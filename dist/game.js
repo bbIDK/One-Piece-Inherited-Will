@@ -36109,7 +36109,7 @@ void main() {
       const cam = this.camera;
       const sailing = p.mode === "sail" && p.ship;
       const scale = p.look?.scale || 1;
-      let eyeH = 1.62 * scale;
+      let eyeH = 1.72 * scale;
       let gx = 0, gz = 0;
       const g0 = ground(p.x, p.y);
       if (this.smoothG === void 0 || Math.abs(g0 - this.smoothG) > 2.5 || p.mode !== this.lastMode) this.smoothG = g0;
@@ -55032,12 +55032,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   function dims(look) {
     const Lg = look.legs || 1, Am = look.arms || 1, Bk = look.bulk || 1;
-    const T1 = 0.45 * Lg, T22 = 0.43 * Lg, hA = 0.075;
+    const T1 = 0.48 * Lg, T22 = 0.465 * Lg, hA = 0.075;
     const hip0 = (T1 + T22) * 0.985 + hA;
-    const chestLen = 0.46 + (Bk - 1) * 0.1;
-    const headR = 0.176 * (1 + (Bk - 1) * 0.22);
-    const A1 = 0.285 * Am, A2 = 0.255 * Am;
-    const neck = 0.055 + (look.neck || 0) * 0.6;
+    const chestLen = 0.52 + (Bk - 1) * 0.1;
+    const headR = 0.13 * (1 + (Bk - 1) * 0.18);
+    const A1 = 0.3 * Am, A2 = 0.27 * Am;
+    const neck = 0.075 + (look.neck || 0) * 0.6;
     return {
       Lg,
       Am,
@@ -55057,7 +55057,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       // hip joints either side of the pelvis
       shY: chestLen - 0.07,
       // shoulder joints below the top of the chest
-      shW: 0.168 * Bk + 6e-3,
+      shW: 0.184 * Bk + 6e-3,
       depth: 0.64,
       // torso depth / width
       kA: (A1 + A2) / 0.43,
@@ -55300,7 +55300,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var TAU11 = Math.PI * 2;
   var DEG2 = Math.PI / 180;
   var DETAIL = {
-    0: { head: [11, 8], cap: [12, 5], cone: 4, sph: [5, 3], blob: [8, 6], limb: [6, 2], lathe: 10, rbox: [6, 5], rboxS: [6, 4], hat: 14, hatS: [10, 6], fringe: 1, hands: 1 },
+    0: { head: [16, 12], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1 },
     1: { head: [8, 6], cap: [10, 4], cone: 3, sph: [5, 3], blob: [6, 4], limb: [5, 1], lathe: 7, rbox: [5, 4], rboxS: [4, 3], hat: 9, hatS: [7, 4], fringe: 0, hands: 0 },
     [-1]: { head: [14, 10], cap: [16, 6], cone: 5, sph: [8, 6], blob: [10, 7], limb: [10, 3], lathe: 12, rbox: [10, 8], rboxS: [8, 6], hat: 16, hatS: [12, 8], fringe: 1, hands: 2 }
   };
@@ -55738,16 +55738,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     add4(Prim.cyl(q2.lathe, true), M(0, 0.02, 0, 0, 0, 0, [0.152 * Bk * (dep + 0.03), 0.055, 0.152 * Bk]), pal.belt, B2.hips);
     add4(Prim.box(), M(0.152 * Bk * (dep + 0.03) + 4e-3, 0.02, 0, 0, 0, 0, [8e-3, 0.026, 0.03]), "#ffd54f", B2.hips);
     const cl = d.chestLen / 0.46;
-    const tp = [[0.132, -0.03], [0.14, 0.1], [0.155, 0.2], [0.178, 0.3], [0.186, 0.38], [0.165, 0.435], [0.1, 0.47], [0.05, 0.482]].map(([r, y]) => [r * Bk, y * cl]);
+    const tp = [[0.128, -0.03], [0.124, 0.08], [0.14, 0.18], [0.172, 0.28], [0.196, 0.36], [0.198, 0.41], [0.16, 0.45], [0.098, 0.474], [0.05, 0.484]].map(([r, y]) => [r * Bk, y * cl]);
     const torsoM = M(0, 0, 0, 0, 0, 0, [dep, 1, 1]);
     if (look.openShirt) {
       add4(lathe2(tp, q2.lathe), torsoM, pal.skin, B2.chest);
-      add4(lathe2(tp.slice(0, 6).map(([r, y]) => [r + 7e-3, y]), q2.lathe, 0.42, TAU11 - 0.84), torsoM, pal.top, B2.chest);
+      add4(lathe2(tp.slice(0, 7).map(([r, y]) => [r + 7e-3, y]), q2.lathe, 0.42, TAU11 - 0.84), torsoM, pal.top, B2.chest);
     } else {
-      const neckY = tp[5][1];
+      const neckY = tp[6][1];
       add4(lathe2(tp, q2.lathe), torsoM, (x, y) => y > neckY + 0.012 && x > -0.02 ? pal.skin : pal.top, B2.chest);
     }
-    if (look.vest) add4(lathe2(tp.slice(0, 6).map(([r, y]) => [r + 0.013, y]), q2.lathe, 0.62, TAU11 - 1.24), torsoM, look.vest, B2.chest);
+    if (look.vest) add4(lathe2(tp.slice(0, 7).map(([r, y]) => [r + 0.013, y]), q2.lathe, 0.62, TAU11 - 1.24), torsoM, look.vest, B2.chest);
     add4(Prim.cyl(Math.max(6, q2.lathe - 2), true), M(0, d.chestLen + d.neck * 0.5 + 5e-3, 0, 0, 0, 0, [0.046 * (1 + (Bk - 1) * 0.5), d.neck + 0.07, 0.048 * (1 + (Bk - 1) * 0.5)]), pal.skin, B2.chest);
     const R2 = d.headR;
     const HM = (m) => mul(M(0, d.hc, 0, 0, 0, 0, R2), m || M());
@@ -56190,12 +56190,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
 
   // src/render3d/chars/mats.js
-  var BODY_KEY = "op-char-body-2";
+  var BODY_KEY = "op-char-body-3";
   var INK2 = 2364943;
   var GRAD = null;
   function charGradient() {
     if (GRAD) return GRAD;
-    const data = new Uint8Array([150, 150, 150, 255, 196, 196, 196, 255, 255, 255, 255, 255, 255, 255, 255, 255]);
+    const data = new Uint8Array([158, 158, 158, 255, 176, 176, 176, 255, 255, 255, 255, 255, 255, 255, 255, 255]);
     GRAD = new DataTexture(data, 4, 1, RGBAFormat);
     GRAD.minFilter = NearestFilter;
     GRAD.magFilter = NearestFilter;
@@ -56216,7 +56216,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const m = new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), fog: opts.fog ?? true });
     m.userData.u = u;
     m.onBeforeCompile = (sh) => {
-      Object.assign(sh.uniforms, u);
+      Object.assign(sh.uniforms, FOG, u);
       sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute float aPart;\nvarying float vPart;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvPart = aPart;");
       sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
 varying float vPart;
@@ -56232,6 +56232,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.7, 0.88, 1.0), uFreeze * 0.55);
 diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
 {
   float rim = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
+  // the anime rim light: a bright edge along the top and sides of the figure
+  float rimUp = smoothstep(-0.25, 0.55, normalize(normal).y);
+  totalEmissiveRadiance += diffuseColor.rgb * vec3(1.0, 0.96, 0.9) * smoothstep(0.55, 0.9, rim) * rimUp * 0.55 * (1.0 - hakiK);
   totalEmissiveRadiance += vec3(0.42, 0.28, 0.72) * pow(rim, 2.2) * hakiK * 0.9;
   totalEmissiveRadiance += vec3(0.5, 0.75, 1.0) * pow(rim, 1.6) * uFreeze * 0.35;
   totalEmissiveRadiance += uLegFxCol * legK * 0.85 + uFlashCol * uFlash * 0.8;
@@ -56245,6 +56248,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const m = new MeshBasicMaterial({ color, side: BackSide, fog: opts.fog ?? true });
     m.userData.u = u;
     m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, FOG);
       sh.uniforms.uOutline = u.uOutline;
       sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uOutline;").replace("#include <skinning_vertex>", `#include <skinning_vertex>
 {
@@ -56258,7 +56262,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   transformed += onrm * uOutline * clamp( -mvq.z * 0.34, 0.75, 5.0 ) / max( sc, 0.2 );
 }`);
     };
-    m.customProgramCacheKey = () => "op-char-outline-1";
+    m.customProgramCacheKey = () => "op-char-outline-2";
     return m;
   }
   var SHARED_OUTLINE = null;

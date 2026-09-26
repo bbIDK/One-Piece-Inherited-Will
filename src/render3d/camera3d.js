@@ -125,7 +125,7 @@ export class CameraRig {
     const cam = this.camera;
     const sailing = p.mode === 'sail' && p.ship;
     const scale = p.look?.scale || 1;
-    let eyeH = 1.62 * scale;
+    let eyeH = 1.72 * scale;
     let gx = 0, gz = 0; // eye position relative to the player (origin)
     // the ground under your feet, smoothed so bumps and steps don't jolt the view
     const g0 = ground(p.x, p.y);

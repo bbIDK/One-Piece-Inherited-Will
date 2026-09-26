@@ -6,15 +6,16 @@
 //  * outline: the anime ink line — back faces pushed out along the normal
 //    (after skinning), scaled with view depth so it stays ~2 px wide.
 import * as THREE from 'three';
+import { FOG } from '../fog.js';
 
-const BODY_KEY = 'op-char-body-2';
+const BODY_KEY = 'op-char-body-3';
 const INK = 0x24160f;
 
 let GRAD = null;
 /** Characters' cel ramp: anime two-tone with a soft mid band and bright shadows (faces stay readable). */
 export function charGradient() {
   if (GRAD) return GRAD;
-  const data = new Uint8Array([150, 150, 150, 255, 196, 196, 196, 255, 255, 255, 255, 255, 255, 255, 255, 255]);
+  const data = new Uint8Array([158, 158, 158, 255, 176, 176, 176, 255, 255, 255, 255, 255, 255, 255, 255, 255]);
   GRAD = new THREE.DataTexture(data, 4, 1, THREE.RGBAFormat);
   GRAD.minFilter = THREE.NearestFilter;
   GRAD.magFilter = THREE.NearestFilter;
@@ -34,7 +35,7 @@ export function bodyMaterial(opts = {}) {
   const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), fog: opts.fog ?? true });
   m.userData.u = u;
   m.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, u);
+    Object.assign(sh.uniforms, FOG, u);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float aPart;\nvarying float vPart;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPart = aPart;');
@@ -55,6 +56,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 {
   float rim = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
+  // the anime rim light: a bright edge along the top and sides of the figure
+  float rimUp = smoothstep(-0.25, 0.55, normalize(normal).y);
+  totalEmissiveRadiance += diffuseColor.rgb * vec3(1.0, 0.96, 0.9) * smoothstep(0.55, 0.9, rim) * rimUp * 0.55 * (1.0 - hakiK);
   totalEmissiveRadiance += vec3(0.42, 0.28, 0.72) * pow(rim, 2.2) * hakiK * 0.9;
   totalEmissiveRadiance += vec3(0.5, 0.75, 1.0) * pow(rim, 1.6) * uFreeze * 0.35;
   totalEmissiveRadiance += uLegFxCol * legK * 0.85 + uFlashCol * uFlash * 0.8;
@@ -70,6 +74,7 @@ export function outlineMaterial(width = 0.0105, color = INK, opts = {}) {
   const m = new THREE.MeshBasicMaterial({ color, side: THREE.BackSide, fog: opts.fog ?? true });
   m.userData.u = u;
   m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, FOG);
     sh.uniforms.uOutline = u.uOutline;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nuniform float uOutline;')
@@ -85,7 +90,7 @@ export function outlineMaterial(width = 0.0105, color = INK, opts = {}) {
   transformed += onrm * uOutline * clamp( -mvq.z * 0.34, 0.75, 5.0 ) / max( sc, 0.2 );
 }`);
   };
-  m.customProgramCacheKey = () => 'op-char-outline-1';
+  m.customProgramCacheKey = () => 'op-char-outline-2';
   return m;
 }
 

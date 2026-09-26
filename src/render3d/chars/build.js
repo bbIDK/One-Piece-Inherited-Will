@@ -17,7 +17,7 @@ const DEG = Math.PI / 180;
 
 // detail per level: [near, far, viewmodel]
 const DETAIL = {
-  0: { head: [11, 8], cap: [12, 5], cone: 4, sph: [5, 3], blob: [8, 6], limb: [6, 2], lathe: 10, rbox: [6, 5], rboxS: [6, 4], hat: 14, hatS: [10, 6], fringe: 1, hands: 1 },
+  0: { head: [16, 12], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1 },
   1: { head: [8, 6], cap: [10, 4], cone: 3, sph: [5, 3], blob: [6, 4], limb: [5, 1], lathe: 7, rbox: [5, 4], rboxS: [4, 3], hat: 9, hatS: [7, 4], fringe: 0, hands: 0 },
   [-1]: { head: [14, 10], cap: [16, 6], cone: 5, sph: [8, 6], blob: [10, 7], limb: [10, 3], lathe: 12, rbox: [10, 8], rboxS: [8, 6], hat: 16, hatS: [12, 8], fringe: 1, hands: 2 },
 };
@@ -402,18 +402,18 @@ export function buildBody(look, wpn, lod = 0) {
 
   // ---- torso (chest frame = hip pivot), shirt / open shirt / vest
   const cl = d.chestLen / 0.46;
-  const tp = [[0.132, -0.03], [0.14, 0.1], [0.155, 0.2], [0.178, 0.3], [0.186, 0.38], [0.165, 0.435], [0.1, 0.47], [0.05, 0.482]]
+  const tp = [[0.128, -0.03], [0.124, 0.08], [0.14, 0.18], [0.172, 0.28], [0.196, 0.36], [0.198, 0.41], [0.16, 0.45], [0.098, 0.474], [0.05, 0.484]]
     .map(([r, y]) => [r * Bk, y * cl]);
   const torsoM = M(0, 0, 0, 0, 0, 0, [dep, 1, 1]);
   if (look.openShirt) {
     add(lathe(tp, q.lathe), torsoM, pal.skin, B.chest);
-    add(lathe(tp.slice(0, 6).map(([r, y]) => [r + 0.007, y]), q.lathe, 0.42, TAU - 0.84), torsoM, pal.top, B.chest);
+    add(lathe(tp.slice(0, 7).map(([r, y]) => [r + 0.007, y]), q.lathe, 0.42, TAU - 0.84), torsoM, pal.top, B.chest);
   } else {
     // shirt with a skin-coloured neckline
-    const neckY = tp[5][1];
+    const neckY = tp[6][1];
     add(lathe(tp, q.lathe), torsoM, (x, y) => (y > neckY + 0.012 && x > -0.02 ? pal.skin : pal.top), B.chest);
   }
-  if (look.vest) add(lathe(tp.slice(0, 6).map(([r, y]) => [r + 0.013, y]), q.lathe, 0.62, TAU - 1.24), torsoM, look.vest, B.chest);
+  if (look.vest) add(lathe(tp.slice(0, 7).map(([r, y]) => [r + 0.013, y]), q.lathe, 0.62, TAU - 1.24), torsoM, look.vest, B.chest);
   // neck
   add(Prim.cyl(Math.max(6, q.lathe - 2), true), M(0, d.chestLen + d.neck * 0.5 + 0.005, 0, 0, 0, 0, [0.046 * (1 + (Bk - 1) * 0.5), d.neck + 0.07, 0.048 * (1 + (Bk - 1) * 0.5)]), pal.skin, B.chest);
 
