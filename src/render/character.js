@@ -394,6 +394,18 @@ function drawHair(g, style, col, hy, r, d) {
     case 'mohawk':
       g.moveTo(-r * 0.2, hy - r * 0.8); g.lineTo(-r * 0.1, hy - r * 1.7); g.lineTo(r * 0.3, hy - r * 1.6); g.lineTo(r * 0.3, hy - r * 0.8);
       break;
+    case 'bun':
+      g.arc(0, hy, r * 1.05, Math.PI * 1.02, -0.02);
+      g.quadraticCurveTo(0, hy - r * 0.5, -r * 1.03, hy);
+      g.moveTo(r * 0.45, hy - r * 1.25); g.arc(0, hy - r * 1.25, r * 0.45, 0, TAU);
+      break;
+    case 'pompadour':
+      g.moveTo(-r * 1.02, hy);
+      g.arc(0, hy, r * 1.02, Math.PI, Math.PI * 1.4);
+      g.quadraticCurveTo(r * 0.2, hy - r * 2.1, r * 1.9, hy - r * 1.3);
+      g.quadraticCurveTo(r * 0.8, hy - r * 1.05, r * 1.02, hy);
+      g.quadraticCurveTo(0, hy - r * 0.5, -r * 1.02, hy);
+      break;
     case 'curly':
       for (let k = 0; k < 7; k++) { const a = Math.PI + (k / 6) * Math.PI; g.moveTo(Math.cos(a) * r + r * 0.28, hy + Math.sin(a) * r * 0.95); g.arc(Math.cos(a) * r, hy + Math.sin(a) * r * 0.95, r * 0.28, 0, TAU); }
       break;
@@ -476,6 +488,11 @@ function drawHat(g, hat, hy, r, d, look) {
     case 'crown': {
       g.fillStyle = '#f1c40f';
       g.beginPath(); g.moveTo(-r * 0.7, hy - r * 0.7); g.lineTo(-r * 0.8, hy - r * 1.4); g.lineTo(-r * 0.35, hy - r * 1.05); g.lineTo(0, hy - r * 1.5); g.lineTo(r * 0.35, hy - r * 1.05); g.lineTo(r * 0.8, hy - r * 1.4); g.lineTo(r * 0.7, hy - r * 0.7); g.closePath(); g.fill(); g.stroke();
+      break;
+    }
+    case 'halo': {
+      g.strokeStyle = '#ffe082'; g.lineWidth = 0.06;
+      g.beginPath(); g.ellipse(0, hy - r * 1.55, r * 0.7, r * 0.2, 0, 0, TAU); g.stroke();
       break;
     }
     case 'headband': {

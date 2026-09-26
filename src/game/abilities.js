@@ -216,6 +216,13 @@ function runStep(actor, s, game, a) {
   if (s.self) {
     if (s.self.iframes) actor.iframes = Math.max(actor.iframes, s.self.iframes);
     if (s.self.cleanse) actor.status = {};
+    if (s.self.hurt && actor.d) {
+      // recoil (Impact / Reject Dials): never lethal on its own
+      const n = Math.round(actor.d.maxHp * s.self.hurt);
+      actor.hp = Math.max(1, actor.hp - n);
+      game.fx.text(actor.x, actor.y - 1.2, String(n), '#ff6b6b', 0.4);
+      if (actor.isPlayer) game.ui?.onPlayerHurt(n);
+    }
   }
   if (s.fx) {
     const f = s.fx;

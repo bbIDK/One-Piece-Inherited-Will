@@ -123,7 +123,7 @@ export const EAST_BLUE = [
         ],
       },
       {
-        id: 'kaya_mansion', name: "Kaya's Mansion", dx: 0.3, dy: -0.28, w: 24, h: 18, style: 'noble', dockDir: 'e', plaza: 'fountain',
+        id: 'kaya_mansion', name: "Kaya's Mansion", dx: 0.3, dy: -0.28, w: 36, h: 26, style: 'noble', dockDir: 'e', plaza: 'fountain',
         buildings: [{ role: 'palace', name: "Kaya's Mansion", npc: 'kaya', w: 10, d: 6, hgt: 3 }, { role: 'shipwright', name: "Merry's Boathouse", npc: 'merry' }],
         houses: 0,
       },
@@ -213,7 +213,7 @@ export const EAST_BLUE = [
     danger: 1,
   },
   {
-    id: 'tequila_wolf', name: 'Tequila Wolf', sea: 'east_blue', x: 3990, y: 170, w: 110, h: 50, climate: 'winter', rough: 0.2,
+    id: 'tequila_wolf', name: 'Tequila Wolf', sea: 'east_blue', x: 3935, y: 170, w: 110, h: 50, climate: 'winter', rough: 0.2,
     blobs: [[-0.7, 0, 0.3, 0.8], [0.7, 0, 0.3, 0.8]],
     archipelago: true,
     paint: [{ op: 'path', points: [[-0.5, 0], [0.5, 0]], width: 4, tile: T.BRIDGE }],

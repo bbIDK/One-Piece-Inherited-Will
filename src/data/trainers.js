@@ -18,6 +18,16 @@ export const TRAINERS = {
     teaches: ['bleg_party', 'bleg_antimanner', 'bleg_concasse'], train: { agi: 30, end: 28 }, spar: { level: 18, style: 'black_leg', name: 'Zeff' },
     lines: ['A cook\'s hands are his life. Fight with your legs.', 'Kicks are ten times stronger than punches, brat.'],
   },
+  dadan: {
+    name: 'Curly Dadan', where: 'the Dadan Family hideout, Mt. Colubo', styles: {}, teaches: ['brawl_tackle', 'brawl_headbutt'], train: { str: 18, end: 20, vit: 20 },
+    spar: { level: 9, style: 'brawler', name: 'Dogra & Magra' },
+    lines: ['Hunt your own dinner or starve, brat!', 'The mountain doesn\'t care who your father is.'],
+  },
+  usopp: {
+    name: 'Usopp', where: 'Syrup Village', styles: { sniper: 800 }, teaches: ['snipe_explode', 'snipe_tabasco'], train: { agi: 18, wil: 16 },
+    spar: { level: 8, style: 'sniper', weapon: 'gun', name: 'Captain Usopp' },
+    lines: ['Hissatsu... Lead Star!', 'A sniper never misses! ...Mostly.'],
+  },
   dojo_generic: {
     name: 'Dojo Master', where: 'a town dojo', styles: {}, teaches: ['brawl_tackle', 'brawl_knee', 'brawl_headbutt'], train: { str: 20, end: 20, vit: 20 }, spar: { level: 9, style: 'brawler', name: 'Senior Student' },
     lines: ['Hit the post a thousand times. Then a thousand more.'],

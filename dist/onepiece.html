@@ -2753,7 +2753,7 @@ void main() {
     candy: { ground: T.CANDY, road: T.CAKE, plaza: T.CAKE, walls: ["#fadbd8", "#fcf3cf", "#d6eaf8", "#e8daef"], roofs: ["#e74c3c", "#8e44ad", "#f5b041", "#ec7063"], roof: "dome", rowStep: 8, lamps: true },
     fishman: { ground: T.CORAL, road: T.MARBLE, plaza: T.MARBLE, walls: ["#f5b7b1", "#aed6f1", "#f9e79f", "#a3e4d7"], roofs: ["#48c9b0", "#5dade2", "#f1948a", "#bb8fce"], roof: "shell", rowStep: 8, lamps: true },
     marine: { ground: T.STONE, road: T.STONE, plaza: T.STONE, walls: ["#fdfefe", "#f2f3f4"], roofs: ["#2874a6", "#1b4f72", "#2e86c1"], roof: "flat", rowStep: 9, lamps: true, flags: true },
-    noble: { ground: T.MARBLE, road: T.MARBLE, plaza: T.MARBLE, walls: ["#fdfefe", "#fef9e7", "#fbeee6"], roofs: ["#d4ac0d", "#1a5276", "#7d3c98"], roof: "dome", rowStep: 9, lamps: true },
+    noble: { ground: T.MARBLE, road: T.MARBLE, plaza: T.MARBLE, walls: ["#fdfefe", "#fef9e7", "#fbeee6"], roofs: ["#d4ac0d", "#1a5276", "#7d3c98"], roof: "gable", rowStep: 9, lamps: true },
     spooky: { ground: T.BONE, road: T.GRAVEL, plaza: T.GRAVEL, walls: ["#5b4a6b", "#4a4a5a", "#6c5b7b"], roofs: ["#2c2c3a", "#3b2f4a", "#1c2833"], roof: "gable", rowStep: 8, lamps: true },
     future: { ground: T.STEEL, road: T.MARBLE, plaza: T.MARBLE, walls: ["#ecf0f1", "#d0ece7", "#fdedec"], roofs: ["#48c9b0", "#f1948a", "#85c1e9"], roof: "dome", rowStep: 9, lamps: true },
     tribal: { ground: null, road: T.DIRT, plaza: T.DIRT, walls: ["#a1887f", "#8d6e63", "#bcaaa4"], roofs: ["#d4ac0d", "#b7950b", "#c9a227"], roof: "hut", rowStep: 8, lamps: false },
@@ -2885,6 +2885,8 @@ void main() {
           name: spec.name,
           sign: spec.sign,
           npc: spec.npc,
+          trainer: spec.trainer,
+          shop: spec.shop,
           door: { x: fx0 + fw / 2, y: lot.ry + 0.5 },
           town: town.id,
           island: town.islandId,
@@ -4034,8 +4036,8 @@ void main() {
           name: "Kaya's Mansion",
           dx: 0.3,
           dy: -0.28,
-          w: 24,
-          h: 18,
+          w: 36,
+          h: 26,
           style: "noble",
           dockDir: "e",
           plaza: "fountain",
@@ -4238,7 +4240,7 @@ void main() {
       id: "tequila_wolf",
       name: "Tequila Wolf",
       sea: "east_blue",
-      x: 3990,
+      x: 3935,
       y: 170,
       w: 110,
       h: 50,
@@ -4291,8 +4293,26 @@ void main() {
     }
   ];
 
+  // src/data/islands/northBlue.js
+  var NORTH_BLUE = [];
+
+  // src/data/islands/westBlue.js
+  var WEST_BLUE = [];
+
+  // src/data/islands/southBlue.js
+  var SOUTH_BLUE = [];
+
+  // src/data/islands/paradise1.js
+  var PARADISE_1 = [];
+
+  // src/data/islands/paradise2.js
+  var PARADISE_2 = [];
+
+  // src/data/islands/newWorld.js
+  var NEW_WORLD = [];
+
   // src/data/islands/index.js
-  var ALL_ISLANDS = [...EAST_BLUE];
+  var ALL_ISLANDS = [...EAST_BLUE, ...NORTH_BLUE, ...WEST_BLUE, ...SOUTH_BLUE, ...PARADISE_1, ...PARADISE_2, ...NEW_WORLD];
   var ISLAND_BY_ID = Object.fromEntries(ALL_ISLANDS.map((i) => [i.id, i]));
 
   // src/core/input.js
@@ -6244,6 +6264,19 @@ void main() {
         g.lineTo(r * 0.3, hy - r * 1.6);
         g.lineTo(r * 0.3, hy - r * 0.8);
         break;
+      case "bun":
+        g.arc(0, hy, r * 1.05, Math.PI * 1.02, -0.02);
+        g.quadraticCurveTo(0, hy - r * 0.5, -r * 1.03, hy);
+        g.moveTo(r * 0.45, hy - r * 1.25);
+        g.arc(0, hy - r * 1.25, r * 0.45, 0, TAU4);
+        break;
+      case "pompadour":
+        g.moveTo(-r * 1.02, hy);
+        g.arc(0, hy, r * 1.02, Math.PI, Math.PI * 1.4);
+        g.quadraticCurveTo(r * 0.2, hy - r * 2.1, r * 1.9, hy - r * 1.3);
+        g.quadraticCurveTo(r * 0.8, hy - r * 1.05, r * 1.02, hy);
+        g.quadraticCurveTo(0, hy - r * 0.5, -r * 1.02, hy);
+        break;
       case "curly":
         for (let k = 0; k < 7; k++) {
           const a = Math.PI + k / 6 * Math.PI;
@@ -6425,6 +6458,14 @@ void main() {
         g.lineTo(r * 0.7, hy - r * 0.7);
         g.closePath();
         g.fill();
+        g.stroke();
+        break;
+      }
+      case "halo": {
+        g.strokeStyle = "#ffe082";
+        g.lineWidth = 0.06;
+        g.beginPath();
+        g.ellipse(0, hy - r * 1.55, r * 0.7, r * 0.2, 0, 0, TAU4);
         g.stroke();
         break;
       }
@@ -7621,6 +7662,12 @@ void main() {
     if (s.self) {
       if (s.self.iframes) actor.iframes = Math.max(actor.iframes, s.self.iframes);
       if (s.self.cleanse) actor.status = {};
+      if (s.self.hurt && actor.d) {
+        const n = Math.round(actor.d.maxHp * s.self.hurt);
+        actor.hp = Math.max(1, actor.hp - n);
+        game.fx.text(actor.x, actor.y - 1.2, String(n), "#ff6b6b", 0.4);
+        if (actor.isPlayer) game.ui?.onPlayerHurt(n);
+      }
     }
     if (s.fx) {
       const f = s.fx;
@@ -12482,17 +12529,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     game.env.day = char.world?.day || 1;
     game.env.clock = char.world?.clock ?? 8.5;
     game.hintsShown = new Set(char.hintsShown || []);
-    let active = null;
+    let active2 = null;
     for (const sd of char.ships || []) {
       if (sd.zone && sd.zone !== "surface") continue;
       const s = game.giveShip(sd.type, sd.x, sd.y, sd.name, sd);
       s.hull = sd.hull ?? s.maxHull;
-      if (sd.uid === char.activeShip) active = s;
+      if (sd.uid === char.activeShip) active2 = s;
     }
     if (pos.zone && pos.zone !== "surface" && game.enterZoneById) {
       game.enterZoneById(pos.zone, pos, true);
-    } else if (pos.mode === "sail" && active) {
-      board(game, p, active);
+    } else if (pos.mode === "sail" && active2) {
+      board(game, p, active2);
     } else if (!game.world.walkable(p.x, p.y - 0.1) && !game.world.swimmable(p.x, p.y - 0.1)) {
       const r = char.rest || char.spawn;
       p.x = r.x;
@@ -12996,16 +13043,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const g = this.game, c = this.char;
       if (c.dreamDone) return;
       const d = c.dream;
-      let done = false;
-      if (d === "warrior" && (c.bosses || []).length >= 12) done = true;
-      if (d === "world_map" && (c.discovered || []).length >= 60) done = true;
-      if (d === "liberation" && (c.liberated || []).length >= 6) done = true;
-      if (d === "true_history" && (c.flags.poneglyphsRead || 0) >= 8) done = true;
-      if (d === "swordsman" && (c.bosses || []).includes("mihawk")) done = true;
-      if (d === "admiral" && c.marineRank === "Admiral") done = true;
-      if (d === "king" && c.flags.laughTale) done = true;
-      if (d === "all_blue" && c.flags.allBlue) done = true;
-      if (done) {
+      let done2 = false;
+      if (d === "warrior" && (c.bosses || []).length >= 12) done2 = true;
+      if (d === "world_map" && (c.discovered || []).length >= 60) done2 = true;
+      if (d === "liberation" && (c.liberated || []).length >= 6) done2 = true;
+      if (d === "true_history" && (c.flags.poneglyphsRead || 0) >= 8) done2 = true;
+      if (d === "swordsman" && (c.bosses || []).includes("mihawk")) done2 = true;
+      if (d === "admiral" && c.marineRank === "Admiral") done2 = true;
+      if (d === "king" && c.flags.laughTale) done2 = true;
+      if (d === "all_blue" && c.flags.allBlue) done2 = true;
+      if (done2) {
         c.dreamDone = true;
         g.ui.toast("DREAM FULFILLED", `${DREAMS[d].icon} ${DREAMS[d].name}`, "#ffd54f");
         g.log("You have become a legend. You may keep sailing \u2014 or retire from the Menu and pass your will on.", "#ffd54f");
@@ -13400,6 +13447,24 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       train: { agi: 30, end: 28 },
       spar: { level: 18, style: "black_leg", name: "Zeff" },
       lines: ["A cook's hands are his life. Fight with your legs.", "Kicks are ten times stronger than punches, brat."]
+    },
+    dadan: {
+      name: "Curly Dadan",
+      where: "the Dadan Family hideout, Mt. Colubo",
+      styles: {},
+      teaches: ["brawl_tackle", "brawl_headbutt"],
+      train: { str: 18, end: 20, vit: 20 },
+      spar: { level: 9, style: "brawler", name: "Dogra & Magra" },
+      lines: ["Hunt your own dinner or starve, brat!", "The mountain doesn't care who your father is."]
+    },
+    usopp: {
+      name: "Usopp",
+      where: "Syrup Village",
+      styles: { sniper: 800 },
+      teaches: ["snipe_explode", "snipe_tabasco"],
+      train: { agi: 18, wil: 16 },
+      spar: { level: 8, style: "sniper", weapon: "gun", name: "Captain Usopp" },
+      lines: ["Hissatsu... Lead Star!", "A sniper never misses! ...Mostly."]
     },
     dojo_generic: {
       name: "Dojo Master",
@@ -14059,21 +14124,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         berriesLine(c),
         c.fruit ? h("div", h("h3", "Devil Fruit"), h("p", `${FRUITS[c.fruit].name} \u2014 mastery ${Math.floor(c.fruitMastery)}`)) : null
       );
-      const groups = {};
+      const groups2 = {};
       for (const it of c.inventory) {
         const d = ITEMS[it.id];
         if (!d) continue;
-        (groups[d.type] = groups[d.type] || []).push({ it, d });
+        (groups2[d.type] = groups2[d.type] || []).push({ it, d });
       }
       const order = ["weapon", "hat", "coat", "food", "medicine", "dial", "fruit", "key", "treasure", "material"];
       const names = { weapon: "Weapons", hat: "Hats", coat: "Coats", food: "Food", medicine: "Medicine", dial: "Dials", fruit: "Devil Fruits", key: "Key items", treasure: "Treasure", material: "Materials" };
       const right = h("div");
       if (!c.inventory.length) right.appendChild(h("p", "Your bag is empty."));
       for (const type of order) {
-        if (!groups[type]) continue;
+        if (!groups2[type]) continue;
         right.appendChild(h("h3", names[type]));
         const list = h("div.list");
-        for (const { it, d } of groups[type]) {
+        for (const { it, d } of groups2[type]) {
           const isEq = eq.hat === it.id || eq.coat === it.id || (eq.weapons || []).includes(it.id);
           const actions = [];
           if (["weapon", "hat", "coat"].includes(d.type)) actions.push(h("button.btn" + (isEq ? ".red" : ""), { on: { click: () => {
@@ -14112,7 +14177,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     };
     render();
   }
-  function confirmEat(game, itemId, done) {
+  function confirmEat(game, itemId, done2) {
     const c = game.state.char;
     const d = ITEMS[itemId];
     const f = FRUITS[d.fruit];
@@ -14130,7 +14195,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         h("button.btn.red", { on: { click: () => {
           game.ui.closePanel();
           useItem(game, itemId);
-          done();
+          done2();
         } } }, "Eat it"),
         h("button.btn", { on: { click: () => game.ui.closePanel() } }, "Not yet")
       )
@@ -14277,13 +14342,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const ui = game.ui;
     const c = game.state.char;
     const q = game.quests;
-    const active = q.active();
-    const done = Object.entries(c.quests).filter(([, s]) => s.done).map(([id]) => questDef(id)).filter(Boolean);
+    const active2 = q.active();
+    const done2 = Object.entries(c.quests).filter(([, s]) => s.done).map(([id]) => questDef(id)).filter(Boolean);
     const body = h(
       "div",
       h("h2", "Journal"),
       h("h3", "Active"),
-      active.length ? h("div.list", ...active.map(({ id, s, def }) => h(
+      active2.length ? h("div.list", ...active2.map(({ id, s, def }) => h(
         "div.card",
         h("h4", def.name, h("span.tag", def.kind || "story")),
         h("div", def.summary || ""),
@@ -14291,7 +14356,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         def.island ? h("div.muted", "Location: " + (game.surface.islands.find((i) => i.id === def.island)?.name || def.island)) : null
       ))) : h("p", "No active quests. Talk to people \u2014 every island has a story."),
       h("h3", "Completed"),
-      done.length ? h("div.list", ...done.map((d) => h("div.row-item", h("span.ico", "\u2714"), h("div.grow", h("b", d.name))))) : h("p.muted", "None yet."),
+      done2.length ? h("div.list", ...done2.map((d) => h("div.row-item", h("span.ico", "\u2714"), h("div.grow", h("b", d.name))))) : h("p.muted", "None yet."),
       h("h3", "Dream"),
       h("p", `${DREAMS[c.dream].icon} ${DREAMS[c.dream].name} \u2014 ${DREAMS[c.dream].goal}`)
     );
@@ -14467,14 +14532,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         } } }, `Treat wounds \u2014 ${formatBerries(S.healPrice(island))}`)
       );
       if (doc?.restoresLife) {
-        const done = c.flags["lifeRestored_" + doc.id];
+        const done2 = c.flags["lifeRestored_" + doc.id];
         body.append(
           h("h3", "Mend a vivre card"),
           h("p", `${doc.name} is one of the few doctors in the world who can pull someone back from the edge. (Restores one lost life, once.)`),
-          h("button.btn.gold", { disabled: done || c.lives >= c.maxLives, on: { click: () => {
+          h("button.btn.gold", { disabled: done2 || c.lives >= c.maxLives, on: { click: () => {
             S.restoreLife(doc);
             render();
-          } } }, done ? "Already treated" : c.lives >= c.maxLives ? "No lives lost" : `Treatment \u2014 ${formatBerries(S.lifePrice(doc))}`)
+          } } }, done2 ? "Already treated" : c.lives >= c.maxLives ? "No lives lost" : `Treatment \u2014 ${formatBerries(S.lifePrice(doc))}`)
         );
       }
     };
@@ -14805,7 +14870,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       weapon: def.weapon ? { kind: def.weapon, power: def.weaponPower || 1.2, count: STYLES[def.style]?.swords || 1 } : null,
       hakiSkill: def.haki || {},
       boss: def.boss,
-      hpMul: (def.hpMul || 1) * (def.boss ? 4 : 1),
+      hpMul: (def.hpMul || 1) * (def.boss ? 2.2 : 1),
       lethal: def.lethal ?? true,
       poise: def.poise,
       dmgMul: def.dmgMul,
@@ -14940,6 +15005,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       game.on("quickHeal", () => this.quickHeal());
       this.objectHandlers = {};
       game.on("useObject", (o) => this.objectHandlers[o.use]?.(o, game));
+      let mt = 0;
+      game.on("tick", (dt) => {
+        if ((mt -= dt) > 0) return;
+        mt = 0.5;
+        const c = game.state?.char;
+        if (!c) return;
+        for (const a of game.actors) {
+          const m = a.def?.marker;
+          if (!m || !a.alive) continue;
+          try {
+            a.questMarker = m(c, game) || null;
+          } catch (e) {
+            a.questMarker = null;
+          }
+        }
+      });
     }
     onObject(id, fn) {
       this.objectHandlers[id] = fn;
@@ -15310,328 +15391,294 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     });
   }
 
-  // src/content/index.js
-  var PACKS = [];
-  function installContent(game) {
-    for (const p of PACKS) {
-      if (p.npcs) registerNPCs(p.npcs);
-      if (p.groups) registerGroups(p.groups);
-      if (p.quests) registerQuests(p.quests);
+  // src/content/bossMoves.js
+  registerAbilities([
+    // ------------------------------------------------------------ East Blue
+    {
+      id: "morgan_axe",
+      name: "Axe-Hand Cleave",
+      anim: "heavy",
+      windup: 0.55,
+      recover: 0.5,
+      cd: 4,
+      cost: { stamina: 10 },
+      steps: [{ hit: { shape: "line", range: 3.4, width: 1.3, damage: 22, knockback: 7, stun: 0.6, heavy: true, guardBreak: true, slashing: true, shake: 0.3 }, vfx: "beam", color: "#cfd8dc" }]
+    },
+    {
+      id: "morgan_sweep",
+      name: "Axe Sweep",
+      anim: "slash",
+      windup: 0.45,
+      recover: 0.4,
+      cd: 6,
+      cost: { stamina: 10 },
+      steps: [{ hit: { shape: "circle", range: 2.6, damage: 16, knockback: 6, stun: 0.4, slashing: true }, vfx: "ring" }]
+    },
+    {
+      id: "alvida_mace",
+      name: "Iron Mace",
+      anim: "heavy",
+      windup: 0.6,
+      recover: 0.5,
+      cd: 3.5,
+      cost: { stamina: 8 },
+      steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.6, offset: 0.3, damage: 16, knockback: 8, stun: 0.6, heavy: true, guardBreak: true } }]
+    },
+    {
+      id: "buggy_ball",
+      name: "Special Muggy Ball",
+      anim: "shoot",
+      windup: 0.7,
+      recover: 0.4,
+      cd: 9,
+      cost: { stamina: 10 },
+      say: "Special Muggy Ball!",
+      steps: [{ proj: { speed: 11, range: 12, radius: 0.5, damage: 10, sprite: "cannonball", size: 1.6, explode: { range: 2.4, damage: 30 } } }]
+    },
+    {
+      id: "buggy_knives",
+      name: "Chop-Chop Knives",
+      anim: "shoot",
+      windup: 0.3,
+      recover: 0.3,
+      cd: 5,
+      cost: { stamina: 8 },
+      steps: [{ proj: { speed: 16, range: 10, radius: 0.25, damage: 8, count: 3, spread: 0.35, sprite: "iceshard", color: "#eceff1", slashing: true } }]
+    },
+    {
+      id: "cabaji_fire",
+      name: "Acrobat Fire Breath",
+      anim: "cast",
+      windup: 0.45,
+      recover: 0.4,
+      cd: 7,
+      cost: { stamina: 8 },
+      steps: [{ hit: { shape: "arc", range: 3, arc: 0.8, offset: 0.2, damage: 12, knockback: 2, stun: 0.3, element: "fire", status: { burn: 2 } }, vfx: "ring", color: "#ff7043" }]
+    },
+    {
+      id: "cabaji_dash",
+      name: "Unicycle Charge",
+      anim: "thrust",
+      windup: 0.35,
+      recover: 0.4,
+      cd: 5,
+      cost: { stamina: 8 },
+      steps: [{ dash: { dist: 7, time: 0.3, hit: { damage: 14, knockback: 5, stun: 0.4, slashing: true } } }]
+    },
+    {
+      id: "kuro_stealth",
+      name: "Stealth Foot",
+      anim: "slash",
+      windup: 0.6,
+      recover: 0.6,
+      cd: 10,
+      cost: { stamina: 12 },
+      say: "Nuki Ashi...",
+      steps: [0, 0.18, 0.36, 0.54, 0.72].map((t, i) => ({ at: 0.6 + t, angleOffset: (i % 2 ? 1 : -1) * (0.4 + i * 0.3), dash: { dist: 4, time: 0.15, iframes: 0.15, hit: { damage: 9, knockback: 2, stun: 0.3, slashing: true } } }))
+    },
+    {
+      id: "kuro_claws",
+      name: "Cat's Claws",
+      anim: "slash",
+      windup: 0.25,
+      recover: 0.3,
+      cd: 3,
+      cost: { stamina: 6 },
+      steps: [{ hit: { shape: "arc", range: 2, arc: 1.8, offset: 0.2, damage: 13, knockback: 2, stun: 0.3, slashing: true, status: { bleed: 3 } }, vfx: "slash" }]
+    },
+    {
+      id: "jango_chakram",
+      name: "Chakram Throw",
+      anim: "shoot",
+      windup: 0.35,
+      recover: 0.3,
+      cd: 4,
+      cost: { stamina: 6 },
+      steps: [{ proj: { speed: 14, range: 11, radius: 0.35, damage: 10, sprite: "orb", color: "#b0bec5", pierce: true } }]
+    },
+    {
+      id: "jango_hypnosis",
+      name: "One, Two, Jango!",
+      anim: "cast",
+      windup: 0.8,
+      recover: 0.4,
+      cd: 14,
+      cost: { stamina: 8 },
+      say: "One... Two... JANGO!",
+      steps: [{ hit: { shape: "circle", range: 4.5, damage: 2, stun: 2.2, knockback: 0, unblockable: true }, vfx: "ring", color: "#e1bee7" }]
+    },
+    {
+      id: "krieg_mh5",
+      name: "MH5 Poison Gas Bomb",
+      anim: "shoot",
+      windup: 0.9,
+      recover: 0.5,
+      cd: 16,
+      cost: { stamina: 10 },
+      say: "MH5!",
+      steps: [{ zone: { range: 3.8, duration: 5, interval: 0.5, damage: 6, element: "poison", status: { poison: 3 }, color: "#8e24aa", atTarget: true, kind: "field" } }]
+    },
+    {
+      id: "krieg_spears",
+      name: "Wootz Spear Barrage",
+      anim: "shoot",
+      windup: 0.5,
+      recover: 0.4,
+      cd: 6,
+      cost: { stamina: 8 },
+      steps: [{ proj: { speed: 17, range: 12, radius: 0.3, damage: 11, count: 5, spread: 0.7, sprite: "iceshard", color: "#90a4ae", knockback: 2 } }]
+    },
+    {
+      id: "krieg_cape",
+      name: "Great Battle Spear",
+      anim: "heavy",
+      windup: 0.6,
+      recover: 0.5,
+      cd: 7,
+      cost: { stamina: 10 },
+      steps: [{ hit: { shape: "line", range: 3.2, width: 1.2, damage: 22, knockback: 8, stun: 0.6, heavy: true, guardBreak: true, element: "explosion" }, vfx: "beam", color: "#ffab40" }]
+    },
+    {
+      id: "arlong_darts",
+      name: "Shark on Darts",
+      anim: "thrust",
+      windup: 0.55,
+      recover: 0.5,
+      cd: 7,
+      cost: { stamina: 10 },
+      say: "Shark on Darts!",
+      steps: [{ dash: { dist: 10, time: 0.35, iframes: 0.2, hit: { damage: 24, knockback: 7, stun: 0.6, heavy: true, guardBreak: true } } }]
+    },
+    {
+      id: "arlong_kiribachi",
+      name: "Kiribachi Saw",
+      anim: "slash",
+      windup: 0.5,
+      recover: 0.4,
+      cd: 5,
+      cost: { stamina: 8 },
+      steps: [{ hit: { shape: "arc", range: 2.6, arc: 2.2, offset: 0.3, damage: 20, knockback: 4, stun: 0.4, slashing: true, status: { bleed: 4 } }, vfx: "slash", color: "#b0bec5" }]
+    },
+    {
+      id: "arlong_bite",
+      name: "Shark Tooth",
+      anim: "grab",
+      windup: 0.35,
+      recover: 0.4,
+      cd: 4,
+      cost: { stamina: 6 },
+      steps: [{ hit: { shape: "arc", range: 1.5, arc: 1.2, offset: 0.2, damage: 18, knockback: 1, stun: 0.8, status: { bleed: 3 } } }]
+    },
+    {
+      id: "hatchan_six",
+      name: "Six Sword Style",
+      anim: "slash",
+      windup: 0.45,
+      recover: 0.4,
+      cd: 5,
+      cost: { stamina: 8 },
+      say: "Rokutoryu!",
+      steps: [{ hit: { shape: "circle", range: 2.4, damage: 6, knockback: 2, stun: 0.2, slashing: true, duration: 0.6, interval: 0.1 }, vfx: "ring" }]
+    },
+    {
+      id: "chew_watergun",
+      name: "Water Gun",
+      anim: "shoot",
+      windup: 0.4,
+      recover: 0.3,
+      cd: 3,
+      cost: { stamina: 6 },
+      steps: [{ proj: { speed: 22, range: 13, radius: 0.3, damage: 13, sprite: "waterdrop", size: 2, element: "water", knockback: 3, status: { wet: 5 } } }]
+    },
+    {
+      id: "smoker_jitte",
+      name: "Seastone Jitte",
+      anim: "thrust",
+      windup: 0.3,
+      recover: 0.3,
+      cd: 3,
+      cost: { stamina: 6 },
+      steps: [{ hit: { shape: "arc", range: 1.9, arc: 1, offset: 0.2, damage: 16, knockback: 4, stun: 0.6, status: { seastone: 4 }, haki: true } }]
     }
-    installFruits(game);
-    for (const p of PACKS) if (p.install) p.install(game);
-  }
-
-  // src/audio/audio.js
-  var Audio = class {
-    constructor(settings) {
-      this.settings = settings;
-      this.ctx = null;
-      this.master = null;
-      this.sfxGain = null;
-      this.musicGain = null;
-      this.noiseBuf = null;
-      this.theme = null;
-      this.nextNoteT = 0;
-      this.step = 0;
-      this.last = {};
-      const unlock = () => {
-        this.init();
-        window.removeEventListener("pointerdown", unlock);
-        window.removeEventListener("keydown", unlock);
-      };
-      window.addEventListener("pointerdown", unlock);
-      window.addEventListener("keydown", unlock);
+  ]);
+  registerAbilities([
+    // --------------------------------------------------------------- dials
+    // Sky Island shells (items with `ability`): usable by anyone who carries one.
+    {
+      id: "dial_impact",
+      name: "Impact Dial",
+      anim: "thrust",
+      windup: 0.2,
+      recover: 0.5,
+      cd: 10,
+      cost: { stamina: 8 },
+      say: "Impact!",
+      steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.1, offset: 0.2, damage: 42, knockback: 11, stun: 0.9, heavy: true, guardBreak: true, shake: 0.45, impactFrame: 0.06 }, self: { hurt: 0.07 }, vfx: "ring", color: "#fff59d" }]
+    },
+    {
+      id: "dial_reject",
+      name: "Reject Dial",
+      anim: "thrust",
+      windup: 0.35,
+      recover: 0.8,
+      cd: 40,
+      cost: { stamina: 20 },
+      say: "Reject!",
+      steps: [{ hit: { shape: "arc", range: 1.7, arc: 1, offset: 0.2, damage: 160, knockback: 16, stun: 1.6, heavy: true, guardBreak: true, unblockable: true, shake: 1, impactFrame: 0.14 }, self: { hurt: 0.3 }, vfx: "ring", color: "#ffffff" }]
+    },
+    {
+      id: "dial_flame",
+      name: "Flame Dial",
+      anim: "cast",
+      windup: 0.25,
+      recover: 0.35,
+      cd: 8,
+      cost: { stamina: 6 },
+      steps: [0, 0.12, 0.24].map((t) => ({ at: 0.25 + t, hit: { shape: "arc", range: 3.2, arc: 0.7, offset: 0.3, damage: 7, knockback: 1.5, stun: 0.2, element: "fire", status: { burn: 2 } }, vfx: "ring", color: "#ff7043" }))
+    },
+    {
+      id: "dial_breath",
+      name: "Breath Dial",
+      anim: "cast",
+      windup: 0.15,
+      recover: 0.3,
+      cd: 6,
+      cost: { stamina: 4 },
+      steps: [{ hit: { shape: "arc", range: 3.6, arc: 1, offset: 0.3, damage: 2, knockback: 12, stun: 0.3 }, vfx: "ring", color: "#e0f7fa" }]
+    },
+    {
+      id: "dial_flash",
+      name: "Flash Dial",
+      anim: "cast",
+      windup: 0.2,
+      recover: 0.3,
+      cd: 14,
+      cost: { stamina: 4 },
+      steps: [{ hit: { shape: "circle", range: 4.5, damage: 1, knockback: 0, stun: 1.6, unblockable: true, element: "light" }, fx: { flash: 0.8 }, vfx: "ring", color: "#fffde7" }]
+    },
+    // --------------------------------------------------------- World Government
+    {
+      id: "kuma_laser",
+      name: "Mouth Laser",
+      anim: "cast",
+      windup: 0.9,
+      recover: 0.5,
+      cd: 6,
+      cost: { stamina: 8 },
+      steps: [{ hit: { shape: "line", range: 13, width: 0.7, damage: 30, knockback: 5, stun: 0.5, element: "light", heavy: true, hitShips: true, shake: 0.4 }, vfx: "beam", color: "#fff59d" }]
+    },
+    {
+      id: "kuma_paw_npc",
+      name: "Paw Cannon",
+      anim: "thrust",
+      windup: 0.6,
+      recover: 0.5,
+      cd: 9,
+      cost: { stamina: 10 },
+      say: "Pad Ho...",
+      steps: [{ proj: { speed: 16, range: 14, radius: 0.7, damage: 28, sprite: "paw", size: 1.8, knockback: 10, heavy: true, pierce: true, color: "#ffffff" } }]
     }
-    init() {
-      if (this.ctx) return;
-      try {
-        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-      } catch {
-        return;
-      }
-      const c = this.ctx;
-      this.master = c.createGain();
-      this.master.connect(c.destination);
-      this.sfxGain = c.createGain();
-      this.sfxGain.connect(this.master);
-      this.musicGain = c.createGain();
-      this.musicGain.connect(this.master);
-      const len = c.sampleRate * 1.5;
-      this.noiseBuf = c.createBuffer(1, len, c.sampleRate);
-      const d = this.noiseBuf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-      this.apply(this.settings);
-      this.scheduler = setInterval(() => this.schedule(), 60);
-    }
-    apply(s) {
-      this.settings = s;
-      if (!this.ctx) return;
-      this.sfxGain.gain.value = s.volume * 0.6;
-      this.musicGain.gain.value = s.music * 0.28;
-    }
-    // ---------------------------------------------------------------- sfx
-    noise(t, dur, { freq = 1e3, q = 1, type = "bandpass", gain = 0.5, attack = 5e-3, sweep } = {}) {
-      const c = this.ctx;
-      const src = c.createBufferSource();
-      src.buffer = this.noiseBuf;
-      const f = c.createBiquadFilter();
-      f.type = type;
-      f.frequency.setValueAtTime(freq, t);
-      f.Q.value = q;
-      if (sweep) f.frequency.exponentialRampToValueAtTime(Math.max(20, sweep), t + dur);
-      const g = c.createGain();
-      g.gain.setValueAtTime(1e-4, t);
-      g.gain.exponentialRampToValueAtTime(gain, t + attack);
-      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
-      src.connect(f);
-      f.connect(g);
-      g.connect(this.sfxGain);
-      src.start(t, Math.random() * 0.5);
-      src.stop(t + dur + 0.05);
-    }
-    tone(t, dur, { freq = 440, to, type = "sine", gain = 0.3, attack = 5e-3, dest } = {}) {
-      const c = this.ctx;
-      const o = c.createOscillator();
-      o.type = type;
-      o.frequency.setValueAtTime(freq, t);
-      if (to) o.frequency.exponentialRampToValueAtTime(Math.max(20, to), t + dur);
-      const g = c.createGain();
-      g.gain.setValueAtTime(1e-4, t);
-      g.gain.exponentialRampToValueAtTime(gain, t + attack);
-      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
-      o.connect(g);
-      g.connect(dest || this.sfxGain);
-      o.start(t);
-      o.stop(t + dur + 0.05);
-    }
-    sfx(name) {
-      if (!this.ctx || this.ctx.state !== "running") {
-        if (this.ctx) this.ctx.resume();
-        return;
-      }
-      const t = this.ctx.currentTime;
-      const lim = { punch: 0.04, slash_hit: 0.04, block: 0.05, whoosh: 0.05, splash: 0.2, thunder_small: 0.15, coin: 0.05 }[name] ?? 0.02;
-      if (this.last[name] && t - this.last[name] < lim) return;
-      this.last[name] = t;
-      const r = () => 0.9 + Math.random() * 0.2;
-      switch (name) {
-        case "whoosh":
-          this.noise(t, 0.12, { freq: 1800 * r(), q: 0.8, gain: 0.12, sweep: 600 });
-          break;
-        case "punch":
-          this.noise(t, 0.09, { freq: 500 * r(), q: 1.2, gain: 0.5 });
-          this.tone(t, 0.09, { freq: 140, to: 60, type: "sine", gain: 0.4 });
-          break;
-        case "slash_hit":
-          this.noise(t, 0.12, { freq: 3500 * r(), q: 2, gain: 0.35, sweep: 1500 });
-          this.tone(t, 0.06, { freq: 900, to: 300, type: "sawtooth", gain: 0.06 });
-          break;
-        case "block":
-          this.tone(t, 0.12, { freq: 620 * r(), type: "square", gain: 0.08 });
-          this.noise(t, 0.06, { freq: 2500, gain: 0.2 });
-          break;
-        case "parry":
-          this.tone(t, 0.25, { freq: 1300, to: 1900, type: "triangle", gain: 0.25 });
-          this.tone(t + 0.02, 0.3, { freq: 2600, type: "sine", gain: 0.12 });
-          break;
-        case "guardbreak":
-          this.tone(t, 0.3, { freq: 300, to: 80, type: "sawtooth", gain: 0.2 });
-          break;
-        case "dodge":
-          this.noise(t, 0.15, { freq: 900, q: 0.6, gain: 0.12, sweep: 2400 });
-          break;
-        case "ko":
-          this.tone(t, 0.35, { freq: 220, to: 55, type: "triangle", gain: 0.3 });
-          this.noise(t, 0.3, { freq: 300, gain: 0.2, type: "lowpass" });
-          break;
-        case "knocked":
-          this.tone(t, 0.8, { freq: 330, to: 110, type: "sawtooth", gain: 0.12 });
-          break;
-        case "getup":
-          [392, 523, 659].forEach((f, i) => this.tone(t + i * 0.08, 0.25, { freq: f, type: "square", gain: 0.1 }));
-          break;
-        case "death":
-          [330, 311, 294, 220].forEach((f, i) => this.tone(t + i * 0.25, 0.5, { freq: f, type: "triangle", gain: 0.18 }));
-          break;
-        case "splash":
-          this.noise(t, 0.4, { freq: 700, q: 0.5, gain: 0.3, type: "lowpass", sweep: 200 });
-          break;
-        case "cannon":
-          this.tone(t, 0.5, { freq: 90, to: 35, type: "sine", gain: 0.8 });
-          this.noise(t, 0.6, { freq: 400, gain: 0.6, type: "lowpass", sweep: 80 });
-          break;
-        case "explosion":
-          this.tone(t, 0.7, { freq: 70, to: 30, type: "sine", gain: 0.8 });
-          this.noise(t, 0.9, { freq: 800, gain: 0.7, type: "lowpass", sweep: 60 });
-          break;
-        case "crash":
-          this.noise(t, 0.5, { freq: 300, gain: 0.6, type: "lowpass" });
-          this.tone(t, 0.3, { freq: 100, to: 50, gain: 0.4 });
-          break;
-        case "thunder":
-          this.noise(t, 2.2, { freq: 200, gain: 0.7, type: "lowpass", attack: 0.02, sweep: 40 });
-          break;
-        case "thunder_small":
-        case "lightning":
-          this.noise(t, 0.5, { freq: 2500, gain: 0.3, sweep: 300 });
-          this.tone(t, 0.3, { freq: 60, gain: 0.3 });
-          break;
-        case "fire":
-          this.noise(t, 0.4, { freq: 1200, q: 0.4, gain: 0.25, sweep: 400 });
-          break;
-        case "ice":
-          this.tone(t, 0.3, { freq: 2400, to: 3200, type: "triangle", gain: 0.1 });
-          this.noise(t, 0.2, { freq: 5e3, gain: 0.15 });
-          break;
-        case "haki":
-          this.tone(t, 0.4, { freq: 80, to: 160, type: "sawtooth", gain: 0.15 });
-          break;
-        case "haki_obs":
-          this.tone(t, 0.6, { freq: 880, to: 1320, type: "sine", gain: 0.1 });
-          break;
-        case "board":
-        case "step":
-          this.noise(t, 0.12, { freq: 300, gain: 0.2, type: "lowpass" });
-          break;
-        case "coin":
-          this.tone(t, 0.08, { freq: 1568, type: "square", gain: 0.07 });
-          this.tone(t + 0.07, 0.18, { freq: 2093, type: "square", gain: 0.07 });
-          break;
-        case "treasure":
-          [523, 659, 784, 1046].forEach((f, i) => this.tone(t + i * 0.09, 0.3, { freq: f, type: "triangle", gain: 0.14 }));
-          break;
-        case "eat":
-          this.noise(t, 0.08, { freq: 900, gain: 0.2 });
-          this.noise(t + 0.12, 0.08, { freq: 800, gain: 0.2 });
-          break;
-        case "equip":
-          this.tone(t, 0.1, { freq: 700, type: "square", gain: 0.06 });
-          break;
-        case "page":
-          this.noise(t, 0.2, { freq: 3e3, q: 0.5, gain: 0.08 });
-          break;
-        case "reveal":
-          [392, 494, 587].forEach((f, i) => this.tone(t + i * 0.1, 0.35, { freq: f, type: "triangle", gain: 0.12 }));
-          break;
-        case "fanfare":
-          [523, 659, 784, 1046, 784, 1046].forEach((f, i) => this.tone(t + i * 0.11, 0.3, { freq: f, type: "square", gain: 0.08 }));
-          break;
-        case "breakthrough":
-          [440, 554, 659, 880].forEach((f, i) => this.tone(t + i * 0.07, 0.4, { freq: f, type: "sawtooth", gain: 0.06 }));
-          break;
-        case "seaking":
-          this.tone(t, 1.6, { freq: 70, to: 45, type: "sawtooth", gain: 0.3, attack: 0.3 });
-          this.noise(t, 1.5, { freq: 250, gain: 0.3, type: "lowpass" });
-          break;
-        default:
-          this.noise(t, 0.05, { freq: 1500, gain: 0.05 });
-      }
-    }
-    // --------------------------------------------------------------- music
-    music(theme) {
-      if (this.theme === theme) return;
-      this.theme = theme;
-      this.step = 0;
-      if (this.ctx) this.nextNoteT = this.ctx.currentTime + 0.1;
-    }
-    schedule() {
-      if (!this.ctx || !this.theme || this.ctx.state !== "running") return;
-      const T3 = THEMES[this.theme];
-      if (!T3) return;
-      const spb = 60 / T3.bpm / 2;
-      while (this.nextNoteT < this.ctx.currentTime + 0.25) {
-        this.playStep(T3, this.step, this.nextNoteT, spb);
-        this.nextNoteT += spb * (this.step % 2 === 0 ? 1 + T3.swing : 1 - T3.swing);
-        this.step++;
-      }
-    }
-    playStep(T3, s, t, spb) {
-      const bar2 = Math.floor(s / 8) % T3.chords.length;
-      const chord = T3.chords[bar2];
-      const pos = s % 8;
-      const root2 = T3.root * Math.pow(2, chord[0] / 12);
-      if (pos === 0 || pos === 4) this.voice(t, spb * 1.8, root2 / 2 * (pos === 4 ? Math.pow(2, 7 / 12) : 1), "triangle", 0.22);
-      if (pos === 2 || pos === 6) for (const iv of chord) this.voice(t, spb * 0.9, root2 * Math.pow(2, iv / 12), "square", 0.035);
-      const m = T3.melody[s % T3.melody.length];
-      if (m !== null && m !== void 0) {
-        const f = T3.root * 2 * Math.pow(2, T3.scale[(m % T3.scale.length + T3.scale.length) % T3.scale.length] / 12 + Math.floor(m / T3.scale.length));
-        this.voice(t, spb * (T3.legato || 1.4), f, T3.lead || "sawtooth", 0.05, true);
-      }
-      if (T3.drums) {
-        if (pos === 0 || pos === 4) this.drum(t, "kick");
-        if (pos === 2 || pos === 6) this.drum(t, "snare");
-        if (T3.hats) this.drum(t, "hat");
-      }
-    }
-    voice(t, dur, freq, type, gain, vib) {
-      const c = this.ctx;
-      const o = c.createOscillator();
-      o.type = type;
-      o.frequency.setValueAtTime(freq, t);
-      let lfo;
-      if (vib) {
-        lfo = c.createOscillator();
-        const lg = c.createGain();
-        lfo.frequency.value = 5.5;
-        lg.gain.value = freq * 8e-3;
-        lfo.connect(lg);
-        lg.connect(o.frequency);
-        lfo.start(t);
-        lfo.stop(t + dur + 0.1);
-      }
-      const f = c.createBiquadFilter();
-      f.type = "lowpass";
-      f.frequency.value = 2200;
-      const g = c.createGain();
-      g.gain.setValueAtTime(1e-4, t);
-      g.gain.exponentialRampToValueAtTime(gain, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
-      o.connect(f);
-      f.connect(g);
-      g.connect(this.musicGain);
-      o.start(t);
-      o.stop(t + dur + 0.1);
-    }
-    drum(t, kind) {
-      const c = this.ctx;
-      if (kind === "kick") {
-        const o = c.createOscillator();
-        const g = c.createGain();
-        o.frequency.setValueAtTime(120, t);
-        o.frequency.exponentialRampToValueAtTime(40, t + 0.15);
-        g.gain.setValueAtTime(0.35, t);
-        g.gain.exponentialRampToValueAtTime(1e-3, t + 0.18);
-        o.connect(g);
-        g.connect(this.musicGain);
-        o.start(t);
-        o.stop(t + 0.2);
-      } else {
-        const src = c.createBufferSource();
-        src.buffer = this.noiseBuf;
-        const f = c.createBiquadFilter();
-        f.type = kind === "hat" ? "highpass" : "bandpass";
-        f.frequency.value = kind === "hat" ? 7e3 : 1800;
-        const g = c.createGain();
-        const dur = kind === "hat" ? 0.04 : 0.12;
-        g.gain.setValueAtTime(kind === "hat" ? 0.05 : 0.14, t);
-        g.gain.exponentialRampToValueAtTime(1e-3, t + dur);
-        src.connect(f);
-        f.connect(g);
-        g.connect(this.musicGain);
-        src.start(t, Math.random());
-        src.stop(t + dur + 0.02);
-      }
-    }
-  };
-  var THEMES = {
-    title: { bpm: 96, root: 146.83, swing: 0.1, scale: [0, 2, 3, 5, 7, 9, 10], chords: [[0, 3, 7], [5, 9, 12], [3, 7, 10], [7, 10, 14]], melody: [4, null, 4, 5, 4, 3, 2, null, 0, null, 2, 3, 4, null, null, null, 4, null, 4, 5, 6, 5, 4, null, 3, 2, 3, 4, 0, null, null, null], drums: false, lead: "triangle", legato: 2 },
-    sea: { bpm: 112, root: 146.83, swing: 0.12, scale: [0, 2, 4, 5, 7, 9, 11], chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], melody: [0, 2, 4, null, 4, 5, 4, 2, 0, null, 2, 4, 2, null, null, null, 5, 5, 4, 2, 4, null, 2, 0, 1, 2, 0, null, -1, null, 0, null], drums: true, lead: "square" },
-    grandline: { bpm: 126, root: 164.81, swing: 0.08, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [8, 12, 15], [5, 8, 12], [7, 10, 14]], melody: [0, null, 2, 3, 4, null, 3, 2, 3, null, 1, 0, -1, null, 0, null, 4, 5, 6, 5, 4, null, 3, null, 2, 3, 4, 2, 0, null, null, null], drums: true, hats: true, lead: "sawtooth" },
-    battle: { bpm: 150, root: 110, swing: 0, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [0, 3, 7], [8, 12, 15], [7, 10, 14]], melody: [0, 0, 3, 0, 4, 0, 3, 2, 0, 0, 3, 0, 5, 4, 3, 2], drums: true, hats: true, lead: "sawtooth", legato: 0.9 },
-    town: { bpm: 104, root: 196, swing: 0.15, scale: [0, 2, 4, 5, 7, 9, 11], chords: [[0, 4, 7], [5, 9, 12], [0, 4, 7], [7, 11, 14]], melody: [4, 2, 0, 2, 4, 4, 4, null, 2, 2, 2, null, 4, 6, 6, null, 4, 2, 0, 2, 4, 4, 4, 4, 2, 2, 4, 2, 0, null, null, null], drums: false, lead: "triangle" },
-    night: { bpm: 72, root: 130.81, swing: 0, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [5, 8, 12], [3, 7, 10], [7, 10, 14]], melody: [4, null, null, 3, 2, null, null, null, 0, null, 2, null, 3, null, null, null], drums: false, lead: "sine", legato: 3 }
-  };
+  ]);
 
   // src/game/sea.js
   function installSea(game) {
@@ -16100,6 +16147,1606 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.fillText(this.name, 0, -4.35);
     }
   }
+
+  // src/content/helpers.js
+  function spawnNow(game, id, pos) {
+    const def = npcDef(id);
+    if (!def) return null;
+    const existing = findActor(game, id);
+    if (existing) return existing;
+    const isl = game.surface.islands.find((i) => i.id === def.island);
+    const list = game.spawner.populated.get(def.island);
+    if (!list && !pos) return null;
+    let p = pos;
+    if (!p && isl) {
+      const s = def.at?.spot && isl.spots[def.at.spot];
+      p = s ? game.spawner.findFree(s.x, s.y, 4) : game.spawner.findFree(game.player.x + 4, game.player.y, 6);
+    }
+    if (!p) p = { x: game.player.x + 4, y: game.player.y };
+    const a = makeNPC(def, p.x, p.y);
+    a.game = game;
+    game.addActor(a);
+    if (list) list.push(a);
+    return a;
+  }
+  function findActor(game, id) {
+    return game.actors.find((a) => a.alive && a.npcId === id) || null;
+  }
+  function despawn(game, id) {
+    const a = findActor(game, id);
+    if (a) a.alive = false;
+  }
+  function aggro(game, a) {
+    if (!a) return;
+    a.provoked = true;
+    a.aggroPlayer = true;
+    if (a.controller) {
+      a.controller.kind = "hostile";
+      a.controller.target = game.player;
+      a.controller.state = "chase";
+    }
+    a.stationary = false;
+    if (a.boss) game.bossTarget = a;
+  }
+  function seaBoss(game, opts, x, y) {
+    const k = makeSeaKing(game, x, y, opts.level, { ...opts, boss: true, hpMul: opts.hpMul || 4 });
+    k.boss = true;
+    game.addActor(k);
+    game.bossTarget = k;
+    return k;
+  }
+
+  // src/content/eastBlue.js
+  var active = (ctx, id, stage) => ctx.game.quests.stageId(id) === stage;
+  var done = (ctx, id) => ctx.game.quests.isDone(id);
+  var npcs = [
+    // ---------------------------------------------------------- Dawn Island
+    {
+      id: "makino",
+      name: "Makino",
+      title: "Owner of Party's Bar",
+      island: "dawn_island",
+      at: { town: "foosha", building: "Party's Bar" },
+      look: { hair: "long", hairColor: "#2d2d2d", top: "#43a047", bottom: "#fafafa", skin: "#f9dcc4", hat: "bandana", hatColor: "#fafafa" },
+      level: 3,
+      marker: (c, g) => !g.quests.state("lord_of_the_coast") ? "!" : g.quests.stageId("lord_of_the_coast") === "report" ? "?" : null,
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: {
+            text: () => done(ctx, "lord_of_the_coast") ? '"The whole village is talking about you! That hat suits you, by the way."' : `"Welcome to Party's Bar! You look like someone about to set out to sea... The last pirates who drank here were the Red Hair Pirates. Their captain, Shanks, lost his arm to the Lord of the Coast out in the bay."`,
+            choices: [
+              { text: "Tell me about the Lord of the Coast.", if: () => !ctx.quest("lord_of_the_coast"), next: "lotc" },
+              { text: "I killed the Lord of the Coast.", if: () => active(ctx, "lord_of_the_coast", "report"), next: "reward" },
+              { text: "I'll have something to eat.", do: (c) => c.open("shop", { shop: "tavern", building: { name: "Party's Bar", role: "bar" } }) },
+              { text: "Any news from the sea?", next: "news" },
+              { text: "See you, Makino.", end: true }
+            ]
+          },
+          lotc: { text: `"It's a Sea King that lives near the coast. It's been attacking fishing boats again... Shanks let it take his arm to save a boy from this village. If someone could finally drive it off... Please be careful. It surfaces just south of the pier."`, choices: [{ text: "I'll deal with it.", do: (c) => {
+            c.startQuest("lord_of_the_coast");
+          }, end: true }, { text: "Maybe later.", end: true }] },
+          reward: { text: `"You actually did it?! ...Shanks left this hat here the day he sailed. He said to give it to the next person who dared to chase a dream bigger than the sea. I think that's you."`, do: null, onEnter: (c) => {
+            c.complete("lord_of_the_coast");
+          }, next: "a" },
+          news: { text: () => ctx.game.fruitRumor?.(new class {
+            constructor() {
+              this.v = Math.random();
+            }
+            next() {
+              return Math.random();
+            }
+            pick(a) {
+              return a[Math.floor(Math.random() * a.length)];
+            }
+            chance(p) {
+              return Math.random() < p;
+            }
+          }()) || '"They say the Marines are watching Loguetown closely these days. Every rookie pirate passes through there on the way to the Grand Line."', next: "a" }
+        }
+      })
+    },
+    {
+      id: "woop_slap",
+      name: "Woop Slap",
+      title: "Mayor of Foosha Village",
+      island: "dawn_island",
+      at: { town: "foosha", building: "Mayor Woop Slap's House" },
+      look: { hair: "bald", skin: "#f1c9a0", top: "#8d6e63", bottom: "#5d4037", hat: "cowboy", hatColor: "#6d4c41" },
+      level: 3,
+      marker: (c, g) => !g.quests.state("higuma_bandits") ? "!" : g.quests.stageId("higuma_bandits") === "report" ? "?" : null,
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: {
+            text: () => ctx.char.bounty ? '"A PIRATE?! Out of my village! Pirates are nothing but scoundrels!"' : `"Hmph. Another youngster with salt in their eyes. Don't you dare become a pirate, you hear me?"`,
+            choices: [
+              { text: "Is something troubling the village?", if: () => !ctx.quest("higuma_bandits"), next: "bandits" },
+              { text: "Higuma won't bother you again.", if: () => active(ctx, "higuma_bandits", "report"), next: "thanks" },
+              { text: "Goodbye, mayor.", end: true }
+            ]
+          },
+          bandits: { text: `"Higuma and his mountain bandits come down from Mt. Colubo and help themselves to Makino's bar! They camp by the road on the mountain's south side. If only someone would teach them a lesson..."`, choices: [{ text: "I'll teach them.", do: (c) => c.startQuest("higuma_bandits"), end: true }, { text: "Not my problem.", end: true }] },
+          thanks: { text: `"Higuma, beaten? ...Hmph. Well. Thank you. Here \u2014 the village took up a collection. Just promise me you won't turn pirate."`, onEnter: (c) => c.complete("higuma_bandits") }
+        }
+      })
+    },
+    {
+      id: "higuma",
+      name: "Higuma",
+      title: "Mountain Bandit Boss",
+      island: "dawn_island",
+      at: { dx: -0.25, dy: 0.12 },
+      hostile: true,
+      boss: true,
+      hpMul: 0.7,
+      look: { hair: "short", hairColor: "#3e2723", top: "#8d6e63", bottom: "#4e342e", hat: "bandana", hatColor: "#795548", scarEye: true },
+      level: 6,
+      style: "ittoryu",
+      weapon: "sword",
+      faction: "bandit",
+      skill: 0.25,
+      alert: "Heh. Another brat who wants to play hero?",
+      bounty: 8e6,
+      infamy: true,
+      breakthrough: 2,
+      when: (c) => !c.bosses.includes("higuma")
+    },
+    {
+      id: "dadan",
+      name: "Curly Dadan",
+      title: "Mountain Bandit Chief of Mt. Colubo",
+      island: "dawn_island",
+      at: { spot: "dadan_hideout" },
+      look: { hair: "curly", hairColor: "#e65100", top: "#6d4c41", bottom: "#3e2723", skin: "#e0ac7e", bulk: 1.3 },
+      level: 8,
+      bulk: 1.3,
+      trainer: "dadan",
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: { text: `"WHAT?! Who let you up the mountain? ...Fine. If you want to survive the sea, you survive the mountain first. Wolves, bears, crocodiles in the rivers. I'll train you \u2014 for a price, brat."`, choices: [
+            { text: "Train with the Dadan Family", do: (c) => c.open("trainer", { trainer: "dadan" }) },
+            { text: "Leave", end: true }
+          ] }
+        }
+      })
+    },
+    {
+      id: "bluejam",
+      name: "Bluejam",
+      title: "Pirate Captain of the Gray Terminal",
+      island: "dawn_island",
+      at: { dx: 0.42, dy: 0.35 },
+      hostile: true,
+      boss: true,
+      hpMul: 0.9,
+      look: { hair: "spiky", hairColor: "#1a237e", top: "#1565c0", bottom: "#263238", hat: "tricorne", hatColor: "#0d47a1" },
+      level: 8,
+      style: "sniper",
+      weapon: "gun",
+      ranged: true,
+      faction: "pirate",
+      moves: ["snipe_explode"],
+      skill: 0.3,
+      alert: "Garbage belongs in the Gray Terminal. So do you.",
+      bounty: 12e6,
+      infamy: true,
+      breakthrough: 2,
+      when: (c) => !c.bosses.includes("bluejam")
+    },
+    {
+      id: "gray_kid",
+      name: "Gray Terminal Kid",
+      title: "Scavenger",
+      island: "dawn_island",
+      at: { dx: 0.35, dy: 0.28 },
+      look: { hair: "spiky", hairColor: "#212121", top: "#5d4037", bottom: "#3e2723" },
+      level: 2,
+      marker: (c, g) => !g.quests.state("gray_terminal") ? "!" : g.quests.stageId("gray_terminal") === "report" ? "?" : null,
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: {
+            text: () => active(ctx, "gray_terminal", "report") ? `"Bluejam's gone! The nobles can't use him to burn us out anymore. Here \u2014 I found this in the junk. Take it!"` : `"The nobles of Goa call this place a stain. I heard they paid Bluejam's pirates to set the whole Gray Terminal on fire before the Celestial Dragon visits..."`,
+            onEnter: (c) => {
+              if (active(c, "gray_terminal", "report")) c.complete("gray_terminal");
+            },
+            choices: [{ text: "I'll stop Bluejam.", if: () => !ctx.quest("gray_terminal"), do: (c) => c.startQuest("gray_terminal"), end: true }, { text: "Take care.", end: true }]
+          }
+        }
+      })
+    },
+    // ---------------------------------------------------------- Goat Island
+    {
+      id: "alvida",
+      name: '"Iron Mace" Alvida',
+      title: "Captain of the Alvida Pirates",
+      island: "goat_island",
+      at: { dx: 0, dy: 0 },
+      hostile: true,
+      boss: true,
+      hpMul: 0.8,
+      look: { hair: "curly", hairColor: "#212121", top: "#e91e63", bottom: "#880e4f", skin: "#f1c9a0", bulk: 1.5, hat: "cowboy", hatColor: "#212121" },
+      bulk: 1.5,
+      level: 6,
+      moves: ["alvida_mace"],
+      faction: "pirate",
+      alert: "Who is the most beautiful woman on all the seas?!",
+      bounty: 5e6,
+      infamy: true,
+      breakthrough: 2,
+      when: (c) => !c.bosses.includes("alvida")
+    },
+    {
+      id: "koby",
+      name: "Koby",
+      title: "Cabin boy of the Alvida Pirates",
+      island: "goat_island",
+      at: { dx: 0.2, dy: 0.25 },
+      look: { hair: "short", hairColor: "#f48fb1", top: "#ffffff", bottom: "#1565c0", hat: "goggles" },
+      level: 2,
+      marker: (c, g) => !g.quests.state("koby_dream") ? "!" : null,
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: {
+            text: () => ctx.char.bosses.includes("alvida") ? '"You beat Alvida-sama?! Then... then I can finally do it. Please, take me to Shells Town! I want to join the Marines and become an Admiral!"' : `"I-I've been Alvida's cabin boy for two years... I only wanted to go fishing. My real dream is to join the Marines. But she'll kill me if I leave!"`,
+            choices: [
+              { text: "Then let's get you out of here.", if: () => !ctx.quest("koby_dream"), do: (c) => c.startQuest("koby_dream"), end: true },
+              { text: "Come with me to Shells Town.", if: () => active(ctx, "koby_dream", "escort") && ctx.char.bosses.includes("alvida"), do: (c) => {
+                c.setFlag("kobyAboard");
+                c.log("Koby hops into your boat. Sail to Shells Town (Yotsuba Island).", "#90caf9");
+              }, end: true },
+              { text: "Chin up, Koby.", end: true }
+            ]
+          }
+        }
+      }),
+      when: (c) => !c.flags.kobyAboard && !c.flags.kobyMarine
+    },
+    // ---------------------------------------------------------- Shells Town
+    {
+      id: "ririka",
+      name: "Rika",
+      title: "Rika's Family Restaurant",
+      island: "shells_island",
+      at: { town: "shells_town", building: "Rika's Family Restaurant" },
+      look: { hair: "ponytail", hairColor: "#6d4c41", top: "#ffcdd2", bottom: "#c62828", skin: "#f9dcc4", scale: 0.8 },
+      level: 1,
+      marker: (c, g) => !g.quests.state("pirate_hunter") ? "!" : null,
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: {
+            text: () => done(ctx, "pirate_hunter") ? '"Mister Pirate Hunter says thank you! And so does the whole town \u2014 Captain Morgan is gone!"' : `"Mister... there's a man tied up in the Marine base yard. The pirate hunter. He hasn't eaten in nine days! He only got caught because he stopped Helmeppo's wolf from hurting me... I made him rice balls. Could you bring them to him? I'm scared of the guards."`,
+            choices: [
+              { text: "Give me the rice balls.", if: () => !ctx.quest("pirate_hunter"), do: (c) => {
+                c.startQuest("pirate_hunter");
+                c.give("rice_ball", 1);
+              }, end: true },
+              { text: "Something to eat, please.", do: (c) => c.open("shop", { shop: "tavern", building: { name: "Rika's Family Restaurant", role: "restaurant" } }) },
+              { text: "Bye, Rika.", end: true }
+            ]
+          }
+        }
+      })
+    },
+    {
+      id: "zoro_tied",
+      name: "Roronoa Zoro",
+      title: "Pirate Hunter (tied up)",
+      island: "shells_island",
+      at: { spot: "execution_yard" },
+      look: { hair: "buzz", hairColor: "#43a047", top: "#fafafa", bottom: "#212121", belt: "#2e7d32", swords: 0, hat: "headband", hatColor: "#212121" },
+      level: 20,
+      ai: "idle",
+      marker: (c, g) => g.quests.stageId("pirate_hunter") === "deliver" || g.quests.stageId("pirate_hunter") === "free" ? "?" : null,
+      when: (c) => !c.flags.zoroLeft,
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: {
+            text: () => {
+              if (done(ctx, "pirate_hunter")) return `"Hah. You're not bad. I made a promise to a friend that I'd become the world's greatest swordsman. If our paths cross on the Grand Line... don't hold back."`;
+              if (active(ctx, "pirate_hunter", "free")) return `"Morgan's kid Helmeppo is the one who promised to let me go after a month. He lied. If you want to do something useful, knock that idiot down \u2014 then his father."`;
+              return `"...What do you want? Leave. I'm going to survive this month tied up, and then they let me go. That's the deal."`;
+            },
+            choices: [
+              { text: "Rika made you rice balls.", if: () => active(ctx, "pirate_hunter", "deliver") && ctx.has("rice_ball"), do: (c) => {
+                c.take("rice_ball", 1);
+                c.stage("pirate_hunter", "free");
+              }, next: "eat" },
+              { text: "Leave", end: true }
+            ]
+          },
+          eat: { text: '(He eats it in one bite, sugar-for-salt and all.) "...Tell the kid it was delicious. Every last grain."', next: "a" }
+        }
+      })
+    },
+    {
+      id: "helmeppo",
+      name: "Helmeppo",
+      title: "Captain Morgan's son",
+      island: "shells_island",
+      at: { town: "shells_town", plaza: true, ox: -3 },
+      hostile: false,
+      named: true,
+      look: { hair: "short", hairColor: "#fff176", top: "#8e24aa", bottom: "#4a148c" },
+      level: 3,
+      faction: "marine",
+      alert: "Do you know who my FATHER is?!",
+      when: (c) => !c.defeated.helmeppo,
+      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: '"Hey you! Bow down! My father is CAPTAIN MORGAN! I can have you executed like THAT!"', choices: [
+        { text: "Punch him.", if: () => active(ctx, "pirate_hunter", "free"), do: (c) => {
+          const a = findActor(c.game, "helmeppo");
+          aggro(c.game, a);
+        }, end: true },
+        { text: "Walk away.", end: true }
+      ] } } })
+    },
+    {
+      id: "morgan",
+      name: '"Axe-Hand" Morgan',
+      title: "Captain, 153rd Marine Branch",
+      island: "shells_island",
+      at: { town: "marine_153", building: "153rd Branch HQ" },
+      boss: true,
+      hpMul: 1.1,
+      look: { hair: "buzz", hairColor: "#795548", top: "#fafafa", bottom: "#1b4f72", coat: "#fafafa", coatText: "JUSTICE", skin: "#e0ac7e", bulk: 1.4, hand: "#90a4ae" },
+      bulk: 1.35,
+      level: 10,
+      style: "brawler",
+      moves: ["morgan_axe", "morgan_sweep"],
+      faction: "marine",
+      lethal: true,
+      skill: 0.3,
+      bounty: 1e7,
+      breakthrough: 3,
+      alert: "I am Captain Morgan! My rank is my justice!",
+      when: (c) => !c.bosses.includes("morgan"),
+      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: '"Salute when you speak to me! In this town my word is law \u2014 rank is everything! ...What do you want?"', choices: [
+        { text: "Your tyranny ends today.", if: () => active(ctx, "pirate_hunter", "morgan"), do: (c) => {
+          aggro(c.game, findActor(c.game, "morgan"));
+        }, end: true },
+        { text: "Nothing, Captain.", end: true }
+      ] } } })
+    },
+    {
+      id: "ripper",
+      name: "Lieutenant Ripper",
+      title: "153rd Marine Branch",
+      island: "shells_island",
+      at: { town: "marine_153", plaza: true, ox: 2 },
+      look: { hair: "short", hairColor: "#212121", top: "#fafafa", bottom: "#1b4f72", hat: "marine" },
+      level: 8,
+      faction: "marine",
+      dialogue: (ctx) => ({ start: "a", nodes: { a: {
+        text: () => ctx.char.bosses.includes("morgan") ? '"With Morgan gone, this base serves the people again. If you want to wear the coat of Justice, I can sign your enlistment papers."' : `"...We don't like what Captain Morgan does either. But orders are orders."`,
+        choices: [
+          { text: "Enlist in the Marines", if: () => ctx.char.faction !== "marine", do: (c) => c.emit("marineEnlist", "Shells Town"), end: true },
+          { text: "Marine business", if: () => ctx.char.faction === "marine", do: (c) => c.emit("marineOffice", { name: "153rd Branch" }), end: true },
+          { text: "Carry on.", end: true }
+        ]
+      } } })
+    },
+    // ---------------------------------------------------------- Shimotsuki
+    {
+      id: "koshiro",
+      name: "Koshiro",
+      title: "Master of the Isshin Dojo",
+      island: "shimotsuki",
+      at: { town: "shimotsuki_village", building: "Isshin Dojo" },
+      trainer: "koshiro",
+      look: { hair: "ponytail", hairColor: "#3e2723", top: "#eceff1", bottom: "#455a64", skin: "#f1c9a0", swords: 1 },
+      level: 22,
+      marker: (c, g) => c.masteries.ittoryu !== void 0 && !g.quests.state("kuina_promise") ? "!" : null,
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: {
+            text: () => ctx.char.masteries.ittoryu === void 0 ? '"Welcome to the Isshin Dojo. The sword is a way of living, not a weapon. Will you learn the One Sword Style?"' : '"Your blade is still honest. Good."',
+            choices: [
+              { text: "Train at the dojo", do: (c) => c.open("trainer", { trainer: "koshiro" }) },
+              { text: "Tell me about the white sword on the wall.", if: () => ctx.char.masteries.ittoryu !== void 0 && !ctx.quest("kuina_promise"), next: "wado" },
+              { text: "I beat you in a spar. About that promise...", if: () => active(ctx, "kuina_promise", "report"), next: "give" },
+              { text: "Farewell, master.", end: true }
+            ]
+          },
+          wado: { text: '"That is Wado Ichimonji. It belonged to my daughter, Kuina. She wanted to be the greatest swordsman in the world... she fell down the stairs, and that was all. I will give it to the swordsman who can defeat me \u2014 and who carries her dream."', choices: [{ text: "Then I'll defeat you.", do: (c) => c.startQuest("kuina_promise"), end: true }, { text: "I'm not ready.", end: true }] },
+          give: { text: '"...Then take it. Carry her dream to the top of the world. If you ever dishonour this blade, I will come for it myself."', onEnter: (c) => c.complete("kuina_promise") }
+        }
+      })
+    },
+    // ---------------------------------------------------------- Orange Town
+    {
+      id: "boodle",
+      name: "Mayor Boodle",
+      title: "Mayor of Orange Town",
+      island: "organ_islands",
+      at: { town: "orange_town", building: "Town Clinic" },
+      look: { hair: "bald", skin: "#f1c9a0", top: "#ff8f00", bottom: "#5d4037", hat: "captain", hatColor: "#1a237e" },
+      level: 5,
+      marker: (c, g) => !g.quests.state("buggy_circus") ? "!" : g.quests.stageId("buggy_circus") === "report" ? "?" : null,
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: {
+            text: () => done(ctx, "buggy_circus") ? '"Forty years we built this town. And you gave it back to us. Orange Town will never forget you."' : `"Buggy the Clown's pirates took over our town! We built it with our own hands, forty years ago... I'm the mayor, I can't just watch! Their cannon \u2014 the Buggy Ball \u2014 flattened a whole street!"`,
+            choices: [
+              { text: "I'll take care of the clown.", if: () => !ctx.quest("buggy_circus"), do: (c) => c.startQuest("buggy_circus"), end: true },
+              { text: "Buggy is finished.", if: () => active(ctx, "buggy_circus", "report"), do: (c) => c.complete("buggy_circus"), next: "thanks" },
+              { text: "Patch me up (clinic)", do: (c) => c.open("doctor", {}) },
+              { text: "Goodbye.", end: true }
+            ]
+          },
+          thanks: { text: `"And this... Buggy was hoarding a sea chart of the Grand Line. Take it \u2014 you'll need it far more than we do."` }
+        }
+      })
+    },
+    {
+      id: "chouchou",
+      name: "Chouchou",
+      title: "Loyal guard dog",
+      island: "organ_islands",
+      at: { town: "orange_town", building: "Pet Food Shop" },
+      ai: "idle",
+      fullLook: { race: "mink", skin: "#fafafa", fur: "#fafafa", hairColor: "#fafafa", hand: "#fafafa", ears: "pointy", muzzle: true, tail: "fluffy", furFace: true, hair: "bald", top: "#fafafa", bottom: "#eeeeee", scale: 0.6 },
+      level: 3,
+      dialogue: () => ({ start: "a", nodes: { a: { text: `"Woof." (Chouchou guards his late master's pet shop. He won't move an inch \u2014 not for pirates, not for anyone.)` } } })
+    },
+    {
+      id: "mohji",
+      name: "Beast Tamer Mohji",
+      title: "Buggy Pirates",
+      island: "organ_islands",
+      at: { town: "orange_town", plaza: true, ox: -4 },
+      hostile: true,
+      named: true,
+      faction: "pirate",
+      level: 7,
+      look: { hair: "afro", hairColor: "#fafafa", top: "#fafafa", bottom: "#ef6c00", ears: "round", fur: "#fafafa" },
+      moves: ["brawl_tackle"],
+      bounty: 3e6,
+      infamy: true,
+      when: (c) => !c.defeated.mohji
+    },
+    {
+      id: "cabaji",
+      name: "Acrobat Cabaji",
+      title: "Chief of Staff, Buggy Pirates",
+      island: "organ_islands",
+      at: { town: "orange_town", plaza: true, ox: 4 },
+      hostile: true,
+      named: true,
+      faction: "pirate",
+      level: 9,
+      look: { hair: "long", hairColor: "#212121", top: "#1a237e", bottom: "#fafafa", scarEye: true },
+      style: "ittoryu",
+      weapon: "sword",
+      moves: ["cabaji_fire", "cabaji_dash"],
+      bounty: 5e6,
+      infamy: true,
+      skill: 0.35,
+      when: (c) => !c.defeated.cabaji
+    },
+    {
+      id: "buggy",
+      name: "Buggy the Clown",
+      title: "Captain of the Buggy Pirates",
+      island: "organ_islands",
+      at: { town: "orange_town", building: "Buggy Pirates HQ (Tavern)" },
+      hostile: true,
+      boss: true,
+      hpMul: 1.1,
+      faction: "pirate",
+      level: 11,
+      look: { hair: "long", hairColor: "#1976d2", top: "#e53935", bottom: "#1565c0", skin: "#fafafa", nose: "red", hat: "captain", hatColor: "#6d4c41", coat: "#e53935" },
+      fruit: "bara",
+      fruitMastery: 45,
+      moves: ["bara_cannon", "bara_festival", "buggy_ball", "buggy_knives"],
+      bounty: 15e6,
+      infamy: true,
+      breakthrough: 3,
+      skill: 0.3,
+      alert: "Who are you calling a big red nose?!",
+      barks: ["Flashy!", "Gyahahaha!"],
+      when: (c) => !c.bosses.includes("buggy")
+    },
+    // ------------------------------------------------ Island of Rare Animals
+    {
+      id: "gaimon",
+      name: "Gaimon",
+      title: "The man in the treasure chest",
+      island: "rare_animals",
+      at: { spot: "gaimon" },
+      ai: "idle",
+      look: { hair: "afro", hairColor: "#ef6c00", top: "#8d5b33", bottom: "#8d5b33", scale: 0.8 },
+      level: 4,
+      marker: (c, g) => !g.quests.state("gaimon_treasure") ? "!" : null,
+      dialogue: (ctx) => ({ start: "a", nodes: {
+        a: {
+          text: () => done(ctx, "gaimon_treasure") ? `"Twenty years guarding empty chests... but you know what? The animals here are my crew. I'm happy."` : `"Don't come closer, pirate! These treasure chests are MINE! I've guarded them for twenty years! ...Could you... look inside the ones on the cliff for me? I can't reach them. I'm stuck in this box."`,
+          choices: [
+            { text: "I'll check the chests.", if: () => !ctx.quest("gaimon_treasure"), do: (c) => c.startQuest("gaimon_treasure"), end: true },
+            { text: "They were empty, Gaimon. I'm sorry.", if: () => active(ctx, "gaimon_treasure", "report"), do: (c) => c.complete("gaimon_treasure"), next: "sad" },
+            { text: "Take care of your animals.", end: true }
+          ]
+        },
+        sad: { text: `"...Empty. I knew it, deep down. Here \u2014 this is my real treasure, found it washed up years ago. It's useless to a man in a box. Go chase your dream before you end up like me!"` }
+      } })
+    },
+    // ---------------------------------------------------------- Syrup Village
+    {
+      id: "usopp",
+      name: "Usopp",
+      title: "Captain of the Usopp Pirates (self-proclaimed)",
+      island: "gecko_islands",
+      at: { spot: "usopp_target" },
+      trainer: "usopp",
+      look: { hair: "curly", hairColor: "#212121", top: "#f5deb3", bottom: "#6d4c41", skin: "#a0643a", nose: "long", hat: "bandana", hatColor: "#795548" },
+      level: 7,
+      marker: (c, g) => !g.quests.state("black_cat_plot") ? "!" : null,
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: {
+            text: () => done(ctx, "black_cat_plot") ? `"We did it! The village doesn't even know how close it came... That's how it should be. I'm going to be a brave warrior of the sea someday. Just you watch!"` : `"PIRATES ARE COMING! ...Just kidding! Ha! I, Captain Usopp, have eight thousand men under my command! ...Okay, three kids. But I'm the best shot in the East Blue!"`,
+            choices: [
+              { text: "Teach me to shoot.", do: (c) => c.open("trainer", { trainer: "usopp" }) },
+              { text: "You look worried about something.", if: () => !ctx.quest("black_cat_plot"), next: "plot" },
+              { text: "Bye, Captain.", end: true }
+            ]
+          },
+          plot: { text: `"...Okay. This one isn't a lie. I overheard Kaya's butler, Klahadore, on the cliffs with a hypnotist. He's really Captain Kuro of the Black Cat Pirates! He faked his death and now he wants to kill Kaya for her fortune! Nobody believes me \u2014 I'm the boy who cried pirates..."`, choices: [{ text: "I believe you.", do: (c) => c.startQuest("black_cat_plot"), end: true }, { text: "Sounds like another lie.", end: true }] }
+        }
+      })
+    },
+    {
+      id: "kaya",
+      name: "Kaya",
+      title: "Heiress of Syrup Village",
+      island: "gecko_islands",
+      at: { town: "kaya_mansion", building: "Kaya's Mansion" },
+      look: { hair: "long", hairColor: "#fff59d", top: "#fafafa", bottom: "#e1f5fe", skin: "#fdeee4" },
+      level: 2,
+      marker: (c, g) => g.quests.stageId("black_cat_plot") === "report" ? "?" : null,
+      dialogue: (ctx) => ({ start: "a", nodes: {
+        a: { text: () => {
+          if (active(ctx, "black_cat_plot", "report")) return `"Klahadore... three years he took care of me, and it was all a lie. Thank you for protecting the village. Merry and I want you to have something \u2014 a ship. She's moored below the mansion."`;
+          if (done(ctx, "black_cat_plot")) return `"I'm going to become a doctor. So next time, I can protect people too."`;
+          return `"Oh! A traveller? Usopp tells me such wonderful stories about the sea... I'm sick most of the time, so his stories are my adventures."`;
+        }, onEnter: (c) => {
+          if (active(c, "black_cat_plot", "report")) c.complete("black_cat_plot");
+        } }
+      } })
+    },
+    {
+      id: "merry",
+      name: "Merry",
+      title: "Butler of the Kaya estate",
+      island: "gecko_islands",
+      at: { town: "kaya_mansion", building: "Merry's Boathouse" },
+      look: { hair: "curly", hairColor: "#fafafa", top: "#212121", bottom: "#212121", skin: "#fafafa", hat: "horns" },
+      level: 2,
+      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: `"I designed the caravel myself. She's not big, but she has a heart. Treat her well, and she'll carry you anywhere."`, choices: [
+        { text: "Shipyard", do: (c) => c.open("shipwright", {}) },
+        { text: "Thank you, Merry.", end: true }
+      ] } } })
+    },
+    {
+      id: "jango",
+      name: "Jango",
+      title: "Hypnotist, Black Cat Pirates",
+      island: "gecko_islands",
+      at: { spot: "north_slope" },
+      hostile: true,
+      named: true,
+      faction: "pirate",
+      level: 9,
+      look: { hair: "afro", hairColor: "#212121", top: "#fafafa", bottom: "#1a237e", hat: "cowboy", hatColor: "#212121", goggles: true },
+      moves: ["jango_chakram", "jango_hypnosis"],
+      bounty: 9e6,
+      infamy: true,
+      breakthrough: 1,
+      when: (c, g) => g.quests.stageId("black_cat_plot") === "slope" || g.quests.stageId("black_cat_plot") === "kuro"
+    },
+    {
+      id: "kuro",
+      name: "Captain Kuro",
+      title: '"Kuro of a Hundred Plans"',
+      island: "gecko_islands",
+      at: { spot: "north_slope" },
+      hostile: true,
+      boss: true,
+      hpMul: 1.1,
+      faction: "pirate",
+      level: 13,
+      look: { hair: "buzz", hairColor: "#212121", top: "#212121", bottom: "#212121", skin: "#f1c9a0", goggles: true, hand: "#eceff1" },
+      style: "brawler",
+      moves: ["kuro_stealth", "kuro_claws"],
+      bounty: 16e6,
+      infamy: true,
+      breakthrough: 3,
+      skill: 0.5,
+      alert: "Three years of planning. I will not let a nobody ruin it.",
+      when: (c, g) => g.quests.stageId("black_cat_plot") === "kuro"
+    },
+    // ------------------------------------------------------------ Baratie
+    {
+      id: "zeff",
+      name: '"Red Leg" Zeff',
+      title: "Head chef of the Baratie",
+      island: "baratie",
+      at: { spot: "baratie_deck" },
+      trainer: "zeff",
+      look: { hair: "long", hairColor: "#fff59d", top: "#fafafa", bottom: "#212121", skin: "#f1c9a0", hat: "captain", hatColor: "#fafafa" },
+      level: 30,
+      marker: (c, g) => !g.quests.state("baratie_krieg") ? "!" : g.quests.stageId("baratie_krieg") === "report" ? "?" : null,
+      dialogue: (ctx) => ({ start: "a", nodes: {
+        a: {
+          text: () => done(ctx, "baratie_krieg") ? '"Hmph. You fight with your whole heart, brat. Eat something before you go."' : `"Welcome to the Baratie, the sea restaurant. We feed anyone who's hungry \u2014 even pirates. Especially pirates. What'll it be?"`,
+          choices: [
+            { text: "A full course, please.", do: (c) => c.open("shop", { shop: ["baratie_course", "fish_stew", "meat", "sea_king_steak"], building: { name: "Baratie", role: "restaurant" } }) },
+            { text: "Teach me Black Leg.", do: (c) => c.open("trainer", { trainer: "zeff" }) },
+            { text: "There's a starving man outside...", if: () => !ctx.quest("baratie_krieg"), next: "gin" },
+            { text: "Krieg's armada is finished.", if: () => active(ctx, "baratie_krieg", "report"), do: (c) => c.complete("baratie_krieg"), next: "thx" },
+            { text: "Goodbye.", end: true }
+          ]
+        },
+        gin: { text: '"A Krieg pirate named Gin, starving on a dinghy. ...No one who is hungry leaves my ship without eating. Take him this. But mark my words \u2014 where Gin goes, Don Krieg follows."', choices: [{ text: "I'll feed him.", do: (c) => {
+          c.startQuest("baratie_krieg");
+          c.give("meat", 1);
+        }, end: true }] },
+        thx: { text: `"You protected my restaurant. As thanks, I'll teach you Black Leg for free \u2014 if you've got the legs for it. And the cooks will always have a plate for you."` }
+      } })
+    },
+    {
+      id: "gin",
+      name: "Gin",
+      title: '"Man-Demon", Krieg Pirates',
+      island: "baratie",
+      at: { spot: "baratie_deck", ox: 3 },
+      look: { hair: "short", hairColor: "#212121", top: "#455a64", bottom: "#263238", hat: "bandana", hatColor: "#9e9e9e" },
+      level: 12,
+      marker: (c, g) => g.quests.stageId("baratie_krieg") === "feed" ? "?" : null,
+      when: (c, g) => !g.quests.isDone("baratie_krieg") && g.quests.stageId("baratie_krieg") !== "krieg",
+      dialogue: (ctx) => ({ start: "a", nodes: {
+        a: { text: '"...Food? For me?"', choices: [
+          { text: "Give him the meat.", if: () => active(ctx, "baratie_krieg", "feed") && ctx.has("meat"), do: (c) => {
+            c.take("meat", 1);
+            c.stage("baratie_krieg", "krieg");
+          }, next: "b" },
+          { text: "Leave", end: true }
+        ] },
+        b: { text: `(Gin eats, crying.) "...Thank you. I'm sorry. Don Krieg is coming. Fifty ships went into the Grand Line, and one came back. He wants this restaurant. Run..."` }
+      } })
+    },
+    {
+      id: "krieg",
+      name: "Don Krieg",
+      title: "Admiral of the Krieg Pirate Armada",
+      island: "baratie",
+      at: { spot: "baratie_deck", ox: -3 },
+      hostile: true,
+      boss: true,
+      hpMul: 1.4,
+      faction: "pirate",
+      level: 15,
+      look: { hair: "short", hairColor: "#212121", top: "#ffd54f", bottom: "#5d4037", skin: "#e0ac7e", bulk: 1.5, coat: "#b71c1c" },
+      bulk: 1.5,
+      defMul: 0.8,
+      moves: ["krieg_mh5", "krieg_spears", "krieg_cape"],
+      bounty: 17e6,
+      infamy: true,
+      breakthrough: 3,
+      skill: 0.4,
+      alert: "I am the strongest! Give me your ship and your food!",
+      when: (c, g) => g.quests.stageId("baratie_krieg") === "krieg"
+    },
+    {
+      id: "mihawk_cameo",
+      name: "Dracule Mihawk",
+      title: `"Hawk-Eyes", World's Greatest Swordsman`,
+      island: "baratie",
+      at: { spot: "baratie_deck", ox: 5 },
+      ai: "idle",
+      look: { hair: "short", hairColor: "#212121", top: "#212121", bottom: "#3e2723", coat: "#212121", hat: "captain", hatColor: "#212121", eyeColor: "#fbc02d", swords: 1 },
+      level: 100,
+      fixedPower: 99999,
+      when: (c) => c.flags.mihawkBaratie && !c.flags.mihawkMet,
+      dialogue: (ctx) => ({ start: "a", nodes: {
+        a: { text: `"...I came to see the one who stopped Krieg's armada. You hold a blade. What is your dream, and how far will you go for it?"`, choices: [
+          { text: `"To become the world's greatest swordsman." (take his blow on your chest)`, do: (c) => {
+            c.setFlag("mihawkMet");
+            c.progression.raiseAttr("wil", 3);
+            c.progression.breakthrough(2, "The scar of a swordsman");
+            c.player.hp = Math.max(1, c.player.hp * 0.3);
+            c.save();
+          }, next: "b" },
+          { text: "Stay silent.", do: (c) => {
+            c.setFlag("mihawkMet");
+          }, next: "c" }
+        ] },
+        b: { text: `"A wound on the back is a swordsman's shame. You took it on the chest. ...I will wait for you at the top, however many years it takes. Surpass me."` },
+        c: { text: '"...A pity." (He is gone before you can blink.)' }
+      } })
+    },
+    // ----------------------------------------------------------- Conomi Islands
+    {
+      id: "nojiko",
+      name: "Nojiko",
+      title: "Tangerine farmer",
+      island: "conomi_islands",
+      at: { town: "cocoyasi", building: "Nojiko's House" },
+      look: { hair: "short", hairColor: "#1976d2", top: "#fff176", bottom: "#8d6e63", skin: "#c68642" },
+      level: 6,
+      marker: (c, g) => !g.quests.state("arlong_park") ? "!" : g.quests.stageId("arlong_park") === "report" ? "?" : null,
+      dialogue: (ctx) => ({ start: "a", nodes: {
+        a: { text: () => {
+          if (done(ctx, "arlong_park")) return `"Eight years... We're free. Take as many tangerines as you want. Bell-m\xE8re would have liked you."`;
+          if (ctx.char.race === "fishman") return `"...A fish-man. Are you one of Arlong's? No? Then why are you here \u2014 to make fun of us?"`;
+          return `"Every adult in Cocoyasi pays Arlong 100,000 berries a month \u2014 or dies. My mother, Bell-m\xE8re, couldn't pay for both of us... and he shot her in front of our tangerine grove. My sister has been working for Arlong for eight years to buy the village back."`;
+        }, choices: [
+          { text: "I'll free Cocoyasi from Arlong.", if: () => !ctx.quest("arlong_park"), do: (c) => c.startQuest("arlong_park"), end: true },
+          { text: "Arlong Park has fallen.", if: () => active(ctx, "arlong_park", "report"), do: (c) => c.complete("arlong_park"), next: "a" },
+          { text: "Buy tangerines", do: (c) => c.open("shop", { shop: ["tangerine", "rice_ball", "fish_stew"], building: { name: "Nojiko's Grove", role: "shop" } }) },
+          { text: "Take care.", end: true }
+        ] }
+      } })
+    },
+    {
+      id: "genzo",
+      name: "Genzo",
+      title: "Sheriff of Cocoyasi",
+      island: "conomi_islands",
+      at: { town: "cocoyasi", building: "Genzo's House" },
+      look: { hair: "buzz", hairColor: "#795548", top: "#fafafa", bottom: "#5d4037", hat: "marine", scarEye: true },
+      level: 8,
+      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: () => ctx.game.quests.isDone("arlong_park") ? `"...Look at them all laughing. I haven't heard that in eight years."` : `"The pinwheel on my hat is for the girls. Nami and Nojiko. ...If you hurt them, I'll kill you. If you save them, I'll owe you my life."` } } })
+    },
+    {
+      id: "nako",
+      name: "Doctor Nako",
+      title: "Cocoyasi physician",
+      island: "conomi_islands",
+      at: { town: "cocoyasi", building: "Doctor Nako's" },
+      look: { hair: "bald", skin: "#f1c9a0", top: "#fafafa", bottom: "#90a4ae" },
+      level: 3,
+      doctor: { line: `"Sit down, sit down. Let's see those wounds."` },
+      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: `"Hurt? Of course you're hurt. Everyone around here is."`, choices: [{ text: "Treat me", do: (c) => c.open("doctor", {}) }, { text: "Leave", end: true }] } } })
+    },
+    {
+      id: "nezumi",
+      name: "Captain Nezumi",
+      title: "Marine 16th Branch (in Arlong's pocket)",
+      island: "conomi_islands",
+      at: { town: "marine_16", building: "16th Branch" },
+      faction: "marine",
+      level: 7,
+      named: true,
+      look: { hair: "short", hairColor: "#9e9e9e", top: "#fafafa", bottom: "#1b4f72", hat: "marine", skin: "#e0e0e0", ears: "round", fur: "#9e9e9e" },
+      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: '"Chi-chi-chi! Arlong? Never heard of him. The Marines have no business interfering with... private arrangements."', choices: [
+        { text: "You're protecting Arlong for money!", do: (c) => aggro(c.game, findActor(c.game, "nezumi")), end: true },
+        { text: "Leave", end: true }
+      ] } } }),
+      when: (c) => !c.defeated.nezumi
+    },
+    {
+      id: "kuroobi",
+      name: "Kuroobi",
+      title: "Arlong Pirates officer (Fish-Man Karate)",
+      island: "conomi_islands",
+      at: { town: "arlong_park", plaza: true, ox: -3 },
+      faction: "pirate",
+      level: 12,
+      named: true,
+      race: "fishman",
+      look: { hair: "bald", skin: "#5c6bc0", top: "#fafafa", bottom: "#fafafa", belt: "#212121", fin: true },
+      style: "fishman_karate",
+      moves: ["fmk_uchimizu", "fmk_arabesque"],
+      skill: 0.45,
+      hostile: true,
+      bounty: 8e6,
+      infamy: true,
+      when: (c) => !c.defeated.kuroobi,
+      alert: "Fish-Man Karate is forty times stronger than your punches, human."
+    },
+    {
+      id: "chew",
+      name: "Chew",
+      title: "Arlong Pirates officer",
+      island: "conomi_islands",
+      at: { town: "arlong_park", plaza: true, ox: 3 },
+      faction: "pirate",
+      level: 11,
+      named: true,
+      race: "fishman",
+      look: { hair: "bald", skin: "#26a69a", top: "#ff7043", bottom: "#5d4037" },
+      style: "brawler",
+      moves: ["chew_watergun"],
+      ranged: true,
+      prefRange: 6,
+      hostile: true,
+      bounty: 7e6,
+      infamy: true,
+      when: (c) => !c.defeated.chew
+    },
+    {
+      id: "hatchan",
+      name: "Hatchan",
+      title: "Arlong Pirates officer (Six Sword Style)",
+      island: "conomi_islands",
+      at: { town: "arlong_park", plaza: true, ox: 0, oy: 3 },
+      faction: "pirate",
+      level: 12,
+      named: true,
+      race: "fishman",
+      look: { hair: "curly", hairColor: "#e53935", skin: "#ef9a9a", top: "#ffeb3b", bottom: "#5d4037", swords: 2 },
+      style: "nitoryu",
+      weapon: "sword",
+      moves: ["hatchan_six"],
+      hostile: true,
+      bounty: 7e6,
+      infamy: true,
+      when: (c) => !c.defeated.hatchan
+    },
+    {
+      id: "arlong",
+      name: "Arlong the Saw",
+      title: "Captain of the Arlong Pirates",
+      island: "conomi_islands",
+      at: { town: "arlong_park", building: "Arlong Park Tower" },
+      faction: "pirate",
+      level: 17,
+      boss: true,
+      hpMul: 1.6,
+      race: "fishman",
+      look: { hair: "spiky", hairColor: "#212121", skin: "#546e7a", top: "#fafafa", bottom: "#1a237e", fin: true, grin: true, sharpTeeth: true, bulk: 1.3, nose: "long" },
+      bulk: 1.3,
+      style: "fishman_karate",
+      moves: ["arlong_darts", "arlong_kiribachi", "arlong_bite"],
+      skill: 0.45,
+      bounty: 2e7,
+      infamy: true,
+      breakthrough: 4,
+      hostile: true,
+      alert: "Shahahaha! A lowly human thinks they can stand against a Fish-Man?!",
+      barks: ["Know your place, human!", "Shahahaha!"],
+      phases: [{ at: 0.5, run: (a, g) => {
+        g.fx.text(a.x, a.y - 2.4, "KIRIBACHI!", "#ff5252", 0.6);
+        a.addBuff({ id: "arlong_rage", name: "Rage", dur: 60, mods: { damage: 1.35, atkSpeed: 1.2 } });
+      } }],
+      when: (c) => !c.bosses.includes("arlong")
+    },
+    // ------------------------------------------------------------ Loguetown
+    {
+      id: "ipponmatsu",
+      name: "Ipponmatsu",
+      title: "Swordsmith of Loguetown",
+      island: "polestar_islands",
+      at: { town: "loguetown", building: "Ipponmatsu's Sword Shop" },
+      look: { hair: "buzz", hairColor: "#9e9e9e", top: "#8d6e63", bottom: "#5d4037", skin: "#f1c9a0" },
+      level: 4,
+      dialogue: (ctx) => ({ start: "a", nodes: {
+        a: { text: `"Welcome, welcome! The finest blades in the East Blue. ...Hm? You're looking at the barrel of discount swords. There's one in there... the Sandai Kitetsu. Cursed. Every owner has met a terrible end."`, choices: [
+          { text: "Browse swords", do: (c) => c.open("shop", { shop: "loguetown_swords", building: { name: "Ipponmatsu's Sword Shop", role: "weapons" } }) },
+          { text: "Let me test the cursed sword's luck.", if: () => !ctx.flag("kitetsu"), next: "k1" },
+          { text: "Goodbye.", end: true }
+        ] },
+        k1: { text: "(You throw the Sandai Kitetsu high into the air and hold your arm out beneath it. The blade spins, falls...)", next: () => Math.random() < 0.8 ? "k2" : "k3" },
+        k2: { text: `(...and slices the air a hair's width from your arm, burying itself in the floor.) Ipponmatsu drops to his knees: "Take it! Take it free! And take this \u2014 a Wazamono, Yubashiri, for half price? No \u2014 FREE! I've never seen such courage!"`, onEnter: (c) => {
+          c.setFlag("kitetsu");
+          c.give("sandai_kitetsu", 1);
+          c.give("yubashiri", 1);
+        } },
+        k3: { text: `(...and nicks your arm. Blood wells up.) Ipponmatsu: "The curse! Put it back, put it back! ...Well, you're alive. Consider yourself lucky."`, onEnter: (c) => {
+          c.setFlag("kitetsu");
+          c.player.hp = Math.max(1, c.player.hp - 30);
+        } }
+      } })
+    },
+    {
+      id: "navigator_merchant",
+      name: "Old Navigator",
+      title: "Navigator Supplies",
+      island: "polestar_islands",
+      at: { town: "loguetown", building: "Navigator Supplies (Log Poses!)" },
+      look: { hair: "long", hairColor: "#bdbdbd", top: "#1565c0", bottom: "#37474f", hat: "tricorne" },
+      level: 3,
+      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: `"Heading to the Grand Line, eh? You'll need a Log Pose. The compass you've got will spin like a top the moment you come down Reverse Mountain. Stay on each island until the needle sets \u2014 then follow it."`, choices: [
+        { text: "Browse", do: (c) => c.open("shop", { shop: "navigator", building: { name: "Navigator Supplies", role: "shop" } }) },
+        { text: "Thanks.", end: true }
+      ] } } })
+    },
+    {
+      id: "gunsmith_logue",
+      name: "Gunsmith",
+      title: "Loguetown Range",
+      island: "polestar_islands",
+      at: { town: "loguetown", building: "Gunsmith & Range" },
+      trainer: "gunsmith",
+      look: { hair: "short", hairColor: "#5d4037", top: "#795548", bottom: "#3e2723", hat: "cowboy", goggles: true },
+      level: 12,
+      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: '"Guns, slingshots, powder. Or lessons \u2014 the range is out back."', choices: [
+        { text: "Train with the gunsmith", do: (c) => c.open("trainer", { trainer: "gunsmith" }) },
+        { text: "Buy a weapon", do: (c) => c.open("shop", { shop: ["slingshot", "flintlock", "marine_rifle"], building: { name: "Gunsmith", role: "weapons" } }) },
+        { text: "Leave", end: true }
+      ] } } })
+    },
+    {
+      id: "smoker",
+      name: "Captain Smoker",
+      title: '"The White Hunter"',
+      island: "polestar_islands",
+      at: { town: "loguetown", plaza: true, ox: 5 },
+      faction: "marine",
+      level: 30,
+      boss: true,
+      hpMul: 1.5,
+      look: { hair: "short", hairColor: "#eceff1", top: "#37474f", bottom: "#263238", coat: "#fafafa", coatText: "JUSTICE", skin: "#e0ac7e" },
+      fruit: "moku",
+      fruitMastery: 60,
+      moves: ["moku_blow", "moku_snake", "smoker_jitte", "moku_launcher"],
+      lethal: false,
+      skill: 0.55,
+      bounty: 0,
+      breakthrough: 4,
+      alert: "Pirate. You won't leave Loguetown.",
+      when: (c) => c.bounty > 0 && !c.bosses.includes("smoker") && !c.flags.escapedLoguetown
+    },
+    {
+      id: "tashigi",
+      name: "Tashigi",
+      title: "Marine Sergeant Major",
+      island: "polestar_islands",
+      at: { town: "loguetown", plaza: true, ox: 7 },
+      faction: "marine",
+      level: 14,
+      named: true,
+      look: { hair: "short", hairColor: "#212121", top: "#e1bee7", bottom: "#1565c0", swords: 1, hat: "goggles" },
+      style: "ittoryu",
+      weapon: "sword",
+      moves: ["itto_iai"],
+      lethal: false,
+      skill: 0.5,
+      when: (c) => c.bounty > 0 && !c.flags.escapedLoguetown
+    }
+  ];
+  var groups = [
+    { island: "dawn_island", dx: -0.25, dy: 0.12, radius: 5, level: 4, enemies: [["bandit", 4], ["bandit", 4], ["bandit", 5]], when: (c) => !c.bosses.includes("higuma") },
+    { island: "dawn_island", dx: 0.1, dy: -0.25, radius: 8, enemies: [["tiger", 9, { name: "Colubo Tiger" }], ["beast", 5, { name: "Mountain Boar" }]] },
+    { island: "dawn_island", dx: 0.42, dy: 0.35, radius: 5, enemies: [["pirate", 5, { name: "Bluejam Pirate" }], ["pirate_gunner", 5, { name: "Bluejam Gunner" }], ["pirate", 5, { name: "Bluejam Pirate" }]], when: (c) => !c.bosses.includes("bluejam") },
+    { island: "goat_island", dx: 0, dy: 0.2, radius: 4, enemies: [["pirate", 3, { name: "Alvida Pirate" }], ["pirate", 3, { name: "Alvida Pirate" }]], when: (c) => !c.bosses.includes("alvida") },
+    { island: "shells_island", town: "marine_153", spot: "execution_yard", radius: 4, enemies: [["marine", 5, { name: "Morgan's Marine", lethal: false }], ["marine_rifle", 5, { name: "Morgan's Rifleman" }]], when: (c, g) => g.quests.stageId("pirate_hunter") === "morgan" },
+    { island: "organ_islands", dx: 0, dy: 0.1, radius: 7, enemies: [["pirate", 6, { name: "Buggy Pirate" }], ["pirate", 6, { name: "Buggy Pirate" }], ["pirate_gunner", 6, { name: "Buggy Cannoneer" }], ["beast", 8, { name: "Richie the Lion", look: { fur: "#f6b93b", skin: "#f6b93b", hairColor: "#e67e22", hair: "afro" } }]], when: (c) => !c.bosses.includes("buggy") },
+    { island: "gecko_islands", spot: "north_slope", radius: 6, enemies: [["pirate", 8, { name: "Black Cat Pirate" }], ["pirate", 8, { name: "Black Cat Pirate" }], ["brute", 9, { name: "Siam (Nyaban Brother)" }], ["brute", 9, { name: "Butchie (Nyaban Brother)" }]], when: (c, g) => g.quests.stageId("black_cat_plot") === "slope" },
+    { island: "baratie", spot: "baratie_deck", radius: 4, enemies: [["pirate", 10, { name: "Krieg Pirate" }], ["pirate_gunner", 10, { name: "Krieg Gunner" }], ["pirate", 10, { name: "Pearl the Iron Wall", hpMul: 2, look: { bulk: 1.4 } }]], when: (c, g) => g.quests.stageId("baratie_krieg") === "krieg" },
+    { island: "conomi_islands", dx: 0.55, dy: -0.15, radius: 7, enemies: [["fishman_thug", 9], ["fishman_thug", 9], ["fishman_thug", 10], ["fishman_thug", 10]], when: (c) => !c.bosses.includes("arlong") },
+    { island: "polestar_islands", dx: 0, dy: 0, radius: 9, enemies: [["marine", 10, { name: "Loguetown Marine" }], ["marine_rifle", 10, { name: "Loguetown Rifleman" }], ["marine", 10, { name: "Loguetown Marine" }]], when: (c) => c.bounty > 0 && !c.flags.escapedLoguetown },
+    { island: "tequila_wolf", dx: 0, dy: 0, radius: 6, enemies: [["marine", 8, { name: "Bridge Overseer", lethal: true }], ["marine", 8, { name: "Bridge Overseer", lethal: true }]] },
+    { island: "oykot", dx: 0.35, dy: -0.3, radius: 5, enemies: [["bandit", 6], ["bandit", 6], ["bandit", 7]] },
+    { island: "satsuruzo", dx: -0.35, dy: -0.2, radius: 5, enemies: [["beast", 6], ["beast", 6]] }
+  ];
+  var quests = [
+    {
+      id: "lord_of_the_coast",
+      name: "The Lord of the Coast",
+      island: "dawn_island",
+      kind: "story",
+      summary: "A Sea King lurks off Foosha Village. It took Shanks' arm ten years ago.",
+      stages: [
+        { id: "hunt", desc: "Sail out south of Foosha Village's pier and slay the Lord of the Coast.", goal: { type: "defeat", npc: "lord_of_the_coast" } },
+        { id: "report", desc: "Return to Makino at Party's Bar." }
+      ],
+      rewards: { berries: 3e3, items: [["straw_hat", 1]], points: 1 }
+    },
+    {
+      id: "higuma_bandits",
+      name: "Bandits of Mt. Colubo",
+      island: "dawn_island",
+      kind: "side",
+      summary: "Higuma's mountain bandits harass Foosha Village.",
+      stages: [{ id: "fight", desc: "Defeat Higuma at his camp on the south side of Mt. Colubo.", goal: { type: "defeat", npc: "higuma" } }, { id: "report", desc: "Tell Mayor Woop Slap." }],
+      rewards: { berries: 2500 }
+    },
+    {
+      id: "gray_terminal",
+      name: "Fire in the Gray Terminal",
+      island: "dawn_island",
+      kind: "side",
+      summary: "The nobles of Goa hired Bluejam to burn the junkyard slum.",
+      stages: [{ id: "fight", desc: "Defeat Bluejam in the Gray Terminal, east of Mt. Colubo.", goal: { type: "defeat", npc: "bluejam" } }, { id: "report", desc: "Tell the kid in the Gray Terminal." }],
+      rewards: { berries: 4e3, items: [["headband", 1]] }
+    },
+    {
+      id: "koby_dream",
+      name: "Koby's Dream",
+      island: "goat_island",
+      kind: "side",
+      summary: "Koby wants to escape Alvida and join the Marines.",
+      stages: [
+        { id: "alvida", desc: 'Defeat "Iron Mace" Alvida on Goat Island.', goal: { type: "defeat", npc: "alvida" } },
+        { id: "escort", desc: "Talk to Koby, then sail him to Shells Town on Yotsuba Island.", goal: { type: "reach", island: "shells_island" }, onComplete: (ctx) => {
+          ctx.setFlag("kobyMarine");
+          ctx.setFlag("kobyAboard", false);
+          ctx.log(`Koby runs toward the Marine base. "I'll become an Admiral! Thank you!!"`, "#90caf9");
+        } }
+      ],
+      rewards: { berries: 1500, points: 1 }
+    },
+    {
+      id: "pirate_hunter",
+      name: "The Pirate Hunter",
+      island: "shells_island",
+      kind: "story",
+      summary: "The pirate hunter Roronoa Zoro is tied up in the yard of Captain Morgan's Marine base.",
+      stages: [
+        { id: "deliver", desc: "Bring Rika's rice ball to the man tied up in the Marine base yard.", goal: { type: "flag", flag: "_never" } },
+        { id: "free", desc: "Deal with Helmeppo, the captain's son (he's near the town square).", goal: { type: "defeat", npc: "helmeppo" } },
+        { id: "morgan", desc: 'Defeat "Axe-Hand" Morgan at the 153rd Branch.', goal: { type: "defeat", npc: "morgan" }, onStart: (ctx, g) => {
+          const m = findActor(g, "morgan");
+          if (m) aggro(g, m);
+        } },
+        { id: "zoro", desc: "Talk to Zoro.", goal: { type: "flag", flag: "_never2" } }
+      ],
+      rewards: { berries: 6e3, points: 1, liberate: "Shells Town" },
+      onComplete: (ctx) => ctx.setFlag("morganFallen")
+    },
+    {
+      id: "kuina_promise",
+      name: "Kuina's Promise",
+      island: "shimotsuki",
+      kind: "story",
+      summary: "Koshiro will give Wado Ichimonji to the swordsman who defeats him.",
+      stages: [
+        { id: "spar", desc: "Beat Koshiro in a spar at the Isshin Dojo (use a sword style).", goal: { type: "event", event: "beat_koshiro" } },
+        { id: "report", desc: "Talk to Koshiro." }
+      ],
+      rewards: { items: [["wado_ichimonji", 1]], mastery: { ittoryu: 5 } }
+    },
+    {
+      id: "buggy_circus",
+      name: "Buggy's Circus",
+      island: "organ_islands",
+      kind: "story",
+      summary: "Buggy the Clown and his pirates have taken over Orange Town.",
+      stages: [
+        { id: "mohji", desc: "Defeat Beast Tamer Mohji.", goal: { type: "defeat", npc: "mohji" } },
+        { id: "cabaji", desc: "Defeat Acrobat Cabaji.", goal: { type: "defeat", npc: "cabaji" } },
+        { id: "buggy", desc: "Defeat Buggy the Clown. Blades can't cut him \u2014 use your fists!", goal: { type: "defeat", npc: "buggy" }, onStart: (ctx, g) => aggro(g, findActor(g, "buggy")) },
+        { id: "report", desc: "Return to Mayor Boodle." }
+      ],
+      rewards: { berries: 12e3, points: 1, liberate: "Orange Town", flag: "buggyChart" },
+      onComplete: (ctx, g) => {
+        for (const id of ["cactus_island", "little_garden", "drum_island", "alabasta", "jaya", "water_7", "sabaody"]) if (!ctx.char.discovered.includes(id)) {
+          const isl = g.surface.islands.find((i) => i.id === id);
+          if (isl) {
+            g.surface.reveal(isl.x, isl.y, isl.radius + 10);
+          }
+        }
+        ctx.log("Buggy's chart of the Grand Line reveals several islands on your world map (M).", "#ffe082");
+      }
+    },
+    {
+      id: "gaimon_treasure",
+      name: "The Man in the Box",
+      island: "rare_animals",
+      kind: "side",
+      summary: "Gaimon has guarded treasure chests on a cliff for twenty years.",
+      stages: [
+        { id: "check", desc: "Look inside the treasure chests on the Island of Rare Animals.", goal: { type: "event", event: "gaimon_chest" } },
+        { id: "report", desc: "Tell Gaimon the truth." }
+      ],
+      rewards: { items: [["jewels", 2]], berries: 2e3 }
+    },
+    {
+      id: "black_cat_plot",
+      name: "The Black Cat's Plot",
+      island: "gecko_islands",
+      kind: "story",
+      summary: "Kaya's butler Klahadore is really Captain Kuro. He plans to kill her at dawn.",
+      stages: [
+        { id: "slope", desc: "Hold the north slope below Syrup Village against the Black Cat Pirates \u2014 defeat Jango the hypnotist.", goal: { type: "defeat", npc: "jango" }, onStart: (ctx, g) => {
+          spawnNow(g, "jango");
+        } },
+        { id: "kuro", desc: "Captain Kuro has shed his disguise. Defeat him on the north slope!", goal: { type: "defeat", npc: "kuro" }, onStart: (ctx, g) => {
+          const k = spawnNow(g, "kuro");
+          aggro(g, k);
+          g.ui.banner("Captain Kuro", '"Kuro of a Hundred Plans"', "The butler removes his glasses...", 4);
+        } },
+        { id: "report", desc: "Visit Kaya at her mansion." }
+      ],
+      rewards: { berries: 8e3, points: 1 },
+      onComplete: (ctx, g) => {
+        const isl = g.surface.islands.find((i) => i.id === "gecko_islands");
+        const dock = isl?.docks.find((d) => d.name === "Kaya's Mansion") || isl?.docks[0];
+        if (dock) {
+          g.giveShip("caravel", dock.moor.x, dock.moor.y, "Going Merry");
+          g.ui.toast("A NEW SHIP!", "Kaya gives you a caravel \u2014 the Going Merry!", "#ffe082");
+        }
+      }
+    },
+    {
+      id: "baratie_krieg",
+      name: "The Sea Restaurant",
+      island: "baratie",
+      kind: "story",
+      summary: "A starving Krieg pirate named Gin is adrift near the Baratie.",
+      stages: [
+        { id: "feed", desc: "Give Gin some meat.", goal: { type: "flag", flag: "_never3" } },
+        { id: "krieg", desc: "Don Krieg attacks the Baratie! Defeat him.", goal: { type: "defeat", npc: "krieg" }, onStart: (ctx, g) => {
+          const k = spawnNow(g, "krieg");
+          aggro(g, k);
+          g.ui.banner("Don Krieg", "Admiral of the Pirate Armada", "A galleon covered in claw marks appears out of the fog...", 4);
+        } },
+        { id: "report", desc: 'Talk to "Red Leg" Zeff.' }
+      ],
+      rewards: { berries: 1e4, items: [["baratie_course", 2]], points: 1 },
+      onComplete: (ctx, g) => {
+        if (ctx.char.masteries.black_leg === void 0) {
+          ctx.char.masteries.black_leg = 0;
+          g.log("Zeff teaches you the basics of Black Leg Style. Switch to it in Skills (K).", "#90caf9");
+        }
+        if (ctx.char.dream === "swordsman" || /ittoryu|nitoryu|santoryu/.test(ctx.char.style)) {
+          ctx.setFlag("mihawkBaratie");
+          spawnNow(g, "mihawk_cameo");
+        }
+      }
+    },
+    {
+      id: "arlong_park",
+      name: "Arlong Park",
+      island: "conomi_islands",
+      kind: "story",
+      summary: "For eight years Arlong's Fish-Man pirates have ruled the Conomi Islands.",
+      stages: [
+        { id: "officers", desc: "Defeat Arlong's officers: Kuroobi, Chew and Hatchan.", goal: { type: "defeat", any: ["kuroobi", "chew", "hatchan"], count: 3 } },
+        { id: "arlong", desc: "Defeat Arlong the Saw in Arlong Park.", goal: { type: "defeat", npc: "arlong" }, onStart: (ctx, g) => aggro(g, findActor(g, "arlong")) },
+        { id: "report", desc: "Return to Nojiko in Cocoyasi Village." }
+      ],
+      rewards: { berries: 2e4, points: 2, liberate: "Cocoyasi Village", items: [["tangerine", 6]] },
+      onComplete: (ctx, g) => {
+        if (ctx.char.faction !== "marine") g.progression.addBounty(1e7, "Toppled Arlong Park");
+      }
+    },
+    {
+      id: "town_of_beginning",
+      name: "The Town of the Beginning and the End",
+      island: "polestar_islands",
+      kind: "story",
+      summary: "Loguetown, where Gol D. Roger was born and executed. The last stop before the Grand Line.",
+      stages: [
+        { id: "platform", desc: "Stand before the execution platform in Loguetown's square.", goal: { type: "event", event: "saw_platform" } },
+        { id: "pose", desc: "Buy a Log Pose (Navigator Supplies).", goal: { type: "item", item: "log_pose" } },
+        { id: "mountain", desc: "Sail to Reverse Mountain, southwest of Loguetown, and ride the current into the Grand Line.", goal: { type: "event", event: "entered_grand_line" } }
+      ],
+      rewards: { points: 1, berries: 5e3 }
+    }
+  ];
+  function install(game) {
+    game.on("tick", () => {
+      const c = game.state?.char;
+      if (!c || game.world !== game.surface) return;
+      if (game.quests.stageId("lord_of_the_coast") === "hunt" && !findActor(game, "lord_of_the_coast")) {
+        const isl = game.surface.islands.find((i) => i.id === "dawn_island");
+        const dock = isl?.docks[0];
+        if (!dock) return;
+        const tx = dock.moor.x, ty = dock.moor.y + 16;
+        if (game.world.distance(game.player.x, game.player.y, tx, ty) < 26 && game.world.isLiquid(tx, ty)) {
+          const k = seaBoss(game, { id: "lord_of_the_coast", name: "Lord of the Coast", title: "Sea King of Foosha Bay", level: 12, hpMul: 3.2, color: "#1e88e5", breakthrough: 3 }, tx, ty);
+          k.npcId = "lord_of_the_coast";
+          game.ui.banner("LORD OF THE COAST", "Sea King", "The water boils. Something ancient is hungry.", 4);
+        }
+      }
+      if (game.currentIsland?.id === "polestar_islands" && game.quests.stageId("town_of_beginning") === "platform") {
+        const t = game.currentIsland.towns[0];
+        if (t && game.world.distance(game.player.x, game.player.y, t.plaza.x, t.plaza.y) < 5) {
+          game.emit("questEvent", "saw_platform");
+          game.ui.banner("The Execution Platform", "Loguetown", '"My treasure? If you want it, you can have it!" \u2014 twenty-two years ago, on this very spot.', 6);
+        }
+      }
+    });
+    game.on("enterIsland", (isl) => {
+      const c = game.state?.char;
+      if (!c) return;
+      if (isl.id === "polestar_islands" && !game.quests.state("town_of_beginning")) game.quests.start("town_of_beginning");
+      if (isl.id === "polestar_islands" && c.bounty > 0 && !c.flags.escapedLoguetown) {
+        game.ui.banner("The White Hunter", "Loguetown Marine Base", "Captain Smoker has seen your wanted poster. Get to the Grand Line \u2014 or get caught.", 5);
+      }
+    });
+    game.on("enterRegion", () => {
+      const c = game.state?.char;
+      if (c && c.bounty > 0 && game.player.mode === "sail" && game.lastIslandName === "Polestar Islands" && !c.flags.escapedLoguetown && game.world.distance(game.player.x, game.player.y, 2385, 590) > 120) {
+        c.flags.escapedLoguetown = true;
+      }
+    });
+    game.on("knockout", (a, att) => {
+      const c = game.state?.char;
+      if (!c) return;
+      if (a.isPlayer && att && att.npcId === "smoker" && Math.random() < 0.6) {
+        setTimeout(() => {
+          if (game.player.state !== "knocked") return;
+          game.lives.k = null;
+          game.player.state = "idle";
+          game.player.hp = Math.round(game.player.d.maxHp * 0.4);
+          game.env.storm = 1;
+          game.env.stormTarget = 0.9;
+          const sm = findActor(game, "smoker");
+          if (sm) sm.knock(12, 0);
+          game.ui.banner("A Sudden Gale", "", '"...Why are you getting in my way, Dragon?!" \u2014 a hooded man stands in the storm. When you look again, he is gone.', 6);
+          c.flags.escapedLoguetown = true;
+          despawn(game, "smoker");
+          despawn(game, "tashigi");
+        }, 1500);
+      }
+    });
+    game.on("knockout", (a) => {
+      if (a.spar === "koshiro" && game.quests.stageId("kuina_promise") === "spar" && /ittoryu|nitoryu|santoryu/.test(game.player.style)) game.emit("questEvent", "beat_koshiro");
+    });
+    game.spawner.addBuilder(({ island }) => {
+      if (island.id !== "rare_animals") return;
+      const s = island.spots.gaimon;
+      if (!s || island._chests) return;
+      island._chests = true;
+      for (let k = 0; k < 2; k++) game.world.objects.add({ kind: "chest", x: s.x + 3 + k * 1.6, y: s.y - 3, block: true, key: "gaimon" + k, empty: true, tier: 0 });
+    });
+    game.on("openChest", (o) => {
+      if (o.key && o.key.startsWith("gaimon") && game.quests.stageId("gaimon_treasure") === "check") {
+        game.log("The chest is empty. Completely empty.", "#b0bec5");
+        game.emit("questEvent", "gaimon_chest");
+      }
+    });
+  }
+  var eastBlue_default = { id: "east_blue", npcs, groups, quests, install, dynamicIds: ["lord_of_the_coast"] };
+
+  // src/content/northBlue.js
+  var northBlue_default = { id: "northBlue", npcs: [], groups: [], quests: [] };
+
+  // src/content/westBlue.js
+  var westBlue_default = { id: "westBlue", npcs: [], groups: [], quests: [] };
+
+  // src/content/southBlue.js
+  var southBlue_default = { id: "southBlue", npcs: [], groups: [], quests: [] };
+
+  // src/content/paradise1.js
+  var paradise1_default = { id: "paradise1", npcs: [], groups: [], quests: [] };
+
+  // src/content/paradise2.js
+  var paradise2_default = { id: "paradise2", npcs: [], groups: [], quests: [] };
+
+  // src/content/newWorld.js
+  var newWorld_default = { id: "newWorld", npcs: [], groups: [], quests: [] };
+
+  // src/content/index.js
+  var PACKS = [eastBlue_default, northBlue_default, westBlue_default, southBlue_default, paradise1_default, paradise2_default, newWorld_default];
+  for (const p of PACKS) {
+    if (p.abilities) registerAbilities(p.abilities, "npc");
+    if (p.items) Object.assign(ITEMS, p.items);
+    if (p.trainers) Object.assign(TRAINERS, p.trainers);
+    if (p.stock) Object.assign(STOCK, p.stock);
+    if (p.archetypes) Object.assign(ARCHETYPES, p.archetypes);
+  }
+  function installContent(game) {
+    for (const p of PACKS) {
+      if (p.npcs) registerNPCs(p.npcs);
+      if (p.groups) registerGroups(p.groups);
+      if (p.quests) registerQuests(p.quests);
+    }
+    installFruits(game);
+    for (const p of PACKS) if (p.install) p.install(game);
+  }
+
+  // src/audio/audio.js
+  var Audio = class {
+    constructor(settings) {
+      this.settings = settings;
+      this.ctx = null;
+      this.master = null;
+      this.sfxGain = null;
+      this.musicGain = null;
+      this.noiseBuf = null;
+      this.theme = null;
+      this.nextNoteT = 0;
+      this.step = 0;
+      this.last = {};
+      const unlock = () => {
+        this.init();
+        window.removeEventListener("pointerdown", unlock);
+        window.removeEventListener("keydown", unlock);
+      };
+      window.addEventListener("pointerdown", unlock);
+      window.addEventListener("keydown", unlock);
+    }
+    init() {
+      if (this.ctx) return;
+      try {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch {
+        return;
+      }
+      const c = this.ctx;
+      this.master = c.createGain();
+      this.master.connect(c.destination);
+      this.sfxGain = c.createGain();
+      this.sfxGain.connect(this.master);
+      this.musicGain = c.createGain();
+      this.musicGain.connect(this.master);
+      const len = c.sampleRate * 1.5;
+      this.noiseBuf = c.createBuffer(1, len, c.sampleRate);
+      const d = this.noiseBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      this.apply(this.settings);
+      this.scheduler = setInterval(() => this.schedule(), 60);
+    }
+    apply(s) {
+      this.settings = s;
+      if (!this.ctx) return;
+      this.sfxGain.gain.value = s.volume * 0.6;
+      this.musicGain.gain.value = s.music * 0.28;
+    }
+    // ---------------------------------------------------------------- sfx
+    noise(t, dur, { freq = 1e3, q = 1, type = "bandpass", gain = 0.5, attack = 5e-3, sweep } = {}) {
+      const c = this.ctx;
+      const src = c.createBufferSource();
+      src.buffer = this.noiseBuf;
+      const f = c.createBiquadFilter();
+      f.type = type;
+      f.frequency.setValueAtTime(freq, t);
+      f.Q.value = q;
+      if (sweep) f.frequency.exponentialRampToValueAtTime(Math.max(20, sweep), t + dur);
+      const g = c.createGain();
+      g.gain.setValueAtTime(1e-4, t);
+      g.gain.exponentialRampToValueAtTime(gain, t + attack);
+      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+      src.connect(f);
+      f.connect(g);
+      g.connect(this.sfxGain);
+      src.start(t, Math.random() * 0.5);
+      src.stop(t + dur + 0.05);
+    }
+    tone(t, dur, { freq = 440, to, type = "sine", gain = 0.3, attack = 5e-3, dest } = {}) {
+      const c = this.ctx;
+      const o = c.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      if (to) o.frequency.exponentialRampToValueAtTime(Math.max(20, to), t + dur);
+      const g = c.createGain();
+      g.gain.setValueAtTime(1e-4, t);
+      g.gain.exponentialRampToValueAtTime(gain, t + attack);
+      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+      o.connect(g);
+      g.connect(dest || this.sfxGain);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    }
+    sfx(name) {
+      if (!this.ctx || this.ctx.state !== "running") {
+        if (this.ctx) this.ctx.resume();
+        return;
+      }
+      const t = this.ctx.currentTime;
+      const lim = { punch: 0.04, slash_hit: 0.04, block: 0.05, whoosh: 0.05, splash: 0.2, thunder_small: 0.15, coin: 0.05 }[name] ?? 0.02;
+      if (this.last[name] && t - this.last[name] < lim) return;
+      this.last[name] = t;
+      const r = () => 0.9 + Math.random() * 0.2;
+      switch (name) {
+        case "whoosh":
+          this.noise(t, 0.12, { freq: 1800 * r(), q: 0.8, gain: 0.12, sweep: 600 });
+          break;
+        case "punch":
+          this.noise(t, 0.09, { freq: 500 * r(), q: 1.2, gain: 0.5 });
+          this.tone(t, 0.09, { freq: 140, to: 60, type: "sine", gain: 0.4 });
+          break;
+        case "slash_hit":
+          this.noise(t, 0.12, { freq: 3500 * r(), q: 2, gain: 0.35, sweep: 1500 });
+          this.tone(t, 0.06, { freq: 900, to: 300, type: "sawtooth", gain: 0.06 });
+          break;
+        case "block":
+          this.tone(t, 0.12, { freq: 620 * r(), type: "square", gain: 0.08 });
+          this.noise(t, 0.06, { freq: 2500, gain: 0.2 });
+          break;
+        case "parry":
+          this.tone(t, 0.25, { freq: 1300, to: 1900, type: "triangle", gain: 0.25 });
+          this.tone(t + 0.02, 0.3, { freq: 2600, type: "sine", gain: 0.12 });
+          break;
+        case "guardbreak":
+          this.tone(t, 0.3, { freq: 300, to: 80, type: "sawtooth", gain: 0.2 });
+          break;
+        case "dodge":
+          this.noise(t, 0.15, { freq: 900, q: 0.6, gain: 0.12, sweep: 2400 });
+          break;
+        case "ko":
+          this.tone(t, 0.35, { freq: 220, to: 55, type: "triangle", gain: 0.3 });
+          this.noise(t, 0.3, { freq: 300, gain: 0.2, type: "lowpass" });
+          break;
+        case "knocked":
+          this.tone(t, 0.8, { freq: 330, to: 110, type: "sawtooth", gain: 0.12 });
+          break;
+        case "getup":
+          [392, 523, 659].forEach((f, i) => this.tone(t + i * 0.08, 0.25, { freq: f, type: "square", gain: 0.1 }));
+          break;
+        case "death":
+          [330, 311, 294, 220].forEach((f, i) => this.tone(t + i * 0.25, 0.5, { freq: f, type: "triangle", gain: 0.18 }));
+          break;
+        case "splash":
+          this.noise(t, 0.4, { freq: 700, q: 0.5, gain: 0.3, type: "lowpass", sweep: 200 });
+          break;
+        case "cannon":
+          this.tone(t, 0.5, { freq: 90, to: 35, type: "sine", gain: 0.8 });
+          this.noise(t, 0.6, { freq: 400, gain: 0.6, type: "lowpass", sweep: 80 });
+          break;
+        case "explosion":
+          this.tone(t, 0.7, { freq: 70, to: 30, type: "sine", gain: 0.8 });
+          this.noise(t, 0.9, { freq: 800, gain: 0.7, type: "lowpass", sweep: 60 });
+          break;
+        case "crash":
+          this.noise(t, 0.5, { freq: 300, gain: 0.6, type: "lowpass" });
+          this.tone(t, 0.3, { freq: 100, to: 50, gain: 0.4 });
+          break;
+        case "thunder":
+          this.noise(t, 2.2, { freq: 200, gain: 0.7, type: "lowpass", attack: 0.02, sweep: 40 });
+          break;
+        case "thunder_small":
+        case "lightning":
+          this.noise(t, 0.5, { freq: 2500, gain: 0.3, sweep: 300 });
+          this.tone(t, 0.3, { freq: 60, gain: 0.3 });
+          break;
+        case "fire":
+          this.noise(t, 0.4, { freq: 1200, q: 0.4, gain: 0.25, sweep: 400 });
+          break;
+        case "ice":
+          this.tone(t, 0.3, { freq: 2400, to: 3200, type: "triangle", gain: 0.1 });
+          this.noise(t, 0.2, { freq: 5e3, gain: 0.15 });
+          break;
+        case "haki":
+          this.tone(t, 0.4, { freq: 80, to: 160, type: "sawtooth", gain: 0.15 });
+          break;
+        case "haki_obs":
+          this.tone(t, 0.6, { freq: 880, to: 1320, type: "sine", gain: 0.1 });
+          break;
+        case "board":
+        case "step":
+          this.noise(t, 0.12, { freq: 300, gain: 0.2, type: "lowpass" });
+          break;
+        case "coin":
+          this.tone(t, 0.08, { freq: 1568, type: "square", gain: 0.07 });
+          this.tone(t + 0.07, 0.18, { freq: 2093, type: "square", gain: 0.07 });
+          break;
+        case "treasure":
+          [523, 659, 784, 1046].forEach((f, i) => this.tone(t + i * 0.09, 0.3, { freq: f, type: "triangle", gain: 0.14 }));
+          break;
+        case "eat":
+          this.noise(t, 0.08, { freq: 900, gain: 0.2 });
+          this.noise(t + 0.12, 0.08, { freq: 800, gain: 0.2 });
+          break;
+        case "equip":
+          this.tone(t, 0.1, { freq: 700, type: "square", gain: 0.06 });
+          break;
+        case "page":
+          this.noise(t, 0.2, { freq: 3e3, q: 0.5, gain: 0.08 });
+          break;
+        case "reveal":
+          [392, 494, 587].forEach((f, i) => this.tone(t + i * 0.1, 0.35, { freq: f, type: "triangle", gain: 0.12 }));
+          break;
+        case "fanfare":
+          [523, 659, 784, 1046, 784, 1046].forEach((f, i) => this.tone(t + i * 0.11, 0.3, { freq: f, type: "square", gain: 0.08 }));
+          break;
+        case "breakthrough":
+          [440, 554, 659, 880].forEach((f, i) => this.tone(t + i * 0.07, 0.4, { freq: f, type: "sawtooth", gain: 0.06 }));
+          break;
+        case "seaking":
+          this.tone(t, 1.6, { freq: 70, to: 45, type: "sawtooth", gain: 0.3, attack: 0.3 });
+          this.noise(t, 1.5, { freq: 250, gain: 0.3, type: "lowpass" });
+          break;
+        default:
+          this.noise(t, 0.05, { freq: 1500, gain: 0.05 });
+      }
+    }
+    // --------------------------------------------------------------- music
+    music(theme) {
+      if (this.theme === theme) return;
+      this.theme = theme;
+      this.step = 0;
+      if (this.ctx) this.nextNoteT = this.ctx.currentTime + 0.1;
+    }
+    schedule() {
+      if (!this.ctx || !this.theme || this.ctx.state !== "running") return;
+      const T3 = THEMES[this.theme];
+      if (!T3) return;
+      const spb = 60 / T3.bpm / 2;
+      while (this.nextNoteT < this.ctx.currentTime + 0.25) {
+        this.playStep(T3, this.step, this.nextNoteT, spb);
+        this.nextNoteT += spb * (this.step % 2 === 0 ? 1 + T3.swing : 1 - T3.swing);
+        this.step++;
+      }
+    }
+    playStep(T3, s, t, spb) {
+      const bar2 = Math.floor(s / 8) % T3.chords.length;
+      const chord = T3.chords[bar2];
+      const pos = s % 8;
+      const root2 = T3.root * Math.pow(2, chord[0] / 12);
+      if (pos === 0 || pos === 4) this.voice(t, spb * 1.8, root2 / 2 * (pos === 4 ? Math.pow(2, 7 / 12) : 1), "triangle", 0.22);
+      if (pos === 2 || pos === 6) for (const iv of chord) this.voice(t, spb * 0.9, root2 * Math.pow(2, iv / 12), "square", 0.035);
+      const m = T3.melody[s % T3.melody.length];
+      if (m !== null && m !== void 0) {
+        const f = T3.root * 2 * Math.pow(2, T3.scale[(m % T3.scale.length + T3.scale.length) % T3.scale.length] / 12 + Math.floor(m / T3.scale.length));
+        this.voice(t, spb * (T3.legato || 1.4), f, T3.lead || "sawtooth", 0.05, true);
+      }
+      if (T3.drums) {
+        if (pos === 0 || pos === 4) this.drum(t, "kick");
+        if (pos === 2 || pos === 6) this.drum(t, "snare");
+        if (T3.hats) this.drum(t, "hat");
+      }
+    }
+    voice(t, dur, freq, type, gain, vib) {
+      const c = this.ctx;
+      const o = c.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      let lfo;
+      if (vib) {
+        lfo = c.createOscillator();
+        const lg = c.createGain();
+        lfo.frequency.value = 5.5;
+        lg.gain.value = freq * 8e-3;
+        lfo.connect(lg);
+        lg.connect(o.frequency);
+        lfo.start(t);
+        lfo.stop(t + dur + 0.1);
+      }
+      const f = c.createBiquadFilter();
+      f.type = "lowpass";
+      f.frequency.value = 2200;
+      const g = c.createGain();
+      g.gain.setValueAtTime(1e-4, t);
+      g.gain.exponentialRampToValueAtTime(gain, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+      o.connect(f);
+      f.connect(g);
+      g.connect(this.musicGain);
+      o.start(t);
+      o.stop(t + dur + 0.1);
+    }
+    drum(t, kind) {
+      const c = this.ctx;
+      if (kind === "kick") {
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.frequency.setValueAtTime(120, t);
+        o.frequency.exponentialRampToValueAtTime(40, t + 0.15);
+        g.gain.setValueAtTime(0.35, t);
+        g.gain.exponentialRampToValueAtTime(1e-3, t + 0.18);
+        o.connect(g);
+        g.connect(this.musicGain);
+        o.start(t);
+        o.stop(t + 0.2);
+      } else {
+        const src = c.createBufferSource();
+        src.buffer = this.noiseBuf;
+        const f = c.createBiquadFilter();
+        f.type = kind === "hat" ? "highpass" : "bandpass";
+        f.frequency.value = kind === "hat" ? 7e3 : 1800;
+        const g = c.createGain();
+        const dur = kind === "hat" ? 0.04 : 0.12;
+        g.gain.setValueAtTime(kind === "hat" ? 0.05 : 0.14, t);
+        g.gain.exponentialRampToValueAtTime(1e-3, t + dur);
+        src.connect(f);
+        f.connect(g);
+        g.connect(this.musicGain);
+        src.start(t, Math.random());
+        src.stop(t + dur + 0.02);
+      }
+    }
+  };
+  var THEMES = {
+    title: { bpm: 96, root: 146.83, swing: 0.1, scale: [0, 2, 3, 5, 7, 9, 10], chords: [[0, 3, 7], [5, 9, 12], [3, 7, 10], [7, 10, 14]], melody: [4, null, 4, 5, 4, 3, 2, null, 0, null, 2, 3, 4, null, null, null, 4, null, 4, 5, 6, 5, 4, null, 3, 2, 3, 4, 0, null, null, null], drums: false, lead: "triangle", legato: 2 },
+    sea: { bpm: 112, root: 146.83, swing: 0.12, scale: [0, 2, 4, 5, 7, 9, 11], chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], melody: [0, 2, 4, null, 4, 5, 4, 2, 0, null, 2, 4, 2, null, null, null, 5, 5, 4, 2, 4, null, 2, 0, 1, 2, 0, null, -1, null, 0, null], drums: true, lead: "square" },
+    grandline: { bpm: 126, root: 164.81, swing: 0.08, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [8, 12, 15], [5, 8, 12], [7, 10, 14]], melody: [0, null, 2, 3, 4, null, 3, 2, 3, null, 1, 0, -1, null, 0, null, 4, 5, 6, 5, 4, null, 3, null, 2, 3, 4, 2, 0, null, null, null], drums: true, hats: true, lead: "sawtooth" },
+    battle: { bpm: 150, root: 110, swing: 0, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [0, 3, 7], [8, 12, 15], [7, 10, 14]], melody: [0, 0, 3, 0, 4, 0, 3, 2, 0, 0, 3, 0, 5, 4, 3, 2], drums: true, hats: true, lead: "sawtooth", legato: 0.9 },
+    town: { bpm: 104, root: 196, swing: 0.15, scale: [0, 2, 4, 5, 7, 9, 11], chords: [[0, 4, 7], [5, 9, 12], [0, 4, 7], [7, 11, 14]], melody: [4, 2, 0, 2, 4, 4, 4, null, 2, 2, 2, null, 4, 6, 6, null, 4, 2, 0, 2, 4, 4, 4, 4, 2, 2, 4, 2, 0, null, null, null], drums: false, lead: "triangle" },
+    night: { bpm: 72, root: 130.81, swing: 0, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [5, 8, 12], [3, 7, 10], [7, 10, 14]], melody: [4, null, null, 3, 2, null, null, null, 0, null, 2, null, 3, null, null, null], drums: false, lead: "sine", legato: 3 }
+  };
 
   // src/main.js
   var root = document.createElement("div");

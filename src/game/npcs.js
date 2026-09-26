@@ -52,7 +52,7 @@ export function makeNPC(def, x, y, extra = {}) {
     x, y, name: def.name, title: def.title, look, race: def.race || look.race, faction: def.faction || 'civilian', attrs,
     style: def.style || 'brawler', fruit: def.fruit || null, fruitMastery: def.fruitMastery ?? (def.fruit ? 60 : 0),
     weapon: def.weapon ? { kind: def.weapon, power: def.weaponPower || 1.2, count: STYLES[def.style]?.swords || 1 } : null,
-    hakiSkill: def.haki || {}, boss: def.boss, hpMul: (def.hpMul || 1) * (def.boss ? 4 : 1), lethal: def.lethal ?? true, poise: def.poise,
+    hakiSkill: def.haki || {}, boss: def.boss, hpMul: (def.hpMul || 1) * (def.boss ? 2.2 : 1), lethal: def.lethal ?? true, poise: def.poise,
     dmgMul: def.dmgMul, defMul: def.defMul,
     ...extra,
   });
@@ -168,6 +168,19 @@ export class Interactions {
     game.on('quickHeal', () => this.quickHeal());
     this.objectHandlers = {};
     game.on('useObject', (o) => this.objectHandlers[o.use]?.(o, game));
+    // quest markers (! / ?) over NPC heads
+    let mt = 0;
+    game.on('tick', (dt) => {
+      if ((mt -= dt) > 0) return;
+      mt = 0.5;
+      const c = game.state?.char;
+      if (!c) return;
+      for (const a of game.actors) {
+        const m = a.def?.marker;
+        if (!m || !a.alive) continue;
+        try { a.questMarker = m(c, game) || null; } catch (e) { a.questMarker = null; }
+      }
+    });
   }
 
   onObject(id, fn) { this.objectHandlers[id] = fn; }
