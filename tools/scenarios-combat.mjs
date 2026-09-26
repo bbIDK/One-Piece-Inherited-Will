@@ -64,20 +64,21 @@ function installLab() {
       // an open, dry patch (no water, no props): first around Dawn Island's
       // grasslands (East Blue), else around the spawn
       const g = OP.game, p = g.player, w = g.world;
-      const good = new Set([16, 17, 18, 29, 31, 46, 47]);
+      const good = new Set([16, 17, 18, 32, 47]);
       const ok = (x, y) => good.has(w.type(x, y)) && w.walkable(x, y);
       const starts = [];
       const dawn = g.surface && g.surface.islands && g.surface.islands.find((i) => i.id === 'dawn_island');
       if (dawn && dawn.towns && dawn.towns[0] && dawn.towns[0].plaza) starts.push(dawn.towns[0].plaza);
       starts.push({ x: p.x, y: p.y });
       for (const st of starts) {
-        for (let r = 6; r < 90; r += 3) {
-          for (let k = 0; k < 28; k++) {
+        for (let r = 6; r < 160; r += 3) {
+          for (let k = 0; k < 32; k++) {
             const a = (k / 28) * Math.PI * 2;
             const cx = Math.round(st.x + Math.cos(a) * r), cy = Math.round(st.y + Math.sin(a) * r);
             let fine = true;
             for (let dx = -8; dx <= 10 && fine; dx += 1) for (let dy = -4; dy <= 4 && fine; dy += 1) if (!ok(cx + dx, cy + dy)) fine = false;
-            if (fine && w.objects) { const near = w.objects.query(cx - 9, cy - 6, cx + 11, cy + 6); if (near.length) fine = false; }
+            // nothing standing in front of (or right behind) the fighters; buildings reach far up
+            if (fine && w.objects) { const near = w.objects.query(cx - 10, cy - 2, cx + 12, cy + 16); if (near.some((o) => o.kind === 'building' || o.y > cy - 2)) fine = false; }
             if (fine) { lab.home = { x: cx + 0.5, y: cy + 0.5 }; return lab.home; }
           }
         }
