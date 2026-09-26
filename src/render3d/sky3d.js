@@ -13,21 +13,36 @@ const VERT = /* glsl */`
 `;
 const FRAG = /* glsl */`
   uniform vec3 uTop, uHorizon, uBottom, uSunDir, uSunCol, uMoonDir;
-  uniform float uNight, uTime, uCloud, uStorm, uZone;
+  uniform float uNight, uTime, uCloud, uStorm, uZone, uDusk;
   varying vec3 vDir;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float hash1(float n) { return fract(sin(n * 91.345) * 47453.5453); }
   float noise(vec2 p) {
     vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
     return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
   }
-  float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += noise(p) * a; p *= 2.03; a *= 0.5; } return s; }
+  float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += noise(p) * a; p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return s; }
+
+  // Cel-shaded cloud colour: sunlit tops, blue-grey undersides, a warm rim
+  // when the sun is behind; lit is 0..1 (how much a point faces the sun).
+  vec3 cloudCol(float lit, float rim) {
+    vec3 sunC = mix(vec3(1.0), uSunCol, 0.45 + uDusk * 0.4);
+    vec3 lightC = sunC * (1.0 - uNight * 0.82) * (1.0 - uStorm * 0.45);
+    vec3 shadowC = mix(uHorizon, uTop, 0.45) * 0.72 + vec3(0.08, 0.09, 0.12);
+    shadowC = mix(shadowC, vec3(0.42, 0.44, 0.5), uStorm * 0.6) * (1.0 - uNight * 0.75);
+    float band = smoothstep(0.42, 0.5, lit) * 0.75 + smoothstep(0.7, 0.76, lit) * 0.25;
+    vec3 c = mix(shadowC, lightC, band);
+    return c + uSunCol * rim * 0.6 * (1.0 - uStorm) * (1.0 - uNight);
+  }
+
   void main() {
     vec3 d = normalize(vDir);
     float y = d.y;
-    vec3 col = y > 0.0 ? mix(uHorizon, uTop, pow(clamp(y, 0.0, 1.0), 0.55)) : mix(uHorizon, uBottom, clamp(-y * 3.0, 0.0, 1.0));
+    // below the horizon the sky only ever shows past the edge of the sea: keep it the far sea's hazy colour
+    vec3 col = y > 0.0 ? mix(uHorizon, uTop, pow(clamp(y, 0.0, 1.0), 0.55)) : mix(uHorizon, uBottom, smoothstep(0.0, 0.35, -y) * 0.6);
     // sun and its glow
     float sd = max(dot(d, uSunDir), 0.0);
-    col += uSunCol * (pow(sd, 900.0) * 6.0 + pow(sd, 12.0) * 0.35) * (1.0 - uStorm * 0.8);
+    col += uSunCol * (pow(sd, 900.0) * 6.0 + pow(sd, 12.0) * 0.35 + pow(sd, 3.0) * 0.08 * uDusk) * (1.0 - uStorm * 0.8);
     // moon
     float md = max(dot(d, uMoonDir), 0.0);
     col += vec3(0.9, 0.93, 1.0) * smoothstep(0.9993, 0.9996, md) * uNight;
@@ -37,12 +52,68 @@ const FRAG = /* glsl */`
       float s = step(0.996, hash(floor(sp))) * (0.6 + 0.4 * sin(uTime * 2.0 + hash(floor(sp) + 3.1) * 20.0));
       col += vec3(s) * uNight * smoothstep(0.0, 0.25, y) * (1.0 - uStorm);
     }
-    // clouds (a slow-moving layer)
-    if (y > 0.0 && uZone != 2.0) {
-      vec2 cp = d.xz / (d.y + 0.15) * 1.6 + vec2(uTime * 0.01, uTime * 0.004);
-      float c = smoothstep(0.52 - uCloud * 0.25, 0.85, fbm(cp));
-      vec3 cc = mix(vec3(1.0), uHorizon, 0.25) * (1.0 - uNight * 0.75) * (1.0 - uStorm * 0.55);
-      col = mix(col, cc, c * smoothstep(0.0, 0.2, y) * 0.9);
+    if (uZone == 2.0 || uZone == 3.0) { gl_FragColor = vec4(col, 1.0); return; }
+
+    // --- towering cumulus banks along the horizon: rounded lobes (anime cloud art)
+    float az = atan(d.z, d.x);
+    vec2 sunH = normalize(uSunDir.xz + vec2(1e-4));
+    if (y > -0.02 && y < 0.34) {
+      float bestD = -1.0; vec2 bestQ = vec2(0.0); float bestR = 1.0;
+      for (int layer = 0; layer < 3; layer++) {
+        // big billows, smaller puffs on top of them, and little bumps along the edges
+        float nc = layer == 0 ? 40.0 : layer == 1 ? 90.0 : 170.0;
+        float cw = 6.2831853 / nc;
+        float fi = floor(az / cw);
+        for (int k = -2; k <= 2; k++) {
+          float ci = fi + float(k);
+          float wrapped = mod(ci, nc);
+          float h1 = hash1(wrapped * 1.7 + float(layer) * 13.1), h2 = hash1(wrapped * 3.3 + 7.7 + float(layer) * 5.3), h3 = hash1(wrapped * 5.9 + 2.1 + float(layer));
+          // the bank this lobe belongs to (banks come and go around the horizon)
+          float bankId = floor(ci * cw / 0.5);
+          float bank = hash1(mod(bankId, 12.566) * 2.9 + 1.3);
+          float thresh = 0.28 + uCloud * 0.55;
+          if (bank > thresh) continue;
+          float size = 1.0 - bank / max(thresh, 0.01); // bigger in the middle of a bank
+          float r = cw * (layer == 0 ? 0.7 + h2 * 0.6 : layer == 1 ? 0.8 + h2 * 0.7 : 0.9 + h2 * 0.8);
+          float cx = (ci + 0.5 + (h1 - 0.5) * 0.8) * cw;
+          float top = 0.012 + 0.07 * size * (0.6 + 0.4 * h3);
+          float cy = layer == 0 ? 0.004 + r * 0.3 : layer == 1 ? top * 0.75 + r * 0.1 : top * (0.45 + 0.6 * h3);
+          vec2 q = vec2(az - cx, (y - cy) * 1.1);
+          float dd = r - length(q);
+          if (dd > bestD) { bestD = dd; bestQ = q; bestR = r; }
+        }
+      }
+      float flatBottom = smoothstep(-0.004, 0.006, y);
+      if (bestD > 0.0 && flatBottom > 0.0) {
+        // shade the lobe like a ball lit by the sun (in the lobe's own frame)
+        vec2 hdir = normalize(d.xz);
+        vec3 L = normalize(vec3(dot(uSunDir.xz, vec2(-hdir.y, hdir.x)), uSunDir.y + 0.15, -dot(uSunDir.xz, hdir)));
+        vec2 qn = bestQ / bestR;
+        vec3 nrm = normalize(vec3(qn.x, qn.y, sqrt(max(0.0, 1.0 - dot(qn, qn)))));
+        float lit = dot(nrm, L) * 0.5 + 0.5;
+        float rim = pow(1.0 - nrm.z, 3.0) * max(0.0, -L.z);
+        vec3 cc = cloudCol(lit, rim);
+        // far banks melt into the haze near the horizon line
+        float haze = 1.0 - smoothstep(0.0, 0.06, y) * 0.55;
+        cc = mix(cc, uHorizon, haze * 0.45);
+        col = mix(col, cc, smoothstep(0.0, 0.004, bestD) * flatBottom);
+      }
+    }
+
+    // --- fair-weather cumulus overhead, drifting on the wind
+    if (y > 0.04) {
+      vec2 cp = d.xz / (d.y + 0.12) * 1.25 + vec2(uTime * 0.008, uTime * 0.003);
+      float cover = 0.56 - uCloud * 0.2;
+      float n0 = fbm(cp);
+      if (n0 > cover - 0.08) {
+        // light: how the density falls away toward the sun (sunward edges are bright)
+        float n1 = fbm(cp + sunH * 0.09);
+        float lit = clamp(0.5 + (n0 - n1) * 6.0 + uSunDir.y * 0.25, 0.0, 1.0);
+        float edge = smoothstep(cover, cover + 0.025, n0);
+        float rim = (1.0 - smoothstep(cover, cover + 0.08, n0)) * pow(max(dot(d, uSunDir), 0.0), 4.0);
+        vec3 cc = cloudCol(lit, rim * 2.0);
+        col = mix(col, cc, edge * smoothstep(0.04, 0.2, y) * 0.96);
+      }
     }
     gl_FragColor = vec4(col, 1.0);
   }
@@ -56,12 +127,12 @@ export class Sky {
       uTop: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uBottom: { value: new THREE.Color() },
       uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunCol: { value: new THREE.Color(1, 0.9, 0.7) },
       uMoonDir: { value: new THREE.Vector3(0, 1, 0) }, uNight: { value: 0 }, uTime: { value: 0 },
-      uCloud: { value: 0.3 }, uStorm: { value: 0 }, uZone: { value: 0 },
+      uCloud: { value: 0.3 }, uStorm: { value: 0 }, uZone: { value: 0 }, uDusk: { value: 0 },
     };
     const mat = new THREE.ShaderMaterial({ uniforms: this.uniforms, vertexShader: VERT, fragmentShader: FRAG, side: THREE.BackSide, depthWrite: false, depthTest: true });
     this.mesh = new THREE.Mesh(new THREE.SphereGeometry(1000, 32, 16), mat);
     this.mesh.frustumCulled = false;
-    this.mesh.renderOrder = -1;
+    this.mesh.renderOrder = 1000; // after the opaque world: only the visible sky runs this shader
     scene.add(this.mesh);
 
     this.sun = new THREE.DirectionalLight(0xffffff, 2.2);
@@ -80,6 +151,7 @@ export class Sky {
     this.sunDir = new THREE.Vector3();
     this.sunCol = new THREE.Color();
     this.horizon = new THREE.Color();
+    this.top = new THREE.Color();
   }
 
   update(env, world, sailing) {
@@ -119,10 +191,12 @@ export class Sky {
     u.uSunCol.value.copy(this.sunCol);
     u.uNight.value = night;
     u.uTime.value = env.time;
-    u.uCloud.value = 0.3 + env.storm * 0.7;
+    u.uCloud.value = 0.3 + env.storm * 0.7 + (env.fog || 0) * 0.2;
+    u.uDusk.value = dusk;
     u.uStorm.value = env.storm;
     u.uZone.value = zone;
     this.horizon.setRGB(...hor);
+    this.top.setRGB(...top);
 
     // lighting: the sun by day, a cool moon by night
     const amb = env.ambient || [1, 1, 1];

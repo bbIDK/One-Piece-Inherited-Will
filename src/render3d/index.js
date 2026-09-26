@@ -108,6 +108,7 @@ export class Renderer3D {
     this.renderer.shadowMap.enabled = q !== 'low';
     this.sky.sun.castShadow = q !== 'low';
     this.terrain.setDetail?.(q);
+    this.water.setDetail?.(q);
     // post-processing (ink outlines, grading, bloom, FXAA) on 'high' only
     if (q === 'low' && this.post) { this.post.dispose(); this.post = null; }
     if (q !== 'low' && !this.post) {
@@ -199,7 +200,7 @@ export class Renderer3D {
     this.sky.maxFar = this.terrain.extent;
     this.sky.update(env, w, sailing);
     this.sky.mesh.position.copy(cam.position);
-    this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon);
+    this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
     this.terrain.update(ox, oy);
     // the shadow camera follows the player
     const gh = this.ground(ox, oy);
@@ -251,7 +252,7 @@ export class Renderer3D {
     this.sky.maxFar = this.terrain.extent;
     this.sky.update(env, w, true);
     this.sky.mesh.position.copy(cam.position);
-    this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon);
+    this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
     this.terrain.update(ox, oy);
     this.sky.sun.target.position.set(0, gh, 0);
     this.sky.sun.position.y += gh;

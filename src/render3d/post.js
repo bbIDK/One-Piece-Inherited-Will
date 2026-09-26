@@ -52,7 +52,11 @@ const InkGradeShader = {
       float near = min(min(dl, dr), min(du, dd));
       // only the far side of an edge is inked, so lines hug the nearer object
       float edge = max(0.0, d - near) / max(near, 0.35);
-      float ink = smoothstep(0.1, 0.35, edge) * (1.0 - smoothstep(45.0, 160.0, near)) * uInk;
+      // …and only where the surface bends or breaks: across a plane 1/depth
+      // changes linearly on screen, so its second difference is ~0
+      float iz = 1.0 / d;
+      float lap = max(abs(1.0 / dl + 1.0 / dr - 2.0 * iz), abs(1.0 / du + 1.0 / dd - 2.0 * iz)) / iz;
+      float ink = smoothstep(0.1, 0.35, edge) * smoothstep(0.04, 0.12, lap) * (1.0 - smoothstep(45.0, 160.0, near)) * uInk;
       c.rgb = mix(c.rgb, uInkColor * (0.3 + 0.2 * c.rgb), ink * 0.85);
       // grading (linear light): saturation, contrast, cool shadows / warm highlights
       float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));

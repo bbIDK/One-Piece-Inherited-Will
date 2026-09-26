@@ -33454,7 +33454,11 @@ void main() {
       float near = min(min(dl, dr), min(du, dd));
       // only the far side of an edge is inked, so lines hug the nearer object
       float edge = max(0.0, d - near) / max(near, 0.35);
-      float ink = smoothstep(0.1, 0.35, edge) * (1.0 - smoothstep(45.0, 160.0, near)) * uInk;
+      // \u2026and only where the surface bends or breaks: across a plane 1/depth
+      // changes linearly on screen, so its second difference is ~0
+      float iz = 1.0 / d;
+      float lap = max(abs(1.0 / dl + 1.0 / dr - 2.0 * iz), abs(1.0 / du + 1.0 / dd - 2.0 * iz)) / iz;
+      float ink = smoothstep(0.1, 0.35, edge) * smoothstep(0.04, 0.12, lap) * (1.0 - smoothstep(45.0, 160.0, near)) * uInk;
       c.rgb = mix(c.rgb, uInkColor * (0.3 + 0.2 * c.rgb), ink * 0.85);
       // grading (linear light): saturation, contrast, cool shadows / warm highlights
       float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
@@ -34584,12 +34588,42 @@ void main() {
     /* glsl */
     `
   uniform vec2 uOrigin;
+  uniform sampler2D uMap;
+  uniform vec2 uSize;
+  uniform float uTime;
+  uniform float uAmp;
   varying vec3 vWorld;
   varying vec3 vView;
+  varying vec3 vSwell;   // slope x, slope z, height (-1..1)
   #include <fog_pars_vertex>
+
+  // three wind swells (world-anchored); returns height, writes the slope
+  float swells(vec2 p, float t, out vec2 slope) {
+    const vec2 D1 = vec2(0.96, 0.28), D2 = vec2(-0.37, 0.93), D3 = vec2(0.75, -0.66);
+    const float K1 = 0.2856, K2 = 0.4833, K3 = 0.7854;       // 22 m, 13 m, 8 m
+    const float W1 = 1.673, W2 = 2.177, W3 = 2.774;         // deep-water speeds
+    float a1 = K1 * dot(D1, p) - W1 * t, a2 = K2 * dot(D2, p) - W2 * t + 1.7, a3 = K3 * dot(D3, p) - W3 * t + 4.1;
+    float h = sin(a1) * 1.0 + sin(a2) * 0.6 + sin(a3) * 0.35;
+    slope = (D1 * K1 * cos(a1) * 1.0 + D2 * K2 * cos(a2) * 0.6 + D3 * K3 * cos(a3) * 0.35) / 1.95;
+    return h / 1.95;
+  }
+
   void main() {
     vec4 wp = modelMatrix * vec4(position, 1.0);
-    vWorld = vec3(wp.x + uOrigin.x, wp.y, wp.z + uOrigin.y);
+    vec2 P = vec2(wp.x + uOrigin.x, wp.z + uOrigin.y);
+    // calmer in the shallows (the sea floor rises), fading out with distance
+    vec4 m = texture2D(uMap, P / uSize);
+    float sd = (m.r * 255.0 - 128.0) * 0.25;
+    float kind = floor(m.g * 255.0 + 0.5);
+    float liquid = kind < 2.5 || kind == 5.0 || kind == 7.0 ? 1.0 : kind == 3.0 ? 0.5 : 0.15;
+    float shore = mix(0.35, 1.0, smoothstep(0.5, -7.0, sd));
+    float fade = 1.0 - smoothstep(70.0, 190.0, length(wp.xz - cameraPosition.xz));
+    float A = uAmp * shore * fade * liquid;
+    vec2 slope;
+    float h = swells(P, uTime, slope);
+    wp.y += h * A;
+    vSwell = vec3(slope * A, h * step(0.001, A));
+    vWorld = vec3(P.x, wp.y, P.y);
     vView = cameraPosition - wp.xyz;
     vec4 mvPosition = viewMatrix * wp;
     gl_Position = projectionMatrix * mvPosition;
@@ -34606,25 +34640,41 @@ void main() {
   uniform vec3 uSunDir;
   uniform vec3 uSunCol;
   uniform vec3 uSky;
+  uniform vec3 uSkyTop;
   uniform float uDay;
   uniform float uZone;
   uniform float uStorm;
+  uniform float uDetail;
   varying vec3 vWorld;
   varying vec3 vView;
+  varying vec3 vSwell;
   #include <fog_pars_fragment>
 
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  vec2 hash2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
   float noise(vec2 p) {
     vec2 i = floor(p), f = fract(p);
     vec2 u = f * f * (3.0 - 2.0 * f);
     return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
   }
-  float waves(vec2 p, float t) {
-    float h = 0.0;
-    h += sin(p.x * 0.35 + t * 1.1) * 0.5 + sin(p.y * 0.28 - t * 0.9) * 0.5;
-    h += (noise(p * 0.6 + vec2(t * 0.35, t * 0.2)) - 0.5) * 1.2;
+  float ripples(vec2 p, float t) {
+    float h = (noise(p * 0.6 + vec2(t * 0.35, t * 0.2)) - 0.5) * 1.2;
     h += (noise(p * 1.7 - vec2(t * 0.6, -t * 0.4)) - 0.5) * 0.5;
+    h += (noise(p * 4.1 + vec2(t * 0.9, t * 0.7)) - 0.5) * 0.18;
     return h;
+  }
+  // caustic network: the edges between moving Voronoi cells
+  float caustic(vec2 p, float t) {
+    vec2 i = floor(p), f = fract(p);
+    float d1 = 8.0, d2 = 8.0;
+    for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+      vec2 g = vec2(float(x), float(y));
+      vec2 o = hash2(i + g);
+      o = 0.5 + 0.42 * sin(t * 0.8 + 6.2831 * o);
+      float d = length(g + o - f);
+      if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d;
+    }
+    return 1.0 - smoothstep(0.0, 0.09, d2 - d1);
   }
 
   void main() {
@@ -34633,22 +34683,29 @@ void main() {
     float sd = (m.r * 255.0 - 128.0) * 0.25;   // + land, - water (tiles)
     float kind = floor(m.g * 255.0 + 0.5);
     float depth = clamp(-sd, 0.0, 30.0);
+    bool water = kind < 2.5 || kind == 5.0 || kind == 7.0;
 
-    // wave normal
+    // the surface normal: swells plus small ripples
     float t = uTime * (1.0 + uStorm * 0.8);
     vec2 p = vWorld.xz;
-    float e = 0.35;
-    float h0 = waves(p, t);
-    vec3 n = normalize(vec3(-(waves(p + vec2(e, 0.0), t) - h0) / e * (0.18 + uStorm * 0.25), 1.0, -(waves(p + vec2(0.0, e), t) - h0) / e * (0.18 + uStorm * 0.25)));
+    float e = 0.3;
+    float r0 = ripples(p, t);
+    vec2 rip = vec2(ripples(p + vec2(e, 0.0), t) - r0, ripples(p + vec2(0.0, e), t) - r0) / e * (0.09 + uStorm * 0.22);
+    vec3 n = normalize(vec3(-vSwell.x - rip.x, 1.0, -vSwell.y - rip.y));
     vec3 v = normalize(vView);
-    float fres = pow(1.0 - max(dot(n, v), 0.0), 3.0);
+    float ndv = max(dot(n, v), 0.0);
+    float fres = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);
+    float light = mix(0.26, 1.0, uDay);
 
-    vec3 deep = vec3(0.05, 0.27, 0.52);
-    vec3 shallow = vec3(0.16, 0.66, 0.78);
-    if (uZone > 1.5 && uZone < 2.5) { deep = vec3(0.02, 0.1, 0.25); shallow = vec3(0.05, 0.35, 0.55); }
-    float sh = exp(-depth * 0.22);
-    vec3 col = mix(deep, shallow, sh);
-    float alpha = mix(0.93, 0.62, sh);
+    // water colour by depth: lagoon, turquoise, blue, deep ocean
+    vec3 deep = vec3(0.006, 0.07, 0.24), mid = vec3(0.01, 0.2, 0.44), shallow = vec3(0.03, 0.52, 0.56), lagoon = vec3(0.18, 0.74, 0.64);
+    if (uZone > 1.5 && uZone < 2.5) { deep = vec3(0.01, 0.06, 0.18); mid = vec3(0.02, 0.14, 0.32); shallow = vec3(0.04, 0.32, 0.5); lagoon = shallow; }
+    vec3 col = mix(deep, mid, exp(-depth * 0.07));
+    col = mix(col, shallow, exp(-depth * 0.32));
+    col = mix(col, lagoon, exp(-depth * 1.1) * 0.7);
+    // light through the tops of the swells
+    col += shallow * clamp(vSwell.z, 0.0, 1.0) * 0.28;
+    float alpha = mix(0.96, 0.5, exp(-depth * 0.35));
 
     // other liquids
     if (kind == 3.0) { col = mix(vec3(0.86, 0.91, 0.97), vec3(1.0), noise(p * 0.15 + t * 0.05)); alpha = 1.0; fres *= 0.3; }
@@ -34656,26 +34713,81 @@ void main() {
     else if (kind == 8.0) { col = mix(vec3(0.42, 0.69, 0.3), vec3(0.73, 0.86, 0.35), noise(p * 0.7 + t * 0.2)); alpha = 0.95; }
     else if (kind == 6.0) { col = vec3(0.02, 0.08, 0.18); alpha = 0.97; }
 
-    float light = mix(0.28, 1.0, uDay);
-    col *= light;
-    col = mix(col, uSky * (0.55 + 0.45 * uDay), fres * 0.55);
-    // sun glitter
+    col *= light * (0.82 + 0.18 * max(dot(n, uSunDir), 0.0));
+    // sunlight rippling on the sand under the shallows
+    if (water && uDetail > 0.5 && depth < 6.0) {
+      float c = caustic(p * 0.42 + vec2(t * 0.03, t * 0.02), t) + caustic(p * 0.71 - vec2(t * 0.02, -t * 0.03) + 3.1, t * 1.3) * 0.6;
+      col += vec3(0.55, 0.95, 0.85) * c * exp(-depth * 0.45) * 0.28 * uDay * (1.0 - uStorm);
+    }
+    // the sky, mirrored at a glance
+    vec3 rd = reflect(-v, n);
+    vec3 skyR = mix(uSky, uSkyTop, pow(clamp(rd.y, 0.0, 1.0), 0.6));
+    col = mix(col, skyR * (0.45 + 0.55 * uDay), fres * 0.85);
+    // the sun: a hard highlight, and sparkles along its path
     vec3 hlf = normalize(uSunDir + v);
-    float spec = pow(max(dot(n, hlf), 0.0), 120.0) * (0.4 + 0.6 * uDay);
-    col += uSunCol * spec * 1.4;
-    // surf on the beaches and whitecaps in storms
-    float foamBand = smoothstep(-1.4, -0.15, sd) * (1.0 - smoothstep(-0.15, 0.25, sd));
-    float foamNoise = noise(p * 1.3 + vec2(t * 0.5, 0.0));
-    float surf = foamBand * smoothstep(0.35, 0.65, foamNoise + 0.25 * sin(sd * 6.0 - t * 2.5));
-    float caps = uStorm * smoothstep(0.72, 0.9, noise(p * 0.45 + t * 0.4));
-    if (kind < 2.5 || kind == 7.0) col = mix(col, vec3(0.97) * light + 0.1, clamp(surf + caps, 0.0, 1.0) * 0.85);
-    alpha = max(alpha, clamp(surf, 0.0, 1.0));
+    float nh = max(dot(n, hlf), 0.0);
+    float sunUp = smoothstep(-0.05, 0.1, uSunDir.y) * (1.0 - uStorm * 0.85);
+    col += uSunCol * (pow(nh, 320.0) * 3.2 + pow(nh, 42.0) * 0.12) * sunUp;
+    if (uDetail > 0.5) {
+      vec2 cell = floor(p * 2.6);
+      float g = hash(cell);
+      float tw = pow(max(0.0, sin(t * 3.1 + g * 40.0)), 12.0);
+      vec2 fc = fract(p * 2.6) - 0.5;
+      float dotS = 1.0 - smoothstep(0.04, 0.16, length(fc));
+      float dist = length(vView);
+      col += uSunCol * step(0.9, g) * tw * dotS * pow(nh, 14.0) * 2.5 * sunUp * (1.0 - smoothstep(18.0, 70.0, dist));
+    }
+    // surf: lines rolling in toward the beach, foam at the waterline, whitecaps
+    float foam = 0.0;
+    if (water) {
+      float band = smoothstep(-5.0, -0.4, sd);
+      float wave = fract(sd * 0.32 - t * 0.16 + noise(p * 0.18) * 0.55);
+      float line = smoothstep(0.84, 0.9, wave) * (1.0 - smoothstep(0.93, 0.99, wave));
+      line *= step(0.36, noise(p * 0.8 + vec2(t * 0.15, 0.0)));
+      float edge = smoothstep(-1.0, -0.15, sd + (noise(p * 1.4 + t * 0.4) - 0.5) * 0.6);
+      float caps = smoothstep(0.55, 0.8, vSwell.z) * step(0.62 - uStorm * 0.3, noise(p * 0.32 + t * 0.2)) * (0.15 + uStorm * 0.85);
+      foam = clamp(max(edge, line * band * 0.9) + caps, 0.0, 1.0);
+    } else if (kind == 7.0) {
+      foam = smoothstep(-0.6, -0.1, sd) * 0.6;
+    }
+    col = mix(col, vec3(0.96, 0.99, 1.0) * light * 1.05, foam * 0.9);
+    alpha = max(alpha, foam);
 
     gl_FragColor = vec4(col, alpha);
     #include <fog_fragment>
   }
 `
   );
+  function discGeometry(radius = 1600, segs = 96) {
+    const rings2 = [0];
+    let r = 0.6, dr = 0.6;
+    while (r < radius) {
+      rings2.push(r);
+      dr *= 1.075;
+      r += dr;
+    }
+    rings2.push(radius);
+    const pos = [], idx = [];
+    pos.push(0, 0, 0);
+    for (let k = 1; k < rings2.length; k++) {
+      for (let i = 0; i < segs; i++) {
+        const a = i / segs * Math.PI * 2;
+        pos.push(Math.cos(a) * rings2[k], 0, Math.sin(a) * rings2[k]);
+      }
+    }
+    const ring3 = (k, i) => k === 0 ? 0 : 1 + (k - 1) * segs + (i % segs + segs) % segs;
+    for (let i = 0; i < segs; i++) idx.push(0, ring3(1, i + 1), ring3(1, i));
+    for (let k = 1; k < rings2.length - 1; k++) {
+      for (let i = 0; i < segs; i++) {
+        const a = ring3(k, i), b = ring3(k, i + 1), c = ring3(k + 1, i), d = ring3(k + 1, i + 1);
+        idx.push(a, b, c, b, d, c);
+      }
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    return g;
+  }
   var Water = class {
     constructor(scene) {
       this.uniforms = UniformsUtils.merge([
@@ -34685,12 +34797,15 @@ void main() {
           uSize: { value: new Vector2(1, 1) },
           uOrigin: { value: new Vector2() },
           uTime: { value: 0 },
+          uAmp: { value: 0.14 },
           uSunDir: { value: new Vector3(0.3, 0.8, 0.2) },
           uSunCol: { value: new Color(1, 0.95, 0.85) },
           uSky: { value: new Color(0.6, 0.8, 1) },
+          uSkyTop: { value: new Color(0.2, 0.45, 0.85) },
           uDay: { value: 1 },
           uZone: { value: 0 },
-          uStorm: { value: 0 }
+          uStorm: { value: 0 },
+          uDetail: { value: 1 }
         }
       ]);
       this.material = new ShaderMaterial({
@@ -34698,16 +34813,18 @@ void main() {
         vertexShader: VERT,
         fragmentShader: FRAG,
         transparent: true,
-        depthWrite: false,
+        depthWrite: true,
         fog: true
       });
-      const geo2 = new PlaneGeometry(3e3, 3e3, 1, 1);
-      geo2.rotateX(-Math.PI / 2);
-      this.mesh = new Mesh(geo2, this.material);
+      this.mesh = new Mesh(discGeometry(), this.material);
       this.mesh.renderOrder = 1;
       this.mesh.frustumCulled = false;
       scene.add(this.mesh);
       this.tex = null;
+    }
+    /** 'high' shows caustics and sparkles; 'low' skips them. */
+    setDetail(q2) {
+      this.uniforms.uDetail.value = q2 === "low" ? 0 : 1;
     }
     setWorld(world) {
       if (this.tex) this.tex.dispose();
@@ -34731,15 +34848,18 @@ void main() {
       this.uniforms.uSize.value.set(W3, H2);
       this.uniforms.uZone.value = world.zone || 0;
     }
-    update(ox, oy, env, sunDir, sunCol, sky) {
+    update(ox, oy, env, sunDir, sunCol, sky, skyTop) {
       const u = this.uniforms;
       u.uOrigin.value.set(ox, oy);
       u.uTime.value = env.time;
       u.uDay.value = env.daylight;
       u.uStorm.value = env.storm;
+      const zone = u.uZone.value;
+      u.uAmp.value = zone >= 2 ? 0 : 0.14 + env.storm * 0.34;
       if (sunDir) u.uSunDir.value.copy(sunDir);
       if (sunCol) u.uSunCol.value.copy(sunCol);
       if (sky) u.uSky.value.copy(sky);
+      if (skyTop) u.uSkyTop.value.copy(skyTop);
     }
   };
 
@@ -34759,21 +34879,36 @@ void main() {
     /* glsl */
     `
   uniform vec3 uTop, uHorizon, uBottom, uSunDir, uSunCol, uMoonDir;
-  uniform float uNight, uTime, uCloud, uStorm, uZone;
+  uniform float uNight, uTime, uCloud, uStorm, uZone, uDusk;
   varying vec3 vDir;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float hash1(float n) { return fract(sin(n * 91.345) * 47453.5453); }
   float noise(vec2 p) {
     vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
     return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
   }
-  float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { s += noise(p) * a; p *= 2.03; a *= 0.5; } return s; }
+  float fbm(vec2 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += noise(p) * a; p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return s; }
+
+  // Cel-shaded cloud colour: sunlit tops, blue-grey undersides, a warm rim
+  // when the sun is behind; lit is 0..1 (how much a point faces the sun).
+  vec3 cloudCol(float lit, float rim) {
+    vec3 sunC = mix(vec3(1.0), uSunCol, 0.45 + uDusk * 0.4);
+    vec3 lightC = sunC * (1.0 - uNight * 0.82) * (1.0 - uStorm * 0.45);
+    vec3 shadowC = mix(uHorizon, uTop, 0.45) * 0.72 + vec3(0.08, 0.09, 0.12);
+    shadowC = mix(shadowC, vec3(0.42, 0.44, 0.5), uStorm * 0.6) * (1.0 - uNight * 0.75);
+    float band = smoothstep(0.42, 0.5, lit) * 0.75 + smoothstep(0.7, 0.76, lit) * 0.25;
+    vec3 c = mix(shadowC, lightC, band);
+    return c + uSunCol * rim * 0.6 * (1.0 - uStorm) * (1.0 - uNight);
+  }
+
   void main() {
     vec3 d = normalize(vDir);
     float y = d.y;
-    vec3 col = y > 0.0 ? mix(uHorizon, uTop, pow(clamp(y, 0.0, 1.0), 0.55)) : mix(uHorizon, uBottom, clamp(-y * 3.0, 0.0, 1.0));
+    // below the horizon the sky only ever shows past the edge of the sea: keep it the far sea's hazy colour
+    vec3 col = y > 0.0 ? mix(uHorizon, uTop, pow(clamp(y, 0.0, 1.0), 0.55)) : mix(uHorizon, uBottom, smoothstep(0.0, 0.35, -y) * 0.6);
     // sun and its glow
     float sd = max(dot(d, uSunDir), 0.0);
-    col += uSunCol * (pow(sd, 900.0) * 6.0 + pow(sd, 12.0) * 0.35) * (1.0 - uStorm * 0.8);
+    col += uSunCol * (pow(sd, 900.0) * 6.0 + pow(sd, 12.0) * 0.35 + pow(sd, 3.0) * 0.08 * uDusk) * (1.0 - uStorm * 0.8);
     // moon
     float md = max(dot(d, uMoonDir), 0.0);
     col += vec3(0.9, 0.93, 1.0) * smoothstep(0.9993, 0.9996, md) * uNight;
@@ -34783,12 +34918,68 @@ void main() {
       float s = step(0.996, hash(floor(sp))) * (0.6 + 0.4 * sin(uTime * 2.0 + hash(floor(sp) + 3.1) * 20.0));
       col += vec3(s) * uNight * smoothstep(0.0, 0.25, y) * (1.0 - uStorm);
     }
-    // clouds (a slow-moving layer)
-    if (y > 0.0 && uZone != 2.0) {
-      vec2 cp = d.xz / (d.y + 0.15) * 1.6 + vec2(uTime * 0.01, uTime * 0.004);
-      float c = smoothstep(0.52 - uCloud * 0.25, 0.85, fbm(cp));
-      vec3 cc = mix(vec3(1.0), uHorizon, 0.25) * (1.0 - uNight * 0.75) * (1.0 - uStorm * 0.55);
-      col = mix(col, cc, c * smoothstep(0.0, 0.2, y) * 0.9);
+    if (uZone == 2.0 || uZone == 3.0) { gl_FragColor = vec4(col, 1.0); return; }
+
+    // --- towering cumulus banks along the horizon: rounded lobes (anime cloud art)
+    float az = atan(d.z, d.x);
+    vec2 sunH = normalize(uSunDir.xz + vec2(1e-4));
+    if (y > -0.02 && y < 0.34) {
+      float bestD = -1.0; vec2 bestQ = vec2(0.0); float bestR = 1.0;
+      for (int layer = 0; layer < 3; layer++) {
+        // big billows, smaller puffs on top of them, and little bumps along the edges
+        float nc = layer == 0 ? 40.0 : layer == 1 ? 90.0 : 170.0;
+        float cw = 6.2831853 / nc;
+        float fi = floor(az / cw);
+        for (int k = -2; k <= 2; k++) {
+          float ci = fi + float(k);
+          float wrapped = mod(ci, nc);
+          float h1 = hash1(wrapped * 1.7 + float(layer) * 13.1), h2 = hash1(wrapped * 3.3 + 7.7 + float(layer) * 5.3), h3 = hash1(wrapped * 5.9 + 2.1 + float(layer));
+          // the bank this lobe belongs to (banks come and go around the horizon)
+          float bankId = floor(ci * cw / 0.5);
+          float bank = hash1(mod(bankId, 12.566) * 2.9 + 1.3);
+          float thresh = 0.28 + uCloud * 0.55;
+          if (bank > thresh) continue;
+          float size = 1.0 - bank / max(thresh, 0.01); // bigger in the middle of a bank
+          float r = cw * (layer == 0 ? 0.7 + h2 * 0.6 : layer == 1 ? 0.8 + h2 * 0.7 : 0.9 + h2 * 0.8);
+          float cx = (ci + 0.5 + (h1 - 0.5) * 0.8) * cw;
+          float top = 0.012 + 0.07 * size * (0.6 + 0.4 * h3);
+          float cy = layer == 0 ? 0.004 + r * 0.3 : layer == 1 ? top * 0.75 + r * 0.1 : top * (0.45 + 0.6 * h3);
+          vec2 q = vec2(az - cx, (y - cy) * 1.1);
+          float dd = r - length(q);
+          if (dd > bestD) { bestD = dd; bestQ = q; bestR = r; }
+        }
+      }
+      float flatBottom = smoothstep(-0.004, 0.006, y);
+      if (bestD > 0.0 && flatBottom > 0.0) {
+        // shade the lobe like a ball lit by the sun (in the lobe's own frame)
+        vec2 hdir = normalize(d.xz);
+        vec3 L = normalize(vec3(dot(uSunDir.xz, vec2(-hdir.y, hdir.x)), uSunDir.y + 0.15, -dot(uSunDir.xz, hdir)));
+        vec2 qn = bestQ / bestR;
+        vec3 nrm = normalize(vec3(qn.x, qn.y, sqrt(max(0.0, 1.0 - dot(qn, qn)))));
+        float lit = dot(nrm, L) * 0.5 + 0.5;
+        float rim = pow(1.0 - nrm.z, 3.0) * max(0.0, -L.z);
+        vec3 cc = cloudCol(lit, rim);
+        // far banks melt into the haze near the horizon line
+        float haze = 1.0 - smoothstep(0.0, 0.06, y) * 0.55;
+        cc = mix(cc, uHorizon, haze * 0.45);
+        col = mix(col, cc, smoothstep(0.0, 0.004, bestD) * flatBottom);
+      }
+    }
+
+    // --- fair-weather cumulus overhead, drifting on the wind
+    if (y > 0.04) {
+      vec2 cp = d.xz / (d.y + 0.12) * 1.25 + vec2(uTime * 0.008, uTime * 0.003);
+      float cover = 0.56 - uCloud * 0.2;
+      float n0 = fbm(cp);
+      if (n0 > cover - 0.08) {
+        // light: how the density falls away toward the sun (sunward edges are bright)
+        float n1 = fbm(cp + sunH * 0.09);
+        float lit = clamp(0.5 + (n0 - n1) * 6.0 + uSunDir.y * 0.25, 0.0, 1.0);
+        float edge = smoothstep(cover, cover + 0.025, n0);
+        float rim = (1.0 - smoothstep(cover, cover + 0.08, n0)) * pow(max(dot(d, uSunDir), 0.0), 4.0);
+        vec3 cc = cloudCol(lit, rim * 2.0);
+        col = mix(col, cc, edge * smoothstep(0.04, 0.2, y) * 0.96);
+      }
     }
     gl_FragColor = vec4(col, 1.0);
   }
@@ -34808,12 +34999,13 @@ void main() {
         uTime: { value: 0 },
         uCloud: { value: 0.3 },
         uStorm: { value: 0 },
-        uZone: { value: 0 }
+        uZone: { value: 0 },
+        uDusk: { value: 0 }
       };
       const mat = new ShaderMaterial({ uniforms: this.uniforms, vertexShader: VERT2, fragmentShader: FRAG2, side: BackSide, depthWrite: false, depthTest: true });
       this.mesh = new Mesh(new SphereGeometry(1e3, 32, 16), mat);
       this.mesh.frustumCulled = false;
-      this.mesh.renderOrder = -1;
+      this.mesh.renderOrder = 1e3;
       scene.add(this.mesh);
       this.sun = new DirectionalLight(16777215, 2.2);
       this.sun.castShadow = true;
@@ -34836,6 +35028,7 @@ void main() {
       this.sunDir = new Vector3();
       this.sunCol = new Color();
       this.horizon = new Color();
+      this.top = new Color();
     }
     update(env, world, sailing) {
       const u = this.uniforms;
@@ -34880,10 +35073,12 @@ void main() {
       u.uSunCol.value.copy(this.sunCol);
       u.uNight.value = night;
       u.uTime.value = env.time;
-      u.uCloud.value = 0.3 + env.storm * 0.7;
+      u.uCloud.value = 0.3 + env.storm * 0.7 + (env.fog || 0) * 0.2;
+      u.uDusk.value = dusk;
       u.uStorm.value = env.storm;
       u.uZone.value = zone;
       this.horizon.setRGB(...hor);
+      this.top.setRGB(...top);
       const amb = env.ambient || [1, 1, 1];
       const lit2 = this.sunDir.y > 0 ? this.sunDir : moon;
       this.sun.position.copy(lit2).multiplyScalar(120);
@@ -59167,6 +59362,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.renderer.shadowMap.enabled = q2 !== "low";
       this.sky.sun.castShadow = q2 !== "low";
       this.terrain.setDetail?.(q2);
+      this.water.setDetail?.(q2);
       if (q2 === "low" && this.post) {
         this.post.dispose();
         this.post = null;
@@ -59275,7 +59471,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.sky.maxFar = this.terrain.extent;
       this.sky.update(env, w, sailing);
       this.sky.mesh.position.copy(cam.position);
-      this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon);
+      this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
       this.terrain.update(ox, oy);
       const gh = this.ground(ox, oy);
       this.sky.sun.target.position.set(0, gh, 0);
@@ -59325,7 +59521,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.sky.maxFar = this.terrain.extent;
       this.sky.update(env, w, true);
       this.sky.mesh.position.copy(cam.position);
-      this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon);
+      this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
       this.terrain.update(ox, oy);
       this.sky.sun.target.position.set(0, gh, 0);
       this.sky.sun.position.y += gh;
