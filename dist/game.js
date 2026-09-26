@@ -10687,6 +10687,7 @@ void main() {
       const kbAng = h2.shape === "circle" || h2.radial ? Math.atan2(tgt.y - h2.y, game.world.dx(h2.x, tgt.x)) : ang;
       if (tgt.iframes > 0) {
         if (tgt.isPlayer || att?.isPlayer) fx.text(tgt.x, tgt.y - 1.2, "DODGE", "#b2ebf2", 0.32);
+        if (tgt.isPlayer) game.emit("playerEvaded", att, h2);
         return false;
       }
       if (tgt.observation && tgt.hakiLevel("observation") > 0 && !h2.unblockable) {
@@ -10742,6 +10743,7 @@ void main() {
             return false;
           }
           blocked = true;
+          if (tgt.isPlayer) game.emit("playerBlocked", att, h2);
           dmg *= h2.guardBreak ? 0.6 : 0.18;
           tgt.stamina -= (h2.guardDmg ?? 10) + h2.damage * 0.25;
           if (tgt.stamina <= 0) {
@@ -13126,11 +13128,26 @@ void main() {
       const sm = actor.styleMastery ? actor.styleMastery(def.style || actor.style) : 0;
       m = str * (1 + sm * 0.012);
       if (def.weapon && actor.weaponMul) m *= actor.weaponMul(def.weapon);
+      if (actor.weaponMastery) m *= 1 + (actor.weaponMastery[weaponKindOf(actor, def)] || 0) * 6e-3;
     }
     m *= actor.buffMul("damage");
     if (actor.armament && !src.startsWith("fruit_ranged")) m *= 1.25 + (actor.hakiLevel("armament") || 0) * 4e-3;
     if (actor.conquerorInfused) m *= 1.4;
     return m;
+  }
+  function weaponKindOf(actor, def) {
+    if (def.weaponKind) return def.weaponKind;
+    if (def.weapon) return def.weapon;
+    const src = def.source || "";
+    if (src.startsWith("style")) {
+      const st = def.style || actor.style;
+      if (/ittoryu|nitoryu|santoryu/.test(st)) return actor.hasWeapon?.("sword") ? "sword" : "fists";
+      if (st === "sniper") return actor.hasWeapon?.("gun") ? "gun" : "fists";
+      if (st === "weather_science") return actor.hasWeapon?.("staff") ? "staff" : "fists";
+      if (st === "elbaf") return actor.hasWeapon?.("axe") ? "axe" : "fists";
+      if (st === "black_leg" || st === "okama_kenpo") return "legs";
+    }
+    return "fists";
   }
   function canUse(actor, def) {
     if (!def) return false;
@@ -15312,6 +15329,7 @@ void main() {
       this.dodgeCd = 0.42 - this.attrs.agi * 15e-4;
       game.fx.burst(this.x, this.y, 6, { color: "#d7ccc8", speed: 2, g: 3, life: 0.3, kind: "smoke", size: 0.18 });
       game.audio?.sfx("dodge");
+      if (this.isPlayer) game.emit("playerDodge");
       return R;
     }
     setBlock(on) {
@@ -16276,7 +16294,10 @@ void main() {
     }
     // --- events from combat ----------------------------------------------------------
     onDamage(target, att, n) {
-      if (target.isPlayer) this.ui?.onPlayerHurt(n);
+      if (target.isPlayer) {
+        this.ui?.onPlayerHurt(n);
+        this.emit("playerHurt", att, n);
+      }
       if (att && att.isPlayer) this.emit("playerHit", target, n);
       if (target.isPlayer || att && att.isPlayer) {
         this.combatT = 6;

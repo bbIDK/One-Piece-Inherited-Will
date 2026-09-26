@@ -168,6 +168,7 @@ export class Combat {
     // dodge i-frames
     if (tgt.iframes > 0) {
       if (tgt.isPlayer || att?.isPlayer) fx.text(tgt.x, tgt.y - 1.2, 'DODGE', '#b2ebf2', 0.32);
+      if (tgt.isPlayer) game.emit('playerEvaded', att, h);
       return false;
     }
     // Observation Haki auto-evade
@@ -232,6 +233,7 @@ export class Combat {
           return false;
         }
         blocked = true;
+        if (tgt.isPlayer) game.emit('playerBlocked', att, h);
         dmg *= h.guardBreak ? 0.6 : 0.18;
         tgt.stamina -= (h.guardDmg ?? 10) + h.damage * 0.25;
         if (tgt.stamina <= 0) {

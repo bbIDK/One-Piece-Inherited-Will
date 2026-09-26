@@ -305,6 +305,7 @@ export class Actor extends Entity {
     this.dodgeCd = 0.42 - this.attrs.agi * 0.0015;
     game.fx.burst(this.x, this.y, 6, { color: '#d7ccc8', speed: 2, g: 3, life: 0.3, kind: 'smoke', size: 0.18 });
     game.audio?.sfx('dodge');
+    if (this.isPlayer) game.emit('playerDodge');
     return R;
   }
 

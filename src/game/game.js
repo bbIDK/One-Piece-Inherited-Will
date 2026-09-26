@@ -97,7 +97,7 @@ export class Game {
 
   // --- events from combat ----------------------------------------------------------
   onDamage(target, att, n) {
-    if (target.isPlayer) this.ui?.onPlayerHurt(n);
+    if (target.isPlayer) { this.ui?.onPlayerHurt(n); this.emit('playerHurt', att, n); }
     if (att && att.isPlayer) this.emit('playerHit', target, n);
     if (target.isPlayer || (att && att.isPlayer)) { this.combatT = 6; }
   }

@@ -8,13 +8,19 @@ import { mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { startServer } from './serve.mjs';
-import { scenarios } from './scenarios.mjs';
+import { scenarios as baseScenarios } from './scenarios.mjs';
+import { readdirSync } from 'node:fs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = Object.fromEntries(process.argv.slice(3).map((a) => {
   const m = a.match(/^--([^=]+)(?:=(.*))?$/);
   return m ? [m[1], m[2] ?? true] : [a, true];
 }));
+// every tools/scenarios*.mjs file contributes scenarios
+const scenarios = { ...baseScenarios };
+for (const f of readdirSync(dirname(fileURLToPath(import.meta.url)))) {
+  if (/^scenarios-.+\.mjs$/.test(f)) Object.assign(scenarios, (await import('./' + f)).scenarios || {});
+}
 const name = process.argv[2] || 'boot';
 const scenario = scenarios[name];
 if (!scenario) {

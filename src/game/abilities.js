@@ -40,11 +40,29 @@ export function powerFor(actor, def) {
     const sm = actor.styleMastery ? actor.styleMastery(def.style || actor.style) : 0;
     m = str * (1 + sm * 0.012);
     if (def.weapon && actor.weaponMul) m *= actor.weaponMul(def.weapon);
+    // weapon mastery: the more you fight with a kind of weapon, the harder it hits
+    if (actor.weaponMastery) m *= 1 + (actor.weaponMastery[weaponKindOf(actor, def)] || 0) * 0.006;
   }
   m *= actor.buffMul('damage');
   if (actor.armament && !src.startsWith('fruit_ranged')) m *= 1.25 + (actor.hakiLevel('armament') || 0) * 0.004;
   if (actor.conquerorInfused) m *= 1.4;
   return m;
+}
+
+/** Which weapon mastery a technique trains and benefits from. */
+export function weaponKindOf(actor, def) {
+  if (def.weaponKind) return def.weaponKind;
+  if (def.weapon) return def.weapon;
+  const src = def.source || '';
+  if (src.startsWith('style')) {
+    const st = def.style || actor.style;
+    if (/ittoryu|nitoryu|santoryu/.test(st)) return actor.hasWeapon?.('sword') ? 'sword' : 'fists';
+    if (st === 'sniper') return actor.hasWeapon?.('gun') ? 'gun' : 'fists';
+    if (st === 'weather_science') return actor.hasWeapon?.('staff') ? 'staff' : 'fists';
+    if (st === 'elbaf') return actor.hasWeapon?.('axe') ? 'axe' : 'fists';
+    if (st === 'black_leg' || st === 'okama_kenpo') return 'legs';
+  }
+  return 'fists';
 }
 
 export function canUse(actor, def) {
