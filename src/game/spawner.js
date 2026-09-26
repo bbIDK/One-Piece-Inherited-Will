@@ -117,13 +117,13 @@ export class Spawner {
   }
 }
 
-function townRaces(isl) {
+export function townRaces(isl) {
   const sea = isl.def.sea;
   if (sea === 'new_world' || sea === 'paradise') return [['human', 70], ['fishman', 6], ['mink', 6], ['longarm', 4], ['longleg', 4], ['skypiean', 2]];
   return [['human', 94], ['fishman', 2], ['longarm', 2], ['longleg', 2]];
 }
 
-function civilianOutfit(style, rng) {
+export function civilianOutfit(style, rng) {
   if (style === 'wano') return { role: 'wano', top: rng.pick(['#6d4c41', '#37474f', '#8d6e63', '#c62828', '#283593', '#4a148c', '#1b5e20']), bottom: rng.pick(['#3e2723', '#263238', '#37474f']) };
   if (style === 'desert') return { role: 'desert', top: rng.pick(['#f5f5f5', '#efebe9', '#ffe0b2']), bottom: rng.pick(['#d7ccc8', '#bcaaa4']), hat: rng.chance(0.4) ? 'bandana' : null, hatColor: '#fafafa' };
   if (style === 'marine') return { role: 'marine', top: '#ffffff', bottom: '#1b4f72', hat: 'marine' };

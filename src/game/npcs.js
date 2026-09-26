@@ -13,6 +13,8 @@ import { STYLES } from '../data/styles.js';
 import { FRUITS } from '../data/fruits.js';
 import { persist } from './lineage.js';
 import { rumorFor } from './rumors.js';
+import { layoutOf, interiorRect } from '../world/interiors.js';
+import { formatBerries } from '../core/math.js';
 
 const NPC_DEFS = new Map();
 const GROUPS = []; // enemy groups: { island, spot|dx/dy, enemies: [archetype...], when }
@@ -116,6 +118,7 @@ export function npcBuilder(ctx) {
   const { island, game, spawner, list, rng } = ctx;
   const c = game.state?.char;
   if (!c) return;
+  for (const t of island.towns || []) for (const b of t.buildings) b.npcCount = 0;
   for (const def of NPC_DEFS.values()) {
     if (def.island !== island.id) continue;
     if (def.when && !def.when(c, game)) continue;
@@ -126,6 +129,12 @@ export function npcBuilder(ctx) {
     if (!pos) continue;
     const a = makeNPC(def, pos.x, pos.y);
     a.game = game;
+    if (pos.inside) {
+      a.homeB = pos.building;
+      a.facing = a.faceHome = Math.PI / 2;
+      a.stationary = true;
+      a.wanderBox = interiorRect(pos.building);
+    }
     game.addActor(a);
     list.push(a);
     if (pos.building) pos.building.npcSpawned = true;
@@ -155,6 +164,16 @@ function clear(spawner, x, y, rng, extra = {}) {
   return { ...p, ...extra };
 }
 
+/** Behind the counter (or at home) in a building you can walk into. */
+function inside(b) {
+  if (!b.enterable) return null;
+  const L = layoutOf(b);
+  const spots = [L.keeper, ...L.residents].filter(Boolean);
+  const s = spots[(b.npcCount = (b.npcCount || 0) + 1) - 1];
+  if (!s) return null;
+  return { x: b.x + s.x, y: b.y + s.z, building: b, inside: true };
+}
+
 function placeNPC(game, island, def, rng, spawner) {
   const pl = (typeof def.at === 'function' ? def.at(game.state?.char, game) : def.at) || {};
   if (pl.spot && island.spots[pl.spot]) {
@@ -167,14 +186,14 @@ function placeNPC(game, island, def, rng, spawner) {
     if (pl.town && town.id !== pl.town) continue;
     if (pl.building) {
       const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
-      if (b) return clear(spawner, b.door.x + (pl.ox || 0.9), b.door.y + 0.9, rng, { building: b });
+      if (b) return inside(b) || clear(spawner, b.door.x + (pl.ox || 0.9), b.door.y + 0.9, rng, { building: b });
     }
     if (pl.plaza || (!pl.building && !pl.dx)) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5, 3, rng);
   }
   // any building that names this NPC
   for (const town of island.towns) {
     const b = town.buildings.find((x) => x.npc === def.id);
-    if (b) return clear(spawner, b.door.x + 0.9, b.door.y + 0.9, rng, { building: b });
+    if (b) return inside(b) || clear(spawner, b.door.x + 0.9, b.door.y + 0.9, rng, { building: b });
   }
   const lm = island.landmarks.find((l) => l.npc === def.id);
   if (lm) return clear(spawner, lm.x + 0.6, lm.y + 1.2, rng);
@@ -259,6 +278,7 @@ export class Interactions {
       g.emit('talked', def.id);
       return;
     }
+    if (a.talk?.kind === 'keeper') { this.building(a.talk.building); return; }
     if (a.talk?.kind === 'townsfolk') {
       const rng = new RNG(a.talk.seed + g.env.day);
       const isl = this.islandOf(a.x, a.y);
@@ -318,6 +338,7 @@ export class Interactions {
           choices: [
             { text: 'Buy food and drink', do: (c) => { c.open('shop', { building: { ...building, role: 'tavern' }, island }); } },
             { text: 'Buy a round and listen for rumours (฿100)', do: (c) => (c.pay(100) ? 'r' : 'a') },
+            { text: `Rent a room upstairs for the night (${formatBerries(g.services.innPrice(island))}) — wake here if you fall`, do: () => { g.dialogue.close(); g.services.rest(island, island?.towns?.find((t) => t.id === building.town)); }, end: true },
             { text: 'Leave', end: true },
           ],
         },
@@ -338,15 +359,36 @@ export class Interactions {
   }
 
   knock(b) {
-    const g = this.game;
-    const rng = new RNG((b.id || 1) * 13 + g.env.day);
-    const lines = ['"Who\'s there? ...Go away, we don\'t want trouble."', '"Nobody home!" (someone is clearly home)', '"If you\'re a pirate, keep walking!"', '"Oh, a traveller? Here, take this for the road." You receive a rice ball.', '"Shh! The baby is sleeping."', '"Are you the new postman? No? Then shoo."'];
-    const line = rng.pick(lines);
-    if (line.includes('rice ball') && !g.state.char.flags['door_' + b.id]) { g.state.char.flags['door_' + b.id] = true; addItem(g, 'rice_ball', 1, { silent: true }); }
-    g.dialogue.open(null, { start: 'a', nodes: { a: { speaker: 'Behind the door', text: line, choices: [
-      { text: 'Leave them be.', end: true },
-      { text: 'Force the door and rob the place. (a crime)', do: () => { g.dialogue.close(); robHouse(g, b); }, end: true },
-    ] } } });
+    const g = this.game, c = g.state.char;
+    const B = g.buildings;
+    const rng = new RNG((b.id || 1) * 13 + g.env.day * 7 + Math.floor(g.env.clock));
+    g.audio?.sfx('knock');
+    const kick = { text: b.pirate ? 'Kick the door in.' : 'Kick the door in. (a crime)', do: () => { g.dialogue.close(); B ? B.breakDoor(b) : robHouse(g, b); }, end: true };
+    const leave = { text: 'Leave them be.', end: true };
+    if (b.pirate) {
+      const line = rng.pick(['"Who\'s there?! Scram before we gut ya!"', '"Password?" ...You don\'t know it. "Then get lost!"', '(Laughter and clinking mugs behind the door. It stops.) "...Who\'s knockin\'?"', '"If yer a Marine, we ain\'t here!"']);
+      g.dialogue.open(null, { start: 'a', nodes: { a: { speaker: 'Behind the door', text: line + ' (A crude Jolly Roger is scratched into the door. Pirates don\'t call the Marines.)', choices: [leave, kick] } } });
+      return;
+    }
+    if ((b.role || 'house') !== 'house') {
+      const opens = B ? B.opensAt(b) : 7;
+      g.dialogue.open(null, { start: 'a', nodes: { a: { speaker: b.name || 'Door', text: `Nobody answers. A sign hangs on the door: CLOSED — OPEN FROM ${opens}:00.`, choices: [{ text: 'Come back later.', end: true }, kick] } } });
+      return;
+    }
+    const night = g.env.clock < 6 || g.env.clock >= 21;
+    const home = g.actors.some((a) => a.homeB === b && a.alive && a.state === 'idle');
+    const invite = home && !night && !c.bounty && rng.chance(0.3 + (c.reputation || 0) / 200);
+    const lines = !home ? ['(No answer. Nobody seems to be home.)', '(Silence. The curtains are drawn.)']
+      : night ? ['"It\'s the middle of the night! Go away!"', '"We\'re sleeping! Come back in the morning!"', '(A candle is snuffed out behind the window.)']
+        : ['"Who\'s there? ...Go away, we don\'t want trouble."', '"Nobody home!" (someone is clearly home)', '"If you\'re a pirate, keep walking!"', '"Shh! The baby is sleeping."', '"Are you the new postman? No? Then shoo."'];
+    if (invite) {
+      g.dialogue.open(null, { start: 'a', nodes: { a: { speaker: 'Behind the door', text: rng.pick(['"Oh, a traveller? Come in, come in — mind your head."', '"Well, don\'t just stand there — come in! The kettle\'s on."', `"Aren\'t you the one folk say helped out around here? Come in!"`]), choices: [
+        { text: 'Step inside.', do: () => { c.flags['invited_' + (B ? B.key(b) : b.id)] = g.env.day; g.dialogue.close(); if (!c.flags['door_' + b.id]) { c.flags['door_' + b.id] = true; addItem(g, 'rice_ball', 1); } }, end: true },
+        leave,
+      ] } } });
+      return;
+    }
+    g.dialogue.open(null, { start: 'a', nodes: { a: { speaker: 'Behind the door', text: rng.pick(lines), choices: [leave, kick] } } });
   }
 
   chest(o) {

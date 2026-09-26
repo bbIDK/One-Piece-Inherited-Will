@@ -99,6 +99,41 @@ export class World {
     if (!this.inBounds(Math.floor(x), Math.floor(y))) return true;
     return this.blocked[this.idx(x, y)] !== 0;
   }
+  /**
+   * Solid to walk into? Like isBlocked, except the floor inside an enterable
+   * building (marked 2): its walls and furniture collide as colliders instead.
+   * isBlocked still counts it (nothing spawns or grows indoors).
+   */
+  solid(x, y) {
+    if (!this.inBounds(Math.floor(x), Math.floor(y))) return true;
+    return this.blocked[this.idx(x, y)] === 1;
+  }
+  /** Register a collider ({ x, y, r } circle or { x, y, hw, hd } box) in the 4 m hash. */
+  addCol(col) {
+    const ex = col.r ?? col.hw, ey = col.r ?? col.hd;
+    col.keys = [];
+    for (let cy = Math.floor((col.y - ey) / 4); cy <= Math.floor((col.y + ey) / 4); cy++) {
+      for (let cx = Math.floor((col.x - ex) / 4); cx <= Math.floor((col.x + ex) / 4); cx++) {
+        const k = this.colKey(cx, cy);
+        let list = this.colliders.get(k);
+        if (!list) this.colliders.set(k, (list = []));
+        list.push(col);
+        col.keys.push(k);
+      }
+    }
+    return col;
+  }
+  removeCol(col) {
+    if (!col?.keys) return;
+    for (const k of col.keys) {
+      const list = this.colliders.get(k);
+      if (!list) continue;
+      const i = list.indexOf(col);
+      if (i >= 0) list.splice(i, 1);
+      if (!list.length) this.colliders.delete(k);
+    }
+    col.keys = null;
+  }
   colKey(cx, cy) {
     if (this.wrap) cx = ((cx % this.colW) + this.colW) % this.colW;
     return cy * this.colW + cx;
@@ -114,26 +149,38 @@ export class World {
       }
     }
   }
-  /** Height of a raised floor under (x, y), or 0. */
-  floorAt(x, y) {
-    if (!this.floors.size) return 0;
+  removeFloor(f) {
+    for (const [k, list] of this.floors) {
+      const i = list.indexOf(f);
+      if (i >= 0) list.splice(i, 1);
+      if (!list.length) this.floors.delete(k);
+    }
+  }
+  /** The raised floor under (x, y) (a ring, a stage, a building's ground floor), or null. */
+  floorRec(x, y) {
+    if (!this.floors.size) return null;
     const list = this.floors.get(this.colKey(Math.floor(this.wx(x) / 4), Math.floor(y / 4)));
-    if (!list) return 0;
+    if (!list) return null;
     for (const f of list) {
       const dx = this.dx(f.x0, x);
-      if (dx >= 0 && dx <= f.x1 - f.x0 && y >= f.y0 && y <= f.y1) return f.h;
+      if (dx >= 0 && dx <= f.x1 - f.x0 && y >= f.y0 && y <= f.y1) return f;
     }
-    return 0;
+    return null;
   }
+  /** Height of a raised floor under (x, y), or 0. */
+  floorAt(x, y) { return this.floorRec(x, y)?.h || 0; }
+  /** The enterable building whose ground floor (x, y) is on, or null. */
+  interiorAt(x, y) { const f = this.floorRec(x, y); return f && f.interior ? f.o : null; }
 
   /** Does a circle of radius r at (x, y) overlap a small prop (lamp, barrel, tree trunk...)? */
-  hitsProp(x, y, r) {
+  hitsProp(x, y, r, wallsOnly = false) {
     if (!this.colliders.size) return false;
     for (let cy = Math.floor((y - r) / 4); cy <= Math.floor((y + r) / 4); cy++) {
       for (let cx = Math.floor((x - r) / 4); cx <= Math.floor((x + r) / 4); cx++) {
         const list = this.colliders.get(this.colKey(cx, cy));
         if (!list) continue;
         for (const c of list) {
+          if (wallsOnly && !c.wall) continue;
           const dx = this.dx(c.x, x), dy = y - c.y;
           if (c.r !== undefined) { const rr = c.r + r; if (dx * dx + dy * dy < rr * rr) return true; }
           else {
@@ -149,7 +196,7 @@ export class World {
   /** Can a character stand here on foot? */
   walkable(x, y) {
     const t = this.type(x, y);
-    return WALKABLE[t] === 1 && !this.isBlocked(x, y);
+    return WALKABLE[t] === 1 && !this.solid(x, y);
   }
   swimmable(x, y) { return SWIMMABLE[this.type(x, y)] === 1 && !this.isBlocked(x, y); }
   sailable(x, y) {

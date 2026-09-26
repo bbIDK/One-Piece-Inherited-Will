@@ -2089,12 +2089,14 @@ function install(game) {
   });
 
   // Vegapunk's old notes
-  game.on('enterBuilding', (b) => {
+  const lab = (b) => {
     if (b?.name === "Vegapunk's Old Laboratory" && game.quests.stageId('p2_baldimore') === 'lab') {
       game.log('Blueprints for a man-shaped weapon with a laser mouth, a Bible, and the note "PX-0". In Room 8 there is a big red button labelled "DO NOT PRESS".', '#b3e5fc');
       game.emit('questEvent', 'p2_read_lab');
     }
-  });
+  };
+  game.on('enterBuilding', lab);
+  game.on('enteredBuilding', lab);
 
   // Burning the World Government flag over Enies Lobby (examine the flagpole during the raid)
   game.on('questEvent', (name) => {

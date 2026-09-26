@@ -1,6 +1,7 @@
 // Props placed in the world (trees, rocks, buildings, docks furniture...).
 // Stored in a chunked spatial index so rendering and interaction only look
 // at nearby objects.
+import { isEnterable, isPirateHouse, layoutOf, doorOf, WALL_T, PLINTH } from './interiors.js';
 
 export const CHUNK = 32;
 
@@ -31,6 +32,9 @@ export function floorOf(o) {
   return { hw: 1.8 * s, hd: 1.4 * s, oy: -0.2 * s, h: 2.4 * s };
 }
 
+// furniture that collides as a circle
+const ROUND = new Set(['barrel', 'roundtable', 'dummy', 'plant']);
+
 let nextObjectId = 1;
 
 export class ObjectIndex {
@@ -59,7 +63,13 @@ export class ObjectIndex {
     const fl = floorOf(obj);
     if (fl) this.world.addFloor({ x0: obj.x - fl.hw, x1: obj.x + fl.hw, y0: obj.y + fl.oy - fl.hd, y1: obj.y + fl.oy + fl.hd, h: fl.h, o: obj });
     const c = obj.block && COLLIDE[obj.kind];
-    if (c !== undefined && obj.block && (fl || ((obj.fw || 1) <= 2 && (obj.fd || 1) <= 2))) {
+    if (obj.block && isEnterable(obj)) {
+      // a building you can walk into: its floor is open (2), its walls and furniture collide
+      obj.enterable = true;
+      obj.pirate = isPirateHouse(obj);
+      this.stamp(obj, 2);
+      this.addInterior(obj);
+    } else if (c !== undefined && obj.block && (fl || ((obj.fw || 1) <= 2 && (obj.fd || 1) <= 2))) {
       // collider-sized props don't block tiles (see COLLIDE)
       obj.soft = true;
       if (c) this.addCollider(obj, c);
@@ -70,33 +80,61 @@ export class ObjectIndex {
   addCollider(obj, c) {
     const s = obj.s || 1;
     const col = Array.isArray(c) ? { x: obj.x, y: obj.y, hw: c[0] * s, hd: c[1] * s, o: obj } : { x: obj.x, y: obj.y, r: c * s, o: obj };
-    obj.col = col;
-    const w = this.world;
-    const ex = col.r ?? col.hw, ey = col.r ?? col.hd;
-    col.keys = [];
-    for (let cy = Math.floor((obj.y - ey) / 4); cy <= Math.floor((obj.y + ey) / 4); cy++) {
-      for (let cx = Math.floor((obj.x - ex) / 4); cx <= Math.floor((obj.x + ex) / 4); cx++) {
-        const k = w.colKey(cx, cy);
-        let list = w.colliders.get(k);
-        if (!list) w.colliders.set(k, (list = []));
-        list.push(col);
-        col.keys.push(k);
-      }
-    }
+    obj.col = this.world.addCol(col);
   }
 
   removeCollider(obj) {
-    const col = obj.col;
-    if (!col) return;
-    const w = this.world;
-    for (const k of col.keys) {
-      const list = w.colliders.get(k);
-      if (!list) continue;
-      const i = list.indexOf(col);
-      if (i >= 0) list.splice(i, 1);
-      if (!list.length) w.colliders.delete(k);
-    }
+    if (!obj.col) return;
+    this.world.removeCol(obj.col);
     obj.col = null;
+  }
+
+  /** Walls (with a doorway) and the ground floor of an enterable building (furniture: see addFurniture). */
+  addInterior(b) {
+    const w = this.world;
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), T = WALL_T;
+    const d = doorOf(b);
+    const cols = [];
+    const box = (x0, x1, z0, z1, extra) => {
+      if (x1 - x0 < 0.01 || z1 - z0 < 0.01) return null;
+      const col = w.addCol({ x: b.x + (x0 + x1) / 2, y: b.y + (z0 + z1) / 2, hw: (x1 - x0) / 2, hd: (z1 - z0) / 2, o: b, ...extra });
+      cols.push(col);
+      return col;
+    };
+    const wall = { wall: true };
+    box(-fw / 2, d.x - d.dw / 2, -T, 0, wall);
+    box(d.x + d.dw / 2, fw / 2, -T, 0, wall);
+    box(-fw / 2, fw / 2, -fd, -fd + T, wall);
+    box(-fw / 2, -fw / 2 + T, -fd, 0, wall);
+    box(fw / 2 - T, fw / 2, -fd, 0, wall);
+    b.cols = cols;
+    // the doorway, closed until something opens it (see game/buildings.js)
+    b.doorBox = { x: b.x + d.x, y: b.y - T / 2, hw: d.dw / 2, hd: T / 2, o: b, wall: true, door: true };
+    b.doorCol = w.addCol({ ...b.doorBox });
+    // the ground floor (its height is worked out by the 3D view from the ground under it)
+    b.floor = { x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - fd, y1: b.y - 0.002, h: PLINTH, o: b, interior: true };
+    w.addFloor(b.floor);
+  }
+
+  /** The furniture collides too (laid out lazily: when someone comes near or the island fills with people). */
+  addFurniture(b) {
+    if (b.furnished || !b.enterable) return;
+    b.furnished = true;
+    const w = this.world, L = layoutOf(b);
+    for (const it of L.items) {
+      if (it.ghost || !it.rect) continue;
+      const r = it.rect, sh = 0.03;
+      if (ROUND.has(it.k)) b.cols.push(w.addCol({ x: b.x + it.x, y: b.y + it.z, r: Math.min(r.x1 - r.x0, r.z1 - r.z0) / 2 - sh, o: b }));
+      else b.cols.push(w.addCol({ x: b.x + (r.x0 + r.x1) / 2, y: b.y + (r.z0 + r.z1) / 2, hw: (r.x1 - r.x0) / 2 - sh, hd: (r.z1 - r.z0) / 2 - sh, o: b }));
+    }
+  }
+
+  removeInterior(b) {
+    const w = this.world;
+    for (const c of b.cols || []) w.removeCol(c);
+    if (b.doorCol) w.removeCol(b.doorCol);
+    if (b.floor) w.removeFloor(b.floor);
+    b.cols = null; b.doorCol = null; b.floor = null; b.furnished = false;
   }
 
   remove(obj) {
@@ -107,7 +145,8 @@ export class ObjectIndex {
     }
     this.byId.delete(obj.id);
     this.count--;
-    if (obj.soft) this.removeCollider(obj);
+    if (obj.enterable) { this.removeInterior(obj); this.stamp(obj, 0); }
+    else if (obj.soft) this.removeCollider(obj);
     else if (obj.block) this.stamp(obj, 0);
   }
 

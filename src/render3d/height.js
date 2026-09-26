@@ -10,6 +10,7 @@
 //  * Walls are vertical blocks (see WALL_H), not hills.
 import { T, IS_LIQUID, OVERLAY } from '../world/tiles.js';
 import { RM_X, RL_HALF, chart } from '../world/constants.js';
+import { PLINTH } from '../world/interiors.js';
 
 export const SEA_Y = 0;
 export const DECK_Y = 0.55; // top of docks and bridges
@@ -133,8 +134,26 @@ export class HeightField {
     if (OVERLAY[t]) return DECK_Y;
     const h = this.terrain(x, y);
     if (IS_LIQUID[t]) return Math.max(h, SEA_Y);
-    const f = this.world.floorAt ? this.world.floorAt(x, y) : 0;
-    return f ? h + f : h;
+    const f = this.world.floorRec ? this.world.floorRec(x, y) : null;
+    if (!f) return h;
+    return f.interior ? this.floorY(f.o) : h + f.h;
+  }
+
+  /**
+   * The ground floor of an enterable building (absolute): a step up from the
+   * street in front, and always over the ground inside the walls.
+   */
+  floorY(b) {
+    if (b._floorY !== undefined && b._floorW === this.world) return b._floorY;
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+    const front = this.terrain(b.x, b.y);
+    let top = -Infinity;
+    for (let z = -fd + 0.3; z <= -0.3 + 1e-6; z += Math.max(0.5, (fd - 0.6) / 4)) {
+      for (let x = -fw / 2 + 0.3; x <= fw / 2 - 0.3 + 1e-6; x += Math.max(0.5, (fw - 0.6) / 5)) top = Math.max(top, this.terrain(b.x + x, b.y + z));
+    }
+    b._floorW = this.world;
+    b._floorY = Math.max(front + PLINTH, top + 0.08);
+    return b._floorY;
   }
 
   /** Invalidate after the tile map changed in a rectangle (tiles). */

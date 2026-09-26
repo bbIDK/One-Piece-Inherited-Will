@@ -6,6 +6,7 @@
 // tile position is the origin, so positions are small and the wrap-around
 // world just works.
 import * as THREE from 'three';
+import { interiorRect, heightsOf } from '../world/interiors.js';
 import { helmPoint } from './ships3d.js';
 
 const TAU = Math.PI * 2;
@@ -176,6 +177,21 @@ export class CameraRig {
       const cp = Math.cos(this.pitch), spch = Math.sin(this.pitch);
       const fx = Math.cos(this.yaw), fz = Math.sin(this.yaw);
       let cx = -fx * d * cp, cz = -fz * d * cp, cy = gh + eyeH * 0.9 + this.tp.height - spch * d * 0.6;
+      const w = game.world;
+      const room = w?.interiorAt?.(p.x, p.y);
+      if (room) {
+        // indoors: keep the camera inside the room, under the ceiling
+        const r = interiorRect(room);
+        cx = Math.max(r.x0 + 0.25, Math.min(r.x1 - 0.25, p.x + cx)) - p.x;
+        cz = Math.max(r.y0 + 0.25, Math.min(r.y1 - 0.25, p.y + cz)) - p.y;
+        cy = Math.min(cy, ground(p.x, p.y) + heightsOf(room).ceil - 0.3);
+      } else if (w) {
+        // outdoors: pull in rather than end up inside a building
+        for (let i = 1; i <= 8; i++) {
+          const t = i / 8;
+          if (w.isBlocked(p.x + cx * t, p.y + cz * t)) { const k = Math.max(0.12, t - 0.16); cx *= k; cz *= k; break; }
+        }
+      }
       // keep the camera above the ground
       const under = ground(p.x + cx, p.y + cz) + 0.4;
       if (cy < under) cy = under;

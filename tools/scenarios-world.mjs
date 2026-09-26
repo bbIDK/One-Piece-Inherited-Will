@@ -2,6 +2,101 @@
 const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
 export const scenarios = {
+  // walk-in buildings: a door that opens, walls that hold, a keeper at the counter, a house door kicked in
+  interior: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => window.OP.quickStart('human'));
+      const info = await page.evaluate(({ id, role }) => {
+        const g = window.OP.game, w = g.world, p0 = g.player;
+        // the named island, or the nearest one with a building of that role
+        const has = (i) => i.towns.some((t) => t.buildings.some((b) => b.enterable && (role ? b.role === role : (b.role || 'house') !== 'house')));
+        const isl = (id && w.islands.find((i) => i.id === id && has(i))) || w.islands.filter(has).sort((a, b) => w.distance(p0.x, p0.y, a.x, a.y) - w.distance(p0.x, p0.y, b.x, b.y))[0];
+        const all = isl.towns.flatMap((t) => t.buildings);
+        const shop = all.find((b) => b.enterable && (role ? b.role === role : (b.role || 'house') !== 'house'));
+        g.env.clock = +(window.__clock || 12);
+        g.settings.view = 'first'; g.applySettings();
+        g.buildings.t = 0;
+        const d = g.buildings.doorPts(shop);
+        window.OP.teleport(d.x, d.out + 1.6);
+        const v = g.view3d; v.rig.yaw = -Math.PI / 2; v.rig.pitch = -0.02;
+        window.__shop = shop;
+        return { buildings: all.length, enterable: all.filter((b) => b.enterable).length, pirates: all.filter((b) => b.pirate).length, shop: { role: shop.role, name: shop.name, fw: shop.fw, fd: shop.fd, style: shop.style } };
+      }, { id: args.island || (args.role ? null : 'dawn_island'), role: args.role || null });
+      console.log('interior', JSON.stringify(info));
+      await page.evaluate(() => { window.OP.game.spawner.t = 0; });
+      await step(page, 0.6);
+      for (let i = 0; i < 8; i++) { await step(page, 0.1); await frames(page, 1); }
+      await snap('outside');
+      // walk in until a step past the doorway
+      await page.evaluate(() => window.OP.key('W', true));
+      for (let i = 0; i < 30; i++) {
+        await step(page, 0.1); await frames(page, 1);
+        if (await page.evaluate(() => { const b = window.__shop, p = window.OP.game.player; return p.y < b.y - 0.9; })) break;
+      }
+      await page.evaluate(() => window.OP.key('W', false));
+      await step(page, 0.3); await frames(page, 3);
+      const inside = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player, b = window.__shop;
+        const d = g.buildings.doorPts(b);
+        return {
+          inside: w.interiorAt(p.x, p.y) === b, pos: [+(p.x - b.x).toFixed(2), +(p.y - b.y).toFixed(2)], doorOpen: b.doorOpen,
+          people: g.actors.filter((a) => a.homeB === b).map((a) => a.name),
+          floor: +(g.view3d.ground(p.x, p.y) - g.view3d.ground(d.x, d.out + 1)).toFixed(2),
+          walls: {
+            back: p.canOccupy(w, b.x, b.y - b.fd + 0.12), left: p.canOccupy(w, b.x - b.fw / 2 + 0.12, b.y - b.fd / 2),
+            frontBesideDoor: p.canOccupy(w, d.x - d.dw / 2 - 0.3, b.y - 0.1), doorway: p.canOccupy(w, d.x, d.mid),
+          },
+        };
+      });
+      console.log('inside', JSON.stringify(inside));
+      await snap('inside');
+      await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = -Math.PI / 2 + 1.0; });
+      await step(page, 0.1); await frames(page, 2); await snap('inside-left');
+      await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = Math.PI / 2; });
+      await step(page, 0.1); await frames(page, 2); await snap('inside-door');
+      // a house: locked, then kicked in
+      const kick = await page.evaluate(() => {
+        const g = window.OP.game, B = g.buildings, w = g.world, p = g.player;
+        const isl = w.islandAt(p.x, p.y) || w.nearestIsland(p.x, p.y, 60);
+        const house = isl.towns.flatMap((t) => t.buildings).find((b) => b.enterable && (b.role || 'house') === 'house' && !b.npc && !b.pirate);
+        if (!house) return null;
+        window.__house = house;
+        const d = B.doorPts(house);
+        window.OP.teleport(d.x, d.out + 0.4);
+        B.t = 0; B.update(0.016);
+        const before = { locked: house.doorLocked, open: !!house.doorOpen, blocked: !p.canOccupy(w, d.x, d.mid), bounty: g.state.char.bounty };
+        B.breakDoor(house);
+        B.update(0.016);
+        const after = { open: house.doorOpen, broken: house.doorBroken, walkIn: p.canOccupy(w, d.x, d.mid), bounty: g.state.char.bounty };
+        const v = g.view3d; v.rig.yaw = -Math.PI / 2; v.rig.pitch = -0.1;
+        window.OP.teleport(d.x + 0.3, d.out + 1.8);
+        return { before, after };
+      });
+      console.log('kick', JSON.stringify(kick));
+      for (let i = 0; i < 5; i++) { await step(page, 0.1); await frames(page, 1); }
+      await snap('kicked');
+      // a bandit follows you in through the doorway (and doesn't walk into the wall)
+      await page.evaluate(() => {
+        const g = window.OP.game, p = g.player, house = window.__house;
+        if (!house) return;
+        const d = g.buildings.doorPts(house);
+        p.invulnerable = true;
+        window.OP.teleport(d.x + 0.5, house.y - house.fd + 0.9);
+        const e = window.OP.debug.makeNPC({ id: 'test_bandit', name: 'Test Bandit', level: 3, hostile: true, faction: 'bandit' }, d.x + 3.5, d.out + 2.5);
+        e.game = g; g.addActor(e); e.aggroPlayer = true; e.controller.target = p; e.controller.state = 'chase'; e.controller.leash = 60;
+        window.__bandit = e;
+      });
+      const trail = [];
+      for (let i = 0; i < 50; i++) {
+        await step(page, 0.1);
+        if (i % 5 === 4) trail.push(await page.evaluate(() => { const g = window.OP.game, e = window.__bandit, p = g.player; return e ? +g.world.distance(e.x, e.y, p.x, p.y).toFixed(2) : null; }));
+      }
+      const got = await page.evaluate(() => { const g = window.OP.game, e = window.__bandit; return e ? { inside: g.world.interiorAt(e.x, e.y) === window.__house, state: e.controller.state } : null; });
+      console.log('chase', JSON.stringify({ trail, ...got }));
+    },
+  },
   // crimes earn a One Piece-style bounty; reputation never goes below zero
   bounty: {
     async run(page) {

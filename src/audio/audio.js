@@ -101,6 +101,10 @@ export class Audio {
       case 'ice': this.tone(t, 0.3, { freq: 2400, to: 3200, type: 'triangle', gain: 0.1 }); this.noise(t, 0.2, { freq: 5000, gain: 0.15 }); break;
       case 'haki': this.tone(t, 0.4, { freq: 80, to: 160, type: 'sawtooth', gain: 0.15 }); break;
       case 'haki_obs': this.tone(t, 0.6, { freq: 880, to: 1320, type: 'sine', gain: 0.1 }); break;
+      case 'knock': [0, 0.17, 0.34].forEach((d) => { this.noise(t + d, 0.07, { freq: 260 * r(), q: 1.6, gain: 0.55 }); this.tone(t + d, 0.08, { freq: 130, to: 80, gain: 0.25 }); }); break;
+      case 'door': this.tone(t, 0.4, { freq: 170 * r(), to: 250, type: 'sawtooth', gain: 0.025, attack: 0.05 }); this.noise(t, 0.3, { freq: 900, q: 0.6, gain: 0.05 }); break;
+      case 'doorshut': this.noise(t, 0.12, { freq: 220, gain: 0.35, type: 'lowpass' }); this.tone(t, 0.12, { freq: 95, to: 60, gain: 0.3 }); break;
+      case 'doorbreak': this.noise(t, 0.6, { freq: 320, gain: 0.7, type: 'lowpass' }); this.noise(t, 0.35, { freq: 2600, gain: 0.3, sweep: 700 }); this.tone(t, 0.3, { freq: 110, to: 45, gain: 0.5 }); break;
       case 'board': case 'step': this.noise(t, 0.12, { freq: 300, gain: 0.2, type: 'lowpass' }); break;
       case 'coin': this.tone(t, 0.08, { freq: 1568, type: 'square', gain: 0.07 }); this.tone(t + 0.07, 0.18, { freq: 2093, type: 'square', gain: 0.07 }); break;
       case 'treasure': [523, 659, 784, 1046].forEach((f, i) => this.tone(t + i * 0.09, 0.3, { freq: f, type: 'triangle', gain: 0.14 })); break;

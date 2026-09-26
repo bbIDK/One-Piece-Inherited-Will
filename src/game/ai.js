@@ -8,6 +8,19 @@ import { angleDiff, clamp, TAU } from '../core/math.js';
 import { getAbility, canUse } from './abilities.js';
 import { hostile } from './entity.js';
 
+/** Can `a` see `b` — both out in the open, both in the same room, or `b` at the open door of `a`'s room? */
+function sameRoom(game, a, b) {
+  const w = game.world;
+  if (!w.interiorAt) return true;
+  const ra = w.interiorAt(a.x, a.y), rb = w.interiorAt(b.x, b.y);
+  if (ra === rb) return true;
+  const room = ra || rb;
+  if (!room.doorOpen) return false;
+  const out = ra ? b : a; // whoever is outside must be at the doorway
+  const d = game.buildings?.doorPts(room);
+  return !!d && w.distance(out.x, out.y, d.x, d.mid) < 3;
+}
+
 export class AIController {
   constructor(o = {}) {
     this.kind = o.kind || 'hostile';
@@ -59,6 +72,7 @@ export class AIController {
       const stealth = b.buffs?.find((x) => x.mods?.stealth);
       if (stealth) d *= 1 + stealth.mods.stealth * 6;
       if (b.isPlayer && b.disguised && a.faction === 'marine') continue;
+      if (!sameRoom(game, a, b)) continue;
       if (d < bd) { bd = d; best = b; }
     }
     return best;
@@ -163,6 +177,9 @@ export class AIController {
 
     // movement: approach to preferred range, strafe when close
     const want = this.ranged ? this.prefRange : this.meleeRange(a) * 0.8;
+    // a wall between us: go round by the door
+    const via = game.buildings?.route(a, t.x, t.y);
+    if (via) { this.moveToward(a, via.x, via.y, game, true); a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4; return; }
     let mx = 0, my = 0;
     if (dist > want + 0.4) { mx = dx / dist; my = dy / dist; a.intent.sprint = dist > 6 && a.stamina > a.d.maxStamina * 0.5; }
     else if (dist < want - 0.8 && this.ranged) { mx = -dx / dist; my = -dy / dist; }
@@ -189,7 +206,11 @@ export class AIController {
     return dist < 3;
   }
 
-  moveToward(a, x, y, game) {
+  moveToward(a, x, y, game, direct = false) {
+    if (!direct) {
+      const via = game.buildings?.route(a, x, y);
+      if (via) { x = via.x; y = via.y; }
+    }
     const dx = game.world.dx(a.x, x), dy = y - a.y;
     const d = Math.hypot(dx, dy);
     if (d > 0.3) { a.intent.mx = dx / d; a.intent.my = dy / d; a.facing = Math.atan2(dy, dx); }
@@ -229,6 +250,10 @@ export class AIController {
       if (Math.random() < (a.stationary ? 0 : 0.6)) {
         const r = combatant ? 5 : (a.wanderRadius ?? 4);
         this.wanderTo = { x: this.home.x + (Math.random() - 0.5) * 2 * r, y: this.home.y + (Math.random() - 0.5) * 2 * r };
+        // people at home potter about their own rooms; passers-by stay out of other people's
+        const bx = a.wanderBox;
+        if (bx) this.wanderTo = { x: clamp(this.wanderTo.x, bx.x0 + 0.35, bx.x1 - 0.35), y: clamp(this.wanderTo.y, bx.y0 + 0.35, bx.y1 - 0.35) };
+        else if (game.world.isBlocked(this.wanderTo.x, this.wanderTo.y)) this.wanderTo = null;
       } else this.wanderTo = null;
     }
     if (this.wanderTo) {

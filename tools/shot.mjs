@@ -2,7 +2,7 @@
 // runs a named scenario from tools/scenarios.mjs, saves screenshots to shots/
 // and fails loudly on page errors.
 //
-//   node tools/shot.mjs <scenario> [--w=1280] [--h=720] [--keep]
+//   node tools/shot.mjs <scenario> [--w=1280] [--h=720] [--keep] [--tag=name (added to the shot file names)]
 import { chromium } from 'playwright-core';
 import { mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -55,7 +55,7 @@ page.on('pageerror', (e) => { console.log(`[pageerror] ${e.stack || e.message}`)
 
 let shotIndex = 0;
 const snap = async (label) => {
-  const file = join(outDir, `${name}-${String(++shotIndex).padStart(2, '0')}-${label}.png`);
+  const file = join(outDir, `${name}${args.tag ? '-' + args.tag : ''}-${String(++shotIndex).padStart(2, '0')}-${label}.png`);
   await page.screenshot({ path: file });
   console.log(`shot → ${file}`);
   return file;

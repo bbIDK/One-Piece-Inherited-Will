@@ -154,6 +154,15 @@ export function generateTown(world, town, rng, noise) {
         block: true,
       });
       buildings.push(b);
+      // level the lot (and a tile round it) with the street in front, so the
+      // ground floor is one step up from the street and flat inside
+      const e0 = world.elev(fx0 + Math.floor(fw / 2), lot.ry);
+      for (let y = fy0 - 1; y < lot.ry; y++) {
+        for (let x = fx0 - 1; x <= fx0 + fw; x++) {
+          if (!okLand(x, y) && !(x >= fx0 && x < fx0 + fw && y >= fy0)) continue;
+          world.setTile(x, y, world.type(x, y), e0);
+        }
+      }
       return b;
     }
     return null;
@@ -198,7 +207,8 @@ export function generateTown(world, town, rng, noise) {
 
   // NPC standing spots: in front of doors and along the streets
   const npcSpots = [];
-  for (const b of buildings) npcSpots.push({ x: b.door.x, y: b.door.y + 0.6, building: b });
+  // (beside the door, not in it)
+  for (const b of buildings) npcSpots.push({ x: b.door.x + (b.fw >= 5 ? 1.6 : 1.25), y: b.door.y + 0.8, building: b });
   for (const ry of rows) for (let x = x0 + 3; x < x1 - 2; x += 5) if (okLand(x, ry + 1)) npcSpots.push({ x: x + 0.5, y: ry + 1.5 });
 
   return {

@@ -13,6 +13,8 @@ import { uiIcon } from '../render/icons.js';
 import { vcMat, bindCtx, STATE } from './props/mats.js';
 import { Mesher, box, cyl, cone, lathe, slab, C, shade, hash } from './props/kit.js';
 import { CLIMATE } from '../world/tiles.js';
+import { doorOf } from '../world/interiors.js';
+import { hollowWalls, rectFrame, shapeFrame, doorLeaf, animateDoor, buildRoom, requestRoom } from './interiors3d.js';
 
 const ROLE_ICON = {
   tavern: 'bar', bar: 'bar', inn: 'inn', shop: 'shop', market: 'shop', weapons: 'sword', dojo: 'trainer', doctor: 'doctor', shipwright: 'shipwright',
@@ -98,24 +100,31 @@ function B(k, x0, y0, z0, x1, y1, z1, color, o = {}) {
   k.add(box(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0)), { at: [(x0 + x1) / 2, Math.min(y0, y1), (z0 + z1) / 2], color, ...o });
 }
 
-/** A window on a wall; (x, y) its centre, `face` +1 front (z = 0 plane) or ±2 for the side walls at x = ±fw/2. */
-function windowAt(k, b, S, x, y, w, h, faceZ, litOn, wallCol, flowers) {
+/**
+ * A window on a wall; (x, y) its centre, facing +z at `faceZ`. With a `pane`
+ * mesher the glass goes there instead (a see-through window over a real hole
+ * in the wall), and the frame is a ring rather than a backing board.
+ */
+function windowAt(k, b, S, x, y, w, h, faceZ, litOn, wallCol, flowers, pane = null) {
   k.save();
   k.translate(x, y, faceZ);
   const frame = S.wall === 'post' ? '#3e2723' : S.wall === 'brick' || S.wall === 'adobe' ? shade(wallCol, 0.35) : shade(wallCol, -0.45);
   const glass = '#2d4150';
   const glow = litOn ? WARM : null;
+  const G = pane ? (pane.m.copy(k.m), pane) : k;
   switch (S.win) {
     case 'shoji': {
-      B(k, -w / 2 - 0.06, -h / 2 - 0.06, -0.02, w / 2 + 0.06, h / 2 + 0.06, 0.06, '#3e2723');
-      B(k, -w / 2, -h / 2, 0, w / 2, h / 2, 0.035, '#f3ead3', { glow: litOn ? '#ffb84d' : null });
+      if (pane) rectFrame(k, w, h, 0.06, -0.02, 0.06, '#3e2723');
+      else B(k, -w / 2 - 0.06, -h / 2 - 0.06, -0.02, w / 2 + 0.06, h / 2 + 0.06, 0.06, '#3e2723');
+      B(G, -w / 2, -h / 2, 0, w / 2, h / 2, 0.035, '#f3ead3', { glow: litOn ? '#ffb84d' : null });
       for (let i = 1; i < 3; i++) B(k, -w / 2 + i * w / 3 - 0.015, -h / 2, 0.03, -w / 2 + i * w / 3 + 0.015, h / 2, 0.05, '#5d4037');
       B(k, -w / 2, -0.015, 0.03, w / 2, 0.015, 0.05, '#5d4037');
       break;
     }
     case 'lattice': {
-      B(k, -w / 2 - 0.08, -h / 2 - 0.08, -0.02, w / 2 + 0.08, h / 2 + 0.08, 0.06, '#8e2b22');
-      B(k, -w / 2, -h / 2, 0, w / 2, h / 2, 0.035, '#f6ddcc', { glow: litOn ? '#ffab66' : null });
+      if (pane) rectFrame(k, w, h, 0.08, -0.02, 0.06, '#8e2b22');
+      else B(k, -w / 2 - 0.08, -h / 2 - 0.08, -0.02, w / 2 + 0.08, h / 2 + 0.08, 0.06, '#8e2b22');
+      B(G, -w / 2, -h / 2, 0, w / 2, h / 2, 0.035, '#f6ddcc', { glow: litOn ? '#ffab66' : null });
       for (let i = 1; i < 4; i++) B(k, -w / 2 + i * w / 4 - 0.012, -h / 2, 0.03, -w / 2 + i * w / 4 + 0.012, h / 2, 0.05, '#8e2b22');
       for (let i = 1; i < 4; i++) B(k, -w / 2, -h / 2 + i * h / 4 - 0.012, 0.03, w / 2, -h / 2 + i * h / 4 + 0.012, 0.05, '#8e2b22');
       break;
@@ -123,7 +132,7 @@ function windowAt(k, b, S, x, y, w, h, faceZ, litOn, wallCol, flowers) {
     case 'round': {
       const r = Math.min(w, h) * 0.5;
       k.add(new THREE.TorusGeometry(r, 0.07, 5, 14), { at: [0, 0, 0.03], color: frame });
-      k.add(new THREE.CircleGeometry(r, 14), { at: [0, 0, 0.02], color: S.wall === 'smooth' && b.style === 'sky' ? '#bde3ff' : glass, glow });
+      G.add(new THREE.CircleGeometry(r, 14), { at: [0, 0, 0.02], color: S.wall === 'smooth' && b.style === 'sky' ? '#bde3ff' : glass, glow });
       B(k, -0.015, -r, 0.03, 0.015, r, 0.05, frame);
       break;
     }
@@ -134,11 +143,14 @@ function windowAt(k, b, S, x, y, w, h, faceZ, litOn, wallCol, flowers) {
       if (S.win === 'gothic') { s.quadraticCurveTo(r, h / 2 - r * 0.2, 0, h / 2 + r * 0.35); s.quadraticCurveTo(-r, h / 2 - r * 0.2, -r, h / 2 - r); }
       else s.absarc(0, h / 2 - r, r, 0, Math.PI, false);
       s.closePath();
-      const g = new THREE.ShapeGeometry(s, 8);
-      const out = new THREE.ShapeGeometry(s, 8);
-      out.scale((r + 0.09) / r, (h / 2 + 0.09) / (h / 2), 1);
-      k.add(out, { at: [0, 0, 0.012], color: frame });
-      k.add(g, { at: [0, 0, 0.025], color: S.win === 'gothic' ? '#2a3a2a' : glass, glow: litOn ? (S.win === 'gothic' ? '#b6ff8a' : WARM) : null });
+      const sx = (r + 0.09) / r, sy = (h / 2 + 0.09) / (h / 2);
+      if (pane) k.add(shapeFrame(s, sx, sy), { at: [0, 0, 0.012], color: frame, double: true, backShade: 0.9 });
+      else {
+        const out = new THREE.ShapeGeometry(s, 8);
+        out.scale(sx, sy, 1);
+        k.add(out, { at: [0, 0, 0.012], color: frame });
+      }
+      G.add(new THREE.ShapeGeometry(s, 8), { at: [0, 0, 0.025], color: S.win === 'gothic' ? '#2a3a2a' : glass, glow: litOn ? (S.win === 'gothic' ? '#b6ff8a' : WARM) : null });
       if (S.win === 'gothic') B(k, -0.015, -h / 2, 0.03, 0.015, h / 2, 0.045, frame);
       if (b.style === 'desert') B(k, -r - 0.12, -h / 2 - 0.12, 0, r + 0.12, -h / 2 - 0.04, 0.12, shade(wallCol, -0.15));
       break;
@@ -150,8 +162,9 @@ function windowAt(k, b, S, x, y, w, h, faceZ, litOn, wallCol, flowers) {
     case 'none': break;
     default: { // 'cross' / 'tall': framed glass with mullions and a sill
       const hh = S.win === 'tall' ? h * 1.2 : h;
-      B(k, -w / 2 - 0.08, -hh / 2 - 0.08, -0.02, w / 2 + 0.08, hh / 2 + 0.08, 0.05, frame);
-      B(k, -w / 2, -hh / 2, 0, w / 2, hh / 2, 0.06, glass, { glow });
+      if (pane) rectFrame(k, w, hh, 0.08, -0.02, 0.05, frame);
+      else B(k, -w / 2 - 0.08, -hh / 2 - 0.08, -0.02, w / 2 + 0.08, hh / 2 + 0.08, 0.05, frame);
+      B(G, -w / 2, -hh / 2, 0, w / 2, hh / 2, 0.06, glass, { glow });
       B(k, -0.025, -hh / 2, 0.05, 0.025, hh / 2, 0.08, frame);
       B(k, -w / 2, -0.025, 0.05, w / 2, 0.025, 0.08, frame);
       B(k, -w / 2 - 0.12, -hh / 2 - 0.14, -0.02, w / 2 + 0.12, -hh / 2 - 0.06, 0.14, shade(frame, 0.1));
@@ -175,33 +188,53 @@ function windowAt(k, b, S, x, y, w, h, faceZ, litOn, wallCol, flowers) {
   k.restore();
 }
 
-/** The front door (with frame, step and style details). */
-function doorAt(k, b, S, x, g, wallCol, big) {
+/**
+ * The front door (with frame, step and style details). For a building you
+ * can enter (`y0` = its floor height) only the frame, the steps up and the
+ * trimmings are drawn here — the doorway is a real opening and the leaf is
+ * its own mesh (see interiors3d.doorLeaf).
+ */
+function doorAt(k, b, S, x, g, wallCol, big, y0 = null) {
   const dw = (big ? 1.7 : 1.05) * g, dh = (big ? 2.5 : 2.15) * g;
-  const wood = S.door === 'panel' && (b.style === 'marine' || b.role === 'marine_base') ? '#1b4f72' : b.style === 'noble' ? '#6d3b1f' : '#5a3a22';
+  const wood = doorWood(b, S);
   const frame = S.wall === 'post' ? '#3e2723' : S.wall === 'brick' ? shade(wallCol, 0.4) : shade(wallCol, -0.4);
+  const open = y0 !== null;
+  const yb = open ? y0 : 0.1; // bottom of the door
   k.save();
   k.translate(x, 0, 0);
-  // step
-  B(k, -dw / 2 - 0.2, -0.3, -0.02, dw / 2 + 0.2, 0.12, 0.45, '#9a948a', { outline: 0.02 });
+  if (open) {
+    // steps up to the threshold
+    const n = Math.max(1, Math.round(y0 / 0.2));
+    for (let i = 0; i < n; i++) {
+      const top = y0 - (i + 1) * y0 / (n + 1);
+      B(k, -dw / 2 - 0.2 - i * 0.05, -0.3, i * 0.32 - 0.02, dw / 2 + 0.2 + i * 0.05, top, (i + 1) * 0.32, '#9a948a', { outline: 0.02 });
+    }
+  } else B(k, -dw / 2 - 0.2, -0.3, -0.02, dw / 2 + 0.2, 0.12, 0.45, '#9a948a', { outline: 0.02 });
   switch (S.door) {
     case 'arch': case 'hole': {
       const s = new THREE.Shape();
       const r = dw / 2;
       s.moveTo(-r, 0); s.lineTo(r, 0); s.lineTo(r, dh - r); s.absarc(0, dh - r, r, 0, Math.PI, false); s.closePath();
-      const out = new THREE.ShapeGeometry(s, 10);
-      out.scale((r + 0.13) / r, (dh + 0.13) / dh, 1);
-      if (S.door !== 'hole') k.add(out, { at: [0, 0.1, 0.012], color: frame });
-      k.add(new THREE.ShapeGeometry(s, 10), { at: [0, 0.1, 0.03], color: S.door === 'hole' ? '#231f1b' : wood });
-      if (S.door !== 'hole') k.add(new THREE.SphereGeometry(0.05, 5, 4), { at: [r * 0.6, 0.1 + dh * 0.45, 0.06], color: '#f1c40f' });
+      if (open) k.add(shapeFrame(s, (r + 0.13) / r, (dh + 0.13) / dh), { at: [0, yb, 0.012], color: frame, double: true, backShade: 0.9 });
+      else {
+        const out = new THREE.ShapeGeometry(s, 10);
+        out.scale((r + 0.13) / r, (dh + 0.13) / dh, 1);
+        if (S.door !== 'hole') k.add(out, { at: [0, yb, 0.012], color: frame });
+        k.add(new THREE.ShapeGeometry(s, 10), { at: [0, yb, 0.03], color: S.door === 'hole' ? '#231f1b' : wood });
+        if (S.door !== 'hole') k.add(new THREE.SphereGeometry(0.05, 5, 4), { at: [r * 0.6, yb + dh * 0.45, 0.06], color: '#f1c40f' });
+      }
       break;
     }
     case 'noren': {
-      B(k, -dw / 2 - 0.12, 0.1, -0.02, dw / 2 + 0.12, dh + 0.2, 0.05, '#3e2723');
-      B(k, -dw / 2, 0.1, 0, dw / 2, dh, 0.03, '#2b2420');
+      if (open) doorFrame(k, dw, dh, yb, 0.12, -0.02, 0.05, '#3e2723');
+      else {
+        B(k, -dw / 2 - 0.12, yb, -0.02, dw / 2 + 0.12, yb + dh + 0.1, 0.05, '#3e2723');
+        B(k, -dw / 2, yb, 0, dw / 2, dh, 0.03, '#2b2420');
+      }
       const nc = ['#1f3a68', '#7b1f1f', '#2e5e3a', '#4a2e6b'][(b.v || 0) % 4];
-      for (let i = 0; i < 3; i++) B(k, -dw / 2 + i * dw / 3 + 0.02, dh - 0.75, 0.05, -dw / 2 + (i + 1) * dw / 3 - 0.02, dh, 0.08, nc);
-      B(k, -dw / 2 - 0.05, dh - 0.05, 0.04, dw / 2 + 0.05, dh + 0.05, 0.1, '#3e2723');
+      const top = open ? yb + dh : dh;
+      for (let i = 0; i < 3; i++) B(k, -dw / 2 + i * dw / 3 + 0.02, top - 0.75, 0.05, -dw / 2 + (i + 1) * dw / 3 - 0.02, top, 0.08, nc);
+      B(k, -dw / 2 - 0.05, top - 0.05, 0.04, dw / 2 + 0.05, top + 0.05, 0.1, '#3e2723');
       break;
     }
     case 'hide': {
@@ -211,22 +244,37 @@ function doorAt(k, b, S, x, g, wallCol, big) {
       break;
     }
     default: {
-      B(k, -dw / 2 - 0.14, 0.1, -0.02, dw / 2 + 0.14, dh + 0.16, 0.07, frame, { outline: 0.015 });
-      B(k, -dw / 2, 0.1, 0, dw / 2, dh, 0.09, wood);
-      if (S.door === 'plank') for (let i = 1; i < 4; i++) B(k, -dw / 2 + i * dw / 4 - 0.012, 0.15, 0.08, -dw / 2 + i * dw / 4 + 0.012, dh - 0.05, 0.1, shade(wood, -0.3));
-      else { B(k, -dw / 2 + 0.12, 0.35, 0.08, dw / 2 - 0.12, dh * 0.45, 0.11, shade(wood, 0.12)); B(k, -dw / 2 + 0.12, dh * 0.55, 0.08, dw / 2 - 0.12, dh - 0.15, 0.11, shade(wood, 0.12)); }
-      if (big) B(k, -0.012, 0.1, 0.09, 0.012, dh, 0.11, shade(wood, -0.35));
-      k.add(new THREE.SphereGeometry(0.05, 5, 4), { at: [dw / 2 - 0.16, 0.1 + dh * 0.47, 0.13], color: '#f1c40f' });
+      if (open) doorFrame(k, dw, dh, yb, 0.14, -0.02, 0.07, frame);
+      else {
+        B(k, -dw / 2 - 0.14, 0.1, -0.02, dw / 2 + 0.14, dh + 0.16, 0.07, frame, { outline: 0.015 });
+        B(k, -dw / 2, 0.1, 0, dw / 2, dh, 0.09, wood);
+        if (S.door === 'plank') for (let i = 1; i < 4; i++) B(k, -dw / 2 + i * dw / 4 - 0.012, 0.15, 0.08, -dw / 2 + i * dw / 4 + 0.012, dh - 0.05, 0.1, shade(wood, -0.3));
+        else { B(k, -dw / 2 + 0.12, 0.35, 0.08, dw / 2 - 0.12, dh * 0.45, 0.11, shade(wood, 0.12)); B(k, -dw / 2 + 0.12, dh * 0.55, 0.08, dw / 2 - 0.12, dh - 0.15, 0.11, shade(wood, 0.12)); }
+        if (big) B(k, -0.012, 0.1, 0.09, 0.012, dh, 0.11, shade(wood, -0.35));
+        k.add(new THREE.SphereGeometry(0.05, 5, 4), { at: [dw / 2 - 0.16, 0.1 + dh * 0.47, 0.13], color: '#f1c40f' });
+      }
       // a lamp over shop doors
+      const top = open ? yb + dh : dh;
       if (b.role && b.role !== 'house') {
-        B(k, -0.04, dh + 0.25, 0.05, 0.04, dh + 0.3, 0.45, '#2d3436');
-        k.add(cyl(0.1, 0.13, 0.28, 6), { at: [0, dh + 0.02, 0.42], color: '#fff1c4', glow: '#ffcf70', flicker: 0.15 });
-        k.add(cone(0.16, 0.12, 6), { at: [0, dh + 0.3, 0.42], color: '#2d3436' });
+        B(k, -0.04, top + 0.25, 0.05, 0.04, top + 0.3, 0.45, '#2d3436');
+        k.add(cyl(0.1, 0.13, 0.28, 6), { at: [0, top + 0.02, 0.42], color: '#fff1c4', glow: '#ffcf70', flicker: 0.15 });
+        k.add(cone(0.16, 0.12, 6), { at: [0, top + 0.3, 0.42], color: '#2d3436' });
       }
     }
   }
   k.restore();
-  return { dw, dh };
+  return { dw, dh, top: open ? yb + dh : dh };
+}
+
+/** Jambs and a lintel round a doorway (the opening itself stays open). */
+function doorFrame(k, dw, dh, yb, t, z0, z1, color) {
+  B(k, -dw / 2 - t, yb, z0, -dw / 2, yb + dh + t, z1, color, { outline: 0.015 });
+  B(k, dw / 2, yb, z0, dw / 2 + t, yb + dh + t, z1, color, { outline: 0.015 });
+  B(k, -dw / 2 - t, yb + dh, z0, dw / 2 + t, yb + dh + t, z1, color, { outline: 0.015 });
+}
+
+function doorWood(b, S) {
+  return S.door === 'panel' && (b.style === 'marine' || b.role === 'marine_base') ? '#1b4f72' : b.style === 'noble' ? '#6d3b1f' : '#5a3a22';
 }
 
 /** A pitched roof with the ridge along x (gable ends at x = ±hw). */
@@ -398,8 +446,16 @@ export function buildBuilding(b, ctx) {
   const baseCol = S.base;
   const storeys = Math.max(1, Math.min(5, (b.hgt || 2) - 1));
   const storeyH = 2.75 * g;
-  const plinth = 0.35;
+  // a building you can walk into: its ground floor sits where the game puts
+  // your feet (a step up from the street, and above the ground inside)
+  const enter = !!b.enterable && S.wall !== 'hut' && rt !== 'hut' && rt !== 'ruin' && S.wall !== 'stone';
+  let plinth = 0.35;
+  if (enter && ctx?.ground) {
+    const rise = ctx.ground(b.x, b.y - fd / 2) - ctx.ground(b.x, b.y);
+    if (Number.isFinite(rise)) plinth = Math.max(0.35, Math.min(3, rise));
+  }
   const H = plinth + 3.0 * g + (storeys - 1) * storeyH;
+  const Hc = plinth + (storeys > 1 ? storeyH : 3.0 * g); // the ground floor's ceiling
   const hd = fd / 2;
   const winter = S.snow || (ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER);
   const door = { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, (b.door?.x ?? b.x) - b.x)) };
@@ -415,31 +471,39 @@ export function buildBuilding(b, ctx) {
   if (ruined) {
     ruinWalls(k, b, fw, fd, H, wallCol);
   } else {
-    const lean = S.crooked ? 0.04 : 0;
+    const lean = S.crooked && !enter ? 0.04 : 0;
     k.save();
     if (lean) k.rotateZ(lean * ((b.v || 0) % 2 ? 1 : -1));
-    B(k, -fw / 2, plinth - 0.05, -fd, fw / 2, H, 0, wallCol, { outline: 0.045 });
-    wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g);
+    let holes = null;
+    if (enter) {
+      // a hollow ground floor with real openings, solid storeys above
+      const ops = hollowWalls(k, b, { fw, fd, y0: plinth, top: Hc, wallCol });
+      if (H > Hc + 0.01) B(k, -fw / 2, Hc, -fd, fw / 2, H, 0, wallCol, { outline: 0.045 });
+      holes = holesOf(ops, doorOf(b), plinth);
+    } else B(k, -fw / 2, plinth - 0.05, -fd, fw / 2, H, 0, wallCol, { outline: 0.045 });
+    wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, holes);
     k.restore();
   }
 
-  // door and windows
-  const dd = doorAt(k, b, S, door.x, g, wallCol, big && fw >= 5);
+  // door and windows (on a walk-in ground floor the glass is its own mesh: see-through up close)
+  const dd = doorAt(k, b, S, door.x, g, wallCol, big && fw >= 5, enter ? plinth : null);
+  const panes = enter ? new Mesher() : null;
   const winW = 0.85 * g, winH = 1.05 * g;
   const cols = Math.max(1, Math.floor(fw / (1.7 * g)));
   let wi = 0;
   for (let f = 0; f < storeys; f++) {
     const y = plinth + f * storeyH + 1.55 * g;
+    const pane = f === 0 ? panes : null;
     for (let i = 0; i < cols + 1; i++) {
       const x = -fw / 2 + (i + 0.5) * (fw / (cols + 1));
       if (f === 0 && Math.abs(x - door.x) < dd.dw / 2 + winW / 2 + 0.35) continue;
       if (Math.abs(x) > fw / 2 - winW / 2 - 0.2) continue;
-      windowAt(k, b, S, x, y, winW, winH, 0.0, lit(b, wi++), wallCol, S.flowers && f === 0 && (i + (b.v || 0)) % 2 === 0);
+      windowAt(k, b, S, x, y, winW, winH, 0.0, lit(b, wi++), wallCol, S.flowers && f === 0 && (i + (b.v || 0)) % 2 === 0, pane);
     }
     if (fd >= 3) {
       for (const sx of [-1, 1]) {
         k.save(); k.translate(sx * fw / 2, 0, -fd / 2); k.rotateY(sx * Math.PI / 2);
-        windowAt(k, b, S, 0, y, winW, winH, 0.0, lit(b, wi++), wallCol, false);
+        windowAt(k, b, S, 0, y, winW, winH, 0.0, lit(b, wi++), wallCol, false, pane);
         k.restore();
       }
     }
@@ -496,7 +560,47 @@ export function buildBuilding(b, ctx) {
   // extras by style and role
   styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter);
 
-  return finish(b, k, { door, dd, H, S }, top);
+  const grp = finish(b, k, { door, dd, H, S }, top);
+  if (enter) walkIn(grp, b, S, { fw, fd, y0: plinth, ceil: Hc - plinth, panes });
+  return grp;
+}
+
+// glass on walk-in ground floors: dark from afar, see-through near enough to look in
+const GLASS_CLEAR = vcMat({ transparent: true, opacity: 0.22, depthWrite: false });
+
+/** The door leaf, the window glass and (when you're near) the furnished room. */
+function walkIn(grp, b, S, o) {
+  const leaf = doorLeaf(b, { y0: o.y0, wood: doorWood(b, S) });
+  grp.add(leaf);
+  let glass = null;
+  if (o.panes && o.panes.vertexCount) {
+    glass = new THREE.Mesh(o.panes.build(false), vcMat());
+    glass.renderOrder = 2;
+    grp.add(glass);
+  }
+  const st = { room: null, t: performance.now() };
+  grp.userData.update = (obj, env, ctx) => {
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - st.t) / 1000);
+    st.t = now;
+    animateDoor(leaf, b, dt);
+    const p = ctx?.game?.player, w = ctx?.world;
+    if (!p || !w) return;
+    const d = w.distance(p.x, p.y, b.x, b.y - o.fd / 2);
+    if (!st.room && d < 38) {
+      requestRoom(d, () => {
+        if (st.room) return;
+        st.room = buildRoom(b, o);
+        grp.add(st.room);
+        if (glass) glass.material = GLASS_CLEAR;
+      });
+    } else if (st.room && d > 50) {
+      grp.remove(st.room);
+      st.room.geometry.dispose();
+      st.room = null;
+      if (glass) glass.material = vcMat();
+    }
+  };
 }
 
 function finish(b, k, info, top) {
@@ -510,7 +614,7 @@ function finish(b, k, info, top) {
   if (info && icon && role !== 'marine_base') {
     // hanging shop sign on a bracket beside the door
     const sx = info.door.x + info.dd.dw / 2 + 0.75;
-    const sy = Math.min(info.H - 0.6, info.dd.dh + 0.55);
+    const sy = Math.min(info.H - 0.6, info.dd.top + 0.55);
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.78), signMaterial(icon));
     sign.position.set(sx, sy, 0.62);
     sign.rotation.y = Math.PI / 2 * 0; // faces the street
@@ -527,29 +631,56 @@ function finish(b, k, info, top) {
     const h = marine ? 0.6 : 0.5;
     const w = Math.min(b.fw - 0.6, h * nb.aspect);
     const board = new THREE.Mesh(new THREE.PlaneGeometry(w, w / nb.aspect), nb.mat);
-    board.position.set(0, Math.min(info.H - 0.45, info.dd.dh + 0.75 + (marine ? 0.4 : 0)), 0.1);
-    if (board.position.y < info.dd.dh + 0.4) board.position.y = info.dd.dh + 0.4;
+    board.position.set(0, Math.min(info.H - 0.45, info.dd.top + 0.75 + (marine ? 0.4 : 0)), 0.1);
+    if (board.position.y < info.dd.top + 0.4) board.position.y = info.dd.top + 0.4;
     grp.add(board);
   }
   grp.userData.height = top;
   return grp;
 }
 
-function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g) {
+/**
+ * Timbers, brick courses, rails and trims on the outside of the walls. With
+ * `holes` (a building you can walk into) the horizontal bands are cut round
+ * the doorway and the windows, and posts that would cross an opening are left
+ * out. holes = { front: [{ a0, a1, y0, y1 }], left: [...], right: [...] } (a along the wall).
+ */
+function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, holes = null) {
   const beam = S.beam || shade(wallCol, -0.5);
+  const HF = holes?.front || [], HS = { [-1]: holes?.left || [], [1]: holes?.right || [] };
+  const segs = (a0, a1, y0, y1, list) => {
+    let parts = [[Math.min(a0, a1), Math.max(a0, a1)]];
+    for (const o of list) {
+      if (o.y1 <= y0 || o.y0 >= y1) continue;
+      const next = [];
+      for (const [p, q] of parts) {
+        if (o.a1 <= p || o.a0 >= q) { next.push([p, q]); continue; }
+        if (o.a0 > p) next.push([p, o.a0]);
+        if (o.a1 < q) next.push([o.a1, q]);
+      }
+      parts = next;
+    }
+    return parts.filter(([p, q]) => q - p > 0.02);
+  };
+  // a band along the front (x0..x1) / along a side wall (z0..z1), cut round the openings
+  const FB = (x0, y0, z0, x1, y1, z1, col, o) => { for (const [p, q] of segs(x0, x1, y0, y1, HF)) B(k, p, y0, z0, q, y1, z1, col, o); };
+  const SB = (sx, xa, y0, za, xb, y1, zb, col, o) => { for (const [p, q] of segs(za, zb, y0, y1, HS[sx])) B(k, xa, y0, p, xb, y1, q, col, o); };
+  const crosses = (x, y0, y1, pad = 0.12) => HF.some((o) => x > o.a0 - pad && x < o.a1 + pad && y1 > o.y0 && y0 < o.y1);
+  const crossesSide = (sx, z, y0, y1, pad = 0.12) => HS[sx].some((o) => z > o.a0 - pad && z < o.a1 + pad && y1 > o.y0 && y0 < o.y1);
   switch (S.wall) {
     case 'timber': {
       // half-timbering: corner posts, floor beams, braces
       for (const sx of [-1, 1]) for (const sz of [0, -fd]) B(k, sx * fw / 2 - 0.12, plinth, sz - 0.12, sx * fw / 2 + 0.12, H, sz + 0.12, beam);
       for (let f = 0; f <= storeys; f++) {
         const y = f === storeys ? H - 0.2 : plinth + f * storeyH;
-        B(k, -fw / 2 - 0.02, y, -0.02, fw / 2 + 0.02, y + 0.2, 0.07, beam);
-        for (const sx of [-1, 1]) B(k, sx * fw / 2 - 0.07, y, -fd, sx * fw / 2 + 0.02 * sx, y + 0.2, 0, beam);
+        FB(-fw / 2 - 0.02, y, -0.02, fw / 2 + 0.02, y + 0.2, 0.07, beam);
+        for (const sx of [-1, 1]) SB(sx, sx * fw / 2 - 0.07, y, -fd, sx * fw / 2 + 0.02 * sx, y + 0.2, 0, beam);
       }
       if (fw >= 4) {
         for (const sx of [-1, 1]) {
           const x0 = sx * (fw / 2 - 0.1), x1 = sx * (fw / 2 - 1.0 * g);
           const y0 = plinth + 0.2, y1 = plinth + Math.min(storeyH, H - plinth) - 0.1;
+          if (crosses(x0, y0, y1, 0.05) || crosses(x1, y0, y1, 0.05) || crosses((x0 + x1) / 2, y0, y1, 0.05)) continue;
           const len = Math.hypot(x1 - x0, y1 - y0);
           k.add(box(0.13, len, 0.06), { at: [x0, y0, 0.03], rot: [0, 0, -Math.atan2(x1 - x0, y1 - y0)], color: beam });
         }
@@ -562,8 +693,10 @@ function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g) {
       for (let i = 0; i < n; i++) {
         const y = plinth + i * 0.34 + 0.17;
         const c = i % 2 ? shade(wallCol, -0.1) : wallCol;
-        k.add(cyl(0.16, 0.16, fw + 0.5, 6, true), { at: [(fw + 0.5) / 2, y, 0.02], rot: [0, 0, Math.PI / 2], color: c });
-        for (const sx of [-1, 1]) k.add(cyl(0.16, 0.16, fd + 0.5, 6, true), { at: [sx * (fw / 2 + 0.02), y, 0.25], rot: [-Math.PI / 2, 0, 0], color: c });
+        for (const [p, q] of segs(-fw / 2 - 0.25, fw / 2 + 0.25, y - 0.16, y + 0.16, HF)) k.add(cyl(0.16, 0.16, q - p, 6, true), { at: [q, y, 0.02], rot: [0, 0, Math.PI / 2], color: c });
+        for (const sx of [-1, 1]) {
+          for (const [p, q] of segs(-fd - 0.25, 0.25, y - 0.16, y + 0.16, HS[sx])) k.add(cyl(0.16, 0.16, q - p, 6, true), { at: [sx * (fw / 2 + 0.02), y, q], rot: [-Math.PI / 2, 0, 0], color: c });
+        }
       }
       break;
     }
@@ -571,10 +704,10 @@ function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g) {
       // brick courses (mortar lines) and a string course per floor
       const mortar = shade(wallCol, -0.25);
       for (let y = plinth + 0.42; y < H - 0.1; y += 0.42) {
-        B(k, -fw / 2 - 0.01, y, -0.01, fw / 2 + 0.01, y + 0.025, 0.012, mortar);
-        for (const sx of [-1, 1]) B(k, sx * (fw / 2 + 0.006) - 0.006, y, -fd, sx * (fw / 2 + 0.006) + 0.006, y + 0.025, 0, mortar);
+        FB(-fw / 2 - 0.01, y, -0.01, fw / 2 + 0.01, y + 0.025, 0.012, mortar);
+        for (const sx of [-1, 1]) SB(sx, sx * (fw / 2 + 0.006) - 0.006, y, -fd, sx * (fw / 2 + 0.006) + 0.006, y + 0.025, 0, mortar);
       }
-      for (let f = 1; f < storeys; f++) B(k, -fw / 2 - 0.06, plinth + f * storeyH - 0.2, -0.06, fw / 2 + 0.06, plinth + f * storeyH, 0.1, S.trim || shade(wallCol, 0.3));
+      for (let f = 1; f < storeys; f++) FB(-fw / 2 - 0.06, plinth + f * storeyH - 0.2, -0.06, fw / 2 + 0.06, plinth + f * storeyH, 0.1, S.trim || shade(wallCol, 0.3));
       for (const sx of [-1, 1]) B(k, sx * fw / 2 - 0.16, plinth, -0.06, sx * fw / 2 + 0.16, H, 0.08, shade(wallCol, -0.12));
       break;
     }
@@ -589,18 +722,25 @@ function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g) {
           }
         }
       }
-      for (let f = 1; f < storeys; f++) B(k, -fw / 2 - 0.05, plinth + f * storeyH - 0.15, -0.05, fw / 2 + 0.05, plinth + f * storeyH, 0.08, qc);
-      if (S.band) B(k, -fw / 2 - 0.04, H - 0.7, -0.04, fw / 2 + 0.04, H - 0.2, 0.08, qc);
+      for (let f = 1; f < storeys; f++) FB(-fw / 2 - 0.05, plinth + f * storeyH - 0.15, -0.05, fw / 2 + 0.05, plinth + f * storeyH, 0.08, qc);
+      if (S.band) FB(-fw / 2 - 0.04, H - 0.7, -0.04, fw / 2 + 0.04, H - 0.2, 0.08, qc);
       break;
     }
     case 'post': {
       // Wano: dark posts and rails over white plaster, a raised veranda
       const n = Math.max(2, Math.round(fw / 1.3));
-      for (let i = 0; i <= n; i++) B(k, -fw / 2 + i * fw / n - 0.08, plinth, -0.02, -fw / 2 + i * fw / n + 0.08, H, 0.08, S.beam);
-      for (const sx of [-1, 1]) for (let i = 0; i <= 2; i++) B(k, sx * fw / 2 - 0.08, plinth, -i * fd / 2 - 0.08, sx * fw / 2 + 0.08, H, -i * fd / 2 + 0.08, S.beam);
+      for (let i = 0; i <= n; i++) {
+        const x = -fw / 2 + i * fw / n;
+        if (crosses(x, plinth, H, 0.1)) continue;
+        B(k, x - 0.08, plinth, -0.02, x + 0.08, H, 0.08, S.beam);
+      }
+      for (const sx of [-1, 1]) for (let i = 0; i <= 2; i++) {
+        if (crossesSide(sx, -i * fd / 2, plinth, H, 0.1)) continue;
+        B(k, sx * fw / 2 - 0.08, plinth, -i * fd / 2 - 0.08, sx * fw / 2 + 0.08, H, -i * fd / 2 + 0.08, S.beam);
+      }
       for (let f = 0; f < storeys; f++) {
         const y = plinth + f * storeyH + storeyH * 0.45;
-        B(k, -fw / 2 - 0.02, y, -0.02, fw / 2 + 0.02, y + 0.14, 0.1, S.beam);
+        FB(-fw / 2 - 0.02, y, -0.02, fw / 2 + 0.02, y + 0.14, 0.1, S.beam);
       }
       B(k, -fw / 2 - 0.02, H - 0.25, -0.02, fw / 2 + 0.02, H, 0.1, S.beam);
       break;
@@ -608,7 +748,11 @@ function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g) {
     case 'column': {
       // Chinese: red columns and a red lintel along the front
       const n = Math.max(2, Math.round(fw / 1.6));
-      for (let i = 0; i <= n; i++) k.add(cyl(0.14, 0.16, H - plinth, 8), { at: [-fw / 2 + i * fw / n, plinth, 0.25], color: '#b03a2e', outline: 0.02 });
+      for (let i = 0; i <= n; i++) {
+        const x = -fw / 2 + i * fw / n;
+        if (holes && crosses(x, plinth, plinth + 1.9, 0.3) && HF[0] && x > HF[0].a0 - 0.3 && x < HF[0].a1 + 0.3) continue; // not in the doorway
+        k.add(cyl(0.14, 0.16, H - plinth, 8), { at: [x, plinth, 0.25], color: '#b03a2e', outline: 0.02 });
+      }
       B(k, -fw / 2 - 0.1, H - 0.45, 0.05, fw / 2 + 0.1, H - 0.1, 0.42, '#b03a2e');
       B(k, -fw / 2 - 0.1, H - 0.55, 0.1, fw / 2 + 0.1, H - 0.45, 0.4, '#d4ac0d');
       break;
@@ -616,17 +760,28 @@ function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g) {
     case 'adobe': {
       // rounded edges and roof beams poking out (vigas)
       if (S.vigas) for (let x = -fw / 2 + 0.5; x < fw / 2 - 0.3; x += 0.9) k.add(cyl(0.08, 0.08, 0.45, 5), { at: [x, H - 0.45, -0.02], rot: [Math.PI / 2, 0, 0], color: '#6d4c33' });
-      B(k, -fw / 2 - 0.05, plinth, -0.05, fw / 2 + 0.05, plinth + 0.25, 0.06, shade(wallCol, -0.1));
+      FB(-fw / 2 - 0.05, plinth, -0.05, fw / 2 + 0.05, plinth + 0.25, 0.06, shade(wallCol, -0.1));
       break;
     }
     case 'smooth': {
-      if (S.strips) for (let f = 0; f < storeys; f++) B(k, -fw / 2 - 0.02, plinth + f * storeyH + 0.4, -0.02, fw / 2 + 0.02, plinth + f * storeyH + 0.5, 0.05, S.trim, { glow: '#4ff5e0' });
+      if (S.strips) for (let f = 0; f < storeys; f++) FB(-fw / 2 - 0.02, plinth + f * storeyH + 0.4, -0.02, fw / 2 + 0.02, plinth + f * storeyH + 0.5, 0.05, S.trim, { glow: '#4ff5e0' });
       break;
     }
   }
   if (S.cornice) {
     B(k, -fw / 2 - 0.18, H - 0.3, -fd - 0.18, fw / 2 + 0.18, H - 0.1, 0.18, S.trim || shade(wallCol, 0.25), { outline: 0.02 });
   }
+}
+
+/** Openings of a walk-in ground floor as wall bands see them (see wallDetail). */
+function holesOf(ops, d, y0) {
+  const pad = 0.03;
+  const win = (w) => ({ a0: w.u - w.w / 2 - pad, a1: w.u + w.w / 2 + pad, y0: w.y - w.h / 2 - pad, y1: w.y + w.h / 2 + (w.kind === 'gothic' ? w.w * 0.18 : 0) + pad });
+  return {
+    front: [{ a0: d.x - d.dw / 2 - pad, a1: d.x + d.dw / 2 + pad, y0: -10, y1: y0 + d.dh + pad }, ...ops.front.map(win)],
+    left: ops.left.map(win),
+    right: ops.right.map(win),
+  };
 }
 
 function ruinWalls(k, b, fw, fd, H, wallCol) {
@@ -749,7 +904,7 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter) {
   if (['shop', 'market', 'restaurant', 'cafe', 'weapons', 'bar', 'tavern', 'inn'].includes(role) && S.door !== 'noren' && fw >= 3.5) {
     const cols = ['#e74c3c', '#3498db', '#27ae60', '#f39c12', '#9b59b6', '#16a085'];
     const c = cols[(b.v || 0) % cols.length];
-    const aw = Math.min(fw - 0.6, dd.dw + 2.4), ay = dd.dh + 0.55;
+    const aw = Math.min(fw - 0.6, dd.dw + 2.4), ay = dd.top + 0.55;
     const n = Math.max(4, Math.round(aw / 0.45));
     for (let i = 0; i < n; i++) {
       const x0 = door.x - aw / 2 + i * aw / n;
@@ -769,21 +924,21 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter) {
     for (const sx of [-1, 1]) {
       const x = door.x + sx * (dd.dw / 2 + 0.55);
       if (Math.abs(x) > fw / 2 - 0.2) continue;
-      k.add(cyl(0.01, 0.01, 0.35, 3), { at: [x, dd.dh + 0.35, 0.45], color: '#2d3436' });
-      k.add(new THREE.SphereGeometry(0.22, 8, 6), { at: [x, dd.dh + 0.2, 0.45], scale: [1, 1.25, 1], color: '#d63a2f', glow: '#ff7043', flicker: 0.25 });
-      B(k, x - 0.13, dd.dh + 0.44, 0.33, x + 0.13, dd.dh + 0.48, 0.57, '#2d3436');
-      B(k, x - 0.13, dd.dh - 0.08, 0.33, x + 0.13, dd.dh - 0.04, 0.57, '#2d3436');
+      k.add(cyl(0.01, 0.01, 0.35, 3), { at: [x, dd.top + 0.35, 0.45], color: '#2d3436' });
+      k.add(new THREE.SphereGeometry(0.22, 8, 6), { at: [x, dd.top + 0.2, 0.45], scale: [1, 1.25, 1], color: '#d63a2f', glow: '#ff7043', flicker: 0.25 });
+      B(k, x - 0.13, dd.top + 0.44, 0.33, x + 0.13, dd.top + 0.48, 0.57, '#2d3436');
+      B(k, x - 0.13, dd.top - 0.08, 0.33, x + 0.13, dd.top - 0.04, 0.57, '#2d3436');
     }
   }
   if (S.portico && fw >= 5) {
     // columns and a pediment around the door
     const px = door.x, pw = dd.dw + 1.8;
     for (const sx of [-1, 1]) {
-      k.add(cyl(0.17, 0.2, dd.dh + 0.9, 10), { at: [px + sx * pw / 2, 0.3, 1.1], color: '#fdfefe', outline: 0.02 });
+      k.add(cyl(0.17, 0.2, dd.top + 0.9, 10), { at: [px + sx * pw / 2, 0.3, 1.1], color: '#fdfefe', outline: 0.02 });
       B(k, px + sx * pw / 2 - 0.26, 0.1, 0.85, px + sx * pw / 2 + 0.26, 0.32, 1.35, '#ecf0f1');
     }
-    B(k, px - pw / 2 - 0.35, dd.dh + 1.2, -0.05, px + pw / 2 + 0.35, dd.dh + 1.45, 1.4, '#fdfefe', { outline: 0.02 });
-    k.save(); k.translate(px, dd.dh + 1.45, 0.65); k.rotateY(0);
+    B(k, px - pw / 2 - 0.35, dd.top + 1.2, -0.05, px + pw / 2 + 0.35, dd.top + 1.45, 1.4, '#fdfefe', { outline: 0.02 });
+    k.save(); k.translate(px, dd.top + 1.45, 0.65); k.rotateY(0);
     k.add(slab([[-pw / 2 - 0.35, 0], [pw / 2 + 0.35, 0], [0, 0.9]], 1.4), { color: S.trim === '#d4ac0d' ? '#fdfefe' : '#fdfefe', outline: 0.02 });
     k.add(slab([[-pw / 2 + 0.1, 0.06], [pw / 2 - 0.1, 0.06], [0, 0.72]], 0.05), { at: [0, 0, 0.71], color: '#d4ac0d' });
     k.restore();
@@ -801,6 +956,15 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter) {
   if (b.style === 'port' && role === 'house' && fw >= 4) {
     // crates and a rope coil by the wall
     B(k, fw / 2 - 1.1, 0, 0.1, fw / 2 - 0.3, 0.8, 0.9, '#b08850', { outline: 0.02 });
+  }
+  if (b.pirate) {
+    // a crude Jolly Roger nailed over the door: pirates live here
+    const x = door.x, y = dd.top + 0.14;
+    B(k, x - 0.42, y, 0.04, x + 0.42, y + 0.56, 0.07, '#141414', { outline: 0.01 });
+    k.add(new THREE.SphereGeometry(0.12, 8, 6), { at: [x, y + 0.33, 0.08], scale: [1, 0.95, 0.35], color: '#f5f5f5' });
+    B(k, x - 0.07, y + 0.19, 0.07, x + 0.07, y + 0.25, 0.1, '#f5f5f5');
+    for (const sx of [-1, 1]) k.add(box(0.46, 0.045, 0.02), { at: [x, y + 0.1, 0.085], rot: [0, 0, sx * 0.62], color: '#f5f5f5' });
+    for (const sx of [-1, 1]) B(k, x + sx * 0.045 - 0.025, y + 0.32, 0.115, x + sx * 0.045 + 0.025, y + 0.37, 0.12, '#141414');
   }
   if (winter && (b.style !== 'snow')) {
     // snow drifts along the walls

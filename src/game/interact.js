@@ -35,8 +35,10 @@ export function findInteraction(game, p) {
     if (a === p || a.state !== 'knocked' || !a.canCarry) continue;
     cands.push({ d: w.distance(p.x, p.y, a.x, a.y) + 0.5, x: a.x, y: a.y, label: a.carryLabel || `Carry ${a.name}`, run: () => game.emit('carry', a) });
   }
+  if (game.buildings) game.buildings.candidates(p, cands);
   if (w.objects) {
     for (const o of w.objects.near(p.x, p.y, 3.2)) {
+      if (o.enterable) continue; // walk in (see game/buildings.js)
       if (o.kind === 'building' && o.role && o.role !== 'house' && o.door) {
         const d = w.distance(p.x, p.y, o.door.x, o.door.y + 0.3);
         if (d < 1.6) cands.push({ d, x: o.door.x, y: o.door.y, label: o.name ? `Enter ${o.name}` : 'Enter', run: () => game.emit('enterBuilding', o) });

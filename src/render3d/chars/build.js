@@ -448,7 +448,7 @@ const HAIR = {
 // ------------------------------------------------------------------ hats
 // Hats sit on the head at their band; `k` scales them for big hair.
 const STRAW = '#f0cd62', STRAW_D = '#e9c150', BAND_RED = '#c8372d', GOLD = '#e0b24a';
-const HAT_COVER = { straw: 1, captain: 1, tricorne: 1, cowboy: 1, marine: 1, pinkhat: 1, tophat: 1, topHat: 1, beanie: 1, bandana: 1, cap: 1, helm: 1 };
+const HAT_COVER = { chef: 1, straw: 1, captain: 1, tricorne: 1, cowboy: 1, marine: 1, pinkhat: 1, tophat: 1, topHat: 1, beanie: 1, bandana: 1, cap: 1, helm: 1 };
 function hatKind(hat, look) {
   if (!hat) return null;
   if (hat === 'horns' && !(look && look.hatColor)) return 'helm';
@@ -462,6 +462,11 @@ const HATS = {
     disc(h, 0.52, 1.72, 0.07, STRAW, 0, 0.08);
     dome(h, 0.58, [0.96, 0.66, 0.96], STRAW_D, 0.08);
     ring(h, 0.68, [0.975], 0.22, BAND_RED, 0.08);
+  },
+  chef(h, col) {
+    const c = col || '#fafafa';
+    h.addC(Prim.frustum(0.9, h.q.hat), M(0, 0.93, 0, 0, 0, 0, [0.99, 1.05, 0.99]), c, h.bone);
+    dome(h, 1.62, [1.12, 0.62, 1.12], c);
   },
   captain(h, col) {
     const c = col || '#2c2831';

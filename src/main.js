@@ -27,6 +27,7 @@ import { persist, endLineage } from './game/lineage.js';
 import { addItem, useItem } from './game/inventory.js';
 import { ITEMS } from './data/items.js';
 import { installReputation } from './game/reputation.js';
+import { installBuildings } from './game/buildings.js';
 import { installForaging } from './game/forage.js';
 import { fruitOf } from './world/fruitTrees.js';
 import { installContent } from './content/index.js';
@@ -157,6 +158,7 @@ async function start() {
   installLegends(game);
   installWorld(game);
   installReputation(game);
+  installBuildings(game);
   installForaging(game);
   installContent(game);
 

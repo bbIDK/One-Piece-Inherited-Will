@@ -515,7 +515,7 @@ export class Actor extends Entity {
   }
 
   passable(w, x, y) {
-    if (w.isBlocked(x, y)) return false;
+    if (w.solid(x, y)) return false;
     const t = w.type(x, y);
     if (WALKABLE[t]) return true;
     if (SWIMMABLE[t]) {

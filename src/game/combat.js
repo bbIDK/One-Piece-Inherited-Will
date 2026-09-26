@@ -48,6 +48,7 @@ export class Combat {
     for (let i = this.hitboxes.length - 1; i >= 0; i--) {
       const h = this.hitboxes[i];
       h.t += dt;
+      if (!h.doorChecked && h.owner?.isPlayer) { h.doorChecked = true; game.buildings?.strike(h); }
       if (h.follow && h.owner && h.owner.alive) {
         h.x = h.owner.x + (h.offX || 0); h.y = h.owner.y + (h.offY || 0);
         if (h.followAngle) h.angle = h.owner.facing;
@@ -85,7 +86,7 @@ export class Combat {
       let dead = p.traveled >= p.range || p.t > (p.life ?? 6);
       if (!p.passWalls && !dead) {
         const t = game.world.type(p.x, p.y);
-        if (game.world.isBlocked(p.x, p.y) || t === 25 || t === 26 || t === 27 || t === 41 || t === 50) dead = true;
+        if (game.world.solid(p.x, p.y) || game.world.hitsProp(p.x, p.y, 0.04, true) || t === 25 || t === 26 || t === 27 || t === 41 || t === 50) dead = true;
       }
       if (!dead) {
         for (const a of actors) {
