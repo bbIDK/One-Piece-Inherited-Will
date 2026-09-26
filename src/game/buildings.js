@@ -18,6 +18,8 @@ import { persist } from './lineage.js';
 
 const SEA_LEVEL = { east_blue: 5, north_blue: 7, west_blue: 7, south_blue: 7, polar: 8, paradise: 20, calm_belt: 22, sky: 24, undersea: 30, red_line: 34, new_world: 45 };
 
+const FLAT = { rug: 1, tatami: 1, mats: 1, lamp: 1, picture: 1, poster: 1, wanted: 1, redcross: 1, board: 1, flag: 1, marineflag: 1 };
+
 export function installBuildings(game) {
   const B = {
     near: [],
@@ -40,14 +42,26 @@ export function installBuildings(game) {
       const role = b.role || 'house';
       const t = game.env.clock;
       if (b.pirate) return true;
-      if (role === 'house') {
-        if (b.npc) return !(t >= 6 && t < 22); // a named person's home: callers welcome by day
-        return c?.flags?.['invited_' + B.key(b)] !== game.env.day;
-      }
+      // homes are private: knock, and wait to be asked in (or break the door down)
+      if (role === 'house') return c?.flags?.['invited_' + B.key(b)] !== game.env.day;
       const h = HOURS[role];
       return h ? !(t >= h[0] && t < h[1]) : false;
     },
     opensAt(b) { const h = HOURS[b.role || 'house']; return h ? h[0] : 6; },
+    /** Clear floor inside `b` at a world point (not in any furniture, chairs and rugs aside)? */
+    freeAt(b, x, y, r = 0.35) {
+      const L = layoutOf(b);
+      const lx = game.world.dx(b.x, x), lz = y - b.y;
+      if (lx < L.x0 + r || lx > L.x1 - r || lz < L.z0 + r || lz > L.z1 - r) return false;
+      for (const it of L.items) {
+        if (FLAT[it.k]) continue;
+        // (seats placed as decoration have no rect of their own)
+        const hw = (it.w || 0.4) / 2, hd = (it.d || 0.4) / 2;
+        const q = it.rect || { x0: it.x - hw, x1: it.x + hw, z0: it.z - hd, z1: it.z + hd };
+        if (lx > q.x0 - r && lx < q.x1 + r && lz > q.z0 - r && lz < q.z1 + r) return false;
+      }
+      return true;
+    },
     inside(a, b) { return game.world.interiorAt(a.x, a.y) === b; },
 
     update(dt) {

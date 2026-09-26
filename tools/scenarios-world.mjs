@@ -567,4 +567,37 @@ export const scenarios = {
       console.log('after 130s', JSON.stringify(late));
     },
   },
+
+  // one of each kind of home, from the inside
+  homes: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate((isl) => { window.OP.quickStart(isl || 'human'); const g = window.OP.game; g.env.clock = 11; g.settings.view = 'first'; g.applySettings(); document.querySelector('.look-hint')?.remove(); }, args.race);
+      for (let i = 0; i < 10; i++) await step(page, 0.1);
+      const found = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player;
+        const out = {};
+        for (const b of w.objects.near(p.x, p.y, 220, (o) => o.enterable && (o.role || 'house') === 'house' && !o.pirate)) {
+          const L = window.OP.debug.layoutOf(b);
+          const k = L.kind || 'family';
+          if (!out[k]) out[k] = { x: b.x, y: b.y, fw: b.fw, fd: b.fd, items: L.items.map((i) => i.k).join(','), use: L.use.map((u) => u.label) };
+        }
+        return out;
+      });
+      console.log('kinds', Object.keys(found).join(', '));
+      for (const [k, b] of Object.entries(found)) {
+        console.log(k, JSON.stringify({ size: `${b.fw}x${b.fd}`, items: b.items, search: b.use }));
+        await page.evaluate((b) => {
+          const g = window.OP.game, c = g.state.char, w = g.world;
+          const bb = w.objects.near(b.x, b.y, 1, (o) => o.enterable)[0];
+          c.flags['invited_' + g.buildings.key(bb)] = g.env.day;
+          window.OP.teleport(b.x, b.y - 0.55);
+          const v = g.view3d; v.rig.yaw = -Math.PI / 2; v.rig.pitch = -0.28;
+        }, b);
+        for (let i = 0; i < 12; i++) { await step(page, 0.1); await frames(page, 1); }
+        await snap('home-' + k);
+      }
+    },
+  },
 };

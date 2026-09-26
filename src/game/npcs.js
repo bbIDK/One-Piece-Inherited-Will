@@ -377,7 +377,9 @@ export class Interactions {
     }
     const night = g.env.clock < 6 || g.env.clock >= 21;
     const home = g.actors.some((a) => a.homeB === b && a.alive && a.state === 'idle');
-    const invite = home && !night && !c.bounty && rng.chance(0.3 + (c.reputation || 0) / 200);
+    // a named character's home: callers are welcome by day; strangers mostly aren't
+    const wanted = (g.wanted?.tier() ?? 0) >= 2;
+    const invite = home && !night && !wanted && rng.chance((b.npc ? 0.85 : 0.3) + (c.reputation || 0) / 200);
     const lines = !home ? ['(No answer. Nobody seems to be home.)', '(Silence. The curtains are drawn.)']
       : night ? ['"It\'s the middle of the night! Go away!"', '"We\'re sleeping! Come back in the morning!"', '(A candle is snuffed out behind the window.)']
         : ['"Who\'s there? ...Go away, we don\'t want trouble."', '"Nobody home!" (someone is clearly home)', '"If you\'re a pirate, keep walking!"', '"Shh! The baby is sleeping."', '"Are you the new postman? No? Then shoo."'];

@@ -292,8 +292,18 @@ export class AIController {
         this.wanderTo = { x: this.home.x + (Math.random() - 0.5) * 2 * r, y: this.home.y + (Math.random() - 0.5) * 2 * r };
         // people at home potter about their own rooms; passers-by stay out of other people's
         const bx = a.wanderBox;
-        if (bx) this.wanderTo = { x: clamp(this.wanderTo.x, bx.x0 + 0.35, bx.x1 - 0.35), y: clamp(this.wanderTo.y, bx.y0 + 0.35, bx.y1 - 0.35) };
-        else if (game.world.isBlocked(this.wanderTo.x, this.wanderTo.y)) this.wanderTo = null;
+        if (bx) {
+          this.wanderTo = { x: clamp(this.wanderTo.x, bx.x0 + 0.35, bx.x1 - 0.35), y: clamp(this.wanderTo.y, bx.y0 + 0.35, bx.y1 - 0.35) };
+          // indoors: only to clear floor (never into the furniture)
+          if (a.homeB && game.buildings?.freeAt && !game.buildings.freeAt(a.homeB, this.wanderTo.x, this.wanderTo.y)) {
+            let ok = null;
+            for (let k = 0; k < 8 && !ok; k++) {
+              const q = { x: bx.x0 + 0.35 + Math.random() * (bx.x1 - bx.x0 - 0.7), y: bx.y0 + 0.35 + Math.random() * (bx.y1 - bx.y0 - 0.7) };
+              if (game.buildings.freeAt(a.homeB, q.x, q.y)) ok = q;
+            }
+            this.wanderTo = ok;
+          }
+        } else if (game.world.isBlocked(this.wanderTo.x, this.wanderTo.y)) this.wanderTo = null;
       } else this.wanderTo = null;
     }
     if (this.wanderTo) {

@@ -287,46 +287,155 @@ function counterRoom(P, L, S, g, { shelf = 'goods', len = 2.2, gapBehind = 0.58 
   return counter;
 }
 
-const ROOMS = {
-  house(P, L, b, R, S, g) {
-    const low = lowStyle(b);
-    const end = R() < 0.5 ? 'start' : 'end';
-    const other = end === 'start' ? 'end' : 'start';
-    // a bed (or a futon) in a back corner, a second in bigger homes
-    const bed = P.wall(S(low ? 'futon' : 'bed'), 'back', end) || P.wall(S(low ? 'futon' : 'bed'), 'left', 'start') || P.wall(S(low ? 'futon' : 'bed'), 'right', 'start');
+// ------------------------------------------------------------------ homes
+// Every home has somewhere to sleep, a hearth, and a chest or chest of drawers
+// worth searching — but a fisherman's hut, a carpenter's workshop-home, a
+// scholar's study, a farmhouse and an old sailor's place all look different.
+
+/** A bed (or a futon) in a back corner, falling back to a side wall. */
+function bedIn(P, S, low, order) {
+  const k = low ? 'futon' : 'bed';
+  return P.wall(S(k), 'back', order) || P.wall(S(k), 'left', 'start') || P.wall(S(k), 'right', 'start');
+}
+/** Something to search, with the spot to stand at in front of it. */
+function searchable(L, it, label) {
+  if (!it) return null;
+  const f = [Math.sin(it.rot), Math.cos(it.rot)];
+  L.use.push({ kind: 'loot', x: it.x + f[0] * (it.d / 2 + 0.42), z: it.z + f[1] * (it.d / 2 + 0.42), label });
+  return it;
+}
+function stash(P, L, S, k, walls, label) {
+  for (const [wall, order] of walls) {
+    const it = P.wall({ ...S(k), loot: true }, wall, order);
+    if (it) return searchable(L, it, label);
+  }
+  return null;
+}
+/** A chest at the foot of a bed against the back wall. */
+function footChest(P, L, S, bed, label) {
+  if (!bed || bed.rot !== 0) return null;
+  const c = S('chest'), r = bed.rect;
+  const it = P.at({ ...c, loot: true }, (r.x0 + r.x1) / 2, r.z1 + c.d / 2 + 0.05, 0);
+  if (it) L.use.push({ kind: 'loot', x: it.x, z: it.rect.z1 + 0.45, label });
+  return it;
+}
+function hearthIn(P, L, b, S, low, order) {
+  const k = b.style === 'snow' || b.style === 'village' || b.style === 'giant' ? 'fireplace' : low ? 'hibachi' : 'stove';
+  const st = P.wall(S(k), 'back', order) || P.wall(S(k), 'left', 'end') || P.wall(S(k), 'right', 'end');
+  if (st) L.residents.push({ x: st.x + Math.sin(st.rot) * (st.d / 2 + 0.35), z: st.z + Math.cos(st.rot) * (st.d / 2 + 0.35) });
+  return st;
+}
+/** A table with a seat either side (people sit at them). */
+function tableIn(P, L, S, low, kind, x, z, seat) {
+  const tb = P.free(S(low ? 'lowTable' : kind), x, z);
+  if (!tb) return null;
+  for (const s of [-1, 1]) {
+    const st = S(low ? 'cushion' : seat);
+    const sx = tb.x + s * (tb.w / 2 + st.w * 0.45);
+    if (sx - st.w / 2 < L.x0 || sx + st.w / 2 > L.x1) continue;
+    P.deco(st, sx, tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
+    L.residents.push({ x: sx, z: tb.z, sit: true, face: s < 0 ? 0 : Math.PI });
+  }
+  return tb;
+}
+const sides = (R) => (R() < 0.5 ? ['start', 'end'] : ['end', 'start']);
+
+const HOMES = {
+  family(P, L, b, R, S, g, low) {
+    const [end, other] = sides(R);
+    const bed = bedIn(P, S, low, end);
     if (bed && (L.x1 - L.x0) > 5) P.wall(S(low ? 'futon' : 'bed'), 'back', other);
-    // a chest at the foot of the bed
-    if (bed && !low) {
-      const r = bed.rect;
-      const c = S('chest');
-      const it = P.at({ ...c, loot: true }, (r.x0 + r.x1) / 2, r.z1 + c.d / 2 + 0.05, 0);
-      if (it) L.use.push({ kind: 'loot', x: it.x, z: it.rect.z1 + 0.45, label: 'Search the chest' });
-    }
-    // the kitchen: a stove or a fireplace on the back wall
-    const hearth = b.style === 'snow' || b.style === 'village' || b.style === 'giant' ? 'fireplace' : low ? 'hibachi' : 'stove';
-    const st = P.wall(S(hearth), 'back', other);
-    if (st) L.residents.push({ x: st.x, z: st.rect.z1 + 0.35 });
-    // a cupboard to rob
-    const cup = P.wall({ ...S(low ? 'tansu' : 'cupboard'), loot: true }, 'left', 'random') || P.wall({ ...S(low ? 'tansu' : 'cupboard'), loot: true }, 'right', 'random') || P.wall({ ...S('dresser'), loot: true }, 'back', 'center') || P.wall({ ...S('dresser'), loot: true }, 'front', 'start');
-    if (cup) {
-      const f = [Math.sin(cup.rot), Math.cos(cup.rot)];
-      L.use.push({ kind: 'loot', x: cup.x + f[0] * (cup.d / 2 + 0.42), z: cup.z + f[1] * (cup.d / 2 + 0.42), label: 'Search the cupboard' });
-    }
-    // a table with seats
-    const tb = P.free(S(low ? 'lowTable' : 'table'), (L.x0 + L.x1) / 2 + (end === 'start' ? 0.8 : -0.8), L.z0 + (L.z1 - L.z0) * 0.55);
-    if (tb) {
-      for (const s of [-1, 1]) {
-        const seat = S(low ? 'cushion' : 'chair');
-        const x = tb.x + s * (tb.w / 2 + seat.w * 0.45);
-        if (x - seat.w / 2 < L.x0 || x + seat.w / 2 > L.x1) continue;
-        P.deco(seat, x, tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
-        L.residents.push({ x, z: tb.z, sit: true, face: s < 0 ? 0 : Math.PI });
-      }
-    }
-    // odds and ends
+    if (!low) footChest(P, L, S, bed, 'Search the chest');
+    stash(P, L, S, low ? 'tansu' : 'cupboard', [['left', 'random'], ['right', 'random'], ['front', 'start']], 'Search the cupboard');
+    hearthIn(P, L, b, S, low, other);
+    tableIn(P, L, S, low, 'table', (L.x0 + L.x1) / 2 + (end === 'start' ? 0.8 : -0.8), L.z0 + (L.z1 - L.z0) * 0.55, 'chair');
     P.wall(S('shelf'), 'right', 'random') || P.wall(S('lowShelf'), 'front', 'end');
     if (R() < 0.6) P.wall(S('barrel'), 'front', R() < 0.5 ? 'start' : 'end');
     if (R() < 0.5) P.wall(S('plant'), 'front', 'end');
+  },
+  // nets, floats and barrels of salt fish; a sea chest by the bed
+  fisher(P, L, b, R, S, g, low) {
+    const [end, other] = sides(R);
+    const bed = bedIn(P, S, low, end);
+    footChest(P, L, S, bed, 'Search the sea chest') || stash(P, L, S, 'chest', [['right', 'random'], ['left', 'random']], 'Search the sea chest');
+    hearthIn(P, L, b, S, low, other);
+    P.wall(S('rack'), 'left', 'random');
+    P.wall(S('barrel'), 'right', 'start'); P.wall(S('barrel'), 'right', 'start');
+    P.wall(S('crate'), 'front', R() < 0.5 ? 'start' : 'end');
+    tableIn(P, L, S, low, 'roundTable', (L.x0 + L.x1) / 2, L.z0 + (L.z1 - L.z0) * 0.6, 'stool');
+    stash(P, L, S, low ? 'tansu' : 'dresser', [['front', 'end'], ['left', 'end']], 'Search the drawers');
+  },
+  // a carpenter or smith who works at home: a workbench, timber, tools
+  crafter(P, L, b, R, S, g, low) {
+    const [end, other] = sides(R);
+    const wb = P.wall(S('workbench'), 'back', other) || P.wall(S('workbench'), 'left', 'random') || P.wall(S('workbench'), 'right', 'random');
+    if (wb) { const f = [Math.sin(wb.rot), Math.cos(wb.rot)]; L.residents.push({ x: wb.x + f[0] * (wb.d / 2 + 0.3), z: wb.z + f[1] * (wb.d / 2 + 0.3), face: wb.rot + Math.PI }); }
+    P.wall(S('rack'), 'right', 'random') || P.wall(S('rack'), 'left', 'random');
+    P.wall(S('lumber'), 'front', R() < 0.5 ? 'start' : 'end') || P.wall(S('crate'), 'front', 'start');
+    const bed = bedIn(P, S, low, end);
+    footChest(P, L, S, bed, 'Search the tool chest');
+    stash(P, L, S, low ? 'tansu' : 'dresser', [['left', 'random'], ['right', 'random'], ['front', 'end']], 'Search the drawers');
+    hearthIn(P, L, b, S, low, 'center');
+    if (R() < 0.7) P.wall(S('crate'), 'right', 'end');
+  },
+  // books everywhere, a desk under the lamp
+  scholar(P, L, b, R, S, g, low) {
+    const [end, other] = sides(R);
+    P.wall(S('bookcase'), 'back', other) || P.wall(S('shelf'), 'back', other);
+    P.wall(S('bookcase'), 'left', 'random') || P.wall(S('lowShelf'), 'left', 'random');
+    const desk = P.wall(S('desk'), 'right', 'random') || P.free(S('desk'), 0, (L.z0 + L.z1) / 2);
+    if (desk) {
+      const f = [Math.sin(desk.rot), Math.cos(desk.rot)], ch = S('chair');
+      const cx = desk.x + f[0] * (desk.d / 2 + ch.d * 0.4), cz = desk.z + f[1] * (desk.d / 2 + ch.d * 0.4);
+      P.deco(ch, cx, cz, desk.rot + Math.PI);
+      L.residents.push({ x: cx, z: cz, sit: true, face: desk.rot + Math.PI });
+    }
+    const bed = bedIn(P, S, low, end);
+    footChest(P, L, S, bed, 'Search the chest') || stash(P, L, S, 'chest', [['front', 'end'], ['left', 'end']], 'Search the chest');
+    hearthIn(P, L, b, S, low, 'center');
+    if (R() < 0.7) P.wall(S('plant'), 'front', 'end');
+  },
+  // sacks of grain, barrels, baskets of produce
+  farmer(P, L, b, R, S, g, low) {
+    const [end, other] = sides(R);
+    const bed = bedIn(P, S, low, end);
+    stash(P, L, S, low ? 'tansu' : 'cupboard', [['right', 'random'], ['front', 'end'], ['left', 'random']], 'Search the cupboard');
+    hearthIn(P, L, b, S, low, other);
+    P.wall(S('sacks'), 'left', 'start'); P.wall(S('sacks'), 'left', 'end');
+    P.wall(S('produce'), 'right', 'random') || P.wall(S('barrel'), 'right', 'random');
+    P.wall(S('barrel'), 'front', R() < 0.5 ? 'start' : 'end');
+    tableIn(P, L, S, low, 'table', (L.x0 + L.x1) / 2, L.z0 + (L.z1 - L.z0) * 0.58, 'chair');
+    if (!low) footChest(P, L, S, bed, 'Search the chest');
+  },
+  // an old sea-dog's place: a hammock-bed, a sea chest, a round table and rum
+  sailor(P, L, b, R, S, g, low) {
+    const [end, other] = sides(R);
+    const bed = bedIn(P, S, low, end);
+    footChest(P, L, S, bed, 'Search the sea chest') || stash(P, L, S, 'chest', [['left', 'random']], 'Search the sea chest');
+    P.wall(S('barrel'), 'back', other); P.wall(S('barrel'), 'right', 'start');
+    tableIn(P, L, S, low, 'roundTable', (L.x0 + L.x1) / 2 + (end === 'start' ? 0.5 : -0.5), L.z0 + (L.z1 - L.z0) * 0.55, 'stool');
+    P.wall(S('lowShelf'), 'left', 'random') || P.wall(S('shelf'), 'right', 'random');
+    hearthIn(P, L, b, S, low, 'center');
+    stash(P, L, S, low ? 'tansu' : 'dresser', [['front', 'start'], ['right', 'end']], 'Search the drawers');
+  },
+};
+
+const ROOMS = {
+  house(P, L, b, R, S, g) {
+    // homes differ with who lives there
+    const low = lowStyle(b);
+    const kinds = ['family', 'family', 'fisher', 'crafter', 'scholar', 'farmer', 'sailor'];
+    const kind = b.npc ? 'family' : kinds[Math.floor(hash(b.x, b.y, 3.3) * kinds.length) % kinds.length];
+    L.kind = kind;
+    HOMES[kind](P, L, b, R, S, g, low);
+    if (!L.use.some((u) => u.kind === 'loot')) {
+      const walls = [['left', 'random'], ['right', 'random'], ['front', 'start'], ['front', 'end'], ['back', 'center']];
+      if (!stash(P, L, S, 'chest', walls, 'Search the chest')) {
+        const it = P.free({ ...S('chest'), loot: true }, 0, (L.z0 + L.z1) / 2);
+        if (it) searchable(L, it, 'Search the chest');
+      }
+    }
+    // the rug, a picture on the wall, and somebody home
     P.deco({ k: low ? 'tatami' : 'rug', w: Math.min(2.2 * g, (L.x1 - L.x0) * 0.6), d: Math.min(1.5 * g, (L.z1 - L.z0) * 0.5), h: 0.02 }, (L.x0 + L.x1) / 2, (L.z0 + L.z1) / 2 + 0.2);
     P.deco({ k: R() < 0.35 ? 'poster' : 'picture', w: 0.55, d: 0.04, h: 0.7 }, L.x0 + (L.x1 - L.x0) * (0.3 + R() * 0.4), L.z0 + 0.02, 0);
     if (!L.residents.length) L.residents.push({ x: (L.x0 + L.x1) / 2, z: (L.z0 + L.z1) / 2 });

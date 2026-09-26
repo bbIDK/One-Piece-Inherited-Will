@@ -310,7 +310,10 @@ export class Game {
       grd.addColorStop(0, 'rgba(255,255,255,0.18)'); grd.addColorStop(0.5, 'rgba(255,255,255,0)'); grd.addColorStop(1, 'rgba(255,250,235,0.12)');
       g.fillStyle = grd; g.fillRect(0, 0, W, H);
     }
-    if (env.rain > 0.05 && !zk) {
+    // (not indoors, not under the sea, not below decks)
+    const p = this.player;
+    const sheltered = !!(p && (this.world.interiorAt?.(p.x, p.y) || this.view3d?.isUnder));
+    if (env.rain > 0.05 && !zk && !sheltered) {
       g.strokeStyle = `rgba(200,220,255,${0.25 + env.rain * 0.35})`;
       g.lineWidth = 1.2 * r.dpr;
       g.beginPath();
@@ -323,7 +326,7 @@ export class Game {
       }
       g.stroke();
     }
-    if (env.snow > 0.05 && zk !== 2 && zk !== 1) {
+    if (env.snow > 0.05 && zk !== 2 && zk !== 1 && !sheltered) {
       g.fillStyle = 'rgba(255,255,255,0.85)';
       const n = Math.floor(env.snow * 200);
       const t = env.time;
