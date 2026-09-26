@@ -131,13 +131,7 @@ export class Ship extends Entity {
       // nudge out of the wall
       if (!this.fits(w, this.x, this.y, this.heading)) this.unstick(w);
     }
-    // wake
-    const sp = Math.abs(this.speed) + Math.hypot(cur.x, cur.y) * 0.3;
-    if (sp > 1.5 && Math.random() < dt * sp * 1.8) {
-      const L = this.def.length;
-      const sx = this.x - Math.cos(this.heading) * L * 0.5, sy = this.y - Math.sin(this.heading) * L * 0.5;
-      game.fx.particle({ x: sx + (Math.random() - 0.5) * 0.6, y: sy + (Math.random() - 0.5) * 0.6, z: 0.02, vx: -Math.cos(this.heading) * 0.5, vy: -Math.sin(this.heading) * 0.5, vz: 0, g: 0, life: 1.4, size: 0.3 + sp * 0.03, grow: 0.5, color: 'rgba(240,250,255,0.55)', kind: 'smoke', drag: 1 });
-    }
+    // (the wake is drawn on the water by the 3D view: see render3d/ships3d.js WakeTrail)
     // carry the crew
     for (const p of this.passengers) { p.x = this.x; p.y = this.y + 0.01; }
     // and everyone standing on the deck, turning with the ship

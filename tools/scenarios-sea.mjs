@@ -508,4 +508,33 @@ export const scenarios = {
       await at('night-2', 1.5, null, 2.2);
     },
   },
+
+  // a ship under way from astern and the side: the foam wake behind her
+  wake: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = Number(11); g.env.storm = 0; g.env.fog = 0; document.querySelector('.look-hint')?.remove(); });
+      const spot = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island');
+        for (let k = 0; k < 40000; k++) {
+          const a = Math.random() * Math.PI * 2, r = isl.radius * (0.8 + Math.random() * 1.5);
+          const x = Math.floor(isl.x + Math.cos(a) * r) + 0.5, y = Math.floor(isl.y + Math.sin(a) * r) + 0.5;
+          if (w.sd(x, y) < -28) return { x, y, a };
+        }
+      });
+      await page.evaluate((s) => { const g = window.OP.game, p = g.player; const sh = g.giveShip('caravel', s.x, s.y, 'Wake Test', { heading: s.a }); const hs = window.OP.debug.deckSpot(sh, 'helm'); p.x = hs.x; p.y = hs.y; }, spot);
+      for (let i = 0; i < 3; i++) await step(page, 0.1);
+      const how = await page.evaluate(() => { const g = window.OP.game, it = g.player.controller.interaction; const label = it?.label; it?.run(); return { label, mode: g.player.mode }; });
+      console.log('boarding', JSON.stringify(how));
+      await page.evaluate(() => window.OP.key('W', true));
+      for (let i = 0; i < 30; i++) { await step(page, 0.2); await frames(page, 1); }
+      await page.evaluate(() => { const g = window.OP.game; g.view3d.rig.yaw = g.player.ship.heading + Math.PI * 0.85; g.view3d.rig.pitch = -0.35; });
+      for (let i = 0; i < 4; i++) { await step(page, 0.1); await frames(page, 1); }
+      await snap('astern');
+      await page.evaluate(() => { const g = window.OP.game; g.env.clock = 22; });
+      for (let i = 0; i < 4; i++) { await step(page, 0.1); await frames(page, 1); }
+      await snap('night');
+    },
+  },
 };

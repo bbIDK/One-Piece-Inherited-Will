@@ -466,6 +466,135 @@ function triGeometry(a, b, c, n = 5) {
 const SOLID = () => vcMat();
 const GHOST = () => vcMat({ transparent: true, opacity: 0.15, depthWrite: false });
 
+// ---------------------------------------------------------------- the wake
+/**
+ * A ship's wake: a trail of foam on the water behind the stern that spreads
+ * and fades as it ages — two bright arms of churned water with paler foam
+ * between them. Positions are kept in world tiles; the ribbon is rebuilt each
+ * frame around the moving origin.
+ */
+const WAKE_N = 36, WAKE_LIFE = 4.2;
+// across the wake: faded outer edge, a bright churned arm, paler water between
+const WAKE_ACROSS = [-1, -0.62, -0.22, 0.22, 0.62, 1], WAKE_ALPHA = [0, 1, 0.45, 0.45, 1, 0];
+const WK = WAKE_ACROSS.length;
+let FOAM = null;
+/** Churned-water foam: marbled veins of white over thinner patches, swirled (tiles both ways). */
+function foamTexture() {
+  if (FOAM) return FOAM;
+  const S = 128, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  const img = g.createImageData(S, S);
+  let seed = 7;
+  const r = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  // gradient noise that repeats every P lattice cells across the tile
+  const lat = new Map();
+  const grad = (P, i, j) => {
+    const k = P * 4096 + (((j % P) + P) % P) * P + (((i % P) + P) % P);
+    let v = lat.get(k);
+    if (!v) { const a = r() * Math.PI * 2; v = [Math.cos(a), Math.sin(a)]; lat.set(k, v); }
+    return v;
+  };
+  const q = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+  const noise = (x, y, P) => {
+    const fx = x / S * P, fy = y / S * P, i = Math.floor(fx), j = Math.floor(fy), u = fx - i, v = fy - j;
+    const d = (gi, gj, dx, dy) => { const gg = grad(P, gi, gj); return gg[0] * dx + gg[1] * dy; };
+    const a = d(i, j, u, v), b = d(i + 1, j, u - 1, v), c2 = d(i, j + 1, u, v - 1), e = d(i + 1, j + 1, u - 1, v - 1);
+    const su = q(u), top = a + (b - a) * su;
+    return top + (c2 + (e - c2) * su - top) * q(v);
+  };
+  const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      // swirl the coordinates so the veins curl
+      const wx = x + noise(x, y, 4) * 14, wy = y + noise(x + 40, y + 17, 4) * 14;
+      let ridged = 0, fbm = 0, amp = 0.55, tot = 0;
+      for (const P of [4, 8, 16, 32]) { const n = 1 - Math.abs(noise(wx, wy, P) * 1.6); ridged += amp * n * n; tot += amp; amp *= 0.55; }
+      ridged /= tot;
+      amp = 0.6; tot = 0;
+      for (const P of [4, 8, 16]) { fbm += amp * noise(x, y, P); tot += amp; amp *= 0.5; }
+      fbm = fbm / tot * 1.5 + 0.5;
+      const fine = noise(x, y, 16) * 0.6 + noise(x, y, 32) * 0.4;
+      const veins = sst(0.58, 0.86, ridged), body = sst(0.5, 0.9, fbm) * sst(-0.1, 0.35, fine);
+      const a = Math.min(1, veins * (0.35 + 0.65 * sst(0.3, 0.7, fbm)) + body * 0.45);
+      const o = (y * S + x) * 4;
+      img.data[o] = img.data[o + 1] = img.data[o + 2] = 255;
+      img.data[o + 3] = Math.round(a * 255);
+    }
+  }
+  g.putImageData(img, 0, 0);
+  FOAM = new THREE.CanvasTexture(c);
+  FOAM.wrapS = FOAM.wrapT = THREE.RepeatWrapping;
+  FOAM.anisotropy = 8;
+  return FOAM;
+}
+class WakeTrail {
+  constructor() {
+    this.pts = []; // { x, y, h (heading), t, sp }
+    const n = WAKE_N * WK;
+    this.pos = new Float32Array(n * 3);
+    this.col = new Float32Array(n * 4);
+    this.uv = new Float32Array(n * 2);
+    const idx = [];
+    for (let i = 0; i < WAKE_N - 1; i++) {
+      for (let k = 0; k < WK - 1; k++) {
+        const a = i * WK + k, b = a + 1, c = a + WK, d = b + WK;
+        idx.push(a, c, b, b, c, d);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(this.col, 4));
+    g.setAttribute('uv', new THREE.BufferAttribute(this.uv, 2));
+    g.setIndex(idx);
+    g.setDrawRange(0, 0);
+    this.mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: foamTexture(), vertexColors: true, transparent: true, depthWrite: false, fog: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 2;
+    this.lastT = -1;
+  }
+
+  update(s, time, ox, oy, w) {
+    const L = s.def.length, B = s.def.beam;
+    const sp = Math.abs(s.speed || 0);
+    // drop a point at the stern every so often while under way
+    if (!s.sunk && sp > 0.8 && time - this.lastT > 0.11) {
+      this.lastT = time;
+      this.pts.unshift({ x: s.x - Math.cos(s.heading) * L * 0.46, y: s.y - Math.sin(s.heading) * L * 0.46, h: s.heading, t: time, sp });
+      if (this.pts.length > WAKE_N) this.pts.length = WAKE_N;
+    }
+    while (this.pts.length && time - this.pts[this.pts.length - 1].t > WAKE_LIFE) this.pts.pop();
+    const n = this.pts.length;
+    const g = this.mesh.geometry;
+    if (n < 2) { g.setDrawRange(0, 0); return; }
+    for (let i = 0; i < n; i++) {
+      const q = this.pts[i];
+      const age = (time - q.t) / WAKE_LIFE;
+      const k = Math.min(1, q.sp / 6);
+      const half = B * 0.42 + age * (1.6 + L * 0.25) * (0.5 + k);
+      const px = -Math.sin(q.h), py = Math.cos(q.h);
+      const cx = w.dx(ox, q.x), cz = q.y - oy;
+      const fade = Math.pow(1 - age, 1.6) * (0.35 + 0.65 * k) * (i === 0 ? 0 : 1);
+      for (let j = 0; j < WK; j++) {
+        const o = i * WK + j;
+        // the foam stays where it was churned (texture fixed to the water, spreading sideways)
+        this.uv[o * 2] = (WAKE_ACROSS[j] * half) * 0.3;
+        this.uv[o * 2 + 1] = (q.x * Math.cos(q.h) + q.y * Math.sin(q.h)) * 0.17;
+        this.pos[o * 3] = cx + px * half * WAKE_ACROSS[j];
+        this.pos[o * 3 + 1] = 0.04;
+        this.pos[o * 3 + 2] = cz + py * half * WAKE_ACROSS[j];
+        this.col[o * 4] = 0.95; this.col[o * 4 + 1] = 0.98; this.col[o * 4 + 2] = 1; this.col[o * 4 + 3] = WAKE_ALPHA[j] * fade;
+      }
+    }
+    g.attributes.position.needsUpdate = true;
+    g.attributes.color.needsUpdate = true;
+    g.attributes.uv.needsUpdate = true;
+    g.setDrawRange(0, (n - 1) * (WK - 1) * 6);
+  }
+
+  dispose() { this.mesh.geometry.dispose(); this.mesh.material.dispose(); this.mesh.removeFromParent(); }
+}
+
 export class ShipView {
   constructor(s) {
     this.ship = s;
@@ -656,6 +785,11 @@ export class ShipView {
   update(env, rx, rz, windAngle, ctx) {
     const s = this.ship;
     const r = this.root;
+    // the foam trail on the water (a sibling of the ship, not riding it)
+    if (!this.wake) this.wake = new WakeTrail();
+    if (r.parent && this.wake.mesh.parent !== r.parent) r.parent.add(this.wake.mesh);
+    const v3 = ctx?.game?.view3d;
+    if (v3 && ctx.world) this.wake.update(s, env.time, v3.ox, v3.oy, ctx.world);
     // from the helm of your own ship the rig is see-through, so you can steer
     const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === 'sail' && ctx.mode === 'first';
     if (own !== this.ghost) this.setGhost(own);
@@ -712,6 +846,7 @@ export class ShipView {
   }
 
   dispose() {
+    this.wake?.dispose();
     this.root.traverse((o) => { if (o.geometry && !o.geometry.userData?.shared) o.geometry.dispose(); });
     for (const m of this.ownMats) { m.map?.dispose(); m.dispose(); }
     this.lineMat?.dispose();
