@@ -739,6 +739,11 @@ void main() {
   function formatBerries(n) {
     return "\u0E3F" + Math.round(n).toLocaleString("en-US");
   }
+  function roundBounty(b) {
+    if (!(b > 0)) return 0;
+    const mag = Math.pow(10, Math.max(4, Math.floor(Math.log10(b)) - 2));
+    return Math.round(b / mag) * mag;
+  }
   function hexToRgb(hex3) {
     const h2 = hex3.replace("#", "");
     const n = parseInt(h2.length === 3 ? h2.split("").map((c) => c + c).join("") : h2, 16);
@@ -74126,7 +74131,7 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
     c.equipped.accessories = c.equipped.accessories || [];
     c.weaponMastery = c.weaponMastery || { fists: 0, legs: 0, sword: 0, gun: 0, staff: 0, axe: 0 };
     c.train = c.train || { str: 0, agi: 0, end: 0, vit: 0, wil: 0 };
-    if (c.reputation === void 0) c.reputation = c.bounty > 0 ? -30 : 0;
+    if (c.reputation === void 0) c.reputation = 0;
     c.legends = c.legends || [];
     if (c.crewName === void 0) c.crewName = c.faction === "pirate" && c.jr ? `${c.name.split(" ")[0]} Pirates` : null;
     if (!c.crewName) c.jr = null;
@@ -74911,7 +74916,7 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       h("p.muted", "The buttons on the right of the screen open the same menus. Drag techniques and items onto the hotbar from the Inventory or Skills menu, and drag hotbar slots to rearrange them."),
       h("p", h("b", "On a phone or tablet: "), "your left thumb moves (push the stick all the way to run; at sea it steers and sets the sails) and your right thumb drags to look around. The round buttons jump, attack, heavy attack, dodge and block; tap Use or the prompt to talk and interact, and tap a hotbar slot to use a technique. The strip at the top opens the menus, the world map and the camera view. Play with the phone held sideways."),
       h("h3", "Reputation"),
-      h("p", "People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation; robbing shops, attacking townsfolk or Marines lowers it. Sink low enough and you are a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks \u2014 all the way to commanding fleets."),
+      h("p", "People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation. Crimes \u2014 robbing shops and houses, picking pockets, attacking townsfolk, Marines or merchant ships \u2014 put a bounty on your head instead, and bounties grow the way they do in One Piece: a few hundred thousand berries for a petty thief in the East Blue, millions on the Grand Line, far more in the New World. Anyone with a bounty is a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks \u2014 all the way to commanding fleets. A Marine who breaks the law loses standing, and is thrown out when nobody trusts them any more."),
       h("h3", "Sailing"),
       h("p", "W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings \u2014 the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle."),
       h("h3", "Crossing the Red Line"),
@@ -75268,7 +75273,7 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
         return;
       }
       if (c.bounty >= 3e7 && g.sendToImpelDown && g.world === g.surface) {
-        c.bounty = Math.round(c.bounty * 1.1);
+        c.bounty = roundBounty(c.bounty * 1.1);
         g.ui.fade(true);
         setTimeout(() => {
           p.state = "idle";
@@ -75281,7 +75286,7 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       }
       const lost = Math.floor(c.berries * 0.5);
       c.berries -= lost;
-      c.bounty = Math.round(c.bounty * 1.1);
+      c.bounty = roundBounty(c.bounty * 1.1);
       g.ui.fade(true);
       setTimeout(() => {
         p.state = "idle";
@@ -75563,6 +75568,365 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
     return true;
   }
 
+  // src/game/quests.js
+  var DEFS = /* @__PURE__ */ new Map();
+  function registerQuests(list) {
+    for (const q2 of list) DEFS.set(q2.id, q2);
+  }
+  var questDef = (id) => DEFS.get(id);
+  var Quests = class {
+    constructor(game) {
+      this.game = game;
+      game.quests = this;
+      game.on("knockout", (a, att) => {
+        if (a.npcId) this.event("defeat", a.npcId, { att });
+      });
+      game.on("enterIsland", (isl) => this.event("reach", isl.id));
+      game.on("itemGained", (id) => this.event("item", id));
+      game.on("questEvent", (name, arg) => this.event("event", name, arg));
+      game.on("tick", (dt) => this.tick(dt));
+      this.t = 0;
+    }
+    get char() {
+      return this.game.state?.char;
+    }
+    state(id) {
+      return this.char?.quests[id] || null;
+    }
+    active() {
+      return Object.entries(this.char?.quests || {}).filter(([, s]) => !s.done).map(([id, s]) => ({ id, s, def: DEFS.get(id) })).filter((x) => x.def);
+    }
+    isActive(id) {
+      const s = this.state(id);
+      return !!s && !s.done;
+    }
+    isDone(id) {
+      return !!this.state(id)?.done;
+    }
+    stageId(id) {
+      const s = this.state(id), d = DEFS.get(id);
+      return s && d && !s.done ? d.stages[s.stage]?.id : null;
+    }
+    ctx() {
+      return this.game.dialogue ? this.game.dialogue.ctx(null) : { game: this.game };
+    }
+    start(id) {
+      const d = DEFS.get(id);
+      const c = this.char;
+      if (!d || c.quests[id]) return false;
+      c.quests[id] = { stage: 0, done: false, day: this.game.env.day };
+      this.game.ui.toast("NEW QUEST", d.name, "#90caf9");
+      this.game.log(`Quest started: ${d.name} \u2014 ${d.stages[0]?.desc || ""}`, "#90caf9");
+      d.stages[0]?.onStart?.(this.ctx(), this.game);
+      this.game.emit("questStarted", id);
+      this.checkImmediate(id);
+      persist(this.game);
+      return true;
+    }
+    setStage(id, stageId) {
+      const d = DEFS.get(id);
+      const s = this.state(id);
+      if (!d || !s || s.done) return;
+      const idx = typeof stageId === "number" ? stageId : d.stages.findIndex((x) => x.id === stageId);
+      if (idx < 0) return;
+      const cur = d.stages[s.stage];
+      cur?.onComplete?.(this.ctx(), this.game);
+      if (idx >= d.stages.length) return this.complete(id);
+      s.stage = idx;
+      s.stageDay = this.game.env.day;
+      const st = d.stages[idx];
+      this.game.log(`${d.name}: ${st.desc}`, "#90caf9");
+      st.onStart?.(this.ctx(), this.game);
+      this.game.emit("questStage", id, st.id);
+      this.checkImmediate(id);
+    }
+    next(id) {
+      const s = this.state(id), d = DEFS.get(id);
+      if (!s || s.done) return;
+      if (s.stage + 1 >= d.stages.length) this.complete(id);
+      else this.setStage(id, s.stage + 1);
+    }
+    complete(id) {
+      const d = DEFS.get(id);
+      const s = this.state(id) || (this.char.quests[id] = { stage: 0, day: this.game.env.day });
+      if (s.done) return;
+      d.stages[s.stage]?.onComplete?.(this.ctx(), this.game);
+      s.done = true;
+      const g = this.game;
+      const r = d.rewards || {};
+      g.ui.toast("QUEST COMPLETE", d.name, "#a5d6a7");
+      if (r.berries) earn(g, r.berries, d.name);
+      for (const [it, n] of r.items || []) addItem(g, it, n || 1);
+      if (r.attrs) for (const [k, v] of Object.entries(r.attrs)) g.progression.raiseAttr(k, v);
+      if (r.points) g.progression.breakthrough(r.points, d.name);
+      if (r.bounty) g.progression.addBounty(r.bounty, d.name);
+      if (r.mastery) for (const [k, v] of Object.entries(r.mastery)) g.progression.addStyleMastery(k, v);
+      if (r.haki) for (const [k, v] of Object.entries(r.haki)) {
+        if (!this.char.haki[k]) g.progression.awakenHaki(k, v);
+        else g.progression.addHaki(k, v);
+      }
+      if (r.liberate && !this.char.liberated.includes(r.liberate)) {
+        this.char.liberated.push(r.liberate);
+        g.log(`${r.liberate} is free!`, "#a5d6a7");
+      }
+      if (r.flag) this.char.flags[r.flag] = true;
+      d.onComplete?.(this.ctx(), g);
+      g.emit("questDone", id);
+      g.progression.checkDream();
+      persist(g);
+    }
+    event(type, key2, arg) {
+      for (const { id, s, def } of this.active()) {
+        const st = def.stages[s.stage];
+        const goal = st?.goal;
+        if (!goal) continue;
+        if (goal.type === type) {
+          if (type === "defeat" && (goal.npc === key2 || goal.any && goal.any.includes(key2))) {
+            if (goal.count) {
+              s.n = (s.n || 0) + 1;
+              if (s.n < goal.count) {
+                this.game.log(`${def.name}: ${s.n}/${goal.count}`, "#90caf9");
+                continue;
+              }
+              s.n = 0;
+            }
+            this.next(id);
+          } else if (type === "reach" && goal.island === key2 && !goal.spot) this.next(id);
+          else if (type === "item" && goal.item === key2 && count(this.char, key2) >= (goal.n || 1)) this.next(id);
+          else if (type === "event" && goal.event === key2) this.next(id);
+        }
+      }
+    }
+    checkImmediate(id) {
+      const s = this.state(id), d = DEFS.get(id);
+      if (!s || s.done) return;
+      const goal = d.stages[s.stage]?.goal;
+      if (!goal) return;
+      if (goal.type === "item" && count(this.char, goal.item) >= (goal.n || 1)) this.next(id);
+      if (goal.type === "flag" && this.char.flags[goal.flag]) this.next(id);
+      if (goal.type === "reach" && !goal.spot && this.game.currentIsland?.id === goal.island) this.next(id);
+    }
+    tick(dt) {
+      this.t -= dt;
+      if (this.t > 0 || !this.char) return;
+      this.t = 0.5;
+      const g = this.game, p = g.player;
+      for (const { id, s, def } of this.active()) {
+        const goal = def.stages[s.stage]?.goal;
+        if (!goal) continue;
+        if (goal.type === "flag" && this.char.flags[goal.flag]) this.next(id);
+        else if (goal.type === "days" && g.env.day - (s.stageDay ?? s.day ?? g.env.day) >= (goal.n || 1)) this.next(id);
+        else if (goal.type === "reach" && goal.spot) {
+          const pos = this.spotPos(goal.island, goal.spot);
+          if (pos && g.world.distance(p.x, p.y, pos.x, pos.y) < (goal.r || 4)) this.next(id);
+        } else if (goal.type === "reachXY") {
+          if (g.world.distance(p.x, p.y, goal.x, goal.y) < (goal.r || 6)) this.next(id);
+        }
+      }
+    }
+    spotPos(islandId, spotId) {
+      const w = this.game.world;
+      const isl = (w.islands || []).find((i) => i.id === islandId) || (w === this.game.surface ? null : null);
+      return isl?.spots?.[spotId] || null;
+    }
+    /** Where the current objective of a quest is, for the map. */
+    marker(id) {
+      const s = this.state(id), d = DEFS.get(id);
+      if (!s || s.done) return null;
+      const st = d.stages[s.stage];
+      const g = st?.goal || {};
+      const island = g.island || st?.island || d.island;
+      let isl = island && this.game.surface.islands.find((i) => i.id === island);
+      let zone = null;
+      if (!isl && island && this.game.world !== this.game.surface) {
+        isl = this.game.world.islands.find((i) => i.id === island);
+        if (isl) zone = this.game.world.id;
+      }
+      if (g.spot && isl?.spots?.[g.spot]) return { ...isl.spots[g.spot], label: d.name, zone };
+      if (g.type === "reachXY") return { x: g.x, y: g.y, label: d.name };
+      if (isl) return { x: isl.x, y: isl.y, label: d.name, zone };
+      return null;
+    }
+  };
+
+  // src/game/reputation.js
+  var REP_TIERS = [
+    { min: 75, name: "Hero of the Seas", color: "#2e7d32" },
+    { min: 50, name: "Honourable", color: "#388e3c" },
+    { min: 25, name: "Respected", color: "#558b2f" },
+    { min: 8, name: "Well-liked", color: "#689f38" },
+    { min: 0, name: "Unknown", color: "#6d4c33" }
+  ];
+  var ENLIST_REP = 25;
+  function repTier(rep = 0) {
+    return REP_TIERS.find((t) => rep >= t.min) || REP_TIERS[REP_TIERS.length - 1];
+  }
+  var CRIMINALS = /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "rival"]);
+  var SEA_TIER = { east_blue: 1, north_blue: 1.2, west_blue: 1.2, south_blue: 1.2, paradise: 3, calm_belt: 3, sky: 3, undersea: 4, red_line: 5, new_world: 6 };
+  var BOUNTY_SEA = { east_blue: 1, north_blue: 1.3, west_blue: 1.3, south_blue: 1.3, polar: 1.5, paradise: 4, calm_belt: 4, sky: 5, undersea: 6, red_line: 8, new_world: 12 };
+  function seaOf(game) {
+    const s = game.currentIsland?.def?.sea;
+    if (s) return s;
+    const p = game.player, w = game.world;
+    if (!p || !w) return "east_blue";
+    if (game.surface && w !== game.surface) return { skypiea: "sky", fishman_island: "undersea", impel_down: "undersea" }[w.id] || "paradise";
+    return REGION_INFO[regionAt(p.x, p.y)]?.id || "east_blue";
+  }
+  var bountySea = (game) => BOUNTY_SEA[seaOf(game)] || 1;
+  function changeRep(game, delta, why, { quiet = false } = {}) {
+    const c = game.state?.char;
+    if (!c || !delta) return 0;
+    const before = c.reputation || 0;
+    c.reputation = clamp(Math.round((before + delta) * 10) / 10, 0, 100);
+    const d = Math.round((c.reputation - before) * 10) / 10;
+    if (!d) return 0;
+    if (!quiet) game.log(`Reputation ${d > 0 ? "+" : ""}${d}${why ? " \u2014 " + why : ""}`, d > 0 ? "#a5d6a7" : "#ef9a9a");
+    const t0 = repTier(before), t1 = repTier(c.reputation);
+    if (t0 !== t1 && !quiet) game.ui.toast(t1.name.toUpperCase(), "Your reputation has changed.", d > 0 ? "#a5d6a7" : "#ef9a9a");
+    game.emit("reputationChanged", c.reputation, d);
+    return d;
+  }
+  function discharge(game) {
+    const c = game.state.char;
+    c.flags.formerMarine = c.marineRank || "Recruit";
+    c.faction = "civilian";
+    c.marineRank = null;
+    c.marineMission = null;
+    game.ui.toast("DISCHARGED", "The Marines will not tolerate a criminal in their ranks.", "#ff5252");
+    game.emit("marineRankChanged", null);
+  }
+  function crime(game, base2, why, { rep = 0, quiet = false } = {}) {
+    const c = game.state?.char;
+    if (!c) return 0;
+    c.stats.crimes = (c.stats.crimes || 0) + 1;
+    if (c.faction === "marine") {
+      changeRep(game, -Math.max(rep, 5), why, { quiet });
+      if ((c.reputation || 0) <= 0) discharge(game);
+      return 0;
+    }
+    if (rep) changeRep(game, -rep, null, { quiet: true });
+    return game.progression?.addBounty(base2 * bountySea(game), why, { quiet }) || 0;
+  }
+  function raiseAlarm(game, x, y, crime2 = "Thief") {
+    const p = game.player;
+    let n = 0;
+    for (const a of game.actors) {
+      if (a === p || a.state !== "idle" || !a.controller) continue;
+      const guard = a.faction === "marine" || a.faction === "guard" || a.def?.guard;
+      if (!guard || game.world.distance(a.x, a.y, x, y) > 22) continue;
+      a.aggroPlayer = true;
+      a.provoked = true;
+      a.controller.target = p;
+      a.controller.state = "chase";
+      n++;
+    }
+    game.fx.text(x, y - 2.2, `${crime2.toUpperCase()}!`, "#ff5252", 0.5, { life: 1.6 });
+    return n;
+  }
+  function seaTier(game) {
+    return SEA_TIER[seaOf(game)] || 1;
+  }
+  function stealChance(game, bonus = 0) {
+    const p = game.player;
+    const stealth = p.buffs?.some((b) => b.mods?.stealth) ? 0.35 : 0;
+    return clamp(0.3 + p.attrs.agi * 6e-3 + stealth + bonus, 0.08, 0.92);
+  }
+  function stealFromShop(game, itemId, building, price = 0) {
+    const c = game.state.char, p = game.player;
+    const expensive = price > 2e4 ? -0.2 : price > 5e3 ? -0.1 : 0;
+    const key2 = shopKey(building);
+    if (Math.random() < stealChance(game, expensive)) {
+      addItem(game, itemId, 1);
+      crime(game, 3e5, "stole from a shop", { rep: 4 });
+      game.progression?.train("agi", 1.5);
+      c.stats.thefts = (c.stats.thefts || 0) + 1;
+      game.audio?.sfx("coin");
+      return "ok";
+    }
+    c.flags["banned_" + key2] = game.env.day;
+    crime(game, 6e5, "caught stealing", { rep: 6 });
+    raiseAlarm(game, p.x, p.y, "Thief");
+    game.ui.toast("CAUGHT!", "The shopkeeper grabs your wrist and screams for the guards.", "#ff5252");
+    return "caught";
+  }
+  var shopKey = (b) => b?.id || b?.name || "shop";
+  var bannedFromShop = (game, b) => game.state.char.flags["banned_" + shopKey(b)] === game.env.day;
+  function robHouse(game, b) {
+    const c = game.state.char, p = game.player;
+    const key2 = "robbed_" + (b.id || `${Math.round(b.x)}_${Math.round(b.y)}`);
+    if (c.world.chests[key2]) {
+      game.log("You already cleaned this place out.", "#b0bec5");
+      return;
+    }
+    c.world.chests[key2] = true;
+    const rng2 = new RNG(key2 + c.runSeed);
+    const tier = seaTier(game);
+    const berries = Math.round(rng2.range(150, 900) * tier);
+    earn(game, berries, "stolen");
+    if (rng2.chance(0.3)) addItem(game, rng2.pick(["meat", "rice_ball", "sake", "gold_coins", "bandage", "jewels"]), 1);
+    crime(game, 8e5, "robbed a house", { rep: 8 });
+    c.stats.thefts = (c.stats.thefts || 0) + 1;
+    if (!rng2.chance(stealChance(game))) {
+      raiseAlarm(game, p.x, p.y, "Burglar");
+      crime(game, 4e5, "seen breaking in", { rep: 3, quiet: true });
+    }
+    game.audio?.sfx("treasure");
+    persist(game);
+  }
+  function pickpocket(game, a) {
+    const c = game.state.char;
+    const key2 = "pp_" + (a.talk?.seed ?? a.name);
+    if (c.flags[key2] === game.env.day) {
+      game.log("Their pockets are already empty.", "#b0bec5");
+      return "empty";
+    }
+    c.flags[key2] = game.env.day;
+    if (Math.random() < stealChance(game, 0.1)) {
+      const amount = Math.round((20 + Math.random() * 180) * seaTier(game));
+      earn(game, amount, `lifted from ${a.name}`);
+      crime(game, 2e5, "picked a pocket", { rep: 3 });
+      game.progression?.train("agi", 1);
+      c.stats.thefts = (c.stats.thefts || 0) + 1;
+      return "ok";
+    }
+    crime(game, 4e5, "caught picking a pocket", { rep: 5 });
+    raiseAlarm(game, a.x, a.y, "Pickpocket");
+    return "caught";
+  }
+  function installReputation(game) {
+    game.reputation = { change: (d, why, o) => changeRep(game, d, why, o), crime: (base2, why, o) => crime(game, base2, why, o), sea: () => seaOf(game), tier: () => repTier(game.state?.char?.reputation || 0) };
+    game.on("questDone", (id) => {
+      const d = questDef(id);
+      if (!d || d.noRep) return;
+      const r = d.rewards || {};
+      let amount = d.rep ?? (r.liberate ? 15 : d.kind === "story" || d.kind === "main" ? 6 : 4);
+      if (amount) changeRep(game, amount, r.liberate ? `freed ${r.liberate}` : d.name);
+    });
+    game.on("knockout", (a, att) => {
+      const c = game.state?.char, p = game.player;
+      if (!c || !p || a.isPlayer || a.spar || a.def?.duel) return;
+      if (att && !att.isPlayer && (att.crewId || att.summonedBy?.isPlayer)) att = p;
+      if (!att?.isPlayer) return;
+      if (a.faction === "civilian" && !a.def?.hostile) crime(game, 1e6, "beat up an innocent", { rep: 6 });
+      else if (CRIMINALS.has(a.faction)) {
+        const tf2 = threatFactor(a.power(), p.power());
+        if (a.boss || a.named) changeRep(game, a.boss ? 4 : 2, `defeated ${a.name}`);
+        else if (tf2 > 0.3) changeRep(game, 0.5, null, { quiet: true });
+      }
+    });
+    game.on("shipSunk", (s) => {
+      if (!s.lastHitBy?.isPlayer) return;
+      if (s.faction === "pirate") changeRep(game, 2, "sank a pirate ship", { quiet: true });
+    });
+    game.on("characterStart", () => {
+      const c = game.state?.char;
+      if (!c || !(c.reputation < 0)) return;
+      const owed = roundBounty(-c.reputation * 15e4);
+      c.reputation = 0;
+      if (c.faction !== "marine" && owed > 0) c.bounty = roundBounty((c.bounty || 0) + owed);
+    });
+  }
+
   // src/game/progression.js
   var KEYS = ["str", "agi", "end", "vit", "wil"];
   var WEAPON_KINDS = { fists: "Fists", legs: "Legs", sword: "Swords", gun: "Guns", staff: "Staffs", axe: "Axes" };
@@ -75797,16 +76161,21 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       if (!silent) g.log(`${ATTRS[key2]?.name || key2} +${amt} (${c.attrs[key2]})`, "#a5d6a7");
       refreshPlayer(g);
     }
-    addBounty(amount, why) {
+    /** Raise the player's bounty (rounded the way posters are). Returns the increase. */
+    addBounty(amount, why, { quiet = false } = {}) {
       const g = this.game, c = this.char;
-      if (c.faction === "marine") return;
-      amount = Math.round(amount / 1e3) * 1e3;
-      if (amount <= 0) return;
-      const first = !c.bounty;
-      c.bounty = (c.bounty || 0) + amount;
+      if (!c || c.faction === "marine") return 0;
+      const before = c.bounty || 0;
+      const after2 = roundBounty(before + Math.max(0, amount));
+      if (after2 <= before) return 0;
+      c.bounty = after2;
       if (c.faction !== "pirate") c.faction = "pirate";
-      g.ui.toast(first ? "WANTED" : "BOUNTY RAISED", `${formatBerries(c.bounty)}${why ? " \u2014 " + why : ""}`, "#ffd54f");
+      const first = !before, jump = after2 - before;
+      g.log(`Bounty ${formatBerries(after2)} (+${formatBerries(jump)})${why ? " \u2014 " + why : ""}`, "#ffd54f");
+      if (first) g.ui.banner("WANTED", formatBerries(after2), `${why ? why[0].toUpperCase() + why.slice(1) + ". " : ""}The World Government has put a price on your head. The Marines will come for you.`, 5);
+      else if (!quiet && (jump >= before * 0.1 || jump >= 5e6)) g.ui.toast("BOUNTY RAISED", `${formatBerries(after2)}${why ? " \u2014 " + why : ""}`, "#ffd54f");
       g.emit("bountyChanged", c.bounty, first);
+      return jump;
     }
     onKnockout(a, att) {
       const g = this.game, p = g.player, c = this.char;
@@ -75816,11 +76185,14 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       if (a.npcId) c.defeated[a.npcId] = (c.defeated[a.npcId] || 0) + 1;
       const tf2 = threatFactor(a.power(), p.power());
       if (tf2 > 0.8) this.train("wil", 6 * tf2);
-      if (a.faction === "marine" || a.faction === "cp") {
-        const b = a.bountyValue ?? Math.round(4e3 * Math.pow(Math.max(1, a.tier), 2.4));
-        this.addBounty(b, a.boss ? `defeated ${a.name}` : null);
+      if ((a.faction === "marine" || a.faction === "cp") && !a.spar && !a.def?.duel) {
+        const b = a.bountyValue ? a.bountyValue * 0.3 : 4e5 * bountySea(g) * (1 + 0.25 * (Math.max(1, a.tier) - 1));
+        this.addBounty(b, a.boss || a.named ? `defeated ${a.name}` : "attacked the Marines", { quiet: !a.boss && !a.named });
       }
-      if (a.bountyValue && a.faction !== "marine" && a.faction !== "cp" && a.infamy && c.faction !== "marine" && c.faction !== "civilian") this.addBounty(a.bountyValue, `defeated ${a.name}`);
+      if (a.bountyValue && a.faction !== "marine" && a.faction !== "cp" && a.infamy && c.faction !== "marine" && c.faction !== "civilian") {
+        const cur = c.bounty || 0;
+        this.addBounty(Math.max(cur + a.bountyValue * 0.3, a.bountyValue * 1.2) - cur, `defeated ${a.name}`);
+      }
       if (a.reward) earn(g, a.reward, `from ${a.name}`);
       if (a.boss && !c.bosses.includes(a.npcId || a.name)) {
         c.bosses.push(a.npcId || a.name);
@@ -76051,187 +76423,6 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       }
       if (!ui.stack.length && !ui.screenEl && !ui.mapOpen) this.game.paused = false;
       if (a?.tree?.onClose) a.tree.onClose(a.ctx);
-    }
-  };
-
-  // src/game/quests.js
-  var DEFS = /* @__PURE__ */ new Map();
-  function registerQuests(list) {
-    for (const q2 of list) DEFS.set(q2.id, q2);
-  }
-  var questDef = (id) => DEFS.get(id);
-  var Quests = class {
-    constructor(game) {
-      this.game = game;
-      game.quests = this;
-      game.on("knockout", (a, att) => {
-        if (a.npcId) this.event("defeat", a.npcId, { att });
-      });
-      game.on("enterIsland", (isl) => this.event("reach", isl.id));
-      game.on("itemGained", (id) => this.event("item", id));
-      game.on("questEvent", (name, arg) => this.event("event", name, arg));
-      game.on("tick", (dt) => this.tick(dt));
-      this.t = 0;
-    }
-    get char() {
-      return this.game.state?.char;
-    }
-    state(id) {
-      return this.char?.quests[id] || null;
-    }
-    active() {
-      return Object.entries(this.char?.quests || {}).filter(([, s]) => !s.done).map(([id, s]) => ({ id, s, def: DEFS.get(id) })).filter((x) => x.def);
-    }
-    isActive(id) {
-      const s = this.state(id);
-      return !!s && !s.done;
-    }
-    isDone(id) {
-      return !!this.state(id)?.done;
-    }
-    stageId(id) {
-      const s = this.state(id), d = DEFS.get(id);
-      return s && d && !s.done ? d.stages[s.stage]?.id : null;
-    }
-    ctx() {
-      return this.game.dialogue ? this.game.dialogue.ctx(null) : { game: this.game };
-    }
-    start(id) {
-      const d = DEFS.get(id);
-      const c = this.char;
-      if (!d || c.quests[id]) return false;
-      c.quests[id] = { stage: 0, done: false, day: this.game.env.day };
-      this.game.ui.toast("NEW QUEST", d.name, "#90caf9");
-      this.game.log(`Quest started: ${d.name} \u2014 ${d.stages[0]?.desc || ""}`, "#90caf9");
-      d.stages[0]?.onStart?.(this.ctx(), this.game);
-      this.game.emit("questStarted", id);
-      this.checkImmediate(id);
-      persist(this.game);
-      return true;
-    }
-    setStage(id, stageId) {
-      const d = DEFS.get(id);
-      const s = this.state(id);
-      if (!d || !s || s.done) return;
-      const idx = typeof stageId === "number" ? stageId : d.stages.findIndex((x) => x.id === stageId);
-      if (idx < 0) return;
-      const cur = d.stages[s.stage];
-      cur?.onComplete?.(this.ctx(), this.game);
-      if (idx >= d.stages.length) return this.complete(id);
-      s.stage = idx;
-      s.stageDay = this.game.env.day;
-      const st = d.stages[idx];
-      this.game.log(`${d.name}: ${st.desc}`, "#90caf9");
-      st.onStart?.(this.ctx(), this.game);
-      this.game.emit("questStage", id, st.id);
-      this.checkImmediate(id);
-    }
-    next(id) {
-      const s = this.state(id), d = DEFS.get(id);
-      if (!s || s.done) return;
-      if (s.stage + 1 >= d.stages.length) this.complete(id);
-      else this.setStage(id, s.stage + 1);
-    }
-    complete(id) {
-      const d = DEFS.get(id);
-      const s = this.state(id) || (this.char.quests[id] = { stage: 0, day: this.game.env.day });
-      if (s.done) return;
-      d.stages[s.stage]?.onComplete?.(this.ctx(), this.game);
-      s.done = true;
-      const g = this.game;
-      const r = d.rewards || {};
-      g.ui.toast("QUEST COMPLETE", d.name, "#a5d6a7");
-      if (r.berries) earn(g, r.berries, d.name);
-      for (const [it, n] of r.items || []) addItem(g, it, n || 1);
-      if (r.attrs) for (const [k, v] of Object.entries(r.attrs)) g.progression.raiseAttr(k, v);
-      if (r.points) g.progression.breakthrough(r.points, d.name);
-      if (r.bounty) g.progression.addBounty(r.bounty, d.name);
-      if (r.mastery) for (const [k, v] of Object.entries(r.mastery)) g.progression.addStyleMastery(k, v);
-      if (r.haki) for (const [k, v] of Object.entries(r.haki)) {
-        if (!this.char.haki[k]) g.progression.awakenHaki(k, v);
-        else g.progression.addHaki(k, v);
-      }
-      if (r.liberate && !this.char.liberated.includes(r.liberate)) {
-        this.char.liberated.push(r.liberate);
-        g.log(`${r.liberate} is free!`, "#a5d6a7");
-      }
-      if (r.flag) this.char.flags[r.flag] = true;
-      d.onComplete?.(this.ctx(), g);
-      g.emit("questDone", id);
-      g.progression.checkDream();
-      persist(g);
-    }
-    event(type, key2, arg) {
-      for (const { id, s, def } of this.active()) {
-        const st = def.stages[s.stage];
-        const goal = st?.goal;
-        if (!goal) continue;
-        if (goal.type === type) {
-          if (type === "defeat" && (goal.npc === key2 || goal.any && goal.any.includes(key2))) {
-            if (goal.count) {
-              s.n = (s.n || 0) + 1;
-              if (s.n < goal.count) {
-                this.game.log(`${def.name}: ${s.n}/${goal.count}`, "#90caf9");
-                continue;
-              }
-              s.n = 0;
-            }
-            this.next(id);
-          } else if (type === "reach" && goal.island === key2 && !goal.spot) this.next(id);
-          else if (type === "item" && goal.item === key2 && count(this.char, key2) >= (goal.n || 1)) this.next(id);
-          else if (type === "event" && goal.event === key2) this.next(id);
-        }
-      }
-    }
-    checkImmediate(id) {
-      const s = this.state(id), d = DEFS.get(id);
-      if (!s || s.done) return;
-      const goal = d.stages[s.stage]?.goal;
-      if (!goal) return;
-      if (goal.type === "item" && count(this.char, goal.item) >= (goal.n || 1)) this.next(id);
-      if (goal.type === "flag" && this.char.flags[goal.flag]) this.next(id);
-      if (goal.type === "reach" && !goal.spot && this.game.currentIsland?.id === goal.island) this.next(id);
-    }
-    tick(dt) {
-      this.t -= dt;
-      if (this.t > 0 || !this.char) return;
-      this.t = 0.5;
-      const g = this.game, p = g.player;
-      for (const { id, s, def } of this.active()) {
-        const goal = def.stages[s.stage]?.goal;
-        if (!goal) continue;
-        if (goal.type === "flag" && this.char.flags[goal.flag]) this.next(id);
-        else if (goal.type === "days" && g.env.day - (s.stageDay ?? s.day ?? g.env.day) >= (goal.n || 1)) this.next(id);
-        else if (goal.type === "reach" && goal.spot) {
-          const pos = this.spotPos(goal.island, goal.spot);
-          if (pos && g.world.distance(p.x, p.y, pos.x, pos.y) < (goal.r || 4)) this.next(id);
-        } else if (goal.type === "reachXY") {
-          if (g.world.distance(p.x, p.y, goal.x, goal.y) < (goal.r || 6)) this.next(id);
-        }
-      }
-    }
-    spotPos(islandId, spotId) {
-      const w = this.game.world;
-      const isl = (w.islands || []).find((i) => i.id === islandId) || (w === this.game.surface ? null : null);
-      return isl?.spots?.[spotId] || null;
-    }
-    /** Where the current objective of a quest is, for the map. */
-    marker(id) {
-      const s = this.state(id), d = DEFS.get(id);
-      if (!s || s.done) return null;
-      const st = d.stages[s.stage];
-      const g = st?.goal || {};
-      const island = g.island || st?.island || d.island;
-      let isl = island && this.game.surface.islands.find((i) => i.id === island);
-      let zone = null;
-      if (!isl && island && this.game.world !== this.game.surface) {
-        isl = this.game.world.islands.find((i) => i.id === island);
-        if (isl) zone = this.game.world.id;
-      }
-      if (g.spot && isl?.spots?.[g.spot]) return { ...isl.spots[g.spot], label: d.name, zone };
-      if (g.type === "reachXY") return { x: g.x, y: g.y, label: d.name };
-      if (isl) return { x: isl.x, y: isl.y, label: d.name, zone };
-      return null;
     }
   };
 
@@ -76852,166 +77043,6 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       persist(g);
     }
   };
-
-  // src/game/reputation.js
-  var REP_TIERS = [
-    { min: 75, name: "Hero of the Seas", color: "#2e7d32" },
-    { min: 50, name: "Honourable", color: "#388e3c" },
-    { min: 25, name: "Respected", color: "#558b2f" },
-    { min: 8, name: "Well-liked", color: "#689f38" },
-    { min: -7, name: "Unknown", color: "#6d4c33" },
-    { min: -24, name: "Suspicious", color: "#e65100" },
-    { min: -59, name: "Outlaw", color: "#c62828" },
-    { min: -100, name: "Villain", color: "#b71c1c" }
-  ];
-  var OUTLAW_AT = -25;
-  var ENLIST_REP = 25;
-  function repTier(rep = 0) {
-    return REP_TIERS.find((t) => rep >= t.min) || REP_TIERS[REP_TIERS.length - 1];
-  }
-  var CRIMINALS = /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "rival"]);
-  var SEA_TIER = { east_blue: 1, north_blue: 1.2, west_blue: 1.2, south_blue: 1.2, paradise: 3, calm_belt: 3, sky: 3, undersea: 4, red_line: 5, new_world: 6 };
-  function changeRep(game, delta, why, { quiet = false } = {}) {
-    const c = game.state?.char;
-    if (!c || !delta) return 0;
-    const before = c.reputation || 0;
-    c.reputation = clamp(Math.round((before + delta) * 10) / 10, -100, 100);
-    const d = Math.round((c.reputation - before) * 10) / 10;
-    if (!d) return 0;
-    if (!quiet) game.log(`Reputation ${d > 0 ? "+" : ""}${d}${why ? " \u2014 " + why : ""}`, d > 0 ? "#a5d6a7" : "#ef9a9a");
-    const t0 = repTier(before), t1 = repTier(c.reputation);
-    if (t0 !== t1 && !quiet) game.ui.toast(t1.name.toUpperCase(), "Your reputation has changed.", d > 0 ? "#a5d6a7" : "#ef9a9a");
-    if (c.reputation <= OUTLAW_AT && before > OUTLAW_AT && c.faction === "civilian") {
-      c.faction = "pirate";
-      game.ui.banner("OUTLAW", "Word of your crimes has spread", "The world now sees you as a pirate. The Marines will not take you \u2014 and some of them will come for you.", 5);
-      if (!c.bounty) game.progression?.addBounty(2e6, "crimes against the people");
-    }
-    if (c.faction === "marine" && d < 0 && c.reputation < 0) {
-      c.flags.formerMarine = c.marineRank;
-      c.faction = "civilian";
-      c.marineRank = null;
-      c.marineMission = null;
-      game.ui.toast("DISCHARGED", "The Marines will not tolerate a criminal in their ranks.", "#ff5252");
-      game.emit("marineRankChanged", null);
-    }
-    game.emit("reputationChanged", c.reputation, d);
-    return d;
-  }
-  function raiseAlarm(game, x, y, crime = "Thief") {
-    const p = game.player;
-    let n = 0;
-    for (const a of game.actors) {
-      if (a === p || a.state !== "idle" || !a.controller) continue;
-      const guard = a.faction === "marine" || a.faction === "guard" || a.def?.guard;
-      if (!guard || game.world.distance(a.x, a.y, x, y) > 22) continue;
-      a.aggroPlayer = true;
-      a.provoked = true;
-      a.controller.target = p;
-      a.controller.state = "chase";
-      n++;
-    }
-    game.fx.text(x, y - 2.2, `${crime.toUpperCase()}!`, "#ff5252", 0.5, { life: 1.6 });
-    return n;
-  }
-  function seaTier(game) {
-    const sea = game.currentIsland?.def?.sea || game.world?.seaId;
-    return SEA_TIER[sea] || 1;
-  }
-  function stealChance(game, bonus = 0) {
-    const p = game.player;
-    const stealth = p.buffs?.some((b) => b.mods?.stealth) ? 0.35 : 0;
-    return clamp(0.3 + p.attrs.agi * 6e-3 + stealth + bonus, 0.08, 0.92);
-  }
-  function stealFromShop(game, itemId, building, price = 0) {
-    const c = game.state.char, p = game.player;
-    const expensive = price > 2e4 ? -0.2 : price > 5e3 ? -0.1 : 0;
-    const key2 = shopKey(building);
-    if (Math.random() < stealChance(game, expensive)) {
-      addItem(game, itemId, 1);
-      changeRep(game, -6, "stole from a shop");
-      game.progression?.train("agi", 1.5);
-      c.stats.thefts = (c.stats.thefts || 0) + 1;
-      game.audio?.sfx("coin");
-      return "ok";
-    }
-    c.flags["banned_" + key2] = game.env.day;
-    changeRep(game, -9, "caught stealing");
-    raiseAlarm(game, p.x, p.y, "Thief");
-    game.ui.toast("CAUGHT!", "The shopkeeper grabs your wrist and screams for the guards.", "#ff5252");
-    return "caught";
-  }
-  var shopKey = (b) => b?.id || b?.name || "shop";
-  var bannedFromShop = (game, b) => game.state.char.flags["banned_" + shopKey(b)] === game.env.day;
-  function robHouse(game, b) {
-    const c = game.state.char, p = game.player;
-    const key2 = "robbed_" + (b.id || `${Math.round(b.x)}_${Math.round(b.y)}`);
-    if (c.world.chests[key2]) {
-      game.log("You already cleaned this place out.", "#b0bec5");
-      return;
-    }
-    c.world.chests[key2] = true;
-    const rng2 = new RNG(key2 + c.runSeed);
-    const tier = seaTier(game);
-    const berries = Math.round(rng2.range(150, 900) * tier);
-    earn(game, berries, "stolen");
-    if (rng2.chance(0.3)) addItem(game, rng2.pick(["meat", "rice_ball", "sake", "gold_coins", "bandage", "jewels"]), 1);
-    changeRep(game, -10, "robbed a house");
-    c.stats.thefts = (c.stats.thefts || 0) + 1;
-    if (!rng2.chance(stealChance(game))) {
-      raiseAlarm(game, p.x, p.y, "Burglar");
-      changeRep(game, -3, "seen breaking in", { quiet: true });
-    }
-    game.audio?.sfx("treasure");
-    persist(game);
-  }
-  function pickpocket(game, a) {
-    const c = game.state.char;
-    const key2 = "pp_" + (a.talk?.seed ?? a.name);
-    if (c.flags[key2] === game.env.day) {
-      game.log("Their pockets are already empty.", "#b0bec5");
-      return "empty";
-    }
-    c.flags[key2] = game.env.day;
-    if (Math.random() < stealChance(game, 0.1)) {
-      const amount = Math.round((20 + Math.random() * 180) * seaTier(game));
-      earn(game, amount, `lifted from ${a.name}`);
-      changeRep(game, -4, "picked a pocket");
-      game.progression?.train("agi", 1);
-      c.stats.thefts = (c.stats.thefts || 0) + 1;
-      return "ok";
-    }
-    changeRep(game, -6, "caught picking a pocket");
-    raiseAlarm(game, a.x, a.y, "Pickpocket");
-    return "caught";
-  }
-  function installReputation(game) {
-    game.reputation = { change: (d, why, o) => changeRep(game, d, why, o), tier: () => repTier(game.state?.char?.reputation || 0) };
-    game.on("questDone", (id) => {
-      const d = questDef(id);
-      if (!d || d.noRep) return;
-      const r = d.rewards || {};
-      let amount = d.rep ?? (r.liberate ? 15 : d.kind === "story" || d.kind === "main" ? 6 : 4);
-      if (amount) changeRep(game, amount, r.liberate ? `freed ${r.liberate}` : d.name);
-    });
-    game.on("knockout", (a, att) => {
-      const c = game.state?.char, p = game.player;
-      if (!c || !p || a.isPlayer || a.spar || a.def?.duel) return;
-      if (att && !att.isPlayer && (att.crewId || att.summonedBy?.isPlayer)) att = p;
-      if (!att?.isPlayer) return;
-      if (a.faction === "civilian" && !a.def?.hostile) changeRep(game, -6, "beat up an innocent");
-      else if ((a.faction === "marine" || a.faction === "cp") && c.faction !== "marine" && !c.bounty) changeRep(game, -3, "attacked the Marines");
-      else if (CRIMINALS.has(a.faction)) {
-        const tf2 = threatFactor(a.power(), p.power());
-        if (a.boss || a.named) changeRep(game, a.boss ? 4 : 2, `defeated ${a.name}`);
-        else if (tf2 > 0.3) changeRep(game, 0.5, null, { quiet: true });
-      }
-    });
-    game.on("shipSunk", (s) => {
-      if (!s.lastHitBy?.isPlayer) return;
-      if (s.faction === "civilian") changeRep(game, -10, "sank a merchant ship");
-      else if (s.faction === "pirate") changeRep(game, 2, "sank a pirate ship", { quiet: true });
-    });
-  }
 
   // src/data/shops.js
   var STOCK = {
@@ -77894,8 +77925,8 @@ Click for details \xB7 right-click to take off` : `${label} \u2014 empty`,
           h(
             "div.rep",
             h("span.lbl", uiImg("reputation", 18), " Reputation"),
-            h("div.rep-bar", h("i", { style: { left: rep < 0 ? 50 + rep / 2 + "%" : "50%", width: Math.abs(rep) / 2 + "%", background: rep < 0 ? "#c62828" : "#2e7d32" } }), h("b", { style: { left: "50%" } })),
-            h("span.rep-name", { style: { color: tier.color } }, `${tier.name} (${rep > 0 ? "+" : ""}${Math.round(rep)})`)
+            h("div.rep-bar", h("i", { style: { left: "0", width: clamp(rep, 0, 100) + "%", background: tier.color } })),
+            h("span.rep-name", { style: { color: tier.color } }, `${tier.name} (${Math.round(rep)})`)
           ),
           h(
             "div.char-btns",
@@ -78258,7 +78289,7 @@ Trains by: ${TRAINS_BY[k]}` },
                 render2();
               }
             } } }, "Buy"),
-            !d.unique ? h("button.btn.steal", { title: "Try to pocket it while nobody is looking. Theft ruins your reputation \u2014 and if you are caught, the guards come running.", on: { click: () => {
+            !d.unique ? h("button.btn.steal", { title: "Try to pocket it while nobody is looking. Theft puts a bounty on your head \u2014 and if you are caught, the guards come running.", on: { click: () => {
               const r = stealFromShop(game, id, building, price);
               if (r === "caught") ui.closePanel(entry);
               else render2();
@@ -79959,8 +79990,8 @@ Trains by: ${TRAINS_BY[k]}` },
       }
       if (s.lastHitBy && s.lastHitBy.isPlayer) {
         earn(g, s.loot || 1e3, `plunder from the ${s.name}`);
-        if (s.faction === "marine") g.progression.addBounty(8e3 * (1 + (s.level || 5) / 10), "sank a Marine ship");
-        if (s.faction === "civilian") g.progression.addBounty(3e3, "attacked a merchant ship");
+        if (s.faction === "marine") crime(g, 4e6 * (1 + (s.level || 5) / 40), "sank a Marine ship", { rep: 2 });
+        if (s.faction === "civilian") crime(g, 2e6, "sank a merchant ship", { rep: 10 });
         const rng2 = new RNG(Math.floor(s.x * 13 + s.y));
         if (rng2.chance(0.25)) addItem(g, rng2.pick(["jewels", "gold_coins", "sea_king_steak", "rumble_ball"]), 1);
         if (rng2.chance(0.03)) this.fruitFromBarrel(rng2);

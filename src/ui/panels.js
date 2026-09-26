@@ -14,7 +14,7 @@ import { count, equip, useItem, addItem, removeItem, pay, earn, isEquipped, uneq
 import { stockFor, priceOf } from '../data/shops.js';
 import { SHIPS, SHIP_UPGRADES } from '../data/ships.js';
 import { TRAINERS } from '../data/trainers.js';
-import { formatBerries } from '../core/math.js';
+import { formatBerries, clamp } from '../core/math.js';
 import { helpContent, wantedPoster, portrait } from './screens.js';
 import { questDef } from '../game/quests.js';
 import { WEAPON_KINDS } from '../game/progression.js';
@@ -313,8 +313,8 @@ export function openCharacter(game) {
         h('h2', c.name),
         h('div', `${raceLabel(c.look)} · ${role} · generation ${c.generation}`),
         c.bounty ? h('div.bounty-line', uiImg('bounty', 18), ` Bounty ${formatBerries(c.bounty)}`) : null,
-        h('div.rep', h('span.lbl', uiImg('reputation', 18), ' Reputation'), h('div.rep-bar', h('i', { style: { left: rep < 0 ? (50 + rep / 2) + '%' : '50%', width: Math.abs(rep) / 2 + '%', background: rep < 0 ? '#c62828' : '#2e7d32' } }), h('b', { style: { left: '50%' } })),
-          h('span.rep-name', { style: { color: tier.color } }, `${tier.name} (${rep > 0 ? '+' : ''}${Math.round(rep)})`)),
+        h('div.rep', h('span.lbl', uiImg('reputation', 18), ' Reputation'), h('div.rep-bar', h('i', { style: { left: '0', width: clamp(rep, 0, 100) + '%', background: tier.color } })),
+          h('span.rep-name', { style: { color: tier.color } }, `${tier.name} (${Math.round(rep)})`)),
         h('div.char-btns',
           h('button.btn', { on: { click: () => openJollyRogerFromMenu(game) } }, uiImg('jolly_roger', 18), 'Jolly Roger'),
           h('button.btn', { on: { click: () => ui.openPanel(h('div', { style: { display: 'grid', placeItems: 'center' } }, wantedPoster(c))) } }, uiImg('bounty', 18), 'Wanted poster'))),
@@ -564,7 +564,7 @@ export function openShop(game, building, island) {
           h('div.grow', h('b', d.name), owned ? h('span.tag', `owned ${owned}`) : null, h('div.sub', statLine(d) || d.desc || d.grade || '')),
           h('span.price', formatBerries(price)),
           h('button.btn.gold', { disabled: c.berries < price, on: { click: () => { if (pay(game, price)) { addItem(game, id, 1); game.audio?.sfx('coin'); render(); } } } }, 'Buy'),
-          !d.unique ? h('button.btn.steal', { title: 'Try to pocket it while nobody is looking. Theft ruins your reputation — and if you are caught, the guards come running.', on: { click: () => { const r = stealFromShop(game, id, building, price); if (r === 'caught') ui.closePanel(entry); else render(); } } }, 'Steal') : null));
+          !d.unique ? h('button.btn.steal', { title: 'Try to pocket it while nobody is looking. Theft puts a bounty on your head — and if you are caught, the guards come running.', on: { click: () => { const r = stealFromShop(game, id, building, price); if (r === 'caught') ui.closePanel(entry); else render(); } } }, 'Steal') : null));
       }
     } else {
       const seen = new Set();

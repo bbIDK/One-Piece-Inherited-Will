@@ -8,6 +8,7 @@ import { makeLook } from '../data/races.js';
 import { makeNPC } from './npcs.js';
 import { count, addItem, earn } from './inventory.js';
 import { persist } from './lineage.js';
+import { crime } from './reputation.js';
 import { RNG } from '../core/rng.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
 import { drawShip } from '../render/ship.js';
@@ -263,8 +264,8 @@ class SeaSystem {
     }
     if (s.lastHitBy && s.lastHitBy.isPlayer) {
       earn(g, s.loot || 1000, `plunder from the ${s.name}`);
-      if (s.faction === 'marine') g.progression.addBounty(8000 * (1 + (s.level || 5) / 10), 'sank a Marine ship');
-      if (s.faction === 'civilian') g.progression.addBounty(3000, 'attacked a merchant ship');
+      if (s.faction === 'marine') crime(g, 4000000 * (1 + (s.level || 5) / 40), 'sank a Marine ship', { rep: 2 });
+      if (s.faction === 'civilian') crime(g, 2000000, 'sank a merchant ship', { rep: 10 });
       const rng = new RNG(Math.floor(s.x * 13 + s.y));
       if (rng.chance(0.25)) addItem(g, rng.pick(['jewels', 'gold_coins', 'sea_king_steak', 'rumble_ball']), 1);
       if (rng.chance(0.03)) this.fruitFromBarrel(rng);

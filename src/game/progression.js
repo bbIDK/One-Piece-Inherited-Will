@@ -19,7 +19,8 @@ import { getAbility, weaponKindOf } from './abilities.js';
 import { STYLES } from '../data/styles.js';
 import { persist, refreshPlayer, hakiKnown, needsHaki } from './lineage.js';
 import { earn } from './inventory.js';
-import { formatBerries } from '../core/math.js';
+import { formatBerries, roundBounty } from '../core/math.js';
+import { bountySea } from './reputation.js';
 import { LEGENDS } from '../data/dreams.js';
 
 const KEYS = ['str', 'agi', 'end', 'vit', 'wil'];
@@ -260,16 +261,21 @@ export class Progression {
     refreshPlayer(g);
   }
 
-  addBounty(amount, why) {
+  /** Raise the player's bounty (rounded the way posters are). Returns the increase. */
+  addBounty(amount, why, { quiet = false } = {}) {
     const g = this.game, c = this.char;
-    if (c.faction === 'marine') return;
-    amount = Math.round(amount / 1000) * 1000;
-    if (amount <= 0) return;
-    const first = !c.bounty;
-    c.bounty = (c.bounty || 0) + amount;
+    if (!c || c.faction === 'marine') return 0;
+    const before = c.bounty || 0;
+    const after = roundBounty(before + Math.max(0, amount));
+    if (after <= before) return 0; // too small to change the poster
+    c.bounty = after;
     if (c.faction !== 'pirate') c.faction = 'pirate';
-    g.ui.toast(first ? 'WANTED' : 'BOUNTY RAISED', `${formatBerries(c.bounty)}${why ? ' — ' + why : ''}`, '#ffd54f');
+    const first = !before, jump = after - before;
+    g.log(`Bounty ${formatBerries(after)} (+${formatBerries(jump)})${why ? ' — ' + why : ''}`, '#ffd54f');
+    if (first) g.ui.banner('WANTED', formatBerries(after), `${why ? why[0].toUpperCase() + why.slice(1) + '. ' : ''}The World Government has put a price on your head. The Marines will come for you.`, 5);
+    else if (!quiet && (jump >= before * 0.1 || jump >= 5000000)) g.ui.toast('BOUNTY RAISED', `${formatBerries(after)}${why ? ' — ' + why : ''}`, '#ffd54f');
     g.emit('bountyChanged', c.bounty, first);
+    return jump;
   }
 
   onKnockout(a, att) {
@@ -282,11 +288,18 @@ export class Progression {
     const tf = threatFactor(a.power(), p.power());
     if (tf > 0.8) this.train('wil', 6 * tf);
     // bounty for attacking the Marines / World Government
-    if (a.faction === 'marine' || a.faction === 'cp') {
-      const b = a.bountyValue ?? Math.round(4000 * Math.pow(Math.max(1, a.tier), 2.4));
-      this.addBounty(b, a.boss ? `defeated ${a.name}` : null);
+    // (One Piece scaling: a grunt is worth a few hundred thousand in the East
+    // Blue and millions further on; an officer with a name adds a share of
+    // their own worth)
+    if ((a.faction === 'marine' || a.faction === 'cp') && !a.spar && !a.def?.duel) {
+      const b = a.bountyValue ? a.bountyValue * 0.3 : 400000 * bountySea(g) * (1 + 0.25 * (Math.max(1, a.tier) - 1));
+      this.addBounty(b, a.boss || a.named ? `defeated ${a.name}` : 'attacked the Marines', { quiet: !a.boss && !a.named });
     }
-    if (a.bountyValue && a.faction !== 'marine' && a.faction !== 'cp' && a.infamy && c.faction !== 'marine' && c.faction !== 'civilian') this.addBounty(a.bountyValue, `defeated ${a.name}`);
+    // beating a wanted pirate makes you at least as dangerous as they were
+    if (a.bountyValue && a.faction !== 'marine' && a.faction !== 'cp' && a.infamy && c.faction !== 'marine' && c.faction !== 'civilian') {
+      const cur = c.bounty || 0;
+      this.addBounty(Math.max(cur + a.bountyValue * 0.3, a.bountyValue * 1.2) - cur, `defeated ${a.name}`);
+    }
     if (a.reward) earn(g, a.reward, `from ${a.name}`);
     if (a.boss && !c.bosses.includes(a.npcId || a.name)) {
       c.bosses.push(a.npcId || a.name);

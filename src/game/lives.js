@@ -5,7 +5,7 @@
 // journey ends; your will passes to the next generation.
 import { hostile } from './entity.js';
 import { persist, endLineage, snapshot } from './lineage.js';
-import { formatBerries } from '../core/math.js';
+import { formatBerries, roundBounty } from '../core/math.js';
 import { findShore } from './interact.js';
 import { conquerorBurst } from './abilities.js';
 
@@ -141,7 +141,7 @@ export class LivesSystem {
     }
     // notorious pirates go to the Great Prison
     if (c.bounty >= 30000000 && g.sendToImpelDown && g.world === g.surface) {
-      c.bounty = Math.round(c.bounty * 1.1);
+      c.bounty = roundBounty(c.bounty * 1.1);
       g.ui.fade(true);
       setTimeout(() => {
         p.state = 'idle';
@@ -154,7 +154,7 @@ export class LivesSystem {
     }
     const lost = Math.floor(c.berries * 0.5);
     c.berries -= lost;
-    c.bounty = Math.round(c.bounty * 1.1);
+    c.bounty = roundBounty(c.bounty * 1.1);
     g.ui.fade(true);
     setTimeout(() => {
       p.state = 'idle';

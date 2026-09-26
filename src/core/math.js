@@ -45,6 +45,13 @@ export function formatBerries(n) {
   return '฿' + Math.round(n).toLocaleString('en-US');
 }
 
+/** Round a bounty the way wanted posters do: three significant figures, never finer than ฿10,000. */
+export function roundBounty(b) {
+  if (!(b > 0)) return 0;
+  const mag = Math.pow(10, Math.max(4, Math.floor(Math.log10(b)) - 2));
+  return Math.round(b / mag) * mag;
+}
+
 export function formatTime(seconds) {
   const m = Math.floor(seconds / 60), s = Math.floor(seconds % 60);
   return `${m}:${String(s).padStart(2, '0')}`;

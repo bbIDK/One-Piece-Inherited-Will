@@ -2,6 +2,47 @@
 const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
 export const scenarios = {
+  // crimes earn a One Piece-style bounty; reputation never goes below zero
+  bounty: {
+    async run(page) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      const r = await page.evaluate(() => {
+        const g = window.OP.game;
+        window.OP.quickStart('human');
+        const c = g.state.char, R = g.reputation, out = { sea: R.sea() };
+        c.bounty = 0; c.faction = 'civilian'; c.reputation = 0;
+        R.change(-20, 'test');
+        out.floor = c.reputation;
+        R.change(30, 'good deeds');
+        R.crime(200000, 'picked a pocket', { rep: 3 });
+        out.afterPick = { rep: c.reputation, bounty: c.bounty, faction: c.faction };
+        for (let i = 0; i < 5; i++) R.crime(800000, 'robbed a house', { rep: 8 });
+        out.afterRobs = { rep: c.reputation, bounty: c.bounty };
+        // a big pirate's pickpocketing doesn't change the poster
+        c.bounty = 150000000; R.crime(200000, 'picked a pocket');
+        out.big = c.bounty;
+        // old save with negative reputation
+        c.bounty = 0; c.faction = 'civilian'; c.reputation = -40;
+        g.emit('characterStart', { char: c, isNew: false });
+        out.converted = { rep: c.reputation, bounty: c.bounty };
+        // a Marine loses standing, then the uniform
+        c.bounty = 0; c.faction = 'marine'; c.marineRank = 'Seaman'; c.reputation = 26;
+        let n = 0; while (c.faction === 'marine' && n < 20) { R.crime(300000, 'stole from a shop', { rep: 4 }); n++; }
+        out.marine = { crimes: n, faction: c.faction, bounty: c.bounty, rep: c.reputation, former: c.flags.formerMarine };
+        return out;
+      });
+      console.log('bounty', JSON.stringify(r));
+      const fail = [];
+      if (r.floor !== 0) fail.push('reputation went negative');
+      if (r.afterPick.bounty !== 200000 * (r.sea === 'east_blue' ? 1 : r.afterPick.bounty / 200000) || r.afterPick.faction !== 'pirate' || r.afterPick.rep !== 27) fail.push('first crime');
+      if (!(r.afterRobs.bounty > r.afterPick.bounty) || r.afterRobs.rep !== 0) fail.push('repeat crimes');
+      if (r.big !== 150000000) fail.push('big bounty moved');
+      if (r.converted.rep !== 0 || r.converted.bounty !== 6000000) fail.push('old save conversion');
+      if (r.marine.faction !== 'civilian' || r.marine.bounty !== 0 || r.marine.crimes > 6) fail.push('marine discharge');
+      if (fail.length) throw new Error(fail.join('; '));
+    },
+  },
   // every Devil Fruit exists once in a world
   fruitsunique: {
     async run(page) {

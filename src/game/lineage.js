@@ -240,7 +240,7 @@ export function upgradeChar(c) {
   c.equipped.accessories = c.equipped.accessories || [];
   c.weaponMastery = c.weaponMastery || { fists: 0, legs: 0, sword: 0, gun: 0, staff: 0, axe: 0 };
   c.train = c.train || { str: 0, agi: 0, end: 0, vit: 0, wil: 0 };
-  if (c.reputation === undefined) c.reputation = c.bounty > 0 ? -30 : 0;
+  if (c.reputation === undefined) c.reputation = 0;
   c.legends = c.legends || [];
   if (c.crewName === undefined) c.crewName = c.faction === 'pirate' && c.jr ? `${c.name.split(' ')[0]} Pirates` : null;
   if (!c.crewName) c.jr = null;
