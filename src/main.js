@@ -2,6 +2,7 @@
 import { Renderer } from './render/renderer.js';
 import { Renderer3D } from './render3d/index.js';
 import './render3d/pickups3d.js';
+import './render3d/groundcover.js';
 import { generateWorld } from './world/worldgen.js';
 import { ALL_ISLANDS } from './data/islands/index.js';
 import { Input } from './core/input.js';

@@ -114,6 +114,68 @@ export const scenarios = {
       await snap('crew-faces');
     },
   },
+  // ground cover: a meadow on Dawn Island, a beach, and the cost of moving through it
+  cover: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human'));
+      const spots = await page.evaluate((id) => {
+        const g = window.OP.game, w = g.world;
+        const isl = w.islands.find((i) => i.id === id);
+        // the grassiest open tile and a sandy beach tile on the island
+        let best = null, beach = null, bs = -1;
+        const G = new Set([17, 32, 47]);
+        for (let k = 0; k < 6000; k++) {
+          const x = Math.floor(isl.x + (Math.random() - 0.5) * 2 * isl.radius), y = Math.floor(isl.y + (Math.random() - 0.5) * 2 * isl.radius);
+          const t = w.type(x, y);
+          if (t === 16 && !beach && w.sd(x, y) > 1.5 && w.sd(x, y) < 4 && !w.isBlocked(x, y)) beach = [x, y];
+          if (!G.has(t) || w.isBlocked(x, y)) continue;
+          let s = 0;
+          for (let j = -6; j <= 6; j += 2) for (let i = -6; i <= 6; i += 2) if (G.has(w.type(x + i, y + j)) && !w.isBlocked(x + i, y + j)) s++;
+          if (s > bs) { bs = s; best = [x, y]; }
+        }
+        g.env.clock = 10.5; g.env.storm = 0; g.env.fog = 0;
+        return { best, beach, bs };
+      }, args.island || 'dawn_island');
+      console.log('spots', JSON.stringify(spots));
+      await page.evaluate(([x, y]) => window.OP.teleport(x + 0.5, y + 0.5), spots.best);
+      for (let i = 0; i < 20; i++) { await step(page, 0.1); await frames(page, 2); }
+      const stat = () => page.evaluate(() => {
+        const v = window.OP.game.view3d, c = v.groundCover, i = v.renderer.info;
+        return { counts: c ? Object.fromEntries(Object.entries(c.meshes).map(([k, m]) => [k, m.count])) : null, cells: c?.cells.size, calls: i.render.calls, tris: i.render.triangles };
+      });
+      console.log('meadow', JSON.stringify(await stat()));
+      for (const [yaw, name] of [[0, 'e'], [Math.PI / 2, 's'], [Math.PI, 'w'], [-Math.PI / 2, 'n']]) {
+        await page.evaluate((yaw) => { const v = window.OP.game.view3d; v.rig.yaw = (yaw + Math.PI * 2) % (Math.PI * 2); v.rig.pitch = -0.1; }, yaw);
+        await step(page, 0.1); await frames(page, 3);
+        await snap('meadow-' + name);
+      }
+      await page.evaluate(() => { const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); });
+      await step(page, 0.1); await frames(page, 3);
+      await snap('meadow-third');
+      // the CPU cost of re-placing the cover as you walk across cells (all cells cached)
+      const ms = await page.evaluate(() => {
+        const g = window.OP.game, v = g.view3d, c = v.groundCover, w = g.world, p = g.player;
+        const out = [];
+        for (let k = 0; k < 30; k++) {
+          const x = p.x + k * 2;
+          const t0 = performance.now();
+          c.rebuild(v.ctx, w, Math.floor(w.wx(x) / 16), Math.floor(p.y / 16), 64, false);
+          out.push(performance.now() - t0);
+        }
+        out.sort((a, b) => a - b);
+        return { median: out[15].toFixed(2), max: out[29].toFixed(2) };
+      });
+      console.log('rebuild ms', JSON.stringify(ms));
+      if (spots.beach) {
+        await page.evaluate(([x, y]) => window.OP.teleport(x + 0.5, y + 0.5), spots.beach);
+        for (let i = 0; i < 16; i++) { await step(page, 0.1); await frames(page, 2); }
+        console.log('beach', JSON.stringify(await stat()));
+        await snap('beach');
+      }
+    },
+  },
   // first-person hands: idle, a jab, a block (Foosha's plaza at noon)
   vmquick: {
     async run(page, snap) {
