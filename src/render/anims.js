@@ -35,6 +35,26 @@ const FINGER = { ...GUARD, b: [0, 0.02], l: 0.03, hF: [0.2, 0.04], hB: [-0.05, 0
 
 /** Combat stances by name (a style's resting fighting pose). */
 export const STANCES = { guard: GUARD, palms: PALMS, sword: SWORD, sword2: SWORD2, gun: GUN, heavyw: HEAVYW, staff: STAFF, legs: POCKETS, ballet: BALLET, claw: CLAWS, finger: FINGER, stand: STAND };
+/** Stances that hold the weapon out (the weapon is drawn, not sheathed). */
+export const STANCE_ARMED = { sword: 'sword', sword2: 'sword', gun: 'gun', heavyw: 'axe', staff: 'staff' };
+const STYLE_STANCE = {
+  brawler: 'guard', ittoryu: 'sword', nitoryu: 'sword2', santoryu: 'sword2', black_leg: 'legs', fishman_karate: 'palms', rokushiki: 'finger',
+  okama_kenpo: 'ballet', electro: 'claw', hasshoken: 'guard', weather_science: 'staff', elbaf: 'heavyw', ryusoken: 'claw', sniper: 'gun',
+};
+/** A style's fighting stance, falling back to fists when its weapon is missing. */
+export function stanceFor(style, weapon) {
+  let s = STYLE_STANCE[style] || 'guard';
+  const need = STANCE_ARMED[s];
+  if (need && (!weapon || weapon.kind !== need)) s = 'guard';
+  if (s === 'sword2' && (weapon.count || 1) < 2) s = 'sword';
+  return s;
+}
+/** 'sling' for slingshots (Usopp's Kabuto…), else a firearm. */
+export function gunKind(weapon) {
+  if (!weapon || weapon.kind !== 'gun') return undefined;
+  const ids = weapon.ids || [];
+  return ids.some((id) => /sling|kabuto/.test(id)) ? 'sling' : weapon.gun;
+}
 
 const EASE = {
   lin: (k) => k,
@@ -261,7 +281,7 @@ export function actionClip(def, actor, stanceName) {
   const hitDur = main.hit ? main.hit.duration || 0 : 0;
   if (hitDur > 0.2) c.hitDur = hitDur;
   if (wk === 'sword' && (actor.weapon?.count || 1) >= 2) c.two = true;
-  if (wk === 'gun' && actor.weapon?.gun === 'sling') c.sling = true;
+  if (wk === 'gun' && gunKind(actor.weapon) === 'sling') c.sling = true;
   const name = pickClip(def, actor, main, steps, c, wk);
   if (c.hitDur) {
     if (FLURRY.has(name) && !SPINS.has(name)) c.flurry = { t0: w, t1: w + c.hitDur, rate: 12, legs: name.startsWith('kick') };

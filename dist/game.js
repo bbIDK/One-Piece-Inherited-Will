@@ -2526,6 +2526,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   var dk = (c, t = 0.3) => mix(c, "#1c0f1c", t);
   var lt = (c, t = 0.4) => mix(c, "#fffaea", t);
+  var fade = (c, a) => {
+    const A = rgba(c);
+    return css(A[0], A[1], A[2], a);
+  };
   var lum = (c) => {
     const A = rgba(c);
     return (0.299 * A[0] + 0.587 * A[1] + 0.114 * A[2]) / 255;
@@ -2702,17 +2706,24 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (const [t, c] of stops) gr.addColorStop(t, c);
     return gr;
   }
+  function rg(I, x, y, r, stops, x0 = x, y0 = y, r0 = 0) {
+    const gr = I.g.createRadialGradient(x0, y0, r0, x, y, r);
+    for (const [t, c] of stops) gr.addColorStop(t, c);
+    return gr;
+  }
   function after(I, fn, behind = false) {
     I.post.push([fn, behind, I.g.getTransform()]);
   }
   function sparkle(I, x, y, r, col = "#ffffff", a = 1) {
-    after(I, () => alpha(I, a, () => {
+    const fn = () => alpha(I, a, () => {
       fl(I, star(x, y, 4, r, r * 0.26), col);
       fl(I, circle(x, y, r * 0.22), "#ffffff");
-    }));
+    });
+    I.inBadge ? fn() : after(I, fn);
   }
   function glow(I, path, col, a = 0.45) {
-    after(I, () => alpha(I, a, () => fl(I, path, col)), true);
+    const fn = () => alpha(I, a, () => fl(I, path, col));
+    I.inBadge ? fn() : after(I, fn, true);
   }
   function hilite(I, p, color, hd, a, inset, rule) {
     const s = scr("hl", I.px), t = s.getContext("2d");
@@ -5193,6 +5204,1611 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     return typeDefault(d, id);
   }
+  var SK = {};
+  var SKIN = "#f2c596";
+  function crescentP(cx, cy, r, a0, a1, w, w0 = 0.7) {
+    const pts = [], n = 22;
+    for (let i = 0; i <= n; i++) {
+      const a = a0 + (a1 - a0) * i / n;
+      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+    }
+    return taper(pts, (t) => w0 + w * Math.pow(Math.sin(Math.PI * t), 0.85));
+  }
+  function flameP(cx, by, s = 1) {
+    return xf("M32 58 C18 58 12 48 14 38 C15 32 19 28 20 21 C24 25 25.5 30 25.5 34 C27.5 27 30.5 19 30 7 C38 13 44 23 44 31.5 C46 29.5 47 26.5 46.5 23 C52 29.5 54 38 52 46 C50 54 42 58 32 58 Z", { ox: 32, oy: 58, x: cx - 32, y: by - 58, s });
+  }
+  function flame(I, cx, by, s, cols = ["#e8452c", "#f7931e", "#ffe066"]) {
+    part(I, flameP(cx, by, s), cols[0], { sd: 2 * s, hd: 1.4 * s, ol: I.ol });
+    part(I, flameP(cx, by - 1.5 * s, s * 0.66), cols[1], { sd: 1.2 * s, hd: 0, ol: 0 });
+    fl(I, flameP(cx, by - 2.5 * s, s * 0.36), cols[2]);
+  }
+  var BOLT = "M37 3 L15 35 H28.5 L21 61 L49 25 H35.5 L45 3 Z";
+  function bolt(I, o = {}) {
+    part(I, xf(BOLT, o), o.c || "#ffe14a", { sd: 1.4, hd: 1.2, hi: "#fffbe0" });
+  }
+  function speed(I, pts, col = "#ffffff", w = 2, a = 0.85) {
+    for (const [x1, y1, x2, y2] of pts) ln(I, `M${x1} ${y1} L${x2} ${y2}`, col, w, { a });
+  }
+  function fistShape(I, c, shiny) {
+    const hi = shiny ? "#b9a8e0" : void 0;
+    part(I, rrect(23.5, 44, 16, 13, 4), dk(c, 0.1), { sd: 1.4, hd: 1, hi });
+    part(I, rrect(17, 22, 29.5, 26, 8.5), c, { sd: 2.4, hd: 1.4, hi });
+    [[17.3, 15.5], [24.6, 14], [31.9, 14], [39.2, 15.5]].forEach(([x, y]) => {
+      part(I, rrect(x, y, 7.5, 17, 3.7), c, { sd: 1.4, hd: 1.2, hi });
+      if (shiny) gloss(I, x + 2.6, y + 4.5, 1.1, 2.6, 0.75, 0);
+    });
+    part(I, "M13.5 35 C13.5 30 18 28.5 24 30 L36 32.5 C40 33.5 40.5 39 36.5 40 L21 41.5 C16.5 42 13.5 39.5 13.5 35 Z", c, { sd: 1.4, hd: 1, hi });
+    if (shiny) {
+      gloss(I, 20, 34, 2.6, 1, 0.7, -0.1);
+      gloss(I, 27, 50, 1.2, 2.4, 0.6, 0);
+    }
+  }
+  function palmShape(I, c) {
+    part(I, rrect(24, 44, 16, 14, 4), dk(c, 0.1), { sd: 1.4, hd: 1 });
+    part(I, xf(rrect(7, 27, 8, 19, 4), { r: -0.65, ox: 14, oy: 42 }), c, { sd: 1.4, hd: 1 });
+    [[17.5, 11, 20], [25, 7, 23], [32.5, 8, 22], [40, 12, 19]].forEach(([x, y, h2]) => part(I, rrect(x, y, 7, h2, 3.5), c, { sd: 1.4, hd: 1.2 }));
+    part(I, rrect(17, 25, 30, 24, 9), c, { sd: 2.4, hd: 1.4 });
+    if (!I.small) ln(I, "M22 36 C27 40 35 40 41 35", dk(c, 0.3), 1.2, { a: 0.7 });
+  }
+  function legShape(I, pants, shoe, sole = "#6b4226") {
+    part(I, "M-8 23 H33 L34 41 H-8 Z", pants, { sd: 2.2, hd: 1.4, hi: lt(pants, 0.45) });
+    if (!I.small) ln(I, "M-6 31.5 H30", dk(pants, 0.3), 1, { a: 0.7 });
+    part(I, rrect(29.5, 22, 6.5, 20, 2.2), dk(pants, 0.18), { sd: 0.8, hd: 0.8, hi: lt(pants, 0.35) });
+    part(I, rrect(34, 38.5, 29, 4.4, 2.2), sole, { sd: 0.8, hd: 0.5 });
+    part(I, "M35 24 C40 22.5 44 24 46.5 28 L56 30.5 C61.5 31.5 63.5 35.5 61.5 38.5 C60.5 40 58 40.5 55 40.5 H35 Z", shoe, { sd: 1.6, hd: 1.3, hi: lt(shoe, 0.55), gloss: [52, 32.5, 3.6, 1.2, 0.55, 0.2] });
+  }
+  function burst(I, x, y, r1, r2, col, n = 9) {
+    part(I, star(x, y, n, r1, r2, 0.2), col, { sd: r1 * 0.08, hd: r1 * 0.06, hi: "#ffffff", ol: I.ol * 0.85 });
+  }
+  function rings(I, x, y, r0, n, col, a0 = -1.1, a1 = 1.1, w = 2.4) {
+    for (let i = 0; i < n; i++) ln(I, arcPath(x, y, r0 + i * 6, a0, a1), col, w - i * 0.3, { a: 1 - i * 0.18 });
+  }
+  function cloudP(x, y, s = 1) {
+    return union(circle(x - 9 * s, y + 2 * s, 7.5 * s), circle(x, y - 3 * s, 10 * s), circle(x + 10 * s, y + 1 * s, 8 * s), rrect(x - 16 * s, y + 1 * s, 33 * s, 9 * s, 4.5 * s));
+  }
+  function dropP(x, y, s = 1) {
+    return `M${x} ${y - 9 * s} C${x + 4 * s} ${y - 3.5 * s} ${x + 6.5 * s} ${y} ${x + 6.5 * s} ${y + 3 * s} C${x + 6.5 * s} ${y + 7 * s} ${x + 3.4 * s} ${y + 9.5 * s} ${x} ${y + 9.5 * s} C${x - 3.4 * s} ${y + 9.5 * s} ${x - 6.5 * s} ${y + 7 * s} ${x - 6.5 * s} ${y + 3 * s} C${x - 6.5 * s} ${y} ${x - 4 * s} ${y - 3.5 * s} ${x} ${y - 9 * s} Z`;
+  }
+  function eyeShape(I, x, y, w, col = "#f7f4ec", iris = "#3aa37a") {
+    const e = `M${x - w} ${y} C${x - w * 0.5} ${y - w * 0.62} ${x + w * 0.5} ${y - w * 0.62} ${x + w} ${y} C${x + w * 0.5} ${y + w * 0.62} ${x - w * 0.5} ${y + w * 0.62} ${x - w} ${y} Z`;
+    part(I, e, col, { sd: w * 0.1, hd: 0 });
+    clip(I, e, () => {
+      part(I, circle(x, y, w * 0.42), iris, { sd: w * 0.06, hd: w * 0.05, ol: I.ol * 0.6 });
+      fl(I, circle(x, y, w * 0.2), OUT);
+      fl(I, circle(x - w * 0.14, y - w * 0.14, w * 0.09), "#ffffff");
+    });
+  }
+  function ghostP(x, y, s = 1) {
+    return `M${x - 11 * s} ${y + 12 * s} L${x - 11 * s} ${y} C${x - 11 * s} ${y - 8 * s} ${x - 6 * s} ${y - 13 * s} ${x} ${y - 13 * s} C${x + 6 * s} ${y - 13 * s} ${x + 11 * s} ${y - 8 * s} ${x + 11 * s} ${y} L${x + 11 * s} ${y + 12 * s} L${x + 6.5 * s} ${y + 8 * s} L${x + 2.2 * s} ${y + 12 * s} L${x - 2.2 * s} ${y + 8 * s} L${x - 6.5 * s} ${y + 12 * s} Z`;
+  }
+  function bat(I, x, y, s, col) {
+    part(I, xf("M32 30 C28 26 22 24 14 24 C16 27 16 30 14 33 C18 32 21 34 22 37 C25 34 28 34 30 36 L32 40 L34 36 C36 34 39 34 42 37 C43 34 46 32 50 33 C48 30 48 27 50 24 C42 24 36 26 32 30 Z", { ox: 32, oy: 32, x: x - 32, y: y - 32, s }), col, { sd: 1, hd: 0.8, hi: lt(col, 0.45) });
+    fl(I, circle(x - 1.4 * s, y - 0.6 * s, 0.9 * s), "#ff5a5a");
+    fl(I, circle(x + 1.4 * s, y - 0.6 * s, 0.9 * s), "#ff5a5a");
+  }
+  function birdP(x, y, s = 1) {
+    return xf("M32 36 C26 30 16 26 5 27 C12 30 16 34 18 38 C12 38 8 40 6 43 C14 42 22 42 28 42 L24 52 L32 46 L40 52 L36 42 C42 42 50 42 58 43 C56 40 52 38 46 38 C48 34 52 30 59 27 C48 26 38 30 32 36 Z", { ox: 32, oy: 38, x: x - 32, y: y - 38, s });
+  }
+  function dragonHead(I, col, o = {}) {
+    part(I, "M52 16 C46 20 44 26 45 32 C38 30 30 30 22 34 C16 37 10 38 5 37 C8 42 14 45 22 45 C28 45 34 43 40 44 C44 45 47 48 48 53 C52 48 54 42 53 36 C56 30 58 22 52 16 Z", col, { sd: 2.4, hd: 1.6 });
+    part(I, "M45 18 C48 12 54 8 60 8 C58 12 54 16 49 19 Z", o.horn || "#f3e6c4", { sd: 0.8, hd: 0.6 });
+    part(I, "M40 22 C42 16 46 12 52 11 C50 15 46 19 42 23 Z", o.horn || "#f3e6c4", { sd: 0.8, hd: 0.6 });
+    fl(I, ellipse(38, 35, 3, 1.8, -0.3), "#fff36b");
+    fl(I, circle(38.4, 35, 1), OUT);
+    if (!I.small) {
+      ln(I, "M8 40 C14 41 20 40 26 39", dk(col, 0.45), 1.2);
+      ln(I, "M20 46 C16 52 12 54 6 55", lt(col, 0.3), 1.4);
+    }
+  }
+  SK.fist = (I, o) => {
+    if (o.burst) burst(I, 46, 18, 13, 6.5, o.burst);
+    if (o.lines !== false) speed(I, [[6, 44, 16, 38], [4, 36, 13, 31], [9, 52, 18, 45]], o.line || "#ffffff", 2.2);
+    tf(I, { r: o.r ?? -0.3, s: o.s ?? 0.86, x: o.x ?? 2, y: o.y ?? 1 }, () => fistShape(I, o.c || SKIN, o.c === BLACKFIST));
+    if (o.fx) SK.fx(I, o.fx);
+  };
+  SK.fx = (I, fx) => {
+    if (fx === "fire") {
+      flame(I, 16, 56, 0.42);
+      flame(I, 50, 58, 0.34);
+    } else if (fx === "bolt") {
+      bolt(I, { s: 0.42, ox: 32, oy: 32, x: 16, y: -14 });
+      bolt(I, { s: 0.3, ox: 32, oy: 32, x: -18, y: 14, r: 0.4 });
+    } else if (fx === "water") for (const [x, y, s] of [[50, 14, 0.55], [54, 30, 0.4], [12, 16, 0.45]]) part(I, dropP(x, y, s), "#7fd3f7", { sd: 0.8, hd: 0.6 });
+    else if (fx === "poison") for (const [x, y, s] of [[20, 58, 0.45], [44, 58, 0.38], [52, 46, 0.3]]) part(I, dropP(x, y, s), "#b35ad6", { sd: 0.8, hd: 0.6 });
+    else if (fx === "cracks") crackLines(I, 48, 16, 12, "#e8f7ff");
+    else if (fx === "mochi") {
+      for (const [x, y, s] of [[18, 56, 0.5], [30, 60, 0.4], [44, 56, 0.45]]) part(I, dropP(x, y, s), "#fbf6ea", { sd: 0.8, shT: 0.2, hd: 0.6 });
+      part(I, cloudP(48, 16, 0.4), "#fbf6ea", { sd: 0.8, shT: 0.2, hd: 0.6 });
+    } else if (fx === "smoke") for (const [x, y, r] of [[14, 52, 6], [8, 44, 4.6], [52, 50, 5]]) part(I, circle(x, y, r), "#eef2f4", { sd: 1, hd: 0.8 });
+  };
+  function crackLines(I, x, y, r, col) {
+    const d = [];
+    for (let i = 0; i < 7; i++) {
+      const a = i / 7 * TAU3 + 0.3, a2 = a + 0.35, r2 = r * (0.55 + i % 2 * 0.2);
+      d.push(`M${x} ${y} L${x + Math.cos(a) * r2} ${y + Math.sin(a) * r2} L${x + Math.cos(a2) * r} ${y + Math.sin(a2) * r}`);
+    }
+    ln(I, d.join(" "), OUT, 3.4);
+    ln(I, d.join(" "), col, 1.6);
+  }
+  SK.stretch = (I, o) => {
+    const c = o.c || SKIN;
+    speed(I, [[10, 30, 22, 24], [12, 44, 30, 38]], "#ffffff", 2);
+    tube(I, "M-2 66 C10 52 22 44 34 36", c, 8.5);
+    tf(I, { r: -0.5, s: 0.62, x: 12, y: -10 }, () => fistShape(I, c));
+    if (o.burst) burst(I, 52, 12, 9, 4.6, o.burst);
+  };
+  SK.multi = (I, o) => {
+    const c = o.c || SKIN;
+    speed(I, [[4, 30, 14, 26], [4, 42, 16, 38], [8, 54, 18, 48]], "#ffffff", 2);
+    for (const [x, y, s, r] of [[-12, -12, 0.46, -0.7], [8, -14, 0.46, -0.3], [-12, 10, 0.46, -0.6], [10, 8, 0.56, -0.4]]) tf(I, { r, s, x, y }, () => fistShape(I, c));
+  };
+  SK.palm = (I, o) => {
+    if (o.rings) rings(I, 32, 30, 22, 3, o.ring || "#ffffff", -2.3, -0.8, 2.6);
+    if (o.burst) burst(I, 32, 14, 12, 6, o.burst);
+    tf(I, { s: o.s ?? 0.82, y: 4 }, () => palmShape(I, o.c || SKIN));
+    if (o.two) tf(I, { s: 0.7, x: 12, y: 8, r: 0.2 }, () => palmShape(I, o.c || SKIN));
+  };
+  SK.palms = (I, o) => {
+    if (o.burst) burst(I, 32, 12, 13, 6.5, o.burst);
+    tf(I, { s: 0.62, x: -10, y: 8, r: -0.25 }, () => palmShape(I, o.c || SKIN));
+    tf(I, { s: 0.62, x: 10, y: 8, r: 0.25 }, () => palmShape(I, o.c || SKIN));
+  };
+  SK.kick = (I, o) => {
+    if (o.burst) burst(I, 50, 17, 11, 5.5, o.burst);
+    if (o.arc !== false) part(I, xf(crescentP(28, 46, 27, -2.3, -0.45, 7.5), { ox: 32, oy: 32, r: o.r || 0 }), fade(o.line || "#ffffff", 0.8), { sd: 0, hd: 0, ol: I.ol * 0.6 });
+    if (o.fx === "fire") {
+      flame(I, 16, 50, 0.4, o.flame);
+      flame(I, 30, 60, 0.36, o.flame);
+      flame(I, 44, 30, 0.34, o.flame);
+    }
+    tf(I, { r: (o.r || 0) - 0.62, s: (o.s ?? 1) * 0.8, x: o.x ?? -1, y: o.y ?? 1 }, () => legShape(I, o.c || "#4a5068", o.shoe || "#1f1b22", o.sole));
+  };
+  SK.swords = (I, o) => {
+    const n = o.n || 1, pal = o.pal || [{}, { wrap: "#1f1a22", blade: "#dfe6ec" }, { wrap: "#f4f1ea", tsuba: "#e2b64a" }];
+    if (o.arc !== false) {
+      part(I, crescentP(32, 36, 23, -2.7, -0.3, 6.2), o.arcCol || "#eaf6ff", { sd: 0.8, hd: 0.6, ol: I.ol * 0.8 });
+    }
+    const angles = n === 1 ? [0] : n === 2 ? [0, Math.PI / 2] : [0, Math.PI / 2, Math.PI / 4];
+    angles.forEach((r, i) => tf(I, { r, s: n === 3 && i === 2 ? 0.66 : 0.74, y: n === 3 && i === 2 ? -8 : 0 }, () => D.katana(I, { ...SWORD.wazamono, ...pal[i] || {} })));
+  };
+  SK.slash = (I, o) => {
+    const c = o.c || "#eaf6ff", n = o.n || 1;
+    const sets = { 1: [[36, 38, 24, -2.8, -0.35, 9]], 2: [[30, 40, 22, -2.6, -0.5, 7.5], [34, 40, 22, -2.6, -0.5, 7.5, 1]], 3: [[26, 44, 20, -2.4, -0.7, 6], [32, 38, 20, -2.4, -0.7, 6], [38, 32, 20, -2.4, -0.7, 6]] }[Math.min(3, n)];
+    for (const [x, y, r, a0, a1, w, flip] of sets) {
+      const p = crescentP(x, y, r, a0, a1, w);
+      part(I, flip ? xf(p, { sx: -1, ox: 32 }) : p, c, { sd: 1, hd: 0.8, hi: "#ffffff", ol: I.ol * 0.85 });
+    }
+    if (o.burst) burst(I, 32, 32, 8, 4, o.burst, 8);
+  };
+  SK.claw = (I, o) => {
+    const c = o.c || "#ffffff";
+    for (let i = -1; i <= 1; i++) part(I, taper(bez([46 + i * 9, 8 + i * 7], [40 + i * 9, 20 + i * 7], [28 + i * 9, 34 + i * 7], [14 + i * 9, 48 + i * 7], 16), (t) => 0.8 + 6 * Math.pow(Math.sin(Math.PI * t), 0.8)), c, { sd: 0.9, hd: 0.7, hi: "#ffffff", ol: I.ol * 0.85 });
+    if (o.hand) tf(I, { s: 0.46, x: 14, y: -15, r: 0.5 }, () => clawHand(I, o.hand));
+  };
+  function clawHand(I, c) {
+    for (const [x, r] of [[20, -0.35], [28, -0.1], [36, 0.12], [44, 0.35]]) part(I, xf("M0 0 C-3 -6 -2 -14 3 -18 C1 -12 3 -6 5 -2 Z", { ox: 0, oy: 0, x, y: 22, r }), "#f3e6c4", { sd: 0.6, hd: 0.4 });
+    part(I, rrect(16, 20, 32, 22, 9), c, { sd: 2, hd: 1.4 });
+    part(I, rrect(24, 40, 16, 16, 4), dk(c, 0.1), { sd: 1.4, hd: 1 });
+  }
+  SK.airblade = (I, o) => {
+    const c = o.c || "#dff4ff";
+    speed(I, [[4, 24, 16, 24], [2, 34, 12, 34], [6, 44, 18, 44]], c, 2, 0.8);
+    part(I, crescentP(20, 34, 30, -0.95, 0.95, 11, 0.8), c, { sd: 1.4, hd: 1, hi: "#ffffff" });
+    if (o.n === 2) part(I, crescentP(8, 34, 26, -0.8, 0.8, 7, 0.8), c, { sd: 1, hd: 0.8, hi: "#ffffff" });
+  };
+  SK.dash = (I, o) => {
+    const c = o.c || "#ffffff";
+    speed(I, [[6, 22, 26, 22], [4, 32, 30, 32], [8, 42, 26, 42]], c, 2.4);
+    for (const x of [30, 42]) part(I, `M${x} 16 L${x + 14} 32 L${x} 48 L${x - 5} 48 L${x + 8} 32 L${x - 5} 16 Z`, o.c2 || c, { sd: 1, hd: 0.8 });
+  };
+  SK.finger = (I, o) => {
+    const c = o.c || SKIN;
+    if (o.burst) burst(I, 50, 16, 11, 5.5, o.burst);
+    speed(I, [[6, 50, 14, 42], [4, 40, 10, 34]], "#ffffff", 2);
+    tf(I, { r: -0.78, s: 0.8, x: 2, y: 4 }, () => {
+      part(I, rrect(23.5, 44, 16, 13, 4), dk(c, 0.1), { sd: 1.4, hd: 1 });
+      part(I, rrect(17, 24, 29.5, 24, 8.5), c, { sd: 2.4, hd: 1.4 });
+      part(I, rrect(24.6, 2, 7.5, 28, 3.7), c, { sd: 1.4, hd: 1.2 });
+      for (const x of [31.9, 39.2]) part(I, rrect(x, 18, 7.5, 13, 3.7), c, { sd: 1.4, hd: 1.2 });
+      part(I, "M13.5 35 C13.5 30 18 28.5 24 30 L36 32.5 C40 33.5 40.5 39 36.5 40 L21 41.5 C16.5 42 13.5 39.5 13.5 35 Z", c, { sd: 1.4, hd: 1 });
+    });
+  };
+  SK.wave = (I, o) => {
+    const c = o.c || "#4fb3e8";
+    const w = "M3 52 C8 40 16 30 28 26 C40 22 52 26 55 36 C57 43 52 48 46 47 C41 46 40 40 44 37 C40 33 33 34 29 39 C24 46 26 54 30 58 H3 Z";
+    part(I, w, c, { sd: 2.4, hd: 1.8, hi: "#e8f8ff" });
+    clip(I, w, () => {
+      ln(I, "M8 50 C12 42 18 36 26 33", lt(c, 0.5), 1.6, { a: 0.8 });
+    });
+    for (const [x, y, r] of [[56, 30, 2.4], [58, 22, 1.6], [52, 20, 1.3]]) part(I, circle(x, y, r), "#e8f8ff", { flat: true, ol: I.ol * 0.6 });
+    if (o.fx) SK.fx(I, o.fx);
+  };
+  SK.drops = (I, o) => {
+    speed(I, [[6, 26, 18, 30], [4, 38, 16, 40], [8, 50, 20, 50]], "#ffffff", 2);
+    for (const [x, y, s] of [[30, 24, 1], [46, 36, 0.8], [30, 46, 0.7], [48, 18, 0.55]]) part(I, xf(dropP(x, y, s), { ox: x, oy: y, r: 1.3 }), o.c || "#7fd3f7", { sd: 1.2, hd: 1, hi: "#ffffff" });
+  };
+  SK.rings = (I, o) => {
+    const c = o.c || "#ffffff";
+    for (let i = 0; i < 3; i++) {
+      const p = new Path2D();
+      p.addPath(circle(32, 32, 9 + i * 7.5));
+      p.addPath(circle(32, 32, 6.4 + i * 7.5));
+      part(I, p, c, { rule: "evenodd", sd: 0, hd: 0, ol: I.ol * 0.7 });
+    }
+    if (o.center) part(I, circle(32, 32, 5), o.center, { sd: 1, hd: 0.8 });
+  };
+  SK.bolt = (I, o) => {
+    if (o.glow !== false) glow(I, circle(32, 32, 22), o.c || "#fff36b", 0.35);
+    bolt(I, { c: o.c, s: o.s ?? 0.9 });
+    if (o.two) bolt(I, { c: o.c, s: 0.45, ox: 32, oy: 32, x: -16, y: 8, r: 0.3 });
+  };
+  SK.cloud = (I, o) => {
+    if (o.bolt) bolt(I, { s: 0.62, ox: 32, oy: 32, x: 0, y: 12 });
+    if (o.rain) for (const x of [20, 30, 40]) ln(I, `M${x} 40 L${x - 3} 50`, "#9fd9f5", 2.2);
+    part(I, cloudP(32, 26, 1.05), o.c || "#e9eef3", { sd: 2, hd: 1.4 });
+  };
+  SK.tornado = (I, o) => {
+    const c = o.c || "#e7f3f8";
+    const rows = [[32, 14, 22, 5], [31, 23, 18, 4.4], [33, 31, 14, 3.8], [31, 39, 10, 3.2], [33, 46, 7, 2.6], [32, 52, 4, 2]];
+    for (const [x, y, rx, ry] of rows.reverse()) part(I, ellipse(x, y, rx, ry), c, { sd: 1, hd: 0.8 });
+    if (!I.small) for (const [x, y, rx] of [[32, 14, 22], [31, 23, 18], [33, 31, 14]]) ln(I, arcPath(x, y, rx * 0.7, 0.3, 2.6), dk(c, 0.25), 1, { a: 0.7 });
+    if (o.sword) tf(I, { s: 0.5, r: 0.2, x: 12, y: 10 }, () => D.katana(I, {}));
+  };
+  SK.flame = (I, o) => {
+    const cols = o.cols || ["#e8452c", "#f7931e", "#ffe066"];
+    glow(I, circle(32, 36, 23), cols[1], 0.3);
+    flame(I, 32, 58, o.s ?? 0.95, cols);
+    if (o.pillar) for (const x of [14, 50]) flame(I, x, 58, 0.45, cols);
+  };
+  SK.fireballs = (I, o) => {
+    const cols = o.cols || ["#e8452c", "#f7931e", "#ffe066"];
+    for (const [x, y, s] of [[18, 44, 0.3], [44, 48, 0.32], [30, 30, 0.36], [50, 24, 0.28], [16, 22, 0.24]]) {
+      part(I, circle(x, y + 4 * s, 11 * s), cols[1], { sd: 1, hd: 0.8, ol: I.ol * 0.8 });
+      flame(I, x, y + 12 * s, s, cols);
+    }
+  };
+  SK.sun = (I, o) => {
+    const c = o.c || "#ffd23f";
+    glow(I, circle(32, 32, 24), c, 0.4);
+    part(I, star(32, 32, 12, 24, 15, 0.1), o.ray || lt(c, 0.2), { sd: 1, hd: 0.8, ol: I.ol * 0.8 });
+    part(I, circle(32, 32, 13), c, { sd: 2.2, hd: 1.6, hi: "#ffffff" });
+    if (o.face) {
+      fl(I, circle(27, 30, 1.6), OUT);
+      fl(I, circle(37, 30, 1.6), OUT);
+      ln(I, "M26 35 C29 39 35 39 38 35", OUT, 1.6);
+    }
+  };
+  SK.moon = (I, o) => {
+    const c = o.c || "#fff1b0";
+    if (o.full) {
+      glow(I, circle(32, 30, 22), c, 0.35);
+      part(I, circle(32, 30, 16), c, { sd: 2, hd: 1.4, hi: "#ffffff" });
+      if (!I.small) for (const [x, y, r] of [[26, 26, 3], [36, 34, 2.4], [37, 23, 1.6]]) fl(I, circle(x, y, r), dk(c, 0.12));
+    } else part(I, crescentP(32, 31, 15, 0.9, 0.9 + TAU3 * 0.7, 12, 0.5), c, { sd: 1.6, hd: 1.2, hi: "#ffffff" });
+    if (o.bolt) {
+      bolt(I, { s: 0.36, ox: 32, oy: 32, x: 15, y: 15 });
+      bolt(I, { s: 0.3, ox: 32, oy: 32, x: -16, y: 16, r: 0.3 });
+    }
+  };
+  SK.airstep = (I, o) => {
+    for (const r of [13, 19]) ln(I, arcPath(30, 50, r, Math.PI * 1.08, Math.PI * 1.92), "#ffffff", 2, { a: 0.75 });
+    part(I, cloudP(30, 50, 0.72), "#ffffff", { sd: 1.2, shT: 0.2, hd: 0.8 });
+    tf(I, { r: -1.1, s: 0.62, x: 4, y: -12 }, () => legShape(I, o.c || "#4a5068", "#1f1b22"));
+    if (o.moon) part(I, crescentP(46, 18, 7, 0.9, 0.9 + TAU3 * 0.7, 5.5, 0.4), "#fff1b0", { sd: 0.8, hd: 0.6 });
+  };
+  SK.ice = (I, o) => {
+    const c = o.c || "#bfefff";
+    glow(I, circle(32, 34, 22), "#e8fbff", 0.35);
+    const shard = (x, y, h2, w, r) => part(I, xf(poly([[x, y - h2], [x + w, y - h2 + w], [x + w, y], [x, y + w * 0.5], [x - w, y], [x - w, y - h2 + w]]), { ox: x, oy: y, r }), c, { sd: w * 0.35, hd: w * 0.25, hi: "#ffffff" });
+    shard(20, 52, 22, 5, -0.5);
+    shard(44, 52, 22, 5, 0.5);
+    shard(32, 54, 34, 7, 0);
+    if (o.flake) {
+      for (let i = 0; i < 3; i++) ln(I, `M${32 + Math.cos(i * Math.PI / 3) * 12} ${20 + Math.sin(i * Math.PI / 3) * 12} L${32 - Math.cos(i * Math.PI / 3) * 12} ${20 - Math.sin(i * Math.PI / 3) * 12}`, "#ffffff", 2.4);
+    }
+  };
+  SK.iceCube = (I, o) => {
+    const c = o.c || "#bfefff";
+    const top = [[32, 12], [52, 22], [32, 32], [12, 22]], L2 = [[12, 22], [32, 32], [32, 56], [12, 46]], R = [[32, 32], [52, 22], [52, 46], [32, 56]];
+    part(I, union(poly(top), poly(L2), poly(R)), c, { sd: 0, hd: 0 });
+    fl(I, poly(L2), dk(c, 0.08));
+    fl(I, poly(R), dk(c, 0.2));
+    fl(I, poly(top), lt(c, 0.4));
+    ln(I, "M12 22 L32 32 L52 22 M32 32 V56", "#ffffff", 1.2, { a: 0.8 });
+    fl(I, "M28 36 C26 40 26 46 30 50 C33 46 33 40 31 36 Z", dk(c, 0.35), { a: 0.7 });
+    gloss(I, 18, 30, 1.6, 5, 0.8, 0.5);
+  };
+  SK.beam = (I, o) => {
+    const c = o.c || "#fff36b";
+    glow(I, rrect(4, 20, 58, 24, 12), c, 0.35);
+    part(I, "M10 32 L60 22 V42 Z", lt(c, 0.25), { sd: 1, hd: 0.8, ol: I.ol * 0.8 });
+    part(I, "M14 32 L60 28 V36 Z", "#ffffff", { flat: true, ol: 0 });
+    burst(I, 14, 32, 11, 5, c, 8);
+  };
+  SK.lightOrbs = (I, o) => {
+    const c = o.c || "#fff36b";
+    for (const [x, y, r] of [[20, 20, 7], [42, 16, 5.5], [36, 38, 8.5], [16, 44, 5.5], [50, 48, 5]]) {
+      glow(I, circle(x, y, r * 1.6), c, 0.35);
+      part(I, circle(x, y, r), lt(c, 0.3), { sd: r * 0.2, hd: r * 0.15, hi: "#ffffff" });
+      speed(I, [[x - r * 0.4, y - r * 0.9, x - r * 1.8, y - r * 2.4]], c, 1.6, 0.7);
+    }
+  };
+  SK.mirror = (I, o) => {
+    const oct = [];
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * TAU3 + Math.PI / 8;
+      oct.push([32 + Math.cos(a) * 20, 32 + Math.sin(a) * 20]);
+    }
+    part(I, poly(oct), o.c || "#e0b24a", { sd: 2, hd: 1.4 });
+    const inner = [];
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * TAU3 + Math.PI / 8;
+      inner.push([32 + Math.cos(a) * 15, 32 + Math.sin(a) * 15]);
+    }
+    part(I, poly(inner), "#dff4ff", { sd: 1, hd: 0, ol: I.ol * 0.7 });
+    gloss(I, 26, 26, 5, 2, 0.9, -0.7);
+    if (o.light) sparkle(I, 44, 18, 6, "#fff6b0");
+  };
+  SK.magma = (I, o) => {
+    glow(I, circle(32, 32, 22), "#ff6a2a", 0.35);
+    tf(I, { r: -0.3, s: 0.86, x: 2, y: 1 }, () => {
+      fistShape(I, "#5a2a1e");
+      ln(I, "M20 20 L24 28 L22 36 M30 16 L33 26 L30 32 L34 40 M38 20 L42 30 M20 44 L28 42 L36 46", "#ff8a2a", 2.2);
+      ln(I, "M20 20 L24 28 L22 36 M30 16 L33 26 L30 32 L34 40 M38 20 L42 30 M20 44 L28 42 L36 46", "#ffe066", 0.9);
+    });
+    for (const [x, y, s] of [[14, 56, 0.4], [48, 58, 0.34]]) part(I, dropP(x, y, s), "#ff7a2a", { sd: 0.8, hd: 0.6 });
+    if (o.lines !== false) speed(I, [[4, 40, 12, 36], [6, 50, 14, 44]], "#ffd29a", 2);
+  };
+  SK.meteor = (I, o) => {
+    const c = o.c || "#8a5a3a", tail = o.tail || ["#e8452c", "#f7931e", "#ffe066"];
+    part(I, taper(bez([56, 6], [48, 14], [40, 22], [30, 30], 12), 3, 22), tail[1], { sd: 1, hd: 0.8 });
+    part(I, taper(bez([54, 10], [46, 17], [40, 23], [32, 29], 12), 1, 12), tail[2], { flat: true, ol: 0 });
+    part(I, circle(26, 38, 14), c, { sd: 2.6, hd: 1.8 });
+    if (!I.small) for (const [x, y, r] of [[22, 34, 3], [30, 42, 2.4], [20, 44, 1.8]]) fl(I, circle(x, y, r), dk(c, 0.3));
+    if (o.two) {
+      part(I, circle(50, 50, 6), c, { sd: 1.2, hd: 0.8 });
+    }
+  };
+  SK.vortex = (I, o) => {
+    const c = o.c || "#7a4fc8";
+    part(I, circle(32, 32, 22), "#1a1024", { sd: 0, hd: 0 });
+    for (let i = 0; i < 3; i++) ln(I, spiral(32, 32, 20, 1.3, i * TAU3 / 3, 1), c, 3 - i * 0.4, { a: 0.9 });
+    fl(I, circle(32, 32, 5), "#05020a");
+    if (o.ring) {
+      part(I, xf(crescentP(32, 32, 26, 0.2, 2.9, 3.4), { sy: 0.4, oy: 32 }), "#c9a0ff", { sd: 0.6, hd: 0.4, ol: I.ol * 0.7 });
+    }
+    if (o.hand) tf(I, { s: 0.5, x: 14, y: 12, r: 0.5 }, () => clawHand(I, "#2a1f33"));
+  };
+  SK.cracks = (I, o) => {
+    const c = o.c || "#dff4ff";
+    part(I, circle(32, 32, 20), c, { sd: 2.4, hd: 1.6, hi: "#ffffff" });
+    clip(I, circle(32, 32, 20), () => crackLines(I, 32, 32, 24, dk(c, 0.1)));
+    crackLines(I, 32, 32, 26, "#ffffff");
+  };
+  SK.room = (I, o) => {
+    const c = o.c || "#7fc8f8";
+    part(I, circle(32, 34, 23), fade(c, 0.35), { sd: 0, hd: 0, ol: I.ol * 0.8 });
+    ln(I, circle(32, 34, 18.5), "#ffffff", 1.6, { dash: [3, 2.4] });
+    part(I, xf(ellipse(32, 50, 23, 6), {}), fade(c, 0.5), { sd: 0, hd: 0, ol: I.ol * 0.6 });
+    if (o.cube) part(I, rrect(24, 26, 16, 16, 2), "#eaf6ff", { sd: 1.2, hd: 1 });
+    else for (let i = 0; i < 4; i++) {
+      const a = i * Math.PI / 2;
+      ln(I, `M${32 + Math.cos(a) * 14} ${34 + Math.sin(a) * 14} L${32 + Math.cos(a) * 22} ${34 + Math.sin(a) * 22}`, "#ffffff", 2);
+    }
+  };
+  SK.swap = (I, o) => {
+    const c = o.c || "#dff4ff";
+    const arrow = (flip) => {
+      const p = xf("M12 30 C12 18 22 12 34 14 L34 8 L46 18 L34 28 L34 22 C26 20 20 24 20 30 Z", flip ? { r: Math.PI } : {});
+      part(I, p, c, { sd: 1.2, hd: 1 });
+    };
+    arrow(false);
+    arrow(true);
+  };
+  SK.heartCube = (I, o) => {
+    const c = o.c || "#bfe4ff";
+    const top = [[32, 14], [50, 23], [32, 32], [14, 23]], L2 = [[14, 23], [32, 32], [32, 54], [14, 45]], R = [[32, 32], [50, 23], [50, 45], [32, 54]];
+    part(I, union(poly(top), poly(L2), poly(R)), fade(c, 0.6), { sd: 0, hd: 0 });
+    part(I, heartP(32, 36, 9), "#e0304a", { sd: 1.4, hd: 1, gloss: [28.5, 32, 1.6, 1, 0.8] });
+    fl(I, poly(top), fade("#ffffff", 0.35));
+    fl(I, poly(R), fade(c, 0.35));
+    ln(I, "M14 23 L32 32 L50 23 M32 32 V54", "#ffffff", 1.1, { a: 0.8 });
+  };
+  SK.glove = (I, o) => {
+    const c = o.c || "#f4f1ea";
+    speed(I, [[6, 48, 16, 40], [4, 38, 12, 32]], "#ffffff", 2);
+    ln(I, "M8 58 L22 44", "#ffffff", 2, { dash: [2.4, 2.4] });
+    tf(I, { r: -0.5, s: 0.72, x: 6, y: -4 }, () => {
+      fistShape(I, c);
+      part(I, rrect(21, 50, 22, 8, 3), "#d23b32", { sd: 1, hd: 0.8 });
+    });
+    if (o.multi) for (const [x, y, r] of [[48, 48, 5], [14, 18, 4]]) part(I, circle(x, y, r), c, { sd: 1, hd: 0.8 });
+  };
+  SK.bomb = (I, o) => {
+    part(I, circle(30, 38, 17), o.c || "#2f2a38", { sd: 2.6, hd: 2, hi: "#8a86a0", gloss: [23, 30, 4, 2.4, 0.5] });
+    part(I, rrect(35, 16, 10, 8, 2), "#8a8f96", { sd: 0.8, hd: 0.6 });
+    tube(I, "M40 17 C42 10 48 8 52 10", "#c9a870", 1.8, { flat: true });
+    burst(I, 53, 9, 6.5, 3, "#ffd23f", 7);
+  };
+  SK.explosion = (I, o) => {
+    burst(I, 32, 32, 25, 14, o.c || "#f7931e", 11);
+    burst(I, 32, 32, 15, 8, o.c2 || "#ffe066", 9);
+    if (o.smoke) for (const [x, y, r] of [[14, 50, 6], [50, 50, 5]]) part(I, circle(x, y, r), "#d6d0c8", { sd: 1, hd: 0.8 });
+  };
+  SK.flower = (I, o) => {
+    if (o.arms) {
+      for (let i = 0; i < 6; i++) {
+        const a = i / 6 * TAU3 - Math.PI / 2;
+        tf(I, { r: a + Math.PI / 2, ox: 32, oy: 32 }, () => {
+          tube(I, "M32 32 L32 14", SKIN, 5.4);
+          part(I, ellipse(32, 11, 4.2, 5), SKIN, { sd: 0.8, hd: 0.6 });
+        });
+      }
+      sakura(I, 32, 32, 12, o.c || "#f7a8c4", 0.3);
+      return;
+    }
+    if (o.cross) for (const r of [-0.7, 0.7]) tf(I, { r }, () => {
+      tube(I, "M32 58 L32 12", SKIN, 6);
+      part(I, ellipse(32, 9, 5, 5.6), SKIN, { sd: 0.8, hd: 0.6 });
+    });
+    sakura(I, 32, 32, o.cross ? 11 : 18, o.c || "#f7a8c4", 0.3);
+  };
+  SK.strings = (I, o) => {
+    const c = o.c || "#f4f1ea";
+    const cols = o.five ? ["#e8453c", "#f7931e", "#ffe14a", "#5ec46a", "#5aa9f0"] : [c, c, c, c, c];
+    if (o.hand) tf(I, { s: 0.5, x: 0, y: -16, r: Math.PI }, () => palmShape(I, SKIN));
+    [[14, 60], [22, 60], [32, 60], [42, 60], [50, 60]].forEach(([x, y], i) => {
+      const d = `M${22 + i * 5} 20 C${22 + i * 5} 34 ${x} 42 ${x} ${y}`;
+      ln(I, d, OUT, 3.2);
+      ln(I, d, cols[i], 1.6);
+    });
+    if (o.hot) glow(I, rrect(10, 18, 44, 44, 12), "#ff5a3a", 0.3);
+  };
+  SK.cage = (I, o) => {
+    const c = o.c || "#f4f1ea";
+    const d = [];
+    for (let i = -3; i <= 3; i++) d.push(`M${32 + i * 7} 58 C${32 + i * 7.5} 30 ${32 + i * 3} 14 32 8`);
+    const s = d.join(" ") + " M8 58 H56 M12 40 C22 36 42 36 52 40 M18 24 C26 21 38 21 46 24";
+    ln(I, s, OUT, 3.2);
+    ln(I, s, c, 1.6);
+  };
+  SK.mochi = (I, o) => {
+    const c = o.c || "#fbf6ea";
+    if (o.trident) {
+      tube(I, "M32 62 V20", "#e9dcc0", 4);
+      part(I, "M20 8 C20 18 24 22 32 22 C40 22 44 18 44 8 L40 14 C38 18 36 18 34.5 16 L32 4 L29.5 16 C28 18 26 18 24 14 Z", c, { sd: 1.4, hd: 1 });
+      return;
+    }
+    const b = "M10 40 C8 28 18 16 32 16 C46 16 56 28 54 40 C53 46 50 48 48 46 L47 54 C46 58 42 58 42 54 L41 48 C38 50 30 50 26 48 L24 56 C23 60 19 60 19 56 L18 47 C14 48 11 45 10 40 Z";
+    part(I, b, c, { sd: 2.6, shT: 0.18, hd: 1.6 });
+    if (o.fists) for (const [x, y] of [[20, 30], [42, 28]]) tf(I, { s: 0.36, x: x - 32, y: y - 32, r: -0.3 }, () => fistShape(I, c));
+  };
+  SK.ghost = (I, o) => {
+    const c = o.c || "#f6eef8";
+    const g = (x, y, s) => {
+      part(I, ghostP(x, y, s), c, { sd: 1.6 * s, shT: 0.2, hd: 1.2 * s });
+      fl(I, ellipse(x - 3.6 * s, y - 2 * s, 1.8 * s, 2.6 * s), OUT);
+      fl(I, ellipse(x + 3.6 * s, y - 2 * s, 1.8 * s, 2.6 * s), OUT);
+      part(I, ellipse(x, y + 4 * s, 2 * s, 3 * s), "#e0487a", { flat: true, ol: I.ol * 0.5 });
+    };
+    if (o.many) {
+      g(20, 38, 0.7);
+      g(44, 40, 0.62);
+      g(32, 22, 0.66);
+    } else g(32, 32, 1.35);
+  };
+  SK.bats = (I, o) => {
+    for (const [x, y, s] of [[32, 26, 1.1], [16, 42, 0.7], [48, 44, 0.75]]) bat(I, x, y, s, o.c || "#2f2a38");
+  };
+  SK.figure = (I, o) => {
+    const c = o.c || "#2a2530";
+    if (o.aura) glow(I, ellipse(32, 36, 22, 26), o.aura, 0.5);
+    const f = union(circle(32, 16, 7.5), "M18 58 C17 44 20 30 32 27 C44 30 47 44 46 58 Z");
+    part(I, f, c, { sd: 2, hd: 1.4, hi: lt(c, 0.4) });
+    if (o.eyes) {
+      fl(I, ellipse(29, 16, 1.4, 2), o.eyes);
+      fl(I, ellipse(35, 16, 1.4, 2), o.eyes);
+    }
+    if (o.steam) for (const [x, y, r] of [[14, 20, 5], [50, 18, 5.5], [48, 40, 4.5], [14, 42, 4.2]]) part(I, circle(x, y, r), "#fbe3ea", { sd: 0.8, hd: 0.6 });
+  };
+  SK.skull = (I, o) => {
+    if (o.aura) glow(I, circle(32, 32, 24), o.aura, 0.45);
+    skull(I, 32, 30, 14, o.c || "#f4f1ea", o.bones !== false);
+  };
+  SK.snake = (I, o) => {
+    const c = o.c || "#9c5ad0";
+    part(I, taper(bez([6, 60], [18, 40], [8, 28], [26, 22], 16), 13, 9), c, { sd: 2, hd: 1.4 });
+    part(I, "M20 14 C28 8 42 8 52 16 C56 19 56 24 52 26 L40 28 C36 32 28 34 22 30 C16 26 15 18 20 14 Z", c, { sd: 2, hd: 1.4 });
+    part(I, "M40 26 L52 26 L48 32 L38 31 Z", "#f4f1ea", { sd: 0.6, hd: 0.4 });
+    for (const x of [42, 48]) fl(I, poly([[x, 26], [x + 2, 26], [x + 1, 30]]), "#ffffff");
+    fl(I, ellipse(34, 17, 2.4, 1.7, 0.2), "#ffe066");
+    fl(I, ellipse(34.3, 17, 0.8, 1.4, 0.2), OUT);
+  };
+  SK.hex = (I, o) => {
+    const c = o.c || "#8fd8ff";
+    const h2 = (x, y, r) => {
+      const p = [];
+      for (let i = 0; i < 6; i++) {
+        const a = i / 6 * TAU3;
+        p.push([x + Math.cos(a) * r, y + Math.sin(a) * r]);
+      }
+      return poly(p);
+    };
+    glow(I, circle(32, 32, 24), c, 0.35);
+    part(I, h2(32, 32, 22), fade(c, 0.55), { sd: 0, hd: 0 });
+    for (const [x, y] of [[32, 32], [32, 18.5], [32, 45.5], [20.3, 25.2], [43.7, 25.2], [20.3, 38.8], [43.7, 38.8]]) ln(I, h2(x, y, 7.4), "#ffffff", 1.3, { a: 0.9 });
+    gloss(I, 24, 22, 5, 2, 0.7, -0.6);
+    if (o.burst) burst(I, 50, 14, 10, 5, o.burst);
+  };
+  SK.eye = (I, o) => {
+    if (o.ripples !== false) for (let i = 0; i < 3; i++) ln(I, ellipse(32, 32, 14 + i * 5.5, 8 + i * 5.5), o.ripple || "#dff8ff", 2 - i * 0.4, { a: 0.9 - i * 0.22 });
+    eyeShape(I, 32, 32, 13, o.c || "#f7f4ec", o.iris || "#e0303a");
+    if (o.dashed) ln(I, "M8 32 C16 20 48 20 56 32 C48 44 16 44 8 32 Z", "#ffffff", 1.4, { dash: [2.4, 2.4] });
+  };
+  SK.sparkles = (I, o) => {
+    const c = o.c || "#ffe9f2";
+    part(I, "M8 44 C20 38 30 40 40 34 C48 29 52 22 56 16 L58 20 C54 28 48 36 40 40 C30 46 20 44 8 50 Z", c, { sd: 1, hd: 0.8 });
+    for (const [x, y, r] of [[24, 24, 7], [44, 44, 5.5], [14, 30, 4]]) part(I, star(x, y, 4, r, r * 0.3), "#ffffff", { flat: true, ol: I.ol * 0.7 });
+  };
+  SK.mace = (I, o) => {
+    tube(I, "M14 56 L34 32", "#8a5a30", 4.4);
+    part(I, star(40, 24, 8, 17, 11), o.c || "#9aa6af", { sd: 1.6, hd: 1.2 });
+    part(I, circle(40, 24, 11), o.c || "#9aa6af", { sd: 2, hd: 1.4, gloss: [36, 20, 2.6, 1.5, 0.7] });
+  };
+  SK.candle = (I, o) => {
+    const c = o.c || "#fbf3dc";
+    if (o.arrows) {
+      for (const [x, y] of [[18, 38], [30, 28], [42, 18]]) tf(I, { r: -0.78, ox: x, oy: y }, () => {
+        part(I, rrect(x - 14, y - 2, 22, 4, 1.5), c, { sd: 0.8, hd: 0.6 });
+        part(I, poly([[x + 8, y - 5], [x + 16, y], [x + 8, y + 5]]), c, { sd: 0.6, hd: 0.4 });
+      });
+      return;
+    }
+    part(I, "M22 24 H42 V56 C42 58 40 60 38 60 H26 C24 60 22 58 22 56 Z", c, { sd: 2.2, shT: 0.2, hd: 1.4 });
+    part(I, "M21 24 C21 20 43 20 43 24 L43 30 C41 34 39 30 38 33 C37 38 34 38 33 33 C32 30 29 30 28 34 C27 37 24 36 24 32 C23 29 21 30 21 27 Z", lt(c, 0.2), { sd: 1, hd: 0.8, shT: 0.15 });
+    tube(I, "M32 22 V16", OUT, 1.4, { flat: true });
+    flame(I, 32, 17, 0.26);
+    if (o.lock) {
+      const r = new Path2D();
+      r.addPath(ellipse(32, 44, 18, 8));
+      r.addPath(ellipse(32, 44, 12, 4.5));
+      part(I, r, "#e9dcc0", { rule: "evenodd", sd: 1, hd: 0.8 });
+    }
+  };
+  SK.bladeFlower = (I, o) => {
+    const c = o.c || "#dfe7ee";
+    for (let i = 0; i < 8; i++) part(I, xf("M32 32 L28 12 C30 6 34 6 36 12 Z", { r: i / 8 * TAU3 + 0.2 }), c, { sd: 0.8, hd: 0.6, hi: "#ffffff" });
+    part(I, circle(32, 32, 6), "#8a949b", { sd: 1, hd: 0.8 });
+  };
+  SK.shield = (I, o) => {
+    const c = o.c || "#aab5bd";
+    const s = "M32 8 C40 12 48 13 54 12 C55 30 50 48 32 58 C14 48 9 30 10 12 C16 13 24 12 32 8 Z";
+    part(I, s, c, { sd: 2.6, hd: 1.8 });
+    clip(I, s, () => {
+      fl(I, "M32 0 V64 H64 V0 Z", dk(c, 0.08), { a: 0.6 });
+    });
+    if (!I.small) for (const [x, y] of [[16, 16], [48, 16], [32, 12], [20, 40], [44, 40]]) part(I, circle(x, y, 1.6), lt(c, 0.4), { flat: true, ol: I.ol * 0.5 });
+    if (o.emblem) o.emblem(I);
+  };
+  SK.paper = (I, o) => {
+    part(I, "M18 10 C26 14 34 8 44 12 C42 22 48 30 44 40 C40 50 46 54 42 58 C32 54 26 60 16 56 C20 46 14 38 18 28 C22 20 14 16 18 10 Z", o.c || "#fbf8f0", { sd: 2, shT: 0.15, hd: 1.2 });
+    speed(I, [[48, 20, 58, 24], [50, 34, 60, 34], [48, 48, 58, 44]], "#ffffff", 1.8);
+  };
+  SK.paw = (I, o) => {
+    const c = o.c || "#f4b8c8";
+    if (o.bubble) {
+      glow(I, circle(32, 34, 26), "#dff4ff", 0.45);
+      part(I, circle(32, 34, 23), fade("#dff4ff", 0.45), { sd: 0, hd: 0, ol: I.ol * 0.8 });
+      gloss(I, 22, 22, 5, 2.4, 0.8, -0.6);
+    }
+    part(I, "M32 30 C42 30 48 38 47 46 C46 52 40 54 32 53 C24 54 18 52 17 46 C16 38 22 30 32 30 Z", c, { sd: 1.8, hd: 1.2 });
+    for (const [x, y, r] of [[16, 28, 5], [24, 19, 5.4], [40, 19, 5.4], [48, 28, 5]]) part(I, ellipse(x, y, r * 0.85, r), c, { sd: 1, hd: 0.8 });
+    if (o.push) rings(I, 30, 36, 26, 2, "#ffffff", -0.9, 0.9, 2.4);
+    if (o.arrow) {
+      part(I, "M44 60 C54 56 58 48 58 38 L62 40 L56 30 L50 38 L54 38 C54 46 50 52 42 56 Z", "#ffffff", { sd: 0.6, hd: 0.4, ol: I.ol * 0.8 });
+    }
+  };
+  SK.masks = (I, o) => {
+    const mk3 = (x, y, r, col, sad) => {
+      part(I, xf("M16 14 C22 10 42 10 48 14 C52 26 50 42 40 52 C36 56 28 56 24 52 C14 42 12 26 16 14 Z", { ox: 32, oy: 32, x: x - 32, y: y - 32, r, s: 0.62 }), col, { sd: 1.4, hd: 1 });
+      tf(I, { ox: x, oy: y, r }, () => {
+        fl(I, ellipse(x - 5, y - 4, 2.4, 1.6), OUT);
+        fl(I, ellipse(x + 5, y - 4, 2.4, 1.6), OUT);
+        ln(I, sad ? `M${x - 5} ${y + 7} C${x - 2} ${y + 4} ${x + 2} ${y + 4} ${x + 5} ${y + 7}` : `M${x - 5} ${y + 4} C${x - 2} ${y + 8} ${x + 2} ${y + 8} ${x + 5} ${y + 4}`, OUT, 1.4);
+      });
+    };
+    mk3(40, 28, 0.3, "#f4f1ea", true);
+    mk3(24, 34, -0.3, o.c || "#f7c96a", false);
+  };
+  SK.gravity = (I, o) => {
+    const c = o.c || "#d8c8ff";
+    for (const x of [18, 32, 46]) part(I, `M${x - 4} 8 H${x + 4} V${x === 32 ? 30 : 24} H${x + 9} L${x} ${x === 32 ? 44 : 38} L${x - 9} ${x === 32 ? 30 : 24} H${x - 4} Z`, c, { sd: 1, hd: 0.8 });
+    part(I, "M6 50 C18 46 46 46 58 50 L58 56 H6 Z", "#8a7a6a", { sd: 1, hd: 0.8 });
+    ln(I, "M20 48 L24 53 L22 56 M40 48 L37 52 L40 56 M32 47 L33 52", OUT, 1.2);
+  };
+  SK.antler = (I, o) => {
+    const c = o.c || "#b8864a";
+    for (const f of [1, -1]) {
+      const t = (x) => 32 + (x - 32) * f;
+      tube(I, `M${t(28)} 40 C${t(24)} 30 ${t(18)} 22 ${t(12)} 10`, c, 4.2);
+      tube(I, `M${t(23)} 28 C${t(28)} 22 ${t(30)} 16 ${t(29)} 10`, c, 3.4);
+      tube(I, `M${t(17)} 19 C${t(11)} 18 ${t(7)} 20 ${t(5)} 24`, c, 3);
+    }
+    if (o.hat) {
+      part(I, "M18 46 C18 36 24 30 32 30 C40 30 46 36 46 46 Z", "#e0485a", { sd: 1.6, hd: 1.2 });
+      part(I, ellipse(32, 46, 18, 5), "#e0485a", { sd: 1, hd: 0.8 });
+      tube(I, "M26 38 L38 38 M32 32 V44", "#ffffff", 2.4, { flat: true });
+    }
+    if (o.muscle) tf(I, { s: 0.55, y: 14 }, () => fistShape(I, "#b8864a"));
+  };
+  SK.leopard = (I, o) => {
+    const c = o.c || "#e8a33c";
+    part(I, union(ellipse(18, 18, 6, 7, -0.4), ellipse(46, 18, 6, 7, 0.4)), c, { sd: 1, hd: 0.8 });
+    part(I, "M32 16 C44 16 52 24 52 34 C52 46 42 54 32 54 C22 54 12 46 12 34 C12 24 20 16 32 16 Z", c, { sd: 2.4, hd: 1.6 });
+    if (!I.small) for (const [x, y] of [[22, 24], [42, 24], [16, 36], [48, 36], [32, 20], [26, 46], [38, 46]]) fl(I, circle(x, y, 1.8), "#5a3a1a");
+    part(I, "M24 42 C26 38 38 38 40 42 C40 48 24 48 24 42 Z", "#fbeed6", { sd: 0.6, hd: 0.4 });
+    fl(I, poly([[29, 40], [35, 40], [32, 43]]), "#3a2418");
+    for (const x of [24, 40]) {
+      fl(I, ellipse(x, 32, 3.2, 2.4, x < 32 ? 0.3 : -0.3), "#ffe066");
+      fl(I, ellipse(x, 32, 0.9, 2.1), OUT);
+    }
+  };
+  SK.bird = (I, o) => {
+    const cols = o.cols || ["#3ab8e0", "#7fe0f0", "#e8fbff"];
+    if (o.fire) glow(I, circle(32, 34, 24), cols[1], 0.4);
+    part(I, birdP(32, 36, 1.05), cols[0], { sd: 2, hd: 1.4, hi: cols[2] });
+    if (!I.small) clip(I, birdP(32, 36, 1.05), () => {
+      for (const x of [12, 20, 44, 52]) ln(I, `M${x} 30 L${x + (x < 32 ? 4 : -4)} 40`, cols[1], 1.4, { a: 0.8 });
+    });
+    part(I, "M28 26 C28 20 36 20 36 26 C36 32 28 32 28 26 Z", cols[0], { sd: 0.8, hd: 0.6, hi: cols[2] });
+    fl(I, poly([[35, 25], [40, 26.5], [35, 28]]), "#ffd23f");
+    if (o.flameTail) for (const x of [26, 32, 38]) flame(I, x, 60, 0.18, [cols[0], cols[1], cols[2]]);
+  };
+  SK.dragon = (I, o) => {
+    const c = o.c || "#3a7fd6";
+    if (o.breath) {
+      part(I, "M4 36 C12 30 16 24 20 20 L24 38 C18 44 10 44 4 36 Z", "#f7931e", { sd: 1, hd: 0.8 });
+      fl(I, "M8 36 C14 32 17 28 20 25 L22 36 C17 40 12 40 8 36 Z", "#ffe066");
+    }
+    tf(I, { s: 0.9, x: o.breath ? 6 : 2, y: 2 }, () => dragonHead(I, c));
+    if (o.bolt) bolt(I, { s: 0.4, ox: 32, oy: 32, x: -14, y: -14 });
+  };
+  SK.cog = (I, o) => {
+    const c = o.c || "#e8766a";
+    const g = new Path2D();
+    g.addPath(star(30, 36, 9, 19, 14, 0));
+    g.addPath(circle(30, 36, 6));
+    part(I, g, c, { rule: "evenodd", sd: 2, hd: 1.4 });
+    for (const [x, y, r] of [[46, 16, 6], [52, 24, 4.5], [40, 10, 4], [54, 12, 3.4]]) part(I, circle(x, y, r), "#f8e4ea", { sd: 0.8, hd: 0.6 });
+  };
+  SK.spring = (I, o) => {
+    const d = "M20 58 C44 58 44 52 20 52 C-2 52 44 46 20 46 C-2 46 44 40 20 40 C-2 40 44 34 20 34".replace(/-2/g, "8");
+    ln(I, "M18 58 C46 57 46 52 18 51 C8 50 46 46 18 45 C8 44 46 40 18 39", OUT, 4.4);
+    ln(I, "M18 58 C46 57 46 52 18 51 C8 50 46 46 18 45 C8 44 46 40 18 39", "#c9d1d8", 2.4);
+    tf(I, { r: -0.2, s: 0.66, x: 4, y: -12 }, () => fistShape(I, o.c || "#3a1f24"));
+  };
+  SK.crosshair = (I, o) => {
+    const c = o.c || "#ff5a4a";
+    const r = new Path2D();
+    r.addPath(circle(32, 32, 20));
+    r.addPath(circle(32, 32, 16));
+    part(I, r, c, { rule: "evenodd", sd: 0.6, hd: 0.4 });
+    for (const [x1, y1, x2, y2] of [[32, 6, 32, 22], [32, 42, 32, 58], [6, 32, 22, 32], [42, 32, 58, 32]]) tube(I, `M${x1} ${y1} L${x2} ${y2}`, c, 3, { flat: true });
+    part(I, circle(32, 32, 3.4), c, { sd: 0.6, hd: 0.4 });
+  };
+  SK.pellet = (I, o) => {
+    const c = o.c || "#c9d1d8";
+    if (o.many) {
+      for (const [x, y, s] of [[20, 44, 0.6], [42, 20, 0.7], [44, 44, 0.55], [22, 20, 0.5]]) {
+        part(I, star(x, y, 5, 8 * s, 3.6 * s), o.cols ? o.cols[(x + y) % o.cols.length] : c, { sd: 0.6, hd: 0.4 });
+      }
+      sparkle(I, 32, 32, 6, "#fff6b0");
+      return;
+    }
+    part(I, taper([[6, 54], [14, 46], [22, 38], [30, 30]], 1, 12), fade("#ffffff", 0.85), { flat: true, ol: 0 });
+    if (o.star) part(I, star(38, 24, 5, 13, 6), c, { sd: 1.2, hd: 1 });
+    else part(I, circle(38, 24, 10), c, { sd: 1.8, hd: 1.4, gloss: [34.5, 20.5, 2.4, 1.4, 0.8] });
+  };
+  SK.chili = (I) => {
+    part(I, "M20 16 C30 18 44 26 50 40 C54 50 50 58 44 54 C40 44 30 32 16 24 C12 22 14 15 20 16 Z", "#d9253a", { sd: 2, hd: 1.4, gloss: [26, 21, 3, 1.4, 0.6, 0.5] });
+    part(I, "M20 16 C16 12 14 10 12 6 L16 5 C18 9 21 12 24 15 Z", "#4f9a3a", { sd: 0.6, hd: 0.4 });
+    part(I, "M16 18 C14 14 18 12 22 14 C22 17 20 20 16 18 Z", "#4f9a3a", { sd: 0.6, hd: 0.4 });
+    for (const [x, y] of [[44, 18], [52, 26]]) flame(I, x, y + 6, 0.18);
+  };
+  SK.sprout = (I) => {
+    tube(I, "M32 58 C32 46 30 36 32 26", "#4f9a3a", 3.4);
+    part(I, "M32 34 C24 26 12 26 6 32 C12 40 24 40 32 34 Z", "#5aa33f", { sd: 1.4, hd: 1 });
+    part(I, "M32 28 C38 18 50 16 58 20 C54 30 42 34 32 28 Z", "#6fb24a", { sd: 1.4, hd: 1 });
+    part(I, "M32 26 C28 18 30 10 36 6 C40 12 38 22 32 26 Z", "#4f9a3a", { sd: 1.2, hd: 0.8 });
+    part(I, ellipse(32, 58, 12, 3.4), "#8a5a30", { sd: 0.6, hd: 0.4 });
+  };
+  SK.swan = (I, o) => {
+    const c = o.c || "#fbf8f0";
+    part(I, "M14 52 C10 40 18 32 28 34 C24 28 22 18 28 12 C34 6 44 10 44 18 L48 20 L44 22 C42 26 36 26 34 22 C32 18 34 16 36 18 C38 14 34 12 32 14 C28 18 30 28 36 34 C44 40 46 50 40 56 C32 60 20 60 14 52 Z", c, { sd: 2, shT: 0.18, hd: 1.4 });
+    fl(I, poly([[44, 18], [50, 20], [44, 22]]), "#f28c2a");
+    fl(I, circle(39.5, 16.5, 1.3), OUT);
+    if (o.spin) for (const r of [26, 20]) ln(I, arcPath(32, 36, r, 0.3, 2.6), "#ffffff", 2, { a: 0.7 });
+    if (o.dash) speed(I, [[50, 34, 60, 34], [48, 44, 58, 44], [50, 52, 60, 54]], "#ffffff", 2);
+  };
+  SK.wink = (I, o) => {
+    part(I, circle(26, 32, 17), o.c || "#f7d7a8", { sd: 2, hd: 1.4 });
+    eyeShape(I, 21, 28, 5.4, "#ffffff", "#3a6ab8");
+    ln(I, "M27 29 C29 26 33 26 35 29", OUT, 1.8);
+    ln(I, "M20 38 C23 41 28 41 31 38", OUT, 1.6);
+    part(I, heartP(50, 22, 7), "#e0487a", { sd: 1, hd: 0.8 });
+    speed(I, [[42, 30, 36, 34], [44, 38, 40, 44]], "#ffffff", 1.8);
+  };
+  SK.crown = (I, o) => {
+    if (o.bolts) for (const [x, y, r, s] of [[-15, -8, -0.45, 0.62], [16, -6, 0.5, 0.58]]) {
+      part(I, xf(BOLT, { s, ox: 32, oy: 32, x, y, r }), "#1a0a12", { sd: 0, hd: 0, line: "#ff4a5a", ol: I.ol * 0.9 });
+      ln(I, xf(BOLT, { s, ox: 32, oy: 32, x, y, r }), "#ff4a5a", 0.8, { a: 0.9 });
+    }
+    const c = "M12 44 L9 20 L21 30 L27 13 L32 26 L37 13 L43 30 L55 20 L52 44 Z";
+    part(I, c, o.c || "#f0bf45", { sd: 2, hd: 1.4 });
+    part(I, rrect(11, 41, 42, 8, 2), dk(o.c || "#f0bf45", 0.08), { sd: 1.2, hd: 0.8 });
+    for (const [x, cc] of [[22, "#d7263d"], [32, "#2f78d6"], [42, "#d7263d"]]) gem(I, x, 45, 3, cc, { ol: I.ol * 0.6 });
+  };
+  SK.heal = (I, o) => {
+    const c = o.c || "#5ed17a";
+    glow(I, circle(32, 32, 22), c, 0.4);
+    part(I, "M26 10 H38 V26 H54 V38 H38 V54 H26 V38 H10 V26 H26 Z", c, { sd: 1.8, hd: 1.4, hi: "#ffffff" });
+    if (o.flame) for (const x of [14, 50]) flame(I, x, 58, 0.3, o.flame);
+  };
+  SK.drill = (I, o) => {
+    const c = o.c || "#c9d1d8";
+    const d = "M6 32 L50 18 C56 22 58 28 58 32 C58 36 56 42 50 46 Z";
+    part(I, d, c, { sd: 2, hd: 1.4 });
+    clip(I, d, () => {
+      for (let x = 14; x < 60; x += 7) ln(I, `M${x} 16 C${x + 5} 26 ${x - 3} 38 ${x + 2} 48`, dk(c, 0.35), 1.6);
+    });
+    speed(I, [[60, 20, 64, 18], [60, 44, 64, 46]], "#ffffff", 2);
+  };
+  SK.axe = (I, o) => tf(I, { s: 0.86, r: 0.1 }, () => o.big ? D.battleAxe(I, {}) : D.axe(I, {}));
+  SK.staff = (I, o) => {
+    if (o.cloud) part(I, cloudP(40, 20, 0.62), "#eef3f7", { sd: 1.2, hd: 1 });
+    tf(I, { s: 0.86 }, () => D.climaTact(I, { orb: o.orb }));
+  };
+  SK.oni = (I, o) => {
+    const c = o.c || "#c8372d";
+    part(I, union("M16 22 L12 6 L24 16 Z", "M48 22 L52 6 L40 16 Z"), "#f3e6c4", { sd: 0.8, hd: 0.6 });
+    part(I, "M32 12 C46 12 52 24 50 36 C48 48 40 56 32 56 C24 56 16 48 14 36 C12 24 18 12 32 12 Z", c, { sd: 2.4, hd: 1.6 });
+    for (const f of [1, -1]) fl(I, xf("M20 28 L29 32 L20 34 Z", { sx: f, ox: 32 }), "#ffe066");
+    part(I, "M22 42 C26 48 38 48 42 42 L40 46 C36 50 28 50 24 46 Z", "#f7f4ec", { flat: true, ol: I.ol * 0.7 });
+    for (const f of [1, -1]) fl(I, xf(poly([[24, 43], [27, 43], [25.5, 49]]), { sx: f, ox: 32 }), "#f7f4ec");
+    if (o.swords) for (const r of [-0.9, 0.9]) tf(I, { r, s: 0.66 }, () => D.katana(I, {}));
+  };
+  SK.net = (I, o) => {
+    const c = o.c || "#e9dcc0";
+    const d = [];
+    for (let i = -2; i <= 2; i++) {
+      d.push(`M${14 + (i + 2) * 9} 10 C${16 + (i + 2) * 8} 30 ${12 + (i + 2) * 10} 44 ${10 + (i + 2) * 11} 58`);
+      d.push(`M8 ${16 + (i + 2) * 10} C24 ${14 + (i + 2) * 10} 40 ${18 + (i + 2) * 10} 56 ${14 + (i + 2) * 10}`);
+    }
+    ln(I, d.join(" "), OUT, 3);
+    ln(I, d.join(" "), c, 1.4);
+  };
+  SK.knives = (I, o) => {
+    for (const [x, y, r] of [[-12, -8, -0.1], [2, 2, 0], [-6, 14, 0.1]]) tf(I, { s: 0.55, x, y, r }, () => D.dagger(I, {}));
+    speed(I, [[4, 20, 14, 20], [2, 36, 12, 36], [6, 50, 14, 50]], "#ffffff", 2);
+  };
+  SK.bullets = (I, o) => {
+    for (const [x, y] of [[40, 18], [50, 33], [38, 47]]) {
+      part(I, taper([[x - 34, y], [x - 12, y]], 0.6, 7), fade("#ffffff", 0.8), { flat: true, ol: 0 });
+      part(I, `M${x - 12} ${y - 4.5} H${x + 2} C${x + 8} ${y - 4.5} ${x + 11} ${y - 1.5} ${x + 12} ${y} C${x + 11} ${y + 1.5} ${x + 8} ${y + 4.5} ${x + 2} ${y + 4.5} H${x - 12} Z`, "#d6a23e", { sd: 1, hd: 0.8 });
+      fl(I, rrect(x - 12, y - 4.5, 4, 9, 1), dk("#d6a23e", 0.3));
+    }
+  };
+  SK.cannonball = (I, o) => {
+    part(I, taper(bez([4, 56], [12, 50], [20, 44], [28, 38], 10), 2, 18), fade("#ffffff", 0.8), { flat: true, ol: 0 });
+    part(I, circle(38, 28, 15), o.c || "#3a3540", { sd: 2.6, hd: 2, hi: "#8a86a0", gloss: [32, 22, 3.4, 2, 0.6] });
+  };
+  SK.chakram = (I, o) => {
+    const r = new Path2D();
+    r.addPath(star(32, 32, 8, 22, 17, 0.2));
+    r.addPath(circle(32, 32, 11));
+    part(I, r, o.c || "#dfe7ee", { rule: "evenodd", sd: 1.6, hd: 1.2 });
+    for (const rr of [26, 20]) ln(I, arcPath(32, 32, rr, 2.4, 3.6), "#ffffff", 2, { a: 0.7 });
+  };
+  SK.pendulum = (I) => {
+    tube(I, "M32 4 V36", "#e9dcc0", 1.6, { flat: true });
+    part(I, circle(32, 44, 13), "#e0b24a", { sd: 1.6, hd: 1.2 });
+    ln(I, spiral(32, 44, 10, 2, 0), "#6b3f8a", 1.6);
+    for (const r of [22, 17]) ln(I, arcPath(32, 4, r * 2, 1.2, 1.94), "#ffffff", 1.8, { a: 0.6 });
+  };
+  SK.summon = (I, o) => {
+    for (const [x, y, s] of [[20, 40, 0.5], [44, 40, 0.5], [32, 30, 0.6]]) tf(I, { s, x: x - 32, y: y - 32 + 4 }, () => SK.figure(I, { c: o.c || "#5a5f6a" }));
+  };
+  SK.shadowFigure = (I, o) => SK.figure(I, { c: "#1f1a26", aura: "#8a6ad6", eyes: "#ff5a5a" });
+  SK.steal = (I, o) => {
+    SK.figure(I, { c: "#1f1a26", eyes: "#ff5a5a" });
+    tf(I, { s: 0.5, x: 14, y: -14, r: 0.6 }, () => {
+      D.dagger(I, {});
+    });
+  };
+  SK.dryCracks = (I, o) => {
+    const c = o.c || "#c9a060";
+    part(I, "M4 34 C18 30 46 30 60 34 L60 58 H4 Z", c, { sd: 1.6, hd: 1.2 });
+    clip(I, "M4 34 C18 30 46 30 60 34 L60 58 H4 Z", () => ln(I, "M10 36 L16 44 L12 52 M16 44 L26 46 L30 54 M26 46 L34 38 L44 42 L48 52 M44 42 L54 38", dk(c, 0.5), 1.8));
+    for (const [x, y, s] of [[20, 20, 0.6], [44, 16, 0.7]]) part(I, xf(crescentP(x, y, 10, -2.6, -0.5, 3), { s: 1 }), lt(c, 0.3), { sd: 0.6, hd: 0.4, ol: I.ol * 0.8 });
+  };
+  SK.spikes = (I, o) => {
+    const c = o.c || "#d9b26f";
+    for (const [x, h2, w] of [[16, 30, 7], [30, 42, 9], [46, 34, 8]]) part(I, poly([[x - w, 58], [x, 58 - h2], [x + w, 58]]), c, { sd: 1.4, hd: 1 });
+    part(I, "M4 56 C16 52 48 52 60 56 V60 H4 Z", dk(c, 0.1), { sd: 0.6, hd: 0.4 });
+  };
+  SK.smoke = (I, o) => {
+    const c = o.c || "#eef2f4";
+    part(I, union(circle(20, 38, 11), circle(34, 30, 13), circle(46, 40, 10), circle(30, 44, 11), circle(14, 24, 6)), c, { sd: 2.2, hd: 1.4 });
+    if (o.fist) tf(I, { r: -0.3, s: 0.56, x: 10, y: -8 }, () => fistShape(I, c));
+    if (o.snake) SK.snake(I, { c });
+  };
+  SK.rocket = (I, o) => {
+    const c = o.c || SKIN;
+    tube(I, "M4 60 C14 40 26 30 44 22", c, 6);
+    tube(I, "M60 60 C50 40 38 30 44 22", c, 6);
+    tf(I, { s: 0.36, x: 12, y: -14, r: -0.3 }, () => palmShape(I, c));
+    speed(I, [[20, 56, 26, 46], [30, 58, 34, 50], [40, 58, 42, 50]], "#ffffff", 2);
+  };
+  SK.impact = (I, o) => {
+    burst(I, 32, 32, 25, 13, o.c || "#ffd23f", 12);
+    if (o.skull) skull(I, 32, 30, 9, "#c9d1d8", false);
+  };
+  var STYLE_SK = {
+    brawler: ["#a8582e", ["fist"]],
+    ittoryu: ["#3a6a9a", ["swords", { n: 1 }]],
+    nitoryu: ["#2e5a86", ["swords", { n: 2 }]],
+    santoryu: ["#2f7a4a", ["swords", { n: 3 }]],
+    black_leg: ["#5a6f96", ["kick"]],
+    fishman_karate: ["#1f78a0", ["fist", { fx: "water" }]],
+    rokushiki: ["#4a4f5c", ["finger", { burst: "#ffd23f" }]],
+    sniper: ["#7a6a2a", ["pellet", { star: true, c: "#c9d1d8" }]],
+    okama_kenpo: ["#c04a8a", ["swan"]],
+    electro: ["#3a5a9a", ["fist", { fx: "bolt" }]],
+    hasshoken: ["#8a4a2a", ["palm", { rings: true }]],
+    weather_science: ["#2f62a8", ["staff", { cloud: true }]],
+    elbaf: ["#7a5230", ["axe", { big: true }]],
+    ryusoken: ["#2a7a6a", ["claw", { hand: "#8fd0b0" }]]
+  };
+  var FRUIT_BADGE = {
+    gomu: "#b8433f",
+    gura: "#3d7f93",
+    ope: "#2f6fa0",
+    bara: "#c0563a",
+    bomu: "#c0762a",
+    hana: "#b9507e",
+    ito: "#b04a78",
+    mochi: "#9a7a4a",
+    horo: "#7a4f96",
+    kage: "#5a6f86",
+    doku: "#6d2a86",
+    noro: "#2f8a92",
+    bari: "#3f7fae",
+    suke: "#6d7f8c",
+    sube: "#b0607a",
+    doru: "#a08050",
+    supa: "#5f6f7c",
+    nikyu: "#6f6a86",
+    mane: "#b03f6e",
+    zushi: "#5b4a9a",
+    hito: "#b86a82",
+    neko_leopard: "#b8782a",
+    tori_phoenix: "#1f7a9a",
+    uo_seiryu: "#2a5aa0",
+    mera: "#c24a26",
+    hie: "#3a86b8",
+    goro: "#3c3f86",
+    suna: "#a8843e",
+    moku: "#6f7f8a",
+    pika: "#b8901e",
+    magu: "#8a2a18",
+    yami: "#4a2a86"
+  };
+  var HAKI_BADGE = { armament: "#5a3f86", observation: "#1f7a86", conqueror: "#8a1c2a" };
+  var ELEM_BADGE = { fire: "#c24a26", ice: "#3a86b8", snow: "#3a86b8", lightning: "#3c3f86", water: "#1f78a0", poison: "#6d2a86", gas: "#6d2a86", sand: "#a8843e", smoke: "#6f7f8a", light: "#b8901e", magma: "#8a2a18", dark: "#4a2a86", explosion: "#c0762a", quake: "#3d7f93", haki: "#8a1c2a" };
+  var ANIM_BADGE = { slash: "#4a5a6a", punch: "#8a4a2a", kick: "#5a6f96", shoot: "#6a5a3a", thrust: "#5a5a66", heavy: "#7a3a2a", grab: "#6a4a5a", cast: "#4a4a7a", block: "#4a6a7a" };
+  var FIRE = ["#e8452c", "#f7931e", "#ffe066"];
+  var BLUEFIRE = ["#1f8fc0", "#4dd0e1", "#e0fbff"];
+  var BLACKFIST = "#2a2530";
+  var SKILL_MAP = {
+    // Gomu
+    gomu_pistol: ["stretch", { burst: "#ffd23f" }],
+    gomu_gatling: ["multi"],
+    gomu_rocket: ["rocket"],
+    gomu_bazooka: ["palms", { burst: "#ffd23f" }],
+    gomu_gear2: ["cog"],
+    gomu_gear3: ["fist", { s: 1.08, x: 0, y: 2, burst: "#ffd23f", lines: false }],
+    gomu_gear4: ["spring"],
+    gomu_gear5: ["sun", { c: "#fbf8f0", ray: "#ffffff", face: true }],
+    // Gura
+    gura_punch: ["fist", { fx: "cracks" }],
+    gura_kaishin: ["cracks"],
+    gura_wave: ["wave", { c: "#9fd9ef", fx: "cracks" }],
+    gura_tsunami: ["wave", { c: "#4fb3e8", fx: "cracks" }],
+    // Ope
+    ope_room: ["room"],
+    ope_shambles: ["swap"],
+    ope_amputate: ["swords", { n: 1, arcCol: "#bfe4ff" }],
+    ope_mes: ["heartCube"],
+    ope_counter: ["palm", { burst: "#ffe14a", rings: true, ring: "#ffe14a" }],
+    ope_gamma: ["beam", { c: "#b8f36b" }],
+    // Bara / Bomu / Hana / Ito
+    bara_cannon: ["glove"],
+    bara_festival: ["glove", { multi: true }],
+    bara_escape: ["glove", { multi: true }],
+    bomu_kick: ["kick", { burst: "#ffd23f" }],
+    bomu_nose: ["bomb"],
+    bomu_breeze: ["explosion", { smoke: true }],
+    hana_clutch: ["flower", { cross: true }],
+    hana_mil: ["flower", { arms: true }],
+    hana_gigante: ["palm", { s: 0.98 }],
+    ito_overheat: ["strings", { c: "#ff8a6a", hot: true }],
+    ito_parasite: ["strings", { hand: true }],
+    ito_fivecolor: ["strings", { five: true }],
+    ito_birdcage: ["cage"],
+    // Mochi / Horo / Kage / Doku / Noro / Bari
+    mochi_tsuki: ["fist", { c: "#f7f0e0", fx: "mochi" }],
+    mochi_zangiri: ["mochi", { trident: true }],
+    mochi_chikara: ["fist", { c: "#f7f0e0", s: 1.05, x: 0, y: 3, burst: "#fff3c0", lines: false, fx: "mochi" }],
+    horo_negative: ["ghost"],
+    horo_mini: ["ghost", { many: true }],
+    kage_brickbat: ["bats"],
+    kage_steal: ["steal"],
+    kage_doppelman: ["shadowFigure"],
+    doku_fist: ["fist", { c: "#9c5ad0", fx: "poison" }],
+    doku_hydra: ["snake"],
+    doku_venom: ["oni", { c: "#8e3ab8" }],
+    noro_beam: ["beam", { c: "#9ff0ff" }],
+    noro_mirror: ["mirror", { c: "#9ff0ff" }],
+    bari_barrier: ["hex"],
+    bari_crash: ["hex", { burst: "#ffd23f" }],
+    // Suke / Sube / Doru / Supa / Nikyu / Mane / Zushi
+    suke_vanish: ["eye", { dashed: true, ripples: false, iris: "#6d7f8c" }],
+    sube_slide: ["sparkles"],
+    sube_mace: ["mace"],
+    doru_arrow: ["candle", { arrows: true }],
+    doru_lock: ["candle", { lock: true }],
+    doru_armor: ["shield", { c: "#fbf3dc" }],
+    supa_sparkling: ["bladeFlower"],
+    supa_spider: ["shield", { c: "#c9d1d8" }],
+    nikyu_paw: ["paw"],
+    nikyu_repel: ["paw", { push: true }],
+    nikyu_travel: ["paw", { arrow: true }],
+    nikyu_ursus: ["paw", { bubble: true }],
+    mane_disguise: ["masks"],
+    mane_memoir: ["masks", { c: "#f4a3bf" }],
+    zushi_press: ["gravity"],
+    zushi_blade: ["claw", { c: "#d8c8ff" }],
+    zushi_meteor: ["meteor"],
+    // Zoans
+    hito_heavy: ["antler", { muscle: true }],
+    hito_horn: ["antler", { hat: true }],
+    hito_monster: ["antler", { c: "#8a5a30" }],
+    neko_hybrid: ["leopard"],
+    neko_claw: ["claw", { c: "#ffe8c0" }],
+    neko_pounce: ["dash", { c: "#ffe8c0", c2: "#e8a33c" }],
+    phoenix_flame: ["heal", { c: "#4dd0e1", flame: BLUEFIRE }],
+    phoenix_fly: ["bird", { cols: BLUEFIRE, fire: true }],
+    phoenix_brand: ["kick", { fx: "fire", flame: BLUEFIRE, c: "#e8d9a8", shoe: "#6b4a2a" }],
+    phoenix_rebirth: ["bird", { cols: BLUEFIRE, fire: true, flameTail: true }],
+    seiryu_bolo: ["dragon", { breath: true }],
+    seiryu_kaifu: ["airblade", { n: 2 }],
+    seiryu_raimei: ["bolt", { two: true }],
+    seiryu_form: ["dragon"],
+    // Logias
+    mera_hiken: ["fist", { c: "#f7931e", fx: "fire", line: "#ffe066" }],
+    mera_hidaruma: ["fireballs"],
+    mera_enkai: ["flame", { pillar: true }],
+    mera_entei: ["sun", { c: "#f7931e", ray: "#e8452c" }],
+    hie_saber: ["swords", { n: 1, pal: [{ blade: "#bfefff", edge: "#ffffff", wrap: "#6fb8d8", tsuba: "#bfefff", habaki: "#e8fbff", diamond: "#e8fbff" }], arcCol: "#bfefff" }],
+    hie_pheasant: ["bird", { cols: ["#8fd8f8", "#c8f0ff", "#ffffff"] }],
+    hie_ageand: ["ice", { flake: true }],
+    hie_time: ["iceCube"],
+    goro_vari: ["bolt"],
+    goro_sango: ["bolt", { two: true }],
+    goro_elthor: ["cloud", { bolt: true, c: "#b8c0d8" }],
+    goro_amaru: ["figure", { c: "#3c3f86", aura: "#fff36b", eyes: "#fff36b" }],
+    goro_raigo: ["cloud", { bolt: true, c: "#5a5f7a" }],
+    suna_barjan: ["airblade", { c: "#e8c77a" }],
+    suna_sables: ["tornado", { c: "#e8c77a" }],
+    suna_spada: ["spikes"],
+    suna_dry: ["dryCracks"],
+    moku_blow: ["smoke", { fist: true }],
+    moku_snake: ["smoke", { snake: true }],
+    moku_out: ["smoke"],
+    moku_launcher: ["dash", { c: "#eef2f4", c2: "#dfe6ea" }],
+    pika_yasakani: ["lightOrbs"],
+    pika_yata: ["mirror", { light: true }],
+    pika_murakumo: ["swords", { n: 1, pal: [{ blade: "#fff6b0", edge: "#ffffff", wrap: "#e0b24a", tsuba: "#fff6b0", habaki: "#fffbe0", diamond: "#fffbe0" }], arcCol: "#fff6b0" }],
+    pika_amaterasu: ["beam"],
+    magu_daifunka: ["magma"],
+    magu_meigo: ["magma"],
+    magu_ryusei: ["meteor", { c: "#5a2a1e", two: true }],
+    yami_kurouzu: ["vortex", { hand: true }],
+    yami_blackhole: ["vortex", { ring: true }],
+    yami_nullify: ["claw", { c: "#c9a0ff", hand: "#2a1f33" }],
+    yami_liberation: ["explosion", { c: "#6a3ab8", c2: "#1a1024" }],
+    // Styles
+    brawl_heavy: ["fist", { burst: "#ffd23f", s: 0.95 }],
+    brawl_tackle: ["dash", { c: "#ffe8c0", c2: "#f2c596" }],
+    brawl_knee: ["kick", { c: "#6b4a32", shoe: "#3a2a1c" }],
+    brawl_headbutt: ["impact", { skull: true }],
+    itto_heavy: ["slash", { n: 1 }],
+    itto_iai: ["swords", { n: 1, arc: false }],
+    itto_pound: ["airblade"],
+    itto_whirl: ["tornado", { sword: true }],
+    nito_heavy: ["slash", { n: 2 }],
+    nito_taka: ["wave", { c: "#dff4ff" }],
+    nito_nigiri: ["slash", { n: 2 }],
+    santo_heavy: ["slash", { n: 3 }],
+    santo_onigiri: ["slash", { n: 3 }],
+    santo_108: ["bird", { cols: ["#bfe4ff", "#e8f6ff", "#ffffff"] }],
+    santo_sanzen: ["bladeFlower", { c: "#eaf2f7" }],
+    santo_asura: ["oni", { swords: true, c: "#5a2a3a" }],
+    bleg_heavy: ["kick", { burst: "#ffd23f" }],
+    bleg_party: ["kick", { r: 0.4, x: 2, y: -2 }],
+    bleg_antimanner: ["kick", { r: -0.5, x: 0, y: 4 }],
+    bleg_concasse: ["kick", { r: 1.2, x: 2, y: 2, burst: "#ffd23f" }],
+    bleg_diable: ["kick", { fx: "fire" }],
+    bleg_skywalk: ["airstep"],
+    fmk_heavy: ["fist", { fx: "water", burst: "#7fd3f7" }],
+    fmk_uchimizu: ["drops"],
+    fmk_arabesque: ["palm", { rings: true, ring: "#9fe0ff" }],
+    fmk_5000: ["fist", { burst: "#9fe0ff", fx: "water", s: 1 }],
+    fmk_vagabond: ["drill", { c: "#7fd3f7" }],
+    roku_3: ["kick", { c: "#3a3540" }],
+    roku_soru: ["dash"],
+    roku_geppo: ["airstep", { c: "#3a3540", moon: true }],
+    roku_tekkai: ["shield"],
+    roku_rankyaku: ["airblade"],
+    roku_kamie: ["paper"],
+    roku_rokuogan: ["palms", { burst: "#ffffff" }],
+    snipe_heavy: ["crosshair"],
+    snipe_explode: ["bomb"],
+    snipe_tabasco: ["chili"],
+    snipe_firebird: ["bird", { cols: FIRE, fire: true }],
+    snipe_popgreen: ["sprout"],
+    snipe_kabuto: ["pellet", { many: true, cols: ["#ffd23f", "#ff7a5a", "#8fd8ff"] }],
+    okama_pirouette: ["swan", { spin: true }],
+    okama_swan_dash: ["swan", { dash: true }],
+    okama_hell_wink: ["wink"],
+    okama_heavy: ["kick", { c: "#f4a3bf", shoe: "#c04a8a" }],
+    elec_heavy: ["claw", { c: "#fff36b" }],
+    elec_discharge: ["bolt", { two: true }],
+    elec_garchu: ["bolt", { s: 0.8 }],
+    elec_sulong: ["moon", { c: "#fff6d0", bolt: true, full: true }],
+    hassho_heavy: ["palm", { rings: true, burst: "#ffd23f" }],
+    hassho_bushin: ["rings"],
+    hassho_drill: ["drill"],
+    clima_heavy: ["fireballs"],
+    clima_thunderbolt: ["cloud", { bolt: true }],
+    clima_cyclone: ["tornado"],
+    clima_mirage: ["sun", { c: "#ffe7a0", ray: "#ffd23f" }],
+    clima_zeus: ["cloud", { bolt: true, c: "#b8c0d8" }],
+    elbaf_heavy: ["axe", { big: true }],
+    elbaf_hakoku: ["swords", { n: 1, arcCol: "#ffe7a0" }],
+    ryu_heavy: ["dragon"],
+    ryu_claw: ["claw", { hand: "#8fd0b0" }],
+    ryu_hiken: ["fist", { c: "#f7931e", fx: "fire", line: "#ffe066" }],
+    // Haki (and the HUD toggles)
+    haki_emission: ["fist", { c: BLACKFIST, burst: "#b58ce0", line: "#d8c8ff" }],
+    haki_ryuo: ["fist", { c: BLACKFIST, fx: "cracks", line: "#d8c8ff" }],
+    haki_futuresight: ["eye", { iris: "#e0303a" }],
+    haki_conqueror: ["crown", { bolts: true }],
+    haki_infusion: ["fist", { c: BLACKFIST, fx: "bolt", line: "#ff8a9a" }],
+    toggle_armament: ["fist", { c: BLACKFIST, lines: false, s: 1, x: 0, y: 2, aura: true }],
+    toggle_observation: ["eye", { iris: "#e0303a" }]
+  };
+  var SKILL_RULES = [
+    [/conqueror|haoshoku/, "crown", { bolts: true }],
+    [/future sight|observation|kenbunshoku/, "eye", {}],
+    [/armament|busoshoku|hardened|ryuo/, "fist", { c: BLACKFIST, line: "#d8c8ff" }],
+    [/meteor|noah|ryusei/, "meteor", {}],
+    [/black hole|vortex|kurouzu/, "vortex", { ring: true }],
+    [/birdcage|cage|fulbright/, "cage", {}],
+    [/thread|string|tamaito|parasite|voodoo|flail/, "strings", {}],
+    [/\bnet\b/, "net", {}],
+    [/chakram|ring blade/, "chakram", {}],
+    [/hypno|jango/, "pendulum", {}],
+    [/soldiers|homies|zombie|summon|call the|gifters/, "summon", {}],
+    [/shadow|doppel|ikasumi|camouflage/, "shadowFigure", {}],
+    [/ghost|hollow/, "ghost", { many: true }],
+    [/\bbats?\b/, "bats", {}],
+    [/snake|serpent|orochi|hydra|coil/, "snake", {}],
+    [/dragon|ryu\b|seiryu|kaido/, "dragon", {}],
+    [/phoenix|bird|feather|wing|pheasant|ikaros/, "bird", {}],
+    [/leopard|jaguar|lion|tiger|wolf|fang|beast/, "claw", {}],
+    [/claw|scratch/, "claw", {}],
+    [/paw|pad ho/, "paw", {}],
+    [/thunder|lightning|raigo|raitei|volt|dengeki|thor|henry|electr/, "bolt", {}],
+    [/cloud/, "cloud", {}],
+    [/tornado|cyclone|tatsumaki|whirlwind|storm|gale/, "tornado", {}],
+    [/fire|flame|blaze|burn|hi-?daruma|hiken|kaen|karyu|heat|tempura|shishi no hi/, "flame", {}],
+    [/ice|frost|freez|blizzard|fubuki|yuki|snow|niflheim|kamakura|hyoga/, "ice", {}],
+    [/magma|lava/, "magma", {}],
+    [/laser|beam|maser|light/, "beam", {}],
+    [/water|wave|tide|umi|splash|juice/, "wave", {}],
+    [/poison|venom|toxic|gas|plague|ooze/, "skull", { aura: "#b35ad6" }],
+    [/bomb|explo|grenade|mine|sneeze|jirai/, "bomb", {}],
+    [/cannon ?ball|cannons?|bazooka|bero/, "cannonball", {}],
+    [/gun|rifle|pistol|volley|shot|bullet|round|machine/, "bullets", {}],
+    [/arrow|bow\b|yabusame/, "airblade", { c: "#f3e6c4" }],
+    [/knife|knives|kunai|dagger|needle/, "knives", {}],
+    [/spear|lance|javelin|trident|halberd|glaive|jitte|bisento/, "drill", {}],
+    [/axe/, "axe", {}],
+    [/mace|club|hammer|bat\b|mallet|pan\b|bamboo/, "mace", {}],
+    [/drill|screw|spin/, "drill", {}],
+    [/sword|blade|slash|cut|cleave|giri|kiri|saw|scalpel|punisher|pretzel/, "slash", {}],
+    [/shield|guard|steel|tekkai|armou?r|cape/, "shield", {}],
+    [/quake|stomp|press|crush|earth|ground|mountain/, "gravity", {}],
+    [/sand|desert|dune/, "airblade", { c: "#e8c77a" }],
+    [/kick|heel|foot|leg|stamp|knee/, "kick", {}],
+    [/palm|hasshoken|shockwave|buddha/, "palm", { rings: true }],
+    [/punch|fist|jab|puncher|lariat|knuckle|elbow/, "fist", {}],
+    [/charge|dash|rush|tackle|dive|lunge|pounce|hopper|spurt/, "dash", {}],
+    [/bite|jaw|munch|tooth|teeth|shark/, "claw", { c: "#ffffff" }],
+    [/heal|life return|mend|cure/, "heal", {}],
+    [/haki/, "crown", { bolts: true }]
+  ];
+  var EMOJI_SK = {
+    "\u{1F525}": ["flame"],
+    "\u26A1": ["bolt"],
+    "\u{1F4A5}": ["impact"],
+    "\u{1F680}": ["dash"],
+    "\u2600": ["sun"],
+    "\u{1F30B}": ["flame", { pillar: true }],
+    "\u{1F5E1}": ["swords", { n: 1 }],
+    "\u{1F4A3}": ["bomb"],
+    "\u{1F32C}": ["airblade"],
+    "\u270B": ["palm"],
+    "\u{1F311}": ["vortex"],
+    "\u{1F479}": ["oni"],
+    "\u{1F6E1}": ["shield"],
+    "\u{1F409}": ["dragon"],
+    "\u{1F329}": ["cloud", { bolt: true }],
+    "\u{1F32A}": ["tornado"],
+    "\u{1F300}": ["airblade"],
+    "\u{1F44A}": ["fist"],
+    "\u{1F388}": ["glove"],
+    "\u{1F30A}": ["wave"],
+    "\u{1F499}": ["heal", { c: "#4dd0e1" }],
+    "\u{1F3AD}": ["masks"],
+    "\u{1F4AA}": ["fist"],
+    "\u{1F40D}": ["snake"],
+    "\u{1FA9E}": ["mirror"],
+    "\u{1F9F1}": ["hex"],
+    "\u{1F528}": ["mace"],
+    "\u{1F43E}": ["paw"],
+    "\u2604": ["meteor"],
+    "\u{1F426}": ["bird"],
+    "\u{1F47A}": ["oni"],
+    "\u{1F319}": ["moon"],
+    "\u2601": ["cloud"],
+    "\u{1F32B}": ["smoke"],
+    "\u{1F9B5}": ["kick"],
+    "\u{1F451}": ["crown", { bolts: true }],
+    "\u{1F52B}": ["bullets"],
+    "\u270A": ["fist"],
+    "\u{1F310}": ["cracks"],
+    "\u{1F535}": ["room"],
+    "\u2744": ["ice", { flake: true }],
+    "\u{1F9CA}": ["iceCube"],
+    "\u2728": ["lightOrbs"],
+    "\u26AB": ["vortex", { ring: true }],
+    "\u{1F4A7}": ["drops"],
+    "\u{1F4A8}": ["dash"],
+    "\u{1F4C4}": ["paper"],
+    "\u{1F336}": ["chili"],
+    "\u{1F33F}": ["sprout"],
+    "\u{1F9A9}": ["swan", { dash: true }],
+    "\u{1FA70}": ["swan", { spin: true }],
+    "\u{1F609}": ["wink"],
+    "\u{1F315}": ["moon", { full: true }],
+    "\u{1F98F}": ["drill"],
+    "\u{1F52E}": ["eye"],
+    "\u{1F42F}": ["claw"],
+    "\u{1F406}": ["leopard"],
+    "\u{1F98C}": ["antler"],
+    "\u{1F54A}": ["bird"],
+    "\u267E": ["heal"],
+    "\u{1F432}": ["dragon"],
+    "\u{1F578}": ["cage"],
+    "\u{1F9F5}": ["strings"],
+    "\u{1F47B}": ["ghost"],
+    "\u{1F987}": ["bats"],
+    "\u2620": ["skull"],
+    "\u{1F40C}": ["beam"],
+    "\u{1F441}": ["eye"],
+    "\u{1F56F}": ["candle"],
+    "\u{1F512}": ["candle", { lock: true }],
+    "\u{1F5FF}": ["shield"],
+    "\u2734": ["bladeFlower"],
+    "\u{1F577}": ["shield"],
+    "\u2708": ["paw", { arrow: true }],
+    "\u{1F4AD}": ["masks"],
+    "\u2B07": ["gravity"],
+    "\u{1F361}": ["mochi"],
+    "\u{1F531}": ["mochi", { trident: true }],
+    "\u{1F338}": ["flower"],
+    "\u{1F33A}": ["flower", { arms: true }],
+    "\u{1F590}": ["strings", { five: true }],
+    "\u{1F921}": ["glove"],
+    "\u{1F3AA}": ["glove", { multi: true }],
+    "\u{1F443}": ["bomb"],
+    "\u2668": ["cog"],
+    "\u{1F9B4}": ["fist"],
+    "\u{1F500}": ["swap"],
+    "\u2622": ["beam"],
+    "\u{1F3DC}": ["dryCracks"],
+    "\u2694": ["swords", { n: 2 }],
+    "\u{1F573}": ["vortex"],
+    "\u{1F402}": ["dash"],
+    "\u{1F981}": ["swords", { n: 1, arc: false }],
+    "\u{1F359}": ["slash", { n: 2 }],
+    "\u{1F30D}": ["bladeFlower"],
+    "\u{1F37D}": ["kick"],
+    "\u{1F386}": ["fireballs"],
+    "\u{1F387}": ["pellet", { many: true }],
+    "\u{1F4A2}": ["fist", { fx: "cracks" }],
+    "\u{1F9B6}": ["kick"],
+    "\u{1F4AB}": ["ghost", { many: true }]
+  };
+  var ANIM_SK = { punch: ["fist"], kick: ["kick"], slash: ["slash"], thrust: ["dash"], heavy: ["impact"], shoot: ["bullets"], grab: ["claw"], cast: ["lightOrbs"], block: ["shield"] };
+  var ELEM_SK = { fire: ["flame"], ice: ["ice"], snow: ["ice", { flake: true }], lightning: ["bolt"], water: ["wave"], poison: ["skull", { aura: "#b35ad6" }], gas: ["skull", { aura: "#b35ad6" }], sand: ["tornado", { c: "#e8c77a" }], smoke: ["smoke"], light: ["beam"], magma: ["magma"], dark: ["vortex"], explosion: ["explosion"], quake: ["cracks"] };
+  function skillElement(def) {
+    let el = def?.element || null;
+    if (!el && def?.steps) {
+      try {
+        JSON.stringify(def.steps, (k, v) => {
+          if (!el && k === "element" && typeof v === "string") el = v;
+          return v;
+        });
+      } catch (e) {
+      }
+    }
+    return el;
+  }
+  function resolveSkill(def) {
+    const id = def?.id || "", src = def?.source || "", [kind, key2 = ""] = src.split(":");
+    const name = (def?.name || id).toLowerCase(), el = skillElement(def);
+    let badge = ELEM_BADGE[el] || ANIM_BADGE[def?.anim] || "#4a4a6a";
+    if (kind === "style" && STYLE_SK[key2]) badge = STYLE_SK[key2][0];
+    if (kind === "fruit") badge = FRUIT_BADGE[key2] || FRUITS[key2]?.color || badge;
+    const haki = def?.hakiType || (kind === "haki" ? key2 : null);
+    if (haki && HAKI_BADGE[haki]) badge = HAKI_BADGE[haki];
+    let m = SKILL_MAP[id];
+    if (!m && haki) m = SKILL_MAP["toggle_" + haki] || SKILL_MAP.haki_conqueror;
+    if (!m && kind === "style" && /^strike$/i.test(def?.name || "")) m = STYLE_SK[key2]?.[1];
+    if (!m) {
+      const r = SKILL_RULES.find(([re]) => re.test(name));
+      if (r) m = [r[1], r[2]];
+    }
+    if (!m && def?.icon && EMOJI_SK[def.icon.replace(/️/g, "")]) m = EMOJI_SK[def.icon.replace(/️/g, "")];
+    if (!m && kind === "style" && STYLE_SK[key2]) m = STYLE_SK[key2][1];
+    if (!m && el && ELEM_SK[el]) m = ELEM_SK[el];
+    if (!m) m = ANIM_SK[def?.anim] || ["impact"];
+    return { motif: m[0], o: m[1] || {}, badge, haki };
+  }
+  function badgeTone(c) {
+    const L2 = lum(c);
+    if (L2 > 0.55) return mix(c, "#241a2a", Math.min(0.6, (L2 - 0.42) / (L2 - 0.08)));
+    if (L2 < 0.16) return mix(c, "#8a7fa0", 0.3);
+    return c;
+  }
+  var WIN = 27;
+  function skillBadge(I, col) {
+    const c = badgeTone(col);
+    part(I, circle(32, 32, 30), dk(c, 0.35), { sd: 0, hd: 0 });
+    fl(I, circle(32, 32, WIN + 0.5), rg(I, 32, 32, 29, [[0, lt(c, 0.3)], [0.55, c], [1, dk(c, 0.3)]], 22, 20, 1));
+    return c;
+  }
+  function skillFrame(I, c) {
+    const ring = new Path2D();
+    ring.addPath(circle(32, 32, 30));
+    ring.addPath(circle(32, 32, WIN));
+    part(I, ring, dk(c, 0.3), { rule: "evenodd", sd: 1.2, hd: 1.1, hi: lt(c, 0.35), sh: dk(c, 0.55), ol: I.ol });
+  }
+  var UI = {};
+  var SLOT = "#5b4330";
+  function slotGhost(I, path, rule) {
+    part(I, path, SLOT, { sd: 0, hd: 0, ol: I.ol * 0.8, line: "#3a2a1c", rule });
+  }
+  function questionP() {
+    const p = new Path2D();
+    p.addPath(P("M21 22 C21 12 28 7 33 7 C41 7 46 12 46 19 C46 26 41 29 37.5 31.5 C35.5 33 35 34.5 35 37.5 V40 H27.5 V36.5 C27.5 31.5 29.5 29 33 26.5 C36 24.5 38 23 38 19.5 C38 16.5 36 14.5 33 14.5 C30 14.5 28.5 16.5 28.5 22 Z"));
+    p.addPath(circle(31.3, 49, 5.4));
+    return p;
+  }
+  function exclaimP(x = 32, y = 0, s = 1) {
+    const p = new Path2D();
+    p.addPath(xf(rrect(27.5, 8, 9, 30, 4.5), { ox: 32, oy: 32, x: x - 32, y, s }));
+    p.addPath(xf(circle(32, 48, 5.4), { ox: 32, oy: 32, x: x - 32, y, s }));
+    return p;
+  }
+  function cogP(x, y, r1, r2, teeth, hole) {
+    const pts = [];
+    for (let i = 0; i < teeth * 4; i++) {
+      const a = i / (teeth * 4) * TAU3, r = i % 4 < 2 ? r1 : r2;
+      pts.push([x + Math.cos(a) * r, y + Math.sin(a) * r]);
+    }
+    const p = poly(pts);
+    if (hole) p.addPath(circle(x, y, hole));
+    return p;
+  }
+  function person(I, x, y, s, shirt, skin = SKIN, hair = "#3a2a1c") {
+    part(I, `M${x - 12 * s} ${y + 22 * s} C${x - 12 * s} ${y + 10 * s} ${x - 7 * s} ${y + 5 * s} ${x} ${y + 5 * s} C${x + 7 * s} ${y + 5 * s} ${x + 12 * s} ${y + 10 * s} ${x + 12 * s} ${y + 22 * s} Z`, shirt, { sd: 2 * s, hd: 1.4 * s });
+    part(I, circle(x, y - 3 * s, 7.4 * s), skin, { sd: 1.4 * s, hd: 1 * s });
+    part(I, `M${x - 7.6 * s} ${y - 3 * s} C${x - 8 * s} ${y - 10 * s} ${x - 4 * s} ${y - 11.4 * s} ${x} ${y - 11.4 * s} C${x + 4 * s} ${y - 11.4 * s} ${x + 8 * s} ${y - 10 * s} ${x + 7.6 * s} ${y - 3 * s} C${x + 5 * s} ${y - 6.5 * s} ${x - 5 * s} ${y - 6.5 * s} ${x - 7.6 * s} ${y - 3 * s} Z`, hair, { sd: 0.8 * s, hd: 0.6 * s, hi: lt(hair, 0.4) });
+  }
+  UI.inventory = (I) => {
+    const lea = "#8e5a30";
+    tube(I, "M16 26 C16 8 48 8 48 26", dk(lea, 0.15), 4.2);
+    const bag = rrect(8, 22, 48, 36, 7);
+    part(I, bag, lea, { sd: 3, hd: 2 });
+    if (!I.small) clip(I, bag, () => ln(I, rrect(11, 25, 42, 30, 5), dk(lea, 0.3), 1, { dash: [2, 1.8] }));
+    part(I, "M8 29 C8 24 12 20 18 20 H46 C52 20 56 24 56 29 V38 C50 41 40 42.5 32 42.5 C24 42.5 14 41 8 38 Z", lt(lea, 0.12), { sd: 1.8, hd: 1.4 });
+    part(I, rrect(26.5, 36, 11, 11, 2.5), C.gold, { sd: 1, hd: 0.8 });
+    fl(I, rrect(30, 39.5, 4, 4, 1), dk(C.gold, 0.45));
+  };
+  UI.character = (I) => {
+    part(I, "M8 60 C8 45 17 37 32 37 C47 37 56 45 56 60 Z", "#c8372d", { sd: 2.4, hd: 1.6 });
+    part(I, "M25 37.5 L32 49 L39 37.5 Z", SKIN, { sd: 0.8, hd: 0.5, ol: I.ol * 0.8 });
+    part(I, rrect(27, 30, 10, 9, 3), dk(SKIN, 0.08), { sd: 0.8, hd: 0.5 });
+    part(I, circle(32, 23, 12.5), SKIN, { sd: 2, hd: 1.4 });
+    part(I, "M19.5 23 C18 12 25 8.5 32 8.5 C39 8.5 46 12 44.5 23 C42 17 38 15.5 36 18 C34 15 30 15 28 18 C26 15.5 22 17 19.5 23 Z", "#2b2226", { sd: 1, hd: 0.8, hi: "#5a4a52" });
+    if (!I.small) {
+      fl(I, ellipse(27.5, 25, 1.4, 2), OUT);
+      fl(I, ellipse(36.5, 25, 1.4, 2), OUT);
+      ln(I, "M28 30 C30.5 32 33.5 32 36 30", OUT, 1.3);
+    }
+  };
+  UI.skills = (I) => {
+    speed(I, [[5, 44, 16, 37], [3, 34, 13, 29], [9, 53, 19, 45]], "#fff4dc", 3.2, 1);
+    speed(I, [[5, 44, 16, 37], [3, 34, 13, 29], [9, 53, 19, 45]], "#c8372d", 1.6, 1);
+    tf(I, { r: -0.3, s: 0.95, x: 3, y: 1 }, () => fistShape(I, SKIN));
+  };
+  UI.journal = (I) => D.book(I, { color: "#7a3f22" });
+  UI.crew = (I) => {
+    person(I, 15, 30, 0.72, "#2f5f96", SKIN, "#e0b24a");
+    person(I, 49, 30, 0.72, "#3f8a44", SKIN, "#2b2226");
+    person(I, 32, 30, 0.95, "#c8372d", SKIN, "#2b2226");
+  };
+  UI.menu = (I) => {
+    const wood = "#8e5a30";
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * TAU3;
+      tube(I, `M${32 + Math.cos(a) * 8} ${32 + Math.sin(a) * 8} L${32 + Math.cos(a) * 28} ${32 + Math.sin(a) * 28}`, wood, 4.2);
+    }
+    const rim2 = new Path2D();
+    rim2.addPath(circle(32, 32, 21));
+    rim2.addPath(circle(32, 32, 15.5));
+    part(I, rim2, lt(wood, 0.08), { rule: "evenodd", sd: 1.6, hd: 1.2 });
+    part(I, circle(32, 32, 7.5), C.gold, { sd: 1.2, hd: 1 });
+  };
+  UI.help = (I) => {
+    part(I, circle(32, 31, 27), "#2f6fb0", { sd: 2.6, hd: 1.8 });
+    tf(I, { s: 0.78, y: 1 }, () => part(I, questionP(), "#fbf8f0", { sd: 1.2, shT: 0.15, hd: 0.8 }));
+  };
+  UI.settings = (I) => {
+    part(I, cogP(32, 32, 28, 20, 8, 8.5), "#9aa6b0", { rule: "evenodd", sd: 2.4, hd: 1.8 });
+    if (!I.small) ln(I, circle(32, 32, 14), dk("#9aa6b0", 0.3), 1.4, { a: 0.8 });
+  };
+  UI.save = (I) => UI.anchor(I, true);
+  UI.check = (I) => {
+    tube(I, "M10 34 L25 49 L54 15", "#fbf1e0", 12, { flat: true });
+    tube(I, "M10 34 L25 49 L54 15", "#3f9a4a", 7.5, { ol: 0, hi: "#9fe0a6" });
+  };
+  UI.close = (I) => {
+    tube(I, "M14 14 L50 50 M50 14 L14 50", "#fbf1e0", 12, { flat: true });
+    tube(I, "M14 14 L50 50 M50 14 L14 50", "#c8372d", 7.5, { ol: 0, hi: "#f28a80" });
+  };
+  UI.quest = (I) => {
+    tube(I, "M10 8 H54", "#7a4a2a", 3.4);
+    const b = "M14 9 H50 V52 L32 44 L14 52 Z";
+    part(I, b, "#f0bf45", { sd: 2.4, hd: 1.6 });
+    tf(I, { s: 0.62, y: -4 }, () => part(I, exclaimP(), "#8a2a1e", { flat: true, ol: I.ol * 0.6 }));
+  };
+  UI.reputation = (I) => {
+    const g = "#e0b24a";
+    tube(I, "M32 10 V54", dk(g, 0.1), 3.6);
+    tube(I, "M8 16 H56", g, 3.4);
+    part(I, rrect(20, 52, 24, 6, 2.5), dk(g, 0.12), { sd: 1, hd: 0.8 });
+    part(I, circle(32, 10, 3.6), g, { sd: 0.8, hd: 0.6 });
+    for (const x of [13, 51]) {
+      ln(I, `M${x} 17 L${x - 8} 38 M${x} 17 L${x + 8} 38`, OUT, 2.2);
+      ln(I, `M${x} 17 L${x - 8} 38 M${x} 17 L${x + 8} 38`, "#c9a24e", 1);
+      part(I, `M${x - 11} 37 H${x + 11} C${x + 10} 44 ${x + 5} 47 ${x} 47 C${x - 5} 47 ${x - 10} 44 ${x - 11} 37 Z`, g, { sd: 1.4, hd: 1 });
+    }
+  };
+  UI.berries = (I) => {
+    const g = C.gold;
+    part(I, circle(32, 32, 26), g, { sd: 3, hd: 2.2 });
+    ln(I, circle(32, 32, 19.5), dk(g, 0.35), 2);
+    part(I, star(32, 32, 5, 12, 5.4), lt(g, 0.28), { sd: 1, hd: 0.8, ol: I.ol * 0.75 });
+    gloss(I, 22, 19, 4.2, 2, 0.7, -0.6);
+  };
+  UI.bounty = (I) => D.poster(I, {});
+  UI.lives = (I) => {
+    D.vivre(I, {});
+    part(I, heartP(40, 42, 8), "#e0304a", { sd: 1.2, hd: 1, gloss: [36.5, 38, 1.6, 1, 0.8] });
+  };
+  UI.jolly_roger = (I) => D.flag(I, {});
+  UI.map = (I) => D.map(I, { chart: true });
+  UI.log_pose = (I) => D.logPose(I, {});
+  UI.ship = (I) => {
+    part(I, "M4 50 C10 46 16 50 22 47 C28 44 34 49 40 46 C46 43 52 48 60 45 V60 H4 Z", "#3f86c8", { sd: 1.6, hd: 1.2, hi: "#a8d8f5" });
+    tube(I, "M31 8 V44", "#5a3a22", 2.6);
+    part(I, "M34 10 C46 14 52 24 50 36 H34 Z", "#fbf6ea", { sd: 1.8, shT: 0.18, hd: 1.2 });
+    part(I, "M28 14 C20 18 14 26 14 36 H28 Z", "#f1e7d0", { sd: 1.6, shT: 0.18, hd: 1 });
+    part(I, "M32 6 L42 8 L32 11 Z", "#c8372d", { sd: 0.5, hd: 0.3, ol: I.ol * 0.7 });
+    part(I, "M6 40 H58 L52 50 C44 53 20 53 12 50 Z", "#8e5a30", { sd: 2, hd: 1.4 });
+    if (!I.small) for (const x of [20, 30, 40]) fl(I, circle(x, 45, 1.6), dk("#8e5a30", 0.5));
+  };
+  UI.trainer = (I) => {
+    for (const f of [1, -1]) tf(I, { sx: f, ox: 32 }, () => {
+      tube(I, "M8 60 L30 30", SKIN, 8.5);
+      tube(I, "M8 60 L14 52", "#f4f1ea", 10);
+      tf(I, { r: 0.55, s: 0.5, x: -2, y: -14 }, () => fistShape(I, SKIN));
+    });
+  };
+  UI.haki = (I) => {
+    glow(I, circle(32, 32, 28), "#b58ce0", 0.55);
+    for (const [x, y, r] of [[10, 18, 0.3], [54, 20, -0.4]]) part(I, xf(BOLT, { s: 0.3, ox: 32, oy: 32, x: x - 32, y: y - 32, r }), "#2a1f33", { sd: 0, hd: 0, line: "#b58ce0" });
+    tf(I, { r: -0.15, s: 1, y: 2 }, () => fistShape(I, BLACKFIST, true));
+  };
+  UI.marine = (I) => {
+    part(I, circle(32, 32, 27), "#f7f5ee", { sd: 2.2, shT: 0.15, hd: 1.4 });
+    ln(I, circle(32, 32, 22), "#2f5f96", 2.6);
+    gull(I, 32, 30, 15, "#2f5f96", { ol: I.ol * 0.8 });
+  };
+  UI.doctor = (I) => {
+    part(I, "M24 8 H40 V24 H56 V40 H40 V56 H24 V40 H8 V24 H24 Z", "#d23b32", { sd: 2.4, hd: 1.8, hi: "#f5998f" });
+  };
+  UI.shipwright = (I) => {
+    tube(I, "M16 58 L38 26", "#b07a45", 5.4);
+    tf(I, { r: 0.6, ox: 42, oy: 20 }, () => {
+      part(I, "M30 12 H48 C52 12 54 15 54 18 V24 H30 Z", "#8c969e", { sd: 1.6, hd: 1.2 });
+      part(I, "M30 12 C24 12 18 14 14 19 L18 21 C22 18 26 18 30 19 Z", "#8c969e", { sd: 1, hd: 0.8 });
+    });
+  };
+  UI.bar = (I) => D.mug(I, {});
+  UI.library = (I) => {
+    const book = (y, x0, w, col) => {
+      part(I, rrect(x0, y, w, 12, 2.5), col, { sd: 1.6, hd: 1.2 });
+      part(I, rrect(x0 + w - 5, y + 1.5, 4, 9, 1), "#f3ead3", { flat: true, ol: I.ol * 0.6 });
+      fl(I, rrect(x0 + 5, y + 4.5, w - 14, 3, 1), C.gold);
+    };
+    book(46, 8, 46, "#2f5f8f");
+    book(33, 12, 42, "#8e2f2a");
+    book(20, 9, 44, "#3f7a3a");
+    tf(I, { r: -0.25, ox: 32, oy: 12 }, () => book(6, 14, 36, "#6b3f8a"));
+  };
+  UI.shop = (I) => {
+    const col = "#b88a4a";
+    const b = "M18 26 C8 34 7 48 12 54 C16 59 48 59 52 54 C57 48 56 34 46 26 Z";
+    part(I, b, col, { sd: 3.2, hd: 2 });
+    part(I, "M21 27 C18 20 21 13 26 15 C28 11 36 11 38 15 C43 13 46 20 43 27 Z", lt(col, 0.1), { sd: 1.6, hd: 1.2 });
+    tube(I, "M18 27 C26 30 38 30 46 27", "#8e2f2a", 3);
+    part(I, circle(32, 44, 9), C.gold, { sd: 1.4, hd: 1 });
+    part(I, star(32, 44, 5, 5, 2.3), lt(C.gold, 0.3), { flat: true, ol: I.ol * 0.6 });
+    for (const [x, y] of [[50, 58], [56, 54]]) part(I, ellipse(x, y, 5, 2.2), C.gold, { sd: 0.6, hd: 0.4 });
+  };
+  UI.inn = (I) => {
+    part(I, rrect(6, 14, 8, 44, 2), "#8e5a30", { sd: 1.4, hd: 1 });
+    part(I, rrect(50, 30, 8, 28, 2), "#8e5a30", { sd: 1.4, hd: 1 });
+    part(I, rrect(8, 36, 48, 12, 3), "#f4f1ea", { sd: 1.6, shT: 0.15, hd: 1 });
+    part(I, "M26 34 H56 V48 H22 C22 42 23 37 26 34 Z", "#c8372d", { sd: 1.8, hd: 1.2 });
+    part(I, ellipse(20, 32, 7, 4.6, -0.15), "#fbf8f0", { sd: 1, shT: 0.15, hd: 0.8 });
+    part(I, rrect(8, 47, 48, 6, 2), "#6e4526", { sd: 1, hd: 0.8 });
+  };
+  UI.sword = (I) => tf(I, { s: 1.06 }, () => D.cutlass(I, { blade: "#e4ecf2", wrap: "#5a3d2b" }));
+  UI.weapon = UI.sword;
+  UI.gun = (I) => D.flintlock(I, {});
+  UI.staff = (I) => D.staff(I, {});
+  UI.axe = (I) => D.axe(I, {});
+  UI.food = (I) => D.meat(I, {});
+  UI.medicine = (I) => D.vial(I, {});
+  UI.fruit = (I) => D.fruit(I, { fruit: "gomu", color: "#8e5bd1", shape: "round" });
+  UI.key = (I) => D.key(I, {});
+  UI.dial = (I) => D.shell(I, { color: "#e3a857" });
+  UI.material = (I) => D.wood(I, {});
+  UI.pose = (I) => D.eternalPose(I, {});
+  UI.hat = (I) => D.strawHat(I, {});
+  UI.coat = (I) => D.coat(I, { color: "#1f3566" });
+  UI.accessory = (I) => D.ring(I, { gem: "#d7263d", metal: C.gold });
+  UI.treasure = (I) => D.chest(I, {});
+  UI.scroll = (I) => D.scroll(I, {});
+  UI.weapon_slot = (I) => slotGhost(I, "M17 50 L44 17 C47 13.5 51 11.5 55 11 C54.5 15 52.5 19 49 22 L22 55 Z M10 43 L24 57 L20.5 60.5 L6.5 46.5 Z M6 58 L13 51 L16.5 54.5 L9.5 61.5 Z");
+  UI.head_slot = (I) => slotGhost(I, union(ellipse(32, 42, 28, 10), "M15 42 C14 28 21 18 32 18 C43 18 50 28 49 42 Z"));
+  UI.body_slot = (I) => slotGhost(I, "M20 9 L27 7 L32 14 L37 7 L44 9 L57 18 L51 30 L46 27 L47 58 H17 L18 27 L13 30 L7 18 Z");
+  UI.accessory_slot = (I) => {
+    const r = new Path2D();
+    r.addPath(ellipse(32, 40, 18, 14));
+    r.addPath(ellipse(32, 41.5, 11.5, 8.4));
+    slotGhost(I, r, "evenodd");
+    slotGhost(I, poly([[22, 27], [26, 18], [38, 18], [42, 27], [32, 34]]));
+  };
+  UI.offhand_slot = (I) => slotGhost(I, "M32 7 C40 11 48 12 54 11 C55 30 50 47 32 58 C14 47 9 30 10 11 C16 12 24 11 32 7 Z");
+  UI.lock = (I) => {
+    tube(I, "M21 30 V21 C21 8 43 8 43 21 V30", "#9aa4ab", 5.5);
+    part(I, rrect(12, 28, 40, 30, 6), "#e0b24a", { sd: 2.4, hd: 1.6 });
+    fl(I, circle(32, 40, 4), OUT);
+    fl(I, poly([[30, 41], [34, 41], [35, 50], [29, 50]]), OUT);
+  };
+  UI.warning = (I) => {
+    part(I, "M32 5 C34 5 35.5 6 36.5 8 L60 51 C61.5 54 59.5 57 56.5 57 H7.5 C4.5 57 2.5 54 4 51 L27.5 8 C28.5 6 30 5 32 5 Z", "#f2c230", { sd: 2.4, hd: 1.8 });
+    tf(I, { s: 0.6, y: 6 }, () => part(I, exclaimP(), "#3a2a1c", { flat: true, ol: 0 }));
+  };
+  UI.info = (I) => {
+    part(I, circle(32, 32, 27), "#2f6fb0", { sd: 2.6, hd: 1.8 });
+    tf(I, { s: 0.62, r: Math.PI, y: -1 }, () => part(I, exclaimP(), "#fbf8f0", { flat: true, ol: I.ol * 0.6 }));
+  };
+  UI.plus = (I) => tube(I, "M32 10 V54 M10 32 H54", "#3f9a4a", 10, { hi: "#9fe0a6" });
+  UI.minus = (I) => tube(I, "M10 32 H54", "#c8372d", 10, { hi: "#f28a80" });
+  UI.heart = (I) => part(I, heartP(32, 34, 25), "#e0304a", { sd: 3, hd: 2, gloss: [20, 22, 4.4, 2.6, 0.8, -0.6] });
+  UI.star = (I) => part(I, star(32, 34, 5, 27, 12), C.gold, { sd: 2.6, hd: 1.8 });
+  UI.sound = (I) => {
+    part(I, "M8 24 H18 L32 12 V52 L18 40 H8 Z", "#8c969e", { sd: 1.8, hd: 1.4 });
+    for (const [r, w] of [[10, 3.6], [18, 3.2]]) tube(I, xf(arcPath(32, 32, r, -0.8, 0.8), {}), "#3f86c8", w, { flat: true });
+  };
+  UI.mute = (I) => {
+    part(I, "M8 24 H18 L32 12 V52 L18 40 H8 Z", "#8c969e", { sd: 1.8, hd: 1.4 });
+    tube(I, "M40 24 L56 40 M56 24 L40 40", "#c8372d", 4.6, { flat: true });
+  };
+  UI.news = (I) => {
+    tf(I, { r: -0.12 }, () => {
+      part(I, rrect(8, 12, 48, 40, 2), "#f4ecd8", { sd: 2.2, shT: 0.15, hd: 1.2 });
+      fl(I, rrect(12, 16, 40, 6, 1), "#3a2a1c");
+      part(I, rrect(12, 26, 18, 14, 1), "#c9d6e0", { flat: true, ol: I.ol * 0.5 });
+      gull(I, 21, 33, 6, "#2f5f96", { ol: I.ol * 0.5 });
+      for (const y of [27, 32, 37, 44]) fl(I, rrect(y === 44 ? 12 : 33, y, y === 44 ? 40 : 19, 2.4, 1), "#8a7a64");
+    });
+  };
+  UI.legacy = (I) => {
+    D.strawHat(I, {});
+    sparkle(I, 52, 14, 6, "#fff3c0");
+  };
+  UI.stats = (I) => {
+    for (const [x, h2, c] of [[10, 18, "#3f86c8"], [26, 32, "#3f9a4a"], [42, 44, "#e0b24a"]]) part(I, rrect(x, 56 - h2, 12, h2, 2), c, { sd: 1.6, hd: 1.2 });
+    tube(I, "M6 58 H58", "#6e4526", 3);
+  };
+  UI.combat = (I) => {
+    tf(I, { s: 0.9 }, () => {
+      D.katana(I, {});
+      tf(I, { sx: -1, ox: 32 }, () => D.katana(I, {}));
+    });
+  };
+  UI.drop = (I) => part(I, dropP(32, 36, 2.4), "#4fb3e8", { sd: 3, hd: 2, gloss: [26, 34, 3, 5, 0.7, 0.3] });
+  UI.dream = (I) => {
+    part(I, cloudP(32, 36, 1.35), "#f4f1ea", { sd: 2.4, shT: 0.15, hd: 1.4 });
+    part(I, star(44, 16, 5, 10, 4.5), C.gold, { sd: 1, hd: 0.8 });
+  };
+  UI.clock = (I) => {
+    part(I, circle(32, 32, 26), "#f4ecd8", { sd: 2.4, shT: 0.15, hd: 1.4 });
+    ln(I, circle(32, 32, 22), "#8e5a30", 2.4);
+    tube(I, "M32 32 V16 M32 32 L42 38", OUT, 3, { flat: true });
+    fl(I, circle(32, 32, 2.6), "#c8372d");
+  };
+  UI.sun = (I) => {
+    part(I, star(32, 32, 12, 28, 18, 0.1), "#f7c948", { sd: 1.2, hd: 1 });
+    part(I, circle(32, 32, 15), "#ffd23f", { sd: 2.2, hd: 1.6 });
+  };
+  UI.moon = (I) => part(I, crescentP(32, 32, 20, 0.9, 0.9 + TAU3 * 0.7, 16, 0.5), "#f6e7a8", { sd: 2, hd: 1.4 });
+  UI.anchor = (I, gold) => {
+    const c = gold === true ? "#d6a23e" : "#6c7780";
+    const r = new Path2D();
+    r.addPath(circle(32, 11, 6));
+    r.addPath(circle(32, 11, 2.6));
+    part(I, r, c, { rule: "evenodd", sd: 0.8, hd: 0.6 });
+    tube(I, "M32 17 V54 M20 24 H44", c, 5);
+    tube(I, "M10 38 C12 50 22 56 32 56 C42 56 52 50 54 38", c, 5);
+    for (const x of [10, 54]) part(I, poly([[x - 5, 40], [x, 31], [x + 5, 40]]), c, { sd: 0.8, hd: 0.6 });
+  };
+  UI.compass = (I) => {
+    part(I, circle(32, 32, 27), "#e0b24a", { sd: 2.4, hd: 1.6 });
+    part(I, circle(32, 32, 22), "#f4ecd8", { sd: 1.4, shT: 0.15, hd: 0 });
+    part(I, star(32, 32, 4, 19, 5), "#8e2f2a", { sd: 1, hd: 0.8, ol: I.ol * 0.7 });
+    fl(I, circle(32, 32, 2.4), C.gold);
+  };
   function itemIcon(idOrDef, size = 48) {
     const isStr = typeof idOrDef === "string";
     const d = isStr ? ITEMS[idOrDef] : idOrDef;
@@ -5205,14 +6821,24 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return render(key2, size, (I) => D[fn](I, { ...r.o, def: d, id }), { tag: fn, fallback: r.fallback || fn !== r.fn });
   }
   function skillIcon(def, size = 48) {
-    return render("skill:" + (def?.id || def?.name || "?"), size, (I) => {
-      part(I, circle(32, 32, 28), "#37474f", { sd: 3, hd: 2 });
-    });
+    const key2 = "skill:" + (def?.id || def?.name || "?");
+    const hit = cache.get(key2 + "@" + Math.max(8, Math.round(size || 48)));
+    if (hit) return hit;
+    const r = resolveSkill(def);
+    return render(key2, size, (I) => {
+      const c = skillBadge(I, r.badge);
+      clip(I, circle(32, 32, WIN + 0.4), () => {
+        if (r.o.aura) fl(I, circle(32, 34, 22), rg(I, 32, 34, 24, [[0, fade(r.o.aura === true ? "#c9a0ff" : r.o.aura, 0.8)], [1, fade(r.o.aura === true ? "#c9a0ff" : r.o.aura, 0)]]));
+        I.inBadge = true;
+        (SK[r.motif] || SK.impact)(I, r.o);
+        I.inBadge = false;
+      });
+      skillFrame(I, c);
+    }, { tag: r.motif, halo: false });
   }
   function uiIcon(name, size = 32) {
-    return render("ui:" + name, size, (I) => {
-      part(I, circle(32, 32, 26), "#8e5a30", { sd: 3, hd: 2 });
-    });
+    const fn = UI[name];
+    return render("ui:" + name, size, (I) => (fn || UI.compass)(I), { tag: fn ? name : "compass", fallback: !fn, bold: 1.2 });
   }
   var urls = /* @__PURE__ */ new WeakMap();
   function iconURL(canvas) {
@@ -15287,38 +16913,67 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.lineTo(x1, y1);
     g.stroke();
   }
-  function limb2(g, ax, ay, jx, jy, ex, ey, w, col, outline, col2) {
-    g.lineCap = "round";
+  var OLW = 0.07;
+  var dk2 = (col, amt) => col && col[0] === "#" ? shade(col, amt) : col;
+  var mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+  function capsulePath(g, x0, y0, r0, x1, y1, r1) {
+    const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy);
+    if (d < Math.abs(r0 - r1) + 1e-4) {
+      const [x, y, r] = r0 > r1 ? [x0, y0, r0] : [x1, y1, r1];
+      g.moveTo(x + r, y);
+      g.arc(x, y, r, 0, TAU7);
+      return;
+    }
+    const a = Math.atan2(dy, dx);
+    const th = Math.acos(Math.max(-1, Math.min(1, (r0 - r1) / d)));
+    g.moveTo(x0 + Math.cos(a + th) * r0, y0 + Math.sin(a + th) * r0);
+    g.arc(x0, y0, r0, a + th, a - th + TAU7);
+    g.lineTo(x1 + Math.cos(a - th) * r1, y1 + Math.sin(a - th) * r1);
+    g.arc(x1, y1, r1, a - th, a + th);
+    g.closePath();
+  }
+  function drawLimb(g, pts, rs, col, shadeCol, sd) {
+    g.beginPath();
+    for (let i = 0; i < pts.length - 1; i++) capsulePath(g, pts[i][0], pts[i][1], rs[i], pts[i + 1][0], pts[i + 1][1], rs[i + 1]);
     g.lineJoin = "round";
-    if (outline) {
-      g.strokeStyle = outline;
-      g.lineWidth = w + 0.07;
-      g.beginPath();
-      g.moveTo(ax, ay);
-      g.lineTo(jx, jy);
-      g.lineTo(ex, ey);
-      g.stroke();
+    g.lineWidth = OLW;
+    g.strokeStyle = OUTLINE2;
+    g.stroke();
+    g.fillStyle = col;
+    g.fill();
+    if (!shadeCol || !sd) return;
+    g.save();
+    g.clip();
+    g.beginPath();
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+      const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy) || 1;
+      let nx = -dy / d, ny = dx / d;
+      if (nx * sd[0] + ny * sd[1] < 0) {
+        nx = -nx;
+        ny = -ny;
+      }
+      capsulePath(g, x0 + nx * rs[i] * 0.72, y0 + ny * rs[i] * 0.72, rs[i] * 0.78, x1 + nx * rs[i + 1] * 0.72, y1 + ny * rs[i + 1] * 0.72, rs[i + 1] * 0.78);
     }
-    g.lineWidth = w;
-    if (col2 && col2 !== col) {
-      g.strokeStyle = col;
-      g.beginPath();
-      g.moveTo(ax, ay);
-      g.lineTo(jx, jy);
-      g.stroke();
-      g.strokeStyle = col2;
-      g.beginPath();
-      g.moveTo(jx, jy);
-      g.lineTo(ex, ey);
-      g.stroke();
-    } else {
-      g.strokeStyle = col;
-      g.beginPath();
-      g.moveTo(ax, ay);
-      g.lineTo(jx, jy);
-      g.lineTo(ex, ey);
-      g.stroke();
-    }
+    g.fillStyle = shadeCol;
+    g.fill();
+    g.restore();
+  }
+  function torsoPath(g, W2, top, bottom, side) {
+    const ws = W2 / 2, ww = W2 * (side ? 0.44 : 0.4), wh = W2 * (side ? 0.47 : 0.45);
+    const waistY = top + (bottom - top) * 0.6;
+    const fx = side ? 0.025 : 0;
+    g.beginPath();
+    g.moveTo(-ws + 0.07, top);
+    g.lineTo(ws - 0.07 + fx, top);
+    g.quadraticCurveTo(ws + fx + 0.01, top, ws + fx, top + 0.09);
+    g.quadraticCurveTo(ws + fx - 0.015, waistY - 0.1, ww, waistY);
+    g.quadraticCurveTo(wh + 0.015, bottom - 0.06, wh, bottom);
+    g.lineTo(-wh, bottom);
+    g.quadraticCurveTo(-wh - 0.015, bottom - 0.06, -ww, waistY);
+    g.quadraticCurveTo(-ws + 0.015, waistY - 0.1, -ws, top + 0.09);
+    g.quadraticCurveTo(-ws - 0.01, top, -ws + 0.07, top);
+    g.closePath();
   }
   function starPath(g, x, y, r, n = 5, k = 0.45, rot = -Math.PI / 2) {
     g.beginPath();
@@ -15411,7 +17066,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return [hip.x + x * cosL - ry * sinL, hip.y + x * sinL + ry * cosL];
     };
     const shoulderY = hipY0 - 0.42 * bulk;
-    const headY = shoulderY - 0.3 - (look.neck || 0);
+    const headY = shoulderY - 0.31 - (look.neck || 0);
     const out = { hip, lean, shoulderY, headY, hipY0, U: U2 };
     const L1 = 0.215 * armLen, L2 = 0.215 * armLen;
     const T1 = 0.245 * legLen, T22 = 0.245 * legLen;
@@ -15658,48 +17313,134 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function drawHand(g, x, y, r, col, shape, dirx, diry, extra) {
     const a = Math.atan2(diry, dirx);
+    const sh = dk2(col, -0.2);
+    g.save();
+    g.translate(x, y);
+    g.rotate(a);
+    g.lineJoin = "round";
+    g.lineCap = "round";
     if (shape === "palm") {
-      g.save();
-      g.translate(x, y);
-      g.rotate(a);
-      g.fillStyle = col;
+      g.beginPath();
+      g.ellipse(0.01, 0, r * 0.78, r * 1.05, 0, 0, TAU7);
+      for (let f = 0; f < 4; f++) {
+        const fy = (f - 1.5) * r * 0.46;
+        g.moveTo(r * 0.5, fy);
+        g.roundRect(r * 0.35, fy - r * 0.2, r * 1.05 - Math.abs(f - 1.5) * r * 0.16, r * 0.4, r * 0.2);
+      }
+      g.moveTo(-r * 0.05 + r * 0.42 * Math.cos(-0.7), -r * 1.02 + r * 0.42 * Math.sin(-0.7));
+      g.ellipse(-r * 0.05, -r * 1.02, r * 0.42, r * 0.22, -0.7, 0, TAU7);
+      g.lineWidth = OLW * 0.8;
       g.strokeStyle = OUTLINE2;
-      g.lineWidth = 0.03;
-      g.beginPath();
-      g.ellipse(0.02, 0, r * 0.75, r * 1.2, 0, 0, TAU7);
-      g.fill();
       g.stroke();
-      g.beginPath();
-      g.ellipse(-0.01, -r * 0.95, r * 0.35, r * 0.22, -0.6, 0, TAU7);
+      g.fillStyle = col;
       g.fill();
+      g.strokeStyle = sh;
+      g.lineWidth = 0.012;
+      g.beginPath();
+      for (let f = 1; f < 4; f++) {
+        const fy = (f - 2) * r * 0.46;
+        g.moveTo(r * 0.45, fy);
+        g.lineTo(r * 1.1, fy);
+      }
       g.stroke();
       g.restore();
       return;
     }
-    circ2(g, x, y, r, col, OUTLINE2, 0.03);
+    const w = r * 1.05, h2 = r * 1;
+    g.beginPath();
+    g.roundRect(-w * 0.95, -h2, w * 1.9, h2 * 2, r * 0.55);
     if (shape === "finger") {
-      g.strokeStyle = OUTLINE2;
-      g.lineWidth = 0.075;
-      g.lineCap = "round";
-      g.beginPath();
-      g.moveTo(x, y);
-      g.lineTo(x + Math.cos(a) * r * 2, y + Math.sin(a) * r * 2);
-      g.stroke();
-      g.strokeStyle = col;
-      g.lineWidth = 0.045;
-      g.stroke();
-    } else if (shape === "claw") {
+      g.moveTo(w * 0.7, -h2 * 0.55);
+      g.roundRect(w * 0.6, -h2 * 0.62, r * 1.6, r * 0.5, r * 0.25);
+    }
+    g.lineWidth = OLW * 0.8;
+    g.strokeStyle = OUTLINE2;
+    g.stroke();
+    g.fillStyle = col;
+    g.fill();
+    g.save();
+    g.clip();
+    g.fillStyle = sh;
+    g.fillRect(-w, h2 * 0.25, w * 2.2, h2);
+    g.restore();
+    g.strokeStyle = dk2(col, -0.35);
+    g.lineWidth = 0.013;
+    g.beginPath();
+    for (let k = -1; k <= 1; k++) {
+      g.moveTo(w * 0.55, k * h2 * 0.42 - h2 * 0.18);
+      g.lineTo(w * 0.85, k * h2 * 0.42 - h2 * 0.18);
+    }
+    g.stroke();
+    g.fillStyle = col;
+    g.strokeStyle = OUTLINE2;
+    g.lineWidth = 0.02;
+    g.beginPath();
+    g.ellipse(w * 0.15, h2 * 0.55, r * 0.5, r * 0.26, 0.15, 0, TAU7);
+    g.fill();
+    g.stroke();
+    if (shape === "claw") {
       g.strokeStyle = extra || "#fafafa";
-      g.lineWidth = 0.025;
-      g.lineCap = "round";
+      g.lineWidth = 0.028;
       for (let k = -1; k <= 1; k++) {
-        const aa = a + k * 0.45;
+        const yy = k * h2 * 0.55;
         g.beginPath();
-        g.moveTo(x + Math.cos(aa) * r * 0.8, y + Math.sin(aa) * r * 0.8);
-        g.quadraticCurveTo(x + Math.cos(aa) * r * 1.8, y + Math.sin(aa) * r * 1.8, x + Math.cos(aa + 0.5) * r * 2.1, y + Math.sin(aa + 0.5) * r * 2.1);
+        g.moveTo(w * 0.8, yy);
+        g.quadraticCurveTo(w * 1.7, yy - r * 0.15, w * 2.05, yy + r * 0.45);
         g.stroke();
       }
     }
+    g.restore();
+  }
+  function drawFoot(g, L2, side, which, look, col, bare, scale) {
+    const dx = L2.e[0] - L2.k[0], dy = L2.e[1] - L2.k[1];
+    const a = side ? Math.atan2(dy, dx) - Math.PI / 2 : 0;
+    const sandals = look.sandals ?? (look.seed || 0) % 4 === 0;
+    g.save();
+    g.translate(L2.e[0], L2.e[1]);
+    g.rotate(side ? a : 0);
+    g.scale(scale, scale);
+    g.lineJoin = "round";
+    const skin = look.skin || "#f1c9a0";
+    const x0 = side ? -0.06 : -0.095, x1 = side ? 0.19 : 0.095;
+    if (sandals || bare) {
+      g.beginPath();
+      g.roundRect(x0, -0.055, x1 - x0, 0.085, 0.04);
+      g.lineWidth = OLW * 0.8;
+      g.strokeStyle = OUTLINE2;
+      g.stroke();
+      g.fillStyle = bare ? col : skin;
+      g.fill();
+      if (!bare) {
+        g.fillStyle = "#6d4c41";
+        g.fillRect(x0 - 5e-3, 0.02, x1 - x0 + 0.01, 0.028);
+        g.strokeStyle = col;
+        g.lineWidth = 0.025;
+        g.beginPath();
+        g.moveTo(x0 + 0.05, -0.05);
+        g.lineTo(x0 + 0.08, 0.02);
+        g.moveTo(x1 - 0.07, -0.05);
+        g.lineTo(x1 - 0.1, 0.02);
+        g.stroke();
+      }
+    } else {
+      g.beginPath();
+      g.moveTo(x0, -0.07);
+      g.lineTo(x1 - 0.06, -0.06);
+      g.quadraticCurveTo(x1 + 5e-3, -0.055, x1, 0);
+      g.lineTo(x1, 0.035);
+      g.lineTo(x0, 0.035);
+      g.closePath();
+      g.lineWidth = OLW * 0.8;
+      g.strokeStyle = OUTLINE2;
+      g.stroke();
+      g.fillStyle = col;
+      g.fill();
+      g.fillStyle = dk2(col, -0.35);
+      g.fillRect(x0, 0.012, x1 - x0, 0.023);
+      g.fillStyle = "rgba(255,255,255,0.18)";
+      g.fillRect(x0 + 0.02, -0.055, (x1 - x0) * 0.5, 0.018);
+    }
+    g.restore();
   }
   function catmull(p0, p1, p2, p3, t) {
     const t2 = t * t, t3 = t2 * t;
@@ -15718,7 +17459,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     out.push(pts[pts.length - 1]);
     return out;
   }
-  var mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
   function drawTrails(g, look, pose, rig, d, side, back) {
     const A = pose.anim;
     if (!A || A.t <= 5e-3) return;
@@ -15730,9 +17470,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const t = A.t - k * dt;
       if (t < tMin) break;
       const P2 = k === 0 ? pose.P : samplePose(A, t, pose);
-      const rg = k === 0 ? rig : solveRig(look, P2, d, side, back);
-      rg.P = P2;
-      samples.push(rg);
+      const rg2 = k === 0 ? rig : solveRig(look, P2, d, side, back);
+      rg2.P = P2;
+      samples.push(rg2);
     }
     if (samples.length < 3) return;
     const col = pose.fx?.trail || pose.fx?.color || "#ffffff";
@@ -15742,17 +17482,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const effs = [];
     const bladed = armed && (wk === "sword" || wk === "axe" || wk === "staff");
     if (bladed || pose.blade) {
-      const tip = (rg, which) => {
-        const arm = which === "F" ? rg.armF : rg.armB;
-        const a = which === "F" ? rg.P.wF : rg.P.wB;
+      const tip = (rg2, which) => {
+        const arm = which === "F" ? rg2.armF : rg2.armB;
+        const a = which === "F" ? rg2.P.wF : rg2.P.wB;
         if (a === void 0 || a === null) return null;
-        const [dx, dy] = bladeDir(a, side, back, rg.lean, which === "F" ? -1 : 1);
+        const [dx, dy] = bladeDir(a, side, back, rg2.lean, which === "F" ? -1 : 1);
         const L2 = wk === "axe" && bladed ? 0.95 : wk === "staff" && bladed ? 0.78 : pose.bladeLen || 0.95;
         return [[arm.e[0] + dx * L2 * 0.3, arm.e[1] + dy * L2 * 0.3], [arm.e[0] + dx * (L2 + 0.12), arm.e[1] + dy * (L2 + 0.12)]];
       };
       for (const which of ["F", "B"]) {
         if (which === "B" && !(bladed && pose.weapon?.count >= 2) && !pose.bladeB) continue;
-        const pts = samples.map((rg) => tip(rg, which));
+        const pts = samples.map((rg2) => tip(rg2, which));
         if (pts.some((p) => !p)) continue;
         if (moved(pts[0][1], pts[pts.length - 1][1]) < 0.22) continue;
         effs.push({ blade: true, pts });
@@ -15761,7 +17501,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (!effs.length) {
       const limbs = A.limb === "fF" || A.limb === "fB" ? [["legF", "e"], ["legB", "e"], ["armF", "e"]] : [["armF", "e"], ["armB", "e"], ["legF", "e"], ["legB", "e"]];
       for (const [name, key2] of limbs) {
-        const pts = samples.map((rg) => rg[name][key2]);
+        const pts = samples.map((rg2) => rg2[name][key2]);
         if (moved(pts[0], pts[pts.length - 1]) < 0.2) continue;
         effs.push({ blade: false, pts, foot: name.startsWith("leg"), scale: samples[0][name].scale || 1 });
         if (effs.length >= 2) break;
@@ -16221,7 +17961,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const hipY = rig.hipY0;
     const shoulderY = rig.shoulderY;
     const headY = rig.headY;
-    const headR = 0.3;
+    const headR = 0.32;
     const armLen = look.arms || 1;
     if (pose.swimming) {
       g.translate(0, 0.45 * (look.legs || 1) + 0.2);
@@ -16377,21 +18117,42 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const hakiCol = "#1c1a24";
     const handCol = pose.armament ? hakiCol : look.hand || skin;
     const foreCol = pose.armament ? hakiCol : skinArm;
+    const sd = side ? [-0.55, 0.84] : back ? [-0.7, 0.7] : [0.7, 0.7];
+    const farDim = (which) => which === "B" && side ? -0.12 : 0;
     const drawArm = (arm, which) => {
-      const col = which === "B" && side ? shade(skinArm, -0.15) : skinArm;
-      const fcol = which === "B" && side ? shade(foreCol, -0.15) : foreCol;
-      const w = 0.12 * bulk * (which === "F" ? 1.08 : 1);
-      limb2(g, arm.s[0], arm.s[1], arm.j[0], arm.j[1], arm.e[0], arm.e[1], w, col, OUTLINE2, fcol);
-      if (pose.armament && !ghost) {
-        g.strokeStyle = "rgba(179,136,255,0.55)";
-        g.lineWidth = 0.018;
+      const dim = farDim(which);
+      const upperCol = dk2(skinArm, dim), foreC = dk2(foreCol, dim);
+      const w = 0.064 * bulk * (which === "F" ? 1.05 : 1);
+      const rs = [w, w * 0.84, w * 0.72];
+      if (ghost) {
+        drawLimb(g, [arm.s, arm.j, arm.e], rs, upperCol, null, null);
+        return;
+      }
+      if (foreC === upperCol) drawLimb(g, [arm.s, arm.j, arm.e], rs, upperCol, dk2(upperCol, -0.18), sd);
+      else {
+        drawLimb(g, [arm.j, arm.e], [rs[1], rs[2]], foreC, dk2(foreC, -0.18), sd);
+        drawLimb(g, [arm.s, arm.j], [rs[0], rs[1]], upperCol, dk2(upperCol, -0.18), sd);
+      }
+      if (armLen > 1.2) {
+        const j2 = mix2(arm.j, arm.e, 0.5);
+        circ2(g, arm.j[0], arm.j[1], rs[1] * 1.12, upperCol, OUTLINE2, 0.03);
+        circ2(g, j2[0], j2[1], rs[2] * 1.12, foreC, OUTLINE2, 0.03);
+      }
+      if (!look.sleeve && !look.noSleeves) {
+        const m = mix2(arm.s, arm.j, 0.42);
+        const tc = dk2(top, dim);
+        drawLimb(g, [arm.s, m], [w * 1.3, w * 1.14], tc, dk2(tc, -0.2), sd);
+      }
+      if (pose.armament) {
+        g.strokeStyle = "rgba(179,136,255,0.6)";
+        g.lineWidth = 0.016;
         g.lineCap = "round";
+        const a0 = mix2(arm.j, arm.e, 0.2), a1 = mix2(arm.j, arm.e, 0.8);
         g.beginPath();
-        g.moveTo(arm.j[0] + (arm.e[0] - arm.j[0]) * 0.2, arm.j[1] + (arm.e[1] - arm.j[1]) * 0.2 - w * 0.25);
-        g.lineTo(arm.j[0] + (arm.e[0] - arm.j[0]) * 0.8, arm.j[1] + (arm.e[1] - arm.j[1]) * 0.8 - w * 0.25);
+        g.moveTo(a0[0], a0[1] - w * 0.35);
+        g.lineTo(a1[0], a1[1] - w * 0.3);
         g.stroke();
       }
-      if (armLen > 1.2) circ2(g, arm.j[0], arm.j[1], 0.07, col, OUTLINE2, 0.03);
     };
     const handShape = (which) => which === "F" ? P2.hand || "fist" : P2.handB || "fist";
     const limbFxOn = (which) => {
@@ -16399,14 +18160,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return l === "both" || l === (which === "F" ? "hF" : "hB");
     };
     const drawHandAt = (arm, which) => {
-      const r = 0.085 * bulk * arm.scale;
+      const r = 0.088 * bulk * arm.scale;
       const dx = arm.e[0] - arm.j[0], dy = arm.e[1] - arm.j[1];
-      const hc = which === "B" && side ? shade(handCol, -0.12) : handCol;
+      const hc = dk2(handCol, farDim(which));
       drawHand(g, arm.e[0], arm.e[1], r, hc, handShape(which), dx, dy, pose.fx?.claw);
       if (pose.armament && !ghost) {
-        g.fillStyle = "rgba(180,140,255,0.5)";
+        g.fillStyle = "rgba(180,140,255,0.55)";
         g.beginPath();
-        g.arc(arm.e[0] - r * 0.3, arm.e[1] - r * 0.35, r * 0.3, 0, TAU7);
+        g.arc(arm.e[0] - r * 0.3, arm.e[1] - r * 0.4, r * 0.28, 0, TAU7);
         g.fill();
       }
       if (!ghost && pose.fx?.elem && limbFxOn(which)) drawHandFx(g, arm.e[0], arm.e[1], r, pose.fx, t, pose.fx.k ?? 1);
@@ -16446,23 +18207,28 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       drawBlade(arm, which);
       drawHandAt(arm, which);
     };
-    const legW = 0.15 * bulk;
+    const legW = 0.078 * bulk;
     const shoeCol = look.shoes || "#3b2a1a";
     const drawLeg = (L2, which) => {
-      const col = which === "B" && side ? shade(bottom, -0.15) : bottom;
+      const dim = farDim(which);
+      const col = dk2(bottom, dim);
       const striking = pose.fx?.limb === (which === "F" ? "fF" : "fB");
       const legSkin = pose.legFx && (striking || pose.legFxAll) ? pose.legFx : pose.armLegs ? hakiCol : null;
-      limb2(g, L2.h[0], L2.h[1], L2.k[0], L2.k[1], L2.e[0], L2.e[1], legW, col, OUTLINE2, legSkin || col);
-      const dx = L2.e[0] - L2.k[0], dy = L2.e[1] - L2.k[1];
-      const a = side ? Math.atan2(dy, dx) - Math.PI / 2 : 0;
-      g.save();
-      g.translate(L2.e[0], L2.e[1]);
-      g.rotate(side ? a : 0);
-      g.scale(L2.scale, L2.scale);
-      const sc = pose.armLegs ? hakiCol : which === "B" && side ? shade(shoeCol, -0.2) : shoeCol;
-      if (side) rrect2(g, -0.04, -0.05, 0.2, 0.09, 0.04, sc);
-      else rrect2(g, -0.09, -0.05, 0.18, 0.09, 0.04, sc);
-      g.restore();
+      const rs = [legW, legW * 0.86, legW * 0.72];
+      if (ghost) {
+        drawLimb(g, [L2.h, L2.k, L2.e], rs, col, null, null);
+        drawFoot(g, L2, side, which, look, col, true, L2.scale);
+        return;
+      }
+      if (legSkin) {
+        drawLimb(g, [L2.k, L2.e], [rs[1], rs[2]], legSkin, dk2(legSkin, -0.2), sd);
+        drawLimb(g, [L2.h, L2.k], [rs[0], rs[1]], col, dk2(col, -0.2), sd);
+      } else {
+        drawLimb(g, [L2.h, L2.k, L2.e], rs, col, dk2(col, -0.2), sd);
+        const c0 = mix2(L2.k, L2.e, 0.7), c1 = mix2(L2.k, L2.e, 0.9);
+        drawLimb(g, [c0, c1], [rs[2] * 1.14, rs[2] * 1.1], dk2(col, -0.25), null, null);
+      }
+      drawFoot(g, L2, side, which, look, pose.armLegs ? hakiCol : dk2(shoeCol, dim * 1.5), false, L2.scale);
       if (!ghost && pose.fx?.elem && striking) drawHandFx(g, L2.e[0], L2.e[1], 0.1, pose.fx, t, pose.fx.k ?? 1);
     };
     const armFForward = !side && !back && rig.armF.u > 0.18;
@@ -16481,41 +18247,122 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       drawLeg(rig.legB, "B");
       if (!legFForward) drawLeg(rig.legF, "F");
     }
-    const torsoW = 0.46 * bulk, torsoH = hipY - shoulderY + 0.05;
+    const torsoW = (side ? 0.4 : 0.46) * bulk;
+    const tTop = shoulderY - 0.02, tBot = hipY + 0.035;
     upper(() => {
-      rrect2(g, -torsoW / 2, shoulderY - 0.02, torsoW, torsoH, 0.12, top, OUTLINE2);
-      if (look.vest) {
-        g.fillStyle = look.vest;
-        g.fillRect(-torsoW / 2 + 0.02, shoulderY + 0.02, 0.1, torsoH - 0.1);
-        g.fillRect(torsoW / 2 - 0.12, shoulderY + 0.02, 0.1, torsoH - 0.1);
-      }
-      if (look.spots && !ghost) {
-        g.fillStyle = "rgba(78,52,46,0.8)";
-        for (let k = 0; k < 6; k++) {
-          g.beginPath();
-          g.arc(-torsoW / 2 + 0.08 + k % 3 * 0.14, shoulderY + 0.1 + Math.floor(k / 3) * 0.16, 0.03, 0, TAU7);
-          g.fill();
+      torsoPath(g, torsoW, tTop, tBot, side);
+      g.lineJoin = "round";
+      g.lineWidth = OLW;
+      g.strokeStyle = OUTLINE2;
+      g.stroke();
+      g.fillStyle = top;
+      g.fill();
+      if (!ghost) {
+        g.save();
+        g.clip();
+        g.fillStyle = bottom;
+        g.fillRect(-torsoW, hipY - 0.05, torsoW * 2, 0.25);
+        if (look.vest) {
+          g.fillStyle = look.vest;
+          if (side) g.fillRect(-torsoW / 2 - 0.02, tTop, torsoW * 0.55, hipY - tTop - 0.05);
+          else {
+            g.fillRect(-torsoW / 2 - 0.02, tTop, 0.13, hipY - tTop - 0.05);
+            g.fillRect(torsoW / 2 - 0.11, tTop, 0.13, hipY - tTop - 0.05);
+          }
         }
-      }
-      if (look.openShirt && !back && !side) {
-        g.fillStyle = skin;
-        g.beginPath();
-        g.moveTo(-0.07, shoulderY);
-        g.lineTo(0.07, shoulderY);
-        g.lineTo(0.03, hipY - 0.05);
-        g.lineTo(-0.03, hipY - 0.05);
-        g.fill();
-        if (look.scar && !ghost) {
-          g.strokeStyle = "#b0413e";
-          g.lineWidth = 0.03;
+        if (look.openShirt && !back) {
+          g.fillStyle = skin;
           g.beginPath();
-          g.moveTo(-0.08, shoulderY + 0.1);
-          g.lineTo(0.08, shoulderY + 0.25);
+          if (side) {
+            g.moveTo(torsoW * 0.3, tTop);
+            g.lineTo(torsoW * 0.6, tTop);
+            g.lineTo(torsoW * 0.6, hipY - 0.06);
+            g.lineTo(torsoW * 0.38, hipY - 0.06);
+          } else {
+            g.moveTo(-0.08, tTop);
+            g.lineTo(0.08, tTop);
+            g.lineTo(0.035, hipY - 0.06);
+            g.lineTo(-0.035, hipY - 0.06);
+          }
+          g.fill();
+          if (look.scar && !side) {
+            g.strokeStyle = "#b0413e";
+            g.lineWidth = 0.03;
+            g.beginPath();
+            g.moveTo(-0.08, shoulderY + 0.1);
+            g.lineTo(0.08, shoulderY + 0.25);
+            g.stroke();
+          }
+        } else if (!back && !side) {
+          g.fillStyle = skin;
+          g.beginPath();
+          g.moveTo(-0.07, tTop - 0.01);
+          g.quadraticCurveTo(0, tTop + 0.09, 0.07, tTop - 0.01);
+          g.fill();
+          g.strokeStyle = dk2(top, -0.35);
+          g.lineWidth = 0.018;
+          g.beginPath();
+          g.moveTo(-0.08, tTop);
+          g.quadraticCurveTo(0, tTop + 0.1, 0.08, tTop);
+          g.stroke();
+        }
+        if (look.spots) {
+          g.fillStyle = "rgba(78,52,46,0.8)";
+          for (let k = 0; k < 6; k++) {
+            g.beginPath();
+            g.arc(-torsoW / 2 + 0.08 + k % 3 * 0.14, shoulderY + 0.1 + Math.floor(k / 3) * 0.16, 0.03, 0, TAU7);
+            g.fill();
+          }
+        }
+        g.fillStyle = "rgba(20,10,30,0.2)";
+        g.beginPath();
+        if (side) {
+          g.moveTo(-torsoW, tTop - 0.1);
+          g.lineTo(-torsoW * 0.1, tTop - 0.1);
+          g.quadraticCurveTo(-torsoW * 0.3, (tTop + tBot) / 2, -torsoW * 0.08, tBot + 0.1);
+          g.lineTo(-torsoW, tBot + 0.1);
+        } else if (back) g.rect(-torsoW, tTop - 0.1, torsoW * 0.62, tBot - tTop + 0.2);
+        else {
+          g.moveTo(torsoW * 0.22, tTop - 0.1);
+          g.quadraticCurveTo(torsoW * 0.08, (tTop + tBot) / 2, torsoW * 0.26, tBot + 0.1);
+          g.lineTo(torsoW, tBot + 0.1);
+          g.lineTo(torsoW, tTop - 0.1);
+        }
+        g.fill();
+        g.strokeStyle = dk2(top, -0.3);
+        g.lineWidth = 0.016;
+        g.beginPath();
+        g.moveTo(-torsoW / 2, hipY - 0.11);
+        g.quadraticCurveTo(0, hipY - 0.085, torsoW / 2, hipY - 0.11);
+        g.stroke();
+        g.restore();
+      }
+      const bw = torsoW * 0.94;
+      g.fillStyle = look.belt || dk2(bottom, -0.32);
+      g.strokeStyle = OUTLINE2;
+      g.lineWidth = 0.025;
+      g.beginPath();
+      g.rect(-bw / 2, hipY - 0.1, bw, 0.06);
+      g.fill();
+      if (!ghost) g.stroke();
+      if (!ghost) {
+        if (!side && !back) {
+          g.fillStyle = "#ffd54f";
+          g.beginPath();
+          g.rect(-0.035, hipY - 0.105, 0.07, 0.07);
+          g.fill();
+          g.stroke();
+        } else if (side) {
+          g.fillStyle = look.belt || dk2(bottom, -0.32);
+          g.beginPath();
+          g.moveTo(-bw / 2, hipY - 0.07);
+          g.quadraticCurveTo(-bw / 2 - 0.12, hipY - 0.02, -bw / 2 - 0.08, hipY + 0.1);
+          g.lineTo(-bw / 2 - 0.02, hipY - 0.04);
+          g.closePath();
+          g.fill();
           g.stroke();
         }
       }
-      g.fillStyle = look.belt || shade(bottom, -0.3);
-      g.fillRect(-torsoW / 2, hipY - 0.07, torsoW, 0.07);
       if (look.gills && !ghost) {
         g.strokeStyle = shade(skin, -0.35);
         g.lineWidth = 0.02;
@@ -16570,7 +18417,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!armBForward) drawArmFull(rig.armB, "B");
       if (!armFForward) drawArmFull(rig.armF, "F");
     }
-    if (look.neck) upper(() => rrect2(g, -0.08, headY + 0.1, 0.16, shoulderY - headY - 0.08, 0.06, skin, OUTLINE2));
+    upper(() => drawLimb(g, [[0, shoulderY + 0.04], [0, headY + headR * 0.55]], [0.075, 0.068], skin, ghost ? null : dk2(skin, -0.2), ghost ? null : sd));
     upper(() => {
       g.save();
       const tilt = (P2.ht || 0) + (pose.state === "hurt" ? -0.25 : 0);
@@ -16986,13 +18833,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       outer.push([Math.cos(th) * R, Math.sin(th) * R]);
       inner.push([Math.cos(th) * (R - w), Math.sin(th) * (R - w)]);
     }
-    const fade = (1 - Math.pow(k, 2.2)) * a;
+    const fade2 = (1 - Math.pow(k, 2.2)) * a;
     if (s.add !== false) g.globalCompositeOperation = "lighter";
     const gr = g.createLinearGradient(outer[0][0], outer[0][1], outer[N2][0], outer[N2][1]);
     gr.addColorStop(0, rgba2(s.color, 0));
-    gr.addColorStop(0.55, rgba2(s.color, 0.55 * fade));
-    gr.addColorStop(0.92, rgba2(s.color, 0.95 * fade));
-    gr.addColorStop(1, rgba2(s.core || "#ffffff", fade));
+    gr.addColorStop(0.55, rgba2(s.color, 0.55 * fade2));
+    gr.addColorStop(0.92, rgba2(s.color, 0.95 * fade2));
+    gr.addColorStop(1, rgba2(s.core || "#ffffff", fade2));
     g.fillStyle = gr;
     g.beginPath();
     g.moveTo(outer[0][0], outer[0][1]);
@@ -17004,7 +18851,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.lineCap = "round";
     for (let i = Math.floor(N2 * 0.45); i < N2; i++) {
       const u = i / N2;
-      g.globalAlpha = fade * u * u;
+      g.globalAlpha = fade2 * u * u;
       g.lineWidth = Math.max(0.012, W2 * 0.22 * u);
       g.beginPath();
       g.moveTo(outer[i][0], outer[i][1]);
@@ -17019,23 +18866,23 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   SHAPES.impact = {
     air(g, s, k, a) {
       const grow = k < 0.25 ? easeOut(k / 0.25) : 1;
-      const fade = k < 0.3 ? 1 : 1 - (k - 0.3) / 0.7;
+      const fade2 = k < 0.3 ? 1 : 1 - (k - 0.3) / 0.7;
       const R = s.size * (0.45 + 0.75 * grow);
       g.translate(0, -(s.z ?? 0.7));
       g.rotate(s.angle || 0);
       g.globalCompositeOperation = "lighter";
-      g.globalAlpha = a * fade * 0.9;
+      g.globalAlpha = a * fade2 * 0.9;
       g.fillStyle = s.color || "#ffffff";
       spiky(g, R, s.spikes || 9, s.seed, 1.3);
       g.fill();
-      g.globalAlpha = a * fade;
+      g.globalAlpha = a * fade2;
       g.fillStyle = s.core || "#ffffff";
       spiky(g, R * 0.52, s.spikes || 9, s.seed + 5, 1.2);
       g.fill();
       g.strokeStyle = s.color || "#ffffff";
       g.lineWidth = 0.035;
       g.lineCap = "round";
-      g.globalAlpha = a * fade * 0.85;
+      g.globalAlpha = a * fade2 * 0.85;
       g.beginPath();
       const n = s.lines ?? 5;
       for (let i = 0; i < n; i++) {
@@ -17050,17 +18897,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   SHAPES.flare = {
     air(g, s, k, a) {
       const grow = k < 0.2 ? easeOut(k / 0.2) : 1;
-      const fade = 1 - k;
+      const fade2 = 1 - k;
       const R = s.size * (0.4 + 0.6 * grow);
       g.translate(0, -(s.z ?? 0.7));
       g.rotate(s.rot ?? 0.2 + k * 0.6);
       g.globalCompositeOperation = "lighter";
-      g.globalAlpha = a * fade * 0.4;
+      g.globalAlpha = a * fade2 * 0.4;
       g.fillStyle = s.color || "#fff59d";
       g.beginPath();
       g.arc(0, 0, R * 0.55, 0, TAU8);
       g.fill();
-      g.globalAlpha = a * fade * 0.95;
+      g.globalAlpha = a * fade2 * 0.95;
       starPath(g, 0, 0, R, 4, 0.12, 0);
       g.fill();
       g.fillStyle = "#ffffff";
@@ -17070,7 +18917,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   SHAPES.beam = {
     air(g, s, k, a, c) {
-      const fade = Math.min(1, (1 - k) * 1.6) * a;
+      const fade2 = Math.min(1, (1 - k) * 1.6) * a;
       g.translate(0, -(s.z ?? 0.7));
       g.rotate(s.angle);
       const ext = easeOut(Math.min(1, k * 6));
@@ -17086,7 +18933,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const seed = s.seed + Math.floor(c.t * 25);
         for (let i = 0; i < 3; i++) {
           for (const [cc, lw, al] of [[col, wd * 0.9, 0.35], [col, wd * 0.35, 0.9], ["#ffffff", wd * 0.14, 1]]) {
-            g.globalAlpha = fade * al;
+            g.globalAlpha = fade2 * al;
             g.strokeStyle = cc;
             g.lineWidth = Math.max(0.02, lw * (i ? 0.6 : 1));
             g.beginPath();
@@ -17097,7 +18944,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         return;
       }
       if (style === "string") {
-        g.globalAlpha = fade;
+        g.globalAlpha = fade2;
         g.strokeStyle = col;
         g.lineWidth = 0.022;
         const n = 5;
@@ -17116,12 +18963,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       const add2 = style !== "dark" && style !== "sand" && style !== "mochi";
       if (add2) g.globalCompositeOperation = "lighter";
-      g.globalAlpha = fade * 0.3;
+      g.globalAlpha = fade2 * 0.3;
       g.fillStyle = col;
       g.beginPath();
       g.roundRect(-wd * 0.3, -wd * 0.85, L2 + wd * 0.6, wd * 1.7, wd * 0.85);
       g.fill();
-      g.globalAlpha = fade * 0.85;
+      g.globalAlpha = fade2 * 0.85;
       if (style === "fire") {
         const gr = g.createLinearGradient(0, 0, L2, 0);
         gr.addColorStop(0, "#ffeb3b");
@@ -17149,7 +18996,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.fill();
       if (style === "dark") {
         g.globalCompositeOperation = "lighter";
-        g.globalAlpha = fade * 0.8;
+        g.globalAlpha = fade2 * 0.8;
         g.strokeStyle = "#b388ff";
         g.lineWidth = 0.03;
         g.beginPath();
@@ -17159,7 +19006,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.lineTo(L2, wd / 2);
         g.stroke();
       } else {
-        g.globalAlpha = fade;
+        g.globalAlpha = fade2;
         g.fillStyle = s.core || "#ffffff";
         const cw = wd * (style === "light" ? 0.55 : 0.32);
         g.beginPath();
@@ -17167,7 +19014,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.fill();
       }
       if (style === "quake") {
-        g.globalAlpha = fade * 0.9;
+        g.globalAlpha = fade2 * 0.9;
         g.strokeStyle = "#ffffff";
         g.lineWidth = 0.035;
         g.beginPath();
@@ -17178,7 +19025,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
         g.stroke();
       } else if (style === "ice") {
-        g.globalAlpha = fade * 0.9;
+        g.globalAlpha = fade2 * 0.9;
         g.fillStyle = "#e1f5fe";
         const n = Math.max(3, Math.round(L2 * 1.5));
         for (let i = 0; i < n; i++) {
@@ -17190,7 +19037,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           g.fill();
         }
       } else if (style === "gravity") {
-        g.globalAlpha = fade * 0.8;
+        g.globalAlpha = fade2 * 0.8;
         g.strokeStyle = "#ede7f6";
         g.lineWidth = 0.03;
         const n = Math.max(3, Math.round(L2));
@@ -17203,7 +19050,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           g.stroke();
         }
       } else if (style === "light" || style === "energy") {
-        g.globalAlpha = fade * 0.9;
+        g.globalAlpha = fade2 * 0.9;
         g.fillStyle = "#ffffff";
         g.beginPath();
         g.arc(0, 0, wd * 0.9, 0, TAU8);
@@ -17211,7 +19058,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         starPath(g, 0, 0, wd * 1.8, 4, 0.12, c.t * 3);
         g.fill();
       }
-      g.globalAlpha = fade * 0.8;
+      g.globalAlpha = fade2 * 0.8;
       g.fillStyle = s.core || "#ffffff";
       g.beginPath();
       g.arc(L2, 0, wd * 0.55, 0, TAU8);
@@ -17221,7 +19068,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   SHAPES.bolt = {
     air(g, s, k, a, c) {
       const [dx, dy] = c.rel(s.x1, s.y1);
-      const fade = (1 - k) * a;
+      const fade2 = (1 - k) * a;
       const z0 = s.z0 ?? 0.8, z1 = s.z1 ?? 0.8;
       const n = Math.max(5, Math.ceil(Math.hypot(dx, dy - z1 + z0) * 2.2));
       const seed = s.seed + Math.floor(c.t * 30);
@@ -17230,7 +19077,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.lineJoin = "round";
       const w = s.width || 0.08;
       for (const [col, lw, al] of [[s.color, w * 4, 0.3], [s.color, w * 1.6, 0.85], ["#ffffff", w * 0.6, 1]]) {
-        g.globalAlpha = fade * al;
+        g.globalAlpha = fade2 * al;
         g.strokeStyle = col;
         g.lineWidth = lw;
         g.beginPath();
@@ -17238,7 +19085,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.stroke();
       }
       if (s.branches !== 0) {
-        g.globalAlpha = fade * 0.7;
+        g.globalAlpha = fade2 * 0.7;
         g.strokeStyle = s.color;
         g.lineWidth = w * 0.7;
         g.beginPath();
@@ -17257,11 +19104,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   SHAPES.aircrack = {
     air(g, s, k, a) {
       const grow = easeOut(Math.min(1, k / 0.12));
-      const fade = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
+      const fade2 = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
       const R = s.size * grow;
       g.translate(0, -(s.z ?? 0.8));
       g.globalCompositeOperation = "lighter";
-      g.globalAlpha = a * fade * 0.25;
+      g.globalAlpha = a * fade2 * 0.25;
       g.fillStyle = s.color || "#e0f7fa";
       g.beginPath();
       g.arc(0, 0, R * 0.35, 0, TAU8);
@@ -17270,7 +19117,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.lineJoin = "miter";
       const n = s.n || 9;
       for (const [col, lw] of [[s.color || "#e0f7fa", 0.09], ["#ffffff", 0.035]]) {
-        g.globalAlpha = a * fade;
+        g.globalAlpha = a * fade2;
         g.strokeStyle = col;
         g.lineWidth = lw;
         g.beginPath();
@@ -17296,22 +19143,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   SHAPES.pillar = {
     ground(g, s, k, a) {
-      const fade = Math.min(1, (1 - k) * 3) * a;
+      const fade2 = Math.min(1, (1 - k) * 3) * a;
       g.globalCompositeOperation = "lighter";
-      g.globalAlpha = fade * 0.45;
+      g.globalAlpha = fade2 * 0.45;
       g.fillStyle = s.color;
       ellipsePath(g, s.r * 1.6, s.r);
       g.fill();
     },
     air(g, s, k, a, c) {
       const grow = easeOut(Math.min(1, k / 0.15));
-      const fade = Math.min(1, (1 - k) * 3) * a;
+      const fade2 = Math.min(1, (1 - k) * 3) * a;
       const H2 = (s.h || 4) * grow, R = s.r * (0.6 + 0.4 * grow) * (1 - k * 0.3);
       g.globalCompositeOperation = s.kind === "dark" ? "source-over" : "lighter";
       const col = s.color;
       for (let layer = 0; layer < 3; layer++) {
         const w = R * [1.4, 1, 0.45][layer];
-        g.globalAlpha = fade * [0.25, 0.6, 0.95][layer];
+        g.globalAlpha = fade2 * [0.25, 0.6, 0.95][layer];
         g.fillStyle = layer === 2 ? s.core || "#ffffff" : col;
         g.beginPath();
         g.moveTo(-w, 0);
@@ -17525,14 +19372,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   SHAPES.spikes = {
     air(g, s, k, a) {
       const age = s.age || 0;
-      const fade = Math.min(1, (1 - k) * 3) * a;
+      const fade2 = Math.min(1, (1 - k) * 3) * a;
       for (const p of s.pts) {
         const t = age - (p.delay || 0);
         if (t < 0) continue;
         const grow = easeOut(Math.min(1, t / 0.12));
         const [px, py] = [p.dx, p.dy];
         const h2 = p.h * grow, w = p.w;
-        g.globalAlpha = fade;
+        g.globalAlpha = fade2;
         g.fillStyle = s.color || "#b3e5fc";
         g.strokeStyle = s.edge || "#e1f5fe";
         g.lineWidth = 0.025;
@@ -17544,7 +19391,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.fill();
         g.stroke();
         if (s.kind === "ice") {
-          g.globalAlpha = fade * 0.8;
+          g.globalAlpha = fade2 * 0.8;
           g.fillStyle = "#ffffff";
           g.beginPath();
           g.moveTo(px - w * 0.3, py - h2 * 0.1);
@@ -17559,7 +19406,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   SHAPES.arms = {
     air(g, s, k, a, c) {
       const age = s.age || 0;
-      const fade = Math.min(1, (1 - k) * 4) * a;
+      const fade2 = Math.min(1, (1 - k) * 4) * a;
       const skin = s.skin || "#f1c9a0", sleeve = s.sleeve || "#7e57c2";
       for (const p of s.pts) {
         const t = age - (p.delay || 0);
@@ -17567,7 +19414,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const grow = easeOut(Math.min(1, t / 0.16));
         const clutch = Math.min(1, Math.max(0, (t - 0.16) / 0.12));
         const x = p.dx, y = p.dy, L2 = p.L * grow * (s.big ? 2.2 : 1);
-        g.globalAlpha = fade;
+        g.globalAlpha = fade2;
         g.fillStyle = s.petal || "#f48fb1";
         for (let i = 0; i < 5; i++) {
           const th = i / 5 * TAU8 + p.seed;
@@ -17687,7 +19534,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   SHAPES.claw = {
     air(g, s, k, a) {
       const reveal = easeOut(Math.min(1, k / 0.25));
-      const fade = k < 0.4 ? 1 : 1 - (k - 0.4) / 0.6;
+      const fade2 = k < 0.4 ? 1 : 1 - (k - 0.4) / 0.6;
       g.translate(0, -(s.z ?? 0.75));
       g.rotate((s.angle || 0) + (s.tilt ?? 0.9));
       const L2 = s.size || 1;
@@ -17698,7 +19545,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const x0 = -L2 / 2, x1 = -L2 / 2 + L2 * reveal;
         for (const [col, lw, add2] of [[s.color || "#ffffff", 0.11, true], ["#ffffff", 0.04, true]]) {
           g.globalCompositeOperation = add2 ? "lighter" : "source-over";
-          g.globalAlpha = a * fade;
+          g.globalAlpha = a * fade2;
           g.strokeStyle = col;
           g.lineWidth = lw * (1 - Math.abs(off) / L2);
           g.beginPath();
@@ -17712,7 +19559,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   SHAPES.cube = {
     air(g, s, k, a, c) {
       const grow = easeOut(Math.min(1, k / 0.2));
-      const fade = 1 - k * k;
+      const fade2 = 1 - k * k;
       g.translate(0, -(s.z ?? 0.8));
       const R = s.size * grow;
       const rot = (s.rot || 0) + c.t * (s.spin ?? 2);
@@ -17724,7 +19571,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         v.push([X * R, (y * cy - Z * sy) * R]);
       }
       g.globalCompositeOperation = "lighter";
-      g.globalAlpha = a * fade * 0.18;
+      g.globalAlpha = a * fade2 * 0.18;
       g.fillStyle = s.color;
       g.beginPath();
       g.moveTo(v[4][0], v[4][1]);
@@ -17733,7 +19580,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.lineTo(v[7][0], v[7][1]);
       g.closePath();
       g.fill();
-      g.globalAlpha = a * fade;
+      g.globalAlpha = a * fade2;
       g.strokeStyle = s.color;
       g.lineWidth = 0.035;
       g.beginPath();
@@ -17744,7 +19591,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.stroke();
       if (s.heart) {
         g.fillStyle = "#ff5252";
-        g.globalAlpha = a * fade;
+        g.globalAlpha = a * fade2;
         g.beginPath();
         g.arc(-R * 0.18, -R * 0.1, R * 0.22, 0, TAU8);
         g.arc(R * 0.18, -R * 0.1, R * 0.22, 0, TAU8);
@@ -17759,7 +19606,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     air(g, s, k, a, c) {
       const [dx, dy] = c.rel(s.x1, s.y1);
       const reveal = easeOut(Math.min(1, k / 0.18));
-      const fade = k < 0.35 ? 1 : 1 - (k - 0.35) / 0.65;
+      const fade2 = k < 0.35 ? 1 : 1 - (k - 0.35) / 0.65;
       const z = s.z ?? 0.7;
       const off = s.off || 0;
       const nx = -dy, ny = dx, l = Math.hypot(dx, dy) || 1;
@@ -17767,7 +19614,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.globalCompositeOperation = "lighter";
       g.lineCap = "round";
       for (const [col, lw] of [[s.color || "#e3f2fd", 0.12], ["#ffffff", 0.035]]) {
-        g.globalAlpha = a * fade;
+        g.globalAlpha = a * fade2;
         g.strokeStyle = col;
         g.lineWidth = lw * (1 - k * 0.5);
         g.beginPath();
@@ -17875,9 +19722,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   SHAPES.strings = {
     air(g, s, k, a, c) {
       const [dx, dy] = c.rel(s.x1, s.y1);
-      const fade = 1 - k;
+      const fade2 = 1 - k;
       const n = s.n || 5;
-      g.globalAlpha = a * fade;
+      g.globalAlpha = a * fade2;
       g.strokeStyle = s.color || "#f8bbd0";
       g.lineWidth = 0.02;
       g.beginPath();
@@ -18710,18 +20557,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.lineJoin = "round";
       for (const t of this.texts) {
         const [sx, sy] = r.toScreen(w, t.x, t.y);
-        const fade = t.dmg ? Math.min(1, t.life / (t.max * 0.4)) : Math.min(1, t.life / t.max * 2.4);
+        const fade2 = t.dmg ? Math.min(1, t.life / (t.max * 0.4)) : Math.min(1, t.life / t.max * 2.4);
         const pk = Math.min(1, t.pop / 0.13);
         const pop = 1 + (t.dmg ? 0.6 : 0.3) * (1 - pk) * (1 - pk);
         const zy = (t.dmg ? t.oy + t.z : t.z) * z;
         g.setTransform(dpr, 0, 0, dpr, sx * dpr, (sy - zy) * dpr);
-        g.globalAlpha = fade;
+        g.globalAlpha = fade2;
         const px = Math.round(t.size * Math.min(z, 44) * pop * (t.crit && !t.dmg ? 1.35 : 1));
         if (px < 4) continue;
         if (t.crit && t.dmg) {
           g.save();
           g.globalCompositeOperation = "lighter";
-          g.globalAlpha = fade * 0.55 * (0.6 + 0.4 * (1 - pk));
+          g.globalAlpha = fade2 * 0.55 * (0.6 + 0.4 * (1 - pk));
           g.fillStyle = "#ff9100";
           starPath(g, 0, -px * 0.35, px * 0.95, 8, 0.45, t.age * 1.5);
           g.fill();
@@ -22762,7 +24609,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     { type: "observation", key: "T", name: "Observation Haki", icon: { id: "toggle_observation", name: "Observation", hakiType: "observation", source: "haki:observation" } },
     { type: "conqueror", key: "G", name: "Conqueror's Haki", icon: { id: "haki_conqueror", name: "Conqueror's", hakiType: "conqueror", source: "haki:conqueror" } }
   ];
-  var UI = class {
+  var UI2 = class {
     constructor(container) {
       const style = document.createElement("style");
       style.textContent = style_default;
@@ -53664,7 +55511,7 @@ Trains by: ${TRAINS_BY[k]}` },
       throw e;
     }
     const input = new Input(root);
-    const ui = new UI(document.body);
+    const ui = new UI2(document.body);
     const settings = loadSettings();
     const audio = new Audio(settings);
     const world = await generateWorld({

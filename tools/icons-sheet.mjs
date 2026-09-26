@@ -78,7 +78,7 @@ const t0 = performance.now();
 // focus mode: ?focus=T:food,i:meat,s:gomu_pistol,S:fruit:mera,u:map → one row per icon at many sizes
 const focus = q.get('focus');
 if (focus) {
-  const abilAll = allAbilities();
+  const abilAll = [...allAbilities(), { id: 'toggle_armament', name: 'Armament', hakiType: 'armament', source: 'haki:armament' }, { id: 'toggle_observation', name: 'Observation', hakiType: 'observation', source: 'haki:observation' }];
   const rows = [];
   for (const tok of focus.split(',')) {
     const [k, ...rest] = tok.split(':'); const v = rest.join(':');
@@ -121,12 +121,17 @@ if (only.includes('items24') && !focus) {
   const g3 = section('items64', 'Items @64 (detail)', '#e9d5a9', '#2b1d12');
   for (const [id, arg] of itemList.slice(0, 400)) cell(g3, itemIcon(arg, 64), null, 68);
 }
-const abil = allAbilities();
+const TOGGLES = [
+  { id: 'toggle_armament', name: 'Armament', hakiType: 'armament', source: 'haki:armament' },
+  { id: 'toggle_observation', name: 'Observation', hakiType: 'observation', source: 'haki:observation' },
+  { id: 'haki_conqueror', name: "Conqueror's", hakiType: 'conqueror', source: 'haki:conqueror' },
+];
+const abil = [...allAbilities(), ...TOGGLES.slice(0, 2)];
 const player = abil.filter((a) => /^(style|fruit|haki)/.test(a.source || ''));
 const npc = abil.filter((a) => !/^(style|fruit|haki)/.test(a.source || ''));
 if (only.includes('skills') && !focus) {
   const g = section('skills', 'Player skills @48 (styles, fruits, haki) on hotbar navy', '#0e2233', '#f5e6c4');
-  for (const a of player) { const c = skillIcon(a, 48); cell(g, c, a.id, 74); }
+  for (const a of player) { const c = skillIcon(a, 48); if (c.dataset.icon === 'impact' && !/impact|burst|skull/i.test(a.name)) report.generic.push(a.id); cell(g, c, a.id, 74); }
 }
 if (only.includes('skills24') && !focus) {
   const g = section('skills24', 'Player skills @24 on parchment', '#f5e6c4', '#2b1d12');
@@ -140,7 +145,7 @@ if (only.includes('npc') && !focus) {
 }
 if (only.includes('ui') && !focus) {
   const g = section('ui', 'UI icons @32 on parchment', '#f5e6c4', '#2b1d12');
-  for (const n of UI_NAMES) { const c = uiIcon(n, 32); cell(g, c, n, 74); }
+  for (const n of UI_NAMES) { const c = uiIcon(n, 32); if (c.dataset.fallback) report.fallback.push('ui:' + n); cell(g, c, n, 74); }
   const g2 = section('uidark', 'UI icons @24 / @32 on navy', '#0e2233', '#f5e6c4');
   for (const n of UI_NAMES) cell(g2, uiIcon(n, 24), null, 28);
   for (const n of UI_NAMES) cell(g2, clone(uiIcon(n, 32)), null, 36);

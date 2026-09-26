@@ -42,6 +42,68 @@ function limb2(g, ax, ay, jx, jy, ex, ey, w, col, outline, col2) {
     g.strokeStyle = col; g.beginPath(); g.moveTo(ax, ay); g.lineTo(jx, jy); g.lineTo(ex, ey); g.stroke();
   }
 }
+// ---------------------------------------------------------------- body primitives
+const OLW = 0.07; // outline stroke (half of it shows outside every part)
+const dk = (col, amt) => (col && col[0] === '#' ? shade(col, amt) : col);
+const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+/** Outer hull of two circles: a tapered capsule from (x0, y0, r0) to (x1, y1, r1). */
+function capsulePath(g, x0, y0, r0, x1, y1, r1) {
+  const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy);
+  if (d < Math.abs(r0 - r1) + 1e-4) {
+    const [x, y, r] = r0 > r1 ? [x0, y0, r0] : [x1, y1, r1];
+    g.moveTo(x + r, y); g.arc(x, y, r, 0, TAU);
+    return;
+  }
+  const a = Math.atan2(dy, dx);
+  const th = Math.acos(Math.max(-1, Math.min(1, (r0 - r1) / d)));
+  g.moveTo(x0 + Math.cos(a + th) * r0, y0 + Math.sin(a + th) * r0);
+  g.arc(x0, y0, r0, a + th, a - th + TAU);
+  g.lineTo(x1 + Math.cos(a - th) * r1, y1 + Math.sin(a - th) * r1);
+  g.arc(x1, y1, r1, a - th, a + th);
+  g.closePath();
+}
+/**
+ * Outlined, cel-shaded limb through the joints `pts` (radii `rs`): the dark
+ * outline is stroked first and the fill covers its inner half, so the joints
+ * merge cleanly; the shadow tone sits on the side facing away from the light.
+ */
+function drawLimb(g, pts, rs, col, shadeCol, sd) {
+  g.beginPath();
+  for (let i = 0; i < pts.length - 1; i++) capsulePath(g, pts[i][0], pts[i][1], rs[i], pts[i + 1][0], pts[i + 1][1], rs[i + 1]);
+  g.lineJoin = 'round';
+  g.lineWidth = OLW; g.strokeStyle = OUTLINE; g.stroke();
+  g.fillStyle = col; g.fill();
+  if (!shadeCol || !sd) return;
+  g.save(); g.clip();
+  g.beginPath();
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+    const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy) || 1;
+    let nx = -dy / d, ny = dx / d;
+    if (nx * sd[0] + ny * sd[1] < 0) { nx = -nx; ny = -ny; }
+    capsulePath(g, x0 + nx * rs[i] * 0.72, y0 + ny * rs[i] * 0.72, rs[i] * 0.78, x1 + nx * rs[i + 1] * 0.72, y1 + ny * rs[i + 1] * 0.72, rs[i + 1] * 0.78);
+  }
+  g.fillStyle = shadeCol; g.fill();
+  g.restore();
+}
+/** Chibi torso silhouette: squared shoulders, a nipped waist, hips. */
+function torsoPath(g, W, top, bottom, side) {
+  const ws = W / 2, ww = W * (side ? 0.44 : 0.4), wh = W * (side ? 0.47 : 0.45);
+  const waistY = top + (bottom - top) * 0.6;
+  const fx = side ? 0.025 : 0; // the chest leads a little in profile
+  g.beginPath();
+  g.moveTo(-ws + 0.07, top);
+  g.lineTo(ws - 0.07 + fx, top);
+  g.quadraticCurveTo(ws + fx + 0.01, top, ws + fx, top + 0.09);
+  g.quadraticCurveTo(ws + fx - 0.015, waistY - 0.1, ww, waistY);
+  g.quadraticCurveTo(wh + 0.015, bottom - 0.06, wh, bottom);
+  g.lineTo(-wh, bottom);
+  g.quadraticCurveTo(-wh - 0.015, bottom - 0.06, -ww, waistY);
+  g.quadraticCurveTo(-ws + 0.015, waistY - 0.1, -ws, top + 0.09);
+  g.quadraticCurveTo(-ws - 0.01, top, -ws + 0.07, top);
+  g.closePath();
+}
+
 /** Star path (no text glyphs): `n` points, inner radius ratio `k`. */
 export function starPath(g, x, y, r, n = 5, k = 0.45, rot = -Math.PI / 2) {
   g.beginPath();
@@ -132,7 +194,7 @@ function solveRig(look, P, d, side, back) {
   // upper body frame: rotate around the hip
   const U = (x, y) => { const ry = y - hipY0; return [hip.x + x * cosL - ry * sinL, hip.y + x * sinL + ry * cosL]; };
   const shoulderY = hipY0 - 0.42 * bulk;
-  const headY = shoulderY - 0.3 - (look.neck || 0);
+  const headY = shoulderY - 0.31 - (look.neck || 0);
   const out = { hip, lean, shoulderY, headY, hipY0, U };
   const L1 = 0.215 * armLen, L2 = 0.215 * armLen;
   const T1 = 0.245 * legLen, T2 = 0.245 * legLen;
@@ -282,29 +344,85 @@ function drawGun(g, x, y, dx, dy, kind) {
 }
 
 // ---------------------------------------------------------------- hands & feet
+/**
+ * Hands, drawn along the forearm direction: a squared fist with knuckles and
+ * a thumb, an open palm with fingers, a pointing finger (Shigan) or a claw.
+ */
 function drawHand(g, x, y, r, col, shape, dirx, diry, extra) {
   const a = Math.atan2(diry, dirx);
+  const sh = dk(col, -0.2);
+  g.save(); g.translate(x, y); g.rotate(a);
+  g.lineJoin = 'round'; g.lineCap = 'round';
   if (shape === 'palm') {
-    g.save(); g.translate(x, y); g.rotate(a);
-    g.fillStyle = col; g.strokeStyle = OUTLINE; g.lineWidth = 0.03;
-    g.beginPath(); g.ellipse(0.02, 0, r * 0.75, r * 1.2, 0, 0, TAU); g.fill(); g.stroke();
-    g.beginPath(); g.ellipse(-0.01, -r * 0.95, r * 0.35, r * 0.22, -0.6, 0, TAU); g.fill(); g.stroke();
+    // open hand: palm + four fingers + thumb
+    g.beginPath();
+    g.ellipse(0.01, 0, r * 0.78, r * 1.05, 0, 0, TAU);
+    for (let f = 0; f < 4; f++) { const fy = (f - 1.5) * r * 0.46; g.moveTo(r * 0.5, fy); g.roundRect(r * 0.35, fy - r * 0.2, r * 1.05 - Math.abs(f - 1.5) * r * 0.16, r * 0.4, r * 0.2); }
+    g.moveTo(-r * 0.05 + r * 0.42 * Math.cos(-0.7), -r * 1.02 + r * 0.42 * Math.sin(-0.7)); g.ellipse(-r * 0.05, -r * 1.02, r * 0.42, r * 0.22, -0.7, 0, TAU);
+    g.lineWidth = OLW * 0.8; g.strokeStyle = OUTLINE; g.stroke();
+    g.fillStyle = col; g.fill();
+    g.strokeStyle = sh; g.lineWidth = 0.012;
+    g.beginPath(); for (let f = 1; f < 4; f++) { const fy = (f - 2) * r * 0.46; g.moveTo(r * 0.45, fy); g.lineTo(r * 1.1, fy); } g.stroke();
     g.restore();
     return;
   }
-  circ(g, x, y, r, col, OUTLINE, 0.03);
-  if (shape === 'finger') {
-    g.strokeStyle = OUTLINE; g.lineWidth = 0.075; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * r * 2.0, y + Math.sin(a) * r * 2.0); g.stroke();
-    g.strokeStyle = col; g.lineWidth = 0.045; g.stroke();
-  } else if (shape === 'claw') {
-    g.strokeStyle = extra || '#fafafa'; g.lineWidth = 0.025; g.lineCap = 'round';
+  // fist: a rounded block with a thumb wrapped over the front
+  const w = r * 1.05, h = r * 1.0;
+  g.beginPath();
+  g.roundRect(-w * 0.95, -h, w * 1.9, h * 2, r * 0.55);
+  if (shape === 'finger') { g.moveTo(w * 0.7, -h * 0.55); g.roundRect(w * 0.6, -h * 0.62, r * 1.6, r * 0.5, r * 0.25); }
+  g.lineWidth = OLW * 0.8; g.strokeStyle = OUTLINE; g.stroke();
+  g.fillStyle = col; g.fill();
+  // cel shade on the lower half, knuckle creases, thumb
+  g.save(); g.clip();
+  g.fillStyle = sh; g.fillRect(-w, h * 0.25, w * 2.2, h);
+  g.restore();
+  g.strokeStyle = dk(col, -0.35); g.lineWidth = 0.013;
+  g.beginPath();
+  for (let k = -1; k <= 1; k++) { g.moveTo(w * 0.55, k * h * 0.42 - h * 0.18); g.lineTo(w * 0.85, k * h * 0.42 - h * 0.18); }
+  g.stroke();
+  g.fillStyle = col; g.strokeStyle = OUTLINE; g.lineWidth = 0.02;
+  g.beginPath(); g.ellipse(w * 0.15, h * 0.55, r * 0.5, r * 0.26, 0.15, 0, TAU); g.fill(); g.stroke();
+  if (shape === 'claw') {
+    g.strokeStyle = extra || '#fafafa'; g.lineWidth = 0.028;
     for (let k = -1; k <= 1; k++) {
-      const aa = a + k * 0.45;
-      g.beginPath(); g.moveTo(x + Math.cos(aa) * r * 0.8, y + Math.sin(aa) * r * 0.8);
-      g.quadraticCurveTo(x + Math.cos(aa) * r * 1.8, y + Math.sin(aa) * r * 1.8, x + Math.cos(aa + 0.5) * r * 2.1, y + Math.sin(aa + 0.5) * r * 2.1); g.stroke();
+      const yy = k * h * 0.55;
+      g.beginPath(); g.moveTo(w * 0.8, yy); g.quadraticCurveTo(w * 1.7, yy - r * 0.15, w * 2.05, yy + r * 0.45); g.stroke();
     }
   }
+  g.restore();
+}
+
+/** Boots (or sandals) at the end of a shin; `a` rotates the foot to point forward. */
+function drawFoot(g, L, side, which, look, col, bare, scale) {
+  const dx = L.e[0] - L.k[0], dy = L.e[1] - L.k[1];
+  const a = side ? Math.atan2(dy, dx) - Math.PI / 2 : 0;
+  const sandals = look.sandals ?? ((look.seed || 0) % 4 === 0);
+  g.save(); g.translate(L.e[0], L.e[1]); g.rotate(side ? a : 0);
+  g.scale(scale, scale);
+  g.lineJoin = 'round';
+  const skin = look.skin || '#f1c9a0';
+  const x0 = side ? -0.06 : -0.095, x1 = side ? 0.19 : 0.095;
+  if (sandals || bare) {
+    // bare foot on a thin sole with two straps
+    g.beginPath(); g.roundRect(x0, -0.055, x1 - x0, 0.085, 0.04);
+    g.lineWidth = OLW * 0.8; g.strokeStyle = OUTLINE; g.stroke(); g.fillStyle = bare ? col : skin; g.fill();
+    if (!bare) {
+      g.fillStyle = '#6d4c41'; g.fillRect(x0 - 0.005, 0.02, x1 - x0 + 0.01, 0.028);
+      g.strokeStyle = col; g.lineWidth = 0.025;
+      g.beginPath(); g.moveTo(x0 + 0.05, -0.05); g.lineTo(x0 + 0.08, 0.02); g.moveTo(x1 - 0.07, -0.05); g.lineTo(x1 - 0.1, 0.02); g.stroke();
+    }
+  } else {
+    // boot: rounded toe, darker sole
+    g.beginPath();
+    g.moveTo(x0, -0.07); g.lineTo(x1 - 0.06, -0.06);
+    g.quadraticCurveTo(x1 + 0.005, -0.055, x1, 0.0); g.lineTo(x1, 0.035); g.lineTo(x0, 0.035); g.closePath();
+    g.lineWidth = OLW * 0.8; g.strokeStyle = OUTLINE; g.stroke(); g.fillStyle = col; g.fill();
+    g.fillStyle = dk(col, -0.35); g.fillRect(x0, 0.012, x1 - x0, 0.023);
+    g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(x0 + 0.02, -0.055, (x1 - x0) * 0.5, 0.018);
+  }
+  g.restore();
+  void which;
 }
 
 // ---------------------------------------------------------------- trails
@@ -325,7 +443,6 @@ function smoothPts(pts, sub = 3) {
   out.push(pts[pts.length - 1]);
   return out;
 }
-const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
 
 /**
  * Weapon/limb smears: re-sample the clip a few moments in the past and fill
@@ -710,7 +827,7 @@ export function drawCharacter(g, look, pose) {
   const hipY = rig.hipY0;
   const shoulderY = rig.shoulderY;
   const headY = rig.headY;
-  const headR = 0.3;
+  const headR = 0.32;
   const armLen = look.arms || 1;
 
   if (pose.swimming) {
@@ -834,27 +951,47 @@ export function drawCharacter(g, look, pose) {
   const handCol = pose.armament ? hakiCol : (look.hand || skin);
   const foreCol = pose.armament ? hakiCol : skinArm;
 
-  // --- back arm (behind the body in side and back views)
+  // light from the front-top: shadow tones sit on the far side of every part
+  const sd = side ? [-0.55, 0.84] : back ? [-0.7, 0.7] : [0.7, 0.7];
+  const farDim = (which) => (which === 'B' && side ? -0.12 : 0);
+
+  // --- arms: tapered, outlined and cel-shaded, with a short sleeve cap
   const drawArm = (arm, which) => {
-    const col = which === 'B' && side ? shade(skinArm, -0.15) : skinArm;
-    const fcol = which === 'B' && side ? shade(foreCol, -0.15) : foreCol;
-    const w = 0.12 * bulk * (which === 'F' ? 1.08 : 1);
-    limb2(g, arm.s[0], arm.s[1], arm.j[0], arm.j[1], arm.e[0], arm.e[1], w, col, OUTLINE, fcol);
-    if (pose.armament && !ghost) {
-      g.strokeStyle = 'rgba(179,136,255,0.55)'; g.lineWidth = 0.018; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(arm.j[0] + (arm.e[0] - arm.j[0]) * 0.2, arm.j[1] + (arm.e[1] - arm.j[1]) * 0.2 - w * 0.25);
-      g.lineTo(arm.j[0] + (arm.e[0] - arm.j[0]) * 0.8, arm.j[1] + (arm.e[1] - arm.j[1]) * 0.8 - w * 0.25); g.stroke();
+    const dim = farDim(which);
+    const upperCol = dk(skinArm, dim), foreC = dk(foreCol, dim);
+    const w = 0.064 * bulk * (which === 'F' ? 1.05 : 1);
+    const rs = [w, w * 0.84, w * 0.72];
+    if (ghost) { drawLimb(g, [arm.s, arm.j, arm.e], rs, upperCol, null, null); return; }
+    if (foreC === upperCol) drawLimb(g, [arm.s, arm.j, arm.e], rs, upperCol, dk(upperCol, -0.18), sd);
+    else {
+      drawLimb(g, [arm.j, arm.e], [rs[1], rs[2]], foreC, dk(foreC, -0.18), sd);
+      drawLimb(g, [arm.s, arm.j], [rs[0], rs[1]], upperCol, dk(upperCol, -0.18), sd);
     }
-    if (armLen > 1.2) circ(g, arm.j[0], arm.j[1], 0.07, col, OUTLINE, 0.03);
+    if (armLen > 1.2) {
+      // the Longarm Tribe's two elbows
+      const j2 = mix2(arm.j, arm.e, 0.5);
+      circ(g, arm.j[0], arm.j[1], rs[1] * 1.12, upperCol, OUTLINE, 0.03);
+      circ(g, j2[0], j2[1], rs[2] * 1.12, foreC, OUTLINE, 0.03);
+    }
+    if (!look.sleeve && !look.noSleeves) {
+      const m = mix2(arm.s, arm.j, 0.42);
+      const tc = dk(top, dim);
+      drawLimb(g, [arm.s, m], [w * 1.3, w * 1.14], tc, dk(tc, -0.2), sd);
+    }
+    if (pose.armament) {
+      g.strokeStyle = 'rgba(179,136,255,0.6)'; g.lineWidth = 0.016; g.lineCap = 'round';
+      const a0 = mix2(arm.j, arm.e, 0.2), a1 = mix2(arm.j, arm.e, 0.8);
+      g.beginPath(); g.moveTo(a0[0], a0[1] - w * 0.35); g.lineTo(a1[0], a1[1] - w * 0.3); g.stroke();
+    }
   };
   const handShape = (which) => (which === 'F' ? P.hand || 'fist' : P.handB || 'fist');
   const limbFxOn = (which) => { const l = pose.fx?.limb; return l === 'both' || l === (which === 'F' ? 'hF' : 'hB'); };
   const drawHandAt = (arm, which) => {
-    const r = 0.085 * bulk * arm.scale;
+    const r = 0.088 * bulk * arm.scale;
     const dx = arm.e[0] - arm.j[0], dy = arm.e[1] - arm.j[1];
-    const hc = which === 'B' && side ? shade(handCol, -0.12) : handCol;
+    const hc = dk(handCol, farDim(which));
     drawHand(g, arm.e[0], arm.e[1], r, hc, handShape(which), dx, dy, pose.fx?.claw);
-    if (pose.armament && !ghost) { g.fillStyle = 'rgba(180,140,255,0.5)'; g.beginPath(); g.arc(arm.e[0] - r * 0.3, arm.e[1] - r * 0.35, r * 0.3, 0, TAU); g.fill(); }
+    if (pose.armament && !ghost) { g.fillStyle = 'rgba(180,140,255,0.55)'; g.beginPath(); g.arc(arm.e[0] - r * 0.3, arm.e[1] - r * 0.4, r * 0.28, 0, TAU); g.fill(); }
     if (!ghost && pose.fx?.elem && limbFxOn(which)) drawHandFx(g, arm.e[0], arm.e[1], r, pose.fx, t, pose.fx.k ?? 1);
   };
   const drawWeaponIn = (arm, which) => {
@@ -883,23 +1020,29 @@ export function drawCharacter(g, look, pose) {
   };
   const drawArmFull = (arm, which) => { drawArm(arm, which); drawWeaponIn(arm, which); drawBlade(arm, which); drawHandAt(arm, which); };
 
-  // legs
-  const legW = 0.15 * bulk;
+  // legs: trousers with cuffs, boots or sandals
+  const legW = 0.078 * bulk;
   const shoeCol = look.shoes || '#3b2a1a';
   const drawLeg = (L, which) => {
-    const col = which === 'B' && side ? shade(bottom, -0.15) : bottom;
+    const dim = farDim(which);
+    const col = dk(bottom, dim);
     const striking = pose.fx?.limb === (which === 'F' ? 'fF' : 'fB');
     const legSkin = pose.legFx && (striking || pose.legFxAll) ? pose.legFx : pose.armLegs ? hakiCol : null;
-    limb2(g, L.h[0], L.h[1], L.k[0], L.k[1], L.e[0], L.e[1], legW, col, OUTLINE, legSkin || col);
-    // shoe points along the shin
-    const dx = L.e[0] - L.k[0], dy = L.e[1] - L.k[1];
-    const a = side ? Math.atan2(dy, dx) - Math.PI / 2 : 0;
-    g.save(); g.translate(L.e[0], L.e[1]); g.rotate(side ? a : 0);
-    g.scale(L.scale, L.scale);
-    const sc = pose.armLegs ? hakiCol : which === 'B' && side ? shade(shoeCol, -0.2) : shoeCol;
-    if (side) rrect(g, -0.04, -0.05, 0.2, 0.09, 0.04, sc);
-    else rrect(g, -0.09, -0.05, 0.18, 0.09, 0.04, sc);
-    g.restore();
+    const rs = [legW, legW * 0.86, legW * 0.72];
+    if (ghost) {
+      drawLimb(g, [L.h, L.k, L.e], rs, col, null, null);
+      drawFoot(g, L, side, which, look, col, true, L.scale);
+      return;
+    }
+    if (legSkin) {
+      drawLimb(g, [L.k, L.e], [rs[1], rs[2]], legSkin, dk(legSkin, -0.2), sd);
+      drawLimb(g, [L.h, L.k], [rs[0], rs[1]], col, dk(col, -0.2), sd);
+    } else {
+      drawLimb(g, [L.h, L.k, L.e], rs, col, dk(col, -0.2), sd);
+      const c0 = mix2(L.k, L.e, 0.7), c1 = mix2(L.k, L.e, 0.9);
+      drawLimb(g, [c0, c1], [rs[2] * 1.14, rs[2] * 1.1], dk(col, -0.25), null, null);
+    }
+    drawFoot(g, L, side, which, look, pose.armLegs ? hakiCol : dk(shoeCol, dim * 1.5), false, L.scale);
     if (!ghost && pose.fx?.elem && striking) drawHandFx(g, L.e[0], L.e[1], 0.1, pose.fx, t, pose.fx.k ?? 1);
   };
 
@@ -919,26 +1062,61 @@ export function drawCharacter(g, look, pose) {
     drawLeg(rig.legB, 'B'); if (!legFForward) drawLeg(rig.legF, 'F');
   }
 
-  // --- torso (upper-body frame)
-  const torsoW = 0.46 * bulk, torsoH = hipY - shoulderY + 0.05;
+  // --- torso (upper-body frame): shaped silhouette, cel shade, collar, belt
+  const torsoW = (side ? 0.4 : 0.46) * bulk;
+  const tTop = shoulderY - 0.02, tBot = hipY + 0.035;
   upper(() => {
-    rrect(g, -torsoW / 2, shoulderY - 0.02, torsoW, torsoH, 0.12, top, OUTLINE);
-    if (look.vest) {
-      g.fillStyle = look.vest;
-      g.fillRect(-torsoW / 2 + 0.02, shoulderY + 0.02, 0.1, torsoH - 0.1);
-      g.fillRect(torsoW / 2 - 0.12, shoulderY + 0.02, 0.1, torsoH - 0.1);
+    torsoPath(g, torsoW, tTop, tBot, side);
+    g.lineJoin = 'round'; g.lineWidth = OLW; g.strokeStyle = OUTLINE; g.stroke();
+    g.fillStyle = top; g.fill();
+    if (!ghost) {
+      g.save(); g.clip();
+      // trousers show below the belt
+      g.fillStyle = bottom; g.fillRect(-torsoW, hipY - 0.05, torsoW * 2, 0.25);
+      if (look.vest) {
+        g.fillStyle = look.vest;
+        if (side) g.fillRect(-torsoW / 2 - 0.02, tTop, torsoW * 0.55, hipY - tTop - 0.05);
+        else { g.fillRect(-torsoW / 2 - 0.02, tTop, 0.13, hipY - tTop - 0.05); g.fillRect(torsoW / 2 - 0.11, tTop, 0.13, hipY - tTop - 0.05); }
+      }
+      if (look.openShirt && !back) {
+        g.fillStyle = skin;
+        g.beginPath();
+        if (side) { g.moveTo(torsoW * 0.3, tTop); g.lineTo(torsoW * 0.6, tTop); g.lineTo(torsoW * 0.6, hipY - 0.06); g.lineTo(torsoW * 0.38, hipY - 0.06); }
+        else { g.moveTo(-0.08, tTop); g.lineTo(0.08, tTop); g.lineTo(0.035, hipY - 0.06); g.lineTo(-0.035, hipY - 0.06); }
+        g.fill();
+        if (look.scar && !side) { g.strokeStyle = '#b0413e'; g.lineWidth = 0.03; g.beginPath(); g.moveTo(-0.08, shoulderY + 0.1); g.lineTo(0.08, shoulderY + 0.25); g.stroke(); }
+      } else if (!back && !side) {
+        // collar
+        g.fillStyle = skin; g.beginPath(); g.moveTo(-0.07, tTop - 0.01); g.quadraticCurveTo(0, tTop + 0.09, 0.07, tTop - 0.01); g.fill();
+        g.strokeStyle = dk(top, -0.35); g.lineWidth = 0.018; g.beginPath(); g.moveTo(-0.08, tTop); g.quadraticCurveTo(0, tTop + 0.1, 0.08, tTop); g.stroke();
+      }
+      if (look.spots) {
+        g.fillStyle = 'rgba(78,52,46,0.8)';
+        for (let k = 0; k < 6; k++) { g.beginPath(); g.arc(-torsoW / 2 + 0.08 + (k % 3) * 0.14, shoulderY + 0.1 + Math.floor(k / 3) * 0.16, 0.03, 0, TAU); g.fill(); }
+      }
+      // cel shade on the far side of the body
+      g.fillStyle = 'rgba(20,10,30,0.2)';
+      g.beginPath();
+      if (side) { g.moveTo(-torsoW, tTop - 0.1); g.lineTo(-torsoW * 0.1, tTop - 0.1); g.quadraticCurveTo(-torsoW * 0.3, (tTop + tBot) / 2, -torsoW * 0.08, tBot + 0.1); g.lineTo(-torsoW, tBot + 0.1); }
+      else if (back) g.rect(-torsoW, tTop - 0.1, torsoW * 0.62, tBot - tTop + 0.2);
+      else { g.moveTo(torsoW * 0.22, tTop - 0.1); g.quadraticCurveTo(torsoW * 0.08, (tTop + tBot) / 2, torsoW * 0.26, tBot + 0.1); g.lineTo(torsoW, tBot + 0.1); g.lineTo(torsoW, tTop - 0.1); }
+      g.fill();
+      // shirt hem fold over the belt
+      g.strokeStyle = dk(top, -0.3); g.lineWidth = 0.016;
+      g.beginPath(); g.moveTo(-torsoW / 2, hipY - 0.11); g.quadraticCurveTo(0, hipY - 0.085, torsoW / 2, hipY - 0.11); g.stroke();
+      g.restore();
     }
-    if (look.spots && !ghost) {
-      g.fillStyle = 'rgba(78,52,46,0.8)';
-      for (let k = 0; k < 6; k++) { g.beginPath(); g.arc(-torsoW / 2 + 0.08 + (k % 3) * 0.14, shoulderY + 0.1 + Math.floor(k / 3) * 0.16, 0.03, 0, TAU); g.fill(); }
+    // belt / sash
+    const bw = torsoW * 0.94;
+    g.fillStyle = look.belt || dk(bottom, -0.32); g.strokeStyle = OUTLINE; g.lineWidth = 0.025;
+    g.beginPath(); g.rect(-bw / 2, hipY - 0.1, bw, 0.06); g.fill(); if (!ghost) g.stroke();
+    if (!ghost) {
+      if (!side && !back) { g.fillStyle = '#ffd54f'; g.beginPath(); g.rect(-0.035, hipY - 0.105, 0.07, 0.07); g.fill(); g.stroke(); }
+      else if (side) {
+        g.fillStyle = look.belt || dk(bottom, -0.32);
+        g.beginPath(); g.moveTo(-bw / 2, hipY - 0.07); g.quadraticCurveTo(-bw / 2 - 0.12, hipY - 0.02, -bw / 2 - 0.08, hipY + 0.1); g.lineTo(-bw / 2 - 0.02, hipY - 0.04); g.closePath(); g.fill(); g.stroke();
+      }
     }
-    if (look.openShirt && !back && !side) {
-      g.fillStyle = skin;
-      g.beginPath(); g.moveTo(-0.07, shoulderY); g.lineTo(0.07, shoulderY); g.lineTo(0.03, hipY - 0.05); g.lineTo(-0.03, hipY - 0.05); g.fill();
-      if (look.scar && !ghost) { g.strokeStyle = '#b0413e'; g.lineWidth = 0.03; g.beginPath(); g.moveTo(-0.08, shoulderY + 0.1); g.lineTo(0.08, shoulderY + 0.25); g.stroke(); }
-    }
-    g.fillStyle = look.belt || shade(bottom, -0.3);
-    g.fillRect(-torsoW / 2, hipY - 0.07, torsoW, 0.07);
     if (look.gills && !ghost) {
       g.strokeStyle = shade(skin, -0.35); g.lineWidth = 0.02;
       for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(-0.12 + k * 0.03, shoulderY + 0.02); g.lineTo(-0.08 + k * 0.03, shoulderY + 0.1); g.stroke(); }
@@ -977,8 +1155,8 @@ export function drawCharacter(g, look, pose) {
     if (!armFForward) drawArmFull(rig.armF, 'F');
   }
 
-  // neck (snakeneck/longneck)
-  if (look.neck) upper(() => rrect(g, -0.08, headY + 0.1, 0.16, shoulderY - headY - 0.08, 0.06, skin, OUTLINE));
+  // neck (longer for the snake-neck look)
+  upper(() => drawLimb(g, [[0, shoulderY + 0.04], [0, headY + headR * 0.55]], [0.075, 0.068], skin, ghost ? null : dk(skin, -0.2), ghost ? null : sd));
 
   // --- head (with its own small tilt)
   upper(() => {
