@@ -6,6 +6,7 @@ import { raceLabel } from '../data/races.js';
 import { ITEMS } from '../data/items.js';
 import { REGION_INFO, regionAt } from '../world/constants.js';
 import { itemImg, skillImg, uiImg } from './icon.js';
+import { Compass } from './compass.js';
 
 // the menu buttons on the right of the screen (below the minimap)
 const SIDEBAR = [
@@ -99,7 +100,12 @@ export class UI {
     E.clock = h('div.clock');
     E.saved = h('div.saved-note');
     E.logpose = h('div.logpose.hidden', h('i'), h('span'));
-    this.hud.appendChild(h('div.minimap-wrap', E.mm, E.logpose, E.loc, E.locSub, E.clock, E.saved));
+    // in the 3D view the minimap turns with you: a fixed arrow and a north mark
+    E.mmArrow = h('div.mm-arrow.hidden');
+    E.mmArrow.innerHTML = '<svg viewBox="-8 -9 16 18" width="16" height="18"><path d="M0 -7.5 L6 7 L0 3.5 L-6 7 Z" fill="#fff" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+    E.mmNorth = h('div.mm-north.hidden', 'N');
+    this.hud.appendChild(h('div.minimap-wrap', h('div.mm-box', E.mm, E.mmArrow, E.mmNorth), E.logpose, E.loc, E.locSub, E.clock, E.saved));
+    this.compass = new Compass(this.hud);
     E.boss = h('div.bossbar.hidden', h('h3'), bar('boss').el);
     this.hud.appendChild(E.boss);
     E.ship = h('div.shiphud.hidden');
@@ -352,6 +358,22 @@ export class UI {
     const free = !!v3 && !this.blocksInput();
     E.crosshair.classList.toggle('hidden', !free || v3.rig.mode !== 'first' || p.mode === 'sail' && !v3.rig.locked);
     E.lookHint.classList.toggle('hidden', !free || v3.rig.locked || v3.rig.lockFailed || !!game.input.touch?.on);
+    this.root.classList.toggle('v3', !!v3);
+    this.compass.update(game, v3 ? v3.rig.yaw : 0, !!v3 && !this.mapOpen);
+    // the minimap turns so that where you look is up
+    const up = v3 ? v3.rig.yaw : null;
+    if (up !== null) E.mm.style.transform = `rotate(${(-Math.PI / 2 - up).toFixed(4)}rad)`;
+    else if (this.cache.mmRot) E.mm.style.transform = '';
+    this.cache.mmRot = up !== null;
+    E.mmArrow.classList.toggle('hidden', up === null);
+    E.mmNorth.classList.toggle('hidden', up === null);
+    if (up !== null) {
+      const heading = p.mode === 'sail' && p.ship ? p.ship.heading : p.facing;
+      E.mmArrow.style.transform = `rotate(${(heading - up).toFixed(4)}rad)`;
+      const phi = -Math.PI / 2 - up; // north, measured clockwise from "up"
+      E.mmNorth.style.left = (50 + Math.sin(phi) * 44) + '%';
+      E.mmNorth.style.top = (50 - Math.cos(phi) * 44) + '%';
+    }
     this.set(E.name, 'name', ch.name || p.name);
     const title = ch.title || (ch.faction === 'marine' ? `Marine ${ch.marineRank || 'Recruit'}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === 'pirate' ? 'Pirate' : 'Wanderer');
     this.set(E.sub, 'sub', `${raceLabel(p.look)} · ${title} · Doriki ${p.power().toLocaleString()}`);
@@ -454,7 +476,8 @@ export class UI {
     E.logpose.classList.toggle('hidden', !lp);
     if (lp) {
       const needle = E.logpose.children[0];
-      needle.style.transform = `rotate(${lp.angle + Math.PI / 2}rad)`;
+      // (in the 3D view the needle is relative to where you look)
+      needle.style.transform = `rotate(${v3 ? lp.angle - v3.rig.yaw : lp.angle + Math.PI / 2}rad)`;
       this.set(E.logpose.children[1], 'lpt', lp.label);
     }
     // boss
@@ -535,7 +558,8 @@ export class UI {
       g.fillStyle = a.questMarker ? '#ffd54f' : '#ff5252';
       g.fillRect(dx - 1.5, dy - 1.5, 3, 3);
     }
-    // player arrow
+    // player arrow (the 3D view draws a fixed one over the turning map)
+    if (game.view3d?.active) return;
     g.save();
     g.translate(W / 2, H / 2);
     g.rotate(p.mode === 'sail' && p.ship ? p.ship.heading : p.facing);

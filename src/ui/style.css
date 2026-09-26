@@ -470,3 +470,25 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
   .eq-slot { width: 74px; height: 50px; }
   .doll { padding: 6px; gap: 6px; }
 }
+
+/* ---------- 3D view: compass and turning minimap ---------- */
+.mm-box { position: relative; }
+.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }
+.mm-arrow svg { display: block; }
+.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }
+.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }
+.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }
+.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }
+.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }
+.compass .cp.major.n { color: #ff8a80; }
+.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }
+.compass .pin { position: absolute; top: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
+.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: -1px; }
+.compass .pin.lp small { color: #ff8a80; }
+.compass .pin.quest small { color: #ffd54f; }
+.compass .pin.ship small { color: #e3f2fd; }
+#ui.v3 .bossbar { top: 64px; }
+#ui.v3 .hint { top: 118px; }
+#ui.touch .compass { top: 52px; width: min(320px, 40vw); }
+#ui.touch.v3 .bossbar { top: 104px; }
+#ui.touch.v3 .hint { top: 150px; }
