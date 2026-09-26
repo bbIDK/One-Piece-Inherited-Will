@@ -66,7 +66,60 @@ async function view(page, snap, label, fn, arg, { clock = 10.5, n = 10, perf = f
   return file;
 }
 
+/** Spawn one ship of each type in open water near (x, y); returns their ids. */
+async function spawnFleet(page, x, y, types) {
+  return page.evaluate(({ x, y, types }) => {
+    const g = window.OP.game;
+    const out = [];
+    types.forEach((t, i) => {
+      const s = g.giveShip(t, x + (i % 4) * 16, y + Math.floor(i / 4) * 16, t);
+      s.heading = 0.35 + i * 0.5;
+      s.sail = 1; s.sailSet = 1; s.anchored = true;
+      if (t === 'caravel' || t === 'adam_brig' || t === 'sloop') s.jr = { skull: 'classic', bones: 'cross', accessory: 'strawhat' };
+      if (t === 'brigantine' || t === 'galleon') { s.jr = { skull: 'grin', bones: 'swords', accessory: 'bandana' }; s.faction = 'pirate'; s.owner = 'npc'; }
+      out.push({ t, x: Math.round(s.x), y: Math.round(s.y), i: g.ships.indexOf(s) });
+    });
+    return out;
+  }, { x, y, types });
+}
+
 export const scenarios = {
+  // every hull type up close, then the view from the helm of three of them
+  ships3d: {
+    async run(page, snap) {
+      await boot(page);
+      await page.evaluate(() => { const g = window.OP.game; for (const s of g.ships) s.x = -9999; });
+      const fleet = await spawnFleet(page, 3745, 382, ['dinghy', 'sloop', 'caravel', 'brigantine', 'frigate', 'galleon', 'adam_brig', 'marine_warship']);
+      console.log('fleet', JSON.stringify(fleet));
+      await still(page);
+      for (const f of fleet) {
+        await view(page, snap, 'ship-' + f.t, () => {
+          const s = g.ships[arg.i];
+          const L = s.def.length;
+          const a = s.heading + Math.PI / 2 + 0.55;
+          const p = g.player;
+          p.mode = 'swim';
+          P3D.standAt(s.x, s.y, L * 1.25 + 3, a, -0.02);
+          p.state = 'idle';
+          g.view3d.rig.roll = 0;
+          return { t: s.type, heading: s.heading };
+        }, f, { n: 6 });
+      }
+      // from the helm (first person): the rig turns see-through
+      for (const t of ['dinghy', 'caravel', 'galleon', 'adam_brig']) {
+        const f = fleet.find((q) => q.t === t);
+        await view(page, snap, 'helm-' + t, () => {
+          const s = g.ships[arg.i];
+          const p = g.player;
+          p.mode = 'sail'; p.ship = s; p.onShip = true; s.captain = p; p.x = s.x; p.y = s.y; p.state = 'idle';
+          g.view3d.rig.yaw = s.heading; g.view3d.rig.pitch = -0.12; g.view3d.rig.roll = 0;
+          return { t: s.type };
+        }, f, { n: 6, perf: true });
+        await page.evaluate(() => { const g = window.OP.game, p = g.player; if (p.ship) p.ship.captain = null; p.mode = 'foot'; p.ship = null; p.onShip = false; });
+      }
+    },
+  },
+
   'p3d-explore': {
     async run(page) {
       await boot(page);

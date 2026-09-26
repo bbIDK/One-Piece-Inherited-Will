@@ -222,9 +222,18 @@ function ring3d(g, r, s, k, c) {
   const e = s.ease === 'lin' ? k : 1 - (1 - k) * (1 - k);
   const rad = s.r0 + (s.r1 - s.r0) * e;
   if (rad <= 0.01) return;
-  const h = s.z ?? 0.4;
   const alpha = (1 - k);
-  const n = Math.max(16, Math.min(48, Math.round(rad * 10)));
+  // rounder rings are air rings (around a fist, a muzzle): upright, facing the camera
+  if ((s.flat ?? 0.62) >= 0.75) {
+    const B = bill(r, s.x, s.y, s.z ?? 0.4);
+    if (!B || !onScreen(r, B, B.sc * rad + 40)) return;
+    setBill(g, r, B);
+    drawShapeLayer(g, copy(s, { z: 0 }), 'air', k, 1, c);
+    return;
+  }
+  // flatter ones are shockwaves: rebuilt on the ground from projected points
+  const h = Math.min(s.z ?? 0.4, 0.12);
+  const n = Math.max(16, Math.min(56, Math.round(rad * 10)));
   const wob = s.wobble ? (th) => s.wobble * (1 - k) * Math.sin(th * (s.lobes || 9) + c.t * 40) : null;
   const runs = ringRuns(r, circlePts(s.x, s.y, rad, h, n, 0, TAU, wob));
   if (!runs.length) return;
@@ -444,16 +453,20 @@ const SMEAR = {
   gatling: 'flurry', shoot: 'shot', aim: 'shot', flick: 'shot', throw: 'straight',
 };
 function smearPath(kind, side, sweep) {
-  // normalised screen points (0..1 of width / height), tail → head
+  // quadratic curves in normalised screen space (0..1 of width / height), tail → head
+  const q = (x0, y0, cx, cy, x1, y1) => (u) => {
+    const v = 1 - u;
+    return [v * v * x0 + 2 * v * u * cx + u * u * x1, v * v * y0 + 2 * v * u * cy + u * u * y1];
+  };
   const m = side; // +1 right hand / foot, -1 left
   switch (kind) {
-    case 'straight': return (u) => [0.5 + m * 0.2 * (1 - u), 0.98 - 0.44 * u];
-    case 'rise': return (u) => [0.55 - 0.08 * Math.sin(u * Math.PI) * m, 1.02 - 0.72 * u];
-    case 'slam': return (u) => [0.46 + 0.08 * Math.sin(u * Math.PI), 0.12 + 0.8 * u];
-    case 'low': return sweep >= 0 ? (u) => [0.92 - 0.84 * u, 0.9 - 0.22 * Math.sin(u * Math.PI)] : (u) => [0.08 + 0.84 * u, 0.9 - 0.22 * Math.sin(u * Math.PI)];
-    case 'up': return (u) => [0.2 + 0.6 * u, 0.84 - 0.5 * u - 0.1 * Math.sin(u * Math.PI)];
-    case 'down': return (u) => [0.8 - 0.6 * u, 0.3 + 0.5 * u - 0.1 * Math.sin(u * Math.PI)];
-    default: return m >= 0 ? (u) => [0.86 - 0.72 * u, 0.62 - 0.1 * Math.sin(u * Math.PI)] : (u) => [0.14 + 0.72 * u, 0.62 - 0.1 * Math.sin(u * Math.PI)];
+    case 'straight': return q(0.5 + m * 0.24, 1.02, 0.5 + m * 0.1, 0.74, 0.5, 0.53);
+    case 'rise': return q(0.56, 1.02, 0.7, 0.55, 0.47, 0.16);
+    case 'slam': return q(0.45, 0.06, 0.66, 0.44, 0.5, 0.98);
+    case 'low': return sweep >= 0 ? q(0.97, 0.92, 0.5, 0.6, 0.03, 0.88) : q(0.03, 0.92, 0.5, 0.6, 0.97, 0.88);
+    case 'up': return q(0.18, 0.84, 0.32, 0.3, 0.84, 0.22);
+    case 'down': return q(0.82, 0.18, 0.68, 0.72, 0.18, 0.8);
+    default: return (m * (sweep || 1)) >= 0 ? q(0.9, 0.5, 0.5, 0.8, 0.1, 0.56) : q(0.1, 0.5, 0.5, 0.8, 0.9, 0.56);
   }
 }
 function clipOfPlayer(p, act) {
@@ -515,36 +528,52 @@ function swingSmear(fx, g, r, p) {
     return;
   }
   const P = smearPath(kind, side, clip.sweep || 1);
-  const head = easeOut(u), tail = kind === 'straight' ? Math.max(0, head - 0.55) : clamp01((u - 0.25) / 0.75) ** 2;
+  const head = easeOut(u), tail = kind === 'straight' ? Math.max(0, head - 0.55) : clamp01((u - 0.2) / 0.8) ** 2;
   if (head - tail < 0.02) return;
-  const wMax = H * (kind === 'straight' ? 0.022 : blade ? 0.03 : 0.026) * (heavy ? 1.35 : 1);
-  const N = 18;
-  const outer = [], inner = [];
+  const wMax = H * (kind === 'straight' ? 0.026 : blade ? 0.042 : 0.032) * (heavy ? 1.35 : 1);
+  const N = 22;
+  const outer = [], inner = [], mid = [];
   for (let i = 0; i <= N; i++) {
     const v = tail + (head - tail) * (i / N);
     const [x, y] = P(v);
     const [x2, y2] = P(Math.min(1, v + 0.01));
-    const dx = (x2 - x) * W, dy = (y2 - y) * H, l = Math.hypot(dx, dy) || 1;
+    const [x0, y0] = P(Math.max(0, v - 0.01));
+    const dx = (x2 - x0) * W, dy = (y2 - y0) * H, l = Math.hypot(dx, dy) || 1;
     const nx = -dy / l, ny = dx / l;
-    const q = i / N;
-    const wd = wMax * Math.pow(q, 0.8) * (1 - 0.3 * Math.pow(q, 8));
+    const qq = i / N;
+    const wd = wMax * Math.pow(qq, 0.75) * (1 - 0.35 * Math.pow(qq, 8));
     outer.push([x * W + nx * wd * 0.5, y * H + ny * wd * 0.5]);
     inner.push([x * W - nx * wd * 0.5, y * H - ny * wd * 0.5]);
+    mid.push([x * W + nx * wd * 0.22, y * H + ny * wd * 0.22]);
   }
-  const a = (0.62 + (heavy ? 0.15 : 0)) * fade;
+  const a = Math.min(1, 0.8 + (heavy ? 0.15 : 0)) * fade;
+  // body: the style colour fading in from the tail (drawn normally so it reads on bright skies too)
+  g.globalCompositeOperation = 'source-over';
   const gr = g.createLinearGradient(outer[0][0], outer[0][1], outer[N][0], outer[N][1]);
-  gr.addColorStop(0, rgba(col, 0)); gr.addColorStop(0.6, rgba(col, 0.5 * a)); gr.addColorStop(1, rgba('#ffffff', a));
+  gr.addColorStop(0, rgba(col, 0)); gr.addColorStop(0.55, rgba(col, 0.35 * a)); gr.addColorStop(1, rgba(col, 0.75 * a));
   g.globalAlpha = 1; g.fillStyle = gr;
   g.beginPath(); g.moveTo(outer[0][0], outer[0][1]);
   for (let i = 1; i <= N; i++) g.lineTo(outer[i][0], outer[i][1]);
   for (let i = N; i >= 0; i--) g.lineTo(inner[i][0], inner[i][1]);
   g.closePath(); g.fill();
-  // speed lines along a straight strike
+  // a thin darker rim on the outside edge, and a white-hot core toward the head
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  g.strokeStyle = rgba(col === '#ffffff' ? '#90a4ae' : col, 1); g.lineWidth = Math.max(1, H * 0.0025);
+  g.globalAlpha = 0.45 * a;
+  g.beginPath(); for (let i = Math.floor(N * 0.3); i <= N; i++) { if (i === Math.floor(N * 0.3)) g.moveTo(outer[i][0], outer[i][1]); else g.lineTo(outer[i][0], outer[i][1]); } g.stroke();
+  g.strokeStyle = '#ffffff';
+  for (let i = Math.floor(N * 0.4); i < N; i++) {
+    const qq = i / N;
+    g.globalAlpha = a * qq * qq;
+    g.lineWidth = Math.max(1, wMax * 0.28 * qq);
+    g.beginPath(); g.moveTo(mid[i][0], mid[i][1]); g.lineTo(mid[i + 1][0], mid[i + 1][1]); g.stroke();
+  }
+  // speed lines behind a straight strike
   if (kind === 'straight' && u < 1) {
-    g.strokeStyle = '#ffffff'; g.lineWidth = H * 0.003; g.globalAlpha = 0.5 * a;
+    g.lineWidth = Math.max(1, H * 0.003); g.globalAlpha = 0.5 * a;
     const [hx, hy] = P(head);
     g.beginPath();
-    for (let i = -1; i <= 1; i++) { g.moveTo(hx * W + i * H * 0.02, hy * H + H * 0.05); g.lineTo(hx * W + i * H * 0.03, hy * H + H * 0.14); }
+    for (let i = -1; i <= 1; i++) { g.moveTo(hx * W + i * H * 0.022, hy * H + H * 0.06); g.lineTo(hx * W + i * H * 0.034, hy * H + H * 0.15); }
     g.stroke();
   }
   g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
