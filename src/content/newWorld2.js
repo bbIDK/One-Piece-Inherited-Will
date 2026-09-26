@@ -59,8 +59,9 @@ function revealLaughTale(game, c, who) {
   game.log?.('The four Road Poneglyphs point to the final island. Laugh Tale lies just before Reverse Mountain, east of Lodestar.', '#ffd54f');
 }
 
-/** Spawn an enemy group right now (for quest stages that begin while the island is populated). */
-function spawnGroup(game, islandId, spotId, enemies, radius = 5) {
+/** Spawn an enemy group right now — only while the island is populated, so the
+ *  actors are cleared with it (helpers.js' spawnGroup spawns unconditionally). */
+function spawnSquad(game, islandId, spotId, enemies, radius = 5) {
   const list = game.spawner?.populated?.get(islandId);
   if (!list || game.world !== game.surface) return [];
   const isl = game.surface.islands.find((i) => i.id === islandId);
@@ -111,6 +112,8 @@ const SCAVENGERS = [
 const ONIWABANSHU = [['nw2_oniwabanshu', 60], ['nw2_oniwabanshu', 60], ['nw2_oniwabanshu', 62]];
 
 // ------------------------------------------------------------------- looks
+const MMA_LOOK = { skin: '#311b92', top: '#4a148c', bottom: '#311b92', fur: '#311b92', hair: 'bald', ears: 'pointy', muzzle: true, tail: 'thin', sharpTeeth: true, eyeColor: '#ff1744' };
+const GIFTER_LOOK = { top: '#212121', bottom: '#4e342e', hat: 'horns', hatColor: '#9e9e9e', fur: '#795548', ears: 'round' };
 const L = {
   kaido: { hair: 'long', hairColor: '#1a1a1a', skin: '#d7a67a', top: '#eceff1', bottom: '#4a148c', coat: '#f5f5f5', hat: 'horns', hatColor: '#cfd8dc', sharpTeeth: true, belt: '#ffd54f' },
   teach: { hair: 'curly', hairColor: '#212121', skin: '#d7a67a', top: '#fafafa', bottom: '#212121', coat: '#212121', hat: 'bandana', hatColor: '#e53935', grin: true, sharpTeeth: true },
@@ -145,7 +148,7 @@ const npcs = [
     when: (c) => !beat(c, 'brownbeard_foodvalten'),
   },
   {
-    id: 'hawkins_foodvalten', name: 'Basil Hawkins', title: '"The Magician" — Supernova', island: 'foodvalten', at: { spot: 'town_gate', ox: 3 }, ai: 'idle', faction: 'neutral',
+    id: 'hawkins_foodvalten', name: 'Basil Hawkins', title: '"The Magician" — Supernova', island: 'foodvalten', at: { spot: 'town_gate', ox: 3 }, ai: 'idle', faction: 'neutral', invulnerable: true,
     look: { hair: 'long', hairColor: '#fff59d', top: '#5d4037', bottom: '#3e2723', coat: '#6d4c41', skin: '#fafafa' }, level: 72, fixedPower: 99999,
     when: (c, g) => g.quests.isDone('foodvalten_flag') && !c.flags.nw2_hawkinsMet,
     dialogue: (ctx) => ({ start: 'a', nodes: { a: {
@@ -304,7 +307,7 @@ const npcs = [
   },
   {
     id: 'holdem', name: 'Holdem', title: 'Headliner of the Beasts Pirates, ruler of Bakura Town', island: 'wano', at: { spot: 'bakura_town' },
-    hostile: true, boss: true, hpMul: 1.2, level: 62, faction: 'pirate', style: 'ittoryu', weapon: 'sword', moves: ['itto_iai', 'nw2_shishi_no_hi'], haki: { armament: 25 },
+    hostile: true, boss: true, hpMul: 1.2, level: 62, faction: 'pirate', style: 'ittoryu', weapon: 'sword', moves: ['itto_iai', 'nw2_shishi_no_hi', 'nw2_call_gifters'], haki: { armament: 25 },
     look: { hair: 'spiky', hairColor: '#f9a825', top: '#fdd835', bottom: '#5d4037', coat: '#e65100', skin: '#e0ac7e', bulk: 1.3, grin: true }, bulk: 1.3,
     breakthrough: 3, skill: 0.4, alert: 'Kneel before a Headliner of the Beasts Pirates, Kuri trash!', barks: ['My lion is hungry!', 'Worthless leftovers!'],
     when: (c) => !beat(c, 'holdem'),
@@ -463,7 +466,7 @@ const npcs = [
     } }),
   },
   {
-    id: 'shanks_gartel', name: 'Shanks', title: '"Red-Haired" — Emperor of the Sea', island: 'gartel_island', at: { spot: 'gartel_pier' }, ai: 'idle', faction: 'neutral',
+    id: 'shanks_gartel', name: 'Shanks', title: '"Red-Haired" — Emperor of the Sea', island: 'gartel_island', at: { spot: 'gartel_pier' }, ai: 'idle', faction: 'neutral', invulnerable: true,
     look: { hair: 'short', hairColor: '#c62828', top: '#fafafa', bottom: '#5d4037', coat: '#212121', scarEye: true, skin: '#f1c9a0', swords: 1 }, level: 120, fixedPower: 99999,
     when: (c, g) => g.quests.stageId('red_hair_flag') === 'shanks',
     marker: (c, g) => (g.quests.stageId('red_hair_flag') === 'shanks' ? '?' : null),
@@ -566,7 +569,7 @@ const npcs = [
     when: (c, g) => g.quests.stageId('egghead_incident') === 'kizaru' && !beat(c, 'kizaru_egghead'),
   },
   {
-    id: 'saturn_cameo', name: 'Saint Jaygarcia Saturn', title: 'One of the Five Elders', island: 'egghead', at: { spot: 'labophase_gate', ox: 7 }, ai: 'idle', faction: 'neutral',
+    id: 'saturn_cameo', name: 'Saint Jaygarcia Saturn', title: 'One of the Five Elders', island: 'egghead', at: { spot: 'labophase_gate', ox: 7 }, ai: 'idle', faction: 'neutral', invulnerable: true,
     look: { hair: 'bald', skin: '#eceff1', top: '#212121', bottom: '#212121', coat: '#212121', hand: '#eceff1' }, scale: 1.2, level: 150, fixedPower: 99999,
     when: (c, g) => g.quests.stageId('egghead_incident') === 'kizaru',
     dialogue: () => ({ start: 'a', nodes: { a: { text: `(An old man in black looks through you as if you were already dead.) "...Vermin. The Holy Land has no need to learn your name."` } } }),
@@ -656,6 +659,7 @@ const npcs = [
     look: { hair: 'long', hairColor: '#e91e63', top: '#4e342e', bottom: '#3e2723', skin: '#e0c2a2', sharpTeeth: true, grin: true, bulk: 1.5 }, scale: 3, level: 108,
     boss: true, respawn: true, hpMul: 2.4, style: 'elbaf', weapon: 'axe', moves: ['nw2_ragna_arrow', 'nw2_thorheim', 'nw2_niflheim', 'elbaf_hakoku'],
     haki: { armament: 90, observation: 80, conqueror: 90 }, bounty: 2600000000, breakthrough: 7, lethal: false, skill: 0.65, // a friendly duel: no infamy
+    duel: true, recover: 4, recoverLine: '"Hehehe... not bad, little one. Come here — let\'s talk."',
     alert: 'Show me you\'re worth following, little warrior!', barks: ['Hahahaha!', 'The Sun God will end this world!'],
     marker: (c, g) => (g.quests.stageId('accursed_prince') === 'free' && has(c, 'loki_chain_key') ? '?' : g.quests.stageId('accursed_prince') === 'report' ? '?' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -680,7 +684,7 @@ const npcs = [
   },
   {
     id: 'killingham', name: 'Saint Rimoshifu Killingham', title: 'Knight of God (World Noble)', island: 'elbaf', at: { spot: 'walrus_school' },
-    hostile: true, boss: true, hpMul: 2.2, level: 100, faction: 'cp', style: 'brawler', moves: ['nw2_flame_clouds', 'nw2_nightmare_holes', 'nw2_nightmare_roar'],
+    hostile: true, boss: true, hpMul: 2.2, level: 100, faction: 'cp', style: 'brawler', moves: ['nw2_flame_clouds', 'nw2_nightmare_holes', 'nw2_nightmare_roar', 'nw2_mma_horn'],
     look: { hair: 'long', hairColor: '#212121', top: '#ef6c00', bottom: '#212121', coat: '#ef6c00', sharpTeeth: true, skin: '#f1c9a0' }, scale: 1.4,
     haki: { armament: 80, observation: 70 }, bounty: 500000000, breakthrough: 6, skill: 0.6,
     alert: 'Nightmares are such lovely things. Let\'s see what yours look like.', barks: ['Dream for me!', 'A World Noble does not bleed for giants!'],
@@ -778,7 +782,7 @@ const npcs = [
 
   // ============================================================= KARAI BARI
   {
-    id: 'buggy_cross_guild', name: 'Buggy', title: 'Emperor of the Sea — Leader of the Cross Guild (allegedly)', island: 'karai_bari', at: { town: 'buggy_town', plaza: true, ox: 2 }, faction: 'neutral',
+    id: 'buggy_cross_guild', name: 'Buggy', title: 'Emperor of the Sea — Leader of the Cross Guild (allegedly)', island: 'karai_bari', at: { town: 'buggy_town', plaza: true, ox: 2 }, faction: 'neutral', invulnerable: true,
     look: { hair: 'long', hairColor: '#1976d2', top: '#e53935', bottom: '#1565c0', skin: '#fafafa', nose: 'red', hat: 'captain', hatColor: '#6d4c41', coat: '#fafafa' }, level: 60, fixedPower: 99999,
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: {
@@ -813,7 +817,7 @@ const npcs = [
     } }),
   },
   {
-    id: 'hinokizu', name: 'The Man with the Burn Scar', title: '"Hinokizu"', island: 'lodestar', at: { spot: 'road4_cave', ox: 2 }, ai: 'idle', faction: 'neutral',
+    id: 'hinokizu', name: 'The Man with the Burn Scar', title: '"Hinokizu"', island: 'lodestar', at: { spot: 'road4_cave', ox: 2 }, ai: 'idle', faction: 'neutral', invulnerable: true,
     look: { hair: 'long', hairColor: '#212121', top: '#212121', bottom: '#212121', coat: '#212121', hat: 'tricorne', hatColor: '#212121', skin: '#a1887f', scarEye: true }, level: 110, fixedPower: 99999,
     when: (c, g) => g.quests.stageId('burn_scar') === 'stranger',
     marker: (c, g) => (g.quests.stageId('burn_scar') === 'stranger' ? '?' : null),
@@ -896,7 +900,7 @@ const quests = [
   { id: 'wano_road_poneglyph', name: 'The Red Stone of Wano', island: 'wano', kind: 'story', summary: 'Kaido claimed Wano\'s Road Poneglyph. It lies in a secret cavern at the foot of Mt. Fuji, reached by a stair beneath the Shogun Castle.',
     stages: [
       { id: 'castle', desc: 'Slip into the Shogun Castle in the Flower Capital and find the way down.', goal: { type: 'reach', island: 'wano', spot: 'shogun_castle', r: 4 },
-        onStart: (ctx, g) => { if (!beat(ctx.char, 'kaido')) { spawnGroup(g, 'wano', 'shogun_castle', ONIWABANSHU, 6); spawnNow(g, 'orochi'); spawnNow(g, 'fukurokuju'); } } },
+        onStart: (ctx, g) => { if (!beat(ctx.char, 'kaido')) { spawnSquad(g, 'wano', 'shogun_castle', ONIWABANSHU, 6); spawnNow(g, 'orochi'); spawnNow(g, 'fukurokuju'); } } },
       { id: 'fuji', desc: 'Follow the secret stair to the cavern at the foot of Mt. Fuji and take a rubbing of the red Road Poneglyph.', goal: { type: 'reach', island: 'wano', spot: 'fuji_poneglyph', r: 3 } },
     ],
     rewards: { points: 2, flag: 'rubbing_road_wano', items: [['poneglyph_rubbing', 1]] },
@@ -913,7 +917,7 @@ const quests = [
   { id: 'baltigo_archive', name: 'The Island of White Soil', island: 'baltigo', kind: 'side', summary: 'Blackbeard\'s scavengers are digging through the ruins of the Revolutionary Army\'s headquarters.',
     stages: [
       { id: 'scavengers', desc: 'Drive the Blackbeard scavengers out of the ruins of Baltigo.', goal: { type: 'defeat', any: ['bb_scavenger'], count: 3 },
-        onStart: (ctx, g) => spawnGroup(g, 'baltigo', 'scavenger_camp', SCAVENGERS, 6) },
+        onStart: (ctx, g) => spawnSquad(g, 'baltigo', 'scavenger_camp', SCAVENGERS, 6) },
       { id: 'archive', desc: 'Search the collapsed vault north of the ruins for Dragon\'s sealed dossier.', goal: { type: 'reach', island: 'baltigo', spot: 'burned_archive', r: 3 } },
       { id: 'report', desc: 'Bring the dossier to the Revolutionary officer.' },
     ],
@@ -942,11 +946,11 @@ const quests = [
     stages: [
       { id: 'meet', desc: 'Climb to the Labophase and meet Dr. Vegapunk.', goal: { type: 'flag', flag: 'nw2_met_vegapunk' } },
       { id: 'seraphim', desc: 'York has handed control of the Seraphim to CP0. Stop the Seraphim at the Labophase gate.', goal: { type: 'defeat', any: ['s_hawk', 's_bear', 's_snake', 's_shark'], count: 3 },
-        onStart: (ctx, g) => { spawnGroup(g, 'egghead', 'labophase_gate', SERAPHIM, 6); g.ui.banner('THE SERAPHIM', 'Egghead', 'Winged children with the faces of Warlords drop from the Labophase — and turn on their creator.', 5); } },
+        onStart: (ctx, g) => { spawnSquad(g, 'egghead', 'labophase_gate', SERAPHIM, 6); g.ui.banner('THE SERAPHIM', 'Egghead', 'Winged children with the faces of Warlords drop from the Labophase — and turn on their creator.', 5); } },
       { id: 'lucci', desc: 'Rob Lucci of CP0 is hunting Vegapunk through the Fabriophase. Stop him.', goal: { type: 'flag', flag: 'nw2_beat_lucci_cp0' },
         onStart: (ctx, g) => { const a = spawnNow(g, 'lucci_cp0'); if (a) aggro(g, a); spawnNow(g, 'kaku_cp0'); } },
       { id: 'kizaru', desc: 'A Buster Call fleet surrounds Egghead. Admiral Kizaru lands at the Labophase gate — hold the line!', goal: { type: 'flag', flag: 'nw2_beat_kizaru_egghead' },
-        onStart: (ctx, g) => { const a = spawnNow(g, 'kizaru_egghead'); if (a) aggro(g, a); spawnNow(g, 'saturn_cameo'); spawnGroup(g, 'egghead', 'labophase_gate', BUSTER_CALL, 9); g.ui.banner('BUSTER CALL', 'Admiral Kizaru — and one of the Five Elders', 'Battleships ring the island. A flash of yellow light lands at the gate... and behind it, an old man in black.', 6); } },
+        onStart: (ctx, g) => { const a = spawnNow(g, 'kizaru_egghead'); if (a) aggro(g, a); spawnNow(g, 'saturn_cameo'); spawnSquad(g, 'egghead', 'labophase_gate', BUSTER_CALL, 9); g.ui.banner('BUSTER CALL', 'Admiral Kizaru — and one of the Five Elders', 'Battleships ring the island. A flash of yellow light lands at the gate... and behind it, an old man in black.', 6); } },
       { id: 'message', desc: 'Every Den Den Mushi in the world begins to speak. Listen to Vegapunk\'s message.', goal: { type: 'event', event: 'nw2_vegapunk_broadcast' } },
       { id: 'report', desc: 'Find Lilith in her workshop in the Labophase.' },
     ],
@@ -957,7 +961,7 @@ const quests = [
     stages: [
       { id: 'jarul', desc: 'Find Elder Jarul in the Western Village.', goal: { type: 'flag', flag: 'nw2_met_jarul' } },
       { id: 'school', desc: 'The children\'s nightmares walk as MMA. Protect the Walrus School and the Owl Library — defeat three of the monsters.', goal: { type: 'defeat', any: ['mma_beast'], count: 3 },
-        onStart: (ctx, g) => { spawnGroup(g, 'elbaf', 'walrus_school', MMA, 8); g.ui.banner('MMA', 'Nightmares made flesh', 'Monsters taller than giants stalk out of the children\'s dreams toward the Walrus School.', 5); } },
+        onStart: (ctx, g) => { spawnSquad(g, 'elbaf', 'walrus_school', MMA, 8); g.ui.banner('MMA', 'Nightmares made flesh', 'Monsters taller than giants stalk out of the children\'s dreams toward the Walrus School.', 5); } },
       { id: 'killingham', desc: 'Saint Killingham commands the MMA with his horn. Drive the Knight of God out of Elbaph.', goal: { type: 'flag', flag: 'nw2_beat_killingham' },
         onStart: (ctx, g) => { const a = spawnNow(g, 'killingham'); if (a) aggro(g, a); } },
       { id: 'report', desc: 'Return to Elder Jarul.' },
@@ -1107,6 +1111,13 @@ const abilities = [
     steps: [{ zone: { range: 3.5, duration: 3, interval: 0.4, damage: 14, element: 'fire', status: { burn: 2 }, color: '#ff8a65', kind: 'field', atTarget: true } }] },
   { id: 'nw2_nightmare_holes', name: 'Nightmare Holes', anim: 'cast', windup: 0.8, recover: 0.5, cd: 16, cost: { stamina: 20 },
     steps: [{ zone: { range: 4.5, duration: 4, interval: 0.5, damage: 10, color: '#4a148c', kind: 'dark', pull: 3, slow: 0.4, atTarget: true } }] },
+  // summons: every field is given because game.summon passes unset ones on as undefined
+  { id: 'nw2_mma_horn', name: 'Nightmare Horn', anim: 'cast', windup: 0.8, recover: 0.5, cd: 28, cost: { stamina: 20 }, say: 'Wake up, my nightmares!',
+    steps: [{ summon: { archetype: 'nw2_mma', level: 70, count: 1, name: 'MMA — Nightmare', look: MMA_LOOK, moves: ['brawl_tackle', 'nw2_nightmare_roar'], hpMul: 1.6, duration: 25, color: '#7e57c2' },
+      buff: { id: 'nw2_horn', name: 'Nightmare Horn', dur: 8, mods: { damage: 1.1 } }, fx: { ring: 4, color: '#7e57c2' } }] },
+  { id: 'nw2_call_gifters', name: 'Call the Gifters', anim: 'cast', windup: 0.6, recover: 0.4, cd: 30, cost: { stamina: 14 }, say: 'Gifters! Eat them!',
+    steps: [{ summon: { archetype: 'nw2_gifter', level: 52, count: 2, name: 'Gifter', look: GIFTER_LOOK, moves: ['brawl_tackle', 'brawl_headbutt'], hpMul: 1.2, duration: 30, color: '#a1887f' },
+      buff: { id: 'nw2_gifters', name: 'Headliner\'s Orders', dur: 8, mods: { damage: 1.1 } } }] },
   { id: 'nw2_nightmare_roar', name: 'Nightmare Roar', anim: 'cast', windup: 0.6, recover: 0.4, cd: 10, cost: { stamina: 10 },
     steps: [{ hit: { shape: 'circle', range: 4, damage: 20, knockback: 8, stun: 0.7 }, vfx: 'ring', color: '#7e57c2' }] },
   { id: 'nw2_ragna_arrow', name: 'Ragna Go-Arrow', anim: 'shoot', windup: 0.6, recover: 0.4, cd: 9, cost: { stamina: 16 },
@@ -1167,9 +1178,9 @@ const trainers = {
 };
 
 const archetypes = {
-  nw2_gifter: { name: 'Gifter', faction: 'pirate', style: 'brawler', look: { top: '#212121', bottom: '#4e342e', hat: 'horns', hatColor: '#9e9e9e', fur: '#795548', ears: 'round' }, skill: 0.3, hpMul: 1.5, moves: ['brawl_tackle', 'brawl_headbutt'], barks: ['For Kaido-sama!', 'Ahahaha! (It never stops...)'] },
+  nw2_gifter: { name: 'Gifter', faction: 'pirate', style: 'brawler', look: GIFTER_LOOK, skill: 0.3, hpMul: 1.5, moves: ['brawl_tackle', 'brawl_headbutt'], barks: ['For Kaido-sama!', 'Ahahaha! (It never stops...)'] },
   nw2_oniwabanshu: { name: 'Oniwabanshu Ninja', faction: 'bandit', style: 'rokushiki', look: { top: '#212121', bottom: '#212121', hat: 'bandana', hatColor: '#212121' }, skill: 0.5, moves: ['roku_soru', 'nw2_kunai'], barks: ['Ninpo!', 'For the shogun!'] },
-  nw2_mma: { name: 'MMA', faction: 'beast', style: 'brawler', look: { skin: '#311b92', top: '#4a148c', bottom: '#311b92', fur: '#311b92', hair: 'bald', ears: 'pointy', muzzle: true, tail: 'thin', sharpTeeth: true, eyeColor: '#ff1744' }, bulk: 1.8, scale: 2.4, hpMul: 3, skill: 0.2, moves: ['brawl_tackle', 'nw2_nightmare_roar'] },
+  nw2_mma: { name: 'MMA', faction: 'beast', style: 'brawler', look: MMA_LOOK, bulk: 1.8, scale: 2.4, hpMul: 3, skill: 0.2, moves: ['brawl_tackle', 'nw2_nightmare_roar'] },
 };
 
 // ------------------------------------------------------------------ install
@@ -1188,16 +1199,13 @@ function install(game) {
   let teachT = -1; // seconds until Blackbeard lands on Laugh Tale
   let vortexT = 0;
 
-  game.on('characterStart', () => { broadcast = null; teachT = -1; lokiRevive = null; });
+  game.on('characterStart', () => { broadcast = null; teachT = -1; });
 
-  let lokiRevive = null;
   game.on('knockout', (a, att) => {
     const c = C();
     if (!c || !a) return;
     if (a.npcId && TRACKED.includes(a.npcId) && att && (att.isPlayer || att.faction === 'player')) c.flags.nw2_ko = { ...(c.flags.nw2_ko || {}), [a.npcId]: true };
     syncBeatFlags(c);
-    // the Accursed Prince only wanted a test: he gets back up to talk
-    if (a.npcId === 'loki') lokiRevive = { a, t: 3 };
   });
 
   game.on('bossDefeated', (a) => {
@@ -1235,16 +1243,8 @@ function install(game) {
     if (id === 'laugh_tale_voyage' && !started(game, 'final_rival')) { game.quests.start('final_rival'); teachT = 5; }
   });
 
-  // Joy Boy's message on Laugh Tale
-  game.interactions?.onObject?.('nw2_joyboy', () => {
-    const c = C();
-    if (!c) return;
-    const text = canDecipher(game, c) || c.flags.laughTaleRevealed
-      ? '(The ancient script speaks of a promise made long ago to someone who waited in the dark, of a dawn that never came, and of a treasure left "for the one who will come to keep it". It is signed with a single name: Joy Boy.)'
-      : '(Lines of the ancient script, carved deep into the stone. You cannot read a word — but whoever carved them was smiling. You are sure of it.)';
-    c.flags.nw2_readJoyBoy = true;
-    game.dialogue.open(null, { start: 'a', nodes: { a: { speaker: "Joy Boy's Message", text } } });
-  });
+  // Joy Boy's message on Laugh Tale is a `lore` landmark; examining it fires questEvent 'nw2_joyboy'
+  game.on('questEvent', (ev) => { const c = C(); if (c && ev === 'nw2_joyboy') c.flags.nw2_readJoyBoy = true; });
 
   // Elbaph is a nation of giants: its townsfolk are giant-sized
   game.spawner.addBuilder((ctx) => {
@@ -1272,21 +1272,6 @@ function install(game) {
       }
     } else broadcast = null;
 
-    if (lokiRevive && (lokiRevive.t -= dt) <= 0) {
-      const a = lokiRevive.a;
-      lokiRevive = null;
-      if (a.alive && a.state === 'knocked') {
-        a.state = 'idle';
-        if (a.d?.maxHp) a.hp = Math.round(a.d.maxHp * 0.3);
-        a.provoked = false;
-        a.aggroPlayer = false;
-        a.stationary = true;
-        if (a.controller) { a.controller.kind = 'guard'; a.controller.target = null; a.controller.state = 'idle'; }
-        if (game.bossTarget === a) game.bossTarget = null;
-        game.fx.text(a.x, a.y - 3.2, 'Hehehe... not bad.', '#ffffff', 0.4);
-      }
-    }
-
     // Blackbeard reaches Laugh Tale a few seconds after the finale
     if (teachT > 0) {
       teachT -= dt;
@@ -1312,6 +1297,10 @@ function install(game) {
     if ((t -= dt) > 0) return;
     t = 0.5;
     syncBeatFlags(c);
+    if (game.currentIsland?.id === 'elbaf') {
+      const loki = findActor(game, 'loki');
+      if (loki && loki.state === 'idle' && !loki.aggroPlayer && !loki.provoked && loki.controller?.kind === 'hostile') { loki.controller.kind = 'guard'; loki.stationary = true; }
+    }
     // the rubbings are read as soon as someone aboard can read the ancient script
     if (game.quests.stageId('laugh_tale_voyage') === 'decipher' && !c.flags.laughTaleRevealed && canDecipher(game, c)) {
       const who = (c.crew || []).find((m) => m.role === 'archaeologist')?.name || 'You';

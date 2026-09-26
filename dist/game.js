@@ -9174,7 +9174,14 @@ void main() {
         ]
       }],
       landmarks: [
-        { kind: "flagpole", dx: 0.62, dy: 0.02, name: "Whitebeard's flag (slashed in half)", spot: "town_gate" },
+        {
+          kind: "flagpole",
+          dx: 0.62,
+          dy: 0.02,
+          name: "Whitebeard's flag (slashed in half)",
+          spot: "town_gate",
+          lore: (c, g) => g.quests?.isDone?.("foodvalten_flag") ? "Whitebeard's Jolly Roger, stitched back together with feather-cord by the whole village. The seam runs right through the moustache. Nobody minds." : "For decades Whitebeard's Jolly Roger hung over the entrance of Foodvalten, and no pirate dared land. The day he died at Marineford, the Brownbeard Pirates came ashore and slashed it in half."
+        },
         { kind: "totem", dx: -0.62, dy: -0.35 },
         { kind: "tent", dx: 0.45, dy: -0.5, name: "Brownbeard Pirates camp", spot: "brownbeard_camp" },
         { kind: "campfire", dx: 0.55, dy: -0.42 }
@@ -9318,17 +9325,43 @@ void main() {
         { kind: "building", role: "palace", name: "Shogun Castle", npc: "momonosuke_wano", fw: 14, fd: 8, hgt: 6, style: "wano", roofType: "pagoda", wall: "#efebe9", roof: "#263238", dx: -0.05, dy: -0.11, spot: "shogun_castle" },
         { kind: "poneglyph", road: true, dx: 0.3, dy: -0.11, poneglyph: "road_wano", name: "Road Poneglyph of Wano (Mt. Fuji cavern)", spot: "fuji_poneglyph" },
         { kind: "ruins", dx: 0.05, dy: 0.52, name: "Ruins of Oden Castle", spot: "oden_castle" },
-        { kind: "grave", dx: 0.12, dy: 0.53, name: "Graves of the Kozuki and their retainers" },
+        {
+          kind: "grave",
+          dx: 0.12,
+          dy: 0.53,
+          name: "Graves of the Kozuki and their retainers",
+          lore: "Plain stones for Kozuki Oden, boiled alive in the Flower Capital, for Lady Toki, and for the retainers who fell the night Kaido and Orochi burned the castle. Toki's last words are still whispered in Kuri: in twenty years, nine would return to open the borders of Wano."
+        },
         { kind: "torii", dx: -0.19, dy: 0.64, name: "Great Torii of Bakura Town" },
         { kind: "building", role: "hall", name: "Holdem's Hall", fw: 8, fd: 5, hgt: 3, style: "wano", roofType: "pagoda", dx: 0, dy: 0.72, spot: "bakura_town" },
         { kind: "grave", dx: -0.2, dy: -0.66, name: "Northern Cemetery" },
         { kind: "grave", dx: -0.26, dy: -0.62, name: "Northern Cemetery" },
-        { kind: "grave", dx: -0.12, dy: -0.6, name: "Grave of Shimotsuki Ryuma", spot: "ryuma_grave" },
+        {
+          kind: "grave",
+          dx: -0.12,
+          dy: -0.6,
+          name: "Grave of Shimotsuki Ryuma",
+          spot: "ryuma_grave",
+          lore: (c, g) => g.quests?.isDone?.("enma_blade") || g.quests?.stageId?.("enma_blade") === "report" ? "The grave of the samurai who cut down a dragon. The black blade Shusui rests across the stone again, where it belongs." : "The grave of Shimotsuki Ryuma, the samurai who cut down a dragon. Grave robbers \u2014 a pirate, they say \u2014 stole his body and his black blade Shusui long ago. Wano still mourns its national treasure."
+        },
         { kind: "sign", dx: -0.2, dy: -0.49, name: "Oihagi Bridge \u2014 entrance to Ringo" },
-        { kind: "torii", dx: 0.66, dy: -0.36, name: "Enma Shrine", spot: "enma_shrine" },
+        {
+          kind: "torii",
+          dx: 0.66,
+          dy: -0.36,
+          name: "Enma Shrine",
+          spot: "enma_shrine",
+          lore: 'A mossy shrine in the red woods of Hakumai. Swordsmen from every region of Wano leave broken blades at the torii as offerings. Someone has carved into the post: "Enma drinks the Haki of the hand that holds it. Hold tighter."'
+        },
         { kind: "lighthouse", dx: 0.74, dy: -0.46, name: "Habu Port tower" },
         { kind: "building", role: "hall", name: "Weapons Factory of Kibi", fw: 7, fd: 5, hgt: 3, style: "wano", roofType: "pagoda", dx: -0.8, dy: -0.12 },
-        { kind: "sign", dx: -0.34, dy: 0.86, name: "Climbing Koi Waterfall" }
+        {
+          kind: "sign",
+          dx: -0.34,
+          dy: 0.86,
+          name: "Climbing Koi Waterfall",
+          lore: "Wano stands on a plateau high above the sea, walled in by cliffs. The only way in is up the great waterfall \u2014 riding one of the giant carp that climb it. Most ships that try are smashed on the rocks below. That is how Wano has stayed closed for so long."
+        }
       ],
       spots: [{ id: "kuri_beach", dx: -0.34, dy: 0.84 }],
       logNext: ["winner_island", "egghead", "elbaf"],
@@ -9350,6 +9383,8 @@ void main() {
       rough: 0.22,
       trees: ["dead", "pine", "rock"],
       treeDensity: 0.02,
+      weather: { storm: 0.45 },
+      // thunderheads hang over Kaido's island
       blobs: [[0, 0.05, 0.8, 0.72], [-0.52, -0.62, 0.2, 0.3], [0.52, -0.62, 0.2, 0.3], [0, 0.62, 0.42, 0.3]],
       mountains: [{ name: "Skull Mountain", dx: 0, dy: -0.45, r: 0.16, h: 0.9 }],
       areas: [{ name: "Wisteria boardwalk", tile: T.FLOWERS, dx: 0.5, dy: 0.1, rx: 0.2, ry: 0.18 }],
@@ -9416,7 +9451,14 @@ void main() {
         ]
       }],
       landmarks: [
-        { kind: "ruins", dx: 0.15, dy: -0.4, name: "Collapsed vault of the Army", spot: "burned_archive" },
+        {
+          kind: "ruins",
+          dx: 0.15,
+          dy: -0.4,
+          name: "Collapsed vault of the Army",
+          spot: "burned_archive",
+          lore: "For years Baltigo hid the headquarters of Dragon's Revolutionary Army. Then Blackbeard's crew attacked and levelled it. The Army escaped to Momoiro Island; its papers did not. Half-burned charts and wanted posters still flutter in the rubble."
+        },
         { kind: "ruins", dx: -0.6, dy: 0.1, name: "Ancient ruins" }
       ],
       spots: [{ id: "scavenger_camp", dx: -0.45, dy: -0.15 }],
@@ -9486,7 +9528,14 @@ void main() {
           { role: "shipwright", name: "Gartel Dockyard" }
         ]
       }],
-      landmarks: [{ kind: "flagpole", dx: 0.28, dy: 0.02, name: "The Red Hair Pirates' flagpole (burned)", spot: "red_hair_flag" }],
+      landmarks: [{
+        kind: "flagpole",
+        dx: 0.28,
+        dy: 0.02,
+        name: "The Red Hair Pirates' flagpole",
+        spot: "red_hair_flag",
+        lore: (c, g) => g.quests?.isDone?.("red_hair_flag") || g.quests?.stageId?.("red_hair_flag") === "shanks" ? "The Red Hair Jolly Roger snaps in the wind above Gartel Town again. The townsfolk sleep with their windows open." : 'Charred rope and a scrap of black cloth. The Red Hair Pirates protect Gartel \u2014 until a loud crew of "Straw Hat fans" with a rooster-crest captain burned the flag down. The whole town is waiting to see what the Emperor will do.'
+      }],
       spots: [{ id: "gartel_pier", dx: -0.72, dy: 0.32 }],
       logNext: ["elbaf", "egghead", "hachinosu"],
       logTime: 1,
@@ -9548,7 +9597,14 @@ void main() {
       landmarks: [
         { kind: "building", role: "hall", name: "Cloud Plant", fw: 7, fd: 6, hgt: 8, style: "future", roofType: "dome", wall: "#e0f7fa", roof: "#80deea", dx: 0.2, dy: 0.2 },
         { kind: "ruins", dx: -0.55, dy: -0.3, name: "Scrapyard" },
-        { kind: "statue", dx: -0.66, dy: -0.18, name: "Emet, the Iron Giant", spot: "emet" }
+        {
+          kind: "statue",
+          dx: -0.66,
+          dy: -0.18,
+          name: "Emet, the Iron Giant",
+          spot: "emet",
+          lore: "A robot as tall as a hill, lying among Vegapunk's failed inventions in the scrapyard. It was built about nine hundred years ago. Two hundred years ago it walked on Mary Geoise, then ran out of power. The Government ordered it destroyed; someone hid it instead."
+        }
       ],
       spots: [
         { id: "labophase_gate", dx: 0.36, dy: 0.05 },
@@ -9647,9 +9703,27 @@ void main() {
         { kind: "bones", dx: -0.08, dy: 0.36 },
         { kind: "bones", dx: 0.1, dy: 0.4 },
         { kind: "elevator", dx: 0.2, dy: 0.25, name: "Boat Elevator to the Sun World" },
-        { kind: "pillar", dx: 0.3, dy: 0.05, name: "The Great Longsword" },
-        { kind: "statue", dx: 0.05, dy: -0.18, name: "Mural on Adam's bark (carved during the Void Century)" },
-        { kind: "ruins", dx: 0.75, dy: -0.05, name: "Ancient Facility (3,000 years old)" },
+        {
+          kind: "pillar",
+          dx: 0.3,
+          dy: 0.05,
+          name: "The Great Longsword",
+          lore: "A longsword so huge it pierces the Sun World and reaches all the way down to the Underworld. Nobody in Elbaph remembers who forged it, or whose hand could ever have swung it."
+        },
+        {
+          kind: "statue",
+          dx: 0.05,
+          dy: -0.18,
+          name: "Mural on Adam's bark (carved during the Void Century)",
+          lore: "A mural carved into the living bark of the Adam Tree during the Void Century. It matches the Harley, Elbaph's oldest text: the world has already been destroyed twice, and the Sun God Nika was there both times. Its third panel, Saul says, is the present day."
+        },
+        {
+          kind: "ruins",
+          dx: 0.75,
+          dy: -0.05,
+          name: "Ancient Facility (3,000 years old)",
+          lore: "Doorways built for giants, grown over by the Adam Tree. Vegapunk's satellite Lilith guesses the facility is at least three thousand years old \u2014 and there is no record of it anywhere in the history of Elbaph."
+        },
         { kind: "building", role: "house", name: "Road's Castle", fw: 10, fd: 7, hgt: 6, style: "giant", roofType: "gable", wall: "#90a4ae", roof: "#455a64", dx: 0.52, dy: 0.72 }
       ],
       spots: [
@@ -9702,9 +9776,15 @@ void main() {
         ]
       }],
       landmarks: [
-        { kind: "building", role: "palace", name: "Skull Fortress", fw: 16, fd: 10, hgt: 8, style: "city", roofType: "dome", wall: "#d4b96a", roof: "#a1887f", dx: 0, dy: -0.38, spot: "skull_fortress" },
+        { kind: "building", role: "palace", name: "Skull Fortress", npc: "teach_hachinosu", fw: 16, fd: 10, hgt: 8, style: "city", roofType: "dome", wall: "#d4b96a", roof: "#a1887f", dx: 0, dy: -0.38, spot: "skull_fortress" },
         { kind: "poneglyph", dx: 0.55, dy: -0.3, poneglyph: "hachinosu", name: "Poneglyph of Hachinosu" },
-        { kind: "ruins", dx: -0.6, dy: -0.22, name: "Ruins of Shakuyaku's first bar" }
+        {
+          kind: "ruins",
+          dx: -0.6,
+          dy: -0.22,
+          name: "Ruins of Shakuyaku's first bar",
+          lore: "Forty-two years ago the Kuja captain Shakuyaku quit piracy and opened a bar here; the Rocks Pirates helped build it. Three years later she was abducted. When word came she was a prize in the hunt on God Valley, every pirate on the island set sail."
+        }
       ],
       spots: [
         { id: "captains_yard", dx: -0.28, dy: -0.12 },
@@ -9751,7 +9831,13 @@ void main() {
         { kind: "tent", dx: -0.62, dy: 0.1 },
         { kind: "tent", dx: 0.62, dy: 0.05 },
         { kind: "tent", dx: 0.55, dy: 0.5, v: 1 },
-        { kind: "flagpole", dx: -0.1, dy: -0.25, name: "Flag of the Cross Guild" }
+        {
+          kind: "flagpole",
+          dx: -0.1,
+          dy: -0.25,
+          name: "Flag of the Cross Guild",
+          lore: `When the Warlords were abolished, a Marine fleet surrounded this island to arrest Buggy. Crocodile sank it \u2014 Buggy owed him money. Then Buggy's followers printed a flyer naming him leader of the new Cross Guild. "Karai bari" means "false bravado".`
+        }
       ],
       logNext: ["lodestar", "hachinosu", "elbaf"],
       logTime: 1,
@@ -9775,12 +9861,31 @@ void main() {
       treeDensity: 0.03,
       areas: [{ tile: T.GRASS, dx: -0.2, dy: 0.1, rx: 0.45, ry: 0.35 }],
       landmarks: [
-        { kind: "statue", dx: -0.08, dy: -0.12, name: "The Needle Stone", spot: "needle_stone" },
+        {
+          kind: "statue",
+          dx: -0.08,
+          dy: -0.12,
+          name: "The Needle Stone",
+          spot: "needle_stone",
+          lore: "Every route of the Grand Line ends at this island. At the foot of the stone lie hundreds of Log Poses left by the crews who got this far, every needle still spinning. None of them could record the next island."
+        },
         { kind: "tent", dx: -0.45, dy: 0.2, name: "Watcher's tent", spot: "watcher_tent" },
         { kind: "campfire", dx: -0.38, dy: 0.3 },
-        { kind: "ruins", dx: 0.2, dy: -0.4, name: "Camp of the Roger Pirates (39 years old)" },
+        {
+          kind: "ruins",
+          dx: 0.2,
+          dy: -0.4,
+          name: "Camp of the Roger Pirates (39 years old)",
+          lore: "A ring of fire-blackened stones. Thirty-nine years ago the Roger Pirates camped here \u2014 the first crew in eight hundred years to reach Lodestar. Here they learned about the Poneglyphs, and that one more island lay ahead that no Log Pose would ever find."
+        },
         { kind: "poneglyph", road: true, dx: 0.76, dy: 0.1, poneglyph: "road_4", name: "The Lost Road Poneglyph", spot: "road4_cave" },
-        { kind: "shipwreck", dx: 0.9, dy: 0.45, name: "An all-black ship" }
+        {
+          kind: "shipwreck",
+          dx: 0.9,
+          dy: 0.45,
+          name: "Wreck of a ship that followed the black ship",
+          lore: 'A pirate ship broken on the eastern rocks. The last entry in its log reads: "Sighted the all-black ship again. It sailed into the whirlpools and went down. It came up on the other side. We follow it at dawn." There are no more entries.'
+        }
       ],
       spots: [{ id: "vortex_bay", dx: 1.35, dy: 0.1 }],
       docks: [{ dx: -0.6, dy: 0.5, dir: "sw", name: "Lodestar Anchorage" }],
@@ -9810,11 +9915,34 @@ void main() {
       areas: [{ tile: T.FOREST, dx: -0.2, dy: 0.1, rx: 0.4, ry: 0.35 }],
       paint: [{ op: "path", points: [[-0.6, 0.55], [-0.2, 0.2], [0.1, -0.1], [0.32, -0.36]], width: 3, tile: T.STONE, onlyLand: true }],
       landmarks: [
-        { kind: "ruins", dx: -0.45, dy: 0.05, name: "Fortifications of the Great Kingdom" },
+        {
+          kind: "ruins",
+          dx: -0.45,
+          dy: 0.05,
+          name: "Fortifications of the Great Kingdom",
+          lore: "Walls of the same unbreakable stone as the Poneglyphs, eight hundred years old and still standing. Whoever built them knew a war was coming."
+        },
         { kind: "ruins", dx: 0.45, dy: 0.12, name: "Fallen ramparts" },
         { kind: "poneglyph", dx: 0.02, dy: -0.2, poneglyph: "laugh_tale", name: "The Last Poneglyph", spot: "last_poneglyph" },
-        { kind: "pillar", dx: 0.2, dy: -0.42, name: "Joy Boy's Message", spot: "joy_boy_message", interact: "Read Joy Boy's message", use: "nw2_joyboy", interactRange: 2.4 },
-        { kind: "arch", dx: 0.36, dy: -0.42, name: "Resting place of the One Piece", spot: "one_piece" }
+        {
+          kind: "pillar",
+          dx: 0.2,
+          dy: -0.42,
+          name: "Joy Boy's Message",
+          spot: "joy_boy_message",
+          loreLabel: "Read Joy Boy's message",
+          loreEvent: "nw2_joyboy",
+          interactRange: 2.4,
+          lore: (c, g) => c.flags.canReadPoneglyphs || c.flags.laughTaleRevealed || g.canReadPoneglyphs?.() ? '(The ancient script speaks of a promise made to someone who waited in the dark, of a dawn that never came, and of a treasure left "for the one who comes to keep it". It is signed with a single name: Joy Boy.)' : "(Lines of the ancient script, carved deep into the stone. You cannot read a word \u2014 but whoever carved them was smiling. You are sure of it.)"
+        },
+        {
+          kind: "arch",
+          dx: 0.36,
+          dy: -0.42,
+          name: "Resting place of the One Piece",
+          spot: "one_piece",
+          lore: (c) => c.flags.laughTale ? "(You already know what lies beyond the arch. You laugh again anyway.)" : "(The path runs on through the arch, to the very top of the cliffs.)"
+        }
       ],
       spots: [
         { id: "landing", dx: -0.55, dy: 0.5 },
@@ -37372,7 +37500,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     game.ui?.banner?.("THE FOUR POINTS", "The Road Poneglyphs are read", `${who} lays the four rubbings side by side. Four places \u2014 join them on a chart and two lines cross in an X, beyond Lodestar, where no Log Pose can lead.`, 8);
     game.log?.("The four Road Poneglyphs point to the final island. Laugh Tale lies just before Reverse Mountain, east of Lodestar.", "#ffd54f");
   }
-  function spawnGroup2(game, islandId, spotId, enemies, radius = 5) {
+  function spawnSquad2(game, islandId, spotId, enemies, radius = 5) {
     const list = game.spawner?.populated?.get(islandId);
     if (!list || game.world !== game.surface) return [];
     const isl = game.surface.islands.find((i) => i.id === islandId);
@@ -37418,6 +37546,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     ["brute", 60, { id: "bb_scavenger", name: "Blackbeard Heavy" }]
   ];
   var ONIWABANSHU = [["nw2_oniwabanshu", 60], ["nw2_oniwabanshu", 60], ["nw2_oniwabanshu", 62]];
+  var MMA_LOOK = { skin: "#311b92", top: "#4a148c", bottom: "#311b92", fur: "#311b92", hair: "bald", ears: "pointy", muzzle: true, tail: "thin", sharpTeeth: true, eyeColor: "#ff1744" };
+  var GIFTER_LOOK = { top: "#212121", bottom: "#4e342e", hat: "horns", hatColor: "#9e9e9e", fur: "#795548", ears: "round" };
   var L = {
     kaido: { hair: "long", hairColor: "#1a1a1a", skin: "#d7a67a", top: "#eceff1", bottom: "#4a148c", coat: "#f5f5f5", hat: "horns", hatColor: "#cfd8dc", sharpTeeth: true, belt: "#ffd54f" },
     teach: { hair: "curly", hairColor: "#212121", skin: "#d7a67a", top: "#fafafa", bottom: "#212121", coat: "#212121", hat: "bandana", hatColor: "#e53935", grin: true, sharpTeeth: true },
@@ -37479,6 +37609,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       at: { spot: "town_gate", ox: 3 },
       ai: "idle",
       faction: "neutral",
+      invulnerable: true,
       look: { hair: "long", hairColor: "#fff59d", top: "#5d4037", bottom: "#3e2723", coat: "#6d4c41", skin: "#fafafa" },
       level: 72,
       fixedPower: 99999,
@@ -37701,7 +37832,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       faction: "pirate",
       style: "ittoryu",
       weapon: "sword",
-      moves: ["itto_iai", "nw2_shishi_no_hi"],
+      moves: ["itto_iai", "nw2_shishi_no_hi", "nw2_call_gifters"],
       haki: { armament: 25 },
       look: { hair: "spiky", hairColor: "#f9a825", top: "#fdd835", bottom: "#5d4037", coat: "#e65100", skin: "#e0ac7e", bulk: 1.3, grin: true },
       bulk: 1.3,
@@ -38081,6 +38212,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       at: { spot: "gartel_pier" },
       ai: "idle",
       faction: "neutral",
+      invulnerable: true,
       look: { hair: "short", hairColor: "#c62828", top: "#fafafa", bottom: "#5d4037", coat: "#212121", scarEye: true, skin: "#f1c9a0", swords: 1 },
       level: 120,
       fixedPower: 99999,
@@ -38260,6 +38392,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       at: { spot: "labophase_gate", ox: 7 },
       ai: "idle",
       faction: "neutral",
+      invulnerable: true,
       look: { hair: "bald", skin: "#eceff1", top: "#212121", bottom: "#212121", coat: "#212121", hand: "#eceff1" },
       scale: 1.2,
       level: 150,
@@ -38408,6 +38541,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       lethal: false,
       skill: 0.65,
       // a friendly duel: no infamy
+      duel: true,
+      recover: 4,
+      recoverLine: `"Hehehe... not bad, little one. Come here \u2014 let's talk."`,
       alert: "Show me you're worth following, little warrior!",
       barks: ["Hahahaha!", "The Sun God will end this world!"],
       marker: (c, g) => g.quests.stageId("accursed_prince") === "free" && has(c, "loki_chain_key") ? "?" : g.quests.stageId("accursed_prince") === "report" ? "?" : null,
@@ -38447,7 +38583,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       level: 100,
       faction: "cp",
       style: "brawler",
-      moves: ["nw2_flame_clouds", "nw2_nightmare_holes", "nw2_nightmare_roar"],
+      moves: ["nw2_flame_clouds", "nw2_nightmare_holes", "nw2_nightmare_roar", "nw2_mma_horn"],
       look: { hair: "long", hairColor: "#212121", top: "#ef6c00", bottom: "#212121", coat: "#ef6c00", sharpTeeth: true, skin: "#f1c9a0" },
       scale: 1.4,
       haki: { armament: 80, observation: 70 },
@@ -38642,6 +38778,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       island: "karai_bari",
       at: { town: "buggy_town", plaza: true, ox: 2 },
       faction: "neutral",
+      invulnerable: true,
       look: { hair: "long", hairColor: "#1976d2", top: "#e53935", bottom: "#1565c0", skin: "#fafafa", nose: "red", hat: "captain", hatColor: "#6d4c41", coat: "#fafafa" },
       level: 60,
       fixedPower: 99999,
@@ -38691,6 +38828,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       at: { spot: "road4_cave", ox: 2 },
       ai: "idle",
       faction: "neutral",
+      invulnerable: true,
       look: { hair: "long", hairColor: "#212121", top: "#212121", bottom: "#212121", coat: "#212121", hat: "tricorne", hatColor: "#212121", skin: "#a1887f", scarEye: true },
       level: 110,
       fixedPower: 99999,
@@ -38834,7 +38972,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           goal: { type: "reach", island: "wano", spot: "shogun_castle", r: 4 },
           onStart: (ctx, g) => {
             if (!beat2(ctx.char, "kaido")) {
-              spawnGroup2(g, "wano", "shogun_castle", ONIWABANSHU, 6);
+              spawnSquad2(g, "wano", "shogun_castle", ONIWABANSHU, 6);
               spawnNow(g, "orochi");
               spawnNow(g, "fukurokuju");
             }
@@ -38877,7 +39015,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           id: "scavengers",
           desc: "Drive the Blackbeard scavengers out of the ruins of Baltigo.",
           goal: { type: "defeat", any: ["bb_scavenger"], count: 3 },
-          onStart: (ctx, g) => spawnGroup2(g, "baltigo", "scavenger_camp", SCAVENGERS, 6)
+          onStart: (ctx, g) => spawnSquad2(g, "baltigo", "scavenger_camp", SCAVENGERS, 6)
         },
         { id: "archive", desc: "Search the collapsed vault north of the ruins for Dragon's sealed dossier.", goal: { type: "reach", island: "baltigo", spot: "burned_archive", r: 3 } },
         { id: "report", desc: "Bring the dossier to the Revolutionary officer." }
@@ -38938,7 +39076,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           desc: "York has handed control of the Seraphim to CP0. Stop the Seraphim at the Labophase gate.",
           goal: { type: "defeat", any: ["s_hawk", "s_bear", "s_snake", "s_shark"], count: 3 },
           onStart: (ctx, g) => {
-            spawnGroup2(g, "egghead", "labophase_gate", SERAPHIM, 6);
+            spawnSquad2(g, "egghead", "labophase_gate", SERAPHIM, 6);
             g.ui.banner("THE SERAPHIM", "Egghead", "Winged children with the faces of Warlords drop from the Labophase \u2014 and turn on their creator.", 5);
           }
         },
@@ -38960,7 +39098,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             const a = spawnNow(g, "kizaru_egghead");
             if (a) aggro(g, a);
             spawnNow(g, "saturn_cameo");
-            spawnGroup2(g, "egghead", "labophase_gate", BUSTER_CALL, 9);
+            spawnSquad2(g, "egghead", "labophase_gate", BUSTER_CALL, 9);
             g.ui.banner("BUSTER CALL", "Admiral Kizaru \u2014 and one of the Five Elders", "Battleships ring the island. A flash of yellow light lands at the gate... and behind it, an old man in black.", 6);
           }
         },
@@ -38983,7 +39121,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           desc: "The children's nightmares walk as MMA. Protect the Walrus School and the Owl Library \u2014 defeat three of the monsters.",
           goal: { type: "defeat", any: ["mma_beast"], count: 3 },
           onStart: (ctx, g) => {
-            spawnGroup2(g, "elbaf", "walrus_school", MMA, 8);
+            spawnSquad2(g, "elbaf", "walrus_school", MMA, 8);
             g.ui.banner("MMA", "Nightmares made flesh", "Monsters taller than giants stalk out of the children's dreams toward the Walrus School.", 5);
           }
         },
@@ -39450,6 +39588,36 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       cost: { stamina: 20 },
       steps: [{ zone: { range: 4.5, duration: 4, interval: 0.5, damage: 10, color: "#4a148c", kind: "dark", pull: 3, slow: 0.4, atTarget: true } }]
     },
+    // summons: every field is given because game.summon passes unset ones on as undefined
+    {
+      id: "nw2_mma_horn",
+      name: "Nightmare Horn",
+      anim: "cast",
+      windup: 0.8,
+      recover: 0.5,
+      cd: 28,
+      cost: { stamina: 20 },
+      say: "Wake up, my nightmares!",
+      steps: [{
+        summon: { archetype: "nw2_mma", level: 70, count: 1, name: "MMA \u2014 Nightmare", look: MMA_LOOK, moves: ["brawl_tackle", "nw2_nightmare_roar"], hpMul: 1.6, duration: 25, color: "#7e57c2" },
+        buff: { id: "nw2_horn", name: "Nightmare Horn", dur: 8, mods: { damage: 1.1 } },
+        fx: { ring: 4, color: "#7e57c2" }
+      }]
+    },
+    {
+      id: "nw2_call_gifters",
+      name: "Call the Gifters",
+      anim: "cast",
+      windup: 0.6,
+      recover: 0.4,
+      cd: 30,
+      cost: { stamina: 14 },
+      say: "Gifters! Eat them!",
+      steps: [{
+        summon: { archetype: "nw2_gifter", level: 52, count: 2, name: "Gifter", look: GIFTER_LOOK, moves: ["brawl_tackle", "brawl_headbutt"], hpMul: 1.2, duration: 30, color: "#a1887f" },
+        buff: { id: "nw2_gifters", name: "Headliner's Orders", dur: 8, mods: { damage: 1.1 } }
+      }]
+    },
     {
       id: "nw2_nightmare_roar",
       name: "Nightmare Roar",
@@ -39590,9 +39758,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   };
   var archetypes6 = {
-    nw2_gifter: { name: "Gifter", faction: "pirate", style: "brawler", look: { top: "#212121", bottom: "#4e342e", hat: "horns", hatColor: "#9e9e9e", fur: "#795548", ears: "round" }, skill: 0.3, hpMul: 1.5, moves: ["brawl_tackle", "brawl_headbutt"], barks: ["For Kaido-sama!", "Ahahaha! (It never stops...)"] },
+    nw2_gifter: { name: "Gifter", faction: "pirate", style: "brawler", look: GIFTER_LOOK, skill: 0.3, hpMul: 1.5, moves: ["brawl_tackle", "brawl_headbutt"], barks: ["For Kaido-sama!", "Ahahaha! (It never stops...)"] },
     nw2_oniwabanshu: { name: "Oniwabanshu Ninja", faction: "bandit", style: "rokushiki", look: { top: "#212121", bottom: "#212121", hat: "bandana", hatColor: "#212121" }, skill: 0.5, moves: ["roku_soru", "nw2_kunai"], barks: ["Ninpo!", "For the shogun!"] },
-    nw2_mma: { name: "MMA", faction: "beast", style: "brawler", look: { skin: "#311b92", top: "#4a148c", bottom: "#311b92", fur: "#311b92", hair: "bald", ears: "pointy", muzzle: true, tail: "thin", sharpTeeth: true, eyeColor: "#ff1744" }, bulk: 1.8, scale: 2.4, hpMul: 3, skill: 0.2, moves: ["brawl_tackle", "nw2_nightmare_roar"] }
+    nw2_mma: { name: "MMA", faction: "beast", style: "brawler", look: MMA_LOOK, bulk: 1.8, scale: 2.4, hpMul: 3, skill: 0.2, moves: ["brawl_tackle", "nw2_nightmare_roar"] }
   };
   var BROADCAST = [
     ["VEGAPUNK'S MESSAGE", "Every Den Den Mushi in the world", '"Hello, everyone in the world. I am Vegapunk. If you are hearing this, I am probably already dead..."'],
@@ -39610,15 +39778,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     game.on("characterStart", () => {
       broadcast = null;
       teachT = -1;
-      lokiRevive = null;
     });
-    let lokiRevive = null;
     game.on("knockout", (a, att) => {
       const c = C();
       if (!c || !a) return;
       if (a.npcId && TRACKED.includes(a.npcId) && att && (att.isPlayer || att.faction === "player")) c.flags.nw2_ko = { ...c.flags.nw2_ko || {}, [a.npcId]: true };
       syncBeatFlags(c);
-      if (a.npcId === "loki") lokiRevive = { a, t: 3 };
     });
     game.on("bossDefeated", (a) => {
       const c = C();
@@ -39656,12 +39821,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         teachT = 5;
       }
     });
-    game.interactions?.onObject?.("nw2_joyboy", () => {
+    game.on("questEvent", (ev) => {
       const c = C();
-      if (!c) return;
-      const text = canDecipher(game, c) || c.flags.laughTaleRevealed ? '(The ancient script speaks of a promise made long ago to someone who waited in the dark, of a dawn that never came, and of a treasure left "for the one who will come to keep it". It is signed with a single name: Joy Boy.)' : "(Lines of the ancient script, carved deep into the stone. You cannot read a word \u2014 but whoever carved them was smiling. You are sure of it.)";
-      c.flags.nw2_readJoyBoy = true;
-      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Joy Boy's Message", text } } });
+      if (c && ev === "nw2_joyboy") c.flags.nw2_readJoyBoy = true;
     });
     game.spawner.addBuilder((ctx) => {
       if (ctx.island.id !== "elbaf") return;
@@ -39686,24 +39848,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           }
         }
       } else broadcast = null;
-      if (lokiRevive && (lokiRevive.t -= dt) <= 0) {
-        const a = lokiRevive.a;
-        lokiRevive = null;
-        if (a.alive && a.state === "knocked") {
-          a.state = "idle";
-          if (a.d?.maxHp) a.hp = Math.round(a.d.maxHp * 0.3);
-          a.provoked = false;
-          a.aggroPlayer = false;
-          a.stationary = true;
-          if (a.controller) {
-            a.controller.kind = "guard";
-            a.controller.target = null;
-            a.controller.state = "idle";
-          }
-          if (game.bossTarget === a) game.bossTarget = null;
-          game.fx.text(a.x, a.y - 3.2, "Hehehe... not bad.", "#ffffff", 0.4);
-        }
-      }
       if (teachT > 0) {
         teachT -= dt;
         if (teachT <= 0 && game.quests.stageId("final_rival") === "duel") {
@@ -39725,6 +39869,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if ((t -= dt) > 0) return;
       t = 0.5;
       syncBeatFlags(c);
+      if (game.currentIsland?.id === "elbaf") {
+        const loki = findActor(game, "loki");
+        if (loki && loki.state === "idle" && !loki.aggroPlayer && !loki.provoked && loki.controller?.kind === "hostile") {
+          loki.controller.kind = "guard";
+          loki.stationary = true;
+        }
+      }
       if (game.quests.stageId("laugh_tale_voyage") === "decipher" && !c.flags.laughTaleRevealed && canDecipher(game, c)) {
         const who = (c.crew || []).find((m) => m.role === "archaeologist")?.name || "You";
         revealLaughTale(game, c, who);

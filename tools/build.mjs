@@ -35,6 +35,23 @@ function writeSingleFile(code) {
   console.log('wrote dist/onepiece.html');
 }
 
+/** A page fragment (no <html>/<head>/<body>) for hosts that wrap pages in their own skeleton. */
+function writeArtifactPage(code) {
+  const html = readFileSync(join(root, 'index.html'), 'utf8');
+  const fonts = (html.match(/<link[^>]+fonts\.googleapis\.com\/css2[^>]*>/) || [''])[0];
+  const out = [
+    '<title>Inherited Will</title>',
+    '<link rel="preconnect" href="https://fonts.googleapis.com">',
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
+    fonts,
+    '<style>html, body { margin: 0; height: 100%; background: #0b1622; color: #f5e6c4; overflow: hidden; } #boot { position: fixed; inset: 0; display: grid; place-items: center; color: #f5e6c4; font: 700 20px \'Nunito\', system-ui, sans-serif; }</style>',
+    '<div id="boot">Loading the Blue Planet…</div>',
+    `<script>${code.replace(/<\/script/gi, '<\\/script')}</script>`,
+  ].join('\n');
+  writeFileSync(join(root, 'dist/artifact.html'), out);
+  console.log('wrote dist/artifact.html');
+}
+
 mkdirSync(join(root, 'dist'), { recursive: true });
 if (watch) {
   const ctx = await esbuild.context({
@@ -48,4 +65,5 @@ if (watch) {
   // the shareable single-file build is minified
   const min = await esbuild.build({ ...options, minify: true, write: false, logLevel: 'silent' });
   writeSingleFile(min.outputFiles[0].text);
+  writeArtifactPage(min.outputFiles[0].text);
 }
