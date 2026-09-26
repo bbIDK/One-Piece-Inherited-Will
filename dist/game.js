@@ -5872,8 +5872,8 @@ void main() {
           name: "Ilisia Harbor",
           dx: 0.42,
           dy: 0.42,
-          w: 46,
-          h: 26,
+          w: 52,
+          h: 30,
           style: "port",
           dockDir: "se",
           plaza: "well",
@@ -5881,6 +5881,7 @@ void main() {
             { role: "tavern", name: "The Salted Crown" },
             { role: "shipwright", name: "Ilisia Shipyard" },
             { role: "bounty", name: "Harbor Bounty Office" },
+            { role: "shop", name: "Navigator Supplies (Log Poses)", shop: "navigator" },
             { role: "house", name: "Warehouse No. 8", npc: "wb_refugee" }
           ]
         }
@@ -38916,8 +38917,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         { id: "brownbeard", desc: "Drive the Brownbeard Pirates out of Foodvalten: defeat Brownbeard at his camp north-east of the village.", goal: { type: "flag", flag: "nw2_beat_brownbeard_foodvalten" } },
         { id: "report", desc: "Return to the chief of Foodvalten." }
       ],
-      rewards: { berries: 6e5, points: 2, liberate: "Foodvalten", items: [["sea_king_steak", 2]] }
+      rewards: { berries: 6e5, points: 2, liberate: "Foodvalten", items: [["sea_king_steak", 2]] },
+      onComplete: (ctx, g) => spawnNow(g, "hawkins_foodvalten")
     },
+    // canon: Hawkins' crew is who really drove Brownbeard out
     // ------------------------------------------------------------------ Wano
     {
       id: "wano_dawn",

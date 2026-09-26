@@ -875,7 +875,8 @@ const quests = [
       { id: 'brownbeard', desc: 'Drive the Brownbeard Pirates out of Foodvalten: defeat Brownbeard at his camp north-east of the village.', goal: { type: 'flag', flag: 'nw2_beat_brownbeard_foodvalten' } },
       { id: 'report', desc: 'Return to the chief of Foodvalten.' },
     ],
-    rewards: { berries: 600000, points: 2, liberate: 'Foodvalten', items: [['sea_king_steak', 2]] } },
+    rewards: { berries: 600000, points: 2, liberate: 'Foodvalten', items: [['sea_king_steak', 2]] },
+    onComplete: (ctx, g) => spawnNow(g, 'hawkins_foodvalten') }, // canon: Hawkins' crew is who really drove Brownbeard out
 
   // ------------------------------------------------------------------ Wano
   { id: 'wano_dawn', name: 'The Dawn of Wano', island: 'wano', kind: 'story', summary: 'Wano is ruled by the shogun Orochi and Kaido\'s Beasts Pirates. The Kozuki retainers have returned to take it back.',

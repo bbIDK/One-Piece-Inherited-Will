@@ -391,11 +391,12 @@ export const WEST_BLUE = [
         ],
       },
       {
-        id: 'wb_ilisia_harbor', name: 'Ilisia Harbor', dx: 0.42, dy: 0.42, w: 46, h: 26, style: 'port', dockDir: 'se', plaza: 'well',
+        id: 'wb_ilisia_harbor', name: 'Ilisia Harbor', dx: 0.42, dy: 0.42, w: 52, h: 30, style: 'port', dockDir: 'se', plaza: 'well',
         buildings: [
           { role: 'tavern', name: 'The Salted Crown' },
           { role: 'shipwright', name: 'Ilisia Shipyard' },
           { role: 'bounty', name: 'Harbor Bounty Office' },
+          { role: 'shop', name: 'Navigator Supplies (Log Poses)', shop: 'navigator' },
           { role: 'house', name: 'Warehouse No. 8', npc: 'wb_refugee' },
         ],
       },
