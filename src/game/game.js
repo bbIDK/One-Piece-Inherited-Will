@@ -311,8 +311,8 @@ export class Game {
       g.fillStyle = grd; g.fillRect(0, 0, W, H);
     }
     // (not indoors, not under the sea, not below decks)
-    const p = this.player;
-    const sheltered = !!(p && (this.world.interiorAt?.(p.x, p.y) || this.view3d?.isUnder));
+    const pl = this.player;
+    const sheltered = !!(pl && (this.world.interiorAt?.(pl.x, pl.y) || this.view3d?.isUnder));
     if (env.rain > 0.05 && !zk && !sheltered) {
       g.strokeStyle = `rgba(200,220,255,${0.25 + env.rain * 0.35})`;
       g.lineWidth = 1.2 * r.dpr;

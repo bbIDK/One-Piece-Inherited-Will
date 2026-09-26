@@ -76369,7 +76369,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = grd;
         g.fillRect(0, 0, W3, H2);
       }
-      if (env.rain > 0.05 && !zk) {
+      const pl = this.player;
+      const sheltered = !!(pl && (this.world.interiorAt?.(pl.x, pl.y) || this.view3d?.isUnder));
+      if (env.rain > 0.05 && !zk && !sheltered) {
         g.strokeStyle = `rgba(200,220,255,${0.25 + env.rain * 0.35})`;
         g.lineWidth = 1.2 * r.dpr;
         g.beginPath();
@@ -76383,7 +76385,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         g.stroke();
       }
-      if (env.snow > 0.05 && zk !== 2 && zk !== 1) {
+      if (env.snow > 0.05 && zk !== 2 && zk !== 1 && !sheltered) {
         g.fillStyle = "rgba(255,255,255,0.85)";
         const n = Math.floor(env.snow * 200);
         const t = env.time;
