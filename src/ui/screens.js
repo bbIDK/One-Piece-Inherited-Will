@@ -448,7 +448,7 @@ export function helpContent(char) {
       k('Right click', 'heavy attack'), k('F', 'block — tap just before a hit to PARRY'), k('1-6', 'hotbar (techniques & items)'),
       haki ? k('R / T', 'Armament / Observation Haki (once awakened)') : null,
       haki && char.haki?.conqueror ? k('G', "Conqueror's Haki") : null,
-      k('E', 'interact / talk / pick fruit / board'),
+      k('E', 'interact / talk / pick fruit / board / search a knocked-out foe'),
       k('C / Space (swimming)', 'dive / swim up — or look down and swim'),
       k('Tab / I', 'inventory & equipment'), k('C', 'character'), k('K', 'skills & hotbar'), k('J', 'journal'),
       k('U', 'crew'), k('M', 'world map'), k('Esc', 'pause menu'), k('Mouse wheel', 'camera distance (third person)'), k('H', 'this help')),

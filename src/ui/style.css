@@ -523,3 +523,5 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .build-row { display: flex; align-items: center; gap: 8px; }
 .build-slider { flex: 1; accent-color: #8e1b16; }
 @media (max-height: 520px) { .preview3d { height: 220px; } }
+
+.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }

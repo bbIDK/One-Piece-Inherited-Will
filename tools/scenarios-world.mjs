@@ -522,4 +522,49 @@ export const scenarios = {
       console.log('hurt', JSON.stringify(hurt), 'after running off 20s', JSON.stringify(after));
     },
   },
+
+  // search a knocked-out foe (E), take their things, and the body is cleared away later
+  loot: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.env.clock = 11; g.settings.view = 'third'; g.applySettings(); document.querySelector('.look-hint')?.remove(); });
+      for (let i = 0; i < 10; i++) await step(page, 0.1);
+      const made = await page.evaluate(() => {
+        const g = window.OP.game, p = g.player;
+        const mk = (name, faction, weapon, dx) => {
+          const a = window.OP.debug.makeNPC({ name, faction, style: weapon === 'sword' ? 'ittoryu' : 'brawler', weapon, level: 12, hostile: faction !== 'civilian' }, p.x + dx, p.y + 1.2);
+          a.test = true; g.addActor(a);
+          a.hp = 0; a.knockOut(g, p);
+          return a;
+        };
+        const a = mk('Pirate Grunt', 'pirate', 'sword', 1.0);
+        const b = mk('Wild Boar', 'beast', null, -2.5);
+        g.view3d.rig.yaw = Math.PI / 2; g.view3d.rig.pitch = -0.35;
+        return { pocketA: a.pocket, pocketB: b.pocket };
+      });
+      console.log('pockets', JSON.stringify(made));
+      for (let i = 0; i < 4; i++) await step(page, 0.1);
+      const label = await page.evaluate(() => window.OP.game.player.controller.interaction?.label || null);
+      console.log('prompt:', label);
+      await frames(page, 2);
+      await snap('bodies');
+      await page.evaluate(() => { window.OP.key('E', true); }); await step(page, 0.05); await page.evaluate(() => { window.OP.key('E', false); }); await step(page, 0.1);
+      await frames(page, 2);
+      await snap('search-panel');
+      const before = await page.evaluate(() => ({ berries: window.OP.game.state.char.berries, inv: window.OP.game.state.char.inventory.map((i) => i.id + 'x' + i.qty).join(',') }));
+      await page.evaluate(() => { const b = [...document.querySelectorAll('.loot button.btn.gold')].find((x) => /Take all/.test(x.textContent)); b?.click(); });
+      await step(page, 0.1);
+      const after = await page.evaluate(() => ({ berries: window.OP.game.state.char.berries, inv: window.OP.game.state.char.inventory.map((i) => i.id + 'x' + i.qty).join(','), panel: !!document.querySelector('.loot') }));
+      console.log('before', JSON.stringify(before), 'after', JSON.stringify(after));
+      // the emptied body goes after ~25 s; the other after ~2 minutes
+      await page.evaluate(() => { const g = window.OP.game; g.ui.closeAll?.(); g.paused = false; });
+      for (let i = 0; i < 30; i++) await step(page, 1);
+      const mid = await page.evaluate(() => window.OP.game.actors.filter((a) => a.test).map((a) => a.name + ':' + (a.fadeAlpha ?? 1).toFixed(2)));
+      console.log('after 30s', JSON.stringify(mid));
+      for (let i = 0; i < 100; i++) await step(page, 1);
+      const late = await page.evaluate(() => window.OP.game.actors.filter((a) => a.test).map((a) => a.name));
+      console.log('after 130s', JSON.stringify(late));
+    },
+  },
 };
