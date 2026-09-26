@@ -196,6 +196,48 @@ export class Renderer3D {
     this.renderer.render(this.scene, cam);
   }
 
+  /**
+   * Title-screen flyover: a camera slowly circling high over (cx, cy) with no
+   * player, in the same world, sky and sea as the game.
+   */
+  renderAttract(game, cx, cy, t) {
+    const w = game.world;
+    if (w !== this.world) this.setWorld(w);
+    const now = performance.now();
+    this.lastT = now;
+    this.frame++;
+    const env = game.env;
+    const a = t * 0.035;
+    const R = this.attractR || 80;
+    const ox = w.wx(cx + Math.cos(a) * R), oy = cy + Math.sin(a) * R;
+    this.ox = ox; this.oy = oy;
+    // look across the island, past its centre
+    const yaw = a + Math.PI - 0.35;
+    this.rig.yaw = ((yaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const camYaw3 = -(yaw + Math.PI / 2);
+    const cam = this.rig.camera;
+    const gh = Math.max(0, this.ground(ox, oy));
+    cam.position.set(0, gh + 30, 0);
+    cam.rotation.set(-0.2, camYaw3, 0);
+    if (Math.abs(cam.fov - 70) > 0.01) { cam.fov = 70; cam.updateProjectionMatrix(); }
+    cam.updateMatrixWorld();
+    this.sky.update(env, w, true);
+    this.sky.mesh.position.copy(cam.position);
+    this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon);
+    this.terrain.update(ox, oy);
+    this.sky.sun.target.position.set(0, gh, 0);
+    this.sky.sun.position.y += gh;
+    this.updateProps(game, ox, oy, env, false, 190);
+    this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
+    this.forest.aim(camYaw3);
+    this.updateEntities(game, ox, oy, env, camYaw3);
+    if (this.vm) this.vm.root.visible = false;
+    const amb = env.ambient || [1, 1, 1];
+    tintSprites(Math.min(1, amb[0] * 1.05), Math.min(1, amb[1] * 1.05), Math.min(1, amb[2] * 1.05));
+    setNightWindows(Math.max(0, 0.9 - env.daylight));
+    this.renderer.render(this.scene, cam);
+  }
+
   /** First-person arms and weapon (a plug-in; see registry.js). */
   updateViewmodel(game, env) {
     const want = this.rig.mode === 'first' && VIEWS.viewmodel && game.player && game.player.mode !== 'sail';
@@ -213,7 +255,7 @@ export class Renderer3D {
   }
 
   /** Static world objects near the player: 3D models where registered, sprites otherwise. */
-  updateProps(game, ox, oy, env, sailing) {
+  updateProps(game, ox, oy, env, sailing, radius) {
     const w = this.world;
     if (!w.objects) return;
     this.propT -= 1 / 60;
@@ -222,7 +264,7 @@ export class Renderer3D {
     this.propT = 0.6;
     this.propsDirty = false;
     this.propOrigin = { x: ox, y: oy, day: env.day };
-    const R = sailing ? 150 : 95;
+    const R = radius || (sailing ? 150 : 95);
     const objs = w.objects.query(ox - R, oy - R, ox + R, oy + R);
     const items = [];
     const keep = new Set();

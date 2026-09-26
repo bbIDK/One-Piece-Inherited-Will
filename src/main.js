@@ -244,7 +244,7 @@ async function start() {
   };
 
   // attract-mode camera for the title screen
-  const attract = { x: 3790, y: 330, t: 0 };
+  const attract = { x: 3790, y: 300, t: 0 };
   renderer.cam.x = attract.x; renderer.cam.y = attract.y; renderer.cam.zoom = 9;
 
   Object.assign(debug, {
@@ -287,11 +287,27 @@ async function start() {
       else game.render();
     } else {
       attract.t += dt;
-      renderer.cam.x = world.wx(attract.x + attract.t * 3);
-      renderer.cam.y = attract.y + Math.sin(attract.t * 0.1) * 20;
       game.env.update(dt, game);
-      renderer.renderTerrain(world, game.env);
-      renderer.renderWorld(world, [], game.env);
+      if (view3d && settings.view !== 'classic' && !attract.no3d) {
+        // a slow 3D flyover of Dawn Island behind the title
+        try {
+          if (!view3d.active) view3d.setActive(true);
+          view3d.renderAttract(game, attract.x, attract.y, attract.t);
+          const g = renderer.ctx;
+          g.setTransform(1, 0, 0, 1, 0, 0);
+          g.clearRect(0, 0, renderer.canvas.width, renderer.canvas.height);
+        } catch (e) {
+          console.warn('3D title view failed', e);
+          attract.no3d = true;
+          view3d.setActive(false);
+        }
+      } else {
+        if (view3d?.active) view3d.setActive(false);
+        renderer.cam.x = world.wx(attract.x + attract.t * 3);
+        renderer.cam.y = attract.y + 30 + Math.sin(attract.t * 0.1) * 20;
+        renderer.renderTerrain(world, game.env);
+        renderer.renderWorld(world, [], game.env);
+      }
       ui.update(dt);
       input.endFrame();
     }
