@@ -32394,6 +32394,1150 @@ void main() {
     if (base !== fogUniforms) base?.call(this, shader, renderer);
   };
 
+  // node_modules/three/examples/jsm/shaders/CopyShader.js
+  var CopyShader = {
+    name: "CopyShader",
+    uniforms: {
+      "tDiffuse": { value: null },
+      "opacity": { value: 1 }
+    },
+    vertexShader: (
+      /* glsl */
+      `
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vUv = uv;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+		}`
+    ),
+    fragmentShader: (
+      /* glsl */
+      `
+
+		uniform float opacity;
+
+		uniform sampler2D tDiffuse;
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vec4 texel = texture2D( tDiffuse, vUv );
+			gl_FragColor = opacity * texel;
+
+
+		}`
+    )
+  };
+
+  // node_modules/three/examples/jsm/postprocessing/Pass.js
+  var Pass = class {
+    constructor() {
+      this.isPass = true;
+      this.enabled = true;
+      this.needsSwap = true;
+      this.clear = false;
+      this.renderToScreen = false;
+    }
+    setSize() {
+    }
+    render() {
+      console.error("THREE.Pass: .render() must be implemented in derived pass.");
+    }
+    dispose() {
+    }
+  };
+  var _camera2 = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  var FullscreenTriangleGeometry = class extends BufferGeometry {
+    constructor() {
+      super();
+      this.setAttribute("position", new Float32BufferAttribute([-1, 3, 0, -1, -1, 0, 3, -1, 0], 3));
+      this.setAttribute("uv", new Float32BufferAttribute([0, 2, 0, 0, 2, 0], 2));
+    }
+  };
+  var _geometry2 = new FullscreenTriangleGeometry();
+  var FullScreenQuad = class {
+    constructor(material) {
+      this._mesh = new Mesh(_geometry2, material);
+    }
+    dispose() {
+      this._mesh.geometry.dispose();
+    }
+    render(renderer) {
+      renderer.render(this._mesh, _camera2);
+    }
+    get material() {
+      return this._mesh.material;
+    }
+    set material(value) {
+      this._mesh.material = value;
+    }
+  };
+
+  // node_modules/three/examples/jsm/postprocessing/ShaderPass.js
+  var ShaderPass = class extends Pass {
+    constructor(shader, textureID) {
+      super();
+      this.textureID = textureID !== void 0 ? textureID : "tDiffuse";
+      if (shader instanceof ShaderMaterial) {
+        this.uniforms = shader.uniforms;
+        this.material = shader;
+      } else if (shader) {
+        this.uniforms = UniformsUtils.clone(shader.uniforms);
+        this.material = new ShaderMaterial({
+          name: shader.name !== void 0 ? shader.name : "unspecified",
+          defines: Object.assign({}, shader.defines),
+          uniforms: this.uniforms,
+          vertexShader: shader.vertexShader,
+          fragmentShader: shader.fragmentShader
+        });
+      }
+      this.fsQuad = new FullScreenQuad(this.material);
+    }
+    render(renderer, writeBuffer, readBuffer) {
+      if (this.uniforms[this.textureID]) {
+        this.uniforms[this.textureID].value = readBuffer.texture;
+      }
+      this.fsQuad.material = this.material;
+      if (this.renderToScreen) {
+        renderer.setRenderTarget(null);
+        this.fsQuad.render(renderer);
+      } else {
+        renderer.setRenderTarget(writeBuffer);
+        if (this.clear) renderer.clear(renderer.autoClearColor, renderer.autoClearDepth, renderer.autoClearStencil);
+        this.fsQuad.render(renderer);
+      }
+    }
+    dispose() {
+      this.material.dispose();
+      this.fsQuad.dispose();
+    }
+  };
+
+  // node_modules/three/examples/jsm/postprocessing/MaskPass.js
+  var MaskPass = class extends Pass {
+    constructor(scene, camera) {
+      super();
+      this.scene = scene;
+      this.camera = camera;
+      this.clear = true;
+      this.needsSwap = false;
+      this.inverse = false;
+    }
+    render(renderer, writeBuffer, readBuffer) {
+      const context = renderer.getContext();
+      const state = renderer.state;
+      state.buffers.color.setMask(false);
+      state.buffers.depth.setMask(false);
+      state.buffers.color.setLocked(true);
+      state.buffers.depth.setLocked(true);
+      let writeValue, clearValue;
+      if (this.inverse) {
+        writeValue = 0;
+        clearValue = 1;
+      } else {
+        writeValue = 1;
+        clearValue = 0;
+      }
+      state.buffers.stencil.setTest(true);
+      state.buffers.stencil.setOp(context.REPLACE, context.REPLACE, context.REPLACE);
+      state.buffers.stencil.setFunc(context.ALWAYS, writeValue, 4294967295);
+      state.buffers.stencil.setClear(clearValue);
+      state.buffers.stencil.setLocked(true);
+      renderer.setRenderTarget(readBuffer);
+      if (this.clear) renderer.clear();
+      renderer.render(this.scene, this.camera);
+      renderer.setRenderTarget(writeBuffer);
+      if (this.clear) renderer.clear();
+      renderer.render(this.scene, this.camera);
+      state.buffers.color.setLocked(false);
+      state.buffers.depth.setLocked(false);
+      state.buffers.color.setMask(true);
+      state.buffers.depth.setMask(true);
+      state.buffers.stencil.setLocked(false);
+      state.buffers.stencil.setFunc(context.EQUAL, 1, 4294967295);
+      state.buffers.stencil.setOp(context.KEEP, context.KEEP, context.KEEP);
+      state.buffers.stencil.setLocked(true);
+    }
+  };
+  var ClearMaskPass = class extends Pass {
+    constructor() {
+      super();
+      this.needsSwap = false;
+    }
+    render(renderer) {
+      renderer.state.buffers.stencil.setLocked(false);
+      renderer.state.buffers.stencil.setTest(false);
+    }
+  };
+
+  // node_modules/three/examples/jsm/postprocessing/EffectComposer.js
+  var EffectComposer = class {
+    constructor(renderer, renderTarget) {
+      this.renderer = renderer;
+      this._pixelRatio = renderer.getPixelRatio();
+      if (renderTarget === void 0) {
+        const size = renderer.getSize(new Vector2());
+        this._width = size.width;
+        this._height = size.height;
+        renderTarget = new WebGLRenderTarget(this._width * this._pixelRatio, this._height * this._pixelRatio, { type: HalfFloatType });
+        renderTarget.texture.name = "EffectComposer.rt1";
+      } else {
+        this._width = renderTarget.width;
+        this._height = renderTarget.height;
+      }
+      this.renderTarget1 = renderTarget;
+      this.renderTarget2 = renderTarget.clone();
+      this.renderTarget2.texture.name = "EffectComposer.rt2";
+      this.writeBuffer = this.renderTarget1;
+      this.readBuffer = this.renderTarget2;
+      this.renderToScreen = true;
+      this.passes = [];
+      this.copyPass = new ShaderPass(CopyShader);
+      this.copyPass.material.blending = NoBlending;
+      this.clock = new Clock();
+    }
+    swapBuffers() {
+      const tmp2 = this.readBuffer;
+      this.readBuffer = this.writeBuffer;
+      this.writeBuffer = tmp2;
+    }
+    addPass(pass) {
+      this.passes.push(pass);
+      pass.setSize(this._width * this._pixelRatio, this._height * this._pixelRatio);
+    }
+    insertPass(pass, index) {
+      this.passes.splice(index, 0, pass);
+      pass.setSize(this._width * this._pixelRatio, this._height * this._pixelRatio);
+    }
+    removePass(pass) {
+      const index = this.passes.indexOf(pass);
+      if (index !== -1) {
+        this.passes.splice(index, 1);
+      }
+    }
+    isLastEnabledPass(passIndex) {
+      for (let i = passIndex + 1; i < this.passes.length; i++) {
+        if (this.passes[i].enabled) {
+          return false;
+        }
+      }
+      return true;
+    }
+    render(deltaTime) {
+      if (deltaTime === void 0) {
+        deltaTime = this.clock.getDelta();
+      }
+      const currentRenderTarget = this.renderer.getRenderTarget();
+      let maskActive = false;
+      for (let i = 0, il = this.passes.length; i < il; i++) {
+        const pass = this.passes[i];
+        if (pass.enabled === false) continue;
+        pass.renderToScreen = this.renderToScreen && this.isLastEnabledPass(i);
+        pass.render(this.renderer, this.writeBuffer, this.readBuffer, deltaTime, maskActive);
+        if (pass.needsSwap) {
+          if (maskActive) {
+            const context = this.renderer.getContext();
+            const stencil = this.renderer.state.buffers.stencil;
+            stencil.setFunc(context.NOTEQUAL, 1, 4294967295);
+            this.copyPass.render(this.renderer, this.writeBuffer, this.readBuffer, deltaTime);
+            stencil.setFunc(context.EQUAL, 1, 4294967295);
+          }
+          this.swapBuffers();
+        }
+        if (MaskPass !== void 0) {
+          if (pass instanceof MaskPass) {
+            maskActive = true;
+          } else if (pass instanceof ClearMaskPass) {
+            maskActive = false;
+          }
+        }
+      }
+      this.renderer.setRenderTarget(currentRenderTarget);
+    }
+    reset(renderTarget) {
+      if (renderTarget === void 0) {
+        const size = this.renderer.getSize(new Vector2());
+        this._pixelRatio = this.renderer.getPixelRatio();
+        this._width = size.width;
+        this._height = size.height;
+        renderTarget = this.renderTarget1.clone();
+        renderTarget.setSize(this._width * this._pixelRatio, this._height * this._pixelRatio);
+      }
+      this.renderTarget1.dispose();
+      this.renderTarget2.dispose();
+      this.renderTarget1 = renderTarget;
+      this.renderTarget2 = renderTarget.clone();
+      this.writeBuffer = this.renderTarget1;
+      this.readBuffer = this.renderTarget2;
+    }
+    setSize(width, height) {
+      this._width = width;
+      this._height = height;
+      const effectiveWidth = this._width * this._pixelRatio;
+      const effectiveHeight = this._height * this._pixelRatio;
+      this.renderTarget1.setSize(effectiveWidth, effectiveHeight);
+      this.renderTarget2.setSize(effectiveWidth, effectiveHeight);
+      for (let i = 0; i < this.passes.length; i++) {
+        this.passes[i].setSize(effectiveWidth, effectiveHeight);
+      }
+    }
+    setPixelRatio(pixelRatio) {
+      this._pixelRatio = pixelRatio;
+      this.setSize(this._width, this._height);
+    }
+    dispose() {
+      this.renderTarget1.dispose();
+      this.renderTarget2.dispose();
+      this.copyPass.dispose();
+    }
+  };
+
+  // node_modules/three/examples/jsm/shaders/LuminosityHighPassShader.js
+  var LuminosityHighPassShader = {
+    name: "LuminosityHighPassShader",
+    shaderID: "luminosityHighPass",
+    uniforms: {
+      "tDiffuse": { value: null },
+      "luminosityThreshold": { value: 1 },
+      "smoothWidth": { value: 1 },
+      "defaultColor": { value: new Color(0) },
+      "defaultOpacity": { value: 0 }
+    },
+    vertexShader: (
+      /* glsl */
+      `
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vUv = uv;
+
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+		}`
+    ),
+    fragmentShader: (
+      /* glsl */
+      `
+
+		uniform sampler2D tDiffuse;
+		uniform vec3 defaultColor;
+		uniform float defaultOpacity;
+		uniform float luminosityThreshold;
+		uniform float smoothWidth;
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vec4 texel = texture2D( tDiffuse, vUv );
+
+			float v = luminance( texel.xyz );
+
+			vec4 outputColor = vec4( defaultColor.rgb, defaultOpacity );
+
+			float alpha = smoothstep( luminosityThreshold, luminosityThreshold + smoothWidth, v );
+
+			gl_FragColor = mix( outputColor, texel, alpha );
+
+		}`
+    )
+  };
+
+  // node_modules/three/examples/jsm/postprocessing/UnrealBloomPass.js
+  var UnrealBloomPass = class _UnrealBloomPass extends Pass {
+    constructor(resolution, strength, radius, threshold) {
+      super();
+      this.strength = strength !== void 0 ? strength : 1;
+      this.radius = radius;
+      this.threshold = threshold;
+      this.resolution = resolution !== void 0 ? new Vector2(resolution.x, resolution.y) : new Vector2(256, 256);
+      this.clearColor = new Color(0, 0, 0);
+      this.renderTargetsHorizontal = [];
+      this.renderTargetsVertical = [];
+      this.nMips = 5;
+      let resx = Math.round(this.resolution.x / 2);
+      let resy = Math.round(this.resolution.y / 2);
+      this.renderTargetBright = new WebGLRenderTarget(resx, resy, { type: HalfFloatType });
+      this.renderTargetBright.texture.name = "UnrealBloomPass.bright";
+      this.renderTargetBright.texture.generateMipmaps = false;
+      for (let i = 0; i < this.nMips; i++) {
+        const renderTargetHorizontal = new WebGLRenderTarget(resx, resy, { type: HalfFloatType });
+        renderTargetHorizontal.texture.name = "UnrealBloomPass.h" + i;
+        renderTargetHorizontal.texture.generateMipmaps = false;
+        this.renderTargetsHorizontal.push(renderTargetHorizontal);
+        const renderTargetVertical = new WebGLRenderTarget(resx, resy, { type: HalfFloatType });
+        renderTargetVertical.texture.name = "UnrealBloomPass.v" + i;
+        renderTargetVertical.texture.generateMipmaps = false;
+        this.renderTargetsVertical.push(renderTargetVertical);
+        resx = Math.round(resx / 2);
+        resy = Math.round(resy / 2);
+      }
+      const highPassShader = LuminosityHighPassShader;
+      this.highPassUniforms = UniformsUtils.clone(highPassShader.uniforms);
+      this.highPassUniforms["luminosityThreshold"].value = threshold;
+      this.highPassUniforms["smoothWidth"].value = 0.01;
+      this.materialHighPassFilter = new ShaderMaterial({
+        uniforms: this.highPassUniforms,
+        vertexShader: highPassShader.vertexShader,
+        fragmentShader: highPassShader.fragmentShader
+      });
+      this.separableBlurMaterials = [];
+      const kernelSizeArray = [3, 5, 7, 9, 11];
+      resx = Math.round(this.resolution.x / 2);
+      resy = Math.round(this.resolution.y / 2);
+      for (let i = 0; i < this.nMips; i++) {
+        this.separableBlurMaterials.push(this.getSeperableBlurMaterial(kernelSizeArray[i]));
+        this.separableBlurMaterials[i].uniforms["invSize"].value = new Vector2(1 / resx, 1 / resy);
+        resx = Math.round(resx / 2);
+        resy = Math.round(resy / 2);
+      }
+      this.compositeMaterial = this.getCompositeMaterial(this.nMips);
+      this.compositeMaterial.uniforms["blurTexture1"].value = this.renderTargetsVertical[0].texture;
+      this.compositeMaterial.uniforms["blurTexture2"].value = this.renderTargetsVertical[1].texture;
+      this.compositeMaterial.uniforms["blurTexture3"].value = this.renderTargetsVertical[2].texture;
+      this.compositeMaterial.uniforms["blurTexture4"].value = this.renderTargetsVertical[3].texture;
+      this.compositeMaterial.uniforms["blurTexture5"].value = this.renderTargetsVertical[4].texture;
+      this.compositeMaterial.uniforms["bloomStrength"].value = strength;
+      this.compositeMaterial.uniforms["bloomRadius"].value = 0.1;
+      const bloomFactors = [1, 0.8, 0.6, 0.4, 0.2];
+      this.compositeMaterial.uniforms["bloomFactors"].value = bloomFactors;
+      this.bloomTintColors = [new Vector3(1, 1, 1), new Vector3(1, 1, 1), new Vector3(1, 1, 1), new Vector3(1, 1, 1), new Vector3(1, 1, 1)];
+      this.compositeMaterial.uniforms["bloomTintColors"].value = this.bloomTintColors;
+      const copyShader = CopyShader;
+      this.copyUniforms = UniformsUtils.clone(copyShader.uniforms);
+      this.blendMaterial = new ShaderMaterial({
+        uniforms: this.copyUniforms,
+        vertexShader: copyShader.vertexShader,
+        fragmentShader: copyShader.fragmentShader,
+        blending: AdditiveBlending,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true
+      });
+      this.enabled = true;
+      this.needsSwap = false;
+      this._oldClearColor = new Color();
+      this.oldClearAlpha = 1;
+      this.basic = new MeshBasicMaterial();
+      this.fsQuad = new FullScreenQuad(null);
+    }
+    dispose() {
+      for (let i = 0; i < this.renderTargetsHorizontal.length; i++) {
+        this.renderTargetsHorizontal[i].dispose();
+      }
+      for (let i = 0; i < this.renderTargetsVertical.length; i++) {
+        this.renderTargetsVertical[i].dispose();
+      }
+      this.renderTargetBright.dispose();
+      for (let i = 0; i < this.separableBlurMaterials.length; i++) {
+        this.separableBlurMaterials[i].dispose();
+      }
+      this.compositeMaterial.dispose();
+      this.blendMaterial.dispose();
+      this.basic.dispose();
+      this.fsQuad.dispose();
+    }
+    setSize(width, height) {
+      let resx = Math.round(width / 2);
+      let resy = Math.round(height / 2);
+      this.renderTargetBright.setSize(resx, resy);
+      for (let i = 0; i < this.nMips; i++) {
+        this.renderTargetsHorizontal[i].setSize(resx, resy);
+        this.renderTargetsVertical[i].setSize(resx, resy);
+        this.separableBlurMaterials[i].uniforms["invSize"].value = new Vector2(1 / resx, 1 / resy);
+        resx = Math.round(resx / 2);
+        resy = Math.round(resy / 2);
+      }
+    }
+    render(renderer, writeBuffer, readBuffer, deltaTime, maskActive) {
+      renderer.getClearColor(this._oldClearColor);
+      this.oldClearAlpha = renderer.getClearAlpha();
+      const oldAutoClear = renderer.autoClear;
+      renderer.autoClear = false;
+      renderer.setClearColor(this.clearColor, 0);
+      if (maskActive) renderer.state.buffers.stencil.setTest(false);
+      if (this.renderToScreen) {
+        this.fsQuad.material = this.basic;
+        this.basic.map = readBuffer.texture;
+        renderer.setRenderTarget(null);
+        renderer.clear();
+        this.fsQuad.render(renderer);
+      }
+      this.highPassUniforms["tDiffuse"].value = readBuffer.texture;
+      this.highPassUniforms["luminosityThreshold"].value = this.threshold;
+      this.fsQuad.material = this.materialHighPassFilter;
+      renderer.setRenderTarget(this.renderTargetBright);
+      renderer.clear();
+      this.fsQuad.render(renderer);
+      let inputRenderTarget = this.renderTargetBright;
+      for (let i = 0; i < this.nMips; i++) {
+        this.fsQuad.material = this.separableBlurMaterials[i];
+        this.separableBlurMaterials[i].uniforms["colorTexture"].value = inputRenderTarget.texture;
+        this.separableBlurMaterials[i].uniforms["direction"].value = _UnrealBloomPass.BlurDirectionX;
+        renderer.setRenderTarget(this.renderTargetsHorizontal[i]);
+        renderer.clear();
+        this.fsQuad.render(renderer);
+        this.separableBlurMaterials[i].uniforms["colorTexture"].value = this.renderTargetsHorizontal[i].texture;
+        this.separableBlurMaterials[i].uniforms["direction"].value = _UnrealBloomPass.BlurDirectionY;
+        renderer.setRenderTarget(this.renderTargetsVertical[i]);
+        renderer.clear();
+        this.fsQuad.render(renderer);
+        inputRenderTarget = this.renderTargetsVertical[i];
+      }
+      this.fsQuad.material = this.compositeMaterial;
+      this.compositeMaterial.uniforms["bloomStrength"].value = this.strength;
+      this.compositeMaterial.uniforms["bloomRadius"].value = this.radius;
+      this.compositeMaterial.uniforms["bloomTintColors"].value = this.bloomTintColors;
+      renderer.setRenderTarget(this.renderTargetsHorizontal[0]);
+      renderer.clear();
+      this.fsQuad.render(renderer);
+      this.fsQuad.material = this.blendMaterial;
+      this.copyUniforms["tDiffuse"].value = this.renderTargetsHorizontal[0].texture;
+      if (maskActive) renderer.state.buffers.stencil.setTest(true);
+      if (this.renderToScreen) {
+        renderer.setRenderTarget(null);
+        this.fsQuad.render(renderer);
+      } else {
+        renderer.setRenderTarget(readBuffer);
+        this.fsQuad.render(renderer);
+      }
+      renderer.setClearColor(this._oldClearColor, this.oldClearAlpha);
+      renderer.autoClear = oldAutoClear;
+    }
+    getSeperableBlurMaterial(kernelRadius) {
+      const coefficients = [];
+      for (let i = 0; i < kernelRadius; i++) {
+        coefficients.push(0.39894 * Math.exp(-0.5 * i * i / (kernelRadius * kernelRadius)) / kernelRadius);
+      }
+      return new ShaderMaterial({
+        defines: {
+          "KERNEL_RADIUS": kernelRadius
+        },
+        uniforms: {
+          "colorTexture": { value: null },
+          "invSize": { value: new Vector2(0.5, 0.5) },
+          // inverse texture size
+          "direction": { value: new Vector2(0.5, 0.5) },
+          "gaussianCoefficients": { value: coefficients }
+          // precomputed Gaussian coefficients
+        },
+        vertexShader: `varying vec2 vUv;
+				void main() {
+					vUv = uv;
+					gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+				}`,
+        fragmentShader: `#include <common>
+				varying vec2 vUv;
+				uniform sampler2D colorTexture;
+				uniform vec2 invSize;
+				uniform vec2 direction;
+				uniform float gaussianCoefficients[KERNEL_RADIUS];
+
+				void main() {
+					float weightSum = gaussianCoefficients[0];
+					vec3 diffuseSum = texture2D( colorTexture, vUv ).rgb * weightSum;
+					for( int i = 1; i < KERNEL_RADIUS; i ++ ) {
+						float x = float(i);
+						float w = gaussianCoefficients[i];
+						vec2 uvOffset = direction * invSize * x;
+						vec3 sample1 = texture2D( colorTexture, vUv + uvOffset ).rgb;
+						vec3 sample2 = texture2D( colorTexture, vUv - uvOffset ).rgb;
+						diffuseSum += (sample1 + sample2) * w;
+						weightSum += 2.0 * w;
+					}
+					gl_FragColor = vec4(diffuseSum/weightSum, 1.0);
+				}`
+      });
+    }
+    getCompositeMaterial(nMips) {
+      return new ShaderMaterial({
+        defines: {
+          "NUM_MIPS": nMips
+        },
+        uniforms: {
+          "blurTexture1": { value: null },
+          "blurTexture2": { value: null },
+          "blurTexture3": { value: null },
+          "blurTexture4": { value: null },
+          "blurTexture5": { value: null },
+          "bloomStrength": { value: 1 },
+          "bloomFactors": { value: null },
+          "bloomTintColors": { value: null },
+          "bloomRadius": { value: 0 }
+        },
+        vertexShader: `varying vec2 vUv;
+				void main() {
+					vUv = uv;
+					gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+				}`,
+        fragmentShader: `varying vec2 vUv;
+				uniform sampler2D blurTexture1;
+				uniform sampler2D blurTexture2;
+				uniform sampler2D blurTexture3;
+				uniform sampler2D blurTexture4;
+				uniform sampler2D blurTexture5;
+				uniform float bloomStrength;
+				uniform float bloomRadius;
+				uniform float bloomFactors[NUM_MIPS];
+				uniform vec3 bloomTintColors[NUM_MIPS];
+
+				float lerpBloomFactor(const in float factor) {
+					float mirrorFactor = 1.2 - factor;
+					return mix(factor, mirrorFactor, bloomRadius);
+				}
+
+				void main() {
+					gl_FragColor = bloomStrength * ( lerpBloomFactor(bloomFactors[0]) * vec4(bloomTintColors[0], 1.0) * texture2D(blurTexture1, vUv) +
+						lerpBloomFactor(bloomFactors[1]) * vec4(bloomTintColors[1], 1.0) * texture2D(blurTexture2, vUv) +
+						lerpBloomFactor(bloomFactors[2]) * vec4(bloomTintColors[2], 1.0) * texture2D(blurTexture3, vUv) +
+						lerpBloomFactor(bloomFactors[3]) * vec4(bloomTintColors[3], 1.0) * texture2D(blurTexture4, vUv) +
+						lerpBloomFactor(bloomFactors[4]) * vec4(bloomTintColors[4], 1.0) * texture2D(blurTexture5, vUv) );
+				}`
+      });
+    }
+  };
+  UnrealBloomPass.BlurDirectionX = new Vector2(1, 0);
+  UnrealBloomPass.BlurDirectionY = new Vector2(0, 1);
+
+  // node_modules/three/examples/jsm/shaders/OutputShader.js
+  var OutputShader = {
+    name: "OutputShader",
+    uniforms: {
+      "tDiffuse": { value: null },
+      "toneMappingExposure": { value: 1 }
+    },
+    vertexShader: (
+      /* glsl */
+      `
+		precision highp float;
+
+		uniform mat4 modelViewMatrix;
+		uniform mat4 projectionMatrix;
+
+		attribute vec3 position;
+		attribute vec2 uv;
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vUv = uv;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+		}`
+    ),
+    fragmentShader: (
+      /* glsl */
+      `
+	
+		precision highp float;
+
+		uniform sampler2D tDiffuse;
+
+		#include <tonemapping_pars_fragment>
+		#include <colorspace_pars_fragment>
+
+		varying vec2 vUv;
+
+		void main() {
+
+			gl_FragColor = texture2D( tDiffuse, vUv );
+
+			// tone mapping
+
+			#ifdef LINEAR_TONE_MAPPING
+
+				gl_FragColor.rgb = LinearToneMapping( gl_FragColor.rgb );
+
+			#elif defined( REINHARD_TONE_MAPPING )
+
+				gl_FragColor.rgb = ReinhardToneMapping( gl_FragColor.rgb );
+
+			#elif defined( CINEON_TONE_MAPPING )
+
+				gl_FragColor.rgb = CineonToneMapping( gl_FragColor.rgb );
+
+			#elif defined( ACES_FILMIC_TONE_MAPPING )
+
+				gl_FragColor.rgb = ACESFilmicToneMapping( gl_FragColor.rgb );
+
+			#elif defined( AGX_TONE_MAPPING )
+
+				gl_FragColor.rgb = AgXToneMapping( gl_FragColor.rgb );
+
+			#elif defined( NEUTRAL_TONE_MAPPING )
+
+				gl_FragColor.rgb = NeutralToneMapping( gl_FragColor.rgb );
+
+			#endif
+
+			// color space
+
+			#ifdef SRGB_TRANSFER
+
+				gl_FragColor = sRGBTransferOETF( gl_FragColor );
+
+			#endif
+
+		}`
+    )
+  };
+
+  // node_modules/three/examples/jsm/postprocessing/OutputPass.js
+  var OutputPass = class extends Pass {
+    constructor() {
+      super();
+      const shader = OutputShader;
+      this.uniforms = UniformsUtils.clone(shader.uniforms);
+      this.material = new RawShaderMaterial({
+        name: shader.name,
+        uniforms: this.uniforms,
+        vertexShader: shader.vertexShader,
+        fragmentShader: shader.fragmentShader
+      });
+      this.fsQuad = new FullScreenQuad(this.material);
+      this._outputColorSpace = null;
+      this._toneMapping = null;
+    }
+    render(renderer, writeBuffer, readBuffer) {
+      this.uniforms["tDiffuse"].value = readBuffer.texture;
+      this.uniforms["toneMappingExposure"].value = renderer.toneMappingExposure;
+      if (this._outputColorSpace !== renderer.outputColorSpace || this._toneMapping !== renderer.toneMapping) {
+        this._outputColorSpace = renderer.outputColorSpace;
+        this._toneMapping = renderer.toneMapping;
+        this.material.defines = {};
+        if (ColorManagement.getTransfer(this._outputColorSpace) === SRGBTransfer) this.material.defines.SRGB_TRANSFER = "";
+        if (this._toneMapping === LinearToneMapping) this.material.defines.LINEAR_TONE_MAPPING = "";
+        else if (this._toneMapping === ReinhardToneMapping) this.material.defines.REINHARD_TONE_MAPPING = "";
+        else if (this._toneMapping === CineonToneMapping) this.material.defines.CINEON_TONE_MAPPING = "";
+        else if (this._toneMapping === ACESFilmicToneMapping) this.material.defines.ACES_FILMIC_TONE_MAPPING = "";
+        else if (this._toneMapping === AgXToneMapping) this.material.defines.AGX_TONE_MAPPING = "";
+        else if (this._toneMapping === NeutralToneMapping) this.material.defines.NEUTRAL_TONE_MAPPING = "";
+        this.material.needsUpdate = true;
+      }
+      if (this.renderToScreen === true) {
+        renderer.setRenderTarget(null);
+        this.fsQuad.render(renderer);
+      } else {
+        renderer.setRenderTarget(writeBuffer);
+        if (this.clear) renderer.clear(renderer.autoClearColor, renderer.autoClearDepth, renderer.autoClearStencil);
+        this.fsQuad.render(renderer);
+      }
+    }
+    dispose() {
+      this.material.dispose();
+      this.fsQuad.dispose();
+    }
+  };
+
+  // node_modules/three/examples/jsm/shaders/FXAAShader.js
+  var FXAAShader = {
+    name: "FXAAShader",
+    uniforms: {
+      "tDiffuse": { value: null },
+      "resolution": { value: new Vector2(1 / 1024, 1 / 512) }
+    },
+    vertexShader: (
+      /* glsl */
+      `
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vUv = uv;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+		}`
+    ),
+    fragmentShader: (
+      /* glsl */
+      `
+		precision highp float;
+
+		uniform sampler2D tDiffuse;
+
+		uniform vec2 resolution;
+
+		varying vec2 vUv;
+
+		// FXAA 3.11 implementation by NVIDIA, ported to WebGL by Agost Biro (biro@archilogic.com)
+
+		//----------------------------------------------------------------------------------
+		// File:        es3-keplerFXAAassetsshaders/FXAA_DefaultES.frag
+		// SDK Version: v3.00
+		// Email:       gameworks@nvidia.com
+		// Site:        http://developer.nvidia.com/
+		//
+		// Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
+		//
+		// Redistribution and use in source and binary forms, with or without
+		// modification, are permitted provided that the following conditions
+		// are met:
+		//  * Redistributions of source code must retain the above copyright
+		//    notice, this list of conditions and the following disclaimer.
+		//  * Redistributions in binary form must reproduce the above copyright
+		//    notice, this list of conditions and the following disclaimer in the
+		//    documentation and/or other materials provided with the distribution.
+		//  * Neither the name of NVIDIA CORPORATION nor the names of its
+		//    contributors may be used to endorse or promote products derived
+		//    from this software without specific prior written permission.
+		//
+		// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+		// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+		// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+		// PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+		// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+		// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+		// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+		// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+		// OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+		// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+		// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+		//
+		//----------------------------------------------------------------------------------
+
+		#ifndef FXAA_DISCARD
+			//
+			// Only valid for PC OpenGL currently.
+			// Probably will not work when FXAA_GREEN_AS_LUMA = 1.
+			//
+			// 1 = Use discard on pixels which don't need AA.
+			//     For APIs which enable concurrent TEX+ROP from same surface.
+			// 0 = Return unchanged color on pixels which don't need AA.
+			//
+			#define FXAA_DISCARD 0
+		#endif
+
+		/*--------------------------------------------------------------------------*/
+		#define FxaaTexTop(t, p) texture2D(t, p, -100.0)
+		#define FxaaTexOff(t, p, o, r) texture2D(t, p + (o * r), -100.0)
+		/*--------------------------------------------------------------------------*/
+
+		#define NUM_SAMPLES 5
+
+		// assumes colors have premultipliedAlpha, so that the calculated color contrast is scaled by alpha
+		float contrast( vec4 a, vec4 b ) {
+			vec4 diff = abs( a - b );
+			return max( max( max( diff.r, diff.g ), diff.b ), diff.a );
+		}
+
+		/*============================================================================
+
+									FXAA3 QUALITY - PC
+
+		============================================================================*/
+
+		/*--------------------------------------------------------------------------*/
+		vec4 FxaaPixelShader(
+			vec2 posM,
+			sampler2D tex,
+			vec2 fxaaQualityRcpFrame,
+			float fxaaQualityEdgeThreshold,
+			float fxaaQualityinvEdgeThreshold
+		) {
+			vec4 rgbaM = FxaaTexTop(tex, posM);
+			vec4 rgbaS = FxaaTexOff(tex, posM, vec2( 0.0, 1.0), fxaaQualityRcpFrame.xy);
+			vec4 rgbaE = FxaaTexOff(tex, posM, vec2( 1.0, 0.0), fxaaQualityRcpFrame.xy);
+			vec4 rgbaN = FxaaTexOff(tex, posM, vec2( 0.0,-1.0), fxaaQualityRcpFrame.xy);
+			vec4 rgbaW = FxaaTexOff(tex, posM, vec2(-1.0, 0.0), fxaaQualityRcpFrame.xy);
+			// . S .
+			// W M E
+			// . N .
+
+			bool earlyExit = max( max( max(
+					contrast( rgbaM, rgbaN ),
+					contrast( rgbaM, rgbaS ) ),
+					contrast( rgbaM, rgbaE ) ),
+					contrast( rgbaM, rgbaW ) )
+					< fxaaQualityEdgeThreshold;
+			// . 0 .
+			// 0 0 0
+			// . 0 .
+
+			#if (FXAA_DISCARD == 1)
+				if(earlyExit) FxaaDiscard;
+			#else
+				if(earlyExit) return rgbaM;
+			#endif
+
+			float contrastN = contrast( rgbaM, rgbaN );
+			float contrastS = contrast( rgbaM, rgbaS );
+			float contrastE = contrast( rgbaM, rgbaE );
+			float contrastW = contrast( rgbaM, rgbaW );
+
+			float relativeVContrast = ( contrastN + contrastS ) - ( contrastE + contrastW );
+			relativeVContrast *= fxaaQualityinvEdgeThreshold;
+
+			bool horzSpan = relativeVContrast > 0.;
+			// . 1 .
+			// 0 0 0
+			// . 1 .
+
+			// 45 deg edge detection and corners of objects, aka V/H contrast is too similar
+			if( abs( relativeVContrast ) < .3 ) {
+				// locate the edge
+				vec2 dirToEdge;
+				dirToEdge.x = contrastE > contrastW ? 1. : -1.;
+				dirToEdge.y = contrastS > contrastN ? 1. : -1.;
+				// . 2 .      . 1 .
+				// 1 0 2  ~=  0 0 1
+				// . 1 .      . 0 .
+
+				// tap 2 pixels and see which ones are "outside" the edge, to
+				// determine if the edge is vertical or horizontal
+
+				vec4 rgbaAlongH = FxaaTexOff(tex, posM, vec2( dirToEdge.x, -dirToEdge.y ), fxaaQualityRcpFrame.xy);
+				float matchAlongH = contrast( rgbaM, rgbaAlongH );
+				// . 1 .
+				// 0 0 1
+				// . 0 H
+
+				vec4 rgbaAlongV = FxaaTexOff(tex, posM, vec2( -dirToEdge.x, dirToEdge.y ), fxaaQualityRcpFrame.xy);
+				float matchAlongV = contrast( rgbaM, rgbaAlongV );
+				// V 1 .
+				// 0 0 1
+				// . 0 .
+
+				relativeVContrast = matchAlongV - matchAlongH;
+				relativeVContrast *= fxaaQualityinvEdgeThreshold;
+
+				if( abs( relativeVContrast ) < .3 ) { // 45 deg edge
+					// 1 1 .
+					// 0 0 1
+					// . 0 1
+
+					// do a simple blur
+					return mix(
+						rgbaM,
+						(rgbaN + rgbaS + rgbaE + rgbaW) * .25,
+						.4
+					);
+				}
+
+				horzSpan = relativeVContrast > 0.;
+			}
+
+			if(!horzSpan) rgbaN = rgbaW;
+			if(!horzSpan) rgbaS = rgbaE;
+			// . 0 .      1
+			// 1 0 1  ->  0
+			// . 0 .      1
+
+			bool pairN = contrast( rgbaM, rgbaN ) > contrast( rgbaM, rgbaS );
+			if(!pairN) rgbaN = rgbaS;
+
+			vec2 offNP;
+			offNP.x = (!horzSpan) ? 0.0 : fxaaQualityRcpFrame.x;
+			offNP.y = ( horzSpan) ? 0.0 : fxaaQualityRcpFrame.y;
+
+			bool doneN = false;
+			bool doneP = false;
+
+			float nDist = 0.;
+			float pDist = 0.;
+
+			vec2 posN = posM;
+			vec2 posP = posM;
+
+			int iterationsUsedN = 0;
+			int iterationsUsedP = 0;
+			for( int i = 0; i < NUM_SAMPLES; i++ ) {
+
+				float increment = float(i + 1);
+
+				if(!doneN) {
+					nDist += increment;
+					posN = posM + offNP * nDist;
+					vec4 rgbaEndN = FxaaTexTop(tex, posN.xy);
+					doneN = contrast( rgbaEndN, rgbaM ) > contrast( rgbaEndN, rgbaN );
+					iterationsUsedN = i;
+				}
+
+				if(!doneP) {
+					pDist += increment;
+					posP = posM - offNP * pDist;
+					vec4 rgbaEndP = FxaaTexTop(tex, posP.xy);
+					doneP = contrast( rgbaEndP, rgbaM ) > contrast( rgbaEndP, rgbaN );
+					iterationsUsedP = i;
+				}
+
+				if(doneN || doneP) break;
+			}
+
+
+			if ( !doneP && !doneN ) return rgbaM; // failed to find end of edge
+
+			float dist = min(
+				doneN ? float( iterationsUsedN ) / float( NUM_SAMPLES - 1 ) : 1.,
+				doneP ? float( iterationsUsedP ) / float( NUM_SAMPLES - 1 ) : 1.
+			);
+
+			// hacky way of reduces blurriness of mostly diagonal edges
+			// but reduces AA quality
+			dist = pow(dist, .5);
+
+			dist = 1. - dist;
+
+			return mix(
+				rgbaM,
+				rgbaN,
+				dist * .5
+			);
+		}
+
+		void main() {
+			const float edgeDetectionQuality = .2;
+			const float invEdgeDetectionQuality = 1. / edgeDetectionQuality;
+
+			gl_FragColor = FxaaPixelShader(
+				vUv,
+				tDiffuse,
+				resolution,
+				edgeDetectionQuality, // [0,1] contrast needed, otherwise early discard
+				invEdgeDetectionQuality
+			);
+
+		}
+	`
+    )
+  };
+
+  // src/render3d/post.js
+  var InkGradeShader = {
+    uniforms: {
+      tDiffuse: { value: null },
+      tDepth: { value: null },
+      uRes: { value: new Vector2(1, 1) },
+      uNear: { value: 0.08 },
+      uFar: { value: 2600 },
+      uInk: { value: 1 },
+      uInkColor: { value: new Color(0.16, 0.1, 0.08) },
+      uSat: { value: 1.12 },
+      uContrast: { value: 1.06 },
+      uVignette: { value: 0.28 }
+    },
+    vertexShader: (
+      /* glsl */
+      `
+    varying vec2 vUv;
+    void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+  `
+    ),
+    fragmentShader: (
+      /* glsl */
+      `
+    uniform sampler2D tDiffuse;
+    uniform sampler2D tDepth;
+    uniform vec2 uRes;
+    uniform float uNear, uFar, uInk, uSat, uContrast, uVignette;
+    uniform vec3 uInkColor;
+    varying vec2 vUv;
+    float linDepth(vec2 uv) {
+      float z = texture2D(tDepth, uv).x * 2.0 - 1.0;
+      return (2.0 * uNear * uFar) / (uFar + uNear - z * (uFar - uNear));
+    }
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      // ink where the depth jumps, relative to how far away it is
+      vec2 px = 1.0 / uRes;
+      float d = linDepth(vUv);
+      float dl = linDepth(vUv - vec2(px.x, 0.0)), dr = linDepth(vUv + vec2(px.x, 0.0));
+      float du = linDepth(vUv + vec2(0.0, px.y)), dd = linDepth(vUv - vec2(0.0, px.y));
+      float near = min(min(dl, dr), min(du, dd));
+      // only the far side of an edge is inked, so lines hug the nearer object
+      float edge = max(0.0, d - near) / max(near, 0.35);
+      float ink = smoothstep(0.1, 0.35, edge) * (1.0 - smoothstep(45.0, 160.0, near)) * uInk;
+      c.rgb = mix(c.rgb, uInkColor * (0.3 + 0.2 * c.rgb), ink * 0.85);
+      // grading (linear light): saturation, contrast, cool shadows / warm highlights
+      float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
+      c.rgb = mix(vec3(l), c.rgb, uSat);
+      c.rgb = max((c.rgb - 0.18) * uContrast + 0.18, 0.0);
+      c.rgb *= mix(vec3(0.95, 0.98, 1.05), vec3(1.05, 1.01, 0.95), smoothstep(0.03, 0.5, l));
+      // vignette
+      vec2 q = vUv - 0.5;
+      c.rgb *= 1.0 - uVignette * dot(q, q) * 1.6;
+      gl_FragColor = c;
+    }
+  `
+    )
+  };
+  var SceneInkPass = class extends Pass {
+    constructor(scene, camera) {
+      super();
+      this.scene = scene;
+      this.camera = camera;
+      this.rt = new WebGLRenderTarget(1, 1, { type: HalfFloatType, depthTexture: new DepthTexture(1, 1) });
+      this.material = new ShaderMaterial({
+        uniforms: UniformsUtils.clone(InkGradeShader.uniforms),
+        vertexShader: InkGradeShader.vertexShader,
+        fragmentShader: InkGradeShader.fragmentShader,
+        depthTest: false,
+        depthWrite: false
+      });
+      this.quad = new FullScreenQuad(this.material);
+    }
+    setSize(w, h2) {
+      this.rt.setSize(w, h2);
+      this.material.uniforms.uRes.value.set(w, h2);
+    }
+    render(renderer, writeBuffer) {
+      const u = this.material.uniforms;
+      renderer.setRenderTarget(this.rt);
+      renderer.clear();
+      renderer.render(this.scene, this.camera);
+      u.tDiffuse.value = this.rt.texture;
+      u.tDepth.value = this.rt.depthTexture;
+      u.uNear.value = this.camera.near;
+      u.uFar.value = this.camera.far;
+      renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer);
+      this.quad.render(renderer);
+    }
+    dispose() {
+      this.rt.dispose();
+      this.material.dispose();
+      this.quad.dispose();
+    }
+  };
+  var Post = class {
+    constructor(renderer, scene, camera) {
+      this.renderer = renderer;
+      const size = renderer.getDrawingBufferSize(new Vector2());
+      this.composer = new EffectComposer(renderer);
+      this.scenePass = new SceneInkPass(scene, camera);
+      this.composer.addPass(this.scenePass);
+      this.bloom = new UnrealBloomPass(new Vector2(size.x, size.y), 0.32, 0.55, 0.92);
+      this.composer.addPass(this.bloom);
+      this.composer.addPass(new OutputPass());
+      this.fxaa = new ShaderPass(FXAAShader);
+      this.composer.addPass(this.fxaa);
+      this.setSize();
+    }
+    setSize() {
+      const r = this.renderer;
+      const dpr = r.getPixelRatio();
+      const w = r.domElement.clientWidth || window.innerWidth, h2 = r.domElement.clientHeight || window.innerHeight;
+      this.composer.setPixelRatio(dpr);
+      this.composer.setSize(w, h2);
+      const bw = Math.round(w * dpr), bh = Math.round(h2 * dpr);
+      this.fxaa.material.uniforms.resolution.value.set(1 / bw, 1 / bh);
+    }
+    render(camera) {
+      this.scenePass.camera = camera;
+      this.composer.render();
+    }
+    dispose() {
+      this.composer.dispose();
+    }
+  };
+
   // src/render3d/height.js
   var SEA_Y = 0;
   var DECK_Y = 0.55;
@@ -56921,6 +58065,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.renderer.outputColorSpace = SRGBColorSpace;
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = PCFSoftShadowMap;
+      this.renderer.info.autoReset = false;
       this.scene = new Scene();
       this.sky = new Sky(this.scene);
       this.water = new Water(this.scene);
@@ -56990,7 +58135,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           return self2.rig.pitch;
         }
       };
-      this.resize();
+      this.setQuality(this.quality);
       window.addEventListener("resize", () => this.resize());
     }
     resize() {
@@ -56998,13 +58143,41 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.renderer.setPixelRatio(dpr);
       this.renderer.setSize(window.innerWidth, window.innerHeight, false);
       this.rig.resize(window.innerWidth, window.innerHeight);
+      this.post?.setSize();
     }
     setQuality(q2) {
       this.quality = q2;
       this.renderer.shadowMap.enabled = q2 !== "low";
       this.sky.sun.castShadow = q2 !== "low";
       this.terrain.setDetail?.(q2);
+      if (q2 === "low" && this.post) {
+        this.post.dispose();
+        this.post = null;
+      }
+      if (q2 !== "low" && !this.post) {
+        try {
+          this.post = new Post(this.renderer, this.scene, this.rig.camera);
+        } catch (e) {
+          console.warn("post-processing unavailable", e);
+          this.post = null;
+        }
+      }
       this.resize();
+    }
+    /** Draw the frame: through the post-processing chain when it's on. */
+    draw(cam) {
+      this.renderer.info.reset();
+      if (this.post) {
+        try {
+          this.post.render(cam);
+          return;
+        } catch (e) {
+          console.warn("post-processing failed; drawing directly", e);
+          this.post.dispose();
+          this.post = null;
+        }
+      }
+      this.renderer.render(this.scene, cam);
     }
     setActive(on) {
       this.active = !!on;
@@ -57101,7 +58274,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       setNightWindows(Math.max(0, 0.9 - env.daylight));
       const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
       this.proj.cam.zoom = f / 7;
-      this.renderer.render(this.scene, cam);
+      this.draw(cam);
     }
     /**
      * Title-screen flyover: a camera slowly circling high over (cx, cy) with no
@@ -57148,7 +58321,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const amb = env.ambient || [1, 1, 1];
       tintSprites(Math.min(1, amb[0] * 1.05), Math.min(1, amb[1] * 1.05), Math.min(1, amb[2] * 1.05));
       setNightWindows(Math.max(0, 0.9 - env.daylight));
-      this.renderer.render(this.scene, cam);
+      this.draw(cam);
     }
     /** Every frame: animated props (userData.update) and plug-in frame hooks. */
     tickProps(env, dt) {

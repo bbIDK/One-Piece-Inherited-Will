@@ -6,6 +6,7 @@
 // weather and damage numbers, projected through the 3D camera.
 import * as THREE from 'three';
 import './fog.js'; // the atmospheric fog shader chunks (before any material compiles)
+import { Post } from './post.js';
 import { TerrainManager } from './terrain3d.js';
 import { Water } from './water3d.js';
 import { Sky } from './sky3d.js';
@@ -35,6 +36,8 @@ export class Renderer3D {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // count a whole frame (scene + post passes) in renderer.info, reset in draw()
+    this.renderer.info.autoReset = false;
     this.scene = new THREE.Scene();
     this.sky = new Sky(this.scene);
     this.water = new Water(this.scene);
@@ -88,7 +91,7 @@ export class Renderer3D {
       get yaw() { return self.rig.yaw; },
       get pitch() { return self.rig.pitch; },
     };
-    this.resize();
+    this.setQuality(this.quality);
     window.addEventListener('resize', () => this.resize());
   }
 
@@ -97,6 +100,7 @@ export class Renderer3D {
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.rig.resize(window.innerWidth, window.innerHeight);
+    this.post?.setSize();
   }
 
   setQuality(q) {
@@ -104,7 +108,21 @@ export class Renderer3D {
     this.renderer.shadowMap.enabled = q !== 'low';
     this.sky.sun.castShadow = q !== 'low';
     this.terrain.setDetail?.(q);
+    // post-processing (ink outlines, grading, bloom, FXAA) on 'high' only
+    if (q === 'low' && this.post) { this.post.dispose(); this.post = null; }
+    if (q !== 'low' && !this.post) {
+      try { this.post = new Post(this.renderer, this.scene, this.rig.camera); } catch (e) { console.warn('post-processing unavailable', e); this.post = null; }
+    }
     this.resize();
+  }
+
+  /** Draw the frame: through the post-processing chain when it's on. */
+  draw(cam) {
+    this.renderer.info.reset();
+    if (this.post) {
+      try { this.post.render(cam); return; } catch (e) { console.warn('post-processing failed; drawing directly', e); this.post.dispose(); this.post = null; }
+    }
+    this.renderer.render(this.scene, cam);
   }
 
   setActive(on) {
@@ -201,7 +219,7 @@ export class Renderer3D {
     // effects layer scale: pixels per metre at arm's length in front of the camera
     const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
     this.proj.cam.zoom = f / 7;
-    this.renderer.render(this.scene, cam);
+    this.draw(cam);
   }
 
   /**
@@ -246,7 +264,7 @@ export class Renderer3D {
     const amb = env.ambient || [1, 1, 1];
     tintSprites(Math.min(1, amb[0] * 1.05), Math.min(1, amb[1] * 1.05), Math.min(1, amb[2] * 1.05));
     setNightWindows(Math.max(0, 0.9 - env.daylight));
-    this.renderer.render(this.scene, cam);
+    this.draw(cam);
   }
 
   /** Every frame: animated props (userData.update) and plug-in frame hooks. */
