@@ -20,6 +20,7 @@ import { Interactions, npcBuilder, npcDef, makeNPC } from './game/npcs.js';
 import { installMap } from './ui/mapUI.js';
 import { openInventory, openCharacter, openSkills, openJournal, openMenu, openSettings } from './ui/panels.js';
 import { persist, endLineage } from './game/lineage.js';
+import { addItem } from './game/inventory.js';
 import { installContent } from './content/index.js';
 import { Audio } from './audio/audio.js';
 import { installSea } from './game/sea.js';
@@ -157,7 +158,7 @@ async function start() {
       startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', dream: opts.dream || 'king', look: null, jr: { skull: 'classic', bones: 'cross', accessory: 'strawhat', color: '#fff' } });
       return game.player;
     },
-    debug: { npcDef, makeNPC },
+    debug: { npcDef, makeNPC, addItem },
     ready: true,
   });
 

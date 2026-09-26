@@ -419,4 +419,50 @@ export const scenarios = {
       console.log('save kept', still);
     },
   },
+  finale: {
+    // the road to Laugh Tale: barrier → reveal → treasure → dream
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human', { dream: 'king' }));
+      await step(page, 0.3);
+      const r1 = await page.evaluate(() => {
+        const g = window.OP.game; const c = g.state.char;
+        const lt = g.surface.islands.find((i) => i.id === 'laugh_tale');
+        // barrier: swim near it without the flag
+        g.player.mode = 'foot';
+        window.OP.teleport(lt.x - 60, lt.y);
+        return { lt: [lt.x, lt.y], hidden: !!lt.def.hidden };
+      });
+      await step(page, 3);
+      const r2 = await page.evaluate(() => { const g = window.OP.game; const lt = g.surface.islands.find((i) => i.id === 'laugh_tale'); return { pushedTo: Math.round(g.world.distance(g.player.x, g.player.y, lt.x, lt.y)) }; });
+      console.log('barrier', JSON.stringify({ ...r1, ...r2 }));
+      const r3 = await page.evaluate(() => {
+        const g = window.OP.game; const c = g.state.char;
+        g.quests.start('laugh_tale_voyage');
+        for (let k = 0; k < 4; k++) window.OP.debug.addItem(g, 'poneglyph_rubbing', 1);
+        c.flags.laughTaleRevealed = true;
+        const lt = g.surface.islands.find((i) => i.id === 'laugh_tale');
+        const sp = lt.spots.one_piece;
+        window.OP.teleport(lt.x, lt.y);
+        return { stage: g.quests.stageId('laugh_tale_voyage'), spot: sp };
+      });
+      console.log('reveal', JSON.stringify(r3));
+      await step(page, 2);
+      await page.evaluate(() => { const g = window.OP.game; const lt = g.surface.islands.find((i) => i.id === 'laugh_tale'); const sp = lt.spots.one_piece; window.OP.teleport(sp.x, sp.y); });
+      await step(page, 1.5);
+      await snap('finale');
+      const r4 = await page.evaluate(() => {
+        const g = window.OP.game;
+        for (let k = 0; k < 12 && g.dialogue.active; k++) { const ch = g.dialogue.active.choices || []; if (ch.length) g.dialogue.choose(0); else { g.dialogue.advance(); g.dialogue.advance(); } }
+        const c = g.state.char;
+        return { stage: g.quests.stageId('laugh_tale_voyage'), done: g.quests.isDone('laugh_tale_voyage'), laughTale: !!c.flags.laughTale, dreamDone: !!c.dreamDone };
+      });
+      console.log('end', JSON.stringify(r4));
+      await step(page, 6);
+      await snap('after');
+      const r5 = await page.evaluate(() => { const g = window.OP.game; return { rival: !!g.actors.find((a) => /teach/.test(a.npcId || '') && a.alive), quest: g.quests.stageId('final_rival') }; });
+      console.log('rival', JSON.stringify(r5));
+    },
+  },
 };
