@@ -133,13 +133,13 @@ export function createPreview(container, look, { game } = {}) {
  * A still portrait as a 2D canvas: 'bust' (head and shoulders) or 'full'.
  * Falls back to null when 3D isn't available.
  */
-export function renderPortrait(look, { w = 120, h = 140, view: framing = 'bust', game = null } = {}) {
+export function renderPortrait(look, { w = 120, h = 140, view: framing = 'bust', game = null, turn = 0 } = {}) {
   try {
     const renderer = sharedRenderer();
     const { scene, camera } = makeStage();
     const ctx = { THREE, scene, game, ground: () => 0, terrain: () => 0, camera, world: null, yaw: 0, mode: 'third' };
     const actor = makeActor(look);
-    actor.facing = Math.PI / 2 - 0.25;
+    actor.facing = Math.PI / 2 - 0.25 + turn;
     const v = VIEWS.actor ? VIEWS.actor(actor, ctx) : null;
     if (!v) return null;
     scene.add(v.root);

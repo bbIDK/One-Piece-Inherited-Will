@@ -3,6 +3,7 @@ import { Renderer } from './render/renderer.js';
 import { Renderer3D } from './render3d/index.js';
 import './render3d/pickups3d.js';
 import './render3d/groundcover.js';
+import { renderPortrait } from './ui/preview3d.js';
 import { generateWorld } from './world/worldgen.js';
 import { ALL_ISLANDS } from './data/islands/index.js';
 import { Input } from './core/input.js';
@@ -299,7 +300,7 @@ async function start() {
       startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', look: null });
       return game.player;
     },
-    debug: { npcDef, makeNPC, addItem, fruitOf },
+    debug: { npcDef, makeNPC, addItem, fruitOf, portrait: renderPortrait },
     ready: true,
   });
 

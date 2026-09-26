@@ -505,7 +505,10 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
 .preview3d canvas:active { cursor: grabbing; }
 .look-tabs { margin: 10px 0 6px; }
-.look-opts { min-height: 150px; }
+.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }
+.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }
+.look-opts .opt-label { margin: 0; }
+@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }
 .build-row { display: flex; align-items: center; gap: 8px; }
 .build-slider { flex: 1; accent-color: #8e1b16; }
 @media (max-height: 520px) { .preview3d { height: 220px; } }

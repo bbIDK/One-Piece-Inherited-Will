@@ -798,13 +798,13 @@ void main() {
       this.width = width;
       this.height = height;
       this.textures.world = texture(gl, { width: 1, height: 1, internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, data: new Uint8Array(4) });
-      const half = new Uint8Array(mapW * mapH);
+      const half2 = new Uint8Array(mapW * mapH);
       const sx = width / mapW, sy = height / mapH;
       for (let y = 0; y < mapH; y++) {
         const row = Math.min(height - 1, Math.floor(y * sy)) * width;
-        for (let x = 0; x < mapW; x++) half[y * mapW + x] = dist[row + Math.min(width - 1, Math.floor(x * sx))];
+        for (let x = 0; x < mapW; x++) half2[y * mapW + x] = dist[row + Math.min(width - 1, Math.floor(x * sx))];
       }
-      this.textures.dist = texture(gl, { width: mapW, height: mapH, internal: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, data: half, filter: gl.LINEAR, mipmaps: true });
+      this.textures.dist = texture(gl, { width: mapW, height: mapH, internal: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, data: half2, filter: gl.LINEAR, mipmaps: true });
       this.textures.map = texture(gl, { width: mapW, height: mapH, internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, data: map, filter: gl.LINEAR, mipmaps: true });
       this.fogW = fogW;
       this.fogH = fogH;
@@ -14619,8 +14619,8 @@ void main() {
       state.ambient[0] = r;
       state.ambient[1] = g;
       state.ambient[2] = b;
-      const hash6 = state.hash;
-      if (hash6.directionalLength !== directionalLength || hash6.pointLength !== pointLength || hash6.spotLength !== spotLength || hash6.rectAreaLength !== rectAreaLength || hash6.hemiLength !== hemiLength || hash6.numDirectionalShadows !== numDirectionalShadows || hash6.numPointShadows !== numPointShadows || hash6.numSpotShadows !== numSpotShadows || hash6.numSpotMaps !== numSpotMaps || hash6.numLightProbes !== numLightProbes) {
+      const hash7 = state.hash;
+      if (hash7.directionalLength !== directionalLength || hash7.pointLength !== pointLength || hash7.spotLength !== spotLength || hash7.rectAreaLength !== rectAreaLength || hash7.hemiLength !== hemiLength || hash7.numDirectionalShadows !== numDirectionalShadows || hash7.numPointShadows !== numPointShadows || hash7.numSpotShadows !== numSpotShadows || hash7.numSpotMaps !== numSpotMaps || hash7.numLightProbes !== numLightProbes) {
         state.directional.length = directionalLength;
         state.spot.length = spotLength;
         state.rectArea.length = rectAreaLength;
@@ -14638,16 +14638,16 @@ void main() {
         state.spotLightMap.length = numSpotMaps;
         state.numSpotLightShadowsWithMaps = numSpotShadowsWithMaps;
         state.numLightProbes = numLightProbes;
-        hash6.directionalLength = directionalLength;
-        hash6.pointLength = pointLength;
-        hash6.spotLength = spotLength;
-        hash6.rectAreaLength = rectAreaLength;
-        hash6.hemiLength = hemiLength;
-        hash6.numDirectionalShadows = numDirectionalShadows;
-        hash6.numPointShadows = numPointShadows;
-        hash6.numSpotShadows = numSpotShadows;
-        hash6.numSpotMaps = numSpotMaps;
-        hash6.numLightProbes = numLightProbes;
+        hash7.directionalLength = directionalLength;
+        hash7.pointLength = pointLength;
+        hash7.spotLength = spotLength;
+        hash7.rectAreaLength = rectAreaLength;
+        hash7.hemiLength = hemiLength;
+        hash7.numDirectionalShadows = numDirectionalShadows;
+        hash7.numPointShadows = numPointShadows;
+        hash7.numSpotShadows = numSpotShadows;
+        hash7.numSpotMaps = numSpotMaps;
+        hash7.numLightProbes = numLightProbes;
         state.version = nextVersion++;
       }
     }
@@ -23736,7 +23736,7 @@ void main() {
             const vecHash1 = hashes[jNext];
             const v0 = _triangle[vertKeys[j]];
             const v1 = _triangle[vertKeys[jNext]];
-            const hash6 = `${vecHash0}_${vecHash1}`;
+            const hash7 = `${vecHash0}_${vecHash1}`;
             const reverseHash = `${vecHash1}_${vecHash0}`;
             if (reverseHash in edgeData && edgeData[reverseHash]) {
               if (_normal.dot(edgeData[reverseHash].normal) <= thresholdDot) {
@@ -23744,8 +23744,8 @@ void main() {
                 vertices.push(v1.x, v1.y, v1.z);
               }
               edgeData[reverseHash] = null;
-            } else if (!(hash6 in edgeData)) {
-              edgeData[hash6] = {
+            } else if (!(hash7 in edgeData)) {
+              edgeData[hash7] = {
                 index0: indexArr[j],
                 index1: indexArr[jNext],
                 normal: _normal.clone()
@@ -30270,18 +30270,18 @@ void main() {
     fadeOut(duration) {
       return this._scheduleFading(duration, 1, 0);
     }
-    crossFadeFrom(fadeOutAction, duration, warp) {
+    crossFadeFrom(fadeOutAction, duration, warp2) {
       fadeOutAction.fadeOut(duration);
       this.fadeIn(duration);
-      if (warp) {
+      if (warp2) {
         const fadeInDuration = this._clip.duration, fadeOutDuration = fadeOutAction._clip.duration, startEndRatio = fadeOutDuration / fadeInDuration, endStartRatio = fadeInDuration / fadeOutDuration;
         fadeOutAction.warp(1, startEndRatio, duration);
         this.warp(endStartRatio, 1, duration);
       }
       return this;
     }
-    crossFadeTo(fadeInAction, duration, warp) {
-      return fadeInAction.crossFadeFrom(this, duration, warp);
+    crossFadeTo(fadeInAction, duration, warp2) {
+      return fadeInAction.crossFadeFrom(this, duration, warp2);
     }
     stopFading() {
       const weightInterpolant = this._weightInterpolant;
@@ -34284,11 +34284,11 @@ void main() {
       this.cw = Math.ceil(world.width / CHUNK);
       this.ch = Math.ceil(world.height / CHUNK);
       const has2 = new Uint8Array(this.cw * this.ch);
-      const W2 = world.width, H2 = world.height, d = world.data;
+      const W3 = world.width, H2 = world.height, d = world.data;
       for (let y = 0; y < H2; y++) {
-        const row = y * W2;
+        const row = y * W3;
         const cy = Math.floor(y / CHUNK) * this.cw;
-        for (let x = 0; x < W2; x++) {
+        for (let x = 0; x < W3; x++) {
           if (d[row + x << 2] >= 16) has2[cy + Math.floor(x / CHUNK)] = 1;
         }
       }
@@ -34711,15 +34711,15 @@ void main() {
     }
     setWorld(world) {
       if (this.tex) this.tex.dispose();
-      const W2 = world.width, H2 = world.height;
-      const data = new Uint8Array(W2 * H2 * 2);
+      const W3 = world.width, H2 = world.height;
+      const data = new Uint8Array(W3 * H2 * 2);
       const d = world.data, dist = world.dist;
-      for (let i = 0, n = W2 * H2; i < n; i++) {
+      for (let i = 0, n = W3 * H2; i < n; i++) {
         data[i * 2] = dist[i];
         const t = d[i << 2];
         data[i * 2 + 1] = t < 16 ? t : 255;
       }
-      const tex2 = new DataTexture(data, W2, H2, RGFormat, UnsignedByteType);
+      const tex2 = new DataTexture(data, W3, H2, RGFormat, UnsignedByteType);
       tex2.wrapS = world.wrap ? RepeatWrapping : ClampToEdgeWrapping;
       tex2.wrapT = ClampToEdgeWrapping;
       tex2.magFilter = LinearFilter;
@@ -34728,7 +34728,7 @@ void main() {
       tex2.needsUpdate = true;
       this.tex = tex2;
       this.uniforms.uMap.value = tex2;
-      this.uniforms.uSize.value.set(W2, H2);
+      this.uniforms.uSize.value.set(W3, H2);
       this.uniforms.uZone.value = world.zone || 0;
     }
     update(ox, oy, env, sunDir, sunCol, sky) {
@@ -35363,7 +35363,7 @@ void main() {
         [0, keelAt(d, t)]
       ];
     };
-    const band = [P3.cap, P3.bulwark, P3.wale, P3.plank, P3.plank2, P3.plank, P3.bottom, shade2(P3.bottom, -0.1), P3.bottom];
+    const band2 = [P3.cap, P3.bulwark, P3.wale, P3.plank, P3.plank2, P3.plank, P3.bottom, shade2(P3.bottom, -0.1), P3.bottom];
     const NP = 10;
     const pos = [], idx = [], triCol = [];
     for (let i = 0; i <= N3; i++) {
@@ -35378,7 +35378,7 @@ void main() {
           const a = vid(i, s, j), b = vid(i + 1, s, j), c = vid(i, s, j + 1), dd = vid(i + 1, s, j + 1);
           if (s === 0) idx.push(a, c, b, b, c, dd);
           else idx.push(a, b, c, b, dd, c);
-          const col = band[j];
+          const col = band2[j];
           triCol.push(col, col);
         }
       }
@@ -36684,14 +36684,14 @@ void main() {
         g.rotate(a);
         g.globalCompositeOperation = "lighter";
         for (let k = 0; k < 4; k++) {
-          const L2 = (1.3 - k * 0.22) * s, W2 = (0.62 - k * 0.12) * s;
+          const L2 = (1.3 - k * 0.22) * s, W3 = (0.62 - k * 0.12) * s;
           g.fillStyle = ["rgba(255,61,0,0.45)", "rgba(255,109,0,0.6)", "rgba(255,171,0,0.75)", "rgba(255,241,118,0.9)"][k];
           g.beginPath();
-          g.moveTo(W2 * 0.7, 0);
-          g.quadraticCurveTo(W2 * 0.6, -W2, -L2 * 0.4, -W2 * (0.7 + 0.1 * Math.sin(t * 25 + k)));
-          g.quadraticCurveTo(-L2 * 0.7, -W2 * 0.3, -L2, Math.sin(t * 20 + k) * W2 * 0.2);
-          g.quadraticCurveTo(-L2 * 0.7, W2 * 0.3, -L2 * 0.4, W2 * (0.7 + 0.1 * Math.cos(t * 25 + k)));
-          g.quadraticCurveTo(W2 * 0.6, W2, W2 * 0.7, 0);
+          g.moveTo(W3 * 0.7, 0);
+          g.quadraticCurveTo(W3 * 0.6, -W3, -L2 * 0.4, -W3 * (0.7 + 0.1 * Math.sin(t * 25 + k)));
+          g.quadraticCurveTo(-L2 * 0.7, -W3 * 0.3, -L2, Math.sin(t * 20 + k) * W3 * 0.2);
+          g.quadraticCurveTo(-L2 * 0.7, W3 * 0.3, -L2 * 0.4, W3 * (0.7 + 0.1 * Math.cos(t * 25 + k)));
+          g.quadraticCurveTo(W3 * 0.6, W3, W3 * 0.7, 0);
           g.fill();
         }
         g.globalCompositeOperation = "source-over";
@@ -39155,7 +39155,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return out;
   }
   D.strawHat = (I, o = {}) => {
-    const straw = o.color || "#f0cd62", band = o.band || "#c8372d";
+    const straw = o.color || "#f0cd62", band2 = o.band || "#c8372d";
     const brim = ellipse(32, 41, 29.5, 11);
     part(I, brim, straw, { sd: 2.4, hd: 1.6 });
     if (!I.small) clip(I, brim, () => {
@@ -39163,7 +39163,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     });
     const crown2 = "M16 41 C15 27 22 17.5 32 17.5 C42 17.5 49 27 48 41 C42 44.5 22 44.5 16 41 Z";
     part(I, crown2, lt(straw, 0.12), { sd: 3, hd: 2 });
-    clip(I, crown2, () => part(I, "M12 32.5 C22 36.5 42 36.5 52 32.5 L52 48 L12 48 Z", band, { sd: 1.4, hd: 1, ol: I.ol * 0.8 }));
+    clip(I, crown2, () => part(I, "M12 32.5 C22 36.5 42 36.5 52 32.5 L52 48 L12 48 Z", band2, { sd: 1.4, hd: 1, ol: I.ol * 0.8 }));
     if (!I.small) clip(I, crown2, () => {
       for (const x of [22, 28, 36, 42]) ln(I, `M${x} 18 C${x + (x - 32) * 0.1} 24 ${x + (x - 32) * 0.1} 28 ${x + (x - 32) * 0.18} 33`, dk(straw, 0.25), 0.9, { a: 0.45 });
     });
@@ -39204,10 +39204,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     part(I, "M4 40 C8 34 17 35 22 36.5 C28 38 36 38 42 36.5 C47 35 56 34 60 40 C58 46 46 49 32 49 C18 49 6 46 4 40 Z", dk(col, 0.08), { sd: 2.2, hd: 1.6, hi: lt(col, 0.3) });
   };
   D.marineCap = (I, o = {}) => {
-    const crown2 = o.color || "#f6f5f0", band = o.band || "#27466e";
+    const crown2 = o.color || "#f6f5f0", band2 = o.band || "#27466e";
     const top = "M6 22 C6 14 20 10 32 10 C44 10 58 14 58 22 C58 27 50 32 46 34 L18 34 C14 32 6 27 6 22 Z";
     part(I, top, crown2, { sd: 2.6, shT: 0.2, hd: 2 });
-    part(I, "M15 31 C24 33.5 40 33.5 49 31 L49 41 C40 43.5 24 43.5 15 41 Z", band, { sd: 1.4, hd: 1 });
+    part(I, "M15 31 C24 33.5 40 33.5 49 31 L49 41 C40 43.5 24 43.5 15 41 Z", band2, { sd: 1.4, hd: 1 });
     part(I, "M14 40.5 C22 44.5 42 44.5 50 40.5 C49 48 42 52 32 52 C22 52 15 48 14 40.5 Z", o.visor || "#1d1a20", { sd: 1.6, hd: 1.2, hi: "#6b6478" });
     if (o.emblem !== false) gull(I, 32, 22.5, 8, "#2f5f96");
   };
@@ -39251,10 +39251,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   D.headband = (I, o = {}) => {
     const col = o.color || "#2e2a31";
-    const ring2 = new Path2D();
-    ring2.addPath(ellipse(32, 36, 26, 13));
-    ring2.addPath(ellipse(32, 32, 21.5, 8.2));
-    part(I, ring2, col, { rule: "evenodd", sd: 2.2, hd: 1.4, hi: lt(col, 0.4) });
+    const ring3 = new Path2D();
+    ring3.addPath(ellipse(32, 36, 26, 13));
+    ring3.addPath(ellipse(32, 32, 21.5, 8.2));
+    part(I, ring3, col, { rule: "evenodd", sd: 2.2, hd: 1.4, hi: lt(col, 0.4) });
     part(I, "M51 41 L63 52 L58.5 55.5 L48.5 44.5 Z", col, { sd: 1.2, hd: 0.8, hi: lt(col, 0.4) });
     part(I, "M49 43 L53 60 L47.5 60.5 L45.5 45.5 Z", dk(col, 0.1), { sd: 1.2, hd: 0.8, hi: lt(col, 0.4) });
     part(I, ellipse(49.5, 42, 5.2, 4.2, 0.4), col, { sd: 1, hd: 0.8, hi: lt(col, 0.4) });
@@ -39438,10 +39438,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   D.ring = (I, o = {}) => {
     const metal = o.metal || C2.gold;
-    const band = new Path2D();
-    band.addPath(ellipse(32, 42, 18.5, 14));
-    band.addPath(ellipse(32, 43.5, 12.5, 8.8));
-    part(I, band, metal, { rule: "evenodd", sd: 2.4, hd: 1.6 });
+    const band2 = new Path2D();
+    band2.addPath(ellipse(32, 42, 18.5, 14));
+    band2.addPath(ellipse(32, 43.5, 12.5, 8.8));
+    part(I, band2, metal, { rule: "evenodd", sd: 2.4, hd: 1.6 });
     if (o.signet || !o.gem) {
       part(I, ellipse(32, 27, 12.5, 8), dk(metal, 0.12), { sd: 1.6, hd: 1.2 });
       part(I, ellipse(32, 25.5, 10.5, 6.2), metal, { sd: 1, hd: 0.8 });
@@ -39680,9 +39680,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       for (const d of ["M9 27 C15 22 22 24 26 32", "M12 17 C19 16 26 20 30 29", "M21 12 C28 12 34 17 37 26", "M13 37 C19 34 26 36 30 42"]) ln(I, d, dk(sh, 0.4), 1.1, { a: 0.75 });
     });
     for (const [x, y] of [[16.5, 23], [21.5, 19.5], [21.5, 25.5]]) fl(I, circle(x, y, 1.7), "#3b2414");
-    const half = "M28 42 C28 51.5 35 58 44 58 C53 58 60 51.5 60 42 Z";
-    part(I, half, sh, { sd: 2.6, hd: 1.4 });
-    if (!I.small) clip(I, half, () => {
+    const half2 = "M28 42 C28 51.5 35 58 44 58 C53 58 60 51.5 60 42 Z";
+    part(I, half2, sh, { sd: 2.6, hd: 1.4 });
+    if (!I.small) clip(I, half2, () => {
       for (const x of [36, 44, 52]) ln(I, `M${x} 43 C${x - 1} 49 ${x} 54 ${x + 1} 58`, dk(sh, 0.4), 1, { a: 0.7 });
     });
     part(I, ellipse(44, 42, 16, 5.4), "#f8f4ea", { sd: 1.4, shT: 0.15, hd: 0.8 });
@@ -40083,16 +40083,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   D.cuffs = (I, o = {}) => {
     const m = o.color || "#6f8e92";
-    const ring2 = (cx, cy, rx, ry, rot) => {
+    const ring3 = (cx, cy, rx, ry, rot) => {
       const p = new Path2D();
       p.addPath(ellipse(cx, cy, rx, ry, rot));
       p.addPath(ellipse(cx, cy, rx * 0.64, ry * 0.6, rot));
       return p;
     };
-    for (const [x, y, r] of [[29.5, 31.5, 0.9], [34.5, 27.5, -0.6]]) part(I, ring2(x, y, 4.6, 2.8, r), "#8c969e", { rule: "evenodd", sd: 0.6, hd: 0.4, ol: I.ol * 0.8 });
-    part(I, ring2(19, 42, 14.5, 12.5, 0.35), m, { rule: "evenodd", sd: 2.2, hd: 1.4 });
+    for (const [x, y, r] of [[29.5, 31.5, 0.9], [34.5, 27.5, -0.6]]) part(I, ring3(x, y, 4.6, 2.8, r), "#8c969e", { rule: "evenodd", sd: 0.6, hd: 0.4, ol: I.ol * 0.8 });
+    part(I, ring3(19, 42, 14.5, 12.5, 0.35), m, { rule: "evenodd", sd: 2.2, hd: 1.4 });
     part(I, xf(rrect(22, 29, 9, 7, 1.6), { r: 0.35, ox: 26, oy: 32 }), dk(m, 0.12), { sd: 0.8, hd: 0.6 });
-    part(I, ring2(46, 21, 13, 11, -0.45), m, { rule: "evenodd", sd: 2.2, hd: 1.4 });
+    part(I, ring3(46, 21, 13, 11, -0.45), m, { rule: "evenodd", sd: 2.2, hd: 1.4 });
     part(I, xf(rrect(34, 24, 8, 6.5, 1.6), { r: -0.45, ox: 38, oy: 27 }), dk(m, 0.12), { sd: 0.8, hd: 0.6 });
     if (!I.small) for (const [x, y] of [[26, 32.5], [38, 27]]) fl(I, circle(x, y, 1), OUT2);
   };
@@ -40192,8 +40192,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     part(I, "M18 11 H50 C51.5 11 53 12.5 53 14 V53 C53 54.5 51.5 56 50 56 H18 Z", "#f3ead3", { sd: 1.2, shT: 0.18, hd: 0 });
     if (!I.small) for (let x = 49.2; x < 53; x += 1.5) ln(I, `M${x} 12.5 V54.5`, "#d9ceb4", 0.6);
     if (o.ribbon !== false) tube2(I, "M40 50 V61", "#c8372d", 3, { cap: "butt" });
-    const cover2 = rrect(11, 8, 39, 46, 3);
-    part(I, cover2, o.comic ? "#f2c230" : col, { sd: 2.6, hd: 1.8 });
+    const cover3 = rrect(11, 8, 39, 46, 3);
+    part(I, cover3, o.comic ? "#f2c230" : col, { sd: 2.6, hd: 1.8 });
     part(I, rrect(11, 8, 7, 46, 3), dk(o.comic ? "#e0572a" : col, 0.22), { sd: 1, hd: 0.8 });
     if (o.comic) {
       part(I, star(34, 30, 9, 14, 8), "#e0572a", { sd: 1, hd: 0.8, ol: I.ol * 0.7 });
@@ -40364,16 +40364,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     });
   };
   D.chest = (I, o = {}) => {
-    const wood = o.iron ? "#7a8791" : "#9c6a3c", band = o.iron ? "#4b545b" : C2.gold;
+    const wood = o.iron ? "#7a8791" : "#9c6a3c", band2 = o.iron ? "#4b545b" : C2.gold;
     const shape = union(rrect(8, 30, 48, 26, 3), "M8 31 V23 C8 14 18 10 32 10 C46 10 56 14 56 23 V31 Z");
     if (!o.iron) for (const [x, y] of [[20, 29], [26, 28], [40, 28.5]]) part(I, ellipse(x, y, 4.6, 2.2), C2.gold, { sd: 0.5, hd: 0.3, ol: I.ol * 0.7 });
     part(I, rrect(8, 30, 48, 26, 3), wood, { sd: 2.6, hd: 1.6 });
     part(I, "M8 30 V23 C8 14 18 10 32 10 C46 10 56 14 56 23 V30 Z", lt(wood, 0.08), { sd: 2, hd: 1.6 });
     clip(I, shape, () => {
       if (!I.small && !o.iron) for (const y of [20, 42, 49]) ln(I, `M8 ${y} H56`, dk(wood, 0.35), 1, { a: 0.8 });
-      for (const x of [16, 48]) part(I, rrect(x - 3, 8, 6, 50, 0.5), band, { sd: 0.8, hd: 0.6, ol: I.ol * 0.7 });
+      for (const x of [16, 48]) part(I, rrect(x - 3, 8, 6, 50, 0.5), band2, { sd: 0.8, hd: 0.6, ol: I.ol * 0.7 });
     });
-    part(I, rrect(6.5, 27.5, 51, 5, 1.5), band, { sd: 0.8, hd: 0.6 });
+    part(I, rrect(6.5, 27.5, 51, 5, 1.5), band2, { sd: 0.8, hd: 0.6 });
     if (o.iron) {
       if (!I.small) for (const [x, y] of [[12, 36], [12, 51], [52, 36], [52, 51], [24, 14], [40, 14]]) part(I, circle(x, y, 1.3), lt(wood, 0.35), { flat: true, ol: I.ol * 0.5 });
       tube2(I, "M27.5 38 V33 C27.5 27.5 36.5 27.5 36.5 33 V38", "#9aa4ab", 2.4);
@@ -40381,7 +40381,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       fl(I, circle(32, 42, 1.6), OUT2);
       fl(I, rrect(31.3, 42, 1.4, 4, 0.5), OUT2);
     } else {
-      part(I, rrect(27, 26, 10, 12, 2), band, { sd: 1, hd: 0.8 });
+      part(I, rrect(27, 26, 10, 12, 2), band2, { sd: 1, hd: 0.8 });
       fl(I, circle(32, 30.5, 1.5), OUT2);
       fl(I, poly([[31, 31], [33, 31], [33.6, 35], [30.4, 35]]), OUT2);
     }
@@ -42420,10 +42420,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return c;
   }
   function skillFrame(I, c) {
-    const ring2 = new Path2D();
-    ring2.addPath(circle(32, 32, 30));
-    ring2.addPath(circle(32, 32, WIN));
-    part(I, ring2, dk(c, 0.3), { rule: "evenodd", sd: 1.2, hd: 1.1, hi: lt(c, 0.35), sh: dk(c, 0.55), ol: I.ol });
+    const ring3 = new Path2D();
+    ring3.addPath(circle(32, 32, 30));
+    ring3.addPath(circle(32, 32, WIN));
+    part(I, ring3, dk(c, 0.3), { rule: "evenodd", sd: 1.2, hd: 1.1, hi: lt(c, 0.35), sh: dk(c, 0.55), ol: I.ol });
   }
   var UI = {};
   var SLOT = "#5b4330";
@@ -44461,10 +44461,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(box(L2 + 0.1, 0.16 * g, 0.26 * g), { at: [0, y + rise + th * 0.5, zc], color: snowy ? "#ffffff" : shade2(roofCol, -0.3), outline: 0.02 });
     return rise + th;
   }
-  function curvedRoof(k, cx, cz, y, W2, D3, rise, ov, roofCol, opts = {}) {
+  function curvedRoof(k, cx, cz, y, W3, D3, rise, ov, roofCol, opts = {}) {
     const R2 = 4, M2 = 4;
-    const hw0 = W2 / 2 + ov, hd0 = D3 / 2 + ov;
-    const ridge = Math.max(0.05, W2 / 2 - D3 / 2 * 0.85);
+    const hw0 = W3 / 2 + ov, hd0 = D3 / 2 + ov;
+    const ridge = Math.max(0.05, W3 / 2 - D3 / 2 * 0.85);
     const up = opts.upturn ?? 0.35;
     const C4 = [[-1, 1], [1, 1], [1, -1], [-1, -1]];
     const rings2 = [];
@@ -45024,9 +45024,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (y < this.minY || y > this.maxY) {
         this.minY = Math.min(this.minY, y);
         this.maxY = Math.max(this.maxY, y);
-        const half = (this.maxY - this.minY + this.h) / 2;
-        m.boundingSphere.center.set(CELL / 2, this.minY + half, CELL / 2);
-        m.boundingSphere.radius = Math.hypot(CELL / 2, CELL / 2, half) + this.r;
+        const half2 = (this.maxY - this.minY + this.h) / 2;
+        m.boundingSphere.center.set(CELL / 2, this.minY + half2, CELL / 2);
+        m.boundingSphere.radius = Math.hypot(CELL / 2, CELL / 2, half2) + this.r;
       }
     }
     remove(slot2) {
@@ -45921,18 +45921,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (let i = 0; i < 3; i++) k.add(new IcosahedronGeometry(0.06, 0), { at: [-0.12 + i * 0.12, 0.1, 0.2], color: ["#e84a7f", "#ffffff", "#ffd54f"][i] });
   });
   var bones = () => model("bones", (k) => {
-    const W2 = "#ecf0f1";
+    const W3 = "#ecf0f1";
     k.save();
     k.translate(-0.1, 0.07, 0);
     k.rotateY(0.6);
     k.rotateZ(Math.PI / 2);
-    k.add(cyl(0.045, 0.05, 0.9, 6), { at: [0, -0.45, 0], color: W2, outline: 0.012 });
-    for (const y of [-0.45, 0.45]) for (const z of [-0.05, 0.05]) k.add(new SphereGeometry(0.075, 6, 4), { at: [0, y, z], color: W2 });
+    k.add(cyl(0.045, 0.05, 0.9, 6), { at: [0, -0.45, 0], color: W3, outline: 0.012 });
+    for (const y of [-0.45, 0.45]) for (const z of [-0.05, 0.05]) k.add(new SphereGeometry(0.075, 6, 4), { at: [0, y, z], color: W3 });
     k.restore();
-    k.add(new SphereGeometry(0.2, 9, 7), { at: [0.35, 0.17, 0.28], scale: [1, 0.9, 1.1], color: W2, outline: 0.015 });
+    k.add(new SphereGeometry(0.2, 9, 7), { at: [0.35, 0.17, 0.28], scale: [1, 0.9, 1.1], color: W3, outline: 0.015 });
     for (const z of [-0.08, 0.08]) k.add(new SphereGeometry(0.055, 5, 4), { at: [0.52, 0.2, 0.28 + z], scale: [0.5, 1, 1], color: "#2d3436" });
-    k.add(box(0.12, 0.08, 0.18), { at: [0.48, 0.02, 0.28], color: W2 });
-    for (let i = 0; i < 3; i++) k.add(torus(0.22, 0.025, 4, 8, Math.PI * 0.8), { at: [-0.45, 0.02, -0.25 + i * 0.12], rot: [0, 0, 0.3], color: W2 });
+    k.add(box(0.12, 0.08, 0.18), { at: [0.48, 0.02, 0.28], color: W3 });
+    for (let i = 0; i < 3; i++) k.add(torus(0.22, 0.025, 4, 8, Math.PI * 0.8), { at: [-0.45, 0.02, -0.25 + i * 0.12], rot: [0, 0, 0.3], color: W3 });
   });
   var anchor = () => model("anchor", (k) => {
     const iron = "#5d6d7e";
@@ -46132,9 +46132,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (const [w, y] of [[0.8, 1.32], [0.62, 1.17]]) k.add(box(w, 0.04, 0.01), { at: [0, y, 0.11], color: "#3b2a1a" });
   });
   var skull2 = () => model("skull", (k) => {
-    const W2 = "#ecf0f1", D3 = "#2d3436";
-    k.add(new SphereGeometry(0.85, 14, 10), { at: [0, 0.8, 0], scale: [1, 0.92, 1.05], color: W2, outline: 0.035 });
-    k.add(box(0.95, 0.42, 0.7), { at: [0, 0.05, 0.28], color: W2, outline: 0.025 });
+    const W3 = "#ecf0f1", D3 = "#2d3436";
+    k.add(new SphereGeometry(0.85, 14, 10), { at: [0, 0.8, 0], scale: [1, 0.92, 1.05], color: W3, outline: 0.035 });
+    k.add(box(0.95, 0.42, 0.7), { at: [0, 0.05, 0.28], color: W3, outline: 0.025 });
     for (const s of [-1, 1]) k.add(new SphereGeometry(0.22, 8, 6), { at: [s * 0.32, 0.9, 0.72], scale: [1, 1.15, 0.45], color: D3 });
     k.add(slab([[-0.1, 0], [0.1, 0], [0, 0.2]], 0.1), { at: [0, 0.52, 0.82], color: D3 });
     for (let i = -3; i <= 3; i++) k.add(box(0.1, 0.16, 0.06), { at: [i * 0.12, 0.26, 0.64], color: "#dfe6e9" });
@@ -46838,19 +46838,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return root2;
   });
   var chestBody = (tier) => model("chest-body:" + tier, (k) => {
-    const [wood, band] = tier >= 3 ? ["#8e2b22", "#f1c40f"] : tier === 2 ? ["#5d4037", "#cfd8dc"] : ["#8d5b33", "#f1c40f"];
+    const [wood, band2] = tier >= 3 ? ["#8e2b22", "#f1c40f"] : tier === 2 ? ["#5d4037", "#cfd8dc"] : ["#8d5b33", "#f1c40f"];
     k.add(box(0.92, 0.5, 0.6), { color: wood, outline: 0.02 });
-    for (const x of [-0.34, 0.34]) k.add(box(0.08, 0.52, 0.62), { at: [x, -5e-3, 0], color: band });
-    k.add(box(0.94, 0.06, 0.62), { at: [0, 0.44, 0], color: band });
-    k.add(box(0.16, 0.2, 0.04), { at: [0, 0.25, 0.31], color: band });
+    for (const x of [-0.34, 0.34]) k.add(box(0.08, 0.52, 0.62), { at: [x, -5e-3, 0], color: band2 });
+    k.add(box(0.94, 0.06, 0.62), { at: [0, 0.44, 0], color: band2 });
+    k.add(box(0.16, 0.2, 0.04), { at: [0, 0.25, 0.31], color: band2 });
     k.add(box(0.05, 0.08, 0.02), { at: [0, 0.3, 0.335], color: "#2d3436" });
-    for (const x of [-0.4, 0.4]) for (const z of [-0.24, 0.24]) k.add(box(0.1, 0.06, 0.1), { at: [x, -0.04, z], color: band });
+    for (const x of [-0.4, 0.4]) for (const z of [-0.24, 0.24]) k.add(box(0.1, 0.06, 0.1), { at: [x, -0.04, z], color: band2 });
     k.add(new CircleGeometry(0.3, 10), { at: [0, 0.47, 0], rot: [-Math.PI / 2, 0, 0], scale: [1.4, 0.9, 1], color: "#3b2a1a" });
   });
   var chestLid = (tier) => model("chest-lid:" + tier, (k) => {
-    const [wood, band] = tier >= 3 ? ["#a63a2e", "#f1c40f"] : tier === 2 ? ["#6d4c33", "#cfd8dc"] : ["#a86f3f", "#f1c40f"];
+    const [wood, band2] = tier >= 3 ? ["#a63a2e", "#f1c40f"] : tier === 2 ? ["#6d4c33", "#cfd8dc"] : ["#a86f3f", "#f1c40f"];
     k.add(new CylinderGeometry(0.3, 0.3, 0.92, 12, 1, false, 0, Math.PI), { at: [0, 0, 0.3], rot: [0, 0, Math.PI / 2], color: wood, outline: 0.02 });
-    for (const x of [-0.34, 0, 0.34]) k.add(new CylinderGeometry(0.31, 0.31, 0.08, 12, 1, false, 0, Math.PI), { at: [x, 0, 0.3], rot: [0, 0, Math.PI / 2], color: band });
+    for (const x of [-0.34, 0, 0.34]) k.add(new CylinderGeometry(0.31, 0.31, 0.08, 12, 1, false, 0, Math.PI), { at: [x, 0, 0.3], rot: [0, 0, Math.PI / 2], color: band2 });
   });
   var coinsGeo = () => model("coins", (k) => {
     const R2 = rng(5);
@@ -46916,19 +46916,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   var gateGeo = (big) => model("gate:" + big, (k) => {
     const stone = big ? "#e8e2d4" : "#607d8b", dark = big ? "#b0a58f" : "#455a64";
-    const W2 = 6.6, H2 = 6.4;
+    const W3 = 6.6, H2 = 6.4;
     for (const s of [-1, 1]) {
-      k.add(box(1.5, H2, 1.8), { at: [s * (W2 / 2 + 0.2), -0.5, 0], color: stone, outline: 0.04 });
-      for (let i = -1; i <= 1; i += 2) k.add(box(0.42, 0.55, 0.42), { at: [s * (W2 / 2 + 0.2) + i * 0.45, H2 - 0.5, 0.55], color: stone });
-      for (let i = -1; i <= 1; i += 2) k.add(box(0.42, 0.55, 0.42), { at: [s * (W2 / 2 + 0.2) + i * 0.45, H2 - 0.5, -0.55], color: stone });
-      for (let y = 0.6; y < H2 - 1; y += 0.55) k.add(box(1.52, 0.04, 1.82), { at: [s * (W2 / 2 + 0.2), y, 0], color: dark });
-      k.add(box(0.25, 0.9, 0.05), { at: [s * (W2 / 2 + 0.2), H2 - 2.4, 0.91], color: "#1d2a30", glow: "#ffcc80" });
+      k.add(box(1.5, H2, 1.8), { at: [s * (W3 / 2 + 0.2), -0.5, 0], color: stone, outline: 0.04 });
+      for (let i = -1; i <= 1; i += 2) k.add(box(0.42, 0.55, 0.42), { at: [s * (W3 / 2 + 0.2) + i * 0.45, H2 - 0.5, 0.55], color: stone });
+      for (let i = -1; i <= 1; i += 2) k.add(box(0.42, 0.55, 0.42), { at: [s * (W3 / 2 + 0.2) + i * 0.45, H2 - 0.5, -0.55], color: stone });
+      for (let y = 0.6; y < H2 - 1; y += 0.55) k.add(box(1.52, 0.04, 1.82), { at: [s * (W3 / 2 + 0.2), y, 0], color: dark });
+      k.add(box(0.25, 0.9, 0.05), { at: [s * (W3 / 2 + 0.2), H2 - 2.4, 0.91], color: "#1d2a30", glow: "#ffcc80" });
     }
-    k.add(box(W2, 1.3, 1.5), { at: [0, H2 - 1.9, 0], color: stone, outline: 0.04 });
-    k.add(box(W2 + 0.4, 0.2, 1.7), { at: [0, H2 - 0.65, 0], color: dark });
-    for (let x = -W2 / 2 + 0.35; x < W2 / 2 - 0.2; x += 0.45) k.add(box(0.1, H2 - 2.1, 0.1), { at: [x, 0, 0.3], color: "#263238" });
-    for (const y of [1.2, 2.8]) k.add(box(W2, 0.1, 0.1), { at: [0, y, 0.3], color: "#263238" });
-    for (let x = -W2 / 2 + 0.35; x < W2 / 2 - 0.2; x += 0.45) k.add(cone(0.08, 0.25, 4), { at: [x, -0.25, 0.3], rot: [Math.PI, 0, 0], color: "#263238" });
+    k.add(box(W3, 1.3, 1.5), { at: [0, H2 - 1.9, 0], color: stone, outline: 0.04 });
+    k.add(box(W3 + 0.4, 0.2, 1.7), { at: [0, H2 - 0.65, 0], color: dark });
+    for (let x = -W3 / 2 + 0.35; x < W3 / 2 - 0.2; x += 0.45) k.add(box(0.1, H2 - 2.1, 0.1), { at: [x, 0, 0.3], color: "#263238" });
+    for (const y of [1.2, 2.8]) k.add(box(W3, 0.1, 0.1), { at: [0, y, 0.3], color: "#263238" });
+    for (let x = -W3 / 2 + 0.35; x < W3 / 2 - 0.2; x += 0.45) k.add(cone(0.08, 0.25, 4), { at: [x, -0.25, 0.3], rot: [Math.PI, 0, 0], color: "#263238" });
   });
   reg2("gate", (o) => {
     const root2 = group("gate");
@@ -49531,8 +49531,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     SEEN.delete(key2);
     const pxb = Math.pow(2, b / 12);
     const [x0, y0, x1, y1] = headBounds(look, st, v);
-    const W2 = Math.ceil((x1 - x0) * pxb) + 2, Ht = Math.ceil((y1 - y0) * pxb) + 2;
-    const K = CELL_CLASSES.find((c) => W2 <= c.cell && Ht <= c.cell);
+    const W3 = Math.ceil((x1 - x0) * pxb) + 2, Ht = Math.ceil((y1 - y0) * pxb) + 2;
+    const K = CELL_CLASSES.find((c) => W3 <= c.cell && Ht <= c.cell);
     const e = K && takeCell(K, key2);
     if (!e) return null;
     const cg = e.pg.g, cs = K.cell;
@@ -49547,11 +49547,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     cg.lineCap = "round";
     renderHead(cg, look, v, pose, st, headCtx(pxb, sx, r, v));
     cg.restore();
-    e.W = W2;
+    e.W = W3;
     e.H = Ht;
     e.x = x0 - 1 / pxb;
     e.y = y0 - 1 / pxb;
-    e.w = W2 / pxb;
+    e.w = W3 / pxb;
     e.h = Ht / pxb;
     return e;
   }
@@ -49768,8 +49768,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.fill();
     g.restore();
   }
-  function torsoPath(g, W2, top, bottom, side) {
-    const ws = W2 / 2, ww = W2 * (side ? 0.44 : 0.4), wh = W2 * (side ? 0.47 : 0.45);
+  function torsoPath(g, W3, top, bottom, side) {
+    const ws = W3 / 2, ww = W3 * (side ? 0.44 : 0.4), wh = W3 * (side ? 0.47 : 0.45);
     const waistY = top + (bottom - top) * 0.6;
     const fx = side ? 0.025 : 0;
     g.beginPath();
@@ -51324,8 +51324,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const m = g.getTransform();
     const px2 = Math.hypot(m.a, m.b) || 1;
     const s = (look.scale || 1) * (look.legs > 1 ? 1.3 : 1);
-    const W2 = Math.ceil(4.4 * s * px2), H2 = Math.ceil(4.6 * s * px2);
-    if (W2 * H2 > 4e6) {
+    const W3 = Math.ceil(4.4 * s * px2), H2 = Math.ceil(4.6 * s * px2);
+    if (W3 * H2 > 4e6) {
       drawCharacter(g, look, pose);
       return;
     }
@@ -51339,9 +51339,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       tintCanvas = document.createElement("canvas");
       silCanvas = document.createElement("canvas");
     }
-    if (tintCanvas.width < W2 || tintCanvas.height < H2) {
+    if (tintCanvas.width < W3 || tintCanvas.height < H2) {
       for (const cv of [tintCanvas, silCanvas]) {
-        cv.width = Math.max(W2, cv.width);
+        cv.width = Math.max(W3, cv.width);
         cv.height = Math.max(H2, cv.height);
       }
     }
@@ -51349,8 +51349,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.globalCompositeOperation = "source-over";
     c.globalAlpha = 1;
-    c.clearRect(0, 0, W2, H2);
-    const ox = Math.round(W2 / 2), oy = Math.round(H2 - 0.8 * s * px2);
+    c.clearRect(0, 0, W3, H2);
+    const ox = Math.round(W3 / 2), oy = Math.round(H2 - 0.8 * s * px2);
     const fx = m.e - Math.floor(m.e), fy = m.f - Math.floor(m.f);
     c.setTransform(px2, 0, 0, px2, ox + fx, oy + fy);
     pose.noShadow = true;
@@ -51361,7 +51361,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     c.globalCompositeOperation = "source-atop";
     c.globalAlpha = k;
     c.fillStyle = color;
-    c.fillRect(0, 0, W2, H2);
+    c.fillRect(0, 0, W3, H2);
     c.globalCompositeOperation = "source-over";
     c.globalAlpha = 1;
     const dx = Math.floor(m.e) - ox, dy = Math.floor(m.f) - oy;
@@ -51372,19 +51372,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       sc.setTransform(1, 0, 0, 1, 0, 0);
       sc.globalCompositeOperation = "source-over";
       sc.globalAlpha = 1;
-      sc.clearRect(0, 0, W2, H2);
-      sc.drawImage(tintCanvas, 0, 0, W2, H2, 0, 0, W2, H2);
+      sc.clearRect(0, 0, W3, H2);
+      sc.drawImage(tintCanvas, 0, 0, W3, H2, 0, 0, W3, H2);
       sc.globalCompositeOperation = "source-in";
       sc.fillStyle = outline;
-      sc.fillRect(0, 0, W2, H2);
+      sc.fillRect(0, 0, W3, H2);
       sc.globalCompositeOperation = "source-over";
       const o = Math.max(1, Math.round(px2 * 0.024));
       const a0 = g.globalAlpha;
       g.globalAlpha = a0 * Math.min(1, (k - 0.35) / 0.35);
-      for (const [ex, ey] of [[o, 0], [-o, 0], [0, o], [0, -o]]) g.drawImage(silCanvas, 0, 0, W2, H2, dx + ex, dy + ey, W2, H2);
+      for (const [ex, ey] of [[o, 0], [-o, 0], [0, o], [0, -o]]) g.drawImage(silCanvas, 0, 0, W3, H2, dx + ex, dy + ey, W3, H2);
       g.globalAlpha = a0;
     }
-    g.drawImage(tintCanvas, 0, 0, W2, H2, dx, dy, W2, H2);
+    g.drawImage(tintCanvas, 0, 0, W3, H2, dx, dy, W3, H2);
     g.restore();
   }
   function drawFlurry(g, look, pose, rig, side, t) {
@@ -51858,20 +51858,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const style = beamStyle(h2.element, a.def);
     fx.beam(actor.x, actor.y, ang, range, h2.width || 0.6, col, h2.duration ? Math.max(0.26, h2.duration) : 0.3, s.core || "#ffffff", { style });
     fx.add("flare", { x: actor.x + Math.cos(ang) * 0.5, y: actor.y + Math.sin(ang) * 0.35, z: 0.75, size: 0.6 + (h2.width || 0.6) * 0.3, color: col, life: 0.22 });
-    const W2 = h2.width || 0.6;
-    if (style === "ice") lineSpikes(fx, actor.x, actor.y, ang, range, "ice", null, W2 * 0.5);
-    else if (style === "sand") lineSpikes(fx, actor.x, actor.y, ang, range, "sand", null, W2 * 0.5);
+    const W3 = h2.width || 0.6;
+    if (style === "ice") lineSpikes(fx, actor.x, actor.y, ang, range, "ice", null, W3 * 0.5);
+    else if (style === "sand") lineSpikes(fx, actor.x, actor.y, ang, range, "sand", null, W3 * 0.5);
     else if (style === "quake") {
       for (let i = 1; i <= 4; i++) {
         const d = i / 4.5 * range;
-        fx.add("aircrack", { x: actor.x + Math.cos(ang) * d, y: actor.y + Math.sin(ang) * d, z: rnd(0.5, 1.2), size: W2 * 0.6 + 0.3, life: 0.5, delay: i * 0.04 });
+        fx.add("aircrack", { x: actor.x + Math.cos(ang) * d, y: actor.y + Math.sin(ang) * d, z: rnd(0.5, 1.2), size: W3 * 0.6 + 0.3, life: 0.5, delay: i * 0.04 });
       }
       fx.crack(actor.x + Math.cos(ang) * range * 0.5, actor.y + Math.sin(ang) * range * 0.5, range * 0.35, 2);
     } else if (style === "lightning") {
       for (let i = 0; i < 3; i++) {
         const d = rnd(0.3, 1) * range;
         const px2 = actor.x + Math.cos(ang) * d, py2 = actor.y + Math.sin(ang) * d;
-        miniBolts(fx, px2, py2, 0.7, 1, W2 * 1.5, "#fff176");
+        miniBolts(fx, px2, py2, 0.7, 1, W3 * 1.5, "#fff176");
       }
     } else if (style === "fire") {
       for (let i = 0; i < 6; i++) {
@@ -51881,7 +51881,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     if (h2.heavy) {
       const ex = actor.x + Math.cos(ang) * range, ey = actor.y + Math.sin(ang) * range;
-      glow2(fx, ex, ey, 0.7, W2 * 1.6, col, 0.3);
+      glow2(fx, ex, ey, 0.7, W3 * 1.6, col, 0.3);
     }
   }
   function swingFx(fx, actor, a, h2, hb, ang, range, col, E, st, clip2) {
@@ -54061,6 +54061,90 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     { id: "jaguar", name: "Jaguar", ears: "round", fur: "#e1b12c", tail: "thin" },
     { id: "wolf", name: "Wolf", ears: "pointy", fur: "#7f8fa6", tail: "fluffy", muzzle: true }
   ];
+  var W2 = (s) => s.split(" ").map((t) => {
+    const [k, w] = t.split(":");
+    return [k, +w || 1];
+  });
+  var DRESS = {
+    civilian: {
+      m: { top: W2("tee:4 shirt:3 open:1 tank:1 striped:1 vest:0.5"), bottom: W2("trousers:4 capri:2 shorts:2 baggy:1 slim:1"), waist: W2("belt:3 none:3 sash:1"), shoes: W2("shoes:3 sandals:3 boots:2") },
+      f: { top: W2("tee:3 tank:2 shirt:2 dress:3 crop:1"), bottom: W2("skirt:3 longskirt:2 trousers:2 capri:1 shorts:1 slim:1"), waist: W2("none:3 belt:2 sash:1"), shoes: W2("shoes:3 sandals:3 boots:1") }
+    },
+    pirate: {
+      m: { top: W2("striped:3 open:3 vest:2 tee:2 bare:1 tank:1"), bottom: W2("baggy:4 capri:2 shorts:2 trousers:2"), waist: W2("sash:5 belt:3"), shoes: W2("boots:5 sandals:2") },
+      f: { top: W2("crop:3 tank:2 open:1 striped:1 bikini:1"), bottom: W2("trousers:2 shorts:2 capri:2 skirt:1 baggy:1"), waist: W2("sash:4 belt:3"), shoes: W2("boots:5 sandals:2") }
+    },
+    bandit: {
+      m: { top: W2("vest:3 open:2 tank:2 bare:1"), bottom: W2("baggy:4 trousers:2 capri:1"), waist: W2("sash:4 belt:2"), shoes: W2("boots:3 sandals:2") },
+      f: { top: W2("crop:2 tank:2 vest:1"), bottom: W2("trousers:2 baggy:2 shorts:1"), waist: W2("sash:3 belt:2"), shoes: W2("boots:3 sandals:1") }
+    },
+    marine: {
+      m: { top: W2("shirt:1"), bottom: W2("trousers:1"), waist: W2("belt:1"), shoes: W2("boots:1") },
+      f: { top: W2("shirt:1"), bottom: W2("trousers:3 skirt:1"), waist: W2("belt:1"), shoes: W2("boots:1") }
+    },
+    officer: {
+      m: { top: W2("jacket:2 shirt:1"), bottom: W2("trousers:2 slim:1"), waist: W2("belt:1"), shoes: W2("boots:1 shoes:1") },
+      f: { top: W2("jacket:2 shirt:1"), bottom: W2("slim:2 skirt:1"), waist: W2("belt:1"), shoes: W2("boots:1 shoes:1") }
+    },
+    agent: {
+      m: { top: W2("jacket:1"), bottom: W2("slim:1"), waist: W2("belt:1"), shoes: W2("shoes:1") },
+      f: { top: W2("jacket:2 shirt:1"), bottom: W2("slim:2 skirt:1"), waist: W2("belt:1"), shoes: W2("shoes:2 boots:1") }
+    },
+    swordsman: {
+      m: { top: W2("kimono:3 open:2 tee:1"), bottom: W2("hakama:3 baggy:1 trousers:1"), waist: W2("obi:2 sash:2"), shoes: W2("geta:2 sandals:2 boots:1") },
+      f: { top: W2("kimono:3 tank:1"), bottom: W2("hakama:2 slim:1"), waist: W2("obi:2 sash:1"), shoes: W2("geta:1 sandals:2 boots:1") }
+    },
+    wano: {
+      m: { top: W2("kimono:6 open:1"), bottom: W2("hakama:4 baggy:1 capri:1"), waist: W2("obi:4 sash:1"), shoes: W2("geta:3 sandals:3") },
+      f: { top: W2("kimono:6 dress:1"), bottom: W2("longskirt:3 hakama:2"), waist: W2("obi:4 none:1"), shoes: W2("geta:3 sandals:2") }
+    },
+    desert: {
+      m: { top: W2("shirt:3 open:2 vest:1 kimono:1"), bottom: W2("baggy:4 trousers:2"), waist: W2("sash:4 belt:1"), shoes: W2("sandals:4 boots:1") },
+      f: { top: W2("dress:2 crop:2 shirt:1"), bottom: W2("longskirt:2 baggy:2 skirt:1"), waist: W2("sash:3 none:1"), shoes: W2("sandals:4") }
+    },
+    snow: {
+      m: { top: W2("coat:3 shirt:2 jacket:1"), bottom: W2("trousers:3 baggy:1"), waist: W2("belt:2 none:1"), shoes: W2("boots:1") },
+      f: { top: W2("coat:3 shirt:1 dress:1"), bottom: W2("trousers:2 longskirt:1 slim:1"), waist: W2("belt:1 none:1"), shoes: W2("boots:1") }
+    },
+    sky: {
+      m: { top: W2("tank:2 tee:2 open:2 vest:1"), bottom: W2("baggy:3 shorts:2 capri:1"), waist: W2("sash:3 none:1"), shoes: W2("sandals:4 bare:1") },
+      f: { top: W2("dress:2 tank:2 crop:2"), bottom: W2("skirt:2 longskirt:2 baggy:1"), waist: W2("sash:2 none:2"), shoes: W2("sandals:4") }
+    },
+    fishman: {
+      m: { top: W2("open:3 tank:2 bare:2 vest:1 shirt:1"), bottom: W2("shorts:3 baggy:2 trousers:1"), waist: W2("sash:2 belt:2 none:1"), shoes: W2("sandals:3 bare:2 boots:1") },
+      f: { top: W2("crop:2 tank:2 bikini:2 dress:1"), bottom: W2("skirt:2 shorts:2 longskirt:1"), waist: W2("none:2 sash:1"), shoes: W2("sandals:3 bare:1") }
+    }
+  };
+  var SASH = ["#f4c430", "#c62828", "#1e88e5", "#2e7d32", "#6a1b9a", "#ef6c00", "#fafafa", "#212121"];
+  var LIGHT = ["#f5f5f5", "#fff8e1", "#e3f2fd", "#fce4ec", "#e8f5e9"];
+  var FEM_ROLES = { civilian: 0.5, pirate: 0.3, bandit: 0.2, marine: 0.25, officer: 0.2, agent: 0.3, swordsman: 0.25, wano: 0.5, desert: 0.5, snow: 0.5, sky: 0.5, fishman: 0.3 };
+  function dress(look, rng2, role = "civilian", over = {}) {
+    if (role === "beast") {
+      Object.assign(look, { fem: false, topStyle: "bare", bottomStyle: "slim", waist: "none", shoeStyle: "bare", muscle: 0.8 });
+      return look;
+    }
+    const set = DRESS[role] || DRESS.civilian;
+    const fem = over.fem ?? rng2.chance(FEM_ROLES[role] ?? 0.45);
+    const T3 = set[fem ? "f" : "m"];
+    look.fem = fem;
+    const legacyTop = over.openShirt !== void 0 || over.noSleeves || over.sleeve || over.vest;
+    if (!over.topStyle && !legacyTop) look.topStyle = rng2.weighted(T3.top);
+    if (!over.bottomStyle) look.bottomStyle = rng2.weighted(T3.bottom);
+    if (!over.waist) look.waist = rng2.weighted(T3.waist);
+    if (!over.shoeStyle && over.sandals === void 0) look.shoeStyle = rng2.weighted(T3.shoes);
+    if (!over.top2) look.top2 = look.topStyle === "striped" ? rng2.pick(LIGHT) : look.topStyle === "jacket" ? rng2.pick(["#f5f5f5", "#f5f5f5", "#90caf9", "#fce4ec"]) : void 0;
+    if (!over.waistCol && (look.waist === "sash" || look.waist === "obi")) look.waistCol = rng2.pick(SASH);
+    if (look.topStyle === "jacket" && !over.tie && rng2.chance(0.5)) look.tie = rng2.pick(["#212121", "#c62828", "#1e3a8a"]);
+    if (look.topStyle === "coat" && !over.coat) look.coat = rng2.pick(["#5d4037", "#37474f", "#6d4c41", "#1b5e20", "#4a148c", "#263238"]);
+    if (fem) {
+      if (!over.hair && rng2.chance(0.75)) look.hair = rng2.pick(["long", "long", "ponytail", "bun", "short", "curly"]);
+      if (!over.eyeShape) look.eyeShape = rng2.pick(["soft", "round", "round", "sharp"]);
+      look.bust = +(0.8 + rng2.next() * 0.45).toFixed(2);
+    } else if (over.muscle === void 0) {
+      look.muscle = +(0.25 + rng2.next() * 0.75).toFixed(2);
+    }
+    return look;
+  }
   function makeLook(raceId, seed, overrides = {}) {
     const rng2 = new RNG(seed);
     const race = RACES[raceId] || RACES.human;
@@ -54120,7 +54204,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       look.hairColor = "#f5f6fa";
       look.hair = rng2.pick(["long", "spiky", "short"]);
     }
-    return Object.assign(look, overrides);
+    const { role, ...over } = overrides;
+    dress(look, rng2, role || (raceId === "fishman" ? "fishman" : raceId === "skypiean" ? "sky" : "civilian"), over);
+    if (look.race === "buccaneer" || look.race === "giant") look.fem = over.fem ?? look.fem;
+    return Object.assign(look, over);
   }
   function raceLabel(look) {
     const r = RACES[look.race] || RACES.human;
@@ -55031,10 +55118,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     hairTail: "head"
   };
   function dims(look) {
-    const Lg = look.legs || 1, Am = look.arms || 1, Bk = look.bulk || 1;
+    const fem = !!look.fem;
+    const Lg = (look.legs || 1) * (fem ? 1.03 : 1), Am = (look.arms || 1) * (fem ? 0.97 : 1), Bk = look.bulk || 1;
     const T1 = 0.48 * Lg, T22 = 0.465 * Lg, hA = 0.075;
     const hip0 = (T1 + T22) * 0.985 + hA;
-    const chestLen = 0.52 + (Bk - 1) * 0.1;
+    const chestLen = (0.52 + (Bk - 1) * 0.1) * (fem ? 0.95 : 1);
     const headR = 0.13 * (1 + (Bk - 1) * 0.18);
     const A1 = 0.3 * Am, A2 = 0.27 * Am;
     const neck = 0.075 + (look.neck || 0) * 0.6;
@@ -55051,13 +55139,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       A1,
       A2,
       neck,
+      fem,
       hc: headR * 0.84,
       // head centre above the neck top
-      hipW: 0.085 * Bk,
+      hipW: (fem ? 0.094 : 0.085) * Bk,
       // hip joints either side of the pelvis
       shY: chestLen - 0.07,
       // shoulder joints below the top of the chest
-      shW: 0.184 * Bk + 6e-3,
+      shW: fem ? 0.152 * Bk + 4e-3 : 0.184 * Bk + 6e-3,
       depth: 0.64,
       // torso depth / width
       kA: (A1 + A2) / 0.43,
@@ -55152,10 +55241,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (uv) uvs.push(p[3] ?? i / U3, p[4] ?? 1 - j / V2);
       }
     }
-    const W2 = U3 + 1;
+    const W3 = U3 + 1;
     for (let j = 0; j < V2; j++) {
       for (let i = 0; i < U3; i++) {
-        const a = j * W2 + i, b = a + 1, c = a + W2, d = c + 1;
+        const a = j * W3 + i, b = a + 1, c = a + W3, d = c + 1;
         idx.push(a, b, c, b, d, c);
       }
     }
@@ -55177,10 +55266,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         pos.push(Math.cos(a) * r, y, Math.sin(a) * r);
       }
     }
-    const W2 = U3 + 1;
+    const W3 = U3 + 1;
     for (let j = 0; j < profile.length - 1; j++) {
       for (let i = 0; i < U3; i++) {
-        const a = j * W2 + i, b = a + 1, c = a + W2, d = c + 1;
+        const a = j * W3 + i, b = a + 1, c = a + W3, d = c + 1;
         if (!flip) idx.push(a, c, b, b, c, d);
         else idx.push(a, b, c, b, d, c);
       }
@@ -55194,9 +55283,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function weldSeam(g, U3, rows) {
     const n = g.attributes.normal;
-    const W2 = U3 + 1;
+    const W3 = U3 + 1;
     for (let j = 0; j < rows; j++) {
-      const a = j * W2, b = j * W2 + U3;
+      const a = j * W3, b = j * W3 + U3;
       _n2.set(n.getX(a) + n.getX(b), n.getY(a) + n.getY(b), n.getZ(a) + n.getZ(b)).normalize();
       n.setXYZ(a, _n2.x, _n2.y, _n2.z);
       n.setXYZ(b, _n2.x, _n2.y, _n2.z);
@@ -55296,13 +55385,529 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return c && c.isColor ? c : lin(c);
   }
 
-  // src/render3d/chars/build.js
+  // src/render3d/chars/body.js
   var TAU11 = Math.PI * 2;
+  var clamp3 = (v, a, b) => v < a ? a : v > b ? b : v;
+  var sstep = (a, b, x) => {
+    const t = clamp3((x - a) / (b - a), 0, 1);
+    return t * t * (3 - 2 * t);
+  };
+  var TOP_STYLES = ["tee", "shirt", "tank", "vest", "open", "jacket", "kimono", "striped", "bare", "crop", "bikini", "dress", "coat"];
+  var BOTTOM_STYLES = ["trousers", "shorts", "capri", "baggy", "slim", "hakama", "skirt", "longskirt"];
+  var WAIST_STYLES = ["belt", "sash", "haramaki", "obi", "none"];
+  var SHOE_STYLES = ["boots", "shoes", "sandals", "geta", "bare"];
+  var SLEEVES_OF = { tee: "short", shirt: "long", tank: "none", vest: "none", open: "short", jacket: "long", kimono: "wide", striped: "short", bare: "none", crop: "none", bikini: "none", dress: "none", coat: "long" };
+  var SASH_COLS = ["#f4c430", "#c62828", "#1e88e5", "#2e7d32", "#6a1b9a", "#ef6c00"];
+  function outfitOf(look) {
+    const seed = look.seed || 0;
+    const fem = !!look.fem;
+    let top = look.topStyle;
+    if (!TOP_STYLES.includes(top)) top = look.openShirt ? look.noSleeves ? "vest" : "open" : look.noSleeves ? "tank" : look.sleeve ? "shirt" : "tee";
+    let sleeves = look.sleeves || SLEEVES_OF[top] || "short";
+    if (look.noSleeves && sleeves !== "none" && top !== "jacket" && top !== "coat") sleeves = "none";
+    let bottom = look.bottomStyle;
+    if (!BOTTOM_STYLES.includes(bottom)) bottom = fem ? ["skirt", "shorts", "trousers", "slim", "longskirt"][seed % 5] : ["trousers", "shorts", "trousers", "capri", "baggy"][seed % 5];
+    if (top === "dress" && bottom !== "skirt") bottom = "longskirt";
+    const skirt = bottom === "skirt" || bottom === "longskirt";
+    let waist = look.waist;
+    if (!WAIST_STYLES.includes(waist)) waist = top === "kimono" ? "obi" : skirt || top === "dress" ? "none" : ["belt", "sash", "belt", "none", "belt"][Math.floor(seed / 5) % 5];
+    let shoes = look.shoeStyle;
+    if (!SHOE_STYLES.includes(shoes)) {
+      const sandals = look.sandals ?? seed % 4 === 0;
+      shoes = sandals ? "sandals" : seed % 3 === 1 ? "boots" : "shoes";
+    }
+    const r = look.race;
+    const muscle = look.muscle ?? (fem ? 0.25 : r === "buccaneer" || r === "giant" ? 0.95 : r === "fishman" ? 0.8 : r === "longarm" || r === "longleg" ? 0.3 : 0.3 + seed % 5 * 0.12);
+    const tucked = look.tucked ?? (waist !== "none" || top === "jacket" || top === "kimono" || top === "crop" || top === "bikini" || top === "bare");
+    return { fem, top, sleeves, bottom, waist, shoes, muscle: clamp3(muscle, 0, 1.2), bust: look.bust ?? 1, tucked, skirt };
+  }
+  function clothColours(look, pal, o) {
+    const seed = look.seed || 0;
+    const top2 = look.top2 || (o.top === "striped" ? "#f5f5f5" : o.top === "jacket" ? "#f5f5f5" : o.top === "kimono" ? mixHex(pal.top, "#ffffff", 0.7) : shade(pal.top, -0.25));
+    const waist = look.waistCol || (o.waist === "sash" ? SASH_COLS[seed % SASH_COLS.length] : o.waist === "haramaki" ? "#2e7d32" : o.waist === "obi" ? mixHex(pal.top, "#f4f1ea", 0.35) : pal.belt);
+    return { top2, waist, lining: shade(pal.top, -0.3), bottomLining: shade(pal.bottom, -0.35), tie: look.tie || null };
+  }
+  var TORSO = {
+    m: [
+      [-0.1, 0.13, 0.088, 0.092],
+      [0.12, 0.126, 0.085, 0.085],
+      [0.32, 0.142, 0.09, 0.09],
+      [0.52, 0.17, 0.097, 0.099],
+      [0.68, 0.194, 0.103, 0.104],
+      [0.8, 0.204, 0.098, 0.1],
+      [0.89, 0.19, 0.086, 0.092],
+      [0.955, 0.128, 0.066, 0.074],
+      [1, 0.058, 0.05, 0.054]
+    ],
+    f: [
+      [-0.1, 0.132, 0.082, 0.094],
+      [0.16, 0.107, 0.071, 0.073],
+      [0.36, 0.117, 0.074, 0.077],
+      [0.56, 0.137, 0.079, 0.084],
+      [0.7, 0.145, 0.081, 0.086],
+      [0.81, 0.155, 0.073, 0.081],
+      [0.9, 0.139, 0.063, 0.073],
+      [0.96, 0.096, 0.053, 0.061],
+      [1, 0.048, 0.043, 0.047]
+    ]
+  };
+  var PELVIS = {
+    m: [[-0.215, 0.02, 0.02, 0.02], [-0.18, 0.092, 0.061, 0.067], [-0.13, 0.13, 0.079, 0.092], [-0.06, 0.143, 0.089, 0.101], [0.02, 0.139, 0.091, 0.096], [0.08, 0.134, 0.09, 0.093]],
+    f: [[-0.215, 0.02, 0.02, 0.02], [-0.18, 0.1, 0.059, 0.071], [-0.13, 0.153, 0.077, 0.102], [-0.06, 0.167, 0.086, 0.11], [0.02, 0.15, 0.084, 0.098], [0.08, 0.118, 0.079, 0.083]]
+  };
+  var LIMB2 = {
+    uarm: { m: [[0, 0.056], [0.13, 0.058], [0.3, 0.05], [0.5, 0.049], [0.72, 0.045], [0.9, 0.041], [1, 0.04]], f: [[0, 0.044], [0.14, 0.045], [0.35, 0.039], [0.6, 0.036], [0.85, 0.033], [1, 0.032]] },
+    farm: { m: [[0, 0.041], [0.15, 0.047], [0.33, 0.044], [0.6, 0.036], [0.86, 0.03], [1, 0.029]], f: [[0, 0.033], [0.15, 0.036], [0.45, 0.031], [0.8, 0.025], [1, 0.024]] },
+    thigh: { m: [[0, 0.084], [0.12, 0.088], [0.36, 0.082], [0.62, 0.071], [0.86, 0.06], [1, 0.057]], f: [[0, 0.09], [0.15, 0.092], [0.4, 0.083], [0.7, 0.066], [0.9, 0.054], [1, 0.05]] },
+    shin: { m: [[0, 0.057], [0.12, 0.06], [0.27, 0.064], [0.5, 0.054], [0.75, 0.042], [0.92, 0.037], [1, 0.036]], f: [[0, 0.05], [0.14, 0.052], [0.3, 0.054], [0.55, 0.045], [0.8, 0.034], [1, 0.03]] }
+  };
+  var BULGE = { uarm: [[0.1, 7e-3, 0.12], [0.48, 8e-3, 0.2]], farm: [[0.17, 6e-3, 0.2]], thigh: [[0.3, 9e-3, 0.26]], shin: [[0.26, 8e-3, 0.17]] };
+  function interpRows(rows, s, out, cols = 4) {
+    const n = rows.length;
+    if (s <= rows[0][0]) {
+      for (let c = 1; c < cols; c++) out[c] = rows[0][c];
+      return out;
+    }
+    if (s >= rows[n - 1][0]) {
+      for (let c = 1; c < cols; c++) out[c] = rows[n - 1][c];
+      return out;
+    }
+    let i = 0;
+    while (i < n - 2 && s > rows[i + 1][0]) i++;
+    const r0 = rows[Math.max(0, i - 1)], r1 = rows[i], r2 = rows[i + 1], r3 = rows[Math.min(n - 1, i + 2)];
+    const h2 = r2[0] - r1[0];
+    const t = (s - r1[0]) / h2, t2 = t * t, t3 = t2 * t;
+    for (let c = 1; c < cols; c++) {
+      const m12 = (r2[c] - r0[c]) / (r2[0] - r0[0] || 1) * h2;
+      const m2 = (r3[c] - r1[c]) / (r3[0] - r1[0] || 1) * h2;
+      out[c] = (2 * t3 - 3 * t2 + 1) * r1[c] + (t3 - 2 * t2 + t) * m12 + (-2 * t3 + 3 * t2) * r2[c] + (t3 - t2) * m2;
+    }
+    return out;
+  }
+  var _r = [0, 0, 0, 0];
+  var supEl = (c, e) => Math.sign(c) * Math.pow(Math.abs(c), e);
+  var warp = (a) => a - 0.42 * Math.sin(a);
+  function shapeOf(d, o) {
+    return {
+      fem: o.fem,
+      m: o.muscle,
+      bust: o.bust,
+      Bk: d.Bk,
+      BkD: 1 + (d.Bk - 1) * 0.85,
+      cl: d.chestLen,
+      T: TORSO[o.fem ? "f" : "m"],
+      P: PELVIS[o.fem ? "f" : "m"]
+    };
+  }
+  function frontBump(sh, s, z, mS) {
+    const Bk = sh.Bk;
+    let b = 0;
+    if (sh.fem) {
+      for (const zc of [-0.06, 0.06]) {
+        const dz = (z - zc * Bk) / (0.066 * Bk), ds = (s - 0.665) * sh.cl / 0.068;
+        const r2 = dz * dz + ds * ds;
+        if (r2 < 1) b = Math.max(b, Math.pow(1 - r2, 0.6) * 0.046 * sh.bust);
+      }
+      return b;
+    }
+    const m = sh.m;
+    const pz2 = Math.abs(z) / (0.19 * Bk);
+    const lobe = Math.max(0, 1 - ((pz2 - 0.4) / 0.52) ** 2);
+    b = sstep(0.55, 0.62, s) * (1 - sstep(0.8, 0.94, s)) * lobe * (0.012 + 0.024 * m);
+    if (s > 0.1 && s < 0.53) {
+      const az = Math.abs(z) / 0.075;
+      if (az < 1) b += Math.sin((s - 0.1) / 0.43 * 3 % 1 * Math.PI) * Math.sin(az * Math.PI) * 8e-3 * m;
+    }
+    return b * mS;
+  }
+  function backBump(sh, s, z, mS) {
+    const bz = Math.abs(z) / (0.19 * sh.Bk);
+    return sstep(0.55, 0.66, s) * (1 - sstep(0.82, 0.94, s)) * Math.max(0, 1 - ((bz - 0.42) / 0.42) ** 2) * (5e-3 + 8e-3 * sh.m) * mS;
+  }
+  function torsoPt(sh, s, a, off = 0, mS = 1) {
+    interpRows(sh.T, s, _r);
+    const W3 = _r[1] * sh.Bk + off, Df = _r[2] * sh.BkD + off, Db = _r[3] * sh.BkD + off;
+    const c = Math.cos(a), sn = Math.sin(a);
+    const z = supEl(sn, 0.78) * W3;
+    let x = c >= 0 ? supEl(c, 0.78) * Df : supEl(c, 0.78) * Db;
+    if (c > 0) x += Math.pow(c, 0.7) * frontBump(sh, s, z, mS);
+    else x -= Math.pow(-c, 0.7) * backBump(sh, s, z, mS);
+    return [x, s * sh.cl, z];
+  }
+  function pelvisPt(sh, y, a, off = 0) {
+    interpRows(sh.P, y, _r);
+    const W3 = _r[1] * sh.Bk + off, Df = _r[2] * sh.BkD + off, Db = _r[3] * sh.BkD + off;
+    const c = Math.cos(a), sn = Math.sin(a);
+    return [c >= 0 ? supEl(c, 0.8) * Df : supEl(c, 0.8) * Db, y, supEl(sn, 0.8) * W3];
+  }
+  function weldGrid(g, U3, V2) {
+    const n = g.attributes.normal, W3 = U3 + 1;
+    for (let j = 0; j <= V2; j++) {
+      const a = j * W3, b = j * W3 + U3;
+      const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b);
+      const l = Math.hypot(x, y, z) || 1;
+      n.setXYZ(a, x / l, y / l, z / l);
+      n.setXYZ(b, x / l, y / l, z / l);
+    }
+  }
+  function band(pt, rows, a0, a1, U3, inward = false) {
+    const V2 = rows.length - 1;
+    const full = typeof a0 === "number" && typeof a1 === "number" && a1 - a0 >= TAU11 - 1e-6;
+    const g = grid((u, v) => {
+      const h2 = rows[Math.round(v * V2)];
+      const A0 = typeof a0 === "function" ? a0(h2) : a0, A1 = typeof a1 === "function" ? a1(h2) : a1;
+      const uu = inward ? 1 - u : u;
+      return pt(h2, warp(A0 + (A1 - A0) * uu));
+    }, U3, V2);
+    if (full && !inward) weldGrid(g, U3, V2);
+    return g;
+  }
+  function half(rows) {
+    const out = rows.filter((_, i) => i % 2 === 0);
+    if (out[out.length - 1] !== rows[rows.length - 1]) out.push(rows[rows.length - 1]);
+    return out;
+  }
+  function cut2(rows, lo, hi) {
+    const out = [hi];
+    for (const s of rows) if (s < hi - 1e-4 && s > lo + 1e-4) out.push(s);
+    out.push(lo);
+    return out;
+  }
+  function interp1(tab, t) {
+    interpRows(tab, t, _r, 2);
+    return _r[1];
+  }
+  function limbFn(kind, fem, m, k) {
+    const tab = LIMB2[kind][fem ? "f" : "m"];
+    const bul = fem ? [] : BULGE[kind];
+    return (t) => {
+      let r = interp1(tab, t);
+      for (const [c, a, w] of bul) {
+        const x = (t - c) / w;
+        if (x > -1 && x < 1) r += a * m * (1 - x * x) ** 2;
+      }
+      return r * k;
+    };
+  }
+  function limbSeg(rf, L2, rs, rows, seg) {
+    const { t0 = 0, t1 = 1, off = 0, capTop = false, capBot = false, flare = 0, flareTop = 0, lining = false, bulge = 0 } = seg;
+    const R2 = (t) => rf(t) + off;
+    const yb = -t1 * L2, yt = -t0 * L2;
+    const rb = R2(t1) + flare, rt = R2(t0) + flareTop;
+    const prof = [];
+    if (capBot) for (let k = 0; k < 3; k++) {
+      const a = -Math.PI / 2 + k / 3 * (Math.PI / 2);
+      prof.push([Math.cos(a) * rb + 1e-5, yb + Math.sin(a) * rb]);
+    }
+    else if (lining) prof.push([Math.max(4e-3, rb - 0.013), yb + 0.024]);
+    for (let i = rows; i >= 0; i--) {
+      const f = i / rows;
+      const t = t0 + (t1 - t0) * f;
+      const r = R2(t) + flare * sstep(0.5, 1, f) + flareTop * sstep(0.5, 1, 1 - f) + bulge * Math.sin(f * Math.PI);
+      prof.push([r, -t * L2]);
+    }
+    if (capTop) for (let k = 1; k <= 3; k++) {
+      const a = k / 3 * (Math.PI / 2);
+      prof.push([Math.cos(a) * rt + 1e-5, yt + Math.sin(a) * rt]);
+    }
+    else if (lining) prof.push([Math.max(4e-3, rt - 0.013), yt - 0.024]);
+    return lathe2(prof, rs);
+  }
+  var torus2 = (q2) => Prim.torus(0.2, 3, q2.cloth ? 12 : 7);
+  var ringAt = (y, rx, rz, thick = 0.014) => M(0, y, 0, Math.PI / 2, 0, 0, [rx, rz, thick / 0.2]);
+  function buildFigure(add4, look, d, pal, q2) {
+    const o = outfitOf(look);
+    const cc = clothColours(look, pal, o);
+    const sh = shapeOf(d, o);
+    const cloth = q2.cloth;
+    const U3 = cloth ? 16 : 9;
+    const rs = cloth ? 12 : 7;
+    const lrows = cloth ? 5 : 2;
+    const skin = pal.skin;
+    const TR = cloth ? [1, 0.955, 0.91, 0.86, 0.81, 0.765, 0.72, 0.68, 0.64, 0.6, 0.565, 0.5, 0.42, 0.33, 0.24, 0.14, 0.03, -0.1] : [1, 0.93, 0.82, 0.7, 0.58, 0.4, 0.2, -0.1];
+    const tpt = (mS, off = 0) => (s, a) => torsoPt(sh, s, a, off, mS);
+    const skinTorso = tpt(1);
+    const TOP = o.top;
+    const shirtM = 0.45;
+    const addT = (rows, pt, col, a0 = -Math.PI, a1 = Math.PI, inward = false) => add4(band(pt, rows, a0, a1, U3, inward), M(), col, B2.chest);
+    const neckS = TOP === "shirt" || TOP === "jacket" ? 0.955 : TOP === "tank" || TOP === "dress" ? 0.84 : 0.93;
+    if (TOP === "bare" || TOP === "vest" || TOP === "open" || TOP === "coat" && !look.top2) {
+      addT(TR, skinTorso, skin);
+    } else if (TOP === "crop" || TOP === "bikini") {
+      const lo = TOP === "crop" ? 0.5 : 0.58, hi = TOP === "crop" ? 0.86 : 0.78;
+      addT(cut2(TR, hi, 1), skinTorso, skin);
+      addT(cut2(TR, lo, hi), tpt(1, 2e-3), pal.top);
+      addT(cut2(TR, -0.1, lo), skinTorso, skin);
+      straps(add4, sh, hi, pal.top, q2);
+    } else if (TOP === "striped") {
+      addT(cut2(TR, neckS, 1), skinTorso, skin);
+      const n = cloth ? 7 : 4;
+      for (let k = 0; k < n; k++) {
+        const hi = neckS - (neckS + 0.1) * (k / n), lo = neckS - (neckS + 0.1) * ((k + 1) / n);
+        addT(cut2(TR, lo, hi), tpt(shirtM), k % 2 ? cc.top2 : pal.top);
+      }
+    } else {
+      const col = TOP === "jacket" || TOP === "coat" ? cc.top2 : pal.top;
+      addT(cut2(TR, neckS, 1), skinTorso, skin);
+      addT(cut2(TR, -0.1, neckS), tpt(shirtM), col);
+      if (TOP === "tank" || TOP === "dress") straps(add4, sh, neckS, col, q2);
+      if (cloth && TOP !== "tank" && TOP !== "dress") {
+        const f = torsoPt(sh, neckS, 0, 0, shirtM)[0], bk = -torsoPt(sh, neckS, Math.PI, 0, shirtM)[0], W3 = torsoPt(sh, neckS, Math.PI / 2, 0, shirtM)[2];
+        add4(torus2(q2), mul(M((f - bk) / 2, 0, 0), ringAt(neckS * sh.cl, (f + bk) / 2 + 2e-3, W3 + 2e-3, 0.012)), shade(col, -0.18), B2.chest);
+      }
+    }
+    const nk = o.fem ? 0.04 : 0.05 * (1 + (d.Bk - 1) * 0.5);
+    add4(Prim.cyl(Math.max(6, rs - 2), true), M(0, d.chestLen + d.neck * 0.5 - 0.01, 0, 0, 0, 0, [nk * 0.96, d.neck + 0.08, nk]), skin, B2.chest);
+    const edge = (a) => (s) => a(s), rest = (a) => (s) => TAU11 - a(s);
+    const shell = (rows, aFn, off, mS, col, lin2) => {
+      add4(band(tpt(mS, off), rows, edge(aFn), rest(aFn), U3), M(), col, B2.chest);
+      if (cloth) add4(band(tpt(mS, off - 5e-3), half(rows), edge(aFn), rest(aFn), U3 / 2, true), M(), lin2, B2.chest);
+    };
+    if (TOP === "vest") {
+      const rows = cut2(TR, 0.1, 0.975);
+      shell(rows, (s) => 0.36 + (s - 0.1) * 0.36, 9e-3, 1, pal.top, cc.lining);
+      if (cloth) for (let k = 0; k < 3; k++) {
+        const s = 0.3 + k * 0.17, a = -(0.36 + (s - 0.1) * 0.36) - 0.12;
+        const p = torsoPt(sh, s, a, 0.016, 1);
+        add4(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), "#ffd54f", B2.chest);
+      }
+    } else if (TOP === "open") {
+      const rows = cut2(TR, -0.08, 0.97);
+      shell(rows, (s) => 0.3 + Math.max(0, s - 0.25) * 0.5, 0.01, 1, pal.top, cc.lining);
+      if (cloth) collarFlaps(add4, sh, pal.top, 0.62);
+    } else if (TOP === "jacket" || TOP === "kimono" || TOP === "coat" && look.top2) {
+      const kim = TOP === "kimono";
+      const col = TOP === "coat" ? look.coat || pal.top : pal.top;
+      const rows = cut2(TR, -0.1, 0.985);
+      const open = kim ? (s) => 0.02 + sstep(0.28, 0.98, s) * 0.46 : (s) => 0.015 + sstep(0.46, 0.96, s) * 0.62;
+      shell(rows, open, kim ? 0.014 : 0.012, 0.2, col, shade(col, -0.3));
+      if (cloth) {
+        const trim = kim ? cc.top2 : shade(col, -0.12);
+        const up = cut2(TR, kim ? 0.28 : 0.46, 0.985);
+        const tw = kim ? 0.3 : 0.24;
+        add4(band(tpt(0.2, 0.017), up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U3 / 6)), M(), trim, B2.chest);
+        add4(band(tpt(0.2, 0.017), up, (s) => TAU11 - open(s) - tw, (s) => TAU11 - open(s), Math.max(3, U3 / 6)), M(), trim, B2.chest);
+        if (!kim) for (let k = 0; k < 2; k++) {
+          const p = torsoPt(sh, 0.3 - k * 0.14, 0, 0.017, 0.2);
+          add4(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), shade(col, -0.35), B2.chest);
+        }
+        if (cc.tie && !kim) {
+          const a = torsoPt(sh, 0.92, 0, 8e-3, 0.2), b = torsoPt(sh, 0.5, 0, 0.012, 0.2);
+          add4(Prim.rbox(0.4, 6, 5), between(a, b, 0.024, 6e-3), cc.tie, B2.chest);
+        }
+      }
+      if (TOP === "jacket") {
+        const rows2 = cloth ? [0.075, 0, -0.08, -0.16] : [0.075, -0.16];
+        const pp3 = (y, a) => pelvisPt(sh, y, a, 0.022 + (0.075 - y) * 0.12);
+        add4(band(pp3, rows2, 0.22, TAU11 - 0.22, U3), M(), col, B2.hips);
+        if (cloth) add4(band((y, a) => pelvisPt(sh, y, a, 0.017 + (0.075 - y) * 0.12), rows2, 0.22, TAU11 - 0.22, U3, true), M(), shade(col, -0.3), B2.hips);
+      }
+    }
+    if (look.vest && TOP !== "vest") {
+      shell(cut2(TR, 0.05, 0.97), (s) => 0.4 + (s - 0.05) * 0.3, 0.02, 0.3, look.vest, shade(look.vest, -0.3));
+    }
+    const loose = !o.tucked && (TOP === "tee" || TOP === "shirt" || TOP === "striped" || TOP === "tank" || TOP === "open");
+    if (loose && !o.skirt) {
+      const hem = cloth ? [0.2, 0.08, -0.06, -0.2, -0.34] : [0.2, -0.34];
+      const col = TOP === "striped" ? pal.top : pal.top;
+      const off = (s) => 6e-3 + (0.2 - s) * 0.03;
+      const a0 = TOP === "open" ? 0.3 : -Math.PI, a1 = TOP === "open" ? TAU11 - 0.3 : Math.PI;
+      add4(band((s, a) => torsoPt(sh, s, a, off(s), shirtM * 0.5), hem, a0, a1, U3), M(), col, B2.chest);
+      if (cloth) add4(band((s, a) => torsoPt(sh, s, a, off(s) - 6e-3, 0.2), hem.slice(-2), a0, a1, U3, true), M(), cc.lining, B2.chest);
+    }
+    const PR = cloth ? [0.08, 0.05, 0.02, -0.02, -0.06, -0.1, -0.13, -0.155, -0.18, -0.2, -0.215] : [0.08, 0, -0.08, -0.15, -0.215];
+    const skirtPelvis = o.skirt || TOP === "dress";
+    const pelvisCol = TOP === "dress" ? pal.top : pal.bottom;
+    add4(band((y, a) => pelvisPt(sh, y, a), PR, -Math.PI, Math.PI, U3), M(), pelvisCol, B2.hips);
+    if (o.waist === "belt") {
+      const rows = [0.082, 0.04];
+      add4(band((y, a) => pelvisPt(sh, y, a, 7e-3), rows, -Math.PI, Math.PI, U3), M(), pal.belt, B2.hips);
+      const p = pelvisPt(sh, 0.061, 0, 0.012);
+      add4(Prim.rbox(0.4, 6, 5), M(p[0], p[1], p[2], 0, 0, 0, [8e-3, 0.026, 0.032]), look.buckle || "#ffd54f", B2.hips);
+    } else if (o.waist === "sash") {
+      const rows = cloth ? [0.1, 0.07, 0.04, 0.01] : [0.1, 0.01];
+      add4(band((y, a) => pelvisPt(sh, y, a, 0.011 + Math.abs(y - 0.055) * 0.08), rows, -Math.PI, Math.PI, U3), M(), cc.waist, B2.hips);
+      const k = pelvisPt(sh, 0.05, -1.25, 0.02);
+      add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(k[0], k[1], k[2], 0, 0, 0, [0.03, 0.032, 0.026]), shade(cc.waist, -0.08), B2.hips);
+      for (const [dx, len, rot] of [[0.012, 0.2, 0.12], [-0.02, 0.16, -0.08]]) {
+        add4(Prim.rbox(0.35, ...q2.rboxS), mul(M(k[0] + dx, k[1] - len / 2, k[2] - 0.01, rot, 0, 0.1), M(0, 0, 0, 0, 0, 0, [0.022, len / 2, 8e-3])), cc.waist, B2.hips);
+      }
+    } else if (o.waist === "haramaki" || o.waist === "obi") {
+      const hi = o.waist === "obi" ? 0.32 : 0.3, lo = o.waist === "obi" ? 0.08 : -0.06;
+      const rows = cut2(TR, lo, hi);
+      add4(band(tpt(0.3, o.waist === "obi" ? 0.02 : 0.016), rows, -Math.PI, Math.PI, U3), M(), cc.waist, B2.chest);
+      if (o.waist === "obi" && cloth) {
+        const p = torsoPt(sh, 0.2, Math.PI, 0.04, 0.3);
+        add4(Prim.rbox(0.4, ...q2.rboxS), M(p[0], p[1], p[2], 0, 0, 0, [0.03, 0.05, 0.1]), shade(cc.waist, -0.1), B2.chest);
+      }
+    }
+    if (skirtPelvis) {
+      const long = o.bottom === "longskirt";
+      const yb = long ? -0.88 * d.Lg : -0.34;
+      const col = TOP === "dress" ? pal.top : pal.bottom;
+      const rows = cloth ? [0.08, 0, -0.1, (0 + yb) * 0.55, yb] : [0.08, -0.1, yb];
+      const Wh = (long ? 0.3 : 0.225) * sh.Bk, Dh = (long ? 0.3 : 0.2) * sh.Bk;
+      const sp = (y, a, inset = 0) => {
+        const k = clamp3((0.08 - y) / (0.08 - yb), 0, 1);
+        const p = pelvisPt(sh, Math.max(y, -0.06), a, 0.012 - inset);
+        const f = Math.pow(k, 0.7);
+        const hx = Math.cos(a) * (Dh - inset), hz = Math.sin(a) * (Wh - inset);
+        return [p[0] + (hx - p[0]) * f, y, p[2] + (hz - p[2]) * f];
+      };
+      add4(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U3), M(), col, B2.hips);
+      if (cloth) add4(band((y, a) => sp(y, a, 8e-3), rows.slice(-2), -Math.PI, Math.PI, U3, true), M(), shade(col, -0.35), B2.hips);
+    }
+    const armCol = pal.sleeve || (TOP === "coat" ? look.coat || pal.top : TOP === "jacket" ? pal.top : TOP === "striped" ? pal.top : pal.top);
+    for (const [s, Ub, Fb, part4] of [[1, B2.uarmR, B2.farmR, 1], [-1, B2.uarmL, B2.farmL, 2]]) {
+      const ua = limbFn("uarm", o.fem, o.muscle, d.Bk), fa = limbFn("farm", o.fem, o.muscle, d.Bk);
+      const sl = o.sleeves;
+      if (sl === "none") {
+        add4(limbSeg(ua, d.A1, rs, lrows, { capTop: true, capBot: true }), M(), skin, Ub);
+        add4(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part4);
+      } else if (sl === "short") {
+        add4(limbSeg(ua, d.A1, rs, lrows, { t1: 0.5, off: 0.012, capTop: true, flare: 0.012, lining: cloth }), M(), armCol, Ub);
+        add4(limbSeg(ua, d.A1, rs, lrows, { t0: 0.42, capBot: true }), M(), skin, Ub);
+        add4(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part4);
+      } else if (sl === "rolled") {
+        add4(limbSeg(ua, d.A1, rs, lrows, { off: 0.012, capTop: true, capBot: true }), M(), armCol, Ub);
+        if (cloth) add4(torus2(q2), ringAt(-d.A1 * 0.96, ua(0.96) + 0.02, ua(0.96) + 0.02, 0.03), shade(armCol, -0.12), Ub);
+        add4(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part4);
+      } else {
+        const wide = sl === "wide";
+        add4(limbSeg(ua, d.A1, rs, lrows, { off: wide ? 0.02 : 0.012, capTop: true, capBot: true }), M(), armCol, Ub);
+        add4(limbSeg(fa, d.A2, rs, lrows, { off: wide ? 0.022 : 0.011, capTop: true, flare: wide ? 0.075 : 8e-3, lining: cloth, t1: wide ? 1.02 : 0.98 }), M(), armCol, Fb, part4);
+        if (cloth && !wide) add4(torus2(q2), ringAt(-d.A2 * 0.95, fa(0.95) + 0.018, fa(0.95) + 0.018, 0.022), shade(armCol, -0.15), Fb, part4);
+        add4(limbSeg(fa, d.A2, rs, 2, { t0: 0.8, capBot: true }), M(), skin, Fb, part4);
+      }
+      if (d.Am > 1.2) add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(0, -d.A2 * 0.5, 0, 0, 0, 0, fa(0.5) * 1.1), sl === "long" || sl === "wide" ? armCol : skin, Fb, part4);
+    }
+    const bot = o.bottom;
+    const bcol = pal.bottom, cuffCol = shade(pal.bottom, -0.22);
+    for (const [T3, S3, Ft, part4] of [[B2.thighR, B2.shinR, B2.footR, 3], [B2.thighL, B2.shinL, B2.footL, 4]]) {
+      const th = limbFn("thigh", o.fem, o.muscle, d.Bk), sn = limbFn("shin", o.fem, o.muscle, d.Bk);
+      const boots = o.shoes === "boots";
+      if (skirtPelvis) {
+        add4(limbSeg(th, d.T1, rs, lrows, { capTop: true, capBot: true }), M(), skin, T3);
+        if (!boots) add4(limbSeg(sn, d.T2, rs, lrows, { capTop: true, capBot: true }), M(), skin, S3, part4);
+      } else if (bot === "shorts") {
+        add4(limbSeg(th, d.T1, rs, lrows, { t1: 0.86, off: 0.014, capTop: true, flare: 0.024, lining: cloth }), M(), bcol, T3);
+        if (cloth) add4(torus2(q2), ringAt(-d.T1 * 0.85, th(0.86) + 0.036, th(0.86) + 0.036, 0.03), cuffCol, T3);
+        add4(limbSeg(th, d.T1, rs, lrows, { t0: 0.78, capBot: true }), M(), skin, T3);
+        if (!boots) add4(limbSeg(sn, d.T2, rs, lrows, { capTop: true, capBot: true }), M(), skin, S3, part4);
+      } else {
+        const baggy = bot === "baggy" || bot === "hakama";
+        const offT = bot === "slim" ? 8e-3 : bot === "hakama" ? 0.04 : baggy ? 0.03 : 0.014;
+        add4(limbSeg(th, d.T1, rs, lrows, { off: offT, capTop: true, capBot: true }), M(), bcol, T3);
+        if (bot === "capri") {
+          add4(limbSeg(sn, d.T2, rs, lrows, { t1: 0.55, off: 0.013, capTop: true, flare: 0.02, lining: cloth }), M(), bcol, S3, part4);
+          if (cloth) add4(torus2(q2), ringAt(-d.T2 * 0.54, sn(0.55) + 0.032, sn(0.55) + 0.032, 0.03), cuffCol, S3, part4);
+          if (!boots) add4(limbSeg(sn, d.T2, rs, lrows, { t0: 0.48, capBot: true }), M(), skin, S3, part4);
+        } else if (boots && (baggy || bot === "slim")) {
+          add4(limbSeg(sn, d.T2, rs, lrows, { t1: 0.6, off: bot === "slim" ? 8e-3 : 0.028, capTop: true, bulge: baggy ? 0.012 : 0 }), M(), bcol, S3, part4);
+        } else {
+          const hem = bot === "hakama" ? 0.075 : baggy ? 4e-3 : bot === "slim" ? 4e-3 : 0.026;
+          const offS = bot === "hakama" ? 0.04 : baggy ? 0.03 : bot === "slim" ? 8e-3 : 0.014;
+          add4(limbSeg(sn, d.T2, rs, lrows, { off: offS, capTop: true, flare: hem, lining: cloth, t1: bot === "slim" ? 0.97 : 0.99, bulge: baggy ? 0.014 : 0 }), M(), bcol, S3, part4);
+          if (baggy && bot !== "hakama" && cloth) add4(torus2(q2), ringAt(-d.T2 * 0.96, sn(0.96) + 0.034, sn(0.96) + 0.034, 0.024), cuffCol, S3, part4);
+        }
+      }
+      if (boots) {
+        const bc = pal.shoes;
+        const tuck = bot === "baggy" || bot === "slim" || bot === "hakama";
+        if (skirtPelvis || bot === "shorts" || bot === "capri" || tuck) {
+          const t0 = 0.42;
+          if (!tuck) add4(limbSeg(sn, d.T2, rs, lrows, { capTop: true, t1: t0 + 0.06 }), M(), skin, S3, part4);
+          add4(limbSeg(sn, d.T2, rs, lrows, { t0, off: tuck ? 0.034 : 0.016, flareTop: 0.01, capBot: true }), M(), bc, S3, part4);
+          if (cloth) add4(torus2(q2), ringAt(-d.T2 * (t0 + 0.02), sn(t0) + (tuck ? 0.044 : 0.027), sn(t0) + (tuck ? 0.044 : 0.027), 0.03), shade(bc, -0.2), S3, part4);
+        }
+      }
+      feet(add4, o, pal, d, q2, Ft, part4);
+    }
+    if (look.coat && TOP !== "coat" || TOP === "coat" && !look.top2 && look.coat) coat(add4, sh, look.coat, TR, U3, cloth, d, q2);
+    else if (TOP === "coat") coatTail(add4, sh, look.coat || pal.top, U3, cloth, d, 0.03);
+    return o;
+  }
+  function straps(add4, sh, s, col, q2) {
+    for (const side of [-1, 1]) {
+      const f = torsoPt(sh, s, side * 0.62, 4e-3, 0.5), back = torsoPt(sh, s - 0.02, side * (Math.PI - 0.62), 4e-3, 0.5);
+      const top = torsoPt(sh, 0.95, side * Math.PI / 2, 6e-3, 0.5);
+      top[1] += 0.012;
+      add4(Prim.cyl(5), between(f, top, 0.013, 5e-3), col, B2.chest);
+      add4(Prim.cyl(5), between(top, back, 0.013, 5e-3), col, B2.chest);
+    }
+  }
+  function collarFlaps(add4, sh, col, a) {
+    for (const side of [-1, 1]) {
+      const p = torsoPt(sh, 0.9, side * a, 0.016, 1);
+      add4(Prim.rbox(0.4, 6, 5), mul(M(p[0], p[1], p[2], 0, 0, 0), M(0, 0, 0, side * 0.5, -side * 0.3, 0.35, [0.03, 0.045, 6e-3])), shade(col, -0.05), B2.chest);
+    }
+  }
+  function feet(add4, o, pal, d, q2, Ft, part4) {
+    const k = o.fem ? 0.9 : 1.06;
+    const w = (o.fem ? 0.048 : 0.058) * d.Bk;
+    const S3 = (x, y, z) => [x * k, y, z];
+    const skin = pal.skin;
+    const rb = (small = true) => Prim.rbox(0.42, ...small ? q2.rboxS : q2.rbox);
+    if (o.shoes === "sandals" || o.shoes === "geta" || o.shoes === "bare") {
+      add4(rb(), M(0.05 * k, -0.046, 0, 0, 0, 0, S3(0.11, 0.034, w * 0.9)), skin, Ft, part4);
+      add4(rb(), M(0.148 * k, -0.058, 0, 0, 0, 0.1, S3(0.034, 0.022, w * 0.86)), shade(skin, -0.04), Ft, part4);
+      add4(Prim.cyl(6, true), M(0, -0.02, 0, 0, 0, 0, [0.042 * d.Bk, 0.05, 0.042 * d.Bk]), skin, Ft, part4);
+      if (o.shoes === "bare") return;
+      const sole2 = o.shoes === "geta" ? "#8d6e4a" : shade(pal.shoes, -0.1);
+      add4(rb(), M(0.055 * k, -0.079, 0, 0, 0, 0, S3(0.125, 8e-3, w * 1.02)), sole2, Ft, part4);
+      add4(Prim.torus(0.28, 3, 10), M(0.078 * k, -0.05, 0, 0, Math.PI / 2, 0, [w * 0.98, 0.03, 0.022 / 0.28]), o.shoes === "geta" ? "#c62828" : pal.shoes, Ft, part4);
+      if (o.shoes === "geta") for (const x of [-0.02, 0.1]) add4(Prim.box(), M(x * k, -0.1, 0, 0, 0, 0, [0.012, 0.014, w * 0.9]), "#6d4c41", Ft, part4);
+      return;
+    }
+    const boot2 = o.shoes === "boots";
+    const col = pal.shoes, sole = shade(col, -0.4);
+    add4(Prim.rbox(0.4, ...q2.rbox), M(0.055 * k, -0.04, 0, 0, 0, 0, S3(0.128, 0.045, w)), col, Ft, part4);
+    add4(rb(), M(0.056 * k, -0.078, 0, 0, 0, 0, S3(0.132, 0.01, w * 1.04)), sole, Ft, part4);
+    if (!boot2) add4(Prim.cyl(6, true), M(-5e-3, 0.02, 0, 0, 0, 0, [0.05 * d.Bk, 0.1, 0.05 * d.Bk]), col, Ft, part4);
+    else add4(Prim.cyl(7, true), M(-4e-3, 0.03, 0, 0, 0, 0, [0.055 * d.Bk, 0.12, 0.055 * d.Bk]), col, Ft, part4);
+  }
+  function coat(add4, sh, c, TR, U3, cloth, d, q2) {
+    const lining = shade(c, -0.3);
+    const off = (s) => 0.024 + sstep(0.55, 0.85, s) * 0.03 - sstep(0.9, 1, s) * 0.02;
+    const rows = cut2(TR, -0.1, 0.99);
+    const open = (s) => 0.5 + sstep(0.75, 1, s) * 0.3;
+    const pt = (k) => (s, a) => torsoPt(sh, s, a, off(s) - k, 0);
+    add4(band(pt(0), rows, open, (s) => TAU11 - open(s), U3), M(), c, B2.chest);
+    if (cloth) add4(band(pt(6e-3), rows, open, (s) => TAU11 - open(s), U3, true), M(), lining, B2.chest);
+    const cr = cloth ? [1.1, 1.04, 0.98] : [1.1, 0.98];
+    const col = (s, a) => {
+      const p = torsoPt(sh, 0.97, a, 0.03, 0);
+      const k = 1 + (s - 0.97) * 1.6;
+      return [p[0] * k, s * sh.cl, p[2] * k];
+    };
+    add4(band(col, cr, 1.25, TAU11 - 1.25, Math.max(4, U3 / 2)), M(), c, B2.chest);
+    if (cloth) add4(band((s, a) => {
+      const p = col(s, a);
+      return [p[0] * 0.95, p[1], p[2] * 0.95];
+    }, cr, 1.25, TAU11 - 1.25, Math.max(4, U3 / 2), true), M(), lining, B2.chest);
+    coatTail(add4, sh, c, U3, cloth, d, off(-0.1));
+  }
+  function coatTail(add4, sh, c, U3, cloth, d, off0) {
+    const lining = shade(c, -0.3);
+    const L2 = 0.62 * d.Lg;
+    const tr = cloth ? [0.02, -0.12, -0.28, -0.45, -L2] : [0.02, -0.3, -L2];
+    const tp = (inset) => (y, a) => {
+      const p = torsoPt(sh, -0.1, a, off0 - inset, 0);
+      const k = 1 + clamp3(-y / L2, 0, 1) * 0.42;
+      return [p[0] * k - 8e-3, y, p[2] * k];
+    };
+    const openT = 0.62;
+    add4(band(tp(0), tr, openT, TAU11 - openT, U3), M(), c, B2.coatTail);
+    if (cloth) add4(band(tp(6e-3), half(tr), openT, TAU11 - openT, U3 / 2, true), M(), lining, B2.coatTail);
+  }
+
+  // src/render3d/chars/build.js
+  var TAU12 = Math.PI * 2;
   var DEG2 = Math.PI / 180;
   var DETAIL = {
-    0: { head: [16, 12], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1 },
-    1: { head: [8, 6], cap: [10, 4], cone: 3, sph: [5, 3], blob: [6, 4], limb: [5, 1], lathe: 7, rbox: [5, 4], rboxS: [4, 3], hat: 9, hatS: [7, 4], fringe: 0, hands: 0 },
-    [-1]: { head: [14, 10], cap: [16, 6], cone: 5, sph: [8, 6], blob: [10, 7], limb: [10, 3], lathe: 12, rbox: [10, 8], rboxS: [8, 6], hat: 16, hatS: [12, 8], fringe: 1, hands: 2 }
+    0: { head: [16, 12], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1, cloth: 1 },
+    1: { head: [8, 6], cap: [10, 4], cone: 3, sph: [5, 3], blob: [6, 4], limb: [5, 1], lathe: 7, rbox: [5, 4], rboxS: [4, 3], hat: 9, hatS: [7, 4], fringe: 0, hands: 0, cloth: 0 },
+    [-1]: { head: [14, 10], cap: [16, 6], cone: 5, sph: [8, 6], blob: [10, 7], limb: [10, 3], lathe: 14, rbox: [10, 8], rboxS: [8, 6], hat: 16, hatS: [12, 8], fringe: 1, hands: 2, cloth: 1 }
   };
   function headShape(x, y, z) {
     let X2 = x * 0.955, Y2 = y * 1.04, Z2 = z * 0.985;
@@ -55330,7 +55935,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     let g = HEADS.get(key2);
     if (!g) {
       g = grid((u, v) => {
-        const ph = Math.PI + u * TAU11, th = v * Math.PI;
+        const ph = Math.PI + u * TAU12, th = v * Math.PI;
         return headShape(Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph));
       }, U3, V2);
       HEADS.set(key2, g);
@@ -55352,7 +55957,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function capGeo(rs, thF, thS, thB, zig = null, U3 = 16, V2 = 6) {
     return grid((u, v) => {
-      const ph = Math.PI + u * TAU11;
+      const ph = Math.PI + u * TAU12;
       const c = Math.cos(ph);
       let th = thS + (thF - thS) * Math.pow(Math.max(0, c), 1.4) + (thB - thS) * Math.pow(Math.max(0, -c), 1.4);
       if (zig && v >= 1) th += zig(ph);
@@ -55488,7 +56093,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       h2.cap(1.08, 58, 100, 118);
       blob2(h2, [-0.36, 0.56, 0], 1.42, [0, 0, 0], [h2.q.blob[0] + 2, h2.q.blob[1] + 2]);
       for (let i = 0; i < 9; i++) {
-        const a = i / 9 * TAU11;
+        const a = i / 9 * TAU12;
         const c = [-0.36 + Math.cos(a) * 1.32 * 0.72, 0.56 + Math.sin(a) * 1.32, Math.sin(a * 2.3) * 0.5];
         if (c[0] > 0.2 && c[1] < 0.1) continue;
         blob2(h2, c, 0.36, [0, 0, 0], h2.q.sph);
@@ -55555,7 +56160,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       h2.addC(Prim.frustum(0.8, h2.q.hat), M(0, 0.86, 0, 0, 0, 0, [1, 0.62, 1]), c, h2.bone);
       dome(h2, 1.16, [0.8, 0.26, 0.8], c);
       for (let i = 0; i < 3; i++) {
-        const a = i / 3 * TAU11 + Math.PI / 3;
+        const a = i / 3 * TAU12 + Math.PI / 3;
         const x = Math.cos(a), z = Math.sin(a);
         h2.addC(Prim.rbox(0.3, h2.q.rboxS[0], h2.q.rboxS[1]), mul(M(x * 1.02, 0.78, z * 1.02, 0, -a, 0), M(0, 0, 0, 0, 0, 0.9, [0.36, 0.06, 1])), c, h2.bone);
         h2.addC(Prim.box(), mul(M(x * 1.14, 0.92, z * 1.14, 0, -a, 0), M(0, 0, 0, 0, 0, 0.9, [0.06, 0.04, 0.9])), GOLD2, h2.bone);
@@ -55641,7 +56246,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const y = top - 0.12;
       h2.add(lathe2([[0.62, y], [0.66, y + 0.3]], h2.q.hat), M(), c, h2.bone);
       for (let i = 0; i < 5; i++) {
-        const a = i / 5 * TAU11;
+        const a = i / 5 * TAU12;
         spike({ ...h2, col: lin(c) }, [Math.cos(a) * 0.64, y + 0.26, Math.sin(a) * 0.64], [Math.cos(a) * 0.7, y + 0.62, Math.sin(a) * 0.7], 0.14, 0.1, 4);
       }
       h2.addC(Prim.sphere(h2.q.sph[0], h2.q.sph[1]), M(0.66, y + 0.14, 0, 0, 0, 0, 0.09), "#e53935", h2.bone);
@@ -55719,8 +56324,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       L2.neck,
       L2.nika ? 1 : 0,
       L2.drums ? 1 : 0,
-      (L2.seed || 0) % 3,
-      wpn ? `${wpn.kind}${wpn.count}` : "-"
+      L2.seed || 0,
+      wpn ? `${wpn.kind}${wpn.count}` : "-",
+      L2.fem ? 1 : 0,
+      L2.topStyle,
+      L2.bottomStyle,
+      L2.waist,
+      L2.waistCol,
+      L2.shoeStyle,
+      L2.top2,
+      L2.sleeves,
+      L2.muscle,
+      L2.bust,
+      L2.tie,
+      L2.tucked,
+      L2.buckle
     ].join("|");
   }
   function buildBody(look, wpn, lod = 0) {
@@ -55729,26 +56347,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const pal = palette2(look);
     const b = new Builder();
     const Bk = d.Bk;
-    const dep = d.depth;
-    const skinArm = pal.sleeve || pal.skin;
     const add4 = (g, m, col, bone, part4 = 0) => b.add(g, m, col, bone, part4);
-    const [lr, lc] = q2.limb;
     const rb = (k = 0.4, small = true) => Prim.rbox(k, ...small ? q2.rboxS : q2.rbox);
-    add4(lathe2([[0.02, -0.19], [0.1 * Bk, -0.18], [0.143 * Bk, -0.125], [0.151 * Bk, -0.05], [0.142 * Bk, 0.03], [0.13 * Bk, 0.09]], q2.lathe), M(0, 0, 0, 0, 0, 0, [dep + 0.03, 1, 1]), pal.bottom, B2.hips);
-    add4(Prim.cyl(q2.lathe, true), M(0, 0.02, 0, 0, 0, 0, [0.152 * Bk * (dep + 0.03), 0.055, 0.152 * Bk]), pal.belt, B2.hips);
-    add4(Prim.box(), M(0.152 * Bk * (dep + 0.03) + 4e-3, 0.02, 0, 0, 0, 0, [8e-3, 0.026, 0.03]), "#ffd54f", B2.hips);
-    const cl = d.chestLen / 0.46;
-    const tp = [[0.128, -0.03], [0.124, 0.08], [0.14, 0.18], [0.172, 0.28], [0.196, 0.36], [0.198, 0.41], [0.16, 0.45], [0.098, 0.474], [0.05, 0.484]].map(([r, y]) => [r * Bk, y * cl]);
-    const torsoM = M(0, 0, 0, 0, 0, 0, [dep, 1, 1]);
-    if (look.openShirt) {
-      add4(lathe2(tp, q2.lathe), torsoM, pal.skin, B2.chest);
-      add4(lathe2(tp.slice(0, 7).map(([r, y]) => [r + 7e-3, y]), q2.lathe, 0.42, TAU11 - 0.84), torsoM, pal.top, B2.chest);
-    } else {
-      const neckY = tp[6][1];
-      add4(lathe2(tp, q2.lathe), torsoM, (x, y) => y > neckY + 0.012 && x > -0.02 ? pal.skin : pal.top, B2.chest);
-    }
-    if (look.vest) add4(lathe2(tp.slice(0, 7).map(([r, y]) => [r + 0.013, y]), q2.lathe, 0.62, TAU11 - 1.24), torsoM, look.vest, B2.chest);
-    add4(Prim.cyl(Math.max(6, q2.lathe - 2), true), M(0, d.chestLen + d.neck * 0.5 + 5e-3, 0, 0, 0, 0, [0.046 * (1 + (Bk - 1) * 0.5), d.neck + 0.07, 0.048 * (1 + (Bk - 1) * 0.5)]), pal.skin, B2.chest);
+    const outfit = buildFigure(add4, look, d, pal, q2);
     const R2 = d.headR;
     const HM = (m) => mul(M(0, d.hc, 0, 0, 0, 0, R2), m || M());
     const hb = B2.head;
@@ -55756,7 +56357,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const style = styleId2(look.hair, look);
     const meta = META2[style];
     const kind = hatKind2(look.hat, look);
-    const cover2 = kind && HAT_COVER2[kind];
+    const cover3 = kind && HAT_COVER2[kind];
     const hairCol = lin(pal.hair);
     const stubble = lin(mixHex(pal.face, pal.hair, 0.3));
     const h2 = {
@@ -55764,7 +56365,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       col: hairCol,
       bone: hb,
       add(g, m, col, bone, part4, anchor2) {
-        if (cover2 && anchor2 && anchor2[1] > 0.5 && style !== "afro") return;
+        if (cover3 && anchor2 && anchor2[1] > 0.5 && style !== "afro") return;
         if (bone === B2.hairTail) b.add(g, mul(M(0, 0, 0, 0, 0, 0, R2), m), col, bone, 0);
         else b.add(g, HM(m), col, bone, 0);
       },
@@ -55804,50 +56405,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       for (let i = 0; i < 5; i++) for (const s of [-1, 1]) b.add(Prim.cone(3), HM(M(1.1 + i * 0.18, -0.3, s * 0.1, s * Math.PI / 2, 0, 0, [0.04, 0.08, 0.03])), "#f4f1ea", hb);
     }
     if (kind && HATS2[kind]) {
-      const k = cover2 ? meta.hatK : 1;
-      const lift = cover2 ? meta.lift || 0 : 0;
+      const k = cover3 ? meta.hatK : 1;
+      const lift = cover3 ? meta.lift || 0 : 0;
       const hh = { ...h2 };
       hh.addC = (g, m, col, bone) => b.add(g, HM(mul(M(0, 0.45 + lift, 0, 0, 0, 0, k), mul(M(0, -0.45, 0), m))), col, bone ?? hb, 0);
       hh.add = (g, m, col, bone) => hh.addC(g, m, col, bone);
       hh.bone = hb;
       HATS2[kind](hh, look.hatColor, look, meta.top);
     }
-    const sleeveY = -d.A1 * 0.42;
-    const upperCol = pal.sleeve ? pal.sleeve : look.noSleeves ? pal.skin : (x, y) => y > sleeveY ? pal.top : pal.skin;
-    for (const [s, U3, F, Hd, part4] of [[1, B2.uarmR, B2.farmR, "R", 1], [-1, B2.uarmL, B2.farmL, "L", 2]]) {
-      const r0 = 0.05 * Bk, r1 = 0.043 * Bk, r2 = 0.036 * Bk;
-      const sl = pal.sleeve || look.noSleeves ? 1 : 1.12;
-      add4(tcap(r0 * sl, r1, d.A1, lr, lc), M(), upperCol, U3);
-      add4(tcap(r1, r2, d.A2, lr, lc), M(), pal.sleeve ? (x, y) => y < -d.A2 * 0.88 ? shade(pal.sleeve, -0.2) : pal.sleeve : skinArm, F, part4);
-      if (d.Am > 1.2) add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(0, -d.A2 * 0.5, 0, 0, 0, 0, r1 * 1.12), skinArm, F, part4);
-      hands(b, Hd, s, pal.hand, Bk, part4, q2);
-    }
-    const sandals = look.sandals ?? (look.seed || 0) % 4 === 0;
-    const cuff = shade(pal.bottom, -0.25);
-    for (const [T3, S3, Ft, part4] of [[B2.thighR, B2.shinR, B2.footR, 3], [B2.thighL, B2.shinL, B2.footL, 4]]) {
-      add4(tcap(0.078 * Bk, 0.063 * Bk, d.T1, lr, lc), M(), pal.bottom, T3);
-      add4(tcap(0.061 * Bk, 0.049 * Bk, d.T2, lr, lc), M(), (x, y) => y < -d.T2 * 0.84 ? cuff : pal.bottom, S3, part4);
-      if (sandals) {
-        add4(rb(0.45), M(0.045, -0.05, 0, 0, 0, 0, [0.095, 0.026, 0.042 * Bk]), (x, y) => y < -0.3 ? "#6d4c41" : pal.skin, Ft, part4);
-        add4(Prim.torus(0.25, 3, 6), M(0.06, -0.05, 0, 0, 0, Math.PI / 2, [0.03, 0.046 * Bk, 0.03]), pal.shoes, Ft, part4);
-        add4(Prim.cyl(6, true), M(0, -0.02, 0, 0, 0, 0, [0.043 * Bk, 0.05, 0.043 * Bk]), pal.skin, Ft, part4);
-      } else {
-        const sole = shade(pal.shoes, -0.35);
-        add4(rb(0.4, false), M(0.04, -0.038, 0, 0, 0, 0, [0.108, 0.044, 0.052 * Bk]), (x, y) => y < -0.55 ? sole : pal.shoes, Ft, part4);
-        add4(Prim.cyl(6, true), M(-5e-3, 0.02, 0, 0, 0, 0, [0.05 * Bk, 0.1, 0.05 * Bk]), pal.shoes, Ft, part4);
-      }
-    }
-    if (look.coat) {
-      const c = look.coat, lining = shade(c, -0.28);
-      const gap = 0.55;
-      const up = [[0.2, 0], [0.205, 0.2], [0.214, 0.36], [0.2, 0.43], [0.12, 0.475]].map(([r, y]) => [r * Bk, y * cl]);
-      const cm = M(-0.01, 0, 0, 0, 0, 0, [dep + 0.12, 1, 1.02]);
-      add4(lathe2(up, q2.lathe, gap, TAU11 - 2 * gap), cm, c, B2.chest);
-      add4(lathe2(up.map(([r, y]) => [r - 8e-3, y]), q2.lathe, gap, TAU11 - 2 * gap, true), cm, lining, B2.chest);
-      const lo = [[0.3, -0.52], [0.26, -0.26], [0.212, 0.02]].map(([r, y]) => [r * Bk, y]);
-      add4(lathe2(lo, q2.lathe, gap + 0.15, TAU11 - 2 * gap - 0.3), cm, c, B2.coatTail);
-      add4(lathe2(lo.map(([r, y]) => [r - 8e-3, y]), q2.lathe, gap + 0.15, TAU11 - 2 * gap - 0.3, true), cm, lining, B2.coatTail);
-    }
+    for (const [s, Hd, part4] of [[1, "R", 1], [-1, "L", 2]]) hands(b, Hd, s, pal.hand, Bk, part4, q2, outfit.fem ? 0.9 : 1.12);
     if (look.drums) {
       for (let k = 0; k < 6; k++) {
         const a = Math.PI * 0.55 + k / 5 * Math.PI * 0.9;
@@ -55864,11 +56430,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (look.wings === "sky" || look.wings === "lunar") {
       const lunar = look.wings === "lunar";
       const col = lunar ? "#1e1e24" : "#ffffff";
-      for (const [s, W2] of [[1, B2.wingR], [-1, B2.wingL]]) {
+      for (const [s, W3] of [[1, B2.wingR], [-1, B2.wingL]]) {
         for (let i = 0; i < 3; i++) {
           const a = (lunar ? 0.35 : 0.55) - i * 0.42;
           const L2 = (lunar ? 0.62 : 0.34) * (1 - i * 0.12);
-          add4(Prim.sphere(q2.sph[0], q2.sph[1]), mul(M(0, 0, 0, s * (Math.PI / 2 - a), 0, 0), M(0, L2 * 0.5, 0, 0, 0, 0, [0.03, L2 * 0.55, lunar ? 0.11 : 0.085])), i ? shade(col, lunar ? 0.1 : -0.08) : col, W2);
+          add4(Prim.sphere(q2.sph[0], q2.sph[1]), mul(M(0, 0, 0, s * (Math.PI / 2 - a), 0, 0), M(0, L2 * 0.5, 0, 0, 0, 0, [0.03, L2 * 0.55, lunar ? 0.11 : 0.085])), i ? shade(col, lunar ? 0.1 : -0.08) : col, W3);
         }
       }
     }
@@ -55913,8 +56479,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
   }
-  function hands(b, H2, s, col, Bk, part4, q2) {
-    const k = 0.95 + (Bk - 1) * 0.6;
+  function hands(b, H2, s, col, Bk, part4, q2, kMul = 1) {
+    const k = (0.95 + (Bk - 1) * 0.6) * kMul;
     const th = -s;
     const fist = B2["fist" + H2], palm = B2["palm" + H2], finger = B2["finger" + H2];
     const S3 = (x, y, z) => [x * k, y * k, z * k];
@@ -55980,7 +56546,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var X = new Vector3(1, 0, 0);
   var Y = new Vector3(0, 1, 0);
   var Z = new Vector3(0, 0, 1);
-  var clamp3 = (v, a, b) => v < a ? a : v > b ? b : v;
+  var clamp4 = (v, a, b) => v < a ? a : v > b ? b : v;
   var toXY3 = (h2, fb) => !h2 ? fb : Array.isArray(h2) ? h2 : [Math.cos(h2.a) * h2.r, Math.sin(h2.a) * h2.r];
   var _m4 = new Matrix4();
   var _a = V();
@@ -56039,7 +56605,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (_p3.lengthSq() < 1e-8) _p3.set(0, -1, 0).addScaledVector(_u, -_u.y);
     _p3.normalize();
     const c = (L1 * L1 + dist * dist - L2 * L2) / (2 * L1 * dist);
-    const ang = Math.acos(clamp3(c, -1, 1)) * Math.min(1, Math.abs(bend));
+    const ang = Math.acos(clamp4(c, -1, 1)) * Math.min(1, Math.abs(bend));
     J.copy(S3).addScaledVector(_u, Math.cos(ang) * L1).addScaledVector(_p3, Math.sin(ang) * L1);
   }
   var Rig = class {
@@ -56082,8 +56648,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const hip = this.hip;
       const hF = toXY3(P3.hF, [0.05, 0.4]), hB = toXY3(P3.hB, [-0.03, 0.4]);
       const fF = P3.fF || [0.05, 0], fB = P3.fB || [-0.05, 0];
-      const twist = clamp3((hF[0] - hB[0]) * 0.85, -0.5, 0.5) * (o.twistK ?? 1);
-      const ptw = clamp3((fF[0] - fB[0]) * 0.45, -0.3, 0.3) * (o.twistK ?? 1);
+      const twist = clamp4((hF[0] - hB[0]) * 0.85, -0.5, 0.5) * (o.twistK ?? 1);
+      const ptw = clamp4((fF[0] - fB[0]) * 0.45, -0.3, 0.3) * (o.twistK ?? 1);
       this.qLean.setFromAxisAngle(Z, -l);
       this.qChest.setFromAxisAngle(Y, twist).multiply(this.qLean);
       this.qPelvis.setFromAxisAngle(Y, ptw).multiply(_qa.setFromAxisAngle(Z, -l * 0.25));
@@ -56110,8 +56676,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (reach) T3.copy(reach);
         else {
           const hx = h2[0], hy = h2[1];
-          const fwdK = clamp3(hx / 0.43, 0, 1);
-          const restK = clamp3(1 - hx / 0.2, 0, 1) * clamp3(hy / 0.3, 0, 1);
+          const fwdK = clamp4(hx / 0.43, 0, 1);
+          const restK = clamp4(1 - hx / 0.2, 0, 1) * clamp4(hy / 0.3, 0, 1);
           const lat = side * (-d.shW * 0.74 * fwdK + 0.055 * restK + (o.spread || 0));
           T3.set(hx * d.kA, -hy * d.kA, lat);
           if (tiltA) T3.applyAxisAngle(X, tiltA * side);
@@ -56126,10 +56692,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const U3 = k === 0 ? B2.uarmR : B2.uarmL, F = k === 0 ? B2.farmR : B2.farmL, Hd = k === 0 ? B2.handR : B2.handL;
         this.pos[U3].copy(S3);
         aimNegY(this.quat[U3], _t2.subVectors(J, S3), this._pole);
-        this.len[U3] = clamp3(S3.distanceTo(J) / d.A1, 0.5, 8);
+        this.len[U3] = clamp4(S3.distanceTo(J) / d.A1, 0.5, 8);
         this.pos[F].copy(J);
         aimNegY(this.quat[F], _t2.subVectors(E, J), this._pole);
-        this.len[F] = clamp3(J.distanceTo(E) / d.A2, 0.5, 8);
+        this.len[F] = clamp4(J.distanceTo(E) / d.A2, 0.5, 8);
         _u.subVectors(E, J).normalize();
         const shape = o.shape ? o.shape[k] : "fist";
         this._ref.set(-0.3, 0.6, side * 0.8);
@@ -56181,7 +56747,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.len[Th] = 1;
         this.len[Sh] = 1;
         _u.subVectors(Ft, Kn).normalize();
-        const raise = clamp3((Ft.y - d.hA) / 0.28, 0, 1);
+        const raise = clamp4((Ft.y - d.hA) / 0.28, 0, 1);
         const toe = 0.12 + ptw * 0.5 * side;
         _a.set(Math.cos(toe), 0, side * Math.sin(toe));
         _b.copy(_u).addScaledVector(_a, 0.9).normalize();
@@ -56295,7 +56861,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var FACE_H = 160;
   var FACE_S2 = 96;
   var FACE_Y0 = 0.62;
-  var TAU12 = Math.PI * 2;
+  var TAU13 = Math.PI * 2;
   var INK3 = "#2a1a1e";
   function hex2(col, fb) {
     if (typeof col !== "string") return fb;
@@ -56432,7 +56998,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function faceKey(look) {
     const hairCol = look.furWhite ? "#fafafa" : look.nika ? "#ffffff" : look.hairColor;
     const skin = look.furWhite ? "#fafafa" : look.fur && look.furFace ? look.fur : look.skin;
-    return `${eyeShapeOf2(look)}|${look.eyeColor}|${hairCol}|${skin}|${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.race === "mink" ? 1 : 0}${look.gills ? 1 : 0}${look.grin || look.nika ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.goggles === true ? 1 : 0}|${look.kind === "Panda" ? "P" : ""}|${look.nose || (look.kind === "Saw Shark" ? "saw" : "")}`;
+    return `${eyeShapeOf2(look)}|${look.eyeColor}|${hairCol}|${skin}|${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.race === "mink" ? 1 : 0}${look.gills ? 1 : 0}${look.grin || look.nika ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.goggles === true ? 1 : 0}|${look.kind === "Panda" ? "P" : ""}|${look.nose || (look.kind === "Saw Shark" ? "saw" : "")}|${look.fem ? "F" : ""}`;
   }
   function drawEyes2(g, look, X2) {
     const shape = eyeShapeOf2(look);
@@ -56476,15 +57042,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const ix = -0.01, iy = fierce ? 0.08 : 0.05;
       g.fillStyle = iris;
       g.beginPath();
-      g.ellipse(ix, iy, 0.125 * ir, 0.19 * ir, 0, 0, TAU12);
+      g.ellipse(ix, iy, 0.125 * ir, 0.19 * ir, 0, 0, TAU13);
       g.fill();
       g.fillStyle = lt2;
       g.beginPath();
-      g.ellipse(ix, iy + 0.1 * ir, 0.085 * ir, 0.07 * ir, 0, 0, TAU12);
+      g.ellipse(ix, iy + 0.1 * ir, 0.085 * ir, 0.07 * ir, 0, 0, TAU13);
       g.fill();
       g.fillStyle = pupil;
       g.beginPath();
-      g.ellipse(ix, iy + 0.015, 0.062 * ir, 0.105 * ir, 0, 0, TAU12);
+      g.ellipse(ix, iy + 0.015, 0.062 * ir, 0.105 * ir, 0, 0, TAU13);
       g.fill();
       g.fillStyle = INK3;
       g.fill(pp2(fish ? E.fishLash : fierce ? E.fLash : E.lash));
@@ -56493,13 +57059,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = INK3;
         g.stroke(pp2(E.lower));
       }
+      if (look.fem && !fish) {
+        g.lineWidth = 0.032;
+        g.strokeStyle = INK3;
+        g.lineCap = "round";
+        g.stroke(pp2(fierce ? "M0.22 -0.18 L0.33 -0.26 M0.24 -0.1 L0.36 -0.14" : "M0.2 -0.2 Q0.3 -0.26 0.36 -0.3 M0.23 -0.11 Q0.33 -0.14 0.39 -0.15"));
+      }
       g.restore();
       g.fillStyle = "#ffffff";
       g.beginPath();
-      g.arc(x - 0.06, ey + (fierce ? 0.04 : -0.03), 0.055 * (fish ? 0.8 : 1), 0, TAU12);
+      g.arc(x - 0.06, ey + (fierce ? 0.04 : -0.03), 0.055 * (fish ? 0.8 : 1), 0, TAU13);
       g.fill();
       g.beginPath();
-      g.arc(x + 0.055, ey + 0.14, 0.028, 0, TAU12);
+      g.arc(x + 0.055, ey + 0.14, 0.028, 0, TAU13);
       g.fill();
     }
     if (look.scarEye) {
@@ -56517,8 +57089,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.translate(0, 0.05);
     }
     if (typeof MOUTHS2[kind] === "string") {
-      g.lineWidth = 0.05;
-      g.strokeStyle = MOUTH_COL2;
+      g.lineWidth = look.fem ? 0.058 : 0.05;
+      g.strokeStyle = look.fem && (kind === "smile" || kind === "flat") ? "#b8405a" : MOUTH_COL2;
       g.lineCap = "round";
       g.stroke(pp2(MOUTHS2[kind]));
     } else {
@@ -56531,7 +57103,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (tongue) {
         g.fillStyle = TONGUE2;
         g.beginPath();
-        g.ellipse(tongue[0], tongue[1], tongue[2], tongue[3], 0, 0, TAU12);
+        g.ellipse(tongue[0], tongue[1], tongue[2], tongue[3], 0, 0, TAU13);
         g.fill();
       }
       g.fillStyle = TEETH2;
@@ -56564,13 +57136,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (look.muzzle) {
       g.fillStyle = skin.muzzle;
       g.beginPath();
-      g.ellipse(0, 0.56, 0.36, 0.27, 0, 0, TAU12);
+      g.ellipse(0, 0.56, 0.36, 0.27, 0, 0, TAU13);
       g.fill();
       g.fillStyle = "#2d2226";
       g.fill(pp2(NOSE_ANIMAL2));
       g.fillStyle = "rgba(255,255,255,0.7)";
       g.beginPath();
-      g.ellipse(-0.04, 0.35, 0.03, 0.02, 0, 0, TAU12);
+      g.ellipse(-0.04, 0.35, 0.03, 0.02, 0, 0, TAU13);
       g.fill();
     }
     if (look.gills) {
@@ -56583,8 +57155,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.fillStyle = skin.blush;
       g.globalAlpha = 0.5;
       g.beginPath();
-      g.ellipse(-0.66, 0.46, 0.14, 0.07, 0, 0, TAU12);
-      g.ellipse(0.66, 0.46, 0.14, 0.07, 0, 0, TAU12);
+      g.ellipse(-0.66, 0.46, 0.14, 0.07, 0, 0, TAU13);
+      g.ellipse(0.66, 0.46, 0.14, 0.07, 0, 0, TAU13);
       g.fill();
       g.globalAlpha = 1;
     }
@@ -56605,15 +57177,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.stroke(pp2(THIRD2));
       g.fillStyle = hex2(look.eyeColor, "#8e44ad");
       g.beginPath();
-      g.ellipse(0, -0.11, 0.06, 0.1, 0, 0, TAU12);
+      g.ellipse(0, -0.11, 0.06, 0.1, 0, 0, TAU13);
       g.fill();
       g.fillStyle = "#1a1020";
       g.beginPath();
-      g.ellipse(0, -0.1, 0.028, 0.05, 0, 0, TAU12);
+      g.ellipse(0, -0.1, 0.028, 0.05, 0, 0, TAU13);
       g.fill();
       g.fillStyle = "#ffffff";
       g.beginPath();
-      g.arc(-0.02, -0.15, 0.025, 0, TAU12);
+      g.arc(-0.02, -0.15, 0.025, 0, TAU13);
       g.fill();
     }
     if (look.goggles === true) {
@@ -57026,7 +57598,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
 
   // src/render3d/chars/fx.js
-  var TAU13 = Math.PI * 2;
+  var TAU14 = Math.PI * 2;
   function canvas(w, h2) {
     const c = document.createElement("canvas");
     c.width = w;
@@ -57180,8 +57752,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function auraTex(color) {
     let t = AURA.get(color);
     if (t) return t;
-    const W2 = 96, H2 = 128, F = 4;
-    const c = canvas(W2, H2 * F), g = c.getContext("2d");
+    const W3 = 96, H2 = 128, F = 4;
+    const c = canvas(W3, H2 * F), g = c.getContext("2d");
     const { c: col, a } = parseCol(color);
     for (let f = 0; f < F; f++) {
       g.save();
@@ -57195,7 +57767,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.globalAlpha = 0.25;
         }
         g.beginPath();
-        const w = W2 * 0.42 * sc, cx = W2 / 2, base2 = H2 - 4;
+        const w = W3 * 0.42 * sc, cx = W3 / 2, base2 = H2 - 4;
         g.moveTo(cx - w, base2);
         for (let k = 0; k <= 10; k++) {
           const x = cx - w + k / 10 * 2 * w;
@@ -57265,7 +57837,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.translate(32, 32);
     g.beginPath();
     for (let i = 0; i < 10; i++) {
-      const r = i % 2 ? 11 : 26, a = -Math.PI / 2 + i / 10 * TAU13;
+      const r = i % 2 ? 11 : 26, a = -Math.PI / 2 + i / 10 * TAU14;
       g.lineTo(Math.cos(a) * r, Math.sin(a) * r);
     }
     g.closePath();
@@ -57290,7 +57862,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     update(t, r = 0.3) {
       for (let k = 0; k < 3; k++) {
-        const a = t * 5 + k * TAU13 / 3;
+        const a = t * 5 + k * TAU14 / 3;
         this.s[k].position.set(Math.cos(a) * r, Math.sin(a * 2) * 0.04, Math.sin(a) * r);
         this.s[k].scale.setScalar(0.13 * (0.85 + 0.15 * Math.sin(a * 2)));
       }
@@ -57311,7 +57883,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render3d/chars/seaking.js
-  var TAU14 = Math.PI * 2;
+  var TAU15 = Math.PI * 2;
   var SPH = new SphereGeometry(1, 16, 12);
   var CONE = new ConeGeometry(1, 1, 6);
   CONE.translate(0, 0.5, 0);
@@ -57620,7 +58192,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render3d/chars/viewmodel.js
-  var clamp4 = (v, a, b) => v < a ? a : v > b ? b : v;
+  var clamp5 = (v, a, b) => v < a ? a : v > b ? b : v;
   var HIDE = [B2.hips, B2.chest, B2.head, B2.sheath, B2.hilts, B2.tail];
   var LEGS = [B2.thighR, B2.shinR, B2.footR, B2.thighL, B2.shinL, B2.footL];
   var _v7 = new Vector3();
@@ -57721,7 +58293,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         };
       }
       if (A) {
-        const lift = (h2) => h2 ? [h2[0], h2[1] - 0.17 * clamp4(h2[0] / 0.43, 0, 1)] : h2;
+        const lift = (h2) => h2 ? [h2[0], h2[1] - 0.17 * clamp5(h2[0] / 0.43, 0, 1)] : h2;
         PP = { ...PP, hF: lift(PP.hF), hB: lift(PP.hB) };
       }
       o.leanAdd = -(PP.l || 0) * 0.55;
@@ -57742,8 +58314,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (this.lastYaw !== null) {
         let dy = yaw - this.lastYaw;
         dy = ((dy + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
-        this.sway.x = clamp4(this.sway.x - dy * 0.35, -0.06, 0.06);
-        this.sway.y = clamp4(this.sway.y + (pitch - this.lastPitch) * 0.3, -0.05, 0.05);
+        this.sway.x = clamp5(this.sway.x - dy * 0.35, -0.06, 0.06);
+        this.sway.y = clamp5(this.sway.y + (pitch - this.lastPitch) * 0.3, -0.05, 0.05);
       }
       this.lastYaw = yaw;
       this.lastPitch = pitch;
@@ -57836,8 +58408,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
 
   // src/render3d/chars3d.js
-  var TAU15 = Math.PI * 2;
-  var clamp5 = (v, a, b) => v < a ? a : v > b ? b : v;
+  var TAU16 = Math.PI * 2;
+  var clamp6 = (v, a, b) => v < a ? a : v > b ? b : v;
   var _v8 = new Vector3();
   var _v24 = new Vector3();
   var ActorView = class {
@@ -57911,7 +58483,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         o.lookYaw = this.lookAt(a, dist, pose, cam, s);
         m.pose(PP, o);
-        this.yaw.rotation.y = -((a.facing || 0) + (P3.sp || 0) * TAU15);
+        this.yaw.rotation.y = -((a.facing || 0) + (P3.sp || 0) * TAU16);
         m.setExpression(expression2(look, pose, P3, pose.time || 0));
         this.effects(a, pose, P3, o, env, ctx, camYaw3, dist, s);
         this.lastT = env.time;
@@ -57929,8 +58501,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const f = a.facing || 0;
         const dx = cam.position.x - this.root.position.x, dz = cam.position.z - this.root.position.z;
         let d = Math.atan2(dz, dx) - f;
-        d = ((d + Math.PI) % TAU15 + TAU15) % TAU15 - Math.PI;
-        y = clamp5(-d, -1, 1);
+        d = ((d + Math.PI) % TAU16 + TAU16) % TAU16 - Math.PI;
+        y = clamp6(-d, -1, 1);
         if (Math.abs(d) > 1.9) y = 0;
       }
       this.headYaw = (this.headYaw || 0) + (y - (this.headYaw || 0)) * 0.12;
@@ -58076,10 +58648,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     labels(a, env, dist, s) {
       const idle = a.state === "idle";
       const name = a.showName && idle && dist < 36 ? a.name : null;
-      const bar2 = !a.isPlayer && (a.damageShown > 0 || a.boss) && idle && !a.hideBar && !a.boss && dist < 36 ? clamp5(a.hp / a.d.maxHp, 0, 1) : null;
+      const bar2 = !a.isPlayer && (a.damageShown > 0 || a.boss) && idle && !a.hideBar && !a.boss && dist < 36 ? clamp6(a.hp / a.d.maxHp, 0, 1) : null;
       const d = this.model.d;
       const top = (d.hip0 + d.chestLen + d.neck + d.hc + d.headR * Math.max(1.15, this.model.body.meta.top) + (this.model.body.hatKind ? 0.12 : 0)) * s + 0.12;
-      const k = clamp5(dist / 8, 0.32, 1.8) / s;
+      const k = clamp6(dist / 8, 0.32, 1.8) / s;
       if (name || bar2 !== null) {
         if (!this.label) {
           this.label = new Label();
@@ -58648,9 +59220,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function makeItemView(it) {
     const root2 = new Group();
     const isFruit = !!(it.id && it.id.startsWith("fruit_"));
-    const ring2 = new Mesh(ringGeo2, isFruit ? fruitRingMat : ringMat);
-    ring2.position.y = 0.04;
-    root2.add(ring2);
+    const ring3 = new Mesh(ringGeo2, isFruit ? fruitRingMat : ringMat);
+    ring3.position.y = 0.04;
+    root2.add(ring3);
     let spin = null;
     if (isFruit) {
       fruitMat || (fruitMat = new MeshToonMaterial({ color: 16777215, map: devilFruitTexture(), gradientMap: toonGradient() }));
@@ -58764,6 +59336,573 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       views.delete(rec);
     }
   });
+
+  // src/render3d/groundcover.js
+  var CELL2 = 16;
+  var KINDS = ["grass", "flower", "fern", "pebble", "shell", "rock"];
+  var MAX2 = { grass: 16e3, flower: 3e3, fern: 2400, pebble: 3e3, shell: 800, rock: 1200 };
+  var SWAY2 = { grass: 1, flower: 0.7, fern: 0.45 };
+  var PAVED = new Uint8Array(64);
+  for (const t of [T.STONE, T.COBBLE, T.PLANK, T.MARBLE, T.WALL, T.RAIL, T.BRIDGE, T.CARPET, T.TATAMI, T.STEEL, T.GOLD, T.CAKE, T.ISLAND_CLOUD, T.ICE, T.PACK_ICE, T.RED_ROCK]) PAVED[t] = 1;
+  function hash5(x, y, k) {
+    let h2 = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(k | 0, 1103515245);
+    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
+    h2 ^= h2 >>> 16;
+    return (h2 >>> 0) / 4294967296;
+  }
+  function colored(geo2, fn) {
+    const p = geo2.attributes.position, c = new Float32Array(p.count * 3);
+    const col = new Color();
+    for (let i = 0; i < p.count; i++) {
+      fn(col, p.getX(i), p.getY(i), p.getZ(i));
+      c[i * 3] = col.r;
+      c[i * 3 + 1] = col.g;
+      c[i * 3 + 2] = col.b;
+    }
+    geo2.setAttribute("color", new BufferAttribute(c, 3));
+    return geo2;
+  }
+  function grassGeo() {
+    const pos = [], shade3 = [];
+    const n = 7;
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2 + i * 0.7;
+      const r = 0.02 + i % 3 * 0.03;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const bx = ca * r, bz = sa * r;
+      const h2 = 0.26 + i * 37 % 5 * 0.045;
+      const lean = 0.1 + i % 2 * 0.07;
+      const w = 0.04;
+      const px2 = -sa * w, pz2 = ca * w;
+      const mx = bx + ca * lean * 0.35, mz = bz + sa * lean * 0.35, my = h2 * 0.55;
+      const tx = bx + ca * lean, tz = bz + sa * lean;
+      pos.push(bx - px2, 0, bz - pz2, bx + px2, 0, bz + pz2, mx + px2 * 0.7, my, mz + pz2 * 0.7);
+      pos.push(bx - px2, 0, bz - pz2, mx + px2 * 0.7, my, mz + pz2 * 0.7, mx - px2 * 0.7, my, mz - pz2 * 0.7);
+      pos.push(mx - px2 * 0.7, my, mz - pz2 * 0.7, mx + px2 * 0.7, my, mz + pz2 * 0.7, tx, h2, tz);
+      for (let k2 = 0; k2 < 9; k2++) shade3.push(h2);
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    g.computeVertexNormals();
+    const hs = shade3;
+    let k = 0;
+    return colored(g, (c, x, y) => {
+      const f = y / hs[k++];
+      c.setRGB(0.78 + f * 0.62, 0.8 + f * 0.6, 0.72 + f * 0.4);
+    });
+  }
+  function flowerGeo() {
+    const parts = [];
+    const stem = new CylinderGeometry(8e-3, 0.01, 0.28, 4);
+    stem.translate(0, 0.14, 0);
+    colored(stem, (c) => c.setRGB(0.25, 0.55, 0.2));
+    parts.push(stem);
+    for (let i = 0; i < 5; i++) {
+      const a = i / 5 * Math.PI * 2;
+      const petal = new CircleGeometry(0.045, 5);
+      petal.rotateX(-Math.PI / 2 + 0.35);
+      petal.translate(Math.cos(a) * 0.045, 0.29, Math.sin(a) * 0.045);
+      colored(petal, (c) => c.setRGB(1, 1, 1));
+      parts.push(petal);
+    }
+    const heart = new SphereGeometry(0.022, 6, 4);
+    heart.translate(0, 0.3, 0);
+    colored(heart, (c) => c.setRGB(1.4, 1.1, 0.2));
+    parts.push(heart);
+    return merge(parts);
+  }
+  function fernGeo() {
+    const pos = [];
+    const n = 7;
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2;
+      const L2 = 0.55 + i % 3 * 0.12;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const w = 0.09;
+      const m = [ca * L2 * 0.55, 0.32, sa * L2 * 0.55], t = [ca * L2, 0.12, sa * L2];
+      const px2 = -sa * w, pz2 = ca * w;
+      pos.push(0, 0.02, 0, m[0] + px2, m[1], m[2] + pz2, m[0] - px2, m[1], m[2] - pz2);
+      pos.push(m[0] + px2, m[1], m[2] + pz2, t[0], t[1], t[2], m[0] - px2, m[1], m[2] - pz2);
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    g.computeVertexNormals();
+    const nr = g.attributes.normal;
+    for (let i = 0; i < nr.count; i++) nr.setXYZ(i, nr.getX(i) * 0.3, Math.abs(nr.getY(i)) + 0.6, nr.getZ(i) * 0.3);
+    return colored(g, (c, x, y) => c.setRGB(0.6 + y * 0.8, 0.7 + y * 0.8, 0.55 + y * 0.4));
+  }
+  function pebbleGeo() {
+    const g = new IcosahedronGeometry(0.1, 0);
+    g.scale(1, 0.55, 0.8);
+    g.translate(0, 0.02, 0);
+    return colored(g, (c, x, y) => c.setRGB(0.85 + y, 0.85 + y, 0.85 + y));
+  }
+  function shellGeo() {
+    const g = new ConeGeometry(0.07, 0.05, 7, 1, true);
+    g.scale(1, 1, 0.7);
+    g.translate(0, 0.02, 0);
+    return colored(g, (c, x, y) => c.setRGB(1, 0.95 - y, 0.9 - y));
+  }
+  function rockGeo() {
+    const g = new DodecahedronGeometry(0.5, 0);
+    g.scale(1, 0.62, 0.85);
+    g.translate(0, 0.12, 0);
+    return colored(g, (c, x, y) => c.setRGB(0.9 + y * 0.3, 0.9 + y * 0.3, 0.9 + y * 0.3));
+  }
+  function merge(list) {
+    let n = 0;
+    for (const g of list) n += g.index ? g.index.count : g.attributes.position.count;
+    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3);
+    let o = 0;
+    for (const g0 of list) {
+      const g = g0.index ? g0.toNonIndexed() : g0;
+      if (!g.attributes.normal) g.computeVertexNormals();
+      pos.set(g.attributes.position.array, o * 3);
+      nor.set(g.attributes.normal.array, o * 3);
+      col.set(g.attributes.color.array, o * 3);
+      o += g.attributes.position.count;
+    }
+    const m = new BufferGeometry();
+    m.setAttribute("position", new BufferAttribute(pos, 3));
+    m.setAttribute("normal", new BufferAttribute(nor, 3));
+    m.setAttribute("color", new BufferAttribute(col, 3));
+    return m;
+  }
+  var uTime = { value: 0 };
+  function coverMaterial(kind) {
+    const soft = kind === "grass" || kind === "fern" || kind === "flower";
+    const m = new MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient(), side: soft ? DoubleSide : FrontSide });
+    const sway = SWAY2[kind] || 0;
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, FOG, { uTime });
+      if (kind === "grass") {
+        sh.fragmentShader = sh.fragmentShader.replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
+      normal = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);`);
+      }
+      if (!sway) return;
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uTime;").replace("#include <begin_vertex>", `#include <begin_vertex>
+      {
+        vec3 ip = vec3(instanceMatrix[3][0], 0.0, instanceMatrix[3][2]);
+        float ph = uTime * 1.6 + ip.x * 0.45 + ip.z * 0.31;
+        float k = transformed.y * transformed.y * ${(2.6 * sway).toFixed(2)};
+        transformed.x += (sin(ph) * 0.6 + sin(ph * 2.3 + 1.7) * 0.25) * k * 0.35;
+        transformed.z += cos(ph * 0.8) * k * 0.12;
+      }`);
+    };
+    m.customProgramCacheKey = () => "cover2-" + kind;
+    return m;
+  }
+  var SRGB = SRGBColorSpace;
+  function grassTint(clim, c, r) {
+    switch (clim) {
+      case CLIMATE.TROPICAL:
+        return c.setRGB(0.3 + r * 0.06, 0.66 + r * 0.06, 0.22, SRGB);
+      case CLIMATE.AUTUMN:
+        return c.setRGB(0.7 + r * 0.08, 0.56 + r * 0.08, 0.2, SRGB);
+      case CLIMATE.ARID:
+        return c.setRGB(0.66, 0.64 + r * 0.05, 0.34, SRGB);
+      case CLIMATE.VOLCANIC:
+        return c.setRGB(0.4, 0.44, 0.28, SRGB);
+      case CLIMATE.GLOOM:
+        return c.setRGB(0.34, 0.4, 0.32, SRGB);
+      case CLIMATE.SAKURA:
+        return c.setRGB(0.44 + r * 0.06, 0.68, 0.34, SRGB);
+      case CLIMATE.SPRING:
+        return c.setRGB(0.42 + r * 0.06, 0.72, 0.3, SRGB);
+      default:
+        return c.setRGB(0.34 + r * 0.07, 0.64 + r * 0.06, 0.25 + r * 0.04, SRGB);
+    }
+  }
+  var FLOWERS = [[1, 1, 1], [1, 0.86, 0.25], [1, 0.55, 0.7], [0.92, 0.25, 0.28], [0.7, 0.5, 1], [0.45, 0.7, 1], [1, 0.62, 0.2]];
+  function vnoise(x, y, k) {
+    const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
+    const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+    const a = hash5(xi, yi, k), b = hash5(xi + 1, yi, k), c = hash5(xi, yi + 1, k), d = hash5(xi + 1, yi + 1, k);
+    return (a + (b - a) * u) * (1 - v) + (c + (d - c) * u) * v;
+  }
+  function buildCell(world, terrain, cx, cy) {
+    const out = {};
+    for (const k of KINDS) out[k] = [];
+    const x0 = cx * CELL2, y0 = cy * CELL2;
+    const col = new Color();
+    const put = (k, x, y, rot, s, c) => {
+      let h2 = terrain(x, y);
+      if (k === "rock") h2 = Math.max(h2, -0.35);
+      else if (!(h2 > 0.05)) return;
+      out[k].push(x, y, h2, rot, s, c.r, c.g, c.b);
+    };
+    for (let j = 0; j < CELL2; j++) {
+      const y = y0 + j;
+      if (y < 1 || y >= world.height - 1) continue;
+      for (let i = 0; i < CELL2; i++) {
+        const x = world.wx(x0 + i);
+        const t = world.type(x, y);
+        const r1 = hash5(x, y, 1), r2 = hash5(x, y, 2), r3 = hash5(x, y, 3);
+        if (IS_LIQUID[t]) {
+          if (t === T.SEA && r1 < 0.022) {
+            const sd = world.sd ? world.sd(x, y) : -1;
+            if (sd > -2.5) put("rock", x + r2, y + r3, r1 * 60, 0.7 + r2 * 1.3, col.setRGB(0.62, 0.6, 0.56));
+          }
+          continue;
+        }
+        if (OVERLAY[t] || PAVED[t] || world.isBlocked(x, y)) continue;
+        const clim = world.climate ? world.climate(x, y) : 0;
+        const winter = clim === CLIMATE.WINTER || t === T.SNOW;
+        if (t === T.GRASS || t === T.LAWN || t === T.FARM || t === T.FLOWERS || t === T.FOREST || t === T.JUNGLE || t === T.SAKURA || t === T.MANGROVE) {
+          if (winter) continue;
+          const n = t === T.FOREST || t === T.JUNGLE ? 2 : t === T.LAWN ? 1 : 3;
+          for (let q2 = 0; q2 < n; q2++) {
+            const a = hash5(x, y, 10 + q2), b = hash5(x, y, 20 + q2);
+            if (a < 0.12) continue;
+            put("grass", x + a, y + b, a * 40, 0.7 + b * 0.7, grassTint(clim, col, hash5(x, y, 30 + q2)));
+          }
+          const patch = vnoise(x / 7, y / 7, 5);
+          const fp = t === T.FLOWERS ? 0.55 : t === T.SAKURA ? 0.25 : t === T.GRASS ? 0.015 + Math.max(0, patch - 0.62) * 1.1 : 0.02;
+          if (r1 < fp) {
+            const pick2 = hash5(Math.floor(x / 7), Math.floor(y / 7), 6) * FLOWERS.length + (r2 < 0.3 ? 2 : 0);
+            const f = clim === CLIMATE.SAKURA ? FLOWERS[2 + Math.floor(r2 * 2)] : FLOWERS[Math.floor(pick2) % FLOWERS.length];
+            put("flower", x + r3, y + r2, r1 * 50, 0.8 + r3 * 0.6, col.setRGB(f[0], f[1], f[2]));
+          }
+          if ((t === T.FOREST || t === T.JUNGLE || t === T.MANGROVE) && r3 < (t === T.JUNGLE ? 0.35 : 0.22)) {
+            put("fern", x + r1, y + r2, r3 * 60, 0.75 + r1 * 0.7, grassTint(clim, col, r2).multiplyScalar(0.85));
+          }
+          if (r2 > 0.985) put("pebble", x + r1, y + r3, r2 * 50, 0.8 + r1, col.setRGB(0.7, 0.68, 0.64));
+        } else if (t === T.SAND) {
+          const sd = world.sd ? world.sd(x, y) : 3;
+          if (r1 < 0.05 && sd < 3) put("shell", x + r2, y + r3, r1 * 80, 0.8 + r2 * 0.6, col.setRGB(1, 0.86 + r3 * 0.1, 0.78));
+          else if (r1 > 0.965) put("pebble", x + r2, y + r3, r1 * 40, 0.7 + r2, col.setRGB(0.78, 0.74, 0.66));
+          if (r2 < 0.04 && sd > 3 && !winter) put("grass", x + r3, y + r1, r2 * 50, 0.6 + r3 * 0.4, col.setRGB(0.66, 0.7, 0.36));
+        } else if (t === T.DIRT || t === T.MUD || t === T.GRAVEL) {
+          if (r1 < (t === T.GRAVEL ? 0.4 : 0.1)) put("pebble", x + r2, y + r3, r1 * 30, 0.6 + r2 * 0.8, col.setRGB(0.66, 0.62, 0.56));
+          if (r3 < 0.2 && t !== T.GRAVEL && !winter) put("grass", x + r1, y + r2, r3 * 40, 0.55 + r1 * 0.4, grassTint(clim, col, r1).multiplyScalar(0.9));
+        } else if (t === T.ROCK || t === T.MOUNTAIN || t === T.CLIFF || t === T.ASH || t === T.SNOWROCK) {
+          if (r1 < 0.3) put("pebble", x + r2, y + r3, r1 * 30, 0.7 + r2 * 1.2, t === T.ASH ? col.setRGB(0.34, 0.32, 0.3) : col.setRGB(0.6, 0.58, 0.55));
+          if (r2 < 0.045) put("rock", x + r3, y + r1, r2 * 70, 0.6 + r3 * 1.1, col.setRGB(0.66, 0.63, 0.6));
+          if (r3 < 0.08 && !winter && t !== T.ASH) put("grass", x + r1, y + r2, r3 * 40, 0.5 + r1 * 0.3, grassTint(clim, col, r2).multiplyScalar(0.85));
+        } else if (t === T.DESERT) {
+          if (r1 < 0.05) put("pebble", x + r2, y + r3, r1 * 30, 0.7 + r2, col.setRGB(0.82, 0.72, 0.56));
+          if (r2 < 0.012) put("rock", x + r3, y + r1, r2 * 50, 0.5 + r3, col.setRGB(0.84, 0.7, 0.52));
+        } else if (t === T.SNOW) {
+          if (r1 < 0.03) put("pebble", x + r2, y + r3, r1 * 30, 0.8 + r2, col.setRGB(0.6, 0.6, 0.64));
+        } else if (t === T.CORAL) {
+          if (r1 < 0.2) put("fern", x + r2, y + r3, r1 * 60, 0.6 + r2 * 0.5, col.setRGB(1, 0.45 + r3 * 0.3, 0.55));
+        } else if (t === T.CANDY) {
+          if (r1 < 0.12) put("flower", x + r2, y + r3, r1 * 50, 1 + r2, col.setRGB(1, 0.5 + r3 * 0.5, 0.7 + r2 * 0.3));
+        }
+      }
+    }
+    return out;
+  }
+  var RINGS = /* @__PURE__ */ new Map();
+  function ring2(cr) {
+    let r = RINGS.get(cr);
+    if (!r) {
+      r = [];
+      for (let j = -cr; j <= cr; j++) for (let i = -cr; i <= cr; i++) r.push([i, j]);
+      r.sort((a, b) => a[0] * a[0] + a[1] * a[1] - (b[0] * b[0] + b[1] * b[1]));
+      RINGS.set(cr, r);
+    }
+    return r;
+  }
+  var GroundCover = class {
+    constructor(scene) {
+      this.group = new Group();
+      this.group.name = "groundcover";
+      scene.add(this.group);
+      const geos = { grass: grassGeo(), flower: flowerGeo(), fern: fernGeo(), pebble: pebbleGeo(), shell: shellGeo(), rock: rockGeo() };
+      this.meshes = {};
+      for (const k of KINDS) {
+        const m = new InstancedMesh(geos[k], coverMaterial(k), MAX2[k]);
+        m.instanceMatrix.setUsage(DynamicDrawUsage);
+        m.instanceColor = new InstancedBufferAttribute(new Float32Array(MAX2[k] * 3), 3);
+        m.count = 0;
+        m.frustumCulled = false;
+        m.receiveShadow = k === "rock" || k === "grass" || k === "pebble";
+        m.castShadow = k === "rock";
+        this.group.add(m);
+        this.meshes[k] = m;
+      }
+      this.cells = /* @__PURE__ */ new Map();
+      this.world = null;
+      this.origin = null;
+      this.key = "";
+      this.t = 0;
+    }
+    update(ctx, env, dt) {
+      const game = ctx.game, v = game.view3d, w = ctx.world;
+      if (!w || !v) return;
+      if (w !== this.world) {
+        this.world = w;
+        this.cells.clear();
+        this.key = "";
+      }
+      uTime.value = env.time;
+      const low = v.quality === "low";
+      const R2 = low ? 36 : 64;
+      const ox = v.ox, oy = v.oy;
+      const ccx = Math.floor(w.wx(ox) / CELL2), ccy = Math.floor(oy / CELL2);
+      const key2 = `${ccx},${ccy},${low ? 1 : 0}`;
+      this.t -= dt;
+      if (key2 !== this.key && this.t <= 0) {
+        this.t = 0.25;
+        this.key = key2;
+        this.rebuild(ctx, w, ccx, ccy, R2, low);
+      }
+      if (this.origin) this.group.position.set(w.dx(ox, this.origin.x), 0, this.origin.y - oy);
+    }
+    rebuild(ctx, w, ccx, ccy, R2, low) {
+      const cr = Math.ceil(R2 / CELL2) + 1;
+      const ox = (ccx + 0.5) * CELL2, oy = (ccy + 0.5) * CELL2;
+      this.origin = { x: ox, y: oy };
+      const counts = {};
+      for (const k of KINDS) counts[k] = 0;
+      const m4 = new Matrix4(), q2 = new Quaternion(), s = new Vector3(), p = new Vector3(), up = new Vector3(0, 1, 0);
+      const keep = /* @__PURE__ */ new Set();
+      let built = 0, missing = false;
+      const n = Math.ceil(w.width / CELL2);
+      for (const [i, j] of ring2(cr)) {
+        const cy = ccy + j;
+        if (cy < 0 || cy * CELL2 >= w.height) continue;
+        let cx = ccx + i;
+        if (w.wrap) cx = (cx % n + n) % n;
+        const k = cy * 1e5 + cx;
+        keep.add(k);
+        let cell = this.cells.get(k);
+        if (!cell) {
+          if (built >= 24) {
+            missing = true;
+            continue;
+          }
+          cell = buildCell(w, ctx.terrain, cx, cy);
+          this.cells.set(k, cell);
+          built++;
+        }
+        for (const kind of KINDS) {
+          const list = cell[kind];
+          const mesh = this.meshes[kind];
+          for (let q22 = 0; q22 < list.length; q22 += 8) {
+            if (counts[kind] >= MAX2[kind]) break;
+            const x = list[q22], y = list[q22 + 1];
+            const dx = w.dx(ox, x), dz = y - oy;
+            const d2 = dx * dx + dz * dz;
+            if (d2 > R2 * R2) continue;
+            if ((kind === "grass" || kind === "flower" || kind === "fern") && d2 > (R2 * 0.5) ** 2) {
+              const f = Math.sqrt(d2) / R2;
+              if (hash5(Math.floor(x * 7), Math.floor(y * 7), 91) < (f - 0.5) * (low ? 2.4 : 1.7)) continue;
+            }
+            const sc = list[q22 + 4];
+            p.set(dx, list[q22 + 2] - 0.02, dz);
+            q2.setFromAxisAngle(up, list[q22 + 3]);
+            s.set(sc, sc * (kind === "grass" ? 0.8 + sc % 0.3 : 1), sc);
+            m4.compose(p, q2, s);
+            const idx = counts[kind]++;
+            mesh.setMatrixAt(idx, m4);
+            mesh.instanceColor.setXYZ(idx, list[q22 + 5], list[q22 + 6], list[q22 + 7]);
+          }
+        }
+      }
+      for (const kind of KINDS) {
+        const mesh = this.meshes[kind];
+        mesh.count = counts[kind];
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.instanceColor.needsUpdate = true;
+      }
+      if (this.cells.size > 900) {
+        for (const k of this.cells.keys()) if (!keep.has(k)) this.cells.delete(k);
+      }
+      if (missing) {
+        this.key = "";
+        this.t = 0.05;
+      }
+    }
+  };
+  var cover2 = null;
+  registerFrameHook((env, ctx, dt) => {
+    if (!cover2) {
+      cover2 = new GroundCover(ctx.scene);
+      if (ctx.game?.view3d) ctx.game.view3d.groundCover = cover2;
+    }
+    cover2.update(ctx, env, dt || 1 / 60);
+  });
+
+  // src/ui/preview3d.js
+  var shared = null;
+  function sharedRenderer() {
+    if (shared) return shared;
+    const canvas2 = document.createElement("canvas");
+    canvas2.className = "preview3d-canvas";
+    const r = new WebGLRenderer({ canvas: canvas2, antialias: true, alpha: true });
+    r.outputColorSpace = SRGBColorSpace;
+    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    r.setClearColor(0, 0);
+    shared = r;
+    return r;
+  }
+  function makeStage() {
+    const scene = new Scene();
+    scene.add(new HemisphereLight(16774888, 8021064, 1.5));
+    const key2 = new DirectionalLight(16777215, 2.3);
+    key2.position.set(2.2, 4, 3.2);
+    scene.add(key2);
+    const rim2 = new DirectionalLight(13624319, 1.4);
+    rim2.position.set(-3, 2.5, -3);
+    scene.add(rim2);
+    const shadow = new Mesh(new CircleGeometry(0.62, 40), new MeshBasicMaterial({ color: 3877402, transparent: true, opacity: 0.22, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.y = 5e-3;
+    scene.add(shadow);
+    const camera = new PerspectiveCamera(28, 1, 0.05, 60);
+    return { scene, camera, shadow };
+  }
+  function makeActor(look) {
+    const a = new Actor({ name: "", look, race: look.race || "human" });
+    a.facing = Math.PI / 2;
+    return a;
+  }
+  function heightOf(look) {
+    const s = look.scale || 1;
+    const legs = look.legs || 1;
+    return (1.08 + 0.72 * legs) * s;
+  }
+  var env0 = () => ({ time: 0, daylight: 1, ambient: [1, 1, 1], clock: 12, storm: 0, fog: 0 });
+  function createPreview(container, look, { game } = {}) {
+    const renderer = sharedRenderer();
+    const canvas2 = renderer.domElement;
+    container.appendChild(canvas2);
+    const { scene, camera, shadow } = makeStage();
+    const env = env0();
+    const ctx = { THREE: three_module_exports, scene, game: game || null, ground: () => 0, terrain: () => 0, camera, world: null, yaw: 0, mode: "third" };
+    let actor = null, view = null, h2 = 1.8;
+    let turn = 0.35, drag = null, raf = 0, last = performance.now();
+    const t0 = last;
+    const setLook = (lk2) => {
+      if (view) {
+        scene.remove(view.root);
+        try {
+          view.dispose?.();
+        } catch {
+        }
+      }
+      actor = makeActor(lk2);
+      try {
+        view = VIEWS.actor ? VIEWS.actor(actor, ctx) : null;
+      } catch (e) {
+        console.warn("preview failed", e);
+        view = null;
+      }
+      if (view) scene.add(view.root);
+      h2 = heightOf(lk2);
+      shadow.scale.setScalar(Math.max(1, (lk2.scale || 1) * (lk2.bulk || 1)));
+    };
+    const frame2 = (now2) => {
+      const dt = Math.min(0.05, (now2 - last) / 1e3);
+      last = now2;
+      env.time = (now2 - t0) / 1e3;
+      const w = container.clientWidth || 260, hh = container.clientHeight || 300;
+      const pr = renderer.getPixelRatio();
+      if (canvas2.width !== Math.round(w * pr) || canvas2.height !== Math.round(hh * pr)) renderer.setSize(w, hh, false);
+      camera.aspect = w / Math.max(1, hh);
+      const fovY = camera.fov * Math.PI / 180;
+      const fitH = h2 * 1.34, fitW = h2 * 0.8 / camera.aspect;
+      const dist = Math.max(fitH, fitW) / (2 * Math.tan(fovY / 2));
+      camera.position.set(0, h2 * 0.6, dist);
+      camera.lookAt(0, h2 * 0.54, 0);
+      camera.updateProjectionMatrix();
+      if (!drag) turn += dt * 0.45;
+      if (actor && view) {
+        actor.facing = Math.PI / 2 + turn;
+        try {
+          view.update(actor, env, ctx, { camYaw3: 0, redraw: true });
+        } catch (e) {
+        }
+        view.root.position.set(0, 0, 0);
+      }
+      renderer.render(scene, camera);
+      raf = requestAnimationFrame(frame2);
+    };
+    const down = (e) => {
+      drag = { x: e.clientX, turn };
+      try {
+        canvas2.setPointerCapture(e.pointerId);
+      } catch {
+      }
+    };
+    const move = (e) => {
+      if (drag) turn = drag.turn - (e.clientX - drag.x) * 0.012;
+    };
+    const up = () => {
+      drag = null;
+    };
+    canvas2.addEventListener("pointerdown", down);
+    canvas2.addEventListener("pointermove", move);
+    canvas2.addEventListener("pointerup", up);
+    canvas2.addEventListener("pointercancel", up);
+    canvas2.style.touchAction = "none";
+    setLook(look);
+    raf = requestAnimationFrame(frame2);
+    return {
+      setLook,
+      dispose() {
+        cancelAnimationFrame(raf);
+        canvas2.removeEventListener("pointerdown", down);
+        canvas2.removeEventListener("pointermove", move);
+        canvas2.removeEventListener("pointerup", up);
+        canvas2.removeEventListener("pointercancel", up);
+        if (view) {
+          scene.remove(view.root);
+          try {
+            view.dispose?.();
+          } catch {
+          }
+        }
+        if (canvas2.parentNode === container) container.removeChild(canvas2);
+      }
+    };
+  }
+  function renderPortrait(look, { w = 120, h: h2 = 140, view: framing = "bust", game = null, turn = 0 } = {}) {
+    try {
+      const renderer = sharedRenderer();
+      const { scene, camera } = makeStage();
+      const ctx = { THREE: three_module_exports, scene, game, ground: () => 0, terrain: () => 0, camera, world: null, yaw: 0, mode: "third" };
+      const actor = makeActor(look);
+      actor.facing = Math.PI / 2 - 0.25 + turn;
+      const v = VIEWS.actor ? VIEWS.actor(actor, ctx) : null;
+      if (!v) return null;
+      scene.add(v.root);
+      v.update(actor, env0(), ctx, { camYaw3: 0, redraw: true });
+      const H2 = heightOf(look);
+      camera.aspect = w / h2;
+      if (framing === "full") {
+        const fovY = camera.fov * Math.PI / 180;
+        const dist = H2 * 1.15 / (2 * Math.tan(fovY / 2));
+        camera.position.set(0, H2 * 0.55, dist);
+        camera.lookAt(0, H2 * 0.5, 0);
+      } else {
+        const head = H2 * 0.86;
+        camera.position.set(0, head, H2 * 0.95);
+        camera.lookAt(0, head - H2 * 0.03, 0);
+      }
+      camera.updateProjectionMatrix();
+      const pr = Math.min(window.devicePixelRatio || 1, 2);
+      renderer.setSize(w, h2, false);
+      renderer.setPixelRatio(pr);
+      renderer.render(scene, camera);
+      const out = document.createElement("canvas");
+      out.width = Math.round(w * pr);
+      out.height = Math.round(h2 * pr);
+      out.style.width = w + "px";
+      out.style.height = h2 + "px";
+      out.getContext("2d").drawImage(renderer.domElement, 0, 0, out.width, out.height);
+      try {
+        v.dispose?.();
+      } catch {
+      }
+      return out;
+    } catch (e) {
+      console.warn("portrait failed", e);
+      return null;
+    }
+  }
 
   // src/world/world.js
   var World = class {
@@ -59333,8 +60472,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
   var CLIMATE_BY_ID = Object.fromEntries(Object.entries(CLIMATES).map(([k, v]) => [v.clim, k]));
   var SCALE = 1;
-  function rel(v, half) {
-    return Math.abs(v) <= 1.5 ? v * half : v * SCALE;
+  function rel(v, half2) {
+    return Math.abs(v) <= 1.5 ? v * half2 : v * SCALE;
   }
   function generateIsland(world, def, noise, rng2) {
     SCALE = def._scale || 1;
@@ -66300,22 +67439,22 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render/fxshapes.js
-  var TAU16 = Math.PI * 2;
+  var TAU17 = Math.PI * 2;
   var easeOut = (k) => 1 - (1 - k) ** 3;
   var clamp014 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
-  function hash5(n) {
+  function hash6(n) {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return x - Math.floor(x);
   }
   function ellipsePath(g, rx, ry) {
     g.beginPath();
-    g.ellipse(0, 0, Math.max(1e-3, rx), Math.max(1e-3, ry), 0, 0, TAU16);
+    g.ellipse(0, 0, Math.max(1e-3, rx), Math.max(1e-3, ry), 0, 0, TAU17);
   }
   function spiky(g, R2, n, seed, sx = 1) {
     g.beginPath();
     for (let i = 0; i < n * 2; i++) {
-      const a = i / (n * 2) * TAU16;
-      const rr = i % 2 ? R2 * (0.26 + 0.08 * hash5(seed + i)) : R2 * (0.62 + 0.55 * hash5(seed + i * 3.1));
+      const a = i / (n * 2) * TAU17;
+      const rr = i % 2 ? R2 * (0.26 + 0.08 * hash6(seed + i)) : R2 * (0.62 + 0.55 * hash6(seed + i * 3.1));
       const x = Math.cos(a) * rr * sx, y = Math.sin(a) * rr;
       if (i) g.lineTo(x, y);
       else g.moveTo(x, y);
@@ -66328,7 +67467,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.moveTo(x0, y0);
     for (let i = 1; i < n; i++) {
       const t = i / n;
-      const j = (hash5(seed + i * 7.3) - 0.5) * 2 * amp * Math.sin(t * Math.PI);
+      const j = (hash6(seed + i * 7.3) - 0.5) * 2 * amp * Math.sin(t * Math.PI);
       g.lineTo(x0 + dx * t + nx * j, y0 + dy * t + ny * j);
     }
     g.lineTo(x1, y1);
@@ -66344,16 +67483,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (s.shape === "circle") {
         g.globalAlpha = a * (0.1 + 0.12 * k);
         g.beginPath();
-        g.arc(0, 0, s.r, 0, TAU16);
+        g.arc(0, 0, s.r, 0, TAU17);
         g.fill();
         g.globalAlpha = a * (0.3 + 0.35 * k);
         g.beginPath();
-        g.arc(0, 0, s.r * easeOut(k), 0, TAU16);
+        g.arc(0, 0, s.r * easeOut(k), 0, TAU17);
         g.fill();
         g.globalAlpha = a * (0.55 + 0.4 * pulse * k);
         g.lineWidth = 0.05 + 0.04 * k;
         g.beginPath();
-        g.arc(0, 0, s.r, 0, TAU16);
+        g.arc(0, 0, s.r, 0, TAU17);
         g.stroke();
       } else if (s.shape === "arc") {
         const a0 = s.angle - s.arc / 2, a1 = s.angle + s.arc / 2;
@@ -66411,18 +67550,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const ang = i / n * TAU16 + s.seed + (hash5(s.seed + i) - 0.5) * 0.5;
+          const ang = i / n * TAU17 + s.seed + (hash6(s.seed + i) - 0.5) * 0.5;
           let px2 = 0, py2 = 0;
           g.moveTo(0, 0);
-          const len = s.r * (0.6 + 0.5 * hash5(s.seed * 3 + i));
+          const len = s.r * (0.6 + 0.5 * hash6(s.seed * 3 + i));
           for (let j = 1; j <= 4; j++) {
             const rr = len * j / 4;
-            const off = (hash5(s.seed + i * 13 + j) - 0.5) * 0.6;
+            const off = (hash6(s.seed + i * 13 + j) - 0.5) * 0.6;
             px2 = Math.cos(ang + off) * rr;
             py2 = Math.sin(ang + off) * rr * 0.7;
             g.lineTo(px2, py2);
-            if (j === 2 && hash5(s.seed + i * 5) > 0.45) {
-              const b = ang + (hash5(s.seed + i * 9) > 0.5 ? 0.7 : -0.7);
+            if (j === 2 && hash6(s.seed + i * 5) > 0.45) {
+              const b = ang + (hash6(s.seed + i * 9) > 0.5 ? 0.7 : -0.7);
               g.moveTo(px2, py2);
               g.lineTo(px2 + Math.cos(b) * len * 0.3, py2 + Math.sin(b) * len * 0.21);
               g.moveTo(px2, py2);
@@ -66442,7 +67581,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     gr.addColorStop(1, rgba2(col, 0));
     g.fillStyle = gr;
     g.beginPath();
-    g.arc(0, 0, Math.max(1e-3, r), 0, TAU16);
+    g.arc(0, 0, Math.max(1e-3, r), 0, TAU17);
     g.fill();
     g.restore();
   }
@@ -66463,7 +67602,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = 0.06;
         g.beginPath();
         for (let i = 0; i < 9; i++) {
-          const a0 = i / 9 * TAU16 + s.seed, a1 = a0 + 0.35;
+          const a0 = i / 9 * TAU17 + s.seed, a1 = a0 + 0.35;
           g.moveTo(Math.cos(a0) * s.r * 0.85, Math.sin(a0) * s.r * 0.51);
           g.lineTo(Math.cos(a1) * s.r * 0.95, Math.sin(a1) * s.r * 0.57);
         }
@@ -66515,7 +67654,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.beginPath();
           const n = 48;
           for (let i = 0; i <= n; i++) {
-            const th = i / n * TAU16;
+            const th = i / n * TAU17;
             const wr = rad * (1 + s.wobble * (1 - k) * Math.sin(th * (s.lobes || 9) + c.t * 40));
             const x = Math.cos(th) * wr, y = Math.sin(th) * wr * ry;
             if (i) g.lineTo(x, y);
@@ -66549,13 +67688,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (Math.abs(head - tail2) < 0.02) return;
     g.translate(0, -(s.z ?? 0.6));
     g.scale(1, s.tilt ?? 0.72);
-    const R2 = s.radius, W2 = s.width || 0.2;
+    const R2 = s.radius, W3 = s.width || 0.2;
     const N3 = 20;
     const outer = [], inner = [];
     for (let i = 0; i <= N3; i++) {
       const u = i / N3;
       const th = tail2 + (head - tail2) * u;
-      const w = W2 * Math.pow(u, 0.7) * (1 - 0.35 * Math.pow(u, 10));
+      const w = W3 * Math.pow(u, 0.7) * (1 - 0.35 * Math.pow(u, 10));
       outer.push([Math.cos(th) * R2, Math.sin(th) * R2]);
       inner.push([Math.cos(th) * (R2 - w), Math.sin(th) * (R2 - w)]);
     }
@@ -66578,7 +67717,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (let i = Math.floor(N3 * 0.45); i < N3; i++) {
       const u = i / N3;
       g.globalAlpha = fade2 * u * u;
-      g.lineWidth = Math.max(0.012, W2 * 0.22 * u);
+      g.lineWidth = Math.max(0.012, W3 * 0.22 * u);
       g.beginPath();
       g.moveTo(outer[i][0], outer[i][1]);
       g.lineTo(outer[i + 1][0], outer[i + 1][1]);
@@ -66612,8 +67751,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.beginPath();
       const n = s.lines ?? 5;
       for (let i = 0; i < n; i++) {
-        const th = (hash5(s.seed + i * 17) - 0.5) * 2.2;
-        const r0 = R2 * (0.9 + 0.5 * k), r1 = R2 * (1.5 + 0.9 * hash5(s.seed + i) + k * 0.8);
+        const th = (hash6(s.seed + i * 17) - 0.5) * 2.2;
+        const r0 = R2 * (0.9 + 0.5 * k), r1 = R2 * (1.5 + 0.9 * hash6(s.seed + i) + k * 0.8);
         g.moveTo(Math.cos(th) * r0, Math.sin(th) * r0 * 0.8);
         g.lineTo(Math.cos(th) * r1, Math.sin(th) * r1 * 0.8);
       }
@@ -66631,7 +67770,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.globalAlpha = a * fade2 * 0.4;
       g.fillStyle = s.color || "#fff59d";
       g.beginPath();
-      g.arc(0, 0, R2 * 0.55, 0, TAU16);
+      g.arc(0, 0, R2 * 0.55, 0, TAU17);
       g.fill();
       g.globalAlpha = a * fade2 * 0.95;
       starPath(g, 0, 0, R2, 4, 0.12, 0);
@@ -66708,13 +67847,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const segs = Math.max(4, Math.round(L2 * 3));
       for (let i = 1; i <= segs; i++) {
         const x = i / segs * L2;
-        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 - c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash5(s.seed + i + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
+        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 - c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash6(s.seed + i + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
         g.lineTo(x, -wd / 2 - ripple2);
       }
       g.lineTo(L2 + wd * 0.3, 0);
       for (let i = segs; i >= 1; i--) {
         const x = i / segs * L2;
-        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 + c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash5(s.seed + i * 3 + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
+        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 + c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash6(s.seed + i * 3 + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
         g.lineTo(x, wd / 2 + ripple2);
       }
       g.lineTo(0, wd / 2);
@@ -66755,7 +67894,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = "#e1f5fe";
         const n = Math.max(3, Math.round(L2 * 1.5));
         for (let i = 0; i < n; i++) {
-          const x = (i + 0.5) / n * L2, sd = hash5(s.seed + i) > 0.5 ? 1 : -1, h2 = wd * (0.5 + hash5(s.seed + i * 3) * 0.6);
+          const x = (i + 0.5) / n * L2, sd = hash6(s.seed + i) > 0.5 ? 1 : -1, h2 = wd * (0.5 + hash6(s.seed + i * 3) * 0.6);
           g.beginPath();
           g.moveTo(x - 0.12, sd * wd * 0.35);
           g.lineTo(x, sd * (wd * 0.35 + h2));
@@ -66779,7 +67918,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = fade2 * 0.9;
         g.fillStyle = "#ffffff";
         g.beginPath();
-        g.arc(0, 0, wd * 0.9, 0, TAU16);
+        g.arc(0, 0, wd * 0.9, 0, TAU17);
         g.fill();
         starPath(g, 0, 0, wd * 1.8, 4, 0.12, c.t * 3);
         g.fill();
@@ -66787,7 +67926,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.globalAlpha = fade2 * 0.8;
       g.fillStyle = s.core || "#ffffff";
       g.beginPath();
-      g.arc(L2, 0, wd * 0.55, 0, TAU16);
+      g.arc(L2, 0, wd * 0.55, 0, TAU17);
       g.fill();
     }
   };
@@ -66817,10 +67956,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         const nb = s.branches || 2;
         for (let b = 0; b < nb; b++) {
-          const t0 = 0.25 + hash5(seed + b) * 0.5;
+          const t0 = 0.25 + hash6(seed + b) * 0.5;
           const bx = dx * t0, by = (dy - z1 + z0) * t0 - z0;
-          const ba = Math.atan2(dy - z1 + z0, dx) + (hash5(seed + b * 3) - 0.5) * 2;
-          const bl = 0.4 + hash5(seed + b * 5) * 0.8;
+          const ba = Math.atan2(dy - z1 + z0, dx) + (hash6(seed + b * 3) - 0.5) * 2;
+          const bl = 0.4 + hash6(seed + b * 5) * 0.8;
           jagged(g, bx, by, bx + Math.cos(ba) * bl, by + Math.sin(ba) * bl, seed + b * 11, 0.15, 4);
         }
         g.stroke();
@@ -66837,7 +67976,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.globalAlpha = a * fade2 * 0.25;
       g.fillStyle = s.color || "#e0f7fa";
       g.beginPath();
-      g.arc(0, 0, R2 * 0.35, 0, TAU16);
+      g.arc(0, 0, R2 * 0.35, 0, TAU17);
       g.fill();
       g.lineCap = "round";
       g.lineJoin = "miter";
@@ -66848,17 +67987,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU16 + (hash5(s.seed + i) - 0.5) * 0.5;
+          const th = i / n * TAU17 + (hash6(s.seed + i) - 0.5) * 0.5;
           let x = 0, y = 0;
           g.moveTo(0, 0);
-          const L2 = R2 * (0.6 + 0.5 * hash5(s.seed + i * 3));
+          const L2 = R2 * (0.6 + 0.5 * hash6(s.seed + i * 3));
           for (let j = 1; j <= 3; j++) {
-            const r = L2 * j / 3, o = (hash5(s.seed + i * 7 + j) - 0.5) * 0.5;
+            const r = L2 * j / 3, o = (hash6(s.seed + i * 7 + j) - 0.5) * 0.5;
             x = Math.cos(th + o) * r;
             y = Math.sin(th + o) * r;
             g.lineTo(x, y);
           }
-          const th2 = th + TAU16 / n;
+          const th2 = th + TAU17 / n;
           const r2 = L2 * 0.55;
           g.moveTo(Math.cos(th) * r2, Math.sin(th) * r2);
           g.lineTo(Math.cos(th2) * r2 * 0.95, Math.sin(th2) * r2 * 0.95);
@@ -66891,12 +68030,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const segs = 10;
         for (let i = 1; i <= segs; i++) {
           const y = -H2 * (i / segs);
-          const wob = s.kind === "fire" ? Math.sin(i * 1.7 - c.t * 18 + layer) * w * 0.25 : s.kind === "lightning" ? (hash5(s.seed + i + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
+          const wob = s.kind === "fire" ? Math.sin(i * 1.7 - c.t * 18 + layer) * w * 0.25 : s.kind === "lightning" ? (hash6(s.seed + i + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
           g.lineTo(-w * (1 - 0.3 * i / segs) + wob, y);
         }
         for (let i = segs; i >= 1; i--) {
           const y = -H2 * (i / segs);
-          const wob = s.kind === "fire" ? Math.sin(i * 1.3 + c.t * 16 + layer) * w * 0.25 : s.kind === "lightning" ? (hash5(s.seed + i * 3 + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
+          const wob = s.kind === "fire" ? Math.sin(i * 1.3 + c.t * 16 + layer) * w * 0.25 : s.kind === "lightning" ? (hash6(s.seed + i * 3 + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
           g.lineTo(w * (1 - 0.3 * i / segs) + wob, y);
         }
         g.lineTo(w, 0);
@@ -66966,7 +68105,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         for (let i = 1; i < 4; i++) {
           const f = i / 4;
-          g.ellipse(0, -H2 * f * 0.85, R2 * Math.sqrt(1 - f * f), R2 * 0.1 * (1 - f), 0, 0, TAU16);
+          g.ellipse(0, -H2 * f * 0.85, R2 * Math.sqrt(1 - f * f), R2 * 0.1 * (1 - f), 0, 0, TAU17);
         }
         g.stroke();
       }
@@ -66979,13 +68118,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const dx = Math.cos(f), dy = Math.sin(f);
       g.translate(dx * 0.75, dy * 0.45 - 0.9);
       const side = Math.abs(dx) > Math.abs(dy);
-      const W2 = (side ? 0.45 : 1.4) * grow, H2 = 1.5 * grow;
+      const W3 = (side ? 0.45 : 1.4) * grow, H2 = 1.5 * grow;
       const shimmer = 0.5 + 0.5 * Math.sin(c.t * 6);
       g.globalCompositeOperation = "lighter";
       g.globalAlpha = a * (0.16 + 0.08 * shimmer);
       g.fillStyle = s.color || "#b3e5fc";
       g.beginPath();
-      g.roundRect(-W2 / 2, -H2 / 2, W2, H2, 0.12);
+      g.roundRect(-W3 / 2, -H2 / 2, W3, H2, 0.12);
       g.fill();
       g.globalAlpha = a * 0.7;
       g.strokeStyle = s.color || "#b3e5fc";
@@ -66998,9 +68137,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (let row = -4; row <= 4; row++) {
         for (let col = -4; col <= 4; col++) {
           const cx = col * hr * 1.5 * (side ? 0.35 : 1), cy = row * hr * 1.73 + (col & 1 ? hr * 0.86 : 0);
-          if (Math.abs(cx) > W2 / 2 - 0.05 || Math.abs(cy) > H2 / 2 - 0.05) continue;
+          if (Math.abs(cx) > W3 / 2 - 0.05 || Math.abs(cy) > H2 / 2 - 0.05) continue;
           for (let i = 0; i <= 6; i++) {
-            const th = i / 6 * TAU16;
+            const th = i / 6 * TAU17;
             const x = cx + Math.cos(th) * hr * 0.55 * (side ? 0.35 : 1), y = cy + Math.sin(th) * hr * 0.55;
             if (i) g.lineTo(x, y);
             else g.moveTo(x, y);
@@ -67039,7 +68178,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         for (let j = 0; j <= 16; j++) {
           const u = j / 16;
-          const th = spin + i / arms * TAU16 + u * 3.2;
+          const th = spin + i / arms * TAU17 + u * 3.2;
           const r = R2 * (1 - u * 0.85);
           const x = Math.cos(th) * r, y = Math.sin(th) * r * 0.62;
           if (j) g.lineTo(x, y);
@@ -67075,13 +68214,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const n = 9;
       for (let pass = 0; pass < 2; pass++) {
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU16;
+          const th = i / n * TAU17;
           const x = Math.cos(th) * R2 * 0.75 + Math.sin(c.t * 0.8 + i) * 0.1, y = Math.sin(th) * R2 * 0.28;
-          const rr = R2 * (0.38 + 0.12 * hash5(s.seed + i));
+          const rr = R2 * (0.38 + 0.12 * hash6(s.seed + i));
           g.globalAlpha = a * (pass ? 0.9 : 0.5);
           g.fillStyle = pass ? s.color || "#37474f" : "#263238";
           g.beginPath();
-          g.arc(x, y + (pass ? -0.05 : 0.08), rr * (pass ? 0.9 : 1.05), 0, TAU16);
+          g.arc(x, y + (pass ? -0.05 : 0.08), rr * (pass ? 0.9 : 1.05), 0, TAU17);
           g.fill();
         }
       }
@@ -67090,7 +68229,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = a * 0.5;
         g.fillStyle = s.glow || "#fff59d";
         g.beginPath();
-        g.arc((hash5(Math.floor(c.t * 8) + s.seed) - 0.5) * R2, 0, R2 * 0.35, 0, TAU16);
+        g.arc((hash6(Math.floor(c.t * 8) + s.seed) - 0.5) * R2, 0, R2 * 0.35, 0, TAU17);
         g.fill();
       }
     }
@@ -67143,9 +68282,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = fade2;
         g.fillStyle = s.petal || "#f48fb1";
         for (let i = 0; i < 5; i++) {
-          const th = i / 5 * TAU16 + p.seed;
+          const th = i / 5 * TAU17 + p.seed;
           g.beginPath();
-          g.ellipse(x + Math.cos(th) * 0.09, y + Math.sin(th) * 0.05, 0.08, 0.04, th, 0, TAU16);
+          g.ellipse(x + Math.cos(th) * 0.09, y + Math.sin(th) * 0.05, 0.08, 0.04, th, 0, TAU17);
           g.fill();
         }
         const ang = p.ang;
@@ -67165,7 +68304,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = 0.025;
         const hr = (s.big ? 0.26 : 0.08) * (1 - clutch * 0.2);
         g.beginPath();
-        g.arc(ex, ey, hr, 0, TAU16);
+        g.arc(ex, ey, hr, 0, TAU17);
         g.fill();
         g.stroke();
         if (!clutch) {
@@ -67219,7 +68358,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.05;
         g.beginPath();
-        g.arc(0, 0, R2, 0, TAU16);
+        g.arc(0, 0, R2, 0, TAU17);
         g.fill();
         g.stroke();
         g.strokeStyle = s.kind === "mochi" ? "#d7ccc8" : "#ffab40";
@@ -67235,15 +68374,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.05;
         g.beginPath();
-        g.ellipse(0, 0, R2 * 1.2, R2 * 0.8, 0, 0, TAU16);
+        g.ellipse(0, 0, R2 * 1.2, R2 * 0.8, 0, 0, TAU17);
         g.fill();
         g.stroke();
       } else {
         g.fillStyle = s.color || "#5d4037";
         g.beginPath();
         for (let i = 0; i < 9; i++) {
-          const th = i / 9 * TAU16;
-          const rr = R2 * (0.8 + 0.3 * hash5(s.seed + i));
+          const th = i / 9 * TAU17;
+          const rr = R2 * (0.8 + 0.3 * hash6(s.seed + i));
           g.lineTo(Math.cos(th) * rr, Math.sin(th) * rr);
         }
         g.closePath();
@@ -67252,7 +68391,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = s.glow || "#ff9100";
         g.globalAlpha = 0.6 * a;
         g.beginPath();
-        g.arc(R2 * 0.2, R2 * 0.2, R2 * 0.5, 0, TAU16);
+        g.arc(R2 * 0.2, R2 * 0.2, R2 * 0.5, 0, TAU17);
         g.fill();
       }
     }
@@ -67319,8 +68458,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = "#ff5252";
         g.globalAlpha = a * fade2;
         g.beginPath();
-        g.arc(-R2 * 0.18, -R2 * 0.1, R2 * 0.22, 0, TAU16);
-        g.arc(R2 * 0.18, -R2 * 0.1, R2 * 0.22, 0, TAU16);
+        g.arc(-R2 * 0.18, -R2 * 0.1, R2 * 0.22, 0, TAU17);
+        g.arc(R2 * 0.18, -R2 * 0.1, R2 * 0.22, 0, TAU17);
         g.moveTo(-R2 * 0.38, 0);
         g.lineTo(0, R2 * 0.4);
         g.lineTo(R2 * 0.38, 0);
@@ -67360,8 +68499,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.lineCap = "round";
       g.beginPath();
       for (let i = 0; i < 7; i++) {
-        const y = (hash5(s.seed + i) - 0.5) * 1.4 - 0.7;
-        const x0 = -0.4 - hash5(s.seed + i * 3 + Math.floor(c.t * 30)) * 0.4, x1 = x0 - 0.6 - hash5(s.seed + i * 5) * 0.9;
+        const y = (hash6(s.seed + i) - 0.5) * 1.4 - 0.7;
+        const x0 = -0.4 - hash6(s.seed + i * 3 + Math.floor(c.t * 30)) * 0.4, x1 = x0 - 0.6 - hash6(s.seed + i * 5) * 0.9;
         g.moveTo(x0, y * 0.9);
         g.lineTo(x1, y * 0.9);
       }
@@ -67377,9 +68516,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (let i = 0; i < n; i++) {
         const ph = (c.t * 7 + i / n) % 1;
         const seed = Math.floor(c.t * 7 + i / n) * 13 + i;
-        const d = 0.8 + hash5(seed) * (s.range || 2.6);
-        const th = ang + (hash5(seed + 3) - 0.5) * (s.arc || 0.9);
-        const x = Math.cos(th) * d, y = Math.sin(th) * d * 0.8 - 0.75 - (hash5(seed + 7) - 0.5) * 0.5;
+        const d = 0.8 + hash6(seed) * (s.range || 2.6);
+        const th = ang + (hash6(seed + 3) - 0.5) * (s.arc || 0.9);
+        const x = Math.cos(th) * d, y = Math.sin(th) * d * 0.8 - 0.75 - (hash6(seed + 7) - 0.5) * 0.5;
         const pop = Math.sin(ph * Math.PI);
         g.globalAlpha = a * pop * 0.95;
         g.strokeStyle = "rgba(255,255,255,0.7)";
@@ -67393,7 +68532,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.025;
         g.beginPath();
-        g.arc(x, y, 0.13 * (0.7 + pop * 0.4), 0, TAU16);
+        g.arc(x, y, 0.13 * (0.7 + pop * 0.4), 0, TAU17);
         g.fill();
         g.stroke();
         if (ph > 0.45 && ph < 0.6) {
@@ -67413,7 +68552,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const R2 = s.r || 2.4;
       for (let i = 0; i < n; i++) {
         const th = c.t * (2.5 + i % 3) + i * 2.39;
-        const r = R2 * (0.35 + 0.65 * hash5(s.seed + i));
+        const r = R2 * (0.35 + 0.65 * hash6(s.seed + i));
         const x = Math.cos(th) * r, y = Math.sin(th) * r * 0.62 - 0.6 - Math.sin(c.t * 7 + i) * 0.25;
         g.globalAlpha = a * Math.min(1, (1 - k) * 4);
         g.save();
@@ -67425,7 +68564,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (kind === 0) {
           g.fillStyle = s.skin || "#f1c9a0";
           g.beginPath();
-          g.arc(0, 0, 0.12, 0, TAU16);
+          g.arc(0, 0, 0.12, 0, TAU17);
           g.fill();
           g.stroke();
         } else {
@@ -67509,7 +68648,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.lineWidth = 0.03;
           g.beginPath();
           for (let i = 0; i < 10; i++) {
-            const th = i / 10 * TAU16 + s.seed;
+            const th = i / 10 * TAU17 + s.seed;
             g.moveTo(0, 0);
             g.lineTo(Math.cos(th) * R2 * 0.9, Math.sin(th) * R2 * 0.55);
           }
@@ -67522,9 +68661,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.globalAlpha = 0.24 * a;
           g.fillStyle = col;
           for (let i = 0; i < 6; i++) {
-            const th = i / 6 * TAU16 + c.t * 0.2, rr = R2 * 0.45;
+            const th = i / 6 * TAU17 + c.t * 0.2, rr = R2 * 0.45;
             g.beginPath();
-            g.ellipse(Math.cos(th) * rr * 0.6, Math.sin(th) * rr * 0.35, rr, rr * 0.6, 0, 0, TAU16);
+            g.ellipse(Math.cos(th) * rr * 0.6, Math.sin(th) * rr * 0.35, rr, rr * 0.6, 0, 0, TAU17);
             g.fill();
           }
           g.globalAlpha = 0.35 * a;
@@ -67539,7 +68678,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             g.globalAlpha = 0.9 * a;
             g.beginPath();
             for (let i = 0; i < 7; i++) {
-              const th = i / 7 * TAU16 + s.seed;
+              const th = i / 7 * TAU17 + s.seed;
               const x = Math.cos(th) * R2 * 0.7, y = Math.sin(th) * R2 * 0.45;
               g.moveTo(x, y);
               g.quadraticCurveTo(x * 0.5, y * 0.5 - 0.4 - Math.sin(c.t * 3 + i) * 0.1, 0, -0.1);
@@ -67595,8 +68734,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             s.pts = [];
             const n = Math.max(3, Math.round(R2 * 3));
             for (let i = 0; i < n; i++) {
-              const th = i / n * TAU16 + hash5(s.seed + i);
-              const rr = R2 * (0.3 + 0.6 * hash5(s.seed + i * 3));
+              const th = i / n * TAU17 + hash6(s.seed + i);
+              const rr = R2 * (0.3 + 0.6 * hash6(s.seed + i * 3));
               s.pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, L: 0.9, ang: th, delay: i * 0.03, seed: i });
             }
           }
@@ -67610,7 +68749,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.lineCap = "round";
           g.beginPath();
           for (let i = 0; i < 8; i++) {
-            const x = (hash5(s.seed + i) - 0.5) * R2 * 1.6, y0 = -3 + (c.t * 3 + hash5(s.seed + i * 3)) % 1 * 3;
+            const x = (hash6(s.seed + i) - 0.5) * R2 * 1.6, y0 = -3 + (c.t * 3 + hash6(s.seed + i * 3)) % 1 * 3;
             g.moveTo(x, y0 - 0.6);
             g.lineTo(x, y0);
           }
@@ -67619,13 +68758,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         case "field": {
           for (let i = 0; i < 5; i++) {
-            const ph = (c.t * 0.8 + hash5(s.seed + i)) % 1;
-            const x = (hash5(s.seed + i * 7 + Math.floor(c.t * 0.8 + hash5(s.seed + i))) - 0.5) * R2 * 1.4, y = (hash5(s.seed + i * 11) - 0.5) * R2 * 0.8;
+            const ph = (c.t * 0.8 + hash6(s.seed + i)) % 1;
+            const x = (hash6(s.seed + i * 7 + Math.floor(c.t * 0.8 + hash6(s.seed + i))) - 0.5) * R2 * 1.4, y = (hash6(s.seed + i * 11) - 0.5) * R2 * 0.8;
             g.globalAlpha = a * (1 - ph) * 0.7;
             g.strokeStyle = s.color;
             g.lineWidth = 0.025;
             g.beginPath();
-            g.arc(x, y - ph * 0.3, 0.06 + ph * 0.12, 0, TAU16);
+            g.arc(x, y - ph * 0.3, 0.06 + ph * 0.12, 0, TAU17);
             g.stroke();
           }
           break;
@@ -67646,7 +68785,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render/fx3d.js
-  var TAU17 = Math.PI * 2;
+  var TAU18 = Math.PI * 2;
   var CULL = -9e3;
   var MAX_SC = 380;
   var MIN_SC = 1;
@@ -67749,7 +68888,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     return runs;
   }
-  function circlePts(x, y, R2, h2, n = 40, a0 = 0, a1 = TAU17, wob) {
+  function circlePts(x, y, R2, h2, n = 40, a0 = 0, a1 = TAU18, wob) {
     const pts = [];
     for (let i = 0; i <= n; i++) {
       const th = a0 + (a1 - a0) * (i / n);
@@ -67884,7 +69023,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const h2 = Math.min(s.z ?? 0.4, 0.12);
     const n = Math.max(16, Math.min(56, Math.round(rad * 10)));
     const wob = s.wobble ? (th) => s.wobble * (1 - k) * Math.sin(th * (s.lobes || 9) + c.t * 40) : null;
-    const runs = ringRuns(r, circlePts(s.x, s.y, rad, h2, n, 0, TAU17, wob));
+    const runs = ringRuns(r, circlePts(s.x, s.y, rad, h2, n, 0, TAU18, wob));
     if (!runs.length) return;
     g.globalCompositeOperation = s.add ? "lighter" : "source-over";
     if (s.fill && runs.length === 1 && runs[0].length > n) fillRuns(g, r, runs, s.fill === true ? s.color : s.fill, alpha2 * 0.22);
@@ -67943,7 +69082,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.globalCompositeOperation = "lighter";
     const nM = s.kind === "cage" ? 16 : 10;
     for (let i = 0; i < nM; i++) {
-      const th = i / nM * TAU17 + (s.kind === "room" ? c.t * 0.15 : 0);
+      const th = i / nM * TAU18 + (s.kind === "room" ? c.t * 0.15 : 0);
       const pts = [];
       for (let j = 0; j <= 10; j++) {
         const ph = j / 10 * (Math.PI / 2);
@@ -68215,7 +69354,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const heavy = (def.steps || []).some((st) => st.hit && st.hit.heavy || st.dash && st.dash.hit && st.dash.hit.heavy);
     const blade2 = clip2.weapon === "sword" || clip2.weapon === "axe" || clip2.weapon === "staff";
     const col = vis.blade || vis.fx && vis.fx.color || (blade2 ? "#e3f2fd" : "#ffffff");
-    const W2 = r.cw * r.dpr, H2 = r.ch * r.dpr;
+    const W3 = r.cw * r.dpr, H2 = r.ch * r.dpr;
     const side = clip2.limb === "hB" || clip2.limb === "fB" || clip2.limb === "wB" ? -1 : 1;
     const fade2 = t > t1 ? 1 - (t - t1) / 0.12 : 1;
     const u = clamp015((t - t0) / (t1 - t0));
@@ -68234,8 +69373,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineCap = "round";
         g.lineWidth = H2 * 0.012;
         g.beginPath();
-        g.moveTo((sx + (ex - sx) * ph * 0.5) * W2, (sy + (ey - sy) * ph * 0.5) * H2);
-        g.lineTo((sx + (ex - sx) * ph) * W2, (sy + (ey - sy) * ph) * H2);
+        g.moveTo((sx + (ex - sx) * ph * 0.5) * W3, (sy + (ey - sy) * ph * 0.5) * H2);
+        g.lineTo((sx + (ex - sx) * ph) * W3, (sy + (ey - sy) * ph) * H2);
         g.stroke();
       }
       g.globalCompositeOperation = "source-over";
@@ -68245,18 +69384,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (kind === "shot") {
       if (t < (def.windup ?? 0.1) || t > (def.windup ?? 0.1) + 0.08) return;
       const k2 = 1 - (t - (def.windup ?? 0.1)) / 0.08;
-      const x = 0.62 * W2, y = 0.8 * H2;
+      const x = 0.62 * W3, y = 0.8 * H2;
       g.globalAlpha = 0.8 * k2;
       g.fillStyle = "#fff59d";
       g.beginPath();
-      g.arc(x, y, H2 * 0.03 * (1 + (1 - k2)), 0, TAU17);
+      g.arc(x, y, H2 * 0.03 * (1 + (1 - k2)), 0, TAU18);
       g.fill();
       g.globalAlpha = 0.5 * k2;
       g.strokeStyle = "#ffe082";
       g.lineWidth = H2 * 6e-3;
       g.beginPath();
       g.moveTo(x, y);
-      g.lineTo(0.5 * W2, 0.5 * H2);
+      g.lineTo(0.5 * W3, 0.5 * H2);
       g.stroke();
       g.globalCompositeOperation = "source-over";
       g.globalAlpha = 1;
@@ -68273,13 +69412,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const [x, y] = P3(v);
       const [x2, y2] = P3(Math.min(1, v + 0.01));
       const [x0, y0] = P3(Math.max(0, v - 0.01));
-      const dx = (x2 - x0) * W2, dy = (y2 - y0) * H2, l = Math.hypot(dx, dy) || 1;
+      const dx = (x2 - x0) * W3, dy = (y2 - y0) * H2, l = Math.hypot(dx, dy) || 1;
       const nx = -dy / l, ny = dx / l;
       const qq = i / N3;
       const wd = wMax * Math.pow(qq, 0.75) * (1 - 0.35 * Math.pow(qq, 8));
-      outer.push([x * W2 + nx * wd * 0.5, y * H2 + ny * wd * 0.5]);
-      inner.push([x * W2 - nx * wd * 0.5, y * H2 - ny * wd * 0.5]);
-      mid.push([x * W2 + nx * wd * 0.22, y * H2 + ny * wd * 0.22]);
+      outer.push([x * W3 + nx * wd * 0.5, y * H2 + ny * wd * 0.5]);
+      inner.push([x * W3 - nx * wd * 0.5, y * H2 - ny * wd * 0.5]);
+      mid.push([x * W3 + nx * wd * 0.22, y * H2 + ny * wd * 0.22]);
     }
     const a = Math.min(1, 0.8 + (heavy ? 0.15 : 0)) * fade2;
     g.globalCompositeOperation = "source-over";
@@ -68322,8 +69461,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const [hx, hy] = P3(head);
       g.beginPath();
       for (let i = -1; i <= 1; i++) {
-        g.moveTo(hx * W2 + i * H2 * 0.022, hy * H2 + H2 * 0.06);
-        g.lineTo(hx * W2 + i * H2 * 0.034, hy * H2 + H2 * 0.15);
+        g.moveTo(hx * W3 + i * H2 * 0.022, hy * H2 + H2 * 0.06);
+        g.lineTo(hx * W3 + i * H2 * 0.034, hy * H2 + H2 * 0.15);
       }
       g.stroke();
     }
@@ -68331,31 +69470,31 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.globalAlpha = 1;
   }
   function edges(fx, g, r, p) {
-    const W2 = r.cw * r.dpr, H2 = r.ch * r.dpr;
+    const W3 = r.cw * r.dpr, H2 = r.ch * r.dpr;
     const aura = (p.buffs || []).find((b) => b.aura)?.aura || (p.conquerorInfused ? "rgba(20,0,20,0.9)" : null);
     g.setTransform(1, 0, 0, 1, 0, 0);
     if (aura) {
       const pulse = 0.14 + 0.05 * Math.sin(fx.time * 7);
-      const gr = g.createRadialGradient(W2 / 2, H2 / 2, Math.min(W2, H2) * 0.42, W2 / 2, H2 / 2, Math.hypot(W2, H2) * 0.55);
+      const gr = g.createRadialGradient(W3 / 2, H2 / 2, Math.min(W3, H2) * 0.42, W3 / 2, H2 / 2, Math.hypot(W3, H2) * 0.55);
       gr.addColorStop(0, rgba2(aura, 0));
       gr.addColorStop(1, rgba2(aura, pulse * 2.2));
       g.globalAlpha = 1;
       g.fillStyle = gr;
-      g.fillRect(0, 0, W2, H2);
+      g.fillRect(0, 0, W3, H2);
     }
     const hf = p.hitFx;
     const since = hf ? fx.game.env.time - hf.t0 : 9;
     if (hf && since >= 0 && since < 0.35) {
       const from = (hf.ang ?? 0) + Math.PI;
       const rel2 = from - (r.yaw || 0);
-      const cx = W2 / 2 + Math.sin(rel2) * W2 * 0.55, cy = H2 / 2 - Math.cos(rel2) * H2 * 0.55;
+      const cx = W3 / 2 + Math.sin(rel2) * W3 * 0.55, cy = H2 / 2 - Math.cos(rel2) * H2 * 0.55;
       const k = (1 - since / 0.35) * Math.min(1, 0.5 + (hf.w || 0.5));
-      const gr = g.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W2, H2) * 0.6);
+      const gr = g.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W3, H2) * 0.6);
       gr.addColorStop(0, `rgba(255,40,30,${0.42 * k})`);
       gr.addColorStop(1, "rgba(255,40,30,0)");
       g.globalAlpha = 1;
       g.fillStyle = gr;
-      g.fillRect(0, 0, W2, H2);
+      g.fillRect(0, 0, W3, H2);
     }
   }
   function teleWarn(fx, g, r, p) {
@@ -68377,7 +69516,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (hit) inside = Math.max(inside, s.max > 0 ? 1 - s.life / s.max : 1);
     }
     if (!inside) return;
-    const W2 = r.cw * r.dpr, H2 = r.ch * r.dpr;
+    const W3 = r.cw * r.dpr, H2 = r.ch * r.dpr;
     const pulse = 0.5 + 0.5 * Math.sin(fx.time * 22);
     g.setTransform(1, 0, 0, 1, 0, 0);
     const gr = g.createLinearGradient(0, H2, 0, H2 * 0.62);
@@ -68385,7 +69524,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     gr.addColorStop(1, "rgba(255,50,40,0)");
     g.globalAlpha = 1;
     g.fillStyle = gr;
-    g.fillRect(0, H2 * 0.62, W2, H2 * 0.38);
+    g.fillRect(0, H2 * 0.62, W3, H2 * 0.38);
   }
   function drawFirstPerson(fx, g, r) {
     const p = fx.game.player;
@@ -69138,7 +70277,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** Screen-space post effects (impact frames, flashes, slow-mo vignette, focus lines). */
     drawScreen(g, r) {
-      const W2 = r.canvas.width, H2 = r.canvas.height;
+      const W3 = r.canvas.width, H2 = r.canvas.height;
       const fp = this.focusT > 0 ? r.is3d ? r.project(this.focusX, this.focusY, 0.9) : r.toScreen(this.game.world, this.focusX, this.focusY - 0.8) : null;
       if (fp && fp[0] > -9e3) {
         const [fx, fy] = fp;
@@ -69147,8 +70286,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = Math.min(1, k * 1.6) * 0.8;
         g.fillStyle = "#ffffff";
         const cx = fx * r.dpr, cy = fy * r.dpr;
-        const R2 = Math.hypot(W2, H2);
-        const inner = Math.min(W2, H2) * (0.22 + 0.1 * (1 - k));
+        const R2 = Math.hypot(W3, H2);
+        const inner = Math.min(W3, H2) * (0.22 + 0.1 * (1 - k));
         g.beginPath();
         const n = 48;
         for (let i = 0; i < n; i++) {
@@ -69165,17 +70304,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (this.slow && this._slowOwned) {
         const k = Math.min(1, this.slow.t / Math.max(0.01, this.slow.max) * 1.5);
         g.setTransform(1, 0, 0, 1, 0, 0);
-        const gr = g.createRadialGradient(W2 / 2, H2 / 2, Math.min(W2, H2) * 0.3, W2 / 2, H2 / 2, Math.max(W2, H2) * 0.7);
+        const gr = g.createRadialGradient(W3 / 2, H2 / 2, Math.min(W3, H2) * 0.3, W3 / 2, H2 / 2, Math.max(W3, H2) * 0.7);
         gr.addColorStop(0, "rgba(0,0,0,0)");
         gr.addColorStop(1, `rgba(10,10,30,${0.45 * k})`);
         g.fillStyle = gr;
-        g.fillRect(0, 0, W2, H2);
+        g.fillRect(0, 0, W3, H2);
       }
       if (this.impact > 0) {
         g.setTransform(1, 0, 0, 1, 0, 0);
         g.globalCompositeOperation = "difference";
         g.fillStyle = this.impactColor || "#ffffff";
-        g.fillRect(0, 0, W2, H2);
+        g.fillRect(0, 0, W3, H2);
         g.globalCompositeOperation = "source-over";
       }
       if (this.flash > 0) {
@@ -69183,7 +70322,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const c = this.flashColor;
         g.fillStyle = c ? c : "#ffffff";
         g.globalAlpha = Math.min(1, this.flash * 2);
-        g.fillRect(0, 0, W2, H2);
+        g.fillRect(0, 0, W3, H2);
         g.globalAlpha = 1;
       }
     }
@@ -70448,12 +71587,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return [["human", 94], ["fishman", 2], ["longarm", 2], ["longleg", 2]];
   }
   function civilianOutfit(style, rng2) {
-    if (style === "wano") return { top: rng2.pick(["#6d4c41", "#37474f", "#8d6e63", "#c62828", "#283593"]), bottom: rng2.pick(["#3e2723", "#263238"]) };
-    if (style === "desert") return { top: rng2.pick(["#f5f5f5", "#efebe9", "#ffe0b2"]), bottom: rng2.pick(["#d7ccc8", "#bcaaa4"]), hat: rng2.chance(0.4) ? "bandana" : null, hatColor: "#fafafa" };
-    if (style === "marine") return { top: "#ffffff", bottom: "#1b4f72", hat: "marine" };
-    if (style === "sky") return { top: rng2.pick(["#ffffff", "#fff9c4", "#e1f5fe"]), bottom: "#ffffff" };
-    if (style === "snow") return { top: rng2.pick(["#6d4c41", "#5d4037", "#455a64"]), bottom: "#3e2723", hat: rng2.chance(0.5) ? "beanie" : null };
-    return {};
+    if (style === "wano") return { role: "wano", top: rng2.pick(["#6d4c41", "#37474f", "#8d6e63", "#c62828", "#283593", "#4a148c", "#1b5e20"]), bottom: rng2.pick(["#3e2723", "#263238", "#37474f"]) };
+    if (style === "desert") return { role: "desert", top: rng2.pick(["#f5f5f5", "#efebe9", "#ffe0b2"]), bottom: rng2.pick(["#d7ccc8", "#bcaaa4"]), hat: rng2.chance(0.4) ? "bandana" : null, hatColor: "#fafafa" };
+    if (style === "marine") return { role: "marine", top: "#ffffff", bottom: "#1b4f72", hat: "marine" };
+    if (style === "sky") return { role: "sky", top: rng2.pick(["#ffffff", "#fff9c4", "#e1f5fe"]), bottom: "#ffffff" };
+    if (style === "snow") return { role: "snow", top: rng2.pick(["#6d4c41", "#5d4037", "#455a64"]), bottom: "#3e2723", hat: rng2.chance(0.5) ? "beanie" : null };
+    return { role: "civilian" };
   }
   var FIRST = ["Ban", "Kin", "Mo", "Ta", "Ri", "Su", "Ko", "Ha", "Yo", "Ma", "Pe", "Gi", "Do", "Ne", "Lu", "Fi", "Ca", "Bo", "Ja", "Ze", "Wa", "Ro", "Mi", "Sa"];
   var SECOND = ["ji", "ta", "ro", "ko", "ne", "mo", "ra", "n", "ki", "bo", "la", "ppo", "zo", "ke", "ri", "sa", "ga", "do"];
@@ -70786,14 +71925,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     drawWeather(g, r) {
       const env = this.env;
       g.setTransform(1, 0, 0, 1, 0, 0);
-      const W2 = r.canvas.width, H2 = r.canvas.height;
+      const W3 = r.canvas.width, H2 = r.canvas.height;
       const zk = this.world.zone;
       if (zk === 2) {
         g.fillStyle = "rgba(0,70,130,0.16)";
-        g.fillRect(0, 0, W2, H2);
+        g.fillRect(0, 0, W3, H2);
         g.fillStyle = "rgba(255,255,255,0.05)";
         for (let k = 0; k < 4; k++) {
-          const x = (k * 431 + env.time * 12) % (W2 + 400) - 200;
+          const x = (k * 431 + env.time * 12) % (W3 + 400) - 200;
           g.beginPath();
           g.moveTo(x, 0);
           g.lineTo(x + 120 * r.dpr, 0);
@@ -70804,25 +71943,25 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = "rgba(220,245,255,0.5)";
         g.lineWidth = 1.2 * r.dpr;
         for (let i = 0; i < 40; i++) {
-          const x = (i * 173.3 + Math.sin(env.time + i) * 20) % W2;
+          const x = (i * 173.3 + Math.sin(env.time + i) * 20) % W3;
           const y = H2 - (i * 97.1 + env.time * (30 + i % 5 * 12)) % (H2 + 40);
           g.beginPath();
           g.arc(x, y, (2 + i % 3) * r.dpr, 0, TAU);
           g.stroke();
         }
       } else if (zk === 3) {
-        const grd = g.createRadialGradient(W2 / 2, H2 / 2, Math.min(W2, H2) * 0.2, W2 / 2, H2 / 2, Math.max(W2, H2) * 0.7);
+        const grd = g.createRadialGradient(W3 / 2, H2 / 2, Math.min(W3, H2) * 0.2, W3 / 2, H2 / 2, Math.max(W3, H2) * 0.7);
         grd.addColorStop(0, "rgba(0,0,0,0)");
         grd.addColorStop(1, "rgba(10,0,0,0.75)");
         g.fillStyle = grd;
-        g.fillRect(0, 0, W2, H2);
+        g.fillRect(0, 0, W3, H2);
       } else if (zk === 1) {
         const grd = g.createLinearGradient(0, 0, 0, H2);
         grd.addColorStop(0, "rgba(255,255,255,0.18)");
         grd.addColorStop(0.5, "rgba(255,255,255,0)");
         grd.addColorStop(1, "rgba(255,250,235,0.12)");
         g.fillStyle = grd;
-        g.fillRect(0, 0, W2, H2);
+        g.fillRect(0, 0, W3, H2);
       }
       if (env.rain > 0.05 && !zk) {
         g.strokeStyle = `rgba(200,220,255,${0.25 + env.rain * 0.35})`;
@@ -70831,7 +71970,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const n = Math.floor(env.rain * 260);
         const t = env.time;
         for (let i = 0; i < n; i++) {
-          const x = (i * 97.13 + t * 900 * (0.8 + i % 5 * 0.1)) % (W2 + 200) - 100;
+          const x = (i * 97.13 + t * 900 * (0.8 + i % 5 * 0.1)) % (W3 + 200) - 100;
           const y = (i * 57.7 + t * 1400) % (H2 + 100) - 50;
           g.moveTo(x, y);
           g.lineTo(x - 8 * r.dpr - env.windX * 6, y + 22 * r.dpr);
@@ -70843,7 +71982,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const n = Math.floor(env.snow * 200);
         const t = env.time;
         for (let i = 0; i < n; i++) {
-          const x = (i * 131.7 + t * 40 * (1 + i % 3) + Math.sin(t + i) * 30) % (W2 + 40) - 20;
+          const x = (i * 131.7 + t * 40 * (1 + i % 3) + Math.sin(t + i) * 30) % (W3 + 40) - 20;
           const y = (i * 71.3 + t * 70 * (1 + i % 4 * 0.3)) % (H2 + 40) - 20;
           g.beginPath();
           g.arc(x, y, (1.2 + i % 3) * r.dpr, 0, TAU);
@@ -70851,24 +71990,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
       }
       if (env.fog > 0.05) {
-        const grd = g.createRadialGradient(W2 / 2, H2 / 2, Math.min(W2, H2) * 0.15, W2 / 2, H2 / 2, Math.max(W2, H2) * 0.7);
+        const grd = g.createRadialGradient(W3 / 2, H2 / 2, Math.min(W3, H2) * 0.15, W3 / 2, H2 / 2, Math.max(W3, H2) * 0.7);
         grd.addColorStop(0, `rgba(210,215,225,${env.fog * 0.15})`);
         grd.addColorStop(1, `rgba(200,205,215,${env.fog * 0.85})`);
         g.fillStyle = grd;
-        g.fillRect(0, 0, W2, H2);
+        g.fillRect(0, 0, W3, H2);
       }
       if (env.lightning > 0.5) {
         g.fillStyle = `rgba(255,255,255,${(env.lightning - 0.5) * 0.5})`;
-        g.fillRect(0, 0, W2, H2);
+        g.fillRect(0, 0, W3, H2);
       }
       const p = this.player;
       if (p && p.d && p.hp / p.d.maxHp < 0.3 && p.state === "idle") {
         const k = 1 - p.hp / p.d.maxHp / 0.3;
-        const grd = g.createRadialGradient(W2 / 2, H2 / 2, Math.min(W2, H2) * 0.3, W2 / 2, H2 / 2, Math.max(W2, H2) * 0.65);
+        const grd = g.createRadialGradient(W3 / 2, H2 / 2, Math.min(W3, H2) * 0.3, W3 / 2, H2 / 2, Math.max(W3, H2) * 0.65);
         grd.addColorStop(0, "rgba(120,0,0,0)");
         grd.addColorStop(1, `rgba(140,0,0,${0.25 + k * 0.3 + Math.sin(env.time * 6) * 0.05})`);
         g.fillStyle = grd;
-        g.fillRect(0, 0, W2, H2);
+        g.fillRect(0, 0, W3, H2);
       }
     }
     regionName(x, y) {
@@ -70923,7 +72062,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/ui/style.css
-  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #b8860b; font-size: 18px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; right: 14px; top: 288px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(-2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-right: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 220px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-right: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-height: 640px) {\n  .sidebar { top: 214px; gap: 3px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-right: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: -1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.quest small { color: #ffd54f; }\n.compass .pin.ship small { color: #e3f2fd; }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n";
+  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #b8860b; font-size: 18px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; right: 14px; top: 288px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(-2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-right: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 220px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-right: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-height: 640px) {\n  .sidebar { top: 214px; gap: 3px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-right: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: -1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.quest small { color: #ffd54f; }\n.compass .pin.ship small { color: #e3f2fd; }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n";
 
   // src/ui/icon.js
   var img = (canvas2, px2, cls = "") => h("img.icon" + cls, { src: iconURL(canvas2), width: px2, height: px2, draggable: false, alt: "" });
@@ -71589,15 +72728,15 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       const g = c.getContext("2d");
       const w = game.world;
       const p = game.player;
-      const W2 = c.width, H2 = c.height;
+      const W3 = c.width, H2 = c.height;
       const scale = p.mode === "sail" ? 2.2 : 1;
-      if (!this.mmImg) this.mmImg = g.createImageData(W2, H2);
+      if (!this.mmImg) this.mmImg = g.createImageData(W3, H2);
       const img2 = this.mmImg.data;
       const map = w.map;
       for (let j = 0; j < H2; j++) {
-        for (let i = 0; i < W2; i++) {
-          const tx = p.x + (i - W2 / 2) * scale, ty = p.y + (j - H2 / 2) * scale;
-          const o = (j * W2 + i) * 4;
+        for (let i = 0; i < W3; i++) {
+          const tx = p.x + (i - W3 / 2) * scale, ty = p.y + (j - H2 / 2) * scale;
+          const o = (j * W3 + i) * 4;
           if (ty < 0 || ty >= w.height || !w.wrap && (tx < 0 || tx >= w.width)) {
             img2[o] = 30;
             img2[o + 1] = 40;
@@ -71619,13 +72758,13 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       g.save();
       g.globalCompositeOperation = "destination-in";
       g.beginPath();
-      g.arc(W2 / 2, H2 / 2, W2 / 2, 0, Math.PI * 2);
+      g.arc(W3 / 2, H2 / 2, W3 / 2, 0, Math.PI * 2);
       g.fill();
       g.restore();
       for (const s of game.ships) {
         if (s.sunk) continue;
-        const dx = w.dx(p.x, s.x) / scale + W2 / 2, dy = (s.y - p.y) / scale + H2 / 2;
-        if (Math.hypot(dx - W2 / 2, dy - H2 / 2) > W2 / 2 - 4) continue;
+        const dx = w.dx(p.x, s.x) / scale + W3 / 2, dy = (s.y - p.y) / scale + H2 / 2;
+        if (Math.hypot(dx - W3 / 2, dy - H2 / 2) > W3 / 2 - 4) continue;
         g.fillStyle = s.owner === "player" ? "#ffeb3b" : s.faction === "marine" ? "#64b5f6" : "#ef5350";
         g.beginPath();
         g.arc(dx, dy, 3, 0, Math.PI * 2);
@@ -71635,14 +72774,14 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
         if (a === p || a.state !== "idle" || a.hidden) continue;
         const hostileNow = a.controller?.target === p || p.observation && a.faction !== "civilian";
         if (!hostileNow && !a.questMarker) continue;
-        const dx = w.dx(p.x, a.x) / scale + W2 / 2, dy = (a.y - p.y) / scale + H2 / 2;
-        if (Math.hypot(dx - W2 / 2, dy - H2 / 2) > W2 / 2 - 3) continue;
+        const dx = w.dx(p.x, a.x) / scale + W3 / 2, dy = (a.y - p.y) / scale + H2 / 2;
+        if (Math.hypot(dx - W3 / 2, dy - H2 / 2) > W3 / 2 - 3) continue;
         g.fillStyle = a.questMarker ? "#ffd54f" : "#ff5252";
         g.fillRect(dx - 1.5, dy - 1.5, 3, 3);
       }
       if (game.view3d?.active) return;
       g.save();
-      g.translate(W2 / 2, H2 / 2);
+      g.translate(W3 / 2, H2 / 2);
       g.rotate(p.mode === "sail" && p.ship ? p.ship.heading : p.facing);
       g.fillStyle = "#fff";
       g.strokeStyle = "#000";
@@ -72162,8 +73301,8 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
     const look = { ...char.look };
     const hat = ITEMS[char.equipped?.hat];
     if (hat?.look) Object.assign(look, hat.look);
-    const coat = ITEMS[char.equipped?.coat];
-    if (coat?.look) Object.assign(look, coat.look);
+    const coat2 = ITEMS[char.equipped?.coat];
+    if (coat2?.look) Object.assign(look, coat2.look);
     const ws = (char.equipped?.weapons || []).map((id) => ITEMS[id]).filter(Boolean);
     const swords = ws.filter((w) => w.kind === "sword").length;
     look.swords = swords;
@@ -72299,185 +73438,6 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
     clearChar();
     saveLegacy(legacy);
     return will;
-  }
-
-  // src/ui/preview3d.js
-  var shared = null;
-  function sharedRenderer() {
-    if (shared) return shared;
-    const canvas2 = document.createElement("canvas");
-    canvas2.className = "preview3d-canvas";
-    const r = new WebGLRenderer({ canvas: canvas2, antialias: true, alpha: true });
-    r.outputColorSpace = SRGBColorSpace;
-    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    r.setClearColor(0, 0);
-    shared = r;
-    return r;
-  }
-  function makeStage() {
-    const scene = new Scene();
-    scene.add(new HemisphereLight(16774888, 8021064, 1.5));
-    const key2 = new DirectionalLight(16777215, 2.3);
-    key2.position.set(2.2, 4, 3.2);
-    scene.add(key2);
-    const rim2 = new DirectionalLight(13624319, 1.4);
-    rim2.position.set(-3, 2.5, -3);
-    scene.add(rim2);
-    const shadow = new Mesh(new CircleGeometry(0.62, 40), new MeshBasicMaterial({ color: 3877402, transparent: true, opacity: 0.22, depthWrite: false }));
-    shadow.rotation.x = -Math.PI / 2;
-    shadow.position.y = 5e-3;
-    scene.add(shadow);
-    const camera = new PerspectiveCamera(28, 1, 0.05, 60);
-    return { scene, camera, shadow };
-  }
-  function makeActor(look) {
-    const a = new Actor({ name: "", look, race: look.race || "human" });
-    a.facing = Math.PI / 2;
-    return a;
-  }
-  function heightOf(look) {
-    const s = look.scale || 1;
-    const legs = look.legs || 1;
-    return (1.08 + 0.72 * legs) * s;
-  }
-  var env0 = () => ({ time: 0, daylight: 1, ambient: [1, 1, 1], clock: 12, storm: 0, fog: 0 });
-  function createPreview(container, look, { game } = {}) {
-    const renderer = sharedRenderer();
-    const canvas2 = renderer.domElement;
-    container.appendChild(canvas2);
-    const { scene, camera, shadow } = makeStage();
-    const env = env0();
-    const ctx = { THREE: three_module_exports, scene, game: game || null, ground: () => 0, terrain: () => 0, camera, world: null, yaw: 0, mode: "third" };
-    let actor = null, view = null, h2 = 1.8;
-    let turn = 0.35, drag = null, raf = 0, last = performance.now();
-    const t0 = last;
-    const setLook = (lk2) => {
-      if (view) {
-        scene.remove(view.root);
-        try {
-          view.dispose?.();
-        } catch {
-        }
-      }
-      actor = makeActor(lk2);
-      try {
-        view = VIEWS.actor ? VIEWS.actor(actor, ctx) : null;
-      } catch (e) {
-        console.warn("preview failed", e);
-        view = null;
-      }
-      if (view) scene.add(view.root);
-      h2 = heightOf(lk2);
-      shadow.scale.setScalar(Math.max(1, (lk2.scale || 1) * (lk2.bulk || 1)));
-    };
-    const frame2 = (now2) => {
-      const dt = Math.min(0.05, (now2 - last) / 1e3);
-      last = now2;
-      env.time = (now2 - t0) / 1e3;
-      const w = container.clientWidth || 260, hh = container.clientHeight || 300;
-      const pr = renderer.getPixelRatio();
-      if (canvas2.width !== Math.round(w * pr) || canvas2.height !== Math.round(hh * pr)) renderer.setSize(w, hh, false);
-      camera.aspect = w / Math.max(1, hh);
-      const fovY = camera.fov * Math.PI / 180;
-      const fitH = h2 * 1.34, fitW = h2 * 0.8 / camera.aspect;
-      const dist = Math.max(fitH, fitW) / (2 * Math.tan(fovY / 2));
-      camera.position.set(0, h2 * 0.6, dist);
-      camera.lookAt(0, h2 * 0.54, 0);
-      camera.updateProjectionMatrix();
-      if (!drag) turn += dt * 0.45;
-      if (actor && view) {
-        actor.facing = Math.PI / 2 + turn;
-        try {
-          view.update(actor, env, ctx, { camYaw3: 0, redraw: true });
-        } catch (e) {
-        }
-        view.root.position.set(0, 0, 0);
-      }
-      renderer.render(scene, camera);
-      raf = requestAnimationFrame(frame2);
-    };
-    const down = (e) => {
-      drag = { x: e.clientX, turn };
-      try {
-        canvas2.setPointerCapture(e.pointerId);
-      } catch {
-      }
-    };
-    const move = (e) => {
-      if (drag) turn = drag.turn - (e.clientX - drag.x) * 0.012;
-    };
-    const up = () => {
-      drag = null;
-    };
-    canvas2.addEventListener("pointerdown", down);
-    canvas2.addEventListener("pointermove", move);
-    canvas2.addEventListener("pointerup", up);
-    canvas2.addEventListener("pointercancel", up);
-    canvas2.style.touchAction = "none";
-    setLook(look);
-    raf = requestAnimationFrame(frame2);
-    return {
-      setLook,
-      dispose() {
-        cancelAnimationFrame(raf);
-        canvas2.removeEventListener("pointerdown", down);
-        canvas2.removeEventListener("pointermove", move);
-        canvas2.removeEventListener("pointerup", up);
-        canvas2.removeEventListener("pointercancel", up);
-        if (view) {
-          scene.remove(view.root);
-          try {
-            view.dispose?.();
-          } catch {
-          }
-        }
-        if (canvas2.parentNode === container) container.removeChild(canvas2);
-      }
-    };
-  }
-  function renderPortrait(look, { w = 120, h: h2 = 140, view: framing = "bust", game = null } = {}) {
-    try {
-      const renderer = sharedRenderer();
-      const { scene, camera } = makeStage();
-      const ctx = { THREE: three_module_exports, scene, game, ground: () => 0, terrain: () => 0, camera, world: null, yaw: 0, mode: "third" };
-      const actor = makeActor(look);
-      actor.facing = Math.PI / 2 - 0.25;
-      const v = VIEWS.actor ? VIEWS.actor(actor, ctx) : null;
-      if (!v) return null;
-      scene.add(v.root);
-      v.update(actor, env0(), ctx, { camYaw3: 0, redraw: true });
-      const H2 = heightOf(look);
-      camera.aspect = w / h2;
-      if (framing === "full") {
-        const fovY = camera.fov * Math.PI / 180;
-        const dist = H2 * 1.15 / (2 * Math.tan(fovY / 2));
-        camera.position.set(0, H2 * 0.55, dist);
-        camera.lookAt(0, H2 * 0.5, 0);
-      } else {
-        const head = H2 * 0.86;
-        camera.position.set(0, head, H2 * 0.95);
-        camera.lookAt(0, head - H2 * 0.03, 0);
-      }
-      camera.updateProjectionMatrix();
-      const pr = Math.min(window.devicePixelRatio || 1, 2);
-      renderer.setSize(w, h2, false);
-      renderer.setPixelRatio(pr);
-      renderer.render(scene, camera);
-      const out = document.createElement("canvas");
-      out.width = Math.round(w * pr);
-      out.height = Math.round(h2 * pr);
-      out.style.width = w + "px";
-      out.style.height = h2 + "px";
-      out.getContext("2d").drawImage(renderer.domElement, 0, 0, out.width, out.height);
-      try {
-        v.dispose?.();
-      } catch {
-      }
-      return out;
-    } catch (e) {
-      console.warn("portrait failed", e);
-      return null;
-    }
   }
 
   // src/ui/screens.js
@@ -72842,21 +73802,59 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
             applyLook(L2, race);
             preview?.setLook(L2);
           } } });
+          const mus = L2.muscle ?? 0.5;
           add2(
             optsEl,
+            row("Body type", chips(L2.fem ? "f" : "m", ["m", "f"], ["Masculine", "Feminine"], (v) => {
+              L2.fem = v === "f";
+              if (!L2.fem && ["dress", "crop", "bikini"].includes(L2.topStyle)) L2.topStyle = "tee";
+              if (!L2.fem && ["skirt", "longskirt"].includes(L2.bottomStyle)) L2.bottomStyle = "trousers";
+            })),
             row("Build", h("div.build-row", h("span.muted", "Thin"), build, h("span.muted", "Wide"))),
+            row("Muscle", chips(mus < 0.35 ? 0.2 : mus < 0.75 ? 0.55 : 1, [0.2, 0.55, 1], ["Lean", "Toned", "Muscular"], (v) => {
+              L2.muscle = v;
+            })),
+            L2.fem ? row("Figure", chips((L2.bust ?? 1) < 0.9 ? 0.8 : (L2.bust ?? 1) < 1.15 ? 1 : 1.3, [0.8, 1, 1.3], ["Slim", "Average", "Curvy"], (v) => {
+              L2.bust = v;
+            })) : null,
             h("p.muted", { style: { margin: "0 0 8px", fontSize: "12px" } }, "Your height is set by your race. " + (HEIGHT_NOTE[race] || "")),
             skinnable ? row("Skin", swatch("skin", ["#fbe3cf", "#f9dcc4", "#f1c9a0", "#e0ac7e", "#c68642", "#a0643a", "#7a4a2a", "#5c3a21"])) : null,
             race === "mink" ? row("Mink", opts("kind", MINK_KINDS.map((k) => k.name))) : null,
             race === "fishman" ? row("Fish-Man kind", opts("kind", FISHMAN_KINDS.map((k) => k.name))) : null
           );
         } else {
+          const o = outfitOf(L2);
+          const TOPS2 = [["tee", "Tee"], ["shirt", "Shirt"], ["tank", "Tank top"], ["vest", "Open vest"], ["open", "Open shirt"], ["striped", "Sailor stripes"], ["jacket", "Suit jacket"], ["kimono", "Kimono"], ["coat", "Long coat"], ["bare", "Bare-chested"]];
+          if (L2.fem) TOPS2.push(["crop", "Crop top"], ["bikini", "Bikini top"], ["dress", "Dress"]);
+          const BOTS = [["trousers", "Trousers"], ["shorts", "Shorts"], ["capri", "Rolled-up"], ["baggy", "Baggy"], ["slim", "Slim"], ["hakama", "Hakama"]];
+          if (L2.fem) BOTS.push(["skirt", "Skirt"], ["longskirt", "Long skirt"]);
+          const setTop = (v) => {
+            L2.topStyle = v;
+            L2.openShirt = void 0;
+            L2.noSleeves = void 0;
+            if (v === "coat" && !L2.coat) L2.coat = "#5d4037";
+            if (v !== "coat" && L2.coat && !L2.keepCoat) L2.coat = void 0;
+          };
+          const COLS = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#a0522d", "#ffffff"];
+          const two = ["striped", "jacket", "kimono", "coat"].includes(o.top);
           add2(
             optsEl,
-            row("Shirt", swatch("top", ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#a0522d", "#ffffff"])),
-            row("Shirt open", opts("openShirt", [false, true], ["Closed", "Open"])),
-            row("Trousers", swatch("bottom", ["#2d3436", "#1e3799", "#3b3b98", "#6d4c41", "#636e72", "#0a3d62", "#b8860b", "#e1b12c", "#f5f6fa"])),
-            row("Shoes", swatch("shoes", ["#3b2a1a", "#2d3436", "#8d6e4a", "#c8a878", "#c0392b", "#f5f6fa"]))
+            row("Top", chips(o.top, TOPS2.map((t) => t[0]), TOPS2.map((t) => t[1]), setTop)),
+            o.top !== "bare" ? row(o.top === "coat" ? "Coat colour" : "Colour", o.top === "coat" ? swatch("coat", ["#5d4037", "#37474f", "#1b5e20", "#4a148c", "#b71c1c", "#fafafa", "#212121", "#0d47a1"]) : swatch("top", COLS)) : null,
+            two ? row(o.top === "striped" ? "Stripes" : o.top === "kimono" ? "Collar" : "Shirt under", swatch("top2", ["#f5f5f5", "#fff8e1", "#90caf9", "#212121", "#c62828", "#fce4ec", "#ffd54f"])) : null,
+            row("Bottoms", chips(o.skirt && !L2.fem ? "trousers" : o.bottom, BOTS.map((t) => t[0]), BOTS.map((t) => t[1]), (v) => {
+              L2.bottomStyle = v;
+            })),
+            row("Colour", swatch("bottom", ["#2d3436", "#1e3799", "#1e63b8", "#3b3b98", "#6d4c41", "#636e72", "#0a3d62", "#b8860b", "#e1b12c", "#f5f6fa"])),
+            row("Waist", chips(o.waist, ["belt", "sash", "haramaki", "obi", "none"], ["Belt", "Sash", "Belly wrap", "Obi", "Nothing"], (v) => {
+              L2.waist = v;
+            })),
+            o.waist !== "none" ? row(o.waist === "belt" ? "Belt" : "Wrap colour", o.waist === "belt" ? swatch("belt", ["#3b2a1a", "#212121", "#6d4c41", "#8d6e4a", "#c62828"]) : swatch("waistCol", ["#f4c430", "#c62828", "#1e88e5", "#2e7d32", "#6a1b9a", "#ef6c00", "#fafafa", "#212121"])) : null,
+            row("Footwear", chips(o.shoes, ["boots", "shoes", "sandals", "geta", "bare"], ["Boots", "Shoes", "Sandals", "Geta", "Barefoot"], (v) => {
+              L2.shoeStyle = v;
+              L2.sandals = void 0;
+            })),
+            o.shoes !== "bare" ? row("Colour", swatch("shoes", ["#3b2a1a", "#2d3436", "#8d6e4a", "#c8a878", "#c0392b", "#f5f6fa"])) : null
           );
         }
       };
@@ -76784,9 +77782,16 @@ Trains by: ${TRAINS_BY[k]}` },
     gorilla: { name: "Snow Gorilla", faction: "beast", style: "brawler", look: { skin: "#eceff1", fur: "#eceff1", hairColor: "#eceff1", top: "#eceff1", bottom: "#cfd8dc", ears: "round", furFace: true, muzzle: true, hair: "bald" }, bulk: 1.4, hpMul: 1.8, skill: 0.1 },
     pacifista: { name: "Pacifista", faction: "marine", style: "brawler", look: { top: "#263238", bottom: "#263238", skin: "#607d8b", hat: "bandana", hatColor: "#263238" }, bulk: 1.5, scale: 1.4, hpMul: 3, skill: 0.3, moves: ["kuma_laser"], lethal: true }
   };
+  var WOMEN = /\b(Makino|Dadan|Alvida|Rika|Kaya|Nojiko|Bell-?m[eè]re|Tashigi|Kuina|Nami|Robin|Vivi|Kureha|Conis|Laki|Aisa|Hina|Isuka|Hancock|Sandersonia|Marigold|Nyon|Perona|Kalifa|Bonney|Shirahoshi|Otohime|Shyarly|Big Mom|Linlin|Pudding|Smoothie|Br[uû]l[eé]e|Galette|Flampe|Praline|Amande|Chiffon|Lola|Viola|Rebecca|Monet|Baby 5|Koala|Carrot|Wanda|Yamato|Hiyori|Kiku|Tama|Ulti|Black Maria|Sugar|Kokoro|Chimney|Shakky|Valentine|Doublefinger|Goldenweek|All ?Sunday|Merry ?Christmas|Paula|Porche|Cindry|Stussy|Lilith|Jewelry|Catarina|Tsuru|Gion|Momousagi|Olvia|Toki|Rouge|Uta|Betty|Hibari|Carina|Mozu|Kiwi|Ishley|Nico)\b/i;
+  var ROLE_OF = { pirate: "pirate", bandit: "bandit", marine: "marine", cp: "agent", baroque: "agent", rival: "swordsman", beast: "beast", fishman: "fishman" };
   function makeNPC(def, x, y, extra = {}) {
     const L2 = def.level ?? 6;
-    const look = def.fullLook ? { ...def.fullLook } : makeLook(def.race || "human", hashSeed(def.id || def.name), { ...def.look || {} });
+    let role = def.role || (def.beast || def.faction === "beast" ? "beast" : ROLE_OF[def.faction]) || "civilian";
+    if (role === "marine" && (def.look?.coat || def.boss || def.named)) role = "officer";
+    const lookOver = { ...def.look || {}, role };
+    if (lookOver.fem === void 0 && def.name && WOMEN.test(def.name)) lookOver.fem = true;
+    if (lookOver.fem === void 0 && (def.named || def.boss || def.dialogue)) lookOver.fem = false;
+    const look = def.fullLook ? { ...def.fullLook } : makeLook(def.race || "human", def.seed ?? hashSeed(def.id || def.name), lookOver);
     if (def.bulk) look.bulk = def.bulk;
     if (def.scale) look.scale = def.scale;
     const attrs = def.attrs || { str: L2, agi: L2, end: L2, vit: L2, wil: L2 };
@@ -76868,6 +77873,8 @@ Trains by: ${TRAINS_BY[k]}` },
       look: { ...A.look || {}, ...over.look || {} },
       moves: over.moves || A.moves,
       id: over.id,
+      seed: over.seed ?? Math.floor(Math.random() * 1e9),
+      // every grunt looks different
       hpMul: (A.hpMul || 1) * (over.hpMul || 1),
       skill: over.skill ?? A.skill,
       fleeAt: 0.15,
@@ -83733,11 +84740,11 @@ Trains by: ${TRAINS_BY[k]}` },
       t = 0.5;
       const c = game.state?.char, p = game.player;
       if (!c || !p || game.world !== game.surface) return;
-      const W2 = game.world;
+      const W3 = game.world;
       const isl = game.currentIsland;
       const near = (spot, r) => {
         const s = isl?.spots?.[spot];
-        return !!s && W2.distance(p.x, p.y, s.x, s.y) < r;
+        return !!s && W3.distance(p.x, p.y, s.x, s.y) < r;
       };
       if (isl?.id === "ohara" && stg(game, "wb_ohara_primer") === "pages" && !c.flags.wbPageLake && near("book_lake", 5)) {
         c.flags.wbPageLake = true;
@@ -83756,7 +84763,7 @@ Trains by: ${TRAINS_BY[k]}` },
       if (stg(game, "wb_god_valley") === "serpent" && !findActor(game, "wb_valley_king")) {
         const gv = game.surface.islands.find((i) => i.id === "god_valley");
         const s = gv?.spots?.valley_deep;
-        if (s && W2.distance(p.x, p.y, s.x, s.y) < 30 && W2.isLiquid(s.x, s.y)) {
+        if (s && W3.distance(p.x, p.y, s.x, s.y) < 30 && W3.isLiquid(s.x, s.y)) {
           seaBoss(game, { id: "wb_valley_king", name: "Sea King of the Drowned Ravine", title: "Guardian of God Valley's grave", level: 20, hpMul: 3.4, color: "#4e342e", breakthrough: 3 }, s.x, s.y);
           game.ui.banner("SEA KING", "The Drowned Ravine", "Something the size of a church rises from where God Valley used to be.", 4);
         }
@@ -83780,7 +84787,7 @@ Trains by: ${TRAINS_BY[k]}` },
       for (const [q2, st, id, r] of PROXIMITY_AGGRO) {
         if (stg(game, q2) !== st) continue;
         const a = findActor(game, id);
-        if (a && !a.provoked && a.state === "idle" && W2.distance(p.x, p.y, a.x, a.y) < r) aggro(game, a);
+        if (a && !a.provoked && a.state === "idle" && W3.distance(p.x, p.y, a.x, a.y) < r) aggro(game, a);
       }
     });
   }
@@ -83854,8 +84861,8 @@ Trains by: ${TRAINS_BY[k]}` },
   }
   function ruin(g, islandId, match, pieces) {
     const isl = islandRec(g, islandId);
-    const W2 = g.surface;
-    if (!isl || !W2?.objects) return null;
+    const W3 = g.surface;
+    if (!isl || !W3?.objects) return null;
     let obj = null;
     for (const t of isl.towns || []) {
       obj = (t.buildings || []).find(match);
@@ -83865,11 +84872,11 @@ Trains by: ${TRAINS_BY[k]}` },
     if (!obj || obj._sbRuined) return null;
     obj._sbRuined = true;
     try {
-      W2.objects.remove(obj);
+      W3.objects.remove(obj);
     } catch (e) {
       return null;
     }
-    for (const [dx, dy, kind] of pieces) W2.objects.add({ kind: kind || "ruins", x: obj.x + dx, y: obj.y + dy, block: true, v: 0 });
+    for (const [dx, dy, kind] of pieces) W3.objects.add({ kind: kind || "ruins", x: obj.x + dx, y: obj.y + dy, block: true, v: 0 });
     return obj;
   }
   var ruinPalace = (g) => ruin(
@@ -89651,12 +90658,12 @@ Trains by: ${TRAINS_BY[k]}` },
   ];
   function drawWhale(g, env, marked) {
     const t = env?.time || 0;
-    const TAU18 = Math.PI * 2;
+    const TAU19 = Math.PI * 2;
     g.save();
     g.translate(0, Math.sin(t * 0.7) * 0.12);
     g.fillStyle = "rgba(255,255,255,0.28)";
     g.beginPath();
-    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU18);
+    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU19);
     g.fill();
     g.fillStyle = "#4e6177";
     g.beginPath();
@@ -89668,7 +90675,7 @@ Trains by: ${TRAINS_BY[k]}` },
     g.fill();
     g.fillStyle = "#5d7389";
     g.beginPath();
-    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU18);
+    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU19);
     g.fill();
     g.fillStyle = "#d7e1ea";
     g.beginPath();
@@ -89684,16 +90691,16 @@ Trains by: ${TRAINS_BY[k]}` },
     }
     g.fillStyle = "#fafafa";
     g.beginPath();
-    g.arc(-6.6, -1.8, 0.45, 0, TAU18);
+    g.arc(-6.6, -1.8, 0.45, 0, TAU19);
     g.fill();
     g.fillStyle = "#1a1a1a";
     g.beginPath();
-    g.arc(-6.7, -1.8, 0.24, 0, TAU18);
+    g.arc(-6.7, -1.8, 0.24, 0, TAU19);
     g.fill();
     if (marked) {
       g.fillStyle = "#fafafa";
       g.beginPath();
-      g.arc(-8.2, -3.1, 0.8, 0, TAU18);
+      g.arc(-8.2, -3.1, 0.8, 0, TAU19);
       g.fill();
       g.strokeStyle = "#fafafa";
       g.lineWidth = 0.25;
@@ -89705,8 +90712,8 @@ Trains by: ${TRAINS_BY[k]}` },
       g.stroke();
       g.fillStyle = "#1a1a1a";
       g.beginPath();
-      g.arc(-8.45, -3.2, 0.16, 0, TAU18);
-      g.arc(-7.95, -3.2, 0.16, 0, TAU18);
+      g.arc(-8.45, -3.2, 0.16, 0, TAU19);
+      g.arc(-7.95, -3.2, 0.16, 0, TAU19);
       g.fill();
     }
     const ph = t % 14;
@@ -89714,7 +90721,7 @@ Trains by: ${TRAINS_BY[k]}` },
       const h2 = Math.sin(ph / 1.6 * Math.PI) * 3.2;
       g.fillStyle = "rgba(225,245,254,0.8)";
       g.beginPath();
-      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU18);
+      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU19);
       g.fill();
     }
     g.font = "bold 0.5px Nunito, sans-serif";
@@ -93944,7 +94951,7 @@ Trains by: ${TRAINS_BY[k]}` },
   }
   function install6(game) {
     const char = () => game.state?.char;
-    const W2 = () => game.world;
+    const W3 = () => game.world;
     let t = 0, nightT = 0, watchT = 0, burnWarn = 0, warT = 0, shellT = 0;
     const shells = [];
     const hqDoor = () => {
@@ -93955,7 +94962,7 @@ Trains by: ${TRAINS_BY[k]}` },
     const near = (id, extra = 0) => {
       const isl = islandRec3(game, id);
       const p = game.player;
-      return !!(isl && p && W2() === game.surface && W2().distance(p.x, p.y, isl.x, isl.y) < (isl.radius || 60) + extra);
+      return !!(isl && p && W3() === game.surface && W3().distance(p.x, p.y, isl.x, isl.y) < (isl.radius || 60) + extra);
     };
     const shell = (minR, maxR) => {
       const p = game.player;
@@ -93966,7 +94973,7 @@ Trains by: ${TRAINS_BY[k]}` },
     };
     game.on("enterIsland", (isl) => {
       const c = char();
-      if (!c || !isl || W2() !== game.surface) return;
+      if (!c || !isl || W3() !== game.surface) return;
       const q2 = game.quests;
       if (isl.id === "thriller_bark" && !q2.state(TB_Q)) q2.start(TB_Q);
       if (isl.id === "amazon_lily" && !q2.state("p2_amazon_lily")) {
@@ -94073,10 +95080,10 @@ Trains by: ${TRAINS_BY[k]}` },
     const prevSea = game.seaInteraction;
     game.seaInteraction = (p, s) => {
       const c = char();
-      if (c && s && W2() === game.surface) {
+      if (c && s && W3() === game.surface) {
         for (const gate of GATES) {
           const spot = spotOf2(game, gate[0], gate[1]);
-          if (!spot || W2().distance(s.x, s.y, spot.x, spot.y) > 16) continue;
+          if (!spot || W3().distance(s.x, s.y, spot.x, spot.y) > 16) continue;
           const open = marine(c) || !!c.flags.p2_taraiOpen;
           return {
             label: open ? "Ride the Tarai Current through the Gate of Justice" : "The Gate of Justice (sealed)",
@@ -94129,7 +95136,7 @@ Trains by: ${TRAINS_BY[k]}` },
         game.fx.crack?.(sh.x, sh.y, sh.r);
         game.fx.shake(0.35);
         game.audio?.sfx("explosion");
-        if (p.state === "idle" && p.d && W2().distance(p.x, p.y, sh.x, sh.y) < sh.r) {
+        if (p.state === "idle" && p.d && W3().distance(p.x, p.y, sh.x, sh.y) < sh.r) {
           p.hp = Math.max(1, p.hp - p.d.maxHp * 0.08);
           game.fx.text(p.x, p.y - 2, "BOOM!", "#ff7043", 0.5);
         }
@@ -94139,14 +95146,14 @@ Trains by: ${TRAINS_BY[k]}` },
       t = 0.5;
       const q2 = game.quests;
       const here = game.currentIsland?.id;
-      const surface = W2() === game.surface;
+      const surface = W3() === game.surface;
       if (surface && !c.flags.p2_florian && near("thriller_bark", 70)) {
         c.flags.p2_florian = true;
         game.ui.banner("THE FLORIAN TRIANGLE", "Paradise", "A sea of fog where a hundred ships a year vanish \u2014 and ghost ships drift out again with no one aboard. Somewhere ahead, someone is singing.", 6);
       }
       if (S2(game, "p2_cp9_conspiracy") === "night" && here === "water_7") {
         const door = hqDoor();
-        if (door && W2().distance(p.x, p.y, door.x, door.y) < 18) {
+        if (door && W3().distance(p.x, p.y, door.x, door.y) < 18) {
           watchT += 0.5;
           if (env.daylight < 0.6 || watchT >= 20) {
             if (env.daylight >= 0.6) {
@@ -97976,10 +98983,10 @@ Trains by: ${TRAINS_BY[k]}` },
         }
       }
       if (isl.id === "zou") {
-        const half = game.env.clock >= 12 ? 1 : 0;
-        if ((game.env.day !== rainDay || half !== rainHalf) && Math.abs(game.env.clock % 12 - 7) < 0.05) {
+        const half2 = game.env.clock >= 12 ? 1 : 0;
+        if ((game.env.day !== rainDay || half2 !== rainHalf) && Math.abs(game.env.clock % 12 - 7) < 0.05) {
           rainDay = game.env.day;
-          rainHalf = half;
+          rainHalf = half2;
           game.ui.banner("ERUPTION RAIN", "Zou", "Zunesha raises its trunk and a flood of sea water crashes down over its back. Minks everywhere dive for shelter \u2014 fish rain from the sky.", 4);
           game.env.storm = Math.max(game.env.storm || 0, 0.6);
         }
@@ -102826,7 +103833,7 @@ Trains by: ${TRAINS_BY[k]}` },
         startNewCharacter(game, birth, { name: opts.name || "Test Pirate", look: null });
         return game.player;
       },
-      debug: { npcDef, makeNPC, addItem, fruitOf },
+      debug: { npcDef, makeNPC, addItem, fruitOf, portrait: renderPortrait },
       ready: true
     });
     showTitle();

@@ -10,6 +10,7 @@
 // that looks the same.
 import { Builder, Prim, M, between, mul, grid, lathe, tcap, lin, THREE } from './geom.js';
 import { B, dims } from './bones.js';
+import { buildFigure } from './body.js';
 import { shade, mixHex } from '../../core/math.js';
 
 const TAU = Math.PI * 2;
@@ -17,9 +18,9 @@ const DEG = Math.PI / 180;
 
 // detail per level: [near, far, viewmodel]
 const DETAIL = {
-  0: { head: [16, 12], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1 },
-  1: { head: [8, 6], cap: [10, 4], cone: 3, sph: [5, 3], blob: [6, 4], limb: [5, 1], lathe: 7, rbox: [5, 4], rboxS: [4, 3], hat: 9, hatS: [7, 4], fringe: 0, hands: 0 },
-  [-1]: { head: [14, 10], cap: [16, 6], cone: 5, sph: [8, 6], blob: [10, 7], limb: [10, 3], lathe: 12, rbox: [10, 8], rboxS: [8, 6], hat: 16, hatS: [12, 8], fringe: 1, hands: 2 },
+  0: { head: [16, 12], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1, cloth: 1 },
+  1: { head: [8, 6], cap: [10, 4], cone: 3, sph: [5, 3], blob: [6, 4], limb: [5, 1], lathe: 7, rbox: [5, 4], rboxS: [4, 3], hat: 9, hatS: [7, 4], fringe: 0, hands: 0, cloth: 0 },
+  [-1]: { head: [14, 10], cap: [16, 6], cone: 5, sph: [8, 6], blob: [10, 7], limb: [10, 3], lathe: 14, rbox: [10, 8], rboxS: [8, 6], hat: 16, hatS: [12, 8], fringe: 1, hands: 2, cloth: 1 },
 };
 
 // ------------------------------------------------------------------ head shape
@@ -379,7 +380,8 @@ export function geoKey(look, wpn, lod = 0) {
   const L = look;
   return [lod, L.race, L.skin, L.hair, L.hairColor, L.top, L.bottom, L.shoes, L.hat, L.hatColor, L.coat, L.openShirt ? 1 : 0, L.sleeve, L.noSleeves ? 1 : 0,
     L.hand, L.arms, L.legs, L.bulk, L.ears, L.fur, L.furFace ? 1 : 0, L.furWhite ? 1 : 0, L.tail, L.fin ? 1 : 0, L.wings, L.nose, L.kind, L.vest, L.belt,
-    L.sandals ?? ((L.seed || 0) % 4 === 0 ? 's' : 'b'), L.neck, L.nika ? 1 : 0, L.drums ? 1 : 0, (L.seed || 0) % 3, wpn ? `${wpn.kind}${wpn.count}` : '-'].join('|');
+    L.sandals ?? ((L.seed || 0) % 4 === 0 ? 's' : 'b'), L.neck, L.nika ? 1 : 0, L.drums ? 1 : 0, L.seed || 0, wpn ? `${wpn.kind}${wpn.count}` : '-',
+    L.fem ? 1 : 0, L.topStyle, L.bottomStyle, L.waist, L.waistCol, L.shoeStyle, L.top2, L.sleeves, L.muscle, L.bust, L.tie, L.tucked, L.buckle].join('|');
 }
 
 /** Build a character's geometry (not cached; see getBody). */
@@ -389,33 +391,11 @@ export function buildBody(look, wpn, lod = 0) {
   const pal = palette(look);
   const b = new Builder();
   const Bk = d.Bk;
-  const dep = d.depth;
-  const skinArm = pal.sleeve || pal.skin;
   const add = (g, m, col, bone, part = 0) => b.add(g, m, col, bone, part);
-  const [lr, lc] = q.limb;
   const rb = (k = 0.4, small = true) => Prim.rbox(k, ...(small ? q.rboxS : q.rbox));
 
-  // ---- pelvis + belt
-  add(lathe([[0.02, -0.19], [0.1 * Bk, -0.18], [0.143 * Bk, -0.125], [0.151 * Bk, -0.05], [0.142 * Bk, 0.03], [0.13 * Bk, 0.09]], q.lathe), M(0, 0, 0, 0, 0, 0, [dep + 0.03, 1, 1]), pal.bottom, B.hips);
-  add(Prim.cyl(q.lathe, true), M(0, 0.02, 0, 0, 0, 0, [0.152 * Bk * (dep + 0.03), 0.055, 0.152 * Bk]), pal.belt, B.hips);
-  add(Prim.box(), M(0.152 * Bk * (dep + 0.03) + 0.004, 0.02, 0, 0, 0, 0, [0.008, 0.026, 0.03]), '#ffd54f', B.hips);
-
-  // ---- torso (chest frame = hip pivot), shirt / open shirt / vest
-  const cl = d.chestLen / 0.46;
-  const tp = [[0.128, -0.03], [0.124, 0.08], [0.14, 0.18], [0.172, 0.28], [0.196, 0.36], [0.198, 0.41], [0.16, 0.45], [0.098, 0.474], [0.05, 0.484]]
-    .map(([r, y]) => [r * Bk, y * cl]);
-  const torsoM = M(0, 0, 0, 0, 0, 0, [dep, 1, 1]);
-  if (look.openShirt) {
-    add(lathe(tp, q.lathe), torsoM, pal.skin, B.chest);
-    add(lathe(tp.slice(0, 7).map(([r, y]) => [r + 0.007, y]), q.lathe, 0.42, TAU - 0.84), torsoM, pal.top, B.chest);
-  } else {
-    // shirt with a skin-coloured neckline
-    const neckY = tp[6][1];
-    add(lathe(tp, q.lathe), torsoM, (x, y) => (y > neckY + 0.012 && x > -0.02 ? pal.skin : pal.top), B.chest);
-  }
-  if (look.vest) add(lathe(tp.slice(0, 7).map(([r, y]) => [r + 0.013, y]), q.lathe, 0.62, TAU - 1.24), torsoM, look.vest, B.chest);
-  // neck
-  add(Prim.cyl(Math.max(6, q.lathe - 2), true), M(0, d.chestLen + d.neck * 0.5 + 0.005, 0, 0, 0, 0, [0.046 * (1 + (Bk - 1) * 0.5), d.neck + 0.07, 0.048 * (1 + (Bk - 1) * 0.5)]), pal.skin, B.chest);
+  // ---- pelvis, torso, arms, legs, feet and clothes (body.js)
+  const outfit = buildFigure(add, look, d, pal, q);
 
   // ---- head (+ ears, race features, hair, hat)
   const R = d.headR;
@@ -471,47 +451,9 @@ export function buildBody(look, wpn, lod = 0) {
     HATS[kind](hh, look.hatColor, look, meta.top);
   }
 
-  // ---- arms (short sleeves are the shirt colour at the top of the upper arm)
-  const sleeveY = -d.A1 * 0.42;
-  const upperCol = pal.sleeve ? pal.sleeve : look.noSleeves ? pal.skin : (x, y) => (y > sleeveY ? pal.top : pal.skin);
-  for (const [s, U, F, Hd, part] of [[1, B.uarmR, B.farmR, 'R', 1], [-1, B.uarmL, B.farmL, 'L', 2]]) {
-    const r0 = 0.05 * Bk, r1 = 0.043 * Bk, r2 = 0.036 * Bk;
-    const sl = pal.sleeve || look.noSleeves ? 1 : 1.12;
-    add(tcap(r0 * sl, r1, d.A1, lr, lc), M(), upperCol, U);
-    add(tcap(r1, r2, d.A2, lr, lc), M(), pal.sleeve ? (x, y) => (y < -d.A2 * 0.88 ? shade(pal.sleeve, -0.2) : pal.sleeve) : skinArm, F, part);
-    if (d.Am > 1.2) add(Prim.sphere(q.sph[0], q.sph[1]), M(0, -d.A2 * 0.5, 0, 0, 0, 0, r1 * 1.12), skinArm, F, part);
-    hands(b, Hd, s, pal.hand, Bk, part, q);
-  }
+  // ---- hands
+  for (const [s, Hd, part] of [[1, 'R', 1], [-1, 'L', 2]]) hands(b, Hd, s, pal.hand, Bk, part, q, outfit.fem ? 0.9 : 1.12);
 
-  // ---- legs + feet
-  const sandals = look.sandals ?? ((look.seed || 0) % 4 === 0);
-  const cuff = shade(pal.bottom, -0.25);
-  for (const [T, S, Ft, part] of [[B.thighR, B.shinR, B.footR, 3], [B.thighL, B.shinL, B.footL, 4]]) {
-    add(tcap(0.078 * Bk, 0.063 * Bk, d.T1, lr, lc), M(), pal.bottom, T);
-    add(tcap(0.061 * Bk, 0.049 * Bk, d.T2, lr, lc), M(), (x, y) => (y < -d.T2 * 0.84 ? cuff : pal.bottom), S, part);
-    if (sandals) {
-      add(rb(0.45), M(0.045, -0.05, 0, 0, 0, 0, [0.095, 0.026, 0.042 * Bk]), (x, y) => (y < -0.3 ? '#6d4c41' : pal.skin), Ft, part);
-      add(Prim.torus(0.25, 3, 6), M(0.06, -0.05, 0, 0, 0, Math.PI / 2, [0.03, 0.046 * Bk, 0.03]), pal.shoes, Ft, part);
-      add(Prim.cyl(6, true), M(0, -0.02, 0, 0, 0, 0, [0.043 * Bk, 0.05, 0.043 * Bk]), pal.skin, Ft, part);
-    } else {
-      const sole = shade(pal.shoes, -0.35);
-      add(rb(0.4, false), M(0.04, -0.038, 0, 0, 0, 0, [0.108, 0.044, 0.052 * Bk]), (x, y) => (y < -0.55 ? sole : pal.shoes), Ft, part);
-      add(Prim.cyl(6, true), M(-0.005, 0.02, 0, 0, 0, 0, [0.05 * Bk, 0.1, 0.05 * Bk]), pal.shoes, Ft, part);
-    }
-  }
-
-  // ---- coat: a cape over the shoulders, the tail swings from the waist
-  if (look.coat) {
-    const c = look.coat, lining = shade(c, -0.28);
-    const gap = 0.55;
-    const up = [[0.2, 0.0], [0.205, 0.2], [0.214, 0.36], [0.2, 0.43], [0.12, 0.475]].map(([r, y]) => [r * Bk, y * cl]);
-    const cm = M(-0.01, 0, 0, 0, 0, 0, [dep + 0.12, 1, 1.02]);
-    add(lathe(up, q.lathe, gap, TAU - 2 * gap), cm, c, B.chest);
-    add(lathe(up.map(([r, y]) => [r - 0.008, y]), q.lathe, gap, TAU - 2 * gap, true), cm, lining, B.chest);
-    const lo = [[0.3, -0.52], [0.26, -0.26], [0.212, 0.02]].map(([r, y]) => [r * Bk, y]);
-    add(lathe(lo, q.lathe, gap + 0.15, TAU - 2 * gap - 0.3), cm, c, B.coatTail);
-    add(lathe(lo.map(([r, y]) => [r - 0.008, y]), q.lathe, gap + 0.15, TAU - 2 * gap - 0.3, true), cm, lining, B.coatTail);
-  }
   if (look.drums) {
     for (let k = 0; k < 6; k++) {
       const a = Math.PI * 0.55 + (k / 5) * Math.PI * 0.9;
@@ -588,8 +530,8 @@ function minkEars(b, HM, look, pal, hb, q) {
  * index finger (shown together with the fist). The viewmodel level (q.hands
  * 2) gets knuckles and separate fingers; the far level only a fist.
  */
-function hands(b, H, s, col, Bk, part, q) {
-  const k = 0.95 + (Bk - 1) * 0.6;
+function hands(b, H, s, col, Bk, part, q, kMul = 1) {
+  const k = (0.95 + (Bk - 1) * 0.6) * kMul;
   const th = -s; // thumb side on local Z (right hand: -Z)
   const fist = B['fist' + H], palm = B['palm' + H], finger = B['finger' + H];
   const S = (x, y, z) => [x * k, y * k, z * k];

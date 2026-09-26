@@ -2,6 +2,7 @@
 // death and Inherited Will screens.
 import { h, clear, add } from './dom.js';
 import { RACES, RARITY, makeLook, raceLabel, MINK_KINDS, FISHMAN_KINDS } from '../data/races.js';
+import { outfitOf } from '../render3d/chars/body.js';
 import { LEGENDS } from '../data/dreams.js';
 import { TRAITS, PERKS, perkLevel, perkCost, rollBirth, dChance, nameWithD } from '../game/lineage.js';
 import { ITEMS } from '../data/items.js';
@@ -261,19 +262,41 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
         );
       } else if (tab === 'body') {
         const build = h('input.build-slider', { type: 'range', min: 0, max: 1, step: 0.05, value: L.build ?? 0.5, on: { input: (e) => { L.build = Number(e.target.value); applyLook(L, race); preview?.setLook(L); } } });
+        const mus = L.muscle ?? 0.5;
         add(optsEl,
+          row('Body type', chips(L.fem ? 'f' : 'm', ['m', 'f'], ['Masculine', 'Feminine'], (v) => {
+            L.fem = v === 'f';
+            // swap clothes that only suit the other build
+            if (!L.fem && ['dress', 'crop', 'bikini'].includes(L.topStyle)) L.topStyle = 'tee';
+            if (!L.fem && ['skirt', 'longskirt'].includes(L.bottomStyle)) L.bottomStyle = 'trousers';
+          })),
           row('Build', h('div.build-row', h('span.muted', 'Thin'), build, h('span.muted', 'Wide'))),
+          row('Muscle', chips(mus < 0.35 ? 0.2 : mus < 0.75 ? 0.55 : 1, [0.2, 0.55, 1], ['Lean', 'Toned', 'Muscular'], (v) => { L.muscle = v; })),
+          L.fem ? row('Figure', chips((L.bust ?? 1) < 0.9 ? 0.8 : (L.bust ?? 1) < 1.15 ? 1 : 1.3, [0.8, 1, 1.3], ['Slim', 'Average', 'Curvy'], (v) => { L.bust = v; })) : null,
           h('p.muted', { style: { margin: '0 0 8px', fontSize: '12px' } }, 'Your height is set by your race. ' + (HEIGHT_NOTE[race] || '')),
           skinnable ? row('Skin', swatch('skin', ['#fbe3cf', '#f9dcc4', '#f1c9a0', '#e0ac7e', '#c68642', '#a0643a', '#7a4a2a', '#5c3a21'])) : null,
           race === 'mink' ? row('Mink', opts('kind', MINK_KINDS.map((k) => k.name))) : null,
           race === 'fishman' ? row('Fish-Man kind', opts('kind', FISHMAN_KINDS.map((k) => k.name))) : null,
         );
       } else {
+        const o = outfitOf(L);
+        const TOPS = [['tee', 'Tee'], ['shirt', 'Shirt'], ['tank', 'Tank top'], ['vest', 'Open vest'], ['open', 'Open shirt'], ['striped', 'Sailor stripes'], ['jacket', 'Suit jacket'], ['kimono', 'Kimono'], ['coat', 'Long coat'], ['bare', 'Bare-chested']];
+        if (L.fem) TOPS.push(['crop', 'Crop top'], ['bikini', 'Bikini top'], ['dress', 'Dress']);
+        const BOTS = [['trousers', 'Trousers'], ['shorts', 'Shorts'], ['capri', 'Rolled-up'], ['baggy', 'Baggy'], ['slim', 'Slim'], ['hakama', 'Hakama']];
+        if (L.fem) BOTS.push(['skirt', 'Skirt'], ['longskirt', 'Long skirt']);
+        const setTop = (v) => { L.topStyle = v; L.openShirt = undefined; L.noSleeves = undefined; if (v === 'coat' && !L.coat) L.coat = '#5d4037'; if (v !== 'coat' && L.coat && !L.keepCoat) L.coat = undefined; };
+        const COLS = ['#d63031', '#0984e3', '#00b894', '#fdcb6e', '#e17055', '#6c5ce7', '#2d3436', '#dfe6e9', '#e84393', '#00cec9', '#a0522d', '#ffffff'];
+        const two = ['striped', 'jacket', 'kimono', 'coat'].includes(o.top);
         add(optsEl,
-          row('Shirt', swatch('top', ['#d63031', '#0984e3', '#00b894', '#fdcb6e', '#e17055', '#6c5ce7', '#2d3436', '#dfe6e9', '#e84393', '#00cec9', '#a0522d', '#ffffff'])),
-          row('Shirt open', opts('openShirt', [false, true], ['Closed', 'Open'])),
-          row('Trousers', swatch('bottom', ['#2d3436', '#1e3799', '#3b3b98', '#6d4c41', '#636e72', '#0a3d62', '#b8860b', '#e1b12c', '#f5f6fa'])),
-          row('Shoes', swatch('shoes', ['#3b2a1a', '#2d3436', '#8d6e4a', '#c8a878', '#c0392b', '#f5f6fa'])),
+          row('Top', chips(o.top, TOPS.map((t) => t[0]), TOPS.map((t) => t[1]), setTop)),
+          o.top !== 'bare' ? row(o.top === 'coat' ? 'Coat colour' : 'Colour', o.top === 'coat' ? swatch('coat', ['#5d4037', '#37474f', '#1b5e20', '#4a148c', '#b71c1c', '#fafafa', '#212121', '#0d47a1']) : swatch('top', COLS)) : null,
+          two ? row(o.top === 'striped' ? 'Stripes' : o.top === 'kimono' ? 'Collar' : 'Shirt under', swatch('top2', ['#f5f5f5', '#fff8e1', '#90caf9', '#212121', '#c62828', '#fce4ec', '#ffd54f'])) : null,
+          row('Bottoms', chips(o.skirt && !L.fem ? 'trousers' : o.bottom, BOTS.map((t) => t[0]), BOTS.map((t) => t[1]), (v) => { L.bottomStyle = v; })),
+          row('Colour', swatch('bottom', ['#2d3436', '#1e3799', '#1e63b8', '#3b3b98', '#6d4c41', '#636e72', '#0a3d62', '#b8860b', '#e1b12c', '#f5f6fa'])),
+          row('Waist', chips(o.waist, ['belt', 'sash', 'haramaki', 'obi', 'none'], ['Belt', 'Sash', 'Belly wrap', 'Obi', 'Nothing'], (v) => { L.waist = v; })),
+          o.waist !== 'none' ? row(o.waist === 'belt' ? 'Belt' : 'Wrap colour', o.waist === 'belt' ? swatch('belt', ['#3b2a1a', '#212121', '#6d4c41', '#8d6e4a', '#c62828']) : swatch('waistCol', ['#f4c430', '#c62828', '#1e88e5', '#2e7d32', '#6a1b9a', '#ef6c00', '#fafafa', '#212121'])) : null,
+          row('Footwear', chips(o.shoes, ['boots', 'shoes', 'sandals', 'geta', 'bare'], ['Boots', 'Shoes', 'Sandals', 'Geta', 'Barefoot'], (v) => { L.shoeStyle = v; L.sandals = undefined; })),
+          o.shoes !== 'bare' ? row('Colour', swatch('shoes', ['#3b2a1a', '#2d3436', '#8d6e4a', '#c8a878', '#c0392b', '#f5f6fa'])) : null,
         );
       }
     };

@@ -44,9 +44,18 @@ export const ARCHETYPES = {
 };
 
 // ------------------------------------------------------------ spawning
+// canon women among the named characters (their data predates body types)
+const WOMEN = /\b(Makino|Dadan|Alvida|Rika|Kaya|Nojiko|Bell-?m[eè]re|Tashigi|Kuina|Nami|Robin|Vivi|Kureha|Conis|Laki|Aisa|Hina|Isuka|Hancock|Sandersonia|Marigold|Nyon|Perona|Kalifa|Bonney|Shirahoshi|Otohime|Shyarly|Big Mom|Linlin|Pudding|Smoothie|Br[uû]l[eé]e|Galette|Flampe|Praline|Amande|Chiffon|Lola|Viola|Rebecca|Monet|Baby 5|Koala|Carrot|Wanda|Yamato|Hiyori|Kiku|Tama|Ulti|Black Maria|Sugar|Kokoro|Chimney|Shakky|Valentine|Doublefinger|Goldenweek|All ?Sunday|Merry ?Christmas|Paula|Porche|Cindry|Stussy|Lilith|Jewelry|Catarina|Tsuru|Gion|Momousagi|Olvia|Toki|Rouge|Uta|Betty|Hibari|Carina|Mozu|Kiwi|Ishley|Nico)\b/i;
+const ROLE_OF = { pirate: 'pirate', bandit: 'bandit', marine: 'marine', cp: 'agent', baroque: 'agent', rival: 'swordsman', beast: 'beast', fishman: 'fishman' };
+
 export function makeNPC(def, x, y, extra = {}) {
   const L = def.level ?? 6;
-  const look = def.fullLook ? { ...def.fullLook } : makeLook(def.race || 'human', hashSeed(def.id || def.name), { ...(def.look || {}) });
+  let role = def.role || (def.beast || def.faction === 'beast' ? 'beast' : ROLE_OF[def.faction]) || 'civilian';
+  if (role === 'marine' && (def.look?.coat || def.boss || def.named)) role = 'officer';
+  const lookOver = { ...(def.look || {}), role };
+  if (lookOver.fem === undefined && def.name && WOMEN.test(def.name)) lookOver.fem = true;
+  if (lookOver.fem === undefined && (def.named || def.boss || def.dialogue)) lookOver.fem = false; // named men stay men
+  const look = def.fullLook ? { ...def.fullLook } : makeLook(def.race || 'human', def.seed ?? hashSeed(def.id || def.name), lookOver);
   if (def.bulk) look.bulk = def.bulk;
   if (def.scale) look.scale = def.scale;
   const attrs = def.attrs || { str: L, agi: L, end: L, vit: L, wil: L };
@@ -97,6 +106,7 @@ export function makeEnemy(arch, level, x, y, over = {}) {
   over = Object.fromEntries(Object.entries(over || {}).filter(([, v]) => v !== undefined));
   return makeNPC({
     ...A, level, hostile: true, name: over.name || A.name, look: { ...(A.look || {}), ...(over.look || {}) }, moves: over.moves || A.moves, id: over.id,
+    seed: over.seed ?? Math.floor(Math.random() * 1e9), // every grunt looks different
     hpMul: (A.hpMul || 1) * (over.hpMul || 1), skill: over.skill ?? A.skill, fleeAt: 0.15, ...over,
   }, x, y);
 }

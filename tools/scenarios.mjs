@@ -36,15 +36,21 @@ export const scenarios = {
       await page.locator('input.build-slider').fill('0');
       await frames(page, 6);
       await snap('identity-thin');
-      await click('Clothes'); await click('Open');
+      await click('Feminine'); await click('Toned');
+      await click('Clothes'); await click('Crop top'); await click('Skirt'); await click('Sash'); await click('Sandals');
       await frames(page, 6);
+      await snap('identity-outfit');
+      await click('Body'); await click('Masculine'); await click('Muscular');
+      await click('Clothes'); await click('Open vest'); await click('Shorts');
+      await frames(page, 6);
+      await snap('identity-vest');
       const look = await page.evaluate(() => { const s = document.querySelector('.preview3d canvas'); return { canvas: !!s && s.width > 0 }; });
       console.log('preview', JSON.stringify(look));
       await page.getByRole('button', { name: 'Set Sail', exact: true }).click();
       await frames(page, 5);
       await step(page, 1);
       await snap('spawned');
-      const info = await page.evaluate(() => { const c = window.OP.game.state.char; return { name: c.name, race: c.race, spawn: c.spawn, look: { eyeShape: c.look.eyeShape, grin: c.look.grin, hair: c.look.hair, build: c.look.build, bulk: c.look.bulk, openShirt: c.look.openShirt } }; });
+      const info = await page.evaluate(() => { const c = window.OP.game.state.char; return { name: c.name, race: c.race, spawn: c.spawn, look: { eyeShape: c.look.eyeShape, grin: c.look.grin, hair: c.look.hair, build: c.look.build, bulk: c.look.bulk, fem: c.look.fem, muscle: c.look.muscle, topStyle: c.look.topStyle, bottomStyle: c.look.bottomStyle, waist: c.look.waist, shoeStyle: c.look.shoeStyle } }; });
       console.log('spawn', JSON.stringify(info));
     },
   },

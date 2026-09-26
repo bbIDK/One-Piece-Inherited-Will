@@ -139,7 +139,7 @@ export function faceKey(look) {
   const skin = look.furWhite ? '#fafafa' : (look.fur && look.furFace ? look.fur : look.skin);
   return `${eyeShapeOf(look)}|${look.eyeColor}|${hairCol}|${skin}|${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.race === 'mink' ? 1 : 0}`
     + `${look.gills ? 1 : 0}${look.grin || look.nika ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.goggles === true ? 1 : 0}`
-    + `|${look.kind === 'Panda' ? 'P' : ''}|${look.nose || (look.kind === 'Saw Shark' ? 'saw' : '')}`;
+    + `|${look.kind === 'Panda' ? 'P' : ''}|${look.nose || (look.kind === 'Saw Shark' ? 'saw' : '')}|${look.fem ? 'F' : ''}`;
 }
 
 // ------------------------------------------------------------------ painting
@@ -176,6 +176,11 @@ function drawEyes(g, look, X) {
     g.fillStyle = pupil; g.beginPath(); g.ellipse(ix, iy + 0.015, 0.062 * ir, 0.105 * ir, 0, 0, TAU); g.fill();
     g.fillStyle = INK; g.fill(pp(fish ? E.fishLash : fierce ? E.fLash : E.lash));
     if (!fierce) { g.lineWidth = 0.028; g.strokeStyle = INK; g.stroke(pp(E.lower)); }
+    if (look.fem && !fish) {
+      // longer lashes flicking out at the outer corner
+      g.lineWidth = 0.032; g.strokeStyle = INK; g.lineCap = 'round';
+      g.stroke(pp(fierce ? 'M0.22 -0.18 L0.33 -0.26 M0.24 -0.1 L0.36 -0.14' : 'M0.2 -0.2 Q0.3 -0.26 0.36 -0.3 M0.23 -0.11 Q0.33 -0.14 0.39 -0.15'));
+    }
     g.restore();
     // catch-lights on the upper-left (not mirrored)
     g.fillStyle = '#ffffff';
@@ -191,7 +196,7 @@ function drawMouth(g, look, X) {
   const kind = X.mouth;
   if (look.muzzle) { g.save(); g.translate(0, 0.05); }
   if (typeof MOUTHS[kind] === 'string') {
-    g.lineWidth = 0.05; g.strokeStyle = MOUTH_COL; g.lineCap = 'round'; g.stroke(pp(MOUTHS[kind]));
+    g.lineWidth = look.fem ? 0.058 : 0.05; g.strokeStyle = look.fem && (kind === 'smile' || kind === 'flat') ? '#b8405a' : MOUTH_COL; g.lineCap = 'round'; g.stroke(pp(MOUTHS[kind]));
   } else {
     const [d, teeth, tongue, lines] = MOUTHS[kind];
     const mp = pp(d);

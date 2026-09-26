@@ -143,6 +143,95 @@ export const MINK_KINDS = [
   { id: 'wolf', name: 'Wolf', ears: 'pointy', fur: '#7f8fa6', tail: 'fluffy', muzzle: true },
 ];
 
+// Outfits by role (see render3d/chars/body.js for what each style looks like).
+// Weighted lists [style, weight] for masculine (m) and feminine (f) builds.
+const W = (s) => s.split(' ').map((t) => { const [k, w] = t.split(':'); return [k, +w || 1]; });
+const DRESS = {
+  civilian: {
+    m: { top: W('tee:4 shirt:3 open:1 tank:1 striped:1 vest:0.5'), bottom: W('trousers:4 capri:2 shorts:2 baggy:1 slim:1'), waist: W('belt:3 none:3 sash:1'), shoes: W('shoes:3 sandals:3 boots:2') },
+    f: { top: W('tee:3 tank:2 shirt:2 dress:3 crop:1'), bottom: W('skirt:3 longskirt:2 trousers:2 capri:1 shorts:1 slim:1'), waist: W('none:3 belt:2 sash:1'), shoes: W('shoes:3 sandals:3 boots:1') },
+  },
+  pirate: {
+    m: { top: W('striped:3 open:3 vest:2 tee:2 bare:1 tank:1'), bottom: W('baggy:4 capri:2 shorts:2 trousers:2'), waist: W('sash:5 belt:3'), shoes: W('boots:5 sandals:2') },
+    f: { top: W('crop:3 tank:2 open:1 striped:1 bikini:1'), bottom: W('trousers:2 shorts:2 capri:2 skirt:1 baggy:1'), waist: W('sash:4 belt:3'), shoes: W('boots:5 sandals:2') },
+  },
+  bandit: {
+    m: { top: W('vest:3 open:2 tank:2 bare:1'), bottom: W('baggy:4 trousers:2 capri:1'), waist: W('sash:4 belt:2'), shoes: W('boots:3 sandals:2') },
+    f: { top: W('crop:2 tank:2 vest:1'), bottom: W('trousers:2 baggy:2 shorts:1'), waist: W('sash:3 belt:2'), shoes: W('boots:3 sandals:1') },
+  },
+  marine: {
+    m: { top: W('shirt:1'), bottom: W('trousers:1'), waist: W('belt:1'), shoes: W('boots:1') },
+    f: { top: W('shirt:1'), bottom: W('trousers:3 skirt:1'), waist: W('belt:1'), shoes: W('boots:1') },
+  },
+  officer: {
+    m: { top: W('jacket:2 shirt:1'), bottom: W('trousers:2 slim:1'), waist: W('belt:1'), shoes: W('boots:1 shoes:1') },
+    f: { top: W('jacket:2 shirt:1'), bottom: W('slim:2 skirt:1'), waist: W('belt:1'), shoes: W('boots:1 shoes:1') },
+  },
+  agent: {
+    m: { top: W('jacket:1'), bottom: W('slim:1'), waist: W('belt:1'), shoes: W('shoes:1') },
+    f: { top: W('jacket:2 shirt:1'), bottom: W('slim:2 skirt:1'), waist: W('belt:1'), shoes: W('shoes:2 boots:1') },
+  },
+  swordsman: {
+    m: { top: W('kimono:3 open:2 tee:1'), bottom: W('hakama:3 baggy:1 trousers:1'), waist: W('obi:2 sash:2'), shoes: W('geta:2 sandals:2 boots:1') },
+    f: { top: W('kimono:3 tank:1'), bottom: W('hakama:2 slim:1'), waist: W('obi:2 sash:1'), shoes: W('geta:1 sandals:2 boots:1') },
+  },
+  wano: {
+    m: { top: W('kimono:6 open:1'), bottom: W('hakama:4 baggy:1 capri:1'), waist: W('obi:4 sash:1'), shoes: W('geta:3 sandals:3') },
+    f: { top: W('kimono:6 dress:1'), bottom: W('longskirt:3 hakama:2'), waist: W('obi:4 none:1'), shoes: W('geta:3 sandals:2') },
+  },
+  desert: {
+    m: { top: W('shirt:3 open:2 vest:1 kimono:1'), bottom: W('baggy:4 trousers:2'), waist: W('sash:4 belt:1'), shoes: W('sandals:4 boots:1') },
+    f: { top: W('dress:2 crop:2 shirt:1'), bottom: W('longskirt:2 baggy:2 skirt:1'), waist: W('sash:3 none:1'), shoes: W('sandals:4') },
+  },
+  snow: {
+    m: { top: W('coat:3 shirt:2 jacket:1'), bottom: W('trousers:3 baggy:1'), waist: W('belt:2 none:1'), shoes: W('boots:1') },
+    f: { top: W('coat:3 shirt:1 dress:1'), bottom: W('trousers:2 longskirt:1 slim:1'), waist: W('belt:1 none:1'), shoes: W('boots:1') },
+  },
+  sky: {
+    m: { top: W('tank:2 tee:2 open:2 vest:1'), bottom: W('baggy:3 shorts:2 capri:1'), waist: W('sash:3 none:1'), shoes: W('sandals:4 bare:1') },
+    f: { top: W('dress:2 tank:2 crop:2'), bottom: W('skirt:2 longskirt:2 baggy:1'), waist: W('sash:2 none:2'), shoes: W('sandals:4') },
+  },
+  fishman: {
+    m: { top: W('open:3 tank:2 bare:2 vest:1 shirt:1'), bottom: W('shorts:3 baggy:2 trousers:1'), waist: W('sash:2 belt:2 none:1'), shoes: W('sandals:3 bare:2 boots:1') },
+    f: { top: W('crop:2 tank:2 bikini:2 dress:1'), bottom: W('skirt:2 shorts:2 longskirt:1'), waist: W('none:2 sash:1'), shoes: W('sandals:3 bare:1') },
+  },
+};
+const SASH = ['#f4c430', '#c62828', '#1e88e5', '#2e7d32', '#6a1b9a', '#ef6c00', '#fafafa', '#212121'];
+const LIGHT = ['#f5f5f5', '#fff8e1', '#e3f2fd', '#fce4ec', '#e8f5e9'];
+const FEM_ROLES = { civilian: 0.5, pirate: 0.3, bandit: 0.2, marine: 0.25, officer: 0.2, agent: 0.3, swordsman: 0.25, wano: 0.5, desert: 0.5, snow: 0.5, sky: 0.5, fishman: 0.3 };
+
+/**
+ * Pick a body type and clothes for `role` into `look` (only where `over`,
+ * the caller's explicit look, leaves them open).
+ */
+export function dress(look, rng, role = 'civilian', over = {}) {
+  if (role === 'beast') {
+    Object.assign(look, { fem: false, topStyle: 'bare', bottomStyle: 'slim', waist: 'none', shoeStyle: 'bare', muscle: 0.8 });
+    return look;
+  }
+  const set = DRESS[role] || DRESS.civilian;
+  const fem = over.fem ?? rng.chance(FEM_ROLES[role] ?? 0.45);
+  const T = set[fem ? 'f' : 'm'];
+  look.fem = fem;
+  const legacyTop = over.openShirt !== undefined || over.noSleeves || over.sleeve || over.vest;
+  if (!over.topStyle && !legacyTop) look.topStyle = rng.weighted(T.top);
+  if (!over.bottomStyle) look.bottomStyle = rng.weighted(T.bottom);
+  if (!over.waist) look.waist = rng.weighted(T.waist);
+  if (!over.shoeStyle && over.sandals === undefined) look.shoeStyle = rng.weighted(T.shoes);
+  if (!over.top2) look.top2 = look.topStyle === 'striped' ? rng.pick(LIGHT) : look.topStyle === 'jacket' ? rng.pick(['#f5f5f5', '#f5f5f5', '#90caf9', '#fce4ec']) : undefined;
+  if (!over.waistCol && (look.waist === 'sash' || look.waist === 'obi')) look.waistCol = rng.pick(SASH);
+  if (look.topStyle === 'jacket' && !over.tie && rng.chance(0.5)) look.tie = rng.pick(['#212121', '#c62828', '#1e3a8a']);
+  if (look.topStyle === 'coat' && !over.coat) look.coat = rng.pick(['#5d4037', '#37474f', '#6d4c41', '#1b5e20', '#4a148c', '#263238']);
+  if (fem) {
+    if (!over.hair && rng.chance(0.75)) look.hair = rng.pick(['long', 'long', 'ponytail', 'bun', 'short', 'curly']);
+    if (!over.eyeShape) look.eyeShape = rng.pick(['soft', 'round', 'round', 'sharp']);
+    look.bust = +(0.8 + rng.next() * 0.45).toFixed(2);
+  } else if (over.muscle === undefined) {
+    look.muscle = +(0.25 + rng.next() * 0.75).toFixed(2);
+  }
+  return look;
+}
+
 export function makeLook(raceId, seed, overrides = {}) {
   const rng = new RNG(seed);
   const race = RACES[raceId] || RACES.human;
@@ -181,7 +270,10 @@ export function makeLook(raceId, seed, overrides = {}) {
   } else if (raceId === 'lunarian') {
     look.wings = 'lunar'; look.backFlame = true; look.skin = rng.pick(['#7a4a2a', '#5c3a21', '#8d5524']); look.hairColor = '#f5f6fa'; look.hair = rng.pick(['long', 'spiky', 'short']);
   }
-  return Object.assign(look, overrides);
+  const { role, ...over } = overrides;
+  dress(look, rng, role || (raceId === 'fishman' ? 'fishman' : raceId === 'skypiean' ? 'sky' : 'civilian'), over);
+  if (look.race === 'buccaneer' || look.race === 'giant') look.fem = over.fem ?? look.fem;
+  return Object.assign(look, over);
 }
 
 export function raceLabel(look) {

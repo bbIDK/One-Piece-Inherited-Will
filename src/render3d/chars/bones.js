@@ -30,19 +30,20 @@ export const PARENT = {
 export function dims(look) {
   // proportions of the anime-game look: about seven heads tall, long legs,
   // broad shoulders over a narrow waist
-  const Lg = look.legs || 1, Am = look.arms || 1, Bk = look.bulk || 1;
+  const fem = !!look.fem;
+  const Lg = (look.legs || 1) * (fem ? 1.03 : 1), Am = (look.arms || 1) * (fem ? 0.97 : 1), Bk = look.bulk || 1;
   const T1 = 0.48 * Lg, T2 = 0.465 * Lg, hA = 0.075;
   const hip0 = (T1 + T2) * 0.985 + hA;
-  const chestLen = 0.52 + (Bk - 1) * 0.1;
+  const chestLen = (0.52 + (Bk - 1) * 0.1) * (fem ? 0.95 : 1);
   const headR = 0.13 * (1 + (Bk - 1) * 0.18);
   const A1 = 0.3 * Am, A2 = 0.27 * Am;
   const neck = 0.075 + (look.neck || 0) * 0.6;
   return {
-    Lg, Am, Bk, T1, T2, hA, hip0, chestLen, headR, A1, A2, neck,
+    Lg, Am, Bk, T1, T2, hA, hip0, chestLen, headR, A1, A2, neck, fem,
     hc: headR * 0.84,               // head centre above the neck top
-    hipW: 0.085 * Bk,               // hip joints either side of the pelvis
+    hipW: (fem ? 0.094 : 0.085) * Bk, // hip joints either side of the pelvis
     shY: chestLen - 0.07,           // shoulder joints below the top of the chest
-    shW: 0.184 * Bk + 0.006,
+    shW: fem ? 0.152 * Bk + 0.004 : 0.184 * Bk + 0.006,
     depth: 0.64,                    // torso depth / width
     kA: (A1 + A2) / 0.43,           // 2D hand target → metres (2D arm length 0.43)
     kL: (T1 + T2) / 0.49,           // 2D foot target → metres (2D leg length 0.49)

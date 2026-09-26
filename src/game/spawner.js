@@ -124,12 +124,12 @@ function townRaces(isl) {
 }
 
 function civilianOutfit(style, rng) {
-  if (style === 'wano') return { top: rng.pick(['#6d4c41', '#37474f', '#8d6e63', '#c62828', '#283593']), bottom: rng.pick(['#3e2723', '#263238']) };
-  if (style === 'desert') return { top: rng.pick(['#f5f5f5', '#efebe9', '#ffe0b2']), bottom: rng.pick(['#d7ccc8', '#bcaaa4']), hat: rng.chance(0.4) ? 'bandana' : null, hatColor: '#fafafa' };
-  if (style === 'marine') return { top: '#ffffff', bottom: '#1b4f72', hat: 'marine' };
-  if (style === 'sky') return { top: rng.pick(['#ffffff', '#fff9c4', '#e1f5fe']), bottom: '#ffffff' };
-  if (style === 'snow') return { top: rng.pick(['#6d4c41', '#5d4037', '#455a64']), bottom: '#3e2723', hat: rng.chance(0.5) ? 'beanie' : null };
-  return {};
+  if (style === 'wano') return { role: 'wano', top: rng.pick(['#6d4c41', '#37474f', '#8d6e63', '#c62828', '#283593', '#4a148c', '#1b5e20']), bottom: rng.pick(['#3e2723', '#263238', '#37474f']) };
+  if (style === 'desert') return { role: 'desert', top: rng.pick(['#f5f5f5', '#efebe9', '#ffe0b2']), bottom: rng.pick(['#d7ccc8', '#bcaaa4']), hat: rng.chance(0.4) ? 'bandana' : null, hatColor: '#fafafa' };
+  if (style === 'marine') return { role: 'marine', top: '#ffffff', bottom: '#1b4f72', hat: 'marine' };
+  if (style === 'sky') return { role: 'sky', top: rng.pick(['#ffffff', '#fff9c4', '#e1f5fe']), bottom: '#ffffff' };
+  if (style === 'snow') return { role: 'snow', top: rng.pick(['#6d4c41', '#5d4037', '#455a64']), bottom: '#3e2723', hat: rng.chance(0.5) ? 'beanie' : null };
+  return { role: 'civilian' };
 }
 
 const FIRST = ['Ban', 'Kin', 'Mo', 'Ta', 'Ri', 'Su', 'Ko', 'Ha', 'Yo', 'Ma', 'Pe', 'Gi', 'Do', 'Ne', 'Lu', 'Fi', 'Ca', 'Bo', 'Ja', 'Ze', 'Wa', 'Ro', 'Mi', 'Sa'];
