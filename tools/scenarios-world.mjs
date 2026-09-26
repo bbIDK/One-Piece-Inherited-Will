@@ -2,6 +2,32 @@
 const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
 export const scenarios = {
+  // every Devil Fruit exists once in a world
+  fruitsunique: {
+    async run(page) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      const r = await page.evaluate(() => {
+        const g = window.OP.game;
+        window.OP.quickStart('human');
+        // a fresh world for a lineage whose past users ate the Gomu Gomu three times
+        g.state.legacy = { ...(g.state.legacy || {}), reincarnatedFruits: ['gomu', 'gomu', 'mera', 'gomu'] };
+        const c = g.state.char;
+        c.world = { ...c.world, fruitSpawns: null, fruitsTaken: [] };
+        c.runSeed = 'dup-test';
+        g.emit('characterStart', { char: c, isNew: true });
+        const spawns = c.world.fruitSpawns.map((f) => f.fruit);
+        const rolls = [];
+        const rng = { weighted: (l) => l[Math.floor(Math.random() * l.length)][0] };
+        for (let i = 0; i < 40; i++) { const f = g.rollFruit(rng); if (f) rolls.push(f); }
+        const all = [...spawns, ...rolls];
+        const dup = all.filter((f, i) => all.indexOf(f) !== i);
+        return { spawns, dup, gomu: all.filter((f) => f === 'gomu').length, taken: c.world.fruitsTaken.length };
+      });
+      console.log('fruits', JSON.stringify(r));
+      if (r.dup.length) throw new Error('duplicate fruits: ' + r.dup.join(','));
+    },
+  },
   // picking fruit from a tree puts it in the bag
   pickfruit: {
     async run(page, snap) {

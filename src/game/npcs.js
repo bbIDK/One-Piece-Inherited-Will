@@ -360,7 +360,10 @@ export class Interactions {
     const tier = o.tier || 1;
     const berries = Math.round(rng.range(300, 1200) * tier * luck);
     earn(g, berries, 'treasure');
-    if (o.item) addItem(g, o.item, 1);
+    if (o.item && !(o.item.startsWith('fruit_') && g.fruitTaken?.(o.item.slice(6)))) {
+      addItem(g, o.item, 1);
+      if (o.item.startsWith('fruit_')) g.state.char.world.fruitsTaken = [...new Set([...(g.state.char.world.fruitsTaken || []), o.item.slice(6)])];
+    }
     else if (rng.chance(0.35 * luck)) addItem(g, rng.pick(tier > 2 ? ['jewels', 'gold_coins', 'golden_statue', 'rumble_ball'] : ['gold_coins', 'meat', 'bandage', 'jewels']), 1);
     g.fx.burst(o.x, o.y - 0.5, 20, { color: ['#ffd54f', '#fff59d'], speed: 4, vz: 4, g: 8, life: 0.8, kind: 'star' });
     g.audio?.sfx('treasure');

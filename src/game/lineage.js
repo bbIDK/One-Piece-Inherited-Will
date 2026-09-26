@@ -371,7 +371,7 @@ export function endLineage(game, cause) {
   });
   legacy.hall = legacy.hall.slice(0, 40);
   legacy.charted = [...new Set([...(legacy.charted || []), ...(char.discovered || [])])];
-  if (char.fruit) legacy.reincarnatedFruits = [...(legacy.reincarnatedFruits || []), char.fruit].slice(-6);
+  if (char.fruit) legacy.reincarnatedFruits = [...(legacy.reincarnatedFruits || []).filter((f) => f !== char.fruit), char.fruit].slice(-6);
   legacy.generation += 1;
   legacy.heirloom = null;
   char.dead = true;

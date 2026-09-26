@@ -74274,7 +74274,7 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
     });
     legacy.hall = legacy.hall.slice(0, 40);
     legacy.charted = [.../* @__PURE__ */ new Set([...legacy.charted || [], ...char.discovered || []])];
-    if (char.fruit) legacy.reincarnatedFruits = [...legacy.reincarnatedFruits || [], char.fruit].slice(-6);
+    if (char.fruit) legacy.reincarnatedFruits = [...(legacy.reincarnatedFruits || []).filter((f) => f !== char.fruit), char.fruit].slice(-6);
     legacy.generation += 1;
     legacy.heirloom = null;
     char.dead = true;
@@ -79057,8 +79057,10 @@ Trains by: ${TRAINS_BY[k]}` },
       const tier = o.tier || 1;
       const berries = Math.round(rng2.range(300, 1200) * tier * luck);
       earn(g, berries, "treasure");
-      if (o.item) addItem(g, o.item, 1);
-      else if (rng2.chance(0.35 * luck)) addItem(g, rng2.pick(tier > 2 ? ["jewels", "gold_coins", "golden_statue", "rumble_ball"] : ["gold_coins", "meat", "bandage", "jewels"]), 1);
+      if (o.item && !(o.item.startsWith("fruit_") && g.fruitTaken?.(o.item.slice(6)))) {
+        addItem(g, o.item, 1);
+        if (o.item.startsWith("fruit_")) g.state.char.world.fruitsTaken = [.../* @__PURE__ */ new Set([...g.state.char.world.fruitsTaken || [], o.item.slice(6)])];
+      } else if (rng2.chance(0.35 * luck)) addItem(g, rng2.pick(tier > 2 ? ["jewels", "gold_coins", "golden_statue", "rumble_ball"] : ["gold_coins", "meat", "bandage", "jewels"]), 1);
       g.fx.burst(o.x, o.y - 0.5, 20, { color: ["#ffd54f", "#fff59d"], speed: 4, vz: 4, g: 8, life: 0.8, kind: "star" });
       g.audio?.sfx("treasure");
       persist(g);
@@ -79339,16 +79341,25 @@ Trains by: ${TRAINS_BY[k]}` },
   }
 
   // src/content/fruits.js
+  function takenFruits(game) {
+    const c = game.state?.char;
+    const t = new Set(c?.world?.fruitsTaken || []);
+    if (c?.fruit) t.add(c.fruit);
+    for (const it of c?.inventory || []) if (it.id && it.id.startsWith("fruit_")) t.add(it.id.slice(6));
+    for (const d of allNpcDefs()) if (d.fruit && FRUITS[d.fruit]) t.add(d.fruit);
+    return t;
+  }
   function installFruits(game) {
     game.rollFruit = (rng2) => {
       const c = game.state?.char;
-      const taken = new Set(c?.world?.fruitsTaken || []);
+      const taken = takenFruits(game);
       const list = FRUIT_IDS.filter((id2) => !taken.has(id2)).map((id2) => [id2, FRUITS[id2].weight]);
       if (!list.length) return null;
       const id = rng2.weighted(list);
-      if (c) c.world.fruitsTaken = [...taken, id];
+      if (c) c.world.fruitsTaken = [.../* @__PURE__ */ new Set([...c.world.fruitsTaken || [], id])];
       return id;
     };
+    game.fruitTaken = (id) => takenFruits(game).has(id);
     game.fruitRumor = (rng2) => {
       const c = game.state?.char;
       const spawns = (c?.world?.fruitSpawns || []).filter((f2) => !f2.taken);
@@ -79365,12 +79376,13 @@ Trains by: ${TRAINS_BY[k]}` },
         const rng2 = new RNG(char.runSeed + ":fruits");
         const isles = game.surface.islands.filter((i) => i.name && !i.def.noFruit && i.def.sea);
         const spawns = [];
-        const reborn = game.state.legacy?.reincarnatedFruits || [];
+        const canon = new Set(allNpcDefs().filter((d) => d.fruit).map((d) => d.fruit));
+        const reborn = [...new Set(game.state.legacy?.reincarnatedFruits || [])].filter((f) => FRUITS[f] && !canon.has(f));
         const n = 7;
         for (let k = 0; k < n; k++) {
           const isl = rng2.pick(isles);
           let fid = k < reborn.length ? reborn[reborn.length - 1 - k] : game.rollFruit(rng2);
-          if (!fid) continue;
+          if (!fid || spawns.some((s0) => s0.fruit === fid)) continue;
           if (!char.world.fruitsTaken?.includes(fid)) char.world.fruitsTaken = [...char.world.fruitsTaken || [], fid];
           const spot = rng2.pick([...isl.towns.map((t) => ({ x: t.x + rng2.range(-t.w / 2, t.w / 2), y: t.y + rng2.range(-t.h / 2, t.h / 2) })), { x: isl.x + rng2.range(-isl.def.w / 3, isl.def.w / 3), y: isl.y + rng2.range(-isl.def.h / 3, isl.def.h / 3) }]);
           spawns.push({ island: isl.id, fruit: fid, x: spot.x, y: spot.y, taken: false });
@@ -79390,6 +79402,7 @@ Trains by: ${TRAINS_BY[k]}` },
     game.on("pickup", (it) => {
       const g = game;
       g.groundItems = (g.groundItems || []).filter((x) => x !== it);
+      if (it.fruitSpawn && it.fruitSpawn.taken) return;
       addItem(g, it.id, 1);
       if (it.fruitSpawn) {
         it.fruitSpawn.taken = true;

@@ -5,17 +5,32 @@ import { RNG } from '../core/rng.js';
 import { regionAt, REGION_INFO } from '../world/constants.js';
 import { placeObject } from '../world/islandgen.js';
 import { addItem } from '../game/inventory.js';
+import { allNpcDefs } from '../game/npcs.js';
+
+/**
+ * Every Devil Fruit exists once: fruits already eaten (by you or a canon
+ * user), in your bag, or placed somewhere in the world are never rolled again.
+ */
+function takenFruits(game) {
+  const c = game.state?.char;
+  const t = new Set(c?.world?.fruitsTaken || []);
+  if (c?.fruit) t.add(c.fruit);
+  for (const it of c?.inventory || []) if (it.id && it.id.startsWith('fruit_')) t.add(it.id.slice(6));
+  for (const d of allNpcDefs()) if (d.fruit && FRUITS[d.fruit]) t.add(d.fruit);
+  return t;
+}
 
 export function installFruits(game) {
   game.rollFruit = (rng) => {
     const c = game.state?.char;
-    const taken = new Set(c?.world?.fruitsTaken || []);
+    const taken = takenFruits(game);
     const list = FRUIT_IDS.filter((id) => !taken.has(id)).map((id) => [id, FRUITS[id].weight]);
     if (!list.length) return null;
     const id = rng.weighted(list);
-    if (c) c.world.fruitsTaken = [...taken, id];
+    if (c) c.world.fruitsTaken = [...new Set([...(c.world.fruitsTaken || []), id])];
     return id;
   };
+  game.fruitTaken = (id) => takenFruits(game).has(id);
   game.fruitRumor = (rng) => {
     const c = game.state?.char;
     const spawns = (c?.world?.fruitSpawns || []).filter((f) => !f.taken);
@@ -32,12 +47,14 @@ export function installFruits(game) {
       const rng = new RNG(char.runSeed + ':fruits');
       const isles = game.surface.islands.filter((i) => i.name && !i.def.noFruit && i.def.sea);
       const spawns = [];
-      const reborn = game.state.legacy?.reincarnatedFruits || [];
+      // fruits whose users died come back into the world (once each), the rest are rolled
+      const canon = new Set(allNpcDefs().filter((d) => d.fruit).map((d) => d.fruit));
+      const reborn = [...new Set(game.state.legacy?.reincarnatedFruits || [])].filter((f) => FRUITS[f] && !canon.has(f));
       const n = 7;
       for (let k = 0; k < n; k++) {
         const isl = rng.pick(isles);
         let fid = k < reborn.length ? reborn[reborn.length - 1 - k] : game.rollFruit(rng);
-        if (!fid) continue;
+        if (!fid || spawns.some((s0) => s0.fruit === fid)) continue;
         if (!char.world.fruitsTaken?.includes(fid)) char.world.fruitsTaken = [...(char.world.fruitsTaken || []), fid];
         const spot = rng.pick([...isl.towns.map((t) => ({ x: t.x + rng.range(-t.w / 2, t.w / 2), y: t.y + rng.range(-t.h / 2, t.h / 2) })), { x: isl.x + rng.range(-isl.def.w / 3, isl.def.w / 3), y: isl.y + rng.range(-isl.def.h / 3, isl.def.h / 3) }]);
         spawns.push({ island: isl.id, fruit: fid, x: spot.x, y: spot.y, taken: false });
@@ -58,6 +75,8 @@ export function installFruits(game) {
   game.on('pickup', (it) => {
     const g = game;
     g.groundItems = (g.groundItems || []).filter((x) => x !== it);
+    // a fruit already found elsewhere (an old save, a second copy) is just a rotten fruit now
+    if (it.fruitSpawn && it.fruitSpawn.taken) return;
     addItem(g, it.id, 1);
     if (it.fruitSpawn) { it.fruitSpawn.taken = true; g.ui.toast('A DEVIL FRUIT!', FRUITS[it.fruitSpawn.fruit].name, '#ffab91'); }
   });
