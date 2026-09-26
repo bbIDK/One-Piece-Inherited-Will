@@ -20,14 +20,34 @@ itself to `localStorage` every minute, at every milestone and when you close
 the page, and there is a **Save game** button in the pause menu. A save cannot
 be reloaded to undo a death.
 
+### The view
+
+The game plays in **first person** by default: the world is 3D (three.js),
+with terrain, sea, sky, towns and ships built from the same map the
+simulation uses. Click the game to capture the mouse and look around (Esc
+frees it). **V** switches between first person, third person and the classic
+top-down view. Settings has mouse sensitivity, invert-Y and a fast graphics
+mode.
+
+**Phones and tablets** get touch controls (hold the device sideways):
+
+- a stick for the left thumb (push it all the way to run; at sea it steers and
+  sets the sails);
+- drag anywhere on the right to look around;
+- round buttons to attack, heavy attack, dodge, block, use and heal (fire and
+  row at sea);
+- a strip at the top for the menus, the world map and the camera view.
+
 ### Controls
 
 | Key | On foot | At sea |
 |---|---|---|
-| WASD | move | W/S sails, A/D steer |
+| Mouse | look around | look around |
+| V | first person / third person / top-down | |
+| WASD | move where you look | W/S sails, A/D steer |
 | Shift | sprint | Coup de Burst (some ships) |
 | Space | dodge (i-frames) | row (works without wind) |
-| Left / right click | combo / heavy attack | broadside toward the mouse |
+| Left / right click | combo / heavy attack | broadside toward where you aim |
 | F | block — tap just before a hit to **parry** | |
 | 1–6 | hotbar: techniques and food | |
 | R / T / G | Haki, once it has awakened | |
