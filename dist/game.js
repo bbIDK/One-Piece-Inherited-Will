@@ -2456,19 +2456,19 @@ void main() {
         world.objects.query(v.x0 - pad, v.y0 - pad, v.x1 + pad, v.y1 + pad + 6, list);
       }
       for (const e of entities) list.push(e);
-      const items = [];
+      const items2 = [];
       for (const o of list) {
         const dx = world.dx(c.x, o.x);
         if (dx < v.x0 - c.x - pad || dx > v.x1 - c.x + pad) continue;
         if (o.y < v.y0 - 2 || o.y > v.y1 + (o.kind === "building" ? 12 : 7)) continue;
         if (lod && (o.kind === "bush" || o.kind === "barrel" || o.kind === "crate" || o.kind === "mooring" || o.kind === "haystack")) continue;
-        items.push(o);
+        items2.push(o);
       }
-      items.sort((a, b) => (a.sortY ?? a.y) - (b.sortY ?? b.y));
+      items2.sort((a, b) => (a.sortY ?? a.y) - (b.sortY ?? b.y));
       const dpr = this.dpr;
       const t = env.time;
       const night = env.daylight < 0.45;
-      for (const o of items) {
+      for (const o of items2) {
         const sx = world.dx(c.x, o.x) * z + this.cw / 2 + c.shakeX;
         const sy = (o.y - c.y) * z + this.ch / 2 + c.shakeY;
         g.setTransform(dpr * z, 0, 0, dpr * z, sx * dpr, sy * dpr);
@@ -6711,6 +6711,20 @@ void main() {
         g.closePath();
         g.fill();
         g.stroke();
+        break;
+      }
+      case "bubble": {
+        g.fillStyle = "rgba(200,235,255,0.22)";
+        g.strokeStyle = "rgba(220,245,255,0.8)";
+        g.lineWidth = 0.04;
+        g.beginPath();
+        g.arc(0, hy - r * 0.1, r * 1.7, 0, TAU4);
+        g.fill();
+        g.stroke();
+        g.fillStyle = "rgba(255,255,255,0.7)";
+        g.beginPath();
+        g.arc(-r * 0.7, hy - r * 0.9, r * 0.22, 0, TAU4);
+        g.fill();
         break;
       }
       case "halo": {
@@ -17824,13 +17838,122 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   // src/content/newWorld2.js
   var newWorld2_default = { id: "newWorld2", npcs: [], groups: [], quests: [] };
 
+  // src/content/redLine.js
+  var npcs2 = [
+    {
+      id: "saint_mjosgard",
+      name: "Saint Donquixote Mjosgard",
+      title: "Celestial Dragon",
+      island: "mary_geoise",
+      at: { town: "holy_land", plaza: true, ox: -3 },
+      look: { hair: "short", hairColor: "#fafafa", top: "#fafafa", bottom: "#eceff1", coat: "#fafafa", hat: "bubble" },
+      level: 5,
+      ai: "idle",
+      dialogue: (ctx) => ({ start: "a", nodes: {
+        a: {
+          text: '"...You are not a Celestial Dragon, and yet you do not kneel. Good. Long ago, a Fish-Man queen named Otohime saved my life when my own kind left me to die. I have not forgotten. Most of the people up here never learned anything."',
+          choices: [
+            { text: "Tell me about the Holy Land.", next: "b" },
+            { text: "What is the Empty Throne?", next: "c" },
+            { text: "Goodbye.", end: true }
+          ]
+        },
+        b: { text: '"Eight hundred years ago, twenty kings founded the World Government and came to live here, above everyone. Their descendants call themselves gods. Every four years the kings of the world gather here for the Reverie \u2014 and every four years, someone disappears."', next: "a" },
+        c: { text: '"A symbol: the twenty kings swore that no one would sit on it, so that no one would rule the world alone. ...Or so we are told. Some nights, I swear I hear footsteps in the Pangaea Castle that belong to no one I know."', next: "a" }
+      } })
+    },
+    {
+      id: "saint_shalria",
+      name: "Saint Shalria",
+      title: "Celestial Dragon",
+      island: "mary_geoise",
+      at: { town: "holy_land", plaza: true, ox: 3 },
+      look: { hair: "long", hairColor: "#fff59d", top: "#fafafa", bottom: "#f5f5f5", hat: "bubble" },
+      level: 3,
+      ai: "idle",
+      when: (c) => !c.flags.punchedDragon,
+      dialogue: (ctx) => ({ start: "a", nodes: {
+        a: {
+          text: '"Kneel, commoner! You are breathing the same air as a World Noble! ...And you, fetch me a new slave. This one broke."',
+          choices: [
+            { text: "(Kneel and keep your head down.)", end: true },
+            { text: "(Punch the Celestial Dragon.)", do: (c) => {
+              const g = c.game;
+              c.setFlag("punchedDragon");
+              const a = findActor(g, "saint_shalria");
+              if (a) {
+                a.knock(8, 2);
+                a.state = "knocked";
+                a.hp = 1;
+              }
+              g.fx.impactFrame(0.3);
+              g.fx.shake(1);
+              g.ui.banner("YOU STRUCK A WORLD NOBLE", "Mary Geoise", "Bells ring across the Holy Land. An Admiral is on the way.", 6);
+              g.progression.addBounty(3e8, "Assaulted a Celestial Dragon");
+              if (c.char.faction === "marine") {
+                c.char.faction = "pirate";
+                c.char.marineRank = null;
+                c.char.flags.deserter = true;
+              }
+              for (const id of ["cp0_guard_1", "cp0_guard_2"]) {
+                const cp = spawnNow(g, id);
+                if (cp) aggro(g, cp);
+              }
+            }, end: true }
+          ]
+        }
+      } })
+    },
+    {
+      id: "cp0_guard_1",
+      name: "CP0 Agent",
+      title: "Cipher Pol Aigis Zero",
+      island: "mary_geoise",
+      at: { town: "holy_land", building: "Pangaea Castle" },
+      faction: "cp",
+      level: 70,
+      named: true,
+      look: { hair: "short", hairColor: "#212121", top: "#fafafa", bottom: "#fafafa", coat: "#fafafa", hat: "bubble" },
+      style: "rokushiki",
+      moves: ["roku_soru", "roku_rankyaku", "roku_tekkai", "roku_rokuogan"],
+      skill: 0.7,
+      haki: { armament: 40, observation: 40 },
+      lethal: true,
+      when: (c) => !!c.flags.punchedDragon,
+      hostile: true
+    },
+    {
+      id: "cp0_guard_2",
+      name: "CP0 Agent",
+      title: "Cipher Pol Aigis Zero",
+      island: "mary_geoise",
+      at: { town: "holy_land", building: "Reverie Assembly Hall" },
+      faction: "cp",
+      level: 70,
+      named: true,
+      look: { hair: "long", hairColor: "#212121", top: "#fafafa", bottom: "#fafafa", coat: "#fafafa" },
+      style: "rokushiki",
+      moves: ["roku_soru", "roku_kamie", "roku_rankyaku"],
+      skill: 0.7,
+      haki: { armament: 40, observation: 40 },
+      lethal: true,
+      when: (c) => !!c.flags.punchedDragon,
+      hostile: true
+    }
+  ];
+  var items = {
+    wg_permit: { name: "Holy Land Permit (forged)", icon: "\u{1F4DC}", type: "key", price: 5e7, desc: "A very good forgery of a World Government travel permit. The Red Port guards will let you ride the Bondola \u2014 and carry your ship over the Red Line." }
+  };
+  var redLine_default = { id: "redLine", npcs: npcs2, items, stockAdd: { black_market: ["wg_permit"] } };
+
   // src/content/index.js
-  var PACKS = [eastBlue_default, northBlue_default, westBlue_default, southBlue_default, paradise1_default, paradise2_default, newWorld_default, newWorld2_default];
+  var PACKS = [eastBlue_default, northBlue_default, westBlue_default, southBlue_default, paradise1_default, paradise2_default, newWorld_default, newWorld2_default, redLine_default];
   for (const p of PACKS) {
     if (p.abilities) registerAbilities(p.abilities, "npc");
     if (p.items) Object.assign(ITEMS, p.items);
     if (p.trainers) Object.assign(TRAINERS, p.trainers);
     if (p.stock) Object.assign(STOCK, p.stock);
+    if (p.stockAdd) for (const [k, list] of Object.entries(p.stockAdd)) (STOCK[k] = STOCK[k] || []).push(...list);
     if (p.archetypes) Object.assign(ARCHETYPES, p.archetypes);
   }
   function installContent(game) {

@@ -193,4 +193,82 @@ export const scenarios = {
       await snap('resumed');
     },
   },
+  quest: {
+    // Makino → Lord of the Coast → straw hat
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human'));
+      await step(page, 0.5);
+      const r1 = await page.evaluate(() => {
+        const g = window.OP.game;
+        const isl = g.surface.islands.find((i) => i.id === 'dawn_island');
+        const t = isl.towns.find((x) => x.id === 'foosha');
+        window.OP.teleport(t.plaza.x, t.plaza.y + 2);
+        g.spawner.t = 0; g.spawner.update(1);
+        const m = g.actors.find((a) => a.npcId === 'makino');
+        if (!m) return 'no makino';
+        const marker1 = m.questMarker;
+        window.OP.teleport(m.x, m.y + 1.2);
+        g.emit('talk', m);
+        const labels = g.dialogue.active.choices.map((x) => x.label);
+        g.dialogue.choose(0); // tell me about the lord of the coast
+        g.dialogue.choose(0); // I'll deal with it
+        return { marker1, labels, quest: g.quests.stageId('lord_of_the_coast') };
+      });
+      console.log('talk', JSON.stringify(r1));
+      await step(page, 1);
+      const r2 = await page.evaluate(() => {
+        const g = window.OP.game;
+        const isl = g.surface.islands.find((i) => i.id === 'dawn_island');
+        const dock = isl.docks[0];
+        const s = g.ships.find((x) => x.owner === 'player');
+        s.x = dock.moor.x; s.y = dock.moor.y + 8;
+        window.OP.teleport(s.x, s.y);
+        const it = g.player.controller; // board
+        g.player.mode = 'foot';
+        return { ship: s.name };
+      });
+      const dbg = await page.evaluate(() => {
+        const g = window.OP.game; const s = g.ships.find((x) => x.owner === 'player');
+        window.OP.teleport(s.x, s.y - 1);
+        const isl = g.surface.islands.find((i) => i.id === 'dawn_island');
+        const dock = isl.docks[0];
+        const tx = dock.moor.x, ty = dock.moor.y + 16;
+        return { stage: g.quests.stageId('lord_of_the_coast'), dist: g.world.distance(g.player.x, g.player.y, tx, ty), liquid: g.world.isLiquid(tx, ty), surface: g.world === g.surface, moor: dock.moor };
+      });
+      console.log('dbg', JSON.stringify(dbg));
+      await step(page, 2);
+      const r3 = await page.evaluate(() => {
+        const g = window.OP.game;
+        const k = g.actors.find((a) => a.npcId === 'lord_of_the_coast');
+        if (!k) return { king: null, mode: g.player.mode };
+        const hp = k.hp;
+        k.takeDamage(99999, g.player, { element: 'physical' }, g);
+        return { king: k.name, hp, mode: g.player.mode };
+      });
+      console.log('seaking', JSON.stringify(r3));
+      await step(page, 2);
+      await snap('seaking');
+      const r4 = await page.evaluate(() => {
+        const g = window.OP.game;
+        const st = g.quests.stageId('lord_of_the_coast');
+        const isl = g.surface.islands.find((i) => i.id === 'dawn_island');
+        const t = isl.towns.find((x) => x.id === 'foosha');
+        g.player.mode = 'foot'; g.player.onShip = false; if (g.player.ship) g.player.ship.captain = null;
+        window.OP.teleport(t.plaza.x, t.plaza.y + 2);
+        g.spawner.t = 0; g.spawner.update(1);
+        const m = g.actors.find((a) => a.npcId === 'makino');
+        const marker = m && m.def.marker(g.state.char, g);
+        g.emit('talk', m);
+        const labels = g.dialogue.active.choices.map((x) => x.label);
+        const i = labels.findIndex((l) => /killed/.test(l));
+        g.dialogue.choose(i);
+        return { st, marker, labels, done: g.quests.isDone('lord_of_the_coast'), hat: g.state.char.inventory.some((x) => x.id === 'straw_hat') };
+      });
+      console.log('report', JSON.stringify(r4));
+      await frames(page, 20);
+      await snap('reward');
+    },
+  },
 };
