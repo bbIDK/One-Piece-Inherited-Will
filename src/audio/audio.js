@@ -1,5 +1,6 @@
 // Procedural audio: every sound effect is synthesised with WebAudio, and the
-// music is a small generative shanty engine (no recorded assets).
+// music is composed on the fly — calm pieces with quiet between them (no
+// recorded assets).
 export class Audio {
   constructor(settings) {
     this.settings = settings;
@@ -9,8 +10,6 @@ export class Audio {
     this.musicGain = null;
     this.noiseBuf = null;
     this.theme = null;
-    this.nextNoteT = 0;
-    this.step = 0;
     this.last = {};
     const unlock = () => { this.init(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
     window.addEventListener('pointerdown', unlock);
@@ -120,92 +119,296 @@ export class Audio {
   }
 
   // --------------------------------------------------------------- music
+  // Calm, generative music in the spirit of a Minecraft soundtrack with a One
+  // Piece heart: a reverb-soaked piano, soft pads, and a flute, accordion or
+  // music-box melody in lilting sea-shanty rhythms. Each piece is composed on
+  // the spot from a theme (key, mode, chords, feel, instruments) — a motif
+  // stated, answered, varied and brought back — and plays for a minute or two;
+  // then there is quiet for a while before the next. Fights get a driving
+  // theme of their own with no gaps.
   music(theme) {
     if (this.theme === theme) return;
+    const prev = this.theme;
     this.theme = theme;
-    this.step = 0;
-    if (this.ctx) this.nextNoteT = this.ctx.currentTime + 0.1;
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    this.fadeSong(prev ? 1.6 : 0.2);
+    const T = SONGS[theme];
+    // straight into a fight; otherwise a breath before the new mood begins
+    this.restUntil = now + (!T ? 0 : T.rest[0] === 0 ? 0.05 : prev ? 2.5 : 0.8);
+    this.song = null;
+  }
+
+  fadeSong(sec) {
+    const b = this.songBus;
+    if (!b) return;
+    const now = this.ctx.currentTime;
+    b.gain.cancelScheduledValues(now);
+    b.gain.setValueAtTime(b.gain.value, now);
+    b.gain.linearRampToValueAtTime(0.0001, now + sec);
+    setTimeout(() => { try { b.disconnect(); } catch { /* gone */ } }, (sec + 6) * 1000);
+    this.songBus = null;
+  }
+
+  /** The reverb (a generated hall impulse) the music sits in. */
+  reverb() {
+    if (this.verb) return this.verb;
+    const c = this.ctx, len = Math.floor(c.sampleRate * 3.2);
+    const ir = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) { const t = i / len; d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3.2) * (i < 80 ? i / 80 : 1); }
+    }
+    const conv = c.createConvolver();
+    conv.buffer = ir;
+    const wet = c.createGain(); wet.gain.value = 0.42;
+    conv.connect(wet); wet.connect(this.musicGain);
+    this.verb = conv;
+    return conv;
   }
 
   schedule() {
     if (!this.ctx || !this.theme || this.ctx.state !== 'running') return;
-    const T = THEMES[this.theme];
+    const T = SONGS[this.theme];
     if (!T) return;
-    const spb = 60 / T.bpm / 2; // eighth notes
-    while (this.nextNoteT < this.ctx.currentTime + 0.25) {
-      this.playStep(T, this.step, this.nextNoteT, spb);
-      this.nextNoteT += spb * (this.step % 2 === 0 ? 1 + T.swing : 1 - T.swing);
-      this.step++;
+    const now = this.ctx.currentTime;
+    if (!this.song) {
+      if (now < (this.restUntil || 0)) return;
+      this.song = compose(T);
+      const bus = this.ctx.createGain();
+      bus.gain.setValueAtTime(0.0001, now);
+      bus.gain.linearRampToValueAtTime(2.2, now + 1.2);
+      bus.connect(this.musicGain);
+      bus.connect(this.reverb());
+      this.songBus = bus;
+      this.songT = now + 0.15;
+      this.bar = 0;
+    }
+    while (this.songT < now + 0.5) {
+      const S = this.song;
+      if (this.bar >= S.bars) {
+        // the piece ends; quiet for a while before the next
+        this.song = null;
+        this.fadeSong(4);
+        this.restUntil = now + T.rest[0] + Math.random() * (T.rest[1] - T.rest[0]);
+        return;
+      }
+      this.playBar(S, this.bar, this.songT);
+      this.songT += S.barDur;
+      this.bar++;
     }
   }
 
-  playStep(T, s, t, spb) {
-    const bar = Math.floor(s / 8) % T.chords.length;
-    const chord = T.chords[bar];
-    const pos = s % 8;
-    const root = T.root * Math.pow(2, chord[0] / 12);
-    // bass on 1 and 5
-    if (pos === 0 || pos === 4) this.voice(t, spb * 1.8, root / 2 * (pos === 4 ? Math.pow(2, 7 / 12) : 1), 'triangle', 0.22);
-    // chord stabs (accordion-ish)
-    if (pos === 2 || pos === 6) for (const iv of chord) this.voice(t, spb * 0.9, root * Math.pow(2, iv / 12), 'square', 0.035);
-    // melody from a seeded pattern over the scale
-    const m = T.melody[s % T.melody.length];
-    if (m !== null && m !== undefined) {
-      const f = T.root * 2 * Math.pow(2, T.scale[((m % T.scale.length) + T.scale.length) % T.scale.length] / 12 + Math.floor(m / T.scale.length));
-      this.voice(t, spb * (T.legato || 1.4), f, T.lead || 'sawtooth', 0.05, true);
+  playBar(S, bar, t0) {
+    const T = S.T, e = S.eighth, n = S.perBar;
+    const chord = S.chords[bar % S.chords.length];
+    const bus = this.songBus;
+    if (!bus) return;
+    const last = bar >= S.bars - 2;
+    // pad: the chord, swelling slowly
+    if (T.pad) {
+      const notes = chord.map((d) => S.midi(d, -1));
+      for (const m of notes) this.inst('pad', t0, S.barDur * 1.05, m, T.padVol ?? 0.018, bus);
     }
-    // percussion
+    // bass / left hand: the root on the downbeat, the fifth mid-bar
+    if (T.bass) this.inst(T.bass, t0, e * n * 0.9, S.midi(chord[0], -2), 0.09, bus);
+    // arpeggio
+    if (T.arp) {
+      const pat = S.arpPat;
+      for (let i = 0; i < n; i++) {
+        const k = pat[i % pat.length];
+        if (k === null || (i > 0 && Math.random() > T.arpDensity)) continue;
+        const d = k < 3 ? chord[k] : chord[k - 3] + 7;
+        this.inst(T.arp, t0 + i * e * (T.feel === 'lilt' && i % 3 === 2 ? 1.04 : 1), e * 3, S.midi(d, T.arpOct ?? -1), (i === 0 ? 0.085 : 0.06) * (T.arpVol ?? 1), bus);
+      }
+    }
+    // melody: phrase by phrase, from the piece's motifs
+    const ph = S.phrases[Math.floor(bar / 2) % S.phrases.length];
+    if (ph && !last) {
+      const half = bar % 2;
+      let pos = 0;
+      for (const note of ph) {
+        const len = Math.abs(note.len);
+        const start = pos - half * n;
+        pos += len;
+        if (start < 0 || start >= n || note.len < 0) continue;
+        // follow the chord under the note (each motif degree sits on this bar's root)
+        const d = note.deg + (T.follow ? chord[0] : 0);
+        this.inst(T.lead, t0 + start * e, len * e * (T.legato ?? 0.95), S.midi(d, 0), T.leadVol ?? 0.07, bus);
+      }
+    }
+    // a closing chord to end on
+    if (bar === S.bars - 1) for (const d of S.chords[0]) this.inst(T.arp || 'piano', t0 + e * 2, e * n * 2, S.midi(d, 0), 0.05, bus);
+    // drums (fights only)
     if (T.drums) {
-      if (pos === 0 || pos === 4) this.drum(t, 'kick');
-      if (pos === 2 || pos === 6) this.drum(t, 'snare');
-      if (T.hats) this.drum(t, 'hat');
+      for (let i = 0; i < n; i++) {
+        if (T.drums.kick[i % T.drums.kick.length]) this.drum(t0 + i * e, 'kick');
+        if (T.drums.snare[i % T.drums.snare.length]) this.drum(t0 + i * e, 'snare');
+        if (T.drums.hat && i % 2 === 1) this.drum(t0 + i * e, 'hat');
+      }
     }
   }
 
-  voice(t, dur, freq, type, gain, vib) {
-    const c = this.ctx;
-    const o = c.createOscillator();
-    o.type = type;
-    o.frequency.setValueAtTime(freq, t);
-    let lfo;
-    if (vib) {
-      lfo = c.createOscillator(); const lg = c.createGain();
-      lfo.frequency.value = 5.5; lg.gain.value = freq * 0.008;
-      lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + dur + 0.1);
-    }
-    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2200;
+  /** One note on an instrument. */
+  inst(kind, t, dur, midi, vol, bus) {
+    const c = this.ctx, f = 440 * Math.pow(2, (midi - 69) / 12);
     const g = c.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain, t + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(f); f.connect(g); g.connect(this.musicGain);
-    o.start(t); o.stop(t + dur + 0.1);
+    g.connect(bus);
+    const osc = (type, freq, gain = 1, detune = 0) => {
+      const o = c.createOscillator(); o.type = type; o.frequency.value = freq; o.detune.value = detune;
+      if (gain !== 1) { const og = c.createGain(); og.gain.value = gain; o.connect(og); return [o, og]; }
+      return [o, o];
+    };
+    const out = [];
+    let end = t + dur;
+    if (kind === 'piano' || kind === 'pluck' || kind === 'musicbox') {
+      // struck: a bright attack mellowing as it rings
+      const decay = kind === 'pluck' ? Math.min(1.6, dur + 0.5) : kind === 'musicbox' ? 1.8 : Math.max(0.9, Math.min(3.4, 3.6 - (midi - 48) * 0.05));
+      end = t + decay + 0.05;
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(kind === 'musicbox' ? 6000 : kind === 'pluck' ? 3200 : 2600, t);
+      lp.frequency.exponentialRampToValueAtTime(kind === 'pluck' ? 700 : 900, t + decay * 0.6);
+      lp.connect(g);
+      if (kind === 'musicbox') { out.push(osc('sine', f * 2, 1), osc('sine', f * 4, 0.25), osc('sine', f * 6.01, 0.08)); }
+      else if (kind === 'pluck') { out.push(osc('triangle', f, 1), osc('sine', f * 2, 0.35), osc('sawtooth', f, 0.05)); }
+      else { out.push(osc('triangle', f, 1, -3), osc('sine', f, 0.7, 4), osc('sine', f * 2, 0.22), osc('sine', f * 3, 0.06)); }
+      for (const [, node] of out) node.connect(lp);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.005);
+      g.gain.exponentialRampToValueAtTime(vol * 0.4, t + 0.3);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+    } else if (kind === 'pad') {
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 850; lp.Q.value = 0.3;
+      lp.connect(g);
+      out.push(osc('sawtooth', f, 0.5, -7), osc('sawtooth', f, 0.5, 7), osc('triangle', f / 2, 0.4));
+      for (const [, node] of out) node.connect(lp);
+      const att = Math.min(1.4, dur * 0.4);
+      end = t + dur + 1.6;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + att);
+      g.gain.setValueAtTime(vol, t + dur);
+      g.gain.exponentialRampToValueAtTime(0.0001, end);
+    } else {
+      // blown or squeezed: flute (breathy, vibrato) and accordion (reedy, tremolo)
+      const flute = kind === 'flute';
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = flute ? 3000 : 1700;
+      lp.connect(g);
+      if (flute) out.push(osc('sine', f, 1), osc('triangle', f, 0.18), osc('sine', f * 2, 0.08));
+      else out.push(osc('square', f, 0.35, -5), osc('sawtooth', f, 0.3, 5), osc('square', f * 2, 0.08));
+      for (const [, node] of out) node.connect(lp);
+      // vibrato that blooms after the attack
+      const lfo = c.createOscillator(); lfo.frequency.value = flute ? 5.2 : 6;
+      const lg = c.createGain(); lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * (flute ? 0.006 : 0.003), t + 0.35);
+      lfo.connect(lg);
+      for (const [o] of out) lg.connect(o.frequency);
+      lfo.start(t); lfo.stop(t + dur + 0.6);
+      const att = flute ? 0.07 : 0.04;
+      end = t + dur + 0.35;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + att);
+      g.gain.setValueAtTime(vol * 0.85, t + Math.max(att + 0.01, dur * 0.8));
+      g.gain.exponentialRampToValueAtTime(0.0001, end);
+      if (flute) {
+        // a breath at the start of each note
+        const src = c.createBufferSource(); src.buffer = this.noiseBuf;
+        const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f * 2; bp.Q.value = 2;
+        const bg = c.createGain(); bg.gain.setValueAtTime(vol * 0.35, t); bg.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+        src.connect(bp); bp.connect(bg); bg.connect(bus); src.start(t, Math.random()); src.stop(t + 0.15);
+      }
+    }
+    for (const [o] of out) { o.start(t); o.stop(end + 0.05); }
   }
 
   drum(t, kind) {
-    const c = this.ctx;
+    const c = this.ctx, bus = this.songBus || this.musicGain;
     if (kind === 'kick') {
+      // a deep, soft drum (more taiko than techno)
       const o = c.createOscillator(); const g = c.createGain();
-      o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.15);
-      g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-      o.connect(g); g.connect(this.musicGain); o.start(t); o.stop(t + 0.2);
+      o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.25);
+      g.gain.setValueAtTime(0.32, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      o.connect(g); g.connect(bus); o.start(t); o.stop(t + 0.32);
     } else {
       const src = c.createBufferSource(); src.buffer = this.noiseBuf;
-      const f = c.createBiquadFilter(); f.type = kind === 'hat' ? 'highpass' : 'bandpass'; f.frequency.value = kind === 'hat' ? 7000 : 1800;
+      const f = c.createBiquadFilter(); f.type = kind === 'hat' ? 'highpass' : 'bandpass'; f.frequency.value = kind === 'hat' ? 7500 : 1500;
       const g = c.createGain();
-      const dur = kind === 'hat' ? 0.04 : 0.12;
-      g.gain.setValueAtTime(kind === 'hat' ? 0.05 : 0.14, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      src.connect(f); f.connect(g); g.connect(this.musicGain); src.start(t, Math.random()); src.stop(t + dur + 0.02);
+      const dur = kind === 'hat' ? 0.035 : 0.14;
+      g.gain.setValueAtTime(kind === 'hat' ? 0.025 : 0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      src.connect(f); f.connect(g); g.connect(bus); src.start(t, Math.random()); src.stop(t + dur + 0.02);
     }
   }
 }
 
-// D dorian-ish sea shanties. melody numbers index into the scale.
-const THEMES = {
-  title: { bpm: 96, root: 146.83, swing: 0.1, scale: [0, 2, 3, 5, 7, 9, 10], chords: [[0, 3, 7], [5, 9, 12], [3, 7, 10], [7, 10, 14]], melody: [4, null, 4, 5, 4, 3, 2, null, 0, null, 2, 3, 4, null, null, null, 4, null, 4, 5, 6, 5, 4, null, 3, 2, 3, 4, 0, null, null, null], drums: false, lead: 'triangle', legato: 2 },
-  sea: { bpm: 112, root: 146.83, swing: 0.12, scale: [0, 2, 4, 5, 7, 9, 11], chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], melody: [0, 2, 4, null, 4, 5, 4, 2, 0, null, 2, 4, 2, null, null, null, 5, 5, 4, 2, 4, null, 2, 0, 1, 2, 0, null, -1, null, 0, null], drums: true, lead: 'square' },
-  grandline: { bpm: 126, root: 164.81, swing: 0.08, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [8, 12, 15], [5, 8, 12], [7, 10, 14]], melody: [0, null, 2, 3, 4, null, 3, 2, 3, null, 1, 0, -1, null, 0, null, 4, 5, 6, 5, 4, null, 3, null, 2, 3, 4, 2, 0, null, null, null], drums: true, hats: true, lead: 'sawtooth' },
-  battle: { bpm: 150, root: 110, swing: 0, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [0, 3, 7], [8, 12, 15], [7, 10, 14]], melody: [0, 0, 3, 0, 4, 0, 3, 2, 0, 0, 3, 0, 5, 4, 3, 2], drums: true, hats: true, lead: 'sawtooth', legato: 0.9 },
-  town: { bpm: 104, root: 196, swing: 0.15, scale: [0, 2, 4, 5, 7, 9, 11], chords: [[0, 4, 7], [5, 9, 12], [0, 4, 7], [7, 11, 14]], melody: [4, 2, 0, 2, 4, 4, 4, null, 2, 2, 2, null, 4, 6, 6, null, 4, 2, 0, 2, 4, 4, 4, 4, 2, 2, 4, 2, 0, null, null, null], drums: false, lead: 'triangle' },
-  night: { bpm: 72, root: 130.81, swing: 0, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [5, 8, 12], [3, 7, 10], [7, 10, 14]], melody: [4, null, null, 3, 2, null, null, null, 0, null, 2, null, 3, null, null, null], drums: false, lead: 'sine', legato: 3 },
+// ------------------------------------------------------------------ composing
+const MODES = {
+  ionian: [0, 2, 4, 5, 7, 9, 11], dorian: [0, 2, 3, 5, 7, 9, 10], mixolydian: [0, 2, 4, 5, 7, 9, 10],
+  aeolian: [0, 2, 3, 5, 7, 8, 10], lydian: [0, 2, 4, 6, 7, 9, 11],
 };
+// rhythms for a two-bar motif, in eighths (negative = a rest)
+const RHYTHMS = {
+  straight: [[2, 2, 4, 2, 2, 4], [3, 1, 2, 2, 4, -4], [2, 2, 2, 2, 6, -2], [1, 1, 2, 4, 2, 2, 4], [4, 2, 2, 8]],
+  lilt: [[3, 3, 2, 1, 3], [2, 1, 2, 1, 6], [3, 2, 1, 3, -3], [2, 1, 3, 2, 1, 3], [1, 1, 1, 3, 6]],
+};
+// arpeggio patterns: indices into [root, third, fifth, root+8ve, third+8ve, fifth+8ve]
+const ARPS = {
+  straight: [[0, 2, 3, 2, 4, 2, 3, 2], [0, 2, 4, 5, 4, 2, 3, 2], [0, null, 2, null, 3, null, 2, null]],
+  lilt: [[0, 2, 3, 0, 2, 3], [0, 3, 4, 2, 3, 4], [0, null, 2, 3, null, 2]],
+};
+
+const SONGS = {
+  title: { key: 50, mode: 'ionian', bpm: 70, feel: 'straight', prog: [[0, 5, 3, 4], [0, 3, 5, 4]], lead: 'piano', arp: 'piano', pad: true, arpDensity: 0.8, bars: [16, 24], rest: [6, 14], melody: 0.85 },
+  sea: { key: 55, mode: 'mixolydian', bpm: 58, feel: 'lilt', prog: [[0, 3, 0, 4], [0, 6, 3, 0], [0, 3, 6, 0]], lead: 'flute', arp: 'pluck', pad: true, arpDensity: 0.75, bars: [16, 32], rest: [18, 45], melody: 0.75 },
+  town: { key: 57, mode: 'ionian', bpm: 62, feel: 'lilt', prog: [[0, 3, 4, 0], [0, 5, 3, 4]], lead: 'accordion', leadVol: 0.05, arp: 'pluck', bass: 'pluck', pad: false, arpDensity: 0.9, bars: [16, 24], rest: [15, 35], melody: 0.8 },
+  night: { key: 52, mode: 'aeolian', bpm: 56, feel: 'straight', prog: [[0, 5, 2, 6], [0, 3, 5, 4]], lead: 'piano', leadVol: 0.06, arp: 'piano', arpVol: 0.8, pad: true, padVol: 0.014, arpDensity: 0.45, bars: [12, 20], rest: [25, 60], melody: 0.55 },
+  grandline: { key: 53, mode: 'dorian', bpm: 64, feel: 'straight', prog: [[0, 3, 0, 6], [0, 6, 3, 4]], lead: 'musicbox', leadVol: 0.05, arp: 'piano', pad: true, arpDensity: 0.65, bars: [16, 24], rest: [18, 45], melody: 0.7 },
+  underwater: { key: 50, mode: 'lydian', bpm: 50, feel: 'straight', prog: [[0, 1, 0, 1], [0, 4, 1, 0]], lead: 'musicbox', leadVol: 0.045, arp: null, pad: true, padVol: 0.022, bars: [12, 16], rest: [10, 25], melody: 0.6 },
+  battle: { key: 45, mode: 'dorian', bpm: 128, feel: 'straight', prog: [[0, 0, 5, 6], [0, 3, 6, 4]], lead: 'pluck', leadVol: 0.07, legato: 0.6, arp: 'pluck', arpVol: 0.8, bass: 'pluck', pad: true, padVol: 0.012, arpDensity: 1, bars: [32, 48], rest: [0, 0], melody: 0.9, follow: true,
+    drums: { kick: [1, 0, 0, 1, 0, 0, 1, 0], snare: [0, 0, 1, 0, 0, 0, 1, 0], hat: true } },
+};
+
+function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+
+/** A two-bar motif: mostly stepwise, the odd leap, ending on a chord tone. */
+function motif(T) {
+  const rh = pick(RHYTHMS[T.feel]);
+  const notes = [];
+  let deg = pick([0, 2, 4, 4, 2]);
+  rh.forEach((len, i) => {
+    if (len < 0) { notes.push({ len, deg }); return; }
+    if (i > 0) {
+      const r = Math.random();
+      deg += r < 0.34 ? 1 : r < 0.62 ? -1 : r < 0.78 ? 2 : r < 0.9 ? -2 : r < 0.95 ? 3 : -3;
+      deg = Math.max(-2, Math.min(9, deg));
+    }
+    // the long last note settles on a chord tone
+    if (i === rh.length - 1) deg = [0, 2, 4, 7].reduce((b, x) => (Math.abs(x - deg) < Math.abs(b - deg) ? x : b), 0);
+    notes.push({ len, deg });
+  });
+  return notes;
+}
+
+/** Vary a motif: the same rhythm, its tail nudged. */
+function vary(m) {
+  return m.map((n, i) => (i >= m.length - 2 && n.len > 0 ? { ...n, deg: n.deg + pick([-1, 1, 2, 0]) } : n));
+}
+
+/** Compose a piece for a theme: its chords, a motif and its answers, the form. */
+function compose(T) {
+  const mode = MODES[T.mode];
+  const perBar = T.feel === 'lilt' ? 6 : 8;
+  const eighth = T.feel === 'lilt' ? 60 / (T.bpm * 3) : 60 / (T.bpm * 2);
+  const prog = pick(T.prog);
+  const chords = prog.map((r) => [r, r + 2, r + 4]);
+  const key = T.key + pick([0, 0, 0, 2, -2, 5]);
+  const midi = (d, oct) => {
+    const n = mode.length, o = Math.floor(d / n), i = ((d % n) + n) % n;
+    return key + 12 + mode[i] + 12 * (o + oct);
+  };
+  const A = motif(T), B = motif(T), C = motif(T);
+  const rest = null;
+  // A A' B A — then maybe C B' A, with a bar or two of breathing room
+  const form = [A, vary(A), B, A, Math.random() < T.melody ? C : rest, vary(B), A, rest];
+  const phrases = form.map((m) => (m && Math.random() < T.melody + 0.2 ? m : null));
+  phrases[0] = A;
+  const bars = 2 * Math.round((T.bars[0] + Math.random() * (T.bars[1] - T.bars[0])) / 2);
+  return { T, chords, midi, perBar, eighth, barDur: eighth * perBar, bars, phrases, arpPat: pick(ARPS[T.feel]) };
+}

@@ -266,7 +266,7 @@ function startRaid(game, T, s) {
   }
   const who = tr.kind === 'marine' ? 'the Marines' : tr.kind === 'pirate' ? 'the pirates' : 'the crew';
   game.ui.banner('RAID!', s.name, `Beat ${who} — then the hold and the helm are yours.`, 3);
-  game.audio?.music?.('battle');
+  if (game.audio && game.audio.theme !== 'battle') { tr.prevTheme = game.audio.theme; game.audio.music('battle'); }
   // any Marine ship in sight joins in
   for (const o of T.ships) if (o !== s && o.traffic?.kind === 'marine' && game.world.distance(o.x, o.y, s.x, s.y) < 80) o.provoked = true;
 }
@@ -276,6 +276,7 @@ function checkCleared(game, s) {
   const standing = (tr.crew || []).filter((a) => a.alive && a.state === 'idle' && a.deck?.ship === s);
   if (standing.length) return;
   tr.cleared = true;
+  if (game.audio?.theme === 'battle') game.audio.music(tr.prevTheme || 'sea');
   game.ui.toast('THE SHIP IS YOURS', `${s.name}: plunder the hold (the hatch amidships), or take the helm to sail her away.`, '#ffd54f');
   game.log(`The crew of the ${s.name} is beaten!`, '#ffe082');
 }

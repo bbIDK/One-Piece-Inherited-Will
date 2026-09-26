@@ -62357,8 +62357,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const patch = vnoise2(x / 7, y / 7, 5);
           const fp = t === T.FLOWERS ? 0.55 : t === T.SAKURA ? 0.25 : t === T.GRASS ? 0.015 + Math.max(0, patch - 0.62) * 1.1 : 0.02;
           if (r1 < fp) {
-            const pick4 = hash6(Math.floor(x / 7), Math.floor(y / 7), 6) * FLOWERS.length + (r2 < 0.3 ? 2 : 0);
-            const f = clim === CLIMATE.SAKURA ? FLOWERS[2 + Math.floor(r2 * 2)] : FLOWERS[Math.floor(pick4) % FLOWERS.length];
+            const pick5 = hash6(Math.floor(x / 7), Math.floor(y / 7), 6) * FLOWERS.length + (r2 < 0.3 ? 2 : 0);
+            const f = clim === CLIMATE.SAKURA ? FLOWERS[2 + Math.floor(r2 * 2)] : FLOWERS[Math.floor(pick5) % FLOWERS.length];
             put("flower", x + r3, y + r2, r1 * 50, 0.8 + r3 * 0.6, col.setRGB(f[0], f[1], f[2]));
           }
           if ((t === T.FOREST || t === T.JUNGLE || t === T.MANGROVE) && r3 < (t === T.JUNGLE ? 0.35 : 0.22)) {
@@ -77399,7 +77399,7 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
     const seaRegion = SEA_IDS[sea];
     const allTowns = [];
     for (const isl2 of world.islands) for (const t2 of isl2.towns) allTowns.push({ isl: isl2, t: t2 });
-    let pick4 = null;
+    let pick5 = null;
     if (race.spawnIslet && world.islets) {
       const cands = world.islets.filter((o) => o.region === seaRegion && o.r >= 5);
       if (cands.length) {
@@ -77410,13 +77410,13 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
     }
     const wanted2 = race.spawnTowns || HUMAN_STARTERS[sea] || [];
     const byId = allTowns.filter(({ t: t2 }) => wanted2.includes(t2.id));
-    if (byId.length) pick4 = rng4.pick(byId);
-    if (!pick4) {
+    if (byId.length) pick5 = rng4.pick(byId);
+    if (!pick5) {
       const inSea = allTowns.filter(({ isl: isl2 }) => regionAt(isl2.x, isl2.y) === seaRegion);
-      if (inSea.length) pick4 = rng4.pick(inSea);
+      if (inSea.length) pick5 = rng4.pick(inSea);
     }
-    if (!pick4) pick4 = allTowns[0];
-    const { isl, t } = pick4;
+    if (!pick5) pick5 = allTowns[0];
+    const { isl, t } = pick5;
     return { x: t.plaza.x + 0.5, y: t.plaza.y + 2.5, island: isl, town: t, sea, name: `${t.name}, ${isl.name}` };
   }
   function buildPlayer(game, char) {
@@ -79473,17 +79473,17 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
         const weights = KEYS.map((k) => [k, 1 + (recent[k] || 0)]);
         let total = weights.reduce((s, [, w]) => s + w, 0);
         let r = Math.random() * total;
-        let pick4 = "vit";
+        let pick5 = "vit";
         for (const [k, w] of weights) {
           if ((r -= w) <= 0) {
-            pick4 = k;
+            pick5 = k;
             break;
           }
         }
-        if (c.attrs[pick4] >= ATTR_CAP) pick4 = KEYS.find((k) => c.attrs[k] < ATTR_CAP) || pick4;
-        c.attrs[pick4] = Math.min(ATTR_CAP, c.attrs[pick4] + 1);
-        gains[pick4] = (gains[pick4] || 0) + 1;
-        if (recent[pick4]) recent[pick4] *= 0.6;
+        if (c.attrs[pick5] >= ATTR_CAP) pick5 = KEYS.find((k) => c.attrs[k] < ATTR_CAP) || pick5;
+        c.attrs[pick5] = Math.min(ATTR_CAP, c.attrs[pick5] + 1);
+        gains[pick5] = (gains[pick5] || 0) + 1;
+        if (recent[pick5]) recent[pick5] *= 0.6;
       }
       refreshPlayer(g);
       const txt = Object.entries(gains).map(([k, v]) => `${ATTRS[k].short} +${v}`).join("  ");
@@ -83564,6 +83564,19 @@ Trains by: ${TRAINS_BY[k]}` },
     S3.lastAct = act2;
     if (live) sharks(game, S3, dt, p);
     rescue(game, S3, dt, p);
+    const au = game.audio;
+    if (au) {
+      if (p.under && au.theme !== "underwater" && au.theme !== "battle") {
+        S3.prevTheme = au.theme;
+        au.music("underwater");
+      } else if (!p.under && au.theme === "underwater") {
+        S3.surfT = (S3.surfT || 0) + dt;
+        if (S3.surfT > 1.5) {
+          S3.surfT = 0;
+          au.music(S3.prevTheme || "sea");
+        }
+      } else S3.surfT = 0;
+    }
     if (p.inWater && !p.gills && !p.fruit && (p.moving || p.under)) {
       S3.trainT = (S3.trainT || 0) + dt;
       if (S3.trainT > 5) {
@@ -107181,8 +107194,6 @@ Trains by: ${TRAINS_BY[k]}` },
       this.musicGain = null;
       this.noiseBuf = null;
       this.theme = null;
-      this.nextNoteT = 0;
-      this.step = 0;
       this.last = {};
       const unlock = () => {
         this.init();
@@ -107397,109 +107408,351 @@ Trains by: ${TRAINS_BY[k]}` },
       }
     }
     // --------------------------------------------------------------- music
+    // Calm, generative music in the spirit of a Minecraft soundtrack with a One
+    // Piece heart: a reverb-soaked piano, soft pads, and a flute, accordion or
+    // music-box melody in lilting sea-shanty rhythms. Each piece is composed on
+    // the spot from a theme (key, mode, chords, feel, instruments) — a motif
+    // stated, answered, varied and brought back — and plays for a minute or two;
+    // then there is quiet for a while before the next. Fights get a driving
+    // theme of their own with no gaps.
     music(theme) {
       if (this.theme === theme) return;
+      const prev = this.theme;
       this.theme = theme;
-      this.step = 0;
-      if (this.ctx) this.nextNoteT = this.ctx.currentTime + 0.1;
+      if (!this.ctx) return;
+      const now2 = this.ctx.currentTime;
+      this.fadeSong(prev ? 1.6 : 0.2);
+      const T3 = SONGS[theme];
+      this.restUntil = now2 + (!T3 ? 0 : T3.rest[0] === 0 ? 0.05 : prev ? 2.5 : 0.8);
+      this.song = null;
+    }
+    fadeSong(sec) {
+      const b = this.songBus;
+      if (!b) return;
+      const now2 = this.ctx.currentTime;
+      b.gain.cancelScheduledValues(now2);
+      b.gain.setValueAtTime(b.gain.value, now2);
+      b.gain.linearRampToValueAtTime(1e-4, now2 + sec);
+      setTimeout(() => {
+        try {
+          b.disconnect();
+        } catch {
+        }
+      }, (sec + 6) * 1e3);
+      this.songBus = null;
+    }
+    /** The reverb (a generated hall impulse) the music sits in. */
+    reverb() {
+      if (this.verb) return this.verb;
+      const c = this.ctx, len = Math.floor(c.sampleRate * 3.2);
+      const ir = c.createBuffer(2, len, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = ir.getChannelData(ch);
+        for (let i = 0; i < len; i++) {
+          const t = i / len;
+          d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3.2) * (i < 80 ? i / 80 : 1);
+        }
+      }
+      const conv = c.createConvolver();
+      conv.buffer = ir;
+      const wet = c.createGain();
+      wet.gain.value = 0.42;
+      conv.connect(wet);
+      wet.connect(this.musicGain);
+      this.verb = conv;
+      return conv;
     }
     schedule() {
       if (!this.ctx || !this.theme || this.ctx.state !== "running") return;
-      const T3 = THEMES[this.theme];
+      const T3 = SONGS[this.theme];
       if (!T3) return;
-      const spb = 60 / T3.bpm / 2;
-      while (this.nextNoteT < this.ctx.currentTime + 0.25) {
-        this.playStep(T3, this.step, this.nextNoteT, spb);
-        this.nextNoteT += spb * (this.step % 2 === 0 ? 1 + T3.swing : 1 - T3.swing);
-        this.step++;
+      const now2 = this.ctx.currentTime;
+      if (!this.song) {
+        if (now2 < (this.restUntil || 0)) return;
+        this.song = compose(T3);
+        const bus = this.ctx.createGain();
+        bus.gain.setValueAtTime(1e-4, now2);
+        bus.gain.linearRampToValueAtTime(2.2, now2 + 1.2);
+        bus.connect(this.musicGain);
+        bus.connect(this.reverb());
+        this.songBus = bus;
+        this.songT = now2 + 0.15;
+        this.bar = 0;
+      }
+      while (this.songT < now2 + 0.5) {
+        const S3 = this.song;
+        if (this.bar >= S3.bars) {
+          this.song = null;
+          this.fadeSong(4);
+          this.restUntil = now2 + T3.rest[0] + Math.random() * (T3.rest[1] - T3.rest[0]);
+          return;
+        }
+        this.playBar(S3, this.bar, this.songT);
+        this.songT += S3.barDur;
+        this.bar++;
       }
     }
-    playStep(T3, s, t, spb) {
-      const bar2 = Math.floor(s / 8) % T3.chords.length;
-      const chord = T3.chords[bar2];
-      const pos = s % 8;
-      const root2 = T3.root * Math.pow(2, chord[0] / 12);
-      if (pos === 0 || pos === 4) this.voice(t, spb * 1.8, root2 / 2 * (pos === 4 ? Math.pow(2, 7 / 12) : 1), "triangle", 0.22);
-      if (pos === 2 || pos === 6) for (const iv of chord) this.voice(t, spb * 0.9, root2 * Math.pow(2, iv / 12), "square", 0.035);
-      const m = T3.melody[s % T3.melody.length];
-      if (m !== null && m !== void 0) {
-        const f = T3.root * 2 * Math.pow(2, T3.scale[(m % T3.scale.length + T3.scale.length) % T3.scale.length] / 12 + Math.floor(m / T3.scale.length));
-        this.voice(t, spb * (T3.legato || 1.4), f, T3.lead || "sawtooth", 0.05, true);
+    playBar(S3, bar2, t0) {
+      const T3 = S3.T, e = S3.eighth, n = S3.perBar;
+      const chord = S3.chords[bar2 % S3.chords.length];
+      const bus = this.songBus;
+      if (!bus) return;
+      const last = bar2 >= S3.bars - 2;
+      if (T3.pad) {
+        const notes = chord.map((d) => S3.midi(d, -1));
+        for (const m of notes) this.inst("pad", t0, S3.barDur * 1.05, m, T3.padVol ?? 0.018, bus);
       }
+      if (T3.bass) this.inst(T3.bass, t0, e * n * 0.9, S3.midi(chord[0], -2), 0.09, bus);
+      if (T3.arp) {
+        const pat = S3.arpPat;
+        for (let i = 0; i < n; i++) {
+          const k = pat[i % pat.length];
+          if (k === null || i > 0 && Math.random() > T3.arpDensity) continue;
+          const d = k < 3 ? chord[k] : chord[k - 3] + 7;
+          this.inst(T3.arp, t0 + i * e * (T3.feel === "lilt" && i % 3 === 2 ? 1.04 : 1), e * 3, S3.midi(d, T3.arpOct ?? -1), (i === 0 ? 0.085 : 0.06) * (T3.arpVol ?? 1), bus);
+        }
+      }
+      const ph = S3.phrases[Math.floor(bar2 / 2) % S3.phrases.length];
+      if (ph && !last) {
+        const half2 = bar2 % 2;
+        let pos = 0;
+        for (const note of ph) {
+          const len = Math.abs(note.len);
+          const start3 = pos - half2 * n;
+          pos += len;
+          if (start3 < 0 || start3 >= n || note.len < 0) continue;
+          const d = note.deg + (T3.follow ? chord[0] : 0);
+          this.inst(T3.lead, t0 + start3 * e, len * e * (T3.legato ?? 0.95), S3.midi(d, 0), T3.leadVol ?? 0.07, bus);
+        }
+      }
+      if (bar2 === S3.bars - 1) for (const d of S3.chords[0]) this.inst(T3.arp || "piano", t0 + e * 2, e * n * 2, S3.midi(d, 0), 0.05, bus);
       if (T3.drums) {
-        if (pos === 0 || pos === 4) this.drum(t, "kick");
-        if (pos === 2 || pos === 6) this.drum(t, "snare");
-        if (T3.hats) this.drum(t, "hat");
+        for (let i = 0; i < n; i++) {
+          if (T3.drums.kick[i % T3.drums.kick.length]) this.drum(t0 + i * e, "kick");
+          if (T3.drums.snare[i % T3.drums.snare.length]) this.drum(t0 + i * e, "snare");
+          if (T3.drums.hat && i % 2 === 1) this.drum(t0 + i * e, "hat");
+        }
       }
     }
-    voice(t, dur, freq, type, gain, vib) {
-      const c = this.ctx;
-      const o = c.createOscillator();
-      o.type = type;
-      o.frequency.setValueAtTime(freq, t);
-      let lfo;
-      if (vib) {
-        lfo = c.createOscillator();
-        const lg2 = c.createGain();
-        lfo.frequency.value = 5.5;
-        lg2.gain.value = freq * 8e-3;
-        lfo.connect(lg2);
-        lg2.connect(o.frequency);
-        lfo.start(t);
-        lfo.stop(t + dur + 0.1);
-      }
-      const f = c.createBiquadFilter();
-      f.type = "lowpass";
-      f.frequency.value = 2200;
+    /** One note on an instrument. */
+    inst(kind, t, dur, midi, vol, bus) {
+      const c = this.ctx, f = 440 * Math.pow(2, (midi - 69) / 12);
       const g = c.createGain();
-      g.gain.setValueAtTime(1e-4, t);
-      g.gain.exponentialRampToValueAtTime(gain, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
-      o.connect(f);
-      f.connect(g);
-      g.connect(this.musicGain);
-      o.start(t);
-      o.stop(t + dur + 0.1);
+      g.connect(bus);
+      const osc = (type, freq, gain = 1, detune = 0) => {
+        const o = c.createOscillator();
+        o.type = type;
+        o.frequency.value = freq;
+        o.detune.value = detune;
+        if (gain !== 1) {
+          const og = c.createGain();
+          og.gain.value = gain;
+          o.connect(og);
+          return [o, og];
+        }
+        return [o, o];
+      };
+      const out = [];
+      let end = t + dur;
+      if (kind === "piano" || kind === "pluck" || kind === "musicbox") {
+        const decay = kind === "pluck" ? Math.min(1.6, dur + 0.5) : kind === "musicbox" ? 1.8 : Math.max(0.9, Math.min(3.4, 3.6 - (midi - 48) * 0.05));
+        end = t + decay + 0.05;
+        const lp = c.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.setValueAtTime(kind === "musicbox" ? 6e3 : kind === "pluck" ? 3200 : 2600, t);
+        lp.frequency.exponentialRampToValueAtTime(kind === "pluck" ? 700 : 900, t + decay * 0.6);
+        lp.connect(g);
+        if (kind === "musicbox") {
+          out.push(osc("sine", f * 2, 1), osc("sine", f * 4, 0.25), osc("sine", f * 6.01, 0.08));
+        } else if (kind === "pluck") {
+          out.push(osc("triangle", f, 1), osc("sine", f * 2, 0.35), osc("sawtooth", f, 0.05));
+        } else {
+          out.push(osc("triangle", f, 1, -3), osc("sine", f, 0.7, 4), osc("sine", f * 2, 0.22), osc("sine", f * 3, 0.06));
+        }
+        for (const [, node] of out) node.connect(lp);
+        g.gain.setValueAtTime(1e-4, t);
+        g.gain.exponentialRampToValueAtTime(vol, t + 5e-3);
+        g.gain.exponentialRampToValueAtTime(vol * 0.4, t + 0.3);
+        g.gain.exponentialRampToValueAtTime(1e-4, t + decay);
+      } else if (kind === "pad") {
+        const lp = c.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = 850;
+        lp.Q.value = 0.3;
+        lp.connect(g);
+        out.push(osc("sawtooth", f, 0.5, -7), osc("sawtooth", f, 0.5, 7), osc("triangle", f / 2, 0.4));
+        for (const [, node] of out) node.connect(lp);
+        const att = Math.min(1.4, dur * 0.4);
+        end = t + dur + 1.6;
+        g.gain.setValueAtTime(1e-4, t);
+        g.gain.exponentialRampToValueAtTime(vol, t + att);
+        g.gain.setValueAtTime(vol, t + dur);
+        g.gain.exponentialRampToValueAtTime(1e-4, end);
+      } else {
+        const flute = kind === "flute";
+        const lp = c.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = flute ? 3e3 : 1700;
+        lp.connect(g);
+        if (flute) out.push(osc("sine", f, 1), osc("triangle", f, 0.18), osc("sine", f * 2, 0.08));
+        else out.push(osc("square", f, 0.35, -5), osc("sawtooth", f, 0.3, 5), osc("square", f * 2, 0.08));
+        for (const [, node] of out) node.connect(lp);
+        const lfo = c.createOscillator();
+        lfo.frequency.value = flute ? 5.2 : 6;
+        const lg2 = c.createGain();
+        lg2.gain.setValueAtTime(0, t);
+        lg2.gain.linearRampToValueAtTime(f * (flute ? 6e-3 : 3e-3), t + 0.35);
+        lfo.connect(lg2);
+        for (const [o] of out) lg2.connect(o.frequency);
+        lfo.start(t);
+        lfo.stop(t + dur + 0.6);
+        const att = flute ? 0.07 : 0.04;
+        end = t + dur + 0.35;
+        g.gain.setValueAtTime(1e-4, t);
+        g.gain.exponentialRampToValueAtTime(vol, t + att);
+        g.gain.setValueAtTime(vol * 0.85, t + Math.max(att + 0.01, dur * 0.8));
+        g.gain.exponentialRampToValueAtTime(1e-4, end);
+        if (flute) {
+          const src = c.createBufferSource();
+          src.buffer = this.noiseBuf;
+          const bp = c.createBiquadFilter();
+          bp.type = "bandpass";
+          bp.frequency.value = f * 2;
+          bp.Q.value = 2;
+          const bg = c.createGain();
+          bg.gain.setValueAtTime(vol * 0.35, t);
+          bg.gain.exponentialRampToValueAtTime(1e-4, t + 0.12);
+          src.connect(bp);
+          bp.connect(bg);
+          bg.connect(bus);
+          src.start(t, Math.random());
+          src.stop(t + 0.15);
+        }
+      }
+      for (const [o] of out) {
+        o.start(t);
+        o.stop(end + 0.05);
+      }
     }
     drum(t, kind) {
-      const c = this.ctx;
+      const c = this.ctx, bus = this.songBus || this.musicGain;
       if (kind === "kick") {
         const o = c.createOscillator();
         const g = c.createGain();
-        o.frequency.setValueAtTime(120, t);
-        o.frequency.exponentialRampToValueAtTime(40, t + 0.15);
-        g.gain.setValueAtTime(0.35, t);
-        g.gain.exponentialRampToValueAtTime(1e-3, t + 0.18);
+        o.frequency.setValueAtTime(95, t);
+        o.frequency.exponentialRampToValueAtTime(42, t + 0.25);
+        g.gain.setValueAtTime(0.32, t);
+        g.gain.exponentialRampToValueAtTime(1e-3, t + 0.3);
         o.connect(g);
-        g.connect(this.musicGain);
+        g.connect(bus);
         o.start(t);
-        o.stop(t + 0.2);
+        o.stop(t + 0.32);
       } else {
         const src = c.createBufferSource();
         src.buffer = this.noiseBuf;
         const f = c.createBiquadFilter();
         f.type = kind === "hat" ? "highpass" : "bandpass";
-        f.frequency.value = kind === "hat" ? 7e3 : 1800;
+        f.frequency.value = kind === "hat" ? 7500 : 1500;
         const g = c.createGain();
-        const dur = kind === "hat" ? 0.04 : 0.12;
-        g.gain.setValueAtTime(kind === "hat" ? 0.05 : 0.14, t);
+        const dur = kind === "hat" ? 0.035 : 0.14;
+        g.gain.setValueAtTime(kind === "hat" ? 0.025 : 0.1, t);
         g.gain.exponentialRampToValueAtTime(1e-3, t + dur);
         src.connect(f);
         f.connect(g);
-        g.connect(this.musicGain);
+        g.connect(bus);
         src.start(t, Math.random());
         src.stop(t + dur + 0.02);
       }
     }
   };
-  var THEMES = {
-    title: { bpm: 96, root: 146.83, swing: 0.1, scale: [0, 2, 3, 5, 7, 9, 10], chords: [[0, 3, 7], [5, 9, 12], [3, 7, 10], [7, 10, 14]], melody: [4, null, 4, 5, 4, 3, 2, null, 0, null, 2, 3, 4, null, null, null, 4, null, 4, 5, 6, 5, 4, null, 3, 2, 3, 4, 0, null, null, null], drums: false, lead: "triangle", legato: 2 },
-    sea: { bpm: 112, root: 146.83, swing: 0.12, scale: [0, 2, 4, 5, 7, 9, 11], chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], melody: [0, 2, 4, null, 4, 5, 4, 2, 0, null, 2, 4, 2, null, null, null, 5, 5, 4, 2, 4, null, 2, 0, 1, 2, 0, null, -1, null, 0, null], drums: true, lead: "square" },
-    grandline: { bpm: 126, root: 164.81, swing: 0.08, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [8, 12, 15], [5, 8, 12], [7, 10, 14]], melody: [0, null, 2, 3, 4, null, 3, 2, 3, null, 1, 0, -1, null, 0, null, 4, 5, 6, 5, 4, null, 3, null, 2, 3, 4, 2, 0, null, null, null], drums: true, hats: true, lead: "sawtooth" },
-    battle: { bpm: 150, root: 110, swing: 0, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [0, 3, 7], [8, 12, 15], [7, 10, 14]], melody: [0, 0, 3, 0, 4, 0, 3, 2, 0, 0, 3, 0, 5, 4, 3, 2], drums: true, hats: true, lead: "sawtooth", legato: 0.9 },
-    town: { bpm: 104, root: 196, swing: 0.15, scale: [0, 2, 4, 5, 7, 9, 11], chords: [[0, 4, 7], [5, 9, 12], [0, 4, 7], [7, 11, 14]], melody: [4, 2, 0, 2, 4, 4, 4, null, 2, 2, 2, null, 4, 6, 6, null, 4, 2, 0, 2, 4, 4, 4, 4, 2, 2, 4, 2, 0, null, null, null], drums: false, lead: "triangle" },
-    night: { bpm: 72, root: 130.81, swing: 0, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [5, 8, 12], [3, 7, 10], [7, 10, 14]], melody: [4, null, null, 3, 2, null, null, null, 0, null, 2, null, 3, null, null, null], drums: false, lead: "sine", legato: 3 }
+  var MODES = {
+    ionian: [0, 2, 4, 5, 7, 9, 11],
+    dorian: [0, 2, 3, 5, 7, 9, 10],
+    mixolydian: [0, 2, 4, 5, 7, 9, 10],
+    aeolian: [0, 2, 3, 5, 7, 8, 10],
+    lydian: [0, 2, 4, 6, 7, 9, 11]
   };
+  var RHYTHMS = {
+    straight: [[2, 2, 4, 2, 2, 4], [3, 1, 2, 2, 4, -4], [2, 2, 2, 2, 6, -2], [1, 1, 2, 4, 2, 2, 4], [4, 2, 2, 8]],
+    lilt: [[3, 3, 2, 1, 3], [2, 1, 2, 1, 6], [3, 2, 1, 3, -3], [2, 1, 3, 2, 1, 3], [1, 1, 1, 3, 6]]
+  };
+  var ARPS = {
+    straight: [[0, 2, 3, 2, 4, 2, 3, 2], [0, 2, 4, 5, 4, 2, 3, 2], [0, null, 2, null, 3, null, 2, null]],
+    lilt: [[0, 2, 3, 0, 2, 3], [0, 3, 4, 2, 3, 4], [0, null, 2, 3, null, 2]]
+  };
+  var SONGS = {
+    title: { key: 50, mode: "ionian", bpm: 70, feel: "straight", prog: [[0, 5, 3, 4], [0, 3, 5, 4]], lead: "piano", arp: "piano", pad: true, arpDensity: 0.8, bars: [16, 24], rest: [6, 14], melody: 0.85 },
+    sea: { key: 55, mode: "mixolydian", bpm: 58, feel: "lilt", prog: [[0, 3, 0, 4], [0, 6, 3, 0], [0, 3, 6, 0]], lead: "flute", arp: "pluck", pad: true, arpDensity: 0.75, bars: [16, 32], rest: [18, 45], melody: 0.75 },
+    town: { key: 57, mode: "ionian", bpm: 62, feel: "lilt", prog: [[0, 3, 4, 0], [0, 5, 3, 4]], lead: "accordion", leadVol: 0.05, arp: "pluck", bass: "pluck", pad: false, arpDensity: 0.9, bars: [16, 24], rest: [15, 35], melody: 0.8 },
+    night: { key: 52, mode: "aeolian", bpm: 56, feel: "straight", prog: [[0, 5, 2, 6], [0, 3, 5, 4]], lead: "piano", leadVol: 0.06, arp: "piano", arpVol: 0.8, pad: true, padVol: 0.014, arpDensity: 0.45, bars: [12, 20], rest: [25, 60], melody: 0.55 },
+    grandline: { key: 53, mode: "dorian", bpm: 64, feel: "straight", prog: [[0, 3, 0, 6], [0, 6, 3, 4]], lead: "musicbox", leadVol: 0.05, arp: "piano", pad: true, arpDensity: 0.65, bars: [16, 24], rest: [18, 45], melody: 0.7 },
+    underwater: { key: 50, mode: "lydian", bpm: 50, feel: "straight", prog: [[0, 1, 0, 1], [0, 4, 1, 0]], lead: "musicbox", leadVol: 0.045, arp: null, pad: true, padVol: 0.022, bars: [12, 16], rest: [10, 25], melody: 0.6 },
+    battle: {
+      key: 45,
+      mode: "dorian",
+      bpm: 128,
+      feel: "straight",
+      prog: [[0, 0, 5, 6], [0, 3, 6, 4]],
+      lead: "pluck",
+      leadVol: 0.07,
+      legato: 0.6,
+      arp: "pluck",
+      arpVol: 0.8,
+      bass: "pluck",
+      pad: true,
+      padVol: 0.012,
+      arpDensity: 1,
+      bars: [32, 48],
+      rest: [0, 0],
+      melody: 0.9,
+      follow: true,
+      drums: { kick: [1, 0, 0, 1, 0, 0, 1, 0], snare: [0, 0, 1, 0, 0, 0, 1, 0], hat: true }
+    }
+  };
+  function pick4(a) {
+    return a[Math.floor(Math.random() * a.length)];
+  }
+  function motif(T3) {
+    const rh = pick4(RHYTHMS[T3.feel]);
+    const notes = [];
+    let deg = pick4([0, 2, 4, 4, 2]);
+    rh.forEach((len, i) => {
+      if (len < 0) {
+        notes.push({ len, deg });
+        return;
+      }
+      if (i > 0) {
+        const r = Math.random();
+        deg += r < 0.34 ? 1 : r < 0.62 ? -1 : r < 0.78 ? 2 : r < 0.9 ? -2 : r < 0.95 ? 3 : -3;
+        deg = Math.max(-2, Math.min(9, deg));
+      }
+      if (i === rh.length - 1) deg = [0, 2, 4, 7].reduce((b, x) => Math.abs(x - deg) < Math.abs(b - deg) ? x : b, 0);
+      notes.push({ len, deg });
+    });
+    return notes;
+  }
+  function vary(m) {
+    return m.map((n, i) => i >= m.length - 2 && n.len > 0 ? { ...n, deg: n.deg + pick4([-1, 1, 2, 0]) } : n);
+  }
+  function compose(T3) {
+    const mode = MODES[T3.mode];
+    const perBar = T3.feel === "lilt" ? 6 : 8;
+    const eighth = T3.feel === "lilt" ? 60 / (T3.bpm * 3) : 60 / (T3.bpm * 2);
+    const prog = pick4(T3.prog);
+    const chords = prog.map((r) => [r, r + 2, r + 4]);
+    const key2 = T3.key + pick4([0, 0, 0, 2, -2, 5]);
+    const midi = (d, oct) => {
+      const n = mode.length, o = Math.floor(d / n), i = (d % n + n) % n;
+      return key2 + 12 + mode[i] + 12 * (o + oct);
+    };
+    const A = motif(T3), B4 = motif(T3), C3 = motif(T3);
+    const rest = null;
+    const form = [A, vary(A), B4, A, Math.random() < T3.melody ? C3 : rest, vary(B4), A, rest];
+    const phrases = form.map((m) => m && Math.random() < T3.melody + 0.2 ? m : null);
+    phrases[0] = A;
+    const bars = 2 * Math.round((T3.bars[0] + Math.random() * (T3.bars[1] - T3.bars[0])) / 2);
+    return { T: T3, chords, midi, perBar, eighth, barDur: eighth * perBar, bars, phrases, arpPat: pick4(ARPS[T3.feel]) };
+  }
 
   // src/game/wanted.js
   function wantedTier(game) {
@@ -107856,7 +108109,10 @@ Trains by: ${TRAINS_BY[k]}` },
     }
     const who = tr.kind === "marine" ? "the Marines" : tr.kind === "pirate" ? "the pirates" : "the crew";
     game.ui.banner("RAID!", s.name, `Beat ${who} \u2014 then the hold and the helm are yours.`, 3);
-    game.audio?.music?.("battle");
+    if (game.audio && game.audio.theme !== "battle") {
+      tr.prevTheme = game.audio.theme;
+      game.audio.music("battle");
+    }
     for (const o of T3.ships) if (o !== s && o.traffic?.kind === "marine" && game.world.distance(o.x, o.y, s.x, s.y) < 80) o.provoked = true;
   }
   function checkCleared(game, s) {
@@ -107864,6 +108120,7 @@ Trains by: ${TRAINS_BY[k]}` },
     const standing = (tr.crew || []).filter((a) => a.alive && a.state === "idle" && a.deck?.ship === s);
     if (standing.length) return;
     tr.cleared = true;
+    if (game.audio?.theme === "battle") game.audio.music(tr.prevTheme || "sea");
     game.ui.toast("THE SHIP IS YOURS", `${s.name}: plunder the hold (the hatch amidships), or take the helm to sail her away.`, "#ffd54f");
     game.log(`The crew of the ${s.name} is beaten!`, "#ffe082");
   }
@@ -109414,13 +109671,13 @@ Trains by: ${TRAINS_BY[k]}` },
         inp.mouse.released[b] = true;
       } else inp.simKey(c, false);
     };
-    const bind = (el, pick4) => {
+    const bind = (el, pick5) => {
       let cur = null;
       el.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         e.stopPropagation();
         if (cur) return;
-        cur = pick4();
+        cur = pick5();
         if (!cur) return;
         el.classList.add("on");
         press(cur);
