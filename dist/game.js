@@ -9178,7 +9178,7 @@ void main() {
           kind: "flagpole",
           dx: 0.62,
           dy: 0.02,
-          name: "Whitebeard's flag (slashed in half)",
+          name: "Whitebeard's flag",
           spot: "town_gate",
           lore: (c, g) => g.quests?.isDone?.("foodvalten_flag") ? "Whitebeard's Jolly Roger, stitched back together with feather-cord by the whole village. The seam runs right through the moustache. Nobody minds." : "For decades Whitebeard's Jolly Roger hung over the entrance of Foodvalten, and no pirate dared land. The day he died at Marineford, the Brownbeard Pirates came ashore and slashed it in half."
         },
