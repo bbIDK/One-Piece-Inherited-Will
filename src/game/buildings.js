@@ -103,7 +103,7 @@ export function installBuildings(game) {
     /** Wanted players who walk into a Marine base get arrested (or fought). */
     guardBases(p) {
       const c = game.state?.char;
-      if (!c || !(c.bounty > 0) || p.disguised) return;
+      if (!c || game.wanted?.tier() < 2 || p.disguised) return;
       const b = game.world.interiorAt(p.x, p.y);
       if (!b || roomOf(b) !== 'marine') return;
       for (const a of game.actors) {

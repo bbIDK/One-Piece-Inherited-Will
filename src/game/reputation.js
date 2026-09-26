@@ -84,6 +84,7 @@ export function crime(game, base, why, { rep = 0, quiet = false } = {}) {
   const c = game.state?.char;
   if (!c) return 0;
   c.stats.crimes = (c.stats.crimes || 0) + 1;
+  game.emit('crime', why);
   if (c.faction === 'marine') {
     changeRep(game, -Math.max(rep, 5), why, { quiet });
     if ((c.reputation || 0) <= 0) discharge(game);

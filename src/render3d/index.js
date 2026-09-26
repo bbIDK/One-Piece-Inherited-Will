@@ -13,6 +13,7 @@ import { Sky } from './sky3d.js';
 import { CameraRig } from './camera3d.js';
 import { SpriteForest, ActorSprite, propSprite, projectileMesh, tintSprites } from './billboards.js';
 import { ShipView } from './ships3d.js';
+import { shipBob } from '../world/hull.js';
 import { buildBuilding, setNightWindows } from './buildings3d.js';
 import { PROP_BUILDERS, VIEWS, FRAME_HOOKS, registerPropBuilder } from './registry.js';
 import './props3d.js';
@@ -417,7 +418,8 @@ export class Renderer3D {
         this.ents.add(v.root);
       }
       let gh;
-      if (a.seaCreature) gh = Math.max(-(a.depth || 0), this.terrain.terrainAt(a.x, a.y) + 0.35);
+      if (a.deck) gh = a.deck.h + shipBob(a.deck.ship, env.time);
+      else if (a.seaCreature) gh = Math.max(-(a.depth || 0), this.terrain.terrainAt(a.x, a.y) + 0.35);
       else if (a.inWater) {
         // afloat with the head out, stretched out along the surface when swimming,
         // or deeper when diving (and standing on the bottom in the shallows)

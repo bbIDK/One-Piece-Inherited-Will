@@ -15,61 +15,16 @@ import { canvasTexture } from './materials.js';
 import { drawJollyRoger, drawMarineEmblem } from '../render/ship.js';
 import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
 import { vcMat } from './props/mats.js';
+import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt } from '../world/hull.js';
+
+export { shipDims, helmPoint };
 
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 
 // ---------------------------------------------------------------- dimensions
-
-/** Everything the hull, the rig and the camera need to agree on. */
-export function shipDims(def) {
-  const L = def.length, B = def.beam;
-  const open = L < 3.5; // the rowboat is an open boat
-  const D = B * 0.42;
-  const deckY = open ? 0.14 : 0.25 + B * 0.2;
-  const bulH = open ? 0.36 : 0.3 + B * 0.07;
-  const castle = L >= 5.5, fore = L >= 6.8;
-  const hq = castle ? 0.85 + (L - 5.5) * 0.1 : 0;
-  const hf = fore ? 0.5 : 0;
-  const tq = castle ? 0.27 : 0, tf = fore ? 0.83 : 1;
-  const masts = def.masts || 1;
-  const mastH = 1.2 + L * 0.75;
-  const helmX = -L * 0.42;
-  return {
-    L, B, D, open, deckY, bulH, castle, fore, hq, hf, tq, tf, masts, mastH, helmX,
-    yq: deckY + hq, yf: deckY + hf,
-    helmFloor: castle ? deckY + hq : deckY,
-  };
-}
-
-/** Where the helmsman stands: x along the hull (stern < 0) and the floor height above the waterline. */
-export function helmPoint(def) {
-  const d = shipDims(def);
-  return { x: d.helmX, floor: d.helmFloor, eye: d.helmFloor + (d.open ? 1.45 : 1.7) };
-}
-
-function hbAt(t, B) {
-  if (t > 0.58) { const k = (t - 0.58) / 0.42; return B / 2 * Math.sqrt(Math.max(0, 1 - Math.pow(k, 2.2))); }
-  if (t < 0.14) return B / 2 * (0.74 + 0.26 * Math.sin((t / 0.14) * Math.PI / 2));
-  return B / 2;
-}
-
-function topAt(d, t) {
-  let y = d.deckY + d.bulH + 0.16 * d.B * Math.pow(Math.abs(t - 0.45) / 0.55, 2);
-  if (d.castle) y += d.hq * (1 - smooth(d.tq - 0.015, d.tq + 0.035, t));
-  if (d.fore) y += d.hf * smooth(d.tf - 0.035, d.tf + 0.015, t);
-  return y;
-}
-
+// (the hull's shape is shared with the game: see world/hull.js)
 const keelAt = (d, t) => -d.D * (1 - 0.55 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
-const xAt = (d, t) => -d.L / 2 + t * d.L;
-
-/** Floor height at t: the quarterdeck, the forecastle or the main deck. */
-function floorAt(d, t) {
-  if (d.castle && t < d.tq) return d.yq;
-  if (d.fore && t > d.tf) return d.yf;
-  return d.deckY;
-}
 
 // ---------------------------------------------------------------- palette
 function palette(def) {

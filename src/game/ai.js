@@ -5,6 +5,7 @@
 //   follower – crew companions: follow the player and fight beside them
 //   boss     – hostile + phase scripts
 import { angleDiff, clamp, TAU } from '../core/math.js';
+import { placeOnDeck } from './decks.js';
 import { getAbility, canUse } from './abilities.js';
 import { hostile } from './entity.js';
 
@@ -71,7 +72,7 @@ export class AIController {
       let d = game.world.dist2(a.x, a.y, b.x, b.y);
       const stealth = b.buffs?.find((x) => x.mods?.stealth);
       if (stealth) d *= 1 + stealth.mods.stealth * 6;
-      if (b.isPlayer && b.disguised && a.faction === 'marine') continue;
+      if (b.isPlayer && b.disguised && a.faction === 'marine' && !a.provoked) continue;
       if (!sameRoom(game, a, b)) continue;
       if (d < bd) { bd = d; best = b; }
     }
@@ -272,7 +273,12 @@ export class AIController {
     const p = game.player;
     if (!p) return;
     if (p.onShip) { a.hidden = true; a.x = p.x; a.y = p.y; return; }
-    if (a.hidden) { a.hidden = false; a.x = p.x + (Math.random() - 0.5) * 2; a.y = p.y + 1; }
+    if (a.hidden) {
+      a.hidden = false;
+      // come up on deck with you (or ashore beside you)
+      if (p.deck) placeOnDeck(game, a, p.deck.ship, Math.min(0.8, p.deck.t + 0.12 + Math.random() * 0.25), (Math.random() - 0.5) * p.deck.ship.def.beam * 0.4);
+      else { a.x = p.x + (Math.random() - 0.5) * 2; a.y = p.y + 1; }
+    }
     // fight nearby enemies of the captain
     if (!this.target || this.target.state !== 'idle' || !this.target.alive) {
       this.target = null;

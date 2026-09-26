@@ -2,18 +2,18 @@
 import { ITEMS } from './items.js';
 
 export const STOCK = {
-  general: ['meat', 'rice_ball', 'fish_stew', 'coconut', 'apple', 'bandage', 'antidote', 'sake', 'bandana', 'headband', 'lucky_charm', 'shell_bracelet', 'den_den_mushi'],
+  general: ['meat', 'rice_ball', 'fish_stew', 'coconut', 'apple', 'bandage', 'antidote', 'sake', 'bandana', 'headband', 'traveller_hood', 'lucky_charm', 'shell_bracelet', 'den_den_mushi'],
   tavern: ['meat', 'rice_ball', 'fish_stew', 'sake', 'tangerine', 'mango'],
   weapons_blue: ['wooden_sword', 'rusty_katana', 'cutlass', 'slingshot', 'flintlock', 'bo_staff', 'woodsman_axe', 'padded_vest', 'leather_jerkin', 'leather_bracers', 'iron_ring'],
   weapons_grand: ['cutlass', 'fine_katana', 'marine_saber', 'flintlock', 'marine_rifle', 'bo_staff', 'woodsman_axe', 'shigure', 'leather_jerkin', 'chain_shirt', 'hand_wraps', 'iron_ring'],
   weapons_new: ['fine_katana', 'marine_saber', 'marine_rifle', 'shigure', 'seastone_cuffs', 'chain_shirt', 'samurai_armor', 'hand_wraps', 'sea_prism_charm'],
-  outfitter: ['bandana', 'tricorne', 'captain_hat', 'cowboy_hat', 'pink_hat', 'goggles', 'headband', 'captain_coat', 'red_cloak', 'haramaki', 'red_sash', 'gold_earrings', 'shell_bracelet', 'lucky_charm'],
+  outfitter: ['bandana', 'traveller_hood', 'black_hood', 'tricorne', 'captain_hat', 'cowboy_hat', 'pink_hat', 'goggles', 'headband', 'captain_coat', 'red_cloak', 'haramaki', 'red_sash', 'gold_earrings', 'shell_bracelet', 'lucky_charm'],
   navigator: ['log_pose', 'den_den_mushi'],
   navigator_grand: ['log_pose', 'new_world_log_pose', 'den_den_mushi'],
   skypiea: ['impact_dial', 'flame_dial', 'breath_dial', 'flash_dial', 'rice_ball', 'fish_stew'],
   fishman: ['fish_stew', 'sea_king_steak', 'pearl', 'pearl_necklace', 'bandage', 'antidote'],
   loguetown_swords: ['wooden_sword', 'rusty_katana', 'cutlass', 'fine_katana', 'yubashiri'],
-  black_market: ['rumble_ball', 'seastone', 'seastone_cuffs', 'cola', 'jewels'],
+  black_market: ['rumble_ball', 'seastone', 'seastone_cuffs', 'cola', 'jewels', 'black_hood'],
 };
 
 // multiplier on list prices depending on the sea (Grand Line prices are wild)

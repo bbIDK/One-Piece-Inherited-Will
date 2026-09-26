@@ -448,7 +448,7 @@ const HAIR = {
 // ------------------------------------------------------------------ hats
 // Hats sit on the head at their band; `k` scales them for big hair.
 const STRAW = '#f0cd62', STRAW_D = '#e9c150', BAND_RED = '#c8372d', GOLD = '#e0b24a';
-const HAT_COVER = { chef: 1, straw: 1, captain: 1, tricorne: 1, cowboy: 1, marine: 1, pinkhat: 1, tophat: 1, topHat: 1, beanie: 1, bandana: 1, cap: 1, helm: 1 };
+const HAT_COVER = { hood: 1, chef: 1, straw: 1, captain: 1, tricorne: 1, cowboy: 1, marine: 1, pinkhat: 1, tophat: 1, topHat: 1, beanie: 1, bandana: 1, cap: 1, helm: 1 };
 function hatKind(hat, look) {
   if (!hat) return null;
   if (hat === 'horns' && !(look && look.hatColor)) return 'helm';
@@ -582,6 +582,18 @@ const HATS = {
       h.addC(Prim.cyl(5), between(add3(a, [-0.05, 0.4, s * 0.3]), [a[0] + 0.35, a[1] + 0.75, a[2] + s * 0.4], 0.07), c, h.bone);
       h.addC(Prim.cyl(5), between(add3(a, [-0.08, 0.62, s * 0.46]), [b[0] - 0.3, b[1] + 0.35, b[2] + s * 0.1], 0.06), c, h.bone);
     }
+  },
+  hood(h, col) {
+    const c = col || '#6a5643';
+    const U = h.q.cap[0] + 4, V = h.q.cap[1] + 2;
+    // a deep cowl over the crown, down the sides and the back, framing the face
+    h.add(capGeo(1.25, 60, 134, 160, null, U, V), M(0.07, 0.03, 0, 0, 0, 0, [1.08, 1.02, 1.05]), c, h.bone);
+    // its shadowed inside, seen through the face opening
+    h.add(capGeo(1.21, 60, 134, 160, null, U, V), M(0.07, 0.03, 0, 0, 0, 0, [1.06, 1.0, -1.03]), shade(c, -0.7), h.bone);
+    // the peak's soft fold and the cape over the shoulders
+    const k = surf(12, 180, 1.28);
+    h.addC(Prim.sphere(h.q.sph[0], h.q.sph[1]), M(k[0] - 0.12, k[1] + 0.02, 0, 0, 0, 0.5, [0.34, 0.2, 0.3]), shade(c, -0.06), h.bone);
+    h.add(lathe([[1.0, -0.8], [1.42, -1.3], [1.62, -1.58]], 14), M(), shade(c, -0.06), h.bone);
   },
   cap(h, col) {
     const c = col || '#5d6d7e';

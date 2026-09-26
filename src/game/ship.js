@@ -82,6 +82,7 @@ export class Ship extends Entity {
       return;
     }
     const w = game.world;
+    const x0 = this.x, y0 = this.y, h0 = this.heading;
     this.sortY = this.y;
     this.cannonCd = Math.max(0, this.cannonCd - dt);
     this.burstCd = Math.max(0, this.burstCd - dt);
@@ -139,6 +140,16 @@ export class Ship extends Entity {
     }
     // carry the crew
     for (const p of this.passengers) { p.x = this.x; p.y = this.y + 0.01; }
+    // and everyone standing on the deck, turning with the ship
+    if (this.aboard && this.aboard.size) {
+      const dh = this.heading - h0, c = Math.cos(dh), sn = Math.sin(dh);
+      for (const a of this.aboard) {
+        if (!a.alive || !a.deck || a.deck.ship !== this) { this.aboard.delete(a); continue; }
+        const rx = w.dx(x0, a.x), ry = a.y - y0;
+        a.x = w.wx(this.x + rx * c - ry * sn); a.y = this.y + rx * sn + ry * c;
+        if (dh) a.facing += dh;
+      }
+    }
   }
 
   unstick(w) {

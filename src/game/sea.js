@@ -146,7 +146,7 @@ class SeaSystem {
     if (s && !g.currentIsland) {
       this.encT -= dt;
       if (this.encT <= 0) {
-        this.encT = (isGrandLine(reg) ? 50 : 80) + Math.random() * 60;
+        this.encT = (isGrandLine(reg) ? 80 : 120) + Math.random() * 80;
         this.encounter(p, s, reg);
       }
       this.flotsamT -= dt;
@@ -224,7 +224,7 @@ class SeaSystem {
     const nw = reg === REGION.NEW_WORLD;
     const roll = rng.next();
     let kind;
-    if (c.bounty > 0 && roll < 0.35) kind = 'marine';
+    if ((g.wanted?.tier() ?? 0) >= 2 && roll < 0.35) kind = 'marine';
     else if (roll < 0.7) kind = 'pirate';
     else kind = 'merchant';
     const lvl = nw ? rng.int(45, 70) : gl ? rng.int(22, 40) : isBlue(reg) && reg !== REGION.EAST_BLUE ? rng.int(10, 18) : rng.int(5, 12);
@@ -308,7 +308,7 @@ function warshipAI(s, dt, game) {
   const target = p.mode === 'sail' && p.ship ? p.ship : null;
   const d = game.world.distance(s.x, s.y, p.x, p.y);
   if (s.expire <= 0 && d > 40) { s.alive = false; return; }
-  const hostileToPlayer = s.faction === 'pirate' || (s.faction === 'marine' && (game.state.char.bounty > 0 || s.provoked));
+  const hostileToPlayer = s.faction === 'pirate' || (s.faction === 'marine' && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked));
   if (!hostileToPlayer) return merchantAI(s, dt, game);
   s.sail = 1;
   if (!target && d > 50) return;

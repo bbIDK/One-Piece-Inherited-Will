@@ -1,6 +1,7 @@
 // Context-sensitive "E" interactions.
 import { WALKABLE } from '../world/tiles.js';
 import { angleDiff } from '../core/math.js';
+import { placeOnDeck, helmSpot } from './decks.js';
 
 export function findInteraction(game, p) {
   const w = game.world;
@@ -16,12 +17,14 @@ export function findInteraction(game, p) {
       const isl = w.islandAt(spot.x, spot.y) || w.nearestIsland(spot.x, spot.y, 40);
       return { label: `Go ashore${isl && isl.name ? ' — ' + isl.name : ''}`, key: 'E', run: () => disembark(game, p, spot) };
     }
+    // hove to: leave the wheel and walk your own deck
+    if (Math.abs(s.speed) < 1.6 && !s.def.open) return { label: 'Leave the helm (walk the deck)', key: 'E', run: () => leaveHelm(game, p, s) };
     return null;
   }
   // on foot / swimming
   const cands = [];
   for (const s of game.ships) {
-    if (s.sunk || s.owner !== 'player') continue;
+    if (s.sunk || s.owner !== 'player' || p.deck?.ship === s) continue;
     const d = w.distance(p.x, p.y, s.x, s.y);
     // a Devil Fruit user in the sea can't climb, but can grab a line thrown from the deck
     const sinking = p.inWater && p.fruit && !p.gills;
@@ -105,8 +108,21 @@ export function disembark(game, p, spot) {
   game.audio?.sfx('step');
 }
 
+/** Let go of the wheel and stand on the deck beside it (the ship heaves to). */
+export function leaveHelm(game, p, s) {
+  s.captain = null; s.sail = 0; s.rowing = 0; s.anchored = true;
+  s.passengers = s.passengers.filter((x) => x !== p);
+  p.mode = 'foot';
+  p.onShip = false;
+  const hs = helmSpot(s);
+  placeOnDeck(game, p, s, hs.t + 0.05, 0);
+  game.emit('disembark', s, null);
+  game.hint?.('deck', 'Walk your deck freely — jump over the rail for a swim, and press E at the wheel to take the helm again.');
+}
+
 export function board(game, p, s) {
   if (p.inWater) p.leaveWater?.(game);
+  if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
   p.mode = 'sail';
   p.ship = s;
   p.onShip = true;

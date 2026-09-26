@@ -67,6 +67,8 @@ export const ITEMS = {
   pink_hat: { name: 'Pink Top Hat', icon: '🎀', type: 'hat', look: { hat: 'pinkhat' }, bonus: { vit: 1 }, price: 800 },
   goggles: { name: 'North Blue Goggles', icon: '🥽', type: 'hat', look: { hat: 'goggles' }, bonus: { agi: 1 }, price: 1200, desc: 'A new model from the North Blue. (Usopp bought these in Loguetown.)' },
   headband: { name: 'Black Bandana', icon: '🖤', type: 'hat', look: { hat: 'headband', hatColor: '#212121' }, bonus: { str: 1 }, price: 300, desc: 'Tie it on when you mean business.' },
+  traveller_hood: { name: 'Traveller\'s Hood', icon: '', type: 'hat', hood: true, look: { hat: 'hood', hatColor: '#6a5643' }, price: 1800, desc: 'A deep hood that keeps your face in shadow. Marines won\'t know a wanted face unless they get right up close — or you start a fight in it.' },
+  black_hood: { name: 'Black Cowl', icon: '', type: 'hat', hood: true, look: { hat: 'hood', hatColor: '#26262b' }, bonus: { agi: 1 }, price: 9000, desc: 'The cowl of a Revolutionary Army field agent. Nobody sees your face.' },
   horned_helm: { name: 'Horned Helm', icon: '⛑', type: 'hat', look: { hat: 'horns' }, bonus: { end: 2 }, price: 0, desc: 'A helm of Elbaf make.' },
   // body armour (the body slot: coats, cloaks and armour)
   padded_vest: { name: 'Padded Vest', icon: '', type: 'coat', armor: 0.04, look: { coat: '#795548' }, bonus: { end: 1 }, price: 1800, desc: 'Quilted canvas that takes the sting out of a cutlass.' },

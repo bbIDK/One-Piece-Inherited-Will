@@ -47,6 +47,7 @@ export class Game {
 
   setPlayer(actor) {
     this.player = actor;
+    actor.game = this;
     actor.isPlayer = true;
     actor.faction = 'player';
     actor.controller = new PlayerController(this);

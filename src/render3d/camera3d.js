@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { interiorRect, heightsOf } from '../world/interiors.js';
 import { helmPoint } from './ships3d.js';
+import { shipBob } from '../world/hull.js';
 
 const TAU = Math.PI * 2;
 
@@ -164,7 +165,7 @@ export class CameraRig {
     let eyeH = 1.72 * scale;
     let gx = 0, gz = 0; // eye position relative to the player (origin)
     // the ground under your feet, smoothed so bumps and steps don't jolt the view
-    const g0 = ground(p.x, p.y);
+    const g0 = p.deck ? p.deck.h + shipBob(p.deck.ship, game.env?.time || 0) : ground(p.x, p.y);
     if (this.smoothG === undefined || Math.abs(g0 - this.smoothG) > 2.5 || p.mode !== this.lastMode) this.smoothG = g0;
     this.smoothG += (g0 - this.smoothG) * Math.min(1, dt * 14);
     this.lastMode = p.mode;

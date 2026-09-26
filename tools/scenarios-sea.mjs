@@ -322,4 +322,161 @@ export const scenarios = {
       console.log('perf', JSON.stringify(perf));
     },
   },
+
+  // ships at sea: traffic with crews on deck, a raid, plundering and stealing a ship, walking your own deck
+  raid: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings(); g.env.clock = 11; g.env.storm = 0; g.env.fog = 0; });
+      // open water ~25 m off Dawn Island: our sloop, and a merchant ship hove to beside it
+      const spot = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island');
+        for (let k = 0; k < 40000; k++) {
+          const a = Math.random() * Math.PI * 2, r = isl.radius * (0.7 + Math.random() * 1.2);
+          const x = Math.floor(isl.x + Math.cos(a) * r) + 0.5, y = Math.floor(isl.y + Math.sin(a) * r) + 0.5;
+          if (w.sd(x, y) < -22 && w.sd(x, y) > -26) {
+            let ok = true;
+            for (let j = -14; j <= 14 && ok; j += 2) for (let i = -14; i <= 14 && ok; i += 2) if (!w.sailable(x + i, y + j)) ok = false;
+            if (ok) return { x, y, a };
+          }
+        }
+        return null;
+      });
+      console.log('spot', JSON.stringify(spot));
+      const made = await page.evaluate((s) => {
+        const g = window.OP.game, p = g.player;
+        document.querySelector('.look-hint')?.remove();
+        const mine = g.giveShip('sloop', s.x, s.y, 'Test Sloop', { heading: 0 });
+        const T = g.traffic;
+        const o = T.spawn({ kind: 'merchant', type: 'caravel', x: s.x, y: s.y + 4.2, heading: 0, level: 6, dest: { x: s.x + 400, y: s.y + 4 } });
+        o.traffic.surrender = true; // (as if we'd fired a shot across her bows)
+        // board our sloop
+        const inter = window.OP.debug;
+        p.x = mine.x; p.y = mine.y;
+        g.emit('noop');
+        return { mine: !!mine, other: !!o, ships: g.ships.length };
+      }, spot);
+      console.log('made', JSON.stringify(made));
+      await page.evaluate(() => { const g = window.OP.game, p = g.player, s = g.ships.find((x) => x.name === 'Test Sloop'); window.__board = s; });
+      // board through the E prompt
+      await page.evaluate(() => { const g = window.OP.game, p = g.player, s = window.__board; p.x = s.x + 0.2; p.y = s.y + 1.6; });
+      for (let i = 0; i < 4; i++) await step(page, 0.1);
+      const pr0 = await page.evaluate(() => window.OP.game.player.controller.interaction?.label || null);
+      console.log('swimming by our ship:', pr0);
+      await page.evaluate(() => { window.OP.key('E', true); }); await step(page, 0.05); await page.evaluate(() => { window.OP.key('E', false); }); await step(page, 0.2);
+      // the other ship's crew is on its deck?
+      for (let i = 0; i < 6; i++) await step(page, 0.1);
+      const crew = await page.evaluate(() => { const g = window.OP.game, o = g.traffic.ships[0]; return { mode: g.player.mode, crew: (o.traffic.crew || []).map((a) => ({ n: a.name, deck: !!a.deck, h: a.deck && +a.deck.h.toFixed(2), water: a.inWater })) }; });
+      console.log('crew', JSON.stringify(crew));
+      await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = Math.PI / 2; v.rig.pitch = -0.25; v.rig.tp.dist = 7; });
+      await step(page, 0.2); await frames(page, 3);
+      await snap('alongside');
+      // E: board and raid
+      const pr1 = await page.evaluate(() => window.OP.game.player.controller.interaction?.label || null);
+      console.log('at the helm:', pr1);
+      await page.evaluate(() => { window.OP.key('E', true); }); await step(page, 0.05); await page.evaluate(() => { window.OP.key('E', false); }); await step(page, 0.1);
+      const st1 = await page.evaluate(() => { const g = window.OP.game, p = g.player, o = g.traffic.ships[0]; return { mode: p.mode, onDeck: p.deck?.ship?.name, raided: o.traffic.raided, bounty: g.state.char.bounty, hostile: o.traffic.crew.filter((a) => a.controller.kind === 'hostile').length }; });
+      console.log('raid', JSON.stringify(st1));
+      for (let i = 0; i < 12; i++) { await step(page, 0.1); await frames(page, 1); }
+      await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.pitch = -0.3; });
+      await snap('raid-fight');
+      await page.evaluate(() => { const g = window.OP.game; g.settings.view = 'first'; g.applySettings(); });
+      await step(page, 0.1); await frames(page, 3);
+      await snap('raid-first');
+      await page.evaluate(() => { const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); });
+      // beat the crew (knock them all out)
+      await page.evaluate(() => { const g = window.OP.game, o = g.traffic.ships[0]; for (const a of o.traffic.crew) { a.hp = 0; a.knockOut?.(g, g.player); } });
+      for (let i = 0; i < 6; i++) await step(page, 0.1);
+      const st2 = await page.evaluate(() => { const g = window.OP.game, o = g.traffic.ships[0]; return { cleared: o.traffic.cleared }; });
+      console.log('after the fight', JSON.stringify(st2));
+      // walk to the hatch and plunder, then to the helm and steal her
+      const go = async (what) => page.evaluate((what) => {
+        const g = window.OP.game, p = g.player, o = g.traffic.ships[0] || g.ships.find((s) => s.name && s.owner !== 'player' && !s.sunk);
+        return what;
+      }, what);
+      const res = await page.evaluate(async () => {
+        const g = window.OP.game, p = g.player, o = g.traffic.ships[0];
+        const out = {};
+        const { hatchSpot, helmSpot } = window.OP.debug.decks || {};
+        return out;
+      });
+      void go; void res;
+      const pl = await page.evaluate(() => {
+        const g = window.OP.game, p = g.player, o = g.traffic.ships[0];
+        const hs = window.OP.debug.deckSpot(o, 'hatch');
+        p.x = hs.x; p.y = hs.y;
+        return hs;
+      });
+      for (let i = 0; i < 3; i++) await step(page, 0.1);
+      const pr2 = await page.evaluate(() => window.OP.game.player.controller.interaction?.label || null);
+      console.log('at the hatch:', pr2);
+      await page.evaluate(() => { window.OP.key('E', true); }); await step(page, 0.05); await page.evaluate(() => { window.OP.key('E', false); }); await step(page, 0.1);
+      await page.evaluate(() => { const g = window.OP.game, p = g.player, o = g.traffic.ships[0]; const hs = window.OP.debug.deckSpot(o, 'helm'); p.x = hs.x; p.y = hs.y; });
+      for (let i = 0; i < 3; i++) await step(page, 0.1);
+      const pr3 = await page.evaluate(() => window.OP.game.player.controller.interaction?.label || null);
+      console.log('at the helm:', pr3);
+      await page.evaluate(() => { window.OP.key('E', true); }); await step(page, 0.05); await page.evaluate(() => { window.OP.key('E', false); }); await step(page, 0.3);
+      const st3 = await page.evaluate(() => { const g = window.OP.game, p = g.player; return { mode: p.mode, ship: p.ship?.name, owner: p.ship?.owner, bounty: g.state.char.bounty, berries: g.state.char.berries, fleet: g.ships.filter((s) => s.owner === 'player').map((s) => s.name) }; });
+      console.log('stolen', JSON.stringify(st3));
+      await step(page, 0.2); await frames(page, 3);
+      await snap('stolen');
+      // leave the helm and walk the deck, jump off, climb back
+      const pr4 = await page.evaluate(() => window.OP.game.player.controller.interaction?.label || null);
+      console.log('helm prompt:', pr4);
+      await page.evaluate(() => { window.OP.key('E', true); }); await step(page, 0.05); await page.evaluate(() => { window.OP.key('E', false); }); await step(page, 0.3);
+      const st4 = await page.evaluate(() => { const p = window.OP.game.player; return { mode: p.mode, deck: p.deck?.ship?.name, water: p.inWater }; });
+      console.log('left the helm', JSON.stringify(st4));
+      await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = window.OP.game.player.ship.heading + 0.6; v.rig.pitch = -0.2; window.OP.key('W', true); });
+      for (let i = 0; i < 8; i++) { await step(page, 0.1); await frames(page, 1); }
+      await page.evaluate(() => window.OP.key('W', false));
+      const st5 = await page.evaluate(() => { const p = window.OP.game.player; return { deck: p.deck?.ship?.name, water: p.inWater }; });
+      console.log('walked (rail holds?)', JSON.stringify(st5));
+      await snap('deck-walk');
+      // wanted: a Marine sees a 10M face
+      await page.evaluate(() => { const g = window.OP.game; g.state.char.bounty = 12000000; });
+      const w1 = await page.evaluate(() => ({ tier: window.OP.game.wanted.tier() }));
+      console.log('tier', JSON.stringify(w1));
+    },
+  },
+
+  // traffic: sail for a while and see who else is out on the water
+  traffic: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = 10; g.env.storm = 0; g.env.fog = 0; document.querySelector('.look-hint')?.remove(); });
+      const spot = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island');
+        for (let k = 0; k < 40000; k++) {
+          const a = Math.random() * Math.PI * 2, r = isl.radius * (0.8 + Math.random() * 1.5);
+          const x = Math.floor(isl.x + Math.cos(a) * r) + 0.5, y = Math.floor(isl.y + Math.sin(a) * r) + 0.5;
+          if (w.sd(x, y) < -28) return { x, y, a };
+        }
+      });
+      await page.evaluate((s) => { const g = window.OP.game, p = g.player; const sh = g.giveShip('caravel', s.x, s.y, 'Going Test', { heading: s.a }); p.x = sh.x; p.y = sh.y + 1; window.__s = sh; }, spot);
+      await step(page, 0.1);
+      await page.evaluate(() => { window.OP.key('E', true); }); await step(page, 0.05); await page.evaluate(() => { window.OP.key('E', false); });
+      await page.evaluate(() => window.OP.key('W', true));
+      for (let i = 0; i < 20; i++) await step(page, 0.5);
+      await page.evaluate(() => window.OP.key('W', false));
+      const list = await page.evaluate(() => { const g = window.OP.game, p = g.player; return { mode: p.mode, ships: g.traffic.ships.map((s) => ({ kind: s.traffic.kind, type: s.type, d: Math.round(g.world.distance(s.x, s.y, p.x, p.y)), crew: s.traffic.crew ? s.traffic.crew.length : 0 })) }; });
+      console.log('traffic', JSON.stringify(list));
+      // bring the nearest one close for a look
+      await page.evaluate(() => {
+        const g = window.OP.game, p = g.player, s = g.traffic.ships[0];
+        if (!s) return;
+        const a = p.ship.heading + 0.5;
+        s.x = g.world.wx(p.x + Math.cos(a) * 30); s.y = p.y + Math.sin(a) * 30;
+        g.view3d.rig.yaw = a; g.view3d.rig.pitch = -0.08;
+      });
+      for (let i = 0; i < 6; i++) { await step(page, 0.2); await frames(page, 1); }
+      await snap('passing');
+      await page.evaluate(() => { const g = window.OP.game; g.settings.view = 'first'; g.applySettings(); });
+      await step(page, 0.1); await frames(page, 3);
+      await snap('passing-helm');
+      const perf = await page.evaluate(() => { const v = window.OP.game.view3d, i = v.renderer.info; return { calls: i.render.calls, tris: i.render.triangles }; });
+      console.log('perf', JSON.stringify(perf));
+    },
+  },
 };

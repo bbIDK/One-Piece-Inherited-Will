@@ -433,12 +433,18 @@ export class UI {
         E.lives.appendChild(v);
       }
     }
-    const bk = `${ch.faction}|${ch.bounty || 0}|${ch.berries || 0}`;
+    // how the Marines see you: wanted (recognised on sight), hooded, watched, spotted
+    const W = game.wanted;
+    const tier = W ? W.tier() : 0;
+    const heat = !W || tier < 2 ? '' : W.spotted > 0 ? 'spotted' : W.watched > 0 ? 'watched' : W.hooded() ? 'hooded' : 'wanted';
+    const bk = `${ch.faction}|${ch.bounty || 0}|${ch.berries || 0}|${heat}`;
     if (this.cache.bountyKey !== bk) {
       this.cache.bountyKey = bk;
       clear(E.bounty);
       if (ch.faction !== 'marine' && ch.bounty) E.bounty.append(h('span.bty', uiImg('bounty', 16), ` ${formatBerries(ch.bounty)}`));
       E.bounty.append(h('small', uiImg('berries', 14), ` ${formatBerries(ch.berries || 0)}`));
+      const TAG = { wanted: ['WANTED', 'Marines who get a good look at you will know your face'], hooded: ['HOODED', 'Your hood hides your face (it slips if you fight or steal)'], watched: ['WATCHED', 'A Marine is looking at you…'], spotted: ['SPOTTED', 'The Marines know who you are!'] };
+      if (heat) E.bounty.append(h('span.heat.' + heat, { title: TAG[heat][1] }, TAG[heat][0]));
     }
     const buffKey = p.buffs.map((b) => b.name + Math.ceil(b.t)).join(',') + Object.keys(p.status).join(',');
     if (this.cache.buffs !== buffKey) {

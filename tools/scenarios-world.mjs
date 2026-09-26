@@ -429,4 +429,48 @@ export const scenarios = {
       console.log('barriers', JSON.stringify(rep));
     },
   },
+
+  // wanted: Marines recognise a wanted face (not a petty thief's), unless it's under a hood
+  wanted: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.env.clock = 11; g.settings.view = 'third'; g.applySettings(); document.querySelector('.look-hint')?.remove(); });
+      for (let i = 0; i < 10; i++) await step(page, 0.1);
+      const trial = async (label, bounty, hood, dist) => {
+        const r = await page.evaluate(([bounty, hood, dist]) => {
+          const g = window.OP.game, p = g.player, c = g.state.char;
+          c.bounty = bounty;
+          for (const a of g.actors) if (a.testMarine) a.alive = false;
+          if (hood) { window.OP.debug.addItem(g, 'traveller_hood', 1); c.equipped.hat = 'traveller_hood'; } else c.equipped.hat = null;
+          p.hoodBlownT = 0;
+          // a Marine on patrol, a few steps away
+          let x = p.x + dist, y = p.y;
+          const m = window.OP.debug.makeNPC({ name: 'Marine', faction: 'marine', style: 'ittoryu', weapon: 'sword', look: { top: '#ffffff', bottom: '#1b4f72', hat: 'marine' }, level: 8, ai: 'wander' }, x, y);
+          m.testMarine = true;
+          g.addActor(m);
+          return { tier: g.wanted.tier(), hooded: g.wanted.hooded() };
+        }, [bounty, hood, dist]);
+        for (let i = 0; i < 40; i++) await step(page, 0.1);
+        const out = await page.evaluate(() => { const g = window.OP.game, m = g.actors.find((a) => a.testMarine); return { suspect: +(m.suspect || 0).toFixed(2), provoked: !!m.provoked }; });
+        console.log(label, JSON.stringify({ ...r, ...out }));
+        return out;
+      };
+      await trial('small fry (500k), 3m', 500000, false, 3);
+      await trial('wanted (12M), 6m', 12000000, false, 6);
+      await trial('wanted (12M), hooded, 6m', 12000000, true, 6);
+      await trial('wanted (12M), hooded, 1.5m', 12000000, true, 1.5);
+      await page.evaluate(() => { const g = window.OP.game; g.view3d.rig.pitch = -0.1; });
+      await trial('notorious (60M), 13m', 60000000, false, 13);
+      await frames(page, 3);
+      await snap('recognised');
+      // the hood on the model
+      await page.evaluate(() => { const g = window.OP.game, c = g.state.char; for (const a of g.actors) if (a.testMarine) a.alive = false; c.equipped.hat = 'traveller_hood'; window.OP.debug.refresh?.(); g.player.look = { ...g.player.look, hat: 'hood', hatColor: '#6a5643' }; g.view3d.rig.yaw = g.player.facing + Math.PI; g.view3d.rig.pitch = 0.05; g.view3d.rig.tp.dist = 2.6; });
+      for (let i = 0; i < 5; i++) { await step(page, 0.1); await frames(page, 1); }
+      await snap('hood');
+      await page.evaluate(() => { const g = window.OP.game; g.view3d.rig.yaw = g.player.facing + Math.PI * 0.6; });
+      await step(page, 0.1); await frames(page, 2);
+      await snap('hood-side');
+    },
+  },
 };

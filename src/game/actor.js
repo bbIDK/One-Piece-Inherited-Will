@@ -456,6 +456,7 @@ export class Actor extends Entity {
     }
     this.updateMovement(dt, game, false);
     this.updateVertical(dt, game);
+    this.updateDeck(game);
     // (in the air over water you haven't splashed down yet)
     if (!(this.z > 0.25)) this.updateWater(dt, game);
 
@@ -552,6 +553,16 @@ export class Actor extends Entity {
   /** The body is a circle around (x, y) (the 3D model stands centred on it). */
   canOccupy(w, x, y) {
     const r = this.r, e = r * 0.85;
+    // ship decks: walk anywhere on your deck (the rail keeps you aboard unless
+    // you jump over it); nobody swims or walks through a hull
+    const g = this.game;
+    if (g && g.deckAt && g.ships.length) {
+      if (this.deck) {
+        const dk = g.deckAt(x, y, r * 0.7);
+        if (dk && dk.ship === this.deck.ship) return true;
+        if (!(this.z > 0.3)) return false;
+      } else if (g.deckAt(x, y, -0.15)) return false;
+    }
     if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
     if (!this.passable(w, x - r, y) || !this.passable(w, x + r, y) || !this.passable(w, x, y - r) || !this.passable(w, x, y + r)) return false;
     return !w.hitsProp(x, y, r * 0.9);
@@ -607,11 +618,28 @@ export class Actor extends Entity {
     return hit;
   }
 
+  /** Standing on a ship's deck? (Stepping off it over the rail drops you to the water.) */
+  updateDeck(game) {
+    const was = this.deck;
+    const dk = game.deckAt && game.ships.length ? game.deckAt(this.x, this.y, was ? 0 : 0.1) : null;
+    if (dk && was && dk.ship === was.ship) { this.deck = dk; return; }
+    if (was) {
+      was.ship.aboard?.delete(this);
+      // over the side: fall from the deck's height
+      if (!dk) { this.z = (this.z || 0) + was.h; this.vz = Math.min(this.vz || 0, 0.5); }
+    }
+    if (dk) {
+      if (!was) this.z = Math.max(0, (this.z || 0) - dk.h);
+      (dk.ship.aboard || (dk.ship.aboard = new Set())).add(this);
+    }
+    this.deck = dk;
+  }
+
   updateWater(dt, game) {
     const w = game.world;
     const t = w.type(this.x, this.y - 0.1);
     const was = this.inWater;
-    this.inWater = IS_LIQUID[t] === 1 && !OVERLAY[t] && !(this.dash && this.dash.ignoreWater);
+    this.inWater = IS_LIQUID[t] === 1 && !OVERLAY[t] && !(this.dash && this.dash.ignoreWater) && !this.deck;
     const df = !!this.fruit && !this.gills; // the sea takes a Devil Fruit user's strength
     if (this.inWater && !was) {
       game.fx.burst(this.x, this.y, 10, { color: ['#e1f5fe', '#81d4fa'], speed: 3, vz: 3, g: 9, life: 0.5, size: 0.12 });

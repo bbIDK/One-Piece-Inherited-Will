@@ -38,6 +38,10 @@ import { fruitOf, fruitPicked } from './world/fruitTrees.js';
 import { installContent } from './content/index.js';
 import { Audio } from './audio/audio.js';
 import { installSea } from './game/sea.js';
+import { installDecks, hatchSpot, helmSpot } from './game/decks.js';
+import { deckToWorld } from './world/hull.js';
+import { installTraffic } from './game/traffic.js';
+import { installWanted } from './game/wanted.js';
 import { installZones } from './game/zones.js';
 import { Crew } from './game/crew.js';
 import { openCrew } from './ui/crewPanel.js';
@@ -165,6 +169,9 @@ async function start() {
   game.spawner.addBuilder(npcBuilder);
   installMap(game);
   installSea(game);
+  installDecks(game);
+  installTraffic(game);
+  installWanted(game);
   installZones(game);
   new Crew(game);
   installFactions(game);
@@ -317,7 +324,7 @@ async function start() {
       startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', look: null });
       return game.player;
     },
-    debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, portrait: renderPortrait },
+    debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); } },
     ready: true,
   });
 
