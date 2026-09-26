@@ -92,8 +92,8 @@ function promote(game) {
   const dock = game.currentIsland?.docks?.[0];
   const pos = dock ? dock.moor : { x: game.player.x, y: game.player.y + 5 };
   if (n.name === 'Ensign') game.giveShip('sloop', pos.x, pos.y, 'Marine Cutter');
-  if (n.name === 'Captain') game.giveShip('brig', pos.x, pos.y, 'Marine Warship');
-  if (n.name === 'Vice Admiral') game.giveShip('galleon', pos.x, pos.y, 'Marine Battleship');
+  if (n.name === 'Captain') game.giveShip('brigantine', pos.x, pos.y, 'Marine Brig');
+  if (n.name === 'Vice Admiral') game.giveShip('marine_warship', pos.x, pos.y, 'Marine Battleship');
   if (n.name === 'Commodore') { addItem(game, 'marine_coat', 1); equip(game, 'marine_coat'); }
   if (i >= rankIndex('Captain')) c.flags.bondolaPass = true;
   game.progression.breakthrough(1, `Promotion to ${n.name}`);

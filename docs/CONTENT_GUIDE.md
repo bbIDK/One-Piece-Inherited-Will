@@ -463,8 +463,9 @@ install(game) {
   - `addBounty(n, why)`;
   - `addStyleMastery(style, n)`.
 - Other actions:
-  - `game.giveShip(type, x, y, name)`, where `type` is one of `rowboat`,
-    `sloop`, `caravel`, `brig`, `galleon`, `sunny`;
+  - `game.giveShip(type, x, y, name)`, where `type` is one of `dinghy`,
+    `sloop`, `caravel`, `brigantine`, `frigate`, `galleon`, `adam_brig`,
+    `marine_warship`;
   - `game.fx`, `game.env` and `game.audio?.sfx(name)`.
 - Helpers from `./helpers.js`:
   - `spawnNow(game, npcId, pos?)` spawns a registered NPC now;

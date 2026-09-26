@@ -9,7 +9,9 @@ import { RACES } from '../data/races.js';
 let shipCounter = 0;
 
 export function installSession(game, { onReturnToTitle }) {
+  const ALIAS = { rowboat: 'dinghy', boat: 'dinghy', brig: 'brigantine', sunny: 'adam_brig', thousand_sunny: 'adam_brig', merry: 'caravel', going_merry: 'caravel', warship: 'marine_warship' };
   game.giveShip = (type, x, y, name, extra = {}) => {
+    type = ALIAS[type] || type;
     const s = game.addShip({ type, x, y, heading: extra.heading ?? Math.PI / 2, owner: 'player', faction: 'player', name: name || undefined, jr: game.state?.char?.jr, upgrades: extra.upgrades || [], hull: extra.hull, coated: extra.coated });
     s.uid = extra.uid || `s${Date.now().toString(36)}${shipCounter++}`;
     if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world);

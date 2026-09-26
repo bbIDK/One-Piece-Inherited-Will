@@ -172,7 +172,7 @@ export function installZones(game) {
           label: knows ? 'Ride the Knock Up Stream to the sky!' : 'The sea here churns strangely…', key: 'E',
           run: () => {
             if (!knows) { game.log('Something enormous stirs beneath the sea here, but you cannot tell where or when. (A South Bird, or someone who knows these waters, could guide you.)', '#b0bec5'); return; }
-            if (s.def.hull < 60) { game.log('Your little boat would be torn apart by the stream. You need a real ship.', '#ff8a80'); return; }
+            if (!s.def.grandLine) { game.log('Your little boat would be torn apart by the stream. You need a real ship.', '#ff8a80'); return; }
             knockUp(game, s);
           },
         };

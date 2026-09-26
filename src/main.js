@@ -28,6 +28,7 @@ import { Crew } from './game/crew.js';
 import { openCrew } from './ui/crewPanel.js';
 import { installFactions } from './game/factions.js';
 import { installLegends } from './game/legends.js';
+import { installWorld } from './game/news.js';
 import { RACES } from './data/races.js';
 
 const root = document.createElement('div');
@@ -76,6 +77,7 @@ async function start() {
   new Crew(game);
   installFactions(game);
   installLegends(game);
+  installWorld(game);
   installContent(game);
 
   const toTitle = (afterDeath) => {
