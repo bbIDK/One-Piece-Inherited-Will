@@ -90,19 +90,25 @@ export const scenarios = {
       await boot(page);
       await page.evaluate(() => { const g = window.OP.game; for (const s of g.ships) s.x = -9999; });
       const fleet = await spawnFleet(page, 3745, 382, ['dinghy', 'sloop', 'caravel', 'brigantine', 'frigate', 'galleon', 'adam_brig', 'marine_warship']);
-      console.log('fleet', JSON.stringify(fleet));
       await still(page);
+      // stand at the end of Foosha's pier and bring each ship alongside
       for (const f of fleet) {
         await view(page, snap, 'ship-' + f.t, () => {
+          const isl = P3D.isl('dawn_island');
+          const dk = isl.docks[0];
+          for (const s2 of g.ships) if (s2 !== g.ships[arg.i]) s2.x = -9999;
           const s = g.ships[arg.i];
           const L = s.def.length;
-          const a = s.heading + Math.PI / 2 + 0.55;
+          const dir = Math.atan2(dk.dirY, dk.dirX);
+          const d = L * 0.75 + 5;
+          s.x = g.world.wx(dk.x + 0.5 + Math.cos(dir) * d); s.y = dk.y + 0.5 + Math.sin(dir) * d;
+          s.heading = dir + Math.PI / 2 + 0.5;
           const p = g.player;
-          p.mode = 'swim';
-          P3D.standAt(s.x, s.y, L * 1.25 + 3, a, -0.02);
-          p.state = 'idle';
-          g.view3d.rig.roll = 0;
-          return { t: s.type, heading: s.heading };
+          p.mode = 'foot'; p.onShip = false; p.state = 'idle';
+          window.OP.teleport(dk.x + 0.5 - Math.cos(dir) * 1.2, dk.y + 0.5 - Math.sin(dir) * 1.2);
+          g.view3d.rig.yaw = (dir + Math.PI * 2) % (Math.PI * 2);
+          g.view3d.rig.pitch = 0.04; g.view3d.rig.roll = 0;
+          return { t: s.type, x: Math.round(s.x), y: Math.round(s.y) };
         }, f, { n: 6 });
       }
       // from the helm (first person): the rig turns see-through
@@ -110,12 +116,13 @@ export const scenarios = {
         const f = fleet.find((q) => q.t === t);
         await view(page, snap, 'helm-' + t, () => {
           const s = g.ships[arg.i];
+          s.x = 3760; s.y = 420; s.heading = 1.2;
           const p = g.player;
           p.mode = 'sail'; p.ship = s; p.onShip = true; s.captain = p; p.x = s.x; p.y = s.y; p.state = 'idle';
           g.view3d.rig.yaw = s.heading; g.view3d.rig.pitch = -0.12; g.view3d.rig.roll = 0;
           return { t: s.type };
         }, f, { n: 6, perf: true });
-        await page.evaluate(() => { const g = window.OP.game, p = g.player; if (p.ship) p.ship.captain = null; p.mode = 'foot'; p.ship = null; p.onShip = false; });
+        await page.evaluate(() => { const g = window.OP.game, p = g.player; if (p.ship) { p.ship.captain = null; p.ship.x = -9999; } p.mode = 'foot'; p.ship = null; p.onShip = false; });
       }
     },
   },

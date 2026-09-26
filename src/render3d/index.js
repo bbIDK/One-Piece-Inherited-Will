@@ -12,11 +12,11 @@ import { CameraRig } from './camera3d.js';
 import { SpriteForest, ActorSprite, propSprite, projectileMesh, tintSprites } from './billboards.js';
 import { ShipView } from './ships3d.js';
 import { buildBuilding, setNightWindows } from './buildings3d.js';
-import { PROP_BUILDERS, VIEWS, registerPropBuilder } from './registry.js';
+import { PROP_BUILDERS, VIEWS, FRAME_HOOKS, registerPropBuilder } from './registry.js';
 import './props3d.js';
 import './chars3d.js';
 
-registerPropBuilder('building', (o) => buildBuilding(o));
+registerPropBuilder('building', (o, ctx) => buildBuilding(o, ctx));
 
 const ACTOR_RANGE = 75;
 const SHIP_RANGE = 520;
@@ -44,6 +44,7 @@ export class Renderer3D {
     this.scene.add(this.props);
     this.forest = new SpriteForest(this.props);
     this.built = new Map();
+    this.animProps = new Map(); // built props with a per-frame userData.update
     this.ents = new THREE.Group();
     this.scene.add(this.ents);
     this.actorViews = new Map();
@@ -121,6 +122,7 @@ export class Renderer3D {
     this.forest.clear();
     for (const v of this.built.values()) if (v) { this.props.remove(v); disposeTree(v); }
     this.built.clear();
+    this.animProps.clear();
     for (const v of this.actorViews.values()) { this.ents.remove(v.root || v.mesh); v.dispose?.(); }
     this.actorViews.clear();
     for (const v of this.shipViews.values()) { this.ents.remove(v.root); v.dispose?.(); }
@@ -184,6 +186,7 @@ export class Renderer3D {
     this.updateProps(game, ox, oy, env, sailing);
     this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
     this.forest.aim(camYaw3);
+    this.tickProps(env, dt);
     this.updateEntities(game, ox, oy, env, camYaw3);
     this.updateViewmodel(game, env);
 
@@ -230,12 +233,23 @@ export class Renderer3D {
     this.updateProps(game, ox, oy, env, false, 190);
     this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
     this.forest.aim(camYaw3);
+    this.tickProps(env, 1 / 60);
     this.updateEntities(game, ox, oy, env, camYaw3);
     if (this.vm) this.vm.root.visible = false;
     const amb = env.ambient || [1, 1, 1];
     tintSprites(Math.min(1, amb[0] * 1.05), Math.min(1, amb[1] * 1.05), Math.min(1, amb[2] * 1.05));
     setNightWindows(Math.max(0, 0.9 - env.daylight));
     this.renderer.render(this.scene, cam);
+  }
+
+  /** Every frame: animated props (userData.update) and plug-in frame hooks. */
+  tickProps(env, dt) {
+    for (const [o, v] of this.animProps) {
+      try { v.userData.update(o, env, this.ctx); } catch (e) { this.animProps.delete(o); console.warn('3D prop update failed for', o.kind, e); }
+    }
+    for (const fn of FRAME_HOOKS) {
+      try { fn(env, this.ctx, dt); } catch (e) { if (!fn.warned) { fn.warned = true; console.warn('3D frame hook failed', e); } }
+    }
   }
 
   /** First-person arms and weapon (a plug-in; see registry.js). */
@@ -280,11 +294,11 @@ export class Renderer3D {
           try { v = builder(o, this.ctx) || null; } catch (e) { v = null; console.warn('3D builder failed for', o.kind, e); }
           this.built.set(o, v);
           if (v) this.props.add(v);
+          if (v?.userData.update) this.animProps.set(o, v);
         }
         if (v) {
           keep.add(o);
           v.position.set(dx, v.userData.noGround ? 0 : this.ground(o.x, o.y), dy);
-          if (v.userData.update) v.userData.update(o, env, this.ctx);
           continue;
         }
       }
@@ -297,6 +311,7 @@ export class Renderer3D {
       if (keep.has(o)) continue;
       if (v) { this.props.remove(v); disposeTree(v); }
       this.built.delete(o);
+      this.animProps.delete(o);
     }
     this.forest.rebuild(items);
   }

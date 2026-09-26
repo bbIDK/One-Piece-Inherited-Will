@@ -10,7 +10,10 @@
 //  registerActorView((actor, ctx) => view)      view: { root, update(actor, env, ctx), dispose(), stale?() }
 //  registerShipView((ship, ctx) => view)        same shape; update(ship, env, rx, rz, windAngle)
 //  registerViewmodel((ctx) => vm)               first-person arms: { root, update(player, env, ctx), dispose() }
+//  registerFrameHook((env, ctx, dt) => void)    called once per rendered frame (animated props, effects)
 //
+// A built prop may set `userData.update(o, env, ctx)`: it is called every
+// frame while the prop is in range.
 // ctx = { THREE, camera, scene, ground(x, y), terrain(x, y), world, game, yaw, mode }
 export const PROP_BUILDERS = new Map();
 export const VIEWS = { actor: null, ship: null, viewmodel: null };
@@ -19,3 +22,5 @@ export function registerPropBuilder(kind, fn) { PROP_BUILDERS.set(kind, fn); }
 export function registerActorView(fn) { VIEWS.actor = fn; }
 export function registerShipView(fn) { VIEWS.ship = fn; }
 export function registerViewmodel(fn) { VIEWS.viewmodel = fn; }
+export const FRAME_HOOKS = [];
+export function registerFrameHook(fn) { FRAME_HOOKS.push(fn); }

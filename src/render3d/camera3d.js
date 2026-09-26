@@ -6,6 +6,7 @@
 // tile position is the origin, so positions are small and the wrap-around
 // world just works.
 import * as THREE from 'three';
+import { helmPoint } from './ships3d.js';
 
 const TAU = Math.PI * 2;
 
@@ -121,13 +122,17 @@ export class CameraRig {
     let eyeH = 1.62 * scale;
     let gx = 0, gz = 0; // eye position relative to the player (origin)
     let gh = ground(p.x, p.y);
+    let rollSea = 0;
     if (sailing) {
-      // at the helm on the stern deck, standing tall enough to see past the rigging
+      // standing at the helm on the stern deck (your own rigging turns
+      // see-through), rising and rolling gently with the ship
       const s = p.ship;
-      const back = -s.def.length * 0.42;
-      gx = Math.cos(s.heading) * back; gz = Math.sin(s.heading) * back;
-      gh = 0.5 + s.def.length * 0.06;
-      eyeH = 2.1 + s.def.length * 0.12;
+      const hp = helmPoint(s.def);
+      gx = Math.cos(s.heading) * hp.x; gz = Math.sin(s.heading) * hp.x;
+      const t = (game.env?.time || 0) + (s.seed || 0);
+      gh = 0.05 + hp.floor + Math.sin(t * 1.3) * 0.07;
+      eyeH = hp.eye - hp.floor + 0.15;
+      rollSea = Math.sin(t * 0.9) * 0.03 * Math.cos(this.yaw - s.heading);
     } else if (p.inWater) {
       gh = -0.2; eyeH = 0.55;
     }
@@ -156,7 +161,7 @@ export class CameraRig {
       cam.rotation.set(this.pitch * 0.8 - 0.12 + this.shake.y, yaw3 + this.shake.x, 0);
     } else {
       cam.position.set(gx, gh + eyeH + bobY, gz);
-      cam.rotation.set(this.pitch + this.shake.y, yaw3 + this.shake.x, this.roll);
+      cam.rotation.set(this.pitch + this.shake.y, yaw3 + this.shake.x, this.roll + rollSea);
     }
     const sprint = !sailing && p.intent?.sprint;
     const fov = this.baseFov + (sprint ? 7 : 0);

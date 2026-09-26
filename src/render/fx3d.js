@@ -27,6 +27,7 @@ const TAU = Math.PI * 2;
 const CULL = -9000;
 const MAX_SC = 380; // px per metre; more means closer than ~1.2 m to the camera
 const MIN_SC = 1.0;
+const NEAR_SC = 200; // billboards closer than ~2.3 m keep this size, so they don't fill the view
 const easeOut = (k) => 1 - (1 - k) ** 3;
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
@@ -43,7 +44,7 @@ function bill(r, x, y, h) {
   return { x: a[0], y: a[1], sc, ux: dx / sc, uy: dy / sc };
 }
 function setBill(g, r, B, k = 1) {
-  const d = r.dpr, s = B.sc * d * k;
+  const d = r.dpr, s = Math.min(B.sc, NEAR_SC) * d * k;
   g.setTransform(-B.uy * s, B.ux * s, -B.ux * s, -B.uy * s, B.x * d, B.y * d);
 }
 /** Local tangent map of the horizontal plane at height h (local +x east, +y south). */
@@ -419,8 +420,9 @@ export function drawParticles3d(fx, g, r, additive, drawPart) {
       const q = r.project(p.x + p.vx * 0.05, p.y + p.vy * 0.05, p.z + p.vz * 0.05);
       if (q[0] > CULL) { vx = (q[0] - B.x) / (0.05 * B.sc); vy = (q[1] - B.y) / (0.05 * B.sc); }
     }
-    g.setTransform(B.sc * d, 0, 0, B.sc * d, B.x * d, B.y * d);
-    drawPart(g, p, vx, vy);
+    const sc = Math.min(B.sc, NEAR_SC);
+    g.setTransform(sc * d, 0, 0, sc * d, B.x * d, B.y * d);
+    drawPart(g, p, vx * B.sc / sc, vy * B.sc / sc);
   }
 }
 

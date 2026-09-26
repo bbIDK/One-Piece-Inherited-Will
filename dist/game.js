@@ -41309,371 +41309,8 @@ void main() {
     }
   };
 
-  // src/render3d/camera3d.js
-  var TAU5 = Math.PI * 2;
-  var CameraRig = class {
-    constructor(canvas2, game) {
-      this.canvas = canvas2;
-      this.game = game;
-      this.camera = new PerspectiveCamera(75, 1, 0.08, 2600);
-      this.camera.rotation.order = "YXZ";
-      this.mode = "first";
-      this.yaw = 0;
-      this.pitch = 0;
-      this.locked = false;
-      this.lockFailed = false;
-      this.sensitivity = 24e-4;
-      this.invertY = false;
-      this.baseFov = 75;
-      this.bobOn = true;
-      this.bob = 0;
-      this.roll = 0;
-      this.eye = new Vector3();
-      this.tp = { dist: 4.2, height: 1.4 };
-      this.shake = new Vector2();
-      this.aimCache = null;
-      this.mouse = { x: 0, y: 0 };
-      this.hint = null;
-      const onMove = (e) => {
-        this.mouse.x = e.clientX;
-        this.mouse.y = e.clientY;
-        if (!this.locked || !this.active) return;
-        this.turn(e.movementX || 0, e.movementY || 0);
-      };
-      document.addEventListener("mousemove", onMove);
-      canvas2.addEventListener("mousedown", (e) => {
-        if (!this.active || this.locked || this.lockFailed) return;
-        if (this.game.ui?.blocksInput()) return;
-        e.stopPropagation();
-        e.preventDefault();
-        this.requestLock();
-      });
-      document.addEventListener("pointerlockchange", () => {
-        this.locked = document.pointerLockElement === this.canvas;
-        this.onLockChange?.(this.locked);
-      });
-      document.addEventListener("pointerlockerror", () => {
-        this.lockFailed = true;
-        this.locked = false;
-        this.onLockChange?.(false);
-        this.game.ui?.hint?.("Mouse look is limited in this window: move the cursor to the screen edges (or use the arrow keys) to turn. Opening the game in its own tab gives full mouse look.", 10);
-      });
-    }
-    get active() {
-      return !!this.game.view3d?.active;
-    }
-    requestLock() {
-      try {
-        const r = this.canvas.requestPointerLock?.({ unadjustedMovement: false });
-        if (r && typeof r.catch === "function") r.catch(() => {
-          this.lockFailed = true;
-          this.onLockChange?.(false);
-        });
-      } catch {
-        this.lockFailed = true;
-      }
-    }
-    releaseLock() {
-      if (document.pointerLockElement === this.canvas) document.exitPointerLock?.();
-    }
-    turn(dx, dy) {
-      this.lookBy(dx * this.sensitivity, -dy * this.sensitivity * (this.invertY ? -1 : 1));
-    }
-    /** Turn by angles (radians): used by mouse look and by touch drags. */
-    lookBy(dyaw, dpitch) {
-      this.yaw = ((this.yaw + dyaw) % TAU5 + TAU5) % TAU5;
-      this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch + dpitch));
-    }
-    resize(w, h2) {
-      this.camera.aspect = w / Math.max(1, h2);
-      this.camera.updateProjectionMatrix();
-    }
-    /** Forward direction (on the ground plane) in world tile coordinates. */
-    forward() {
-      return [Math.cos(this.yaw), Math.sin(this.yaw)];
-    }
-    /**
-     * Place the camera for this frame. `ground(x, y)` gives ground heights in
-     * world tile coordinates; `p` is the player actor (at the origin).
-     */
-    update(dt, game, ground) {
-      const p = game.player;
-      const inp = game.input;
-      if (!this.locked && !game.ui?.blocksInput()) {
-        let t = 0, l = 0;
-        if (inp.isDown("ArrowLeft")) t -= 1;
-        if (inp.isDown("ArrowRight")) t += 1;
-        if (inp.isDown("ArrowUp")) l += 1;
-        if (inp.isDown("ArrowDown")) l -= 1;
-        if (this.lockFailed && !inp.touch?.on) {
-          const w = window.innerWidth, h2 = window.innerHeight;
-          const ex = (this.mouse.x / w - 0.5) * 2, ey = (this.mouse.y / h2 - 0.5) * 2;
-          if (Math.abs(ex) > 0.55) t += Math.sign(ex) * (Math.abs(ex) - 0.55) / 0.45 * 1.6;
-          if (Math.abs(ey) > 0.6) l -= Math.sign(ey) * (Math.abs(ey) - 0.6) / 0.4 * 1;
-        }
-        this.yaw = ((this.yaw + t * 2.4 * dt) % TAU5 + TAU5) % TAU5;
-        this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch + l * 1.4 * dt));
-      }
-      const cam = this.camera;
-      const sailing = p.mode === "sail" && p.ship;
-      const scale = p.look?.scale || 1;
-      let eyeH = 1.62 * scale;
-      let gx = 0, gz = 0;
-      let gh = ground(p.x, p.y);
-      if (sailing) {
-        const s = p.ship;
-        const back = -s.def.length * 0.42;
-        gx = Math.cos(s.heading) * back;
-        gz = Math.sin(s.heading) * back;
-        gh = 0.5 + s.def.length * 0.06;
-        eyeH = 2.1 + s.def.length * 0.12;
-      } else if (p.inWater) {
-        gh = -0.2;
-        eyeH = 0.55;
-      }
-      const moving = !sailing && (Math.abs(p.vx || 0) + Math.abs(p.vy || 0) > 0.5 || p.moving);
-      this.bob += dt * (moving ? 9 : 0);
-      let bobY = moving && this.bobOn ? Math.sin(this.bob) * 0.045 : 0;
-      let roll = 0;
-      if (p.state === "knocked") {
-        eyeH = 0.45;
-        roll = 0.35;
-      }
-      this.roll += (roll - this.roll) * Math.min(1, dt * 4);
-      const tr = game.fx?.trauma || 0;
-      const sh = tr * tr * 0.06;
-      this.shake.set((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
-      const yaw3 = -(this.yaw + Math.PI / 2);
-      if (this.mode === "third" && !sailing) {
-        const d = this.tp.dist;
-        const cp = Math.cos(this.pitch), spch = Math.sin(this.pitch);
-        const fx = Math.cos(this.yaw), fz = Math.sin(this.yaw);
-        let cx = -fx * d * cp, cz = -fz * d * cp, cy = gh + eyeH * 0.9 + this.tp.height - spch * d * 0.6;
-        const under = ground(p.x + cx, p.y + cz) + 0.4;
-        if (cy < under) cy = under;
-        cam.position.set(cx, cy, cz);
-        cam.rotation.set(this.pitch * 0.8 - 0.12 + this.shake.y, yaw3 + this.shake.x, 0);
-      } else {
-        cam.position.set(gx, gh + eyeH + bobY, gz);
-        cam.rotation.set(this.pitch + this.shake.y, yaw3 + this.shake.x, this.roll);
-      }
-      const sprint = !sailing && p.intent?.sprint;
-      const fov2 = this.baseFov + (sprint ? 7 : 0);
-      if (Math.abs(cam.fov - fov2) > 0.05) {
-        cam.fov += (fov2 - cam.fov) * Math.min(1, dt * 6);
-        cam.updateProjectionMatrix();
-      }
-      cam.updateMatrixWorld();
-      this.aimCache = null;
-    }
-    /**
-     * The world point under the crosshair (screen centre), or under the mouse
-     * when the pointer is free. Marches the view ray against the ground.
-     */
-    aimPoint(game, ground, sx, sy) {
-      if (this.aimCache && sx === void 0) return this.aimCache;
-      const cam = this.camera;
-      const ndc = new Vector2(0, 0);
-      if (sx !== void 0) {
-        ndc.set(sx / window.innerWidth * 2 - 1, -(sy / window.innerHeight * 2 - 1));
-      }
-      const ray = new Raycaster();
-      ray.setFromCamera(ndc, cam);
-      const o = ray.ray.origin, d = ray.ray.direction;
-      const p = game.player;
-      let hit = null;
-      let t = 0.5;
-      for (let i = 0; i < 160 && t < 90; i++) {
-        const x = o.x + d.x * t, y = o.y + d.y * t, z = o.z + d.z * t;
-        const g = ground(p.x + x, p.y + z);
-        if (y <= g) {
-          hit = [p.x + x, p.y + z];
-          break;
-        }
-        t += 0.35 + t * 0.04;
-      }
-      if (!hit) {
-        const l = Math.hypot(d.x, d.z) || 1;
-        hit = [p.x + d.x / l * 30, p.y + d.z / l * 30];
-      }
-      const res = [game.world.wx(hit[0]), hit[1]];
-      if (sx === void 0) this.aimCache = res;
-      return res;
-    }
-  };
-
-  // src/render3d/billboards.js
-  var PPU_ACTOR = 64;
-  var PPU_PROP = 48;
-  var matCache = /* @__PURE__ */ new Map();
-  function spriteMaterial(key2, canvas2) {
-    let m = matCache.get(key2);
-    if (m) return m;
-    const tex2 = new CanvasTexture(canvas2);
-    tex2.colorSpace = SRGBColorSpace;
-    tex2.anisotropy = 2;
-    m = new MeshBasicMaterial({ map: tex2, alphaTest: 0.35, side: DoubleSide, fog: true });
-    m.userData.tint = true;
-    matCache.set(key2, m);
-    return m;
-  }
-  function tintSprites(r, g, b) {
-    for (const m of matCache.values()) m.color.setRGB(r, g, b);
-  }
-  function propSprite(o, worldId, day) {
-    if (o.kind === "tree") {
-      const s2 = treeSprite(o.sub, o.v || 0);
-      const fr = fruitOf(o);
-      if (fr && !isPicked(worldId, o, day)) {
-        const key3 = `tree:${o.sub}:${o.v || 0}:${fr}`;
-        let f = propCanvasCache.get(key3);
-        if (!f) {
-          const c2 = document.createElement("canvas");
-          c2.width = s2.canvas.width;
-          c2.height = s2.canvas.height;
-          const g2 = c2.getContext("2d");
-          g2.drawImage(s2.canvas, 0, 0);
-          const ppu = c2.width / s2.w;
-          g2.setTransform(ppu, 0, 0, ppu, s2.ax * ppu, s2.ay * ppu);
-          drawTreeFruit(g2, o, fr, fruitSpots(o), FRUIT_COLORS[fr]);
-          f = { key: key3, canvas: c2, w: s2.w, h: s2.h, ax: s2.ax, ay: s2.ay };
-          propCanvasCache.set(key3, f);
-        }
-        return f;
-      }
-      return { key: `tree:${o.sub}:${o.v || 0}`, canvas: s2.canvas, w: s2.w, h: s2.h, ax: s2.ax, ay: s2.ay };
-    }
-    if (o.kind === "rock") {
-      const s2 = rockSprite(o.v || 0);
-      return { key: `rock:${o.v || 0}`, canvas: s2.canvas, w: s2.w, h: s2.h, ax: s2.ax, ay: s2.ay };
-    }
-    if (o.kind === "bush") {
-      const s2 = bushSprite(o.sub || "bush", o.v || 0);
-      return { key: `bush:${o.sub}:${o.v || 0}`, canvas: s2.canvas, w: s2.w, h: s2.h, ax: s2.ax, ay: s2.ay };
-    }
-    if (o.kind === "building" || o.kind === "chestOpen") return null;
-    const key2 = `prop:${o.kind}:${o.sub || ""}:${o.v || 0}:${o.opened ? 1 : 0}`;
-    let s = propCanvasCache.get(key2);
-    if (s) return s;
-    const hTiles = Math.max(1.6, propHeight(o) + 0.8);
-    const wTiles = Math.max(2, (o.fw || 1) + 1.4, hTiles * 0.8);
-    const c = document.createElement("canvas");
-    c.width = Math.ceil(wTiles * PPU_PROP);
-    c.height = Math.ceil(hTiles * PPU_PROP);
-    const g = c.getContext("2d");
-    g.setTransform(PPU_PROP, 0, 0, PPU_PROP, c.width / 2, c.height - 0.4 * PPU_PROP);
-    try {
-      drawProp(g, { ...o, x: 0, y: 0 }, 1, false);
-    } catch {
-    }
-    s = { key: key2, canvas: c, w: wTiles, h: hTiles, ax: wTiles / 2, ay: hTiles - 0.4 };
-    propCanvasCache.set(key2, s);
-    return s;
-  }
-  var propCanvasCache = /* @__PURE__ */ new Map();
-  var PLANE = new PlaneGeometry(1, 1);
-  PLANE.translate(0, 0.5, 0);
-  var SpriteForest = class {
-    constructor(parent) {
-      this.group = new Group();
-      parent.add(this.group);
-      this.batches = /* @__PURE__ */ new Map();
-      this.fruit = new Group();
-      this.group.add(this.fruit);
-      this.dummy = new Object3D();
-    }
-    clear() {
-      for (const b of this.batches.values()) {
-        this.group.remove(b.mesh);
-        b.mesh.dispose();
-      }
-      this.batches.clear();
-    }
-    /** items: [{ o, sprite, x, y (relative), h (ground) }] */
-    rebuild(items9) {
-      this.clear();
-      const byKey = /* @__PURE__ */ new Map();
-      for (const it of items9) {
-        let arr = byKey.get(it.sprite.key);
-        if (!arr) byKey.set(it.sprite.key, arr = []);
-        arr.push(it);
-      }
-      for (const [key2, list] of byKey) {
-        const s = list[0].sprite;
-        const mesh = new InstancedMesh(PLANE, spriteMaterial(key2, s.canvas), list.length);
-        mesh.frustumCulled = false;
-        this.batches.set(key2, { mesh, items: list, sprite: s });
-        this.group.add(mesh);
-      }
-    }
-    /** Face every instance towards the camera (items hold positions relative to the group). */
-    aim(camYaw3) {
-      const d = this.dummy;
-      for (const b of this.batches.values()) {
-        const s = b.sprite;
-        let i = 0;
-        for (const it of b.items) {
-          const sc = it.o.s || 1;
-          d.position.set(it.rx, it.h - 0.05 - (s.h - s.ay) * sc, it.rz);
-          d.rotation.set(0, camYaw3, 0);
-          d.scale.set(s.w * sc, s.h * sc, 1);
-          d.updateMatrix();
-          b.mesh.setMatrixAt(i++, d.matrix);
-        }
-        b.mesh.instanceMatrix.needsUpdate = true;
-      }
-    }
-  };
-  var ActorSprite = class {
-    constructor(actor) {
-      const s = actor.look?.scale || 1;
-      const big = actor.r > 1 || actor.look?.race === "seaking";
-      this.wT = (big ? 7 : 2.6) * Math.max(1, s);
-      this.hT = (big ? 5 : 3.2) * Math.max(1, s);
-      this.foot = 0.35;
-      const c = document.createElement("canvas");
-      c.width = Math.ceil(this.wT * PPU_ACTOR);
-      c.height = Math.ceil(this.hT * PPU_ACTOR);
-      this.canvas = c;
-      this.ctx = c.getContext("2d");
-      this.tex = new CanvasTexture(c);
-      this.tex.colorSpace = SRGBColorSpace;
-      this.mat = new MeshBasicMaterial({ map: this.tex, alphaTest: 0.3, side: DoubleSide, fog: true });
-      const geo2 = new PlaneGeometry(this.wT, this.hT);
-      geo2.translate(0, this.hT / 2 - this.foot, 0);
-      this.mesh = new Mesh(geo2, this.mat);
-      this.mesh.frustumCulled = false;
-      this.lastDraw = -1;
-    }
-    draw(actor, env, camYaw) {
-      const g = this.ctx, c = this.canvas;
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.clearRect(0, 0, c.width, c.height);
-      g.setTransform(PPU_ACTOR, 0, 0, PPU_ACTOR, c.width / 2, c.height - this.foot * PPU_ACTOR);
-      const f = actor.facing;
-      actor.facing = f - camYaw - Math.PI / 2;
-      try {
-        if (actor.draw) actor.draw(g, env);
-      } catch {
-      }
-      actor.facing = f;
-      this.tex.needsUpdate = true;
-    }
-    dispose() {
-      this.mesh.geometry.dispose();
-      this.mat.dispose();
-      this.tex.dispose();
-    }
-  };
-  function projectileMesh(p) {
-    const col = new Color(p.color || (p.sprite === "cannonball" ? "#333333" : "#ffffff"));
-    const r = Math.max(0.12, Math.min(0.8, (p.radius || 0.3) * 0.8));
-    const m = new Mesh(new SphereGeometry(r, 10, 8), new MeshBasicMaterial({ color: col, fog: true }));
-    return m;
-  }
-
   // src/render/ship.js
-  var TAU6 = Math.PI * 2;
+  var TAU5 = Math.PI * 2;
   function drawJollyRoger(g, jr = {}, size = 1, bg = "#111") {
     g.save();
     g.scale(size, size);
@@ -41691,8 +41328,8 @@ void main() {
       g.stroke();
       for (const [x, y] of [[-0.42, -0.3], [0.42, 0.35], [0.42, -0.3], [-0.42, 0.35]]) {
         g.beginPath();
-        g.arc(x + (x < 0 ? -0.03 : 0.03), y - 0.04, 0.06, 0, TAU6);
-        g.arc(x + (x < 0 ? 0.03 : -0.03), y + 0.04, 0.06, 0, TAU6);
+        g.arc(x + (x < 0 ? -0.03 : 0.03), y - 0.04, 0.06, 0, TAU5);
+        g.arc(x + (x < 0 ? 0.03 : -0.03), y + 0.04, 0.06, 0, TAU5);
         g.fillStyle = fg;
         g.fill();
       }
@@ -41722,14 +41359,14 @@ void main() {
     const skull3 = jr.skull || "classic";
     g.fillStyle = fg;
     g.beginPath();
-    g.ellipse(0, -0.05, 0.3, 0.27, 0, 0, TAU6);
+    g.ellipse(0, -0.05, 0.3, 0.27, 0, 0, TAU5);
     g.fill();
     g.fillRect(-0.17, 0.1, 0.34, 0.16);
     g.fillStyle = bg;
     const eye = skull3 === "grin" ? 0.07 : 0.085;
     g.beginPath();
-    g.ellipse(-0.11, -0.05, eye, eye * 1.15, 0, 0, TAU6);
-    g.ellipse(0.11, -0.05, eye, eye * 1.15, 0, 0, TAU6);
+    g.ellipse(-0.11, -0.05, eye, eye * 1.15, 0, 0, TAU5);
+    g.ellipse(0.11, -0.05, eye, eye * 1.15, 0, 0, TAU5);
     g.fill();
     g.beginPath();
     g.moveTo(0, 0.04);
@@ -41754,7 +41391,7 @@ void main() {
     if (acc === "strawhat") {
       g.fillStyle = "#f2d16b";
       g.beginPath();
-      g.ellipse(0, -0.24, 0.42, 0.1, 0, 0, TAU6);
+      g.ellipse(0, -0.24, 0.42, 0.1, 0, 0, TAU5);
       g.fill();
       g.beginPath();
       g.ellipse(0, -0.3, 0.23, 0.15, 0, Math.PI, 0);
@@ -41811,7 +41448,7 @@ void main() {
       g.strokeStyle = "#f1c40f";
       g.lineWidth = 0.04;
       g.beginPath();
-      g.ellipse(0, -0.42, 0.25, 0.07, 0, 0, TAU6);
+      g.ellipse(0, -0.42, 0.25, 0.07, 0, 0, TAU5);
       g.stroke();
     }
     g.restore();
@@ -41830,7 +41467,7 @@ void main() {
     g.quadraticCurveTo(0.22, -0.3, 0.42, -0.05);
     g.stroke();
     g.beginPath();
-    g.ellipse(0, 0.02, 0.08, 0.12, 0, 0, TAU6);
+    g.ellipse(0, 0.02, 0.08, 0.12, 0, 0, TAU5);
     g.fill();
     g.lineWidth = 0.06;
     g.beginPath();
@@ -41848,7 +41485,7 @@ void main() {
     g.scale(1, 1 + bobRoll);
     g.fillStyle = "rgba(0,20,40,0.28)";
     g.beginPath();
-    g.ellipse(0.1, 0.12, L2 * 0.55, B3 * 0.62, 0, 0, TAU6);
+    g.ellipse(0.1, 0.12, L2 * 0.55, B3 * 0.62, 0, 0, TAU5);
     g.fill();
     const hullCol = def.color || "#8d5b33";
     const hullPath = () => {
@@ -41895,25 +41532,25 @@ void main() {
     if (def.figurehead === "ram") {
       g.fillStyle = "#f5f6fa";
       g.beginPath();
-      g.arc(L2 * 0.52, 0, 0.26, 0, TAU6);
+      g.arc(L2 * 0.52, 0, 0.26, 0, TAU5);
       g.fill();
       g.strokeStyle = "#d4a373";
       g.lineWidth = 0.08;
       g.beginPath();
-      g.arc(L2 * 0.5, -0.12, 0.12, 0, TAU6);
-      g.arc(L2 * 0.5, 0.12, 0.12, 0, TAU6);
+      g.arc(L2 * 0.5, -0.12, 0.12, 0, TAU5);
+      g.arc(L2 * 0.5, 0.12, 0.12, 0, TAU5);
       g.stroke();
     } else if (def.figurehead === "lion") {
       g.fillStyle = "#f39c12";
       for (let k = 0; k < 10; k++) {
-        const a = k / 10 * TAU6;
+        const a = k / 10 * TAU5;
         g.beginPath();
-        g.arc(L2 * 0.52 + Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.14, 0, TAU6);
+        g.arc(L2 * 0.52 + Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.14, 0, TAU5);
         g.fill();
       }
       g.fillStyle = "#fdcb6e";
       g.beginPath();
-      g.arc(L2 * 0.52, 0, 0.26, 0, TAU6);
+      g.arc(L2 * 0.52, 0, 0.26, 0, TAU5);
       g.fill();
     } else if (def.figurehead === "seagull") {
       g.fillStyle = "#f5f6fa";
@@ -41966,7 +41603,7 @@ void main() {
       g.restore();
       g.fillStyle = "#4e342e";
       g.beginPath();
-      g.arc(mx, 0, 0.12, 0, TAU6);
+      g.arc(mx, 0, 0.12, 0, TAU5);
       g.fill();
     }
     const marineFlag = def.sail === "marine" || st.marine;
@@ -41997,7 +41634,7 @@ void main() {
         const ph = (t * 0.7 + k / 3) % 1;
         g.fillStyle = `rgba(60,60,60,${0.5 * (1 - ph)})`;
         g.beginPath();
-        g.arc(-L2 * 0.2 + k * 0.3, -ph * 1.5, 0.2 + ph * 0.4, 0, TAU6);
+        g.arc(-L2 * 0.2 + k * 0.3, -ph * 1.5, 0.2 + ph * 0.4, 0, TAU5);
         g.fill();
       }
     }
@@ -42006,7 +41643,7 @@ void main() {
       g.fillStyle = "rgba(200,240,255,0.18)";
       g.lineWidth = 0.06;
       g.beginPath();
-      g.ellipse(0, 0, L2 * 0.7, B3 * 1.2, 0, 0, TAU6);
+      g.ellipse(0, 0, L2 * 0.7, B3 * 1.2, 0, 0, TAU5);
       g.fill();
       g.stroke();
     }
@@ -42337,10 +41974,10 @@ void main() {
 }
 `
   );
-  var matCache2 = /* @__PURE__ */ new Map();
+  var matCache = /* @__PURE__ */ new Map();
   function vcMat(opts = {}) {
     const key2 = `${opts.sway ? "s" : ""}|${opts.side || 0}|${opts.transparent ? opts.opacity ?? 0.5 : 1}|${opts.depthWrite === false ? 0 : 1}`;
-    let m = matCache2.get(key2);
+    let m = matCache.get(key2);
     if (m) return m;
     m = new MeshToonMaterial({
       vertexColors: true,
@@ -42359,7 +41996,7 @@ void main() {
       sh.fragmentShader = "varying vec3 vGlow;\n" + sh.fragmentShader.replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n	totalEmissiveRadiance += vGlow;");
     };
     m.customProgramCacheKey = () => "opvc" + (sway ? "-sway" : "");
-    matCache2.set(key2, m);
+    matCache.set(key2, m);
     return m;
   }
   var STATE = { game: null, ctx: null, t: 0, night: 0, frame: 0, env: null };
@@ -42428,6 +42065,10 @@ void main() {
       yf: deckY + hf,
       helmFloor: castle ? deckY + hq : deckY
     };
+  }
+  function helmPoint(def) {
+    const d = shipDims(def);
+    return { x: d.helmX, floor: d.helmFloor, eye: d.helmFloor + (d.open ? 1.45 : 1.7) };
   }
   function hbAt(t, B3) {
     if (t > 0.58) {
@@ -42604,10 +42245,10 @@ void main() {
       for (let z = -w + 0.15; z < w; z += 0.26) k.add(cyl(0.03, 0.035, 0.62, 5, true), { at: [xf2 - 0.04, d.yf, z], color: shade2(P3.bulwark, 0.1) });
     }
     if (!d.open) {
-      const wx = d.helmX + 0.8, fy = floorAt(d, (wx + d.L / 2) / d.L);
-      k.add(box(0.14, 0.95, 0.14), { at: [wx, fy, 0], color: P3.wood, outline: 0.015 });
+      const wx = d.helmX + 1.1, fy = floorAt(d, (wx + d.L / 2) / d.L);
+      k.add(box(0.14, 0.82, 0.14), { at: [wx, fy, 0], color: P3.wood, outline: 0.015 });
       k.save();
-      k.translate(wx - 0.1, fy + 1.05, 0);
+      k.translate(wx - 0.1, fy + 0.92, 0);
       k.rotateY(Math.PI / 2);
       k.add(torus(0.4, 0.03, 5, 18), { color: "#7b5230" });
       for (let i = 0; i < 8; i++) {
@@ -42871,7 +42512,7 @@ void main() {
     return g;
   }
   var SOLID = () => vcMat();
-  var GHOST = () => vcMat({ transparent: true, opacity: 0.22, depthWrite: false });
+  var GHOST = () => vcMat({ transparent: true, opacity: 0.15, depthWrite: false });
   var ShipView = class {
     constructor(s) {
       this.ship = s;
@@ -43042,7 +42683,7 @@ void main() {
       for (const sl of this.sails) {
         const mt = sl.mesh.material;
         mt.transparent = on;
-        mt.opacity = on ? 0.2 : 1;
+        mt.opacity = on ? 0.16 : 1;
         mt.depthWrite = !on;
         mt.needsUpdate = true;
         sl.mesh.renderOrder = on ? 2 : 0;
@@ -43124,6 +42765,372 @@ void main() {
       this.lineMat?.dispose();
     }
   };
+
+  // src/render3d/camera3d.js
+  var TAU6 = Math.PI * 2;
+  var CameraRig = class {
+    constructor(canvas2, game) {
+      this.canvas = canvas2;
+      this.game = game;
+      this.camera = new PerspectiveCamera(75, 1, 0.08, 2600);
+      this.camera.rotation.order = "YXZ";
+      this.mode = "first";
+      this.yaw = 0;
+      this.pitch = 0;
+      this.locked = false;
+      this.lockFailed = false;
+      this.sensitivity = 24e-4;
+      this.invertY = false;
+      this.baseFov = 75;
+      this.bobOn = true;
+      this.bob = 0;
+      this.roll = 0;
+      this.eye = new Vector3();
+      this.tp = { dist: 4.2, height: 1.4 };
+      this.shake = new Vector2();
+      this.aimCache = null;
+      this.mouse = { x: 0, y: 0 };
+      this.hint = null;
+      const onMove = (e) => {
+        this.mouse.x = e.clientX;
+        this.mouse.y = e.clientY;
+        if (!this.locked || !this.active) return;
+        this.turn(e.movementX || 0, e.movementY || 0);
+      };
+      document.addEventListener("mousemove", onMove);
+      canvas2.addEventListener("mousedown", (e) => {
+        if (!this.active || this.locked || this.lockFailed) return;
+        if (this.game.ui?.blocksInput()) return;
+        e.stopPropagation();
+        e.preventDefault();
+        this.requestLock();
+      });
+      document.addEventListener("pointerlockchange", () => {
+        this.locked = document.pointerLockElement === this.canvas;
+        this.onLockChange?.(this.locked);
+      });
+      document.addEventListener("pointerlockerror", () => {
+        this.lockFailed = true;
+        this.locked = false;
+        this.onLockChange?.(false);
+        this.game.ui?.hint?.("Mouse look is limited in this window: move the cursor to the screen edges (or use the arrow keys) to turn. Opening the game in its own tab gives full mouse look.", 10);
+      });
+    }
+    get active() {
+      return !!this.game.view3d?.active;
+    }
+    requestLock() {
+      try {
+        const r = this.canvas.requestPointerLock?.({ unadjustedMovement: false });
+        if (r && typeof r.catch === "function") r.catch(() => {
+          this.lockFailed = true;
+          this.onLockChange?.(false);
+        });
+      } catch {
+        this.lockFailed = true;
+      }
+    }
+    releaseLock() {
+      if (document.pointerLockElement === this.canvas) document.exitPointerLock?.();
+    }
+    turn(dx, dy) {
+      this.lookBy(dx * this.sensitivity, -dy * this.sensitivity * (this.invertY ? -1 : 1));
+    }
+    /** Turn by angles (radians): used by mouse look and by touch drags. */
+    lookBy(dyaw, dpitch) {
+      this.yaw = ((this.yaw + dyaw) % TAU6 + TAU6) % TAU6;
+      this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch + dpitch));
+    }
+    resize(w, h2) {
+      this.camera.aspect = w / Math.max(1, h2);
+      this.camera.updateProjectionMatrix();
+    }
+    /** Forward direction (on the ground plane) in world tile coordinates. */
+    forward() {
+      return [Math.cos(this.yaw), Math.sin(this.yaw)];
+    }
+    /**
+     * Place the camera for this frame. `ground(x, y)` gives ground heights in
+     * world tile coordinates; `p` is the player actor (at the origin).
+     */
+    update(dt, game, ground) {
+      const p = game.player;
+      const inp = game.input;
+      if (!this.locked && !game.ui?.blocksInput()) {
+        let t = 0, l = 0;
+        if (inp.isDown("ArrowLeft")) t -= 1;
+        if (inp.isDown("ArrowRight")) t += 1;
+        if (inp.isDown("ArrowUp")) l += 1;
+        if (inp.isDown("ArrowDown")) l -= 1;
+        if (this.lockFailed && !inp.touch?.on) {
+          const w = window.innerWidth, h2 = window.innerHeight;
+          const ex = (this.mouse.x / w - 0.5) * 2, ey = (this.mouse.y / h2 - 0.5) * 2;
+          if (Math.abs(ex) > 0.55) t += Math.sign(ex) * (Math.abs(ex) - 0.55) / 0.45 * 1.6;
+          if (Math.abs(ey) > 0.6) l -= Math.sign(ey) * (Math.abs(ey) - 0.6) / 0.4 * 1;
+        }
+        this.yaw = ((this.yaw + t * 2.4 * dt) % TAU6 + TAU6) % TAU6;
+        this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch + l * 1.4 * dt));
+      }
+      const cam = this.camera;
+      const sailing = p.mode === "sail" && p.ship;
+      const scale = p.look?.scale || 1;
+      let eyeH = 1.62 * scale;
+      let gx = 0, gz = 0;
+      let gh = ground(p.x, p.y);
+      let rollSea = 0;
+      if (sailing) {
+        const s = p.ship;
+        const hp = helmPoint(s.def);
+        gx = Math.cos(s.heading) * hp.x;
+        gz = Math.sin(s.heading) * hp.x;
+        const t = (game.env?.time || 0) + (s.seed || 0);
+        gh = 0.05 + hp.floor + Math.sin(t * 1.3) * 0.07;
+        eyeH = hp.eye - hp.floor + 0.15;
+        rollSea = Math.sin(t * 0.9) * 0.03 * Math.cos(this.yaw - s.heading);
+      } else if (p.inWater) {
+        gh = -0.2;
+        eyeH = 0.55;
+      }
+      const moving = !sailing && (Math.abs(p.vx || 0) + Math.abs(p.vy || 0) > 0.5 || p.moving);
+      this.bob += dt * (moving ? 9 : 0);
+      let bobY = moving && this.bobOn ? Math.sin(this.bob) * 0.045 : 0;
+      let roll = 0;
+      if (p.state === "knocked") {
+        eyeH = 0.45;
+        roll = 0.35;
+      }
+      this.roll += (roll - this.roll) * Math.min(1, dt * 4);
+      const tr = game.fx?.trauma || 0;
+      const sh = tr * tr * 0.06;
+      this.shake.set((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
+      const yaw3 = -(this.yaw + Math.PI / 2);
+      if (this.mode === "third" && !sailing) {
+        const d = this.tp.dist;
+        const cp = Math.cos(this.pitch), spch = Math.sin(this.pitch);
+        const fx = Math.cos(this.yaw), fz = Math.sin(this.yaw);
+        let cx = -fx * d * cp, cz = -fz * d * cp, cy = gh + eyeH * 0.9 + this.tp.height - spch * d * 0.6;
+        const under = ground(p.x + cx, p.y + cz) + 0.4;
+        if (cy < under) cy = under;
+        cam.position.set(cx, cy, cz);
+        cam.rotation.set(this.pitch * 0.8 - 0.12 + this.shake.y, yaw3 + this.shake.x, 0);
+      } else {
+        cam.position.set(gx, gh + eyeH + bobY, gz);
+        cam.rotation.set(this.pitch + this.shake.y, yaw3 + this.shake.x, this.roll + rollSea);
+      }
+      const sprint = !sailing && p.intent?.sprint;
+      const fov2 = this.baseFov + (sprint ? 7 : 0);
+      if (Math.abs(cam.fov - fov2) > 0.05) {
+        cam.fov += (fov2 - cam.fov) * Math.min(1, dt * 6);
+        cam.updateProjectionMatrix();
+      }
+      cam.updateMatrixWorld();
+      this.aimCache = null;
+    }
+    /**
+     * The world point under the crosshair (screen centre), or under the mouse
+     * when the pointer is free. Marches the view ray against the ground.
+     */
+    aimPoint(game, ground, sx, sy) {
+      if (this.aimCache && sx === void 0) return this.aimCache;
+      const cam = this.camera;
+      const ndc = new Vector2(0, 0);
+      if (sx !== void 0) {
+        ndc.set(sx / window.innerWidth * 2 - 1, -(sy / window.innerHeight * 2 - 1));
+      }
+      const ray = new Raycaster();
+      ray.setFromCamera(ndc, cam);
+      const o = ray.ray.origin, d = ray.ray.direction;
+      const p = game.player;
+      let hit = null;
+      let t = 0.5;
+      for (let i = 0; i < 160 && t < 90; i++) {
+        const x = o.x + d.x * t, y = o.y + d.y * t, z = o.z + d.z * t;
+        const g = ground(p.x + x, p.y + z);
+        if (y <= g) {
+          hit = [p.x + x, p.y + z];
+          break;
+        }
+        t += 0.35 + t * 0.04;
+      }
+      if (!hit) {
+        const l = Math.hypot(d.x, d.z) || 1;
+        hit = [p.x + d.x / l * 30, p.y + d.z / l * 30];
+      }
+      const res = [game.world.wx(hit[0]), hit[1]];
+      if (sx === void 0) this.aimCache = res;
+      return res;
+    }
+  };
+
+  // src/render3d/billboards.js
+  var PPU_ACTOR = 64;
+  var PPU_PROP = 48;
+  var matCache2 = /* @__PURE__ */ new Map();
+  function spriteMaterial(key2, canvas2) {
+    let m = matCache2.get(key2);
+    if (m) return m;
+    const tex2 = new CanvasTexture(canvas2);
+    tex2.colorSpace = SRGBColorSpace;
+    tex2.anisotropy = 2;
+    m = new MeshBasicMaterial({ map: tex2, alphaTest: 0.35, side: DoubleSide, fog: true });
+    m.userData.tint = true;
+    matCache2.set(key2, m);
+    return m;
+  }
+  function tintSprites(r, g, b) {
+    for (const m of matCache2.values()) m.color.setRGB(r, g, b);
+  }
+  function propSprite(o, worldId, day) {
+    if (o.kind === "tree") {
+      const s2 = treeSprite(o.sub, o.v || 0);
+      const fr = fruitOf(o);
+      if (fr && !isPicked(worldId, o, day)) {
+        const key3 = `tree:${o.sub}:${o.v || 0}:${fr}`;
+        let f = propCanvasCache.get(key3);
+        if (!f) {
+          const c2 = document.createElement("canvas");
+          c2.width = s2.canvas.width;
+          c2.height = s2.canvas.height;
+          const g2 = c2.getContext("2d");
+          g2.drawImage(s2.canvas, 0, 0);
+          const ppu = c2.width / s2.w;
+          g2.setTransform(ppu, 0, 0, ppu, s2.ax * ppu, s2.ay * ppu);
+          drawTreeFruit(g2, o, fr, fruitSpots(o), FRUIT_COLORS[fr]);
+          f = { key: key3, canvas: c2, w: s2.w, h: s2.h, ax: s2.ax, ay: s2.ay };
+          propCanvasCache.set(key3, f);
+        }
+        return f;
+      }
+      return { key: `tree:${o.sub}:${o.v || 0}`, canvas: s2.canvas, w: s2.w, h: s2.h, ax: s2.ax, ay: s2.ay };
+    }
+    if (o.kind === "rock") {
+      const s2 = rockSprite(o.v || 0);
+      return { key: `rock:${o.v || 0}`, canvas: s2.canvas, w: s2.w, h: s2.h, ax: s2.ax, ay: s2.ay };
+    }
+    if (o.kind === "bush") {
+      const s2 = bushSprite(o.sub || "bush", o.v || 0);
+      return { key: `bush:${o.sub}:${o.v || 0}`, canvas: s2.canvas, w: s2.w, h: s2.h, ax: s2.ax, ay: s2.ay };
+    }
+    if (o.kind === "building" || o.kind === "chestOpen") return null;
+    const key2 = `prop:${o.kind}:${o.sub || ""}:${o.v || 0}:${o.opened ? 1 : 0}`;
+    let s = propCanvasCache.get(key2);
+    if (s) return s;
+    const hTiles = Math.max(1.6, propHeight(o) + 0.8);
+    const wTiles = Math.max(2, (o.fw || 1) + 1.4, hTiles * 0.8);
+    const c = document.createElement("canvas");
+    c.width = Math.ceil(wTiles * PPU_PROP);
+    c.height = Math.ceil(hTiles * PPU_PROP);
+    const g = c.getContext("2d");
+    g.setTransform(PPU_PROP, 0, 0, PPU_PROP, c.width / 2, c.height - 0.4 * PPU_PROP);
+    try {
+      drawProp(g, { ...o, x: 0, y: 0 }, 1, false);
+    } catch {
+    }
+    s = { key: key2, canvas: c, w: wTiles, h: hTiles, ax: wTiles / 2, ay: hTiles - 0.4 };
+    propCanvasCache.set(key2, s);
+    return s;
+  }
+  var propCanvasCache = /* @__PURE__ */ new Map();
+  var PLANE = new PlaneGeometry(1, 1);
+  PLANE.translate(0, 0.5, 0);
+  var SpriteForest = class {
+    constructor(parent) {
+      this.group = new Group();
+      parent.add(this.group);
+      this.batches = /* @__PURE__ */ new Map();
+      this.fruit = new Group();
+      this.group.add(this.fruit);
+      this.dummy = new Object3D();
+    }
+    clear() {
+      for (const b of this.batches.values()) {
+        this.group.remove(b.mesh);
+        b.mesh.dispose();
+      }
+      this.batches.clear();
+    }
+    /** items: [{ o, sprite, x, y (relative), h (ground) }] */
+    rebuild(items9) {
+      this.clear();
+      const byKey = /* @__PURE__ */ new Map();
+      for (const it of items9) {
+        let arr = byKey.get(it.sprite.key);
+        if (!arr) byKey.set(it.sprite.key, arr = []);
+        arr.push(it);
+      }
+      for (const [key2, list] of byKey) {
+        const s = list[0].sprite;
+        const mesh = new InstancedMesh(PLANE, spriteMaterial(key2, s.canvas), list.length);
+        mesh.frustumCulled = false;
+        this.batches.set(key2, { mesh, items: list, sprite: s });
+        this.group.add(mesh);
+      }
+    }
+    /** Face every instance towards the camera (items hold positions relative to the group). */
+    aim(camYaw3) {
+      const d = this.dummy;
+      for (const b of this.batches.values()) {
+        const s = b.sprite;
+        let i = 0;
+        for (const it of b.items) {
+          const sc = it.o.s || 1;
+          d.position.set(it.rx, it.h - 0.05 - (s.h - s.ay) * sc, it.rz);
+          d.rotation.set(0, camYaw3, 0);
+          d.scale.set(s.w * sc, s.h * sc, 1);
+          d.updateMatrix();
+          b.mesh.setMatrixAt(i++, d.matrix);
+        }
+        b.mesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+  };
+  var ActorSprite = class {
+    constructor(actor) {
+      const s = actor.look?.scale || 1;
+      const big = actor.r > 1 || actor.look?.race === "seaking";
+      this.wT = (big ? 7 : 2.6) * Math.max(1, s);
+      this.hT = (big ? 5 : 3.2) * Math.max(1, s);
+      this.foot = 0.35;
+      const c = document.createElement("canvas");
+      c.width = Math.ceil(this.wT * PPU_ACTOR);
+      c.height = Math.ceil(this.hT * PPU_ACTOR);
+      this.canvas = c;
+      this.ctx = c.getContext("2d");
+      this.tex = new CanvasTexture(c);
+      this.tex.colorSpace = SRGBColorSpace;
+      this.mat = new MeshBasicMaterial({ map: this.tex, alphaTest: 0.3, side: DoubleSide, fog: true });
+      const geo2 = new PlaneGeometry(this.wT, this.hT);
+      geo2.translate(0, this.hT / 2 - this.foot, 0);
+      this.mesh = new Mesh(geo2, this.mat);
+      this.mesh.frustumCulled = false;
+      this.lastDraw = -1;
+    }
+    draw(actor, env, camYaw) {
+      const g = this.ctx, c = this.canvas;
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, c.width, c.height);
+      g.setTransform(PPU_ACTOR, 0, 0, PPU_ACTOR, c.width / 2, c.height - this.foot * PPU_ACTOR);
+      const f = actor.facing;
+      actor.facing = f - camYaw - Math.PI / 2;
+      try {
+        if (actor.draw) actor.draw(g, env);
+      } catch {
+      }
+      actor.facing = f;
+      this.tex.needsUpdate = true;
+    }
+    dispose() {
+      this.mesh.geometry.dispose();
+      this.mat.dispose();
+      this.tex.dispose();
+    }
+  };
+  function projectileMesh(p) {
+    const col = new Color(p.color || (p.sprite === "cannonball" ? "#333333" : "#ffffff"));
+    const r = Math.max(0.12, Math.min(0.8, (p.radius || 0.3) * 0.8));
+    const m = new Mesh(new SphereGeometry(r, 10, 8), new MeshBasicMaterial({ color: col, fog: true }));
+    return m;
+  }
 
   // src/render3d/buildings3d.js
   var ROLE_ICON2 = {
@@ -43909,6 +43916,7 @@ void main() {
   function registerViewmodel(fn) {
     VIEWS.viewmodel = fn;
   }
+  var FRAME_HOOKS = [];
 
   // src/render3d/props/instancer.js
   var CELL = 32;
@@ -55444,7 +55452,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   registerViewmodel((ctx) => createViewmodel(ctx));
 
   // src/render3d/index.js
-  registerPropBuilder("building", (o) => buildBuilding(o));
+  registerPropBuilder("building", (o, ctx) => buildBuilding(o, ctx));
   var ACTOR_RANGE = 75;
   var SHIP_RANGE = 520;
   var Renderer3D = class {
@@ -55470,6 +55478,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.scene.add(this.props);
       this.forest = new SpriteForest(this.props);
       this.built = /* @__PURE__ */ new Map();
+      this.animProps = /* @__PURE__ */ new Map();
       this.ents = new Group();
       this.scene.add(this.ents);
       this.actorViews = /* @__PURE__ */ new Map();
@@ -55563,6 +55572,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         disposeTree(v);
       }
       this.built.clear();
+      this.animProps.clear();
       for (const v of this.actorViews.values()) {
         this.ents.remove(v.root || v.mesh);
         v.dispose?.();
@@ -55627,6 +55637,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.updateProps(game, ox, oy, env, sailing);
       this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
       this.forest.aim(camYaw3);
+      this.tickProps(env, dt);
       this.updateEntities(game, ox, oy, env, camYaw3);
       this.updateViewmodel(game, env);
       const amb = env.ambient || [1, 1, 1];
@@ -55673,12 +55684,34 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.updateProps(game, ox, oy, env, false, 190);
       this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
       this.forest.aim(camYaw3);
+      this.tickProps(env, 1 / 60);
       this.updateEntities(game, ox, oy, env, camYaw3);
       if (this.vm) this.vm.root.visible = false;
       const amb = env.ambient || [1, 1, 1];
       tintSprites(Math.min(1, amb[0] * 1.05), Math.min(1, amb[1] * 1.05), Math.min(1, amb[2] * 1.05));
       setNightWindows(Math.max(0, 0.9 - env.daylight));
       this.renderer.render(this.scene, cam);
+    }
+    /** Every frame: animated props (userData.update) and plug-in frame hooks. */
+    tickProps(env, dt) {
+      for (const [o, v] of this.animProps) {
+        try {
+          v.userData.update(o, env, this.ctx);
+        } catch (e) {
+          this.animProps.delete(o);
+          console.warn("3D prop update failed for", o.kind, e);
+        }
+      }
+      for (const fn of FRAME_HOOKS) {
+        try {
+          fn(env, this.ctx, dt);
+        } catch (e) {
+          if (!fn.warned) {
+            fn.warned = true;
+            console.warn("3D frame hook failed", e);
+          }
+        }
+      }
     }
     /** First-person arms and weapon (a plug-in; see registry.js). */
     updateViewmodel(game, env) {
@@ -55731,11 +55764,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             }
             this.built.set(o, v);
             if (v) this.props.add(v);
+            if (v?.userData.update) this.animProps.set(o, v);
           }
           if (v) {
             keep.add(o);
             v.position.set(dx, v.userData.noGround ? 0 : this.ground(o.x, o.y), dy);
-            if (v.userData.update) v.userData.update(o, env, this.ctx);
             continue;
           }
         }
@@ -55750,6 +55783,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           disposeTree(v);
         }
         this.built.delete(o);
+        this.animProps.delete(o);
       }
       this.forest.rebuild(items9);
     }
@@ -64724,6 +64758,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var CULL = -9e3;
   var MAX_SC = 380;
   var MIN_SC = 1;
+  var NEAR_SC = 200;
   var easeOut2 = (k) => 1 - (1 - k) ** 3;
   var clamp015 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function bill(r, x, y, h2) {
@@ -64737,7 +64772,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return { x: a[0], y: a[1], sc, ux: dx / sc, uy: dy / sc };
   }
   function setBill(g, r, B3, k = 1) {
-    const d = r.dpr, s = B3.sc * d * k;
+    const d = r.dpr, s = Math.min(B3.sc, NEAR_SC) * d * k;
     g.setTransform(-B3.uy * s, B3.ux * s, -B3.ux * s, -B3.uy * s, B3.x * d, B3.y * d);
   }
   function plane(r, x, y, h2) {
@@ -65155,8 +65190,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           vy = (q2[1] - B3.y) / (0.05 * B3.sc);
         }
       }
-      g.setTransform(B3.sc * d, 0, 0, B3.sc * d, B3.x * d, B3.y * d);
-      drawPart(g, p, vx, vy);
+      const sc = Math.min(B3.sc, NEAR_SC);
+      g.setTransform(sc * d, 0, 0, sc * d, B3.x * d, B3.y * d);
+      drawPart(g, p, vx * B3.sc / sc, vy * B3.sc / sc);
     }
   }
   function textPlace3d(r, t) {
@@ -65536,8 +65572,38 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.focusT = Math.max(this.focusT, t);
       this.focusMax = Math.max(0.05, this.focusT);
     }
+    /**
+     * Height hidden in a y offset. The top-down view draws "north" and "up" the
+     * same way, so plenty of callers write y - 1.5 for "over the head". In the
+     * 3D view that would be 1.5 m to the north: when an actor stands right
+     * below such a spot, the offset is handed back as height instead.
+     */
+    lift3d(x, y) {
+      const g = this.game;
+      if (!g.view3d || !g.view3d.active || !g.actors) return 0;
+      const w = g.world;
+      let best = 0, bd = 0.45;
+      for (const a of g.actors) {
+        if (!a.alive) continue;
+        const dy = a.y - y;
+        if (dy < 0.45 || dy > 2.8) continue;
+        const dx = Math.abs(w ? w.dx(x, a.x) : a.x - x);
+        if (dx < bd) {
+          bd = dx;
+          best = dy;
+        }
+      }
+      return best;
+    }
     // ------------------------------------------------------------------ particles
     particle(p) {
+      if (!this._inBurst) {
+        const l = this.lift3d(p.x, p.y);
+        if (l) {
+          p.y += l;
+          p.z = (p.z ?? 0.5) + l;
+        }
+      }
       if (this.parts.length >= this.maxParts) this.parts.shift();
       p.life = p.life ?? 0.6;
       p.max = p.life;
@@ -65554,6 +65620,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return p;
     }
     burst(x, y, n, o = {}) {
+      const lift = this.lift3d(x, y);
+      if (lift) {
+        y += lift;
+        o = { ...o, z: (o.z ?? 0.6) + lift };
+      }
+      this._inBurst = true;
       for (let i = 0; i < n; i++) {
         const a = (o.angle ?? Math.random() * TAU) + (o.spread !== void 0 ? (Math.random() - 0.5) * o.spread : 0);
         const sp = (o.speed ?? 4) * (0.4 + Math.random() * 0.8);
@@ -65576,6 +65648,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           vr: (Math.random() - 0.5) * 12
         });
       }
+      this._inBurst = false;
     }
     // ------------------------------------------------------------------ text
     /**
@@ -65585,6 +65658,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      */
     text(x, y, str, color = "#fff", size = 0.42, o = {}) {
       str = String(str);
+      const lift = this.lift3d(x, y);
+      if (lift) y += lift;
       const num = NUMERIC.test(str);
       if (!num) {
         for (const t2 of this.texts) {
@@ -65601,7 +65676,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const t = {
         x: x + (Math.random() - 0.5) * (num ? 0.5 : 0.15),
         y,
-        z: 1.6 + bump * 0.34,
+        z: 1.6 + bump * 0.34 + lift,
         str,
         color,
         size,

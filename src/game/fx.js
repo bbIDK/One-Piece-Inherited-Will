@@ -78,8 +78,30 @@ export class FX {
   /** Anime focus lines converging on a world point. */
   focus(x, y, t = 0.18) { this.focusX = x; this.focusY = y; this.focusT = Math.max(this.focusT, t); this.focusMax = Math.max(0.05, this.focusT); }
 
+  /**
+   * Height hidden in a y offset. The top-down view draws "north" and "up" the
+   * same way, so plenty of callers write y - 1.5 for "over the head". In the
+   * 3D view that would be 1.5 m to the north: when an actor stands right
+   * below such a spot, the offset is handed back as height instead.
+   */
+  lift3d(x, y) {
+    const g = this.game;
+    if (!g.view3d || !g.view3d.active || !g.actors) return 0;
+    const w = g.world;
+    let best = 0, bd = 0.45;
+    for (const a of g.actors) {
+      if (!a.alive) continue;
+      const dy = a.y - y;
+      if (dy < 0.45 || dy > 2.8) continue;
+      const dx = Math.abs(w ? w.dx(x, a.x) : a.x - x);
+      if (dx < bd) { bd = dx; best = dy; }
+    }
+    return best;
+  }
+
   // ------------------------------------------------------------------ particles
   particle(p) {
+    if (!this._inBurst) { const l = this.lift3d(p.x, p.y); if (l) { p.y += l; p.z = (p.z ?? 0.5) + l; } }
     if (this.parts.length >= this.maxParts) this.parts.shift();
     p.life = p.life ?? 0.6;
     p.max = p.life;
@@ -96,6 +118,9 @@ export class FX {
   }
 
   burst(x, y, n, o = {}) {
+    const lift = this.lift3d(x, y);
+    if (lift) { y += lift; o = { ...o, z: (o.z ?? 0.6) + lift }; }
+    this._inBurst = true;
     for (let i = 0; i < n; i++) {
       const a = (o.angle ?? Math.random() * TAU) + (o.spread !== undefined ? (Math.random() - 0.5) * o.spread : 0);
       const sp = (o.speed ?? 4) * (0.4 + Math.random() * 0.8);
@@ -107,6 +132,7 @@ export class FX {
         kind: o.kind || 'spark', drag: o.drag ?? 3, grow: o.grow ?? 0, add: o.add, rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 12,
       });
     }
+    this._inBurst = false;
   }
 
   // ------------------------------------------------------------------ text
@@ -117,6 +143,8 @@ export class FX {
    */
   text(x, y, str, color = '#fff', size = 0.42, o = {}) {
     str = String(str);
+    const lift = this.lift3d(x, y);
+    if (lift) y += lift;
     const num = NUMERIC.test(str);
     if (!num) {
       for (const t of this.texts) {
@@ -127,7 +155,7 @@ export class FX {
     for (const t of this.texts) if (!t.dmg && Math.abs(t.x - x) < 1.2 && Math.abs(t.y - y) < 0.6 && t.age < 0.3) bump++;
     const life = o.life ?? (num ? 0.8 : 0.95);
     const t = {
-      x: x + (Math.random() - 0.5) * (num ? 0.5 : 0.15), y, z: 1.6 + bump * 0.34, str, color, size, life, max: life, vz: num ? 2.4 : 2.0,
+      x: x + (Math.random() - 0.5) * (num ? 0.5 : 0.15), y, z: 1.6 + bump * 0.34 + lift, str, color, size, life, max: life, vz: num ? 2.4 : 2.0,
       crit: o.crit, pop: 0, age: 0, kind: num ? 'num' : 'call',
     };
     this.texts.push(t);

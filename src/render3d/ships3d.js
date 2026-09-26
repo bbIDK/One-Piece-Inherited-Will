@@ -234,9 +234,9 @@ function hullGeometry(def) {
 
   // ---- the helm (a wheel on a post; the rowboat just has oars)
   if (!d.open) {
-    const wx = d.helmX + 0.8, fy = floorAt(d, (wx + d.L / 2) / d.L);
-    k.add(box(0.14, 0.95, 0.14), { at: [wx, fy, 0], color: P.wood, outline: 0.015 });
-    k.save(); k.translate(wx - 0.1, fy + 1.05, 0); k.rotateY(Math.PI / 2);
+    const wx = d.helmX + 1.1, fy = floorAt(d, (wx + d.L / 2) / d.L);
+    k.add(box(0.14, 0.82, 0.14), { at: [wx, fy, 0], color: P.wood, outline: 0.015 });
+    k.save(); k.translate(wx - 0.1, fy + 0.92, 0); k.rotateY(Math.PI / 2);
     k.add(torus(0.4, 0.03, 5, 18), { color: '#7b5230' });
     for (let i = 0; i < 8; i++) {
       const a = i / 8 * Math.PI * 2;
@@ -509,7 +509,7 @@ function triGeometry(a, b, c, n = 5) {
 
 // ---------------------------------------------------------------- the view
 const SOLID = () => vcMat();
-const GHOST = () => vcMat({ transparent: true, opacity: 0.22, depthWrite: false });
+const GHOST = () => vcMat({ transparent: true, opacity: 0.15, depthWrite: false });
 
 export class ShipView {
   constructor(s) {
@@ -685,7 +685,7 @@ export class ShipView {
     for (const m of this.ghostables) { m.material = on ? GHOST() : SOLID(); m.renderOrder = on ? 2 : 0; }
     for (const sl of this.sails) {
       const mt = sl.mesh.material;
-      mt.transparent = on; mt.opacity = on ? 0.2 : 1; mt.depthWrite = !on; mt.needsUpdate = true;
+      mt.transparent = on; mt.opacity = on ? 0.16 : 1; mt.depthWrite = !on; mt.needsUpdate = true;
       sl.mesh.renderOrder = on ? 2 : 0;
       sl.mesh.castShadow = !on;
     }
