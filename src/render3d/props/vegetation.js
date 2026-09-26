@@ -58,10 +58,10 @@ const TRUNK = { oak: '#6d4c33', autumn: '#6d4c33', sakura: '#5a3d2b', blossom: '
 // ------------------------------------------------------------ building blocks
 
 /** Leafy blobs sharing one crown: grey vertex colours (tinted per instance), radial normals, outline. */
-function crown(k, blobs, c, { lo = 0.5, hi = 1.05, outline = 0.045, squash = 1 } = {}) {
+function crown(k, blobs, c, { lo = 0.62, hi = 1.12, outline = 0.045, squash = 1 } = {}) {
   let y0 = Infinity, y1 = -Infinity;
   for (const b of blobs) { y0 = Math.min(y0, b[1] - b[3] * squash); y1 = Math.max(y1, b[1] + b[3] * squash); }
-  const nf = radial(c[0], c[1], c[2], 0.3);
+  const nf = radial(c[0], c[1], c[2], 0.12);
   const tmp = new THREE.Color();
   blobs.forEach(([x, y, z, r, f = 1], i) => {
     k.add(new THREE.DodecahedronGeometry(r, 0), {
@@ -607,12 +607,12 @@ function buildTree(o, ctx, sub) {
   const model = treeModel(sub, v);
   const pal = paletteOf(sub);
   const color = pal ? jitter(pal[v % pal.length], o) : null;
-  const part = { key: `t:${sub}:${v % 2}:${sub === 'cactus' ? v % 4 : 0}`, geo: model.geo, sway: model.sway, tinted: !!pal, color };
+  const part = { key: `t:${sub}:${v % 2}:${sub === 'cactus' ? v % 4 : 0}`, geo: model.geo, sway: model.sway, tinted: !!pal, color, receiveShadow: false };
   const parts = [part];
   let dyn = null;
   const fr = fruitOf(o);
   if (fr && model.crown) {
-    const fp = { key: `f:${sub}:${v % 2}:${fr}`, geo: fruitModel(sub, v, fr, model), sway: model.sway, hidden: false };
+    const fp = { key: `f:${sub}:${v % 2}:${fr}`, geo: fruitModel(sub, v, fr, model), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false };
     parts.push(fp);
     dyn = (oo, env, c, u) => setPartVisible(u, fp, !isPicked(c.world?.id, oo, env.day));
     void fruitSpots;
@@ -633,7 +633,7 @@ registerPropBuilder('bush', (o, ctx) => {
   const m = bushModel(sub, v);
   const pal = sub === 'fern' ? ['#2e7d32', '#33873a', '#2a7430', '#388e3c'] : ['#4caf50', '#43a047', '#66bb6a', '#388e3c'];
   const color = m.tinted ? jitter(pal[v % 4], o) : null;
-  const part = { key: `b:${sub}:${sub === 'bush' && v === 1 ? 1 : 0}`, geo: m.geo, tinted: m.tinted, color, castShadow: false };
+  const part = { key: `b:${sub}:${sub === 'bush' && v === 1 ? 1 : 0}`, geo: m.geo, tinted: m.tinted, color, castShadow: false, receiveShadow: false };
   return instanced(o, ctx, [part], { yaw: hash(o.x, o.y) * Math.PI * 2, scale: o.s || 1 });
 });
 

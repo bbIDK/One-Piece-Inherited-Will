@@ -33,6 +33,7 @@ class Batch {
     this.material = part.material || vcMat({ sway: part.sway, side: part.side });
     this.tinted = !!part.tinted;
     this.castShadow = part.castShadow !== false;
+    this.receiveShadow = part.receiveShadow !== false;
     this.count = 0;
     this.refs = [];
     this.minY = Infinity;
@@ -51,7 +52,7 @@ class Batch {
     if (this.tinted) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
     m.count = this.count;
     m.castShadow = this.castShadow;
-    m.receiveShadow = true;
+    m.receiveShadow = this.receiveShadow;
     m.boundingSphere = new THREE.Sphere(new THREE.Vector3(CELL / 2, 0, CELL / 2), CELL);
     m.name = 'inst:' + this.key;
     if (old) {

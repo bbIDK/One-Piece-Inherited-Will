@@ -44065,6 +44065,7 @@ void main() {
       this.material = part4.material || vcMat({ sway: part4.sway, side: part4.side });
       this.tinted = !!part4.tinted;
       this.castShadow = part4.castShadow !== false;
+      this.receiveShadow = part4.receiveShadow !== false;
       this.count = 0;
       this.refs = [];
       this.minY = Infinity;
@@ -44082,7 +44083,7 @@ void main() {
       if (this.tinted) m.instanceColor = new InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
       m.count = this.count;
       m.castShadow = this.castShadow;
-      m.receiveShadow = true;
+      m.receiveShadow = this.receiveShadow;
       m.boundingSphere = new Sphere(new Vector3(CELL / 2, 0, CELL / 2), CELL);
       m.name = "inst:" + this.key;
       if (old) {
@@ -44328,13 +44329,13 @@ void main() {
     cactus: ["#3f8f3f", "#468f3c", "#3a8a45", "#4b9a42"]
   };
   var TRUNK = { oak: "#6d4c33", autumn: "#6d4c33", sakura: "#5a3d2b", blossom: "#6d4c33", jungle: "#6b4f36", cottoncandy: "#f5f5f5", cloudtree: "#c8d6e5", spooky: "#3b2f3f" };
-  function crown(k, blobs, c, { lo = 0.5, hi = 1.05, outline = 0.045, squash = 1 } = {}) {
+  function crown(k, blobs, c, { lo = 0.62, hi = 1.12, outline = 0.045, squash = 1 } = {}) {
     let y0 = Infinity, y1 = -Infinity;
     for (const b of blobs) {
       y0 = Math.min(y0, b[1] - b[3] * squash);
       y1 = Math.max(y1, b[1] + b[3] * squash);
     }
-    const nf = radial(c[0], c[1], c[2], 0.3);
+    const nf = radial(c[0], c[1], c[2], 0.12);
     const tmp2 = new Color();
     blobs.forEach(([x, y, z, r, f = 1], i) => {
       k.add(new DodecahedronGeometry(r, 0), {
@@ -44884,12 +44885,12 @@ void main() {
     const model2 = treeModel(sub, v);
     const pal = paletteOf(sub);
     const color = pal ? jitter(pal[v % pal.length], o) : null;
-    const part4 = { key: `t:${sub}:${v % 2}:${sub === "cactus" ? v % 4 : 0}`, geo: model2.geo, sway: model2.sway, tinted: !!pal, color };
+    const part4 = { key: `t:${sub}:${v % 2}:${sub === "cactus" ? v % 4 : 0}`, geo: model2.geo, sway: model2.sway, tinted: !!pal, color, receiveShadow: false };
     const parts = [part4];
     let dyn = null;
     const fr = fruitOf(o);
     if (fr && model2.crown) {
-      const fp = { key: `f:${sub}:${v % 2}:${fr}`, geo: fruitModel(sub, v, fr, model2), sway: model2.sway, hidden: false };
+      const fp = { key: `f:${sub}:${v % 2}:${fr}`, geo: fruitModel(sub, v, fr, model2), sway: model2.sway, hidden: false, receiveShadow: false, castShadow: false };
       parts.push(fp);
       dyn = (oo, env, c, u) => setPartVisible(u, fp, !isPicked(c.world?.id, oo, env.day));
     }
@@ -44906,7 +44907,7 @@ void main() {
     const m = bushModel(sub, v);
     const pal = sub === "fern" ? ["#2e7d32", "#33873a", "#2a7430", "#388e3c"] : ["#4caf50", "#43a047", "#66bb6a", "#388e3c"];
     const color = m.tinted ? jitter(pal[v % 4], o) : null;
-    const part4 = { key: `b:${sub}:${sub === "bush" && v === 1 ? 1 : 0}`, geo: m.geo, tinted: m.tinted, color, castShadow: false };
+    const part4 = { key: `b:${sub}:${sub === "bush" && v === 1 ? 1 : 0}`, geo: m.geo, tinted: m.tinted, color, castShadow: false, receiveShadow: false };
     return instanced(o, ctx, [part4], { yaw: hash3(o.x, o.y) * Math.PI * 2, scale: o.s || 1 });
   });
   registerPropBuilder("rock", (o, ctx) => {
@@ -57329,7 +57330,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const g = this.game;
       if (!g.player) return [0, 0];
       const free = !this.rig.locked && this.rig.lockFailed && sx !== void 0;
-      return this.rig.aimPoint(g, (x, y) => this.ground(x, y), free ? sx : void 0, free ? sy : void 0);
+      const [x, y] = this.rig.aimPoint(g, (x2, y2) => this.ground(x2, y2), free ? sx : void 0, free ? sy : void 0);
+      return [x, y - 0.5];
     }
     render(game) {
       const w = game.world;
@@ -57584,7 +57586,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           this.ents.add(m);
         }
         const h2 = pr.sprite === "cannonball" ? 1.3 : 1.15;
-        m.position.set(w.dx(ox, pr.x), Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y)) + h2 + (pr.z || 0), pr.y - oy);
+        m.position.set(w.dx(ox, pr.x), Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y + 0.5)) + h2 + (pr.z || 0), pr.y + 0.5 - oy);
       }
       for (const [pr, m] of this.projViews) {
         if (seenP.has(pr)) continue;

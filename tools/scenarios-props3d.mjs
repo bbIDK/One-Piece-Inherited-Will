@@ -138,6 +138,18 @@ async function tourStop(page, snap, label, w) {
       v.rig.roll = 0;
       return { kind: o.kind, x: Math.round(o.x), y: Math.round(o.y), name: o.name };
     }
+    // find a clear spot: on land, nothing within 2.5 m
+    const W = g.world;
+    const clear = (cx, cy) => !W.isLiquid(cx, cy) && W.objects.near(cx, cy, 2.5, (o) => o.kind !== 'bush').length === 0;
+    if (!clear(x, y)) {
+      let found = false;
+      for (let r = 1; r < 30 && !found; r += 1) {
+        for (let a = 0; a < 16 && !found; a++) {
+          const cx = x + Math.cos(a / 16 * Math.PI * 2) * r, cy = y + Math.sin(a / 16 * Math.PI * 2) * r;
+          if (clear(cx, cy)) { x = cx; y = cy; found = true; }
+        }
+      }
+    }
     window.OP.teleport(x, y);
     v.rig.yaw = ((w.yaw || 0) + Math.PI * 2) % (Math.PI * 2);
     v.rig.pitch = w.pitch ?? 0; v.rig.roll = 0;
@@ -214,6 +226,23 @@ export const scenarios = {
         }, f, { n: 6, perf: true });
         await page.evaluate(() => { const g = window.OP.game, p = g.player; if (p.ship) { p.ship.captain = null; p.ship.x = -9999; } p.mode = 'foot'; p.ship = null; p.onShip = false; });
       }
+    },
+  },
+
+  // which object kinds exist in the world, and which of them still fall back to sprites
+  'p3d-coverage': {
+    async run(page) {
+      await boot(page);
+      const out = await page.evaluate(async () => {
+        const g = window.OP.game;
+        const kinds = {};
+        const scan = (w) => { for (const o of w.objects.query(0, 0, w.width, w.height)) { const k = o.kind + (o.draw ? '*' : ''); kinds[k] = (kinds[k] || 0) + 1; } };
+        scan(g.surface);
+        const zones = ['skypiea', 'fishman_island', 'impel_down'];
+        for (const z of zones) { try { g.enterZoneById(z); scan(g.world); } catch (e) { kinds['zone-error:' + z] = String(e); } }
+        return { kinds };
+      });
+      console.log(JSON.stringify(out));
     },
   },
 
