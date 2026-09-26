@@ -72,9 +72,10 @@ export const WEST_BLUE = [
       {
         id: 'wb_passage_port', name: 'Passage Port', dx: -0.05, dy: 0.15, w: 44, h: 26, style: 'port', dockDir: 'e', plaza: 'well',
         buildings: [
-          { role: 'shop', name: 'Kanezenny Pawnshop', npc: 'wb_kanezenny' },
+          { role: 'house', name: "Kanezenny's Farmhouse", npc: 'wb_kanezenny' },
+          { role: 'shop', name: 'Ferry Landing Store' },
           { role: 'inn', name: 'Ferry House Inn' },
-          { role: 'bar', name: "Ferryman's Rest" },
+          { role: 'bar', name: "Ferryman's Rest", npc: 'wb_ferryman' },
         ],
       },
     ],
@@ -83,7 +84,8 @@ export const WEST_BLUE = [
     tagline: 'Twenty years ago, a little girl from a burning island boarded a ferry here.',
     rumors: [
       'The Marines spotted the "Devil Child" of Ohara on a ferry from this island. That\'s how they learned she was alive.',
-      'Old Kanezenny at the pawnshop buys anything that washes up from the southwest. Anything. Ask him what he pays for burnt books.',
+      'Old Kanezenny up at the farmhouse took that girl in, twenty years ago — and then sent for the Government agents. She still swears they owe her the reward.',
+      'Kanezenny picks through everything that washes up from the southwest. Burnt books, too. She says paper from Ohara sells.',
       'Don\'t sail southwest looking for Ohara. It isn\'t on the charts anymore. ...Well. The current will take you there anyway.',
     ],
   },
