@@ -49,6 +49,13 @@ export function installFactions(game) {
   game.on('marineOffice', (building, island) => office(game, building, island));
   game.on('bountyBoard', (building, island) => bountyOffice(game, building, island));
   game.on('knockout', (a, att) => onKnockout(game, a, att));
+  game.on('shipSunk', (s) => {
+    const c = game.state?.char;
+    if (!c || c.faction !== 'marine' || s.faction !== 'pirate' || !s.lastHitBy?.isPlayer) return;
+    const merit = 6 + Math.round((s.level || 5) / 2);
+    c.merit = (c.merit || 0) + merit;
+    game.log(`Pirate ship sunk: +${merit} merit (${Math.floor(c.merit)})`, '#90caf9');
+  });
   game.on('enterRegion', (reg) => { const c = game.state?.char; if (c && isGrandLine(reg)) c.flags.enteredGrandLine = true; });
 }
 
