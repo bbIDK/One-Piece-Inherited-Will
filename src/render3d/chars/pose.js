@@ -67,7 +67,9 @@ export function rigOptions(a, pose, P, o = {}) {
   o.armed = !!pose.armed;
   o.armament = !!pose.armament;
   o.blade = pose.blade || null; o.bladeB = pose.bladeB || null; o.bladeLen = pose.bladeLen || 1;
-  if (pose.dodge !== undefined && pose.dodgeSide !== undefined && Math.abs(pose.dodgeDir) <= 0.35) o.headRoll = 0;
+  // a side-step leans into the slide
+  o.sideRoll = 0;
+  if (pose.dodge !== undefined && pose.dodgeSide !== undefined && Math.abs(pose.dodgeDir) <= 0.35) o.sideRoll = Math.sign(pose.dodgeSide) * 0.38 * Math.sin(pose.dodge * Math.PI);
   return o;
 }
 

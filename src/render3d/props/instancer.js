@@ -29,7 +29,7 @@ class Batch {
     this.cell = cell;
     this.key = key;
     this.geo = part.geo;
-    this.farGeo = part.far || null;
+    this.farGeo = part.far || part.geo.userData.far || null;
     this.material = part.material || vcMat({ sway: part.sway, side: part.side });
     this.tinted = !!part.tinted;
     this.castShadow = part.castShadow !== false;

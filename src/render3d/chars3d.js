@@ -59,6 +59,8 @@ class ActorView {
 
   update(a, env, ctx, { camYaw3, redraw }) {
     const m = this.model;
+    // at the helm the camera rides the ship; the body isn't drawn on the water below it
+    this.root.visible = !(a.isPlayer && a.mode === 'sail');
     const cam = ctx.camera;
     const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
     this.frame++;

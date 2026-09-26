@@ -7,7 +7,7 @@
 // Fruit trees carry their fruit as a separate instanced part that is hidden
 // while the tree is picked.
 import * as THREE from 'three';
-import { Mesher, cyl, cone, box, ribbon, tube, slab, C, shade, hash, rng, radial } from './kit.js';
+import { Mesher, cyl, cone, box, ribbon, tube, slab, C, shade, hash, rng, radial, KIT } from './kit.js';
 import { instanced, setPartVisible } from './instancer.js';
 import { registerPropBuilder } from '../registry.js';
 import { fruitOf, fruitSpots, isPicked } from '../../world/fruitTrees.js';
@@ -16,9 +16,21 @@ import { T, CLIMATE } from '../../world/tiles.js';
 const UP = new THREE.Vector3(0, 1, 0);
 const ONE = new THREE.Vector3(1, 1, 1);
 const GEO = new Map();
+/** Build a model once (and its outline-free far variant, kept in geometry.userData.far). */
 function cached(key, fn) {
   let g = GEO.get(key);
-  if (!g) { g = fn(); GEO.set(key, g); }
+  if (!g) {
+    g = fn();
+    if (!KIT.noOutline) {
+      KIT.noOutline = true;
+      let f;
+      try { f = fn(); } finally { KIT.noOutline = false; }
+      const ng = g.isBufferGeometry ? g : g.geo, fg = f.isBufferGeometry ? f : f.geo;
+      fg.userData.shared = true;
+      ng.userData.far = fg;
+    }
+    GEO.set(key, g);
+  }
   return g;
 }
 const lin = (v) => new THREE.Color(v, v, v);

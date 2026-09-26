@@ -40716,6 +40716,7 @@ void main() {
   var _n = new Vector3();
   var _m32 = new Matrix3();
   var OUTLINE = new Color(1905420);
+  var KIT = { noOutline: false };
   function C2(c) {
     if (c && c.isColor) return c;
     if (Array.isArray(c)) return new Color().setRGB(c[0], c[1], c[2], SRGBColorSpace);
@@ -40887,7 +40888,7 @@ void main() {
       const tint3 = o.tint ? 1 : 0;
       const gl = o.glow ? C2(o.glow) : null;
       const fl2 = o.flicker || 0;
-      const geomN = o.outline ? new Float32Array(P3.count * 3) : null;
+      const geomN = o.outline && !KIT.noOutline ? new Float32Array(P3.count * 3) : null;
       for (let i = 0; i < P3.count; i++) {
         _v.fromBufferAttribute(P3, i).applyMatrix4(M2);
         _n.fromBufferAttribute(NA, i).applyMatrix3(_m32).normalize();
@@ -40924,7 +40925,7 @@ void main() {
         }
         for (let i = 0; i < tris.length; i += 3) this.idx.push(tris[i] + b2, tris[i + 2] + b2, tris[i + 1] + b2);
       }
-      if (o.outline) this.shell(base, P3.count, tris, geomN, o.outline, o.outlineColor);
+      if (o.outline && !KIT.noOutline) this.shell(base, P3.count, tris, geomN, o.outline, o.outlineColor);
       return this;
     }
     /** Inverted hull: the primitive pushed out along its (position-averaged) normals, faces flipped. */
@@ -44060,6 +44061,7 @@ void main() {
       this.cell = cell;
       this.key = key2;
       this.geo = part4.geo;
+      this.farGeo = part4.far || part4.geo.userData.far || null;
       this.material = part4.material || vcMat({ sway: part4.sway, side: part4.side });
       this.tinted = !!part4.tinted;
       this.castShadow = part4.castShadow !== false;
@@ -44075,7 +44077,7 @@ void main() {
     }
     alloc(cap) {
       const old = this.mesh;
-      const m = new InstancedMesh(this.geo, this.material, cap);
+      const m = new InstancedMesh(this.cell.far && this.farGeo ? this.farGeo : this.geo, this.material, cap);
       m.instanceMatrix.setUsage(DynamicDrawUsage);
       if (this.tinted) m.instanceColor = new InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
       m.count = this.count;
@@ -44155,7 +44157,7 @@ void main() {
     const key2 = `${ctx?.world?.id || ""}:${cx},${cy}`;
     let c = cells.get(key2);
     if (!c) {
-      c = { key: key2, x0: cx * CELL, y0: cy * CELL, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent, markers: /* @__PURE__ */ new Set(), rep: null };
+      c = { key: key2, x0: cx * CELL, y0: cy * CELL, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent, markers: /* @__PURE__ */ new Set(), rep: null, far: false };
       cells.set(key2, c);
     }
     if (!c.parent && parent) c.parent = parent;
@@ -44219,6 +44221,7 @@ void main() {
       dynDirty = true;
     }
   }
+  var LOD2 = { far: 62 };
   function frame(env, ctx) {
     for (const cell of cells.values()) {
       const mk3 = cell.rep;
@@ -44229,6 +44232,15 @@ void main() {
         cell.px = px2;
         cell.pz = pz2;
         for (const b of cell.batches.values()) b.mesh.position.set(px2, 0, pz2);
+      }
+      const gp = mk3.parent ? mk3.parent.position : null;
+      const cx = (gp ? gp.x : 0) + px2, cz = (gp ? gp.z : 0) + pz2;
+      const nx = Math.max(cx, Math.min(0, cx + CELL)), nz = Math.max(cz, Math.min(0, cz + CELL));
+      const d = Math.hypot(nx, nz);
+      const far = cell.far ? d > LOD2.far - 4 : d > LOD2.far + 4;
+      if (far !== cell.far) {
+        cell.far = far;
+        for (const b of cell.batches.values()) if (b.farGeo) b.mesh.geometry = far ? b.farGeo : b.geo;
       }
     }
     if (dynDirty) {
@@ -44281,6 +44293,18 @@ void main() {
     let g = GEO.get(key2);
     if (!g) {
       g = fn();
+      if (!KIT.noOutline) {
+        KIT.noOutline = true;
+        let f;
+        try {
+          f = fn();
+        } finally {
+          KIT.noOutline = false;
+        }
+        const ng = g.isBufferGeometry ? g : g.geo, fg = f.isBufferGeometry ? f : f.geo;
+        fg.userData.shared = true;
+        ng.userData.far = fg;
+      }
       GEO.set(key2, g);
     }
     return g;
@@ -44906,6 +44930,14 @@ void main() {
       const k = new Mesher();
       fn(k);
       g = k.build();
+      KIT.noOutline = true;
+      try {
+        const f = new Mesher();
+        fn(f);
+        g.userData.far = f.build();
+      } finally {
+        KIT.noOutline = false;
+      }
       GEO2.set(key2, g);
     }
     return g;
@@ -55995,6 +56027,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.quaternion.setFromAxisAngle(AZ, -roll);
       g.position.set(0, pivot, 0).applyQuaternion(g.quaternion).negate().add(_v5.set(0, pivot, 0));
       g.position.y += o.lift || 0;
+      if (o.sideRoll) {
+        _q3.setFromAxisAngle(AX, o.sideRoll);
+        g.quaternion.premultiply(_q3);
+        g.position.applyQuaternion(_q3);
+      }
       if (o.lying) {
         const k = o.lying;
         _q3.setFromAxisAngle(AZ, Math.PI / 2 * 0.94 * k);
@@ -56627,7 +56664,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     o.blade = pose.blade || null;
     o.bladeB = pose.bladeB || null;
     o.bladeLen = pose.bladeLen || 1;
-    if (pose.dodge !== void 0 && pose.dodgeSide !== void 0 && Math.abs(pose.dodgeDir) <= 0.35) o.headRoll = 0;
+    o.sideRoll = 0;
+    if (pose.dodge !== void 0 && pose.dodgeSide !== void 0 && Math.abs(pose.dodgeDir) <= 0.35) o.sideRoll = Math.sign(pose.dodgeSide) * 0.38 * Math.sin(pose.dodge * Math.PI);
     return o;
   }
 
@@ -56888,6 +56926,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     update(a, env, ctx, { camYaw3, redraw }) {
       const m = this.model;
+      this.root.visible = !(a.isPlayer && a.mode === "sail");
       const cam = ctx.camera;
       const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
       this.frame++;

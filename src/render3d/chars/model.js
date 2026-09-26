@@ -177,6 +177,11 @@ export class CharacterModel {
     g.quaternion.setFromAxisAngle(AZ, -roll);
     g.position.set(0, pivot, 0).applyQuaternion(g.quaternion).negate().add(_v.set(0, pivot, 0));
     g.position.y += (o.lift || 0);
+    if (o.sideRoll) {
+      _q.setFromAxisAngle(AX, o.sideRoll);
+      g.quaternion.premultiply(_q);
+      g.position.applyQuaternion(_q);
+    }
     if (o.lying) {
       const k = o.lying;
       _q.setFromAxisAngle(AZ, Math.PI / 2 * 0.94 * k);

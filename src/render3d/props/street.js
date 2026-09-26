@@ -5,7 +5,7 @@
 // signposts and skulls. Lamps, lanterns and crystals glow at night through
 // the shared material's glow channel (so they stay instanced).
 import * as THREE from 'three';
-import { Mesher, box, cbox, cyl, cone, lathe, torus, extrude, slab, ribbon, C, shade, hash, rng } from './kit.js';
+import { Mesher, box, cbox, cyl, cone, lathe, torus, extrude, slab, ribbon, C, shade, hash, rng, KIT } from './kit.js';
 import { instanced, local } from './instancer.js';
 import { registerPropBuilder } from '../registry.js';
 
@@ -13,7 +13,13 @@ const GEO = new Map();
 /** A cached merged model: fn(k) fills a Mesher. */
 export function model(key, fn) {
   let g = GEO.get(key);
-  if (!g) { const k = new Mesher(); fn(k); g = k.build(); GEO.set(key, g); }
+  if (!g) {
+    const k = new Mesher(); fn(k); g = k.build();
+    // the far variant (no outlines) for distant cells
+    KIT.noOutline = true;
+    try { const f = new Mesher(); fn(f); g.userData.far = f.build(); } finally { KIT.noOutline = false; }
+    GEO.set(key, g);
+  }
   return g;
 }
 
