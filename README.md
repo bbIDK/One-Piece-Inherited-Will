@@ -124,6 +124,72 @@ The game saves itself to `localStorage` and cannot be reloaded to undo a death.
   Admiral, the True History, the World Map, Liberation, and the Strongest
   Warrior.
 
+## The world, sea by sea
+
+There are 111 charted islands, 549 named NPCs and 118 quests, plus three
+zones and Mary Geoise. Every arc is told from the point of view of *your*
+pirate, Marine or wanderer. The Straw Hats appear as cameos and never as the
+player.
+
+**East Blue**
+- Foosha Village and the Lord of the Coast, and the Gray Terminal.
+- Alvida and Koby; Captain Morgan and the pirate hunter.
+- Koshiro and Kuina's promise; Buggy's circus; Gaimon.
+- Kuro's plot, which rewards the caravel Going Merry.
+- The Baratie, Don Krieg and a visit from Mihawk.
+- Arlong Park.
+- Loguetown, with Roger's execution platform and Smoker.
+
+**North Blue**
+- Lvneel and Noland's legend.
+- Flevance, the White Town, and its Amber Lead.
+- Spider Miles, the young Donquixote Family and Law's past.
+- Minion Island and the Ope Ope no Mi.
+- Swallow Island, where the Heart Pirates form.
+- The Germa Kingdom.
+
+**West Blue**
+- Ohara's scholars, who teach you to read Poneglyphs.
+- God Valley's remnants.
+- Kano Country's Hasshoken trials.
+- Capone Bege's Fire Tank Family in Las Camp.
+- Ilisia, and the Asshina colosseum of the Longleg tribe.
+
+**South Blue**
+- Baterilla and Portgas D. Rouge.
+- The Karate Island tournament and Torino Kingdom's giant birds.
+- Sorbet Kingdom, with Kuma the pastor-king and the Tyrant story.
+- Briss and the St. Briss.
+- Kid's gang on Kutsukku, and Centaurea's revolution.
+
+**Paradise, first half**
+- Twin Cape and Laboon, then the seven routes.
+- Whisky Peak and Little Garden's hundred-year duel.
+- Drum Island's cherry blossoms.
+- The Alabasta civil war and Crocodile.
+- Jaya and the Knock Up Stream to **Skypiea**, where Enel waits.
+- The Davy Back Fight.
+
+**Paradise, second half and the Calm Belt**
+- Water 7, CP9 and the Enies Lobby raid.
+- Thriller Bark and Moria's shadow theft.
+- Sabaody: Rayleigh's Haki, the auction and ship coating.
+- The Summit War at Marineford.
+- The **Impel Down** breakout.
+- Amazon Lily, Kuraigana (Mihawk), Momoiro and Rusukaina.
+
+**New World, first half**
+- **Fish-Man Island**, with Hody and Decken.
+- Punk Hazard; Dressrosa, with the Corrida Colosseum and the Birdcage.
+- Green Bit and Zou (Road Poneglyph).
+- Whole Cake Island, with the tea party and a Road Poneglyph.
+
+**New World, second half**
+- Wano, Onigashima and Kaido (Road Poneglyph).
+- Egghead and Elbaph.
+- Blackbeard's Hachinosu.
+- Lodestar, then **Laugh Tale** and the One Piece.
+
 ## Development
 
 ```
