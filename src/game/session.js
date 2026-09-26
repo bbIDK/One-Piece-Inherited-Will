@@ -5,6 +5,7 @@ import { board } from './interact.js';
 import { lifeLostScreen, lineageEndScreen, legacyShopScreen } from '../ui/screens.js';
 import { SEA_IDS, REGION_INFO, regionAt } from '../world/constants.js';
 import { RACES } from '../data/races.js';
+import { DREAMS } from '../data/dreams.js';
 
 let shipCounter = 0;
 
@@ -110,7 +111,8 @@ export function startNewCharacter(game, birth, choices) {
   game.snapCamera();
   game.ui.setHudVisible(true);
   const seaName = REGION_INFO[SEA_IDS[spawn.sea]]?.name || '';
-  setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : 'An Uncharted Islet', seaName, `${char.name} begins their journey. Dream: ${choices.dream ? '' : ''}`, 5), 400);
+  const dream = DREAMS[char.dream];
+  setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : 'An Uncharted Islet', seaName, `${char.name} begins their journey.${dream ? ` Dream: ${dream.icon || ''} ${dream.name}` : ''}`, 5), 400);
   game.emit('characterStart', { char, isNew: true, spawn });
   persist(game);
   return p;

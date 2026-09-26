@@ -217,6 +217,7 @@ export class Interactions {
         if (a.recoverAfter && a.state === 'knocked' && a.knockT > a.recoverAfter && a.alive) {
           a.state = 'idle'; a.hp = Math.round(a.d.maxHp * 0.5); a.provoked = false; a.aggroPlayer = !!a.def?.hostile;
           if (a.controller) { a.controller.target = null; a.controller.state = 'return'; }
+          if (game.bossTarget === a) game.bossTarget = null;
           game.fx.text(a.x, a.y - 2, a.def?.recoverLine || '...Hah. You win.', '#fff', 0.32);
         }
         const m = a.def?.marker;

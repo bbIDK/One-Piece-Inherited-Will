@@ -99,20 +99,29 @@ function drawLabels(game, r, cam, layer) {
     if (!zone) dx -= W * Math.round(dx / W);
     return [dx * cam.zoom + r.cw / 2, (y - cam.y) * cam.zoom + r.ch / 2];
   };
-  const add = (cls, text, x, y, extra = {}) => {
+  const placed = [];
+  const add = (cls, text, x, y, extra = {}, declutter = false) => {
     const [sx, sy] = toS(x, y);
     if (sx < -200 || sy < -50 || sx > r.cw + 200 || sy > r.ch + 50) return;
+    if (declutter) {
+      // skip labels that would overlap one already on the chart
+      const fs = parseFloat(extra.fontSize) || 13;
+      const w2 = text.length * fs * 0.28, h2 = fs * 0.62;
+      if (placed.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2)) return;
+      placed.push({ x: sx, y: sy, w: w2, h: h2 });
+    }
     layer.appendChild(h('div.wm-label' + cls, { style: { left: sx + 'px', top: sy + 'px', ...extra } }, text));
   };
   if (zone) add('.sea', w.name, w.width / 2, 14 / cam.zoom, { fontSize: '26px' });
   if (!zone) for (const s of SEA_LABELS) add('.sea', s.name, s.x, s.y, s.vertical ? { writingMode: 'vertical-rl', fontSize: Math.max(16, 26 * cam.zoom / 0.3) + 'px' } : { fontSize: Math.max(14, 30 * cam.zoom / 0.3) + 'px' });
   const discovered = new Set(c.discovered || []);
-  for (const isl of w.islands) {
+  const byImportance = w.islands.filter((i) => i.name).sort((a, b) => (b.def?.w || 0) * (b.def?.h || 0) - (a.def?.w || 0) * (a.def?.h || 0));
+  for (const isl of byImportance) {
     if (!isl.name) continue;
     if (isl.def?.hidden && !c.flags.laughTaleRevealed) continue;
     const known = zone || discovered.has(isl.id) || w.isExplored(isl.x, isl.y);
     if (!known) continue;
-    add('', isl.name, isl.x, isl.y + isl.radius * 0.2 + 6 / cam.zoom, { fontSize: Math.max(11, Math.min(20, 14 * Math.sqrt(cam.zoom / 0.3))) + 'px' });
+    add('', isl.name, isl.x, isl.y + isl.radius * 0.2 + 6 / cam.zoom, { fontSize: Math.max(11, Math.min(20, 14 * Math.sqrt(cam.zoom / 0.3))) + 'px' }, true);
   }
   if (!zone) {
     add('', '⛰ Reverse Mountain', RM_X, EQ - 40, { fontSize: '14px' });

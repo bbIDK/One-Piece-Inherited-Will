@@ -365,4 +365,38 @@ export const scenarios = {
       if (problems) throw new Error(`${problems} island(s) had problems`);
     },
   },
+  spawns: {
+    // every race is born where it should be
+    async run(page) {
+      await waitReady(page);
+      const races = await page.evaluate(() => Object.keys(window.OP.game && window.OP.RACES || {}));
+      void races;
+      const out = await page.evaluate(() => {
+        const res = [];
+        for (const race of ['human', 'fishman', 'mink', 'skypiean', 'longarm', 'longleg', 'buccaneer', 'three_eye', 'lunarian']) {
+          for (const seed of [1, 2, 3]) {
+            localStorage.clear();
+            window.OP.quickStart(race, { seed: seed * 7919 });
+            const c = window.OP.game.state.char;
+            res.push(`${race}#${seed}: ${c.spawn.name} (${c.spawn.sea})`);
+          }
+        }
+        return res;
+      });
+      for (const l of out) console.log(l);
+    },
+  },
+  worldmap: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.surface.fog.fill(255); g.renderer.terrain.updateFog(g.surface.fog); for (const i of g.surface.islands) if (i.name) g.state.char.discovered.push(i.id); });
+      await step(page, 0.3);
+      await page.keyboard.press('KeyM');
+      await frames(page, 4);
+      await page.evaluate(() => { const g = window.OP.game; if (g.renderMap) g.renderMap(); });
+      await frames(page, 2);
+      await snap('map');
+    },
+  },
 };
