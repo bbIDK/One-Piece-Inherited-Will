@@ -127,11 +127,14 @@ export const PARADISE_2 = [
       { kind: 'anchor', dx: 0.84, dy: 0.28 },
       { kind: 'sign', dx: -0.8, dy: 0.18, name: 'Rocky Cape', spot: 'rocky_cape' },
       { kind: 'lamp', dx: 0.52, dy: -0.02, light: true },
+      { kind: 'statue', dx: 0.67, dy: -0.04, name: "Tom's Workers", loreLabel: 'Read the plaque',
+        lore: '"TOM\'S WORKERS." Here a Fish-Man shipwright named Tom built the Oro Jackson for Gol D. Roger, and then the Puffing Tom for Water 7. The Government executed him for the first ship. The city runs on the second. His apprentices were Iceburg and a boy called Cutty Flam.' },
     ],
     spots: [
       { id: 'galley_la', dx: 0, dy: -0.6 },
       { id: 'scrap_island', dx: 0.86, dy: 0.46 },
       { id: 'aqua_laguna', dx: 0, dy: 1.25 },
+      { id: 'franky_house', dx: 0.12, dy: 0.5 },
     ],
     logNext: ['enies_lobby', 'thriller_bark'], logTime: 2, danger: 4, music: 'town',
     tagline: 'The City of Water — home of Galley-La, the finest shipwrights in the world.',
@@ -171,7 +174,7 @@ export const PARADISE_2 = [
       id: 'san_faldo_town', name: 'San Faldo', dx: 0.02, dy: 0.06, w: 46, h: 28, style: 'city', dockDir: 's', plaza: 'platform',
       buildings: [
         { role: 'hall', name: 'San Faldo Station', npc: 'p2_faldo_station' },
-        { role: 'shop', name: 'Carnival Mask Boutique' },
+        { role: 'shop', name: 'Carnival Mask Boutique', shop: 'p2_carnival_goods' },
         { role: 'weapons', name: 'San Faldo Ironworks' },
         { role: 'bar', name: 'Masquerade Tavern', npc: 'p2_faldo_barkeep' },
       ],
@@ -205,13 +208,18 @@ export const PARADISE_2 = [
       { kind: 'gate', dx: -0.6, dy: 0.02, name: 'Main Gate', spot: 'main_gate' },
       { kind: 'tower', dx: 0.74, dy: -0.16, name: 'Tower of Justice', spot: 'tower_of_justice' },
       { kind: 'gate', dx: 67, dy: 0, name: 'The Gates of Justice', spot: 'gates_of_justice' },
-      { kind: 'flagpole', dx: 0.66, dy: 0.22, name: 'World Government flag' },
+      { kind: 'flagpole', dx: 0.66, dy: 0.22, name: 'World Government flag', loreLabel: 'Look up at the World Government flag', loreEvent: 'p2_wg_flag',
+        lore: (c, g) => (c?.flags?.p2_flagBurned ? '(Only a charred pole remains where the flag of the World Government flew over the Judicial Island.)'
+          : ['courthouse', 'keys', 'lucci'].includes(g?.quests?.stageId('p2_enies_lobby')) ? '(You climb the pole and set the flag of the World Government on fire. Every soldier and agent on the Judicial Island watches it burn. There is no going back: this is a declaration of war.)'
+            : '(The flag of the World Government: a hundred and seventy nations bound together. Over the Judicial Island it never has to see the night.)') },
     ],
     spots: [
       { id: 'courtyard', dx: 0, dy: 0.22 },
       { id: 'bridge_of_hesitation', dx: 54, dy: 0 },
       { id: 'waterfall', dx: -0.1, dy: -0.62 },
       { id: 'whirlpools', dx: 82, dy: 22 },
+      { id: 'cp9_jabra', dx: -0.2, dy: -0.35 }, { id: 'cp9_kumadori', dx: 0.25, dy: -0.4 }, { id: 'cp9_fukurou', dx: -0.3, dy: 0.3 },
+      { id: 'cp9_kalifa', dx: 0.3, dy: 0.35 }, { id: 'cp9_kaku', dx: 0.7, dy: 0.12 },
     ],
     logNext: ['thriller_bark'], logTime: 1, danger: 5, music: 'battle',
     tagline: 'The Judicial Island, where the sun never sets — and no criminal has ever been found innocent.',
@@ -320,7 +328,7 @@ export const PARADISE_2 = [
       { kind: 'wheel', dx: 0, dy: -0.7, name: 'Sabaody Park Ferris Wheel', spot: 'sabaody_park' },
       hut(SB, -0.07, 0.6, { role: 'marine_base', name: 'Grove 66 Marine Base', fw: 8, fd: 5, style: 'marine', wall: '#fdfefe', roof: '#1b4f72' }),
       hut(SB, 0.1, 0.7, { role: 'inn', name: 'Grove 72 Hotel', fw: 6, fd: 4, style: 'town', wall: '#e1f5fe', roof: '#0277bd' }),
-      { kind: 'sign', dx: -0.4, dy: 0.2, name: 'Grove 1' }, { kind: 'sign', dx: -0.4, dy: -0.4, name: 'Grove 13' },
+      { kind: 'sign', dx: -0.4, dy: 0.2, name: 'Grove 1', lore: '"GROVES 1–29: LAWLESS ZONE." (Scrawled underneath:) Human Shops are legal here — the Government calls them "employment agencies". Marines do not patrol. Bounty hunters do.' }, { kind: 'sign', dx: -0.4, dy: -0.4, name: 'Grove 13' },
       { kind: 'sign', dx: 0.1, dy: -0.52, name: 'Grove 33 — Sabaody Park' }, { kind: 'sign', dx: 0.4, dy: -0.42, name: 'Grove 41' },
       { kind: 'sign', dx: 0.4, dy: 0.42, name: 'Grove 50' }, { kind: 'sign', dx: -0.12, dy: 0.52, name: 'Grove 66' },
       ...[[-0.62, 0.42], [-0.44, 0.16], [-0.62, -0.18], [-0.4, -0.36], [-0.1, -0.56], [0.12, -0.72], [0.4, -0.18], [0.62, -0.4], [0.62, 0.18], [0.42, 0.4], [-0.1, 0.72], [0.12, 0.54]]
@@ -367,8 +375,11 @@ export const PARADISE_2 = [
     ],
     docks: [{ near: 'marine_hq', dir: 'n', name: 'Marine HQ Docks' }, { near: 'marineford_town', dir: 'w', name: 'Marineford Town Pier' }],
     landmarks: [
-      { kind: 'platform', dx: 0, dy: 0.04, name: 'The Execution Platform', spot: 'execution_platform', fw: 3, fd: 2 },
-      { kind: 'ruins', dx: 0.26, dy: 0.12, name: "The great fissure left by Whitebeard's quake" },
+      { kind: 'platform', dx: 0, dy: 0.04, name: 'The Execution Platform', spot: 'execution_platform', fw: 3, fd: 2, loreLabel: 'Look up at the platform',
+        lore: (c, g) => (g?.quests?.isDone('p2_summit_war') ? '(The platform where Portgas D. Ace was to be executed. He died down on the plaza instead, shielding his little brother. Somebody still leaves flowers at its foot.)'
+          : '(The execution platform of Marine Headquarters. Soon Portgas D. Ace, son of the Pirate King, will kneel here in seastone chains — and Whitebeard will come for him.)') },
+      { kind: 'ruins', dx: 0.26, dy: 0.12, name: 'Cracked flagstones', loreLabel: 'Examine the cracks',
+        lore: (c, g) => (g?.quests?.isDone('p2_summit_war') ? '(The fissure Whitebeard\'s quake tore across Oris Plaza. The Marines never repaired it.)' : '(Old flagstones, cracked by a century of drills. Veterans say the plaza was built to survive an earthquake.)') },
       { kind: 'cannon', dx: -0.24, dy: 0.2 }, { kind: 'cannon', dx: 0.24, dy: 0.2 }, { kind: 'cannon', dx: -0.4, dy: 0.34 }, { kind: 'cannon', dx: 0.4, dy: 0.34 },
       { kind: 'gate', dx: 0.45, dy: 0.96, name: "Marineford's Gate of Justice", spot: 'mf_gate_of_justice' },
     ],
@@ -387,7 +398,8 @@ export const PARADISE_2 = [
     forestTrees: ['spooky', 'dead'],
     landmarks: [
       hut(KG, 0.38, -0.3, { role: 'palace', name: "Mihawk's Castle", npc: 'mihawk', fw: 10, fd: 6, hgt: 5, style: 'spooky', wall: '#4a4a5a', roof: '#1c2833' }),
-      { kind: 'ruins', dx: 0.05, dy: 0.2 }, { kind: 'ruins', dx: 0.25, dy: 0.3 }, { kind: 'ruins', dx: -0.1, dy: 0.35 },
+      { kind: 'ruins', dx: 0.05, dy: 0.2, name: 'Ruins of the Shikkearu Kingdom', lore: '(Burnt walls and rusted blades. The Shikkearu Kingdom tore itself apart in a war — and the baboons of the island watched every battle, and learned.)' },
+      { kind: 'ruins', dx: 0.25, dy: 0.3 }, { kind: 'ruins', dx: -0.1, dy: 0.35 },
       { kind: 'grave', dx: 0.35, dy: 0.12 }, { kind: 'bones', dx: -0.3, dy: 0.25 },
     ],
     spots: [{ id: 'humandrill_woods', dx: -0.45, dy: 0 }, { id: 'castle_gate', dx: 0.38, dy: -0.1 }, { id: 'shikkearu_ruins', dx: 0.12, dy: 0.26 }],
@@ -461,11 +473,11 @@ export const PARADISE_2 = [
     danger: 7, tagline: 'A Calm Belt island of savage beasts, north-west of Amazon Lily. A fine place to train for two years.',
   },
   {
-    id: 'amazon_lily', name: 'Amazon Lily', sea: 'calm_belt', x: 3560, y: 784, w: 130, h: 56, climate: 'jungle', rough: 0.18,
+    id: 'amazon_lily', name: 'Amazon Lily', sea: 'calm_belt', x: 3560, y: 784, w: 130, h: 56, climate: 'jungle', rough: 0.18, population: [['human', 100]],
     blobs: [[0, 0, 0.95, 0.9]],
     mountains: [{ name: 'Western cliffs', dx: -0.8, dy: -0.1, r: 0.1, h: 0.8 }, { name: 'Eastern cliffs', dx: 0.8, dy: -0.1, r: 0.1, h: 0.8 }],
     towns: [{
-      id: 'kuja_village', name: 'Kuja Village', dx: 0, dy: 0.02, w: 72, h: 30, style: 'tribal', dockDir: 's', plaza: 'statue',
+      id: 'kuja_village', name: 'Kuja Village', dx: 0, dy: 0.02, w: 72, h: 30, style: 'chinese', dockDir: 's', plaza: 'statue',
       buildings: [
         { role: 'palace', name: 'Kuja Castle', npc: 'p2_hancock', roofType: 'gable', wall: '#f8bbd0', roof: '#ad1457' },
         { role: 'dojo', name: 'Kuja Training Grounds', npc: 'p2_marguerite', trainer: 'kuja' },

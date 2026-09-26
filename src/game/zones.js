@@ -9,7 +9,7 @@ import { count } from './inventory.js';
 import { persist } from './lineage.js';
 import { findShore } from './interact.js';
 import { formatBerries } from '../core/math.js';
-import { npcDef } from './npcs.js';
+import { npcDef, allNpcDefs } from './npcs.js';
 
 export function installZones(game) {
   const cache = new Map();
@@ -221,7 +221,9 @@ export function installZones(game) {
           return { d: 0.5, label: e.label || 'Leave', run: () => {
             const c = game.state.char;
             const beatWarden = (c.bosses || []).some((b) => npcDef(b)?.island?.startsWith('id_'));
-            if (w.id === 'impel_down' && c.flags.imprisoned && !c.flags.impelGateOpen && !beatWarden) {
+            const noWardens = !allNpcDefs().some((d) => d.boss && d.island?.startsWith('id_'));
+            const riot = c.flags.imprisonedDay !== undefined && game.env.day - c.flags.imprisonedDay >= 2;
+            if (w.id === 'impel_down' && c.flags.imprisoned && !c.flags.impelGateOpen && !beatWarden && !noWardens && !riot) {
               game.log('The Main Gate is sealed with seastone bars. Someone in this prison holds the way out — defeat one of the wardens, or find another way.', '#ff8a80');
               return;
             }
@@ -282,6 +284,7 @@ export function installZones(game) {
     if (p.onShip && p.ship) { p.ship.captain = null; p.onShip = false; }
     p.mode = 'foot';
     c.flags.imprisoned = true;
+    c.flags.imprisonedDay = game.env.day;
     c.flags.impelDownVisits = (c.flags.impelDownVisits || 0) + 1;
     // your gear is confiscated until you break out
     c.confiscated = { weapons: c.equipped.weapons.slice(), berries: c.berries };
@@ -291,9 +294,19 @@ export function installZones(game) {
     game.ui.banner('IMPEL DOWN', 'Level 1 — Crimson Hell', `${by ? by.name + ' handed you over to the Great Prison. ' : ''}Your weapons and berries are confiscated. Find a way out through the Main Gate.`, 7);
     persist(game);
   };
+  game.on('newDay', () => {
+    const c = game.state?.char;
+    if (!c?.flags.imprisoned || game.world.id !== 'impel_down') return;
+    if (game.env.day - (c.flags.imprisonedDay ?? game.env.day) >= 2 && !c.flags.impelRiot) {
+      c.flags.impelRiot = true;
+      game.ui.banner('RIOT!', 'Impel Down', 'The prisoners of Level 1 have overpowered the guards. The Main Gate stands open — go, now!', 6);
+    }
+  });
   game.on('leaveZone', (id) => {
     const c = game.state?.char;
     if (id !== 'impel_down' || !c?.flags.imprisoned) return;
+    c.flags.impelRiot = false;
+    delete c.flags.imprisonedDay;
     c.flags.imprisoned = false;
     c.flags.escapedImpelDown = (c.flags.escapedImpelDown || 0) + 1;
     if (c.confiscated) {

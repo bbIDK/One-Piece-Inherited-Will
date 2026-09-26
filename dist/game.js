@@ -40952,7 +40952,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             return { d: 0.5, label: e.label || "Leave", run: () => {
               const c = game.state.char;
               const beatWarden = (c.bosses || []).some((b) => npcDef(b)?.island?.startsWith("id_"));
-              if (w.id === "impel_down" && c.flags.imprisoned && !c.flags.impelGateOpen && !beatWarden) {
+              const noWardens = !allNpcDefs().some((d) => d.boss && d.island?.startsWith("id_"));
+              const riot = c.flags.imprisonedDay !== void 0 && game.env.day - c.flags.imprisonedDay >= 2;
+              if (w.id === "impel_down" && c.flags.imprisoned && !c.flags.impelGateOpen && !beatWarden && !noWardens && !riot) {
                 game.log("The Main Gate is sealed with seastone bars. Someone in this prison holds the way out \u2014 defeat one of the wardens, or find another way.", "#ff8a80");
                 return;
               }
@@ -41016,6 +41018,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       p.mode = "foot";
       c.flags.imprisoned = true;
+      c.flags.imprisonedDay = game.env.day;
       c.flags.impelDownVisits = (c.flags.impelDownVisits || 0) + 1;
       c.confiscated = { weapons: c.equipped.weapons.slice(), berries: c.berries };
       c.equipped.weapons = [];
@@ -41024,9 +41027,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       game.ui.banner("IMPEL DOWN", "Level 1 \u2014 Crimson Hell", `${by ? by.name + " handed you over to the Great Prison. " : ""}Your weapons and berries are confiscated. Find a way out through the Main Gate.`, 7);
       persist(game);
     };
+    game.on("newDay", () => {
+      const c = game.state?.char;
+      if (!c?.flags.imprisoned || game.world.id !== "impel_down") return;
+      if (game.env.day - (c.flags.imprisonedDay ?? game.env.day) >= 2 && !c.flags.impelRiot) {
+        c.flags.impelRiot = true;
+        game.ui.banner("RIOT!", "Impel Down", "The prisoners of Level 1 have overpowered the guards. The Main Gate stands open \u2014 go, now!", 6);
+      }
+    });
     game.on("leaveZone", (id) => {
       const c = game.state?.char;
       if (id !== "impel_down" || !c?.flags.imprisoned) return;
+      c.flags.impelRiot = false;
+      delete c.flags.imprisonedDay;
       c.flags.imprisoned = false;
       c.flags.escapedImpelDown = (c.flags.escapedImpelDown || 0) + 1;
       if (c.confiscated) {
