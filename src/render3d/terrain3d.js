@@ -39,6 +39,14 @@ export class TerrainManager {
     this.hf = null;
     this.live = new Map(); // key → { mesh: Object3D, lod, x0, y0 }
     this.queue = [];
+    this.nearR = NEAR_R;
+    this.farR = FAR_R;
+  }
+
+  /** Fast graphics draws less terrain detail and a nearer horizon. */
+  setDetail(q) {
+    this.nearR = q === 'low' ? 4 : NEAR_R;
+    this.farR = q === 'low' ? 11 : FAR_R;
   }
 
   setWorld(world) {
@@ -83,18 +91,19 @@ export class TerrainManager {
     if (!w) return;
     const ccx = Math.floor(w.wx(ox) / CHUNK), ccy = Math.floor(oy / CHUNK);
     const want = new Map();
-    for (let j = -FAR_R; j <= FAR_R; j++) {
+    const NR = this.nearR, FR = this.farR;
+    for (let j = -FR; j <= FR; j++) {
       const cy = ccy + j;
       if (cy < 0 || cy >= this.ch) continue;
-      for (let i = -FAR_R; i <= FAR_R; i++) {
+      for (let i = -FR; i <= FR; i++) {
         const d2 = i * i + j * j;
-        if (d2 > FAR_R * FAR_R) continue;
+        if (d2 > FR * FR) continue;
         let cx = ccx + i;
         if (w.wrap) cx = ((cx % this.cw) + this.cw) % this.cw;
         else if (cx < 0 || cx >= this.cw) continue;
         const land = this.hasLand[cy * this.cw + cx];
         if (!land) continue;
-        const lod = d2 <= NEAR_R * NEAR_R ? 1 : 4;
+        const lod = d2 <= NR * NR ? 1 : 4;
         if (lod === 4 && land === 1) continue; // far shallows are invisible anyway
         want.set(cy * 100000 + cx, { cx, cy, lod, d2 });
       }

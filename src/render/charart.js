@@ -20,12 +20,15 @@
 // style/view and reused by every character on screen. Light comes from the
 // top-left (also for mirrored profiles); shading is one flat shadow tone
 // (the fill is repeated nudged toward the light and clipped to the shape).
+// At in-game sizes whole heads are also cached as small bitmaps (see
+// cachedHead), so a crowd of NPCs costs one drawImage per head.
 //
 // Layers inside drawHead (front view):
-//   hat tails → animal ears, fins, antennae → BACK hair (the mass behind the
-//   head, long hair behind the shoulders) → ears → face → eyes, nose, mouth →
-//   FRONT hair (fringe, side locks, sideburns, knots) → brows (over the
-//   fringe, anime style) → third eye, long nose, eyewear → hat.
+//   hat tails → fins → BACK hair (the mass behind the head, long hair behind
+//   the shoulders) → ears → face (+ the fringe's shadow) → eyes, nose, mouth →
+//   FRONT hair (fringe, side locks, sideburns, knots) → animal ears and
+//   antennae growing through it → brows (over the fringe, anime style) →
+//   third eye, long nose, eyewear → hat.
 // A hat that covers the head clips both hair layers at its band, so the
 // fringe peeks out under the brim and tall hair never pokes through.
 //
@@ -74,13 +77,13 @@ function hairPal(col) {
   PALS.set(key, p);
   return p;
 }
-/** Tones for a hat colour: dk (shadow), dd (deeper), lt (lighter), band. */
+/** Tones for a hat colour: dk (shadow), mid, lt / lt2 (lighter), band. */
 function hatPal(col) {
   const key = 'k' + col;
   let p = PALS.get(key);
   if (p) return p;
   const h = hex(col, '#888888');
-  p = { base: h, dk: mixHex(h, '#000000', 0.32), dd: mixHex(h, '#000000', 0.5), lt: mixHex(h, '#ffffff', 0.22), lt2: mixHex(h, '#ffffff', 0.55),
+  p = { base: h, dk: mixHex(h, '#000000', 0.32), lt: mixHex(h, '#ffffff', 0.22), lt2: mixHex(h, '#ffffff', 0.55),
     mid: mixHex(h, '#000000', 0.12), band: mixHex(h, '#1a1010', 0.6) };
   PALS.set(key, p);
   return p;
@@ -199,10 +202,12 @@ const EAR_S = { p: 'M0.02 0.06 C-0.12 -0.02 -0.27 0.1 -0.23 0.27 C-0.2 0.4 -0.06
 // ------------------------------------------------------------ hairstyles
 // Each style gives, per view (F front, S profile facing +x, B back), a list
 // of BACK parts (drawn before the face) and FRONT parts (after it). A part:
-//   d: path data; tone: 'base' | 'shadow' | 'stubble' | 'tie';
+//   d: path data; tone: 'base' | 'shadow' (hair behind the head) | 'stubble' | 'tie' | 'cord';
 //   shine: [cx, cy, r, a0, a1, n] highlight band (upper-left of the part);
-//   strands: open path data for strand lines; sway: [px, py, amp, speed, runLift];
-//   noInk: skip the outline (edge: stroke this open path instead).
+//   strands: open path data for strand lines; shade: an extra shadow shape;
+//   sway: [px, py, amp, speed, runLift]; at: [x, y, rotation] placement;
+//   fringe: its shadow falls on the forehead; minor: flat below the top level
+//   of detail; noInk: no outline.
 // meta: top (hair top y in F, for crowns/halos), w (half-width at the band
 // line, for headbands/goggles), hatK (hats grow to fit big hair).
 const TIE = '#c8372d';
@@ -251,7 +256,7 @@ const NAPE_B = [[0.92, 0.46], [0.8, 0.3], [0.64, 0.6], [0.48, 0.4], [0.3, 0.64],
 const SHINE_F = [0, -0.06, 0.8, 200, 262, 4];
 const SHINE_S = [-0.1, -0.12, 0.8, 204, 266, 4];
 const SHINE_B = [0, -0.06, 0.8, 202, 262, 4];
-const CROWN_SWIRL = 'M-0.5 -0.86 Q-0.2 -0.7 -0.02 -0.44';
+const CROWN_STRAND = 'M-0.5 -0.86 Q-0.2 -0.7 -0.02 -0.44';
 /** Slicked skull cap (buzz / topknot / mohawk sides): hairline at y=hl in front. */
 function slickF(V, hl) {
   return pb().M(-1.0, 0.12).q(-V, -0.06, -0.04).arc(0, -0.06, V, V - 0.02, 180, 360).q(1.0, 0.12, -0.04).L(0.94, 0.02)
@@ -276,7 +281,7 @@ const backShortF = pb().M(-1.1, -0.2).arc(0, -0.04, 1.12, 1.1, 188, 352).q(1.12,
 STYLES.short = {
   F: { back: [{ d: backShortF, tone: 'shadow' }], front: [{ d: capF(1.13, 0.3, FRINGE_SHORT), shine: SHINE_F, strands: STRANDS_SHORT, fringe: true }] },
   S: { back: [], front: [{ d: capS(backRound, NAPE_S), shine: SHINE_S, strands: 'M0.74 -0.46 Q0.5 -0.8 0.1 -0.96 M0.5 -0.42 Q0.2 -0.66 -0.2 -0.8 M-0.6 0.34 Q-0.8 0 -0.84 -0.4 M-0.84 0.34 Q-1.0 0.0 -1.0 -0.3', fringe: true }] },
-  B: { back: [], front: [{ d: capB(1.13, NAPE_B), shine: SHINE_B, strands: CROWN_SWIRL + ' M0.64 0.6 Q0.7 0.2 0.8 -0.1 M0.3 0.64 Q0.3 0.2 0.4 -0.2 M-0.06 0.66 Q-0.1 0.3 -0.1 0.0 M-0.42 0.62 Q-0.5 0.2 -0.6 -0.1' }] },
+  B: { back: [], front: [{ d: capB(1.13, NAPE_B), shine: SHINE_B, strands: CROWN_STRAND + ' M0.64 0.6 Q0.7 0.2 0.8 -0.1 M0.3 0.64 Q0.3 0.2 0.4 -0.2 M-0.06 0.66 Q-0.1 0.3 -0.1 0.0 M-0.42 0.62 Q-0.5 0.2 -0.6 -0.1' }] },
 };
 
 // spiky -------------------------------------------------------------------
@@ -302,7 +307,7 @@ const capSpikyB = (() => {
 STYLES.spiky = {
   F: { back: [{ d: backSpikyF, tone: 'shadow' }], front: [{ d: capSpikyF, shine: [0, -0.06, 0.82, 200, 262, 4], strands: 'M0.5 -0.6 Q0.5 -0.9 0.56 -1.1 M0.12 -0.62 Q0.1 -0.95 0.02 -1.2 M-0.3 -0.62 Q-0.34 -0.9 -0.5 -1.08 M-0.7 -0.56 Q-0.8 -0.7 -1.0 -0.8', fringe: true }] },
   S: { back: [], front: [{ d: capSpikyS, shine: SHINE_S, strands: 'M0.76 -0.5 Q0.5 -0.84 0.18 -1.0 M0.5 -0.46 Q0.2 -0.7 -0.3 -0.86 M-0.2 -0.6 Q-0.6 -0.66 -1.0 -0.5 M-0.64 0.3 Q-0.8 0 -0.9 -0.2', fringe: true }] },
-  B: { back: [], front: [{ d: capSpikyB, shine: SHINE_B, strands: CROWN_SWIRL + ' M0.48 0.7 Q0.5 0.3 0.6 0.0 M0.12 0.72 Q0.1 0.3 0.12 0.0 M-0.24 0.7 Q-0.3 0.3 -0.4 0.0 M-0.6 0.66 Q-0.7 0.3 -0.8 0.1' }] },
+  B: { back: [], front: [{ d: capSpikyB, shine: SHINE_B, strands: CROWN_STRAND + ' M0.48 0.7 Q0.5 0.3 0.6 0.0 M0.12 0.72 Q0.1 0.3 0.12 0.0 M-0.24 0.7 Q-0.3 0.3 -0.4 0.0 M-0.6 0.66 Q-0.7 0.3 -0.8 0.1' }] },
 };
 
 // long --------------------------------------------------------------------
@@ -329,7 +334,7 @@ STYLES.long = {
   F: { back: [{ d: backLongF, tone: 'shadow', strands: 'M1.1 0.3 Q1.16 0.8 1.1 1.3 M-1.1 0.3 Q-1.16 0.8 -1.1 1.3', sway: [0, -0.3, 0.018, 1.6, 0] }],
     front: [{ d: capLongF, shine: [0, -0.06, 0.82, 198, 262, 4], strands: 'M0.48 -0.52 Q0.44 -0.8 0.3 -0.96 M0.13 -0.54 Q0.1 -0.84 0.0 -1.0 M-0.24 -0.54 Q-0.26 -0.8 -0.36 -0.94 M1.06 0.2 Q1.1 0.7 1.0 1.2 M-1.06 0.2 Q-1.1 0.7 -1.0 1.2', fringe: true }] },
   S: { back: [], front: [{ d: capLongS, shine: SHINE_S, strands: 'M0.74 -0.46 Q0.5 -0.8 0.1 -0.96 M-0.6 -0.2 Q-0.8 0.6 -0.72 1.3 M-0.3 0.1 Q-0.5 0.7 -0.5 1.2 M0.1 0.2 Q-0.1 0.6 -0.2 0.9', fringe: true }] },
-  B: { back: [], front: [{ d: capLongB, shine: SHINE_B, strands: CROWN_SWIRL + ' M0.8 0.2 Q0.86 0.8 0.72 1.36 M0.36 0.1 Q0.4 0.8 0.36 1.4 M-0.1 0.1 Q-0.1 0.8 0 1.4 M-0.5 0.2 Q-0.56 0.8 -0.54 1.4 M-0.9 0.2 Q-0.96 0.8 -0.9 1.4' }] },
+  B: { back: [], front: [{ d: capLongB, shine: SHINE_B, strands: CROWN_STRAND + ' M0.8 0.2 Q0.86 0.8 0.72 1.36 M0.36 0.1 Q0.4 0.8 0.36 1.4 M-0.1 0.1 Q-0.1 0.8 0 1.4 M-0.5 0.2 Q-0.56 0.8 -0.54 1.4 M-0.9 0.2 Q-0.96 0.8 -0.9 1.4' }] },
 };
 
 // ponytail ----------------------------------------------------------------
@@ -567,7 +572,7 @@ function drawParts(g, parts, C, H) {
     else {
       g.fillStyle = shadow || base; g.fill(p);
       g.save(); g.clip(p);
-      if (shadow) { g.save(); g.translate(-(pt.off ?? 0.13) * C.sx, -(pt.off ?? 0.13)); g.fillStyle = base; g.fill(p); g.restore(); }
+      if (shadow) { const o = pt.off ?? 0.13; g.translate(-o * C.sx, -o); g.fillStyle = base; g.fill(p); g.translate(o * C.sx, o); }
       if (pt.shade) { g.fillStyle = pal.shadow; g.fill(path(pt.shade)); }
       if (pt.shine && pt.tone !== 'shadow') { g.fillStyle = pal.light; g.fill(shineOf(pt, C.sx)); }
       if (pt.strands && C.lod === 2) { g.lineWidth = C.lwIn; g.strokeStyle = pt.tone === 'shadow' ? pal.line : pal.shadow; g.stroke(pt.sp || (pt.sp = path(pt.strands))); }
@@ -607,7 +612,7 @@ function part(g, C, d, base, shadow, off = 0.1, w, minor) {
   ink(g, p, C, w);
   return p;
 }
-function line(g, C, d, col, w) { g.lineWidth = (w || LW_IN) / 0.3 * (0.3 / C.r0); g.strokeStyle = col; g.stroke(pp(d)); }
+function line(g, C, d, col, w) { g.lineWidth = (w || LW_IN) / C.r0; g.strokeStyle = col; g.stroke(pp(d)); }
 
 // Colours matched to the item icons (src/render/icons.js).
 const STRAW = '#f0cd62', STRAW_D = '#c9a23f', BAND_RED = '#c8372d', GOLD = '#e0b24a';
@@ -1066,36 +1071,53 @@ function sharpTeeth(kind) {
 }
 
 // --------------------------------------------------------- race features
+// Mink ears sit on top of the hair: filled shapes, outlined only along the rim
+// (no line across the base, which blends into the fur-coloured hair).
 const MINK_EARS = {
-  pointy: ['M-0.9 -0.44 L-1.02 -1.34 Q-0.64 -1.12 -0.28 -0.9 Z', 'M-0.82 -0.6 L-0.9 -1.14 Q-0.66 -1.02 -0.46 -0.86 Z'],
-  round: [pb().ell(-0.74, -0.86, 0.32, 0.3).s, pb().ell(-0.74, -0.88, 0.18, 0.17).s],
-  long: ['M-0.62 -0.8 C-0.8 -1.4 -0.78 -2.0 -0.52 -2.1 C-0.28 -2.0 -0.2 -1.4 -0.3 -0.84 Z', 'M-0.56 -0.96 C-0.66 -1.4 -0.64 -1.86 -0.52 -1.94 C-0.4 -1.86 -0.36 -1.4 -0.4 -0.96 Z'],
+  pointy: { o: 'M-0.96 -0.5 L-1.02 -1.34 Q-0.64 -1.12 -0.24 -0.96 Z', rim: 'M-0.96 -0.5 L-1.02 -1.34 Q-0.64 -1.12 -0.24 -0.96', i: 'M-0.84 -0.64 L-0.9 -1.14 Q-0.66 -1.02 -0.46 -0.9 Z' },
+  round: { o: pb().ell(-0.74, -0.86, 0.32, 0.3).s, rim: (() => { const a = at(-0.74, -0.86, 0.32, 125); return pb().M(-0.74 + (a[0] + 0.74), -0.86 + (a[1] + 0.86) * 0.3 / 0.32).arc(-0.74, -0.86, 0.32, 0.3, 125, 395).s; })(), i: pb().ell(-0.74, -0.88, 0.18, 0.17).s },
+  long: { o: 'M-0.64 -0.8 C-0.8 -1.4 -0.78 -2.0 -0.52 -2.1 C-0.28 -2.0 -0.2 -1.4 -0.3 -0.84 Z', rim: 'M-0.64 -0.8 C-0.8 -1.4 -0.78 -2.0 -0.52 -2.1 C-0.28 -2.0 -0.2 -1.4 -0.3 -0.84', i: 'M-0.56 -0.96 C-0.66 -1.4 -0.64 -1.86 -0.52 -1.94 C-0.4 -1.86 -0.36 -1.4 -0.4 -0.96 Z' },
 };
-function minkEars(g, C, v, look, furCol) {
+/** Where head-top features (animal ears, antennae) sit: lifted and spread on voluminous hair. */
+function topLift(style) {
+  if (style !== 'afro' && style !== 'curly' && style !== 'spiky' && style !== 'nika') return [1, 0];
+  const m = META[style];
+  return [m.w / 1.15, Math.min(0, (m.top + 1.16) * 0.55)];
+}
+function minkEars(g, C, v, look, furCol, style) {
   const fp = skinPal(furCol);
   const panda = look.kind === 'Panda';
   const col = panda ? '#2b2b2b' : furCol, inner = panda ? '#2b2b2b' : fp.inner;
-  const [o, i] = MINK_EARS[look.ears] || MINK_EARS.pointy;
+  const E = MINK_EARS[look.ears] || MINK_EARS.pointy;
+  const [kx, dy] = topLift(style);
   const one = (dx, flipX, far) => {
-    g.save(); g.translate(dx, 0); if (flipX) g.scale(-1, 1);
-    part(g, C, o, far ? fp.shadow : col, far ? fp.deep : fp.shadow, 0.1, 0, true);
-    if (v !== 'B' && C.lod) { g.fillStyle = far ? fp.innerDk : inner; g.fill(pp(i)); }
+    g.save(); g.translate(dx, dy); g.scale(flipX ? -kx : kx, 1);
+    const p = pp(E.o);
+    cel(g, p, far ? fp.shadow : col, C.lod < 2 ? null : far ? fp.deep : fp.shadow, C, 0.1);
+    if (v !== 'B' && C.lod) { g.fillStyle = far ? fp.innerDk : inner; g.fill(pp(E.i)); }
+    ink(g, pp(E.rim), C);
     g.restore();
   };
   if (v === 'S') { one(0.62, false, true); one(0.9, false, false); }
   else { one(0, false, false); one(0, true, false); }
 }
 const ANTENNA = { S: 'M0.2 -0.9 Q0.3 -1.3 0.5 -1.44 M-0.06 -0.94 Q0.0 -1.34 0.16 -1.5', F: 'M-0.24 -0.92 Q-0.34 -1.3 -0.46 -1.46 M0.24 -0.92 Q0.34 -1.3 0.46 -1.46' };
-function antennae(g, C, v, skinP) {
+function antennae(g, C, v, skinP, style) {
+  const [kx, dy] = topLift(style);
+  g.save(); g.translate(0, dy); g.scale(kx, 1);
   const d = pp(v === 'S' ? ANTENNA.S : ANTENNA.F);
   g.lineWidth = 0.13; g.strokeStyle = OUTLINE; g.stroke(d);
   g.lineWidth = 0.06; g.strokeStyle = skinP.shadow; g.stroke(d);
   part(g, C, v === 'S' ? EL(0.5, -1.44, 0.09, 0.09, 0.16, -1.5, 0.09, 0.09) : EL(-0.46, -1.46, 0.09, 0.09, 0.46, -1.46, 0.09, 0.09), skinP.base, skinP.shadow, 0.04, 0, true);
+  g.restore();
 }
 const FIN = { S: 'M0.3 -0.92 C0.1 -1.36 -0.3 -1.62 -0.7 -1.8 C-0.62 -1.36 -0.7 -1.02 -0.92 -0.72 Z', F: 'M-0.18 -0.88 Q-0.12 -1.4 0.04 -1.76 Q0.22 -1.36 0.18 -0.88 Z', rays: 'M0.0 -0.94 Q-0.3 -1.3 -0.56 -1.6 M-0.4 -0.84 Q-0.56 -1.2 -0.66 -1.4' };
-function fin(g, C, v, skinP) {
+function fin(g, C, v, skinP, style) {
+  const dy = topLift(style)[1];
+  if (dy) { g.save(); g.translate(0, dy); }
   const p = part(g, C, v === 'S' ? FIN.S : FIN.F, skinP.shadow, skinP.deep, 0.08, 0, true);
   if (C.lod === 2 && v === 'S') { g.save(); g.clip(p); line(g, C, FIN.rays, skinP.line); g.restore(); }
+  if (dy) g.restore();
 }
 const GILLS = { S: 'M0.3 0.5 Q0.24 0.6 0.3 0.7 M0.2 0.52 Q0.14 0.62 0.2 0.74 M0.1 0.56 Q0.04 0.66 0.1 0.78',
   F: 'M0.74 0.44 Q0.68 0.52 0.72 0.6 M0.68 0.54 Q0.62 0.62 0.66 0.7 M-0.74 0.44 Q-0.68 0.52 -0.72 0.6 M-0.68 0.54 Q-0.62 0.62 -0.66 0.7' };
@@ -1303,9 +1325,7 @@ function renderHead(g, look, v, pose, st, C) {
   // 1. behind the head: hat tails, animal ears, fins, antennae, back hair
   if (kind) hatLayer(g, C, kind, v, HT, true);
   withClip(g, clip, () => {
-    if (look.ears) minkEars(g, C, v, look, white ? '#fafafa' : hex(look.fur || look.hairColor, skinCol));
-    if (look.race === 'skypiean' && !ghost) antennae(g, C, v, skinP);
-    if (look.fin && look.kind !== 'Octopus') fin(g, C, v, skinP);
+    if (look.fin && look.kind !== 'Octopus') fin(g, C, v, skinP, style);
     if (style === 'nika') drawParts(g, [{ d: new Path2D(nikaFlames(v, H.t)), off: 0.08 }], C, H);
     drawParts(g, S.back, C, H);
   });
@@ -1341,8 +1361,12 @@ function renderHead(g, look, v, pose, st, C) {
     if (!look.nose && look.kind !== 'Saw Shark') noseF(g, C, look, skinP, v);
     drawMouth(g, C, v, look, X);
   }
-  // 5. front hair
-  withClip(g, clip, () => drawParts(g, S.front, C, H));
+  // 5. front hair, then what grows through it (animal ears, antennae)
+  withClip(g, clip, () => {
+    drawParts(g, S.front, C, H);
+    if (look.ears) minkEars(g, C, v, look, white ? '#fafafa' : hex(look.fur || look.hairColor, skinCol), style);
+    if (look.race === 'skypiean' && !ghost) antennae(g, C, v, skinP, style);
+  });
   // 6. over the fringe: brows, third eye, long noses, eyewear
   if (v !== 'B' && !ghost) {
     drawBrows(g, C, v, X, H.pal);

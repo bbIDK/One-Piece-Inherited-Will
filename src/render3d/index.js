@@ -101,6 +101,7 @@ export class Renderer3D {
     this.quality = q;
     this.renderer.shadowMap.enabled = q !== 'low';
     this.sky.sun.castShadow = q !== 'low';
+    this.terrain.setDetail?.(q);
     this.resize();
   }
 

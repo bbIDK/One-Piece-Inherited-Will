@@ -2,7 +2,7 @@
 // real character renderer (src/render/character.js) so heads are seen on
 // their bodies, exactly as the game draws them.
 //
-//   node tools/charart-sheet.mjs [--only=hair,races,hats,matrix,world,closeup,cache,bench] [--dsf=1]
+//   node tools/charart-sheet.mjs [--only=hair,races,hats,matrix,world,closeup,heads,eyes,cache,api,bench] [--dsf=1]
 //
 // Bundles a small entry script with esbuild, writes shots/charart-sheet.{html,js}
 // and screenshots every section into shots/charart-<section>.png:
@@ -10,10 +10,15 @@
 //   hair-S    the same, small (~60 px tall), on grass and on parchment
 //   races-L*  / races-S   race heads (fish-men, minks, three-eyes, lunarians…) and face flags
 //   hats-L*   / hats-S    every hat in every facing
-//   matrix-*  every hat on every hairstyle (front and profile)
+//   matrix-*  every hat on every hairstyle (front, profile, back)
 //   world     random townsfolk at the in-game zoom
-//   closeup   a few heads very large, for detail
-// Nothing here is part of the game bundle.
+//   closeup   a few heads very large (plus the knocked-out face via drawHead)
+//   heads*    every hairstyle in all four views, head and shoulders
+//   eyes      the eye shapes (look.eyeShape) and expressions, big
+//   cache     the same townsfolk drawn live and from the head bitmap cache
+//   api       drawHair / drawHat called on their own, every style/hat/view
+//   bench     (only with --only=bench) ms per head and per character at 46 px/tile
+// Exits non-zero if any drawing threw. Nothing here is part of the game bundle.
 import * as esbuild from 'esbuild';
 import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname, normalize } from 'node:path';
@@ -24,11 +29,11 @@ const outDir = join(root, 'shots');
 
 const ENTRY = `
 import { drawCharacter, STAND } from './src/render/character.js';
-import { drawHead } from './src/render/charart.js';
+import { drawHead, drawHair, drawHat } from './src/render/charart.js';
 import { makeLook } from './src/data/races.js';
 
 const q = new URLSearchParams(location.search);
-const only = (q.get('only') || 'hair,races,hats,matrix,world,closeup,cache').split(',');
+const only = (q.get('only') || 'hair,races,hats,matrix,world,closeup,heads,eyes,cache,api').split(',');
 const sections = [];
 const errors = [];
 
@@ -200,6 +205,16 @@ if (only.includes('closeup')) {
     }), ['ko (drawHead)', ko]], 250);
   }
 }
+if (only.includes('api')) {
+  // the exported pieces on their own: drawHair (both layers over a plain circle face, as the knocked pose uses it) and drawHat
+  const sec = section('api', 'drawHair / drawHat standalone, every style and hat in every view');
+  const cell = (fn) => { const c = document.createElement('canvas'); c.width = 60; c.height = 64; const g = c.getContext('2d'); g.fillStyle = PARCH; g.fillRect(0, 0, 60, 64);
+    g.setTransform(60, 0, 0, 60, 30, 40); try { fn(g); } catch (e) { errors.push(String(e && e.stack || e)); } return c; };
+  for (const d of ['down', 'right', 'up']) {
+    row(sec, 'hair ' + d, HAIRS.map((h, i) => [h, cell((g) => { g.beginPath(); g.arc(0, 0, 0.3, 0, Math.PI * 2); g.fillStyle = '#f1c9a0'; g.fill(); drawHair(g, h, HAIR_COLS[i], 0, 0.3, d, h === 'spiky' ? 1.2 : null); })]), 60);
+    row(sec, 'hat ' + d, HATS.map((hv) => { const [hat, hc] = hv.split(':'); return [hat, cell((g) => drawHat(g, hat, 0, 0.3, d, { hair: 'short', hatColor: hc || undefined, seed: 4 }))]; }), 60);
+  }
+}
 if (only.includes('heads')) {
   // every hairstyle in all four views, head and shoulders at 190 px/tile (drawn live: above the cache size)
   const rows = HAIRS.slice(0, 12).map((h, i) => [h, baseLook({ hair: h, hairColor: HAIR_COLS[i % HAIR_COLS.length], seedIn: 11 + i })]);
@@ -209,6 +224,15 @@ if (only.includes('heads')) {
     for (const [label, look] of rows.slice(i, i + 5)) {
       row(sec, label, ['down', 'left', 'right', 'up'].map((d) => [d, draw(look, { d, foot: -0.72 }, 190, 180, 200, (i + k) % 2 ? PARCH : GRASS)]), 180);
     }
+  }
+}
+if (only.includes('eyes')) {
+  // eye shapes (look.eyeShape) and expressions, big
+  const sec = section('eyes', 'Eye shapes (look.eyeShape) at 260 px/tile');
+  for (const shape of ['round', 'sharp', 'soft', 'fish']) {
+    const look = baseLook({ hair: 'short', hairColor: '#3b2a1a', eyeShape: shape, eyeColor: shape === 'fish' ? '#1e3799' : '#27ae60', seedIn: 21 });
+    row(sec, shape, [['down', {}], ['right', {}], ['fierce', { face: 'fierce' }], ['shout', { face: 'shout' }], ['side fierce', { d: 'right', face: 'fierce' }], ['blink', { blink: true }]].map(([lab, o]) =>
+      [lab, draw(look, { d: o.d || (lab === 'right' ? 'right' : 'down'), ...o, foot: -0.84 }, 260, 200, 200, PARCH)]), 200);
   }
 }
 if (only.includes('cache')) {

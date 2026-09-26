@@ -1,5 +1,6 @@
 // Context-sensitive "E" interactions.
 import { WALKABLE } from '../world/tiles.js';
+import { angleDiff } from '../core/math.js';
 
 export function findInteraction(game, p) {
   const w = game.world;
@@ -22,44 +23,52 @@ export function findInteraction(game, p) {
   for (const s of game.ships) {
     if (s.sunk || s.owner !== 'player') continue;
     const d = w.distance(p.x, p.y, s.x, s.y);
-    if (d < s.def.length * 0.55 + 1.6) cands.push({ d: d - 1, label: `Board the ${s.name}`, run: () => board(game, p, s) });
+    if (d < s.def.length * 0.55 + 1.6) cands.push({ d: d - 1, x: s.x, y: s.y, label: `Board the ${s.name}`, run: () => board(game, p, s) });
   }
   for (const a of game.actorsNear(p.x, p.y, 2.4)) {
     if (a === p || a.state !== 'idle' || !a.talk) continue;
     if (a.provoked && a.hostileNow) continue;
     const d = w.distance(p.x, p.y, a.x, a.y);
-    cands.push({ d, label: `Talk to ${a.name}`, run: () => game.emit('talk', a) });
+    cands.push({ d, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit('talk', a) });
   }
   for (const a of game.actorsNear(p.x, p.y, 2.2)) {
     if (a === p || a.state !== 'knocked' || !a.canCarry) continue;
-    cands.push({ d: w.distance(p.x, p.y, a.x, a.y) + 0.5, label: a.carryLabel || `Carry ${a.name}`, run: () => game.emit('carry', a) });
+    cands.push({ d: w.distance(p.x, p.y, a.x, a.y) + 0.5, x: a.x, y: a.y, label: a.carryLabel || `Carry ${a.name}`, run: () => game.emit('carry', a) });
   }
   if (w.objects) {
     for (const o of w.objects.near(p.x, p.y, 3.2)) {
       if (o.kind === 'building' && o.role && o.role !== 'house' && o.door) {
         const d = w.distance(p.x, p.y, o.door.x, o.door.y + 0.3);
-        if (d < 1.6) cands.push({ d, label: o.name ? `Enter ${o.name}` : 'Enter', run: () => game.emit('enterBuilding', o) });
+        if (d < 1.6) cands.push({ d, x: o.door.x, y: o.door.y, label: o.name ? `Enter ${o.name}` : 'Enter', run: () => game.emit('enterBuilding', o) });
       } else if (o.kind === 'building' && o.role === 'house' && o.door) {
         const d = w.distance(p.x, p.y, o.door.x, o.door.y + 0.3);
-        if (d < 1.2) cands.push({ d: d + 0.5, label: 'Knock on the door', run: () => game.emit('knockDoor', o) });
+        if (d < 1.2) cands.push({ d: d + 0.5, x: o.door.x, y: o.door.y, label: 'Knock on the door', run: () => game.emit('knockDoor', o) });
       } else if (o.kind === 'chest' && !o.opened) {
         const d = w.distance(p.x, p.y, o.x, o.y);
-        if (d < 1.6) cands.push({ d, label: 'Open the chest', run: () => game.emit('openChest', o) });
+        if (d < 1.6) cands.push({ d, x: o.x, y: o.y, label: 'Open the chest', run: () => game.emit('openChest', o) });
       } else if (o.interact) {
         const d = w.distance(p.x, p.y, o.x, o.y);
-        if (d < (o.interactRange || 1.8)) cands.push({ d, label: o.interact, run: () => game.emit('useObject', o) });
+        if (d < (o.interactRange || 1.8)) cands.push({ d, x: o.x, y: o.y, label: o.interact, run: () => game.emit('useObject', o) });
       } else if (o.kind === 'dummy') {
         const d = w.distance(p.x, p.y, o.x, o.y);
-        if (d < 1.8) cands.push({ d: d + 0.3, label: 'Train (strike the dummy)', run: () => game.emit('trainDummy', o) });
+        if (d < 1.8) cands.push({ d: d + 0.3, x: o.x, y: o.y, label: 'Train (strike the dummy)', run: () => game.emit('trainDummy', o) });
       }
     }
   }
   for (const it of game.groundItems || []) {
     const d = w.distance(p.x, p.y, it.x, it.y);
-    if (d < 1.4) cands.push({ d: d - 0.2, label: `Pick up ${it.label}`, run: () => game.emit('pickup', it) });
+    if (d < 1.4) cands.push({ d: d - 0.2, x: it.x, y: it.y, label: `Pick up ${it.label}`, run: () => game.emit('pickup', it) });
   }
   if (game.footInteraction) { const x = game.footInteraction(p); if (x) cands.push(x); }
   if (!cands.length) return null;
+  // in the 3D view, prefer what you are looking at
+  const v3 = game.view3d?.active ? game.view3d : null;
+  if (v3 && cands.length > 1) {
+    for (const c of cands) {
+      if (c.x === undefined) continue;
+      c.d += Math.abs(angleDiff(v3.rig.yaw, Math.atan2(c.y - p.y, w.dx(p.x, c.x)))) * 0.9;
+    }
+  }
   cands.sort((a, b) => a.d - b.d);
   return cands[0];
 }
