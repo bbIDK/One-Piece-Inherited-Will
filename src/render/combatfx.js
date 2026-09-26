@@ -73,7 +73,7 @@ function sparks(fx, x, y, z, ang, n, cols, o = {}) {
   fx.burst(x, y, n, { angle: ang, spread: o.spread ?? 1.8, speed: o.speed ?? 7, z, vz: o.vz ?? 1.2, g: o.g ?? 6, life: o.life ?? 0.28, size: o.size ?? 0.09, color: cols, kind: o.kind || 'spark', drag: o.drag ?? 4, add: o.add });
 }
 function dust(fx, x, y, n, o = {}) {
-  fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU, speed: o.speed ?? 2.2, z: o.z ?? 0.08, vz: o.vz ?? 0.6, g: 1.2, life: o.life ?? 0.55, size: o.size ?? 0.2, grow: o.grow ?? 0.45, color: o.color || ['#d7ccc8', '#bcaaa4', '#efebe9'], kind: 'dust', drag: 3 });
+  fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU, speed: o.speed ?? 2.2, z: o.z ?? 0.08, vz: o.vz ?? 0.6, g: 1.2, life: o.life ?? 0.5, size: o.size ?? 0.17, grow: o.grow ?? 0.3, color: o.color || ['#d7ccc8', '#bcaaa4', '#efebe9'], kind: 'dust', drag: 3 });
 }
 function glow(fx, x, y, z, size, color, life = 0.2) {
   fx.particle({ x, y, z, size, color, kind: 'glow', life, g: 0, drag: 0, vz: 0, add: true });
@@ -330,7 +330,7 @@ function slashFx(fx, actor, a, h, ang, range, col, st, clip, o = {}) {
   for (let i = 0; i < n; i++) {
     fx.add('crescent', {
       x, y, angle: ang + (i - (n - 1) / 2) * 0.14 * dir, radius: range * (0.9 - i * 0.08), arc: arc * (1 - i * 0.07),
-      width: baseW * (1 - i * 0.2), color: col, core: '#ffffff', dir, life: life + i * 0.02, delay: i * 0.022, z: 0.62 + (i - (n - 1) / 2) * 0.1,
+      width: baseW * (1 - i * 0.2), color: col, core: '#ffffff', dir, life: life + i * 0.02, delay: i * 0.022, z: 0.62 + (i - (n - 1) / 2) * 0.1, reveal: 0.14,
     });
   }
   if (st && st.giant) {
@@ -405,7 +405,8 @@ function swingFx(fx, actor, a, h, hb, ang, range, col, E, st, clip) {
   const heavy = !!h.heavy;
   const diable = actor.buffs && actor.buffs.some((b) => b.id === 'diable');
   if (legs) {
-    fx.add('crescent', { x: actor.x, y: actor.y, angle: ang, radius: range * 0.85, arc: heavy ? 1.9 : 1.5, width: heavy ? 0.24 : 0.15, color: diable ? '#ff9800' : (st && st.legArc) || col, core: diable ? '#ffeb3b' : '#ffffff', dir: (clip && clip.sweep) || -1, life: heavy ? 0.22 : 0.16, z: 0.5, tilt: 0.62 });
+    // the swing already happened by the hit frame: the arc appears swept, then fades
+    fx.add('crescent', { x: actor.x, y: actor.y, angle: ang, radius: range * 0.85, arc: heavy ? 2 : 1.6, width: heavy ? 0.3 : 0.2, color: diable ? '#ff9800' : (st && st.legArc) || col, core: diable ? '#ffeb3b' : '#ffffff', dir: (clip && clip.sweep) || -1, life: heavy ? 0.26 : 0.2, z: 0.5, tilt: 0.62, reveal: 0.08 });
     if (diable) flames(fx, px, py, z, 5, ELEM.fire.spark, { speed: 2 });
   } else {
     fx.burst(px, py, heavy ? 5 : 3, { angle: ang, spread: 0.35, speed: 7, kind: 'line', color: 'rgba(255,255,255,0.85)', z, vz: 0, g: 0, life: 0.12, size: 0.05, drag: 2 });
@@ -450,6 +451,14 @@ const DEFAULTS = {
     const vfx = s.vfx || h.vfx;
     const clip = clipOf(actor, a);
     const range = (h.range || 1.4) * (h.shape === 'circle' ? 1 : reach);
+    if (vfx === 'stab') {
+      // a straight thrust: a bright line to the tip, a glint and speed lines
+      const x1 = actor.x + Math.cos(ang) * range, y1 = actor.y + Math.sin(ang) * range;
+      fx.add('cutline', { x: actor.x + Math.cos(ang) * 0.3, y: actor.y + Math.sin(ang) * 0.2, x1, y1, z: 0.7, color: col, life: 0.22 });
+      fx.add('flare', { x: x1, y: y1, z: 0.7, size: 0.55, color: col === '#ffffff' ? '#e3f2fd' : col, life: 0.16, rot: ang });
+      fx.burst(x1, y1, 4, { angle: ang, spread: 0.4, speed: 7, kind: 'line', color: '#ffffff', z: 0.7, vz: 0, g: 0, life: 0.14, size: 0.05 });
+      return;
+    }
     if (vfx === 'slash' || (!vfx && h.slashing)) slashFx(fx, actor, a, h, ang, range, col, st, clip);
     else if (vfx === 'ring' || h.shape === 'circle' || h.shape === 'ring') ringFx(fx, actor, a, h, hb, col, E, st);
     else if (vfx === 'beam' || h.shape === 'line') beamFx(fx, actor, s, a, h, ang, range, col, E);

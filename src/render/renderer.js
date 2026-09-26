@@ -45,6 +45,8 @@ export class Renderer {
     return [world.dx(c.x, x) * c.zoom + this.cw / 2 + c.shakeX, (y - c.y) * c.zoom + this.ch / 2 + c.shakeY];
   }
   toWorld(world, sx, sy) {
+    // first/third person: where the crosshair (or the free mouse) points
+    if (this.view3d?.active && !this.view3d.game.ui?.mapOpen) return this.view3d.aimWorld(sx, sy);
     const c = this.cam;
     return [world.wx(c.x + (sx - this.cw / 2 - c.shakeX) / c.zoom), c.y + (sy - this.ch / 2 - c.shakeY) / c.zoom];
   }

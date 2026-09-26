@@ -536,7 +536,7 @@ function drawTrails(g, look, pose, rig, d, side, back) {
     } else {
       const pts = smoothPts(e.pts, 2);
       const n = pts.length;
-      const r0 = (e.foot ? 0.1 : 0.085) * (look.bulk || 1) * e.scale;
+      const r0 = (e.foot ? 0.15 : 0.11) * (look.bulk || 1) * e.scale;
       const L = [], R = [];
       for (let i = 0; i < n; i++) {
         const p = pts[i], q = pts[Math.min(n - 1, i + 1)], o = pts[Math.max(0, i - 1)];
@@ -546,7 +546,7 @@ function drawTrails(g, look, pose, rig, d, side, back) {
         R.push([p[0] - Math.cos(ang) * w, p[1] - Math.sin(ang) * w]);
       }
       const gr = g.createLinearGradient(pts[0][0], pts[0][1], pts[n - 1][0], pts[n - 1][1]);
-      gr.addColorStop(0, rgba('#ffffff', 0.75)); gr.addColorStop(0.3, rgba(col, 0.45)); gr.addColorStop(1, rgba(col, 0));
+      gr.addColorStop(0, rgba('#ffffff', 0.85)); gr.addColorStop(0.3, rgba(col, 0.6)); gr.addColorStop(1, rgba(col, 0));
       g.fillStyle = gr;
       g.beginPath(); g.moveTo(L[0][0], L[0][1]);
       for (let i = 1; i < n; i++) g.lineTo(L[i][0], L[i][1]);
@@ -689,14 +689,16 @@ function drawCharge(g, pose, rig, t, headY, bulk) {
       break;
     }
     case 'oni': {
-      // Oni aura: dark red flames and a demon's horns behind the swordsman
-      g.globalAlpha = 0.5 * k;
-      g.fillStyle = 'rgba(120,0,0,0.9)';
-      g.beginPath(); g.moveTo(-0.5 * bulk, 0);
-      for (let i = 0; i <= 8; i++) { const x = -0.5 * bulk + i / 8 * bulk; g.quadraticCurveTo(x - 0.05, headY * 0.6, x, headY - 0.3 - (i % 2 ? 0.1 : 0.32 + 0.08 * Math.sin(t * 14 + i))); }
-      g.lineTo(0.5 * bulk, 0); g.closePath(); g.fill();
-      g.globalAlpha = 0.8 * k; g.fillStyle = '#1a0000';
-      for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 0.12, headY - 0.22); g.quadraticCurveTo(sx * 0.42, headY - 0.5, sx * 0.3, headY - 0.78); g.lineTo(sx * 0.22, headY - 0.3); g.closePath(); g.fill(); }
+      // Oni aura: dark red and black flames licking up behind the swordsman, a demon's horns
+      const flick = 0.85 + 0.15 * Math.sin(t * 17);
+      g.save();
+      g.globalAlpha *= 0.55 * k * flick;
+      drawAura(g, 'rgba(120,0,0,0.95)', t * 1.4, headY - 0.25, bulk * 1.25, false);
+      g.globalAlpha *= 0.9;
+      drawAura(g, 'rgba(15,0,0,0.95)', t * 1.7 + 3, headY + 0.05, bulk * 0.95, false);
+      g.restore();
+      g.globalAlpha = 0.85 * k; g.fillStyle = '#1a0000';
+      for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 0.14, headY - 0.24); g.quadraticCurveTo(sx * 0.44, headY - 0.5, sx * 0.34, headY - 0.82); g.lineTo(sx * 0.24, headY - 0.32); g.closePath(); g.fill(); }
       g.globalCompositeOperation = 'lighter'; g.fillStyle = '#ff1744';
       for (const sx of [-0.1, 0.1]) { g.globalAlpha = k * (0.6 + 0.4 * Math.sin(t * 20)); g.beginPath(); g.arc(sx + 0.05, headY, 0.03, 0, TAU); g.fill(); }
       break;
@@ -826,6 +828,10 @@ export function drawCharacter(g, look, pose) {
   if (roll) { g.translate(0, -0.72); g.rotate(roll); g.translate(0, 0.72); }
 
   const rig = solveRig(look, P, d, side, back);
+  // level of detail: far-away crowds skip the cel-shade passes
+  const xf = g.getTransform ? g.getTransform() : null;
+  const pxTile = xf ? Math.hypot(xf.a, xf.b) : 60;
+  const detail = pxTile >= 26;
   pose.rig = rig;
   const { hip, lean } = rig;
   const hipY = rig.hipY0;
@@ -956,7 +962,7 @@ export function drawCharacter(g, look, pose) {
   const foreCol = pose.armament ? hakiCol : skinArm;
 
   // light from the front-top: shadow tones sit on the far side of every part
-  const sd = side ? [-0.55, 0.84] : back ? [-0.7, 0.7] : [0.7, 0.7];
+  const sd = !detail ? null : side ? [-0.55, 0.84] : back ? [-0.7, 0.7] : [0.7, 0.7];
   const farDim = (which) => (which === 'B' && side ? -0.12 : 0);
 
   // --- arms: tapered, outlined and cel-shaded, with a short sleeve cap
@@ -1099,7 +1105,7 @@ export function drawCharacter(g, look, pose) {
         for (let k = 0; k < 6; k++) { g.beginPath(); g.arc(-torsoW / 2 + 0.08 + (k % 3) * 0.14, shoulderY + 0.1 + Math.floor(k / 3) * 0.16, 0.03, 0, TAU); g.fill(); }
       }
       // cel shade on the far side of the body
-      g.fillStyle = 'rgba(20,10,30,0.2)';
+      g.fillStyle = detail ? 'rgba(20,10,30,0.2)' : 'rgba(0,0,0,0)';
       g.beginPath();
       if (side) { g.moveTo(-torsoW, tTop - 0.1); g.lineTo(-torsoW * 0.1, tTop - 0.1); g.quadraticCurveTo(-torsoW * 0.3, (tTop + tBot) / 2, -torsoW * 0.08, tBot + 0.1); g.lineTo(-torsoW, tBot + 0.1); }
       else if (back) g.rect(-torsoW, tTop - 0.1, torsoW * 0.62, tBot - tTop + 0.2);

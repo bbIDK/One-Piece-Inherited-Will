@@ -393,3 +393,13 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }
 .panel-top .berries { display: flex; align-items: center; gap: 6px; }
 .eq-slot { height: 58px; }
+
+/* ---------- first person ---------- */
+.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }
+.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }
+.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }
+.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }
+.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }
+.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }
+.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
+.set-row .nm { width: 130px; font-weight: 800; }

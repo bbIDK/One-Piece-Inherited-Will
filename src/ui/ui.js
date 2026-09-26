@@ -100,6 +100,11 @@ export class UI {
     this.hud.appendChild(E.ship);
     E.knocked = h('div.knocked-overlay.hidden', h('div', h('h1', 'KNOCKED DOWN'), h('p.kt', ''), h('div.timer', h('i'))));
     this.hud.appendChild(E.knocked);
+    // first person: a crosshair, and a prompt to capture the mouse
+    E.crosshair = h('div.crosshair.hidden', h('i'), h('b'));
+    this.hud.appendChild(E.crosshair);
+    E.lookHint = h('div.look-hint.hidden', 'Click to look around', h('small', 'Esc frees the mouse · V switches view'));
+    this.hud.appendChild(E.lookHint);
     R.appendChild(this.hud);
     this.bannerEl = h('div.banner', h('h2'), h('h1'), h('p'));
     R.appendChild(this.bannerEl);
@@ -333,6 +338,10 @@ export class UI {
     const E = this.el;
     const ch = p.char || {};
     E.side.classList.toggle('hidden', !!this.mapOpen || !!this.screenEl);
+    const v3 = game.view3d?.active ? game.view3d : null;
+    const free = !!v3 && !this.blocksInput();
+    E.crosshair.classList.toggle('hidden', !free || v3.rig.mode !== 'first' || p.mode === 'sail' && !v3.rig.locked);
+    E.lookHint.classList.toggle('hidden', !free || v3.rig.locked || v3.rig.lockFailed);
     this.set(E.name, 'name', ch.name || p.name);
     const title = ch.title || (ch.faction === 'marine' ? `Marine ${ch.marineRank || 'Recruit'}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === 'pirate' ? 'Pirate' : 'Wanderer');
     this.set(E.sub, 'sub', `${raceLabel(p.look)} · ${title} · Doriki ${p.power().toLocaleString()}`);

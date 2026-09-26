@@ -200,6 +200,7 @@ async function grab(page, frames, label, clip) {
  * after the start) while stepping the game at 60 fps.
  */
 async function filmAt(page, frames, { start, times, label = '', clip, arg }) {
+  await page.evaluate(() => window.OP.step(0)); // show the freshly set-up scene
   await page.evaluate(start, arg);
   let t = 0;
   for (const at of times) {
@@ -295,7 +296,7 @@ export const scenarios = {
         await page.evaluate((race) => {
           const L = window.LAB, g = window.OP.game;
           L.arena();
-          g.player.hidden = true;
+          g.player.hidden = true; g.player.invulnerable = true; g.player.y += 8;
           // three fighters: facing right (side), down (front) and up (back), each with a sparring dummy
           L.fighters = [
             L.spawn({ race, seed: 1, facing: 0 }, -3, 0),

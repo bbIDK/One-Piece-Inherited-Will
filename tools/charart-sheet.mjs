@@ -2,7 +2,7 @@
 // real character renderer (src/render/character.js) so heads are seen on
 // their bodies, exactly as the game draws them.
 //
-//   node tools/charart-sheet.mjs [--only=hair,races,hats,matrix,world,closeup] [--dsf=1]
+//   node tools/charart-sheet.mjs [--only=hair,races,hats,matrix,world,closeup,cache,bench] [--dsf=1]
 //
 // Bundles a small entry script with esbuild, writes shots/charart-sheet.{html,js}
 // and screenshots every section into shots/charart-<section>.png:
@@ -24,10 +24,11 @@ const outDir = join(root, 'shots');
 
 const ENTRY = `
 import { drawCharacter, STAND } from './src/render/character.js';
+import { drawHead } from './src/render/charart.js';
 import { makeLook } from './src/data/races.js';
 
 const q = new URLSearchParams(location.search);
-const only = (q.get('only') || 'hair,races,hats,matrix,world,closeup').split(',');
+const only = (q.get('only') || 'hair,races,hats,matrix,world,closeup,cache').split(',');
 const sections = [];
 const errors = [];
 
@@ -59,7 +60,7 @@ function draw(look, o, px, w, h, bg) {
   if (bg) { g.fillStyle = bg; g.fillRect(0, 0, w, h); }
   const d = o.d || 'down';
   const P = { ...STAND, face: o.face || null };
-  const pose = { facing: FACE[d], moving: !!o.moving, walk: o.walk || 0, time: o.t ?? 1.3, state: o.state || 'idle', P, blink: o.blink, knockT: 1 };
+  const pose = { facing: FACE[d], moving: !!o.moving, walk: o.walk || 0, time: o.t ?? 1.3, state: o.state || 'idle', P, blink: !!o.blink, knockT: 1 };
   const L = o.look ? { ...look, ...o.look } : look;
   try {
     // knocked characters lie on their back with the head to the left of the feet
@@ -166,7 +167,7 @@ if (only.includes('matrix')) {
     header(sec, HAIRS.slice(0, 12), 84);
     HATS.forEach((hv, i) => {
       const [hat, hc] = hv.split(':');
-      row(sec, hv, HAIRS.slice(0, 12).map((h, j) => [h, draw(baseLook({ hair: h, hat, hatColor: hc || undefined, hairColor: HAIR_COLS[j], seedIn: 90 + j }), { d, foot: 0.9 }, 62, 84, 96, (i + j) % 2 ? PARCH : GRASS)]), 84);
+      row(sec, hv, HAIRS.slice(0, 12).map((h, j) => [h, draw(baseLook({ hair: h, hat, hatColor: hc || undefined, hairColor: HAIR_COLS[j], seedIn: 90 + j }), { d, foot: -0.5 }, 62, 84, 96, (i + j) % 2 ? PARCH : GRASS)]), 84);
     });
   }
 }
@@ -191,13 +192,69 @@ if (only.includes('closeup')) {
   const picks = [['short', '#1e1e1e', null], ['long', '#f2d16b', null], ['spiky', '#c0392b', 'straw'], ['ponytail', '#6b4423', null], ['curly', '#2980b9', 'bandana'], ['afro', '#1e1e1e', null]];
   for (const [h, c, hat] of picks) {
     const look = baseLook({ hair: h, hairColor: c, hat, seedIn: 5 });
-    row(sec, h + (hat ? '+' + hat : ''), ['down', 'right', 'up', 'grin', 'shout'].map((k) => {
+    const ko = document.createElement('canvas'); ko.width = 250; ko.height = 330;
+    { const g = ko.getContext('2d'); g.fillStyle = PARCH; g.fillRect(0, 0, 250, 330); g.setTransform(300, 0, 0, 300, 125, 200); drawHead(g, look, 0, 0.3, 'down', { state: 'knocked' }, 1, null); }
+    row(sec, h + (hat ? '+' + hat : ''), [...['down', 'right', 'up', 'grin', 'shout'].map((k) => {
       const o = k === 'grin' ? { d: 'down', look: { grin: true } } : k === 'shout' ? { d: 'down', face: 'shout' } : { d: k };
-      return [k, draw(look, { ...o, foot: -0.95 }, 300, 250, 290, PARCH)];
-    }), 250);
+      return [k, draw(look, { ...o, foot: -0.76 }, 300, 250, 330, PARCH)];
+    }), ['ko (drawHead)', ko]], 250);
   }
 }
-window.SHEET = { done: true, sections, errors };
+if (only.includes('heads')) {
+  // every hairstyle in all four views, head and shoulders at 190 px/tile (drawn live: above the cache size)
+  const rows = HAIRS.slice(0, 12).map((h, i) => [h, baseLook({ hair: h, hairColor: HAIR_COLS[i % HAIR_COLS.length], seedIn: 11 + i })]);
+  rows.push(['nika', baseLook({ hair: 'short', hairColor: '#ffffff', nika: true, top: '#ffffff', bottom: '#ffffff' })]);
+  for (let i = 0, k = 1; i < rows.length; i += 5, k++) {
+    const sec = section('heads' + k, 'Heads, all views (' + k + ')');
+    for (const [label, look] of rows.slice(i, i + 5)) {
+      row(sec, label, ['down', 'left', 'right', 'up'].map((d) => [d, draw(look, { d, foot: -0.72 }, 190, 180, 200, (i + k) % 2 ? PARCH : GRASS)]), 180);
+    }
+  }
+}
+if (only.includes('cache')) {
+  // the same townsfolk drawn live (top) and from the head cache (bottom), at the in-game zoom, off the pixel grid
+  const sec = section('cache', 'Head cache check at 46 px/tile: live (odd rows) vs cached (even rows)');
+  const races = ['human', 'fishman', 'mink', 'skypiean', 'three_eye', 'lunarian', 'human', 'buccaneer'];
+  const hats = [null, 'straw', 'bandana', null, 'cowboy', 'marine', 'beanie', 'captain', 'headband', null];
+  for (let r = 0; r < 2; r++) {
+    for (const live of [true, false]) {
+      globalThis.CHARART_NOCACHE = live;
+      const cells = [];
+      for (let k = 0; k < 12; k++) {
+        const i = r * 12 + k;
+        const L = makeLook(races[i % races.length], 3000 + i * 13);
+        L.hat = hats[i % hats.length];
+        const d = ['down', 'right', 'left', 'up'][i % 4];
+        const c = document.createElement('canvas'); c.width = 64; c.height = 96;
+        const g = c.getContext('2d'); g.fillStyle = r % 2 ? GRASS : PARCH; g.fillRect(0, 0, 64, 96);
+        g.setTransform(46, 0, 0, 46, 32.37, 90.61);
+        drawCharacter(g, L, { facing: FACE[d], moving: false, time: 1.3 + i, state: 'idle', P: { ...STAND }, blink: false });
+        cells.push([(live ? 'live ' : 'cache ') + d, c]);
+      }
+      row(sec, (live ? 'live' : 'cached') + ' ' + (r + 1), cells, 64);
+    }
+  }
+  globalThis.CHARART_NOCACHE = false;
+}
+// --bench: time the heads alone and whole characters at the in-game zoom (46 px/tile)
+let bench = null;
+if (only.includes('bench')) {
+  const c = document.createElement('canvas'); c.width = 1280; c.height = 720;
+  const g = c.getContext('2d');
+  const looks = [];
+  const races = ['human', 'human', 'human', 'fishman', 'mink', 'skypiean', 'longarm', 'longleg', 'buccaneer', 'three_eye', 'lunarian'];
+  const hats = [null, null, 'bandana', 'straw', 'cowboy', 'marine', 'beanie', 'captain', 'headband', 'goggles', 'tricorne', 'horns'];
+  for (let i = 0; i < 64; i++) { const L = makeLook(races[i % races.length], 500 + i * 31); if (i % 2) L.hat = hats[i % hats.length]; looks.push(L); }
+  const dirs = ['down', 'right', 'left', 'up'];
+  const run = (fn, n) => { const t0 = performance.now(); for (let i = 0; i < n; i++) fn(i); return (performance.now() - t0) / n; };
+  const head = (i) => { g.setTransform(46, 0, 0, 46, 40 + (i % 30) * 40, 60 + ((i / 30) | 0) % 16 * 40); drawHead(g, looks[i % 64], -1.19, 0.3, dirs[i % 4], { state: 'idle' }, i * 0.1, null); };
+  const full = (i) => { g.setTransform(46, 0, 0, 46, 40 + (i % 30) * 40, 90 + ((i / 30) | 0) % 16 * 40); drawCharacter(g, looks[i % 64], { facing: [Math.PI / 2, 0, Math.PI, -Math.PI / 2][i % 4], moving: i % 3 === 0, walk: i, time: i * 0.1, state: 'idle' }); };
+  run(head, 400); run(full, 400); // warm-up (paths are built and cached lazily)
+  const n = Number(q.get('n') || 3000);
+  bench = { headMs: +run(head, n).toFixed(4), characterMs: +run(full, n).toFixed(4), n };
+  console.log('BENCH ' + JSON.stringify(bench));
+}
+window.SHEET = { done: true, sections, errors, bench };
 console.log('SHEET ' + JSON.stringify({ sections: sections.length, errors: errors.slice(0, 5) }));
 `;
 
@@ -252,7 +309,7 @@ if (process.argv[1] && normalize(process.argv[1]) === fileURLToPath(import.meta.
   const browser = await chromium.launch({ executablePath: chromePath });
   const page = await browser.newPage({ viewport: { width: Number(args.w || 1400), height: 900 }, deviceScaleFactor: Number(args.dsf || 1) });
   const errors = [];
-  page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) { errors.push(m.text()); console.log('[error]', m.text()); } else if (m.text().startsWith('SHEET')) console.log(m.text().slice(0, 2000)); });
+  page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) { errors.push(m.text()); console.log('[error]', m.text()); } else if (/^(SHEET|BENCH)/.test(m.text())) console.log(m.text().slice(0, 2000)); });
   page.on('pageerror', (e) => { errors.push(e.message); console.log('[pageerror]', e.stack || e.message); });
   const qs = new URLSearchParams(); if (args.only) qs.set('only', args.only);
   await page.goto(`http://localhost:${port}${pagePath}?${qs}`);

@@ -495,12 +495,25 @@ export function openMenu(game, { onQuit, onRetire, onSave }) {
 
 export function openSettings(game) {
   const s = game.settings;
+  const body = h('div');
   const slider = (label, key) => h('div.stat-row', h('span.nm', label), h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: s[key], style: { flex: 1 }, on: { input: (e) => { s[key] = Number(e.target.value); game.applySettings(); } } }));
   const check = (label, key) => h('label.check-row', h('input', { type: 'checkbox', checked: !!s[key], on: { change: (e) => { s[key] = e.target.checked; game.applySettings(); } } }), label);
-  game.ui.openPanel(h('div', h('h2', 'Settings'),
-    slider('Sound effects', 'volume'), slider('Music', 'music'), slider('Screen shake', 'shake'),
-    check('Show tutorial hints', 'showHints'),
-    h('p.muted', 'Settings are saved in this browser.')), { onClose: () => game.applySettings(true), id: 'settings' });
+  const choice = (label, key, opts) => h('div.set-row', h('span.nm', label), h('div.tabs', { style: { margin: 0 } }, opts.map(([v, name]) => h('button' + (s[key] === v ? '.on' : ''), { on: { click: () => { s[key] = v; game.applySettings(); render(); } } }, name))));
+  const render = () => {
+    clear(body);
+    add(body, h('h2', 'Settings'),
+      h('h3', 'View'),
+      choice('Camera', 'view', [['first', 'First person'], ['third', 'Third person'], ['classic', 'Classic top-down']]),
+      slider('Mouse sensitivity', 'sensitivity'),
+      check('Invert mouse look', 'invertY'),
+      choice('Graphics', 'quality', [['high', 'High (shadows)'], ['low', 'Fast']]),
+      h('h3', 'Sound & feel'),
+      slider('Sound effects', 'volume'), slider('Music', 'music'), slider('Screen shake', 'shake'),
+      check('Show tutorial hints', 'showHints'),
+      h('p.muted', 'Press V in game to switch between first person, third person and the classic view. Settings are saved in this browser.'));
+  };
+  render();
+  game.ui.openPanel(body, { onClose: () => game.applySettings(true), id: 'settings' });
 }
 
 // =================================================================== shop

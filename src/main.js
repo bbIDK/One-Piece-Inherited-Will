@@ -1,5 +1,6 @@
 // Entry point: boot the world, show the title, run the loop.
 import { Renderer } from './render/renderer.js';
+import { Renderer3D } from './render3d/index.js';
 import { generateWorld } from './world/worldgen.js';
 import { ALL_ISLANDS } from './data/islands/index.js';
 import { Input } from './core/input.js';
@@ -64,7 +65,43 @@ async function start() {
   boot.style.display = 'none';
   const game = new Game({ renderer, input, ui, audio, world });
   game.settings = settings;
-  game.applySettings = (save) => { audio.apply(settings); game.shakeMul = settings.shake; if (save) saveSettings(settings); };
+  // the 3D view (first / third person); 'classic' keeps the top-down view
+  let view3d = null;
+  try {
+    view3d = new Renderer3D(root, renderer, game);
+    game.view3d = view3d;
+    renderer.view3d = view3d;
+  } catch (e) {
+    console.warn('3D view unavailable', e);
+  }
+  const applyView = () => {
+    if (!view3d) return;
+    const on = !!game.player && settings.view !== 'classic';
+    view3d.setMode(settings.view === 'third' ? 'third' : 'first');
+    view3d.setActive(on);
+  };
+  game.applySettings = (save) => {
+    audio.apply(settings);
+    game.shakeMul = settings.shake;
+    if (view3d) {
+      view3d.rig.sensitivity = 0.0008 + (settings.sensitivity ?? 0.5) * 0.0032;
+      view3d.rig.invertY = !!settings.invertY;
+      if (view3d.quality !== settings.quality) view3d.setQuality(settings.quality || 'high');
+      applyView();
+    }
+    if (save) saveSettings(settings);
+  };
+  game.cycleView = () => {
+    const order = ['first', 'third', 'classic'];
+    settings.view = order[(order.indexOf(settings.view) + 1) % order.length];
+    applyView();
+    saveSettings(settings);
+    ui.toast(settings.view === 'first' ? 'FIRST PERSON' : settings.view === 'third' ? 'THIRD PERSON' : 'CLASSIC VIEW', 'Press V to switch views', '#ffe082');
+  };
+  game.on('characterStart', () => {
+    applyView();
+    if (view3d && game.player) view3d.rig.yaw = game.player.facing || 0;
+  });
   game.applySettings();
   ui.game = game;
   game.setWorld(world);
@@ -97,6 +134,7 @@ async function start() {
     if (ui.mapOpen) game.closeMap();
     ui.setHudVisible(false);
     game.paused = false;
+    view3d?.setActive(false);
     if (next === 'create') openCreation();
     else showTitle();
   };
@@ -115,6 +153,7 @@ async function start() {
     help: () => ui.openPanel(helpContent(game.state?.char), { wide: true, id: 'help' }),
   };
   ui.keyHandlers.push(
+    { key: 'V', when: playing, fn: () => game.cycleView() },
     { key: 'I', when: playing, fn: () => ui.sideAction('inventory') },
     { key: 'Tab', when: playing, fn: () => ui.sideAction('inventory') },
     { key: 'C', when: playing, fn: () => ui.sideAction('character') },
@@ -202,6 +241,7 @@ async function start() {
   renderer.cam.x = attract.x; renderer.cam.y = attract.y; renderer.cam.zoom = 9;
 
   Object.assign(debug, {
+    get view3d() { return game.view3d; },
     world, renderer, game, input, ui,
     get player() { return game.player; },
     get env() { return game.env; },
@@ -228,6 +268,12 @@ async function start() {
     last = now;
     if (game.player) {
       game.update(dt);
+      // menus and dialogue need the mouse back
+      if (view3d?.rig.locked && ui.blocksInput()) view3d.rig.releaseLock();
+      if (view3d?.active) {
+        view3d.canvas.style.display = ui.mapOpen ? 'none' : 'block';
+        renderer.glCanvas.style.display = ui.mapOpen ? 'block' : 'none';
+      }
       if (ui.mapOpen) game.renderMap();
       else game.render();
     } else {

@@ -1,0 +1,327 @@
+// The 3D view (first or third person). The simulation still runs on the 2D
+// tile plane; this renders it in 3D around a floating origin at the player:
+// terrain chunks, the ocean, sky and weather light, world objects (3D models
+// where one is registered, sprites otherwise), characters, ships and
+// projectiles. The existing 2D overlay canvas stays on top for effects,
+// weather and damage numbers, projected through the 3D camera.
+import * as THREE from 'three';
+import { TerrainManager } from './terrain3d.js';
+import { Water } from './water3d.js';
+import { Sky } from './sky3d.js';
+import { CameraRig } from './camera3d.js';
+import { SpriteForest, ActorSprite, propSprite, projectileMesh, tintSprites } from './billboards.js';
+import { ShipView } from './ships3d.js';
+import { buildBuilding, setNightWindows } from './buildings3d.js';
+import { PROP_BUILDERS, VIEWS, registerPropBuilder } from './registry.js';
+
+registerPropBuilder('building', (o) => buildBuilding(o));
+
+const ACTOR_RANGE = 75;
+const SHIP_RANGE = 520;
+
+export class Renderer3D {
+  constructor(root, r2d, game) {
+    this.root = root;
+    this.r2d = r2d;
+    this.game = game;
+    const canvas = document.createElement('canvas');
+    Object.assign(canvas.style, { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', display: 'none' });
+    root.insertBefore(canvas, r2d.canvas);
+    this.canvas = canvas;
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.scene = new THREE.Scene();
+    this.sky = new Sky(this.scene);
+    this.water = new Water(this.scene);
+    this.terrain = new TerrainManager(this.scene);
+    this.rig = new CameraRig(canvas, game);
+    this.props = new THREE.Group();
+    this.props.name = 'props';
+    this.scene.add(this.props);
+    this.forest = new SpriteForest(this.props);
+    this.built = new Map();
+    this.ents = new THREE.Group();
+    this.scene.add(this.ents);
+    this.actorViews = new Map();
+    this.shipViews = new Map();
+    this.projViews = new Map();
+    this.active = false;
+    this.world = null;
+    this.propOrigin = null;
+    this.propT = 0;
+    this.frame = 0;
+    this.lastT = performance.now();
+    this.ox = 0; this.oy = 0;
+    this.quality = 'high';
+    this.ctx = {
+      THREE, scene: this.scene, game,
+      ground: (x, y) => this.ground(x, y),
+      terrain: (x, y) => this.terrain.terrainAt(x, y),
+    };
+    Object.defineProperty(this.ctx, 'camera', { get: () => this.rig.camera });
+    Object.defineProperty(this.ctx, 'world', { get: () => this.world });
+    Object.defineProperty(this.ctx, 'yaw', { get: () => this.rig.yaw });
+    Object.defineProperty(this.ctx, 'mode', { get: () => this.rig.mode });
+    // a projection shim so the 2D effects layer can draw on top of the 3D view
+    const self = this;
+    this.proj = {
+      get dpr() { return r2d.dpr; },
+      get cw() { return r2d.cw; },
+      get ch() { return r2d.ch; },
+      get canvas() { return r2d.canvas; },
+      cam: { x: 0, y: 0, zoom: 40, shakeX: 0, shakeY: 0 },
+      toScreen: (w, x, y) => self.project(x, y, 0.9),
+      toWorld: (w, sx, sy) => self.aimWorld(sx, sy),
+      viewRect: () => r2d.viewRect(),
+      is3d: true,
+      project: (x, y, h) => self.project(x, y, h),
+    };
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+  }
+
+  resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, this.quality === 'low' ? 1 : 1.75);
+    this.renderer.setPixelRatio(dpr);
+    this.renderer.setSize(window.innerWidth, window.innerHeight, false);
+    this.rig.resize(window.innerWidth, window.innerHeight);
+  }
+
+  setQuality(q) {
+    this.quality = q;
+    this.renderer.shadowMap.enabled = q !== 'low';
+    this.sky.sun.castShadow = q !== 'low';
+    this.resize();
+  }
+
+  setActive(on) {
+    this.active = !!on;
+    this.canvas.style.display = on ? 'block' : 'none';
+    this.r2d.glCanvas.style.display = on ? 'none' : 'block';
+    if (!on) this.rig.releaseLock();
+  }
+
+  setMode(mode) { this.rig.mode = mode === 'third' ? 'third' : 'first'; }
+
+  setWorld(world) {
+    this.world = world;
+    this.terrain.setWorld(world);
+    this.water.setWorld(world);
+    this.forest.clear();
+    for (const v of this.built.values()) if (v) { this.props.remove(v); disposeTree(v); }
+    this.built.clear();
+    for (const v of this.actorViews.values()) { this.ents.remove(v.root || v.mesh); v.dispose?.(); }
+    this.actorViews.clear();
+    for (const v of this.shipViews.values()) { this.ents.remove(v.root); v.dispose?.(); }
+    this.shipViews.clear();
+    for (const m of this.projViews.values()) this.ents.remove(m);
+    this.projViews.clear();
+    this.propOrigin = null;
+  }
+
+  ground(x, y) { return this.terrain.groundAt(x, y); }
+
+  /** World point → CSS pixels (h metres above the ground). Off-screen when behind the camera. */
+  project(x, y, h = 0) {
+    const w = this.world;
+    const v = new THREE.Vector3(w ? w.dx(this.ox, x) : x - this.ox, this.ground(x, y) + h, y - this.oy);
+    v.project(this.rig.camera);
+    if (v.z > 1 || v.z < -1) return [-99999, -99999];
+    return [(v.x + 1) / 2 * this.r2d.cw, (1 - v.y) / 2 * this.r2d.ch];
+  }
+
+  /** Where the player is aiming, in world tiles (the crosshair, or the free mouse). */
+  aimWorld(sx, sy) {
+    const g = this.game;
+    if (!g.player) return [0, 0];
+    const free = !this.rig.locked && this.rig.lockFailed && sx !== undefined;
+    return this.rig.aimPoint(g, (x, y) => this.ground(x, y), free ? sx : undefined, free ? sy : undefined);
+  }
+
+  render(game) {
+    const w = game.world;
+    if (w !== this.world) this.setWorld(w);
+    const now = performance.now();
+    const dt = Math.min(0.05, (now - this.lastT) / 1000);
+    this.lastT = now;
+    this.frame++;
+    const p = game.player;
+    const env = game.env;
+    this.ox = p.x; this.oy = p.y;
+    const ox = p.x, oy = p.y;
+    const sailing = p.mode === 'sail';
+    this.rig.update(dt, game, (x, y) => this.ground(x, y));
+    const cam = this.rig.camera;
+    const camYaw3 = -(this.rig.yaw + Math.PI / 2);
+
+    this.sky.update(env, w, sailing);
+    this.sky.mesh.position.copy(cam.position);
+    this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon);
+    this.terrain.update(ox, oy);
+    // the shadow camera follows the player
+    const gh = this.ground(ox, oy);
+    this.sky.sun.target.position.set(0, gh, 0);
+    this.sky.sun.position.y += gh;
+
+    this.updateProps(game, ox, oy, env, sailing);
+    this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
+    this.forest.aim(camYaw3);
+    this.updateEntities(game, ox, oy, env, camYaw3);
+
+    const amb = env.ambient || [1, 1, 1];
+    tintSprites(Math.min(1, amb[0] * 1.05), Math.min(1, amb[1] * 1.05), Math.min(1, amb[2] * 1.05));
+    setNightWindows(Math.max(0, 0.9 - env.daylight));
+    // effects layer scale: pixels per metre at arm's length in front of the camera
+    const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
+    this.proj.cam.zoom = f / 7;
+    this.renderer.render(this.scene, cam);
+  }
+
+  /** Static world objects near the player: 3D models where registered, sprites otherwise. */
+  updateProps(game, ox, oy, env, sailing) {
+    const w = this.world;
+    if (!w.objects) return;
+    this.propT -= 1 / 60;
+    const moved = this.propOrigin ? Math.hypot(w.dx(this.propOrigin.x, ox), oy - this.propOrigin.y) : Infinity;
+    if (moved < 7 && this.propT > 0 && this.propOrigin?.day === env.day && !this.propsDirty) return;
+    this.propT = 0.6;
+    this.propsDirty = false;
+    this.propOrigin = { x: ox, y: oy, day: env.day };
+    const R = sailing ? 150 : 95;
+    const objs = w.objects.query(ox - R, oy - R, ox + R, oy + R);
+    const items = [];
+    const keep = new Set();
+    for (const o of objs) {
+      const dx = w.dx(ox, o.x), dy = o.y - oy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > R * R) continue;
+      if (o.hidden) continue;
+      const builder = PROP_BUILDERS.get(o.kind);
+      if (builder) {
+        let v = this.built.get(o);
+        if (v === undefined) {
+          try { v = builder(o, this.ctx) || null; } catch (e) { v = null; console.warn('3D builder failed for', o.kind, e); }
+          this.built.set(o, v);
+          if (v) this.props.add(v);
+        }
+        if (v) {
+          keep.add(o);
+          v.position.set(dx, v.userData.noGround ? 0 : this.ground(o.x, o.y), dy);
+          if (v.userData.update) v.userData.update(o, env, this.ctx);
+          continue;
+        }
+      }
+      // sprites only nearby (they're flat; far away the fog hides them)
+      if (d2 > 80 * 80 && o.kind !== 'tree') continue;
+      const s = propSprite(o, w.id, env.day);
+      if (s) items.push({ o, sprite: s, rx: dx, rz: dy, h: this.terrain.terrainAt(o.x, o.y) });
+    }
+    for (const [o, v] of this.built) {
+      if (keep.has(o)) continue;
+      if (v) { this.props.remove(v); disposeTree(v); }
+      this.built.delete(o);
+    }
+    this.forest.rebuild(items);
+  }
+
+  updateEntities(game, ox, oy, env, camYaw3) {
+    const w = this.world;
+    const p = game.player;
+    const seen = new Set();
+    // characters
+    const near = [];
+    for (const a of game.actors) {
+      if (!a.alive || a.hidden) continue;
+      if (a === p && this.rig.mode === 'first') continue;
+      if (a.onShip && a !== p) continue;
+      const dx = w.dx(ox, a.x), dy = a.y - oy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > ACTOR_RANGE * ACTOR_RANGE) continue;
+      near.push([a, dx, dy, d2]);
+    }
+    near.sort((a, b) => a[3] - b[3]);
+    let i = 0;
+    for (const [a, dx, dy] of near) {
+      seen.add(a);
+      let v = this.actorViews.get(a);
+      if (!v) {
+        v = VIEWS.actor ? VIEWS.actor(a, this.ctx) : null;
+        if (!v) v = new ActorSpriteView(a);
+        this.actorViews.set(a, v);
+        this.ents.add(v.root);
+      } else if (v.stale?.()) {
+        this.ents.remove(v.root); v.dispose?.();
+        v = VIEWS.actor ? VIEWS.actor(a, this.ctx) || new ActorSpriteView(a) : new ActorSpriteView(a);
+        this.actorViews.set(a, v);
+        this.ents.add(v.root);
+      }
+      const gh = a.inWater ? -0.9 : this.ground(a.x, a.y);
+      v.root.position.set(dx, gh + (a.z || 0), dy);
+      v.update(a, env, this.ctx, { camYaw3, redraw: i < 18 || (this.frame + i) % 3 === 0 });
+      i++;
+    }
+    for (const [a, v] of this.actorViews) {
+      if (seen.has(a)) continue;
+      this.ents.remove(v.root); v.dispose?.();
+      this.actorViews.delete(a);
+    }
+    // ships
+    const seenS = new Set();
+    for (const s of game.ships) {
+      const dx = w.dx(ox, s.x), dy = s.y - oy;
+      if (dx * dx + dy * dy > SHIP_RANGE * SHIP_RANGE || !s.alive) continue;
+      seenS.add(s);
+      let v = this.shipViews.get(s);
+      if (v && v.stale?.()) { this.ents.remove(v.root); v.dispose?.(); v = null; }
+      if (!v) {
+        v = (VIEWS.ship ? VIEWS.ship(s, this.ctx) : null) || new ShipView(s);
+        this.shipViews.set(s, v);
+        this.ents.add(v.root);
+      }
+      v.update(env, dx, dy, env.windAngle, this.ctx);
+    }
+    for (const [s, v] of this.shipViews) {
+      if (seenS.has(s)) continue;
+      this.ents.remove(v.root); v.dispose?.();
+      this.shipViews.delete(s);
+    }
+    // projectiles
+    const seenP = new Set();
+    for (const pr of game.combat.projectiles) {
+      if (pr.delay > 0) continue;
+      seenP.add(pr);
+      let m = this.projViews.get(pr);
+      if (!m) { m = projectileMesh(pr); this.projViews.set(pr, m); this.ents.add(m); }
+      const h = pr.sprite === 'cannonball' ? 1.3 : 1.15;
+      m.position.set(w.dx(ox, pr.x), Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y)) + h + (pr.z || 0), pr.y - oy);
+    }
+    for (const [pr, m] of this.projViews) {
+      if (seenP.has(pr)) continue;
+      this.ents.remove(m); m.geometry.dispose(); m.material.dispose();
+      this.projViews.delete(pr);
+    }
+  }
+}
+
+/** The fallback character view: an upright sprite of the 2D anime art. */
+class ActorSpriteView {
+  constructor(a) {
+    this.sprite = new ActorSprite(a);
+    this.root = this.sprite.mesh;
+  }
+  update(a, env, ctx, { camYaw3, redraw }) {
+    this.root.rotation.set(0, camYaw3, 0);
+    if (redraw) this.sprite.draw(a, env, ctx.yaw);
+  }
+  dispose() { this.sprite.dispose(); }
+}
+
+function disposeTree(o) {
+  o.traverse((x) => {
+    if (x.geometry && !x.geometry.userData?.shared) x.geometry.dispose();
+  });
+}
+
+export { THREE };

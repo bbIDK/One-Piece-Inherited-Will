@@ -262,6 +262,7 @@ export class Game {
     const r = this.renderer;
     const env = this.env;
     if (!this.player) return;
+    if (this.view3d?.active && !this.ui?.mapOpen) { this.render3d(); return; }
     // lights: lamps & glowing things near the camera at night
     r.terrain.clearLights();
     if (env.daylight < 0.6 && this.world.objects) {
@@ -298,6 +299,24 @@ export class Game {
     if (root.style.filter !== want) root.style.filter = want;
     this.ui?.render(this);
     void g;
+  }
+
+  /** First/third-person frame: the 3D view, then effects and weather on the overlay. */
+  render3d() {
+    const v = this.view3d, r = this.renderer;
+    v.render(this);
+    const g = r.ctx;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, r.canvas.width, r.canvas.height);
+    const proj = v.proj;
+    try { this.fx.draw(g, proj); } catch (e) { /* effects that don't project yet */ }
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    this.drawWeather(g, r);
+    try { this.fx.drawScreen(g, proj); } catch (e) { /* ignore */ }
+    const root = r.root;
+    const want = this.fx.impact > 0 ? 'invert(1) grayscale(1) contrast(1.6)' : '';
+    if (root.style.filter !== want) root.style.filter = want;
+    this.ui?.render(this);
   }
 
   drawWeather(g, r) {
