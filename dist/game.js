@@ -33663,7 +33663,8 @@ void main() {
       if (OVERLAY[t]) return DECK_Y;
       const h2 = this.terrain(x, y);
       if (IS_LIQUID[t]) return Math.max(h2, SEA_Y);
-      return h2;
+      const f = this.world.floorAt ? this.world.floorAt(x, y) : 0;
+      return f ? h2 + f : h2;
     }
     /** Invalidate after the tile map changed in a rectangle (tiles). */
     invalidate(x0, y0, x1, y1) {
@@ -60547,6 +60548,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.blocked = new Uint8Array(width * height);
       this.colliders = /* @__PURE__ */ new Map();
       this.colW = Math.ceil(width / 4);
+      this.floors = /* @__PURE__ */ new Map();
       this.dist = new Uint8Array(width * height);
       this.objects = null;
       this.islands = [];
@@ -60636,6 +60638,28 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     colKey(cx, cy) {
       if (this.wrap) cx = (cx % this.colW + this.colW) % this.colW;
       return cy * this.colW + cx;
+    }
+    /** A raised floor you can stand on (x0..x1 × y0..y1, h metres over the ground). */
+    addFloor(f) {
+      for (let cy = Math.floor(f.y0 / 4); cy <= Math.floor(f.y1 / 4); cy++) {
+        for (let cx = Math.floor(f.x0 / 4); cx <= Math.floor(f.x1 / 4); cx++) {
+          const k = this.colKey(cx, cy);
+          let list = this.floors.get(k);
+          if (!list) this.floors.set(k, list = []);
+          list.push(f);
+        }
+      }
+    }
+    /** Height of a raised floor under (x, y), or 0. */
+    floorAt(x, y) {
+      if (!this.floors.size) return 0;
+      const list = this.floors.get(this.colKey(Math.floor(this.wx(x) / 4), Math.floor(y / 4)));
+      if (!list) return 0;
+      for (const f of list) {
+        const dx = this.dx(f.x0, x);
+        if (dx >= 0 && dx <= f.x1 - f.x0 && y >= f.y0 && y <= f.y1) return f.h;
+      }
+      return 0;
     }
     /** Does a circle of radius r at (x, y) overlap a small prop (lamp, barrel, tree trunk...)? */
     hitsProp(x, y, r) {
@@ -60782,8 +60806,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     arch: 0,
     bones: 0,
     skull: 0,
-    bubble: 0
+    bubble: 0,
+    platform: 0
+    // a raised floor you walk onto (see floorOf)
   };
+  function floorOf(o) {
+    if (o.kind !== "platform") return null;
+    const n = o.name || "";
+    const s = o.s || 1;
+    if (/ring/i.test(n)) return { hw: 2.3 * s, hd: 2.3 * s, oy: 0, h: 0.88 * s };
+    if (/stage|carnival/i.test(n)) return { hw: 2.4 * s, hd: 1.7 * s, oy: 0, h: 1.02 * s };
+    return { hw: 1.8 * s, hd: 1.4 * s, oy: -0.2 * s, h: 2.4 * s };
+  }
   var nextObjectId = 1;
   var ObjectIndex = class {
     constructor(world) {
@@ -60808,8 +60842,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       obj._chunk = k;
       this.byId.set(obj.id, obj);
       this.count++;
+      const fl2 = floorOf(obj);
+      if (fl2) this.world.addFloor({ x0: obj.x - fl2.hw, x1: obj.x + fl2.hw, y0: obj.y + fl2.oy - fl2.hd, y1: obj.y + fl2.oy + fl2.hd, h: fl2.h, o: obj });
       const c = obj.block && COLLIDE[obj.kind];
-      if (c !== void 0 && obj.block && (obj.fw || 1) <= 2 && (obj.fd || 1) <= 2) {
+      if (c !== void 0 && obj.block && (fl2 || (obj.fw || 1) <= 2 && (obj.fd || 1) <= 2)) {
         obj.soft = true;
         if (c) this.addCollider(obj, c);
       } else if (obj.block) this.stamp(obj, 1);
@@ -78756,6 +78792,10 @@ Trains by: ${TRAINS_BY[k]}` },
       }
     }
   }
+  function clear2(spawner, x, y, rng2, extra = {}) {
+    const p = spawner.freeSpot(x, y) ? { x, y } : spawner.findFree(x, y, 2.5, rng2) || spawner.findFree(x, y, 5, rng2) || { x, y };
+    return { ...p, ...extra };
+  }
   function placeNPC(game, island, def, rng2, spawner) {
     const pl = (typeof def.at === "function" ? def.at(game.state?.char, game) : def.at) || {};
     if (pl.spot && island.spots[pl.spot]) {
@@ -78768,16 +78808,16 @@ Trains by: ${TRAINS_BY[k]}` },
       if (pl.town && town.id !== pl.town) continue;
       if (pl.building) {
         const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
-        if (b) return { x: b.door.x + (pl.ox || 0.9), y: b.door.y + 0.9, building: b };
+        if (b) return clear2(spawner, b.door.x + (pl.ox || 0.9), b.door.y + 0.9, rng2, { building: b });
       }
       if (pl.plaza || !pl.building && !pl.dx) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5, 3, rng2);
     }
     for (const town of island.towns) {
       const b = town.buildings.find((x) => x.npc === def.id);
-      if (b) return { x: b.door.x + 0.9, y: b.door.y + 0.9, building: b };
+      if (b) return clear2(spawner, b.door.x + 0.9, b.door.y + 0.9, rng2, { building: b });
     }
     const lm = island.landmarks.find((l) => l.npc === def.id);
-    if (lm) return { x: lm.x + 0.6, y: lm.y + 1.2 };
+    if (lm) return clear2(spawner, lm.x + 0.6, lm.y + 1.2, rng2);
     if (pl.dx !== void 0) return spawner.findFree(island.x + pl.dx * island.def.w / 2, island.y + pl.dy * island.def.h / 2, 5, rng2);
     return spawner.findFree(island.x, island.y, 10, rng2);
   }
@@ -103542,15 +103582,15 @@ Trains by: ${TRAINS_BY[k]}` },
   }
   function installFleet(game) {
     let t = 0;
-    const clear2 = () => {
+    const clear3 = () => {
       for (const s of game.ships) if (s.escortOf) s.alive = false;
       for (const a of game.actors) if (a.marineSquad) a.alive = false;
     };
-    game.on("characterStart", clear2);
-    game.on("enterZone", clear2);
-    game.on("leaveZone", clear2);
+    game.on("characterStart", clear3);
+    game.on("enterZone", clear3);
+    game.on("leaveZone", clear3);
     game.on("marineRankChanged", (r) => {
-      if (!r) clear2();
+      if (!r) clear3();
     });
     game.on("tick", (dt) => {
       if ((t -= dt) > 0) return;
@@ -103620,8 +103660,8 @@ Trains by: ${TRAINS_BY[k]}` },
       s.heading += clamp(angleDiff(s.heading, want2), -1, 1) * s.def.turn * dt;
       const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
       const toLead = Math.atan2(lead.y - s.y, w.dx(s.x, lead.x));
-      const clear2 = Math.abs(angleDiff(toT, toLead)) > 0.5 || w.distance(s.x, s.y, lead.x, lead.y) > fd + 3;
-      if (fd < 16 && side < 0.6 && clear2 && s.cannonCd <= 0) s.fireBroadside(game, foe.x, foe.y, { name: s.name, faction: "player", isShip: true, escort: true, power: () => (s.level || 10) * 10 });
+      const clear3 = Math.abs(angleDiff(toT, toLead)) > 0.5 || w.distance(s.x, s.y, lead.x, lead.y) > fd + 3;
+      if (fd < 16 && side < 0.6 && clear3 && s.cannonCd <= 0) s.fireBroadside(game, foe.x, foe.y, { name: s.name, faction: "player", isShip: true, escort: true, power: () => (s.level || 10) * 10 });
       return;
     }
     const pt = formationPoint(game, lead, s.escortSlot || 0);

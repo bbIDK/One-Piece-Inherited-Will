@@ -15,6 +15,7 @@ export class World {
     this.blocked = new Uint8Array(width * height); // objects occupying tiles
     this.colliders = new Map(); // 4 m cell → small props' colliders (objects.js COLLIDE)
     this.colW = Math.ceil(width / 4);
+    this.floors = new Map(); // 4 m cell → raised floors (rings, stages) over the ground
     this.dist = new Uint8Array(width * height); // encoded signed distance
     this.objects = null; // ObjectIndex
     this.islands = []; // generated island records
@@ -102,6 +103,29 @@ export class World {
     if (this.wrap) cx = ((cx % this.colW) + this.colW) % this.colW;
     return cy * this.colW + cx;
   }
+  /** A raised floor you can stand on (x0..x1 × y0..y1, h metres over the ground). */
+  addFloor(f) {
+    for (let cy = Math.floor(f.y0 / 4); cy <= Math.floor(f.y1 / 4); cy++) {
+      for (let cx = Math.floor(f.x0 / 4); cx <= Math.floor(f.x1 / 4); cx++) {
+        const k = this.colKey(cx, cy);
+        let list = this.floors.get(k);
+        if (!list) this.floors.set(k, (list = []));
+        list.push(f);
+      }
+    }
+  }
+  /** Height of a raised floor under (x, y), or 0. */
+  floorAt(x, y) {
+    if (!this.floors.size) return 0;
+    const list = this.floors.get(this.colKey(Math.floor(this.wx(x) / 4), Math.floor(y / 4)));
+    if (!list) return 0;
+    for (const f of list) {
+      const dx = this.dx(f.x0, x);
+      if (dx >= 0 && dx <= f.x1 - f.x0 && y >= f.y0 && y <= f.y1) return f.h;
+    }
+    return 0;
+  }
+
   /** Does a circle of radius r at (x, y) overlap a small prop (lamp, barrel, tree trunk...)? */
   hitsProp(x, y, r) {
     if (!this.colliders.size) return false;

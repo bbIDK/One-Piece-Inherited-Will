@@ -18,7 +18,18 @@ export const COLLIDE = {
   statue: 0.7, pillar: 0.45, totem: 0.35, dummy: 0.28, cannon: 0.55, anchor: 0.5, grave: 0.3, bell: 0.6, ruins: 0.8,
   poneglyph: [0.8, 0.35], boat: [1.4, 0.6], shipwreck: [2.5, 1.2], lighthouse: 1.6, tower: 2.0, windmill: 1.5, wheel: 1.0, elevator: 1.5,
   gate: 0, torii: 0, arch: 0, bones: 0, skull: 0, bubble: 0,
+  platform: 0, // a raised floor you walk onto (see floorOf)
 };
+
+/** Raised floors you can stand on (boxing rings, stages, scaffolds), sized like their models. */
+export function floorOf(o) {
+  if (o.kind !== 'platform') return null;
+  const n = o.name || '';
+  const s = o.s || 1;
+  if (/ring/i.test(n)) return { hw: 2.3 * s, hd: 2.3 * s, oy: 0, h: 0.88 * s };
+  if (/stage|carnival/i.test(n)) return { hw: 2.4 * s, hd: 1.7 * s, oy: 0, h: 1.02 * s };
+  return { hw: 1.8 * s, hd: 1.4 * s, oy: -0.2 * s, h: 2.4 * s };
+}
 
 let nextObjectId = 1;
 
@@ -45,8 +56,10 @@ export class ObjectIndex {
     obj._chunk = k;
     this.byId.set(obj.id, obj);
     this.count++;
+    const fl = floorOf(obj);
+    if (fl) this.world.addFloor({ x0: obj.x - fl.hw, x1: obj.x + fl.hw, y0: obj.y + fl.oy - fl.hd, y1: obj.y + fl.oy + fl.hd, h: fl.h, o: obj });
     const c = obj.block && COLLIDE[obj.kind];
-    if (c !== undefined && obj.block && (obj.fw || 1) <= 2 && (obj.fd || 1) <= 2) {
+    if (c !== undefined && obj.block && (fl || ((obj.fw || 1) <= 2 && (obj.fd || 1) <= 2))) {
       // collider-sized props don't block tiles (see COLLIDE)
       obj.soft = true;
       if (c) this.addCollider(obj, c);

@@ -1,5 +1,34 @@
 // World checks: collisions and placements.
+const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
+const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
 export const scenarios = {
+  // Otto on the Notice Cup ring (he used to stand inside it)
+  otto: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => window.OP.quickStart('human'));
+      const s = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world;
+        const isl = w.islands.find((i) => i.id === 'notice');
+        const r = isl.spots.notice_ring;
+        window.OP.teleport(r.x, r.y + 7);
+        g.env.clock = 12;
+        return r;
+      });
+      for (let i = 0; i < 30; i++) { await step(page, 0.1); await frames(page, 1); }
+      const info = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, o = g.actors.find((a) => a.npcId === 'nb_otto');
+        if (!o) return null;
+        const v = g.view3d;
+        return { x: o.x, y: o.y, floor: w.floorAt(o.x, o.y), ground: v.ground(o.x, o.y), terrain: v.terrain.terrainAt(o.x, o.y) };
+      });
+      console.log('otto', JSON.stringify(info));
+      await page.evaluate(() => { const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); const v = g.view3d; v.rig.yaw = -Math.PI / 2; v.rig.pitch = -0.12; });
+      await step(page, 0.2); await frames(page, 3);
+      await snap('ring');
+    },
+  },
   // invisible barriers: how close you can stand to each town prop from 8 directions,
   // and blocked tiles in town that no object accounts for
   barriers: {

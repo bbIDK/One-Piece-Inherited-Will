@@ -149,6 +149,12 @@ export function npcBuilder(ctx) {
   }
 }
 
+/** (x, y) if a person can stand there, else the nearest clear spot around it. */
+function clear(spawner, x, y, rng, extra = {}) {
+  const p = spawner.freeSpot(x, y) ? { x, y } : spawner.findFree(x, y, 2.5, rng) || spawner.findFree(x, y, 5, rng) || { x, y };
+  return { ...p, ...extra };
+}
+
 function placeNPC(game, island, def, rng, spawner) {
   const pl = (typeof def.at === 'function' ? def.at(game.state?.char, game) : def.at) || {};
   if (pl.spot && island.spots[pl.spot]) {
@@ -161,17 +167,17 @@ function placeNPC(game, island, def, rng, spawner) {
     if (pl.town && town.id !== pl.town) continue;
     if (pl.building) {
       const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
-      if (b) return { x: b.door.x + (pl.ox || 0.9), y: b.door.y + 0.9, building: b };
+      if (b) return clear(spawner, b.door.x + (pl.ox || 0.9), b.door.y + 0.9, rng, { building: b });
     }
     if (pl.plaza || (!pl.building && !pl.dx)) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5, 3, rng);
   }
   // any building that names this NPC
   for (const town of island.towns) {
     const b = town.buildings.find((x) => x.npc === def.id);
-    if (b) return { x: b.door.x + 0.9, y: b.door.y + 0.9, building: b };
+    if (b) return clear(spawner, b.door.x + 0.9, b.door.y + 0.9, rng, { building: b });
   }
   const lm = island.landmarks.find((l) => l.npc === def.id);
-  if (lm) return { x: lm.x + 0.6, y: lm.y + 1.2 };
+  if (lm) return clear(spawner, lm.x + 0.6, lm.y + 1.2, rng);
   if (pl.dx !== undefined) return spawner.findFree(island.x + pl.dx * island.def.w / 2, island.y + pl.dy * island.def.h / 2, 5, rng);
   return spawner.findFree(island.x, island.y, 10, rng);
 }

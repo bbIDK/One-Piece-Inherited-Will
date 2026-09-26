@@ -133,7 +133,8 @@ export class HeightField {
     if (OVERLAY[t]) return DECK_Y;
     const h = this.terrain(x, y);
     if (IS_LIQUID[t]) return Math.max(h, SEA_Y);
-    return h;
+    const f = this.world.floorAt ? this.world.floorAt(x, y) : 0;
+    return f ? h + f : h;
   }
 
   /** Invalidate after the tile map changed in a rectangle (tiles). */
