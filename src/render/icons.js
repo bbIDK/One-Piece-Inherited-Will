@@ -137,7 +137,7 @@ function mk(size) {
   g.setTransform(k, 0, 0, k, 0, 0);
   g.lineJoin = 'round'; g.lineCap = 'round';
   const olPx = Math.min(2.1, Math.max(1, 0.7 + size * 0.0145));
-  return { c, g, k, px, size, res, small: size <= 28, ol: olPx * U / size, rimPx: Math.min(1.5, Math.max(0.65, size * 0.019)) * res };
+  return { c, g, k, px, size, res, small: size <= 28, ol: olPx * U / size, rimPx: Math.min(1.5, Math.max(0.65, size * 0.019)) * res, post: [] };
 }
 
 /** Local (uniform) scale of the current transform relative to the icon grid. */
@@ -156,13 +156,15 @@ function lvec(I, x, y) {
  */
 function part(I, path, color, o = {}) {
   const g = I.g, p = P(path), rule = o.rule || 'nonzero', s = lsc(I);
+  // `color` may be a CanvasGradient: then o.base (a hex colour) drives the derived tones
+  const base = typeof color === 'string' ? color : o.base || '#888888';
   const ol = (o.ol ?? I.ol) / s;
   if (ol > 0) { g.lineWidth = ol * 2; g.strokeStyle = o.line || OUT; g.stroke(p); }
   const sd = o.flat ? 0 : o.sd ?? 2.6, hd = o.flat ? 0 : o.hd ?? 2;
   g.save();
   g.clip(p, rule);
   if (sd > 0) {
-    g.fillStyle = o.sh || dk(color, o.shT ?? 0.32);
+    g.fillStyle = o.sh || dk(base, o.shT ?? 0.32);
     g.fill(p, rule);
     const [dx, dy] = lvec(I, -sd, -sd);
     g.translate(dx, dy);
@@ -170,10 +172,19 @@ function part(I, path, color, o = {}) {
   g.fillStyle = color;
   g.fill(p, rule);
   g.restore();
-  if (hd > 0) hilite(I, p, o.hi || lt(color, o.hiT ?? 0.45), hd, o.hiA ?? 0.85, o.inset ?? 0.9, rule);
+  if (hd > 0) hilite(I, p, o.hi || lt(base, o.hiT ?? 0.45), hd, o.hiA ?? 0.85, o.inset ?? 0.9, rule);
   if (o.gloss) gloss(I, ...o.gloss);
   return p;
 }
+/** Linear / radial gradients in grid units (current transform). */
+function lg(I, x0, y0, x1, y1, stops) { const gr = I.g.createLinearGradient(x0, y0, x1, y1); for (const [t, c] of stops) gr.addColorStop(t, c); return gr; }
+function rg(I, x, y, r, stops, x0 = x, y0 = y, r0 = 0) { const gr = I.g.createRadialGradient(x0, y0, r0, x, y, r); for (const [t, c] of stops) gr.addColorStop(t, c); return gr; }
+/** Draw after the silhouette rim: glows (behind = true, no outline) and sparkles on top. */
+function after(I, fn, behind = false) { I.post.push([fn, behind, I.g.getTransform()]); }
+function sparkle(I, x, y, r, col = '#ffffff', a = 1) {
+  after(I, () => alpha(I, a, () => { fl(I, star(x, y, 4, r, r * 0.26), col); fl(I, circle(x, y, r * 0.22), '#ffffff'); }));
+}
+function glow(I, path, col, a = 0.45) { after(I, () => alpha(I, a, () => fl(I, path, col)), true); }
 function hilite(I, p, color, hd, a, inset, rule) {
   const s = scr('hl', I.px), t = s.getContext('2d');
   t.setTransform(I.g.getTransform());
@@ -222,6 +233,8 @@ function fl(I, path, color, o = {}) {
   g.fillStyle = color; g.fill(P(path), o.rule || 'nonzero'); g.restore();
 }
 function clip(I, path, fn) { const g = I.g; g.save(); g.clip(P(path)); fn(); g.restore(); }
+/** Erase (punch a hole). */
+function cut(I, path) { const g = I.g; g.save(); g.globalCompositeOperation = 'destination-out'; g.fill(P(path)); g.restore(); }
 /** Run fn with the grid rotated by r (radians) / scaled by s about (ox, oy). */
 function tf(I, { r = 0, s = 1, sx, sy, x = 0, y = 0, ox = 32, oy = 32 } = {}, fn) {
   const g = I.g; g.save();
@@ -230,16 +243,28 @@ function tf(I, { r = 0, s = 1, sx, sy, x = 0, y = 0, ox = 32, oy = 32 } = {}, fn
 }
 function alpha(I, a, fn) { const g = I.g; g.save(); g.globalAlpha *= a; fn(); g.restore(); }
 
-/** Silhouette rim: thickens the outer contour so shapes separate from any background. */
-function rim(I, rpx = I.rimPx) {
+/**
+ * Silhouette rim: thickens the outer ink contour so shapes separate from any
+ * background, plus a faint light halo beyond it so dark shapes still read on
+ * the dark HUD (on parchment the halo is practically invisible).
+ */
+const HALO = '#fff4dc', HALO_A = 0.5;
+function rim(I, rpx = I.rimPx, hpx = 0) {
   if (rpx <= 0) return;
   const s = scr('rim', I.px), t = s.getContext('2d');
   t.drawImage(I.c, 0, 0);
   t.globalCompositeOperation = 'source-in';
   t.fillStyle = OUT; t.fillRect(0, 0, I.px, I.px);
+  let h = null;
+  if (hpx > 0) {
+    h = scr('halo', I.px); const u = h.getContext('2d');
+    for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; u.drawImage(s, Math.cos(a) * (rpx + hpx), Math.sin(a) * (rpx + hpx)); }
+    u.globalCompositeOperation = 'source-in'; u.fillStyle = HALO; u.fillRect(0, 0, I.px, I.px);
+  }
   const g = I.g;
   g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'destination-over';
   for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; g.drawImage(s, Math.cos(a) * rpx, Math.sin(a) * rpx); }
+  if (h) { g.globalAlpha = HALO_A; g.drawImage(h, 0, 0); }
   g.restore();
 }
 
@@ -249,15 +274,23 @@ function render(key, size, draw, opts = {}) {
   let c = cache.get(ck);
   if (c) return c;
   const I = mk(size);
+  if (opts.bold) { I.ol *= opts.bold; I.rimPx *= opts.bold; I.small = I.small || size <= 48; }
   try {
     draw(I);
   } catch (e) {
     if (typeof console !== 'undefined') console.warn('[icons] failed to draw', key, e);
     I.g.setTransform(1, 0, 0, 1, 0, 0); I.g.clearRect(0, 0, I.px, I.px);
     I.g.setTransform(I.k, 0, 0, I.k, 0, 0);
+    I.post = [];
     D.pouch(I, {});
   }
-  if (opts.rim !== false) rim(I, opts.rimPx ?? I.rimPx);
+  if (opts.rim !== false) rim(I, opts.rimPx ?? I.rimPx, opts.halo === false ? 0 : Math.max(0.7, size * 0.014) * I.res);
+  for (const [fn, behind, m] of I.post) {
+    const g = I.g; g.save(); g.setTransform(m);
+    if (behind) g.globalCompositeOperation = 'destination-over';
+    try { fn(); } catch (e) { /* decoration only */ }
+    g.restore();
+  }
   c = I.c;
   if (opts.tag) c.dataset.icon = opts.tag;
   if (opts.fallback) c.dataset.fallback = '1';
@@ -1066,6 +1099,938 @@ D.pouch = (I, o = {}) => {
   tube(I, 'M44 26 C49 29 50 35 47 38', '#d9b26f', 2.2);
 };
 
+// ------------------------------------------------------------ shape helpers
+function heartP(cx, cy, s) {
+  return `M${cx} ${cy + 0.9 * s} C${cx - 0.2 * s} ${cy + 0.6 * s} ${cx - s} ${cy + 0.12 * s} ${cx - s} ${cy - 0.35 * s} C${cx - s} ${cy - 0.8 * s} ${cx - 0.42 * s} ${cy - 0.98 * s} ${cx} ${cy - 0.52 * s} C${cx + 0.42 * s} ${cy - 0.98 * s} ${cx + s} ${cy - 0.8 * s} ${cx + s} ${cy - 0.35 * s} C${cx + s} ${cy + 0.12 * s} ${cx + 0.2 * s} ${cy + 0.6 * s} ${cx} ${cy + 0.9 * s} Z`;
+}
+/** Wax seal: a wobbly disc. */
+function sealP(cx, cy, r) {
+  const pts = [];
+  for (let i = 0; i < 28; i++) { const a = i / 28 * TAU, rr = r * (1 + 0.09 * Math.sin(a * 7 + 1)); pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]); }
+  return poly(pts);
+}
+/** Tapered stroke along points (widths w0 → w1) as a filled outline path. */
+function taper(pts, w0, w1, pow = 1) {
+  const L = [], R = [], n = pts.length - 1;
+  for (let i = 0; i <= n; i++) {
+    const [x, y] = pts[i], [ax, ay] = pts[Math.max(0, i - 1)], [bx, by] = pts[Math.min(n, i + 1)];
+    let dx = bx - ax, dy = by - ay; const d = Math.hypot(dx, dy) || 1; dx /= d; dy /= d;
+    const w = (typeof w0 === 'function' ? w0(i / n) : w0 + (w1 - w0) * Math.pow(i / n, pow)) / 2;
+    L.push([x - dy * w, y + dx * w]); R.push([x + dy * w, y - dx * w]);
+  }
+  return poly(L.concat(R.reverse()));
+}
+/** Compass needle inside a glass globe. */
+function needle(I, x, y, r, rot = -0.45) {
+  tf(I, { r: rot, ox: x, oy: y }, () => {
+    part(I, poly([[x - r * 0.74, y], [x, y - r * 0.17], [x, y + r * 0.17]]), '#eef2f4', { sd: 0, hd: 0, ol: I.ol * 0.6 });
+    part(I, poly([[x + r * 0.74, y], [x, y - r * 0.17], [x, y + r * 0.17]]), '#d23b32', { sd: 0, hd: 0, ol: I.ol * 0.6 });
+  });
+  fl(I, circle(x, y, Math.max(1, r * 0.11)), OUT);
+}
+function globe(I, x, y, r, rot) {
+  part(I, circle(x, y, r), '#d6eef4', { sd: r * 0.14, shT: 0.2, hd: 0 });
+  clip(I, circle(x, y, r), () => fl(I, ellipse(x + r * 0.2, y + r * 1.05, r * 1.2, r * 0.55), '#b4d8e4'));
+  needle(I, x, y, r, rot);
+  gloss(I, x - r * 0.4, y - r * 0.42, r * 0.3, r * 0.17, 0.9, -0.7);
+  if (!I.small) ln(I, arcPath(x, y, r * 0.78, Math.PI * 1.02, Math.PI * 1.42), '#ffffff', Math.max(0.9, r * 0.09), { a: 0.75 });
+}
+/** Sakura blossom (five notched petals). */
+function sakura(I, x, y, r, col, rot = 0, o = {}) {
+  const petal = 'M0 0 C-6 -4 -8.5 -10 -5 -15 C-3.4 -16.5 -1.4 -16.2 0 -14 C1.4 -16.2 3.4 -16.5 5 -15 C8.5 -10 6 -4 0 0 Z';
+  const ps = []; for (let i = 0; i < 5; i++) ps.push(xf(petal, { ox: 0, oy: 0, x, y, r: rot + i / 5 * TAU, s: r / 16 }));
+  part(I, union(...ps), col, { sd: r * 0.12, hd: r * 0.08, ol: o.ol });
+  if (!I.small && r > 8) for (let i = 0; i < 5; i++) { const a = rot + i / 5 * TAU - Math.PI / 2; ln(I, `M${x} ${y} L${x + Math.cos(a) * r * 0.42} ${y + Math.sin(a) * r * 0.42}`, dk(col, 0.35), Math.max(0.8, r * 0.06)); fl(I, circle(x + Math.cos(a) * r * 0.44, y + Math.sin(a) * r * 0.44, Math.max(0.7, r * 0.06)), '#f7d34a'); }
+  fl(I, circle(x, y, r * 0.16), dk(col, 0.4));
+}
+
+// ------------------------------------------------------------ fruit & veg
+D.coconut = (I) => {
+  const sh = '#7a4a28';
+  const whole = ellipse(25, 28, 17, 16.5, -0.3);
+  part(I, whole, sh, { sd: 3.4, hd: 2 });
+  if (!I.small) clip(I, whole, () => {
+    for (const d of ['M9 27 C15 22 22 24 26 32', 'M12 17 C19 16 26 20 30 29', 'M21 12 C28 12 34 17 37 26', 'M13 37 C19 34 26 36 30 42']) ln(I, d, dk(sh, 0.4), 1.1, { a: 0.75 });
+  });
+  for (const [x, y] of [[16.5, 23], [21.5, 19.5], [21.5, 25.5]]) fl(I, circle(x, y, 1.7), '#3b2414');
+  const half = 'M28 42 C28 51.5 35 58 44 58 C53 58 60 51.5 60 42 Z';
+  part(I, half, sh, { sd: 2.6, hd: 1.4 });
+  if (!I.small) clip(I, half, () => { for (const x of [36, 44, 52]) ln(I, `M${x} 43 C${x - 1} 49 ${x} 54 ${x + 1} 58`, dk(sh, 0.4), 1, { a: 0.7 }); });
+  part(I, ellipse(44, 42, 16, 5.4), '#f8f4ea', { sd: 1.4, shT: 0.15, hd: 0.8 });
+  fl(I, ellipse(44.6, 42.6, 11.6, 3.3), '#e1ece8');
+  gloss(I, 40, 41.6, 3.6, 0.9, 0.7, 0);
+};
+D.banana = (I) => {
+  const b = 'M9 19 C8 41 36 57 58 38 C57.5 35.5 55.5 35.2 53.5 36.4 C38 45 19 36 14.5 18.5 Z';
+  const cols = ['#e9b923', '#f2c52e', '#f7d443'];
+  [0.42, 0.14, -0.16].forEach((r, i) => {
+    const p = xf(b, { ox: 11.5, oy: 17, r, x: i * 1.5 - 1.5, y: i * 2 - 2 });
+    part(I, p, cols[i], { sd: 2.2, hd: 1.4 });
+    if (!I.small) clip(I, p, () => ln(I, xf('M12 22 C15 38 32 48 50 42', { ox: 11.5, oy: 17, r, x: i * 1.5 - 1.5, y: i * 2 - 2 }), dk(cols[i], 0.28), 1, { a: 0.7 }));
+    fl(I, xf(ellipse(56.5, 37.2, 2, 1.6), { ox: 11.5, oy: 17, r, x: i * 1.5 - 1.5, y: i * 2 - 2 }), '#4a3219');
+  });
+  part(I, rrect(7, 11, 8, 9, 2.5), '#7a6a2a', { sd: 1, hd: 0.6 });
+};
+D.mango = (I) => {
+  const m = 'M31 14 C43 11 55 20 55.5 33 C56 47 45 58 31 57 C19 56 9.5 48 10 37 C10.5 26 19 16 31 14 Z';
+  const base = lg(I, 50, 14, 14, 54, [[0, '#e0452f'], [0.42, '#f59a1f'], [0.78, '#f2c53a'], [1, '#9dbb3a']]);
+  const shade = lg(I, 50, 14, 14, 54, [[0, '#a8321f'], [0.42, '#c0701a'], [0.78, '#c2952a'], [1, '#6f8a2a']]);
+  part(I, m, base, { base: '#f59a1f', sh: shade, hi: '#ffe2a8', sd: 3.8, hd: 2.4, gloss: [21, 27, 3, 5.5, 0.55, 0.5] });
+  if (!I.small) for (const [x, y] of [[40, 40], [34, 47], [45, 30], [25, 44]]) fl(I, circle(x, y, 0.8), '#fff3c8', { a: 0.7 });
+  tube(I, 'M33 15 C33 11 34 8 36.5 5.5', '#6b4a2a', 2.2);
+  part(I, 'M35.5 8.5 C40 2.5 50 2 56 6 C51 11.5 42 12.5 35.5 8.5 Z', C.leaf, { sd: 1.4, hd: 1 });
+  if (!I.small) ln(I, 'M38 8 C42 6.5 47 6 52 6.3', dk(C.leaf, 0.35), 1);
+};
+D.apple = (I, o = {}) => {
+  const col = o.color || '#d9362c';
+  const a = 'M32 21 C37 15 49 14 54 23 C59 33 55 47 47 55 C43 59 37 59 32 56 C27 59 21 59 17 55 C9 47 5 33 10 23 C15 14 27 15 32 21 Z';
+  part(I, a, col, { sd: 3.8, hd: 2.4, gloss: [20.5, 28, 2.8, 5.6, 0.6, 0.35] });
+  tube(I, 'M32 22 C31.5 16 32.5 11 35.5 7', '#6b4a2a', 2.4);
+  part(I, 'M35 12 C38 5 47 3 53 6 C50 12 42 15 35 12 Z', C.leaf, { sd: 1.4, hd: 1 });
+  if (!I.small) ln(I, 'M37 11 C41 9 45 7.5 50 6.5', dk(C.leaf, 0.35), 1);
+};
+D.cherry = (I) => {
+  tube(I, 'M36 9 C30 16 25 26 22 38', '#5f8a2e', 2.2);
+  tube(I, 'M36 9 C39 19 42 29 43.5 40', '#5f8a2e', 2.2);
+  part(I, 'M36 10 C40 3 50 1 57 4 C53 10 44 13 36 10 Z', C.leaf, { sd: 1.4, hd: 1 });
+  if (!I.small) ln(I, 'M39 8.5 C44 6 49 4.8 54 4.6', dk(C.leaf, 0.35), 1);
+  part(I, circle(21, 45, 11.5), '#c81f2c', { sd: 3, hd: 2, gloss: [16.5, 40.5, 2.4, 3.6, 0.7, 0.5] });
+  part(I, circle(44, 47, 11.5), '#b3162a', { sd: 3, hd: 2, gloss: [39.5, 42.5, 2.4, 3.6, 0.7, 0.5] });
+  fl(I, ellipse(22.2, 34.6, 1.6, 1), '#5a0d14'); fl(I, ellipse(43.6, 36.6, 1.6, 1), '#5a0d14');
+};
+D.mushroom = (I, o = {}) => {
+  const col = o.color || '#d23a2e';
+  part(I, 'M25 34 C24 42 21 50 23 56 C25 59 39 59 41 56 C43 50 40 42 39 34 Z', '#f1e7d0', { sd: 2.4, shT: 0.2, hd: 1.4 });
+  const cap = 'M7 36 C6 21 17 9 32 9 C47 9 58 21 57 36 C50 40 14 40 7 36 Z';
+  part(I, cap, col, { sd: 3, hd: 2.2 });
+  clip(I, cap, () => { for (const [x, y, r] of [[20, 20, 4.2], [34, 15, 3.6], [45, 24, 4.4], [27, 30, 3], [13, 31, 2.6], [51, 34, 2.4]]) part(I, ellipse(x, y, r, r * 0.8), '#fbf6ea', { sd: 0.6, shT: 0.15, hd: 0, ol: I.ol * 0.5 }); });
+  part(I, 'M9 36 C18 40.5 46 40.5 55 36 C52 42.5 12 42.5 9 36 Z', '#e8d9b8', { sd: 0.8, hd: 0, ol: I.ol * 0.7 });
+};
+
+// ------------------------------------------------------ dishes & sweets
+D.pizza = (I) => {
+  tf(I, { r: -0.35, s: 0.9, y: 1 }, () => {
+    const slice = 'M32 60 L9 17 C20 8 44 8 55 17 Z';
+    part(I, slice, '#f2c14e', { sd: 2.6, hd: 1.6 });
+    clip(I, slice, () => fl(I, 'M9 17 C20 8 44 8 55 17 L55 23 C44 15 20 15 9 23 Z', '#d9482f'));
+    part(I, 'M15.5 29 C15 35 14 39 16 41.5 C18 43.5 20.5 40.5 19.5 35 L18.4 29 Z', '#f2c14e', { sd: 0.8, hd: 0.5, ol: I.ol * 0.8 });
+    tube(I, 'M9 16 C20 6.5 44 6.5 55 16', '#d99a4e', 7);
+    for (const [x, y, r] of [[25, 24, 4.4], [39, 24.5, 4.2], [31, 36.5, 4], [32.5, 48.5, 3]]) part(I, circle(x, y, r), '#c23a2c', { sd: 1, hd: 0.8, ol: I.ol * 0.7 });
+    if (!I.small) for (const [x, y] of [[33, 29], [22, 32], [40, 36], [28, 44]]) fl(I, ellipse(x, y, 1.7, 0.9, 0.6), '#4f9a3a');
+  });
+};
+D.doughnut = (I, o = {}) => {
+  const dough = new Path2D(); dough.addPath(ellipse(32, 36, 26, 20)); dough.addPath(ellipse(32, 33.5, 8, 5.2));
+  part(I, dough, '#d99450', { rule: 'evenodd', sd: 3, hd: 1.6 });
+  const pts = [];
+  for (let i = 0; i < 60; i++) { const a = i / 60 * TAU, r = 21.5 + Math.sin(a * 7 + 0.6) * 1.2 + (Math.sin(a) > 0.2 ? Math.max(0, Math.sin(a * 6 + 1)) * 2.4 : 0); pts.push([32 + Math.cos(a) * r, 33 + Math.sin(a) * r * 0.74]); }
+  const fr = poly(pts); fr.addPath(ellipse(32, 33.2, 10.4, 6.8));
+  part(I, fr, o.color || '#f27bb0', { rule: 'evenodd', sd: 1.6, hd: 1.6, ol: I.ol * 0.8 });
+  if (!I.small) {
+    const cols = ['#ffffff', '#f6d02a', '#5bc0eb', '#8cc152', '#ffffff'];
+    for (let i = 0; i < 14; i++) { const a = i / 14 * TAU + 0.3, r = 14.5 + (i % 3) * 1.8, x = 32 + Math.cos(a) * r, y = 33 + Math.sin(a) * r * 0.74; fl(I, xf(rrect(x - 1.9, y - 0.65, 3.8, 1.3, 0.65), { ox: x, oy: y, r: i * 1.3 }), cols[i % 5]); }
+  }
+  clip(I, ellipse(32, 33.5, 8, 5.2), () => fl(I, ellipse(32, 30, 9.5, 5.4), '#9b5e2b'));
+};
+D.chocolate = (I) => {
+  tf(I, { r: -0.5, s: 0.88 }, () => {
+    part(I, rrect(14, 8, 36, 44, 3), '#6b3a22', { sd: 2, hd: 1.4, hi: '#a8683f' });
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) part(I, rrect(17 + c * 15.5, 11 + r * 12.5, 14, 10.5, 1.8), '#7a4428', { sd: 1.4, hd: 1.2, ol: I.ol * 0.55, hi: '#b0724a' });
+    const wr = 'M11 36 L15 33.5 L19 36 L23 33.5 L27 36 L31 33.5 L35 36 L39 33.5 L43 36 L47 33.5 L51 36 L53 36 L53 58 L11 58 Z';
+    part(I, wr, '#c8372d', { sd: 2, hd: 1.4 });
+    clip(I, wr, () => { fl(I, rrect(8, 31, 48, 7.5, 0), '#e8c35a'); if (!I.small) { fl(I, rrect(8, 46, 48, 3.6, 0), '#e8c35a', { a: 0.9 }); } });
+  });
+};
+D.cake = (I, o = {}) => {
+  const sponge = o.color || '#f3cf7a';
+  const front = 'M6 34 L58 24 L58 44 L6 54 Z';
+  part(I, front, sponge, { sd: 2.4, hd: 0 });
+  clip(I, front, () => {
+    fl(I, 'M0 39 L64 26.7 L64 30.4 L0 42.7 Z', '#fbf3e4');
+    fl(I, 'M0 46 L64 33.7 L64 36.4 L0 48.7 Z', o.jam || '#d9404f');
+    if (!I.small) for (const [x, y] of [[16, 49], [30, 45], [44, 43], [22, 38.5], [50, 36]]) fl(I, circle(x, y, 0.8), dk(sponge, 0.2));
+  });
+  part(I, 'M6 34 L38 15 C45.5 15 53.5 18.5 58 24 Z', '#fbf3e4', { sd: 1.2, shT: 0.12, hd: 1 });
+  part(I, 'M22 28 C20 24 24 20.5 28 22 C31 18.5 36 21 34.5 25 C36.5 28 33.5 31 28.5 30 C25.5 32 21 31 22 28 Z', '#ffffff', { sd: 1, shT: 0.12, hd: 0.6 });
+  part(I, 'M40 19 C36 13 40 7 45 8 C50 9 52 15 47 20 C45 22 42 22 40 19 Z', '#e0303a', { sd: 1.2, hd: 0.8 });
+  if (!I.small) for (const [x, y] of [[44, 12], [47, 15], [43, 17], [48, 11]]) fl(I, ellipse(x, y, 0.55, 0.85), '#ffe08a');
+  part(I, 'M41 9 L43.5 4.5 L46 8.5 L50 6.5 L47.5 10.5 Z', C.leaf, { sd: 0.5, hd: 0, ol: I.ol * 0.7 });
+};
+D.iceCream = (I, o = {}) => {
+  const cone = 'M18.5 35 L32 61 L45.5 35 Z';
+  part(I, cone, '#d9a15a', { sd: 1.8, hd: 1.2 });
+  if (!I.small) clip(I, cone, () => { for (let i = -3; i <= 3; i++) { ln(I, `M${26 + i * 6} 30 L${38 + i * 6} 62`, dk('#d9a15a', 0.35), 1); ln(I, `M${38 + i * 6} 30 L${26 + i * 6} 62`, dk('#d9a15a', 0.35), 1); } });
+  const s1 = 'M16 37 C12 36 12 30 15 28 C14 20 22 16 28 20 C32 16 42 17 45 23 C51 24 52 32 48 36 C46 40 42 38 40 41 C38 43 35 40 32 41 C28 42 26 39 23 40 C19 41 17 39 16 37 Z';
+  part(I, s1, o.scoop || '#f6e7c1', { sd: 2.4, shT: 0.2, hd: 1.6 });
+  part(I, circle(32, 18.5, 10.5), o.scoop2 || '#f48fb1', { sd: 2.4, hd: 1.6 });
+  tube(I, 'M33 8 C34 4.5 37 2.5 40 2.5', '#6b4a2a', 1.4, { flat: true });
+  part(I, circle(32.5, 8.5, 3.6), '#d9253a', { sd: 0.8, hd: 0.5, gloss: [31.4, 7.4, 0.9, 0.6, 0.9] });
+};
+D.sherbet = (I, o = {}) => {
+  const col = o.color || '#f06a8a';
+  part(I, ellipse(32, 58, 13, 3.4), '#cfe6ee', { sd: 0.8, hd: 0.6 });
+  part(I, rrect(29.5, 45, 5, 13, 2), '#cfe6ee', { sd: 0.8, hd: 0.6 });
+  part(I, circle(23, 32, 10), col, { sd: 2.2, hd: 1.4 });
+  part(I, circle(41, 32, 10), lt(col, 0.15), { sd: 2.2, hd: 1.4 });
+  part(I, circle(32, 24.5, 10), col, { sd: 2.2, hd: 1.4 });
+  const bowl = 'M9 34 H55 C55 43 45 49 32 49 C19 49 9 43 9 34 Z';
+  part(I, bowl, '#d7ecf1', { sd: 1.8, shT: 0.2, hd: 1.2 });
+  gloss(I, 17, 39, 1.4, 3.4, 0.8, 0.5);
+  part(I, 'M33 17 C29 11 33 4 39 5 C45 6 46 13 41 18 C38 20 35 20 33 17 Z', '#e0303a', { sd: 1.2, hd: 0.8 });
+  if (!I.small) for (const [x, y] of [[37, 10], [40, 13], [36, 15], [41, 9]]) fl(I, ellipse(x, y, 0.6, 0.9), '#ffe08a');
+  part(I, 'M33 6 L36 2 L38 5.5 L42 3.5 L40 7.5 Z', C.leaf, { sd: 0.5, hd: 0, ol: I.ol * 0.7 });
+};
+D.dango = (I, o = {}) => {
+  tf(I, { r: 0.6 }, () => {
+    tube(I, 'M32 63 L32 3', '#d9b26f', 2.6);
+    const cols = o.colors || ['#f4a3bf', '#f8f4e8', '#8cc152'];
+    [[32, 16], [32, 32.5], [32, 49]].forEach(([x, y], i) => part(I, circle(x, y, 8.8), cols[i], { sd: 2, shT: 0.22, hd: 1.4, gloss: [x - 3, y - 3.4, 1.8, 1.1, 0.7] }));
+  });
+};
+D.skewer = (I) => {
+  tf(I, { r: 0.55 }, () => {
+    tube(I, 'M32 63 L32 2', '#d9b26f', 2.4);
+    part(I, poly([[32, 5], [43.5, 22.5], [20.5, 22.5]]), '#8e8378', { sd: 1.6, hd: 1.2 });
+    if (!I.small) for (const [x, y] of [[29, 15], [35, 17], [31, 19.5], [37, 20.5], [26, 20.5]]) fl(I, circle(x, y, 0.6), '#4a4038');
+    part(I, ellipse(32, 33, 11, 7.5), '#f0dfb8', { sd: 1.8, shT: 0.2, hd: 1.2 });
+    if (!I.small) ln(I, ellipse(32, 33, 7.4, 4.8), '#d9c08a', 1, { a: 0.8 });
+    part(I, circle(32, 49, 8.5), '#c98b4a', { sd: 2, hd: 1.4 });
+  });
+};
+D.takoyaki = (I) => {
+  part(I, 'M5 37 C5 31 59 31 59 37 L59 42 H5 Z', '#b8955a', { sd: 1, hd: 0.6 });
+  for (const [x, y] of [[18, 30], [32, 29], [46, 30], [25, 37], [39, 37]]) {
+    part(I, circle(x, y, 8.4), '#d98b3e', { sd: 2, hd: 1.2 });
+    part(I, ellipse(x - 0.5, y - 3, 6.2, 4), '#6a3518', { sd: 0.8, hd: 0.6, ol: 0, hi: '#9a5a2e' });
+    if (!I.small) { ln(I, `M${x - 5} ${y - 3} q2.5 -2 5 0 t5 0`, '#fbf6ea', 1.2); fl(I, circle(x + 2, y - 5, 0.8), '#6fae3c'); fl(I, circle(x - 3, y - 1.4, 0.7), '#6fae3c'); }
+  }
+  const front = 'M3 40 H61 L54.5 53 C52.5 56 49.5 57 46 57 H18 C14.5 57 11.5 56 9.5 53 Z';
+  part(I, front, '#e3c890', { sd: 2.2, hd: 1.2 });
+  if (!I.small) clip(I, front, () => { for (let x = 7; x < 60; x += 5) ln(I, `M${x} 40 L${x - 1} 57`, dk('#e3c890', 0.18), 0.9, { a: 0.7 }); });
+  tube(I, 'M46 29 L58 8', '#e9d3a0', 1.6, { flat: true });
+};
+D.buns = (I) => {
+  const st = 'M5 38 H59 V50 C59 55 50 58 32 58 C14 58 5 55 5 50 Z';
+  part(I, st, '#c9a064', { sd: 2.2, hd: 1.2 });
+  if (!I.small) clip(I, st, () => { ln(I, 'M4 44.5 C14 47.5 50 47.5 60 44.5', dk('#c9a064', 0.35), 1.2); ln(I, 'M4 51 C14 54 50 54 60 51', dk('#c9a064', 0.35), 1.2); });
+  part(I, ellipse(32, 38, 27, 7), '#b08a52', { sd: 0.8, hd: 0.6 });
+  fl(I, ellipse(32, 38.4, 23.5, 5.2), '#6e5230');
+  for (const [x, y] of [[20, 33], [44, 33], [32, 27]]) {
+    const b = `M${x - 11} ${y + 6} C${x - 12} ${y - 4} ${x - 6} ${y - 9} ${x} ${y - 9} C${x + 6} ${y - 9} ${x + 12} ${y - 4} ${x + 11} ${y + 6} C${x + 6} ${y + 8} ${x - 6} ${y + 8} ${x - 11} ${y + 6} Z`;
+    part(I, b, '#fbf6ec', { sd: 2, shT: 0.18, hd: 1.2 });
+    if (!I.small) ln(I, `M${x - 3.4} ${y - 6.4} C${x - 1.4} ${y - 4.2} ${x + 1.4} ${y - 4.2} ${x + 3.4} ${y - 6.4} M${x} ${y - 8.6} L${x} ${y - 5}`, '#d9cdb4', 1);
+    fl(I, circle(x, y - 1, 1.3), '#e0567a');
+  }
+};
+D.bread = (I) => {
+  tf(I, { r: -0.3 }, () => {
+    part(I, 'M6 38 C5 27 17 19 32 19 C47 19 59 27 58 38 C57 46 47 50 32 50 C17 50 7 46 6 38 Z', '#d4893a', { sd: 3.2, hd: 2 });
+    for (const x of [20, 32, 44]) part(I, ellipse(x, 30, 3, 8, 0.5), '#f2c77e', { sd: 0, hd: 0, ol: I.ol * 0.6 });
+    if (!I.small) for (const [x, y] of [[14, 36], [26, 43], [40, 42], [50, 36]]) fl(I, ellipse(x, y, 1, 0.6), '#fbe3b0');
+  });
+};
+
+// ---------------------------------------------------------------- drinks
+D.wine = (I, o = {}) => {
+  const glass = o.glass || '#2f4a36', wine = o.wine || '#8e1b2a';
+  part(I, 'M19 5 H28 V17 C28 21 34 23 34 31 V56 C34 58.5 32 60 30 60 H17 C15 60 13 58.5 13 56 V31 C13 23 19 21 19 17 Z', glass, { sd: 2.4, hd: 1.6, hi: lt(glass, 0.4) });
+  gloss(I, 17, 33, 1.3, 6, 0.45, 0);
+  part(I, rrect(13, 37, 21, 13, 1), '#efe3c4', { sd: 0.8, hd: 0.6, ol: I.ol * 0.7 });
+  if (!I.small) part(I, ellipse(23.5, 43.5, 4.6, 3.2), wine, { sd: 0, hd: 0, ol: 0 });
+  part(I, rrect(18, 3, 11, 10, 1.5), wine, { sd: 0.8, hd: 0.6 });
+  part(I, ellipse(50, 59.5, 9, 2.4), '#d7ecf1', { sd: 0.4, hd: 0, ol: I.ol * 0.8 });
+  tube(I, 'M50 45 V59', '#d7ecf1', 2, { flat: true });
+  const bowl = 'M39 24 H61 C61 36 57 45 50 45 C43 45 39 36 39 24 Z';
+  part(I, bowl, '#e3f1f4', { sd: 1.2, shT: 0.15, hd: 0 });
+  clip(I, bowl, () => part(I, rrect(36, 32, 28, 16, 0), wine, { sd: 1.4, hd: 0.8, ol: 0 }));
+  gloss(I, 43, 29.5, 1.1, 3.6, 0.8, 0.2);
+};
+D.whisky = (I) => {
+  part(I, 'M21 5 H31 V13 C31 16 37 17 37 22 V55 C37 58 35 60 32 60 H20 C17 60 15 58 15 55 V22 C15 17 21 16 21 13 Z', '#c7771f', { sd: 2.6, hd: 1.6 });
+  gloss(I, 19, 31, 1.3, 7, 0.5, 0);
+  part(I, rrect(15, 32, 22, 15, 1), '#2b2631', { sd: 0.6, hd: 0.4, ol: I.ol * 0.7 });
+  if (!I.small) { ln(I, rrect(17, 34, 18, 11, 0.5), '#e0b24a', 0.9); fl(I, circle(26, 39.5, 2.4), '#e0b24a'); }
+  part(I, rrect(20, 2, 12, 7, 2), '#8a5a30', { sd: 0.8, hd: 0.6 });
+  const t = 'M39 34 H61 L59 58 C59 59.5 58 60 56.5 60 H43.5 C42 60 41 59.5 41 58 Z';
+  part(I, t, '#e3f1f4', { sd: 1.2, shT: 0.15, hd: 0 });
+  clip(I, t, () => { part(I, rrect(36, 46, 28, 16, 0), '#d08a2a', { sd: 1.2, hd: 0.6, ol: 0 }); part(I, xf(rrect(44, 40, 10, 10, 2), { r: 0.3, ox: 49, oy: 45 }), '#f4fbfd', { sd: 1, shT: 0.15, hd: 0.6, ol: I.ol * 0.6 }); });
+  gloss(I, 43, 40, 1, 5, 0.8, 0);
+};
+D.mug = (I, o = {}) => {
+  const wood = o.color || '#a8703f';
+  tube(I, 'M44 27 C57 27 58 46 44 47', wood, 5);
+  const body = rrect(11, 22, 35, 37, 4);
+  part(I, body, wood, { sd: 2.6, hd: 1.8 });
+  clip(I, body, () => {
+    if (!I.small) for (const x of [19, 27, 35]) ln(I, `M${x} 22 V60`, dk(wood, 0.35), 1.1, { a: 0.8 });
+    for (const y of [27, 50]) part(I, rrect(8, y, 42, 4.5, 0), '#7c868d', { sd: 0.8, hd: 0.6, ol: I.ol * 0.7 });
+  });
+  part(I, union(circle(14.5, 22, 5.5), circle(22, 18.5, 6.5), circle(31, 18, 6.5), circle(39.5, 20, 6), circle(43.5, 23.5, 4.5), rrect(9.5, 20, 37, 7, 3)), '#fbf3dc', { sd: 1.6, shT: 0.18, hd: 1 });
+  part(I, 'M12 25 C12 30 10 33 12 35 C14 37 16 34 15.5 29 Z', '#fbf3dc', { sd: 0.6, hd: 0, ol: I.ol * 0.7 });
+};
+D.teacup = (I, o = {}) => {
+  part(I, ellipse(32, 52, 27, 7), '#f4f1ea', { sd: 1.8, shT: 0.18, hd: 1 });
+  if (!I.small) ln(I, ellipse(32, 52, 22, 5.2), '#5a86b8', 1, { a: 0.8 });
+  tube(I, 'M50 33 C60 31 60 44 49 45', '#f4f1ea', 3.4);
+  const cup = 'M11 29 H53 C53 42 44 50 32 50 C20 50 11 42 11 29 Z';
+  part(I, cup, '#f7f4ec', { sd: 2.6, shT: 0.2, hd: 1.4 });
+  clip(I, cup, () => fl(I, 'M8 36 C20 40 44 40 56 36 L56 39.5 C44 43.5 20 43.5 8 39.5 Z', o.band || '#5a86b8'));
+  part(I, ellipse(32, 29, 21, 4.6), dk('#f7f4ec', 0.15), { sd: 0, hd: 0 });
+  fl(I, ellipse(32, 29.6, 18.5, 3.4), o.tea || '#b5652a');
+  if (!I.small) gloss(I, 26, 29, 4, 0.9, 0.5, 0);
+  for (const [x, h] of [[24, 0], [33, -3], [42, 0]]) ln(I, `M${x} ${22 + h} c-4 -4 4 -7 0 -12`, '#ffffff', 2.2, { a: 0.8 });
+};
+/** Water: a blue gourd flask. */
+D.drop = (I, o = {}) => {
+  const col = o.color || '#7cc3ea';
+  part(I, union(circle(32, 20, 9.5), circle(32, 42, 16.5), rrect(27, 20, 10, 16, 3)), col, { sd: 3, hd: 2, gloss: [25.5, 37, 2.6, 5, 0.6, 0.3] });
+  if (!I.small) gloss(I, 29, 16, 1.5, 2.6, 0.7, 0.3);
+  part(I, rrect(28, 5, 8, 7, 2), '#b27a45', { sd: 0.8, hd: 0.6 });
+  tube(I, 'M23.5 29.5 C28 31.5 36 31.5 40.5 29.5', '#c8372d', 2.4);
+  tube(I, 'M39 31 C43 36 43 42 41 46', '#c8372d', 1.8);
+  if (!I.small) part(I, 'M32 37 C35 41 37 44 37 47 C37 50 34.8 52 32 52 C29.2 52 27 50 27 47 C27 44 29 41 32 37 Z', '#ffffff', { flat: true, ol: I.ol * 0.55 });
+};
+D.bottle = (I, o = {}) => {
+  const b = 'M25 9 H39 V16 C39 20 46 22 46 29 V54 C46 57.5 43.5 60 40 60 H24 C20.5 60 18 57.5 18 54 V29 C18 22 25 20 25 16 Z';
+  part(I, b, '#dcebee', { sd: 1.6, shT: 0.2, hd: 0 });
+  clip(I, b, () => { part(I, rrect(10, 26, 44, 40, 0), o.liquid || '#f7f4ec', { sd: 2.6, hd: 1.4, ol: 0 }); part(I, rrect(10, 36, 44, 12, 0), o.label || '#5a86b8', { sd: 0.8, hd: 0.6, ol: I.ol * 0.7 }); });
+  gloss(I, 22, 33, 1.3, 5.5, 0.6, 0);
+  part(I, rrect(23.5, 4, 17, 7, 2), o.cap || '#c8372d', { sd: 0.8, hd: 0.6 });
+};
+D.fish = (I, o = {}) => {
+  const col = o.color || '#5b8fb5';
+  tf(I, { r: -0.35 }, () => {
+    part(I, 'M44 29 L58 16 C60 22 60 26 57 32 C60 38 60 42 58 48 L44 35 Z', dk(col, 0.1), { sd: 1.4, hd: 1 });
+    const body = 'M5 32 C12 20 30 16 44 24 C47 26 49 29 49 32 C49 35 47 38 44 40 C30 48 12 44 5 32 Z';
+    part(I, body, col, { sd: 3, hd: 2 });
+    clip(I, body, () => { fl(I, 'M4 33 C14 40 30 43 50 34 L50 50 L4 50 Z', '#e9eef0'); if (!I.small) for (let x = 20; x < 44; x += 5) ln(I, `M${x} 24 q3 4 0 8`, dk(col, 0.3), 0.9, { a: 0.6 }); });
+    part(I, 'M22 20 C26 13 34 12 38 16 C34 19 28 21 22 20 Z', dk(col, 0.1), { sd: 0.8, hd: 0.6, ol: I.ol * 0.8 });
+    fl(I, circle(12.5, 30, 2.3), '#ffffff'); fl(I, circle(12.8, 30, 1.25), OUT);
+    ln(I, 'M17.5 25 C19.5 29 19.5 34 17.5 38', dk(col, 0.4), 1.2);
+  });
+};
+
+// -------------------------------------------------------------- medicine
+/** Open jar of salve / tar / powder. o.color contents. */
+D.jar = (I, o = {}) => {
+  const clay = o.clay || '#e3d6bb';
+  const pot = 'M17 24 C11 31 11 49 17 55 C21 59 43 59 47 55 C53 49 53 31 47 24 Z';
+  part(I, pot, clay, { sd: 3, shT: 0.25, hd: 2 });
+  clip(I, pot, () => part(I, rrect(8, 34, 48, 10, 0), o.band || '#5a86b8', { sd: 1, hd: 0.6, ol: I.ol * 0.7 }));
+  part(I, rrect(15, 18, 34, 9, 3.5), lt(clay, 0.1), { sd: 1.2, shT: 0.2, hd: 0.8 });
+  part(I, ellipse(32, 19.5, 15.5, 4.2), dk(clay, 0.35), { sd: 0, hd: 0 });
+  part(I, 'M18.5 20 C20 14 26 11 32 12 C38 11 44 14 45.5 20 C40 22.5 24 22.5 18.5 20 Z', o.color || '#6fae3c', { sd: 1.2, hd: 1, ol: I.ol * 0.7 });
+  tube(I, 'M37 15 L51 3', C.woodL, 2.4);
+};
+D.dandelion = (I) => {
+  tube(I, 'M31 60 C30 50 32 42 32 34', '#5f8a2e', 2.6);
+  part(I, 'M30 58 C24 54 18 48 16 40 L20 42 L19 37 L23 41 L24 36 L27 44 C29 50 31 54 30 58 Z', C.leaf, { sd: 1, hd: 0.8 });
+  part(I, 'M33 58 C38 54 44 49 47 42 L43 44 L45 39 L40 43 L40 38 L36 45 C34 50 33 54 33 58 Z', dk(C.leaf, 0.1), { sd: 1, hd: 0.8 });
+  glow(I, circle(32, 21, 19), '#fff6c8', 0.55);
+  part(I, circle(32, 21, 13.5), '#f7f4ea', { sd: 1.6, shT: 0.12, hd: 1, ol: I.ol * 0.8 });
+  if (!I.small) for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; ln(I, `M${32 + Math.cos(a) * 3} ${21 + Math.sin(a) * 3} L${32 + Math.cos(a) * 11.4} ${21 + Math.sin(a) * 11.4}`, '#cfc8b4', 0.8); fl(I, circle(32 + Math.cos(a) * 11.8, 21 + Math.sin(a) * 11.8, 1.1), '#ffffff'); }
+  part(I, circle(32, 21, 3.2), '#e0c25a', { sd: 0.6, hd: 0.4, ol: I.ol * 0.6 });
+  for (const [x, y] of [[52, 10], [56, 20]]) { ln(I, `M${x} ${y} l3 3`, '#8a8270', 0.9); fl(I, circle(x, y, 2), '#ffffff'); }
+};
+
+// ------------------------------------------------------- spare weapons
+D.spear = (I, o = {}) => {
+  tf(I, { r: DIAG, s: 0.95 }, () => {
+    tube(I, 'M-4 32 H50', o.shaft || C.wood, 3.8);
+    part(I, rrect(-7, 29.5, 6, 5, 1.5), '#6c7780', { sd: 0.6, hd: 0.4 });
+    const head = 'M48 32 C52 27 60 27 70 32 C60 37 52 37 48 32 Z';
+    part(I, head, o.head || '#d4dde4', { sd: 1.2, hd: 0.8 });
+    clip(I, head, () => fl(I, 'M48 32 H72 V40 H48 Z', lt(o.head || '#d4dde4', 0.4), { a: 0.9 }));
+    part(I, rrect(45, 29, 5, 6, 1.4), C.brass, { sd: 0.6, hd: 0.4 });
+    if (o.tassel !== false) part(I, 'M45 33 C41 36 37 41 37 45 L41 43 L41 47.5 L44 42 C45.5 39 46 36 46 33 Z', '#c8372d', { sd: 0.8, hd: 0.5 });
+  });
+};
+D.dagger = (I, o = {}) => {
+  tf(I, { r: DIAG }, () => {
+    const blade = 'M28 28.5 L54 30.5 L62 32 L54 33.5 L28 35.5 Z';
+    part(I, blade, '#dfe7ee', { sd: 1.2, hd: 0.8 });
+    clip(I, blade, () => fl(I, 'M28 32 L62 32 L62 38 L28 38 Z', '#f4f8fb', { a: 0.8 }));
+    part(I, rrect(24, 22, 5, 20, 2), C.brass, { sd: 0.8, hd: 0.6 });
+    part(I, rrect(8, 28.5, 17, 7, 2.5), o.wrap || '#5a3d2b', { sd: 1, hd: 0.7 });
+    part(I, circle(7, 32, 4), C.brass, { sd: 0.8, hd: 0.5 });
+  });
+};
+
+// ------------------------------------------------------------ navigation
+/** Log Pose: glass globe(s) with a needle on a leather wrist strap. */
+D.logPose = (I, o = {}) => {
+  const leather = '#7a4a2a', brass = '#d6a23e';
+  const strap = new Path2D(); strap.addPath(ellipse(32, 48, 26, 10.5)); strap.addPath(ellipse(32, 47.2, 20, 6.2));
+  part(I, strap, leather, { rule: 'evenodd', sd: 1.8, hd: 1.2 });
+  if (!I.small) ln(I, ellipse(32, 47.6, 23, 8.4), lt(leather, 0.35), 0.9, { dash: [2, 1.8], a: 0.9 });
+  if (o.three) {
+    [[16, 29, 9.6, -0.3], [48, 29, 9.6, -0.7], [32, 24, 11, -0.5]].forEach(([x, y, r, a]) => globe(I, x, y, r, a));
+    part(I, rrect(5.5, 35, 53, 10, 4.5), brass, { sd: 1.6, hd: 1.2 });
+    if (!I.small) for (const x of [16, 32, 48]) part(I, circle(x, 40, 1.6), dk(brass, 0.3), { flat: true, ol: 0 });
+  } else {
+    globe(I, 32, 23.5, 17, -0.45);
+    part(I, 'M15 39 C15 47 49 47 49 39 L47 34 H17 Z', brass, { sd: 1.6, hd: 1.2 });
+  }
+};
+/** Eternal Pose: hourglass stand, glass globe between two wooden discs. */
+D.eternalPose = (I, o = {}) => {
+  const wood = o.wood || '#8a5a30';
+  part(I, rrect(11, 47, 42, 9, 2.5), wood, { sd: 1.6, hd: 1 });
+  part(I, ellipse(32, 47, 21, 4.8), lt(wood, 0.18), { sd: 0.8, hd: 0.6 });
+  if (!I.small) part(I, rrect(23, 49.5, 18, 4.6, 1), '#efe3c4', { flat: true, ol: I.ol * 0.6 });
+  for (const x of [14.5, 49.5]) tube(I, `M${x} 14 V47`, lt(wood, 0.08), 3.4);
+  globe(I, 32, 30.5, 13.5, -0.8);
+  part(I, rrect(11, 8, 42, 8, 2.5), wood, { sd: 1.4, hd: 1 });
+  part(I, ellipse(32, 8.5, 21, 4.4), lt(wood, 0.22), { sd: 0.6, hd: 0.5 });
+};
+/** Vivre Card: a torn scrap of white paper. */
+D.vivre = (I, o = {}) => {
+  tf(I, { r: -0.2 }, () => {
+    const p = 'M15 10 L20 8.5 L24 10.5 L29 8 L33 10 L38 8.5 L42 10.5 L47 9 L49 13 L47.5 18 L50 23 L48 29 L50.5 35 L48.5 41 L50 47 L48 52 L43 53.5 L38 52 L33 54 L28 52.5 L23 54 L18 52.5 L14 53 L15.5 47 L13.5 41 L15.5 35 L13.5 29 L15.5 23 L13.5 17 Z';
+    part(I, p, '#fbf8f0', { sd: 2.4, shT: 0.14, hd: 1.2 });
+    if (!I.small) { ln(I, 'M20 21 C24 18.5 28 23 32 20 C35 18 38 21 42 19', '#a79f8e', 1.3, { a: 0.85 }); ln(I, 'M21 28 C25 26 28 29 32 27', '#a79f8e', 1.2, { a: 0.7 }); }
+    part(I, 'M41 53.5 L48 52 L50 47 C46 46 42 49 41 53.5 Z', '#e2dccb', { sd: 0.5, hd: 0, ol: I.ol * 0.6 });
+    if (o.burn) part(I, 'M47 9 L49 13 L47.5 18 L50 23 C44 24 40 19 41 14 C42 11 44 10 47 9 Z', '#6b4a3a', { sd: 0.6, hd: 0, ol: I.ol * 0.6 });
+  });
+};
+/** Den Den Mushi: snail with a receiver on its shell. */
+D.denDen = (I) => {
+  const body = '#b9d27e', shell = '#b5773a';
+  part(I, 'M6 50 C6 45 10 42 16 42 H52 C58 42 61 46 60 51 C59 55 55 57 50 57 H14 C9 57 6 55 6 50 Z', body, { sd: 2, hd: 1.4 });
+  tube(I, 'M13 27 C11 21 9.5 17 8.5 13', body, 3); tube(I, 'M19.5 26 C19.5 20 20.5 16 22.5 12', body, 3);
+  part(I, 'M7 49 C4 40 6 28 14 25 C20 23 25 28 25 36 L24 46 Z', body, { sd: 2, hd: 1.4 });
+  for (const [x, y] of [[8.5, 12], [22.5, 11]]) { part(I, circle(x, y, 3.7), '#f7f4ec', { sd: 0.6, hd: 0.4 }); fl(I, circle(x + 0.8, y + 0.7, 1.7), OUT); }
+  if (!I.small) ln(I, 'M8 38.5 C11 41 14.5 41 17 38.5', dk(body, 0.5), 1.3);
+  part(I, circle(41, 32, 15), shell, { sd: 2.8, hd: 1.8 });
+  ln(I, spiral(41, 32, 12, 1.7, 0.4), dk(shell, 0.42), 1.6);
+  ln(I, 'M54 19 c3 1 1 3 3 4 c3 1 0 3 2 5 c2 2 -1 3 0 5', OUT, 1.3);
+  tube(I, 'M29.5 15 C32 9 48 9 51 15', '#2f2a33', 4.2, { hi: '#6b6478' });
+  part(I, ellipse(28.5, 16.5, 4.6, 3.3, 0.45), '#2f2a33', { sd: 0.8, hd: 0.8, hi: '#6b6478' });
+  part(I, ellipse(52, 16.5, 4.6, 3.3, -0.45), '#2f2a33', { sd: 0.8, hd: 0.8, hi: '#6b6478' });
+};
+/** Seastone handcuffs: two cuffs and a short chain. */
+D.cuffs = (I, o = {}) => {
+  const m = o.color || '#6f8e92';
+  const ring = (cx, cy, rx, ry, rot) => { const p = new Path2D(); p.addPath(ellipse(cx, cy, rx, ry, rot)); p.addPath(ellipse(cx, cy, rx * 0.64, ry * 0.6, rot)); return p; };
+  for (const [x, y, r] of [[29.5, 31.5, 0.9], [34.5, 27.5, -0.6]]) part(I, ring(x, y, 4.6, 2.8, r), '#8c969e', { rule: 'evenodd', sd: 0.6, hd: 0.4, ol: I.ol * 0.8 });
+  part(I, ring(19, 42, 14.5, 12.5, 0.35), m, { rule: 'evenodd', sd: 2.2, hd: 1.4 });
+  part(I, xf(rrect(22, 29, 9, 7, 1.6), { r: 0.35, ox: 26, oy: 32 }), dk(m, 0.12), { sd: 0.8, hd: 0.6 });
+  part(I, ring(46, 21, 13, 11, -0.45), m, { rule: 'evenodd', sd: 2.2, hd: 1.4 });
+  part(I, xf(rrect(34, 24, 8, 6.5, 1.6), { r: -0.45, ox: 38, oy: 27 }), dk(m, 0.12), { sd: 0.8, hd: 0.6 });
+  if (!I.small) for (const [x, y] of [[26, 32.5], [38, 27]]) fl(I, circle(x, y, 1), OUT);
+};
+/** South Bird: round bird that always faces south (beak down). */
+D.bird = (I, o = {}) => {
+  const col = o.color || '#c8743a';
+  part(I, 'M44 42 L61 49 L59 38 Z', dk(col, 0.15), { sd: 0.8, hd: 0.6 });
+  const body = ellipse(35, 37, 18, 15.5);
+  part(I, body, col, { sd: 3, hd: 2 });
+  clip(I, body, () => fl(I, ellipse(29, 44, 13.5, 10.5), '#f3dfb5'));
+  part(I, 'M34 31 C44 28.5 53 34 52.5 43 C46 45 38 43 34 38.5 Z', dk(col, 0.12), { sd: 1, hd: 0.8 });
+  tube(I, 'M29 52 V58 M38 52.5 V58', '#e39a3a', 1.8, { flat: true });
+  part(I, circle(22, 23, 11.5), col, { sd: 2.2, hd: 1.6 });
+  part(I, 'M21.5 11.5 C23 6 28 5 31 8.5 C27.5 9 25.5 10.5 24.5 13 Z', dk(col, 0.1), { sd: 0.6, hd: 0.4 });
+  part(I, 'M14 25.5 L7.5 36 L18 29.5 Z', '#f2a33a', { sd: 0.8, hd: 0.5 });
+  part(I, circle(19, 20.5, 3.4), '#ffffff', { flat: true, ol: I.ol * 0.6 });
+  fl(I, circle(18.6, 21.4, 1.8), OUT);
+};
+
+// ---------------------------------------------------- documents & paper
+/** Poneglyph rubbing: red sheet of glyph blocks on two rollers. */
+D.rubbing = (I) => {
+  const red = '#b3261e';
+  const sheet = rrect(12, 13, 40, 38, 0.5);
+  part(I, sheet, red, { sd: 2, hd: 1.2 });
+  clip(I, sheet, () => {
+    const n = I.small ? 3 : 4, step = 32 / n;
+    let k = 0;
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+      const x = 16 + c * step, y = 17 + r * (30 / n), w = step - 2.6, h = 30 / n - 2.4, q = hash('pg' + k++);
+      fl(I, rrect(x, y, w, h, 1), dk(red, 0.55));
+      if (!I.small) {
+        if (q & 1) fl(I, rrect(x + 1 + (q >> 3 & 3), y + 1, 1.3, h - 2, 0.4), lt(red, 0.25));
+        if (q & 2) fl(I, rrect(x + 1, y + 1.4 + (q >> 5 & 1) * 1.4, w - 2, 1.2, 0.4), lt(red, 0.25));
+        if (q & 4) fl(I, circle(x + w - 2, y + h - 2, 0.9), lt(red, 0.25));
+      }
+    }
+  });
+  for (const y of [12, 52]) {
+    part(I, rrect(9, y - 3.2, 46, 6.4, 3.2), '#5a3a22', { sd: 1, hd: 0.8 });
+    for (const x of [8, 56]) part(I, circle(x, y, 3.2), '#8a6a44', { sd: 0.6, hd: 0.5 });
+  }
+};
+/** Rolled-edge chart: treasure map (path + X) or a sea chart (grid + compass). */
+D.map = (I, o = {}) => {
+  const paper = '#ead6a6';
+  const sheet = 'M12 12 C20 14 28 10 36 12 C44 14 48 11 52 12 V51 C44 49 40 53 32 51 C24 49 18 53 12 51 Z';
+  part(I, sheet, paper, { sd: 2.2, hd: 1.4 });
+  clip(I, sheet, () => {
+    if (o.chart) {
+      if (!I.small) { for (let x = 17; x < 52; x += 7) ln(I, `M${x} 8 V56`, dk(paper, 0.22), 0.8, { a: 0.7 }); for (let y = 18; y < 52; y += 7) ln(I, `M8 ${y} H56`, dk(paper, 0.22), 0.8, { a: 0.7 }); }
+      part(I, 'M16 24 C20 18 28 19 30 25 C31 31 24 35 19 32 C16 30 15 27 16 24 Z', '#9cc07a', { sd: 0.8, hd: 0.6, ol: I.ol * 0.6 });
+      part(I, 'M33 38 C37 33 46 34 46 40 C46 46 38 47 35 44 Z', '#9cc07a', { sd: 0.8, hd: 0.6, ol: I.ol * 0.6 });
+      part(I, star(42, 22, 4, 7, 2), '#c8372d', { sd: 0.6, hd: 0, ol: I.ol * 0.6 });
+      if (!I.small) ln(I, 'M22 44 L28 38 L36 30', '#2f5f96', 1.2, { dash: [2, 1.8] });
+    } else {
+      part(I, 'M16 21 C22 15 34 16 40 22 C46 28 44 38 36 42 C28 46 18 43 16 35 C14 29 12 25 16 21 Z', '#a9c77e', { sd: 1, hd: 0.8, ol: I.ol * 0.6 });
+      if (!I.small) for (const [x, y] of [[22, 26], [27, 31], [24, 36]]) part(I, poly([[x, y - 3], [x + 2.6, y + 1.2], [x - 2.6, y + 1.2]]), '#6f9a4f', { flat: true, ol: 0 });
+      ln(I, 'M18 46 C22 40 28 42 30 35 C31.5 30 34 28 36.5 25.5', '#8a3a2a', 1.5, { dash: [2.2, 2] });
+      tube(I, 'M34.5 20 L41.5 27 M41.5 20 L34.5 27', '#d23b32', 2.4, { ol: I.ol * 0.6 });
+    }
+  });
+  for (const x of [12, 52]) { part(I, rrect(x - 3.5, 9, 7, 45, 3.5), lt(paper, 0.1), { sd: 1.2, hd: 1 }); fl(I, ellipse(x, 9.5, 2.4, 1.2), dk(paper, 0.35)); }
+};
+/** Skeleton key (gold) or a heavy iron key with a chain. */
+D.key = (I, o = {}) => {
+  const metal = o.big ? '#8c969e' : C.gold;
+  if (o.big) for (const [x, y, r] of [[9, 47, 0.7], [13, 53, -0.8], [18, 58, 0.7]]) { const l = new Path2D(); l.addPath(ellipse(x, y, 4, 2.6, r)); l.addPath(ellipse(x, y, 2.2, 1.1, r)); part(I, l, '#6c7780', { rule: 'evenodd', sd: 0.6, hd: 0.4, ol: I.ol * 0.8 }); }
+  tf(I, { r: -0.78 }, () => {
+    part(I, rrect(21, 29, 36, 6, 2), metal, { sd: 1.2, hd: 0.8 });
+    part(I, 'M44 34 H57 V44 H53 V39 H49 V43.5 H44 Z', metal, { sd: 1.2, hd: 0.8 });
+    const bow = new Path2D(); bow.addPath(o.big ? rrect(3, 22, 20, 20, 5) : union(circle(14, 26, 5.6), circle(14, 38, 5.6), circle(8, 32, 5.6), circle(18, 32, 6))); bow.addPath(circle(o.big ? 13 : 13.5, 32, o.big ? 4.6 : 3.4));
+    part(I, bow, metal, { rule: 'evenodd', sd: 1.6, hd: 1.2 });
+    part(I, rrect(21, 27.5, 3.4, 9, 1), dk(metal, 0.15), { sd: 0.6, hd: 0.4 });
+  });
+};
+/** Envelope with a wax seal (a heart for invitations). */
+D.envelope = (I, o = {}) => {
+  const paper = o.color || '#f4ecd8';
+  const b = rrect(6, 16, 52, 36, 3);
+  part(I, b, paper, { sd: 2.4, shT: 0.18, hd: 1.4 });
+  clip(I, b, () => ln(I, 'M6 52 L27 33 M58 52 L37 33', dk(paper, 0.2), 1.2));
+  part(I, 'M6.5 17.5 L32 38 L57.5 17.5 C57 16.5 56 16 55 16 H9 C8 16 7 16.5 6.5 17.5 Z', dk(paper, 0.06), { sd: 1.2, shT: 0.15, hd: 0.8 });
+  if (o.heart) part(I, heartP(32, 37.5, 7.4), '#e0487a', { sd: 1.2, hd: 0.8, gloss: [29, 34, 1.6, 1, 0.7] });
+  else part(I, sealP(32, 37.5, 6.6), '#c8372d', { sd: 1.2, hd: 0.8 });
+  if (!o.heart && !I.small) ln(I, circle(32, 37.5, 3.6), dk('#c8372d', 0.35), 1);
+};
+const BOOK_COLS = ['#8e2f2a', '#2f5f8f', '#3f7a3a', '#6b3f8a', '#8a5a2a', '#2a5a5a'];
+/** Closed book with a bookmark ribbon (a comic gets a loud cover). */
+D.book = (I, o = {}) => {
+  const col = o.color || BOOK_COLS[hash(o.id || 'b') % BOOK_COLS.length];
+  part(I, 'M18 11 H50 C51.5 11 53 12.5 53 14 V53 C53 54.5 51.5 56 50 56 H18 Z', '#f3ead3', { sd: 1.2, shT: 0.18, hd: 0 });
+  if (!I.small) for (let x = 49.2; x < 53; x += 1.5) ln(I, `M${x} 12.5 V54.5`, '#d9ceb4', 0.6);
+  if (o.ribbon !== false) tube(I, 'M40 50 V61', '#c8372d', 3, { cap: 'butt' });
+  const cover = rrect(11, 8, 39, 46, 3);
+  part(I, cover, o.comic ? '#f2c230' : col, { sd: 2.6, hd: 1.8 });
+  part(I, rrect(11, 8, 7, 46, 3), dk(o.comic ? '#e0572a' : col, 0.22), { sd: 1, hd: 0.8 });
+  if (o.comic) {
+    part(I, star(34, 30, 9, 14, 8), '#e0572a', { sd: 1, hd: 0.8, ol: I.ol * 0.7 });
+    if (!I.small) part(I, star(34, 30, 5, 6.5, 3), '#ffffff', { flat: true, ol: I.ol * 0.5 });
+  } else {
+    if (!I.small) for (const [x, y] of [[20, 11], [47, 11], [20, 51], [47, 51]]) part(I, circle(x, y, 1.6), C.gold, { flat: true, ol: I.ol * 0.5 });
+    part(I, poly([[34, 21], [41, 31], [34, 41], [27, 31]]), C.gold, { sd: 0.8, hd: 0.6, ol: I.ol * 0.7 });
+    if (!I.small) ln(I, rrect(22, 14, 24, 34, 1.5), lt(col, 0.3), 0.9, { a: 0.8 });
+  }
+};
+D.notebook = (I) => {
+  const pad = rrect(12, 10, 36, 47, 2);
+  part(I, pad, '#f7f4ec', { sd: 2.4, shT: 0.15, hd: 1.2 });
+  clip(I, pad, () => {
+    for (let y = 21; y < 56; y += 5) ln(I, `M12 ${y} H48`, '#9cc0e0', 0.9);
+    ln(I, 'M19 10 V58', '#e07a7a', 0.9);
+    if (!I.small) { ln(I, 'M23 24 C27 21.5 30 26 34 22.5', OUT, 1.1, { a: 0.6 }); ln(I, circle(33, 37, 5), OUT, 1, { a: 0.6 }); ln(I, 'M24 42 L33 37 L42 30', OUT, 1, { a: 0.6 }); }
+  });
+  for (let x = 16; x < 46; x += 5) tube(I, `M${x} 13 C${x} 7 ${x + 2.5} 7 ${x + 2.5} 11`, '#7c868d', 1.6);
+  tf(I, { r: -0.78, ox: 46, oy: 46 }, () => {
+    part(I, rrect(28, 42.5, 26, 6, 1), '#f2c230', { sd: 1, hd: 0.7 });
+    part(I, poly([[54, 42.5], [61, 45.5], [54, 48.5]]), '#efd9b0', { sd: 0.5, hd: 0.3 });
+    fl(I, poly([[59, 44.6], [61, 45.5], [59, 46.4]]), OUT);
+    part(I, rrect(24, 42.5, 5, 6, 1), '#f08aa0', { sd: 0.6, hd: 0.4 });
+  });
+};
+D.ticket = (I, o = {}) => {
+  const col = o.color || '#2f8a86';
+  tf(I, { r: -0.28 }, () => {
+    const t = new Path2D();
+    t.moveTo(8, 18); t.lineTo(56, 18); t.lineTo(56, 27); t.arc(56, 32, 5, -Math.PI / 2, Math.PI / 2, true); t.lineTo(56, 46); t.lineTo(8, 46); t.lineTo(8, 37); t.arc(8, 32, 5, Math.PI / 2, -Math.PI / 2, true); t.closePath();
+    part(I, t, '#f3e6c4', { sd: 2, shT: 0.18, hd: 1.2 });
+    clip(I, t, () => { fl(I, rrect(8, 18, 34, 28, 0), col); ln(I, 'M42 18 V46', OUT, 1.1, { dash: [2, 2] }); });
+    part(I, star(25, 32, 5, 7.5, 3.2), '#f3e6c4', { sd: 0.8, hd: 0.5, ol: I.ol * 0.7 });
+    if (!I.small) { ln(I, 'M46 26 H52 M46 31 H51 M46 36 H52', dk('#f3e6c4', 0.4), 1.2); }
+  });
+};
+/** A loose page (o.wet: water-stained, running ink). */
+D.page = (I, o = {}) => {
+  const paper = o.wet ? '#dfe7e2' : '#f4ecd8';
+  tf(I, { r: 0.12 }, () => {
+    const p = o.wet ? 'M14 8 H42 L52 18 V52 C48 55 45 52 41 55 C37 58 34 54 30 56 C26 58 22 55 18 57 L14 55 Z' : 'M14 8 H42 L52 18 V56 H14 Z';
+    part(I, p, paper, { sd: 2.2, shT: 0.15, hd: 1.2 });
+    clip(I, p, () => {
+      for (let y = 24; y < 52; y += 5) ln(I, `M19 ${y} H${y % 2 ? 44 : 47}`, o.wet ? '#6f8fa8' : '#8a7a64', 1.3, { a: o.wet ? 0.55 : 0.75 });
+      if (o.wet) { for (const [x, y, r] of [[36, 36, 7], [22, 46, 5], [42, 24, 4]]) fl(I, circle(x, y, r), '#8fb8c8', { a: 0.35 }); if (!I.small) for (const x of [24, 33, 44]) ln(I, `M${x} 26 V${36 + (x % 7)}`, '#6f8fa8', 1, { a: 0.5 }); }
+    });
+    part(I, 'M42 8 V18 H52 Z', dk(paper, 0.12), { sd: 0.6, hd: 0.4 });
+  });
+};
+/** Wanted poster (or a theatre playbill). */
+D.poster = (I, o = {}) => {
+  const paper = o.play ? '#f1d6e2' : '#ecd8a6';
+  const p = 'M12 8 L14 6.5 H50 L52 8.5 V56 L50 57.5 H14 L12 56 Z';
+  part(I, p, paper, { sd: 2.4, hd: 1.4 });
+  fl(I, rrect(17, 11, 30, 6, 1.2), o.play ? '#8e2a5a' : '#3a2a1c');
+  part(I, rrect(17, 20, 30, 22, 1), o.play ? '#f7e8ee' : '#d9c28e', { sd: 1, hd: 0, ol: I.ol * 0.6 });
+  clip(I, rrect(17, 20, 30, 22, 1), () => {
+    const sil = o.play ? '#8e2a5a' : '#6b5438';
+    fl(I, circle(32, 29, 5.6), sil);
+    fl(I, 'M20 44 C20 36 26 34 32 34 C38 34 44 36 44 44 Z', sil);
+    if (o.play) fl(I, 'M25.5 28 C25 21 39 21 38.5 28 C37 25 27 25 25.5 28 Z', '#e0b24a');
+  });
+  fl(I, rrect(19, 45, 26, 3.4, 1.2), o.play ? '#8e2a5a' : '#3a2a1c');
+  if (!I.small) fl(I, rrect(23, 50, 18, 2.6, 1), o.play ? '#8e2a5a' : '#3a2a1c', { a: 0.75 });
+  if (o.play) part(I, star(47, 12, 5, 5, 2.2), '#e0b24a', { sd: 0.5, hd: 0.3, ol: I.ol * 0.6 });
+  for (const x of [15.5, 48.5]) part(I, circle(x, 10.5, 1.8), '#8a8f96', { flat: true, ol: I.ol * 0.5 });
+};
+/** Rolled scroll tied with a ribbon (o.seal adds a wax seal). */
+D.scroll = (I, o = {}) => {
+  const paper = o.color || '#efe0bb';
+  tf(I, { r: -0.62 }, () => {
+    for (const x of [5.5, 58.5]) part(I, rrect(x - 3, 27, 6, 10, 2.5), '#6e4526', { sd: 0.8, hd: 0.6 });
+    const body = rrect(8, 22, 48, 20, 5);
+    part(I, body, paper, { sd: 2.4, hd: 1.6 });
+    part(I, ellipse(55, 32, 4.2, 10), lt(paper, 0.1), { sd: 0.8, hd: 0.5 });
+    if (!I.small) ln(I, spiral(55, 32, 3.4, 1.2, 0), dk(paper, 0.35), 0.9);
+    part(I, rrect(27, 21, 7, 22, 1), o.ribbon || '#c8372d', { sd: 0.8, hd: 0.6 });
+    if (o.seal) part(I, sealP(30.5, 42, 5.4), o.seal, { sd: 1, hd: 0.7 });
+  });
+};
+D.dice = (I) => {
+  tf(I, { r: 0.35, ox: 45, oy: 19 }, () => {
+    part(I, rrect(35, 9, 20, 20, 4), '#c8372d', { sd: 1.6, hd: 1.2 });
+    for (const [x, y] of [[40, 14], [45, 19], [50, 24]]) fl(I, circle(x, y, 1.8), '#fbf8f0');
+  });
+  const top = [[26, 22], [45, 31], [26, 40], [7, 31]], L = [[7, 31], [26, 40], [26, 60], [7, 51]], R = [[26, 40], [45, 31], [45, 51], [26, 60]];
+  part(I, union(poly(top), poly(L), poly(R)), '#f4f1ea', { sd: 0, hd: 0 });
+  fl(I, poly(L), '#e2dccf'); fl(I, poly(R), '#c9c0b0'); fl(I, poly(top), '#fbf8f0');
+  ln(I, 'M7 31 L26 40 L45 31 M26 40 V60', '#a89f8c', 1);
+  const face = (A, B, Dd, u, v, r, col) => { const x = A[0] + u * (B[0] - A[0]) + v * (Dd[0] - A[0]), y = A[1] + u * (B[1] - A[1]) + v * (Dd[1] - A[1]); fl(I, ellipse(x, y, r, r * 0.72, Math.atan2(B[1] - A[1], B[0] - A[0])), col); };
+  face(top[3], top[0], top[2], 0.5, 0.5, 3, '#c8372d');
+  for (const [u, v] of [[0.28, 0.3], [0.72, 0.7]]) face(L[0], L[1], L[3], u, v, 2, OUT);
+  for (const [u, v] of [[0.26, 0.25], [0.74, 0.25], [0.5, 0.5], [0.26, 0.75], [0.74, 0.75]]) face(R[0], R[1], R[3], u, v, 1.9, OUT);
+};
+D.tag = (I, o = {}) => {
+  const col = o.color || '#e0b24a';
+  tube(I, 'M15 29 C8 22 9 11 18 8', '#c8372d', 1.8);
+  tf(I, { r: -0.35 }, () => {
+    const t = new Path2D(); t.addPath(P('M22 16 H50 C52 16 54 18 54 20 V48 C54 50 52 52 50 52 H22 L12 34 Z')); t.addPath(circle(20.5, 34, 2.8));
+    part(I, t, col, { rule: 'evenodd', sd: 2, hd: 1.4 });
+    if (o.rabbit) fl(I, union(ellipse(38, 39, 6.4, 5.4), ellipse(34.6, 28, 1.9, 6, -0.25), ellipse(41.4, 28, 1.9, 6, 0.25)), dk(col, 0.42));
+    else if (!I.small) ln(I, rrect(27, 22, 22, 24, 2), dk(col, 0.3), 1.1);
+  });
+};
+D.horn = (I, o = {}) => {
+  const ivory = o.color || '#efe4c8';
+  const pts = bez([8, 52], [14, 30], [32, 14], [54, 13], 18);
+  tube(I, 'M13 42 C20 54 40 50 46 26', '#8a5a30', 1.8);
+  part(I, taper(pts, 3, 17, 1.6), ivory, { sd: 2, hd: 1.4 });
+  for (const t of [0.4, 0.72]) { const i = Math.round(t * 18), [x, y] = pts[i], [x2, y2] = pts[i + 1], a = Math.atan2(y2 - y, x2 - x), w = (3 + 14 * Math.pow(t, 1.6)) / 2 + 0.8; tube(I, `M${x - Math.sin(a) * w} ${y + Math.cos(a) * w} L${x + Math.sin(a) * w} ${y - Math.cos(a) * w}`, C.gold, 2.4, { ol: I.ol * 0.7 }); }
+  part(I, ellipse(54, 13.2, 3.6, 8.6, 0.05), dk(ivory, 0.5), { sd: 0, hd: 0, ol: I.ol * 0.8 });
+  part(I, rrect(5, 49, 6, 6, 1.5), C.gold, { sd: 0.6, hd: 0.4 });
+};
+/** Flag on a pole: o.emblem 'skull' | 'sun', o.tattered. */
+D.flag = (I, o = {}) => {
+  tube(I, 'M12 61 V7', '#7a4a2a', 3.6);
+  part(I, circle(12, 5.5, 3.2), C.gold, { sd: 0.6, hd: 0.4 });
+  const cloth = o.tattered ? 'M14 9 C24 5 34 13 45 9 L50 8 L47 14 L53 16 L49 21 L55 25 L50 29 L53 35 C45 36 41 40 33 38 L30 42 L26 37 C22 36 18 36 14 38 Z'
+    : 'M14 9 C24 5 34 13 45 9 C49 7.5 53 7 58 8 L58 38 C51 36 45 40 35 40 C25 40 21 35 14 38 Z';
+  const col = o.color || '#2b2631';
+  part(I, cloth, col, { sd: 2.4, hd: 1.6, hi: lt(col, 0.3) });
+  if (o.tattered) cut(I, ellipse(46, 27, 2.6, 2));
+  if (o.emblem === 'sun') {
+    const sx = o.tattered ? 32 : 35, sy = 23;
+    part(I, star(sx, sy, 10, 11, 7.6), '#d23b32', { sd: 0.8, hd: 0.5, ol: I.ol * 0.7 });
+    part(I, circle(sx, sy, 5.8), '#e8503a', { sd: 0.8, hd: 0.6, ol: I.ol * 0.6 });
+  } else skull(I, o.tattered ? 31 : 35, 21, 5.6);
+};
+D.umbrella = (I, o = {}) => {
+  const col = o.color || '#5b3f8a';
+  tf(I, { r: -0.3 }, () => {
+    tube(I, 'M32 28 V55 C32 61 24 61 24 56', '#3a2a1c', 2.6);
+    const can = 'M5 30 C7 16 19 8 32 8 C45 8 57 16 59 30 C55 27 50 27 46 30 C42 27 36 27 32 30 C28 27 22 27 18 30 C14 27 9 27 5 30 Z';
+    part(I, can, col, { sd: 2.6, hd: 1.8, hi: lt(col, 0.4) });
+    clip(I, can, () => { fl(I, 'M32 8 L18 31 H32 Z', lt(col, 0.14)); fl(I, 'M32 8 L46 31 H62 V8 Z', dk(col, 0.1)); ln(I, 'M32 8 L18 30 M32 8 L32 30 M32 8 L46 30', dk(col, 0.4), 1); });
+    tube(I, 'M32 8 V3.5', '#3a2a1c', 2);
+    if (o.bolt) part(I, 'M27 11 L22 21 L27 21 L24 28 L33 17 L28 17 L31 11 Z', '#f6d94a', { sd: 0.6, hd: 0.4, ol: I.ol * 0.7 });
+  });
+};
+
+// ------------------------------------------------------------- treasure
+/** Treasure chest (o.iron: a steel strongbox with a padlock). */
+D.chest = (I, o = {}) => {
+  const wood = o.iron ? '#7a8791' : '#9c6a3c', band = o.iron ? '#4b545b' : C.gold;
+  const shape = union(rrect(8, 30, 48, 26, 3), 'M8 31 V23 C8 14 18 10 32 10 C46 10 56 14 56 23 V31 Z');
+  if (!o.iron) for (const [x, y] of [[20, 29], [26, 28], [40, 28.5]]) part(I, ellipse(x, y, 4.6, 2.2), C.gold, { sd: 0.5, hd: 0.3, ol: I.ol * 0.7 });
+  part(I, rrect(8, 30, 48, 26, 3), wood, { sd: 2.6, hd: 1.6 });
+  part(I, 'M8 30 V23 C8 14 18 10 32 10 C46 10 56 14 56 23 V30 Z', lt(wood, 0.08), { sd: 2, hd: 1.6 });
+  clip(I, shape, () => {
+    if (!I.small && !o.iron) for (const y of [20, 42, 49]) ln(I, `M8 ${y} H56`, dk(wood, 0.35), 1, { a: 0.8 });
+    for (const x of [16, 48]) part(I, rrect(x - 3, 8, 6, 50, 0.5), band, { sd: 0.8, hd: 0.6, ol: I.ol * 0.7 });
+  });
+  part(I, rrect(6.5, 27.5, 51, 5, 1.5), band, { sd: 0.8, hd: 0.6 });
+  if (o.iron) {
+    if (!I.small) for (const [x, y] of [[12, 36], [12, 51], [52, 36], [52, 51], [24, 14], [40, 14]]) part(I, circle(x, y, 1.3), lt(wood, 0.35), { flat: true, ol: I.ol * 0.5 });
+    tube(I, 'M27.5 38 V33 C27.5 27.5 36.5 27.5 36.5 33 V38', '#9aa4ab', 2.4);
+    part(I, rrect(25, 37, 14, 12, 2), '#d6a23e', { sd: 1, hd: 0.8 });
+    fl(I, circle(32, 42, 1.6), OUT); fl(I, rrect(31.3, 42, 1.4, 4, 0.5), OUT);
+  } else {
+    part(I, rrect(27, 26, 10, 12, 2), band, { sd: 1, hd: 0.8 });
+    fl(I, circle(32, 30.5, 1.5), OUT); fl(I, poly([[31, 31], [33, 31], [33.6, 35], [30.4, 35]]), OUT);
+  }
+};
+D.bell = (I, o = {}) => {
+  const gold = o.color || '#e7b53c';
+  tube(I, 'M26 11 C26 3.5 38 3.5 38 11', gold, 3);
+  const b = 'M32 9 C22 9 17 16 17 27 C17 37 15 43 9 48 H55 C49 43 47 37 47 27 C47 16 42 9 32 9 Z';
+  part(I, b, gold, { sd: 3.2, hd: 2.2 });
+  clip(I, b, () => {
+    ln(I, 'M15 21 C24 24.5 40 24.5 49 21', dk(gold, 0.35), 1.4); ln(I, 'M13 40 C24 43.5 40 43.5 51 40', dk(gold, 0.35), 1.4);
+    if (!I.small) for (const x of [22, 32, 42]) ln(I, spiral(x, 32, 3.6, 1.4, x), dk(gold, 0.35), 1);
+  });
+  part(I, rrect(7, 46, 50, 7, 3.5), dk(gold, 0.06), { sd: 1.2, hd: 1 });
+  part(I, circle(32, 56.5, 4), dk(gold, 0.15), { sd: 0.8, hd: 0.6 });
+};
+D.statue = (I, o = {}) => {
+  const gold = o.color || '#e7b53c';
+  part(I, rrect(11, 50, 42, 9, 2), dk(gold, 0.22), { sd: 1.4, hd: 1 });
+  part(I, rrect(15, 45, 34, 6.5, 2), dk(gold, 0.1), { sd: 1, hd: 0.8 });
+  part(I, 'M18 46 C16 36 20 28 32 27 C44 28 48 36 46 46 Z', gold, { sd: 2.6, hd: 1.8 });
+  part(I, 'M20 41 C24 36 40 36 44 41 C40 44 24 44 20 41 Z', dk(gold, 0.08), { sd: 1, hd: 0.8 });
+  part(I, 'M22.5 15 L25.5 5 L29 10 L32 3.5 L35 10 L38.5 5 L41.5 15 Z', gold, { sd: 1, hd: 0.8 });
+  part(I, circle(32, 19, 8.2), gold, { sd: 1.8, hd: 1.4 });
+  if (!I.small) { ln(I, 'M28 19 H30.5 M33.5 19 H36', dk(gold, 0.5), 1.2); ln(I, 'M30 23 C31.3 24 32.7 24 34 23', dk(gold, 0.5), 1); }
+  gloss(I, 27, 15.5, 2, 1.2, 0.8);
+  sparkle(I, 48, 12, 4.5);
+};
+/** Mermaid pearl in an open clam shell. */
+D.pearl = (I) => {
+  const shell = '#f0b9a3';
+  const up = 'M8 38 C8 18 20 8 32 8 C44 8 56 18 56 38 C50 35 43 34 32 34 C21 34 14 35 8 38 Z';
+  part(I, up, shell, { sd: 2, hd: 1.4 });
+  if (!I.small) clip(I, up, () => { for (let i = -3; i <= 3; i++) ln(I, `M32 36 L${32 + i * 8} 6`, dk(shell, 0.28), 1.1, { a: 0.8 }); });
+  part(I, 'M5 40 C8 52 20 58 32 58 C44 58 56 52 59 40 C52 44 42 46 32 46 C22 46 12 44 5 40 Z', lt(shell, 0.08), { sd: 2, hd: 1.2 });
+  glow(I, circle(32, 38, 15.5), '#fff6fb', 0.5);
+  part(I, circle(32, 38, 11.5), '#f7f2fa', { sd: 2.4, sh: '#d9cfe6', hd: 1.4, gloss: [28, 34, 3, 2, 0.95, -0.6] });
+  if (!I.small) ln(I, arcPath(32, 38, 8.6, 0.2, 1.4), '#f6c6de', 1.4, { a: 0.8 });
+};
+D.coins = (I, o = {}) => {
+  const gold = o.color || C.gold;
+  for (let i = 0; i < 5; i++) { const y = 52 - i * 5.2; part(I, rrect(7, y - 3, 28, 6, 3), dk(gold, 0.12), { sd: 0.8, hd: 0.6, ol: I.ol * 0.8 }); part(I, ellipse(21, y - 3, 14, 3.6), gold, { sd: 0.8, hd: 0.5, ol: I.ol * 0.8 }); }
+  part(I, ellipse(45, 36, 13, 14), dk(gold, 0.15), { sd: 0.8, hd: 0.6 });
+  part(I, ellipse(44, 36, 12, 14), gold, { sd: 2.2, hd: 1.6 });
+  if (!I.small) ln(I, ellipse(44, 36, 8.6, 10.4), dk(gold, 0.3), 1.2);
+  part(I, star(44, 36.5, 5, 6, 2.8), lt(gold, 0.25), { sd: 0.6, hd: 0.4, ol: I.ol * 0.6 });
+  part(I, ellipse(46, 55, 11, 3.6), gold, { sd: 0.8, hd: 0.6, ol: I.ol * 0.8 });
+  sparkle(I, 55, 21, 4);
+};
+D.jewels = (I) => {
+  gem(I, 20, 24, 11, '#2f78d6');
+  gem(I, 45, 26, 10, '#2fae66');
+  gem(I, 13, 48, 6.5, '#8e4fd1');
+  gem(I, 52, 47, 6.5, '#f0a52a');
+  gem(I, 32, 41, 14, '#d7263d');
+  sparkle(I, 54, 11, 4.5);
+};
+D.ingot = (I, o = {}) => {
+  const m = o.color || '#b8c7d4';
+  const bar = (front, top, col) => { part(I, poly(front), col, { sd: 1.6, hd: 1 }); part(I, poly(top), lt(col, 0.25), { sd: 0.6, hd: 0.6 }); };
+  bar([[22, 34], [58, 34], [53, 22], [27, 22]], [[27, 22], [53, 22], [50, 15], [30, 15]], dk(m, 0.06));
+  bar([[6, 56], [46, 56], [40, 40], [12, 40]], [[12, 40], [40, 40], [37, 32], [15, 32]], m);
+  if (!I.small) part(I, rrect(20, 45, 12, 6, 1), dk(m, 0.12), { flat: true, ol: I.ol * 0.5 });
+  sparkle(I, 42, 33, 3.6);
+};
+D.violin = (I) => {
+  tube(I, 'M6 57 L58 13', '#6e4526', 1.8);
+  ln(I, 'M8 58.5 L59 15.5', '#f1ead8', 1);
+  tf(I, { r: 0.62 }, () => {
+    tube(I, 'M32 7 V26', '#2b2631', 4);
+    part(I, circle(32, 6, 3.4), '#9a4a18', { sd: 0.6, hd: 0.4 });
+    const body = union(ellipse(32, 31, 10.5, 8.5), ellipse(32, 46.5, 13, 11), rrect(26, 32, 12, 10, 3));
+    part(I, body, '#b5571d', { sd: 2.6, hd: 1.8 });
+    part(I, rrect(29.6, 13, 4.8, 26, 2), '#2b2631', { sd: 0.6, hd: 0.4 });
+    if (!I.small) { ln(I, 'M25.5 40 c-1.6 2 1.6 4 0 6 M38.5 40 c1.6 2 -1.6 4 0 6', OUT, 1.1); for (const x of [30.8, 32, 33.2]) ln(I, `M${x} 13 V53`, '#f1ead8', 0.5); }
+    part(I, rrect(27, 45, 10, 2, 0.6), '#e9d3a0', { flat: true, ol: I.ol * 0.5 });
+    part(I, 'M29 49 H35 L34 57 H30 Z', '#2b2631', { sd: 0.4, hd: 0.3 });
+  });
+};
+D.perfume = (I) => {
+  const liquid = '#c77dd8';
+  tube(I, 'M42 31 C50 29 54 35 55 41', '#e0b24a', 1.4, { flat: true });
+  part(I, ellipse(55.5, 46, 5.2, 6.5), '#e0487a', { sd: 1, hd: 0.8 });
+  const b = 'M18 30 C12 36 12 50 20 56 C24 59 40 59 44 56 C52 50 52 36 46 30 Z';
+  part(I, b, '#eadcf2', { sd: 1.4, shT: 0.15, hd: 0 });
+  clip(I, b, () => part(I, rrect(8, 38, 48, 24, 0), liquid, { sd: 2.2, hd: 1.2, ol: 0 }));
+  gloss(I, 21, 40, 1.6, 5, 0.75, 0.3);
+  part(I, rrect(25, 22, 14, 9, 2), '#e0b24a', { sd: 1, hd: 0.8 });
+  part(I, 'M32 5 C36 9 38.5 13 38.5 16.5 C38.5 20.5 35.5 23 32 23 C28.5 23 25.5 20.5 25.5 16.5 C25.5 13 28 9 32 5 Z', lt(liquid, 0.45), { sd: 1.4, hd: 1, gloss: [29.5, 13, 1.2, 2.4, 0.9, 0.3] });
+};
+D.feather = (I, o = {}) => {
+  const col = o.color || '#2aa198', tip = o.tip || '#f0bf45';
+  tf(I, { r: 0.75 }, () => {
+    const vane = 'M32 4 C42 12 44 26 42 40 C41 46 37 51 32 53 C27 51 23 46 22 40 C20 26 22 12 32 4 Z';
+    part(I, vane, col, { sd: 2, hd: 1.4, hi: lt(col, 0.45) });
+    clip(I, vane, () => {
+      fl(I, 'M16 0 H48 V17 C40 20 24 20 16 17 Z', tip);
+      if (!I.small) for (let y = 12; y < 50; y += 4) { ln(I, `M32 ${y + 4} L${22 + (y % 8 ? 1 : 0)} ${y}`, dk(col, 0.3), 0.8, { a: 0.7 }); ln(I, `M32 ${y + 4} L${42 - (y % 8 ? 1 : 0)} ${y}`, dk(col, 0.3), 0.8, { a: 0.7 }); }
+    });
+    tube(I, 'M32 62 V6', '#f4efe0', 1.8);
+  });
+};
+D.blossom = (I) => {
+  sakura(I, 26, 29, 18, '#f7a8c4', 0.15);
+  sakura(I, 48, 48, 10.5, '#f48fb1', -0.35);
+  part(I, xf('M0 0 C-3 -3 -4 -7 -2.4 -10 L0 -8.6 L2.4 -10 C4 -7 3 -3 0 0 Z', { ox: 0, oy: 0, x: 52, y: 20, r: 0.9, s: 0.9 }), '#f7a8c4', { sd: 0.6, hd: 0.4 });
+};
+D.flower = (I, o = {}) => {
+  const col = o.color || '#e0303a';
+  part(I, 'M34 40 C42 46 52 48 60 44 C54 38 44 36 34 40 Z', C.leaf, { sd: 1, hd: 0.8 });
+  part(I, 'M28 42 C22 50 14 54 5 52 C9 45 18 41 28 42 Z', dk(C.leaf, 0.08), { sd: 1, hd: 0.8 });
+  const petal = 'M0 0 C-10 -4 -13 -14 -8.5 -19.5 C-4.5 -23.5 4.5 -23.5 8.5 -19.5 C13 -14 10 -4 0 0 Z';
+  const ps = []; for (let i = 0; i < 5; i++) ps.push(xf(petal, { ox: 0, oy: 0, x: 31, y: 30, r: 0.3 + i / 5 * TAU, s: 1.05 }));
+  part(I, union(...ps), col, { sd: 2.4, hd: 1.6 });
+  if (!I.small) for (let i = 0; i < 5; i++) { const a = 0.3 + i / 5 * TAU - Math.PI / 2; ln(I, `M${31 + Math.cos(a) * 5} ${30 + Math.sin(a) * 5} L${31 + Math.cos(a) * 14} ${30 + Math.sin(a) * 14}`, dk(col, 0.3), 1, { a: 0.7 }); }
+  fl(I, circle(31, 30, 5.5), dk(col, 0.5));
+  tube(I, 'M31 30 C35 24 40 19 45 15', '#f3d27a', 1.8, { flat: true });
+  for (const [x, y] of [[45.5, 14], [43, 13], [47, 16.5]]) part(I, circle(x, y, 1.6), '#f6c431', { flat: true, ol: I.ol * 0.5 });
+};
+
+// ------------------------------------------------------------- materials
+D.sack = (I, o = {}) => {
+  const burlap = '#c9a870';
+  const s = 'M18 24 C10 32 8 46 12 54 C16 59 48 59 52 54 C56 46 54 32 46 24 Z';
+  part(I, s, burlap, { sd: 3.4, hd: 2 });
+  if (!I.small) clip(I, s, () => { for (let y = 30; y < 58; y += 4) ln(I, `M8 ${y} H56`, dk(burlap, 0.18), 0.8, { a: 0.7 }); for (let x = 12; x < 56; x += 4) ln(I, `M${x} 24 V60`, dk(burlap, 0.15), 0.7, { a: 0.6 }); });
+  part(I, 'M20 25 C18 20 20 16 24 17 L40 17 C44 16 46 20 44 25 Z', lt(burlap, 0.1), { sd: 1.4, hd: 1 });
+  part(I, ellipse(32, 17, 11, 3.8), dk(burlap, 0.45), { flat: true, ol: I.ol * 0.7 });
+  part(I, 'M22.5 17 C24 11 28 8 32 8 C36 8 40 11 41.5 17 C36 19 28 19 22.5 17 Z', o.content || '#f7f5ef', { sd: 1.2, shT: 0.12, hd: 0.8 });
+  tube(I, 'M19 25 C27 28 37 28 45 25', '#8a5a30', 2.2);
+};
+D.wood = (I, o = {}) => {
+  const bark = o.adam ? '#4f3322' : '#8a5a30', core = o.adam ? '#e6a547' : '#e8c890';
+  const log = (x, y, r) => tf(I, { r: -0.42, ox: x, oy: y }, () => {
+    part(I, rrect(x, y - r, 40, r * 2, r * 0.7), bark, { sd: 2, hd: 1.4, hi: lt(bark, 0.35) });
+    if (!I.small) clip(I, rrect(x, y - r, 40, r * 2, r * 0.7), () => { for (const dy of [-0.45, 0.1, 0.55]) ln(I, `M${x + 6} ${y + dy * r} H${x + 38}`, dk(bark, 0.35), 1, { a: 0.8 }); });
+    part(I, ellipse(x, y, r * 0.62, r), core, { sd: 1, hd: 0.8, ol: I.ol * 0.9 });
+    ln(I, ellipse(x, y, r * 0.38, r * 0.62), dk(core, 0.25), 1);
+    if (!I.small) ln(I, ellipse(x, y, r * 0.16, r * 0.28), dk(core, 0.3), 0.9);
+  });
+  log(18, 26, 9);
+  log(11, 44, 10.5);
+  if (o.adam) { sparkle(I, 52, 13, 4.5, '#fff3c0'); sparkle(I, 56, 34, 3.2, '#fff3c0'); }
+};
+D.rock = (I, o = {}) => {
+  const col = o.color || '#8d8a85';
+  const outer = poly([[9, 42], [14, 25], [26, 13], [42, 12], [55, 24], [57, 40], [46, 55], [22, 56]]);
+  part(I, outer, col, { sd: 3, hd: 1.4 });
+  clip(I, outer, () => {
+    fl(I, poly([[9, 25], [26, 11], [43, 10], [37, 26], [22, 30]]), lt(col, 0.3));
+    fl(I, poly([[37, 26], [43, 10], [58, 23], [58, 40], [43, 39]]), lt(col, 0.1));
+    fl(I, poly([[43, 39], [58, 40], [47, 57], [34, 50]]), dk(col, 0.15));
+    ln(I, 'M22 30 L37 26 L43 39 L34 50 M37 26 L43 11 M43 39 L57 40', dk(col, 0.35), 1);
+    if (o.speckle && !I.small) for (let i = 0; i < 12; i++) { const q = hash('sp' + i); fl(I, circle(14 + (q % 38), 16 + ((q >> 6) % 36), 0.9), lt(col, 0.45), { a: 0.8 }); }
+  });
+  if (o.sheen) { ln(I, 'M20 22 L30 16', '#ffffff', 1.6, { a: 0.7 }); sparkle(I, 47, 17, 3.6, o.sheen); }
+};
+D.herbs = (I, o = {}) => {
+  const tips = [[12, 18], [22, 9], [34, 7], [45, 12], [53, 22]];
+  const cols = ['#4f9a3a', '#5aa33f', '#3f8a34', '#6fb24a', '#4a9038'];
+  tips.forEach(([x, y], i) => {
+    tube(I, `M31 58 Q${(31 + x) / 2 + (x - 31) * 0.1} ${(58 + y) / 2} ${x} ${y}`, '#5f7f2e', 1.6, { flat: true });
+    for (let t = 0.35; t < 1.01; t += 0.22) {
+      const px = 31 + (x - 31) * t, py = 58 + (y - 58) * t, a = Math.atan2(y - 58, x - 31), side = (Math.round(t * 10) % 2 ? 1 : -1);
+      part(I, ellipse(px + Math.cos(a + side * 1.2) * 3.4, py + Math.sin(a + side * 1.2) * 3.4, 4.6, 2.3, a + side * 0.9), cols[i], { sd: 0.8, hd: 0.6, ol: I.ol * 0.8 });
+    }
+  });
+  part(I, rrect(25, 44, 13, 5.5, 2), '#c9a870', { sd: 0.8, hd: 0.6 });
+};
+/** Dial: a spiral sky-island shell tinted by type, with its effect at the mouth. */
+D.shell = (I, o = {}) => {
+  const col = o.color || '#d9c1a0';
+  part(I, ellipse(45, 19, 9.5, 7.5, -0.6), lt(col, 0.1), { sd: 1.4, hd: 1 });
+  part(I, ellipse(51.5, 11.5, 5.4, 4.2, -0.6), lt(col, 0.2), { sd: 0.8, hd: 0.6 });
+  part(I, circle(54, 8.5, 3), '#f4f1ea', { sd: 0.6, hd: 0.4 });
+  const body = 'M8 40 C8 26 20 17 33 18 C45 19 52 28 51 39 C50 50 40 57 29 57 C18 57 8 51 8 40 Z';
+  part(I, body, col, { sd: 3, hd: 2 });
+  clip(I, body, () => { ln(I, 'M20 20 C32 22 44 30 50 44', dk(col, 0.3), 1.4); if (!I.small) ln(I, 'M30 18 C40 22 48 30 51 36', dk(col, 0.25), 1.1, { a: 0.8 }); });
+  part(I, ellipse(22, 44, 10.5, 7.8, -0.6), '#f7e7d6', { sd: 1, hd: 0.6 });
+  fl(I, ellipse(22.8, 44.8, 7, 4.8, -0.6), dk(col, 0.62));
+  const fx = o.fx;
+  if (!fx) return;
+  if (fx === 'flame') { part(I, 'M14 50 C8 46 6 38 10 32 C11 38 14 40 16 40 C15 35 18 31 22 29 C21 35 25 38 24 44 C23 48 19 51 14 50 Z', '#ffc93c', { sd: 1, hd: 0.8, ol: I.ol * 0.8 }); if (!I.small) fl(I, 'M15 48 C12 46 12 42 14 40 C15 43 17 43 18 42 C19 44 18.5 47 15 48 Z', '#fff3c4'); }
+  else if (fx === 'breath') for (const [d, w] of [['M20 44 C12 44 8 48 6 54', 2.6], ['M24 48 C18 52 16 56 17 60', 2], ['M17 40 C11 38 6 40 3 44', 1.8]]) tube(I, d, '#eaf7fb', w, { ol: I.ol * 0.7, flat: true });
+  else if (fx === 'flash') { part(I, star(15, 51, 8, 11, 4.6), '#fff1a0', { sd: 0.6, hd: 0.4, ol: I.ol * 0.7 }); }
+  else if (fx === 'impact') part(I, star(15, 51, 7, 10, 5), '#f6c431', { sd: 0.8, hd: 0.5, ol: I.ol * 0.7 });
+  else if (fx === 'reject') { part(I, star(15, 51, 9, 11, 5.4), '#b58ce0', { sd: 0.8, hd: 0.5, ol: I.ol * 0.7 }); fl(I, circle(15, 51, 3), '#fff6ff'); }
+  else if (fx === 'water') part(I, 'M14 42 C17 46 19 49 19 52 C19 55 16.8 57 14 57 C11.2 57 9 55 9 52 C9 49 11 46 14 42 Z', '#6cc3ef', { sd: 1, hd: 0.8, ol: I.ol * 0.8 });
+};
+// ----------------------------------------------------------- devil fruit
+// Shape per fruit id (curated for the famous ones, hashed for the rest).
+const FRUIT_SHAPE = {
+  gomu: 'round', mera: 'round', ope: 'heart', hie: 'pear', goro: 'melon', yami: 'heart', gura: 'round', pika: 'gourd', magu: 'pear',
+  suna: 'banana', moku: 'grape', hana: 'grape', bara: 'melon', ito: 'grape', mochi: 'gourd', horo: 'heart', kage: 'melon', doku: 'grape',
+  hito: 'pear', neko_leopard: 'banana', tori_phoenix: 'pear', uo_seiryu: 'banana', nikyu: 'heart', bari: 'round', supa: 'gourd',
+};
+const FRUIT_SHAPES = ['round', 'pear', 'grape', 'banana', 'gourd', 'melon', 'heart'];
+const FRUIT_BODY = {
+  round: [() => ellipse(32, 38, 21, 20), [32, 18.5]],
+  melon: [() => ellipse(32, 39, 24.5, 17.5), [32, 21.8]],
+  pear: [() => 'M32 15 C38 15 41 20 42 27 C50 32 54 40 52 48 C50 55 42 59 32 59 C22 59 14 55 12 48 C10 40 14 32 22 27 C23 20 26 15 32 15 Z', [32, 15.5]],
+  heart: [() => 'M32 59 C22 51 9 43 9 31 C9 22 15 17 22 17 C26 17 30 19 32 22 C34 19 38 17 42 17 C49 17 55 22 55 31 C55 43 42 51 32 59 Z', [32, 21]],
+  gourd: [() => union(circle(32, 25, 11.5), circle(32, 44, 16), rrect(26, 25, 12, 14, 4)), [32, 14]],
+  banana: [() => taper(bez([15, 25], [15, 47], [38, 58], [57, 43], 22), (t) => 9 + 13 * Math.sin(Math.PI * Math.min(1, t * 1.1)) - (t > 0.9 ? (t - 0.9) * 40 : 0)), [15, 22]],
+};
+function swirls(I, path, box, col, rr, seed) {
+  const dark = lum(col) < 0.32;
+  const sw = dark ? lt(col, 0.42) : dk(col, 0.45), hi = dark ? dk(col, 0.5) : lt(col, 0.55), [x0, y0, x1, y1] = box;
+  const w = I.small ? 2.3 : 1.9, step = rr * 2.1;
+  clip(I, path, () => {
+    let k = 0;
+    for (let y = y0; y <= y1; y += step * 0.86) for (let x = x0 + ((Math.round((y - y0) / (step * 0.86)) % 2) ? step / 2 : 0); x <= x1; x += step) {
+      const q = hash(seed + ':' + k++), jx = ((q & 15) / 15 - 0.5) * rr * 0.45, jy = (((q >> 4) & 15) / 15 - 0.5) * rr * 0.45, rot = ((q >> 8) & 63) / 63 * TAU, dir = q & 4096 ? 1 : -1;
+      const sp = spiral(x + jx, y + jy, rr, I.small ? 1.2 : 1.45, rot, dir);
+      if (!I.small) ln(I, xf(sp, { x: -0.6, y: -0.6 }), hi, w * 0.5, { a: 0.75 });
+      ln(I, sp, sw, w);
+    }
+  });
+}
+D.fruit = (I, o = {}) => {
+  const id = o.fruit || '', f = FRUITS[id] || {};
+  let col = o.color || f.color || '#8e5bd1';
+  if (lum(col) > 0.84) col = mix(col, '#9fb2c6', 0.24);
+  const shape = o.shape || FRUIT_SHAPE[id] || FRUIT_SHAPES[hash(id || 'x') % FRUIT_SHAPES.length];
+  const rr = I.small ? 7.6 : 6.6;
+  const stem = (x, y, leaf = 17) => {
+    part(I, `M${x - 1} ${y + 1} C${x - leaf * 0.35} ${y - 5} ${x - leaf * 0.8} ${y - 5} ${x - leaf} ${y - 1} C${x - leaf * 0.75} ${y + 3} ${x - leaf * 0.35} ${y + 3.5} ${x - 1} ${y + 1} Z`, C.leaf, { sd: 1.2, hd: 0.9 });
+    if (!I.small) ln(I, `M${x - 3} ${y} C${x - leaf * 0.4} ${y - 2} ${x - leaf * 0.62} ${y - 2.4} ${x - leaf * 0.86} ${y - 1}`, dk(C.leaf, 0.35), 0.9);
+    tube(I, `M${x} ${y + 2} C${x} ${y - 4} ${x + 2} ${y - 8} ${x + 6} ${y - 8.5} C${x + 10} ${y - 9} ${x + 11} ${y - 5} ${x + 8} ${y - 4} C${x + 6} ${y - 3.5} ${x + 5.5} ${y - 5.5} ${x + 7} ${y - 6}`, '#3f6d2a', 2.6);
+  };
+  if (shape === 'grape') {
+    const balls = [[17, 27], [27.5, 26], [38, 26], [48, 27], [22, 37.5], [32.5, 37], [43, 37.5], [27, 47.5], [38, 47.5], [32.5, 56.5]];
+    const r = 7.6, all = union(...balls.map(([x, y]) => circle(x, y, r)));
+    balls.forEach(([x, y], i) => part(I, circle(x, y, r), i % 3 === 1 ? dk(col, 0.05) : col, { sd: 2.2, hd: 0 }));
+    swirls(I, all, [8, 18, 56, 62], col, rr * 0.8, id || 'grape');
+    balls.forEach(([x, y]) => { hilite(I, circle(x, y, r), lt(col, 0.55), 1.4, 0.7, 0.8, 'nonzero'); if (!I.small) gloss(I, x - 2.8, y - 3, 1.5, 0.9, 0.55); });
+    stem(32, 19.5);
+    return;
+  }
+  const [mkBody, [sx, sy]] = FRUIT_BODY[shape] || FRUIT_BODY.round;
+  const body = P(mkBody());
+  part(I, body, col, { sd: 3.6, hd: 2.2 });
+  swirls(I, body, [6, 14, 58, 60], col, rr, id || 'fruit');
+  hilite(I, body, lt(col, 0.6), 2, 0.7, 0.9, 'nonzero');
+  const gl = { round: [23, 27], melon: [20, 30], pear: [24, 33], heart: [18, 27], gourd: [27, 20], banana: [18, 33] }[shape] || [24, 28];
+  gloss(I, gl[0], gl[1], 4, 2.2, 0.6);
+  stem(sx, sy, shape === 'banana' ? 11 : 17);
+};
+
+D.crate = (I, o = {}) => {
+  const w = o.color || '#b07a45';
+  const front = poly([[8, 27], [40, 27], [40, 58], [8, 58]]), top = poly([[8, 27], [22, 14], [55, 14], [40, 27]]), side = poly([[40, 27], [55, 14], [55, 45], [40, 58]]);
+  part(I, union(front, top, side), w, { sd: 0, hd: 0 });
+  fl(I, top, lt(w, 0.25)); fl(I, side, dk(w, 0.2)); fl(I, front, w);
+  clip(I, front, () => { part(I, 'M8 52 L34 27 H40 V31 L14 58 H8 Z', dk(w, 0.1), { sd: 0.6, hd: 0.5, ol: I.ol * 0.6 }); for (const y of [37.5, 47.5]) ln(I, `M8 ${y} H40`, dk(w, 0.4), 1); });
+  ln(I, 'M8 27 H40 L55 14 M40 27 V58', dk(w, 0.45), 1.2);
+  if (!I.small) for (const [x, y] of [[11, 30], [37, 30], [11, 55], [37, 55]]) fl(I, circle(x, y, 1), OUT);
+};
+
 // ================================================================ resolver
 /** id → [drawer, opts] for notable items. */
 const ITEM_MAP = {
@@ -1106,10 +2071,21 @@ const ITEM_MAP = {
   elbaf_helm: ['hornHelm', { horns: true, metal: '#c9b27a', trim: '#7a4a2a' }], p2_carnival_mask: ['mask', { eye: true, color: '#8e24aa' }],
   marine_coat: ['marineCoat'], captain_coat: ['coat', { color: '#1f3566' }], red_cloak: ['cloak', { color: '#b71c1c' }],
   nb_corazon_coat: ['coat', { color: '#2b2630', feather: '#2b2630', trim: false, inner: '#f06aa0' }], p1_royal_cape: ['cloak', { color: '#f4f1ea', trim: C.gold, crest: '#c8372d' }],
+  // keepsakes whose names would mislead the keyword rules
+  sea_prism_charm: ['amulet', { cage: true, metal: C.brass, gem: '#6fd3c8' }], nw_tea_invitation: ['envelope', { heart: true, color: '#f7e6ee' }],
+  sb_hibiscus_tea: ['teacup', { tea: '#b3123f', band: '#d9485f' }], seastone: ['rock', { color: '#5f8187', speckle: true, sheen: '#bfe9ef' }],
+  amber_lead: ['rock', { color: '#ece6d6', sheen: '#fff6d8' }], seastone_cuffs: ['cuffs'], p2_salt: ['sack', { content: '#fbfbf7' }],
+  gold_coins: ['coins'], golden_statue: ['statue'], shandora_gold: ['bell'], jewels: ['jewels'], pearl: ['pearl'],
+  south_bird: ['bird'], wb_rocks_flag: ['flag', { tattered: true }], p1_sun_flag: ['flag', { emblem: 'sun' }],
+  nw_raijin_umbrella: ['umbrella', { bolt: true, color: '#3f3a78' }], wb_cindry_poster: ['poster', { play: true }],
+  wb_rabbit_tag: ['tag', { rabbit: true, color: '#d9c7a0' }], p1_noland_page: ['scroll', { seal: '#8a5a30' }],
+  p1_giant_ale: ['barrel', { label: 'ale', hoop: '#6b5a3a', wood: '#8e5a30' }], elbaf_mead: ['mug', { color: '#8e5a30' }],
+  wb_toroa_red: ['wine'], p1_yuba_water: ['drop'], nb_sora_comic: ['book', { comic: true }],
 };
 
 /** Name keyword rules, first match wins: [regex, drawer, opts | (name, def, id) => opts, types?]. */
 const NAME_RULES = [
+  [/invitation|\bletter\b|envelope/, 'envelope', (n) => ({ heart: /tea|love|party|invitation/.test(n) })],
   // ---- fruit & food
   [/coconut/, 'coconut'], [/\bapples?\b/, 'apple'], [/banana/, 'banana'], [/cherr(y|ies)/, 'cherry'], [/mango/, 'mango'],
   [/mushroom|fungus|shroom|truffle/, 'mushroom'], [/tangerine|orange|mikan|citrus|lemon|lime/, 'orange', (n) => ({ color: /lemon/.test(n) ? '#f2d33a' : /lime/.test(n) ? '#8cc63f' : undefined })],
@@ -1121,8 +2097,8 @@ const NAME_RULES = [
   [/cola/, 'barrel', { label: 'cola', hoop: '#c23b2e' }], [/barrel|cask|keg/, 'barrel', { label: 'ale' }],
   [/stew|soup|curry|udon|ramen|noodle|broth|oshiruko|porridge|chowder|hot ?pot|\bnabe|gumbo|moqueca/, 'bowl', (n) => ({ top: /noodle|udon|ramen|soba/.test(n) ? 'noodles' : /fish|chowder|sea/.test(n) ? 'fish' : 'veg' })],
   [/\bsake\b/, 'sake'], [/\bwine|toroa|claret|bordeaux|champagne/, 'wine'], [/whisk|brandy|\brum\b|grog|\bgin\b|liquor|bourbon|vodka/, 'whisky'],
-  [/\bale\b|beer|mead|cider|lager|stout|tankard/, 'mug'], [/\btea\b|coffee|cocoa/, 'teacup'],
-  [/water|dew\b/, 'drop'], [/milk|juice|lemonade|soda/, 'bottle', (n) => ({ liquid: /milk/.test(n) ? '#f7f4ec' : '#f29a2e' })],
+  [/\bale\b|beer|mead|cider|lager|stout|tankard/, 'mug'], [/\btea\b|coffee|cocoa/, 'teacup', (n) => ({ tea: /hibiscus|rose|berry/.test(n) ? '#b3123f' : /coffee|cocoa/.test(n) ? '#4a2a1a' : undefined })],
+  [/water|dew\b/, 'drop', {}, ['food', 'medicine']], [/milk|juice|lemonade|soda/, 'bottle', (n) => ({ liquid: /milk/.test(n) ? '#f7f4ec' : '#f29a2e' })],
   [/platter|course|feast|banquet|meal|dish|plate|bento|lunch|dinner|cuisine/, 'plate', (n) => ({ food: /platter|bento|feast|banquet/.test(n) ? 'platter' : undefined })],
   [/\bfish|salmon|tuna|\beel\b|mackerel|sardine/, 'fish', {}, ['food', 'material']],
   // ---- medicine
@@ -1172,16 +2148,16 @@ const NAME_RULES = [
   [/amulet|medallion|sea.?glass|prism/, 'amulet', (n, d, id) => ({ metal: /glass|prism/.test(n) ? C.brass : metalOf(n), gem: /glass|prism/.test(n) ? '#6fd3c8' : gemOf(n, id), cage: /glass|prism|cage/.test(n) })],
   [/brooch|badge|medal|\bpin\b|emblem|honou?r/, 'medal', (n) => ({ metal: metalOf(n), marine: /marine|honou?r|navy/.test(n) }), ['accessory', 'treasure', 'key']],
   // ---- navigation, documents & keepsakes
-  [/log ?pose/, 'logPose', (n) => ({ three: /three|new world|3/.test(n) })], [/eternal pose/, 'eternalPose'], [/vivre/, 'vivre'],
+  [/log ?pose/, 'logPose', (n) => ({ three: /three|new world|3/.test(n) })], [/eternal pose/, 'eternalPose'], [/vivre/, 'vivre', (n) => ({ burn: /burn|dying|fading/.test(n) })],
   [/den ?den|transponder|snail/, 'denDen'], [/handcuff|shackle|\bcuffs\b|manacle/, 'cuffs'], [/poneglyph|rubbing/, 'rubbing'],
   [/treasure map/, 'map'], [/\bchart\b|\bmaps?\b|atlas/, 'map', { chart: true }], [/\bkeys?\b/, 'key', (n) => ({ big: /loki|chain|giant|prison|vault/.test(n) })],
   [/letter|invitation|envelope|\bnote from|message/, 'envelope', (n) => ({ heart: /tea|love|party|invitation/.test(n) })],
   [/comic|manga/, 'book', { comic: true }], [/book|primer|novel|diary|journal|manual|log of|logbook|almanac|encyclop|tome/, 'book'],
   [/notes|notebook|sketch/, 'notebook'], [/ticket|\bpass\b|boarding/, 'ticket'], [/\bpage\b|leaflet|flyer|sheet/, 'page', (n) => ({ wet: /water|soak|wet/.test(n) })],
-  [/poster|playbill|wanted|bill\b/, 'poster'],
+  [/poster|playbill|wanted|bill\b/, 'poster', (n) => ({ play: /play|theat|concert|show|signed/.test(n) })],
   [/scroll|survey|register|permit|decree|\blog\b|promise|orders|edict|charter|record|document|deed|certificate|contract|papers|report/, 'scroll', (n) => ({ seal: /sealed|government|permit|holy|royal/.test(n) ? '#c8372d' : undefined })],
-  [/\bdice\b|\bdie\b/, 'dice'], [/\btag\b|label/, 'tag'], [/\bhorn\b|bugle/, 'horn'], [/flag|banner|jolly roger|pennant/, 'flag', (n) => ({ emblem: /sun/.test(n) ? 'sun' : 'skull' })],
-  [/umbrella|parasol/, 'umbrella'], [/bird|gull|parrot|coo\b/, 'bird'],
+  [/\bdice\b|\bdie\b/, 'dice'], [/\btag\b|label/, 'tag', (n) => ({ rabbit: /rabbit|bunny/.test(n) })], [/\bhorn\b|bugle/, 'horn'], [/flag|banner|jolly roger|pennant/, 'flag', (n) => ({ emblem: /sun/.test(n) ? 'sun' : 'skull', tattered: /scrap|torn|tatter|\brag/.test(n) })],
+  [/umbrella|parasol/, 'umbrella', (n) => ({ bolt: /raijin|thunder|lightning|storm/.test(n) })], [/bird|gull|parrot|coo\b/, 'bird'],
   [/strongbox|lockbox|\bsafe\b|coffer/, 'chest', { iron: true }], [/chest|\bcrate\b|\bbox\b/, 'chest', {}, ['treasure', 'key']],
   [/\bbell\b|shandora/, 'bell'], [/statue|idol|figurine|effigy/, 'statue'], [/pearl/, 'pearl'],
   [/coin|doubloon|berr(y|ies)|belly|money|\bgold\b/, 'coins', {}, ['treasure', 'key', 'material']],
@@ -1189,12 +2165,13 @@ const NAME_RULES = [
   [/violin|fiddle|guitar|lute|instrument|\bdrum\b|flute|harp/, 'violin'], [/perfume|fragrance|scent|cologne/, 'perfume'],
   [/feather|plume/, 'feather'], [/sakura|cherry blossom/, 'blossom'], [/hibiscus|flower|blossom|\brose\b|\blily\b|orchid/, 'flower'],
   [/\bsalt\b|sugar|spice|pepper|flour|grain/, 'sack'], [/\bwood|timber|\blogs?\b|lumber|plank/, 'wood', (n) => ({ adam: /adam/.test(n) })],
-  [/seastone|kairoseki/, 'rock', { color: '#5f8187' }], [/\bstone|\brock|\bore\b|crystal|\blead\b|amber|mineral/, 'rock', (n) => ({ color: /amber|lead|white/.test(n) ? '#e9e6dc' : undefined })],
+  [/seastone|kairoseki/, 'rock', { color: '#5f8187', speckle: true, sheen: '#bfe9ef' }], [/\bstone|\brock|\bore\b|crystal|\blead\b|amber|mineral/, 'rock', (n) => ({ color: /amber|lead|white/.test(n) ? '#e9e6dc' : undefined })],
   [/herb|\bleaf|leaves|moss|\broot|grass|seaweed/, 'herbs'], [/powder|dust/, 'jar', { color: '#f3c6d6' }],
 ];
 
 const HAT_LOOK = { straw: 'strawHat', bandana: 'bandana', tricorne: 'tricorne', captain: 'captainHat', cowboy: 'cowboyHat', marine: 'marineCap', pinkhat: 'topHat', goggles: 'goggles', headband: 'headband', horns: 'hornHelm', beanie: 'beanie', crown: 'crownHat', halo: 'halo', bubble: 'halo' };
 const KIND_DEFAULT = { sword: 'katana', gun: 'flintlock', staff: 'staff', axe: 'axe' };
+const DIAL_FX = [[/impact/, 'impact'], [/reject/, 'reject'], [/flame|fire|heat/, 'flame'], [/breath|wind|air|jet/, 'breath'], [/flash|lamp|light/, 'flash'], [/water|aqua/, 'water']];
 const DIAL_COLORS = [
   [/impact/, '#e3a857'], [/reject/, '#5b3f8a'], [/flame|fire|heat/, '#e8643a'], [/breath|wind|air|jet/, '#9fd9e3'], [/flash|lamp|light/, '#f6d94a'],
   [/eisen|iron/, '#8c9aa6'], [/tone|sound|music/, '#8fd18a'], [/milky|cloud/, '#f4f1ea'], [/water|aqua/, '#4fb3e8'], [/axe|blade/, '#b0bec5'],
@@ -1205,7 +2182,7 @@ function typeDefault(d, id) {
   if (t === 'weapon') return { fn: KIND_DEFAULT[d.kind] || 'katana', o: {} };
   if (t === 'hat') return d.look?.hat && HAT_LOOK[d.look.hat] ? { fn: HAT_LOOK[d.look.hat], o: { color: d.look.hatColor } } : { fn: 'tricorne', o: {}, fallback: true };
   if (t === 'coat') return { fn: 'coat', o: { color: d.look?.coat, trim: false } };
-  if (t === 'dial') { const n = (d.name || id || '').toLowerCase(); return { fn: 'shell', o: { color: (DIAL_COLORS.find(([re]) => re.test(n)) || [0, '#d9c1a0'])[1] } }; }
+  if (t === 'dial') { const n = (d.name || id || '').toLowerCase(); return { fn: 'shell', o: { color: (DIAL_COLORS.find(([re]) => re.test(n)) || [0, '#d9c1a0'])[1], fx: (DIAL_FX.find(([re]) => re.test(n)) || [0, null])[1] } }; }
   if (t === 'pose') return { fn: 'eternalPose', o: {} };
   if (t === 'fruit') return { fn: 'fruit', o: { fruit: d.fruit } };
   const generic = { food: 'bread', medicine: 'vial', accessory: 'amulet', key: 'key', treasure: 'chest', material: 'crate' }[t];
@@ -1225,13 +2202,794 @@ function idOfDef(d) {
 function resolveItem(id, d) {
   if (id && ITEM_MAP[id]) return { fn: ITEM_MAP[id][0], o: ITEM_MAP[id][1] || {} };
   if (d?.type === 'fruit' || d?.fruit || /^fruit_/.test(id || '')) return { fn: 'fruit', o: { fruit: d?.fruit || (id || '').replace(/^fruit_/, '') } };
+  if (d?.type === 'dial') return typeDefault(d, id);
   const name = `${d?.name || ''} ${id || ''}`.toLowerCase().replace(/_/g, ' ');
   for (const [re, fn, o, types] of NAME_RULES) {
     if (!re.test(name) || (types && d?.type && !types.includes(d.type))) continue;
     return { fn, o: typeof o === 'function' ? o(name, d, id) : o || {} };
   }
-  if (d?.type === 'dial') return typeDefault(d, id);
   return typeDefault(d, id);
+}
+
+// ================================================================= skills
+// Techniques are drawn as a medallion: a tinted badge (colour of the fruit /
+// style / haki) with a bold motif on top, so they read as "abilities" next to
+// items and stay visible on both the parchment panels and the dark hotbar.
+const SK = {};
+const SKIN = '#f2c596';
+
+function crescentP(cx, cy, r, a0, a1, w, w0 = 0.7) {
+  const pts = [], n = 22;
+  for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0) * i / n; pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
+  return taper(pts, (t) => w0 + w * Math.pow(Math.sin(Math.PI * t), 0.85));
+}
+function flameP(cx, by, s = 1) {
+  return xf('M32 58 C18 58 12 48 14 38 C15 32 19 28 20 21 C24 25 25.5 30 25.5 34 C27.5 27 30.5 19 30 7 C38 13 44 23 44 31.5 C46 29.5 47 26.5 46.5 23 C52 29.5 54 38 52 46 C50 54 42 58 32 58 Z', { ox: 32, oy: 58, x: cx - 32, y: by - 58, s });
+}
+function flame(I, cx, by, s, cols = ['#e8452c', '#f7931e', '#ffe066']) {
+  part(I, flameP(cx, by, s), cols[0], { sd: 2 * s, hd: 1.4 * s, ol: I.ol });
+  part(I, flameP(cx, by - 1.5 * s, s * 0.66), cols[1], { sd: 1.2 * s, hd: 0, ol: 0 });
+  fl(I, flameP(cx, by - 2.5 * s, s * 0.36), cols[2]);
+}
+const BOLT = 'M37 3 L15 35 H28.5 L21 61 L49 25 H35.5 L45 3 Z';
+function bolt(I, o = {}) { part(I, xf(BOLT, o), o.c || '#ffe14a', { sd: 1.4, hd: 1.2, hi: '#fffbe0' }); }
+function speed(I, pts, col = '#ffffff', w = 2, a = 0.85) { for (const [x1, y1, x2, y2] of pts) ln(I, `M${x1} ${y1} L${x2} ${y2}`, col, w, { a }); }
+function fistShape(I, c) {
+  part(I, rrect(23.5, 44, 16, 13, 4), dk(c, 0.1), { sd: 1.4, hd: 1 });
+  part(I, rrect(17, 22, 29.5, 26, 8.5), c, { sd: 2.4, hd: 1.4 });
+  [[17.3, 15.5], [24.6, 14], [31.9, 14], [39.2, 15.5]].forEach(([x, y]) => part(I, rrect(x, y, 7.5, 17, 3.7), c, { sd: 1.4, hd: 1.2 }));
+  part(I, 'M13.5 35 C13.5 30 18 28.5 24 30 L36 32.5 C40 33.5 40.5 39 36.5 40 L21 41.5 C16.5 42 13.5 39.5 13.5 35 Z', c, { sd: 1.4, hd: 1 });
+}
+function palmShape(I, c) {
+  part(I, rrect(24, 44, 16, 14, 4), dk(c, 0.1), { sd: 1.4, hd: 1 });
+  part(I, xf(rrect(7, 27, 8, 19, 4), { r: -0.65, ox: 14, oy: 42 }), c, { sd: 1.4, hd: 1 });
+  [[17.5, 11, 20], [25, 7, 23], [32.5, 8, 22], [40, 12, 19]].forEach(([x, y, h]) => part(I, rrect(x, y, 7, h, 3.5), c, { sd: 1.4, hd: 1.2 }));
+  part(I, rrect(17, 25, 30, 24, 9), c, { sd: 2.4, hd: 1.4 });
+  if (!I.small) ln(I, 'M22 36 C27 40 35 40 41 35', dk(c, 0.3), 1.2, { a: 0.7 });
+}
+function legShape(I, pants, shoe) {
+  part(I, 'M3 54 C10 46 20 41 33 35 L39 45 C27 50 17 55 9 61 Z', pants, { sd: 2.2, hd: 1.4, hi: lt(pants, 0.4) });
+  part(I, 'M31 44 C30 37 33 31 39 28 L52 21 C56.5 18.5 60.5 21.5 58.5 26 L50 39 C46.5 44 38 48.5 31 44 Z', shoe, { sd: 1.6, hd: 1.2, hi: lt(shoe, 0.45) });
+  if (!I.small) ln(I, 'M50 38 L58 25', lt(shoe, 0.25), 1.4);
+}
+function burst(I, x, y, r1, r2, col, n = 9) { part(I, star(x, y, n, r1, r2, 0.2), col, { sd: r1 * 0.08, hd: r1 * 0.06, hi: '#ffffff', ol: I.ol * 0.85 }); }
+function rings(I, x, y, r0, n, col, a0 = -1.1, a1 = 1.1, w = 2.4) { for (let i = 0; i < n; i++) ln(I, arcPath(x, y, r0 + i * 6, a0, a1), col, w - i * 0.3, { a: 1 - i * 0.18 }); }
+function cloudP(x, y, s = 1) { return union(circle(x - 9 * s, y + 2 * s, 7.5 * s), circle(x, y - 3 * s, 10 * s), circle(x + 10 * s, y + 1 * s, 8 * s), rrect(x - 16 * s, y + 1 * s, 33 * s, 9 * s, 4.5 * s)); }
+function dropP(x, y, s = 1) { return `M${x} ${y - 9 * s} C${x + 4 * s} ${y - 3.5 * s} ${x + 6.5 * s} ${y} ${x + 6.5 * s} ${y + 3 * s} C${x + 6.5 * s} ${y + 7 * s} ${x + 3.4 * s} ${y + 9.5 * s} ${x} ${y + 9.5 * s} C${x - 3.4 * s} ${y + 9.5 * s} ${x - 6.5 * s} ${y + 7 * s} ${x - 6.5 * s} ${y + 3 * s} C${x - 6.5 * s} ${y} ${x - 4 * s} ${y - 3.5 * s} ${x} ${y - 9 * s} Z`; }
+function eyeShape(I, x, y, w, col = '#f7f4ec', iris = '#3aa37a') {
+  const e = `M${x - w} ${y} C${x - w * 0.5} ${y - w * 0.62} ${x + w * 0.5} ${y - w * 0.62} ${x + w} ${y} C${x + w * 0.5} ${y + w * 0.62} ${x - w * 0.5} ${y + w * 0.62} ${x - w} ${y} Z`;
+  part(I, e, col, { sd: w * 0.1, hd: 0 });
+  clip(I, e, () => { part(I, circle(x, y, w * 0.42), iris, { sd: w * 0.06, hd: w * 0.05, ol: I.ol * 0.6 }); fl(I, circle(x, y, w * 0.2), OUT); fl(I, circle(x - w * 0.14, y - w * 0.14, w * 0.09), '#ffffff'); });
+}
+function ghostP(x, y, s = 1) { return `M${x - 11 * s} ${y + 12 * s} L${x - 11 * s} ${y} C${x - 11 * s} ${y - 8 * s} ${x - 6 * s} ${y - 13 * s} ${x} ${y - 13 * s} C${x + 6 * s} ${y - 13 * s} ${x + 11 * s} ${y - 8 * s} ${x + 11 * s} ${y} L${x + 11 * s} ${y + 12 * s} L${x + 6.5 * s} ${y + 8 * s} L${x + 2.2 * s} ${y + 12 * s} L${x - 2.2 * s} ${y + 8 * s} L${x - 6.5 * s} ${y + 12 * s} Z`; }
+function bat(I, x, y, s, col) {
+  part(I, xf('M32 30 C28 26 22 24 14 24 C16 27 16 30 14 33 C18 32 21 34 22 37 C25 34 28 34 30 36 L32 40 L34 36 C36 34 39 34 42 37 C43 34 46 32 50 33 C48 30 48 27 50 24 C42 24 36 26 32 30 Z', { ox: 32, oy: 32, x: x - 32, y: y - 32, s }), col, { sd: 1, hd: 0.8, hi: lt(col, 0.45) });
+  fl(I, circle(x - 1.4 * s, y - 0.6 * s, 0.9 * s), '#ff5a5a'); fl(I, circle(x + 1.4 * s, y - 0.6 * s, 0.9 * s), '#ff5a5a');
+}
+function birdP(x, y, s = 1) {
+  return xf('M32 36 C26 30 16 26 5 27 C12 30 16 34 18 38 C12 38 8 40 6 43 C14 42 22 42 28 42 L24 52 L32 46 L40 52 L36 42 C42 42 50 42 58 43 C56 40 52 38 46 38 C48 34 52 30 59 27 C48 26 38 30 32 36 Z', { ox: 32, oy: 38, x: x - 32, y: y - 38, s });
+}
+function dragonHead(I, col, o = {}) {
+  part(I, 'M52 16 C46 20 44 26 45 32 C38 30 30 30 22 34 C16 37 10 38 5 37 C8 42 14 45 22 45 C28 45 34 43 40 44 C44 45 47 48 48 53 C52 48 54 42 53 36 C56 30 58 22 52 16 Z', col, { sd: 2.4, hd: 1.6 });
+  part(I, 'M45 18 C48 12 54 8 60 8 C58 12 54 16 49 19 Z', o.horn || '#f3e6c4', { sd: 0.8, hd: 0.6 });
+  part(I, 'M40 22 C42 16 46 12 52 11 C50 15 46 19 42 23 Z', o.horn || '#f3e6c4', { sd: 0.8, hd: 0.6 });
+  fl(I, ellipse(38, 35, 3, 1.8, -0.3), '#fff36b'); fl(I, circle(38.4, 35, 1), OUT);
+  if (!I.small) { ln(I, 'M8 40 C14 41 20 40 26 39', dk(col, 0.45), 1.2); ln(I, 'M20 46 C16 52 12 54 6 55', lt(col, 0.3), 1.4); }
+}
+
+// ---- motifs: SK.name(I, o) draws inside the badge, o.c main colour
+SK.fist = (I, o) => {
+  if (o.burst) burst(I, 46, 18, 13, 6.5, o.burst);
+  if (o.lines !== false) speed(I, [[6, 44, 16, 38], [4, 36, 13, 31], [9, 52, 18, 45]], o.line || '#ffffff', 2.2);
+  tf(I, { r: o.r ?? -0.3, s: o.s ?? 0.86, x: o.x ?? 2, y: o.y ?? 1 }, () => fistShape(I, o.c || SKIN));
+  if (o.fx) SK.fx(I, o.fx);
+};
+SK.fx = (I, fx) => {
+  if (fx === 'fire') { flame(I, 16, 56, 0.42); flame(I, 50, 58, 0.34); }
+  else if (fx === 'bolt') { bolt(I, { s: 0.42, ox: 32, oy: 32, x: 16, y: -14 }); bolt(I, { s: 0.3, ox: 32, oy: 32, x: -18, y: 14, r: 0.4 }); }
+  else if (fx === 'water') for (const [x, y, s] of [[50, 14, 0.55], [54, 30, 0.4], [12, 16, 0.45]]) part(I, dropP(x, y, s), '#7fd3f7', { sd: 0.8, hd: 0.6 });
+  else if (fx === 'poison') for (const [x, y, s] of [[20, 58, 0.45], [44, 58, 0.38], [52, 46, 0.3]]) part(I, dropP(x, y, s), '#b35ad6', { sd: 0.8, hd: 0.6 });
+  else if (fx === 'cracks') crackLines(I, 48, 16, 12, '#e8f7ff');
+  else if (fx === 'smoke') for (const [x, y, r] of [[14, 52, 6], [8, 44, 4.6], [52, 50, 5]]) part(I, circle(x, y, r), '#eef2f4', { sd: 1, hd: 0.8 });
+};
+function crackLines(I, x, y, r, col) {
+  const d = [];
+  for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + 0.3, a2 = a + 0.35, r2 = r * (0.55 + (i % 2) * 0.2); d.push(`M${x} ${y} L${x + Math.cos(a) * r2} ${y + Math.sin(a) * r2} L${x + Math.cos(a2) * r} ${y + Math.sin(a2) * r}`); }
+  ln(I, d.join(' '), OUT, 3.4); ln(I, d.join(' '), col, 1.6);
+}
+SK.stretch = (I, o) => {
+  const c = o.c || SKIN;
+  speed(I, [[10, 30, 22, 24], [12, 44, 30, 38]], '#ffffff', 2);
+  tube(I, 'M-2 66 C10 52 22 44 34 36', c, 8.5);
+  tf(I, { r: -0.5, s: 0.62, x: 12, y: -10 }, () => fistShape(I, c));
+  if (o.burst) burst(I, 52, 12, 9, 4.6, o.burst);
+};
+SK.multi = (I, o) => {
+  const c = o.c || SKIN;
+  speed(I, [[4, 30, 14, 26], [4, 42, 16, 38], [8, 54, 18, 48]], '#ffffff', 2);
+  for (const [x, y, s, r] of [[-12, -12, 0.46, -0.7], [8, -14, 0.46, -0.3], [-12, 10, 0.46, -0.6], [10, 8, 0.56, -0.4]]) tf(I, { r, s, x, y }, () => fistShape(I, c));
+};
+SK.palm = (I, o) => {
+  if (o.rings) rings(I, 32, 30, 22, 3, o.ring || '#ffffff', -2.3, -0.8, 2.6);
+  if (o.burst) burst(I, 32, 14, 12, 6, o.burst);
+  tf(I, { s: o.s ?? 0.82, y: 4 }, () => palmShape(I, o.c || SKIN));
+  if (o.two) tf(I, { s: 0.7, x: 12, y: 8, r: 0.2 }, () => palmShape(I, o.c || SKIN));
+};
+SK.palms = (I, o) => {
+  if (o.burst) burst(I, 32, 12, 13, 6.5, o.burst);
+  tf(I, { s: 0.62, x: -10, y: 8, r: -0.25 }, () => palmShape(I, o.c || SKIN));
+  tf(I, { s: 0.62, x: 10, y: 8, r: 0.25 }, () => palmShape(I, o.c || SKIN));
+};
+SK.kick = (I, o) => {
+  if (o.arc !== false) for (const [r, w, a] of [[25, 3, 0.85], [19, 2.2, 0.7]]) ln(I, arcPath(34, 42, r, -2.9, -1.05), o.line || '#ffffff', w, { a });
+  if (o.fx === 'fire') { flame(I, 22, 50, 0.42, o.flame); flame(I, 36, 40, 0.5, o.flame); }
+  tf(I, { r: o.r || 0, s: o.s ?? 0.95, x: o.x || 0, y: o.y || 0 }, () => legShape(I, o.c || '#2f3440', o.shoe || '#1f1b22'));
+  if (o.burst) burst(I, 52, 16, 10, 5, o.burst);
+};
+SK.swords = (I, o) => {
+  const n = o.n || 1, pal = o.pal || [{}, { wrap: '#1f1a22', blade: '#dfe6ec' }, { wrap: '#f4f1ea', tsuba: '#e2b64a' }];
+  if (o.arc !== false) { part(I, crescentP(32, 36, 23, -2.7, -0.3, 6.2), o.arcCol || '#eaf6ff', { sd: 0.8, hd: 0.6, ol: I.ol * 0.8 }); }
+  const angles = n === 1 ? [0] : n === 2 ? [0, Math.PI / 2] : [0, Math.PI / 2, Math.PI / 4];
+  angles.forEach((r, i) => tf(I, { r, s: n === 3 && i === 2 ? 0.66 : 0.74, y: n === 3 && i === 2 ? -8 : 0 }, () => D.katana(I, { ...SWORD.wazamono, ...(pal[i] || {}) })));
+};
+SK.slash = (I, o) => {
+  const c = o.c || '#eaf6ff', n = o.n || 1;
+  const sets = { 1: [[36, 38, 24, -2.8, -0.35, 9]], 2: [[30, 40, 22, -2.6, -0.5, 7.5], [34, 40, 22, -2.6, -0.5, 7.5, 1]], 3: [[26, 44, 20, -2.4, -0.7, 6], [32, 38, 20, -2.4, -0.7, 6], [38, 32, 20, -2.4, -0.7, 6]] }[Math.min(3, n)];
+  for (const [x, y, r, a0, a1, w, flip] of sets) {
+    const p = crescentP(x, y, r, a0, a1, w);
+    part(I, flip ? xf(p, { sx: -1, ox: 32 }) : p, c, { sd: 1, hd: 0.8, hi: '#ffffff', ol: I.ol * 0.85 });
+  }
+  if (o.burst) burst(I, 32, 32, 8, 4, o.burst, 8);
+};
+SK.claw = (I, o) => {
+  const c = o.c || '#ffffff';
+  for (let i = 0; i < 3; i++) part(I, xf(crescentP(40, 22, 30, 1.9, 2.95, 5.2), { x: i * 8 - 8, y: i * 3 - 3 }), c, { sd: 0.8, hd: 0.6, ol: I.ol * 0.85 });
+  if (o.hand) tf(I, { s: 0.5, x: 14, y: -14, r: 0.5 }, () => clawHand(I, o.hand));
+};
+function clawHand(I, c) {
+  for (const [x, r] of [[20, -0.35], [28, -0.1], [36, 0.12], [44, 0.35]]) part(I, xf('M0 0 C-3 -6 -2 -14 3 -18 C1 -12 3 -6 5 -2 Z', { ox: 0, oy: 0, x, y: 22, r }), '#f3e6c4', { sd: 0.6, hd: 0.4 });
+  part(I, rrect(16, 20, 32, 22, 9), c, { sd: 2, hd: 1.4 });
+  part(I, rrect(24, 40, 16, 16, 4), dk(c, 0.1), { sd: 1.4, hd: 1 });
+}
+SK.airblade = (I, o) => {
+  const c = o.c || '#dff4ff';
+  speed(I, [[4, 24, 16, 24], [2, 34, 12, 34], [6, 44, 18, 44]], c, 2, 0.8);
+  part(I, crescentP(20, 34, 30, -0.95, 0.95, 11, 0.8), c, { sd: 1.4, hd: 1, hi: '#ffffff' });
+  if (o.n === 2) part(I, crescentP(8, 34, 26, -0.8, 0.8, 7, 0.8), c, { sd: 1, hd: 0.8, hi: '#ffffff' });
+};
+SK.dash = (I, o) => {
+  const c = o.c || '#ffffff';
+  speed(I, [[6, 22, 26, 22], [4, 32, 30, 32], [8, 42, 26, 42]], c, 2.4);
+  for (const x of [30, 42]) part(I, `M${x} 16 L${x + 14} 32 L${x} 48 L${x - 5} 48 L${x + 8} 32 L${x - 5} 16 Z`, o.c2 || c, { sd: 1, hd: 0.8 });
+};
+SK.finger = (I, o) => {
+  const c = o.c || SKIN;
+  if (o.burst) burst(I, 50, 16, 11, 5.5, o.burst);
+  speed(I, [[6, 50, 14, 42], [4, 40, 10, 34]], '#ffffff', 2);
+  tf(I, { r: -0.78, s: 0.8, x: 2, y: 4 }, () => {
+    part(I, rrect(23.5, 44, 16, 13, 4), dk(c, 0.1), { sd: 1.4, hd: 1 });
+    part(I, rrect(17, 24, 29.5, 24, 8.5), c, { sd: 2.4, hd: 1.4 });
+    part(I, rrect(24.6, 2, 7.5, 28, 3.7), c, { sd: 1.4, hd: 1.2 });
+    for (const x of [31.9, 39.2]) part(I, rrect(x, 18, 7.5, 13, 3.7), c, { sd: 1.4, hd: 1.2 });
+    part(I, 'M13.5 35 C13.5 30 18 28.5 24 30 L36 32.5 C40 33.5 40.5 39 36.5 40 L21 41.5 C16.5 42 13.5 39.5 13.5 35 Z', c, { sd: 1.4, hd: 1 });
+  });
+};
+SK.wave = (I, o) => {
+  const c = o.c || '#4fb3e8';
+  const w = 'M3 52 C8 40 16 30 28 26 C40 22 52 26 55 36 C57 43 52 48 46 47 C41 46 40 40 44 37 C40 33 33 34 29 39 C24 46 26 54 30 58 H3 Z';
+  part(I, w, c, { sd: 2.4, hd: 1.8, hi: '#e8f8ff' });
+  clip(I, w, () => { ln(I, 'M8 50 C12 42 18 36 26 33', lt(c, 0.5), 1.6, { a: 0.8 }); });
+  for (const [x, y, r] of [[56, 30, 2.4], [58, 22, 1.6], [52, 20, 1.3]]) part(I, circle(x, y, r), '#e8f8ff', { flat: true, ol: I.ol * 0.6 });
+  if (o.fx) SK.fx(I, o.fx);
+};
+SK.drops = (I, o) => {
+  speed(I, [[6, 26, 18, 30], [4, 38, 16, 40], [8, 50, 20, 50]], '#ffffff', 2);
+  for (const [x, y, s] of [[30, 24, 1], [46, 36, 0.8], [30, 46, 0.7], [48, 18, 0.55]]) part(I, xf(dropP(x, y, s), { ox: x, oy: y, r: 1.3 }), o.c || '#7fd3f7', { sd: 1.2, hd: 1, hi: '#ffffff' });
+};
+SK.rings = (I, o) => {
+  const c = o.c || '#ffffff';
+  for (let i = 0; i < 3; i++) { const p = new Path2D(); p.addPath(circle(32, 32, 9 + i * 7.5)); p.addPath(circle(32, 32, 6.4 + i * 7.5)); part(I, p, c, { rule: 'evenodd', sd: 0, hd: 0, ol: I.ol * 0.7 }); }
+  if (o.center) part(I, circle(32, 32, 5), o.center, { sd: 1, hd: 0.8 });
+};
+SK.bolt = (I, o) => { if (o.glow !== false) glow(I, circle(32, 32, 22), o.c || '#fff36b', 0.35); bolt(I, { c: o.c, s: o.s ?? 0.9 }); if (o.two) bolt(I, { c: o.c, s: 0.45, ox: 32, oy: 32, x: -16, y: 8, r: 0.3 }); };
+SK.cloud = (I, o) => {
+  if (o.bolt) bolt(I, { s: 0.62, ox: 32, oy: 32, x: 0, y: 12 });
+  if (o.rain) for (const x of [20, 30, 40]) ln(I, `M${x} 40 L${x - 3} 50`, '#9fd9f5', 2.2);
+  part(I, cloudP(32, 26, 1.05), o.c || '#e9eef3', { sd: 2, hd: 1.4 });
+};
+SK.tornado = (I, o) => {
+  const c = o.c || '#e7f3f8';
+  const rows = [[32, 14, 22, 5], [31, 23, 18, 4.4], [33, 31, 14, 3.8], [31, 39, 10, 3.2], [33, 46, 7, 2.6], [32, 52, 4, 2]];
+  for (const [x, y, rx, ry] of rows.reverse()) part(I, ellipse(x, y, rx, ry), c, { sd: 1, hd: 0.8 });
+  if (!I.small) for (const [x, y, rx] of [[32, 14, 22], [31, 23, 18], [33, 31, 14]]) ln(I, arcPath(x, y, rx * 0.7, 0.3, 2.6), dk(c, 0.25), 1, { a: 0.7 });
+  if (o.sword) tf(I, { s: 0.5, r: 0.2, x: 12, y: 10 }, () => D.katana(I, {}));
+};
+SK.flame = (I, o) => {
+  const cols = o.cols || ['#e8452c', '#f7931e', '#ffe066'];
+  glow(I, circle(32, 36, 23), cols[1], 0.3);
+  flame(I, 32, 58, o.s ?? 0.95, cols);
+  if (o.pillar) for (const x of [14, 50]) flame(I, x, 58, 0.45, cols);
+};
+SK.fireballs = (I, o) => {
+  const cols = o.cols || ['#e8452c', '#f7931e', '#ffe066'];
+  for (const [x, y, s] of [[18, 44, 0.3], [44, 48, 0.32], [30, 30, 0.36], [50, 24, 0.28], [16, 22, 0.24]]) { part(I, circle(x, y + 4 * s, 11 * s), cols[1], { sd: 1, hd: 0.8, ol: I.ol * 0.8 }); flame(I, x, y + 12 * s, s, cols); }
+};
+SK.sun = (I, o) => {
+  const c = o.c || '#ffd23f';
+  glow(I, circle(32, 32, 24), c, 0.4);
+  part(I, star(32, 32, 12, 24, 15, 0.1), o.ray || lt(c, 0.2), { sd: 1, hd: 0.8, ol: I.ol * 0.8 });
+  part(I, circle(32, 32, 13), c, { sd: 2.2, hd: 1.6, hi: '#ffffff' });
+  if (o.face) { fl(I, circle(27, 30, 1.6), OUT); fl(I, circle(37, 30, 1.6), OUT); ln(I, 'M26 35 C29 39 35 39 38 35', OUT, 1.6); }
+};
+SK.moon = (I, o) => {
+  const c = o.c || '#fff1b0';
+  const m = new Path2D(); m.addPath(circle(32, 30, 17)); m.addPath(circle(39, 25, 14));
+  part(I, m, c, { rule: 'evenodd', sd: 1.6, hd: 1.2 });
+  if (o.boot) tf(I, { s: 0.5, x: 12, y: 16, r: -0.2 }, () => legShape(I, '#2f3440', '#1f1b22'));
+  if (o.puffs) for (const [x, y, r] of [[30, 54, 5], [38, 52, 4], [22, 52, 3.6]]) part(I, circle(x, y, r), '#ffffff', { sd: 0.8, hd: 0.6 });
+  if (o.bolt) { bolt(I, { s: 0.36, ox: 32, oy: 32, x: 14, y: 14 }); bolt(I, { s: 0.28, ox: 32, oy: 32, x: -16, y: 16 }); }
+};
+SK.ice = (I, o) => {
+  const c = o.c || '#bfefff';
+  glow(I, circle(32, 34, 22), '#e8fbff', 0.35);
+  const shard = (x, y, h, w, r) => part(I, xf(poly([[x, y - h], [x + w, y - h + w], [x + w, y], [x, y + w * 0.5], [x - w, y], [x - w, y - h + w]]), { ox: x, oy: y, r }), c, { sd: w * 0.35, hd: w * 0.25, hi: '#ffffff' });
+  shard(20, 52, 22, 5, -0.5); shard(44, 52, 22, 5, 0.5); shard(32, 54, 34, 7, 0);
+  if (o.flake) { for (let i = 0; i < 3; i++) ln(I, `M${32 + Math.cos(i * Math.PI / 3) * 12} ${20 + Math.sin(i * Math.PI / 3) * 12} L${32 - Math.cos(i * Math.PI / 3) * 12} ${20 - Math.sin(i * Math.PI / 3) * 12}`, '#ffffff', 2.4); }
+};
+SK.iceCube = (I, o) => {
+  const c = o.c || '#bfefff';
+  const top = [[32, 12], [52, 22], [32, 32], [12, 22]], L = [[12, 22], [32, 32], [32, 56], [12, 46]], R = [[32, 32], [52, 22], [52, 46], [32, 56]];
+  part(I, union(poly(top), poly(L), poly(R)), c, { sd: 0, hd: 0 });
+  fl(I, poly(L), dk(c, 0.08)); fl(I, poly(R), dk(c, 0.2)); fl(I, poly(top), lt(c, 0.4));
+  ln(I, 'M12 22 L32 32 L52 22 M32 32 V56', '#ffffff', 1.2, { a: 0.8 });
+  fl(I, 'M28 36 C26 40 26 46 30 50 C33 46 33 40 31 36 Z', dk(c, 0.35), { a: 0.7 });
+  gloss(I, 18, 30, 1.6, 5, 0.8, 0.5);
+};
+SK.beam = (I, o) => {
+  const c = o.c || '#fff36b';
+  glow(I, rrect(4, 20, 58, 24, 12), c, 0.35);
+  part(I, 'M10 32 L60 22 V42 Z', lt(c, 0.25), { sd: 1, hd: 0.8, ol: I.ol * 0.8 });
+  part(I, 'M14 32 L60 28 V36 Z', '#ffffff', { flat: true, ol: 0 });
+  burst(I, 14, 32, 11, 5, c, 8);
+};
+SK.lightOrbs = (I, o) => {
+  const c = o.c || '#fff36b';
+  for (const [x, y, r] of [[20, 20, 7], [42, 16, 5.5], [36, 38, 8.5], [16, 44, 5.5], [50, 48, 5]]) { glow(I, circle(x, y, r * 1.6), c, 0.35); part(I, circle(x, y, r), lt(c, 0.3), { sd: r * 0.2, hd: r * 0.15, hi: '#ffffff' }); speed(I, [[x - r * 0.4, y - r * 0.9, x - r * 1.8, y - r * 2.4]], c, 1.6, 0.7); }
+};
+SK.mirror = (I, o) => {
+  const oct = []; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + Math.PI / 8; oct.push([32 + Math.cos(a) * 20, 32 + Math.sin(a) * 20]); }
+  part(I, poly(oct), o.c || '#e0b24a', { sd: 2, hd: 1.4 });
+  const inner = []; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + Math.PI / 8; inner.push([32 + Math.cos(a) * 15, 32 + Math.sin(a) * 15]); }
+  part(I, poly(inner), '#dff4ff', { sd: 1, hd: 0, ol: I.ol * 0.7 });
+  gloss(I, 26, 26, 5, 2, 0.9, -0.7);
+  if (o.light) sparkle(I, 44, 18, 6, '#fff6b0');
+};
+SK.magma = (I, o) => {
+  glow(I, circle(32, 32, 22), '#ff6a2a', 0.35);
+  tf(I, { r: -0.3, s: 0.86, x: 2, y: 1 }, () => {
+    fistShape(I, '#5a2a1e');
+    ln(I, 'M20 20 L24 28 L22 36 M30 16 L33 26 L30 32 L34 40 M38 20 L42 30 M20 44 L28 42 L36 46', '#ff8a2a', 2.2);
+    ln(I, 'M20 20 L24 28 L22 36 M30 16 L33 26 L30 32 L34 40 M38 20 L42 30 M20 44 L28 42 L36 46', '#ffe066', 0.9);
+  });
+  for (const [x, y, s] of [[14, 56, 0.4], [48, 58, 0.34]]) part(I, dropP(x, y, s), '#ff7a2a', { sd: 0.8, hd: 0.6 });
+  if (o.lines !== false) speed(I, [[4, 40, 12, 36], [6, 50, 14, 44]], '#ffd29a', 2);
+};
+SK.meteor = (I, o) => {
+  const c = o.c || '#8a5a3a', tail = o.tail || ['#e8452c', '#f7931e', '#ffe066'];
+  part(I, taper(bez([56, 6], [48, 14], [40, 22], [30, 30], 12), 3, 22), tail[1], { sd: 1, hd: 0.8 });
+  part(I, taper(bez([54, 10], [46, 17], [40, 23], [32, 29], 12), 1, 12), tail[2], { flat: true, ol: 0 });
+  part(I, circle(26, 38, 14), c, { sd: 2.6, hd: 1.8 });
+  if (!I.small) for (const [x, y, r] of [[22, 34, 3], [30, 42, 2.4], [20, 44, 1.8]]) fl(I, circle(x, y, r), dk(c, 0.3));
+  if (o.two) { part(I, circle(50, 50, 6), c, { sd: 1.2, hd: 0.8 }); }
+};
+SK.vortex = (I, o) => {
+  const c = o.c || '#7a4fc8';
+  part(I, circle(32, 32, 22), '#1a1024', { sd: 0, hd: 0 });
+  for (let i = 0; i < 3; i++) ln(I, spiral(32, 32, 20, 1.3, i * TAU / 3, 1), c, 3 - i * 0.4, { a: 0.9 });
+  fl(I, circle(32, 32, 5), '#05020a');
+  if (o.ring) { part(I, xf(crescentP(32, 32, 26, 0.2, 2.9, 3.4), { sy: 0.4, oy: 32 }), '#c9a0ff', { sd: 0.6, hd: 0.4, ol: I.ol * 0.7 }); }
+  if (o.hand) tf(I, { s: 0.5, x: 14, y: 12, r: 0.5 }, () => clawHand(I, '#2a1f33'));
+};
+SK.cracks = (I, o) => {
+  const c = o.c || '#dff4ff';
+  part(I, circle(32, 32, 20), c, { sd: 2.4, hd: 1.6, hi: '#ffffff' });
+  clip(I, circle(32, 32, 20), () => crackLines(I, 32, 32, 24, dk(c, 0.1)));
+  crackLines(I, 32, 32, 26, '#ffffff');
+};
+SK.room = (I, o) => {
+  const c = o.c || '#7fc8f8';
+  part(I, circle(32, 34, 23), fade(c, 0.35), { sd: 0, hd: 0, ol: I.ol * 0.8 });
+  ln(I, circle(32, 34, 18.5), '#ffffff', 1.6, { dash: [3, 2.4] });
+  part(I, xf(ellipse(32, 50, 23, 6), {}), fade(c, 0.5), { sd: 0, hd: 0, ol: I.ol * 0.6 });
+  if (o.cube) part(I, rrect(24, 26, 16, 16, 2), '#eaf6ff', { sd: 1.2, hd: 1 });
+  else for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; ln(I, `M${32 + Math.cos(a) * 14} ${34 + Math.sin(a) * 14} L${32 + Math.cos(a) * 22} ${34 + Math.sin(a) * 22}`, '#ffffff', 2); }
+};
+SK.swap = (I, o) => {
+  const c = o.c || '#dff4ff';
+  const arrow = (flip) => { const p = xf('M12 30 C12 18 22 12 34 14 L34 8 L46 18 L34 28 L34 22 C26 20 20 24 20 30 Z', flip ? { r: Math.PI } : {}); part(I, p, c, { sd: 1.2, hd: 1 }); };
+  arrow(false); arrow(true);
+};
+SK.heartCube = (I, o) => {
+  const c = o.c || '#bfe4ff';
+  const top = [[32, 14], [50, 23], [32, 32], [14, 23]], L = [[14, 23], [32, 32], [32, 54], [14, 45]], R = [[32, 32], [50, 23], [50, 45], [32, 54]];
+  part(I, union(poly(top), poly(L), poly(R)), fade(c, 0.6), { sd: 0, hd: 0 });
+  part(I, heartP(32, 36, 9), '#e0304a', { sd: 1.4, hd: 1, gloss: [28.5, 32, 1.6, 1, 0.8] });
+  fl(I, poly(top), fade('#ffffff', 0.35)); fl(I, poly(R), fade(c, 0.35));
+  ln(I, 'M14 23 L32 32 L50 23 M32 32 V54', '#ffffff', 1.1, { a: 0.8 });
+};
+SK.glove = (I, o) => {
+  const c = o.c || '#f4f1ea';
+  speed(I, [[6, 48, 16, 40], [4, 38, 12, 32]], '#ffffff', 2);
+  ln(I, 'M8 58 L22 44', '#ffffff', 2, { dash: [2.4, 2.4] });
+  tf(I, { r: -0.5, s: 0.72, x: 6, y: -4 }, () => { fistShape(I, c); part(I, rrect(21, 50, 22, 8, 3), '#d23b32', { sd: 1, hd: 0.8 }); });
+  if (o.multi) for (const [x, y, r] of [[48, 48, 5], [14, 18, 4]]) part(I, circle(x, y, r), c, { sd: 1, hd: 0.8 });
+};
+SK.bomb = (I, o) => {
+  part(I, circle(30, 38, 17), o.c || '#2f2a38', { sd: 2.6, hd: 2, hi: '#8a86a0', gloss: [23, 30, 4, 2.4, 0.5] });
+  part(I, rrect(35, 16, 10, 8, 2), '#8a8f96', { sd: 0.8, hd: 0.6 });
+  tube(I, 'M40 17 C42 10 48 8 52 10', '#c9a870', 1.8, { flat: true });
+  burst(I, 53, 9, 6.5, 3, '#ffd23f', 7);
+};
+SK.explosion = (I, o) => {
+  burst(I, 32, 32, 25, 14, o.c || '#f7931e', 11);
+  burst(I, 32, 32, 15, 8, o.c2 || '#ffe066', 9);
+  if (o.smoke) for (const [x, y, r] of [[14, 50, 6], [50, 50, 5]]) part(I, circle(x, y, r), '#d6d0c8', { sd: 1, hd: 0.8 });
+};
+SK.flower = (I, o) => {
+  if (o.arms) {
+    for (let i = 0; i < 6; i++) { const a = i / 6 * TAU - Math.PI / 2; tf(I, { r: a + Math.PI / 2, ox: 32, oy: 32 }, () => { tube(I, 'M32 32 L32 14', SKIN, 5.4); part(I, ellipse(32, 11, 4.2, 5), SKIN, { sd: 0.8, hd: 0.6 }); }); }
+    sakura(I, 32, 32, 12, o.c || '#f7a8c4', 0.3);
+    return;
+  }
+  if (o.cross) for (const r of [-0.7, 0.7]) tf(I, { r }, () => { tube(I, 'M32 58 L32 12', SKIN, 6); part(I, ellipse(32, 9, 5, 5.6), SKIN, { sd: 0.8, hd: 0.6 }); });
+  sakura(I, 32, 32, o.cross ? 11 : 18, o.c || '#f7a8c4', 0.3);
+};
+SK.strings = (I, o) => {
+  const c = o.c || '#f4f1ea';
+  const cols = o.five ? ['#e8453c', '#f7931e', '#ffe14a', '#5ec46a', '#5aa9f0'] : [c, c, c, c, c];
+  if (o.hand) tf(I, { s: 0.5, x: 0, y: -16, r: Math.PI }, () => palmShape(I, SKIN));
+  [[14, 60], [22, 60], [32, 60], [42, 60], [50, 60]].forEach(([x, y], i) => { const d = `M${22 + i * 5} 20 C${22 + i * 5} 34 ${x} 42 ${x} ${y}`; ln(I, d, OUT, 3.2); ln(I, d, cols[i], 1.6); });
+  if (o.hot) glow(I, rrect(10, 18, 44, 44, 12), '#ff5a3a', 0.3);
+};
+SK.cage = (I, o) => {
+  const c = o.c || '#f4f1ea';
+  const d = []; for (let i = -3; i <= 3; i++) d.push(`M${32 + i * 7} 58 C${32 + i * 7.5} 30 ${32 + i * 3} 14 32 8`);
+  const s = d.join(' ') + ' M8 58 H56 M12 40 C22 36 42 36 52 40 M18 24 C26 21 38 21 46 24';
+  ln(I, s, OUT, 3.2); ln(I, s, c, 1.6);
+};
+SK.mochi = (I, o) => {
+  const c = o.c || '#fbf6ea';
+  if (o.trident) { tube(I, 'M32 62 V20', '#e9dcc0', 4); part(I, 'M20 8 C20 18 24 22 32 22 C40 22 44 18 44 8 L40 14 C38 18 36 18 34.5 16 L32 4 L29.5 16 C28 18 26 18 24 14 Z', c, { sd: 1.4, hd: 1 }); return; }
+  const b = 'M10 40 C8 28 18 16 32 16 C46 16 56 28 54 40 C53 46 50 48 48 46 L47 54 C46 58 42 58 42 54 L41 48 C38 50 30 50 26 48 L24 56 C23 60 19 60 19 56 L18 47 C14 48 11 45 10 40 Z';
+  part(I, b, c, { sd: 2.6, shT: 0.18, hd: 1.6 });
+  if (o.fists) for (const [x, y] of [[20, 30], [42, 28]]) tf(I, { s: 0.36, x: x - 32, y: y - 32, r: -0.3 }, () => fistShape(I, c));
+};
+SK.ghost = (I, o) => {
+  const c = o.c || '#f6eef8';
+  const g = (x, y, s) => { part(I, ghostP(x, y, s), c, { sd: 1.6 * s, shT: 0.2, hd: 1.2 * s }); fl(I, ellipse(x - 3.6 * s, y - 2 * s, 1.8 * s, 2.6 * s), OUT); fl(I, ellipse(x + 3.6 * s, y - 2 * s, 1.8 * s, 2.6 * s), OUT); part(I, ellipse(x, y + 4 * s, 2 * s, 3 * s), '#e0487a', { flat: true, ol: I.ol * 0.5 }); };
+  if (o.many) { g(20, 38, 0.7); g(44, 40, 0.62); g(32, 22, 0.66); } else g(32, 32, 1.35);
+};
+SK.bats = (I, o) => { for (const [x, y, s] of [[32, 26, 1.1], [16, 42, 0.7], [48, 44, 0.75]]) bat(I, x, y, s, o.c || '#2f2a38'); };
+SK.figure = (I, o) => {
+  const c = o.c || '#2a2530';
+  if (o.aura) glow(I, ellipse(32, 36, 22, 26), o.aura, 0.5);
+  const f = union(circle(32, 16, 7.5), 'M18 58 C17 44 20 30 32 27 C44 30 47 44 46 58 Z');
+  part(I, f, c, { sd: 2, hd: 1.4, hi: lt(c, 0.4) });
+  if (o.eyes) { fl(I, ellipse(29, 16, 1.4, 2), o.eyes); fl(I, ellipse(35, 16, 1.4, 2), o.eyes); }
+  if (o.steam) for (const [x, y, r] of [[14, 20, 5], [50, 18, 5.5], [48, 40, 4.5], [14, 42, 4.2]]) part(I, circle(x, y, r), '#fbe3ea', { sd: 0.8, hd: 0.6 });
+};
+SK.skull = (I, o) => { if (o.aura) glow(I, circle(32, 32, 24), o.aura, 0.45); skull(I, 32, 30, 14, o.c || '#f4f1ea', o.bones !== false); };
+SK.snake = (I, o) => {
+  const c = o.c || '#9c5ad0';
+  part(I, taper(bez([6, 60], [18, 40], [8, 28], [26, 22], 16), 13, 9), c, { sd: 2, hd: 1.4 });
+  part(I, 'M20 14 C28 8 42 8 52 16 C56 19 56 24 52 26 L40 28 C36 32 28 34 22 30 C16 26 15 18 20 14 Z', c, { sd: 2, hd: 1.4 });
+  part(I, 'M40 26 L52 26 L48 32 L38 31 Z', '#f4f1ea', { sd: 0.6, hd: 0.4 });
+  for (const x of [42, 48]) fl(I, poly([[x, 26], [x + 2, 26], [x + 1, 30]]), '#ffffff');
+  fl(I, ellipse(34, 17, 2.4, 1.7, 0.2), '#ffe066'); fl(I, ellipse(34.3, 17, 0.8, 1.4, 0.2), OUT);
+};
+SK.hex = (I, o) => {
+  const c = o.c || '#8fd8ff';
+  const h = (x, y, r) => { const p = []; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; p.push([x + Math.cos(a) * r, y + Math.sin(a) * r]); } return poly(p); };
+  glow(I, circle(32, 32, 24), c, 0.35);
+  part(I, h(32, 32, 22), fade(c, 0.55), { sd: 0, hd: 0 });
+  for (const [x, y] of [[32, 32], [32, 18.5], [32, 45.5], [20.3, 25.2], [43.7, 25.2], [20.3, 38.8], [43.7, 38.8]]) ln(I, h(x, y, 7.4), '#ffffff', 1.3, { a: 0.9 });
+  gloss(I, 24, 22, 5, 2, 0.7, -0.6);
+  if (o.burst) burst(I, 50, 14, 10, 5, o.burst);
+};
+SK.eye = (I, o) => {
+  if (o.ripples !== false) for (let i = 0; i < 3; i++) ln(I, ellipse(32, 32, 14 + i * 5.5, 8 + i * 5.5), o.ripple || '#dff8ff', 2 - i * 0.4, { a: 0.9 - i * 0.22 });
+  eyeShape(I, 32, 32, 13, o.c || '#f7f4ec', o.iris || '#e0303a');
+  if (o.dashed) ln(I, 'M8 32 C16 20 48 20 56 32 C48 44 16 44 8 32 Z', '#ffffff', 1.4, { dash: [2.4, 2.4] });
+};
+SK.sparkles = (I, o) => {
+  const c = o.c || '#ffe9f2';
+  part(I, 'M8 44 C20 38 30 40 40 34 C48 29 52 22 56 16 L58 20 C54 28 48 36 40 40 C30 46 20 44 8 50 Z', c, { sd: 1, hd: 0.8 });
+  for (const [x, y, r] of [[24, 24, 7], [44, 44, 5.5], [14, 30, 4]]) part(I, star(x, y, 4, r, r * 0.3), '#ffffff', { flat: true, ol: I.ol * 0.7 });
+};
+SK.mace = (I, o) => {
+  tube(I, 'M14 56 L34 32', '#8a5a30', 4.4);
+  part(I, star(40, 24, 8, 17, 11), o.c || '#9aa6af', { sd: 1.6, hd: 1.2 });
+  part(I, circle(40, 24, 11), o.c || '#9aa6af', { sd: 2, hd: 1.4, gloss: [36, 20, 2.6, 1.5, 0.7] });
+};
+SK.candle = (I, o) => {
+  const c = o.c || '#fbf3dc';
+  if (o.arrows) { for (const [x, y] of [[18, 38], [30, 28], [42, 18]]) tf(I, { r: -0.78, ox: x, oy: y }, () => { part(I, rrect(x - 14, y - 2, 22, 4, 1.5), c, { sd: 0.8, hd: 0.6 }); part(I, poly([[x + 8, y - 5], [x + 16, y], [x + 8, y + 5]]), c, { sd: 0.6, hd: 0.4 }); }); return; }
+  part(I, 'M22 24 H42 V56 C42 58 40 60 38 60 H26 C24 60 22 58 22 56 Z', c, { sd: 2.2, shT: 0.2, hd: 1.4 });
+  part(I, 'M21 24 C21 20 43 20 43 24 L43 30 C41 34 39 30 38 33 C37 38 34 38 33 33 C32 30 29 30 28 34 C27 37 24 36 24 32 C23 29 21 30 21 27 Z', lt(c, 0.2), { sd: 1, hd: 0.8, shT: 0.15 });
+  tube(I, 'M32 22 V16', OUT, 1.4, { flat: true });
+  flame(I, 32, 17, 0.26);
+  if (o.lock) { const r = new Path2D(); r.addPath(ellipse(32, 44, 18, 8)); r.addPath(ellipse(32, 44, 12, 4.5)); part(I, r, '#e9dcc0', { rule: 'evenodd', sd: 1, hd: 0.8 }); }
+};
+SK.bladeFlower = (I, o) => {
+  const c = o.c || '#dfe7ee';
+  for (let i = 0; i < 8; i++) part(I, xf('M32 32 L28 12 C30 6 34 6 36 12 Z', { r: i / 8 * TAU + 0.2 }), c, { sd: 0.8, hd: 0.6, hi: '#ffffff' });
+  part(I, circle(32, 32, 6), '#8a949b', { sd: 1, hd: 0.8 });
+};
+SK.shield = (I, o) => {
+  const c = o.c || '#aab5bd';
+  const s = 'M32 8 C40 12 48 13 54 12 C55 30 50 48 32 58 C14 48 9 30 10 12 C16 13 24 12 32 8 Z';
+  part(I, s, c, { sd: 2.6, hd: 1.8 });
+  clip(I, s, () => { fl(I, 'M32 0 V64 H64 V0 Z', dk(c, 0.08), { a: 0.6 }); });
+  if (!I.small) for (const [x, y] of [[16, 16], [48, 16], [32, 12], [20, 40], [44, 40]]) part(I, circle(x, y, 1.6), lt(c, 0.4), { flat: true, ol: I.ol * 0.5 });
+  if (o.emblem) o.emblem(I);
+};
+SK.paper = (I, o) => {
+  part(I, 'M18 10 C26 14 34 8 44 12 C42 22 48 30 44 40 C40 50 46 54 42 58 C32 54 26 60 16 56 C20 46 14 38 18 28 C22 20 14 16 18 10 Z', o.c || '#fbf8f0', { sd: 2, shT: 0.15, hd: 1.2 });
+  speed(I, [[48, 20, 58, 24], [50, 34, 60, 34], [48, 48, 58, 44]], '#ffffff', 1.8);
+};
+SK.paw = (I, o) => {
+  const c = o.c || '#f4b8c8';
+  if (o.bubble) { glow(I, circle(32, 34, 26), '#dff4ff', 0.45); part(I, circle(32, 34, 23), fade('#dff4ff', 0.45), { sd: 0, hd: 0, ol: I.ol * 0.8 }); gloss(I, 22, 22, 5, 2.4, 0.8, -0.6); }
+  part(I, 'M32 30 C42 30 48 38 47 46 C46 52 40 54 32 53 C24 54 18 52 17 46 C16 38 22 30 32 30 Z', c, { sd: 1.8, hd: 1.2 });
+  for (const [x, y, r] of [[16, 28, 5], [24, 19, 5.4], [40, 19, 5.4], [48, 28, 5]]) part(I, ellipse(x, y, r * 0.85, r), c, { sd: 1, hd: 0.8 });
+  if (o.push) rings(I, 30, 36, 26, 2, '#ffffff', -0.9, 0.9, 2.4);
+  if (o.arrow) { part(I, 'M44 60 C54 56 58 48 58 38 L62 40 L56 30 L50 38 L54 38 C54 46 50 52 42 56 Z', '#ffffff', { sd: 0.6, hd: 0.4, ol: I.ol * 0.8 }); }
+};
+SK.masks = (I, o) => {
+  const mk = (x, y, r, col, sad) => {
+    part(I, xf('M16 14 C22 10 42 10 48 14 C52 26 50 42 40 52 C36 56 28 56 24 52 C14 42 12 26 16 14 Z', { ox: 32, oy: 32, x: x - 32, y: y - 32, r, s: 0.62 }), col, { sd: 1.4, hd: 1 });
+    tf(I, { ox: x, oy: y, r }, () => { fl(I, ellipse(x - 5, y - 4, 2.4, 1.6), OUT); fl(I, ellipse(x + 5, y - 4, 2.4, 1.6), OUT); ln(I, sad ? `M${x - 5} ${y + 7} C${x - 2} ${y + 4} ${x + 2} ${y + 4} ${x + 5} ${y + 7}` : `M${x - 5} ${y + 4} C${x - 2} ${y + 8} ${x + 2} ${y + 8} ${x + 5} ${y + 4}`, OUT, 1.4); });
+  };
+  mk(40, 28, 0.3, '#f4f1ea', true);
+  mk(24, 34, -0.3, o.c || '#f7c96a', false);
+};
+SK.gravity = (I, o) => {
+  const c = o.c || '#d8c8ff';
+  for (const x of [18, 32, 46]) part(I, `M${x - 4} 8 H${x + 4} V${x === 32 ? 30 : 24} H${x + 9} L${x} ${x === 32 ? 44 : 38} L${x - 9} ${x === 32 ? 30 : 24} H${x - 4} Z`, c, { sd: 1, hd: 0.8 });
+  part(I, 'M6 50 C18 46 46 46 58 50 L58 56 H6 Z', '#8a7a6a', { sd: 1, hd: 0.8 });
+  ln(I, 'M20 48 L24 53 L22 56 M40 48 L37 52 L40 56 M32 47 L33 52', OUT, 1.2);
+};
+SK.antler = (I, o) => {
+  const c = o.c || '#b8864a';
+  for (const f of [1, -1]) {
+    const t = (x) => 32 + (x - 32) * f;
+    tube(I, `M${t(28)} 40 C${t(24)} 30 ${t(18)} 22 ${t(12)} 10`, c, 4.2);
+    tube(I, `M${t(23)} 28 C${t(28)} 22 ${t(30)} 16 ${t(29)} 10`, c, 3.4);
+    tube(I, `M${t(17)} 19 C${t(11)} 18 ${t(7)} 20 ${t(5)} 24`, c, 3);
+  }
+  if (o.hat) { part(I, 'M18 46 C18 36 24 30 32 30 C40 30 46 36 46 46 Z', '#e0485a', { sd: 1.6, hd: 1.2 }); part(I, ellipse(32, 46, 18, 5), '#e0485a', { sd: 1, hd: 0.8 }); tube(I, 'M26 38 L38 38 M32 32 V44', '#ffffff', 2.4, { flat: true }); }
+  if (o.muscle) tf(I, { s: 0.55, y: 14 }, () => fistShape(I, '#b8864a'));
+};
+SK.leopard = (I, o) => {
+  const c = o.c || '#e8a33c';
+  part(I, union(ellipse(18, 18, 6, 7, -0.4), ellipse(46, 18, 6, 7, 0.4)), c, { sd: 1, hd: 0.8 });
+  part(I, 'M32 16 C44 16 52 24 52 34 C52 46 42 54 32 54 C22 54 12 46 12 34 C12 24 20 16 32 16 Z', c, { sd: 2.4, hd: 1.6 });
+  if (!I.small) for (const [x, y] of [[22, 24], [42, 24], [16, 36], [48, 36], [32, 20], [26, 46], [38, 46]]) fl(I, circle(x, y, 1.8), '#5a3a1a');
+  part(I, 'M24 42 C26 38 38 38 40 42 C40 48 24 48 24 42 Z', '#fbeed6', { sd: 0.6, hd: 0.4 });
+  fl(I, poly([[29, 40], [35, 40], [32, 43]]), '#3a2418');
+  for (const x of [24, 40]) { fl(I, ellipse(x, 32, 3.2, 2.4, x < 32 ? 0.3 : -0.3), '#ffe066'); fl(I, ellipse(x, 32, 0.9, 2.1), OUT); }
+};
+SK.bird = (I, o) => {
+  const cols = o.cols || ['#3ab8e0', '#7fe0f0', '#e8fbff'];
+  if (o.fire) glow(I, circle(32, 34, 24), cols[1], 0.4);
+  part(I, birdP(32, 36, 1.05), cols[0], { sd: 2, hd: 1.4, hi: cols[2] });
+  if (!I.small) clip(I, birdP(32, 36, 1.05), () => { for (const x of [12, 20, 44, 52]) ln(I, `M${x} 30 L${x + (x < 32 ? 4 : -4)} 40`, cols[1], 1.4, { a: 0.8 }); });
+  part(I, 'M28 26 C28 20 36 20 36 26 C36 32 28 32 28 26 Z', cols[0], { sd: 0.8, hd: 0.6, hi: cols[2] });
+  fl(I, poly([[35, 25], [40, 26.5], [35, 28]]), '#ffd23f');
+  if (o.flameTail) for (const x of [26, 32, 38]) flame(I, x, 60, 0.18, [cols[0], cols[1], cols[2]]);
+};
+SK.dragon = (I, o) => {
+  const c = o.c || '#3a7fd6';
+  if (o.breath) { part(I, 'M4 36 C12 30 16 24 20 20 L24 38 C18 44 10 44 4 36 Z', '#f7931e', { sd: 1, hd: 0.8 }); fl(I, 'M8 36 C14 32 17 28 20 25 L22 36 C17 40 12 40 8 36 Z', '#ffe066'); }
+  tf(I, { s: 0.9, x: o.breath ? 6 : 2, y: 2 }, () => dragonHead(I, c));
+  if (o.bolt) bolt(I, { s: 0.4, ox: 32, oy: 32, x: -14, y: -14 });
+};
+SK.cog = (I, o) => {
+  const c = o.c || '#e8766a';
+  const g = new Path2D(); g.addPath(star(30, 36, 9, 19, 14, 0)); g.addPath(circle(30, 36, 6));
+  part(I, g, c, { rule: 'evenodd', sd: 2, hd: 1.4 });
+  for (const [x, y, r] of [[46, 16, 6], [52, 24, 4.5], [40, 10, 4], [54, 12, 3.4]]) part(I, circle(x, y, r), '#f8e4ea', { sd: 0.8, hd: 0.6 });
+};
+SK.spring = (I, o) => {
+  const d = 'M20 58 C44 58 44 52 20 52 C-2 52 44 46 20 46 C-2 46 44 40 20 40 C-2 40 44 34 20 34'.replace(/-2/g, '8');
+  ln(I, 'M18 58 C46 57 46 52 18 51 C8 50 46 46 18 45 C8 44 46 40 18 39', OUT, 4.4); ln(I, 'M18 58 C46 57 46 52 18 51 C8 50 46 46 18 45 C8 44 46 40 18 39', '#c9d1d8', 2.4);
+  void d;
+  tf(I, { r: -0.2, s: 0.66, x: 4, y: -12 }, () => fistShape(I, o.c || '#3a1f24'));
+};
+SK.crosshair = (I, o) => {
+  const c = o.c || '#ff5a4a';
+  const r = new Path2D(); r.addPath(circle(32, 32, 20)); r.addPath(circle(32, 32, 16));
+  part(I, r, c, { rule: 'evenodd', sd: 0.6, hd: 0.4 });
+  for (const [x1, y1, x2, y2] of [[32, 6, 32, 22], [32, 42, 32, 58], [6, 32, 22, 32], [42, 32, 58, 32]]) tube(I, `M${x1} ${y1} L${x2} ${y2}`, c, 3, { flat: true });
+  part(I, circle(32, 32, 3.4), c, { sd: 0.6, hd: 0.4 });
+};
+SK.pellet = (I, o) => {
+  const c = o.c || '#c9d1d8';
+  if (o.many) { for (const [x, y, s] of [[20, 44, 0.6], [42, 20, 0.7], [44, 44, 0.55], [22, 20, 0.5]]) { part(I, star(x, y, 5, 8 * s, 3.6 * s), o.cols ? o.cols[(x + y) % o.cols.length] : c, { sd: 0.6, hd: 0.4 }); } sparkle(I, 32, 32, 6, '#fff6b0'); return; }
+  part(I, taper([[6, 54], [14, 46], [22, 38], [30, 30]], 1, 12), fade('#ffffff', 0.85), { flat: true, ol: 0 });
+  if (o.star) part(I, star(38, 24, 5, 13, 6), c, { sd: 1.2, hd: 1 });
+  else part(I, circle(38, 24, 10), c, { sd: 1.8, hd: 1.4, gloss: [34.5, 20.5, 2.4, 1.4, 0.8] });
+};
+SK.chili = (I) => {
+  part(I, 'M20 16 C30 18 44 26 50 40 C54 50 50 58 44 54 C40 44 30 32 16 24 C12 22 14 15 20 16 Z', '#d9253a', { sd: 2, hd: 1.4, gloss: [26, 21, 3, 1.4, 0.6, 0.5] });
+  part(I, 'M20 16 C16 12 14 10 12 6 L16 5 C18 9 21 12 24 15 Z', '#4f9a3a', { sd: 0.6, hd: 0.4 });
+  part(I, 'M16 18 C14 14 18 12 22 14 C22 17 20 20 16 18 Z', '#4f9a3a', { sd: 0.6, hd: 0.4 });
+  for (const [x, y] of [[44, 18], [52, 26]]) flame(I, x, y + 6, 0.18);
+};
+SK.sprout = (I) => {
+  tube(I, 'M32 58 C32 46 30 36 32 26', '#4f9a3a', 3.4);
+  part(I, 'M32 34 C24 26 12 26 6 32 C12 40 24 40 32 34 Z', '#5aa33f', { sd: 1.4, hd: 1 });
+  part(I, 'M32 28 C38 18 50 16 58 20 C54 30 42 34 32 28 Z', '#6fb24a', { sd: 1.4, hd: 1 });
+  part(I, 'M32 26 C28 18 30 10 36 6 C40 12 38 22 32 26 Z', '#4f9a3a', { sd: 1.2, hd: 0.8 });
+  part(I, ellipse(32, 58, 12, 3.4), '#8a5a30', { sd: 0.6, hd: 0.4 });
+};
+SK.swan = (I, o) => {
+  const c = o.c || '#fbf8f0';
+  part(I, 'M14 52 C10 40 18 32 28 34 C24 28 22 18 28 12 C34 6 44 10 44 18 L48 20 L44 22 C42 26 36 26 34 22 C32 18 34 16 36 18 C38 14 34 12 32 14 C28 18 30 28 36 34 C44 40 46 50 40 56 C32 60 20 60 14 52 Z', c, { sd: 2, shT: 0.18, hd: 1.4 });
+  fl(I, poly([[44, 18], [50, 20], [44, 22]]), '#f28c2a');
+  fl(I, circle(39.5, 16.5, 1.3), OUT);
+  if (o.spin) for (const r of [26, 20]) ln(I, arcPath(32, 36, r, 0.3, 2.6), '#ffffff', 2, { a: 0.7 });
+  if (o.dash) speed(I, [[50, 34, 60, 34], [48, 44, 58, 44], [50, 52, 60, 54]], '#ffffff', 2);
+};
+SK.wink = (I, o) => {
+  part(I, circle(26, 32, 17), o.c || '#f7d7a8', { sd: 2, hd: 1.4 });
+  eyeShape(I, 21, 28, 5.4, '#ffffff', '#3a6ab8');
+  ln(I, 'M27 29 C29 26 33 26 35 29', OUT, 1.8);
+  ln(I, 'M20 38 C23 41 28 41 31 38', OUT, 1.6);
+  part(I, heartP(50, 22, 7), '#e0487a', { sd: 1, hd: 0.8 });
+  speed(I, [[42, 30, 36, 34], [44, 38, 40, 44]], '#ffffff', 1.8);
+};
+SK.crown = (I, o) => {
+  if (o.bolts) { for (const [x, y, r, s] of [[-14, -6, -0.5, 0.42], [15, -4, 0.5, 0.4], [0, 14, 0, 0.32]]) bolt(I, { s, ox: 32, oy: 32, x, y, r, c: '#1f0f18' }); for (const [x, y, r, s] of [[-14, -6, -0.5, 0.42], [15, -4, 0.5, 0.4]]) ln(I, xf('M37 3 L15 35 H28.5 L21 61', { s, ox: 32, oy: 32, x, y, r }), '#ff3a4a', 1.2); }
+  const c = 'M12 44 L9 20 L21 30 L27 13 L32 26 L37 13 L43 30 L55 20 L52 44 Z';
+  part(I, c, o.c || '#f0bf45', { sd: 2, hd: 1.4 });
+  part(I, rrect(11, 41, 42, 8, 2), dk(o.c || '#f0bf45', 0.08), { sd: 1.2, hd: 0.8 });
+  for (const [x, cc] of [[22, '#d7263d'], [32, '#2f78d6'], [42, '#d7263d']]) gem(I, x, 45, 3, cc, { ol: I.ol * 0.6 });
+};
+SK.heal = (I, o) => {
+  const c = o.c || '#5ed17a';
+  glow(I, circle(32, 32, 22), c, 0.4);
+  part(I, 'M26 10 H38 V26 H54 V38 H38 V54 H26 V38 H10 V26 H26 Z', c, { sd: 1.8, hd: 1.4, hi: '#ffffff' });
+  if (o.flame) for (const x of [14, 50]) flame(I, x, 58, 0.3, o.flame);
+};
+SK.drill = (I, o) => {
+  const c = o.c || '#c9d1d8';
+  const d = 'M6 32 L50 18 C56 22 58 28 58 32 C58 36 56 42 50 46 Z';
+  part(I, d, c, { sd: 2, hd: 1.4 });
+  clip(I, d, () => { for (let x = 14; x < 60; x += 7) ln(I, `M${x} 16 C${x + 5} 26 ${x - 3} 38 ${x + 2} 48`, dk(c, 0.35), 1.6); });
+  speed(I, [[60, 20, 64, 18], [60, 44, 64, 46]], '#ffffff', 2);
+};
+SK.axe = (I, o) => tf(I, { s: 0.86, r: 0.1 }, () => (o.big ? D.battleAxe(I, {}) : D.axe(I, {})));
+SK.staff = (I, o) => { if (o.cloud) part(I, cloudP(40, 20, 0.62), '#eef3f7', { sd: 1.2, hd: 1 }); tf(I, { s: 0.86 }, () => D.climaTact(I, { orb: o.orb })); };
+SK.oni = (I, o) => {
+  const c = o.c || '#c8372d';
+  part(I, union('M16 22 L12 6 L24 16 Z', 'M48 22 L52 6 L40 16 Z'), '#f3e6c4', { sd: 0.8, hd: 0.6 });
+  part(I, 'M32 12 C46 12 52 24 50 36 C48 48 40 56 32 56 C24 56 16 48 14 36 C12 24 18 12 32 12 Z', c, { sd: 2.4, hd: 1.6 });
+  for (const f of [1, -1]) fl(I, xf('M20 28 L29 32 L20 34 Z', { sx: f, ox: 32 }), '#ffe066');
+  part(I, 'M22 42 C26 48 38 48 42 42 L40 46 C36 50 28 50 24 46 Z', '#f7f4ec', { flat: true, ol: I.ol * 0.7 });
+  for (const f of [1, -1]) fl(I, xf(poly([[24, 43], [27, 43], [25.5, 49]]), { sx: f, ox: 32 }), '#f7f4ec');
+  if (o.swords) for (const r of [-0.9, 0.9]) tf(I, { r, s: 0.66 }, () => D.katana(I, {}));
+};
+SK.net = (I, o) => {
+  const c = o.c || '#e9dcc0';
+  const d = []; for (let i = -2; i <= 2; i++) { d.push(`M${14 + (i + 2) * 9} 10 C${16 + (i + 2) * 8} 30 ${12 + (i + 2) * 10} 44 ${10 + (i + 2) * 11} 58`); d.push(`M8 ${16 + (i + 2) * 10} C24 ${14 + (i + 2) * 10} 40 ${18 + (i + 2) * 10} 56 ${14 + (i + 2) * 10}`); }
+  ln(I, d.join(' '), OUT, 3); ln(I, d.join(' '), c, 1.4);
+};
+SK.knives = (I, o) => { for (const [x, y, r] of [[-12, -8, -0.1], [2, 2, 0], [-6, 14, 0.1]]) tf(I, { s: 0.55, x, y, r }, () => D.dagger(I, {})); speed(I, [[4, 20, 14, 20], [2, 36, 12, 36], [6, 50, 14, 50]], '#ffffff', 2); };
+SK.bullets = (I, o) => {
+  for (const [x, y] of [[40, 16], [48, 32], [36, 46]]) { part(I, taper([[x - 26, y], [x - 12, y]], 0.6, 5), fade('#ffffff', 0.8), { flat: true, ol: 0 }); part(I, rrect(x - 10, y - 3, 12, 6, 3), '#d6a23e', { sd: 0.8, hd: 0.6 }); }
+};
+SK.cannonball = (I, o) => {
+  part(I, taper(bez([4, 56], [12, 50], [20, 44], [28, 38], 10), 2, 18), fade('#ffffff', 0.8), { flat: true, ol: 0 });
+  part(I, circle(38, 28, 15), o.c || '#3a3540', { sd: 2.6, hd: 2, hi: '#8a86a0', gloss: [32, 22, 3.4, 2, 0.6] });
+};
+SK.chakram = (I, o) => {
+  const r = new Path2D(); r.addPath(star(32, 32, 8, 22, 17, 0.2)); r.addPath(circle(32, 32, 11));
+  part(I, r, o.c || '#dfe7ee', { rule: 'evenodd', sd: 1.6, hd: 1.2 });
+  for (const rr of [26, 20]) ln(I, arcPath(32, 32, rr, 2.4, 3.6), '#ffffff', 2, { a: 0.7 });
+};
+SK.pendulum = (I) => {
+  tube(I, 'M32 4 V36', '#e9dcc0', 1.6, { flat: true });
+  part(I, circle(32, 44, 13), '#e0b24a', { sd: 1.6, hd: 1.2 });
+  ln(I, spiral(32, 44, 10, 2, 0), '#6b3f8a', 1.6);
+  for (const r of [22, 17]) ln(I, arcPath(32, 4, r * 2, 1.2, 1.94), '#ffffff', 1.8, { a: 0.6 });
+};
+SK.summon = (I, o) => { for (const [x, y, s] of [[20, 40, 0.5], [44, 40, 0.5], [32, 30, 0.6]]) tf(I, { s, x: x - 32, y: y - 32 + 4 }, () => SK.figure(I, { c: o.c || '#5a5f6a' })); };
+SK.shadowFigure = (I, o) => SK.figure(I, { c: '#1f1a26', aura: '#8a6ad6', eyes: '#ff5a5a' });
+SK.steal = (I, o) => { SK.figure(I, { c: '#1f1a26', eyes: '#ff5a5a' }); tf(I, { s: 0.5, x: 14, y: -14, r: 0.6 }, () => { D.dagger(I, {}); }); };
+SK.dryCracks = (I, o) => {
+  const c = o.c || '#c9a060';
+  part(I, 'M4 34 C18 30 46 30 60 34 L60 58 H4 Z', c, { sd: 1.6, hd: 1.2 });
+  clip(I, 'M4 34 C18 30 46 30 60 34 L60 58 H4 Z', () => ln(I, 'M10 36 L16 44 L12 52 M16 44 L26 46 L30 54 M26 46 L34 38 L44 42 L48 52 M44 42 L54 38', dk(c, 0.5), 1.8));
+  for (const [x, y, s] of [[20, 20, 0.6], [44, 16, 0.7]]) part(I, xf(crescentP(x, y, 10, -2.6, -0.5, 3), { s: 1 }), lt(c, 0.3), { sd: 0.6, hd: 0.4, ol: I.ol * 0.8 });
+};
+SK.spikes = (I, o) => {
+  const c = o.c || '#d9b26f';
+  for (const [x, h, w] of [[16, 30, 7], [30, 42, 9], [46, 34, 8]]) part(I, poly([[x - w, 58], [x, 58 - h], [x + w, 58]]), c, { sd: 1.4, hd: 1 });
+  part(I, 'M4 56 C16 52 48 52 60 56 V60 H4 Z', dk(c, 0.1), { sd: 0.6, hd: 0.4 });
+};
+SK.smoke = (I, o) => {
+  const c = o.c || '#eef2f4';
+  part(I, union(circle(20, 38, 11), circle(34, 30, 13), circle(46, 40, 10), circle(30, 44, 11), circle(14, 24, 6)), c, { sd: 2.2, hd: 1.4 });
+  if (o.fist) tf(I, { r: -0.3, s: 0.56, x: 10, y: -8 }, () => fistShape(I, c));
+  if (o.snake) SK.snake(I, { c });
+};
+SK.rocket = (I, o) => {
+  const c = o.c || SKIN;
+  tube(I, 'M4 60 C14 40 26 30 44 22', c, 6); tube(I, 'M60 60 C50 40 38 30 44 22', c, 6);
+  tf(I, { s: 0.36, x: 12, y: -14, r: -0.3 }, () => palmShape(I, c));
+  speed(I, [[20, 56, 26, 46], [30, 58, 34, 50], [40, 58, 42, 50]], '#ffffff', 2);
+};
+SK.impact = (I, o) => { burst(I, 32, 32, 25, 13, o.c || '#ffd23f', 12); if (o.skull) skull(I, 32, 30, 9, '#c9d1d8', false); };
+
+/** Style colours (badge) and default motif per fighting style. */
+const STYLE_SK = {
+  brawler: ['#a8582e', ['fist']], ittoryu: ['#3a6a9a', ['swords', { n: 1 }]], nitoryu: ['#2e5a86', ['swords', { n: 2 }]], santoryu: ['#2f7a4a', ['swords', { n: 3 }]],
+  black_leg: ['#5a6f96', ['kick']], fishman_karate: ['#1f78a0', ['fist', { fx: 'water' }]], rokushiki: ['#4a4f5c', ['finger', { burst: '#ffd23f' }]],
+  sniper: ['#7a6a2a', ['pellet', { star: true, c: '#c9d1d8' }]], okama_kenpo: ['#c04a8a', ['swan']], electro: ['#3a5a9a', ['fist', { fx: 'bolt' }]],
+  hasshoken: ['#8a4a2a', ['palm', { rings: true }]], weather_science: ['#2f62a8', ['staff', { cloud: true }]], elbaf: ['#7a5230', ['axe', { big: true }]],
+  ryusoken: ['#2a7a6a', ['claw', { hand: '#8fd0b0' }]],
+};
+const FRUIT_BADGE = {
+  gomu: '#b8433f', gura: '#3d7f93', ope: '#2f6fa0', bara: '#c0563a', bomu: '#c0762a', hana: '#b9507e', ito: '#b04a78', mochi: '#9a7a4a', horo: '#7a4f96',
+  kage: '#5a6f86', doku: '#6d2a86', noro: '#2f8a92', bari: '#3f7fae', suke: '#6d7f8c', sube: '#b0607a', doru: '#a08050', supa: '#5f6f7c', nikyu: '#6f6a86',
+  mane: '#b03f6e', zushi: '#5b4a9a', hito: '#b86a82', neko_leopard: '#b8782a', tori_phoenix: '#1f7a9a', uo_seiryu: '#2a5aa0', mera: '#c24a26', hie: '#3a86b8',
+  goro: '#3c3f86', suna: '#a8843e', moku: '#6f7f8a', pika: '#b8901e', magu: '#8a2a18', yami: '#4a2a86',
+};
+const HAKI_BADGE = { armament: '#5a3f86', observation: '#1f7a86', conqueror: '#8a1c2a' };
+const ELEM_BADGE = { fire: '#c24a26', ice: '#3a86b8', snow: '#3a86b8', lightning: '#3c3f86', water: '#1f78a0', poison: '#6d2a86', gas: '#6d2a86', sand: '#a8843e', smoke: '#6f7f8a', light: '#b8901e', magma: '#8a2a18', dark: '#4a2a86', explosion: '#c0762a', quake: '#3d7f93', haki: '#8a1c2a' };
+const ANIM_BADGE = { slash: '#4a5a6a', punch: '#8a4a2a', kick: '#5a6f96', shoot: '#6a5a3a', thrust: '#5a5a66', heavy: '#7a3a2a', grab: '#6a4a5a', cast: '#4a4a7a', block: '#4a6a7a' };
+const FIRE = ['#e8452c', '#f7931e', '#ffe066'], BLUEFIRE = ['#1f8fc0', '#4dd0e1', '#e0fbff'], WHITE = '#f4f7fa', BLACKFIST = '#2a2530';
+
+/** Curated motif per technique id: [motif, opts]. */
+const SKILL_MAP = {
+  // Gomu
+  gomu_pistol: ['stretch', { burst: '#ffd23f' }], gomu_gatling: ['multi'], gomu_rocket: ['rocket'], gomu_bazooka: ['palms', { burst: '#ffd23f' }],
+  gomu_gear2: ['cog'], gomu_gear3: ['fist', { s: 1.08, x: 0, y: 2, burst: '#ffd23f', lines: false }], gomu_gear4: ['spring'], gomu_gear5: ['sun', { c: '#fbf8f0', ray: '#ffffff', face: true }],
+  // Gura
+  gura_punch: ['fist', { fx: 'cracks' }], gura_kaishin: ['cracks'], gura_wave: ['wave', { c: '#9fd9ef', fx: 'cracks' }], gura_tsunami: ['wave', { c: '#4fb3e8', fx: 'cracks' }],
+  // Ope
+  ope_room: ['room'], ope_shambles: ['swap'], ope_amputate: ['swords', { n: 1, arcCol: '#bfe4ff' }], ope_mes: ['heartCube'], ope_counter: ['palm', { burst: '#ffe14a', rings: true, ring: '#ffe14a' }], ope_gamma: ['beam', { c: '#b8f36b' }],
+  // Bara / Bomu / Hana / Ito
+  bara_cannon: ['glove'], bara_festival: ['glove', { multi: true }], bara_escape: ['glove', { multi: true }],
+  bomu_kick: ['kick', { burst: '#ffd23f' }], bomu_nose: ['bomb'], bomu_breeze: ['explosion', { smoke: true }],
+  hana_clutch: ['flower', { cross: true }], hana_mil: ['flower', { arms: true }], hana_gigante: ['palm', { s: 0.98 }],
+  ito_overheat: ['strings', { c: '#ff8a6a', hot: true }], ito_parasite: ['strings', { hand: true }], ito_fivecolor: ['strings', { five: true }], ito_birdcage: ['cage'],
+  // Mochi / Horo / Kage / Doku / Noro / Bari
+  mochi_tsuki: ['mochi', { fists: true }], mochi_zangiri: ['mochi', { trident: true }], mochi_chikara: ['mochi', { fists: true }],
+  horo_negative: ['ghost'], horo_mini: ['ghost', { many: true }],
+  kage_brickbat: ['bats'], kage_steal: ['steal'], kage_doppelman: ['shadowFigure'],
+  doku_fist: ['fist', { c: '#9c5ad0', fx: 'poison' }], doku_hydra: ['snake'], doku_venom: ['oni', { c: '#8e3ab8' }],
+  noro_beam: ['beam', { c: '#9ff0ff' }], noro_mirror: ['mirror', { c: '#9ff0ff' }],
+  bari_barrier: ['hex'], bari_crash: ['hex', { burst: '#ffd23f' }],
+  // Suke / Sube / Doru / Supa / Nikyu / Mane / Zushi
+  suke_vanish: ['eye', { dashed: true, ripples: false, iris: '#6d7f8c' }], sube_slide: ['sparkles'], sube_mace: ['mace'],
+  doru_arrow: ['candle', { arrows: true }], doru_lock: ['candle', { lock: true }], doru_armor: ['shield', { c: '#fbf3dc' }],
+  supa_sparkling: ['bladeFlower'], supa_spider: ['shield', { c: '#c9d1d8' }],
+  nikyu_paw: ['paw'], nikyu_repel: ['paw', { push: true }], nikyu_travel: ['paw', { arrow: true }], nikyu_ursus: ['paw', { bubble: true }],
+  mane_disguise: ['masks'], mane_memoir: ['masks', { c: '#f4a3bf' }],
+  zushi_press: ['gravity'], zushi_blade: ['claw', { c: '#d8c8ff' }], zushi_meteor: ['meteor'],
+  // Zoans
+  hito_heavy: ['antler', { muscle: true }], hito_horn: ['antler', { hat: true }], hito_monster: ['antler', { c: '#8a5a30' }],
+  neko_hybrid: ['leopard'], neko_claw: ['claw', { c: '#ffe8c0' }], neko_pounce: ['dash', { c: '#ffe8c0', c2: '#e8a33c' }],
+  phoenix_flame: ['heal', { c: '#4dd0e1', flame: BLUEFIRE }], phoenix_fly: ['bird', { cols: BLUEFIRE, fire: true }], phoenix_brand: ['kick', { fx: 'fire', flame: BLUEFIRE, c: '#e8d9a8', shoe: '#6b4a2a' }], phoenix_rebirth: ['bird', { cols: BLUEFIRE, fire: true, flameTail: true }],
+  seiryu_bolo: ['dragon', { breath: true }], seiryu_kaifu: ['airblade', { n: 2 }], seiryu_raimei: ['bolt', { two: true }], seiryu_form: ['dragon'],
+  // Logias
+  mera_hiken: ['fist', { c: '#f7931e', fx: 'fire', line: '#ffe066' }], mera_hidaruma: ['fireballs'], mera_enkai: ['flame', { pillar: true }], mera_entei: ['sun', { c: '#f7931e', ray: '#e8452c' }],
+  hie_saber: ['swords', { n: 1, pal: [{ blade: '#bfefff', edge: '#ffffff', wrap: '#6fb8d8', tsuba: '#bfefff', habaki: '#e8fbff', diamond: '#e8fbff' }], arcCol: '#bfefff' }],
+  hie_pheasant: ['bird', { cols: ['#8fd8f8', '#c8f0ff', '#ffffff'] }], hie_ageand: ['ice', { flake: true }], hie_time: ['iceCube'],
+  goro_vari: ['bolt'], goro_sango: ['bolt', { two: true }], goro_elthor: ['cloud', { bolt: true, c: '#b8c0d8' }], goro_amaru: ['figure', { c: '#3c3f86', aura: '#fff36b', eyes: '#fff36b' }], goro_raigo: ['cloud', { bolt: true, c: '#5a5f7a' }],
+  suna_barjan: ['airblade', { c: '#e8c77a' }], suna_sables: ['tornado', { c: '#e8c77a' }], suna_spada: ['spikes'], suna_dry: ['dryCracks'],
+  moku_blow: ['smoke', { fist: true }], moku_snake: ['smoke', { snake: true }], moku_out: ['smoke'], moku_launcher: ['dash', { c: '#eef2f4', c2: '#dfe6ea' }],
+  pika_yasakani: ['lightOrbs'], pika_yata: ['mirror', { light: true }], pika_murakumo: ['swords', { n: 1, pal: [{ blade: '#fff6b0', edge: '#ffffff', wrap: '#e0b24a', tsuba: '#fff6b0', habaki: '#fffbe0', diamond: '#fffbe0' }], arcCol: '#fff6b0' }], pika_amaterasu: ['beam'],
+  magu_daifunka: ['magma'], magu_meigo: ['magma'], magu_ryusei: ['meteor', { c: '#5a2a1e', two: true }],
+  yami_kurouzu: ['vortex', { hand: true }], yami_blackhole: ['vortex', { ring: true }], yami_nullify: ['claw', { c: '#c9a0ff', hand: '#2a1f33' }], yami_liberation: ['explosion', { c: '#6a3ab8', c2: '#1a1024' }],
+  // Styles
+  brawl_heavy: ['fist', { burst: '#ffd23f', s: 0.95 }], brawl_tackle: ['dash', { c: '#ffe8c0', c2: '#f2c596' }], brawl_knee: ['kick', { c: '#6b4a32', shoe: '#3a2a1c' }], brawl_headbutt: ['impact', { skull: true }],
+  itto_heavy: ['slash', { n: 1 }], itto_iai: ['swords', { n: 1, arc: false }], itto_pound: ['airblade'], itto_whirl: ['tornado', { sword: true }],
+  nito_heavy: ['slash', { n: 2 }], nito_taka: ['wave', { c: '#dff4ff' }], nito_nigiri: ['slash', { n: 2 }],
+  santo_heavy: ['slash', { n: 3 }], santo_onigiri: ['slash', { n: 3 }], santo_108: ['bird', { cols: ['#bfe4ff', '#e8f6ff', '#ffffff'] }], santo_sanzen: ['bladeFlower', { c: '#eaf2f7' }], santo_asura: ['oni', { swords: true, c: '#5a2a3a' }],
+  bleg_heavy: ['kick', { burst: '#ffd23f' }], bleg_party: ['kick', { r: 0.4, x: 2, y: -2 }], bleg_antimanner: ['kick', { r: -0.5, x: 0, y: 4 }], bleg_concasse: ['kick', { r: 1.2, x: 2, y: 2, burst: '#ffd23f' }],
+  bleg_diable: ['kick', { fx: 'fire' }], bleg_skywalk: ['moon', { boot: true, puffs: true, c: '#dff4ff' }],
+  fmk_heavy: ['fist', { fx: 'water', burst: '#7fd3f7' }], fmk_uchimizu: ['drops'], fmk_arabesque: ['palm', { rings: true, ring: '#9fe0ff' }], fmk_5000: ['fist', { burst: '#9fe0ff', fx: 'water', s: 1 }], fmk_vagabond: ['drill', { c: '#7fd3f7' }],
+  roku_soru: ['dash'], roku_geppo: ['moon', { boot: true, puffs: true }], roku_tekkai: ['shield'], roku_rankyaku: ['airblade'], roku_kamie: ['paper'], roku_rokuogan: ['palms', { burst: '#ffffff' }],
+  snipe_heavy: ['crosshair'], snipe_explode: ['bomb'], snipe_tabasco: ['chili'], snipe_firebird: ['bird', { cols: FIRE, fire: true }], snipe_popgreen: ['sprout'], snipe_kabuto: ['pellet', { many: true, cols: ['#ffd23f', '#ff7a5a', '#8fd8ff'] }],
+  okama_pirouette: ['swan', { spin: true }], okama_swan_dash: ['swan', { dash: true }], okama_hell_wink: ['wink'], okama_heavy: ['kick', { c: '#f4a3bf', shoe: '#c04a8a' }],
+  elec_heavy: ['claw', { c: '#fff36b' }], elec_discharge: ['bolt', { two: true }], elec_garchu: ['bolt', { s: 0.8 }], elec_sulong: ['moon', { c: '#fff6d0', bolt: true }],
+  hassho_heavy: ['palm', { rings: true, burst: '#ffd23f' }], hassho_bushin: ['rings'], hassho_drill: ['drill'],
+  clima_heavy: ['fireballs'], clima_thunderbolt: ['cloud', { bolt: true }], clima_cyclone: ['tornado'], clima_mirage: ['sun', { c: '#ffe7a0', ray: '#ffd23f' }], clima_zeus: ['cloud', { bolt: true, c: '#b8c0d8' }],
+  elbaf_heavy: ['axe', { big: true }], elbaf_hakoku: ['swords', { n: 1, arcCol: '#ffe7a0' }],
+  ryu_heavy: ['dragon'], ryu_claw: ['claw', { hand: '#8fd0b0' }], ryu_hiken: ['fist', { c: '#f7931e', fx: 'fire', line: '#ffe066' }],
+  // Haki (and the HUD toggles)
+  haki_emission: ['fist', { c: BLACKFIST, burst: '#b58ce0', line: '#d8c8ff' }], haki_ryuo: ['fist', { c: BLACKFIST, fx: 'cracks', line: '#d8c8ff' }],
+  haki_futuresight: ['eye', { iris: '#e0303a' }], haki_conqueror: ['crown', { bolts: true }], haki_infusion: ['fist', { c: BLACKFIST, fx: 'bolt', line: '#ff8a9a' }],
+  toggle_armament: ['fist', { c: BLACKFIST, lines: false, s: 1, x: 0, y: 2, aura: true }], toggle_observation: ['eye', { iris: '#e0303a' }],
+};
+/** Keyword rules on the technique name (NPC moves, future techniques). */
+const SKILL_RULES = [
+  [/conqueror|haoshoku/, 'crown', { bolts: true }], [/future sight|observation|kenbunshoku/, 'eye', {}], [/armament|busoshoku|hardened|ryuo/, 'fist', { c: BLACKFIST, line: '#d8c8ff' }],
+  [/meteor|noah|ryusei/, 'meteor', {}], [/black hole|vortex|kurouzu/, 'vortex', { ring: true }], [/birdcage|cage|fulbright/, 'cage', {}],
+  [/thread|string|tamaito|parasite|voodoo|flail/, 'strings', {}], [/\bnet\b/, 'net', {}], [/chakram|ring blade/, 'chakram', {}], [/hypno|jango/, 'pendulum', {}],
+  [/soldiers|homies|zombie|summon|call the|gifters/, 'summon', {}], [/shadow|doppel|ikasumi|camouflage/, 'shadowFigure', {}],
+  [/ghost|hollow/, 'ghost', { many: true }], [/\bbats?\b/, 'bats', {}], [/snake|serpent|orochi|hydra|coil/, 'snake', {}], [/dragon|ryu\b|seiryu|kaido/, 'dragon', {}],
+  [/phoenix|bird|feather|wing|pheasant|ikaros/, 'bird', {}], [/leopard|jaguar|lion|tiger|wolf|fang|beast/, 'claw', {}], [/claw|scratch/, 'claw', {}],
+  [/paw|pad ho/, 'paw', {}], [/thunder|lightning|raigo|raitei|volt|dengeki|thor|henry|electr/, 'bolt', {}], [/cloud/, 'cloud', {}],
+  [/tornado|cyclone|tatsumaki|whirlwind|storm|gale/, 'tornado', {}], [/fire|flame|blaze|burn|hi-?daruma|hiken|kaen|karyu|heat|tempura|shishi no hi/, 'flame', {}],
+  [/ice|frost|freez|blizzard|fubuki|yuki|snow|niflheim|kamakura|hyoga/, 'ice', {}], [/magma|lava/, 'magma', {}], [/laser|beam|maser|light/, 'beam', {}],
+  [/water|wave|tide|umi|splash|juice/, 'wave', {}], [/poison|venom|toxic|gas|plague|ooze/, 'skull', { aura: '#b35ad6' }], [/bomb|explo|grenade|mine|sneeze|jirai/, 'bomb', {}],
+  [/cannon ?ball|cannons?|bazooka|bero/, 'cannonball', {}], [/gun|rifle|pistol|volley|shot|bullet|round|machine/, 'bullets', {}], [/arrow|bow\b|yabusame/, 'airblade', { c: '#f3e6c4' }],
+  [/knife|knives|kunai|dagger|needle/, 'knives', {}], [/spear|lance|javelin|trident|halberd|glaive|jitte|bisento/, 'drill', {}], [/axe/, 'axe', {}],
+  [/mace|club|hammer|bat\b|mallet|pan\b|bamboo/, 'mace', {}], [/drill|screw|spin/, 'drill', {}], [/sword|blade|slash|cut|cleave|giri|kiri|saw|scalpel|punisher|pretzel/, 'slash', {}],
+  [/shield|guard|steel|tekkai|armou?r|cape/, 'shield', {}], [/quake|stomp|press|crush|earth|ground|mountain/, 'gravity', {}], [/sand|desert|dune/, 'airblade', { c: '#e8c77a' }],
+  [/kick|heel|foot|leg|stamp|knee/, 'kick', {}], [/palm|hasshoken|shockwave|buddha/, 'palm', { rings: true }], [/punch|fist|jab|puncher|lariat|knuckle|elbow/, 'fist', {}],
+  [/charge|dash|rush|tackle|dive|lunge|pounce|hopper|spurt/, 'dash', {}], [/bite|jaw|munch|tooth|teeth|shark/, 'claw', { c: '#ffffff' }],
+  [/heal|life return|mend|cure/, 'heal', {}], [/haki/, 'crown', { bolts: true }],
+];
+/** Emoji hint on the ability (data-side) → motif. Only used as a hint, never drawn. */
+const EMOJI_SK = {
+  '🔥': ['flame'], '⚡': ['bolt'], '💥': ['impact'], '🚀': ['dash'], '☀': ['sun'], '🌋': ['flame', { pillar: true }], '🗡': ['swords', { n: 1 }], '💣': ['bomb'], '🌬': ['airblade'],
+  '✋': ['palm'], '🌑': ['vortex'], '👹': ['oni'], '🛡': ['shield'], '🐉': ['dragon'], '🌩': ['cloud', { bolt: true }], '🌪': ['tornado'], '🌀': ['airblade'], '👊': ['fist'],
+  '🎈': ['glove'], '🌊': ['wave'], '💙': ['heal', { c: '#4dd0e1' }], '🎭': ['masks'], '💪': ['fist'], '🐍': ['snake'], '🪞': ['mirror'], '🧱': ['hex'], '🔨': ['mace'],
+  '🐾': ['paw'], '☄': ['meteor'], '🐦': ['bird'], '👺': ['oni'], '🌙': ['moon'], '☁': ['cloud'], '🌫': ['smoke'], '🦵': ['kick'], '👑': ['crown', { bolts: true }],
+  '🔫': ['bullets'], '✊': ['fist'], '🌐': ['cracks'], '🔵': ['room'], '❄': ['ice', { flake: true }], '🧊': ['iceCube'], '✨': ['lightOrbs'], '⚫': ['vortex', { ring: true }],
+  '💧': ['drops'], '💨': ['dash'], '📄': ['paper'], '🌶': ['chili'], '🌿': ['sprout'], '🦩': ['swan', { dash: true }], '🩰': ['swan', { spin: true }], '😉': ['wink'],
+  '🌕': ['moon'], '🦏': ['drill'], '🔮': ['eye'], '🐯': ['claw'], '🐆': ['leopard'], '🦌': ['antler'], '🕊': ['bird'], '♾': ['heal'], '🐲': ['dragon'],
+  '🕸': ['cage'], '🧵': ['strings'], '👻': ['ghost'], '🦇': ['bats'], '☠': ['skull'], '🐌': ['beam'], '👁': ['eye'], '🕯': ['candle'], '🔒': ['candle', { lock: true }],
+  '🗿': ['shield'], '✴': ['bladeFlower'], '🕷': ['shield'], '✈': ['paw', { arrow: true }], '💭': ['masks'], '⬇': ['gravity'], '🍡': ['mochi'], '🔱': ['mochi', { trident: true }],
+  '🌸': ['flower'], '🌺': ['flower', { arms: true }], '🖐': ['strings', { five: true }], '🤡': ['glove'], '🎪': ['glove', { multi: true }], '👃': ['bomb'], '♨': ['cog'], '🦴': ['fist'],
+  '🔀': ['swap'], '☢': ['beam'], '🏜': ['dryCracks'], '⚔': ['swords', { n: 2 }], '🕳': ['vortex'], '🐂': ['dash'], '🦁': ['swords', { n: 1, arc: false }], '🍙': ['slash', { n: 2 }],
+  '🌍': ['bladeFlower'], '🍽': ['kick'], '🎆': ['fireballs'], '🎇': ['pellet', { many: true }], '💢': ['fist', { fx: 'cracks' }], '🦶': ['kick'], '💫': ['ghost', { many: true }],
+};
+const ANIM_SK = { punch: ['fist'], kick: ['kick'], slash: ['slash'], thrust: ['dash'], heavy: ['impact'], shoot: ['bullets'], grab: ['claw'], cast: ['lightOrbs'], block: ['shield'] };
+const ELEM_SK = { fire: ['flame'], ice: ['ice'], snow: ['ice', { flake: true }], lightning: ['bolt'], water: ['wave'], poison: ['skull', { aura: '#b35ad6' }], gas: ['skull', { aura: '#b35ad6' }], sand: ['tornado', { c: '#e8c77a' }], smoke: ['smoke'], light: ['beam'], magma: ['magma'], dark: ['vortex'], explosion: ['explosion'], quake: ['cracks'] };
+
+function skillElement(def) {
+  let el = def?.element || null;
+  if (!el && def?.steps) { try { JSON.stringify(def.steps, (k, v) => { if (!el && k === 'element' && typeof v === 'string') el = v; return v; }); } catch (e) { /* ignore */ } }
+  return el;
+}
+function resolveSkill(def) {
+  const id = def?.id || '', src = def?.source || '', [kind, key = ''] = src.split(':');
+  const name = (def?.name || id).toLowerCase(), el = skillElement(def);
+  let badge = ELEM_BADGE[el] || ANIM_BADGE[def?.anim] || '#4a4a6a';
+  if (kind === 'style' && STYLE_SK[key]) badge = STYLE_SK[key][0];
+  if (kind === 'fruit') badge = FRUIT_BADGE[key] || FRUITS[key]?.color || badge;
+  const haki = def?.hakiType || (kind === 'haki' ? key : null);
+  if (haki && HAKI_BADGE[haki]) badge = HAKI_BADGE[haki];
+  let m = SKILL_MAP[id];
+  if (!m && haki) m = SKILL_MAP['toggle_' + haki] || SKILL_MAP.haki_conqueror;
+  if (!m && kind === 'style' && /^strike$/i.test(def?.name || '')) m = STYLE_SK[key]?.[1];
+  if (!m) { const r = SKILL_RULES.find(([re]) => re.test(name)); if (r) m = [r[1], r[2]]; }
+  if (!m && def?.icon && EMOJI_SK[def.icon.replace(/️/g, '')]) m = EMOJI_SK[def.icon.replace(/️/g, '')];
+  if (!m && kind === 'style' && STYLE_SK[key]) m = STYLE_SK[key][1];
+  if (!m && el && ELEM_SK[el]) m = ELEM_SK[el];
+  if (!m) m = ANIM_SK[def?.anim] || ['impact'];
+  return { motif: m[0], o: m[1] || {}, badge, haki };
+}
+function badgeTone(c) {
+  const L = lum(c);
+  if (L > 0.55) return mix(c, '#241a2a', Math.min(0.6, (L - 0.42) / (L - 0.08)));
+  if (L < 0.16) return mix(c, '#8a7fa0', 0.3);
+  return c;
+}
+function skillBadge(I, col, haki) {
+  const c = badgeTone(col);
+  part(I, circle(32, 32, 30), dk(c, 0.35), { sd: 0, hd: 0 });
+  fl(I, circle(32, 32, 27.2), rg(I, 32, 32, 28, [[0, lt(c, 0.3)], [0.55, c], [1, dk(c, 0.28)]], 22, 20, 1));
+  ln(I, arcPath(32, 32, 28.6, Math.PI * 0.95, Math.PI * 1.65), lt(c, 0.45), 1.6, { a: 0.9 });
+  ln(I, arcPath(32, 32, 28.6, -0.1, Math.PI * 0.6), dk(c, 0.55), 1.4, { a: 0.8 });
+  ln(I, circle(32, 32, 27.2), dk(c, 0.5), 0.9, { a: 0.9 });
+  if (haki === 'armament') glow(I, circle(32, 32, 31.5), '#b58ce0', 0);
 }
 
 // ================================================================== exports
@@ -1243,13 +3001,20 @@ export function itemIcon(idOrDef, size = 48) {
   const hit = cache.get(key + '@' + Math.max(8, Math.round(size || 48)));
   if (hit) return hit;
   const r = resolveItem(id, d);
-  return render(key, size, (I) => (D[r.fn] || D.pouch)(I, { ...r.o, def: d, id }), { tag: r.fn, fallback: r.fallback });
+  const fn = D[r.fn] ? r.fn : 'pouch';
+  return render(key, size, (I) => D[fn](I, { ...r.o, def: d, id }), { tag: fn, fallback: r.fallback || fn !== r.fn });
 }
 
 export function skillIcon(def, size = 48) {
-  return render('skill:' + (def?.id || def?.name || '?'), size, (I) => {
-    part(I, circle(32, 32, 28), '#37474f', { sd: 3, hd: 2 });
-  });
+  const key = 'skill:' + (def?.id || def?.name || '?');
+  const hit = cache.get(key + '@' + Math.max(8, Math.round(size || 48)));
+  if (hit) return hit;
+  const r = resolveSkill(def);
+  return render(key, size, (I) => {
+    skillBadge(I, r.badge, r.haki);
+    clip(I, circle(32, 32, 27.6), () => { if (r.o.aura) fl(I, circle(32, 34, 20), rg(I, 32, 34, 22, [[0, fade('#c9a0ff', 0.75)], [1, fade('#c9a0ff', 0)]])); });
+    (SK[r.motif] || SK.impact)(I, r.o);
+  }, { tag: r.motif, halo: false });
 }
 
 export function uiIcon(name, size = 32) {

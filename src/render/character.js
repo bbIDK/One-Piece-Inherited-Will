@@ -6,7 +6,8 @@
 // (left mirrors right); the front/back views project the side-view pose with
 // foreshortening so punches come at the camera and blades sweep across.
 import { shade } from '../core/math.js';
-import { samplePose, STAND, GUARD, restPose } from './anims.js';
+import { samplePose, STAND, GUARD, restPose, blendPose } from './anims.js';
+import { drawHead, drawHair, drawHat } from './charart.js';
 
 const TAU = Math.PI * 2;
 const OUTLINE = 'rgba(30,20,20,0.85)';
@@ -52,6 +53,34 @@ export function starPath(g, x, y, r, n = 5, k = 0.45, rot = -Math.PI / 2) {
   g.closePath();
 }
 
+/** '#rgb' / '#rrggbb' / 'rgb(a)(...)' → 'rgba(r,g,b,a)'. */
+export function rgba(col, a) {
+  if (!col) return `rgba(255,255,255,${a})`;
+  if (col[0] === '#') {
+    let h = col.slice(1);
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    const n = parseInt(h.slice(0, 6), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+  const m = col.match(/rgba?\(([^)]+)\)/);
+  if (m) { const p = m[1].split(',').map((s) => parseFloat(s)); return `rgba(${p[0] | 0},${p[1] | 0},${p[2] | 0},${a * (p[3] ?? 1)})`; }
+  return col;
+}
+/** Rough perceived brightness 0..1 of a colour string. */
+export function brightness(col) {
+  if (!col) return 1;
+  let r = 255, gg = 255, b = 255;
+  if (col[0] === '#') {
+    let h = col.slice(1);
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    const n = parseInt(h.slice(0, 6), 16); r = (n >> 16) & 255; gg = (n >> 8) & 255; b = n & 255;
+  } else {
+    const m = col.match(/rgba?\(([^)]+)\)/);
+    if (m) { const p = m[1].split(',').map((s) => parseFloat(s)); r = p[0]; gg = p[1]; b = p[2]; }
+  }
+  return (r * 0.299 + gg * 0.587 + b * 0.114) / 255;
+}
+
 /** facing angle → 'down' | 'up' | 'right' | 'left' */
 export function dir4(angle) {
   const a = ((angle % TAU) + TAU) % TAU;
@@ -73,7 +102,7 @@ function ik(ax, ay, tx, ty, l1, l2, bend, stretch) {
   const max = (l1 + l2) * 0.999;
   if (d > max && !stretch) { dx *= max / d; dy *= max / d; d = max; }
   if (d < 1e-4) { d = 1e-4; dx = 1e-4; }
-  let ex = ax + dx, ey = ay + dy;
+  const ex = ax + dx, ey = ay + dy;
   if (d >= max) {
     // fully extended (or stretched): joint halfway along the line
     return [ax + dx * 0.5, ay + dy * 0.5, ex, ey];
@@ -136,7 +165,7 @@ function solveRig(look, P, d, side, back) {
   const leg = (foot, hx0, inward) => {
     const [fx, fy] = foot;
     const root = [hip.x + hx0, hip.y];
-    let u = fx * legLen, v = fy * legLen;
+    const u = fx * legLen, v = fy * legLen;
     let tx, ty;
     if (side) { tx = hip.x + u; ty = v - 0.02; }
     else {
@@ -159,7 +188,7 @@ function solveRig(look, P, d, side, back) {
 function bladeDir(a, side, back, lean, inward) {
   if (side) return [Math.cos(a + lean), Math.sin(a + lean)];
   const u = Math.cos(a), v = Math.sin(a);
-  let x = inward * u * 0.8, y = v * 0.9 + (back ? -u * 0.35 : u * 0.35);
+  const x = inward * u * 0.8, y = v * 0.9 + (back ? -u * 0.35 : u * 0.35);
   const l = Math.hypot(x, y);
   const m = Math.max(0.62, l) / (l || 1);
   return [x * m, y * m];
@@ -185,16 +214,28 @@ function drawSword(g, x, y, dx, dy, len = 0.95, o = {}) {
   g.lineTo(0.1 + L * 0.93, 0.03); g.quadraticCurveTo(0.1 + L * 0.5, 0.015, 0.1, 0.03); g.closePath(); g.fill(); g.stroke();
   g.strokeStyle = 'rgba(255,255,255,0.85)'; g.lineWidth = 0.012;
   g.beginPath(); g.moveTo(0.14, -0.018); g.quadraticCurveTo(0.1 + L * 0.5, -0.036, 0.1 + L * 0.96, -0.012); g.stroke();
+  if (o.haki) {
+    // Armament-coated blade: black with a violet sheen
+    g.fillStyle = 'rgba(20,14,30,0.82)';
+    g.beginPath(); g.moveTo(0.1, -0.03); g.quadraticCurveTo(0.1 + L * 0.5, -0.05, 0.1 + L, -0.012);
+    g.lineTo(0.1 + L * 0.93, 0.03); g.quadraticCurveTo(0.1 + L * 0.5, 0.015, 0.1, 0.03); g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(179,136,255,0.8)'; g.lineWidth = 0.01;
+    g.beginPath(); g.moveTo(0.16, -0.02); g.quadraticCurveTo(0.1 + L * 0.5, -0.036, 0.1 + L * 0.94, -0.012); g.stroke();
+  }
   g.restore();
 }
-function drawEnergyBlade(g, x, y, dx, dy, len, color) {
+function drawEnergyBlade(g, x, y, dx, dy, len, color, t) {
   const a = Math.atan2(dy, dx);
   g.save(); g.translate(x, y); g.rotate(a);
   g.globalCompositeOperation = 'lighter';
-  g.fillStyle = color; g.globalAlpha *= 0.55;
-  g.beginPath(); g.moveTo(0.05, -0.09); g.lineTo(len, -0.02); g.lineTo(len + 0.12, 0); g.lineTo(len, 0.02); g.lineTo(0.05, 0.09); g.closePath(); g.fill();
-  g.globalAlpha /= 0.55; g.globalCompositeOperation = 'source-over';
-  g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(0.05, -0.03); g.lineTo(len, -0.008); g.lineTo(len + 0.08, 0); g.lineTo(len, 0.008); g.lineTo(0.05, 0.03); g.closePath(); g.fill();
+  const flick = 0.85 + 0.15 * Math.sin((t || 0) * 40);
+  const gr = g.createLinearGradient(0, 0, len + 0.15, 0);
+  gr.addColorStop(0, rgba(color, 0.15)); gr.addColorStop(0.35, rgba(color, 0.55 * flick)); gr.addColorStop(1, rgba(color, 0.85));
+  g.fillStyle = gr;
+  g.beginPath(); g.moveTo(0.04, -0.11); g.quadraticCurveTo(len * 0.6, -0.1, len + 0.16, 0); g.quadraticCurveTo(len * 0.6, 0.1, 0.04, 0.11); g.closePath(); g.fill();
+  g.globalCompositeOperation = 'source-over';
+  g.fillStyle = '#ffffff';
+  g.beginPath(); g.moveTo(0.05, -0.03); g.quadraticCurveTo(len * 0.6, -0.028, len + 0.09, 0); g.quadraticCurveTo(len * 0.6, 0.028, 0.05, 0.03); g.closePath(); g.fill();
   g.restore();
 }
 function drawAxe(g, x, y, dx, dy) {
@@ -209,6 +250,8 @@ function drawAxe(g, x, y, dx, dy) {
     g.quadraticCurveTo(0.86, sy * 0.22, 0.92, sy * 0.36); g.quadraticCurveTo(0.95, sy * 0.12, 0.84, sy * 0.03); g.closePath(); g.fill(); g.stroke();
   }
   g.fillStyle = '#90a4ae'; g.fillRect(0.6, -0.05, 0.26, 0.1);
+  g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 0.014;
+  g.beginPath(); g.moveTo(0.74, -0.38); g.quadraticCurveTo(0.88, -0.24, 0.9, -0.34); g.moveTo(0.74, 0.38); g.quadraticCurveTo(0.88, 0.24, 0.9, 0.34); g.stroke();
   g.restore();
 }
 function drawStaff(g, x, y, dx, dy) {
@@ -265,92 +308,139 @@ function drawHand(g, x, y, r, col, shape, dirx, diry, extra) {
 }
 
 // ---------------------------------------------------------------- trails
+function catmull(p0, p1, p2, p3, t) {
+  const t2 = t * t, t3 = t2 * t;
+  return [
+    0.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+    0.5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3),
+  ];
+}
+function smoothPts(pts, sub = 3) {
+  if (pts.length < 3) return pts.slice();
+  const out = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    for (let k = 0; k < sub; k++) out.push(catmull(p0, p1, p2, p3, k / sub));
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+
 /**
  * Weapon/limb smears: re-sample the clip a few moments in the past and fill
- * the swept area (crescent for blades, tapered ribbon for fists and feet).
+ * the swept area — a tapered crescent for blades (gradient from a white
+ * leading edge to nothing), a tapered ribbon plus speed lines for fists and
+ * feet. Only drawn during the swing itself, never the wind-back.
  */
 function drawTrails(g, look, pose, rig, d, side, back) {
   const A = pose.anim;
   if (!A || A.t <= 0.005) return;
-  const N = 5, dt = A.trailDt || 0.018;
+  if (A.t < (A.trailFrom ?? 0) - 0.005 || A.t > (A.trailTo ?? 99)) return;
+  const N = 7, dt = A.trailDt || 0.015;
+  const tMin = Math.max(0, (A.trailFrom ?? 0) - 0.02);
   const samples = [];
   for (let k = 0; k < N; k++) {
     const t = A.t - k * dt;
-    if (t < 0) break;
+    if (t < tMin) break;
     const P = k === 0 ? pose.P : samplePose(A, t, pose);
-    samples.push(k === 0 ? rig : solveRig(look, P, d, side, back));
-    samples[samples.length - 1].P = P;
+    const rg = k === 0 ? rig : solveRig(look, P, d, side, back);
+    rg.P = P;
+    samples.push(rg);
   }
   if (samples.length < 3) return;
   const col = pose.fx?.trail || pose.fx?.color || '#ffffff';
   const armed = pose.armed;
-  // which effectors moved fast enough to smear?
-  const first = samples[0], last = samples[samples.length - 1];
+  const wk = pose.weapon?.kind;
   const moved = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
   const effs = [];
-  if (armed && (pose.weapon?.kind === 'sword' || pose.weapon?.kind === 'axe' || pose.weapon?.kind === 'staff' || pose.blade)) {
-    const inF = -1, inB = 1;
+  const bladed = armed && (wk === 'sword' || wk === 'axe' || wk === 'staff');
+  if (bladed || pose.blade) {
     const tip = (rg, which) => {
       const arm = which === 'F' ? rg.armF : rg.armB;
       const a = which === 'F' ? rg.P.wF : rg.P.wB;
       if (a === undefined || a === null) return null;
-      const [dx, dy] = bladeDir(a, side, back, rg.lean, which === 'F' ? inF : inB);
-      const L = pose.weapon?.kind === 'axe' ? 0.9 : pose.weapon?.kind === 'staff' ? 0.75 : pose.bladeLen || 0.95;
-      return [[arm.e[0] + dx * L * 0.35, arm.e[1] + dy * L * 0.35], [arm.e[0] + dx * (L + 0.1), arm.e[1] + dy * (L + 0.1)]];
+      const [dx, dy] = bladeDir(a, side, back, rg.lean, which === 'F' ? -1 : 1);
+      const L = wk === 'axe' && bladed ? 0.95 : wk === 'staff' && bladed ? 0.78 : pose.bladeLen || 0.95;
+      return [[arm.e[0] + dx * L * 0.3, arm.e[1] + dy * L * 0.3], [arm.e[0] + dx * (L + 0.12), arm.e[1] + dy * (L + 0.12)]];
     };
     for (const which of ['F', 'B']) {
-      if (which === 'B' && !(pose.weapon?.count >= 2) && !pose.bladeB) continue;
+      if (which === 'B' && !(bladed && pose.weapon?.count >= 2) && !pose.bladeB) continue;
       const pts = samples.map((rg) => tip(rg, which));
       if (pts.some((p) => !p)) continue;
-      if (moved(pts[0][1], pts[pts.length - 1][1]) < 0.25) continue;
+      if (moved(pts[0][1], pts[pts.length - 1][1]) < 0.22) continue;
       effs.push({ blade: true, pts });
     }
-  } else {
-    for (const [name, key] of [['armF', 'e'], ['armB', 'e'], ['legF', 'e'], ['legB', 'e']]) {
+  }
+  if (!effs.length) {
+    const limbs = A.limb === 'fF' || A.limb === 'fB' ? [['legF', 'e'], ['legB', 'e'], ['armF', 'e']] : [['armF', 'e'], ['armB', 'e'], ['legF', 'e'], ['legB', 'e']];
+    for (const [name, key] of limbs) {
       const pts = samples.map((rg) => rg[name][key]);
-      if (moved(pts[0], pts[pts.length - 1]) < 0.22) continue;
-      effs.push({ blade: false, pts, foot: name.startsWith('leg'), scale: first[name].scale || 1 });
+      if (moved(pts[0], pts[pts.length - 1]) < 0.2) continue;
+      effs.push({ blade: false, pts, foot: name.startsWith('leg'), scale: samples[0][name].scale || 1 });
+      if (effs.length >= 2) break;
     }
   }
   if (!effs.length) return;
   g.save();
-  g.globalCompositeOperation = pose.fx?.additive ? 'lighter' : 'source-over';
+  const additive = !!pose.fx?.additive;
+  g.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+  g.lineJoin = 'round';
   for (const e of effs) {
-    const n = e.pts.length;
     if (e.blade) {
+      const tips = smoothPts(e.pts.map((p) => p[1]));
+      const bases = smoothPts(e.pts.map((p) => p[0]));
+      const n = tips.length;
+      // crescent: the inner edge closes onto the blade tip toward the tail
+      const inner = bases.map((b, i) => mix2(b, tips[i], Math.pow(i / (n - 1), 0.75) * 0.9));
+      const gr = g.createLinearGradient(tips[0][0], tips[0][1], tips[n - 1][0], tips[n - 1][1]);
+      gr.addColorStop(0, rgba('#ffffff', 0.92));
+      gr.addColorStop(0.18, rgba(col, 0.75));
+      gr.addColorStop(0.65, rgba(col, 0.28));
+      gr.addColorStop(1, rgba(col, 0));
+      g.fillStyle = gr;
+      g.beginPath(); g.moveTo(tips[0][0], tips[0][1]);
+      for (let i = 1; i < n; i++) g.lineTo(tips[i][0], tips[i][1]);
+      for (let i = n - 1; i >= 0; i--) g.lineTo(inner[i][0], inner[i][1]);
+      g.closePath(); g.fill();
+      // bright leading edge that fades along the arc
+      g.lineCap = 'round';
       for (let i = 0; i < n - 1; i++) {
-        const [b0, t0] = e.pts[i], [b1, t1] = e.pts[i + 1];
-        g.globalAlpha = 0.55 * (1 - i / (n - 1));
-        g.fillStyle = i === 0 ? '#ffffff' : col;
-        g.beginPath(); g.moveTo(b0[0], b0[1]); g.lineTo(t0[0], t0[1]); g.lineTo(t1[0], t1[1]); g.lineTo(b1[0], b1[1]); g.closePath(); g.fill();
+        const u = i / (n - 1);
+        g.globalAlpha = 0.95 * (1 - u) * (1 - u);
+        g.strokeStyle = '#ffffff'; g.lineWidth = 0.045 * (1 - u * 0.7);
+        g.beginPath(); g.moveTo(tips[i][0], tips[i][1]); g.lineTo(tips[i + 1][0], tips[i + 1][1]); g.stroke();
       }
-      // bright leading edge
-      g.globalAlpha = 0.9; g.strokeStyle = '#ffffff'; g.lineWidth = 0.035; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(e.pts[0][1][0], e.pts[0][1][1]);
-      for (let i = 1; i < n; i++) g.lineTo(e.pts[i][1][0], e.pts[i][1][1]);
-      g.stroke();
+      g.globalAlpha = 1;
     } else {
+      const pts = smoothPts(e.pts, 2);
+      const n = pts.length;
       const r0 = (e.foot ? 0.1 : 0.085) * (look.bulk || 1) * e.scale;
-      for (let i = 0; i < n - 1; i++) {
-        const [x0, y0] = e.pts[i], [x1, y1] = e.pts[i + 1];
-        const w0 = r0 * (1 - i / n) * 2, w1 = r0 * (1 - (i + 1) / n) * 2;
-        const ang = Math.atan2(y1 - y0, x1 - x0) + Math.PI / 2;
-        const cx = Math.cos(ang), cy = Math.sin(ang);
-        g.globalAlpha = 0.5 * (1 - i / (n - 1));
-        g.fillStyle = i === 0 ? '#ffffff' : col;
-        g.beginPath();
-        g.moveTo(x0 + cx * w0 / 2, y0 + cy * w0 / 2); g.lineTo(x1 + cx * w1 / 2, y1 + cy * w1 / 2);
-        g.lineTo(x1 - cx * w1 / 2, y1 - cy * w1 / 2); g.lineTo(x0 - cx * w0 / 2, y0 - cy * w0 / 2); g.closePath(); g.fill();
+      const L = [], R = [];
+      for (let i = 0; i < n; i++) {
+        const p = pts[i], q = pts[Math.min(n - 1, i + 1)], o = pts[Math.max(0, i - 1)];
+        const ang = Math.atan2(q[1] - o[1], q[0] - o[0]) + Math.PI / 2;
+        const w = r0 * (1 - i / n) * 1.1;
+        L.push([p[0] + Math.cos(ang) * w, p[1] + Math.sin(ang) * w]);
+        R.push([p[0] - Math.cos(ang) * w, p[1] - Math.sin(ang) * w]);
       }
+      const gr = g.createLinearGradient(pts[0][0], pts[0][1], pts[n - 1][0], pts[n - 1][1]);
+      gr.addColorStop(0, rgba('#ffffff', 0.75)); gr.addColorStop(0.3, rgba(col, 0.45)); gr.addColorStop(1, rgba(col, 0));
+      g.fillStyle = gr;
+      g.beginPath(); g.moveTo(L[0][0], L[0][1]);
+      for (let i = 1; i < n; i++) g.lineTo(L[i][0], L[i][1]);
+      for (let i = n - 1; i >= 0; i--) g.lineTo(R[i][0], R[i][1]);
+      g.closePath(); g.fill();
       // speed lines trailing the fist/foot
-      const [hx, hy] = e.pts[0], [tx, ty] = e.pts[n - 1];
+      const [hx, hy] = pts[0], [tx, ty] = pts[n - 1];
       const dx = hx - tx, dy = hy - ty, l = Math.hypot(dx, dy) || 1;
-      g.strokeStyle = col; g.lineWidth = 0.02; g.globalAlpha = 0.6;
+      g.strokeStyle = rgba(col, 0.7); g.lineWidth = 0.018; g.lineCap = 'round';
       g.beginPath();
       for (let k = -1; k <= 1; k++) {
-        const ox = -dy / l * k * r0 * 1.3, oy = dx / l * k * r0 * 1.3;
-        g.moveTo(hx - dx / l * r0 * 1.4 + ox, hy - dy / l * r0 * 1.4 + oy);
-        g.lineTo(hx - dx / l * (r0 * 1.4 + l * 0.9) + ox, hy - dy / l * (r0 * 1.4 + l * 0.9) + oy);
+        const ox = -dy / l * k * r0 * 1.4, oy = dx / l * k * r0 * 1.4;
+        const s0 = r0 * 1.5, s1 = r0 * 1.5 + l * (0.7 + 0.25 * (k & 1));
+        g.moveTo(hx - dx / l * s0 + ox, hy - dy / l * s0 + oy);
+        g.lineTo(hx - dx / l * s1 + ox, hy - dy / l * s1 + oy);
       }
       g.stroke();
     }
@@ -365,37 +455,193 @@ function drawHandFx(g, x, y, r, fx, t, k) {
   g.save();
   g.globalCompositeOperation = 'lighter';
   const col = fx.color || '#ffffff';
-  if (e === 'fire' || e === 'magma') {
-    for (let i = 0; i < 5; i++) {
-      const ph = (t * 5 + i * 0.21) % 1;
+  if (e === 'fire' || e === 'magma' || e === 'bluefire') {
+    const cols = e === 'magma' ? ['#bf360c', '#ff6f00', '#ffab40'] : e === 'bluefire' ? ['#00838f', '#4dd0e1', '#e0f7fa'] : ['#ff5722', '#ff9800', '#ffeb3b'];
+    g.globalAlpha = 0.35 * k; g.fillStyle = cols[0];
+    g.beginPath(); g.arc(x, y, r * 2.1, 0, TAU); g.fill();
+    for (let i = 0; i < 6; i++) {
+      const ph = (t * 4.5 + i * 0.17) % 1;
+      const ox = Math.sin(i * 2.3 + t * 9) * r * 0.7;
+      const fy = y - ph * r * 3.6;
+      const fr = r * (1.25 - ph) * (0.8 + 0.3 * Math.sin(i + t * 20));
       g.globalAlpha = (1 - ph) * 0.8 * k;
-      g.fillStyle = i % 2 ? (e === 'magma' ? '#ff6f00' : '#ffca28') : (e === 'magma' ? '#bf360c' : '#ff7043');
-      const ox = Math.sin(i * 2.3 + t * 9) * r * 0.6;
-      g.beginPath(); g.arc(x + ox, y - ph * r * 3.2, r * (1.3 - ph * 0.9), 0, TAU); g.fill();
+      g.fillStyle = cols[1 + (i % 2)];
+      g.beginPath(); g.moveTo(x + ox - fr, fy + fr * 0.4); g.quadraticCurveTo(x + ox, fy - fr * 2.2, x + ox + fr, fy + fr * 0.4); g.arc(x + ox, fy + fr * 0.4, fr, 0, Math.PI); g.fill();
     }
-  } else if (e === 'lightning') {
-    g.strokeStyle = '#fff59d'; g.lineWidth = 0.025; g.globalAlpha = 0.9 * k;
-    for (let i = 0; i < 3; i++) {
-      const a0 = (Math.floor(t * 20) * 1.7 + i * 2.1) % TAU;
-      g.beginPath(); g.moveTo(x, y);
-      let px = x, py = y;
-      for (let s = 1; s <= 3; s++) { px = x + Math.cos(a0 + Math.sin(s * 5 + i) * 0.7) * r * (0.9 + s * 0.6); py = y + Math.sin(a0 + Math.cos(s * 3 + i) * 0.7) * r * (0.9 + s * 0.6); g.lineTo(px, py); }
+    if (e === 'magma') {
+      g.globalCompositeOperation = 'source-over'; g.globalAlpha = 0.85 * k;
+      g.fillStyle = '#3e2723'; g.beginPath(); g.arc(x, y, r * 1.05, 0, TAU); g.fill();
+      g.strokeStyle = '#ffab40'; g.lineWidth = 0.02; g.beginPath();
+      for (let i = 0; i < 4; i++) { const a = i * 1.7 + t; g.moveTo(x, y); g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); }
       g.stroke();
     }
-  } else if (e === 'ice') {
-    g.fillStyle = '#e1f5fe'; g.globalAlpha = 0.8 * k;
-    for (let i = 0; i < 4; i++) { const a = t * 2 + i * TAU / 4; starPath(g, x + Math.cos(a) * r * 1.5, y + Math.sin(a) * r * 1.5, r * 0.45, 4, 0.35, a); g.fill(); }
+  } else if (e === 'lightning') {
+    g.globalAlpha = 0.3 * k; g.fillStyle = '#fff59d'; g.beginPath(); g.arc(x, y, r * 2.2, 0, TAU); g.fill();
+    g.lineCap = 'round';
+    for (let i = 0; i < 4; i++) {
+      const a0 = (Math.floor(t * 24) * 1.7 + i * 1.6) % TAU;
+      g.globalAlpha = 0.95 * k; g.strokeStyle = i % 2 ? '#fff59d' : '#ffffff'; g.lineWidth = i % 2 ? 0.03 : 0.018;
+      g.beginPath(); g.moveTo(x, y);
+      for (let s = 1; s <= 3; s++) g.lineTo(x + Math.cos(a0 + Math.sin(s * 5 + i) * 0.8) * r * (0.9 + s * 0.7), y + Math.sin(a0 + Math.cos(s * 3 + i) * 0.8) * r * (0.9 + s * 0.7));
+      g.stroke();
+    }
+  } else if (e === 'ice' || e === 'snow') {
+    g.globalAlpha = 0.3 * k; g.fillStyle = '#b3e5fc'; g.beginPath(); g.arc(x, y, r * 2, 0, TAU); g.fill();
+    g.globalAlpha = 0.9 * k; g.fillStyle = '#e1f5fe';
+    for (let i = 0; i < 5; i++) {
+      const a = t * 1.5 + i * TAU / 5, d = r * 1.6;
+      g.save(); g.translate(x + Math.cos(a) * d, y + Math.sin(a) * d); g.rotate(a);
+      g.beginPath(); g.moveTo(r * 0.7, 0); g.lineTo(0, -r * 0.22); g.lineTo(-r * 0.4, 0); g.lineTo(0, r * 0.22); g.closePath(); g.fill();
+      g.restore();
+    }
   } else if (e === 'water') {
-    g.strokeStyle = '#b3e5fc'; g.lineWidth = 0.02; g.globalAlpha = 0.8 * k;
-    const ph = (t * 3) % 1;
-    g.beginPath(); g.arc(x, y, r * (1.2 + ph * 1.2), 0, TAU); g.stroke();
+    g.strokeStyle = '#b3e5fc'; g.lineWidth = 0.022;
+    for (let i = 0; i < 2; i++) {
+      const ph = (t * 3 + i * 0.5) % 1;
+      g.globalAlpha = 0.85 * k * (1 - ph);
+      g.beginPath(); g.ellipse(x, y, r * (1.1 + ph * 1.6), r * (0.8 + ph * 1.1), 0, 0, TAU); g.stroke();
+    }
+    g.globalAlpha = 0.5 * k; g.fillStyle = '#4fc3f7'; g.beginPath(); g.arc(x, y, r * 1.3, 0, TAU); g.fill();
   } else if (e === 'dark' || e === 'haki') {
     g.globalCompositeOperation = 'source-over';
-    g.fillStyle = e === 'haki' ? 'rgba(20,0,30,0.55)' : 'rgba(49,27,146,0.55)'; g.globalAlpha = k;
-    for (let i = 0; i < 4; i++) { const a = t * 6 + i * TAU / 4; g.beginPath(); g.arc(x + Math.cos(a) * r * 0.8, y + Math.sin(a) * r * 0.8, r * 0.7, 0, TAU); g.fill(); }
+    for (let i = 0; i < 5; i++) {
+      const a = t * 6 + i * TAU / 5;
+      g.globalAlpha = 0.55 * k; g.fillStyle = e === 'haki' ? '#12001c' : '#311b92';
+      g.beginPath(); g.arc(x + Math.cos(a) * r * 0.9, y + Math.sin(a) * r * 0.9, r * 0.75, 0, TAU); g.fill();
+    }
+    g.globalCompositeOperation = 'lighter';
+    g.strokeStyle = e === 'haki' ? '#ff1744' : '#b388ff'; g.lineWidth = 0.02; g.globalAlpha = 0.8 * k;
+    const a0 = Math.floor(t * 18) * 2.1;
+    g.beginPath(); g.moveTo(x + Math.cos(a0) * r * 2, y + Math.sin(a0) * r * 2); g.lineTo(x + Math.cos(a0 + 0.6) * r * 0.9, y + Math.sin(a0 + 0.6) * r * 0.9); g.lineTo(x + Math.cos(a0 + 1.2) * r * 1.9, y + Math.sin(a0 + 1.2) * r * 1.9); g.stroke();
+  } else if (e === 'light') {
+    g.globalAlpha = 0.5 * k; g.fillStyle = '#fff9c4'; g.beginPath(); g.arc(x, y, r * 2.2, 0, TAU); g.fill();
+    g.globalAlpha = 0.95 * k; g.fillStyle = '#ffffff';
+    starPath(g, x, y, r * 2.6, 4, 0.18, t * 2); g.fill();
+  } else if (e === 'poison') {
+    g.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < 4; i++) {
+      const ph = (t * 2 + i * 0.25) % 1;
+      g.globalAlpha = 0.8 * k * (1 - ph); g.fillStyle = i % 2 ? '#8e24aa' : '#aed581';
+      g.beginPath(); g.arc(x + Math.sin(i * 2 + t * 3) * r, y + ph * r * 2.5, r * 0.45 * (1 - ph * 0.5), 0, TAU); g.fill();
+    }
+  } else if (e === 'sand') {
+    g.globalCompositeOperation = 'source-over'; g.fillStyle = '#e1c16e';
+    for (let i = 0; i < 10; i++) {
+      const a = t * 7 + i * 0.63, d = r * (1 + (i % 3) * 0.5);
+      g.globalAlpha = 0.8 * k; g.fillRect(x + Math.cos(a) * d, y + Math.sin(a) * d * 0.7, 0.03, 0.03);
+    }
+  } else if (e === 'smoke' || e === 'gas') {
+    g.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < 4; i++) {
+      const ph = (t * 1.8 + i * 0.25) % 1;
+      g.globalAlpha = 0.6 * k * (1 - ph); g.fillStyle = e === 'gas' ? '#b2dfdb' : '#eceff1';
+      g.beginPath(); g.arc(x + Math.sin(i * 1.7) * r * 0.8, y - ph * r * 2, r * (0.7 + ph), 0, TAU); g.fill();
+    }
   } else {
     g.fillStyle = col; g.globalAlpha = 0.35 * k;
     g.beginPath(); g.arc(x, y, r * 2, 0, TAU); g.fill();
+  }
+  g.restore();
+}
+
+/** Energy gathering during a technique's wind-up (drawn in body space). */
+function drawCharge(g, pose, rig, t, headY, bulk) {
+  const c = pose.charge;
+  if (!c || !(c.k > 0)) return;
+  const k = Math.min(1, c.k);
+  const col = c.color || '#ffffff';
+  const hand = c.at === 'hB' ? rig.armB.e : rig.armF.e;
+  g.save();
+  switch (c.kind) {
+    case 'sun': {
+      // a second sun growing above the raised hand (Entei)
+      const cx = hand[0], cy = Math.min(hand[1], headY) - 0.35 - k * 0.6, R = 0.12 + k * 0.62;
+      g.globalCompositeOperation = 'lighter';
+      g.globalAlpha = 0.35; g.fillStyle = '#ff6d00'; g.beginPath(); g.arc(cx, cy, R * 1.6, 0, TAU); g.fill();
+      for (let i = 0; i < 10; i++) {
+        const a = i / 10 * TAU + t * 1.5, fl = 1.25 + 0.25 * Math.sin(t * 13 + i * 2);
+        g.globalAlpha = 0.6; g.fillStyle = i % 2 ? '#ffab00' : '#ff3d00';
+        g.beginPath(); g.moveTo(cx + Math.cos(a - 0.25) * R * 0.9, cy + Math.sin(a - 0.25) * R * 0.9); g.lineTo(cx + Math.cos(a) * R * fl, cy + Math.sin(a) * R * fl); g.lineTo(cx + Math.cos(a + 0.25) * R * 0.9, cy + Math.sin(a + 0.25) * R * 0.9); g.fill();
+      }
+      g.globalAlpha = 0.95; g.fillStyle = '#ff9100'; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.fill();
+      g.fillStyle = '#ffe57f'; g.beginPath(); g.arc(cx, cy, R * 0.62, 0, TAU); g.fill();
+      break;
+    }
+    case 'oni': {
+      // Oni aura: dark red flames and a demon's horns behind the swordsman
+      g.globalAlpha = 0.5 * k;
+      g.fillStyle = 'rgba(120,0,0,0.9)';
+      g.beginPath(); g.moveTo(-0.5 * bulk, 0);
+      for (let i = 0; i <= 8; i++) { const x = -0.5 * bulk + i / 8 * bulk; g.quadraticCurveTo(x - 0.05, headY * 0.6, x, headY - 0.3 - (i % 2 ? 0.1 : 0.32 + 0.08 * Math.sin(t * 14 + i))); }
+      g.lineTo(0.5 * bulk, 0); g.closePath(); g.fill();
+      g.globalAlpha = 0.8 * k; g.fillStyle = '#1a0000';
+      for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * 0.12, headY - 0.22); g.quadraticCurveTo(sx * 0.42, headY - 0.5, sx * 0.3, headY - 0.78); g.lineTo(sx * 0.22, headY - 0.3); g.closePath(); g.fill(); }
+      g.globalCompositeOperation = 'lighter'; g.fillStyle = '#ff1744';
+      for (const sx of [-0.1, 0.1]) { g.globalAlpha = k * (0.6 + 0.4 * Math.sin(t * 20)); g.beginPath(); g.arc(sx + 0.05, headY, 0.03, 0, TAU); g.fill(); }
+      break;
+    }
+    case 'bolt': {
+      g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+      for (let i = 0; i < 3; i++) {
+        const seed = Math.floor(t * 20) + i * 7;
+        g.globalAlpha = 0.9 * k; g.strokeStyle = i ? col : '#ffffff'; g.lineWidth = i ? 0.03 : 0.018;
+        g.beginPath();
+        let x = Math.sin(seed * 1.3) * 0.35 * bulk, y = headY + 0.1;
+        g.moveTo(x, y);
+        for (let s = 0; s < 5; s++) { x += Math.sin(seed * 2.1 + s * 3.7) * 0.16; y += 0.16; g.lineTo(x, y); }
+        g.stroke();
+      }
+      break;
+    }
+    case 'dark': {
+      g.globalAlpha = 0.65 * k;
+      for (let i = 0; i < 6; i++) {
+        const a = -t * 5 + i * TAU / 6, d = 0.3 * (1 - (t * 1.5 + i / 6) % 1) + 0.08;
+        g.fillStyle = i % 2 ? '#1a0033' : '#4a148c';
+        g.beginPath(); g.arc(hand[0] + Math.cos(a) * d, hand[1] + Math.sin(a) * d * 0.8, 0.07, 0, TAU); g.fill();
+      }
+      g.fillStyle = '#000'; g.beginPath(); g.arc(hand[0], hand[1], 0.06 + 0.1 * k, 0, TAU); g.fill();
+      break;
+    }
+    default: {
+      // gather: streaks converging on the hand + a growing orb
+      g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+      for (let i = 0; i < 7; i++) {
+        const ph = (t * 2.6 + i / 7) % 1;
+        const a = i * 2.39 + Math.floor(t * 2.6 + i / 7) * 1.3;
+        const d0 = 0.75 * (1 - ph) + 0.1, d1 = d0 + 0.18;
+        g.globalAlpha = 0.8 * k * ph; g.strokeStyle = col; g.lineWidth = 0.022;
+        g.beginPath(); g.moveTo(hand[0] + Math.cos(a) * d0, hand[1] + Math.sin(a) * d0); g.lineTo(hand[0] + Math.cos(a) * d1, hand[1] + Math.sin(a) * d1); g.stroke();
+      }
+      const R = 0.05 + (c.size || 0.22) * k;
+      g.globalAlpha = 0.35 * k; g.fillStyle = col; g.beginPath(); g.arc(hand[0], hand[1], R * 1.8, 0, TAU); g.fill();
+      g.globalAlpha = 0.9 * k; g.beginPath(); g.arc(hand[0], hand[1], R, 0, TAU); g.fill();
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(hand[0], hand[1], R * 0.5, 0, TAU); g.fill();
+    }
+  }
+  g.restore();
+}
+
+/** Flickering flame silhouette around the body (Haki, transformations). */
+function drawAura(g, color, t, headY, bulk, bright) {
+  const h = -headY + 0.45;
+  g.save();
+  if (bright) g.globalCompositeOperation = 'lighter';
+  for (let layer = 0; layer < 2; layer++) {
+    const sc = layer ? 0.82 : 1.12;
+    g.globalAlpha *= layer ? 1.25 : 0.7;
+    g.fillStyle = color;
+    g.beginPath();
+    const w = 0.56 * bulk * sc;
+    g.moveTo(-w, 0.02);
+    for (let k = 0; k <= 10; k++) {
+      const x = -w + (k / 10) * 2 * w;
+      const env = Math.sin((k / 10) * Math.PI);
+      const tip = (k % 2 ? 0.1 : 0.3 + 0.12 * Math.sin(t * 13 + k * 1.7 + layer)) * sc;
+      g.quadraticCurveTo(x - 0.06, -h * (0.5 + 0.3 * env) * sc, x, -(h * (0.55 + 0.45 * env)) * sc - tip);
+    }
+    g.lineTo(w, 0.02); g.closePath(); g.fill();
+    g.globalAlpha /= layer ? 1.25 : 0.7;
   }
   g.restore();
 }
@@ -404,10 +650,13 @@ function drawHandFx(g, x, y, r, fx, t, k) {
 /**
  * Draw a character.
  * look: appearance (see data/races.js makeLook)
- * pose: { facing, walk, moving, time, state, alpha, aura, swimming, flash,
- *         anim: { keys, t, ... } (see anims.js), weapon: { kind, count, gun },
- *         armed, fx: { color, trail, elem }, combat, sprint, z, roll, squash,
- *         knockT, blockT, noShadow }
+ * pose: { facing, walk, moving, time, state, alpha, aura, auraBright, swimming, flash,
+ *         anim: { keys, t, ... } (see anims.js), blend: { P, k }, stanceP,
+ *         weapon: { kind, count, gun }, armed, armament, armLegs,
+ *         fx: { color, trail, elem, limb, k, additive, claw }, blade/bladeB/bladeLen,
+ *         legFx, charge: { kind, color, k, at }, flurry, combat, sprint, block,
+ *         dodge, dodgeDir, getUp, launch, hurtK, z, roll, squash, toon, bounce,
+ *         knockT, ghost, noShadow, noTrails }
  */
 export function drawCharacter(g, look, pose) {
   const s = look.scale || 1;
@@ -416,6 +665,7 @@ export function drawCharacter(g, look, pose) {
   let P = pose.P;
   if (!P) {
     P = pose.anim ? samplePose(pose.anim, pose.anim.t, pose) : restPose(pose, look);
+    if (pose.blend && pose.blend.P) P = blendPose(pose.blend.P, P, pose.blend.k);
     pose.P = P;
   }
   const facing = (pose.facing || 0) + (P.sp || 0) * TAU * (Math.cos(pose.facing || 0) < 0 ? -1 : 1);
@@ -423,6 +673,7 @@ export function drawCharacter(g, look, pose) {
   const flip = d === 'left';
   const side = d === 'left' || d === 'right';
   const back = d === 'up';
+  const ghost = !!pose.ghost;
   const skin = look.skin || '#f1c9a0';
   const top = look.top || '#d63031';
   const bottom = look.bottom || '#2d3436';
@@ -434,7 +685,7 @@ export function drawCharacter(g, look, pose) {
   if (pose.alpha !== undefined) g.globalAlpha *= pose.alpha;
 
   // shadow stays on the ground and shrinks while airborne
-  if (!pose.swimming && !pose.noShadow) {
+  if (!pose.swimming && !pose.noShadow && !ghost) {
     const k = 1 / (1 + z * 1.2);
     g.fillStyle = `rgba(0,0,0,${0.25 * k})`;
     g.beginPath(); g.ellipse(0, 0, 0.36 * s * bulk * k, 0.13 * s * k, 0, 0, TAU); g.fill();
@@ -447,6 +698,7 @@ export function drawCharacter(g, look, pose) {
   }
 
   if (pose.squash) g.scale(1 / Math.sqrt(pose.squash), pose.squash);
+  if (pose.toon) { const w = Math.sin(t * 9) * 0.05; g.scale(1 + w, 1 - w); }
   g.translate(0, -z * s);
   g.scale(flip ? -s : s, s);
   const roll = (P.r || 0) + (pose.roll || 0);
@@ -454,7 +706,7 @@ export function drawCharacter(g, look, pose) {
 
   const rig = solveRig(look, P, d, side, back);
   pose.rig = rig;
-  const { hip, lean, U } = rig;
+  const { hip, lean } = rig;
   const hipY = rig.hipY0;
   const shoulderY = rig.shoulderY;
   const headY = rig.headY;
@@ -467,21 +719,13 @@ export function drawCharacter(g, look, pose) {
   }
 
   // aura (haki / transformations): a flickering flame-shaped silhouette
-  if (pose.aura) {
+  if (pose.aura && !ghost) {
     g.save();
-    g.globalAlpha *= 0.32 + 0.12 * Math.sin(t * 10);
-    g.fillStyle = pose.aura;
-    const h = -headY + 0.45;
-    g.beginPath();
-    g.moveTo(-0.55 * bulk, 0);
-    for (let k = 0; k <= 8; k++) {
-      const x = -0.55 * bulk + (k / 8) * 1.1 * bulk;
-      const tip = k % 2 ? 0.12 : 0.28 + 0.08 * Math.sin(t * 12 + k);
-      g.quadraticCurveTo(x - 0.05, -h * 0.75, x, -h - tip);
-    }
-    g.lineTo(0.55 * bulk, 0); g.closePath(); g.fill();
+    g.globalAlpha *= 0.34 + 0.12 * Math.sin(t * 10);
+    drawAura(g, pose.aura, t, headY, bulk, pose.auraBright ?? brightness(pose.aura) > 0.45);
     g.restore();
   }
+  if (pose.charge && pose.charge.kind === 'oni' && !ghost) drawCharge(g, pose, rig, t, headY, bulk);
 
   // --- upper-body frame helper
   const upper = (fn) => { g.save(); g.translate(hip.x, hip.y); g.rotate(lean); g.translate(0, -hipY); fn(); g.restore(); };
@@ -536,6 +780,20 @@ export function drawCharacter(g, look, pose) {
       g.fill();
     }
   };
+  const drawDrums = () => {
+    // Enel's Amaru: a ring of thunder drums
+    if (!look.drums) return;
+    g.save();
+    for (let k = 0; k < 6; k++) {
+      const a = Math.PI + (k / 5) * Math.PI;
+      const x = Math.cos(a) * 0.62, y = shoulderY - 0.05 + Math.sin(a) * 0.5;
+      rrect(g, x - 0.09, y - 0.07, 0.18, 0.14, 0.05, '#ffb300', OUTLINE, 0.025);
+      circ(g, x, y, 0.045, '#6d4c41');
+    }
+    g.strokeStyle = '#ffca28'; g.lineWidth = 0.035;
+    g.beginPath(); g.arc(0, shoulderY - 0.05, 0.62, Math.PI, 0); g.stroke();
+    g.restore();
+  };
   const drawTail = () => {
     if (!look.tail) return;
     g.strokeStyle = look.fur || hair; g.lineWidth = look.tail === 'fluffy' ? 0.2 : 0.1; g.lineCap = 'round';
@@ -559,21 +817,22 @@ export function drawCharacter(g, look, pose) {
     g.lineTo(0.36 * bulk + sway + flow, hipY + 0.35);
     g.lineTo(-0.36 * bulk + sway + flow * 1.3, hipY + 0.35);
     g.closePath(); g.fill(); g.stroke();
-    if (look.coatText && back) {
+    if (look.coatText && back && !ghost) {
       g.fillStyle = '#1b4f72'; g.font = 'bold 0.16px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillText(look.coatText, sway * 0.5, (shoulderY + hipY) / 2 + 0.08);
     }
   };
-  if (look.dragonForm) drawDragonCoil(g, look, t, shoulderY, hipY);
-  if (look.asura) drawAsura(g, t, shoulderY, headY);
-  if (!back) upper(() => { drawBackFlame(); drawWings(); drawTail(); if (look.coat) drawCape(); });
+  if (look.dragonForm && !ghost) drawDragonCoil(g, look, t, shoulderY, hipY);
+  if (look.asura && !ghost) drawAsura(g, t, shoulderY, headY);
+  if (!back) upper(() => { drawDrums(); drawBackFlame(); drawWings(); drawTail(); if (look.coat) drawCape(); });
 
   // weapon kinds
   const wpn = pose.weapon || (look.weapon ? { kind: look.weapon, count: look.swords || 1 } : (look.swords ? { kind: 'sword', count: look.swords } : null));
   const armed = !!(pose.armed && wpn);
   const skinArm = look.sleeve || skin;
-  const handCol = pose.armament ? '#1c1a24' : (look.hand || skin);
-  const foreCol = pose.armament && pose.anim ? '#1c1a24' : skinArm;
+  const hakiCol = '#1c1a24';
+  const handCol = pose.armament ? hakiCol : (look.hand || skin);
+  const foreCol = pose.armament ? hakiCol : skinArm;
 
   // --- back arm (behind the body in side and back views)
   const drawArm = (arm, which) => {
@@ -581,16 +840,22 @@ export function drawCharacter(g, look, pose) {
     const fcol = which === 'B' && side ? shade(foreCol, -0.15) : foreCol;
     const w = 0.12 * bulk * (which === 'F' ? 1.08 : 1);
     limb2(g, arm.s[0], arm.s[1], arm.j[0], arm.j[1], arm.e[0], arm.e[1], w, col, OUTLINE, fcol);
+    if (pose.armament && !ghost) {
+      g.strokeStyle = 'rgba(179,136,255,0.55)'; g.lineWidth = 0.018; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(arm.j[0] + (arm.e[0] - arm.j[0]) * 0.2, arm.j[1] + (arm.e[1] - arm.j[1]) * 0.2 - w * 0.25);
+      g.lineTo(arm.j[0] + (arm.e[0] - arm.j[0]) * 0.8, arm.j[1] + (arm.e[1] - arm.j[1]) * 0.8 - w * 0.25); g.stroke();
+    }
     if (armLen > 1.2) circ(g, arm.j[0], arm.j[1], 0.07, col, OUTLINE, 0.03);
   };
   const handShape = (which) => (which === 'F' ? P.hand || 'fist' : P.handB || 'fist');
+  const limbFxOn = (which) => { const l = pose.fx?.limb; return l === 'both' || l === (which === 'F' ? 'hF' : 'hB'); };
   const drawHandAt = (arm, which) => {
     const r = 0.085 * bulk * arm.scale;
     const dx = arm.e[0] - arm.j[0], dy = arm.e[1] - arm.j[1];
     const hc = which === 'B' && side ? shade(handCol, -0.12) : handCol;
     drawHand(g, arm.e[0], arm.e[1], r, hc, handShape(which), dx, dy, pose.fx?.claw);
-    if (pose.armament) { g.fillStyle = 'rgba(180,140,255,0.5)'; g.beginPath(); g.arc(arm.e[0] - r * 0.3, arm.e[1] - r * 0.35, r * 0.3, 0, TAU); g.fill(); }
-    if (pose.fx?.elem && pose.fx.limb === (which === 'F' ? 'hF' : 'hB')) drawHandFx(g, arm.e[0], arm.e[1], r, pose.fx, t, pose.fx.k ?? 1);
+    if (pose.armament && !ghost) { g.fillStyle = 'rgba(180,140,255,0.5)'; g.beginPath(); g.arc(arm.e[0] - r * 0.3, arm.e[1] - r * 0.35, r * 0.3, 0, TAU); g.fill(); }
+    if (!ghost && pose.fx?.elem && limbFxOn(which)) drawHandFx(g, arm.e[0], arm.e[1], r, pose.fx, t, pose.fx.k ?? 1);
   };
   const drawWeaponIn = (arm, which) => {
     if (!armed) return;
@@ -601,7 +866,7 @@ export function drawCharacter(g, look, pose) {
     let dx, dy;
     if (a === undefined || a === null) { const fx = arm.e[0] - arm.j[0], fy = arm.e[1] - arm.j[1], l = Math.hypot(fx, fy) || 1; dx = fx / l; dy = fy / l; }
     else [dx, dy] = bladeDir(a, side, back, lean, which === 'F' ? -1 : 1);
-    if (kind === 'sword') drawSword(g, arm.e[0], arm.e[1], dx, dy, 0.95, which === 'B' ? { hilt: '#1b2631', color: '#dfe6e9' } : {});
+    if (kind === 'sword') drawSword(g, arm.e[0], arm.e[1], dx, dy, 0.95, which === 'B' ? { hilt: '#1b2631', color: '#dfe6e9', haki: pose.armament } : { haki: pose.armament });
     else if (kind === 'axe') drawAxe(g, arm.e[0], arm.e[1], dx, dy);
     else if (kind === 'staff') drawStaff(g, arm.e[0], arm.e[1], dx, dy);
     else if (kind === 'gun') drawGun(g, arm.e[0], arm.e[1], dx, dy, wpn.gun);
@@ -614,26 +879,28 @@ export function drawCharacter(g, look, pose) {
     let dx, dy;
     if (a === undefined || a === null) { const fx = arm.e[0] - arm.j[0], fy = arm.e[1] - arm.j[1], l = Math.hypot(fx, fy) || 1; dx = fx / l; dy = fy / l; }
     else [dx, dy] = bladeDir(a, side, back, lean, which === 'F' ? -1 : 1);
-    drawEnergyBlade(g, arm.e[0], arm.e[1], dx, dy, pose.bladeLen || 0.95, col);
+    drawEnergyBlade(g, arm.e[0], arm.e[1], dx, dy, pose.bladeLen || 0.95, col, t);
   };
+  const drawArmFull = (arm, which) => { drawArm(arm, which); drawWeaponIn(arm, which); drawBlade(arm, which); drawHandAt(arm, which); };
 
   // legs
   const legW = 0.15 * bulk;
   const shoeCol = look.shoes || '#3b2a1a';
   const drawLeg = (L, which) => {
     const col = which === 'B' && side ? shade(bottom, -0.15) : bottom;
-    const legSkin = pose.legFx && pose.fx?.limb === (which === 'F' ? 'fF' : 'fB') ? pose.legFx : null;
+    const striking = pose.fx?.limb === (which === 'F' ? 'fF' : 'fB');
+    const legSkin = pose.legFx && (striking || pose.legFxAll) ? pose.legFx : pose.armLegs ? hakiCol : null;
     limb2(g, L.h[0], L.h[1], L.k[0], L.k[1], L.e[0], L.e[1], legW, col, OUTLINE, legSkin || col);
     // shoe points along the shin
     const dx = L.e[0] - L.k[0], dy = L.e[1] - L.k[1];
     const a = side ? Math.atan2(dy, dx) - Math.PI / 2 : 0;
     g.save(); g.translate(L.e[0], L.e[1]); g.rotate(side ? a : 0);
     g.scale(L.scale, L.scale);
-    const sc = which === 'B' && side ? shade(shoeCol, -0.2) : shoeCol;
+    const sc = pose.armLegs ? hakiCol : which === 'B' && side ? shade(shoeCol, -0.2) : shoeCol;
     if (side) rrect(g, -0.04, -0.05, 0.2, 0.09, 0.04, sc);
     else rrect(g, -0.09, -0.05, 0.18, 0.09, 0.04, sc);
     g.restore();
-    if (pose.fx?.elem && pose.fx.limb === (which === 'F' ? 'fF' : 'fB')) drawHandFx(g, L.e[0], L.e[1], 0.1, pose.fx, t, pose.fx.k ?? 1);
+    if (!ghost && pose.fx?.elem && striking) drawHandFx(g, L.e[0], L.e[1], 0.1, pose.fx, t, pose.fx.k ?? 1);
   };
 
   const armFForward = !side && !back && rig.armF.u > 0.18;
@@ -641,14 +908,13 @@ export function drawCharacter(g, look, pose) {
   const legFForward = !side && !back && rig.legF.u > 0.2;
 
   if (side) {
-    upper(() => {}); // (frame helper warm-up; arms are solved in body space)
-    drawArm(rig.armB, 'B'); drawWeaponIn(rig.armB, 'B'); drawBlade(rig.armB, 'B'); drawHandAt(rig.armB, 'B');
+    drawArmFull(rig.armB, 'B');
     drawLeg(rig.legB, 'B'); drawLeg(rig.legF, 'F');
   } else if (back) {
     drawLeg(rig.legB, 'B'); drawLeg(rig.legF, 'F');
     // arms reaching forward are hidden behind the body
-    if (!rig.armF.raised) { drawWeaponIn(rig.armF, 'F'); drawBlade(rig.armF, 'F'); drawArm(rig.armF, 'F'); drawHandAt(rig.armF, 'F'); }
-    if (!rig.armB.raised) { drawWeaponIn(rig.armB, 'B'); drawBlade(rig.armB, 'B'); drawArm(rig.armB, 'B'); drawHandAt(rig.armB, 'B'); }
+    if (!rig.armF.raised) drawArmFull(rig.armF, 'F');
+    if (!rig.armB.raised) drawArmFull(rig.armB, 'B');
   } else {
     drawLeg(rig.legB, 'B'); if (!legFForward) drawLeg(rig.legF, 'F');
   }
@@ -662,24 +928,24 @@ export function drawCharacter(g, look, pose) {
       g.fillRect(-torsoW / 2 + 0.02, shoulderY + 0.02, 0.1, torsoH - 0.1);
       g.fillRect(torsoW / 2 - 0.12, shoulderY + 0.02, 0.1, torsoH - 0.1);
     }
-    if (look.spots) {
+    if (look.spots && !ghost) {
       g.fillStyle = 'rgba(78,52,46,0.8)';
       for (let k = 0; k < 6; k++) { g.beginPath(); g.arc(-torsoW / 2 + 0.08 + (k % 3) * 0.14, shoulderY + 0.1 + Math.floor(k / 3) * 0.16, 0.03, 0, TAU); g.fill(); }
     }
     if (look.openShirt && !back && !side) {
       g.fillStyle = skin;
       g.beginPath(); g.moveTo(-0.07, shoulderY); g.lineTo(0.07, shoulderY); g.lineTo(0.03, hipY - 0.05); g.lineTo(-0.03, hipY - 0.05); g.fill();
-      if (look.scar) { g.strokeStyle = '#b0413e'; g.lineWidth = 0.03; g.beginPath(); g.moveTo(-0.08, shoulderY + 0.1); g.lineTo(0.08, shoulderY + 0.25); g.stroke(); }
+      if (look.scar && !ghost) { g.strokeStyle = '#b0413e'; g.lineWidth = 0.03; g.beginPath(); g.moveTo(-0.08, shoulderY + 0.1); g.lineTo(0.08, shoulderY + 0.25); g.stroke(); }
     }
     g.fillStyle = look.belt || shade(bottom, -0.3);
     g.fillRect(-torsoW / 2, hipY - 0.07, torsoW, 0.07);
-    if (look.gills) {
+    if (look.gills && !ghost) {
       g.strokeStyle = shade(skin, -0.35); g.lineWidth = 0.02;
       for (let k = 0; k < 3; k++) { g.beginPath(); g.moveTo(-0.12 + k * 0.03, shoulderY + 0.02); g.lineTo(-0.08 + k * 0.03, shoulderY + 0.1); g.stroke(); }
     }
-    if (back) { drawCape(); drawTail(); drawWings(); drawBackFlame(); }
+    if (back) { drawDrums(); drawCape(); drawTail(); drawWings(); drawBackFlame(); }
     // sheathed weapons
-    if (wpn && !armed) {
+    if (wpn && !armed && !ghost) {
       if (wpn.kind === 'sword') {
         for (let k = 0; k < Math.min(wpn.count || 1, 3); k++) {
           g.save();
@@ -702,13 +968,13 @@ export function drawCharacter(g, look, pose) {
 
   // --- arms in front
   if (side) {
-    drawArm(rig.armF, 'F'); drawWeaponIn(rig.armF, 'F'); drawBlade(rig.armF, 'F'); drawHandAt(rig.armF, 'F');
+    drawArmFull(rig.armF, 'F');
   } else if (back) {
-    if (rig.armF.raised) { drawArm(rig.armF, 'F'); drawWeaponIn(rig.armF, 'F'); drawBlade(rig.armF, 'F'); drawHandAt(rig.armF, 'F'); }
-    if (rig.armB.raised) { drawArm(rig.armB, 'B'); drawWeaponIn(rig.armB, 'B'); drawBlade(rig.armB, 'B'); drawHandAt(rig.armB, 'B'); }
+    if (rig.armF.raised) drawArmFull(rig.armF, 'F');
+    if (rig.armB.raised) drawArmFull(rig.armB, 'B');
   } else {
-    if (!armBForward) { drawArm(rig.armB, 'B'); drawWeaponIn(rig.armB, 'B'); drawBlade(rig.armB, 'B'); drawHandAt(rig.armB, 'B'); }
-    if (!armFForward) { drawArm(rig.armF, 'F'); drawWeaponIn(rig.armF, 'F'); drawBlade(rig.armF, 'F'); drawHandAt(rig.armF, 'F'); }
+    if (!armBForward) drawArmFull(rig.armB, 'B');
+    if (!armFForward) drawArmFull(rig.armF, 'F');
   }
 
   // neck (snakeneck/longneck)
@@ -725,7 +991,7 @@ export function drawCharacter(g, look, pose) {
       const m = P.m ?? 0.15;
       const mx = side ? headR * 0.45 : 0, my = headY + headR * 0.45;
       const [dx, dy] = side ? [Math.cos(m), Math.sin(m)] : [0.8, 0.35];
-      drawSword(g, mx - dx * 0.1, my - dy * 0.1, dx, dy, 0.8, { hilt: '#fafafa', guard: '#b71c1c' });
+      drawSword(g, mx - dx * 0.1, my - dy * 0.1, dx, dy, 0.8, { hilt: '#fafafa', guard: '#b71c1c', haki: pose.armament });
     }
     g.restore();
   });
@@ -733,13 +999,16 @@ export function drawCharacter(g, look, pose) {
   // arms/legs reaching toward the camera go on top
   if (!side && !back) {
     if (legFForward) drawLeg(rig.legF, 'F');
-    if (armBForward) { drawArm(rig.armB, 'B'); drawWeaponIn(rig.armB, 'B'); drawBlade(rig.armB, 'B'); drawHandAt(rig.armB, 'B'); }
-    if (armFForward) { drawArm(rig.armF, 'F'); drawWeaponIn(rig.armF, 'F'); drawBlade(rig.armF, 'F'); drawHandAt(rig.armF, 'F'); }
+    if (armBForward) drawArmFull(rig.armB, 'B');
+    if (armFForward) drawArmFull(rig.armF, 'F');
   }
 
-  // smears and speed lines on top of everything
-  if (pose.anim && !pose.noTrails) drawTrails(g, look, pose, rig, d, side, back);
-  if (pose.flurry) drawFlurry(g, look, pose, rig, side, t);
+  // smears, flurries and charge-ups on top of everything
+  if (!ghost) {
+    if (pose.anim && !pose.noTrails) drawTrails(g, look, pose, rig, d, side, back);
+    if (pose.flurry) drawFlurry(g, look, pose, rig, side, t);
+    if (pose.charge && pose.charge.kind !== 'oni') drawCharge(g, pose, rig, t, headY, bulk);
+  }
 
   g.restore();
 }
@@ -752,15 +1021,21 @@ function drawFlurry(g, look, pose, rig, side, t) {
   const sleeve = look.sleeve || look.skin || '#f1c9a0';
   const sx = rig.armF.s[0], sy = rig.armF.s[1];
   g.save();
+  g.lineCap = 'round';
   for (let k = 0; k < n; k++) {
     const ph = (t * (f.rate || 9) + k / n) % 1;
-    const reach = (f.reach || 0.9) * (0.45 + 0.55 * Math.sin(ph * Math.PI));
+    const ext = Math.sin(ph * Math.PI);
+    const reach = (f.reach || 0.9) * (0.45 + 0.55 * ext);
     const spread = ((k * 0.618) % 1 - 0.5) * (f.spread || 0.9);
     const ex = side ? sx + reach : sx + spread * 0.6;
     const ey = side ? sy - 0.05 + spread * 0.55 : sy + reach * 0.45 + spread * 0.2;
-    g.globalAlpha = 0.35 + 0.45 * Math.sin(ph * Math.PI);
+    g.globalAlpha = 0.3 + 0.5 * ext;
     if (f.stretch) limb(g, sx, sy, ex, ey, 0.09, sleeve, null);
-    circ(g, ex, ey, 0.09 * (side ? 1 : 1.2), col, OUTLINE, 0.025);
+    // motion streak behind each fist
+    g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 0.05;
+    g.beginPath(); g.moveTo(ex, ey); g.lineTo(side ? ex - 0.25 * ext : ex, side ? ey : ey - 0.2 * ext); g.stroke();
+    if (f.legs) rrect(g, ex - 0.1, ey - 0.05, 0.2, 0.1, 0.05, look.shoes || '#3b2a1a', OUTLINE, 0.02);
+    else circ(g, ex, ey, 0.09 * (side ? 1 : 1.2), col, OUTLINE, 0.025);
   }
   g.restore();
 }
@@ -807,272 +1082,6 @@ function drawAsura(g, t, shoulderY, headY) {
   g.restore();
 }
 
-function drawHead(g, look, hy, r, d, pose, t, P) {
-  const skin = look.skin || '#f1c9a0';
-  const hair = look.hairColor || '#2d2d2d';
-  const side = d === 'left' || d === 'right';
-  const back = d === 'up';
-  const white = look.furWhite;
-
-  // mink ears (behind hair)
-  if (look.ears) {
-    const ec = white ? '#fafafa' : look.fur || hair;
-    for (const sx of [-1, 1]) {
-      g.save(); g.translate(sx * r * 0.62, hy - r * 0.75);
-      g.rotate(sx * 0.35);
-      g.fillStyle = ec; g.strokeStyle = OUTLINE; g.lineWidth = 0.03;
-      g.beginPath();
-      if (look.ears === 'long') g.ellipse(0, -0.2, 0.08, 0.26, 0, 0, TAU);
-      else if (look.ears === 'round') g.arc(0, -0.02, 0.12, 0, TAU);
-      else { g.moveTo(-0.11, 0.05); g.lineTo(0, -0.22); g.lineTo(0.11, 0.05); g.closePath(); }
-      g.fill(); g.stroke();
-      g.restore();
-      if (side) break;
-    }
-  }
-  if (look.fin) {
-    g.fillStyle = shade(skin, -0.2); g.strokeStyle = OUTLINE; g.lineWidth = 0.03;
-    g.beginPath(); g.moveTo(-0.12, hy - r * 0.8); g.quadraticCurveTo(0.05, hy - r * 1.9, 0.22, hy - r * 0.75); g.closePath(); g.fill(); g.stroke();
-  }
-
-  const faceCol = white ? '#fafafa' : look.fur && look.furFace ? look.fur : skin;
-  circ(g, 0, hy, r, faceCol, OUTLINE, 0.04);
-  if (look.muzzle && !back) {
-    circ(g, side ? r * 0.55 : 0, hy + r * 0.3, r * 0.38, shade(white ? '#fafafa' : look.fur || skin, 0.35), null);
-    circ(g, side ? r * 0.82 : 0, hy + r * 0.18, 0.045, '#2d2d2d');
-  }
-
-  drawHair(g, look.hair || 'short', white ? '#fafafa' : hair, hy, r, d, look.nika ? t : null);
-
-  if (!back) {
-    const ex = side ? r * 0.4 : r * 0.36;
-    const eyeY = hy + r * 0.05;
-    const eyeCol = white ? '#ff1744' : look.eyeColor || '#222';
-    const blink = Math.sin(t * 1.7 + (look.seed || 0)) > 0.985;
-    const fierce = P && (P.face === 'shout' || P.face === 'fierce');
-    const drawEye = (x) => {
-      if (pose.state === 'hurt') {
-        g.strokeStyle = '#222'; g.lineWidth = 0.028; g.beginPath();
-        g.moveTo(x - 0.05, eyeY - 0.04); g.lineTo(x + 0.04, eyeY); g.lineTo(x - 0.05, eyeY + 0.04); g.stroke();
-        return;
-      }
-      if (blink && !fierce) { g.strokeStyle = '#222'; g.lineWidth = 0.025; g.beginPath(); g.moveTo(x - 0.05, eyeY); g.lineTo(x + 0.05, eyeY); g.stroke(); return; }
-      g.fillStyle = '#fff'; g.beginPath(); g.ellipse(x, eyeY, 0.06, 0.075, 0, 0, TAU); g.fill();
-      g.fillStyle = eyeCol; g.beginPath(); g.ellipse(x + (side ? 0.015 : 0), eyeY + 0.01, 0.035, 0.05, 0, 0, TAU); g.fill();
-      g.fillStyle = '#fff'; g.beginPath(); g.arc(x - 0.01, eyeY - 0.02, 0.012, 0, TAU); g.fill();
-      if (fierce) {
-        g.strokeStyle = '#222'; g.lineWidth = 0.03; g.beginPath();
-        g.moveTo(x - 0.07, eyeY - 0.1 + (side ? 0 : x > 0 ? 0.03 : 0)); g.lineTo(x + 0.06, eyeY - 0.06 + (side ? 0 : x > 0 ? -0.03 : 0.03)); g.stroke();
-      }
-    };
-    if (side) drawEye(ex);
-    else { drawEye(-ex); drawEye(ex); }
-    if (look.thirdEye) {
-      g.fillStyle = '#fff'; g.beginPath(); g.ellipse(side ? r * 0.2 : 0, hy - r * 0.35, 0.05, 0.065, 0, 0, TAU); g.fill();
-      g.fillStyle = look.eyeColor || '#8e44ad'; g.beginPath(); g.arc(side ? r * 0.21 : 0, hy - r * 0.34, 0.028, 0, TAU); g.fill();
-    }
-    g.strokeStyle = '#6b2b2b'; g.lineWidth = 0.025;
-    const my = hy + r * 0.5;
-    const mx = side ? r * 0.35 : 0;
-    g.beginPath();
-    if (pose.state === 'hurt' || (P && P.face === 'shout')) {
-      g.ellipse(mx, my, 0.06, 0.045, 0, 0, TAU); g.fillStyle = '#6b2b2b'; g.fill();
-    } else if (look.nika || look.grin) {
-      g.arc(mx, my - 0.04, 0.08, 0.2, Math.PI - 0.2); g.stroke();
-      if (look.sharpTeeth) { g.fillStyle = '#fff'; g.fillRect(mx - 0.06, my - 0.01, 0.12, 0.03); }
-    } else { g.moveTo(mx - 0.04, my); g.lineTo(mx + 0.04, my); g.stroke(); }
-    if (look.scarEye) { g.strokeStyle = '#b0413e'; g.lineWidth = 0.025; g.beginPath(); g.moveTo(-ex - 0.02, eyeY - 0.12); g.lineTo(-ex + 0.03, eyeY + 0.12); g.stroke(); }
-    if (look.nose === 'long') { g.fillStyle = skin; g.strokeStyle = OUTLINE; g.lineWidth = 0.02; g.beginPath(); g.moveTo(side ? r * 0.7 : -0.04, hy + r * 0.2); g.lineTo(side ? r * 1.6 : 0, hy + r * 0.25); g.lineTo(side ? r * 0.7 : 0.04, hy + r * 0.32); g.fill(); g.stroke(); }
-    if (pose.flash) { g.fillStyle = 'rgba(255,255,255,0.6)'; g.beginPath(); g.arc(0, hy, r, 0, TAU); g.fill(); }
-  }
-
-  drawHat(g, look.hat, hy, r, d, look);
-}
-
-function drawHair(g, style, col, hy, r, d, nikaT) {
-  if (style === 'bald' && nikaT === null) return;
-  const back = d === 'up';
-  g.fillStyle = col; g.strokeStyle = OUTLINE; g.lineWidth = 0.035;
-  g.beginPath();
-  if (nikaT !== null && nikaT !== undefined) {
-    // Nika: hair billowing like white flame
-    g.moveTo(-r * 1.05, hy);
-    for (let k = 0; k <= 8; k++) {
-      const a = Math.PI + (k / 8) * Math.PI;
-      const rr = r * (k % 2 ? 1.25 + 0.2 * Math.sin(nikaT * 9 + k) : 1.0);
-      g.lineTo(Math.cos(a) * rr * 1.1, hy + Math.sin(a) * rr * 1.25 - (k % 2 ? r * 0.2 : 0));
-    }
-    g.lineTo(r * 1.05, hy); g.quadraticCurveTo(0, hy - r * 0.4, -r * 1.05, hy);
-    g.fill(); g.stroke();
-    return;
-  }
-  switch (style) {
-    case 'spiky':
-      g.moveTo(-r * 1.05, hy);
-      for (let k = 0; k <= 6; k++) {
-        const a = Math.PI + (k / 6) * Math.PI;
-        const rr = k % 2 ? r * 1.35 : r * 1.02;
-        g.lineTo(Math.cos(a) * rr, hy + Math.sin(a) * rr);
-      }
-      g.lineTo(r * 1.05, hy); g.quadraticCurveTo(0, hy - r * 0.4, -r * 1.05, hy);
-      break;
-    case 'long':
-      g.moveTo(-r * 1.05, hy + r * 1.3);
-      g.lineTo(-r * 1.1, hy);
-      g.arc(0, hy, r * 1.1, Math.PI, 0);
-      g.lineTo(r * 1.05, hy + r * 1.3);
-      g.quadraticCurveTo(0, hy + (back ? r * 1.5 : r * 0.2), -r * 1.05, hy + r * 1.3);
-      break;
-    case 'ponytail':
-      g.arc(0, hy, r * 1.06, Math.PI * 1.02, -0.02);
-      g.quadraticCurveTo(0, hy - r * 0.5, -r * 1.05, hy);
-      g.moveTo(r * 0.6, hy - r * 0.7); g.quadraticCurveTo(r * 1.6, hy - r * 0.2, r * 1.1, hy + r * 1.1);
-      g.lineTo(r * 0.8, hy - r * 0.3);
-      break;
-    case 'afro':
-      g.arc(0, hy - r * 0.35, r * 1.35, 0, TAU);
-      break;
-    case 'topknot':
-      g.arc(0, hy, r * 1.04, Math.PI, 0);
-      g.quadraticCurveTo(0, hy - r * 0.55, -r * 1.04, hy);
-      g.moveTo(r * 0.2, hy - r * 1.0); g.arc(0, hy - r * 1.2, r * 0.25, 0, TAU);
-      break;
-    case 'buzz':
-      g.arc(0, hy, r * 1.02, Math.PI * 1.05, -0.05);
-      g.quadraticCurveTo(0, hy - r * 0.7, -r * 1.0, hy - r * 0.15);
-      break;
-    case 'mohawk':
-      g.moveTo(-r * 0.2, hy - r * 0.8); g.lineTo(-r * 0.1, hy - r * 1.7); g.lineTo(r * 0.3, hy - r * 1.6); g.lineTo(r * 0.3, hy - r * 0.8);
-      break;
-    case 'bun':
-      g.arc(0, hy, r * 1.05, Math.PI * 1.02, -0.02);
-      g.quadraticCurveTo(0, hy - r * 0.5, -r * 1.03, hy);
-      g.moveTo(r * 0.45, hy - r * 1.25); g.arc(0, hy - r * 1.25, r * 0.45, 0, TAU);
-      break;
-    case 'pompadour':
-      g.moveTo(-r * 1.02, hy);
-      g.arc(0, hy, r * 1.02, Math.PI, Math.PI * 1.4);
-      g.quadraticCurveTo(r * 0.2, hy - r * 2.1, r * 1.9, hy - r * 1.3);
-      g.quadraticCurveTo(r * 0.8, hy - r * 1.05, r * 1.02, hy);
-      g.quadraticCurveTo(0, hy - r * 0.5, -r * 1.02, hy);
-      break;
-    case 'curly':
-      for (let k = 0; k < 7; k++) { const a = Math.PI + (k / 6) * Math.PI; g.moveTo(Math.cos(a) * r + r * 0.28, hy + Math.sin(a) * r * 0.95); g.arc(Math.cos(a) * r, hy + Math.sin(a) * r * 0.95, r * 0.28, 0, TAU); }
-      break;
-    default: // short
-      g.arc(0, hy, r * 1.06, Math.PI * 1.02, -0.02);
-      g.lineTo(r * 0.9, hy - r * 0.1);
-      g.lineTo(r * 0.55, hy - r * 0.45);
-      g.lineTo(r * 0.2, hy - r * 0.2);
-      g.lineTo(-r * 0.2, hy - r * 0.5);
-      g.lineTo(-r * 0.6, hy - r * 0.2);
-      g.lineTo(-r * 0.95, hy - r * 0.05);
-  }
-  g.fill(); g.stroke();
-  if (back && style !== 'bald') { g.beginPath(); g.arc(0, hy, r * 1.02, 0, TAU); g.fill(); }
-}
-
-function drawHat(g, hat, hy, r, d, look) {
-  if (!hat) return;
-  g.strokeStyle = OUTLINE; g.lineWidth = 0.035;
-  switch (hat) {
-    case 'straw': {
-      g.fillStyle = '#f2d16b';
-      g.beginPath(); g.ellipse(0, hy - r * 0.55, r * 1.55, r * 0.42, 0, 0, TAU); g.fill(); g.stroke();
-      g.fillStyle = '#f5da7a';
-      g.beginPath(); g.ellipse(0, hy - r * 0.85, r * 0.85, r * 0.62, 0, Math.PI, 0); g.fill(); g.stroke();
-      g.fillStyle = '#c0392b'; g.fillRect(-r * 0.85, hy - r * 0.8, r * 1.7, r * 0.2);
-      break;
-    }
-    case 'bandana': {
-      g.fillStyle = look.hatColor || '#2d3436';
-      g.beginPath(); g.arc(0, hy - r * 0.1, r * 1.05, Math.PI * 1.05, -0.05); g.closePath(); g.fill(); g.stroke();
-      if (d !== 'up') { g.beginPath(); g.moveTo(-r, hy - r * 0.1); g.lineTo(-r * 1.5, hy + r * 0.3); g.lineTo(-r * 1.2, hy + r * 0.4); g.closePath(); g.fill(); }
-      break;
-    }
-    case 'marine': {
-      g.fillStyle = '#ffffff';
-      g.beginPath(); g.ellipse(0, hy - r * 0.75, r * 1.0, r * 0.45, 0, 0, TAU); g.fill(); g.stroke();
-      g.fillStyle = '#1b4f72'; g.fillRect(-r * 0.95, hy - r * 0.6, r * 1.9, r * 0.2);
-      if (d === 'down' || d === 'right') { g.fillStyle = '#34495e'; g.beginPath(); g.ellipse(r * 0.3, hy - r * 0.45, r * 0.6, r * 0.15, 0, 0, TAU); g.fill(); }
-      break;
-    }
-    case 'tricorne': {
-      g.fillStyle = look.hatColor || '#2d3436';
-      g.beginPath(); g.moveTo(-r * 1.5, hy - r * 0.6); g.quadraticCurveTo(0, hy - r * 2.1, r * 1.5, hy - r * 0.6); g.quadraticCurveTo(0, hy - r * 0.9, -r * 1.5, hy - r * 0.6); g.fill(); g.stroke();
-      g.fillStyle = '#f1c40f'; g.beginPath(); g.arc(0, hy - r * 1.15, r * 0.15, 0, TAU); g.fill();
-      break;
-    }
-    case 'captain': {
-      g.fillStyle = look.hatColor || '#1e272e';
-      g.beginPath(); g.ellipse(0, hy - r * 0.6, r * 1.6, r * 0.38, 0, 0, TAU); g.fill(); g.stroke();
-      g.beginPath(); g.ellipse(0, hy - r * 0.95, r * 0.95, r * 0.6, 0, Math.PI, 0); g.fill(); g.stroke();
-      g.fillStyle = '#fff'; g.beginPath(); g.arc(0, hy - r * 1.1, r * 0.18, 0, TAU); g.fill();
-      g.fillStyle = '#e74c3c'; g.beginPath(); g.moveTo(r * 0.8, hy - r * 1.0); g.quadraticCurveTo(r * 1.6, hy - r * 1.9, r * 1.3, hy - r * 0.8); g.fill();
-      break;
-    }
-    case 'cowboy': {
-      g.fillStyle = look.hatColor || '#8d6e4a';
-      g.beginPath(); g.ellipse(0, hy - r * 0.6, r * 1.6, r * 0.35, 0, 0, TAU); g.fill(); g.stroke();
-      g.beginPath(); g.roundRect(-r * 0.7, hy - r * 1.5, r * 1.4, r * 0.95, r * 0.3); g.fill(); g.stroke();
-      break;
-    }
-    case 'beanie': {
-      g.fillStyle = look.hatColor || '#e74c3c';
-      g.beginPath(); g.arc(0, hy - r * 0.2, r * 1.05, Math.PI, 0); g.closePath(); g.fill(); g.stroke();
-      g.fillStyle = '#fff'; g.beginPath(); g.arc(0, hy - r * 1.25, r * 0.22, 0, TAU); g.fill();
-      break;
-    }
-    case 'pinkhat': {
-      g.fillStyle = '#f78fb3';
-      g.beginPath(); g.ellipse(0, hy - r * 0.55, r * 1.3, r * 0.35, 0, 0, TAU); g.fill(); g.stroke();
-      g.beginPath(); g.roundRect(-r * 0.8, hy - r * 1.6, r * 1.6, r * 1.05, r * 0.4); g.fill(); g.stroke();
-      g.strokeStyle = '#fff'; g.lineWidth = 0.05; g.beginPath(); g.moveTo(-r * 0.3, hy - r * 1.1); g.lineTo(r * 0.3, hy - r * 1.1); g.moveTo(0, hy - r * 1.4); g.lineTo(0, hy - r * 0.8); g.stroke();
-      break;
-    }
-    case 'horns': {
-      g.fillStyle = '#ecf0f1';
-      for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(sx * r * 0.5, hy - r * 0.7); g.quadraticCurveTo(sx * r * 1.4, hy - r * 1.4, sx * r * 1.1, hy - r * 2.0); g.lineTo(sx * r * 0.3, hy - r * 0.8); g.fill(); g.stroke(); }
-      break;
-    }
-    case 'antlers': {
-      g.strokeStyle = '#8d6e63'; g.lineWidth = 0.06; g.lineCap = 'round';
-      for (const sx of [-1, 1]) {
-        g.beginPath(); g.moveTo(sx * r * 0.5, hy - r * 0.8); g.lineTo(sx * r * 1.2, hy - r * 1.9);
-        g.moveTo(sx * r * 0.85, hy - r * 1.35); g.lineTo(sx * r * 1.5, hy - r * 1.4);
-        g.moveTo(sx * r * 1.05, hy - r * 1.7); g.lineTo(sx * r * 0.8, hy - r * 2.2); g.stroke();
-      }
-      break;
-    }
-    case 'crown': {
-      g.fillStyle = '#f1c40f';
-      g.beginPath(); g.moveTo(-r * 0.7, hy - r * 0.7); g.lineTo(-r * 0.8, hy - r * 1.4); g.lineTo(-r * 0.35, hy - r * 1.05); g.lineTo(0, hy - r * 1.5); g.lineTo(r * 0.35, hy - r * 1.05); g.lineTo(r * 0.8, hy - r * 1.4); g.lineTo(r * 0.7, hy - r * 0.7); g.closePath(); g.fill(); g.stroke();
-      break;
-    }
-    case 'bubble': {
-      g.fillStyle = 'rgba(200,235,255,0.22)'; g.strokeStyle = 'rgba(220,245,255,0.8)'; g.lineWidth = 0.04;
-      g.beginPath(); g.arc(0, hy - r * 0.1, r * 1.7, 0, TAU); g.fill(); g.stroke();
-      g.fillStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.arc(-r * 0.7, hy - r * 0.9, r * 0.22, 0, TAU); g.fill();
-      break;
-    }
-    case 'halo': {
-      g.strokeStyle = '#ffe082'; g.lineWidth = 0.06;
-      g.beginPath(); g.ellipse(0, hy - r * 1.55, r * 0.7, r * 0.2, 0, 0, TAU); g.stroke();
-      break;
-    }
-    case 'headband': {
-      g.fillStyle = look.hatColor || '#c0392b'; g.fillRect(-r * 1.02, hy - r * 0.55, r * 2.04, r * 0.22);
-      break;
-    }
-    case 'goggles': {
-      g.fillStyle = '#2d3436'; g.fillRect(-r * 1.02, hy - r * 0.62, r * 2.04, r * 0.14);
-      circ(g, -r * 0.35, hy - r * 0.55, r * 0.22, '#74b9ff', OUTLINE); circ(g, r * 0.35, hy - r * 0.55, r * 0.22, '#74b9ff', OUTLINE);
-      break;
-    }
-    default: break;
-  }
-}
-
 /** Knocked out: fall over (with a bounce) and lie on the back, dazed. */
 function drawLying(g, look, pose, s) {
   const kt = pose.knockT ?? 1;
@@ -1095,7 +1104,7 @@ function drawLying(g, look, pose, s) {
   g.strokeStyle = '#222'; g.lineWidth = 0.03;
   for (const ex of [-0.1, 0.1]) { g.beginPath(); g.moveTo(ex - 0.04, -1.02); g.lineTo(ex + 0.04, -0.96); g.moveTo(ex + 0.04, -1.02); g.lineTo(ex - 0.04, -0.96); g.stroke(); }
   g.restore();
-  if (pose.state === 'knocked' && pose.time !== undefined && fall >= 1) {
+  if (pose.state === 'knocked' && pose.time !== undefined && fall >= 1 && !pose.ghost) {
     // dazed: drawn stars circling the head
     for (let i = 0; i < 3; i++) {
       const a = pose.time * 4 + i * TAU / 3;
