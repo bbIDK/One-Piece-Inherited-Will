@@ -271,4 +271,98 @@ export const scenarios = {
       await snap('reward');
     },
   },
+  fight: {
+    // a boss fight: --boss=arlong (npc id) — the boss attacks, the player swings back
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human'));
+      await step(page, 0.5);
+      const info = await page.evaluate((id) => {
+        const g = window.OP.game;
+        const { npcDef, makeNPC } = window.OP.debug;
+        const def = npcDef(id);
+        const isl = g.surface.islands.find((i) => i.id === def.island);
+        const t = isl.towns[0];
+        window.OP.teleport(t.plaza.x, t.plaza.y + 2);
+        const a = makeNPC({ ...def, when: undefined }, g.player.x + 3, g.player.y);
+        g.addActor(a);
+        a.provoked = true; a.aggroPlayer = true; a.controller.target = g.player; a.controller.state = 'chase'; g.bossTarget = a;
+        return { boss: a.name, hp: a.hp, php: g.player.hp, power: Math.round(a.power()), ppower: Math.round(g.player.power()) };
+      }, args.boss || 'arlong');
+      console.log('fight', JSON.stringify(info));
+      for (let k = 0; k < 8; k++) {
+        await page.evaluate(() => { const g = window.OP.game; const b = g.bossTarget; if (b) g.player.facing = Math.atan2(b.y - g.player.y, g.world.dx(g.player.x, b.x)); window.OP.input.mouse.pressed = [true, false, false]; window.OP.input.mouse.down = [true, false, false]; });
+        await step(page, 0.6);
+        await page.evaluate(() => { window.OP.input.mouse.down = [false, false, false]; });
+        await step(page, 0.4);
+        if (k === 3) await snap('mid');
+      }
+      const end = await page.evaluate(() => { const g = window.OP.game; const b = g.bossTarget; return { bossHp: b && Math.round(b.hp), playerHp: Math.round(g.player.hp), state: g.player.state, lives: g.state.char.lives }; });
+      console.log('after', JSON.stringify(end));
+      await snap('end');
+    },
+  },
+  tour: {
+    // visit every named island (or --islands=a,b), populate it, talk to everyone with dialogue
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human'));
+      await step(page, 0.3);
+      const ids = await page.evaluate((only) => {
+        const g = window.OP.game;
+        const list = g.surface.islands.filter((i) => i.name && !i.def.islet).map((i) => i.id);
+        return only ? list.filter((id) => only.split(',').includes(id)) : list;
+      }, args.islands || null);
+      const zones = args.zones === undefined ? ['skypiea', 'fishman_island', 'impel_down'] : String(args.zones).split(',').filter(Boolean);
+      let problems = 0;
+      const visit = async (id, zone) => {
+        const r = await page.evaluate(({ id, zone }) => {
+          const g = window.OP.game;
+          const errs = [];
+          const w = g.world;
+          const isl = w.islands.find((i) => i.id === id);
+          if (!isl) return { id, err: 'missing' };
+          const t = isl.towns[0];
+          const p = t ? { x: t.plaza.x, y: t.plaza.y + 2 } : isl.docks[0] ? isl.docks[0].land : { x: isl.x, y: isl.y };
+          g.player.mode = 'foot'; g.player.onShip = false; g.player.ship = null;
+          window.OP.teleport(p.x, p.y);
+          g.player.state = 'idle'; g.player.hp = g.player.d.maxHp; g.player.iframes = 99;
+          g.spawner.t = 0; g.spawner.update(1);
+          const talkers = g.actors.filter((a) => a.def && a.def.dialogue && a.def.island === id);
+          for (const a of talkers) {
+            try {
+              g.emit('talk', a);
+              const d = g.dialogue.active;
+              if (d) {
+                for (let k = 0; k < 6 && g.dialogue.active; k++) {
+                  const ch = g.dialogue.active.choices || [];
+                  const safe = ch.findIndex((c) => c.end && !c.do);
+                  if (safe >= 0) g.dialogue.choose(safe);
+                  else if (ch.length) g.dialogue.close();
+                  else g.dialogue.advance(), g.dialogue.advance();
+                }
+                g.dialogue.close();
+              }
+            } catch (e) { errs.push(`${a.npcId}: ${e.message}`); }
+          }
+          g.ui.closeAll();
+          return { id, npcs: g.actors.filter((a) => a.npcId && a.alive).length, talkers: talkers.length, errs };
+        }, { id, zone });
+        await step(page, 0.4);
+        if (r.err || r.errs?.length) { problems++; console.log('PROBLEM', JSON.stringify(r)); }
+        else console.log('ok', id, `npcs=${r.npcs} talked=${r.talkers}`);
+        if (args.shots) await snap(id);
+      };
+      for (const id of ids) await visit(id);
+      for (const z of zones) {
+        const zi = await page.evaluate((z) => { const g = window.OP.game; g.enterZoneById(z); return g.world.islands.map((i) => i.id); }, z);
+        for (const id of zi) await visit(id, z);
+        await page.evaluate(() => window.OP.game.leaveZone(true));
+      }
+      console.log(`tour: ${ids.length} islands, ${problems} problem(s)`);
+      if (problems) throw new Error(`${problems} island(s) had problems`);
+    },
+  },
 };

@@ -16,7 +16,7 @@ import { Progression } from './game/progression.js';
 import { Dialogue } from './game/dialogue.js';
 import { Quests } from './game/quests.js';
 import { Services } from './game/services.js';
-import { Interactions, npcBuilder } from './game/npcs.js';
+import { Interactions, npcBuilder, npcDef, makeNPC } from './game/npcs.js';
 import { installMap } from './ui/mapUI.js';
 import { openInventory, openCharacter, openSkills, openJournal, openMenu, openSettings } from './ui/panels.js';
 import { persist, endLineage } from './game/lineage.js';
@@ -157,6 +157,7 @@ async function start() {
       startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', dream: opts.dream || 'king', look: null, jr: { skull: 'classic', bones: 'cross', accessory: 'strawhat', color: '#fff' } });
       return game.player;
     },
+    debug: { npcDef, makeNPC },
     ready: true,
   });
 

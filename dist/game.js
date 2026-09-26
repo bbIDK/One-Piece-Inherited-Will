@@ -19966,6 +19966,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         startNewCharacter(game, birth, { name: opts.name || "Test Pirate", dream: opts.dream || "king", look: null, jr: { skull: "classic", bones: "cross", accessory: "strawhat", color: "#fff" } });
         return game.player;
       },
+      debug: { npcDef, makeNPC },
       ready: true
     });
     showTitle();
