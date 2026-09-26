@@ -224,10 +224,7 @@ export class Combat {
           att.stagger(0.9);
           tgt.stamina = Math.min(tgt.d.maxStamina, tgt.stamina + 15);
           if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + 6);
-          fx.burst(tgt.x + Math.cos(ang + Math.PI) * 0.5, tgt.y - 0.7, 14, { color: ['#fff', '#fff59d'], speed: 6, g: 0, life: 0.3, kind: 'line' });
-          fx.ring(tgt.x, tgt.y, 0.3, 1.6, '#fff59d', 0.3, 0.12);
-          fx.text(tgt.x, tgt.y - 1.4, 'PARRY!', '#fff59d', 0.44);
-          fx.stop(0.12);
+          fx.parry(tgt, att, ang); // flash, ring, "PARRY!", hit-stop and a beat of slow motion
           game.audio?.sfx('parry');
           if (tgt.isPlayer) game.onPlayerParry(att);
           return false;
@@ -240,7 +237,7 @@ export class Combat {
           tgt.stamina = 0;
           tgt.blocking = false;
           tgt.stagger(1.1);
-          fx.text(tgt.x, tgt.y - 1.4, 'GUARD BREAK', '#ff7675', 0.4);
+          fx.guardBreak(tgt, att, ang); // shattered guard, "GUARD BREAK", a jolt
           game.audio?.sfx('guardbreak');
         } else {
           game.audio?.sfx('block');
@@ -263,17 +260,9 @@ export class Combat {
       if (h.onHit) h.onHit(tgt, att, game, h);
     }
 
-    // feedback
-    const col = ELEMENT_COLORS[el] || '#fff';
-    const hx = tgt.x, hy = tgt.y - 0.7;
-    fx.burst(hx, hy, blocked ? 5 : 8 + Math.min(12, final / 8), { color: blocked ? '#b0bec5' : [col, '#ffffff'], speed: 5, g: 4, life: 0.3, kind: 'line', size: 0.12 });
-    if (final > 0) fx.text(hx, tgt.y - 1.2, String(final), blocked ? '#b0bec5' : crit ? '#ffeb3b' : tgt.isPlayer ? '#ff6b6b' : '#ffffff', crit ? 0.55 : 0.45, { crit });
-    if (isPlayerInvolved) {
-      const heavy = (h.heavy || final > (tgt.d ? tgt.d.maxHp * 0.12 : 50));
-      fx.stop(heavy ? 0.09 : 0.04);
-      fx.shake(heavy ? 0.35 : 0.12);
-      if (h.impactFrame) fx.impactFrame(0.07);
-    }
+    // feedback: impact star, sparks, hit-stop, camera kick and a combined damage
+    // number, all scaled by the weight of the blow (see render/combatfx.js)
+    fx.hit(att, tgt, h, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved });
     game.audio?.sfx(blocked ? 'block' : h.sfxHit || (el === 'physical' ? (h.slashing ? 'slash_hit' : 'punch') : el));
     return true;
   }
