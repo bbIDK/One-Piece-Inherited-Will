@@ -42495,12 +42495,33 @@ void main() {
       this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
       this.forest.aim(camYaw3);
       this.updateEntities(game, ox, oy, env, camYaw3);
+      this.updateViewmodel(game, env);
       const amb = env.ambient || [1, 1, 1];
       tintSprites(Math.min(1, amb[0] * 1.05), Math.min(1, amb[1] * 1.05), Math.min(1, amb[2] * 1.05));
       setNightWindows(Math.max(0, 0.9 - env.daylight));
       const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
       this.proj.cam.zoom = f / 7;
       this.renderer.render(this.scene, cam);
+    }
+    /** First-person arms and weapon (a plug-in; see registry.js). */
+    updateViewmodel(game, env) {
+      const want = this.rig.mode === "first" && VIEWS.viewmodel && game.player && game.player.mode !== "sail";
+      if (want && !this.vm) {
+        try {
+          this.vm = VIEWS.viewmodel(this.ctx);
+        } catch (e) {
+          console.warn("viewmodel failed", e);
+          this.vm = null;
+        }
+        if (this.vm) {
+          if (!this.rig.camera.parent) this.scene.add(this.rig.camera);
+          this.rig.camera.add(this.vm.root);
+        }
+      }
+      if (this.vm) {
+        this.vm.root.visible = !!want;
+        if (want) this.vm.update(game.player, env, this.ctx);
+      }
     }
     /** Static world objects near the player: 3D models where registered, sprites otherwise. */
     updateProps(game, ox, oy, env, sailing) {
