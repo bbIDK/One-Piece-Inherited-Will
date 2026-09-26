@@ -510,7 +510,11 @@ function toggleFullscreen() {
 export function openSettings(game) {
   const s = game.settings;
   const body = h('div');
-  const slider = (label, key) => h('div.stat-row', h('span.nm', label), h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: s[key], style: { flex: 1 }, on: { input: (e) => { s[key] = Number(e.target.value); game.applySettings(); } } }));
+  const slider = (label, key) => {
+    // (a function label is re-read as the slider moves)
+    const nm = h('span.nm', typeof label === 'function' ? label() : label);
+    return h('div.stat-row', nm, h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: s[key] ?? 0.5, style: { flex: 1 }, on: { input: (e) => { s[key] = Number(e.target.value); if (typeof label === 'function') nm.textContent = label(); game.applySettings(); } } }));
+  };
   const check = (label, key) => h('label.check-row', h('input', { type: 'checkbox', checked: !!s[key], on: { change: (e) => { s[key] = e.target.checked; game.applySettings(); } } }), label);
   const choice = (label, key, opts) => h('div.set-row', h('span.nm', label), h('div.tabs', { style: { margin: 0 } }, opts.map(([v, name]) => h('button' + (s[key] === v ? '.on' : ''), { on: { click: () => { s[key] = v; if (key === 'quality') s.qualityPicked = true; game.applySettings(); render(); } } }, name))));
   const render = () => {
@@ -520,6 +524,8 @@ export function openSettings(game) {
       choice('Camera', 'view', [['first', 'First person'], ['third', 'Third person'], ['classic', 'Classic top-down']]),
       slider(game.input.touch?.on ? 'Look sensitivity' : 'Mouse sensitivity', 'sensitivity'),
       check('Invert mouse look', 'invertY'),
+      slider(() => `Field of view ${Math.round(60 + (s.fov ?? 0.5) * 35)}°`, 'fov'),
+      check('View bobbing while walking', 'bob'),
       choice('Graphics', 'quality', [['high', 'High (shadows)'], ['low', 'Fast']]),
       h('h3', 'Sound & feel'),
       slider('Sound effects', 'volume'), slider('Music', 'music'), slider('Screen shake', 'shake'),

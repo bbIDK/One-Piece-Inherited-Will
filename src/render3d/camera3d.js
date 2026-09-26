@@ -22,6 +22,8 @@ export class CameraRig {
     this.lockFailed = false;
     this.sensitivity = 0.0024;
     this.invertY = false;
+    this.baseFov = 75; // settings: 60–95
+    this.bobOn = true;
     this.bob = 0;
     this.roll = 0;
     this.eye = new THREE.Vector3();
@@ -132,7 +134,7 @@ export class CameraRig {
     // walking bob and a knocked-down camera
     const moving = !sailing && (Math.abs(p.vx || 0) + Math.abs(p.vy || 0) > 0.5 || p.moving);
     this.bob += dt * (moving ? 9 : 0);
-    let bobY = moving ? Math.sin(this.bob) * 0.045 : 0;
+    let bobY = moving && this.bobOn ? Math.sin(this.bob) * 0.045 : 0;
     let roll = 0;
     if (p.state === 'knocked') { eyeH = 0.45; roll = 0.35; }
     this.roll += (roll - this.roll) * Math.min(1, dt * 4);
@@ -157,7 +159,7 @@ export class CameraRig {
       cam.rotation.set(this.pitch + this.shake.y, yaw3 + this.shake.x, this.roll);
     }
     const sprint = !sailing && p.intent?.sprint;
-    const fov = sprint ? 82 : 75;
+    const fov = this.baseFov + (sprint ? 7 : 0);
     if (Math.abs(cam.fov - fov) > 0.05) { cam.fov += (fov - cam.fov) * Math.min(1, dt * 6); cam.updateProjectionMatrix(); }
     cam.updateMatrixWorld();
     this.aimCache = null;

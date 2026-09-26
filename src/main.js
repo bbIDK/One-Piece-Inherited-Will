@@ -36,6 +36,7 @@ import { installFactions } from './game/factions.js';
 import { installLegends } from './game/legends.js';
 import { installWorld } from './game/news.js';
 import { installTouch } from './ui/touch.js';
+import { IS_LIQUID } from './world/tiles.js';
 
 const root = document.createElement('div');
 root.id = 'game';
@@ -90,6 +91,8 @@ async function start() {
     if (view3d) {
       view3d.rig.sensitivity = 0.0008 + (settings.sensitivity ?? 0.5) * 0.0032;
       view3d.rig.invertY = !!settings.invertY;
+      view3d.rig.baseFov = Math.round(60 + (settings.fov ?? 0.5) * 35);
+      view3d.rig.bobOn = settings.bob !== false;
       if (view3d.quality !== settings.quality) view3d.setQuality(settings.quality || 'high');
       applyView();
     }
@@ -102,9 +105,33 @@ async function start() {
     saveSettings(settings);
     ui.toast(settings.view === 'first' ? 'FIRST PERSON' : settings.view === 'third' ? 'THIRD PERSON' : 'CLASSIC VIEW', input.touch?.on ? 'Tap View to switch' : 'Press V to switch views', '#ffe082');
   };
+  // start looking down the longest clear line of sight (not at a wall)
+  const openYaw = (p) => {
+    const w = game.world;
+    let best = p.facing || 0, bestLen = -1;
+    for (let k = 0; k < 24; k++) {
+      const a = k / 24 * Math.PI * 2;
+      const cx = Math.cos(a), cy = Math.sin(a);
+      let len = 0;
+      for (let d = 1; d <= 40; d++) {
+        const x = p.x + cx * d, y = p.y + cy * d;
+        if (w.isBlocked(x, y) || (!w.walkable(x, y) && !IS_LIQUID[w.type(x, y)])) break;
+        len = d;
+      }
+      // a little preference for the way the character already faces
+      const score = len - Math.abs(Math.atan2(Math.sin(a - (p.facing || 0)), Math.cos(a - (p.facing || 0)))) * 0.8;
+      if (score > bestLen) { bestLen = score; best = a; }
+    }
+    return best;
+  };
   game.on('characterStart', () => {
     applyView();
-    if (view3d && game.player) view3d.rig.yaw = game.player.facing || 0;
+    if (view3d && game.player) {
+      const yaw = openYaw(game.player);
+      view3d.rig.yaw = yaw;
+      view3d.rig.pitch = -0.04;
+      game.player.facing = yaw;
+    }
   });
   game.applySettings();
   ui.game = game;
