@@ -18,6 +18,7 @@ export class CameraRig {
     this.camera = new THREE.PerspectiveCamera(75, 1, 0.08, 2600);
     this.camera.rotation.order = 'YXZ';
     this.mode = 'first'; // 'first' | 'third'
+    this.shiftLock = false; // third person: Roblox-style shift lock (tap Shift)
     this.yaw = 0; // world facing angle (same convention as actor.facing: atan2(dy, dx), y = south)
     this.pitch = 0;
     this.locked = false;
@@ -38,17 +39,33 @@ export class CameraRig {
 
     const onMove = (e) => {
       this.mouse.x = e.clientX; this.mouse.y = e.clientY;
-      if (!this.locked || !this.active) return;
+      if (!this.active) return;
+      // free-mouse third person: hold the right button to turn the camera
+      if (this.drag) {
+        this.drag.moved += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0);
+        this.turn(e.movementX || 0, e.movementY || 0);
+        return;
+      }
+      if (!this.locked) return;
       this.turn(e.movementX || 0, e.movementY || 0);
     };
     document.addEventListener('mousemove', onMove);
-    // the first click on the game captures the mouse (and is not an attack)
     canvas.addEventListener('mousedown', (e) => {
-      if (!this.active || this.locked || this.lockFailed) return;
-      if (this.game.ui?.blocksInput()) return;
+      if (!this.active || this.game.ui?.blocksInput()) return;
+      if (this.freeMouse) {
+        // (the left button attacks; the right button turns the camera while held —
+        // a quick right-click without dragging is still a heavy attack)
+        if (e.button === 2) this.drag = { t: performance.now(), moved: 0 };
+        return;
+      }
+      // first person / shift lock: the first click captures the mouse (and is not an attack)
+      if (this.locked || this.lockFailed) return;
       e.stopPropagation();
       e.preventDefault();
       this.requestLock();
+    });
+    document.addEventListener('mouseup', (e) => {
+      if (e.button === 2 && this.drag) { this.lastDrag = { ...this.drag, end: performance.now() }; this.drag = null; }
     });
     // the mouse wheel pulls the third-person camera in and out
     canvas.addEventListener('wheel', (e) => {
@@ -68,6 +85,24 @@ export class CameraRig {
   }
 
   get active() { return !!this.game.view3d?.active; }
+
+  /** Third person without shift lock: the cursor is free (attacks aim at it). */
+  get freeMouse() { return this.mode === 'third' && !this.shiftLock && !this.game.input?.touch?.on; }
+
+  /** Roblox-style shift lock: mouse captured, character faces the camera, crosshair, over-the-shoulder view. */
+  setShiftLock(on) {
+    this.shiftLock = !!on;
+    if (this.game.settings) this.game.settings.shiftLock = this.shiftLock;
+    if (this.mode !== 'third') return;
+    if (this.shiftLock) this.requestLock(); else this.releaseLock();
+  }
+
+  /** A right-click that didn't turn the camera (free mouse): heavy attack. */
+  takeRightClick() {
+    const d = this.lastDrag;
+    this.lastDrag = null;
+    return !!d && d.moved < 10 && d.end - d.t < 350;
+  }
 
   requestLock() {
     try {
@@ -108,13 +143,13 @@ export class CameraRig {
     const p = game.player;
     const inp = game.input;
     // edge/arrow turning when the pointer isn't locked
-    if (!this.locked && !game.ui?.blocksInput()) {
+    if (!this.locked && !this.drag && !game.ui?.blocksInput()) {
       let t = 0, l = 0;
       if (inp.isDown('ArrowLeft')) t -= 1;
       if (inp.isDown('ArrowRight')) t += 1;
       if (inp.isDown('ArrowUp')) l += 1;
       if (inp.isDown('ArrowDown')) l -= 1;
-      if (this.lockFailed && !inp.touch?.on) {
+      if (this.lockFailed && !inp.touch?.on && !this.freeMouse) {
         const w = window.innerWidth, h = window.innerHeight;
         const ex = (this.mouse.x / w - 0.5) * 2, ey = (this.mouse.y / h - 0.5) * 2;
         if (Math.abs(ex) > 0.55) t += Math.sign(ex) * (Math.abs(ex) - 0.55) / 0.45 * 1.6;
@@ -177,6 +212,9 @@ export class CameraRig {
       const cp = Math.cos(this.pitch), spch = Math.sin(this.pitch);
       const fx = Math.cos(this.yaw), fz = Math.sin(this.yaw);
       let cx = -fx * d * cp, cz = -fz * d * cp, cy = gh + eyeH * 0.9 + this.tp.height - spch * d * 0.6;
+      // shift lock looks over the right shoulder
+      this.shoulder = (this.shoulder || 0) + ((this.shiftLock ? 0.7 : 0) - (this.shoulder || 0)) * Math.min(1, dt * 8);
+      cx += -fz * this.shoulder; cz += fx * this.shoulder;
       const w = game.world;
       const room = w?.interiorAt?.(p.x, p.y);
       if (room) {

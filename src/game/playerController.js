@@ -43,8 +43,8 @@ export class PlayerController {
     if (inp.isDown('Shift')) this.shiftT = (this.shiftT ?? 0) + dt;
     const tapDodge = inp.wasReleased('Shift') && (this.shiftT ?? 1) < 0.22;
     p.intent.sprint = ((inp.isDown('Shift') && this.shiftT > 0.16) || !!tc?.run) && l > 0;
-    // in first person you always face where you look
-    if (v3 && v3.rig.mode === 'first') this.aimT = Math.max(this.aimT, 0.25);
+    // in first person (and with shift lock) you always face where you look
+    if (v3 && (v3.rig.mode === 'first' || v3.rig.shiftLock)) this.aimT = Math.max(this.aimT, 0.25);
 
     // aim at the mouse (melee swings snap onto a foe near that direction)
     let [wx, wy] = game.renderer.toWorld(game.world, inp.mouse.x, inp.mouse.y);
@@ -54,7 +54,7 @@ export class PlayerController {
     const melee = p.style !== 'sniper';
     const aimM = melee ? this.assist(p, game, aim) : aim;
     this.aimT = Math.max(0, this.aimT - dt);
-    const fighting = inp.mouseDown(0) || inp.mouseDown(2) || inp.isDown('F');
+    const fighting = inp.mouseDown(0) || (inp.mouseDown(2) && !v3?.rig.freeMouse) || inp.isDown('F');
     if (fighting) this.aimT = 0.7;
     if (p.action && p.action.def.track !== false && p.action.t < (p.action.def.windup ?? 0.1)) p.facing = p.action.def.m1Chain || p.action.def.source?.startsWith('style') ? aimM : aim;
     else if (!p.action) {
@@ -68,8 +68,15 @@ export class PlayerController {
     const buf = this.buf || (this.buf = { m1: 0, heavy: 0, dodge: 0, jump: 0 });
     buf.m1 = Math.max(0, buf.m1 - dt); buf.heavy = Math.max(0, buf.heavy - dt); buf.dodge = Math.max(0, buf.dodge - dt); buf.jump = Math.max(0, (buf.jump || 0) - dt);
     if (inp.mousePressed(0)) buf.m1 = 0.22;
-    if (inp.mousePressed(2)) buf.heavy = 0.25;
-    if (tapDodge && !(v3 && v3.rig.mode === 'third')) buf.dodge = 0.16; // (in third person a tap of Shift toggles shift lock)
+    const freeMouse = !!v3?.rig.freeMouse;
+    if (freeMouse ? inp.mouse.released[2] && v3.rig.takeRightClick() : inp.mousePressed(2)) buf.heavy = 0.25;
+    if (tapDodge && !(v3 && v3.rig.mode === 'third')) buf.dodge = 0.16;
+    // in third person a tap of Shift toggles shift lock
+    if (tapDodge && v3 && v3.rig.mode === 'third' && !inp.touch?.on) {
+      v3.rig.setShiftLock(!v3.rig.shiftLock);
+      game.applySettings?.(true);
+      game.ui.toast(v3.rig.shiftLock ? 'SHIFT LOCK ON' : 'SHIFT LOCK OFF', v3.rig.shiftLock ? 'Your character faces where you look. Tap Shift to free the mouse.' : 'Hold the right mouse button to turn the camera. Tap Shift to lock it.', '#ffe082');
+    }
     if (inp.wasPressed('Q')) buf.dodge = 0.16; // Q dashes
     if (inp.wasPressed('Space')) buf.jump = 0.14;
     if (buf.dodge > 0 && p.tryDodge(game, mx, my)) { buf.dodge = 0; buf.m1 = 0; }
@@ -101,6 +108,7 @@ export class PlayerController {
     this.interaction = findInteraction(game, p);
     if (inp.wasPressed('E') && this.interaction) {
       inp.consume('E');
+      p.reachT = 0.45; // (the first-person hand reaches out)
       this.interaction.run();
     }
   }
@@ -199,6 +207,7 @@ export class PlayerController {
     this.interaction = findInteraction(game, p);
     if (inp.wasPressed('E') && this.interaction) {
       inp.consume('E');
+      p.reachT = 0.45; // (the first-person hand reaches out)
       this.interaction.run();
     }
     // hotbar still usable for ranged techniques from the deck

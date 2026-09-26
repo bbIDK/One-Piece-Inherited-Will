@@ -176,7 +176,7 @@ export class Renderer3D {
   aimWorld(sx, sy) {
     const g = this.game;
     if (!g.player) return [0, 0];
-    const free = !this.rig.locked && this.rig.lockFailed && sx !== undefined;
+    const free = sx !== undefined && !this.rig.locked && (this.rig.lockFailed || this.rig.freeMouse);
     const [x, y] = this.rig.aimPoint(g, (x, y) => this.ground(x, y), free ? sx : undefined, free ? sy : undefined);
     // the simulation aims along the 2D "chest line" (y - 0.5), so shift the ground point to match
     return [x, y - 0.5];

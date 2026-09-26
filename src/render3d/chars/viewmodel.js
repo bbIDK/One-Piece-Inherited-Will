@@ -19,6 +19,8 @@ import { actorPose, rigOptions, currentLook, weaponOf } from './pose.js';
 import { FRUITS } from '../../data/fruits.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const xy = (h, fb) => (!h ? fb : Array.isArray(h) ? h : [Math.cos(h.a) * h.r, Math.sin(h.a) * h.r]);
+const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
 const HIDE = [B.hips, B.chest, B.head, B.sheath, B.hilts, B.tail];
 const LEGS = [B.thighR, B.shinR, B.footR, B.thighL, B.shinL, B.footL];
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3();
@@ -95,18 +97,32 @@ class Viewmodel {
     o.twistK = 0.8;
     const A = pose.anim;
     let PP = P;
-    // idle (not fighting): hands up at the bottom of the view instead of hanging out of sight
-    const resting = !A && pose.block === undefined && pose.dodge === undefined && pose.getUp === undefined && !pose.launch && pose.state !== 'hurt';
-    if (resting && !(pose.combat || pose.armed)) {
-      const w = pose.walk || 0;
-      const sw = pose.moving ? Math.sin(w) : 0;
-      const sprint = !!pose.sprint;
+    const dtv = Math.min(0.05, Math.max(0.001, (env.time - (this.lastT ?? env.time)) || 0.016));
+    // Out of a fight the hands drop out of sight (like a lowered weapon); they come
+    // up into a guard when you fight, block, dodge or draw a weapon, pump at the
+    // bottom corners when you sprint, and reach out when you use something.
+    const busy = !!A || pose.block !== undefined || pose.dodge !== undefined || pose.getUp !== undefined || !!pose.launch || pose.state === 'hurt';
+    const wantReady = busy || pose.combat || pose.armed ? 1 : 0;
+    this.ready = (this.ready ?? 0) + (wantReady - (this.ready ?? 0)) * Math.min(1, dtv * (wantReady ? 12 : 2.5));
+    if (p.reachT > 0) p.reachT = Math.max(0, p.reachT - dtv);
+    const reach = p.reachT > 0 ? Math.sin((1 - p.reachT / 0.45) * Math.PI) : 0;
+    this.pump = (this.pump ?? 0) + ((pose.sprint && !busy ? 1 : 0) - (this.pump ?? 0)) * Math.min(1, dtv * 6);
+    if (!busy) {
+      const w = pose.walk || 0, sw = pose.moving ? Math.sin(w) : 0;
+      const k = this.ready, q = this.pump * (1 - k);
+      // relaxed: hanging at the sides; sprinting: swinging up into the lower corners
+      const relF = [0.04 + q * (0.12 - sw * 0.18), 0.42 - q * (0.08 + Math.max(0, -sw) * 0.13)];
+      const relB = [0.02 + q * (0.1 + sw * 0.18), 0.42 - q * (0.08 + Math.max(0, sw) * 0.13)];
       PP = {
         ...P,
-        hF: [0.22 - sw * (sprint ? 0.2 : 0.04), 0.07 + (sprint ? Math.max(0, sw) * 0.08 : 0)], hB: [0.2 + sw * (sprint ? 0.2 : 0.04), 0.09 + (sprint ? Math.max(0, -sw) * 0.08 : 0)],
-        eF: 1, eB: 1, hand: P.hand === 'fist' ? 'fist' : P.hand, handB: P.handB,
+        hF: mix2(relF, xy(P.hF, [0.05, 0.4]), k), hB: mix2(relB, xy(P.hB, [-0.03, 0.4]), k),
+        eF: 1, eB: 1,
+        hand: k > 0.5 ? P.hand : q > 0.3 ? 'palm' : 'fist', handB: k > 0.5 ? P.handB : q > 0.3 ? 'palm' : 'fist',
       };
+      if (k > 0.5) { PP.hF = [PP.hF[0], PP.hF[1] + 0.04 * k]; PP.hB = [PP.hB[0], PP.hB[1] + 0.04 * k]; }
+      o.spread = (o.spread || 0) + 0.05 * q + 0.03 * k;
     }
+    if (reach > 0) { PP = { ...PP, hF: mix2(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: 'palm' }; }
     // attacks aim at the crosshair: an extending hand rises toward eye level
     // (the shoulders sit well below the eye) and swings in toward the centre
     if (A) {
@@ -143,7 +159,9 @@ class Viewmodel {
     const bobA = moving ? (pose.sprint ? 0.028 : 0.014) : 0.004;
     const bx = Math.cos(this.bob * 0.5) * bobA, by = -Math.abs(Math.sin(this.bob * 0.5)) * bobA * 1.4 + Math.sin(env.time * 1.3) * 0.003;
     this.body.rotation.set(0, Math.PI / 2, 0);
-    this.body.position.set(this.sway.x + bx, 0.16 - eyeY + this.sway.y + by, -0.06);
+    // the shoulders ride up toward the eye when the hands are in use, and sink when they aren't
+    const use = Math.max(this.ready ?? 0, reach, (this.pump ?? 0) * 0.28);
+    this.body.position.set(this.sway.x + bx, -0.1 + 0.26 * use - eyeY + this.sway.y + by, -0.06);
     this.body.updateMatrix();
     // ---- effects: haki, flash, fruit glow, muzzle flash
     const fx = m.fx;

@@ -368,8 +368,16 @@ export class UI {
     E.side.classList.toggle('hidden', !!this.mapOpen || !!this.screenEl);
     const v3 = game.view3d?.active ? game.view3d : null;
     const free = !!v3 && !this.blocksInput();
-    E.crosshair.classList.toggle('hidden', !free || v3.rig.mode !== 'first' || p.mode === 'sail' && !v3.rig.locked);
-    E.lookHint.classList.toggle('hidden', !free || v3.rig.locked || v3.rig.lockFailed || !!game.input.touch?.on);
+    const aimed = !!v3 && (v3.rig.mode === 'first' || v3.rig.shiftLock);
+    E.crosshair.classList.toggle('hidden', !free || !aimed || p.mode === 'sail' && !v3.rig.locked);
+    E.lookHint.classList.toggle('hidden', !free || v3.rig.locked || v3.rig.lockFailed || !!game.input.touch?.on || (v3.rig.freeMouse && (this.cache.tpHintT = (this.cache.tpHintT ?? 8) - 1 / 60) < 0));
+    const hintKey = !v3 ? '' : v3.rig.freeMouse ? 'free' : 'lock';
+    if (this.cache.lookHint !== hintKey) {
+      this.cache.lookHint = hintKey;
+      clear(E.lookHint);
+      if (hintKey === 'free') E.lookHint.append('Hold right mouse to turn the camera', h('small', 'Tap Shift for shift lock · V switches view'));
+      else E.lookHint.append('Click to look around', h('small', 'Esc frees the mouse · V switches view'));
+    }
     this.root.classList.toggle('v3', !!v3);
     this.compass.update(game, v3 ? v3.rig.yaw : 0, !!v3 && !this.mapOpen);
     // the minimap turns so that where you look is up

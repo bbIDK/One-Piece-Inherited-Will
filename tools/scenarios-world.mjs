@@ -2,6 +2,65 @@
 const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
 export const scenarios = {
+  // third person: free mouse, then shift lock (crosshair, over the shoulder)
+  camctl: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.env.clock = 11; g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings(); g.view3d.rig.pitch = -0.1; });
+      for (let i = 0; i < 12; i++) await step(page, 0.1);
+      await frames(page, 2);
+      const st = () => page.evaluate(() => { const g = window.OP.game, r = g.view3d.rig; return { shiftLock: r.shiftLock, freeMouse: r.freeMouse, crosshair: !document.querySelector('.crosshair').classList.contains('hidden'), hint: document.querySelector('.look-hint')?.textContent }; });
+      console.log('free', JSON.stringify(await st()));
+      await snap('free');
+      await page.evaluate(() => window.OP.key('Shift', true)); await step(page, 0.05);
+      await page.evaluate(() => window.OP.key('Shift', false)); await step(page, 0.4); await frames(page, 2);
+      console.log('locked', JSON.stringify(await st()));
+      await snap('shiftlock');
+      await page.evaluate(() => window.OP.key('W', true));
+      for (let i = 0; i < 6; i++) { await step(page, 0.1); await frames(page, 1); }
+      await page.evaluate(() => window.OP.key('W', false));
+      const face = await page.evaluate(() => { const g = window.OP.game; return { facing: +g.player.facing.toFixed(2), yaw: +g.view3d.rig.yaw.toFixed(2) }; });
+      console.log('facing', JSON.stringify(face));
+      // and first person while sprinting
+      await page.evaluate(() => { const g = window.OP.game; g.settings.view = 'first'; g.applySettings(); window.OP.key('W', true); window.OP.key('Shift', true); });
+      for (let i = 0; i < 10; i++) { await step(page, 0.1); await frames(page, 1); }
+      await snap('fp-sprint');
+      await step(page, 0.14); await frames(page, 1);
+      await snap('fp-sprint2');
+      await page.evaluate(() => { window.OP.key('W', false); window.OP.key('Shift', false); });
+    },
+  },
+  // first-person hands: relaxed, walking, sprinting, in a fight, reaching out
+  fphands: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.env.clock = 11; g.settings.view = 'first'; g.applySettings(); g.view3d.rig.pitch = -0.05; });
+      for (let i = 0; i < 20; i++) await step(page, 0.1);
+      await frames(page, 2); await snap('idle');
+      await page.evaluate(() => window.OP.key('W', true));
+      for (let i = 0; i < 6; i++) { await step(page, 0.1); await frames(page, 1); }
+      await snap('walk');
+      await page.evaluate(() => window.OP.key('Shift', true));
+      for (let i = 0; i < 9; i++) { await step(page, 0.1); await frames(page, 1); }
+      await snap('sprint');
+      await step(page, 0.13); await frames(page, 1);
+      await snap('sprint2');
+      await page.evaluate(() => { window.OP.key('Shift', false); window.OP.key('W', false); });
+      await step(page, 0.3);
+      await page.evaluate(() => { const g = window.OP.game; g.player.tryM1(g); });
+      await step(page, 0.12); await frames(page, 1);
+      await snap('punch');
+      await step(page, 0.8); await frames(page, 1);
+      await snap('guard');
+      await page.evaluate(() => { const g = window.OP.game; g.player._lastActT = -99; g.combatT = 0; });
+      await step(page, 2.8); await frames(page, 1);
+      await page.evaluate(() => { window.OP.game.player.reachT = 0.45; });
+      await step(page, 0.2); await frames(page, 1);
+      await snap('reach');
+    },
+  },
   // everyday poses in a row, facing the camera
   poses: {
     async run(page, snap, args) {

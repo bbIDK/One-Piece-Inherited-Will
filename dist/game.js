@@ -3022,7 +3022,7 @@ void main() {
         const xx = (m11 + 1) / 2;
         const yy = (m22 + 1) / 2;
         const zz = (m33 + 1) / 2;
-        const xy = (m12 + m21) / 4;
+        const xy2 = (m12 + m21) / 4;
         const xz = (m13 + m31) / 4;
         const yz = (m23 + m32) / 4;
         if (xx > yy && xx > zz) {
@@ -3032,7 +3032,7 @@ void main() {
             z = 0.707106781;
           } else {
             x = Math.sqrt(xx);
-            y = xy / x;
+            y = xy2 / x;
             z = xz / x;
           }
         } else if (yy > zz) {
@@ -3042,7 +3042,7 @@ void main() {
             z = 0.707106781;
           } else {
             y = Math.sqrt(yy);
-            x = xy / y;
+            x = xy2 / y;
             z = yz / y;
           }
         } else {
@@ -5412,13 +5412,13 @@ void main() {
       );
       return this;
     }
-    makeShear(xy, xz, yx, yz, zx, zy) {
+    makeShear(xy2, xz, yx, yz, zx, zy) {
       this.set(
         1,
         yx,
         zx,
         0,
-        xy,
+        xy2,
         1,
         zy,
         0,
@@ -5437,15 +5437,15 @@ void main() {
       const te = this.elements;
       const x = quaternion._x, y = quaternion._y, z = quaternion._z, w = quaternion._w;
       const x2 = x + x, y2 = y + y, z2 = z + z;
-      const xx = x * x2, xy = x * y2, xz = x * z2;
+      const xx = x * x2, xy2 = x * y2, xz = x * z2;
       const yy = y * y2, yz = y * z2, zz = z * z2;
       const wx = w * x2, wy = w * y2, wz = w * z2;
       const sx = scale.x, sy = scale.y, sz = scale.z;
       te[0] = (1 - (yy + zz)) * sx;
-      te[1] = (xy + wz) * sx;
+      te[1] = (xy2 + wz) * sx;
       te[2] = (xz - wy) * sx;
       te[3] = 0;
-      te[4] = (xy - wz) * sy;
+      te[4] = (xy2 - wz) * sy;
       te[5] = (1 - (xx + zz)) * sy;
       te[6] = (yz + wx) * sy;
       te[7] = 0;
@@ -36802,6 +36802,7 @@ void main() {
       this.camera = new PerspectiveCamera(75, 1, 0.08, 2600);
       this.camera.rotation.order = "YXZ";
       this.mode = "first";
+      this.shiftLock = false;
       this.yaw = 0;
       this.pitch = 0;
       this.locked = false;
@@ -36822,16 +36823,32 @@ void main() {
       const onMove = (e) => {
         this.mouse.x = e.clientX;
         this.mouse.y = e.clientY;
-        if (!this.locked || !this.active) return;
+        if (!this.active) return;
+        if (this.drag) {
+          this.drag.moved += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0);
+          this.turn(e.movementX || 0, e.movementY || 0);
+          return;
+        }
+        if (!this.locked) return;
         this.turn(e.movementX || 0, e.movementY || 0);
       };
       document.addEventListener("mousemove", onMove);
       canvas2.addEventListener("mousedown", (e) => {
-        if (!this.active || this.locked || this.lockFailed) return;
-        if (this.game.ui?.blocksInput()) return;
+        if (!this.active || this.game.ui?.blocksInput()) return;
+        if (this.freeMouse) {
+          if (e.button === 2) this.drag = { t: performance.now(), moved: 0 };
+          return;
+        }
+        if (this.locked || this.lockFailed) return;
         e.stopPropagation();
         e.preventDefault();
         this.requestLock();
+      });
+      document.addEventListener("mouseup", (e) => {
+        if (e.button === 2 && this.drag) {
+          this.lastDrag = { ...this.drag, end: performance.now() };
+          this.drag = null;
+        }
       });
       canvas2.addEventListener("wheel", (e) => {
         if (!this.active || this.mode !== "third") return;
@@ -36850,6 +36867,24 @@ void main() {
     }
     get active() {
       return !!this.game.view3d?.active;
+    }
+    /** Third person without shift lock: the cursor is free (attacks aim at it). */
+    get freeMouse() {
+      return this.mode === "third" && !this.shiftLock && !this.game.input?.touch?.on;
+    }
+    /** Roblox-style shift lock: mouse captured, character faces the camera, crosshair, over-the-shoulder view. */
+    setShiftLock(on) {
+      this.shiftLock = !!on;
+      if (this.game.settings) this.game.settings.shiftLock = this.shiftLock;
+      if (this.mode !== "third") return;
+      if (this.shiftLock) this.requestLock();
+      else this.releaseLock();
+    }
+    /** A right-click that didn't turn the camera (free mouse): heavy attack. */
+    takeRightClick() {
+      const d = this.lastDrag;
+      this.lastDrag = null;
+      return !!d && d.moved < 10 && d.end - d.t < 350;
     }
     requestLock() {
       try {
@@ -36888,13 +36923,13 @@ void main() {
     update(dt, game, ground) {
       const p = game.player;
       const inp = game.input;
-      if (!this.locked && !game.ui?.blocksInput()) {
+      if (!this.locked && !this.drag && !game.ui?.blocksInput()) {
         let t = 0, l = 0;
         if (inp.isDown("ArrowLeft")) t -= 1;
         if (inp.isDown("ArrowRight")) t += 1;
         if (inp.isDown("ArrowUp")) l += 1;
         if (inp.isDown("ArrowDown")) l -= 1;
-        if (this.lockFailed && !inp.touch?.on) {
+        if (this.lockFailed && !inp.touch?.on && !this.freeMouse) {
           const w = window.innerWidth, h2 = window.innerHeight;
           const ex = (this.mouse.x / w - 0.5) * 2, ey = (this.mouse.y / h2 - 0.5) * 2;
           if (Math.abs(ex) > 0.55) t += Math.sign(ex) * (Math.abs(ex) - 0.55) / 0.45 * 1.6;
@@ -36953,6 +36988,9 @@ void main() {
         const cp = Math.cos(this.pitch), spch = Math.sin(this.pitch);
         const fx = Math.cos(this.yaw), fz = Math.sin(this.yaw);
         let cx = -fx * d * cp, cz = -fz * d * cp, cy = gh + eyeH * 0.9 + this.tp.height - spch * d * 0.6;
+        this.shoulder = (this.shoulder || 0) + ((this.shiftLock ? 0.7 : 0) - (this.shoulder || 0)) * Math.min(1, dt * 8);
+        cx += -fz * this.shoulder;
+        cz += fx * this.shoulder;
         const w = game.world;
         const room = w?.interiorAt?.(p.x, p.y);
         if (room) {
@@ -60442,6 +60480,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
 
   // src/render3d/chars/viewmodel.js
   var clamp5 = (v, a, b) => v < a ? a : v > b ? b : v;
+  var xy = (h2, fb) => !h2 ? fb : Array.isArray(h2) ? h2 : [Math.cos(h2.a) * h2.r, Math.sin(h2.a) * h2.r];
+  var mix22 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
   var HIDE = [B3.hips, B3.chest, B3.head, B3.sheath, B3.hilts, B3.tail];
   var LEGS = [B3.thighR, B3.shinR, B3.footR, B3.thighL, B3.shinL, B3.footL];
   var _v7 = new Vector3();
@@ -60526,20 +60566,35 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       o.twistK = 0.8;
       const A = pose.anim;
       let PP = P3;
-      const resting = !A && pose.block === void 0 && pose.dodge === void 0 && pose.getUp === void 0 && !pose.launch && pose.state !== "hurt";
-      if (resting && !(pose.combat || pose.armed)) {
-        const w = pose.walk || 0;
-        const sw2 = pose.moving ? Math.sin(w) : 0;
-        const sprint = !!pose.sprint;
+      const dtv = Math.min(0.05, Math.max(1e-3, env.time - (this.lastT ?? env.time) || 0.016));
+      const busy = !!A || pose.block !== void 0 || pose.dodge !== void 0 || pose.getUp !== void 0 || !!pose.launch || pose.state === "hurt";
+      const wantReady = busy || pose.combat || pose.armed ? 1 : 0;
+      this.ready = (this.ready ?? 0) + (wantReady - (this.ready ?? 0)) * Math.min(1, dtv * (wantReady ? 12 : 2.5));
+      if (p.reachT > 0) p.reachT = Math.max(0, p.reachT - dtv);
+      const reach = p.reachT > 0 ? Math.sin((1 - p.reachT / 0.45) * Math.PI) : 0;
+      this.pump = (this.pump ?? 0) + ((pose.sprint && !busy ? 1 : 0) - (this.pump ?? 0)) * Math.min(1, dtv * 6);
+      if (!busy) {
+        const w = pose.walk || 0, sw2 = pose.moving ? Math.sin(w) : 0;
+        const k = this.ready, q2 = this.pump * (1 - k);
+        const relF = [0.04 + q2 * (0.12 - sw2 * 0.18), 0.42 - q2 * (0.08 + Math.max(0, -sw2) * 0.13)];
+        const relB = [0.02 + q2 * (0.1 + sw2 * 0.18), 0.42 - q2 * (0.08 + Math.max(0, sw2) * 0.13)];
         PP = {
           ...P3,
-          hF: [0.22 - sw2 * (sprint ? 0.2 : 0.04), 0.07 + (sprint ? Math.max(0, sw2) * 0.08 : 0)],
-          hB: [0.2 + sw2 * (sprint ? 0.2 : 0.04), 0.09 + (sprint ? Math.max(0, -sw2) * 0.08 : 0)],
+          hF: mix22(relF, xy(P3.hF, [0.05, 0.4]), k),
+          hB: mix22(relB, xy(P3.hB, [-0.03, 0.4]), k),
           eF: 1,
           eB: 1,
-          hand: P3.hand === "fist" ? "fist" : P3.hand,
-          handB: P3.handB
+          hand: k > 0.5 ? P3.hand : q2 > 0.3 ? "palm" : "fist",
+          handB: k > 0.5 ? P3.handB : q2 > 0.3 ? "palm" : "fist"
         };
+        if (k > 0.5) {
+          PP.hF = [PP.hF[0], PP.hF[1] + 0.04 * k];
+          PP.hB = [PP.hB[0], PP.hB[1] + 0.04 * k];
+        }
+        o.spread = (o.spread || 0) + 0.05 * q2 + 0.03 * k;
+      }
+      if (reach > 0) {
+        PP = { ...PP, hF: mix22(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: "palm" };
       }
       if (A) {
         const lift = (h2) => h2 ? [h2[0], h2[1] - 0.17 * clamp5(h2[0] / 0.43, 0, 1)] : h2;
@@ -60574,7 +60629,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const bobA = moving ? pose.sprint ? 0.028 : 0.014 : 4e-3;
       const bx = Math.cos(this.bob * 0.5) * bobA, by = -Math.abs(Math.sin(this.bob * 0.5)) * bobA * 1.4 + Math.sin(env.time * 1.3) * 3e-3;
       this.body.rotation.set(0, Math.PI / 2, 0);
-      this.body.position.set(this.sway.x + bx, 0.16 - eyeY + this.sway.y + by, -0.06);
+      const use = Math.max(this.ready ?? 0, reach, (this.pump ?? 0) * 0.28);
+      this.body.position.set(this.sway.x + bx, -0.1 + 0.26 * use - eyeY + this.sway.y + by, -0.06);
       this.body.updateMatrix();
       const fx = m.fx;
       fx.uHaki.value.set(p.armament ? 1 : 0, p.armament ? 1 : 0, pose.armLegs ? 1 : 0, pose.armLegs ? 1 : 0);
@@ -61140,7 +61196,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     aimWorld(sx, sy) {
       const g = this.game;
       if (!g.player) return [0, 0];
-      const free = !this.rig.locked && this.rig.lockFailed && sx !== void 0;
+      const free = sx !== void 0 && !this.rig.locked && (this.rig.lockFailed || this.rig.freeMouse);
       const [x, y] = this.rig.aimPoint(g, (x2, y2) => this.ground(x2, y2), free ? sx : void 0, free ? sy : void 0);
       return [x, y - 0.5];
     }
@@ -73504,14 +73560,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (inp.isDown("Shift")) this.shiftT = (this.shiftT ?? 0) + dt;
       const tapDodge = inp.wasReleased("Shift") && (this.shiftT ?? 1) < 0.22;
       p.intent.sprint = (inp.isDown("Shift") && this.shiftT > 0.16 || !!tc?.run) && l > 0;
-      if (v3 && v3.rig.mode === "first") this.aimT = Math.max(this.aimT, 0.25);
+      if (v3 && (v3.rig.mode === "first" || v3.rig.shiftLock)) this.aimT = Math.max(this.aimT, 0.25);
       let [wx, wy] = game.renderer.toWorld(game.world, inp.mouse.x, inp.mouse.y);
       if (inp.touch?.on && !v3) [wx, wy] = this.touchAim(p, game);
       const aim = Math.atan2(wy - (p.y - 0.5), game.world.dx(p.x, wx));
       const melee = p.style !== "sniper";
       const aimM = melee ? this.assist(p, game, aim) : aim;
       this.aimT = Math.max(0, this.aimT - dt);
-      const fighting = inp.mouseDown(0) || inp.mouseDown(2) || inp.isDown("F");
+      const fighting = inp.mouseDown(0) || inp.mouseDown(2) && !v3?.rig.freeMouse || inp.isDown("F");
       if (fighting) this.aimT = 0.7;
       if (p.action && p.action.def.track !== false && p.action.t < (p.action.def.windup ?? 0.1)) p.facing = p.action.def.m1Chain || p.action.def.source?.startsWith("style") ? aimM : aim;
       else if (!p.action) {
@@ -73525,8 +73581,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       buf.dodge = Math.max(0, buf.dodge - dt);
       buf.jump = Math.max(0, (buf.jump || 0) - dt);
       if (inp.mousePressed(0)) buf.m1 = 0.22;
-      if (inp.mousePressed(2)) buf.heavy = 0.25;
+      const freeMouse = !!v3?.rig.freeMouse;
+      if (freeMouse ? inp.mouse.released[2] && v3.rig.takeRightClick() : inp.mousePressed(2)) buf.heavy = 0.25;
       if (tapDodge && !(v3 && v3.rig.mode === "third")) buf.dodge = 0.16;
+      if (tapDodge && v3 && v3.rig.mode === "third" && !inp.touch?.on) {
+        v3.rig.setShiftLock(!v3.rig.shiftLock);
+        game.applySettings?.(true);
+        game.ui.toast(v3.rig.shiftLock ? "SHIFT LOCK ON" : "SHIFT LOCK OFF", v3.rig.shiftLock ? "Your character faces where you look. Tap Shift to free the mouse." : "Hold the right mouse button to turn the camera. Tap Shift to lock it.", "#ffe082");
+      }
       if (inp.wasPressed("Q")) buf.dodge = 0.16;
       if (inp.wasPressed("Space")) buf.jump = 0.14;
       if (buf.dodge > 0 && p.tryDodge(game, mx, my)) {
@@ -73573,6 +73635,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.interaction = findInteraction(game, p);
       if (inp.wasPressed("E") && this.interaction) {
         inp.consume("E");
+        p.reachT = 0.45;
         this.interaction.run();
       }
     }
@@ -73689,6 +73752,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.interaction = findInteraction(game, p);
       if (inp.wasPressed("E") && this.interaction) {
         inp.consume("E");
+        p.reachT = 0.45;
         this.interaction.run();
       }
       for (let i = 0; i < 6; i++) {
@@ -75178,8 +75242,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       E.side.classList.toggle("hidden", !!this.mapOpen || !!this.screenEl);
       const v3 = game.view3d?.active ? game.view3d : null;
       const free = !!v3 && !this.blocksInput();
-      E.crosshair.classList.toggle("hidden", !free || v3.rig.mode !== "first" || p.mode === "sail" && !v3.rig.locked);
-      E.lookHint.classList.toggle("hidden", !free || v3.rig.locked || v3.rig.lockFailed || !!game.input.touch?.on);
+      const aimed = !!v3 && (v3.rig.mode === "first" || v3.rig.shiftLock);
+      E.crosshair.classList.toggle("hidden", !free || !aimed || p.mode === "sail" && !v3.rig.locked);
+      E.lookHint.classList.toggle("hidden", !free || v3.rig.locked || v3.rig.lockFailed || !!game.input.touch?.on || v3.rig.freeMouse && (this.cache.tpHintT = (this.cache.tpHintT ?? 8) - 1 / 60) < 0);
+      const hintKey = !v3 ? "" : v3.rig.freeMouse ? "free" : "lock";
+      if (this.cache.lookHint !== hintKey) {
+        this.cache.lookHint = hintKey;
+        clear(E.lookHint);
+        if (hintKey === "free") E.lookHint.append("Hold right mouse to turn the camera", h("small", "Tap Shift for shift lock \xB7 V switches view"));
+        else E.lookHint.append("Click to look around", h("small", "Esc frees the mouse \xB7 V switches view"));
+      }
       this.root.classList.toggle("v3", !!v3);
       this.compass.update(game, v3 ? v3.rig.yaw : 0, !!v3 && !this.mapOpen);
       const up = v3 ? v3.rig.yaw : null;
@@ -76666,8 +76738,9 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
         k("V", "first person / third person"),
         k("WASD", "move where you look / steer ship"),
         k("Space", "jump (ship: row)"),
-        k("Shift", "hold to sprint (ship: Coup de Burst)"),
+        k("Shift", "hold to sprint (ship: Coup de Burst); tap in third person for shift lock"),
         k("Q", "dash / dodge"),
+        k("Right mouse", "heavy attack; hold and drag to turn the camera in third person without shift lock"),
         k("Left click", "attack combo (ship: cannons)"),
         k("Right click", "heavy attack"),
         k("F", "block \u2014 tap just before a hit to PARRY"),
@@ -107191,6 +107264,7 @@ Trains by: ${TRAINS_BY[k]}` },
         view3d.rig.invertY = !!settings.invertY;
         view3d.rig.baseFov = Math.round(60 + (settings.fov ?? 0.5) * 35);
         view3d.rig.bobOn = settings.bob !== false;
+        view3d.rig.shiftLock = !!settings.shiftLock;
         if (view3d.quality !== settings.quality) view3d.setQuality(settings.quality || "high");
         applyView();
       }
@@ -107200,7 +107274,11 @@ Trains by: ${TRAINS_BY[k]}` },
       settings.view = settings.view === "first" ? "third" : "first";
       applyView();
       saveSettings(settings);
-      ui.toast(settings.view === "first" ? "FIRST PERSON" : "THIRD PERSON", input.touch?.on ? "Tap View to switch" : "Press V to switch views", "#ffe082");
+      if (view3d && !input.touch?.on) {
+        if (view3d.rig.freeMouse) view3d.rig.releaseLock();
+        else if (!view3d.rig.locked && !view3d.rig.lockFailed) view3d.rig.requestLock();
+      }
+      ui.toast(settings.view === "first" ? "FIRST PERSON" : "THIRD PERSON", input.touch?.on ? "Tap View to switch" : settings.view === "third" ? settings.shiftLock ? "Shift lock is on (tap Shift to free the mouse) \xB7 V switches views" : "Hold the right mouse button to turn the camera \xB7 tap Shift for shift lock \xB7 V switches views" : "Press V to switch views", "#ffe082");
     };
     const openYaw = (p) => {
       const w = game.world;
