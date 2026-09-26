@@ -80,6 +80,7 @@ class SeaSystem {
     if (!hasPose) return null;
     const lp = c.logPose;
     const t = this.logTarget();
+    if (g.currentIsland?.def?.logSpins) return { angle: g.time * 9, label: 'The needle spins wildly…' };
     if (!t) {
       const isl = g.currentIsland;
       if (isl && isGrandLine(regionAt(isl.x, isl.y)) && isl.def?.logNext) return { angle: -Math.PI / 2 + Math.sin(g.time * 7) * 0.3, label: `Setting log… ${Math.round((lp.progress || 0) * 100)}%` };

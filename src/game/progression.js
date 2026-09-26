@@ -129,6 +129,8 @@ export class Progression {
 
   onKnockout(a, att) {
     const g = this.game, p = g.player, c = this.char;
+    // the crew's victories (followers, summons) are the captain's victories
+    if (att && !att.isPlayer && (att.crewId || att.summonedBy?.isPlayer)) att = p;
     if (!c || !att || !att.isPlayer || a.isPlayer || a.faction === 'player') return;
     c.stats.kills = (c.stats.kills || 0) + 1;
     if (a.npcId) c.defeated[a.npcId] = (c.defeated[a.npcId] || 0) + 1;

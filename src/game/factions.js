@@ -166,8 +166,14 @@ function meritFor(d) {
 
 function onKnockout(game, a, att) {
   const c = game.state?.char;
-  if (!c || !att || !att.isPlayer || a.isPlayer || a.faction === 'player') return;
   const p = game.player;
+  const byCrew = att && !att.isPlayer && (att.crewId || att.summonedBy?.isPlayer);
+  if (byCrew) {
+    // merit and bounty claims count for the crew's work — desertion only for your own blows
+    if (a.faction === 'marine' || a.faction === 'cp') return;
+    att = p;
+  }
+  if (!c || !att || !att.isPlayer || a.isPlayer || a.faction === 'player') return;
   // a Marine who strikes down Marines is a deserter
   if (c.faction === 'marine' && (a.faction === 'marine' || a.faction === 'cp') && !a.spar) {
     c.flags.deserter = true;

@@ -18805,6 +18805,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     onKnockout(a, att) {
       const g = this.game, p = g.player, c = this.char;
+      if (att && !att.isPlayer && (att.crewId || att.summonedBy?.isPlayer)) att = p;
       if (!c || !att || !att.isPlayer || a.isPlayer || a.faction === "player") return;
       c.stats.kills = (c.stats.kills || 0) + 1;
       if (a.npcId) c.defeated[a.npcId] = (c.defeated[a.npcId] || 0) + 1;
@@ -20730,6 +20731,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function makeEnemy(arch, level, x, y, over = {}) {
     const A = ARCHETYPES[arch] || ARCHETYPES.bandit;
+    over = Object.fromEntries(Object.entries(over || {}).filter(([, v]) => v !== void 0));
     return makeNPC({
       ...A,
       level,
@@ -21629,6 +21631,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!hasPose) return null;
       const lp = c.logPose;
       const t = this.logTarget();
+      if (g.currentIsland?.def?.logSpins) return { angle: g.time * 9, label: "The needle spins wildly\u2026" };
       if (!t) {
         const isl = g.currentIsland;
         if (isl && isGrandLine(regionAt(isl.x, isl.y)) && isl.def?.logNext) return { angle: -Math.PI / 2 + Math.sin(g.time * 7) * 0.3, label: `Setting log\u2026 ${Math.round((lp.progress || 0) * 100)}%` };
@@ -22046,8 +22049,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const list = game.spawner.populated.get(def.island);
     if (!list && !pos) return null;
     let p = pos;
+    const at3 = typeof def.at === "function" ? def.at(game.state?.char, game) : def.at;
     if (!p && isl) {
-      const s = def.at?.spot && isl.spots[def.at.spot];
+      const s = at3?.spot && isl.spots[at3.spot];
       p = s ? game.spawner.findFree(s.x, s.y, 4) : game.spawner.findFree(game.player.x + 4, game.player.y, 6);
     }
     if (!p) p = { x: game.player.x + 4, y: game.player.y };
@@ -37589,7 +37593,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       hostile: true,
       boss: true,
       hpMul: 1.3,
-      level: 58,
+      level: 60,
       faction: "pirate",
       style: "ittoryu",
       weapon: "sword",
@@ -41535,8 +41539,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function onKnockout(game, a, att) {
     const c = game.state?.char;
-    if (!c || !att || !att.isPlayer || a.isPlayer || a.faction === "player") return;
     const p = game.player;
+    const byCrew = att && !att.isPlayer && (att.crewId || att.summonedBy?.isPlayer);
+    if (byCrew) {
+      if (a.faction === "marine" || a.faction === "cp") return;
+      att = p;
+    }
+    if (!c || !att || !att.isPlayer || a.isPlayer || a.faction === "player") return;
     if (c.faction === "marine" && (a.faction === "marine" || a.faction === "cp") && !a.spar) {
       c.flags.deserter = true;
       c.flags.formerMarine = c.marineRank;

@@ -12,8 +12,9 @@ export function spawnNow(game, id, pos) {
   const list = game.spawner.populated.get(def.island);
   if (!list && !pos) return null;
   let p = pos;
+  const at = typeof def.at === 'function' ? def.at(game.state?.char, game) : def.at;
   if (!p && isl) {
-    const s = def.at?.spot && isl.spots[def.at.spot];
+    const s = at?.spot && isl.spots[at.spot];
     p = s ? game.spawner.findFree(s.x, s.y, 4) : game.spawner.findFree(game.player.x + 4, game.player.y, 6);
   }
   if (!p) p = { x: game.player.x + 4, y: game.player.y };

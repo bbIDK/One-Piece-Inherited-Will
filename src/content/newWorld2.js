@@ -141,7 +141,7 @@ const npcs = [
   },
   {
     id: 'brownbeard_foodvalten', name: '"Brownbeard" Chadros Higelyges', title: 'Captain of the Brownbeard Pirates', island: 'foodvalten', at: { spot: 'brownbeard_camp' },
-    hostile: true, boss: true, hpMul: 1.3, level: 58, faction: 'pirate', style: 'ittoryu', weapon: 'sword', moves: ['itto_pound', 'itto_iai', 'itto_whirl'],
+    hostile: true, boss: true, hpMul: 1.3, level: 60, faction: 'pirate', style: 'ittoryu', weapon: 'sword', moves: ['itto_pound', 'itto_iai', 'itto_whirl'],
     look: { hair: 'long', hairColor: '#6d4c41', top: '#8d6e63', bottom: '#4e342e', hat: 'tricorne', hatColor: '#4e342e', skin: '#e0ac7e', bulk: 1.4 }, bulk: 1.4,
     haki: { armament: 20 }, bounty: 80000000, infamy: true, breakthrough: 3, skill: 0.45,
     alert: 'Whitebeard is DEAD! His islands belong to whoever takes them!', barks: ['This island is mine now!', 'Hah! Feathers!'],

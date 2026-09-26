@@ -92,6 +92,8 @@ function hashSeed(s) { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.c
 
 export function makeEnemy(arch, level, x, y, over = {}) {
   const A = ARCHETYPES[arch] || ARCHETYPES.bandit;
+  // fields left undefined must not wipe the archetype's defaults
+  over = Object.fromEntries(Object.entries(over || {}).filter(([, v]) => v !== undefined));
   return makeNPC({
     ...A, level, hostile: true, name: over.name || A.name, look: { ...(A.look || {}), ...(over.look || {}) }, moves: over.moves || A.moves, id: over.id,
     hpMul: (A.hpMul || 1) * (over.hpMul || 1), skill: over.skill ?? A.skill, fleeAt: 0.15, ...over,
