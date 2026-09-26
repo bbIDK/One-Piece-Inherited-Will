@@ -25172,24 +25172,24 @@ void main() {
       const P23 = new Vector3();
       const B4 = new Vector3();
       const T3 = new Vector3();
-      const N3 = new Vector3();
+      const N4 = new Vector3();
       for (let i = 0; i <= tubularSegments; ++i) {
         const u = i / tubularSegments * p * Math.PI * 2;
         calculatePositionOnCurve(u, p, q2, radius, P1);
         calculatePositionOnCurve(u + 0.01, p, q2, radius, P23);
         T3.subVectors(P23, P1);
-        N3.addVectors(P23, P1);
-        B4.crossVectors(T3, N3);
-        N3.crossVectors(B4, T3);
+        N4.addVectors(P23, P1);
+        B4.crossVectors(T3, N4);
+        N4.crossVectors(B4, T3);
         B4.normalize();
-        N3.normalize();
+        N4.normalize();
         for (let j = 0; j <= radialSegments; ++j) {
           const v = j / radialSegments * Math.PI * 2;
           const cx = -tube3 * Math.cos(v);
           const cy = tube3 * Math.sin(v);
-          vertex2.x = P1.x + (cx * N3.x + cy * B4.x);
-          vertex2.y = P1.y + (cx * N3.y + cy * B4.y);
-          vertex2.z = P1.z + (cx * N3.z + cy * B4.z);
+          vertex2.x = P1.x + (cx * N4.x + cy * B4.x);
+          vertex2.y = P1.y + (cx * N4.y + cy * B4.y);
+          vertex2.z = P1.z + (cx * N4.z + cy * B4.z);
           vertices.push(vertex2.x, vertex2.y, vertex2.z);
           normal.subVectors(vertex2, P1).normalize();
           normals.push(normal.x, normal.y, normal.z);
@@ -25268,15 +25268,15 @@ void main() {
       }
       function generateSegment(i) {
         P4 = path2.getPointAt(i / tubularSegments, P4);
-        const N3 = frames.normals[i];
+        const N4 = frames.normals[i];
         const B4 = frames.binormals[i];
         for (let j = 0; j <= radialSegments; j++) {
           const v = j / radialSegments * Math.PI * 2;
           const sin = Math.sin(v);
           const cos = -Math.cos(v);
-          normal.x = cos * N3.x + sin * B4.x;
-          normal.y = cos * N3.y + sin * B4.y;
-          normal.z = cos * N3.z + sin * B4.z;
+          normal.x = cos * N4.x + sin * B4.x;
+          normal.y = cos * N4.y + sin * B4.y;
+          normal.z = cos * N4.z + sin * B4.z;
           normal.normalize();
           normals.push(normal.x, normal.y, normal.z);
           vertex2.x = P4.x + radius * normal.x;
@@ -33706,9 +33706,9 @@ void main() {
   };
   var overlap = (a, b, m = 0) => a.x0 < b.x1 + m && a.x1 > b.x0 - m && a.z0 < b.z1 + m && a.z1 > b.z0 - m;
   var Placer = class {
-    constructor(L2, R2) {
+    constructor(L2, R3) {
       this.L = L2;
-      this.R = R2;
+      this.R = R3;
       this.rects = [];
       this.keep = [];
       this.low = [];
@@ -33883,8 +33883,8 @@ void main() {
     const T3 = WALL_T;
     const door = doorOf(b);
     const L2 = { x0: -fw / 2 + T3, x1: fw / 2 - T3, z0: -fd + T3, z1: -T3, door, items: [], use: [], keeper: null, residents: [], rest: null, room: roomOf(b) };
-    const R2 = rng(hash(b.x, b.y, (b.v || 0) + 1));
-    const P4 = new Placer(L2, R2);
+    const R3 = rng(hash(b.x, b.y, (b.v || 0) + 1));
+    const P4 = new Placer(L2, R3);
     P4.keep.push({ x0: door.x - door.dw / 2 - 0.22, x1: door.x + door.dw / 2 + 0.22, z0: L2.z1 - Math.max(1, door.dw) - 0.06, z1: L2.z1 + 1 });
     for (const w of groundWindows(b)) {
       const hw = w.w / 2 + 0.12;
@@ -33893,7 +33893,7 @@ void main() {
       else P4.low.push({ x0: L2.x1 - 0.7, x1: L2.x1 + 1, z0: w.u - hw, z1: w.u + hw });
     }
     const S3 = (k) => sized(F[k], g);
-    (ROOMS[L2.room] || ROOMS.house)(P4, L2, b, R2, S3, g);
+    (ROOMS[L2.room] || ROOMS.house)(P4, L2, b, R3, S3, g);
     P4.deco({ k: "lamp", w: 0.3, d: 0.3, h: 0.5 }, (L2.x0 + L2.x1) / 2, (L2.z0 + L2.z1) / 2);
     b._layout = L2;
     return L2;
@@ -33914,9 +33914,9 @@ void main() {
     return counter;
   }
   var ROOMS = {
-    house(P4, L2, b, R2, S3, g) {
+    house(P4, L2, b, R3, S3, g) {
       const low = lowStyle(b);
-      const end = R2() < 0.5 ? "start" : "end";
+      const end = R3() < 0.5 ? "start" : "end";
       const other = end === "start" ? "end" : "start";
       const bed2 = P4.wall(S3(low ? "futon" : "bed"), "back", end) || P4.wall(S3(low ? "futon" : "bed"), "left", "start") || P4.wall(S3(low ? "futon" : "bed"), "right", "start");
       if (bed2 && L2.x1 - L2.x0 > 5) P4.wall(S3(low ? "futon" : "bed"), "back", other);
@@ -33945,13 +33945,13 @@ void main() {
         }
       }
       P4.wall(S3("shelf"), "right", "random") || P4.wall(S3("lowShelf"), "front", "end");
-      if (R2() < 0.6) P4.wall(S3("barrel"), "front", R2() < 0.5 ? "start" : "end");
-      if (R2() < 0.5) P4.wall(S3("plant"), "front", "end");
+      if (R3() < 0.6) P4.wall(S3("barrel"), "front", R3() < 0.5 ? "start" : "end");
+      if (R3() < 0.5) P4.wall(S3("plant"), "front", "end");
       P4.deco({ k: low ? "tatami" : "rug", w: Math.min(2.2 * g, (L2.x1 - L2.x0) * 0.6), d: Math.min(1.5 * g, (L2.z1 - L2.z0) * 0.5), h: 0.02 }, (L2.x0 + L2.x1) / 2, (L2.z0 + L2.z1) / 2 + 0.2);
-      P4.deco({ k: R2() < 0.35 ? "poster" : "picture", w: 0.55, d: 0.04, h: 0.7 }, L2.x0 + (L2.x1 - L2.x0) * (0.3 + R2() * 0.4), L2.z0 + 0.02, 0);
+      P4.deco({ k: R3() < 0.35 ? "poster" : "picture", w: 0.55, d: 0.04, h: 0.7 }, L2.x0 + (L2.x1 - L2.x0) * (0.3 + R3() * 0.4), L2.z0 + 0.02, 0);
       if (!L2.residents.length) L2.residents.push({ x: (L2.x0 + L2.x1) / 2, z: (L2.z0 + L2.z1) / 2 });
     },
-    shop(P4, L2, b, R2, S3, g) {
+    shop(P4, L2, b, R3, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "goods" });
       P4.wall(S3("shelf"), "left", "start") || P4.wall(S3("lowShelf"), "left", "start");
       P4.wall(S3("shelf"), "right", "start") || P4.wall(S3("lowShelf"), "right", "start");
@@ -33960,7 +33960,7 @@ void main() {
       if (L2.z1 - L2.z0 > 3) P4.free(S3("produce"), 0, L2.z1 - 1.4);
       P4.deco({ k: "rug", w: 1.4 * g, d: 0.9 * g, h: 0.02 }, L2.door.x, L2.z1 - 0.7);
     },
-    market(P4, L2, b, R2, S3, g) {
+    market(P4, L2, b, R3, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "goods" });
       P4.wall(S3("produce"), "left", "start");
       P4.wall(S3("produce"), "right", "start");
@@ -33968,26 +33968,26 @@ void main() {
       P4.wall(S3("barrel"), "front", "end");
       P4.wall(S3("crate"), "left", "end");
     },
-    weapons(P4, L2, b, R2, S3, g) {
+    weapons(P4, L2, b, R3, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "wallrack" });
       P4.wall(S3("rack"), "left", "start") || P4.wall(S3("rack"), "left", "end");
       P4.wall(S3("rack"), "right", "start") || P4.wall(S3("armor"), "right", "start");
       P4.wall(S3("armor"), "front", "start");
       P4.wall(S3("barrel"), "front", "end");
     },
-    bank(P4, L2, b, R2, S3, g) {
+    bank(P4, L2, b, R3, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "goods", len: 2.6 });
       P4.wall(S3("safe"), "right", "start");
       P4.wall(S3("bench"), "left", "end") || P4.wall(S3("bench"), "front", "start");
       P4.wall(S3("plant"), "front", "end");
     },
-    bounty(P4, L2, b, R2, S3, g) {
+    bounty(P4, L2, b, R3, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "goods", len: 1.6 });
       P4.deco({ k: "wanted", w: Math.min(1.8, L2.z1 - L2.z0 - 0.4), d: 0.04, h: 1 }, L2.x0 + 0.03, (L2.z0 + L2.z1) / 2 + 0.2, Math.PI / 2);
       P4.wall(S3("filing"), "right", "start");
       P4.wall(S3("bench"), "front", "start");
     },
-    library(P4, L2, b, R2, S3, g) {
+    library(P4, L2, b, R3, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "books", len: 1.6 });
       P4.wall(S3("bookcase"), "left", "start");
       P4.wall(S3("bookcase"), "left", "end");
@@ -33997,7 +33997,7 @@ void main() {
       if (tb) for (const s of [-1, 1]) P4.deco(S3("chair"), tb.x + s * (tb.w / 2 + 0.2), tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
       L2.use.push({ kind: "read", x: L2.x0 + 0.7, z: (L2.z0 + L2.z1) / 2, label: "Browse the shelves" });
     },
-    tavern(P4, L2, b, R2, S3, g) {
+    tavern(P4, L2, b, R3, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "bottles", len: 3 });
       const bar2 = L2.items.find((it) => it.k === "counter");
       if (bar2) for (let x = bar2.rect.x0 + 0.35; x < bar2.rect.x1 - 0.2; x += 0.62) P4.deco(S3("stool"), x, bar2.rect.z1 + 0.3, 0);
@@ -34016,11 +34016,11 @@ void main() {
       P4.deco({ k: "wanted", w: 0.9, d: 0.04, h: 0.8 }, L2.x1 - 0.03, (L2.z0 + L2.z1) / 2, -Math.PI / 2);
       L2.rest = bar2 ? { x: bar2.x, z: bar2.rect.z1 + 0.7 } : { x: 0, z: L2.z1 - 1 };
     },
-    inn(P4, L2, b, R2, S3, g) {
-      ROOMS.tavern(P4, L2, b, R2, S3, g);
+    inn(P4, L2, b, R3, S3, g) {
+      ROOMS.tavern(P4, L2, b, R3, S3, g);
       P4.wall(S3("stairs"), "left", "start") || P4.wall(S3("stairs"), "right", "start");
     },
-    restaurant(P4, L2, b, R2, S3, g) {
+    restaurant(P4, L2, b, R3, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "bottles", len: 2.2 });
       for (const px2 of [L2.x0 + 0.8, L2.x1 - 0.8]) {
         const t = P4.free(S3("table"), px2, L2.z1 - 1.1);
@@ -34034,7 +34034,7 @@ void main() {
       }
       P4.wall(S3("plant"), "front", "end");
     },
-    doctor(P4, L2, b, R2, S3, g) {
+    doctor(P4, L2, b, R3, S3, g) {
       const desk = P4.wall(S3("desk"), "back", "start", 0.62 * g);
       if (desk) {
         L2.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
@@ -34050,7 +34050,7 @@ void main() {
       P4.deco({ k: "redcross", w: 0.6, d: 0.03, h: 0.6 }, desk ? desk.x : 0, L2.z0 + 0.02, 0);
       P4.wall(S3("plant"), "front", "end");
     },
-    dojo(P4, L2, b, R2, S3, g) {
+    dojo(P4, L2, b, R3, S3, g) {
       P4.deco({ k: "mats", w: L2.x1 - L2.x0 - 0.4, d: L2.z1 - L2.z0 - 0.3, h: 0.03 }, (L2.x0 + L2.x1) / 2, (L2.z0 + L2.z1) / 2);
       const sh = P4.wall(S3("shrine"), "back", "center");
       L2.keeper = { x: sh ? sh.x : 0, z: (sh ? sh.rect.z1 : L2.z0) + 0.55 };
@@ -34061,7 +34061,7 @@ void main() {
       P4.free(S3("dummy"), L2.x1 - 1, L2.z1 - 1.2);
       L2.use.push({ kind: "service", x: L2.keeper.x, z: L2.keeper.z + 0.9, label: null });
     },
-    church(P4, L2, b, R2, S3, g) {
+    church(P4, L2, b, R3, S3, g) {
       const al = P4.wall(S3("altar"), "back", "center", 0.6 * g);
       if (al) {
         L2.keeper = { x: al.x, z: al.rect.z0 - 0.3 };
@@ -34078,7 +34078,7 @@ void main() {
       P4.wall(S3("plant"), "front", "start");
       P4.wall(S3("plant"), "front", "end");
     },
-    marine(P4, L2, b, R2, S3, g) {
+    marine(P4, L2, b, R3, S3, g) {
       const desk = P4.wall(S3("desk"), "back", "center", 0.62 * g);
       if (desk) {
         L2.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
@@ -34094,7 +34094,7 @@ void main() {
       P4.deco({ k: "wanted", w: 1.2, d: 0.04, h: 0.9 }, L2.x1 - 0.03, (L2.z0 + L2.z1) / 2 - 0.3, -Math.PI / 2);
       L2.residents.push({ x: L2.x0 + 0.8, z: L2.z1 - 1, guard: true });
     },
-    shipwright(P4, L2, b, R2, S3, g) {
+    shipwright(P4, L2, b, R3, S3, g) {
       const wb = P4.wall(S3("workbench"), "back", "start", 0.62 * g);
       if (wb) {
         L2.keeper = { x: wb.x, z: wb.rect.z0 - 0.32 };
@@ -34206,11 +34206,11 @@ void main() {
       const k = this.key(cx, cy);
       let g = this.chunks.get(k);
       if (g) return g;
-      const N3 = CHUNK + 1;
-      g = new Float32Array(N3 * N3);
+      const N4 = CHUNK + 1;
+      g = new Float32Array(N4 * N4);
       const x0 = cx * CHUNK, y0 = cy * CHUNK;
-      for (let j = 0; j < N3; j++) {
-        for (let i = 0; i < N3; i++) g[j * N3 + i] = cornerHeight(w, x0 + i, y0 + j);
+      for (let j = 0; j < N4; j++) {
+        for (let i = 0; i < N4; i++) g[j * N4 + i] = cornerHeight(w, x0 + i, y0 + j);
       }
       if (w.objects) {
         for (const b of w.objects.query(x0 - 8, y0 - 8, x0 + CHUNK + 8, y0 + CHUNK + 8)) {
@@ -34219,14 +34219,14 @@ void main() {
           const bx0 = b.x - fw / 2, bx1 = b.x + fw / 2, by0 = b.y - fd, by1 = b.y;
           const fy = Math.round(by1), fx = Math.round(b.x);
           const front = cornerHeight(w, fx, fy);
-          for (let j = 0; j < N3; j++) {
+          for (let j = 0; j < N4; j++) {
             const cy2 = y0 + j;
             if (cy2 <= by0 || cy2 >= by1) continue;
-            for (let i = 0; i < N3; i++) {
+            for (let i = 0; i < N4; i++) {
               const cx2 = x0 + i;
               const dx = w.dx(bx0, cx2);
               if (dx <= 0 || dx >= bx1 - bx0) continue;
-              const q2 = j * N3 + i;
+              const q2 = j * N4 + i;
               if (g[q2] > front + 0.2) g[q2] = front + 0.2;
             }
           }
@@ -34249,8 +34249,8 @@ void main() {
       const lx = x - cx * CHUNK, ly = y - cy * CHUNK;
       const i = Math.min(CHUNK - 1, Math.floor(lx)), j = Math.min(CHUNK - 1, Math.floor(ly));
       const fx = lx - i, fy = ly - j;
-      const N3 = CHUNK + 1;
-      const a = g[j * N3 + i], b = g[j * N3 + i + 1], c = g[(j + 1) * N3 + i], d = g[(j + 1) * N3 + i + 1];
+      const N4 = CHUNK + 1;
+      const a = g[j * N4 + i], b = g[j * N4 + i + 1], c = g[(j + 1) * N4 + i], d = g[(j + 1) * N4 + i + 1];
       if (fx >= fy) return a + (b - a) * fx + (d - b) * fy;
       return a + (d - c) * fx + (c - a) * fy;
     }
@@ -34397,8 +34397,8 @@ void main() {
   function lathe(pts, seg = 10) {
     return new LatheGeometry(pts.map(([r, y]) => new Vector2(Math.max(1e-4, r), y)), seg);
   }
-  function torus(R2, r, rs = 6, ts = 12, arc = Math.PI * 2) {
-    return new TorusGeometry(R2, r, rs, ts, arc);
+  function torus(R3, r, rs = 6, ts = 12, arc = Math.PI * 2) {
+    return new TorusGeometry(R3, r, rs, ts, arc);
   }
   function extrude(shape, depth, bevel = 0, curveSegments = 6) {
     const g = new ExtrudeGeometry(shape, {
@@ -34595,10 +34595,10 @@ void main() {
       const M2 = this.m;
       _m32.getNormalMatrix(M2);
       const base2 = this.pos.length / 3;
-      const P4 = g.attributes.position, N3 = g.attributes.normal;
+      const P4 = g.attributes.position, N4 = g.attributes.normal;
       for (let i = 0; i < P4.count; i++) {
         _v.fromBufferAttribute(P4, i).applyMatrix4(M2);
-        _n.fromBufferAttribute(N3, i).applyMatrix3(_m32).normalize();
+        _n.fromBufferAttribute(N4, i).applyMatrix3(_m32).normalize();
         this.pos.push(_v.x, _v.y, _v.z);
         this.nor.push(_n.x, _n.y, _n.z);
       }
@@ -35017,7 +35017,7 @@ void main() {
       const w = this.world;
       const g = this.hf.grid(cx, cy);
       const x0 = cx * CHUNK, y0 = cy * CHUNK;
-      const N3 = CHUNK + 1;
+      const N4 = CHUNK + 1;
       const step = lod;
       const n = CHUNK / step + 1;
       const pos = new Float32Array(n * n * 3);
@@ -35026,7 +35026,7 @@ void main() {
       for (let j = 0; j < n; j++) {
         for (let i = 0; i < n; i++) {
           const gi = i * step, gj = j * step;
-          const h2 = g[gj * N3 + gi];
+          const h2 = g[gj * N4 + gi];
           if (h2 < minH) minH = h2;
           const k = (j * n + i) * 3;
           pos[k] = gi;
@@ -35124,8 +35124,8 @@ void main() {
     }
   };
   function detailTexture() {
-    const N3 = 256;
-    const data = new Uint8Array(N3 * N3 * 4);
+    const N4 = 256;
+    const data = new Uint8Array(N4 * N4 * 4);
     const lattice = (n, seed) => {
       const g = new Float32Array(n * n);
       let h2 = seed;
@@ -35143,19 +35143,19 @@ void main() {
       };
     };
     const big = lattice(8, 7), mid = lattice(16, 31), fine = lattice(64, 97), finer = lattice(128, 151);
-    for (let y = 0; y < N3; y++) {
-      for (let x = 0; x < N3; x++) {
-        const u = x / N3, v = y / N3;
+    for (let y = 0; y < N4; y++) {
+      for (let x = 0; x < N4; x++) {
+        const u = x / N4, v = y / N4;
         const r = big(u * 8, v * 8) * 0.65 + mid(u * 16, v * 16) * 0.35;
         const g = fine(u * 64, v * 64) * 0.6 + finer(u * 128, v * 128) * 0.4;
-        const o = (y * N3 + x) * 4;
+        const o = (y * N4 + x) * 4;
         data[o] = r * 255;
         data[o + 1] = g * 255;
         data[o + 2] = 0;
         data[o + 3] = 255;
       }
     }
-    const tex2 = new DataTexture(data, N3, N3, RGBAFormat);
+    const tex2 = new DataTexture(data, N4, N4, RGBAFormat);
     tex2.wrapS = tex2.wrapT = RepeatWrapping;
     tex2.magFilter = LinearFilter;
     tex2.minFilter = LinearMipmapLinearFilter;
@@ -36228,7 +36228,7 @@ void main() {
     const d = shipDims(def);
     const P4 = palette(def);
     const k = new Mesher();
-    const N3 = 22;
+    const N4 = 22;
     const prof = (t) => {
       const top = topAt(d, t), dk3 = d.deckY;
       return [
@@ -36247,13 +36247,13 @@ void main() {
     const band2 = [P4.cap, P4.bulwark, P4.wale, P4.plank, P4.plank2, P4.plank, P4.bottom, shade2(P4.bottom, -0.1), P4.bottom];
     const NP = 10;
     const pos = [], idx = [], triCol = [];
-    for (let i = 0; i <= N3; i++) {
-      const t = i / N3, x = xAt(d, t), hb = Math.max(0, hbAt(t, d.B));
+    for (let i = 0; i <= N4; i++) {
+      const t = i / N4, x = xAt(d, t), hb = Math.max(0, hbAt(t, d.B));
       const pr = prof(t);
       for (const s of [1, -1]) for (const [w, y] of pr) pos.push(x, y, s * w * hb);
     }
     const vid = (i, s, j) => (i * 2 + s) * NP + j;
-    for (let i = 0; i < N3; i++) {
+    for (let i = 0; i < N4; i++) {
       for (let s = 0; s < 2; s++) {
         for (let j = 0; j < NP - 1; j++) {
           const a = vid(i, s, j), b = vid(i + 1, s, j), c = vid(i, s, j + 1), dd = vid(i + 1, s, j + 1);
@@ -36292,8 +36292,8 @@ void main() {
     };
     for (const s of [1, -1]) {
       const inner = [], cap = [];
-      for (let i = 0; i <= N3; i++) {
-        const t = i / N3, x = xAt(d, t), hb = hbAt(t, d.B);
+      for (let i = 0; i <= N4; i++) {
+        const t = i / N4, x = xAt(d, t), hb = hbAt(t, d.B);
         if (hb < 0.12) continue;
         const top = topAt(d, t);
         const zi = s * Math.max(0.02, 0.965 * hb - inset);
@@ -36305,14 +36305,14 @@ void main() {
     }
     const deckRegion = (t0, t1, yFn) => {
       const M2 = Math.max(4, Math.round(d.B / 0.24));
-      const R2 = Math.max(2, Math.round((t1 - t0) * N3));
+      const R3 = Math.max(2, Math.round((t1 - t0) * N4));
       const dp = [], di = [], dc = [];
-      for (let i = 0; i <= R2; i++) {
-        const t = t0 + (t1 - t0) * i / R2, x = xAt(d, t);
+      for (let i = 0; i <= R3; i++) {
+        const t = t0 + (t1 - t0) * i / R3, x = xAt(d, t);
         const w = Math.max(0.01, 0.995 * hbAt(t, d.B) - inset);
         for (let m = 0; m <= M2; m++) dp.push(x, yFn(t), -w + 2 * w * m / M2);
       }
-      for (let i = 0; i < R2; i++) {
+      for (let i = 0; i < R3; i++) {
         for (let m = 0; m < M2; m++) {
           const a = i * (M2 + 1) + m, b = a + 1, c = a + M2 + 1, e = c + 1;
           di.push(a, b, c, b, e, c);
@@ -36425,14 +36425,14 @@ void main() {
       }
     }
     if (def.paddle) {
-      const px2 = xAt(d, 0.34), R2 = 0.75;
+      const px2 = xAt(d, 0.34), R3 = 0.75;
       for (const s of [-1, 1]) {
         const hb = hbAt(0.34, d.B);
         k.save();
         k.translate(px2, d.deckY - 0.1, s * (hb + 0.2));
         k.rotateZ(Math.PI / 2);
         k.rotateX(Math.PI / 2);
-        k.add(new CylinderGeometry(R2 + 0.12, R2 + 0.12, 0.44, 12, 1, true, 0, Math.PI), { color: P4.cap, double: true });
+        k.add(new CylinderGeometry(R3 + 0.12, R3 + 0.12, 0.44, 12, 1, true, 0, Math.PI), { color: P4.cap, double: true });
         k.restore();
       }
     }
@@ -36701,14 +36701,14 @@ void main() {
       root2.add(this.lines);
       if (def.paddle) {
         const pk = new Mesher();
-        const R2 = 0.72;
+        const R3 = 0.72;
         pk.add(cyl(0.12, 0.12, 0.4, 8), { at: [0, 0, -0.2], rot: [Math.PI / 2, 0, 0], color: "#5d4037" });
         for (let i = 0; i < 8; i++) {
           const a = i / 8 * Math.PI * 2, dx = -Math.sin(a), dy = Math.cos(a);
-          for (const sz of [-1, 1]) pk.add(box(0.05, R2, 0.04), { at: [0, 0, sz * 0.17], rot: [0, 0, a], color: "#6d4c33" });
-          pk.add(box(0.06, 0.4, 0.38), { at: [dx * (R2 - 0.36), dy * (R2 - 0.36), 0], rot: [0, 0, a], color: "#8d6e4a", outline: 0.01 });
+          for (const sz of [-1, 1]) pk.add(box(0.05, R3, 0.04), { at: [0, 0, sz * 0.17], rot: [0, 0, a], color: "#6d4c33" });
+          pk.add(box(0.06, 0.4, 0.38), { at: [dx * (R3 - 0.36), dy * (R3 - 0.36), 0], rot: [0, 0, a], color: "#8d6e4a", outline: 0.01 });
         }
-        for (const sz of [-1, 1]) pk.add(torus(R2, 0.035, 4, 16), { at: [0, 0, sz * 0.17], color: "#5d4037" });
+        for (const sz of [-1, 1]) pk.add(torus(R3, 0.035, 4, 16), { at: [0, 0, sz * 0.17], color: "#5d4037" });
         const geo2 = pk.build(false);
         this.paddles = [];
         for (const s2 of [-1, 1]) {
@@ -37502,27 +37502,27 @@ void main() {
     }
     return col;
   }
-  function fistShape(g, R2, col, dark) {
+  function fistShape(g, R3, col, dark) {
     g.fillStyle = col;
     g.strokeStyle = OUT;
-    g.lineWidth = 0.05 * Math.max(1, R2 / 0.3);
+    g.lineWidth = 0.05 * Math.max(1, R3 / 0.3);
     g.beginPath();
-    g.roundRect(-R2 * 0.9, -R2 * 0.85, R2 * 1.8, R2 * 1.7, R2 * 0.5);
+    g.roundRect(-R3 * 0.9, -R3 * 0.85, R3 * 1.8, R3 * 1.7, R3 * 0.5);
     g.fill();
     g.stroke();
     g.strokeStyle = dark;
-    g.lineWidth = 0.03 * Math.max(1, R2 / 0.3);
+    g.lineWidth = 0.03 * Math.max(1, R3 / 0.3);
     g.beginPath();
     for (let k = -1; k <= 1; k++) {
-      g.moveTo(R2 * 0.45, k * R2 * 0.5 - R2 * 0.12);
-      g.lineTo(R2 * 0.85, k * R2 * 0.5 - R2 * 0.12);
+      g.moveTo(R3 * 0.45, k * R3 * 0.5 - R3 * 0.12);
+      g.lineTo(R3 * 0.85, k * R3 * 0.5 - R3 * 0.12);
     }
     g.stroke();
     g.fillStyle = col;
     g.strokeStyle = OUT;
-    g.lineWidth = 0.035 * Math.max(1, R2 / 0.3);
+    g.lineWidth = 0.035 * Math.max(1, R3 / 0.3);
     g.beginPath();
-    g.ellipse(R2 * 0.1, R2 * 0.62, R2 * 0.5, R2 * 0.25, 0.2, 0, TAU4);
+    g.ellipse(R3 * 0.1, R3 * 0.62, R3 * 0.5, R3 * 0.25, 0.2, 0, TAU4);
     g.fill();
     g.stroke();
   }
@@ -37592,8 +37592,8 @@ void main() {
       }
       case "fireball": {
         if (s >= 3) {
-          const R2 = 0.55 * s;
-          glowDisc(g, R2 * 1.9, "#ff6d00", 0.35);
+          const R3 = 0.55 * s;
+          glowDisc(g, R3 * 1.9, "#ff6d00", 0.35);
           g.save();
           g.globalCompositeOperation = "lighter";
           for (let k = 0; k < 16; k++) {
@@ -37601,20 +37601,20 @@ void main() {
             const fl2 = 1.18 + 0.2 * Math.sin(t * 11 + k * 1.7);
             g.fillStyle = k % 2 ? "rgba(255,171,0,0.7)" : "rgba(255,61,0,0.65)";
             g.beginPath();
-            g.moveTo(Math.cos(ang - 0.18) * R2 * 0.92, Math.sin(ang - 0.18) * R2 * 0.92);
-            g.lineTo(Math.cos(ang) * R2 * fl2, Math.sin(ang) * R2 * fl2);
-            g.lineTo(Math.cos(ang + 0.18) * R2 * 0.92, Math.sin(ang + 0.18) * R2 * 0.92);
+            g.moveTo(Math.cos(ang - 0.18) * R3 * 0.92, Math.sin(ang - 0.18) * R3 * 0.92);
+            g.lineTo(Math.cos(ang) * R3 * fl2, Math.sin(ang) * R3 * fl2);
+            g.lineTo(Math.cos(ang + 0.18) * R3 * 0.92, Math.sin(ang + 0.18) * R3 * 0.92);
             g.fill();
           }
           g.restore();
-          const gr = g.createRadialGradient(-R2 * 0.25, -R2 * 0.25, R2 * 0.1, 0, 0, R2);
+          const gr = g.createRadialGradient(-R3 * 0.25, -R3 * 0.25, R3 * 0.1, 0, 0, R3);
           gr.addColorStop(0, "#fff8e1");
           gr.addColorStop(0.35, "#ffd54f");
           gr.addColorStop(0.75, "#ff9100");
           gr.addColorStop(1, "#e65100");
           g.fillStyle = gr;
           g.beginPath();
-          g.arc(0, 0, R2, 0, TAU4);
+          g.arc(0, 0, R3, 0, TAU4);
           g.fill();
           break;
         }
@@ -37742,21 +37742,21 @@ void main() {
           g.lineTo(-1.1 * s, k * 0.35 * s);
         }
         g.stroke();
-        const R2 = 0.7 * s;
-        const gr = g.createLinearGradient(0, -R2, 0, R2);
+        const R3 = 0.7 * s;
+        const gr = g.createLinearGradient(0, -R3, 0, R3);
         gr.addColorStop(0, rgbaOf(col, 0));
         gr.addColorStop(0.5, rgbaOf(col, 0.95));
         gr.addColorStop(1, rgbaOf(col, 0));
         g.fillStyle = gr;
         g.beginPath();
-        g.arc(-0.45 * s, 0, R2, -1.15, 1.15);
-        g.arc(-0.62 * s, 0, R2 * 0.9, 1.05, -1.05, true);
+        g.arc(-0.45 * s, 0, R3, -1.15, 1.15);
+        g.arc(-0.62 * s, 0, R3 * 0.9, 1.05, -1.05, true);
         g.closePath();
         g.fill();
         g.strokeStyle = "rgba(255,255,255,0.95)";
         g.lineWidth = 0.045 * s;
         g.beginPath();
-        g.arc(-0.45 * s, 0, R2, -0.9, 0.9);
+        g.arc(-0.45 * s, 0, R3, -0.9, 0.9);
         g.stroke();
         break;
       }
@@ -40023,12 +40023,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     tf(I, { r: 0.42, s: 0.84, y: 3 }, () => {
       tube2(I, "M32 64 L32 6", handle, 5.8);
       const L2 = "M28 12 C22 7 13 6 6 9 C4 16 4 26 6 33 C13 36 22 35 28 30 Z";
-      const R2 = "M36 12 C42 7 51 6 58 9 C60 16 60 26 58 33 C51 36 42 35 36 30 Z";
-      for (const b of [L2, R2]) {
+      const R3 = "M36 12 C42 7 51 6 58 9 C60 16 60 26 58 33 C51 36 42 35 36 30 Z";
+      for (const b of [L2, R3]) {
         part(I, b, head, { sd: 1.8, hd: 1.2 });
       }
       clip(I, L2, () => fl(I, "M6 9 C4 16 4 26 6 33 L2 34 L2 8 Z", "#f4f8fb", { a: 0.95 }));
-      clip(I, R2, () => fl(I, "M58 9 C60 16 60 26 58 33 L63 34 L63 8 Z", dk(head, 0.12)));
+      clip(I, R3, () => fl(I, "M58 9 C60 16 60 26 58 33 L63 34 L63 8 Z", dk(head, 0.12)));
       part(I, rrect(26.5, 8, 11, 26, 2.5), trim, { sd: 1, hd: 0.8 });
       if (!I.small) for (const y of [13, 21, 29]) part(I, circle(32, y, 1.3), dk(trim, 0.3), { sd: 0, hd: 0, ol: 0 });
       part(I, rrect(28.5, 55, 7, 7, 2), trim, { sd: 0.6, hd: 0.4 });
@@ -40586,7 +40586,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return poly(pts);
   }
   function taper(pts, w0, w1, pow = 1) {
-    const L2 = [], R2 = [], n = pts.length - 1;
+    const L2 = [], R3 = [], n = pts.length - 1;
     for (let i = 0; i <= n; i++) {
       const [x, y] = pts[i], [ax, ay] = pts[Math.max(0, i - 1)], [bx, by] = pts[Math.min(n, i + 1)];
       let dx = bx - ax, dy = by - ay;
@@ -40595,9 +40595,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       dy /= d;
       const w = (typeof w0 === "function" ? w0(i / n) : w0 + (w1 - w0) * Math.pow(i / n, pow)) / 2;
       L2.push([x - dy * w, y + dx * w]);
-      R2.push([x + dy * w, y - dx * w]);
+      R3.push([x + dy * w, y - dx * w]);
     }
-    return poly(L2.concat(R2.reverse()));
+    return poly(L2.concat(R3.reverse()));
   }
   function needle(I, x, y, r, rot = -0.45) {
     tf(I, { r: rot, ox: x, oy: y }, () => {
@@ -41250,10 +41250,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       part(I, rrect(35, 9, 20, 20, 4), "#c8372d", { sd: 1.6, hd: 1.2 });
       for (const [x, y] of [[40, 14], [45, 19], [50, 24]]) fl(I, circle(x, y, 1.8), "#fbf8f0");
     });
-    const top = [[26, 22], [45, 31], [26, 40], [7, 31]], L2 = [[7, 31], [26, 40], [26, 60], [7, 51]], R2 = [[26, 40], [45, 31], [45, 51], [26, 60]];
-    part(I, union(poly(top), poly(L2), poly(R2)), "#f4f1ea", { sd: 0, hd: 0 });
+    const top = [[26, 22], [45, 31], [26, 40], [7, 31]], L2 = [[7, 31], [26, 40], [26, 60], [7, 51]], R3 = [[26, 40], [45, 31], [45, 51], [26, 60]];
+    part(I, union(poly(top), poly(L2), poly(R3)), "#f4f1ea", { sd: 0, hd: 0 });
     fl(I, poly(L2), "#e2dccf");
-    fl(I, poly(R2), "#c9c0b0");
+    fl(I, poly(R3), "#c9c0b0");
     fl(I, poly(top), "#fbf8f0");
     ln(I, "M7 31 L26 40 L45 31 M26 40 V60", "#a89f8c", 1);
     const face = (A, B4, Dd, u, v, r, col) => {
@@ -41262,7 +41262,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     };
     face(top[3], top[0], top[2], 0.5, 0.5, 3, "#c8372d");
     for (const [u, v] of [[0.28, 0.3], [0.72, 0.7]]) face(L2[0], L2[1], L2[3], u, v, 2, OUT2);
-    for (const [u, v] of [[0.26, 0.25], [0.74, 0.25], [0.5, 0.5], [0.26, 0.75], [0.74, 0.75]]) face(R2[0], R2[1], R2[3], u, v, 1.9, OUT2);
+    for (const [u, v] of [[0.26, 0.25], [0.74, 0.25], [0.5, 0.5], [0.26, 0.75], [0.74, 0.75]]) face(R3[0], R3[1], R3[3], u, v, 1.9, OUT2);
   };
   D.tag = (I, o = {}) => {
     const col = o.color || "#e0b24a";
@@ -42357,10 +42357,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   SK.iceCube = (I, o) => {
     const c = o.c || "#bfefff";
-    const top = [[32, 12], [52, 22], [32, 32], [12, 22]], L2 = [[12, 22], [32, 32], [32, 56], [12, 46]], R2 = [[32, 32], [52, 22], [52, 46], [32, 56]];
-    part(I, union(poly(top), poly(L2), poly(R2)), c, { sd: 0, hd: 0 });
+    const top = [[32, 12], [52, 22], [32, 32], [12, 22]], L2 = [[12, 22], [32, 32], [32, 56], [12, 46]], R3 = [[32, 32], [52, 22], [52, 46], [32, 56]];
+    part(I, union(poly(top), poly(L2), poly(R3)), c, { sd: 0, hd: 0 });
     fl(I, poly(L2), dk(c, 0.08));
-    fl(I, poly(R2), dk(c, 0.2));
+    fl(I, poly(R3), dk(c, 0.2));
     fl(I, poly(top), lt(c, 0.4));
     ln(I, "M12 22 L32 32 L52 22 M32 32 V56", "#ffffff", 1.2, { a: 0.8 });
     fl(I, "M28 36 C26 40 26 46 30 50 C33 46 33 40 31 36 Z", dk(c, 0.35), { a: 0.7 });
@@ -42456,11 +42456,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   SK.heartCube = (I, o) => {
     const c = o.c || "#bfe4ff";
-    const top = [[32, 14], [50, 23], [32, 32], [14, 23]], L2 = [[14, 23], [32, 32], [32, 54], [14, 45]], R2 = [[32, 32], [50, 23], [50, 45], [32, 54]];
-    part(I, union(poly(top), poly(L2), poly(R2)), fade(c, 0.6), { sd: 0, hd: 0 });
+    const top = [[32, 14], [50, 23], [32, 32], [14, 23]], L2 = [[14, 23], [32, 32], [32, 54], [14, 45]], R3 = [[32, 32], [50, 23], [50, 45], [32, 54]];
+    part(I, union(poly(top), poly(L2), poly(R3)), fade(c, 0.6), { sd: 0, hd: 0 });
     part(I, heartP(32, 36, 9), "#e0304a", { sd: 1.4, hd: 1, gloss: [28.5, 32, 1.6, 1, 0.8] });
     fl(I, poly(top), fade("#ffffff", 0.35));
-    fl(I, poly(R2), fade(c, 0.35));
+    fl(I, poly(R3), fade(c, 0.35));
     ln(I, "M14 23 L32 32 L50 23 M32 32 V54", "#ffffff", 1.1, { a: 0.8 });
   };
   SK.glove = (I, o) => {
@@ -45345,8 +45345,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const k = new Mesher();
     const x0 = -fw / 2 + T3, x1 = fw / 2 - T3, z0 = -fd + T3, z1 = -T3;
     const top = y0 + ceil;
-    const R2 = (i) => hash2(b.x, b.y, i + 0.37);
-    const cloth = P4.cloth[Math.floor(R2(1) * P4.cloth.length)];
+    const R3 = (i) => hash2(b.x, b.y, i + 0.37);
+    const cloth = P4.cloth[Math.floor(R3(1) * P4.cloth.length)];
     B(k, x0, y0 - 0.04, z0, x1, y0 + 0.012, z1, P4.floor);
     B(k, L2.door.x - L2.door.dw / 2, y0 - 0.04, -T3, L2.door.x + L2.door.dw / 2, y0 + 8e-3, 0, P4.floor2);
     floorPattern(k, P4, x0, x1, z0, z1, y0 + 0.012);
@@ -45382,7 +45382,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.translate(it.x, y, it.z);
       k.rotateY(it.rot || 0);
       try {
-        piece(k, it, P4, cloth, R2, top - y0);
+        piece(k, it, P4, cloth, R3, top - y0);
       } catch (e) {
         console.warn("furniture failed", it.k, e);
       }
@@ -45449,7 +45449,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function legs(k, w, d, h2, col, t = 0.06, inset = 0.04) {
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(k, sx * (w / 2 - inset) - t / 2, 0, sz * (d / 2 - inset) - t / 2, sx * (w / 2 - inset) + t / 2, h2, sz * (d / 2 - inset) + t / 2, col);
   }
-  function shelves(k, w, d, h2, n, P4, fill2, R2) {
+  function shelves(k, w, d, h2, n, P4, fill2, R3) {
     const wood = P4.wood;
     B(k, -w / 2, 0, -d / 2, w / 2, h2, -d / 2 + 0.03, shade2(wood, -0.15));
     for (const s of [-1, 1]) B(k, s > 0 ? w / 2 - 0.035 : -w / 2, 0, -d / 2, s > 0 ? w / 2 : -w / 2 + 0.035, h2, d / 2, wood, { outline: 0.01 });
@@ -45459,7 +45459,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (i < n && fill2) fill2(y + 0.035, (h2 - 0.1) / n - 0.05, i);
     }
   }
-  function piece(k, it, P4, cloth, R2, ceilH) {
+  function piece(k, it, P4, cloth, R3, ceilH) {
     const { w, d, h: h2 } = it;
     const wood = P4.wood, woodL = P4.woodL, woodD = P4.woodD;
     switch (it.k) {
@@ -45555,7 +45555,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           let x = -w / 2 + 0.06;
           let i = 0;
           while (x < w / 2 - 0.08) {
-            const r = R2(row * 31 + i * 7 + (it.x * 13 | 0));
+            const r = R3(row * 31 + i * 7 + (it.x * 13 | 0));
             if (kind === "books" || kind === "bookcase") {
               const bw = 0.04 + r * 0.05, bh = gap * (0.6 + r * 0.35);
               B(k, x, y, -d / 2 + 0.05, x + bw, y + bh, d / 2 - 0.04, BOOKS[Math.floor(r * BOOKS.length)]);
@@ -45576,7 +45576,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             i++;
             if (i > 40) break;
           }
-        }, R2);
+        }, R3);
         if (kind === "medcabinet") {
           B(k, -w / 2, h2 * 0.45, d / 2 - 0.01, w / 2, h2, d / 2 + 5e-3, "#d6eaf8", { glow: null });
           B(k, -0.12, h2 + 0.02, d / 2 - 0.02, 0.12, h2 + 0.26, d / 2, "#fafafa");
@@ -45823,7 +45823,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         for (let i = 0; i < n; i++) {
           const pw = it.k === "wanted" ? Math.min(0.36, w / n - 0.06) : w, ph = pw * 1.3;
           const cx = -w / 2 + (i + 0.5) * w / n, cy = 1.1 + (it.k === "wanted" ? i % 2 * 0.08 + 0.05 : 0.15);
-          const tilt = (R2(i + 9) - 0.5) * 0.12;
+          const tilt = (R3(i + 9) - 0.5) * 0.12;
           k.save();
           k.translate(cx, cy, 0.015 + i * 1e-3);
           k.rotateZ(tilt);
@@ -45982,12 +45982,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const frame2 = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" || S3.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
     const glass = "#2d4150";
     const glow3 = litOn ? WARM : null;
-    const G = pane ? (pane.m.copy(k.m), pane) : k;
+    const G3 = pane ? (pane.m.copy(k.m), pane) : k;
     switch (S3.win) {
       case "shoji": {
         if (pane) rectFrame(k, w, h2, 0.06, -0.02, 0.06, "#3e2723");
         else B2(k, -w / 2 - 0.06, -h2 / 2 - 0.06, -0.02, w / 2 + 0.06, h2 / 2 + 0.06, 0.06, "#3e2723");
-        B2(G, -w / 2, -h2 / 2, 0, w / 2, h2 / 2, 0.035, "#f3ead3", { glow: litOn ? "#ffb84d" : null });
+        B2(G3, -w / 2, -h2 / 2, 0, w / 2, h2 / 2, 0.035, "#f3ead3", { glow: litOn ? "#ffb84d" : null });
         for (let i = 1; i < 3; i++) B2(k, -w / 2 + i * w / 3 - 0.015, -h2 / 2, 0.03, -w / 2 + i * w / 3 + 0.015, h2 / 2, 0.05, "#5d4037");
         B2(k, -w / 2, -0.015, 0.03, w / 2, 0.015, 0.05, "#5d4037");
         break;
@@ -45995,7 +45995,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       case "lattice": {
         if (pane) rectFrame(k, w, h2, 0.08, -0.02, 0.06, "#8e2b22");
         else B2(k, -w / 2 - 0.08, -h2 / 2 - 0.08, -0.02, w / 2 + 0.08, h2 / 2 + 0.08, 0.06, "#8e2b22");
-        B2(G, -w / 2, -h2 / 2, 0, w / 2, h2 / 2, 0.035, "#f6ddcc", { glow: litOn ? "#ffab66" : null });
+        B2(G3, -w / 2, -h2 / 2, 0, w / 2, h2 / 2, 0.035, "#f6ddcc", { glow: litOn ? "#ffab66" : null });
         for (let i = 1; i < 4; i++) B2(k, -w / 2 + i * w / 4 - 0.012, -h2 / 2, 0.03, -w / 2 + i * w / 4 + 0.012, h2 / 2, 0.05, "#8e2b22");
         for (let i = 1; i < 4; i++) B2(k, -w / 2, -h2 / 2 + i * h2 / 4 - 0.012, 0.03, w / 2, -h2 / 2 + i * h2 / 4 + 0.012, 0.05, "#8e2b22");
         break;
@@ -46003,7 +46003,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       case "round": {
         const r = Math.min(w, h2) * 0.5;
         k.add(new TorusGeometry(r, 0.07, 5, 14), { at: [0, 0, 0.03], color: frame2 });
-        G.add(new CircleGeometry(r, 14), { at: [0, 0, 0.02], color: S3.wall === "smooth" && b.style === "sky" ? "#bde3ff" : glass, glow: glow3 });
+        G3.add(new CircleGeometry(r, 14), { at: [0, 0, 0.02], color: S3.wall === "smooth" && b.style === "sky" ? "#bde3ff" : glass, glow: glow3 });
         B2(k, -0.015, -r, 0.03, 0.015, r, 0.05, frame2);
         break;
       }
@@ -46026,7 +46026,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           out.scale(sx, sy, 1);
           k.add(out, { at: [0, 0, 0.012], color: frame2 });
         }
-        G.add(new ShapeGeometry(s, 8), { at: [0, 0, 0.025], color: S3.win === "gothic" ? "#2a3a2a" : glass, glow: litOn ? S3.win === "gothic" ? "#b6ff8a" : WARM : null });
+        G3.add(new ShapeGeometry(s, 8), { at: [0, 0, 0.025], color: S3.win === "gothic" ? "#2a3a2a" : glass, glow: litOn ? S3.win === "gothic" ? "#b6ff8a" : WARM : null });
         if (S3.win === "gothic") B2(k, -0.015, -h2 / 2, 0.03, 0.015, h2 / 2, 0.045, frame2);
         if (b.style === "desert") B2(k, -r - 0.12, -h2 / 2 - 0.12, 0, r + 0.12, -h2 / 2 - 0.04, 0.12, shade2(wallCol, -0.15));
         break;
@@ -46041,7 +46041,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const hh = S3.win === "tall" ? h2 * 1.2 : h2;
         if (pane) rectFrame(k, w, hh, 0.08, -0.02, 0.05, frame2);
         else B2(k, -w / 2 - 0.08, -hh / 2 - 0.08, -0.02, w / 2 + 0.08, hh / 2 + 0.08, 0.05, frame2);
-        B2(G, -w / 2, -hh / 2, 0, w / 2, hh / 2, 0.06, glass, { glow: glow3 });
+        B2(G3, -w / 2, -hh / 2, 0, w / 2, hh / 2, 0.06, glass, { glow: glow3 });
         B2(k, -0.025, -hh / 2, 0.05, 0.025, hh / 2, 0.08, frame2);
         B2(k, -w / 2, -0.025, 0.05, w / 2, 0.025, 0.08, frame2);
         B2(k, -w / 2 - 0.12, -hh / 2 - 0.14, -0.02, w / 2 + 0.12, -hh / 2 - 0.06, 0.14, shade2(frame2, 0.1));
@@ -46198,14 +46198,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return rise + th;
   }
   function curvedRoof(k, cx, cz, y, W3, D3, rise, ov, roofCol, opts = {}) {
-    const R2 = 4, M2 = 4;
+    const R3 = 4, M2 = 4;
     const hw0 = W3 / 2 + ov, hd0 = D3 / 2 + ov;
     const ridge = Math.max(0.05, W3 / 2 - D3 / 2 * 0.85);
     const up = opts.upturn ?? 0.35;
     const C4 = [[-1, 1], [1, 1], [1, -1], [-1, -1]];
     const rings2 = [];
-    for (let i = 0; i <= R2; i++) {
-      const t = i / R2;
+    for (let i = 0; i <= R3; i++) {
+      const t = i / R3;
       const e = Math.pow(t, 0.62);
       const hw = hw0 + (ridge - hw0) * e, hd = hd0 + (0.03 - hd0) * e, yy = y + rise * Math.pow(t, 1.8);
       const lift = i === 0 ? up : i === 1 ? up * 0.3 : 0;
@@ -46220,17 +46220,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       rings2.push(pts);
     }
-    const N3 = 4 * M2;
+    const N4 = 4 * M2;
     const pos = [], idx = [];
     rings2.forEach((r) => r.forEach((p) => pos.push(...p)));
-    for (let i = 0; i < R2; i++) {
-      for (let j = 0; j < N3; j++) {
-        const a = i * N3 + j, b2 = i * N3 + (j + 1) % N3, c = a + N3, d = b2 + N3;
+    for (let i = 0; i < R3; i++) {
+      for (let j = 0; j < N4; j++) {
+        const a = i * N4 + j, b2 = i * N4 + (j + 1) % N4, c = a + N4, d = b2 + N4;
         idx.push(a, b2, d, a, d, c);
       }
     }
-    const t0 = R2 * N3;
-    for (let j = 1; j < N3 - 1; j++) idx.push(t0, t0 + j, t0 + j + 1);
+    const t0 = R3 * N4;
+    for (let j = 1; j < N4 - 1; j++) idx.push(t0, t0 + j, t0 + j + 1);
     const g = new BufferGeometry();
     g.setAttribute("position", new Float32BufferAttribute(pos, 3));
     g.setIndex(idx);
@@ -46241,19 +46241,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     e0.forEach((p) => fp.push(...p));
     e0.forEach((p) => fp.push(p[0], p[1] - th, p[2]));
     fp.push(cx, y - th + 0.05, cz);
-    for (let j = 0; j < N3; j++) {
-      const a = j, b2 = (j + 1) % N3;
-      fi.push(a, b2 + N3, b2, a, a + N3, b2 + N3);
-      fi.push(2 * N3, b2 + N3, j + N3);
+    for (let j = 0; j < N4; j++) {
+      const a = j, b2 = (j + 1) % N4;
+      fi.push(a, b2 + N4, b2, a, a + N4, b2 + N4);
+      fi.push(2 * N4, b2 + N4, j + N4);
     }
     const fg = new BufferGeometry();
     fg.setAttribute("position", new Float32BufferAttribute(fp, 3));
     fg.setIndex(fi);
     k.add(fg.toNonIndexed(), { color: shade2(roofCol, -0.35), flat: true });
-    const top = rings2[R2];
+    const top = rings2[R3];
     const ridgeCol = opts.ridgeCol || shade2(roofCol, -0.4);
     for (let s = 0; s < 4; s++) {
-      for (let i = 0; i < R2; i++) {
+      for (let i = 0; i < R3; i++) {
         const a = rings2[i][s * M2], bb = rings2[i + 1][s * M2];
         const d = new Vector3(bb[0] - a[0], bb[1] - a[1], bb[2] - a[2]);
         const len = d.length();
@@ -46619,24 +46619,24 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function ruinWalls(k, b, fw, fd, H2, wallCol) {
     const stone = C(wallCol);
-    const R2 = (i) => hash2(b.x, b.y, i);
+    const R3 = (i) => hash2(b.x, b.y, i);
     const seg = Math.max(2, Math.round(fw / 1.2));
     for (let i = 0; i < seg; i++) {
       const x0 = -fw / 2 + i * fw / seg, x1 = x0 + fw / seg;
-      const h2 = 0.8 + R2(i) * (H2 - 0.8) * 0.9;
+      const h2 = 0.8 + R3(i) * (H2 - 0.8) * 0.9;
       B2(k, x0, -1, -0.45, x1 + 0.01, h2, 0, i % 2 ? shade2(stone, -0.08) : stone, { outline: 0.03 });
     }
     for (const sx of [-1, 1]) {
       const sseg = Math.max(2, Math.round(fd / 1.2));
       for (let i = 0; i < sseg; i++) {
         const z0 = -i * fd / sseg, z1 = z0 - fd / sseg;
-        const h2 = 0.5 + R2(i + sx * 10) * (H2 - 0.5) * 0.8;
+        const h2 = 0.5 + R3(i + sx * 10) * (H2 - 0.5) * 0.8;
         B2(k, sx * fw / 2 - 0.45 * (sx > 0 ? 1 : 0), -1, z1, sx * fw / 2 + 0.45 * (sx > 0 ? 0 : 1), h2, z0, stone, { outline: 0.03 });
       }
     }
     for (let i = 0; i < 6; i++) {
-      const g = new IcosahedronGeometry(0.25 + R2(i + 40) * 0.25, 0);
-      k.add(g, { at: [(R2(i + 20) - 0.5) * fw, 0.1, -R2(i + 30) * fd], flat: true, color: shade2(stone, -0.1), outline: 0.02 });
+      const g = new IcosahedronGeometry(0.25 + R3(i + 40) * 0.25, 0);
+      k.add(g, { at: [(R3(i + 20) - 0.5) * fw, 0.1, -R3(i + 30) * fd], flat: true, color: shade2(stone, -0.1), outline: 0.02 });
     }
   }
   function flatRoof(k, b, S3, fw, fd, H2, wallCol, roofCol) {
@@ -47119,7 +47119,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(cyl(r1, r0, len, seg, o.open !== false), o);
     k.restore();
   }
-  function branches(k, R2, pos, dir, len, r, depth, o, tips) {
+  function branches(k, R3, pos, dir, len, r, depth, o, tips) {
     const end = pos.clone().addScaledVector(dir, len);
     limb(k, pos.toArray(), end.toArray(), r, r * 0.66, o.seg || 5, o);
     if (depth <= 0) {
@@ -47127,12 +47127,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return;
     }
     const side = new Vector3().crossVectors(dir, Math.abs(dir.y) > 0.9 ? new Vector3(1, 0, 0) : UP).normalize();
-    side.applyAxisAngle(dir, R2() * Math.PI * 2);
+    side.applyAxisAngle(dir, R3() * Math.PI * 2);
     for (let i = 0; i < 2; i++) {
-      const nd = dir.clone().applyAxisAngle(side, (i ? 1 : -1) * (o.spread || 0.55) * (0.7 + R2() * 0.6));
+      const nd = dir.clone().applyAxisAngle(side, (i ? 1 : -1) * (o.spread || 0.55) * (0.7 + R3() * 0.6));
       nd.y += o.lift || 0.15;
       nd.normalize();
-      branches(k, R2, end, nd, len * (o.shrink || 0.7), r * 0.64, depth - 1, o, tips);
+      branches(k, R3, end, nd, len * (o.shrink || 0.7), r * 0.64, depth - 1, o, tips);
     }
   }
   var trunkColor = (col, h2) => {
@@ -47176,11 +47176,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       limb(k, [0.3, 1.5, 0.05], [1.2, 2.4, 0.3], 0.1, 0.05, 5, { color: tc });
       limb(k, [0.2, 2.1, 0], [-0.7, 2.7, -0.3], 0.08, 0.04, 5, { color: tc });
       crown(k, WIDE.blobs, WIDE.c, { squash: WIDE.squash, outline: 0.045 });
-      const R2 = rng2(7 + variant);
+      const R3 = rng2(7 + variant);
       for (let i = 0; i < 12; i++) {
-        const a = R2() * Math.PI * 2, e = (R2() - 0.3) * 0.9;
+        const a = R3() * Math.PI * 2, e = (R3() - 0.3) * 0.9;
         const p = crownPoint(WIDE.blobs, WIDE.c, [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], 0.97, WIDE.squash);
-        k.add(new TetrahedronGeometry(0.09, 0), { at: p, rot: [R2() * 3, R2() * 3, 0], color: "#ffffff" });
+        k.add(new TetrahedronGeometry(0.09, 0), { at: p, rot: [R3() * 3, R3() * 3, 0], color: "#ffffff" });
       }
       return { geo: k.build(), sway: true, crown: WIDE };
     });
@@ -47199,9 +47199,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         k.restore();
       }
       crown(k, JUNGLE.blobs, JUNGLE.c, { squash: JUNGLE.squash, outline: 0.05 });
-      const R2 = rng2(3 + variant);
+      const R3 = rng2(3 + variant);
       for (let i = 0; i < 4; i++) {
-        const a = i * 1.6 + R2(), rr = 0.9 + R2() * 0.6;
+        const a = i * 1.6 + R3(), rr = 0.9 + R3() * 0.6;
         const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
         const pts = [];
         for (let s = 0; s <= 4; s++) pts.push([x + Math.sin(s * 1.3 + i) * 0.08, 4.5 - s * 0.55, z, 0.05]);
@@ -47288,12 +47288,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return cached(`tree:dead:${sub}:${variant}`, () => {
       const k = new Mesher();
       const col = sub === "spooky" ? "#3b2f3f" : "#6b5a4a";
-      const R2 = rng2(11 + variant * 7 + (sub === "spooky" ? 3 : 0));
+      const R3 = rng2(11 + variant * 7 + (sub === "spooky" ? 3 : 0));
       const snowCol = C("#f4f9ff"), wood = C(col);
       const color = sub === "deadsnow" ? (p, n) => n.y > 0.35 ? snowCol : wood : col;
       k.add(cyl(0.16, 0.3, 0.4, 6, true), { color: shade2(col, -0.2), outline: 0.03 });
-      const dir = new Vector3((R2() - 0.5) * 0.25, 1, (R2() - 0.5) * 0.25).normalize();
-      branches(k, R2, new Vector3(0, 0.3, 0), dir, sub === "spooky" ? 2 : 1.8, 0.2, 3, { color, outline: 0.025, spread: 0.6, shrink: 0.68, lift: 0.2 });
+      const dir = new Vector3((R3() - 0.5) * 0.25, 1, (R3() - 0.5) * 0.25).normalize();
+      branches(k, R3, new Vector3(0, 0.3, 0), dir, sub === "spooky" ? 2 : 1.8, 0.2, 3, { color, outline: 0.025, spread: 0.6, shrink: 0.68, lift: 0.2 });
       let crownInfo = null;
       if (sub === "spooky") {
         const c = [0, 3.7, 0];
@@ -47334,20 +47334,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return cached("tree:lollipop", () => {
       const k = new Mesher();
       k.add(cyl(0.05, 0.06, 2.3, 6, true), { color: "#fdfefe", outline: 0.02 });
-      const R2 = 0.78, th = 0.22, seg = 16;
+      const R3 = 0.78, th = 0.22, seg = 16;
       k.save();
-      k.translate(0, 2.25 + R2, 0);
+      k.translate(0, 2.25 + R3, 0);
       k.rotateX(Math.PI / 2);
-      const side = cyl(R2, R2, th, seg, true);
+      const side = cyl(R3, R3, th, seg, true);
       k.add(side, { at: [0, -th / 2, 0], color: "#ffffff", tint: 1, outline: 0.035 });
       for (const face of [1, -1]) {
         const pos = [];
         for (let i = 0; i < seg; i++) {
           const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
           const tw = 0.9;
-          pos.push(0, face * th / 2, 0, Math.cos(a1 + tw) * R2 * 0.45, face * th / 2, Math.sin(a1 + tw) * R2 * 0.45, Math.cos(a0 + tw) * R2 * 0.45, face * th / 2, Math.sin(a0 + tw) * R2 * 0.45);
-          pos.push(Math.cos(a0 + tw) * R2 * 0.45, face * th / 2, Math.sin(a0 + tw) * R2 * 0.45, Math.cos(a1 + tw) * R2 * 0.45, face * th / 2, Math.sin(a1 + tw) * R2 * 0.45, Math.cos(a1) * R2, face * th / 2, Math.sin(a1) * R2);
-          pos.push(Math.cos(a0 + tw) * R2 * 0.45, face * th / 2, Math.sin(a0 + tw) * R2 * 0.45, Math.cos(a1) * R2, face * th / 2, Math.sin(a1) * R2, Math.cos(a0) * R2, face * th / 2, Math.sin(a0) * R2);
+          pos.push(0, face * th / 2, 0, Math.cos(a1 + tw) * R3 * 0.45, face * th / 2, Math.sin(a1 + tw) * R3 * 0.45, Math.cos(a0 + tw) * R3 * 0.45, face * th / 2, Math.sin(a0 + tw) * R3 * 0.45);
+          pos.push(Math.cos(a0 + tw) * R3 * 0.45, face * th / 2, Math.sin(a0 + tw) * R3 * 0.45, Math.cos(a1 + tw) * R3 * 0.45, face * th / 2, Math.sin(a1 + tw) * R3 * 0.45, Math.cos(a1) * R3, face * th / 2, Math.sin(a1) * R3);
+          pos.push(Math.cos(a0 + tw) * R3 * 0.45, face * th / 2, Math.sin(a0 + tw) * R3 * 0.45, Math.cos(a1) * R3, face * th / 2, Math.sin(a1) * R3, Math.cos(a0) * R3, face * th / 2, Math.sin(a0) * R3);
         }
         const g = new BufferGeometry();
         g.setAttribute("position", new Float32BufferAttribute(pos, 3));
@@ -47382,14 +47382,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function bamboo(variant) {
     return cached(`tree:bamboo:${variant}`, () => {
       const k = new Mesher();
-      const R2 = rng2(5 + variant);
+      const R3 = rng2(5 + variant);
       const n = 4;
       for (let i = 0; i < n; i++) {
-        const a = i / n * Math.PI * 2 + R2();
+        const a = i / n * Math.PI * 2 + R3();
         const x = Math.cos(a) * 0.28, z = Math.sin(a) * 0.28;
-        const h2 = 3.4 + R2() * 1.4;
+        const h2 = 3.4 + R3() * 1.4;
         const segs = 5;
-        const lean = (R2() - 0.5) * 0.12;
+        const lean = (R3() - 0.5) * 0.12;
         for (let s = 0; s < segs; s++) {
           k.add(cyl(0.062, 0.075, h2 / segs, 5, true), { at: [x + lean * s, s * h2 / segs, z], rot: [0, 0, -lean], color: s % 2 ? "#8bc34a" : "#7cb342", tint: 1 });
         }
@@ -47407,9 +47407,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function coral(variant) {
     return cached(`tree:coral:${variant}`, () => {
       const k = new Mesher();
-      const R2 = rng2(21 + variant);
+      const R3 = rng2(21 + variant);
       const tips = [];
-      branches(k, R2, new Vector3(0, 0, 0), new Vector3(0, 1, 0), 0.75, 0.13, 3, { color: "#ffffff", tint: 1, outline: 0.02, spread: 0.7, shrink: 0.78, lift: 0.3, seg: 5 }, tips);
+      branches(k, R3, new Vector3(0, 0, 0), new Vector3(0, 1, 0), 0.75, 0.13, 3, { color: "#ffffff", tint: 1, outline: 0.02, spread: 0.7, shrink: 0.78, lift: 0.3, seg: 5 }, tips);
       for (const t of tips) k.add(new IcosahedronGeometry(0.075, 0), { at: t.toArray(), color: "#ffffff", tint: 1 });
       return { geo: k.build(), sway: false };
     });
@@ -47560,10 +47560,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         return { geo: k.build(), tinted: true };
       }
       if (sub === "deadbush") {
-        const R2 = rng2(4);
+        const R3 = rng2(4);
         for (let i = 0; i < 8; i++) {
-          const a = i / 8 * Math.PI * 2 + R2() * 0.5;
-          const tip = [Math.cos(a) * 0.45, 0.45 + R2() * 0.25, Math.sin(a) * 0.45];
+          const a = i / 8 * Math.PI * 2 + R3() * 0.5;
+          const tip = [Math.cos(a) * 0.45, 0.45 + R3() * 0.25, Math.sin(a) * 0.45];
           limb(k, [0, 0, 0], tip, 0.03, 0.012, 3, { color: "#8d6e4a" });
           limb(k, [tip[0] * 0.6, tip[1] * 0.6, tip[2] * 0.6], [tip[0] * 0.8 + 0.1, tip[1] * 0.95, tip[2] * 0.8], 0.015, 8e-3, 3, { color: "#8d6e4a" });
         }
@@ -47572,9 +47572,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const blobs = [[0, 0.42, 0, 0.5], [0.4, 0.32, 0.12, 0.38, 0.9], [-0.36, 0.33, -0.1, 0.4, 0.88], [0.05, 0.3, 0.38, 0.36, 0.95], [-0.05, 0.3, -0.36, 0.34, 0.85]];
       crown(k, blobs, [0, 0.25, 0], { outline: 0.03, lo: 0.55 });
       if (var2) {
-        const R2 = rng2(9);
+        const R3 = rng2(9);
         for (let i = 0; i < 7; i++) {
-          const a = R2() * Math.PI * 2, e = R2() * 0.8;
+          const a = R3() * Math.PI * 2, e = R3() * 0.8;
           const p = crownPoint(blobs, [0, 0.25, 0], [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], 0.98);
           k.add(new IcosahedronGeometry(0.06, 0), { at: p, color: i % 2 ? "#f06292" : "#fff176" });
         }
@@ -47740,9 +47740,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   var haystack = () => model("haystack", (k) => {
     k.add(lathe([[0.68, 0], [0.7, 0.2], [0.63, 0.48], [0.46, 0.74], [0.22, 0.9], [0.02, 0.94]], 14), { split: true, color: (p, n, i) => Math.floor(i / 30) % 2 ? "#d4ac0d" : "#c49a18", outline: 0.03 });
-    const R2 = rng2(3);
+    const R3 = rng2(3);
     for (let i = 0; i < 9; i++) {
-      const a = R2() * Math.PI * 2;
+      const a = R3() * Math.PI * 2;
       k.add(cone(0.05, 0.4, 3), { at: [Math.cos(a) * 0.35, 0.72, Math.sin(a) * 0.35], rot: [Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9], color: "#e0bf3a" });
     }
     k.add(torus(0.6, 0.035, 4, 16), { at: [0, 0.35, 0], rot: [Math.PI / 2, 0, 0], color: "#8d6e4a" });
@@ -47828,19 +47828,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(lathe([[0.16, 0], [0.13, 0.3], [0.12, 0.7], [0.15, 0.9]], 10), { color: "#efebe9", outline: 0.015 });
     k.add(new SphereGeometry(0.66, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2), { at: [0, 0.86, 0], scale: [1, 0.62, 1], color: "#e53935", tint: 1, outline: 0.03 });
     k.add(new CircleGeometry(0.64, 14), { at: [0, 0.86, 0], rot: [Math.PI / 2, 0, 0], color: "#f5e6d3" });
-    const R2 = rng2(2);
+    const R3 = rng2(2);
     for (let i = 0; i < 7; i++) {
-      const a = R2() * Math.PI * 2, th = 0.35 + R2() * 0.8;
-      k.add(new SphereGeometry(0.08 + R2() * 0.04, 6, 4), { at: [Math.sin(th) * Math.cos(a) * 0.63, 0.86 + Math.cos(th) * 0.41, Math.sin(th) * Math.sin(a) * 0.63], scale: [1, 0.45, 1], color: "#ffffff" });
+      const a = R3() * Math.PI * 2, th = 0.35 + R3() * 0.8;
+      k.add(new SphereGeometry(0.08 + R3() * 0.04, 6, 4), { at: [Math.sin(th) * Math.cos(a) * 0.63, 0.86 + Math.cos(th) * 0.41, Math.sin(th) * Math.sin(a) * 0.63], scale: [1, 0.45, 1], color: "#ffffff" });
     }
   });
   var crystal = () => model("crystal", (k) => {
-    const R2 = rng2(8);
+    const R3 = rng2(8);
     const pts = [[0, 0, 0, 1.8, 0.28], [0.45, 0, 0.15, 1.1, 0.2, 0.35], [-0.35, 0, 0.25, 1.3, 0.22, -0.3], [0.1, 0, -0.4, 0.9, 0.18, 0.25], [-0.2, 0, -0.25, 0.7, 0.15, -0.4]];
     for (const [x, y, z, h2, r, tilt = 0] of pts) {
       k.save();
       k.translate(x, y - 0.15, z);
-      k.rotateY(R2() * 3);
+      k.rotateY(R3() * 3);
       k.rotateZ(tilt);
       k.rotateX(tilt * 0.5);
       k.add(cyl(r, r * 1.05, h2, 6), { flat: true, color: "#80deea", glow: "#4dd0e1", outline: 0.02, outlineColor: "#00363a" });
@@ -47855,8 +47855,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const H2 = broken ? 1.3 : 2.5;
     k.add(cyl(0.3, 0.33, H2, 12), { at: [0, 0.38, 0], split: true, color: (p, n, i) => i < 72 ? Math.floor(i / 6) % 2 ? stone : "#d4d9db" : stone, tint: 1, outline: 0.02 });
     if (broken) {
-      const R2 = rng2(4);
-      for (let i = 0; i < 4; i++) k.add(new IcosahedronGeometry(0.16, 0), { at: [(R2() - 0.5) * 0.3, 0.38 + H2, (R2() - 0.5) * 0.3], flat: true, color: stone, tint: 1 });
+      const R3 = rng2(4);
+      for (let i = 0; i < 4; i++) k.add(new IcosahedronGeometry(0.16, 0), { at: [(R3() - 0.5) * 0.3, 0.38 + H2, (R3() - 0.5) * 0.3], flat: true, color: stone, tint: 1 });
       k.save();
       k.translate(0.9, 0.3, 0.2);
       k.rotateZ(Math.PI / 2 - 0.1);
@@ -47869,16 +47869,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   });
   var ruins = (v) => model("ruins:" + v, (k) => {
-    const R2 = rng2(11 + v * 3);
+    const R3 = rng2(11 + v * 3);
     const stone = "#a1887f", dark = "#8d6e63";
     const segs = 3 + v % 2;
     for (let i = 0; i < segs; i++) {
-      const h2 = 0.5 + R2() * 1.4;
+      const h2 = 0.5 + R3() * 1.4;
       k.add(box(0.6, h2, 0.5), { at: [-0.9 + i * 0.6, -0.2, 0], color: i % 2 ? stone : shade2(stone, -0.06), tint: 1, outline: 0.025 });
-      k.add(box(0.45, 0.12, 0.5), { at: [-0.9 + i * 0.6 + (R2() - 0.5) * 0.1, h2 - 0.2, 0], rot: [0, 0, (R2() - 0.5) * 0.5], color: dark, tint: 1 });
+      k.add(box(0.45, 0.12, 0.5), { at: [-0.9 + i * 0.6 + (R3() - 0.5) * 0.1, h2 - 0.2, 0], rot: [0, 0, (R3() - 0.5) * 0.5], color: dark, tint: 1 });
     }
     for (let i = 0; i < 5; i++) {
-      k.add(new IcosahedronGeometry(0.18 + R2() * 0.2, 0), { at: [(R2() - 0.5) * 2.6, 0.05, 0.4 + R2() * 0.8], rot: [R2() * 3, R2() * 3, 0], flat: true, color: stone, tint: 1, outline: 0.015 });
+      k.add(new IcosahedronGeometry(0.18 + R3() * 0.2, 0), { at: [(R3() - 0.5) * 2.6, 0.05, 0.4 + R3() * 0.8], rot: [R3() * 3, R3() * 3, 0], flat: true, color: stone, tint: 1, outline: 0.015 });
     }
     if (v % 3 === 0) {
       k.save();
@@ -48420,20 +48420,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const sheet = new Mesh(new CylinderGeometry(0.57, 0.62, 1.28, 18, 1, true), glowMat(13627135, { opacity: 0.33 }));
     sheet.position.y = 1.1;
     root2.add(sheet);
-    const N3 = 12;
+    const N4 = 12;
     const drop = new IcosahedronGeometry(0.055, 0);
     const dp = drop.attributes.position.array;
     const per = dp.length;
-    const arr = new Float32Array(per * N3);
+    const arr = new Float32Array(per * N4);
     const g = new BufferGeometry();
     g.setAttribute("position", new BufferAttribute(arr, 3));
     const drops = new Mesh(g, glowMat(15136767, { opacity: 0.85 }));
     drops.frustumCulled = false;
     root2.add(drops);
     animate(root2, (t) => {
-      for (let k = 0; k < N3; k++) {
-        const a = k / N3 * Math.PI * 2 + t * 0.4;
-        const ph = (t * 0.9 + k / N3) % 1;
+      for (let k = 0; k < N4; k++) {
+        const a = k / N4 * Math.PI * 2 + t * 0.4;
+        const ph = (t * 0.9 + k / N4) % 1;
         const r = 0.1 + ph * 0.55, y = 2 + ph * 0.55 - ph * ph * 1.3;
         const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
         for (let v = 0; v < per; v += 3) {
@@ -48448,10 +48448,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return root2;
   });
   var fireBase = () => model("campfire", (k) => {
-    const R2 = rng2(4);
+    const R3 = rng2(4);
     for (let i = 0; i < 9; i++) {
       const a = i / 9 * Math.PI * 2;
-      k.add(new IcosahedronGeometry(0.14 + R2() * 0.05, 0), { at: [Math.cos(a) * 0.58, 0.05, Math.sin(a) * 0.58], scale: [1, 0.7, 1], flat: true, color: "#8e8a82", outline: 0.012 });
+      k.add(new IcosahedronGeometry(0.14 + R3() * 0.05, 0), { at: [Math.cos(a) * 0.58, 0.05, Math.sin(a) * 0.58], scale: [1, 0.7, 1], flat: true, color: "#8e8a82", outline: 0.012 });
     }
     k.add(new CircleGeometry(0.5, 10), { at: [0, 0.02, 0], rot: [-Math.PI / 2, 0, 0], color: "#2e2622" });
     for (let i = 0; i < 4; i++) {
@@ -48464,7 +48464,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.add(cyl(0.061, 0.061, 0.12, 6), { at: [0, 0.5, 0], color: "#1d1512" });
       k.restore();
     }
-    for (let i = 0; i < 6; i++) k.add(new IcosahedronGeometry(0.05, 0), { at: [(R2() - 0.5) * 0.4, 0.06, (R2() - 0.5) * 0.4], color: "#ff7043", glow: "#ff5722", flicker: 0.6 });
+    for (let i = 0; i < 6; i++) k.add(new IcosahedronGeometry(0.05, 0), { at: [(R3() - 0.5) * 0.4, 0.06, (R3() - 0.5) * 0.4], color: "#ff7043", glow: "#ff5722", flicker: 0.6 });
   });
   var flameGeo = () => model("flame", (k) => {
     const prof = (s) => [[1e-3, 0], [0.16 * s, 0.1 * s], [0.2 * s, 0.25 * s], [0.14 * s, 0.5 * s], [0.06 * s, 0.75 * s], [1e-3, 0.95 * s]];
@@ -48528,15 +48528,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var fireGlowMat = null;
   reg2("bubble", (o) => {
     const root2 = group("bubbles");
-    const R2 = rng2(hash2(o.x, o.y) * 1e3 + (o.v || 0));
+    const R3 = rng2(hash2(o.x, o.y) * 1e3 + (o.v || 0));
     const bubbles = [];
-    const n = 2 + Math.floor(R2() * 2);
+    const n = 2 + Math.floor(R3() * 2);
     for (let i = 0; i < n; i++) {
-      const r = 0.35 + R2() * 0.6 + (i === 0 ? 0.3 : 0);
+      const r = 0.35 + R3() * 0.6 + (i === 0 ? 0.3 : 0);
       const m = new Mesh(BUBBLE_GEO, bubbleMaterial());
       m.scale.setScalar(r);
       m.renderOrder = 3;
-      const b = { m, r, x: (R2() - 0.5) * 2.4, y: 1.3 + R2() * 2.4, z: (R2() - 0.5) * 2.4, ph: R2() * 6, sp: 0.4 + R2() * 0.5 };
+      const b = { m, r, x: (R3() - 0.5) * 2.4, y: 1.3 + R3() * 2.4, z: (R3() - 0.5) * 2.4, ph: R3() * 6, sp: 0.4 + R3() * 0.5 };
       root2.add(m);
       bubbles.push(b);
     }
@@ -48550,7 +48550,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return root2;
   });
   var ferrisStatic = () => model("ferris-frame", (k) => {
-    const R2 = 7.4, hy = R2 + 1.4;
+    const R3 = 7.4, hy = R3 + 1.4;
     for (const z of [-1.3, 1.3]) {
       for (const s of [-1, 1]) {
         const a = [s * 3.2, 0, z], b = [0, hy, z * 0.55];
@@ -48569,16 +48569,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(cone(1.2, 0.8, 4), { at: [2.6, 2.3, 1.8], rot: [0, Math.PI / 4, 0], color: "#ffd54f", outline: 0.02 });
   });
   var ferrisWheel = () => model("ferris-wheel", (k) => {
-    const R2 = 7.4;
+    const R3 = 7.4;
     for (const z of [-0.55, 0.55]) {
-      k.add(torus(R2, 0.12, 5, 40), { at: [0, 0, z], color: "#ff8a65", outline: 0.02 });
-      k.add(torus(R2 * 0.55, 0.08, 5, 28), { at: [0, 0, z], color: "#4fc3f7" });
-      for (let i = 0; i < 16; i++) k.add(box(0.07, R2, 0.07), { at: [0, 0, z], rot: [0, 0, i / 16 * Math.PI * 2], color: "#eceff1" });
+      k.add(torus(R3, 0.12, 5, 40), { at: [0, 0, z], color: "#ff8a65", outline: 0.02 });
+      k.add(torus(R3 * 0.55, 0.08, 5, 28), { at: [0, 0, z], color: "#4fc3f7" });
+      for (let i = 0; i < 16; i++) k.add(box(0.07, R3, 0.07), { at: [0, 0, z], rot: [0, 0, i / 16 * Math.PI * 2], color: "#eceff1" });
     }
     for (let i = 0; i < 12; i++) {
       const a = i / 12 * Math.PI * 2;
-      k.add(cyl(0.05, 0.05, 1.1, 4), { at: [Math.cos(a) * R2, Math.sin(a) * R2, -0.55], rot: [Math.PI / 2, 0, 0], color: "#eceff1" });
-      k.add(new SphereGeometry(0.12, 6, 4), { at: [Math.cos(a) * R2, Math.sin(a) * R2, 0.6], color: "#ffeb3b", glow: "#fff176" });
+      k.add(cyl(0.05, 0.05, 1.1, 4), { at: [Math.cos(a) * R3, Math.sin(a) * R3, -0.55], rot: [Math.PI / 2, 0, 0], color: "#eceff1" });
+      k.add(new SphereGeometry(0.12, 6, 4), { at: [Math.cos(a) * R3, Math.sin(a) * R3, 0.6], color: "#ffeb3b", glow: "#fff176" });
     }
     k.add(cyl(0.5, 0.5, 1.3, 12), { at: [0, 0, -0.65], rot: [Math.PI / 2, 0, 0], color: "#90a4ae" });
   });
@@ -48598,14 +48598,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return k.build(false);
   }
   var millWheel = () => model("mill-wheel", (k) => {
-    const R2 = 1.5;
+    const R3 = 1.5;
     for (const z of [-0.3, 0.3]) {
-      k.add(torus(R2, 0.07, 5, 20), { at: [0, 0, z], color: "#6d4c41", outline: 0.015 });
-      for (let i = 0; i < 8; i++) k.add(box(0.08, R2, 0.08), { at: [0, 0, z], rot: [0, 0, i / 8 * Math.PI * 2], color: "#795548" });
+      k.add(torus(R3, 0.07, 5, 20), { at: [0, 0, z], color: "#6d4c41", outline: 0.015 });
+      for (let i = 0; i < 8; i++) k.add(box(0.08, R3, 0.08), { at: [0, 0, z], rot: [0, 0, i / 8 * Math.PI * 2], color: "#795548" });
     }
     for (let i = 0; i < 12; i++) {
       const a = i / 12 * Math.PI * 2;
-      k.add(box(0.06, 0.4, 0.7), { at: [-Math.sin(a) * (R2 - 0.05), Math.cos(a) * (R2 - 0.05), 0], rot: [0, 0, a], color: "#8d6e4a" });
+      k.add(box(0.06, 0.4, 0.7), { at: [-Math.sin(a) * (R3 - 0.05), Math.cos(a) * (R3 - 0.05), 0], rot: [0, 0, a], color: "#8d6e4a" });
     }
     k.add(cyl(0.15, 0.15, 1, 8), { at: [0, 0, -0.5], rot: [Math.PI / 2, 0, 0], color: "#4e342e" });
   });
@@ -48715,8 +48715,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (const x of [-0.34, 0, 0.34]) k.add(new CylinderGeometry(0.31, 0.31, 0.08, 12, 1, false, 0, Math.PI), { at: [x, 0, 0.3], rot: [0, 0, Math.PI / 2], color: band2 });
   });
   var coinsGeo = () => model("coins", (k) => {
-    const R2 = rng2(5);
-    for (let i = 0; i < 14; i++) k.add(new CylinderGeometry(0.06, 0.06, 0.02, 8), { at: [(R2() - 0.5) * 0.7, 0.42 + R2() * 0.12, (R2() - 0.5) * 0.4], rot: [R2(), 0, R2()], color: "#ffd54f", glow: "#ffb300" });
+    const R3 = rng2(5);
+    for (let i = 0; i < 14; i++) k.add(new CylinderGeometry(0.06, 0.06, 0.02, 8), { at: [(R3() - 0.5) * 0.7, 0.42 + R3() * 0.12, (R3() - 0.5) * 0.4], rot: [R3(), 0, R3()], color: "#ffd54f", glow: "#ffb300" });
     k.add(new SphereGeometry(0.3, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), { at: [0, 0.4, 0], scale: [1.3, 0.35, 0.8], color: "#f1c40f" });
   });
   reg2("chest", (o) => {
@@ -48832,11 +48832,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   var stoneArch = () => model("arch-stone", (k) => {
     const s = new Shape();
-    const R2 = 2.3, r = 1.55, H2 = 2.2;
-    s.moveTo(-R2, 0);
-    s.lineTo(-R2, H2);
-    s.absarc(0, H2, R2, Math.PI, 0, true);
-    s.lineTo(R2, 0);
+    const R3 = 2.3, r = 1.55, H2 = 2.2;
+    s.moveTo(-R3, 0);
+    s.lineTo(-R3, H2);
+    s.absarc(0, H2, R3, Math.PI, 0, true);
+    s.lineTo(R3, 0);
     s.lineTo(r, 0);
     s.lineTo(r, H2);
     s.absarc(0, H2, r, 0, Math.PI, false);
@@ -48851,10 +48851,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     d.closePath();
     k.add(new ShapeGeometry(d, 10), { at: [0, -0.3, -0.3], color: "#15100c" });
     const R22 = rng2(3);
-    for (let i = 0; i < 7; i++) k.add(new IcosahedronGeometry(0.3 + R22() * 0.4, 0), { at: [(R22() > 0.5 ? 1 : -1) * (R2 + 0.3 + R22() * 0.6), R22() * 0.5, (R22() - 0.5) * 1.2], flat: true, color: "#7d6b5a", outline: 0.02 });
+    for (let i = 0; i < 7; i++) k.add(new IcosahedronGeometry(0.3 + R22() * 0.4, 0), { at: [(R22() > 0.5 ? 1 : -1) * (R3 + 0.3 + R22() * 0.6), R22() * 0.5, (R22() - 0.5) * 1.2], flat: true, color: "#7d6b5a", outline: 0.02 });
     for (let i = 0; i < 9; i++) {
       const a = i / 8 * Math.PI;
-      k.add(box(0.3, 0.12, 1.25), { at: [Math.cos(a) * (R2 - 0.05), H2 - 0.3 + Math.sin(a) * (R2 - 0.05), 0], rot: [0, 0, a - Math.PI / 2], color: "#a8927c" });
+      k.add(box(0.3, 0.12, 1.25), { at: [Math.cos(a) * (R3 - 0.05), H2 - 0.3 + Math.sin(a) * (R3 - 0.05), 0], rot: [0, 0, a - Math.PI / 2], color: "#a8927c" });
     }
   });
   var mineArch = () => model("arch-mine", (k) => {
@@ -48868,21 +48868,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (let z = 0.3; z < 3; z += 0.45) k.add(box(1.2, 0.06, 0.16), { at: [0, -0.02, z], color: "#6d4c33" });
   });
   var heavensGate = () => model("arch-heaven", (k) => {
-    const R2 = rng2(7);
+    const R3 = rng2(7);
     for (const s of [-1, 1]) {
-      for (let i = 0; i < 6; i++) k.add(new IcosahedronGeometry(0.8 + R2() * 0.3, 1), { at: [s * 3.2 + (R2() - 0.5) * 0.4, i * 0.9, (R2() - 0.5) * 0.4], color: "#ffffff", outline: 0.03, outlineColor: "#9fb7cc" });
+      for (let i = 0; i < 6; i++) k.add(new IcosahedronGeometry(0.8 + R3() * 0.3, 1), { at: [s * 3.2 + (R3() - 0.5) * 0.4, i * 0.9, (R3() - 0.5) * 0.4], color: "#ffffff", outline: 0.03, outlineColor: "#9fb7cc" });
     }
     k.add(box(7.8, 1.1, 0.9), { at: [0, 5.1, 0], color: "#f5f6fa", outline: 0.04 });
-    for (let i = 0; i < 9; i++) k.add(new IcosahedronGeometry(0.7 + R2() * 0.3, 1), { at: [-3.6 + i * 0.9, 6.1 + R2() * 0.3, (R2() - 0.5) * 0.3], color: "#ffffff", outline: 0.03, outlineColor: "#9fb7cc" });
-    for (let i = 0; i < 8; i++) k.add(new IcosahedronGeometry(0.6 + R2() * 0.4, 1), { at: [(R2() - 0.5) * 8, 0, 0.6 + R2() * 0.8], color: "#f4f8ff" });
+    for (let i = 0; i < 9; i++) k.add(new IcosahedronGeometry(0.7 + R3() * 0.3, 1), { at: [-3.6 + i * 0.9, 6.1 + R3() * 0.3, (R3() - 0.5) * 0.3], color: "#ffffff", outline: 0.03, outlineColor: "#9fb7cc" });
+    for (let i = 0; i < 8; i++) k.add(new IcosahedronGeometry(0.6 + R3() * 0.4, 1), { at: [(R3() - 0.5) * 8, 0, 0.6 + R3() * 0.8], color: "#f4f8ff" });
   });
   var grandArch = () => model("arch-grand", (k) => {
     const s = new Shape();
-    const R2 = 3.6, r = 2.6, H2 = 3.2;
-    s.moveTo(-R2, 0);
-    s.lineTo(-R2, H2);
-    s.absarc(0, H2, R2, Math.PI, 0, true);
-    s.lineTo(R2, 0);
+    const R3 = 3.6, r = 2.6, H2 = 3.2;
+    s.moveTo(-R3, 0);
+    s.lineTo(-R3, H2);
+    s.absarc(0, H2, R3, Math.PI, 0, true);
+    s.lineTo(R3, 0);
     s.lineTo(r, 0);
     s.lineTo(r, H2);
     s.absarc(0, H2, r, 0, Math.PI, false);
@@ -48890,10 +48890,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     s.closePath();
     k.add(extrude(s, 1.6, 0.08, 12), { at: [0, -0.3, 0], color: "#cfc3a8", outline: 0.05 });
     const t = new Shape();
-    t.moveTo(-R2 - 0.05, H2);
-    t.absarc(0, H2, R2 + 0.05, Math.PI, 0, true);
-    t.lineTo(R2 - 0.25, H2);
-    t.absarc(0, H2, R2 - 0.25, 0, Math.PI, false);
+    t.moveTo(-R3 - 0.05, H2);
+    t.absarc(0, H2, R3 + 0.05, Math.PI, 0, true);
+    t.lineTo(R3 - 0.25, H2);
+    t.absarc(0, H2, R3 - 0.25, 0, Math.PI, false);
     t.closePath();
     k.add(extrude(t, 1.7, 0, 12), { at: [0, -0.3, 0], color: "#d4ac0d" });
   });
@@ -48989,16 +48989,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const stone = red ? "#8e2b22" : "#37474f", light = red ? "#ffcdb4" : "#c8e6f0";
     k.add(box(2.6, 0.35, 2.4), { at: [0, -0.2, 0], color: red ? "#6e5a50" : "#5d6468", outline: 0.025 });
     k.add(box(2.05, 2.05, 2.05), { at: [0, 0.15, 0], color: stone, outline: 0.04, flat: true });
-    const R2 = rng2(red ? 5 : 3);
+    const R3 = rng2(red ? 5 : 3);
     for (const face of [0, 1, 2, 3]) {
       k.save();
       k.rotateY(face * Math.PI / 2);
       for (let r = 0; r < 7; r++) {
         let x = -0.85;
         while (x < 0.8) {
-          const w = 0.08 + R2() * 0.16;
+          const w = 0.08 + R3() * 0.16;
           k.add(box(w, 0.11, 0.02), { at: [x + w / 2, 0.42 + r * 0.25, 1.03], color: light, glow: red ? "#ff8a65" : "#4fc3f7" });
-          x += w + 0.06 + R2() * 0.06;
+          x += w + 0.06 + R3() * 0.06;
         }
       }
       k.restore();
@@ -49035,8 +49035,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(ribbon([[0.2, 3.7, 0, 0.05], [0.9, 3.2, 0.4, 0.5], [1.4, 2.5, 0.2, 0.35], [1.6, 2, 0.5, 0.12]], { side: [0, 0, 1] }), { color: "#ece6d6", double: true });
     for (let i = 0; i < 5; i++) k.add(torus(1.2, 0.07, 4, 8, Math.PI * 0.7), { at: [-2.4 - i * 0.35, 0.6, 0], rot: [Math.PI / 2, Math.PI / 2, 0], color: "#4e342e" });
     k.restore();
-    const R2 = rng2(6);
-    for (let i = 0; i < 6; i++) k.add(box(1.2 + R2(), 0.08, 0.22), { at: [(R2() - 0.5) * 7, 0.03, 2 + R2() * 2], rot: [0, R2() * 3, 0], color: "#6d4c33" });
+    const R3 = rng2(6);
+    for (let i = 0; i < 6; i++) k.add(box(1.2 + R3(), 0.08, 0.22), { at: [(R3() - 0.5) * 7, 0.03, 2 + R3() * 2], rot: [0, R3() * 3, 0], color: "#6d4c33" });
   });
   reg2("shipwreck", (o, ctx) => {
     const m = simple(o, ctx, "shipwreck", wreckGeo(), { yaw: hash2(o.x, o.y) * Math.PI * 2 });
@@ -50809,8 +50809,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.restore();
     },
     bubble(g, C3, v, H2) {
-      const R2 = 1.72 * H2.hatK, cy = -0.2 - (H2.hatK - 1) * 0.6;
-      const b = EL(0, cy, R2, R2);
+      const R3 = 1.72 * H2.hatK, cy = -0.2 - (H2.hatK - 1) * 0.6;
+      const b = EL(0, cy, R3, R3);
       g.fillStyle = "rgba(200,235,255,0.2)";
       g.fill(b);
       g.lineWidth = 0.08;
@@ -50819,9 +50819,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (C3.lod) {
         g.lineWidth = 0.1;
         g.strokeStyle = "rgba(255,255,255,0.75)";
-        g.stroke(pp(memo("bb" + R2, () => pb().M(-R2 * 0.72, cy - R2 * 0.34).Q(-R2 * 0.62, cy - R2 * 0.72, -R2 * 0.2, cy - R2 * 0.86).s)));
+        g.stroke(pp(memo("bb" + R3, () => pb().M(-R3 * 0.72, cy - R3 * 0.34).Q(-R3 * 0.62, cy - R3 * 0.72, -R3 * 0.2, cy - R3 * 0.86).s)));
         g.fillStyle = "rgba(255,255,255,0.8)";
-        g.fill(EL(R2 * 0.5, cy - R2 * 0.5, 0.1, 0.07));
+        g.fill(EL(R3 * 0.5, cy - R3 * 0.5, 0.1, 0.07));
       }
     },
     antlers(g, C3, v, H2) {
@@ -51521,11 +51521,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (st.kind === "crown") y0 = Math.min(y0, m.top - 0.55);
       if (st.kind === "halo") y0 = Math.min(y0, m.top - 0.7);
       if (st.kind === "bubble") {
-        const R2 = 1.72 * k + 0.12;
-        x0 = Math.min(x0, -R2);
-        x1 = Math.max(x1, R2);
-        y0 = Math.min(y0, -0.2 - (k - 1) * 0.6 - R2);
-        y1 = Math.max(y1, -0.2 + R2);
+        const R3 = 1.72 * k + 0.12;
+        x0 = Math.min(x0, -R3);
+        x1 = Math.max(x1, R3);
+        y0 = Math.min(y0, -0.2 - (k - 1) * 0.6 - R3);
+        y1 = Math.max(y1, -0.2 + R3);
       }
       if (st.kind === "marine" && v !== "F") y1 = Math.max(y1, 1.2);
     }
@@ -52299,10 +52299,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const A = pose.anim;
     if (!A || A.t <= 5e-3) return;
     if (A.t < (A.trailFrom ?? 0) - 5e-3 || A.t > (A.trailTo ?? 99)) return;
-    const N3 = 11, dt = A.trailDt || 85e-4;
+    const N4 = 11, dt = A.trailDt || 85e-4;
     const tMin = Math.max(0, (A.trailFrom ?? 0) - 0.02);
     const samples = [];
-    for (let k = 0; k < N3; k++) {
+    for (let k = 0; k < N4; k++) {
       const t = A.t - k * dt;
       if (t < tMin) break;
       const P4 = k === 0 ? pose.P : samplePose(A, t, pose);
@@ -52382,13 +52382,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const pts = smoothPts(e.pts, 2);
         const n = pts.length;
         const r0 = (e.foot ? 0.15 : 0.11) * (look.bulk || 1) * e.scale;
-        const L2 = [], R2 = [];
+        const L2 = [], R3 = [];
         for (let i = 0; i < n; i++) {
           const p = pts[i], q2 = pts[Math.min(n - 1, i + 1)], o = pts[Math.max(0, i - 1)];
           const ang = Math.atan2(q2[1] - o[1], q2[0] - o[0]) + Math.PI / 2;
           const w = r0 * (1 - i / n) * 1.1;
           L2.push([p[0] + Math.cos(ang) * w, p[1] + Math.sin(ang) * w]);
-          R2.push([p[0] - Math.cos(ang) * w, p[1] - Math.sin(ang) * w]);
+          R3.push([p[0] - Math.cos(ang) * w, p[1] - Math.sin(ang) * w]);
         }
         const gr = g.createLinearGradient(pts[0][0], pts[0][1], pts[n - 1][0], pts[n - 1][1]);
         gr.addColorStop(0, rgba2("#ffffff", 0.85));
@@ -52398,7 +52398,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.beginPath();
         g.moveTo(L2[0][0], L2[0][1]);
         for (let i = 1; i < n; i++) g.lineTo(L2[i][0], L2[i][1]);
-        for (let i = n - 1; i >= 0; i--) g.lineTo(R2[i][0], R2[i][1]);
+        for (let i = n - 1; i >= 0; i--) g.lineTo(R3[i][0], R3[i][1]);
         g.closePath();
         g.fill();
         const [hx, hy] = pts[0], [tx, ty] = pts[n - 1];
@@ -52591,31 +52591,31 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.save();
     switch (c.kind) {
       case "sun": {
-        const cx = hand[0], cy = Math.min(hand[1], headY) - 0.35 - k * 0.6, R2 = 0.12 + k * 0.62;
+        const cx = hand[0], cy = Math.min(hand[1], headY) - 0.35 - k * 0.6, R3 = 0.12 + k * 0.62;
         g.globalCompositeOperation = "lighter";
         g.globalAlpha = 0.35;
         g.fillStyle = "#ff6d00";
         g.beginPath();
-        g.arc(cx, cy, R2 * 1.6, 0, TAU9);
+        g.arc(cx, cy, R3 * 1.6, 0, TAU9);
         g.fill();
         for (let i = 0; i < 10; i++) {
           const a = i / 10 * TAU9 + t * 1.5, fl2 = 1.25 + 0.25 * Math.sin(t * 13 + i * 2);
           g.globalAlpha = 0.6;
           g.fillStyle = i % 2 ? "#ffab00" : "#ff3d00";
           g.beginPath();
-          g.moveTo(cx + Math.cos(a - 0.25) * R2 * 0.9, cy + Math.sin(a - 0.25) * R2 * 0.9);
-          g.lineTo(cx + Math.cos(a) * R2 * fl2, cy + Math.sin(a) * R2 * fl2);
-          g.lineTo(cx + Math.cos(a + 0.25) * R2 * 0.9, cy + Math.sin(a + 0.25) * R2 * 0.9);
+          g.moveTo(cx + Math.cos(a - 0.25) * R3 * 0.9, cy + Math.sin(a - 0.25) * R3 * 0.9);
+          g.lineTo(cx + Math.cos(a) * R3 * fl2, cy + Math.sin(a) * R3 * fl2);
+          g.lineTo(cx + Math.cos(a + 0.25) * R3 * 0.9, cy + Math.sin(a + 0.25) * R3 * 0.9);
           g.fill();
         }
         g.globalAlpha = 0.95;
         g.fillStyle = "#ff9100";
         g.beginPath();
-        g.arc(cx, cy, R2, 0, TAU9);
+        g.arc(cx, cy, R3, 0, TAU9);
         g.fill();
         g.fillStyle = "#ffe57f";
         g.beginPath();
-        g.arc(cx, cy, R2 * 0.62, 0, TAU9);
+        g.arc(cx, cy, R3 * 0.62, 0, TAU9);
         g.fill();
         break;
       }
@@ -52697,19 +52697,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           g.lineTo(hand[0] + Math.cos(a) * d1, hand[1] + Math.sin(a) * d1);
           g.stroke();
         }
-        const R2 = 0.05 + (c.size || 0.22) * k;
+        const R3 = 0.05 + (c.size || 0.22) * k;
         g.globalAlpha = 0.35 * k;
         g.fillStyle = col;
         g.beginPath();
-        g.arc(hand[0], hand[1], R2 * 1.8, 0, TAU9);
+        g.arc(hand[0], hand[1], R3 * 1.8, 0, TAU9);
         g.fill();
         g.globalAlpha = 0.9 * k;
         g.beginPath();
-        g.arc(hand[0], hand[1], R2, 0, TAU9);
+        g.arc(hand[0], hand[1], R3, 0, TAU9);
         g.fill();
         g.fillStyle = "#ffffff";
         g.beginPath();
-        g.arc(hand[0], hand[1], R2 * 0.5, 0, TAU9);
+        g.arc(hand[0], hand[1], R3 * 0.5, 0, TAU9);
         g.fill();
       }
     }
@@ -53595,11 +53595,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       fx.bolt(x, y, x + Math.cos(a) * r * rnd(0.6, 1), y + Math.sin(a) * r * 0.7 * rnd(0.6, 1), col, 0.14, 0.035, { z0: z, z1: z + rnd(-0.35, 0.35), branches: 0, amp: -0.2 });
     }
   }
-  function vibration(fx, x, y, z, R2, col, n = 3) {
-    for (let i = 0; i < n; i++) fx.ring(x, y, 0.05, R2 * (0.6 + i * 0.25), col, 0.28 + i * 0.05, 0.05, { z, flat: 0.85, wobble: 0.18, lobes: 11, delay: i * 0.05, noCore: true, add: true });
+  function vibration(fx, x, y, z, R3, col, n = 3) {
+    for (let i = 0; i < n; i++) fx.ring(x, y, 0.05, R3 * (0.6 + i * 0.25), col, 0.28 + i * 0.05, 0.05, { z, flat: 0.85, wobble: 0.18, lobes: 11, delay: i * 0.05, noCore: true, add: true });
   }
-  function ripple(fx, x, y, R2, col, n = 2) {
-    for (let i = 0; i < n; i++) fx.ring(x, y, 0.1, R2 * (0.8 + i * 0.35), col, 0.45, 0.07, { z: 0.06, flat: 0.55, delay: i * 0.08, add: true });
+  function ripple(fx, x, y, R3, col, n = 2) {
+    for (let i = 0; i < n; i++) fx.ring(x, y, 0.1, R3 * (0.8 + i * 0.35), col, 0.45, 0.07, { z: 0.06, flat: 0.55, delay: i * 0.08, add: true });
   }
   var clipOf = (actor, a) => a.clip || (a.clip = actionClip(a.def, actor));
   var lastLook = (a) => a._lastLook || a.look;
@@ -53873,36 +53873,36 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   }
   function ringFx(fx, actor, a, h2, hb, col, E, st) {
-    const R2 = h2.range || 2;
+    const R3 = h2.range || 2;
     const x = hb.x, y = hb.y + 0.4;
-    fx.ring(x, y, 0.2, R2, col, 0.36, 0.2, { add: !!E.add || col === "#ffffff" });
-    fx.ring(x, y, 0.1, R2 * 0.7, "#ffffff", 0.26, 0.07, { add: true });
+    fx.ring(x, y, 0.2, R3, col, 0.36, 0.2, { add: !!E.add || col === "#ffffff" });
+    fx.ring(x, y, 0.1, R3 * 0.7, "#ffffff", 0.26, 0.07, { add: true });
     if ((h2.duration || 0) > 0.3) {
-      for (let t = 0.12; t < h2.duration; t += 0.14) fx.ring(x, y, 0.2, R2 * 0.9, col, 0.3, 0.1, { delay: t, add: true });
+      for (let t = 0.12; t < h2.duration; t += 0.14) fx.ring(x, y, 0.2, R3 * 0.9, col, 0.3, 0.1, { delay: t, add: true });
     }
-    fx.burst(x, y, Math.round(8 + R2 * 3), { speed: R2 * 3, spread: TAU10, kind: E.kind === "drop" ? "drop" : E.kind, color: E.spark, z: 0.45, vz: 1, g: 3, life: 0.4, size: 0.1 });
+    fx.burst(x, y, Math.round(8 + R3 * 3), { speed: R3 * 3, spread: TAU10, kind: E.kind === "drop" ? "drop" : E.kind, color: E.spark, z: 0.45, vz: 1, g: 3, life: 0.4, size: 0.1 });
     const el = h2.element || "physical";
-    if (el === "lightning") miniBolts(fx, x, y, 0.6, 5, R2 * 0.9, "#fff176");
-    else if (el === "fire" || el === "explosion") flames(fx, x, y, 0.3, 14, ELEM.fire.spark, { speed: R2 * 1.6 });
-    else if (el === "ice") ringSpikes(fx, x, y, R2 * 0.75, Math.round(R2 * 4), "ice");
+    if (el === "lightning") miniBolts(fx, x, y, 0.6, 5, R3 * 0.9, "#fff176");
+    else if (el === "fire" || el === "explosion") flames(fx, x, y, 0.3, 14, ELEM.fire.spark, { speed: R3 * 1.6 });
+    else if (el === "ice") ringSpikes(fx, x, y, R3 * 0.75, Math.round(R3 * 4), "ice");
     else if (el === "quake") {
-      for (let i = 0; i < 3; i++) fx.add("aircrack", { x: x + rnd(-R2, R2) * 0.5, y: y + rnd(-R2, R2) * 0.3, z: rnd(0.6, 1.4), size: R2 * 0.3, life: 0.45, delay: i * 0.05 });
-    } else if (el === "water") ripple(fx, x, y, R2, "#81d4fa", 3);
-    else if (el === "dark") fx.add("vortex", { x, y, r: R2 * 0.7, kind: "dark", life: 0.5, spin: -6 });
-    else if (el === "light") glow2(fx, x, y, 0.8, R2, "#fff9c4", 0.25);
-    if (st && st.vibrate) vibration(fx, x, y, 0.7, R2, st.vibrate, 3);
+      for (let i = 0; i < 3; i++) fx.add("aircrack", { x: x + rnd(-R3, R3) * 0.5, y: y + rnd(-R3, R3) * 0.3, z: rnd(0.6, 1.4), size: R3 * 0.3, life: 0.45, delay: i * 0.05 });
+    } else if (el === "water") ripple(fx, x, y, R3, "#81d4fa", 3);
+    else if (el === "dark") fx.add("vortex", { x, y, r: R3 * 0.7, kind: "dark", life: 0.5, spin: -6 });
+    else if (el === "light") glow2(fx, x, y, 0.8, R3, "#fff9c4", 0.25);
+    if (st && st.vibrate) vibration(fx, x, y, 0.7, R3, st.vibrate, 3);
     if (st && st.sparkle) sparkle2(fx, x, y, 0.8, 6, st.sparkle);
     if (h2.heavy) {
-      fx.crack(x, y, R2 * 0.7);
-      dust(fx, x, y, Math.round(6 + R2 * 2), { speed: R2 * 1.5 });
+      fx.crack(x, y, R3 * 0.7);
+      dust(fx, x, y, Math.round(6 + R3 * 2), { speed: R3 * 1.5 });
     }
   }
-  function ringSpikes(fx, x, y, R2, n, kind, col) {
+  function ringSpikes(fx, x, y, R3, n, kind, col) {
     const pts = [];
     for (let i = 0; i < n; i++) {
       const th = i / n * TAU10 + rnd(-0.2, 0.2);
-      const rr = R2 * rnd(0.55, 1);
-      pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, h: rnd(0.5, 1.1), w: rnd(0.12, 0.2), delay: rr / R2 * 0.12, lean: Math.cos(th) * 0.25 });
+      const rr = R3 * rnd(0.55, 1);
+      pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, h: rnd(0.5, 1.1), w: rnd(0.12, 0.2), delay: rr / R3 * 0.12, lean: Math.cos(th) * 0.25 });
     }
     pts.sort((p, q2) => p.dy - q2.dy);
     fx.add("spikes", { x, y, pts, kind, color: col || (kind === "ice" ? "#b3e5fc" : kind === "sand" ? "#d7b56d" : "#8d6e63"), edge: kind === "ice" ? "#e1f5fe" : "#5d4037", life: 1.1 });
@@ -54060,13 +54060,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       sparkle2(fx, actor.x, actor.y, 1.2, 4, [col, "#ffffff"]);
     },
     pull(fx, actor, s, a) {
-      const R2 = s.pull.range;
+      const R3 = s.pull.range;
       const col = s.color || "#7e57c2";
       const ang = a.angle;
       fx.add("vortex", { x: actor.x + Math.cos(ang) * 0.6, y: actor.y + Math.sin(ang) * 0.4, r: 1.1, kind: "dark", life: 0.6, spin: -8, arms: 5 });
-      fx.ring(actor.x, actor.y, R2, 0.3, col, 0.5, 0.3);
+      fx.ring(actor.x, actor.y, R3, 0.3, col, 0.5, 0.3);
       for (let i = 0; i < 18; i++) {
-        const th = rnd(0, TAU10), rr = R2 * rnd(0.5, 0.95);
+        const th = rnd(0, TAU10), rr = R3 * rnd(0.5, 0.95);
         fx.particle({ x: actor.x + Math.cos(th) * rr, y: actor.y + Math.sin(th) * rr * 0.7, z: rnd(0.3, 1.2), vx: -Math.cos(th) * rr * 2.2, vy: -Math.sin(th) * rr * 1.6, vz: 0, g: 0, drag: 0.5, life: 0.45, size: 0.12, color: i % 2 ? "#311b92" : "#7e57c2", kind: "spark", add: false });
       }
     },
@@ -54120,9 +54120,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   sig("santo_heavy", {
     hit(fx, actor, s, a, hb) {
-      const h2 = s.hit, ang = hb.angle, R2 = (h2.range || 2.4) * (actor.reach ?? 1);
-      for (const [dir, z] of [[1, 0.9], [-1, 0.45]]) fx.add("crescent", { x: actor.x, y: actor.y, angle: ang, radius: R2 * 0.9, arc: 1.9, width: 0.3, color: "#e8f5e9", dir, life: 0.28, z, tilt: 0.55 });
-      fx.add("flare", { x: actor.x + Math.cos(ang) * R2 * 0.7, y: actor.y + Math.sin(ang) * R2 * 0.5, z: 0.7, size: 0.9, color: "#ff5252", life: 0.22 });
+      const h2 = s.hit, ang = hb.angle, R3 = (h2.range || 2.4) * (actor.reach ?? 1);
+      for (const [dir, z] of [[1, 0.9], [-1, 0.45]]) fx.add("crescent", { x: actor.x, y: actor.y, angle: ang, radius: R3 * 0.9, arc: 1.9, width: 0.3, color: "#e8f5e9", dir, life: 0.28, z, tilt: 0.55 });
+      fx.add("flare", { x: actor.x + Math.cos(ang) * R3 * 0.7, y: actor.y + Math.sin(ang) * R3 * 0.5, z: 0.7, size: 0.9, color: "#ff5252", life: 0.22 });
     }
   });
   sig("santo_sanzen", {
@@ -54281,10 +54281,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   sig("elec_heavy ryu_claw neko_claw kuro_claws", {
     hit(fx, actor, s, a, hb) {
-      const h2 = s.hit, R2 = (h2.range || 1.8) * (actor.reach ?? 1);
+      const h2 = s.hit, R3 = (h2.range || 1.8) * (actor.reach ?? 1);
       const col = a.def.id === "elec_heavy" ? "#fff59d" : a.def.id === "neko_claw" ? "#ffcc80" : "#ffffff";
-      const [px2, py2] = fwd(actor, hb.angle, R2 * 0.65);
-      fx.add("claw", { x: px2, y: py2, z: 0.8, angle: hb.angle, size: 0.9 + R2 * 0.2, color: col, life: 0.4, n: a.def.id === "ryu_claw" ? 4 : 3 });
+      const [px2, py2] = fwd(actor, hb.angle, R3 * 0.65);
+      fx.add("claw", { x: px2, y: py2, z: 0.8, angle: hb.angle, size: 0.9 + R3 * 0.2, color: col, life: 0.4, n: a.def.id === "ryu_claw" ? 4 : 3 });
       if (a.def.id === "elec_heavy") miniBolts(fx, px2, py2, 0.8, 3, 1, "#fff176");
       if (a.def.id === "ryu_claw") fx.crack(px2, py2 + 0.1, 0.8, 1.6);
     }
@@ -54342,11 +54342,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   sig("elbaf_heavy", {
     hit(fx, actor, s, a, hb) {
-      const R2 = s.hit.range || 2.3;
-      fx.add("crescent", { x: actor.x, y: actor.y, angle: a.angle, radius: R2, arc: TAU10 * 0.95, width: 0.42, color: "#ffe082", core: "#fffde7", dir: 1, life: 0.35, z: 0.45, reveal: 0.35 });
-      fx.crack(actor.x, actor.y, R2 * 0.8);
-      dust(fx, actor.x, actor.y, 14, { speed: R2 * 1.8, size: 0.26 });
-      fx.ring(actor.x, actor.y, 0.3, R2 * 1.2, "#ffe082", 0.35, 0.14, { z: 0.05, flat: 0.55, add: true });
+      const R3 = s.hit.range || 2.3;
+      fx.add("crescent", { x: actor.x, y: actor.y, angle: a.angle, radius: R3, arc: TAU10 * 0.95, width: 0.42, color: "#ffe082", core: "#fffde7", dir: 1, life: 0.35, z: 0.45, reveal: 0.35 });
+      fx.crack(actor.x, actor.y, R3 * 0.8);
+      dust(fx, actor.x, actor.y, 14, { speed: R3 * 1.8, size: 0.26 });
+      fx.ring(actor.x, actor.y, 0.3, R3 * 1.2, "#ffe082", 0.35, 0.14, { z: 0.05, flat: 0.55, add: true });
     }
   });
   sig("elbaf_hakoku", {
@@ -54451,14 +54451,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   sig("gura_kaishin gura_tsunami", {
     hit(fx, actor, s, a, hb) {
-      const R2 = s.hit.range || 4.5, big = a.def.id === "gura_tsunami";
+      const R3 = s.hit.range || 4.5, big = a.def.id === "gura_tsunami";
       const n = big ? 9 : 5;
       for (let i = 0; i < n; i++) {
-        const th = i / n * TAU10 + rnd(-0.3, 0.3), rr = R2 * rnd(0.3, 0.8);
+        const th = i / n * TAU10 + rnd(-0.3, 0.3), rr = R3 * rnd(0.3, 0.8);
         fx.add("aircrack", { x: actor.x + Math.cos(th) * rr, y: actor.y + Math.sin(th) * rr * 0.6, z: rnd(0.6, 2), size: rnd(0.8, 1.4) * (big ? 1.5 : 1), life: 0.6, delay: i * 0.03 });
       }
-      for (let i = 0; i < 4; i++) fx.ring(actor.x, actor.y, 0.5, R2 * (0.5 + i * 0.2), "#e0f7fa", 0.55, 0.14, { delay: i * 0.06, add: true, wobble: 0.05 });
-      fx.crack(actor.x, actor.y, R2 * 0.6, 2.5);
+      for (let i = 0; i < 4; i++) fx.ring(actor.x, actor.y, 0.5, R3 * (0.5 + i * 0.2), "#e0f7fa", 0.55, 0.14, { delay: i * 0.06, add: true, wobble: 0.05 });
+      fx.crack(actor.x, actor.y, R3 * 0.6, 2.5);
       if (big) {
         fx.flashScreen(0.1, "rgba(224,247,250,1)");
         fx.focus(actor.x, actor.y, 0.35);
@@ -54487,10 +54487,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   sig("ope_amputate", {
     hit(fx, actor, s, a, hb) {
       DEFAULTS.hit(fx, actor, s, a, hb);
-      const R2 = (s.hit.range || 4) * (actor.reach ?? 1);
-      fx.add("cutline", { x: actor.x - Math.sin(hb.angle) * R2 * 0.6, y: actor.y + Math.cos(hb.angle) * R2 * 0.4, x1: actor.x + Math.sin(hb.angle) * R2 * 0.6 + Math.cos(hb.angle) * R2 * 0.5, y1: actor.y - Math.cos(hb.angle) * R2 * 0.4 + Math.sin(hb.angle) * R2 * 0.5, z: 0.7, color: "#b3e5fc", life: 0.45 });
+      const R3 = (s.hit.range || 4) * (actor.reach ?? 1);
+      fx.add("cutline", { x: actor.x - Math.sin(hb.angle) * R3 * 0.6, y: actor.y + Math.cos(hb.angle) * R3 * 0.4, x1: actor.x + Math.sin(hb.angle) * R3 * 0.6 + Math.cos(hb.angle) * R3 * 0.5, y1: actor.y - Math.cos(hb.angle) * R3 * 0.4 + Math.sin(hb.angle) * R3 * 0.5, z: 0.7, color: "#b3e5fc", life: 0.45 });
       for (let i = 0; i < 3; i++) {
-        const [px2, py2] = fwd(actor, hb.angle + rnd(-0.5, 0.5), rnd(1, R2 * 0.8));
+        const [px2, py2] = fwd(actor, hb.angle + rnd(-0.5, 0.5), rnd(1, R3 * 0.8));
         fx.add("cube", { x: px2, y: py2, z: rnd(0.5, 1.2), size: 0.2, color: "#81d4fa", life: 0.5, delay: 0.05 * i });
       }
     }
@@ -54515,9 +54515,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   } });
   sig("bomu_kick bomu_breeze", {
     hit(fx, actor, s, a, hb) {
-      const R2 = (s.hit.range || 1.8) * (actor.reach ?? 1);
-      const [px2, py2] = fwd(actor, hb.angle, R2 * 0.6);
-      explosionFx(fx, px2, py2 + 0.45, { range: R2 * 0.6, element: "explosion" }, actor, true);
+      const R3 = (s.hit.range || 1.8) * (actor.reach ?? 1);
+      const [px2, py2] = fwd(actor, hb.angle, R3 * 0.6);
+      explosionFx(fx, px2, py2 + 0.45, { range: R3 * 0.6, element: "explosion" }, actor, true);
     }
   });
   sig("hana_mil", {
@@ -54538,8 +54538,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     fx.add("strings", { x: actor.x, y: actor.y, x1: tx, y1: ty, color: "#f8bbd0", n: 5, life: 0.6 });
   } });
   sig("ito_fivecolor", { hit(fx, actor, s, a, hb) {
-    const R2 = (s.hit.range || 3.4) * (actor.reach ?? 1);
-    for (let i = 0; i < 5; i++) fx.add("crescent", { x: actor.x, y: actor.y, angle: hb.angle + (i - 2) * 0.08, radius: R2 * (0.95 - i * 0.05), arc: 1.4, width: 0.05, color: ["#f48fb1", "#ce93d8", "#90caf9", "#a5d6a7", "#fff59d"][i], dir: 1, life: 0.28, delay: i * 0.02, z: 0.5 + i * 0.1 });
+    const R3 = (s.hit.range || 3.4) * (actor.reach ?? 1);
+    for (let i = 0; i < 5; i++) fx.add("crescent", { x: actor.x, y: actor.y, angle: hb.angle + (i - 2) * 0.08, radius: R3 * (0.95 - i * 0.05), arc: 1.4, width: 0.05, color: ["#f48fb1", "#ce93d8", "#90caf9", "#a5d6a7", "#fff59d"][i], dir: 1, life: 0.28, delay: i * 0.02, z: 0.5 + i * 0.1 });
   } });
   sig("ito_overheat", { beam: "string" });
   sig("mochi_zangiri", { beam: "mochi" });
@@ -54617,13 +54617,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   sig("mera_enkai", {
     hit(fx, actor, s, a, hb) {
       DEFAULTS.hit(fx, actor, s, a, hb);
-      const R2 = s.hit.range || 3;
+      const R3 = s.hit.range || 3;
       for (let i = 0; i < 6; i++) {
         const th = i / 6 * TAU10;
-        fx.add("pillar", { x: actor.x + Math.cos(th) * R2 * 0.75, y: actor.y + Math.sin(th) * R2 * 0.5, r: 0.35, h: 3, color: "#ff7043", core: "#ffeb3b", life: 0.6, kind: "fire", delay: i * 0.03 });
+        fx.add("pillar", { x: actor.x + Math.cos(th) * R3 * 0.75, y: actor.y + Math.sin(th) * R3 * 0.5, r: 0.35, h: 3, color: "#ff7043", core: "#ffeb3b", life: 0.6, kind: "fire", delay: i * 0.03 });
       }
       fx.add("pillar", { x: actor.x, y: actor.y, r: 0.8, h: 4.5, color: "#ff5722", core: "#ffeb3b", life: 0.6, kind: "fire" });
-      fx.add("scorch", { x: actor.x, y: actor.y, r: R2 * 0.8, life: 3 });
+      fx.add("scorch", { x: actor.x, y: actor.y, r: R3 * 0.8, life: 3 });
     }
   });
   sig("mera_entei", {
@@ -54642,9 +54642,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   } });
   sig("hie_ageand", {
     hit(fx, actor, s, a, hb) {
-      const R2 = s.hit.range || 5;
-      ringSpikes(fx, actor.x, actor.y, R2 * 0.85, 22, "ice");
-      fx.ring(actor.x, actor.y, 0.3, R2, "#e1f5fe", 0.6, 0.2, { add: true });
+      const R3 = s.hit.range || 5;
+      ringSpikes(fx, actor.x, actor.y, R3 * 0.85, 22, "ice");
+      fx.ring(actor.x, actor.y, 0.3, R3, "#e1f5fe", 0.6, 0.2, { add: true });
       shards(fx, actor.x, actor.y, 0.6, 20);
       fx.flashScreen(0.06, "rgba(225,245,254,1)");
     }
@@ -54864,19 +54864,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   }
   function explosionFx(fx, x, y, e, owner, small) {
-    const R2 = e.range || 1.8;
+    const R3 = e.range || 1.8;
     const el = e.element || "explosion";
     const E = elemOf(el);
     const cols = e.colors || (el === "explosion" ? ["#ffab40", "#ff7043", "#fff176", "#616161"] : E.spark);
     const gy = y + 0.45;
-    glow2(fx, x, gy, 0.5, R2 * 1.1, cols[0], 0.3);
-    fx.add("impact", { x, y: gy, z: 0.5, angle: 0, size: R2 * 0.55, color: cols[0], core: "#ffffff", life: 0.22, spikes: 12, lines: 6 });
-    fx.ring(x, gy, 0.2, R2, e.color || cols[0], 0.35, 0.3, { add: true });
-    fx.burst(x, gy, Math.round(10 + R2 * 5), { color: cols, speed: 3 + R2 * 2, g: 3, z: 0.4, vz: 3, life: 0.6, kind: el === "explosion" || el === "fire" ? "fire" : E.kind, size: 0.22 + R2 * 0.03 });
-    smoke(fx, x, gy, 0.6, Math.round(4 + R2 * 2), ["#616161", "#757575", "#424242"], { speed: R2 * 1.2, size: 0.35 + R2 * 0.05, vz: 1.5 });
-    dust(fx, x, gy, Math.round(4 + R2), { speed: R2 * 1.5 });
-    if (!small) fx.crack(x, gy, R2 * 0.6, 1.5);
-    if (el === "explosion" || el === "fire") fx.add("scorch", { x, y: gy, r: R2 * 0.55, life: 3 });
+    glow2(fx, x, gy, 0.5, R3 * 1.1, cols[0], 0.3);
+    fx.add("impact", { x, y: gy, z: 0.5, angle: 0, size: R3 * 0.55, color: cols[0], core: "#ffffff", life: 0.22, spikes: 12, lines: 6 });
+    fx.ring(x, gy, 0.2, R3, e.color || cols[0], 0.35, 0.3, { add: true });
+    fx.burst(x, gy, Math.round(10 + R3 * 5), { color: cols, speed: 3 + R3 * 2, g: 3, z: 0.4, vz: 3, life: 0.6, kind: el === "explosion" || el === "fire" ? "fire" : E.kind, size: 0.22 + R3 * 0.03 });
+    smoke(fx, x, gy, 0.6, Math.round(4 + R3 * 2), ["#616161", "#757575", "#424242"], { speed: R3 * 1.2, size: 0.35 + R3 * 0.05, vz: 1.5 });
+    dust(fx, x, gy, Math.round(4 + R3), { speed: R3 * 1.5 });
+    if (!small) fx.crack(x, gy, R3 * 0.6, 1.5);
+    if (el === "explosion" || el === "fire") fx.add("scorch", { x, y: gy, r: R3 * 0.55, life: 3 });
     const pl = fx.game.player;
     if (!small && (owner?.isPlayer || pl && fx.game.world && fx.game.world.distance(x, y, pl.x, pl.y) < 12)) fx.shake(0.3);
   }
@@ -54886,16 +54886,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     fx.particle({ x: p.x, y: p.y + 0.5, z: 1, vx: Math.random() - 0.5, vy: Math.random() - 0.5, vz: 0.4, g: 0, life: t.life || 0.35, size: t.size || 0.18, color: col, kind: t.kind || "fire", grow: t.grow ?? -0.2 });
   }
   function conquerorFx(fx, actor, c) {
-    const R2 = c.range;
-    fx.ring(actor.x, actor.y, 0.5, R2, "#1a1a1a", 0.7, 0.45);
-    fx.ring(actor.x, actor.y, 0.3, R2 * 0.8, "#d50000", 0.55, 0.16, { add: true });
-    fx.ring(actor.x, actor.y, 0.2, R2 * 1.1, "#000000", 0.9, 0.08, { wobble: 0.08 });
+    const R3 = c.range;
+    fx.ring(actor.x, actor.y, 0.5, R3, "#1a1a1a", 0.7, 0.45);
+    fx.ring(actor.x, actor.y, 0.3, R3 * 0.8, "#d50000", 0.55, 0.16, { add: true });
+    fx.ring(actor.x, actor.y, 0.2, R3 * 1.1, "#000000", 0.9, 0.08, { wobble: 0.08 });
     for (let k = 0; k < 10; k++) {
       const a = Math.random() * TAU10;
-      fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * R2 * rnd(0.5, 0.8), actor.y + Math.sin(a) * R2 * rnd(0.35, 0.55), k % 2 ? "#d50000" : "#000000", 0.4, 0.09, { z0: 0.9, z1: rnd(0, 1.6), branches: 2 });
+      fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * R3 * rnd(0.5, 0.8), actor.y + Math.sin(a) * R3 * rnd(0.35, 0.55), k % 2 ? "#d50000" : "#000000", 0.4, 0.09, { z0: 0.9, z1: rnd(0, 1.6), branches: 2 });
     }
     fx.add("pillar", { x: actor.x, y: actor.y, r: 0.6, h: 5, color: "#000000", core: "#d50000", kind: "dark", life: 0.5 });
-    dust(fx, actor.x, actor.y, 14, { speed: R2 * 0.8, size: 0.3 });
+    dust(fx, actor.x, actor.y, 14, { speed: R3 * 0.8, size: 0.3 });
     fx.impactFrame(0.12);
     fx.shake(0.7);
     fx.focus(actor.x, actor.y, 0.3);
@@ -56291,12 +56291,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.title = o.title || "";
       this.look = o.look || {};
       this.race = o.race || this.look.race || "human";
-      const R2 = RACES[this.race] || RACES.human;
+      const R3 = RACES[this.race] || RACES.human;
       this.attrs = { ...baseAttrs(), ...o.attrs || {} };
-      this.baseMods = { hpMul: (R2.hpMul || 1) * (o.hpMul || 1), stride: R2.stride || 1, speedMul: (o.speedMul || 1) * (this.race === "buccaneer" ? 0.92 : 1) };
-      this.reach = R2.reach || 1;
-      this.canSwimRace = R2.swim || 1;
-      this.gills = !!R2.gills;
+      this.baseMods = { hpMul: (R3.hpMul || 1) * (o.hpMul || 1), stride: R3.stride || 1, speedMul: (o.speedMul || 1) * (this.race === "buccaneer" ? 0.92 : 1) };
+      this.reach = R3.reach || 1;
+      this.canSwimRace = R3.swim || 1;
+      this.gills = !!R3.gills;
       this.style = o.style || "brawler";
       this.weapon = o.weapon || null;
       this.fruit = o.fruit || null;
@@ -56623,7 +56623,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         dy = Math.sin(this.facing);
         len = 1;
       }
-      const R2 = RACES[this.race] || {};
+      const R3 = RACES[this.race] || {};
       const dist = 3.2 * (this.race === "skypiean" ? 1.3 : 1) * (this.race === "lunarian" ? 1.4 : 1) * (this.dashMul || 1);
       const time = 0.22;
       this.dash = { vx: dx / len * dist / time, vy: dy / len * dist / time, t: time, t0: time, dodge: true, ignoreWater: this.race === "lunarian" };
@@ -56633,7 +56633,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       game.fx.burst(this.x, this.y, 7, { angle: Math.atan2(-dy, -dx), spread: 1.6, color: ["#d7ccc8", "#bcaaa4", "#efebe9"], speed: 2.4, z: 0.08, vz: 0.6, g: 1.2, life: 0.5, kind: "dust", size: 0.2, grow: 0.45 });
       game.audio?.sfx("dodge");
       if (this.isPlayer) game.emit("playerDodge");
-      return R2;
+      return R3;
     }
     /**
      * Jump (Space): a real hop with height `z` (metres) and vertical speed `vz`.
@@ -56827,7 +56827,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         } else this.haki = Math.min(d.maxHaki, this.haki + d.hakiRegen * dt);
       }
       const regen = (this.fruitDef?.passive?.regen || 0) + d.hpRegen * (this.inCombat ? 0.2 : 1);
-      if (this.hp < d.maxHp && this.state === "idle") this.hp = Math.min(d.maxHp, this.hp + regen * dt);
+      const rested = this.isPlayer || !this.game || (this.game.time || 0) - (this.lastHitT || -999) > 45;
+      if (this.hp < d.maxHp && this.state === "idle" && rested) this.hp = Math.min(d.maxHp, this.hp + regen * dt);
     }
     passable(w, x, y) {
       if (w.solid(x, y)) return false;
@@ -57477,7 +57478,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
      * THREE.Color, or fn(x, y, z) of the primitive's local position → colour.
      */
     add(g, m, color, bone = 0, part5 = 0) {
-      const P4 = g.attributes.position, N3 = g.attributes.normal;
+      const P4 = g.attributes.position, N4 = g.attributes.normal;
       const base2 = this.count;
       _nm.getNormalMatrix(m);
       const fn = typeof color === "function" ? color : null;
@@ -57486,7 +57487,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         _v4.fromBufferAttribute(P4, i);
         const c = fn ? toColor(fn(_v4.x, _v4.y, _v4.z)) : c0;
         _v4.applyMatrix4(m);
-        _n2.fromBufferAttribute(N3, i).applyMatrix3(_nm).normalize();
+        _n2.fromBufferAttribute(N4, i).applyMatrix3(_nm).normalize();
         this.pos.push(_v4.x, _v4.y, _v4.z);
         this.nor.push(_n2.x, _n2.y, _n2.z);
         this.col.push(c.r, c.g, c.b);
@@ -57759,9 +57760,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function limbSeg(rf, L2, rs, rows, seg) {
     const { t0 = 0, t1 = 1, off = 0, capTop = false, capBot = false, flare = 0, flareTop = 0, lining = false, bulge = 0 } = seg;
-    const R2 = (t) => rf(t) + off;
+    const R3 = (t) => rf(t) + off;
     const yb = -t1 * L2, yt = -t0 * L2;
-    const rb = R2(t1) + flare, rt = R2(t0) + flareTop;
+    const rb = R3(t1) + flare, rt = R3(t0) + flareTop;
     const prof = [];
     if (capBot) for (let k = 0; k < 3; k++) {
       const a = -Math.PI / 2 + k / 3 * (Math.PI / 2);
@@ -57771,7 +57772,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (let i = rows; i >= 0; i--) {
       const f = i / rows;
       const t = t0 + (t1 - t0) * f;
-      const r = R2(t) + flare * sstep(0.5, 1, f) + flareTop * sstep(0.5, 1, 1 - f) + bulge * Math.sin(f * Math.PI);
+      const r = R3(t) + flare * sstep(0.5, 1, f) + flareTop * sstep(0.5, 1, 1 - f) + bulge * Math.sin(f * Math.PI);
       prof.push([r, -t * L2]);
     }
     if (capTop) for (let k = 1; k <= 3; k++) {
@@ -58833,9 +58834,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return [p[0] * k, p[1] * k, p[2] * k];
   }
   function faceNormals(g, U3, V3) {
-    const P4 = g.attributes.position, N3 = g.attributes.normal;
-    const W3 = U3 + 1, n = N3.count;
-    let a = Float32Array.from(N3.array), b = new Float32Array(a.length);
+    const P4 = g.attributes.position, N4 = g.attributes.normal;
+    const W3 = U3 + 1, n = N4.count;
+    let a = Float32Array.from(N4.array), b = new Float32Array(a.length);
     for (let it = 0; it < 3; it++) {
       for (let j = 0; j <= V3; j++) {
         for (let i = 0; i <= U3; i++) {
@@ -58865,7 +58866,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const f = Math.max(0, Math.min(1, (dx + 0.1) / 0.7));
       const nx = a[i * 3] * wg + dx * (1 - wg) + f * 0.2, ny = a[i * 3 + 1] * wg + dy * (1 - wg) + f * 0.05, nz = a[i * 3 + 2] * wg + dz * (1 - wg);
       const m = Math.hypot(nx, ny, nz) || 1;
-      N3.setXYZ(i, nx / m, ny / m, nz / m);
+      N4.setXYZ(i, nx / m, ny / m, nz / m);
     }
     return g;
   }
@@ -58873,30 +58874,30 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     near: { U: 34, warp: 0.74, rows: [0, 16, 32, 46, 58, 67, 74, 80, 85, 90, 94, 98, 102, 106, 110, 114, 118, 122, 126, 130, 134, 138, 142, 146, 150, 155, 160, 166, 173, 180] },
     far: { U: 12, warp: 0.4, rows: [0, 36, 66, 86, 102, 118, 134, 150, 166, 180] }
   };
-  var phOf = (G, i) => {
-    const u = i / G.U;
-    return (u + G.warp * Math.sin((u - 0.5) * TAU13) / TAU13) * TAU13 - Math.PI;
+  var phOf = (G3, i) => {
+    const u = i / G3.U;
+    return (u + G3.warp * Math.sin((u - 0.5) * TAU13) / TAU13) * TAU13 - Math.PI;
   };
-  function headPoint(G, i, j) {
-    const ph = phOf(G, i), th = G.rows[j] * DEG2;
+  function headPoint(G3, i, j) {
+    const ph = phOf(G3, i), th = G3.rows[j] * DEG2;
     return headShape(Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph));
   }
   var HEADS = /* @__PURE__ */ new Map();
   function headGeo(level) {
-    const G = HEAD_GRID[level];
+    const G3 = HEAD_GRID[level];
     const key2 = HEAD.key + "|" + level;
     let g = HEADS.get(key2);
     if (!g) {
-      const V3 = G.rows.length - 1;
-      g = grid((u, v) => headPoint(G, Math.round(u * G.U), Math.round(v * V3)), G.U, V3);
-      const n = g.attributes.normal, W3 = G.U + 1;
+      const V3 = G3.rows.length - 1;
+      g = grid((u, v) => headPoint(G3, Math.round(u * G3.U), Math.round(v * V3)), G3.U, V3);
+      const n = g.attributes.normal, W3 = G3.U + 1;
       for (let j = 0; j <= V3; j++) {
-        const a = j * W3, b = j * W3 + G.U;
+        const a = j * W3, b = j * W3 + G3.U;
         const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b), l = Math.hypot(x, y, z) || 1;
         n.setXYZ(a, x / l, y / l, z / l);
         n.setXYZ(b, x / l, y / l, z / l);
       }
-      faceNormals(g, G.U, V3);
+      faceNormals(g, G3.U, V3);
       if (HEADS.size > 300) HEADS.clear();
       HEADS.set(key2, g);
     }
@@ -58909,12 +58910,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const key2 = HEAD.key + "|" + level;
     let g = FACE_GEO.get(key2);
     if (!g) {
-      const G = HEAD_GRID[level];
+      const G3 = HEAD_GRID[level];
       const head = headGeo(level);
-      const HP = head.attributes.position, HN = head.attributes.normal, W3 = G.U + 1;
+      const HP = head.attributes.position, HN = head.attributes.normal, W3 = G3.U + 1;
       const cols = [], rws = [];
-      for (let i = 0; i <= G.U; i++) if (Math.abs(phOf(G, i)) <= 72 * DEG2) cols.push(i);
-      for (let j = 0; j < G.rows.length; j++) if (G.rows[j] >= 55 && G.rows[j] <= 172) rws.push(j);
+      for (let i = 0; i <= G3.U; i++) if (Math.abs(phOf(G3, i)) <= 72 * DEG2) cols.push(i);
+      for (let j = 0; j < G3.rows.length; j++) if (G3.rows[j] >= 55 && G3.rows[j] <= 172) rws.push(j);
       const pos = [], nor = [], uv = [], idx = [];
       for (const j of rws) {
         for (const i of cols) {
@@ -59364,8 +59365,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const add4 = (g, m, col, bone, part5 = 0) => b.add(g, m, col, bone, part5);
     const rb = (k = 0.4, small = true) => Prim.rbox(k, ...small ? q2.rboxS : q2.rbox);
     const outfit = buildFigure(add4, look, d, pal, q2);
-    const R2 = d.headR;
-    const HM = (m) => mul(M(d.hx, d.hc, 0, 0, 0, 0, R2), m || M());
+    const R3 = d.headR;
+    const HM = (m) => mul(M(d.hx, d.hc, 0, 0, 0, 0, R3), m || M());
     const hb = B3.head;
     add4(headGeo(lod === 0 ? "near" : "far"), HM(), pal.face, hb);
     const style = styleId2(look.hair, look);
@@ -59380,11 +59381,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       bone: hb,
       add(g, m, col, bone, part5, anchor2) {
         if (cover3 && anchor2 && anchor2[1] > 0.5 && style !== "afro") return;
-        if (bone === B3.hairTail) b.add(g, mul(M(0, 0, 0, 0, 0, 0, R2), m), col, bone, 0);
+        if (bone === B3.hairTail) b.add(g, mul(M(0, 0, 0, 0, 0, 0, R3), m), col, bone, 0);
         else b.add(g, HM(m), col, bone, 0);
       },
       addC(g, m, col, bone) {
-        if (bone === B3.hairTail) b.add(g, mul(M(0, 0, 0, 0, 0, 0, R2), m), col, bone, 0);
+        if (bone === B3.hairTail) b.add(g, mul(M(0, 0, 0, 0, 0, 0, R3), m), col, bone, 0);
         else b.add(g, HM(m), col, bone, 0);
       },
       cap(rs, f, s, bk, zig, tone) {
@@ -59705,13 +59706,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const sg = e < 0 ? -1 : 1;
         this._pole.set(_t2.y / lxy * sg, -_t2.x / lxy * sg, side * 0.42);
         ik2(S3, T3, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P4.stretch || !!reach, J, E);
-        const U3 = k === 0 ? B3.uarmR : B3.uarmL, F3 = k === 0 ? B3.farmR : B3.farmL, Hd = k === 0 ? B3.handR : B3.handL;
+        const U3 = k === 0 ? B3.uarmR : B3.uarmL, F4 = k === 0 ? B3.farmR : B3.farmL, Hd = k === 0 ? B3.handR : B3.handL;
         this.pos[U3].copy(S3);
         aimNegY(this.quat[U3], _t2.subVectors(J, S3), this._pole);
         this.len[U3] = clamp4(S3.distanceTo(J) / d.A1, 0.5, 8);
-        this.pos[F3].copy(J);
-        aimNegY(this.quat[F3], _t2.subVectors(E, J), this._pole);
-        this.len[F3] = clamp4(J.distanceTo(E) / d.A2, 0.5, 8);
+        this.pos[F4].copy(J);
+        aimNegY(this.quat[F4], _t2.subVectors(E, J), this._pole);
+        this.len[F4] = clamp4(J.distanceTo(E) / d.A2, 0.5, 8);
         _u.subVectors(E, J).normalize();
         const shape = o.shape ? o.shape[k] : "fist";
         if (shape === "flat") this._ref.set(0.1, 1, side * 0.35);
@@ -59778,15 +59779,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
 
   // src/render3d/chars/weapons.js
   function blade(b, x0, L2, w, t, cols) {
-    const N3 = 6;
+    const N4 = 6;
     const P4 = [], C3 = [], I = [];
     const sec = (u) => {
       const x = x0 + u * L2, curve = 0.035 * u * u;
       const ww = w * (1 - 0.3 * u);
       return [[x, curve + ww * 0.5, 0], [x, curve, t * 0.5], [x, curve - ww * 0.5, 0], [x, curve, -t * 0.5]];
     };
-    for (let i = 0; i <= N3; i++) {
-      const s = sec(i / N3);
+    for (let i = 0; i <= N4; i++) {
+      const s = sec(i / N4);
       for (let k = 0; k < 4; k++) {
         P4.push(...s[k]);
         C3.push(cols[k]);
@@ -59794,13 +59795,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     P4.push(x0 + L2 + 0.06, 0.035 + w * 0.12, 0);
     C3.push(cols[0]);
-    for (let i = 0; i < N3; i++) {
+    for (let i = 0; i < N4; i++) {
       for (let k = 0; k < 4; k++) {
         const a = i * 4 + k, b2 = i * 4 + (k + 1) % 4, c = a + 4, d = b2 + 4;
         I.push(a, b2, c, b2, d, c);
       }
     }
-    const tip = (N3 + 1) * 4, last = N3 * 4;
+    const tip = (N4 + 1) * 4, last = N4 * 4;
     for (let k = 0; k < 4; k++) I.push(last + k, last + (k + 1) % 4, tip);
     I.push(0, 2, 1, 0, 3, 2);
     const g = new three_module_exports.BufferGeometry();
@@ -60310,10 +60311,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function auraTex(color) {
     let t = AURA.get(color);
     if (t) return t;
-    const W3 = 96, H2 = 128, F3 = 4;
-    const c = canvas(W3, H2 * F3), g = c.getContext("2d");
+    const W3 = 96, H2 = 128, F4 = 4;
+    const c = canvas(W3, H2 * F4), g = c.getContext("2d");
     const { c: col, a } = parseCol(color);
-    for (let f = 0; f < F3; f++) {
+    for (let f = 0; f < F4; f++) {
       g.save();
       g.translate(0, f * H2);
       for (let layer = 0; layer < 2; layer++) {
@@ -60341,7 +60342,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.restore();
     }
     t = tex(c);
-    t.repeat.set(1, 1 / F3);
+    t.repeat.set(1, 1 / F4);
     AURA.set(color, t);
     return t;
   }
@@ -61671,8 +61672,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.frame++;
       const env = game.env;
       const a = t * 0.035;
-      const R2 = this.attractR || 120;
-      const ox = w.wx(cx + Math.cos(a) * R2), oy = cy + Math.sin(a) * R2;
+      const R3 = this.attractR || 120;
+      const ox = w.wx(cx + Math.cos(a) * R3), oy = cy + Math.sin(a) * R3;
       this.ox = ox;
       this.oy = oy;
       const yaw = a + Math.PI - 0.35;
@@ -61796,14 +61797,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.propT = 0.6;
       this.propsDirty = false;
       this.propOrigin = { x: ox, y: oy, day: env.day };
-      const R2 = radius || (sailing ? 150 : 95);
-      const objs = w.objects.query(ox - R2, oy - R2, ox + R2, oy + R2);
+      const R3 = radius || (sailing ? 150 : 95);
+      const objs = w.objects.query(ox - R3, oy - R3, ox + R3, oy + R3);
       const items9 = [];
       const keep = /* @__PURE__ */ new Set();
       for (const o of objs) {
         const dx = w.dx(ox, o.x), dy = o.y - oy;
         const d2 = dx * dx + dy * dy;
-        if (d2 > R2 * R2) continue;
+        if (d2 > R3 * R3) continue;
         if (o.hidden) continue;
         const builder = PROP_BUILDERS.get(o.kind);
         if (builder) {
@@ -62418,7 +62419,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       uTime.value = env.time;
       const low = v.quality === "low";
-      const R2 = low ? 36 : 64;
+      const R3 = low ? 36 : 64;
       const ox = v.ox, oy = v.oy;
       const ccx = Math.floor(w.wx(ox) / CELL2), ccy = Math.floor(oy / CELL2);
       const key2 = `${ccx},${ccy},${low ? 1 : 0}`;
@@ -62426,12 +62427,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (key2 !== this.key && this.t <= 0) {
         this.t = 0.25;
         this.key = key2;
-        this.rebuild(ctx, w, ccx, ccy, R2, low);
+        this.rebuild(ctx, w, ccx, ccy, R3, low);
       }
       if (this.origin) this.group.position.set(w.dx(ox, this.origin.x), 0, this.origin.y - oy);
     }
-    rebuild(ctx, w, ccx, ccy, R2, low) {
-      const cr = Math.ceil(R2 / CELL2) + 1;
+    rebuild(ctx, w, ccx, ccy, R3, low) {
+      const cr = Math.ceil(R3 / CELL2) + 1;
       const ox = (ccx + 0.5) * CELL2, oy = (ccy + 0.5) * CELL2;
       this.origin = { x: ox, y: oy };
       const counts = {};
@@ -62465,9 +62466,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             const x = list[q22], y = list[q22 + 1];
             const dx = w.dx(ox, x), dz = y - oy;
             const d2 = dx * dx + dz * dz;
-            if (d2 > R2 * R2) continue;
-            if ((kind === "grass" || kind === "flower" || kind === "fern") && d2 > (R2 * 0.5) ** 2) {
-              const f = Math.sqrt(d2) / R2;
+            if (d2 > R3 * R3) continue;
+            if ((kind === "grass" || kind === "flower" || kind === "fern") && d2 > (R3 * 0.5) ** 2) {
+              const f = Math.sqrt(d2) / R3;
               if (hash6(Math.floor(x * 7), Math.floor(y * 7), 91) < (f - 0.5) * (low ? 2.4 : 1.7)) continue;
             }
             const sc = list[q22 + 4];
@@ -62685,10 +62686,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function fanGeo() {
     const pos = [];
-    const n = 9, R2 = 0.72, y0 = 0.1;
+    const n = 9, R3 = 0.72, y0 = 0.1;
     for (let i = 0; i < n; i++) {
       const a0 = 0.35 + i / n * (Math.PI - 0.7), a1 = 0.35 + (i + 1) / n * (Math.PI - 0.7);
-      const r0 = R2 * (0.86 + 0.14 * Math.sin(i * 1.7)), r1 = R2 * (0.86 + 0.14 * Math.sin((i + 1) * 1.7));
+      const r0 = R3 * (0.86 + 0.14 * Math.sin(i * 1.7)), r1 = R3 * (0.86 + 0.14 * Math.sin((i + 1) * 1.7));
       pos.push(0, y0, 0, Math.cos(a1) * r1, y0 + Math.sin(a1) * r1, 0, Math.cos(a0) * r0, y0 + Math.sin(a0) * r0, 0);
     }
     const g = new BufferGeometry();
@@ -62948,22 +62949,22 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const under = !!v.isUnder;
       const cam = ctx.camera;
       const camH = cam ? cam.position.y : 0;
-      const R2 = low ? 28 : under ? 46 : 40;
+      const R3 = low ? 28 : under ? 46 : 40;
       const show = camH < 40;
       this.group.visible = show;
       if (!show) return;
       const ccx = Math.floor(w.wx(v.ox) / CELL3), ccy = Math.floor(v.oy / CELL3);
-      const key2 = `${ccx},${ccy},${R2}`;
+      const key2 = `${ccx},${ccy},${R3}`;
       this.t -= dt;
       if (key2 !== this.key && this.t <= 0) {
         this.t = 0.3;
         this.key = key2;
-        this.rebuild(ctx, w, ccx, ccy, R2);
+        this.rebuild(ctx, w, ccx, ccy, R3);
       }
       if (this.origin) this.group.position.set(w.dx(v.ox, this.origin.x), 0, this.origin.y - v.oy);
     }
-    rebuild(ctx, w, ccx, ccy, R2) {
-      const cr = Math.ceil(R2 / CELL3) + 1;
+    rebuild(ctx, w, ccx, ccy, R3) {
+      const cr = Math.ceil(R3 / CELL3) + 1;
       const ox = (ccx + 0.5) * CELL3, oy = (ccy + 0.5) * CELL3;
       this.origin = { x: ox, y: oy };
       const counts = {};
@@ -62999,7 +63000,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             const x = list[o], y = list[o + 1];
             const dx = w.dx(ox, x), dz = y - oy;
             const d2 = dx * dx + dz * dz;
-            if (d2 > (small ? R2 * 0.7 : R2) ** 2) continue;
+            if (d2 > (small ? R3 * 0.7 : R3) ** 2) continue;
             const sc = list[o + 4];
             p.set(dx, list[o + 2], dz);
             q2.setFromAxisAngle(UP2, list[o + 3]);
@@ -63177,9 +63178,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     };
   }
   function snow() {
-    const N3 = 900, B4 = 26;
-    const base2 = new Float32Array(N3 * 3), pos = new Float32Array(N3 * 3);
-    for (let i = 0; i < N3; i++) {
+    const N4 = 900, B4 = 26;
+    const base2 = new Float32Array(N4 * 3), pos = new Float32Array(N4 * 3);
+    for (let i = 0; i < N4; i++) {
       base2[i * 3] = Math.random() * B4;
       base2[i * 3 + 1] = Math.random() * 16;
       base2[i * 3 + 2] = Math.random() * B4;
@@ -63193,7 +63194,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       pts,
       /** (wx, wz) = the camera's world position on the sea plane; cy its height. */
       update(wx, wz, cy, t) {
-        for (let i = 0; i < N3; i++) {
+        for (let i = 0; i < N4; i++) {
           const bx = base2[i * 3] + t * 0.05 + Math.sin(t * 0.3 + i) * 0.3, bz = base2[i * 3 + 2] + t * 0.03;
           pos[i * 3] = ((bx - wx) % B4 + B4) % B4 - B4 / 2;
           const by = base2[i * 3 + 1] - t * 0.04;
@@ -63205,7 +63206,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     };
   }
   function shafts() {
-    const N3 = 14, B4 = 48;
+    const N4 = 14, B4 = 48;
     const uStr = { value: 0 }, uCol = { value: new Color(0.8, 0.95, 1) }, uT = { value: 0 };
     const mat = new ShaderMaterial({
       uniforms: { uStr, uCol, uT },
@@ -63243,7 +63244,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     });
     const group3 = new Group();
     const list = [];
-    for (let i = 0; i < N3; i++) {
+    for (let i = 0; i < N4; i++) {
       const w = 1.2 + Math.random() * 2.6, h2 = 34;
       const g = new PlaneGeometry(w, h2);
       g.translate(0, -h2 / 2, 0);
@@ -71351,11 +71352,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.beginPath();
     g.ellipse(0, 0, Math.max(1e-3, rx), Math.max(1e-3, ry), 0, 0, TAU19);
   }
-  function spiky(g, R2, n, seed, sx = 1) {
+  function spiky(g, R3, n, seed, sx = 1) {
     g.beginPath();
     for (let i = 0; i < n * 2; i++) {
       const a = i / (n * 2) * TAU19;
-      const rr = i % 2 ? R2 * (0.26 + 0.08 * hash8(seed + i)) : R2 * (0.62 + 0.55 * hash8(seed + i * 3.1));
+      const rr = i % 2 ? R3 * (0.26 + 0.08 * hash8(seed + i)) : R3 * (0.62 + 0.55 * hash8(seed + i * 3.1));
       const x = Math.cos(a) * rr * sx, y = Math.sin(a) * rr;
       if (i) g.lineTo(x, y);
       else g.moveTo(x, y);
@@ -71589,19 +71590,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (Math.abs(head - tail2) < 0.02) return;
     g.translate(0, -(s.z ?? 0.6));
     g.scale(1, s.tilt ?? 0.72);
-    const R2 = s.radius, W3 = s.width || 0.2;
-    const N3 = 20;
+    const R3 = s.radius, W3 = s.width || 0.2;
+    const N4 = 20;
     const outer = [], inner = [];
-    for (let i = 0; i <= N3; i++) {
-      const u = i / N3;
+    for (let i = 0; i <= N4; i++) {
+      const u = i / N4;
       const th = tail2 + (head - tail2) * u;
       const w = W3 * Math.pow(u, 0.7) * (1 - 0.35 * Math.pow(u, 10));
-      outer.push([Math.cos(th) * R2, Math.sin(th) * R2]);
-      inner.push([Math.cos(th) * (R2 - w), Math.sin(th) * (R2 - w)]);
+      outer.push([Math.cos(th) * R3, Math.sin(th) * R3]);
+      inner.push([Math.cos(th) * (R3 - w), Math.sin(th) * (R3 - w)]);
     }
     const fade2 = (1 - Math.pow(k, 2.2)) * a;
     if (s.add !== false) g.globalCompositeOperation = "lighter";
-    const gr = g.createLinearGradient(outer[0][0], outer[0][1], outer[N3][0], outer[N3][1]);
+    const gr = g.createLinearGradient(outer[0][0], outer[0][1], outer[N4][0], outer[N4][1]);
     gr.addColorStop(0, rgba2(s.color, 0));
     gr.addColorStop(0.55, rgba2(s.color, 0.55 * fade2));
     gr.addColorStop(0.92, rgba2(s.color, 0.95 * fade2));
@@ -71609,14 +71610,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.fillStyle = gr;
     g.beginPath();
     g.moveTo(outer[0][0], outer[0][1]);
-    for (let i = 1; i <= N3; i++) g.lineTo(outer[i][0], outer[i][1]);
-    for (let i = N3; i >= 0; i--) g.lineTo(inner[i][0], inner[i][1]);
+    for (let i = 1; i <= N4; i++) g.lineTo(outer[i][0], outer[i][1]);
+    for (let i = N4; i >= 0; i--) g.lineTo(inner[i][0], inner[i][1]);
     g.closePath();
     g.fill();
     g.strokeStyle = s.core || "#ffffff";
     g.lineCap = "round";
-    for (let i = Math.floor(N3 * 0.45); i < N3; i++) {
-      const u = i / N3;
+    for (let i = Math.floor(N4 * 0.45); i < N4; i++) {
+      const u = i / N4;
       g.globalAlpha = fade2 * u * u;
       g.lineWidth = Math.max(0.012, W3 * 0.22 * u);
       g.beginPath();
@@ -71633,17 +71634,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     air(g, s, k, a) {
       const grow = k < 0.25 ? easeOut(k / 0.25) : 1;
       const fade2 = k < 0.3 ? 1 : 1 - (k - 0.3) / 0.7;
-      const R2 = s.size * (0.45 + 0.75 * grow);
+      const R3 = s.size * (0.45 + 0.75 * grow);
       g.translate(0, -(s.z ?? 0.7));
       g.rotate(s.angle || 0);
       g.globalCompositeOperation = "lighter";
       g.globalAlpha = a * fade2 * 0.9;
       g.fillStyle = s.color || "#ffffff";
-      spiky(g, R2, s.spikes || 9, s.seed, 1.3);
+      spiky(g, R3, s.spikes || 9, s.seed, 1.3);
       g.fill();
       g.globalAlpha = a * fade2;
       g.fillStyle = s.core || "#ffffff";
-      spiky(g, R2 * 0.52, s.spikes || 9, s.seed + 5, 1.2);
+      spiky(g, R3 * 0.52, s.spikes || 9, s.seed + 5, 1.2);
       g.fill();
       g.strokeStyle = s.color || "#ffffff";
       g.lineWidth = 0.035;
@@ -71653,7 +71654,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const n = s.lines ?? 5;
       for (let i = 0; i < n; i++) {
         const th = (hash8(s.seed + i * 17) - 0.5) * 2.2;
-        const r0 = R2 * (0.9 + 0.5 * k), r1 = R2 * (1.5 + 0.9 * hash8(s.seed + i) + k * 0.8);
+        const r0 = R3 * (0.9 + 0.5 * k), r1 = R3 * (1.5 + 0.9 * hash8(s.seed + i) + k * 0.8);
         g.moveTo(Math.cos(th) * r0, Math.sin(th) * r0 * 0.8);
         g.lineTo(Math.cos(th) * r1, Math.sin(th) * r1 * 0.8);
       }
@@ -71664,20 +71665,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     air(g, s, k, a) {
       const grow = k < 0.2 ? easeOut(k / 0.2) : 1;
       const fade2 = 1 - k;
-      const R2 = s.size * (0.4 + 0.6 * grow);
+      const R3 = s.size * (0.4 + 0.6 * grow);
       g.translate(0, -(s.z ?? 0.7));
       g.rotate(s.rot ?? 0.2 + k * 0.6);
       g.globalCompositeOperation = "lighter";
       g.globalAlpha = a * fade2 * 0.4;
       g.fillStyle = s.color || "#fff59d";
       g.beginPath();
-      g.arc(0, 0, R2 * 0.55, 0, TAU19);
+      g.arc(0, 0, R3 * 0.55, 0, TAU19);
       g.fill();
       g.globalAlpha = a * fade2 * 0.95;
-      starPath(g, 0, 0, R2, 4, 0.12, 0);
+      starPath(g, 0, 0, R3, 4, 0.12, 0);
       g.fill();
       g.fillStyle = "#ffffff";
-      starPath(g, 0, 0, R2 * 0.6, 4, 0.14, Math.PI / 4);
+      starPath(g, 0, 0, R3 * 0.6, 4, 0.14, Math.PI / 4);
       g.fill();
     }
   };
@@ -71871,13 +71872,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     air(g, s, k, a) {
       const grow = easeOut(Math.min(1, k / 0.12));
       const fade2 = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
-      const R2 = s.size * grow;
+      const R3 = s.size * grow;
       g.translate(0, -(s.z ?? 0.8));
       g.globalCompositeOperation = "lighter";
       g.globalAlpha = a * fade2 * 0.25;
       g.fillStyle = s.color || "#e0f7fa";
       g.beginPath();
-      g.arc(0, 0, R2 * 0.35, 0, TAU19);
+      g.arc(0, 0, R3 * 0.35, 0, TAU19);
       g.fill();
       g.lineCap = "round";
       g.lineJoin = "miter";
@@ -71891,7 +71892,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const th = i / n * TAU19 + (hash8(s.seed + i) - 0.5) * 0.5;
           let x = 0, y = 0;
           g.moveTo(0, 0);
-          const L2 = R2 * (0.6 + 0.5 * hash8(s.seed + i * 3));
+          const L2 = R3 * (0.6 + 0.5 * hash8(s.seed + i * 3));
           for (let j = 1; j <= 3; j++) {
             const r = L2 * j / 3, o = (hash8(s.seed + i * 7 + j) - 0.5) * 0.5;
             x = Math.cos(th + o) * r;
@@ -71919,11 +71920,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     air(g, s, k, a, c) {
       const grow = easeOut(Math.min(1, k / 0.15));
       const fade2 = Math.min(1, (1 - k) * 3) * a;
-      const H2 = (s.h || 4) * grow, R2 = s.r * (0.6 + 0.4 * grow) * (1 - k * 0.3);
+      const H2 = (s.h || 4) * grow, R3 = s.r * (0.6 + 0.4 * grow) * (1 - k * 0.3);
       g.globalCompositeOperation = s.kind === "dark" ? "source-over" : "lighter";
       const col = s.color;
       for (let layer = 0; layer < 3; layer++) {
-        const w = R2 * [1.4, 1, 0.45][layer];
+        const w = R3 * [1.4, 1, 0.45][layer];
         g.globalAlpha = fade2 * [0.25, 0.6, 0.95][layer];
         g.fillStyle = layer === 2 ? s.core || "#ffffff" : col;
         g.beginPath();
@@ -71948,38 +71949,38 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   SHAPES2.dome = {
     ground(g, s, k, a, c) {
       const grow = easeOut(Math.min(1, (s.age || 0) / 0.35));
-      const R2 = s.r * grow;
+      const R3 = s.r * grow;
       g.globalAlpha = 0.12 * a;
       g.fillStyle = s.color;
-      ellipsePath(g, R2, R2 * 0.62);
+      ellipsePath(g, R3, R3 * 0.62);
       g.fill();
       g.globalAlpha = 0.7 * a;
       g.strokeStyle = s.color;
       g.lineWidth = 0.06;
-      ellipsePath(g, R2, R2 * 0.62);
+      ellipsePath(g, R3, R3 * 0.62);
       g.stroke();
       if (s.kind === "room") {
         const ph = c.t * 0.5 % 1;
         g.globalAlpha = 0.35 * a * (1 - ph);
         g.lineWidth = 0.035;
-        ellipsePath(g, R2 * ph, R2 * ph * 0.62);
+        ellipsePath(g, R3 * ph, R3 * ph * 0.62);
         g.stroke();
       }
     },
     air(g, s, k, a, c) {
       const grow = easeOut(Math.min(1, (s.age || 0) / 0.35));
-      const R2 = s.r * grow, H2 = R2 * (s.hk ?? 0.55);
+      const R3 = s.r * grow, H2 = R3 * (s.hk ?? 0.55);
       g.globalAlpha = 0.08 * a;
       g.fillStyle = s.color;
       g.beginPath();
-      g.ellipse(0, 0, R2, H2 + R2 * 0.62, 0, Math.PI, 0);
-      g.ellipse(0, 0, R2, R2 * 0.62, 0, 0, Math.PI);
+      g.ellipse(0, 0, R3, H2 + R3 * 0.62, 0, Math.PI, 0);
+      g.ellipse(0, 0, R3, R3 * 0.62, 0, 0, Math.PI);
       g.fill();
       g.globalAlpha = 0.55 * a;
       g.strokeStyle = s.color;
       g.lineWidth = 0.05;
       g.beginPath();
-      g.ellipse(0, 0, R2, H2 + R2 * 0.62 * 0.4, 0, Math.PI, 0);
+      g.ellipse(0, 0, R3, H2 + R3 * 0.62 * 0.4, 0, Math.PI, 0);
       g.stroke();
       if (s.kind === "cage") {
         g.globalAlpha = 0.7 * a;
@@ -71988,11 +71989,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         for (let i = 0; i < n; i++) {
           const th = i / n * Math.PI;
-          const bx = Math.cos(th) * R2, by = Math.sin(th) * R2 * 0.62;
+          const bx = Math.cos(th) * R3, by = Math.sin(th) * R3 * 0.62;
           g.moveTo(bx, by);
-          g.quadraticCurveTo(bx * 0.55, -H2 * 0.9, 0, -(H2 + R2 * 0.25));
+          g.quadraticCurveTo(bx * 0.55, -H2 * 0.9, 0, -(H2 + R3 * 0.25));
           g.moveTo(-bx, -by * 0.4);
-          g.quadraticCurveTo(-bx * 0.55, -H2 * 0.9, 0, -(H2 + R2 * 0.25));
+          g.quadraticCurveTo(-bx * 0.55, -H2 * 0.9, 0, -(H2 + R3 * 0.25));
         }
         g.stroke();
         g.globalCompositeOperation = "lighter";
@@ -72006,7 +72007,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         for (let i = 1; i < 4; i++) {
           const f = i / 4;
-          g.ellipse(0, -H2 * f * 0.85, R2 * Math.sqrt(1 - f * f), R2 * 0.1 * (1 - f), 0, 0, TAU19);
+          g.ellipse(0, -H2 * f * 0.85, R3 * Math.sqrt(1 - f * f), R3 * 0.1 * (1 - f), 0, 0, TAU19);
         }
         g.stroke();
       }
@@ -72053,21 +72054,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   SHAPES2.vortex = {
     ground(g, s, k, a, c) {
       const grow = easeOut(Math.min(1, (s.age || 0) / 0.3));
-      const R2 = s.r * grow;
+      const R3 = s.r * grow;
       const spin = c.t * (s.spin || 4);
       if (s.kind === "dark") {
         g.globalAlpha = 0.85 * a;
         g.fillStyle = "#05000a";
-        ellipsePath(g, R2 * 0.35, R2 * 0.22);
+        ellipsePath(g, R3 * 0.35, R3 * 0.22);
         g.fill();
         g.globalAlpha = 0.5 * a;
         g.fillStyle = "#1a0033";
-        ellipsePath(g, R2 * 0.7, R2 * 0.43);
+        ellipsePath(g, R3 * 0.7, R3 * 0.43);
         g.fill();
       } else {
         g.globalAlpha = 0.18 * a;
         g.fillStyle = s.color;
-        ellipsePath(g, R2, R2 * 0.62);
+        ellipsePath(g, R3, R3 * 0.62);
         g.fill();
       }
       g.lineCap = "round";
@@ -72080,7 +72081,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         for (let j = 0; j <= 16; j++) {
           const u = j / 16;
           const th = spin + i / arms * TAU19 + u * 3.2;
-          const r = R2 * (1 - u * 0.85);
+          const r = R3 * (1 - u * 0.85);
           const x = Math.cos(th) * r, y = Math.sin(th) * r * 0.62;
           if (j) g.lineTo(x, y);
           else g.moveTo(x, y);
@@ -72091,12 +72092,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     air(g, s, k, a, c) {
       if (s.kind !== "sand" && s.kind !== "wind" && s.kind !== "smoke" && s.kind !== "water") return;
       const grow = easeOut(Math.min(1, (s.age || 0) / 0.3));
-      const R2 = s.r * grow, H2 = (s.h || s.r * 1.6) * grow;
+      const R3 = s.r * grow, H2 = (s.h || s.r * 1.6) * grow;
       const spin = c.t * (s.spin || 7);
       g.lineCap = "round";
       for (let i = 0; i < 9; i++) {
         const u = i / 8;
-        const y = -H2 * u, r = R2 * (0.25 + 0.75 * u);
+        const y = -H2 * u, r = R3 * (0.25 + 0.75 * u);
         g.globalAlpha = a * (0.25 + 0.3 * u);
         g.strokeStyle = i % 2 ? s.color : s.color2 || "#ffffff";
         g.lineWidth = 0.07 + u * 0.05;
@@ -72110,14 +72111,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   SHAPES2.cloud = {
     air(g, s, k, a, c) {
       const grow = easeOut(Math.min(1, (s.age || 0) / 0.4));
-      const R2 = s.r * grow;
+      const R3 = s.r * grow;
       g.translate(0, -(s.z ?? 5));
       const n = 9;
       for (let pass = 0; pass < 2; pass++) {
         for (let i = 0; i < n; i++) {
           const th = i / n * TAU19;
-          const x = Math.cos(th) * R2 * 0.75 + Math.sin(c.t * 0.8 + i) * 0.1, y = Math.sin(th) * R2 * 0.28;
-          const rr = R2 * (0.38 + 0.12 * hash8(s.seed + i));
+          const x = Math.cos(th) * R3 * 0.75 + Math.sin(c.t * 0.8 + i) * 0.1, y = Math.sin(th) * R3 * 0.28;
+          const rr = R3 * (0.38 + 0.12 * hash8(s.seed + i));
           g.globalAlpha = a * (pass ? 0.9 : 0.5);
           g.fillStyle = pass ? s.color || "#37474f" : "#263238";
           g.beginPath();
@@ -72130,7 +72131,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = a * 0.5;
         g.fillStyle = s.glow || "#fff59d";
         g.beginPath();
-        g.arc((hash8(Math.floor(c.t * 8) + s.seed) - 0.5) * R2, 0, R2 * 0.35, 0, TAU19);
+        g.arc((hash8(Math.floor(c.t * 8) + s.seed) - 0.5) * R3, 0, R3 * 0.35, 0, TAU19);
         g.fill();
       }
     }
@@ -72229,28 +72230,28 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const t = Math.min(1, age / fall);
       const zh = (s.h || 9) * (1 - t * t);
       const ox = (s.drift || 1.5) * (1 - t);
-      const R2 = s.size || 1;
+      const R3 = s.size || 1;
       if (t >= 1) {
         const f = 1 - Math.min(1, (age - fall) / 0.35);
         if (f <= 0) return;
         g.globalCompositeOperation = "lighter";
         g.globalAlpha = f * a;
         g.fillStyle = s.glow || "#ff9100";
-        ellipsePath(g, R2 * 1.6, R2);
+        ellipsePath(g, R3 * 1.6, R3);
         g.fill();
         return;
       }
       g.translate(-ox, -zh);
       g.globalAlpha = a;
       g.globalCompositeOperation = "lighter";
-      const gr = g.createLinearGradient(0, 0, ox * 0.8 + 0.8, -R2 * 3);
+      const gr = g.createLinearGradient(0, 0, ox * 0.8 + 0.8, -R3 * 3);
       gr.addColorStop(0, rgba2(s.glow || "#ff9100", 0.9));
       gr.addColorStop(1, rgba2(s.glow || "#ff9100", 0));
       g.fillStyle = gr;
       g.beginPath();
-      g.moveTo(-R2 * 0.8, 0);
-      g.lineTo(ox * 0.8 + 0.8, -R2 * 3.2);
-      g.lineTo(R2 * 0.8, 0);
+      g.moveTo(-R3 * 0.8, 0);
+      g.lineTo(ox * 0.8 + 0.8, -R3 * 3.2);
+      g.lineTo(R3 * 0.8, 0);
       g.closePath();
       g.fill();
       g.globalCompositeOperation = "source-over";
@@ -72259,15 +72260,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.05;
         g.beginPath();
-        g.arc(0, 0, R2, 0, TAU19);
+        g.arc(0, 0, R3, 0, TAU19);
         g.fill();
         g.stroke();
         g.strokeStyle = s.kind === "mochi" ? "#d7ccc8" : "#ffab40";
         g.lineWidth = 0.04;
         g.beginPath();
         for (let i = -1; i <= 1; i++) {
-          g.moveTo(i * R2 * 0.35, -R2 * 0.2);
-          g.lineTo(i * R2 * 0.35, R2 * 0.45);
+          g.moveTo(i * R3 * 0.35, -R3 * 0.2);
+          g.lineTo(i * R3 * 0.35, R3 * 0.45);
         }
         g.stroke();
       } else if (s.kind === "hand") {
@@ -72275,7 +72276,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.05;
         g.beginPath();
-        g.ellipse(0, 0, R2 * 1.2, R2 * 0.8, 0, 0, TAU19);
+        g.ellipse(0, 0, R3 * 1.2, R3 * 0.8, 0, 0, TAU19);
         g.fill();
         g.stroke();
       } else {
@@ -72283,7 +72284,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         for (let i = 0; i < 9; i++) {
           const th = i / 9 * TAU19;
-          const rr = R2 * (0.8 + 0.3 * hash8(s.seed + i));
+          const rr = R3 * (0.8 + 0.3 * hash8(s.seed + i));
           g.lineTo(Math.cos(th) * rr, Math.sin(th) * rr);
         }
         g.closePath();
@@ -72292,7 +72293,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = s.glow || "#ff9100";
         g.globalAlpha = 0.6 * a;
         g.beginPath();
-        g.arc(R2 * 0.2, R2 * 0.2, R2 * 0.5, 0, TAU19);
+        g.arc(R3 * 0.2, R3 * 0.2, R3 * 0.5, 0, TAU19);
         g.fill();
       }
     }
@@ -72327,14 +72328,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const grow = easeOut(Math.min(1, k / 0.2));
       const fade2 = 1 - k * k;
       g.translate(0, -(s.z ?? 0.8));
-      const R2 = s.size * grow;
+      const R3 = s.size * grow;
       const rot = (s.rot || 0) + c.t * (s.spin ?? 2);
       const v = [];
       for (const [x, y, z] of [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]]) {
         const cx = Math.cos(rot), sx = Math.sin(rot);
         const X2 = x * cx - z * sx, Z2 = x * sx + z * cx;
         const cy = Math.cos(0.5), sy = Math.sin(0.5);
-        v.push([X2 * R2, (y * cy - Z2 * sy) * R2]);
+        v.push([X2 * R3, (y * cy - Z2 * sy) * R3]);
       }
       g.globalCompositeOperation = "lighter";
       g.globalAlpha = a * fade2 * 0.18;
@@ -72359,11 +72360,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = "#ff5252";
         g.globalAlpha = a * fade2;
         g.beginPath();
-        g.arc(-R2 * 0.18, -R2 * 0.1, R2 * 0.22, 0, TAU19);
-        g.arc(R2 * 0.18, -R2 * 0.1, R2 * 0.22, 0, TAU19);
-        g.moveTo(-R2 * 0.38, 0);
-        g.lineTo(0, R2 * 0.4);
-        g.lineTo(R2 * 0.38, 0);
+        g.arc(-R3 * 0.18, -R3 * 0.1, R3 * 0.22, 0, TAU19);
+        g.arc(R3 * 0.18, -R3 * 0.1, R3 * 0.22, 0, TAU19);
+        g.moveTo(-R3 * 0.38, 0);
+        g.lineTo(0, R3 * 0.4);
+        g.lineTo(R3 * 0.38, 0);
         g.fill();
       }
     }
@@ -72450,10 +72451,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   SHAPES2.pieces = {
     air(g, s, k, a, c) {
       const n = 10;
-      const R2 = s.r || 2.4;
+      const R3 = s.r || 2.4;
       for (let i = 0; i < n; i++) {
         const th = c.t * (2.5 + i % 3) + i * 2.39;
-        const r = R2 * (0.35 + 0.65 * hash8(s.seed + i));
+        const r = R3 * (0.35 + 0.65 * hash8(s.seed + i));
         const x = Math.cos(th) * r, y = Math.sin(th) * r * 0.62 - 0.6 - Math.sin(c.t * 7 + i) * 0.25;
         g.globalAlpha = a * Math.min(1, (1 - k) * 4);
         g.save();
@@ -72512,19 +72513,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   SHAPES2.zone = {
     ground(g, s, k, a, c) {
       const z = s.zone;
-      const R2 = s.r * easeOut(Math.min(1, (s.age || 0) / 0.3));
+      const R3 = s.r * easeOut(Math.min(1, (s.age || 0) / 0.3));
       const col = s.color || "#ffffff";
       switch (s.kind) {
         case "dark":
-          SHAPES2.vortex.ground(g, { ...s, r: R2, kind: "dark", spin: -3, arms: 6 }, k, a, c);
+          SHAPES2.vortex.ground(g, { ...s, r: R3, kind: "dark", spin: -3, arms: 6 }, k, a, c);
           break;
         case "storm":
-          SHAPES2.vortex.ground(g, { ...s, r: R2, kind: "sand", spin: 5 }, k, a * 0.7, c);
+          SHAPES2.vortex.ground(g, { ...s, r: R3, kind: "sand", spin: 5 }, k, a * 0.7, c);
           break;
         case "gravity": {
           g.globalAlpha = 0.22 * a;
           g.fillStyle = col;
-          ellipsePath(g, R2, R2 * 0.62);
+          ellipsePath(g, R3, R3 * 0.62);
           g.fill();
           g.globalAlpha = 0.6 * a;
           g.strokeStyle = col;
@@ -72534,7 +72535,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             const ph = (c.t * 0.9 + i / 3) % 1;
             g.globalAlpha = 0.5 * a * ph;
             g.lineWidth = 0.04;
-            ellipsePath(g, R2 * (1 - ph), R2 * (1 - ph) * 0.62);
+            ellipsePath(g, R3 * (1 - ph), R3 * (1 - ph) * 0.62);
             g.stroke();
           }
           break;
@@ -72542,7 +72543,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         case "ice": {
           g.globalAlpha = 0.3 * a;
           g.fillStyle = "#e1f5fe";
-          ellipsePath(g, R2, R2 * 0.62);
+          ellipsePath(g, R3, R3 * 0.62);
           g.fill();
           g.globalAlpha = 0.5 * a;
           g.strokeStyle = "#ffffff";
@@ -72551,7 +72552,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           for (let i = 0; i < 10; i++) {
             const th = i / 10 * TAU19 + s.seed;
             g.moveTo(0, 0);
-            g.lineTo(Math.cos(th) * R2 * 0.9, Math.sin(th) * R2 * 0.55);
+            g.lineTo(Math.cos(th) * R3 * 0.9, Math.sin(th) * R3 * 0.55);
           }
           g.stroke();
           break;
@@ -72562,7 +72563,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.globalAlpha = 0.24 * a;
           g.fillStyle = col;
           for (let i = 0; i < 6; i++) {
-            const th = i / 6 * TAU19 + c.t * 0.2, rr = R2 * 0.45;
+            const th = i / 6 * TAU19 + c.t * 0.2, rr = R3 * 0.45;
             g.beginPath();
             g.ellipse(Math.cos(th) * rr * 0.6, Math.sin(th) * rr * 0.35, rr, rr * 0.6, 0, 0, TAU19);
             g.fill();
@@ -72570,7 +72571,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.globalAlpha = 0.35 * a;
           g.strokeStyle = col;
           g.lineWidth = 0.04;
-          ellipsePath(g, R2, R2 * 0.62);
+          ellipsePath(g, R3, R3 * 0.62);
           g.stroke();
           if (s.kind === "plant") {
             g.strokeStyle = "#2e7d32";
@@ -72580,7 +72581,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             g.beginPath();
             for (let i = 0; i < 7; i++) {
               const th = i / 7 * TAU19 + s.seed;
-              const x = Math.cos(th) * R2 * 0.7, y = Math.sin(th) * R2 * 0.45;
+              const x = Math.cos(th) * R3 * 0.7, y = Math.sin(th) * R3 * 0.45;
               g.moveTo(x, y);
               g.quadraticCurveTo(x * 0.5, y * 0.5 - 0.4 - Math.sin(c.t * 3 + i) * 0.1, 0, -0.1);
             }
@@ -72595,52 +72596,52 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         case "cage": {
           g.globalAlpha = 0.16 * a;
           g.fillStyle = col;
-          ellipsePath(g, R2, R2 * 0.62);
+          ellipsePath(g, R3, R3 * 0.62);
           g.fill();
           g.globalAlpha = 0.5 * a;
           g.strokeStyle = col;
           g.lineWidth = 0.05;
-          ellipsePath(g, R2, R2 * 0.62);
+          ellipsePath(g, R3, R3 * 0.62);
           g.stroke();
-          if (s.kind === "cage") SHAPES2.dome.ground(g, { ...s, kind: "cage", r: R2, age: 9 }, k, a, c);
+          if (s.kind === "cage") SHAPES2.dome.ground(g, { ...s, kind: "cage", r: R3, age: 9 }, k, a, c);
           break;
         }
         default: {
           g.globalAlpha = 0.18 * a;
           g.fillStyle = col;
-          ellipsePath(g, R2, R2 * 0.62);
+          ellipsePath(g, R3, R3 * 0.62);
           g.fill();
           g.globalAlpha = 0.5 * a;
           g.strokeStyle = col;
           g.lineWidth = 0.04;
-          ellipsePath(g, R2, R2 * 0.62);
+          ellipsePath(g, R3, R3 * 0.62);
           g.stroke();
         }
       }
     },
     air(g, s, k, a, c) {
-      const R2 = s.r * easeOut(Math.min(1, (s.age || 0) / 0.3));
+      const R3 = s.r * easeOut(Math.min(1, (s.age || 0) / 0.3));
       switch (s.kind) {
         case "thunder":
-          SHAPES2.cloud.air(g, { ...s, r: Math.max(1.4, R2 * 0.9), z: 4.5 + R2 * 0.3, color: "#37474f" }, k, a, c);
+          SHAPES2.cloud.air(g, { ...s, r: Math.max(1.4, R3 * 0.9), z: 4.5 + R3 * 0.3, color: "#37474f" }, k, a, c);
           break;
         case "storm":
-          SHAPES2.vortex.air(g, { ...s, r: R2, kind: "sand", h: R2 * 1.3, color: s.color, color2: "#ffffff" }, k, a * 0.8, c);
+          SHAPES2.vortex.air(g, { ...s, r: R3, kind: "sand", h: R3 * 1.3, color: s.color, color2: "#ffffff" }, k, a * 0.8, c);
           break;
         case "cage":
-          SHAPES2.dome.air(g, { ...s, kind: "cage", r: R2, age: 9, hk: 0.6 }, k, a, c);
+          SHAPES2.dome.air(g, { ...s, kind: "cage", r: R3, age: 9, hk: 0.6 }, k, a, c);
           break;
         case "arms": {
           if (!s.pts) {
             s.pts = [];
-            const n = Math.max(3, Math.round(R2 * 3));
+            const n = Math.max(3, Math.round(R3 * 3));
             for (let i = 0; i < n; i++) {
               const th = i / n * TAU19 + hash8(s.seed + i);
-              const rr = R2 * (0.3 + 0.6 * hash8(s.seed + i * 3));
+              const rr = R3 * (0.3 + 0.6 * hash8(s.seed + i * 3));
               s.pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, L: 0.9, ang: th, delay: i * 0.03, seed: i });
             }
           }
-          SHAPES2.arms.air(g, { ...s, big: R2 > 2 }, k, a, c);
+          SHAPES2.arms.air(g, { ...s, big: R3 > 2 }, k, a, c);
           break;
         }
         case "gravity": {
@@ -72650,7 +72651,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.lineCap = "round";
           g.beginPath();
           for (let i = 0; i < 8; i++) {
-            const x = (hash8(s.seed + i) - 0.5) * R2 * 1.6, y0 = -3 + (c.t * 3 + hash8(s.seed + i * 3)) % 1 * 3;
+            const x = (hash8(s.seed + i) - 0.5) * R3 * 1.6, y0 = -3 + (c.t * 3 + hash8(s.seed + i * 3)) % 1 * 3;
             g.moveTo(x, y0 - 0.6);
             g.lineTo(x, y0);
           }
@@ -72660,7 +72661,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         case "field": {
           for (let i = 0; i < 5; i++) {
             const ph = (c.t * 0.8 + hash8(s.seed + i)) % 1;
-            const x = (hash8(s.seed + i * 7 + Math.floor(c.t * 0.8 + hash8(s.seed + i))) - 0.5) * R2 * 1.4, y = (hash8(s.seed + i * 11) - 0.5) * R2 * 0.8;
+            const x = (hash8(s.seed + i * 7 + Math.floor(c.t * 0.8 + hash8(s.seed + i))) - 0.5) * R3 * 1.4, y = (hash8(s.seed + i * 11) - 0.5) * R3 * 0.8;
             g.globalAlpha = a * (1 - ph) * 0.7;
             g.strokeStyle = s.color;
             g.lineWidth = 0.025;
@@ -72789,11 +72790,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     return runs;
   }
-  function circlePts(x, y, R2, h2, n = 40, a0 = 0, a1 = TAU20, wob) {
+  function circlePts(x, y, R3, h2, n = 40, a0 = 0, a1 = TAU20, wob) {
     const pts = [];
     for (let i = 0; i <= n; i++) {
       const th = a0 + (a1 - a0) * (i / n);
-      const rr = wob ? R2 * (1 + wob(th)) : R2;
+      const rr = wob ? R3 * (1 + wob(th)) : R3;
       pts.push([x + Math.cos(th) * rr, y + Math.sin(th) * rr, h2]);
     }
     return pts;
@@ -72962,24 +72963,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       outline = rect(s.length);
       inner = rect(s.length * easeOut2(k));
     } else return;
-    const R1 = ringRuns(r, outline), R2 = ringRuns(r, inner);
+    const R1 = ringRuns(r, outline), R22 = ringRuns(r, inner);
     if (!R1.length) return;
     fillRuns(g, r, R1, col, 0.1 + 0.12 * k);
-    fillRuns(g, r, R2, col, 0.3 + 0.35 * k);
+    fillRuns(g, r, R22, col, 0.3 + 0.35 * k);
     strokeRuns(g, r, R1, 0.05 + 0.04 * k, col, 0.55 + 0.4 * pulse * k);
   }
   function dome3d(g, r, s, layer, c) {
     const grow = easeOut2(Math.min(1, (s.age || 0) / 0.35));
-    const R2 = s.r * grow;
-    if (R2 < 0.05) return;
+    const R3 = s.r * grow;
+    if (R3 < 0.05) return;
     const col = s.color || "#ffffff";
     if (layer === "ground") {
-      const runs = ringRuns(r, circlePts(s.x, s.y, R2, 0.04, 48));
+      const runs = ringRuns(r, circlePts(s.x, s.y, R3, 0.04, 48));
       if (runs.length === 1 && runs[0].length > 40) fillRuns(g, r, runs, col, 0.1);
       strokeRuns(g, r, runs, 0.06, col, 0.7);
       return;
     }
-    const H2 = R2 * (s.hk ?? 0.55) * 1.6;
+    const H2 = R3 * (s.hk ?? 0.55) * 1.6;
     g.globalCompositeOperation = "lighter";
     const nM = s.kind === "cage" ? 16 : 10;
     for (let i = 0; i < nM; i++) {
@@ -72987,24 +72988,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const pts = [];
       for (let j = 0; j <= 10; j++) {
         const ph = j / 10 * (Math.PI / 2);
-        pts.push([s.x + Math.cos(th) * Math.cos(ph) * R2, s.y + Math.sin(th) * Math.cos(ph) * R2, Math.sin(ph) * H2]);
+        pts.push([s.x + Math.cos(th) * Math.cos(ph) * R3, s.y + Math.sin(th) * Math.cos(ph) * R3, Math.sin(ph) * H2]);
       }
       strokeRuns(g, r, ringRuns(r, pts), s.kind === "cage" ? 0.03 : 0.025, col, s.kind === "cage" ? 0.75 : 0.35);
     }
     for (const f of [0.35, 0.7]) {
-      const rr = R2 * Math.cos(f * Math.PI / 2), hh = Math.sin(f * Math.PI / 2) * H2;
+      const rr = R3 * Math.cos(f * Math.PI / 2), hh = Math.sin(f * Math.PI / 2) * H2;
       strokeRuns(g, r, ringRuns(r, circlePts(s.x, s.y, rr, hh, 36)), 0.025, col, 0.3);
     }
     g.globalCompositeOperation = "source-over";
   }
   function zone3d(fx, g, r, s, layer, k, c) {
-    const R2 = s.r * easeOut2(Math.min(1, (s.age || 0) / 0.3));
-    if (R2 < 0.05) return;
+    const R3 = s.r * easeOut2(Math.min(1, (s.age || 0) / 0.3));
+    if (R3 < 0.05) return;
     const col = s.color || "#ffffff";
     const zA = s.endT !== void 0 ? Math.max(0, s.endT / 0.35) : 1;
     if (layer === "ground") {
-      const n = Math.max(24, Math.min(64, Math.round(R2 * 8)));
-      const runs = ringRuns(r, circlePts(s.x, s.y, R2, 0.04, n));
+      const n = Math.max(24, Math.min(64, Math.round(R3 * 8)));
+      const runs = ringRuns(r, circlePts(s.x, s.y, R3, 0.04, n));
       if (!runs.length) return;
       const whole = runs.length === 1 && runs[0].length > n;
       const fillCol = s.kind === "dark" ? "#12001c" : s.kind === "ice" ? "#e1f5fe" : col;
@@ -73013,20 +73014,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (s.kind === "gravity" || s.kind === "dark" || s.kind === "storm") {
         for (let i = 0; i < 3; i++) {
           const ph = (c.t * 0.9 + i / 3) % 1;
-          strokeRuns(g, r, ringRuns(r, circlePts(s.x, s.y, R2 * (1 - ph), 0.04, 32)), 0.04, s.kind === "dark" ? "#b388ff" : col, 0.45 * ph * zA);
+          strokeRuns(g, r, ringRuns(r, circlePts(s.x, s.y, R3 * (1 - ph), 0.04, 32)), 0.04, s.kind === "dark" ? "#b388ff" : col, 0.45 * ph * zA);
         }
       }
       return;
     }
     if (s.kind === "cage") {
-      dome3d(g, r, { ...s, r: R2, age: 9, hk: 0.6 }, "air", c);
+      dome3d(g, r, { ...s, r: R3, age: 9, hk: 0.6 }, "air", c);
       return;
     }
     if (s.kind === "thunder") {
-      const B4 = bill(r, s.x, s.y, 4.5 + R2 * 0.3);
+      const B4 = bill(r, s.x, s.y, 4.5 + R3 * 0.3);
       if (!B4) return;
       setBill(g, r, B4);
-      drawShapeLayer(g, { ...s, type: "cloud", r: Math.max(1.4, R2 * 0.9), z: 0, color: "#37474f" }, "air", 0, 1, c);
+      drawShapeLayer(g, { ...s, type: "cloud", r: Math.max(1.4, R3 * 0.9), z: 0, color: "#37474f" }, "air", 0, 1, c);
       return;
     }
     if (s.kind === "storm" || s.kind === "arms" || s.kind === "gravity" || s.kind === "field") {
@@ -73306,16 +73307,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const head = easeOut2(u), tail2 = kind === "straight" ? Math.max(0, head - 0.55) : clamp015((u - 0.2) / 0.8) ** 2;
     if (head - tail2 < 0.02) return;
     const wMax = H2 * (kind === "straight" ? 0.026 : blade2 ? 0.042 : 0.032) * (heavy ? 1.35 : 1);
-    const N3 = 22;
+    const N4 = 22;
     const outer = [], inner = [], mid = [];
-    for (let i = 0; i <= N3; i++) {
-      const v = tail2 + (head - tail2) * (i / N3);
+    for (let i = 0; i <= N4; i++) {
+      const v = tail2 + (head - tail2) * (i / N4);
       const [x, y] = P4(v);
       const [x2, y2] = P4(Math.min(1, v + 0.01));
       const [x0, y0] = P4(Math.max(0, v - 0.01));
       const dx = (x2 - x0) * W3, dy = (y2 - y0) * H2, l = Math.hypot(dx, dy) || 1;
       const nx = -dy / l, ny = dx / l;
-      const qq = i / N3;
+      const qq = i / N4;
       const wd = wMax * Math.pow(qq, 0.75) * (1 - 0.35 * Math.pow(qq, 8));
       outer.push([x * W3 + nx * wd * 0.5, y * H2 + ny * wd * 0.5]);
       inner.push([x * W3 - nx * wd * 0.5, y * H2 - ny * wd * 0.5]);
@@ -73323,7 +73324,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     const a = Math.min(1, 0.8 + (heavy ? 0.15 : 0)) * fade2;
     g.globalCompositeOperation = "source-over";
-    const gr = g.createLinearGradient(outer[0][0], outer[0][1], outer[N3][0], outer[N3][1]);
+    const gr = g.createLinearGradient(outer[0][0], outer[0][1], outer[N4][0], outer[N4][1]);
     gr.addColorStop(0, rgba2(col, 0));
     gr.addColorStop(0.55, rgba2(col, 0.35 * a));
     gr.addColorStop(1, rgba2(col, 0.75 * a));
@@ -73331,8 +73332,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.fillStyle = gr;
     g.beginPath();
     g.moveTo(outer[0][0], outer[0][1]);
-    for (let i = 1; i <= N3; i++) g.lineTo(outer[i][0], outer[i][1]);
-    for (let i = N3; i >= 0; i--) g.lineTo(inner[i][0], inner[i][1]);
+    for (let i = 1; i <= N4; i++) g.lineTo(outer[i][0], outer[i][1]);
+    for (let i = N4; i >= 0; i--) g.lineTo(inner[i][0], inner[i][1]);
     g.closePath();
     g.fill();
     g.lineCap = "round";
@@ -73341,14 +73342,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.lineWidth = Math.max(1, H2 * 25e-4);
     g.globalAlpha = 0.45 * a;
     g.beginPath();
-    for (let i = Math.floor(N3 * 0.3); i <= N3; i++) {
-      if (i === Math.floor(N3 * 0.3)) g.moveTo(outer[i][0], outer[i][1]);
+    for (let i = Math.floor(N4 * 0.3); i <= N4; i++) {
+      if (i === Math.floor(N4 * 0.3)) g.moveTo(outer[i][0], outer[i][1]);
       else g.lineTo(outer[i][0], outer[i][1]);
     }
     g.stroke();
     g.strokeStyle = "#ffffff";
-    for (let i = Math.floor(N3 * 0.4); i < N3; i++) {
-      const qq = i / N3;
+    for (let i = Math.floor(N4 * 0.4); i < N4; i++) {
+      const qq = i / N4;
       g.globalAlpha = a * qq * qq;
       g.lineWidth = Math.max(1, wMax * 0.28 * qq);
       g.beginPath();
@@ -73435,14 +73436,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalAlpha = 0.55 * k;
     g.fillStyle = "#ffffff";
-    const R2 = Math.hypot(W3, H2) * 0.55, n = 40;
+    const R3 = Math.hypot(W3, H2) * 0.55, n = 40;
     g.beginPath();
     for (let i = 0; i < n; i++) {
       const a = i / n * TAU20 + i * 7919 % 17 * 0.013 + fx.time * 0.3;
-      const r0 = R2 * (0.62 + i * 131 % 7 * 0.04), wd = 4e-3 + i * 53 % 5 * 2e-3;
-      g.moveTo(cx + Math.cos(a) * R2 * 1.3, cy + Math.sin(a) * R2 * 1.3);
+      const r0 = R3 * (0.62 + i * 131 % 7 * 0.04), wd = 4e-3 + i * 53 % 5 * 2e-3;
+      g.moveTo(cx + Math.cos(a) * R3 * 1.3, cy + Math.sin(a) * R3 * 1.3);
       g.lineTo(cx + Math.cos(a + wd) * r0, cy + Math.sin(a + wd) * r0);
-      g.lineTo(cx + Math.cos(a + wd * 2) * R2 * 1.3, cy + Math.sin(a + wd * 2) * R2 * 1.3);
+      g.lineTo(cx + Math.cos(a + wd * 2) * R3 * 1.3, cy + Math.sin(a + wd * 2) * R3 * 1.3);
     }
     g.fill();
     g.globalAlpha = 1;
@@ -74253,7 +74254,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = Math.min(1, k * 1.6) * 0.8;
         g.fillStyle = "#ffffff";
         const cx = fx * r.dpr, cy = fy * r.dpr;
-        const R2 = Math.hypot(W3, H2);
+        const R3 = Math.hypot(W3, H2);
         const inner = Math.min(W3, H2) * (0.22 + 0.1 * (1 - k));
         g.beginPath();
         const n = 48;
@@ -74261,9 +74262,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const a = i / n * TAU + i * 7919 % 13 * 0.01;
           const wdt = 6e-3 + i * 104729 % 7 * 25e-4;
           const r0 = inner * (0.9 + i * 31 % 5 * 0.08);
-          g.moveTo(cx + Math.cos(a) * R2, cy + Math.sin(a) * R2);
+          g.moveTo(cx + Math.cos(a) * R3, cy + Math.sin(a) * R3);
           g.lineTo(cx + Math.cos(a + wdt) * r0, cy + Math.sin(a + wdt) * r0);
-          g.lineTo(cx + Math.cos(a + wdt * 2) * R2, cy + Math.sin(a + wdt * 2) * R2);
+          g.lineTo(cx + Math.cos(a + wdt * 2) * R3, cy + Math.sin(a + wdt * 2) * R3);
         }
         g.fill();
         g.globalAlpha = 1;
@@ -75221,6 +75222,137 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
   };
 
+  // src/game/path.js
+  function standable(w, x, y, r = 0.3, inside2 = null) {
+    if (!w.walkable(x, y) || w.solid(x, y)) return false;
+    if (w.isBlocked(x, y) && (!inside2 || w.interiorAt(x, y) !== inside2)) return false;
+    return !w.hitsProp(x, y, r);
+  }
+  function clearLine(w, x0, y0, x1, y1, r = 0.3) {
+    const inside2 = w.interiorAt ? w.interiorAt(x0, y0) : null;
+    const dx = w.dx(x0, x1), dy = y1 - y0;
+    const n = Math.ceil(Math.hypot(dx, dy) / 0.3);
+    for (let i = 1; i <= n; i++) {
+      const t = i / n;
+      if (!standable(w, w.wx(x0 + dx * t), y0 + dy * t, r, inside2)) return false;
+    }
+    return true;
+  }
+  var R = 36;
+  var N3 = 2 * R + 1;
+  var CELLS = N3 * N3;
+  var G = new Float32Array(CELLS);
+  var F3 = new Float32Array(CELLS);
+  var FROM = new Int32Array(CELLS);
+  var STATE2 = new Uint8Array(CELLS);
+  var OK = new Int8Array(CELLS);
+  var HEAP = new Int32Array(CELLS * 2);
+  var SQ2 = Math.SQRT2;
+  var DIRS = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, SQ2], [1, -1, SQ2], [-1, 1, SQ2], [-1, -1, SQ2]];
+  function findPath(w, sx, sy, tx, ty, r = 0.3, maxNodes = 2600) {
+    const ox = Math.floor(sx) - R, oy = Math.floor(sy) - R;
+    const gx = Math.floor(sx + w.dx(sx, tx)) - ox, gy = Math.floor(ty) - oy;
+    if (gx < 0 || gy < 0 || gx >= N3 || gy >= N3) return null;
+    STATE2.fill(0);
+    OK.fill(0);
+    const inside2 = w.interiorAt ? w.interiorAt(sx, sy) : null;
+    const ok = (i2, j) => {
+      const k = j * N3 + i2;
+      if (OK[k] === 0) OK[k] = standable(w, w.wx(ox + i2 + 0.5), oy + j + 0.5, r, inside2) ? 1 : -1;
+      return OK[k] === 1;
+    };
+    const h2 = (i2, j) => {
+      const dx = Math.abs(i2 - gx), dy = Math.abs(j - gy);
+      return Math.max(dx, dy) + (SQ2 - 1) * Math.min(dx, dy);
+    };
+    let hn = 0;
+    const push = (k) => {
+      let i2 = hn++;
+      HEAP[i2] = k;
+      while (i2 > 0) {
+        const p = i2 - 1 >> 1;
+        if (F3[HEAP[p]] <= F3[HEAP[i2]]) break;
+        const t = HEAP[p];
+        HEAP[p] = HEAP[i2];
+        HEAP[i2] = t;
+        i2 = p;
+      }
+    };
+    const pop = () => {
+      const top = HEAP[0];
+      HEAP[0] = HEAP[--hn];
+      let i2 = 0;
+      for (; ; ) {
+        const l = i2 * 2 + 1, rr = l + 1;
+        let m = i2;
+        if (l < hn && F3[HEAP[l]] < F3[HEAP[m]]) m = l;
+        if (rr < hn && F3[HEAP[rr]] < F3[HEAP[m]]) m = rr;
+        if (m === i2) break;
+        const t = HEAP[m];
+        HEAP[m] = HEAP[i2];
+        HEAP[i2] = t;
+        i2 = m;
+      }
+      return top;
+    };
+    const si = R, sj = R, sk = sj * N3 + si;
+    G[sk] = 0;
+    F3[sk] = h2(si, sj);
+    FROM[sk] = -1;
+    STATE2[sk] = 1;
+    OK[sk] = 1;
+    push(sk);
+    let best = sk, bestH = h2(si, sj), expanded = 0;
+    while (hn > 0 && expanded < maxNodes) {
+      const k = pop();
+      if (STATE2[k] === 2) continue;
+      STATE2[k] = 2;
+      expanded++;
+      const i2 = k % N3, j = k / N3 | 0;
+      const hk = h2(i2, j);
+      if (hk < bestH) {
+        bestH = hk;
+        best = k;
+      }
+      if (i2 === gx && j === gy) {
+        best = k;
+        break;
+      }
+      for (const [di, dj, c] of DIRS) {
+        const ni = i2 + di, nj = j + dj;
+        if (ni < 0 || nj < 0 || ni >= N3 || nj >= N3) continue;
+        const nk = nj * N3 + ni;
+        if (STATE2[nk] === 2 || !ok(ni, nj)) continue;
+        if (di && dj && (!ok(i2 + di, j) || !ok(i2, j + dj))) continue;
+        if (w.hitsProp(w.wx(ox + i2 + 0.5 + di * 0.5), oy + j + 0.5 + dj * 0.5, r * 0.8)) continue;
+        const g = G[k] + c;
+        if (STATE2[nk] === 1 && g >= G[nk]) continue;
+        G[nk] = g;
+        F3[nk] = g + h2(ni, nj) * 1.05;
+        FROM[nk] = k;
+        STATE2[nk] = 1;
+        push(nk);
+      }
+    }
+    if (best === sk) return null;
+    const cells2 = [];
+    for (let k = best; k !== -1 && k !== sk; k = FROM[k]) cells2.push(k);
+    cells2.reverse();
+    const pts = cells2.map((k) => ({ x: w.wx(ox + k % N3 + 0.5), y: oy + (k / N3 | 0) + 0.5 }));
+    if (best % N3 === gx && (best / N3 | 0) === gy && standable(w, tx, ty, r)) pts[pts.length - 1] = { x: tx, y: ty };
+    const out = [];
+    let cx = sx, cy = sy, i = 0;
+    while (i < pts.length) {
+      let j = pts.length - 1;
+      while (j > i && !clearLine(w, cx, cy, pts[j].x, pts[j].y, r)) j--;
+      out.push(pts[j]);
+      cx = pts[j].x;
+      cy = pts[j].y;
+      i = j + 1;
+    }
+    return out;
+  }
+
   // src/game/ai.js
   function sameRoom(game, a, b) {
     const w = game.world;
@@ -75346,10 +75478,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           return;
         }
         const d = this.moveToward(a, this.home.x, this.home.y, game);
-        if (d < 1) {
-          this.state = "idle";
-          a.hp = Math.min(a.d.maxHp, a.hp + a.d.maxHp * 0.5);
-        }
+        if (d < 1) this.state = "idle";
         return;
       }
       if (!this.target) {
@@ -75419,6 +75548,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4;
         return;
       }
+      if (dist > 1.8) {
+        const wp = this.steer(a, t.x, t.y, game);
+        if (wp.x !== t.x || wp.y !== t.y) {
+          this.moveToward(a, wp.x, wp.y, game, true);
+          a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4;
+          return;
+        }
+      }
       let mx = 0, my = 0;
       if (dist > want + 0.4) {
         mx = dx / dist;
@@ -75456,14 +75593,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return dist < 3;
     }
     moveToward(a, x, y, game, direct = false) {
+      let tx = x, ty = y;
       if (!direct) {
         const via = game.buildings?.route(a, x, y);
         if (via) {
-          x = via.x;
-          y = via.y;
+          tx = via.x;
+          ty = via.y;
         }
+        const wp = this.steer(a, tx, ty, game);
+        tx = wp.x;
+        ty = wp.y;
       }
-      const dx = game.world.dx(a.x, x), dy = y - a.y;
+      const dx = game.world.dx(a.x, tx), dy = ty - a.y;
       const d = Math.hypot(dx, dy);
       if (d > 0.3) {
         a.intent.mx = dx / d;
@@ -75471,7 +75612,37 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         a.facing = Math.atan2(dy, dx);
       }
       this.avoidStuck(a, 0.016, game);
-      return d;
+      return tx === x && ty === y ? d : Math.hypot(game.world.dx(a.x, x), y - a.y);
+    }
+    /** The next point to head for on the way to (x, y): straight there, or a path round whatever's in the way. */
+    steer(a, x, y, game) {
+      const w = game.world, now2 = game.time || 0;
+      const P4 = this.path;
+      if (P4 && Math.hypot(w.dx(P4.tx, x), P4.ty - y) < 1.2 && now2 - P4.t < 6) {
+        while (P4.i < P4.pts.length && Math.hypot(w.dx(a.x, P4.pts[P4.i].x), P4.pts[P4.i].y - a.y) < 0.45) P4.i++;
+        if (P4.i < P4.pts.length) return P4.pts[P4.i];
+        this.path = null;
+        return { x, y };
+      }
+      if (now2 < (this.lineT || 0) && Math.hypot(w.dx(this.lineX, x), this.lineY - y) < 1) {
+        if (this.lineOk || now2 < (this.pathCd || 0)) return { x, y };
+      } else {
+        const d = Math.hypot(w.dx(a.x, x), y - a.y);
+        this.lineOk = d < 1.2 || clearLine(w, a.x, a.y, x, y, a.r * 0.85);
+        this.lineT = now2 + 0.5;
+        this.lineX = x;
+        this.lineY = y;
+        if (this.lineOk) {
+          this.path = null;
+          return { x, y };
+        }
+      }
+      if (now2 < (this.pathCd || 0)) return { x, y };
+      const pts = findPath(w, a.x, a.y, x, y, a.r * 0.85);
+      this.pathCd = now2 + (pts ? 0.7 : 2);
+      if (!pts || !pts.length) return { x, y };
+      this.path = { pts, i: 0, tx: x, ty: y, t: now2 };
+      return pts[0];
     }
     avoidStuck(a, dt, game) {
       const moved = Math.hypot(game.world.dx(this.lastX ?? a.x, a.x), a.y - (this.lastY ?? a.y));
@@ -76311,7 +76482,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     // --- HUD -----------------------------------------------------------------
     buildHud() {
-      const R2 = this.root;
+      const R3 = this.root;
       this.hud = h("div.hud");
       this.el = {};
       const E = this.el;
@@ -76408,15 +76579,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.hud.appendChild(E.crosshair);
       E.lookHint = h("div.look-hint.hidden", "Click to look around", h("small", "Esc frees the mouse \xB7 V switches view"));
       this.hud.appendChild(E.lookHint);
-      R2.appendChild(this.hud);
+      R3.appendChild(this.hud);
       this.bannerEl = h("div.banner", h("h2"), h("h1"), h("p"));
-      R2.appendChild(this.bannerEl);
+      R3.appendChild(this.bannerEl);
       this.hintEl = h("div.hint.hidden");
-      R2.appendChild(this.hintEl);
+      R3.appendChild(this.hintEl);
       this.fadeEl = h("div.fade-black");
-      R2.appendChild(this.fadeEl);
+      R3.appendChild(this.fadeEl);
       this.panelLayer = h("div");
-      R2.appendChild(this.panelLayer);
+      R3.appendChild(this.panelLayer);
       E.side = h("div.sidebar.hidden");
       E.sideBtns = {};
       for (const b of SIDEBAR) {
@@ -76433,11 +76604,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         E.sideBtns[b.id] = el;
         E.side.appendChild(el);
       }
-      R2.appendChild(E.side);
+      R3.appendChild(E.side);
       this.screenLayer = h("div");
-      R2.appendChild(this.screenLayer);
+      R3.appendChild(this.screenLayer);
       this.modalLayer = h("div");
-      R2.appendChild(this.modalLayer);
+      R3.appendChild(this.modalLayer);
     }
     setHudVisible(v) {
       this.hudVisible = v;
@@ -83148,8 +83319,8 @@ Trains by: ${TRAINS_BY[k]}` },
         if (role === "tavern" || role === "bar" || role === "inn") S3.tavern.push(out);
       }
     }
-    const R2 = Math.max(town.w, town.h) * 0.75 + 8;
-    for (const o of w.objects.near(town.x, town.y, R2)) {
+    const R3 = Math.max(town.w, town.h) * 0.75 + 8;
+    for (const o of w.objects.near(town.x, town.y, R3)) {
       if (o.kind === "barrel" || o.kind === "crate" || o.kind === "haystack") {
         const face = Math.PI / 2;
         const r = (o.col?.r ?? 0.4) + 0.4;
@@ -83826,9 +83997,9 @@ Trains by: ${TRAINS_BY[k]}` },
         if (prey && this.bored > 40) this.bored = 0;
       } else if (this.mode === "circle") {
         this.ang += dt * 0.55;
-        const R2 = 6.5;
-        tx = p.x + Math.cos(this.ang) * R2;
-        ty = p.y + Math.sin(this.ang) * R2;
+        const R3 = 6.5;
+        tx = p.x + Math.cos(this.ang) * R3;
+        ty = p.y + Math.sin(this.ang) * R3;
         this.t -= dt;
         if (this.t <= 0 && d < 12) {
           this.mode = "charge";
@@ -107778,10 +107949,10 @@ Trains by: ${TRAINS_BY[k]}` },
     const step = 0.25;
     W3.t = step;
     let watched = 0;
-    const R2 = tier >= 3 ? 16 : 10;
-    const range = hood ? tier >= 3 ? 4 : 2.5 : R2;
+    const R3 = tier >= 3 ? 16 : 10;
+    const range = hood ? tier >= 3 ? 4 : 2.5 : R3;
     const aboard = p.mode === "sail" || p.onShip;
-    for (const a of game.actorsNear(p.x, p.y, R2 + 2)) {
+    for (const a of game.actorsNear(p.x, p.y, R3 + 2)) {
       if (a === p || a.faction !== "marine" || !a.controller || a.state !== "idle" || a.controller.kind === "follower") continue;
       if (a.provoked) continue;
       const d = game.world.distance(a.x, a.y, p.x, p.y);
@@ -109396,11 +109567,11 @@ Trains by: ${TRAINS_BY[k]}` },
       const lt2 = laughTale();
       if (!lt2 || c.flags.laughTaleRevealed) return;
       const d = game.world.distance(p.x, p.y, lt2.x, lt2.y);
-      const R2 = lt2.radius + 70;
-      if (d < R2) {
-        game.env.storm = Math.max(game.env.storm, 0.9 * (1 - d / R2) + 0.3);
+      const R3 = lt2.radius + 70;
+      if (d < R3) {
+        game.env.storm = Math.max(game.env.storm, 0.9 * (1 - d / R3) + 0.3);
         const ang = Math.atan2(p.y - lt2.y, game.world.dx(lt2.x, p.x));
-        const push = 9 * (1 - d / R2) + 2;
+        const push = 9 * (1 - d / R3) + 2;
         const s = p.mode === "sail" ? p.ship : null;
         if (s) {
           s.x = game.world.wx(s.x + Math.cos(ang) * push * dt);
@@ -109610,7 +109781,7 @@ Trains by: ${TRAINS_BY[k]}` },
   // src/ui/touch.js
   var DEAD = 0.14;
   var RUN = 0.9;
-  var R = 54;
+  var R2 = 54;
   function installTouch(game, root2) {
     const ui = game.ui, inp = game.input;
     const t = inp.touch = { on: false, mx: 0, my: 0, run: false };
@@ -109692,7 +109863,7 @@ Trains by: ${TRAINS_BY[k]}` },
     const placeStick = (x, y, kx, ky) => {
       stickEl.style.left = x + "px";
       stickEl.style.top = y + "px";
-      knob.style.transform = `translate(${kx * R}px, ${ky * R}px)`;
+      knob.style.transform = `translate(${kx * R2}px, ${ky * R2}px)`;
     };
     const resetStick = () => {
       stick.id = null;
@@ -109733,14 +109904,14 @@ Trains by: ${TRAINS_BY[k]}` },
       if (e.pointerId === stick.id) {
         let dx = e.clientX - stick.ox, dy = e.clientY - stick.oy;
         const d = Math.hypot(dx, dy);
-        if (d > R) {
-          const k = (d - R) / d;
+        if (d > R2) {
+          const k = (d - R2) / d;
           stick.ox += dx * k;
           stick.oy += dy * k;
-          dx *= R / d;
-          dy *= R / d;
+          dx *= R2 / d;
+          dy *= R2 / d;
         }
-        const mx = dx / R, my = dy / R, m = Math.hypot(mx, my);
+        const mx = dx / R2, my = dy / R2, m = Math.hypot(mx, my);
         const s = m < DEAD ? 0 : (m - DEAD) / (1 - DEAD) / m;
         t.mx = mx * s;
         t.my = my * s;

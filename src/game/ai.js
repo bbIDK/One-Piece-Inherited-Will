@@ -6,6 +6,7 @@
 //   boss     – hostile + phase scripts
 import { angleDiff, clamp, TAU } from '../core/math.js';
 import { placeOnDeck } from './decks.js';
+import { clearLine, findPath } from './path.js';
 import { getAbility, canUse } from './abilities.js';
 import { hostile } from './entity.js';
 
@@ -126,7 +127,8 @@ export class AIController {
     if (this.state === 'return') {
       if (!this.home) { this.state = 'idle'; return; }
       const d = this.moveToward(a, this.home.x, this.home.y, game);
-      if (d < 1) { this.state = 'idle'; a.hp = Math.min(a.d.maxHp, a.hp + a.d.maxHp * 0.5); }
+      // (no healing up on the way home: walk away from a fight and come back, and it's still hurt)
+      if (d < 1) this.state = 'idle';
       return;
     }
     if (!this.target) {
@@ -182,6 +184,11 @@ export class AIController {
     // a wall between us: go round by the door
     const via = game.buildings?.route(a, t.x, t.y);
     if (via) { this.moveToward(a, via.x, via.y, game, true); a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4; return; }
+    // something in the way (a house, a fence, a cart): go round it
+    if (dist > 1.8) {
+      const wp = this.steer(a, t.x, t.y, game);
+      if (wp.x !== t.x || wp.y !== t.y) { this.moveToward(a, wp.x, wp.y, game, true); a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4; return; }
+    }
     let mx = 0, my = 0;
     if (dist > want + 0.4) { mx = dx / dist; my = dy / dist; a.intent.sprint = dist > 6 && a.stamina > a.d.maxStamina * 0.5; }
     else if (dist < want - 0.8 && this.ranged) { mx = -dx / dist; my = -dy / dist; }
@@ -209,15 +216,46 @@ export class AIController {
   }
 
   moveToward(a, x, y, game, direct = false) {
+    let tx = x, ty = y;
     if (!direct) {
+      // in or out of a building by its door, and round anything in the way
       const via = game.buildings?.route(a, x, y);
-      if (via) { x = via.x; y = via.y; }
+      if (via) { tx = via.x; ty = via.y; }
+      const wp = this.steer(a, tx, ty, game);
+      tx = wp.x; ty = wp.y;
     }
-    const dx = game.world.dx(a.x, x), dy = y - a.y;
+    const dx = game.world.dx(a.x, tx), dy = ty - a.y;
     const d = Math.hypot(dx, dy);
     if (d > 0.3) { a.intent.mx = dx / d; a.intent.my = dy / d; a.facing = Math.atan2(dy, dx); }
     this.avoidStuck(a, 0.016, game);
-    return d;
+    return tx === x && ty === y ? d : Math.hypot(game.world.dx(a.x, x), y - a.y);
+  }
+
+  /** The next point to head for on the way to (x, y): straight there, or a path round whatever's in the way. */
+  steer(a, x, y, game) {
+    const w = game.world, now = game.time || 0;
+    const P = this.path;
+    if (P && Math.hypot(w.dx(P.tx, x), P.ty - y) < 1.2 && now - P.t < 6) {
+      while (P.i < P.pts.length && Math.hypot(w.dx(a.x, P.pts[P.i].x), P.pts[P.i].y - a.y) < 0.45) P.i++;
+      if (P.i < P.pts.length) return P.pts[P.i];
+      this.path = null;
+      return { x, y };
+    }
+    // the straight line is the usual case: check it a couple of times a second
+    if (now < (this.lineT || 0) && Math.hypot(w.dx(this.lineX, x), this.lineY - y) < 1) {
+      if (this.lineOk || now < (this.pathCd || 0)) return { x, y };
+    } else {
+      const d = Math.hypot(w.dx(a.x, x), y - a.y);
+      this.lineOk = d < 1.2 || clearLine(w, a.x, a.y, x, y, a.r * 0.85);
+      this.lineT = now + 0.5; this.lineX = x; this.lineY = y;
+      if (this.lineOk) { this.path = null; return { x, y }; }
+    }
+    if (now < (this.pathCd || 0)) return { x, y };
+    const pts = findPath(w, a.x, a.y, x, y, a.r * 0.85);
+    this.pathCd = now + (pts ? 0.7 : 2);
+    if (!pts || !pts.length) return { x, y };
+    this.path = { pts, i: 0, tx: x, ty: y, t: now };
+    return pts[0];
   }
 
   avoidStuck(a, dt, game) {

@@ -532,7 +532,9 @@ export class Actor extends Entity {
       } else this.haki = Math.min(d.maxHaki, this.haki + d.hakiRegen * dt);
     }
     const regen = (this.fruitDef?.passive?.regen || 0) + d.hpRegen * (this.inCombat ? 0.2 : 1);
-    if (this.hp < d.maxHp && this.state === 'idle') this.hp = Math.min(d.maxHp, this.hp + regen * dt);
+    // everyone else only heals once they've been left alone for a good while
+    const rested = this.isPlayer || !this.game || (this.game.time || 0) - (this.lastHitT || -999) > 45;
+    if (this.hp < d.maxHp && this.state === 'idle' && rested) this.hp = Math.min(d.maxHp, this.hp + regen * dt);
   }
 
   passable(w, x, y) {

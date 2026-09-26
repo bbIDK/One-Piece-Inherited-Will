@@ -473,4 +473,53 @@ export const scenarios = {
       await snap('hood-side');
     },
   },
+
+  // NPCs go round houses instead of into them, and don't heal up when you run off
+  npcpath: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.env.clock = 11; g.settings.view = 'third'; g.applySettings(); document.querySelector('.look-hint')?.remove(); });
+      for (let i = 0; i < 10; i++) await step(page, 0.1);
+      const setup = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player;
+        // a big house with open ground in front of it and behind it
+        const bs = w.objects.near(p.x, p.y, 90).filter((o) => o.kind === 'building' && (o.fw || 3) >= 4);
+        for (const b of bs) {
+          const fd = b.fd || 3;
+          const back = { x: b.x + 0.3, y: b.y - fd - 1.6 }, front = { x: b.x - 0.2, y: b.y + 2.4 };
+          const ok = (q) => w.walkable(q.x, q.y) && !w.isBlocked(q.x, q.y) && !w.hitsProp(q.x, q.y, 0.4);
+          if (!ok(back) || !ok(front)) continue;
+          p.x = back.x; p.y = back.y; p.hp = 1e6; p.d.maxHp = 1e6;
+          const m = window.OP.debug.makeNPC({ name: 'Bandit', faction: 'bandit', style: 'brawler', level: 6, hostile: true, aggroRange: 14 }, front.x, front.y);
+          m.testB = true;
+          g.addActor(m);
+          m.controller.target = p; m.controller.state = 'chase';
+          return { b: b.name || b.role, fw: b.fw, fd, back, front };
+        }
+        return null;
+      });
+      console.log('setup', JSON.stringify(setup));
+      const trail = [];
+      let stuck = 0;
+      let last = null;
+      for (let i = 0; i < 40; i++) {
+        await step(page, 0.25);
+        const st = await page.evaluate(() => { const g = window.OP.game, m = g.actors.find((a) => a.testB), p = g.player, c = m.controller; return { d: +g.world.distance(m.x, m.y, p.x, p.y).toFixed(2), x: m.x, y: m.y, st: c.state, tgt: !!c.target, path: c.path ? c.path.pts.map((q) => [+(q.x - m.x).toFixed(1), +(q.y - m.y).toFixed(1)]).slice(0, 4) : null, i: c.path?.i, lineOk: c.lineOk, act: !!m.action, block: c.blockT > 0 }; });
+        if (i < 8 || i % 5 === 0) console.log(i, JSON.stringify(st));
+        trail.push(st.d);
+        if (last && Math.hypot(st.x - last.x, st.y - last.y) < 0.03 && st.d > 2) stuck++;
+        last = st;
+        if (st.d < 1.8) break;
+      }
+      console.log('bandit distance', JSON.stringify(trail), 'stuck ticks', stuck);
+      await frames(page, 2);
+      await snap('reached');
+      // hurt it, run far away, and see what it's like when it gets home
+      const hurt = await page.evaluate(() => { const g = window.OP.game, m = g.actors.find((a) => a.testB); m.hp = Math.round(m.d.maxHp * 0.4); m.lastHitT = g.time; const home = m.controller.home; window.OP.teleport(g.player.x + 60, g.player.y); return { hp: m.hp, max: m.d.maxHp, home: !!home }; });
+      for (let i = 0; i < 40; i++) await step(page, 0.5);
+      const after = await page.evaluate(() => { const g = window.OP.game, m = g.actors.find((a) => a.testB); return { hp: Math.round(m.hp), state: m.controller.state }; });
+      console.log('hurt', JSON.stringify(hurt), 'after running off 20s', JSON.stringify(after));
+    },
+  },
 };
