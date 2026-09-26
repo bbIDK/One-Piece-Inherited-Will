@@ -4367,8 +4367,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   D.mango = (I) => {
     const m = "M31 14 C43 11 55 20 55.5 33 C56 47 45 58 31 57 C19 56 9.5 48 10 37 C10.5 26 19 16 31 14 Z";
     const base = lg(I, 50, 14, 14, 54, [[0, "#e0452f"], [0.42, "#f59a1f"], [0.78, "#f2c53a"], [1, "#9dbb3a"]]);
-    const shade4 = lg(I, 50, 14, 14, 54, [[0, "#a8321f"], [0.42, "#c0701a"], [0.78, "#c2952a"], [1, "#6f8a2a"]]);
-    part(I, m, base, { base: "#f59a1f", sh: shade4, hi: "#ffe2a8", sd: 3.8, hd: 2.4, gloss: [21, 27, 3, 5.5, 0.55, 0.5] });
+    const shade3 = lg(I, 50, 14, 14, 54, [[0, "#a8321f"], [0.42, "#c0701a"], [0.78, "#c2952a"], [1, "#6f8a2a"]]);
+    part(I, m, base, { base: "#f59a1f", sh: shade3, hi: "#ffe2a8", sd: 3.8, hd: 2.4, gloss: [21, 27, 3, 5.5, 0.55, 0.5] });
     if (!I.small) for (const [x, y] of [[40, 40], [34, 47], [45, 30], [25, 44]]) fl(I, circle(x, y, 0.8), "#fff3c8", { a: 0.7 });
     tube(I, "M33 15 C33 11 34 8 36.5 5.5", "#6b4a2a", 2.2);
     part(I, "M35.5 8.5 C40 2.5 50 2 56 6 C51 11.5 42 12.5 35.5 8.5 Z", C.leaf, { sd: 1.4, hd: 1 });
@@ -42013,320 +42013,6 @@ void main() {
     g.restore();
   }
 
-  // src/render3d/ships3d.js
-  var shade2 = (hex3, k) => {
-    const c = new Color(hex3);
-    if (k < 0) c.multiplyScalar(1 + k);
-    else c.lerp(new Color(1, 1, 1), k);
-    return c;
-  };
-  function halfBeam(t, B3) {
-    if (t > 0.72) {
-      const k = (t - 0.72) / 0.28;
-      return B3 / 2 * Math.sqrt(Math.max(0, 1 - k * k));
-    }
-    if (t < 0.08) return B3 / 2 * (0.78 + t / 0.08 * 0.22);
-    return B3 / 2;
-  }
-  function hullGeometry(L2, B3, D3) {
-    const segs = 18, prof = [[1, 0], [0.96, -0.45], [0.8, -0.8], [0.45, -1], [0, -1.05]];
-    const pos = [], idx = [];
-    for (let i = 0; i <= segs; i++) {
-      const t = i / segs;
-      const x = -L2 / 2 + t * L2;
-      const hb = Math.max(0.02, halfBeam(t, B3));
-      const sheer = 0.12 * Math.pow(Math.abs(t - 0.45) * 2, 2) * D3;
-      for (let side = -1; side <= 1; side += 2) {
-        for (const [w, d] of prof) pos.push(x, d * D3 + sheer, side * hb * w);
-      }
-    }
-    const P3 = prof.length;
-    const ring = P3 * 2;
-    for (let i = 0; i < segs; i++) {
-      for (let side = 0; side < 2; side++) {
-        for (let k = 0; k < P3 - 1; k++) {
-          const a = i * ring + side * P3 + k, b = a + 1, c = a + ring, d = c + 1;
-          if (side === 0) idx.push(a, b, c, b, d, c);
-          else idx.push(a, c, b, b, c, d);
-        }
-      }
-    }
-    const s0 = 0;
-    for (let k = 0; k < P3 - 1; k++) idx.push(s0 + k, s0 + P3 + k, s0 + k + 1, s0 + k + 1, s0 + P3 + k, s0 + P3 + k + 1);
-    const geo2 = new BufferGeometry();
-    geo2.setAttribute("position", new Float32BufferAttribute(pos, 3));
-    geo2.setIndex(idx);
-    geo2.computeVertexNormals();
-    return geo2;
-  }
-  function deckGeometry(L2, B3) {
-    const shape = new Shape();
-    const n = 16;
-    for (let i = 0; i <= n; i++) {
-      const t = i / n;
-      const x = -L2 / 2 + t * L2;
-      const hb = halfBeam(t, B3) * 0.94;
-      if (i === 0) shape.moveTo(x, -hb);
-      else shape.lineTo(x, -hb);
-    }
-    for (let i = n; i >= 0; i--) {
-      const t = i / n;
-      const x = -L2 / 2 + t * L2;
-      const hb = halfBeam(t, B3) * 0.94;
-      shape.lineTo(x, hb);
-    }
-    const geo2 = new ShapeGeometry(shape);
-    geo2.rotateX(Math.PI / 2);
-    return geo2;
-  }
-  function sailTexture(kind, jr) {
-    const { canvas: canvas2, ctx: g, tex: tex2 } = canvasTexture(256, 256);
-    g.fillStyle = kind === "marine" ? "#f5f6fa" : "#efe6cf";
-    g.fillRect(0, 0, 256, 256);
-    g.strokeStyle = "rgba(80,60,40,0.25)";
-    g.lineWidth = 3;
-    for (let x = 32; x < 256; x += 42) {
-      g.beginPath();
-      g.moveTo(x, 0);
-      g.lineTo(x, 256);
-      g.stroke();
-    }
-    g.setTransform(150, 0, 0, 150, 128, 132);
-    if (kind === "marine") drawMarineEmblem(g, 1);
-    else if (jr) drawJollyRoger(g, jr, 1, "#efe6cf");
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    tex2.needsUpdate = true;
-    return tex2;
-  }
-  function flagTexture(kind, jr) {
-    const { ctx: g, tex: tex2 } = canvasTexture(128, 96);
-    g.fillStyle = kind === "marine" ? "#f5f6fa" : "#141414";
-    g.fillRect(0, 0, 128, 96);
-    g.setTransform(70, 0, 0, 70, 64, 50);
-    if (kind === "marine") drawMarineEmblem(g, 1);
-    else if (jr) drawJollyRoger(g, jr, 1, "#141414");
-    tex2.needsUpdate = true;
-    return tex2;
-  }
-  var ShipView = class {
-    constructor(s) {
-      this.ship = s;
-      const def = s.def;
-      const L2 = def.length, B3 = def.beam, D3 = Math.max(0.6, B3 * 0.42);
-      const root2 = new Group();
-      const hullCol = def.color || "#8d5b33";
-      const hull = new Mesh(hullGeometry(L2, B3, D3), toon(shade2(hullCol, -0.15).getHex(), { side: DoubleSide }));
-      hull.castShadow = true;
-      root2.add(hull);
-      const deck = new Mesh(deckGeometry(L2, B3), toon(def.seastone ? 14673641 : shade2(hullCol, 0.2).getHex(), { side: DoubleSide }));
-      deck.position.y = -0.02;
-      root2.add(deck);
-      const railMat = toon(shade2(hullCol, -0.35).getHex());
-      const rail2 = new Mesh(new BoxGeometry(L2 * 0.8, 0.12, 0.08), railMat);
-      for (const side of [-1, 1]) {
-        const r = rail2.clone();
-        r.position.set(-L2 * 0.05, 0.3, side * B3 * 0.46);
-        root2.add(r);
-      }
-      this.sails = [];
-      const kind = this.flagKind();
-      const masts = def.masts || 1;
-      const mastH = 2.2 + L2 * 0.42;
-      const mastMat = toon(6111287);
-      for (let m = 0; m < masts; m++) {
-        const mx = masts === 1 ? 0.05 * L2 : L2 * (0.28 - m * (0.56 / Math.max(1, masts - 1)));
-        const mast = new Mesh(new CylinderGeometry(0.07, 0.1, mastH, 8), mastMat);
-        mast.position.set(mx, mastH / 2, 0);
-        mast.castShadow = true;
-        root2.add(mast);
-        const main = m === (masts > 1 ? 1 : 0) || masts === 1;
-        const sw2 = B3 * (m === 0 && masts > 1 ? 1.35 : 1.6);
-        const sh = mastH * 0.62;
-        const sailGeo = new PlaneGeometry(sw2, sh, 6, 4);
-        sailGeo.rotateY(Math.PI / 2);
-        const tex2 = main && kind !== "none" ? sailTexture(kind, s.jr) : null;
-        const sailMat = new MeshToonMaterial({ color: tex2 ? 16777215 : 15722191, map: tex2, side: DoubleSide });
-        const sail = new Mesh(sailGeo, sailMat);
-        sail.position.set(mx + 0.18, mastH * 0.52, 0);
-        sail.castShadow = true;
-        sail.userData.base = sailGeo.attributes.position.array.slice();
-        root2.add(sail);
-        this.sails.push({ mesh: sail, sw: sw2, sh });
-        const yard = new Mesh(new CylinderGeometry(0.05, 0.05, sw2 * 1.05, 6), mastMat);
-        yard.rotation.x = Math.PI / 2;
-        yard.position.set(mx + 0.12, mastH * 0.52 + sh / 2, 0);
-        root2.add(yard);
-      }
-      if (kind !== "none") {
-        const fg = new PlaneGeometry(1, 0.7, 4, 1);
-        fg.translate(0.5, 0, 0);
-        const flag = new Mesh(fg, new MeshBasicMaterial({ map: flagTexture(kind, s.jr), side: DoubleSide, fog: true }));
-        const mx0 = masts === 1 ? 0.05 * L2 : L2 * 0.28;
-        flag.position.set(mx0, mastH + 0.2, 0);
-        flag.userData.base = fg.attributes.position.array.slice();
-        root2.add(flag);
-        this.flag = flag;
-      }
-      this.root = root2;
-      this.kindKey = kind + ":" + JSON.stringify(s.jr || null);
-    }
-    flagKind() {
-      const s = this.ship;
-      if (s.def.sail === "marine" || s.faction === "marine" || s.owner === "player" && s.game?.state?.char?.faction === "marine") return "marine";
-      if (s.jr) return "jr";
-      return "none";
-    }
-    /** True when the colours changed (e.g. the player founded a crew) and the view must be rebuilt. */
-    stale() {
-      return this.kindKey !== this.flagKind() + ":" + JSON.stringify(this.ship.jr || null);
-    }
-    update(env, rx, rz, windAngle, ctx) {
-      const s = this.ship;
-      const r = this.root;
-      const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === "sail" && ctx.mode === "first";
-      if (own !== this.ghost) {
-        this.ghost = own;
-        for (const sl of this.sails) {
-          sl.mesh.material.transparent = own;
-          sl.mesh.material.opacity = own ? 0.28 : 1;
-          sl.mesh.material.depthWrite = !own;
-          sl.mesh.material.needsUpdate = true;
-        }
-      }
-      const t = env.time + (s.seed || 0);
-      const sinking = s.sunk ? Math.min(1, s.sinkT / 4) : 0;
-      r.position.set(rx, 0.05 + Math.sin(t * 1.3) * 0.07 - sinking * 3, rz);
-      r.rotation.set(Math.sin(t * 0.9) * 0.035 + sinking * 0.5, -s.heading, Math.sin(t * 1.1) * 0.02, "YXZ");
-      const rel2 = Math.cos((windAngle || 0) - s.heading);
-      const billow = (0.15 + (s.sailSet ?? 0.5) * 0.45) * (0.6 + 0.4 * Math.max(0, rel2));
-      for (const sl of this.sails) {
-        const set = s.sailSet ?? 0.5;
-        sl.mesh.visible = set > 0.05;
-        sl.mesh.scale.y = 0.35 + set * 0.65;
-        const a = sl.mesh.geometry.attributes.position;
-        const base = sl.mesh.userData.base;
-        for (let i = 0; i < a.count; i++) {
-          const z = base[i * 3 + 2], y = base[i * 3 + 1];
-          const k = 1 - (z / (sl.sw / 2)) ** 2;
-          const kv = 1 - (y / (sl.sh / 2)) ** 2 * 0.5;
-          a.array[i * 3] = base[i * 3] + billow * k * kv;
-        }
-        a.needsUpdate = true;
-      }
-      if (this.flag) {
-        const a = this.flag.geometry.attributes.position, base = this.flag.userData.base;
-        for (let i = 0; i < a.count; i++) {
-          const x = base[i * 3];
-          a.array[i * 3 + 2] = base[i * 3 + 2] + Math.sin(t * 7 + x * 4) * 0.08 * x;
-        }
-        a.needsUpdate = true;
-        this.flag.rotation.y = s.heading - (windAngle || 0) + Math.PI;
-      }
-    }
-    dispose() {
-      this.root.traverse((o) => {
-        if (o.geometry) o.geometry.dispose();
-        if (o.material?.map) o.material.map.dispose();
-      });
-    }
-  };
-
-  // src/render3d/props/mats.js
-  var U2 = {
-    time: { value: 0 },
-    night: { value: 0 },
-    wind: { value: 1 }
-  };
-  var COLOR_VERTEX = (
-    /* glsl */
-    `
-#if defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )
-	vColor = vec3( 1.0 );
-#endif
-#ifdef USE_COLOR
-	vColor *= color;
-#endif
-#ifdef USE_INSTANCING_COLOR
-	vColor.xyz *= mix( vec3( 1.0 ), instanceColor.xyz, tint );
-#endif
-	{
-		vec2 gph = modelMatrix[3].xz;
-		#ifdef USE_INSTANCING
-			gph += instanceMatrix[3].xz;
-		#endif
-		float fl = 1.0 - glow.a * ( 0.25 + 0.25 * sin( uTime * 11.0 + gph.x * 3.1 ) + 0.18 * sin( uTime * 23.0 + gph.y * 1.7 ) );
-		vGlow = glow.rgb * uNight * fl;
-	}
-`
-  );
-  var SWAY = (
-    /* glsl */
-    `
-#include <begin_vertex>
-{
-	float sh = max( position.y - 1.0, 0.0 );
-	vec2 ph = modelMatrix[3].xz;
-	#ifdef USE_INSTANCING
-		ph += instanceMatrix[3].xz;
-	#endif
-	float s = sin( uTime * 1.3 + ph.x * 0.37 + ph.y * 0.23 ) + 0.4 * sin( uTime * 2.7 + ph.x * 0.13 - ph.y * 0.31 );
-	transformed.x += s * sh * sh * 0.0055 * uWind;
-	transformed.z += cos( uTime * 1.05 + ph.y * 0.29 ) * sh * sh * 0.0035 * uWind;
-}
-`
-  );
-  var matCache2 = /* @__PURE__ */ new Map();
-  function vcMat(opts = {}) {
-    const key2 = `${opts.sway ? "s" : ""}|${opts.side || 0}|${opts.transparent ? opts.opacity ?? 0.5 : 1}|${opts.depthWrite === false ? 0 : 1}`;
-    let m = matCache2.get(key2);
-    if (m) return m;
-    m = new MeshToonMaterial({
-      vertexColors: true,
-      gradientMap: toonGradient(),
-      side: opts.side || FrontSide,
-      transparent: !!opts.transparent,
-      opacity: opts.opacity ?? 1,
-      depthWrite: opts.depthWrite !== false
-    });
-    const sway = !!opts.sway;
-    m.onBeforeCompile = (sh) => {
-      sh.uniforms.uTime = U2.time;
-      sh.uniforms.uNight = U2.night;
-      sh.uniforms.uWind = U2.wind;
-      sh.vertexShader = "attribute float tint;\nattribute vec4 glow;\nvarying vec3 vGlow;\nuniform float uTime;\nuniform float uNight;\nuniform float uWind;\n" + sh.vertexShader.replace("#include <color_vertex>", COLOR_VERTEX).replace("#include <begin_vertex>", sway ? SWAY : "#include <begin_vertex>");
-      sh.fragmentShader = "varying vec3 vGlow;\n" + sh.fragmentShader.replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n	totalEmissiveRadiance += vGlow;");
-    };
-    m.customProgramCacheKey = () => "opvc" + (sway ? "-sway" : "");
-    matCache2.set(key2, m);
-    return m;
-  }
-  var STATE = { game: null, ctx: null, t: 0, night: 0, frame: 0, env: null };
-  var animators = /* @__PURE__ */ new Set();
-  function bindCtx(ctx) {
-    if (ctx && !STATE.ctx) {
-      STATE.ctx = ctx;
-      STATE.game = ctx.game;
-    }
-  }
-  function tick(night) {
-    const env = STATE.game?.env;
-    STATE.env = env;
-    STATE.t = env ? env.time : performance.now() / 1e3;
-    STATE.night = night;
-    STATE.frame++;
-    U2.time.value = STATE.t;
-    U2.night.value = night;
-    U2.wind.value = 1 + (env?.storm || 0) * 2.5;
-    for (const a of animators) {
-      try {
-        a.fn(STATE.t, env, STATE);
-      } catch (e) {
-        animators.delete(a);
-        console.warn("prop animation failed", e);
-      }
-    }
-  }
-
   // src/render3d/props/kit.js
   var _v = new Vector3();
   var _n = new Vector3();
@@ -42338,7 +42024,7 @@ void main() {
     return new Color(c ?? 16777215);
   }
   var WHITE = new Color(1, 1, 1);
-  function shade3(c, k) {
+  function shade2(c, k) {
     const s = C2(c).clone().convertLinearToSRGB();
     if (k < 0) s.multiplyScalar(1 + k);
     else s.lerp(WHITE, k);
@@ -42375,6 +42061,9 @@ void main() {
   }
   function lathe(pts, seg = 10) {
     return new LatheGeometry(pts.map(([r, y]) => new Vector2(Math.max(1e-4, r), y)), seg);
+  }
+  function torus(R2, r, rs = 6, ts = 12, arc = Math.PI * 2) {
+    return new TorusGeometry(R2, r, rs, ts, arc);
   }
   function extrude(shape, depth, bevel = 0, curveSegments = 6) {
     const g = new ExtrudeGeometry(shape, {
@@ -42604,6 +42293,838 @@ void main() {
     };
   }
 
+  // src/render3d/props/mats.js
+  var U2 = {
+    time: { value: 0 },
+    night: { value: 0 },
+    wind: { value: 1 }
+  };
+  var COLOR_VERTEX = (
+    /* glsl */
+    `
+#if defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )
+	vColor = vec3( 1.0 );
+#endif
+#ifdef USE_COLOR
+	vColor *= color;
+#endif
+#ifdef USE_INSTANCING_COLOR
+	vColor.xyz *= mix( vec3( 1.0 ), instanceColor.xyz, tint );
+#endif
+	{
+		vec2 gph = modelMatrix[3].xz;
+		#ifdef USE_INSTANCING
+			gph += instanceMatrix[3].xz;
+		#endif
+		float fl = 1.0 - glow.a * ( 0.25 + 0.25 * sin( uTime * 11.0 + gph.x * 3.1 ) + 0.18 * sin( uTime * 23.0 + gph.y * 1.7 ) );
+		vGlow = glow.rgb * uNight * fl;
+	}
+`
+  );
+  var SWAY = (
+    /* glsl */
+    `
+#include <begin_vertex>
+{
+	float sh = max( position.y - 1.0, 0.0 );
+	vec2 ph = modelMatrix[3].xz;
+	#ifdef USE_INSTANCING
+		ph += instanceMatrix[3].xz;
+	#endif
+	float s = sin( uTime * 1.3 + ph.x * 0.37 + ph.y * 0.23 ) + 0.4 * sin( uTime * 2.7 + ph.x * 0.13 - ph.y * 0.31 );
+	transformed.x += s * sh * sh * 0.0055 * uWind;
+	transformed.z += cos( uTime * 1.05 + ph.y * 0.29 ) * sh * sh * 0.0035 * uWind;
+}
+`
+  );
+  var matCache2 = /* @__PURE__ */ new Map();
+  function vcMat(opts = {}) {
+    const key2 = `${opts.sway ? "s" : ""}|${opts.side || 0}|${opts.transparent ? opts.opacity ?? 0.5 : 1}|${opts.depthWrite === false ? 0 : 1}`;
+    let m = matCache2.get(key2);
+    if (m) return m;
+    m = new MeshToonMaterial({
+      vertexColors: true,
+      gradientMap: toonGradient(),
+      side: opts.side || FrontSide,
+      transparent: !!opts.transparent,
+      opacity: opts.opacity ?? 1,
+      depthWrite: opts.depthWrite !== false
+    });
+    const sway = !!opts.sway;
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.uTime = U2.time;
+      sh.uniforms.uNight = U2.night;
+      sh.uniforms.uWind = U2.wind;
+      sh.vertexShader = "attribute float tint;\nattribute vec4 glow;\nvarying vec3 vGlow;\nuniform float uTime;\nuniform float uNight;\nuniform float uWind;\n" + sh.vertexShader.replace("#include <color_vertex>", COLOR_VERTEX).replace("#include <begin_vertex>", sway ? SWAY : "#include <begin_vertex>");
+      sh.fragmentShader = "varying vec3 vGlow;\n" + sh.fragmentShader.replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n	totalEmissiveRadiance += vGlow;");
+    };
+    m.customProgramCacheKey = () => "opvc" + (sway ? "-sway" : "");
+    matCache2.set(key2, m);
+    return m;
+  }
+  var STATE = { game: null, ctx: null, t: 0, night: 0, frame: 0, env: null };
+  var animators = /* @__PURE__ */ new Set();
+  function bindCtx(ctx) {
+    if (ctx && !STATE.ctx) {
+      STATE.ctx = ctx;
+      STATE.game = ctx.game;
+    }
+  }
+  function tick(night) {
+    const env = STATE.game?.env;
+    STATE.env = env;
+    STATE.t = env ? env.time : performance.now() / 1e3;
+    STATE.night = night;
+    STATE.frame++;
+    U2.time.value = STATE.t;
+    U2.night.value = night;
+    U2.wind.value = 1 + (env?.storm || 0) * 2.5;
+    for (const a of animators) {
+      try {
+        a.fn(STATE.t, env, STATE);
+      } catch (e) {
+        animators.delete(a);
+        console.warn("prop animation failed", e);
+      }
+    }
+  }
+
+  // src/render3d/ships3d.js
+  var clamp01 = (x) => Math.max(0, Math.min(1, x));
+  var smooth2 = (a, b, x) => {
+    const t = clamp01((x - a) / (b - a));
+    return t * t * (3 - 2 * t);
+  };
+  function shipDims(def) {
+    const L2 = def.length, B3 = def.beam;
+    const open = L2 < 3.5;
+    const D3 = B3 * 0.42;
+    const deckY = open ? 0.14 : 0.25 + B3 * 0.2;
+    const bulH = open ? 0.36 : 0.3 + B3 * 0.07;
+    const castle = L2 >= 5.5, fore = L2 >= 6.8;
+    const hq = castle ? 0.85 + (L2 - 5.5) * 0.1 : 0;
+    const hf = fore ? 0.5 : 0;
+    const tq = castle ? 0.27 : 0, tf2 = fore ? 0.83 : 1;
+    const masts = def.masts || 1;
+    const mastH = 1.2 + L2 * 0.75;
+    const helmX = -L2 * 0.42;
+    return {
+      L: L2,
+      B: B3,
+      D: D3,
+      open,
+      deckY,
+      bulH,
+      castle,
+      fore,
+      hq,
+      hf,
+      tq,
+      tf: tf2,
+      masts,
+      mastH,
+      helmX,
+      yq: deckY + hq,
+      yf: deckY + hf,
+      helmFloor: castle ? deckY + hq : deckY
+    };
+  }
+  function hbAt(t, B3) {
+    if (t > 0.58) {
+      const k = (t - 0.58) / 0.42;
+      return B3 / 2 * Math.sqrt(Math.max(0, 1 - Math.pow(k, 2.2)));
+    }
+    if (t < 0.14) return B3 / 2 * (0.74 + 0.26 * Math.sin(t / 0.14 * Math.PI / 2));
+    return B3 / 2;
+  }
+  function topAt(d, t) {
+    let y = d.deckY + d.bulH + 0.16 * d.B * Math.pow(Math.abs(t - 0.45) / 0.55, 2);
+    if (d.castle) y += d.hq * (1 - smooth2(d.tq - 0.015, d.tq + 0.035, t));
+    if (d.fore) y += d.hf * smooth2(d.tf - 0.035, d.tf + 0.015, t);
+    return y;
+  }
+  var keelAt = (d, t) => -d.D * (1 - 0.55 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
+  var xAt = (d, t) => -d.L / 2 + t * d.L;
+  function floorAt(d, t) {
+    if (d.castle && t < d.tq) return d.yq;
+    if (d.fore && t > d.tf) return d.yf;
+    return d.deckY;
+  }
+  function palette(def) {
+    const H2 = C2(def.color || "#8d5b33");
+    const warship = def.sail === "marine";
+    const light = H2.getHSL({}).l > 0.8;
+    return {
+      hull: H2,
+      cap: warship ? C2("#1b4f72") : shade2(H2, -0.45),
+      bulwark: warship ? C2("#f5f6fa") : light ? shade2(H2, -0.05) : shade2(H2, 0.12),
+      wale: warship ? C2("#1b4f72") : def.figurehead === "ram" ? C2("#f2efe6") : def.figurehead === "lion" ? C2("#e8c26b") : shade2(H2, -0.55),
+      plank: warship ? C2("#e9edf1") : H2,
+      plank2: warship ? C2("#dfe4ea") : shade2(H2, -0.08),
+      bottom: def.seastone ? C2("#5b6770") : warship ? C2("#5b6770") : shade2(H2, -0.3),
+      deck: def.figurehead === "lion" ? C2("#6fb34a") : def.seastone && !warship ? C2("#cfd8dc") : warship ? C2("#c9b28f") : shade2(H2, 0.2),
+      trim: warship ? C2("#1b4f72") : def.length >= 8 ? C2("#d4ac0d") : shade2(H2, -0.4),
+      wood: C2("#6d4c33"),
+      dark: C2("#2b1d14")
+    };
+  }
+  var hullCache = /* @__PURE__ */ new Map();
+  function hullGeometry(def) {
+    const key2 = `${def.length}|${def.beam}|${def.color}|${def.figurehead}|${def.cannons}|${def.paddle}|${def.sail}|${def.seastone}|${def.masts}`;
+    let g = hullCache.get(key2);
+    if (g) return g;
+    const d = shipDims(def);
+    const P3 = palette(def);
+    const k = new Mesher();
+    const N3 = 22;
+    const prof = (t) => {
+      const top = topAt(d, t), dk3 = d.deckY;
+      return [
+        [0.965, top],
+        [0.975, top - 0.1],
+        [0.995, dk3 + (d.open ? 0.02 : 0)],
+        [1, dk3 - 0.12],
+        [1, dk3 * 0.55],
+        [0.975, dk3 * 0.12],
+        [0.9, -d.D * 0.25],
+        [0.68, -d.D * 0.62],
+        [0.36, -d.D * 0.9],
+        [0, keelAt(d, t)]
+      ];
+    };
+    const band = [P3.cap, P3.bulwark, P3.wale, P3.plank, P3.plank2, P3.plank, P3.bottom, shade2(P3.bottom, -0.1), P3.bottom];
+    const NP = 10;
+    const pos = [], idx = [], triCol = [];
+    for (let i = 0; i <= N3; i++) {
+      const t = i / N3, x = xAt(d, t), hb = Math.max(0, hbAt(t, d.B));
+      const pr = prof(t);
+      for (const s of [1, -1]) for (const [w, y] of pr) pos.push(x, y, s * w * hb);
+    }
+    const vid = (i, s, j) => (i * 2 + s) * NP + j;
+    for (let i = 0; i < N3; i++) {
+      for (let s = 0; s < 2; s++) {
+        for (let j = 0; j < NP - 1; j++) {
+          const a = vid(i, s, j), b = vid(i + 1, s, j), c = vid(i, s, j + 1), dd = vid(i + 1, s, j + 1);
+          if (s === 0) idx.push(a, c, b, b, c, dd);
+          else idx.push(a, b, c, b, dd, c);
+          const col = band[j];
+          triCol.push(col, col);
+        }
+      }
+    }
+    for (let j = 0; j < NP - 1; j++) {
+      const A = vid(0, 1, j), Bv = vid(0, 0, j), Cv = vid(0, 1, j + 1), Dv = vid(0, 0, j + 1);
+      idx.push(A, Cv, Bv, Bv, Cv, Dv);
+      const col = j < 2 ? P3.cap : j < 6 ? shade2(P3.hull, -0.12) : P3.bottom;
+      triCol.push(col, col);
+    }
+    const shell = new BufferGeometry();
+    shell.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    shell.setIndex(idx);
+    shell.computeVertexNormals();
+    k.add(shell, { split: true, color: (p, n, i) => triCol[Math.floor(i / 3)], outline: 0.045 });
+    const inset = d.open ? 0.06 : 0.09;
+    const strip = (pts, col, flip = false) => {
+      const sp = [], si = [];
+      pts.forEach(([a, b]) => sp.push(...a, ...b));
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = i * 2, b = a + 1, c = a + 2, e = a + 3;
+        if (flip) si.push(a, c, b, b, c, e);
+        else si.push(a, b, c, b, e, c);
+      }
+      const sg = new BufferGeometry();
+      sg.setAttribute("position", new Float32BufferAttribute(sp, 3));
+      sg.setIndex(si);
+      sg.computeVertexNormals();
+      k.add(sg, { color: col });
+    };
+    for (const s of [1, -1]) {
+      const inner = [], cap = [];
+      for (let i = 0; i <= N3; i++) {
+        const t = i / N3, x = xAt(d, t), hb = hbAt(t, d.B);
+        if (hb < 0.12) continue;
+        const top = topAt(d, t);
+        const zi = s * Math.max(0.02, 0.965 * hb - inset);
+        inner.push([[x, top - 0.02, zi], [x, floorAt(d, t) - 0.01, s * Math.max(0.02, 0.995 * hb - inset)]]);
+        cap.push([[x, top, s * 0.965 * hb], [x, top - 0.02, zi]]);
+      }
+      strip(inner, shade2(P3.bulwark, -0.1), s > 0);
+      strip(cap, P3.cap, s > 0);
+    }
+    const deckRegion = (t0, t1, yFn) => {
+      const M2 = Math.max(4, Math.round(d.B / 0.24));
+      const R2 = Math.max(2, Math.round((t1 - t0) * N3));
+      const dp = [], di = [], dc = [];
+      for (let i = 0; i <= R2; i++) {
+        const t = t0 + (t1 - t0) * i / R2, x = xAt(d, t);
+        const w = Math.max(0.01, 0.995 * hbAt(t, d.B) - inset);
+        for (let m = 0; m <= M2; m++) dp.push(x, yFn(t), -w + 2 * w * m / M2);
+      }
+      for (let i = 0; i < R2; i++) {
+        for (let m = 0; m < M2; m++) {
+          const a = i * (M2 + 1) + m, b = a + 1, c = a + M2 + 1, e = c + 1;
+          di.push(a, b, c, b, e, c);
+          const col = m % 2 ? shade2(P3.deck, -0.06) : P3.deck;
+          dc.push(col, col);
+        }
+      }
+      const dg = new BufferGeometry();
+      dg.setAttribute("position", new Float32BufferAttribute(dp, 3));
+      dg.setIndex(di);
+      dg.computeVertexNormals();
+      k.add(dg, { split: true, color: (p, n, i) => dc[Math.floor(i / 3)] });
+    };
+    deckRegion(d.castle ? d.tq : 0.02, d.fore ? d.tf : 0.97, () => d.deckY);
+    if (d.castle) deckRegion(0, d.tq + 0.012, () => d.yq);
+    if (d.fore) deckRegion(d.tf - 0.012, 0.975, () => d.yf);
+    if (d.castle) {
+      const xq = xAt(d, d.tq), w = 0.995 * hbAt(d.tq, d.B) - inset;
+      k.add(box(0.12, d.hq, w * 2), { at: [xq + 0.06, d.deckY, 0], color: shade2(P3.bulwark, -0.05), outline: 0.02 });
+      k.add(box(0.06, 1.45, 0.75), { at: [xq + 0.13, d.deckY, 0], color: P3.dark });
+      for (const s of [-1, 1]) k.add(box(0.06, 0.35, 0.3), { at: [xq + 0.13, d.deckY + d.hq * 0.45, s * w * 0.55], color: "#2d4150", glow: "#ffc766" });
+      k.add(box(0.08, 0.06, w * 2), { at: [xq + 0.04, d.yq + 0.72, 0], color: P3.cap });
+      for (let z = -w + 0.15; z < w; z += 0.26) k.add(cyl(0.03, 0.035, 0.72, 5, true), { at: [xq + 0.04, d.yq, z], color: shade2(P3.bulwark, 0.1) });
+      const steps = 4;
+      for (let i = 0; i < steps; i++) k.add(box(0.28, 0.07, 0.6), { at: [xq + 0.25 + (steps - i) * 0.26, d.deckY + (i + 1) * d.hq / (steps + 1), w - 0.4], color: P3.wood });
+      const x0 = -d.L / 2 - 4e-3, wt = hbAt(0, d.B) * 0.965;
+      for (let i = -1; i <= 1; i++) k.add(box(0.05, 0.36, 0.28), { at: [x0, d.deckY + d.hq * 0.3, i * wt * 0.55], color: "#2d4150", glow: "#ffc766" });
+      k.add(box(0.05, 0.08, wt * 2), { at: [x0, d.deckY + d.hq * 0.3 + 0.44, 0], color: P3.trim });
+      for (const s of [-1, 1]) for (const t of [0.06, 0.16]) k.add(box(0.26, 0.26, 0.05), { at: [xAt(d, t), d.deckY + 0.1, s * (hbAt(t, d.B) * 0.975 + 0.012)], color: "#2d4150", glow: "#ffc766" });
+      for (const s of [-1, 1]) {
+        const lx = -d.L / 2 + 0.2, lz = s * (hbAt(0.02, d.B) * 0.9 - 0.1), ly = topAt(d, 0.02);
+        k.add(cyl(0.03, 0.03, 0.5, 4), { at: [lx, ly, lz], color: P3.dark });
+        k.add(cyl(0.11, 0.13, 0.26, 6), { at: [lx, ly + 0.5, lz], color: "#fff3c4", glow: "#ffcf70", flicker: 0.2 });
+        k.add(cone(0.15, 0.14, 6), { at: [lx, ly + 0.76, lz], color: P3.dark });
+      }
+    }
+    if (d.fore) {
+      const xf2 = xAt(d, d.tf), w = 0.995 * hbAt(d.tf, d.B) - inset;
+      k.add(box(0.12, d.hf, w * 2), { at: [xf2 - 0.06, d.deckY, 0], color: shade2(P3.bulwark, -0.05), outline: 0.02 });
+      k.add(box(0.08, 0.06, w * 2), { at: [xf2 - 0.04, d.yf + 0.62, 0], color: P3.cap });
+      for (let z = -w + 0.15; z < w; z += 0.26) k.add(cyl(0.03, 0.035, 0.62, 5, true), { at: [xf2 - 0.04, d.yf, z], color: shade2(P3.bulwark, 0.1) });
+    }
+    if (!d.open) {
+      const wx = d.helmX + 0.8, fy = floorAt(d, (wx + d.L / 2) / d.L);
+      k.add(box(0.14, 0.95, 0.14), { at: [wx, fy, 0], color: P3.wood, outline: 0.015 });
+      k.save();
+      k.translate(wx - 0.1, fy + 1.05, 0);
+      k.rotateY(Math.PI / 2);
+      k.add(torus(0.4, 0.03, 5, 18), { color: "#7b5230" });
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * Math.PI * 2;
+        k.add(box(0.035, 0.56, 0.035), { at: [0, 0, 0], rot: [0, 0, a], color: "#7b5230" });
+      }
+      k.add(cyl(0.07, 0.07, 0.08, 8), { at: [0, 0, -0.04], rot: [Math.PI / 2, 0, 0], color: "#d4ac0d" });
+      k.restore();
+    } else {
+      for (const t of [0.35, 0.65]) k.add(box(0.26, 0.05, hbAt(t, d.B) * 1.85), { at: [xAt(d, t), d.deckY + 0.26, 0], color: P3.wood, outline: 0.01 });
+      for (const s of [-1, 1]) {
+        k.save();
+        k.translate(xAt(d, 0.5), topAt(d, 0.5) + 0.02, s * (d.B / 2 + 0.05));
+        k.rotateY(s * 0.12);
+        k.rotateZ(Math.PI / 2 - 0.05);
+        k.add(cyl(0.025, 0.025, 2, 5), { at: [0, -1, 0], color: "#b08850" });
+        k.add(box(0.05, 0.5, 0.16), { at: [0, -1.25, 0], color: "#b08850" });
+        k.restore();
+      }
+    }
+    if (!d.open) {
+      const hx = xAt(d, 0.5);
+      k.add(box(0.8, 0.12, 0.8), { at: [hx - 0.45, d.deckY, 0], color: shade2(P3.deck, -0.25), outline: 0.015 });
+      k.add(box(0.62, 0.02, 0.62), { at: [hx - 0.45, d.deckY + 0.12, 0], color: P3.dark });
+      if (d.L >= 4.4) {
+        for (const [dx, dz] of [[0.35, 0.5], [0.62, 0.62]]) k.add(cyl(0.2, 0.2, 0.5, 8), { at: [hx + dx, d.deckY, (dz - 0.05) * d.B / 2], color: "#8d5b33", outline: 0.015 });
+        k.add(box(0.45, 0.4, 0.45), { at: [hx + 0.4, d.deckY, -d.B * 0.28], color: "#b08850", outline: 0.015 });
+      }
+    }
+    const nC = Math.min(10, Math.ceil(Math.min(20, def.cannons || 0) / 2));
+    if (nC > 0) {
+      const t0 = (d.castle ? d.tq : 0.12) + 0.06, t1 = (d.fore ? d.tf : 0.8) - 0.06;
+      const r = 0.05 + d.B * 0.012;
+      for (let i = 0; i < nC; i++) {
+        const t = nC === 1 ? (t0 + t1) / 2 : t0 + (t1 - t0) * i / (nC - 1);
+        const x = xAt(d, t), hb = hbAt(t, d.B);
+        for (const s of [-1, 1]) {
+          const y = d.deckY + 0.26;
+          k.add(box(0.34, 0.3, 0.05), { at: [x, y - 0.15, s * (0.985 * hb + 0.01)], color: "#1a1a1a" });
+          k.add(cyl(r * 0.85, r, 0.75, 7), { at: [x, y, s * (hb - 0.5)], rot: [s * Math.PI / 2, 0, 0], color: "#2d3436", outline: 0.012 });
+          k.add(box(0.3, 0.16, 0.36), { at: [x, d.deckY, s * (hb - 0.45)], color: P3.wood });
+          if (d.L >= 8) {
+            k.add(box(0.3, 0.26, 0.05), { at: [x + 0.2, d.deckY - 0.58, s * (hb + 0.012)], color: "#1a1a1a" });
+            k.add(cyl(r * 0.8, r * 0.9, 0.3, 6), { at: [x + 0.2, d.deckY - 0.45, s * (hb - 0.12)], rot: [s * Math.PI / 2, 0, 0], color: "#2d3436" });
+          }
+        }
+      }
+    }
+    if (!d.open) {
+      k.add(box(0.34, d.deckY + d.D * 0.8, 0.08), { at: [-d.L / 2 - 0.1, -d.D * 0.8, 0], color: shade2(P3.hull, -0.35), outline: 0.015 });
+      const ft = topAt(d, 0.98);
+      if (def.figurehead !== "ram" && def.figurehead !== "lion") {
+        k.save();
+        k.translate(d.L / 2 - 0.35, ft - 0.1, 0);
+        k.rotateZ(-Math.PI / 2 + 0.33);
+        k.add(cyl(0.05, 0.09, d.L * 0.3, 6), { color: P3.wood, outline: 0.015 });
+        k.restore();
+      }
+      for (const s of [-1, 1]) {
+        const ax = d.L / 2 - d.L * 0.12, az = s * (hbAt(0.88, d.B) + 0.03);
+        k.add(cyl(0.025, 0.025, 0.6, 4), { at: [ax, ft - 0.95, az], color: "#4a4a4a" });
+        k.add(torus(0.13, 0.025, 4, 8, Math.PI), { at: [ax, ft - 0.95, az], rot: [0, 0, Math.PI], color: "#4a4a4a" });
+      }
+    }
+    if (def.paddle) {
+      const px2 = xAt(d, 0.34), R2 = 0.75;
+      for (const s of [-1, 1]) {
+        const hb = hbAt(0.34, d.B);
+        k.save();
+        k.translate(px2, d.deckY - 0.1, s * (hb + 0.2));
+        k.rotateZ(Math.PI / 2);
+        k.rotateX(Math.PI / 2);
+        k.add(new CylinderGeometry(R2 + 0.12, R2 + 0.12, 0.44, 12, 1, true, 0, Math.PI), { color: P3.cap, double: true });
+        k.restore();
+      }
+    }
+    figurehead(k, def, d, P3);
+    g = k.build(true);
+    hullCache.set(key2, g);
+    return g;
+  }
+  function figurehead(k, def, d, P3) {
+    const tip = [d.L / 2, topAt(d, 1), 0];
+    const s = Math.max(0.7, d.B / 2.4);
+    if (def.figurehead === "ram") {
+      k.add(cyl(0.12 * s, 0.16 * s, 0.6 * s, 7), { at: [tip[0] - 0.12, tip[1] - 0.25, 0], rot: [0, 0, -0.5], color: "#f5f6fa", outline: 0.02 });
+      const hc = [tip[0] + 0.28 * s, tip[1] + 0.42 * s, 0];
+      k.add(new SphereGeometry(0.36 * s, 12, 9), { at: hc, scale: [1.15, 1, 1], color: "#f7f5ef", outline: 0.03 });
+      k.add(new SphereGeometry(0.22 * s, 10, 7), { at: [hc[0] + 0.3 * s, hc[1] - 0.1 * s, 0], scale: [1, 0.85, 1.05], color: "#efe8da", outline: 0.02 });
+      for (const z of [-1, 1]) {
+        k.add(new SphereGeometry(0.06 * s, 6, 4), { at: [hc[0] + 0.22 * s, hc[1] + 0.12 * s, z * 0.2 * s], color: "#1d1d1d" });
+        k.add(new SphereGeometry(0.035 * s, 5, 3), { at: [hc[0] + 0.47 * s, hc[1] - 0.08 * s, z * 0.07 * s], color: "#5a4a3a" });
+        const pts = [];
+        for (let i = 0; i <= 24; i++) {
+          const a = i / 24 * Math.PI * 2.4 + Math.PI * 0.5;
+          const r = 0.24 * s * (1 - i / 24 * 0.72);
+          pts.push(new Vector3(hc[0] - 0.1 * s + Math.cos(a) * r, hc[1] + 0.05 * s + Math.sin(a) * r, z * (0.3 * s + i / 24 * 0.12 * s)));
+        }
+        k.add(tube2(new CatmullRomCurve3(pts), 24, 0.065 * s, 6), { color: "#c8955a", outline: 0.015 });
+      }
+    } else if (def.figurehead === "lion") {
+      const hc = [tip[0] + 0.3 * s, tip[1] + 0.55 * s, 0];
+      k.add(cyl(0.14 * s, 0.2 * s, 0.7 * s, 7), { at: [tip[0] - 0.15, tip[1] - 0.25, 0], rot: [0, 0, -0.45], color: "#e8c26b" });
+      for (let i = 0; i < 14; i++) {
+        const a = i / 14 * Math.PI * 2;
+        k.save();
+        k.translate(hc[0] - 0.08 * s, hc[1], 0);
+        k.rotateX(a);
+        k.add(cone(0.17 * s, 0.42 * s, 6), { at: [0, 0.38 * s, 0], color: i % 2 ? "#f39c12" : "#e67e22", outline: 0.015 });
+        k.restore();
+      }
+      k.add(new SphereGeometry(0.44 * s, 12, 9), { at: hc, scale: [0.75, 1, 1], color: "#fdd663", outline: 0.03 });
+      for (const z of [-1, 1]) k.add(new SphereGeometry(0.07 * s, 6, 4), { at: [hc[0] + 0.3 * s, hc[1] + 0.12 * s, z * 0.17 * s], color: "#1d1d1d" });
+      k.add(new SphereGeometry(0.09 * s, 6, 4), { at: [hc[0] + 0.34 * s, hc[1] - 0.05 * s, 0], color: "#8d5524" });
+      k.add(torus(0.12 * s, 0.022 * s, 4, 10, Math.PI), { at: [hc[0] + 0.32 * s, hc[1] - 0.14 * s, 0], rot: [0, Math.PI / 2, Math.PI], color: "#5a3a22" });
+    } else if (def.figurehead === "seagull") {
+      const hc = [tip[0] + 0.2 * s, tip[1] + 0.3 * s, 0];
+      k.add(new SphereGeometry(0.3 * s, 10, 8), { at: hc, color: "#f5f6fa", outline: 0.025 });
+      k.add(cone(0.1 * s, 0.42 * s, 6), { at: [hc[0] + 0.22 * s, hc[1] - 0.04 * s, 0], rot: [0, 0, -Math.PI / 2], color: "#f5a623", outline: 0.015 });
+      for (const z of [-1, 1]) k.add(new SphereGeometry(0.05 * s, 6, 4), { at: [hc[0] + 0.14 * s, hc[1] + 0.1 * s, z * 0.2 * s], color: "#1d1d1d" });
+      k.add(new CylinderGeometry(0.2 * s, 0.26 * s, 0.1 * s, 10), { at: [hc[0] - 0.02, hc[1] + 0.3 * s, 0], color: "#1b4f72" });
+    } else if (!d.open) {
+      k.add(torus(0.14, 0.05, 5, 10, Math.PI * 1.5), { at: [tip[0] + 0.02, tip[1] + 0.05, 0], rot: [0, 0, 0], color: P3.trim, outline: 0.012 });
+    }
+  }
+  var rigCache = /* @__PURE__ */ new Map();
+  function mastPlan(def, d) {
+    const out = [];
+    const n = d.masts;
+    for (let m = 0; m < n; m++) {
+      const x = n === 1 ? 0.05 * d.L : d.L * (0.28 - m * (0.56 / Math.max(1, n - 1)));
+      const main = m === (n > 1 ? 1 : 0) || n === 1;
+      const h2 = d.mastH * (n === 1 ? 1 : main ? 1 : m === 0 ? 0.9 : 0.8);
+      const base = floorAt(d, (x + d.L / 2) / d.L);
+      out.push({ x, h: h2, base, main, m });
+    }
+    return out;
+  }
+  function bowTip(def, d) {
+    const ft = topAt(d, 0.98);
+    if (def.figurehead === "ram" || def.figurehead === "lion" || d.open) return [d.L / 2 - 0.05, topAt(d, 1) + 0.15];
+    return [d.L / 2 - 0.35 + 0.946 * 0.3 * d.L, ft - 0.1 + 0.324 * 0.3 * d.L];
+  }
+  function sailPlan(def, d, mast) {
+    const sails = [];
+    const rig = def.sail || "square";
+    const top = mast.h;
+    if (rig === "fore") {
+      sails.push({ type: "gaff", x: mast.x, y0: mast.base + 0.9, y1: top * 0.94, len: d.L * 0.4 });
+      {
+        const [tx, ty] = bowTip(def, d);
+        sails.push({ type: "jib", x: mast.x, y1: top * 0.9, tipX: tx, tipY: ty });
+      }
+      return sails;
+    }
+    const w1 = d.B * (mast.main ? 1.6 : 1.4);
+    if (d.L >= 6.8) {
+      const yA = top * 0.56, yB = top * 0.88;
+      sails.push({ type: "square", x: mast.x, w: w1, y1: yA, y0: Math.max(mast.base + 1.6, yA - top * 0.36), emblem: mast.main });
+      sails.push({ type: "square", x: mast.x, w: w1 * 0.78, y1: yB, y0: yA + 0.18 });
+    } else {
+      const y1 = top * 0.86;
+      sails.push({ type: "square", x: mast.x, w: d.open ? d.B * 1.5 : w1, y1, y0: Math.max(mast.base + (d.open ? 1 : 1.4), y1 - top * 0.58), emblem: mast.main });
+    }
+    if (mast.m === 0 && d.masts > 1 && !d.open) {
+      const [tx, ty] = bowTip(def, d);
+      sails.push({ type: "jib", x: mast.x, y1: top * 0.72, tipX: tx, tipY: ty });
+    }
+    return sails;
+  }
+  function mastGeometry(def, d, plan) {
+    const key2 = `${def.length}|${def.beam}|${def.masts}|${def.sail}`;
+    let g = rigCache.get(key2);
+    if (g) return g;
+    const k = new Mesher();
+    const wood = "#5d4037";
+    for (const m of plan) {
+      const r = 0.05 + d.L * 0.011;
+      k.add(cyl(r * 0.55, r, m.h - m.base + 0.3, 8), { at: [m.x, m.base - 0.3, 0], color: wood, outline: 0.015 });
+      k.add(new SphereGeometry(r * 0.8, 6, 4), { at: [m.x, m.h + 0.05, 0], color: "#d4ac0d" });
+      if (d.L >= 6.8) {
+        k.add(box(0.7, 0.07, 0.9), { at: [m.x, m.h * 0.56 + 0.1, 0], color: shade2(wood, 0.1), outline: 0.012 });
+      }
+      if (m.main && d.L >= 5.5) {
+        const y = m.h * 0.8;
+        k.add(cyl(0.42, 0.34, 0.5, 10, true), { at: [m.x, y, 0], color: "#8d6e4a", double: true, outline: 0.015 });
+        k.add(cyl(0.34, 0.34, 0.05, 10), { at: [m.x, y, 0], color: "#6d4c33" });
+        k.add(torus(0.42, 0.03, 4, 12), { at: [m.x, y + 0.5, 0], rot: [Math.PI / 2, 0, 0], color: "#5d4037" });
+      }
+      for (let y = m.base + 1.2; y < m.h * 0.5; y += 0.9) k.add(torus(r * 1.05, 0.02, 3, 8), { at: [m.x, y, 0], rot: [Math.PI / 2, 0, 0], color: "#c8b89a" });
+    }
+    g = k.build(true);
+    rigCache.set(key2, g);
+    return g;
+  }
+  function sailTexture(kind, jr, sailColor) {
+    const { ctx: g, tex: tex2 } = canvasTexture(256, 256);
+    const bg = kind === "marine" ? "#f5f6fa" : sailColor || "#efe6cf";
+    g.fillStyle = bg;
+    g.fillRect(0, 0, 256, 256);
+    g.strokeStyle = "rgba(80,60,40,0.22)";
+    g.lineWidth = 3;
+    for (let x = 32; x < 256; x += 42) {
+      g.beginPath();
+      g.moveTo(x, 0);
+      g.lineTo(x, 256);
+      g.stroke();
+    }
+    g.strokeStyle = "rgba(80,60,40,0.35)";
+    g.lineWidth = 5;
+    g.strokeRect(2, 2, 252, 252);
+    if (kind === "marine") {
+      g.setTransform(140, 0, 0, 140, 128, 150);
+      drawMarineEmblem(g, 1);
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.fillStyle = "#1b4f72";
+      g.font = 'bold 40px Nunito, "Trebuchet MS", sans-serif';
+      g.textAlign = "center";
+      g.fillText("MARINE", 128, 70);
+    } else if (jr) {
+      g.setTransform(150, 0, 0, 150, 128, 132);
+      drawJollyRoger(g, jr, 1, bg);
+    }
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    tex2.needsUpdate = true;
+    return tex2;
+  }
+  function flagTexture(kind, jr) {
+    const { ctx: g, tex: tex2 } = canvasTexture(128, 96);
+    g.fillStyle = kind === "marine" ? "#f5f6fa" : "#141414";
+    g.fillRect(0, 0, 128, 96);
+    g.setTransform(70, 0, 0, 70, 64, 50);
+    if (kind === "marine") drawMarineEmblem(g, 1);
+    else if (jr) drawJollyRoger(g, jr, 1, "#141414");
+    tex2.needsUpdate = true;
+    return tex2;
+  }
+  function triGeometry(a, b, c, n = 5) {
+    const pos = [], uv = [], idx = [];
+    const row = [];
+    for (let i = 0; i <= n; i++) {
+      row.push(pos.length / 3);
+      for (let j = 0; j <= n - i; j++) {
+        const u = i / n, v = j / n, w = 1 - u - v;
+        pos.push(a[0] * w + b[0] * u + c[0] * v, a[1] * w + b[1] * u + c[1] * v, a[2] * w + b[2] * u + c[2] * v);
+        uv.push(u, v);
+      }
+    }
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n - i; j++) {
+        const p = row[i] + j, q2 = row[i + 1] + j;
+        idx.push(p, q2, p + 1);
+        if (j < n - i - 1) idx.push(q2, q2 + 1, p + 1);
+      }
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    g.setAttribute("uv", new Float32BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
+  var SOLID = () => vcMat();
+  var GHOST = () => vcMat({ transparent: true, opacity: 0.22, depthWrite: false });
+  var ShipView = class {
+    constructor(s) {
+      this.ship = s;
+      const def = s.def;
+      const d = shipDims(def);
+      this.d = d;
+      const root2 = new Group();
+      root2.name = "ship:" + (s.type || "");
+      const hull = new Mesh(hullGeometry(def), SOLID());
+      hull.castShadow = true;
+      hull.receiveShadow = true;
+      root2.add(hull);
+      this.hull = hull;
+      const plan = mastPlan(def, d);
+      this.rig = new Mesh(mastGeometry(def, d, plan), SOLID());
+      this.rig.castShadow = true;
+      root2.add(this.rig);
+      const kind = this.flagKind();
+      const sailCol = kind === "marine" || def.sail === "marine" ? "#f5f6fa" : s.sailColor || "#efe6cf";
+      this.sails = [];
+      this.braces = [];
+      this.ownMats = [];
+      const own = (m) => {
+        this.ownMats.push(m);
+        return m;
+      };
+      this.ghostables = [];
+      const yardK = new Mesher();
+      for (const m of plan) {
+        const grp = new Group();
+        grp.position.set(m.x, 0, 0);
+        root2.add(grp);
+        this.braces.push(grp);
+        const yk = new Mesher();
+        for (const sp of sailPlan(def, d, m)) {
+          if (sp.type === "square") {
+            const sw2 = sp.w, sh = sp.y1 - sp.y0;
+            yk.add(cyl(0.035, 0.05, sw2 * 1.08, 6), { at: [0.1, sp.y1 + 0.04, -sw2 * 0.54], rot: [Math.PI / 2, 0, 0], color: "#5d4037" });
+            const geo2 = new PlaneGeometry(sw2, sh, 6, 4);
+            geo2.rotateY(Math.PI / 2);
+            const tex2 = sp.emblem && kind !== "none" ? sailTexture(kind, s.jr, sailCol) : null;
+            const mat = own(new MeshToonMaterial({ color: tex2 ? 16777215 : sailCol, map: tex2, side: DoubleSide }));
+            const mesh = new Mesh(geo2, mat);
+            mesh.position.set(0.16, sp.y0 + sh / 2, 0);
+            mesh.castShadow = true;
+            mesh.userData.base = geo2.attributes.position.array.slice();
+            grp.add(mesh);
+            this.sails.push({ mesh, sw: sw2, sh, kind: "square" });
+          } else if (sp.type === "gaff") {
+            const a = [0.12, sp.y0, 0], b = [0.12, sp.y1, 0], c = [-sp.len, sp.y0 + 0.05, 0];
+            yk.add(cyl(0.035, 0.045, sp.len, 6), { at: [0.1, sp.y0 - 0.05, 0], rot: [0, 0, Math.PI / 2], color: "#5d4037" });
+            const geo2 = triGeometry(a, b, c, 5);
+            const mat = own(new MeshToonMaterial({ color: sailCol, side: DoubleSide }));
+            const mesh = new Mesh(geo2, mat);
+            mesh.castShadow = true;
+            mesh.userData.base = geo2.attributes.position.array.slice();
+            grp.add(mesh);
+            this.sails.push({ mesh, kind: "fore", len: sp.len, y0: sp.y0, y1: sp.y1 });
+          } else if (sp.type === "jib") {
+            const a = [m.x + 0.05, sp.y1, 0], b = [sp.tipX, sp.tipY, 0], c = [m.x + 0.1, floorAt(d, (m.x + d.L / 2) / d.L) + 1.1, 0];
+            const geo2 = triGeometry(a, b, c, 4);
+            const mat = own(new MeshToonMaterial({ color: sailCol, side: DoubleSide }));
+            const mesh = new Mesh(geo2, mat);
+            mesh.castShadow = true;
+            mesh.userData.base = geo2.attributes.position.array.slice();
+            root2.add(mesh);
+            this.sails.push({ mesh, kind: "jib" });
+          }
+        }
+        const ym = new Mesh(yk.build(false), SOLID());
+        grp.add(ym);
+        this.ghostables.push(ym);
+      }
+      this.lines = this.rigging(def, d, plan);
+      root2.add(this.lines);
+      if (def.paddle) {
+        const pk = new Mesher();
+        const R2 = 0.72;
+        pk.add(cyl(0.12, 0.12, 0.4, 8), { at: [0, 0, -0.2], rot: [Math.PI / 2, 0, 0], color: "#5d4037" });
+        for (let i = 0; i < 8; i++) {
+          const a = i / 8 * Math.PI * 2, dx = -Math.sin(a), dy = Math.cos(a);
+          for (const sz of [-1, 1]) pk.add(box(0.05, R2, 0.04), { at: [0, 0, sz * 0.17], rot: [0, 0, a], color: "#6d4c33" });
+          pk.add(box(0.06, 0.4, 0.38), { at: [dx * (R2 - 0.36), dy * (R2 - 0.36), 0], rot: [0, 0, a], color: "#8d6e4a", outline: 0.01 });
+        }
+        for (const sz of [-1, 1]) pk.add(torus(R2, 0.035, 4, 16), { at: [0, 0, sz * 0.17], color: "#5d4037" });
+        const geo2 = pk.build(false);
+        this.paddles = [];
+        for (const s2 of [-1, 1]) {
+          const pm = new Mesh(geo2, SOLID());
+          pm.position.set(xAt(d, 0.34), d.deckY - 0.1, s2 * (hbAt(0.34, d.B) + 0.2));
+          root2.add(pm);
+          this.paddles.push(pm);
+        }
+      }
+      if (kind !== "none") {
+        const fg = new PlaneGeometry(1.1, 0.75, 5, 1);
+        fg.translate(0.55, 0, 0);
+        const flag = new Mesh(fg, own(new MeshToonMaterial({ map: flagTexture(kind, s.jr), side: DoubleSide })));
+        const mm = plan.find((p) => p.main) || plan[0];
+        flag.position.set(mm.x, mm.h + 0.35, 0);
+        flag.userData.base = fg.attributes.position.array.slice();
+        root2.add(flag);
+        this.flag = flag;
+        const pole = new Mesher();
+        pole.add(cyl(0.015, 0.02, 0.55, 4), { at: [mm.x, mm.h, 0], color: "#3e2723" });
+        const pm = new Mesh(pole.build(false), SOLID());
+        root2.add(pm);
+        this.ghostables.push(pm);
+      }
+      if (s.coated) {
+        const bg = new SphereGeometry(1, 24, 16);
+        const bm = own(new MeshToonMaterial({ color: 12577279, transparent: true, opacity: 0.18, depthWrite: false, side: DoubleSide }));
+        const bubble = new Mesh(bg, bm);
+        bubble.scale.set(d.L * 0.72, d.mastH * 0.75, d.B * 1.6);
+        bubble.position.y = d.mastH * 0.25;
+        bubble.renderOrder = 3;
+        root2.add(bubble);
+      }
+      this.root = root2;
+      this.kindKey = kind + ":" + JSON.stringify(s.jr || null) + ":" + !!s.coated;
+    }
+    rigging(def, d, plan) {
+      const pts = [];
+      const L2 = (a, b) => pts.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+      for (const m of plan) {
+        const t = (m.x + d.L / 2) / d.L;
+        const hb = hbAt(t, d.B);
+        const rail2 = topAt(d, t);
+        for (const s of [-1, 1]) for (let i = 0; i < 4; i++) L2([m.x, m.h * 0.74, 0], [m.x - 0.15 - i * 0.2, rail2, s * hb * 0.95]);
+        for (const s of [-1, 1]) for (let y = rail2 + 0.4; y < m.h * 0.62; y += 0.4) {
+          const f = (m.h * 0.74 - y) / (m.h * 0.74 - rail2);
+          L2([m.x - 0.15 * f, y, s * hb * 0.95 * f], [m.x - 0.75 * f, y, s * hb * 0.95 * f]);
+        }
+      }
+      for (let i = 0; i < plan.length; i++) {
+        const m = plan[i];
+        if (i === 0) {
+          const [tx, ty] = bowTip(def, d);
+          L2([m.x, m.h, 0], [tx, ty, 0]);
+        } else L2([m.x, m.h * 0.95, 0], [plan[i - 1].x, plan[i - 1].h * 0.6, 0]);
+        if (i === plan.length - 1) for (const s of [-1, 1]) L2([m.x, m.h * 0.9, 0], [-d.L / 2 + 0.25, topAt(d, 0.02), s * hbAt(0.02, d.B) * 0.8]);
+      }
+      const g = new BufferGeometry();
+      g.setAttribute("position", new Float32BufferAttribute(pts, 3));
+      const mat = new LineBasicMaterial({ color: 3811870, transparent: true, opacity: 0.85, fog: true });
+      this.lineMat = mat;
+      return new LineSegments(g, mat);
+    }
+    flagKind() {
+      const s = this.ship;
+      if (s.def.sail === "marine" || s.faction === "marine" || s.owner === "player" && s.game?.state?.char?.faction === "marine") return "marine";
+      if (s.jr) return "jr";
+      return "none";
+    }
+    /** True when the colours changed (e.g. the player founded a crew) and the view must be rebuilt. */
+    stale() {
+      return this.kindKey !== this.flagKind() + ":" + JSON.stringify(this.ship.jr || null) + ":" + !!this.ship.coated;
+    }
+    setGhost(on) {
+      this.ghost = on;
+      this.rig.material = on ? GHOST() : SOLID();
+      this.rig.renderOrder = on ? 2 : 0;
+      this.rig.castShadow = !on;
+      for (const m of this.ghostables) {
+        m.material = on ? GHOST() : SOLID();
+        m.renderOrder = on ? 2 : 0;
+      }
+      for (const sl of this.sails) {
+        const mt = sl.mesh.material;
+        mt.transparent = on;
+        mt.opacity = on ? 0.2 : 1;
+        mt.depthWrite = !on;
+        mt.needsUpdate = true;
+        sl.mesh.renderOrder = on ? 2 : 0;
+        sl.mesh.castShadow = !on;
+      }
+      this.lines.material.opacity = on ? 0.18 : 0.85;
+      this.lines.renderOrder = on ? 2 : 0;
+      if (this.flag) {
+        const mt = this.flag.material;
+        mt.transparent = on;
+        mt.opacity = on ? 0.3 : 1;
+        mt.depthWrite = !on;
+        mt.needsUpdate = true;
+        this.flag.renderOrder = on ? 2 : 0;
+      }
+    }
+    update(env, rx, rz, windAngle, ctx) {
+      const s = this.ship;
+      const r = this.root;
+      const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === "sail" && ctx.mode === "first";
+      if (own !== this.ghost) this.setGhost(own);
+      const t = env.time + (s.seed || 0);
+      const sinking = s.sunk ? Math.min(1, s.sinkT / 4) : 0;
+      r.position.set(rx, 0.05 + Math.sin(t * 1.3) * 0.07 - sinking * 3, rz);
+      r.rotation.set(Math.sin(t * 0.9) * 0.035 + sinking * 0.5, -s.heading, Math.sin(t * 1.1) * 0.02, "YXZ");
+      const relA = (windAngle || 0) - s.heading;
+      const brace = Math.max(-0.5, Math.min(0.5, Math.sin(relA) * 0.45));
+      for (const b of this.braces) b.rotation.y = -brace;
+      const rel2 = Math.cos(relA);
+      const set = s.sailSet ?? 0.5;
+      const billow = (0.15 + set * 0.45) * (0.6 + 0.4 * Math.max(0, rel2));
+      const side = Math.sin(relA) >= 0 ? 1 : -1;
+      for (const sl of this.sails) {
+        sl.mesh.visible = set > 0.05 || sl.kind === "fore";
+        const a = sl.mesh.geometry.attributes.position;
+        const base = sl.mesh.userData.base;
+        if (sl.kind === "square") {
+          sl.mesh.scale.y = 0.35 + set * 0.65;
+          for (let i = 0; i < a.count; i++) {
+            const z = base[i * 3 + 2], y = base[i * 3 + 1];
+            const k = 1 - (z / (sl.sw / 2)) ** 2;
+            const kv = 1 - (y / (sl.sh / 2)) ** 2 * 0.5;
+            a.array[i * 3] = base[i * 3] + billow * k * kv;
+          }
+        } else {
+          const amt = (0.1 + set * 0.35) * side * (sl.kind === "jib" ? 0.6 : 1);
+          const uv = sl.mesh.geometry.attributes.uv.array;
+          for (let i = 0; i < a.count; i++) {
+            const uu = uv[i * 2], vv = uv[i * 2 + 1], w = Math.max(0, 1 - uu - vv);
+            a.array[i * 3 + 2] = base[i * 3 + 2] + amt * 27 * uu * vv * w * 0.8;
+          }
+          if (sl.kind === "fore") sl.mesh.scale.y = 1;
+        }
+        a.needsUpdate = true;
+      }
+      if (this.flag) {
+        const a = this.flag.geometry.attributes.position, base = this.flag.userData.base;
+        for (let i = 0; i < a.count; i++) {
+          const x = base[i * 3];
+          a.array[i * 3 + 2] = base[i * 3 + 2] + Math.sin(t * 7 + x * 4) * 0.09 * x;
+        }
+        a.needsUpdate = true;
+        this.flag.rotation.y = s.heading - (windAngle || 0) + Math.PI;
+      }
+      if (this.paddles) {
+        const spin = (s.speed || 0) * 1.4 + (s.rowing ? 2 : 0);
+        this.spin = (this.spin || 0) + spin * 0.016;
+        for (const p of this.paddles) p.rotation.z = -this.spin;
+      }
+    }
+    dispose() {
+      this.root.traverse((o) => {
+        if (o.geometry && !o.geometry.userData?.shared) o.geometry.dispose();
+      });
+      for (const m of this.ownMats) {
+        m.map?.dispose();
+        m.dispose();
+      }
+      this.lineMat?.dispose();
+    }
+  };
+
   // src/render3d/buildings3d.js
   var ROLE_ICON2 = {
     tavern: "bar",
@@ -42707,7 +43228,7 @@ void main() {
   function windowAt(k, b, S3, x, y, w, h2, faceZ, litOn, wallCol, flowers) {
     k.save();
     k.translate(x, y, faceZ);
-    const frame = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" || S3.wall === "adobe" ? shade3(wallCol, 0.35) : shade3(wallCol, -0.45);
+    const frame = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" || S3.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
     const glass = "#2d4150";
     const glow3 = litOn ? WARM : null;
     switch (S3.win) {
@@ -42750,7 +43271,7 @@ void main() {
         k.add(out, { at: [0, 0, 0.012], color: frame });
         k.add(g, { at: [0, 0, 0.025], color: S3.win === "gothic" ? "#2a3a2a" : glass, glow: litOn ? S3.win === "gothic" ? "#b6ff8a" : WARM : null });
         if (S3.win === "gothic") B(k, -0.015, -h2 / 2, 0.03, 0.015, h2 / 2, 0.045, frame);
-        if (b.style === "desert") B(k, -r - 0.12, -h2 / 2 - 0.12, 0, r + 0.12, -h2 / 2 - 0.04, 0.12, shade3(wallCol, -0.15));
+        if (b.style === "desert") B(k, -r - 0.12, -h2 / 2 - 0.12, 0, r + 0.12, -h2 / 2 - 0.04, 0.12, shade2(wallCol, -0.15));
         break;
       }
       case "hole": {
@@ -42765,12 +43286,12 @@ void main() {
         B(k, -w / 2, -hh / 2, 0, w / 2, hh / 2, 0.06, glass, { glow: glow3 });
         B(k, -0.025, -hh / 2, 0.05, 0.025, hh / 2, 0.08, frame);
         B(k, -w / 2, -0.025, 0.05, w / 2, 0.025, 0.08, frame);
-        B(k, -w / 2 - 0.12, -hh / 2 - 0.14, -0.02, w / 2 + 0.12, -hh / 2 - 0.06, 0.14, shade3(frame, 0.1));
+        B(k, -w / 2 - 0.12, -hh / 2 - 0.14, -0.02, w / 2 + 0.12, -hh / 2 - 0.06, 0.14, shade2(frame, 0.1));
         if (S3.shutters) {
           const sc = ["#2e6b8a", "#4f7d3a", "#8a3b2e", "#6d4c33"][(b.v || 0) % 4];
           for (const s of [-1, 1]) {
             B(k, s * (w / 2 + 0.1), -hh / 2, 0, s * (w / 2 + 0.1 + w * 0.45), hh / 2, 0.04, sc);
-            for (let i = 1; i < 4; i++) B(k, s * (w / 2 + 0.12), -hh / 2 + i * hh / 4 - 0.01, 0.03, s * (w / 2 + 0.08 + w * 0.45), -hh / 2 + i * hh / 4 + 0.01, 0.05, shade3(sc, -0.3));
+            for (let i = 1; i < 4; i++) B(k, s * (w / 2 + 0.12), -hh / 2 + i * hh / 4 - 0.01, 0.03, s * (w / 2 + 0.08 + w * 0.45), -hh / 2 + i * hh / 4 + 0.01, 0.05, shade2(sc, -0.3));
           }
         }
         if (flowers) {
@@ -42788,7 +43309,7 @@ void main() {
   function doorAt(k, b, S3, x, g, wallCol, big) {
     const dw = (big ? 1.7 : 1.05) * g, dh = (big ? 2.5 : 2.15) * g;
     const wood = S3.door === "panel" && (b.style === "marine" || b.role === "marine_base") ? "#1b4f72" : b.style === "noble" ? "#6d3b1f" : "#5a3a22";
-    const frame = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" ? shade3(wallCol, 0.4) : shade3(wallCol, -0.4);
+    const frame = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" ? shade2(wallCol, 0.4) : shade2(wallCol, -0.4);
     k.save();
     k.translate(x, 0, 0);
     B(k, -dw / 2 - 0.2, -0.3, -0.02, dw / 2 + 0.2, 0.12, 0.45, "#9a948a", { outline: 0.02 });
@@ -42831,12 +43352,12 @@ void main() {
       default: {
         B(k, -dw / 2 - 0.14, 0.1, -0.02, dw / 2 + 0.14, dh + 0.16, 0.07, frame, { outline: 0.015 });
         B(k, -dw / 2, 0.1, 0, dw / 2, dh, 0.09, wood);
-        if (S3.door === "plank") for (let i = 1; i < 4; i++) B(k, -dw / 2 + i * dw / 4 - 0.012, 0.15, 0.08, -dw / 2 + i * dw / 4 + 0.012, dh - 0.05, 0.1, shade3(wood, -0.3));
+        if (S3.door === "plank") for (let i = 1; i < 4; i++) B(k, -dw / 2 + i * dw / 4 - 0.012, 0.15, 0.08, -dw / 2 + i * dw / 4 + 0.012, dh - 0.05, 0.1, shade2(wood, -0.3));
         else {
-          B(k, -dw / 2 + 0.12, 0.35, 0.08, dw / 2 - 0.12, dh * 0.45, 0.11, shade3(wood, 0.12));
-          B(k, -dw / 2 + 0.12, dh * 0.55, 0.08, dw / 2 - 0.12, dh - 0.15, 0.11, shade3(wood, 0.12));
+          B(k, -dw / 2 + 0.12, 0.35, 0.08, dw / 2 - 0.12, dh * 0.45, 0.11, shade2(wood, 0.12));
+          B(k, -dw / 2 + 0.12, dh * 0.55, 0.08, dw / 2 - 0.12, dh - 0.15, 0.11, shade2(wood, 0.12));
         }
-        if (big) B(k, -0.012, 0.1, 0.09, 0.012, dh, 0.11, shade3(wood, -0.35));
+        if (big) B(k, -0.012, 0.1, 0.09, 0.012, dh, 0.11, shade2(wood, -0.35));
         k.add(new SphereGeometry(0.05, 5, 4), { at: [dw / 2 - 0.16, 0.1 + dh * 0.47, 0.13], color: "#f1c40f" });
         if (b.role && b.role !== "house") {
           B(k, -0.04, dh + 0.25, 0.05, 0.04, dh + 0.3, 0.45, "#2d3436");
@@ -42879,16 +43400,16 @@ void main() {
         const rows = Math.max(3, Math.round(slopeLen / (0.42 * g)));
         for (let i = 1; i < rows; i++) {
           const z = i / rows * slopeLen;
-          k.add(box(L2, 0.05 * g, 0.07 * g), { at: [0, th, z], color: shade3(roofCol, -0.22) });
+          k.add(box(L2, 0.05 * g, 0.07 * g), { at: [0, th, z], color: shade2(roofCol, -0.22) });
         }
       } else {
         k.add(box(L2 - 0.1, 0.18 * g, slopeLen - 0.05), { at: [0, th, slopeLen / 2 + 0.02], color: "#f4f9ff" });
         k.add(cyl(0.13 * g, 0.13 * g, L2 - 0.1, 7), { at: [(L2 - 0.1) / 2, th + 0.06, slopeLen], rot: [0, 0, Math.PI / 2], color: "#ffffff" });
       }
-      for (const sx of [-1, 1]) k.add(box(0.1 * g, th + 0.08, slopeLen), { at: [sx * (L2 / 2 + 0.03), -0.04, slopeLen / 2], color: shade3(roofCol, -0.4) });
+      for (const sx of [-1, 1]) k.add(box(0.1 * g, th + 0.08, slopeLen), { at: [sx * (L2 / 2 + 0.03), -0.04, slopeLen / 2], color: shade2(roofCol, -0.4) });
       k.restore();
     }
-    k.add(box(L2 + 0.1, 0.16 * g, 0.26 * g), { at: [0, y + rise + th * 0.5, zc], color: snowy ? "#ffffff" : shade3(roofCol, -0.3), outline: 0.02 });
+    k.add(box(L2 + 0.1, 0.16 * g, 0.26 * g), { at: [0, y + rise + th * 0.5, zc], color: snowy ? "#ffffff" : shade2(roofCol, -0.3), outline: 0.02 });
     return rise + th;
   }
   function curvedRoof(k, cx, cz, y, W2, D3, rise, ov, roofCol, opts = {}) {
@@ -42943,9 +43464,9 @@ void main() {
     const fg = new BufferGeometry();
     fg.setAttribute("position", new Float32BufferAttribute(fp, 3));
     fg.setIndex(fi);
-    k.add(fg.toNonIndexed(), { color: shade3(roofCol, -0.35), flat: true });
+    k.add(fg.toNonIndexed(), { color: shade2(roofCol, -0.35), flat: true });
     const top = rings2[R2];
-    const ridgeCol = opts.ridgeCol || shade3(roofCol, -0.4);
+    const ridgeCol = opts.ridgeCol || shade2(roofCol, -0.4);
     for (let s = 0; s < 4; s++) {
       for (let i = 0; i < R2; i++) {
         const a = rings2[i][s * M2], bb = rings2[i + 1][s * M2];
@@ -42961,7 +43482,7 @@ void main() {
     const rhw = Math.abs(top[0][0] - cx), ry = top[0][1];
     k.add(box(rhw * 2 + 0.3, 0.2, 0.22), { at: [cx, ry - 0.02, cz], color: ridgeCol, outline: 0.02 });
     for (const sx of [-1, 1]) {
-      k.add(slab([[0, 0], [0.22, 0], [0.3, 0.5], [0.08, 0.42]], 0.12), { at: [cx + sx * (rhw + 0.12), ry + 0.08, cz], scale: [sx, 1, 1], color: opts.finCol || shade3(roofCol, -0.45) });
+      k.add(slab([[0, 0], [0.22, 0], [0.3, 0.5], [0.08, 0.42]], 0.12), { at: [cx + sx * (rhw + 0.12), ry + 0.08, cz], scale: [sx, 1, 1], color: opts.finCol || shade2(roofCol, -0.45) });
     }
     return rise;
   }
@@ -43051,7 +43572,7 @@ void main() {
     if (!ruined) {
       if (rt === "flat") top += flatRoof(k, b, S3, fw, fd, H2, wallCol, roofCol);
       else if (rt === "dome" || rt === "shell") {
-        B(k, -fw / 2 - 0.15, H2 - 0.05, -fd - 0.15, fw / 2 + 0.15, H2 + 0.18, 0.15, shade3(wallCol, -0.12), { outline: 0.03 });
+        B(k, -fw / 2 - 0.15, H2 - 0.05, -fd - 0.15, fw / 2 + 0.15, H2 + 0.18, 0.15, shade2(wallCol, -0.12), { outline: 0.03 });
         const r = Math.min(fw, fd) / 2 * 0.98;
         const kind = rt === "shell" ? "shell" : b.style === "candy" ? "onion" : "dome";
         top += 0.18 + domeRoof(k, 0, -hd, H2 + 0.15, r, rt === "shell" ? 0.8 : 0.9, roofCol, kind);
@@ -43070,7 +43591,7 @@ void main() {
           k.add(cyl(0.04, 0.06, 1.4, 5), { at: [0, top, -hd], color: "#b0bec5" });
           k.add(new SphereGeometry(0.12, 6, 4), { at: [0, top + 1.45, -hd], color: "#e74c3c", glow: "#ff5252" });
         }
-        if (rt === "shell") k.add(cone(0.18, 0.6, 7), { at: [0, top - 0.05, -hd], color: shade3(roofCol, 0.2), outline: 0.02 });
+        if (rt === "shell") k.add(cone(0.18, 0.6, 7), { at: [0, top - 0.05, -hd], color: shade2(roofCol, 0.2), outline: 0.02 });
       } else if (rt === "pagoda") {
         top += pagodaRoofs(k, b, S3, fw, fd, H2, storeys, storeyH, plinth, wallCol, roofCol);
       } else {
@@ -43128,7 +43649,7 @@ void main() {
     return grp;
   }
   function wallDetail(k, b, S3, fw, fd, H2, plinth, storeys, storeyH, wallCol, g) {
-    const beam = S3.beam || shade3(wallCol, -0.5);
+    const beam = S3.beam || shade2(wallCol, -0.5);
     switch (S3.wall) {
       case "timber": {
         for (const sx of [-1, 1]) for (const sz of [0, -fd]) B(k, sx * fw / 2 - 0.12, plinth, sz - 0.12, sx * fw / 2 + 0.12, H2, sz + 0.12, beam);
@@ -43151,29 +43672,29 @@ void main() {
         const n = Math.floor((H2 - plinth) / 0.34);
         for (let i = 0; i < n; i++) {
           const y = plinth + i * 0.34 + 0.17;
-          const c = i % 2 ? shade3(wallCol, -0.1) : wallCol;
+          const c = i % 2 ? shade2(wallCol, -0.1) : wallCol;
           k.add(cyl(0.16, 0.16, fw + 0.5, 6, true), { at: [(fw + 0.5) / 2, y, 0.02], rot: [0, 0, Math.PI / 2], color: c });
           for (const sx of [-1, 1]) k.add(cyl(0.16, 0.16, fd + 0.5, 6, true), { at: [sx * (fw / 2 + 0.02), y, 0.25], rot: [-Math.PI / 2, 0, 0], color: c });
         }
         break;
       }
       case "brick": {
-        const mortar = shade3(wallCol, -0.25);
+        const mortar = shade2(wallCol, -0.25);
         for (let y = plinth + 0.42; y < H2 - 0.1; y += 0.42) {
           B(k, -fw / 2 - 0.01, y, -0.01, fw / 2 + 0.01, y + 0.025, 0.012, mortar);
           for (const sx of [-1, 1]) B(k, sx * (fw / 2 + 6e-3) - 6e-3, y, -fd, sx * (fw / 2 + 6e-3) + 6e-3, y + 0.025, 0, mortar);
         }
-        for (let f = 1; f < storeys; f++) B(k, -fw / 2 - 0.06, plinth + f * storeyH - 0.2, -0.06, fw / 2 + 0.06, plinth + f * storeyH, 0.1, S3.trim || shade3(wallCol, 0.3));
-        for (const sx of [-1, 1]) B(k, sx * fw / 2 - 0.16, plinth, -0.06, sx * fw / 2 + 0.16, H2, 0.08, shade3(wallCol, -0.12));
+        for (let f = 1; f < storeys; f++) B(k, -fw / 2 - 0.06, plinth + f * storeyH - 0.2, -0.06, fw / 2 + 0.06, plinth + f * storeyH, 0.1, S3.trim || shade2(wallCol, 0.3));
+        for (const sx of [-1, 1]) B(k, sx * fw / 2 - 0.16, plinth, -0.06, sx * fw / 2 + 0.16, H2, 0.08, shade2(wallCol, -0.12));
         break;
       }
       case "plaster": {
-        const qc = S3.trim || shade3(wallCol, -0.2);
+        const qc = S3.trim || shade2(wallCol, -0.2);
         if (S3.quoins || b.style === "marine" || b.style === "noble") {
           for (const sx of [-1, 1]) {
             for (let y = plinth, i = 0; y < H2 - 0.3; y += 0.45, i++) {
               const w = i % 2 ? 0.35 : 0.55;
-              B(k, sx * fw / 2 - (sx > 0 ? w : 0.05), y, -0.05, sx * fw / 2 + (sx > 0 ? 0.05 : w), y + 0.38, 0.05, shade3(wallCol, -0.14));
+              B(k, sx * fw / 2 - (sx > 0 ? w : 0.05), y, -0.05, sx * fw / 2 + (sx > 0 ? 0.05 : w), y + 0.38, 0.05, shade2(wallCol, -0.14));
             }
           }
         }
@@ -43201,7 +43722,7 @@ void main() {
       }
       case "adobe": {
         if (S3.vigas) for (let x = -fw / 2 + 0.5; x < fw / 2 - 0.3; x += 0.9) k.add(cyl(0.08, 0.08, 0.45, 5), { at: [x, H2 - 0.45, -0.02], rot: [Math.PI / 2, 0, 0], color: "#6d4c33" });
-        B(k, -fw / 2 - 0.05, plinth, -0.05, fw / 2 + 0.05, plinth + 0.25, 0.06, shade3(wallCol, -0.1));
+        B(k, -fw / 2 - 0.05, plinth, -0.05, fw / 2 + 0.05, plinth + 0.25, 0.06, shade2(wallCol, -0.1));
         break;
       }
       case "smooth": {
@@ -43210,7 +43731,7 @@ void main() {
       }
     }
     if (S3.cornice) {
-      B(k, -fw / 2 - 0.18, H2 - 0.3, -fd - 0.18, fw / 2 + 0.18, H2 - 0.1, 0.18, S3.trim || shade3(wallCol, 0.25), { outline: 0.02 });
+      B(k, -fw / 2 - 0.18, H2 - 0.3, -fd - 0.18, fw / 2 + 0.18, H2 - 0.1, 0.18, S3.trim || shade2(wallCol, 0.25), { outline: 0.02 });
     }
   }
   function ruinWalls(k, b, fw, fd, H2, wallCol) {
@@ -43220,7 +43741,7 @@ void main() {
     for (let i = 0; i < seg; i++) {
       const x0 = -fw / 2 + i * fw / seg, x1 = x0 + fw / seg;
       const h2 = 0.8 + R2(i) * (H2 - 0.8) * 0.9;
-      B(k, x0, -1, -0.45, x1 + 0.01, h2, 0, i % 2 ? shade3(stone, -0.08) : stone, { outline: 0.03 });
+      B(k, x0, -1, -0.45, x1 + 0.01, h2, 0, i % 2 ? shade2(stone, -0.08) : stone, { outline: 0.03 });
     }
     for (const sx of [-1, 1]) {
       const sseg = Math.max(2, Math.round(fd / 1.2));
@@ -43232,13 +43753,13 @@ void main() {
     }
     for (let i = 0; i < 6; i++) {
       const g = new IcosahedronGeometry(0.25 + R2(i + 40) * 0.25, 0);
-      k.add(g, { at: [(R2(i + 20) - 0.5) * fw, 0.1, -R2(i + 30) * fd], flat: true, color: shade3(stone, -0.1), outline: 0.02 });
+      k.add(g, { at: [(R2(i + 20) - 0.5) * fw, 0.1, -R2(i + 30) * fd], flat: true, color: shade2(stone, -0.1), outline: 0.02 });
     }
   }
   function flatRoof(k, b, S3, fw, fd, H2, wallCol, roofCol) {
     const hd = fd / 2;
     B(k, -fw / 2 - 0.12, H2 - 0.05, -fd - 0.12, fw / 2 + 0.12, H2 + 0.15, 0.12, roofCol, { outline: 0.03 });
-    const pc = b.style === "marine" ? "#f5f6fa" : shade3(wallCol, -0.06);
+    const pc = b.style === "marine" ? "#f5f6fa" : shade2(wallCol, -0.06);
     const ph = 0.45;
     B(k, -fw / 2 - 0.12, H2 + 0.15, -0.1, fw / 2 + 0.12, H2 + ph, 0.12, pc);
     B(k, -fw / 2 - 0.12, H2 + 0.15, -fd - 0.12, fw / 2 + 0.12, H2 + ph, -fd + 0.1, pc);
@@ -43247,8 +43768,8 @@ void main() {
       for (let x = -fw / 2 + 0.3; x < fw / 2; x += 0.8) k.add(new SphereGeometry(0.16, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2), { at: [x, H2 + ph, 0.01], color: pc });
       if (fw >= 4 && fd >= 3) {
         const r = Math.min(fw, fd) * 0.32;
-        B(k, -r - 0.1, H2 + 0.15, -hd - r - 0.1, r + 0.1, H2 + 0.55, -hd + r + 0.1, shade3(wallCol, 0.05));
-        domeRoof(k, 0, -hd, H2 + 0.55, r, 0.95, shade3(wallCol, 0.18), "dome");
+        B(k, -r - 0.1, H2 + 0.15, -hd - r - 0.1, r + 0.1, H2 + 0.55, -hd + r + 0.1, shade2(wallCol, 0.05));
+        domeRoof(k, 0, -hd, H2 + 0.55, r, 0.95, shade2(wallCol, 0.18), "dome");
         k.add(cyl(0.02, 0.05, 0.5, 4), { at: [0, H2 + 0.55 + r * 0.95, -hd], color: "#d4ac0d" });
         return 0.55 + r * 0.95 + 0.5;
       }
@@ -43262,7 +43783,7 @@ void main() {
   function pagodaRoofs(k, b, S3, fw, fd, H2, storeys, storeyH, plinth, wallCol, roofCol) {
     const hd = fd / 2;
     const chinese = b.style === "chinese";
-    const ridgeCol = chinese ? "#d4ac0d" : shade3(roofCol, -0.35);
+    const ridgeCol = chinese ? "#d4ac0d" : shade2(roofCol, -0.35);
     for (let f = 1; f < storeys; f++) {
       const y = plinth + f * storeyH - 0.25;
       curvedRoof(k, 0, -hd, y, fw, fd, 0.55, 0.55, roofCol, { upturn: 0.22, th: 0.14, ridgeCol });
@@ -43291,13 +43812,13 @@ void main() {
     k.translate(0, 0, -rz);
     k.scale(1, 1, rz / rx);
     k.add(cyl(rx, rx * 1.03, h2 + 2, 12, true), { at: [0, -2, 0], color: wallCol, outline: 0.04 });
-    for (let y = 0.5; y < h2 - 0.2; y += 0.6) k.add(cyl(rx + 0.03, rx + 0.03, 0.08, 12, true), { at: [0, y, 0], color: shade3(wallCol, -0.25) });
+    for (let y = 0.5; y < h2 - 0.2; y += 0.6) k.add(cyl(rx + 0.03, rx + 0.03, 0.08, 12, true), { at: [0, y, 0], color: shade2(wallCol, -0.25) });
     const rr = rx + 0.7, rh = rx * 1.15 + 0.8;
     const roof = cone(rr, rh, 14, false, 3);
     const P3 = roof.attributes.position;
     for (let i = 0; i < P3.count; i++) if (Math.abs(P3.getY(i)) < 1e-4 && i % 2) P3.setY(i, -0.18);
     roof.computeVertexNormals();
-    const tmp2 = new Color(), rc = C2(roofCol), dark = shade3(roofCol, -0.25);
+    const tmp2 = new Color(), rc = C2(roofCol), dark = shade2(roofCol, -0.25);
     k.add(roof, { at: [0, h2 - 0.15, 0], color: (p) => tmp2.copy(Math.floor((p.y - h2) / 0.45) % 2 ? rc : dark), outline: 0.05 });
     k.add(cyl(0.05, 0.1, 0.7, 5), { at: [0, h2 - 0.15 + rh - 0.1, 0], color: "#6d4c33" });
     k.restore();
@@ -43597,7 +44118,7 @@ void main() {
     }
     return g;
   }
-  var clamp01 = (x) => Math.max(0, Math.min(1, x));
+  var clamp012 = (x) => Math.max(0, Math.min(1, x));
   var TREE_COLORS2 = {
     oak: ["#3f9a3a", "#4aa843", "#378f35", "#52b04a"],
     autumn: ["#d35400", "#e67e22", "#c0392b", "#f39c12"],
@@ -43630,7 +44151,7 @@ void main() {
         rot: [hash4(i, 1) * 3, hash4(i, 2) * 3, hash4(i, 3) * 3],
         scale: [1, squash, 1],
         color: (p) => {
-          const v = (lo + (hi - lo) * clamp01((p.y - y0) / (y1 - y0))) * f;
+          const v = (lo + (hi - lo) * clamp012((p.y - y0) / (y1 - y0))) * f;
           return tmp2.setRGB(v, v, v);
         },
         tint: 1,
@@ -43681,8 +44202,8 @@ void main() {
     }
   }
   var trunkColor = (col, h2) => {
-    const a = C2(shade3(col, -0.35)), b = C2(col), tmp2 = new Color();
-    return (p) => tmp2.copy(a).lerp(b, clamp01(p.y / h2));
+    const a = C2(shade2(col, -0.35)), b = C2(col), tmp2 = new Color();
+    return (p) => tmp2.copy(a).lerp(b, clamp012(p.y / h2));
   };
   var BROAD = {
     // round oak crown
@@ -43740,7 +44261,7 @@ void main() {
       for (let i = 0; i < 4; i++) {
         k.save();
         k.rotateY(i * Math.PI / 2 + 0.4 + variant * 0.3);
-        k.add(slab([[0.1, 0], [0.9, 0], [0.1, 1.3]], 0.12), { rot: [0, Math.PI / 2, 0], color: shade3(tc, -0.15), outline: 0.02 });
+        k.add(slab([[0.1, 0], [0.9, 0], [0.1, 1.3]], 0.12), { rot: [0, Math.PI / 2, 0], color: shade2(tc, -0.15), outline: 0.02 });
         k.restore();
       }
       crown(k, JUNGLE.blobs, JUNGLE.c, { squash: JUNGLE.squash, outline: 0.05 });
@@ -43780,7 +44301,7 @@ void main() {
         g.computeVertexNormals();
         const lo = 0.62 + i * 0.05, hi = 1;
         k.add(g, { at: [0, y, 0], color: (p) => {
-          const t = clamp01((p.y - y) / h2);
+          const t = clamp012((p.y - y) / h2);
           const v = lo + (hi - lo) * t;
           return tmp2.setRGB(v, v, v);
         }, tint: 1, outline: 0.04 });
@@ -43824,7 +44345,7 @@ void main() {
           pts.push([top[0] + Math.cos(a) * d, y, Math.sin(a) * d, w]);
         }
         const g = ribbon(pts, { fold: 0.35 });
-        k.add(g, { color: (p, nn, idx) => idx % 3 === 1 ? shade3("#2b8a3e", -0.1) : i % 2 ? "#37b24d" : "#2f9e44", tint: 1, double: true, backShade: 0.75 });
+        k.add(g, { color: (p, nn, idx) => idx % 3 === 1 ? shade2("#2b8a3e", -0.1) : i % 2 ? "#37b24d" : "#2f9e44", tint: 1, double: true, backShade: 0.75 });
       }
       return { geo: k.build(), sway: true, crown: { palm: true, top: [top[0], top[1], 0] } };
     });
@@ -43836,7 +44357,7 @@ void main() {
       const R2 = rng(11 + variant * 7 + (sub === "spooky" ? 3 : 0));
       const snowCol = C2("#f4f9ff"), wood = C2(col);
       const color = sub === "deadsnow" ? (p, n) => n.y > 0.35 ? snowCol : wood : col;
-      k.add(cyl(0.16, 0.3, 0.4, 6, true), { color: shade3(col, -0.2), outline: 0.03 });
+      k.add(cyl(0.16, 0.3, 0.4, 6, true), { color: shade2(col, -0.2), outline: 0.03 });
       const dir = new Vector3((R2() - 0.5) * 0.25, 1, (R2() - 0.5) * 0.25).normalize();
       branches(k, R2, new Vector3(0, 0.3, 0), dir, sub === "spooky" ? 2 : 1.8, 0.2, 3, { color, outline: 0.025, spread: 0.6, shrink: 0.68, lift: 0.2 });
       let crownInfo = null;
@@ -44049,7 +44570,7 @@ void main() {
       at: [x, y, z],
       scale: sc,
       normals: radial(x, y, z, 0),
-      color: (p) => tmp2.copy(base).lerp(top, clamp01((p.y - y) / r) * (fruit === "coconut" ? 0.2 : 0.55)),
+      color: (p) => tmp2.copy(base).lerp(top, clamp012((p.y - y) / r) * (fruit === "coconut" ? 0.2 : 0.55)),
       outline: 0.014
     });
     if (fruit !== "coconut") k.add(cyl(0.01, 0.012, 0.07, 3, true), { at: [x, y + r * 0.9, z], color: "#5d4037" });
@@ -48392,7 +48913,7 @@ void main() {
   // src/render/combatfx.js
   var TAU10 = Math.PI * 2;
   var rnd = (a, b) => a + Math.random() * (b - a);
-  var clamp012 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  var clamp013 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   var ELEM = {
     physical: { c: "#ffffff", spark: ["#ffffff", "#fff8e1", "#ffe0b2"], kind: "spark" },
     slash: { c: "#e3f2fd", spark: ["#ffffff", "#e3f2fd"], kind: "spark" },
@@ -49864,7 +50385,7 @@ void main() {
     const sg = SIG[def.id] || {};
     const st = styleOf(def, actor);
     const E = elem ? elemOf(elem) : null;
-    const k = t < w ? clamp012(t / Math.max(0.04, w)) : Math.max(0, 1 - (t - w) / 0.3);
+    const k = t < w ? clamp013(t / Math.max(0.04, w)) : Math.max(0, 1 - (t - w) / 0.3);
     const trail2 = sg.trail || (E && elem !== "physical" ? E.c : st ? st.trail : "#ffffff");
     const fxElem = sg.elem || (elem && elem !== "physical" ? elem : st && st.elem) || null;
     out.fx = { elem: fxElem, color: E ? E.c : trail2, trail: trail2, limb: sg.limb || clip2.limb, k, additive: !!(E && E.add), claw: st && st.claw };
@@ -52519,7 +53040,7 @@ void main() {
       h2.addC(Prim.cyl(12), mul(M(0.9, 0.46, 0, 0, 0, -0.18), M(0, 0, 0, 0, 0, 0, [0.62, 0.05, 0.86])), shade(c, -0.25), h2.bone);
     }
   };
-  function palette(look) {
+  function palette2(look) {
     const white = !!look.furWhite;
     const skin = white ? "#fafafa" : look.skin || "#f1c9a0";
     const bottom = look.bottom || "#2d3436";
@@ -52577,7 +53098,7 @@ void main() {
   }
   function buildBody(look, wpn) {
     const d = dims(look);
-    const pal = palette(look);
+    const pal = palette2(look);
     const b = new Builder();
     const Bk = d.Bk;
     const dep = d.depth;
@@ -62862,7 +63383,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/render/fxshapes.js
   var TAU16 = Math.PI * 2;
   var easeOut = (k) => 1 - (1 - k) ** 3;
-  var clamp013 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  var clamp014 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function hash5(n) {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return x - Math.floor(x);
@@ -63008,7 +63529,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.fillStyle = s.color || "rgba(30,18,12,1)";
       ellipsePath(g, s.r, s.r * 0.6);
       g.fill();
-      const hot = clamp013(1 - k * 2.5);
+      const hot = clamp014(1 - k * 2.5);
       if (hot > 0) {
         g.globalCompositeOperation = "lighter";
         g.globalAlpha = alpha2 * hot * 0.8;
@@ -63096,7 +63617,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const a0 = s.angle - dir * arc / 2;
     const reveal = s.reveal ?? 0.28;
     const headK = reveal > 0 ? Math.min(1, k / reveal) : 1;
-    const tailK = clamp013((k - reveal * 0.6) / (1 - reveal * 0.6));
+    const tailK = clamp014((k - reveal * 0.6) / (1 - reveal * 0.6));
     const head = a0 + dir * arc * easeOut(headK);
     const tail2 = a0 + dir * arc * tailK * tailK;
     if (Math.abs(head - tail2) < 0.02) return;
@@ -64204,7 +64725,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var MAX_SC = 380;
   var MIN_SC = 1;
   var easeOut2 = (k) => 1 - (1 - k) ** 3;
-  var clamp014 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  var clamp015 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function bill(r, x, y, h2) {
     const a = r.project(x, y, h2);
     if (a[0] < CULL) return null;
@@ -64758,7 +65279,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const W2 = r.cw * r.dpr, H2 = r.ch * r.dpr;
     const side = clip2.limb === "hB" || clip2.limb === "fB" || clip2.limb === "wB" ? -1 : 1;
     const fade2 = t > t1 ? 1 - (t - t1) / 0.12 : 1;
-    const u = clamp014((t - t0) / (t1 - t0));
+    const u = clamp015((t - t0) / (t1 - t0));
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalCompositeOperation = "lighter";
     if (kind === "flurry" || clip2.flurry && t >= clip2.flurry.t0 && t <= clip2.flurry.t1) {
@@ -64803,7 +65324,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return;
     }
     const P3 = smearPath(kind, side, clip2.sweep || 1);
-    const head = easeOut2(u), tail2 = kind === "straight" ? Math.max(0, head - 0.55) : clamp014((u - 0.25) / 0.75) ** 2;
+    const head = easeOut2(u), tail2 = kind === "straight" ? Math.max(0, head - 0.55) : clamp015((u - 0.25) / 0.75) ** 2;
     if (head - tail2 < 0.02) return;
     const wMax = H2 * (kind === "straight" ? 0.022 : blade2 ? 0.03 : 0.026) * (heavy ? 1.35 : 1);
     const N3 = 18;
