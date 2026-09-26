@@ -408,11 +408,82 @@ export function samplePose(A, t, pose) {
 }
 
 function walkLegs(P, pose) {
-  const w = pose.walk || 0;
-  const s = Math.sin(w), c = Math.cos(w);
-  const stride = 0.15;
-  P.fF = [0.04 + s * stride, -Math.max(0, c) * 0.08];
-  P.fB = [-0.04 - s * stride, -Math.max(0, -c) * 0.08];
+  const g = gaitParams(pose.speed ?? 3, pose.sprint);
+  const u = frac((pose.walk || 0) / TAU);
+  const a = legAt(u, g), b = legAt(frac(u + 0.5), g);
+  P.fF = [0.03 + a[0], -a[1]];
+  P.fB = [-0.03 + b[0], -b[1]];
+}
+
+// ------------------------------------------------------------ gait
+// A proper stride: each foot is planted and sweeps back under the body for a
+// share of the cycle (long when walking, short when running), then lifts off
+// behind — the heel kicking up — and reaches forward to land again. Running
+// has a flight phase with both feet off the ground; the body dips as it takes
+// its weight and rises as it pushes off; the arms swing against the legs.
+// The cycle's pace is matched to the ground speed so feet don't skate.
+const frac = (x) => x - Math.floor(x);
+const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+const mixN = (a, b, k) => a + (b - a) * k;
+
+/** Stride shape at a speed (m/s, for a human-sized body). */
+export function gaitParams(v, sprint) {
+  const k = clamp01((v - 1.4) / 3); // 0 walk … 1 run
+  const s = sprint ? 1 : 0;
+  return {
+    k, s,
+    sigma: 0.62 - 0.26 * k - 0.05 * s, // share of the cycle each foot is planted
+    R: 0.24 + 0.03 * k + 0.06 * s, // half the foot's sweep (2D leg units: 0.49 = a leg)
+    H: 0.06 + 0.17 * k + 0.12 * s, // how high the swinging heel kicks up
+  };
+}
+
+/** Stride cycles per second at a speed: the planted foot keeps pace with the ground. */
+export function gaitCadence(v, sprint) {
+  const g = gaitParams(v, sprint);
+  const sweep = (2 * g.R / 0.49) * 0.86; // metres the foot travels while planted (a 0.86 m leg)
+  return Math.max(0.5, v / (sweep / g.sigma));
+}
+
+/** One foot at cycle phase u (0 = touching down in front): [forward, lift]. */
+function legAt(u, g) {
+  if (u < g.sigma) return [g.R - 2 * g.R * (u / g.sigma), 0];
+  const v = (u - g.sigma) / (1 - g.sigma);
+  const x = -g.R * Math.cos(Math.PI * v);
+  const lift = g.H * Math.pow(Math.sin(Math.PI * Math.pow(v, 0.75)), 1.15);
+  return [x, lift];
+}
+
+/** Legs, bob, lean and (unless busy fighting) arms of the stride. */
+function gaitPose(P, pose, base) {
+  const g = gaitParams(pose.speed ?? 3, pose.sprint);
+  const u = frac((pose.walk || 0) / TAU);
+  const uB = frac(u + 0.5);
+  const a = legAt(u, g), b = legAt(uB, g);
+  P.fF = [0.03 + a[0], -a[1]];
+  P.fB = [-0.03 + b[0], -b[1]];
+  // the body is lowest mid-stance, highest (off the ground, running) in between
+  const mid = (w) => (w < g.sigma ? Math.sin(Math.PI * w / g.sigma) : 0);
+  const load = Math.max(mid(u), mid(uB));
+  P.b = [0.02 * g.k + 0.02 * g.s, 0.012 + load * (0.012 + 0.03 * g.k + 0.015 * g.s)];
+  if (g.sigma < 0.5) {
+    const fl = (w) => (w >= g.sigma && w < 0.5 ? Math.sin(Math.PI * (w - g.sigma) / (0.5 - g.sigma)) : 0);
+    P.z = (P.z || 0) + Math.max(fl(u), fl(uB)) * (0.025 * g.k + 0.025 * g.s);
+  }
+  P.l = (P.l || 0) * (1 - g.k) + 0.03 + 0.15 * g.k + 0.12 * g.s;
+  P.ht = (P.ht || 0) - P.l * 0.45;
+  if (pose.combat) return;
+  // arms swing against the legs: the right hand forward as the right foot goes back
+  const swF = clamp01(0.5 - a[0] / (2 * g.R)), swB = clamp01(0.5 - b[0] / (2 * g.R));
+  const run = clamp01(g.k * 1.3 - 0.2);
+  const walkArm = (sw) => [mixN(-0.1, 0.14, sw), 0.38 - sw * 0.03];
+  const runArm = (sw) => [mixN(-0.14, 0.22 + 0.04 * g.s, sw), mixN(0.28, 0.06, sw)];
+  const wF = walkArm(swF), wB = walkArm(swB), rF = runArm(swF), rB = runArm(swB);
+  P.hF = [mixN(wF[0], rF[0], run) + 0.02, mixN(wF[1], rF[1], run)];
+  P.hB = [mixN(wB[0], rB[0], run) - 0.01, mixN(wB[1], rB[1], run)];
+  P.eF = 1; P.eB = 1;
+  if (run > 0.5) { P.hand = 'fist'; P.handB = 'fist'; }
+  if (pose.sprint) { P.wF = base.wF === null ? null : -2.4; P.wB = base.wB === null ? null : -2.5; }
 }
 
 /** Mix two poses (used to ease between clips, stances and states). */
@@ -572,26 +643,7 @@ export function restPose(pose) {
     if (Array.isArray(base.hF)) P.hF = [base.hF[0], base.hF[1] + bounce * 0.015];
     if (Array.isArray(base.hB)) P.hB = [base.hB[0], base.hB[1] + bounce * 0.012];
   }
-  if (pose.moving) {
-    const w = pose.walk || 0;
-    const s = Math.sin(w), c = Math.cos(w);
-    const sprint = !!pose.sprint;
-    const stride = sprint ? 0.27 : 0.15;
-    P.fF = [0.03 + s * stride, -Math.max(0, c) * (sprint ? 0.18 : 0.08)];
-    P.fB = [-0.03 - s * stride, -Math.max(0, -c) * (sprint ? 0.18 : 0.08)];
-    P.b = [sprint ? 0.04 : 0, 0.02 - Math.abs(c) * (sprint ? 0.05 : 0.035)];
-    if (sprint) {
-      P.l = 0.34;
-      P.hF = [-s * 0.26 + 0.06, 0.16 + Math.max(0, s) * 0.06];
-      P.hB = [s * 0.26 + 0.02, 0.16 + Math.max(0, -s) * 0.06];
-      P.eF = 1; P.eB = 1;
-      P.hand = 'fist'; P.handB = 'fist';
-      P.wF = base.wF === null ? null : -2.4; P.wB = base.wB === null ? null : -2.5;
-    } else if (!pose.combat) {
-      P.hF = [-s * 0.14 + 0.03, 0.38];
-      P.hB = [s * 0.14 - 0.02, 0.38];
-    }
-  }
+  if (pose.moving) gaitPose(P, pose, base);
   if (pose.activity) activityPose(P, pose.activity, t);
   if (pose.bounce) {
     // Gear Fourth: the whole body bounces like a ball

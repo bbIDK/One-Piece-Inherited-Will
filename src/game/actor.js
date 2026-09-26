@@ -1,7 +1,7 @@
 import { Entity } from './entity.js';
 import { derive, baseAttrs, doriki } from './stats.js';
 import { drawCharacter, drawCharacterTinted, starPath, dir4 } from '../render/character.js';
-import { actionClip, stanceFor, STANCES, STANCE_ARMED, gunKind } from '../render/anims.js';
+import { actionClip, stanceFor, STANCES, STANCE_ARMED, gunKind, gaitCadence } from '../render/anims.js';
 import { actorVisuals, drawActorExtras } from '../render/combatfx.js';
 import { getAbility, canUse, startAbility, updateAbility } from './abilities.js';
 import { STYLES } from '../data/styles.js';
@@ -462,7 +462,9 @@ export class Actor extends Entity {
 
     const sp = Math.hypot(this.vx, this.vy);
     this.moving = sp > 0.4;
-    if (this.moving) this.walk += dt * sp * 2.6;
+    this.speed = sp;
+    // the stride cycle keeps pace with the ground (no skating feet): see render/anims.js gait()
+    if (this.moving) this.walk += dt * TAU * gaitCadence(sp / (this.look?.scale || 1), this.intent.sprint);
   }
 
   updateStatus(dt, game) {
@@ -744,7 +746,7 @@ export class Actor extends Entity {
     this._wasDown = this.state === 'knocked';
     if (this._getUpT > 0) this._getUpT -= vdt;
     const pose = {
-      facing: this.facing, walk: this.walk, moving: this.moving, time: now + this.seed,
+      facing: this.facing, walk: this.walk, moving: this.moving, speed: (this.speed || 0) / (this.look?.scale || 1), time: now + this.seed,
       state: this.state === 'knocked' ? 'knocked' : hurt ? 'hurt' : this.state,
       swimming: this.inWater, swim, swimDir: this.intent.mz || 0, alpha: alphaBuff ? alphaBuff.alpha : this.fadeAlpha, aura,
       anim, stanceP: STANCES[stance], combat, sprint: !!(this.intent.sprint && this.moving),

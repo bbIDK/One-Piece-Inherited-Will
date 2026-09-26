@@ -600,4 +600,41 @@ export const scenarios = {
       }
     },
   },
+
+  // the stride from the side: a jog and a sprint through one cycle, and a slow walk
+  gait: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.env.clock = 11; g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings(); document.querySelector('.look-hint')?.remove(); });
+      // an open stretch of ground
+      await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player;
+        for (let r = 4; r < 120; r += 2) for (let a = 0; a < 6.28; a += 0.3) {
+          const x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r;
+          let ok = true;
+          for (let d = -14; d <= 14 && ok; d += 1) if (!w.walkable(x + d, y) || w.isBlocked(x + d, y) || w.hitsProp(x + d, y, 0.8)) ok = false;
+          if (ok) { window.OP.teleport(x - 12, y); return; }
+        }
+      });
+      for (let i = 0; i < 6; i++) await step(page, 0.1);
+      const cyc = async (label, keys, n = 6) => {
+        await page.evaluate((keys) => { const g = window.OP.game; g.view3d.rig.yaw = -Math.PI / 2; g.view3d.rig.pitch = -0.05; g.view3d.rig.tp.dist = 3.4; for (const k of keys) window.OP.key(k, true); }, keys);
+        for (let i = 0; i < 12; i++) await step(page, 0.1);
+        const info = await page.evaluate(() => { const p = window.OP.game.player; return { speed: +(p.speed || 0).toFixed(2), walk: +p.walk.toFixed(2) }; });
+        const per = await page.evaluate(() => { const p = window.OP.game.player; return 1; });
+        void per;
+        console.log(label, JSON.stringify(info));
+        for (let i = 0; i < n; i++) {
+          await step(page, 0.06); await frames(page, 1);
+          await snap(`${label}-${i}`);
+        }
+        await page.evaluate((keys) => { for (const k of keys) window.OP.key(k, false); }, keys);
+        for (let i = 0; i < 8; i++) await step(page, 0.1);
+        await page.evaluate(() => { const g = window.OP.game; window.OP.teleport(g.player.x - 6, g.player.y); });
+      };
+      await cyc('jog', ['D']);
+      await cyc('sprint', ['D', 'Shift']);
+    },
+  },
 };

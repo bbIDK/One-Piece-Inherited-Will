@@ -49710,11 +49710,75 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return P4;
   }
   function walkLegs(P4, pose) {
-    const w = pose.walk || 0;
-    const s = Math.sin(w), c = Math.cos(w);
-    const stride = 0.15;
-    P4.fF = [0.04 + s * stride, -Math.max(0, c) * 0.08];
-    P4.fB = [-0.04 - s * stride, -Math.max(0, -c) * 0.08];
+    const g = gaitParams(pose.speed ?? 3, pose.sprint);
+    const u = frac((pose.walk || 0) / TAU7);
+    const a = legAt(u, g), b = legAt(frac(u + 0.5), g);
+    P4.fF = [0.03 + a[0], -a[1]];
+    P4.fB = [-0.03 + b[0], -b[1]];
+  }
+  var frac = (x) => x - Math.floor(x);
+  var clamp013 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
+  var mixN = (a, b, k) => a + (b - a) * k;
+  function gaitParams(v, sprint) {
+    const k = clamp013((v - 1.4) / 3);
+    const s = sprint ? 1 : 0;
+    return {
+      k,
+      s,
+      sigma: 0.62 - 0.26 * k - 0.05 * s,
+      // share of the cycle each foot is planted
+      R: 0.24 + 0.03 * k + 0.06 * s,
+      // half the foot's sweep (2D leg units: 0.49 = a leg)
+      H: 0.06 + 0.17 * k + 0.12 * s
+      // how high the swinging heel kicks up
+    };
+  }
+  function gaitCadence(v, sprint) {
+    const g = gaitParams(v, sprint);
+    const sweep = 2 * g.R / 0.49 * 0.86;
+    return Math.max(0.5, v / (sweep / g.sigma));
+  }
+  function legAt(u, g) {
+    if (u < g.sigma) return [g.R - 2 * g.R * (u / g.sigma), 0];
+    const v = (u - g.sigma) / (1 - g.sigma);
+    const x = -g.R * Math.cos(Math.PI * v);
+    const lift = g.H * Math.pow(Math.sin(Math.PI * Math.pow(v, 0.75)), 1.15);
+    return [x, lift];
+  }
+  function gaitPose(P4, pose, base2) {
+    const g = gaitParams(pose.speed ?? 3, pose.sprint);
+    const u = frac((pose.walk || 0) / TAU7);
+    const uB = frac(u + 0.5);
+    const a = legAt(u, g), b = legAt(uB, g);
+    P4.fF = [0.03 + a[0], -a[1]];
+    P4.fB = [-0.03 + b[0], -b[1]];
+    const mid = (w) => w < g.sigma ? Math.sin(Math.PI * w / g.sigma) : 0;
+    const load = Math.max(mid(u), mid(uB));
+    P4.b = [0.02 * g.k + 0.02 * g.s, 0.012 + load * (0.012 + 0.03 * g.k + 0.015 * g.s)];
+    if (g.sigma < 0.5) {
+      const fl2 = (w) => w >= g.sigma && w < 0.5 ? Math.sin(Math.PI * (w - g.sigma) / (0.5 - g.sigma)) : 0;
+      P4.z = (P4.z || 0) + Math.max(fl2(u), fl2(uB)) * (0.025 * g.k + 0.025 * g.s);
+    }
+    P4.l = (P4.l || 0) * (1 - g.k) + 0.03 + 0.15 * g.k + 0.12 * g.s;
+    P4.ht = (P4.ht || 0) - P4.l * 0.45;
+    if (pose.combat) return;
+    const swF = clamp013(0.5 - a[0] / (2 * g.R)), swB = clamp013(0.5 - b[0] / (2 * g.R));
+    const run = clamp013(g.k * 1.3 - 0.2);
+    const walkArm = (sw2) => [mixN(-0.1, 0.14, sw2), 0.38 - sw2 * 0.03];
+    const runArm = (sw2) => [mixN(-0.14, 0.22 + 0.04 * g.s, sw2), mixN(0.28, 0.06, sw2)];
+    const wF = walkArm(swF), wB = walkArm(swB), rF = runArm(swF), rB = runArm(swB);
+    P4.hF = [mixN(wF[0], rF[0], run) + 0.02, mixN(wF[1], rF[1], run)];
+    P4.hB = [mixN(wB[0], rB[0], run) - 0.01, mixN(wB[1], rB[1], run)];
+    P4.eF = 1;
+    P4.eB = 1;
+    if (run > 0.5) {
+      P4.hand = "fist";
+      P4.handB = "fist";
+    }
+    if (pose.sprint) {
+      P4.wF = base2.wF === null ? null : -2.4;
+      P4.wB = base2.wB === null ? null : -2.5;
+    }
   }
   function blendPose(A, B4, k) {
     if (!A || k >= 1) return B4;
@@ -49910,29 +49974,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (Array.isArray(base2.hF)) P4.hF = [base2.hF[0], base2.hF[1] + bounce * 0.015];
       if (Array.isArray(base2.hB)) P4.hB = [base2.hB[0], base2.hB[1] + bounce * 0.012];
     }
-    if (pose.moving) {
-      const w = pose.walk || 0;
-      const s = Math.sin(w), c = Math.cos(w);
-      const sprint = !!pose.sprint;
-      const stride = sprint ? 0.27 : 0.15;
-      P4.fF = [0.03 + s * stride, -Math.max(0, c) * (sprint ? 0.18 : 0.08)];
-      P4.fB = [-0.03 - s * stride, -Math.max(0, -c) * (sprint ? 0.18 : 0.08)];
-      P4.b = [sprint ? 0.04 : 0, 0.02 - Math.abs(c) * (sprint ? 0.05 : 0.035)];
-      if (sprint) {
-        P4.l = 0.34;
-        P4.hF = [-s * 0.26 + 0.06, 0.16 + Math.max(0, s) * 0.06];
-        P4.hB = [s * 0.26 + 0.02, 0.16 + Math.max(0, -s) * 0.06];
-        P4.eF = 1;
-        P4.eB = 1;
-        P4.hand = "fist";
-        P4.handB = "fist";
-        P4.wF = base2.wF === null ? null : -2.4;
-        P4.wB = base2.wB === null ? null : -2.5;
-      } else if (!pose.combat) {
-        P4.hF = [-s * 0.14 + 0.03, 0.38];
-        P4.hB = [s * 0.14 - 0.02, 0.38];
-      }
-    }
+    if (pose.moving) gaitPose(P4, pose, base2);
     if (pose.activity) activityPose(P4, pose.activity, t);
     if (pose.bounce) {
       const k = Math.abs(Math.sin(t * 5.2));
@@ -53615,7 +53657,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   // src/render/combatfx.js
   var TAU10 = Math.PI * 2;
   var rnd = (a, b) => a + Math.random() * (b - a);
-  var clamp013 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  var clamp014 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   var ELEM = {
     physical: { c: "#ffffff", spark: ["#ffffff", "#fff8e1", "#ffe0b2"], kind: "spark" },
     slash: { c: "#e3f2fd", spark: ["#ffffff", "#e3f2fd"], kind: "spark" },
@@ -55124,7 +55166,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const sg = SIG[def.id] || {};
     const st = styleOf(def, actor);
     const E = elem ? elemOf(elem) : null;
-    const k = t < w ? clamp013(t / Math.max(0.04, w)) : Math.max(0, 1 - (t - w) / 0.3);
+    const k = t < w ? clamp014(t / Math.max(0.04, w)) : Math.max(0, 1 - (t - w) / 0.3);
     const trail2 = sg.trail || (E && elem !== "physical" ? E.c : st ? st.trail : "#ffffff");
     const fxElem = sg.elem || (elem && elem !== "physical" ? elem : st && st.elem) || null;
     out.fx = { elem: fxElem, color: E ? E.c : trail2, trail: trail2, limb: sg.limb || clip2.limb, k, additive: !!(E && E.add), claw: st && st.claw };
@@ -56846,7 +56888,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!(this.z > 0.25)) this.updateWater(dt, game);
       const sp = Math.hypot(this.vx, this.vy);
       this.moving = sp > 0.4;
-      if (this.moving) this.walk += dt * sp * 2.6;
+      this.speed = sp;
+      if (this.moving) this.walk += dt * TAU * gaitCadence(sp / (this.look?.scale || 1), this.intent.sprint);
     }
     updateStatus(dt, game) {
       const st = this.status;
@@ -57174,6 +57217,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         facing: this.facing,
         walk: this.walk,
         moving: this.moving,
+        speed: (this.speed || 0) / (this.look?.scale || 1),
         time: now2 + this.seed,
         state: this.state === "knocked" ? "knocked" : hurt ? "hurt" : this.state,
         swimming: this.inWater,
@@ -71451,7 +71495,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/render/fxshapes.js
   var TAU19 = Math.PI * 2;
   var easeOut = (k) => 1 - (1 - k) ** 3;
-  var clamp014 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  var clamp015 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function hash8(n) {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return x - Math.floor(x);
@@ -71604,7 +71648,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     ground(g, s, k, a) {
       const alpha2 = Math.min(1, (1 - k) * 2) * a;
       softDisc(g, s.r, s.color || "rgba(30,18,12,1)", alpha2 * 0.62);
-      const hot = clamp014(1 - k * 2.5);
+      const hot = clamp015(1 - k * 2.5);
       if (hot > 0) {
         g.globalCompositeOperation = "lighter";
         g.globalAlpha = alpha2 * hot * 0.8;
@@ -71692,7 +71736,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const a0 = s.angle - dir * arc / 2;
     const reveal = s.reveal ?? 0.28;
     const headK = reveal > 0 ? Math.min(1, k / reveal) : 1;
-    const tailK = clamp014((k - reveal * 0.6) / (1 - reveal * 0.6));
+    const tailK = clamp015((k - reveal * 0.6) / (1 - reveal * 0.6));
     const head = a0 + dir * arc * easeOut(headK);
     const tail2 = a0 + dir * arc * tailK * tailK;
     if (Math.abs(head - tail2) < 0.02) return;
@@ -72801,7 +72845,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var MIN_SC = 1;
   var NEAR_SC = 200;
   var easeOut2 = (k) => 1 - (1 - k) ** 3;
-  var clamp015 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  var clamp016 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function bill(r, x, y, h2) {
     const a = r.project(x, y, h2);
     if (a[0] < CULL) return null;
@@ -73367,7 +73411,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const W3 = r.cw * r.dpr, H2 = r.ch * r.dpr;
     const side = clip2.limb === "hB" || clip2.limb === "fB" || clip2.limb === "wB" ? -1 : 1;
     const fade2 = t > t1 ? 1 - (t - t1) / 0.12 : 1;
-    const u = clamp015((t - t0) / (t1 - t0));
+    const u = clamp016((t - t0) / (t1 - t0));
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalCompositeOperation = "lighter";
     if (kind === "flurry" || clip2.flurry && t >= clip2.flurry.t0 && t <= clip2.flurry.t1) {
@@ -73412,7 +73456,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return;
     }
     const P4 = smearPath(kind, side, clip2.sweep || 1);
-    const head = easeOut2(u), tail2 = kind === "straight" ? Math.max(0, head - 0.55) : clamp015((u - 0.2) / 0.8) ** 2;
+    const head = easeOut2(u), tail2 = kind === "straight" ? Math.max(0, head - 0.55) : clamp016((u - 0.2) / 0.8) ** 2;
     if (head - tail2 < 0.02) return;
     const wMax = H2 * (kind === "straight" ? 0.026 : blade2 ? 0.042 : 0.032) * (heavy ? 1.35 : 1);
     const N4 = 22;
@@ -77096,8 +77140,8 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
           s2.el.classList.remove("none-left");
         }
         const cd = def ? p.cooldowns[def.id] || 0 : 0;
-        const frac = def && def.cd ? clamp(cd / (def.cd * (p.cdMul ?? 1)), 0, 1) : 0;
-        s2.cd.style.transform = `scaleY(${frac})`;
+        const frac2 = def && def.cd ? clamp(cd / (def.cd * (p.cdMul ?? 1)), 0, 1) : 0;
+        s2.cd.style.transform = `scaleY(${frac2})`;
         const txt = cd > 0.05 ? cd >= 10 ? Math.ceil(cd) : cd.toFixed(1) : "";
         if (s2.cdt.textContent !== String(txt)) s2.cdt.textContent = txt;
       }
@@ -77252,12 +77296,12 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
     let last = -1;
     return {
       el,
-      set(frac, text) {
-        frac = clamp(frac, 0, 1);
-        if (Math.abs(frac - last) > 2e-3) {
-          i.style.width = frac * 100 + "%";
-          b.style.width = frac * 100 + "%";
-          last = frac;
+      set(frac2, text) {
+        frac2 = clamp(frac2, 0, 1);
+        if (Math.abs(frac2 - last) > 2e-3) {
+          i.style.width = frac2 * 100 + "%";
+          b.style.width = frac2 * 100 + "%";
+          last = frac2;
         }
         if (span2.textContent !== text) span2.textContent = text;
       }
@@ -79578,22 +79622,22 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
         }
         return;
       }
-      const frac = Math.min(0.3, dmg / target.d.maxHp);
+      const frac2 = Math.min(0.3, dmg / target.d.maxHp);
       const def = p.action?.def || {};
       const src = def.source || "";
-      let gain = frac * tf2 * 6;
+      let gain = frac2 * tf2 * 6;
       if (c.traits.includes("born_fighter")) gain *= 1.15;
       if (src.startsWith("fruit") && c.fruit) {
         this.addFruitMastery(gain * 0.9);
-        this.train("wil", frac * tf2 * 18);
+        this.train("wil", frac2 * tf2 * 18);
       } else if (src.startsWith("haki")) {
         this.addHaki(getAbility(def.id)?.hakiType || "armament", gain * 0.5);
-        this.train("wil", frac * tf2 * 20);
+        this.train("wil", frac2 * tf2 * 20);
       } else {
         this.addStyleMastery(p.style, gain);
         const kind = weaponKindOf(p, def);
         this.addWeaponMastery(kind, gain * 1.2);
-        this.train(kind === "gun" ? "agi" : "str", frac * tf2 * 40);
+        this.train(kind === "gun" ? "agi" : "str", frac2 * tf2 * 40);
         if (p.armament) this.addHaki("armament", gain * 0.5);
         this.maybeAwaken("armament", tf2);
       }
@@ -80409,9 +80453,9 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       if (id === "coating") ship.coated = true;
       else {
         ship.upgrades.push(id);
-        const frac = ship.hull / ship.maxHull;
+        const frac2 = ship.hull / ship.maxHull;
         ship.applyDef();
-        ship.hull = ship.maxHull * frac;
+        ship.hull = ship.maxHull * frac2;
       }
       g.log(`${SHIP_UPGRADES[id].name} fitted to the ${ship.name}.`, "#a5d6a7");
       persist(g);
@@ -90671,9 +90715,9 @@ Trains by: ${TRAINS_BY[k]}` },
   var islandRec = (g, id) => g.surface?.islands?.find((i) => i.id === id) || null;
   var spotOf = (g, islandId, spot) => islandRec(g, islandId)?.spots?.[spot] || null;
   var populated = (g, islandId) => !!g.spawner?.populated?.has(islandId);
-  var healPlayer = (c, frac = 1) => {
+  var healPlayer = (c, frac2 = 1) => {
     const p = c.player;
-    if (p?.d) p.hp = Math.max(p.hp, Math.round(p.d.maxHp * frac));
+    if (p?.d) p.hp = Math.max(p.hp, Math.round(p.d.maxHp * frac2));
   };
   function squad(g, islandId, spotId, enemies, radius = 4) {
     const s = spotOf(g, islandId, spotId);
