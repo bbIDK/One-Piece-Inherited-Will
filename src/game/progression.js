@@ -1,52 +1,143 @@
-// How characters grow — without grinding.
-//  * Mastery (style / fruit) grows when you land hits on opponents who are a
-//    real threat to you (threatFactor). Beating up weaklings teaches nothing.
-//  * Defeating named foes and bosses grants BREAKTHROUGHS: attribute points
-//    you spend in the Character screen.
-//  * Trainers and sparring grant mastery and attributes (limited per day).
-//  * Haki levels rise with use against worthy foes and with training.
-//  * Pirates earn bounties for defeating Marines and notorious people.
-import { threatFactor, ATTR_CAP } from './stats.js';
+// How characters grow — by doing, never by grinding or spending points.
+//  * Attributes train themselves from what you do in real fights: landing
+//    blows (Strength, or Agility with ranged weapons), slipping past attacks
+//    (Agility), blocking (Endurance), taking punishment (Vitality) and getting
+//    back up or facing someone stronger (Willpower). Only opponents who are a
+//    real threat count — beating up weaklings teaches nothing.
+//  * Weapon mastery: the more you fight with fists, legs, swords, guns,
+//    staffs or axes, the harder that kind of weapon hits.
+//  * Style mastery unlocks techniques; Devil Fruit mastery unlocks fruit moves.
+//  * Great victories (bosses, story quests, spars) are BREAKTHROUGHS: your
+//    body surges in the directions you have been training.
+//  * Haki is never taught to a nobody: Armament stirs in those who have grown
+//    strong enough, Observation in those who have learned to read attacks —
+//    at a random moment of a hard fight, like in the stories.
+//  * Legends: great feats the world remembers.
+import { threatFactor, ATTR_CAP, ATTRS } from './stats.js';
 import { unlockedFruitTechniques, FRUITS } from '../data/fruits.js';
-import { getAbility } from './abilities.js';
+import { getAbility, weaponKindOf } from './abilities.js';
 import { STYLES } from '../data/styles.js';
-import { persist, refreshPlayer } from './lineage.js';
+import { persist, refreshPlayer, hakiKnown, needsHaki } from './lineage.js';
 import { earn } from './inventory.js';
 import { formatBerries } from '../core/math.js';
-import { DREAMS } from '../data/dreams.js';
+import { LEGENDS } from '../data/dreams.js';
+
+const KEYS = ['str', 'agi', 'end', 'vit', 'wil'];
+export const WEAPON_KINDS = { fists: 'Fists', legs: 'Legs', sword: 'Swords', gun: 'Guns', staff: 'Staffs', axe: 'Axes' };
 
 export class Progression {
   constructor(game) {
     this.game = game;
     game.on('playerHit', (target, dmg) => this.onPlayerHit(target, dmg));
     game.on('knockout', (a, att) => this.onKnockout(a, att));
+    game.on('playerEvaded', (att) => this.onEvade(att));
+    game.on('playerBlocked', (att) => this.onBlocked(att));
+    game.on('parry', (att) => this.onParry(att));
+    game.on('playerHurt', (att, n) => this.onHurt(att, n));
+    game.on('playerGotUp', () => this.train('wil', 10, true));
+    game.on('questDone', () => this.checkDream());
+    let t = 0;
+    game.on('tick', (dt) => { if ((t += dt) > 5) { t = 0; this.checkDream(); } });
   }
 
   get char() { return this.game.state?.char; }
 
+  /** How much a fight against this actor is worth (0 = nothing to learn). */
+  worth(a) {
+    const p = this.game.player;
+    if (!a || !a.power || !p) return 0;
+    return threatFactor(a.power(), p.power());
+  }
+
+  // ------------------------------------------------------------ fighting
   onPlayerHit(target, dmg) {
     const g = this.game, p = g.player, c = this.char;
     if (!c || !target.d) return;
-    const tf = threatFactor(target.power(), p.power());
+    const tf = this.worth(target);
     if (tf <= 0) {
-      if (!this.weakNote) { this.weakNote = true; g.hint('weak', 'Beating up weak opponents teaches you nothing. Grow by training, by fighting people stronger than you, and by overcoming the great foes of each island.'); }
+      if (!this.weakNote) { this.weakNote = true; g.hint('weak', 'Beating up weak opponents teaches you nothing. You grow by training and by fighting people who are a real threat to you.'); }
       return;
     }
     const frac = Math.min(0.3, dmg / target.d.maxHp);
-    const src = p.action?.def?.source || '';
+    const def = p.action?.def || {};
+    const src = def.source || '';
     let gain = frac * tf * 6;
     if (c.traits.includes('born_fighter')) gain *= 1.15;
     if (src.startsWith('fruit') && c.fruit) {
       this.addFruitMastery(gain * 0.9);
-    } else if (src.startsWith('haki') || p.armament) {
-      this.addHaki(p.armament ? 'armament' : (getAbility(p.action?.def?.id)?.hakiType || 'armament'), gain * 0.5);
-      if (!src.startsWith('haki')) this.addStyleMastery(p.style, gain * 0.6);
+      this.train('wil', frac * tf * 18);
+    } else if (src.startsWith('haki')) {
+      this.addHaki(getAbility(def.id)?.hakiType || 'armament', gain * 0.5);
+      this.train('wil', frac * tf * 20);
     } else {
-      let m = gain;
-      if (c.dream === 'swordsman' && STYLES[p.style]?.weapon === 'sword') m *= 1.2;
-      this.addStyleMastery(p.style, m);
+      this.addStyleMastery(p.style, gain);
+      const kind = weaponKindOf(p, def);
+      this.addWeaponMastery(kind, gain * 1.2);
+      this.train(kind === 'gun' ? 'agi' : 'str', frac * tf * 40);
+      if (p.armament) this.addHaki('armament', gain * 0.5);
+      this.maybeAwaken('armament', tf);
     }
     if (p.observation) this.addHaki('observation', gain * 0.3);
+  }
+
+  onEvade(att) {
+    const tf = this.worth(att);
+    if (tf <= 0) return;
+    const c = this.char;
+    c.stats.evades = (c.stats.evades || 0) + 1;
+    this.train('agi', 4 * tf);
+    this.maybeAwaken('observation', tf);
+  }
+
+  onBlocked(att) {
+    const tf = this.worth(att);
+    if (tf > 0) this.train('end', 3 * tf);
+  }
+
+  onParry(att) {
+    const tf = this.worth(att);
+    if (tf <= 0) return;
+    this.train('agi', 3 * tf);
+    this.train('end', 2 * tf);
+    this.maybeAwaken('observation', tf * 1.5);
+  }
+
+  onHurt(att, n) {
+    const p = this.game.player;
+    const tf = att ? this.worth(att) : 0.5;
+    if (tf <= 0 || !p.d) return;
+    this.train('vit', Math.min(0.4, n / p.d.maxHp) * 45 * tf);
+  }
+
+  // ------------------------------------------------------------ training
+  /** Add practice to an attribute; it rises by itself once practice is enough. */
+  train(key, amt, silent) {
+    const c = this.char;
+    if (!c || !(amt > 0)) return;
+    c.train = c.train || { str: 0, agi: 0, end: 0, vit: 0, wil: 0 };
+    c.train[key] = (c.train[key] || 0) + amt;
+    // recent practice also steers where breakthroughs go
+    c.recent = c.recent || {};
+    c.recent[key] = (c.recent[key] || 0) * 0.995 + amt;
+    let need = 14 + c.attrs[key] * 3.5;
+    let ups = 0;
+    while (c.train[key] >= need && c.attrs[key] < ATTR_CAP) {
+      c.train[key] -= need;
+      c.attrs[key] += 1;
+      ups++;
+      need = 14 + c.attrs[key] * 3.5;
+    }
+    if (ups) {
+      refreshPlayer(this.game);
+      if (!silent || ups) this.game.log(`${ATTRS[key].name} +${ups} (${c.attrs[key]})`, '#a5d6a7');
+    }
+  }
+
+  /** Progress (0..1) towards the next point of an attribute, for the UI. */
+  trainProgress(key) {
+    const c = this.char;
+    if (!c) return 0;
+    return Math.min(1, (c.train?.[key] || 0) / (14 + c.attrs[key] * 3.5));
   }
 
   addStyleMastery(style, amt) {
@@ -54,7 +145,17 @@ export class Progression {
     const before = p.masteries[style] || 0;
     const after = Math.min(100, before + amt);
     p.masteries[style] = after;
-    if (Math.floor(after / 5) > Math.floor(before / 5)) this.game.log(`${STYLES[style]?.name || style} mastery: ${Math.floor(after)}`, '#90caf9');
+    if (Math.floor(after / 5) > Math.floor(before / 5)) this.game.log(`${STYLES[style]?.name || style} mastery ${Math.floor(after)}`, '#90caf9');
+  }
+
+  addWeaponMastery(kind, amt) {
+    const c = this.char;
+    c.weaponMastery = c.weaponMastery || {};
+    const before = c.weaponMastery[kind] || 0;
+    const after = Math.min(100, before + amt);
+    c.weaponMastery[kind] = after;
+    this.game.player.weaponMastery = c.weaponMastery;
+    if (Math.floor(after / 5) > Math.floor(before / 5)) this.game.log(`${WEAPON_KINDS[kind] || kind} mastery ${Math.floor(after)} — your ${(WEAPON_KINDS[kind] || kind).toLowerCase()} hit harder`, '#90caf9');
   }
 
   addFruitMastery(amt) {
@@ -68,62 +169,106 @@ export class Progression {
       if (had.has(id)) continue;
       if (!c.techniques.includes(id)) c.techniques.push(id);
       const d = getAbility(id);
-      g.ui.toast('NEW TECHNIQUE', `${d.icon || ''} ${d.name}`, '#ffab91');
-      g.log(`Your mastery of the ${FRUITS[c.fruit].name} reveals a new technique: ${d.name}. Assign it in Skills (K).`, '#ffab91');
+      if (needsHaki(d) && !hakiKnown(c)) continue; // it reveals itself once Haki awakens
+      g.ui.toast('NEW TECHNIQUE', d.name, '#ffab91');
+      g.log(`Your mastery of the ${FRUITS[c.fruit].name} reveals a new technique: ${d.name}. Put it on your hotbar from the Skills tab.`, '#ffab91');
       const empty = c.hotbar.findIndex((x) => !x);
-      if (empty >= 0) c.hotbar[empty] = id; else if (c.hotbar.length < 6) c.hotbar.push(id);
+      if (empty >= 0 && empty < 6) c.hotbar[empty] = id; else if (c.hotbar.length < 6) c.hotbar.push(id);
+    }
+  }
+
+  // ---------------------------------------------------------------- haki
+  /** Armament / Observation stir by themselves in a hard fight, once you're ready. */
+  maybeAwaken(type, tf) {
+    const c = this.char;
+    if (!c || c.haki[type] || tf < 0.6) return;
+    const perk = 1 + (this.game.state.legacy?.perks?.haki || 0) * 0.5;
+    if (type === 'armament') {
+      const wm = Math.max(0, ...Object.values(c.weaponMastery || {}));
+      const str = c.attrs.str;
+      if (str < 22 && wm < 35) return;
+      const sure = str >= 45 || wm >= 80;
+      const chance = (0.004 + Math.max(0, str - 22) * 0.0006 + Math.max(0, wm - 35) * 0.0003) * perk;
+      if (sure || Math.random() < chance) this.awakenHaki('armament', 3, 'In the middle of the fight your arm turns black as iron. Something in you has hardened.');
+    } else if (type === 'observation') {
+      const agi = c.attrs.agi;
+      if (agi < 22 && (c.stats.evades || 0) < 60) return;
+      const sure = agi >= 45 || (c.stats.evades || 0) >= 400;
+      const chance = (0.015 + Math.max(0, agi - 22) * 0.002) * perk;
+      if (sure || Math.random() < chance) this.awakenHaki('observation', 3, 'For a heartbeat you hear your opponent\'s next move before it happens.');
     }
   }
 
   addHaki(type, amt, cap = 100) {
     const g = this.game, c = this.char;
     if (!c.haki[type]) return; // must be awakened first
-    const mul = 1 + (g.state.legacy?.perks?.haki || 0) * 0.25 * (c.race === 'skypiean' && type === 'observation' ? 2 : 1);
+    const mul = (1 + (g.state.legacy?.perks?.haki || 0) * 0.25) * (c.race === 'skypiean' && type === 'observation' ? 2 : 1);
     const before = c.haki[type];
     c.haki[type] = Math.min(cap, before + amt * mul);
-    if (Math.floor(c.haki[type] / 10) > Math.floor(before / 10)) g.log(`${type[0].toUpperCase() + type.slice(1)} Haki: level ${Math.floor(c.haki[type])}`, '#ce93d8');
+    if (Math.floor(c.haki[type] / 10) > Math.floor(before / 10)) g.log(`${type[0].toUpperCase() + type.slice(1)} Haki level ${Math.floor(c.haki[type])}`, '#ce93d8');
   }
 
   awakenHaki(type, level = 5, how = '') {
     const g = this.game, c = this.char, p = g.player;
     if (c.haki[type]) return false;
+    const first = !c.haki.armament && !c.haki.observation && !c.haki.conqueror;
     c.haki[type] = level;
     p.hakiSkill = c.haki;
     p.haki = p.d.maxHaki;
     const names = { armament: 'ARMAMENT HAKI', observation: 'OBSERVATION HAKI', conqueror: "CONQUEROR'S HAKI" };
     g.ui.toast(names[type], how || 'Your will takes shape.', type === 'conqueror' ? '#ff5252' : '#ce93d8');
-    g.log(`${names[type]} awakened! Toggle it with ${type === 'armament' ? 'R' : type === 'observation' ? 'T' : 'G'}.`, '#ce93d8');
+    g.fx.impactFrame?.(0.12);
+    g.log(`${names[type]} awakened. Press ${type === 'armament' ? 'R' : type === 'observation' ? 'T' : 'G'} to use it.${first ? ' Haki draws on a new spirit bar under your stamina; it refills when you rest it.' : ''}`, '#ce93d8');
     g.emit('hakiAwakened', type);
     persist(g);
     return true;
   }
 
-  /** Attribute points to spend. */
+  // ---------------------------------------------------------- breakthroughs
+  /**
+   * A great victory: your body surges. `points` attribute gains go where you
+   * have been training lately (no points to spend by hand).
+   */
   breakthrough(points, why) {
     const g = this.game, c = this.char;
-    if (c.dream === 'warrior') points += 1;
-    c.unspent = (c.unspent || 0) + points;
-    g.ui.toast('BREAKTHROUGH!', `${why ? why + ' — ' : ''}+${points} attribute point${points > 1 ? 's' : ''} (open Character: C)`, '#ffd54f');
+    if (!c || !(points > 0)) return;
+    const recent = c.recent || {};
+    const gains = {};
+    for (let i = 0; i < points; i++) {
+      // weighted by recent practice, with a little of everything
+      const weights = KEYS.map((k) => [k, 1 + (recent[k] || 0)]);
+      let total = weights.reduce((s, [, w]) => s + w, 0);
+      let r = Math.random() * total;
+      let pick = 'vit';
+      for (const [k, w] of weights) { if ((r -= w) <= 0) { pick = k; break; } }
+      if (c.attrs[pick] >= ATTR_CAP) pick = KEYS.find((k) => c.attrs[k] < ATTR_CAP) || pick;
+      c.attrs[pick] = Math.min(ATTR_CAP, c.attrs[pick] + 1);
+      gains[pick] = (gains[pick] || 0) + 1;
+      if (recent[pick]) recent[pick] *= 0.6;
+    }
+    refreshPlayer(g);
+    const txt = Object.entries(gains).map(([k, v]) => `${ATTRS[k].short} +${v}`).join('  ');
+    g.ui.toast('BREAKTHROUGH', `${why ? why + ' — ' : ''}${txt}`, '#ffd54f');
+    g.log(`Breakthrough${why ? ` (${why})` : ''}: ${txt}`, '#ffd54f');
     g.audio?.sfx('breakthrough');
   }
 
   raiseAttr(key, amt = 1, silent) {
     const g = this.game, c = this.char;
     c.attrs[key] = Math.min(ATTR_CAP, (c.attrs[key] || 0) + amt);
-    if (!silent) g.log(`${key.toUpperCase()} +${amt} (${c.attrs[key]})`, '#a5d6a7');
+    if (!silent) g.log(`${ATTRS[key]?.name || key} +${amt} (${c.attrs[key]})`, '#a5d6a7');
     refreshPlayer(g);
   }
 
   addBounty(amount, why) {
     const g = this.game, c = this.char;
     if (c.faction === 'marine') return;
-    if (c.dream === 'king') amount *= 1.15;
     amount = Math.round(amount / 1000) * 1000;
     if (amount <= 0) return;
     const first = !c.bounty;
     c.bounty = (c.bounty || 0) + amount;
     if (c.faction !== 'pirate') c.faction = 'pirate';
-    g.ui.toast(first ? 'WANTED!' : 'BOUNTY RAISED', `${formatBerries(c.bounty)}${why ? ' — ' + why : ''}`, '#ffd54f');
+    g.ui.toast(first ? 'WANTED' : 'BOUNTY RAISED', `${formatBerries(c.bounty)}${why ? ' — ' + why : ''}`, '#ffd54f');
     g.emit('bountyChanged', c.bounty, first);
   }
 
@@ -135,18 +280,18 @@ export class Progression {
     c.stats.kills = (c.stats.kills || 0) + 1;
     if (a.npcId) c.defeated[a.npcId] = (c.defeated[a.npcId] || 0) + 1;
     const tf = threatFactor(a.power(), p.power());
+    if (tf > 0.8) this.train('wil', 6 * tf);
     // bounty for attacking the Marines / World Government
     if (a.faction === 'marine' || a.faction === 'cp') {
       const b = a.bountyValue ?? Math.round(4000 * Math.pow(Math.max(1, a.tier), 2.4));
       this.addBounty(b, a.boss ? `defeated ${a.name}` : null);
     }
-    if (a.bountyValue && a.faction !== 'marine' && a.faction !== 'cp' && a.infamy) this.addBounty(a.bountyValue, `defeated ${a.name}`);
+    if (a.bountyValue && a.faction !== 'marine' && a.faction !== 'cp' && a.infamy && c.faction !== 'marine' && c.faction !== 'civilian') this.addBounty(a.bountyValue, `defeated ${a.name}`);
     if (a.reward) earn(g, a.reward, `from ${a.name}`);
     if (a.boss && !c.bosses.includes(a.npcId || a.name)) {
       c.bosses.push(a.npcId || a.name);
       this.breakthrough(a.breakthrough ?? 3, `Defeated ${a.name}`);
-      const style = p.style;
-      this.addStyleMastery(style, 4);
+      this.addStyleMastery(p.style, 4);
       if (c.fruit) this.addFruitMastery(4);
       g.emit('bossDefeated', a);
       this.checkDream();
@@ -158,23 +303,21 @@ export class Progression {
     }
   }
 
+  // ---------------------------------------------------------------- legends
+  /** Check every Legend (the old "dream" hook name is kept for callers). */
   checkDream() {
     const g = this.game, c = this.char;
-    if (c.dreamDone) return;
-    const d = c.dream;
-    let done = false;
-    if (d === 'warrior' && (c.bosses || []).length >= 12) done = true;
-    if (d === 'world_map' && (c.discovered || []).length >= 60) done = true;
-    if (d === 'liberation' && (c.liberated || []).length >= 6) done = true;
-    if (d === 'true_history' && (c.flags.poneglyphsRead || 0) >= 8) done = true;
-    if (d === 'swordsman' && (c.bosses || []).includes('mihawk')) done = true;
-    if (d === 'admiral' && c.marineRank === 'Admiral') done = true;
-    if (d === 'king' && c.flags.laughTale) done = true;
-    if (d === 'all_blue' && c.flags.allBlue) done = true;
-    if (done) {
-      c.dreamDone = true;
-      g.ui.toast('DREAM FULFILLED', `${DREAMS[d].icon} ${DREAMS[d].name}`, '#ffd54f');
-      g.log('You have become a legend. You may keep sailing — or retire from the Menu and pass your will on.', '#ffd54f');
+    if (!c) return;
+    c.legends = c.legends || [];
+    for (const [id, L] of Object.entries(LEGENDS)) {
+      if (c.legends.includes(id)) continue;
+      let ok = false;
+      try { ok = L.check(c); } catch { ok = false; }
+      if (!ok) continue;
+      c.legends.push(id);
+      g.ui.toast('A NEW LEGEND', L.name, '#ffd54f');
+      g.log(`Legend: ${L.name}. The whole sea will remember this. (Journal, Legends)`, '#ffd54f');
+      g.emit('legend', id);
       persist(g);
     }
   }

@@ -17,16 +17,14 @@ export const scenarios = {
       await page.evaluate(() => localStorage.clear());
       await waitReady(page);
       await frames(page, 3);
-      await page.getByText('Set Sail').first().click();
-      await page.waitForTimeout(2500);
+      await snap('slots');
+      await page.getByText('Begin a Lineage').first().click();
+      await page.waitForTimeout(3200);
       await snap('roll');
       await page.getByText('Accept my fate').click();
       await frames(page, 3);
       await snap('identity');
-      await page.getByText('Next: your dream').click();
-      await frames(page, 3);
-      await snap('dream');
-      await page.getByText('Set Sail! ⚓').click();
+      await page.getByRole('button', { name: 'Set Sail', exact: true }).click();
       await frames(page, 5);
       await step(page, 1);
       await snap('spawned');
@@ -187,7 +185,8 @@ export const scenarios = {
       await page.reload();
       await waitReady(page);
       await frames(page, 5);
-      await page.getByText('Continue').first().click();
+      await snap('title-slots');
+      await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
       await frames(page, 5);
       await step(page, 1);
       const after = await page.evaluate(() => { const g = window.OP.game; return { world: g.world.id, x: g.player.x, y: g.player.y, ships: g.ships.length }; });
@@ -410,12 +409,12 @@ export const scenarios = {
       await page.reload();
       await waitReady(page);
       await frames(page, 3);
-      await page.getByText('Abandon & Begin Anew').first().click();
+      await page.getByRole('button', { name: 'Abandon', exact: true }).first().click();
       await frames(page, 3);
       await snap('abandon-ask');
       await page.getByText('Keep them').click();
       await frames(page, 3);
-      const still = await page.evaluate(() => !!localStorage.getItem('op-inherited-will:char:v1'));
+      const still = await page.evaluate(() => !!localStorage.getItem('op-inherited-will:slot1:char:v1'));
       console.log('save kept', still);
     },
   },
@@ -424,7 +423,7 @@ export const scenarios = {
     async run(page, snap) {
       await page.evaluate(() => localStorage.clear());
       await waitReady(page);
-      await page.evaluate(() => window.OP.quickStart('human', { dream: 'king' }));
+      await page.evaluate(() => window.OP.quickStart('human'));
       await step(page, 0.3);
       const r1 = await page.evaluate(() => {
         const g = window.OP.game; const c = g.state.char;
@@ -456,7 +455,7 @@ export const scenarios = {
         const g = window.OP.game;
         for (let k = 0; k < 12 && g.dialogue.active; k++) { const ch = g.dialogue.active.choices || []; if (ch.length) g.dialogue.choose(0); else { g.dialogue.advance(); g.dialogue.advance(); } }
         const c = g.state.char;
-        return { stage: g.quests.stageId('laugh_tale_voyage'), done: g.quests.isDone('laugh_tale_voyage'), laughTale: !!c.flags.laughTale, dreamDone: !!c.dreamDone };
+        return { stage: g.quests.stageId('laugh_tale_voyage'), done: g.quests.isDone('laugh_tale_voyage'), laughTale: !!c.flags.laughTale, legend: (c.legends || []).includes('king') };
       });
       console.log('end', JSON.stringify(r4));
       await step(page, 6);

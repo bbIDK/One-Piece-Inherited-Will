@@ -163,7 +163,7 @@ export function installLegends(game) {
   game.on('tick', () => {
     const c = game.state?.char, p = game.player;
     if (!c || !p || c.flags.allBlue || game.world !== game.surface || p.mode !== 'sail') return;
-    if (!(c.dream === 'all_blue' || game.crew?.hasRole('cook'))) return;
+    if (!(game.crew?.hasRole('cook') || c.masteries?.black_leg !== undefined)) return;
     const ab = allBluePoint(c);
     if (game.world.distance(p.x, p.y, ab.x, ab.y) < 26) {
       c.flags.allBlue = true;

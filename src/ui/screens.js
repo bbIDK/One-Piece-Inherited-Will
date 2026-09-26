@@ -1,77 +1,159 @@
-// Title, character creation (race roll → identity → dream), death and
-// Inherited Will screens.
+// Title (three lineage slots), character creation (birth roll → identity),
+// death and Inherited Will screens.
 import { h, clear } from './dom.js';
 import { RACES, RARITY, makeLook, raceLabel, MINK_KINDS, FISHMAN_KINDS } from '../data/races.js';
-import { DREAMS, DREAM_IDS } from '../data/dreams.js';
-import { TRAITS, PERKS, perkLevel, perkCost, rollBirth } from '../game/lineage.js';
+import { LEGENDS } from '../data/dreams.js';
+import { TRAITS, PERKS, perkLevel, perkCost, rollBirth, dChance, nameWithD } from '../game/lineage.js';
 import { drawCharacter } from '../render/character.js';
-import { drawJollyRoger } from '../render/ship.js';
 import { ITEMS } from '../data/items.js';
 import { FRUITS } from '../data/fruits.js';
 import { formatBerries } from '../core/math.js';
 import { RNG } from '../core/rng.js';
+import { itemImg, uiImg } from './icon.js';
 
 const SEA_NAMES = { east_blue: 'East Blue', north_blue: 'North Blue', west_blue: 'West Blue', south_blue: 'South Blue' };
+const pct = (x) => `${Math.round(x * 1000) / 10}%`;
+
+/** A small still portrait of a character look. */
+export function portrait(look, w = 96, hgt = 110, bg = null) {
+  const cv = h('canvas.portrait', { width: w * 2, height: hgt * 2, style: { width: w + 'px', height: hgt + 'px' } });
+  const g = cv.getContext('2d');
+  if (bg) { g.fillStyle = bg; g.fillRect(0, 0, w * 2, hgt * 2); }
+  try {
+    g.setTransform(w * 0.72, 0, 0, w * 0.72, w, hgt * 1.72);
+    drawCharacter(g, look, { facing: Math.PI / 2, moving: false, time: 1, state: 'idle', action: null });
+  } catch { /* a look from an older version */ }
+  return cv;
+}
 
 // ---------------------------------------------------------------- title
-export function titleScreen(ui, { legacy, hasSave, saveInfo, onContinue, onNew, onHall, onHelp, onSettings }) {
-  const menu = h('div.menu',
-    hasSave ? h('button.btn.gold', { on: { click: onContinue } }, `Continue — ${saveInfo}`) : null,
-    h('button.btn.red', { on: { click: onNew } }, hasSave ? 'Abandon & Begin Anew' : 'Set Sail'),
-    h('button.btn', { on: { click: onHall } }, `Hall of Legends (${legacy.hall.length})`),
-    h('button.btn', { on: { click: onHelp } }, 'How to Play'),
-    h('button.btn', { on: { click: onSettings } }, 'Settings'),
-  );
-  const el = h('div.screen',
+export function titleScreen(ui, { slots, onPlay, onNew, onDelete, onHall, onWill, onHelp, onSettings }) {
+  const cards = slots.map((s) => slotCard(s, { onPlay, onNew, onDelete, onHall, onWill }));
+  const el = h('div.screen.title-screen',
     h('div.title',
       h('h1', 'Inherited Will'),
       h('h2', 'A One Piece Roguelike'),
-      h('p', { style: { margin: '-12px 0 20px', textShadow: '0 1px 3px #000' } }, legacy.generation > 1 ? `Generation ${legacy.generation} · Inherited Will: ${legacy.will}` : 'Your lineage begins here.'),
-      menu,
+      h('div.slots', cards),
+      h('div.title-links',
+        h('button.btn', { on: { click: onHelp } }, uiImg('help', 18), 'How to Play'),
+        h('button.btn', { on: { click: onSettings } }, uiImg('settings', 18), 'Settings')),
     ),
     h('div.foot', 'Unofficial fan game. ONE PIECE © Eiichiro Oda / Shueisha / Toei Animation. All art in this game is procedurally drawn.'),
   );
   ui.showScreen(el);
 }
 
+function slotCard(info, { onPlay, onNew, onDelete, onHall, onWill }) {
+  const { slot, char, legacy } = info;
+  const head = h('div.slot-head', h('span', `Lineage ${slot}`),
+    !info.empty ? h('button.link', { title: 'Delete this lineage for good', on: { click: () => onDelete(slot) } }, 'Delete') : null);
+  if (info.empty) {
+    return h('div.slot-card.empty', head,
+      h('div.slot-empty', h('div.big', 'Empty'), h('p', 'A new bloodline, waiting to be born.')),
+      h('div.slot-actions', h('button.btn.red', { on: { click: () => onNew(slot) } }, 'Begin a Lineage')));
+  }
+  const gen = legacy?.generation || char?.generation || 1;
+  const will = legacy?.will || 0;
+  const meta = h('div.slot-meta',
+    h('span', `Generation ${gen}`),
+    h('span', { title: 'Inherited Will — spend it on your bloodline' }, uiImg('reputation', 14), ` ${will} Will`));
+  if (char) {
+    const race = RACES[char.race];
+    const faction = char.faction === 'marine' ? `Marine ${char.marineRank || 'Recruit'}` : char.crewName ? `Captain of the ${char.crewName}` : char.faction === 'pirate' ? 'Pirate' : 'Wanderer';
+    const saved = char.lastSaved ? new Date(char.lastSaved) : null;
+    return h('div.slot-card', head,
+      h('div.slot-body',
+        portrait(char.look, 84, 96),
+        h('div.slot-info',
+          h('div.nm', char.name),
+          h('div.sub', `${race?.name || char.race} · ${faction}`),
+          h('div.sub', `Day ${char.world?.day || 1} · ${char.lives}/${char.maxLives} lives${char.bounty ? ' · ' + formatBerries(char.bounty) : ''}`),
+          saved ? h('div.sub.faint', `Saved ${saved.toLocaleDateString()} ${saved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`) : null)),
+      meta,
+      h('div.slot-actions',
+        h('button.btn.gold', { on: { click: () => onPlay(slot) } }, 'Continue'),
+        h('button.btn', { on: { click: () => onWill(slot) } }, 'Will'),
+        h('button.btn', { on: { click: () => onHall(slot) } }, `Hall (${legacy?.hall?.length || 0})`),
+        h('button.btn.red.small', { title: 'Abandon this character and start a new one in this lineage', on: { click: () => onNew(slot) } }, 'Abandon')));
+  }
+  const last = legacy?.hall?.[0];
+  return h('div.slot-card', head,
+    h('div.slot-body',
+      last ? portrait(last.look, 84, 96) : null,
+      h('div.slot-info',
+        h('div.nm', last ? `${last.name}` : 'The next generation'),
+        h('div.sub', last ? `Fell on day ${last.days}. Their will lives on.` : 'Ready to be born.'))),
+    meta,
+    h('div.slot-actions',
+      h('button.btn.red', { on: { click: () => onNew(slot) } }, `Begin Generation ${gen}`),
+      h('button.btn', { on: { click: () => onWill(slot) } }, 'Will'),
+      h('button.btn', { on: { click: () => onHall(slot) } }, `Hall (${legacy?.hall?.length || 0})`)));
+}
+
 // --------------------------------------------------------------- creation
 export function creationScreen(ui, legacy, { onDone, onBack }) {
   let rerolls = perkLevel(legacy, 'reroll');
   let birth = rollBirth(legacy, Math.floor(Math.random() * 1e9));
-  const state = { name: '', look: null, dream: 'king', jr: { skull: 'classic', bones: 'cross', accessory: 'strawhat', color: '#f5f6fa' } };
+  const state = { name: '', look: null };
   const root = h('div.screen');
   ui.showScreen(root);
   let raf = 0;
-
-  const stopAnim = () => cancelAnimationFrame(raf);
+  let timers = [];
+  const stopAnim = () => { cancelAnimationFrame(raf); for (const t of timers) clearTimeout(t); timers = []; };
+  const later = (ms, fn) => timers.push(setTimeout(fn, ms));
+  const hasD = () => birth.traits.includes('will_of_d');
 
   // ---- step 1: the roll
   function stepRoll(spin = true) {
     stopAnim();
     clear(root);
+    state.look = null;
     const race = RACES[birth.race];
     const rar = RARITY[race.rarity];
+    const shown = birth.traits.filter((t) => TRAITS[t] && !TRAITS[t].hidden && t !== 'will_of_d');
     const nameEl = h('div.race', { style: { color: rar.color } }, '???');
     const rarEl = h('div.rarity', { style: { color: rar.color } }, '');
-    const info = h('div', { style: { opacity: 0, transition: 'opacity .6s' } },
+    const dEl = h('div.d-reveal');
+    const info = h('div.roll-info', { style: { opacity: 0 } },
       h('p', { style: { maxWidth: '560px', margin: '6px auto' } }, race.desc),
       h('p', h('b', 'Birthplace: '), race.origin, ' ', h('span.tag', race.spawnSeas.map((s) => SEA_NAMES[s]).join(' / '))),
-      h('div', { style: { margin: '10px auto', maxWidth: '600px', textAlign: 'left' } },
-        h('h3', 'Racial traits'), ...race.traits.map((t) => h('div', '• ' + t)),
-        h('h3', 'Born with'),
-        ...birth.traits.map((t) => h('div', h('b', { style: { color: TRAITS[t].rarity === 'legendary' ? '#b8860b' : 'inherit' } }, TRAITS[t].name + ': '), TRAITS[t].desc)),
-        h('p.muted', `Lives: ${Math.min(5, race.lives + perkLevel(legacy, 'lives'))} vivre cards`)),
-      h('div', { style: { display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '12px' } },
-        h('button.btn.gold', { on: { click: stepIdentity } }, 'Accept my fate'),
-        rerolls > 0 ? h('button.btn', { on: { click: () => { rerolls--; birth = rollBirth(legacy, Math.floor(Math.random() * 1e9)); stepRoll(true); } } }, `Flip Fate's Coin (${rerolls} left)`) : null,
-        h('button.btn', { on: { click: () => { stopAnim(); onBack(); } } }, 'Back'),
-      ),
+      h('div.roll-cols',
+        h('div', h('h3', 'Racial traits'), ...race.traits.map((t) => h('div.li', t))),
+        h('div', h('h3', 'Born with'),
+          ...shown.map((t) => h('div.li', h('b', TRAITS[t].name + ': '), TRAITS[t].desc)),
+          h('div.li.muted', `${Math.min(5, race.lives + perkLevel(legacy, 'lives'))} lives (vivre cards)`))),
     );
-    const panel = h('div.panel.race-roll', h('h2', legacy.generation > 1 ? `Generation ${legacy.generation} is born…` : 'A child is born…'), nameEl, rarEl, info);
+    const btns = h('div.roll-btns', { style: { opacity: 0 } },
+      h('button.btn.gold', { on: { click: stepIdentity } }, 'Accept my fate'),
+      rerolls > 0 ? h('button.btn', { on: { click: () => { rerolls--; birth = rollBirth(legacy, Math.floor(Math.random() * 1e9)); stepRoll(true); } } }, `Flip Fate's Coin (${rerolls} left)`) : null,
+      h('button.btn', { on: { click: () => { stopAnim(); onBack(); } } }, 'Back'));
+    const willLine = h('div.will-line', uiImg('reputation', 16), ` Your lineage's Inherited Will: ${legacy.will}` + (legacy.generation > 1 ? ` · generation ${legacy.generation}` : ''));
+    const panel = h('div.panel.race-roll', h('h2', legacy.generation > 1 ? `Generation ${legacy.generation} is born…` : 'A child is born…'), nameEl, rarEl, dEl, info, btns, willLine);
     root.appendChild(panel);
     const ids = Object.keys(RACES);
-    let t0 = performance.now();
+    const t0 = performance.now();
     const dur = spin ? 1800 : 0;
+    const reveal = () => {
+      nameEl.textContent = race.name;
+      nameEl.style.color = rar.color;
+      rarEl.textContent = rar.label.toUpperCase();
+      info.style.opacity = 1;
+      ui.game?.audio?.sfx(race.rarity === 'legendary' || race.rarity === 'epic' ? 'fanfare' : 'reveal');
+      // the D.: a second, separate roll of fate
+      clear(dEl);
+      const chance = dChance(legacy);
+      if (hasD()) {
+        dEl.append(h('div.d-stamp', 'D.'), h('div.d-title', 'THE WILL OF D.'),
+          h('p', 'A hidden initial runs in your blood. Those who carry it laugh in the face of death — and the powers of the world fear the name. (', pct(chance), ' of births)'));
+        dEl.classList.remove('miss');
+        dEl.classList.add('hit');
+        later(spin ? 900 : 0, () => { dEl.classList.add('show'); ui.game?.audio?.sfx('fanfare'); btns.style.opacity = 1; });
+      } else {
+        dEl.append(h('p.muted', `No "D." in your name this time — only ${pct(chance)} of births carry the Will of D.`));
+        dEl.classList.add('miss', 'show');
+        btns.style.opacity = 1;
+      }
+    };
     const tick = (now) => {
       const k = (now - t0) / Math.max(1, dur);
       if (k < 1) {
@@ -79,73 +161,60 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
         nameEl.textContent = RACES[ids[i]].name;
         nameEl.style.color = RARITY[RACES[ids[i]].rarity].color;
         raf = requestAnimationFrame(tick);
-      } else {
-        nameEl.textContent = race.name;
-        nameEl.style.color = rar.color;
-        rarEl.textContent = rar.label.toUpperCase();
-        info.style.opacity = 1;
-        ui.game?.audio?.sfx(race.rarity === 'legendary' || race.rarity === 'epic' ? 'fanfare' : 'reveal');
-      }
+      } else reveal();
     };
     raf = requestAnimationFrame(tick);
   }
 
-  // ---- step 2: identity & looks & flag
+  // ---- step 2: identity & looks
   function stepIdentity() {
     stopAnim();
     clear(root);
     if (!state.look) state.look = makeLook(birth.race, birth.seed);
     if (!state.name) state.name = randomCharName();
     const preview = h('canvas', { width: 260, height: 300, style: { width: '100%', height: '300px' } });
-    const flag = h('canvas', { width: 180, height: 130, style: { width: '180px', height: '130px', borderRadius: '8px', background: '#111' } });
-    const nameInput = h('input.name', { value: state.name, maxLength: 28, on: { input: (e) => { state.name = e.target.value; } } });
+    const finalName = h('div.final-name');
+    const updateName = () => {
+      clear(finalName);
+      const n = (state.name || '').trim() || 'Nameless';
+      finalName.append(h('span.muted', 'You will be known as '), h('b', hasD() ? nameWithD(n) : n));
+    };
+    const nameInput = h('input.name', { value: state.name, maxLength: 24, spellcheck: false, on: { input: (e) => { state.name = e.target.value; updateName(); } } });
+    updateName();
     const L = state.look;
     const race = birth.race;
-    const row = (label, ...kids) => h('div', { style: { margin: '6px 0' } }, h('div', { style: { fontWeight: 800, fontSize: '13px' } }, label), ...kids);
-    const swatch = (key, colors) => h('div.swatches', ...colors.map((c) => {
-      const b = h('button' + (L[key] === c ? '.on' : ''), { style: { background: c }, on: { click: () => { L[key] = c; if (key === 'fur') { L.skin = c; L.hairColor = c; L.hand = c; } stepIdentityRefresh(); } } });
-      return b;
-    }));
-    const opts = (key, values, labels) => h('div.swatches', ...values.map((v, i) => h('button' + (L[key] === v ? '.on' : ''), {
-      style: { width: 'auto', borderRadius: '6px', padding: '2px 8px', background: L[key] === v ? '#c0392b' : '#6d4c33', color: '#fff', font: '700 12px Nunito' },
-      on: { click: () => { L[key] = v; stepIdentityRefresh(); } },
-    }, labels ? labels[i] : v)));
-    const jrOpt = (key, values) => h('div.swatches', ...values.map((v) => h('button' + (state.jr[key] === v ? '.on' : ''), {
-      style: { width: 'auto', borderRadius: '6px', padding: '2px 8px', background: state.jr[key] === v ? '#c0392b' : '#6d4c33', color: '#fff', font: '700 12px Nunito' },
-      on: { click: () => { state.jr[key] = v; stepIdentityRefresh(); } },
-    }, v)));
+    const row = (label, ...kids) => h('div.opt-row', h('div.opt-label', label), ...kids);
+    const swatch = (key, colors) => h('div.swatches', ...colors.map((c) => h('button' + (L[key] === c ? '.on' : ''), { style: { background: c }, on: { click: () => { L[key] = c; if (key === 'fur') { L.skin = c; L.hairColor = c; L.hand = c; } refresh(); } } })));
+    const opts = (key, values, labels) => h('div.swatches', ...values.map((v, i) => h('button.chip' + (L[key] === v ? '.on' : ''), { on: { click: () => { L[key] = v; refresh(); } } }, labels ? labels[i] : v)));
     const left = h('div', h('div.preview', preview), h('p.muted', { style: { textAlign: 'center' } }, raceLabel(L)));
     const right = h('div',
-      row('Name', h('div', { style: { display: 'flex', gap: '6px' } }, nameInput, h('button.btn', { on: { click: () => { state.name = randomCharName(); nameInput.value = state.name; } } }, '🎲'))),
+      row('Name', h('div', { style: { display: 'flex', gap: '6px' } }, nameInput, h('button.btn', { on: { click: () => { state.name = randomCharName(); nameInput.value = state.name; updateName(); } } }, 'Random'))),
+      finalName,
       race === 'mink' ? row('Mink', opts('kind', MINK_KINDS.map((k) => k.name))) : null,
       race === 'fishman' ? row('Fish-Man kind', opts('kind', FISHMAN_KINDS.map((k) => k.name))) : null,
       row('Hair', opts('hair', ['short', 'spiky', 'long', 'ponytail', 'buzz', 'curly', 'afro', 'topknot', 'mohawk', 'bald'])),
       race !== 'mink' ? row('Hair colour', swatch('hairColor', ['#1e1e1e', '#3b2a1a', '#6b4423', '#c69c6d', '#f2d16b', '#e67e22', '#c0392b', '#2ecc71', '#2980b9', '#e84393', '#dfe6e9', '#8e44ad'])) : null,
-      race === 'human' || race === 'longarm' || race === 'longleg' || race === 'three_eye' || race === 'buccaneer' || race === 'skypiean' ? row('Skin', swatch('skin', ['#f9dcc4', '#f1c9a0', '#e0ac7e', '#c68642', '#a0643a', '#7a4a2a', '#5c3a21'])) : null,
+      ['human', 'longarm', 'longleg', 'three_eye', 'buccaneer', 'skypiean', 'lunarian'].includes(race) ? row('Skin', swatch('skin', ['#f9dcc4', '#f1c9a0', '#e0ac7e', '#c68642', '#a0643a', '#7a4a2a', '#5c3a21'])) : null,
       row('Shirt', swatch('top', ['#d63031', '#0984e3', '#00b894', '#fdcb6e', '#e17055', '#6c5ce7', '#2d3436', '#dfe6e9', '#e84393', '#00cec9', '#a0522d', '#ffffff'])),
       row('Trousers', swatch('bottom', ['#2d3436', '#1e3799', '#3b3b98', '#6d4c41', '#636e72', '#0a3d62', '#b8860b', '#e1b12c'])),
       row('Shirt open', opts('openShirt', [false, true], ['closed', 'open'])),
-      h('h3', 'Your Jolly Roger'),
-      h('div', { style: { display: 'flex', gap: '12px', alignItems: 'flex-start' } }, flag, h('div',
-        row('Skull', jrOpt('skull', ['classic', 'grin', 'eyepatch'])),
-        row('Crossed', jrOpt('bones', ['cross', 'swords', 'anchor'])),
-        row('Hat', jrOpt('accessory', ['none', 'strawhat', 'bandana', 'tricorne', 'horns', 'crown', 'flames', 'halo'])),
-      )),
+      h('p.muted', { style: { marginTop: '12px' } }, 'No destiny is chosen for you. Pirate, Marine, adventurer, bounty hunter or none of these — the sea is free, and what you become is up to you. You can found your own pirate crew and raise your Jolly Roger later, from the Crew menu.'),
     );
+    const born = RACES[birth.race];
     const panel = h('div.panel.wide', h('h2', 'Who are you?'), h('div.creation-grid', left, right),
-      h('div', { style: { display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' } },
-        h('button.btn', { on: { click: () => stepRoll(false) } }, 'Back'),
-        h('button.btn.gold', { on: { click: stepDream } }, 'Next: your dream ➜')));
+      h('div.creation-foot',
+        h('div.muted', `${raceLabel(L)} · born in the ${born.spawnSeas.length > 1 ? 'one of the four Blues' : SEA_NAMES[born.spawnSeas[0]]}`),
+        h('div', { style: { display: 'flex', gap: '10px' } },
+          h('button.btn', { on: { click: () => stepRoll(false) } }, 'Back'),
+          h('button.btn.red.big', { on: { click: () => { stopAnim(); onDone(birth, { name: (state.name || '').trim() || 'Nameless', look: state.look }); } } }, 'Set Sail'))));
     root.appendChild(panel);
-    function stepIdentityRefresh() {
-      // apply kind choices
+    function refresh() {
       if (race === 'mink') { const k = MINK_KINDS.find((m) => m.name === L.kind); if (k) Object.assign(L, { ears: k.ears, fur: k.fur, tail: k.tail, muzzle: k.muzzle, skin: k.fur, hairColor: k.fur, hand: k.fur }); }
       if (race === 'fishman') { const k = FISHMAN_KINDS.find((m) => m.name === L.kind); if (k) L.skin = k.skin; }
       stepIdentity();
     }
-    // animate preview
+    // animate the preview
     const g = preview.getContext('2d');
-    const fg = flag.getContext('2d');
     const t0 = performance.now();
     const tick = (now) => {
       const t = (now - t0) / 1000;
@@ -153,37 +222,10 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
       g.clearRect(0, 0, 260, 300);
       g.setTransform(95, 0, 0, 95, 130, 250);
       const facing = [Math.PI / 2, 0, Math.PI, -Math.PI / 2][Math.floor(t / 2) % 4];
-      drawCharacter(g, L, { facing, walk: t * 8, moving: Math.floor(t / 2) % 4 !== 0, time: t, state: 'idle' });
-      fg.setTransform(1, 0, 0, 1, 0, 0);
-      fg.fillStyle = '#111'; fg.fillRect(0, 0, 180, 130);
-      fg.setTransform(110, 0, 0, 110, 90, 70);
-      drawJollyRoger(fg, state.jr, 1, '#111');
+      try { drawCharacter(g, L, { facing, walk: t * 8, moving: Math.floor(t / 2) % 4 !== 0, time: t, state: 'idle' }); } catch { /* ignore */ }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-  }
-
-  // ---- step 3: dream
-  function stepDream() {
-    stopAnim();
-    clear(root);
-    const cards = DREAM_IDS.map((id) => {
-      const d = DREAMS[id];
-      return h('div.card.dream' + (state.dream === id ? '.on' : ''), { on: { click: () => { state.dream = id; stepDream(); } } },
-        h('h4', `${d.icon} ${d.name}`), h('div', d.desc), h('div.meta', { style: { marginTop: '4px' } }, 'Goal: ' + d.goal), h('div.meta', '✦ ' + d.perk));
-    });
-    const race = RACES[birth.race];
-    const panel = h('div.panel.wide',
-      h('h2', 'What is your dream?'),
-      h('p', 'Everyone who sets out to sea chases something. Your dream shapes your journey and — if you ever reach it — your legend.'),
-      h('div.grid2', cards),
-      h('div', { style: { display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px' } },
-        h('div.muted', `${state.name || 'You'} · ${raceLabel(state.look)} · born in the ${race.spawnSeas.length > 1 ? 'one of the four Blues' : SEA_NAMES[race.spawnSeas[0]]}`),
-        h('div', { style: { display: 'flex', gap: '10px' } },
-          h('button.btn', { on: { click: stepIdentity } }, 'Back'),
-          h('button.btn.red', { style: { fontSize: '18px' }, on: { click: () => { stopAnim(); onDone(birth, { ...state, name: state.name || 'Nameless' }); } } }, 'Set Sail! ⚓'))),
-    );
-    root.appendChild(panel);
   }
 
   stepRoll(true);
@@ -206,10 +248,9 @@ export function lifeLostScreen(ui, { cause, lives, onContinue }) {
 // ------------------------------------------------------------- wipe & legacy
 export function lineageEndScreen(ui, { char, cause, will, legacy, onNext }) {
   const heirloomOptions = [];
-  const inv = char.inventory || [];
-  for (const it of inv) {
+  for (const it of char.inventory || []) {
     const d = ITEMS[it.id];
-    if (!d || !['hat', 'coat', 'weapon'].includes(d.type)) continue;
+    if (!d || !['hat', 'coat', 'weapon', 'accessory'].includes(d.type)) continue;
     if (!heirloomOptions.find((o) => o.id === it.id)) heirloomOptions.push({ id: it.id, d });
   }
   let chosen = null;
@@ -218,33 +259,34 @@ export function lineageEndScreen(ui, { char, cause, will, legacy, onNext }) {
     clear(list);
     if (!heirloomOptions.length) list.appendChild(h('p.muted', 'You owned nothing worth passing down. Your successor starts with only your will.'));
     for (const o of heirloomOptions) {
-      list.appendChild(h('div.row-item', { style: { cursor: 'pointer', outline: chosen === o.id ? '3px solid #c0392b' : 'none' }, on: { click: () => { chosen = o.id; renderList(); } } },
-        h('span.ico', o.d.icon), h('div.grow', h('b', o.d.name), h('div.sub', o.d.desc || o.d.grade || o.d.type))));
+      list.appendChild(h('div.row-item' + (chosen === o.id ? '.picked' : ''), { style: { cursor: 'pointer' }, on: { click: () => { chosen = o.id; renderList(); } } },
+        itemImg(o.id, 30, '.ico'), h('div.grow', h('b', o.d.name), h('div.sub', o.d.desc || o.d.grade || o.d.type))));
     }
   };
   renderList();
-  const poster = wantedPoster(char);
+  const legends = (char.legends || []).map((id) => LEGENDS[id]).filter(Boolean);
   const el = h('div.screen', h('div.panel.wide',
     h('h2', 'Your journey has ended.'),
     h('div', { style: { display: 'flex', gap: '20px', flexWrap: 'wrap' } },
-      poster,
+      wantedPoster(char),
       h('div', { style: { flex: 1, minWidth: '280px' } },
         h('p', h('b', char.name), ` — ${raceLabel(char.look)}, generation ${char.generation}.`),
         h('p', cause),
         h('p', `Survived ${char.world?.day || 1} days · ${(char.discovered || []).length} islands discovered · ${(char.bosses || []).length} great foes defeated${char.bounty ? ' · bounty ' + formatBerries(char.bounty) : ''}${char.fruit ? ' · ate the ' + FRUITS[char.fruit].name : ''}.`),
+        legends.length ? h('p', h('b', 'Legends: '), legends.map((l) => l.name).join(', ')) : null,
         char.fruit ? h('p.muted', `Somewhere in the world, the ${FRUITS[char.fruit].name} has been reborn inside an ordinary fruit…`) : null,
         h('p', { style: { fontSize: '20px' } }, h('b', `+${will} Inherited Will`)),
         h('h3', 'Pass on an heirloom'),
         h('p.muted', 'Like the straw hat passed from Roger to Shanks to Luffy, choose one item for your successor to inherit.'),
         list,
         h('div', { style: { marginTop: '12px', display: 'flex', justifyContent: 'flex-end' } },
-          h('button.btn.gold', { on: { click: () => { if (chosen) legacy.heirloom = { id: chosen, from: char.name }; onNext(); } } }, 'Continue ➜')),
+          h('button.btn.gold', { on: { click: () => { if (chosen) legacy.heirloom = { id: chosen, from: char.name }; onNext(); } } }, 'Continue')),
       )),
   ));
   ui.showScreen(el);
 }
 
-export function legacyShopScreen(ui, legacy, { onDone, save }) {
+export function legacyShopScreen(ui, legacy, { onDone, save, doneLabel = 'Begin the next generation' }) {
   const root = h('div.screen');
   ui.showScreen(root);
   const render = () => {
@@ -252,56 +294,69 @@ export function legacyShopScreen(ui, legacy, { onDone, save }) {
     const cards = Object.entries(PERKS).map(([id, p]) => {
       const lvl = perkLevel(legacy, id);
       const cost = perkCost(legacy, id);
-      return h('div.card',
-        h('h4', `${p.icon} ${p.name}`, h('span.tag', `Lv ${lvl}/${p.costs.length}`)),
+      return h('div.card.perk',
+        h('h4', uiImg(p.icon, 22), ' ', p.name, h('span.tag', `Lv ${lvl}/${p.costs.length}`)),
         h('div', p.desc),
         h('div', { style: { marginTop: '6px' } }, cost == null ? h('span.muted', 'Mastered') :
           h('button.btn' + (legacy.will >= cost ? '.gold' : ''), { disabled: legacy.will < cost, on: { click: () => { legacy.will -= cost; legacy.perks[id] = lvl + 1; save(); render(); } } }, `Inherit — ${cost} Will`)));
     });
     root.appendChild(h('div.panel.wide',
       h('h2', 'The Inherited Will'),
-      h('p', 'Your ancestors\' deeds live on. Spend Inherited Will to shape every generation that follows. ', h('b', `Will: ${legacy.will}`)),
-      legacy.heirloom ? h('p', `Heirloom waiting for the next generation: ${ITEMS[legacy.heirloom.id]?.icon} ${ITEMS[legacy.heirloom.id]?.name} (from ${legacy.heirloom.from}).`) : null,
+      h('p', 'Your ancestors\' deeds live on. Every life earns Inherited Will — for the islands it charted, the foes it bested, the days it survived and the legends it wrote. Spend it to shape every generation that follows. ', h('b', `Will: ${legacy.will}`)),
+      legacy.heirloom ? h('p', 'Heirloom waiting for the next generation: ', itemImg(legacy.heirloom.id, 20), ` ${ITEMS[legacy.heirloom.id]?.name} (from ${legacy.heirloom.from}).`) : null,
       h('div.grid2', cards),
-      h('div', { style: { marginTop: '12px', display: 'flex', justifyContent: 'flex-end' } }, h('button.btn.red', { on: { click: onDone } }, 'Begin the next generation ➜')),
+      h('div', { style: { marginTop: '12px', display: 'flex', justifyContent: 'flex-end' } }, h('button.btn.red', { on: { click: onDone } }, doneLabel)),
     ));
   };
   render();
 }
 
 export function hallScreen(ui, legacy, { onBack }) {
-  const rows = legacy.hall.map((e) => h('div.row-item',
-    h('span.ico', e.dreamDone ? '⭐' : '☠'),
-    h('div.grow', h('b', e.name), ` — ${RACES[e.race]?.name || e.race}, gen ${e.generation}`,
-      h('div.sub', `${DREAMS[e.dream]?.name || ''}${e.dreamDone ? ' (fulfilled!)' : ''} · ${e.days} days · ${e.islands} islands · ${e.bosses} great foes${e.bounty ? ' · ' + formatBerries(e.bounty) : ''}`),
-      h('div.sub', e.cause)),
-    h('span.price', `+${e.will} Will`)));
+  const rows = (legacy.hall || []).map((e) => {
+    const legends = (e.legends || []).map((id) => LEGENDS[id]?.name).filter(Boolean);
+    const role = e.marineRank ? `Marine ${e.marineRank}` : e.crewName ? `captain of the ${e.crewName}` : e.faction === 'pirate' ? 'pirate' : 'wanderer';
+    return h('div.row-item',
+      e.look ? portrait(e.look, 40, 46) : uiImg('bounty', 30),
+      h('div.grow', h('b', e.name), ` — ${RACES[e.race]?.name || e.race}, ${role}, generation ${e.generation}`,
+        h('div.sub', `${e.days} days · ${e.islands} islands · ${e.bosses} great foes${e.bounty ? ' · ' + formatBerries(e.bounty) : ''}`),
+        legends.length ? h('div.sub', { style: { color: '#7a4a06', fontWeight: 800 } }, 'Legends: ' + legends.join(', ')) : null,
+        h('div.sub', e.cause)),
+      h('span.price', `+${e.will} Will`));
+  });
   ui.showScreen(h('div.screen', h('div.panel.wide',
     h('h2', 'Hall of Legends'),
     rows.length ? h('div.list', rows) : h('p', 'No legends yet. Every legend starts with a single voyage.'),
     h('div', { style: { marginTop: '12px', textAlign: 'right' } }, h('button.btn', { on: { click: onBack } }, 'Back')))));
 }
 
-export function helpContent() {
+/** How to Play. Pass the character so powers you haven't discovered stay secret. */
+export function helpContent(char) {
+  const haki = !!(char && (char.haki?.armament || char.haki?.observation || char.haki?.conqueror));
   const k = (key, text) => h('div', h('kbd', key), text);
   return h('div',
     h('h2', 'How to Play'),
-    h('p', 'Inherited Will is a roguelike set on the whole Blue Planet of One Piece. You are born in one of the four Blues depending on your race. Reach Reverse Mountain, enter the Grand Line, cross the Red Line and find the One Piece — or chase whatever dream you chose.'),
+    h('p', 'Inherited Will is a roguelike set on the whole Blue Planet of One Piece. You are born in one of the four Blues depending on your race. Nobody tells you what to become: sail where you like, climb Reverse Mountain into the Grand Line, cross the Red Line, join the Marines, become a pirate, hunt treasure — or all of it.'),
     h('p', h('b', 'Lives: '), 'You have a few vivre cards. Get knocked down and you can mash SPACE to get back up; if an enemy finishes you, a vivre card burns. Lose them all and your journey ends — your Inherited Will, an heirloom, and your charted islands pass to the next generation.'),
-    h('p', h('b', 'Getting stronger: '), 'There is no XP grinding. Weak enemies teach you nothing. Grow by training with masters (dojos, trainers), completing island stories, defeating worthy opponents (breakthroughs), finding Devil Fruits and awakening Haki.'),
+    h('p', h('b', 'Getting stronger: '), 'There are no points to spend. Your body grows by use: landing blows builds Strength, dodging and parrying builds Agility, blocking builds Endurance, taking punishment builds Vitality, and refusing to stay down builds Willpower. Every weapon type has its own mastery that rises the more you fight with it — and deals more damage as it does. Worthy opponents teach you far more than weak ones; masters and trainers can push you further, and beating a great foe brings a breakthrough.'),
+    haki ? h('p', h('b', 'Haki: '), 'Your spirit has awakened. Haki grows as you use it in battle and with a master\'s training.') : h('p.muted', 'Some say that those who push their body and spirit far enough awaken something more…'),
     h('h3', 'Controls'),
     h('div.kbd-help',
       k('WASD', 'move / steer ship'), k('Shift', 'sprint (ship: Coup de Burst)'), k('Space', 'dodge (ship: row)'), k('Left click', 'attack combo (ship: cannons)'),
-      k('Right click', 'heavy attack'), k('F', 'block — tap just before a hit to PARRY'), k('1-6', 'techniques'), k('R', 'Armament Haki'),
-      k('T', 'Observation Haki'), k('G', "Conqueror's Haki"), k('E', 'interact / talk / board / go ashore'), k('Q', 'eat food'),
-      k('I / Tab', 'inventory & equipment'), k('C', 'character & stats'), k('K', 'skills & hotbar'), k('J', 'journal'),
-      k('M', 'world map'), k('U', 'crew (nakama)'), k('Esc', 'menu'), k('Mouse wheel', 'zoom'), k('H', 'this help')),
+      k('Right click', 'heavy attack'), k('F', 'block — tap just before a hit to PARRY'), k('1-6', 'hotbar (techniques & items)'),
+      haki ? k('R / T', 'Armament / Observation Haki (once awakened)') : null,
+      haki && char.haki?.conqueror ? k('G', "Conqueror's Haki") : null,
+      k('E', 'interact / talk / pick fruit / board'), k('Q', 'eat food'),
+      k('Tab / I', 'inventory & equipment'), k('C', 'character'), k('K', 'skills & hotbar'), k('J', 'journal'),
+      k('U', 'crew'), k('M', 'world map'), k('Esc', 'pause menu'), k('Mouse wheel', 'zoom'), k('H', 'this help')),
+    h('p.muted', 'The buttons on the right of the screen open the same menus. Drag techniques and items onto the hotbar from the Inventory or Skills menu, and drag hotbar slots to rearrange them.'),
+    h('h3', 'Reputation'),
+    h('p', 'People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation; robbing shops, attacking townsfolk or Marines lowers it. Sink low enough and you are a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks — all the way to commanding fleets.'),
     h('h3', 'Sailing'),
     h('p', 'W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings — the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle.'),
     h('h3', 'Crossing the Red Line'),
     h('p', 'Paradise ends at the Red Line. Pirates cross the way the Straw Hats did: have your ship coated at the Sabaody Archipelago, then dive 10,000 metres to Fish-Man Island and rise into the New World. The Red Ports and their Bondola lifts to Mary Geoise are for the World Government — and those it permits.'),
-    h('h3', 'Crew, Marines and the One Piece'),
-    h('p', 'Recruit companions you meet (U). Enlist in the Marines at a base if your bounty is clean and climb the ranks — or become a pirate and watch your bounty grow. Poneglyphs can only be read by an archaeologist. Four Road Poneglyphs point the way to Laugh Tale.'),
+    h('h3', 'Crew and the One Piece'),
+    h('p', 'Found your own pirate crew and design your Jolly Roger from the Crew menu (U); it flies from your ship\'s sails. Recruit companions you meet along the way. Poneglyphs can only be read by an archaeologist. Four Road Poneglyphs point the way to Laugh Tale. Pick fruit and coconuts from trees when you are hungry.'),
   );
 }
 
@@ -312,7 +367,7 @@ export function wantedPoster(char) {
   g.fillStyle = '#e8d5a8'; g.fillRect(0, 0, 240, 200);
   g.fillStyle = '#d4bd8a'; for (let i = 0; i < 40; i++) g.fillRect((i * 53) % 240, (i * 37) % 200, 3, 3);
   g.setTransform(110, 0, 0, 110, 120, 235);
-  drawCharacter(g, char.look, { facing: Math.PI / 2, moving: false, time: 1, state: 'idle', action: null });
+  try { drawCharacter(g, char.look, { facing: Math.PI / 2, moving: false, time: 1, state: 'idle', action: null }); } catch { /* ignore */ }
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalCompositeOperation = 'multiply';
   g.fillStyle = '#d9c28f'; g.fillRect(0, 0, 240, 200);

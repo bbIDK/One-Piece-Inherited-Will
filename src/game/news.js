@@ -43,7 +43,7 @@ export function installWorld(game) {
     }
     if (c.faction === 'marine' && c.marineRank) lines.push(`Marine ${c.marineRank} ${c.name} commended for service.`);
     lines.push(rng.pick(HEADLINES));
-    game.log(`📰 A News Coo drops the morning paper: ${lines.join(' · ')}`, '#e0e0e0');
+    game.log(`A News Coo drops the morning paper: ${lines.join(' · ')}`, '#e0e0e0');
   };
 
   // ---------------------------------------------------------- Grand Line weather

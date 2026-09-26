@@ -11,12 +11,12 @@ export function addItem(game, id, qty = 1, opts = {}) {
   const char = game.state.char;
   const d = ITEMS[id];
   if (!d) return false;
-  const stackable = !['weapon', 'hat', 'coat', 'fruit'].includes(d.type) || d.stack;
+  const stackable = !['weapon', 'hat', 'coat', 'fruit', 'accessory'].includes(d.type) || d.stack;
   const ex = stackable && char.inventory.find((i) => i.id === id);
   if (ex) ex.qty = (ex.qty || 1) + qty;
   else if (stackable) char.inventory.push({ id, qty });
   else for (let k = 0; k < qty; k++) char.inventory.push({ id, qty: 1, ...opts });
-  if (!opts.silent) game.log(`Obtained ${d.icon} ${d.name}${qty > 1 ? ' ×' + qty : ''}.`, '#ffe082');
+  if (!opts.silent) game.log(`Obtained ${d.name}${qty > 1 ? ' ×' + qty : ''}.`, '#ffe082');
   game.emit('itemGained', id, qty);
   return true;
 }
@@ -38,6 +38,9 @@ export function removeItem(game, id, qty = 1) {
     if (eq.hat === id) eq.hat = null;
     if (eq.coat === id) eq.coat = null;
     eq.weapons = (eq.weapons || []).filter((w) => w !== id);
+    eq.accessories = (eq.accessories || []).filter((w) => w !== id);
+    const hb = char.hotbar || [];
+    for (let k = 0; k < hb.length; k++) if (hb[k] === 'item:' + id) hb[k] = null;
     refreshPlayer(game);
   }
   return left === 0;
@@ -56,25 +59,60 @@ export function earn(game, amount, why) {
   if (why !== false) game.log(`+฿${Math.round(amount).toLocaleString()}${why ? ' — ' + why : ''}`, '#ffd54f');
 }
 
-export function equip(game, id) {
+export const ACC_SLOTS = 2;
+
+export function isEquipped(c, id) {
+  const eq = c.equipped || {};
+  return eq.hat === id || eq.coat === id || (eq.weapons || []).includes(id) || (eq.accessories || []).includes(id);
+}
+
+/** Equip (or, if already worn, take off) an item. `slot` picks an accessory slot. */
+export function equip(game, id, { slot } = {}) {
   const c = game.state.char;
   const d = ITEMS[id];
   if (!d || !count(c, id)) return;
   const eq = c.equipped;
   if (d.type === 'hat') eq.hat = eq.hat === id ? null : id;
   else if (d.type === 'coat') eq.coat = eq.coat === id ? null : id;
-  else if (d.type === 'weapon') {
+  else if (d.type === 'accessory') {
+    const acc = (eq.accessories || []).filter(Boolean);
+    const worn = acc.filter((x) => x === id).length;
+    if (slot !== undefined) {
+      if (worn >= count(c, id)) acc.splice(acc.indexOf(id), 1);
+      if (slot < acc.length) acc[slot] = id; else acc.push(id);
+    } else if (worn && worn >= count(c, id)) acc.splice(acc.indexOf(id), 1);
+    else if (acc.length < ACC_SLOTS) acc.push(id);
+    else { acc.shift(); acc.push(id); }
+    eq.accessories = acc.slice(0, ACC_SLOTS);
+  } else if (d.type === 'weapon') {
     const ws = eq.weapons || [];
     if (ws.includes(id) && ws.filter((w) => w === id).length >= count(c, id)) eq.weapons = ws.filter((w) => w !== id);
-    else if (d.kind === 'sword' && ws.length && ITEMS[ws[0]].kind === 'sword' && ws.length < 3) eq.weapons = [...ws, id];
+    else if (d.kind === 'sword' && ws.length && ITEMS[ws[0]]?.kind === 'sword' && ws.length < 3) eq.weapons = [...ws, id];
     else eq.weapons = [id];
     if (id === 'sandai_kitetsu' && !c.flags.kitetsuTested) {
       c.flags.kitetsuTested = true;
       game.log('You toss the cursed Kitetsu into the air and hold out your arm… it spins down and misses you by a hair. The blade accepts you.', '#ef9a9a');
     }
-  }
+  } else return;
   refreshPlayer(game);
   game.audio?.sfx('equip');
+}
+
+/** Take off whatever is in an equipment slot: head, body, weapon0-2, acc0-1. */
+export function unequipSlot(game, slot) {
+  const eq = game.state.char.equipped;
+  if (slot === 'head') eq.hat = null;
+  else if (slot === 'body') eq.coat = null;
+  else if (slot.startsWith('weapon')) { const i = +slot.slice(6); eq.weapons = (eq.weapons || []).filter((_, k) => k !== i); }
+  else if (slot.startsWith('acc')) { const i = +slot.slice(3); eq.accessories = (eq.accessories || []).filter((_, k) => k !== i); }
+  refreshPlayer(game);
+  game.audio?.sfx('equip');
+}
+
+/** Which slot an item goes to, for drag-and-drop checks. */
+export function slotKind(d) {
+  if (!d) return null;
+  return d.type === 'hat' ? 'head' : d.type === 'coat' ? 'body' : d.type === 'weapon' ? 'weapon' : d.type === 'accessory' ? 'acc' : null;
 }
 
 export function useItem(game, id) {
@@ -87,7 +125,7 @@ export function useItem(game, id) {
     let heal = d.heal || 0;
     if (d.type === 'food') {
       if (c.traits.includes('iron_stomach')) heal *= 1.3;
-      if (c.dream === 'all_blue') heal *= 1.5;
+      if (c.flags?.allBlue) heal *= 1.25; // a cook who has seen the All Blue
       heal *= game.crewMods?.foodMul || 1;
     }
     if (d.costsLife) {
@@ -126,16 +164,13 @@ export function eatFruit(game, itemId) {
   const p = game.player;
   const fid = ITEMS[itemId].fruit;
   const f = FRUITS[fid];
-  removeItem(game, itemId, 1);
   if (c.fruit) {
-    // Canon: a body can only hold one Devil Fruit. (Blackbeard is the exception nobody understands.)
-    c.fruitsEaten = (c.fruitsEaten || 0) + 1;
-    game.ui.toast('YOUR BODY IS TEARING APART', 'You ate a second Devil Fruit.', '#ff5252');
-    game.fx.impactFrame(0.3);
-    p.hp = 0;
-    setTimeout(() => game.lives.loseLife(`Ate a second Devil Fruit (${f.name}). The body cannot hold two.`), 1200);
-    return true;
+    // Canon: a body can only hold one Devil Fruit — a second one tears you
+    // apart. You can still carry, sell or trade the fruits you find.
+    game.log(`You already carry the power of the ${FRUITS[c.fruit]?.name}. A second Devil Fruit would tear your body apart — better to keep it, sell it, or give it to someone worthy.`, '#ff8a80');
+    return false;
   }
+  removeItem(game, itemId, 1);
   c.fruit = fid;
   c.fruitMastery = 0;
   c.fruitsEaten = 1;

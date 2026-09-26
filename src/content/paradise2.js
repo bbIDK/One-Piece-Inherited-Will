@@ -2147,7 +2147,7 @@ function install(game) {
     if (c.flags.p2_elNews === true) { c.flags.p2_elNews = 'printed'; lines.push('ENIES LOBBY DESTROYED IN BUSTER CALL. Government blames rookie pirates who "declared war on the world". CP9 disbanded.'); }
     if (c.flags.p2_idNews === true) { c.flags.p2_idNews = 'printed'; lines.push('MASS BREAKOUT FROM IMPEL DOWN! 241 prisoners escape the "inescapable" prison. Chief Warden Magellan under investigation.'); }
     if (c.flags.p2_warNews === true) { c.flags.p2_warNews = 'printed'; lines.push('WHITEBEARD DEAD. "The One Piece is real!" — the old pirate\'s last words start a new Great Pirate Era.'); }
-    if (lines.length) game.log(`📰 Extra! ${lines.join(' · ')}`, '#e0e0e0');
+    if (lines.length) game.log(`Extra! ${lines.join(' · ')}`, '#e0e0e0');
   });
 
   // ------------------------------------------------------------ the Tarai Current

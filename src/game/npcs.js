@@ -1,6 +1,7 @@
 // Named NPCs, enemy groups and bosses from data, spawned when their island is
 // populated. Also the interaction dispatcher for buildings, townsfolk,
 // chests and props.
+import { robHouse, pickpocket } from './reputation.js';
 import { Actor } from './actor.js';
 import { AIController } from './ai.js';
 import { makeLook } from '../data/races.js';
@@ -245,7 +246,12 @@ export class Interactions {
     if (a.talk?.kind === 'townsfolk') {
       const rng = new RNG(a.talk.seed + g.env.day);
       const isl = this.islandOf(a.x, a.y);
-      g.dialogue.open(a, { start: 'a', nodes: { a: { text: rumorFor(g, isl, rng, a) } } });
+      g.dialogue.open(a, { start: 'a', nodes: {
+        a: { text: rumorFor(g, isl, rng, a), choices: [
+          { text: 'Thanks. Take care.', end: true },
+          { text: 'Pick their pocket while they talk. (a crime)', do: () => { g.dialogue.close(); const r = pickpocket(g, a); if (r === 'caught') g.fx.text(a.x, a.y - 2, 'HEY! THIEF!', '#ff5252', 0.45); }, end: true },
+        ] },
+      } });
     }
   }
 
@@ -321,7 +327,10 @@ export class Interactions {
     const lines = ['"Who\'s there? ...Go away, we don\'t want trouble."', '"Nobody home!" (someone is clearly home)', '"If you\'re a pirate, keep walking!"', '"Oh, a traveller? Here, take this for the road." You receive a rice ball.', '"Shh! The baby is sleeping."', '"Are you the new postman? No? Then shoo."'];
     const line = rng.pick(lines);
     if (line.includes('rice ball') && !g.state.char.flags['door_' + b.id]) { g.state.char.flags['door_' + b.id] = true; addItem(g, 'rice_ball', 1, { silent: true }); }
-    g.dialogue.open(null, { start: 'a', nodes: { a: { speaker: 'Behind the door', text: line } } });
+    g.dialogue.open(null, { start: 'a', nodes: { a: { speaker: 'Behind the door', text: line, choices: [
+      { text: 'Leave them be.', end: true },
+      { text: 'Force the door and rob the place. (a crime)', do: () => { g.dialogue.close(); robHouse(g, b); }, end: true },
+    ] } } });
   }
 
   chest(o) {

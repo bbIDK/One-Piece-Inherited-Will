@@ -13,27 +13,35 @@ import { allNpcDefs } from './npcs.js';
 import { openTrainer } from '../ui/panels.js';
 import { wantedPoster } from '../ui/screens.js';
 import { h } from '../ui/dom.js';
+import { uiImg } from '../ui/icon.js';
 import { regionAt, REGION_INFO, isGrandLine } from '../world/constants.js';
+import { hakiKnown } from './lineage.js';
+import { ENLIST_REP, repTier } from './reputation.js';
+import { makeEnemy } from './npcs.js';
+import { AIController } from './ai.js';
+import { angleDiff, clamp } from '../core/math.js';
 
+// `rep`: the reputation the Navy expects before it trusts you with the rank.
+const spiritReq = (c, what) => (hakiKnown(c) ? what : 'Your spirit has not yet awakened the strength the Navy expects of an officer this senior.');
 export const MARINE_RANKS = [
-  { name: 'Seaman Recruit', merit: 0 },
-  { name: 'Seaman Apprentice', merit: 40 },
-  { name: 'Seaman First Class', merit: 100 },
-  { name: 'Petty Officer', merit: 200 },
-  { name: 'Chief Petty Officer', merit: 350 },
-  { name: 'Master Chief Petty Officer', merit: 550 },
-  { name: 'Warrant Officer', merit: 800 },
-  { name: 'Ensign', merit: 1100, perk: 'Command of a Marine sloop.' },
-  { name: 'Lieutenant Junior Grade', merit: 1500 },
-  { name: 'Lieutenant', merit: 2000, perk: 'Rokushiki instruction at any Marine base.' },
-  { name: 'Lieutenant Commander', merit: 2700 },
-  { name: 'Commander', merit: 3500 },
-  { name: 'Captain', merit: 4500, perk: 'A Marine brig, and Bondola passage across the Red Line.', req: (c) => (c.flags.enteredGrandLine ? null : 'Serve in the Grand Line first.') },
-  { name: 'Commodore', merit: 6000, perk: 'The coat of Justice.', req: (c) => (c.haki.armament > 0 ? null : 'Awaken Armament Haki.') },
-  { name: 'Rear Admiral', merit: 8000 },
-  { name: 'Vice Admiral', merit: 11000, perk: 'A Marine battleship.', req: (c) => (c.haki.armament >= 30 && c.haki.observation > 0 ? null : 'Armament Haki 30 and Observation Haki.') },
-  { name: 'Admiral', merit: 16000, req: (c) => ((c.bosses || []).length >= 25 ? null : 'Defeat 25 great foes.') },
-  { name: 'Fleet Admiral', merit: 25000 },
+  { name: 'Seaman Recruit', merit: 0, rep: 25 },
+  { name: 'Seaman Apprentice', merit: 40, rep: 25 },
+  { name: 'Seaman First Class', merit: 100, rep: 28 },
+  { name: 'Petty Officer', merit: 200, rep: 30 },
+  { name: 'Chief Petty Officer', merit: 350, rep: 33 },
+  { name: 'Master Chief Petty Officer', merit: 550, rep: 36 },
+  { name: 'Warrant Officer', merit: 800, rep: 40 },
+  { name: 'Ensign', merit: 1100, rep: 43, perk: 'Command of a Marine sloop.' },
+  { name: 'Lieutenant Junior Grade', merit: 1500, rep: 46 },
+  { name: 'Lieutenant', merit: 2000, rep: 50, perk: 'A Marine seaman under your command on land, and Rokushiki instruction at any Marine base.' },
+  { name: 'Lieutenant Commander', merit: 2700, rep: 53 },
+  { name: 'Commander', merit: 3500, rep: 56 },
+  { name: 'Captain', merit: 4500, rep: 60, perk: 'A Marine brig with an escort ship, two Marines at your side, and Bondola passage across the Red Line.', req: (c) => (c.flags.enteredGrandLine ? null : 'Serve in the Grand Line first.') },
+  { name: 'Commodore', merit: 6000, rep: 64, perk: 'The coat of Justice and a second escort ship.', req: (c) => (c.haki.armament > 0 ? null : spiritReq(c, 'Awaken Armament Haki.')) },
+  { name: 'Rear Admiral', merit: 8000, rep: 68 },
+  { name: 'Vice Admiral', merit: 11000, rep: 74, perk: 'A Marine battleship, a fleet of three escorts and a squad of three Marines.', req: (c) => (c.haki.armament >= 30 && c.haki.observation > 0 ? null : spiritReq(c, 'Armament Haki 30 and Observation Haki.')) },
+  { name: 'Admiral', merit: 16000, rep: 82, perk: 'The fleets of the Navy answer to you.', req: (c) => ((c.bosses || []).length >= 25 ? null : 'Defeat 25 great foes.') },
+  { name: 'Fleet Admiral', merit: 25000, rep: 90, perk: 'Supreme command of every Marine in the world.' },
 ];
 export const rankIndex = (name) => MARINE_RANKS.findIndex((r) => r.name === name);
 
@@ -57,6 +65,133 @@ export function installFactions(game) {
     game.log(`Pirate ship sunk: +${merit} merit (${Math.floor(c.merit)})`, '#90caf9');
   });
   game.on('enterRegion', (reg) => { const c = game.state?.char; if (c && isGrandLine(reg)) c.flags.enteredGrandLine = true; });
+  installFleet(game);
+}
+
+// ------------------------------------------------------ fleet & squad
+// Officers don't sail alone: from Captain, Marine escort ships follow your
+// ship in formation and fire on pirates; from Lieutenant, Marines follow you
+// on land and fight at your side.
+function fleetSize(c) {
+  const i = rankIndex(c.marineRank);
+  return i >= rankIndex('Vice Admiral') ? 3 : i >= rankIndex('Commodore') ? 2 : i >= rankIndex('Captain') ? 1 : 0;
+}
+function squadSize(c) {
+  const i = rankIndex(c.marineRank);
+  return i >= rankIndex('Vice Admiral') ? 3 : i >= rankIndex('Captain') ? 2 : i >= rankIndex('Lieutenant') ? 1 : 0;
+}
+
+function installFleet(game) {
+  let t = 0;
+  const clear = () => {
+    for (const s of game.ships) if (s.escortOf) s.alive = false;
+    for (const a of game.actors) if (a.marineSquad) a.alive = false;
+  };
+  game.on('characterStart', clear);
+  game.on('enterZone', clear);
+  game.on('leaveZone', clear);
+  game.on('marineRankChanged', (r) => { if (!r) clear(); });
+  game.on('tick', (dt) => {
+    if ((t -= dt) > 0) return;
+    t = 1;
+    const c = game.state?.char, p = game.player;
+    if (!c || !p) return;
+    const marine = c.faction === 'marine';
+    // ships
+    const escorts = game.ships.filter((s) => s.escortOf && !s.sunk && s.alive !== false);
+    const wantShips = marine && p.mode === 'sail' && p.ship && game.world === game.surface ? fleetSize(c) : 0;
+    for (let i = escorts.length - 1; i >= wantShips; i--) if (escorts[i] && game.world.distance(escorts[i].x, escorts[i].y, p.x, p.y) > 30) escorts[i].alive = false;
+    for (let i = escorts.length; i < wantShips; i++) spawnEscort(game, i);
+    // soldiers
+    const squad = game.actors.filter((a) => a.marineSquad && a.alive);
+    const wantSquad = marine && p.mode === 'foot' ? squadSize(c) : 0;
+    for (let i = squad.length - 1; i >= wantSquad; i--) squad[i].alive = false;
+    for (let i = squad.length; i < wantSquad; i++) spawnSoldier(game, i);
+    for (const a of squad) {
+      if (a.state === 'knocked' && !p.inCombat) { a.state = 'idle'; a.hp = Math.round(a.d.maxHp * 0.4); }
+      if (game.world.distance(a.x, a.y, p.x, p.y) > 40) a.alive = false; // got left behind; a fresh one reports in
+    }
+  });
+}
+
+function spawnEscort(game, slot) {
+  const c = game.state.char, p = game.player, lead = p.ship;
+  const big = rankIndex(c.marineRank) >= rankIndex('Vice Admiral');
+  const pos = formationPoint(game, lead, slot, 1.6);
+  if (!game.world.sailable(pos.x, pos.y)) return;
+  const s = game.addShip({ type: big ? 'marine_warship' : 'brigantine', x: pos.x, y: pos.y, heading: lead.heading, owner: 'marine', faction: 'marine', name: big ? 'Marine Battleship' : 'Marine Escort' });
+  if (!s.fits(game.world, s.x, s.y, s.heading)) { s.alive = false; return; }
+  s.escortOf = 'player';
+  s.escortSlot = slot;
+  s.level = 10 + rankIndex(c.marineRank) * 3;
+  s.label = `${s.name} (your fleet)`;
+  s.ai = escortAI;
+}
+
+function formationPoint(game, lead, slot, spread = 1) {
+  const back = -(9 + Math.floor(slot / 2) * 7) * spread, side = (slot % 2 ? 1 : -1) * 6 * spread * (slot === 2 ? 0 : 1);
+  const hx = Math.cos(lead.heading), hy = Math.sin(lead.heading);
+  return { x: game.world.wx(lead.x + hx * back - hy * side), y: lead.y + hy * back + hx * side };
+}
+
+function escortAI(s, dt, game) {
+  const p = game.player, lead = p.ship;
+  const c = game.state?.char;
+  if (!c || c.faction !== 'marine' || !lead || lead.sunk || p.mode !== 'sail') { s.sail = 0; return; }
+  const w = game.world;
+  // engage the nearest pirate ship
+  let foe = null, fd = 22;
+  for (const o of game.ships) {
+    if (o === s || o.sunk || o.faction !== 'pirate') continue;
+    const d = w.distance(s.x, s.y, o.x, o.y);
+    if (d < fd) { fd = d; foe = o; }
+  }
+  if (foe) {
+    s.sail = 1;
+    const toT = Math.atan2(foe.y - s.y, w.dx(s.x, foe.x));
+    const want = fd > 12 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
+    s.heading += clamp(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
+    const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
+    // never fire across your own flagship
+    const toLead = Math.atan2(lead.y - s.y, w.dx(s.x, lead.x));
+    const clear = Math.abs(angleDiff(toT, toLead)) > 0.5 || w.distance(s.x, s.y, lead.x, lead.y) > fd + 3;
+    if (fd < 16 && side < 0.6 && clear && s.cannonCd <= 0) s.fireBroadside(game, foe.x, foe.y, { name: s.name, faction: 'player', isShip: true, escort: true, power: () => (s.level || 10) * 10 });
+    return;
+  }
+  // hold formation behind the flagship
+  const pt = formationPoint(game, lead, s.escortSlot || 0);
+  const d = w.distance(s.x, s.y, pt.x, pt.y);
+  if (d > 60) {
+    // fell far behind: it catches up out of sight
+    const q = formationPoint(game, lead, s.escortSlot || 0, 1.6);
+    if (s.fits(w, q.x, q.y, lead.heading)) { s.x = q.x; s.y = q.y; s.heading = lead.heading; s.speed = lead.speed; }
+    return;
+  }
+  const toP = Math.atan2(pt.y - s.y, w.dx(s.x, pt.x));
+  const want = d > 3 ? toP : lead.heading;
+  s.heading += clamp(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
+  s.sail = d > 8 ? 1 : d > 3 ? Math.max(0.3, lead.sailSet) : lead.sailSet;
+  s.rowing = d > 10 && game.isCalmAt(s.x, s.y) ? 1 : 0;
+}
+
+function spawnSoldier(game, i) {
+  const c = game.state.char, p = game.player;
+  const lvl = Math.max(6, Math.round(6 + rankIndex(c.marineRank) * 2.5));
+  const pos = game.spawner.findFree(p.x - 1.5 + i, p.y + 1.2, 3) || { x: p.x, y: p.y + 1 };
+  const names = ['Seaman Coby', 'Seaman Helmeppo', 'Seaman Rokkaku', 'Petty Officer Jango', 'Seaman Fullbody', 'Seaman Tashigi'];
+  const a = makeEnemy('marine', lvl, pos.x, pos.y, { name: i === 0 && rankIndex(c.marineRank) >= rankIndex('Captain') ? 'Your aide' : 'Marine Seaman' });
+  a.name = names[(i + (c.runSeed || 0)) % names.length].replace('Seaman ', 'Marine ');
+  a.game = game;
+  a.faction = 'player';
+  a.marineSquad = true;
+  a.aggroPlayer = false;
+  a.provoked = false;
+  a.lethal = false;
+  a.showName = true;
+  a.nameColor = '#90caf9';
+  a.controller = new AIController({ kind: 'follower', skill: 0.4, moves: a.techniques || [] });
+  game.addActor(a);
+  game.fx.burst(a.x, a.y - 0.6, 8, { color: ['#90caf9', '#ffffff'], speed: 2, g: 0, life: 0.4, kind: 'smoke' });
 }
 
 function enlist(game, where) {
@@ -64,6 +199,14 @@ function enlist(game, where) {
   if (c.faction === 'marine') { game.log('You are already a Marine.', '#b0bec5'); return; }
   if (c.bounty > 0 || c.flags.deserter) {
     game.dialogue.open(null, { start: 'a', nodes: { a: { speaker: 'Recruiting Officer', text: `"${c.flags.deserter ? 'A deserter wants back in? Guards!' : `Enlist? With a ${formatBerries(c.bounty)} bounty on your head? Get out before I arrest you.`}"` } } });
+    return;
+  }
+  if (c.crewName) {
+    game.dialogue.open(null, { start: 'a', nodes: { a: { speaker: 'Recruiting Officer', text: `"You fly a Jolly Roger — the flag of the ${c.crewName}. The Navy doesn't recruit pirate captains."` } } });
+    return;
+  }
+  if ((c.reputation || 0) < ENLIST_REP) {
+    game.dialogue.open(null, { start: 'a', nodes: { a: { speaker: 'Recruiting Officer', text: `"The Marines only take people of good standing. Right now folk around here would call you '${repTier(c.reputation || 0).name}'. Help people — finish their troubles, stand up to pirates — and come back when your name means something. (Reputation ${Math.round(c.reputation || 0)} / ${ENLIST_REP})"` } } });
     return;
   }
   game.dialogue.open(null, { start: 'a', nodes: {
@@ -92,6 +235,7 @@ function promote(game) {
   if (!n || c.merit < n.merit) return null;
   const why = n.req ? n.req(c) : null;
   if (why) return why;
+  if ((c.reputation || 0) < (n.rep || 0)) return `Headquarters wants officers the people trust. Reputation ${Math.round(c.reputation || 0)} / ${n.rep}.`;
   c.marineRank = n.name;
   game.ui.toast('PROMOTED!', n.name, '#64b5f6');
   game.log(`Promoted to ${n.name}.${n.perk ? ' ' + n.perk : ''}`, '#90caf9');
@@ -102,6 +246,7 @@ function promote(game) {
   if (n.name === 'Captain') game.giveShip('brigantine', pos.x, pos.y, 'Marine Brig');
   if (n.name === 'Vice Admiral') game.giveShip('marine_warship', pos.x, pos.y, 'Marine Battleship');
   if (n.name === 'Commodore') { addItem(game, 'marine_coat', 1); equip(game, 'marine_coat'); }
+  if (n.name === 'Captain' || n.name === 'Vice Admiral') addItem(game, 'marine_medal', 1);
   if (i >= rankIndex('Captain')) c.flags.bondolaPass = true;
   game.progression.breakthrough(1, `Promotion to ${n.name}`);
   game.emit('marineRankChanged', n.name);
@@ -231,7 +376,7 @@ function bountyOffice(game, building, island) {
   for (const d of wanted) {
     const isl = game.surface.islands.find((i) => i.id === d.island);
     const known = c.discovered.includes(d.island);
-    list.appendChild(h('div.row-item', h('span.ico', '☠'), h('div.grow', h('b', d.name), h('div.sub', `${d.title || ''}${known && isl ? ' · last seen: ' + isl.name : ''}`)), h('span.price', formatBerries(d.bounty))));
+    list.appendChild(h('div.row-item', uiImg('bounty', 30), h('div.grow', h('b', d.name), h('div.sub', `${d.title || ''}${known && isl ? ' · last seen: ' + isl.name : ''}`)), h('span.price', formatBerries(d.bounty))));
   }
   body.appendChild(list);
   if (c.faction === 'pirate') body.append(h('p.muted', 'The clerk eyes you nervously and keeps one hand near the Den Den Mushi.'));

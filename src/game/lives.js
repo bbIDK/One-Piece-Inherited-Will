@@ -74,6 +74,7 @@ export class LivesSystem {
     g.fx.shake(0.4);
     g.audio?.sfx('getup');
     c.stats.deathsAvoided = (c.stats.deathsAvoided || 0) + 1;
+    g.emit('playerGotUp');
   }
 
   awaken() {

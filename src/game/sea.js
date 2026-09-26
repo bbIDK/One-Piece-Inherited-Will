@@ -63,7 +63,9 @@ class SeaSystem {
     } else if (reg === REGION.PARADISE && prev !== REGION.PARADISE && prev !== REGION.NEW_WORLD) {
       g.ui.banner('GRAND LINE', 'PARADISE', 'The first half of the pirates\' graveyard.', 6);
     } else if (reg === REGION.NEW_WORLD && prev !== REGION.NEW_WORLD) {
-      g.ui.banner('NEW WORLD', 'The second half of the Grand Line', 'Here, Haki is not optional.', 6);
+      const c = g.state?.char;
+      const known = !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
+      g.ui.banner('NEW WORLD', 'The second half of the Grand Line', known ? 'Here, Haki is not optional.' : 'Only the strongest survive here.', 6);
     } else if (isBlue(reg) && !isBlue(prev)) {
       g.ui.banner(info.name.toUpperCase(), '', '', 3);
     }

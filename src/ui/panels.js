@@ -1,251 +1,523 @@
-// Modal panels: inventory, character, skills, journal, menu, shops, trainers,
-// inns, doctors, shipyards.
+// Modal panels: inventory & equipment, character, skills, journal, pause
+// menu, settings, shops, trainers, inns, doctors, shipyards.
 import { h, clear } from './dom.js';
 import { ITEMS, sellPrice } from '../data/items.js';
 import { STYLES } from '../data/styles.js';
 import { FRUITS, FRUIT_RARITY } from '../data/fruits.js';
 import { HAKI } from '../data/haki.js';
-import { DREAMS } from '../data/dreams.js';
+import { LEGENDS, LEGEND_IDS } from '../data/dreams.js';
 import { RACES, raceLabel } from '../data/races.js';
-import { TRAITS, refreshPlayer, persist, perkLevel } from '../game/lineage.js';
+import { TRAITS, refreshPlayer, persist, computeWill, hakiKnown, needsHaki, dChance, equippedLook, armorOf } from '../game/lineage.js';
 import { ATTRS, ATTR_KEYS, ATTR_CAP } from '../game/stats.js';
 import { getAbility } from '../game/abilities.js';
-import { count, equip, useItem, addItem, removeItem, pay, earn } from '../game/inventory.js';
+import { count, equip, useItem, addItem, removeItem, pay, earn, isEquipped, unequipSlot, slotKind, ACC_SLOTS } from '../game/inventory.js';
 import { stockFor, priceOf } from '../data/shops.js';
 import { SHIPS, SHIP_UPGRADES } from '../data/ships.js';
 import { TRAINERS } from '../data/trainers.js';
 import { formatBerries } from '../core/math.js';
-import { helpContent, wantedPoster } from './screens.js';
+import { helpContent, wantedPoster, portrait } from './screens.js';
 import { questDef } from '../game/quests.js';
+import { WEAPON_KINDS } from '../game/progression.js';
+import { repTier, stealFromShop, bannedFromShop } from '../game/reputation.js';
+import { itemImg, skillImg, uiImg } from './icon.js';
+import { openJollyRoger } from './crewPanel.js';
 
-const berriesLine = (c) => h('div.berries', `${formatBerries(c.berries)}`);
+const berriesLine = (c) => h('div.berries', uiImg('berries', 20), ` ${formatBerries(c.berries)}`);
+const HOTBAR = 6;
+const USABLE = new Set(['food', 'medicine']);
+const title = (s) => s[0].toUpperCase() + s.slice(1);
 
-// ------------------------------------------------------------- inventory
+// ============================================================== hotbar editor
+/** What a hotbar entry is: a technique id, or `item:<id>`. */
+export function hotbarEntry(id, c) {
+  if (!id) return null;
+  if (id.startsWith('item:')) {
+    const iid = id.slice(5), d = ITEMS[iid];
+    if (!d) return null;
+    return { kind: 'item', id: iid, def: d, name: d.name, qty: count(c, iid), img: (px) => itemImg(iid, px) };
+  }
+  const d = getAbility(id);
+  if (!d) return null;
+  return { kind: 'skill', id, def: d, name: d.name, img: (px) => skillImg(d, px) };
+}
+
+function ensureHotbar(c) {
+  c.hotbar = c.hotbar || [];
+  for (let i = 0; i < HOTBAR; i++) if (c.hotbar[i] === undefined) c.hotbar[i] = null;
+  c.hotbar.length = HOTBAR;
+  return c.hotbar;
+}
+
+/** Put something in a hotbar slot (from drag-and-drop or click-to-assign). */
+export function assignHotbar(game, slot, payload) {
+  const c = game.state.char;
+  const hb = ensureHotbar(c);
+  if (!payload) return;
+  if (payload.startsWith('slot:')) {
+    const j = +payload.slice(5);
+    if (j === slot || j < 0 || j >= HOTBAR) return;
+    [hb[slot], hb[j]] = [hb[j], hb[slot]];
+  } else {
+    let id = payload;
+    if (payload.startsWith('skill:')) id = payload.slice(6);
+    else if (payload.startsWith('item:') || payload.startsWith('inv:')) {
+      const iid = payload.slice(payload.indexOf(':') + 1);
+      const d = ITEMS[iid];
+      if (!d || !USABLE.has(d.type)) { game.log('Only food and medicine can go on the hotbar.', '#ff8a80'); return; }
+      id = 'item:' + iid;
+    } else return;
+    for (let k = 0; k < HOTBAR; k++) if (hb[k] === id) hb[k] = null;
+    hb[slot] = id;
+  }
+  refreshPlayer(game);
+  game.audio?.sfx('equip');
+}
+
+function hotbarStrip(game, sel, rerender) {
+  const c = game.state.char;
+  const hb = ensureHotbar(c);
+  const slots = [];
+  for (let i = 0; i < HOTBAR; i++) {
+    const e = hotbarEntry(hb[i], c);
+    const slot = h('div.hb-slot' + (e ? '' : '.empty') + (sel.slot === i ? '.sel' : ''), {
+      draggable: !!e,
+      title: e ? `${e.name}${e.def.desc ? '\n' + e.def.desc : ''}\n\nDrag to move · right-click to clear` : 'Empty — drag a technique or food here',
+      on: {
+        dragstart: (ev) => { ev.dataTransfer.setData('text/plain', 'slot:' + i); ev.dataTransfer.effectAllowed = 'move'; slot.classList.add('dragging'); },
+        dragend: () => slot.classList.remove('dragging'),
+        dragover: (ev) => { ev.preventDefault(); slot.classList.add('over'); },
+        dragleave: () => slot.classList.remove('over'),
+        drop: (ev) => { ev.preventDefault(); assignHotbar(game, i, ev.dataTransfer.getData('text/plain')); sel.pick = null; sel.slot = null; rerender(); },
+        click: () => {
+          if (sel.pick) { assignHotbar(game, i, sel.pick); sel.pick = null; sel.slot = null; }
+          else if (sel.slot !== null && sel.slot !== i) { assignHotbar(game, i, 'slot:' + sel.slot); sel.slot = null; }
+          else sel.slot = sel.slot === i ? null : i;
+          rerender();
+        },
+        contextmenu: (ev) => { ev.preventDefault(); hb[i] = null; refreshPlayer(game); rerender(); },
+      },
+    },
+    h('span.k', String(i + 1)),
+    e ? e.img(34) : null,
+    e ? h('span.nm', e.name) : null,
+    e && e.kind === 'item' ? h('span.qty', String(e.qty)) : null,
+    e ? h('button.x', { title: 'Clear', on: { click: (ev) => { ev.stopPropagation(); hb[i] = null; refreshPlayer(game); rerender(); } } }, '×') : null);
+    slots.push(slot);
+  }
+  const hint = sel.pick ? 'Now click a slot to put it there.' : sel.slot !== null ? `Slot ${sel.slot + 1} selected — click a technique or food to fill it, or another slot to swap.` : 'Drag techniques and food onto the hotbar, drag slots to rearrange them. Right-click a slot to clear it.';
+  return h('div.hotbar-edit', h('div.hb-row', slots), h('div.hb-hint', hint));
+}
+
+/** Make an element a drag source for the hotbar / equipment. */
+function dragSource(el, payload) {
+  el.draggable = true;
+  el.addEventListener('dragstart', (ev) => { ev.dataTransfer.setData('text/plain', payload); ev.dataTransfer.effectAllowed = 'copyMove'; });
+  return el;
+}
+
+// ============================================================== inventory
+const CATS = [
+  { id: 'all', name: 'All', icon: 'inventory', types: null },
+  { id: 'gear', name: 'Gear', icon: 'sword', types: ['weapon', 'hat', 'coat', 'accessory'] },
+  { id: 'food', name: 'Food & Medicine', icon: 'food', types: ['food', 'medicine'] },
+  { id: 'fruit', name: 'Devil Fruits', icon: 'fruit', types: ['fruit'] },
+  { id: 'other', name: 'Other', icon: 'key', types: ['key', 'dial', 'pose', 'treasure', 'material'] },
+];
+const TYPE_ORDER = ['weapon', 'hat', 'coat', 'accessory', 'food', 'medicine', 'fruit', 'dial', 'pose', 'key', 'treasure', 'material'];
+const TYPE_NAME = { weapon: 'Weapon', hat: 'Headgear', coat: 'Body', accessory: 'Accessory', food: 'Food', medicine: 'Medicine', fruit: 'Devil Fruit', dial: 'Dial', pose: 'Eternal Pose', key: 'Key item', treasure: 'Treasure', material: 'Material' };
+
+function statLine(d) {
+  const parts = [];
+  if (d.type === 'weapon') parts.push(`${title(d.kind || 'weapon')} · power ×${d.power}${d.grade ? ' · ' + d.grade : ''}`);
+  if (d.armor) parts.push(`Defence +${Math.round(d.armor * 100)}%`);
+  if (d.bonus) parts.push(Object.entries(d.bonus).map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${ATTRS[k]?.short || k.toUpperCase()}`).join('  '));
+  if (d.heal) parts.push(d.heal > 9999 ? 'Full health' : `+${d.heal} health`);
+  if (d.stamina) parts.push(`+${d.stamina} stamina`);
+  if (d.buff) parts.push(`${d.buff.name} for ${d.buff.dur}s`);
+  return parts.join(' · ');
+}
+
 export function openInventory(game) {
   const ui = game.ui;
   const c = game.state.char;
-  const body = h('div');
+  const body = h('div.inv');
   const entry = ui.openPanel(body, { wide: true, id: 'inventory' });
   if (!entry) return;
+  const st = { cat: 'all', selected: null, hb: { pick: null, slot: null } };
   const render = () => {
     clear(body);
     const eq = c.equipped;
-    const eqRow = (label, id) => {
+    eq.accessories = eq.accessories || [];
+    // ---------------------------------------------------------- paper doll
+    const slotBox = (key, label, id, accepts, iconName, disabled) => {
       const d = ITEMS[id];
-      return h('div.row-item', h('span.ico', d ? d.icon : '—'), h('div.grow', h('b', label), h('div.sub', d ? d.name : 'nothing')));
+      const box = h('div.eq-slot' + (d ? '.filled' : '') + (disabled ? '.disabled' : '') + (st.selected === id && d ? '.sel' : ''), {
+        title: d ? `${d.name}\n${statLine(d)}\n\nClick for details · right-click to take off` : `${label} — empty`,
+        on: {
+          click: () => { if (d) { st.selected = id; render(); } },
+          contextmenu: (ev) => { ev.preventDefault(); if (d) { unequipSlot(game, key); render(); } },
+          dragover: (ev) => { ev.preventDefault(); box.classList.add('over'); },
+          dragleave: () => box.classList.remove('over'),
+          drop: (ev) => {
+            ev.preventDefault();
+            const data = ev.dataTransfer.getData('text/plain');
+            if (!data.startsWith('inv:')) return;
+            const iid = data.slice(4), dd = ITEMS[iid];
+            if (slotKind(dd) !== accepts) { game.log(`That doesn't go in the ${label.toLowerCase()} slot.`, '#ff8a80'); render(); return; }
+            if (!isEquipped(c, iid) || accepts === 'acc') equip(game, iid, accepts === 'acc' ? { slot: +key.slice(3) } : {});
+            st.selected = iid;
+            render();
+          },
+        },
+      }, d ? itemImg(id, 40) : uiImg(iconName, 34, '.ghost'), h('span.lbl', d ? d.name : label));
+      if (d) dragSource(box, 'eq:' + key);
+      return box;
     };
-    const weapons = (eq.weapons || []).map((id) => ITEMS[id]?.name).join(' + ') || 'bare hands';
-    const left = h('div',
-      h('h3', 'Equipped'),
-      h('div.list',
-        h('div.row-item', h('span.ico', '⚔'), h('div.grow', h('b', 'Weapon'), h('div.sub', weapons))),
-        eqRow('Hat', eq.hat), eqRow('Coat', eq.coat)),
-      h('p.muted', 'Tip: equip up to three swords for the Two and Three Sword Styles.'),
-      h('h3', 'Purse'), berriesLine(c),
-      c.fruit ? h('div', h('h3', 'Devil Fruit'), h('p', `${FRUITS[c.fruit].name} — mastery ${Math.floor(c.fruitMastery)}`)) : null,
+    const ws = eq.weapons || [];
+    const swords = ITEMS[ws[0]]?.kind === 'sword';
+    const doll = h('div.doll',
+      h('div.doll-col',
+        slotBox('weapon0', 'Weapon', ws[0], 'weapon', 'weapon_slot'),
+        slotBox('weapon1', '2nd sword', ws[1], 'weapon', 'weapon_slot', !swords),
+        slotBox('weapon2', '3rd sword', ws[2], 'weapon', 'weapon_slot', !swords)),
+      h('div.doll-mid', portrait(equippedLook(c), 120, 150)),
+      h('div.doll-col',
+        slotBox('head', 'Head', eq.hat, 'head', 'head_slot'),
+        slotBox('body', 'Body', eq.coat, 'body', 'body_slot'),
+        ...Array.from({ length: ACC_SLOTS }, (_, i) => slotBox('acc' + i, `Accessory ${i + 1}`, eq.accessories[i], 'acc', 'accessory_slot'))),
     );
-    const groups = {};
+    const p = game.player, dd = p.d;
+    const summary = h('div.eq-summary',
+      h('div', h('b', 'Health '), dd.maxHp), h('div', h('b', 'Defence '), `${Math.round(dd.def * 100)}%`, armorOf(c) ? h('span.muted', ` (armour ${Math.round(armorOf(c) * 100)}%)`) : null),
+      h('div', h('b', 'Damage '), `×${dd.dmg.toFixed(2)}`), h('div', h('b', 'Speed '), dd.speed.toFixed(1)));
+    const fruitNote = c.fruit ? h('div.fruit-note', itemImg('fruit_' + c.fruit, 26), h('div', h('b', FRUITS[c.fruit].name), h('div.sub', `Eaten · mastery ${Math.floor(c.fruitMastery)} · you can never swim again`))) : null;
+    const left = h('div.inv-left', h('h3', 'Equipment'), doll, summary, fruitNote, h('div.purse', h('h3', 'Purse'), berriesLine(c)));
+
+    // -------------------------------------------------------------- grid
+    const tabs = h('div.tabs.icon-tabs', CATS.map((k) => h('button' + (st.cat === k.id ? '.on' : ''), { on: { click: () => { st.cat = k.id; render(); } } }, uiImg(k.icon, 16), k.name)));
+    const cat = CATS.find((k) => k.id === st.cat);
+    const seen = new Map();
     for (const it of c.inventory) {
       const d = ITEMS[it.id];
-      if (!d) continue;
-      (groups[d.type] = groups[d.type] || []).push({ it, d });
+      if (!d || (cat.types && !cat.types.includes(d.type))) continue;
+      const ex = seen.get(it.id);
+      if (ex) { ex.qty += it.qty || 1; if (it.heirloom) ex.heirloom = it; } else seen.set(it.id, { id: it.id, d, qty: it.qty || 1, heirloom: it.heirloom ? it : null });
     }
-    const order = ['weapon', 'hat', 'coat', 'food', 'medicine', 'dial', 'fruit', 'pose', 'key', 'treasure', 'material'];
-    const names = { weapon: 'Weapons', hat: 'Hats', coat: 'Coats', food: 'Food', medicine: 'Medicine', dial: 'Dials', fruit: 'Devil Fruits', pose: 'Eternal Poses', key: 'Key items', treasure: 'Treasure', material: 'Materials' };
-    const right = h('div');
-    if (!c.inventory.length) right.appendChild(h('p', 'Your bag is empty.'));
-    for (const type of order) {
-      if (!groups[type]) continue;
-      right.appendChild(h('h3', names[type]));
-      const list = h('div.list');
-      for (const { it, d } of groups[type]) {
-        const isEq = eq.hat === it.id || eq.coat === it.id || (eq.weapons || []).includes(it.id);
-        const actions = [];
-        if (['weapon', 'hat', 'coat'].includes(d.type)) actions.push(h('button.btn' + (isEq ? '.red' : ''), { on: { click: () => { equip(game, it.id); render(); } } }, isEq ? 'Unequip' : 'Equip'));
-        if (d.type === 'food' || d.type === 'medicine') actions.push(h('button.btn.green', { on: { click: () => { useItem(game, it.id); render(); } } }, d.type === 'food' ? 'Eat' : 'Use'));
-        if (d.type === 'pose') actions.push(h('button.btn', { on: { click: () => { useItem(game, it.id); render(); } } }, c.logPose?.eternal === it.id ? 'Following' : 'Follow'));
-        if (d.type === 'dial') actions.push(h('button.btn', { on: { click: () => { useItem(game, it.id); render(); } } }, 'Learn'));
-        if (d.type === 'fruit') actions.push(h('button.btn.red', { on: { click: () => confirmEat(game, it.id, () => { ui.closePanel(entry); }) } }, 'Eat…'));
-        list.appendChild(h('div.row-item', { title: d.desc || '' },
-          h('span.ico', d.icon), h('div.grow', h('b', d.name), it.heirloom ? h('span.tag', `heirloom of ${it.from}`) : null, (it.qty || 1) > 1 ? h('span.tag', '×' + it.qty) : null,
-            h('div.sub', d.grade ? `${d.grade} · power ×${d.power}` : d.heal ? `+${d.heal} HP` : d.bonus ? Object.entries(d.bonus).map(([k, v]) => `+${v} ${k.toUpperCase()}`).join(' ') : (d.desc || '').slice(0, 90))),
-          ...actions));
+    const items = [...seen.values()].sort((a, b) => TYPE_ORDER.indexOf(a.d.type) - TYPE_ORDER.indexOf(b.d.type) || a.d.name.localeCompare(b.d.name));
+    const grid = h('div.inv-grid', {
+      on: {
+        dragover: (ev) => ev.preventDefault(),
+        drop: (ev) => { ev.preventDefault(); const data = ev.dataTransfer.getData('text/plain'); if (data.startsWith('eq:')) { unequipSlot(game, data.slice(3)); render(); } },
+      },
+    });
+    for (const x of items) {
+      const worn = isEquipped(c, x.id);
+      const tile = h('div.inv-tile' + (st.selected === x.id ? '.sel' : '') + (worn ? '.worn' : ''), {
+        title: `${x.d.name}${statLine(x.d) ? '\n' + statLine(x.d) : ''}`,
+        on: {
+          click: () => { st.selected = x.id; render(); },
+          dblclick: () => { quickUse(x.id); },
+        },
+      }, itemImg(x.id, 40), x.qty > 1 ? h('span.qty', String(x.qty)) : null, worn ? h('span.worn-tag', 'E') : null, x.heirloom ? h('span.heir') : null);
+      dragSource(tile, 'inv:' + x.id); // onto an equipment slot, or (food) onto the hotbar
+      grid.appendChild(tile);
+    }
+    if (!items.length) grid.appendChild(h('p.muted', { style: { gridColumn: '1 / -1' } }, st.cat === 'all' ? 'Your bag is empty.' : 'Nothing here.'));
+
+    // ----------------------------------------------------------- details
+    const sd = ITEMS[st.selected];
+    let details;
+    if (sd && count(c, st.selected)) {
+      const id = st.selected;
+      const worn = isEquipped(c, id);
+      const acts = [];
+      if (slotKind(sd)) acts.push(h('button.btn' + (worn ? '.red' : '.gold'), { on: { click: () => { equip(game, id); render(); } } }, worn ? 'Take off' : 'Equip'));
+      if (USABLE.has(sd.type)) {
+        acts.push(h('button.btn.green', { on: { click: () => { useItem(game, id); render(); } } }, sd.type === 'food' ? 'Eat' : 'Use'));
+        acts.push(h('button.btn', { on: { click: () => { st.hb.pick = 'item:' + id; st.hb.slot = null; render(); } } }, 'Put on hotbar'));
       }
-      right.appendChild(list);
+      if (sd.type === 'pose') acts.push(h('button.btn', { on: { click: () => { useItem(game, id); render(); } } }, c.logPose?.eternal === id ? 'Following' : 'Follow the needle'));
+      if (sd.type === 'dial') acts.push(h('button.btn', { disabled: c.techniques.includes(sd.ability), on: { click: () => { useItem(game, id); render(); } } }, c.techniques.includes(sd.ability) ? 'Learned' : 'Learn to use'));
+      if (sd.type === 'fruit') {
+        if (c.fruit) acts.push(h('span.muted', 'You have already eaten a Devil Fruit — a body can only hold one. Keep it, sell it, or give it away.'));
+        else acts.push(h('button.btn.red', { on: { click: () => confirmEat(game, id, () => render()) } }, 'Eat…'));
+      }
+      const heir = c.inventory.find((i) => i.id === id && i.heirloom);
+      details = h('div.inv-details',
+        h('div.det-head', itemImg(id, 56), h('div', h('h4', sd.name), h('div.sub', `${TYPE_NAME[sd.type] || sd.type}${count(c, id) > 1 ? ' · ×' + count(c, id) : ''}${worn ? ' · equipped' : ''}`), heir ? h('div.sub', `Heirloom of ${heir.from}`) : null)),
+        statLine(sd) ? h('div.det-stats', statLine(sd)) : null,
+        sd.type === 'fruit' ? fruitInfo(sd) : h('p', sd.desc || ''),
+        h('div.det-actions', acts));
+    } else {
+      details = h('div.inv-details.empty', h('p.muted', 'Select an item to see it. Drag gear onto the equipment slots, and food onto the hotbar. Double-click to equip or eat.'));
     }
-    body.appendChild(h('h2', 'Inventory'));
-    body.appendChild(h('div.grid2', left, right));
+    const right = h('div.inv-right', tabs, grid, details);
+    body.append(h('h2', 'Inventory'), h('div.inv-cols', left, right), h('h3', 'Hotbar'), hotbarStrip(game, st.hb, render));
+  };
+  const quickUse = (id) => {
+    const d = ITEMS[id];
+    if (slotKind(d)) equip(game, id);
+    else if (USABLE.has(d.type)) useItem(game, id);
+    else if (d.type === 'fruit' && !c.fruit) { confirmEat(game, id, () => render()); return; }
+    st.selected = id;
+    render();
   };
   render();
+}
+
+function fruitInfo(d) {
+  const f = FRUITS[d.fruit];
+  if (!f) return h('p', d.desc || '');
+  return h('div',
+    h('p', h('b', `${f.en} · ${f.type}`), ' ', h('span.tag', { style: { background: FRUIT_RARITY[f.rarity]?.color, color: '#222' } }, FRUIT_RARITY[f.rarity]?.label)),
+    h('p', f.desc));
 }
 
 function confirmEat(game, itemId, done) {
   const c = game.state.char;
   const d = ITEMS[itemId];
   const f = FRUITS[d.fruit];
+  if (c.fruit) { game.log('A body can only hold one Devil Fruit.', '#ff8a80'); return; }
   const body = h('div', { style: { textAlign: 'center' } },
+    itemImg(itemId, 72),
     h('h2', f.name),
-    h('p', h('b', `${f.en} · ${f.type}`), ' ', h('span.tag', { style: { background: FRUIT_RARITY[f.rarity]?.color, color: '#222' } }, FRUIT_RARITY[f.rarity]?.label)),
-    h('p', f.desc),
-    h('p', 'Techniques: ' + f.techniques.map((t) => `${t.name} (${t.mastery})`).join(', ')),
-    c.fruit ? h('p', { style: { color: '#b71c1c', fontWeight: 800 } }, `You already ate the ${FRUITS[c.fruit].name}. Eating a second Devil Fruit will tear your body apart and KILL you.`) : h('p', { style: { color: '#b71c1c', fontWeight: 800 } }, 'You will never swim again. The sea will become your grave if you fall in.'),
+    fruitInfo(d),
+    h('p', 'Techniques: ' + f.techniques.map((t) => `${t.name} (mastery ${t.mastery})`).join(', ')),
+    h('p', { style: { color: '#b71c1c', fontWeight: 800 } }, 'You will never swim again — the sea becomes your grave if you fall in. And a body can only ever hold ONE Devil Fruit.'),
     h('div', { style: { display: 'flex', gap: '10px', justifyContent: 'center' } },
       h('button.btn.red', { on: { click: () => { game.ui.closePanel(); useItem(game, itemId); done(); } } }, 'Eat it'),
       h('button.btn', { on: { click: () => game.ui.closePanel() } }, 'Not yet')));
   game.ui.openPanel(body);
 }
 
-// ------------------------------------------------------------- character
+// ============================================================== character
 export function openCharacter(game) {
   const ui = game.ui;
   const c = game.state.char;
   const p = game.player;
-  const body = h('div');
+  const body = h('div.charsheet');
   const entry = ui.openPanel(body, { wide: true, id: 'character' });
   if (!entry) return;
   const render = () => {
     clear(body);
     const race = RACES[c.race];
-    const attrRows = ATTR_KEYS.map((k) => h('div.stat-row', { title: ATTRS[k].desc },
+    const legacy = game.state.legacy;
+    const tier = repTier(c.reputation || 0);
+    const rep = c.reputation || 0;
+    const role = c.faction === 'marine' ? `Marine ${c.marineRank || 'Recruit'}` : c.crewName ? `Captain of the ${c.crewName}` : c.faction === 'pirate' ? 'Pirate' : 'Wanderer';
+    const hasD = c.traits.includes('will_of_d');
+    // ------------------------------------------------------------ header
+    const header = h('div.char-head',
+      portrait(equippedLook(c), 110, 130),
+      h('div.char-id',
+        h('h2', c.name),
+        h('div', `${raceLabel(c.look)} · ${role} · generation ${c.generation}`),
+        c.bounty ? h('div.bounty-line', uiImg('bounty', 18), ` Bounty ${formatBerries(c.bounty)}`) : null,
+        h('div.rep', h('span.lbl', uiImg('reputation', 18), ' Reputation'), h('div.rep-bar', h('i', { style: { left: rep < 0 ? (50 + rep / 2) + '%' : '50%', width: Math.abs(rep) / 2 + '%', background: rep < 0 ? '#c62828' : '#2e7d32' } }), h('b', { style: { left: '50%' } })),
+          h('span.rep-name', { style: { color: tier.color } }, `${tier.name} (${rep > 0 ? '+' : ''}${Math.round(rep)})`)),
+        h('div.char-btns',
+          h('button.btn', { on: { click: () => openJollyRogerFromMenu(game) } }, uiImg('jolly_roger', 18), 'Jolly Roger'),
+          h('button.btn', { on: { click: () => ui.openPanel(h('div', { style: { display: 'grid', placeItems: 'center' } }, wantedPoster(c))) } }, uiImg('bounty', 18), 'Wanted poster'))),
+      h('div.will-box',
+        h('h4', uiImg('reputation', 18), ' Inherited Will'),
+        h('div', h('b', `${legacy?.will || 0}`), ' banked by your lineage'),
+        h('div', h('b', `+${computeWill(c)}`), ' if your journey ended today'),
+        h('div.sub', 'Earned from islands charted, great foes defeated, days survived, your bounty and the legends you write. Spend it on your bloodline between generations.'),
+        h('div.d-line' + (hasD ? '.has' : ''), hasD ? h('span', h('b', 'D.'), ' You carry the Will of D.') : h('span', `No "D." in your name. (${Math.round(dChance(legacy || {}) * 100)}% of births carry it.)`))),
+    );
+    // -------------------------------------------------------- attributes
+    const prog = game.progression;
+    const attrRows = ATTR_KEYS.map((k) => h('div.stat-row', { title: `${ATTRS[k].desc}\nTrains by: ${TRAINS_BY[k]}` },
       h('span.nm', ATTRS[k].name), h('span.val', c.attrs[k]),
-      h('div.meter', h('i', { style: { width: (100 * c.attrs[k] / ATTR_CAP) + '%' } })),
-      c.unspent > 0 && c.attrs[k] < ATTR_CAP ? h('button.btn.gold', { style: { padding: '1px 8px' }, on: { click: () => { c.unspent--; c.attrs[k]++; refreshPlayer(game); persist(game); render(); } } }, '+') : null));
-    const hakiRows = Object.entries(HAKI).map(([k, hk]) => h('div.stat-row', { title: hk.desc },
-      h('span.nm', `${hk.icon} ${hk.name.replace(' Haki', '')}`), h('span.val', c.haki[k] ? Math.floor(c.haki[k]) : '—'),
-      h('div.meter', h('i', { style: { width: (c.haki[k] || 0) + '%', background: 'linear-gradient(90deg,#4a148c,#ce93d8)' } }))));
-    const masteryRows = Object.entries(c.masteries).map(([s, m]) => h('div.stat-row',
-      h('span.nm', `${STYLES[s]?.icon || ''} ${STYLES[s]?.name || s}`), h('span.val', Math.floor(m)),
+      h('div.meter.dual', h('i', { style: { width: (100 * c.attrs[k] / ATTR_CAP) + '%' } }), h('u', { style: { width: (100 * (prog?.trainProgress(k) || 0)) + '%' } }))));
+    const dd = p.d;
+    const derived = h('div.derived', `Health ${dd.maxHp} · Stamina ${dd.maxStamina}${hakiKnown(c) ? ' · Spirit ' + dd.maxHaki : ''} · Speed ${dd.speed.toFixed(1)} · Damage ×${dd.dmg.toFixed(2)} · Defence ${Math.round(dd.def * 100)}% · Doriki ${p.power().toLocaleString()}`);
+    const wm = c.weaponMastery || {};
+    const wmRows = Object.entries(WEAPON_KINDS).map(([k, name]) => h('div.stat-row', { title: `+${((wm[k] || 0) * 0.6).toFixed(0)}% damage with ${name.toLowerCase()}` },
+      h('span.nm', name), h('span.val', Math.floor(wm[k] || 0)),
+      h('div.meter', h('i', { style: { width: (wm[k] || 0) + '%', background: 'linear-gradient(90deg,#6d4c33,#d4a373)' } }))));
+    const masteryRows = Object.entries(c.masteries).filter(([s]) => STYLES[s]).map(([s, m]) => h('div.stat-row',
+      h('span.nm', STYLES[s]?.name || s), h('span.val', Math.floor(m)),
       h('div.meter', h('i', { style: { width: m + '%', background: 'linear-gradient(90deg,#1565c0,#90caf9)' } }))));
-    const d = p.d;
+    const hakiRows = hakiKnown(c) ? Object.entries(HAKI).filter(([k]) => c.haki[k]).map(([k, hk]) => h('div.stat-row', { title: hk.desc },
+      h('span.nm', hk.name.replace(' Haki', '')), h('span.val', Math.floor(c.haki[k])),
+      h('div.meter', h('i', { style: { width: (c.haki[k] || 0) + '%', background: 'linear-gradient(90deg,#4a148c,#ce93d8)' } })))) : [];
+    const traits = c.traits.filter((t) => TRAITS[t] && (!TRAITS[t].hidden || (t === 'conqueror' && c.haki.conqueror)));
     const left = h('div',
-      h('h2', c.name),
-      h('p', `${raceLabel(c.look)} · generation ${c.generation} · ${c.faction === 'marine' ? 'Marine ' + (c.marineRank || '') : c.faction === 'pirate' ? 'Pirate' : 'Wanderer'}`),
-      h('p', h('b', 'Dream: '), `${DREAMS[c.dream].icon} ${DREAMS[c.dream].name}${c.dreamDone ? ' — FULFILLED' : ''}`, h('div.muted', DREAMS[c.dream].goal)),
-      h('p', h('b', 'Doriki: '), p.power().toLocaleString(), h('span.muted', '  (CP9 scale: an armed Marine ≈ 10, Rob Lucci ≈ 4000)')),
-      h('h3', 'Attributes'), c.unspent ? h('p', { style: { color: '#b8860b', fontWeight: 800 } }, `${c.unspent} breakthrough point${c.unspent > 1 ? 's' : ''} to spend!`) : null,
-      ...attrRows,
-      h('p.muted', `Health ${d.maxHp} · Stamina ${d.maxStamina} · Haki ${d.maxHaki} · Speed ${d.speed.toFixed(1)} · Damage ×${d.dmg.toFixed(2)} · Defence ${Math.round(d.def * 100)}%`),
-      h('h3', 'Haki'), ...hakiRows,
-      h('h3', 'Style mastery'), ...masteryRows,
+      h('h3', 'Attributes'),
+      h('p.muted', 'Attributes grow by themselves as you train and fight worthy opponents. The thin bar shows how close each one is to rising.'),
+      ...attrRows, derived,
+      h('h3', 'Weapon mastery'), h('p.muted', 'Every kind of weapon grows stronger the more you fight with it.'), ...wmRows);
+    const right = h('div',
+      h('h3', 'Fighting styles'), ...masteryRows,
       c.fruit ? h('div', h('h3', 'Devil Fruit'), h('div.stat-row', h('span.nm', FRUITS[c.fruit].name), h('span.val', Math.floor(c.fruitMastery)), h('div.meter', h('i', { style: { width: c.fruitMastery + '%', background: 'linear-gradient(90deg,#bf360c,#ffab91)' } })))) : null,
+      hakiRows.length ? h('div', h('h3', 'Haki'), ...hakiRows) : null,
       h('h3', 'Traits'),
-      ...race.traits.map((t) => h('div', '• ' + t)),
-      ...c.traits.map((t) => h('div', h('b', TRAITS[t]?.name + ': '), TRAITS[t]?.desc)),
+      ...race.traits.map((t) => h('div.li', t)),
+      ...traits.map((t) => h('div.li', h('b', TRAITS[t].name + ': '), TRAITS[t].desc)),
+      h('p.muted', { style: { marginTop: '10px' } }, `Lives ${c.lives}/${c.maxLives} · Second winds ${c.getUpCharges || 0} · ${(c.discovered || []).length} islands charted · ${(c.bosses || []).length} great foes · day ${game.env.day}`),
     );
-    const right = h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' } },
-      wantedPoster(c),
-      h('p.muted', `Lives ${c.lives}/${c.maxLives} · Second winds ${c.getUpCharges || 0} · ${(c.discovered || []).length} islands charted · ${(c.bosses || []).length} great foes defeated · ${c.world?.day || game.env.day} days at sea`),
-    );
-    body.appendChild(h('div.grid2', left, right));
+    body.append(header, h('div.grid2', left, right));
   };
   render();
 }
+const TRAINS_BY = {
+  str: 'landing blows on worthy opponents, masters, breakthroughs',
+  agi: 'dodging and parrying attacks, fighting with guns, masters',
+  end: 'blocking hits, masters',
+  vit: 'taking punishment and surviving, masters',
+  wil: 'getting back up, facing stronger foes, Devil Fruit use, masters',
+};
 
-// ---------------------------------------------------------------- skills
+function openJollyRogerFromMenu(game) { openJollyRoger(game); }
+
+// ================================================================= skills
 export function openSkills(game) {
   const ui = game.ui;
   const c = game.state.char;
   const p = game.player;
-  const body = h('div');
+  const body = h('div.skills');
   const entry = ui.openPanel(body, { wide: true, id: 'skills' });
   if (!entry) return;
-  let picking = null;
+  const sel = { pick: null, slot: null };
   const render = () => {
     clear(body);
     const styles = Object.keys(c.masteries).filter((s) => STYLES[s]);
-    const styleBtns = styles.map((s) => h('button.btn' + (c.style === s ? '.red' : ''), { on: { click: () => { c.style = s; refreshPlayer(game); render(); } }, title: STYLES[s].desc },
-      `${STYLES[s].icon} ${STYLES[s].name} (${Math.floor(c.masteries[s])})`));
+    const styleBtns = styles.map((s) => h('button' + (c.style === s ? '.on' : ''), { on: { click: () => { c.style = s; refreshPlayer(game); render(); } }, title: STYLES[s].desc },
+      `${STYLES[s].name} (${Math.floor(c.masteries[s])})`));
     const cur = STYLES[c.style];
     const needW = cur?.weapon && !p.hasWeapon(cur.weapon);
-    const hot = h('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap' } }, ...Array.from({ length: 6 }, (_, i) => {
-      const d = getAbility(c.hotbar[i]);
-      return h('div.card', { style: { width: '120px', cursor: 'pointer', outline: picking === i ? '3px solid #c0392b' : 'none' }, on: { click: () => { picking = i; render(); } } },
-        h('b', `${i + 1}. `), d ? `${d.icon || ''} ${d.name}` : h('span.muted', 'empty'));
-    }));
-    const techs = c.techniques.map(getAbility).filter(Boolean);
-    const techList = h('div.list', ...techs.map((d) => h('div.row-item',
-      h('span.ico', d.icon || '✦'),
-      h('div.grow', h('b', d.name), h('div.sub', `${d.desc || ''} ${d.cd ? '· cooldown ' + d.cd + 's' : ''} ${d.cost?.stamina ? '· ' + d.cost.stamina + ' stamina' : ''} ${d.cost?.haki ? '· ' + d.cost.haki + ' haki' : ''} ${d.weapon ? '· needs ' + d.weapon : ''}`)),
-      picking !== null ? h('button.btn.gold', { on: { click: () => { c.hotbar[picking] = d.id; for (let k = 0; k < 6; k++) if (k !== picking && c.hotbar[k] === d.id) c.hotbar[k] = null; picking = null; refreshPlayer(game); render(); } } }, `Put in slot ${picking + 1}`) : null)));
+    const techs = c.techniques.map(getAbility).filter((d) => d && (!needsHaki(d) || hakiKnown(c)));
+    const byGroup = {};
+    for (const d of techs) {
+      const src = d.source || '';
+      const g = src.startsWith('fruit') ? 'Devil Fruit' : src.startsWith('haki') ? 'Haki' : src.startsWith('style:') ? (STYLES[src.slice(6)]?.name || 'Style') : d.style ? (STYLES[d.style]?.name || 'Style') : 'Other';
+      (byGroup[g] = byGroup[g] || []).push(d);
+    }
+    const lists = Object.entries(byGroup).map(([g, ds]) => h('div',
+      h('h4.grp', g),
+      h('div.tech-grid', ds.map((d) => {
+        const onBar = c.hotbar.includes(d.id);
+        const card = h('div.tech' + (sel.pick === 'skill:' + d.id ? '.sel' : '') + (onBar ? '.onbar' : ''), {
+          title: 'Drag onto the hotbar, or click and then click a slot',
+          on: { click: () => {
+            if (sel.slot !== null) { assignHotbar(game, sel.slot, 'skill:' + d.id); sel.slot = null; sel.pick = null; }
+            else sel.pick = sel.pick === 'skill:' + d.id ? null : 'skill:' + d.id;
+            render();
+          } },
+        }, skillImg(d, 40),
+        h('div.grow', h('b', d.name), h('div.sub', d.desc || ''),
+          h('div.sub.meta', [d.cd ? `cooldown ${d.cd}s` : null, d.cost?.stamina ? `${d.cost.stamina} stamina` : null, d.cost?.haki && hakiKnown(c) ? `${d.cost.haki} spirit` : null, d.weapon ? `needs ${d.weapon}` : null].filter(Boolean).join(' · '))),
+        onBar ? h('span.tag', `slot ${c.hotbar.indexOf(d.id) + 1}`) : null);
+        return dragSource(card, 'skill:' + d.id);
+      }))));
     body.append(
       h('h2', 'Skills'),
       h('h3', 'Fighting style'), h('div.tabs', styleBtns),
       needW ? h('p', { style: { color: '#b71c1c' } }, `${cur.name} needs ${cur.weapon === 'sword' ? cur.swords + ' sword(s)' : 'a ' + cur.weapon} equipped — until then you fight bare-handed.`) : null,
       h('p.muted', cur?.desc || ''),
-      h('h3', 'Hotbar'), h('p.muted', 'Click a slot, then choose a technique for it.'), hot,
-      picking !== null ? h('button.btn', { on: { click: () => { c.hotbar[picking] = null; picking = null; render(); } } }, 'Clear slot') : null,
-      h('h3', 'Known techniques'), techs.length ? techList : h('p', 'You know no techniques yet. Find a trainer — or a Devil Fruit.'),
-      h('h3', 'Haki'),
-      h('p.muted', 'R toggles Armament, T toggles Observation, G releases Conqueror\'s. They drain your Haki bar while active.'),
+      h('h3', 'Hotbar'), hotbarStrip(game, sel, render),
+      h('h3', 'Techniques'), techs.length ? h('div', lists) : h('p', 'You know no techniques yet. Find a trainer — or a Devil Fruit.'),
+      hakiKnown(c) ? h('p.muted', `Haki: ${[c.haki.armament && 'R toggles Armament', c.haki.observation && 'T toggles Observation', c.haki.conqueror && "G releases Conqueror's"].filter(Boolean).join(', ')}. Active Haki drains your spirit bar.`) : null,
     );
   };
   render();
 }
 
-// --------------------------------------------------------------- journal
+// ================================================================ journal
 export function openJournal(game) {
   const ui = game.ui;
   const c = game.state.char;
-  const q = game.quests;
-  const active = q.active();
-  const done = Object.entries(c.quests).filter(([, s]) => s.done).map(([id]) => questDef(id)).filter(Boolean);
-  const body = h('div',
-    h('h2', 'Journal'),
-    h('h3', 'Active'),
-    active.length ? h('div.list', ...active.map(({ id, s, def }) => h('div.card',
-      h('h4', def.name, h('span.tag', def.kind || 'story')),
-      h('div', def.summary || ''),
-      h('div', { style: { marginTop: '4px', fontWeight: 800 } }, '➤ ' + (def.stages[s.stage]?.desc || '')),
-      def.island ? h('div.muted', 'Location: ' + (game.surface.islands.find((i) => i.id === def.island)?.name || def.island)) : null))) : h('p', 'No active quests. Talk to people — every island has a story.'),
-    h('h3', 'Completed'),
-    done.length ? h('div.list', ...done.map((d) => h('div.row-item', h('span.ico', '✔'), h('div.grow', h('b', d.name))))) : h('p.muted', 'None yet.'),
-    h('h3', 'Dream'),
-    h('p', `${DREAMS[c.dream].icon} ${DREAMS[c.dream].name} — ${DREAMS[c.dream].goal}`),
-  );
-  ui.openPanel(body, { id: 'journal' });
+  const body = h('div.journal');
+  const entry = ui.openPanel(body, { wide: true, id: 'journal' });
+  if (!entry) return;
+  let tab = 'quests';
+  const render = () => {
+    clear(body);
+    const tabs = h('div.tabs', ['quests', 'legends'].map((k) => h('button' + (tab === k ? '.on' : ''), { on: { click: () => { tab = k; render(); } } }, k === 'quests' ? 'Quests' : 'Legends')));
+    body.append(h('h2', 'Journal'), tabs);
+    if (tab === 'quests') {
+      const q = game.quests;
+      const active = q.active();
+      const done = Object.entries(c.quests).filter(([, s]) => s.done).map(([id]) => questDef(id)).filter(Boolean);
+      body.append(
+        h('h3', 'Active'),
+        active.length ? h('div.list', ...active.map(({ s, def }) => h('div.card',
+          h('h4', uiImg('quest', 18), ' ', def.name, h('span.tag', def.kind || 'story')),
+          h('div', def.summary || ''),
+          h('div.objective', def.stages[s.stage]?.desc || ''),
+          def.island ? h('div.muted', 'Location: ' + (game.surface.islands.find((i) => i.id === def.island)?.name || def.island)) : null))) : h('p', 'No active quests. Talk to people — every island has a story.'),
+        h('h3', 'Completed'),
+        done.length ? h('div.list.compact', ...done.map((d) => h('div.row-item', uiImg('check', 18), h('div.grow', h('b', d.name))))) : h('p.muted', 'None yet.'));
+    } else {
+      body.append(h('p.muted', 'Nobody chooses your destiny. But the sea remembers those who do the impossible — every legend you write adds to your Inherited Will.'));
+      const list = h('div.list');
+      for (const id of LEGEND_IDS) {
+        const L = LEGENDS[id];
+        const got = (c.legends || []).includes(id);
+        let pr = null;
+        try { pr = L.progress ? L.progress(c) : null; } catch { pr = null; }
+        list.appendChild(h('div.row-item' + (got ? '.legend-done' : ''),
+          uiImg(got ? 'check' : 'journal', 22),
+          h('div.grow', h('b', L.name), h('div.sub', L.desc),
+            pr && !got ? h('div.stat-row', h('div.meter', h('i', { style: { width: Math.min(100, 100 * pr[0] / pr[1]) + '%' } })), h('span.sub', `${pr[0].toLocaleString()} / ${pr[1].toLocaleString()} ${pr[2]}`)) : null),
+          h('span.price', got ? 'Achieved' : `+${L.will} Will`)));
+      }
+      body.appendChild(list);
+    }
+  };
+  render();
 }
 
-// ------------------------------------------------------------------ menu
-export function openMenu(game, { onQuit, onRetire }) {
+// =================================================================== menu
+export function openMenu(game, { onQuit, onRetire, onSave }) {
   const ui = game.ui;
   const c = game.state.char;
-  const body = h('div', { style: { textAlign: 'center' } },
+  const saved = h('p.muted.save-note', c.lastSaved ? `Last saved ${new Date(c.lastSaved).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not saved yet');
+  const btn = (icon, text, fn, cls = '') => h('button.btn.menu-btn' + cls, { on: { click: fn } }, uiImg(icon, 20), text);
+  const body = h('div.pause',
     h('h2', 'Paused'),
-    h('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' } },
-      h('button.btn.gold', { on: { click: () => ui.closePanel() } }, 'Resume'),
-      h('button.btn', { on: { click: () => { ui.closePanel(); openInventory(game); } } }, 'Inventory (I)'),
-      h('button.btn', { on: { click: () => { ui.closePanel(); openCharacter(game); } } }, 'Character (C)'),
-      h('button.btn', { on: { click: () => { ui.closePanel(); openSkills(game); } } }, 'Skills (K)'),
-      h('button.btn', { on: { click: () => { ui.closePanel(); openJournal(game); } } }, 'Journal (J)'),
-      h('button.btn', { on: { click: () => { ui.closePanel(); game.openMap(); } } }, 'World Map (M)'),
-      h('button.btn', { on: { click: () => { ui.closePanel(); ui.openPanel(helpContent(), { wide: true }); } } }, 'How to Play (H)'),
-      h('button.btn', { on: { click: () => { ui.closePanel(); openSettings(game); } } }, 'Settings'),
-      c.dreamDone ? h('button.btn.gold', { on: { click: () => { ui.closePanel(); onRetire(); } } }, 'Retire as a legend') : null,
-      h('button.btn.red', { on: { click: () => { ui.closePanel(); onQuit(); } } }, 'Save & return to title'),
+    h('div.menu-list',
+      btn('check', 'Resume', () => ui.closePanel(), '.gold'),
+      btn('save', 'Save game', () => { if (onSave()) saved.textContent = `Saved just now (lineage ${game.saveSlot || 1})`; }),
+      btn('help', 'How to Play', () => { ui.closePanel(); ui.openPanel(helpContent(c), { wide: true, id: 'help' }); }),
+      btn('settings', 'Settings', () => { ui.closePanel(); openSettings(game); }),
+      (c.legends || []).length ? btn('journal', 'Retire as a legend', async () => {
+        if (!(await ui.ask({ title: 'Retire?', text: `${c.name} hangs up their hat and becomes a legend. This life ends here and its Inherited Will passes to the next generation.`, ok: 'Retire', danger: true }))) return;
+        ui.closePanel(); onRetire();
+      }) : null,
+      btn('close', 'Save & quit to title', () => { ui.closePanel(); onQuit(); }, '.red'),
     ),
-    h('p.muted', { style: { marginTop: '10px' } }, 'The game saves automatically. Death is permanent once your last vivre card burns.'));
-  ui.openPanel(body);
+    saved,
+    h('p.muted', 'The game also saves by itself every minute, at every milestone, and when you close the page. Death is written immediately.'));
+  ui.openPanel(body, { id: 'menu' });
 }
 
 export function openSettings(game) {
   const s = game.settings;
   const slider = (label, key) => h('div.stat-row', h('span.nm', label), h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: s[key], style: { flex: 1 }, on: { input: (e) => { s[key] = Number(e.target.value); game.applySettings(); } } }));
+  const check = (label, key) => h('label.check-row', h('input', { type: 'checkbox', checked: !!s[key], on: { change: (e) => { s[key] = e.target.checked; game.applySettings(); } } }), label);
   game.ui.openPanel(h('div', h('h2', 'Settings'),
     slider('Sound effects', 'volume'), slider('Music', 'music'), slider('Screen shake', 'shake'),
-    h('p.muted', 'Settings are saved in this browser.')), { onClose: () => game.applySettings(true) });
+    check('Show tutorial hints', 'showHints'),
+    h('p.muted', 'Settings are saved in this browser.')), { onClose: () => game.applySettings(true), id: 'settings' });
 }
 
-// ------------------------------------------------------------------ shop
+// =================================================================== shop
 export function openShop(game, building, island) {
   const ui = game.ui;
   const c = game.state.char;
+  if (bannedFromShop(game, building)) {
+    game.dialogue.open(null, { start: 'a', nodes: { a: { speaker: building.name || 'Shopkeeper', text: '"YOU! Thief! Get out of my shop before I call the Marines again!"' } } });
+    return null;
+  }
   const body = h('div');
   const stock = stockFor(building, island);
   let tab = 'buy';
-  const entry = ui.openPanel(body, { wide: true });
+  const entry = ui.openPanel(body, { wide: true, id: 'shop' });
   const render = () => {
     clear(body);
-    body.append(h('h2', building.name || 'Shop'), h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+    body.append(h('h2', building.name || 'Shop'), h('div.shop-top',
       h('div.tabs', h('button' + (tab === 'buy' ? '.on' : ''), { on: { click: () => { tab = 'buy'; render(); } } }, 'Buy'), h('button' + (tab === 'sell' ? '.on' : ''), { on: { click: () => { tab = 'sell'; render(); } } }, 'Sell')),
       berriesLine(c)));
     const list = h('div.list');
@@ -255,10 +527,11 @@ export function openShop(game, building, island) {
         if (!d) continue;
         const price = priceOf(id, island, c);
         const owned = count(c, id);
-        list.appendChild(h('div.row-item', { title: d.desc || '' }, h('span.ico', d.icon),
-          h('div.grow', h('b', d.name), owned ? h('span.tag', `owned ${owned}`) : null, h('div.sub', d.desc || d.grade || (d.heal ? `+${d.heal} HP` : ''))),
+        list.appendChild(h('div.row-item', { title: d.desc || '' }, itemImg(id, 34, '.ico'),
+          h('div.grow', h('b', d.name), owned ? h('span.tag', `owned ${owned}`) : null, h('div.sub', statLine(d) || d.desc || d.grade || '')),
           h('span.price', formatBerries(price)),
-          h('button.btn.gold', { disabled: c.berries < price, on: { click: () => { if (pay(game, price)) { addItem(game, id, 1); game.audio?.sfx('coin'); render(); } } } }, 'Buy')));
+          h('button.btn.gold', { disabled: c.berries < price, on: { click: () => { if (pay(game, price)) { addItem(game, id, 1); game.audio?.sfx('coin'); render(); } } } }, 'Buy'),
+          !d.unique ? h('button.btn.steal', { title: 'Try to pocket it while nobody is looking. Theft ruins your reputation — and if you are caught, the guards come running.', on: { click: () => { const r = stealFromShop(game, id, building, price); if (r === 'caught') ui.closePanel(entry); else render(); } } }, 'Steal') : null));
       }
     } else {
       const seen = new Set();
@@ -268,10 +541,13 @@ export function openShop(game, building, island) {
         const d = ITEMS[it.id];
         const sp = sellPrice(it.id);
         if (!d || !sp || it.heirloom) continue;
-        const isEq = c.equipped.hat === it.id || c.equipped.coat === it.id || (c.equipped.weapons || []).includes(it.id);
-        list.appendChild(h('div.row-item', h('span.ico', d.icon), h('div.grow', h('b', d.name), h('span.tag', '×' + count(c, it.id))),
+        const worn = isEquipped(c, it.id) && count(c, it.id) <= 1;
+        list.appendChild(h('div.row-item', itemImg(it.id, 34, '.ico'), h('div.grow', h('b', d.name), h('span.tag', '×' + count(c, it.id)), d.type === 'fruit' ? h('div.sub', 'Devil Fruits fetch a fortune — the black market always pays.') : null),
           h('span.price', formatBerries(sp)),
-          h('button.btn', { disabled: isEq, on: { click: () => { removeItem(game, it.id, 1); earn(game, sp, false); game.audio?.sfx('coin'); render(); } } }, isEq ? 'Equipped' : 'Sell')));
+          h('button.btn', { disabled: worn, on: { click: async () => {
+            if (d.type === 'fruit' && !(await ui.ask({ title: `Sell the ${d.name}?`, text: `The ${d.name} will be gone for good. (${formatBerries(sp)})`, ok: 'Sell' }))) return;
+            removeItem(game, it.id, 1); earn(game, sp, false); game.audio?.sfx('coin'); render();
+          } } }, worn ? 'Equipped' : 'Sell')));
       }
       if (!list.children.length) list.appendChild(h('p', 'Nothing the shopkeeper wants.'));
     }
@@ -281,14 +557,14 @@ export function openShop(game, building, island) {
   return entry;
 }
 
-// ------------------------------------------------------------ inn / doctor
+// ========================================================== inn / doctor
 export function openInn(game, building, island, town) {
   const S = game.services;
   const price = S.innPrice(island);
   game.ui.openPanel(h('div', h('h2', building.name || 'Inn'),
     h('p', 'A warm bed, a hot meal and a roof over your head. Resting here also makes this town the place you wake up if you fall in battle, and restores your second winds.'),
     h('p', h('b', 'Price: '), formatBerries(price)),
-    h('button.btn.gold', { on: { click: () => { if (S.rest(island, town)) game.ui.closePanel(); } } }, 'Rest until morning')));
+    h('button.btn.gold', { on: { click: () => { if (S.rest(island, town)) game.ui.closePanel(); } } }, 'Rest until morning')), { id: 'inn' });
 }
 
 export function openDoctor(game, building, island, doc) {
@@ -296,7 +572,7 @@ export function openDoctor(game, building, island, doc) {
   const c = game.state.char;
   const p = game.player;
   const body = h('div');
-  const entry = game.ui.openPanel(body);
+  const entry = game.ui.openPanel(body, { id: 'doctor' });
   const render = () => {
     clear(body);
     body.append(h('h2', doc?.name || building.name || 'Clinic'),
@@ -314,12 +590,12 @@ export function openDoctor(game, building, island, doc) {
   return entry;
 }
 
-// -------------------------------------------------------------- shipyard
+// ============================================================== shipyard
 export function openShipyard(game, building, island, dock) {
   const S = game.services;
   const c = game.state.char;
   const body = h('div');
-  game.ui.openPanel(body, { wide: true });
+  game.ui.openPanel(body, { wide: true, id: 'shipyard' });
   const myShips = () => game.ships.filter((s) => s.owner === 'player' && !s.sunk);
   const render = () => {
     clear(body);
@@ -329,10 +605,10 @@ export function openShipyard(game, building, island, dock) {
     for (const type of S.shipsFor(island)) {
       const d = SHIPS[type];
       const price = S.shipPrice(type, island);
-      list.appendChild(h('div.row-item', h('span.ico', '⛵'),
+      list.appendChild(h('div.row-item', uiImg('ship', 30),
         h('div.grow', h('b', d.name), h('div.sub', `${d.desc} · hull ${d.hull} · speed ${d.speed} · cannons ${d.cannons}${d.grandLine ? '' : ' · NOT fit for the Grand Line'}`)),
         h('span.price', formatBerries(price)),
-        h('button.btn.gold', { disabled: c.berries < price, on: { click: async () => { const n = await game.ui.ask({ title: `Buy a ${d.name}`, text: `Name your new ship (${formatBerries(price)}).`, input: d.name, ok: 'Buy' }); if (n === null) return; S.buyShip(type, island, dock, (n || d.name).slice(0, 24)); render(); } } }, 'Buy')));
+        h('button.btn.gold', { disabled: c.berries < price, on: { click: async () => { const n = await game.ui.ask({ title: `Buy a ${d.name}`, text: `Name your new ship (${formatBerries(price)}).`, input: d.name, ok: 'Buy' }); if (n === null) return; S.buyShip(type, island, dock, (n || d.name).slice(0, 24)); game.emit('shipBought', type); render(); } } }, 'Buy')));
     }
     body.appendChild(list);
     const ships = myShips();
@@ -368,22 +644,23 @@ export function openShipyard(game, building, island, dock) {
   render();
 }
 
-// --------------------------------------------------------------- trainer
+// =============================================================== trainer
 export function openTrainer(game, tid, npcName) {
   const S = game.services;
   const t = TRAINERS[tid];
   const c = game.state.char;
   const body = h('div');
-  game.ui.openPanel(body, { wide: true });
+  game.ui.openPanel(body, { wide: true, id: 'trainer' });
   let tab = 'styles';
   const render = () => {
     clear(body);
     const tabs = ['styles', 'techniques', 'training'];
-    if (t.haki) tabs.push('haki');
+    const hakiTypes = Object.keys(t.haki || {}).filter((k) => c.haki[k]);
+    if (hakiTypes.length) tabs.push('haki');
     tabs.push('spar');
     body.append(h('h2', npcName || t.name), h('p', h('i', `"${t.lines?.[0] || 'Let\'s see what you\'ve got.'}"`)),
-      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-        h('div.tabs', ...tabs.map((k) => h('button' + (tab === k ? '.on' : ''), { on: { click: () => { tab = k; render(); } } }, k[0].toUpperCase() + k.slice(1)))),
+      h('div.shop-top',
+        h('div.tabs', ...tabs.map((k) => h('button' + (tab === k ? '.on' : ''), { on: { click: () => { tab = k; render(); } } }, title(k)))),
         berriesLine(c)));
     const list = h('div.list');
     if (tab === 'styles') {
@@ -393,46 +670,46 @@ export function openTrainer(game, tid, npcName) {
         const st = STYLES[s];
         const chk = S.canLearnStyle(tid, s);
         const price = S.stylePrice(tid, s);
-        list.appendChild(h('div.row-item', h('span.ico', st.icon), h('div.grow', h('b', st.name), h('div.sub', st.desc), chk.warn ? h('div.sub', { style: { color: '#b71c1c' } }, chk.warn) : null),
+        list.appendChild(h('div.row-item', uiImg('skills', 30), h('div.grow', h('b', st.name), h('div.sub', st.desc), chk.warn ? h('div.sub', { style: { color: '#b71c1c' } }, chk.warn) : null),
           h('span.price', price ? formatBerries(price) : 'free'),
           h('button.btn.gold', { disabled: !chk.ok || c.berries < price, on: { click: () => { S.learnStyle(tid, s); render(); } } }, chk.ok ? 'Learn' : chk.why)));
       }
     } else if (tab === 'techniques') {
       for (const id of t.teaches || []) {
         const d = getAbility(id);
-        if (!d) continue;
+        if (!d || (needsHaki(d) && !hakiKnown(c))) continue;
         const chk = S.canLearnTech(id);
         const price = S.techPrice(id);
-        list.appendChild(h('div.row-item', h('span.ico', d.icon || '✦'),
-          h('div.grow', h('b', d.name), h('span.tag', STYLES[d.style]?.name || (d.hakiType ? d.hakiType + ' haki' : '')), h('div.sub', d.desc || ''), h('div.sub', `Requires: ${d.learn?.mastery ? STYLES[d.style]?.name + ' mastery ' + d.learn.mastery : d.learn?.level ? d.hakiType + ' Haki ' + d.learn.level : '—'}`)),
+        list.appendChild(h('div.row-item', skillImg(d, 34, '.ico'),
+          h('div.grow', h('b', d.name), h('span.tag', STYLES[d.style]?.name || (d.hakiType ? title(d.hakiType) + ' Haki' : '')), h('div.sub', d.desc || ''), h('div.sub', `Requires: ${d.learn?.mastery ? STYLES[d.style]?.name + ' mastery ' + d.learn.mastery : d.learn?.level ? title(d.hakiType) + ' Haki ' + d.learn.level : '—'}`)),
           h('span.price', formatBerries(price)),
           h('button.btn.gold', { disabled: !chk.ok || c.berries < price, on: { click: () => { S.learnTech(id); render(); } } }, chk.ok ? 'Learn' : chk.why)));
       }
-      if (!list.children.length) list.appendChild(h('p', 'No techniques to teach.'));
+      if (!list.children.length) list.appendChild(h('p', 'No techniques to teach you yet.'));
     } else if (tab === 'training') {
-      list.appendChild(h('p.muted', `Training sessions left today: ${S.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
+      list.appendChild(h('p.muted', `A master pushes your body further than fighting alone. Training sessions left today: ${S.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
       for (const [k, cap] of Object.entries(t.train || {})) {
         const price = S.trainPrice(k);
         const maxed = c.attrs[k] >= cap;
-        list.appendChild(h('div.row-item', h('span.ico', '🏋'), h('div.grow', h('b', ATTRS[k].name), h('div.sub', `${c.attrs[k]} / ${cap} with this master · ${ATTRS[k].desc}`)),
+        list.appendChild(h('div.row-item', uiImg('trainer', 30), h('div.grow', h('b', ATTRS[k].name), h('div.sub', `${c.attrs[k]} / ${cap} with this master · ${ATTRS[k].desc}`)),
           h('span.price', formatBerries(price)),
-          h('button.btn.gold', { disabled: maxed || S.trainsLeft() <= 0 || c.berries < price, on: { click: () => { S.train(tid, k); render(); } } }, maxed ? 'Mastered' : 'Train +1')));
+          h('button.btn.gold', { disabled: maxed || S.trainsLeft() <= 0 || c.berries < price, on: { click: () => { S.train(tid, k); render(); } } }, maxed ? 'Mastered' : 'Train')));
       }
     } else if (tab === 'haki') {
-      for (const [k, cap] of Object.entries(t.haki)) {
+      for (const k of hakiTypes) {
+        const cap = t.haki[k];
         const lvl = c.haki[k] || 0;
-        const price = S.hakiTrainPrice(k) * (lvl ? 1 : 3);
-        list.appendChild(h('div.row-item', h('span.ico', HAKI[k].icon), h('div.grow', h('b', HAKI[k].name), h('div.sub', HAKI[k].desc), h('div.sub', lvl ? `Level ${Math.floor(lvl)} / ${cap} with this master` : 'Not awakened')),
+        const price = S.hakiTrainPrice(k);
+        list.appendChild(h('div.row-item', uiImg('haki', 30), h('div.grow', h('b', HAKI[k].name), h('div.sub', HAKI[k].desc), h('div.sub', `Level ${Math.floor(lvl)} / ${cap} with this master`)),
           h('span.price', formatBerries(price)),
-          h('button.btn.gold', { disabled: c.berries < price || (lvl >= cap), on: { click: () => { S.hakiTrain(tid, k); render(); } } }, lvl ? 'Train' : 'Awaken')));
+          h('button.btn.gold', { disabled: c.berries < price || (lvl >= cap), on: { click: () => { S.hakiTrain(tid, k); render(); } } }, 'Train')));
       }
     } else if (tab === 'spar') {
       const chk = S.canSpar(tid);
-      list.appendChild(h('p', `A real duel against ${t.spar.name} (level ${t.spar.level}). Nobody dies in a spar. Win to gain mastery, an attribute point and possibly a breakthrough — beating someone stronger than you is how warriors grow. Once per day.`));
+      list.appendChild(h('p', `A real duel against ${t.spar.name} (level ${t.spar.level}). Nobody dies in a spar. Win to gain mastery and possibly a breakthrough — beating someone stronger than you is how warriors grow. Once per day.`));
       list.appendChild(h('button.btn.red', { disabled: !chk.ok, on: { click: () => { game.ui.closePanel(); S.startSpar(tid); } } }, chk.ok ? 'Begin the spar' : chk.why));
     }
     body.appendChild(list);
   };
   render();
-  void perkLevel; void questDef;
 }

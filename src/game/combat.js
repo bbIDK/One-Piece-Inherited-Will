@@ -193,7 +193,7 @@ export class Combat {
       if (!armed && !counters && !h.trueDamage) {
         fx.burst(tgt.x, tgt.y - 0.7, 8, { color: lg.color || '#fff', speed: 3, g: 0, life: 0.35, kind: 'smoke', size: 0.2 });
         if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, 'INTANGIBLE', lg.color || '#fff', 0.3);
-        if (att && att.isPlayer) game.hint('logia', 'Logia users are intangible. Use Armament Haki, Seastone, or their elemental weakness to hit them.');
+        if (att && att.isPlayer) game.hint('logia', att.hakiUnlocked?.() ? 'Logia users are intangible. Use Armament Haki, Seastone, or their elemental weakness to hit them.' : 'Your blows pass straight through them! Logia users are intangible — Seastone or their elemental weakness can still reach them.');
         return false;
       }
     }

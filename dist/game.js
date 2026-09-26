@@ -864,12 +864,3179 @@ void main() {
     }
   };
 
-  // src/render/sprites.js
+  // src/game/entity.js
+  var nextId = 1;
+  var Entity = class {
+    constructor(o = {}) {
+      this.id = nextId++;
+      this.x = o.x ?? 0;
+      this.y = o.y ?? 0;
+      this.vx = 0;
+      this.vy = 0;
+      this.r = o.r ?? 0.3;
+      this.alive = true;
+      this.kind = o.kind || "entity";
+      this.faction = o.faction || "neutral";
+      this.world = o.world || null;
+    }
+    update() {
+    }
+    remove() {
+      this.alive = false;
+    }
+  };
+  var HOSTILITY = {
+    player: /* @__PURE__ */ new Set(["pirate", "bandit", "beast", "seaking", "baroque", "cp", "marine_hostile", "zombie", "rival"]),
+    marine: /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "revolutionary"]),
+    pirate: /* @__PURE__ */ new Set(["player", "marine", "civilian_target", "rival"]),
+    bandit: /* @__PURE__ */ new Set(["player", "civilian_target"]),
+    beast: /* @__PURE__ */ new Set(["player", "civilian", "marine", "pirate", "bandit"]),
+    seaking: /* @__PURE__ */ new Set(["player", "marine", "pirate"]),
+    baroque: /* @__PURE__ */ new Set(["player", "marine"]),
+    cp: /* @__PURE__ */ new Set(["player"]),
+    zombie: /* @__PURE__ */ new Set(["player", "marine"]),
+    rival: /* @__PURE__ */ new Set(["player", "pirate"]),
+    civilian: /* @__PURE__ */ new Set(),
+    neutral: /* @__PURE__ */ new Set()
+  };
+  function hostile(a, b) {
+    if (!a || !b || a === b) return false;
+    if (a.faction === "player" && b.aggroPlayer) return true;
+    if (b.faction === "player" && a.aggroPlayer) return true;
+    const fa = HOSTILITY[a.faction], fb = HOSTILITY[b.faction];
+    return fa && fa.has(b.faction) || fb && fb.has(a.faction) || false;
+  }
+
+  // src/game/combat.js
+  var ELEMENT_COLORS = {
+    physical: "#ffffff",
+    fire: "#ff7b39",
+    ice: "#9be7ff",
+    lightning: "#fff176",
+    sand: "#e1c16e",
+    smoke: "#cfd8dc",
+    light: "#fff9c4",
+    magma: "#ff5722",
+    dark: "#7e57c2",
+    quake: "#e0f7fa",
+    poison: "#aed581",
+    water: "#4fc3f7",
+    haki: "#9c27b0",
+    slash: "#ecf0f1",
+    explosion: "#ffab40",
+    gas: "#b2dfdb",
+    string: "#f8bbd0",
+    wax: "#fff8e1",
+    snow: "#ffffff",
+    swamp: "#6d4c41"
+  };
+  var Combat = class {
+    constructor(game) {
+      this.game = game;
+      this.hitboxes = [];
+      this.projectiles = [];
+    }
+    /** Register a hitbox that lives for `duration` seconds and hits each target once. */
+    hitbox(h2) {
+      h2.t = 0;
+      h2.duration = h2.duration ?? 0.1;
+      h2.hit = h2.hit || /* @__PURE__ */ new Set();
+      h2.interval = h2.interval || 0;
+      h2.lastHit = /* @__PURE__ */ new Map();
+      this.hitboxes.push(h2);
+      return h2;
+    }
+    projectile(p) {
+      p.t = 0;
+      p.hit = /* @__PURE__ */ new Set();
+      p.alive = true;
+      p.traveled = 0;
+      this.projectiles.push(p);
+      return p;
+    }
+    update(dt) {
+      const game = this.game;
+      const actors = game.actorsNear(game.player ? game.player.x : 0, game.player ? game.player.y : 0, 60);
+      for (let i = this.hitboxes.length - 1; i >= 0; i--) {
+        const h2 = this.hitboxes[i];
+        h2.t += dt;
+        if (h2.follow && h2.owner && h2.owner.alive) {
+          h2.x = h2.owner.x + (h2.offX || 0);
+          h2.y = h2.owner.y + (h2.offY || 0);
+          if (h2.followAngle) h2.angle = h2.owner.facing;
+        }
+        for (const a of actors) {
+          if (!this.canHit(h2.owner, a, h2)) continue;
+          if (!this.overlaps(h2, a)) continue;
+          if (h2.interval) {
+            const last = h2.lastHit.get(a.id);
+            if (last !== void 0 && h2.t - last < h2.interval) continue;
+            h2.lastHit.set(a.id, h2.t);
+          } else {
+            if (h2.hit.has(a.id)) continue;
+            h2.hit.add(a.id);
+          }
+          this.applyHit(h2.owner, a, h2);
+        }
+        if (h2.hitShips) this.hitShips(h2);
+        if (h2.t >= h2.duration) this.hitboxes.splice(i, 1);
+      }
+      for (let i = this.projectiles.length - 1; i >= 0; i--) {
+        const p = this.projectiles[i];
+        p.t += dt;
+        if (p.homing && p.target && p.target.alive) {
+          const want = Math.atan2(p.target.y - p.y, game.world.dx(p.x, p.target.x));
+          const cur = Math.atan2(p.vy, p.vx);
+          const na = cur + clamp(angleDiff(cur, want), -p.homing * dt, p.homing * dt);
+          const sp = Math.hypot(p.vx, p.vy);
+          p.vx = Math.cos(na) * sp;
+          p.vy = Math.sin(na) * sp;
+        }
+        const sx = p.vx * dt, sy = p.vy * dt;
+        p.x = game.world.wx(p.x + sx);
+        p.y += sy;
+        p.traveled += Math.hypot(sx, sy);
+        if (p.trail) p.trail(p, game);
+        let dead = p.traveled >= p.range || p.t > (p.life ?? 6);
+        if (!p.passWalls && !dead) {
+          const t = game.world.type(p.x, p.y);
+          if (game.world.isBlocked(p.x, p.y) || t === 25 || t === 26 || t === 27 || t === 41 || t === 50) dead = true;
+        }
+        if (!dead) {
+          for (const a of actors) {
+            if (p.hit.has(a.id) || !this.canHit(p.owner, a, p)) continue;
+            if (game.world.dist2(p.x, p.y, a.x, a.y - 0.5) > (p.radius + a.r + 0.2) ** 2) continue;
+            p.hit.add(a.id);
+            p.angle = Math.atan2(p.vy, p.vx);
+            this.applyHit(p.owner, a, p);
+            if (!p.pierce) {
+              dead = true;
+              break;
+            }
+          }
+          if (p.hitShips && !dead) {
+            for (const s of game.ships) {
+              if (s === p.ownerShip || s.sunk) continue;
+              if (game.world.dist2(p.x, p.y, s.x, s.y) < (s.def.length * 0.45) ** 2) {
+                s.damage(p.shipDamage ?? p.damage, p.owner, p);
+                dead = true;
+                break;
+              }
+            }
+          }
+        }
+        if (dead) {
+          p.alive = false;
+          if (p.onEnd) p.onEnd(p, game);
+          this.projectiles.splice(i, 1);
+        }
+      }
+    }
+    canHit(owner, target, h2) {
+      if (!target.alive || target === owner) return false;
+      if (target.state === "dead") return false;
+      if (target.state === "knocked" && !h2.hitsDowned) return false;
+      if (h2.friendly) return false;
+      if (owner && owner.faction === "player" && target.faction === "player") return false;
+      if (!owner) return true;
+      if (target.invulnerable) return false;
+      return hostile(owner, target) || owner.isPlayer && target.provoked || target.isPlayer && owner.provoked || h2.hitsAll;
+    }
+    overlaps(h2, a) {
+      const w = this.game.world;
+      const dx = w.dx(h2.x, a.x), dy = a.y - 0.4 - h2.y;
+      const d = Math.hypot(dx, dy);
+      const rr = a.r + 0.15;
+      if (h2.shape === "circle") return d <= h2.range + rr;
+      if (h2.shape === "arc") {
+        if (d > h2.range + rr) return false;
+        if (d < rr + 0.4) return true;
+        return Math.abs(angleDiff(h2.angle, Math.atan2(dy, dx))) <= h2.arc / 2 + rr / Math.max(d, 0.1);
+      }
+      if (h2.shape === "line") {
+        const ca = Math.cos(h2.angle), sa = Math.sin(h2.angle);
+        const along = dx * ca + dy * sa;
+        const perp = Math.abs(-dx * sa + dy * ca);
+        return along >= -rr && along <= h2.range + rr && perp <= h2.width / 2 + rr;
+      }
+      if (h2.shape === "ring") return Math.abs(d - h2.range) <= (h2.width || 1) / 2 + rr;
+      return false;
+    }
+    hitShips(h2) {
+      for (const s of this.game.ships) {
+        if (s.sunk || s === h2.ownerShip) continue;
+        if (h2.hitShipSet && h2.hitShipSet.has(s.id)) continue;
+        const d = this.game.world.distance(h2.x, h2.y, s.x, s.y);
+        if (d < h2.range + s.def.length * 0.4) {
+          h2.hitShipSet = h2.hitShipSet || /* @__PURE__ */ new Set();
+          h2.hitShipSet.add(s.id);
+          s.damage(h2.shipDamage ?? h2.damage * 0.5, h2.owner, h2);
+        }
+      }
+    }
+    /** Resolve one hit. `h` carries damage, element, knockback, stun, status. */
+    applyHit(att, tgt, h2) {
+      const game = this.game;
+      const fx = game.fx;
+      const el = h2.element || "physical";
+      const isPlayerInvolved = att && att.isPlayer || tgt.isPlayer;
+      const ang = h2.angle ?? (att ? Math.atan2(tgt.y - att.y, game.world.dx(att.x, tgt.x)) : 0);
+      const kbAng = h2.shape === "circle" || h2.radial ? Math.atan2(tgt.y - h2.y, game.world.dx(h2.x, tgt.x)) : ang;
+      if (tgt.iframes > 0) {
+        if (tgt.isPlayer || att?.isPlayer) fx.text(tgt.x, tgt.y - 1.2, "DODGE", "#b2ebf2", 0.32);
+        if (tgt.isPlayer) game.emit("playerEvaded", att, h2);
+        return false;
+      }
+      if (tgt.observation && tgt.hakiLevel("observation") > 0 && !h2.unblockable) {
+        const lvl = tgt.hakiLevel("observation");
+        const chance = 0.12 + lvl * 35e-4 - (att?.observation ? 0.15 : 0);
+        if (Math.random() < chance && tgt.haki >= 4) {
+          tgt.haki -= 4;
+          tgt.iframes = 0.2;
+          fx.text(tgt.x, tgt.y - 1.2, "FORESIGHT", "#e1bee7", 0.3);
+          fx.burst(tgt.x, tgt.y - 0.5, 6, { color: "#ce93d8", speed: 3, g: 0, life: 0.3 });
+          return false;
+        }
+      }
+      const armed = att && (att.armament || h2.haki || h2.seastone);
+      const lg = tgt.fruitDef && tgt.fruitDef.logia ? tgt.fruitDef : tgt.fakeLogia || null;
+      if (lg && !tgt.seastoned && (lg === tgt.fakeLogia ? tgt.state !== "knocked" && !tgt.inWater && !tgt.status.freeze : tgt.intangibleOK())) {
+        const weakness = lg.weakTo || [];
+        const counters = weakness.includes(el) || el === "water" && tgt.status.wet || att && att.status.wet && weakness.includes("water");
+        if (!armed && !counters && !h2.trueDamage) {
+          fx.burst(tgt.x, tgt.y - 0.7, 8, { color: lg.color || "#fff", speed: 3, g: 0, life: 0.35, kind: "smoke", size: 0.2 });
+          if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, "INTANGIBLE", lg.color || "#fff", 0.3);
+          if (att && att.isPlayer) game.hint("logia", att.hakiUnlocked?.() ? "Logia users are intangible. Use Armament Haki, Seastone, or their elemental weakness to hit them." : "Your blows pass straight through them! Logia users are intangible \u2014 Seastone or their elemental weakness can still reach them.");
+          return false;
+        }
+      }
+      let dmg = h2.damage;
+      if (tgt.fruitDef && tgt.fruitDef.rubber && !armed) {
+        if (el === "lightning") {
+          dmg = 0;
+          if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.2, "RUBBER!", "#fff176", 0.34);
+        } else if (!h2.slashing && el === "physical") dmg *= 0.35;
+      }
+      if (tgt.fruitDef && tgt.fruitDef.resist && tgt.fruitDef.resist.includes(el)) dmg *= 0.25;
+      if (tgt.fruitDef && tgt.fruitDef.weakTo && tgt.fruitDef.weakTo.includes(el)) dmg *= 1.5;
+      if (tgt.race === "lunarian" && tgt.flameLit) dmg *= 0.55;
+      if (tgt.armament) dmg *= 1 - Math.min(0.35, 0.12 + tgt.hakiLevel("armament") * 25e-4);
+      dmg *= 1 - (tgt.d ? tgt.d.def : 0);
+      if (tgt.defMul) dmg *= tgt.defMul;
+      let blocked = false;
+      if (tgt.blocking && !h2.unblockable) {
+        const facingDiff = Math.abs(angleDiff(tgt.facing, ang + Math.PI));
+        if (facingDiff < 1.9) {
+          if (tgt.blockTime < 0.2 && att && !h2.projectileOnly) {
+            att.stagger(0.9);
+            tgt.stamina = Math.min(tgt.d.maxStamina, tgt.stamina + 15);
+            if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + 6);
+            fx.burst(tgt.x + Math.cos(ang + Math.PI) * 0.5, tgt.y - 0.7, 14, { color: ["#fff", "#fff59d"], speed: 6, g: 0, life: 0.3, kind: "line" });
+            fx.ring(tgt.x, tgt.y, 0.3, 1.6, "#fff59d", 0.3, 0.12);
+            fx.text(tgt.x, tgt.y - 1.4, "PARRY!", "#fff59d", 0.44);
+            fx.stop(0.12);
+            game.audio?.sfx("parry");
+            if (tgt.isPlayer) game.onPlayerParry(att);
+            return false;
+          }
+          blocked = true;
+          if (tgt.isPlayer) game.emit("playerBlocked", att, h2);
+          dmg *= h2.guardBreak ? 0.6 : 0.18;
+          tgt.stamina -= (h2.guardDmg ?? 10) + h2.damage * 0.25;
+          if (tgt.stamina <= 0) {
+            tgt.stamina = 0;
+            tgt.blocking = false;
+            tgt.stagger(1.1);
+            fx.text(tgt.x, tgt.y - 1.4, "GUARD BREAK", "#ff7675", 0.4);
+            game.audio?.sfx("guardbreak");
+          } else {
+            game.audio?.sfx("block");
+          }
+        }
+      }
+      dmg = Math.max(0, dmg);
+      const crit = !blocked && h2.critChance && Math.random() < h2.critChance;
+      if (crit) dmg *= 1.6;
+      const final = Math.round(dmg);
+      tgt.takeDamage(final, att, h2, game);
+      if (!blocked) {
+        const kb = (h2.knockback ?? 2) * (tgt.kbResist ?? 1);
+        if (kb > 0) tgt.knock(Math.cos(kbAng) * kb, Math.sin(kbAng) * kb, h2.forceWater);
+        if (h2.stun && !(tgt.poise && !h2.guardBreak && h2.stun < 0.6)) tgt.stagger(h2.stun * (tgt.stunResist ?? 1));
+        if (h2.status) for (const [k, v] of Object.entries(h2.status)) tgt.addStatus(k, v, att);
+        if (h2.onHit) h2.onHit(tgt, att, game, h2);
+      }
+      const col = ELEMENT_COLORS[el] || "#fff";
+      const hx = tgt.x, hy = tgt.y - 0.7;
+      fx.burst(hx, hy, blocked ? 5 : 8 + Math.min(12, final / 8), { color: blocked ? "#b0bec5" : [col, "#ffffff"], speed: 5, g: 4, life: 0.3, kind: "line", size: 0.12 });
+      if (final > 0) fx.text(hx, tgt.y - 1.2, String(final), blocked ? "#b0bec5" : crit ? "#ffeb3b" : tgt.isPlayer ? "#ff6b6b" : "#ffffff", crit ? 0.55 : 0.45, { crit });
+      if (isPlayerInvolved) {
+        const heavy = h2.heavy || final > (tgt.d ? tgt.d.maxHp * 0.12 : 50);
+        fx.stop(heavy ? 0.09 : 0.04);
+        fx.shake(heavy ? 0.35 : 0.12);
+        if (h2.impactFrame) fx.impactFrame(0.07);
+      }
+      game.audio?.sfx(blocked ? "block" : h2.sfxHit || (el === "physical" ? h2.slashing ? "slash_hit" : "punch" : el));
+      return true;
+    }
+  };
+
+  // src/render/projectiles.js
   var TAU2 = Math.PI * 2;
-  var PX = 64;
+  function drawProjectile(g, env, r) {
+    const p = this;
+    const a = Math.atan2(p.vy, p.vx);
+    const s = p.size || 1;
+    const t = p.t || 0;
+    const lift = -0.5;
+    g.translate(0, lift);
+    switch (p.sprite) {
+      case "gomufist": {
+        if (p.stretch && p.stretch.alive) {
+          const w = r.game ? r.game.world : null;
+          const dx = w ? w.dx(p.x, p.stretch.x) : p.stretch.x - p.x;
+          const dy = p.stretch.y - 0.9 - p.y + 0.5;
+          g.strokeStyle = p.stretch.look?.sleeve || p.stretch.look?.skin || "#f1c9a0";
+          g.lineWidth = 0.22 * s;
+          g.lineCap = "round";
+          g.beginPath();
+          g.moveTo(0, 0);
+          g.lineTo(dx, dy);
+          g.stroke();
+          g.strokeStyle = "rgba(40,20,20,0.6)";
+          g.lineWidth = 0.04;
+          g.stroke();
+        }
+        g.fillStyle = p.stretch?.armament ? "#212121" : p.stretch?.look?.skin || "#f1c9a0";
+        g.strokeStyle = "#3b2a1a";
+        g.lineWidth = 0.05;
+        g.beginPath();
+        g.arc(0, 0, 0.3 * s, 0, TAU2);
+        g.fill();
+        g.stroke();
+        break;
+      }
+      case "fireball":
+      case "firefist": {
+        for (let k = 0; k < 3; k++) {
+          g.fillStyle = ["rgba(255,87,34,0.55)", "rgba(255,152,0,0.8)", "rgba(255,235,59,0.95)"][k];
+          g.beginPath();
+          g.ellipse(-Math.cos(a) * 0.15 * (2 - k), -Math.sin(a) * 0.15 * (2 - k), (0.55 - k * 0.13) * s, (0.42 - k * 0.1) * s, a, 0, TAU2);
+          g.fill();
+        }
+        break;
+      }
+      case "magmafist": {
+        g.fillStyle = "#bf360c";
+        g.beginPath();
+        g.arc(0, 0, 0.55 * s, 0, TAU2);
+        g.fill();
+        g.fillStyle = "#ff6f00";
+        g.beginPath();
+        g.arc(Math.sin(t * 20) * 0.05, 0, 0.38 * s, 0, TAU2);
+        g.fill();
+        g.fillStyle = "#ffd54f";
+        g.beginPath();
+        g.arc(0, 0, 0.18 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "iceshard": {
+        g.rotate(a);
+        g.fillStyle = "#b3e5fc";
+        g.strokeStyle = "#e1f5fe";
+        g.lineWidth = 0.04;
+        g.beginPath();
+        g.moveTo(0.5 * s, 0);
+        g.lineTo(-0.3 * s, -0.16 * s);
+        g.lineTo(-0.45 * s, 0);
+        g.lineTo(-0.3 * s, 0.16 * s);
+        g.closePath();
+        g.fill();
+        g.stroke();
+        break;
+      }
+      case "bird": {
+        g.rotate(a);
+        g.fillStyle = p.color || "#b3e5fc";
+        g.beginPath();
+        g.moveTo(0.5 * s, 0);
+        g.quadraticCurveTo(-0.1, -0.7 * s + Math.sin(t * 20) * 0.2, -0.5 * s, -0.5 * s);
+        g.lineTo(-0.2 * s, 0);
+        g.lineTo(-0.5 * s, 0.5 * s);
+        g.quadraticCurveTo(-0.1, 0.7 * s - Math.sin(t * 20) * 0.2, 0.5 * s, 0);
+        g.fill();
+        break;
+      }
+      case "airslash": {
+        g.rotate(a);
+        g.strokeStyle = p.color || "#e3f2fd";
+        g.lineWidth = 0.12 * s;
+        g.lineCap = "round";
+        g.beginPath();
+        g.arc(-0.4 * s, 0, 0.7 * s, -1.1, 1.1);
+        g.stroke();
+        g.strokeStyle = "rgba(255,255,255,0.9)";
+        g.lineWidth = 0.05 * s;
+        g.stroke();
+        break;
+      }
+      case "bullet": {
+        g.rotate(a);
+        g.fillStyle = "#ffe082";
+        g.fillRect(-0.3, -0.03, 0.3, 0.06);
+        g.fillStyle = "#424242";
+        g.beginPath();
+        g.arc(0, 0, 0.07, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "cannonball": {
+        g.fillStyle = "#212121";
+        g.beginPath();
+        g.arc(0, 0, 0.22 * s, 0, TAU2);
+        g.fill();
+        g.fillStyle = "#616161";
+        g.beginPath();
+        g.arc(-0.06, -0.06, 0.07 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "bomb": {
+        g.fillStyle = "#263238";
+        g.beginPath();
+        g.arc(0, 0, 0.25 * s, 0, TAU2);
+        g.fill();
+        g.strokeStyle = "#8d6e63";
+        g.lineWidth = 0.04;
+        g.beginPath();
+        g.moveTo(0.1, -0.2);
+        g.lineTo(0.2, -0.35);
+        g.stroke();
+        g.fillStyle = Math.sin(t * 30) > 0 ? "#ffeb3b" : "#ff7043";
+        g.beginPath();
+        g.arc(0.2, -0.37, 0.06, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "sandblade": {
+        g.rotate(a);
+        g.fillStyle = "rgba(225,193,110,0.9)";
+        g.beginPath();
+        g.moveTo(0.5 * s, 0);
+        g.quadraticCurveTo(0, -0.8 * s, -0.5 * s, -0.6 * s);
+        g.quadraticCurveTo(-0.1, 0, -0.5 * s, 0.6 * s);
+        g.quadraticCurveTo(0, 0.8 * s, 0.5 * s, 0);
+        g.fill();
+        break;
+      }
+      case "smokefist": {
+        g.fillStyle = "rgba(236,239,241,0.9)";
+        for (let k = 0; k < 4; k++) {
+          g.beginPath();
+          g.arc(-Math.cos(a) * k * 0.2, -Math.sin(a) * k * 0.2, (0.5 - k * 0.08) * s, 0, TAU2);
+          g.fill();
+        }
+        break;
+      }
+      case "lightorb": {
+        g.fillStyle = "rgba(255,249,196,0.5)";
+        g.beginPath();
+        g.arc(0, 0, 0.4 * s, 0, TAU2);
+        g.fill();
+        g.fillStyle = "#fffde7";
+        g.beginPath();
+        g.arc(0, 0, 0.2 * s, 0, TAU2);
+        g.fill();
+        g.rotate(a);
+        g.fillStyle = "rgba(255,245,157,0.5)";
+        g.fillRect(-1.2 * s, -0.08, 1.2 * s, 0.16);
+        break;
+      }
+      case "darkorb": {
+        g.fillStyle = "rgba(49,27,146,0.6)";
+        g.beginPath();
+        g.arc(0, 0, 0.55 * s, 0, TAU2);
+        g.fill();
+        g.fillStyle = "#000";
+        g.beginPath();
+        g.arc(0, 0, 0.35 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "thunder": {
+        g.strokeStyle = "#fff176";
+        g.lineWidth = 0.08;
+        g.beginPath();
+        for (let k = 0; k < 6; k++) {
+          const aa = k / 6 * TAU2 + t * 10;
+          g.moveTo(0, 0);
+          g.lineTo(Math.cos(aa) * 0.5 * s, Math.sin(aa) * 0.5 * s);
+        }
+        g.stroke();
+        g.fillStyle = "#fffde7";
+        g.beginPath();
+        g.arc(0, 0, 0.22 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "waterdrop": {
+        g.fillStyle = "#4fc3f7";
+        g.beginPath();
+        g.arc(0, 0, 0.14 * s, 0, TAU2);
+        g.fill();
+        g.fillStyle = "#e1f5fe";
+        g.beginPath();
+        g.arc(-0.04, -0.04, 0.05 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "shockwave": {
+        g.rotate(a);
+        g.strokeStyle = p.color || "#e0f7fa";
+        g.lineWidth = 0.1;
+        for (let k = 0; k < 3; k++) {
+          g.globalAlpha = 1 - k * 0.3;
+          g.beginPath();
+          g.arc(-k * 0.25, 0, (0.4 + k * 0.1) * s, -1.2, 1.2);
+          g.stroke();
+        }
+        g.globalAlpha = 1;
+        break;
+      }
+      case "star": {
+        g.fillStyle = p.color || "#ffeb3b";
+        g.rotate(t * 12);
+        g.beginPath();
+        for (let k = 0; k < 10; k++) {
+          const rr = k % 2 ? 0.1 * s : 0.25 * s;
+          g.lineTo(Math.cos(k * TAU2 / 10) * rr, Math.sin(k * TAU2 / 10) * rr);
+        }
+        g.closePath();
+        g.fill();
+        break;
+      }
+      case "poison": {
+        g.fillStyle = "rgba(123,31,162,0.8)";
+        g.beginPath();
+        g.arc(0, 0, 0.4 * s, 0, TAU2);
+        g.fill();
+        g.fillStyle = "rgba(174,213,129,0.8)";
+        g.beginPath();
+        g.arc(0.08, -0.08, 0.15 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "string": {
+        g.rotate(a);
+        g.strokeStyle = "#f8bbd0";
+        g.lineWidth = 0.03;
+        for (let k = -2; k <= 2; k++) {
+          g.beginPath();
+          g.moveTo(-1.2, k * 0.06);
+          g.lineTo(0.3, k * 0.02);
+          g.stroke();
+        }
+        break;
+      }
+      case "paw": {
+        g.fillStyle = "rgba(255,255,255,0.35)";
+        g.strokeStyle = "#fff";
+        g.lineWidth = 0.04;
+        g.beginPath();
+        g.arc(0, 0.1, 0.35 * s, 0, TAU2);
+        g.fill();
+        g.stroke();
+        for (let k = 0; k < 3; k++) {
+          g.beginPath();
+          g.arc((k - 1) * 0.2 * s, -0.3 * s, 0.1 * s, 0, TAU2);
+          g.fill();
+          g.stroke();
+        }
+        break;
+      }
+      case "petal": {
+        g.fillStyle = "#f48fb1";
+        for (let k = 0; k < 5; k++) {
+          g.save();
+          g.rotate(k * TAU2 / 5 + t * 5);
+          g.beginPath();
+          g.ellipse(0.15, 0, 0.14, 0.07, 0, 0, TAU2);
+          g.fill();
+          g.restore();
+        }
+        break;
+      }
+      default: {
+        g.fillStyle = p.color || "#ffffff";
+        g.beginPath();
+        g.arc(0, 0, 0.25 * s, 0, TAU2);
+        g.fill();
+        g.fillStyle = "rgba(255,255,255,0.8)";
+        g.beginPath();
+        g.arc(-0.06, -0.06, 0.08 * s, 0, TAU2);
+        g.fill();
+      }
+    }
+  }
+
+  // src/game/abilities.js
+  var REG = /* @__PURE__ */ new Map();
+  function registerAbilities(list, source) {
+    for (const a of list) {
+      a.source = a.source || source;
+      REG.set(a.id, a);
+    }
+  }
+  var getAbility = (id) => REG.get(id);
+  function abilityTotal(def) {
+    const last = Math.max(0, ...(def.steps || []).map((s) => (s.at ?? def.windup ?? 0) + (s.dash ? s.dash.time : 0) + (s.hit ? s.hit.duration ?? 0.1 : 0)));
+    return Math.max((def.windup ?? 0) + (def.active ?? 0.1), last) + (def.recover ?? 0.2);
+  }
+  function powerFor(actor, def) {
+    const src = def.source || "";
+    if (actor.dmgOverride) return actor.dmgOverride * actor.buffMul("damage");
+    const str = actor.d ? actor.d.dmg : 1;
+    let m = 1;
+    if (src.startsWith("fruit")) {
+      const fm = actor.fruitMastery || 0;
+      m = (0.7 + str * 0.35) * (1 + fm * 0.022);
+    } else if (src.startsWith("haki")) {
+      m = (0.6 + str * 0.3) * (1 + (actor.hakiLevel(def.hakiType || "armament") || 0) * 0.02) * (1 + (actor.attrs?.wil || 0) * 0.01);
+    } else {
+      const sm = actor.styleMastery ? actor.styleMastery(def.style || actor.style) : 0;
+      m = str * (1 + sm * 0.012);
+      if (def.weapon && actor.weaponMul) m *= actor.weaponMul(def.weapon);
+      if (actor.weaponMastery) m *= 1 + (actor.weaponMastery[weaponKindOf(actor, def)] || 0) * 6e-3;
+    }
+    m *= actor.buffMul("damage");
+    if (actor.armament && !src.startsWith("fruit_ranged")) m *= 1.25 + (actor.hakiLevel("armament") || 0) * 4e-3;
+    if (actor.conquerorInfused) m *= 1.4;
+    return m;
+  }
+  function weaponKindOf(actor, def) {
+    if (def.weaponKind) return def.weaponKind;
+    if (def.weapon) return def.weapon;
+    const src = def.source || "";
+    if (src.startsWith("style")) {
+      const st = def.style || actor.style;
+      if (/ittoryu|nitoryu|santoryu/.test(st)) return actor.hasWeapon?.("sword") ? "sword" : "fists";
+      if (st === "sniper") return actor.hasWeapon?.("gun") ? "gun" : "fists";
+      if (st === "weather_science") return actor.hasWeapon?.("staff") ? "staff" : "fists";
+      if (st === "elbaf") return actor.hasWeapon?.("axe") ? "axe" : "fists";
+      if (st === "black_leg" || st === "okama_kenpo") return "legs";
+    }
+    return "fists";
+  }
+  function canUse(actor, def) {
+    if (!def) return false;
+    if ((actor.cooldowns[def.id] || 0) > 0) return false;
+    const c = def.cost || {};
+    if (c.stamina && actor.stamina < c.stamina * 0.5) return false;
+    if (c.haki && actor.haki < c.haki) return false;
+    if (def.source?.startsWith("fruit") && (actor.inWater || actor.seastoned)) return false;
+    if (def.weapon && !actor.hasWeapon(def.weapon)) return false;
+    if (def.requiresBuff && !actor.hasBuff(def.requiresBuff)) return false;
+    return true;
+  }
+  function startAbility(actor, def, game, target) {
+    const c = def.cost || {};
+    if (c.stamina) actor.stamina = Math.max(0, actor.stamina - c.stamina);
+    if (c.haki) actor.haki -= c.haki;
+    const cdMul = actor.cdMul ?? 1;
+    if (def.cd) actor.cooldowns[def.id] = def.cd * cdMul;
+    const angle = actor.facing;
+    const tx = target ? target.x : actor.x + Math.cos(angle) * 5;
+    const ty = target ? target.y : actor.y + Math.sin(angle) * 5;
+    actor.action = { def, t: 0, step: 0, angle, tx, ty, target, total: abilityTotal(def) / (def.noSpeedup ? 1 : actor.atkSpeed()), mult: powerFor(actor, def) };
+    if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, "#ffffff", 0.34, { life: 1.2 });
+    if (!actor.isPlayer && def.telegraph !== false) telegraph(actor, def, game);
+    if (def.onStart) def.onStart(actor, game);
+    game.audio?.sfx(def.sfxStart || "whoosh");
+  }
+  function telegraph(actor, def, game) {
+    const wind = def.windup ?? 0.2;
+    if (wind < 0.12) return;
+    const first = (def.steps || []).find((s) => s.hit || s.proj || s.dash || s.zone);
+    if (!first) return;
+    const col = actor.boss ? "rgba(255,40,80,1)" : "rgba(255,60,60,1)";
+    const life = wind * (actor.game?.player?.observation ? 1.35 : 1);
+    if (first.hit) {
+      const h2 = first.hit;
+      const ox = actor.x + Math.cos(actor.facing) * (h2.offset || 0), oy = actor.y + Math.sin(actor.facing) * (h2.offset || 0);
+      if (h2.shape === "circle" || h2.shape === "ring") game.fx.telegraph(ox, oy, "circle", { r: h2.range, life, color: col, follow: h2.offset ? null : actor });
+      else if (h2.shape === "line") game.fx.telegraph(actor.x, actor.y, "line", { angle: actor.facing, length: h2.range, width: h2.width || 1, life, color: col });
+      else game.fx.telegraph(ox, oy, "arc", { r: h2.range, angle: actor.facing, arc: h2.arc || 1.4, life, color: col });
+    } else if (first.proj || first.dash) {
+      const len = first.proj ? Math.min(14, first.proj.range || 10) : first.dash.dist;
+      game.fx.telegraph(actor.x, actor.y, "line", { angle: actor.facing, length: len, width: first.proj ? (first.proj.radius || 0.4) * 2 + 0.3 : 1.2, life, color: col });
+    } else if (first.zone) {
+      game.fx.telegraph(actor.action.tx, actor.action.ty, "circle", { r: first.zone.range, life, color: col });
+    }
+  }
+  function updateAbility(actor, dt, game) {
+    const a = actor.action;
+    const def = a.def;
+    a.t += dt * (def.noSpeedup ? 1 : actor.atkSpeed());
+    const steps = def.steps || [];
+    if (def.track && a.t < (def.windup ?? 0)) a.angle = actor.facing;
+    while (a.step < steps.length && a.t >= (steps[a.step].at ?? def.windup ?? 0)) {
+      runStep(actor, steps[a.step], game, a);
+      a.step++;
+    }
+    if (a.t >= a.total * (def.noSpeedup ? 1 : actor.atkSpeed())) {
+      if (def.onEnd) def.onEnd(actor, game);
+      actor.action = null;
+    }
+  }
+  function runStep(actor, s, game, a) {
+    const ang = s.angleOffset ? a.angle + s.angleOffset : a.angle;
+    const mult = a.mult;
+    const col = ELEMENT_COLORS[s.hit?.element || s.proj?.element || "physical"];
+    if (s.hit) {
+      const h2 = s.hit;
+      const off = h2.offset ?? 0;
+      const reach = actor.reach ?? 1;
+      const hb = {
+        owner: actor,
+        x: game.world.wx(actor.x + Math.cos(ang) * off * reach),
+        y: actor.y - 0.4 + Math.sin(ang) * off * reach,
+        shape: h2.shape || "arc",
+        range: (h2.range || 1.4) * (h2.shape === "circle" ? 1 : reach),
+        arc: h2.arc ?? 1.8,
+        width: h2.width,
+        angle: ang,
+        damage: (h2.damage || 5) * mult,
+        knockback: h2.knockback,
+        stun: h2.stun ?? 0.25,
+        element: h2.element || "physical",
+        status: h2.status,
+        duration: h2.duration ?? 0.1,
+        interval: h2.interval,
+        heavy: h2.heavy,
+        slashing: h2.slashing,
+        guardBreak: h2.guardBreak,
+        unblockable: h2.unblockable,
+        haki: h2.haki || actor.armament && def_isPhysical(h2),
+        critChance: h2.crit ?? (actor.critChance || 0.05),
+        follow: h2.follow,
+        offX: Math.cos(ang) * off * reach,
+        offY: -0.4 + Math.sin(ang) * off * reach,
+        followAngle: h2.followAngle,
+        impactFrame: h2.impactFrame,
+        trueDamage: h2.trueDamage,
+        hitShips: h2.hitShips,
+        shipDamage: h2.shipDamage,
+        radial: h2.radial,
+        onHit: h2.onHit,
+        forceWater: h2.forceWater,
+        hitsAll: h2.hitsAll
+      };
+      game.combat.hitbox(hb);
+      const vfx = s.vfx || h2.vfx;
+      const color = s.color || h2.color || col;
+      if (vfx === "slash" || !vfx && h2.slashing) game.fx.slash(actor.x + Math.cos(ang) * 0.3, actor.y, ang, (h2.range || 1.4) * reach * 0.85, h2.arc ?? 1.8, color, 0.18, h2.width ? h2.width * 0.4 : 0.22);
+      else if (vfx === "ring" || h2.shape === "circle") {
+        game.fx.ring(hb.x, hb.y + 0.4, 0.2, h2.range || 2, color, 0.35, 0.2);
+        if (h2.heavy) game.fx.crack(hb.x, hb.y + 0.4, (h2.range || 2) * 0.7);
+      } else if (vfx === "beam" || h2.shape === "line") game.fx.beam(actor.x, actor.y, ang, (h2.range || 4) * reach, h2.width || 0.6, color, h2.duration ? Math.max(0.2, h2.duration) : 0.25, s.core || "#ffffff");
+      else if (vfx === "fist" || !vfx) game.fx.burst(hb.x + Math.cos(ang) * (h2.range || 1.3) * 0.6, hb.y, 5, { color, speed: 3, g: 0, life: 0.18, kind: "line", angle: ang, spread: 0.8 });
+      if (h2.shake) game.fx.shake(h2.shake);
+    }
+    if (s.proj) {
+      const p = s.proj;
+      const n = p.count || 1;
+      for (let i = 0; i < n; i++) {
+        const spread = n > 1 ? (i / (n - 1) - 0.5) * (p.spread ?? 0.5) : p.jitter ? (Math.random() - 0.5) * p.jitter : 0;
+        const pa = ang + spread;
+        const sp = p.speed || 14;
+        const sx = actor.x + Math.cos(pa) * 0.6, sy = actor.y - 0.5 + Math.sin(pa) * 0.6;
+        game.combat.projectile({
+          owner: actor,
+          x: game.world.wx(sx),
+          y: sy,
+          vx: Math.cos(pa) * sp,
+          vy: Math.sin(pa) * sp,
+          range: p.range || 10,
+          radius: p.radius || 0.3,
+          damage: (p.damage || 5) * mult,
+          element: p.element || "physical",
+          knockback: p.knockback ?? 2,
+          stun: p.stun ?? 0.2,
+          status: p.status,
+          pierce: p.pierce,
+          homing: p.homing,
+          target: a.target,
+          sprite: p.sprite || "orb",
+          color: p.color || col,
+          size: p.size || 1,
+          haki: actor.armament && p.element === void 0,
+          stretch: p.stretch ? actor : null,
+          passWalls: p.passWalls,
+          hitShips: p.hitShips ?? true,
+          shipDamage: p.shipDamage,
+          slashing: p.slashing,
+          heavy: p.heavy,
+          critChance: 0.05,
+          unblockable: p.unblockable,
+          onEnd: p.explode ? (pr, g) => explode(pr, g, p.explode, mult) : null,
+          trail: p.trail ? (pr, g) => trail(pr, g, p.trail) : null,
+          draw: drawProjectile
+        });
+      }
+    }
+    if (s.dash) {
+      const d = s.dash;
+      const dist = d.dist * (actor.dashMul || 1);
+      actor.dash = { vx: Math.cos(ang) * dist / d.time, vy: Math.sin(ang) * dist / d.time, t: d.time, ignoreWater: d.air };
+      if (d.iframes) actor.iframes = Math.max(actor.iframes, d.iframes);
+      if (d.hit) {
+        game.combat.hitbox({
+          owner: actor,
+          x: actor.x,
+          y: actor.y - 0.4,
+          shape: "circle",
+          range: d.hit.range || 1.1,
+          damage: (d.hit.damage || 5) * mult,
+          knockback: d.hit.knockback ?? 4,
+          stun: d.hit.stun ?? 0.3,
+          element: d.hit.element || "physical",
+          follow: true,
+          offX: 0,
+          offY: -0.4,
+          duration: d.time + 0.05,
+          slashing: d.hit.slashing,
+          heavy: d.hit.heavy,
+          status: d.hit.status,
+          radial: true,
+          guardBreak: d.hit.guardBreak
+        });
+      }
+      if (d.trail) game.fx.burst(actor.x, actor.y, 8, { color: d.trail, speed: 2, g: 0, life: 0.3, kind: "smoke", size: 0.25 });
+    }
+    if (s.teleport) {
+      const t = s.teleport;
+      const dist = t.dist;
+      let nx = actor.x, ny = actor.y;
+      for (let k = 0; k < 20; k++) {
+        const tx = actor.x + Math.cos(ang) * dist * (1 - k / 20), ty = actor.y + Math.sin(ang) * dist * (1 - k / 20);
+        if (actor.canOccupy(game.world, tx, ty)) {
+          nx = tx;
+          ny = ty;
+          break;
+        }
+      }
+      game.fx.burst(actor.x, actor.y - 0.5, 10, { color: t.color || "#fff", speed: 3, g: 0, life: 0.25, kind: "line" });
+      actor.x = game.world.wx(nx);
+      actor.y = ny;
+      game.fx.burst(actor.x, actor.y - 0.5, 10, { color: t.color || "#fff", speed: 3, g: 0, life: 0.25, kind: "line" });
+      actor.iframes = Math.max(actor.iframes, 0.15);
+    }
+    if (s.buff) actor.addBuff({ ...s.buff, source: a.def.id });
+    if (s.heal) {
+      const amt = s.heal * (a.def.source?.startsWith("fruit") ? 1 + (actor.fruitMastery || 0) * 0.02 : 1);
+      actor.heal(amt, game);
+      game.fx.burst(actor.x, actor.y - 0.6, 14, { color: s.color || "#80deea", speed: 2, vz: 2, g: -1, life: 0.8, kind: "fire", size: 0.2 });
+    }
+    if (s.zone) {
+      const z = s.zone;
+      const zx = z.atTarget ? a.tx : actor.x + Math.cos(ang) * (z.offset || 0);
+      const zy = z.atTarget ? a.ty : actor.y + Math.sin(ang) * (z.offset || 0);
+      game.addZone({ owner: actor, x: game.world.wx(zx), y: zy, r: z.range, t: z.duration, interval: z.interval || 0.5, damage: (z.damage || 0) * mult, element: z.element || "physical", status: z.status, slow: z.slow, color: z.color || col, kind: z.kind || "field", pull: z.pull });
+    }
+    if (s.pull) {
+      for (const e of game.actorsNear(actor.x, actor.y, s.pull.range)) {
+        if (!game.combat.canHit(actor, e, {})) continue;
+        const dx = game.world.dx(e.x, actor.x), dy = actor.y - e.y;
+        const d = Math.hypot(dx, dy) || 1;
+        e.knock(dx / d * s.pull.strength, dy / d * s.pull.strength);
+        if (s.pull.stun) e.stagger(s.pull.stun);
+        if (s.pull.nullify) e.addStatus("seastone", s.pull.nullify);
+      }
+      game.fx.ring(actor.x, actor.y, s.pull.range, 0.3, s.color || "#7e57c2", 0.5, 0.3);
+    }
+    if (s.conqueror) conquerorBurst(actor, game, s.conqueror, mult);
+    if (s.summon && game.summon) game.summon(actor, s.summon);
+    if (s.self) {
+      if (s.self.iframes) actor.iframes = Math.max(actor.iframes, s.self.iframes);
+      if (s.self.cleanse) actor.status = {};
+      if (s.self.hurt && actor.d) {
+        const n = Math.round(actor.d.maxHp * s.self.hurt);
+        actor.hp = Math.max(1, actor.hp - n);
+        game.fx.text(actor.x, actor.y - 1.2, String(n), "#ff6b6b", 0.4);
+        if (actor.isPlayer) game.ui?.onPlayerHurt(n);
+      }
+    }
+    if (s.fx) {
+      const f = s.fx;
+      if (f.ring) game.fx.ring(actor.x, actor.y, 0.3, f.ring, f.color || col, f.life || 0.4, f.width || 0.2);
+      if (f.burst) game.fx.burst(actor.x, actor.y - 0.6, f.burst, { color: f.color || col, speed: f.speed || 5, g: f.g ?? 2, life: f.life || 0.5, kind: f.kind || "spark", size: f.size || 0.14 });
+      if (f.shake) game.fx.shake(f.shake);
+      if (f.impact) game.fx.impactFrame(f.impact);
+      if (f.flash) game.fx.flash = Math.max(game.fx.flash, f.flash);
+      if (f.text) game.fx.text(actor.x, actor.y - 2.2, f.text, f.color || "#fff", 0.5, { life: 1.1 });
+    }
+    if (s.sfx) game.audio?.sfx(s.sfx);
+  }
+  function def_isPhysical(h2) {
+    return !h2.element || h2.element === "physical";
+  }
+  function explode(p, game, e, mult) {
+    game.combat.hitbox({ owner: p.owner, x: p.x, y: p.y, shape: "circle", range: e.range || 1.8, damage: (e.damage || 10) * mult, knockback: e.knockback ?? 6, stun: e.stun ?? 0.4, element: e.element || "explosion", duration: 0.1, radial: true, heavy: true, hitShips: true, status: e.status });
+    game.fx.ring(p.x, p.y + 0.4, 0.2, e.range || 1.8, e.color || "#ffab40", 0.35, 0.3);
+    game.fx.burst(p.x, p.y, 22, { color: e.colors || ["#ffab40", "#ff7043", "#fff176", "#616161"], speed: 7, g: 3, life: 0.6, kind: "fire", size: 0.25 });
+    game.fx.crack(p.x, p.y + 0.4, (e.range || 1.8) * 0.6, 1.5);
+    if (p.owner?.isPlayer || game.world.distance(p.x, p.y, game.player.x, game.player.y) < 12) game.fx.shake(0.3);
+    game.audio?.sfx("explosion");
+  }
+  function trail(p, game, t) {
+    if (Math.random() < (t.rate || 0.6)) game.fx.particle({ x: p.x, y: p.y + 0.5, z: 0.5, vx: Math.random() - 0.5, vy: Math.random() - 0.5, vz: 0.4, g: 0, life: t.life || 0.35, size: t.size || 0.18, color: Array.isArray(t.color) ? t.color[Math.floor(Math.random() * t.color.length)] : t.color, kind: t.kind || "fire", grow: t.grow ?? -0.2 });
+  }
+  function conquerorBurst(actor, game, c, mult) {
+    const lvl = actor.hakiLevel("conqueror") || 20;
+    const my = actor.power();
+    game.fx.ring(actor.x, actor.y, 0.5, c.range, "#1a1a1a", 0.6, 0.4);
+    game.fx.ring(actor.x, actor.y, 0.3, c.range * 0.8, "#d50000", 0.5, 0.15);
+    for (let k = 0; k < 6; k++) {
+      const a = Math.random() * TAU;
+      game.fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * c.range * 0.7, actor.y + Math.sin(a) * c.range * 0.5, "#000000", 0.35, 0.09);
+    }
+    game.fx.impactFrame(0.12);
+    game.fx.shake(0.7);
+    let fainted = 0;
+    for (const e of game.actorsNear(actor.x, actor.y, c.range)) {
+      if (e === actor || !game.combat.canHit(actor, e, {})) continue;
+      const ratio = e.power() / Math.max(1, my);
+      const resist = e.hakiLevel && e.hakiLevel("conqueror") > 0 ? 0.5 : 0;
+      if (ratio < 0.35 + lvl * 4e-3 - resist && !e.boss) {
+        e.faint(game);
+        fainted++;
+      } else {
+        e.stagger(0.6 + lvl * 0.01);
+        e.takeDamage(Math.round((c.damage || 0) * mult), actor, { element: "haki" }, game);
+      }
+    }
+    if (fainted && actor.isPlayer) game.log(`${fainted} ${fainted === 1 ? "foe" : "foes"} fainted before your will.`, "#ef5350");
+  }
+
+  // src/data/fruits.js
+  var T2 = (mastery, a) => ({ ...a, mastery });
+  var FRUITS = {
+    // ------------------------------------------------------------- PARAMECIA
+    gomu: {
+      name: "Gomu Gomu no Mi",
+      en: "Gum-Gum Fruit",
+      type: "Paramecia",
+      rarity: "mythical",
+      color: "#e57373",
+      weight: 0.6,
+      desc: "Turns the body into rubber. Or so the World Government would have you believe...",
+      passive: { rubber: true },
+      stretch: true,
+      techniques: [
+        T2(0, { id: "gomu_pistol", name: "Gum-Gum Pistol", icon: "\u{1F44A}", anim: "punch", windup: 0.12, recover: 0.25, cd: 2.5, cost: { stamina: 10 }, say: "Gomu Gomu no... Pistol!", steps: [{ proj: { speed: 26, range: 8, radius: 0.35, damage: 16, sprite: "gomufist", stretch: true, knockback: 5, stun: 0.3 } }] }),
+        T2(10, { id: "gomu_gatling", name: "Gum-Gum Gatling", icon: "\u{1F52B}", anim: "punch", windup: 0.2, recover: 0.3, cd: 6, cost: { stamina: 20 }, say: "Gomu Gomu no... Gatling!", steps: [{ hit: { shape: "arc", range: 3.2, arc: 0.9, offset: 0.3, damage: 5, knockback: 0.8, stun: 0.15, duration: 0.9, interval: 0.08 }, vfx: "fist" }] }),
+        T2(20, { id: "gomu_rocket", name: "Gum-Gum Rocket", icon: "\u{1F680}", anim: "thrust", windup: 0.15, recover: 0.2, cd: 4, cost: { stamina: 14 }, desc: "Launch yourself like a slingshot.", steps: [{ dash: { dist: 9, time: 0.3, iframes: 0.25, air: true, hit: { damage: 14, knockback: 6, stun: 0.4 } } }] }),
+        T2(30, { id: "gomu_bazooka", name: "Gum-Gum Bazooka", icon: "\u{1F4A5}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 8, cost: { stamina: 22 }, say: "Gomu Gomu no... BAZOOKA!", steps: [{ hit: { shape: "arc", range: 2.4, arc: 1.2, offset: 0.4, damage: 36, knockback: 14, stun: 0.8, heavy: true, guardBreak: true, impactFrame: true, hitShips: true } }] }),
+        T2(45, {
+          id: "gomu_gear2",
+          name: "Gear Second",
+          icon: "\u2668",
+          anim: "cast",
+          windup: 0.4,
+          recover: 0.1,
+          cd: 35,
+          cost: { stamina: 15 },
+          say: "Gear... Second!",
+          desc: "Pump blood at high speed: faster and stronger, at a cost.",
+          steps: [{ fx: { burst: 20, color: "#ffcdd2", kind: "smoke" } }, { at: 0.4, buff: { id: "gear2", name: "Gear Second", dur: 16, mods: { speedMul: 1.35, damage: 1.35, atkSpeed: 1.3 }, aura: "rgba(255,138,128,0.7)", steam: true, drain: { stamina: 2.2 } } }]
+        }),
+        T2(60, { id: "gomu_gear3", name: "Gear Third: Gigant Pistol", icon: "\u{1F9B4}", anim: "heavy", windup: 0.7, recover: 0.5, cd: 18, cost: { stamina: 32 }, say: "Gear Third... Gigant Pistol!", steps: [{ proj: { speed: 16, range: 10, radius: 1.6, damage: 80, sprite: "gomufist", size: 4, stretch: true, pierce: true, knockback: 14, stun: 1, heavy: true, hitShips: true, shipDamage: 200 } }] }),
+        T2(80, {
+          id: "gomu_gear4",
+          name: "Gear Fourth: Boundman",
+          icon: "\u{1F388}",
+          anim: "cast",
+          windup: 0.8,
+          recover: 0.2,
+          cd: 90,
+          cost: { stamina: 30, haki: 40 },
+          requiresHaki: "armament",
+          say: "Gear... FOURTH!",
+          desc: "Inflate your Haki-hardened muscles. Enormous power for a short time.",
+          steps: [{ fx: { ring: 3, color: "#b71c1c", impact: 0.1 } }, { at: 0.8, buff: { id: "gear4", name: "Boundman", dur: 20, mods: { damage: 2.2, defMul: 0.6, speedMul: 1.2 }, aura: "rgba(183,28,28,0.9)", forceArmament: true, drain: { haki: 1.5 } } }]
+        }),
+        T2(100, {
+          id: "gomu_gear5",
+          name: "Gear Fifth",
+          icon: "\u2600",
+          anim: "cast",
+          windup: 1,
+          recover: 0.2,
+          cd: 180,
+          cost: { stamina: 20, haki: 60 },
+          requiresHaki: "conqueror",
+          say: "...Drums of Liberation.",
+          desc: "The fruit's true name is Hito Hito no Mi, Model: Nika. The warrior of liberation, bringer of joy.",
+          steps: [{ fx: { ring: 6, color: "#ffffff", flash: 0.6, impact: 0.2, text: "SUN GOD NIKA" } }, { at: 1, buff: { id: "gear5", name: "Gear Fifth", dur: 30, mods: { damage: 3, defMul: 0.45, speedMul: 1.4, atkSpeed: 1.4 }, aura: "rgba(255,255,255,1)", look: { hairColor: "#ffffff", top: "#ffffff", bottom: "#ffffff" } } }]
+        })
+      ]
+    },
+    gura: {
+      name: "Gura Gura no Mi",
+      en: "Tremor-Tremor Fruit",
+      type: "Paramecia",
+      rarity: "legendary",
+      color: "#e0f7fa",
+      weight: 0.4,
+      desc: "The power to destroy the world: create quakes in the air, the ground and the sea. Once eaten by Whitebeard.",
+      techniques: [
+        T2(0, { id: "gura_punch", name: "Quake Punch", icon: "\u270A", anim: "punch", windup: 0.25, recover: 0.3, cd: 4, cost: { stamina: 14 }, steps: [{ hit: { shape: "arc", range: 3, arc: 1.2, offset: 0.3, damage: 26, knockback: 10, stun: 0.6, element: "quake", heavy: true, guardBreak: true, shake: 0.4 }, vfx: "ring" }] }),
+        T2(20, { id: "gura_kaishin", name: "Kaishin", icon: "\u{1F310}", anim: "heavy", windup: 0.45, recover: 0.4, cd: 9, cost: { stamina: 26 }, desc: "Crack the air itself around you.", steps: [{ hit: { shape: "circle", range: 4.5, damage: 40, knockback: 12, stun: 0.9, element: "quake", heavy: true, guardBreak: true, impactFrame: true, shake: 0.8, hitShips: true }, vfx: "ring" }] }),
+        T2(45, { id: "gura_wave", name: "Quake Wave", icon: "\u{1F30A}", anim: "heavy", windup: 0.5, recover: 0.4, cd: 12, cost: { stamina: 28 }, desc: "A shockwave that rips across the ground (and sea).", steps: [{ hit: { shape: "line", range: 12, width: 3, damage: 55, knockback: 14, stun: 1, element: "quake", heavy: true, unblockable: true, shake: 0.7, hitShips: true, shipDamage: 250 }, vfx: "beam", color: "#e0f7fa" }] }),
+        T2(75, { id: "gura_tsunami", name: "Seaquake", icon: "\u{1F30B}", anim: "cast", windup: 0.9, recover: 0.5, cd: 40, cost: { stamina: 40 }, desc: "Tilt the sea. Everything nearby is crushed.", steps: [{ hit: { shape: "circle", range: 8, damage: 90, knockback: 16, stun: 1.2, element: "quake", heavy: true, unblockable: true, impactFrame: true, shake: 1.2, hitShips: true, shipDamage: 500 }, vfx: "ring" }] })
+      ]
+    },
+    ope: {
+      name: "Ope Ope no Mi",
+      en: "Op-Op Fruit",
+      type: "Paramecia",
+      rarity: "legendary",
+      color: "#81d4fa",
+      weight: 0.4,
+      desc: "Create a ROOM and become a surgeon within it. Its ultimate technique grants eternal youth \u2014 at the cost of the user's life.",
+      techniques: [
+        T2(0, { id: "ope_room", name: "ROOM", icon: "\u{1F535}", anim: "cast", windup: 0.3, recover: 0.2, cd: 20, cost: { stamina: 15 }, desc: "Within your Room, techniques cost less and hit harder.", steps: [{ fx: { ring: 7, color: "#81d4fa" } }, { buff: { id: "room", name: "ROOM", dur: 12, mods: { damage: 1.3, cdMul: 0.6 }, aura: "rgba(129,212,250,0.5)" } }] }),
+        T2(10, { id: "ope_shambles", name: "Shambles", icon: "\u{1F500}", anim: "cast", windup: 0.1, recover: 0.1, cd: 3, cost: { stamina: 10 }, desc: "Swap places instantly.", steps: [{ teleport: { dist: 8, color: "#81d4fa" } }] }),
+        T2(25, { id: "ope_amputate", name: "Amputate", icon: "\u{1F5E1}", anim: "slash", windup: 0.2, recover: 0.3, cd: 5, cost: { stamina: 16 }, desc: "A vast slash that cuts without killing.", steps: [{ hit: { shape: "arc", range: 4, arc: 2.4, offset: 0.2, damage: 28, knockback: 2, stun: 0.9, slashing: true }, vfx: "slash", color: "#81d4fa" }] }),
+        T2(45, { id: "ope_mes", name: "Mes", icon: "\u{1F499}", anim: "thrust", windup: 0.15, recover: 0.3, cd: 12, cost: { stamina: 18 }, desc: "Remove the target's heart in a cube. They freeze in terror.", steps: [{ hit: { shape: "arc", range: 1.6, arc: 1, offset: 0.2, damage: 20, stun: 2.5, unblockable: true } }] }),
+        T2(60, { id: "ope_counter", name: "Counter Shock", icon: "\u26A1", anim: "grab", windup: 0.2, recover: 0.3, cd: 10, cost: { stamina: 20 }, steps: [{ hit: { shape: "arc", range: 1.5, arc: 1.2, offset: 0.2, damage: 45, stun: 1.2, element: "lightning", status: { shock: 1.5 } }, vfx: "ring", color: "#fff176" }] }),
+        T2(80, { id: "ope_gamma", name: "Gamma Knife", icon: "\u2622", anim: "thrust", windup: 0.3, recover: 0.3, cd: 18, cost: { stamina: 26 }, desc: "Destroys organs from the inside. Ignores all defences.", steps: [{ hit: { shape: "line", range: 3, width: 0.8, damage: 85, stun: 1, unblockable: true, trueDamage: true }, vfx: "beam", color: "#b388ff" }] })
+      ]
+    },
+    bara: {
+      name: "Bara Bara no Mi",
+      en: "Chop-Chop Fruit",
+      type: "Paramecia",
+      rarity: "uncommon",
+      color: "#ff8a65",
+      weight: 3,
+      desc: "Split your body into pieces. Blades cannot hurt you \u2014 but your feet must stay on the ground. (Buggy the Clown's fruit.)",
+      passive: { immuneSlash: true },
+      techniques: [
+        T2(0, { id: "bara_cannon", name: "Chop-Chop Cannon", icon: "\u{1F921}", anim: "punch", windup: 0.15, recover: 0.25, cd: 3, cost: { stamina: 10 }, say: "Bara Bara Ho!", steps: [{ proj: { speed: 20, range: 9, radius: 0.35, damage: 14, sprite: "orb", color: "#ffccbc", knockback: 3, stun: 0.3 } }] }),
+        T2(20, { id: "bara_festival", name: "Chop-Chop Festival", icon: "\u{1F3AA}", anim: "cast", windup: 0.3, recover: 0.4, cd: 10, cost: { stamina: 24 }, desc: "Scatter into a hundred pieces that pummel everything nearby.", steps: [{ hit: { shape: "circle", range: 3.2, damage: 6, knockback: 1.5, stun: 0.15, duration: 1.2, interval: 0.15 }, vfx: "ring" }] }),
+        T2(40, { id: "bara_escape", name: "Emergency Escape", icon: "\u{1F388}", anim: "cast", windup: 0.05, recover: 0.1, cd: 8, cost: { stamina: 12 }, steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, air: true } }] })
+      ]
+    },
+    bomu: {
+      name: "Bomu Bomu no Mi",
+      en: "Bomb-Bomb Fruit",
+      type: "Paramecia",
+      rarity: "common",
+      color: "#ffab40",
+      weight: 5,
+      desc: "Make any part of your body explode \u2014 and survive it. (Mr. 5 of Baroque Works.)",
+      passive: { resist: ["explosion"] },
+      techniques: [
+        T2(0, { id: "bomu_kick", name: "Kick Bomb", icon: "\u{1F4A3}", anim: "kick", windup: 0.2, recover: 0.3, cd: 3, cost: { stamina: 10 }, steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.3, damage: 18, knockback: 7, stun: 0.4, element: "explosion" }, vfx: "ring", color: "#ffab40" }] }),
+        T2(15, { id: "bomu_nose", name: "Nose Fancy Cannon", icon: "\u{1F443}", anim: "shoot", windup: 0.25, recover: 0.3, cd: 5, cost: { stamina: 12 }, desc: "Flick an explosive... bogey. Disgusting and effective.", steps: [{ proj: { speed: 18, range: 12, radius: 0.2, damage: 6, sprite: "orb", color: "#aed581", explode: { range: 2, damage: 24 } } }] }),
+        T2(40, { id: "bomu_breeze", name: "Breeze Breath Bomb", icon: "\u{1F32C}", anim: "cast", windup: 0.35, recover: 0.3, cd: 9, cost: { stamina: 20 }, steps: [{ hit: { shape: "arc", range: 4, arc: 1.2, offset: 0.2, damage: 32, knockback: 8, stun: 0.6, element: "explosion", heavy: true }, vfx: "ring", color: "#ffab40" }] })
+      ]
+    },
+    hana: {
+      name: "Hana Hana no Mi",
+      en: "Flower-Flower Fruit",
+      type: "Paramecia",
+      rarity: "uncommon",
+      color: "#f48fb1",
+      weight: 2.5,
+      desc: "Sprout copies of your body parts on any surface \u2014 including your enemies. (Nico Robin.)",
+      techniques: [
+        T2(0, { id: "hana_clutch", name: "Clutch", icon: "\u{1F338}", anim: "cast", windup: 0.25, recover: 0.3, cd: 5, cost: { stamina: 14 }, say: "Seis Fleur... Clutch!", desc: "Sprout arms on the target and bend them backwards.", steps: [{ zone: { range: 1.2, duration: 0.3, interval: 0.3, damage: 24, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.2 } } }] }),
+        T2(20, { id: "hana_mil", name: "Mil Fleur", icon: "\u{1F33A}", anim: "cast", windup: 0.4, recover: 0.4, cd: 10, cost: { stamina: 22 }, desc: "A thousand arms bloom around you and strike.", steps: [{ hit: { shape: "circle", range: 3.6, damage: 7, knockback: 1, stun: 0.3, duration: 1, interval: 0.14 }, vfx: "ring", color: "#f48fb1" }] }),
+        T2(50, { id: "hana_gigante", name: "Gigantesco Mano", icon: "\u270B", anim: "cast", windup: 0.5, recover: 0.4, cd: 14, cost: { stamina: 28 }, desc: "Two giant sprouted hands slam down.", steps: [{ zone: { range: 2.6, duration: 0.3, interval: 0.3, damage: 60, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.5 } } }] })
+      ]
+    },
+    ito: {
+      name: "Ito Ito no Mi",
+      en: "String-String Fruit",
+      type: "Paramecia",
+      rarity: "legendary",
+      color: "#f8bbd0",
+      weight: 0.5,
+      desc: "Create strings sharp enough to cut steel and strong enough to puppet people. (Donquixote Doflamingo.)",
+      techniques: [
+        T2(0, { id: "ito_overheat", name: "Overheat", icon: "\u{1F9F5}", anim: "cast", windup: 0.3, recover: 0.3, cd: 5, cost: { stamina: 14 }, steps: [{ hit: { shape: "line", range: 9, width: 0.6, damage: 24, knockback: 4, stun: 0.4, slashing: true, element: "fire" }, vfx: "beam", color: "#ff8a80" }] }),
+        T2(15, { id: "ito_parasite", name: "Parasite", icon: "\u{1F3AD}", anim: "cast", windup: 0.25, recover: 0.3, cd: 12, cost: { stamina: 18 }, desc: "Puppet strings freeze your target in place.", steps: [{ proj: { speed: 22, range: 10, radius: 0.4, damage: 8, sprite: "string", status: { root: 2.5 }, stun: 0.5 } }] }),
+        T2(35, { id: "ito_fivecolor", name: "Five Color Strings", icon: "\u{1F590}", anim: "slash", windup: 0.25, recover: 0.3, cd: 7, cost: { stamina: 20 }, steps: [{ hit: { shape: "arc", range: 3.4, arc: 1.4, offset: 0.2, damage: 34, knockback: 3, stun: 0.5, slashing: true }, vfx: "slash", color: "#f8bbd0" }] }),
+        T2(70, { id: "ito_birdcage", name: "Birdcage", icon: "\u{1F578}", anim: "cast", windup: 0.8, recover: 0.4, cd: 45, cost: { stamina: 35 }, desc: "A cage of cutting strings that closes around the area.", steps: [{ zone: { range: 6, duration: 6, interval: 0.4, damage: 10, color: "#f8bbd0", kind: "cage" } }] })
+      ]
+    },
+    mochi: {
+      name: "Mochi Mochi no Mi",
+      en: "Mochi-Mochi Fruit",
+      type: "Special Paramecia",
+      rarity: "legendary",
+      color: "#fff8e1",
+      weight: 0.5,
+      desc: "A special Paramecia that behaves like a Logia: turn your body into mochi. (Charlotte Katakuri.)",
+      passive: { logiaLike: true, intangible: 0.5, weakTo: ["fire"] },
+      techniques: [
+        T2(0, { id: "mochi_tsuki", name: "Mochi Tsuki", icon: "\u{1F361}", anim: "punch", windup: 0.25, recover: 0.3, cd: 4, cost: { stamina: 14 }, steps: [{ proj: { speed: 18, range: 8, radius: 0.6, damage: 22, sprite: "orb", color: "#fff8e1", knockback: 6, stun: 0.5, size: 1.5 } }] }),
+        T2(20, { id: "mochi_zangiri", name: "Zan Giri Mochi", icon: "\u{1F531}", anim: "thrust", windup: 0.3, recover: 0.3, cd: 7, cost: { stamina: 20 }, steps: [{ hit: { shape: "line", range: 4.5, width: 1.2, damage: 36, knockback: 5, stun: 0.6, slashing: true }, vfx: "beam", color: "#fff8e1" }] }),
+        T2(50, { id: "mochi_chikara", name: "Chikara Mochi", icon: "\u{1F4AA}", anim: "heavy", windup: 0.45, recover: 0.4, cd: 12, cost: { stamina: 28 }, desc: "Giant mochi fists rain down.", steps: [{ zone: { range: 3, duration: 1.2, interval: 0.2, damage: 18, color: "#fff8e1", atTarget: true, kind: "fists" } }] })
+      ]
+    },
+    horo: {
+      name: "Horo Horo no Mi",
+      en: "Hollow-Hollow Fruit",
+      type: "Paramecia",
+      rarity: "uncommon",
+      color: "#ce93d8",
+      weight: 3,
+      desc: "Create ghosts. Negative Hollows drain the will to live from anyone they pass through. (Perona.)",
+      techniques: [
+        T2(0, { id: "horo_negative", name: "Negative Hollow", icon: "\u{1F47B}", anim: "cast", windup: 0.3, recover: 0.3, cd: 8, cost: { stamina: 14 }, desc: `"I'm so sorry I was born..." The target collapses in despair.`, steps: [{ proj: { speed: 10, range: 12, radius: 0.5, damage: 4, sprite: "orb", color: "#e1bee7", homing: 3, status: { despair: 3 }, stun: 2.2, unblockable: true } }] }),
+        T2(20, { id: "horo_mini", name: "Mini Hollows", icon: "\u{1F4AB}", anim: "cast", windup: 0.3, recover: 0.3, cd: 7, cost: { stamina: 16 }, steps: [{ proj: { speed: 11, range: 10, radius: 0.3, damage: 6, count: 4, spread: 0.9, sprite: "orb", color: "#e1bee7", homing: 4, explode: { range: 1.2, damage: 12, colors: ["#e1bee7", "#fff"] } } }] })
+      ]
+    },
+    kage: {
+      name: "Kage Kage no Mi",
+      en: "Shadow-Shadow Fruit",
+      type: "Paramecia",
+      rarity: "rare",
+      color: "#455a64",
+      weight: 1.2,
+      desc: "Manipulate shadows, steal them, and fight with a living shadow double. (Gecko Moria.)",
+      techniques: [
+        T2(0, { id: "kage_brickbat", name: "Brick Bat", icon: "\u{1F987}", anim: "cast", windup: 0.25, recover: 0.3, cd: 4, cost: { stamina: 12 }, steps: [{ proj: { speed: 14, range: 11, radius: 0.3, damage: 7, count: 5, spread: 0.6, sprite: "orb", color: "#263238", homing: 2 } }] }),
+        T2(20, { id: "kage_steal", name: "Shadow Steal", icon: "\u{1F311}", anim: "grab", windup: 0.35, recover: 0.3, cd: 16, cost: { stamina: 20 }, desc: "Cut away the target's shadow: they weaken badly (and would burn in sunlight...).", steps: [{ hit: { shape: "arc", range: 2.6, arc: 1, offset: 0.2, damage: 18, stun: 0.8, status: { shadowless: 12 }, unblockable: true } }] }),
+        T2(40, { id: "kage_doppelman", name: "Doppelman", icon: "\u{1F464}", anim: "cast", windup: 0.3, recover: 0.2, cd: 30, cost: { stamina: 24 }, desc: "Your shadow fights beside you as a second body.", steps: [{ buff: { id: "doppel", name: "Doppelman", dur: 18, mods: { damage: 1.4, extraHit: 1 }, aura: "rgba(38,50,56,0.6)" } }] })
+      ]
+    },
+    doku: {
+      name: "Doku Doku no Mi",
+      en: "Venom-Venom Fruit",
+      type: "Paramecia",
+      rarity: "rare",
+      color: "#8e24aa",
+      weight: 1.2,
+      desc: "Produce and control lethal poison. (Magellan, chief warden of Impel Down.)",
+      passive: { resist: ["poison"] },
+      techniques: [
+        T2(0, { id: "doku_fist", name: "Poison Fist", icon: "\u2620", anim: "punch", windup: 0.15, recover: 0.25, cd: 3, cost: { stamina: 10 }, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 12, knockback: 3, stun: 0.3, element: "poison", status: { poison: 5 } } }] }),
+        T2(20, { id: "doku_hydra", name: "Hydra", icon: "\u{1F40D}", anim: "cast", windup: 0.4, recover: 0.4, cd: 9, cost: { stamina: 22 }, say: "Hydra!", steps: [{ proj: { speed: 13, range: 12, radius: 0.7, damage: 26, count: 3, spread: 0.4, sprite: "poison", element: "poison", status: { poison: 6 }, homing: 1.5, trail: { color: "#8e24aa", kind: "smoke" } } }] }),
+        T2(50, { id: "doku_venom", name: "Venom Demon", icon: "\u{1F479}", anim: "cast", windup: 0.8, recover: 0.5, cd: 40, cost: { stamina: 35 }, steps: [{ zone: { range: 4.5, duration: 8, interval: 0.5, damage: 12, element: "poison", status: { poison: 4 }, color: "#8e24aa", kind: "field" } }] })
+      ]
+    },
+    noro: {
+      name: "Noro Noro no Mi",
+      en: "Slow-Slow Fruit",
+      type: "Paramecia",
+      rarity: "common",
+      color: "#80deea",
+      weight: 5,
+      desc: "Fire Noro Noro photons that slow anything they hit to a crawl. (Foxy the Silver Fox.)",
+      techniques: [
+        T2(0, { id: "noro_beam", name: "Noro Noro Beam", icon: "\u{1F40C}", anim: "cast", windup: 0.25, recover: 0.3, cd: 8, cost: { stamina: 12 }, steps: [{ hit: { shape: "line", range: 9, width: 1.2, damage: 4, stun: 0.1, status: { slowmo: 4 } }, vfx: "beam", color: "#80deea" }] }),
+        T2(30, { id: "noro_mirror", name: "Noro Noro Beam Sword", icon: "\u{1FA9E}", anim: "slash", windup: 0.2, recover: 0.3, cd: 10, cost: { stamina: 16 }, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.2, offset: 0.2, damage: 10, stun: 0.2, status: { slowmo: 3 } }, vfx: "slash", color: "#80deea" }] })
+      ]
+    },
+    bari: {
+      name: "Bari Bari no Mi",
+      en: "Barrier-Barrier Fruit",
+      type: "Paramecia",
+      rarity: "uncommon",
+      color: "#b3e5fc",
+      weight: 2.5,
+      desc: "Create unbreakable barriers. (Bartolomeo.)",
+      techniques: [
+        T2(0, { id: "bari_barrier", name: "Barrier", icon: "\u{1F6E1}", anim: "block", windup: 0.05, recover: 0.1, cd: 10, cost: { stamina: 14 }, desc: "Block everything for a moment.", steps: [{ buff: { id: "barrier", name: "Barrier", dur: 2.5, mods: { defMul: 0.05 }, aura: "rgba(179,229,252,0.8)" } }] }),
+        T2(20, { id: "bari_crash", name: "Barrier Crash", icon: "\u{1F9F1}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 7, cost: { stamina: 18 }, steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, hit: { damage: 30, knockback: 9, stun: 0.6, heavy: true, guardBreak: true } } }] })
+      ]
+    },
+    suke: {
+      name: "Suke Suke no Mi",
+      en: "Clear-Clear Fruit",
+      type: "Paramecia",
+      rarity: "uncommon",
+      color: "#eceff1",
+      weight: 3,
+      desc: "Turn yourself (and what you touch) invisible. (Absalom, then Shiliew.)",
+      techniques: [
+        T2(0, { id: "suke_vanish", name: "Clear Body", icon: "\u{1F441}", anim: "cast", windup: 0.2, recover: 0.1, cd: 16, cost: { stamina: 14 }, desc: "Become invisible: enemies lose track of you and your first hit is a critical.", steps: [{ buff: { id: "invisible", name: "Invisible", dur: 8, mods: { stealth: 1, crit: 0.6 }, alpha: 0.12 } }] })
+      ]
+    },
+    sube: {
+      name: "Sube Sube no Mi",
+      en: "Slip-Slip Fruit",
+      type: "Paramecia",
+      rarity: "common",
+      color: "#fce4ec",
+      weight: 5,
+      desc: "Your skin becomes perfectly slippery. Attacks slide right off. (Alvida.)",
+      passive: { slippery: 0.3 },
+      techniques: [
+        T2(0, { id: "sube_slide", name: "Slip Slide", icon: "\u26F8", anim: "thrust", windup: 0.05, recover: 0.1, cd: 3, cost: { stamina: 10 }, steps: [{ dash: { dist: 6, time: 0.25, iframes: 0.25, hit: { damage: 8, knockback: 3 } } }] }),
+        T2(25, { id: "sube_mace", name: "Mace Swing", icon: "\u{1F528}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 5, cost: { stamina: 16 }, steps: [{ hit: { shape: "arc", range: 2.2, arc: 2, offset: 0.2, damage: 22, knockback: 7, stun: 0.5, heavy: true } }] })
+      ]
+    },
+    doru: {
+      name: "Doru Doru no Mi",
+      en: "Wax-Wax Fruit",
+      type: "Paramecia",
+      rarity: "common",
+      color: "#fff8e1",
+      weight: 5,
+      desc: "Produce wax as hard as steel. Weak to fire. (Mr. 3 of Baroque Works.)",
+      passive: { weakTo: ["fire"] },
+      techniques: [
+        T2(0, { id: "doru_arrow", name: "Candle Arrows", icon: "\u{1F56F}", anim: "shoot", windup: 0.2, recover: 0.3, cd: 4, cost: { stamina: 12 }, steps: [{ proj: { speed: 18, range: 11, radius: 0.25, damage: 9, count: 3, spread: 0.25, sprite: "iceshard", color: "#fff8e1" } }] }),
+        T2(20, { id: "doru_lock", name: "Candle Lock", icon: "\u{1F512}", anim: "cast", windup: 0.3, recover: 0.3, cd: 11, cost: { stamina: 16 }, steps: [{ zone: { range: 1.5, duration: 0.4, interval: 0.4, damage: 10, color: "#fff8e1", atTarget: true, status: { root: 2.5 } } }] }),
+        T2(40, { id: "doru_armor", name: "Candle Champion", icon: "\u{1F5FF}", anim: "cast", windup: 0.4, recover: 0.2, cd: 30, cost: { stamina: 22 }, steps: [{ buff: { id: "waxarmor", name: "Wax Armour", dur: 12, mods: { defMul: 0.55, damage: 1.2 }, aura: "rgba(255,248,225,0.8)" } }] })
+      ]
+    },
+    supa: {
+      name: "Supa Supa no Mi",
+      en: "Dice-Dice Fruit",
+      type: "Paramecia",
+      rarity: "uncommon",
+      color: "#b0bec5",
+      weight: 3,
+      desc: "Turn any part of your body into a steel blade. Blades can't hurt you. (Daz Bonez, Mr. 1.)",
+      passive: { immuneSlash: true },
+      techniques: [
+        T2(0, { id: "supa_sparkling", name: "Sparkling Daisy", icon: "\u2734", anim: "slash", windup: 0.25, recover: 0.3, cd: 5, cost: { stamina: 16 }, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.6, offset: 0.2, damage: 26, knockback: 4, stun: 0.5, slashing: true }, vfx: "slash", color: "#eceff1" }] }),
+        T2(25, { id: "supa_spider", name: "Spider", icon: "\u{1F577}", anim: "block", windup: 0.05, recover: 0.1, cd: 12, cost: { stamina: 14 }, desc: "Harden your whole body into steel.", steps: [{ buff: { id: "steel", name: "Steel Body", dur: 4, mods: { defMul: 0.3 }, aura: "rgba(176,190,197,0.9)" } }] })
+      ]
+    },
+    nikyu: {
+      name: "Nikyu Nikyu no Mi",
+      en: "Paw-Paw Fruit",
+      type: "Paramecia",
+      rarity: "legendary",
+      color: "#fff",
+      weight: 0.4,
+      desc: "Paw pads that repel anything \u2014 even pain, even people across the world. (Bartholomew Kuma.)",
+      techniques: [
+        T2(0, { id: "nikyu_paw", name: "Pad Ho", icon: "\u{1F43E}", anim: "punch", windup: 0.25, recover: 0.3, cd: 4, cost: { stamina: 14 }, steps: [{ proj: { speed: 24, range: 12, radius: 0.5, damage: 20, sprite: "paw", pierce: true, knockback: 8, stun: 0.4 } }] }),
+        T2(20, { id: "nikyu_repel", name: "Repel", icon: "\u270B", anim: "block", windup: 0.02, recover: 0.1, cd: 8, cost: { stamina: 12 }, desc: "Deflect everything around you.", steps: [{ hit: { shape: "circle", range: 2.2, damage: 10, knockback: 12, stun: 0.4 }, vfx: "ring", color: "#ffffff" }, { self: { iframes: 0.4 } }] }),
+        T2(45, { id: "nikyu_travel", name: "Tabi Tabi", icon: "\u2708", anim: "cast", windup: 0.2, recover: 0.1, cd: 6, cost: { stamina: 16 }, desc: "Repel yourself through the air.", steps: [{ teleport: { dist: 12, color: "#ffffff" } }] }),
+        T2(70, { id: "nikyu_ursus", name: "Ursus Shock", icon: "\u{1F4A3}", anim: "cast", windup: 1, recover: 0.5, cd: 30, cost: { stamina: 38 }, desc: "Compress the air into a paw-shaped bomb.", steps: [{ proj: { speed: 7, range: 9, radius: 1.2, damage: 20, sprite: "paw", size: 2.5, pierce: true, explode: { range: 4.5, damage: 110, colors: ["#ffffff", "#e0f7fa", "#b2ebf2"] } } }] })
+      ]
+    },
+    mane: {
+      name: "Mane Mane no Mi",
+      en: "Clone-Clone Fruit",
+      type: "Paramecia",
+      rarity: "common",
+      color: "#f06292",
+      weight: 4,
+      desc: "Touch a face with your right hand and copy it perfectly. Marines won't recognise you. (Bon Clay.)",
+      passive: { disguise: true },
+      techniques: [
+        T2(0, { id: "mane_disguise", name: "Mimicry", icon: "\u{1F3AD}", anim: "cast", windup: 0.4, recover: 0.2, cd: 60, cost: { stamina: 10 }, desc: "Disguise yourself: Marines and bounty hunters ignore you until you attack.", steps: [{ buff: { id: "disguise", name: "Disguised", dur: 90, mods: { stealth: 0.5 }, disguise: true } }] }),
+        T2(20, { id: "mane_memoir", name: "Memoir Strike", icon: "\u{1F4AD}", anim: "kick", windup: 0.2, recover: 0.3, cd: 8, cost: { stamina: 16 }, desc: "Take a friend's face \u2014 the enemy hesitates to strike.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 20, knockback: 5, stun: 1.4 } }] })
+      ]
+    },
+    zushi: {
+      name: "Zushi Zushi no Mi",
+      en: "Press-Press Fruit",
+      type: "Paramecia",
+      rarity: "legendary",
+      color: "#9575cd",
+      weight: 0.4,
+      desc: "Control gravity. Pull meteors down from space. (Admiral Fujitora.)",
+      techniques: [
+        T2(0, { id: "zushi_press", name: "Gravity Press", icon: "\u2B07", anim: "cast", windup: 0.3, recover: 0.3, cd: 6, cost: { stamina: 16 }, steps: [{ zone: { range: 2.8, duration: 2, interval: 0.25, damage: 6, color: "#9575cd", atTarget: true, slow: 0.25, kind: "gravity" } }] }),
+        T2(25, { id: "zushi_blade", name: "Gravity Blade: Raging Tiger", icon: "\u{1F42F}", anim: "slash", windup: 0.4, recover: 0.4, cd: 10, cost: { stamina: 24 }, steps: [{ hit: { shape: "line", range: 10, width: 2.2, damage: 48, knockback: 6, stun: 0.8, heavy: true }, vfx: "beam", color: "#9575cd" }] }),
+        T2(70, { id: "zushi_meteor", name: "Meteor", icon: "\u2604", anim: "cast", windup: 1.2, recover: 0.5, cd: 45, cost: { stamina: 40 }, desc: "Call down a meteor from the heavens.", steps: [{ zone: { range: 4, duration: 1.3, interval: 1.2, damage: 140, color: "#ff7043", atTarget: true, kind: "meteor", element: "explosion" } }] })
+      ]
+    },
+    // ------------------------------------------------------------------ ZOAN
+    hito: {
+      name: "Hito Hito no Mi",
+      en: "Human-Human Fruit",
+      type: "Zoan",
+      rarity: "uncommon",
+      color: "#f8bbd0",
+      weight: 2.5,
+      desc: "Grants the intelligence and form of a human. Tony Tony Chopper ate it as a reindeer.",
+      techniques: [
+        T2(0, { id: "hito_heavy", name: "Heavy Point", icon: "\u{1F4AA}", anim: "cast", windup: 0.4, recover: 0.1, cd: 25, cost: { stamina: 14 }, steps: [{ buff: { id: "heavy_point", name: "Heavy Point", dur: 15, mods: { damage: 1.4, defMul: 0.8, scale: 1.3 } } }] }),
+        T2(20, { id: "hito_horn", name: "Horn Point: Kokutei Roseo", icon: "\u{1F98C}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, cost: { stamina: 18 }, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] }),
+        T2(50, { id: "hito_monster", name: "Monster Point", icon: "\u{1F479}", anim: "cast", windup: 0.8, recover: 0.1, cd: 90, cost: { stamina: 30 }, desc: "A Rumble Ball overdose: enormous power, barely controllable.", steps: [{ buff: { id: "monster", name: "Monster Point", dur: 20, mods: { damage: 2.2, defMul: 0.5, scale: 1.8, speedMul: 1.1 }, aura: "rgba(121,85,72,0.8)", drain: { stamina: 2 } } }] })
+      ]
+    },
+    neko_leopard: {
+      name: "Neko Neko no Mi, Model: Leopard",
+      en: "Cat-Cat Fruit, Leopard",
+      type: "Zoan",
+      rarity: "rare",
+      color: "#ffb74d",
+      weight: 1.2,
+      desc: "Become a leopard or a half-leopard warrior. Rob Lucci's ferocious fruit.",
+      techniques: [
+        T2(0, { id: "neko_hybrid", name: "Hybrid Form", icon: "\u{1F406}", anim: "cast", windup: 0.4, recover: 0.1, cd: 30, cost: { stamina: 14 }, steps: [{ buff: { id: "leopard", name: "Leopard Form", dur: 20, mods: { damage: 1.45, speedMul: 1.2, defMul: 0.85 }, aura: "rgba(255,183,77,0.6)" } }] }),
+        T2(20, { id: "neko_claw", name: "Leopard Claw", icon: "\u{1F43E}", anim: "slash", windup: 0.15, recover: 0.25, cd: 3, cost: { stamina: 12 }, steps: [{ hit: { shape: "arc", range: 1.9, arc: 1.8, offset: 0.2, damage: 22, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 4 } }, vfx: "slash", color: "#ffb74d" }] }),
+        T2(50, { id: "neko_pounce", name: "Hunting Pounce", icon: "\u{1F405}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, cost: { stamina: 20 }, steps: [{ dash: { dist: 8, time: 0.25, iframes: 0.2, hit: { damage: 40, knockback: 5, stun: 0.8, heavy: true } } }] })
+      ]
+    },
+    tori_phoenix: {
+      name: "Tori Tori no Mi, Model: Phoenix",
+      en: "Bird-Bird Fruit, Phoenix",
+      type: "Mythical Zoan",
+      rarity: "mythical",
+      color: "#4dd0e1",
+      weight: 0.4,
+      desc: "Blue flames of resurrection. Wounds heal as fast as they are dealt. (Marco the Phoenix.)",
+      passive: { regen: 3 },
+      techniques: [
+        T2(0, { id: "phoenix_flame", name: "Flames of Restoration", icon: "\u{1F499}", anim: "cast", windup: 0.3, recover: 0.2, cd: 12, cost: { stamina: 12 }, steps: [{ heal: 45, color: "#4dd0e1" }] }),
+        T2(15, { id: "phoenix_fly", name: "Phoenix Flight", icon: "\u{1F54A}", anim: "cast", windup: 0.05, recover: 0.1, cd: 3, cost: { stamina: 12 }, steps: [{ dash: { dist: 10, time: 0.35, iframes: 0.3, air: true, trail: "#4dd0e1" } }] }),
+        T2(35, { id: "phoenix_brand", name: "Phoenix Brand", icon: "\u{1F525}", anim: "kick", windup: 0.3, recover: 0.3, cd: 7, cost: { stamina: 20 }, steps: [{ dash: { dist: 6, time: 0.22, iframes: 0.2, air: true, hit: { damage: 38, knockback: 8, stun: 0.6, element: "fire", heavy: true } } }] }),
+        T2(70, { id: "phoenix_rebirth", name: "Blue Rebirth", icon: "\u267E", anim: "cast", windup: 0.6, recover: 0.2, cd: 120, cost: { stamina: 20 }, desc: "Burn away all harm: full heal and a burst of blue fire.", steps: [{ heal: 400, color: "#4dd0e1" }, { hit: { shape: "circle", range: 3, damage: 30, knockback: 6, element: "fire" }, vfx: "ring", color: "#4dd0e1" }, { self: { cleanse: true } }] })
+      ]
+    },
+    uo_seiryu: {
+      name: "Uo Uo no Mi, Model: Seiryu",
+      en: "Fish-Fish Fruit, Azure Dragon",
+      type: "Mythical Zoan",
+      rarity: "mythical",
+      color: "#42a5f5",
+      weight: 0.3,
+      desc: "Become the Azure Dragon of legend. Kaido, strongest creature in the world, ate this fruit.",
+      techniques: [
+        T2(0, { id: "seiryu_bolo", name: "Bolo Breath", icon: "\u{1F409}", anim: "cast", windup: 0.5, recover: 0.4, cd: 7, cost: { stamina: 20 }, say: "Bolo Breath!", steps: [{ hit: { shape: "line", range: 11, width: 1.8, damage: 44, knockback: 6, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true, hitShips: true }, vfx: "beam", color: "#ff7043" }] }),
+        T2(25, { id: "seiryu_kaifu", name: "Kaifu", icon: "\u{1F32C}", anim: "cast", windup: 0.35, recover: 0.3, cd: 6, cost: { stamina: 18 }, desc: "Wind blades from the dragon's whiskers.", steps: [{ proj: { speed: 18, range: 12, radius: 0.5, damage: 18, count: 3, spread: 0.5, sprite: "airslash", slashing: true, pierce: true } }] }),
+        T2(50, { id: "seiryu_raimei", name: "Raimei Hakke", icon: "\u26A1", anim: "heavy", windup: 0.6, recover: 0.5, cd: 14, cost: { stamina: 30 }, desc: "Thunder Bagua: a club blow that shakes the heavens.", steps: [{ hit: { shape: "arc", range: 3, arc: 1.4, offset: 0.4, damage: 95, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, element: "lightning", impactFrame: true, shake: 0.9 } }] }),
+        T2(80, { id: "seiryu_form", name: "Dragon Form", icon: "\u{1F432}", anim: "cast", windup: 1, recover: 0.1, cd: 120, cost: { stamina: 30 }, steps: [{ buff: { id: "dragon", name: "Azure Dragon", dur: 25, mods: { damage: 2, defMul: 0.4, scale: 1.6 }, aura: "rgba(66,165,245,0.8)" } }] })
+      ]
+    },
+    // ----------------------------------------------------------------- LOGIA
+    mera: {
+      name: "Mera Mera no Mi",
+      en: "Flame-Flame Fruit",
+      type: "Logia",
+      rarity: "rare",
+      color: "#ff7043",
+      weight: 1,
+      desc: "Become fire itself. Portgas D. Ace's fruit \u2014 later the Colosseum prize of Dressrosa.",
+      passive: { logia: true, element: "fire", resist: ["fire"], weakTo: ["magma", "water"] },
+      techniques: [
+        T2(0, { id: "mera_hiken", name: "Hiken", icon: "\u{1F525}", anim: "punch", windup: 0.3, recover: 0.3, cd: 4, cost: { stamina: 14 }, say: "Hiken!", desc: "Fire Fist.", steps: [{ proj: { speed: 16, range: 12, radius: 0.8, damage: 26, sprite: "firefist", element: "fire", pierce: true, status: { burn: 3 }, knockback: 5, trail: { color: ["#ff7043", "#ffca28"] } } }] }),
+        T2(15, { id: "mera_hidaruma", name: "Hidaruma", icon: "\u{1F386}", anim: "cast", windup: 0.25, recover: 0.3, cd: 6, cost: { stamina: 14 }, desc: "Fireflies of flame that ignite everything they touch.", steps: [{ proj: { speed: 9, range: 10, radius: 0.3, damage: 8, count: 6, spread: 1.2, sprite: "fireball", element: "fire", status: { burn: 2 }, homing: 2 } }] }),
+        T2(35, { id: "mera_enkai", name: "Enkai: Hibashira", icon: "\u{1F30B}", anim: "cast", windup: 0.4, recover: 0.4, cd: 10, cost: { stamina: 22 }, desc: "A pillar of flame erupts around you.", steps: [{ hit: { shape: "circle", range: 3, damage: 36, knockback: 8, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true }, vfx: "ring" }] }),
+        T2(70, { id: "mera_entei", name: "Dai Enkai: Entei", icon: "\u2600", anim: "cast", windup: 1.1, recover: 0.5, cd: 40, cost: { stamina: 40 }, desc: "A second sun, hurled.", say: "Dai Enkai... ENTEI!", steps: [{ proj: { speed: 9, range: 13, radius: 2.2, damage: 40, size: 4, sprite: "fireball", element: "fire", pierce: true, status: { burn: 5 }, explode: { range: 4.5, damage: 100, element: "fire" } } }] })
+      ]
+    },
+    hie: {
+      name: "Hie Hie no Mi",
+      en: "Ice-Ice Fruit",
+      type: "Logia",
+      rarity: "rare",
+      color: "#81d4fa",
+      weight: 1,
+      desc: "Become ice. Freeze anything \u2014 even the sea. (Admiral Aokiji.)",
+      passive: { logia: true, element: "ice", resist: ["ice"], weakTo: ["magma"] },
+      techniques: [
+        T2(0, { id: "hie_saber", name: "Ice Saber", icon: "\u{1F5E1}", anim: "slash", windup: 0.15, recover: 0.25, cd: 3, cost: { stamina: 10 }, steps: [{ hit: { shape: "arc", range: 2, arc: 1.8, offset: 0.2, damage: 18, knockback: 3, stun: 0.3, slashing: true, element: "ice", status: { chill: 3 } }, vfx: "slash", color: "#b3e5fc" }] }),
+        T2(15, { id: "hie_pheasant", name: "Pheasant Beak", icon: "\u{1F426}", anim: "cast", windup: 0.35, recover: 0.3, cd: 6, cost: { stamina: 16 }, say: "Pheasant Beak!", steps: [{ proj: { speed: 15, range: 12, radius: 0.8, damage: 28, sprite: "bird", color: "#b3e5fc", element: "ice", status: { freeze: 1.4 }, pierce: true } }] }),
+        T2(35, { id: "hie_ageand", name: "Ice Age", icon: "\u2744", anim: "cast", windup: 0.6, recover: 0.4, cd: 14, cost: { stamina: 26 }, desc: "Freeze everything around you \u2014 even water becomes a road of ice.", say: "Ice Age!", steps: [{ hit: { shape: "circle", range: 5, damage: 30, knockback: 1, stun: 0.3, element: "ice", status: { freeze: 2.5 }, heavy: true }, vfx: "ring", color: "#e1f5fe" }, { zone: { range: 5, duration: 6, interval: 1, damage: 0, color: "#e1f5fe", kind: "ice", slow: 0.5 } }] }),
+        T2(65, { id: "hie_time", name: "Ice Time Capsule", icon: "\u{1F9CA}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, cost: { stamina: 32 }, steps: [{ hit: { shape: "line", range: 10, width: 2.5, damage: 60, knockback: 2, element: "ice", status: { freeze: 3.5 }, heavy: true, unblockable: true }, vfx: "beam", color: "#e1f5fe" }] })
+      ]
+    },
+    goro: {
+      name: "Goro Goro no Mi",
+      en: "Rumble-Rumble Fruit",
+      type: "Logia",
+      rarity: "legendary",
+      color: "#fff176",
+      weight: 0.6,
+      desc: "Become lightning. The self-proclaimed God Enel's fruit. Useless against rubber.",
+      passive: { logia: true, element: "lightning", resist: ["lightning"], weakTo: ["rubber"] },
+      techniques: [
+        T2(0, { id: "goro_vari", name: "Vari", icon: "\u26A1", anim: "cast", windup: 0.2, recover: 0.25, cd: 3, cost: { stamina: 12 }, steps: [{ hit: { shape: "line", range: 8, width: 0.8, damage: 22, knockback: 2, stun: 0.5, element: "lightning", status: { shock: 1 } }, vfx: "beam", color: "#fff176" }] }),
+        T2(15, { id: "goro_sango", name: "Sango", icon: "\u{1F409}", anim: "cast", windup: 0.4, recover: 0.3, cd: 8, cost: { stamina: 20 }, desc: "A lightning dragon.", steps: [{ proj: { speed: 20, range: 14, radius: 0.9, damage: 34, sprite: "thunder", size: 2, element: "lightning", pierce: true, status: { shock: 1.2 } } }] }),
+        T2(35, { id: "goro_elthor", name: "El Thor", icon: "\u{1F329}", anim: "cast", windup: 0.7, recover: 0.4, cd: 14, cost: { stamina: 28 }, desc: "A pillar of divine lightning from the sky.", say: "El Thor!", steps: [{ zone: { range: 2.8, duration: 0.8, interval: 0.4, damage: 45, element: "lightning", status: { shock: 1.5 }, color: "#fff176", atTarget: true, kind: "thunder" } }] }),
+        T2(55, { id: "goro_amaru", name: "200 Million Volt Amaru", icon: "\u{1F47A}", anim: "cast", windup: 0.8, recover: 0.2, cd: 60, cost: { stamina: 30 }, steps: [{ buff: { id: "amaru", name: "Amaru", dur: 18, mods: { damage: 1.9, speedMul: 1.25, scale: 1.3 }, element: "lightning", aura: "rgba(255,241,118,0.9)" } }] }),
+        T2(85, { id: "goro_raigo", name: "Raigo", icon: "\u{1F311}", anim: "cast", windup: 1.4, recover: 0.6, cd: 90, cost: { stamina: 45 }, desc: "A thundercloud large enough to erase an island.", steps: [{ zone: { range: 7, duration: 3, interval: 0.3, damage: 22, element: "lightning", status: { shock: 0.5 }, color: "#fff176", kind: "thunder" } }] })
+      ]
+    },
+    suna: {
+      name: "Suna Suna no Mi",
+      en: "Sand-Sand Fruit",
+      type: "Logia",
+      rarity: "rare",
+      color: "#e1c16e",
+      weight: 1,
+      desc: "Become sand and drain the moisture from anything you touch. Water is its weakness. (Sir Crocodile.)",
+      passive: { logia: true, element: "sand", weakTo: ["water"] },
+      techniques: [
+        T2(0, { id: "suna_barjan", name: "Barjan", icon: "\u{1F319}", anim: "slash", windup: 0.2, recover: 0.3, cd: 3, cost: { stamina: 12 }, steps: [{ proj: { speed: 17, range: 10, radius: 0.5, damage: 18, sprite: "sandblade", element: "sand", slashing: true, pierce: true } }] }),
+        T2(15, { id: "suna_sables", name: "Sables", icon: "\u{1F32A}", anim: "cast", windup: 0.4, recover: 0.3, cd: 9, cost: { stamina: 20 }, desc: "A sandstorm.", steps: [{ zone: { range: 3, duration: 3.5, interval: 0.3, damage: 7, element: "sand", color: "#e1c16e", kind: "storm", atTarget: true, pull: 2 } }] }),
+        T2(35, { id: "suna_spada", name: "Desert Spada", icon: "\u{1F5E1}", anim: "grab", windup: 0.3, recover: 0.35, cd: 8, cost: { stamina: 22 }, desc: "Blades of sand rip through the ground.", steps: [{ hit: { shape: "line", range: 11, width: 1.2, damage: 40, knockback: 4, stun: 0.5, element: "sand", slashing: true }, vfx: "beam", color: "#e1c16e" }] }),
+        T2(60, { id: "suna_dry", name: "Ground Death", icon: "\u{1F3DC}", anim: "grab", windup: 0.7, recover: 0.4, cd: 30, cost: { stamina: 32 }, desc: "Drain all moisture from the land around you.", steps: [{ zone: { range: 6, duration: 5, interval: 0.4, damage: 12, element: "sand", color: "#d7b56d", kind: "field", status: { dry: 2 } } }] })
+      ]
+    },
+    moku: {
+      name: "Moku Moku no Mi",
+      en: "Plume-Plume Fruit",
+      type: "Logia",
+      rarity: "rare",
+      color: "#cfd8dc",
+      weight: 1,
+      desc: 'Become smoke. Smoker "the White Hunter" pairs it with a Seastone jitte.',
+      passive: { logia: true, element: "smoke" },
+      techniques: [
+        T2(0, { id: "moku_blow", name: "White Blow", icon: "\u2601", anim: "punch", windup: 0.2, recover: 0.3, cd: 3, cost: { stamina: 12 }, steps: [{ proj: { speed: 16, range: 10, radius: 0.6, damage: 18, sprite: "smokefist", element: "smoke", knockback: 5, stun: 0.4 } }] }),
+        T2(15, { id: "moku_snake", name: "White Snake", icon: "\u{1F40D}", anim: "grab", windup: 0.25, recover: 0.3, cd: 7, cost: { stamina: 16 }, desc: "Smoke tendrils bind the target.", steps: [{ proj: { speed: 14, range: 11, radius: 0.5, damage: 12, sprite: "smokefist", element: "smoke", status: { root: 2 }, homing: 2 } }] }),
+        T2(35, { id: "moku_out", name: "White Out", icon: "\u{1F32B}", anim: "cast", windup: 0.4, recover: 0.3, cd: 12, cost: { stamina: 22 }, steps: [{ zone: { range: 4, duration: 5, interval: 0.5, damage: 6, element: "smoke", color: "#eceff1", kind: "storm", slow: 0.45, status: { root: 0.4 } } }] }),
+        T2(60, { id: "moku_launcher", name: "White Launcher", icon: "\u{1F680}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 6, cost: { stamina: 18 }, steps: [{ dash: { dist: 10, time: 0.3, iframes: 0.3, air: true, trail: "#eceff1", hit: { damage: 36, knockback: 8, stun: 0.6, element: "smoke" } } }] })
+      ]
+    },
+    pika: {
+      name: "Pika Pika no Mi",
+      en: "Glint-Glint Fruit",
+      type: "Logia",
+      rarity: "legendary",
+      color: "#fff9c4",
+      weight: 0.6,
+      desc: "Become light. Move at the speed of light and kick with its weight. (Admiral Kizaru.)",
+      passive: { logia: true, element: "light" },
+      techniques: [
+        T2(0, { id: "pika_yasakani", name: "Yasakani no Magatama", icon: "\u2728", anim: "cast", windup: 0.35, recover: 0.4, cd: 6, cost: { stamina: 16 }, desc: "A rain of light bullets.", steps: [{ proj: { speed: 30, range: 12, radius: 0.25, damage: 8, count: 9, spread: 1, sprite: "lightorb", element: "light" } }] }),
+        T2(15, { id: "pika_yata", name: "Yata no Kagami", icon: "\u{1FA9E}", anim: "cast", windup: 0.05, recover: 0.05, cd: 2, cost: { stamina: 10 }, desc: "Travel at the speed of light.", steps: [{ teleport: { dist: 12, color: "#fff9c4" } }] }),
+        T2(35, { id: "pika_murakumo", name: "Ama no Murakumo", icon: "\u2694", anim: "slash", windup: 0.2, recover: 0.3, cd: 5, cost: { stamina: 16 }, desc: "A sword of light.", steps: [{ hit: { shape: "arc", range: 2.6, arc: 2.2, offset: 0.2, damage: 40, knockback: 4, stun: 0.5, slashing: true, element: "light" }, vfx: "slash", color: "#fff9c4" }] }),
+        T2(60, { id: "pika_amaterasu", name: "Amaterasu", icon: "\u2600", anim: "cast", windup: 0.8, recover: 0.4, cd: 25, cost: { stamina: 35 }, steps: [{ hit: { shape: "line", range: 16, width: 1.6, damage: 90, knockback: 8, stun: 0.8, element: "light", heavy: true, impactFrame: true, hitShips: true, shipDamage: 300 }, vfx: "beam", color: "#fff59d" }] })
+      ]
+    },
+    magu: {
+      name: "Magu Magu no Mi",
+      en: "Magma-Magma Fruit",
+      type: "Logia",
+      rarity: "legendary",
+      color: "#ff5722",
+      weight: 0.6,
+      desc: "Become magma \u2014 hotter than fire itself. (Admiral, then Fleet Admiral, Akainu.)",
+      passive: { logia: true, element: "magma", resist: ["fire", "magma"] },
+      techniques: [
+        T2(0, { id: "magu_daifunka", name: "Dai Funka", icon: "\u{1F30B}", anim: "punch", windup: 0.3, recover: 0.35, cd: 4, cost: { stamina: 16 }, say: "Dai Funka!", desc: "Great Eruption.", steps: [{ proj: { speed: 15, range: 11, radius: 0.9, damage: 34, sprite: "magmafist", size: 1.5, element: "magma", pierce: true, status: { burn: 4 }, knockback: 6, trail: { color: ["#bf360c", "#ff6f00"], kind: "fire" } } }] }),
+        T2(20, { id: "magu_meigo", name: "Meigo", icon: "\u{1F44A}", anim: "thrust", windup: 0.3, recover: 0.35, cd: 8, cost: { stamina: 22 }, desc: "Hell Hound: a magma fist that pierces through.", steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 55, knockback: 6, stun: 0.8, element: "magma", status: { burn: 4 }, heavy: true, guardBreak: true } } }] }),
+        T2(50, { id: "magu_ryusei", name: "Ryusei Kazan", icon: "\u2604", anim: "cast", windup: 1, recover: 0.5, cd: 35, cost: { stamina: 40 }, desc: "Meteor Volcano: a rain of magma fists.", steps: [{ zone: { range: 6, duration: 2.5, interval: 0.2, damage: 24, element: "magma", color: "#ff5722", kind: "meteor", status: { burn: 3 } } }] })
+      ]
+    },
+    yami: {
+      name: "Yami Yami no Mi",
+      en: "Dark-Dark Fruit",
+      type: "Logia",
+      rarity: "legendary",
+      color: "#311b92",
+      weight: 0.5,
+      desc: "Darkness that swallows everything \u2014 even other Devil Fruit powers. Unlike other Logia, it cannot become intangible. (Marshall D. Teach.)",
+      passive: { element: "dark", noIntangible: true, damageTaken: 1.15 },
+      techniques: [
+        T2(0, { id: "yami_kurouzu", name: "Kurouzu", icon: "\u{1F573}", anim: "grab", windup: 0.3, recover: 0.3, cd: 6, cost: { stamina: 16 }, desc: "Black Vortex: drag your enemy to you.", steps: [{ pull: { range: 8, strength: 14, stun: 0.6 } }] }),
+        T2(15, { id: "yami_blackhole", name: "Black Hole", icon: "\u26AB", anim: "cast", windup: 0.5, recover: 0.4, cd: 14, cost: { stamina: 26 }, steps: [{ zone: { range: 4, duration: 4, interval: 0.4, damage: 10, element: "dark", color: "#311b92", kind: "dark", pull: 4, slow: 0.4 } }] }),
+        T2(35, { id: "yami_nullify", name: "Dark Hand", icon: "\u270B", anim: "grab", windup: 0.2, recover: 0.3, cd: 18, cost: { stamina: 20 }, desc: "Touch an enemy to nullify their Devil Fruit.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.2, damage: 15, stun: 0.8, status: { seastone: 8 }, unblockable: true } }] }),
+        T2(60, { id: "yami_liberation", name: "Liberation", icon: "\u{1F4A5}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, cost: { stamina: 32 }, desc: "Release everything the darkness swallowed.", steps: [{ hit: { shape: "circle", range: 5, damage: 70, knockback: 12, stun: 0.8, element: "dark", heavy: true, impactFrame: true }, vfx: "ring", color: "#7e57c2" }] })
+      ]
+    }
+  };
+  var FRUIT_IDS = Object.keys(FRUITS);
+  for (const [fid, f] of Object.entries(FRUITS)) {
+    registerAbilities(f.techniques.map((t) => ({ ...t, source: "fruit:" + fid, fruit: fid })), "fruit:" + fid);
+    f.logia = !!(f.passive && f.passive.logia);
+    f.rubber = !!(f.passive && f.passive.rubber);
+    f.resist = f.passive?.resist || [];
+    f.weakTo = f.passive?.weakTo || [];
+  }
+  var FRUIT_RARITY = {
+    common: { label: "Common", color: "#b2bec3" },
+    uncommon: { label: "Uncommon", color: "#55efc4" },
+    rare: { label: "Rare", color: "#74b9ff" },
+    legendary: { label: "Legendary", color: "#fdcb6e" },
+    mythical: { label: "Mythical", color: "#ff7675" }
+  };
+  function unlockedFruitTechniques(fruitId, mastery) {
+    const f = FRUITS[fruitId];
+    if (!f) return [];
+    return f.techniques.filter((t) => mastery >= t.mastery).map((t) => t.id);
+  }
+
+  // src/data/items.js
+  var ITEMS = {
+    // ---------------------------------------------------------------- food
+    meat: { name: "Meat on the Bone", icon: "\u{1F356}", type: "food", heal: 70, stamina: 40, price: 90, desc: "The universal fuel of every rubber-brained captain." },
+    rice_ball: { name: "Rice Ball", icon: "\u{1F359}", type: "food", heal: 40, stamina: 20, price: 45, desc: "Simple, salty, filling." },
+    fish_stew: { name: "Sea Fish Stew", icon: "\u{1F372}", type: "food", heal: 110, stamina: 60, price: 180, desc: "A sailor's favourite." },
+    tangerine: { name: "Bell-m\xE8re's Tangerine", icon: "\u{1F34A}", type: "food", heal: 35, stamina: 60, price: 60, desc: "From the groves of Cocoyasi Village." },
+    sea_king_steak: { name: "Sea King Steak", icon: "\u{1F969}", type: "food", heal: 400, stamina: 200, price: 2500, desc: "Enough meat to feed a crew for a week." },
+    baratie_course: { name: "Baratie Full Course", icon: "\u{1F37D}", type: "food", heal: 300, stamina: 150, price: 1200, buff: { id: "well_fed", name: "Well Fed", dur: 180, mods: { damage: 1.1 } }, desc: `Cooked by "Red Leg" Zeff's kitchen. Leaves you Well Fed.` },
+    sake: { name: "Sake", icon: "\u{1F376}", type: "food", heal: 10, stamina: 80, price: 120, buff: { id: "tipsy", name: "Tipsy", dur: 60, mods: { damage: 1.08, defMul: 1.1 } }, desc: "Dutch courage." },
+    cola: { name: "Cola Barrel", icon: "\u{1F964}", type: "material", price: 500, desc: "Fuel for Coup de Burst and for certain cyborgs." },
+    bandage: { name: "Bandages", icon: "\u{1FA79}", type: "medicine", heal: 55, price: 70, desc: "Stops the bleeding.", cure: ["bleed"] },
+    antidote: { name: "Antidote", icon: "\u{1F9EA}", type: "medicine", heal: 20, price: 150, cure: ["poison"], desc: "Neutralises most poisons." },
+    rumble_ball: { name: "Rumble Ball", icon: "\u{1F7E1}", type: "medicine", price: 8e3, buff: { id: "rumble", name: "Rumble", dur: 180, mods: { damage: 1.2, speedMul: 1.1 } }, desc: "Chopper's invention. Strengthens you for three minutes." },
+    // foraged from trees (E next to a palm or fruit tree)
+    coconut: { name: "Coconut", icon: "", type: "food", heal: 30, stamina: 50, price: 25, desc: "Crack it open: sweet water and white flesh. Picked from palms." },
+    banana: { name: "Banana", icon: "", type: "food", heal: 25, stamina: 35, price: 20, desc: "Quick energy from a jungle tree." },
+    mango: { name: "Mango", icon: "", type: "food", heal: 40, stamina: 30, price: 35, desc: "Ripe, juicy and sticky." },
+    apple: { name: "Apple", icon: "", type: "food", heal: 25, stamina: 20, price: 15, desc: "Crisp and red." },
+    cherry: { name: "Cherries", icon: "", type: "food", heal: 12, stamina: 18, price: 10, desc: "A handful of cherries." },
+    tension_hormone: { name: "Tension Hormones", icon: "\u{1F489}", type: "medicine", heal: 99999, price: 0, costsLife: true, desc: "Emporio Ivankov's miracle: fully restores you right now \u2014 at the cost of ten years of lifespan (one life)." },
+    // ------------------------------------------------------------- swords
+    wooden_sword: { name: "Wooden Practice Sword", icon: "\u{1FAB5}", type: "weapon", kind: "sword", power: 0.75, price: 300, grade: "Training", desc: "Every swordsman starts with one." },
+    rusty_katana: { name: "Rusty Katana", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1, price: 1500, grade: "Unranked", desc: "Nicked and rusted, but it cuts." },
+    cutlass: { name: "Pirate Cutlass", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.1, price: 3500, grade: "Unranked" },
+    marine_saber: { name: "Marine Saber", icon: "\u2694", type: "weapon", kind: "sword", power: 1.15, price: 6e3, grade: "Unranked" },
+    fine_katana: { name: "Fine Katana", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.25, price: 18e3, grade: "Unranked", desc: "Well-balanced steel from a Loguetown forge." },
+    yubashiri: { name: "Yubashiri", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.35, price: 1e5, grade: "Wazamono", desc: "A light, sharp blade sold in Ipponmatsu's shop." },
+    sandai_kitetsu: { name: "Sandai Kitetsu", icon: "\u{1FA78}", type: "weapon", kind: "sword", power: 1.45, price: 0, grade: "Wazamono (cursed)", cursed: true, desc: "A cursed blade said to bring doom to its wielders. Throw it into the air and see if fate spares your arm." },
+    shigure: { name: "Shigure", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.4, price: 25e4, grade: "Wazamono" },
+    wado_ichimonji: { name: "Wado Ichimonji", icon: "\u{1F90D}", type: "weapon", kind: "sword", power: 1.6, price: 0, grade: "O Wazamono", unique: true, desc: "The white-hilted sword of Kuina, entrusted by Koshiro of Shimotsuki Village." },
+    shusui: { name: "Shusui", icon: "\u{1F5A4}", type: "weapon", kind: "sword", power: 1.75, price: 0, grade: "O Wazamono", unique: true, desc: "The black blade of the legendary samurai Ryuma, won at Thriller Bark." },
+    enma: { name: "Enma", icon: "\u{1F525}", type: "weapon", kind: "sword", power: 1.95, price: 0, grade: "O Wazamono", unique: true, hakiHungry: true, desc: "The blade that cut Kaido. It draws out its wielder's Haki whether they like it or not." },
+    yoru: { name: "Yoru", icon: "\u271D", type: "weapon", kind: "sword", power: 2.3, price: 0, grade: "Saijo O Wazamono", unique: true, desc: "The black blade of Dracule Mihawk, one of the twelve Supreme Grade swords." },
+    // --------------------------------------------------------------- guns
+    slingshot: { name: "Slingshot", icon: "\u{1F3AF}", type: "weapon", kind: "gun", power: 0.9, price: 800, desc: "Lead stars at the ready." },
+    flintlock: { name: "Flintlock Pistol", icon: "\u{1F52B}", type: "weapon", kind: "gun", power: 1.05, price: 4e3 },
+    marine_rifle: { name: "Marine Rifle", icon: "\u{1F52B}", type: "weapon", kind: "gun", power: 1.2, price: 16e3 },
+    kabuto: { name: "Kabuto", icon: "\u{1FAB2}", type: "weapon", kind: "gun", power: 1.35, price: 0, unique: true, desc: "A giant slingshot with a Dial built in." },
+    kuro_kabuto: { name: "Kuro Kabuto", icon: "\u{1FAB2}", type: "weapon", kind: "gun", power: 1.6, price: 0, unique: true },
+    // ------------------------------------------------------------- staffs
+    bo_staff: { name: "Bo Staff", icon: "\u{1F9AF}", type: "weapon", kind: "staff", power: 1, price: 2e3 },
+    clima_tact: { name: "Clima-Tact", icon: "\u{1F326}", type: "weapon", kind: "staff", power: 1.2, price: 6e4, desc: "A weather-controlling staff." },
+    sorcery_clima_tact: { name: "Sorcery Clima-Tact", icon: "\u26C8", type: "weapon", kind: "staff", power: 1.6, price: 0, unique: true, desc: "Improved with Weatherian science." },
+    // --------------------------------------------------------------- axes
+    woodsman_axe: { name: "Woodsman's Axe", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.1, price: 2500 },
+    giant_axe: { name: "Axe of a Giant Warrior", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.6, price: 0, unique: true, desc: "A gift from the giants of Little Garden. Absurdly heavy." },
+    morgan_axe: { name: "Axe-Hand", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.3, price: 0, desc: "Taken from Captain Morgan." },
+    // --------------------------------------------------------- hats / coats
+    straw_hat: { name: "Straw Hat", icon: "\u{1F452}", type: "hat", look: { hat: "straw" }, bonus: { wil: 2 }, price: 500, desc: "A hat passed down through generations of dreamers. It is said to carry a promise." },
+    bandana: { name: "Bandana", icon: "\u{1F397}", type: "hat", look: { hat: "bandana" }, price: 120 },
+    tricorne: { name: "Tricorne", icon: "\u{1F3A9}", type: "hat", look: { hat: "tricorne" }, bonus: { wil: 1 }, price: 900 },
+    captain_hat: { name: "Captain's Hat", icon: "\u{1F3A9}", type: "hat", look: { hat: "captain" }, bonus: { wil: 2 }, price: 4e3 },
+    cowboy_hat: { name: "Cowboy Hat", icon: "\u{1F920}", type: "hat", look: { hat: "cowboy" }, bonus: { agi: 1 }, price: 700 },
+    marine_cap: { name: "Marine Cap", icon: "\u{1F9E2}", type: "hat", look: { hat: "marine" }, price: 0 },
+    pink_hat: { name: "Pink Top Hat", icon: "\u{1F380}", type: "hat", look: { hat: "pinkhat" }, bonus: { vit: 1 }, price: 800 },
+    goggles: { name: "North Blue Goggles", icon: "\u{1F97D}", type: "hat", look: { hat: "goggles" }, bonus: { agi: 1 }, price: 1200, desc: "A new model from the North Blue. (Usopp bought these in Loguetown.)" },
+    headband: { name: "Black Bandana", icon: "\u{1F5A4}", type: "hat", look: { hat: "headband", hatColor: "#212121" }, bonus: { str: 1 }, price: 300, desc: "Tie it on when you mean business." },
+    horned_helm: { name: "Horned Helm", icon: "\u26D1", type: "hat", look: { hat: "horns" }, bonus: { end: 2 }, price: 0, desc: "A helm of Elbaf make." },
+    // body armour (the body slot: coats, cloaks and armour)
+    padded_vest: { name: "Padded Vest", icon: "", type: "coat", armor: 0.04, look: { coat: "#795548" }, bonus: { end: 1 }, price: 1800, desc: "Quilted canvas that takes the sting out of a cutlass." },
+    leather_jerkin: { name: "Leather Jerkin", icon: "", type: "coat", armor: 0.06, look: { coat: "#6d4c33" }, bonus: { agi: 1 }, price: 5500, desc: "Boiled leather \u2014 light enough to dodge in." },
+    chain_shirt: { name: "Chain Shirt", icon: "", type: "coat", armor: 0.1, look: { coat: "#90a4ae" }, bonus: { end: 1 }, price: 22e3, desc: "Rings of steel under your shirt. Heavy, but blades slide off." },
+    samurai_armor: { name: "Samurai Armour", icon: "", type: "coat", armor: 0.14, look: { coat: "#8e1b16" }, bonus: { end: 2, vit: 1 }, price: 9e4, desc: "Lacquered plates in the style of the Land of Wano." },
+    marine_coat: { name: "Marine Coat of Justice", icon: "\u{1F9E5}", type: "coat", look: { coat: "#fafafa", coatText: "JUSTICE" }, bonus: { end: 1 }, price: 0, desc: 'Worn by Marine officers. "JUSTICE" is stitched on the back.' },
+    captain_coat: { name: "Captain's Coat", icon: "\u{1F9E5}", type: "coat", look: { coat: "#1a237e" }, bonus: { wil: 1 }, price: 12e3 },
+    red_cloak: { name: "Red Cloak", icon: "\u{1F9E3}", type: "coat", look: { coat: "#b71c1c" }, bonus: { vit: 1 }, price: 6e3 },
+    // ---------------------------------------------------------- accessories (two slots)
+    iron_ring: { name: "Iron Ring", icon: "", type: "accessory", bonus: { str: 1 }, price: 1500, desc: "A heavy ring that makes every punch land harder." },
+    shell_bracelet: { name: "Shell Bracelet", icon: "", type: "accessory", bonus: { agi: 1 }, price: 900, desc: "Strung by island children. Light on the wrist." },
+    lucky_charm: { name: "Lucky Charm", icon: "", type: "accessory", bonus: { wil: 1 }, price: 800, desc: "A little wooden charm. Sailors swear by them." },
+    leather_bracers: { name: "Leather Bracers", icon: "", type: "accessory", bonus: { end: 1 }, price: 1200, desc: "For blocking blades with your forearms (not recommended)." },
+    haramaki: { name: "Haramaki", icon: "", type: "accessory", bonus: { vit: 1, end: 1 }, price: 2400, desc: "A green belly-warmer. Keeps your insides where they belong." },
+    gold_earrings: { name: "Three Gold Earrings", icon: "", type: "accessory", bonus: { agi: 1, wil: 1 }, price: 6e3, desc: "Three small gold drops that clink when you move." },
+    hand_wraps: { name: "Fighter's Hand Wraps", icon: "", type: "accessory", bonus: { str: 2 }, price: 5e3, desc: "Tight cloth wraps worn by bare-knuckle brawlers." },
+    pearl_necklace: { name: "Pearl Necklace", icon: "", type: "accessory", bonus: { vit: 2 }, price: 14e3, desc: "Pearls from the seabed near Fish-Man Island." },
+    red_sash: { name: "Red Sash", icon: "", type: "accessory", bonus: { str: 1, wil: 1 }, price: 8e3, desc: "Tied at the waist the way the old Roger Pirates wore theirs." },
+    sea_prism_charm: { name: "Sea-Glass Charm", icon: "", type: "accessory", bonus: { end: 2 }, price: 12e3, desc: "Polished sea glass in a brass cage." },
+    marine_medal: { name: "Medal of Honour", icon: "", type: "accessory", bonus: { wil: 2, end: 1 }, price: 0, unique: true, desc: "Awarded by Marine Headquarters for distinguished service." },
+    king_signet: { name: "Signet of a Fallen King", icon: "", type: "accessory", bonus: { wil: 3 }, price: 0, unique: true, desc: "A royal ring from a kingdom erased from the maps." },
+    // ---------------------------------------------------------------- dials
+    impact_dial: { name: "Impact Dial", icon: "\u{1F41A}", type: "dial", price: 3e4, ability: "dial_impact", desc: "Absorbs a blow and releases it. Hurts the user too." },
+    flame_dial: { name: "Flame Dial", icon: "\u{1F525}", type: "dial", price: 12e3, ability: "dial_flame", desc: "Stores fire and breathes it out." },
+    breath_dial: { name: "Breath Dial", icon: "\u{1F4A8}", type: "dial", price: 6e3, ability: "dial_breath", desc: "Stores wind \u2014 boats and gusts." },
+    flash_dial: { name: "Flash Dial", icon: "\u{1F4A1}", type: "dial", price: 8e3, ability: "dial_flash", desc: "Blinds everyone nearby." },
+    reject_dial: { name: "Reject Dial", icon: "\u{1F4A5}", type: "dial", price: 0, ability: "dial_reject", unique: true, desc: "Ten times the power of an Impact Dial. Can kill the user." },
+    // -------------------------------------------------------- navigation
+    log_pose: { name: "Log Pose", icon: "\u{1F9ED}", type: "key", price: 5e3, desc: "The only compass that works in the Grand Line. It locks onto the next island after the log is set." },
+    new_world_log_pose: { name: "Three-Needle Log Pose", icon: "\u{1F9ED}", type: "key", price: 6e4, desc: "A Log Pose for the New World: three needles for three islands." },
+    vivre_card: { name: "Vivre Card", icon: "\u{1F4C3}", type: "key", price: 0, desc: "A piece of paper made from someone's fingernail. It points to them and burns as their life fades." },
+    south_bird: { name: "South Bird", icon: "\u{1F426}", type: "key", price: 0, desc: "A bird that always faces south. Needed to find the Knock Up Stream." },
+    adam_wood: { name: "Adam Wood", icon: "\u{1FAB5}", type: "material", price: 2e6, desc: "Timber from the Treasure Tree Adam. Water 7 shipwrights can build a legend with it." },
+    seastone: { name: "Seastone Chunk", icon: "\u{1FAA8}", type: "material", price: 4e4, desc: "Stone that emits the same energy as the sea. Devil Fruit users go weak when they touch it." },
+    seastone_cuffs: { name: "Seastone Handcuffs", icon: "\u26D3", type: "key", price: 9e4, desc: "Capture a Devil Fruit user alive." },
+    poneglyph_rubbing: { name: "Road Poneglyph Rubbing", icon: "\u{1F7E5}", type: "key", price: 0, stack: true, desc: "A rubbing of a red Road Poneglyph. Four of them together point to Laugh Tale." },
+    treasure_map: { name: "Treasure Map", icon: "\u{1F5FA}", type: "key", price: 0, desc: "X marks the spot." },
+    den_den_mushi: { name: "Den Den Mushi", icon: "\u{1F40C}", type: "key", price: 3e3, desc: "A transponder snail. Lets you hear the news of the world." },
+    // ------------------------------------------------------------ treasure
+    gold_coins: { name: "Gold Doubloons", icon: "\u{1FA99}", type: "treasure", price: 1200, desc: "Sell them." },
+    jewels: { name: "Jewels", icon: "\u{1F48E}", type: "treasure", price: 6e3 },
+    shandora_gold: { name: "Shandora Gold", icon: "\u{1F514}", type: "treasure", price: 8e4, desc: "Gold from the lost city of Shandora." },
+    golden_statue: { name: "Golden Statue", icon: "\u{1F5FF}", type: "treasure", price: 25e3 },
+    pearl: { name: "Mermaid Pearl", icon: "\u26AA", type: "treasure", price: 15e3 }
+  };
+  for (const [id, f] of Object.entries(FRUITS)) {
+    ITEMS["fruit_" + id] = {
+      name: f.name,
+      icon: "\u{1F348}",
+      type: "fruit",
+      fruit: id,
+      price: 0,
+      unique: true,
+      desc: `${f.type}. ${f.desc}
+
+Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a second one will kill you.`
+    };
+  }
+  var FRUIT_VALUE = { common: 15e4, uncommon: 3e5, rare: 7e5, epic: 15e5, legendary: 3e6, mythical: 5e6 };
+  function sellPrice(id) {
+    const d = ITEMS[id];
+    if (!d) return 0;
+    if (d.type === "treasure") return d.price;
+    if (d.type === "fruit") return FRUIT_VALUE[FRUITS[d.fruit]?.rarity] || 2e5;
+    if (d.unique || d.type === "key") return 0;
+    return Math.floor((d.price || 0) * 0.4);
+  }
+
+  // src/render/icons.js
+  var TAU3 = Math.PI * 2;
+  var OUT = "#2b1d14";
+  var U = 64;
+  var colCache = /* @__PURE__ */ new Map();
+  function rgba(c) {
+    let v = colCache.get(c);
+    if (v) return v;
+    let r = 0, g = 0, b = 0, a = 1;
+    if (c[0] === "#") {
+      let h2 = c.slice(1);
+      if (h2.length <= 4) h2 = h2.split("").map((x) => x + x).join("");
+      r = parseInt(h2.slice(0, 2), 16);
+      g = parseInt(h2.slice(2, 4), 16);
+      b = parseInt(h2.slice(4, 6), 16);
+      if (h2.length === 8) a = parseInt(h2.slice(6, 8), 16) / 255;
+    } else {
+      const m = c.match(/[\d.]+/g) || [0, 0, 0];
+      r = +m[0];
+      g = +m[1];
+      b = +m[2];
+      if (m.length > 3) a = +m[3];
+    }
+    v = [r, g, b, a];
+    colCache.set(c, v);
+    return v;
+  }
+  var css = (r, g, b, a = 1) => a >= 1 ? `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})` : `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${Math.max(0, a).toFixed(3)})`;
+  function mix(c1, c2, t) {
+    const A = rgba(c1), B = rgba(c2);
+    return css(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t, A[3]);
+  }
+  var dk = (c, t = 0.3) => mix(c, "#1c0f1c", t);
+  var lt = (c, t = 0.4) => mix(c, "#fffaea", t);
+  function hash(s) {
+    let h2 = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h2 ^= s.charCodeAt(i);
+      h2 = Math.imul(h2, 16777619);
+    }
+    return h2 >>> 0;
+  }
+  var C = {
+    wood: "#9c6a3c",
+    woodD: "#6e4526",
+    woodL: "#c89560",
+    bone: "#f1e6cb",
+    steel: "#d4dde4",
+    iron: "#6c7780",
+    gold: "#f0bf45",
+    brass: "#d6a23e",
+    silver: "#cfd6dc",
+    paper: "#f6ead0",
+    leather: "#8e5a30",
+    skin: "#f2c596",
+    white: "#f7f4ec",
+    black: "#35303a",
+    red: "#c8372d",
+    navy: "#223f66",
+    green: "#4f9a3a",
+    leaf: "#5aa33f",
+    cloth: "#c0392b",
+    glass: "#d7ecf1",
+    sea: "#2f7fc0",
+    purple: "#7a4fa8",
+    pink: "#ef8fb5"
+  };
+  var PC = /* @__PURE__ */ new Map();
+  var P = (d) => {
+    if (typeof d !== "string") return d;
+    let p = PC.get(d);
+    if (!p) {
+      p = new Path2D(d);
+      PC.set(d, p);
+    }
+    return p;
+  };
+  function circle(x, y, r) {
+    const p = new Path2D();
+    p.arc(x, y, r, 0, TAU3);
+    return p;
+  }
+  function ellipse(x, y, rx, ry, rot = 0) {
+    const p = new Path2D();
+    p.ellipse(x, y, rx, ry, rot, 0, TAU3);
+    return p;
+  }
+  function rrect(x, y, w, h2, r = 0) {
+    const p = new Path2D();
+    r = Math.min(r, w / 2, h2 / 2);
+    p.moveTo(x + r, y);
+    p.arcTo(x + w, y, x + w, y + h2, r);
+    p.arcTo(x + w, y + h2, x, y + h2, r);
+    p.arcTo(x, y + h2, x, y, r);
+    p.arcTo(x, y, x + w, y, r);
+    p.closePath();
+    return p;
+  }
+  function poly(pts, close = true) {
+    const p = new Path2D();
+    pts.forEach(([x, y], i) => i ? p.lineTo(x, y) : p.moveTo(x, y));
+    if (close) p.closePath();
+    return p;
+  }
+  function union(...ps) {
+    const p = new Path2D();
+    for (const q of ps) p.addPath(P(q));
+    return p;
+  }
+  function star(cx, cy, n, r1, r2, rot = -Math.PI / 2) {
+    const pts = [];
+    for (let i = 0; i < n * 2; i++) {
+      const r = i % 2 ? r2 : r1, a = rot + i * Math.PI / n;
+      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+    }
+    return poly(pts);
+  }
+  function spiral(cx, cy, r, turns = 1.6, rot = 0, dir = 1) {
+    const p = new Path2D(), n = Math.ceil(turns * 26);
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, a = rot + dir * t * turns * TAU3, rr = r * (0.12 + 0.88 * t);
+      const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+      i ? p.lineTo(x, y) : p.moveTo(x, y);
+    }
+    return p;
+  }
   var cache = /* @__PURE__ */ new Map();
-  function cachedSprite(key, wTiles, hTiles, draw) {
-    let s = cache.get(key);
+  var scratch = {};
+  function scr(name, px) {
+    let s = scratch[name];
+    if (!s) s = scratch[name] = document.createElement("canvas");
+    if (s.width !== px) {
+      s.width = px;
+      s.height = px;
+    }
+    const t = s.getContext("2d");
+    t.setTransform(1, 0, 0, 1, 0, 0);
+    t.globalCompositeOperation = "source-over";
+    t.globalAlpha = 1;
+    t.clearRect(0, 0, px, px);
+    return s;
+  }
+  function mk(size) {
+    const dpr = typeof devicePixelRatio === "number" && devicePixelRatio || 1;
+    const res = Math.max(2, Math.min(3, Math.ceil(dpr)));
+    const px = Math.max(8, Math.round(size * res));
+    const c = document.createElement("canvas");
+    c.width = c.height = px;
+    c.style.width = c.style.height = size + "px";
+    const g = c.getContext("2d");
+    const k = px / U;
+    g.setTransform(k, 0, 0, k, 0, 0);
+    g.lineJoin = "round";
+    g.lineCap = "round";
+    const olPx = Math.min(2.1, Math.max(1, 0.7 + size * 0.0145));
+    return { c, g, k, px, size, res, small: size <= 28, ol: olPx * U / size, rimPx: Math.min(1.5, Math.max(0.65, size * 0.019)) * res };
+  }
+  function lsc(I) {
+    const m = I.g.getTransform();
+    return Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) / I.k;
+  }
+  function lvec(I, x, y) {
+    const m = I.g.getTransform(), det = m.a * m.d - m.b * m.c, px = x * I.k, py = y * I.k;
+    return [(m.d * px - m.c * py) / det, (-m.b * px + m.a * py) / det];
+  }
+  function part(I, path, color, o = {}) {
+    const g = I.g, p = P(path), rule = o.rule || "nonzero", s = lsc(I);
+    const ol = (o.ol ?? I.ol) / s;
+    if (ol > 0) {
+      g.lineWidth = ol * 2;
+      g.strokeStyle = o.line || OUT;
+      g.stroke(p);
+    }
+    const sd = o.flat ? 0 : o.sd ?? 2.6, hd = o.flat ? 0 : o.hd ?? 2;
+    g.save();
+    g.clip(p, rule);
+    if (sd > 0) {
+      g.fillStyle = o.sh || dk(color, o.shT ?? 0.32);
+      g.fill(p, rule);
+      const [dx, dy] = lvec(I, -sd, -sd);
+      g.translate(dx, dy);
+    }
+    g.fillStyle = color;
+    g.fill(p, rule);
+    g.restore();
+    if (hd > 0) hilite(I, p, o.hi || lt(color, o.hiT ?? 0.45), hd, o.hiA ?? 0.85, o.inset ?? 0.9, rule);
+    if (o.gloss) gloss(I, ...o.gloss);
+    return p;
+  }
+  function hilite(I, p, color, hd, a, inset, rule) {
+    const s = scr("hl", I.px), t = s.getContext("2d");
+    t.setTransform(I.g.getTransform());
+    t.fillStyle = color;
+    const [ix, iy] = lvec(I, inset, inset), [hx, hy] = lvec(I, inset + hd, inset + hd);
+    t.save();
+    t.translate(ix, iy);
+    t.fill(p, rule);
+    t.restore();
+    t.globalCompositeOperation = "destination-out";
+    t.save();
+    t.translate(hx, hy);
+    t.fill(p, rule);
+    t.restore();
+    t.globalCompositeOperation = "destination-in";
+    t.fill(p, rule);
+    const g = I.g;
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalAlpha = a;
+    g.drawImage(s, 0, 0);
+    g.restore();
+  }
+  function gloss(I, x, y, rx, ry, a = 0.75, rot = -0.6) {
+    const g = I.g;
+    g.save();
+    g.globalAlpha = a;
+    g.fillStyle = "#ffffff";
+    g.beginPath();
+    g.ellipse(x, y, rx, ry, rot, 0, TAU3);
+    g.fill();
+    g.restore();
+  }
+  function tube(I, path, color, w, o = {}) {
+    const g = I.g, p = P(path), s = lsc(I), ol = (o.ol ?? I.ol) / s;
+    g.save();
+    g.lineCap = o.cap || "round";
+    g.lineJoin = "round";
+    if (ol > 0) {
+      g.strokeStyle = o.line || OUT;
+      g.lineWidth = w + ol * 2;
+      g.stroke(p);
+    }
+    g.strokeStyle = color;
+    g.lineWidth = w;
+    g.stroke(p);
+    if (!o.flat && w > 1.6) {
+      let [dx, dy] = lvec(I, w * 0.2, w * 0.2);
+      g.save();
+      g.translate(dx, dy);
+      g.globalAlpha = 0.9;
+      g.strokeStyle = o.sh || dk(color, 0.3);
+      g.lineWidth = w * 0.32;
+      g.stroke(p);
+      g.restore();
+      [dx, dy] = lvec(I, -w * 0.2, -w * 0.2);
+      g.save();
+      g.translate(dx, dy);
+      g.globalAlpha = 0.85;
+      g.strokeStyle = o.hi || lt(color, 0.5);
+      g.lineWidth = w * 0.26;
+      g.stroke(p);
+      g.restore();
+    }
+    g.restore();
+  }
+  function ln(I, path, color, w, o = {}) {
+    const g = I.g;
+    g.save();
+    g.lineCap = o.cap || "round";
+    g.lineJoin = "round";
+    g.strokeStyle = color;
+    g.lineWidth = w;
+    if (o.a != null) g.globalAlpha = o.a;
+    if (o.dash) g.setLineDash(o.dash);
+    g.stroke(P(path));
+    g.restore();
+  }
+  function fl(I, path, color, o = {}) {
+    const g = I.g;
+    g.save();
+    if (o.a != null) g.globalAlpha = o.a;
+    g.fillStyle = color;
+    g.fill(P(path), o.rule || "nonzero");
+    g.restore();
+  }
+  function clip(I, path, fn) {
+    const g = I.g;
+    g.save();
+    g.clip(P(path));
+    fn();
+    g.restore();
+  }
+  function tf(I, { r = 0, s = 1, sx, sy, x = 0, y = 0, ox = 32, oy = 32 } = {}, fn) {
+    const g = I.g;
+    g.save();
+    g.translate(ox + x, oy + y);
+    g.rotate(r);
+    g.scale(sx ?? s, sy ?? s);
+    g.translate(-ox, -oy);
+    fn();
+    g.restore();
+  }
+  function alpha(I, a, fn) {
+    const g = I.g;
+    g.save();
+    g.globalAlpha *= a;
+    fn();
+    g.restore();
+  }
+  function rim(I, rpx = I.rimPx) {
+    if (rpx <= 0) return;
+    const s = scr("rim", I.px), t = s.getContext("2d");
+    t.drawImage(I.c, 0, 0);
+    t.globalCompositeOperation = "source-in";
+    t.fillStyle = OUT;
+    t.fillRect(0, 0, I.px, I.px);
+    const g = I.g;
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = "destination-over";
+    for (let i = 0; i < 12; i++) {
+      const a = i / 12 * TAU3;
+      g.drawImage(s, Math.cos(a) * rpx, Math.sin(a) * rpx);
+    }
+    g.restore();
+  }
+  function render(key2, size, draw, opts = {}) {
+    size = Math.max(8, Math.round(size || 48));
+    const ck = key2 + "@" + size;
+    let c = cache.get(ck);
+    if (c) return c;
+    const I = mk(size);
+    try {
+      draw(I);
+    } catch (e) {
+      if (typeof console !== "undefined") console.warn("[icons] failed to draw", key2, e);
+      I.g.setTransform(1, 0, 0, 1, 0, 0);
+      I.g.clearRect(0, 0, I.px, I.px);
+      I.g.setTransform(I.k, 0, 0, I.k, 0, 0);
+      D.pouch(I, {});
+    }
+    if (opts.rim !== false) rim(I, opts.rimPx ?? I.rimPx);
+    c = I.c;
+    if (opts.tag) c.dataset.icon = opts.tag;
+    if (opts.fallback) c.dataset.fallback = "1";
+    cache.set(ck, c);
+    return c;
+  }
+  var D = {};
+  D.meat = (I) => {
+    tube(I, "M11 53 L53 11", C.bone, 7);
+    part(I, union(circle(8, 51.5, 4.6), circle(12.5, 56, 4.6)), C.bone, { sd: 1.6, hd: 1.2 });
+    part(I, union(circle(51.5, 8, 4.6), circle(56, 12.5, 4.6)), C.bone, { sd: 1.6, hd: 1.2 });
+    const m = "M18 47 C10 40 12 27 20 20 C27 13 39 11 45 17 C51 23 49 35 42 42 C35 49 25 53 18 47 Z";
+    part(I, m, "#bb5a2c", { sd: 4, hd: 2.4, gloss: [26, 23, 5, 2.4, 0.55] });
+    if (!I.small) clip(I, m, () => {
+      ln(I, "M22 40 C27 38 32 34 35 29", dk("#bb5a2c", 0.4), 1.6, { a: 0.6 });
+      ln(I, "M29 44 C33 42 37 39 40 35", dk("#bb5a2c", 0.4), 1.4, { a: 0.5 });
+    });
+  };
+  D.riceBall = (I) => {
+    const r = "M32 8 C38 8 42 14 47 22 C53 32 58 40 57 47 C56 54 50 56 44 56 L20 56 C14 56 8 54 7 47 C6 40 11 32 17 22 C22 14 26 8 32 8 Z";
+    part(I, r, "#fbf7ec", { sd: 3, shT: 0.2, hd: 2 });
+    clip(I, r, () => part(I, rrect(20.5, 36, 23, 24, 1.5), "#27352c", { sd: 1.6, hd: 1.4, hiT: 0.3 }));
+    if (!I.small) for (const [x, y] of [[27, 20], [36, 25], [22, 30], [42, 33]]) fl(I, ellipse(x, y, 1.6, 0.9, 0.5), "#d9d2c2");
+  };
+  D.bowl = (I, o = {}) => {
+    const bowl = o.bowl || "#3e6f9f", soup = o.soup || "#e08a3c";
+    part(I, rrect(23, 50, 18, 7, 2), dk(bowl, 0.15), { sd: 1.4, hd: 1 });
+    if (o.top === "noodles") {
+      tube(I, "M36 27 L56 8", "#d9b26f", 2.6);
+      tube(I, "M39 28 L60 13", "#d9b26f", 2.6);
+    }
+    const body = "M7 29 H57 C57 44 46 54 32 54 C18 54 7 44 7 29 Z";
+    part(I, body, bowl, { sd: 3.2, hd: 2 });
+    if (!I.small) clip(I, body, () => ln(I, "M8 36 C20 41 44 41 56 36", lt(bowl, 0.5), 2.2, { a: 0.8 }));
+    part(I, ellipse(32, 29, 25, 6.2), dk(bowl, 0.35), { sd: 0, hd: 0 });
+    part(I, ellipse(32, 29.6, 21.5, 4.6), soup, { ol: I.ol * 0.6, sd: 1.4, hd: 1.2 });
+    if (o.top === "fish") part(I, "M39 28 C41 23 44 19 48 17 L46 12 L55 15 L52 21 L49 20 C46 23 44 26 43.5 29 Z", "#e0a052", { sd: 1.4, hd: 1 });
+    if (o.top === "noodles") for (const x of [18, 24, 30, 36]) ln(I, `M${x} 29 c2 -2 4 2 6 0`, lt(soup, 0.5), 1.5);
+    if (o.top === "mochi") {
+      part(I, ellipse(26, 28.5, 5, 2.6), "#fbf7ec", { sd: 1, hd: 0.8 });
+      part(I, ellipse(38, 29.5, 4.5, 2.3), "#fbf7ec", { sd: 1, hd: 0.8 });
+    }
+    if (o.top === "bone") {
+      tube(I, "M34 29 L50 12", C.bone, 4.5);
+      part(I, union(circle(49, 10, 3.2), circle(52.5, 13.5, 3.2)), C.bone, { sd: 1, hd: 0.8 });
+      part(I, ellipse(31, 29, 8, 3.2), "#a6512b", { sd: 1, hd: 0.8 });
+    }
+    if (o.top === "veg") {
+      part(I, circle(24, 28.5, 3), "#f08a2c", { sd: 1, hd: 0.8 });
+      part(I, circle(38, 29, 2.8), "#6fae3c", { sd: 1, hd: 0.8 });
+      part(I, circle(31, 27.6, 2.6), "#d44a3a", { sd: 1, hd: 0.8 });
+    }
+    if (!o.noSteam) for (const [x, h2] of [[20, 0], [30, -3], [40 + (o.top === "fish" ? -12 : 0), 0]]) ln(I, `M${x} ${22 + h2} c-4 -4 4 -7 0 -12`, "#ffffff", 2.4, { a: 0.8 });
+  };
+  D.orange = (I, o = {}) => {
+    const col = o.color || "#f28e1c";
+    part(I, circle(32, 37, 19.5), col, { sd: 3.6, hd: 2.4, gloss: [24, 28, 4.5, 2.4, 0.55] });
+    if (!I.small) for (const [x, y] of [[40, 44], [36, 50], [44, 36], [27, 46]]) fl(I, circle(x, y, 0.8), dk(col, 0.3), { a: 0.7 });
+    part(I, circle(32, 18.5, 2.6), "#5c7a2a", { sd: 0.8, hd: 0 });
+    part(I, "M33 18 C36 10 44 7 53 9 C50 16 42 20 33 18 Z", C.leaf, { sd: 1.6, hd: 1.2 });
+    ln(I, "M35 16.5 C40 14 45 12 50 10.5", dk(C.leaf, 0.35), 1.1);
+  };
+  D.steak = (I) => {
+    const fat = "M9 31 C9 19 20 10 33 10 C47 10 57 19 57 31 C57 45 46 55 32 55 C19 55 9 44 9 31 Z";
+    const meat = "M14 31 C14 21 23 15.5 33 15.5 C44 15.5 52 22 52 31 C52 42 44 50 32 50 C21 50 14 41 14 31 Z";
+    part(I, fat, "#f1dbb2", { sd: 3, hd: 2 });
+    part(I, meat, "#b8442f", { sd: 3, hd: 2, ol: I.ol * 0.7 });
+    clip(I, meat, () => {
+      ln(I, "M18 26 C24 30 28 24 34 28 C40 32 44 26 50 29", "#f3d9b4", 1.6, { a: 0.9 });
+      if (!I.small) ln(I, "M20 40 C26 37 30 42 36 39", "#f3d9b4", 1.3, { a: 0.8 });
+      for (const x of [18, 28, 38, 48]) ln(I, `M${x} 50 L${x + 12} 14`, "#4a1f16", 2.4, { a: 0.55 });
+    });
+    part(I, circle(24, 33, 4.2), C.bone, { sd: 1.2, hd: 0.8, ol: I.ol * 0.7 });
+  };
+  D.plate = (I, o = {}) => {
+    part(I, ellipse(32, 42, 29, 13.5), "#f4f1ea", { sd: 2.6, shT: 0.2, hd: 1.6 });
+    fl(I, ellipse(32, 41.5, 21, 8.6), "#e6e1d6");
+    ln(I, ellipse(32, 42, 25.5, 11.2), "#5a86b8", 1.2, { a: 0.9 });
+    if (o.food === "platter") {
+      part(I, ellipse(24, 37, 9, 5.5), "#b8562f", { sd: 1.6, hd: 1.2 });
+      part(I, "M30 38 C31 30 44 28 46 36 C44 42 34 43 30 38 Z", "#f2ce6b", { sd: 1.6, hd: 1.2 });
+      part(I, circle(40, 43, 3.6), "#d44a3a", { sd: 1, hd: 0.8 });
+      part(I, "M18 42 C20 38 26 38 28 42 C25 45 21 45 18 42 Z", "#6fae3c", { sd: 1, hd: 0.8 });
+    } else {
+      const fish = "M13 38 C19 29 35 28 43 34 L53 27 L51.5 41 L43 37 C35 44 19 45 13 38 Z";
+      part(I, fish, "#d9793a", { sd: 2.2, hd: 1.6, gloss: [22, 34, 3.6, 1.6, 0.5] });
+      clip(I, fish, () => {
+        for (const x of [24, 30, 36]) ln(I, `M${x} 31 L${x - 4} 43`, "#7a3418", 1.6, { a: 0.55 });
+      });
+      fl(I, circle(18.5, 36, 1.4), OUT);
+      part(I, "M40 44 C40 40 48 40 48 44 Z", "#f6dc4a", { sd: 0.8, hd: 0.6 });
+      part(I, "M44 26 C47 20 53 19 56 21 C54 25 49 27 44 26 Z", C.leaf, { sd: 1, hd: 0.8 });
+    }
+  };
+  D.sake = (I, o = {}) => {
+    const b = "M27 7 H37 V13 C37 18 46 23 46 37 C46 49 40 56 32 56 C24 56 18 49 18 37 C18 23 27 18 27 13 Z";
+    part(I, b, "#efe7d2", { sd: 3, shT: 0.22, hd: 2 });
+    clip(I, b, () => {
+      part(I, rrect(14, 30, 36, 9, 0), o.band || "#2f5f8f", { sd: 1.4, hd: 1, ol: I.ol * 0.7 });
+    });
+    if (!I.small) part(I, circle(32, 34.5, 2.6), "#efe7d2", { sd: 0.6, hd: 0, ol: I.ol * 0.5 });
+    part(I, ellipse(32, 7.5, 6.6, 2.3), "#efe7d2", { sd: 0.8, hd: 0 });
+    const cup = "M43 45 H59 C59 51 56 57 51 57 C46 57 43 51 43 45 Z";
+    part(I, cup, "#efe7d2", { sd: 1.8, shT: 0.22, hd: 1.2 });
+    clip(I, cup, () => fl(I, rrect(42, 50, 18, 3, 0), o.band || "#2f5f8f"));
+    part(I, ellipse(51, 45, 8, 2.2), "#c9b88f", { sd: 0, hd: 0 });
+  };
+  D.barrel = (I, o = {}) => {
+    const body = "M15 11 C23 8 41 8 49 11 C54 21 54 45 49 55 C41 58 23 58 15 55 C10 45 10 21 15 11 Z";
+    const wood = o.wood || "#a8693a";
+    part(I, body, wood, { sd: 3.4, hd: 2.2 });
+    clip(I, body, () => {
+      for (const d of ["M24 9 C21 24 21 42 24 57", "M32 8 V58", "M40 9 C43 24 43 42 40 57"]) ln(I, d, dk(wood, 0.45), 1.2, { a: 0.7 });
+      for (const y of [17, 45]) part(I, `M8 ${y} C22 ${y + 3} 42 ${y + 3} 56 ${y} L56 ${y + 5} C42 ${y + 8} 22 ${y + 8} 8 ${y + 5} Z`, o.hoop || "#5b6770", { sd: 1.2, hd: 1, ol: I.ol * 0.8 });
+    });
+    part(I, ellipse(32, 11, 16.5, 3.8), lt(wood, 0.12), { sd: 1, hd: 0.8 });
+    if (o.label === "cola") {
+      part(I, circle(32, 33, 7.5), "#d4302b", { sd: 1.4, hd: 1 });
+      ln(I, "M26 34 C29 30 33 37 38 31", "#ffffff", 1.8);
+      for (const [x, y, r] of [[27, 5, 2.2], [34, 3.5, 1.6], [39, 6, 1.9]]) part(I, circle(x, y, r), "#e9d9c2", { sd: 0.5, hd: 0, ol: I.ol * 0.6 });
+    } else if (o.label === "ale") {
+      part(I, "M15 11 C14 4 22 3 26 5 C29 1 37 1 40 5 C45 2 51 5 49 11 C41 14 23 14 15 11 Z", "#fbf3dc", { sd: 1.4, hd: 1 });
+    }
+  };
+  D.bandage = (I) => {
+    part(I, poly([[20, 38], [54, 42], [50.5, 47], [55, 52], [20, 49]]), "#f3efe4", { sd: 1.8, shT: 0.2, hd: 1.2 });
+    if (!I.small) ln(I, "M28 43.5 L48 45.5", "#cfc6b2", 1.1, { dash: [2.2, 2] });
+    part(I, rrect(38, 41.5, 7, 7, 1), "#d23b32", { sd: 0, hd: 0, ol: 0 });
+    fl(I, rrect(40.4, 42.7, 2.2, 4.6, 0.5), "#ffffff");
+    fl(I, rrect(39.2, 43.9, 4.6, 2.2, 0.5), "#ffffff");
+    part(I, circle(24, 27, 15), "#f6f2e8", { sd: 3, shT: 0.22, hd: 2 });
+    ln(I, spiral(24, 27, 11.5, 1.6, 0.6), "#d4ccb8", 1.3);
+    part(I, circle(24, 27, 4.2), "#cdbfa2", { sd: 1, hd: 0, ol: I.ol * 0.7 });
+  };
+  D.vial = (I, o = {}) => {
+    const liquid = o.liquid || "#5bbf6a";
+    const f = o.shape === "tall" ? "M24 12 H40 V47 C40 53 36.5 57 32 57 C27.5 57 24 53 24 47 Z" : "M27 12 H37 V23 C46 26 52 33 52 41 C52 51 43 58 32 58 C21 58 12 51 12 41 C12 33 18 26 27 23 Z";
+    part(I, f, "#dcebee", { sd: 1.6, shT: 0.2, hd: 0 });
+    clip(I, f, () => {
+      part(I, rrect(6, o.shape === "tall" ? 30 : 35, 52, 30, 0), liquid, { sd: 2.6, hd: 0, ol: 0 });
+      fl(I, ellipse(32, o.shape === "tall" ? 30 : 35, 22, 2.2), lt(liquid, 0.4));
+      if (!I.small) for (const [x, y, r] of [[26, 45, 1.6], [36, 50, 1.2], [30, 41, 1]]) fl(I, circle(x, y, r), lt(liquid, 0.55));
+    });
+    gloss(I, o.shape === "tall" ? 28 : 19, o.shape === "tall" ? 30 : 38, 1.8, o.shape === "tall" ? 9 : 6, 0.7, o.shape === "tall" ? 0 : 0.35);
+    part(I, rrect(25, 4.5, 14, 9, 2), "#b27a45", { sd: 1.4, hd: 1 });
+    part(I, rrect(26, 11.5, 12, 3, 1), lt("#dcebee", 0.2), { sd: 0, hd: 0, ol: I.ol * 0.7 });
+  };
+  D.pill = (I, o = {}) => {
+    const col = o.color || "#f6d02a";
+    part(I, circle(30, 35, 18), col, { sd: 3.6, hd: 2.4, gloss: [22, 26, 5.5, 3, 0.7] });
+    clip(I, circle(30, 35, 18), () => ln(I, "M11 37 C20 45 40 45 49 37", dk(col, 0.4), 2, { a: 0.8 }));
+    if (o.engrave && !I.small) ln(I, star(30, 28, 5, 4, 1.8), dk(col, 0.45), 1.1);
+    part(I, star(50, 13, 4, 8, 2.2), "#ffffff", { sd: 0, hd: 0, ol: I.ol * 0.8 });
+  };
+  D.syringe = (I, o = {}) => {
+    const liquid = o.liquid || "#e0578d";
+    tf(I, { r: -Math.PI / 4 }, () => {
+      part(I, rrect(5, 30, 15, 4, 1), "#b8c3cc", { sd: 0.8, hd: 0.6 });
+      part(I, rrect(2, 23.5, 4.5, 17, 1.5), "#8d99a3", { sd: 1, hd: 0.8 });
+      tube(I, "M50 32 H63", "#c7d0d8", 1.6, { flat: true });
+      part(I, rrect(45, 28.5, 6, 7, 1.2), "#9aa6b0", { sd: 1, hd: 0.8 });
+      const barrel = rrect(19, 24.5, 27, 15, 3);
+      part(I, barrel, "#e3eff3", { sd: 1.4, shT: 0.2, hd: 0 });
+      clip(I, barrel, () => {
+        part(I, rrect(25, 24, 22, 16, 0), liquid, { sd: 2, hd: 1.4, ol: I.ol * 0.6 });
+        if (!I.small) for (const x of [28, 33, 38, 43]) ln(I, `M${x} 25 V29`, "#ffffff", 1, { a: 0.9 });
+      });
+      gloss(I, 30, 27.5, 9, 1.2, 0.6, 0);
+      part(I, rrect(17, 21.5, 4, 21, 1.5), "#a7b3bd", { sd: 1, hd: 0.8 });
+    });
+  };
+  var DIAG = -Math.PI / 4;
+  var SWORD = {
+    steel: { blade: "#dfe7ee", wrap: "#5a3d2b", diamond: "#b89868", tsuba: "#8a7a64", habaki: "#c9a24e" },
+    wazamono: { blade: "#e4ecf2", wrap: "#2c3b5c", diamond: "#e9e1c8", tsuba: "#c9a04a", habaki: "#d8b04f" },
+    ryo: { blade: "#e6eef3", wrap: "#23605e", diamond: "#e9e1c8", tsuba: "#c9a04a", habaki: "#d8b04f" },
+    o: { blade: "#eef3f7", wrap: "#4a2a5e", diamond: "#f0d58a", tsuba: "#e2b64a", habaki: "#e8c35a" },
+    saijo: { blade: "#3a3542", wrap: "#2a2530", diamond: "#e2b64a", tsuba: "#e2b64a", habaki: "#e8c35a" }
+  };
+  function swordPalette(o) {
+    const g = (o.def?.grade || "").toLowerCase();
+    if (/saijo/.test(g)) return SWORD.saijo;
+    if (/^o wazamono|^ō/.test(g)) return SWORD.o;
+    if (/ryo/.test(g)) return SWORD.ryo;
+    if (/wazamono/.test(g)) return SWORD.wazamono;
+    return SWORD.steel;
+  }
+  D.katana = (I, o = {}) => {
+    const p = { ...swordPalette(o), ...o };
+    tf(I, { r: DIAG, s: 0.93 }, () => {
+      if (p.aura) alpha(I, 0.45, () => {
+        ln(I, "M26 32 L66 29", p.aura, 11);
+        ln(I, "M26 32 L68 28.5", p.aura, 7);
+      });
+      const blade = "M25 29.4 L70 27.3 C67.5 31 64 33.8 58 34.3 L25 34.9 Z";
+      if (!p.wood) {
+        part(I, blade, p.blade, { sd: 1.6, hd: 1, shT: 0.35 });
+        clip(I, blade, () => {
+          fl(I, "M25 33.4 L58 32.8 C63 32.4 67 30.5 70 27.3 L72 36 L25 36 Z", p.edge || lt(p.blade, 0.6), { a: 0.9 });
+          if (p.hamon === "wave") ln(I, "M26 33 q3 -2 6 0 t6 0 t6 0 t6 0 t6 0 t6 -0.5", p.hamonColor || "#c0302a", 1.4);
+          if (!I.small) ln(I, "M27 30.9 L60 29.4", dk(p.blade, 0.35), 0.9, { a: 0.7 });
+          if (p.rust) for (const [x, y, r] of [[34, 31, 1.6], [44, 32.5, 1.2], [51, 30.6, 1.4], [39, 33.6, 0.9]]) fl(I, circle(x, y, r), "#8a4b24", { a: 0.75 });
+          if (p.bolt) ln(I, "M28 32 L33 30 L37 33 L42 30 L47 33 L52 30 L57 32", "#fff38a", 1.3);
+        });
+        part(I, rrect(23, 28.8, 3.8, 6.6, 0.8), p.habaki, { sd: 0.8, hd: 0.5 });
+      } else {
+        part(I, "M22 29.4 L67 28 C68.5 28.4 69.5 30 69 31.6 C67 33.6 64 34.4 60 34.5 L22 34.9 Z", C.woodL, { sd: 1.6, hd: 1 });
+      }
+      const handle = rrect(-2, 28.5, 22, 7, 2.6);
+      part(I, handle, p.wrap, { sd: 1.4, hd: 1 });
+      if (!I.small) clip(I, handle, () => {
+        for (let x = -1; x < 19; x += 4.2) fl(I, poly([[x, 32], [x + 2.1, 29.7], [x + 4.2, 32], [x + 2.1, 34.3]]), p.diamond);
+      });
+      part(I, rrect(-5, 28.3, 4, 7.4, 1.6), p.habaki, { sd: 0.8, hd: 0.5 });
+      const ts = p.tsubaShape === "flower" ? union(circle(21, 26.5, 3), circle(21, 32, 3.4), circle(21, 37.5, 3)) : p.tsubaShape === "square" ? rrect(19, 24, 4.2, 16, 1) : ellipse(21, 32, 2.4, 8.3);
+      part(I, ts, p.tsuba, { sd: 1, hd: 0.7 });
+    });
+  };
+  D.cutlass = (I, o = {}) => {
+    const guard = o.guard || C.brass;
+    tf(I, { r: DIAG + 0.05 }, () => {
+      const blade = o.saber ? "M22 29.5 L62 28.8 C64 29 66 30.5 67 32 C64 33.6 61 34.4 58 34.6 L22 34.8 Z" : "M22 29.4 C36 29 50 27 60 24 C63 23.5 66 25 67 27.5 C64 32 58 37 50 38.5 C40 39.5 30 36 22 35.4 Z";
+      part(I, blade, o.blade || "#dbe3ea", { sd: 1.6, hd: 1 });
+      clip(I, blade, () => fl(I, o.saber ? "M22 33.4 L58 33 L68 32 L68 36 L22 36 Z" : "M22 34 C32 35.5 44 37 52 36.5 C58 35 64 31 68 27 L68 40 L22 40 Z", "#f4f8fb", { a: 0.9 }));
+      tube(I, "M20 24.5 C10 23 3 25 2.5 29", guard, 2.2);
+      part(I, rrect(2, 28.6, 16, 6.8, 2.6), o.wrap || "#3b2a22", { sd: 1.2, hd: 0.8 });
+      part(I, "M17 21 C22 22 24 26 24 32 C24 38 22 42 17 43 C19 38 19.5 26 17 21 Z", guard, { sd: 1.4, hd: 1 });
+      part(I, circle(1.5, 32, 3.1), guard, { sd: 0.8, hd: 0.5 });
+    });
+  };
+  D.yoru = (I) => {
+    tf(I, { r: DIAG, s: 0.93 }, () => {
+      const blade = "M27 27.6 L62 27.4 C65 27.6 68.5 30 70 32 C68.5 34 65 36.4 62 36.6 L27 36.4 Z";
+      part(I, blade, "#34303c", { sd: 1.6, hd: 1.4, hi: "#8a8298" });
+      clip(I, blade, () => {
+        fl(I, "M27 34.6 L62 34.6 L70 32 L71 38 L27 38 Z", "#6b6478", { a: 0.9 });
+        ln(I, "M29 32 L62 32", "#1e1a24", 1, { a: 0.8 });
+      });
+      part(I, rrect(-3, 29, 22, 6, 2.4), "#2b2631", { sd: 1.2, hd: 1, hi: "#6b6478" });
+      if (!I.small) for (const x of [2, 7, 12]) fl(I, rrect(x, 29.2, 1.6, 5.6, 0.6), "#d6a23e");
+      const cross = "M20 30 C21 24 21.5 18 20 12 C23.5 14 25.5 14 28 12 C26.5 18 27 24 28 30 L28 34 C27 40 26.5 46 28 52 C25.5 50 23.5 50 20 52 C21.5 46 21 40 20 34 Z";
+      part(I, cross, "#e0b24a", { sd: 1.4, hd: 1 });
+      part(I, circle(24, 32, 3.4), "#3aa37a", { sd: 1, hd: 0.8, gloss: [23, 31, 1.1, 0.7, 0.9] });
+      part(I, circle(-4, 32, 3), "#e0b24a", { sd: 0.8, hd: 0.5 });
+    });
+  };
+  D.flintlock = (I, o = {}) => {
+    const metal = o.metal || "#7c8891", wood = o.wood || "#8a5530";
+    tf(I, { r: -0.26, y: 2 }, () => {
+      part(I, rrect(18, 19.5, 43, 6.4, 2.2), metal, { sd: 1.4, hd: 1 });
+      part(I, rrect(58.5, 18.4, 4.6, 8.6, 1.4), C.brass, { sd: 0.8, hd: 0.6 });
+      part(I, "M22 24 H50 C52.5 24 53.5 26 53 28 C52.6 29.6 51.5 30.4 49.5 30.4 H30 Z", wood, { sd: 1.2, hd: 0.9 });
+      const grip = "M12 19.5 C17 19 22 19.5 27.5 21 L30 29 C25 32 22 38 20.5 45 L20 50 C18.5 55.5 11.5 57 8.5 53 C6.5 51 7 48.5 8 46 C10.5 38 12 29 12 19.5 Z";
+      part(I, grip, wood, { sd: 2, hd: 1.4 });
+      part(I, "M8 46 C7 48.5 6.5 51 8.5 53 C11.5 56.5 18.5 55.5 20 50.5 C15.5 51 11 49.5 8 46 Z", C.brass, { sd: 0.8, hd: 0.5 });
+      part(I, rrect(44, 19, 3, 12, 1), C.brass, { sd: 0.6, hd: 0.4 });
+      part(I, rrect(17, 23.5, 12, 6, 2), "#a3aeb6", { sd: 0.8, hd: 0.6 });
+      part(I, "M18.5 24 C15.5 19.5 16.5 13.5 21 12.5 L23.5 15 C21 16.5 21 20 22.5 23.5 Z", "#5d6870", { sd: 0.8, hd: 0.5 });
+      tube(I, "M28.5 30.5 C28.5 37.5 36 39 38.5 31", C.brass, 1.8, { flat: true });
+      ln(I, "M32 30.5 C31.5 33.5 32.5 35 33.5 35.5", OUT, 1.4);
+    });
+  };
+  D.rifle = (I, o = {}) => {
+    const wood = o.wood || "#8a5530", metal = o.metal || "#6f7a83";
+    tf(I, { r: DIAG }, () => {
+      if (o.bayonet) part(I, "M60 27.4 L71 28.4 L60 30.2 Z", "#dfe7ee", { sd: 0.6, hd: 0.4 });
+      part(I, rrect(26, 26, 38, 3.8, 1.4), metal, { sd: 1, hd: 0.7 });
+      part(I, rrect(26, 29, 30, 5.6, 2), wood, { sd: 1.2, hd: 0.8 });
+      part(I, "M-3 30.5 C-3 27 1 25 5 25 L20 27.5 L29 28.5 V35.5 L20 35.5 L6 39.5 C0 41 -3 38 -3 34.5 Z", wood, { sd: 1.6, hd: 1.2 });
+      for (const x of [38, 50]) part(I, rrect(x, 25.4, 2.6, 9.8, 0.8), C.brass, { sd: 0.5, hd: 0.3 });
+      part(I, rrect(20, 26, 8, 5, 1.5), "#9aa6af", { sd: 0.6, hd: 0.4 });
+      tube(I, "M20 35 C20 40 26 41 28 36", C.brass, 1.6, { flat: true });
+    });
+  };
+  D.slingshot = (I, o = {}) => {
+    const wood = o.wood || C.wood;
+    tf(I, { r: 0.28 }, () => {
+      tube(I, "M32 58 L32 38", wood, 7);
+      tube(I, "M32 40 C24 36 19.5 28 18.5 13", wood, 5.5);
+      tube(I, "M32 40 C40 36 44.5 28 45.5 13", wood, 5.5);
+      part(I, rrect(28.2, 46, 7.6, 10, 2), "#6b3f25", { sd: 1, hd: 0.7 });
+      ln(I, "M18.5 14 L32 27 L45.5 14", OUT, 2.8);
+      ln(I, "M18.5 14 L32 27 L45.5 14", "#b8744a", 1.6);
+      part(I, ellipse(32, 27, 5.4, 3.8), "#6b3f25", { sd: 0.8, hd: 0.6 });
+      part(I, circle(32, 26, 2.4), "#9aa6af", { sd: 0.5, hd: 0.3 });
+    });
+  };
+  D.kabuto = (I, o = {}) => {
+    const col = o.color || "#4f7d3a", trim = o.trim || C.brass;
+    tf(I, { r: 0.6 }, () => {
+      tube(I, "M32 66 L32 34", col, 5.6);
+      part(I, rrect(28.5, 50, 7, 8, 1.6), trim, { sd: 0.6, hd: 0.4 });
+      const arms = "M32 39 C21 37 14.5 28 14.5 16 C14.5 11 16 7 18.5 3.5 C20 9 21 16 24.5 22 C26.5 25.5 29 27 32 27 C35 27 37.5 25.5 39.5 22 C43 16 44 9 45.5 3.5 C48 7 49.5 11 49.5 16 C49.5 28 43 37 32 39 Z";
+      part(I, arms, col, { sd: 2, hd: 1.4 });
+      ln(I, "M18.8 6 L32 21 L45.2 6", OUT, 2.4);
+      ln(I, "M18.8 6 L32 21 L45.2 6", "#e6d2a8", 1.2);
+      part(I, circle(32, 33, 5.2), trim, { sd: 1, hd: 0.8 });
+      part(I, circle(32, 33, 2.3), o.gem || "#e0663a", { sd: 0.5, hd: 0, ol: I.ol * 0.6 });
+    });
+  };
+  D.bow = (I, o = {}) => {
+    const col = o.color || "#5f8f3a";
+    tf(I, { r: DIAG }, () => {
+      ln(I, "M20 6 L20 58", "#e8dcc0", 1.1);
+      tube(I, "M20 6 C33 12 38 22 38 32 C38 42 33 52 20 58", col, 4.2);
+      if (o.snake) {
+        part(I, ellipse(19, 5, 4, 2.6, -0.4), col, { sd: 0.8, hd: 0.5 });
+        fl(I, circle(18, 4, 0.9), "#f6dc4a");
+      }
+      tube(I, "M6 32 H56", C.woodL, 2, { flat: true });
+      part(I, "M55 29 L63 32 L55 35 Z", "#cfd6dc", { sd: 0.6, hd: 0.4 });
+      part(I, "M4 32 L10 27 H14 L9 32 L14 37 H10 Z", "#e25b4a", { sd: 0.6, hd: 0.4 });
+    });
+  };
+  D.cannon = (I) => {
+    part(I, "M10 22 C10 16 16 14 22 16 L54 26 C58 27 60 31 58 35 C57 38 54 39 51 38 L18 32 C13 31 10 27 10 22 Z", "#3f444c", { sd: 2, hd: 1.4 });
+    part(I, ellipse(57, 32, 3.4, 5.4, -0.2), "#23262c", { sd: 0, hd: 0 });
+    part(I, circle(26, 42, 11), C.wood, { sd: 2, hd: 1.4 });
+    part(I, circle(26, 42, 3.4), C.brass, { sd: 0.6, hd: 0.4 });
+    for (let i = 0; i < 6; i++) {
+      const a = i / 6 * TAU3;
+      ln(I, `M${26 + Math.cos(a) * 4} ${42 + Math.sin(a) * 4} L${26 + Math.cos(a) * 9.5} ${42 + Math.sin(a) * 9.5}`, C.woodD, 1.6);
+    }
+  };
+  D.staff = (I, o = {}) => {
+    const col = o.color || C.wood;
+    tube(I, "M9 55 L55 9", col, 5.4);
+    tube(I, "M8 56 L13.5 50.5", o.cap || "#8f9aa3", 6.2);
+    tube(I, "M50.5 13.5 L56 8", o.cap || "#8f9aa3", 6.2);
+    tube(I, "M27 37 L37 27", o.grip || "#b3382c", 6.4);
+    if (!I.small) for (const t of [0.25, 0.5, 0.75]) {
+      const x = 27 + t * 10, y = 37 - t * 10;
+      ln(I, `M${x - 2.4} ${y - 2.4} L${x + 2.4} ${y + 2.4}`, dk(o.grip || "#b3382c", 0.4), 1);
+    }
+  };
+  D.climaTact = (I, o = {}) => {
+    const bar2 = o.color || "#3d7fc9", joint = o.joint || "#f2efe6", knob = o.knob || C.gold;
+    tube(I, "M11 53 L24 40", bar2, 5.2);
+    tube(I, "M27 37 L37 27", bar2, 5.2);
+    tube(I, "M40 24 L53 11", bar2, 5.2);
+    part(I, circle(25.5, 38.5, 3.8), joint, { sd: 0.8, hd: 0.6 });
+    part(I, circle(38.5, 25.5, 3.8), joint, { sd: 0.8, hd: 0.6 });
+    part(I, circle(9, 55, 4.8), knob, { sd: 1, hd: 0.8 });
+    if (o.orb) {
+      part(I, circle(54, 10, 7.5), o.orb, { sd: 1.4, hd: 1, gloss: [51.5, 7.5, 2.2, 1.2, 0.85] });
+      part(I, "M22 6 L30 5 L25 12 L31 12 L19 24 L23 15 L17 15 Z", "#ffe36b", { sd: 0.8, hd: 0.5 });
+    } else {
+      part(I, circle(55, 9, 4.8), knob, { sd: 1, hd: 0.8 });
+      part(I, "M12 22 C10 16 16 12 21 15 C23 10 31 10 33 16 C38 15 41 20 38 24 C36 26 14 26 12 22 Z", "#eef3f7", { sd: 1.4, shT: 0.2, hd: 1 });
+    }
+  };
+  D.axe = (I, o = {}) => {
+    const head = o.head || "#cfd8df", handle = o.handle || C.wood;
+    tube(I, "M17 59 C22 44 31 25 40 7", handle, 5);
+    const blade = "M36 11 C30 6 21 5 13 9 C12 17 14 26 19 32 C24 28 30 24 38 22 Z";
+    part(I, blade, head, { sd: 1.8, hd: 1.2 });
+    clip(I, blade, () => fl(I, "M13 9 C12 17 14 26 19 32 L15 34 L8 8 Z", "#f4f8fb", { a: 0.95 }));
+    part(I, "M34 10.5 L43 13 L40 23.5 L32 21.5 Z", dk(head, 0.25), { sd: 1, hd: 0.8 });
+    part(I, circle(38, 17, 1.6), C.brass, { sd: 0, hd: 0, ol: I.ol * 0.5 });
+  };
+  D.battleAxe = (I, o = {}) => {
+    const head = o.head || "#c8d2da", handle = o.handle || "#6e4526", trim = o.trim || C.gold;
+    tf(I, { r: 0.42, s: 0.84, y: 3 }, () => {
+      tube(I, "M32 64 L32 6", handle, 5.8);
+      const L2 = "M28 12 C22 7 13 6 6 9 C4 16 4 26 6 33 C13 36 22 35 28 30 Z";
+      const R = "M36 12 C42 7 51 6 58 9 C60 16 60 26 58 33 C51 36 42 35 36 30 Z";
+      for (const b of [L2, R]) {
+        part(I, b, head, { sd: 1.8, hd: 1.2 });
+      }
+      clip(I, L2, () => fl(I, "M6 9 C4 16 4 26 6 33 L2 34 L2 8 Z", "#f4f8fb", { a: 0.95 }));
+      clip(I, R, () => fl(I, "M58 9 C60 16 60 26 58 33 L63 34 L63 8 Z", dk(head, 0.12)));
+      part(I, rrect(26.5, 8, 11, 26, 2.5), trim, { sd: 1, hd: 0.8 });
+      if (!I.small) for (const y of [13, 21, 29]) part(I, circle(32, y, 1.3), dk(trim, 0.3), { sd: 0, hd: 0, ol: 0 });
+      part(I, rrect(28.5, 55, 7, 7, 2), trim, { sd: 0.6, hd: 0.4 });
+    });
+  };
+  D.axeHand = (I) => {
+    const blade = "M34 9 C27 3 16 3 8 8 C7 17 10 27 16 33 C21 28 28 24 37 22 Z";
+    const bracer = "M30 20 L44 12 L60 44 C61 50 56 56 50 56 C46 56 44 54 42 51 Z";
+    part(I, bracer, "#6d7880", { sd: 2.2, hd: 1.4 });
+    clip(I, bracer, () => {
+      for (const d of ["M33 26 L47 18", "M40 40 L54 32"]) ln(I, d, "#3f474e", 2.2, { a: 0.8 });
+    });
+    if (!I.small) for (const [x, y] of [[41, 23], [47, 34], [52, 45]]) part(I, circle(x, y, 1.6), "#c3ccd3", { sd: 0, hd: 0, ol: I.ol * 0.6 });
+    part(I, blade, "#cfd8df", { sd: 1.8, hd: 1.2 });
+    clip(I, blade, () => fl(I, "M8 8 C7 17 10 27 16 33 L12 35 L4 6 Z", "#f4f8fb", { a: 0.95 }));
+    part(I, "M32 8 L41 11 L38 23 L29 20.5 Z", "#8e99a2", { sd: 1, hd: 0.8 });
+  };
+  D.mallet = (I, o = {}) => {
+    tube(I, "M14 58 L40 20", o.handle || C.woodL, 4.6);
+    tf(I, { r: 0.6, ox: 42, oy: 16 }, () => {
+      part(I, rrect(26, 8, 32, 17, 4), o.head || "#a8703f", { sd: 2, hd: 1.4 });
+      for (const x of [28, 52]) part(I, rrect(x, 7, 4, 19, 1.2), o.band || "#5b6770", { sd: 0.8, hd: 0.6 });
+    });
+  };
+  function skull(I, x, y, r, col = "#f4f1ea", bones = true) {
+    if (bones) {
+      tube(I, `M${x - r * 1.45} ${y - r * 0.45} L${x + r * 1.45} ${y + r * 1.5}`, col, r * 0.46, { flat: true });
+      tube(I, `M${x + r * 1.45} ${y - r * 0.45} L${x - r * 1.45} ${y + r * 1.5}`, col, r * 0.46, { flat: true });
+    }
+    part(I, union(circle(x, y, r), rrect(x - r * 0.55, y + r * 0.35, r * 1.1, r * 0.85, r * 0.28)), col, { sd: r * 0.22, hd: r * 0.16 });
+    fl(I, circle(x - r * 0.38, y + r * 0.08, r * 0.27), OUT);
+    fl(I, circle(x + r * 0.38, y + r * 0.08, r * 0.27), OUT);
+    fl(I, poly([[x, y + r * 0.42], [x - r * 0.13, y + r * 0.62], [x + r * 0.13, y + r * 0.62]]), OUT);
+  }
+  function gull(I, x, y, w, col, o = {}) {
+    const d = `M${x - w} ${y + w * 0.12} C${x - w * 0.62} ${y - w * 0.5} ${x - w * 0.22} ${y - w * 0.42} ${x} ${y + w * 0.12} C${x + w * 0.22} ${y - w * 0.42} ${x + w * 0.62} ${y - w * 0.5} ${x + w} ${y + w * 0.12} C${x + w * 0.55} ${y - w * 0.12} ${x + w * 0.25} ${y + w * 0.05} ${x} ${y + w * 0.55} C${x - w * 0.25} ${y + w * 0.05} ${x - w * 0.55} ${y - w * 0.12} ${x - w} ${y + w * 0.12} Z`;
+    part(I, d, col, { sd: w * 0.08, hd: w * 0.06, ol: o.ol ?? I.ol * 0.6 });
+  }
+  function gem(I, x, y, r, col, o = {}) {
+    const p = poly([[x - r, y - r * 0.2], [x - r * 0.55, y - r * 0.78], [x + r * 0.55, y - r * 0.78], [x + r, y - r * 0.2], [x, y + r * 0.95]]);
+    part(I, p, col, { sd: r * 0.3, hd: r * 0.2, ol: o.ol });
+    if (r > 4 && !I.small) {
+      const f = lt(col, 0.55);
+      ln(I, `M${x - r} ${y - r * 0.2} H${x + r} M${x - r * 0.55} ${y - r * 0.78} L${x - r * 0.3} ${y - r * 0.2} L${x} ${y + r * 0.95} L${x + r * 0.3} ${y - r * 0.2} L${x + r * 0.55} ${y - r * 0.78}`, f, Math.max(0.7, r * 0.09), { a: 0.75 });
+    }
+    gloss(I, x - r * 0.35, y - r * 0.45, r * 0.22, r * 0.14, 0.9, 0);
+  }
+  var GEM_RULES = [
+    [/ruby|red|blood|flame|fire|crimson|garnet/, "#d7263d"],
+    [/sapphire|blue|sea\b|ocean|aqua|water|azure/, "#2f78d6"],
+    [/emerald|green|jade|leaf|forest/, "#2fae66"],
+    [/amethyst|purple|violet/, "#8e4fd1"],
+    [/topaz|amber|gold|sun|yellow/, "#f0a52a"],
+    [/pearl|white|moon|shell/, "#f3efe6"],
+    [/diamond|crystal|ice|clear|glass/, "#bfefff"],
+    [/kairoseki|seastone/, "#5f8a8f"],
+    [/onyx|black|shadow|dark|obsidian/, "#3a3440"],
+    [/pink|rose|love|heart|coral/, "#f06aa0"]
+  ];
+  function gemOf(name, id, fallback = true) {
+    for (const [re, c] of GEM_RULES) if (re.test(name)) return c;
+    return fallback ? ["#d7263d", "#2f78d6", "#2fae66", "#8e4fd1", "#f0a52a"][hash(id || name) % 5] : null;
+  }
+  function metalOf(name) {
+    if (/silver|steel|iron|platinum|kairoseki|seastone/.test(name)) return "#c9d1d8";
+    if (/bronze|copper|brass/.test(name)) return "#c47f3f";
+    if (/bone|ivory/.test(name)) return C.bone;
+    if (/wood/.test(name)) return C.woodL;
+    return C.gold;
+  }
+  function bez(p0, p1, p2, p3, n) {
+    const out = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, u = 1 - t;
+      out.push([u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0], u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]]);
+    }
+    return out;
+  }
+  D.strawHat = (I, o = {}) => {
+    const straw = o.color || "#f0cd62", band = o.band || "#c8372d";
+    const brim = ellipse(32, 41, 29.5, 11);
+    part(I, brim, straw, { sd: 2.4, hd: 1.6 });
+    if (!I.small) clip(I, brim, () => {
+      for (const r of [0.62, 0.84]) ln(I, ellipse(32, 41, 29.5 * r + 2, 11 * r + 1), dk(straw, 0.3), 1, { a: 0.5 });
+    });
+    const crown = "M16 41 C15 27 22 17.5 32 17.5 C42 17.5 49 27 48 41 C42 44.5 22 44.5 16 41 Z";
+    part(I, crown, lt(straw, 0.12), { sd: 3, hd: 2 });
+    clip(I, crown, () => part(I, "M12 32.5 C22 36.5 42 36.5 52 32.5 L52 48 L12 48 Z", band, { sd: 1.4, hd: 1, ol: I.ol * 0.8 }));
+    if (!I.small) clip(I, crown, () => {
+      for (const x of [22, 28, 36, 42]) ln(I, `M${x} 18 C${x + (x - 32) * 0.1} 24 ${x + (x - 32) * 0.1} 28 ${x + (x - 32) * 0.18} 33`, dk(straw, 0.25), 0.9, { a: 0.45 });
+    });
+  };
+  D.tricorne = (I, o = {}) => {
+    const col = o.color || "#302b35", trim = o.trim || "#e0b24a";
+    part(I, "M20 27 C22 18 26.5 13 32 13 C37.5 13 42 18 44 27 Z", dk(col, 0.1), { sd: 1.6, hd: 1.2, hi: lt(col, 0.3) });
+    const brim = "M3 29 C10 32 16 28 22 22 C26 18.5 29 17 32 17 C35 17 38 18.5 42 22 C48 28 54 32 61 29 C58 38 52 44 44 45 C40 45.5 36 46.5 32 50 C28 46.5 24 45.5 20 45 C12 44 6 38 3 29 Z";
+    part(I, brim, col, { sd: 2.6, hd: 1.8, hi: lt(col, 0.35) });
+    clip(I, brim, () => ln(I, "M3 29 C10 32 16 28 22 22 C26 18.5 29 17 32 17 C35 17 38 18.5 42 22 C48 28 54 32 61 29", trim, 3.4));
+    if (!I.small) ln(I, "M14 38 C22 36 28 37 32 41 C36 37 42 36 50 38", lt(col, 0.18), 1.2, { a: 0.8 });
+    part(I, circle(32, 40, 3), trim, { sd: 0.6, hd: 0.5 });
+  };
+  D.captainHat = (I, o = {}) => {
+    const col = o.color || "#2c2831", trim = o.trim || "#e0b24a";
+    part(I, "M43 22 C47 11 55 5 62 6 C61 13 55 21 47 26 Z", o.plume || "#c8372d", { sd: 1.4, hd: 1 });
+    if (!I.small) ln(I, "M46 23 C50 16 55 10 60 7.5", lt(o.plume || "#c8372d", 0.4), 1, { a: 0.8 });
+    part(I, "M17 34 C16 20 23 10.5 32 10.5 C41 10.5 48 20 47 34 Z", col, { sd: 2.4, hd: 1.8, hi: lt(col, 0.35) });
+    const brim = "M3 38 C10 30 20 28 32 28 C44 28 54 30 61 38 C56 46 44 44 32 48.5 C20 44 8 46 3 38 Z";
+    part(I, brim, col, { sd: 2.4, hd: 1.8, hi: lt(col, 0.35) });
+    clip(I, brim, () => ln(I, brim, trim, 3.2));
+    skull(I, 32, 19, 5.4);
+  };
+  D.cowboyHat = (I, o = {}) => {
+    const col = o.color || "#9a6a3f";
+    const crown = "M18 37 C16.5 26 18.5 14 24.5 12.5 C27.5 12 29 16.5 32 16.5 C35 16.5 36.5 12 39.5 12.5 C45.5 14 47.5 26 46 37 C40 40.5 24 40.5 18 37 Z";
+    part(I, crown, lt(col, 0.08), { sd: 2.6, hd: 2 });
+    clip(I, crown, () => part(I, "M12 29.5 C24 33 40 33 52 29.5 L52 44 L12 44 Z", o.band || dk(col, 0.55), { sd: 1, hd: 0.8, ol: I.ol * 0.8 }));
+    if (!I.small) ln(I, "M32 17 C31 21 31.5 25 32.5 29", dk(col, 0.35), 1.2, { a: 0.8 });
+    part(I, "M3 33 C5 28 12 30 17 33.5 C24 38 40 38 47 33.5 C52 30 59 28 61 33 C62 42 49 49 32 49 C15 49 2 42 3 33 Z", col, { sd: 2.4, hd: 1.8 });
+  };
+  D.fedora = (I, o = {}) => {
+    const col = o.color || "#39424c";
+    const crown = "M16 39 C15 28 17 18 22.5 15 C26 13 29 17 32 17 C35 17 38 13 41.5 15 C47 18 49 28 48 39 C42 42 22 42 16 39 Z";
+    part(I, crown, col, { sd: 2.6, hd: 2, hi: lt(col, 0.35) });
+    clip(I, crown, () => part(I, "M12 31 C24 34 40 34 52 31 L52 44 L12 44 Z", o.band || "#1d1a20", { sd: 1, hd: 0.6, ol: I.ol * 0.8 }));
+    if (!I.small) ln(I, "M32 18 C30.5 22 31 26 32 30", dk(col, 0.4), 1.2, { a: 0.8 });
+    part(I, "M4 40 C8 34 17 35 22 36.5 C28 38 36 38 42 36.5 C47 35 56 34 60 40 C58 46 46 49 32 49 C18 49 6 46 4 40 Z", dk(col, 0.08), { sd: 2.2, hd: 1.6, hi: lt(col, 0.3) });
+  };
+  D.marineCap = (I, o = {}) => {
+    const crown = o.color || "#f6f5f0", band = o.band || "#27466e";
+    const top = "M6 22 C6 14 20 10 32 10 C44 10 58 14 58 22 C58 27 50 32 46 34 L18 34 C14 32 6 27 6 22 Z";
+    part(I, top, crown, { sd: 2.6, shT: 0.2, hd: 2 });
+    part(I, "M15 31 C24 33.5 40 33.5 49 31 L49 41 C40 43.5 24 43.5 15 41 Z", band, { sd: 1.4, hd: 1 });
+    part(I, "M14 40.5 C22 44.5 42 44.5 50 40.5 C49 48 42 52 32 52 C22 52 15 48 14 40.5 Z", o.visor || "#1d1a20", { sd: 1.6, hd: 1.2, hi: "#6b6478" });
+    if (o.emblem !== false) gull(I, 32, 22.5, 8, "#2f5f96");
+  };
+  D.topHat = (I, o = {}) => {
+    const col = o.color || "#f190b7";
+    part(I, ellipse(32, 48, 24, 7.5), dk(col, 0.08), { sd: 1.8, hd: 1.2 });
+    const crown = "M16.5 47 C15.5 36 16 22 18.5 13 C24 10 40 10 45.5 13 C48 22 48.5 36 47.5 47 C41.5 50.5 22.5 50.5 16.5 47 Z";
+    part(I, crown, col, { sd: 3, hd: 2 });
+    clip(I, crown, () => part(I, "M12 39 C22 42 42 42 52 39 L52 52 L12 52 Z", o.band || dk(col, 0.25), { sd: 1, hd: 0.8, ol: I.ol * 0.8 }));
+    if (o.cross !== false) {
+      tube(I, "M26.5 20 L37.5 31", "#ffffff", 3.4, { ol: I.ol * 0.8, flat: true });
+      tube(I, "M37.5 20 L26.5 31", "#ffffff", 3.4, { ol: I.ol * 0.8, flat: true });
+    }
+    part(I, ellipse(32, 12.4, 13.4, 3), lt(col, 0.18), { sd: 0.8, hd: 0.6 });
+  };
+  D.goggles = (I, o = {}) => {
+    const lens = o.lens || "#f0a53a", frame = o.frame || "#c9a04a", strap = o.strap || "#6b4a32";
+    tube(I, "M5 40 C3 25 17 18 32 18 C47 18 61 25 59 40", strap, 5.5);
+    for (const x of [19.5, 44.5]) {
+      part(I, circle(x, 38, 12), frame, { sd: 1.6, hd: 1.2 });
+      part(I, circle(x, 38, 8), lens, { sd: 2, hd: 1.4, ol: I.ol * 0.8, gloss: [x - 3, 34.5, 2.6, 1.5, 0.85] });
+    }
+    tube(I, "M30 37 C31 34.5 33 34.5 34 37", frame, 3.2);
+  };
+  D.glasses = (I, o = {}) => {
+    const lens = o.lens || "#3a3440", frame = o.frame || "#2b2631";
+    tube(I, "M8 30 L4 26 M56 30 L60 26", frame, 2.2);
+    for (const x of [20, 44]) part(I, ellipse(x, 34, 11, 8), lens, { sd: 1.6, hd: 1.2, hi: "#8fb3d9", gloss: [x - 4, 31, 2.8, 1.3, 0.8] });
+    tube(I, "M30 32 C31 30 33 30 34 32", frame, 2.4);
+  };
+  D.bandana = (I, o = {}) => {
+    const col = o.color || "#2f5f96";
+    part(I, "M11 42 L3 53 L10.5 52 L12 58.5 L18 45 Z", dk(col, 0.12), { sd: 1.2, hd: 0.8 });
+    const cap = "M9 43 C8 26 18 13 32 13 C46 13 56 26 55 43 C44 38.5 20 38.5 9 43 Z";
+    part(I, cap, col, { sd: 3, hd: 2 });
+    if (o.dots !== false && !I.small) clip(I, cap, () => {
+      for (const [x, y] of [[23, 21], [32, 17.5], [41, 21], [18, 30], [27, 27], [37, 27], [46, 30], [24, 35], [40, 35], [32, 33]]) fl(I, circle(x, y, 1.5), "#ffffff", { a: 0.85 });
+    });
+    part(I, "M8 42 C20 37 44 37 56 42 L55 48 C44 43.5 20 43.5 9 48 Z", dk(col, 0.18), { sd: 1, hd: 0.8 });
+    part(I, circle(12.5, 45, 4.4), dk(col, 0.08), { sd: 1, hd: 0.8 });
+  };
+  D.headband = (I, o = {}) => {
+    const col = o.color || "#2e2a31";
+    const ring = new Path2D();
+    ring.addPath(ellipse(32, 36, 26, 13));
+    ring.addPath(ellipse(32, 32, 21.5, 8.2));
+    part(I, ring, col, { rule: "evenodd", sd: 2.2, hd: 1.4, hi: lt(col, 0.4) });
+    part(I, "M51 41 L63 52 L58.5 55.5 L48.5 44.5 Z", col, { sd: 1.2, hd: 0.8, hi: lt(col, 0.4) });
+    part(I, "M49 43 L53 60 L47.5 60.5 L45.5 45.5 Z", dk(col, 0.1), { sd: 1.2, hd: 0.8, hi: lt(col, 0.4) });
+    part(I, ellipse(49.5, 42, 5.2, 4.2, 0.4), col, { sd: 1, hd: 0.8, hi: lt(col, 0.4) });
+    if (o.emblem) {
+      part(I, circle(32, 45, 4.6), "#f4f1ea", { sd: 0.8, hd: 0.6, ol: I.ol * 0.7 });
+      part(I, circle(32, 45, 2.4), o.emblem, { sd: 0, hd: 0, ol: 0 });
+    }
+  };
+  D.hornHelm = (I, o = {}) => {
+    const metal = o.metal || "#aab5bd", horn = o.horn || "#efe4c8", trim = o.trim || "#8a6a44";
+    if (o.horns !== false) {
+      part(I, "M18 31 C9 29 3.5 19 6 6 C9 14 14 19.5 22 21.5 Z", horn, { sd: 1.6, hd: 1.2 });
+      part(I, "M46 31 C55 29 60.5 19 58 6 C55 14 50 19.5 42 21.5 Z", horn, { sd: 1.6, hd: 1.2 });
+    }
+    part(I, "M13 43 C13 26 21 15 32 15 C43 15 51 26 51 43 Z", metal, { sd: 2.8, hd: 2 });
+    part(I, rrect(29.3, 14.5, 5.4, 27, 2), trim, { sd: 0.8, hd: 0.6 });
+    part(I, "M11 38.5 C22 41.5 42 41.5 53 38.5 L53 46 C42 49 22 49 11 46 Z", trim, { sd: 1.2, hd: 1 });
+    if (!I.small) for (const x of [16, 24, 40, 48]) part(I, circle(x, 43.5, 1.3), lt(trim, 0.5), { sd: 0, hd: 0, ol: 0 });
+    part(I, "M29.5 46 H34.5 L33.6 55 H30.4 Z", metal, { sd: 0.8, hd: 0.5 });
+  };
+  D.mask = (I, o = {}) => {
+    const col = o.color || "#2a2630", trim = o.trim || "#e0b24a";
+    if (o.eye) {
+      part(I, "M50 24 C53 13 58 7 63 4 C62.5 12 58 21 52 27 Z", o.feather || "#f06aa0", { sd: 1.2, hd: 0.8 });
+      const m = "M4 28 C10 21 20 21 26 25.5 C29 27.5 35 27.5 38 25.5 C44 21 54 21 60 28 C58.5 38.5 50 44 42 42 C37 40.5 34.5 37 32 37 C29.5 37 27 40.5 22 42 C14 44 5.5 38.5 4 28 Z";
+      part(I, m, col, { sd: 2, hd: 1.4, hi: lt(col, 0.35) });
+      clip(I, m, () => ln(I, m, trim, 2.8));
+      fl(I, ellipse(18, 31.5, 6.2, 3.8, 0.15), OUT);
+      fl(I, ellipse(46, 31.5, 6.2, 3.8, -0.15), OUT);
+      tube(I, "M32 44 L32 60", C.woodL, 2.4);
+    } else {
+      const f = "M14 12 C20 6 44 6 50 12 C55 24 53 42 42 53 C38 57 26 57 22 53 C11 42 9 24 14 12 Z";
+      part(I, f, col, { sd: 2.6, hd: 2, hi: lt(col, 0.4) });
+      for (const [x, r] of [[23, 0.2], [41, -0.2]]) {
+        part(I, ellipse(x, 29, 6.4, 4.2, r), "#f4f1ea", { sd: 0, hd: 0, ol: I.ol * 0.6 });
+        fl(I, ellipse(x, 29.6, 4.2, 2.5, r), OUT);
+      }
+      if (!I.small) {
+        ln(I, "M32 11 V22", "#f4f1ea", 2);
+        ln(I, "M26 45 C30 47 34 47 38 45", "#f4f1ea", 1.6);
+      }
+    }
+  };
+  D.crownHat = (I, o = {}) => {
+    const gold = o.color || C.gold;
+    const c = "M9 46 L6 18 L19 30 L25 12 L32 26 L39 12 L45 30 L58 18 L55 46 Z";
+    part(I, c, gold, { sd: 2.4, hd: 1.8 });
+    part(I, rrect(8, 42, 48, 9, 2), dk(gold, 0.08), { sd: 1.4, hd: 1 });
+    for (const [x, cc] of [[20, "#d7263d"], [32, "#2f78d6"], [44, "#2fae66"]]) gem(I, x, 46.5, 3.2, cc, { ol: I.ol * 0.6 });
+    for (const [x, y] of [[6, 18], [25, 12], [39, 12], [58, 18]]) part(I, circle(x, y, 2.6), "#f3efe6", { sd: 0.5, hd: 0.3 });
+  };
+  D.beanie = (I, o = {}) => {
+    const col = o.color || "#c8372d";
+    part(I, circle(32, 12, 5.5), "#f4f1ea", { sd: 1, hd: 0.8 });
+    part(I, "M11 44 C10 27 19 15 32 15 C45 15 54 27 53 44 Z", col, { sd: 2.8, hd: 2 });
+    if (!I.small) clip(I, "M11 44 C10 27 19 15 32 15 C45 15 54 27 53 44 Z", () => {
+      for (const x of [20, 26, 32, 38, 44]) ln(I, `M${x} 16 C${x + (x - 32) * 0.2} 28 ${x + (x - 32) * 0.3} 36 ${x + (x - 32) * 0.3} 44`, dk(col, 0.25), 1.2, { a: 0.6 });
+    });
+    part(I, rrect(9, 40, 46, 11, 4), dk(col, 0.1), { sd: 1.4, hd: 1 });
+  };
+  D.halo = (I) => {
+    const r = new Path2D();
+    r.addPath(ellipse(32, 30, 24, 10));
+    r.addPath(ellipse(32, 30, 17, 5.6));
+    alpha(I, 0.35, () => fl(I, ellipse(32, 30, 29, 14), "#fff3b0"));
+    part(I, r, "#ffe27a", { rule: "evenodd", sd: 1.4, hd: 1 });
+  };
+  D.marineCoat = (I, o = {}) => {
+    const col = o.color || "#f6f4ee", stripe = o.stripe || "#25324b";
+    part(I, "M11 15 C7.5 26 6 40 6.5 54 L14 55 C14 43 15 31 17.5 21 Z", dk(col, 0.1), { sd: 1.6, shT: 0.2, hd: 1 });
+    part(I, "M53 15 C56.5 26 58 40 57.5 54 L50 55 C50 43 49 31 46.5 21 Z", dk(col, 0.1), { sd: 1.6, shT: 0.2, hd: 1 });
+    const body = "M17 11 C22 9 27 9.5 32 9.5 C37 9.5 42 9 47 11 L52 17 C53.5 30 54 44 53.5 59 C46 60.5 39 61 32 61 C25 61 18 60.5 10.5 59 C10 44 10.5 30 12 17 Z";
+    part(I, body, col, { sd: 3, shT: 0.22, hd: 2 });
+    clip(I, body, () => {
+      part(I, "M4 19.5 C20 22.5 44 22.5 60 19.5 L60 30 C44 33 20 33 4 30 Z", stripe, { sd: 1.2, hd: 0.8, ol: I.ol * 0.7 });
+      if (!I.small) {
+        for (const x of [21, 29, 37]) fl(I, rrect(x, 23, 5.6, 5.4, 0.8), lt(stripe, 0.18));
+        ln(I, "M32 33 V61", dk(col, 0.22), 1.2, { a: 0.8 });
+      }
+    });
+    part(I, "M20 11.5 C25 14.5 39 14.5 44 11.5 L42.5 5.5 C37.5 7.5 26.5 7.5 21.5 5.5 Z", dk(col, 0.06), { sd: 1, shT: 0.2, hd: 0.8 });
+    for (const [x, r] of [[13.5, -0.4], [50.5, 0.4]]) {
+      part(I, ellipse(x, 14, 7, 3.8, r), C.gold, { sd: 1, hd: 0.8 });
+      if (!I.small) for (let i = -2; i <= 2; i++) ln(I, `M${x + i * 2.3} ${16.2 + (x < 32 ? -i : i) * 0.7} v4`, C.gold, 1.4);
+    }
+  };
+  D.coat = (I, o = {}) => {
+    const col = o.color || "#223f66", trim = o.trim === void 0 ? C.gold : o.trim, inner = o.inner || "#f1ebdc";
+    const sl = dk(col, 0.1);
+    if (!o.vest) {
+      part(I, "M13 15 L5 45 L13.5 48 L19 27 Z", sl, { sd: 1.6, hd: 1, hi: lt(col, 0.35) });
+      part(I, "M51 15 L59 45 L50.5 48 L45 27 Z", sl, { sd: 1.6, hd: 1, hi: lt(col, 0.35) });
+    }
+    const body = "M20 9 L27 7 L32 14 L37 7 L44 9 L52 14 C54 28 54.5 44 53 58 H11 C9.5 44 10 28 12 14 Z";
+    part(I, body, col, { sd: 3, hd: 2, hi: lt(col, 0.35) });
+    clip(I, body, () => {
+      if (o.stripes && !I.small) for (let x = 14; x < 54; x += 4.5) ln(I, `M${x} 8 L${x + (x - 32) * 0.05} 60`, lt(col, 0.3), 0.8, { a: 0.8 });
+      if (o.quilted && !I.small) for (let i = -6; i <= 6; i++) {
+        ln(I, `M${10 + i * 7} 8 L${40 + i * 7} 60`, dk(col, 0.3), 0.9, { a: 0.7 });
+        ln(I, `M${54 - i * 7} 8 L${24 - i * 7} 60`, dk(col, 0.3), 0.9, { a: 0.7 });
+      }
+      if (o.laces && !I.small) for (const y of [24, 31, 38, 45]) ln(I, `M28 ${y} L36 ${y + 4} M36 ${y} L28 ${y + 4}`, o.laces, 1.1);
+      fl(I, "M31.2 16 H32.8 V60 H31.2 Z", dk(col, 0.45));
+      if (trim) {
+        ln(I, "M32 17 V60", trim, 1.6);
+        fl(I, rrect(8, 54, 48, 6, 0), trim);
+      }
+    });
+    part(I, "M27 7 L32 14 L37 7 L35.5 24 H28.5 Z", inner, { sd: 1, shT: 0.2, hd: 0.6 });
+    part(I, "M27 7 L21.5 10 L25.5 27 L31.5 17 Z", lt(col, 0.1), { sd: 1, hd: 0.8, hi: lt(col, 0.4) });
+    part(I, "M37 7 L42.5 10 L38.5 27 L32.5 17 Z", lt(col, 0.1), { sd: 1, hd: 0.8, hi: lt(col, 0.4) });
+    if (trim) {
+      ln(I, "M27 7.5 L21.8 10.3 L25.5 26", trim, 1.3);
+      ln(I, "M37 7.5 L42.2 10.3 L38.5 26", trim, 1.3);
+    }
+    if (trim && !I.small) for (const y of [31, 38, 45]) {
+      part(I, circle(28.2, y, 1.5), trim, { sd: 0, hd: 0, ol: I.ol * 0.5 });
+      part(I, circle(35.8, y, 1.5), trim, { sd: 0, hd: 0, ol: I.ol * 0.5 });
+    }
+    if (o.fur) {
+      const f = o.fur === true ? lt(col, 0.35) : o.fur;
+      part(I, union(circle(15, 12, 6), circle(22, 9.5, 6), circle(28.5, 11, 5), circle(35.5, 11, 5), circle(42, 9.5, 6), circle(49, 12, 6), circle(12, 18, 5), circle(52, 18, 5)), f, { sd: 1.6, hd: 1.2 });
+    }
+    if (o.feather) {
+      const f = o.feather;
+      const scal = [];
+      for (let i = 0; i < 9; i++) scal.push(ellipse(12 + i * 5, 11 + Math.abs(i - 4) * 0.8, 3.6, 6, (i - 4) * 0.12));
+      for (const [x, y] of [[9, 18], [55, 18], [8, 25], [56, 25]]) scal.push(ellipse(x, y, 3.6, 6, 0));
+      part(I, union(...scal), f, { sd: 1.4, hd: 1, hi: lt(f, 0.4) });
+    }
+  };
+  D.cloak = (I, o = {}) => {
+    const col = o.color || "#b71c1c", short = !!o.short;
+    const bottom = short ? 48 : 57;
+    const body = `M22 10 C26 8 38 8 42 10 L46 16 C52 28 56 ${bottom - 12} 59 ${bottom} C49 ${bottom + 3} 15 ${bottom + 3} 5 ${bottom} C8 ${bottom - 12} 12 28 18 16 Z`;
+    part(I, body, col, { sd: 3, hd: 2, hi: lt(col, 0.4) });
+    clip(I, body, () => {
+      fl(I, `M29 16 L26 ${bottom + 4} H38 L35 16 Z`, dk(col, 0.45));
+      if (!I.small) for (const d of [`M24 20 L16 ${bottom}`, `M40 20 L48 ${bottom}`]) ln(I, d, dk(col, 0.3), 1.3, { a: 0.8 });
+      if (o.trim) fl(I, rrect(0, bottom - 4, 64, 8, 0), o.trim);
+    });
+    part(I, "M17 15 C21 6.5 43 6.5 47 15 C42 19 22 19 17 15 Z", dk(col, 0.15), { sd: 1.2, hd: 0.9, hi: lt(col, 0.35) });
+    part(I, circle(32, 16.5, 3.6), o.clasp || C.gold, { sd: 0.8, hd: 0.6 });
+    if (o.crest) {
+      part(I, circle(32, bottom - 18, 6), o.crest, { sd: 1, hd: 0.8 });
+    }
+  };
+  D.armor = (I, o = {}) => {
+    const metal = o.color || "#aab5bd";
+    if (o.samurai) {
+      part(I, "M4 20 C8 14 14 12 20 13 L22 30 C16 31 9 29 5 26 Z", dk(metal, 0.1), { sd: 1.4, hd: 1 });
+      part(I, "M60 20 C56 14 50 12 44 13 L42 30 C48 31 55 29 59 26 Z", dk(metal, 0.1), { sd: 1.4, hd: 1 });
+      const b2 = "M18 10 H46 L48 34 C48 36 46 37 44 37 H20 C18 37 16 36 16 34 Z";
+      part(I, b2, metal, { sd: 2.4, hd: 1.6 });
+      for (const [y, w] of [[37, 36], [44, 38], [51, 40]]) part(I, rrect(32 - w / 2, y, w, 7.5, 2), metal, { sd: 1.2, hd: 0.8 });
+      if (!I.small) {
+        clip(I, b2, () => {
+          for (const y of [17, 24, 31]) ln(I, `M16 ${y} H48`, dk(metal, 0.4), 1.2);
+        });
+        for (const x of [22, 32, 42]) ln(I, `M${x} 37 V58`, o.lace || C.gold, 1.2, { a: 0.9 });
+      }
+      part(I, circle(32, 22, 4), o.lace || C.gold, { sd: 0.6, hd: 0.5 });
+      return;
+    }
+    const b = "M16 10 L26 8 C28 12.5 36 12.5 38 8 L48 10 L55 18 L50 30 L52 52 C44 58.5 20 58.5 12 52 L14 30 L9 18 Z";
+    part(I, b, metal, { sd: 3, hd: 2 });
+    if (o.mail) {
+      if (!I.small) clip(I, b, () => {
+        for (let y = 12; y < 60; y += 4) for (let x = 8 + y / 4 % 2 * 2.5; x < 58; x += 5) ln(I, ellipse(x, y, 2.2, 1.7), dk(metal, 0.35), 0.8, { a: 0.8 });
+      });
+      part(I, "M24 8 C27 14 37 14 40 8 L38 5 C35 9 29 9 26 5 Z", dk(metal, 0.2), { sd: 0.8, hd: 0.5 });
+      return;
+    }
+    clip(I, b, () => {
+      ln(I, "M32 13 V57", lt(metal, 0.5), 2.2);
+      ln(I, "M13 31 C22 35 42 35 51 31", dk(metal, 0.3), 1.6);
+      ln(I, "M14 42 C22 46 42 46 50 42", dk(metal, 0.3), 1.6);
+    });
+    if (!I.small) for (const [x, y] of [[19, 16], [45, 16], [18, 50], [46, 50]]) part(I, circle(x, y, 1.5), C.brass, { sd: 0, hd: 0, ol: I.ol * 0.5 });
+  };
+  D.ring = (I, o = {}) => {
+    const metal = o.metal || C.gold;
+    const band = new Path2D();
+    band.addPath(ellipse(32, 42, 18.5, 14));
+    band.addPath(ellipse(32, 43.5, 12.5, 8.8));
+    part(I, band, metal, { rule: "evenodd", sd: 2.4, hd: 1.6 });
+    if (o.signet || !o.gem) {
+      part(I, ellipse(32, 27, 12.5, 8), dk(metal, 0.12), { sd: 1.6, hd: 1.2 });
+      part(I, ellipse(32, 25.5, 10.5, 6.2), metal, { sd: 1, hd: 0.8 });
+      if (o.signet) part(I, "M25 28 L24 21.5 L28.5 25 L32 20 L35.5 25 L40 21.5 L39 28 Z", dk(metal, 0.35), { sd: 0, hd: 0, ol: 0 });
+      else if (!I.small) ln(I, ellipse(32, 25.5, 6, 3.4), dk(metal, 0.3), 1.1);
+      return;
+    }
+    part(I, "M23.5 31 L27 25 H37 L40.5 31 L36 34 H28 Z", metal, { sd: 1.2, hd: 0.8 });
+    gem(I, 32, 20, 10, o.gem);
+  };
+  D.earrings = (I, o = {}) => {
+    const metal = o.metal || C.gold;
+    if (o.three) {
+      for (const [x, y] of [[17, 18], [32, 24], [47, 18]]) {
+        tube(I, `M${x} ${y - 12} C${x + 5} ${y - 12} ${x + 5} ${y - 4} ${x} ${y - 2}`, metal, 1.8, { flat: true });
+        part(I, `M${x} ${y - 2} C${x + 6} ${y + 6} ${x + 7} ${y + 12} ${x + 5} ${y + 16} C${x + 3} ${y + 20} ${x - 3} ${y + 20} ${x - 5} ${y + 16} C${x - 7} ${y + 12} ${x - 6} ${y + 6} ${x} ${y - 2} Z`, metal, { sd: 1.6, hd: 1.2, gloss: [x - 2, y + 9, 1.5, 3, 0.8, 0] });
+      }
+      return;
+    }
+    for (const [x, y] of [[20, 22], [44, 28]]) {
+      tube(I, `M${x} ${y - 14} C${x + 6} ${y - 14} ${x + 6} ${y - 5} ${x} ${y - 3}`, metal, 1.8, { flat: true });
+      if (o.pearl) {
+        part(I, circle(x, y + 5, 7.5), "#f3efe6", { sd: 1.8, shT: 0.25, hd: 1.2, gloss: [x - 2.5, y + 2.5, 2, 1.3, 0.9] });
+        part(I, rrect(x - 2.2, y - 4, 4.4, 3.5, 1), metal, { sd: 0.5, hd: 0.3 });
+      } else {
+        const h2 = new Path2D();
+        h2.addPath(circle(x, y + 7, 9));
+        h2.addPath(circle(x, y + 7, 6));
+        part(I, h2, metal, { rule: "evenodd", sd: 1.2, hd: 0.8 });
+        gem(I, x, y + 16, 3.4, o.gem || "#d7263d", { ol: I.ol * 0.6 });
+      }
+    }
+  };
+  D.necklace = (I, o = {}) => {
+    const metal = o.metal || C.gold;
+    const pts = bez([7, 7], [8, 32], [20, 45], [32, 45.5], 9).concat(bez([32, 45.5], [44, 45], [56, 32], [57, 7], 9).slice(1));
+    ln(I, poly(pts, false), OUT, 3.6);
+    ln(I, poly(pts, false), metal, 1.8);
+    if (o.pearl) for (const [x, y] of pts.slice(1, -1)) part(I, circle(x, y, 3.1), "#f5f1e8", { sd: 0.9, shT: 0.25, hd: 0.6, ol: I.ol * 0.7 });
+    else if (!I.small) for (const [x, y] of pts.slice(1, -1)) part(I, circle(x, y, 2), o.bead || metal, { sd: 0.5, hd: 0.3, ol: I.ol * 0.6 });
+    if (o.pearl) {
+      part(I, circle(32, 52, 7), "#f5f1e8", { sd: 1.8, shT: 0.25, hd: 1.2, gloss: [29.5, 49.5, 2, 1.3, 0.9] });
+      return;
+    }
+    if (o.shell) {
+      part(I, "M32 45 C24 46 21 52 24 58 C28 61 36 61 40 58 C43 52 40 46 32 45 Z", "#f3c6b0", { sd: 1.4, hd: 1 });
+      if (!I.small) for (const d of ["M32 47 V59", "M28 48 L26 58", "M36 48 L38 58"]) ln(I, d, dk("#f3c6b0", 0.35), 1);
+    } else {
+      part(I, rrect(29.5, 43, 5, 4, 1), metal, { sd: 0.5, hd: 0.3 });
+      gem(I, 32, 52, 7, o.gem || "#2f78d6");
+    }
+  };
+  D.bracelet = (I, o = {}) => {
+    const metal = o.metal || C.gold;
+    const b = new Path2D();
+    b.addPath(ellipse(32, 35, 26, 16));
+    b.addPath(ellipse(32, 31.5, 18.5, 9.5));
+    part(I, b, metal, { rule: "evenodd", sd: 2.6, hd: 1.8 });
+    const pts = bez([10, 40], [18, 50], [46, 50], [54, 40], 4);
+    if (o.shells) {
+      pts.forEach(([x, y], i) => part(I, `M${x} ${y - 5} C${x + 5} ${y - 4} ${x + 5} ${y + 3} ${x} ${y + 5} C${x - 5} ${y + 3} ${x - 5} ${y - 4} ${x} ${y - 5} Z`, i % 2 ? "#f6d2c0" : "#f3efe6", { sd: 1, hd: 0.7, ol: I.ol * 0.7 }));
+      return;
+    }
+    pts.forEach(([x, y], i) => i % 2 ? part(I, circle(x, y, 2), lt(metal, 0.3), { sd: 0.4, hd: 0.3, ol: I.ol * 0.6 }) : gem(I, x, y, 3.6, o.gem || "#2fae66", { ol: I.ol * 0.6 }));
+  };
+  D.bracer = (I, o = {}) => {
+    const col = o.color || "#8a5a33";
+    const b = "M14 14 C22 10 42 10 50 14 L54 50 C44 56 20 56 10 50 Z";
+    part(I, b, col, { sd: 3, hd: 2 });
+    clip(I, b, () => {
+      part(I, "M8 12 H56 V19 C44 15 20 15 8 19 Z", dk(col, 0.2), { sd: 0.8, hd: 0.6, ol: I.ol * 0.7 });
+      part(I, "M8 46 C20 51 44 51 56 46 V58 H8 Z", dk(col, 0.2), { sd: 0.8, hd: 0.6, ol: I.ol * 0.7 });
+    });
+    if (!I.small) for (const y of [22, 29, 36, 43]) {
+      ln(I, `M26 ${y} L38 ${y + 5} M38 ${y} L26 ${y + 5}`, o.lace || "#e9d8b0", 1.3);
+    }
+    for (const [x, y] of [[26, 22], [38, 22], [26, 46], [38, 46]]) part(I, circle(x, y, 1.4), C.brass, { sd: 0, hd: 0, ol: I.ol * 0.5 });
+  };
+  D.sash = (I, o = {}) => {
+    const col = o.color || "#3f8f3a";
+    const back = "M6 24 C10 16 54 16 58 24 L58 30 C50 23 14 23 6 30 Z";
+    part(I, back, dk(col, 0.3), { sd: 0.8, hd: 0.5 });
+    const front = "M6 26 C14 34 50 34 58 26 L58 42 C50 50 14 50 6 42 Z";
+    part(I, front, col, { sd: 2.6, hd: 1.8 });
+    if (o.knot) {
+      part(I, "M42 40 L50 58 L44 60 L38 44 Z", dk(col, 0.08), { sd: 1, hd: 0.8 });
+      part(I, "M44 40 L58 55 L53 59 L40 45 Z", col, { sd: 1, hd: 0.8 });
+      part(I, ellipse(42, 40, 6, 5, 0.3), col, { sd: 1.2, hd: 1 });
+    } else if (!I.small) clip(I, front, () => {
+      for (let x = 8; x < 58; x += 5) ln(I, `M${x} 28 V48`, dk(col, 0.25), 1, { a: 0.7 });
+    });
+  };
+  D.wraps = (I, o = {}) => {
+    const cloth = o.color || "#f1ebdc";
+    part(I, "M44 44 C52 46 58 52 60 60", cloth, { sd: 0, hd: 0, ol: 0 });
+    tube(I, "M42 46 C50 48 56 52 59 60", cloth, 4, { flat: true });
+    const f = "M14 28 C14 20 20 17 26 19 C28 15 34 14 37 17 C40 14 46 15 47 20 C51 20 53 24 52 29 L52 40 C52 50 45 55 36 55 L28 55 C19 55 14 49 14 40 Z";
+    part(I, f, cloth, { sd: 3, shT: 0.22, hd: 2 });
+    clip(I, f, () => {
+      for (let i = 0; i < 8; i++) ln(I, `M10 ${18 + i * 6} L56 ${10 + i * 6}`, dk(cloth, 0.2), 1.2, { a: 0.8 });
+    });
+    if (!I.small) for (const d of ["M26 19 L27 29", "M37 17 L37.5 28", "M47 20 L46.5 29"]) ln(I, d, dk(cloth, 0.3), 1.2);
+    part(I, "M14 34 C19 30 28 31 33 34 C34 36.5 32 38.5 29.5 38.5 L20 39 C17 39 15 37 14 34 Z", lt(cloth, 0.1), { sd: 1, shT: 0.2, hd: 0.8 });
+  };
+  D.belt = (I, o = {}) => {
+    const leather = o.color || "#7a4a2a", metal = o.metal || C.gold;
+    const strap = "M3 27 C18 23.5 46 23.5 61 27 L61 39 C46 35.5 18 35.5 3 39 Z";
+    part(I, strap, leather, { sd: 1.8, hd: 1.2 });
+    if (!I.small) {
+      ln(I, "M4 29.5 C18 26 46 26 60 29.5", lt(leather, 0.35), 0.9, { dash: [2, 1.6] });
+      for (const x of [46, 51, 56]) fl(I, circle(x, 32 - (x - 32) * 0.02, 1.2), OUT);
+    }
+    const bk = new Path2D();
+    bk.addPath(rrect(20, 18.5, 18, 27, 4));
+    bk.addPath(rrect(24.5, 23, 9, 18, 2));
+    part(I, bk, metal, { rule: "evenodd", sd: 1.6, hd: 1.2 });
+    tube(I, "M24.5 31.5 H38", "#c9d1d8", 2.2, { flat: true });
+  };
+  D.glove = (I, o = {}) => {
+    const col = o.color || "#8e5a30";
+    if (o.boxing) {
+      const g = "M15 32 C12 18 21 9 34 9 C47 9 55 18 53 32 C52 42 47 48 40 50 L40 55 H20 L20 48 C16.5 44 15.5 38 15 32 Z";
+      part(I, g, col, { sd: 3, hd: 2, gloss: [26, 17, 5, 2.6, 0.55] });
+      part(I, "M15 32 C13 26 16 21 21 22 C25 23 26 29 24 34 C22 38 17 38 15 32 Z", dk(col, 0.05), { sd: 1.4, hd: 1 });
+      part(I, rrect(17, 49, 26, 11, 3), "#f4f1ea", { sd: 1.4, shT: 0.2, hd: 1 });
+      if (!I.small) ln(I, "M26 50 L34 58 M34 50 L26 58", "#c8372d", 1.2);
+      return;
+    }
+    const h2 = "M19 58 L19 37 C15 33 11 29 13 25 C15 22 19 24 22 28 L22 14 C22 10 27 10 27 14 L27 26 L28 9.5 C28 5.5 33 5.5 33 9.5 L33 26 L34 11.5 C34 7.5 39 7.5 39 11.5 L39 27 L41 17 C41 13 46 13 46 17 L45 36 C45 44 43 50 43 58 Z";
+    part(I, h2, col, { sd: 2.6, hd: 1.8 });
+    if (!I.small) for (const d of ["M27 26 V33", "M33 26 V33", "M39 27 L38.5 33"]) ln(I, d, dk(col, 0.35), 1.1);
+    part(I, rrect(17, 50, 28, 10, 2.5), o.cuff || dk(col, 0.25), { sd: 1.2, hd: 0.8 });
+  };
+  D.charm = (I, o = {}) => {
+    const col = o.color || "#c8372d", gold = C.gold;
+    tube(I, "M28 14 C23 3 41 3 36 14", gold, 2.2, { flat: true });
+    const b = "M18 21 C18 15 24 12.5 32 12.5 C40 12.5 46 15 46 21 L46 52 C46 56 44 58 40 58 H24 C20 58 18 56 18 52 Z";
+    part(I, b, col, { sd: 2.6, hd: 1.8 });
+    clip(I, b, () => {
+      if (!I.small) for (let i = -3; i <= 3; i++) {
+        ln(I, `M${18 + i * 8} 12 L${46 + i * 8} 60`, lt(col, 0.25), 0.8, { a: 0.6 });
+        ln(I, `M${46 - i * 8} 12 L${18 - i * 8} 60`, lt(col, 0.25), 0.8, { a: 0.6 });
+      }
+    });
+    part(I, rrect(26, 22, 12, 26, 2), gold, { sd: 1, hd: 0.8 });
+    if (!I.small) for (const y of [28, 34, 40]) ln(I, `M29 ${y} H35`, dk(gold, 0.4), 1.2);
+    part(I, circle(32, 14, 3), gold, { sd: 0.6, hd: 0.4 });
+  };
+  D.amulet = (I, o = {}) => {
+    const metal = o.metal || C.gold;
+    ln(I, "M12 4 C15 18 24 25 32 27 C40 25 49 18 52 4", OUT, 3.2);
+    ln(I, "M12 4 C15 18 24 25 32 27 C40 25 49 18 52 4", o.cord || "#8e5a30", 1.8);
+    if (o.cage) {
+      part(I, "M32 24 C41 26 46 34 45 43 C44 51 38 57 32 59 C26 57 20 51 19 43 C18 34 23 26 32 24 Z", o.gem || "#6fd3c8", { sd: 2.4, hd: 1.6, gloss: [27, 34, 2.6, 4, 0.7, 0.3] });
+      for (const d of ["M32 24 C38 32 39 50 32 59", "M32 24 C26 32 25 50 32 59", "M19 42 C26 45 38 45 45 42"]) tube(I, d, metal, 1.8, { flat: true });
+      part(I, circle(32, 24, 3), metal, { sd: 0.5, hd: 0.3 });
+      return;
+    }
+    part(I, "M32 25 C42 25 48 33 48 41 C48 50 40 58 32 60 C24 58 16 50 16 41 C16 33 22 25 32 25 Z", metal, { sd: 2, hd: 1.4 });
+    gem(I, 32, 42, 9, o.gem || "#2f78d6");
+  };
+  D.medal = (I, o = {}) => {
+    part(I, "M20 4 H30 L36 28 H28 Z", o.marine ? "#f6f5f0" : "#2f5f96", { sd: 1, hd: 0.8 });
+    part(I, "M44 4 H34 L28 28 H36 Z", o.marine ? "#2f5f96" : "#c8372d", { sd: 1, hd: 0.8 });
+    part(I, circle(32, 40, 15), o.metal || C.gold, { sd: 2.4, hd: 1.6 });
+    if (o.marine) {
+      part(I, circle(32, 40, 10), "#f6f5f0", { sd: 1, shT: 0.2, hd: 0.6, ol: I.ol * 0.7 });
+      gull(I, 32, 40, 7, "#2f5f96");
+    } else part(I, star(32, 40.5, 5, 9, 4), lt(o.metal || C.gold, 0.25), { sd: 0.8, hd: 0.6, ol: I.ol * 0.7 });
+  };
+  D.pouch = (I, o = {}) => {
+    const col = o.color || "#9a6433";
+    const b = "M20 24 C12 30 9 40 12 48 C15 55 24 58 32 58 C40 58 49 55 52 48 C55 40 52 30 44 24 Z";
+    part(I, b, col, { sd: 3.6, hd: 2.2 });
+    if (!I.small) clip(I, b, () => ln(I, "M22 40 C28 44 36 44 42 40", dk(col, 0.4), 1.4, { a: 0.7 }));
+    part(I, "M22 25 C20 18 23 11 28 13 C30 9 34 9 36 13 C41 11 44 18 42 25 Z", lt(col, 0.1), { sd: 1.8, hd: 1.4 });
+    tube(I, "M19 25.5 C27 28 37 28 45 25.5", "#d9b26f", 3);
+    tube(I, "M44 26 C49 29 50 35 47 38", "#d9b26f", 2.2);
+  };
+  var ITEM_MAP = {
+    meat: ["meat"],
+    rice_ball: ["riceBall"],
+    fish_stew: ["bowl", { top: "fish" }],
+    tangerine: ["orange"],
+    sea_king_steak: ["steak"],
+    baratie_course: ["plate"],
+    sake: ["sake"],
+    cola: ["barrel", { label: "cola", hoop: "#c23b2e" }],
+    p2_cola_barrel: ["barrel", { label: "cola", hoop: "#c23b2e" }],
+    bandage: ["bandage"],
+    antidote: ["vial"],
+    rumble_ball: ["pill"],
+    tension_hormone: ["syringe"],
+    nb_germa_antidote: ["syringe", { liquid: "#4fb3c9" }],
+    p1_gold_ball: ["pill", { color: "#f0bf45", engrave: true }],
+    sb_moqueca_stew: ["bowl", { soup: "#e2572f", top: "veg", bowl: "#a4552c" }],
+    p2_attack_cuisine: ["bowl", { soup: "#c9763a", top: "bone", bowl: "#5a3b2a" }],
+    oshiruko: ["bowl", { soup: "#6b2a2a", top: "mochi", bowl: "#2d2b2f" }],
+    sb_curry_udon: ["bowl", { soup: "#d99a2b", top: "noodles", bowl: "#8e2f2a" }],
+    p2_gourmet_platter: ["plate", { food: "platter" }],
+    wano_sake: ["sake", { band: "#b23a2e" }],
+    // swords
+    wooden_sword: ["katana", { wood: true, wrap: "#6e4526", diamond: "#a7784a", tsuba: "#3d3530", habaki: "#6e4526" }],
+    rusty_katana: ["katana", { rust: true, blade: "#b7ada0", wrap: "#4d3a2c", tsuba: "#6b5a4a", habaki: "#8a6a44" }],
+    cutlass: ["cutlass"],
+    marine_saber: ["cutlass", { saber: true, wrap: "#f1ece0", guard: C.gold }],
+    fine_katana: ["katana", { wrap: "#2c3b5c", tsuba: "#c9a04a" }],
+    yubashiri: ["katana", { wrap: "#8a2e2a", diamond: "#f0e2c0", tsuba: "#b8bec4", habaki: "#c9a24e" }],
+    shigure: ["katana", { wrap: "#2a2a33", diamond: "#b9c3cc", tsuba: "#8e9aa3", tsubaShape: "square" }],
+    sandai_kitetsu: ["katana", { wrap: "#b3261e", diamond: "#3a1a18", tsuba: "#4a3a33", hamon: "wave", habaki: "#c9a24e" }],
+    wado_ichimonji: ["katana", { wrap: "#f4f1ea", diamond: "#b9c3cc", tsuba: "#e2b64a", habaki: "#e8c35a" }],
+    shusui: ["katana", { blade: "#3a3542", edge: "#8a8298", wrap: "#7a1f24", diamond: "#1f1a22", tsuba: "#d8a93f", tsubaShape: "flower" }],
+    enma: ["katana", { blade: "#5a2a33", edge: "#e0584f", wrap: "#3a1f3f", diamond: "#b7303a", tsuba: "#2b2229", aura: "#c0283a", habaki: "#b8963e" }],
+    yoru: ["yoru"],
+    wano_katana: ["katana", { wrap: "#3d2b5a", diamond: "#e9e1c8", tsuba: "#c9a04a" }],
+    nb_shibireru: ["katana", { blade: "#f1e7a2", edge: "#fffbe0", wrap: "#2b2b33", diamond: "#f2d33a", tsuba: "#f2d33a", bolt: true }],
+    p2_funkfreed: ["cutlass", { saber: true, blade: "#c9d0d6", wrap: "#8d8f9a", guard: "#9aa3ad" }],
+    // guns
+    slingshot: ["slingshot"],
+    flintlock: ["flintlock"],
+    marine_rifle: ["rifle", { bayonet: true, wood: "#7a4a2a" }],
+    kabuto: ["kabuto"],
+    kuro_kabuto: ["kabuto", { color: "#2f2b33", trim: "#c23b2e", gem: "#f2d33a" }],
+    sb_scrap_flintlock: ["flintlock", { metal: "#8a6a55", wood: "#6b5040" }],
+    p2_kuja_bow: ["bow", { snake: true }],
+    // staffs & axes
+    bo_staff: ["staff"],
+    clima_tact: ["climaTact"],
+    sorcery_clima_tact: ["climaTact", { color: "#2a3d7a", joint: "#cfd8e8", knob: "#9aa6b8", orb: "#7fd3f0" }],
+    woodsman_axe: ["axe"],
+    giant_axe: ["battleAxe"],
+    morgan_axe: ["axeHand"],
+    elbaf_axe: ["battleAxe", { head: "#b9c4cc", trim: "#c9a04a", handle: "#5a3a22" }],
+    p2_shipwright_mallet: ["mallet"],
+    // hats & coats
+    straw_hat: ["strawHat"],
+    bandana: ["bandana"],
+    tricorne: ["tricorne"],
+    captain_hat: ["captainHat"],
+    cowboy_hat: ["cowboyHat"],
+    marine_cap: ["marineCap"],
+    pink_hat: ["topHat"],
+    goggles: ["goggles"],
+    headband: ["headband"],
+    horned_helm: ["hornHelm", { horns: true }],
+    elbaf_helm: ["hornHelm", { horns: true, metal: "#c9b27a", trim: "#7a4a2a" }],
+    p2_carnival_mask: ["mask", { eye: true, color: "#8e24aa" }],
+    marine_coat: ["marineCoat"],
+    captain_coat: ["coat", { color: "#1f3566" }],
+    red_cloak: ["cloak", { color: "#b71c1c" }],
+    nb_corazon_coat: ["coat", { color: "#2b2630", feather: "#2b2630", trim: false, inner: "#f06aa0" }],
+    p1_royal_cape: ["cloak", { color: "#f4f1ea", trim: C.gold, crest: "#c8372d" }]
+  };
+  var NAME_RULES = [
+    // ---- fruit & food
+    [/coconut/, "coconut"],
+    [/\bapples?\b/, "apple"],
+    [/banana/, "banana"],
+    [/cherr(y|ies)/, "cherry"],
+    [/mango/, "mango"],
+    [/mushroom|fungus|shroom|truffle/, "mushroom"],
+    [/tangerine|orange|mikan|citrus|lemon|lime/, "orange", (n) => ({ color: /lemon/.test(n) ? "#f2d33a" : /lime/.test(n) ? "#8cc63f" : void 0 })],
+    [/rice ?ball|onigiri/, "riceBall"],
+    [/steak/, "steak"],
+    [/\bmeat|drumstick|\bham\b|jerky/, "meat"],
+    [/pizza/, "pizza"],
+    [/dough?nut/, "doughnut"],
+    [/chocolat|cocoa bar|fudge/, "chocolate"],
+    [/cake|pastry|tart\b|\bpie\b|pudding|cookie|muffin/, "cake"],
+    [/ice ?cream|gelato/, "iceCream"],
+    [/sherbet|sorbet|shaved ice|parfait|sundae/, "sherbet"],
+    [/dango/, "dango"],
+    [/\boden|skewer|kebab|yakitori|kushi/, "skewer"],
+    [/takoyaki|octopus balls?/, "takoyaki"],
+    [/\bbuns?\b|dumpling|\bbao\b|manju|gyoza/, "buns"],
+    [/bread|loaf|biscuit|cracker|baguette|toast/, "bread"],
+    [/cola/, "barrel", { label: "cola", hoop: "#c23b2e" }],
+    [/barrel|cask|keg/, "barrel", { label: "ale" }],
+    [/stew|soup|curry|udon|ramen|noodle|broth|oshiruko|porridge|chowder|hot ?pot|\bnabe|gumbo|moqueca/, "bowl", (n) => ({ top: /noodle|udon|ramen|soba/.test(n) ? "noodles" : /fish|chowder|sea/.test(n) ? "fish" : "veg" })],
+    [/\bsake\b/, "sake"],
+    [/\bwine|toroa|claret|bordeaux|champagne/, "wine"],
+    [/whisk|brandy|\brum\b|grog|\bgin\b|liquor|bourbon|vodka/, "whisky"],
+    [/\bale\b|beer|mead|cider|lager|stout|tankard/, "mug"],
+    [/\btea\b|coffee|cocoa/, "teacup"],
+    [/water|dew\b/, "drop"],
+    [/milk|juice|lemonade|soda/, "bottle", (n) => ({ liquid: /milk/.test(n) ? "#f7f4ec" : "#f29a2e" })],
+    [/platter|course|feast|banquet|meal|dish|plate|bento|lunch|dinner|cuisine/, "plate", (n) => ({ food: /platter|bento|feast|banquet/.test(n) ? "platter" : void 0 })],
+    [/\bfish|salmon|tuna|\beel\b|mackerel|sardine/, "fish", {}, ["food", "material"]],
+    // ---- medicine
+    [/bandage|gauze|splint/, "bandage"],
+    [/syringe|injection|hormone|serum|vaccine/, "syringe"],
+    [/rumble|\bpill|tablet|capsule/, "pill"],
+    [/golden ball/, "pill", { color: "#f0bf45", engrave: true }],
+    [/salve|ointment|balm|poultice|coating|\btar\b|paste/, "jar", (n) => ({ color: /tar\b|coating/.test(n) ? "#3a3440" : "#6fae3c" })],
+    [/dandelion/, "dandelion"],
+    [/antidote|potion|elixir|tonic|remedy|medicine|draught|vial|flask/, "vial", (n) => ({ liquid: /germa|blue/.test(n) ? "#4fb3c9" : void 0 })],
+    // ---- weapons
+    [/\bbow\b|longbow|crossbow/, "bow", {}, ["weapon"]],
+    [/cannon|bazooka|mortar/, "cannon", {}, ["weapon"]],
+    [/mallet|hammer|\bclub\b|\bmace\b|\bbat\b|kanabo|cudgel/, "mallet", {}, ["weapon"]],
+    [/rifle|musket|carbine/, "rifle", {}, ["weapon"]],
+    [/slingshot|kabuto/, "slingshot", {}, ["weapon"]],
+    [/pistol|flintlock|revolver|\bgun\b|blunderbuss/, "flintlock", {}, ["weapon"]],
+    [/spear|lance|trident|halberd|naginata|glaive|\bpike\b|polearm|bisento|jitte/, "spear", {}, ["weapon"]],
+    [/dagger|knife|kunai|dirk|stiletto/, "dagger", {}, ["weapon"]],
+    [/cutlass|sab(er|re)|scimitar|rapier|falchion/, "cutlass", (n) => ({ saber: /sab|rapier/.test(n) }), ["weapon"]],
+    [/\baxe\b|hatchet|tomahawk/, "axe", {}, ["weapon"]],
+    [/staff|\brod\b|cane|stick|\bpole\b|clima/, "staff", {}, ["weapon"]],
+    [/katana|sword|blade|tachi|wakizashi|nodachi|kitetsu/, "katana", {}, ["weapon"]],
+    // ---- hats & masks
+    [/mask/, "mask", (n, d) => ({ color: d?.look?.hatColor, eye: /carnival|masquerade|domino/.test(n) }), ["hat", "accessory", "key", "treasure"]],
+    [/fedora|trilby|bowler|gangster/, "fedora", (n, d) => ({ color: d?.look?.hatColor })],
+    [/crown|tiara|diadem/, "crownHat", {}, ["hat", "treasure", "accessory"]],
+    [/halo/, "halo", {}, ["hat"]],
+    [/helm|helmet/, "hornHelm", (n) => ({ horns: /horn|elba|viking|giant/.test(n) }), ["hat"]],
+    [/goggle/, "goggles"],
+    [/glasses|spectacle|monocle|sunglass|shades/, "glasses"],
+    [/armband|headband|hachimaki|\bband\b|sweatband/, "headband", (n, d) => ({ color: d?.look?.hatColor, emblem: /champion/.test(n) ? "#c8372d" : void 0 }), ["hat", "accessory"]],
+    [/bandana|kerchief|headscarf|\bscarf/, "bandana", (n, d) => ({ color: d?.look?.hatColor })],
+    [/straw hat/, "strawHat"],
+    [/top hat/, "topHat", (n, d) => ({ color: d?.look?.hatColor })],
+    [/tricorn/, "tricorne", (n, d) => ({ color: d?.look?.hatColor })],
+    [/cowboy|stetson|sombrero/, "cowboyHat", (n, d) => ({ color: d?.look?.hatColor })],
+    [/beanie|woolly|knit cap/, "beanie", (n, d) => ({ color: d?.look?.hatColor })],
+    // ---- coats
+    [/cape|cloak|mantle|shawl|poncho/, "cloak", (n, d) => ({ color: d?.look?.coat, short: /mantle|shawl|poncho/.test(n), trim: /royal|king|queen/.test(n) ? C.gold : void 0 }), ["coat"]],
+    [/\bfur\b|pelt|hide coat/, "coat", (n, d) => ({ color: d?.look?.coat, fur: true, trim: false }), ["coat"]],
+    [/feather/, "coat", (n, d) => ({ color: d?.look?.coat, feather: /pink|flamingo/.test(n) ? "#f48fb1" : d?.look?.coat || "#2b2630", trim: false }), ["coat"]],
+    [/chain ?(shirt|mail)|\bmail\b|hauberk/, "armor", (n, d) => ({ mail: true, color: d?.look?.coat }), ["coat"]],
+    [/samurai|lacquer|lamellar|\bo-?yoroi/, "armor", (n, d) => ({ samurai: true, color: d?.look?.coat || "#8e1b16" }), ["coat"]],
+    [/armou?r|breastplate|cuirass|plate\b/, "armor", (n, d) => ({ color: d?.look?.coat }), ["coat"]],
+    [/vest|waistcoat|jerkin|doublet|tabard/, "coat", (n, d) => ({ color: d?.look?.coat, vest: true, trim: false, quilted: /padded|quilt/.test(n), laces: /jerkin|leather/.test(n) ? "#e9d8b0" : void 0 }), ["coat"]],
+    [/pinstripe|\bsuit\b|tuxedo/, "coat", (n, d) => ({ color: d?.look?.coat, stripes: true, trim: false }), ["coat"]],
+    // ---- accessories
+    [/ear ?rings?|ear ?studs?/, "earrings", (n, d, id) => ({ three: /three|3/.test(n), pearl: /pearl/.test(n), metal: metalOf(n), gem: gemOf(n, id) })],
+    [/\brings?\b|signet/, "ring", (n, d, id) => ({ metal: metalOf(n), gem: gemOf(n, id, false), signet: /signet|seal|king/.test(n) }), ["accessory", "treasure"]],
+    [/necklace|pendant|locket|choker|beads|\bchain\b/, "necklace", (n, d, id) => ({ pearl: /pearl/.test(n), shell: /shell|sea/.test(n), metal: metalOf(n), gem: gemOf(n, id) }), ["accessory", "treasure"]],
+    [/bracer|vambrace|arm ?guard/, "bracer"],
+    [/haramaki|belly ?band|waistband/, "sash"],
+    [/\bsash\b|\bobi\b|cummerbund/, "sash", (n) => ({ knot: true, color: /red/.test(n) ? "#c0392b" : void 0 })],
+    [/wraps|tape\b/, "wraps", {}, ["accessory", "weapon"]],
+    [/bracelet|bangle|armlet|wristband|anklet|\bcuff\b/, "bracelet", (n, d, id) => ({ shells: /shell/.test(n), metal: metalOf(n), gem: gemOf(n, id) }), ["accessory", "treasure"]],
+    [/\bbelt\b|girdle/, "belt"],
+    [/glove|gauntlet|mitt|knuckle/, "glove", (n) => ({ boxing: /box/.test(n), color: /box/.test(n) ? "#c8372d" : void 0 }), ["accessory", "weapon"]],
+    [/charm|omamori|talisman|token|lucky/, "charm", (n, d, id) => ({ color: /wood/.test(n) || /wooden/.test(d?.desc || "") ? "#a8703f" : gemOf(n, id) }), ["accessory", "treasure", "key"]],
+    [/amulet|medallion|sea.?glass|prism/, "amulet", (n, d, id) => ({ metal: /glass|prism/.test(n) ? C.brass : metalOf(n), gem: /glass|prism/.test(n) ? "#6fd3c8" : gemOf(n, id), cage: /glass|prism|cage/.test(n) })],
+    [/brooch|badge|medal|\bpin\b|emblem|honou?r/, "medal", (n) => ({ metal: metalOf(n), marine: /marine|honou?r|navy/.test(n) }), ["accessory", "treasure", "key"]],
+    // ---- navigation, documents & keepsakes
+    [/log ?pose/, "logPose", (n) => ({ three: /three|new world|3/.test(n) })],
+    [/eternal pose/, "eternalPose"],
+    [/vivre/, "vivre"],
+    [/den ?den|transponder|snail/, "denDen"],
+    [/handcuff|shackle|\bcuffs\b|manacle/, "cuffs"],
+    [/poneglyph|rubbing/, "rubbing"],
+    [/treasure map/, "map"],
+    [/\bchart\b|\bmaps?\b|atlas/, "map", { chart: true }],
+    [/\bkeys?\b/, "key", (n) => ({ big: /loki|chain|giant|prison|vault/.test(n) })],
+    [/letter|invitation|envelope|\bnote from|message/, "envelope", (n) => ({ heart: /tea|love|party|invitation/.test(n) })],
+    [/comic|manga/, "book", { comic: true }],
+    [/book|primer|novel|diary|journal|manual|log of|logbook|almanac|encyclop|tome/, "book"],
+    [/notes|notebook|sketch/, "notebook"],
+    [/ticket|\bpass\b|boarding/, "ticket"],
+    [/\bpage\b|leaflet|flyer|sheet/, "page", (n) => ({ wet: /water|soak|wet/.test(n) })],
+    [/poster|playbill|wanted|bill\b/, "poster"],
+    [/scroll|survey|register|permit|decree|\blog\b|promise|orders|edict|charter|record|document|deed|certificate|contract|papers|report/, "scroll", (n) => ({ seal: /sealed|government|permit|holy|royal/.test(n) ? "#c8372d" : void 0 })],
+    [/\bdice\b|\bdie\b/, "dice"],
+    [/\btag\b|label/, "tag"],
+    [/\bhorn\b|bugle/, "horn"],
+    [/flag|banner|jolly roger|pennant/, "flag", (n) => ({ emblem: /sun/.test(n) ? "sun" : "skull" })],
+    [/umbrella|parasol/, "umbrella"],
+    [/bird|gull|parrot|coo\b/, "bird"],
+    [/strongbox|lockbox|\bsafe\b|coffer/, "chest", { iron: true }],
+    [/chest|\bcrate\b|\bbox\b/, "chest", {}, ["treasure", "key"]],
+    [/\bbell\b|shandora/, "bell"],
+    [/statue|idol|figurine|effigy/, "statue"],
+    [/pearl/, "pearl"],
+    [/coin|doubloon|berr(y|ies)|belly|money|\bgold\b/, "coins", {}, ["treasure", "key", "material"]],
+    [/jewel|\bgems?\b|diamond|ruby|sapphire|emerald|topaz/, "jewels"],
+    [/ingot|\bmetal\b|bullion|wapometal|\bbar of/, "ingot"],
+    [/violin|fiddle|guitar|lute|instrument|\bdrum\b|flute|harp/, "violin"],
+    [/perfume|fragrance|scent|cologne/, "perfume"],
+    [/feather|plume/, "feather"],
+    [/sakura|cherry blossom/, "blossom"],
+    [/hibiscus|flower|blossom|\brose\b|\blily\b|orchid/, "flower"],
+    [/\bsalt\b|sugar|spice|pepper|flour|grain/, "sack"],
+    [/\bwood|timber|\blogs?\b|lumber|plank/, "wood", (n) => ({ adam: /adam/.test(n) })],
+    [/seastone|kairoseki/, "rock", { color: "#5f8187" }],
+    [/\bstone|\brock|\bore\b|crystal|\blead\b|amber|mineral/, "rock", (n) => ({ color: /amber|lead|white/.test(n) ? "#e9e6dc" : void 0 })],
+    [/herb|\bleaf|leaves|moss|\broot|grass|seaweed/, "herbs"],
+    [/powder|dust/, "jar", { color: "#f3c6d6" }]
+  ];
+  var HAT_LOOK = { straw: "strawHat", bandana: "bandana", tricorne: "tricorne", captain: "captainHat", cowboy: "cowboyHat", marine: "marineCap", pinkhat: "topHat", goggles: "goggles", headband: "headband", horns: "hornHelm", beanie: "beanie", crown: "crownHat", halo: "halo", bubble: "halo" };
+  var KIND_DEFAULT = { sword: "katana", gun: "flintlock", staff: "staff", axe: "axe" };
+  var DIAL_COLORS = [
+    [/impact/, "#e3a857"],
+    [/reject/, "#5b3f8a"],
+    [/flame|fire|heat/, "#e8643a"],
+    [/breath|wind|air|jet/, "#9fd9e3"],
+    [/flash|lamp|light/, "#f6d94a"],
+    [/eisen|iron/, "#8c9aa6"],
+    [/tone|sound|music/, "#8fd18a"],
+    [/milky|cloud/, "#f4f1ea"],
+    [/water|aqua/, "#4fb3e8"],
+    [/axe|blade/, "#b0bec5"]
+  ];
+  function typeDefault(d, id) {
+    const t = d?.type;
+    if (t === "weapon") return { fn: KIND_DEFAULT[d.kind] || "katana", o: {} };
+    if (t === "hat") return d.look?.hat && HAT_LOOK[d.look.hat] ? { fn: HAT_LOOK[d.look.hat], o: { color: d.look.hatColor } } : { fn: "tricorne", o: {}, fallback: true };
+    if (t === "coat") return { fn: "coat", o: { color: d.look?.coat, trim: false } };
+    if (t === "dial") {
+      const n = (d.name || id || "").toLowerCase();
+      return { fn: "shell", o: { color: (DIAL_COLORS.find(([re]) => re.test(n)) || [0, "#d9c1a0"])[1] } };
+    }
+    if (t === "pose") return { fn: "eternalPose", o: {} };
+    if (t === "fruit") return { fn: "fruit", o: { fruit: d.fruit } };
+    const generic = { food: "bread", medicine: "vial", accessory: "amulet", key: "key", treasure: "chest", material: "crate" }[t];
+    if (generic) return { fn: generic, o: {}, fallback: true };
+    return { fn: "pouch", o: {}, fallback: true };
+  }
+  var defIds = /* @__PURE__ */ new WeakMap();
+  var defCount = -1;
+  function idOfDef(d) {
+    if (!d) return null;
+    if (d.id) return d.id;
+    const n = Object.keys(ITEMS).length;
+    if (n !== defCount) {
+      defIds = /* @__PURE__ */ new WeakMap();
+      for (const [k, v] of Object.entries(ITEMS)) defIds.set(v, k);
+      defCount = n;
+    }
+    return defIds.get(d) || null;
+  }
+  function resolveItem(id, d) {
+    if (id && ITEM_MAP[id]) return { fn: ITEM_MAP[id][0], o: ITEM_MAP[id][1] || {} };
+    if (d?.type === "fruit" || d?.fruit || /^fruit_/.test(id || "")) return { fn: "fruit", o: { fruit: d?.fruit || (id || "").replace(/^fruit_/, "") } };
+    const name = `${d?.name || ""} ${id || ""}`.toLowerCase().replace(/_/g, " ");
+    for (const [re, fn, o, types] of NAME_RULES) {
+      if (!re.test(name) || types && d?.type && !types.includes(d.type)) continue;
+      return { fn, o: typeof o === "function" ? o(name, d, id) : o || {} };
+    }
+    if (d?.type === "dial") return typeDefault(d, id);
+    return typeDefault(d, id);
+  }
+  function itemIcon(idOrDef, size = 48) {
+    const isStr = typeof idOrDef === "string";
+    const d = isStr ? ITEMS[idOrDef] : idOrDef;
+    const id = isStr ? idOrDef : idOfDef(d);
+    const key2 = "item:" + (id || `${d?.type || "?"}/${d?.name || "?"}`);
+    const hit = cache.get(key2 + "@" + Math.max(8, Math.round(size || 48)));
+    if (hit) return hit;
+    const r = resolveItem(id, d);
+    return render(key2, size, (I) => (D[r.fn] || D.pouch)(I, { ...r.o, def: d, id }), { tag: r.fn, fallback: r.fallback });
+  }
+  function skillIcon(def, size = 48) {
+    return render("skill:" + (def?.id || def?.name || "?"), size, (I) => {
+      part(I, circle(32, 32, 28), "#37474f", { sd: 3, hd: 2 });
+    });
+  }
+  function uiIcon(name, size = 32) {
+    return render("ui:" + name, size, (I) => {
+      part(I, circle(32, 32, 26), "#8e5a30", { sd: 3, hd: 2 });
+    });
+  }
+  var urls = /* @__PURE__ */ new WeakMap();
+  function iconURL(canvas) {
+    if (!canvas) return "";
+    if (!urls.has(canvas)) urls.set(canvas, canvas.toDataURL("image/png"));
+    return urls.get(canvas);
+  }
+
+  // src/render/sprites.js
+  var TAU4 = Math.PI * 2;
+  var PX = 64;
+  var cache2 = /* @__PURE__ */ new Map();
+  function cachedSprite(key2, wTiles, hTiles, draw) {
+    let s = cache2.get(key2);
     if (s) return s;
     const c = document.createElement("canvas");
     c.width = Math.ceil(wTiles * PX);
@@ -879,7 +4046,7 @@ void main() {
     g.scale(PX, PX);
     draw(g);
     s = { canvas: c, w: wTiles, h: hTiles, ax: wTiles / 2, ay: hTiles - 0.35 };
-    cache.set(key, s);
+    cache2.set(key2, s);
     return s;
   }
   function drawCached(ctx, s, x, y, scale = 1) {
@@ -887,7 +4054,7 @@ void main() {
   }
   function blob(g, x, y, r, fill, outline) {
     g.beginPath();
-    g.arc(x, y, r, 0, TAU2);
+    g.arc(x, y, r, 0, TAU4);
     g.fillStyle = fill;
     g.fill();
     if (outline) {
@@ -900,7 +4067,7 @@ void main() {
     const dark = shade(base, -0.28), light = shade(base, 0.22), line = shade(base, -0.5);
     const pts = [];
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU2 + seed;
+      const a = i / n * TAU4 + seed;
       pts.push([cx + Math.cos(a) * r * 0.45, cy + Math.sin(a) * r * 0.35, r * (0.55 + (i * 37 + seed * 11) % 7 / 20)]);
     }
     pts.push([cx, cy - r * 0.15, r * 0.7]);
@@ -925,16 +4092,36 @@ void main() {
     cloudtree: ["#ffffff", "#f4f8ff", "#eef4ff", "#ffffff"]
   };
   function treeSprite(sub, v) {
-    const key = `tree:${sub}:${v}`;
+    const key2 = `tree:${sub}:${v}`;
     const sizes = { palm: [2.6, 3.6], pine: [2, 3.4], snowpine: [2, 3.4], jungle: [3, 3.6], cactus: [1.6, 2.4], dead: [2, 2.8], deadsnow: [2, 2.8], lollipop: [1.8, 3], candycane: [1.4, 2.8], bamboo: [1.6, 3.6], coral: [2, 2.4], kelp: [1.6, 3], spooky: [2.6, 3.4] };
     const [w, h2] = sizes[sub] || [2.6, 3.2];
-    return cachedSprite(key, w, h2, (g) => drawTree(g, sub, v));
+    return cachedSprite(key2, w, h2, (g) => drawTree(g, sub, v));
+  }
+  function drawTreeFruit(g, o, fruit, spots, colors) {
+    const [c1, c2] = colors;
+    for (const [x, y, r] of spots) {
+      if (fruit === "banana") {
+        g.fillStyle = c1;
+        g.strokeStyle = c2;
+        g.lineWidth = 0.03;
+        g.beginPath();
+        g.ellipse(x, y, r * 0.55, r * 1.25, 0.5, 0, TAU4);
+        g.fill();
+        g.stroke();
+        continue;
+      }
+      blob(g, x, y, r, c1, c2);
+      g.fillStyle = "rgba(255,255,255,0.35)";
+      g.beginPath();
+      g.arc(x - r * 0.35, y - r * 0.35, r * 0.3, 0, TAU4);
+      g.fill();
+    }
   }
   function drawTree(g, sub, v) {
     const r = (n) => (v * 9301 + n * 49297) % 233280 / 233280;
     g.fillStyle = "rgba(0,0,0,0.22)";
     g.beginPath();
-    g.ellipse(0.15, -0.05, 0.75, 0.28, 0, 0, TAU2);
+    g.ellipse(0.15, -0.05, 0.75, 0.28, 0, 0, TAU4);
     g.fill();
     switch (sub) {
       case "palm": {
@@ -958,7 +4145,7 @@ void main() {
         const top = [lean, -2.5];
         const fronds = 7;
         for (let i = 0; i < fronds; i++) {
-          const a = i / fronds * TAU2 + r(2);
+          const a = i / fronds * TAU4 + r(2);
           const len = 1.1 + r(i + 3) * 0.35;
           const ex = top[0] + Math.cos(a) * len, ey = top[1] + Math.sin(a) * len * 0.55 + 0.35;
           g.strokeStyle = i % 2 ? "#2f9e44" : "#37b24d";
@@ -971,8 +4158,6 @@ void main() {
           g.lineWidth = 0.05;
           g.stroke();
         }
-        blob(g, top[0], top[1] + 0.1, 0.15, "#8d5b2a");
-        blob(g, top[0] + 0.14, top[1] + 0.15, 0.13, "#7a4a20");
         break;
       }
       case "pine":
@@ -1069,7 +4254,7 @@ void main() {
         g.strokeStyle = "#ffffff";
         g.lineWidth = 0.12;
         g.beginPath();
-        for (let a = 0; a < TAU2 * 2.2; a += 0.2) {
+        for (let a = 0; a < TAU4 * 2.2; a += 0.2) {
           const rr2 = 0.06 + a * 0.045;
           g.lineTo(Math.cos(a) * rr2, -2.2 + Math.sin(a) * rr2);
         }
@@ -1105,7 +4290,7 @@ void main() {
           for (let y = 0.5; y < hh; y += 0.55) g.fillRect(x - 0.08, -y, 0.16, 0.04);
           g.fillStyle = "#9ccc65";
           g.beginPath();
-          g.ellipse(x + 0.2, -hh + 0.2, 0.28, 0.08, -0.5, 0, TAU2);
+          g.ellipse(x + 0.2, -hh + 0.2, 0.28, 0.08, -0.5, 0, TAU4);
           g.fill();
         }
         break;
@@ -1172,7 +4357,7 @@ void main() {
     return cachedSprite(`rock:${v}`, 1.6, 1.4, (g) => {
       g.fillStyle = "rgba(0,0,0,0.2)";
       g.beginPath();
-      g.ellipse(0.05, -0.05, 0.6, 0.2, 0, 0, TAU2);
+      g.ellipse(0.05, -0.05, 0.6, 0.2, 0, 0, TAU4);
       g.fill();
       const col = ["#8e8a82", "#9a948a", "#7f7a72", "#a39d92"][v % 4];
       g.fillStyle = shade(col, -0.25);
@@ -1208,7 +4393,7 @@ void main() {
     return cachedSprite(`bush:${sub}:${v}`, 1.4, 1.2, (g) => {
       g.fillStyle = "rgba(0,0,0,0.18)";
       g.beginPath();
-      g.ellipse(0, -0.03, 0.5, 0.16, 0, 0, TAU2);
+      g.ellipse(0, -0.03, 0.5, 0.16, 0, 0, TAU4);
       g.fill();
       if (sub === "fern") {
         g.strokeStyle = "#2e7d32";
@@ -1244,23 +4429,23 @@ void main() {
     });
   }
   var ROLE_ICON = {
-    tavern: "\u{1F37A}",
-    bar: "\u{1F37A}",
-    inn: "\u{1F6CF}",
-    shop: "\u{1F6CD}",
-    market: "\u{1F6CD}",
-    weapons: "\u2694",
-    dojo: "\u62F3",
-    doctor: "\u271A",
-    shipwright: "\u2693",
-    marine_base: "MARINE",
-    bounty: "\u2620",
-    trainer: "\u2605",
-    library: "\u{1F4D6}",
-    bank: "\u0E3F",
-    cafe: "\u2615",
-    restaurant: "\u{1F356}",
-    church: "\u271D"
+    tavern: "bar",
+    bar: "bar",
+    inn: "inn",
+    shop: "shop",
+    market: "shop",
+    weapons: "sword",
+    dojo: "trainer",
+    doctor: "doctor",
+    shipwright: "shipwright",
+    marine_base: "marine",
+    bounty: "bounty",
+    trainer: "trainer",
+    library: "library",
+    bank: "berries",
+    cafe: "bar",
+    restaurant: "food",
+    church: "help"
   };
   function drawBuilding(g, b, night, time) {
     const fw = b.fw, fd = b.fd;
@@ -1332,7 +4517,7 @@ void main() {
       g.fillStyle = lit ? "#ffd56b" : style === "sky" ? "#bde3ff" : "#3d5a6c";
       if (style === "desert" || style === "fishman" || style === "candy" || style === "sky") {
         g.beginPath();
-        g.ellipse(wx, wyy + 0.2, 0.2, 0.24, 0, 0, TAU2);
+        g.ellipse(wx, wyy + 0.2, 0.2, 0.24, 0, 0, TAU4);
         g.fill();
       } else {
         g.fillRect(wx - 0.22, wyy, 0.44, 0.4);
@@ -1387,15 +4572,15 @@ void main() {
       } else if (rt === "dome" || rt === "shell") {
         g.fillStyle = shade(roof, -0.2);
         g.beginPath();
-        g.ellipse(0, (ry0 + ry1) / 2 + 0.1, (rx1 - rx0) / 2, (ry1 - ry0) / 2 + 0.15, 0, 0, TAU2);
+        g.ellipse(0, (ry0 + ry1) / 2 + 0.1, (rx1 - rx0) / 2, (ry1 - ry0) / 2 + 0.15, 0, 0, TAU4);
         g.fill();
         g.fillStyle = roof;
         g.beginPath();
-        g.ellipse(0, (ry0 + ry1) / 2, (rx1 - rx0) / 2 - 0.08, (ry1 - ry0) / 2, 0, 0, TAU2);
+        g.ellipse(0, (ry0 + ry1) / 2, (rx1 - rx0) / 2 - 0.08, (ry1 - ry0) / 2, 0, 0, TAU4);
         g.fill();
         g.fillStyle = shade(roof, 0.3);
         g.beginPath();
-        g.ellipse(-(rx1 - rx0) * 0.15, (ry0 + ry1) / 2 - (ry1 - ry0) * 0.18, (rx1 - rx0) * 0.2, (ry1 - ry0) * 0.15, -0.3, 0, TAU2);
+        g.ellipse(-(rx1 - rx0) * 0.15, (ry0 + ry1) / 2 - (ry1 - ry0) * 0.18, (rx1 - rx0) * 0.2, (ry1 - ry0) * 0.15, -0.3, 0, TAU4);
         g.fill();
         if (rt === "shell") {
           g.strokeStyle = shade(roof, -0.35);
@@ -1541,11 +4726,7 @@ void main() {
         g.roundRect(0.5, sy - 0.1, 0.62, 0.48, 0.06);
         g.fill();
         g.stroke();
-        g.fillStyle = "#3b2a1a";
-        g.font = "0.34px sans-serif";
-        g.textAlign = "center";
-        g.textBaseline = "middle";
-        g.fillText(icon, 0.81, sy + 0.15);
+        g.drawImage(uiIcon(icon, 32), 0.81 - 0.21, sy + 0.14 - 0.21, 0.42, 0.42);
       }
     }
     if (b.name && b.role && b.role !== "house" && b.showName) {
@@ -1560,7 +4741,7 @@ void main() {
       case "barrel": {
         g.fillStyle = "rgba(0,0,0,0.2)";
         g.beginPath();
-        g.ellipse(0, 0, 0.35, 0.12, 0, 0, TAU2);
+        g.ellipse(0, 0, 0.35, 0.12, 0, 0, TAU4);
         g.fill();
         g.fillStyle = "#8d5b33";
         g.beginPath();
@@ -1573,7 +4754,7 @@ void main() {
         g.fillRect(-0.3, -0.2, 0.6, 0.06);
         g.fillStyle = "#6d4526";
         g.beginPath();
-        g.ellipse(0, -0.75, 0.3, 0.1, 0, 0, TAU2);
+        g.ellipse(0, -0.75, 0.3, 0.1, 0, 0, TAU4);
         g.fill();
         break;
       }
@@ -1598,7 +4779,7 @@ void main() {
       case "haystack": {
         g.fillStyle = "#d4ac0d";
         g.beginPath();
-        g.ellipse(0, -0.35, 0.55, 0.45, 0, 0, TAU2);
+        g.ellipse(0, -0.35, 0.55, 0.45, 0, 0, TAU4);
         g.fill();
         g.strokeStyle = "#b7950b";
         g.lineWidth = 0.03;
@@ -1628,7 +4809,7 @@ void main() {
         } else {
           g.fillStyle = night ? "#ff8a5c" : "#e74c3c";
           g.beginPath();
-          g.ellipse(0, -2.05, 0.2, 0.26, 0, 0, TAU2);
+          g.ellipse(0, -2.05, 0.2, 0.26, 0, 0, TAU4);
           g.fill();
           g.fillStyle = "#2d3436";
           g.fillRect(-0.12, -2.34, 0.24, 0.06);
@@ -1639,15 +4820,15 @@ void main() {
       case "well": {
         g.fillStyle = "rgba(0,0,0,0.2)";
         g.beginPath();
-        g.ellipse(0, 0, 0.8, 0.25, 0, 0, TAU2);
+        g.ellipse(0, 0, 0.8, 0.25, 0, 0, TAU4);
         g.fill();
         g.fillStyle = "#8e8a82";
         g.beginPath();
-        g.ellipse(0, -0.3, 0.7, 0.35, 0, 0, TAU2);
+        g.ellipse(0, -0.3, 0.7, 0.35, 0, 0, TAU4);
         g.fill();
         g.fillStyle = "#26465b";
         g.beginPath();
-        g.ellipse(0, -0.35, 0.5, 0.22, 0, 0, TAU2);
+        g.ellipse(0, -0.35, 0.5, 0.22, 0, 0, TAU4);
         g.fill();
         g.fillStyle = "#6d4c33";
         g.fillRect(-0.62, -1.4, 0.1, 1.1);
@@ -1664,28 +4845,28 @@ void main() {
       case "fountain": {
         g.fillStyle = "rgba(0,0,0,0.2)";
         g.beginPath();
-        g.ellipse(0, 0, 1.3, 0.4, 0, 0, TAU2);
+        g.ellipse(0, 0, 1.3, 0.4, 0, 0, TAU4);
         g.fill();
         g.fillStyle = "#cfc8ba";
         g.beginPath();
-        g.ellipse(0, -0.25, 1.2, 0.5, 0, 0, TAU2);
+        g.ellipse(0, -0.25, 1.2, 0.5, 0, 0, TAU4);
         g.fill();
         g.fillStyle = "#4fb3d9";
         g.beginPath();
-        g.ellipse(0, -0.3, 1, 0.38, 0, 0, TAU2);
+        g.ellipse(0, -0.3, 1, 0.38, 0, 0, TAU4);
         g.fill();
         g.fillStyle = "#b8b0a2";
         g.fillRect(-0.12, -1.2, 0.24, 0.9);
         g.fillStyle = "#cfc8ba";
         g.beginPath();
-        g.ellipse(0, -1.2, 0.45, 0.16, 0, 0, TAU2);
+        g.ellipse(0, -1.2, 0.45, 0.16, 0, 0, TAU4);
         g.fill();
         for (let k = 0; k < 6; k++) {
-          const a = k / 6 * TAU2 + t * 0.5;
+          const a = k / 6 * TAU4 + t * 0.5;
           const ph = (t * 1.5 + k / 6) % 1;
           g.fillStyle = `rgba(200,235,255,${0.8 - ph * 0.6})`;
           g.beginPath();
-          g.arc(Math.cos(a) * ph * 0.7, -1.3 + ph * ph * 1 - ph * 0.6, 0.06, 0, TAU2);
+          g.arc(Math.cos(a) * ph * 0.7, -1.3 + ph * ph * 1 - ph * 0.6, 0.06, 0, TAU4);
           g.fill();
         }
         break;
@@ -1751,7 +4932,7 @@ void main() {
       case "statue": {
         g.fillStyle = "rgba(0,0,0,0.2)";
         g.beginPath();
-        g.ellipse(0, 0, 0.8, 0.25, 0, 0, TAU2);
+        g.ellipse(0, 0, 0.8, 0.25, 0, 0, TAU4);
         g.fill();
         g.fillStyle = "#b8b0a2";
         g.fillRect(-0.6, -0.8, 1.2, 0.8);
@@ -1775,7 +4956,7 @@ void main() {
       case "lighthouse": {
         g.fillStyle = "rgba(0,0,0,0.25)";
         g.beginPath();
-        g.ellipse(0.2, 0, 1.2, 0.35, 0, 0, TAU2);
+        g.ellipse(0.2, 0, 1.2, 0.35, 0, 0, TAU4);
         g.fill();
         g.fillStyle = "#fdfefe";
         g.beginPath();
@@ -1828,12 +5009,12 @@ void main() {
         g.fillRect(-0.1, -0.5, 0.2, 0.5);
         g.fillStyle = "#795548";
         g.beginPath();
-        g.ellipse(0, -0.5, 0.12, 0.05, 0, 0, TAU2);
+        g.ellipse(0, -0.5, 0.12, 0.05, 0, 0, TAU4);
         g.fill();
         g.strokeStyle = "#c8b89a";
         g.lineWidth = 0.04;
         g.beginPath();
-        g.arc(0, -0.3, 0.13, 0, TAU2);
+        g.arc(0, -0.3, 0.13, 0, TAU4);
         g.stroke();
         break;
       }
@@ -1880,7 +5061,7 @@ void main() {
           const s = 0.5 + 0.5 * Math.sin(t * 3 + (o.id || 0));
           g.fillStyle = `rgba(255,230,120,${0.35 * s})`;
           g.beginPath();
-          g.arc(0, -0.5, 0.7, 0, TAU2);
+          g.arc(0, -0.5, 0.7, 0, TAU4);
           g.fill();
         }
         break;
@@ -1956,7 +5137,7 @@ void main() {
         g.fillRect(-0.5, -1.25, 1, 0.1);
         g.fillStyle = "#d4ac0d";
         g.beginPath();
-        g.ellipse(0, -1, 0.28, 0.45, 0, 0, TAU2);
+        g.ellipse(0, -1, 0.28, 0.45, 0, 0, TAU4);
         g.fill();
         blob(g, 0, -1.7, 0.2, "#e8d5b5");
         g.strokeStyle = "#8d6e4a";
@@ -1972,11 +5153,11 @@ void main() {
         g.rotate(-0.2);
         g.fillStyle = "#8d5b33";
         g.beginPath();
-        g.ellipse(0, -0.3, 1.1, 0.4, 0, 0, TAU2);
+        g.ellipse(0, -0.3, 1.1, 0.4, 0, 0, TAU4);
         g.fill();
         g.fillStyle = "#6d4526";
         g.beginPath();
-        g.ellipse(0, -0.35, 0.9, 0.26, 0, 0, TAU2);
+        g.ellipse(0, -0.35, 0.9, 0.26, 0, 0, TAU4);
         g.fill();
         g.restore();
         break;
@@ -2014,12 +5195,12 @@ void main() {
         g.fillStyle = "rgba(210,240,255,0.25)";
         g.lineWidth = 0.04;
         g.beginPath();
-        g.arc(0, -1.5 + bob, r, 0, TAU2);
+        g.arc(0, -1.5 + bob, r, 0, TAU4);
         g.fill();
         g.stroke();
         g.fillStyle = "rgba(255,255,255,0.8)";
         g.beginPath();
-        g.arc(-r * 0.35, -1.5 + bob - r * 0.35, r * 0.2, 0, TAU2);
+        g.arc(-r * 0.35, -1.5 + bob - r * 0.35, r * 0.2, 0, TAU4);
         g.fill();
         break;
       }
@@ -2057,7 +5238,7 @@ void main() {
         g.rotate(t * 0.8);
         g.fillStyle = "#efebe9";
         for (let k = 0; k < 4; k++) {
-          g.rotate(TAU2 / 4);
+          g.rotate(TAU4 / 4);
           g.fillRect(0.1, -0.12, 1.6, 0.24);
         }
         g.restore();
@@ -2117,7 +5298,7 @@ void main() {
         g.lineTo(0.35, -1.3);
         g.stroke();
         g.beginPath();
-        g.arc(0, -1.7, 0.14, 0, TAU2);
+        g.arc(0, -1.7, 0.14, 0, TAU4);
         g.stroke();
         break;
       }
@@ -2132,7 +5313,7 @@ void main() {
         const red = !!o.road;
         g.fillStyle = "rgba(0,0,0,0.25)";
         g.beginPath();
-        g.ellipse(0, 0, 1.1, 0.3, 0, 0, TAU2);
+        g.ellipse(0, 0, 1.1, 0.3, 0, 0, TAU4);
         g.fill();
         g.fillStyle = red ? "#8e2b22" : "#37474f";
         g.fillRect(-0.95, -1.9, 1.9, 1.9);
@@ -2207,14 +5388,23 @@ void main() {
       case "portal": {
         g.fillStyle = "rgba(0,0,0,0.55)";
         g.beginPath();
-        g.ellipse(0, -0.2, 1, 0.5, 0, 0, TAU2);
+        g.ellipse(0, -0.2, 1, 0.5, 0, 0, TAU4);
         g.fill();
         g.fillStyle = "#5d5d5d";
         for (let k = 0; k < 4; k++) g.fillRect(-0.8 + k * 0.1, -0.5 + k * 0.12, 1.6 - k * 0.2, 0.1);
-        g.fillStyle = o.up ? "#90caf9" : "#ff8a65";
-        g.font = "bold 0.5px sans-serif";
-        g.textAlign = "center";
-        g.fillText(o.up ? "\u25B2" : "\u25BC", 0, -0.9 + Math.sin(t * 3) * 0.08);
+        {
+          const ay = -1.05 + Math.sin(t * 3) * 0.08, d = o.up ? -1 : 1;
+          g.fillStyle = o.up ? "#90caf9" : "#ff8a65";
+          g.strokeStyle = "rgba(0,0,0,0.5)";
+          g.lineWidth = 0.04;
+          g.beginPath();
+          g.moveTo(-0.2, ay - d * 0.14);
+          g.lineTo(0.2, ay - d * 0.14);
+          g.lineTo(0, ay + d * 0.18);
+          g.closePath();
+          g.fill();
+          g.stroke();
+        }
         break;
       }
       case "gate": {
@@ -2256,8 +5446,8 @@ void main() {
         blob(g, 0, -0.9, 0.8, "#ecf0f1");
         g.fillStyle = "#2d3436";
         g.beginPath();
-        g.arc(-0.28, -1, 0.18, 0, TAU2);
-        g.arc(0.28, -1, 0.18, 0, TAU2);
+        g.arc(-0.28, -1, 0.18, 0, TAU4);
+        g.arc(0.28, -1, 0.18, 0, TAU4);
         g.fill();
         g.fillRect(-0.3, -0.45, 0.6, 0.1);
         break;
@@ -2297,8 +5487,8 @@ void main() {
         g.fill();
         g.fillStyle = "#fff";
         g.beginPath();
-        g.arc(-0.2, -0.95, 0.08, 0, TAU2);
-        g.arc(0.18, -1, 0.06, 0, TAU2);
+        g.arc(-0.2, -0.95, 0.08, 0, TAU4);
+        g.arc(0.18, -1, 0.06, 0, TAU4);
         g.fill();
         break;
       }
@@ -2306,10 +5496,10 @@ void main() {
         g.strokeStyle = "#6d4c41";
         g.lineWidth = 0.12;
         g.beginPath();
-        g.arc(0, -1.2, 0.8, 0, TAU2);
+        g.arc(0, -1.2, 0.8, 0, TAU4);
         g.stroke();
         for (let k = 0; k < 8; k++) {
-          const a = k * TAU2 / 8 + t * 0.2;
+          const a = k * TAU4 / 8 + t * 0.2;
           g.beginPath();
           g.moveTo(0, -1.2);
           g.lineTo(Math.cos(a) * 1.05, -1.2 + Math.sin(a) * 1.05);
@@ -2320,7 +5510,7 @@ void main() {
       default: {
         g.fillStyle = "#e17055";
         g.beginPath();
-        g.arc(0, -0.6, 0.3, 0, TAU2);
+        g.arc(0, -0.6, 0.3, 0, TAU4);
         g.fill();
       }
     }
@@ -2330,17 +5520,17 @@ void main() {
     const bob = Math.sin(t * 3 + this.x) * 0.08;
     g.fillStyle = "rgba(0,0,0,0.25)";
     g.beginPath();
-    g.ellipse(0, 0, 0.3, 0.1, 0, 0, TAU2);
+    g.ellipse(0, 0, 0.3, 0.1, 0, 0, TAU4);
     g.fill();
     if (this.id && this.id.startsWith("fruit_")) {
       const glow = 0.4 + 0.3 * Math.sin(t * 4);
       g.fillStyle = `rgba(255,171,145,${glow * 0.5})`;
       g.beginPath();
-      g.arc(0, -0.5 + bob, 0.55, 0, TAU2);
+      g.arc(0, -0.5 + bob, 0.55, 0, TAU4);
       g.fill();
       g.fillStyle = "#8e44ad";
       g.beginPath();
-      g.arc(0, -0.45 + bob, 0.28, 0, TAU2);
+      g.arc(0, -0.45 + bob, 0.28, 0, TAU4);
       g.fill();
       g.strokeStyle = "#e1bee7";
       g.lineWidth = 0.04;
@@ -2351,18 +5541,63 @@ void main() {
       }
       g.fillStyle = "#2e7d32";
       g.beginPath();
-      g.ellipse(0.1, -0.78 + bob, 0.12, 0.05, -0.5, 0, TAU2);
+      g.ellipse(0.1, -0.78 + bob, 0.12, 0.05, -0.5, 0, TAU4);
       g.fill();
     } else {
       g.fillStyle = "#ffd54f";
       g.beginPath();
-      g.arc(0, -0.3 + bob, 0.2, 0, TAU2);
+      g.arc(0, -0.3 + bob, 0.2, 0, TAU4);
       g.fill();
       g.fillStyle = "#fff8e1";
       g.beginPath();
-      g.arc(-0.06, -0.36 + bob, 0.06, 0, TAU2);
+      g.arc(-0.06, -0.36 + bob, 0.06, 0, TAU4);
       g.fill();
     }
+  }
+
+  // src/world/fruitTrees.js
+  var BEARS = {
+    palm: { chance: 0.75, fruit: ["coconut", "coconut", "coconut", "banana"] },
+    oak: { chance: 0.3, fruit: ["apple", "apple", "cherry"] },
+    autumn: { chance: 0.35, fruit: ["apple"] },
+    jungle: { chance: 0.4, fruit: ["banana", "mango", "banana"] },
+    sakura: { chance: 0.3, fruit: ["cherry"] },
+    blossom: { chance: 0.3, fruit: ["cherry"] }
+  };
+  var FRUIT_COLORS = { coconut: ["#7a4a20", "#5b3514"], apple: ["#e53935", "#8e1b16"], banana: ["#ffd54f", "#b8860b"], mango: ["#ffb300", "#e65100"], cherry: ["#c2185b", "#6d0f33"] };
+  var REGROW_DAYS = 2;
+  function hash2(x, y) {
+    let h2 = Math.imul(Math.round(x * 100) | 0, 73856093) ^ Math.imul(Math.round(y * 100) | 0, 19349663);
+    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
+    return (h2 ^ h2 >>> 16) >>> 0;
+  }
+  function fruitOf(o) {
+    if (o._fruit !== void 0) return o._fruit;
+    let f = null;
+    const b = o.kind === "tree" ? BEARS[o.sub] : null;
+    if (b) {
+      const hv = hash2(o.x, o.y);
+      if (hv % 1e3 / 1e3 < b.chance) f = b.fruit[(hv >>> 10) % b.fruit.length];
+    }
+    o._fruit = f;
+    return f;
+  }
+  var fruitKey = (worldId, o) => `${worldId || "s"}:${Math.round(o.x * 10)},${Math.round(o.y * 10)}`;
+  var PICKED = /* @__PURE__ */ new Map();
+  function isPicked(worldId, o, day) {
+    const d = PICKED.get(fruitKey(worldId, o));
+    return d !== void 0 && day < d;
+  }
+  function fruitSpots(o) {
+    const v = o.v || 0;
+    if (o.sub === "palm") {
+      const r1 = (v * 9301 + 49297) % 233280 / 233280;
+      const lean = (r1 - 0.5) * 0.9;
+      return [[lean - 0.02, -2.38, 0.15], [lean + 0.14, -2.34, 0.13], [lean - 0.16, -2.32, 0.12]];
+    }
+    const tall = o.sub === "jungle" ? 1.3 : 1;
+    const cy = -1.6 * tall;
+    return [[-0.42, cy + 0.15, 0.09], [0.36, cy - 0.12, 0.09], [0.05, cy + 0.38, 0.09], [-0.12, cy - 0.35, 0.08], [0.5, cy + 0.3, 0.08]];
   }
 
   // src/render/renderer.js
@@ -2485,6 +5720,11 @@ void main() {
               g.transform(1, 0, sway, 1, 0, 0);
             }
             drawCached(g, s, 0, 0, sc);
+            const fr = !lod && fruitOf(o);
+            if (fr && !isPicked(world.id, o, env.day)) {
+              g.scale(sc, sc);
+              drawTreeFruit(g, o, fr, fruitSpots(o), FRUIT_COLORS[fr]);
+            }
             break;
           }
           case "rock":
@@ -2779,7 +6019,7 @@ void main() {
     h2 ^= h2 >>> 16;
     return h2 >>> 0;
   }
-  var hash2 = (x, y, seed = 0) => hash2i(x, y, seed) / 4294967296;
+  var hash22 = (x, y, seed = 0) => hash2i(x, y, seed) / 4294967296;
   var RNG = class _RNG {
     constructor(seed = 1) {
       this.s = (typeof seed === "string" ? hashString(seed) : seed >>> 0) || 2654435769;
@@ -3247,9 +6487,9 @@ void main() {
         return L2[li(i, jj)] === 1 || world.isOverlay(x, y);
       }
     };
-    const P = (f) => ({ x: cx + rel(f.dx ?? 0, hw), y: cy + rel(f.dy ?? 0, hh) });
+    const P2 = (f) => ({ x: cx + rel(f.dx ?? 0, hw), y: cy + rel(f.dy ?? 0, hh) });
     for (const f of def.mountains || []) {
-      const c = P(f);
+      const c = P2(f);
       const r = rel(f.r ?? 0.3, Math.max(hw, hh));
       const peak = f.h ?? 1;
       stampRadial(world, c.x, c.y, r * 1.3, (x, y, dn) => {
@@ -3267,7 +6507,7 @@ void main() {
       rec.landmarks.push({ type: "mountain", name: f.name, x: c.x, y: c.y, r });
     }
     for (const f of def.areas || []) {
-      const c = P(f);
+      const c = P2(f);
       const rx = rel(f.rx ?? f.r ?? 0.3, hw), ry = rel(f.ry ?? f.r ?? 0.3, hh);
       stampEllipse(world, c.x, c.y, rx, ry, noise, f.rough ?? 0.35, (x, y) => {
         const t = world.type(x, y);
@@ -3278,7 +6518,7 @@ void main() {
       if (f.name) rec.landmarks.push({ type: "area", name: f.name, x: c.x, y: c.y, r: Math.max(rx, ry) });
     }
     for (const f of def.lakes || []) {
-      const c = P(f);
+      const c = P2(f);
       const rx = rel(f.rx ?? f.r ?? 0.1, hw), ry = rel(f.ry ?? f.r ?? 0.1, hh);
       stampEllipse(world, c.x, c.y, rx, ry, noise, 0.3, (x, y) => {
         if (!world.isLiquid(x, y)) world.setTile(x, y, f.tile ?? T.POND, 0);
@@ -3290,7 +6530,7 @@ void main() {
     }
     for (const p of def.paint || []) paintOp(world, p, cx, cy, hw, hh, noise);
     for (const town of def.towns || []) {
-      const c = P(town);
+      const c = P2(town);
       const t = generateTown(world, {
         ...town,
         x: c.x,
@@ -3310,7 +6550,7 @@ void main() {
         const town = rec.towns.find((t) => t.id === dd.near || t.name === dd.near);
         if (town) from = { x: town.x, y: town.y };
       }
-      if (!from) from = P(dd);
+      if (!from) from = P2(dd);
       const dock = buildDock(world, from, dd.dir, dd.len ?? 8, rec, dd);
       if (dock) {
         const nearTown = dd.near && rec.towns.find((t) => t.id === dd.near || t.name === dd.near);
@@ -3330,7 +6570,7 @@ void main() {
       }
     }
     for (const lm of def.landmarks || []) {
-      const c = P(lm);
+      const c = P2(lm);
       const o = { ...lm, x: c.x, y: c.y, kind: lm.kind || lm.type };
       delete o.dx;
       delete o.dy;
@@ -3356,7 +6596,7 @@ void main() {
       if (lm.spot) rec.spots[lm.spot] = { x: c.x, y: c.y + 1.2 };
     }
     for (const s of def.spots || []) {
-      const c = P(s);
+      const c = P2(s);
       rec.spots[s.id] = { x: c.x, y: c.y, ...s, dx: void 0, dy: void 0 };
     }
     const treeKinds = def.treeKind ? [def.treeKind] : def.trees || preset.trees;
@@ -3703,10 +6943,10 @@ void main() {
       }
     }
     for (let k = 0; k < 900; k++) {
-      const x = Math.floor(hash2(k, 1, 77) * W);
+      const x = Math.floor(hash22(k, 1, 77) * W);
       const north = k % 2 === 0;
-      const y = north ? POLAR + 6 + Math.floor(hash2(k, 2, 77) * 60) : H - POLAR - 6 - Math.floor(hash2(k, 2, 77) * 60);
-      const r = 1.5 + hash2(k, 3, 77) * 4;
+      const y = north ? POLAR + 6 + Math.floor(hash22(k, 2, 77) * 60) : H - POLAR - 6 - Math.floor(hash22(k, 2, 77) * 60);
+      const r = 1.5 + hash22(k, 3, 77) * 4;
       for (let j = -Math.ceil(r); j <= Math.ceil(r); j++) {
         for (let i = -Math.ceil(r); i <= Math.ceil(r); i++) {
           if (i * i + j * j > r * r) continue;
@@ -3752,8 +6992,8 @@ void main() {
       }
     }
     const summit = { x: M.x, y: M.y };
-    for (const key of Object.keys(M.mouths)) {
-      const m = M.mouths[key];
+    for (const key2 of Object.keys(M.mouths)) {
+      const m = M.mouths[key2];
       const sx = m.x + Math.sign(m.x - M.x) * 20, sy = m.y + Math.sign(m.y - M.y) * 20;
       carvePath(world, [[sx, sy], [m.x, m.y], [summit.x + Math.sign(m.x - M.x) * 6, summit.y + Math.sign(m.y - M.y) * 6]], 7, T.SEA, noise, 0.5, { elev: 0 });
     }
@@ -3953,7 +7193,7 @@ void main() {
         f[i] = boundary ? 0.5 : INF;
       }
     }
-    const D2 = Math.SQRT2;
+    const D3 = Math.SQRT2;
     for (let y = 0; y < h2; y++) {
       for (let x = 0; x < w; x++) {
         const i = y * w + x;
@@ -3961,8 +7201,8 @@ void main() {
         if (x > 0) v = Math.min(v, f[i - 1] + 1);
         if (y > 0) {
           v = Math.min(v, f[i - w] + 1);
-          if (x > 0) v = Math.min(v, f[i - w - 1] + D2);
-          if (x < w - 1) v = Math.min(v, f[i - w + 1] + D2);
+          if (x > 0) v = Math.min(v, f[i - w - 1] + D3);
+          if (x < w - 1) v = Math.min(v, f[i - w + 1] + D3);
         }
         f[i] = v;
       }
@@ -3974,8 +7214,8 @@ void main() {
         if (x < w - 1) v = Math.min(v, f[i + 1] + 1);
         if (y < h2 - 1) {
           v = Math.min(v, f[i + w] + 1);
-          if (x < w - 1) v = Math.min(v, f[i + w + 1] + D2);
-          if (x > 0) v = Math.min(v, f[i + w - 1] + D2);
+          if (x < w - 1) v = Math.min(v, f[i + w + 1] + D3);
+          if (x > 0) v = Math.min(v, f[i + w - 1] + D3);
         }
         f[i] = v;
       }
@@ -4012,7 +7252,7 @@ void main() {
   }
   function buildMapImage(world) {
     const mw = world.width >> 1, mh = world.height >> 1;
-    const img = new Uint8Array(mw * mh * 4);
+    const img2 = new Uint8Array(mw * mh * 4);
     const d = world.data;
     const seaCol = {
       [REGION.EAST_BLUE]: "#9fd0e6",
@@ -4045,13 +7285,13 @@ void main() {
           c = landRGB[t] || [200, 190, 160];
         }
         const o = (y * mw + x) * 4;
-        img[o] = c[0];
-        img[o + 1] = c[1];
-        img[o + 2] = c[2];
-        img[o + 3] = 255;
+        img2[o] = c[0];
+        img2[o + 1] = c[1];
+        img2[o + 2] = c[2];
+        img2[o + 3] = 255;
       }
     }
-    return { data: img, w: mw, h: mh };
+    return { data: img2, w: mw, h: mh };
   }
 
   // src/data/islands/eastBlue.js
@@ -10467,323 +13707,6 @@ void main() {
     }
   };
 
-  // src/game/entity.js
-  var nextId = 1;
-  var Entity = class {
-    constructor(o = {}) {
-      this.id = nextId++;
-      this.x = o.x ?? 0;
-      this.y = o.y ?? 0;
-      this.vx = 0;
-      this.vy = 0;
-      this.r = o.r ?? 0.3;
-      this.alive = true;
-      this.kind = o.kind || "entity";
-      this.faction = o.faction || "neutral";
-      this.world = o.world || null;
-    }
-    update() {
-    }
-    remove() {
-      this.alive = false;
-    }
-  };
-  var HOSTILITY = {
-    player: /* @__PURE__ */ new Set(["pirate", "bandit", "beast", "seaking", "baroque", "cp", "marine_hostile", "zombie", "rival"]),
-    marine: /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "revolutionary"]),
-    pirate: /* @__PURE__ */ new Set(["player", "marine", "civilian_target", "rival"]),
-    bandit: /* @__PURE__ */ new Set(["player", "civilian_target"]),
-    beast: /* @__PURE__ */ new Set(["player", "civilian", "marine", "pirate", "bandit"]),
-    seaking: /* @__PURE__ */ new Set(["player", "marine", "pirate"]),
-    baroque: /* @__PURE__ */ new Set(["player", "marine"]),
-    cp: /* @__PURE__ */ new Set(["player"]),
-    zombie: /* @__PURE__ */ new Set(["player", "marine"]),
-    rival: /* @__PURE__ */ new Set(["player", "pirate"]),
-    civilian: /* @__PURE__ */ new Set(),
-    neutral: /* @__PURE__ */ new Set()
-  };
-  function hostile(a, b) {
-    if (!a || !b || a === b) return false;
-    if (a.faction === "player" && b.aggroPlayer) return true;
-    if (b.faction === "player" && a.aggroPlayer) return true;
-    const fa = HOSTILITY[a.faction], fb = HOSTILITY[b.faction];
-    return fa && fa.has(b.faction) || fb && fb.has(a.faction) || false;
-  }
-
-  // src/game/combat.js
-  var ELEMENT_COLORS = {
-    physical: "#ffffff",
-    fire: "#ff7b39",
-    ice: "#9be7ff",
-    lightning: "#fff176",
-    sand: "#e1c16e",
-    smoke: "#cfd8dc",
-    light: "#fff9c4",
-    magma: "#ff5722",
-    dark: "#7e57c2",
-    quake: "#e0f7fa",
-    poison: "#aed581",
-    water: "#4fc3f7",
-    haki: "#9c27b0",
-    slash: "#ecf0f1",
-    explosion: "#ffab40",
-    gas: "#b2dfdb",
-    string: "#f8bbd0",
-    wax: "#fff8e1",
-    snow: "#ffffff",
-    swamp: "#6d4c41"
-  };
-  var Combat = class {
-    constructor(game) {
-      this.game = game;
-      this.hitboxes = [];
-      this.projectiles = [];
-    }
-    /** Register a hitbox that lives for `duration` seconds and hits each target once. */
-    hitbox(h2) {
-      h2.t = 0;
-      h2.duration = h2.duration ?? 0.1;
-      h2.hit = h2.hit || /* @__PURE__ */ new Set();
-      h2.interval = h2.interval || 0;
-      h2.lastHit = /* @__PURE__ */ new Map();
-      this.hitboxes.push(h2);
-      return h2;
-    }
-    projectile(p) {
-      p.t = 0;
-      p.hit = /* @__PURE__ */ new Set();
-      p.alive = true;
-      p.traveled = 0;
-      this.projectiles.push(p);
-      return p;
-    }
-    update(dt) {
-      const game = this.game;
-      const actors = game.actorsNear(game.player ? game.player.x : 0, game.player ? game.player.y : 0, 60);
-      for (let i = this.hitboxes.length - 1; i >= 0; i--) {
-        const h2 = this.hitboxes[i];
-        h2.t += dt;
-        if (h2.follow && h2.owner && h2.owner.alive) {
-          h2.x = h2.owner.x + (h2.offX || 0);
-          h2.y = h2.owner.y + (h2.offY || 0);
-          if (h2.followAngle) h2.angle = h2.owner.facing;
-        }
-        for (const a of actors) {
-          if (!this.canHit(h2.owner, a, h2)) continue;
-          if (!this.overlaps(h2, a)) continue;
-          if (h2.interval) {
-            const last = h2.lastHit.get(a.id);
-            if (last !== void 0 && h2.t - last < h2.interval) continue;
-            h2.lastHit.set(a.id, h2.t);
-          } else {
-            if (h2.hit.has(a.id)) continue;
-            h2.hit.add(a.id);
-          }
-          this.applyHit(h2.owner, a, h2);
-        }
-        if (h2.hitShips) this.hitShips(h2);
-        if (h2.t >= h2.duration) this.hitboxes.splice(i, 1);
-      }
-      for (let i = this.projectiles.length - 1; i >= 0; i--) {
-        const p = this.projectiles[i];
-        p.t += dt;
-        if (p.homing && p.target && p.target.alive) {
-          const want = Math.atan2(p.target.y - p.y, game.world.dx(p.x, p.target.x));
-          const cur = Math.atan2(p.vy, p.vx);
-          const na = cur + clamp(angleDiff(cur, want), -p.homing * dt, p.homing * dt);
-          const sp = Math.hypot(p.vx, p.vy);
-          p.vx = Math.cos(na) * sp;
-          p.vy = Math.sin(na) * sp;
-        }
-        const sx = p.vx * dt, sy = p.vy * dt;
-        p.x = game.world.wx(p.x + sx);
-        p.y += sy;
-        p.traveled += Math.hypot(sx, sy);
-        if (p.trail) p.trail(p, game);
-        let dead = p.traveled >= p.range || p.t > (p.life ?? 6);
-        if (!p.passWalls && !dead) {
-          const t = game.world.type(p.x, p.y);
-          if (game.world.isBlocked(p.x, p.y) || t === 25 || t === 26 || t === 27 || t === 41 || t === 50) dead = true;
-        }
-        if (!dead) {
-          for (const a of actors) {
-            if (p.hit.has(a.id) || !this.canHit(p.owner, a, p)) continue;
-            if (game.world.dist2(p.x, p.y, a.x, a.y - 0.5) > (p.radius + a.r + 0.2) ** 2) continue;
-            p.hit.add(a.id);
-            p.angle = Math.atan2(p.vy, p.vx);
-            this.applyHit(p.owner, a, p);
-            if (!p.pierce) {
-              dead = true;
-              break;
-            }
-          }
-          if (p.hitShips && !dead) {
-            for (const s of game.ships) {
-              if (s === p.ownerShip || s.sunk) continue;
-              if (game.world.dist2(p.x, p.y, s.x, s.y) < (s.def.length * 0.45) ** 2) {
-                s.damage(p.shipDamage ?? p.damage, p.owner, p);
-                dead = true;
-                break;
-              }
-            }
-          }
-        }
-        if (dead) {
-          p.alive = false;
-          if (p.onEnd) p.onEnd(p, game);
-          this.projectiles.splice(i, 1);
-        }
-      }
-    }
-    canHit(owner, target, h2) {
-      if (!target.alive || target === owner) return false;
-      if (target.state === "dead") return false;
-      if (target.state === "knocked" && !h2.hitsDowned) return false;
-      if (h2.friendly) return false;
-      if (owner && owner.faction === "player" && target.faction === "player") return false;
-      if (!owner) return true;
-      if (target.invulnerable) return false;
-      return hostile(owner, target) || owner.isPlayer && target.provoked || target.isPlayer && owner.provoked || h2.hitsAll;
-    }
-    overlaps(h2, a) {
-      const w = this.game.world;
-      const dx = w.dx(h2.x, a.x), dy = a.y - 0.4 - h2.y;
-      const d = Math.hypot(dx, dy);
-      const rr = a.r + 0.15;
-      if (h2.shape === "circle") return d <= h2.range + rr;
-      if (h2.shape === "arc") {
-        if (d > h2.range + rr) return false;
-        if (d < rr + 0.4) return true;
-        return Math.abs(angleDiff(h2.angle, Math.atan2(dy, dx))) <= h2.arc / 2 + rr / Math.max(d, 0.1);
-      }
-      if (h2.shape === "line") {
-        const ca = Math.cos(h2.angle), sa = Math.sin(h2.angle);
-        const along = dx * ca + dy * sa;
-        const perp = Math.abs(-dx * sa + dy * ca);
-        return along >= -rr && along <= h2.range + rr && perp <= h2.width / 2 + rr;
-      }
-      if (h2.shape === "ring") return Math.abs(d - h2.range) <= (h2.width || 1) / 2 + rr;
-      return false;
-    }
-    hitShips(h2) {
-      for (const s of this.game.ships) {
-        if (s.sunk || s === h2.ownerShip) continue;
-        if (h2.hitShipSet && h2.hitShipSet.has(s.id)) continue;
-        const d = this.game.world.distance(h2.x, h2.y, s.x, s.y);
-        if (d < h2.range + s.def.length * 0.4) {
-          h2.hitShipSet = h2.hitShipSet || /* @__PURE__ */ new Set();
-          h2.hitShipSet.add(s.id);
-          s.damage(h2.shipDamage ?? h2.damage * 0.5, h2.owner, h2);
-        }
-      }
-    }
-    /** Resolve one hit. `h` carries damage, element, knockback, stun, status. */
-    applyHit(att, tgt, h2) {
-      const game = this.game;
-      const fx = game.fx;
-      const el = h2.element || "physical";
-      const isPlayerInvolved = att && att.isPlayer || tgt.isPlayer;
-      const ang = h2.angle ?? (att ? Math.atan2(tgt.y - att.y, game.world.dx(att.x, tgt.x)) : 0);
-      const kbAng = h2.shape === "circle" || h2.radial ? Math.atan2(tgt.y - h2.y, game.world.dx(h2.x, tgt.x)) : ang;
-      if (tgt.iframes > 0) {
-        if (tgt.isPlayer || att?.isPlayer) fx.text(tgt.x, tgt.y - 1.2, "DODGE", "#b2ebf2", 0.32);
-        if (tgt.isPlayer) game.emit("playerEvaded", att, h2);
-        return false;
-      }
-      if (tgt.observation && tgt.hakiLevel("observation") > 0 && !h2.unblockable) {
-        const lvl = tgt.hakiLevel("observation");
-        const chance = 0.12 + lvl * 35e-4 - (att?.observation ? 0.15 : 0);
-        if (Math.random() < chance && tgt.haki >= 4) {
-          tgt.haki -= 4;
-          tgt.iframes = 0.2;
-          fx.text(tgt.x, tgt.y - 1.2, "FORESIGHT", "#e1bee7", 0.3);
-          fx.burst(tgt.x, tgt.y - 0.5, 6, { color: "#ce93d8", speed: 3, g: 0, life: 0.3 });
-          return false;
-        }
-      }
-      const armed = att && (att.armament || h2.haki || h2.seastone);
-      const lg = tgt.fruitDef && tgt.fruitDef.logia ? tgt.fruitDef : tgt.fakeLogia || null;
-      if (lg && !tgt.seastoned && (lg === tgt.fakeLogia ? tgt.state !== "knocked" && !tgt.inWater && !tgt.status.freeze : tgt.intangibleOK())) {
-        const weakness = lg.weakTo || [];
-        const counters = weakness.includes(el) || el === "water" && tgt.status.wet || att && att.status.wet && weakness.includes("water");
-        if (!armed && !counters && !h2.trueDamage) {
-          fx.burst(tgt.x, tgt.y - 0.7, 8, { color: lg.color || "#fff", speed: 3, g: 0, life: 0.35, kind: "smoke", size: 0.2 });
-          if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, "INTANGIBLE", lg.color || "#fff", 0.3);
-          if (att && att.isPlayer) game.hint("logia", "Logia users are intangible. Use Armament Haki, Seastone, or their elemental weakness to hit them.");
-          return false;
-        }
-      }
-      let dmg = h2.damage;
-      if (tgt.fruitDef && tgt.fruitDef.rubber && !armed) {
-        if (el === "lightning") {
-          dmg = 0;
-          if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.2, "RUBBER!", "#fff176", 0.34);
-        } else if (!h2.slashing && el === "physical") dmg *= 0.35;
-      }
-      if (tgt.fruitDef && tgt.fruitDef.resist && tgt.fruitDef.resist.includes(el)) dmg *= 0.25;
-      if (tgt.fruitDef && tgt.fruitDef.weakTo && tgt.fruitDef.weakTo.includes(el)) dmg *= 1.5;
-      if (tgt.race === "lunarian" && tgt.flameLit) dmg *= 0.55;
-      if (tgt.armament) dmg *= 1 - Math.min(0.35, 0.12 + tgt.hakiLevel("armament") * 25e-4);
-      dmg *= 1 - (tgt.d ? tgt.d.def : 0);
-      if (tgt.defMul) dmg *= tgt.defMul;
-      let blocked = false;
-      if (tgt.blocking && !h2.unblockable) {
-        const facingDiff = Math.abs(angleDiff(tgt.facing, ang + Math.PI));
-        if (facingDiff < 1.9) {
-          if (tgt.blockTime < 0.2 && att && !h2.projectileOnly) {
-            att.stagger(0.9);
-            tgt.stamina = Math.min(tgt.d.maxStamina, tgt.stamina + 15);
-            if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + 6);
-            fx.burst(tgt.x + Math.cos(ang + Math.PI) * 0.5, tgt.y - 0.7, 14, { color: ["#fff", "#fff59d"], speed: 6, g: 0, life: 0.3, kind: "line" });
-            fx.ring(tgt.x, tgt.y, 0.3, 1.6, "#fff59d", 0.3, 0.12);
-            fx.text(tgt.x, tgt.y - 1.4, "PARRY!", "#fff59d", 0.44);
-            fx.stop(0.12);
-            game.audio?.sfx("parry");
-            if (tgt.isPlayer) game.onPlayerParry(att);
-            return false;
-          }
-          blocked = true;
-          if (tgt.isPlayer) game.emit("playerBlocked", att, h2);
-          dmg *= h2.guardBreak ? 0.6 : 0.18;
-          tgt.stamina -= (h2.guardDmg ?? 10) + h2.damage * 0.25;
-          if (tgt.stamina <= 0) {
-            tgt.stamina = 0;
-            tgt.blocking = false;
-            tgt.stagger(1.1);
-            fx.text(tgt.x, tgt.y - 1.4, "GUARD BREAK", "#ff7675", 0.4);
-            game.audio?.sfx("guardbreak");
-          } else {
-            game.audio?.sfx("block");
-          }
-        }
-      }
-      dmg = Math.max(0, dmg);
-      const crit = !blocked && h2.critChance && Math.random() < h2.critChance;
-      if (crit) dmg *= 1.6;
-      const final = Math.round(dmg);
-      tgt.takeDamage(final, att, h2, game);
-      if (!blocked) {
-        const kb = (h2.knockback ?? 2) * (tgt.kbResist ?? 1);
-        if (kb > 0) tgt.knock(Math.cos(kbAng) * kb, Math.sin(kbAng) * kb, h2.forceWater);
-        if (h2.stun && !(tgt.poise && !h2.guardBreak && h2.stun < 0.6)) tgt.stagger(h2.stun * (tgt.stunResist ?? 1));
-        if (h2.status) for (const [k, v] of Object.entries(h2.status)) tgt.addStatus(k, v, att);
-        if (h2.onHit) h2.onHit(tgt, att, game, h2);
-      }
-      const col = ELEMENT_COLORS[el] || "#fff";
-      const hx = tgt.x, hy = tgt.y - 0.7;
-      fx.burst(hx, hy, blocked ? 5 : 8 + Math.min(12, final / 8), { color: blocked ? "#b0bec5" : [col, "#ffffff"], speed: 5, g: 4, life: 0.3, kind: "line", size: 0.12 });
-      if (final > 0) fx.text(hx, tgt.y - 1.2, String(final), blocked ? "#b0bec5" : crit ? "#ffeb3b" : tgt.isPlayer ? "#ff6b6b" : "#ffffff", crit ? 0.55 : 0.45, { crit });
-      if (isPlayerInvolved) {
-        const heavy = h2.heavy || final > (tgt.d ? tgt.d.maxHp * 0.12 : 50);
-        fx.stop(heavy ? 0.09 : 0.04);
-        fx.shake(heavy ? 0.35 : 0.12);
-        if (h2.impactFrame) fx.impactFrame(0.07);
-      }
-      game.audio?.sfx(blocked ? "block" : h2.sfxHit || (el === "physical" ? h2.slashing ? "slash_hit" : "punch" : el));
-      return true;
-    }
-  };
-
   // src/game/env.js
   var DAY_SECONDS = 960;
   var Env = class {
@@ -11101,7 +14024,7 @@ void main() {
   };
 
   // src/render/ship.js
-  var TAU3 = Math.PI * 2;
+  var TAU5 = Math.PI * 2;
   function drawJollyRoger(g, jr = {}, size = 1, bg = "#111") {
     g.save();
     g.scale(size, size);
@@ -11119,8 +14042,8 @@ void main() {
       g.stroke();
       for (const [x, y] of [[-0.42, -0.3], [0.42, 0.35], [0.42, -0.3], [-0.42, 0.35]]) {
         g.beginPath();
-        g.arc(x + (x < 0 ? -0.03 : 0.03), y - 0.04, 0.06, 0, TAU3);
-        g.arc(x + (x < 0 ? 0.03 : -0.03), y + 0.04, 0.06, 0, TAU3);
+        g.arc(x + (x < 0 ? -0.03 : 0.03), y - 0.04, 0.06, 0, TAU5);
+        g.arc(x + (x < 0 ? 0.03 : -0.03), y + 0.04, 0.06, 0, TAU5);
         g.fillStyle = fg;
         g.fill();
       }
@@ -11147,30 +14070,30 @@ void main() {
       g.arc(0, 0.15, 0.35, Math.PI * 0.15, Math.PI * 0.85);
       g.stroke();
     }
-    const skull = jr.skull || "classic";
+    const skull2 = jr.skull || "classic";
     g.fillStyle = fg;
     g.beginPath();
-    g.ellipse(0, -0.05, 0.3, 0.27, 0, 0, TAU3);
+    g.ellipse(0, -0.05, 0.3, 0.27, 0, 0, TAU5);
     g.fill();
     g.fillRect(-0.17, 0.1, 0.34, 0.16);
     g.fillStyle = bg;
-    const eye = skull === "grin" ? 0.07 : 0.085;
+    const eye = skull2 === "grin" ? 0.07 : 0.085;
     g.beginPath();
-    g.ellipse(-0.11, -0.05, eye, eye * 1.15, 0, 0, TAU3);
-    g.ellipse(0.11, -0.05, eye, eye * 1.15, 0, 0, TAU3);
+    g.ellipse(-0.11, -0.05, eye, eye * 1.15, 0, 0, TAU5);
+    g.ellipse(0.11, -0.05, eye, eye * 1.15, 0, 0, TAU5);
     g.fill();
     g.beginPath();
     g.moveTo(0, 0.04);
     g.lineTo(-0.035, 0.1);
     g.lineTo(0.035, 0.1);
     g.fill();
-    if (skull === "grin") {
+    if (skull2 === "grin") {
       g.fillRect(-0.12, 0.17, 0.24, 0.03);
       for (let k = -2; k <= 2; k++) g.fillRect(k * 0.05 - 5e-3, 0.14, 0.01, 0.1);
     } else {
       for (let k = -1; k <= 1; k++) g.fillRect(k * 0.07 - 0.01, 0.16, 0.02, 0.1);
     }
-    if (skull === "eyepatch") {
+    if (skull2 === "eyepatch") {
       g.strokeStyle = bg;
       g.lineWidth = 0.03;
       g.beginPath();
@@ -11182,7 +14105,7 @@ void main() {
     if (acc === "strawhat") {
       g.fillStyle = "#f2d16b";
       g.beginPath();
-      g.ellipse(0, -0.24, 0.42, 0.1, 0, 0, TAU3);
+      g.ellipse(0, -0.24, 0.42, 0.1, 0, 0, TAU5);
       g.fill();
       g.beginPath();
       g.ellipse(0, -0.3, 0.23, 0.15, 0, Math.PI, 0);
@@ -11239,9 +14162,32 @@ void main() {
       g.strokeStyle = "#f1c40f";
       g.lineWidth = 0.04;
       g.beginPath();
-      g.ellipse(0, -0.42, 0.25, 0.07, 0, 0, TAU3);
+      g.ellipse(0, -0.42, 0.25, 0.07, 0, 0, TAU5);
       g.stroke();
     }
+    g.restore();
+  }
+  function drawMarineEmblem(g, size = 1) {
+    g.save();
+    g.scale(size, size);
+    g.strokeStyle = "#2874a6";
+    g.fillStyle = "#2874a6";
+    g.lineCap = "round";
+    g.lineJoin = "round";
+    g.lineWidth = 0.09;
+    g.beginPath();
+    g.moveTo(-0.42, -0.05);
+    g.quadraticCurveTo(-0.22, -0.3, 0, -0.08);
+    g.quadraticCurveTo(0.22, -0.3, 0.42, -0.05);
+    g.stroke();
+    g.beginPath();
+    g.ellipse(0, 0.02, 0.08, 0.12, 0, 0, TAU5);
+    g.fill();
+    g.lineWidth = 0.06;
+    g.beginPath();
+    g.moveTo(-0.3, 0.26);
+    g.lineTo(0.3, 0.26);
+    g.stroke();
     g.restore();
   }
   function drawShip(g, def, st) {
@@ -11253,7 +14199,7 @@ void main() {
     g.scale(1, 1 + bobRoll);
     g.fillStyle = "rgba(0,20,40,0.28)";
     g.beginPath();
-    g.ellipse(0.1, 0.12, L2 * 0.55, B * 0.62, 0, 0, TAU3);
+    g.ellipse(0.1, 0.12, L2 * 0.55, B * 0.62, 0, 0, TAU5);
     g.fill();
     const hullCol = def.color || "#8d5b33";
     const hullPath = () => {
@@ -11300,25 +14246,25 @@ void main() {
     if (def.figurehead === "ram") {
       g.fillStyle = "#f5f6fa";
       g.beginPath();
-      g.arc(L2 * 0.52, 0, 0.26, 0, TAU3);
+      g.arc(L2 * 0.52, 0, 0.26, 0, TAU5);
       g.fill();
       g.strokeStyle = "#d4a373";
       g.lineWidth = 0.08;
       g.beginPath();
-      g.arc(L2 * 0.5, -0.12, 0.12, 0, TAU3);
-      g.arc(L2 * 0.5, 0.12, 0.12, 0, TAU3);
+      g.arc(L2 * 0.5, -0.12, 0.12, 0, TAU5);
+      g.arc(L2 * 0.5, 0.12, 0.12, 0, TAU5);
       g.stroke();
     } else if (def.figurehead === "lion") {
       g.fillStyle = "#f39c12";
       for (let k = 0; k < 10; k++) {
-        const a = k / 10 * TAU3;
+        const a = k / 10 * TAU5;
         g.beginPath();
-        g.arc(L2 * 0.52 + Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.14, 0, TAU3);
+        g.arc(L2 * 0.52 + Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.14, 0, TAU5);
         g.fill();
       }
       g.fillStyle = "#fdcb6e";
       g.beginPath();
-      g.arc(L2 * 0.52, 0, 0.26, 0, TAU3);
+      g.arc(L2 * 0.52, 0, 0.26, 0, TAU5);
       g.fill();
     } else if (def.figurehead === "seagull") {
       g.fillStyle = "#f5f6fa";
@@ -11342,7 +14288,8 @@ void main() {
       g.fillStyle = "#5d4037";
       g.fillRect(-0.06, -sw / 2 - 0.1, 0.12, sw + 0.2);
       if (set > 0.05) {
-        const sc = def.sail === "marine" ? "#f5f6fa" : st.sailColor || "#f3ecd8";
+        const marine2 = def.sail === "marine" || st.marine;
+        const sc = marine2 ? "#f5f6fa" : st.sailColor || "#f3ecd8";
         g.fillStyle = sc;
         g.strokeStyle = "rgba(60,40,20,0.7)";
         g.lineWidth = 0.035;
@@ -11359,13 +14306,8 @@ void main() {
           g.translate(billow * 0.9, 0);
           g.rotate(-Math.PI / 2);
           g.scale(0.9, 0.35 + billow * 0.5);
-          if (def.sail === "marine") {
-            g.fillStyle = "#2874a6";
-            g.font = "bold 0.5px sans-serif";
-            g.textAlign = "center";
-            g.textBaseline = "middle";
-            g.fillText("MARINE", 0, 0);
-          } else if (st.jr) drawJollyRoger(g, st.jr, 0.9, sc);
+          if (marine2) drawMarineEmblem(g, 0.9);
+          else if (st.jr) drawJollyRoger(g, st.jr, 0.9, sc);
           g.restore();
         }
       } else {
@@ -11375,16 +14317,17 @@ void main() {
       g.restore();
       g.fillStyle = "#4e342e";
       g.beginPath();
-      g.arc(mx, 0, 0.12, 0, TAU3);
+      g.arc(mx, 0, 0.12, 0, TAU5);
       g.fill();
     }
-    {
+    const marineFlag = def.sail === "marine" || st.marine;
+    if (!st.noFlag || marineFlag) {
       const mx = masts === 1 ? 0.05 * L2 : L2 * 0.28 - (masts > 1 ? L2 * 0.56 / (masts - 1) : 0) * Math.min(1, masts - 1) * 0.5;
       g.save();
       g.translate(mx, 0);
       g.rotate(rel2 + Math.PI);
       const wave = Math.sin(t * 7) * 0.08;
-      g.fillStyle = def.sail === "marine" ? "#f5f6fa" : "#111";
+      g.fillStyle = marineFlag ? "#f5f6fa" : "#111";
       g.beginPath();
       g.moveTo(0, -0.02);
       g.quadraticCurveTo(0.35, wave, 0.7, -0.05);
@@ -11392,13 +14335,12 @@ void main() {
       g.quadraticCurveTo(0.35, 0.42 - wave, 0, 0.42);
       g.closePath();
       g.fill();
-      if (st.jr && def.sail !== "marine") {
-        g.save();
-        g.translate(0.35, 0.2);
-        g.rotate(Math.PI / 2);
-        drawJollyRoger(g, st.jr, 0.32, "#111");
-        g.restore();
-      }
+      g.save();
+      g.translate(0.35, 0.2);
+      g.rotate(Math.PI / 2);
+      if (marineFlag) drawMarineEmblem(g, 0.32);
+      else if (st.jr) drawJollyRoger(g, st.jr, 0.32, "#111");
+      g.restore();
       g.restore();
     }
     if (st.damage > 0.5) {
@@ -11406,7 +14348,7 @@ void main() {
         const ph = (t * 0.7 + k / 3) % 1;
         g.fillStyle = `rgba(60,60,60,${0.5 * (1 - ph)})`;
         g.beginPath();
-        g.arc(-L2 * 0.2 + k * 0.3, -ph * 1.5, 0.2 + ph * 0.4, 0, TAU3);
+        g.arc(-L2 * 0.2 + k * 0.3, -ph * 1.5, 0.2 + ph * 0.4, 0, TAU5);
         g.fill();
       }
     }
@@ -11415,18 +14357,176 @@ void main() {
       g.fillStyle = "rgba(200,240,255,0.18)";
       g.lineWidth = 0.06;
       g.beginPath();
-      g.ellipse(0, 0, L2 * 0.7, B * 1.2, 0, 0, TAU3);
+      g.ellipse(0, 0, L2 * 0.7, B * 1.2, 0, 0, TAU5);
       g.fill();
       g.stroke();
     }
     g.restore();
   }
 
+  // src/render/anims.js
+  var TAU6 = Math.PI * 2;
+  var STAND = { b: [0, 0], l: 0, r: 0, z: 0, sp: 0, ht: 0, hF: [0.05, 0.4], hB: [-0.03, 0.4], eF: 1, eB: 1, fF: [0.05, 0], fB: [-0.05, 0], wF: null, wB: null, m: 0.15, hand: "fist", handB: "fist", face: null, stretch: false };
+  var GUARD = { ...STAND, b: [0, 0.035], l: 0.07, hF: [0.21, 0.02], hB: [0.13, 0.08], fF: [0.16, 0], fB: [-0.13, 0] };
+  var PALMS = { ...GUARD, hF: [0.24, 0], hB: [0.12, 0.1], hand: "palm", handB: "palm", b: [0, 0.07], fF: [0.2, 0], fB: [-0.16, 0] };
+  var SWORD2 = { ...STAND, b: [0, 0.045], l: 0.06, hF: [0.2, 0.12], hB: [0.13, 0.15], wF: -0.75, fF: [0.19, 0], fB: [-0.14, 0] };
+  var SWORD22 = { ...SWORD2, hF: [0.22, 0.1], hB: [0.1, 0.12], wF: -0.55, wB: -1.05 };
+  var GUN = { ...STAND, hF: [0.26, 0.16], wF: 0.35, hB: [0, 0.34], fF: [0.12, 0], fB: [-0.1, 0] };
+  var HEAVYW = { ...SWORD2, hF: [0.16, 0.14], hB: [0.1, 0.17], wF: -1.1 };
+  var EASE = {
+    lin: (k) => k,
+    out: (k) => 1 - (1 - k) ** 3,
+    in: (k) => k * k * k,
+    inout: (k) => k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2,
+    snap: (k) => 1 - (1 - k) ** 5,
+    back: (k) => {
+      const c = 1.9;
+      return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2;
+    }
+  };
+  var toXY = (h2) => Array.isArray(h2) ? h2 : [Math.cos(h2.a) * h2.r, Math.sin(h2.a) * h2.r];
+  function lerpVal(a, b, k) {
+    if (a === void 0) return b;
+    if (b === void 0) return a;
+    if (typeof a === "number" && typeof b === "number") return a + (b - a) * k;
+    if (a && b && typeof a === "object" && typeof b === "object") {
+      if (!Array.isArray(a) && !Array.isArray(b)) return { a: a.a + (b.a - a.a) * k, r: a.r + (b.r - a.r) * k };
+      const A = toXY(a), B = toXY(b);
+      return [A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k];
+    }
+    if (typeof a === "boolean" || typeof b === "boolean") return k < 0.5 ? a : b;
+    return k < 0.35 ? a : b;
+  }
+  function samplePose(A, t, pose) {
+    const keys = A.keys;
+    let i = 0;
+    while (i < keys.length - 2 && t >= keys[i + 1].t) i++;
+    const k0 = keys[i], k1 = keys[i + 1] || k0;
+    const span2 = k1.t - k0.t;
+    let k = span2 > 0 ? (t - k0.t) / span2 : 1;
+    k = k < 0 ? 0 : k > 1 ? 1 : k;
+    k = (EASE[k1.e] || EASE.inout)(k);
+    const A0 = k0.P, A1 = k1.P;
+    const P2 = {};
+    for (const key2 in A0) P2[key2] = lerpVal(A0[key2], A1[key2], k);
+    if (A.jitter && t < (A.w ?? keys[2]?.t ?? 0)) {
+      const amp = A.jitter * Math.min(1, t / 0.2);
+      P2.b = [P2.b[0] + Math.sin(t * 91) * amp, P2.b[1] + Math.cos(t * 77) * amp];
+    }
+    const f = A.flurry;
+    if (f && t >= f.t0 && t <= f.t1) {
+      const ph = (t - f.t0) * (f.rate || 11);
+      const tri = Math.abs(ph % 2 - 1);
+      if (f.legs) {
+        P2.fF = [0.12 + 0.52 * tri, -0.3 - 0.2 * tri];
+        P2.fB = [-0.05, 0];
+      } else {
+        P2.hF = [0.12 + 0.34 * tri, -0.04 + 0.06 * (1 - tri)];
+        P2.hB = [0.12 + 0.34 * (1 - tri), 0.02 + 0.05 * tri];
+      }
+    }
+    const s = A.spin;
+    if (s && t >= s.t0 && t <= s.t1) P2.sp = (P2.sp || 0) + (t - s.t0) / Math.max(0.05, s.t1 - s.t0) * s.turns;
+    if (pose && pose.moving && !A.legs) walkLegs(P2, pose);
+    return P2;
+  }
+  function walkLegs(P2, pose) {
+    const w = pose.walk || 0;
+    const s = Math.sin(w), c = Math.cos(w);
+    const stride = 0.15;
+    P2.fF = [0.04 + s * stride, -Math.max(0, c) * 0.08];
+    P2.fB = [-0.04 - s * stride, -Math.max(0, -c) * 0.08];
+  }
+  function restPose(pose) {
+    const t = pose.time || 0;
+    const base = pose.block !== void 0 ? GUARD : pose.combat ? GUARD : STAND;
+    const P2 = { ...base };
+    P2.b = [base.b[0], base.b[1] + Math.sin(t * 2.2) * 0.012];
+    if (pose.combat && !pose.moving) {
+      const bounce = Math.abs(Math.sin(t * 4.2));
+      P2.b = [0, 0.03 + bounce * 0.025];
+      P2.hF = [0.21, 0.02 + bounce * 0.015];
+    }
+    if (pose.moving) {
+      const w = pose.walk || 0;
+      const s = Math.sin(w), c = Math.cos(w);
+      const sprint = !!pose.sprint;
+      const stride = sprint ? 0.26 : 0.15;
+      P2.fF = [0.03 + s * stride, -Math.max(0, c) * (sprint ? 0.16 : 0.08)];
+      P2.fB = [-0.03 - s * stride, -Math.max(0, -c) * (sprint ? 0.16 : 0.08)];
+      P2.b = [0, 0.02 - Math.abs(c) * 0.035];
+      if (sprint) {
+        P2.l = 0.3;
+        P2.hF = [-s * 0.24 + 0.06, 0.18 + Math.max(0, s) * 0.05];
+        P2.hB = [s * 0.24 + 0.02, 0.18 + Math.max(0, -s) * 0.05];
+        P2.eF = 1;
+        P2.eB = 1;
+      } else if (!pose.combat) {
+        P2.hF = [-s * 0.14 + 0.03, 0.38];
+        P2.hB = [s * 0.14 - 0.02, 0.38];
+      }
+    }
+    if (pose.swimming) {
+      const s = Math.sin(t * 5);
+      P2.hF = [0.3 + s * 0.12, -0.05 + Math.cos(t * 5) * 0.1];
+      P2.hB = [0.28 - s * 0.12, -0.02 - Math.cos(t * 5) * 0.1];
+    }
+    if (pose.block !== void 0) {
+      const fresh = Math.max(0, 1 - pose.block / 0.2);
+      P2.hF = [0.2, -0.13];
+      P2.hB = [0.23, -0.03];
+      P2.eF = 1;
+      P2.eB = -0.8;
+      P2.b = [-0.02 * fresh, 0.07];
+      P2.l = 0.12;
+      P2.fF = [0.2, 0];
+      P2.fB = [-0.18, 0];
+      P2.face = "fierce";
+    }
+    if (pose.state === "hurt") {
+      const k = pose.hurtK ?? 1;
+      P2.l = -0.38 * k;
+      P2.b = [-0.06 * k, 0.05];
+      P2.hF = [-0.18, 0.1];
+      P2.hB = [0.18, 0.02];
+      P2.eF = 0.3;
+      P2.eB = 0.3;
+      P2.ht = -0.2;
+    }
+    if (pose.dodge !== void 0) {
+      const k = pose.dodge;
+      P2.r = k * TAU6;
+      P2.b = [0, 0.22 * Math.sin(k * Math.PI)];
+      P2.hF = [0.2, 0.18];
+      P2.hB = [0.16, 0.2];
+      P2.fF = [0.18, -0.26 * Math.sin(k * Math.PI)];
+      P2.fB = [0.06, -0.3 * Math.sin(k * Math.PI)];
+      P2.l = 0.4 * Math.sin(k * Math.PI);
+    }
+    if (pose.getUp !== void 0) {
+      const k = pose.getUp;
+      P2.b = [0, 0.25 * (1 - k)];
+      P2.l = 0.5 * (1 - k);
+      P2.hF = [0.2, 0.4 * (1 - k) + 0.1];
+      P2.hB = [0.1, 0.4];
+    }
+    if (pose.launch) {
+      P2.r = -pose.launch * 0.9;
+      P2.hF = [-0.1, -0.3];
+      P2.hB = [0.14, -0.26];
+      P2.fF = [0.3, -0.25];
+      P2.fB = [0.12, -0.12];
+      P2.ht = -0.3;
+    }
+    return P2;
+  }
+
   // src/render/character.js
-  var TAU4 = Math.PI * 2;
+  var TAU7 = Math.PI * 2;
+  var OUTLINE = "rgba(30,20,20,0.85)";
   function circ(g, x, y, r, fill, stroke, lw = 0.04) {
     g.beginPath();
-    g.arc(x, y, r, 0, TAU4);
+    g.arc(x, y, Math.max(1e-3, r), 0, TAU7);
     if (fill) {
       g.fillStyle = fill;
       g.fill();
@@ -11437,7 +14537,7 @@ void main() {
       g.stroke();
     }
   }
-  function rrect(g, x, y, w, h2, r, fill, stroke, lw = 0.04) {
+  function rrect2(g, x, y, w, h2, r, fill, stroke, lw = 0.04) {
     g.beginPath();
     g.roundRect(x, y, w, h2, r);
     if (fill) {
@@ -11467,17 +14567,539 @@ void main() {
     g.lineTo(x1, y1);
     g.stroke();
   }
-  var OUTLINE = "rgba(30,20,20,0.85)";
+  function limb2(g, ax, ay, jx, jy, ex, ey, w, col, outline, col2) {
+    g.lineCap = "round";
+    g.lineJoin = "round";
+    if (outline) {
+      g.strokeStyle = outline;
+      g.lineWidth = w + 0.07;
+      g.beginPath();
+      g.moveTo(ax, ay);
+      g.lineTo(jx, jy);
+      g.lineTo(ex, ey);
+      g.stroke();
+    }
+    g.lineWidth = w;
+    if (col2 && col2 !== col) {
+      g.strokeStyle = col;
+      g.beginPath();
+      g.moveTo(ax, ay);
+      g.lineTo(jx, jy);
+      g.stroke();
+      g.strokeStyle = col2;
+      g.beginPath();
+      g.moveTo(jx, jy);
+      g.lineTo(ex, ey);
+      g.stroke();
+    } else {
+      g.strokeStyle = col;
+      g.beginPath();
+      g.moveTo(ax, ay);
+      g.lineTo(jx, jy);
+      g.lineTo(ex, ey);
+      g.stroke();
+    }
+  }
+  function starPath(g, x, y, r, n = 5, k = 0.45, rot = -Math.PI / 2) {
+    g.beginPath();
+    for (let i = 0; i < n * 2; i++) {
+      const rr = i % 2 ? r * k : r;
+      const a = rot + i / (n * 2) * TAU7;
+      if (i) g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+      else g.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    }
+    g.closePath();
+  }
   function dir4(angle) {
-    const a = (angle % TAU4 + TAU4) % TAU4;
+    const a = (angle % TAU7 + TAU7) % TAU7;
     if (a > Math.PI * 0.25 && a <= Math.PI * 0.75) return "down";
     if (a > Math.PI * 0.75 && a <= Math.PI * 1.25) return "left";
     if (a > Math.PI * 1.25 && a <= Math.PI * 1.75) return "up";
     return "right";
   }
+  function ik(ax, ay, tx, ty, l1, l2, bend, stretch) {
+    let dx = tx - ax, dy = ty - ay;
+    let d = Math.hypot(dx, dy);
+    const max = (l1 + l2) * 0.999;
+    if (d > max && !stretch) {
+      dx *= max / d;
+      dy *= max / d;
+      d = max;
+    }
+    if (d < 1e-4) {
+      d = 1e-4;
+      dx = 1e-4;
+    }
+    let ex = ax + dx, ey = ay + dy;
+    if (d >= max) {
+      return [ax + dx * 0.5, ay + dy * 0.5, ex, ey];
+    }
+    const c = (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d);
+    const a = Math.acos(c < -1 ? -1 : c > 1 ? 1 : c) * bend;
+    const base = Math.atan2(dy, dx);
+    return [ax + Math.cos(base + a) * l1, ay + Math.sin(base + a) * l1, ex, ey];
+  }
+  var toXY2 = (h2) => Array.isArray(h2) ? h2 : [Math.cos(h2.a) * h2.r, Math.sin(h2.a) * h2.r];
+  function solveRig(look, P2, d, side, back) {
+    const legLen = look.legs || 1;
+    const armLen = look.arms || 1;
+    const bulk = look.bulk || 1;
+    const front = d === "down";
+    const lean = side ? P2.l : 0;
+    const fwd = side ? P2.b[0] : 0;
+    const hipY0 = -0.42 * legLen - 0.05;
+    const hip = { x: fwd, y: hipY0 + P2.b[1] + (side ? 0 : Math.abs(P2.l) * 0.06 + (front ? P2.b[0] * 0.25 : -P2.b[0] * 0.25)) };
+    const cosL = Math.cos(lean), sinL = Math.sin(lean);
+    const U2 = (x, y) => {
+      const ry = y - hipY0;
+      return [hip.x + x * cosL - ry * sinL, hip.y + x * sinL + ry * cosL];
+    };
+    const shoulderY = hipY0 - 0.42 * bulk;
+    const headY = shoulderY - 0.3 - (look.neck || 0);
+    const out = { hip, lean, shoulderY, headY, hipY0, U: U2 };
+    const L1 = 0.215 * armLen, L2 = 0.215 * armLen;
+    const T1 = 0.245 * legLen, T22 = 0.245 * legLen;
+    const stretch = !!P2.stretch;
+    const project = (u, v, inward) => {
+      if (side) return [u, v];
+      if (front) return [inward * u * 0.34, v * 0.92 + u * 0.26];
+      return [inward * u * 0.3, v * 0.92 - u * 0.24];
+    };
+    const depth = (u, L3) => side ? 1 : front ? 1 + 0.55 * Math.max(0, u) / L3 : 1 - 0.28 * Math.max(0, u) / L3;
+    const arm = (hand, bend, sx, inward) => {
+      const [hx, hy] = toXY2(hand);
+      const tx = hx * armLen, ty = hy * armLen;
+      const [jx, jy, ex, ey] = ik(0, 0, tx, ty, L1, L2, bend, stretch);
+      const [pjx, pjy] = project(jx, jy, inward);
+      const [pex, pey] = project(ex, ey, inward);
+      const flare = side ? 0 : Math.abs(jx - ex * 0.5) * 0.35 + Math.abs(jy - ey * 0.5) * 0.25;
+      const sy = shoulderY + 0.08;
+      const s0 = U2(sx, sy);
+      const j = U2(sx + pjx - inward * flare, sy + pjy);
+      const e = U2(sx + pex, sy + pey);
+      return { s: s0, j, e, u: ex, v: ey, scale: depth(ex, L1 + L2), raised: ey < -0.15 };
+    };
+    const shx = side ? 0.03 : 0.27 * bulk;
+    out.armF = arm(P2.hF, P2.eF, side ? 0.05 : shx, -1);
+    out.armB = arm(P2.hB, P2.eB, side ? -0.05 : -shx, 1);
+    const leg = (foot, hx0, inward) => {
+      const [fx, fy] = foot;
+      const root2 = [hip.x + hx0, hip.y];
+      let u = fx * legLen, v = fy * legLen;
+      let tx, ty;
+      if (side) {
+        tx = hip.x + u;
+        ty = v - 0.02;
+      } else {
+        tx = hip.x + hx0 + inward * u * 0.08;
+        ty = v - 0.02 + (front ? u * 0.3 : -u * 0.22);
+      }
+      const [kx, ky, ex, ey] = ik(root2[0], root2[1], tx, ty, T1, T22, side ? -1 : -inward * 0.35, false);
+      return { h: root2, k: [kx, ky], e: [ex, ey], u, v, scale: depth(u, T1 + T22) };
+    };
+    const spread = side ? 0 : 0.11 * bulk;
+    out.legF = leg(P2.fF, side ? 0.02 : spread, -1);
+    out.legB = leg(P2.fB, side ? -0.02 : -spread, 1);
+    out.head = U2(0, headY);
+    out.neck = U2(0, shoulderY);
+    out.bladeLen = 0.95;
+    return out;
+  }
+  function bladeDir(a, side, back, lean, inward) {
+    if (side) return [Math.cos(a + lean), Math.sin(a + lean)];
+    const u = Math.cos(a), v = Math.sin(a);
+    let x = inward * u * 0.8, y = v * 0.9 + (back ? -u * 0.35 : u * 0.35);
+    const l = Math.hypot(x, y);
+    const m = Math.max(0.62, l) / (l || 1);
+    return [x * m, y * m];
+  }
+  function drawSword(g, x, y, dx, dy, len = 0.95, o = {}) {
+    const a = Math.atan2(dy, dx);
+    const lenK = Math.hypot(dx, dy);
+    g.save();
+    g.translate(x, y);
+    g.rotate(a);
+    g.scale(Math.max(0.35, Math.min(1, lenK)), 1);
+    g.fillStyle = o.hilt || "#2d2a32";
+    g.fillRect(-0.12, -0.035, 0.2, 0.07);
+    g.strokeStyle = "#b8a07a";
+    g.lineWidth = 0.015;
+    g.beginPath();
+    for (let k = 0; k < 4; k++) {
+      g.moveTo(-0.11 + k * 0.05, -0.035);
+      g.lineTo(-0.085 + k * 0.05, 0.035);
+    }
+    g.stroke();
+    g.fillStyle = o.guard || "#d4ac0d";
+    g.beginPath();
+    g.ellipse(0.09, 0, 0.025, 0.07, 0, 0, TAU7);
+    g.fill();
+    const L2 = len;
+    g.fillStyle = o.color || "#e4ecf1";
+    g.strokeStyle = o.edge || "#7f8c8d";
+    g.lineWidth = 0.018;
+    g.beginPath();
+    g.moveTo(0.1, -0.03);
+    g.quadraticCurveTo(0.1 + L2 * 0.5, -0.05, 0.1 + L2, -0.012);
+    g.lineTo(0.1 + L2 * 0.93, 0.03);
+    g.quadraticCurveTo(0.1 + L2 * 0.5, 0.015, 0.1, 0.03);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    g.strokeStyle = "rgba(255,255,255,0.85)";
+    g.lineWidth = 0.012;
+    g.beginPath();
+    g.moveTo(0.14, -0.018);
+    g.quadraticCurveTo(0.1 + L2 * 0.5, -0.036, 0.1 + L2 * 0.96, -0.012);
+    g.stroke();
+    g.restore();
+  }
+  function drawEnergyBlade(g, x, y, dx, dy, len, color) {
+    const a = Math.atan2(dy, dx);
+    g.save();
+    g.translate(x, y);
+    g.rotate(a);
+    g.globalCompositeOperation = "lighter";
+    g.fillStyle = color;
+    g.globalAlpha *= 0.55;
+    g.beginPath();
+    g.moveTo(0.05, -0.09);
+    g.lineTo(len, -0.02);
+    g.lineTo(len + 0.12, 0);
+    g.lineTo(len, 0.02);
+    g.lineTo(0.05, 0.09);
+    g.closePath();
+    g.fill();
+    g.globalAlpha /= 0.55;
+    g.globalCompositeOperation = "source-over";
+    g.fillStyle = "#ffffff";
+    g.beginPath();
+    g.moveTo(0.05, -0.03);
+    g.lineTo(len, -8e-3);
+    g.lineTo(len + 0.08, 0);
+    g.lineTo(len, 8e-3);
+    g.lineTo(0.05, 0.03);
+    g.closePath();
+    g.fill();
+    g.restore();
+  }
+  function drawAxe(g, x, y, dx, dy) {
+    const a = Math.atan2(dy, dx);
+    g.save();
+    g.translate(x, y);
+    g.rotate(a);
+    g.fillStyle = "#6d4c41";
+    g.strokeStyle = OUTLINE;
+    g.lineWidth = 0.025;
+    g.beginPath();
+    g.roundRect(-0.25, -0.035, 1.1, 0.07, 0.03);
+    g.fill();
+    g.stroke();
+    g.fillStyle = "#cfd8dc";
+    g.strokeStyle = "#546e7a";
+    for (const sy of [-1, 1]) {
+      g.beginPath();
+      g.moveTo(0.62, sy * 0.03);
+      g.quadraticCurveTo(0.6, sy * 0.28, 0.72, sy * 0.4);
+      g.quadraticCurveTo(0.86, sy * 0.22, 0.92, sy * 0.36);
+      g.quadraticCurveTo(0.95, sy * 0.12, 0.84, sy * 0.03);
+      g.closePath();
+      g.fill();
+      g.stroke();
+    }
+    g.fillStyle = "#90a4ae";
+    g.fillRect(0.6, -0.05, 0.26, 0.1);
+    g.restore();
+  }
+  function drawStaff(g, x, y, dx, dy) {
+    const a = Math.atan2(dy, dx);
+    g.save();
+    g.translate(x, y);
+    g.rotate(a);
+    g.strokeStyle = OUTLINE;
+    g.lineWidth = 0.08;
+    g.lineCap = "round";
+    g.beginPath();
+    g.moveTo(-0.3, 0);
+    g.lineTo(0.72, 0);
+    g.stroke();
+    g.strokeStyle = "#4fc3f7";
+    g.lineWidth = 0.05;
+    g.stroke();
+    g.strokeStyle = "#e1f5fe";
+    g.lineWidth = 0.015;
+    g.beginPath();
+    g.moveTo(-0.28, -0.01);
+    g.lineTo(0.7, -0.01);
+    g.stroke();
+    circ(g, 0.74, 0, 0.07, "#0288d1", OUTLINE, 0.025);
+    circ(g, 0.2, 0, 0.045, "#0288d1", null);
+    circ(g, -0.3, 0, 0.055, "#0288d1", OUTLINE, 0.02);
+    g.restore();
+  }
+  function drawGun(g, x, y, dx, dy, kind) {
+    const a = Math.atan2(dy, dx);
+    g.save();
+    g.translate(x, y);
+    g.rotate(a);
+    if (kind === "sling") {
+      g.strokeStyle = "#6d4c41";
+      g.lineWidth = 0.05;
+      g.lineCap = "round";
+      g.beginPath();
+      g.moveTo(-0.02, 0);
+      g.lineTo(0.14, 0);
+      g.moveTo(0.14, 0);
+      g.lineTo(0.28, -0.1);
+      g.moveTo(0.14, 0);
+      g.lineTo(0.28, 0.1);
+      g.stroke();
+      g.strokeStyle = "#ffcc80";
+      g.lineWidth = 0.02;
+      g.beginPath();
+      g.moveTo(0.28, -0.1);
+      g.lineTo(0.08, 0);
+      g.lineTo(0.28, 0.1);
+      g.stroke();
+    } else {
+      g.fillStyle = "#2d3436";
+      g.fillRect(0.02, -0.04, 0.34, 0.07);
+      g.fillStyle = "#636e72";
+      g.fillRect(0.02, -0.04, 0.34, 0.02);
+      g.fillStyle = "#8d5b33";
+      g.beginPath();
+      g.moveTo(0.06, 0.02);
+      g.lineTo(-0.02, 0.14);
+      g.lineTo(0.06, 0.16);
+      g.lineTo(0.12, 0.03);
+      g.closePath();
+      g.fill();
+    }
+    g.restore();
+  }
+  function drawHand(g, x, y, r, col, shape, dirx, diry, extra) {
+    const a = Math.atan2(diry, dirx);
+    if (shape === "palm") {
+      g.save();
+      g.translate(x, y);
+      g.rotate(a);
+      g.fillStyle = col;
+      g.strokeStyle = OUTLINE;
+      g.lineWidth = 0.03;
+      g.beginPath();
+      g.ellipse(0.02, 0, r * 0.75, r * 1.2, 0, 0, TAU7);
+      g.fill();
+      g.stroke();
+      g.beginPath();
+      g.ellipse(-0.01, -r * 0.95, r * 0.35, r * 0.22, -0.6, 0, TAU7);
+      g.fill();
+      g.stroke();
+      g.restore();
+      return;
+    }
+    circ(g, x, y, r, col, OUTLINE, 0.03);
+    if (shape === "finger") {
+      g.strokeStyle = OUTLINE;
+      g.lineWidth = 0.075;
+      g.lineCap = "round";
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x + Math.cos(a) * r * 2, y + Math.sin(a) * r * 2);
+      g.stroke();
+      g.strokeStyle = col;
+      g.lineWidth = 0.045;
+      g.stroke();
+    } else if (shape === "claw") {
+      g.strokeStyle = extra || "#fafafa";
+      g.lineWidth = 0.025;
+      g.lineCap = "round";
+      for (let k = -1; k <= 1; k++) {
+        const aa = a + k * 0.45;
+        g.beginPath();
+        g.moveTo(x + Math.cos(aa) * r * 0.8, y + Math.sin(aa) * r * 0.8);
+        g.quadraticCurveTo(x + Math.cos(aa) * r * 1.8, y + Math.sin(aa) * r * 1.8, x + Math.cos(aa + 0.5) * r * 2.1, y + Math.sin(aa + 0.5) * r * 2.1);
+        g.stroke();
+      }
+    }
+  }
+  function drawTrails(g, look, pose, rig, d, side, back) {
+    const A = pose.anim;
+    if (!A || A.t <= 5e-3) return;
+    const N2 = 5, dt = A.trailDt || 0.018;
+    const samples = [];
+    for (let k = 0; k < N2; k++) {
+      const t = A.t - k * dt;
+      if (t < 0) break;
+      const P2 = k === 0 ? pose.P : samplePose(A, t, pose);
+      samples.push(k === 0 ? rig : solveRig(look, P2, d, side, back));
+      samples[samples.length - 1].P = P2;
+    }
+    if (samples.length < 3) return;
+    const col = pose.fx?.trail || pose.fx?.color || "#ffffff";
+    const armed = pose.armed;
+    const first = samples[0], last = samples[samples.length - 1];
+    const moved = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+    const effs = [];
+    if (armed && (pose.weapon?.kind === "sword" || pose.weapon?.kind === "axe" || pose.weapon?.kind === "staff" || pose.blade)) {
+      const inF = -1, inB = 1;
+      const tip = (rg, which) => {
+        const arm = which === "F" ? rg.armF : rg.armB;
+        const a = which === "F" ? rg.P.wF : rg.P.wB;
+        if (a === void 0 || a === null) return null;
+        const [dx, dy] = bladeDir(a, side, back, rg.lean, which === "F" ? inF : inB);
+        const L2 = pose.weapon?.kind === "axe" ? 0.9 : pose.weapon?.kind === "staff" ? 0.75 : pose.bladeLen || 0.95;
+        return [[arm.e[0] + dx * L2 * 0.35, arm.e[1] + dy * L2 * 0.35], [arm.e[0] + dx * (L2 + 0.1), arm.e[1] + dy * (L2 + 0.1)]];
+      };
+      for (const which of ["F", "B"]) {
+        if (which === "B" && !(pose.weapon?.count >= 2) && !pose.bladeB) continue;
+        const pts = samples.map((rg) => tip(rg, which));
+        if (pts.some((p) => !p)) continue;
+        if (moved(pts[0][1], pts[pts.length - 1][1]) < 0.25) continue;
+        effs.push({ blade: true, pts });
+      }
+    } else {
+      for (const [name, key2] of [["armF", "e"], ["armB", "e"], ["legF", "e"], ["legB", "e"]]) {
+        const pts = samples.map((rg) => rg[name][key2]);
+        if (moved(pts[0], pts[pts.length - 1]) < 0.22) continue;
+        effs.push({ blade: false, pts, foot: name.startsWith("leg"), scale: first[name].scale || 1 });
+      }
+    }
+    if (!effs.length) return;
+    g.save();
+    g.globalCompositeOperation = pose.fx?.additive ? "lighter" : "source-over";
+    for (const e of effs) {
+      const n = e.pts.length;
+      if (e.blade) {
+        for (let i = 0; i < n - 1; i++) {
+          const [b0, t0] = e.pts[i], [b1, t1] = e.pts[i + 1];
+          g.globalAlpha = 0.55 * (1 - i / (n - 1));
+          g.fillStyle = i === 0 ? "#ffffff" : col;
+          g.beginPath();
+          g.moveTo(b0[0], b0[1]);
+          g.lineTo(t0[0], t0[1]);
+          g.lineTo(t1[0], t1[1]);
+          g.lineTo(b1[0], b1[1]);
+          g.closePath();
+          g.fill();
+        }
+        g.globalAlpha = 0.9;
+        g.strokeStyle = "#ffffff";
+        g.lineWidth = 0.035;
+        g.lineCap = "round";
+        g.beginPath();
+        g.moveTo(e.pts[0][1][0], e.pts[0][1][1]);
+        for (let i = 1; i < n; i++) g.lineTo(e.pts[i][1][0], e.pts[i][1][1]);
+        g.stroke();
+      } else {
+        const r0 = (e.foot ? 0.1 : 0.085) * (look.bulk || 1) * e.scale;
+        for (let i = 0; i < n - 1; i++) {
+          const [x0, y0] = e.pts[i], [x1, y1] = e.pts[i + 1];
+          const w0 = r0 * (1 - i / n) * 2, w1 = r0 * (1 - (i + 1) / n) * 2;
+          const ang = Math.atan2(y1 - y0, x1 - x0) + Math.PI / 2;
+          const cx = Math.cos(ang), cy = Math.sin(ang);
+          g.globalAlpha = 0.5 * (1 - i / (n - 1));
+          g.fillStyle = i === 0 ? "#ffffff" : col;
+          g.beginPath();
+          g.moveTo(x0 + cx * w0 / 2, y0 + cy * w0 / 2);
+          g.lineTo(x1 + cx * w1 / 2, y1 + cy * w1 / 2);
+          g.lineTo(x1 - cx * w1 / 2, y1 - cy * w1 / 2);
+          g.lineTo(x0 - cx * w0 / 2, y0 - cy * w0 / 2);
+          g.closePath();
+          g.fill();
+        }
+        const [hx, hy] = e.pts[0], [tx, ty] = e.pts[n - 1];
+        const dx = hx - tx, dy = hy - ty, l = Math.hypot(dx, dy) || 1;
+        g.strokeStyle = col;
+        g.lineWidth = 0.02;
+        g.globalAlpha = 0.6;
+        g.beginPath();
+        for (let k = -1; k <= 1; k++) {
+          const ox = -dy / l * k * r0 * 1.3, oy = dx / l * k * r0 * 1.3;
+          g.moveTo(hx - dx / l * r0 * 1.4 + ox, hy - dy / l * r0 * 1.4 + oy);
+          g.lineTo(hx - dx / l * (r0 * 1.4 + l * 0.9) + ox, hy - dy / l * (r0 * 1.4 + l * 0.9) + oy);
+        }
+        g.stroke();
+      }
+    }
+    g.restore();
+  }
+  function drawHandFx(g, x, y, r, fx, t, k) {
+    if (!fx || !fx.elem || k <= 0) return;
+    const e = fx.elem;
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    const col = fx.color || "#ffffff";
+    if (e === "fire" || e === "magma") {
+      for (let i = 0; i < 5; i++) {
+        const ph = (t * 5 + i * 0.21) % 1;
+        g.globalAlpha = (1 - ph) * 0.8 * k;
+        g.fillStyle = i % 2 ? e === "magma" ? "#ff6f00" : "#ffca28" : e === "magma" ? "#bf360c" : "#ff7043";
+        const ox = Math.sin(i * 2.3 + t * 9) * r * 0.6;
+        g.beginPath();
+        g.arc(x + ox, y - ph * r * 3.2, r * (1.3 - ph * 0.9), 0, TAU7);
+        g.fill();
+      }
+    } else if (e === "lightning") {
+      g.strokeStyle = "#fff59d";
+      g.lineWidth = 0.025;
+      g.globalAlpha = 0.9 * k;
+      for (let i = 0; i < 3; i++) {
+        const a0 = (Math.floor(t * 20) * 1.7 + i * 2.1) % TAU7;
+        g.beginPath();
+        g.moveTo(x, y);
+        let px = x, py = y;
+        for (let s = 1; s <= 3; s++) {
+          px = x + Math.cos(a0 + Math.sin(s * 5 + i) * 0.7) * r * (0.9 + s * 0.6);
+          py = y + Math.sin(a0 + Math.cos(s * 3 + i) * 0.7) * r * (0.9 + s * 0.6);
+          g.lineTo(px, py);
+        }
+        g.stroke();
+      }
+    } else if (e === "ice") {
+      g.fillStyle = "#e1f5fe";
+      g.globalAlpha = 0.8 * k;
+      for (let i = 0; i < 4; i++) {
+        const a = t * 2 + i * TAU7 / 4;
+        starPath(g, x + Math.cos(a) * r * 1.5, y + Math.sin(a) * r * 1.5, r * 0.45, 4, 0.35, a);
+        g.fill();
+      }
+    } else if (e === "water") {
+      g.strokeStyle = "#b3e5fc";
+      g.lineWidth = 0.02;
+      g.globalAlpha = 0.8 * k;
+      const ph = t * 3 % 1;
+      g.beginPath();
+      g.arc(x, y, r * (1.2 + ph * 1.2), 0, TAU7);
+      g.stroke();
+    } else if (e === "dark" || e === "haki") {
+      g.globalCompositeOperation = "source-over";
+      g.fillStyle = e === "haki" ? "rgba(20,0,30,0.55)" : "rgba(49,27,146,0.55)";
+      g.globalAlpha = k;
+      for (let i = 0; i < 4; i++) {
+        const a = t * 6 + i * TAU7 / 4;
+        g.beginPath();
+        g.arc(x + Math.cos(a) * r * 0.8, y + Math.sin(a) * r * 0.8, r * 0.7, 0, TAU7);
+        g.fill();
+      }
+    } else {
+      g.fillStyle = col;
+      g.globalAlpha = 0.35 * k;
+      g.beginPath();
+      g.arc(x, y, r * 2, 0, TAU7);
+      g.fill();
+    }
+    g.restore();
+  }
   function drawCharacter(g, look, pose) {
     const s = look.scale || 1;
-    const d = dir4(pose.facing || 0);
+    const t = pose.time || 0;
+    let P2 = pose.P;
+    if (!P2) {
+      P2 = pose.anim ? samplePose(pose.anim, pose.anim.t, pose) : restPose(pose, look);
+      pose.P = P2;
+    }
+    const facing = (pose.facing || 0) + (P2.sp || 0) * TAU7 * (Math.cos(pose.facing || 0) < 0 ? -1 : 1);
+    const d = dir4(facing);
     const flip = d === "left";
     const side = d === "left" || d === "right";
     const back = d === "up";
@@ -11485,13 +15107,15 @@ void main() {
     const top = look.top || "#d63031";
     const bottom = look.bottom || "#2d3436";
     const hair = look.hairColor || "#2d2d2d";
-    const t = pose.time || 0;
+    const bulk = look.bulk || 1;
+    const z = (pose.z || 0) + (P2.z || 0);
     g.save();
     if (pose.alpha !== void 0) g.globalAlpha *= pose.alpha;
-    if (!pose.swimming) {
-      g.fillStyle = "rgba(0,0,0,0.25)";
+    if (!pose.swimming && !pose.noShadow) {
+      const k = 1 / (1 + z * 1.2);
+      g.fillStyle = `rgba(0,0,0,${0.25 * k})`;
       g.beginPath();
-      g.ellipse(0, 0, 0.36 * s * (look.bulk || 1), 0.13 * s, 0, 0, TAU4);
+      g.ellipse(0, 0, 0.36 * s * bulk * k, 0.13 * s * k, 0, 0, TAU7);
       g.fill();
     }
     if (pose.state === "knocked" || pose.state === "dead") {
@@ -11499,32 +15123,54 @@ void main() {
       g.restore();
       return;
     }
+    if (pose.squash) g.scale(1 / Math.sqrt(pose.squash), pose.squash);
+    g.translate(0, -z * s);
     g.scale(flip ? -s : s, s);
-    const legLen = look.legs || 1;
-    const armLen = look.arms || 1;
-    const bulk = look.bulk || 1;
-    const walk = pose.moving ? Math.sin(pose.walk || 0) : 0;
-    const bob = pose.moving ? Math.abs(Math.cos(pose.walk || 0)) * 0.05 : Math.sin(t * 2.2) * 0.012;
-    const hipY = -0.42 * legLen - 0.05;
-    const shoulderY = hipY - 0.42 * bulk - bob;
-    const headY = shoulderY - 0.3 - (look.neck || 0);
+    const roll = (P2.r || 0) + (pose.roll || 0);
+    if (roll) {
+      g.translate(0, -0.72);
+      g.rotate(roll);
+      g.translate(0, 0.72);
+    }
+    const rig = solveRig(look, P2, d, side, back);
+    pose.rig = rig;
+    const { hip, lean, U: U2 } = rig;
+    const hipY = rig.hipY0;
+    const shoulderY = rig.shoulderY;
+    const headY = rig.headY;
     const headR = 0.3;
+    const armLen = look.arms || 1;
     if (pose.swimming) {
-      g.translate(0, 0.45 * legLen + 0.2);
+      g.translate(0, 0.45 * (look.legs || 1) + 0.2);
       g.beginPath();
       g.rect(-2, -4, 4, 3.62);
       g.clip();
     }
     if (pose.aura) {
-      const a = pose.aura;
       g.save();
-      g.globalAlpha *= 0.35 + 0.15 * Math.sin(t * 10);
-      g.fillStyle = a;
+      g.globalAlpha *= 0.32 + 0.12 * Math.sin(t * 10);
+      g.fillStyle = pose.aura;
+      const h2 = -headY + 0.45;
       g.beginPath();
-      g.ellipse(0, (headY + 0) / 2, 0.6 * bulk + 0.1, -headY / 2 + 0.3, 0, 0, TAU4);
+      g.moveTo(-0.55 * bulk, 0);
+      for (let k = 0; k <= 8; k++) {
+        const x = -0.55 * bulk + k / 8 * 1.1 * bulk;
+        const tip = k % 2 ? 0.12 : 0.28 + 0.08 * Math.sin(t * 12 + k);
+        g.quadraticCurveTo(x - 0.05, -h2 * 0.75, x, -h2 - tip);
+      }
+      g.lineTo(0.55 * bulk, 0);
+      g.closePath();
       g.fill();
       g.restore();
     }
+    const upper = (fn) => {
+      g.save();
+      g.translate(hip.x, hip.y);
+      g.rotate(lean);
+      g.translate(0, -hipY);
+      fn();
+      g.restore();
+    };
     const drawWings = () => {
       if (look.wings === "sky") {
         g.fillStyle = "#ffffff";
@@ -11554,6 +15200,23 @@ void main() {
           g.fill();
           g.stroke();
         }
+      } else if (look.wings === "phoenix") {
+        g.save();
+        g.globalCompositeOperation = "lighter";
+        for (const sx of [-1, 1]) {
+          for (let k = 0; k < 3; k++) {
+            const flap = Math.sin(t * 6 + k) * 0.08;
+            g.fillStyle = ["rgba(77,208,225,0.55)", "rgba(128,222,234,0.5)", "rgba(255,241,118,0.45)"][k];
+            g.beginPath();
+            g.moveTo(sx * 0.08, shoulderY + 0.05);
+            g.quadraticCurveTo(sx * (0.7 + k * 0.12), shoulderY - 0.75 - k * 0.1 + flap, sx * (1.05 - k * 0.12), shoulderY - 0.2 + flap);
+            g.quadraticCurveTo(sx * (0.7 - k * 0.1), shoulderY + 0.05, sx * (0.9 - k * 0.2), shoulderY + 0.35);
+            g.quadraticCurveTo(sx * 0.4, shoulderY + 0.2, sx * 0.08, shoulderY + 0.25);
+            g.closePath();
+            g.fill();
+          }
+        }
+        g.restore();
       }
     };
     const drawBackFlame = () => {
@@ -11561,7 +15224,6 @@ void main() {
       for (let k = 0; k < 4; k++) {
         const ph = (t * 3 + k * 0.25) % 1;
         g.fillStyle = ["#ff6b35", "#f7931e", "#ffd23f", "#ff6b35"][k];
-        g.globalAlpha *= 1;
         g.beginPath();
         const bx = (k - 1.5) * 0.08;
         g.moveTo(bx - 0.12, shoulderY + 0.1);
@@ -11578,6 +15240,14 @@ void main() {
       g.moveTo(0, hipY + 0.05);
       g.quadraticCurveTo(-0.45, hipY + 0.1 + Math.sin(t * 4) * 0.08, -0.5, hipY - 0.35);
       g.stroke();
+      if (look.spots) {
+        g.fillStyle = "#4e342e";
+        for (let k = 1; k < 4; k++) {
+          g.beginPath();
+          g.arc(-0.14 * k, hipY + 0.08 - k * 0.03, 0.025, 0, TAU7);
+          g.fill();
+        }
+      }
     };
     const drawCape = () => {
       if (!look.coat) return;
@@ -11586,11 +15256,12 @@ void main() {
       g.strokeStyle = OUTLINE;
       g.lineWidth = 0.035;
       const sway = pose.moving ? Math.sin((pose.walk || 0) * 0.5) * 0.06 : 0;
+      const flow = side ? -Math.max(0, lean) * 0.3 - (pose.sprint ? 0.12 : 0) : 0;
       g.beginPath();
       g.moveTo(-0.28 * bulk, shoulderY);
       g.lineTo(0.28 * bulk, shoulderY);
-      g.lineTo(0.36 * bulk + sway, hipY + 0.35);
-      g.lineTo(-0.36 * bulk + sway, hipY + 0.35);
+      g.lineTo(0.36 * bulk + sway + flow, hipY + 0.35);
+      g.lineTo(-0.36 * bulk + sway + flow * 1.3, hipY + 0.35);
       g.closePath();
       g.fill();
       g.stroke();
@@ -11602,176 +15273,355 @@ void main() {
         g.fillText(look.coatText, sway * 0.5, (shoulderY + hipY) / 2 + 0.08);
       }
     };
-    if (!back) {
+    if (look.dragonForm) drawDragonCoil(g, look, t, shoulderY, hipY);
+    if (look.asura) drawAsura(g, t, shoulderY, headY);
+    if (!back) upper(() => {
       drawBackFlame();
       drawWings();
       drawTail();
       if (look.coat) drawCape();
-    }
-    const legW = 0.15 * bulk;
-    const legSpread = side ? 0.04 : 0.11 * bulk;
-    const stepA = walk * 0.14 * legLen, stepB = -walk * 0.14 * legLen;
-    const footY = pose.swimming ? 0 : -0.02;
-    if (side) {
-      limb(g, 0.02, hipY, 0.02 + stepB, footY, legW, shade(bottom, -0.15), OUTLINE);
-      limb(g, -0.02, hipY, -0.02 + stepA, footY, legW, bottom, OUTLINE);
-      rrect(g, -0.02 + stepA - 0.02, footY - 0.06, 0.2, 0.09, 0.04, look.shoes || "#3b2a1a");
-    } else {
-      limb(g, -legSpread, hipY, -legSpread, footY - stepA * 0.4, legW, bottom, OUTLINE);
-      limb(g, legSpread, hipY, legSpread, footY - stepB * 0.4, legW, bottom, OUTLINE);
-      rrect(g, -legSpread - 0.09, footY - stepA * 0.4 - 0.06, 0.18, 0.09, 0.04, look.shoes || "#3b2a1a");
-      rrect(g, legSpread - 0.09, footY - stepB * 0.4 - 0.06, 0.18, 0.09, 0.04, look.shoes || "#3b2a1a");
-    }
-    if (look.sandals) {
-    }
-    const act2 = pose.action;
-    const p = pose.actionT ?? 0;
-    const sh = { x: side ? 0.02 : 0.27 * bulk, y: shoulderY + 0.08 };
-    let armF = { a: 0.2 + walk * 0.5, len: 0.42 * armLen };
-    let armB = { a: -0.2 - walk * 0.5, len: 0.42 * armLen };
-    let weaponAngle = null;
-    if (act2 === "punch" || act2 === "kick" || act2 === "heavy" || act2 === "slash" || act2 === "thrust" || act2 === "shoot" || act2 === "cast" || act2 === "block" || act2 === "grab") {
-      const ease = p < 0.35 ? p / 0.35 : 1 - (p - 0.35) / 0.65 * 0.6;
-      if (act2 === "punch" || act2 === "thrust" || act2 === "shoot" || act2 === "grab") {
-        armF = { a: -Math.PI / 2 * ease * (side ? 1 : 0.9), len: (0.42 + 0.25 * ease) * armLen };
-        if (armLen > 1.2) armF.len = (0.42 + 0.6 * ease) * armLen;
-      } else if (act2 === "slash" || act2 === "heavy") {
-        const swing = -2.6 + p * 3.6;
-        armF = { a: swing, len: 0.44 * armLen };
-        weaponAngle = swing;
-      } else if (act2 === "cast") {
-        armF = { a: -2.6, len: 0.44 * armLen };
-        armB = { a: 2.6, len: 0.44 * armLen };
-      } else if (act2 === "block") {
-        armF = { a: -1.2, len: 0.3 };
-        armB = { a: 1.2, len: 0.3 };
+    });
+    const wpn = pose.weapon || (look.weapon ? { kind: look.weapon, count: look.swords || 1 } : look.swords ? { kind: "sword", count: look.swords } : null);
+    const armed = !!(pose.armed && wpn);
+    const skinArm = look.sleeve || skin;
+    const handCol = pose.armament ? "#1c1a24" : look.hand || skin;
+    const foreCol = pose.armament && pose.anim ? "#1c1a24" : skinArm;
+    const drawArm = (arm, which) => {
+      const col = which === "B" && side ? shade(skinArm, -0.15) : skinArm;
+      const fcol = which === "B" && side ? shade(foreCol, -0.15) : foreCol;
+      const w = 0.12 * bulk * (which === "F" ? 1.08 : 1);
+      limb2(g, arm.s[0], arm.s[1], arm.j[0], arm.j[1], arm.e[0], arm.e[1], w, col, OUTLINE, fcol);
+      if (armLen > 1.2) circ(g, arm.j[0], arm.j[1], 0.07, col, OUTLINE, 0.03);
+    };
+    const handShape = (which) => which === "F" ? P2.hand || "fist" : P2.handB || "fist";
+    const drawHandAt = (arm, which) => {
+      const r = 0.085 * bulk * arm.scale;
+      const dx = arm.e[0] - arm.j[0], dy = arm.e[1] - arm.j[1];
+      const hc = which === "B" && side ? shade(handCol, -0.12) : handCol;
+      drawHand(g, arm.e[0], arm.e[1], r, hc, handShape(which), dx, dy, pose.fx?.claw);
+      if (pose.armament) {
+        g.fillStyle = "rgba(180,140,255,0.5)";
+        g.beginPath();
+        g.arc(arm.e[0] - r * 0.3, arm.e[1] - r * 0.35, r * 0.3, 0, TAU7);
+        g.fill();
       }
-    }
-    const armEnd = (arm) => ({ x: sh.x + Math.sin(-arm.a) * arm.len * (side ? 1 : 0.2), y: sh.y + Math.cos(arm.a) * arm.len });
-    if (side || back) {
-      const e = armEnd(armB);
-      const bx = side ? -0.04 : -sh.x;
-      limb(g, bx, sh.y, bx + (e.x - sh.x) * (side ? 1 : 0) - (side ? 0.05 : 0), e.y, 0.12 * bulk, shade(look.sleeve || skin, -0.15), OUTLINE);
+      if (pose.fx?.elem && pose.fx.limb === (which === "F" ? "hF" : "hB")) drawHandFx(g, arm.e[0], arm.e[1], r, pose.fx, t, pose.fx.k ?? 1);
+    };
+    const drawWeaponIn = (arm, which) => {
+      if (!armed) return;
+      const kind = wpn.kind;
+      const a = which === "F" ? P2.wF : P2.wB;
+      if (which === "B" && kind === "sword" && (wpn.count || 1) < 2) return;
+      if (which === "B" && kind !== "sword") return;
+      let dx, dy;
+      if (a === void 0 || a === null) {
+        const fx = arm.e[0] - arm.j[0], fy = arm.e[1] - arm.j[1], l = Math.hypot(fx, fy) || 1;
+        dx = fx / l;
+        dy = fy / l;
+      } else [dx, dy] = bladeDir(a, side, back, lean, which === "F" ? -1 : 1);
+      if (kind === "sword") drawSword(g, arm.e[0], arm.e[1], dx, dy, 0.95, which === "B" ? { hilt: "#1b2631", color: "#dfe6e9" } : {});
+      else if (kind === "axe") drawAxe(g, arm.e[0], arm.e[1], dx, dy);
+      else if (kind === "staff") drawStaff(g, arm.e[0], arm.e[1], dx, dy);
+      else if (kind === "gun") drawGun(g, arm.e[0], arm.e[1], dx, dy, wpn.gun);
+    };
+    const drawBlade = (arm, which) => {
+      const col = which === "F" ? pose.blade : pose.bladeB;
+      if (!col) return;
+      const a = which === "F" ? P2.wF : P2.wB;
+      let dx, dy;
+      if (a === void 0 || a === null) {
+        const fx = arm.e[0] - arm.j[0], fy = arm.e[1] - arm.j[1], l = Math.hypot(fx, fy) || 1;
+        dx = fx / l;
+        dy = fy / l;
+      } else [dx, dy] = bladeDir(a, side, back, lean, which === "F" ? -1 : 1);
+      drawEnergyBlade(g, arm.e[0], arm.e[1], dx, dy, pose.bladeLen || 0.95, col);
+    };
+    const legW = 0.15 * bulk;
+    const shoeCol = look.shoes || "#3b2a1a";
+    const drawLeg = (L2, which) => {
+      const col = which === "B" && side ? shade(bottom, -0.15) : bottom;
+      const legSkin = pose.legFx && pose.fx?.limb === (which === "F" ? "fF" : "fB") ? pose.legFx : null;
+      limb2(g, L2.h[0], L2.h[1], L2.k[0], L2.k[1], L2.e[0], L2.e[1], legW, col, OUTLINE, legSkin || col);
+      const dx = L2.e[0] - L2.k[0], dy = L2.e[1] - L2.k[1];
+      const a = side ? Math.atan2(dy, dx) - Math.PI / 2 : 0;
+      g.save();
+      g.translate(L2.e[0], L2.e[1]);
+      g.rotate(side ? a : 0);
+      g.scale(L2.scale, L2.scale);
+      const sc = which === "B" && side ? shade(shoeCol, -0.2) : shoeCol;
+      if (side) rrect2(g, -0.04, -0.05, 0.2, 0.09, 0.04, sc);
+      else rrect2(g, -0.09, -0.05, 0.18, 0.09, 0.04, sc);
+      g.restore();
+      if (pose.fx?.elem && pose.fx.limb === (which === "F" ? "fF" : "fB")) drawHandFx(g, L2.e[0], L2.e[1], 0.1, pose.fx, t, pose.fx.k ?? 1);
+    };
+    const armFForward = !side && !back && rig.armF.u > 0.18;
+    const armBForward = !side && !back && rig.armB.u > 0.18;
+    const legFForward = !side && !back && rig.legF.u > 0.2;
+    if (side) {
+      upper(() => {
+      });
+      drawArm(rig.armB, "B");
+      drawWeaponIn(rig.armB, "B");
+      drawBlade(rig.armB, "B");
+      drawHandAt(rig.armB, "B");
+      drawLeg(rig.legB, "B");
+      drawLeg(rig.legF, "F");
+    } else if (back) {
+      drawLeg(rig.legB, "B");
+      drawLeg(rig.legF, "F");
+      if (!rig.armF.raised) {
+        drawWeaponIn(rig.armF, "F");
+        drawBlade(rig.armF, "F");
+        drawArm(rig.armF, "F");
+        drawHandAt(rig.armF, "F");
+      }
+      if (!rig.armB.raised) {
+        drawWeaponIn(rig.armB, "B");
+        drawBlade(rig.armB, "B");
+        drawArm(rig.armB, "B");
+        drawHandAt(rig.armB, "B");
+      }
+    } else {
+      drawLeg(rig.legB, "B");
+      if (!legFForward) drawLeg(rig.legF, "F");
     }
     const torsoW = 0.46 * bulk, torsoH = hipY - shoulderY + 0.05;
-    if (back) drawCapeBackFirst();
-    function drawCapeBackFirst() {
-    }
-    rrect(g, -torsoW / 2, shoulderY - 0.02, torsoW, torsoH, 0.12, top, OUTLINE);
-    if (look.vest) {
-      g.fillStyle = look.vest;
-      g.fillRect(-torsoW / 2 + 0.02, shoulderY + 0.02, 0.1, torsoH - 0.1);
-      g.fillRect(torsoW / 2 - 0.12, shoulderY + 0.02, 0.1, torsoH - 0.1);
-    }
-    if (look.openShirt && !back && !side) {
-      g.fillStyle = skin;
-      g.beginPath();
-      g.moveTo(-0.07, shoulderY);
-      g.lineTo(0.07, shoulderY);
-      g.lineTo(0.03, hipY - 0.05);
-      g.lineTo(-0.03, hipY - 0.05);
-      g.fill();
-      if (look.scar) {
-        g.strokeStyle = "#b0413e";
-        g.lineWidth = 0.03;
-        g.beginPath();
-        g.moveTo(-0.08, shoulderY + 0.1);
-        g.lineTo(0.08, shoulderY + 0.25);
-        g.stroke();
+    upper(() => {
+      rrect2(g, -torsoW / 2, shoulderY - 0.02, torsoW, torsoH, 0.12, top, OUTLINE);
+      if (look.vest) {
+        g.fillStyle = look.vest;
+        g.fillRect(-torsoW / 2 + 0.02, shoulderY + 0.02, 0.1, torsoH - 0.1);
+        g.fillRect(torsoW / 2 - 0.12, shoulderY + 0.02, 0.1, torsoH - 0.1);
       }
-    }
-    g.fillStyle = look.belt || shade(bottom, -0.3);
-    g.fillRect(-torsoW / 2, hipY - 0.07, torsoW, 0.07);
-    if (look.gills) {
-      g.strokeStyle = shade(skin, -0.35);
-      g.lineWidth = 0.02;
-      for (let k = 0; k < 3; k++) {
-        g.beginPath();
-        g.moveTo(-0.12 + k * 0.03, shoulderY + 0.02);
-        g.lineTo(-0.08 + k * 0.03, shoulderY + 0.1);
-        g.stroke();
+      if (look.spots) {
+        g.fillStyle = "rgba(78,52,46,0.8)";
+        for (let k = 0; k < 6; k++) {
+          g.beginPath();
+          g.arc(-torsoW / 2 + 0.08 + k % 3 * 0.14, shoulderY + 0.1 + Math.floor(k / 3) * 0.16, 0.03, 0, TAU7);
+          g.fill();
+        }
       }
-    }
-    if (back) {
-      drawCape();
-      drawTail();
-      drawWings();
-      drawBackFlame();
-    }
-    const swords = look.swords || 0;
-    if (swords && weaponAngle === null) {
-      for (let k = 0; k < Math.min(swords, 3); k++) {
-        g.save();
-        g.translate(side ? -0.12 : 0.18 - k * 0.05, hipY - 0.02);
-        g.rotate(side ? 2.3 - k * 0.12 : 2.6 - k * 0.15);
-        g.fillStyle = ["#ecf0f1", "#2c3e50", "#c0392b"][k] || "#2c3e50";
-        g.fillRect(-0.02, 0, 0.05, 0.62);
-        g.fillStyle = "#f1c40f";
-        g.fillRect(-0.05, 0, 0.11, 0.03);
-        g.restore();
-      }
-    }
-    {
-      const e = armEnd(armF);
-      const fx = side ? 0.06 : sh.x;
-      const ex = side ? fx + (e.x - sh.x) : fx + (e.x - sh.x) * 0.2;
-      limb(g, fx, sh.y, ex, e.y, 0.13 * bulk, look.sleeve || skin, OUTLINE);
-      if (armLen > 1.2) circ(g, (fx + ex) / 2, (sh.y + e.y) / 2, 0.075, look.sleeve || skin, OUTLINE, 0.03);
-      circ(g, ex, e.y, 0.085 * bulk, look.hand || skin, OUTLINE, 0.03);
-      if (weaponAngle !== null && (look.weapon === "sword" || swords)) {
-        g.save();
-        g.translate(ex, e.y);
-        g.rotate(weaponAngle + Math.PI);
-        g.fillStyle = "#dfe6e9";
-        g.strokeStyle = "#636e72";
-        g.lineWidth = 0.02;
+      if (look.openShirt && !back && !side) {
+        g.fillStyle = skin;
         g.beginPath();
-        g.moveTo(-0.03, 0.05);
-        g.lineTo(0.03, 0.05);
-        g.lineTo(0.02, 0.95);
-        g.lineTo(-0.01, 1.02);
-        g.closePath();
+        g.moveTo(-0.07, shoulderY);
+        g.lineTo(0.07, shoulderY);
+        g.lineTo(0.03, hipY - 0.05);
+        g.lineTo(-0.03, hipY - 0.05);
         g.fill();
-        g.stroke();
-        g.fillStyle = "#f1c40f";
-        g.fillRect(-0.07, 0.02, 0.14, 0.04);
-        g.restore();
-      } else if (look.weapon === "gun" && (act2 === "shoot" || pose.aiming)) {
-        g.save();
-        g.translate(ex, e.y);
-        g.rotate(-Math.PI / 2 * (side ? 1 : 0));
-        g.fillStyle = "#2d3436";
-        g.fillRect(0, -0.04, 0.35, 0.08);
-        g.fillStyle = "#8d5b33";
-        g.fillRect(-0.05, -0.02, 0.1, 0.14);
-        g.restore();
-      } else if (look.weapon === "staff") {
-        g.strokeStyle = "#74b9ff";
-        g.lineWidth = 0.05;
-        g.beginPath();
-        g.moveTo(ex, e.y - 0.5);
-        g.lineTo(ex, e.y + 0.4);
-        g.stroke();
+        if (look.scar) {
+          g.strokeStyle = "#b0413e";
+          g.lineWidth = 0.03;
+          g.beginPath();
+          g.moveTo(-0.08, shoulderY + 0.1);
+          g.lineTo(0.08, shoulderY + 0.25);
+          g.stroke();
+        }
+      }
+      g.fillStyle = look.belt || shade(bottom, -0.3);
+      g.fillRect(-torsoW / 2, hipY - 0.07, torsoW, 0.07);
+      if (look.gills) {
+        g.strokeStyle = shade(skin, -0.35);
+        g.lineWidth = 0.02;
+        for (let k = 0; k < 3; k++) {
+          g.beginPath();
+          g.moveTo(-0.12 + k * 0.03, shoulderY + 0.02);
+          g.lineTo(-0.08 + k * 0.03, shoulderY + 0.1);
+          g.stroke();
+        }
+      }
+      if (back) {
+        drawCape();
+        drawTail();
+        drawWings();
+        drawBackFlame();
+      }
+      if (wpn && !armed) {
+        if (wpn.kind === "sword") {
+          for (let k = 0; k < Math.min(wpn.count || 1, 3); k++) {
+            g.save();
+            g.translate(side ? -0.12 : 0.18 - k * 0.05, hipY - 0.02);
+            g.rotate(side ? 2.3 - k * 0.12 : 2.6 - k * 0.15);
+            g.fillStyle = ["#ecf0f1", "#2c3e50", "#c0392b"][k] || "#2c3e50";
+            g.fillRect(-0.02, 0, 0.05, 0.62);
+            g.fillStyle = "#f1c40f";
+            g.fillRect(-0.05, 0, 0.11, 0.03);
+            g.restore();
+          }
+        } else if (wpn.kind === "axe" || wpn.kind === "staff") {
+          g.save();
+          g.translate(side ? -0.1 : 0.05, shoulderY + 0.1);
+          g.rotate(side ? -2.2 : -1.9);
+          if (wpn.kind === "axe") drawAxe(g, 0, 0, 1, 0);
+          else drawStaff(g, 0, 0, 1, 0);
+          g.restore();
+        } else if (wpn.kind === "gun" && !back) {
+          g.save();
+          g.translate(side ? -0.08 : 0.2, hipY - 0.02);
+          g.rotate(1.9);
+          drawGun(g, 0, 0, 1, 0, wpn.gun);
+          g.restore();
+        }
+      }
+    });
+    if (side) {
+      drawArm(rig.armF, "F");
+      drawWeaponIn(rig.armF, "F");
+      drawBlade(rig.armF, "F");
+      drawHandAt(rig.armF, "F");
+    } else if (back) {
+      if (rig.armF.raised) {
+        drawArm(rig.armF, "F");
+        drawWeaponIn(rig.armF, "F");
+        drawBlade(rig.armF, "F");
+        drawHandAt(rig.armF, "F");
+      }
+      if (rig.armB.raised) {
+        drawArm(rig.armB, "B");
+        drawWeaponIn(rig.armB, "B");
+        drawBlade(rig.armB, "B");
+        drawHandAt(rig.armB, "B");
+      }
+    } else {
+      if (!armBForward) {
+        drawArm(rig.armB, "B");
+        drawWeaponIn(rig.armB, "B");
+        drawBlade(rig.armB, "B");
+        drawHandAt(rig.armB, "B");
+      }
+      if (!armFForward) {
+        drawArm(rig.armF, "F");
+        drawWeaponIn(rig.armF, "F");
+        drawBlade(rig.armF, "F");
+        drawHandAt(rig.armF, "F");
       }
     }
+    if (look.neck) upper(() => rrect2(g, -0.08, headY + 0.1, 0.16, shoulderY - headY - 0.08, 0.06, skin, OUTLINE));
+    upper(() => {
+      g.save();
+      const tilt = (P2.ht || 0) + (pose.state === "hurt" ? -0.25 : 0);
+      if (tilt) {
+        g.translate(0, headY + headR);
+        g.rotate(tilt);
+        g.translate(0, -headY - headR);
+      }
+      drawHead(g, look, headY, headR, d, pose, t, P2);
+      if (armed && wpn.kind === "sword" && (wpn.count || 0) >= 3 && !back) {
+        const m = P2.m ?? 0.15;
+        const mx = side ? headR * 0.45 : 0, my = headY + headR * 0.45;
+        const [dx, dy] = side ? [Math.cos(m), Math.sin(m)] : [0.8, 0.35];
+        drawSword(g, mx - dx * 0.1, my - dy * 0.1, dx, dy, 0.8, { hilt: "#fafafa", guard: "#b71c1c" });
+      }
+      g.restore();
+    });
     if (!side && !back) {
-      const e = armEnd(armB);
-      limb(g, -sh.x, sh.y, -sh.x - (e.x - sh.x) * 0.2, e.y, 0.13 * bulk, look.sleeve || skin, OUTLINE);
-      circ(g, -sh.x - (e.x - sh.x) * 0.2, e.y, 0.085 * bulk, look.hand || skin, OUTLINE, 0.03);
+      if (legFForward) drawLeg(rig.legF, "F");
+      if (armBForward) {
+        drawArm(rig.armB, "B");
+        drawWeaponIn(rig.armB, "B");
+        drawBlade(rig.armB, "B");
+        drawHandAt(rig.armB, "B");
+      }
+      if (armFForward) {
+        drawArm(rig.armF, "F");
+        drawWeaponIn(rig.armF, "F");
+        drawBlade(rig.armF, "F");
+        drawHandAt(rig.armF, "F");
+      }
     }
-    if (look.neck) {
-      rrect(g, -0.08, headY + 0.1, 0.16, shoulderY - headY - 0.08, 0.06, skin, OUTLINE);
-    }
-    drawHead(g, look, headY, headR, d, pose, t);
+    if (pose.anim && !pose.noTrails) drawTrails(g, look, pose, rig, d, side, back);
+    if (pose.flurry) drawFlurry(g, look, pose, rig, side, t);
     g.restore();
   }
-  function drawHead(g, look, hy, r, d, pose, t) {
+  function drawFlurry(g, look, pose, rig, side, t) {
+    const f = pose.flurry;
+    const n = f.n || 7;
+    const col = pose.armament ? "#1c1a24" : look.hand || look.skin || "#f1c9a0";
+    const sleeve = look.sleeve || look.skin || "#f1c9a0";
+    const sx = rig.armF.s[0], sy = rig.armF.s[1];
+    g.save();
+    for (let k = 0; k < n; k++) {
+      const ph = (t * (f.rate || 9) + k / n) % 1;
+      const reach = (f.reach || 0.9) * (0.45 + 0.55 * Math.sin(ph * Math.PI));
+      const spread = (k * 0.618 % 1 - 0.5) * (f.spread || 0.9);
+      const ex = side ? sx + reach : sx + spread * 0.6;
+      const ey = side ? sy - 0.05 + spread * 0.55 : sy + reach * 0.45 + spread * 0.2;
+      g.globalAlpha = 0.35 + 0.45 * Math.sin(ph * Math.PI);
+      if (f.stretch) limb(g, sx, sy, ex, ey, 0.09, sleeve, null);
+      circ(g, ex, ey, 0.09 * (side ? 1 : 1.2), col, OUTLINE, 0.025);
+    }
+    g.restore();
+  }
+  function drawDragonCoil(g, look, t, shoulderY, hipY) {
+    g.save();
+    g.lineCap = "round";
+    const pts = [];
+    for (let k = 0; k <= 14; k++) {
+      const u = k / 14;
+      pts.push([Math.sin(u * 5 + t * 1.5) * 0.7 * (1 - u * 0.4), shoulderY - 0.9 + u * 1.3 + Math.cos(u * 4 + t) * 0.15]);
+    }
+    for (const [w, col] of [[0.38, "#0d47a1"], [0.3, "#42a5f5"], [0.08, "#bbdefb"]]) {
+      g.strokeStyle = col;
+      g.lineWidth = w;
+      g.beginPath();
+      g.moveTo(pts[0][0], pts[0][1]);
+      for (const p of pts) g.lineTo(p[0], p[1]);
+      g.stroke();
+    }
+    const [hx, hy] = pts[0];
+    circ(g, hx, hy, 0.24, "#42a5f5", OUTLINE, 0.03);
+    g.fillStyle = "#fff59d";
+    g.beginPath();
+    g.arc(hx + 0.08, hy - 0.05, 0.05, 0, TAU7);
+    g.fill();
+    g.strokeStyle = "#fff8e1";
+    g.lineWidth = 0.04;
+    g.beginPath();
+    g.moveTo(hx - 0.05, hy - 0.2);
+    g.lineTo(hx - 0.2, hy - 0.45);
+    g.moveTo(hx + 0.05, hy - 0.2);
+    g.lineTo(hx + 0.12, hy - 0.47);
+    g.stroke();
+    g.restore();
+  }
+  function drawAsura(g, t, shoulderY, headY) {
+    g.save();
+    g.globalAlpha *= 0.45 + 0.1 * Math.sin(t * 5);
+    g.fillStyle = "rgba(30,30,30,0.9)";
+    for (const sx of [-1, 1]) {
+      circ(g, sx * 0.42, headY - 0.05, 0.22, "rgba(30,30,30,0.9)", null);
+      for (let k = 0; k < 3; k++) {
+        g.strokeStyle = "rgba(30,30,30,0.9)";
+        g.lineWidth = 0.1;
+        g.lineCap = "round";
+        g.beginPath();
+        g.moveTo(sx * 0.2, shoulderY + 0.1);
+        g.lineTo(sx * (0.7 + k * 0.05), shoulderY - 0.2 + k * 0.25);
+        g.stroke();
+        g.strokeStyle = "rgba(220,230,235,0.8)";
+        g.lineWidth = 0.035;
+        g.beginPath();
+        g.moveTo(sx * (0.7 + k * 0.05), shoulderY - 0.2 + k * 0.25);
+        g.lineTo(sx * (1.3 + k * 0.05), shoulderY - 0.45 + k * 0.3);
+        g.stroke();
+      }
+    }
+    g.fillStyle = "#ff1744";
+    for (const sx of [-1, 1]) {
+      g.beginPath();
+      g.arc(sx * 0.46, headY - 0.08, 0.03, 0, TAU7);
+      g.fill();
+    }
+    g.restore();
+  }
+  function drawHead(g, look, hy, r, d, pose, t, P2) {
     const skin = look.skin || "#f1c9a0";
     const hair = look.hairColor || "#2d2d2d";
     const side = d === "left" || d === "right";
     const back = d === "up";
+    const white = look.furWhite;
     if (look.ears) {
-      const ec = look.fur || hair;
+      const ec = white ? "#fafafa" : look.fur || hair;
       for (const sx of [-1, 1]) {
         g.save();
         g.translate(sx * r * 0.62, hy - r * 0.75);
@@ -11780,8 +15630,8 @@ void main() {
         g.strokeStyle = OUTLINE;
         g.lineWidth = 0.03;
         g.beginPath();
-        if (look.ears === "long") g.ellipse(0, -0.2, 0.08, 0.26, 0, 0, TAU4);
-        else if (look.ears === "round") g.arc(0, -0.02, 0.12, 0, TAU4);
+        if (look.ears === "long") g.ellipse(0, -0.2, 0.08, 0.26, 0, 0, TAU7);
+        else if (look.ears === "round") g.arc(0, -0.02, 0.12, 0, TAU7);
         else {
           g.moveTo(-0.11, 0.05);
           g.lineTo(0, -0.22);
@@ -11805,19 +15655,31 @@ void main() {
       g.fill();
       g.stroke();
     }
-    circ(g, 0, hy, r, look.fur && look.furFace ? look.fur : skin, OUTLINE, 0.04);
+    const faceCol = white ? "#fafafa" : look.fur && look.furFace ? look.fur : skin;
+    circ(g, 0, hy, r, faceCol, OUTLINE, 0.04);
     if (look.muzzle && !back) {
-      circ(g, side ? r * 0.55 : 0, hy + r * 0.3, r * 0.38, shade(look.fur || skin, 0.35), null);
+      circ(g, side ? r * 0.55 : 0, hy + r * 0.3, r * 0.38, shade(white ? "#fafafa" : look.fur || skin, 0.35), null);
       circ(g, side ? r * 0.82 : 0, hy + r * 0.18, 0.045, "#2d2d2d");
     }
-    drawHair(g, look.hair || "short", hair, hy, r, d);
+    drawHair(g, look.hair || "short", white ? "#fafafa" : hair, hy, r, d, look.nika ? t : null);
     if (!back) {
       const ex = side ? r * 0.4 : r * 0.36;
       const eyeY = hy + r * 0.05;
-      const eyeCol = look.eyeColor || "#222";
+      const eyeCol = white ? "#ff1744" : look.eyeColor || "#222";
       const blink = Math.sin(t * 1.7 + (look.seed || 0)) > 0.985;
+      const fierce = P2 && (P2.face === "shout" || P2.face === "fierce");
       const drawEye = (x) => {
-        if (blink) {
+        if (pose.state === "hurt") {
+          g.strokeStyle = "#222";
+          g.lineWidth = 0.028;
+          g.beginPath();
+          g.moveTo(x - 0.05, eyeY - 0.04);
+          g.lineTo(x + 0.04, eyeY);
+          g.lineTo(x - 0.05, eyeY + 0.04);
+          g.stroke();
+          return;
+        }
+        if (blink && !fierce) {
           g.strokeStyle = "#222";
           g.lineWidth = 0.025;
           g.beginPath();
@@ -11828,16 +15690,24 @@ void main() {
         }
         g.fillStyle = "#fff";
         g.beginPath();
-        g.ellipse(x, eyeY, 0.06, 0.075, 0, 0, TAU4);
+        g.ellipse(x, eyeY, 0.06, 0.075, 0, 0, TAU7);
         g.fill();
         g.fillStyle = eyeCol;
         g.beginPath();
-        g.ellipse(x + (side ? 0.015 : 0), eyeY + 0.01, 0.035, 0.05, 0, 0, TAU4);
+        g.ellipse(x + (side ? 0.015 : 0), eyeY + 0.01, 0.035, 0.05, 0, 0, TAU7);
         g.fill();
         g.fillStyle = "#fff";
         g.beginPath();
-        g.arc(x - 0.01, eyeY - 0.02, 0.012, 0, TAU4);
+        g.arc(x - 0.01, eyeY - 0.02, 0.012, 0, TAU7);
         g.fill();
+        if (fierce) {
+          g.strokeStyle = "#222";
+          g.lineWidth = 0.03;
+          g.beginPath();
+          g.moveTo(x - 0.07, eyeY - 0.1 + (side ? 0 : x > 0 ? 0.03 : 0));
+          g.lineTo(x + 0.06, eyeY - 0.06 + (side ? 0 : x > 0 ? -0.03 : 0.03));
+          g.stroke();
+        }
       };
       if (side) drawEye(ex);
       else {
@@ -11847,31 +15717,32 @@ void main() {
       if (look.thirdEye) {
         g.fillStyle = "#fff";
         g.beginPath();
-        g.ellipse(side ? r * 0.2 : 0, hy - r * 0.35, 0.05, 0.065, 0, 0, TAU4);
+        g.ellipse(side ? r * 0.2 : 0, hy - r * 0.35, 0.05, 0.065, 0, 0, TAU7);
         g.fill();
         g.fillStyle = look.eyeColor || "#8e44ad";
         g.beginPath();
-        g.arc(side ? r * 0.21 : 0, hy - r * 0.34, 0.028, 0, TAU4);
+        g.arc(side ? r * 0.21 : 0, hy - r * 0.34, 0.028, 0, TAU7);
         g.fill();
       }
       g.strokeStyle = "#6b2b2b";
       g.lineWidth = 0.025;
       const my = hy + r * 0.5;
+      const mx = side ? r * 0.35 : 0;
       g.beginPath();
-      if (pose.state === "hurt" || pose.action === "heavy") {
-        g.ellipse(side ? r * 0.35 : 0, my, 0.05, 0.035, 0, 0, TAU4);
+      if (pose.state === "hurt" || P2 && P2.face === "shout") {
+        g.ellipse(mx, my, 0.06, 0.045, 0, 0, TAU7);
         g.fillStyle = "#6b2b2b";
         g.fill();
-      } else if (look.grin) {
-        g.arc(side ? r * 0.35 : 0, my - 0.04, 0.08, 0.2, Math.PI - 0.2);
+      } else if (look.nika || look.grin) {
+        g.arc(mx, my - 0.04, 0.08, 0.2, Math.PI - 0.2);
         g.stroke();
         if (look.sharpTeeth) {
           g.fillStyle = "#fff";
-          g.fillRect((side ? r * 0.35 : 0) - 0.06, my - 0.01, 0.12, 0.03);
+          g.fillRect(mx - 0.06, my - 0.01, 0.12, 0.03);
         }
       } else {
-        g.moveTo((side ? r * 0.3 : 0) - 0.04, my);
-        g.lineTo((side ? r * 0.3 : 0) + 0.04, my);
+        g.moveTo(mx - 0.04, my);
+        g.lineTo(mx + 0.04, my);
         g.stroke();
       }
       if (look.scarEye) {
@@ -11896,19 +15767,32 @@ void main() {
       if (pose.flash) {
         g.fillStyle = "rgba(255,255,255,0.6)";
         g.beginPath();
-        g.arc(0, hy, r, 0, TAU4);
+        g.arc(0, hy, r, 0, TAU7);
         g.fill();
       }
     }
     drawHat(g, look.hat, hy, r, d, look);
   }
-  function drawHair(g, style, col, hy, r, d) {
-    if (style === "bald") return;
+  function drawHair(g, style, col, hy, r, d, nikaT) {
+    if (style === "bald" && nikaT === null) return;
     const back = d === "up";
     g.fillStyle = col;
     g.strokeStyle = OUTLINE;
     g.lineWidth = 0.035;
     g.beginPath();
+    if (nikaT !== null && nikaT !== void 0) {
+      g.moveTo(-r * 1.05, hy);
+      for (let k = 0; k <= 8; k++) {
+        const a = Math.PI + k / 8 * Math.PI;
+        const rr = r * (k % 2 ? 1.25 + 0.2 * Math.sin(nikaT * 9 + k) : 1);
+        g.lineTo(Math.cos(a) * rr * 1.1, hy + Math.sin(a) * rr * 1.25 - (k % 2 ? r * 0.2 : 0));
+      }
+      g.lineTo(r * 1.05, hy);
+      g.quadraticCurveTo(0, hy - r * 0.4, -r * 1.05, hy);
+      g.fill();
+      g.stroke();
+      return;
+    }
     switch (style) {
       case "spiky":
         g.moveTo(-r * 1.05, hy);
@@ -11935,13 +15819,13 @@ void main() {
         g.lineTo(r * 0.8, hy - r * 0.3);
         break;
       case "afro":
-        g.arc(0, hy - r * 0.35, r * 1.35, 0, TAU4);
+        g.arc(0, hy - r * 0.35, r * 1.35, 0, TAU7);
         break;
       case "topknot":
         g.arc(0, hy, r * 1.04, Math.PI, 0);
         g.quadraticCurveTo(0, hy - r * 0.55, -r * 1.04, hy);
         g.moveTo(r * 0.2, hy - r * 1);
-        g.arc(0, hy - r * 1.2, r * 0.25, 0, TAU4);
+        g.arc(0, hy - r * 1.2, r * 0.25, 0, TAU7);
         break;
       case "buzz":
         g.arc(0, hy, r * 1.02, Math.PI * 1.05, -0.05);
@@ -11957,7 +15841,7 @@ void main() {
         g.arc(0, hy, r * 1.05, Math.PI * 1.02, -0.02);
         g.quadraticCurveTo(0, hy - r * 0.5, -r * 1.03, hy);
         g.moveTo(r * 0.45, hy - r * 1.25);
-        g.arc(0, hy - r * 1.25, r * 0.45, 0, TAU4);
+        g.arc(0, hy - r * 1.25, r * 0.45, 0, TAU7);
         break;
       case "pompadour":
         g.moveTo(-r * 1.02, hy);
@@ -11970,7 +15854,7 @@ void main() {
         for (let k = 0; k < 7; k++) {
           const a = Math.PI + k / 6 * Math.PI;
           g.moveTo(Math.cos(a) * r + r * 0.28, hy + Math.sin(a) * r * 0.95);
-          g.arc(Math.cos(a) * r, hy + Math.sin(a) * r * 0.95, r * 0.28, 0, TAU4);
+          g.arc(Math.cos(a) * r, hy + Math.sin(a) * r * 0.95, r * 0.28, 0, TAU7);
         }
         break;
       default:
@@ -11986,7 +15870,7 @@ void main() {
     g.stroke();
     if (back && style !== "bald") {
       g.beginPath();
-      g.arc(0, hy, r * 1.02, 0, TAU4);
+      g.arc(0, hy, r * 1.02, 0, TAU7);
       g.fill();
     }
   }
@@ -11998,7 +15882,7 @@ void main() {
       case "straw": {
         g.fillStyle = "#f2d16b";
         g.beginPath();
-        g.ellipse(0, hy - r * 0.55, r * 1.55, r * 0.42, 0, 0, TAU4);
+        g.ellipse(0, hy - r * 0.55, r * 1.55, r * 0.42, 0, 0, TAU7);
         g.fill();
         g.stroke();
         g.fillStyle = "#f5da7a";
@@ -12030,7 +15914,7 @@ void main() {
       case "marine": {
         g.fillStyle = "#ffffff";
         g.beginPath();
-        g.ellipse(0, hy - r * 0.75, r * 1, r * 0.45, 0, 0, TAU4);
+        g.ellipse(0, hy - r * 0.75, r * 1, r * 0.45, 0, 0, TAU7);
         g.fill();
         g.stroke();
         g.fillStyle = "#1b4f72";
@@ -12038,7 +15922,7 @@ void main() {
         if (d === "down" || d === "right") {
           g.fillStyle = "#34495e";
           g.beginPath();
-          g.ellipse(r * 0.3, hy - r * 0.45, r * 0.6, r * 0.15, 0, 0, TAU4);
+          g.ellipse(r * 0.3, hy - r * 0.45, r * 0.6, r * 0.15, 0, 0, TAU7);
           g.fill();
         }
         break;
@@ -12053,14 +15937,14 @@ void main() {
         g.stroke();
         g.fillStyle = "#f1c40f";
         g.beginPath();
-        g.arc(0, hy - r * 1.15, r * 0.15, 0, TAU4);
+        g.arc(0, hy - r * 1.15, r * 0.15, 0, TAU7);
         g.fill();
         break;
       }
       case "captain": {
         g.fillStyle = look.hatColor || "#1e272e";
         g.beginPath();
-        g.ellipse(0, hy - r * 0.6, r * 1.6, r * 0.38, 0, 0, TAU4);
+        g.ellipse(0, hy - r * 0.6, r * 1.6, r * 0.38, 0, 0, TAU7);
         g.fill();
         g.stroke();
         g.beginPath();
@@ -12069,7 +15953,7 @@ void main() {
         g.stroke();
         g.fillStyle = "#fff";
         g.beginPath();
-        g.arc(0, hy - r * 1.1, r * 0.18, 0, TAU4);
+        g.arc(0, hy - r * 1.1, r * 0.18, 0, TAU7);
         g.fill();
         g.fillStyle = "#e74c3c";
         g.beginPath();
@@ -12081,7 +15965,7 @@ void main() {
       case "cowboy": {
         g.fillStyle = look.hatColor || "#8d6e4a";
         g.beginPath();
-        g.ellipse(0, hy - r * 0.6, r * 1.6, r * 0.35, 0, 0, TAU4);
+        g.ellipse(0, hy - r * 0.6, r * 1.6, r * 0.35, 0, 0, TAU7);
         g.fill();
         g.stroke();
         g.beginPath();
@@ -12099,14 +15983,14 @@ void main() {
         g.stroke();
         g.fillStyle = "#fff";
         g.beginPath();
-        g.arc(0, hy - r * 1.25, r * 0.22, 0, TAU4);
+        g.arc(0, hy - r * 1.25, r * 0.22, 0, TAU7);
         g.fill();
         break;
       }
       case "pinkhat": {
         g.fillStyle = "#f78fb3";
         g.beginPath();
-        g.ellipse(0, hy - r * 0.55, r * 1.3, r * 0.35, 0, 0, TAU4);
+        g.ellipse(0, hy - r * 0.55, r * 1.3, r * 0.35, 0, 0, TAU7);
         g.fill();
         g.stroke();
         g.beginPath();
@@ -12135,6 +16019,22 @@ void main() {
         }
         break;
       }
+      case "antlers": {
+        g.strokeStyle = "#8d6e63";
+        g.lineWidth = 0.06;
+        g.lineCap = "round";
+        for (const sx of [-1, 1]) {
+          g.beginPath();
+          g.moveTo(sx * r * 0.5, hy - r * 0.8);
+          g.lineTo(sx * r * 1.2, hy - r * 1.9);
+          g.moveTo(sx * r * 0.85, hy - r * 1.35);
+          g.lineTo(sx * r * 1.5, hy - r * 1.4);
+          g.moveTo(sx * r * 1.05, hy - r * 1.7);
+          g.lineTo(sx * r * 0.8, hy - r * 2.2);
+          g.stroke();
+        }
+        break;
+      }
       case "crown": {
         g.fillStyle = "#f1c40f";
         g.beginPath();
@@ -12155,12 +16055,12 @@ void main() {
         g.strokeStyle = "rgba(220,245,255,0.8)";
         g.lineWidth = 0.04;
         g.beginPath();
-        g.arc(0, hy - r * 0.1, r * 1.7, 0, TAU4);
+        g.arc(0, hy - r * 0.1, r * 1.7, 0, TAU7);
         g.fill();
         g.stroke();
         g.fillStyle = "rgba(255,255,255,0.7)";
         g.beginPath();
-        g.arc(-r * 0.7, hy - r * 0.9, r * 0.22, 0, TAU4);
+        g.arc(-r * 0.7, hy - r * 0.9, r * 0.22, 0, TAU7);
         g.fill();
         break;
       }
@@ -12168,7 +16068,7 @@ void main() {
         g.strokeStyle = "#ffe082";
         g.lineWidth = 0.06;
         g.beginPath();
-        g.ellipse(0, hy - r * 1.55, r * 0.7, r * 0.2, 0, 0, TAU4);
+        g.ellipse(0, hy - r * 1.55, r * 0.7, r * 0.2, 0, 0, TAU7);
         g.stroke();
         break;
       }
@@ -12189,16 +16089,23 @@ void main() {
     }
   }
   function drawLying(g, look, pose, s) {
+    const kt = pose.knockT ?? 1;
+    const fall = Math.min(1, kt / 0.28);
+    const bounce = kt > 0.28 && kt < 0.5 ? Math.sin((kt - 0.28) / 0.22 * Math.PI) * 0.12 : 0;
+    const k = fall * fall;
     g.save();
     g.scale(s, s);
-    g.rotate(-Math.PI / 2 * 0.92);
-    g.translate(0.55, -0.1);
+    g.translate(0, -bounce);
+    g.rotate(-Math.PI / 2 * 0.92 * k);
+    g.translate(0.55 * k, -0.1 * k);
     const skin = look.skin || "#f1c9a0";
-    rrect(g, -0.25, -0.75, 0.5, 0.55, 0.12, look.top || "#d63031", OUTLINE);
+    rrect2(g, -0.25, -0.75, 0.5, 0.55, 0.12, look.top || "#d63031", OUTLINE);
     limb(g, -0.1, -0.2, -0.12, 0.25, 0.15, look.bottom || "#2d3436", OUTLINE);
     limb(g, 0.1, -0.2, 0.14, 0.25, 0.15, look.bottom || "#2d3436", OUTLINE);
-    circ(g, 0, -1, 0.3, skin, OUTLINE);
-    drawHair(g, look.hair || "short", look.hairColor || "#2d2d2d", -1, 0.3, "down");
+    limb(g, -0.22, -0.68, -0.42 + k * 0.1, -0.35, 0.11, look.sleeve || skin, OUTLINE);
+    limb(g, 0.22, -0.68, 0.44 - k * 0.1, -0.4, 0.11, look.sleeve || skin, OUTLINE);
+    circ(g, 0, -1, 0.3, look.furWhite ? "#fafafa" : skin, OUTLINE);
+    drawHair(g, look.hair || "short", look.hairColor || "#2d2d2d", -1, 0.3, "down", null);
     g.strokeStyle = "#222";
     g.lineWidth = 0.03;
     for (const ex of [-0.1, 0.1]) {
@@ -12210,311 +16117,16 @@ void main() {
       g.stroke();
     }
     g.restore();
-    if (pose.state === "knocked" && pose.time !== void 0) {
-      for (let k = 0; k < 3; k++) {
-        const a = pose.time * 4 + k * TAU4 / 3;
-        g.fillStyle = "#f1c40f";
-        g.font = "0.3px sans-serif";
-        g.fillText("\u2605", Math.cos(a) * 0.4 * s - 0.6 * s, -0.45 * s + Math.sin(a) * 0.15);
-      }
-    }
-  }
-
-  // src/render/projectiles.js
-  var TAU5 = Math.PI * 2;
-  function drawProjectile(g, env, r) {
-    const p = this;
-    const a = Math.atan2(p.vy, p.vx);
-    const s = p.size || 1;
-    const t = p.t || 0;
-    const lift = -0.5;
-    g.translate(0, lift);
-    switch (p.sprite) {
-      case "gomufist": {
-        if (p.stretch && p.stretch.alive) {
-          const w = r.game ? r.game.world : null;
-          const dx = w ? w.dx(p.x, p.stretch.x) : p.stretch.x - p.x;
-          const dy = p.stretch.y - 0.9 - p.y + 0.5;
-          g.strokeStyle = p.stretch.look?.sleeve || p.stretch.look?.skin || "#f1c9a0";
-          g.lineWidth = 0.22 * s;
-          g.lineCap = "round";
-          g.beginPath();
-          g.moveTo(0, 0);
-          g.lineTo(dx, dy);
-          g.stroke();
-          g.strokeStyle = "rgba(40,20,20,0.6)";
-          g.lineWidth = 0.04;
-          g.stroke();
-        }
-        g.fillStyle = p.stretch?.armament ? "#212121" : p.stretch?.look?.skin || "#f1c9a0";
-        g.strokeStyle = "#3b2a1a";
-        g.lineWidth = 0.05;
-        g.beginPath();
-        g.arc(0, 0, 0.3 * s, 0, TAU5);
-        g.fill();
-        g.stroke();
-        break;
-      }
-      case "fireball":
-      case "firefist": {
-        for (let k = 0; k < 3; k++) {
-          g.fillStyle = ["rgba(255,87,34,0.55)", "rgba(255,152,0,0.8)", "rgba(255,235,59,0.95)"][k];
-          g.beginPath();
-          g.ellipse(-Math.cos(a) * 0.15 * (2 - k), -Math.sin(a) * 0.15 * (2 - k), (0.55 - k * 0.13) * s, (0.42 - k * 0.1) * s, a, 0, TAU5);
-          g.fill();
-        }
-        break;
-      }
-      case "magmafist": {
-        g.fillStyle = "#bf360c";
-        g.beginPath();
-        g.arc(0, 0, 0.55 * s, 0, TAU5);
-        g.fill();
-        g.fillStyle = "#ff6f00";
-        g.beginPath();
-        g.arc(Math.sin(t * 20) * 0.05, 0, 0.38 * s, 0, TAU5);
-        g.fill();
+    if (pose.state === "knocked" && pose.time !== void 0 && fall >= 1) {
+      for (let i = 0; i < 3; i++) {
+        const a = pose.time * 4 + i * TAU7 / 3;
+        const x = Math.cos(a) * 0.4 * s - 0.6 * s, y = -0.55 * s + Math.sin(a) * 0.15;
         g.fillStyle = "#ffd54f";
-        g.beginPath();
-        g.arc(0, 0, 0.18 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "iceshard": {
-        g.rotate(a);
-        g.fillStyle = "#b3e5fc";
-        g.strokeStyle = "#e1f5fe";
-        g.lineWidth = 0.04;
-        g.beginPath();
-        g.moveTo(0.5 * s, 0);
-        g.lineTo(-0.3 * s, -0.16 * s);
-        g.lineTo(-0.45 * s, 0);
-        g.lineTo(-0.3 * s, 0.16 * s);
-        g.closePath();
+        g.strokeStyle = "rgba(80,50,0,0.8)";
+        g.lineWidth = 0.02;
+        starPath(g, x, y, 0.11 * (0.8 + 0.2 * Math.sin(a * 2)), 5, 0.45, a);
         g.fill();
         g.stroke();
-        break;
-      }
-      case "bird": {
-        g.rotate(a);
-        g.fillStyle = p.color || "#b3e5fc";
-        g.beginPath();
-        g.moveTo(0.5 * s, 0);
-        g.quadraticCurveTo(-0.1, -0.7 * s + Math.sin(t * 20) * 0.2, -0.5 * s, -0.5 * s);
-        g.lineTo(-0.2 * s, 0);
-        g.lineTo(-0.5 * s, 0.5 * s);
-        g.quadraticCurveTo(-0.1, 0.7 * s - Math.sin(t * 20) * 0.2, 0.5 * s, 0);
-        g.fill();
-        break;
-      }
-      case "airslash": {
-        g.rotate(a);
-        g.strokeStyle = p.color || "#e3f2fd";
-        g.lineWidth = 0.12 * s;
-        g.lineCap = "round";
-        g.beginPath();
-        g.arc(-0.4 * s, 0, 0.7 * s, -1.1, 1.1);
-        g.stroke();
-        g.strokeStyle = "rgba(255,255,255,0.9)";
-        g.lineWidth = 0.05 * s;
-        g.stroke();
-        break;
-      }
-      case "bullet": {
-        g.rotate(a);
-        g.fillStyle = "#ffe082";
-        g.fillRect(-0.3, -0.03, 0.3, 0.06);
-        g.fillStyle = "#424242";
-        g.beginPath();
-        g.arc(0, 0, 0.07, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "cannonball": {
-        g.fillStyle = "#212121";
-        g.beginPath();
-        g.arc(0, 0, 0.22 * s, 0, TAU5);
-        g.fill();
-        g.fillStyle = "#616161";
-        g.beginPath();
-        g.arc(-0.06, -0.06, 0.07 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "bomb": {
-        g.fillStyle = "#263238";
-        g.beginPath();
-        g.arc(0, 0, 0.25 * s, 0, TAU5);
-        g.fill();
-        g.strokeStyle = "#8d6e63";
-        g.lineWidth = 0.04;
-        g.beginPath();
-        g.moveTo(0.1, -0.2);
-        g.lineTo(0.2, -0.35);
-        g.stroke();
-        g.fillStyle = Math.sin(t * 30) > 0 ? "#ffeb3b" : "#ff7043";
-        g.beginPath();
-        g.arc(0.2, -0.37, 0.06, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "sandblade": {
-        g.rotate(a);
-        g.fillStyle = "rgba(225,193,110,0.9)";
-        g.beginPath();
-        g.moveTo(0.5 * s, 0);
-        g.quadraticCurveTo(0, -0.8 * s, -0.5 * s, -0.6 * s);
-        g.quadraticCurveTo(-0.1, 0, -0.5 * s, 0.6 * s);
-        g.quadraticCurveTo(0, 0.8 * s, 0.5 * s, 0);
-        g.fill();
-        break;
-      }
-      case "smokefist": {
-        g.fillStyle = "rgba(236,239,241,0.9)";
-        for (let k = 0; k < 4; k++) {
-          g.beginPath();
-          g.arc(-Math.cos(a) * k * 0.2, -Math.sin(a) * k * 0.2, (0.5 - k * 0.08) * s, 0, TAU5);
-          g.fill();
-        }
-        break;
-      }
-      case "lightorb": {
-        g.fillStyle = "rgba(255,249,196,0.5)";
-        g.beginPath();
-        g.arc(0, 0, 0.4 * s, 0, TAU5);
-        g.fill();
-        g.fillStyle = "#fffde7";
-        g.beginPath();
-        g.arc(0, 0, 0.2 * s, 0, TAU5);
-        g.fill();
-        g.rotate(a);
-        g.fillStyle = "rgba(255,245,157,0.5)";
-        g.fillRect(-1.2 * s, -0.08, 1.2 * s, 0.16);
-        break;
-      }
-      case "darkorb": {
-        g.fillStyle = "rgba(49,27,146,0.6)";
-        g.beginPath();
-        g.arc(0, 0, 0.55 * s, 0, TAU5);
-        g.fill();
-        g.fillStyle = "#000";
-        g.beginPath();
-        g.arc(0, 0, 0.35 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "thunder": {
-        g.strokeStyle = "#fff176";
-        g.lineWidth = 0.08;
-        g.beginPath();
-        for (let k = 0; k < 6; k++) {
-          const aa = k / 6 * TAU5 + t * 10;
-          g.moveTo(0, 0);
-          g.lineTo(Math.cos(aa) * 0.5 * s, Math.sin(aa) * 0.5 * s);
-        }
-        g.stroke();
-        g.fillStyle = "#fffde7";
-        g.beginPath();
-        g.arc(0, 0, 0.22 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "waterdrop": {
-        g.fillStyle = "#4fc3f7";
-        g.beginPath();
-        g.arc(0, 0, 0.14 * s, 0, TAU5);
-        g.fill();
-        g.fillStyle = "#e1f5fe";
-        g.beginPath();
-        g.arc(-0.04, -0.04, 0.05 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "shockwave": {
-        g.rotate(a);
-        g.strokeStyle = p.color || "#e0f7fa";
-        g.lineWidth = 0.1;
-        for (let k = 0; k < 3; k++) {
-          g.globalAlpha = 1 - k * 0.3;
-          g.beginPath();
-          g.arc(-k * 0.25, 0, (0.4 + k * 0.1) * s, -1.2, 1.2);
-          g.stroke();
-        }
-        g.globalAlpha = 1;
-        break;
-      }
-      case "star": {
-        g.fillStyle = p.color || "#ffeb3b";
-        g.rotate(t * 12);
-        g.beginPath();
-        for (let k = 0; k < 10; k++) {
-          const rr = k % 2 ? 0.1 * s : 0.25 * s;
-          g.lineTo(Math.cos(k * TAU5 / 10) * rr, Math.sin(k * TAU5 / 10) * rr);
-        }
-        g.closePath();
-        g.fill();
-        break;
-      }
-      case "poison": {
-        g.fillStyle = "rgba(123,31,162,0.8)";
-        g.beginPath();
-        g.arc(0, 0, 0.4 * s, 0, TAU5);
-        g.fill();
-        g.fillStyle = "rgba(174,213,129,0.8)";
-        g.beginPath();
-        g.arc(0.08, -0.08, 0.15 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "string": {
-        g.rotate(a);
-        g.strokeStyle = "#f8bbd0";
-        g.lineWidth = 0.03;
-        for (let k = -2; k <= 2; k++) {
-          g.beginPath();
-          g.moveTo(-1.2, k * 0.06);
-          g.lineTo(0.3, k * 0.02);
-          g.stroke();
-        }
-        break;
-      }
-      case "paw": {
-        g.fillStyle = "rgba(255,255,255,0.35)";
-        g.strokeStyle = "#fff";
-        g.lineWidth = 0.04;
-        g.beginPath();
-        g.arc(0, 0.1, 0.35 * s, 0, TAU5);
-        g.fill();
-        g.stroke();
-        for (let k = 0; k < 3; k++) {
-          g.beginPath();
-          g.arc((k - 1) * 0.2 * s, -0.3 * s, 0.1 * s, 0, TAU5);
-          g.fill();
-          g.stroke();
-        }
-        break;
-      }
-      case "petal": {
-        g.fillStyle = "#f48fb1";
-        for (let k = 0; k < 5; k++) {
-          g.save();
-          g.rotate(k * TAU5 / 5 + t * 5);
-          g.beginPath();
-          g.ellipse(0.15, 0, 0.14, 0.07, 0, 0, TAU5);
-          g.fill();
-          g.restore();
-        }
-        break;
-      }
-      default: {
-        g.fillStyle = p.color || "#ffffff";
-        g.beginPath();
-        g.arc(0, 0, 0.25 * s, 0, TAU5);
-        g.fill();
-        g.fillStyle = "rgba(255,255,255,0.8)";
-        g.beginPath();
-        g.arc(-0.06, -0.06, 0.08 * s, 0, TAU5);
-        g.fill();
       }
     }
   }
@@ -12739,7 +16351,11 @@ void main() {
         damage: 1 - this.hull / this.maxHull,
         seed: this.seed,
         sailColor: this.sailColor,
-        coated: this.coated
+        coated: this.coated,
+        // the player's ships fly the Marine colours while they serve, their own
+        // Jolly Roger once they found a crew, and no flag at all before that
+        marine: this.owner === "player" && this.game?.state?.char?.faction === "marine",
+        noFlag: this.owner === "player" && !this.jr
       });
       g.restore();
       const deck = [];
@@ -12961,7 +16577,7 @@ void main() {
         if (p.hakiLevel("conqueror")) {
           p.facing = aim;
           p.tryTechnique("haki_conqueror", game);
-        } else game.log("You feel something stir deep inside... but nothing comes out. (Conqueror's Haki not awakened)", "#b0bec5");
+        }
       }
       if (inp.wasPressed("Q")) game.emit("quickHeal");
       this.interaction = findInteraction(game, p);
@@ -12983,10 +16599,7 @@ void main() {
       return best;
     }
     toggleHaki(p, game, type) {
-      if (!p.hakiLevel(type)) {
-        game.log(type === "armament" ? "You have not awakened Armament Haki yet. Seek a master in the Grand Line." : 'You have not awakened Observation Haki yet. The priests of Skypiea call it "Mantra".', "#b0bec5");
-        return;
-      }
+      if (!p.hakiLevel(type)) return;
       if (type === "armament") {
         p.armament = !p.armament;
         if (p.armament) {
@@ -13064,7 +16677,7 @@ void main() {
     agi: { name: "Agility", short: "AGI", desc: "Move speed, dodge recovery and attack speed." },
     end: { name: "Endurance", short: "END", desc: "Stamina pool, defence and stamina regeneration." },
     vit: { name: "Vitality", short: "VIT", desc: "Maximum health and recovery." },
-    wil: { name: "Willpower", short: "WIL", desc: "Haki pool and potency, resistance to Conqueror's Haki, and your chance to get back up." }
+    wil: { name: "Willpower", short: "WIL", desc: "Your spirit: resistance to fear, your chance to get back up, and the strength of any hidden power you awaken." }
   };
   var ATTR_KEYS = Object.keys(ATTRS);
   var ATTR_CAP = 100;
@@ -13079,7 +16692,7 @@ void main() {
       maxHaki: Math.round(40 + a.wil * 4),
       speed: 4.3 * (1 + a.agi * 45e-4) * (mods.stride || 1) * (mods.speedMul || 1),
       dmg: 1 + a.str * 0.028,
-      def: clamp(a.end * 35e-4, 0, 0.4),
+      def: clamp(a.end * 35e-4 + (mods.armor || 0), 0, 0.55),
       staminaRegen: 16 + a.end * 0.25,
       hpRegen: 0.25 + a.vit * 0.02,
       hakiRegen: 1.5 + a.wil * 0.06,
@@ -13099,345 +16712,6 @@ void main() {
     const r = enemyPower / playerPower;
     if (r < 0.55) return 0;
     return clamp((r - 0.55) / 0.45, 0, 1.6);
-  }
-
-  // src/game/abilities.js
-  var REG = /* @__PURE__ */ new Map();
-  function registerAbilities(list, source) {
-    for (const a of list) {
-      a.source = a.source || source;
-      REG.set(a.id, a);
-    }
-  }
-  var getAbility = (id) => REG.get(id);
-  function abilityTotal(def) {
-    const last = Math.max(0, ...(def.steps || []).map((s) => (s.at ?? def.windup ?? 0) + (s.dash ? s.dash.time : 0) + (s.hit ? s.hit.duration ?? 0.1 : 0)));
-    return Math.max((def.windup ?? 0) + (def.active ?? 0.1), last) + (def.recover ?? 0.2);
-  }
-  function powerFor(actor, def) {
-    const src = def.source || "";
-    if (actor.dmgOverride) return actor.dmgOverride * actor.buffMul("damage");
-    const str = actor.d ? actor.d.dmg : 1;
-    let m = 1;
-    if (src.startsWith("fruit")) {
-      const fm = actor.fruitMastery || 0;
-      m = (0.7 + str * 0.35) * (1 + fm * 0.022);
-    } else if (src.startsWith("haki")) {
-      m = (0.6 + str * 0.3) * (1 + (actor.hakiLevel(def.hakiType || "armament") || 0) * 0.02) * (1 + (actor.attrs?.wil || 0) * 0.01);
-    } else {
-      const sm = actor.styleMastery ? actor.styleMastery(def.style || actor.style) : 0;
-      m = str * (1 + sm * 0.012);
-      if (def.weapon && actor.weaponMul) m *= actor.weaponMul(def.weapon);
-      if (actor.weaponMastery) m *= 1 + (actor.weaponMastery[weaponKindOf(actor, def)] || 0) * 6e-3;
-    }
-    m *= actor.buffMul("damage");
-    if (actor.armament && !src.startsWith("fruit_ranged")) m *= 1.25 + (actor.hakiLevel("armament") || 0) * 4e-3;
-    if (actor.conquerorInfused) m *= 1.4;
-    return m;
-  }
-  function weaponKindOf(actor, def) {
-    if (def.weaponKind) return def.weaponKind;
-    if (def.weapon) return def.weapon;
-    const src = def.source || "";
-    if (src.startsWith("style")) {
-      const st = def.style || actor.style;
-      if (/ittoryu|nitoryu|santoryu/.test(st)) return actor.hasWeapon?.("sword") ? "sword" : "fists";
-      if (st === "sniper") return actor.hasWeapon?.("gun") ? "gun" : "fists";
-      if (st === "weather_science") return actor.hasWeapon?.("staff") ? "staff" : "fists";
-      if (st === "elbaf") return actor.hasWeapon?.("axe") ? "axe" : "fists";
-      if (st === "black_leg" || st === "okama_kenpo") return "legs";
-    }
-    return "fists";
-  }
-  function canUse(actor, def) {
-    if (!def) return false;
-    if ((actor.cooldowns[def.id] || 0) > 0) return false;
-    const c = def.cost || {};
-    if (c.stamina && actor.stamina < c.stamina * 0.5) return false;
-    if (c.haki && actor.haki < c.haki) return false;
-    if (def.source?.startsWith("fruit") && (actor.inWater || actor.seastoned)) return false;
-    if (def.weapon && !actor.hasWeapon(def.weapon)) return false;
-    if (def.requiresBuff && !actor.hasBuff(def.requiresBuff)) return false;
-    return true;
-  }
-  function startAbility(actor, def, game, target) {
-    const c = def.cost || {};
-    if (c.stamina) actor.stamina = Math.max(0, actor.stamina - c.stamina);
-    if (c.haki) actor.haki -= c.haki;
-    const cdMul = actor.cdMul ?? 1;
-    if (def.cd) actor.cooldowns[def.id] = def.cd * cdMul;
-    const angle = actor.facing;
-    const tx = target ? target.x : actor.x + Math.cos(angle) * 5;
-    const ty = target ? target.y : actor.y + Math.sin(angle) * 5;
-    actor.action = { def, t: 0, step: 0, angle, tx, ty, target, total: abilityTotal(def) / (def.noSpeedup ? 1 : actor.atkSpeed()), mult: powerFor(actor, def) };
-    if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, "#ffffff", 0.34, { life: 1.2 });
-    if (!actor.isPlayer && def.telegraph !== false) telegraph(actor, def, game);
-    if (def.onStart) def.onStart(actor, game);
-    game.audio?.sfx(def.sfxStart || "whoosh");
-  }
-  function telegraph(actor, def, game) {
-    const wind = def.windup ?? 0.2;
-    if (wind < 0.12) return;
-    const first = (def.steps || []).find((s) => s.hit || s.proj || s.dash || s.zone);
-    if (!first) return;
-    const col = actor.boss ? "rgba(255,40,80,1)" : "rgba(255,60,60,1)";
-    const life = wind * (actor.game?.player?.observation ? 1.35 : 1);
-    if (first.hit) {
-      const h2 = first.hit;
-      const ox = actor.x + Math.cos(actor.facing) * (h2.offset || 0), oy = actor.y + Math.sin(actor.facing) * (h2.offset || 0);
-      if (h2.shape === "circle" || h2.shape === "ring") game.fx.telegraph(ox, oy, "circle", { r: h2.range, life, color: col, follow: h2.offset ? null : actor });
-      else if (h2.shape === "line") game.fx.telegraph(actor.x, actor.y, "line", { angle: actor.facing, length: h2.range, width: h2.width || 1, life, color: col });
-      else game.fx.telegraph(ox, oy, "arc", { r: h2.range, angle: actor.facing, arc: h2.arc || 1.4, life, color: col });
-    } else if (first.proj || first.dash) {
-      const len = first.proj ? Math.min(14, first.proj.range || 10) : first.dash.dist;
-      game.fx.telegraph(actor.x, actor.y, "line", { angle: actor.facing, length: len, width: first.proj ? (first.proj.radius || 0.4) * 2 + 0.3 : 1.2, life, color: col });
-    } else if (first.zone) {
-      game.fx.telegraph(actor.action.tx, actor.action.ty, "circle", { r: first.zone.range, life, color: col });
-    }
-  }
-  function updateAbility(actor, dt, game) {
-    const a = actor.action;
-    const def = a.def;
-    a.t += dt * (def.noSpeedup ? 1 : actor.atkSpeed());
-    const steps = def.steps || [];
-    if (def.track && a.t < (def.windup ?? 0)) a.angle = actor.facing;
-    while (a.step < steps.length && a.t >= (steps[a.step].at ?? def.windup ?? 0)) {
-      runStep(actor, steps[a.step], game, a);
-      a.step++;
-    }
-    if (a.t >= a.total * (def.noSpeedup ? 1 : actor.atkSpeed())) {
-      if (def.onEnd) def.onEnd(actor, game);
-      actor.action = null;
-    }
-  }
-  function runStep(actor, s, game, a) {
-    const ang = s.angleOffset ? a.angle + s.angleOffset : a.angle;
-    const mult = a.mult;
-    const col = ELEMENT_COLORS[s.hit?.element || s.proj?.element || "physical"];
-    if (s.hit) {
-      const h2 = s.hit;
-      const off = h2.offset ?? 0;
-      const reach = actor.reach ?? 1;
-      const hb = {
-        owner: actor,
-        x: game.world.wx(actor.x + Math.cos(ang) * off * reach),
-        y: actor.y - 0.4 + Math.sin(ang) * off * reach,
-        shape: h2.shape || "arc",
-        range: (h2.range || 1.4) * (h2.shape === "circle" ? 1 : reach),
-        arc: h2.arc ?? 1.8,
-        width: h2.width,
-        angle: ang,
-        damage: (h2.damage || 5) * mult,
-        knockback: h2.knockback,
-        stun: h2.stun ?? 0.25,
-        element: h2.element || "physical",
-        status: h2.status,
-        duration: h2.duration ?? 0.1,
-        interval: h2.interval,
-        heavy: h2.heavy,
-        slashing: h2.slashing,
-        guardBreak: h2.guardBreak,
-        unblockable: h2.unblockable,
-        haki: h2.haki || actor.armament && def_isPhysical(h2),
-        critChance: h2.crit ?? (actor.critChance || 0.05),
-        follow: h2.follow,
-        offX: Math.cos(ang) * off * reach,
-        offY: -0.4 + Math.sin(ang) * off * reach,
-        followAngle: h2.followAngle,
-        impactFrame: h2.impactFrame,
-        trueDamage: h2.trueDamage,
-        hitShips: h2.hitShips,
-        shipDamage: h2.shipDamage,
-        radial: h2.radial,
-        onHit: h2.onHit,
-        forceWater: h2.forceWater,
-        hitsAll: h2.hitsAll
-      };
-      game.combat.hitbox(hb);
-      const vfx = s.vfx || h2.vfx;
-      const color = s.color || h2.color || col;
-      if (vfx === "slash" || !vfx && h2.slashing) game.fx.slash(actor.x + Math.cos(ang) * 0.3, actor.y, ang, (h2.range || 1.4) * reach * 0.85, h2.arc ?? 1.8, color, 0.18, h2.width ? h2.width * 0.4 : 0.22);
-      else if (vfx === "ring" || h2.shape === "circle") {
-        game.fx.ring(hb.x, hb.y + 0.4, 0.2, h2.range || 2, color, 0.35, 0.2);
-        if (h2.heavy) game.fx.crack(hb.x, hb.y + 0.4, (h2.range || 2) * 0.7);
-      } else if (vfx === "beam" || h2.shape === "line") game.fx.beam(actor.x, actor.y, ang, (h2.range || 4) * reach, h2.width || 0.6, color, h2.duration ? Math.max(0.2, h2.duration) : 0.25, s.core || "#ffffff");
-      else if (vfx === "fist" || !vfx) game.fx.burst(hb.x + Math.cos(ang) * (h2.range || 1.3) * 0.6, hb.y, 5, { color, speed: 3, g: 0, life: 0.18, kind: "line", angle: ang, spread: 0.8 });
-      if (h2.shake) game.fx.shake(h2.shake);
-    }
-    if (s.proj) {
-      const p = s.proj;
-      const n = p.count || 1;
-      for (let i = 0; i < n; i++) {
-        const spread = n > 1 ? (i / (n - 1) - 0.5) * (p.spread ?? 0.5) : p.jitter ? (Math.random() - 0.5) * p.jitter : 0;
-        const pa = ang + spread;
-        const sp = p.speed || 14;
-        const sx = actor.x + Math.cos(pa) * 0.6, sy = actor.y - 0.5 + Math.sin(pa) * 0.6;
-        game.combat.projectile({
-          owner: actor,
-          x: game.world.wx(sx),
-          y: sy,
-          vx: Math.cos(pa) * sp,
-          vy: Math.sin(pa) * sp,
-          range: p.range || 10,
-          radius: p.radius || 0.3,
-          damage: (p.damage || 5) * mult,
-          element: p.element || "physical",
-          knockback: p.knockback ?? 2,
-          stun: p.stun ?? 0.2,
-          status: p.status,
-          pierce: p.pierce,
-          homing: p.homing,
-          target: a.target,
-          sprite: p.sprite || "orb",
-          color: p.color || col,
-          size: p.size || 1,
-          haki: actor.armament && p.element === void 0,
-          stretch: p.stretch ? actor : null,
-          passWalls: p.passWalls,
-          hitShips: p.hitShips ?? true,
-          shipDamage: p.shipDamage,
-          slashing: p.slashing,
-          heavy: p.heavy,
-          critChance: 0.05,
-          unblockable: p.unblockable,
-          onEnd: p.explode ? (pr, g) => explode(pr, g, p.explode, mult) : null,
-          trail: p.trail ? (pr, g) => trail(pr, g, p.trail) : null,
-          draw: drawProjectile
-        });
-      }
-    }
-    if (s.dash) {
-      const d = s.dash;
-      const dist = d.dist * (actor.dashMul || 1);
-      actor.dash = { vx: Math.cos(ang) * dist / d.time, vy: Math.sin(ang) * dist / d.time, t: d.time, ignoreWater: d.air };
-      if (d.iframes) actor.iframes = Math.max(actor.iframes, d.iframes);
-      if (d.hit) {
-        game.combat.hitbox({
-          owner: actor,
-          x: actor.x,
-          y: actor.y - 0.4,
-          shape: "circle",
-          range: d.hit.range || 1.1,
-          damage: (d.hit.damage || 5) * mult,
-          knockback: d.hit.knockback ?? 4,
-          stun: d.hit.stun ?? 0.3,
-          element: d.hit.element || "physical",
-          follow: true,
-          offX: 0,
-          offY: -0.4,
-          duration: d.time + 0.05,
-          slashing: d.hit.slashing,
-          heavy: d.hit.heavy,
-          status: d.hit.status,
-          radial: true,
-          guardBreak: d.hit.guardBreak
-        });
-      }
-      if (d.trail) game.fx.burst(actor.x, actor.y, 8, { color: d.trail, speed: 2, g: 0, life: 0.3, kind: "smoke", size: 0.25 });
-    }
-    if (s.teleport) {
-      const t = s.teleport;
-      const dist = t.dist;
-      let nx = actor.x, ny = actor.y;
-      for (let k = 0; k < 20; k++) {
-        const tx = actor.x + Math.cos(ang) * dist * (1 - k / 20), ty = actor.y + Math.sin(ang) * dist * (1 - k / 20);
-        if (actor.canOccupy(game.world, tx, ty)) {
-          nx = tx;
-          ny = ty;
-          break;
-        }
-      }
-      game.fx.burst(actor.x, actor.y - 0.5, 10, { color: t.color || "#fff", speed: 3, g: 0, life: 0.25, kind: "line" });
-      actor.x = game.world.wx(nx);
-      actor.y = ny;
-      game.fx.burst(actor.x, actor.y - 0.5, 10, { color: t.color || "#fff", speed: 3, g: 0, life: 0.25, kind: "line" });
-      actor.iframes = Math.max(actor.iframes, 0.15);
-    }
-    if (s.buff) actor.addBuff({ ...s.buff, source: a.def.id });
-    if (s.heal) {
-      const amt = s.heal * (a.def.source?.startsWith("fruit") ? 1 + (actor.fruitMastery || 0) * 0.02 : 1);
-      actor.heal(amt, game);
-      game.fx.burst(actor.x, actor.y - 0.6, 14, { color: s.color || "#80deea", speed: 2, vz: 2, g: -1, life: 0.8, kind: "fire", size: 0.2 });
-    }
-    if (s.zone) {
-      const z = s.zone;
-      const zx = z.atTarget ? a.tx : actor.x + Math.cos(ang) * (z.offset || 0);
-      const zy = z.atTarget ? a.ty : actor.y + Math.sin(ang) * (z.offset || 0);
-      game.addZone({ owner: actor, x: game.world.wx(zx), y: zy, r: z.range, t: z.duration, interval: z.interval || 0.5, damage: (z.damage || 0) * mult, element: z.element || "physical", status: z.status, slow: z.slow, color: z.color || col, kind: z.kind || "field", pull: z.pull });
-    }
-    if (s.pull) {
-      for (const e of game.actorsNear(actor.x, actor.y, s.pull.range)) {
-        if (!game.combat.canHit(actor, e, {})) continue;
-        const dx = game.world.dx(e.x, actor.x), dy = actor.y - e.y;
-        const d = Math.hypot(dx, dy) || 1;
-        e.knock(dx / d * s.pull.strength, dy / d * s.pull.strength);
-        if (s.pull.stun) e.stagger(s.pull.stun);
-        if (s.pull.nullify) e.addStatus("seastone", s.pull.nullify);
-      }
-      game.fx.ring(actor.x, actor.y, s.pull.range, 0.3, s.color || "#7e57c2", 0.5, 0.3);
-    }
-    if (s.conqueror) conquerorBurst(actor, game, s.conqueror, mult);
-    if (s.summon && game.summon) game.summon(actor, s.summon);
-    if (s.self) {
-      if (s.self.iframes) actor.iframes = Math.max(actor.iframes, s.self.iframes);
-      if (s.self.cleanse) actor.status = {};
-      if (s.self.hurt && actor.d) {
-        const n = Math.round(actor.d.maxHp * s.self.hurt);
-        actor.hp = Math.max(1, actor.hp - n);
-        game.fx.text(actor.x, actor.y - 1.2, String(n), "#ff6b6b", 0.4);
-        if (actor.isPlayer) game.ui?.onPlayerHurt(n);
-      }
-    }
-    if (s.fx) {
-      const f = s.fx;
-      if (f.ring) game.fx.ring(actor.x, actor.y, 0.3, f.ring, f.color || col, f.life || 0.4, f.width || 0.2);
-      if (f.burst) game.fx.burst(actor.x, actor.y - 0.6, f.burst, { color: f.color || col, speed: f.speed || 5, g: f.g ?? 2, life: f.life || 0.5, kind: f.kind || "spark", size: f.size || 0.14 });
-      if (f.shake) game.fx.shake(f.shake);
-      if (f.impact) game.fx.impactFrame(f.impact);
-      if (f.flash) game.fx.flash = Math.max(game.fx.flash, f.flash);
-      if (f.text) game.fx.text(actor.x, actor.y - 2.2, f.text, f.color || "#fff", 0.5, { life: 1.1 });
-    }
-    if (s.sfx) game.audio?.sfx(s.sfx);
-  }
-  function def_isPhysical(h2) {
-    return !h2.element || h2.element === "physical";
-  }
-  function explode(p, game, e, mult) {
-    game.combat.hitbox({ owner: p.owner, x: p.x, y: p.y, shape: "circle", range: e.range || 1.8, damage: (e.damage || 10) * mult, knockback: e.knockback ?? 6, stun: e.stun ?? 0.4, element: e.element || "explosion", duration: 0.1, radial: true, heavy: true, hitShips: true, status: e.status });
-    game.fx.ring(p.x, p.y + 0.4, 0.2, e.range || 1.8, e.color || "#ffab40", 0.35, 0.3);
-    game.fx.burst(p.x, p.y, 22, { color: e.colors || ["#ffab40", "#ff7043", "#fff176", "#616161"], speed: 7, g: 3, life: 0.6, kind: "fire", size: 0.25 });
-    game.fx.crack(p.x, p.y + 0.4, (e.range || 1.8) * 0.6, 1.5);
-    if (p.owner?.isPlayer || game.world.distance(p.x, p.y, game.player.x, game.player.y) < 12) game.fx.shake(0.3);
-    game.audio?.sfx("explosion");
-  }
-  function trail(p, game, t) {
-    if (Math.random() < (t.rate || 0.6)) game.fx.particle({ x: p.x, y: p.y + 0.5, z: 0.5, vx: Math.random() - 0.5, vy: Math.random() - 0.5, vz: 0.4, g: 0, life: t.life || 0.35, size: t.size || 0.18, color: Array.isArray(t.color) ? t.color[Math.floor(Math.random() * t.color.length)] : t.color, kind: t.kind || "fire", grow: t.grow ?? -0.2 });
-  }
-  function conquerorBurst(actor, game, c, mult) {
-    const lvl = actor.hakiLevel("conqueror") || 20;
-    const my = actor.power();
-    game.fx.ring(actor.x, actor.y, 0.5, c.range, "#1a1a1a", 0.6, 0.4);
-    game.fx.ring(actor.x, actor.y, 0.3, c.range * 0.8, "#d50000", 0.5, 0.15);
-    for (let k = 0; k < 6; k++) {
-      const a = Math.random() * TAU;
-      game.fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * c.range * 0.7, actor.y + Math.sin(a) * c.range * 0.5, "#000000", 0.35, 0.09);
-    }
-    game.fx.impactFrame(0.12);
-    game.fx.shake(0.7);
-    let fainted = 0;
-    for (const e of game.actorsNear(actor.x, actor.y, c.range)) {
-      if (e === actor || !game.combat.canHit(actor, e, {})) continue;
-      const ratio = e.power() / Math.max(1, my);
-      const resist = e.hakiLevel && e.hakiLevel("conqueror") > 0 ? 0.5 : 0;
-      if (ratio < 0.35 + lvl * 4e-3 - resist && !e.boss) {
-        e.faint(game);
-        fainted++;
-      } else {
-        e.stagger(0.6 + lvl * 0.01);
-        e.takeDamage(Math.round((c.damage || 0) * mult), actor, { element: "haki" }, game);
-      }
-    }
-    if (fainted && actor.isPlayer) game.log(`${fainted} ${fainted === 1 ? "foe" : "foes"} fainted before your will.`, "#ef5350");
   }
 
   // src/data/styles.js
@@ -14227,552 +17501,6 @@ void main() {
     s.heavyId = s.heavy.id;
   }
 
-  // src/data/fruits.js
-  var T2 = (mastery, a) => ({ ...a, mastery });
-  var FRUITS = {
-    // ------------------------------------------------------------- PARAMECIA
-    gomu: {
-      name: "Gomu Gomu no Mi",
-      en: "Gum-Gum Fruit",
-      type: "Paramecia",
-      rarity: "mythical",
-      color: "#e57373",
-      weight: 0.6,
-      desc: "Turns the body into rubber. Or so the World Government would have you believe...",
-      passive: { rubber: true },
-      stretch: true,
-      techniques: [
-        T2(0, { id: "gomu_pistol", name: "Gum-Gum Pistol", icon: "\u{1F44A}", anim: "punch", windup: 0.12, recover: 0.25, cd: 2.5, cost: { stamina: 10 }, say: "Gomu Gomu no... Pistol!", steps: [{ proj: { speed: 26, range: 8, radius: 0.35, damage: 16, sprite: "gomufist", stretch: true, knockback: 5, stun: 0.3 } }] }),
-        T2(10, { id: "gomu_gatling", name: "Gum-Gum Gatling", icon: "\u{1F52B}", anim: "punch", windup: 0.2, recover: 0.3, cd: 6, cost: { stamina: 20 }, say: "Gomu Gomu no... Gatling!", steps: [{ hit: { shape: "arc", range: 3.2, arc: 0.9, offset: 0.3, damage: 5, knockback: 0.8, stun: 0.15, duration: 0.9, interval: 0.08 }, vfx: "fist" }] }),
-        T2(20, { id: "gomu_rocket", name: "Gum-Gum Rocket", icon: "\u{1F680}", anim: "thrust", windup: 0.15, recover: 0.2, cd: 4, cost: { stamina: 14 }, desc: "Launch yourself like a slingshot.", steps: [{ dash: { dist: 9, time: 0.3, iframes: 0.25, air: true, hit: { damage: 14, knockback: 6, stun: 0.4 } } }] }),
-        T2(30, { id: "gomu_bazooka", name: "Gum-Gum Bazooka", icon: "\u{1F4A5}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 8, cost: { stamina: 22 }, say: "Gomu Gomu no... BAZOOKA!", steps: [{ hit: { shape: "arc", range: 2.4, arc: 1.2, offset: 0.4, damage: 36, knockback: 14, stun: 0.8, heavy: true, guardBreak: true, impactFrame: true, hitShips: true } }] }),
-        T2(45, {
-          id: "gomu_gear2",
-          name: "Gear Second",
-          icon: "\u2668",
-          anim: "cast",
-          windup: 0.4,
-          recover: 0.1,
-          cd: 35,
-          cost: { stamina: 15 },
-          say: "Gear... Second!",
-          desc: "Pump blood at high speed: faster and stronger, at a cost.",
-          steps: [{ fx: { burst: 20, color: "#ffcdd2", kind: "smoke" } }, { at: 0.4, buff: { id: "gear2", name: "Gear Second", dur: 16, mods: { speedMul: 1.35, damage: 1.35, atkSpeed: 1.3 }, aura: "rgba(255,138,128,0.7)", steam: true, drain: { stamina: 2.2 } } }]
-        }),
-        T2(60, { id: "gomu_gear3", name: "Gear Third: Gigant Pistol", icon: "\u{1F9B4}", anim: "heavy", windup: 0.7, recover: 0.5, cd: 18, cost: { stamina: 32 }, say: "Gear Third... Gigant Pistol!", steps: [{ proj: { speed: 16, range: 10, radius: 1.6, damage: 80, sprite: "gomufist", size: 4, stretch: true, pierce: true, knockback: 14, stun: 1, heavy: true, hitShips: true, shipDamage: 200 } }] }),
-        T2(80, {
-          id: "gomu_gear4",
-          name: "Gear Fourth: Boundman",
-          icon: "\u{1F388}",
-          anim: "cast",
-          windup: 0.8,
-          recover: 0.2,
-          cd: 90,
-          cost: { stamina: 30, haki: 40 },
-          requiresHaki: "armament",
-          say: "Gear... FOURTH!",
-          desc: "Inflate your Haki-hardened muscles. Enormous power for a short time.",
-          steps: [{ fx: { ring: 3, color: "#b71c1c", impact: 0.1 } }, { at: 0.8, buff: { id: "gear4", name: "Boundman", dur: 20, mods: { damage: 2.2, defMul: 0.6, speedMul: 1.2 }, aura: "rgba(183,28,28,0.9)", forceArmament: true, drain: { haki: 1.5 } } }]
-        }),
-        T2(100, {
-          id: "gomu_gear5",
-          name: "Gear Fifth",
-          icon: "\u2600",
-          anim: "cast",
-          windup: 1,
-          recover: 0.2,
-          cd: 180,
-          cost: { stamina: 20, haki: 60 },
-          requiresHaki: "conqueror",
-          say: "...Drums of Liberation.",
-          desc: "The fruit's true name is Hito Hito no Mi, Model: Nika. The warrior of liberation, bringer of joy.",
-          steps: [{ fx: { ring: 6, color: "#ffffff", flash: 0.6, impact: 0.2, text: "SUN GOD NIKA" } }, { at: 1, buff: { id: "gear5", name: "Gear Fifth", dur: 30, mods: { damage: 3, defMul: 0.45, speedMul: 1.4, atkSpeed: 1.4 }, aura: "rgba(255,255,255,1)", look: { hairColor: "#ffffff", top: "#ffffff", bottom: "#ffffff" } } }]
-        })
-      ]
-    },
-    gura: {
-      name: "Gura Gura no Mi",
-      en: "Tremor-Tremor Fruit",
-      type: "Paramecia",
-      rarity: "legendary",
-      color: "#e0f7fa",
-      weight: 0.4,
-      desc: "The power to destroy the world: create quakes in the air, the ground and the sea. Once eaten by Whitebeard.",
-      techniques: [
-        T2(0, { id: "gura_punch", name: "Quake Punch", icon: "\u270A", anim: "punch", windup: 0.25, recover: 0.3, cd: 4, cost: { stamina: 14 }, steps: [{ hit: { shape: "arc", range: 3, arc: 1.2, offset: 0.3, damage: 26, knockback: 10, stun: 0.6, element: "quake", heavy: true, guardBreak: true, shake: 0.4 }, vfx: "ring" }] }),
-        T2(20, { id: "gura_kaishin", name: "Kaishin", icon: "\u{1F310}", anim: "heavy", windup: 0.45, recover: 0.4, cd: 9, cost: { stamina: 26 }, desc: "Crack the air itself around you.", steps: [{ hit: { shape: "circle", range: 4.5, damage: 40, knockback: 12, stun: 0.9, element: "quake", heavy: true, guardBreak: true, impactFrame: true, shake: 0.8, hitShips: true }, vfx: "ring" }] }),
-        T2(45, { id: "gura_wave", name: "Quake Wave", icon: "\u{1F30A}", anim: "heavy", windup: 0.5, recover: 0.4, cd: 12, cost: { stamina: 28 }, desc: "A shockwave that rips across the ground (and sea).", steps: [{ hit: { shape: "line", range: 12, width: 3, damage: 55, knockback: 14, stun: 1, element: "quake", heavy: true, unblockable: true, shake: 0.7, hitShips: true, shipDamage: 250 }, vfx: "beam", color: "#e0f7fa" }] }),
-        T2(75, { id: "gura_tsunami", name: "Seaquake", icon: "\u{1F30B}", anim: "cast", windup: 0.9, recover: 0.5, cd: 40, cost: { stamina: 40 }, desc: "Tilt the sea. Everything nearby is crushed.", steps: [{ hit: { shape: "circle", range: 8, damage: 90, knockback: 16, stun: 1.2, element: "quake", heavy: true, unblockable: true, impactFrame: true, shake: 1.2, hitShips: true, shipDamage: 500 }, vfx: "ring" }] })
-      ]
-    },
-    ope: {
-      name: "Ope Ope no Mi",
-      en: "Op-Op Fruit",
-      type: "Paramecia",
-      rarity: "legendary",
-      color: "#81d4fa",
-      weight: 0.4,
-      desc: "Create a ROOM and become a surgeon within it. Its ultimate technique grants eternal youth \u2014 at the cost of the user's life.",
-      techniques: [
-        T2(0, { id: "ope_room", name: "ROOM", icon: "\u{1F535}", anim: "cast", windup: 0.3, recover: 0.2, cd: 20, cost: { stamina: 15 }, desc: "Within your Room, techniques cost less and hit harder.", steps: [{ fx: { ring: 7, color: "#81d4fa" } }, { buff: { id: "room", name: "ROOM", dur: 12, mods: { damage: 1.3, cdMul: 0.6 }, aura: "rgba(129,212,250,0.5)" } }] }),
-        T2(10, { id: "ope_shambles", name: "Shambles", icon: "\u{1F500}", anim: "cast", windup: 0.1, recover: 0.1, cd: 3, cost: { stamina: 10 }, desc: "Swap places instantly.", steps: [{ teleport: { dist: 8, color: "#81d4fa" } }] }),
-        T2(25, { id: "ope_amputate", name: "Amputate", icon: "\u{1F5E1}", anim: "slash", windup: 0.2, recover: 0.3, cd: 5, cost: { stamina: 16 }, desc: "A vast slash that cuts without killing.", steps: [{ hit: { shape: "arc", range: 4, arc: 2.4, offset: 0.2, damage: 28, knockback: 2, stun: 0.9, slashing: true }, vfx: "slash", color: "#81d4fa" }] }),
-        T2(45, { id: "ope_mes", name: "Mes", icon: "\u{1F499}", anim: "thrust", windup: 0.15, recover: 0.3, cd: 12, cost: { stamina: 18 }, desc: "Remove the target's heart in a cube. They freeze in terror.", steps: [{ hit: { shape: "arc", range: 1.6, arc: 1, offset: 0.2, damage: 20, stun: 2.5, unblockable: true } }] }),
-        T2(60, { id: "ope_counter", name: "Counter Shock", icon: "\u26A1", anim: "grab", windup: 0.2, recover: 0.3, cd: 10, cost: { stamina: 20 }, steps: [{ hit: { shape: "arc", range: 1.5, arc: 1.2, offset: 0.2, damage: 45, stun: 1.2, element: "lightning", status: { shock: 1.5 } }, vfx: "ring", color: "#fff176" }] }),
-        T2(80, { id: "ope_gamma", name: "Gamma Knife", icon: "\u2622", anim: "thrust", windup: 0.3, recover: 0.3, cd: 18, cost: { stamina: 26 }, desc: "Destroys organs from the inside. Ignores all defences.", steps: [{ hit: { shape: "line", range: 3, width: 0.8, damage: 85, stun: 1, unblockable: true, trueDamage: true }, vfx: "beam", color: "#b388ff" }] })
-      ]
-    },
-    bara: {
-      name: "Bara Bara no Mi",
-      en: "Chop-Chop Fruit",
-      type: "Paramecia",
-      rarity: "uncommon",
-      color: "#ff8a65",
-      weight: 3,
-      desc: "Split your body into pieces. Blades cannot hurt you \u2014 but your feet must stay on the ground. (Buggy the Clown's fruit.)",
-      passive: { immuneSlash: true },
-      techniques: [
-        T2(0, { id: "bara_cannon", name: "Chop-Chop Cannon", icon: "\u{1F921}", anim: "punch", windup: 0.15, recover: 0.25, cd: 3, cost: { stamina: 10 }, say: "Bara Bara Ho!", steps: [{ proj: { speed: 20, range: 9, radius: 0.35, damage: 14, sprite: "orb", color: "#ffccbc", knockback: 3, stun: 0.3 } }] }),
-        T2(20, { id: "bara_festival", name: "Chop-Chop Festival", icon: "\u{1F3AA}", anim: "cast", windup: 0.3, recover: 0.4, cd: 10, cost: { stamina: 24 }, desc: "Scatter into a hundred pieces that pummel everything nearby.", steps: [{ hit: { shape: "circle", range: 3.2, damage: 6, knockback: 1.5, stun: 0.15, duration: 1.2, interval: 0.15 }, vfx: "ring" }] }),
-        T2(40, { id: "bara_escape", name: "Emergency Escape", icon: "\u{1F388}", anim: "cast", windup: 0.05, recover: 0.1, cd: 8, cost: { stamina: 12 }, steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, air: true } }] })
-      ]
-    },
-    bomu: {
-      name: "Bomu Bomu no Mi",
-      en: "Bomb-Bomb Fruit",
-      type: "Paramecia",
-      rarity: "common",
-      color: "#ffab40",
-      weight: 5,
-      desc: "Make any part of your body explode \u2014 and survive it. (Mr. 5 of Baroque Works.)",
-      passive: { resist: ["explosion"] },
-      techniques: [
-        T2(0, { id: "bomu_kick", name: "Kick Bomb", icon: "\u{1F4A3}", anim: "kick", windup: 0.2, recover: 0.3, cd: 3, cost: { stamina: 10 }, steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.3, damage: 18, knockback: 7, stun: 0.4, element: "explosion" }, vfx: "ring", color: "#ffab40" }] }),
-        T2(15, { id: "bomu_nose", name: "Nose Fancy Cannon", icon: "\u{1F443}", anim: "shoot", windup: 0.25, recover: 0.3, cd: 5, cost: { stamina: 12 }, desc: "Flick an explosive... bogey. Disgusting and effective.", steps: [{ proj: { speed: 18, range: 12, radius: 0.2, damage: 6, sprite: "orb", color: "#aed581", explode: { range: 2, damage: 24 } } }] }),
-        T2(40, { id: "bomu_breeze", name: "Breeze Breath Bomb", icon: "\u{1F32C}", anim: "cast", windup: 0.35, recover: 0.3, cd: 9, cost: { stamina: 20 }, steps: [{ hit: { shape: "arc", range: 4, arc: 1.2, offset: 0.2, damage: 32, knockback: 8, stun: 0.6, element: "explosion", heavy: true }, vfx: "ring", color: "#ffab40" }] })
-      ]
-    },
-    hana: {
-      name: "Hana Hana no Mi",
-      en: "Flower-Flower Fruit",
-      type: "Paramecia",
-      rarity: "uncommon",
-      color: "#f48fb1",
-      weight: 2.5,
-      desc: "Sprout copies of your body parts on any surface \u2014 including your enemies. (Nico Robin.)",
-      techniques: [
-        T2(0, { id: "hana_clutch", name: "Clutch", icon: "\u{1F338}", anim: "cast", windup: 0.25, recover: 0.3, cd: 5, cost: { stamina: 14 }, say: "Seis Fleur... Clutch!", desc: "Sprout arms on the target and bend them backwards.", steps: [{ zone: { range: 1.2, duration: 0.3, interval: 0.3, damage: 24, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.2 } } }] }),
-        T2(20, { id: "hana_mil", name: "Mil Fleur", icon: "\u{1F33A}", anim: "cast", windup: 0.4, recover: 0.4, cd: 10, cost: { stamina: 22 }, desc: "A thousand arms bloom around you and strike.", steps: [{ hit: { shape: "circle", range: 3.6, damage: 7, knockback: 1, stun: 0.3, duration: 1, interval: 0.14 }, vfx: "ring", color: "#f48fb1" }] }),
-        T2(50, { id: "hana_gigante", name: "Gigantesco Mano", icon: "\u270B", anim: "cast", windup: 0.5, recover: 0.4, cd: 14, cost: { stamina: 28 }, desc: "Two giant sprouted hands slam down.", steps: [{ zone: { range: 2.6, duration: 0.3, interval: 0.3, damage: 60, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.5 } } }] })
-      ]
-    },
-    ito: {
-      name: "Ito Ito no Mi",
-      en: "String-String Fruit",
-      type: "Paramecia",
-      rarity: "legendary",
-      color: "#f8bbd0",
-      weight: 0.5,
-      desc: "Create strings sharp enough to cut steel and strong enough to puppet people. (Donquixote Doflamingo.)",
-      techniques: [
-        T2(0, { id: "ito_overheat", name: "Overheat", icon: "\u{1F9F5}", anim: "cast", windup: 0.3, recover: 0.3, cd: 5, cost: { stamina: 14 }, steps: [{ hit: { shape: "line", range: 9, width: 0.6, damage: 24, knockback: 4, stun: 0.4, slashing: true, element: "fire" }, vfx: "beam", color: "#ff8a80" }] }),
-        T2(15, { id: "ito_parasite", name: "Parasite", icon: "\u{1F3AD}", anim: "cast", windup: 0.25, recover: 0.3, cd: 12, cost: { stamina: 18 }, desc: "Puppet strings freeze your target in place.", steps: [{ proj: { speed: 22, range: 10, radius: 0.4, damage: 8, sprite: "string", status: { root: 2.5 }, stun: 0.5 } }] }),
-        T2(35, { id: "ito_fivecolor", name: "Five Color Strings", icon: "\u{1F590}", anim: "slash", windup: 0.25, recover: 0.3, cd: 7, cost: { stamina: 20 }, steps: [{ hit: { shape: "arc", range: 3.4, arc: 1.4, offset: 0.2, damage: 34, knockback: 3, stun: 0.5, slashing: true }, vfx: "slash", color: "#f8bbd0" }] }),
-        T2(70, { id: "ito_birdcage", name: "Birdcage", icon: "\u{1F578}", anim: "cast", windup: 0.8, recover: 0.4, cd: 45, cost: { stamina: 35 }, desc: "A cage of cutting strings that closes around the area.", steps: [{ zone: { range: 6, duration: 6, interval: 0.4, damage: 10, color: "#f8bbd0", kind: "cage" } }] })
-      ]
-    },
-    mochi: {
-      name: "Mochi Mochi no Mi",
-      en: "Mochi-Mochi Fruit",
-      type: "Special Paramecia",
-      rarity: "legendary",
-      color: "#fff8e1",
-      weight: 0.5,
-      desc: "A special Paramecia that behaves like a Logia: turn your body into mochi. (Charlotte Katakuri.)",
-      passive: { logiaLike: true, intangible: 0.5, weakTo: ["fire"] },
-      techniques: [
-        T2(0, { id: "mochi_tsuki", name: "Mochi Tsuki", icon: "\u{1F361}", anim: "punch", windup: 0.25, recover: 0.3, cd: 4, cost: { stamina: 14 }, steps: [{ proj: { speed: 18, range: 8, radius: 0.6, damage: 22, sprite: "orb", color: "#fff8e1", knockback: 6, stun: 0.5, size: 1.5 } }] }),
-        T2(20, { id: "mochi_zangiri", name: "Zan Giri Mochi", icon: "\u{1F531}", anim: "thrust", windup: 0.3, recover: 0.3, cd: 7, cost: { stamina: 20 }, steps: [{ hit: { shape: "line", range: 4.5, width: 1.2, damage: 36, knockback: 5, stun: 0.6, slashing: true }, vfx: "beam", color: "#fff8e1" }] }),
-        T2(50, { id: "mochi_chikara", name: "Chikara Mochi", icon: "\u{1F4AA}", anim: "heavy", windup: 0.45, recover: 0.4, cd: 12, cost: { stamina: 28 }, desc: "Giant mochi fists rain down.", steps: [{ zone: { range: 3, duration: 1.2, interval: 0.2, damage: 18, color: "#fff8e1", atTarget: true, kind: "fists" } }] })
-      ]
-    },
-    horo: {
-      name: "Horo Horo no Mi",
-      en: "Hollow-Hollow Fruit",
-      type: "Paramecia",
-      rarity: "uncommon",
-      color: "#ce93d8",
-      weight: 3,
-      desc: "Create ghosts. Negative Hollows drain the will to live from anyone they pass through. (Perona.)",
-      techniques: [
-        T2(0, { id: "horo_negative", name: "Negative Hollow", icon: "\u{1F47B}", anim: "cast", windup: 0.3, recover: 0.3, cd: 8, cost: { stamina: 14 }, desc: `"I'm so sorry I was born..." The target collapses in despair.`, steps: [{ proj: { speed: 10, range: 12, radius: 0.5, damage: 4, sprite: "orb", color: "#e1bee7", homing: 3, status: { despair: 3 }, stun: 2.2, unblockable: true } }] }),
-        T2(20, { id: "horo_mini", name: "Mini Hollows", icon: "\u{1F4AB}", anim: "cast", windup: 0.3, recover: 0.3, cd: 7, cost: { stamina: 16 }, steps: [{ proj: { speed: 11, range: 10, radius: 0.3, damage: 6, count: 4, spread: 0.9, sprite: "orb", color: "#e1bee7", homing: 4, explode: { range: 1.2, damage: 12, colors: ["#e1bee7", "#fff"] } } }] })
-      ]
-    },
-    kage: {
-      name: "Kage Kage no Mi",
-      en: "Shadow-Shadow Fruit",
-      type: "Paramecia",
-      rarity: "rare",
-      color: "#455a64",
-      weight: 1.2,
-      desc: "Manipulate shadows, steal them, and fight with a living shadow double. (Gecko Moria.)",
-      techniques: [
-        T2(0, { id: "kage_brickbat", name: "Brick Bat", icon: "\u{1F987}", anim: "cast", windup: 0.25, recover: 0.3, cd: 4, cost: { stamina: 12 }, steps: [{ proj: { speed: 14, range: 11, radius: 0.3, damage: 7, count: 5, spread: 0.6, sprite: "orb", color: "#263238", homing: 2 } }] }),
-        T2(20, { id: "kage_steal", name: "Shadow Steal", icon: "\u{1F311}", anim: "grab", windup: 0.35, recover: 0.3, cd: 16, cost: { stamina: 20 }, desc: "Cut away the target's shadow: they weaken badly (and would burn in sunlight...).", steps: [{ hit: { shape: "arc", range: 2.6, arc: 1, offset: 0.2, damage: 18, stun: 0.8, status: { shadowless: 12 }, unblockable: true } }] }),
-        T2(40, { id: "kage_doppelman", name: "Doppelman", icon: "\u{1F464}", anim: "cast", windup: 0.3, recover: 0.2, cd: 30, cost: { stamina: 24 }, desc: "Your shadow fights beside you as a second body.", steps: [{ buff: { id: "doppel", name: "Doppelman", dur: 18, mods: { damage: 1.4, extraHit: 1 }, aura: "rgba(38,50,56,0.6)" } }] })
-      ]
-    },
-    doku: {
-      name: "Doku Doku no Mi",
-      en: "Venom-Venom Fruit",
-      type: "Paramecia",
-      rarity: "rare",
-      color: "#8e24aa",
-      weight: 1.2,
-      desc: "Produce and control lethal poison. (Magellan, chief warden of Impel Down.)",
-      passive: { resist: ["poison"] },
-      techniques: [
-        T2(0, { id: "doku_fist", name: "Poison Fist", icon: "\u2620", anim: "punch", windup: 0.15, recover: 0.25, cd: 3, cost: { stamina: 10 }, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 12, knockback: 3, stun: 0.3, element: "poison", status: { poison: 5 } } }] }),
-        T2(20, { id: "doku_hydra", name: "Hydra", icon: "\u{1F40D}", anim: "cast", windup: 0.4, recover: 0.4, cd: 9, cost: { stamina: 22 }, say: "Hydra!", steps: [{ proj: { speed: 13, range: 12, radius: 0.7, damage: 26, count: 3, spread: 0.4, sprite: "poison", element: "poison", status: { poison: 6 }, homing: 1.5, trail: { color: "#8e24aa", kind: "smoke" } } }] }),
-        T2(50, { id: "doku_venom", name: "Venom Demon", icon: "\u{1F479}", anim: "cast", windup: 0.8, recover: 0.5, cd: 40, cost: { stamina: 35 }, steps: [{ zone: { range: 4.5, duration: 8, interval: 0.5, damage: 12, element: "poison", status: { poison: 4 }, color: "#8e24aa", kind: "field" } }] })
-      ]
-    },
-    noro: {
-      name: "Noro Noro no Mi",
-      en: "Slow-Slow Fruit",
-      type: "Paramecia",
-      rarity: "common",
-      color: "#80deea",
-      weight: 5,
-      desc: "Fire Noro Noro photons that slow anything they hit to a crawl. (Foxy the Silver Fox.)",
-      techniques: [
-        T2(0, { id: "noro_beam", name: "Noro Noro Beam", icon: "\u{1F40C}", anim: "cast", windup: 0.25, recover: 0.3, cd: 8, cost: { stamina: 12 }, steps: [{ hit: { shape: "line", range: 9, width: 1.2, damage: 4, stun: 0.1, status: { slowmo: 4 } }, vfx: "beam", color: "#80deea" }] }),
-        T2(30, { id: "noro_mirror", name: "Noro Noro Beam Sword", icon: "\u{1FA9E}", anim: "slash", windup: 0.2, recover: 0.3, cd: 10, cost: { stamina: 16 }, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.2, offset: 0.2, damage: 10, stun: 0.2, status: { slowmo: 3 } }, vfx: "slash", color: "#80deea" }] })
-      ]
-    },
-    bari: {
-      name: "Bari Bari no Mi",
-      en: "Barrier-Barrier Fruit",
-      type: "Paramecia",
-      rarity: "uncommon",
-      color: "#b3e5fc",
-      weight: 2.5,
-      desc: "Create unbreakable barriers. (Bartolomeo.)",
-      techniques: [
-        T2(0, { id: "bari_barrier", name: "Barrier", icon: "\u{1F6E1}", anim: "block", windup: 0.05, recover: 0.1, cd: 10, cost: { stamina: 14 }, desc: "Block everything for a moment.", steps: [{ buff: { id: "barrier", name: "Barrier", dur: 2.5, mods: { defMul: 0.05 }, aura: "rgba(179,229,252,0.8)" } }] }),
-        T2(20, { id: "bari_crash", name: "Barrier Crash", icon: "\u{1F9F1}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 7, cost: { stamina: 18 }, steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, hit: { damage: 30, knockback: 9, stun: 0.6, heavy: true, guardBreak: true } } }] })
-      ]
-    },
-    suke: {
-      name: "Suke Suke no Mi",
-      en: "Clear-Clear Fruit",
-      type: "Paramecia",
-      rarity: "uncommon",
-      color: "#eceff1",
-      weight: 3,
-      desc: "Turn yourself (and what you touch) invisible. (Absalom, then Shiliew.)",
-      techniques: [
-        T2(0, { id: "suke_vanish", name: "Clear Body", icon: "\u{1F441}", anim: "cast", windup: 0.2, recover: 0.1, cd: 16, cost: { stamina: 14 }, desc: "Become invisible: enemies lose track of you and your first hit is a critical.", steps: [{ buff: { id: "invisible", name: "Invisible", dur: 8, mods: { stealth: 1, crit: 0.6 }, alpha: 0.12 } }] })
-      ]
-    },
-    sube: {
-      name: "Sube Sube no Mi",
-      en: "Slip-Slip Fruit",
-      type: "Paramecia",
-      rarity: "common",
-      color: "#fce4ec",
-      weight: 5,
-      desc: "Your skin becomes perfectly slippery. Attacks slide right off. (Alvida.)",
-      passive: { slippery: 0.3 },
-      techniques: [
-        T2(0, { id: "sube_slide", name: "Slip Slide", icon: "\u26F8", anim: "thrust", windup: 0.05, recover: 0.1, cd: 3, cost: { stamina: 10 }, steps: [{ dash: { dist: 6, time: 0.25, iframes: 0.25, hit: { damage: 8, knockback: 3 } } }] }),
-        T2(25, { id: "sube_mace", name: "Mace Swing", icon: "\u{1F528}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 5, cost: { stamina: 16 }, steps: [{ hit: { shape: "arc", range: 2.2, arc: 2, offset: 0.2, damage: 22, knockback: 7, stun: 0.5, heavy: true } }] })
-      ]
-    },
-    doru: {
-      name: "Doru Doru no Mi",
-      en: "Wax-Wax Fruit",
-      type: "Paramecia",
-      rarity: "common",
-      color: "#fff8e1",
-      weight: 5,
-      desc: "Produce wax as hard as steel. Weak to fire. (Mr. 3 of Baroque Works.)",
-      passive: { weakTo: ["fire"] },
-      techniques: [
-        T2(0, { id: "doru_arrow", name: "Candle Arrows", icon: "\u{1F56F}", anim: "shoot", windup: 0.2, recover: 0.3, cd: 4, cost: { stamina: 12 }, steps: [{ proj: { speed: 18, range: 11, radius: 0.25, damage: 9, count: 3, spread: 0.25, sprite: "iceshard", color: "#fff8e1" } }] }),
-        T2(20, { id: "doru_lock", name: "Candle Lock", icon: "\u{1F512}", anim: "cast", windup: 0.3, recover: 0.3, cd: 11, cost: { stamina: 16 }, steps: [{ zone: { range: 1.5, duration: 0.4, interval: 0.4, damage: 10, color: "#fff8e1", atTarget: true, status: { root: 2.5 } } }] }),
-        T2(40, { id: "doru_armor", name: "Candle Champion", icon: "\u{1F5FF}", anim: "cast", windup: 0.4, recover: 0.2, cd: 30, cost: { stamina: 22 }, steps: [{ buff: { id: "waxarmor", name: "Wax Armour", dur: 12, mods: { defMul: 0.55, damage: 1.2 }, aura: "rgba(255,248,225,0.8)" } }] })
-      ]
-    },
-    supa: {
-      name: "Supa Supa no Mi",
-      en: "Dice-Dice Fruit",
-      type: "Paramecia",
-      rarity: "uncommon",
-      color: "#b0bec5",
-      weight: 3,
-      desc: "Turn any part of your body into a steel blade. Blades can't hurt you. (Daz Bonez, Mr. 1.)",
-      passive: { immuneSlash: true },
-      techniques: [
-        T2(0, { id: "supa_sparkling", name: "Sparkling Daisy", icon: "\u2734", anim: "slash", windup: 0.25, recover: 0.3, cd: 5, cost: { stamina: 16 }, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.6, offset: 0.2, damage: 26, knockback: 4, stun: 0.5, slashing: true }, vfx: "slash", color: "#eceff1" }] }),
-        T2(25, { id: "supa_spider", name: "Spider", icon: "\u{1F577}", anim: "block", windup: 0.05, recover: 0.1, cd: 12, cost: { stamina: 14 }, desc: "Harden your whole body into steel.", steps: [{ buff: { id: "steel", name: "Steel Body", dur: 4, mods: { defMul: 0.3 }, aura: "rgba(176,190,197,0.9)" } }] })
-      ]
-    },
-    nikyu: {
-      name: "Nikyu Nikyu no Mi",
-      en: "Paw-Paw Fruit",
-      type: "Paramecia",
-      rarity: "legendary",
-      color: "#fff",
-      weight: 0.4,
-      desc: "Paw pads that repel anything \u2014 even pain, even people across the world. (Bartholomew Kuma.)",
-      techniques: [
-        T2(0, { id: "nikyu_paw", name: "Pad Ho", icon: "\u{1F43E}", anim: "punch", windup: 0.25, recover: 0.3, cd: 4, cost: { stamina: 14 }, steps: [{ proj: { speed: 24, range: 12, radius: 0.5, damage: 20, sprite: "paw", pierce: true, knockback: 8, stun: 0.4 } }] }),
-        T2(20, { id: "nikyu_repel", name: "Repel", icon: "\u270B", anim: "block", windup: 0.02, recover: 0.1, cd: 8, cost: { stamina: 12 }, desc: "Deflect everything around you.", steps: [{ hit: { shape: "circle", range: 2.2, damage: 10, knockback: 12, stun: 0.4 }, vfx: "ring", color: "#ffffff" }, { self: { iframes: 0.4 } }] }),
-        T2(45, { id: "nikyu_travel", name: "Tabi Tabi", icon: "\u2708", anim: "cast", windup: 0.2, recover: 0.1, cd: 6, cost: { stamina: 16 }, desc: "Repel yourself through the air.", steps: [{ teleport: { dist: 12, color: "#ffffff" } }] }),
-        T2(70, { id: "nikyu_ursus", name: "Ursus Shock", icon: "\u{1F4A3}", anim: "cast", windup: 1, recover: 0.5, cd: 30, cost: { stamina: 38 }, desc: "Compress the air into a paw-shaped bomb.", steps: [{ proj: { speed: 7, range: 9, radius: 1.2, damage: 20, sprite: "paw", size: 2.5, pierce: true, explode: { range: 4.5, damage: 110, colors: ["#ffffff", "#e0f7fa", "#b2ebf2"] } } }] })
-      ]
-    },
-    mane: {
-      name: "Mane Mane no Mi",
-      en: "Clone-Clone Fruit",
-      type: "Paramecia",
-      rarity: "common",
-      color: "#f06292",
-      weight: 4,
-      desc: "Touch a face with your right hand and copy it perfectly. Marines won't recognise you. (Bon Clay.)",
-      passive: { disguise: true },
-      techniques: [
-        T2(0, { id: "mane_disguise", name: "Mimicry", icon: "\u{1F3AD}", anim: "cast", windup: 0.4, recover: 0.2, cd: 60, cost: { stamina: 10 }, desc: "Disguise yourself: Marines and bounty hunters ignore you until you attack.", steps: [{ buff: { id: "disguise", name: "Disguised", dur: 90, mods: { stealth: 0.5 }, disguise: true } }] }),
-        T2(20, { id: "mane_memoir", name: "Memoir Strike", icon: "\u{1F4AD}", anim: "kick", windup: 0.2, recover: 0.3, cd: 8, cost: { stamina: 16 }, desc: "Take a friend's face \u2014 the enemy hesitates to strike.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 20, knockback: 5, stun: 1.4 } }] })
-      ]
-    },
-    zushi: {
-      name: "Zushi Zushi no Mi",
-      en: "Press-Press Fruit",
-      type: "Paramecia",
-      rarity: "legendary",
-      color: "#9575cd",
-      weight: 0.4,
-      desc: "Control gravity. Pull meteors down from space. (Admiral Fujitora.)",
-      techniques: [
-        T2(0, { id: "zushi_press", name: "Gravity Press", icon: "\u2B07", anim: "cast", windup: 0.3, recover: 0.3, cd: 6, cost: { stamina: 16 }, steps: [{ zone: { range: 2.8, duration: 2, interval: 0.25, damage: 6, color: "#9575cd", atTarget: true, slow: 0.25, kind: "gravity" } }] }),
-        T2(25, { id: "zushi_blade", name: "Gravity Blade: Raging Tiger", icon: "\u{1F42F}", anim: "slash", windup: 0.4, recover: 0.4, cd: 10, cost: { stamina: 24 }, steps: [{ hit: { shape: "line", range: 10, width: 2.2, damage: 48, knockback: 6, stun: 0.8, heavy: true }, vfx: "beam", color: "#9575cd" }] }),
-        T2(70, { id: "zushi_meteor", name: "Meteor", icon: "\u2604", anim: "cast", windup: 1.2, recover: 0.5, cd: 45, cost: { stamina: 40 }, desc: "Call down a meteor from the heavens.", steps: [{ zone: { range: 4, duration: 1.3, interval: 1.2, damage: 140, color: "#ff7043", atTarget: true, kind: "meteor", element: "explosion" } }] })
-      ]
-    },
-    // ------------------------------------------------------------------ ZOAN
-    hito: {
-      name: "Hito Hito no Mi",
-      en: "Human-Human Fruit",
-      type: "Zoan",
-      rarity: "uncommon",
-      color: "#f8bbd0",
-      weight: 2.5,
-      desc: "Grants the intelligence and form of a human. Tony Tony Chopper ate it as a reindeer.",
-      techniques: [
-        T2(0, { id: "hito_heavy", name: "Heavy Point", icon: "\u{1F4AA}", anim: "cast", windup: 0.4, recover: 0.1, cd: 25, cost: { stamina: 14 }, steps: [{ buff: { id: "heavy_point", name: "Heavy Point", dur: 15, mods: { damage: 1.4, defMul: 0.8, scale: 1.3 } } }] }),
-        T2(20, { id: "hito_horn", name: "Horn Point: Kokutei Roseo", icon: "\u{1F98C}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, cost: { stamina: 18 }, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] }),
-        T2(50, { id: "hito_monster", name: "Monster Point", icon: "\u{1F479}", anim: "cast", windup: 0.8, recover: 0.1, cd: 90, cost: { stamina: 30 }, desc: "A Rumble Ball overdose: enormous power, barely controllable.", steps: [{ buff: { id: "monster", name: "Monster Point", dur: 20, mods: { damage: 2.2, defMul: 0.5, scale: 1.8, speedMul: 1.1 }, aura: "rgba(121,85,72,0.8)", drain: { stamina: 2 } } }] })
-      ]
-    },
-    neko_leopard: {
-      name: "Neko Neko no Mi, Model: Leopard",
-      en: "Cat-Cat Fruit, Leopard",
-      type: "Zoan",
-      rarity: "rare",
-      color: "#ffb74d",
-      weight: 1.2,
-      desc: "Become a leopard or a half-leopard warrior. Rob Lucci's ferocious fruit.",
-      techniques: [
-        T2(0, { id: "neko_hybrid", name: "Hybrid Form", icon: "\u{1F406}", anim: "cast", windup: 0.4, recover: 0.1, cd: 30, cost: { stamina: 14 }, steps: [{ buff: { id: "leopard", name: "Leopard Form", dur: 20, mods: { damage: 1.45, speedMul: 1.2, defMul: 0.85 }, aura: "rgba(255,183,77,0.6)" } }] }),
-        T2(20, { id: "neko_claw", name: "Leopard Claw", icon: "\u{1F43E}", anim: "slash", windup: 0.15, recover: 0.25, cd: 3, cost: { stamina: 12 }, steps: [{ hit: { shape: "arc", range: 1.9, arc: 1.8, offset: 0.2, damage: 22, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 4 } }, vfx: "slash", color: "#ffb74d" }] }),
-        T2(50, { id: "neko_pounce", name: "Hunting Pounce", icon: "\u{1F405}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, cost: { stamina: 20 }, steps: [{ dash: { dist: 8, time: 0.25, iframes: 0.2, hit: { damage: 40, knockback: 5, stun: 0.8, heavy: true } } }] })
-      ]
-    },
-    tori_phoenix: {
-      name: "Tori Tori no Mi, Model: Phoenix",
-      en: "Bird-Bird Fruit, Phoenix",
-      type: "Mythical Zoan",
-      rarity: "mythical",
-      color: "#4dd0e1",
-      weight: 0.4,
-      desc: "Blue flames of resurrection. Wounds heal as fast as they are dealt. (Marco the Phoenix.)",
-      passive: { regen: 3 },
-      techniques: [
-        T2(0, { id: "phoenix_flame", name: "Flames of Restoration", icon: "\u{1F499}", anim: "cast", windup: 0.3, recover: 0.2, cd: 12, cost: { stamina: 12 }, steps: [{ heal: 45, color: "#4dd0e1" }] }),
-        T2(15, { id: "phoenix_fly", name: "Phoenix Flight", icon: "\u{1F54A}", anim: "cast", windup: 0.05, recover: 0.1, cd: 3, cost: { stamina: 12 }, steps: [{ dash: { dist: 10, time: 0.35, iframes: 0.3, air: true, trail: "#4dd0e1" } }] }),
-        T2(35, { id: "phoenix_brand", name: "Phoenix Brand", icon: "\u{1F525}", anim: "kick", windup: 0.3, recover: 0.3, cd: 7, cost: { stamina: 20 }, steps: [{ dash: { dist: 6, time: 0.22, iframes: 0.2, air: true, hit: { damage: 38, knockback: 8, stun: 0.6, element: "fire", heavy: true } } }] }),
-        T2(70, { id: "phoenix_rebirth", name: "Blue Rebirth", icon: "\u267E", anim: "cast", windup: 0.6, recover: 0.2, cd: 120, cost: { stamina: 20 }, desc: "Burn away all harm: full heal and a burst of blue fire.", steps: [{ heal: 400, color: "#4dd0e1" }, { hit: { shape: "circle", range: 3, damage: 30, knockback: 6, element: "fire" }, vfx: "ring", color: "#4dd0e1" }, { self: { cleanse: true } }] })
-      ]
-    },
-    uo_seiryu: {
-      name: "Uo Uo no Mi, Model: Seiryu",
-      en: "Fish-Fish Fruit, Azure Dragon",
-      type: "Mythical Zoan",
-      rarity: "mythical",
-      color: "#42a5f5",
-      weight: 0.3,
-      desc: "Become the Azure Dragon of legend. Kaido, strongest creature in the world, ate this fruit.",
-      techniques: [
-        T2(0, { id: "seiryu_bolo", name: "Bolo Breath", icon: "\u{1F409}", anim: "cast", windup: 0.5, recover: 0.4, cd: 7, cost: { stamina: 20 }, say: "Bolo Breath!", steps: [{ hit: { shape: "line", range: 11, width: 1.8, damage: 44, knockback: 6, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true, hitShips: true }, vfx: "beam", color: "#ff7043" }] }),
-        T2(25, { id: "seiryu_kaifu", name: "Kaifu", icon: "\u{1F32C}", anim: "cast", windup: 0.35, recover: 0.3, cd: 6, cost: { stamina: 18 }, desc: "Wind blades from the dragon's whiskers.", steps: [{ proj: { speed: 18, range: 12, radius: 0.5, damage: 18, count: 3, spread: 0.5, sprite: "airslash", slashing: true, pierce: true } }] }),
-        T2(50, { id: "seiryu_raimei", name: "Raimei Hakke", icon: "\u26A1", anim: "heavy", windup: 0.6, recover: 0.5, cd: 14, cost: { stamina: 30 }, desc: "Thunder Bagua: a club blow that shakes the heavens.", steps: [{ hit: { shape: "arc", range: 3, arc: 1.4, offset: 0.4, damage: 95, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, element: "lightning", impactFrame: true, shake: 0.9 } }] }),
-        T2(80, { id: "seiryu_form", name: "Dragon Form", icon: "\u{1F432}", anim: "cast", windup: 1, recover: 0.1, cd: 120, cost: { stamina: 30 }, steps: [{ buff: { id: "dragon", name: "Azure Dragon", dur: 25, mods: { damage: 2, defMul: 0.4, scale: 1.6 }, aura: "rgba(66,165,245,0.8)" } }] })
-      ]
-    },
-    // ----------------------------------------------------------------- LOGIA
-    mera: {
-      name: "Mera Mera no Mi",
-      en: "Flame-Flame Fruit",
-      type: "Logia",
-      rarity: "rare",
-      color: "#ff7043",
-      weight: 1,
-      desc: "Become fire itself. Portgas D. Ace's fruit \u2014 later the Colosseum prize of Dressrosa.",
-      passive: { logia: true, element: "fire", resist: ["fire"], weakTo: ["magma", "water"] },
-      techniques: [
-        T2(0, { id: "mera_hiken", name: "Hiken", icon: "\u{1F525}", anim: "punch", windup: 0.3, recover: 0.3, cd: 4, cost: { stamina: 14 }, say: "Hiken!", desc: "Fire Fist.", steps: [{ proj: { speed: 16, range: 12, radius: 0.8, damage: 26, sprite: "firefist", element: "fire", pierce: true, status: { burn: 3 }, knockback: 5, trail: { color: ["#ff7043", "#ffca28"] } } }] }),
-        T2(15, { id: "mera_hidaruma", name: "Hidaruma", icon: "\u{1F386}", anim: "cast", windup: 0.25, recover: 0.3, cd: 6, cost: { stamina: 14 }, desc: "Fireflies of flame that ignite everything they touch.", steps: [{ proj: { speed: 9, range: 10, radius: 0.3, damage: 8, count: 6, spread: 1.2, sprite: "fireball", element: "fire", status: { burn: 2 }, homing: 2 } }] }),
-        T2(35, { id: "mera_enkai", name: "Enkai: Hibashira", icon: "\u{1F30B}", anim: "cast", windup: 0.4, recover: 0.4, cd: 10, cost: { stamina: 22 }, desc: "A pillar of flame erupts around you.", steps: [{ hit: { shape: "circle", range: 3, damage: 36, knockback: 8, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true }, vfx: "ring" }] }),
-        T2(70, { id: "mera_entei", name: "Dai Enkai: Entei", icon: "\u2600", anim: "cast", windup: 1.1, recover: 0.5, cd: 40, cost: { stamina: 40 }, desc: "A second sun, hurled.", say: "Dai Enkai... ENTEI!", steps: [{ proj: { speed: 9, range: 13, radius: 2.2, damage: 40, size: 4, sprite: "fireball", element: "fire", pierce: true, status: { burn: 5 }, explode: { range: 4.5, damage: 100, element: "fire" } } }] })
-      ]
-    },
-    hie: {
-      name: "Hie Hie no Mi",
-      en: "Ice-Ice Fruit",
-      type: "Logia",
-      rarity: "rare",
-      color: "#81d4fa",
-      weight: 1,
-      desc: "Become ice. Freeze anything \u2014 even the sea. (Admiral Aokiji.)",
-      passive: { logia: true, element: "ice", resist: ["ice"], weakTo: ["magma"] },
-      techniques: [
-        T2(0, { id: "hie_saber", name: "Ice Saber", icon: "\u{1F5E1}", anim: "slash", windup: 0.15, recover: 0.25, cd: 3, cost: { stamina: 10 }, steps: [{ hit: { shape: "arc", range: 2, arc: 1.8, offset: 0.2, damage: 18, knockback: 3, stun: 0.3, slashing: true, element: "ice", status: { chill: 3 } }, vfx: "slash", color: "#b3e5fc" }] }),
-        T2(15, { id: "hie_pheasant", name: "Pheasant Beak", icon: "\u{1F426}", anim: "cast", windup: 0.35, recover: 0.3, cd: 6, cost: { stamina: 16 }, say: "Pheasant Beak!", steps: [{ proj: { speed: 15, range: 12, radius: 0.8, damage: 28, sprite: "bird", color: "#b3e5fc", element: "ice", status: { freeze: 1.4 }, pierce: true } }] }),
-        T2(35, { id: "hie_ageand", name: "Ice Age", icon: "\u2744", anim: "cast", windup: 0.6, recover: 0.4, cd: 14, cost: { stamina: 26 }, desc: "Freeze everything around you \u2014 even water becomes a road of ice.", say: "Ice Age!", steps: [{ hit: { shape: "circle", range: 5, damage: 30, knockback: 1, stun: 0.3, element: "ice", status: { freeze: 2.5 }, heavy: true }, vfx: "ring", color: "#e1f5fe" }, { zone: { range: 5, duration: 6, interval: 1, damage: 0, color: "#e1f5fe", kind: "ice", slow: 0.5 } }] }),
-        T2(65, { id: "hie_time", name: "Ice Time Capsule", icon: "\u{1F9CA}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, cost: { stamina: 32 }, steps: [{ hit: { shape: "line", range: 10, width: 2.5, damage: 60, knockback: 2, element: "ice", status: { freeze: 3.5 }, heavy: true, unblockable: true }, vfx: "beam", color: "#e1f5fe" }] })
-      ]
-    },
-    goro: {
-      name: "Goro Goro no Mi",
-      en: "Rumble-Rumble Fruit",
-      type: "Logia",
-      rarity: "legendary",
-      color: "#fff176",
-      weight: 0.6,
-      desc: "Become lightning. The self-proclaimed God Enel's fruit. Useless against rubber.",
-      passive: { logia: true, element: "lightning", resist: ["lightning"], weakTo: ["rubber"] },
-      techniques: [
-        T2(0, { id: "goro_vari", name: "Vari", icon: "\u26A1", anim: "cast", windup: 0.2, recover: 0.25, cd: 3, cost: { stamina: 12 }, steps: [{ hit: { shape: "line", range: 8, width: 0.8, damage: 22, knockback: 2, stun: 0.5, element: "lightning", status: { shock: 1 } }, vfx: "beam", color: "#fff176" }] }),
-        T2(15, { id: "goro_sango", name: "Sango", icon: "\u{1F409}", anim: "cast", windup: 0.4, recover: 0.3, cd: 8, cost: { stamina: 20 }, desc: "A lightning dragon.", steps: [{ proj: { speed: 20, range: 14, radius: 0.9, damage: 34, sprite: "thunder", size: 2, element: "lightning", pierce: true, status: { shock: 1.2 } } }] }),
-        T2(35, { id: "goro_elthor", name: "El Thor", icon: "\u{1F329}", anim: "cast", windup: 0.7, recover: 0.4, cd: 14, cost: { stamina: 28 }, desc: "A pillar of divine lightning from the sky.", say: "El Thor!", steps: [{ zone: { range: 2.8, duration: 0.8, interval: 0.4, damage: 45, element: "lightning", status: { shock: 1.5 }, color: "#fff176", atTarget: true, kind: "thunder" } }] }),
-        T2(55, { id: "goro_amaru", name: "200 Million Volt Amaru", icon: "\u{1F47A}", anim: "cast", windup: 0.8, recover: 0.2, cd: 60, cost: { stamina: 30 }, steps: [{ buff: { id: "amaru", name: "Amaru", dur: 18, mods: { damage: 1.9, speedMul: 1.25, scale: 1.3 }, element: "lightning", aura: "rgba(255,241,118,0.9)" } }] }),
-        T2(85, { id: "goro_raigo", name: "Raigo", icon: "\u{1F311}", anim: "cast", windup: 1.4, recover: 0.6, cd: 90, cost: { stamina: 45 }, desc: "A thundercloud large enough to erase an island.", steps: [{ zone: { range: 7, duration: 3, interval: 0.3, damage: 22, element: "lightning", status: { shock: 0.5 }, color: "#fff176", kind: "thunder" } }] })
-      ]
-    },
-    suna: {
-      name: "Suna Suna no Mi",
-      en: "Sand-Sand Fruit",
-      type: "Logia",
-      rarity: "rare",
-      color: "#e1c16e",
-      weight: 1,
-      desc: "Become sand and drain the moisture from anything you touch. Water is its weakness. (Sir Crocodile.)",
-      passive: { logia: true, element: "sand", weakTo: ["water"] },
-      techniques: [
-        T2(0, { id: "suna_barjan", name: "Barjan", icon: "\u{1F319}", anim: "slash", windup: 0.2, recover: 0.3, cd: 3, cost: { stamina: 12 }, steps: [{ proj: { speed: 17, range: 10, radius: 0.5, damage: 18, sprite: "sandblade", element: "sand", slashing: true, pierce: true } }] }),
-        T2(15, { id: "suna_sables", name: "Sables", icon: "\u{1F32A}", anim: "cast", windup: 0.4, recover: 0.3, cd: 9, cost: { stamina: 20 }, desc: "A sandstorm.", steps: [{ zone: { range: 3, duration: 3.5, interval: 0.3, damage: 7, element: "sand", color: "#e1c16e", kind: "storm", atTarget: true, pull: 2 } }] }),
-        T2(35, { id: "suna_spada", name: "Desert Spada", icon: "\u{1F5E1}", anim: "grab", windup: 0.3, recover: 0.35, cd: 8, cost: { stamina: 22 }, desc: "Blades of sand rip through the ground.", steps: [{ hit: { shape: "line", range: 11, width: 1.2, damage: 40, knockback: 4, stun: 0.5, element: "sand", slashing: true }, vfx: "beam", color: "#e1c16e" }] }),
-        T2(60, { id: "suna_dry", name: "Ground Death", icon: "\u{1F3DC}", anim: "grab", windup: 0.7, recover: 0.4, cd: 30, cost: { stamina: 32 }, desc: "Drain all moisture from the land around you.", steps: [{ zone: { range: 6, duration: 5, interval: 0.4, damage: 12, element: "sand", color: "#d7b56d", kind: "field", status: { dry: 2 } } }] })
-      ]
-    },
-    moku: {
-      name: "Moku Moku no Mi",
-      en: "Plume-Plume Fruit",
-      type: "Logia",
-      rarity: "rare",
-      color: "#cfd8dc",
-      weight: 1,
-      desc: 'Become smoke. Smoker "the White Hunter" pairs it with a Seastone jitte.',
-      passive: { logia: true, element: "smoke" },
-      techniques: [
-        T2(0, { id: "moku_blow", name: "White Blow", icon: "\u2601", anim: "punch", windup: 0.2, recover: 0.3, cd: 3, cost: { stamina: 12 }, steps: [{ proj: { speed: 16, range: 10, radius: 0.6, damage: 18, sprite: "smokefist", element: "smoke", knockback: 5, stun: 0.4 } }] }),
-        T2(15, { id: "moku_snake", name: "White Snake", icon: "\u{1F40D}", anim: "grab", windup: 0.25, recover: 0.3, cd: 7, cost: { stamina: 16 }, desc: "Smoke tendrils bind the target.", steps: [{ proj: { speed: 14, range: 11, radius: 0.5, damage: 12, sprite: "smokefist", element: "smoke", status: { root: 2 }, homing: 2 } }] }),
-        T2(35, { id: "moku_out", name: "White Out", icon: "\u{1F32B}", anim: "cast", windup: 0.4, recover: 0.3, cd: 12, cost: { stamina: 22 }, steps: [{ zone: { range: 4, duration: 5, interval: 0.5, damage: 6, element: "smoke", color: "#eceff1", kind: "storm", slow: 0.45, status: { root: 0.4 } } }] }),
-        T2(60, { id: "moku_launcher", name: "White Launcher", icon: "\u{1F680}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 6, cost: { stamina: 18 }, steps: [{ dash: { dist: 10, time: 0.3, iframes: 0.3, air: true, trail: "#eceff1", hit: { damage: 36, knockback: 8, stun: 0.6, element: "smoke" } } }] })
-      ]
-    },
-    pika: {
-      name: "Pika Pika no Mi",
-      en: "Glint-Glint Fruit",
-      type: "Logia",
-      rarity: "legendary",
-      color: "#fff9c4",
-      weight: 0.6,
-      desc: "Become light. Move at the speed of light and kick with its weight. (Admiral Kizaru.)",
-      passive: { logia: true, element: "light" },
-      techniques: [
-        T2(0, { id: "pika_yasakani", name: "Yasakani no Magatama", icon: "\u2728", anim: "cast", windup: 0.35, recover: 0.4, cd: 6, cost: { stamina: 16 }, desc: "A rain of light bullets.", steps: [{ proj: { speed: 30, range: 12, radius: 0.25, damage: 8, count: 9, spread: 1, sprite: "lightorb", element: "light" } }] }),
-        T2(15, { id: "pika_yata", name: "Yata no Kagami", icon: "\u{1FA9E}", anim: "cast", windup: 0.05, recover: 0.05, cd: 2, cost: { stamina: 10 }, desc: "Travel at the speed of light.", steps: [{ teleport: { dist: 12, color: "#fff9c4" } }] }),
-        T2(35, { id: "pika_murakumo", name: "Ama no Murakumo", icon: "\u2694", anim: "slash", windup: 0.2, recover: 0.3, cd: 5, cost: { stamina: 16 }, desc: "A sword of light.", steps: [{ hit: { shape: "arc", range: 2.6, arc: 2.2, offset: 0.2, damage: 40, knockback: 4, stun: 0.5, slashing: true, element: "light" }, vfx: "slash", color: "#fff9c4" }] }),
-        T2(60, { id: "pika_amaterasu", name: "Amaterasu", icon: "\u2600", anim: "cast", windup: 0.8, recover: 0.4, cd: 25, cost: { stamina: 35 }, steps: [{ hit: { shape: "line", range: 16, width: 1.6, damage: 90, knockback: 8, stun: 0.8, element: "light", heavy: true, impactFrame: true, hitShips: true, shipDamage: 300 }, vfx: "beam", color: "#fff59d" }] })
-      ]
-    },
-    magu: {
-      name: "Magu Magu no Mi",
-      en: "Magma-Magma Fruit",
-      type: "Logia",
-      rarity: "legendary",
-      color: "#ff5722",
-      weight: 0.6,
-      desc: "Become magma \u2014 hotter than fire itself. (Admiral, then Fleet Admiral, Akainu.)",
-      passive: { logia: true, element: "magma", resist: ["fire", "magma"] },
-      techniques: [
-        T2(0, { id: "magu_daifunka", name: "Dai Funka", icon: "\u{1F30B}", anim: "punch", windup: 0.3, recover: 0.35, cd: 4, cost: { stamina: 16 }, say: "Dai Funka!", desc: "Great Eruption.", steps: [{ proj: { speed: 15, range: 11, radius: 0.9, damage: 34, sprite: "magmafist", size: 1.5, element: "magma", pierce: true, status: { burn: 4 }, knockback: 6, trail: { color: ["#bf360c", "#ff6f00"], kind: "fire" } } }] }),
-        T2(20, { id: "magu_meigo", name: "Meigo", icon: "\u{1F44A}", anim: "thrust", windup: 0.3, recover: 0.35, cd: 8, cost: { stamina: 22 }, desc: "Hell Hound: a magma fist that pierces through.", steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 55, knockback: 6, stun: 0.8, element: "magma", status: { burn: 4 }, heavy: true, guardBreak: true } } }] }),
-        T2(50, { id: "magu_ryusei", name: "Ryusei Kazan", icon: "\u2604", anim: "cast", windup: 1, recover: 0.5, cd: 35, cost: { stamina: 40 }, desc: "Meteor Volcano: a rain of magma fists.", steps: [{ zone: { range: 6, duration: 2.5, interval: 0.2, damage: 24, element: "magma", color: "#ff5722", kind: "meteor", status: { burn: 3 } } }] })
-      ]
-    },
-    yami: {
-      name: "Yami Yami no Mi",
-      en: "Dark-Dark Fruit",
-      type: "Logia",
-      rarity: "legendary",
-      color: "#311b92",
-      weight: 0.5,
-      desc: "Darkness that swallows everything \u2014 even other Devil Fruit powers. Unlike other Logia, it cannot become intangible. (Marshall D. Teach.)",
-      passive: { element: "dark", noIntangible: true, damageTaken: 1.15 },
-      techniques: [
-        T2(0, { id: "yami_kurouzu", name: "Kurouzu", icon: "\u{1F573}", anim: "grab", windup: 0.3, recover: 0.3, cd: 6, cost: { stamina: 16 }, desc: "Black Vortex: drag your enemy to you.", steps: [{ pull: { range: 8, strength: 14, stun: 0.6 } }] }),
-        T2(15, { id: "yami_blackhole", name: "Black Hole", icon: "\u26AB", anim: "cast", windup: 0.5, recover: 0.4, cd: 14, cost: { stamina: 26 }, steps: [{ zone: { range: 4, duration: 4, interval: 0.4, damage: 10, element: "dark", color: "#311b92", kind: "dark", pull: 4, slow: 0.4 } }] }),
-        T2(35, { id: "yami_nullify", name: "Dark Hand", icon: "\u270B", anim: "grab", windup: 0.2, recover: 0.3, cd: 18, cost: { stamina: 20 }, desc: "Touch an enemy to nullify their Devil Fruit.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.2, damage: 15, stun: 0.8, status: { seastone: 8 }, unblockable: true } }] }),
-        T2(60, { id: "yami_liberation", name: "Liberation", icon: "\u{1F4A5}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, cost: { stamina: 32 }, desc: "Release everything the darkness swallowed.", steps: [{ hit: { shape: "circle", range: 5, damage: 70, knockback: 12, stun: 0.8, element: "dark", heavy: true, impactFrame: true }, vfx: "ring", color: "#7e57c2" }] })
-      ]
-    }
-  };
-  var FRUIT_IDS = Object.keys(FRUITS);
-  for (const [fid, f] of Object.entries(FRUITS)) {
-    registerAbilities(f.techniques.map((t) => ({ ...t, source: "fruit:" + fid, fruit: fid })), "fruit:" + fid);
-    f.logia = !!(f.passive && f.passive.logia);
-    f.rubber = !!(f.passive && f.passive.rubber);
-    f.resist = f.passive?.resist || [];
-    f.weakTo = f.passive?.weakTo || [];
-  }
-  var FRUIT_RARITY = {
-    common: { label: "Common", color: "#b2bec3" },
-    uncommon: { label: "Uncommon", color: "#55efc4" },
-    rare: { label: "Rare", color: "#74b9ff" },
-    legendary: { label: "Legendary", color: "#fdcb6e" },
-    mythical: { label: "Mythical", color: "#ff7675" }
-  };
-  function unlockedFruitTechniques(fruitId, mastery) {
-    const f = FRUITS[fruitId];
-    if (!f) return [];
-    return f.techniques.filter((t) => mastery >= t.mastery).map((t) => t.id);
-  }
-
   // src/data/races.js
   var RARITY = {
     common: { label: "Common", color: "#b2bec3" },
@@ -15127,9 +17855,9 @@ void main() {
     atkSpeed() {
       return this.d.atkSpeed * this.buffMul("atkSpeed") * (this.status.slowmo ? 0.3 : 1) * (this.status.chill ? 0.75 : 1);
     }
-    buffMul(key) {
+    buffMul(key2) {
       let m = 1;
-      for (const b of this.buffs) if (b.mods && b.mods[key] !== void 0) m *= b.mods[key];
+      for (const b of this.buffs) if (b.mods && b.mods[key2] !== void 0) m *= b.mods[key2];
       return m;
     }
     hasBuff(id) {
@@ -15279,11 +18007,12 @@ void main() {
       return true;
     }
     tryTechnique(id, game, target) {
+      if (typeof id === "string" && id.startsWith("item:")) return this.isPlayer && this.state === "idle" && !!game.useHotbarItem?.(id.slice(5));
       if (!this.canAct()) return false;
       const def = getAbility(id);
       if (!def) return false;
       if (def.requiresHaki && !this.hakiLevel(def.requiresHaki)) {
-        if (this.isPlayer) game.log(`${def.name} requires ${def.requiresHaki} Haki.`, "#ff8a80");
+        if (this.isPlayer) game.log(this.hakiUnlocked() ? `${def.name} requires ${def.requiresHaki} Haki.` : `${def.name} is beyond you for now \u2014 something in you has yet to awaken.`, "#ff8a80");
         return false;
       }
       if (def.requiresNight && game.env.daylight > 0.35) {
@@ -15299,7 +18028,7 @@ void main() {
           if ((this.cooldowns[def.id] || 0) > 0) game.ui?.flashSlot(id);
           else if (def.source?.startsWith("fruit") && this.inWater) game.log("Your Devil Fruit power is useless in the sea!", "#ff8a80");
           else if (def.weapon && !this.hasWeapon(def.weapon)) game.log(`${def.name} needs ${def.weapon === "sword" ? `${STYLES[this.style]?.swords || 1} sword(s)` : "a " + def.weapon}.`, "#ff8a80");
-          else game.log("Not enough " + (def.cost?.haki && this.haki < def.cost.haki ? "Haki." : "stamina."), "#ff8a80");
+          else game.log("Not enough " + (def.cost?.haki && this.haki < def.cost.haki ? this.hakiUnlocked() ? "Haki." : "strength of will." : "stamina."), "#ff8a80");
         }
         return false;
       }
@@ -16287,9 +19016,9 @@ void main() {
       if (this.logLines.length > 60) this.logLines.shift();
       this.ui?.log(text, color);
     }
-    hint(key, text) {
-      if (this.hintsShown.has(key)) return;
-      this.hintsShown.add(key);
+    hint(key2, text) {
+      if (this.hintsShown.has(key2)) return;
+      this.hintsShown.add(key2);
       this.ui?.hint(text);
     }
     // --- events from combat ----------------------------------------------------------
@@ -16625,9 +19354,9 @@ void main() {
     const m = sel.match(/^([a-z0-9]+)?((?:[.#][\w-]+)*)$/i);
     const el = document.createElement(m && m[1] ? m[1] : "div");
     if (m && m[2]) {
-      for (const part of m[2].match(/[.#][\w-]+/g) || []) {
-        if (part[0] === ".") el.classList.add(part.slice(1));
-        else el.id = part.slice(1);
+      for (const part2 of m[2].match(/[.#][\w-]+/g) || []) {
+        if (part2[0] === ".") el.classList.add(part2.slice(1));
+        else el.id = part2.slice(1);
       }
     }
     if (props && (typeof props !== "object" || props instanceof Node || Array.isArray(props))) {
@@ -16662,9 +19391,28 @@ void main() {
   }
 
   // src/ui/style.css
-  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.hud-bounty small { font-family: Nunito; font-size: 11px; color: #ddd; margin-left: 6px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; }\n.loc-sub { font-size: 12px; opacity: .85; text-shadow: 0 1px 2px #000; }\n.clock { font-size: 12px; margin-top: 2px; text-shadow: 0 1px 2px #000; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; }\n.hint::before { content: '\u{1F4DC} '; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; transition: transform .5s; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font-size: 16px; cursor: pointer; }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n.dream { cursor: pointer; }\n.dream.on { outline: 3px solid var(--red); background: rgba(192,57,43,.12); }\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #b8860b; font-size: 18px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n";
+  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #b8860b; font-size: 18px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; right: 14px; top: 288px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(-2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-right: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 70px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(245,230,196,.7); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 220px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-right: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-height: 640px) {\n  .sidebar { top: 214px; gap: 3px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n";
+
+  // src/ui/icon.js
+  var img = (canvas, px, cls = "") => h("img.icon" + cls, { src: iconURL(canvas), width: px, height: px, draggable: false, alt: "" });
+  var itemImg = (idOrDef, px = 32, cls) => img(itemIcon(idOrDef, 64), px, cls);
+  var skillImg = (def, px = 32, cls) => img(skillIcon(def, 64), px, cls);
+  var uiImg = (name, px = 24, cls) => img(uiIcon(name, 48), px, cls);
 
   // src/ui/ui.js
+  var SIDEBAR = [
+    { id: "inventory", label: "Inventory", key: "Tab" },
+    { id: "character", label: "Character", key: "C" },
+    { id: "skills", label: "Skills", key: "K" },
+    { id: "journal", label: "Journal", key: "J" },
+    { id: "crew", label: "Crew", key: "U" },
+    { id: "menu", label: "Menu", key: "Esc" }
+  ];
+  var HAKI_TOGGLES = [
+    { type: "armament", key: "R", name: "Armament Haki", icon: { id: "toggle_armament", name: "Armament", hakiType: "armament", source: "haki:armament" } },
+    { type: "observation", key: "T", name: "Observation Haki", icon: { id: "toggle_observation", name: "Observation", hakiType: "observation", source: "haki:observation" } },
+    { type: "conqueror", key: "G", name: "Conqueror's Haki", icon: { id: "haki_conqueror", name: "Conqueror's", hakiType: "conqueror", source: "haki:conqueror" } }
+  ];
   var UI = class {
     constructor(container) {
       const style = document.createElement("style");
@@ -16677,6 +19425,7 @@ void main() {
       this.dialogueEl = null;
       this.screenEl = null;
       this.cache = {};
+      this.actions = {};
       this.buildHud();
       this.hudVisible = false;
       this.setHudVisible(false);
@@ -16701,15 +19450,35 @@ void main() {
       E.hotbar = h("div.hotbar");
       E.slots = [];
       for (let i = 0; i < 6; i++) {
-        const s = { el: h("div.slot"), ico: h("span"), k: h("span.k", String(i + 1)), nm: h("span.nm"), cd: h("div.cd"), cdt: h("div.cdt") };
-        s.el.append(s.ico, s.k, s.nm, s.cd, s.cdt);
+        const s = { el: h("div.slot.interactive"), ico: h("span.ico"), k: h("span.k", String(i + 1)), nm: h("span.nm"), qty: h("span.qty"), cd: h("div.cd"), cdt: h("div.cdt") };
+        s.el.append(s.ico, s.k, s.nm, s.qty, s.cd, s.cdt);
+        s.el.draggable = true;
+        s.el.addEventListener("dragstart", (ev) => {
+          if (!this.game?.player?.hotbar?.[i]) {
+            ev.preventDefault();
+            return;
+          }
+          ev.dataTransfer.setData("text/plain", "slot:" + i);
+        });
+        s.el.addEventListener("dragover", (ev) => {
+          ev.preventDefault();
+          s.el.classList.add("over");
+        });
+        s.el.addEventListener("dragleave", () => s.el.classList.remove("over"));
+        s.el.addEventListener("drop", (ev) => {
+          ev.preventDefault();
+          s.el.classList.remove("over");
+          const data = ev.dataTransfer.getData("text/plain");
+          if (data.startsWith("slot:")) this.swapSlots(+data.slice(5), i);
+        });
+        s.el.addEventListener("click", () => this.useSlot(i));
         E.slots.push(s);
         E.hotbar.appendChild(s.el);
       }
       E.toggles = {};
-      for (const [k, ico, key] of [["armament", "\u{1F5A4}", "R"], ["observation", "\u{1F441}", "T"], ["conqueror", "\u{1F451}", "G"]]) {
-        const el = h("div.slot.toggle", h("span", ico), h("span.k", key));
-        E.toggles[k] = el;
+      for (const t of HAKI_TOGGLES) {
+        const el = h("div.slot.toggle.hidden", h("span.ico", skillImg(t.icon, 28)), h("span.k", t.key));
+        E.toggles[t.type] = el;
         E.hotbar.appendChild(el);
       }
       this.hud.appendChild(E.hotbar);
@@ -16721,8 +19490,9 @@ void main() {
       E.loc = h("div.loc-name");
       E.locSub = h("div.loc-sub");
       E.clock = h("div.clock");
+      E.saved = h("div.saved-note");
       E.logpose = h("div.logpose.hidden", h("i"), h("span"));
-      this.hud.appendChild(h("div.minimap-wrap", E.mm, E.logpose, E.loc, E.locSub, E.clock));
+      this.hud.appendChild(h("div.minimap-wrap", E.mm, E.logpose, E.loc, E.locSub, E.clock, E.saved));
       E.boss = h("div.bossbar.hidden", h("h3"), bar("boss").el);
       this.hud.appendChild(E.boss);
       E.ship = h("div.shiphud.hidden");
@@ -16738,6 +19508,23 @@ void main() {
       R.appendChild(this.fadeEl);
       this.panelLayer = h("div");
       R.appendChild(this.panelLayer);
+      E.side = h("div.sidebar.hidden");
+      E.sideBtns = {};
+      for (const b of SIDEBAR) {
+        const el = h(
+          "button.side-btn",
+          { title: `${b.label} (${b.key})`, on: { click: (ev) => {
+            ev.currentTarget.blur();
+            this.sideAction(b.id);
+          } } },
+          uiImg(b.id, 22),
+          h("span.lbl", b.label),
+          h("span.key", b.key)
+        );
+        E.sideBtns[b.id] = el;
+        E.side.appendChild(el);
+      }
+      R.appendChild(E.side);
       this.screenLayer = h("div");
       R.appendChild(this.screenLayer);
       this.modalLayer = h("div");
@@ -16746,6 +19533,38 @@ void main() {
     setHudVisible(v) {
       this.hudVisible = v;
       this.hud.classList.toggle("hidden", !v);
+      this.el.side.classList.toggle("hidden", !v);
+    }
+    /** Sidebar / shortcut: open a menu, or close it if it is already open. */
+    sideAction(id) {
+      const g = this.game;
+      if (!g?.player || this.screenEl) return;
+      if (this.dialogueEl) return;
+      if (this.mapOpen) this.closeMap?.();
+      const top = this.stack[this.stack.length - 1];
+      if (top && top.id === id) {
+        this.closeAll();
+        return;
+      }
+      this.closeAll();
+      this.actions[id]?.();
+    }
+    swapSlots(a, b) {
+      const p = this.game?.player;
+      if (!p || a === b) return;
+      const hb = p.char.hotbar;
+      [hb[a], hb[b]] = [hb[b] ?? null, hb[a] ?? null];
+      p.hotbar = hb;
+      this.cache["slot" + a] = this.cache["slot" + b] = null;
+      this.game.audio?.sfx("equip");
+    }
+    useSlot(i) {
+      const g = this.game, p = g?.player;
+      if (!p || this.blocksInput()) return;
+      const id = p.hotbar[i];
+      if (!id) return;
+      const aim = p.facing;
+      p.tryTechnique(id, g, { x: p.x + Math.cos(aim) * 4, y: p.y + Math.sin(aim) * 4 });
     }
     blocksInput() {
       return this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen;
@@ -16756,7 +19575,9 @@ void main() {
       while (this.el.log.children.length > 7) this.el.log.removeChild(this.el.log.firstChild);
     }
     hint(text, dur = 9) {
-      this.hintEl.textContent = text;
+      if (this.game?.settings && this.game.settings.showHints === false) return;
+      clear(this.hintEl);
+      this.hintEl.append(uiImg("journal", 18), h("span", text));
       this.hintEl.classList.remove("hidden");
       this.hintEl.style.opacity = "1";
       clearTimeout(this.hintTimer);
@@ -16765,10 +19586,10 @@ void main() {
         setTimeout(() => this.hintEl.classList.add("hidden"), 500);
       }, dur * 1e3);
     }
-    banner(title, sub = "", text = "", dur = 4) {
+    banner(title2, sub = "", text = "", dur = 4) {
       const [s, t, p] = this.bannerEl.children;
       s.textContent = sub;
-      t.textContent = title;
+      t.textContent = title2;
       p.textContent = text;
       this.bannerEl.classList.add("show");
       clearTimeout(this.bannerTimer);
@@ -16779,6 +19600,14 @@ void main() {
       if (color) el.style.color = color;
       this.root.appendChild(el);
       setTimeout(() => el.remove(), 2700);
+    }
+    /** The little "Saved" note under the clock. */
+    savedNote() {
+      const el = this.el.saved;
+      el.textContent = "Game saved";
+      el.classList.remove("show");
+      void el.offsetWidth;
+      el.classList.add("show");
     }
     fade(on) {
       this.fadeEl.classList.toggle("on", on);
@@ -16796,9 +19625,9 @@ void main() {
       void el.offsetWidth;
       el.classList.add("flash");
     }
-    set(el, key, val, prop = "textContent") {
-      if (this.cache[key] === val) return;
-      this.cache[key] = val;
+    set(el, key2, val, prop = "textContent") {
+      if (this.cache[key2] === val) return;
+      this.cache[key2] = val;
       el[prop] = val;
     }
     update(dt) {
@@ -16845,9 +19674,9 @@ void main() {
           return null;
         }
       }
-      const close = h("button.close", { on: { click: () => this.closePanel(entry) } }, "\u2715");
+      const close = h("button.close", { title: "Close (Esc)", on: { click: () => this.closePanel(entry) } }, "\xD7");
       const panel = h("div.panel" + (wide ? ".wide" : ""), close, content);
-      const bg = h("div.panel-bg", panel);
+      const bg = h("div.panel-bg" + (this.hudVisible ? ".side-pad" : ""), panel);
       bg.addEventListener("mousedown", (e) => {
         if (e.target === bg) this.closePanel(entry);
       });
@@ -16855,6 +19684,7 @@ void main() {
       this.stack.push(entry);
       this.panelLayer.appendChild(bg);
       if (this.game) this.game.paused = true;
+      this.markSidebar();
       return entry;
     }
     closePanel(entry) {
@@ -16864,15 +19694,20 @@ void main() {
       e.el.remove();
       if (e.onClose) e.onClose();
       if (this.game && !this.stack.length && !this.dialogueEl && !this.mapOpen) this.game.paused = false;
+      this.markSidebar();
     }
     closeAll() {
       while (this.stack.length) this.closePanel();
+    }
+    markSidebar() {
+      const top = this.stack[this.stack.length - 1];
+      for (const [id, el] of Object.entries(this.el.sideBtns)) el.classList.toggle("on", !!top && top.id === id);
     }
     /**
      * In-game replacement for confirm()/prompt() (native dialogs are blocked in
      * some embeds). Resolves to true / the typed text, or null when cancelled.
      */
-    ask({ title = "", text = "", input, ok = "OK", cancel = "Cancel", danger = false } = {}) {
+    ask({ title: title2 = "", text = "", input, ok = "OK", cancel = "Cancel", danger = false } = {}) {
       return new Promise((resolve) => {
         let done6 = false;
         const wasPaused = this.game ? this.game.paused : false;
@@ -16887,7 +19722,7 @@ void main() {
         const okBtn = h("button.btn" + (danger ? ".red" : ".gold"), { on: { click: () => finish(field ? field.value.trim() || null : true) } }, ok);
         const panel = h(
           "div.panel.ask",
-          title ? h("h2", title) : null,
+          title2 ? h("h2", title2) : null,
           text ? h("p", text) : null,
           field,
           h("div.ask-row", okBtn, h("button.btn", { on: { click: () => finish(null) } }, cancel))
@@ -16915,10 +19750,12 @@ void main() {
       this.hideScreen();
       this.screenEl = el;
       this.screenLayer.appendChild(el);
+      this.el.side.classList.add("hidden");
     }
     hideScreen() {
       if (this.screenEl) this.screenEl.remove();
       this.screenEl = null;
+      this.el.side.classList.toggle("hidden", !this.hudVisible);
     }
     // --- per-frame HUD ------------------------------------------------------------
     render(game) {
@@ -16927,19 +19764,20 @@ void main() {
       if (!p) return;
       const E = this.el;
       const ch = p.char || {};
+      E.side.classList.toggle("hidden", !!this.mapOpen || !!this.screenEl);
       this.set(E.name, "name", ch.name || p.name);
-      const title = ch.title || (ch.faction === "marine" ? `Marine ${ch.marineRank || "Recruit"}` : ch.faction === "pirate" ? "Pirate" : "Wanderer");
-      this.set(E.sub, "sub", `${raceLabel(p.look)} \xB7 ${title} \xB7 Doriki ${p.power().toLocaleString()}`);
+      const title2 = ch.title || (ch.faction === "marine" ? `Marine ${ch.marineRank || "Recruit"}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === "pirate" ? "Pirate" : "Wanderer");
+      this.set(E.sub, "sub", `${raceLabel(p.look)} \xB7 ${title2} \xB7 Doriki ${p.power().toLocaleString()}`);
       E.hp.set(p.hp / p.d.maxHp, `${Math.ceil(p.hp)} / ${p.d.maxHp}`);
       E.st.set(p.stamina / p.d.maxStamina, `${Math.ceil(p.stamina)}`);
       const hakiOn2 = p.hakiUnlocked();
-      E.hk.el.classList.toggle("locked", !hakiOn2);
-      E.hk.set(hakiOn2 ? p.haki / p.d.maxHaki : 0, hakiOn2 ? `${Math.ceil(p.haki)}` : "Haki locked");
+      E.hk.el.classList.toggle("hidden", !hakiOn2);
+      if (hakiOn2) E.hk.set(p.haki / p.d.maxHaki, `${Math.ceil(p.haki)}`);
       const lives = ch.lives ?? 3, maxLives = ch.maxLives ?? 3;
-      const key = lives + "/" + maxLives;
-      if (this.cache.lives !== key) {
+      const key2 = lives + "/" + maxLives;
+      if (this.cache.lives !== key2) {
         const prev = this.cache.livesN;
-        this.cache.lives = key;
+        this.cache.lives = key2;
         this.cache.livesN = lives;
         clear(E.lives);
         for (let i = 0; i < maxLives; i++) {
@@ -16948,12 +19786,12 @@ void main() {
           E.lives.appendChild(v);
         }
       }
-      const bountyTxt = ch.faction === "marine" ? `Justice \xB7 ${formatBerries(ch.berries || 0)}` : ch.bounty ? `\u2620 ${formatBerries(ch.bounty)}` : "";
-      this.set(E.bounty, "bounty", "", "textContent");
-      if (this.cache.bountyTxt !== bountyTxt + "|" + (ch.berries || 0)) {
-        this.cache.bountyTxt = bountyTxt + "|" + (ch.berries || 0);
+      const bk = `${ch.faction}|${ch.bounty || 0}|${ch.berries || 0}`;
+      if (this.cache.bountyKey !== bk) {
+        this.cache.bountyKey = bk;
         clear(E.bounty);
-        E.bounty.append(bountyTxt || "", h("small", ch.faction === "marine" ? "" : `Purse ${formatBerries(ch.berries || 0)}`));
+        if (ch.faction !== "marine" && ch.bounty) E.bounty.append(h("span.bty", uiImg("bounty", 16), ` ${formatBerries(ch.bounty)}`));
+        E.bounty.append(h("small", uiImg("berries", 14), ` ${formatBerries(ch.berries || 0)}`));
       }
       const buffKey = p.buffs.map((b) => b.name + Math.ceil(b.t)).join(",") + Object.keys(p.status).join(",");
       if (this.cache.buffs !== buffKey) {
@@ -16965,16 +19803,32 @@ void main() {
       for (let i = 0; i < 6; i++) {
         const s2 = E.slots[i];
         const id = p.hotbar[i];
-        const def = id ? getAbility(id) : null;
+        const isItem = typeof id === "string" && id.startsWith("item:");
+        const def = !id ? null : isItem ? ITEMS[id.slice(5)] : getAbility(id);
         const k = "slot" + i;
-        const v = def ? def.id : "";
+        const v = def ? id : "";
         if (this.cache[k] !== v) {
           this.cache[k] = v;
-          s2.ico.textContent = def ? def.icon || "\u2726" : "";
+          clear(s2.ico);
+          if (def) s2.ico.appendChild(isItem ? itemImg(id.slice(5), 34) : skillImg(def, 34));
           s2.nm.textContent = def ? def.name : "";
           s2.el.classList.toggle("empty", !def);
           s2.el.title = def ? `${def.name}
-${def.desc || ""}` : "Empty \u2014 assign techniques in the Skills menu (K)";
+${def.desc || ""}
+
+Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag techniques or food here from Skills (K) or Inventory (Tab)";
+        }
+        if (isItem) {
+          const n = (ch.inventory || []).filter((x) => x.id === id.slice(5)).reduce((a, x) => a + (x.qty || 1), 0);
+          if (s2.qty.textContent !== String(n)) s2.qty.textContent = String(n);
+          s2.el.classList.toggle("none-left", n <= 0);
+          s2.cd.style.transform = "scaleY(0)";
+          if (s2.cdt.textContent) s2.cdt.textContent = "";
+          continue;
+        }
+        if (s2.qty.textContent) {
+          s2.qty.textContent = "";
+          s2.el.classList.remove("none-left");
         }
         const cd = def ? p.cooldowns[def.id] || 0 : 0;
         const frac = def && def.cd ? clamp(cd / (def.cd * (p.cdMul ?? 1)), 0, 1) : 0;
@@ -16982,11 +19836,13 @@ ${def.desc || ""}` : "Empty \u2014 assign techniques in the Skills menu (K)";
         const txt = cd > 0.05 ? cd >= 10 ? Math.ceil(cd) : cd.toFixed(1) : "";
         if (s2.cdt.textContent !== String(txt)) s2.cdt.textContent = txt;
       }
-      for (const [k, el] of Object.entries(E.toggles)) {
-        const lvl = p.hakiLevel(k);
-        el.classList.toggle("lock", !lvl);
-        el.classList.toggle("on", k === "armament" ? p.armament : k === "observation" ? p.observation : !!p.conquerorInfused);
-        el.title = lvl ? `${k} Haki \u2014 level ${Math.floor(lvl)}` : `${k} Haki \u2014 not awakened`;
+      for (const t of HAKI_TOGGLES) {
+        const el = E.toggles[t.type];
+        const lvl = p.hakiLevel(t.type);
+        el.classList.toggle("hidden", !lvl);
+        if (!lvl) continue;
+        el.classList.toggle("on", t.type === "armament" ? p.armament : t.type === "observation" ? p.observation : !!p.conquerorInfused);
+        el.title = `${t.name} \u2014 level ${Math.floor(lvl)} (${t.key})`;
       }
       const inter = p.controller?.interaction;
       const pk = inter ? inter.label : "";
@@ -17002,7 +19858,7 @@ ${def.desc || ""}` : "Empty \u2014 assign techniques in the Skills menu (K)";
       const reg = game.world.zone === 0 ? REGION_INFO[regionAt(p.x, p.y)]?.name || "" : game.world.subtitle || "";
       this.set(E.locSub, "locSub", reg);
       const env = game.env;
-      const wx = env.storm > 0.6 ? "\u26C8 Storm" : env.storm > 0.25 ? "\u{1F327} Squall" : env.snow ? "\u2744 Snow" : env.fog > 0.3 ? "\u{1F32B} Fog" : env.daylight < 0.35 ? env.fullMoon ? "\u{1F315} Full moon" : "\u{1F319} Night" : "\u2600 Clear";
+      const wx = env.storm > 0.6 ? "Storm" : env.storm > 0.25 ? "Squall" : env.snow ? "Snow" : env.fog > 0.3 ? "Fog" : env.daylight < 0.35 ? env.fullMoon ? "Full moon" : "Night" : "Clear";
       this.set(E.clock, "clock", `Day ${env.day} \xB7 ${env.clockString()} \xB7 ${wx}`);
       this.mmT -= 1 / 60;
       if (this.mmT <= 0) {
@@ -17020,9 +19876,9 @@ ${def.desc || ""}` : "Empty \u2014 assign techniques in the Skills menu (K)";
       E.boss.classList.toggle("hidden", !boss || boss.state !== "idle");
       if (boss) {
         const h3 = E.boss.children[0];
-        const bk = boss.name + (boss.title || "");
-        if (this.cache.boss !== bk) {
-          this.cache.boss = bk;
+        const bk2 = boss.name + (boss.title || "");
+        if (this.cache.boss !== bk2) {
+          this.cache.boss = bk2;
           clear(h3);
           h3.append(h("small", boss.title || ""), boss.name);
         }
@@ -17033,11 +19889,10 @@ ${def.desc || ""}` : "Empty \u2014 assign techniques in the Skills menu (K)";
       const s = p.mode === "sail" ? p.ship : null;
       E.ship.classList.toggle("hidden", !s);
       if (s) {
-        const windRel = ((env.windAngle - s.heading) * 180 / Math.PI + 360) % 360;
         const html = `<div class="row"><b>${s.name}</b><span>${s.def.name}</span></div>
         <div class="bar hull"><i style="width:${100 * s.hull / s.maxHull}%"></i><span>Hull ${Math.ceil(s.hull)}/${s.maxHull}</span></div>
         <div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>
-        <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span><span>Wind <span class="wind" style="transform:rotate(${env.windAngle}rad)">\u279C</span> ${game.isCalmAt(p.x, p.y) ? "none (Calm Belt!)" : Math.round(env.windStrength * 100) + "%"}</span></div>
+        <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span><span>Wind <span class="wind" style="transform:rotate(${env.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? "none (Calm Belt!)" : Math.round(env.windStrength * 100) + "%"}</span></div>
         <div class="row"><span>Cannons ${s.def.cannons || 0}</span><span>${s.cannonCd > 0 ? "reloading\u2026" : s.def.cannons ? "ready" : ""}</span></div>`;
         if (this.cache.shipHtml !== html) {
           this.cache.shipHtml = html;
@@ -17060,27 +19915,27 @@ ${def.desc || ""}` : "Empty \u2014 assign techniques in the Skills menu (K)";
       const W2 = c.width, H2 = c.height;
       const scale = p.mode === "sail" ? 2.2 : 1;
       if (!this.mmImg) this.mmImg = g.createImageData(W2, H2);
-      const img = this.mmImg.data;
+      const img2 = this.mmImg.data;
       const map = w.map;
       for (let j = 0; j < H2; j++) {
         for (let i = 0; i < W2; i++) {
           const tx = p.x + (i - W2 / 2) * scale, ty = p.y + (j - H2 / 2) * scale;
           const o = (j * W2 + i) * 4;
           if (ty < 0 || ty >= w.height || !w.wrap && (tx < 0 || tx >= w.width)) {
-            img[o] = 30;
-            img[o + 1] = 40;
-            img[o + 2] = 50;
-            img[o + 3] = 255;
+            img2[o] = 30;
+            img2[o + 1] = 40;
+            img2[o + 2] = 50;
+            img2[o + 3] = 255;
             continue;
           }
           const mx = Math.floor(w.wx(tx) / 2) % map.w, my = Math.floor(ty / 2);
           const k = (my * map.w + mx) * 4;
           const explored = w.isExplored(tx, ty);
           const f = explored ? 1 : 0.35;
-          img[o] = map.data[k] * f;
-          img[o + 1] = map.data[k + 1] * f;
-          img[o + 2] = map.data[k + 2] * f;
-          img[o + 3] = 255;
+          img2[o] = map.data[k] * f;
+          img2[o + 1] = map.data[k + 1] * f;
+          img2[o + 2] = map.data[k + 2] * f;
+          img2[o + 3] = 255;
         }
       }
       g.putImageData(this.mmImg, 0, 0);
@@ -17248,209 +20103,146 @@ ${def.desc || ""}` : "Empty \u2014 assign techniques in the Skills menu (K)";
   registerAbilities(HAKI_ABILITIES.map((a) => ({ ...a, source: "haki:" + a.hakiType })), "haki");
 
   // src/game/save.js
-  var KEY_CHAR = "op-inherited-will:char:v1";
-  var KEY_LEGACY = "op-inherited-will:legacy:v1";
-  var KEY_SETTINGS = "op-inherited-will:settings:v1";
-  function read(key) {
+  var PREFIX = "op-inherited-will";
+  var LEGACY_CHAR = `${PREFIX}:char:v1`;
+  var LEGACY_LEGACY = `${PREFIX}:legacy:v1`;
+  var KEY_SETTINGS = `${PREFIX}:settings:v1`;
+  var KEY_LAST = `${PREFIX}:lastSlot`;
+  var SLOT_COUNT = 3;
+  var slot = 1;
+  var key = (s, what) => `${PREFIX}:slot${s}:${what}:v1`;
+  function read(k) {
     try {
-      const s = localStorage.getItem(key);
+      const s = localStorage.getItem(k);
       return s ? JSON.parse(s) : null;
     } catch {
       return null;
     }
   }
-  function write(key, v) {
+  function write(k, v) {
     try {
-      localStorage.setItem(key, JSON.stringify(v));
+      localStorage.setItem(k, JSON.stringify(v));
       return true;
     } catch {
       return false;
     }
   }
+  function remove(k) {
+    try {
+      localStorage.removeItem(k);
+    } catch {
+    }
+  }
+  (function migrate() {
+    const oldChar = read(LEGACY_CHAR), oldLegacy = read(LEGACY_LEGACY);
+    if (!oldChar && !oldLegacy) return;
+    if (!read(key(1, "char")) && !read(key(1, "legacy"))) {
+      if (oldChar) write(key(1, "char"), oldChar);
+      if (oldLegacy) write(key(1, "legacy"), oldLegacy);
+    }
+    remove(LEGACY_CHAR);
+    remove(LEGACY_LEGACY);
+  })();
   function defaultLegacy() {
     return { version: 1, generation: 1, will: 0, totalWill: 0, perks: {}, heirloom: null, hall: [], charted: [], reincarnatedFruits: [], unlocks: {} };
   }
-  var loadLegacy = () => ({ ...defaultLegacy(), ...read(KEY_LEGACY) || {} });
-  var saveLegacy = (l) => write(KEY_LEGACY, l);
-  var loadChar = () => read(KEY_CHAR);
-  var saveChar = (c) => write(KEY_CHAR, c);
-  var clearChar = () => {
-    try {
-      localStorage.removeItem(KEY_CHAR);
-    } catch {
-    }
-  };
+  function setSlot(n) {
+    slot = Math.max(1, Math.min(SLOT_COUNT, n | 0));
+    write(KEY_LAST, slot);
+  }
+  var loadLegacy = (s = slot) => ({ ...defaultLegacy(), ...read(key(s, "legacy")) || {} });
+  var saveLegacy = (l, s = slot) => write(key(s, "legacy"), l);
+  var loadChar = (s = slot) => read(key(s, "char"));
+  var saveChar = (c, s = slot) => write(key(s, "char"), c);
+  var clearChar = (s = slot) => remove(key(s, "char"));
+  function clearSlot(s) {
+    remove(key(s, "char"));
+    remove(key(s, "legacy"));
+  }
+  function slotInfo(s) {
+    const char = read(key(s, "char"));
+    const legacy = read(key(s, "legacy"));
+    return { slot: s, char, legacy: legacy ? { ...defaultLegacy(), ...legacy } : null, empty: !char && !legacy };
+  }
   var loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, ...read(KEY_SETTINGS) || {} });
   var saveSettings = (s) => write(KEY_SETTINGS, s);
 
   // src/data/dreams.js
-  var DREAMS = {
+  var LEGENDS = {
     king: {
       name: "King of the Pirates",
-      icon: "\u{1F451}",
       desc: "Find the One Piece on Laugh Tale, the final island of the Grand Line.",
-      goal: "Collect the four Road Poneglyph rubbings and set foot on Laugh Tale.",
-      perk: "Your bounty grows 15% faster.",
-      faction: "pirate"
+      check: (c) => !!c.flags?.laughTale,
+      progress: (c) => [Math.min(4, (c.inventory || []).filter((i) => i.id === "poneglyph_rubbing").reduce((s, i) => s + (i.qty || 1), 0)), 4, "Road Poneglyph rubbings"],
+      will: 150
     },
     swordsman: {
       name: "World's Greatest Swordsman",
-      icon: "\u2694",
-      desc: 'Surpass "Hawk-Eyes" Dracule Mihawk, the strongest swordsman alive.',
-      goal: "Defeat Dracule Mihawk in a duel.",
-      perk: "Sword styles gain mastery 20% faster. You start with a rusty katana."
+      desc: 'Defeat "Hawk-Eyes" Dracule Mihawk in a duel.',
+      check: (c) => (c.bosses || []).includes("mihawk"),
+      will: 90
+    },
+    admiral: {
+      name: "Admiral of the Marines",
+      desc: "Rise through the Marines to the rank of Admiral.",
+      check: (c) => c.marineRank === "Admiral" || c.marineRank === "Fleet Admiral",
+      will: 90
+    },
+    fleet_admiral: {
+      name: "Fleet Admiral",
+      desc: "Command every Marine in the world.",
+      check: (c) => c.marineRank === "Fleet Admiral",
+      will: 120
     },
     all_blue: {
-      name: "Find the All Blue",
-      icon: "\u{1F41F}",
+      name: "The All Blue",
       desc: "Find the legendary sea where the fish of all four Blues meet.",
-      goal: "Discover the All Blue.",
-      perk: "Food heals 50% more."
+      check: (c) => !!c.flags?.allBlue,
+      will: 80
     },
     world_map: {
-      name: "Draw a Map of the World",
-      icon: "\u{1F5FA}",
-      desc: "Chart every island of the Blue Planet with your own eyes.",
-      goal: "Discover 60 charted islands.",
-      perk: "You see further at sea and sense storms coming."
+      name: "Map of the World",
+      desc: "Chart 60 islands with your own eyes.",
+      check: (c) => (c.discovered || []).length >= 60,
+      progress: (c) => [(c.discovered || []).length, 60, "islands charted"],
+      will: 70
     },
     warrior: {
       name: "Brave Warrior of the Sea",
-      icon: "\u{1F6E1}",
-      desc: "Become a warrior as brave as the giants of Elbaf.",
-      goal: "Defeat 12 bosses.",
-      perk: "+2 Willpower. Breakthroughs grant +1 extra point."
-    },
-    admiral: {
-      name: "Admiral of Justice",
-      icon: "\u2693",
-      desc: "Join the Marines and rise to the rank of Admiral.",
-      goal: "Reach the rank of Admiral in the Marines.",
-      perk: "Marines start friendly. You can enlist at any Marine base.",
-      faction: "marine"
+      desc: "Defeat 12 great foes.",
+      check: (c) => (c.bosses || []).length >= 12,
+      progress: (c) => [(c.bosses || []).length, 12, "great foes defeated"],
+      will: 70
     },
     true_history: {
-      name: "Uncover the True History",
-      icon: "\u{1F4DC}",
-      desc: "Read the Poneglyphs and learn what happened in the Void Century.",
-      goal: "Read 8 Poneglyphs.",
-      perk: "You can study Poneglyphs even without the Voice of All Things."
+      name: "The True History",
+      desc: "Read 8 Poneglyphs and learn what happened in the Void Century.",
+      check: (c) => (c.flags?.poneglyphsRead || 0) >= 8,
+      progress: (c) => [c.flags?.poneglyphsRead || 0, 8, "Poneglyphs read"],
+      will: 80
     },
     liberation: {
-      name: "Free the Oppressed",
-      icon: "\u270A",
-      desc: "Topple the tyrants of the seas, like the Revolutionary Army.",
-      goal: "Liberate 6 islands from tyrants (Arlong, Crocodile, Enel, Moria, Doflamingo, Kaido...).",
-      perk: "Liberated islands sell to you at half price."
+      name: "Liberator",
+      desc: "Free 6 places from their tyrants.",
+      check: (c) => (c.liberated || []).length >= 6,
+      progress: (c) => [(c.liberated || []).length, 6, "places liberated"],
+      will: 70
+    },
+    emperor: {
+      name: "Emperor of the Sea",
+      desc: "Carry a bounty of over 3,000,000,000 berries.",
+      check: (c) => (c.bounty || 0) >= 3e9,
+      progress: (c) => [Math.floor((c.bounty || 0) / 1e6), 3e3, "million berries"],
+      will: 100
     }
   };
-  var DREAM_IDS = Object.keys(DREAMS);
-
-  // src/data/items.js
-  var ITEMS = {
-    // ---------------------------------------------------------------- food
-    meat: { name: "Meat on the Bone", icon: "\u{1F356}", type: "food", heal: 70, stamina: 40, price: 90, desc: "The universal fuel of every rubber-brained captain." },
-    rice_ball: { name: "Rice Ball", icon: "\u{1F359}", type: "food", heal: 40, stamina: 20, price: 45, desc: "Simple, salty, filling." },
-    fish_stew: { name: "Sea Fish Stew", icon: "\u{1F372}", type: "food", heal: 110, stamina: 60, price: 180, desc: "A sailor's favourite." },
-    tangerine: { name: "Bell-m\xE8re's Tangerine", icon: "\u{1F34A}", type: "food", heal: 35, stamina: 60, price: 60, desc: "From the groves of Cocoyasi Village." },
-    sea_king_steak: { name: "Sea King Steak", icon: "\u{1F969}", type: "food", heal: 400, stamina: 200, price: 2500, desc: "Enough meat to feed a crew for a week." },
-    baratie_course: { name: "Baratie Full Course", icon: "\u{1F37D}", type: "food", heal: 300, stamina: 150, price: 1200, buff: { id: "well_fed", name: "Well Fed", dur: 180, mods: { damage: 1.1 } }, desc: `Cooked by "Red Leg" Zeff's kitchen. Leaves you Well Fed.` },
-    sake: { name: "Sake", icon: "\u{1F376}", type: "food", heal: 10, stamina: 80, price: 120, buff: { id: "tipsy", name: "Tipsy", dur: 60, mods: { damage: 1.08, defMul: 1.1 } }, desc: "Dutch courage." },
-    cola: { name: "Cola Barrel", icon: "\u{1F964}", type: "material", price: 500, desc: "Fuel for Coup de Burst and for certain cyborgs." },
-    bandage: { name: "Bandages", icon: "\u{1FA79}", type: "medicine", heal: 55, price: 70, desc: "Stops the bleeding.", cure: ["bleed"] },
-    antidote: { name: "Antidote", icon: "\u{1F9EA}", type: "medicine", heal: 20, price: 150, cure: ["poison"], desc: "Neutralises most poisons." },
-    rumble_ball: { name: "Rumble Ball", icon: "\u{1F7E1}", type: "medicine", price: 8e3, buff: { id: "rumble", name: "Rumble", dur: 180, mods: { damage: 1.2, speedMul: 1.1 } }, desc: "Chopper's invention. Strengthens you for three minutes." },
-    tension_hormone: { name: "Tension Hormones", icon: "\u{1F489}", type: "medicine", heal: 99999, price: 0, costsLife: true, desc: "Emporio Ivankov's miracle: fully restores you right now \u2014 at the cost of ten years of lifespan (one life)." },
-    // ------------------------------------------------------------- swords
-    wooden_sword: { name: "Wooden Practice Sword", icon: "\u{1FAB5}", type: "weapon", kind: "sword", power: 0.75, price: 300, grade: "Training", desc: "Every swordsman starts with one." },
-    rusty_katana: { name: "Rusty Katana", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1, price: 1500, grade: "Unranked", desc: "Nicked and rusted, but it cuts." },
-    cutlass: { name: "Pirate Cutlass", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.1, price: 3500, grade: "Unranked" },
-    marine_saber: { name: "Marine Saber", icon: "\u2694", type: "weapon", kind: "sword", power: 1.15, price: 6e3, grade: "Unranked" },
-    fine_katana: { name: "Fine Katana", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.25, price: 18e3, grade: "Unranked", desc: "Well-balanced steel from a Loguetown forge." },
-    yubashiri: { name: "Yubashiri", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.35, price: 1e5, grade: "Wazamono", desc: "A light, sharp blade sold in Ipponmatsu's shop." },
-    sandai_kitetsu: { name: "Sandai Kitetsu", icon: "\u{1FA78}", type: "weapon", kind: "sword", power: 1.45, price: 0, grade: "Wazamono (cursed)", cursed: true, desc: "A cursed blade said to bring doom to its wielders. Throw it into the air and see if fate spares your arm." },
-    shigure: { name: "Shigure", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.4, price: 25e4, grade: "Wazamono" },
-    wado_ichimonji: { name: "Wado Ichimonji", icon: "\u{1F90D}", type: "weapon", kind: "sword", power: 1.6, price: 0, grade: "O Wazamono", unique: true, desc: "The white-hilted sword of Kuina, entrusted by Koshiro of Shimotsuki Village." },
-    shusui: { name: "Shusui", icon: "\u{1F5A4}", type: "weapon", kind: "sword", power: 1.75, price: 0, grade: "O Wazamono", unique: true, desc: "The black blade of the legendary samurai Ryuma, won at Thriller Bark." },
-    enma: { name: "Enma", icon: "\u{1F525}", type: "weapon", kind: "sword", power: 1.95, price: 0, grade: "O Wazamono", unique: true, hakiHungry: true, desc: "The blade that cut Kaido. It draws out its wielder's Haki whether they like it or not." },
-    yoru: { name: "Yoru", icon: "\u271D", type: "weapon", kind: "sword", power: 2.3, price: 0, grade: "Saijo O Wazamono", unique: true, desc: "The black blade of Dracule Mihawk, one of the twelve Supreme Grade swords." },
-    // --------------------------------------------------------------- guns
-    slingshot: { name: "Slingshot", icon: "\u{1F3AF}", type: "weapon", kind: "gun", power: 0.9, price: 800, desc: "Lead stars at the ready." },
-    flintlock: { name: "Flintlock Pistol", icon: "\u{1F52B}", type: "weapon", kind: "gun", power: 1.05, price: 4e3 },
-    marine_rifle: { name: "Marine Rifle", icon: "\u{1F52B}", type: "weapon", kind: "gun", power: 1.2, price: 16e3 },
-    kabuto: { name: "Kabuto", icon: "\u{1FAB2}", type: "weapon", kind: "gun", power: 1.35, price: 0, unique: true, desc: "A giant slingshot with a Dial built in." },
-    kuro_kabuto: { name: "Kuro Kabuto", icon: "\u{1FAB2}", type: "weapon", kind: "gun", power: 1.6, price: 0, unique: true },
-    // ------------------------------------------------------------- staffs
-    bo_staff: { name: "Bo Staff", icon: "\u{1F9AF}", type: "weapon", kind: "staff", power: 1, price: 2e3 },
-    clima_tact: { name: "Clima-Tact", icon: "\u{1F326}", type: "weapon", kind: "staff", power: 1.2, price: 6e4, desc: "A weather-controlling staff." },
-    sorcery_clima_tact: { name: "Sorcery Clima-Tact", icon: "\u26C8", type: "weapon", kind: "staff", power: 1.6, price: 0, unique: true, desc: "Improved with Weatherian science." },
-    // --------------------------------------------------------------- axes
-    woodsman_axe: { name: "Woodsman's Axe", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.1, price: 2500 },
-    giant_axe: { name: "Axe of a Giant Warrior", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.6, price: 0, unique: true, desc: "A gift from the giants of Little Garden. Absurdly heavy." },
-    morgan_axe: { name: "Axe-Hand", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.3, price: 0, desc: "Taken from Captain Morgan." },
-    // --------------------------------------------------------- hats / coats
-    straw_hat: { name: "Straw Hat", icon: "\u{1F452}", type: "hat", look: { hat: "straw" }, bonus: { wil: 2 }, price: 500, desc: "A hat passed down through generations of dreamers. It is said to carry a promise." },
-    bandana: { name: "Bandana", icon: "\u{1F397}", type: "hat", look: { hat: "bandana" }, price: 120 },
-    tricorne: { name: "Tricorne", icon: "\u{1F3A9}", type: "hat", look: { hat: "tricorne" }, bonus: { wil: 1 }, price: 900 },
-    captain_hat: { name: "Captain's Hat", icon: "\u{1F3A9}", type: "hat", look: { hat: "captain" }, bonus: { wil: 2 }, price: 4e3 },
-    cowboy_hat: { name: "Cowboy Hat", icon: "\u{1F920}", type: "hat", look: { hat: "cowboy" }, bonus: { agi: 1 }, price: 700 },
-    marine_cap: { name: "Marine Cap", icon: "\u{1F9E2}", type: "hat", look: { hat: "marine" }, price: 0 },
-    pink_hat: { name: "Pink Top Hat", icon: "\u{1F380}", type: "hat", look: { hat: "pinkhat" }, bonus: { vit: 1 }, price: 800 },
-    goggles: { name: "North Blue Goggles", icon: "\u{1F97D}", type: "hat", look: { hat: "goggles" }, bonus: { agi: 1 }, price: 1200, desc: "A new model from the North Blue. (Usopp bought these in Loguetown.)" },
-    headband: { name: "Black Bandana", icon: "\u{1F5A4}", type: "hat", look: { hat: "headband", hatColor: "#212121" }, bonus: { str: 1 }, price: 300, desc: "Tie it on when you mean business." },
-    horned_helm: { name: "Horned Helm", icon: "\u26D1", type: "hat", look: { hat: "horns" }, bonus: { end: 2 }, price: 0, desc: "A helm of Elbaf make." },
-    marine_coat: { name: "Marine Coat of Justice", icon: "\u{1F9E5}", type: "coat", look: { coat: "#fafafa", coatText: "JUSTICE" }, bonus: { end: 1 }, price: 0, desc: 'Worn by Marine officers. "JUSTICE" is stitched on the back.' },
-    captain_coat: { name: "Captain's Coat", icon: "\u{1F9E5}", type: "coat", look: { coat: "#1a237e" }, bonus: { wil: 1 }, price: 12e3 },
-    red_cloak: { name: "Red Cloak", icon: "\u{1F9E3}", type: "coat", look: { coat: "#b71c1c" }, bonus: { vit: 1 }, price: 6e3 },
-    // ---------------------------------------------------------------- dials
-    impact_dial: { name: "Impact Dial", icon: "\u{1F41A}", type: "dial", price: 3e4, ability: "dial_impact", desc: "Absorbs a blow and releases it. Hurts the user too." },
-    flame_dial: { name: "Flame Dial", icon: "\u{1F525}", type: "dial", price: 12e3, ability: "dial_flame", desc: "Stores fire and breathes it out." },
-    breath_dial: { name: "Breath Dial", icon: "\u{1F4A8}", type: "dial", price: 6e3, ability: "dial_breath", desc: "Stores wind \u2014 boats and gusts." },
-    flash_dial: { name: "Flash Dial", icon: "\u{1F4A1}", type: "dial", price: 8e3, ability: "dial_flash", desc: "Blinds everyone nearby." },
-    reject_dial: { name: "Reject Dial", icon: "\u{1F4A5}", type: "dial", price: 0, ability: "dial_reject", unique: true, desc: "Ten times the power of an Impact Dial. Can kill the user." },
-    // -------------------------------------------------------- navigation
-    log_pose: { name: "Log Pose", icon: "\u{1F9ED}", type: "key", price: 5e3, desc: "The only compass that works in the Grand Line. It locks onto the next island after the log is set." },
-    new_world_log_pose: { name: "Three-Needle Log Pose", icon: "\u{1F9ED}", type: "key", price: 6e4, desc: "A Log Pose for the New World: three needles for three islands." },
-    vivre_card: { name: "Vivre Card", icon: "\u{1F4C3}", type: "key", price: 0, desc: "A piece of paper made from someone's fingernail. It points to them and burns as their life fades." },
-    south_bird: { name: "South Bird", icon: "\u{1F426}", type: "key", price: 0, desc: "A bird that always faces south. Needed to find the Knock Up Stream." },
-    adam_wood: { name: "Adam Wood", icon: "\u{1FAB5}", type: "material", price: 2e6, desc: "Timber from the Treasure Tree Adam. Water 7 shipwrights can build a legend with it." },
-    seastone: { name: "Seastone Chunk", icon: "\u{1FAA8}", type: "material", price: 4e4, desc: "Stone that emits the same energy as the sea. Devil Fruit users go weak when they touch it." },
-    seastone_cuffs: { name: "Seastone Handcuffs", icon: "\u26D3", type: "key", price: 9e4, desc: "Capture a Devil Fruit user alive." },
-    poneglyph_rubbing: { name: "Road Poneglyph Rubbing", icon: "\u{1F7E5}", type: "key", price: 0, stack: true, desc: "A rubbing of a red Road Poneglyph. Four of them together point to Laugh Tale." },
-    treasure_map: { name: "Treasure Map", icon: "\u{1F5FA}", type: "key", price: 0, desc: "X marks the spot." },
-    den_den_mushi: { name: "Den Den Mushi", icon: "\u{1F40C}", type: "key", price: 3e3, desc: "A transponder snail. Lets you hear the news of the world." },
-    // ------------------------------------------------------------ treasure
-    gold_coins: { name: "Gold Doubloons", icon: "\u{1FA99}", type: "treasure", price: 1200, desc: "Sell them." },
-    jewels: { name: "Jewels", icon: "\u{1F48E}", type: "treasure", price: 6e3 },
-    shandora_gold: { name: "Shandora Gold", icon: "\u{1F514}", type: "treasure", price: 8e4, desc: "Gold from the lost city of Shandora." },
-    golden_statue: { name: "Golden Statue", icon: "\u{1F5FF}", type: "treasure", price: 25e3 },
-    pearl: { name: "Mermaid Pearl", icon: "\u26AA", type: "treasure", price: 15e3 }
-  };
-  for (const [id, f] of Object.entries(FRUITS)) {
-    ITEMS["fruit_" + id] = {
-      name: f.name,
-      icon: "\u{1F348}",
-      type: "fruit",
-      fruit: id,
-      price: 0,
-      unique: true,
-      desc: `${f.type}. ${f.desc}
-
-Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a second one will kill you.`
-    };
-  }
-  function sellPrice(id) {
-    const d = ITEMS[id];
-    if (!d) return 0;
-    if (d.type === "treasure") return d.price;
-    if (d.unique || d.type === "fruit" || d.type === "key") return 0;
-    return Math.floor((d.price || 0) * 0.4);
-  }
+  var LEGEND_IDS = Object.keys(LEGENDS);
 
   // src/game/lineage.js
   var TRAITS = {
-    will_of_d: { name: "Will of D.", rarity: "legendary", weight: 0, desc: `Your name carries a hidden "D." Fate bends around you: you laugh in the face of death, and Conqueror's Haki may stir in your blood.`, attrs: { wil: 3 } },
-    conqueror: { name: "King's Disposition", rarity: "legendary", weight: 0, desc: "One in several million is born with the qualities of a king. Your Conqueror's Haki will awaken the first time your will is truly tested." },
+    will_of_d: { name: "Will of D.", rarity: "legendary", weight: 0, desc: `Your name carries a hidden "D." \u2014 the mark of those who laugh in the face of death. Fate bends around you, and the world's powers will come to fear the name.`, attrs: { wil: 3 } },
+    // hidden: never shown until it awakens
+    conqueror: { name: "King's Disposition", rarity: "legendary", weight: 0, hidden: true, desc: "One in several million is born with the qualities of a king. It awakened the first time your will was truly tested." },
     iron_stomach: { name: "Iron Stomach", rarity: "common", weight: 10, desc: "Food heals 30% more." },
     sea_legs: { name: "Sea Legs", rarity: "common", weight: 10, desc: "Storms and crashes damage your ship 30% less." },
     silver_tongue: { name: "Silver Tongue", rarity: "common", weight: 10, desc: "Shops charge you 10% less." },
@@ -17464,17 +20256,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     sickly: { name: "Sickly", rarity: "common", weight: 4, desc: "You tire quickly (-1 Endurance) \u2014 but you've learned to read people (+1 Willpower).", attrs: { end: -1, wil: 1 } }
   };
   var PERKS = {
-    lives: { name: "Stubborn Bloodline", desc: "+1 starting life (vivre card).", costs: [60, 160], icon: "\u{1F4C3}" },
-    berries: { name: "Family Treasure", desc: "+3,000 starting berries per level.", costs: [20, 30, 40], icon: "\u{1F4B0}" },
-    reroll: { name: "Fate's Coin", desc: "Re-roll your race once per level at birth.", costs: [35, 70, 120], icon: "\u{1FA99}" },
-    attrs: { name: "Trained from Birth", desc: "+2 to every attribute per level.", costs: [50, 110], icon: "\u{1F4AA}" },
-    ship: { name: "Old Sea Dog", desc: "Start with a Sloop instead of a rowboat.", costs: [70], icon: "\u26F5" },
-    chart: { name: "Grandfather's Chart", desc: "Every island your ancestors discovered starts charted on your map.", costs: [30], icon: "\u{1F5FA}" },
-    haki: { name: "Latent Haki", desc: "Haki training is 25% faster per level.", costs: [80, 160], icon: "\u{1F5A4}" },
-    will_of_d: { name: "Will of D.", desc: 'Much higher chance to be born with the hidden "D."', costs: [90], icon: "D" },
-    kings_blood: { name: "Kingly Bloodline", desc: "Much higher chance to be born with Conqueror's Haki.", costs: [150], icon: "\u{1F451}" },
-    rare_races: { name: "Distant Relatives", desc: "Rare, epic and legendary races are twice as likely.", costs: [100], icon: "\u{1F9EC}" }
+    lives: { name: "Stubborn Bloodline", desc: "+1 starting life (vivre card).", costs: [60, 160], icon: "lives" },
+    berries: { name: "Family Treasure", desc: "+3,000 starting berries per level.", costs: [20, 30, 40], icon: "berries" },
+    reroll: { name: "Fate's Coin", desc: "Re-roll your birth once per level.", costs: [35, 70, 120], icon: "reputation" },
+    attrs: { name: "Trained from Birth", desc: "+2 to every attribute per level.", costs: [50, 110], icon: "skills" },
+    ship: { name: "Old Sea Dog", desc: "Start with a Sloop instead of a rowboat.", costs: [70], icon: "ship" },
+    chart: { name: "Grandfather's Chart", desc: "Every island your ancestors discovered starts charted on your map.", costs: [30], icon: "map" },
+    haki: { name: "Latent Spirit", desc: "Hidden powers, once awakened, grow 25% faster per level.", costs: [80, 160], icon: "character" },
+    will_of_d: { name: "Will of D.", desc: 'Triples the chance to be born with the hidden "D." (5% \u2192 15%).', costs: [90], icon: "journal" },
+    kings_blood: { name: "Kingly Bloodline", desc: "Much higher chance to be born with the qualities of a king.", costs: [150], icon: "crew" },
+    rare_races: { name: "Distant Relatives", desc: "Rare, epic and legendary races are twice as likely.", costs: [100], icon: "character" }
   };
+  var hakiKnown = (c) => !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
+  var needsHaki = (d) => !!(d && (d.hakiType || d.requiresHaki || d.cost?.haki || d.learn?.haki));
   function perkLevel(legacy, id) {
     return legacy.perks && legacy.perks[id] || 0;
   }
@@ -17482,6 +20276,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const p = PERKS[id];
     const lvl = perkLevel(legacy, id);
     return lvl < p.costs.length ? p.costs[lvl] : null;
+  }
+  function dChance(legacy) {
+    return 0.05 * (perkLevel(legacy, "will_of_d") ? 3 : 1);
+  }
+  function nameWithD(name) {
+    name = (name || "Nameless").trim();
+    if (/(^| )D\.( |$)/.test(name)) return name;
+    const parts = name.split(/\s+/);
+    return parts.length > 1 ? `${parts[0]} D. ${parts.slice(1).join(" ")}` : `${name} D.`;
   }
   function rollBirth(legacy, seed) {
     const rng = new RNG(seed);
@@ -17495,8 +20298,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const t2 = rng.weighted(pool);
       if (!traits.includes(t2)) traits.push(t2);
     }
-    const dChance = 0.03 * (perkLevel(legacy, "will_of_d") ? 4 : 1);
-    if (rng.chance(dChance)) traits.push("will_of_d");
+    if (rng.chance(dChance(legacy))) traits.push("will_of_d");
     const kChance = (traits.includes("will_of_d") ? 0.25 : 0.015) * (perkLevel(legacy, "kings_blood") ? 4 : 1);
     if (rng.chance(kChance)) traits.push("conqueror");
     return { race, traits, seed };
@@ -17507,13 +20309,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const attrs = baseAttrs();
     for (const k of ATTR_KEYS) attrs[k] += (race.stats[k] || 0) + perkLevel(legacy, "attrs") * 2;
     for (const t of birth.traits) for (const [k, v] of Object.entries(TRAITS[t]?.attrs || {})) attrs[k] += v;
-    if (choices.dream === "warrior") attrs.wil += 2;
     for (const k of ATTR_KEYS) attrs[k] = Math.max(1, attrs[k]);
-    let name = (choices.name || "Nameless").trim().slice(0, 28);
-    if (birth.traits.includes("will_of_d") && !/ D\. /.test(name)) {
-      const parts = name.split(" ");
-      name = parts.length > 1 ? `${parts[0]} D. ${parts.slice(1).join(" ")}` : `${name} D.`;
-    }
+    let name = (choices.name || "Nameless").trim().slice(0, 28) || "Nameless";
+    if (birth.traits.includes("will_of_d")) name = nameWithD(name);
     const lives = Math.min(5, race.lives + perkLevel(legacy, "lives"));
     let style = "brawler";
     const masteries = { brawler: 0 };
@@ -17529,11 +20327,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       style = "electro";
     }
     const inventory = [{ id: "meat", qty: 3 }, { id: "rice_ball", qty: 2 }, { id: "bandage", qty: 2 }];
-    const equipped = { weapons: [], hat: null, coat: null };
-    if (choices.dream === "swordsman") {
-      inventory.push({ id: "rusty_katana", qty: 1 });
-      equipped.weapons = ["rusty_katana"];
-    }
+    const equipped = { weapons: [], hat: null, coat: null, accessories: [] };
     if (legacy.heirloom && ITEMS[legacy.heirloom.id]) {
       const it = legacy.heirloom;
       inventory.push({ id: it.id, qty: 1, heirloom: true, from: it.from });
@@ -17551,14 +20345,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       race: birth.race,
       traits: birth.traits.slice(),
       look: choices.look || makeLook(birth.race, birth.seed),
-      dream: choices.dream || "king",
-      jr: choices.jr || { skull: "classic", bones: "cross", accessory: "none", color: "#f5f6fa" },
+      dream: null,
+      // no crew and no flag yet: you found your own pirate crew later (Crew menu)
+      jr: null,
+      crewName: null,
+      reputation: 0,
+      weaponMastery: { fists: 0, legs: 0, sword: 0, gun: 0, staff: 0, axe: 0 },
+      train: { str: 0, agi: 0, end: 0, vit: 0, wil: 0 },
+      legends: [],
       attrs,
       lives,
       maxLives: lives,
       berries: 1500 + perkLevel(legacy, "berries") * 3e3,
       bounty: 0,
-      faction: choices.dream === "admiral" ? "civilian" : "civilian",
+      faction: "civilian",
       marineRank: null,
       merit: 0,
       style,
@@ -17605,7 +20405,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const seaRegion = SEA_IDS[sea];
     const allTowns = [];
     for (const isl2 of world.islands) for (const t2 of isl2.towns) allTowns.push({ isl: isl2, t: t2 });
-    let pick = null;
+    let pick2 = null;
     if (race.spawnIslet && world.islets) {
       const cands = world.islets.filter((o) => o.region === seaRegion && o.r >= 5);
       if (cands.length) {
@@ -17616,13 +20416,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     const wanted2 = race.spawnTowns || HUMAN_STARTERS[sea] || [];
     const byId = allTowns.filter(({ t: t2 }) => wanted2.includes(t2.id));
-    if (byId.length) pick = rng.pick(byId);
-    if (!pick) {
+    if (byId.length) pick2 = rng.pick(byId);
+    if (!pick2) {
       const inSea = allTowns.filter(({ isl: isl2 }) => regionAt(isl2.x, isl2.y) === seaRegion);
-      if (inSea.length) pick = rng.pick(inSea);
+      if (inSea.length) pick2 = rng.pick(inSea);
     }
-    if (!pick) pick = allTowns[0];
-    const { isl, t } = pick;
+    if (!pick2) pick2 = allTowns[0];
+    const { isl, t } = pick2;
     return { x: t.plaza.x + 0.5, y: t.plaza.y + 2.5, island: isl, town: t, sea, name: `${t.name}, ${isl.name}` };
   }
   function buildPlayer(game, char) {
@@ -17637,6 +20437,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     a.fruitMastery = char.fruitMastery;
     a.hakiSkill = char.haki;
     a.weapon = weaponFromChar(char);
+    a.weaponMastery = char.weaponMastery;
+    a.baseMods.armor = armorOf(char);
     a.persistent = true;
     a.recalc();
     a.hp = a.d.maxHp;
@@ -17646,11 +20448,37 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function effectiveAttrs(char) {
     const a = { ...char.attrs };
-    for (const slot of ["hat", "coat"]) {
-      const d = ITEMS[char.equipped?.[slot]];
+    const eq = char.equipped || {};
+    const worn = [eq.hat, eq.coat, ...eq.accessories || []];
+    for (const id of worn) {
+      const d = ITEMS[id];
       if (d?.bonus) for (const [k, v] of Object.entries(d.bonus)) a[k] = (a[k] || 0) + v;
     }
     return a;
+  }
+  function armorOf(char) {
+    const eq = char.equipped || {};
+    return [eq.hat, eq.coat].reduce((s, id) => s + (ITEMS[id]?.armor || 0), 0);
+  }
+  function upgradeChar(c) {
+    if (!c) return c;
+    c.equipped = c.equipped || { weapons: [], hat: null, coat: null };
+    c.equipped.accessories = c.equipped.accessories || [];
+    c.weaponMastery = c.weaponMastery || { fists: 0, legs: 0, sword: 0, gun: 0, staff: 0, axe: 0 };
+    c.train = c.train || { str: 0, agi: 0, end: 0, vit: 0, wil: 0 };
+    if (c.reputation === void 0) c.reputation = c.bounty > 0 ? -30 : 0;
+    c.legends = c.legends || [];
+    if (c.crewName === void 0) c.crewName = c.faction === "pirate" && c.jr ? `${c.name.split(" ")[0]} Pirates` : null;
+    if (!c.crewName) c.jr = null;
+    if (c.unspent > 0) {
+      const keys = ["str", "agi", "end", "vit", "wil"];
+      for (let i = 0; i < c.unspent; i++) {
+        const k = keys[i % keys.length];
+        c.attrs[k] = Math.min(100, c.attrs[k] + 1);
+      }
+      c.unspent = 0;
+    }
+    return c;
   }
   function equippedLook(char) {
     const look = { ...char.look };
@@ -17684,6 +20512,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     p.hakiSkill = c.haki;
     p.techniques = c.techniques;
     p.hotbar = c.hotbar;
+    p.weaponMastery = c.weaponMastery;
+    p.baseMods.armor = armorOf(c);
     p.recalc();
     p.hp = Math.max(1, Math.round(p.d.maxHp * hpFrac));
   }
@@ -17739,11 +20569,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   }
   function persist(game) {
-    if (!game.state?.char || game.state.char.dead) return;
+    if (!game.state?.char || game.state.char.dead) return false;
     snapshot(game);
     game.state.char.lastSaved = Date.now();
-    saveChar(game.state.char);
+    const ok = saveChar(game.state.char);
     saveLegacy(game.state.legacy);
+    if (ok) game.emit?.("saved");
+    return ok;
   }
   function computeWill(char) {
     const islands = (char.discovered || []).length;
@@ -17752,7 +20584,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const days = Math.max(0, (char.world?.day || 1) - 1);
     let will = 5 + islands + bosses * 6 + Math.floor(Math.sqrt(bounty / 1e5)) * 2 + Math.floor(days / 2);
     if (char.marineRank) will += 10;
-    if (char.dreamDone) will += 120;
+    for (const id of char.legends || []) will += LEGENDS[id]?.will || 0;
     return Math.round(will);
   }
   function endLineage(game, cause) {
@@ -17770,8 +20602,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       marineRank: char.marineRank,
       days: char.world?.day || 1,
       cause,
-      dream: char.dream,
-      dreamDone: !!char.dreamDone,
+      legends: (char.legends || []).slice(),
+      crewName: char.crewName,
       bosses: (char.bosses || []).length,
       islands: (char.discovered || []).length,
       fruit: char.fruit,
@@ -17793,77 +20625,200 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
 
   // src/ui/screens.js
   var SEA_NAMES = { east_blue: "East Blue", north_blue: "North Blue", west_blue: "West Blue", south_blue: "South Blue" };
-  function titleScreen(ui, { legacy, hasSave, saveInfo, onContinue, onNew, onHall, onHelp, onSettings }) {
-    const menu = h(
-      "div.menu",
-      hasSave ? h("button.btn.gold", { on: { click: onContinue } }, `Continue \u2014 ${saveInfo}`) : null,
-      h("button.btn.red", { on: { click: onNew } }, hasSave ? "Abandon & Begin Anew" : "Set Sail"),
-      h("button.btn", { on: { click: onHall } }, `Hall of Legends (${legacy.hall.length})`),
-      h("button.btn", { on: { click: onHelp } }, "How to Play"),
-      h("button.btn", { on: { click: onSettings } }, "Settings")
-    );
+  var pct = (x) => `${Math.round(x * 1e3) / 10}%`;
+  function portrait(look, w = 96, hgt = 110, bg = null) {
+    const cv = h("canvas.portrait", { width: w * 2, height: hgt * 2, style: { width: w + "px", height: hgt + "px" } });
+    const g = cv.getContext("2d");
+    if (bg) {
+      g.fillStyle = bg;
+      g.fillRect(0, 0, w * 2, hgt * 2);
+    }
+    try {
+      g.setTransform(w * 0.72, 0, 0, w * 0.72, w, hgt * 1.72);
+      drawCharacter(g, look, { facing: Math.PI / 2, moving: false, time: 1, state: "idle", action: null });
+    } catch {
+    }
+    return cv;
+  }
+  function titleScreen(ui, { slots, onPlay, onNew, onDelete, onHall, onWill, onHelp, onSettings }) {
+    const cards = slots.map((s) => slotCard(s, { onPlay, onNew, onDelete, onHall, onWill }));
     const el = h(
-      "div.screen",
+      "div.screen.title-screen",
       h(
         "div.title",
         h("h1", "Inherited Will"),
         h("h2", "A One Piece Roguelike"),
-        h("p", { style: { margin: "-12px 0 20px", textShadow: "0 1px 3px #000" } }, legacy.generation > 1 ? `Generation ${legacy.generation} \xB7 Inherited Will: ${legacy.will}` : "Your lineage begins here."),
-        menu
+        h("div.slots", cards),
+        h(
+          "div.title-links",
+          h("button.btn", { on: { click: onHelp } }, uiImg("help", 18), "How to Play"),
+          h("button.btn", { on: { click: onSettings } }, uiImg("settings", 18), "Settings")
+        )
       ),
       h("div.foot", "Unofficial fan game. ONE PIECE \xA9 Eiichiro Oda / Shueisha / Toei Animation. All art in this game is procedurally drawn.")
     );
     ui.showScreen(el);
   }
+  function slotCard(info, { onPlay, onNew, onDelete, onHall, onWill }) {
+    const { slot: slot2, char, legacy } = info;
+    const head = h(
+      "div.slot-head",
+      h("span", `Lineage ${slot2}`),
+      !info.empty ? h("button.link", { title: "Delete this lineage for good", on: { click: () => onDelete(slot2) } }, "Delete") : null
+    );
+    if (info.empty) {
+      return h(
+        "div.slot-card.empty",
+        head,
+        h("div.slot-empty", h("div.big", "Empty"), h("p", "A new bloodline, waiting to be born.")),
+        h("div.slot-actions", h("button.btn.red", { on: { click: () => onNew(slot2) } }, "Begin a Lineage"))
+      );
+    }
+    const gen = legacy?.generation || char?.generation || 1;
+    const will = legacy?.will || 0;
+    const meta = h(
+      "div.slot-meta",
+      h("span", `Generation ${gen}`),
+      h("span", { title: "Inherited Will \u2014 spend it on your bloodline" }, uiImg("reputation", 14), ` ${will} Will`)
+    );
+    if (char) {
+      const race = RACES[char.race];
+      const faction = char.faction === "marine" ? `Marine ${char.marineRank || "Recruit"}` : char.crewName ? `Captain of the ${char.crewName}` : char.faction === "pirate" ? "Pirate" : "Wanderer";
+      const saved = char.lastSaved ? new Date(char.lastSaved) : null;
+      return h(
+        "div.slot-card",
+        head,
+        h(
+          "div.slot-body",
+          portrait(char.look, 84, 96),
+          h(
+            "div.slot-info",
+            h("div.nm", char.name),
+            h("div.sub", `${race?.name || char.race} \xB7 ${faction}`),
+            h("div.sub", `Day ${char.world?.day || 1} \xB7 ${char.lives}/${char.maxLives} lives${char.bounty ? " \xB7 " + formatBerries(char.bounty) : ""}`),
+            saved ? h("div.sub.faint", `Saved ${saved.toLocaleDateString()} ${saved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`) : null
+          )
+        ),
+        meta,
+        h(
+          "div.slot-actions",
+          h("button.btn.gold", { on: { click: () => onPlay(slot2) } }, "Continue"),
+          h("button.btn", { on: { click: () => onWill(slot2) } }, "Will"),
+          h("button.btn", { on: { click: () => onHall(slot2) } }, `Hall (${legacy?.hall?.length || 0})`),
+          h("button.btn.red.small", { title: "Abandon this character and start a new one in this lineage", on: { click: () => onNew(slot2) } }, "Abandon")
+        )
+      );
+    }
+    const last = legacy?.hall?.[0];
+    return h(
+      "div.slot-card",
+      head,
+      h(
+        "div.slot-body",
+        last ? portrait(last.look, 84, 96) : null,
+        h(
+          "div.slot-info",
+          h("div.nm", last ? `${last.name}` : "The next generation"),
+          h("div.sub", last ? `Fell on day ${last.days}. Their will lives on.` : "Ready to be born.")
+        )
+      ),
+      meta,
+      h(
+        "div.slot-actions",
+        h("button.btn.red", { on: { click: () => onNew(slot2) } }, `Begin Generation ${gen}`),
+        h("button.btn", { on: { click: () => onWill(slot2) } }, "Will"),
+        h("button.btn", { on: { click: () => onHall(slot2) } }, `Hall (${legacy?.hall?.length || 0})`)
+      )
+    );
+  }
   function creationScreen(ui, legacy, { onDone, onBack }) {
     let rerolls = perkLevel(legacy, "reroll");
     let birth = rollBirth(legacy, Math.floor(Math.random() * 1e9));
-    const state = { name: "", look: null, dream: "king", jr: { skull: "classic", bones: "cross", accessory: "strawhat", color: "#f5f6fa" } };
+    const state = { name: "", look: null };
     const root2 = h("div.screen");
     ui.showScreen(root2);
     let raf = 0;
-    const stopAnim = () => cancelAnimationFrame(raf);
+    let timers = [];
+    const stopAnim = () => {
+      cancelAnimationFrame(raf);
+      for (const t of timers) clearTimeout(t);
+      timers = [];
+    };
+    const later = (ms, fn) => timers.push(setTimeout(fn, ms));
+    const hasD = () => birth.traits.includes("will_of_d");
     function stepRoll(spin = true) {
       stopAnim();
       clear(root2);
+      state.look = null;
       const race = RACES[birth.race];
       const rar = RARITY[race.rarity];
+      const shown = birth.traits.filter((t) => TRAITS[t] && !TRAITS[t].hidden && t !== "will_of_d");
       const nameEl = h("div.race", { style: { color: rar.color } }, "???");
       const rarEl = h("div.rarity", { style: { color: rar.color } }, "");
+      const dEl = h("div.d-reveal");
       const info = h(
-        "div",
-        { style: { opacity: 0, transition: "opacity .6s" } },
+        "div.roll-info",
+        { style: { opacity: 0 } },
         h("p", { style: { maxWidth: "560px", margin: "6px auto" } }, race.desc),
         h("p", h("b", "Birthplace: "), race.origin, " ", h("span.tag", race.spawnSeas.map((s) => SEA_NAMES[s]).join(" / "))),
         h(
-          "div",
-          { style: { margin: "10px auto", maxWidth: "600px", textAlign: "left" } },
-          h("h3", "Racial traits"),
-          ...race.traits.map((t) => h("div", "\u2022 " + t)),
-          h("h3", "Born with"),
-          ...birth.traits.map((t) => h("div", h("b", { style: { color: TRAITS[t].rarity === "legendary" ? "#b8860b" : "inherit" } }, TRAITS[t].name + ": "), TRAITS[t].desc)),
-          h("p.muted", `Lives: ${Math.min(5, race.lives + perkLevel(legacy, "lives"))} vivre cards`)
-        ),
-        h(
-          "div",
-          { style: { display: "flex", gap: "10px", justifyContent: "center", marginTop: "12px" } },
-          h("button.btn.gold", { on: { click: stepIdentity } }, "Accept my fate"),
-          rerolls > 0 ? h("button.btn", { on: { click: () => {
-            rerolls--;
-            birth = rollBirth(legacy, Math.floor(Math.random() * 1e9));
-            stepRoll(true);
-          } } }, `Flip Fate's Coin (${rerolls} left)`) : null,
-          h("button.btn", { on: { click: () => {
-            stopAnim();
-            onBack();
-          } } }, "Back")
+          "div.roll-cols",
+          h("div", h("h3", "Racial traits"), ...race.traits.map((t) => h("div.li", t))),
+          h(
+            "div",
+            h("h3", "Born with"),
+            ...shown.map((t) => h("div.li", h("b", TRAITS[t].name + ": "), TRAITS[t].desc)),
+            h("div.li.muted", `${Math.min(5, race.lives + perkLevel(legacy, "lives"))} lives (vivre cards)`)
+          )
         )
       );
-      const panel = h("div.panel.race-roll", h("h2", legacy.generation > 1 ? `Generation ${legacy.generation} is born\u2026` : "A child is born\u2026"), nameEl, rarEl, info);
+      const btns = h(
+        "div.roll-btns",
+        { style: { opacity: 0 } },
+        h("button.btn.gold", { on: { click: stepIdentity } }, "Accept my fate"),
+        rerolls > 0 ? h("button.btn", { on: { click: () => {
+          rerolls--;
+          birth = rollBirth(legacy, Math.floor(Math.random() * 1e9));
+          stepRoll(true);
+        } } }, `Flip Fate's Coin (${rerolls} left)`) : null,
+        h("button.btn", { on: { click: () => {
+          stopAnim();
+          onBack();
+        } } }, "Back")
+      );
+      const willLine = h("div.will-line", uiImg("reputation", 16), ` Your lineage's Inherited Will: ${legacy.will}` + (legacy.generation > 1 ? ` \xB7 generation ${legacy.generation}` : ""));
+      const panel = h("div.panel.race-roll", h("h2", legacy.generation > 1 ? `Generation ${legacy.generation} is born\u2026` : "A child is born\u2026"), nameEl, rarEl, dEl, info, btns, willLine);
       root2.appendChild(panel);
       const ids = Object.keys(RACES);
-      let t0 = performance.now();
+      const t0 = performance.now();
       const dur = spin ? 1800 : 0;
+      const reveal = () => {
+        nameEl.textContent = race.name;
+        nameEl.style.color = rar.color;
+        rarEl.textContent = rar.label.toUpperCase();
+        info.style.opacity = 1;
+        ui.game?.audio?.sfx(race.rarity === "legendary" || race.rarity === "epic" ? "fanfare" : "reveal");
+        clear(dEl);
+        const chance = dChance(legacy);
+        if (hasD()) {
+          dEl.append(
+            h("div.d-stamp", "D."),
+            h("div.d-title", "THE WILL OF D."),
+            h("p", "A hidden initial runs in your blood. Those who carry it laugh in the face of death \u2014 and the powers of the world fear the name. (", pct(chance), " of births)")
+          );
+          dEl.classList.remove("miss");
+          dEl.classList.add("hit");
+          later(spin ? 900 : 0, () => {
+            dEl.classList.add("show");
+            ui.game?.audio?.sfx("fanfare");
+            btns.style.opacity = 1;
+          });
+        } else {
+          dEl.append(h("p.muted", `No "D." in your name this time \u2014 only ${pct(chance)} of births carry the Will of D.`));
+          dEl.classList.add("miss", "show");
+          btns.style.opacity = 1;
+        }
+      };
       const tick = (now) => {
         const k = (now - t0) / Math.max(1, dur);
         if (k < 1) {
@@ -17871,13 +20826,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           nameEl.textContent = RACES[ids[i]].name;
           nameEl.style.color = RARITY[RACES[ids[i]].rarity].color;
           raf = requestAnimationFrame(tick);
-        } else {
-          nameEl.textContent = race.name;
-          nameEl.style.color = rar.color;
-          rarEl.textContent = rar.label.toUpperCase();
-          info.style.opacity = 1;
-          ui.game?.audio?.sfx(race.rarity === "legendary" || race.rarity === "epic" ? "fanfare" : "reveal");
-        }
+        } else reveal();
       };
       raf = requestAnimationFrame(tick);
     }
@@ -17887,75 +20836,73 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!state.look) state.look = makeLook(birth.race, birth.seed);
       if (!state.name) state.name = randomCharName();
       const preview = h("canvas", { width: 260, height: 300, style: { width: "100%", height: "300px" } });
-      const flag = h("canvas", { width: 180, height: 130, style: { width: "180px", height: "130px", borderRadius: "8px", background: "#111" } });
-      const nameInput = h("input.name", { value: state.name, maxLength: 28, on: { input: (e) => {
+      const finalName = h("div.final-name");
+      const updateName = () => {
+        clear(finalName);
+        const n = (state.name || "").trim() || "Nameless";
+        finalName.append(h("span.muted", "You will be known as "), h("b", hasD() ? nameWithD(n) : n));
+      };
+      const nameInput = h("input.name", { value: state.name, maxLength: 24, spellcheck: false, on: { input: (e) => {
         state.name = e.target.value;
+        updateName();
       } } });
+      updateName();
       const L2 = state.look;
       const race = birth.race;
-      const row = (label, ...kids) => h("div", { style: { margin: "6px 0" } }, h("div", { style: { fontWeight: 800, fontSize: "13px" } }, label), ...kids);
-      const swatch = (key, colors) => h("div.swatches", ...colors.map((c) => {
-        const b = h("button" + (L2[key] === c ? ".on" : ""), { style: { background: c }, on: { click: () => {
-          L2[key] = c;
-          if (key === "fur") {
-            L2.skin = c;
-            L2.hairColor = c;
-            L2.hand = c;
-          }
-          stepIdentityRefresh();
-        } } });
-        return b;
-      }));
-      const opts = (key, values, labels) => h("div.swatches", ...values.map((v, i) => h("button" + (L2[key] === v ? ".on" : ""), {
-        style: { width: "auto", borderRadius: "6px", padding: "2px 8px", background: L2[key] === v ? "#c0392b" : "#6d4c33", color: "#fff", font: "700 12px Nunito" },
-        on: { click: () => {
-          L2[key] = v;
-          stepIdentityRefresh();
-        } }
-      }, labels ? labels[i] : v)));
-      const jrOpt = (key, values) => h("div.swatches", ...values.map((v) => h("button" + (state.jr[key] === v ? ".on" : ""), {
-        style: { width: "auto", borderRadius: "6px", padding: "2px 8px", background: state.jr[key] === v ? "#c0392b" : "#6d4c33", color: "#fff", font: "700 12px Nunito" },
-        on: { click: () => {
-          state.jr[key] = v;
-          stepIdentityRefresh();
-        } }
-      }, v)));
+      const row = (label, ...kids) => h("div.opt-row", h("div.opt-label", label), ...kids);
+      const swatch = (key2, colors) => h("div.swatches", ...colors.map((c) => h("button" + (L2[key2] === c ? ".on" : ""), { style: { background: c }, on: { click: () => {
+        L2[key2] = c;
+        if (key2 === "fur") {
+          L2.skin = c;
+          L2.hairColor = c;
+          L2.hand = c;
+        }
+        refresh();
+      } } })));
+      const opts = (key2, values, labels) => h("div.swatches", ...values.map((v, i) => h("button.chip" + (L2[key2] === v ? ".on" : ""), { on: { click: () => {
+        L2[key2] = v;
+        refresh();
+      } } }, labels ? labels[i] : v)));
       const left = h("div", h("div.preview", preview), h("p.muted", { style: { textAlign: "center" } }, raceLabel(L2)));
       const right = h(
         "div",
         row("Name", h("div", { style: { display: "flex", gap: "6px" } }, nameInput, h("button.btn", { on: { click: () => {
           state.name = randomCharName();
           nameInput.value = state.name;
-        } } }, "\u{1F3B2}"))),
+          updateName();
+        } } }, "Random"))),
+        finalName,
         race === "mink" ? row("Mink", opts("kind", MINK_KINDS.map((k) => k.name))) : null,
         race === "fishman" ? row("Fish-Man kind", opts("kind", FISHMAN_KINDS.map((k) => k.name))) : null,
         row("Hair", opts("hair", ["short", "spiky", "long", "ponytail", "buzz", "curly", "afro", "topknot", "mohawk", "bald"])),
         race !== "mink" ? row("Hair colour", swatch("hairColor", ["#1e1e1e", "#3b2a1a", "#6b4423", "#c69c6d", "#f2d16b", "#e67e22", "#c0392b", "#2ecc71", "#2980b9", "#e84393", "#dfe6e9", "#8e44ad"])) : null,
-        race === "human" || race === "longarm" || race === "longleg" || race === "three_eye" || race === "buccaneer" || race === "skypiean" ? row("Skin", swatch("skin", ["#f9dcc4", "#f1c9a0", "#e0ac7e", "#c68642", "#a0643a", "#7a4a2a", "#5c3a21"])) : null,
+        ["human", "longarm", "longleg", "three_eye", "buccaneer", "skypiean", "lunarian"].includes(race) ? row("Skin", swatch("skin", ["#f9dcc4", "#f1c9a0", "#e0ac7e", "#c68642", "#a0643a", "#7a4a2a", "#5c3a21"])) : null,
         row("Shirt", swatch("top", ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#a0522d", "#ffffff"])),
         row("Trousers", swatch("bottom", ["#2d3436", "#1e3799", "#3b3b98", "#6d4c41", "#636e72", "#0a3d62", "#b8860b", "#e1b12c"])),
         row("Shirt open", opts("openShirt", [false, true], ["closed", "open"])),
-        h("h3", "Your Jolly Roger"),
-        h("div", { style: { display: "flex", gap: "12px", alignItems: "flex-start" } }, flag, h(
-          "div",
-          row("Skull", jrOpt("skull", ["classic", "grin", "eyepatch"])),
-          row("Crossed", jrOpt("bones", ["cross", "swords", "anchor"])),
-          row("Hat", jrOpt("accessory", ["none", "strawhat", "bandana", "tricorne", "horns", "crown", "flames", "halo"]))
-        ))
+        h("p.muted", { style: { marginTop: "12px" } }, "No destiny is chosen for you. Pirate, Marine, adventurer, bounty hunter or none of these \u2014 the sea is free, and what you become is up to you. You can found your own pirate crew and raise your Jolly Roger later, from the Crew menu.")
       );
+      const born = RACES[birth.race];
       const panel = h(
         "div.panel.wide",
         h("h2", "Who are you?"),
         h("div.creation-grid", left, right),
         h(
-          "div",
-          { style: { display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "10px" } },
-          h("button.btn", { on: { click: () => stepRoll(false) } }, "Back"),
-          h("button.btn.gold", { on: { click: stepDream } }, "Next: your dream \u279C")
+          "div.creation-foot",
+          h("div.muted", `${raceLabel(L2)} \xB7 born in the ${born.spawnSeas.length > 1 ? "one of the four Blues" : SEA_NAMES[born.spawnSeas[0]]}`),
+          h(
+            "div",
+            { style: { display: "flex", gap: "10px" } },
+            h("button.btn", { on: { click: () => stepRoll(false) } }, "Back"),
+            h("button.btn.red.big", { on: { click: () => {
+              stopAnim();
+              onDone(birth, { name: (state.name || "").trim() || "Nameless", look: state.look });
+            } } }, "Set Sail")
+          )
         )
       );
       root2.appendChild(panel);
-      function stepIdentityRefresh() {
+      function refresh() {
         if (race === "mink") {
           const k = MINK_KINDS.find((m) => m.name === L2.kind);
           if (k) Object.assign(L2, { ears: k.ears, fur: k.fur, tail: k.tail, muzzle: k.muzzle, skin: k.fur, hairColor: k.fur, hand: k.fur });
@@ -17967,7 +20914,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         stepIdentity();
       }
       const g = preview.getContext("2d");
-      const fg = flag.getContext("2d");
       const t0 = performance.now();
       const tick = (now) => {
         const t = (now - t0) / 1e3;
@@ -17975,55 +20921,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.clearRect(0, 0, 260, 300);
         g.setTransform(95, 0, 0, 95, 130, 250);
         const facing = [Math.PI / 2, 0, Math.PI, -Math.PI / 2][Math.floor(t / 2) % 4];
-        drawCharacter(g, L2, { facing, walk: t * 8, moving: Math.floor(t / 2) % 4 !== 0, time: t, state: "idle" });
-        fg.setTransform(1, 0, 0, 1, 0, 0);
-        fg.fillStyle = "#111";
-        fg.fillRect(0, 0, 180, 130);
-        fg.setTransform(110, 0, 0, 110, 90, 70);
-        drawJollyRoger(fg, state.jr, 1, "#111");
+        try {
+          drawCharacter(g, L2, { facing, walk: t * 8, moving: Math.floor(t / 2) % 4 !== 0, time: t, state: "idle" });
+        } catch {
+        }
         raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
-    }
-    function stepDream() {
-      stopAnim();
-      clear(root2);
-      const cards = DREAM_IDS.map((id) => {
-        const d = DREAMS[id];
-        return h(
-          "div.card.dream" + (state.dream === id ? ".on" : ""),
-          { on: { click: () => {
-            state.dream = id;
-            stepDream();
-          } } },
-          h("h4", `${d.icon} ${d.name}`),
-          h("div", d.desc),
-          h("div.meta", { style: { marginTop: "4px" } }, "Goal: " + d.goal),
-          h("div.meta", "\u2726 " + d.perk)
-        );
-      });
-      const race = RACES[birth.race];
-      const panel = h(
-        "div.panel.wide",
-        h("h2", "What is your dream?"),
-        h("p", "Everyone who sets out to sea chases something. Your dream shapes your journey and \u2014 if you ever reach it \u2014 your legend."),
-        h("div.grid2", cards),
-        h(
-          "div",
-          { style: { display: "flex", gap: "10px", justifyContent: "space-between", alignItems: "center", marginTop: "14px" } },
-          h("div.muted", `${state.name || "You"} \xB7 ${raceLabel(state.look)} \xB7 born in the ${race.spawnSeas.length > 1 ? "one of the four Blues" : SEA_NAMES[race.spawnSeas[0]]}`),
-          h(
-            "div",
-            { style: { display: "flex", gap: "10px" } },
-            h("button.btn", { on: { click: stepIdentity } }, "Back"),
-            h("button.btn.red", { style: { fontSize: "18px" }, on: { click: () => {
-              stopAnim();
-              onDone(birth, { ...state, name: state.name || "Nameless" });
-            } } }, "Set Sail! \u2693")
-          )
-        )
-      );
-      root2.appendChild(panel);
     }
     stepRoll(true);
   }
@@ -18043,10 +20947,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function lineageEndScreen(ui, { char, cause, will, legacy, onNext }) {
     const heirloomOptions = [];
-    const inv = char.inventory || [];
-    for (const it of inv) {
+    for (const it of char.inventory || []) {
       const d = ITEMS[it.id];
-      if (!d || !["hat", "coat", "weapon"].includes(d.type)) continue;
+      if (!d || !["hat", "coat", "weapon", "accessory"].includes(d.type)) continue;
       if (!heirloomOptions.find((o) => o.id === it.id)) heirloomOptions.push({ id: it.id, d });
     }
     let chosen = null;
@@ -18056,31 +20959,32 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!heirloomOptions.length) list.appendChild(h("p.muted", "You owned nothing worth passing down. Your successor starts with only your will."));
       for (const o of heirloomOptions) {
         list.appendChild(h(
-          "div.row-item",
-          { style: { cursor: "pointer", outline: chosen === o.id ? "3px solid #c0392b" : "none" }, on: { click: () => {
+          "div.row-item" + (chosen === o.id ? ".picked" : ""),
+          { style: { cursor: "pointer" }, on: { click: () => {
             chosen = o.id;
             renderList();
           } } },
-          h("span.ico", o.d.icon),
+          itemImg(o.id, 30, ".ico"),
           h("div.grow", h("b", o.d.name), h("div.sub", o.d.desc || o.d.grade || o.d.type))
         ));
       }
     };
     renderList();
-    const poster = wantedPoster(char);
+    const legends = (char.legends || []).map((id) => LEGENDS[id]).filter(Boolean);
     const el = h("div.screen", h(
       "div.panel.wide",
       h("h2", "Your journey has ended."),
       h(
         "div",
         { style: { display: "flex", gap: "20px", flexWrap: "wrap" } },
-        poster,
+        wantedPoster(char),
         h(
           "div",
           { style: { flex: 1, minWidth: "280px" } },
           h("p", h("b", char.name), ` \u2014 ${raceLabel(char.look)}, generation ${char.generation}.`),
           h("p", cause),
           h("p", `Survived ${char.world?.day || 1} days \xB7 ${(char.discovered || []).length} islands discovered \xB7 ${(char.bosses || []).length} great foes defeated${char.bounty ? " \xB7 bounty " + formatBerries(char.bounty) : ""}${char.fruit ? " \xB7 ate the " + FRUITS[char.fruit].name : ""}.`),
+          legends.length ? h("p", h("b", "Legends: "), legends.map((l) => l.name).join(", ")) : null,
           char.fruit ? h("p.muted", `Somewhere in the world, the ${FRUITS[char.fruit].name} has been reborn inside an ordinary fruit\u2026`) : null,
           h("p", { style: { fontSize: "20px" } }, h("b", `+${will} Inherited Will`)),
           h("h3", "Pass on an heirloom"),
@@ -18092,57 +20996,62 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             h("button.btn.gold", { on: { click: () => {
               if (chosen) legacy.heirloom = { id: chosen, from: char.name };
               onNext();
-            } } }, "Continue \u279C")
+            } } }, "Continue")
           )
         )
       )
     ));
     ui.showScreen(el);
   }
-  function legacyShopScreen(ui, legacy, { onDone, save }) {
+  function legacyShopScreen(ui, legacy, { onDone, save, doneLabel = "Begin the next generation" }) {
     const root2 = h("div.screen");
     ui.showScreen(root2);
-    const render = () => {
+    const render2 = () => {
       clear(root2);
       const cards = Object.entries(PERKS).map(([id, p]) => {
         const lvl = perkLevel(legacy, id);
         const cost = perkCost(legacy, id);
         return h(
-          "div.card",
-          h("h4", `${p.icon} ${p.name}`, h("span.tag", `Lv ${lvl}/${p.costs.length}`)),
+          "div.card.perk",
+          h("h4", uiImg(p.icon, 22), " ", p.name, h("span.tag", `Lv ${lvl}/${p.costs.length}`)),
           h("div", p.desc),
           h("div", { style: { marginTop: "6px" } }, cost == null ? h("span.muted", "Mastered") : h("button.btn" + (legacy.will >= cost ? ".gold" : ""), { disabled: legacy.will < cost, on: { click: () => {
             legacy.will -= cost;
             legacy.perks[id] = lvl + 1;
             save();
-            render();
+            render2();
           } } }, `Inherit \u2014 ${cost} Will`))
         );
       });
       root2.appendChild(h(
         "div.panel.wide",
         h("h2", "The Inherited Will"),
-        h("p", "Your ancestors' deeds live on. Spend Inherited Will to shape every generation that follows. ", h("b", `Will: ${legacy.will}`)),
-        legacy.heirloom ? h("p", `Heirloom waiting for the next generation: ${ITEMS[legacy.heirloom.id]?.icon} ${ITEMS[legacy.heirloom.id]?.name} (from ${legacy.heirloom.from}).`) : null,
+        h("p", "Your ancestors' deeds live on. Every life earns Inherited Will \u2014 for the islands it charted, the foes it bested, the days it survived and the legends it wrote. Spend it to shape every generation that follows. ", h("b", `Will: ${legacy.will}`)),
+        legacy.heirloom ? h("p", "Heirloom waiting for the next generation: ", itemImg(legacy.heirloom.id, 20), ` ${ITEMS[legacy.heirloom.id]?.name} (from ${legacy.heirloom.from}).`) : null,
         h("div.grid2", cards),
-        h("div", { style: { marginTop: "12px", display: "flex", justifyContent: "flex-end" } }, h("button.btn.red", { on: { click: onDone } }, "Begin the next generation \u279C"))
+        h("div", { style: { marginTop: "12px", display: "flex", justifyContent: "flex-end" } }, h("button.btn.red", { on: { click: onDone } }, doneLabel))
       ));
     };
-    render();
+    render2();
   }
   function hallScreen(ui, legacy, { onBack }) {
-    const rows = legacy.hall.map((e) => h(
-      "div.row-item",
-      h("span.ico", e.dreamDone ? "\u2B50" : "\u2620"),
-      h(
-        "div.grow",
-        h("b", e.name),
-        ` \u2014 ${RACES[e.race]?.name || e.race}, gen ${e.generation}`,
-        h("div.sub", `${DREAMS[e.dream]?.name || ""}${e.dreamDone ? " (fulfilled!)" : ""} \xB7 ${e.days} days \xB7 ${e.islands} islands \xB7 ${e.bosses} great foes${e.bounty ? " \xB7 " + formatBerries(e.bounty) : ""}`),
-        h("div.sub", e.cause)
-      ),
-      h("span.price", `+${e.will} Will`)
-    ));
+    const rows = (legacy.hall || []).map((e) => {
+      const legends = (e.legends || []).map((id) => LEGENDS[id]?.name).filter(Boolean);
+      const role = e.marineRank ? `Marine ${e.marineRank}` : e.crewName ? `captain of the ${e.crewName}` : e.faction === "pirate" ? "pirate" : "wanderer";
+      return h(
+        "div.row-item",
+        e.look ? portrait(e.look, 40, 46) : uiImg("bounty", 30),
+        h(
+          "div.grow",
+          h("b", e.name),
+          ` \u2014 ${RACES[e.race]?.name || e.race}, ${role}, generation ${e.generation}`,
+          h("div.sub", `${e.days} days \xB7 ${e.islands} islands \xB7 ${e.bosses} great foes${e.bounty ? " \xB7 " + formatBerries(e.bounty) : ""}`),
+          legends.length ? h("div.sub", { style: { color: "#7a4a06", fontWeight: 800 } }, "Legends: " + legends.join(", ")) : null,
+          h("div.sub", e.cause)
+        ),
+        h("span.price", `+${e.will} Will`)
+      );
+    });
     ui.showScreen(h("div.screen", h(
       "div.panel.wide",
       h("h2", "Hall of Legends"),
@@ -18150,14 +21059,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       h("div", { style: { marginTop: "12px", textAlign: "right" } }, h("button.btn", { on: { click: onBack } }, "Back"))
     )));
   }
-  function helpContent() {
-    const k = (key, text) => h("div", h("kbd", key), text);
+  function helpContent(char) {
+    const haki = !!(char && (char.haki?.armament || char.haki?.observation || char.haki?.conqueror));
+    const k = (key2, text) => h("div", h("kbd", key2), text);
     return h(
       "div",
       h("h2", "How to Play"),
-      h("p", "Inherited Will is a roguelike set on the whole Blue Planet of One Piece. You are born in one of the four Blues depending on your race. Reach Reverse Mountain, enter the Grand Line, cross the Red Line and find the One Piece \u2014 or chase whatever dream you chose."),
+      h("p", "Inherited Will is a roguelike set on the whole Blue Planet of One Piece. You are born in one of the four Blues depending on your race. Nobody tells you what to become: sail where you like, climb Reverse Mountain into the Grand Line, cross the Red Line, join the Marines, become a pirate, hunt treasure \u2014 or all of it."),
       h("p", h("b", "Lives: "), "You have a few vivre cards. Get knocked down and you can mash SPACE to get back up; if an enemy finishes you, a vivre card burns. Lose them all and your journey ends \u2014 your Inherited Will, an heirloom, and your charted islands pass to the next generation."),
-      h("p", h("b", "Getting stronger: "), "There is no XP grinding. Weak enemies teach you nothing. Grow by training with masters (dojos, trainers), completing island stories, defeating worthy opponents (breakthroughs), finding Devil Fruits and awakening Haki."),
+      h("p", h("b", "Getting stronger: "), "There are no points to spend. Your body grows by use: landing blows builds Strength, dodging and parrying builds Agility, blocking builds Endurance, taking punishment builds Vitality, and refusing to stay down builds Willpower. Every weapon type has its own mastery that rises the more you fight with it \u2014 and deals more damage as it does. Worthy opponents teach you far more than weak ones; masters and trainers can push you further, and beating a great foe brings a breakthrough."),
+      haki ? h("p", h("b", "Haki: "), "Your spirit has awakened. Haki grows as you use it in battle and with a master's training.") : h("p.muted", "Some say that those who push their body and spirit far enough awaken something more\u2026"),
       h("h3", "Controls"),
       h(
         "div.kbd-help",
@@ -18167,28 +21078,30 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         k("Left click", "attack combo (ship: cannons)"),
         k("Right click", "heavy attack"),
         k("F", "block \u2014 tap just before a hit to PARRY"),
-        k("1-6", "techniques"),
-        k("R", "Armament Haki"),
-        k("T", "Observation Haki"),
-        k("G", "Conqueror's Haki"),
-        k("E", "interact / talk / board / go ashore"),
+        k("1-6", "hotbar (techniques & items)"),
+        haki ? k("R / T", "Armament / Observation Haki (once awakened)") : null,
+        haki && char.haki?.conqueror ? k("G", "Conqueror's Haki") : null,
+        k("E", "interact / talk / pick fruit / board"),
         k("Q", "eat food"),
-        k("I / Tab", "inventory & equipment"),
-        k("C", "character & stats"),
+        k("Tab / I", "inventory & equipment"),
+        k("C", "character"),
         k("K", "skills & hotbar"),
         k("J", "journal"),
+        k("U", "crew"),
         k("M", "world map"),
-        k("U", "crew (nakama)"),
-        k("Esc", "menu"),
+        k("Esc", "pause menu"),
         k("Mouse wheel", "zoom"),
         k("H", "this help")
       ),
+      h("p.muted", "The buttons on the right of the screen open the same menus. Drag techniques and items onto the hotbar from the Inventory or Skills menu, and drag hotbar slots to rearrange them."),
+      h("h3", "Reputation"),
+      h("p", "People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation; robbing shops, attacking townsfolk or Marines lowers it. Sink low enough and you are a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks \u2014 all the way to commanding fleets."),
       h("h3", "Sailing"),
       h("p", "W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings \u2014 the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle."),
       h("h3", "Crossing the Red Line"),
       h("p", "Paradise ends at the Red Line. Pirates cross the way the Straw Hats did: have your ship coated at the Sabaody Archipelago, then dive 10,000 metres to Fish-Man Island and rise into the New World. The Red Ports and their Bondola lifts to Mary Geoise are for the World Government \u2014 and those it permits."),
-      h("h3", "Crew, Marines and the One Piece"),
-      h("p", "Recruit companions you meet (U). Enlist in the Marines at a base if your bounty is clean and climb the ranks \u2014 or become a pirate and watch your bounty grow. Poneglyphs can only be read by an archaeologist. Four Road Poneglyphs point the way to Laugh Tale.")
+      h("h3", "Crew and the One Piece"),
+      h("p", "Found your own pirate crew and design your Jolly Roger from the Crew menu (U); it flies from your ship's sails. Recruit companions you meet along the way. Poneglyphs can only be read by an archaeologist. Four Road Poneglyphs point the way to Laugh Tale. Pick fruit and coconuts from trees when you are hungry.")
     );
   }
   function wantedPoster(char) {
@@ -18199,7 +21112,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.fillStyle = "#d4bd8a";
     for (let i = 0; i < 40; i++) g.fillRect(i * 53 % 240, i * 37 % 200, 3, 3);
     g.setTransform(110, 0, 0, 110, 120, 235);
-    drawCharacter(g, char.look, { facing: Math.PI / 2, moving: false, time: 1, state: "idle", action: null });
+    try {
+      drawCharacter(g, char.look, { facing: Math.PI / 2, moving: false, time: 1, state: "idle", action: null });
+    } catch {
+    }
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalCompositeOperation = "multiply";
     g.fillStyle = "#d9c28f";
@@ -18255,7 +21171,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
               save: () => saveLegacy(legacy),
               onDone: () => {
                 game.ui.hideScreen();
-                onReturnToTitle(true);
+                onReturnToTitle(true, "create");
               }
             });
           }
@@ -18271,9 +21187,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         persist(game);
       }
     });
-    window.addEventListener("beforeunload", () => {
+    const saveOnLeave = () => {
       if (game.player && game.player.state !== "knocked") persist(game);
+    };
+    window.addEventListener("beforeunload", saveOnLeave);
+    window.addEventListener("pagehide", saveOnLeave);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) saveOnLeave();
     });
+    let soon = null;
+    const saveSoon = () => {
+      clearTimeout(soon);
+      soon = setTimeout(() => {
+        if (game.player && game.player.state !== "knocked") persist(game);
+      }, 1200);
+    };
+    for (const ev of ["questDone", "discovered", "bossDefeated", "newDay", "crewJoined", "hakiAwakened", "legend", "fruitEaten", "shipBought", "rankUp"]) game.on(ev, saveSoon);
   }
   function resetGame(game) {
     game.actors = [];
@@ -18333,13 +21262,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     game.snapCamera();
     game.ui.setHudVisible(true);
     const seaName = REGION_INFO[SEA_IDS[spawn.sea]]?.name || "";
-    const dream = DREAMS[char.dream];
-    setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : "An Uncharted Islet", seaName, `${char.name} begins their journey.${dream ? ` Dream: ${dream.icon || ""} ${dream.name}` : ""}`, 5), 400);
+    setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : "An Uncharted Islet", seaName, `${char.name} begins their journey. The sea is yours to choose.`, 5), 400);
     game.emit("characterStart", { char, isNew: true, spawn });
     persist(game);
     return p;
   }
   function resumeCharacter(game, char) {
+    upgradeChar(char);
     const legacy = loadLegacy();
     resetGame(game);
     const world = game.surface;
@@ -18454,6 +21383,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.fx.shake(0.4);
       g.audio?.sfx("getup");
       c.stats.deathsAvoided = (c.stats.deathsAvoided || 0) + 1;
+      g.emit("playerGotUp");
     }
     awaken() {
       const g = this.game, p = g.player, c = p.char;
@@ -18640,12 +21570,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const char = game.state.char;
     const d = ITEMS[id];
     if (!d) return false;
-    const stackable = !["weapon", "hat", "coat", "fruit"].includes(d.type) || d.stack;
+    const stackable = !["weapon", "hat", "coat", "fruit", "accessory"].includes(d.type) || d.stack;
     const ex = stackable && char.inventory.find((i) => i.id === id);
     if (ex) ex.qty = (ex.qty || 1) + qty;
     else if (stackable) char.inventory.push({ id, qty });
     else for (let k = 0; k < qty; k++) char.inventory.push({ id, qty: 1, ...opts });
-    if (!opts.silent) game.log(`Obtained ${d.icon} ${d.name}${qty > 1 ? " \xD7" + qty : ""}.`, "#ffe082");
+    if (!opts.silent) game.log(`Obtained ${d.name}${qty > 1 ? " \xD7" + qty : ""}.`, "#ffe082");
     game.emit("itemGained", id, qty);
     return true;
   }
@@ -18665,6 +21595,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (eq.hat === id) eq.hat = null;
       if (eq.coat === id) eq.coat = null;
       eq.weapons = (eq.weapons || []).filter((w) => w !== id);
+      eq.accessories = (eq.accessories || []).filter((w) => w !== id);
+      const hb = char.hotbar || [];
+      for (let k = 0; k < hb.length; k++) if (hb[k] === "item:" + id) hb[k] = null;
       refreshPlayer(game);
     }
     return left === 0;
@@ -18680,25 +21613,62 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     c.berries += Math.round(amount);
     if (why !== false) game.log(`+\u0E3F${Math.round(amount).toLocaleString()}${why ? " \u2014 " + why : ""}`, "#ffd54f");
   }
-  function equip(game, id) {
+  var ACC_SLOTS = 2;
+  function isEquipped(c, id) {
+    const eq = c.equipped || {};
+    return eq.hat === id || eq.coat === id || (eq.weapons || []).includes(id) || (eq.accessories || []).includes(id);
+  }
+  function equip(game, id, { slot: slot2 } = {}) {
     const c = game.state.char;
     const d = ITEMS[id];
     if (!d || !count(c, id)) return;
     const eq = c.equipped;
     if (d.type === "hat") eq.hat = eq.hat === id ? null : id;
     else if (d.type === "coat") eq.coat = eq.coat === id ? null : id;
-    else if (d.type === "weapon") {
+    else if (d.type === "accessory") {
+      const acc = (eq.accessories || []).filter(Boolean);
+      const worn = acc.filter((x) => x === id).length;
+      if (slot2 !== void 0) {
+        if (worn >= count(c, id)) acc.splice(acc.indexOf(id), 1);
+        if (slot2 < acc.length) acc[slot2] = id;
+        else acc.push(id);
+      } else if (worn && worn >= count(c, id)) acc.splice(acc.indexOf(id), 1);
+      else if (acc.length < ACC_SLOTS) acc.push(id);
+      else {
+        acc.shift();
+        acc.push(id);
+      }
+      eq.accessories = acc.slice(0, ACC_SLOTS);
+    } else if (d.type === "weapon") {
       const ws = eq.weapons || [];
       if (ws.includes(id) && ws.filter((w) => w === id).length >= count(c, id)) eq.weapons = ws.filter((w) => w !== id);
-      else if (d.kind === "sword" && ws.length && ITEMS[ws[0]].kind === "sword" && ws.length < 3) eq.weapons = [...ws, id];
+      else if (d.kind === "sword" && ws.length && ITEMS[ws[0]]?.kind === "sword" && ws.length < 3) eq.weapons = [...ws, id];
       else eq.weapons = [id];
       if (id === "sandai_kitetsu" && !c.flags.kitetsuTested) {
         c.flags.kitetsuTested = true;
         game.log("You toss the cursed Kitetsu into the air and hold out your arm\u2026 it spins down and misses you by a hair. The blade accepts you.", "#ef9a9a");
       }
+    } else return;
+    refreshPlayer(game);
+    game.audio?.sfx("equip");
+  }
+  function unequipSlot(game, slot2) {
+    const eq = game.state.char.equipped;
+    if (slot2 === "head") eq.hat = null;
+    else if (slot2 === "body") eq.coat = null;
+    else if (slot2.startsWith("weapon")) {
+      const i = +slot2.slice(6);
+      eq.weapons = (eq.weapons || []).filter((_, k) => k !== i);
+    } else if (slot2.startsWith("acc")) {
+      const i = +slot2.slice(3);
+      eq.accessories = (eq.accessories || []).filter((_, k) => k !== i);
     }
     refreshPlayer(game);
     game.audio?.sfx("equip");
+  }
+  function slotKind(d) {
+    if (!d) return null;
+    return d.type === "hat" ? "head" : d.type === "coat" ? "body" : d.type === "weapon" ? "weapon" : d.type === "accessory" ? "acc" : null;
   }
   function useItem(game, id) {
     const c = game.state.char;
@@ -18710,7 +21680,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       let heal = d.heal || 0;
       if (d.type === "food") {
         if (c.traits.includes("iron_stomach")) heal *= 1.3;
-        if (c.dream === "all_blue") heal *= 1.5;
+        if (c.flags?.allBlue) heal *= 1.25;
         heal *= game.crewMods?.foodMul || 1;
       }
       if (d.costsLife) {
@@ -18753,23 +21723,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const p = game.player;
     const fid = ITEMS[itemId].fruit;
     const f = FRUITS[fid];
-    removeItem(game, itemId, 1);
     if (c.fruit) {
-      c.fruitsEaten = (c.fruitsEaten || 0) + 1;
-      game.ui.toast("YOUR BODY IS TEARING APART", "You ate a second Devil Fruit.", "#ff5252");
-      game.fx.impactFrame(0.3);
-      p.hp = 0;
-      setTimeout(() => game.lives.loseLife(`Ate a second Devil Fruit (${f.name}). The body cannot hold two.`), 1200);
-      return true;
+      game.log(`You already carry the power of the ${FRUITS[c.fruit]?.name}. A second Devil Fruit would tear your body apart \u2014 better to keep it, sell it, or give it to someone worthy.`, "#ff8a80");
+      return false;
     }
+    removeItem(game, itemId, 1);
     c.fruit = fid;
     c.fruitMastery = 0;
     c.fruitsEaten = 1;
     const first = f.techniques[0];
     if (first && !c.techniques.includes(first.id)) c.techniques.push(first.id);
-    const slot = c.hotbar.findIndex((h2, i) => !h2 && i < 6);
+    const slot2 = c.hotbar.findIndex((h2, i) => !h2 && i < 6);
     if (first) {
-      if (slot >= 0) c.hotbar[slot] = first.id;
+      if (slot2 >= 0) c.hotbar[slot2] = first.id;
       else if (c.hotbar.length < 6) c.hotbar.push(first.id);
     }
     refreshPlayer(game);
@@ -18783,48 +21749,137 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
 
   // src/game/progression.js
+  var KEYS = ["str", "agi", "end", "vit", "wil"];
+  var WEAPON_KINDS = { fists: "Fists", legs: "Legs", sword: "Swords", gun: "Guns", staff: "Staffs", axe: "Axes" };
   var Progression = class {
     constructor(game) {
       this.game = game;
       game.on("playerHit", (target, dmg) => this.onPlayerHit(target, dmg));
       game.on("knockout", (a, att) => this.onKnockout(a, att));
+      game.on("playerEvaded", (att) => this.onEvade(att));
+      game.on("playerBlocked", (att) => this.onBlocked(att));
+      game.on("parry", (att) => this.onParry(att));
+      game.on("playerHurt", (att, n) => this.onHurt(att, n));
+      game.on("playerGotUp", () => this.train("wil", 10, true));
+      game.on("questDone", () => this.checkDream());
+      let t = 0;
+      game.on("tick", (dt) => {
+        if ((t += dt) > 5) {
+          t = 0;
+          this.checkDream();
+        }
+      });
     }
     get char() {
       return this.game.state?.char;
     }
+    /** How much a fight against this actor is worth (0 = nothing to learn). */
+    worth(a) {
+      const p = this.game.player;
+      if (!a || !a.power || !p) return 0;
+      return threatFactor(a.power(), p.power());
+    }
+    // ------------------------------------------------------------ fighting
     onPlayerHit(target, dmg) {
       const g = this.game, p = g.player, c = this.char;
       if (!c || !target.d) return;
-      const tf = threatFactor(target.power(), p.power());
-      if (tf <= 0) {
+      const tf2 = this.worth(target);
+      if (tf2 <= 0) {
         if (!this.weakNote) {
           this.weakNote = true;
-          g.hint("weak", "Beating up weak opponents teaches you nothing. Grow by training, by fighting people stronger than you, and by overcoming the great foes of each island.");
+          g.hint("weak", "Beating up weak opponents teaches you nothing. You grow by training and by fighting people who are a real threat to you.");
         }
         return;
       }
       const frac = Math.min(0.3, dmg / target.d.maxHp);
-      const src = p.action?.def?.source || "";
-      let gain = frac * tf * 6;
+      const def = p.action?.def || {};
+      const src = def.source || "";
+      let gain = frac * tf2 * 6;
       if (c.traits.includes("born_fighter")) gain *= 1.15;
       if (src.startsWith("fruit") && c.fruit) {
         this.addFruitMastery(gain * 0.9);
-      } else if (src.startsWith("haki") || p.armament) {
-        this.addHaki(p.armament ? "armament" : getAbility(p.action?.def?.id)?.hakiType || "armament", gain * 0.5);
-        if (!src.startsWith("haki")) this.addStyleMastery(p.style, gain * 0.6);
+        this.train("wil", frac * tf2 * 18);
+      } else if (src.startsWith("haki")) {
+        this.addHaki(getAbility(def.id)?.hakiType || "armament", gain * 0.5);
+        this.train("wil", frac * tf2 * 20);
       } else {
-        let m = gain;
-        if (c.dream === "swordsman" && STYLES[p.style]?.weapon === "sword") m *= 1.2;
-        this.addStyleMastery(p.style, m);
+        this.addStyleMastery(p.style, gain);
+        const kind = weaponKindOf(p, def);
+        this.addWeaponMastery(kind, gain * 1.2);
+        this.train(kind === "gun" ? "agi" : "str", frac * tf2 * 40);
+        if (p.armament) this.addHaki("armament", gain * 0.5);
+        this.maybeAwaken("armament", tf2);
       }
       if (p.observation) this.addHaki("observation", gain * 0.3);
+    }
+    onEvade(att) {
+      const tf2 = this.worth(att);
+      if (tf2 <= 0) return;
+      const c = this.char;
+      c.stats.evades = (c.stats.evades || 0) + 1;
+      this.train("agi", 4 * tf2);
+      this.maybeAwaken("observation", tf2);
+    }
+    onBlocked(att) {
+      const tf2 = this.worth(att);
+      if (tf2 > 0) this.train("end", 3 * tf2);
+    }
+    onParry(att) {
+      const tf2 = this.worth(att);
+      if (tf2 <= 0) return;
+      this.train("agi", 3 * tf2);
+      this.train("end", 2 * tf2);
+      this.maybeAwaken("observation", tf2 * 1.5);
+    }
+    onHurt(att, n) {
+      const p = this.game.player;
+      const tf2 = att ? this.worth(att) : 0.5;
+      if (tf2 <= 0 || !p.d) return;
+      this.train("vit", Math.min(0.4, n / p.d.maxHp) * 45 * tf2);
+    }
+    // ------------------------------------------------------------ training
+    /** Add practice to an attribute; it rises by itself once practice is enough. */
+    train(key2, amt, silent) {
+      const c = this.char;
+      if (!c || !(amt > 0)) return;
+      c.train = c.train || { str: 0, agi: 0, end: 0, vit: 0, wil: 0 };
+      c.train[key2] = (c.train[key2] || 0) + amt;
+      c.recent = c.recent || {};
+      c.recent[key2] = (c.recent[key2] || 0) * 0.995 + amt;
+      let need = 14 + c.attrs[key2] * 3.5;
+      let ups = 0;
+      while (c.train[key2] >= need && c.attrs[key2] < ATTR_CAP) {
+        c.train[key2] -= need;
+        c.attrs[key2] += 1;
+        ups++;
+        need = 14 + c.attrs[key2] * 3.5;
+      }
+      if (ups) {
+        refreshPlayer(this.game);
+        if (!silent || ups) this.game.log(`${ATTRS[key2].name} +${ups} (${c.attrs[key2]})`, "#a5d6a7");
+      }
+    }
+    /** Progress (0..1) towards the next point of an attribute, for the UI. */
+    trainProgress(key2) {
+      const c = this.char;
+      if (!c) return 0;
+      return Math.min(1, (c.train?.[key2] || 0) / (14 + c.attrs[key2] * 3.5));
     }
     addStyleMastery(style, amt) {
       const p = this.game.player;
       const before = p.masteries[style] || 0;
       const after = Math.min(100, before + amt);
       p.masteries[style] = after;
-      if (Math.floor(after / 5) > Math.floor(before / 5)) this.game.log(`${STYLES[style]?.name || style} mastery: ${Math.floor(after)}`, "#90caf9");
+      if (Math.floor(after / 5) > Math.floor(before / 5)) this.game.log(`${STYLES[style]?.name || style} mastery ${Math.floor(after)}`, "#90caf9");
+    }
+    addWeaponMastery(kind, amt) {
+      const c = this.char;
+      c.weaponMastery = c.weaponMastery || {};
+      const before = c.weaponMastery[kind] || 0;
+      const after = Math.min(100, before + amt);
+      c.weaponMastery[kind] = after;
+      this.game.player.weaponMastery = c.weaponMastery;
+      if (Math.floor(after / 5) > Math.floor(before / 5)) this.game.log(`${WEAPON_KINDS[kind] || kind} mastery ${Math.floor(after)} \u2014 your ${(WEAPON_KINDS[kind] || kind).toLowerCase()} hit harder`, "#90caf9");
     }
     addFruitMastery(amt) {
       const g = this.game, p = g.player, c = this.char;
@@ -18837,58 +21892,105 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (had.has(id)) continue;
         if (!c.techniques.includes(id)) c.techniques.push(id);
         const d = getAbility(id);
-        g.ui.toast("NEW TECHNIQUE", `${d.icon || ""} ${d.name}`, "#ffab91");
-        g.log(`Your mastery of the ${FRUITS[c.fruit].name} reveals a new technique: ${d.name}. Assign it in Skills (K).`, "#ffab91");
+        if (needsHaki(d) && !hakiKnown(c)) continue;
+        g.ui.toast("NEW TECHNIQUE", d.name, "#ffab91");
+        g.log(`Your mastery of the ${FRUITS[c.fruit].name} reveals a new technique: ${d.name}. Put it on your hotbar from the Skills tab.`, "#ffab91");
         const empty = c.hotbar.findIndex((x) => !x);
-        if (empty >= 0) c.hotbar[empty] = id;
+        if (empty >= 0 && empty < 6) c.hotbar[empty] = id;
         else if (c.hotbar.length < 6) c.hotbar.push(id);
+      }
+    }
+    // ---------------------------------------------------------------- haki
+    /** Armament / Observation stir by themselves in a hard fight, once you're ready. */
+    maybeAwaken(type, tf2) {
+      const c = this.char;
+      if (!c || c.haki[type] || tf2 < 0.6) return;
+      const perk = 1 + (this.game.state.legacy?.perks?.haki || 0) * 0.5;
+      if (type === "armament") {
+        const wm = Math.max(0, ...Object.values(c.weaponMastery || {}));
+        const str = c.attrs.str;
+        if (str < 22 && wm < 35) return;
+        const sure = str >= 45 || wm >= 80;
+        const chance = (4e-3 + Math.max(0, str - 22) * 6e-4 + Math.max(0, wm - 35) * 3e-4) * perk;
+        if (sure || Math.random() < chance) this.awakenHaki("armament", 3, "In the middle of the fight your arm turns black as iron. Something in you has hardened.");
+      } else if (type === "observation") {
+        const agi = c.attrs.agi;
+        if (agi < 22 && (c.stats.evades || 0) < 60) return;
+        const sure = agi >= 45 || (c.stats.evades || 0) >= 400;
+        const chance = (0.015 + Math.max(0, agi - 22) * 2e-3) * perk;
+        if (sure || Math.random() < chance) this.awakenHaki("observation", 3, "For a heartbeat you hear your opponent's next move before it happens.");
       }
     }
     addHaki(type, amt, cap = 100) {
       const g = this.game, c = this.char;
       if (!c.haki[type]) return;
-      const mul = 1 + (g.state.legacy?.perks?.haki || 0) * 0.25 * (c.race === "skypiean" && type === "observation" ? 2 : 1);
+      const mul = (1 + (g.state.legacy?.perks?.haki || 0) * 0.25) * (c.race === "skypiean" && type === "observation" ? 2 : 1);
       const before = c.haki[type];
       c.haki[type] = Math.min(cap, before + amt * mul);
-      if (Math.floor(c.haki[type] / 10) > Math.floor(before / 10)) g.log(`${type[0].toUpperCase() + type.slice(1)} Haki: level ${Math.floor(c.haki[type])}`, "#ce93d8");
+      if (Math.floor(c.haki[type] / 10) > Math.floor(before / 10)) g.log(`${type[0].toUpperCase() + type.slice(1)} Haki level ${Math.floor(c.haki[type])}`, "#ce93d8");
     }
     awakenHaki(type, level = 5, how = "") {
       const g = this.game, c = this.char, p = g.player;
       if (c.haki[type]) return false;
+      const first = !c.haki.armament && !c.haki.observation && !c.haki.conqueror;
       c.haki[type] = level;
       p.hakiSkill = c.haki;
       p.haki = p.d.maxHaki;
       const names = { armament: "ARMAMENT HAKI", observation: "OBSERVATION HAKI", conqueror: "CONQUEROR'S HAKI" };
       g.ui.toast(names[type], how || "Your will takes shape.", type === "conqueror" ? "#ff5252" : "#ce93d8");
-      g.log(`${names[type]} awakened! Toggle it with ${type === "armament" ? "R" : type === "observation" ? "T" : "G"}.`, "#ce93d8");
+      g.fx.impactFrame?.(0.12);
+      g.log(`${names[type]} awakened. Press ${type === "armament" ? "R" : type === "observation" ? "T" : "G"} to use it.${first ? " Haki draws on a new spirit bar under your stamina; it refills when you rest it." : ""}`, "#ce93d8");
       g.emit("hakiAwakened", type);
       persist(g);
       return true;
     }
-    /** Attribute points to spend. */
+    // ---------------------------------------------------------- breakthroughs
+    /**
+     * A great victory: your body surges. `points` attribute gains go where you
+     * have been training lately (no points to spend by hand).
+     */
     breakthrough(points, why) {
       const g = this.game, c = this.char;
-      if (c.dream === "warrior") points += 1;
-      c.unspent = (c.unspent || 0) + points;
-      g.ui.toast("BREAKTHROUGH!", `${why ? why + " \u2014 " : ""}+${points} attribute point${points > 1 ? "s" : ""} (open Character: C)`, "#ffd54f");
+      if (!c || !(points > 0)) return;
+      const recent = c.recent || {};
+      const gains = {};
+      for (let i = 0; i < points; i++) {
+        const weights = KEYS.map((k) => [k, 1 + (recent[k] || 0)]);
+        let total = weights.reduce((s, [, w]) => s + w, 0);
+        let r = Math.random() * total;
+        let pick2 = "vit";
+        for (const [k, w] of weights) {
+          if ((r -= w) <= 0) {
+            pick2 = k;
+            break;
+          }
+        }
+        if (c.attrs[pick2] >= ATTR_CAP) pick2 = KEYS.find((k) => c.attrs[k] < ATTR_CAP) || pick2;
+        c.attrs[pick2] = Math.min(ATTR_CAP, c.attrs[pick2] + 1);
+        gains[pick2] = (gains[pick2] || 0) + 1;
+        if (recent[pick2]) recent[pick2] *= 0.6;
+      }
+      refreshPlayer(g);
+      const txt = Object.entries(gains).map(([k, v]) => `${ATTRS[k].short} +${v}`).join("  ");
+      g.ui.toast("BREAKTHROUGH", `${why ? why + " \u2014 " : ""}${txt}`, "#ffd54f");
+      g.log(`Breakthrough${why ? ` (${why})` : ""}: ${txt}`, "#ffd54f");
       g.audio?.sfx("breakthrough");
     }
-    raiseAttr(key, amt = 1, silent) {
+    raiseAttr(key2, amt = 1, silent) {
       const g = this.game, c = this.char;
-      c.attrs[key] = Math.min(ATTR_CAP, (c.attrs[key] || 0) + amt);
-      if (!silent) g.log(`${key.toUpperCase()} +${amt} (${c.attrs[key]})`, "#a5d6a7");
+      c.attrs[key2] = Math.min(ATTR_CAP, (c.attrs[key2] || 0) + amt);
+      if (!silent) g.log(`${ATTRS[key2]?.name || key2} +${amt} (${c.attrs[key2]})`, "#a5d6a7");
       refreshPlayer(g);
     }
     addBounty(amount, why) {
       const g = this.game, c = this.char;
       if (c.faction === "marine") return;
-      if (c.dream === "king") amount *= 1.15;
       amount = Math.round(amount / 1e3) * 1e3;
       if (amount <= 0) return;
       const first = !c.bounty;
       c.bounty = (c.bounty || 0) + amount;
       if (c.faction !== "pirate") c.faction = "pirate";
-      g.ui.toast(first ? "WANTED!" : "BOUNTY RAISED", `${formatBerries(c.bounty)}${why ? " \u2014 " + why : ""}`, "#ffd54f");
+      g.ui.toast(first ? "WANTED" : "BOUNTY RAISED", `${formatBerries(c.bounty)}${why ? " \u2014 " + why : ""}`, "#ffd54f");
       g.emit("bountyChanged", c.bounty, first);
     }
     onKnockout(a, att) {
@@ -18897,45 +21999,47 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!c || !att || !att.isPlayer || a.isPlayer || a.faction === "player") return;
       c.stats.kills = (c.stats.kills || 0) + 1;
       if (a.npcId) c.defeated[a.npcId] = (c.defeated[a.npcId] || 0) + 1;
-      const tf = threatFactor(a.power(), p.power());
+      const tf2 = threatFactor(a.power(), p.power());
+      if (tf2 > 0.8) this.train("wil", 6 * tf2);
       if (a.faction === "marine" || a.faction === "cp") {
         const b = a.bountyValue ?? Math.round(4e3 * Math.pow(Math.max(1, a.tier), 2.4));
         this.addBounty(b, a.boss ? `defeated ${a.name}` : null);
       }
-      if (a.bountyValue && a.faction !== "marine" && a.faction !== "cp" && a.infamy) this.addBounty(a.bountyValue, `defeated ${a.name}`);
+      if (a.bountyValue && a.faction !== "marine" && a.faction !== "cp" && a.infamy && c.faction !== "marine" && c.faction !== "civilian") this.addBounty(a.bountyValue, `defeated ${a.name}`);
       if (a.reward) earn(g, a.reward, `from ${a.name}`);
       if (a.boss && !c.bosses.includes(a.npcId || a.name)) {
         c.bosses.push(a.npcId || a.name);
         this.breakthrough(a.breakthrough ?? 3, `Defeated ${a.name}`);
-        const style = p.style;
-        this.addStyleMastery(style, 4);
+        this.addStyleMastery(p.style, 4);
         if (c.fruit) this.addFruitMastery(4);
         g.emit("bossDefeated", a);
         this.checkDream();
         persist(g);
-      } else if (a.named && tf > 0.3) {
+      } else if (a.named && tf2 > 0.3) {
         this.breakthrough(1, `Defeated ${a.name}`);
-      } else if (tf > 0.9 && Math.random() < 0.15 * tf) {
+      } else if (tf2 > 0.9 && Math.random() < 0.15 * tf2) {
         this.breakthrough(1, "A hard-fought victory");
       }
     }
+    // ---------------------------------------------------------------- legends
+    /** Check every Legend (the old "dream" hook name is kept for callers). */
     checkDream() {
       const g = this.game, c = this.char;
-      if (c.dreamDone) return;
-      const d = c.dream;
-      let done6 = false;
-      if (d === "warrior" && (c.bosses || []).length >= 12) done6 = true;
-      if (d === "world_map" && (c.discovered || []).length >= 60) done6 = true;
-      if (d === "liberation" && (c.liberated || []).length >= 6) done6 = true;
-      if (d === "true_history" && (c.flags.poneglyphsRead || 0) >= 8) done6 = true;
-      if (d === "swordsman" && (c.bosses || []).includes("mihawk")) done6 = true;
-      if (d === "admiral" && c.marineRank === "Admiral") done6 = true;
-      if (d === "king" && c.flags.laughTale) done6 = true;
-      if (d === "all_blue" && c.flags.allBlue) done6 = true;
-      if (done6) {
-        c.dreamDone = true;
-        g.ui.toast("DREAM FULFILLED", `${DREAMS[d].icon} ${DREAMS[d].name}`, "#ffd54f");
-        g.log("You have become a legend. You may keep sailing \u2014 or retire from the Menu and pass your will on.", "#ffd54f");
+      if (!c) return;
+      c.legends = c.legends || [];
+      for (const [id, L2] of Object.entries(LEGENDS)) {
+        if (c.legends.includes(id)) continue;
+        let ok = false;
+        try {
+          ok = L2.check(c);
+        } catch {
+          ok = false;
+        }
+        if (!ok) continue;
+        c.legends.push(id);
+        g.ui.toast("A NEW LEGEND", L2.name, "#ffd54f");
+        g.log(`Legend: ${L2.name}. The whole sea will remember this. (Journal, Legends)`, "#ffd54f");
+        g.emit("legend", id);
         persist(g);
       }
     }
@@ -19042,10 +22146,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const ui = this.game.ui;
       if (ui.dialogueEl) ui.dialogueEl.remove();
       const speaker = a.node.speaker ?? (a.npc ? a.npc.name : "");
-      const title = a.node.speaker ? "" : a.npc?.title || "";
+      const title2 = a.node.speaker ? "" : a.npc?.title || "";
       const textEl = h("div.text");
       const choicesEl = h("div.choices");
-      const el = h("div.dialogue", speaker ? h("div.who", speaker, title ? h("small", title) : null) : null, textEl, choicesEl, h("div.cont", a.choices.length ? "" : "SPACE / click to continue"));
+      const el = h("div.dialogue", speaker ? h("div.who", speaker, title2 ? h("small", title2) : null) : null, textEl, choicesEl, h("div.cont", a.choices.length ? "" : "SPACE / click to continue"));
       el.addEventListener("mousedown", (e) => {
         if (e.target.tagName !== "BUTTON") this.advance();
       });
@@ -19242,13 +22346,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.progression.checkDream();
       persist(g);
     }
-    event(type, key, arg) {
+    event(type, key2, arg) {
       for (const { id, s, def } of this.active()) {
         const st = def.stages[s.stage];
         const goal = st?.goal;
         if (!goal) continue;
         if (goal.type === type) {
-          if (type === "defeat" && (goal.npc === key || goal.any && goal.any.includes(key))) {
+          if (type === "defeat" && (goal.npc === key2 || goal.any && goal.any.includes(key2))) {
             if (goal.count) {
               s.n = (s.n || 0) + 1;
               if (s.n < goal.count) {
@@ -19258,9 +22362,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
               s.n = 0;
             }
             this.next(id);
-          } else if (type === "reach" && goal.island === key && !goal.spot) this.next(id);
-          else if (type === "item" && goal.item === key && count(this.char, key) >= (goal.n || 1)) this.next(id);
-          else if (type === "event" && goal.event === key) this.next(id);
+          } else if (type === "reach" && goal.island === key2 && !goal.spot) this.next(id);
+          else if (type === "item" && goal.item === key2 && count(this.char, key2) >= (goal.n || 1)) this.next(id);
+          else if (type === "event" && goal.event === key2) this.next(id);
         }
       }
     }
@@ -19630,13 +22734,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.log("Your vivre cards are all whole.", "#b0bec5");
         return false;
       }
-      const key = "lifeRestored_" + doc.id;
-      if (c.flags[key]) {
+      const key2 = "lifeRestored_" + doc.id;
+      if (c.flags[key2]) {
         g.log(`${doc.name} has already done all they can for you.`, "#b0bec5");
         return false;
       }
       if (!pay(g, this.lifePrice(doc))) return false;
-      c.flags[key] = true;
+      c.flags[key2] = true;
       c.lives += 1;
       g.ui.toast("A VIVRE CARD MENDS", `${doc.name} brought you back from the brink.`, "#a5d6a7");
       persist(g);
@@ -19775,7 +22879,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (empty >= 0) c.hotbar[empty] = id;
       else if (c.hotbar.length < 6) c.hotbar.push(id);
       refreshPlayer(g);
-      g.ui.toast("TECHNIQUE LEARNED", `${d.icon || ""} ${d.name}`, "#90caf9");
+      g.ui.toast("TECHNIQUE LEARNED", d.name, "#90caf9");
       persist(g);
       return true;
     }
@@ -19934,18 +23038,178 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   };
 
+  // src/game/reputation.js
+  var REP_TIERS = [
+    { min: 75, name: "Hero of the Seas", color: "#2e7d32" },
+    { min: 50, name: "Honourable", color: "#388e3c" },
+    { min: 25, name: "Respected", color: "#558b2f" },
+    { min: 8, name: "Well-liked", color: "#689f38" },
+    { min: -7, name: "Unknown", color: "#6d4c33" },
+    { min: -24, name: "Suspicious", color: "#e65100" },
+    { min: -59, name: "Outlaw", color: "#c62828" },
+    { min: -100, name: "Villain", color: "#b71c1c" }
+  ];
+  var OUTLAW_AT = -25;
+  var ENLIST_REP = 25;
+  function repTier(rep = 0) {
+    return REP_TIERS.find((t) => rep >= t.min) || REP_TIERS[REP_TIERS.length - 1];
+  }
+  var CRIMINALS = /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "rival"]);
+  var SEA_TIER = { east_blue: 1, north_blue: 1.2, west_blue: 1.2, south_blue: 1.2, paradise: 3, calm_belt: 3, sky: 3, undersea: 4, red_line: 5, new_world: 6 };
+  function changeRep(game, delta, why, { quiet = false } = {}) {
+    const c = game.state?.char;
+    if (!c || !delta) return 0;
+    const before = c.reputation || 0;
+    c.reputation = clamp(Math.round((before + delta) * 10) / 10, -100, 100);
+    const d = Math.round((c.reputation - before) * 10) / 10;
+    if (!d) return 0;
+    if (!quiet) game.log(`Reputation ${d > 0 ? "+" : ""}${d}${why ? " \u2014 " + why : ""}`, d > 0 ? "#a5d6a7" : "#ef9a9a");
+    const t0 = repTier(before), t1 = repTier(c.reputation);
+    if (t0 !== t1 && !quiet) game.ui.toast(t1.name.toUpperCase(), "Your reputation has changed.", d > 0 ? "#a5d6a7" : "#ef9a9a");
+    if (c.reputation <= OUTLAW_AT && before > OUTLAW_AT && c.faction === "civilian") {
+      c.faction = "pirate";
+      game.ui.banner("OUTLAW", "Word of your crimes has spread", "The world now sees you as a pirate. The Marines will not take you \u2014 and some of them will come for you.", 5);
+      if (!c.bounty) game.progression?.addBounty(2e6, "crimes against the people");
+    }
+    if (c.faction === "marine" && d < 0 && c.reputation < 0) {
+      c.flags.formerMarine = c.marineRank;
+      c.faction = "civilian";
+      c.marineRank = null;
+      c.marineMission = null;
+      game.ui.toast("DISCHARGED", "The Marines will not tolerate a criminal in their ranks.", "#ff5252");
+      game.emit("marineRankChanged", null);
+    }
+    game.emit("reputationChanged", c.reputation, d);
+    return d;
+  }
+  function raiseAlarm(game, x, y, crime = "Thief") {
+    const p = game.player;
+    let n = 0;
+    for (const a of game.actors) {
+      if (a === p || a.state !== "idle" || !a.controller) continue;
+      const guard = a.faction === "marine" || a.faction === "guard" || a.def?.guard;
+      if (!guard || game.world.distance(a.x, a.y, x, y) > 22) continue;
+      a.aggroPlayer = true;
+      a.provoked = true;
+      a.controller.target = p;
+      a.controller.state = "chase";
+      n++;
+    }
+    game.fx.text(x, y - 2.2, `${crime.toUpperCase()}!`, "#ff5252", 0.5, { life: 1.6 });
+    return n;
+  }
+  function seaTier(game) {
+    const sea = game.currentIsland?.def?.sea || game.world?.seaId;
+    return SEA_TIER[sea] || 1;
+  }
+  function stealChance(game, bonus = 0) {
+    const p = game.player;
+    const stealth = p.buffs?.some((b) => b.mods?.stealth) ? 0.35 : 0;
+    return clamp(0.3 + p.attrs.agi * 6e-3 + stealth + bonus, 0.08, 0.92);
+  }
+  function stealFromShop(game, itemId, building, price = 0) {
+    const c = game.state.char, p = game.player;
+    const expensive = price > 2e4 ? -0.2 : price > 5e3 ? -0.1 : 0;
+    const key2 = shopKey(building);
+    if (Math.random() < stealChance(game, expensive)) {
+      addItem(game, itemId, 1);
+      changeRep(game, -6, "stole from a shop");
+      game.progression?.train("agi", 1.5);
+      c.stats.thefts = (c.stats.thefts || 0) + 1;
+      game.audio?.sfx("coin");
+      return "ok";
+    }
+    c.flags["banned_" + key2] = game.env.day;
+    changeRep(game, -9, "caught stealing");
+    raiseAlarm(game, p.x, p.y, "Thief");
+    game.ui.toast("CAUGHT!", "The shopkeeper grabs your wrist and screams for the guards.", "#ff5252");
+    return "caught";
+  }
+  var shopKey = (b) => b?.id || b?.name || "shop";
+  var bannedFromShop = (game, b) => game.state.char.flags["banned_" + shopKey(b)] === game.env.day;
+  function robHouse(game, b) {
+    const c = game.state.char, p = game.player;
+    const key2 = "robbed_" + (b.id || `${Math.round(b.x)}_${Math.round(b.y)}`);
+    if (c.world.chests[key2]) {
+      game.log("You already cleaned this place out.", "#b0bec5");
+      return;
+    }
+    c.world.chests[key2] = true;
+    const rng = new RNG(key2 + c.runSeed);
+    const tier = seaTier(game);
+    const berries = Math.round(rng.range(150, 900) * tier);
+    earn(game, berries, "stolen");
+    if (rng.chance(0.3)) addItem(game, rng.pick(["meat", "rice_ball", "sake", "gold_coins", "bandage", "jewels"]), 1);
+    changeRep(game, -10, "robbed a house");
+    c.stats.thefts = (c.stats.thefts || 0) + 1;
+    if (!rng.chance(stealChance(game))) {
+      raiseAlarm(game, p.x, p.y, "Burglar");
+      changeRep(game, -3, "seen breaking in", { quiet: true });
+    }
+    game.audio?.sfx("treasure");
+    persist(game);
+  }
+  function pickpocket(game, a) {
+    const c = game.state.char;
+    const key2 = "pp_" + (a.talk?.seed ?? a.name);
+    if (c.flags[key2] === game.env.day) {
+      game.log("Their pockets are already empty.", "#b0bec5");
+      return "empty";
+    }
+    c.flags[key2] = game.env.day;
+    if (Math.random() < stealChance(game, 0.1)) {
+      const amount = Math.round((20 + Math.random() * 180) * seaTier(game));
+      earn(game, amount, `lifted from ${a.name}`);
+      changeRep(game, -4, "picked a pocket");
+      game.progression?.train("agi", 1);
+      c.stats.thefts = (c.stats.thefts || 0) + 1;
+      return "ok";
+    }
+    changeRep(game, -6, "caught picking a pocket");
+    raiseAlarm(game, a.x, a.y, "Pickpocket");
+    return "caught";
+  }
+  function installReputation(game) {
+    game.reputation = { change: (d, why, o) => changeRep(game, d, why, o), tier: () => repTier(game.state?.char?.reputation || 0) };
+    game.on("questDone", (id) => {
+      const d = questDef(id);
+      if (!d || d.noRep) return;
+      const r = d.rewards || {};
+      let amount = d.rep ?? (r.liberate ? 15 : d.kind === "story" || d.kind === "main" ? 6 : 4);
+      if (amount) changeRep(game, amount, r.liberate ? `freed ${r.liberate}` : d.name);
+    });
+    game.on("knockout", (a, att) => {
+      const c = game.state?.char, p = game.player;
+      if (!c || !p || a.isPlayer || a.spar || a.def?.duel) return;
+      if (att && !att.isPlayer && (att.crewId || att.summonedBy?.isPlayer)) att = p;
+      if (!att?.isPlayer) return;
+      if (a.faction === "civilian" && !a.def?.hostile) changeRep(game, -6, "beat up an innocent");
+      else if ((a.faction === "marine" || a.faction === "cp") && c.faction !== "marine" && !c.bounty) changeRep(game, -3, "attacked the Marines");
+      else if (CRIMINALS.has(a.faction)) {
+        const tf2 = threatFactor(a.power(), p.power());
+        if (a.boss || a.named) changeRep(game, a.boss ? 4 : 2, `defeated ${a.name}`);
+        else if (tf2 > 0.3) changeRep(game, 0.5, null, { quiet: true });
+      }
+    });
+    game.on("shipSunk", (s) => {
+      if (!s.lastHitBy?.isPlayer) return;
+      if (s.faction === "civilian") changeRep(game, -10, "sank a merchant ship");
+      else if (s.faction === "pirate") changeRep(game, 2, "sank a pirate ship", { quiet: true });
+    });
+  }
+
   // src/data/shops.js
   var STOCK = {
-    general: ["meat", "rice_ball", "fish_stew", "bandage", "antidote", "sake", "bandana", "headband", "den_den_mushi"],
-    tavern: ["meat", "rice_ball", "fish_stew", "sake", "tangerine"],
-    weapons_blue: ["wooden_sword", "rusty_katana", "cutlass", "slingshot", "flintlock", "bo_staff", "woodsman_axe"],
-    weapons_grand: ["cutlass", "fine_katana", "marine_saber", "flintlock", "marine_rifle", "bo_staff", "woodsman_axe", "shigure"],
-    weapons_new: ["fine_katana", "marine_saber", "marine_rifle", "shigure", "seastone_cuffs"],
-    outfitter: ["bandana", "tricorne", "captain_hat", "cowboy_hat", "pink_hat", "goggles", "headband", "captain_coat", "red_cloak"],
+    general: ["meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "antidote", "sake", "bandana", "headband", "lucky_charm", "shell_bracelet", "den_den_mushi"],
+    tavern: ["meat", "rice_ball", "fish_stew", "sake", "tangerine", "mango"],
+    weapons_blue: ["wooden_sword", "rusty_katana", "cutlass", "slingshot", "flintlock", "bo_staff", "woodsman_axe", "padded_vest", "leather_jerkin", "leather_bracers", "iron_ring"],
+    weapons_grand: ["cutlass", "fine_katana", "marine_saber", "flintlock", "marine_rifle", "bo_staff", "woodsman_axe", "shigure", "leather_jerkin", "chain_shirt", "hand_wraps", "iron_ring"],
+    weapons_new: ["fine_katana", "marine_saber", "marine_rifle", "shigure", "seastone_cuffs", "chain_shirt", "samurai_armor", "hand_wraps", "sea_prism_charm"],
+    outfitter: ["bandana", "tricorne", "captain_hat", "cowboy_hat", "pink_hat", "goggles", "headband", "captain_coat", "red_cloak", "haramaki", "red_sash", "gold_earrings", "shell_bracelet", "lucky_charm"],
     navigator: ["log_pose", "den_den_mushi"],
     navigator_grand: ["log_pose", "new_world_log_pose", "den_den_mushi"],
     skypiea: ["impact_dial", "flame_dial", "breath_dial", "flash_dial", "rice_ball", "fish_stew"],
-    fishman: ["fish_stew", "sea_king_steak", "pearl", "bandage", "antidote"],
+    fishman: ["fish_stew", "sea_king_steak", "pearl", "pearl_necklace", "bandage", "antidote"],
     loguetown_swords: ["wooden_sword", "rusty_katana", "cutlass", "fine_katana", "yubashiri"],
     black_market: ["rumble_ball", "seastone", "seastone_cuffs", "cola", "jewels"]
   };
@@ -19979,109 +23243,800 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const sea = island?.def?.sea || "east_blue";
     let p = (d.price || 0) * (SEA_PRICE[sea] || 1);
     if (char?.traits?.includes("silver_tongue")) p *= 0.9;
-    if (char?.liberated?.includes(island?.name) && char.dream === "liberation") p *= 0.5;
+    if (char?.liberated?.includes(island?.name)) p *= 0.75;
     return Math.max(1, Math.round(p / 5) * 5);
   }
 
+  // src/game/crew.js
+  var CREW_ROLES = {
+    fighter: { name: "Combatant", icon: "skills", desc: "Fights beside you on land." },
+    swordsman: { name: "Swordsman", icon: "sword", desc: "Fights beside you on land with a blade." },
+    navigator: { name: "Navigator", icon: "log_pose", desc: "Log Pose sets twice as fast, storms are announced early, +10% sailing speed." },
+    cook: { name: "Cook", icon: "food", desc: "Food heals 50% more; stamina regenerates at sea." },
+    doctor: { name: "Doctor", icon: "doctor", desc: "Patches you up after every battle (heals 30% when combat ends)." },
+    shipwright: { name: "Shipwright", icon: "shipwright", desc: "Repairs your ship slowly while sailing." },
+    sniper: { name: "Sniper", icon: "gun", desc: "Cannons deal 30% more damage." },
+    musician: { name: "Musician", icon: "bar", desc: "Stamina regenerates 25% faster." },
+    archaeologist: { name: "Archaeologist", icon: "library", desc: "Can read Poneglyphs." },
+    helmsman: { name: "Helmsman", icon: "ship", desc: "Your ship turns 25% faster." }
+  };
+  var MAX_FOLLOWERS = 2;
+  function computeMods(members) {
+    const has2 = (r) => members.some((m) => m.role === r);
+    return {
+      speedMul: has2("navigator") ? 1.1 : 1,
+      logMul: has2("navigator") ? 2 : 1,
+      foodMul: has2("cook") ? 1.5 : 1,
+      seaStamina: has2("cook"),
+      doctor: has2("doctor"),
+      repair: has2("shipwright") ? 0.6 : 0,
+      cannonMul: has2("sniper") ? 1.3 : 1,
+      staminaMul: has2("musician") ? 1.25 : 1,
+      poneglyphs: has2("archaeologist"),
+      turnMul: has2("helmsman") ? 1.25 : 1
+    };
+  }
+  var Crew = class {
+    constructor(game) {
+      this.game = game;
+      game.crew = this;
+      game.crewMods = computeMods([]);
+      this.followers = /* @__PURE__ */ new Map();
+      this.t = 0;
+      this.wasFighting = false;
+      game.on("characterStart", () => {
+        this.followers.clear();
+        this.refresh();
+      });
+      game.on("tick", (dt) => this.tick(dt));
+      game.on("enterZone", () => this.followers.clear());
+      game.on("leaveZone", () => this.followers.clear());
+      game.on("bossDefeated", () => {
+        for (const m of this.members()) m.level = Math.min((m.baseLevel || m.level) + 40, (m.level || 5) + 1.5);
+      });
+    }
+    get char() {
+      return this.game.state?.char;
+    }
+    members() {
+      return this.char?.crew || [];
+    }
+    has(id) {
+      return this.members().some((m) => m.id === id);
+    }
+    count() {
+      return this.members().length;
+    }
+    hasRole(role) {
+      return this.members().some((m) => m.role === role);
+    }
+    refresh() {
+      this.game.crewMods = computeMods(this.members());
+    }
+    canRecruit(def) {
+      const c = this.char;
+      if (!c || !def.recruit || this.has(def.id)) return false;
+      if (def.boss && !c.bosses.includes(def.id) && def.recruit.afterDefeat) return false;
+      try {
+        if (def.recruit.requires && !def.recruit.requires(c, this.game)) return false;
+      } catch {
+        return false;
+      }
+      return true;
+    }
+    /** Add the "Join my crew" choice to an NPC's dialogue tree. */
+    decorate(tree, npc) {
+      const def = npc?.def;
+      if (!def?.recruit || !tree?.nodes) return tree;
+      const startId = tree.start || "start";
+      const start2 = tree.nodes[startId];
+      if (!start2) return tree;
+      const r = def.recruit;
+      const role = CREW_ROLES[r.role] || CREW_ROLES.fighter;
+      const cost = r.cost || 0;
+      const nodes = { ...tree.nodes };
+      const choice = {
+        text: `"Join my crew!"${cost ? ` (${formatBerries(cost)})` : ""}`,
+        if: () => this.canRecruit(def),
+        next: "__recruit"
+      };
+      nodes[startId] = { ...start2, choices: [choice, ...start2.choices || []] };
+      if (!start2.choices || !start2.choices.length) nodes[startId].choices.push({ text: "Goodbye.", end: true });
+      nodes.__recruit = {
+        text: r.pitch || `"You want me as your ${role.name.toLowerCase()}? ...Alright. I'm in!"`,
+        choices: [
+          { text: `Welcome aboard! (${role.name}: ${role.desc})`, do: () => {
+            if (cost && !pay(this.game, cost)) {
+              this.game.log("Not enough berries.", "#ff8a80");
+              return;
+            }
+            this.recruit(def, npc);
+          }, end: true },
+          { text: "On second thought...", end: true }
+        ]
+      };
+      return { ...tree, nodes };
+    }
+    recruit(def, actor) {
+      const c = this.char, g = this.game;
+      if (!c || this.has(def.id)) return;
+      const m = {
+        id: def.id,
+        name: def.name,
+        title: def.title,
+        role: def.recruit.role,
+        fighter: def.recruit.fighter ?? (def.recruit.role === "fighter" || def.recruit.role === "swordsman"),
+        level: def.level ?? 6,
+        baseLevel: def.level ?? 6,
+        joined: g.env.day,
+        follow: true
+      };
+      const fighters = this.members().filter((x) => x.fighter && x.follow).length;
+      if (m.fighter && fighters >= MAX_FOLLOWERS) m.follow = false;
+      c.crew.push(m);
+      this.refresh();
+      const role = CREW_ROLES[m.role];
+      g.ui.toast("NEW NAKAMA!", `${m.name} joins your crew as ${role?.name || m.role}.`, "#ffd54f");
+      g.log(`${m.name} joined the crew. ${role?.desc || ""} (Crew: U)`, "#ffe082");
+      g.audio?.sfx("breakthrough");
+      if (actor && actor.alive) {
+        if (m.fighter && m.follow) this.adopt(actor, m);
+        else {
+          actor.alive = false;
+          g.fx.burst(actor.x, actor.y - 0.6, 10, { color: ["#ffe082"], speed: 3, g: 0, life: 0.4, kind: "star" });
+        }
+      }
+      g.emit("crewJoined", def.id);
+      persist(g);
+    }
+    dismiss(id) {
+      const c = this.char;
+      const i = c.crew.findIndex((m2) => m2.id === id);
+      if (i < 0) return;
+      const [m] = c.crew.splice(i, 1);
+      const a = this.followers.get(id);
+      if (a) a.alive = false;
+      this.followers.delete(id);
+      c.flags["leftCrew_" + id] = true;
+      this.refresh();
+      this.game.log(`${m.name} leaves the crew. "Take care of yourself, captain."`, "#b0bec5");
+      persist(this.game);
+    }
+    setFollow(id, on) {
+      const m = this.members().find((x) => x.id === id);
+      if (!m) return false;
+      if (on && this.members().filter((x) => x.fighter && x.follow && x !== m).length >= MAX_FOLLOWERS) return false;
+      m.follow = !!on;
+      if (!on) {
+        const a = this.followers.get(id);
+        if (a) a.alive = false;
+        this.followers.delete(id);
+      }
+      return true;
+    }
+    adopt(a, m) {
+      const g = this.game;
+      a.faction = "player";
+      a.crewId = m.id;
+      a.persistent = true;
+      a.aggroPlayer = false;
+      a.provoked = false;
+      a.boss = false;
+      a.talk = a.def?.dialogue ? { def: a.def } : null;
+      a.nameColor = "#ffe082";
+      a.showName = true;
+      a.controller = new AIController({ kind: "follower", skill: 0.45, moves: a.def?.moves || [], ranged: a.def?.ranged });
+      a.stationary = false;
+      for (const list of g.spawner.populated.values()) {
+        const k = list.indexOf(a);
+        if (k >= 0) list.splice(k, 1);
+      }
+      this.followers.set(m.id, a);
+    }
+    spawnFollower(m) {
+      const g = this.game, p = g.player;
+      const def = npcDef(m.id);
+      if (!def) return null;
+      const a = makeNPC({ ...def, hostile: false, boss: false, level: Math.round(m.level || def.level || 6), when: void 0 }, p.x - 1, p.y + 0.8);
+      a.game = g;
+      g.addActor(a);
+      this.adopt(a, m);
+      return a;
+    }
+    tick(dt) {
+      const g = this.game, p = g.player, c = this.char;
+      if (!c || !p) return;
+      this.t -= dt;
+      if (this.t <= 0) {
+        this.t = 0.5;
+        for (const m of this.members()) {
+          if (!m.fighter || !m.follow) continue;
+          let a = this.followers.get(m.id);
+          if (a && !a.alive) {
+            this.followers.delete(m.id);
+            a = null;
+          }
+          if (!a && p.mode === "foot" && p.state === "idle") a = this.spawnFollower(m);
+          if (a && a.state === "knocked" && !p.inCombat) {
+            a.state = "idle";
+            a.hp = Math.round(a.d.maxHp * 0.3);
+            g.fx.text(a.x, a.y - 2, "Still standing!", "#ffe082", 0.35);
+          }
+        }
+      }
+      const mods = g.crewMods;
+      const fighting = !!p.inCombat;
+      if (this.wasFighting && !fighting && mods.doctor && p.state === "idle" && p.hp < p.d.maxHp) {
+        const heal = Math.round(p.d.maxHp * 0.3);
+        p.hp = Math.min(p.d.maxHp, p.hp + heal);
+        g.fx.text(p.x, p.y - 1.6, `+${heal}`, "#69f0ae", 0.45);
+        const doc = this.members().find((m) => m.role === "doctor");
+        g.log(`${doc?.name || "Your doctor"} patches you up.`, "#a5d6a7");
+      }
+      this.wasFighting = fighting;
+      if (p.mode === "sail" && p.ship && !p.ship.sunk) {
+        if (mods.repair && p.ship.hull < p.ship.maxHull) p.ship.hull = Math.min(p.ship.maxHull, p.ship.hull + mods.repair * dt);
+        if (mods.seaStamina) p.stamina = Math.min(p.d.maxStamina, p.stamina + 4 * dt);
+      }
+    }
+  };
+
+  // src/ui/crewPanel.js
+  var JR_OPTS = {
+    skull: [["classic", "Classic"], ["grin", "Grinning"], ["eyepatch", "Scarred"]],
+    bones: [["cross", "Crossbones"], ["swords", "Crossed swords"], ["anchor", "Anchor"]],
+    accessory: [["none", "None"], ["strawhat", "Straw hat"], ["bandana", "Bandana"], ["tricorne", "Tricorne"], ["horns", "Horns"], ["crown", "Crown"], ["flames", "Flames"], ["halo", "Halo"]],
+    color: [["#f5f6fa", "White"], ["#efe2c4", "Bone"], ["#e53935", "Red"], ["#f1c40f", "Gold"], ["#64b5f6", "Sky"]]
+  };
+  function flagCanvas(jr, w = 180, hgt = 130, marine2 = false) {
+    const cv = h("canvas.flag", { width: w * 2, height: hgt * 2, style: { width: w + "px", height: hgt + "px" } });
+    const g = cv.getContext("2d");
+    g.fillStyle = marine2 ? "#f5f6fa" : "#111";
+    g.fillRect(0, 0, w * 2, hgt * 2);
+    g.setTransform(hgt * 1.7, 0, 0, hgt * 1.7, w, hgt * 1.08);
+    if (marine2) drawMarineEmblem(g, 1);
+    else drawJollyRoger(g, jr || {}, 1, "#111");
+    return cv;
+  }
+  function designer(state, onChange) {
+    const row = (label, key2) => h(
+      "div.opt-row",
+      h("div.opt-label", label),
+      h("div.swatches", JR_OPTS[key2].map(([v, name]) => key2 === "color" ? h("button" + (state.jr[key2] === v ? ".on" : ""), { title: name, style: { background: v }, on: { click: () => {
+        state.jr[key2] = v;
+        onChange();
+      } } }) : h("button.chip" + (state.jr[key2] === v ? ".on" : ""), { on: { click: () => {
+        state.jr[key2] = v;
+        onChange();
+      } } }, name)))
+    );
+    return h(
+      "div.jr-designer",
+      flagCanvas(state.jr, 220, 150),
+      h("div", row("Skull", "skull"), row("Behind it", "bones"), row("On its head", "accessory"), row("Colour", "color"))
+    );
+  }
+  function hoist(game) {
+    const c = game.state.char;
+    for (const s of game.ships) if (s.owner === "player") s.jr = c.jr;
+  }
+  function openCrew(game) {
+    const body = h("div.crew");
+    const entry = game.ui.openPanel(body, { wide: true, id: "crew" });
+    if (!entry) return;
+    const c = game.state.char;
+    const found = { name: "", jr: { skull: "classic", bones: "cross", accessory: "none", color: "#f5f6fa" } };
+    const render2 = () => {
+      clear(body);
+      if (c.faction === "marine") {
+        body.append(h("div.crew-head", flagCanvas(null, 120, 86, true), h(
+          "div",
+          h("h2", `${c.marineRank} ${c.name}`),
+          h("p", "You sail under the flag of the World Government. Marines cannot found a pirate crew \u2014 resign first if the sea calls you another way."),
+          fleetInfo(game)
+        )));
+      } else if (!c.crewName) {
+        if (!found.name) found.name = `${c.name.split(" ")[0]} Pirates`;
+        const input = h("input.name", { value: found.name, maxLength: 28, spellcheck: false, on: { input: (e) => {
+          found.name = e.target.value;
+        } } });
+        body.append(
+          h("h2", "Crew"),
+          h(
+            "div.card.found",
+            h("h3", "Found a pirate crew"),
+            h("p", "Every great pirate started with a name and a flag. Choose your crew's name and design your Jolly Roger \u2014 it will fly from the sails of every ship you own."),
+            h("p.muted", "Raising a Jolly Roger makes you a pirate in the eyes of the world. The Marines won't take a pirate captain, and a pirate with a bounty is hunted."),
+            h("div.opt-row", h("div.opt-label", "Crew name"), input),
+            designer(found, render2),
+            h(
+              "div",
+              { style: { display: "flex", justifyContent: "flex-end", marginTop: "10px" } },
+              h("button.btn.red.big", { on: { click: async () => {
+                const name = (found.name || "").trim().slice(0, 28);
+                if (!name) return;
+                if (!await game.ui.ask({ title: `Raise the flag of the ${name}?`, text: "From now on you sail as a pirate captain.", ok: "Raise the flag" })) return;
+                c.crewName = name;
+                c.jr = { ...found.jr, name };
+                if (c.faction === "civilian") c.faction = "pirate";
+                hoist(game);
+                game.ui.toast("A NEW PIRATE CREW", `The ${name} set sail!`, "#ffd54f");
+                game.log(`You founded the ${name}. Your Jolly Roger flies from your ship.`, "#ffe082");
+                game.emit("crewFounded", name);
+                persist(game);
+                render2();
+              } } }, "Raise the flag")
+            )
+          )
+        );
+      } else {
+        body.append(h("div.crew-head", flagCanvas(c.jr, 120, 86), h(
+          "div",
+          h("h2", `The ${c.crewName}`),
+          h("p.muted", `Captain ${c.name} \xB7 ${game.crew.count() + 1} aboard`),
+          h("button.btn", { on: { click: () => openJollyRoger(game) } }, uiImg("jolly_roger", 18), "Redesign the Jolly Roger")
+        )));
+      }
+      roster(game, body, render2);
+    };
+    render2();
+  }
+  function fleetInfo(game) {
+    const c = game.state.char;
+    const ships = game.ships.filter((s) => s.owner === "player" && !s.sunk);
+    const escorts = game.ships.filter((s) => s.escortOf && !s.sunk);
+    return h(
+      "div",
+      h("p", `Ships under your command: ${ships.map((s) => s.name).join(", ") || "none"}${escorts.length ? ` \xB7 escorts: ${escorts.length}` : ""}`),
+      h("p.muted", c.marineRank && /Captain|Commodore|Admiral/.test(c.marineRank) ? "Your escort ships sail with you and Marines under your command fight at your side." : "From the rank of Captain, escort ships sail with you; officers command Marines who fight beside them.")
+    );
+  }
+  function roster(game, body, rerender) {
+    const crew = game.crew.members();
+    body.append(h("h3", "Nakama"));
+    body.append(h("p.muted", 'Companions you recruit in the world. Look for "Join my crew!" when you talk to people \u2014 a navigator, a cook, a doctor\u2026 Up to two fighters follow you on land; everyone else stays with the ship and helps from there.'));
+    if (!crew.length) body.append(h("p", "Your crew is just you, for now. Every great pirate started alone."));
+    const list = h("div.list");
+    for (const m of crew) {
+      const role = CREW_ROLES[m.role] || CREW_ROLES.fighter;
+      const actions = [];
+      if (m.fighter) {
+        actions.push(h("button.btn" + (m.follow ? ".green" : ""), {
+          on: { click: () => {
+            if (!game.crew.setFollow(m.id, !m.follow)) game.log("Only two companions can follow you on land at once.", "#ff8a80");
+            rerender();
+          } }
+        }, m.follow ? "Following" : "Stays aboard"));
+      }
+      actions.push(h("button.btn.red", { on: { click: async () => {
+        if (await game.ui.ask({ title: "Part ways?", text: `${m.name} will leave the crew and will not come back.`, ok: "Part ways", danger: true })) {
+          game.crew.dismiss(m.id);
+          rerender();
+        }
+      } } }, "Part ways"));
+      list.appendChild(h(
+        "div.row-item",
+        uiImg(role.icon || "crew", 28),
+        h("div.grow", h("b", `${m.name}`), h("div.sub", `${role.name}${m.title ? " \xB7 " + m.title : ""} \xB7 Lv ${Math.round(m.level || 1)} \xB7 joined day ${m.joined || 1}`), h("div.sub", role.desc)),
+        ...actions
+      ));
+    }
+    body.appendChild(list);
+    const mods = game.crewMods;
+    const perks = [];
+    if (mods.speedMul > 1) perks.push("+10% sailing speed");
+    if (mods.logMul > 1) perks.push("Log Pose sets twice as fast");
+    if (mods.foodMul > 1) perks.push("+50% healing from food");
+    if (mods.doctor) perks.push("Healed after every battle");
+    if (mods.repair) perks.push("Ship repairs itself at sea");
+    if (mods.cannonMul > 1) perks.push("+30% cannon damage");
+    if (mods.staminaMul > 1) perks.push("+25% stamina regeneration");
+    if (mods.poneglyphs) perks.push("Can read Poneglyphs");
+    if (mods.turnMul > 1) perks.push("Ship turns 25% faster");
+    if (perks.length) body.append(h("h3", "Crew bonuses"), h("p", perks.join(" \xB7 ")));
+  }
+  function openJollyRoger(game) {
+    const c = game.state.char;
+    const body = h("div.jolly");
+    const entry = game.ui.openPanel(body, { wide: false, id: "jolly" });
+    if (!entry) return;
+    if (c.faction === "marine") {
+      body.append(h("h2", "Colours"), flagCanvas(null, 220, 150, true), h("p", "As a Marine you sail under the gull of the World Government."));
+      return;
+    }
+    if (!c.crewName) {
+      body.append(
+        h("h2", "Jolly Roger"),
+        flagCanvas({ skull: "classic", bones: "cross", accessory: "none", color: "#333" }, 220, 150),
+        h("p", "You have no crew \u2014 and no flag \u2014 yet. Found a pirate crew from the Crew menu (U) to design your Jolly Roger. It will fly from the sails of your ships."),
+        h("button.btn.gold", { on: { click: () => {
+          game.ui.closePanel(entry);
+          openCrew(game);
+        } } }, uiImg("crew", 18), "Open the Crew menu")
+      );
+      return;
+    }
+    const state = { jr: { skull: "classic", bones: "cross", accessory: "none", color: "#f5f6fa", ...c.jr } };
+    const render2 = () => {
+      clear(body);
+      body.append(
+        h("h2", `Flag of the ${c.crewName}`),
+        designer(state, render2),
+        h(
+          "div",
+          { style: { display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "10px" } },
+          h("button.btn", { on: { click: () => game.ui.closePanel(entry) } }, "Cancel"),
+          h("button.btn.gold", { on: { click: () => {
+            c.jr = { ...state.jr, name: c.crewName };
+            hoist(game);
+            persist(game);
+            game.ui.closePanel(entry);
+            game.log("Your new Jolly Roger is hoisted.", "#ffe082");
+          } } }, "Hoist it")
+        )
+      );
+    };
+    render2();
+  }
+
   // src/ui/panels.js
-  var berriesLine = (c) => h("div.berries", `${formatBerries(c.berries)}`);
+  var berriesLine = (c) => h("div.berries", uiImg("berries", 20), ` ${formatBerries(c.berries)}`);
+  var HOTBAR = 6;
+  var USABLE = /* @__PURE__ */ new Set(["food", "medicine"]);
+  var title = (s) => s[0].toUpperCase() + s.slice(1);
+  function hotbarEntry(id, c) {
+    if (!id) return null;
+    if (id.startsWith("item:")) {
+      const iid = id.slice(5), d2 = ITEMS[iid];
+      if (!d2) return null;
+      return { kind: "item", id: iid, def: d2, name: d2.name, qty: count(c, iid), img: (px) => itemImg(iid, px) };
+    }
+    const d = getAbility(id);
+    if (!d) return null;
+    return { kind: "skill", id, def: d, name: d.name, img: (px) => skillImg(d, px) };
+  }
+  function ensureHotbar(c) {
+    c.hotbar = c.hotbar || [];
+    for (let i = 0; i < HOTBAR; i++) if (c.hotbar[i] === void 0) c.hotbar[i] = null;
+    c.hotbar.length = HOTBAR;
+    return c.hotbar;
+  }
+  function assignHotbar(game, slot2, payload) {
+    const c = game.state.char;
+    const hb = ensureHotbar(c);
+    if (!payload) return;
+    if (payload.startsWith("slot:")) {
+      const j = +payload.slice(5);
+      if (j === slot2 || j < 0 || j >= HOTBAR) return;
+      [hb[slot2], hb[j]] = [hb[j], hb[slot2]];
+    } else {
+      let id = payload;
+      if (payload.startsWith("skill:")) id = payload.slice(6);
+      else if (payload.startsWith("item:") || payload.startsWith("inv:")) {
+        const iid = payload.slice(payload.indexOf(":") + 1);
+        const d = ITEMS[iid];
+        if (!d || !USABLE.has(d.type)) {
+          game.log("Only food and medicine can go on the hotbar.", "#ff8a80");
+          return;
+        }
+        id = "item:" + iid;
+      } else return;
+      for (let k = 0; k < HOTBAR; k++) if (hb[k] === id) hb[k] = null;
+      hb[slot2] = id;
+    }
+    refreshPlayer(game);
+    game.audio?.sfx("equip");
+  }
+  function hotbarStrip(game, sel, rerender) {
+    const c = game.state.char;
+    const hb = ensureHotbar(c);
+    const slots = [];
+    for (let i = 0; i < HOTBAR; i++) {
+      const e = hotbarEntry(hb[i], c);
+      const slot2 = h(
+        "div.hb-slot" + (e ? "" : ".empty") + (sel.slot === i ? ".sel" : ""),
+        {
+          draggable: !!e,
+          title: e ? `${e.name}${e.def.desc ? "\n" + e.def.desc : ""}
+
+Drag to move \xB7 right-click to clear` : "Empty \u2014 drag a technique or food here",
+          on: {
+            dragstart: (ev) => {
+              ev.dataTransfer.setData("text/plain", "slot:" + i);
+              ev.dataTransfer.effectAllowed = "move";
+              slot2.classList.add("dragging");
+            },
+            dragend: () => slot2.classList.remove("dragging"),
+            dragover: (ev) => {
+              ev.preventDefault();
+              slot2.classList.add("over");
+            },
+            dragleave: () => slot2.classList.remove("over"),
+            drop: (ev) => {
+              ev.preventDefault();
+              assignHotbar(game, i, ev.dataTransfer.getData("text/plain"));
+              sel.pick = null;
+              sel.slot = null;
+              rerender();
+            },
+            click: () => {
+              if (sel.pick) {
+                assignHotbar(game, i, sel.pick);
+                sel.pick = null;
+                sel.slot = null;
+              } else if (sel.slot !== null && sel.slot !== i) {
+                assignHotbar(game, i, "slot:" + sel.slot);
+                sel.slot = null;
+              } else sel.slot = sel.slot === i ? null : i;
+              rerender();
+            },
+            contextmenu: (ev) => {
+              ev.preventDefault();
+              hb[i] = null;
+              refreshPlayer(game);
+              rerender();
+            }
+          }
+        },
+        h("span.k", String(i + 1)),
+        e ? e.img(34) : null,
+        e ? h("span.nm", e.name) : null,
+        e && e.kind === "item" ? h("span.qty", String(e.qty)) : null,
+        e ? h("button.x", { title: "Clear", on: { click: (ev) => {
+          ev.stopPropagation();
+          hb[i] = null;
+          refreshPlayer(game);
+          rerender();
+        } } }, "\xD7") : null
+      );
+      slots.push(slot2);
+    }
+    const hint = sel.pick ? "Now click a slot to put it there." : sel.slot !== null ? `Slot ${sel.slot + 1} selected \u2014 click a technique or food to fill it, or another slot to swap.` : "Drag techniques and food onto the hotbar, drag slots to rearrange them. Right-click a slot to clear it.";
+    return h("div.hotbar-edit", h("div.hb-row", slots), h("div.hb-hint", hint));
+  }
+  function dragSource(el, payload) {
+    el.draggable = true;
+    el.addEventListener("dragstart", (ev) => {
+      ev.dataTransfer.setData("text/plain", payload);
+      ev.dataTransfer.effectAllowed = "copyMove";
+    });
+    return el;
+  }
+  var CATS = [
+    { id: "all", name: "All", icon: "inventory", types: null },
+    { id: "gear", name: "Gear", icon: "sword", types: ["weapon", "hat", "coat", "accessory"] },
+    { id: "food", name: "Food & Medicine", icon: "food", types: ["food", "medicine"] },
+    { id: "fruit", name: "Devil Fruits", icon: "fruit", types: ["fruit"] },
+    { id: "other", name: "Other", icon: "key", types: ["key", "dial", "pose", "treasure", "material"] }
+  ];
+  var TYPE_ORDER = ["weapon", "hat", "coat", "accessory", "food", "medicine", "fruit", "dial", "pose", "key", "treasure", "material"];
+  var TYPE_NAME = { weapon: "Weapon", hat: "Headgear", coat: "Body", accessory: "Accessory", food: "Food", medicine: "Medicine", fruit: "Devil Fruit", dial: "Dial", pose: "Eternal Pose", key: "Key item", treasure: "Treasure", material: "Material" };
+  function statLine(d) {
+    const parts = [];
+    if (d.type === "weapon") parts.push(`${title(d.kind || "weapon")} \xB7 power \xD7${d.power}${d.grade ? " \xB7 " + d.grade : ""}`);
+    if (d.armor) parts.push(`Defence +${Math.round(d.armor * 100)}%`);
+    if (d.bonus) parts.push(Object.entries(d.bonus).map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${ATTRS[k]?.short || k.toUpperCase()}`).join("  "));
+    if (d.heal) parts.push(d.heal > 9999 ? "Full health" : `+${d.heal} health`);
+    if (d.stamina) parts.push(`+${d.stamina} stamina`);
+    if (d.buff) parts.push(`${d.buff.name} for ${d.buff.dur}s`);
+    return parts.join(" \xB7 ");
+  }
   function openInventory(game) {
     const ui = game.ui;
     const c = game.state.char;
-    const body = h("div");
+    const body = h("div.inv");
     const entry = ui.openPanel(body, { wide: true, id: "inventory" });
     if (!entry) return;
-    const render = () => {
+    const st = { cat: "all", selected: null, hb: { pick: null, slot: null } };
+    const render2 = () => {
       clear(body);
       const eq = c.equipped;
-      const eqRow = (label, id) => {
+      eq.accessories = eq.accessories || [];
+      const slotBox = (key2, label, id, accepts, iconName, disabled) => {
         const d = ITEMS[id];
-        return h("div.row-item", h("span.ico", d ? d.icon : "\u2014"), h("div.grow", h("b", label), h("div.sub", d ? d.name : "nothing")));
+        const box = h("div.eq-slot" + (d ? ".filled" : "") + (disabled ? ".disabled" : "") + (st.selected === id && d ? ".sel" : ""), {
+          title: d ? `${d.name}
+${statLine(d)}
+
+Click for details \xB7 right-click to take off` : `${label} \u2014 empty`,
+          on: {
+            click: () => {
+              if (d) {
+                st.selected = id;
+                render2();
+              }
+            },
+            contextmenu: (ev) => {
+              ev.preventDefault();
+              if (d) {
+                unequipSlot(game, key2);
+                render2();
+              }
+            },
+            dragover: (ev) => {
+              ev.preventDefault();
+              box.classList.add("over");
+            },
+            dragleave: () => box.classList.remove("over"),
+            drop: (ev) => {
+              ev.preventDefault();
+              const data = ev.dataTransfer.getData("text/plain");
+              if (!data.startsWith("inv:")) return;
+              const iid = data.slice(4), dd2 = ITEMS[iid];
+              if (slotKind(dd2) !== accepts) {
+                game.log(`That doesn't go in the ${label.toLowerCase()} slot.`, "#ff8a80");
+                render2();
+                return;
+              }
+              if (!isEquipped(c, iid) || accepts === "acc") equip(game, iid, accepts === "acc" ? { slot: +key2.slice(3) } : {});
+              st.selected = iid;
+              render2();
+            }
+          }
+        }, d ? itemImg(id, 40) : uiImg(iconName, 34, ".ghost"), h("span.lbl", d ? d.name : label));
+        if (d) dragSource(box, "eq:" + key2);
+        return box;
       };
-      const weapons = (eq.weapons || []).map((id) => ITEMS[id]?.name).join(" + ") || "bare hands";
-      const left = h(
-        "div",
-        h("h3", "Equipped"),
+      const ws = eq.weapons || [];
+      const swords = ITEMS[ws[0]]?.kind === "sword";
+      const doll = h(
+        "div.doll",
         h(
-          "div.list",
-          h("div.row-item", h("span.ico", "\u2694"), h("div.grow", h("b", "Weapon"), h("div.sub", weapons))),
-          eqRow("Hat", eq.hat),
-          eqRow("Coat", eq.coat)
+          "div.doll-col",
+          slotBox("weapon0", "Weapon", ws[0], "weapon", "weapon_slot"),
+          slotBox("weapon1", "2nd sword", ws[1], "weapon", "weapon_slot", !swords),
+          slotBox("weapon2", "3rd sword", ws[2], "weapon", "weapon_slot", !swords)
         ),
-        h("p.muted", "Tip: equip up to three swords for the Two and Three Sword Styles."),
-        h("h3", "Purse"),
-        berriesLine(c),
-        c.fruit ? h("div", h("h3", "Devil Fruit"), h("p", `${FRUITS[c.fruit].name} \u2014 mastery ${Math.floor(c.fruitMastery)}`)) : null
+        h("div.doll-mid", portrait(equippedLook(c), 120, 150)),
+        h(
+          "div.doll-col",
+          slotBox("head", "Head", eq.hat, "head", "head_slot"),
+          slotBox("body", "Body", eq.coat, "body", "body_slot"),
+          ...Array.from({ length: ACC_SLOTS }, (_, i) => slotBox("acc" + i, `Accessory ${i + 1}`, eq.accessories[i], "acc", "accessory_slot"))
+        )
       );
-      const groups9 = {};
+      const p = game.player, dd = p.d;
+      const summary = h(
+        "div.eq-summary",
+        h("div", h("b", "Health "), dd.maxHp),
+        h("div", h("b", "Defence "), `${Math.round(dd.def * 100)}%`, armorOf(c) ? h("span.muted", ` (armour ${Math.round(armorOf(c) * 100)}%)`) : null),
+        h("div", h("b", "Damage "), `\xD7${dd.dmg.toFixed(2)}`),
+        h("div", h("b", "Speed "), dd.speed.toFixed(1))
+      );
+      const fruitNote = c.fruit ? h("div.fruit-note", itemImg("fruit_" + c.fruit, 26), h("div", h("b", FRUITS[c.fruit].name), h("div.sub", `Eaten \xB7 mastery ${Math.floor(c.fruitMastery)} \xB7 you can never swim again`))) : null;
+      const left = h("div.inv-left", h("h3", "Equipment"), doll, summary, fruitNote, h("div.purse", h("h3", "Purse"), berriesLine(c)));
+      const tabs = h("div.tabs.icon-tabs", CATS.map((k) => h("button" + (st.cat === k.id ? ".on" : ""), { on: { click: () => {
+        st.cat = k.id;
+        render2();
+      } } }, uiImg(k.icon, 16), k.name)));
+      const cat = CATS.find((k) => k.id === st.cat);
+      const seen = /* @__PURE__ */ new Map();
       for (const it of c.inventory) {
         const d = ITEMS[it.id];
-        if (!d) continue;
-        (groups9[d.type] = groups9[d.type] || []).push({ it, d });
+        if (!d || cat.types && !cat.types.includes(d.type)) continue;
+        const ex = seen.get(it.id);
+        if (ex) {
+          ex.qty += it.qty || 1;
+          if (it.heirloom) ex.heirloom = it;
+        } else seen.set(it.id, { id: it.id, d, qty: it.qty || 1, heirloom: it.heirloom ? it : null });
       }
-      const order = ["weapon", "hat", "coat", "food", "medicine", "dial", "fruit", "pose", "key", "treasure", "material"];
-      const names = { weapon: "Weapons", hat: "Hats", coat: "Coats", food: "Food", medicine: "Medicine", dial: "Dials", fruit: "Devil Fruits", pose: "Eternal Poses", key: "Key items", treasure: "Treasure", material: "Materials" };
-      const right = h("div");
-      if (!c.inventory.length) right.appendChild(h("p", "Your bag is empty."));
-      for (const type of order) {
-        if (!groups9[type]) continue;
-        right.appendChild(h("h3", names[type]));
-        const list = h("div.list");
-        for (const { it, d } of groups9[type]) {
-          const isEq = eq.hat === it.id || eq.coat === it.id || (eq.weapons || []).includes(it.id);
-          const actions = [];
-          if (["weapon", "hat", "coat"].includes(d.type)) actions.push(h("button.btn" + (isEq ? ".red" : ""), { on: { click: () => {
-            equip(game, it.id);
-            render();
-          } } }, isEq ? "Unequip" : "Equip"));
-          if (d.type === "food" || d.type === "medicine") actions.push(h("button.btn.green", { on: { click: () => {
-            useItem(game, it.id);
-            render();
-          } } }, d.type === "food" ? "Eat" : "Use"));
-          if (d.type === "pose") actions.push(h("button.btn", { on: { click: () => {
-            useItem(game, it.id);
-            render();
-          } } }, c.logPose?.eternal === it.id ? "Following" : "Follow"));
-          if (d.type === "dial") actions.push(h("button.btn", { on: { click: () => {
-            useItem(game, it.id);
-            render();
-          } } }, "Learn"));
-          if (d.type === "fruit") actions.push(h("button.btn.red", { on: { click: () => confirmEat(game, it.id, () => {
-            ui.closePanel(entry);
-          }) } }, "Eat\u2026"));
-          list.appendChild(h(
-            "div.row-item",
-            { title: d.desc || "" },
-            h("span.ico", d.icon),
-            h(
-              "div.grow",
-              h("b", d.name),
-              it.heirloom ? h("span.tag", `heirloom of ${it.from}`) : null,
-              (it.qty || 1) > 1 ? h("span.tag", "\xD7" + it.qty) : null,
-              h("div.sub", d.grade ? `${d.grade} \xB7 power \xD7${d.power}` : d.heal ? `+${d.heal} HP` : d.bonus ? Object.entries(d.bonus).map(([k, v]) => `+${v} ${k.toUpperCase()}`).join(" ") : (d.desc || "").slice(0, 90))
-            ),
-            ...actions
-          ));
+      const items9 = [...seen.values()].sort((a, b) => TYPE_ORDER.indexOf(a.d.type) - TYPE_ORDER.indexOf(b.d.type) || a.d.name.localeCompare(b.d.name));
+      const grid = h("div.inv-grid", {
+        on: {
+          dragover: (ev) => ev.preventDefault(),
+          drop: (ev) => {
+            ev.preventDefault();
+            const data = ev.dataTransfer.getData("text/plain");
+            if (data.startsWith("eq:")) {
+              unequipSlot(game, data.slice(3));
+              render2();
+            }
+          }
         }
-        right.appendChild(list);
+      });
+      for (const x of items9) {
+        const worn = isEquipped(c, x.id);
+        const tile = h("div.inv-tile" + (st.selected === x.id ? ".sel" : "") + (worn ? ".worn" : ""), {
+          title: `${x.d.name}${statLine(x.d) ? "\n" + statLine(x.d) : ""}`,
+          on: {
+            click: () => {
+              st.selected = x.id;
+              render2();
+            },
+            dblclick: () => {
+              quickUse(x.id);
+            }
+          }
+        }, itemImg(x.id, 40), x.qty > 1 ? h("span.qty", String(x.qty)) : null, worn ? h("span.worn-tag", "E") : null, x.heirloom ? h("span.heir") : null);
+        dragSource(tile, "inv:" + x.id);
+        grid.appendChild(tile);
       }
-      body.appendChild(h("h2", "Inventory"));
-      body.appendChild(h("div.grid2", left, right));
+      if (!items9.length) grid.appendChild(h("p.muted", { style: { gridColumn: "1 / -1" } }, st.cat === "all" ? "Your bag is empty." : "Nothing here."));
+      const sd = ITEMS[st.selected];
+      let details;
+      if (sd && count(c, st.selected)) {
+        const id = st.selected;
+        const worn = isEquipped(c, id);
+        const acts = [];
+        if (slotKind(sd)) acts.push(h("button.btn" + (worn ? ".red" : ".gold"), { on: { click: () => {
+          equip(game, id);
+          render2();
+        } } }, worn ? "Take off" : "Equip"));
+        if (USABLE.has(sd.type)) {
+          acts.push(h("button.btn.green", { on: { click: () => {
+            useItem(game, id);
+            render2();
+          } } }, sd.type === "food" ? "Eat" : "Use"));
+          acts.push(h("button.btn", { on: { click: () => {
+            st.hb.pick = "item:" + id;
+            st.hb.slot = null;
+            render2();
+          } } }, "Put on hotbar"));
+        }
+        if (sd.type === "pose") acts.push(h("button.btn", { on: { click: () => {
+          useItem(game, id);
+          render2();
+        } } }, c.logPose?.eternal === id ? "Following" : "Follow the needle"));
+        if (sd.type === "dial") acts.push(h("button.btn", { disabled: c.techniques.includes(sd.ability), on: { click: () => {
+          useItem(game, id);
+          render2();
+        } } }, c.techniques.includes(sd.ability) ? "Learned" : "Learn to use"));
+        if (sd.type === "fruit") {
+          if (c.fruit) acts.push(h("span.muted", "You have already eaten a Devil Fruit \u2014 a body can only hold one. Keep it, sell it, or give it away."));
+          else acts.push(h("button.btn.red", { on: { click: () => confirmEat(game, id, () => render2()) } }, "Eat\u2026"));
+        }
+        const heir = c.inventory.find((i) => i.id === id && i.heirloom);
+        details = h(
+          "div.inv-details",
+          h("div.det-head", itemImg(id, 56), h("div", h("h4", sd.name), h("div.sub", `${TYPE_NAME[sd.type] || sd.type}${count(c, id) > 1 ? " \xB7 \xD7" + count(c, id) : ""}${worn ? " \xB7 equipped" : ""}`), heir ? h("div.sub", `Heirloom of ${heir.from}`) : null)),
+          statLine(sd) ? h("div.det-stats", statLine(sd)) : null,
+          sd.type === "fruit" ? fruitInfo(sd) : h("p", sd.desc || ""),
+          h("div.det-actions", acts)
+        );
+      } else {
+        details = h("div.inv-details.empty", h("p.muted", "Select an item to see it. Drag gear onto the equipment slots, and food onto the hotbar. Double-click to equip or eat."));
+      }
+      const right = h("div.inv-right", tabs, grid, details);
+      body.append(h("h2", "Inventory"), h("div.inv-cols", left, right), h("h3", "Hotbar"), hotbarStrip(game, st.hb, render2));
     };
-    render();
+    const quickUse = (id) => {
+      const d = ITEMS[id];
+      if (slotKind(d)) equip(game, id);
+      else if (USABLE.has(d.type)) useItem(game, id);
+      else if (d.type === "fruit" && !c.fruit) {
+        confirmEat(game, id, () => render2());
+        return;
+      }
+      st.selected = id;
+      render2();
+    };
+    render2();
+  }
+  function fruitInfo(d) {
+    const f = FRUITS[d.fruit];
+    if (!f) return h("p", d.desc || "");
+    return h(
+      "div",
+      h("p", h("b", `${f.en} \xB7 ${f.type}`), " ", h("span.tag", { style: { background: FRUIT_RARITY[f.rarity]?.color, color: "#222" } }, FRUIT_RARITY[f.rarity]?.label)),
+      h("p", f.desc)
+    );
   }
   function confirmEat(game, itemId, done6) {
     const c = game.state.char;
     const d = ITEMS[itemId];
     const f = FRUITS[d.fruit];
+    if (c.fruit) {
+      game.log("A body can only hold one Devil Fruit.", "#ff8a80");
+      return;
+    }
     const body = h(
       "div",
       { style: { textAlign: "center" } },
+      itemImg(itemId, 72),
       h("h2", f.name),
-      h("p", h("b", `${f.en} \xB7 ${f.type}`), " ", h("span.tag", { style: { background: FRUIT_RARITY[f.rarity]?.color, color: "#222" } }, FRUIT_RARITY[f.rarity]?.label)),
-      h("p", f.desc),
-      h("p", "Techniques: " + f.techniques.map((t) => `${t.name} (${t.mastery})`).join(", ")),
-      c.fruit ? h("p", { style: { color: "#b71c1c", fontWeight: 800 } }, `You already ate the ${FRUITS[c.fruit].name}. Eating a second Devil Fruit will tear your body apart and KILL you.`) : h("p", { style: { color: "#b71c1c", fontWeight: 800 } }, "You will never swim again. The sea will become your grave if you fall in."),
+      fruitInfo(d),
+      h("p", "Techniques: " + f.techniques.map((t) => `${t.name} (mastery ${t.mastery})`).join(", ")),
+      h("p", { style: { color: "#b71c1c", fontWeight: 800 } }, "You will never swim again \u2014 the sea becomes your grave if you fall in. And a body can only ever hold ONE Devil Fruit."),
       h(
         "div",
         { style: { display: "flex", gap: "10px", justifyContent: "center" } },
@@ -20099,116 +24054,173 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const ui = game.ui;
     const c = game.state.char;
     const p = game.player;
-    const body = h("div");
+    const body = h("div.charsheet");
     const entry = ui.openPanel(body, { wide: true, id: "character" });
     if (!entry) return;
-    const render = () => {
+    const render2 = () => {
       clear(body);
       const race = RACES[c.race];
+      const legacy = game.state.legacy;
+      const tier = repTier(c.reputation || 0);
+      const rep = c.reputation || 0;
+      const role = c.faction === "marine" ? `Marine ${c.marineRank || "Recruit"}` : c.crewName ? `Captain of the ${c.crewName}` : c.faction === "pirate" ? "Pirate" : "Wanderer";
+      const hasD = c.traits.includes("will_of_d");
+      const header = h(
+        "div.char-head",
+        portrait(equippedLook(c), 110, 130),
+        h(
+          "div.char-id",
+          h("h2", c.name),
+          h("div", `${raceLabel(c.look)} \xB7 ${role} \xB7 generation ${c.generation}`),
+          c.bounty ? h("div.bounty-line", uiImg("bounty", 18), ` Bounty ${formatBerries(c.bounty)}`) : null,
+          h(
+            "div.rep",
+            h("span.lbl", uiImg("reputation", 18), " Reputation"),
+            h("div.rep-bar", h("i", { style: { left: rep < 0 ? 50 + rep / 2 + "%" : "50%", width: Math.abs(rep) / 2 + "%", background: rep < 0 ? "#c62828" : "#2e7d32" } }), h("b", { style: { left: "50%" } })),
+            h("span.rep-name", { style: { color: tier.color } }, `${tier.name} (${rep > 0 ? "+" : ""}${Math.round(rep)})`)
+          ),
+          h(
+            "div.char-btns",
+            h("button.btn", { on: { click: () => openJollyRogerFromMenu(game) } }, uiImg("jolly_roger", 18), "Jolly Roger"),
+            h("button.btn", { on: { click: () => ui.openPanel(h("div", { style: { display: "grid", placeItems: "center" } }, wantedPoster(c))) } }, uiImg("bounty", 18), "Wanted poster")
+          )
+        ),
+        h(
+          "div.will-box",
+          h("h4", uiImg("reputation", 18), " Inherited Will"),
+          h("div", h("b", `${legacy?.will || 0}`), " banked by your lineage"),
+          h("div", h("b", `+${computeWill(c)}`), " if your journey ended today"),
+          h("div.sub", "Earned from islands charted, great foes defeated, days survived, your bounty and the legends you write. Spend it on your bloodline between generations."),
+          h("div.d-line" + (hasD ? ".has" : ""), hasD ? h("span", h("b", "D."), " You carry the Will of D.") : h("span", `No "D." in your name. (${Math.round(dChance(legacy || {}) * 100)}% of births carry it.)`))
+        )
+      );
+      const prog = game.progression;
       const attrRows = ATTR_KEYS.map((k) => h(
         "div.stat-row",
-        { title: ATTRS[k].desc },
+        { title: `${ATTRS[k].desc}
+Trains by: ${TRAINS_BY[k]}` },
         h("span.nm", ATTRS[k].name),
         h("span.val", c.attrs[k]),
-        h("div.meter", h("i", { style: { width: 100 * c.attrs[k] / ATTR_CAP + "%" } })),
-        c.unspent > 0 && c.attrs[k] < ATTR_CAP ? h("button.btn.gold", { style: { padding: "1px 8px" }, on: { click: () => {
-          c.unspent--;
-          c.attrs[k]++;
-          refreshPlayer(game);
-          persist(game);
-          render();
-        } } }, "+") : null
+        h("div.meter.dual", h("i", { style: { width: 100 * c.attrs[k] / ATTR_CAP + "%" } }), h("u", { style: { width: 100 * (prog?.trainProgress(k) || 0) + "%" } }))
       ));
-      const hakiRows = Object.entries(HAKI).map(([k, hk]) => h(
+      const dd = p.d;
+      const derived = h("div.derived", `Health ${dd.maxHp} \xB7 Stamina ${dd.maxStamina}${hakiKnown(c) ? " \xB7 Spirit " + dd.maxHaki : ""} \xB7 Speed ${dd.speed.toFixed(1)} \xB7 Damage \xD7${dd.dmg.toFixed(2)} \xB7 Defence ${Math.round(dd.def * 100)}% \xB7 Doriki ${p.power().toLocaleString()}`);
+      const wm = c.weaponMastery || {};
+      const wmRows = Object.entries(WEAPON_KINDS).map(([k, name]) => h(
         "div.stat-row",
-        { title: hk.desc },
-        h("span.nm", `${hk.icon} ${hk.name.replace(" Haki", "")}`),
-        h("span.val", c.haki[k] ? Math.floor(c.haki[k]) : "\u2014"),
-        h("div.meter", h("i", { style: { width: (c.haki[k] || 0) + "%", background: "linear-gradient(90deg,#4a148c,#ce93d8)" } }))
+        { title: `+${((wm[k] || 0) * 0.6).toFixed(0)}% damage with ${name.toLowerCase()}` },
+        h("span.nm", name),
+        h("span.val", Math.floor(wm[k] || 0)),
+        h("div.meter", h("i", { style: { width: (wm[k] || 0) + "%", background: "linear-gradient(90deg,#6d4c33,#d4a373)" } }))
       ));
-      const masteryRows = Object.entries(c.masteries).map(([s, m]) => h(
+      const masteryRows = Object.entries(c.masteries).filter(([s]) => STYLES[s]).map(([s, m]) => h(
         "div.stat-row",
-        h("span.nm", `${STYLES[s]?.icon || ""} ${STYLES[s]?.name || s}`),
+        h("span.nm", STYLES[s]?.name || s),
         h("span.val", Math.floor(m)),
         h("div.meter", h("i", { style: { width: m + "%", background: "linear-gradient(90deg,#1565c0,#90caf9)" } }))
       ));
-      const d = p.d;
+      const hakiRows = hakiKnown(c) ? Object.entries(HAKI).filter(([k]) => c.haki[k]).map(([k, hk]) => h(
+        "div.stat-row",
+        { title: hk.desc },
+        h("span.nm", hk.name.replace(" Haki", "")),
+        h("span.val", Math.floor(c.haki[k])),
+        h("div.meter", h("i", { style: { width: (c.haki[k] || 0) + "%", background: "linear-gradient(90deg,#4a148c,#ce93d8)" } }))
+      )) : [];
+      const traits = c.traits.filter((t) => TRAITS[t] && (!TRAITS[t].hidden || t === "conqueror" && c.haki.conqueror));
       const left = h(
         "div",
-        h("h2", c.name),
-        h("p", `${raceLabel(c.look)} \xB7 generation ${c.generation} \xB7 ${c.faction === "marine" ? "Marine " + (c.marineRank || "") : c.faction === "pirate" ? "Pirate" : "Wanderer"}`),
-        h("p", h("b", "Dream: "), `${DREAMS[c.dream].icon} ${DREAMS[c.dream].name}${c.dreamDone ? " \u2014 FULFILLED" : ""}`, h("div.muted", DREAMS[c.dream].goal)),
-        h("p", h("b", "Doriki: "), p.power().toLocaleString(), h("span.muted", "  (CP9 scale: an armed Marine \u2248 10, Rob Lucci \u2248 4000)")),
         h("h3", "Attributes"),
-        c.unspent ? h("p", { style: { color: "#b8860b", fontWeight: 800 } }, `${c.unspent} breakthrough point${c.unspent > 1 ? "s" : ""} to spend!`) : null,
+        h("p.muted", "Attributes grow by themselves as you train and fight worthy opponents. The thin bar shows how close each one is to rising."),
         ...attrRows,
-        h("p.muted", `Health ${d.maxHp} \xB7 Stamina ${d.maxStamina} \xB7 Haki ${d.maxHaki} \xB7 Speed ${d.speed.toFixed(1)} \xB7 Damage \xD7${d.dmg.toFixed(2)} \xB7 Defence ${Math.round(d.def * 100)}%`),
-        h("h3", "Haki"),
-        ...hakiRows,
-        h("h3", "Style mastery"),
-        ...masteryRows,
-        c.fruit ? h("div", h("h3", "Devil Fruit"), h("div.stat-row", h("span.nm", FRUITS[c.fruit].name), h("span.val", Math.floor(c.fruitMastery)), h("div.meter", h("i", { style: { width: c.fruitMastery + "%", background: "linear-gradient(90deg,#bf360c,#ffab91)" } })))) : null,
-        h("h3", "Traits"),
-        ...race.traits.map((t) => h("div", "\u2022 " + t)),
-        ...c.traits.map((t) => h("div", h("b", TRAITS[t]?.name + ": "), TRAITS[t]?.desc))
+        derived,
+        h("h3", "Weapon mastery"),
+        h("p.muted", "Every kind of weapon grows stronger the more you fight with it."),
+        ...wmRows
       );
       const right = h(
         "div",
-        { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" } },
-        wantedPoster(c),
-        h("p.muted", `Lives ${c.lives}/${c.maxLives} \xB7 Second winds ${c.getUpCharges || 0} \xB7 ${(c.discovered || []).length} islands charted \xB7 ${(c.bosses || []).length} great foes defeated \xB7 ${c.world?.day || game.env.day} days at sea`)
+        h("h3", "Fighting styles"),
+        ...masteryRows,
+        c.fruit ? h("div", h("h3", "Devil Fruit"), h("div.stat-row", h("span.nm", FRUITS[c.fruit].name), h("span.val", Math.floor(c.fruitMastery)), h("div.meter", h("i", { style: { width: c.fruitMastery + "%", background: "linear-gradient(90deg,#bf360c,#ffab91)" } })))) : null,
+        hakiRows.length ? h("div", h("h3", "Haki"), ...hakiRows) : null,
+        h("h3", "Traits"),
+        ...race.traits.map((t) => h("div.li", t)),
+        ...traits.map((t) => h("div.li", h("b", TRAITS[t].name + ": "), TRAITS[t].desc)),
+        h("p.muted", { style: { marginTop: "10px" } }, `Lives ${c.lives}/${c.maxLives} \xB7 Second winds ${c.getUpCharges || 0} \xB7 ${(c.discovered || []).length} islands charted \xB7 ${(c.bosses || []).length} great foes \xB7 day ${game.env.day}`)
       );
-      body.appendChild(h("div.grid2", left, right));
+      body.append(header, h("div.grid2", left, right));
     };
-    render();
+    render2();
+  }
+  var TRAINS_BY = {
+    str: "landing blows on worthy opponents, masters, breakthroughs",
+    agi: "dodging and parrying attacks, fighting with guns, masters",
+    end: "blocking hits, masters",
+    vit: "taking punishment and surviving, masters",
+    wil: "getting back up, facing stronger foes, Devil Fruit use, masters"
+  };
+  function openJollyRogerFromMenu(game) {
+    openJollyRoger(game);
   }
   function openSkills(game) {
     const ui = game.ui;
     const c = game.state.char;
     const p = game.player;
-    const body = h("div");
+    const body = h("div.skills");
     const entry = ui.openPanel(body, { wide: true, id: "skills" });
     if (!entry) return;
-    let picking = null;
-    const render = () => {
+    const sel = { pick: null, slot: null };
+    const render2 = () => {
       clear(body);
       const styles = Object.keys(c.masteries).filter((s) => STYLES[s]);
       const styleBtns = styles.map((s) => h(
-        "button.btn" + (c.style === s ? ".red" : ""),
+        "button" + (c.style === s ? ".on" : ""),
         { on: { click: () => {
           c.style = s;
           refreshPlayer(game);
-          render();
+          render2();
         } }, title: STYLES[s].desc },
-        `${STYLES[s].icon} ${STYLES[s].name} (${Math.floor(c.masteries[s])})`
+        `${STYLES[s].name} (${Math.floor(c.masteries[s])})`
       ));
       const cur = STYLES[c.style];
       const needW = cur?.weapon && !p.hasWeapon(cur.weapon);
-      const hot = h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, ...Array.from({ length: 6 }, (_, i) => {
-        const d = getAbility(c.hotbar[i]);
-        return h(
-          "div.card",
-          { style: { width: "120px", cursor: "pointer", outline: picking === i ? "3px solid #c0392b" : "none" }, on: { click: () => {
-            picking = i;
-            render();
-          } } },
-          h("b", `${i + 1}. `),
-          d ? `${d.icon || ""} ${d.name}` : h("span.muted", "empty")
-        );
-      }));
-      const techs = c.techniques.map(getAbility).filter(Boolean);
-      const techList = h("div.list", ...techs.map((d) => h(
-        "div.row-item",
-        h("span.ico", d.icon || "\u2726"),
-        h("div.grow", h("b", d.name), h("div.sub", `${d.desc || ""} ${d.cd ? "\xB7 cooldown " + d.cd + "s" : ""} ${d.cost?.stamina ? "\xB7 " + d.cost.stamina + " stamina" : ""} ${d.cost?.haki ? "\xB7 " + d.cost.haki + " haki" : ""} ${d.weapon ? "\xB7 needs " + d.weapon : ""}`)),
-        picking !== null ? h("button.btn.gold", { on: { click: () => {
-          c.hotbar[picking] = d.id;
-          for (let k = 0; k < 6; k++) if (k !== picking && c.hotbar[k] === d.id) c.hotbar[k] = null;
-          picking = null;
-          refreshPlayer(game);
-          render();
-        } } }, `Put in slot ${picking + 1}`) : null
-      )));
+      const techs = c.techniques.map(getAbility).filter((d) => d && (!needsHaki(d) || hakiKnown(c)));
+      const byGroup = {};
+      for (const d of techs) {
+        const src = d.source || "";
+        const g = src.startsWith("fruit") ? "Devil Fruit" : src.startsWith("haki") ? "Haki" : src.startsWith("style:") ? STYLES[src.slice(6)]?.name || "Style" : d.style ? STYLES[d.style]?.name || "Style" : "Other";
+        (byGroup[g] = byGroup[g] || []).push(d);
+      }
+      const lists = Object.entries(byGroup).map(([g, ds]) => h(
+        "div",
+        h("h4.grp", g),
+        h("div.tech-grid", ds.map((d) => {
+          const onBar = c.hotbar.includes(d.id);
+          const card = h(
+            "div.tech" + (sel.pick === "skill:" + d.id ? ".sel" : "") + (onBar ? ".onbar" : ""),
+            {
+              title: "Drag onto the hotbar, or click and then click a slot",
+              on: { click: () => {
+                if (sel.slot !== null) {
+                  assignHotbar(game, sel.slot, "skill:" + d.id);
+                  sel.slot = null;
+                  sel.pick = null;
+                } else sel.pick = sel.pick === "skill:" + d.id ? null : "skill:" + d.id;
+                render2();
+              } }
+            },
+            skillImg(d, 40),
+            h(
+              "div.grow",
+              h("b", d.name),
+              h("div.sub", d.desc || ""),
+              h("div.sub.meta", [d.cd ? `cooldown ${d.cd}s` : null, d.cost?.stamina ? `${d.cost.stamina} stamina` : null, d.cost?.haki && hakiKnown(c) ? `${d.cost.haki} spirit` : null, d.weapon ? `needs ${d.weapon}` : null].filter(Boolean).join(" \xB7 "))
+            ),
+            onBar ? h("span.tag", `slot ${c.hotbar.indexOf(d.id) + 1}`) : null
+          );
+          return dragSource(card, "skill:" + d.id);
+        }))
+      ));
       body.append(
         h("h2", "Skills"),
         h("h3", "Fighting style"),
@@ -20216,130 +24228,151 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         needW ? h("p", { style: { color: "#b71c1c" } }, `${cur.name} needs ${cur.weapon === "sword" ? cur.swords + " sword(s)" : "a " + cur.weapon} equipped \u2014 until then you fight bare-handed.`) : null,
         h("p.muted", cur?.desc || ""),
         h("h3", "Hotbar"),
-        h("p.muted", "Click a slot, then choose a technique for it."),
-        hot,
-        picking !== null ? h("button.btn", { on: { click: () => {
-          c.hotbar[picking] = null;
-          picking = null;
-          render();
-        } } }, "Clear slot") : null,
-        h("h3", "Known techniques"),
-        techs.length ? techList : h("p", "You know no techniques yet. Find a trainer \u2014 or a Devil Fruit."),
-        h("h3", "Haki"),
-        h("p.muted", "R toggles Armament, T toggles Observation, G releases Conqueror's. They drain your Haki bar while active.")
+        hotbarStrip(game, sel, render2),
+        h("h3", "Techniques"),
+        techs.length ? h("div", lists) : h("p", "You know no techniques yet. Find a trainer \u2014 or a Devil Fruit."),
+        hakiKnown(c) ? h("p.muted", `Haki: ${[c.haki.armament && "R toggles Armament", c.haki.observation && "T toggles Observation", c.haki.conqueror && "G releases Conqueror's"].filter(Boolean).join(", ")}. Active Haki drains your spirit bar.`) : null
       );
     };
-    render();
+    render2();
   }
   function openJournal(game) {
     const ui = game.ui;
     const c = game.state.char;
-    const q = game.quests;
-    const active5 = q.active();
-    const done6 = Object.entries(c.quests).filter(([, s]) => s.done).map(([id]) => questDef(id)).filter(Boolean);
-    const body = h(
-      "div",
-      h("h2", "Journal"),
-      h("h3", "Active"),
-      active5.length ? h("div.list", ...active5.map(({ id, s, def }) => h(
-        "div.card",
-        h("h4", def.name, h("span.tag", def.kind || "story")),
-        h("div", def.summary || ""),
-        h("div", { style: { marginTop: "4px", fontWeight: 800 } }, "\u27A4 " + (def.stages[s.stage]?.desc || "")),
-        def.island ? h("div.muted", "Location: " + (game.surface.islands.find((i) => i.id === def.island)?.name || def.island)) : null
-      ))) : h("p", "No active quests. Talk to people \u2014 every island has a story."),
-      h("h3", "Completed"),
-      done6.length ? h("div.list", ...done6.map((d) => h("div.row-item", h("span.ico", "\u2714"), h("div.grow", h("b", d.name))))) : h("p.muted", "None yet."),
-      h("h3", "Dream"),
-      h("p", `${DREAMS[c.dream].icon} ${DREAMS[c.dream].name} \u2014 ${DREAMS[c.dream].goal}`)
-    );
-    ui.openPanel(body, { id: "journal" });
+    const body = h("div.journal");
+    const entry = ui.openPanel(body, { wide: true, id: "journal" });
+    if (!entry) return;
+    let tab = "quests";
+    const render2 = () => {
+      clear(body);
+      const tabs = h("div.tabs", ["quests", "legends"].map((k) => h("button" + (tab === k ? ".on" : ""), { on: { click: () => {
+        tab = k;
+        render2();
+      } } }, k === "quests" ? "Quests" : "Legends")));
+      body.append(h("h2", "Journal"), tabs);
+      if (tab === "quests") {
+        const q = game.quests;
+        const active5 = q.active();
+        const done6 = Object.entries(c.quests).filter(([, s]) => s.done).map(([id]) => questDef(id)).filter(Boolean);
+        body.append(
+          h("h3", "Active"),
+          active5.length ? h("div.list", ...active5.map(({ s, def }) => h(
+            "div.card",
+            h("h4", uiImg("quest", 18), " ", def.name, h("span.tag", def.kind || "story")),
+            h("div", def.summary || ""),
+            h("div.objective", def.stages[s.stage]?.desc || ""),
+            def.island ? h("div.muted", "Location: " + (game.surface.islands.find((i) => i.id === def.island)?.name || def.island)) : null
+          ))) : h("p", "No active quests. Talk to people \u2014 every island has a story."),
+          h("h3", "Completed"),
+          done6.length ? h("div.list.compact", ...done6.map((d) => h("div.row-item", uiImg("check", 18), h("div.grow", h("b", d.name))))) : h("p.muted", "None yet.")
+        );
+      } else {
+        body.append(h("p.muted", "Nobody chooses your destiny. But the sea remembers those who do the impossible \u2014 every legend you write adds to your Inherited Will."));
+        const list = h("div.list");
+        for (const id of LEGEND_IDS) {
+          const L2 = LEGENDS[id];
+          const got = (c.legends || []).includes(id);
+          let pr = null;
+          try {
+            pr = L2.progress ? L2.progress(c) : null;
+          } catch {
+            pr = null;
+          }
+          list.appendChild(h(
+            "div.row-item" + (got ? ".legend-done" : ""),
+            uiImg(got ? "check" : "journal", 22),
+            h(
+              "div.grow",
+              h("b", L2.name),
+              h("div.sub", L2.desc),
+              pr && !got ? h("div.stat-row", h("div.meter", h("i", { style: { width: Math.min(100, 100 * pr[0] / pr[1]) + "%" } })), h("span.sub", `${pr[0].toLocaleString()} / ${pr[1].toLocaleString()} ${pr[2]}`)) : null
+            ),
+            h("span.price", got ? "Achieved" : `+${L2.will} Will`)
+          ));
+        }
+        body.appendChild(list);
+      }
+    };
+    render2();
   }
-  function openMenu(game, { onQuit, onRetire }) {
+  function openMenu(game, { onQuit, onRetire, onSave }) {
     const ui = game.ui;
     const c = game.state.char;
+    const saved = h("p.muted.save-note", c.lastSaved ? `Last saved ${new Date(c.lastSaved).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Not saved yet");
+    const btn = (icon, text, fn, cls = "") => h("button.btn.menu-btn" + cls, { on: { click: fn } }, uiImg(icon, 20), text);
     const body = h(
-      "div",
-      { style: { textAlign: "center" } },
+      "div.pause",
       h("h2", "Paused"),
       h(
-        "div",
-        { style: { display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" } },
-        h("button.btn.gold", { on: { click: () => ui.closePanel() } }, "Resume"),
-        h("button.btn", { on: { click: () => {
+        "div.menu-list",
+        btn("check", "Resume", () => ui.closePanel(), ".gold"),
+        btn("save", "Save game", () => {
+          if (onSave()) saved.textContent = `Saved just now (lineage ${game.saveSlot || 1})`;
+        }),
+        btn("help", "How to Play", () => {
           ui.closePanel();
-          openInventory(game);
-        } } }, "Inventory (I)"),
-        h("button.btn", { on: { click: () => {
-          ui.closePanel();
-          openCharacter(game);
-        } } }, "Character (C)"),
-        h("button.btn", { on: { click: () => {
-          ui.closePanel();
-          openSkills(game);
-        } } }, "Skills (K)"),
-        h("button.btn", { on: { click: () => {
-          ui.closePanel();
-          openJournal(game);
-        } } }, "Journal (J)"),
-        h("button.btn", { on: { click: () => {
-          ui.closePanel();
-          game.openMap();
-        } } }, "World Map (M)"),
-        h("button.btn", { on: { click: () => {
-          ui.closePanel();
-          ui.openPanel(helpContent(), { wide: true });
-        } } }, "How to Play (H)"),
-        h("button.btn", { on: { click: () => {
+          ui.openPanel(helpContent(c), { wide: true, id: "help" });
+        }),
+        btn("settings", "Settings", () => {
           ui.closePanel();
           openSettings(game);
-        } } }, "Settings"),
-        c.dreamDone ? h("button.btn.gold", { on: { click: () => {
+        }),
+        (c.legends || []).length ? btn("journal", "Retire as a legend", async () => {
+          if (!await ui.ask({ title: "Retire?", text: `${c.name} hangs up their hat and becomes a legend. This life ends here and its Inherited Will passes to the next generation.`, ok: "Retire", danger: true })) return;
           ui.closePanel();
           onRetire();
-        } } }, "Retire as a legend") : null,
-        h("button.btn.red", { on: { click: () => {
+        }) : null,
+        btn("close", "Save & quit to title", () => {
           ui.closePanel();
           onQuit();
-        } } }, "Save & return to title")
+        }, ".red")
       ),
-      h("p.muted", { style: { marginTop: "10px" } }, "The game saves automatically. Death is permanent once your last vivre card burns.")
+      saved,
+      h("p.muted", "The game also saves by itself every minute, at every milestone, and when you close the page. Death is written immediately.")
     );
-    ui.openPanel(body);
+    ui.openPanel(body, { id: "menu" });
   }
   function openSettings(game) {
     const s = game.settings;
-    const slider = (label, key) => h("div.stat-row", h("span.nm", label), h("input", { type: "range", min: 0, max: 1, step: 0.05, value: s[key], style: { flex: 1 }, on: { input: (e) => {
-      s[key] = Number(e.target.value);
+    const slider = (label, key2) => h("div.stat-row", h("span.nm", label), h("input", { type: "range", min: 0, max: 1, step: 0.05, value: s[key2], style: { flex: 1 }, on: { input: (e) => {
+      s[key2] = Number(e.target.value);
       game.applySettings();
     } } }));
+    const check = (label, key2) => h("label.check-row", h("input", { type: "checkbox", checked: !!s[key2], on: { change: (e) => {
+      s[key2] = e.target.checked;
+      game.applySettings();
+    } } }), label);
     game.ui.openPanel(h(
       "div",
       h("h2", "Settings"),
       slider("Sound effects", "volume"),
       slider("Music", "music"),
       slider("Screen shake", "shake"),
+      check("Show tutorial hints", "showHints"),
       h("p.muted", "Settings are saved in this browser.")
-    ), { onClose: () => game.applySettings(true) });
+    ), { onClose: () => game.applySettings(true), id: "settings" });
   }
   function openShop(game, building, island) {
     const ui = game.ui;
     const c = game.state.char;
+    if (bannedFromShop(game, building)) {
+      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: building.name || "Shopkeeper", text: '"YOU! Thief! Get out of my shop before I call the Marines again!"' } } });
+      return null;
+    }
     const body = h("div");
     const stock8 = stockFor(building, island);
     let tab = "buy";
-    const entry = ui.openPanel(body, { wide: true });
-    const render = () => {
+    const entry = ui.openPanel(body, { wide: true, id: "shop" });
+    const render2 = () => {
       clear(body);
       body.append(h("h2", building.name || "Shop"), h(
-        "div",
-        { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+        "div.shop-top",
         h("div.tabs", h("button" + (tab === "buy" ? ".on" : ""), { on: { click: () => {
           tab = "buy";
-          render();
+          render2();
         } } }, "Buy"), h("button" + (tab === "sell" ? ".on" : ""), { on: { click: () => {
           tab = "sell";
-          render();
+          render2();
         } } }, "Sell")),
         berriesLine(c)
       ));
@@ -20353,16 +24386,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           list.appendChild(h(
             "div.row-item",
             { title: d.desc || "" },
-            h("span.ico", d.icon),
-            h("div.grow", h("b", d.name), owned ? h("span.tag", `owned ${owned}`) : null, h("div.sub", d.desc || d.grade || (d.heal ? `+${d.heal} HP` : ""))),
+            itemImg(id, 34, ".ico"),
+            h("div.grow", h("b", d.name), owned ? h("span.tag", `owned ${owned}`) : null, h("div.sub", statLine(d) || d.desc || d.grade || "")),
             h("span.price", formatBerries(price)),
             h("button.btn.gold", { disabled: c.berries < price, on: { click: () => {
               if (pay(game, price)) {
                 addItem(game, id, 1);
                 game.audio?.sfx("coin");
-                render();
+                render2();
               }
-            } } }, "Buy")
+            } } }, "Buy"),
+            !d.unique ? h("button.btn.steal", { title: "Try to pocket it while nobody is looking. Theft ruins your reputation \u2014 and if you are caught, the guards come running.", on: { click: () => {
+              const r = stealFromShop(game, id, building, price);
+              if (r === "caught") ui.closePanel(entry);
+              else render2();
+            } } }, "Steal") : null
           ));
         }
       } else {
@@ -20373,25 +24411,26 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           const d = ITEMS[it.id];
           const sp = sellPrice(it.id);
           if (!d || !sp || it.heirloom) continue;
-          const isEq = c.equipped.hat === it.id || c.equipped.coat === it.id || (c.equipped.weapons || []).includes(it.id);
+          const worn = isEquipped(c, it.id) && count(c, it.id) <= 1;
           list.appendChild(h(
             "div.row-item",
-            h("span.ico", d.icon),
-            h("div.grow", h("b", d.name), h("span.tag", "\xD7" + count(c, it.id))),
+            itemImg(it.id, 34, ".ico"),
+            h("div.grow", h("b", d.name), h("span.tag", "\xD7" + count(c, it.id)), d.type === "fruit" ? h("div.sub", "Devil Fruits fetch a fortune \u2014 the black market always pays.") : null),
             h("span.price", formatBerries(sp)),
-            h("button.btn", { disabled: isEq, on: { click: () => {
+            h("button.btn", { disabled: worn, on: { click: async () => {
+              if (d.type === "fruit" && !await ui.ask({ title: `Sell the ${d.name}?`, text: `The ${d.name} will be gone for good. (${formatBerries(sp)})`, ok: "Sell" })) return;
               removeItem(game, it.id, 1);
               earn(game, sp, false);
               game.audio?.sfx("coin");
-              render();
-            } } }, isEq ? "Equipped" : "Sell")
+              render2();
+            } } }, worn ? "Equipped" : "Sell")
           ));
         }
         if (!list.children.length) list.appendChild(h("p", "Nothing the shopkeeper wants."));
       }
       body.appendChild(list);
     };
-    render();
+    render2();
     return entry;
   }
   function openInn(game, building, island, town) {
@@ -20405,15 +24444,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       h("button.btn.gold", { on: { click: () => {
         if (S2.rest(island, town)) game.ui.closePanel();
       } } }, "Rest until morning")
-    ));
+    ), { id: "inn" });
   }
   function openDoctor(game, building, island, doc) {
     const S2 = game.services;
     const c = game.state.char;
     const p = game.player;
     const body = h("div");
-    const entry = game.ui.openPanel(body);
-    const render = () => {
+    const entry = game.ui.openPanel(body, { id: "doctor" });
+    const render2 = () => {
       clear(body);
       body.append(
         h("h2", doc?.name || building.name || "Clinic"),
@@ -20421,7 +24460,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         h("p", `Health ${Math.ceil(p.hp)}/${p.d.maxHp}${Object.keys(p.status).length ? " \xB7 " + Object.keys(p.status).join(", ") : ""}`),
         h("button.btn.green", { disabled: p.hp >= p.d.maxHp && !Object.keys(p.status).length, on: { click: () => {
           S2.heal(island);
-          render();
+          render2();
         } } }, `Treat wounds \u2014 ${formatBerries(S2.healPrice(island))}`)
       );
       if (doc?.restoresLife) {
@@ -20431,21 +24470,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           h("p", `${doc.name} is one of the few doctors in the world who can pull someone back from the edge. (Restores one lost life, once.)`),
           h("button.btn.gold", { disabled: done6 || c.lives >= c.maxLives, on: { click: () => {
             S2.restoreLife(doc);
-            render();
+            render2();
           } } }, done6 ? "Already treated" : c.lives >= c.maxLives ? "No lives lost" : `Treatment \u2014 ${formatBerries(S2.lifePrice(doc))}`)
         );
       }
     };
-    render();
+    render2();
     return entry;
   }
   function openShipyard(game, building, island, dock) {
     const S2 = game.services;
     const c = game.state.char;
     const body = h("div");
-    game.ui.openPanel(body, { wide: true });
+    game.ui.openPanel(body, { wide: true, id: "shipyard" });
     const myShips = () => game.ships.filter((s) => s.owner === "player" && !s.sunk);
-    const render = () => {
+    const render2 = () => {
       clear(body);
       body.append(h("h2", building.name || "Shipyard"), berriesLine(c));
       body.append(h("h3", "Buy a ship"));
@@ -20455,14 +24494,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const price = S2.shipPrice(type, island);
         list.appendChild(h(
           "div.row-item",
-          h("span.ico", "\u26F5"),
+          uiImg("ship", 30),
           h("div.grow", h("b", d.name), h("div.sub", `${d.desc} \xB7 hull ${d.hull} \xB7 speed ${d.speed} \xB7 cannons ${d.cannons}${d.grandLine ? "" : " \xB7 NOT fit for the Grand Line"}`)),
           h("span.price", formatBerries(price)),
           h("button.btn.gold", { disabled: c.berries < price, on: { click: async () => {
             const n = await game.ui.ask({ title: `Buy a ${d.name}`, text: `Name your new ship (${formatBerries(price)}).`, input: d.name, ok: "Buy" });
             if (n === null) return;
             S2.buyShip(type, island, dock, (n || d.name).slice(0, 24));
-            render();
+            game.emit("shipBought", type);
+            render2();
           } } }, "Buy")
         ));
       }
@@ -20478,7 +24518,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           else {
             card.appendChild(h("button.btn.green", { disabled: s.hull >= s.maxHull || c.berries < rp, on: { click: () => {
               S2.repair(s, island);
-              render();
+              render2();
             } } }, `Repair \u2014 ${formatBerries(rp)}`));
             const ups = h("div.list", { style: { marginTop: "6px" } });
             for (const [id, u] of Object.entries(SHIP_UPGRADES)) {
@@ -20492,7 +24532,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
                 h("span.price", formatBerries(up)),
                 h("button.btn", { disabled: has2 || c.berries < up, on: { click: () => {
                   S2.upgrade(s, id, island);
-                  render();
+                  render2();
                 } } }, has2 ? "Fitted" : "Fit")
               ));
             }
@@ -20502,7 +24542,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
               if (n) {
                 s.name = n.slice(0, 24);
                 persist(game);
-                render();
+                render2();
               }
             } } }, "Rename"));
           }
@@ -20518,35 +24558,35 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             const s = game.giveShip("adam_brig", dock?.moor?.x ?? game.player.x, dock?.moor?.y ?? game.player.y + 4, "Thousand Dreams");
             game.ui.toast("A LEGENDARY SHIP", `${s.name} \u2014 an Adam-wood brig with Coup de Burst!`, "#ffd54f");
             persist(game);
-            render();
+            render2();
           } } }, "Build an Adam-wood brig")
         );
       }
     };
-    render();
+    render2();
   }
   function openTrainer(game, tid, npcName) {
     const S2 = game.services;
     const t = TRAINERS[tid];
     const c = game.state.char;
     const body = h("div");
-    game.ui.openPanel(body, { wide: true });
+    game.ui.openPanel(body, { wide: true, id: "trainer" });
     let tab = "styles";
-    const render = () => {
+    const render2 = () => {
       clear(body);
       const tabs = ["styles", "techniques", "training"];
-      if (t.haki) tabs.push("haki");
+      const hakiTypes = Object.keys(t.haki || {}).filter((k) => c.haki[k]);
+      if (hakiTypes.length) tabs.push("haki");
       tabs.push("spar");
       body.append(
         h("h2", npcName || t.name),
         h("p", h("i", `"${t.lines?.[0] || "Let's see what you've got."}"`)),
         h(
-          "div",
-          { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+          "div.shop-top",
           h("div.tabs", ...tabs.map((k) => h("button" + (tab === k ? ".on" : ""), { on: { click: () => {
             tab = k;
-            render();
-          } } }, k[0].toUpperCase() + k.slice(1)))),
+            render2();
+          } } }, title(k)))),
           berriesLine(c)
         )
       );
@@ -20560,67 +24600,68 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           const price = S2.stylePrice(tid, s);
           list.appendChild(h(
             "div.row-item",
-            h("span.ico", st.icon),
+            uiImg("skills", 30),
             h("div.grow", h("b", st.name), h("div.sub", st.desc), chk.warn ? h("div.sub", { style: { color: "#b71c1c" } }, chk.warn) : null),
             h("span.price", price ? formatBerries(price) : "free"),
             h("button.btn.gold", { disabled: !chk.ok || c.berries < price, on: { click: () => {
               S2.learnStyle(tid, s);
-              render();
+              render2();
             } } }, chk.ok ? "Learn" : chk.why)
           ));
         }
       } else if (tab === "techniques") {
         for (const id of t.teaches || []) {
           const d = getAbility(id);
-          if (!d) continue;
+          if (!d || needsHaki(d) && !hakiKnown(c)) continue;
           const chk = S2.canLearnTech(id);
           const price = S2.techPrice(id);
           list.appendChild(h(
             "div.row-item",
-            h("span.ico", d.icon || "\u2726"),
-            h("div.grow", h("b", d.name), h("span.tag", STYLES[d.style]?.name || (d.hakiType ? d.hakiType + " haki" : "")), h("div.sub", d.desc || ""), h("div.sub", `Requires: ${d.learn?.mastery ? STYLES[d.style]?.name + " mastery " + d.learn.mastery : d.learn?.level ? d.hakiType + " Haki " + d.learn.level : "\u2014"}`)),
+            skillImg(d, 34, ".ico"),
+            h("div.grow", h("b", d.name), h("span.tag", STYLES[d.style]?.name || (d.hakiType ? title(d.hakiType) + " Haki" : "")), h("div.sub", d.desc || ""), h("div.sub", `Requires: ${d.learn?.mastery ? STYLES[d.style]?.name + " mastery " + d.learn.mastery : d.learn?.level ? title(d.hakiType) + " Haki " + d.learn.level : "\u2014"}`)),
             h("span.price", formatBerries(price)),
             h("button.btn.gold", { disabled: !chk.ok || c.berries < price, on: { click: () => {
               S2.learnTech(id);
-              render();
+              render2();
             } } }, chk.ok ? "Learn" : chk.why)
           ));
         }
-        if (!list.children.length) list.appendChild(h("p", "No techniques to teach."));
+        if (!list.children.length) list.appendChild(h("p", "No techniques to teach you yet."));
       } else if (tab === "training") {
-        list.appendChild(h("p.muted", `Training sessions left today: ${S2.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
+        list.appendChild(h("p.muted", `A master pushes your body further than fighting alone. Training sessions left today: ${S2.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
         for (const [k, cap] of Object.entries(t.train || {})) {
           const price = S2.trainPrice(k);
           const maxed = c.attrs[k] >= cap;
           list.appendChild(h(
             "div.row-item",
-            h("span.ico", "\u{1F3CB}"),
+            uiImg("trainer", 30),
             h("div.grow", h("b", ATTRS[k].name), h("div.sub", `${c.attrs[k]} / ${cap} with this master \xB7 ${ATTRS[k].desc}`)),
             h("span.price", formatBerries(price)),
             h("button.btn.gold", { disabled: maxed || S2.trainsLeft() <= 0 || c.berries < price, on: { click: () => {
               S2.train(tid, k);
-              render();
-            } } }, maxed ? "Mastered" : "Train +1")
+              render2();
+            } } }, maxed ? "Mastered" : "Train")
           ));
         }
       } else if (tab === "haki") {
-        for (const [k, cap] of Object.entries(t.haki)) {
+        for (const k of hakiTypes) {
+          const cap = t.haki[k];
           const lvl = c.haki[k] || 0;
-          const price = S2.hakiTrainPrice(k) * (lvl ? 1 : 3);
+          const price = S2.hakiTrainPrice(k);
           list.appendChild(h(
             "div.row-item",
-            h("span.ico", HAKI[k].icon),
-            h("div.grow", h("b", HAKI[k].name), h("div.sub", HAKI[k].desc), h("div.sub", lvl ? `Level ${Math.floor(lvl)} / ${cap} with this master` : "Not awakened")),
+            uiImg("haki", 30),
+            h("div.grow", h("b", HAKI[k].name), h("div.sub", HAKI[k].desc), h("div.sub", `Level ${Math.floor(lvl)} / ${cap} with this master`)),
             h("span.price", formatBerries(price)),
             h("button.btn.gold", { disabled: c.berries < price || lvl >= cap, on: { click: () => {
               S2.hakiTrain(tid, k);
-              render();
-            } } }, lvl ? "Train" : "Awaken")
+              render2();
+            } } }, "Train")
           ));
         }
       } else if (tab === "spar") {
         const chk = S2.canSpar(tid);
-        list.appendChild(h("p", `A real duel against ${t.spar.name} (level ${t.spar.level}). Nobody dies in a spar. Win to gain mastery, an attribute point and possibly a breakthrough \u2014 beating someone stronger than you is how warriors grow. Once per day.`));
+        list.appendChild(h("p", `A real duel against ${t.spar.name} (level ${t.spar.level}). Nobody dies in a spar. Win to gain mastery and possibly a breakthrough \u2014 beating someone stronger than you is how warriors grow. Once per day.`));
         list.appendChild(h("button.btn.red", { disabled: !chk.ok, on: { click: () => {
           game.ui.closePanel();
           S2.startSpar(tid);
@@ -20628,7 +24669,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       body.appendChild(list);
     };
-    render();
+    render2();
   }
 
   // src/game/rumors.js
@@ -20697,7 +24738,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     'Log Poses must stay on an island a while to "set" before they point to the next one. Eternal Poses always point to a single island.'
   ];
   function rumorFor(game, island, rng, npc, tavern, kind) {
-    if (kind === "lore") return rng.pick(LORE);
+    if (kind === "lore") {
+      const c0 = game.state?.char;
+      const known0 = !!(c0?.haki && (c0.haki.armament || c0.haki.observation || c0.haki.conqueror));
+      return rng.pick(known0 ? LORE : LORE.filter((l) => !/haki/i.test(l)));
+    }
     const p = game.player;
     const reg = regionAt(p.x, p.y);
     const pool = [];
@@ -20710,7 +24755,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (c?.bounty && rng.chance(0.2)) return `"Hey... aren't you the one on that wanted poster? \u0E3F${c.bounty.toLocaleString()}... I didn't see anything!"`;
     const quest = game.questRumor?.(island, rng);
     if (quest && rng.chance(0.35)) return quest;
-    const line = pool.length ? rng.pick(pool) : "Nice weather today.";
+    const known = !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
+    const heard = known ? pool : pool.filter((l) => !/haki|mantra/i.test(l));
+    const line = heard.length ? rng.pick(heard) : "Nice weather today.";
     return npc ? `"${line.replace(/^"|"$/g, "")}"` : line;
   }
 
@@ -20991,7 +25038,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (a.talk?.kind === "townsfolk") {
         const rng = new RNG(a.talk.seed + g.env.day);
         const isl = this.islandOf(a.x, a.y);
-        g.dialogue.open(a, { start: "a", nodes: { a: { text: rumorFor(g, isl, rng, a) } } });
+        g.dialogue.open(a, { start: "a", nodes: {
+          a: { text: rumorFor(g, isl, rng, a), choices: [
+            { text: "Thanks. Take care.", end: true },
+            { text: "Pick their pocket while they talk. (a crime)", do: () => {
+              g.dialogue.close();
+              const r = pickpocket(g, a);
+              if (r === "caught") g.fx.text(a.x, a.y - 2, "HEY! THIEF!", "#ff5252", 0.45);
+            }, end: true }
+          ] }
+        } });
       }
     }
     building(b) {
@@ -21081,11 +25137,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     library(building, island) {
       const g = this.game;
       const c = g.state.char;
-      const key = "read_" + (building.id || building.name);
-      const first = !c.flags[key];
+      const key2 = "read_" + (building.id || building.name);
+      const first = !c.flags[key2];
       g.dialogue.open(null, { start: "a", nodes: { a: { speaker: building.name || "Library", text: () => {
         if (first) {
-          c.flags[key] = true;
+          c.flags[key2] = true;
           g.progression.raiseAttr("wil", 1);
         }
         return (first ? "(+1 Willpower) " : "") + rumorFor(g, island, new RNG(building.id || 1), null, true, "lore");
@@ -21100,18 +25156,24 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.state.char.flags["door_" + b.id] = true;
         addItem(g, "rice_ball", 1, { silent: true });
       }
-      g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: line } } });
+      g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: line, choices: [
+        { text: "Leave them be.", end: true },
+        { text: "Force the door and rob the place. (a crime)", do: () => {
+          g.dialogue.close();
+          robHouse(g, b);
+        }, end: true }
+      ] } } });
     }
     chest(o) {
       const g = this.game, c = g.state.char;
-      const key = "chest_" + (o.key || `${Math.round(o.x)}_${Math.round(o.y)}`);
-      if (c.world.chests[key]) {
+      const key2 = "chest_" + (o.key || `${Math.round(o.x)}_${Math.round(o.y)}`);
+      if (c.world.chests[key2]) {
         o.opened = true;
         return;
       }
-      c.world.chests[key] = true;
+      c.world.chests[key2] = true;
       o.opened = true;
-      const rng = new RNG(key + c.runSeed);
+      const rng = new RNG(key2 + c.runSeed);
       const luck = c.traits.includes("lucky") ? 1.5 : 1;
       const tier = o.tier || 1;
       const berries = Math.round(rng.range(300, 1200) * tier * luck);
@@ -21180,9 +25242,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function installMap(game) {
     const ui = game.ui;
     const layer = h("div.worldmap-labels.hidden");
-    const title = h("div.wm-title", "Chart of the Blue Planet");
+    const title2 = h("div.wm-title", "Chart of the Blue Planet");
     const help = h("div.wm-help", "Drag to pan \xB7 wheel to zoom \xB7 M or Esc to close");
-    const wrap = h("div", { style: { position: "absolute", inset: "0", pointerEvents: "auto", cursor: "grab" } }, layer, title, help);
+    const wrap = h("div", { style: { position: "absolute", inset: "0", pointerEvents: "auto", cursor: "grab" } }, layer, title2, help);
     wrap.classList.add("hidden");
     ui.root.appendChild(wrap);
     const cam = { x: 0, y: 0, zoom: 0.3 };
@@ -21286,18 +25348,73 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       add("", isl.name, isl.x, isl.y + isl.radius * 0.2 + 6 / cam.zoom, { fontSize: Math.max(11, Math.min(20, 14 * Math.sqrt(cam.zoom / 0.3))) + "px" }, true);
     }
     if (!zone) {
-      add("", "\u26F0 Reverse Mountain", RM_X, EQ - 40, { fontSize: "14px" });
-      if (discovered.has("mary_geoise") || w.isExplored(0, EQ)) add("", "\u{1F3DB} Mary Geoise", 4, EQ - 70, { fontSize: "13px" });
+      add("", "Reverse Mountain", RM_X, EQ - 40, { fontSize: "14px" });
+      if (discovered.has("mary_geoise") || w.isExplored(0, EQ)) add("", "Mary Geoise", 4, EQ - 70, { fontSize: "13px" });
     }
     for (const { id } of game.quests.active()) {
       const m = game.quests.marker(id);
-      if (m && (!zone || m.zone === w.id)) add(".quest", "\u2757 " + m.label, m.x, m.y - 12 / cam.zoom);
+      if (m && (!zone || m.zone === w.id)) add(".quest", [uiImg("quest", 18), " " + m.label], m.x, m.y - 12 / cam.zoom);
     }
     const lp = game.logPoseTarget?.();
-    if (lp && !zone) add(".quest", "\u{1F9ED}", lp.x, lp.y);
-    for (const s of game.ships) if (s.owner === "player" && !s.sunk) add("", "\u26F5", s.x, s.y, { fontSize: "16px" });
+    if (lp && !zone) add(".quest", [uiImg("log_pose", 22)], lp.x, lp.y);
+    for (const s of game.ships) if (s.owner === "player" && !s.sunk) add("", [uiImg("ship", 22)], s.x, s.y, { fontSize: "16px" });
     const p = game.player;
-    add(".me", "\u2716 You", p.x, p.y);
+    add(".me", [h("span.me-dot"), "You"], p.x, p.y);
+  }
+
+  // src/game/forage.js
+  var PLURAL = { coconut: "coconuts", banana: "bananas", mango: "mangoes", apple: "apples", cherry: "cherries" };
+  function installForaging(game) {
+    const load = () => {
+      PICKED.clear();
+      const saved = game.state?.char?.world?.picked || {};
+      for (const [k, d] of Object.entries(saved)) PICKED.set(k, d);
+    };
+    game.on("characterStart", load);
+    game.on("newDay", () => {
+      const c = game.state?.char;
+      if (!c?.world?.picked) return;
+      for (const [k, d] of Object.entries(c.world.picked)) if (game.env.day >= d) {
+        delete c.world.picked[k];
+        PICKED.delete(k);
+      }
+    });
+    const prevFoot = game.footInteraction;
+    game.footInteraction = (p) => {
+      const other = prevFoot ? prevFoot(p) : null;
+      const w = game.world;
+      if (!w.objects || p.mode !== "foot") return other;
+      let best = null, bd = 1.9;
+      for (const o of w.objects.near(p.x, p.y, 2.2, (o2) => o2.kind === "tree")) {
+        const fr = fruitOf(o);
+        if (!fr || isPicked(w.id, o, game.env.day)) continue;
+        const d = w.distance(p.x, p.y, o.x, o.y - 0.3);
+        if (d < bd) {
+          bd = d;
+          best = { o, fr };
+        }
+      }
+      if (!best) return other;
+      const mine = { d: bd + 0.4, label: `Pick ${PLURAL[best.fr] || best.fr}`, run: () => pick(game, best.o, best.fr) };
+      return !other || mine.d < other.d ? mine : other;
+    };
+  }
+  function pick(game, o, fruit) {
+    const c = game.state.char, p = game.player, w = game.world;
+    if (isPicked(w.id, o, game.env.day)) return;
+    const n = fruit === "cherry" ? 3 : fruit === "coconut" ? 1 + (Math.random() < 0.5 ? 1 : 0) : 1 + Math.floor(Math.random() * 2);
+    if (!ITEMS[fruit]) return;
+    addItem(game, fruit, n, { silent: true });
+    game.log(`You pick ${n} ${n > 1 ? PLURAL[fruit] || fruit : ITEMS[fruit].name.toLowerCase()}.`, "#c5e1a5");
+    const key2 = fruitKey(w.id, o);
+    const back = game.env.day + REGROW_DAYS;
+    PICKED.set(key2, back);
+    c.world.picked = c.world.picked || {};
+    c.world.picked[key2] = back;
+    p.facing = Math.atan2(o.y - 1.5 - p.y, w.dx(p.x, o.x));
+    game.fx.burst(o.x, o.y - 2, 8, { color: ["#7cb342", "#aed581"], speed: 2.5, vz: 1, g: 6, life: 0.6, kind: "leaf", size: 0.12 });
+    game.audio?.sfx("equip");
+    game.emit("foraged", fruit, n);
   }
 
   // src/content/fruits.js
@@ -21703,7 +25820,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       } else if (reg === REGION.PARADISE && prev !== REGION.PARADISE && prev !== REGION.NEW_WORLD) {
         g.ui.banner("GRAND LINE", "PARADISE", "The first half of the pirates' graveyard.", 6);
       } else if (reg === REGION.NEW_WORLD && prev !== REGION.NEW_WORLD) {
-        g.ui.banner("NEW WORLD", "The second half of the Grand Line", "Here, Haki is not optional.", 6);
+        const c = g.state?.char;
+        const known = !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
+        g.ui.banner("NEW WORLD", "The second half of the Grand Line", known ? "Here, Haki is not optional." : "Only the strongest survive here.", 6);
       } else if (isBlue(reg) && !isBlue(prev)) {
         g.ui.banner(info.name.toUpperCase(), "", "", 3);
       }
@@ -23341,7 +27460,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           ctx.char.masteries.black_leg = 0;
           g.log("Zeff teaches you the basics of Black Leg Style. Switch to it in Skills (K).", "#90caf9");
         }
-        if (ctx.char.dream === "swordsman" || /ittoryu|nitoryu|santoryu/.test(ctx.char.style)) {
+        if ((ctx.char.weaponMastery?.sword || 0) >= 10 || /ittoryu|nitoryu|santoryu/.test(ctx.char.style)) {
           ctx.setFlag("mihawkBaratie");
           spawnNow(g, "mihawk_cameo");
         }
@@ -25629,7 +29748,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var active2 = (ctx, id, stage2) => ctx.game.quests.stageId(id) === stage2;
   var done3 = (ctx, id) => ctx.game.quests.isDone(id);
   var stg = (g, id) => g.quests.stageId(id);
-  var mk = (g, id, startable, reportStage) => !g.quests.state(id) ? startable ? "!" : null : g.quests.stageId(id) === reportStage ? "?" : null;
+  var mk2 = (g, id, startable, reportStage) => !g.quests.state(id) ? startable ? "!" : null : g.quests.stageId(id) === reportStage ? "?" : null;
   function spawnGroupAt(game, x, y, enemies, radius = 4) {
     const out = [];
     const list = game.currentIsland ? game.spawner.populated.get(game.currentIsland.id) : null;
@@ -25665,7 +29784,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       look: { hair: "bald", skin: "#f1c9a0", top: "#5d4037", bottom: "#4e342e", coat: "#33691e", hairColor: "#eceff1" },
       level: 12,
       trainer: "wb_ohara_elder",
-      marker: (c, g) => mk(g, "wb_ohara_primer", true, "report"),
+      marker: (c, g) => mk2(g, "wb_ohara_primer", true, "report"),
       dialogue: (ctx) => ({
         start: "a",
         nodes: {
@@ -25728,7 +29847,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       at: { spot: "memorial" },
       look: { hair: "bun", hairColor: "#9e9e9e", top: "#7986cb", bottom: "#3949ab", skin: "#e0ac7e" },
       level: 4,
-      marker: (c, g) => mk(g, "wb_ohara_echoes", true, "report"),
+      marker: (c, g) => mk2(g, "wb_ohara_echoes", true, "report"),
       dialogue: (ctx) => ({
         start: "a",
         nodes: {
@@ -25871,7 +29990,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       at: { spot: "coyote_camp" },
       look: { hair: "long", hairColor: "#bdbdbd", skin: "#a0643a", top: "#795548", bottom: "#5d4037", hat: "cowboy", hatColor: "#8d6e63", scarEye: true },
       level: 10,
-      marker: (c, g) => mk(g, "wb_god_valley", true, "report"),
+      marker: (c, g) => mk2(g, "wb_god_valley", true, "report"),
       dialogue: (ctx) => ({
         start: "a",
         nodes: {
@@ -25913,7 +30032,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       at: { town: "esperia_town", building: "Instrument Makers' Guild" },
       look: { hair: "short", hairColor: "#eceff1", skin: "#f1c9a0", top: "#8d6e63", bottom: "#4e342e", coat: "#a1887f" },
       level: 3,
-      marker: (c, g) => mk(g, "wb_esperia_convoy", true, "report"),
+      marker: (c, g) => mk2(g, "wb_esperia_convoy", true, "report"),
       dialogue: (ctx) => ({
         start: "a",
         nodes: {
@@ -25978,7 +30097,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       level: 60,
       trainer: "chinjao_master",
       ai: "idle",
-      marker: (c, g) => mk(g, "wb_hasshoken_trials", true, "report"),
+      marker: (c, g) => mk2(g, "wb_hasshoken_trials", true, "report"),
       dialogue: (ctx) => ({
         start: "a",
         nodes: {
@@ -26102,7 +30221,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       at: { town: "toroa_town", building: "Toroa Music Hall" },
       look: { hair: "long", hairColor: "#f2d16b", skin: "#f1c9a0", top: "#c62828", coat: "#263238", bottom: "#6d4c41", scarEye: true },
       level: 9,
-      marker: (c, g) => mk(g, "wb_toroa_slavers", true, "report"),
+      marker: (c, g) => mk2(g, "wb_toroa_slavers", true, "report"),
       recruit: {
         role: "musician",
         fighter: false,
@@ -26461,7 +30580,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       look: { hair: "short", hairColor: "#5d4037", skin: "#e0ac7e", top: "#fafafa", bottom: "#1b4f72", coat: "#fafafa", coatText: "JUSTICE", hat: "marine" },
       level: 16,
       faction: "marine",
-      marker: (c, g) => mk(g, "wb_raccoon_raids", !(c.bounty > 0 && c.faction !== "marine"), "report"),
+      marker: (c, g) => mk2(g, "wb_raccoon_raids", !(c.bounty > 0 && c.faction !== "marine"), "report"),
       dialogue: (ctx) => ({
         start: "a",
         nodes: {
@@ -26514,7 +30633,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       at: { town: "ilisia_town", building: "Ilisia Palace" },
       look: { hair: "short", hairColor: "#f2d16b", skin: "#f1c9a0", top: "#90caf9", bottom: "#90caf9", coat: "#e3f2fd", hat: "crown", hatColor: "#ffd54f" },
       level: 9,
-      marker: (c, g) => mk(g, "wb_ilisia_dragon", true, "crown_report"),
+      marker: (c, g) => mk2(g, "wb_ilisia_dragon", true, "crown_report"),
       dialogue: (ctx) => ({
         start: "a",
         nodes: {
@@ -26702,7 +30821,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       at: { town: "wb_ballywood_city", building: "Ballywood Grand Theater" },
       look: { hair: "bun", hairColor: "#b0bec5", skin: "#f9dcc4", top: "#6a1b9a", bottom: "#4a148c" },
       level: 3,
-      marker: (c, g) => mk(g, "wb_ballywood_star", true, "report"),
+      marker: (c, g) => mk2(g, "wb_ballywood_star", true, "report"),
       dialogue: (ctx) => ({
         start: "a",
         nodes: {
@@ -26735,7 +30854,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       race: "longleg",
       look: { hair: "bald", skin: "#e0ac7e", top: "#ffb300", bottom: "#5d4037", coat: "#6d4c41" },
       level: 12,
-      marker: (c, g) => mk(g, "wb_asshina_colosseum", true, "report"),
+      marker: (c, g) => mk2(g, "wb_asshina_colosseum", true, "report"),
       dialogue: (ctx) => ({
         start: "a",
         nodes: {
@@ -27594,11 +31713,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         game.log("You wade into the shallows of the Lake of Books. Caught in the reeds: a single page the giants missed.", "#b39ddb");
       }
       if (isl?.id === "god_valley" && stg(game, "wb_god_valley") === "relics") {
-        for (const [spot, item, flag, title, text] of GV_RELICS) {
+        for (const [spot, item, flag, title2, text] of GV_RELICS) {
           if (c.flags[flag] || !near(spot, 5)) continue;
           c.flags[flag] = true;
           game.quests.ctx().give(item, 1);
-          game.ui.banner(title, "God Valley", text, 5);
+          game.ui.banner(title2, "God Valley", text, 5);
         }
         if (c.flags.wbGvTag && c.flags.wbGvHorn && c.flags.wbGvFlag) c.flags.wbGvRelics = true;
       }
@@ -33500,12 +37619,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   ];
   function drawWhale(g, env, marked) {
     const t = env?.time || 0;
-    const TAU6 = Math.PI * 2;
+    const TAU8 = Math.PI * 2;
     g.save();
     g.translate(0, Math.sin(t * 0.7) * 0.12);
     g.fillStyle = "rgba(255,255,255,0.28)";
     g.beginPath();
-    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU6);
+    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU8);
     g.fill();
     g.fillStyle = "#4e6177";
     g.beginPath();
@@ -33517,7 +37636,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.fill();
     g.fillStyle = "#5d7389";
     g.beginPath();
-    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU6);
+    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU8);
     g.fill();
     g.fillStyle = "#d7e1ea";
     g.beginPath();
@@ -33533,16 +37652,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     g.fillStyle = "#fafafa";
     g.beginPath();
-    g.arc(-6.6, -1.8, 0.45, 0, TAU6);
+    g.arc(-6.6, -1.8, 0.45, 0, TAU8);
     g.fill();
     g.fillStyle = "#1a1a1a";
     g.beginPath();
-    g.arc(-6.7, -1.8, 0.24, 0, TAU6);
+    g.arc(-6.7, -1.8, 0.24, 0, TAU8);
     g.fill();
     if (marked) {
       g.fillStyle = "#fafafa";
       g.beginPath();
-      g.arc(-8.2, -3.1, 0.8, 0, TAU6);
+      g.arc(-8.2, -3.1, 0.8, 0, TAU8);
       g.fill();
       g.strokeStyle = "#fafafa";
       g.lineWidth = 0.25;
@@ -33554,8 +37673,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.stroke();
       g.fillStyle = "#1a1a1a";
       g.beginPath();
-      g.arc(-8.45, -3.2, 0.16, 0, TAU6);
-      g.arc(-7.95, -3.2, 0.16, 0, TAU6);
+      g.arc(-8.45, -3.2, 0.16, 0, TAU8);
+      g.arc(-7.95, -3.2, 0.16, 0, TAU8);
       g.fill();
     }
     const ph = t % 14;
@@ -33563,7 +37682,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const h2 = Math.sin(ph / 1.6 * Math.PI) * 3.2;
       g.fillStyle = "rgba(225,245,254,0.8)";
       g.beginPath();
-      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU6);
+      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU8);
       g.fill();
     }
     g.font = "bold 0.5px Nunito, sans-serif";
@@ -33603,7 +37722,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   });
   function install5(game) {
-    const C = () => game.state?.char;
+    const C2 = () => game.state?.char;
     const onSurface = () => game.world === game.surface;
     const surfIsland = (id) => game.surface?.islands?.find((i) => i.id === id) || null;
     game.spawner.addBuilder(({ island }) => {
@@ -33631,12 +37750,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (o?.use === "p1_laboon") game.dialogue?.open(null, laboonDialogue);
     });
     game.spawner.addBuilder(({ island }) => {
-      if (!C()) return;
+      if (!C2()) return;
       if (island.id === "foolshout_island" && stg2(game, "p1_foolshout_sun") === "flag") ensureGroundItem(game, "foolshout_island", "sun_anchorage", "p1_sun_flag", "the Sun Pirates' flag");
       if (island.id === "jaya" && stg2(game, "p1_golden_city") === "bird") ensureGroundItem(game, "jaya", "south_bird_woods", "south_bird", "a South Bird (its head points south)");
     });
     game.on("enterIsland", (isl) => {
-      const c = C();
+      const c = C2();
       if (!c || !isl) return;
       if (isl.id === "navarone" && pirate(c) && !c.flags.p1_g8Escaped && !game.quests.state("p1_g8_escape")) {
         game.quests.start("p1_g8_escape");
@@ -33652,7 +37771,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     });
     game.on("enterZone", (id) => {
-      const c = C();
+      const c = C2();
       if (!c || id !== "skypiea") return;
       game.emit("questEvent", "p1_reached_sky");
       if (!game.quests.state("p1_skypiea_god")) game.quests.start("p1_skypiea_god");
@@ -33672,7 +37791,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     });
     game.on("questDone", (id) => {
-      const c = C();
+      const c = C2();
       if (id === "p1_little_garden" && c && count(c, "eternal_pose_alabasta")) {
         try {
           useItem(game, "eternal_pose_alabasta");
@@ -33683,7 +37802,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     });
     let tt = 0, ramT = 20;
     game.on("tick", (dt) => {
-      const c = C(), p = game.player;
+      const c = C2(), p = game.player;
       if (!c || !p) return;
       if (p.buffs?.some((b) => b.id === "p1_soaked")) p.addStatus?.("wet", 1.5);
       else if (onSurface() && p.inWater && game.currentIsland?.id === "alabasta") p.addStatus?.("wet", 12);
@@ -33750,7 +37869,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
 
   // src/content/paradise2.js
   var S = (g, id) => g.quests.stageId(id);
-  var D = (g, id) => g.quests.isDone(id);
+  var D2 = (g, id) => g.quests.isDone(id);
   var ON = (g, id) => !!g.quests.state(id) && !g.quests.isDone(id);
   var at3 = (ctx, id, st) => ctx.game.quests.stageId(id) === st;
   var beat2 = (c, id) => (c.bosses || []).includes(id) || !!(c.defeated || {})[id];
@@ -34454,8 +38573,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           const p = ctx.game.player;
           const s = (ctx.game.ships || []).find((x) => x.owner === "player" && !x.sunk && ctx.game.world.distance(x.x, x.y, p.x, p.y) < 120);
           if (!s) return `"Kaku, foreman at Dock 1. They call me Mountain Wind \u2014 I like high places. Bring your ship into the harbour and I'll appraise her for free."`;
-          const pct = Math.round(s.hull / s.maxHull * 100);
-          return `"Let me have a look at the ${s.name}... (He leaps onto the mast in one jump.) Hull at ${pct}%. ${pct > 80 ? "She's sound. Treat her well and she'll outlive you." : pct > 40 ? "Cracked planks, a tired keel. Dock 1 can fix it." : "Honestly? I'm amazed she floats. Get her repaired before the Grand Line finishes the job."}"`;
+          const pct2 = Math.round(s.hull / s.maxHull * 100);
+          return `"Let me have a look at the ${s.name}... (He leaps onto the mast in one jump.) Hull at ${pct2}%. ${pct2 > 80 ? "She's sound. Treat her well and she'll outlive you." : pct2 > 40 ? "Cracked planks, a tired keel. Dock 1 can fix it." : "Honestly? I'm amazed she floats. Get her repaired before the Grand Line finishes the job."}"`;
         } }
       } })
     },
@@ -34613,7 +38732,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       look: { hair: "ponytail", hairColor: "#e65100", top: "#1565c0", bottom: "#8d6e63", hat: "bandana", hatColor: "#fafafa", skin: "#f1c9a0" },
       level: 18,
       style: "brawler",
-      recruit: { role: "shipwright", requires: (c, g) => D(g, "p2_cp9_conspiracy"), pitch: `"Really?! A real voyage beats five more years of sanding decks! (She shoulders a toolbox bigger than she is.) While I'm aboard, your ship does not sink. That's a Galley-La promise."` },
+      recruit: { role: "shipwright", requires: (c, g) => D2(g, "p2_cp9_conspiracy"), pitch: `"Really?! A real voyage beats five more years of sanding decks! (She shoulders a toolbox bigger than she is.) While I'm aboard, your ship does not sink. That's a Galley-La promise."` },
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: { text: () => ctx.game.quests.isDone("p2_cp9_conspiracy") ? `"Foremen Lucci and Kaku were CP9 all along... Paulie hasn't stopped smoking since. (She kicks a pebble.) Water 7 is the best place in the world to learn ships \u2014 and the worst place to see what they're for. I want to see the sea."` : `"I'm Chisel, apprentice at Dock 3! Galley-La won't let me touch a real keel for another five years. I sand. I sand a LOT."` }
       } })
@@ -34632,7 +38751,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       look: { hair: "pompadour", hairColor: "#29b6f6", top: "#e53935", bottom: "#1565c0", skin: "#f1c9a0", hand: "#b0bec5", bulk: 1.4, openShirt: true },
       bulk: 1.4,
       level: 45,
-      when: (c, g) => D(g, "p2_enies_lobby"),
+      when: (c, g) => D2(g, "p2_enies_lobby"),
       marker: (c, g) => !g.quests.state("p2_adam_wood") ? "!" : S(g, "p2_adam_wood") === "build" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
@@ -34673,7 +38792,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       at: { town: "st_poplar_town", building: "Back-Alley Dealer" },
       look: { hair: "long", hairColor: "#424242", top: "#37474f", bottom: "#212121", hat: "cowboy", hatColor: "#212121", scarEye: true },
       level: 20,
-      marker: (c, g) => D(g, "p2_enies_lobby") && !g.quests.state("p2_candy_pirates") ? "!" : S(g, "p2_candy_pirates") === "report" ? "?" : null,
+      marker: (c, g) => D2(g, "p2_enies_lobby") && !g.quests.state("p2_candy_pirates") ? "!" : S(g, "p2_candy_pirates") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.game.quests.isDone("p2_candy_pirates") ? `"You ran the Candy Pirates out of St. Poplar. The town doesn't know your name \u2014 which is how I like my friends. What do you need?"` : '"Timber, stone that makes Devil Fruit users sweat, things that fell off Government ships... (He lowers his voice.) Two girls from the Franky Family bought a plank of Adam wood here once. Two hundred million. Cash."',
@@ -34702,7 +38821,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       faction: "civilian",
       look: { hair: "short", hairColor: "#8d6e63", nose: "long", top: "#6d4c41", bottom: "#3e2723", hat: "beanie", hatColor: "#3e2723" },
       level: 48,
-      when: (c, g) => D(g, "p2_enies_lobby"),
+      when: (c, g) => D2(g, "p2_enies_lobby"),
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.game.quests.isDone("p2_candy_pirates") ? `"We are not CP9 anymore. The Government needed someone to blame for Enies Lobby. (He shrugs.) You fought beside us against the Candy Pirates. If you want the Six Powers, I will teach you \u2014 for a price. Lucci's hospital bills do not pay themselves."` : '"...You. From Enies Lobby. (He does not reach for his swords.) We are street performers now, if you can believe it. Lucci is still in the hospital. Leave us be \u2014 unless you are here about the Candy Pirates."',
@@ -34849,7 +38968,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       bulk: 1.6,
       ai: "idle",
       look: { hair: "long", hairColor: "#8d6e63", hat: "horns", hatColor: "#9e9e9e", top: "#795548", bottom: "#4e342e", skin: "#e0ac7e" },
-      when: (c, g) => !D(g, "p2_enies_lobby"),
+      when: (c, g) => !D2(g, "p2_enies_lobby"),
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: { text: () => ctx.char.flags.p2_giantsTruth ? '"Fifty years... (Kashii wipes his eyes with a hand the size of a boat.) Go, tiny warrior. We will hold the gate open behind you."' : '"Oimo does the talking. I do the smashing. Go home, little one."' }
       } })
@@ -35098,7 +39217,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       ai: "idle",
       look: { skin: "#fafafa", hair: "afro", hairColor: "#212121", top: "#212121", bottom: "#212121", hat: "captain", hatColor: "#212121", scale: 1.15 },
       level: 45,
-      when: (c, g) => !D(g, TB_Q),
+      when: (c, g) => !D2(g, TB_Q),
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Yohohoho! Good evening! Please don't be alarmed \u2014 I'm only a skeleton. I died fifty years ago, you see. Skull joke! ...A man named Moria stole my shadow. If the sun touches me, I'll vanish. Not that I have any skin left to burn. Yohohoho!"`,
@@ -35203,7 +39322,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       skill: 0.35,
       breakthrough: 2,
       alert: "Fosfosfos! A fresh body for my research!",
-      when: (c, g) => !D(g, TB_Q),
+      when: (c, g) => !D2(g, TB_Q),
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Fosfosfos! The world-famous Genius Surgeon, Dr. Hogback! Cindry-chan, serve our guest a plate. (A pale maid hurls a dinner plate at your head.) Once Moria-sama takes your shadow, I'll give your body a much better use."`,
@@ -35225,7 +39344,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       style: "brawler",
       moves: ["p2_plates", "brawl_knee"],
       skill: 0.4,
-      when: (c, g) => !D(g, TB_Q)
+      when: (c, g) => !D2(g, TB_Q)
     },
     {
       id: "p2_absalom",
@@ -35246,7 +39365,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       skill: 0.45,
       breakthrough: 3,
       alert: "You can't hit what you can't see! Gaohahaha!",
-      when: (c, g) => !D(g, TB_Q),
+      when: (c, g) => !D2(g, TB_Q),
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `(A voice from nowhere.) "Over here. No \u2014 here. Gaohahaha! Elephant skin, bear muscles, a lion's jaw \u2014 and the Clear-Clear Fruit. The General Zombies of this graveyard obey me. Want to see my bride? She'll be yours to meet at the wedding... after I find her."`,
@@ -35274,7 +39393,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       breakthrough: 3,
       alert: "Horohorohoro! Negative Hollow!",
       barks: ["Horohorohoro!", "So cute... NOT!"],
-      when: (c, g) => !D(g, TB_Q),
+      when: (c, g) => !D2(g, TB_Q),
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Horohorohoro! Welcome to my Wonder Garden. Kumashi, don't talk, you ruin the mood. (A ghost drifts through you \u2014 and for a second you want to crawl into a hole.) That's a Negative Hollow. Nobody who's felt one wants to fight anymore."`,
@@ -35300,7 +39419,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       skill: 0.3,
       breakthrough: 4,
       alert: "OARS... WANTS... MEAT!",
-      when: (c, g) => !D(g, TB_Q),
+      when: (c, g) => !D2(g, TB_Q),
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: '(A giant corpse five hundred years old, stitched together by Hogback, towers out of its freezer. The shadow inside it belonged to some loud rookie and will not stop talking about meat.) "OARS... HUNGRY..."',
@@ -35328,7 +39447,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       alert: "Draw.",
       duel: true,
       marker: (c, g) => !g.quests.state("p2_ryuma_duel") && /ittoryu|nitoryu|santoryu/.test(c.style || "") ? "!" : null,
-      when: (c, g) => !D(g, "p2_ryuma_duel"),
+      when: (c, g) => !D2(g, "p2_ryuma_duel"),
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `(A skeletal samurai sits cross-legged beneath a dead tree, a black blade across his knees. His shadow hums an old sea shanty.) "They call me Ryuma, the King. I cut down a dragon in Wano long ago. Now I am Moria's puppet. ...You carry a sword. Draw it."`,
@@ -35369,7 +39488,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.ui.banner("SHADOWS' ASGARD", "Gecko Moria", "He swallows a thousand stolen shadows and swells to the size of a mansion.", 4);
         a.addBuff({ id: "p2_asgard", name: "Shadows' Asgard", dur: 120, mods: { damage: 1.5, defMul: 0.75, scale: 1.4 }, aura: "rgba(38,50,56,0.8)" });
       } }],
-      when: (c, g) => !D(g, TB_Q),
+      when: (c, g) => !D2(g, TB_Q),
       marker: (c, g) => S(g, TB_Q) === "moria" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
@@ -35525,8 +39644,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       ai: "idle",
       look: { hair: "long", hairColor: "#fafafa", top: "#fafafa", bottom: "#5d4037", coat: "#8d6e63", scarEye: true, swords: 1, skin: "#f1c9a0" },
       level: 90,
-      when: (c, g) => D(g, "p2_sabaody_auction") && !ON(g, "p2_rusukaina"),
-      marker: (c, g) => D(g, "p2_summit_war") && !g.quests.state("p2_rusukaina") ? "!" : null,
+      when: (c, g) => D2(g, "p2_sabaody_auction") && !ON(g, "p2_rusukaina"),
+      marker: (c, g) => D2(g, "p2_summit_war") && !g.quests.state("p2_rusukaina") ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: '"Hm? Ah, the young one from the auction. Take it easy. (He pours two glasses.) I coat ships these days. And now and then, I teach a promising pirate what Haki really is \u2014 the power of conviction without a shadow of doubt."',
@@ -35661,7 +39780,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       race: "fishman",
       look: { hair: "short", hairColor: "#4caf50", top: "#f8bbd0", bottom: "#f06292", skin: "#fdeee4", fin: true },
       level: 3,
-      when: (c, g) => D(g, "p2_sabaody_auction"),
+      when: (c, g) => D2(g, "p2_sabaody_auction"),
       dialogue: () => ({ start: "a", nodes: { a: { text: `"You came for me! (She flops forward and hugs you, tail and all.) Pappag says we're going home to Fish-Man Island. If you ever dive down, come to the Mermaid Caf\xE9 in Mermaid Cove! Coat your ship first, okay? Or you'll be squished!"` } } })
     },
     {
@@ -35743,7 +39862,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       look: { hair: "spiky", hairColor: "#1565c0", top: "#fafafa", bottom: "#1565c0", hat: "goggles", skin: "#e0ac7e" },
       level: 24,
       style: "brawler",
-      recruit: { role: "helmsman", requires: (c, g) => D(g, "p2_sabaody_auction"), pitch: `"Leave the Riders? Duval said if I ever found a captain worth following, I should go. (He grins.) I can steer anything that floats \u2014 or flies. Let's go!"` },
+      recruit: { role: "helmsman", requires: (c, g) => D2(g, "p2_sabaody_auction"), pitch: `"Leave the Riders? Duval said if I ever found a captain worth following, I should go. (He grins.) I can steer anything that floats \u2014 or flies. Let's go!"` },
       dialogue: (ctx) => ({ start: "a", nodes: { a: { text: () => ctx.game.quests.isDone("p2_sabaody_auction") ? `"You punched \u2014 or nearly punched \u2014 a Celestial Dragon! Sabaody's still shaking. I pilot flying fish for Duval, but I've always wanted to steer a real ship through the New World."` : `"Gil, Rosy Life Riders. I fly flying fish between the groves. Fastest way around Sabaody \u2014 if you don't mind the smell."` } } })
     },
     {
@@ -35940,7 +40059,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       moves: ["p2_buddha_wave", "p2_daibutsu", "brawl_tackle"],
       haki: { armament: 85, observation: 75 },
       bounty: 3e8,
-      marker: (c, g) => marine(c) && !g.quests.state(WAR) && (D(g, "p2_sabaody_auction") || D(g, "p2_impel_down")) ? "!" : null,
+      marker: (c, g) => marine(c) && !g.quests.state(WAR) && (D2(g, "p2_sabaody_auction") || D2(g, "p2_impel_down")) ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => marine(ctx.char) ? `"At ease, ${ctx.char.marineRank || "sailor"}. (The Fleet Admiral's pet goat chews on a report.) The pirates of this era do not stay in their seas. Whitebeard moves. The Supernovas move. And I am told Garp's grandson is somewhere in this. Justice must not waver."` : wanted(ctx.char) ? `"A pirate walks into Marine Headquarters and asks for the Fleet Admiral. (He does not stand up.) Garp's grandson would do the same. Leave while I am in a good mood \u2014 or do not, and discover why they call me the Buddha."` : '"You wish to serve Justice? The Enlistment Office is beside this building. Absolute Justice is a heavy coat to wear."',
@@ -36107,7 +40226,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       island: "marineford",
       at: { spot: "oris_plaza", ox: -6 },
       level: 20,
-      marker: (c, g) => !g.quests.state(WAR) && (D(g, "p2_impel_down") || D(g, "p2_sabaody_auction")) ? "!" : null,
+      marker: (c, g) => !g.quests.state(WAR) && (D2(g, "p2_impel_down") || D2(g, "p2_sabaody_auction")) ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.game.quests.isDone(WAR) ? '"I was on this plaza when Whitebeard fell. He died standing, you know. Not a single wound in his back. (The old man points at the great crack across the stone.) He said the One Piece is real. The whole world heard him. A new era started that day."' : `"The execution platform, Oris Plaza. They're going to execute Portgas D. Ace, Whitebeard's second division commander, right up there. Whitebeard will come. Every pirate in the New World knows it. This plaza is going to become a war."`,
@@ -36238,7 +40357,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       ai: "idle",
       look: { hair: "long", hairColor: "#f48fb1", top: "#212121", bottom: "#e91e63", hat: "crown", hatColor: "#ffd54f", scale: 0.92 },
       level: 45,
-      when: (c, g) => D(g, TB_Q),
+      when: (c, g) => D2(g, TB_Q),
       dialogue: () => ({ start: "a", nodes: { a: { text: `"Horohorohoro! Some bear-man pushed me across the sea and I landed HERE. It's gloomy, it's foggy, the castle is full of bats... I LOVE it. (A tiny ghost pats your head.) The owner never talks. The baboons have swords. Don't tell him I ate his cake."` } } })
     },
     {
@@ -36360,7 +40479,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       style: "okama_kenpo",
       moves: ["p2_hell_wink", "okama_pirouette"],
       invulnerable: true,
-      when: (c, g) => D(g, "p2_impel_down"),
+      when: (c, g) => D2(g, "p2_impel_down"),
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: '"Hee-haw! Candy-boy! You made it out of Impel Down alive \u2014 Vanatta! (He poses.) Welcome to my kingdom. Hormones, Newkama Kenpo, Hell Wink \u2014 the queen teaches everything to her friends!"',
@@ -36698,7 +40817,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       look: { hair: "long", hairColor: "#1976d2", nose: "red", top: "#fafafa", bottom: "#fafafa", skin: "#fafafa", hat: "captain", hatColor: "#6d4c41" },
       level: 30,
       fruit: "bara",
-      when: (c, g) => !D(g, "p2_impel_down"),
+      when: (c, g) => !D2(g, "p2_impel_down"),
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"GYAHAHAHA! Blades can't cut me \u2014 I'm a Chop-Chop man! The Blade Forest of Level 1 is a spa for Captain Buggy! (He lowers his voice.) You're breaking out? ...Flashy. I know where the hole to Level 2 is. The Blugoris patrol it. Their boss, Saldeath, is tiny and annoying."`,
@@ -36741,7 +40860,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       fruit: "doru",
       look: { hair: "spiky", hairColor: "#212121", top: "#fafafa", bottom: "#fafafa", skin: "#f1c9a0", goggles: true },
       level: 34,
-      when: (c, g) => !D(g, "p2_impel_down"),
+      when: (c, g) => !D2(g, "p2_impel_down"),
       dialogue: () => ({ start: "a", nodes: { a: { text: '"Hah! A breakout? How ARTISTIC. (He moulds a key out of wax in three seconds flat.) Candle Key. Opens any lock on this level. ...The Sphinx guards the stairs down. It says the names of noodles and it will eat you. Good luck, my canvas."' } } })
     },
     {
@@ -36795,7 +40914,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       fruit: "mane",
       look: { hair: "short", hairColor: "#212121", top: "#fafafa", bottom: "#fafafa", skin: "#f1c9a0" },
       level: 36,
-      when: (c, g) => !D(g, "p2_impel_down"),
+      when: (c, g) => !D2(g, "p2_impel_down"),
       dialogue: () => ({ start: "a", nodes: { a: { text: '"Un, deux, trois! A friend breaking out of hell? The way of the okama is the way of friendship! (He strikes a swan pose on one leg, starving.) Listen: prisoners on Level 5 vanish \u2014 the guards call it the Oni Sleeve Pull. I think they go somewhere... fabulous."' } } })
     },
     {
@@ -36896,7 +41015,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       style: "okama_kenpo",
       moves: ["p2_hell_wink", "okama_pirouette"],
       invulnerable: true,
-      when: (c, g) => !D(g, "p2_impel_down"),
+      when: (c, g) => !D2(g, "p2_impel_down"),
       marker: (c, g) => S(g, "p2_impel_down") === "newkama" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
@@ -36926,7 +41045,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       ai: "idle",
       look: { hair: "short", hairColor: "#e53935", top: "#212121", bottom: "#212121", skin: "#f1c9a0" },
       level: 55,
-      when: (c, g) => !D(g, "p2_impel_down"),
+      when: (c, g) => !D2(g, "p2_impel_down"),
       dialogue: () => ({ start: "a", nodes: { a: { text: '(Inazuma snips a stone wall into a neat staircase with a pair of hands that are scissors.) "Iva-san has waited years for someone to start a breakout. Do not disappoint the queen."' } } })
     },
     {
@@ -37173,7 +41292,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     { island: "marineford", spot: "oris_plaza", radius: 10, enemies: MF_MARINES, when: (c, g) => warOn(g, "vice_admiral", "akainu") && !marine(c) },
     { island: "marineford", spot: "oris_plaza", radius: 10, enemies: MF_PIRATES, when: (c, g) => warOn(g, "vice_admiral") && marine(c) },
     // the islands Kuma sent them to
-    { island: "kuraigana", spot: "humandrill_woods", radius: 8, enemies: [HUMANDRILL(0), HUMANDRILL(1), HUMANDRILL(2)], when: (c, g) => !D(g, "p2_kuraigana_trial") },
+    { island: "kuraigana", spot: "humandrill_woods", radius: 8, enemies: [HUMANDRILL(0), HUMANDRILL(1), HUMANDRILL(2)], when: (c, g) => !D2(g, "p2_kuraigana_trial") },
     { island: "boin", spot: "boin_depths", radius: 8, enemies: [["beast", 40, { name: "Boin Hunting Boar" }], ["tiger", 42, { name: "Boin Jungle Tiger" }]] },
     { island: "momoiro", dx: 0.02, dy: 0.1, radius: 6, enemies: CANDIDATES, when: (c, g) => S(g, "p2_kamabakka") === "candidates" },
     { island: "rusukaina", spot: "beast_plains", radius: 9, enemies: [["tiger", 50, { name: "Rusukaina Tiger" }], ["gorilla", 50, { name: "Rusukaina Ape" }], ["beast", 50, { name: "Rusukaina Boar", hpMul: 1.5 }]] },
@@ -37184,7 +41303,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       dy: 0,
       radius: 8,
       enemies: [["gorilla", 44, { name: "Blugori", faction: "marine", look: { skin: "#5c6bc0", fur: "#3949ab", hairColor: "#3949ab", top: "#3949ab", bottom: "#283593", ears: "round", furFace: true, muzzle: true, hair: "bald" } }], ["gorilla", 44, { name: "Blugori", faction: "marine", look: { skin: "#5c6bc0", fur: "#3949ab", hairColor: "#3949ab", top: "#3949ab", bottom: "#283593", ears: "round", furFace: true, muzzle: true, hair: "bald" } }]],
-      when: (c, g) => inmate(c) && !D(g, "p2_impel_down")
+      when: (c, g) => inmate(c) && !D2(g, "p2_impel_down")
     },
     {
       island: "id_level1",
@@ -37199,21 +41318,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       dy: 0.1,
       radius: 8,
       enemies: [["tiger", 46, { name: "Manticore" }], ["beast", 44, { name: "Puzzle Scorpion", look: { skin: "#8d6e63", fur: "#6d4c41", top: "#5d4037", bottom: "#4e342e", hair: "bald", tail: "thin" } }]],
-      when: (c, g) => inmate(c) && !D(g, "p2_impel_down")
+      when: (c, g) => inmate(c) && !D2(g, "p2_impel_down")
     },
-    { island: "id_level3", dx: 0, dy: 0, radius: 8, enemies: [["marine", 46, { name: "Impel Down Jailer" }], ["marine_rifle", 46, { name: "Jailer Rifleman" }]], when: (c, g) => inmate(c) && !D(g, "p2_impel_down") },
+    { island: "id_level3", dx: 0, dy: 0, radius: 8, enemies: [["marine", 46, { name: "Impel Down Jailer" }], ["marine_rifle", 46, { name: "Jailer Rifleman" }]], when: (c, g) => inmate(c) && !D2(g, "p2_impel_down") },
     { island: "id_level4", dx: -0.1, dy: 0.2, radius: 8, enemies: [
       ["brute", 50, { name: "Minokoala (Jailer Beast)", faction: "marine", look: { skin: "#90a4ae", fur: "#78909c", ears: "round", muzzle: true, hat: "horns", hatColor: "#efebe9", top: "#607d8b", bottom: "#455a64", hair: "bald" } }],
       ["brute", 50, { name: "Minozebra (Jailer Beast)", faction: "marine", look: { skin: "#eceff1", fur: "#212121", ears: "round", muzzle: true, hat: "horns", hatColor: "#efebe9", top: "#eceff1", bottom: "#212121", hair: "mohawk", hairColor: "#212121" } }],
       ["brute", 50, { name: "Minorhinoceros (Jailer Beast)", faction: "marine", look: { skin: "#9e9e9e", ears: "round", muzzle: true, hat: "horns", hatColor: "#efebe9", top: "#757575", bottom: "#616161", hair: "bald" } }]
-    ], when: (c, g) => inmate(c) && !D(g, "p2_impel_down") },
+    ], when: (c, g) => inmate(c) && !D2(g, "p2_impel_down") },
     {
       island: "id_level5",
       dx: 0,
       dy: 0,
       radius: 9,
       enemies: [0, 1, 2].map(() => ["beast", 50, { name: "Freezing Hell Wolf", look: { skin: "#eceff1", fur: "#fafafa", ears: "pointy", muzzle: true, tail: "fluffy", top: "#eceff1", bottom: "#cfd8dc", hair: "bald" } }]),
-      when: (c, g) => inmate(c) && !D(g, "p2_impel_down")
+      when: (c, g) => inmate(c) && !D2(g, "p2_impel_down")
     }
   ];
   var spawnHere = (g, grp) => g.spawner?.populated.has(grp.island) ? spawnGroup(g, grp) : [];
@@ -37917,7 +42036,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         c.flags.p2_warNews = "printed";
         lines.push(`WHITEBEARD DEAD. "The One Piece is real!" \u2014 the old pirate's last words start a new Great Pirate Era.`);
       }
-      if (lines.length) game.log(`\u{1F4F0} Extra! ${lines.join(" \xB7 ")}`, "#e0e0e0");
+      if (lines.length) game.log(`Extra! ${lines.join(" \xB7 ")}`, "#e0e0e0");
     });
     const prevSea = game.seaInteraction;
     game.seaInteraction = (p, s) => {
@@ -44193,7 +48312,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     ["THE LAST WORDS", "The broadcast cuts out", '"...The fate of the world depends on whoever finds the One Piece. Please, someone\u2014" (Static.)']
   ];
   function install8(game) {
-    const C = () => game.state?.char;
+    const C2 = () => game.state?.char;
     let t = 0;
     let broadcast = null;
     let teachT = -1;
@@ -44203,20 +48322,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       teachT = -1;
     });
     game.on("knockout", (a, att) => {
-      const c = C();
+      const c = C2();
       if (!c || !a) return;
       if (a.npcId && TRACKED.includes(a.npcId) && att && (att.isPlayer || att.faction === "player")) c.flags.nw2_ko = { ...c.flags.nw2_ko || {}, [a.npcId]: true };
       syncBeatFlags(c);
     });
     game.on("bossDefeated", (a) => {
-      const c = C();
+      const c = C2();
       if (!c || !a) return;
       if (a.npcId === "kaido") game.ui.banner("KAIDO HAS FALLEN", "Onigashima", "The strongest creature in the world crashes through the Skull Dome into the magma below. Wano will talk about this night for a thousand years.", 7);
       if (a.npcId === "teach_hachinosu") game.ui.banner("BLACKBEARD DEFEATED", "Hachinosu", `"Zehaha... ha... This isn't over! People's dreams... never end...!"`, 6);
       if (a.npcId === "kizaru_egghead") game.log('Kizaru staggers back into the light. "Ooh~ that one actually hurt..." Somewhere in the Labophase, a Den Den Mushi starts to speak.', "#fff59d");
     });
     game.on("enterIsland", (isl) => {
-      const c = C();
+      const c = C2();
       if (!c || !isl) return;
       if (isl.id === "wano" && !started3(game, "wano_dawn")) game.quests.start("wano_dawn");
       if (isl.id === "egghead" && !started3(game, "egghead_incident")) game.quests.start("egghead_incident");
@@ -44235,7 +48354,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     });
     game.on("itemGained", (id) => {
-      const c = C();
+      const c = C2();
       if (c && id === "poneglyph_rubbing" && !started3(game, "laugh_tale_voyage")) game.quests.start("laugh_tale_voyage");
     });
     game.on("questDone", (id) => {
@@ -44245,7 +48364,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     });
     game.on("questEvent", (ev) => {
-      const c = C();
+      const c = C2();
       if (c && ev === "nw2_joyboy") c.flags.nw2_readJoyBoy = true;
     });
     game.spawner.addBuilder((ctx) => {
@@ -44255,15 +48374,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       };
     });
     game.on("tick", (dt) => {
-      const c = C();
+      const c = C2();
       if (!c || !game.player) return;
       if (game.quests.stageId("egghead_incident") === "message") {
         if (!broadcast) broadcast = { t: 0, i: 0 };
         broadcast.t -= dt;
         if (broadcast.t <= 0) {
           if (broadcast.i < BROADCAST.length) {
-            const [title, sub, text] = BROADCAST[broadcast.i++];
-            game.ui.banner(title, sub, text, 7);
+            const [title2, sub, text] = BROADCAST[broadcast.i++];
+            game.ui.banner(title2, sub, text, 7);
             broadcast.t = 7.5;
           } else {
             broadcast = null;
@@ -45151,15 +49270,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
 
   // src/game/zones.js
   function installZones(game) {
-    const cache2 = /* @__PURE__ */ new Map();
+    const cache3 = /* @__PURE__ */ new Map();
     let stash = null;
     const zoneWorld = (id) => {
-      if (!cache2.has(id)) {
+      if (!cache3.has(id)) {
         const w = generateZoneWorld(ZONES[id]);
         w.fog.fill(255);
-        cache2.set(id, w);
+        cache3.set(id, w);
       }
-      return cache2.get(id);
+      return cache3.get(id);
     };
     game.zoneWorld = zoneWorld;
     game.inZone = () => game.world !== game.surface ? game.world.id : null;
@@ -45488,316 +49607,30 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }, 1400);
   }
 
-  // src/game/crew.js
-  var CREW_ROLES = {
-    fighter: { name: "Combatant", icon: "\u2694", desc: "Fights beside you on land." },
-    swordsman: { name: "Swordsman", icon: "\u{1F5E1}", desc: "Fights beside you on land with a blade." },
-    navigator: { name: "Navigator", icon: "\u{1F9ED}", desc: "Log Pose sets twice as fast, storms are announced early, +10% sailing speed." },
-    cook: { name: "Cook", icon: "\u{1F373}", desc: "Food heals 50% more; stamina regenerates at sea." },
-    doctor: { name: "Doctor", icon: "\u{1FA7A}", desc: "Patches you up after every battle (heals 30% when combat ends)." },
-    shipwright: { name: "Shipwright", icon: "\u{1F528}", desc: "Repairs your ship slowly while sailing." },
-    sniper: { name: "Sniper", icon: "\u{1F3AF}", desc: "Cannons deal 30% more damage." },
-    musician: { name: "Musician", icon: "\u{1F3BB}", desc: "Stamina regenerates 25% faster." },
-    archaeologist: { name: "Archaeologist", icon: "\u{1F4DC}", desc: "Can read Poneglyphs." },
-    helmsman: { name: "Helmsman", icon: "\u2388", desc: "Your ship turns 25% faster." }
-  };
-  var MAX_FOLLOWERS = 2;
-  function computeMods(members) {
-    const has2 = (r) => members.some((m) => m.role === r);
-    return {
-      speedMul: has2("navigator") ? 1.1 : 1,
-      logMul: has2("navigator") ? 2 : 1,
-      foodMul: has2("cook") ? 1.5 : 1,
-      seaStamina: has2("cook"),
-      doctor: has2("doctor"),
-      repair: has2("shipwright") ? 0.6 : 0,
-      cannonMul: has2("sniper") ? 1.3 : 1,
-      staminaMul: has2("musician") ? 1.25 : 1,
-      poneglyphs: has2("archaeologist"),
-      turnMul: has2("helmsman") ? 1.25 : 1
-    };
-  }
-  var Crew = class {
-    constructor(game) {
-      this.game = game;
-      game.crew = this;
-      game.crewMods = computeMods([]);
-      this.followers = /* @__PURE__ */ new Map();
-      this.t = 0;
-      this.wasFighting = false;
-      game.on("characterStart", () => {
-        this.followers.clear();
-        this.refresh();
-      });
-      game.on("tick", (dt) => this.tick(dt));
-      game.on("enterZone", () => this.followers.clear());
-      game.on("leaveZone", () => this.followers.clear());
-      game.on("bossDefeated", () => {
-        for (const m of this.members()) m.level = Math.min((m.baseLevel || m.level) + 40, (m.level || 5) + 1.5);
-      });
-    }
-    get char() {
-      return this.game.state?.char;
-    }
-    members() {
-      return this.char?.crew || [];
-    }
-    has(id) {
-      return this.members().some((m) => m.id === id);
-    }
-    count() {
-      return this.members().length;
-    }
-    hasRole(role) {
-      return this.members().some((m) => m.role === role);
-    }
-    refresh() {
-      this.game.crewMods = computeMods(this.members());
-    }
-    canRecruit(def) {
-      const c = this.char;
-      if (!c || !def.recruit || this.has(def.id)) return false;
-      if (def.boss && !c.bosses.includes(def.id) && def.recruit.afterDefeat) return false;
-      try {
-        if (def.recruit.requires && !def.recruit.requires(c, this.game)) return false;
-      } catch {
-        return false;
-      }
-      return true;
-    }
-    /** Add the "Join my crew" choice to an NPC's dialogue tree. */
-    decorate(tree, npc) {
-      const def = npc?.def;
-      if (!def?.recruit || !tree?.nodes) return tree;
-      const startId = tree.start || "start";
-      const start2 = tree.nodes[startId];
-      if (!start2) return tree;
-      const r = def.recruit;
-      const role = CREW_ROLES[r.role] || CREW_ROLES.fighter;
-      const cost = r.cost || 0;
-      const nodes = { ...tree.nodes };
-      const choice = {
-        text: `${role.icon} "Join my crew!"${cost ? ` (${formatBerries(cost)})` : ""}`,
-        if: () => this.canRecruit(def),
-        next: "__recruit"
-      };
-      nodes[startId] = { ...start2, choices: [choice, ...start2.choices || []] };
-      if (!start2.choices || !start2.choices.length) nodes[startId].choices.push({ text: "Goodbye.", end: true });
-      nodes.__recruit = {
-        text: r.pitch || `"You want me as your ${role.name.toLowerCase()}? ...Alright. I'm in!"`,
-        choices: [
-          { text: `Welcome aboard! (${role.name}: ${role.desc})`, do: () => {
-            if (cost && !pay(this.game, cost)) {
-              this.game.log("Not enough berries.", "#ff8a80");
-              return;
-            }
-            this.recruit(def, npc);
-          }, end: true },
-          { text: "On second thought...", end: true }
-        ]
-      };
-      return { ...tree, nodes };
-    }
-    recruit(def, actor) {
-      const c = this.char, g = this.game;
-      if (!c || this.has(def.id)) return;
-      const m = {
-        id: def.id,
-        name: def.name,
-        title: def.title,
-        role: def.recruit.role,
-        fighter: def.recruit.fighter ?? (def.recruit.role === "fighter" || def.recruit.role === "swordsman"),
-        level: def.level ?? 6,
-        baseLevel: def.level ?? 6,
-        joined: g.env.day,
-        follow: true
-      };
-      const fighters = this.members().filter((x) => x.fighter && x.follow).length;
-      if (m.fighter && fighters >= MAX_FOLLOWERS) m.follow = false;
-      c.crew.push(m);
-      this.refresh();
-      const role = CREW_ROLES[m.role];
-      g.ui.toast("NEW NAKAMA!", `${m.name} joins your crew as ${role?.name || m.role}.`, "#ffd54f");
-      g.log(`${m.name} joined the crew. ${role?.desc || ""} (Crew: U)`, "#ffe082");
-      g.audio?.sfx("breakthrough");
-      if (actor && actor.alive) {
-        if (m.fighter && m.follow) this.adopt(actor, m);
-        else {
-          actor.alive = false;
-          g.fx.burst(actor.x, actor.y - 0.6, 10, { color: ["#ffe082"], speed: 3, g: 0, life: 0.4, kind: "star" });
-        }
-      }
-      g.emit("crewJoined", def.id);
-      persist(g);
-    }
-    dismiss(id) {
-      const c = this.char;
-      const i = c.crew.findIndex((m2) => m2.id === id);
-      if (i < 0) return;
-      const [m] = c.crew.splice(i, 1);
-      const a = this.followers.get(id);
-      if (a) a.alive = false;
-      this.followers.delete(id);
-      c.flags["leftCrew_" + id] = true;
-      this.refresh();
-      this.game.log(`${m.name} leaves the crew. "Take care of yourself, captain."`, "#b0bec5");
-      persist(this.game);
-    }
-    setFollow(id, on) {
-      const m = this.members().find((x) => x.id === id);
-      if (!m) return false;
-      if (on && this.members().filter((x) => x.fighter && x.follow && x !== m).length >= MAX_FOLLOWERS) return false;
-      m.follow = !!on;
-      if (!on) {
-        const a = this.followers.get(id);
-        if (a) a.alive = false;
-        this.followers.delete(id);
-      }
-      return true;
-    }
-    adopt(a, m) {
-      const g = this.game;
-      a.faction = "player";
-      a.crewId = m.id;
-      a.persistent = true;
-      a.aggroPlayer = false;
-      a.provoked = false;
-      a.boss = false;
-      a.talk = a.def?.dialogue ? { def: a.def } : null;
-      a.nameColor = "#ffe082";
-      a.showName = true;
-      a.controller = new AIController({ kind: "follower", skill: 0.45, moves: a.def?.moves || [], ranged: a.def?.ranged });
-      a.stationary = false;
-      for (const list of g.spawner.populated.values()) {
-        const k = list.indexOf(a);
-        if (k >= 0) list.splice(k, 1);
-      }
-      this.followers.set(m.id, a);
-    }
-    spawnFollower(m) {
-      const g = this.game, p = g.player;
-      const def = npcDef(m.id);
-      if (!def) return null;
-      const a = makeNPC({ ...def, hostile: false, boss: false, level: Math.round(m.level || def.level || 6), when: void 0 }, p.x - 1, p.y + 0.8);
-      a.game = g;
-      g.addActor(a);
-      this.adopt(a, m);
-      return a;
-    }
-    tick(dt) {
-      const g = this.game, p = g.player, c = this.char;
-      if (!c || !p) return;
-      this.t -= dt;
-      if (this.t <= 0) {
-        this.t = 0.5;
-        for (const m of this.members()) {
-          if (!m.fighter || !m.follow) continue;
-          let a = this.followers.get(m.id);
-          if (a && !a.alive) {
-            this.followers.delete(m.id);
-            a = null;
-          }
-          if (!a && p.mode === "foot" && p.state === "idle") a = this.spawnFollower(m);
-          if (a && a.state === "knocked" && !p.inCombat) {
-            a.state = "idle";
-            a.hp = Math.round(a.d.maxHp * 0.3);
-            g.fx.text(a.x, a.y - 2, "Still standing!", "#ffe082", 0.35);
-          }
-        }
-      }
-      const mods = g.crewMods;
-      const fighting = !!p.inCombat;
-      if (this.wasFighting && !fighting && mods.doctor && p.state === "idle" && p.hp < p.d.maxHp) {
-        const heal = Math.round(p.d.maxHp * 0.3);
-        p.hp = Math.min(p.d.maxHp, p.hp + heal);
-        g.fx.text(p.x, p.y - 1.6, `+${heal}`, "#69f0ae", 0.45);
-        const doc = this.members().find((m) => m.role === "doctor");
-        g.log(`${doc?.name || "Your doctor"} patches you up.`, "#a5d6a7");
-      }
-      this.wasFighting = fighting;
-      if (p.mode === "sail" && p.ship && !p.ship.sunk) {
-        if (mods.repair && p.ship.hull < p.ship.maxHull) p.ship.hull = Math.min(p.ship.maxHull, p.ship.hull + mods.repair * dt);
-        if (mods.seaStamina) p.stamina = Math.min(p.d.maxStamina, p.stamina + 4 * dt);
-      }
-    }
-  };
-
-  // src/ui/crewPanel.js
-  function openCrew(game) {
-    const body = h("div");
-    const entry = game.ui.openPanel(body, { wide: true, id: "crew" });
-    if (!entry) return;
-    const render = () => {
-      clear(body);
-      const crew = game.crew.members();
-      body.append(h("h2", `Crew of the ${game.state.char.jr?.name || game.state.char.name}`));
-      body.append(h("p.muted", 'Companions you recruit in the world. Look for "Join my crew!" when you talk to people \u2014 a navigator, a cook, a doctor\u2026 Up to two fighters follow you on land; everyone else stays with the ship and helps from there.'));
-      if (!crew.length) body.append(h("p", "Your crew is just you, for now. Every great pirate started alone."));
-      const list = h("div.list");
-      for (const m of crew) {
-        const role = CREW_ROLES[m.role] || CREW_ROLES.fighter;
-        const actions = [];
-        if (m.fighter) {
-          actions.push(h("button.btn" + (m.follow ? ".green" : ""), {
-            on: { click: () => {
-              if (!game.crew.setFollow(m.id, !m.follow)) game.log("Only two companions can follow you on land at once.", "#ff8a80");
-              render();
-            } }
-          }, m.follow ? "Following" : "Stays aboard"));
-        }
-        actions.push(h("button.btn.red", { on: { click: async () => {
-          if (await game.ui.ask({ title: "Part ways?", text: `${m.name} will leave the crew and will not come back.`, ok: "Part ways", danger: true })) {
-            game.crew.dismiss(m.id);
-            render();
-          }
-        } } }, "Part ways"));
-        list.appendChild(h(
-          "div.row-item",
-          h("span.ico", role.icon),
-          h("div.grow", h("b", `${m.name}`), h("div.sub", `${role.name}${m.title ? " \xB7 " + m.title : ""} \xB7 Lv ${Math.round(m.level || 1)} \xB7 joined day ${m.joined || 1}`), h("div.sub", role.desc)),
-          ...actions
-        ));
-      }
-      body.appendChild(list);
-      const mods = game.crewMods;
-      const perks = [];
-      if (mods.speedMul > 1) perks.push("+10% sailing speed");
-      if (mods.logMul > 1) perks.push("Log Pose sets twice as fast");
-      if (mods.foodMul > 1) perks.push("+50% healing from food");
-      if (mods.doctor) perks.push("Healed after every battle");
-      if (mods.repair) perks.push("Ship repairs itself at sea");
-      if (mods.cannonMul > 1) perks.push("+30% cannon damage");
-      if (mods.staminaMul > 1) perks.push("+25% stamina regeneration");
-      if (mods.poneglyphs) perks.push("Can read Poneglyphs");
-      if (mods.turnMul > 1) perks.push("Ship turns 25% faster");
-      if (perks.length) body.append(h("h3", "Crew bonuses"), h("p", perks.join(" \xB7 ")));
-    };
-    render();
-  }
-
   // src/game/factions.js
+  var spiritReq = (c, what) => hakiKnown(c) ? what : "Your spirit has not yet awakened the strength the Navy expects of an officer this senior.";
   var MARINE_RANKS = [
-    { name: "Seaman Recruit", merit: 0 },
-    { name: "Seaman Apprentice", merit: 40 },
-    { name: "Seaman First Class", merit: 100 },
-    { name: "Petty Officer", merit: 200 },
-    { name: "Chief Petty Officer", merit: 350 },
-    { name: "Master Chief Petty Officer", merit: 550 },
-    { name: "Warrant Officer", merit: 800 },
-    { name: "Ensign", merit: 1100, perk: "Command of a Marine sloop." },
-    { name: "Lieutenant Junior Grade", merit: 1500 },
-    { name: "Lieutenant", merit: 2e3, perk: "Rokushiki instruction at any Marine base." },
-    { name: "Lieutenant Commander", merit: 2700 },
-    { name: "Commander", merit: 3500 },
-    { name: "Captain", merit: 4500, perk: "A Marine brig, and Bondola passage across the Red Line.", req: (c) => c.flags.enteredGrandLine ? null : "Serve in the Grand Line first." },
-    { name: "Commodore", merit: 6e3, perk: "The coat of Justice.", req: (c) => c.haki.armament > 0 ? null : "Awaken Armament Haki." },
-    { name: "Rear Admiral", merit: 8e3 },
-    { name: "Vice Admiral", merit: 11e3, perk: "A Marine battleship.", req: (c) => c.haki.armament >= 30 && c.haki.observation > 0 ? null : "Armament Haki 30 and Observation Haki." },
-    { name: "Admiral", merit: 16e3, req: (c) => (c.bosses || []).length >= 25 ? null : "Defeat 25 great foes." },
-    { name: "Fleet Admiral", merit: 25e3 }
+    { name: "Seaman Recruit", merit: 0, rep: 25 },
+    { name: "Seaman Apprentice", merit: 40, rep: 25 },
+    { name: "Seaman First Class", merit: 100, rep: 28 },
+    { name: "Petty Officer", merit: 200, rep: 30 },
+    { name: "Chief Petty Officer", merit: 350, rep: 33 },
+    { name: "Master Chief Petty Officer", merit: 550, rep: 36 },
+    { name: "Warrant Officer", merit: 800, rep: 40 },
+    { name: "Ensign", merit: 1100, rep: 43, perk: "Command of a Marine sloop." },
+    { name: "Lieutenant Junior Grade", merit: 1500, rep: 46 },
+    { name: "Lieutenant", merit: 2e3, rep: 50, perk: "A Marine seaman under your command on land, and Rokushiki instruction at any Marine base." },
+    { name: "Lieutenant Commander", merit: 2700, rep: 53 },
+    { name: "Commander", merit: 3500, rep: 56 },
+    { name: "Captain", merit: 4500, rep: 60, perk: "A Marine brig with an escort ship, two Marines at your side, and Bondola passage across the Red Line.", req: (c) => c.flags.enteredGrandLine ? null : "Serve in the Grand Line first." },
+    { name: "Commodore", merit: 6e3, rep: 64, perk: "The coat of Justice and a second escort ship.", req: (c) => c.haki.armament > 0 ? null : spiritReq(c, "Awaken Armament Haki.") },
+    { name: "Rear Admiral", merit: 8e3, rep: 68 },
+    { name: "Vice Admiral", merit: 11e3, rep: 74, perk: "A Marine battleship, a fleet of three escorts and a squad of three Marines.", req: (c) => c.haki.armament >= 30 && c.haki.observation > 0 ? null : spiritReq(c, "Armament Haki 30 and Observation Haki.") },
+    { name: "Admiral", merit: 16e3, rep: 82, perk: "The fleets of the Navy answer to you.", req: (c) => (c.bosses || []).length >= 25 ? null : "Defeat 25 great foes." },
+    { name: "Fleet Admiral", merit: 25e3, rep: 90, perk: "Supreme command of every Marine in the world." }
   ];
   var rankIndex = (name) => MARINE_RANKS.findIndex((r) => r.name === name);
-  var CRIMINALS = /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "rival"]);
+  var CRIMINALS2 = /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "rival"]);
   function installFactions(game) {
     game.marines = {
       rank: () => game.state?.char?.marineRank || null,
@@ -45819,6 +49652,136 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const c = game.state?.char;
       if (c && isGrandLine(reg)) c.flags.enteredGrandLine = true;
     });
+    installFleet(game);
+  }
+  function fleetSize(c) {
+    const i = rankIndex(c.marineRank);
+    return i >= rankIndex("Vice Admiral") ? 3 : i >= rankIndex("Commodore") ? 2 : i >= rankIndex("Captain") ? 1 : 0;
+  }
+  function squadSize(c) {
+    const i = rankIndex(c.marineRank);
+    return i >= rankIndex("Vice Admiral") ? 3 : i >= rankIndex("Captain") ? 2 : i >= rankIndex("Lieutenant") ? 1 : 0;
+  }
+  function installFleet(game) {
+    let t = 0;
+    const clear2 = () => {
+      for (const s of game.ships) if (s.escortOf) s.alive = false;
+      for (const a of game.actors) if (a.marineSquad) a.alive = false;
+    };
+    game.on("characterStart", clear2);
+    game.on("enterZone", clear2);
+    game.on("leaveZone", clear2);
+    game.on("marineRankChanged", (r) => {
+      if (!r) clear2();
+    });
+    game.on("tick", (dt) => {
+      if ((t -= dt) > 0) return;
+      t = 1;
+      const c = game.state?.char, p = game.player;
+      if (!c || !p) return;
+      const marine2 = c.faction === "marine";
+      const escorts = game.ships.filter((s) => s.escortOf && !s.sunk && s.alive !== false);
+      const wantShips = marine2 && p.mode === "sail" && p.ship && game.world === game.surface ? fleetSize(c) : 0;
+      for (let i = escorts.length - 1; i >= wantShips; i--) if (escorts[i] && game.world.distance(escorts[i].x, escorts[i].y, p.x, p.y) > 30) escorts[i].alive = false;
+      for (let i = escorts.length; i < wantShips; i++) spawnEscort(game, i);
+      const squad2 = game.actors.filter((a) => a.marineSquad && a.alive);
+      const wantSquad = marine2 && p.mode === "foot" ? squadSize(c) : 0;
+      for (let i = squad2.length - 1; i >= wantSquad; i--) squad2[i].alive = false;
+      for (let i = squad2.length; i < wantSquad; i++) spawnSoldier(game, i);
+      for (const a of squad2) {
+        if (a.state === "knocked" && !p.inCombat) {
+          a.state = "idle";
+          a.hp = Math.round(a.d.maxHp * 0.4);
+        }
+        if (game.world.distance(a.x, a.y, p.x, p.y) > 40) a.alive = false;
+      }
+    });
+  }
+  function spawnEscort(game, slot2) {
+    const c = game.state.char, p = game.player, lead = p.ship;
+    const big = rankIndex(c.marineRank) >= rankIndex("Vice Admiral");
+    const pos = formationPoint(game, lead, slot2, 1.6);
+    if (!game.world.sailable(pos.x, pos.y)) return;
+    const s = game.addShip({ type: big ? "marine_warship" : "brigantine", x: pos.x, y: pos.y, heading: lead.heading, owner: "marine", faction: "marine", name: big ? "Marine Battleship" : "Marine Escort" });
+    if (!s.fits(game.world, s.x, s.y, s.heading)) {
+      s.alive = false;
+      return;
+    }
+    s.escortOf = "player";
+    s.escortSlot = slot2;
+    s.level = 10 + rankIndex(c.marineRank) * 3;
+    s.label = `${s.name} (your fleet)`;
+    s.ai = escortAI;
+  }
+  function formationPoint(game, lead, slot2, spread = 1) {
+    const back = -(9 + Math.floor(slot2 / 2) * 7) * spread, side = (slot2 % 2 ? 1 : -1) * 6 * spread * (slot2 === 2 ? 0 : 1);
+    const hx = Math.cos(lead.heading), hy = Math.sin(lead.heading);
+    return { x: game.world.wx(lead.x + hx * back - hy * side), y: lead.y + hy * back + hx * side };
+  }
+  function escortAI(s, dt, game) {
+    const p = game.player, lead = p.ship;
+    const c = game.state?.char;
+    if (!c || c.faction !== "marine" || !lead || lead.sunk || p.mode !== "sail") {
+      s.sail = 0;
+      return;
+    }
+    const w = game.world;
+    let foe = null, fd = 22;
+    for (const o of game.ships) {
+      if (o === s || o.sunk || o.faction !== "pirate") continue;
+      const d2 = w.distance(s.x, s.y, o.x, o.y);
+      if (d2 < fd) {
+        fd = d2;
+        foe = o;
+      }
+    }
+    if (foe) {
+      s.sail = 1;
+      const toT = Math.atan2(foe.y - s.y, w.dx(s.x, foe.x));
+      const want2 = fd > 12 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
+      s.heading += clamp(angleDiff(s.heading, want2), -1, 1) * s.def.turn * dt;
+      const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
+      const toLead = Math.atan2(lead.y - s.y, w.dx(s.x, lead.x));
+      const clear2 = Math.abs(angleDiff(toT, toLead)) > 0.5 || w.distance(s.x, s.y, lead.x, lead.y) > fd + 3;
+      if (fd < 16 && side < 0.6 && clear2 && s.cannonCd <= 0) s.fireBroadside(game, foe.x, foe.y, { name: s.name, faction: "player", isShip: true, escort: true, power: () => (s.level || 10) * 10 });
+      return;
+    }
+    const pt = formationPoint(game, lead, s.escortSlot || 0);
+    const d = w.distance(s.x, s.y, pt.x, pt.y);
+    if (d > 60) {
+      const q = formationPoint(game, lead, s.escortSlot || 0, 1.6);
+      if (s.fits(w, q.x, q.y, lead.heading)) {
+        s.x = q.x;
+        s.y = q.y;
+        s.heading = lead.heading;
+        s.speed = lead.speed;
+      }
+      return;
+    }
+    const toP = Math.atan2(pt.y - s.y, w.dx(s.x, pt.x));
+    const want = d > 3 ? toP : lead.heading;
+    s.heading += clamp(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
+    s.sail = d > 8 ? 1 : d > 3 ? Math.max(0.3, lead.sailSet) : lead.sailSet;
+    s.rowing = d > 10 && game.isCalmAt(s.x, s.y) ? 1 : 0;
+  }
+  function spawnSoldier(game, i) {
+    const c = game.state.char, p = game.player;
+    const lvl = Math.max(6, Math.round(6 + rankIndex(c.marineRank) * 2.5));
+    const pos = game.spawner.findFree(p.x - 1.5 + i, p.y + 1.2, 3) || { x: p.x, y: p.y + 1 };
+    const names = ["Seaman Coby", "Seaman Helmeppo", "Seaman Rokkaku", "Petty Officer Jango", "Seaman Fullbody", "Seaman Tashigi"];
+    const a = makeEnemy("marine", lvl, pos.x, pos.y, { name: i === 0 && rankIndex(c.marineRank) >= rankIndex("Captain") ? "Your aide" : "Marine Seaman" });
+    a.name = names[(i + (c.runSeed || 0)) % names.length].replace("Seaman ", "Marine ");
+    a.game = game;
+    a.faction = "player";
+    a.marineSquad = true;
+    a.aggroPlayer = false;
+    a.provoked = false;
+    a.lethal = false;
+    a.showName = true;
+    a.nameColor = "#90caf9";
+    a.controller = new AIController({ kind: "follower", skill: 0.4, moves: a.techniques || [] });
+    game.addActor(a);
+    game.fx.burst(a.x, a.y - 0.6, 8, { color: ["#90caf9", "#ffffff"], speed: 2, g: 0, life: 0.4, kind: "smoke" });
   }
   function enlist(game, where) {
     const c = game.state.char;
@@ -45828,6 +49791,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     if (c.bounty > 0 || c.flags.deserter) {
       game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Recruiting Officer", text: `"${c.flags.deserter ? "A deserter wants back in? Guards!" : `Enlist? With a ${formatBerries(c.bounty)} bounty on your head? Get out before I arrest you.`}"` } } });
+      return;
+    }
+    if (c.crewName) {
+      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Recruiting Officer", text: `"You fly a Jolly Roger \u2014 the flag of the ${c.crewName}. The Navy doesn't recruit pirate captains."` } } });
+      return;
+    }
+    if ((c.reputation || 0) < ENLIST_REP) {
+      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Recruiting Officer", text: `"The Marines only take people of good standing. Right now folk around here would call you '${repTier(c.reputation || 0).name}'. Help people \u2014 finish their troubles, stand up to pirates \u2014 and come back when your name means something. (Reputation ${Math.round(c.reputation || 0)} / ${ENLIST_REP})"` } } });
       return;
     }
     game.dialogue.open(null, { start: "a", nodes: {
@@ -45864,6 +49835,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (!n || c.merit < n.merit) return null;
     const why = n.req ? n.req(c) : null;
     if (why) return why;
+    if ((c.reputation || 0) < (n.rep || 0)) return `Headquarters wants officers the people trust. Reputation ${Math.round(c.reputation || 0)} / ${n.rep}.`;
     c.marineRank = n.name;
     game.ui.toast("PROMOTED!", n.name, "#64b5f6");
     game.log(`Promoted to ${n.name}.${n.perk ? " " + n.perk : ""}`, "#90caf9");
@@ -45877,6 +49849,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       addItem(game, "marine_coat", 1);
       equip(game, "marine_coat");
     }
+    if (n.name === "Captain" || n.name === "Vice Admiral") addItem(game, "marine_medal", 1);
     if (i >= rankIndex("Captain")) c.flags.bondolaPass = true;
     game.progression.breakthrough(1, `Promotion to ${n.name}`);
     game.emit("marineRankChanged", n.name);
@@ -45982,13 +49955,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       game.progression.addBounty(Math.max(3e7, (a.bountyValue || 0) + 2e7), "Marine deserter");
       return;
     }
-    if (!CRIMINALS.has(a.faction)) return;
-    const tf = threatFactor(a.power(), p.power());
+    if (!CRIMINALS2.has(a.faction)) return;
+    const tf2 = threatFactor(a.power(), p.power());
     const bounty = a.bountyValue || a.def?.bounty || 0;
     if (c.faction === "marine") {
       let merit = 0;
       if (a.boss || a.named) merit = meritFor({ bounty, boss: a.boss });
-      else if (tf > 0.2) merit = 1 + Math.round(tf * 3);
+      else if (tf2 > 0.2) merit = 1 + Math.round(tf2 * 3);
       if (c.marineMission && a.npcId === c.marineMission.id) {
         merit += c.marineMission.merit;
         game.ui.toast("ORDERS COMPLETE", `${a.name} captured`, "#64b5f6");
@@ -46033,7 +50006,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (const d of wanted2) {
       const isl = game.surface.islands.find((i) => i.id === d.island);
       const known = c.discovered.includes(d.island);
-      list.appendChild(h("div.row-item", h("span.ico", "\u2620"), h("div.grow", h("b", d.name), h("div.sub", `${d.title || ""}${known && isl ? " \xB7 last seen: " + isl.name : ""}`)), h("span.price", formatBerries(d.bounty))));
+      list.appendChild(h("div.row-item", uiImg("bounty", 30), h("div.grow", h("b", d.name), h("div.sub", `${d.title || ""}${known && isl ? " \xB7 last seen: " + isl.name : ""}`)), h("span.price", formatBerries(d.bounty))));
     }
     body.appendChild(list);
     if (c.faction === "pirate") body.append(h("p.muted", "The clerk eyes you nervously and keeps one hand near the Den Den Mushi."));
@@ -46098,13 +50071,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     game.on("tick", (dt) => {
       const c = game.state?.char, p = game.player;
       if (!c || !p || game.world !== game.surface) return;
-      const lt = laughTale();
-      if (!lt || c.flags.laughTaleRevealed) return;
-      const d = game.world.distance(p.x, p.y, lt.x, lt.y);
-      const R = lt.radius + 70;
+      const lt2 = laughTale();
+      if (!lt2 || c.flags.laughTaleRevealed) return;
+      const d = game.world.distance(p.x, p.y, lt2.x, lt2.y);
+      const R = lt2.radius + 70;
       if (d < R) {
         game.env.storm = Math.max(game.env.storm, 0.9 * (1 - d / R) + 0.3);
-        const ang = Math.atan2(p.y - lt.y, game.world.dx(lt.x, p.x));
+        const ang = Math.atan2(p.y - lt2.y, game.world.dx(lt2.x, p.x));
         const push = 9 * (1 - d / R) + 2;
         const s = p.mode === "sail" ? p.ship : null;
         if (s) {
@@ -46130,10 +50103,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       if (c.flags.laughTaleRevealed && !revealed) {
         revealed = true;
-        const lt = laughTale();
-        if (lt && !c.flags.laughTaleAnnounced) {
+        const lt2 = laughTale();
+        if (lt2 && !c.flags.laughTaleAnnounced) {
           c.flags.laughTaleAnnounced = true;
-          game.surface.reveal(lt.x, lt.y, lt.radius + 20);
+          game.surface.reveal(lt2.x, lt2.y, lt2.radius + 20);
           game.renderer.terrain.updateFog(game.surface.fog);
           game.ui.toast("THE ROAD IS OPEN", "The four Road Poneglyphs point to the final island: Laugh Tale.", "#ffd54f");
         }
@@ -46196,7 +50169,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     game.on("tick", () => {
       const c = game.state?.char, p = game.player;
       if (!c || !p || c.flags.allBlue || game.world !== game.surface || p.mode !== "sail") return;
-      if (!(c.dream === "all_blue" || game.crew?.hasRole("cook"))) return;
+      if (!(game.crew?.hasRole("cook") || c.masteries?.black_leg !== void 0)) return;
       const ab = allBluePoint(c);
       if (game.world.distance(p.x, p.y, ab.x, ab.y) < 26) {
         c.flags.allBlue = true;
@@ -46252,7 +50225,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       if (c.faction === "marine" && c.marineRank) lines.push(`Marine ${c.marineRank} ${c.name} commended for service.`);
       lines.push(rng.pick(HEADLINES));
-      game.log(`\u{1F4F0} A News Coo drops the morning paper: ${lines.join(" \xB7 ")}`, "#e0e0e0");
+      game.log(`A News Coo drops the morning paper: ${lines.join(" \xB7 ")}`, "#e0e0e0");
     };
     game.onGrandLineWeather = () => {
       const p = game.player, env = game.env;
@@ -46364,8 +50337,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     installFactions(game);
     installLegends(game);
     installWorld(game);
+    installReputation(game);
+    installForaging(game);
     installContent(game);
-    const toTitle = (afterDeath) => {
+    const toTitle = (afterDeath, next) => {
       if (!afterDeath && game.player && game.state?.char && !game.state.char.dead) persist(game);
       game.player = null;
       game.actors = [];
@@ -46376,57 +50351,115 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (ui.mapOpen) game.closeMap();
       ui.setHudVisible(false);
       game.paused = false;
-      showTitle();
+      if (next === "create") openCreation();
+      else showTitle();
     };
     installSession(game, { onReturnToTitle: toTitle });
     const playing = () => !!game.player && !ui.screenEl;
+    ui.actions = {
+      inventory: () => openInventory(game),
+      character: () => openCharacter(game),
+      skills: () => openSkills(game),
+      journal: () => openJournal(game),
+      crew: () => openCrew(game),
+      menu: () => ui.openMenu(),
+      help: () => ui.openPanel(helpContent(game.state?.char), { wide: true, id: "help" })
+    };
     ui.keyHandlers.push(
-      { key: "I", when: playing, fn: () => openInventory(game) },
-      { key: "Tab", when: playing, fn: () => openInventory(game) },
-      { key: "C", when: playing, fn: () => openCharacter(game) },
-      { key: "K", when: playing, fn: () => openSkills(game) },
-      { key: "J", when: playing, fn: () => openJournal(game) },
-      { key: "H", when: playing, fn: () => ui.openPanel(helpContent(), { wide: true, id: "help" }) },
-      { key: "U", when: playing, fn: () => openCrew(game) }
+      { key: "I", when: playing, fn: () => ui.sideAction("inventory") },
+      { key: "Tab", when: playing, fn: () => ui.sideAction("inventory") },
+      { key: "C", when: playing, fn: () => ui.sideAction("character") },
+      { key: "K", when: playing, fn: () => ui.sideAction("skills") },
+      { key: "J", when: playing, fn: () => ui.sideAction("journal") },
+      { key: "H", when: playing, fn: () => ui.sideAction("help") },
+      { key: "U", when: playing, fn: () => ui.sideAction("crew") }
     );
+    game.on("saved", () => ui.savedNote());
+    game.useHotbarItem = (id) => {
+      const c = game.state?.char;
+      if (!c) return false;
+      if (!c.inventory.some((i) => i.id === id)) {
+        game.log(`You have no ${ITEMS[id]?.name || id} left.`, "#ff8a80");
+        return false;
+      }
+      return useItem(game, id);
+    };
+    const saveNow = () => {
+      const ok = persist(game);
+      if (ok) ui.toast("Game saved", `Lineage ${getSlotLabel()}`, "#a5d6a7");
+      else ui.toast("Could not save", "This browser is blocking local storage.", "#ff8a80");
+      return ok;
+    };
+    const getSlotLabel = () => String(game.saveSlot || 1);
     ui.openMenu = () => {
       if (!playing()) return;
+      if (ui.stack.some((e) => e.id === "menu")) {
+        ui.closeAll();
+        return;
+      }
+      ui.closeAll();
       openMenu(game, {
+        onSave: saveNow,
         onQuit: () => toTitle(false),
         onRetire: () => {
-          const will = endLineage(game, `Retired as a living legend. ${game.state.char.name}'s dream came true.`);
+          const will = endLineage(game, `Retired as a living legend. ${game.state.char.name}'s journey is complete.`);
           game.emit("lineageEnded", { cause: "Retired as a legend.", will });
         }
       });
     };
+    const openCreation = () => {
+      creationScreen(ui, loadLegacy(), {
+        onBack: showTitle,
+        onDone: (birth, choices) => {
+          ui.hideScreen();
+          startNewCharacter(game, birth, choices);
+          audio.music("sea");
+        }
+      });
+    };
+    const useSlot = (s) => {
+      setSlot(s);
+      game.saveSlot = s;
+    };
     const showTitle = () => {
-      const legacy = loadLegacy();
-      const saved = loadChar();
+      const slots = [];
+      for (let s = 1; s <= SLOT_COUNT; s++) slots.push(slotInfo(s));
       titleScreen(ui, {
-        legacy,
-        hasSave: !!saved,
-        saveInfo: saved ? `${saved.name} (${RACES[saved.race]?.name}, day ${saved.world?.day || 1})` : "",
-        onContinue: () => {
+        slots,
+        onPlay: (s) => {
+          useSlot(s);
+          const saved = loadChar();
+          if (!saved) {
+            showTitle();
+            return;
+          }
           ui.hideScreen();
           resumeCharacter(game, saved);
           audio.music("sea");
         },
-        onNew: async () => {
+        onNew: async (s) => {
+          useSlot(s);
+          const saved = loadChar();
           if (saved && !await ui.ask({ title: `Abandon ${saved.name}?`, text: "Their journey will be lost, and no Inherited Will is earned for abandoning a life.", ok: "Abandon", cancel: "Keep them", danger: true })) return;
           if (saved) clearChar();
-          creationScreen(ui, loadLegacy(), {
-            onBack: showTitle,
-            onDone: (birth, choices) => {
-              ui.hideScreen();
-              startNewCharacter(game, birth, choices);
-              audio.music("sea");
-            }
-          });
+          openCreation();
         },
-        onHall: () => hallScreen(ui, legacy, { onBack: showTitle }),
+        onDelete: async (s) => {
+          const info = slotInfo(s);
+          const who = info.char ? `${info.char.name} and the` : "The";
+          if (!await ui.ask({ title: `Delete lineage ${s}?`, text: `${who} whole bloodline \u2014 Inherited Will, perks and the Hall of Legends \u2014 will be erased for good.`, ok: "Delete forever", cancel: "Keep it", danger: true })) return;
+          clearSlot(s);
+          showTitle();
+        },
+        onHall: (s) => hallScreen(ui, slotInfo(s).legacy || defaultLegacy(), { onBack: showTitle }),
+        onWill: (s) => {
+          useSlot(s);
+          const legacy = loadLegacy();
+          legacyShopScreen(ui, legacy, { save: () => saveLegacy(legacy), onDone: showTitle, doneLabel: "Back" });
+        },
         onHelp: () => {
           ui.hideScreen();
-          const e = ui.openPanel(helpContent(), { wide: true, onClose: showTitle });
+          ui.openPanel(helpContent(null), { wide: true, onClose: showTitle });
         },
         onSettings: () => {
           ui.hideScreen();
@@ -46478,10 +50511,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       quickStart(race = "human", opts = {}) {
         const birth = { race, traits: opts.traits || ["lucky"], seed: opts.seed || 12345 };
         ui.hideScreen();
-        startNewCharacter(game, birth, { name: opts.name || "Test Pirate", dream: opts.dream || "king", look: null, jr: { skull: "classic", bones: "cross", accessory: "strawhat", color: "#fff" } });
+        if (opts.slot) useSlot(opts.slot);
+        startNewCharacter(game, birth, { name: opts.name || "Test Pirate", look: null });
         return game.player;
       },
-      debug: { npcDef, makeNPC, addItem },
+      debug: { npcDef, makeNPC, addItem, fruitOf },
       ready: true
     });
     showTitle();

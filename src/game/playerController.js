@@ -57,8 +57,8 @@ export class PlayerController {
     if (inp.wasPressed('R')) this.toggleHaki(p, game, 'armament');
     if (inp.wasPressed('T')) this.toggleHaki(p, game, 'observation');
     if (inp.wasPressed('G')) {
+      // (nothing happens — and nothing is said — until the power awakens)
       if (p.hakiLevel('conqueror')) { p.facing = aim; p.tryTechnique('haki_conqueror', game); }
-      else game.log('You feel something stir deep inside... but nothing comes out. (Conqueror\'s Haki not awakened)', '#b0bec5');
     }
     if (inp.wasPressed('Q')) game.emit('quickHeal');
 
@@ -81,10 +81,7 @@ export class PlayerController {
   }
 
   toggleHaki(p, game, type) {
-    if (!p.hakiLevel(type)) {
-      game.log(type === 'armament' ? 'You have not awakened Armament Haki yet. Seek a master in the Grand Line.' : 'You have not awakened Observation Haki yet. The priests of Skypiea call it "Mantra".', '#b0bec5');
-      return;
-    }
+    if (!p.hakiLevel(type)) return; // hidden until awakened
     if (type === 'armament') {
       p.armament = !p.armament;
       if (p.armament) { p.observation = false; game.fx.burst(p.x, p.y - 0.8, 10, { color: '#212121', speed: 3, g: 0, life: 0.35, kind: 'line' }); game.audio?.sfx('haki'); }

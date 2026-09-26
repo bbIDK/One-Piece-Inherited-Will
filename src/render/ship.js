@@ -60,6 +60,22 @@ export function drawJollyRoger(g, jr = {}, size = 1, bg = '#111') {
   g.restore();
 }
 
+/** The Marine seagull emblem (blue gull over the word-less anchor bar). */
+export function drawMarineEmblem(g, size = 1) {
+  g.save();
+  g.scale(size, size);
+  g.strokeStyle = '#2874a6'; g.fillStyle = '#2874a6'; g.lineCap = 'round'; g.lineJoin = 'round';
+  // gull wings
+  g.lineWidth = 0.09;
+  g.beginPath(); g.moveTo(-0.42, -0.05); g.quadraticCurveTo(-0.22, -0.3, 0, -0.08); g.quadraticCurveTo(0.22, -0.3, 0.42, -0.05); g.stroke();
+  // body and head
+  g.beginPath(); g.ellipse(0, 0.02, 0.08, 0.12, 0, 0, TAU); g.fill();
+  // the bar below
+  g.lineWidth = 0.06;
+  g.beginPath(); g.moveTo(-0.3, 0.26); g.lineTo(0.3, 0.26); g.stroke();
+  g.restore();
+}
+
 /** Draw a ship. s: { type def, heading, sailSet (0..1), wind{x,y}, jr, t, damage(0..1), sinking } */
 export function drawShip(g, def, st) {
   const L = def.length, B = def.beam;
@@ -133,7 +149,8 @@ export function drawShip(g, def, st) {
     // yard
     g.fillStyle = '#5d4037'; g.fillRect(-0.06, -sw / 2 - 0.1, 0.12, sw + 0.2);
     if (set > 0.05) {
-      const sc = def.sail === 'marine' ? '#f5f6fa' : (st.sailColor || '#f3ecd8');
+      const marine = def.sail === 'marine' || st.marine;
+      const sc = marine ? '#f5f6fa' : (st.sailColor || '#f3ecd8');
       g.fillStyle = sc; g.strokeStyle = 'rgba(60,40,20,0.7)'; g.lineWidth = 0.035;
       g.beginPath();
       g.moveTo(0, -sw / 2);
@@ -144,7 +161,7 @@ export function drawShip(g, def, st) {
       // emblem on the main sail
       if (m === (masts > 1 ? 1 : 0) || masts === 1) {
         g.save(); g.translate(billow * 0.9, 0); g.rotate(-Math.PI / 2); g.scale(0.9, 0.35 + billow * 0.5);
-        if (def.sail === 'marine') { g.fillStyle = '#2874a6'; g.font = 'bold 0.5px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('MARINE', 0, 0); }
+        if (marine) drawMarineEmblem(g, 0.9);
         else if (st.jr) drawJollyRoger(g, st.jr, 0.9, sc);
         g.restore();
       }
@@ -156,14 +173,18 @@ export function drawShip(g, def, st) {
     // mast top
     g.fillStyle = '#4e342e'; g.beginPath(); g.arc(mx, 0, 0.12, 0, TAU); g.fill();
   }
-  // flag on the main mast (points downwind)
-  {
+  // flag on the main mast (points downwind) — a ship with no colours flies none
+  const marineFlag = def.sail === 'marine' || st.marine;
+  if (!st.noFlag || marineFlag) {
     const mx = masts === 1 ? 0.05 * L : L * 0.28 - (masts > 1 ? L * 0.56 / (masts - 1) : 0) * Math.min(1, masts - 1) * 0.5;
     g.save(); g.translate(mx, 0); g.rotate(rel + Math.PI);
     const wave = Math.sin(t * 7) * 0.08;
-    g.fillStyle = def.sail === 'marine' ? '#f5f6fa' : '#111';
+    g.fillStyle = marineFlag ? '#f5f6fa' : '#111';
     g.beginPath(); g.moveTo(0, -0.02); g.quadraticCurveTo(0.35, wave, 0.7, -0.05); g.lineTo(0.7, 0.4); g.quadraticCurveTo(0.35, 0.42 - wave, 0, 0.42); g.closePath(); g.fill();
-    if (st.jr && def.sail !== 'marine') { g.save(); g.translate(0.35, 0.2); g.rotate(Math.PI / 2); drawJollyRoger(g, st.jr, 0.32, '#111'); g.restore(); }
+    g.save(); g.translate(0.35, 0.2); g.rotate(Math.PI / 2);
+    if (marineFlag) drawMarineEmblem(g, 0.32);
+    else if (st.jr) drawJollyRoger(g, st.jr, 0.32, '#111');
+    g.restore();
     g.restore();
   }
   // damage: smoke & fire

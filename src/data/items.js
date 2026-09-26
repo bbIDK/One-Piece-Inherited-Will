@@ -1,4 +1,6 @@
-// Items. `type`: food | medicine | weapon | hat | coat | key | dial | fruit | treasure | material | pose
+// Items. `type`: food | medicine | weapon | hat | coat | accessory | key | dial | fruit | treasure | material | pose
+// Equipment slots: head (hat), body (coat — coats, cloaks and armour; `armor`
+// is damage reduction), weapons (up to three swords, else one), two accessories.
 // Weapons: kind sword/gun/staff/axe and a power multiplier (sword grades follow canon:
 // Saijo O Wazamono > O Wazamono > Ryo Wazamono > Wazamono > unranked).
 import { FRUITS } from './fruits.js';
@@ -16,6 +18,12 @@ export const ITEMS = {
   bandage: { name: 'Bandages', icon: '🩹', type: 'medicine', heal: 55, price: 70, desc: 'Stops the bleeding.', cure: ['bleed'] },
   antidote: { name: 'Antidote', icon: '🧪', type: 'medicine', heal: 20, price: 150, cure: ['poison'], desc: 'Neutralises most poisons.' },
   rumble_ball: { name: 'Rumble Ball', icon: '🟡', type: 'medicine', price: 8000, buff: { id: 'rumble', name: 'Rumble', dur: 180, mods: { damage: 1.2, speedMul: 1.1 } }, desc: 'Chopper\'s invention. Strengthens you for three minutes.' },
+  // foraged from trees (E next to a palm or fruit tree)
+  coconut: { name: 'Coconut', icon: '', type: 'food', heal: 30, stamina: 50, price: 25, desc: 'Crack it open: sweet water and white flesh. Picked from palms.' },
+  banana: { name: 'Banana', icon: '', type: 'food', heal: 25, stamina: 35, price: 20, desc: 'Quick energy from a jungle tree.' },
+  mango: { name: 'Mango', icon: '', type: 'food', heal: 40, stamina: 30, price: 35, desc: 'Ripe, juicy and sticky.' },
+  apple: { name: 'Apple', icon: '', type: 'food', heal: 25, stamina: 20, price: 15, desc: 'Crisp and red.' },
+  cherry: { name: 'Cherries', icon: '', type: 'food', heal: 12, stamina: 18, price: 10, desc: 'A handful of cherries.' },
   tension_hormone: { name: 'Tension Hormones', icon: '💉', type: 'medicine', heal: 99999, price: 0, costsLife: true, desc: 'Emporio Ivankov\'s miracle: fully restores you right now — at the cost of ten years of lifespan (one life).' },
 
   // ------------------------------------------------------------- swords
@@ -58,9 +66,28 @@ export const ITEMS = {
   goggles: { name: 'North Blue Goggles', icon: '🥽', type: 'hat', look: { hat: 'goggles' }, bonus: { agi: 1 }, price: 1200, desc: 'A new model from the North Blue. (Usopp bought these in Loguetown.)' },
   headband: { name: 'Black Bandana', icon: '🖤', type: 'hat', look: { hat: 'headband', hatColor: '#212121' }, bonus: { str: 1 }, price: 300, desc: 'Tie it on when you mean business.' },
   horned_helm: { name: 'Horned Helm', icon: '⛑', type: 'hat', look: { hat: 'horns' }, bonus: { end: 2 }, price: 0, desc: 'A helm of Elbaf make.' },
+  // body armour (the body slot: coats, cloaks and armour)
+  padded_vest: { name: 'Padded Vest', icon: '', type: 'coat', armor: 0.04, look: { coat: '#795548' }, bonus: { end: 1 }, price: 1800, desc: 'Quilted canvas that takes the sting out of a cutlass.' },
+  leather_jerkin: { name: 'Leather Jerkin', icon: '', type: 'coat', armor: 0.06, look: { coat: '#6d4c33' }, bonus: { agi: 1 }, price: 5500, desc: 'Boiled leather — light enough to dodge in.' },
+  chain_shirt: { name: 'Chain Shirt', icon: '', type: 'coat', armor: 0.1, look: { coat: '#90a4ae' }, bonus: { end: 1 }, price: 22000, desc: 'Rings of steel under your shirt. Heavy, but blades slide off.' },
+  samurai_armor: { name: 'Samurai Armour', icon: '', type: 'coat', armor: 0.14, look: { coat: '#8e1b16' }, bonus: { end: 2, vit: 1 }, price: 90000, desc: 'Lacquered plates in the style of the Land of Wano.' },
   marine_coat: { name: 'Marine Coat of Justice', icon: '🧥', type: 'coat', look: { coat: '#fafafa', coatText: 'JUSTICE' }, bonus: { end: 1 }, price: 0, desc: 'Worn by Marine officers. "JUSTICE" is stitched on the back.' },
   captain_coat: { name: 'Captain\'s Coat', icon: '🧥', type: 'coat', look: { coat: '#1a237e' }, bonus: { wil: 1 }, price: 12000 },
   red_cloak: { name: 'Red Cloak', icon: '🧣', type: 'coat', look: { coat: '#b71c1c' }, bonus: { vit: 1 }, price: 6000 },
+
+  // ---------------------------------------------------------- accessories (two slots)
+  iron_ring: { name: 'Iron Ring', icon: '', type: 'accessory', bonus: { str: 1 }, price: 1500, desc: 'A heavy ring that makes every punch land harder.' },
+  shell_bracelet: { name: 'Shell Bracelet', icon: '', type: 'accessory', bonus: { agi: 1 }, price: 900, desc: 'Strung by island children. Light on the wrist.' },
+  lucky_charm: { name: 'Lucky Charm', icon: '', type: 'accessory', bonus: { wil: 1 }, price: 800, desc: 'A little wooden charm. Sailors swear by them.' },
+  leather_bracers: { name: 'Leather Bracers', icon: '', type: 'accessory', bonus: { end: 1 }, price: 1200, desc: 'For blocking blades with your forearms (not recommended).' },
+  haramaki: { name: 'Haramaki', icon: '', type: 'accessory', bonus: { vit: 1, end: 1 }, price: 2400, desc: 'A green belly-warmer. Keeps your insides where they belong.' },
+  gold_earrings: { name: 'Three Gold Earrings', icon: '', type: 'accessory', bonus: { agi: 1, wil: 1 }, price: 6000, desc: 'Three small gold drops that clink when you move.' },
+  hand_wraps: { name: 'Fighter\'s Hand Wraps', icon: '', type: 'accessory', bonus: { str: 2 }, price: 5000, desc: 'Tight cloth wraps worn by bare-knuckle brawlers.' },
+  pearl_necklace: { name: 'Pearl Necklace', icon: '', type: 'accessory', bonus: { vit: 2 }, price: 14000, desc: 'Pearls from the seabed near Fish-Man Island.' },
+  red_sash: { name: 'Red Sash', icon: '', type: 'accessory', bonus: { str: 1, wil: 1 }, price: 8000, desc: 'Tied at the waist the way the old Roger Pirates wore theirs.' },
+  sea_prism_charm: { name: 'Sea-Glass Charm', icon: '', type: 'accessory', bonus: { end: 2 }, price: 12000, desc: 'Polished sea glass in a brass cage.' },
+  marine_medal: { name: 'Medal of Honour', icon: '', type: 'accessory', bonus: { wil: 2, end: 1 }, price: 0, unique: true, desc: 'Awarded by Marine Headquarters for distinguished service.' },
+  king_signet: { name: 'Signet of a Fallen King', icon: '', type: 'accessory', bonus: { wil: 3 }, price: 0, unique: true, desc: 'A royal ring from a kingdom erased from the maps.' },
 
   // ---------------------------------------------------------------- dials
   impact_dial: { name: 'Impact Dial', icon: '🐚', type: 'dial', price: 30000, ability: 'dial_impact', desc: 'Absorbs a blow and releases it. Hurts the user too.' },
@@ -98,11 +125,13 @@ for (const [id, f] of Object.entries(FRUITS)) {
 }
 
 export const itemDef = (id) => ITEMS[id];
+const FRUIT_VALUE = { common: 150000, uncommon: 300000, rare: 700000, epic: 1500000, legendary: 3000000, mythical: 5000000 };
 
 export function sellPrice(id) {
   const d = ITEMS[id];
   if (!d) return 0;
   if (d.type === 'treasure') return d.price;
-  if (d.unique || d.type === 'fruit' || d.type === 'key') return 0;
+  if (d.type === 'fruit') return FRUIT_VALUE[FRUITS[d.fruit]?.rarity] || 200000; // the black market pays for Devil Fruits
+  if (d.unique || d.type === 'key') return 0;
   return Math.floor((d.price || 0) * 0.4);
 }

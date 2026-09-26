@@ -1,6 +1,7 @@
 // Procedural art for world props. All drawing functions work in tile units
 // with the origin at the object's base point (bottom-centre of its footprint);
 // +y is down on screen, so things "stand up" into negative y.
+import { uiIcon } from './icons.js';
 import { shade, mixHex } from '../core/math.js';
 
 const TAU = Math.PI * 2;
@@ -75,6 +76,21 @@ export function treeSprite(sub, v) {
   return cachedSprite(key, w, h, (g) => drawTree(g, sub, v));
 }
 
+/** Fruit hanging on a tree that bears it (see world/fruitTrees.js). */
+export function drawTreeFruit(g, o, fruit, spots, colors) {
+  const [c1, c2] = colors;
+  for (const [x, y, r] of spots) {
+    if (fruit === 'banana') {
+      g.fillStyle = c1; g.strokeStyle = c2; g.lineWidth = 0.03;
+      g.beginPath(); g.ellipse(x, y, r * 0.55, r * 1.25, 0.5, 0, TAU); g.fill(); g.stroke();
+      continue;
+    }
+    blob(g, x, y, r, c1, c2);
+    g.fillStyle = 'rgba(255,255,255,0.35)';
+    g.beginPath(); g.arc(x - r * 0.35, y - r * 0.35, r * 0.3, 0, TAU); g.fill();
+  }
+}
+
 function drawTree(g, sub, v) {
   const r = (n) => ((v * 9301 + n * 49297) % 233280) / 233280;
   // soft shadow
@@ -98,8 +114,7 @@ function drawTree(g, sub, v) {
         g.beginPath(); g.moveTo(top[0], top[1]); g.quadraticCurveTo((top[0] + ex) / 2, top[1] - 0.35, ex, ey); g.stroke();
         g.strokeStyle = '#1f7a33'; g.lineWidth = 0.05; g.stroke();
       }
-      blob(g, top[0], top[1] + 0.1, 0.15, '#8d5b2a');
-      blob(g, top[0] + 0.14, top[1] + 0.15, 0.13, '#7a4a20');
+      // (coconuts are drawn live by drawTreeFruit, so picked palms are bare)
       break;
     }
     case 'pine':
@@ -259,9 +274,10 @@ export function bushSprite(sub, v) {
 // ---------------------------------------------------------------------------
 // Buildings (drawn live, they're big and unique)
 
+// shop signs: drawn icons (render/icons.js), no emoji
 const ROLE_ICON = {
-  tavern: '🍺', bar: '🍺', inn: '🛏', shop: '🛍', market: '🛍', weapons: '⚔', dojo: '拳', doctor: '✚', shipwright: '⚓',
-  marine_base: 'MARINE', bounty: '☠', trainer: '★', library: '📖', bank: '฿', cafe: '☕', restaurant: '🍖', church: '✝',
+  tavern: 'bar', bar: 'bar', inn: 'inn', shop: 'shop', market: 'shop', weapons: 'sword', dojo: 'trainer', doctor: 'doctor', shipwright: 'shipwright',
+  marine_base: 'marine', bounty: 'bounty', trainer: 'trainer', library: 'library', bank: 'berries', cafe: 'bar', restaurant: 'food', church: 'help',
 };
 
 export function drawBuilding(g, b, night, time) {
@@ -446,8 +462,7 @@ export function drawBuilding(g, b, night, time) {
       g.fillStyle = '#6d4c33'; g.fillRect(0.45, sy - 0.05, 0.05, 0.3);
       g.fillStyle = '#f5e6c4'; g.strokeStyle = '#5a3a22'; g.lineWidth = 0.04;
       g.beginPath(); g.roundRect(0.5, sy - 0.1, 0.62, 0.48, 0.06); g.fill(); g.stroke();
-      g.fillStyle = '#3b2a1a'; g.font = '0.34px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillText(icon, 0.81, sy + 0.15);
+      g.drawImage(uiIcon(icon, 32), 0.81 - 0.21, sy + 0.14 - 0.21, 0.42, 0.42);
     }
   }
   if (b.name && b.role && b.role !== 'house' && b.showName) {
@@ -757,8 +772,11 @@ export function drawProp(g, o, t, night) {
       g.fillStyle = 'rgba(0,0,0,0.55)'; g.beginPath(); g.ellipse(0, -0.2, 1.0, 0.5, 0, 0, TAU); g.fill();
       g.fillStyle = '#5d5d5d';
       for (let k = 0; k < 4; k++) g.fillRect(-0.8 + k * 0.1, -0.5 + k * 0.12, 1.6 - k * 0.2, 0.1);
-      g.fillStyle = o.up ? '#90caf9' : '#ff8a65'; g.font = 'bold 0.5px sans-serif'; g.textAlign = 'center';
-      g.fillText(o.up ? '▲' : '▼', 0, -0.9 + Math.sin(t * 3) * 0.08);
+      {
+        const ay = -1.05 + Math.sin(t * 3) * 0.08, d = o.up ? -1 : 1;
+        g.fillStyle = o.up ? '#90caf9' : '#ff8a65'; g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = 0.04;
+        g.beginPath(); g.moveTo(-0.2, ay - d * 0.14); g.lineTo(0.2, ay - d * 0.14); g.lineTo(0, ay + d * 0.18); g.closePath(); g.fill(); g.stroke();
+      }
       break;
     }
     case 'gate': {

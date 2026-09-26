@@ -3,7 +3,24 @@ import CSS from './style.css';
 import { getAbility } from '../game/abilities.js';
 import { formatBerries, clamp } from '../core/math.js';
 import { raceLabel } from '../data/races.js';
+import { ITEMS } from '../data/items.js';
 import { REGION_INFO, regionAt } from '../world/constants.js';
+import { itemImg, skillImg, uiImg } from './icon.js';
+
+// the menu buttons on the right of the screen (below the minimap)
+const SIDEBAR = [
+  { id: 'inventory', label: 'Inventory', key: 'Tab' },
+  { id: 'character', label: 'Character', key: 'C' },
+  { id: 'skills', label: 'Skills', key: 'K' },
+  { id: 'journal', label: 'Journal', key: 'J' },
+  { id: 'crew', label: 'Crew', key: 'U' },
+  { id: 'menu', label: 'Menu', key: 'Esc' },
+];
+const HAKI_TOGGLES = [
+  { type: 'armament', key: 'R', name: 'Armament Haki', icon: { id: 'toggle_armament', name: 'Armament', hakiType: 'armament', source: 'haki:armament' } },
+  { type: 'observation', key: 'T', name: 'Observation Haki', icon: { id: 'toggle_observation', name: 'Observation', hakiType: 'observation', source: 'haki:observation' } },
+  { type: 'conqueror', key: 'G', name: "Conqueror's Haki", icon: { id: 'haki_conqueror', name: "Conqueror's", hakiType: 'conqueror', source: 'haki:conqueror' } },
+];
 
 export class UI {
   constructor(container) {
@@ -17,6 +34,7 @@ export class UI {
     this.dialogueEl = null;
     this.screenEl = null;
     this.cache = {};
+    this.actions = {}; // sidebar button → handler (set by main.js)
     this.buildHud();
     this.hudVisible = false;
     this.setHudVisible(false);
@@ -37,19 +55,30 @@ export class UI {
     E.bounty = h('div.hud-bounty');
     E.buffs = h('div.buffs');
     this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.st.el, E.hk.el, E.lives, E.bounty, E.buffs));
-    // hotbar
+    // hotbar: click a slot to use it, drag slots to rearrange
     E.hotbar = h('div.hotbar');
     E.slots = [];
     for (let i = 0; i < 6; i++) {
-      const s = { el: h('div.slot'), ico: h('span'), k: h('span.k', String(i + 1)), nm: h('span.nm'), cd: h('div.cd'), cdt: h('div.cdt') };
-      s.el.append(s.ico, s.k, s.nm, s.cd, s.cdt);
+      const s = { el: h('div.slot.interactive'), ico: h('span.ico'), k: h('span.k', String(i + 1)), nm: h('span.nm'), qty: h('span.qty'), cd: h('div.cd'), cdt: h('div.cdt') };
+      s.el.append(s.ico, s.k, s.nm, s.qty, s.cd, s.cdt);
+      s.el.draggable = true;
+      s.el.addEventListener('dragstart', (ev) => { if (!this.game?.player?.hotbar?.[i]) { ev.preventDefault(); return; } ev.dataTransfer.setData('text/plain', 'slot:' + i); });
+      s.el.addEventListener('dragover', (ev) => { ev.preventDefault(); s.el.classList.add('over'); });
+      s.el.addEventListener('dragleave', () => s.el.classList.remove('over'));
+      s.el.addEventListener('drop', (ev) => {
+        ev.preventDefault();
+        s.el.classList.remove('over');
+        const data = ev.dataTransfer.getData('text/plain');
+        if (data.startsWith('slot:')) this.swapSlots(+data.slice(5), i);
+      });
+      s.el.addEventListener('click', () => this.useSlot(i));
       E.slots.push(s);
       E.hotbar.appendChild(s.el);
     }
     E.toggles = {};
-    for (const [k, ico, key] of [['armament', '🖤', 'R'], ['observation', '👁', 'T'], ['conqueror', '👑', 'G']]) {
-      const el = h('div.slot.toggle', h('span', ico), h('span.k', key));
-      E.toggles[k] = el;
+    for (const t of HAKI_TOGGLES) {
+      const el = h('div.slot.toggle.hidden', h('span.ico', skillImg(t.icon, 28)), h('span.k', t.key));
+      E.toggles[t.type] = el;
       E.hotbar.appendChild(el);
     }
     this.hud.appendChild(E.hotbar);
@@ -62,8 +91,9 @@ export class UI {
     E.loc = h('div.loc-name');
     E.locSub = h('div.loc-sub');
     E.clock = h('div.clock');
+    E.saved = h('div.saved-note');
     E.logpose = h('div.logpose.hidden', h('i'), h('span'));
-    this.hud.appendChild(h('div.minimap-wrap', E.mm, E.logpose, E.loc, E.locSub, E.clock));
+    this.hud.appendChild(h('div.minimap-wrap', E.mm, E.logpose, E.loc, E.locSub, E.clock, E.saved));
     E.boss = h('div.bossbar.hidden', h('h3'), bar('boss').el);
     this.hud.appendChild(E.boss);
     E.ship = h('div.shiphud.hidden');
@@ -79,13 +109,58 @@ export class UI {
     R.appendChild(this.fadeEl);
     this.panelLayer = h('div');
     R.appendChild(this.panelLayer);
+    // the sidebar sits above open panels so you can jump between menus
+    E.side = h('div.sidebar.hidden');
+    E.sideBtns = {};
+    for (const b of SIDEBAR) {
+      const el = h('button.side-btn', { title: `${b.label} (${b.key})`, on: { click: (ev) => { ev.currentTarget.blur(); this.sideAction(b.id); } } },
+        uiImg(b.id, 22), h('span.lbl', b.label), h('span.key', b.key));
+      E.sideBtns[b.id] = el;
+      E.side.appendChild(el);
+    }
+    R.appendChild(E.side);
     this.screenLayer = h('div');
     R.appendChild(this.screenLayer);
     this.modalLayer = h('div');
     R.appendChild(this.modalLayer);
   }
 
-  setHudVisible(v) { this.hudVisible = v; this.hud.classList.toggle('hidden', !v); }
+  setHudVisible(v) {
+    this.hudVisible = v;
+    this.hud.classList.toggle('hidden', !v);
+    this.el.side.classList.toggle('hidden', !v);
+  }
+
+  /** Sidebar / shortcut: open a menu, or close it if it is already open. */
+  sideAction(id) {
+    const g = this.game;
+    if (!g?.player || this.screenEl) return;
+    if (this.dialogueEl) return;
+    if (this.mapOpen) this.closeMap?.();
+    const top = this.stack[this.stack.length - 1];
+    if (top && top.id === id) { this.closeAll(); return; }
+    this.closeAll();
+    this.actions[id]?.();
+  }
+
+  swapSlots(a, b) {
+    const p = this.game?.player;
+    if (!p || a === b) return;
+    const hb = p.char.hotbar;
+    [hb[a], hb[b]] = [hb[b] ?? null, hb[a] ?? null];
+    p.hotbar = hb;
+    this.cache['slot' + a] = this.cache['slot' + b] = null;
+    this.game.audio?.sfx('equip');
+  }
+
+  useSlot(i) {
+    const g = this.game, p = g?.player;
+    if (!p || this.blocksInput()) return;
+    const id = p.hotbar[i];
+    if (!id) return;
+    const aim = p.facing;
+    p.tryTechnique(id, g, { x: p.x + Math.cos(aim) * 4, y: p.y + Math.sin(aim) * 4 });
+  }
 
   blocksInput() { return this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen; }
 
@@ -96,7 +171,9 @@ export class UI {
   }
 
   hint(text, dur = 9) {
-    this.hintEl.textContent = text;
+    if (this.game?.settings && this.game.settings.showHints === false) return;
+    clear(this.hintEl);
+    this.hintEl.append(uiImg('journal', 18), h('span', text));
     this.hintEl.classList.remove('hidden');
     this.hintEl.style.opacity = '1';
     clearTimeout(this.hintTimer);
@@ -116,6 +193,13 @@ export class UI {
     if (color) el.style.color = color;
     this.root.appendChild(el);
     setTimeout(() => el.remove(), 2700);
+  }
+
+  /** The little "Saved" note under the clock. */
+  savedNote() {
+    const el = this.el.saved;
+    el.textContent = 'Game saved';
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   }
 
   fade(on) { this.fadeEl.classList.toggle('on', on); }
@@ -165,14 +249,15 @@ export class UI {
   // --- panels -----------------------------------------------------------------
   openPanel(content, { wide = false, onClose, id } = {}) {
     if (id) { const ex = this.stack.find((s) => s.id === id); if (ex) { this.closePanel(ex); return null; } }
-    const close = h('button.close', { on: { click: () => this.closePanel(entry) } }, '✕');
+    const close = h('button.close', { title: 'Close (Esc)', on: { click: () => this.closePanel(entry) } }, '×');
     const panel = h('div.panel' + (wide ? '.wide' : ''), close, content);
-    const bg = h('div.panel-bg', panel);
+    const bg = h('div.panel-bg' + (this.hudVisible ? '.side-pad' : ''), panel);
     bg.addEventListener('mousedown', (e) => { if (e.target === bg) this.closePanel(entry); });
     const entry = { el: bg, onClose, id, panel };
     this.stack.push(entry);
     this.panelLayer.appendChild(bg);
     if (this.game) this.game.paused = true;
+    this.markSidebar();
     return entry;
   }
 
@@ -183,9 +268,15 @@ export class UI {
     e.el.remove();
     if (e.onClose) e.onClose();
     if (this.game && !this.stack.length && !this.dialogueEl && !this.mapOpen) this.game.paused = false;
+    this.markSidebar();
   }
 
   closeAll() { while (this.stack.length) this.closePanel(); }
+
+  markSidebar() {
+    const top = this.stack[this.stack.length - 1];
+    for (const [id, el] of Object.entries(this.el.sideBtns)) el.classList.toggle('on', !!top && top.id === id);
+  }
 
   /**
    * In-game replacement for confirm()/prompt() (native dialogs are blocked in
@@ -226,10 +317,12 @@ export class UI {
     this.hideScreen();
     this.screenEl = el;
     this.screenLayer.appendChild(el);
+    this.el.side.classList.add('hidden');
   }
   hideScreen() {
     if (this.screenEl) this.screenEl.remove();
     this.screenEl = null;
+    this.el.side.classList.toggle('hidden', !this.hudVisible);
   }
 
   // --- per-frame HUD ------------------------------------------------------------
@@ -239,14 +332,16 @@ export class UI {
     if (!p) return;
     const E = this.el;
     const ch = p.char || {};
+    E.side.classList.toggle('hidden', !!this.mapOpen || !!this.screenEl);
     this.set(E.name, 'name', ch.name || p.name);
-    const title = ch.title || (ch.faction === 'marine' ? `Marine ${ch.marineRank || 'Recruit'}` : ch.faction === 'pirate' ? 'Pirate' : 'Wanderer');
+    const title = ch.title || (ch.faction === 'marine' ? `Marine ${ch.marineRank || 'Recruit'}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === 'pirate' ? 'Pirate' : 'Wanderer');
     this.set(E.sub, 'sub', `${raceLabel(p.look)} · ${title} · Doriki ${p.power().toLocaleString()}`);
     E.hp.set(p.hp / p.d.maxHp, `${Math.ceil(p.hp)} / ${p.d.maxHp}`);
     E.st.set(p.stamina / p.d.maxStamina, `${Math.ceil(p.stamina)}`);
+    // the spirit (Haki) bar doesn't exist until Haki awakens
     const hakiOn = p.hakiUnlocked();
-    E.hk.el.classList.toggle('locked', !hakiOn);
-    E.hk.set(hakiOn ? p.haki / p.d.maxHaki : 0, hakiOn ? `${Math.ceil(p.haki)}` : 'Haki locked');
+    E.hk.el.classList.toggle('hidden', !hakiOn);
+    if (hakiOn) E.hk.set(p.haki / p.d.maxHaki, `${Math.ceil(p.haki)}`);
     // lives
     const lives = ch.lives ?? 3, maxLives = ch.maxLives ?? 3;
     const key = lives + '/' + maxLives;
@@ -261,12 +356,12 @@ export class UI {
         E.lives.appendChild(v);
       }
     }
-    const bountyTxt = ch.faction === 'marine' ? `Justice · ${formatBerries(ch.berries || 0)}` : ch.bounty ? `☠ ${formatBerries(ch.bounty)}` : '';
-    this.set(E.bounty, 'bounty', '', 'textContent');
-    if (this.cache.bountyTxt !== bountyTxt + '|' + (ch.berries || 0)) {
-      this.cache.bountyTxt = bountyTxt + '|' + (ch.berries || 0);
+    const bk = `${ch.faction}|${ch.bounty || 0}|${ch.berries || 0}`;
+    if (this.cache.bountyKey !== bk) {
+      this.cache.bountyKey = bk;
       clear(E.bounty);
-      E.bounty.append(bountyTxt || '', h('small', ch.faction === 'marine' ? '' : `Purse ${formatBerries(ch.berries || 0)}`));
+      if (ch.faction !== 'marine' && ch.bounty) E.bounty.append(h('span.bty', uiImg('bounty', 16), ` ${formatBerries(ch.bounty)}`));
+      E.bounty.append(h('small', uiImg('berries', 14), ` ${formatBerries(ch.berries || 0)}`));
     }
     const buffKey = p.buffs.map((b) => b.name + Math.ceil(b.t)).join(',') + Object.keys(p.status).join(',');
     if (this.cache.buffs !== buffKey) {
@@ -279,27 +374,40 @@ export class UI {
     for (let i = 0; i < 6; i++) {
       const s = E.slots[i];
       const id = p.hotbar[i];
-      const def = id ? getAbility(id) : null;
+      const isItem = typeof id === 'string' && id.startsWith('item:');
+      const def = !id ? null : isItem ? ITEMS[id.slice(5)] : getAbility(id);
       const k = 'slot' + i;
-      const v = def ? def.id : '';
+      const v = def ? id : '';
       if (this.cache[k] !== v) {
         this.cache[k] = v;
-        s.ico.textContent = def ? def.icon || '✦' : '';
+        clear(s.ico);
+        if (def) s.ico.appendChild(isItem ? itemImg(id.slice(5), 34) : skillImg(def, 34));
         s.nm.textContent = def ? def.name : '';
         s.el.classList.toggle('empty', !def);
-        s.el.title = def ? `${def.name}\n${def.desc || ''}` : 'Empty — assign techniques in the Skills menu (K)';
+        s.el.title = def ? `${def.name}\n${def.desc || ''}\n\nClick or press ${i + 1} to use · drag to rearrange` : 'Empty — drag techniques or food here from Skills (K) or Inventory (Tab)';
       }
+      if (isItem) {
+        const n = (ch.inventory || []).filter((x) => x.id === id.slice(5)).reduce((a, x) => a + (x.qty || 1), 0);
+        if (s.qty.textContent !== String(n)) s.qty.textContent = String(n);
+        s.el.classList.toggle('none-left', n <= 0);
+        s.cd.style.transform = 'scaleY(0)';
+        if (s.cdt.textContent) s.cdt.textContent = '';
+        continue;
+      }
+      if (s.qty.textContent) { s.qty.textContent = ''; s.el.classList.remove('none-left'); }
       const cd = def ? p.cooldowns[def.id] || 0 : 0;
       const frac = def && def.cd ? clamp(cd / (def.cd * (p.cdMul ?? 1)), 0, 1) : 0;
       s.cd.style.transform = `scaleY(${frac})`;
       const txt = cd > 0.05 ? (cd >= 10 ? Math.ceil(cd) : cd.toFixed(1)) : '';
       if (s.cdt.textContent !== String(txt)) s.cdt.textContent = txt;
     }
-    for (const [k, el] of Object.entries(E.toggles)) {
-      const lvl = p.hakiLevel(k);
-      el.classList.toggle('lock', !lvl);
-      el.classList.toggle('on', k === 'armament' ? p.armament : k === 'observation' ? p.observation : !!p.conquerorInfused);
-      el.title = lvl ? `${k} Haki — level ${Math.floor(lvl)}` : `${k} Haki — not awakened`;
+    for (const t of HAKI_TOGGLES) {
+      const el = E.toggles[t.type];
+      const lvl = p.hakiLevel(t.type);
+      el.classList.toggle('hidden', !lvl);
+      if (!lvl) continue;
+      el.classList.toggle('on', t.type === 'armament' ? p.armament : t.type === 'observation' ? p.observation : !!p.conquerorInfused);
+      el.title = `${t.name} — level ${Math.floor(lvl)} (${t.key})`;
     }
     // prompt
     const inter = p.controller?.interaction;
@@ -317,7 +425,7 @@ export class UI {
     const reg = game.world.zone === 0 ? REGION_INFO[regionAt(p.x, p.y)]?.name || '' : game.world.subtitle || '';
     this.set(E.locSub, 'locSub', reg);
     const env = game.env;
-    const wx = env.storm > 0.6 ? '⛈ Storm' : env.storm > 0.25 ? '🌧 Squall' : env.snow ? '❄ Snow' : env.fog > 0.3 ? '🌫 Fog' : env.daylight < 0.35 ? (env.fullMoon ? '🌕 Full moon' : '🌙 Night') : '☀ Clear';
+    const wx = env.storm > 0.6 ? 'Storm' : env.storm > 0.25 ? 'Squall' : env.snow ? 'Snow' : env.fog > 0.3 ? 'Fog' : env.daylight < 0.35 ? (env.fullMoon ? 'Full moon' : 'Night') : 'Clear';
     this.set(E.clock, 'clock', `Day ${env.day} · ${env.clockString()} · ${wx}`);
     // minimap
     this.mmT -= 1 / 60;
@@ -335,8 +443,8 @@ export class UI {
     E.boss.classList.toggle('hidden', !boss || boss.state !== 'idle');
     if (boss) {
       const h3 = E.boss.children[0];
-      const bk = boss.name + (boss.title || '');
-      if (this.cache.boss !== bk) { this.cache.boss = bk; clear(h3); h3.append(h('small', boss.title || ''), boss.name); }
+      const bk2 = boss.name + (boss.title || '');
+      if (this.cache.boss !== bk2) { this.cache.boss = bk2; clear(h3); h3.append(h('small', boss.title || ''), boss.name); }
       const bb = E.boss.children[1];
       bb.firstChild.style.width = (100 * clamp(boss.hp / boss.d.maxHp, 0, 1)) + '%';
       bb.children[1].style.width = (100 * clamp(boss.hp / boss.d.maxHp, 0, 1)) + '%';
@@ -345,13 +453,12 @@ export class UI {
     const s = p.mode === 'sail' ? p.ship : null;
     E.ship.classList.toggle('hidden', !s);
     if (s) {
-      const windRel = ((env.windAngle - s.heading) * 180 / Math.PI + 360) % 360;
       const html = `<div class="row"><b>${s.name}</b><span>${s.def.name}</span></div>
         <div class="bar hull"><i style="width:${100 * s.hull / s.maxHull}%"></i><span>Hull ${Math.ceil(s.hull)}/${s.maxHull}</span></div>
         <div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>
-        <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span><span>Wind <span class="wind" style="transform:rotate(${env.windAngle}rad)">➜</span> ${game.isCalmAt(p.x, p.y) ? 'none (Calm Belt!)' : Math.round(env.windStrength * 100) + '%'}</span></div>
+        <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span><span>Wind <span class="wind" style="transform:rotate(${env.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? 'none (Calm Belt!)' : Math.round(env.windStrength * 100) + '%'}</span></div>
         <div class="row"><span>Cannons ${s.def.cannons || 0}</span><span>${s.cannonCd > 0 ? 'reloading…' : s.def.cannons ? 'ready' : ''}</span></div>`;
-      if (this.cache.shipHtml !== html) { this.cache.shipHtml = html; E.ship.innerHTML = html; void windRel; }
+      if (this.cache.shipHtml !== html) { this.cache.shipHtml = html; E.ship.innerHTML = html; }
     }
     // knocked
     const kn = p.state === 'knocked';

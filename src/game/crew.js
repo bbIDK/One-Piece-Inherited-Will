@@ -8,16 +8,16 @@ import { pay } from './inventory.js';
 import { persist } from './lineage.js';
 import { formatBerries } from '../core/math.js';
 export const CREW_ROLES = {
-  fighter: { name: 'Combatant', icon: '⚔', desc: 'Fights beside you on land.' },
-  swordsman: { name: 'Swordsman', icon: '🗡', desc: 'Fights beside you on land with a blade.' },
-  navigator: { name: 'Navigator', icon: '🧭', desc: 'Log Pose sets twice as fast, storms are announced early, +10% sailing speed.' },
-  cook: { name: 'Cook', icon: '🍳', desc: 'Food heals 50% more; stamina regenerates at sea.' },
-  doctor: { name: 'Doctor', icon: '🩺', desc: 'Patches you up after every battle (heals 30% when combat ends).' },
-  shipwright: { name: 'Shipwright', icon: '🔨', desc: 'Repairs your ship slowly while sailing.' },
-  sniper: { name: 'Sniper', icon: '🎯', desc: 'Cannons deal 30% more damage.' },
-  musician: { name: 'Musician', icon: '🎻', desc: 'Stamina regenerates 25% faster.' },
-  archaeologist: { name: 'Archaeologist', icon: '📜', desc: 'Can read Poneglyphs.' },
-  helmsman: { name: 'Helmsman', icon: '⎈', desc: 'Your ship turns 25% faster.' },
+  fighter: { name: 'Combatant', icon: 'skills', desc: 'Fights beside you on land.' },
+  swordsman: { name: 'Swordsman', icon: 'sword', desc: 'Fights beside you on land with a blade.' },
+  navigator: { name: 'Navigator', icon: 'log_pose', desc: 'Log Pose sets twice as fast, storms are announced early, +10% sailing speed.' },
+  cook: { name: 'Cook', icon: 'food', desc: 'Food heals 50% more; stamina regenerates at sea.' },
+  doctor: { name: 'Doctor', icon: 'doctor', desc: 'Patches you up after every battle (heals 30% when combat ends).' },
+  shipwright: { name: 'Shipwright', icon: 'shipwright', desc: 'Repairs your ship slowly while sailing.' },
+  sniper: { name: 'Sniper', icon: 'gun', desc: 'Cannons deal 30% more damage.' },
+  musician: { name: 'Musician', icon: 'bar', desc: 'Stamina regenerates 25% faster.' },
+  archaeologist: { name: 'Archaeologist', icon: 'library', desc: 'Can read Poneglyphs.' },
+  helmsman: { name: 'Helmsman', icon: 'ship', desc: 'Your ship turns 25% faster.' },
 };
 
 
@@ -84,7 +84,7 @@ export class Crew {
     const cost = r.cost || 0;
     const nodes = { ...tree.nodes };
     const choice = {
-      text: `${role.icon} "Join my crew!"${cost ? ` (${formatBerries(cost)})` : ''}`,
+      text: `"Join my crew!"${cost ? ` (${formatBerries(cost)})` : ''}`,
       if: () => this.canRecruit(def),
       next: '__recruit',
     };

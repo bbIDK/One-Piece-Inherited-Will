@@ -69,7 +69,11 @@ const LORE = [
 ];
 
 export function rumorFor(game, island, rng, npc, tavern, kind) {
-  if (kind === 'lore') return rng.pick(LORE);
+  if (kind === 'lore') {
+    const c0 = game.state?.char;
+    const known0 = !!(c0?.haki && (c0.haki.armament || c0.haki.observation || c0.haki.conqueror));
+    return rng.pick(known0 ? LORE : LORE.filter((l) => !/haki/i.test(l)));
+  }
   const p = game.player;
   const reg = regionAt(p.x, p.y);
   const pool = [];
@@ -83,7 +87,10 @@ export function rumorFor(game, island, rng, npc, tavern, kind) {
   if (c?.bounty && rng.chance(0.2)) return `"Hey... aren't you the one on that wanted poster? ฿${c.bounty.toLocaleString()}... I didn't see anything!"`;
   const quest = game.questRumor?.(island, rng);
   if (quest && rng.chance(0.35)) return quest;
-  const line = pool.length ? rng.pick(pool) : 'Nice weather today.';
+  // nobody talks about Haki to someone who has never felt it
+  const known = !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
+  const heard = known ? pool : pool.filter((l) => !/haki|mantra/i.test(l));
+  const line = heard.length ? rng.pick(heard) : 'Nice weather today.';
   return npc ? `"${line.replace(/^"|"$/g, '')}"` : line;
 }
 

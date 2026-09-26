@@ -1,11 +1,10 @@
 // Starting, resuming and ending a character's journey.
-import { buildPlayer, resolveSpawn, persist, decodeFog, createCharacter, refreshPlayer } from './lineage.js';
+import { buildPlayer, resolveSpawn, persist, decodeFog, createCharacter, refreshPlayer, upgradeChar } from './lineage.js';
 import { saveLegacy, loadLegacy, saveChar } from './save.js';
 import { board } from './interact.js';
 import { lifeLostScreen, lineageEndScreen, legacyShopScreen } from '../ui/screens.js';
 import { SEA_IDS, REGION_INFO, regionAt } from '../world/constants.js';
 import { RACES } from '../data/races.js';
-import { DREAMS } from '../data/dreams.js';
 
 let shipCounter = 0;
 
@@ -39,7 +38,7 @@ export function installSession(game, { onReturnToTitle }) {
           saveLegacy(legacy);
           legacyShopScreen(game.ui, legacy, {
             save: () => saveLegacy(legacy),
-            onDone: () => { game.ui.hideScreen(); onReturnToTitle(true); },
+            onDone: () => { game.ui.hideScreen(); onReturnToTitle(true, 'create'); },
           });
         },
       });
@@ -53,7 +52,14 @@ export function installSession(game, { onReturnToTitle }) {
     if (game.state?.char) game.state.char.stats.playTime = (game.state.char.stats.playTime || 0) + dt;
     if (t > 45) { t = 0; persist(game); }
   });
-  window.addEventListener('beforeunload', () => { if (game.player && game.player.state !== 'knocked') persist(game); });
+  const saveOnLeave = () => { if (game.player && game.player.state !== 'knocked') persist(game); };
+  window.addEventListener('beforeunload', saveOnLeave);
+  window.addEventListener('pagehide', saveOnLeave);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveOnLeave(); });
+  // milestones are saved right away (a little later, so the moment settles)
+  let soon = null;
+  const saveSoon = () => { clearTimeout(soon); soon = setTimeout(() => { if (game.player && game.player.state !== 'knocked') persist(game); }, 1200); };
+  for (const ev of ['questDone', 'discovered', 'bossDefeated', 'newDay', 'crewJoined', 'hakiAwakened', 'legend', 'fruitEaten', 'shipBought', 'rankUp']) game.on(ev, saveSoon);
 }
 
 /** Reset the world's dynamic state before a character enters it. */
@@ -111,14 +117,14 @@ export function startNewCharacter(game, birth, choices) {
   game.snapCamera();
   game.ui.setHudVisible(true);
   const seaName = REGION_INFO[SEA_IDS[spawn.sea]]?.name || '';
-  const dream = DREAMS[char.dream];
-  setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : 'An Uncharted Islet', seaName, `${char.name} begins their journey.${dream ? ` Dream: ${dream.icon || ''} ${dream.name}` : ''}`, 5), 400);
+  setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : 'An Uncharted Islet', seaName, `${char.name} begins their journey. The sea is yours to choose.`, 5), 400);
   game.emit('characterStart', { char, isNew: true, spawn });
   persist(game);
   return p;
 }
 
 export function resumeCharacter(game, char) {
+  upgradeChar(char);
   const legacy = loadLegacy();
   resetGame(game);
   const world = game.surface;

@@ -267,10 +267,12 @@ export class Actor extends Entity {
   }
 
   tryTechnique(id, game, target) {
+    // hotbar slots can also hold items (food, medicine, dials…)
+    if (typeof id === 'string' && id.startsWith('item:')) return this.isPlayer && this.state === 'idle' && !!game.useHotbarItem?.(id.slice(5));
     if (!this.canAct()) return false;
     const def = getAbility(id);
     if (!def) return false;
-    if (def.requiresHaki && !this.hakiLevel(def.requiresHaki)) { if (this.isPlayer) game.log(`${def.name} requires ${def.requiresHaki} Haki.`, '#ff8a80'); return false; }
+    if (def.requiresHaki && !this.hakiLevel(def.requiresHaki)) { if (this.isPlayer) game.log(this.hakiUnlocked() ? `${def.name} requires ${def.requiresHaki} Haki.` : `${def.name} is beyond you for now — something in you has yet to awaken.`, '#ff8a80'); return false; }
     if (def.requiresNight && game.env.daylight > 0.35) { if (this.isPlayer) game.log('Only under the night sky...', '#ff8a80'); return false; }
     if (def.requiresFruit && this.fruit !== def.requiresFruit) { if (this.isPlayer) game.log(`${def.name} needs the ${FRUITS[def.requiresFruit]?.name}.`, '#ff8a80'); return false; }
     if (!canUse(this, def)) {
@@ -278,7 +280,7 @@ export class Actor extends Entity {
         if ((this.cooldowns[def.id] || 0) > 0) game.ui?.flashSlot(id);
         else if (def.source?.startsWith('fruit') && this.inWater) game.log('Your Devil Fruit power is useless in the sea!', '#ff8a80');
         else if (def.weapon && !this.hasWeapon(def.weapon)) game.log(`${def.name} needs ${def.weapon === 'sword' ? `${STYLES[this.style]?.swords || 1} sword(s)` : 'a ' + def.weapon}.`, '#ff8a80');
-        else game.log('Not enough ' + ((def.cost?.haki && this.haki < def.cost.haki) ? 'Haki.' : 'stamina.'), '#ff8a80');
+        else game.log('Not enough ' + ((def.cost?.haki && this.haki < def.cost.haki) ? (this.hakiUnlocked() ? 'Haki.' : 'strength of will.') : 'stamina.'), '#ff8a80');
       }
       return false;
     }

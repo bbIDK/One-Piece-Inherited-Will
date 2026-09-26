@@ -8,7 +8,7 @@ import { RACES, rollRace, makeLook } from '../data/races.js';
 import { ITEMS } from '../data/items.js';
 import { STYLES } from '../data/styles.js';
 import { FRUITS, unlockedFruitTechniques } from '../data/fruits.js';
-import { DREAMS } from '../data/dreams.js';
+import { DREAMS, LEGENDS } from '../data/dreams.js';
 import { Actor } from './actor.js';
 import { baseAttrs, ATTR_KEYS } from './stats.js';
 import { saveChar, saveLegacy, clearChar } from './save.js';
@@ -17,8 +17,9 @@ import { findShore } from './interact.js';
 
 // --------------------------------------------------------------- birth traits
 export const TRAITS = {
-  will_of_d: { name: 'Will of D.', rarity: 'legendary', weight: 0, desc: 'Your name carries a hidden "D." Fate bends around you: you laugh in the face of death, and Conqueror\'s Haki may stir in your blood.', attrs: { wil: 3 } },
-  conqueror: { name: "King's Disposition", rarity: 'legendary', weight: 0, desc: 'One in several million is born with the qualities of a king. Your Conqueror\'s Haki will awaken the first time your will is truly tested.' },
+  will_of_d: { name: 'Will of D.', rarity: 'legendary', weight: 0, desc: 'Your name carries a hidden "D." — the mark of those who laugh in the face of death. Fate bends around you, and the world\'s powers will come to fear the name.', attrs: { wil: 3 } },
+  // hidden: never shown until it awakens
+  conqueror: { name: "King's Disposition", rarity: 'legendary', weight: 0, hidden: true, desc: 'One in several million is born with the qualities of a king. It awakened the first time your will was truly tested.' },
   iron_stomach: { name: 'Iron Stomach', rarity: 'common', weight: 10, desc: 'Food heals 30% more.' },
   sea_legs: { name: 'Sea Legs', rarity: 'common', weight: 10, desc: 'Storms and crashes damage your ship 30% less.' },
   silver_tongue: { name: 'Silver Tongue', rarity: 'common', weight: 10, desc: 'Shops charge you 10% less.' },
@@ -34,23 +35,39 @@ export const TRAITS = {
 
 // ------------------------------------------------------- Inherited Will perks
 export const PERKS = {
-  lives: { name: 'Stubborn Bloodline', desc: '+1 starting life (vivre card).', costs: [60, 160], icon: '📃' },
-  berries: { name: 'Family Treasure', desc: '+3,000 starting berries per level.', costs: [20, 30, 40], icon: '💰' },
-  reroll: { name: "Fate's Coin", desc: 'Re-roll your race once per level at birth.', costs: [35, 70, 120], icon: '🪙' },
-  attrs: { name: 'Trained from Birth', desc: '+2 to every attribute per level.', costs: [50, 110], icon: '💪' },
-  ship: { name: 'Old Sea Dog', desc: 'Start with a Sloop instead of a rowboat.', costs: [70], icon: '⛵' },
-  chart: { name: "Grandfather's Chart", desc: 'Every island your ancestors discovered starts charted on your map.', costs: [30], icon: '🗺' },
-  haki: { name: 'Latent Haki', desc: 'Haki training is 25% faster per level.', costs: [80, 160], icon: '🖤' },
-  will_of_d: { name: 'Will of D.', desc: 'Much higher chance to be born with the hidden "D."', costs: [90], icon: 'D' },
-  kings_blood: { name: 'Kingly Bloodline', desc: "Much higher chance to be born with Conqueror's Haki.", costs: [150], icon: '👑' },
-  rare_races: { name: 'Distant Relatives', desc: 'Rare, epic and legendary races are twice as likely.', costs: [100], icon: '🧬' },
+  lives: { name: 'Stubborn Bloodline', desc: '+1 starting life (vivre card).', costs: [60, 160], icon: 'lives' },
+  berries: { name: 'Family Treasure', desc: '+3,000 starting berries per level.', costs: [20, 30, 40], icon: 'berries' },
+  reroll: { name: "Fate's Coin", desc: 'Re-roll your birth once per level.', costs: [35, 70, 120], icon: 'reputation' },
+  attrs: { name: 'Trained from Birth', desc: '+2 to every attribute per level.', costs: [50, 110], icon: 'skills' },
+  ship: { name: 'Old Sea Dog', desc: 'Start with a Sloop instead of a rowboat.', costs: [70], icon: 'ship' },
+  chart: { name: "Grandfather's Chart", desc: 'Every island your ancestors discovered starts charted on your map.', costs: [30], icon: 'map' },
+  haki: { name: 'Latent Spirit', desc: 'Hidden powers, once awakened, grow 25% faster per level.', costs: [80, 160], icon: 'character' },
+  will_of_d: { name: 'Will of D.', desc: 'Triples the chance to be born with the hidden "D." (5% → 15%).', costs: [90], icon: 'journal' },
+  kings_blood: { name: 'Kingly Bloodline', desc: 'Much higher chance to be born with the qualities of a king.', costs: [150], icon: 'crew' },
+  rare_races: { name: 'Distant Relatives', desc: 'Rare, epic and legendary races are twice as likely.', costs: [100], icon: 'character' },
 };
+
+/** Has this character awakened any Haki? (Until then the game never mentions it.) */
+export const hakiKnown = (c) => !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
+/** Does a technique need Haki (so it stays hidden until Haki awakens)? */
+export const needsHaki = (d) => !!(d && (d.hakiType || d.requiresHaki || d.cost?.haki || d.learn?.haki));
 
 export function perkLevel(legacy, id) { return (legacy.perks && legacy.perks[id]) || 0; }
 export function perkCost(legacy, id) {
   const p = PERKS[id];
   const lvl = perkLevel(legacy, id);
   return lvl < p.costs.length ? p.costs[lvl] : null;
+}
+
+/** Chance of being born with the hidden "D." in your name. */
+export function dChance(legacy) { return 0.05 * (perkLevel(legacy, 'will_of_d') ? 3 : 1); }
+
+/** Insert the "D." into a name: "Kaito Stormwell" → "Kaito D. Stormwell". */
+export function nameWithD(name) {
+  name = (name || 'Nameless').trim();
+  if (/(^| )D\.( |$)/.test(name)) return name;
+  const parts = name.split(/\s+/);
+  return parts.length > 1 ? `${parts[0]} D. ${parts.slice(1).join(' ')}` : `${name} D.`;
 }
 
 export function rollBirth(legacy, seed) {
@@ -63,8 +80,7 @@ export function rollBirth(legacy, seed) {
   const pool = Object.entries(TRAITS).filter(([, t]) => t.weight > 0).map(([id, t]) => [id, t.weight]);
   traits.push(rng.weighted(pool));
   if (rng.chance(0.25)) { const t2 = rng.weighted(pool); if (!traits.includes(t2)) traits.push(t2); }
-  const dChance = 0.03 * (perkLevel(legacy, 'will_of_d') ? 4 : 1);
-  if (rng.chance(dChance)) traits.push('will_of_d');
+  if (rng.chance(dChance(legacy))) traits.push('will_of_d');
   const kChance = (traits.includes('will_of_d') ? 0.25 : 0.015) * (perkLevel(legacy, 'kings_blood') ? 4 : 1);
   if (rng.chance(kChance)) traits.push('conqueror');
   return { race, traits, seed };
@@ -77,13 +93,9 @@ export function createCharacter(legacy, birth, choices) {
   const attrs = baseAttrs();
   for (const k of ATTR_KEYS) attrs[k] += (race.stats[k] || 0) + perkLevel(legacy, 'attrs') * 2;
   for (const t of birth.traits) for (const [k, v] of Object.entries(TRAITS[t]?.attrs || {})) attrs[k] += v;
-  if (choices.dream === 'warrior') attrs.wil += 2;
   for (const k of ATTR_KEYS) attrs[k] = Math.max(1, attrs[k]);
-  let name = (choices.name || 'Nameless').trim().slice(0, 28);
-  if (birth.traits.includes('will_of_d') && !/ D\. /.test(name)) {
-    const parts = name.split(' ');
-    name = parts.length > 1 ? `${parts[0]} D. ${parts.slice(1).join(' ')}` : `${name} D.`;
-  }
+  let name = (choices.name || 'Nameless').trim().slice(0, 28) || 'Nameless';
+  if (birth.traits.includes('will_of_d')) name = nameWithD(name);
   const lives = Math.min(5, race.lives + perkLevel(legacy, 'lives'));
   let style = 'brawler';
   const masteries = { brawler: 0 };
@@ -91,8 +103,7 @@ export function createCharacter(legacy, birth, choices) {
   if (birth.race === 'fishman') { style = 'fishman_karate'; masteries.fishman_karate = 8; techniques.push('fmk_uchimizu'); }
   if (birth.race === 'mink') { masteries.electro = 5; techniques.push('elec_discharge'); style = 'electro'; }
   const inventory = [{ id: 'meat', qty: 3 }, { id: 'rice_ball', qty: 2 }, { id: 'bandage', qty: 2 }];
-  const equipped = { weapons: [], hat: null, coat: null };
-  if (choices.dream === 'swordsman') { inventory.push({ id: 'rusty_katana', qty: 1 }); equipped.weapons = ['rusty_katana']; }
+  const equipped = { weapons: [], hat: null, coat: null, accessories: [] };
   if (legacy.heirloom && ITEMS[legacy.heirloom.id]) {
     const it = legacy.heirloom;
     inventory.push({ id: it.id, qty: 1, heirloom: true, from: it.from });
@@ -110,13 +121,19 @@ export function createCharacter(legacy, birth, choices) {
     race: birth.race,
     traits: birth.traits.slice(),
     look: choices.look || makeLook(birth.race, birth.seed),
-    dream: choices.dream || 'king',
-    jr: choices.jr || { skull: 'classic', bones: 'cross', accessory: 'none', color: '#f5f6fa' },
+    dream: null,
+    // no crew and no flag yet: you found your own pirate crew later (Crew menu)
+    jr: null,
+    crewName: null,
+    reputation: 0,
+    weaponMastery: { fists: 0, legs: 0, sword: 0, gun: 0, staff: 0, axe: 0 },
+    train: { str: 0, agi: 0, end: 0, vit: 0, wil: 0 },
+    legends: [],
     attrs,
     lives, maxLives: lives,
     berries: 1500 + perkLevel(legacy, 'berries') * 3000,
     bounty: 0,
-    faction: choices.dream === 'admiral' ? 'civilian' : 'civilian',
+    faction: 'civilian',
     marineRank: null, merit: 0,
     style, masteries, techniques, hotbar: techniques.slice(0, 6),
     fruit: null, fruitMastery: 0, fruitsEaten: 0,
@@ -189,6 +206,8 @@ export function buildPlayer(game, char) {
   a.fruitMastery = char.fruitMastery;
   a.hakiSkill = char.haki;
   a.weapon = weaponFromChar(char);
+  a.weaponMastery = char.weaponMastery;
+  a.baseMods.armor = armorOf(char);
   a.persistent = true;
   a.recalc();
   a.hp = a.d.maxHp;
@@ -199,11 +218,39 @@ export function buildPlayer(game, char) {
 
 export function effectiveAttrs(char) {
   const a = { ...char.attrs };
-  for (const slot of ['hat', 'coat']) {
-    const d = ITEMS[char.equipped?.[slot]];
+  const eq = char.equipped || {};
+  const worn = [eq.hat, eq.coat, ...(eq.accessories || [])];
+  for (const id of worn) {
+    const d = ITEMS[id];
     if (d?.bonus) for (const [k, v] of Object.entries(d.bonus)) a[k] = (a[k] || 0) + v;
   }
   return a;
+}
+
+/** Damage reduction from worn armour (hat + body). */
+export function armorOf(char) {
+  const eq = char.equipped || {};
+  return [eq.hat, eq.coat].reduce((s, id) => s + (ITEMS[id]?.armor || 0), 0);
+}
+
+/** Bring older saves up to date (new fields, retired systems). */
+export function upgradeChar(c) {
+  if (!c) return c;
+  c.equipped = c.equipped || { weapons: [], hat: null, coat: null };
+  c.equipped.accessories = c.equipped.accessories || [];
+  c.weaponMastery = c.weaponMastery || { fists: 0, legs: 0, sword: 0, gun: 0, staff: 0, axe: 0 };
+  c.train = c.train || { str: 0, agi: 0, end: 0, vit: 0, wil: 0 };
+  if (c.reputation === undefined) c.reputation = c.bounty > 0 ? -30 : 0;
+  c.legends = c.legends || [];
+  if (c.crewName === undefined) c.crewName = c.faction === 'pirate' && c.jr ? `${c.name.split(' ')[0]} Pirates` : null;
+  if (!c.crewName) c.jr = null;
+  // attribute points from the old breakthrough system are spent automatically
+  if (c.unspent > 0) {
+    const keys = ['str', 'agi', 'end', 'vit', 'wil'];
+    for (let i = 0; i < c.unspent; i++) { const k = keys[i % keys.length]; c.attrs[k] = Math.min(100, c.attrs[k] + 1); }
+    c.unspent = 0;
+  }
+  return c;
 }
 
 export function equippedLook(char) {
@@ -241,6 +288,8 @@ export function refreshPlayer(game) {
   p.hakiSkill = c.haki;
   p.techniques = c.techniques;
   p.hotbar = c.hotbar;
+  p.weaponMastery = c.weaponMastery;
+  p.baseMods.armor = armorOf(c);
   p.recalc();
   p.hp = Math.max(1, Math.round(p.d.maxHp * hpFrac));
 }
@@ -288,11 +337,13 @@ export function decodeFog(enc, fog) {
 }
 
 export function persist(game) {
-  if (!game.state?.char || game.state.char.dead) return;
+  if (!game.state?.char || game.state.char.dead) return false;
   snapshot(game);
   game.state.char.lastSaved = Date.now();
-  saveChar(game.state.char);
+  const ok = saveChar(game.state.char);
   saveLegacy(game.state.legacy);
+  if (ok) game.emit?.('saved');
+  return ok;
 }
 
 // ------------------------------------------------------------ will & legacy
@@ -303,7 +354,7 @@ export function computeWill(char) {
   const days = Math.max(0, (char.world?.day || 1) - 1);
   let will = 5 + islands + bosses * 6 + Math.floor(Math.sqrt(bounty / 100000)) * 2 + Math.floor(days / 2);
   if (char.marineRank) will += 10;
-  if (char.dreamDone) will += 120;
+  for (const id of char.legends || []) will += LEGENDS[id]?.will || 0;
   return Math.round(will);
 }
 
@@ -315,7 +366,7 @@ export function endLineage(game, cause) {
   legacy.totalWill += will;
   legacy.hall.unshift({
     name: char.name, race: char.race, generation: char.generation, bounty: char.bounty, faction: char.faction, marineRank: char.marineRank,
-    days: char.world?.day || 1, cause, dream: char.dream, dreamDone: !!char.dreamDone, bosses: (char.bosses || []).length,
+    days: char.world?.day || 1, cause, legends: (char.legends || []).slice(), crewName: char.crewName, bosses: (char.bosses || []).length,
     islands: (char.discovered || []).length, fruit: char.fruit, will, when: Date.now(), look: char.look, jr: char.jr,
   });
   legacy.hall = legacy.hall.slice(0, 40);

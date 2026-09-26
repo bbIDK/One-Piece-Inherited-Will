@@ -1,7 +1,8 @@
 // Frame composition: WebGL terrain underneath, a Canvas2D layer on top for
 // props, characters, ships and effects, all sharing one camera.
 import { TerrainRenderer } from './terrain.js';
-import { treeSprite, rockSprite, bushSprite, drawCached, drawBuilding, drawProp } from './sprites.js';
+import { treeSprite, rockSprite, bushSprite, drawCached, drawBuilding, drawProp, drawTreeFruit } from './sprites.js';
+import { fruitOf, fruitSpots, isPicked, FRUIT_COLORS } from '../world/fruitTrees.js';
 
 export class Renderer {
   constructor(root) {
@@ -114,6 +115,8 @@ export class Renderer {
             g.transform(1, 0, sway, 1, 0, 0);
           }
           drawCached(g, s, 0, 0, sc);
+          const fr = !lod && fruitOf(o);
+          if (fr && !isPicked(world.id, o, env.day)) { g.scale(sc, sc); drawTreeFruit(g, o, fr, fruitSpots(o), FRUIT_COLORS[fr]); }
           break;
         }
         case 'rock': drawCached(g, rockSprite(o.v || 0), 0, 0, o.s || 1); break;

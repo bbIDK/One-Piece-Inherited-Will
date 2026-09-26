@@ -181,7 +181,7 @@ export class Services {
     const empty = c.hotbar.findIndex((x) => !x);
     if (empty >= 0) c.hotbar[empty] = id; else if (c.hotbar.length < 6) c.hotbar.push(id);
     refreshPlayer(g);
-    g.ui.toast('TECHNIQUE LEARNED', `${d.icon || ''} ${d.name}`, '#90caf9');
+    g.ui.toast('TECHNIQUE LEARNED', d.name, '#90caf9');
     persist(g);
     return true;
   }

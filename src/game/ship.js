@@ -209,6 +209,10 @@ export class Ship extends Entity {
     drawShip(g, this.def, {
       heading: this.heading, sailSet: this.sailSet, windAngle: this.game ? this.game.env.windAngle : 0, jr: this.jr, t: env.time,
       damage: 1 - this.hull / this.maxHull, seed: this.seed, sailColor: this.sailColor, coated: this.coated,
+      // the player's ships fly the Marine colours while they serve, their own
+      // Jolly Roger once they found a crew, and no flag at all before that
+      marine: this.owner === 'player' && this.game?.state?.char?.faction === 'marine',
+      noFlag: this.owner === 'player' && !this.jr,
     });
     g.restore();
     // captain and crew on deck (upright characters)

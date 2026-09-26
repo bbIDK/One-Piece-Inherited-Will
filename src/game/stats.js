@@ -1,5 +1,7 @@
-// Attribute model. There are no XP levels: attributes rise through training,
-// trainers, quests and hard-won fights ("breakthroughs"), never by farming.
+// Attribute model. There are no XP levels and no points to spend: attributes
+// rise by themselves from what you actually do (hitting, dodging, blocking,
+// taking hits, getting back up) against opponents worth fighting, from
+// trainers, and from breakthroughs after great victories.
 import { clamp } from '../core/math.js';
 
 export const ATTRS = {
@@ -7,7 +9,7 @@ export const ATTRS = {
   agi: { name: 'Agility', short: 'AGI', desc: 'Move speed, dodge recovery and attack speed.' },
   end: { name: 'Endurance', short: 'END', desc: 'Stamina pool, defence and stamina regeneration.' },
   vit: { name: 'Vitality', short: 'VIT', desc: 'Maximum health and recovery.' },
-  wil: { name: 'Willpower', short: 'WIL', desc: 'Haki pool and potency, resistance to Conqueror\'s Haki, and your chance to get back up.' },
+  wil: { name: 'Willpower', short: 'WIL', desc: 'Your spirit: resistance to fear, your chance to get back up, and the strength of any hidden power you awaken.' },
 };
 export const ATTR_KEYS = Object.keys(ATTRS);
 export const ATTR_CAP = 100;
@@ -25,7 +27,7 @@ export function derive(a, mods = {}) {
     maxHaki: Math.round(40 + a.wil * 4),
     speed: 4.3 * (1 + a.agi * 0.0045) * (mods.stride || 1) * (mods.speedMul || 1),
     dmg: 1 + a.str * 0.028,
-    def: clamp(a.end * 0.0035, 0, 0.4),
+    def: clamp(a.end * 0.0035 + (mods.armor || 0), 0, 0.55),
     staminaRegen: 16 + a.end * 0.25,
     hpRegen: 0.25 + a.vit * 0.02,
     hakiRegen: 1.5 + a.wil * 0.06,

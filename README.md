@@ -15,7 +15,10 @@ lives, death is permanent, and your will passes on to the next generation.
 - Or run `npm install && npm run build && npm run serve` and open
   <http://localhost:8080>.
 
-The game saves itself to `localStorage` and cannot be reloaded to undo a death.
+There are **three save slots** (lineages) on the title screen. The game saves
+itself to `localStorage` every minute, at every milestone and when you close
+the page, and there is a **Save game** button in the pause menu. A save cannot
+be reloaded to undo a death.
 
 ### Controls
 
@@ -26,12 +29,17 @@ The game saves itself to `localStorage` and cannot be reloaded to undo a death.
 | Space | dodge (i-frames) | row (works without wind) |
 | Left / right click | combo / heavy attack | broadside toward the mouse |
 | F | block — tap just before a hit to **parry** | |
-| 1–6 | techniques (styles, Devil Fruit, dials) | |
-| R / T / G | Armament / Observation / Conqueror's Haki | |
-| E | talk, enter, board, go ashore, examine | dive, knock-up, go ashore |
+| 1–6 | hotbar: techniques and food | |
+| R / T / G | Haki, once it has awakened | |
+| E | talk, enter, board, pick fruit, examine | dive, knock-up, go ashore |
 | Q | eat | |
-| I, C, K, J, U, M | inventory, character, skills, journal, **crew**, world map | |
-| H / Esc | help / menu | |
+| Tab/I, C, K, J, U | inventory, character, skills, journal, crew | |
+| M | world map | |
+| H / Esc | help / pause menu | |
+
+The same menus are on the **sidebar** under the minimap. Press a menu's key
+again (or Esc) to close it. Drag techniques and food onto the hotbar, and drag
+hotbar slots to rearrange them.
 
 ## What's in it
 
@@ -52,7 +60,10 @@ The game saves itself to `localStorage` and cannot be reloaded to undo a death.
 - **Race** is rolled with rarities: Human, Fish-Man, Mink, Skypiean, Longarm,
   Longleg, Buccaneer, Three-Eye or Lunarian. Race decides which Blue and
   which town you are born in.
-- **Traits** include the hidden **Will of D.** and **King's Disposition**.
+- **Traits** are rolled at birth. About one birth in twenty carries the
+  **Will of D.**: a hidden "D." in your name, revealed with a flourish at
+  birth. **King's Disposition** (Conqueror's Haki) is far rarer and stays
+  secret until the day it awakens.
 - You have a few **vivre cards** (lives). When you are knocked down, mash
   SPACE to get back up. If you are finished off, a card burns. Wanted pirates
   are arrested by the Marines instead of killed; notorious ones go to
@@ -64,15 +75,24 @@ The game saves itself to `localStorage` and cannot be reloaded to undo a death.
   - reincarnated Devil Fruits,
   - a place in the Hall of Legends.
 
-**No grinding.**
+**Growing by doing (no stat points).**
 
-- Weak enemies teach nothing. You grow by:
-  - sparring with and training under **masters** (once per day),
-  - fighting opponents who are a real threat,
-  - **breakthroughs** from defeating named foes and bosses,
-  - island story quests,
-  - Devil Fruit mastery,
-  - Haki.
+- Attributes rise by themselves from what you do against opponents worth
+  fighting:
+  - landing blows builds Strength (Agility with guns);
+  - dodging and parrying builds Agility;
+  - blocking builds Endurance;
+  - taking punishment builds Vitality;
+  - getting back up builds Willpower.
+- **Weapon mastery**: fists, legs, swords, guns, staffs and axes each have
+  their own mastery. It rises the more you use them and adds damage.
+- **Breakthroughs** from great victories push your body in the directions
+  you have been training. Masters and sparring push further.
+- Weak enemies teach nothing.
+- **Haki is never mentioned until it awakens.** Armament can stir at random
+  in a hard fight once you are strong enough (it becomes certain past a
+  point). Observation comes the same way to those who have learned to read
+  attacks.
 - **Doriki** measures your power.
 
 **Combat.**
@@ -84,7 +104,8 @@ The game saves itself to `localStorage` and cannot be reloaded to undo a death.
   - Logia intangibility unless you use Haki, seastone or their weakness;
   - rubber versus lightning;
   - fruit users can't swim;
-  - a second fruit kills you.
+  - you can eat only one. Collect others to sell to the black market (or
+    keep them).
 - Haki: Armament (with Emission and Ryuo), Observation (with Future Sight)
   and Conqueror's (with Infusion).
 - Parry, guard breaks, i-frame dodges, finishers and anime impact frames.
@@ -111,18 +132,40 @@ The game saves itself to `localStorage` and cannot be reloaded to undo a death.
 
 **Factions and life.**
 
+- **No chosen destiny.** Character creation has no goal and no crew. You
+  decide what to become.
+- **Reputation** (from Villain to Hero of the Seas):
+  - Crimes lower it: stealing from shops, breaking into houses, picking
+    pockets, beating townsfolk, sinking merchants. At **Outlaw (-25)** the
+    world treats you as a pirate.
+  - Good deeds raise it: quests, freeing islands, defeating pirates.
+- **Your own pirate crew**: found it from the Crew menu. Name it and design
+  your **Jolly Roger**. The flag flies from the sails of every ship you own.
+  (Before you found a crew your ships fly no colours.)
 - **Crew**: recruit nakama in the world (navigator, cook, doctor,
   shipwright, sniper, musician, archaeologist, helmsman, fighters). Each
   gives a passive bonus, and fighters follow you on land.
-- **Marines**: enlist with a clean record, then climb from Seaman Recruit to
-  Fleet Admiral. Merit, missions, salary, Rokushiki and warships come with
-  the ranks. Desertion costs you.
+- **Marines**:
+  - Enlist with reputation 25+ and a clean record, then climb from Seaman
+    Recruit to Fleet Admiral. Each promotion needs merit **and** a better
+    reputation.
+  - Salary, missions, Rokushiki and warships come with the ranks.
+  - From Lieutenant, Marines follow you on land. From Captain, **escort
+    ships** sail in formation with your flagship and engage pirates. A Vice
+    Admiral commands a fleet of three.
+  - Desertion costs you.
+- **Equipment**: head, body armour, up to three swords and two accessory
+  slots (rings, earrings, sashes, charms…). Armour reduces damage.
+- **Foraging**: pick coconuts, bananas, mangoes, apples and cherries from
+  trees. They grow back in two days.
 - **Bounties**: wanted posters, a most-wanted board and bounty hunting.
 - **Poneglyphs**: only an archaeologist can read them. The four **Road
   Poneglyphs** reveal the way to **Laugh Tale**.
-- **Dreams**: King of the Pirates, World's Greatest Swordsman, All Blue,
-  Admiral, the True History, the World Map, Liberation, and the Strongest
-  Warrior.
+- **Legends**: great feats the world remembers. They are never chosen, only
+  achieved: King of the Pirates, World's Greatest Swordsman, Admiral, Fleet
+  Admiral, the All Blue, Map of the World, Brave Warrior of the Sea, the True
+  History, Liberator and Emperor of the Sea. Each adds to your Inherited
+  Will.
 
 ## The world, sea by sea
 

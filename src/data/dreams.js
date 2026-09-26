@@ -1,55 +1,75 @@
-// Every character sails for a dream. Fulfilling it makes you a legend and
-// pays a huge amount of Inherited Will to your successors.
-export const DREAMS = {
+// Legends: great feats any character can achieve. Nobody chooses a goal —
+// the sea is free — but the world remembers those who do the impossible.
+// Each legend fulfilled adds Inherited Will when the lineage passes on.
+export const LEGENDS = {
   king: {
-    name: 'King of the Pirates', icon: '👑',
+    name: 'King of the Pirates',
     desc: 'Find the One Piece on Laugh Tale, the final island of the Grand Line.',
-    goal: 'Collect the four Road Poneglyph rubbings and set foot on Laugh Tale.',
-    perk: 'Your bounty grows 15% faster.',
-    faction: 'pirate',
+    check: (c) => !!c.flags?.laughTale,
+    progress: (c) => [Math.min(4, (c.inventory || []).filter((i) => i.id === 'poneglyph_rubbing').reduce((s, i) => s + (i.qty || 1), 0)), 4, 'Road Poneglyph rubbings'],
+    will: 150,
   },
   swordsman: {
-    name: "World's Greatest Swordsman", icon: '⚔',
-    desc: 'Surpass "Hawk-Eyes" Dracule Mihawk, the strongest swordsman alive.',
-    goal: 'Defeat Dracule Mihawk in a duel.',
-    perk: 'Sword styles gain mastery 20% faster. You start with a rusty katana.',
-  },
-  all_blue: {
-    name: 'Find the All Blue', icon: '🐟',
-    desc: 'Find the legendary sea where the fish of all four Blues meet.',
-    goal: 'Discover the All Blue.',
-    perk: 'Food heals 50% more.',
-  },
-  world_map: {
-    name: 'Draw a Map of the World', icon: '🗺',
-    desc: 'Chart every island of the Blue Planet with your own eyes.',
-    goal: 'Discover 60 charted islands.',
-    perk: 'You see further at sea and sense storms coming.',
-  },
-  warrior: {
-    name: 'Brave Warrior of the Sea', icon: '🛡',
-    desc: 'Become a warrior as brave as the giants of Elbaf.',
-    goal: 'Defeat 12 bosses.',
-    perk: '+2 Willpower. Breakthroughs grant +1 extra point.',
+    name: "World's Greatest Swordsman",
+    desc: 'Defeat "Hawk-Eyes" Dracule Mihawk in a duel.',
+    check: (c) => (c.bosses || []).includes('mihawk'),
+    will: 90,
   },
   admiral: {
-    name: 'Admiral of Justice', icon: '⚓',
-    desc: 'Join the Marines and rise to the rank of Admiral.',
-    goal: 'Reach the rank of Admiral in the Marines.',
-    perk: 'Marines start friendly. You can enlist at any Marine base.',
-    faction: 'marine',
+    name: 'Admiral of the Marines',
+    desc: 'Rise through the Marines to the rank of Admiral.',
+    check: (c) => c.marineRank === 'Admiral' || c.marineRank === 'Fleet Admiral',
+    will: 90,
+  },
+  fleet_admiral: {
+    name: 'Fleet Admiral',
+    desc: 'Command every Marine in the world.',
+    check: (c) => c.marineRank === 'Fleet Admiral',
+    will: 120,
+  },
+  all_blue: {
+    name: 'The All Blue',
+    desc: 'Find the legendary sea where the fish of all four Blues meet.',
+    check: (c) => !!c.flags?.allBlue,
+    will: 80,
+  },
+  world_map: {
+    name: 'Map of the World',
+    desc: 'Chart 60 islands with your own eyes.',
+    check: (c) => (c.discovered || []).length >= 60,
+    progress: (c) => [(c.discovered || []).length, 60, 'islands charted'],
+    will: 70,
+  },
+  warrior: {
+    name: 'Brave Warrior of the Sea',
+    desc: 'Defeat 12 great foes.',
+    check: (c) => (c.bosses || []).length >= 12,
+    progress: (c) => [(c.bosses || []).length, 12, 'great foes defeated'],
+    will: 70,
   },
   true_history: {
-    name: 'Uncover the True History', icon: '📜',
-    desc: 'Read the Poneglyphs and learn what happened in the Void Century.',
-    goal: 'Read 8 Poneglyphs.',
-    perk: 'You can study Poneglyphs even without the Voice of All Things.',
+    name: 'The True History',
+    desc: 'Read 8 Poneglyphs and learn what happened in the Void Century.',
+    check: (c) => (c.flags?.poneglyphsRead || 0) >= 8,
+    progress: (c) => [c.flags?.poneglyphsRead || 0, 8, 'Poneglyphs read'],
+    will: 80,
   },
   liberation: {
-    name: 'Free the Oppressed', icon: '✊',
-    desc: 'Topple the tyrants of the seas, like the Revolutionary Army.',
-    goal: 'Liberate 6 islands from tyrants (Arlong, Crocodile, Enel, Moria, Doflamingo, Kaido...).',
-    perk: 'Liberated islands sell to you at half price.',
+    name: 'Liberator',
+    desc: 'Free 6 places from their tyrants.',
+    check: (c) => (c.liberated || []).length >= 6,
+    progress: (c) => [(c.liberated || []).length, 6, 'places liberated'],
+    will: 70,
+  },
+  emperor: {
+    name: 'Emperor of the Sea',
+    desc: 'Carry a bounty of over 3,000,000,000 berries.',
+    check: (c) => (c.bounty || 0) >= 3000000000,
+    progress: (c) => [Math.floor((c.bounty || 0) / 1e6), 3000, 'million berries'],
+    will: 100,
   },
 };
-export const DREAM_IDS = Object.keys(DREAMS);
+export const LEGEND_IDS = Object.keys(LEGENDS);
+// older saves and code paths
+export const DREAMS = LEGENDS;
+export const DREAM_IDS = LEGEND_IDS;

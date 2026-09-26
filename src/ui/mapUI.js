@@ -1,4 +1,5 @@
 // Full-screen world chart (M). Uses the terrain shader's parchment "map mode".
+import { uiImg } from './icon.js';
 import { h, clear } from './dom.js';
 import { W, H, EQ, RM_X, GL_TOP, GL_BOTTOM } from '../world/constants.js';
 
@@ -124,20 +125,20 @@ function drawLabels(game, r, cam, layer) {
     add('', isl.name, isl.x, isl.y + isl.radius * 0.2 + 6 / cam.zoom, { fontSize: Math.max(11, Math.min(20, 14 * Math.sqrt(cam.zoom / 0.3))) + 'px' }, true);
   }
   if (!zone) {
-    add('', '⛰ Reverse Mountain', RM_X, EQ - 40, { fontSize: '14px' });
-    if (discovered.has('mary_geoise') || w.isExplored(0, EQ)) add('', '🏛 Mary Geoise', 4, EQ - 70, { fontSize: '13px' });
+    add('', 'Reverse Mountain', RM_X, EQ - 40, { fontSize: '14px' });
+    if (discovered.has('mary_geoise') || w.isExplored(0, EQ)) add('', 'Mary Geoise', 4, EQ - 70, { fontSize: '13px' });
   }
   // quests
   for (const { id } of game.quests.active()) {
     const m = game.quests.marker(id);
-    if (m && (!zone || m.zone === w.id)) add('.quest', '❗ ' + m.label, m.x, m.y - 12 / cam.zoom);
+    if (m && (!zone || m.zone === w.id)) add('.quest', [uiImg('quest', 18), ' ' + m.label], m.x, m.y - 12 / cam.zoom);
   }
   // log pose target
   const lp = game.logPoseTarget?.();
-  if (lp && !zone) add('.quest', '🧭', lp.x, lp.y);
+  if (lp && !zone) add('.quest', [uiImg('log_pose', 22)], lp.x, lp.y);
   // ships
-  for (const s of game.ships) if (s.owner === 'player' && !s.sunk) add('', '⛵', s.x, s.y, { fontSize: '16px' });
+  for (const s of game.ships) if (s.owner === 'player' && !s.sunk) add('', [uiImg('ship', 22)], s.x, s.y, { fontSize: '16px' });
   // me
   const p = game.player;
-  add('.me', '✖ You', p.x, p.y);
+  add('.me', [h('span.me-dot'), 'You'], p.x, p.y);
 }

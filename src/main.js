@@ -8,8 +8,8 @@ import { UI } from './ui/ui.js';
 import './data/styles.js';
 import './data/fruits.js';
 import './data/haki.js';
-import { loadChar, loadLegacy, loadSettings, saveSettings, clearChar } from './game/save.js';
-import { titleScreen, creationScreen, hallScreen, helpContent } from './ui/screens.js';
+import { loadChar, loadLegacy, loadSettings, saveSettings, clearChar, saveLegacy, setSlot, slotInfo, clearSlot, defaultLegacy, SLOT_COUNT } from './game/save.js';
+import { titleScreen, creationScreen, hallScreen, helpContent, legacyShopScreen } from './ui/screens.js';
 import { installSession, startNewCharacter, resumeCharacter } from './game/session.js';
 import { LivesSystem } from './game/lives.js';
 import { Progression } from './game/progression.js';
@@ -20,7 +20,11 @@ import { Interactions, npcBuilder, npcDef, makeNPC } from './game/npcs.js';
 import { installMap } from './ui/mapUI.js';
 import { openInventory, openCharacter, openSkills, openJournal, openMenu, openSettings } from './ui/panels.js';
 import { persist, endLineage } from './game/lineage.js';
-import { addItem } from './game/inventory.js';
+import { addItem, useItem } from './game/inventory.js';
+import { ITEMS } from './data/items.js';
+import { installReputation } from './game/reputation.js';
+import { installForaging } from './game/forage.js';
+import { fruitOf } from './world/fruitTrees.js';
 import { installContent } from './content/index.js';
 import { Audio } from './audio/audio.js';
 import { installSea } from './game/sea.js';
@@ -30,7 +34,6 @@ import { openCrew } from './ui/crewPanel.js';
 import { installFactions } from './game/factions.js';
 import { installLegends } from './game/legends.js';
 import { installWorld } from './game/news.js';
-import { RACES } from './data/races.js';
 
 const root = document.createElement('div');
 root.id = 'game';
@@ -79,9 +82,11 @@ async function start() {
   installFactions(game);
   installLegends(game);
   installWorld(game);
+  installReputation(game);
+  installForaging(game);
   installContent(game);
 
-  const toTitle = (afterDeath) => {
+  const toTitle = (afterDeath, next) => {
     if (!afterDeath && game.player && game.state?.char && !game.state.char.dead) persist(game);
     game.player = null;
     game.actors = [];
@@ -92,49 +97,101 @@ async function start() {
     if (ui.mapOpen) game.closeMap();
     ui.setHudVisible(false);
     game.paused = false;
-    showTitle();
+    if (next === 'create') openCreation();
+    else showTitle();
   };
   installSession(game, { onReturnToTitle: toTitle });
 
-  // global shortcuts while playing
+  // menus: the sidebar buttons and their keyboard shortcuts do the same thing
+  // (press again, or Esc, to close; pressing another switches menus)
   const playing = () => !!game.player && !ui.screenEl;
+  ui.actions = {
+    inventory: () => openInventory(game),
+    character: () => openCharacter(game),
+    skills: () => openSkills(game),
+    journal: () => openJournal(game),
+    crew: () => openCrew(game),
+    menu: () => ui.openMenu(),
+    help: () => ui.openPanel(helpContent(game.state?.char), { wide: true, id: 'help' }),
+  };
   ui.keyHandlers.push(
-    { key: 'I', when: playing, fn: () => openInventory(game) },
-    { key: 'Tab', when: playing, fn: () => openInventory(game) },
-    { key: 'C', when: playing, fn: () => openCharacter(game) },
-    { key: 'K', when: playing, fn: () => openSkills(game) },
-    { key: 'J', when: playing, fn: () => openJournal(game) },
-    { key: 'H', when: playing, fn: () => ui.openPanel(helpContent(), { wide: true, id: 'help' }) },
-    { key: 'U', when: playing, fn: () => openCrew(game) },
+    { key: 'I', when: playing, fn: () => ui.sideAction('inventory') },
+    { key: 'Tab', when: playing, fn: () => ui.sideAction('inventory') },
+    { key: 'C', when: playing, fn: () => ui.sideAction('character') },
+    { key: 'K', when: playing, fn: () => ui.sideAction('skills') },
+    { key: 'J', when: playing, fn: () => ui.sideAction('journal') },
+    { key: 'H', when: playing, fn: () => ui.sideAction('help') },
+    { key: 'U', when: playing, fn: () => ui.sideAction('crew') },
   );
+  game.on('saved', () => ui.savedNote());
+  // food and medicine on the hotbar
+  game.useHotbarItem = (id) => {
+    const c = game.state?.char;
+    if (!c) return false;
+    if (!c.inventory.some((i) => i.id === id)) { game.log(`You have no ${ITEMS[id]?.name || id} left.`, '#ff8a80'); return false; }
+    return useItem(game, id);
+  };
+  const saveNow = () => {
+    const ok = persist(game);
+    if (ok) ui.toast('Game saved', `Lineage ${getSlotLabel()}`, '#a5d6a7');
+    else ui.toast('Could not save', 'This browser is blocking local storage.', '#ff8a80');
+    return ok;
+  };
+  const getSlotLabel = () => String(game.saveSlot || 1);
   ui.openMenu = () => {
     if (!playing()) return;
+    if (ui.stack.some((e) => e.id === 'menu')) { ui.closeAll(); return; }
+    ui.closeAll();
     openMenu(game, {
+      onSave: saveNow,
       onQuit: () => toTitle(false),
       onRetire: () => {
-        const will = endLineage(game, `Retired as a living legend. ${game.state.char.name}'s dream came true.`);
+        const will = endLineage(game, `Retired as a living legend. ${game.state.char.name}'s journey is complete.`);
         game.emit('lineageEnded', { cause: 'Retired as a legend.', will });
       },
     });
   };
 
+  const openCreation = () => {
+    creationScreen(ui, loadLegacy(), {
+      onBack: showTitle,
+      onDone: (birth, choices) => { ui.hideScreen(); startNewCharacter(game, birth, choices); audio.music('sea'); },
+    });
+  };
+  const useSlot = (s) => { setSlot(s); game.saveSlot = s; };
+
   const showTitle = () => {
-    const legacy = loadLegacy();
-    const saved = loadChar();
+    const slots = [];
+    for (let s = 1; s <= SLOT_COUNT; s++) slots.push(slotInfo(s));
     titleScreen(ui, {
-      legacy, hasSave: !!saved,
-      saveInfo: saved ? `${saved.name} (${RACES[saved.race]?.name}, day ${saved.world?.day || 1})` : '',
-      onContinue: () => { ui.hideScreen(); resumeCharacter(game, saved); audio.music('sea'); },
-      onNew: async () => {
+      slots,
+      onPlay: (s) => {
+        useSlot(s);
+        const saved = loadChar();
+        if (!saved) { showTitle(); return; }
+        ui.hideScreen(); resumeCharacter(game, saved); audio.music('sea');
+      },
+      onNew: async (s) => {
+        useSlot(s);
+        const saved = loadChar();
         if (saved && !(await ui.ask({ title: `Abandon ${saved.name}?`, text: 'Their journey will be lost, and no Inherited Will is earned for abandoning a life.', ok: 'Abandon', cancel: 'Keep them', danger: true }))) return;
         if (saved) clearChar();
-        creationScreen(ui, loadLegacy(), {
-          onBack: showTitle,
-          onDone: (birth, choices) => { ui.hideScreen(); startNewCharacter(game, birth, choices); audio.music('sea'); },
-        });
+        openCreation();
       },
-      onHall: () => hallScreen(ui, legacy, { onBack: showTitle }),
-      onHelp: () => { ui.hideScreen(); const e = ui.openPanel(helpContent(), { wide: true, onClose: showTitle }); void e; },
+      onDelete: async (s) => {
+        const info = slotInfo(s);
+        const who = info.char ? `${info.char.name} and the` : 'The';
+        if (!(await ui.ask({ title: `Delete lineage ${s}?`, text: `${who} whole bloodline — Inherited Will, perks and the Hall of Legends — will be erased for good.`, ok: 'Delete forever', cancel: 'Keep it', danger: true }))) return;
+        clearSlot(s);
+        showTitle();
+      },
+      onHall: (s) => hallScreen(ui, slotInfo(s).legacy || defaultLegacy(), { onBack: showTitle }),
+      onWill: (s) => {
+        useSlot(s);
+        const legacy = loadLegacy();
+        legacyShopScreen(ui, legacy, { save: () => saveLegacy(legacy), onDone: showTitle, doneLabel: 'Back' });
+      },
+      onHelp: () => { ui.hideScreen(); ui.openPanel(helpContent(null), { wide: true, onClose: showTitle }); },
       onSettings: () => { ui.hideScreen(); openSettings(game); const s = ui.stack[ui.stack.length - 1]; if (s) s.onClose = () => { game.applySettings(true); showTitle(); }; },
     });
     audio.music('title');
@@ -155,10 +212,11 @@ async function start() {
     quickStart(race = 'human', opts = {}) {
       const birth = { race, traits: opts.traits || ['lucky'], seed: opts.seed || 12345 };
       ui.hideScreen();
-      startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', dream: opts.dream || 'king', look: null, jr: { skull: 'classic', bones: 'cross', accessory: 'strawhat', color: '#fff' } });
+      if (opts.slot) useSlot(opts.slot);
+      startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', look: null });
       return game.player;
     },
-    debug: { npcDef, makeNPC, addItem },
+    debug: { npcDef, makeNPC, addItem, fruitOf },
     ready: true,
   });
 
