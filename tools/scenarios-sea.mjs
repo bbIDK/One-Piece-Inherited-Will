@@ -479,4 +479,33 @@ export const scenarios = {
       console.log('perf', JSON.stringify(perf));
     },
   },
+
+  // the sky at the horizon through the day (clouds banks, no balls)
+  sky: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'first'; g.applySettings(); g.env.storm = 0; g.env.fog = 0; document.querySelector('.look-hint')?.remove(); });
+      const spot = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island');
+        for (let k = 0; k < 40000; k++) {
+          const a = Math.random() * Math.PI * 2, r = isl.radius * (0.3 + Math.random() * 0.9);
+          const x = Math.floor(isl.x + Math.cos(a) * r), y = Math.floor(isl.y + Math.sin(a) * r);
+          if (w.type(x, y) === 16 && w.sd(x, y) > 1 && w.sd(x, y) < 2.5 && !w.isBlocked(x, y)) return [x + 0.5, y + 0.5, a];
+        }
+      });
+      await page.evaluate(([x, y]) => window.OP.teleport(x, y), spot);
+      const at = async (name, clock, cloud, yawOff = 0) => {
+        await page.evaluate(([clock, cloud, a]) => { const g = window.OP.game; g.env.clock = clock; if (cloud != null) g.env.cloud = cloud; g.view3d.rig.yaw = a; g.view3d.rig.pitch = 0.1; }, [clock, cloud, spot[2] + yawOff]);
+        for (let i = 0; i < 4; i++) { await step(page, 0.1); await frames(page, 1); }
+        await snap(name);
+      };
+      await at('noon', 12, null);
+      await at('noon-2', 12, null, 1.6);
+      await at('afternoon-cloudy', 15, 0.8, -1.2);
+      await at('dusk', 18.5, null, 0.4);
+      await at('night', 22.5, null, 0.4);
+      await at('night-2', 1.5, null, 2.2);
+    },
+  },
 };

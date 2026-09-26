@@ -54,49 +54,31 @@ const FRAG = /* glsl */`
     }
     if (uZone == 2.0 || uZone == 3.0) { gl_FragColor = vec4(col, 1.0); return; }
 
-    // --- towering cumulus banks along the horizon: rounded lobes (anime cloud art)
+    // --- distant cloud banks low on the horizon: flat-bottomed, billowing on
+    // top, coming and going around the compass (noise, not circles)
     float az = atan(d.z, d.x);
     vec2 sunH = normalize(uSunDir.xz + vec2(1e-4));
-    if (y > -0.02 && y < 0.34) {
-      float bestD = -1.0; vec2 bestQ = vec2(0.0); float bestR = 1.0;
-      for (int layer = 0; layer < 3; layer++) {
-        // big billows, smaller puffs on top of them, and little bumps along the edges
-        float nc = layer == 0 ? 40.0 : layer == 1 ? 90.0 : 170.0;
-        float cw = 6.2831853 / nc;
-        float fi = floor(az / cw);
-        for (int k = -2; k <= 2; k++) {
-          float ci = fi + float(k);
-          float wrapped = mod(ci, nc);
-          float h1 = hash1(wrapped * 1.7 + float(layer) * 13.1), h2 = hash1(wrapped * 3.3 + 7.7 + float(layer) * 5.3), h3 = hash1(wrapped * 5.9 + 2.1 + float(layer));
-          // the bank this lobe belongs to (banks come and go around the horizon)
-          float bankId = floor(ci * cw / 0.5);
-          float bank = hash1(mod(bankId, 12.566) * 2.9 + 1.3);
-          float thresh = 0.28 + uCloud * 0.55;
-          if (bank > thresh) continue;
-          float size = 1.0 - bank / max(thresh, 0.01); // bigger in the middle of a bank
-          float r = cw * (layer == 0 ? 0.7 + h2 * 0.6 : layer == 1 ? 0.8 + h2 * 0.7 : 0.9 + h2 * 0.8);
-          float cx = (ci + 0.5 + (h1 - 0.5) * 0.8) * cw;
-          float top = 0.012 + 0.07 * size * (0.6 + 0.4 * h3);
-          float cy = layer == 0 ? 0.004 + r * 0.3 : layer == 1 ? top * 0.75 + r * 0.1 : top * (0.45 + 0.6 * h3);
-          vec2 q = vec2(az - cx, (y - cy) * 1.1);
-          float dd = r - length(q);
-          if (dd > bestD) { bestD = dd; bestQ = q; bestR = r; }
+    if (y > -0.012 && y < 0.24) {
+      vec2 ap = vec2(cos(az), sin(az));
+      float bank = smoothstep(0.42, 0.72, fbm(ap * 1.6 + 11.0)) + uCloud * 0.55 - 0.08;
+      bank = clamp(bank, 0.0, 1.0);
+      if (bank > 0.01) {
+        float topH = bank * (0.022 + 0.1 * fbm(ap * 4.3 + 3.0));
+        // a lumpy upper edge (in two scales) over a straight base
+        float lumps = (fbm(ap * 14.0 + vec2(y * 26.0, 5.0)) - 0.5) * 0.045 + (noise(ap * 42.0 + 1.3) - 0.5) * 0.012;
+        float inside = topH + lumps * (0.4 + bank) - y;
+        if (inside > 0.0) {
+          float body = smoothstep(0.0, 0.006, inside) * smoothstep(-0.012, 0.003, y);
+          // lit from above and from the sun's side; the base in shade
+          float up = clamp(y / max(topH, 0.004), 0.0, 1.0);
+          float toward = dot(normalize(d.xz), sunH);
+          float lit = clamp(0.3 + up * 0.5 + toward * 0.22 * clamp(uSunDir.y * 3.0 + 0.3, 0.0, 1.0) + (inside < 0.012 ? 0.12 : 0.0), 0.0, 1.0);
+          float rim = (1.0 - smoothstep(0.0, 0.01, inside)) * pow(max(dot(d, uSunDir), 0.0), 6.0);
+          vec3 cc = cloudCol(lit, rim);
+          // the farthest melt into the haze at the horizon line
+          cc = mix(cc, uHorizon, (1.0 - smoothstep(0.0, 0.07, y)) * 0.55);
+          col = mix(col, cc, body * (0.55 + 0.4 * bank));
         }
-      }
-      float flatBottom = smoothstep(-0.004, 0.006, y);
-      if (bestD > 0.0 && flatBottom > 0.0) {
-        // shade the lobe like a ball lit by the sun (in the lobe's own frame)
-        vec2 hdir = normalize(d.xz);
-        vec3 L = normalize(vec3(dot(uSunDir.xz, vec2(-hdir.y, hdir.x)), uSunDir.y + 0.15, -dot(uSunDir.xz, hdir)));
-        vec2 qn = bestQ / bestR;
-        vec3 nrm = normalize(vec3(qn.x, qn.y, sqrt(max(0.0, 1.0 - dot(qn, qn)))));
-        float lit = dot(nrm, L) * 0.5 + 0.5;
-        float rim = pow(1.0 - nrm.z, 3.0) * max(0.0, -L.z);
-        vec3 cc = cloudCol(lit, rim);
-        // far banks melt into the haze near the horizon line
-        float haze = 1.0 - smoothstep(0.0, 0.06, y) * 0.55;
-        cc = mix(cc, uHorizon, haze * 0.45);
-        col = mix(col, cc, smoothstep(0.0, 0.004, bestD) * flatBottom);
       }
     }
 
