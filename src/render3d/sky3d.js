@@ -1,6 +1,7 @@
 // Sky dome, sun, moon, stars and clouds, plus the scene lighting and fog —
 // all driven by the game's clock and weather.
 import * as THREE from 'three';
+import { FOG } from './fog.js';
 
 const VERT = /* glsl */`
   varying vec3 vDir;
@@ -133,13 +134,27 @@ export class Sky {
     this.hemi.color.setRGB(amb[0] * 0.8, amb[1] * 0.85, amb[2] * 0.95);
     this.hemi.groundColor.setRGB(amb[0] * 0.45, amb[1] * 0.4, amb[2] * 0.35);
     this.hemi.intensity = 1.0 + (zone === 3 ? -0.3 : 0);
-    // fog: thick in storms, fog banks and under the sea; long at sea on a clear day
-    const clear = sailing ? 900 : 520;
-    let far = clear * (1 - env.fog * 0.8) * (1 - env.storm * 0.5);
-    if (zone === 2) far = 160;
-    if (zone === 3) far = 90;
-    this.fog.near = Math.min(far * 0.35, 80);
-    this.fog.far = Math.max(50, far);
+    // Fog (see fog.js): a thin sea haze on a clear day that thickens in storms,
+    // snow and fog banks; it always closes in completely at the render
+    // distance (maxFar, set from the terrain's reach) so nothing pops.
+    let far = sailing ? 900 : 620;
+    far *= (1 - env.fog * 0.72) * (1 - env.storm * 0.4);
+    if (zone === 2) far = 170;
+    if (zone === 3) far = 95;
+    far = Math.max(60, Math.min(far, this.maxFar || far));
+    this.fog.far = far;
+    this.fog.near = far * 0.55;
     this.fog.color.copy(this.horizon);
+    let dens = 0.0011 + env.storm * 0.0045 + env.fog * 0.013 + (env.snow ? 0.0025 : 0) + night * 0.0004;
+    if (sailing) dens *= 0.8;
+    if (zone === 2) dens = 0.012;
+    else if (zone === 3) dens = 0.02;
+    else if (zone === 1) dens = 0.0014;
+    FOG.fogDensity2.value = dens;
+    FOG.fogHeightK.value = zone === 1 ? 0.012 : 0.028;
+    FOG.fogBase.value = zone === 1 ? -25 : 0; // the sky islands' haze lies on the cloud sea below
+    FOG.fogSunDir.value.copy(this.sunDir.y > -0.05 ? this.sunDir : moon);
+    const glow = (this.sunDir.y > -0.05 ? 1 : 0.25) * (1 - env.storm * 0.8) * (zone >= 2 ? 0.3 : 1);
+    FOG.fogSunColor.value.copy(this.horizon).lerp(this.sunCol, 0.75 * glow).multiplyScalar(1 + 0.25 * glow);
   }
 }

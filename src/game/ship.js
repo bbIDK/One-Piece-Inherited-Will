@@ -8,6 +8,9 @@ import { SAILABLE } from '../world/tiles.js';
 import { angleDiff, clamp, TAU } from '../core/math.js';
 import { drawProjectile } from '../render/projectiles.js';
 
+/** Sailing speed multiplier for the bigger world (see WORLD_SCALE). */
+const SEA_PACE = 1.25;
+
 export class Ship extends Entity {
   constructor(o) {
     super({ ...o, kind: 'ship' });
@@ -90,7 +93,8 @@ export class Ship extends Entity {
     this.sailSet += (this.sail - this.sailSet) * Math.min(1, dt * 1.5);
     const rel = Math.cos(angleDiff(this.heading, windA));
     const windFactor = (0.35 + 0.65 * clamp((rel + 0.4) / 1.4, 0, 1)) * windS;
-    let target = this.def.speed * this.sailSet * windFactor * (this.owner === 'player' ? game.crewMods?.speedMul || 1 : 1);
+    // (the seas were widened with the world, so sails carry a little further)
+    let target = this.def.speed * SEA_PACE * this.sailSet * windFactor * (this.owner === 'player' ? game.crewMods?.speedMul || 1 : 1);
     // rowing / paddles work without wind
     const rowSpeed = this.def.paddle ? 0.6 : this.def.oars || this.type === 'dinghy' ? 0.42 : 0.12;
     if (this.rowing) target = Math.max(target, this.def.speed * rowSpeed * this.rowing);

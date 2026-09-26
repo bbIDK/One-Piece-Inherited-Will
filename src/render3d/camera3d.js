@@ -26,6 +26,7 @@ export class CameraRig {
     this.baseFov = 75; // settings: 60–95
     this.bobOn = true;
     this.bob = 0;
+    this.bobAmp = 0;
     this.roll = 0;
     this.eye = new THREE.Vector3();
     this.tp = { dist: 4.2, height: 1.4 };
@@ -126,7 +127,12 @@ export class CameraRig {
     const scale = p.look?.scale || 1;
     let eyeH = 1.62 * scale;
     let gx = 0, gz = 0; // eye position relative to the player (origin)
-    let gh = ground(p.x, p.y) + (p.z || 0);
+    // the ground under your feet, smoothed so bumps and steps don't jolt the view
+    const g0 = ground(p.x, p.y);
+    if (this.smoothG === undefined || Math.abs(g0 - this.smoothG) > 2.5 || p.mode !== this.lastMode) this.smoothG = g0;
+    this.smoothG += (g0 - this.smoothG) * Math.min(1, dt * 14);
+    this.lastMode = p.mode;
+    let gh = this.smoothG + (p.z || 0);
     let rollSea = 0;
     if (sailing) {
       // standing at the helm on the stern deck (your own rigging turns
@@ -146,13 +152,19 @@ export class CameraRig {
     this.lastZ = p.z || 0;
     this.dip = (this.dip || 0) * Math.max(0, 1 - dt * 7);
     gh -= this.dip;
-    // walking bob and a knocked-down camera
-    const moving = !sailing && !(p.z > 0.05) && (Math.abs(p.vx || 0) + Math.abs(p.vy || 0) > 0.5 || p.moving);
-    this.bob += dt * (moving ? 9 : 0);
-    let bobY = moving && this.bobOn ? Math.sin(this.bob) * 0.045 : 0;
-    let roll = 0;
+    // walking bob (faster and deeper when running), a lean into strafes, and
+    // a knocked-down camera
+    const spd = Math.hypot(p.vx || 0, p.vy || 0);
+    const moving = !sailing && !(p.z > 0.05) && (spd > 0.5 || p.moving);
+    this.bob += dt * (moving ? 5.5 + Math.min(spd, 9) * 0.9 : 0);
+    this.bobAmp += ((moving && this.bobOn ? 0.03 + Math.min(spd, 9) * 0.004 : 0) - this.bobAmp) * Math.min(1, dt * 6);
+    const bobY = Math.sin(this.bob) * this.bobAmp;
+    const bobX = Math.cos(this.bob * 0.5) * this.bobAmp * 0.6;
+    // lateral speed relative to the view: lean a little into it
+    const side = !sailing ? ((p.vx || 0) * -Math.sin(this.yaw) + (p.vy || 0) * Math.cos(this.yaw)) : 0;
+    let roll = this.bobOn ? -side * 0.006 : 0;
     if (p.state === 'knocked') { eyeH = 0.45; roll = 0.35; }
-    this.roll += (roll - this.roll) * Math.min(1, dt * 4);
+    this.roll += (roll - this.roll) * Math.min(1, dt * 5);
     // screen shake from the effects system
     const tr = game.fx?.trauma || 0;
     const sh = tr * tr * 0.06;
@@ -170,11 +182,13 @@ export class CameraRig {
       cam.position.set(cx, cy, cz);
       cam.rotation.set(this.pitch * 0.8 - 0.12 + this.shake.y, yaw3 + this.shake.x, 0);
     } else {
-      cam.position.set(gx, gh + eyeH + bobY, gz);
+      cam.position.set(gx + Math.cos(this.yaw + Math.PI / 2) * bobX, gh + eyeH + bobY, gz + Math.sin(this.yaw + Math.PI / 2) * bobX);
       cam.rotation.set(this.pitch + this.shake.y, yaw3 + this.shake.x, this.roll + rollSea);
     }
-    const sprint = !sailing && p.intent?.sprint;
-    const fov = this.baseFov + (sprint ? 7 : 0);
+    const sprint = !sailing && p.intent?.sprint && moving;
+    // a quick widening of the view during dodges and dashes
+    const dashing = !!p.dash;
+    const fov = this.baseFov + (sprint ? 7 : 0) + (dashing ? 6 : 0);
     if (Math.abs(cam.fov - fov) > 0.05) { cam.fov += (fov - cam.fov) * Math.min(1, dt * 6); cam.updateProjectionMatrix(); }
     cam.updateMatrixWorld();
     this.aimCache = null;

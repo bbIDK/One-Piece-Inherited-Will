@@ -5,6 +5,7 @@
 // projectiles. The existing 2D overlay canvas stays on top for effects,
 // weather and damage numbers, projected through the 3D camera.
 import * as THREE from 'three';
+import './fog.js'; // the atmospheric fog shader chunks (before any material compiles)
 import { TerrainManager } from './terrain3d.js';
 import { Water } from './water3d.js';
 import { Sky } from './sky3d.js';
@@ -176,6 +177,8 @@ export class Renderer3D {
     const cam = this.rig.camera;
     const camYaw3 = -(this.rig.yaw + Math.PI / 2);
 
+    this.terrain.setSailing(sailing);
+    this.sky.maxFar = this.terrain.extent;
     this.sky.update(env, w, sailing);
     this.sky.mesh.position.copy(cam.position);
     this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon);
@@ -226,6 +229,8 @@ export class Renderer3D {
     cam.rotation.set(-0.2, camYaw3, 0);
     if (Math.abs(cam.fov - 70) > 0.01) { cam.fov = 70; cam.updateProjectionMatrix(); }
     cam.updateMatrixWorld();
+    this.terrain.setSailing(true);
+    this.sky.maxFar = this.terrain.extent;
     this.sky.update(env, w, true);
     this.sky.mesh.position.copy(cam.position);
     this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon);

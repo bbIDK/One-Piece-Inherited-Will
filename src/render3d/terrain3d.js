@@ -46,9 +46,24 @@ export class TerrainManager {
 
   /** Fast graphics draws less terrain detail and a nearer horizon. */
   setDetail(q) {
+    this.quality = q;
     this.nearR = q === 'low' ? 4 : NEAR_R;
-    this.farR = q === 'low' ? 11 : FAR_R;
+    this.farR = this.reach(false);
   }
+
+  /** How far (in chunks) the land is drawn: further out at sea, where islands are the view. */
+  reach(sailing) {
+    const low = this.quality === 'low';
+    return sailing ? (low ? 15 : 22) : (low ? 11 : 17);
+  }
+
+  setSailing(on) {
+    const r = this.reach(!!on);
+    if (r !== this.farR) this.farR = r;
+  }
+
+  /** Distance (m) out to which every direction has terrain: where the fog must close in. */
+  get extent() { return (this.farR - 1) * CHUNK; }
 
   setWorld(world) {
     for (const c of this.live.values()) this.disposeChunk(c);
