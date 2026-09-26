@@ -175,7 +175,8 @@
 .title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }
 .title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }
 .race-roll { text-align: center; }
-.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; }
+.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }
+.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }
 .race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }
 .creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }
 .preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }
@@ -220,7 +221,7 @@ img.icon { vertical-align: middle; image-rendering: auto; }
 .side-btn:hover { border-color: var(--gold); transform: translateX(-2px); }
 .side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }
 .panel-bg.side-pad { padding-right: 222px; box-sizing: border-box; }
-.panel-bg.side-pad .panel { max-width: 100%; }
+.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }
 .panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }
 .saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }
 .saved-note.show { animation: savednote 2.4s forwards; }
@@ -229,7 +230,7 @@ img.icon { vertical-align: middle; image-rendering: auto; }
 /* ---------- hotbar editor (in menus) ---------- */
 .hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }
 .hb-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.hb-slot { position: relative; width: 104px; height: 70px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }
+.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }
 .hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }
 .hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }
 .hb-slot.over { border-color: var(--gold); transform: scale(1.04); }
@@ -326,7 +327,7 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 /* ---------- title: lineage slots ---------- */
 .slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }
 .slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }
-.slot-card.empty { background: rgba(245,230,196,.7); border-style: dashed; }
+.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }
 .slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }
 .slot-head button.link { color: #8e1b16; }
 .slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }
@@ -388,3 +389,7 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 
 .wm-label img.icon { vertical-align: -5px; }
 .me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }
+
+.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }
+.panel-top .berries { display: flex; align-items: center; gap: 6px; }
+.eq-slot { height: 58px; }

@@ -241,7 +241,7 @@ npm run build        # bundles src/ → dist/game.js and dist/onepiece.html
 npm run serve        # http://localhost:8080
 npm test             # content validator: generates the world and cross-checks every island/NPC/quest/dialogue
 node tools/validate.mjs [--fast] [--pack=<id>]
-node tools/shot.mjs <scenario>   # headless Chromium play-tests with screenshots (boot, create, play, zones, systems, quest, resume, look)
+node tools/shot.mjs <scenario>   # headless Chromium play-tests with screenshots (boot, create, play, zones, systems, quest, resume, look, menus, marines, dreveal, fight…)
 ```
 
 **Engine.** Plain ES modules bundled by esbuild.
@@ -255,7 +255,9 @@ node tools/shot.mjs <scenario>   # headless Chromium play-tests with screenshots
 - `src/world/`: world generation (Red Line, Reverse Mountain, islands,
   towns, zones).
 - `src/game/`: gameplay systems (combat, abilities, AI, lives, progression,
-  quests, sea, zones, crew, factions, legends).
+  reputation, foraging, quests, sea, zones, crew, factions, legends, saving).
+- `src/ui/`: HUD and sidebar, menus (inventory, character, skills, journal,
+  crew), title and creation screens. `src/render/icons.js` draws every icon.
 - `src/data/`: races, styles, fruits, items, ships, trainers, and island data
   per sea.
 - `src/content/`: NPCs, bosses, quests and events per sea. See

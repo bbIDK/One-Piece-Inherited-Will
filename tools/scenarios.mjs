@@ -141,9 +141,15 @@ export const scenarios = {
       // --- marines
       const marine = await page.evaluate(() => {
         const g = window.OP.game; const c = g.state.char;
+        // a nobody with no reputation is turned away…
+        g.emit('marineEnlist', 'test');
+        g.dialogue.close();
+        const refused = c.faction;
+        // …someone the people trust is not
+        c.reputation = 30;
         g.emit('marineEnlist', 'test');
         g.dialogue.choose(0); g.dialogue.advance && g.dialogue.close();
-        return { faction: c.faction, rank: c.marineRank, hat: c.equipped.hat };
+        return { refused, faction: c.faction, rank: c.marineRank, hat: c.equipped.hat };
       });
       console.log('marine', JSON.stringify(marine));
       await page.evaluate(() => { const g = window.OP.game; g.state.char.merit = 50; g.emit('marineOffice', { name: 'Test Base' }, null); });

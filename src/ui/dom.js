@@ -8,7 +8,8 @@ export function h(sel, props, ...children) {
       else el.id = part.slice(1);
     }
   }
-  if (props && (typeof props !== 'object' || props instanceof Node || Array.isArray(props))) {
+  // anything that isn't a plain options object is the first child (including 0)
+  if (props !== null && props !== undefined && (typeof props !== 'object' || props instanceof Node || Array.isArray(props))) {
     children.unshift(props);
     props = null;
   }
@@ -35,6 +36,9 @@ function append(el, children) {
     else el.appendChild(document.createTextNode(String(c)));
   }
 }
+
+/** Like el.append(), but skips null/undefined/false (native append prints "null"). */
+export function add(el, ...children) { append(el, children); return el; }
 
 export function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
 

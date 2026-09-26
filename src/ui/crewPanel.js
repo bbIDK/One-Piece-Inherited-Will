@@ -1,6 +1,6 @@
 // Crew menu: found your own pirate crew (name + Jolly Roger), the roster of
 // companions ("nakama"), and — for Marines — the fleet under your command.
-import { h, clear } from './dom.js';
+import { h, clear, add } from './dom.js';
 import { CREW_ROLES } from '../game/crew.js';
 import { drawJollyRoger, drawMarineEmblem } from '../render/ship.js';
 import { persist } from '../game/lineage.js';
@@ -48,14 +48,14 @@ export function openCrew(game) {
   const render = () => {
     clear(body);
     if (c.faction === 'marine') {
-      body.append(h('div.crew-head', flagCanvas(null, 120, 86, true), h('div',
+      add(body, h('div.crew-head', flagCanvas(null, 120, 86, true), h('div',
         h('h2', `${c.marineRank} ${c.name}`),
         h('p', 'You sail under the flag of the World Government. Marines cannot found a pirate crew — resign first if the sea calls you another way.'),
         fleetInfo(game))));
     } else if (!c.crewName) {
       if (!found.name) found.name = `${c.name.split(' ')[0]} Pirates`;
       const input = h('input.name', { value: found.name, maxLength: 28, spellcheck: false, on: { input: (e) => { found.name = e.target.value; } } });
-      body.append(h('h2', 'Crew'),
+      add(body, h('h2', 'Crew'),
         h('div.card.found',
           h('h3', 'Found a pirate crew'),
           h('p', 'Every great pirate started with a name and a flag. Choose your crew\'s name and design your Jolly Roger — it will fly from the sails of every ship you own.'),
@@ -78,7 +78,7 @@ export function openCrew(game) {
               render();
             } } }, 'Raise the flag'))));
     } else {
-      body.append(h('div.crew-head', flagCanvas(c.jr, 120, 86), h('div',
+      add(body, h('div.crew-head', flagCanvas(c.jr, 120, 86), h('div',
         h('h2', `The ${c.crewName}`),
         h('p.muted', `Captain ${c.name} · ${game.crew.count() + 1} aboard`),
         h('button.btn', { on: { click: () => openJollyRoger(game) } }, uiImg('jolly_roger', 18), 'Redesign the Jolly Roger'))));
@@ -99,9 +99,9 @@ function fleetInfo(game) {
 
 function roster(game, body, rerender) {
   const crew = game.crew.members();
-  body.append(h('h3', 'Nakama'));
-  body.append(h('p.muted', 'Companions you recruit in the world. Look for "Join my crew!" when you talk to people — a navigator, a cook, a doctor… Up to two fighters follow you on land; everyone else stays with the ship and helps from there.'));
-  if (!crew.length) body.append(h('p', 'Your crew is just you, for now. Every great pirate started alone.'));
+  add(body, h('h3', 'Nakama'));
+  add(body, h('p.muted', 'Companions you recruit in the world. Look for "Join my crew!" when you talk to people — a navigator, a cook, a doctor… Up to two fighters follow you on land; everyone else stays with the ship and helps from there.'));
+  if (!crew.length) add(body, h('p', 'Your crew is just you, for now. Every great pirate started alone.'));
   const list = h('div.list');
   for (const m of crew) {
     const role = CREW_ROLES[m.role] || CREW_ROLES.fighter;
@@ -129,7 +129,7 @@ function roster(game, body, rerender) {
   if (mods.staminaMul > 1) perks.push('+25% stamina regeneration');
   if (mods.poneglyphs) perks.push('Can read Poneglyphs');
   if (mods.turnMul > 1) perks.push('Ship turns 25% faster');
-  if (perks.length) body.append(h('h3', 'Crew bonuses'), h('p', perks.join(' · ')));
+  if (perks.length) add(body, h('h3', 'Crew bonuses'), h('p', perks.join(' · ')));
 }
 
 /** The Jolly Roger button (Character menu): your flag, or how to get one. */
@@ -139,11 +139,11 @@ export function openJollyRoger(game) {
   const entry = game.ui.openPanel(body, { wide: false, id: 'jolly' });
   if (!entry) return;
   if (c.faction === 'marine') {
-    body.append(h('h2', 'Colours'), flagCanvas(null, 220, 150, true), h('p', 'As a Marine you sail under the gull of the World Government.'));
+    add(body, h('h2', 'Colours'), flagCanvas(null, 220, 150, true), h('p', 'As a Marine you sail under the gull of the World Government.'));
     return;
   }
   if (!c.crewName) {
-    body.append(h('h2', 'Jolly Roger'), flagCanvas({ skull: 'classic', bones: 'cross', accessory: 'none', color: '#333' }, 220, 150),
+    add(body, h('h2', 'Jolly Roger'), flagCanvas({ skull: 'classic', bones: 'cross', accessory: 'none', color: '#333' }, 220, 150),
       h('p', 'You have no crew — and no flag — yet. Found a pirate crew from the Crew menu (U) to design your Jolly Roger. It will fly from the sails of your ships.'),
       h('button.btn.gold', { on: { click: () => { game.ui.closePanel(entry); openCrew(game); } } }, uiImg('crew', 18), 'Open the Crew menu'));
     return;
@@ -151,7 +151,7 @@ export function openJollyRoger(game) {
   const state = { jr: { skull: 'classic', bones: 'cross', accessory: 'none', color: '#f5f6fa', ...c.jr } };
   const render = () => {
     clear(body);
-    body.append(h('h2', `Flag of the ${c.crewName}`), designer(state, render),
+    add(body, h('h2', `Flag of the ${c.crewName}`), designer(state, render),
       h('div', { style: { display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' } },
         h('button.btn', { on: { click: () => game.ui.closePanel(entry) } }, 'Cancel'),
         h('button.btn.gold', { on: { click: () => { c.jr = { ...state.jr, name: c.crewName }; hoist(game); persist(game); game.ui.closePanel(entry); game.log('Your new Jolly Roger is hoisted.', '#ffe082'); } } }, 'Hoist it')));

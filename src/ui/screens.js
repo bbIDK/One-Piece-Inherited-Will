@@ -94,6 +94,7 @@ function slotCard(info, { onPlay, onNew, onDelete, onHall, onWill }) {
 export function creationScreen(ui, legacy, { onDone, onBack }) {
   let rerolls = perkLevel(legacy, 'reroll');
   let birth = rollBirth(legacy, Math.floor(Math.random() * 1e9));
+  if (ui.game?.debugBirth) birth = { ...birth, ...ui.game.debugBirth }; // test harness only
   const state = { name: '', look: null };
   const root = h('div.screen');
   ui.showScreen(root);
@@ -155,7 +156,8 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
       }
     };
     const tick = (now) => {
-      const k = (now - t0) / Math.max(1, dur);
+      // (a frame's timestamp can be slightly earlier than t0)
+      const k = Math.max(0, (now - t0) / Math.max(1, dur));
       if (k < 1) {
         const i = Math.floor(Math.pow(k, 0.5) * 40) % ids.length;
         nameEl.textContent = RACES[ids[i]].name;
@@ -203,7 +205,7 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
     const born = RACES[birth.race];
     const panel = h('div.panel.wide', h('h2', 'Who are you?'), h('div.creation-grid', left, right),
       h('div.creation-foot',
-        h('div.muted', `${raceLabel(L)} · born in the ${born.spawnSeas.length > 1 ? 'one of the four Blues' : SEA_NAMES[born.spawnSeas[0]]}`),
+        h('div.muted', `${raceLabel(L)} · born in ${born.spawnSeas.length > 1 ? 'one of the four Blues' : 'the ' + SEA_NAMES[born.spawnSeas[0]]}`),
         h('div', { style: { display: 'flex', gap: '10px' } },
           h('button.btn', { on: { click: () => stepRoll(false) } }, 'Back'),
           h('button.btn.red.big', { on: { click: () => { stopAnim(); onDone(birth, { name: (state.name || '').trim() || 'Nameless', look: state.look }); } } }, 'Set Sail'))));

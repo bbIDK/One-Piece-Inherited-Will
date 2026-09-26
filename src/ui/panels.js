@@ -1,6 +1,6 @@
 // Modal panels: inventory & equipment, character, skills, journal, pause
 // menu, settings, shops, trainers, inns, doctors, shipyards.
-import { h, clear } from './dom.js';
+import { h, clear, add } from './dom.js';
 import { ITEMS, sellPrice } from '../data/items.js';
 import { STYLES } from '../data/styles.js';
 import { FRUITS, FRUIT_RARITY } from '../data/fruits.js';
@@ -180,7 +180,7 @@ export function openInventory(game) {
         slotBox('weapon0', 'Weapon', ws[0], 'weapon', 'weapon_slot'),
         slotBox('weapon1', '2nd sword', ws[1], 'weapon', 'weapon_slot', !swords),
         slotBox('weapon2', '3rd sword', ws[2], 'weapon', 'weapon_slot', !swords)),
-      h('div.doll-mid', portrait(equippedLook(c), 120, 150)),
+      h('div.doll-mid', portrait(equippedLook(c), 104, 130)),
       h('div.doll-col',
         slotBox('head', 'Head', eq.hat, 'head', 'head_slot'),
         slotBox('body', 'Body', eq.coat, 'body', 'body_slot'),
@@ -191,7 +191,7 @@ export function openInventory(game) {
       h('div', h('b', 'Health '), dd.maxHp), h('div', h('b', 'Defence '), `${Math.round(dd.def * 100)}%`, armorOf(c) ? h('span.muted', ` (armour ${Math.round(armorOf(c) * 100)}%)`) : null),
       h('div', h('b', 'Damage '), `×${dd.dmg.toFixed(2)}`), h('div', h('b', 'Speed '), dd.speed.toFixed(1)));
     const fruitNote = c.fruit ? h('div.fruit-note', itemImg('fruit_' + c.fruit, 26), h('div', h('b', FRUITS[c.fruit].name), h('div.sub', `Eaten · mastery ${Math.floor(c.fruitMastery)} · you can never swim again`))) : null;
-    const left = h('div.inv-left', h('h3', 'Equipment'), doll, summary, fruitNote, h('div.purse', h('h3', 'Purse'), berriesLine(c)));
+    const left = h('div.inv-left', doll, summary, fruitNote);
 
     // -------------------------------------------------------------- grid
     const tabs = h('div.tabs.icon-tabs', CATS.map((k) => h('button' + (st.cat === k.id ? '.on' : ''), { on: { click: () => { st.cat = k.id; render(); } } }, uiImg(k.icon, 16), k.name)));
@@ -252,7 +252,7 @@ export function openInventory(game) {
       details = h('div.inv-details.empty', h('p.muted', 'Select an item to see it. Drag gear onto the equipment slots, and food onto the hotbar. Double-click to equip or eat.'));
     }
     const right = h('div.inv-right', tabs, grid, details);
-    body.append(h('h2', 'Inventory'), h('div.inv-cols', left, right), h('h3', 'Hotbar'), hotbarStrip(game, st.hb, render));
+    add(body, h('div.panel-top', h('h2', 'Inventory'), berriesLine(c)), h('div.inv-cols', left, right), h('h4.grp', 'Hotbar'), hotbarStrip(game, st.hb, render));
   };
   const quickUse = (id) => {
     const d = ITEMS[id];
@@ -357,7 +357,7 @@ export function openCharacter(game) {
       ...traits.map((t) => h('div.li', h('b', TRAITS[t].name + ': '), TRAITS[t].desc)),
       h('p.muted', { style: { marginTop: '10px' } }, `Lives ${c.lives}/${c.maxLives} · Second winds ${c.getUpCharges || 0} · ${(c.discovered || []).length} islands charted · ${(c.bosses || []).length} great foes · day ${game.env.day}`),
     );
-    body.append(header, h('div.grid2', left, right));
+    add(body, header, h('div.grid2', left, right));
   };
   render();
 }
@@ -411,7 +411,7 @@ export function openSkills(game) {
         onBar ? h('span.tag', `slot ${c.hotbar.indexOf(d.id) + 1}`) : null);
         return dragSource(card, 'skill:' + d.id);
       }))));
-    body.append(
+    add(body, 
       h('h2', 'Skills'),
       h('h3', 'Fighting style'), h('div.tabs', styleBtns),
       needW ? h('p', { style: { color: '#b71c1c' } }, `${cur.name} needs ${cur.weapon === 'sword' ? cur.swords + ' sword(s)' : 'a ' + cur.weapon} equipped — until then you fight bare-handed.`) : null,
@@ -435,12 +435,12 @@ export function openJournal(game) {
   const render = () => {
     clear(body);
     const tabs = h('div.tabs', ['quests', 'legends'].map((k) => h('button' + (tab === k ? '.on' : ''), { on: { click: () => { tab = k; render(); } } }, k === 'quests' ? 'Quests' : 'Legends')));
-    body.append(h('h2', 'Journal'), tabs);
+    add(body, h('h2', 'Journal'), tabs);
     if (tab === 'quests') {
       const q = game.quests;
       const active = q.active();
       const done = Object.entries(c.quests).filter(([, s]) => s.done).map(([id]) => questDef(id)).filter(Boolean);
-      body.append(
+      add(body, 
         h('h3', 'Active'),
         active.length ? h('div.list', ...active.map(({ s, def }) => h('div.card',
           h('h4', uiImg('quest', 18), ' ', def.name, h('span.tag', def.kind || 'story')),
@@ -450,7 +450,7 @@ export function openJournal(game) {
         h('h3', 'Completed'),
         done.length ? h('div.list.compact', ...done.map((d) => h('div.row-item', uiImg('check', 18), h('div.grow', h('b', d.name))))) : h('p.muted', 'None yet.'));
     } else {
-      body.append(h('p.muted', 'Nobody chooses your destiny. But the sea remembers those who do the impossible — every legend you write adds to your Inherited Will.'));
+      add(body, h('p.muted', 'Nobody chooses your destiny. But the sea remembers those who do the impossible — every legend you write adds to your Inherited Will.'));
       const list = h('div.list');
       for (const id of LEGEND_IDS) {
         const L = LEGENDS[id];
@@ -517,7 +517,7 @@ export function openShop(game, building, island) {
   const entry = ui.openPanel(body, { wide: true, id: 'shop' });
   const render = () => {
     clear(body);
-    body.append(h('h2', building.name || 'Shop'), h('div.shop-top',
+    add(body, h('h2', building.name || 'Shop'), h('div.shop-top',
       h('div.tabs', h('button' + (tab === 'buy' ? '.on' : ''), { on: { click: () => { tab = 'buy'; render(); } } }, 'Buy'), h('button' + (tab === 'sell' ? '.on' : ''), { on: { click: () => { tab = 'sell'; render(); } } }, 'Sell')),
       berriesLine(c)));
     const list = h('div.list');
@@ -575,13 +575,13 @@ export function openDoctor(game, building, island, doc) {
   const entry = game.ui.openPanel(body, { id: 'doctor' });
   const render = () => {
     clear(body);
-    body.append(h('h2', doc?.name || building.name || 'Clinic'),
+    add(body, h('h2', doc?.name || building.name || 'Clinic'),
       h('p', doc?.line || 'Let\'s have a look at you.'),
       h('p', `Health ${Math.ceil(p.hp)}/${p.d.maxHp}${Object.keys(p.status).length ? ' · ' + Object.keys(p.status).join(', ') : ''}`),
       h('button.btn.green', { disabled: p.hp >= p.d.maxHp && !Object.keys(p.status).length, on: { click: () => { S.heal(island); render(); } } }, `Treat wounds — ${formatBerries(S.healPrice(island))}`));
     if (doc?.restoresLife) {
       const done = c.flags['lifeRestored_' + doc.id];
-      body.append(h('h3', 'Mend a vivre card'),
+      add(body, h('h3', 'Mend a vivre card'),
         h('p', `${doc.name} is one of the few doctors in the world who can pull someone back from the edge. (Restores one lost life, once.)`),
         h('button.btn.gold', { disabled: done || c.lives >= c.maxLives, on: { click: () => { S.restoreLife(doc); render(); } } }, done ? 'Already treated' : c.lives >= c.maxLives ? 'No lives lost' : `Treatment — ${formatBerries(S.lifePrice(doc))}`));
     }
@@ -599,8 +599,8 @@ export function openShipyard(game, building, island, dock) {
   const myShips = () => game.ships.filter((s) => s.owner === 'player' && !s.sunk);
   const render = () => {
     clear(body);
-    body.append(h('h2', building.name || 'Shipyard'), berriesLine(c));
-    body.append(h('h3', 'Buy a ship'));
+    add(body, h('h2', building.name || 'Shipyard'), berriesLine(c));
+    add(body, h('h3', 'Buy a ship'));
     const list = h('div.list');
     for (const type of S.shipsFor(island)) {
       const d = SHIPS[type];
@@ -613,7 +613,7 @@ export function openShipyard(game, building, island, dock) {
     body.appendChild(list);
     const ships = myShips();
     if (ships.length) {
-      body.append(h('h3', 'Your ships'));
+      add(body, h('h3', 'Your ships'));
       for (const s of ships) {
         const near = game.world.distance(s.x, s.y, game.player.x, game.player.y) < 60;
         const rp = S.repairPrice(s, island);
@@ -637,7 +637,7 @@ export function openShipyard(game, building, island, dock) {
       }
     }
     if (building.adam && c.inventory.some((i) => i.id === 'adam_wood')) {
-      body.append(h('h3', 'A dream ship'), h('p', 'You have Adam wood. The shipwrights\' eyes light up.'),
+      add(body, h('h3', 'A dream ship'), h('p', 'You have Adam wood. The shipwrights\' eyes light up.'),
         h('button.btn.red', { on: { click: () => { removeItem(game, 'adam_wood', 1); const s = game.giveShip('adam_brig', dock?.moor?.x ?? game.player.x, dock?.moor?.y ?? game.player.y + 4, 'Thousand Dreams'); game.ui.toast('A LEGENDARY SHIP', `${s.name} — an Adam-wood brig with Coup de Burst!`, '#ffd54f'); persist(game); render(); } } }, 'Build an Adam-wood brig'));
     }
   };
@@ -658,7 +658,7 @@ export function openTrainer(game, tid, npcName) {
     const hakiTypes = Object.keys(t.haki || {}).filter((k) => c.haki[k]);
     if (hakiTypes.length) tabs.push('haki');
     tabs.push('spar');
-    body.append(h('h2', npcName || t.name), h('p', h('i', `"${t.lines?.[0] || 'Let\'s see what you\'ve got.'}"`)),
+    add(body, h('h2', npcName || t.name), h('p', h('i', `"${t.lines?.[0] || 'Let\'s see what you\'ve got.'}"`)),
       h('div.shop-top',
         h('div.tabs', ...tabs.map((k) => h('button' + (tab === k ? '.on' : ''), { on: { click: () => { tab = k; render(); } } }, title(k)))),
         berriesLine(c)));
