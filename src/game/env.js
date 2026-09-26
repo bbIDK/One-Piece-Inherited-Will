@@ -43,7 +43,7 @@ export class Env {
     const c = this.clock;
     const rise = smoothstep(5, 7, c), set = 1 - smoothstep(18, 20, c);
     this.daylight = Math.min(rise, set);
-    const night = [0.32, 0.38, 0.62];
+    const night = [0.21, 0.25, 0.46]; // moonlit blue, dark enough for lamplight to matter
     const dusk = [1.0, 0.72, 0.55];
     const day = [1, 1, 1];
     const duskAmt = Math.max(1 - Math.abs(c - 19) / 1.5, 1 - Math.abs(c - 6) / 1.5, 0) * 0.8;

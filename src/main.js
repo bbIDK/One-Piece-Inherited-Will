@@ -5,6 +5,7 @@ import './render3d/pickups3d.js';
 import './render3d/groundcover.js';
 import './render3d/seabed.js';
 import './render3d/sealife3d.js';
+import './render3d/lamplight.js';
 import { renderPortrait } from './ui/preview3d.js';
 import { generateWorld } from './world/worldgen.js';
 import { ALL_ISLANDS } from './data/islands/index.js';

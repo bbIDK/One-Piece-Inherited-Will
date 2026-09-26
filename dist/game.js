@@ -13756,7 +13756,7 @@ void main() {
       if (value === 0) return "uv";
       return `uv${value}`;
     }
-    function getParameters(material, lights, shadows, scene, object) {
+    function getParameters(material, lights2, shadows, scene, object) {
       const fog = scene.fog;
       const geometry = object.geometry;
       const environment = material.isMeshStandardMaterial ? scene.environment : null;
@@ -13934,17 +13934,17 @@ void main() {
         morphColors: geometry.morphAttributes.color !== void 0,
         morphTargetsCount,
         morphTextureStride,
-        numDirLights: lights.directional.length,
-        numPointLights: lights.point.length,
-        numSpotLights: lights.spot.length,
-        numSpotLightMaps: lights.spotLightMap.length,
-        numRectAreaLights: lights.rectArea.length,
-        numHemiLights: lights.hemi.length,
-        numDirLightShadows: lights.directionalShadowMap.length,
-        numPointLightShadows: lights.pointShadowMap.length,
-        numSpotLightShadows: lights.spotShadowMap.length,
-        numSpotLightShadowsWithMaps: lights.numSpotLightShadowsWithMaps,
-        numLightProbes: lights.numLightProbes,
+        numDirLights: lights2.directional.length,
+        numPointLights: lights2.point.length,
+        numSpotLights: lights2.spot.length,
+        numSpotLightMaps: lights2.spotLightMap.length,
+        numRectAreaLights: lights2.rectArea.length,
+        numHemiLights: lights2.hemi.length,
+        numDirLightShadows: lights2.directionalShadowMap.length,
+        numPointLightShadows: lights2.pointShadowMap.length,
+        numSpotLightShadows: lights2.spotShadowMap.length,
+        numSpotLightShadowsWithMaps: lights2.numSpotLightShadowsWithMaps,
+        numLightProbes: lights2.numLightProbes,
         numClippingPlanes: clipping.numPlanes,
         numClipIntersection: clipping.numIntersection,
         dithering: material.dithering,
@@ -14353,11 +14353,11 @@ void main() {
     };
   }
   function UniformsCache() {
-    const lights = {};
+    const lights2 = {};
     return {
       get: function(light) {
-        if (lights[light.id] !== void 0) {
-          return lights[light.id];
+        if (lights2[light.id] !== void 0) {
+          return lights2[light.id];
         }
         let uniforms;
         switch (light.type) {
@@ -14402,17 +14402,17 @@ void main() {
             };
             break;
         }
-        lights[light.id] = uniforms;
+        lights2[light.id] = uniforms;
         return uniforms;
       }
     };
   }
   function ShadowUniformsCache() {
-    const lights = {};
+    const lights2 = {};
     return {
       get: function(light) {
-        if (lights[light.id] !== void 0) {
-          return lights[light.id];
+        if (lights2[light.id] !== void 0) {
+          return lights2[light.id];
         }
         let uniforms;
         switch (light.type) {
@@ -14446,7 +14446,7 @@ void main() {
             };
             break;
         }
-        lights[light.id] = uniforms;
+        lights2[light.id] = uniforms;
         return uniforms;
       }
     };
@@ -14498,7 +14498,7 @@ void main() {
     const vector3 = new Vector3();
     const matrix4 = new Matrix4();
     const matrix42 = new Matrix4();
-    function setup(lights) {
+    function setup(lights2) {
       let r = 0, g = 0, b = 0;
       for (let i = 0; i < 9; i++) state.probe[i].set(0, 0, 0);
       let directionalLength = 0;
@@ -14512,9 +14512,9 @@ void main() {
       let numSpotMaps = 0;
       let numSpotShadowsWithMaps = 0;
       let numLightProbes = 0;
-      lights.sort(shadowCastingAndTexturingLightsFirst);
-      for (let i = 0, l = lights.length; i < l; i++) {
-        const light = lights[i];
+      lights2.sort(shadowCastingAndTexturingLightsFirst);
+      for (let i = 0, l = lights2.length; i < l; i++) {
+        const light = lights2[i];
         const color = light.color;
         const intensity = light.intensity;
         const distance = light.distance;
@@ -14656,15 +14656,15 @@ void main() {
         state.version = nextVersion++;
       }
     }
-    function setupView(lights, camera) {
+    function setupView(lights2, camera) {
       let directionalLength = 0;
       let pointLength = 0;
       let spotLength = 0;
       let rectAreaLength = 0;
       let hemiLength = 0;
       const viewMatrix = camera.matrixWorldInverse;
-      for (let i = 0, l = lights.length; i < l; i++) {
-        const light = lights[i];
+      for (let i = 0, l = lights2.length; i < l; i++) {
+        const light = lights2[i];
         if (light.isDirectionalLight) {
           const uniforms = state.directional[directionalLength];
           uniforms.direction.setFromMatrixPosition(light.matrixWorld);
@@ -14714,7 +14714,7 @@ void main() {
     };
   }
   function WebGLRenderState(extensions) {
-    const lights = new WebGLLights(extensions);
+    const lights2 = new WebGLLights(extensions);
     const lightsArray = [];
     const shadowsArray = [];
     function init(camera) {
@@ -14729,16 +14729,16 @@ void main() {
       shadowsArray.push(shadowLight);
     }
     function setupLights() {
-      lights.setup(lightsArray);
+      lights2.setup(lightsArray);
     }
     function setupLightsView(camera) {
-      lights.setupView(lightsArray, camera);
+      lights2.setupView(lightsArray, camera);
     }
     const state = {
       lightsArray,
       shadowsArray,
       camera: null,
-      lights,
+      lights: lights2,
       transmissionRenderTarget: {}
     };
     return {
@@ -14861,10 +14861,10 @@ void main() {
     this.needsUpdate = false;
     this.type = PCFShadowMap;
     let _previousType = this.type;
-    this.render = function(lights, scene, camera) {
+    this.render = function(lights2, scene, camera) {
       if (scope.enabled === false) return;
       if (scope.autoUpdate === false && scope.needsUpdate === false) return;
-      if (lights.length === 0) return;
+      if (lights2.length === 0) return;
       const currentRenderTarget = renderer.getRenderTarget();
       const activeCubeFace = renderer.getActiveCubeFace();
       const activeMipmapLevel = renderer.getActiveMipmapLevel();
@@ -14875,8 +14875,8 @@ void main() {
       _state.setScissorTest(false);
       const toVSM = _previousType !== VSMShadowMap && this.type === VSMShadowMap;
       const fromVSM = _previousType === VSMShadowMap && this.type !== VSMShadowMap;
-      for (let i = 0, il = lights.length; i < il; i++) {
-        const light = lights[i];
+      for (let i = 0, il = lights2.length; i < il; i++) {
+        const light = lights2[i];
         const shadow = light.shadow;
         if (shadow === void 0) {
           console.warn("THREE.WebGLShadowMap:", light, "has no shadow.");
@@ -19256,10 +19256,10 @@ void main() {
       function getProgram(material, scene, object) {
         if (scene.isScene !== true) scene = _emptyScene;
         const materialProperties = properties.get(material);
-        const lights = currentRenderState.state.lights;
+        const lights2 = currentRenderState.state.lights;
         const shadowsArray = currentRenderState.state.shadowsArray;
-        const lightsStateVersion = lights.state.version;
-        const parameters2 = programCache.getParameters(material, lights.state, shadowsArray, scene, object);
+        const lightsStateVersion = lights2.state.version;
+        const parameters2 = programCache.getParameters(material, lights2.state, shadowsArray, scene, object);
         const programCacheKey = programCache.getProgramCacheKey(parameters2);
         let programs = materialProperties.programs;
         materialProperties.environment = material.isMeshStandardMaterial ? scene.environment : null;
@@ -19292,25 +19292,25 @@ void main() {
         materialProperties.needsLights = materialNeedsLights(material);
         materialProperties.lightsStateVersion = lightsStateVersion;
         if (materialProperties.needsLights) {
-          uniforms.ambientLightColor.value = lights.state.ambient;
-          uniforms.lightProbe.value = lights.state.probe;
-          uniforms.directionalLights.value = lights.state.directional;
-          uniforms.directionalLightShadows.value = lights.state.directionalShadow;
-          uniforms.spotLights.value = lights.state.spot;
-          uniforms.spotLightShadows.value = lights.state.spotShadow;
-          uniforms.rectAreaLights.value = lights.state.rectArea;
-          uniforms.ltc_1.value = lights.state.rectAreaLTC1;
-          uniforms.ltc_2.value = lights.state.rectAreaLTC2;
-          uniforms.pointLights.value = lights.state.point;
-          uniforms.pointLightShadows.value = lights.state.pointShadow;
-          uniforms.hemisphereLights.value = lights.state.hemi;
-          uniforms.directionalShadowMap.value = lights.state.directionalShadowMap;
-          uniforms.directionalShadowMatrix.value = lights.state.directionalShadowMatrix;
-          uniforms.spotShadowMap.value = lights.state.spotShadowMap;
-          uniforms.spotLightMatrix.value = lights.state.spotLightMatrix;
-          uniforms.spotLightMap.value = lights.state.spotLightMap;
-          uniforms.pointShadowMap.value = lights.state.pointShadowMap;
-          uniforms.pointShadowMatrix.value = lights.state.pointShadowMatrix;
+          uniforms.ambientLightColor.value = lights2.state.ambient;
+          uniforms.lightProbe.value = lights2.state.probe;
+          uniforms.directionalLights.value = lights2.state.directional;
+          uniforms.directionalLightShadows.value = lights2.state.directionalShadow;
+          uniforms.spotLights.value = lights2.state.spot;
+          uniforms.spotLightShadows.value = lights2.state.spotShadow;
+          uniforms.rectAreaLights.value = lights2.state.rectArea;
+          uniforms.ltc_1.value = lights2.state.rectAreaLTC1;
+          uniforms.ltc_2.value = lights2.state.rectAreaLTC2;
+          uniforms.pointLights.value = lights2.state.point;
+          uniforms.pointLightShadows.value = lights2.state.pointShadow;
+          uniforms.hemisphereLights.value = lights2.state.hemi;
+          uniforms.directionalShadowMap.value = lights2.state.directionalShadowMap;
+          uniforms.directionalShadowMatrix.value = lights2.state.directionalShadowMatrix;
+          uniforms.spotShadowMap.value = lights2.state.spotShadowMap;
+          uniforms.spotLightMatrix.value = lights2.state.spotLightMatrix;
+          uniforms.spotLightMap.value = lights2.state.spotLightMap;
+          uniforms.pointShadowMap.value = lights2.state.pointShadowMap;
+          uniforms.pointShadowMatrix.value = lights2.state.pointShadowMatrix;
         }
         materialProperties.currentProgram = program2;
         materialProperties.uniformsList = null;
@@ -19363,7 +19363,7 @@ void main() {
         const morphAttribute = geometry.morphAttributes.position || geometry.morphAttributes.normal || geometry.morphAttributes.color;
         const morphTargetsCount = morphAttribute !== void 0 ? morphAttribute.length : 0;
         const materialProperties = properties.get(material);
-        const lights = currentRenderState.state.lights;
+        const lights2 = currentRenderState.state.lights;
         if (_clippingEnabled === true) {
           if (_localClippingEnabled === true || camera !== _currentCamera) {
             const useCache = camera === _currentCamera && material.id === _currentMaterialId;
@@ -19372,7 +19372,7 @@ void main() {
         }
         let needsProgramChange = false;
         if (material.version === materialProperties.__version) {
-          if (materialProperties.needsLights && materialProperties.lightsStateVersion !== lights.state.version) {
+          if (materialProperties.needsLights && materialProperties.lightsStateVersion !== lights2.state.version) {
             needsProgramChange = true;
           } else if (materialProperties.outputColorSpace !== colorSpace) {
             needsProgramChange = true;
@@ -63527,6 +63527,137 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     life.update(ctx, env);
   });
 
+  // src/render3d/lamplight.js
+  var KINDS3 = {
+    lamp: { h: 2.62, r: 6.5, col: [1, 0.72, 0.4], power: 1 },
+    lantern: { h: 1.6, r: 4.6, col: [1, 0.55, 0.32], power: 0.75 },
+    campfire: { h: 0.55, r: 6.5, col: [1, 0.58, 0.26], power: 1.1, fire: true }
+  };
+  var NLIGHTS = 4;
+  var MAX_POOLS = 160;
+  var clamp015 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
+  function poolTexture() {
+    const S3 = 128, c = document.createElement("canvas");
+    c.width = c.height = S3;
+    const g = c.getContext("2d");
+    const grd = g.createRadialGradient(S3 / 2, S3 / 2, 0, S3 / 2, S3 / 2, S3 / 2);
+    grd.addColorStop(0, "rgba(255,255,255,1)");
+    grd.addColorStop(0.25, "rgba(255,255,255,0.62)");
+    grd.addColorStop(0.6, "rgba(255,255,255,0.18)");
+    grd.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = grd;
+    g.fillRect(0, 0, S3, S3);
+    const t = new CanvasTexture(c);
+    t.colorSpace = SRGBColorSpace;
+    return t;
+  }
+  var LampLight = class {
+    constructor(scene) {
+      const geo2 = new PlaneGeometry(1, 1);
+      geo2.rotateX(-Math.PI / 2);
+      const mat = new MeshBasicMaterial({
+        map: poolTexture(),
+        transparent: true,
+        blending: AdditiveBlending,
+        depthWrite: false,
+        fog: true,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2
+      });
+      this.pools = new InstancedMesh(geo2, mat, MAX_POOLS);
+      this.pools.instanceColor = new InstancedBufferAttribute(new Float32Array(MAX_POOLS * 3), 3);
+      this.pools.frustumCulled = false;
+      this.pools.renderOrder = 1;
+      this.pools.count = 0;
+      scene.add(this.pools);
+      this.lights = [];
+      for (let i = 0; i < NLIGHTS; i++) {
+        const L2 = new PointLight(16756832, 0, 10, 2);
+        L2.castShadow = false;
+        scene.add(L2);
+        this.lights.push(L2);
+      }
+      this.m4 = new Matrix4();
+      this.q = new Quaternion();
+      this.s = new Vector3();
+      this.p = new Vector3();
+      this.col = new Color();
+      this.near = [];
+      this.t = 0;
+    }
+    update(ctx, env, dt) {
+      const game = ctx.game, v = game.view3d, w = ctx.world;
+      if (!w || !v) return;
+      const night = clamp015((0.78 - (env.daylight ?? 1)) / 0.45 + (env.storm || 0) * 0.35);
+      if (night <= 0.01 || !w.objects) {
+        if (this.pools.count) {
+          this.pools.count = 0;
+          for (const L2 of this.lights) L2.intensity = 0;
+        }
+        return;
+      }
+      const ox = v.ox, oy = v.oy, cam = ctx.camera;
+      this.t -= dt;
+      if (this.t <= 0) {
+        this.t = 0.4;
+        this.near = w.objects.near(ox, oy, 75, (o) => !!KINDS3[o.kind]);
+      }
+      const t = env.time;
+      const cands = [];
+      let n = 0;
+      for (const o of this.near) {
+        const K = KINDS3[o.kind];
+        const dx = w.dx(ox, o.x), dz = o.y - oy;
+        const gh = ctx.ground(o.x, o.y);
+        const fl2 = K.fire ? 0.82 + 0.18 * Math.sin(t * 13 + o.x) * Math.sin(t * 7.3 + o.y) : 0.95 + 0.05 * Math.sin(t * 9 + o.x * 3);
+        const k = night * fl2 * K.power;
+        if (n < MAX_POOLS) {
+          const r = K.r * (o.s || 1);
+          this.p.set(dx, gh + 0.05, dz);
+          this.s.set(r * 2, 1, r * 2);
+          this.m4.compose(this.p, this.q, this.s);
+          this.pools.setMatrixAt(n, this.m4);
+          this.col.setRGB(K.col[0] * k * 0.3, K.col[1] * k * 0.3, K.col[2] * k * 0.3);
+          this.pools.setColorAt(n, this.col);
+          n++;
+        }
+        const cd = (dx - cam.position.x) ** 2 + (dz - cam.position.z) ** 2;
+        cands.push({ d: cd, x: dx, y: gh + K.h * (o.s || 1), z: dz, k, col: K.col, range: K.r * 1.6 });
+      }
+      this.pools.count = n;
+      this.pools.instanceMatrix.needsUpdate = true;
+      if (this.pools.instanceColor) this.pools.instanceColor.needsUpdate = true;
+      const p = game.player;
+      const room = p && w.interiorAt ? w.interiorAt(p.x, p.y) : null;
+      if (room) {
+        const floor = v.terrain?.hf?.floorY ? v.terrain.hf.floorY(room) : ctx.ground(p.x, p.y);
+        const fd = room.fd || 3;
+        cands.push({ d: -1, x: w.dx(ox, room.x), y: floor + 2.1, z: room.y - fd / 2 - oy, k: (0.35 + night * 0.65) * 0.5, col: [1, 0.8, 0.56], range: 6 });
+      }
+      cands.sort((a, b) => a.d - b.d);
+      for (let i = 0; i < NLIGHTS; i++) {
+        const L2 = this.lights[i], c = cands[i];
+        if (!c) {
+          L2.intensity = 0;
+          continue;
+        }
+        L2.position.set(c.x, c.y, c.z);
+        L2.color.setRGB(c.col[0], c.col[1], c.col[2]);
+        L2.distance = c.range;
+        L2.intensity = 5 * c.k;
+      }
+    }
+  };
+  var lights = null;
+  registerFrameHook((env, ctx, dt) => {
+    if (!lights) {
+      lights = new LampLight(ctx.scene);
+      if (ctx.game?.view3d) ctx.game.view3d.lampLight = lights;
+    }
+    lights.update(ctx, env, dt || 1 / 60);
+  });
+
   // src/ui/preview3d.js
   var shared = null;
   function sharedRenderer() {
@@ -71495,7 +71626,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/render/fxshapes.js
   var TAU19 = Math.PI * 2;
   var easeOut = (k) => 1 - (1 - k) ** 3;
-  var clamp015 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  var clamp016 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function hash8(n) {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return x - Math.floor(x);
@@ -71648,7 +71779,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     ground(g, s, k, a) {
       const alpha2 = Math.min(1, (1 - k) * 2) * a;
       softDisc(g, s.r, s.color || "rgba(30,18,12,1)", alpha2 * 0.62);
-      const hot = clamp015(1 - k * 2.5);
+      const hot = clamp016(1 - k * 2.5);
       if (hot > 0) {
         g.globalCompositeOperation = "lighter";
         g.globalAlpha = alpha2 * hot * 0.8;
@@ -71736,7 +71867,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const a0 = s.angle - dir * arc / 2;
     const reveal = s.reveal ?? 0.28;
     const headK = reveal > 0 ? Math.min(1, k / reveal) : 1;
-    const tailK = clamp015((k - reveal * 0.6) / (1 - reveal * 0.6));
+    const tailK = clamp016((k - reveal * 0.6) / (1 - reveal * 0.6));
     const head = a0 + dir * arc * easeOut(headK);
     const tail2 = a0 + dir * arc * tailK * tailK;
     if (Math.abs(head - tail2) < 0.02) return;
@@ -72845,7 +72976,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var MIN_SC = 1;
   var NEAR_SC = 200;
   var easeOut2 = (k) => 1 - (1 - k) ** 3;
-  var clamp016 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  var clamp017 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function bill(r, x, y, h2) {
     const a = r.project(x, y, h2);
     if (a[0] < CULL) return null;
@@ -73411,7 +73542,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const W3 = r.cw * r.dpr, H2 = r.ch * r.dpr;
     const side = clip2.limb === "hB" || clip2.limb === "fB" || clip2.limb === "wB" ? -1 : 1;
     const fade2 = t > t1 ? 1 - (t - t1) / 0.12 : 1;
-    const u = clamp016((t - t0) / (t1 - t0));
+    const u = clamp017((t - t0) / (t1 - t0));
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalCompositeOperation = "lighter";
     if (kind === "flurry" || clip2.flurry && t >= clip2.flurry.t0 && t <= clip2.flurry.t1) {
@@ -73456,7 +73587,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return;
     }
     const P4 = smearPath(kind, side, clip2.sweep || 1);
-    const head = easeOut2(u), tail2 = kind === "straight" ? Math.max(0, head - 0.55) : clamp016((u - 0.2) / 0.8) ** 2;
+    const head = easeOut2(u), tail2 = kind === "straight" ? Math.max(0, head - 0.55) : clamp017((u - 0.2) / 0.8) ** 2;
     if (head - tail2 < 0.02) return;
     const wMax = H2 * (kind === "straight" ? 0.026 : blade2 ? 0.042 : 0.032) * (heavy ? 1.35 : 1);
     const N4 = 22;
@@ -74513,7 +74644,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const c = this.clock;
       const rise = smoothstep(5, 7, c), set = 1 - smoothstep(18, 20, c);
       this.daylight = Math.min(rise, set);
-      const night = [0.32, 0.38, 0.62];
+      const night = [0.21, 0.25, 0.46];
       const dusk = [1, 0.72, 0.55];
       const day = [1, 1, 1];
       const duskAmt = Math.max(1 - Math.abs(c - 19) / 1.5, 1 - Math.abs(c - 6) / 1.5, 0) * 0.8;

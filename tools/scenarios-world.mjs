@@ -637,4 +637,47 @@ export const scenarios = {
       await cyc('sprint', ['D', 'Shift']);
     },
   },
+
+  // a town at night: lamps pooling light on the street, lit windows, a room lit by its lamp
+  night: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate((race) => { window.OP.quickStart(race || 'human'); const g = window.OP.game; g.env.clock = Number(22); g.settings.view = 'third'; g.applySettings(); document.querySelector('.look-hint')?.remove(); }, args.race);
+      for (let i = 0; i < 10; i++) await step(page, 0.1);
+      // stand near a street lamp
+      const lamp = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player;
+        const L = w.objects.near(p.x, p.y, 150, (o) => o.kind === 'lamp' || o.kind === 'lantern').sort((a, b) => w.distance(a.x, a.y, p.x, p.y) - w.distance(b.x, b.y, p.x, p.y))[0];
+        if (!L) return null;
+        for (let r = 2; r < 6; r += 0.5) for (let a = 0; a < 6.28; a += 0.4) {
+          const x = L.x + Math.cos(a) * r, y = L.y + Math.sin(a) * r;
+          if (w.walkable(x, y) && !w.isBlocked(x, y) && !w.hitsProp(x, y, 0.4)) { window.OP.teleport(x, y); g.view3d.rig.yaw = Math.atan2(L.y - y, g.world.dx(x, L.x)) + 0.3; g.view3d.rig.pitch = -0.12; return { kind: L.kind, x: L.x, y: L.y }; }
+        }
+        return null;
+      });
+      console.log('lamp', JSON.stringify(lamp));
+      for (let i = 0; i < 8; i++) { await step(page, 0.1); await frames(page, 1); }
+      await snap('street');
+      await page.evaluate(() => { const g = window.OP.game; g.settings.view = 'first'; g.applySettings(); g.view3d.rig.pitch = -0.2; });
+      await step(page, 0.1); await frames(page, 3);
+      await snap('street-first');
+      await page.evaluate(() => { const g = window.OP.game; g.env.clock = 19.2; });
+      for (let i = 0; i < 4; i++) { await step(page, 0.1); await frames(page, 1); }
+      await snap('dusk');
+      // inside a home at night
+      await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player, c = g.state.char;
+        g.env.clock = 22.5;
+        const b = w.objects.near(p.x, p.y, 120, (o) => o.enterable && (o.role || 'house') === 'house' && !o.pirate)[0];
+        c.flags['invited_' + g.buildings.key(b)] = g.env.day;
+        window.OP.teleport(b.x, b.y - 0.55);
+        g.view3d.rig.yaw = -Math.PI / 2; g.view3d.rig.pitch = -0.25;
+      });
+      for (let i = 0; i < 10; i++) { await step(page, 0.1); await frames(page, 1); }
+      await snap('room');
+      const perf = await page.evaluate(() => { const v = window.OP.game.view3d, i = v.renderer.info; return { calls: i.render.calls, tris: i.render.triangles, pools: v.lampLight?.pools.count }; });
+      console.log('perf', JSON.stringify(perf));
+    },
+  },
 };
