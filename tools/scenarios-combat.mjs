@@ -10,6 +10,7 @@
 //   node tools/shot.mjs combat-tech --ids=a,b,c           any techniques by id (styles, fruits, haki)
 //   node tools/shot.mjs combat-hit                        hit feel: sparks, crit, heavy, block, guard break, parry
 //   node tools/shot.mjs combat-move                       dodge, sprint, block, knockdown & get-up
+//   node tools/shot.mjs combat-3d [--mode=first|third] [--ids=a,b]   the same effects in the 3D view
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync } from 'node:fs';
@@ -431,6 +432,67 @@ export const scenarios = {
         start: () => { const d = window.LAB.victim; d.state = 'idle'; d.hp = d.d.maxHp * 0.5; },
       });
       await sheet(page, 'combat-move.png', frames, 6, 'Movement: dodge, sprint, block, knockdown, get-up');
+    },
+  },
+  'combat-3d': {
+    // effects projected through the 3D camera: M1 chain, heavy, a few techniques
+    async run(page, snap, args) {
+      await boot(page);
+      const mode = args.mode === 'third' ? 'third' : 'first';
+      await page.evaluate((mode) => {
+        const L = window.LAB, g = window.OP.game;
+        L.view3d = true;
+        L.arena();
+        if (g.settings) g.settings.view = mode;
+        g.view3d.setMode(mode); g.view3d.setActive(true);
+        // updates only between captures: a 3D frame costs a lot under SwiftShader
+        L.run = (n) => { for (let i = 0; i < n; i++) g.update(1 / 60); g.render(); };
+        L.look = () => {
+          const p = g.player, d = L.target, v = g.view3d;
+          const a = Math.atan2(d.y - p.y, g.world.dx(p.x, d.x));
+          v.rig.yaw = (a + Math.PI * 2) % (Math.PI * 2); v.rig.pitch = mode === 'first' ? -0.12 : -0.05;
+          p.facing = a;
+          window.OP.input.mouse.x = window.innerWidth / 2; window.OP.input.mouse.y = window.innerHeight / 2;
+        };
+        for (let i = 0; i < 6; i++) L.run(4);
+      }, mode);
+      const clip = { x: 0, y: 0, width: 1280, height: 720 };
+      const film = async (frames, label, setup, start, times) => {
+        await page.evaluate(setup);
+        await page.evaluate(() => { window.LAB.look(); window.LAB.run(1); });
+        await page.evaluate(start);
+        let t = 0;
+        for (const at of times) {
+          const n = Math.max(0, Math.round((at - t) * 60));
+          await page.evaluate((n) => window.LAB.run(n), n);
+          t += n / 60;
+          frames.push({ label: `${label} ${t.toFixed(2)}s`, buf: await page.screenshot({ clip, scale: 'css' }) });
+        }
+      };
+      const frames = [];
+      const brawler = () => { const L = window.LAB; L.arena(); L.equip({ style: 'brawler' }); L.dummy(1.9, 0, { hpMul: 400 }); };
+      const m1 = () => { const g = window.OP.game, p = g.player; p.combo.step = 0; p.combo.window = 0; window.OP.input.mouse.down = [true, false, false]; window.OP.input.mouse.pressed = [true, false, false]; };
+      await film(frames, 'm1', brawler, m1, [0.05, 0.08, 0.3, 0.55, 0.62, 0.95, 1.05]);
+      await page.evaluate(() => { window.OP.input.mouse.down = [false, false, false]; });
+      await film(frames, 'heavy', brawler, () => { const g = window.OP.game; g.player.tryHeavy(g); }, [0.3, 0.36, 0.5]);
+      const swords = () => { const L = window.LAB; L.arena(); L.equip({ style: 'santoryu', weapon: 'sword', count: 3 }); L.dummy(1.9, 0, { hpMul: 400 }); };
+      await film(frames, 'santoryu m1', swords, m1, [0.08, 0.14, 0.4]);
+      await page.evaluate(() => { window.OP.input.mouse.down = [false, false, false]; });
+      await sheet(page, `combat-3d-${mode}-basics.png`, frames, 3, `3D (${mode}): brawler M1s, heavy, Santoryu`);
+      // techniques, filmed from a few steps back so area effects fit the view
+      const ids = String(args.ids || 'mera_hiken,gomu_pistol,gura_kaishin,goro_elthor,ope_room,pika_yasakani,hie_ageand,suna_sables').split(',');
+      const tf = [];
+      for (const id of ids) {
+        const info = techInfo(id);
+        if (!info) { console.log('unknown technique', id); continue; }
+        const src = (await import('../src/game/abilities.js')).getAbility(id).source || '';
+        const fruit = src.startsWith('fruit:') ? src.slice(6) : null;
+        const w = info.w;
+        await film(tf, id, `(() => { const L = window.LAB; L.arena(); L.equip({ fruit: ${JSON.stringify(fruit)}, style: 'brawler' }); L.dummy(${info.ranged ? 5 : 2.2}, 0, { hpMul: 400 }); })()`,
+          `(() => { const L = window.LAB, g = window.OP.game; L.refill(); if (!g.player.tryTechnique(${JSON.stringify(id)}, g, L.target)) console.log('technique refused ${id}'); })()`,
+          [w * 0.6, w + 0.05, w + 0.2, w + 0.45].map((x) => Math.round(x * 60) / 60));
+      }
+      await sheet(page, `combat-3d-${mode}-techs.png`, tf, 4, `3D (${mode}): techniques`);
     },
   },
 };

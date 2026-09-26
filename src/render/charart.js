@@ -20,7 +20,7 @@
 // style/view and reused by every character on screen. Light comes from the
 // top-left (also for mirrored profiles); shading is one flat shadow tone
 // (the fill is repeated nudged toward the light and clipped to the shape).
-// At in-game sizes whole heads are also cached as small bitmaps (see
+// At in-game sizes whole heads are also cached in a shared bitmap atlas (see
 // cachedHead), so a crowd of NPCs costs one drawImage per head.
 //
 // Layers inside drawHead (front view):

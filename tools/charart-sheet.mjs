@@ -298,7 +298,10 @@ if (only.includes('cache')) {
         const c = document.createElement('canvas'); c.width = 64; c.height = 96;
         const g = c.getContext('2d'); g.fillStyle = r % 2 ? GRASS : PARCH; g.fillRect(0, 0, 64, 96);
         g.setTransform(46, 0, 0, 46, 32.37, 90.61);
-        drawCharacter(g, L, { facing: FACE[d], moving: false, time: 1.3 + i, state: 'idle', P: { ...STAND }, blink: false });
+        const pose = () => ({ facing: FACE[d], moving: false, time: 1.3 + i, state: 'idle', P: { ...STAND }, blink: false });
+        // a head is cached on its second sighting: show it twice off-screen first, so this one comes from the atlas
+        if (!live) for (let w = 0; w < 2; w++) { const s = document.createElement('canvas').getContext('2d'); s.setTransform(46, 0, 0, 46, 32.37, 90.61); drawCharacter(s, L, pose()); }
+        drawCharacter(g, L, pose());
         cells.push([(live ? 'live ' : 'cache ') + d, c]);
       }
       row(sec, (live ? 'live' : 'cached') + ' ' + (r + 1), cells, 64);
