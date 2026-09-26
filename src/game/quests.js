@@ -138,7 +138,8 @@ export class Quests {
   }
 
   spotPos(islandId, spotId) {
-    const isl = this.game.surface.islands.find((i) => i.id === islandId) || (this.game.world.islands || []).find((i) => i.id === islandId);
+    const w = this.game.world;
+    const isl = (w.islands || []).find((i) => i.id === islandId) || (w === this.game.surface ? null : null);
     return isl?.spots?.[spotId] || null;
   }
 
@@ -149,10 +150,12 @@ export class Quests {
     const st = d.stages[s.stage];
     const g = st?.goal || {};
     const island = g.island || st?.island || d.island;
-    const isl = island && this.game.surface.islands.find((i) => i.id === island);
-    if (g.spot && isl?.spots?.[g.spot]) return { ...isl.spots[g.spot], label: d.name };
+    let isl = island && this.game.surface.islands.find((i) => i.id === island);
+    let zone = null;
+    if (!isl && island && this.game.world !== this.game.surface) { isl = this.game.world.islands.find((i) => i.id === island); if (isl) zone = this.game.world.id; }
+    if (g.spot && isl?.spots?.[g.spot]) return { ...isl.spots[g.spot], label: d.name, zone };
     if (g.type === 'reachXY') return { x: g.x, y: g.y, label: d.name };
-    if (isl) return { x: isl.x, y: isl.y, label: d.name };
+    if (isl) return { x: isl.x, y: isl.y, label: d.name, zone };
     return null;
   }
 }

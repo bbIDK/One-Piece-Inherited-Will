@@ -9,7 +9,8 @@ import { W, H, EQ, RL_HALF, RM_X, POLAR, GL_TOP, GL_BOTTOM, CB_TOP, CB_BOTTOM, r
 import { Noise } from '../core/noise.js';
 import { RNG, hash2 } from '../core/rng.js';
 import { hexToRgb, clamp } from '../core/math.js';
-import { generateIsland, carvePath } from './islandgen.js';
+import { generateIsland, carvePath, placeObject } from './islandgen.js';
+import { generateTown } from './towngen.js';
 
 export const REVERSE_MOUNTAIN = {
   x: RM_X,
@@ -70,6 +71,8 @@ export async function generateWorld({ seed = 'blue-planet', islands = [], onProg
       console.error(`island ${def.id} failed`, e);
     }
   }
+
+  buildMaryGeoise(world, rng);
 
   onProgress(0.75, 'Scattering uncharted islets');
   scatterIslets(world, noise, rng);
@@ -210,6 +213,43 @@ function buildRedLine(world, noise, rng) {
     }
   }
   world.maryGeoise = MG;
+}
+
+/** The Holy Land on top of the Red Line, as an island record (NPCs, town). */
+export const MARY_GEOISE_DEF = {
+  id: 'mary_geoise', name: 'Mary Geoise', sea: 'red_line', x: 0, y: EQ, w: 44, h: 116, noFruit: true, noDock: true, danger: 10,
+  tagline: 'The Holy Land. Home of the Celestial Dragons, 10,000 metres above the sea.',
+  towns: [{ id: 'holy_land', name: 'The Holy Land', dx: 0, dy: -0.05, w: 36, h: 70, style: 'noble', walls: false, plaza: 'fountain',
+    buildings: [
+      { role: 'palace', name: 'Pangaea Castle', w: 12, d: 7, hgt: 6 },
+      { role: 'hall', name: 'Reverie Assembly Hall' },
+      { role: 'house', name: "Celestial Dragons' Mansion" },
+      { role: 'church', name: 'Chapel of the First Twenty' },
+    ], houses: 3 }],
+};
+
+function buildMaryGeoise(world, rng) {
+  const def = MARY_GEOISE_DEF;
+  const rec = {
+    id: def.id, name: def.name, def, x: 0, y: EQ, sea: 'red_line', radius: 58,
+    bbox: { cx: 0, hw: 22, x0: -22, x1: 22, y0: EQ - 58, y1: EQ + 58 },
+    towns: [], docks: [], spots: {}, landmarks: [], treeSpots: [],
+    containsTile: (x, y) => { const dx = world.dx(0, x); return Math.hypot(dx / 22, (y - EQ) / 58) < 0.95; },
+  };
+  const t = def.towns[0];
+  const town = generateTown(world, { ...t, x: 0, y: EQ - 3, islandId: def.id }, rng.fork('mary_geoise'), { noise2: () => 0 });
+  town.island = rec;
+  rec.towns.push(town);
+  rec.spots.bondola_newworld = { x: 16, y: EQ + 3 };
+  rec.spots.bondola_paradise = { x: world.wx(-16), y: EQ + 3 };
+  rec.spots.empty_throne = { x: town.plaza.x, y: town.plaza.y - 6 };
+  placeObject(world, { kind: 'elevator', x: world.wx(-19), y: EQ + 1, block: true, interact: 'Ride the Bondola down to the Paradise side', use: 'bondola', port: 'down_paradise' });
+  placeObject(world, { kind: 'elevator', x: 19, y: EQ + 1, block: true, interact: 'Ride the Bondola down to the New World side', use: 'bondola', port: 'down_newworld' });
+  world.islands.push(rec);
+  // Red Port lifts at the foot of the wall
+  const MG = MARY_GEOISE;
+  placeObject(world, { kind: 'elevator', x: MG.portParadise.bondola.x, y: MG.portParadise.bondola.y + 1, block: true, interact: 'Ride the Bondola up to Mary Geoise', use: 'bondola', port: 'paradise' });
+  placeObject(world, { kind: 'elevator', x: MG.portNewWorld.bondola.x, y: MG.portNewWorld.bondola.y + 1, block: true, interact: 'Ride the Bondola up to Mary Geoise', use: 'bondola', port: 'newworld' });
 }
 
 /** Small uncharted islands for exploration (treasure, hermits, wildlife). */
@@ -368,7 +408,7 @@ export function buildMapImage(world) {
       const t = d[(ty * world.width + tx) * 4];
       let c;
       if (IS_LIQUID[t] || OVERLAY[t]) {
-        c = world.zone === 0 ? seaRGB[regionAt(tx, ty)] : [150, 200, 230];
+        c = world.zone === 0 ? seaRGB[regionAt(tx, ty)] : world.zone === 2 ? [40, 90, 150] : world.zone === 3 ? [20, 16, 24] : [150, 200, 230];
         if (t === T.LAVA) c = [220, 90, 40];
         if (t === T.CLOUD_SEA) c = [235, 242, 250];
       } else {

@@ -18,6 +18,7 @@ const GROUPS = []; // enemy groups: { island, spot|dx/dy, enemies: [archetype...
 export function registerNPCs(list) { for (const n of list) NPC_DEFS.set(n.id, n); }
 export function registerGroups(list) { for (const g of list) GROUPS.push(g); }
 export const npcDef = (id) => NPC_DEFS.get(id);
+export const allNpcDefs = () => [...NPC_DEFS.values()];
 
 // ---------------------------------------------------------- enemy archetypes
 // level ~ attribute value; tier gives HP/damage multipliers
@@ -103,6 +104,7 @@ export function npcBuilder(ctx) {
     if (def.when && !def.when(c, game)) continue;
     if (def.boss && c.bosses.includes(def.id) && !def.respawn) continue;
     if (def.once && c.defeated[def.id]) continue;
+    if ((c.crew || []).some((m) => m.id === def.id) || c.flags['leftCrew_' + def.id]) continue;
     const pos = placeNPC(game, island, def, rng, spawner);
     if (!pos) continue;
     const a = makeNPC(def, pos.x, pos.y);
@@ -134,7 +136,9 @@ function placeNPC(game, island, def, rng, spawner) {
   const pl = def.at || {};
   if (pl.spot && island.spots[pl.spot]) {
     const s = island.spots[pl.spot];
-    return spawner.findFree(s.x, s.y, 3, rng) || s;
+    const x = s.x + (pl.ox || 0), y = s.y + (pl.oy || 0);
+    if (spawner.freeSpot(x, y)) return { x, y };
+    return spawner.findFree(x, y, 2.5, rng) || spawner.findFree(s.x, s.y, 3, rng) || s;
   }
   for (const town of island.towns) {
     if (pl.town && town.id !== pl.town) continue;

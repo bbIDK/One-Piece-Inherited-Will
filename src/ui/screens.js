@@ -295,9 +295,13 @@ export function helpContent() {
       k('Right click', 'heavy attack'), k('F', 'block — tap just before a hit to PARRY'), k('1-6', 'techniques'), k('R', 'Armament Haki'),
       k('T', 'Observation Haki'), k('G', "Conqueror's Haki"), k('E', 'interact / talk / board / go ashore'), k('Q', 'eat food'),
       k('I / Tab', 'inventory & equipment'), k('C', 'character & stats'), k('K', 'skills & hotbar'), k('J', 'journal'),
-      k('M', 'world map'), k('Esc', 'menu'), k('Mouse wheel', 'zoom'), k('H', 'this help')),
+      k('M', 'world map'), k('U', 'crew (nakama)'), k('Esc', 'menu'), k('Mouse wheel', 'zoom'), k('H', 'this help')),
     h('h3', 'Sailing'),
-    h('p', 'W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings — the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose.'),
+    h('p', 'W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings — the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle.'),
+    h('h3', 'Crossing the Red Line'),
+    h('p', 'Paradise ends at the Red Line. Pirates cross the way the Straw Hats did: have your ship coated at the Sabaody Archipelago, then dive 10,000 metres to Fish-Man Island and rise into the New World. The Red Ports and their Bondola lifts to Mary Geoise are for the World Government — and those it permits.'),
+    h('h3', 'Crew, Marines and the One Piece'),
+    h('p', 'Recruit companions you meet (U). Enlist in the Marines at a base if your bounty is clean and climb the ranks — or become a pirate and watch your bounty grow. Poneglyphs can only be read by an archaeologist. Four Road Poneglyphs point the way to Laugh Tale.'),
   );
 }
 

@@ -8,7 +8,7 @@ export function spawnNow(game, id, pos) {
   if (!def) return null;
   const existing = findActor(game, id);
   if (existing) return existing;
-  const isl = game.surface.islands.find((i) => i.id === def.island);
+  const isl = game.world.islands.find((i) => i.id === def.island);
   const list = game.spawner.populated.get(def.island);
   if (!list && !pos) return null;
   let p = pos;

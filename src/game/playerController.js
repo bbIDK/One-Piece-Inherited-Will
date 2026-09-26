@@ -102,7 +102,7 @@ export class PlayerController {
     let turn = 0;
     if (inp.isDown('A') || inp.isDown('ArrowLeft')) turn -= 1;
     if (inp.isDown('D') || inp.isDown('ArrowRight')) turn += 1;
-    const steer = s.def.turn * (0.35 + 0.65 * clamp(Math.abs(s.speed) / 3, 0, 1));
+    const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp(Math.abs(s.speed) / 3, 0, 1));
     s.heading += turn * steer * dt;
     if (inp.isDown('W') || inp.isDown('ArrowUp')) { s.sail = Math.min(1, s.sail + dt * 0.9); s.anchored = false; }
     if (inp.isDown('S') || inp.isDown('ArrowDown')) s.sail = Math.max(0, s.sail - dt * 1.2);

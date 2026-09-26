@@ -23,6 +23,11 @@ import { persist, endLineage } from './game/lineage.js';
 import { installContent } from './content/index.js';
 import { Audio } from './audio/audio.js';
 import { installSea } from './game/sea.js';
+import { installZones } from './game/zones.js';
+import { Crew } from './game/crew.js';
+import { openCrew } from './ui/crewPanel.js';
+import { installFactions } from './game/factions.js';
+import { installLegends } from './game/legends.js';
 import { RACES } from './data/races.js';
 
 const root = document.createElement('div');
@@ -67,6 +72,10 @@ async function start() {
   game.spawner.addBuilder(npcBuilder);
   installMap(game);
   installSea(game);
+  installZones(game);
+  new Crew(game);
+  installFactions(game);
+  installLegends(game);
   installContent(game);
 
   const toTitle = (afterDeath) => {
@@ -93,6 +102,7 @@ async function start() {
     { key: 'K', when: playing, fn: () => openSkills(game) },
     { key: 'J', when: playing, fn: () => openJournal(game) },
     { key: 'H', when: playing, fn: () => ui.openPanel(helpContent(), { wide: true, id: 'help' }) },
+    { key: 'U', when: playing, fn: () => openCrew(game) },
   );
   ui.openMenu = () => {
     if (!playing()) return;

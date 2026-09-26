@@ -217,6 +217,8 @@ export function generateIsland(world, def, noise, rng) {
     const o = { ...lm, x: c.x, y: c.y, kind: lm.kind || lm.type };
     delete o.dx; delete o.dy;
     if (o.block === undefined) o.block = true;
+    if (o.kind === 'poneglyph' && !o.interact) { o.interact = o.road ? 'Examine the red Road Poneglyph' : 'Examine the Poneglyph'; o.use = 'poneglyph'; o.interactRange = 2.4; }
+    if (o.kind === 'bell' && !o.interact) { o.interact = 'Ring the bell'; o.use = 'bell'; o.interactRange = 2.4; }
     placeObject(world, o);
     rec.landmarks.push(o);
     if (lm.spot) rec.spots[lm.spot] = { x: c.x, y: c.y + 1.2 };

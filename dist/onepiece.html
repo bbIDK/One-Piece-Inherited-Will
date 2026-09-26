@@ -2145,6 +2145,195 @@ void main() {
         g.fillRect(-0.5, -0.28, 1, 0.07);
         break;
       }
+      case "poneglyph": {
+        const red = !!o.road;
+        g.fillStyle = "rgba(0,0,0,0.25)";
+        g.beginPath();
+        g.ellipse(0, 0, 1.1, 0.3, 0, 0, TAU2);
+        g.fill();
+        g.fillStyle = red ? "#8e2b22" : "#37474f";
+        g.fillRect(-0.95, -1.9, 1.9, 1.9);
+        g.fillStyle = red ? "#b03a2e" : "#546e7a";
+        g.beginPath();
+        g.moveTo(-0.95, -1.9);
+        g.lineTo(-0.6, -2.25);
+        g.lineTo(1.3, -2.25);
+        g.lineTo(0.95, -1.9);
+        g.closePath();
+        g.fill();
+        g.fillStyle = red ? "#6e2019" : "#263238";
+        g.beginPath();
+        g.moveTo(0.95, -1.9);
+        g.lineTo(1.3, -2.25);
+        g.lineTo(1.3, -0.35);
+        g.lineTo(0.95, 0);
+        g.closePath();
+        g.fill();
+        g.fillStyle = red ? "rgba(255,205,180,0.45)" : "rgba(200,230,240,0.35)";
+        for (let r = 0; r < 6; r++) for (let c = 0; c < 5; c++) {
+          const k = (r * 7 + c * 3 + (o.v || 0)) % 5;
+          g.fillRect(-0.8 + c * 0.33, -1.75 + r * 0.28, 0.1 + k * 0.03, 0.12);
+        }
+        if (night) {
+          g.fillStyle = "rgba(255,255,255,0.06)";
+          g.fillRect(-0.95, -1.9, 1.9, 1.9);
+        }
+        break;
+      }
+      case "shipwreck": {
+        g.save();
+        g.rotate(-0.25);
+        g.fillStyle = "#5d4037";
+        g.beginPath();
+        g.moveTo(-2.4, -0.2);
+        g.quadraticCurveTo(0, 0.6, 2.4, -0.4);
+        g.lineTo(2, -1.4);
+        g.lineTo(-2, -1.1);
+        g.closePath();
+        g.fill();
+        g.fillStyle = "#4e342e";
+        for (let x = -1.8; x < 2; x += 0.5) g.fillRect(x, -1.2, 0.08, 1);
+        g.fillStyle = "#3e2723";
+        g.fillRect(-0.1, -3.4, 0.16, 2.3);
+        g.fillStyle = "rgba(236,239,241,0.7)";
+        g.beginPath();
+        g.moveTo(0.06, -3.2);
+        g.lineTo(1.1, -2.7);
+        g.lineTo(0.06, -2.2);
+        g.fill();
+        g.restore();
+        break;
+      }
+      case "totem": {
+        g.fillStyle = "#8d6e63";
+        g.fillRect(-0.3, -2.6, 0.6, 2.6);
+        for (let k = 0; k < 3; k++) {
+          const y = -2.5 + k * 0.85;
+          g.fillStyle = ["#c0392b", "#f39c12", "#27ae60"][k];
+          g.fillRect(-0.36, y, 0.72, 0.7);
+          g.fillStyle = "#2d3436";
+          g.fillRect(-0.2, y + 0.18, 0.1, 0.1);
+          g.fillRect(0.1, y + 0.18, 0.1, 0.1);
+          g.fillRect(-0.15, y + 0.45, 0.3, 0.06);
+        }
+        g.fillStyle = "#6d4c41";
+        g.fillRect(-0.7, -2.2, 0.35, 0.15);
+        g.fillRect(0.35, -2.2, 0.35, 0.15);
+        break;
+      }
+      case "portal": {
+        g.fillStyle = "rgba(0,0,0,0.55)";
+        g.beginPath();
+        g.ellipse(0, -0.2, 1, 0.5, 0, 0, TAU2);
+        g.fill();
+        g.fillStyle = "#5d5d5d";
+        for (let k = 0; k < 4; k++) g.fillRect(-0.8 + k * 0.1, -0.5 + k * 0.12, 1.6 - k * 0.2, 0.1);
+        g.fillStyle = o.up ? "#90caf9" : "#ff8a65";
+        g.font = "bold 0.5px sans-serif";
+        g.textAlign = "center";
+        g.fillText(o.up ? "\u25B2" : "\u25BC", 0, -0.9 + Math.sin(t * 3) * 0.08);
+        break;
+      }
+      case "gate": {
+        g.fillStyle = "#455a64";
+        g.fillRect(-2.2, -3.2, 0.6, 3.2);
+        g.fillRect(1.6, -3.2, 0.6, 3.2);
+        g.fillStyle = "#37474f";
+        g.fillRect(-2.4, -3.6, 4.8, 0.5);
+        g.fillStyle = "#263238";
+        for (let x = -1.5; x < 1.6; x += 0.35) g.fillRect(x, -3.1, 0.1, 3.1);
+        break;
+      }
+      case "elevator": {
+        g.strokeStyle = "#90a4ae";
+        g.lineWidth = 0.06;
+        g.beginPath();
+        g.moveTo(-0.6, -6);
+        g.lineTo(-0.6, -1.4);
+        g.moveTo(0.6, -6);
+        g.lineTo(0.6, -1.4);
+        g.stroke();
+        g.fillStyle = "#eceff1";
+        g.strokeStyle = "#546e7a";
+        g.lineWidth = 0.05;
+        g.beginPath();
+        g.roundRect(-1.1, -1.5 + Math.sin(t) * 0.05, 2.2, 1.3, 0.2);
+        g.fill();
+        g.stroke();
+        g.fillStyle = "#81d4fa";
+        g.fillRect(-0.9, -1.3, 0.8, 0.5);
+        g.fillRect(0.1, -1.3, 0.8, 0.5);
+        g.fillStyle = "#1565c0";
+        g.font = "bold 0.26px sans-serif";
+        g.textAlign = "center";
+        g.fillText("W.G.", 0, -0.45);
+        break;
+      }
+      case "skull": {
+        blob(g, 0, -0.9, 0.8, "#ecf0f1");
+        g.fillStyle = "#2d3436";
+        g.beginPath();
+        g.arc(-0.28, -1, 0.18, 0, TAU2);
+        g.arc(0.28, -1, 0.18, 0, TAU2);
+        g.fill();
+        g.fillRect(-0.3, -0.45, 0.6, 0.1);
+        break;
+      }
+      case "tower": {
+        g.fillStyle = "#b0bec5";
+        g.fillRect(-0.8, -5, 1.6, 5);
+        g.fillStyle = "#78909c";
+        g.fillRect(-1, -5.3, 2, 0.4);
+        g.fillStyle = "#37474f";
+        for (let y = -4.6; y < -0.5; y += 0.9) {
+          g.fillRect(-0.45, y, 0.25, 0.4);
+          g.fillRect(0.2, y, 0.25, 0.4);
+        }
+        break;
+      }
+      case "crystal": {
+        g.fillStyle = "rgba(128,222,234,0.85)";
+        g.strokeStyle = "#006064";
+        g.lineWidth = 0.04;
+        g.beginPath();
+        g.moveTo(0, -1.8);
+        g.lineTo(0.4, -0.6);
+        g.lineTo(0, 0);
+        g.lineTo(-0.4, -0.6);
+        g.closePath();
+        g.fill();
+        g.stroke();
+        break;
+      }
+      case "mushroom": {
+        g.fillStyle = "#efebe9";
+        g.fillRect(-0.12, -0.8, 0.24, 0.8);
+        g.fillStyle = "#e53935";
+        g.beginPath();
+        g.ellipse(0, -0.8, 0.6, 0.35, 0, Math.PI, 0);
+        g.fill();
+        g.fillStyle = "#fff";
+        g.beginPath();
+        g.arc(-0.2, -0.95, 0.08, 0, TAU2);
+        g.arc(0.18, -1, 0.06, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "wheel": {
+        g.strokeStyle = "#6d4c41";
+        g.lineWidth = 0.12;
+        g.beginPath();
+        g.arc(0, -1.2, 0.8, 0, TAU2);
+        g.stroke();
+        for (let k = 0; k < 8; k++) {
+          const a = k * TAU2 / 8 + t * 0.2;
+          g.beginPath();
+          g.moveTo(0, -1.2);
+          g.lineTo(Math.cos(a) * 1.05, -1.2 + Math.sin(a) * 1.05);
+          g.stroke();
+        }
+        break;
+      }
       default: {
         g.fillStyle = "#e17055";
         g.beginPath();
@@ -3162,6 +3351,16 @@ void main() {
       delete o.dx;
       delete o.dy;
       if (o.block === void 0) o.block = true;
+      if (o.kind === "poneglyph" && !o.interact) {
+        o.interact = o.road ? "Examine the red Road Poneglyph" : "Examine the Poneglyph";
+        o.use = "poneglyph";
+        o.interactRange = 2.4;
+      }
+      if (o.kind === "bell" && !o.interact) {
+        o.interact = "Ring the bell";
+        o.use = "bell";
+        o.interactRange = 2.4;
+      }
       placeObject(world, o);
       rec.landmarks.push(o);
       if (lm.spot) rec.spots[lm.spot] = { x: c.x, y: c.y + 1.2 };
@@ -3478,6 +3677,7 @@ void main() {
         console.error(`island ${def.id} failed`, e);
       }
     }
+    buildMaryGeoise(world, rng);
     onProgress(0.75, "Scattering uncharted islets");
     scatterIslets(world, noise, rng);
     await yieldFrame();
@@ -3603,6 +3803,72 @@ void main() {
       }
     }
     world.maryGeoise = MG;
+  }
+  var MARY_GEOISE_DEF = {
+    id: "mary_geoise",
+    name: "Mary Geoise",
+    sea: "red_line",
+    x: 0,
+    y: EQ,
+    w: 44,
+    h: 116,
+    noFruit: true,
+    noDock: true,
+    danger: 10,
+    tagline: "The Holy Land. Home of the Celestial Dragons, 10,000 metres above the sea.",
+    towns: [{
+      id: "holy_land",
+      name: "The Holy Land",
+      dx: 0,
+      dy: -0.05,
+      w: 36,
+      h: 70,
+      style: "noble",
+      walls: false,
+      plaza: "fountain",
+      buildings: [
+        { role: "palace", name: "Pangaea Castle", w: 12, d: 7, hgt: 6 },
+        { role: "hall", name: "Reverie Assembly Hall" },
+        { role: "house", name: "Celestial Dragons' Mansion" },
+        { role: "church", name: "Chapel of the First Twenty" }
+      ],
+      houses: 3
+    }]
+  };
+  function buildMaryGeoise(world, rng) {
+    const def = MARY_GEOISE_DEF;
+    const rec = {
+      id: def.id,
+      name: def.name,
+      def,
+      x: 0,
+      y: EQ,
+      sea: "red_line",
+      radius: 58,
+      bbox: { cx: 0, hw: 22, x0: -22, x1: 22, y0: EQ - 58, y1: EQ + 58 },
+      towns: [],
+      docks: [],
+      spots: {},
+      landmarks: [],
+      treeSpots: [],
+      containsTile: (x, y) => {
+        const dx = world.dx(0, x);
+        return Math.hypot(dx / 22, (y - EQ) / 58) < 0.95;
+      }
+    };
+    const t = def.towns[0];
+    const town = generateTown(world, { ...t, x: 0, y: EQ - 3, islandId: def.id }, rng.fork("mary_geoise"), { noise2: () => 0 });
+    town.island = rec;
+    rec.towns.push(town);
+    rec.spots.bondola_newworld = { x: 16, y: EQ + 3 };
+    rec.spots.bondola_paradise = { x: world.wx(-16), y: EQ + 3 };
+    rec.spots.empty_throne = { x: town.plaza.x, y: town.plaza.y - 6 };
+    placeObject(world, { kind: "elevator", x: world.wx(-19), y: EQ + 1, block: true, interact: "Ride the Bondola down to the Paradise side", use: "bondola", port: "down_paradise" });
+    placeObject(world, { kind: "elevator", x: 19, y: EQ + 1, block: true, interact: "Ride the Bondola down to the New World side", use: "bondola", port: "down_newworld" });
+    world.islands.push(rec);
+    const MG = MARY_GEOISE;
+    placeObject(world, { kind: "elevator", x: MG.portParadise.bondola.x, y: MG.portParadise.bondola.y + 1, block: true, interact: "Ride the Bondola up to Mary Geoise", use: "bondola", port: "paradise" });
+    placeObject(world, { kind: "elevator", x: MG.portNewWorld.bondola.x, y: MG.portNewWorld.bondola.y + 1, block: true, interact: "Ride the Bondola up to Mary Geoise", use: "bondola", port: "newworld" });
   }
   function scatterIslets(world, noise, rng) {
     world.islets = [];
@@ -3782,7 +4048,7 @@ void main() {
         const t = d[(ty * world.width + tx) * 4];
         let c;
         if (IS_LIQUID[t] || OVERLAY[t]) {
-          c = world.zone === 0 ? seaRGB[regionAt(tx, ty)] : [150, 200, 230];
+          c = world.zone === 0 ? seaRGB[regionAt(tx, ty)] : world.zone === 2 ? [40, 90, 150] : world.zone === 3 ? [20, 16, 24] : [150, 200, 230];
           if (t === T.LAVA) c = [220, 90, 40];
           if (t === T.CLOUD_SEA) c = [235, 242, 250];
         } else {
@@ -4311,8 +4577,11 @@ void main() {
   // src/data/islands/newWorld.js
   var NEW_WORLD = [];
 
+  // src/data/islands/newWorld2.js
+  var NEW_WORLD_2 = [];
+
   // src/data/islands/index.js
-  var ALL_ISLANDS = [...EAST_BLUE, ...NORTH_BLUE, ...WEST_BLUE, ...SOUTH_BLUE, ...PARADISE_1, ...PARADISE_2, ...NEW_WORLD];
+  var ALL_ISLANDS = [...EAST_BLUE, ...NORTH_BLUE, ...WEST_BLUE, ...SOUTH_BLUE, ...PARADISE_1, ...PARADISE_2, ...NEW_WORLD, ...NEW_WORLD_2];
   var ISLAND_BY_ID = Object.fromEntries(ALL_ISLANDS.map((i) => [i.id, i]));
 
   // src/core/input.js
@@ -6894,7 +7163,7 @@ void main() {
       this.sailSet += (this.sail - this.sailSet) * Math.min(1, dt * 1.5);
       const rel2 = Math.cos(angleDiff(this.heading, windA));
       const windFactor = (0.35 + 0.65 * clamp((rel2 + 0.4) / 1.4, 0, 1)) * windS;
-      let target = this.def.speed * this.sailSet * windFactor;
+      let target = this.def.speed * this.sailSet * windFactor * (this.owner === "player" ? game.crewMods?.speedMul || 1 : 1);
       const rowSpeed = this.def.paddle ? 0.6 : this.def.oars || this.type === "dinghy" ? 0.42 : 0.12;
       if (this.rowing) target = Math.max(target, this.def.speed * rowSpeed * this.rowing);
       if (this.coupT > 0) {
@@ -7001,8 +7270,8 @@ void main() {
           vy: Math.sin(a) * sp,
           range: 16 + Math.random() * 3,
           radius: 0.3,
-          damage: 22,
-          shipDamage: 26,
+          damage: 22 * (owner?.isPlayer ? game.crewMods?.cannonMul || 1 : 1),
+          shipDamage: 26 * (owner?.isPlayer ? game.crewMods?.cannonMul || 1 : 1),
           element: "explosion",
           knockback: 6,
           stun: 0.4,
@@ -7308,7 +7577,7 @@ void main() {
       let turn = 0;
       if (inp.isDown("A") || inp.isDown("ArrowLeft")) turn -= 1;
       if (inp.isDown("D") || inp.isDown("ArrowRight")) turn += 1;
-      const steer = s.def.turn * (0.35 + 0.65 * clamp(Math.abs(s.speed) / 3, 0, 1));
+      const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp(Math.abs(s.speed) / 3, 0, 1));
       s.heading += turn * steer * dt;
       if (inp.isDown("W") || inp.isDown("ArrowUp")) {
         s.sail = Math.min(1, s.sail + dt * 0.9);
@@ -9741,7 +10010,8 @@ void main() {
     updateResources(dt) {
       const d = this.d;
       const busy = !!this.action || this.blocking || this.intent.sprint || this.inWater && !this.gills;
-      if (!busy) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * dt);
+      const regenMul = this.isPlayer ? this.game?.crewMods?.staminaMul || 1 : 1;
+      if (!busy) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * regenMul * dt);
       else if (!this.intent.sprint && !this.inWater) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * 0.25 * dt);
       if (this.hakiUnlocked()) {
         if (this.armament) {
@@ -10701,7 +10971,7 @@ void main() {
     }
     updateLocation() {
       const p = this.player;
-      const isl = this.world.zone === 0 ? this.world.islandAt(p.x, p.y) || this.world.nearestIsland(p.x, p.y, 25) : this.world.islands[0] || null;
+      const isl = this.world.islandAt(p.x, p.y) || this.world.nearestIsland(p.x, p.y, this.world.zone === 0 ? 25 : 12);
       if (isl !== this.currentIsland) {
         this.currentIsland = isl;
         if (isl && isl.name && isl.name !== this.lastIslandName) {
@@ -10793,7 +11063,44 @@ void main() {
       const env = this.env;
       g.setTransform(1, 0, 0, 1, 0, 0);
       const W2 = r.canvas.width, H2 = r.canvas.height;
-      if (env.rain > 0.05) {
+      const zk = this.world.zone;
+      if (zk === 2) {
+        g.fillStyle = "rgba(0,70,130,0.16)";
+        g.fillRect(0, 0, W2, H2);
+        g.fillStyle = "rgba(255,255,255,0.05)";
+        for (let k = 0; k < 4; k++) {
+          const x = (k * 431 + env.time * 12) % (W2 + 400) - 200;
+          g.beginPath();
+          g.moveTo(x, 0);
+          g.lineTo(x + 120 * r.dpr, 0);
+          g.lineTo(x - 80 * r.dpr, H2);
+          g.lineTo(x - 180 * r.dpr, H2);
+          g.fill();
+        }
+        g.strokeStyle = "rgba(220,245,255,0.5)";
+        g.lineWidth = 1.2 * r.dpr;
+        for (let i = 0; i < 40; i++) {
+          const x = (i * 173.3 + Math.sin(env.time + i) * 20) % W2;
+          const y = H2 - (i * 97.1 + env.time * (30 + i % 5 * 12)) % (H2 + 40);
+          g.beginPath();
+          g.arc(x, y, (2 + i % 3) * r.dpr, 0, TAU);
+          g.stroke();
+        }
+      } else if (zk === 3) {
+        const grd = g.createRadialGradient(W2 / 2, H2 / 2, Math.min(W2, H2) * 0.2, W2 / 2, H2 / 2, Math.max(W2, H2) * 0.7);
+        grd.addColorStop(0, "rgba(0,0,0,0)");
+        grd.addColorStop(1, "rgba(10,0,0,0.75)");
+        g.fillStyle = grd;
+        g.fillRect(0, 0, W2, H2);
+      } else if (zk === 1) {
+        const grd = g.createLinearGradient(0, 0, 0, H2);
+        grd.addColorStop(0, "rgba(255,255,255,0.18)");
+        grd.addColorStop(0.5, "rgba(255,255,255,0)");
+        grd.addColorStop(1, "rgba(255,250,235,0.12)");
+        g.fillStyle = grd;
+        g.fillRect(0, 0, W2, H2);
+      }
+      if (env.rain > 0.05 && !zk) {
         g.strokeStyle = `rgba(200,220,255,${0.25 + env.rain * 0.35})`;
         g.lineWidth = 1.2 * r.dpr;
         g.beginPath();
@@ -10807,7 +11114,7 @@ void main() {
         }
         g.stroke();
       }
-      if (env.snow > 0.05) {
+      if (env.snow > 0.05 && zk !== 2 && zk !== 1) {
         g.fillStyle = "rgba(255,255,255,0.85)";
         const n = Math.floor(env.snow * 200);
         const t = env.time;
@@ -11247,7 +11554,7 @@ ${def.desc || ""}` : "Empty \u2014 assign techniques in the Skills menu (K)";
         for (let i = 0; i < W2; i++) {
           const tx = p.x + (i - W2 / 2) * scale, ty = p.y + (j - H2 / 2) * scale;
           const o = (j * W2 + i) * 4;
-          if (ty < 0 || ty >= w.height) {
+          if (ty < 0 || ty >= w.height || !w.wrap && (tx < 0 || tx >= w.width)) {
             img[o] = 30;
             img[o + 1] = 40;
             img[o + 2] = 50;
@@ -12359,12 +12666,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         k("K", "skills & hotbar"),
         k("J", "journal"),
         k("M", "world map"),
+        k("U", "crew (nakama)"),
         k("Esc", "menu"),
         k("Mouse wheel", "zoom"),
         k("H", "this help")
       ),
       h("h3", "Sailing"),
-      h("p", "W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings \u2014 the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose.")
+      h("p", "W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings \u2014 the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle."),
+      h("h3", "Crossing the Red Line"),
+      h("p", "Paradise ends at the Red Line. Pirates cross the way the Straw Hats did: have your ship coated at the Sabaody Archipelago, then dive 10,000 metres to Fish-Man Island and rise into the New World. The Red Ports and their Bondola lifts to Mary Geoise are for the World Government \u2014 and those it permits."),
+      h("h3", "Crew, Marines and the One Piece"),
+      h("p", "Recruit companions you meet (U). Enlist in the Marines at a base if your bounty is clean and climb the ranks \u2014 or become a pirate and watch your bounty grow. Poneglyphs can only be read by an archaeologist. Four Road Poneglyphs point the way to Laugh Tale.")
     );
   }
   function wantedPoster(char) {
@@ -12681,6 +12993,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     capture(marine) {
       const g = this.game, p = g.player, c = p.char;
+      if (c.bounty >= 3e7 && g.sendToImpelDown && g.world === g.surface) {
+        c.bounty = Math.round(c.bounty * 1.1);
+        g.ui.fade(true);
+        setTimeout(() => {
+          p.state = "idle";
+          p.hp = Math.round(p.d.maxHp * 0.6);
+          p.iframes = 2;
+          g.sendToImpelDown(marine);
+          g.ui.fade(false);
+        }, 900);
+        return;
+      }
       const lost = Math.floor(c.berries * 0.5);
       c.berries -= lost;
       c.bounty = Math.round(c.bounty * 1.1);
@@ -12840,6 +13164,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (d.type === "food") {
         if (c.traits.includes("iron_stomach")) heal *= 1.3;
         if (c.dream === "all_blue") heal *= 1.5;
+        heal *= game.crewMods?.foodMul || 1;
       }
       if (d.costsLife) {
         if (c.lives <= 1) {
@@ -12859,6 +13184,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return true;
     }
     if (d.type === "fruit") return eatFruit(game, id);
+    if (d.type === "pose" && d.target) {
+      const tgt = game.surface.islands.find((i) => i.id === d.target);
+      c.logPose.target = d.target;
+      c.logPose.eternal = id;
+      game.ui.toast("ETERNAL POSE", `The needle points to ${tgt?.name || d.target}.`, "#81d4fa");
+      return true;
+    }
     if (d.type === "dial" && d.ability) {
       const learned = c.techniques.includes(d.ability);
       if (!learned) {
@@ -13117,6 +13449,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const ctx = this.ctx(npc);
       if (typeof tree === "function") tree = tree(ctx);
       if (!tree) return;
+      if (npc?.def?.recruit && this.game.crew) tree = this.game.crew.decorate(tree, npc);
       this.active = { npc, tree, ctx, node: null, typing: 0, full: "" };
       this.game.paused = true;
       if (npc && this.game.player) {
@@ -13409,7 +13742,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
     spotPos(islandId, spotId) {
-      const isl = this.game.surface.islands.find((i) => i.id === islandId) || (this.game.world.islands || []).find((i) => i.id === islandId);
+      const w = this.game.world;
+      const isl = (w.islands || []).find((i) => i.id === islandId) || (w === this.game.surface ? null : null);
       return isl?.spots?.[spotId] || null;
     }
     /** Where the current objective of a quest is, for the map. */
@@ -13419,10 +13753,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const st = d.stages[s.stage];
       const g = st?.goal || {};
       const island = g.island || st?.island || d.island;
-      const isl = island && this.game.surface.islands.find((i) => i.id === island);
-      if (g.spot && isl?.spots?.[g.spot]) return { ...isl.spots[g.spot], label: d.name };
+      let isl = island && this.game.surface.islands.find((i) => i.id === island);
+      let zone = null;
+      if (!isl && island && this.game.world !== this.game.surface) {
+        isl = this.game.world.islands.find((i) => i.id === island);
+        if (isl) zone = this.game.world.id;
+      }
+      if (g.spot && isl?.spots?.[g.spot]) return { ...isl.spots[g.spot], label: d.name, zone };
       if (g.type === "reachXY") return { x: g.x, y: g.y, label: d.name };
-      if (isl) return { x: isl.x, y: isl.y, label: d.name };
+      if (isl) return { x: isl.x, y: isl.y, label: d.name, zone };
       return null;
     }
   };
@@ -14130,8 +14469,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (!d) continue;
         (groups2[d.type] = groups2[d.type] || []).push({ it, d });
       }
-      const order = ["weapon", "hat", "coat", "food", "medicine", "dial", "fruit", "key", "treasure", "material"];
-      const names = { weapon: "Weapons", hat: "Hats", coat: "Coats", food: "Food", medicine: "Medicine", dial: "Dials", fruit: "Devil Fruits", key: "Key items", treasure: "Treasure", material: "Materials" };
+      const order = ["weapon", "hat", "coat", "food", "medicine", "dial", "fruit", "pose", "key", "treasure", "material"];
+      const names = { weapon: "Weapons", hat: "Hats", coat: "Coats", food: "Food", medicine: "Medicine", dial: "Dials", fruit: "Devil Fruits", pose: "Eternal Poses", key: "Key items", treasure: "Treasure", material: "Materials" };
       const right = h("div");
       if (!c.inventory.length) right.appendChild(h("p", "Your bag is empty."));
       for (const type of order) {
@@ -14149,6 +14488,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             useItem(game, it.id);
             render();
           } } }, d.type === "food" ? "Eat" : "Use"));
+          if (d.type === "pose") actions.push(h("button.btn", { on: { click: () => {
+            useItem(game, it.id);
+            render();
+          } } }, c.logPose?.eternal === it.id ? "Following" : "Follow"));
           if (d.type === "dial") actions.push(h("button.btn", { on: { click: () => {
             useItem(game, it.id);
             render();
@@ -14588,7 +14931,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             } } }, `Repair \u2014 ${formatBerries(rp)}`));
             const ups = h("div.list", { style: { marginTop: "6px" } });
             for (const [id, u] of Object.entries(SHIP_UPGRADES)) {
-              if (id === "coating" && !(building.coating || island?.id === "sabaody")) continue;
+              if (id === "coating" && !(building.coating || /sabaody/i.test(island?.id || "") || /coat/i.test(building.name || ""))) continue;
               if (id === "seastone_keel" && !(building.seastone || island?.def?.sea === "paradise" || island?.def?.sea === "new_world")) continue;
               const has = s.upgrades.includes(id) || id === "coating" && s.coated;
               const up = S.upgradePrice(id, island);
@@ -14830,6 +15173,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (const g of list) GROUPS.push(g);
   }
   var npcDef = (id) => NPC_DEFS.get(id);
+  var allNpcDefs = () => [...NPC_DEFS.values()];
   var ARCHETYPES = {
     bandit: { name: "Mountain Bandit", faction: "bandit", style: "brawler", look: { top: "#6d4c41", hat: "bandana", hatColor: "#8d6e63" }, skill: 0.15, barks: ["Hand over your money!", "Heh heh heh!"] },
     pirate: { name: "Pirate Grunt", faction: "pirate", style: "ittoryu", weapon: "sword", look: { top: "#37474f", hat: "bandana", hatColor: "#b71c1c" }, skill: 0.2, barks: ["Yo-ho!", "Get 'em!"] },
@@ -14944,6 +15288,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (def.when && !def.when(c, game)) continue;
       if (def.boss && c.bosses.includes(def.id) && !def.respawn) continue;
       if (def.once && c.defeated[def.id]) continue;
+      if ((c.crew || []).some((m) => m.id === def.id) || c.flags["leftCrew_" + def.id]) continue;
       const pos = placeNPC(game, island, def, rng, spawner);
       if (!pos) continue;
       const a = makeNPC(def, pos.x, pos.y);
@@ -14974,7 +15319,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const pl = def.at || {};
     if (pl.spot && island.spots[pl.spot]) {
       const s = island.spots[pl.spot];
-      return spawner.findFree(s.x, s.y, 3, rng) || s;
+      const x = s.x + (pl.ox || 0), y = s.y + (pl.oy || 0);
+      if (spawner.freeSpot(x, y)) return { x, y };
+      return spawner.findFree(x, y, 2.5, rng) || spawner.findFree(s.x, s.y, 3, rng) || s;
     }
     for (const town of island.towns) {
       if (pl.town && town.id !== pl.town) continue;
@@ -15265,9 +15612,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       game.paused = true;
       const p = game.player;
       const r = game.renderer;
-      cam.zoom = Math.max(0.18, Math.min(r.cw / W * 1.02, 0.5));
-      cam.x = game.world === game.surface ? p.x : W / 2;
-      cam.y = game.world === game.surface ? Math.max(H * 0.3, Math.min(H * 0.7, p.y)) : H / 2;
+      if (game.world === game.surface) {
+        cam.zoom = Math.max(0.18, Math.min(r.cw / W * 1.02, 0.5));
+        cam.x = p.x;
+        cam.y = Math.max(H * 0.3, Math.min(H * 0.7, p.y));
+      } else {
+        const zw = game.world;
+        cam.zoom = Math.min(r.cw / zw.width, r.ch / zw.height) * 0.92;
+        cam.x = zw.width / 2;
+        cam.y = zw.height / 2;
+      }
       wrap.classList.remove("hidden");
       layer.classList.remove("hidden");
       game.audio?.sfx("page");
@@ -15286,7 +15640,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const env = game.env;
       const prevMode = env.mapMode;
       env.mapMode = true;
-      r.renderTerrain(game.surface, env);
+      r.renderTerrain(game.world, env);
       env.mapMode = prevMode;
       const g = r.ctx;
       g.setTransform(1, 0, 0, 1, 0, 0);
@@ -15297,11 +15651,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function drawLabels(game, r, cam, layer) {
     clear(layer);
-    const w = game.surface;
+    const w = game.world;
+    const zone = w !== game.surface;
     const c = game.state.char;
     const toS = (x, y) => {
       let dx = x - cam.x;
-      dx -= W * Math.round(dx / W);
+      if (!zone) dx -= W * Math.round(dx / W);
       return [dx * cam.zoom + r.cw / 2, (y - cam.y) * cam.zoom + r.ch / 2];
     };
     const add = (cls, text, x, y, extra = {}) => {
@@ -15309,26 +15664,29 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (sx < -200 || sy < -50 || sx > r.cw + 200 || sy > r.ch + 50) return;
       layer.appendChild(h("div.wm-label" + cls, { style: { left: sx + "px", top: sy + "px", ...extra } }, text));
     };
-    for (const s of SEA_LABELS) add(".sea", s.name, s.x, s.y, s.vertical ? { writingMode: "vertical-rl", fontSize: Math.max(16, 26 * cam.zoom / 0.3) + "px" } : { fontSize: Math.max(14, 30 * cam.zoom / 0.3) + "px" });
+    if (zone) add(".sea", w.name, w.width / 2, 14 / cam.zoom, { fontSize: "26px" });
+    if (!zone) for (const s of SEA_LABELS) add(".sea", s.name, s.x, s.y, s.vertical ? { writingMode: "vertical-rl", fontSize: Math.max(16, 26 * cam.zoom / 0.3) + "px" } : { fontSize: Math.max(14, 30 * cam.zoom / 0.3) + "px" });
     const discovered = new Set(c.discovered || []);
     for (const isl of w.islands) {
       if (!isl.name) continue;
-      const known = discovered.has(isl.id) || w.isExplored(isl.x, isl.y);
+      if (isl.def?.hidden && !c.flags.laughTaleRevealed) continue;
+      const known = zone || discovered.has(isl.id) || w.isExplored(isl.x, isl.y);
       if (!known) continue;
       add("", isl.name, isl.x, isl.y + isl.radius * 0.2 + 6 / cam.zoom, { fontSize: Math.max(11, Math.min(20, 14 * Math.sqrt(cam.zoom / 0.3))) + "px" });
     }
-    add("", "\u26F0 Reverse Mountain", RM_X, EQ - 40, { fontSize: "14px" });
-    if (discovered.has("mary_geoise") || w.isExplored(0, EQ)) add("", "\u{1F3DB} Mary Geoise", 4, EQ - 70, { fontSize: "13px" });
+    if (!zone) {
+      add("", "\u26F0 Reverse Mountain", RM_X, EQ - 40, { fontSize: "14px" });
+      if (discovered.has("mary_geoise") || w.isExplored(0, EQ)) add("", "\u{1F3DB} Mary Geoise", 4, EQ - 70, { fontSize: "13px" });
+    }
     for (const { id } of game.quests.active()) {
       const m = game.quests.marker(id);
-      if (m) add(".quest", "\u2757 " + m.label, m.x, m.y - 12 / cam.zoom);
+      if (m && (!zone || m.zone === w.id)) add(".quest", "\u2757 " + m.label, m.x, m.y - 12 / cam.zoom);
     }
     const lp = game.logPoseTarget?.();
-    if (lp) add(".quest", "\u{1F9ED}", lp.x, lp.y);
-    for (const s of game.ships) if (s.owner === "player" && !s.sunk && game.world === game.surface) add("", "\u26F5", s.x, s.y, { fontSize: "16px" });
+    if (lp && !zone) add(".quest", "\u{1F9ED}", lp.x, lp.y);
+    for (const s of game.ships) if (s.owner === "player" && !s.sunk) add("", "\u26F5", s.x, s.y, { fontSize: "16px" });
     const p = game.player;
-    if (game.world === game.surface) add(".me", "\u2716 You", p.x, p.y);
-    else add(".me", `\u2716 You (${game.world.name})`, game.zoneAnchor?.x ?? p.x, game.zoneAnchor?.y ?? p.y);
+    add(".me", "\u2716 You", p.x, p.y);
   }
 
   // src/content/fruits.js
@@ -15712,13 +16070,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const g = this.game, c = this.char;
       if (!c || !isl.name || isl.def?.islet) return;
       const first = !c.discovered.includes(isl.id);
+      const inZone = g.world !== g.surface;
       if (first) {
         c.discovered.push(isl.id);
-        g.surface.reveal(isl.x, isl.y, isl.radius + 10);
+        if (!inZone) g.surface.reveal(isl.x, isl.y, isl.radius + 10);
         g.progression?.checkDream();
       }
-      const reg = REGION_INFO[regionAt(isl.x, isl.y)];
+      const reg = inZone ? { name: g.world.name } : REGION_INFO[regionAt(isl.x, isl.y)];
       g.ui.banner(isl.name, reg?.name || "", first ? isl.def.tagline || "New island charted!" : isl.def.tagline || "", first ? 5 : 3);
+      if (first) g.emit("discovered", isl);
       g.audio?.music(isl.def.music || (isl.towns.length ? "town" : "sea"));
       if (first) persist(g);
     }
@@ -15744,7 +16104,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!c || g.world !== g.surface) return null;
       const p = g.player;
       const reg = regionAt(p.x, p.y);
-      const hasPose = count(c, "log_pose") || count(c, "new_world_log_pose");
+      const hasPose = count(c, "log_pose") || count(c, "new_world_log_pose") || c.logPose.eternal && count(c, c.logPose.eternal);
       if (!hasPose) return null;
       const lp = c.logPose;
       const t = this.logTarget();
@@ -15768,12 +16128,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const isl = g.currentIsland;
       if (!isl || !isl.def?.logNext || p.mode !== "foot" || g.world !== g.surface) return;
       const lp = c.logPose;
+      if (lp.eternal && count(c, lp.eternal)) {
+        if (lp.target !== isl.id) return;
+        lp.eternal = null;
+        lp.target = null;
+        g.log("You have arrived where the Eternal Pose was pointing.", "#81d4fa");
+      }
       if (lp.last === isl.id && lp.target) return;
       if (lp.setting !== isl.id) {
         lp.setting = isl.id;
         lp.progress = 0;
       }
-      const secs = (isl.def.logTime ?? 1) * 45;
+      const secs = (isl.def.logTime ?? 1) * 45 / (g.crewMods?.logMul || 1);
       lp.progress = Math.min(1, (lp.progress || 0) + dt / secs);
       if (lp.progress >= 1) {
         lp.last = isl.id;
@@ -15784,6 +16150,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         lp.progress = 0;
         const t = this.logTarget();
         g.ui.toast("LOG SET", `The needle swings toward ${c.discovered.includes(lp.target) ? t?.name : "an unknown island"}.`, "#81d4fa");
+        g.emit("logSet", lp.target);
         g.audio?.sfx("reveal");
         persist(g);
       }
@@ -16154,7 +16521,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (!def) return null;
     const existing = findActor(game, id);
     if (existing) return existing;
-    const isl = game.surface.islands.find((i) => i.id === def.island);
+    const isl = game.world.islands.find((i) => i.id === def.island);
     const list = game.spawner.populated.get(def.island);
     if (!list && !pos) return null;
     let p = pos;
@@ -16823,6 +17190,57 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       } })
     },
     {
+      id: "johnny",
+      name: "Johnny",
+      title: "Bounty hunter",
+      island: "baratie",
+      at: { spot: "baratie_deck", ox: -5 },
+      level: 7,
+      style: "ittoryu",
+      weapon: "sword",
+      look: { hair: "short", hairColor: "#212121", top: "#8d6e63", bottom: "#3e2723", goggles: true, swords: 1 },
+      recruit: { role: "swordsman", fighter: true, requires: (c) => !!c.flags.yosakuCured, pitch: `"Aniki! You saved Yosaku's life! Johnny and Yosaku, the pirate-hunting duo \u2014 we'll follow you anywhere!"` },
+      dialogue: (ctx) => ({ start: "a", nodes: {
+        a: {
+          text: () => ctx.flag("yosakuCured") ? `"Yosaku's back on his feet! We owe you big, aniki!"` : '"H-hey! You there! My partner Yosaku collapsed \u2014 his teeth are falling out and his old wounds opened up! Is this some kind of plague?!"',
+          choices: [
+            { text: "That's scurvy. He needs fresh fruit \u2014 here, a tangerine.", if: () => !ctx.flag("yosakuCured") && (ctx.has("tangerine") || ctx.has("rice_ball")), do: (c) => {
+              if (c.has("tangerine")) c.take("tangerine", 1);
+              else c.take("rice_ball", 1);
+              c.setFlag("yosakuCured");
+              c.log("Yosaku wolfs down the fruit and colour returns to his face. (Scurvy: a lack of vitamin C.)", "#a5d6a7");
+            }, next: "b" },
+            { text: "Good luck.", end: true }
+          ]
+        },
+        b: { text: `"He's... he's getting better already?! Aniki, you're a genius!"` }
+      } })
+    },
+    {
+      id: "yosaku",
+      name: "Yosaku",
+      title: "Bounty hunter",
+      island: "baratie",
+      at: { spot: "baratie_deck", ox: -6.5 },
+      level: 7,
+      style: "ittoryu",
+      weapon: "sword",
+      look: { hair: "short", hairColor: "#6d4c41", top: "#43a047", bottom: "#2e7d32", hat: "bandana", hatColor: "#1b5e20", swords: 1 },
+      recruit: { role: "swordsman", fighter: true, requires: (c) => !!c.flags.yosakuCured, pitch: `"You cured me with a piece of fruit... I thought I was done for. Take me along \u2014 I'm handy with a blade!"` },
+      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: () => ctx.flag("yosakuCured") ? `"Never felt better! Scurvy, huh? I'll never skip my fruit again."` : '"(Yosaku lies pale on the deck, groaning. His gums are bleeding.)"' } } })
+    },
+    {
+      id: "patty",
+      name: "Patty",
+      title: "Cook of the Baratie",
+      island: "baratie",
+      at: { spot: "baratie_deck", ox: 2 },
+      level: 9,
+      look: { hair: "bald", skin: "#e0ac7e", top: "#fafafa", bottom: "#212121", hat: "captain", hatColor: "#fafafa", bulk: 1.2 },
+      recruit: { role: "cook", fighter: false, requires: (c, g) => g.quests.isDone("baratie_krieg"), pitch: `"The old geezer says a cook who's never seen the Grand Line is only half a cook. Fine! I'll cook for your crew \u2014 and you'd better eat every bite!"` },
+      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: () => ctx.game.quests.isDone("baratie_krieg") ? '"You fought for this restaurant like one of us. Hungry? Of course you are."' : '"Welcome, you shitty customer! Sit down, eat, pay, get out!"' } } })
+    },
+    {
       id: "krieg",
       name: "Don Krieg",
       title: "Admiral of the Krieg Pirate Armada",
@@ -17418,8 +17836,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   // src/content/newWorld.js
   var newWorld_default = { id: "newWorld", npcs: [], groups: [], quests: [] };
 
+  // src/content/newWorld2.js
+  var newWorld2_default = { id: "newWorld2", npcs: [], groups: [], quests: [] };
+
   // src/content/index.js
-  var PACKS = [eastBlue_default, northBlue_default, westBlue_default, southBlue_default, paradise1_default, paradise2_default, newWorld_default];
+  var PACKS = [eastBlue_default, northBlue_default, westBlue_default, southBlue_default, paradise1_default, paradise2_default, newWorld_default, newWorld2_default];
   for (const p of PACKS) {
     if (p.abilities) registerAbilities(p.abilities, "npc");
     if (p.items) Object.assign(ITEMS, p.items);
@@ -17748,6 +18169,1427 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     night: { bpm: 72, root: 130.81, swing: 0, scale: [0, 2, 3, 5, 7, 8, 10], chords: [[0, 3, 7], [5, 8, 12], [3, 7, 10], [7, 10, 14]], melody: [4, null, null, 3, 2, null, null, null, 0, null, 2, null, 3, null, null, null], drums: false, lead: "sine", legato: 3 }
   };
 
+  // src/data/zones/index.js
+  var ZONES = {
+    skypiea: {
+      id: "skypiea",
+      name: "Skypiea",
+      kind: "sky",
+      w: 640,
+      h: 480,
+      fill: T.CLOUD_SEA,
+      altitude: "10,000 m",
+      arrive: { x: 320, y: 450, heading: -Math.PI / 2 },
+      // falling off Cloud End drops you back into the sea near Jaya
+      exits: [{ id: "cloud_end", x: 18, y: 240, r: 14, to: "surface", surface: { island: "jaya", spot: "knock_up_stream" }, label: "Cloud End \u2014 the long fall to the Blue Sea" }],
+      islands: [
+        {
+          id: "heavens_gate",
+          name: "Heaven's Gate",
+          sea: "sky",
+          x: 320,
+          y: 405,
+          w: 40,
+          h: 22,
+          climate: "sky",
+          rough: 0.15,
+          landmarks: [{ kind: "arch", dx: 0, dy: -0.2, name: "Heaven's Gate" }, { kind: "sign", dx: 0.4, dy: 0.3, spot: "gate_booth" }],
+          docks: [{ dx: 0, dy: 0.6, dir: "s", len: 4, name: "Heaven's Gate" }]
+        },
+        {
+          id: "angel_island",
+          name: "Angel Island",
+          sea: "sky",
+          x: 190,
+          y: 285,
+          w: 160,
+          h: 110,
+          climate: "sky",
+          rough: 0.25,
+          trees: ["cloudtree", "palm"],
+          towns: [{
+            id: "lovely_street",
+            name: "Lovely Street",
+            dx: 0.05,
+            dy: 0.05,
+            w: 56,
+            h: 38,
+            style: "sky",
+            dockDir: "s",
+            plaza: "fountain",
+            buildings: [
+              { role: "house", name: "Pagaya's House" },
+              { role: "shop", name: "Dial Shop", shop: "skypiea" },
+              { role: "inn", name: "Cloud Inn" },
+              { role: "cafe", name: "Angel Beach Caf\xE9" },
+              { role: "hall", name: "White Berets Post" }
+            ]
+          }],
+          landmarks: [{ kind: "sign", dx: -0.55, dy: 0.55, spot: "angel_beach", name: "Angel Beach" }]
+        },
+        {
+          id: "upper_yard",
+          name: "Upper Yard",
+          sea: "sky",
+          x: 470,
+          y: 225,
+          w: 190,
+          h: 170,
+          climate: "jungle",
+          rough: 0.22,
+          mountains: [{ name: "Giant Jack", dx: 0, dy: -0.12, r: 0.12, h: 1.1 }],
+          areas: [
+            { name: "Ruins of Shandora", tile: T.STONE, dx: 0.28, dy: 0.28, rx: 0.2, ry: 0.18 },
+            { name: "Forest of Ordeals", tile: T.JUNGLE, dx: -0.3, dy: -0.1, rx: 0.3, ry: 0.35 }
+          ],
+          landmarks: [
+            { kind: "ruins", dx: 0.28, dy: 0.28, name: "Shandora" },
+            { kind: "ruins", dx: 0.36, dy: 0.2 },
+            { kind: "bell", dx: 0.02, dy: -0.36, spot: "golden_bell", name: "The Golden Bell of Shandora" },
+            { kind: "poneglyph", dx: 0.3, dy: 0.34, poneglyph: "shandora", name: "Poneglyph of Shandora" },
+            { kind: "totem", dx: -0.3, dy: 0.32, spot: "altar", name: "Sacrificial Altar" }
+          ],
+          spots: [
+            { id: "ordeal_balls", dx: -0.6, dy: 0.1 },
+            { id: "ordeal_swamp", dx: 0.55, dy: -0.3 },
+            { id: "ordeal_iron", dx: -0.2, dy: -0.55 },
+            { id: "ordeal_string", dx: 0.6, dy: 0.45 },
+            { id: "god_shrine", dx: 0.05, dy: 0.12 }
+          ],
+          docks: [{ dx: -0.8, dy: 0.2, dir: "w", len: 5, name: "Upper Yard" }]
+        },
+        {
+          id: "shandia_village",
+          name: "Hidden Shandian Village",
+          sea: "sky",
+          x: 95,
+          y: 110,
+          w: 90,
+          h: 64,
+          climate: "sky",
+          rough: 0.3,
+          towns: [{
+            id: "shandia_camp",
+            name: "Shandian Village",
+            dx: 0,
+            dy: 0,
+            w: 34,
+            h: 24,
+            style: "tribal",
+            dockDir: "s",
+            plaza: "well",
+            buildings: [{ role: "hall", name: "Chief's Hut" }, { role: "house", name: "Wyper's Hut" }]
+          }]
+        },
+        {
+          id: "weatheria",
+          name: "Weatheria",
+          sea: "sky",
+          x: 565,
+          y: 60,
+          w: 70,
+          h: 48,
+          climate: "sky",
+          rough: 0.2,
+          towns: [{
+            id: "weatheria_town",
+            name: "Weatheria",
+            dx: 0,
+            dy: 0.05,
+            w: 34,
+            h: 24,
+            style: "sky",
+            dockDir: "w",
+            plaza: "fountain",
+            buildings: [{ role: "library", name: "Weatheria Library" }, { role: "trainer", name: "Weather Laboratory", trainer: "weatheria_scholar" }]
+          }]
+        }
+      ]
+    },
+    fishman_island: {
+      id: "fishman_island",
+      name: "Fish-Man Island",
+      kind: "undersea",
+      w: 480,
+      h: 380,
+      fill: T.SEA,
+      altitude: "10,000 m below",
+      arrive: { x: 420, y: 200, heading: Math.PI },
+      exits: [
+        { id: "new_world", x: 20, y: 60, r: 16, to: "surface", surface: { x: 118, y: 990 }, label: "Rise to the New World" },
+        { id: "paradise", x: 462, y: 330, r: 16, to: "surface", surface: { x: 3985, y: 1070 }, label: "Rise back to Sabaody" }
+      ],
+      islands: [
+        {
+          id: "fishman_island",
+          name: "Fish-Man Island",
+          sea: "undersea",
+          x: 245,
+          y: 195,
+          w: 230,
+          h: 190,
+          climate: "undersea",
+          rough: 0.2,
+          trees: ["coral", "kelp"],
+          towns: [
+            {
+              id: "ryugu_kingdom",
+              name: "Ryugu Kingdom",
+              dx: 0,
+              dy: -0.35,
+              w: 56,
+              h: 34,
+              style: "fishman",
+              walls: true,
+              dockDir: "n",
+              plaza: "fountain",
+              buildings: [{ role: "palace", name: "Ryugu Palace", w: 14, d: 7, hgt: 5 }, { role: "hall", name: "Hard Shell Tower" }]
+            },
+            {
+              id: "mermaid_cove",
+              name: "Mermaid Cove",
+              dx: 0.5,
+              dy: 0.2,
+              w: 40,
+              h: 28,
+              style: "fishman",
+              dockDir: "e",
+              plaza: "fountain",
+              buildings: [{ role: "cafe", name: "Mermaid Caf\xE9" }, { role: "shop", name: "Coral Hill Market", shop: "fishman" }, { role: "inn", name: "Bubble Inn" }]
+            },
+            {
+              id: "fishman_district",
+              name: "Fish-Man District",
+              dx: -0.45,
+              dy: 0.35,
+              w: 40,
+              h: 28,
+              style: "fishman",
+              dockDir: "sw",
+              plaza: "well",
+              buildings: [{ role: "bar", name: "Noah Tavern" }, { role: "dojo", name: "Fish-Man Karate Dojo", trainer: "jinbe" }]
+            }
+          ],
+          spots: [{ id: "gyoncorde_plaza", dx: 0, dy: 0.05 }, { id: "coral_hill", dx: 0.35, dy: 0.45 }],
+          landmarks: [{ kind: "fountain", dx: 0, dy: 0.1, name: "Gyoncorde Plaza" }]
+        },
+        {
+          id: "sea_forest",
+          name: "Forest of the Sea",
+          sea: "undersea",
+          x: 75,
+          y: 320,
+          w: 90,
+          h: 60,
+          climate: "undersea",
+          rough: 0.3,
+          noDock: false,
+          trees: ["kelp", "coral"],
+          landmarks: [
+            { kind: "poneglyph", dx: 0, dy: -0.1, poneglyph: "apology", name: "Joy Boy's Apology" },
+            { kind: "shipwreck", dx: 0.4, dy: 0.2, name: "The Ark Noah" },
+            { kind: "grave", dx: -0.3, dy: 0.2, name: "Queen Otohime's grave" }
+          ]
+        }
+      ]
+    },
+    impel_down: {
+      id: "impel_down",
+      name: "Impel Down",
+      kind: "prison",
+      w: 420,
+      h: 520,
+      fill: T.ABYSS,
+      altitude: "beneath the Calm Belt",
+      arrive: { island: "id_level1", spot: "cell" },
+      exits: [{ id: "main_gate", island: "id_level1", spot: "main_gate", r: 3, to: "surface", surface: { island: "impel_down", dock: true }, label: "The Main Gate" }],
+      islands: [
+        {
+          id: "id_level1",
+          name: "Level 1 \u2014 Crimson Hell",
+          sea: "zone",
+          x: 110,
+          y: 70,
+          w: 150,
+          h: 80,
+          climate: "autumn",
+          ground: T.DIRT,
+          rough: 0.12,
+          noDock: true,
+          areas: [{ name: "Blade forest", tile: T.FOREST, dx: 0.1, dy: 0, rx: 0.5, ry: 0.5 }],
+          spots: [{ id: "cell", dx: -0.6, dy: 0.2 }, { id: "main_gate", dx: -0.85, dy: -0.4 }, { id: "stairs_down", dx: 0.8, dy: 0.4 }]
+        },
+        {
+          id: "id_level2",
+          name: "Level 2 \u2014 Wild Beast Hell",
+          sea: "zone",
+          x: 300,
+          y: 145,
+          w: 150,
+          h: 80,
+          climate: "jungle",
+          rough: 0.12,
+          noDock: true,
+          spots: [{ id: "stairs_up", dx: -0.8, dy: -0.4 }, { id: "stairs_down", dx: 0.8, dy: 0.4 }]
+        },
+        {
+          id: "id_level3",
+          name: "Level 3 \u2014 Starvation Hell",
+          sea: "zone",
+          x: 110,
+          y: 220,
+          w: 150,
+          h: 80,
+          climate: "desert",
+          rough: 0.12,
+          noDock: true,
+          spots: [{ id: "stairs_up", dx: 0.8, dy: -0.4 }, { id: "stairs_down", dx: -0.8, dy: 0.4 }]
+        },
+        {
+          id: "id_level4",
+          name: "Level 4 \u2014 Burning Hell",
+          sea: "zone",
+          x: 300,
+          y: 295,
+          w: 150,
+          h: 80,
+          climate: "volcanic",
+          rough: 0.12,
+          noDock: true,
+          lakes: [{ dx: 0, dy: 0, rx: 0.2, ry: 0.25, tile: T.LAVA }],
+          spots: [{ id: "stairs_up", dx: -0.8, dy: -0.4 }, { id: "stairs_down", dx: 0.8, dy: 0.4 }, { id: "warden_office", dx: 0.4, dy: -0.4 }]
+        },
+        {
+          id: "id_level5",
+          name: "Level 5 \u2014 Freezing Hell",
+          sea: "zone",
+          x: 110,
+          y: 370,
+          w: 150,
+          h: 80,
+          climate: "winter",
+          rough: 0.12,
+          noDock: true,
+          spots: [{ id: "stairs_up", dx: 0.8, dy: -0.4 }, { id: "stairs_down", dx: -0.8, dy: 0.4 }, { id: "secret_passage", dx: 0.6, dy: 0.45 }]
+        },
+        {
+          id: "id_newkama",
+          name: "Level 5.5 \u2014 Newkama Land",
+          sea: "zone",
+          x: 320,
+          y: 440,
+          w: 100,
+          h: 60,
+          climate: "spring",
+          rough: 0.12,
+          noDock: true,
+          towns: [{ id: "newkama_land", name: "Newkama Land", dx: 0, dy: 0, w: 40, h: 26, style: "noble", plaza: "fountain", buildings: [{ role: "hall", name: "Ivankov's Party Hall", trainer: "ivankov" }, { role: "bar", name: "Newkama Bar" }] }],
+          spots: [{ id: "stairs_up", dx: -0.8, dy: -0.5 }]
+        },
+        {
+          id: "id_level6",
+          name: "Level 6 \u2014 Eternal Hell",
+          sea: "zone",
+          x: 110,
+          y: 475,
+          w: 150,
+          h: 60,
+          climate: "rocky",
+          rough: 0.1,
+          noDock: true,
+          spots: [{ id: "stairs_up", dx: -0.8, dy: -0.4 }, { id: "deepest_cell", dx: 0.6, dy: 0.2 }]
+        }
+      ],
+      // stairways between levels (portal objects are placed at these spots)
+      links: [
+        ["id_level1", "stairs_down", "id_level2", "stairs_up"],
+        ["id_level2", "stairs_down", "id_level3", "stairs_up"],
+        ["id_level3", "stairs_down", "id_level4", "stairs_up"],
+        ["id_level4", "stairs_down", "id_level5", "stairs_up"],
+        ["id_level5", "secret_passage", "id_newkama", "stairs_up"],
+        ["id_level5", "stairs_down", "id_level6", "stairs_up"]
+      ]
+    }
+  };
+  var ZONE_ISLAND_IDS = new Set(Object.values(ZONES).flatMap((z) => z.islands.map((i) => i.id)));
+
+  // src/world/zonegen.js
+  var ZONE_KIND = { sky: 1, undersea: 2, prison: 3 };
+  function generateZoneWorld(z) {
+    const world = new World(z.w, z.h, { wrap: false, zone: ZONE_KIND[z.kind] || 3, id: z.id });
+    world.name = z.name;
+    world.zoneDef = z;
+    world.objects = new ObjectIndex(world);
+    const d = world.data;
+    for (let i = 0, n = z.w * z.h; i < n; i++) {
+      d[i * 4] = z.fill;
+      d[i * 4 + 1] = 0;
+      d[i * 4 + 2] = 0;
+      d[i * 4 + 3] = Math.imul(i, 2654435761) >>> 25 & 127;
+    }
+    const noise = new Noise(z.id);
+    const rng = new RNG(z.id + ":zone");
+    for (const def of z.islands) {
+      try {
+        const rec = generateIsland(world, def, noise, rng.fork(def.id));
+        if (rec) {
+          rec.zone = z.id;
+          world.islands.push(rec);
+        }
+      } catch (e) {
+        console.error(`zone island ${def.id} failed`, e);
+      }
+    }
+    for (const [a, sa, b, sb] of z.links || []) {
+      const A = world.islands.find((i) => i.id === a), B = world.islands.find((i) => i.id === b);
+      const pa = A?.spots[sa], pb = B?.spots[sb];
+      if (!pa || !pb) continue;
+      placeObject(world, { kind: "portal", x: pa.x, y: pa.y, block: false, to: { x: pb.x, y: pb.y + 1.5 }, interact: `Take the stairs down to ${B.name}`, use: "portal" });
+      placeObject(world, { kind: "portal", x: pb.x, y: pb.y, block: false, to: { x: pa.x, y: pa.y + 1.5 }, interact: `Climb the stairs to ${A.name}`, use: "portal", up: true });
+    }
+    computeDistanceField(world);
+    world.map = buildMapImage(world);
+    return world;
+  }
+
+  // src/game/zones.js
+  function installZones(game) {
+    const cache2 = /* @__PURE__ */ new Map();
+    let stash = null;
+    const zoneWorld = (id) => {
+      if (!cache2.has(id)) {
+        const w = generateZoneWorld(ZONES[id]);
+        w.fog.fill(255);
+        cache2.set(id, w);
+      }
+      return cache2.get(id);
+    };
+    game.zoneWorld = zoneWorld;
+    game.inZone = () => game.world !== game.surface ? game.world.id : null;
+    const spotIn = (world, islandId, spotId) => {
+      const isl = world.islands.find((i) => i.id === islandId);
+      if (!isl) return null;
+      if (spotId && isl.spots[spotId]) return isl.spots[spotId];
+      return { x: isl.x, y: isl.y };
+    };
+    const clearPopulation = () => {
+      for (const id of [...game.spawner.populated.keys()]) {
+        const isl = game.world.islands.find((i) => i.id === id);
+        if (isl) game.spawner.depopulate(isl);
+      }
+      game.spawner.populated.clear();
+      game.actors = game.actors.filter((a) => a === game.player || a.crewId && a.alive);
+      game.combat.hitboxes.length = 0;
+      game.combat.projectiles.length = 0;
+      game.groundItems = [];
+      game.flotsam = [];
+      game.bossTarget = null;
+    };
+    game.enterZoneById = (id, opts = {}, resuming = false) => {
+      const z = ZONES[id];
+      const p = game.player;
+      if (!z || !p) return false;
+      if (game.world !== game.surface) game.leaveZone(true);
+      const c = game.state.char;
+      const carried = opts.byShip && p.ship && !p.ship.sunk ? p.ship : null;
+      clearPopulation();
+      stash = game.ships.filter((s) => s !== carried);
+      game.ships = carried ? [carried] : [];
+      const w = zoneWorld(id);
+      game.setWorld(w);
+      game.renderer.terrain.updateFog(w.fog);
+      let pos = null;
+      if (resuming && opts.x !== void 0) pos = { x: opts.x, y: opts.y };
+      else if (z.arrive.island) pos = spotIn(w, z.arrive.island, z.arrive.spot);
+      else pos = { x: z.arrive.x, y: z.arrive.y };
+      if (carried) {
+        carried.x = pos.x;
+        carried.y = pos.y;
+        carried.heading = z.arrive.heading ?? carried.heading;
+        carried.zoneId = id;
+        carried.speed = 0;
+        if (!carried.fits(w, carried.x, carried.y, carried.heading)) carried.unstick(w);
+        p.x = carried.x;
+        p.y = carried.y;
+      } else {
+        p.mode = "foot";
+        p.onShip = false;
+        p.ship = null;
+        let s = findShore(w, pos.x, pos.y, 6);
+        if (!s) {
+          const isl = w.nearestIsland(pos.x, pos.y);
+          const d = isl?.docks?.[0];
+          s = d && findShore(w, d.land.x, d.land.y, 8) || isl && findShore(w, isl.x, isl.y, 30) || pos;
+        }
+        p.x = s.x;
+        p.y = s.y;
+      }
+      if (resuming) {
+        for (const sd of c.ships || []) {
+          if (sd.zone !== id || game.ships.some((s2) => s2.uid === sd.uid)) continue;
+          const s = game.giveShip(sd.type, sd.x, sd.y, sd.name, sd);
+          s.zoneId = id;
+          s.hull = sd.hull ?? s.maxHull;
+          if (resuming && opts.mode === "sail" && sd.uid === c.activeShip) board(game, p, s);
+        }
+      }
+      game.currentIsland = null;
+      game.lastIslandName = null;
+      game.lastRegion = void 0;
+      game.snapCamera();
+      game.env.zoneKind = z.kind;
+      game.emit("enterZone", id);
+      if (!resuming) {
+        game.ui.banner(z.name, z.altitude || "", z.kind === "sky" ? "Above the clouds, the sea is white." : z.kind === "undersea" ? "10,000 metres beneath the waves, a bubble of air and light." : "The Great Underwater Prison.", 5);
+        persist(game);
+      }
+      game.audio?.music(z.kind === "prison" ? "night" : z.kind === "sky" ? "town" : "grandline");
+      return true;
+    };
+    game.leaveZone = (forced = false, exit = null) => {
+      if (game.world === game.surface) return;
+      const id = game.world.id;
+      const z = ZONES[id];
+      const p = game.player;
+      const carried = p.mode === "sail" && p.ship && !p.ship.sunk ? p.ship : null;
+      clearPopulation();
+      const left = game.ships.filter((s) => s !== carried && s.owner === "player");
+      game.state.char.zoneShips = left.map((s) => ({ uid: s.uid, type: s.type, name: s.name, upgrades: s.upgrades, hull: s.hull, x: s.x, y: s.y, zone: id }));
+      game.ships = (stash || []).concat(carried ? [carried] : []);
+      stash = null;
+      game.setWorld(game.surface);
+      game.renderer.terrain.updateFog(game.surface.fog);
+      game.env.zoneKind = null;
+      const S = game.surface;
+      let target = null;
+      const tgt = exit?.surface || z?.exits?.find((e) => e.to === "surface")?.surface;
+      if (tgt?.island) {
+        const isl = S.islands.find((i) => i.id === tgt.island);
+        if (isl) target = tgt.spot && isl.spots[tgt.spot] ? isl.spots[tgt.spot] : tgt.dock && isl.docks[0] ? isl.docks[0].moor : { x: isl.x, y: isl.y };
+      } else if (tgt && tgt.x !== void 0) target = { x: tgt.x, y: tgt.y };
+      if (!target || forced) target = game.state.char.rest || game.state.char.spawn;
+      if (carried) {
+        carried.zoneId = "surface";
+        carried.x = target.x;
+        carried.y = target.y;
+        carried.speed = 0;
+        if (!carried.fits(S, carried.x, carried.y, carried.heading)) carried.unstick(S);
+        p.x = carried.x;
+        p.y = carried.y;
+      } else {
+        p.mode = "foot";
+        p.onShip = false;
+        const s = findShore(S, target.x, target.y, 10) || target;
+        p.x = s.x;
+        p.y = s.y;
+        if (!S.walkable(p.x, p.y - 0.1)) {
+          const r = game.state.char.rest || game.state.char.spawn;
+          p.x = r.x;
+          p.y = r.y;
+        }
+      }
+      game.currentIsland = null;
+      game.lastIslandName = null;
+      game.lastRegion = void 0;
+      game.snapCamera();
+      game.emit("leaveZone", id);
+      if (!forced) persist(game);
+    };
+    const surfaceSpot = (spotId) => {
+      for (const isl of game.surface.islands) if (isl.spots?.[spotId]) return isl.spots[spotId];
+      return null;
+    };
+    const prevSea = game.seaInteraction;
+    game.seaInteraction = (p, s) => {
+      const w = game.world;
+      const c = game.state.char;
+      if (w === game.surface) {
+        const ku = surfaceSpot("knock_up_stream");
+        if (ku && w.distance(s.x, s.y, ku.x, ku.y) < 14) {
+          const knows = count(c, "south_bird") > 0 || c.flags.knockUpKnown;
+          return {
+            label: knows ? "Ride the Knock Up Stream to the sky!" : "The sea here churns strangely\u2026",
+            key: "E",
+            run: () => {
+              if (!knows) {
+                game.log("Something enormous stirs beneath the sea here, but you cannot tell where or when. (A South Bird, or someone who knows these waters, could guide you.)", "#b0bec5");
+                return;
+              }
+              if (s.def.hull < 60) {
+                game.log("Your little boat would be torn apart by the stream. You need a real ship.", "#ff8a80");
+                return;
+              }
+              knockUp(game, s);
+            }
+          };
+        }
+        const dive = surfaceSpot("fishman_dive");
+        if (dive && w.distance(s.x, s.y, dive.x, dive.y) < 16) {
+          return {
+            label: s.coated ? "Dive to Fish-Man Island (10,000 m)" : "Dive to Fish-Man Island (needs a coated ship)",
+            key: "E",
+            run: () => {
+              if (!s.coated) {
+                game.log("Without a resin coating your ship would be crushed by the deep. Sabaody's coating mechanics can help \u2014 for a price.", "#ff8a80");
+                return;
+              }
+              game.ui.fade(true);
+              setTimeout(() => {
+                s.coated = false;
+                game.enterZoneById("fishman_island", { byShip: true });
+                game.ui.fade(false);
+                game.log("The bubble holds. Down past the Sea Kings, past the downward currents\u2026 light below: Fish-Man Island.", "#80deea");
+              }, 900);
+            }
+          };
+        }
+      } else {
+        const z = ZONES[w.id];
+        for (const e of z?.exits || []) {
+          if (e.island) continue;
+          if (w.distance(s.x, s.y, e.x, e.y) < e.r + 4) {
+            return { label: e.label || "Leave", key: "E", run: () => exitZone(game, e) };
+          }
+        }
+      }
+      return prevSea ? prevSea(p, s) : null;
+    };
+    const prevFoot = game.footInteraction;
+    game.footInteraction = (p) => {
+      const w = game.world;
+      if (w !== game.surface) {
+        const z = ZONES[w.id];
+        for (const e of z?.exits || []) {
+          let pos = null;
+          if (e.island) pos = spotIn(w, e.island, e.spot);
+          else if (w.id === "skypiea" && e.id === "cloud_end") continue;
+          else pos = { x: e.x, y: e.y };
+          if (pos && w.distance(p.x, p.y, pos.x, pos.y) < (e.r || 3)) {
+            return { d: 0.5, label: e.label || "Leave", run: () => {
+              const c = game.state.char;
+              const beatWarden = (c.bosses || []).some((b) => npcDef(b)?.island?.startsWith("id_"));
+              if (w.id === "impel_down" && c.flags.imprisoned && !c.flags.impelGateOpen && !beatWarden) {
+                game.log("The Main Gate is sealed with seastone bars. Someone in this prison holds the way out \u2014 defeat one of the wardens, or find another way.", "#ff8a80");
+                return;
+              }
+              exitZone(game, e);
+            } };
+          }
+        }
+      }
+      return prevFoot ? prevFoot(p) : null;
+    };
+    game.on("useObject", (o) => {
+      if (o.kind !== "portal" || !o.to) return;
+      const p = game.player;
+      game.ui.fade(true);
+      setTimeout(() => {
+        p.x = o.to.x;
+        p.y = o.to.y;
+        const s = findShore(game.world, p.x, p.y, 4);
+        if (s) {
+          p.x = s.x;
+          p.y = s.y;
+        }
+        game.snapCamera();
+        game.ui.fade(false);
+        game.emit("enterIsland", game.world.islandAt(p.x, p.y) || game.world.nearestIsland(p.x, p.y, 80));
+      }, 500);
+    });
+    game.on("tick", () => {
+      const w = game.world, p = game.player;
+      if (!p || w === game.surface || p.state !== "idle") return;
+      if (w.zone === 1 && p.mode === "foot" && p.inWater) {
+        if (!p.cloudFallT) p.cloudFallT = 0;
+        p.cloudFallT += 1 / 30;
+        if (p.cloudFallT > 1.2) {
+          p.cloudFallT = 0;
+          game.log("You sink through the cloud sea\u2026 and fall ten thousand metres.", "#ff8a80");
+          const e = ZONES.skypiea.exits[0];
+          exitZone(game, e, true);
+          p.hp = Math.max(1, Math.round(p.hp * 0.4));
+        }
+      } else p.cloudFallT = 0;
+      if (w.zone === 2 && p.mode === "foot" && p.inWater && game.state.char.race !== "fishman") {
+        p.deepT = (p.deepT || 0) + 1 / 30;
+        if (p.deepT > 1.5) {
+          p.deepT = 0;
+          const s = findShore(w, p.x, p.y, 20);
+          if (s) {
+            p.x = s.x;
+            p.y = s.y;
+          }
+          p.hp = Math.max(1, Math.round(p.hp - p.d.maxHp * 0.15));
+          game.log("The pressure of the deep sea crushes the air from your lungs \u2014 you claw your way back into the bubble.", "#ff8a80");
+        }
+      } else p.deepT = 0;
+    });
+    game.sendToImpelDown = (by) => {
+      const p = game.player, c = game.state.char;
+      if (p.onShip && p.ship) {
+        p.ship.captain = null;
+        p.onShip = false;
+      }
+      p.mode = "foot";
+      c.flags.imprisoned = true;
+      c.flags.impelDownVisits = (c.flags.impelDownVisits || 0) + 1;
+      c.confiscated = { weapons: c.equipped.weapons.slice(), berries: c.berries };
+      c.equipped.weapons = [];
+      c.berries = 0;
+      game.enterZoneById("impel_down");
+      game.ui.banner("IMPEL DOWN", "Level 1 \u2014 Crimson Hell", `${by ? by.name + " handed you over to the Great Prison. " : ""}Your weapons and berries are confiscated. Find a way out through the Main Gate.`, 7);
+      persist(game);
+    };
+    game.on("leaveZone", (id) => {
+      const c = game.state?.char;
+      if (id !== "impel_down" || !c?.flags.imprisoned) return;
+      c.flags.imprisoned = false;
+      c.flags.escapedImpelDown = (c.flags.escapedImpelDown || 0) + 1;
+      if (c.confiscated) {
+        c.equipped.weapons = c.confiscated.weapons || [];
+        c.berries += Math.floor((c.confiscated.berries || 0) * 0.6);
+        c.confiscated = null;
+        game.log("You raid the warden's storeroom on the way out and recover your weapons (and some of your berries).", "#a5d6a7");
+      }
+      game.progression?.addBounty(Math.max(2e7, Math.round((c.bounty || 0) * 0.35)), "Broke out of Impel Down");
+      game.ui.banner("JAILBREAK!", "Impel Down", "Nobody breaks out of Impel Down\u2026 except you.", 6);
+      game.progression?.breakthrough(2, "Escaped the Great Prison");
+    });
+  }
+  function exitZone(game, e, falling = false) {
+    game.ui.fade(true);
+    setTimeout(() => {
+      game.leaveZone(false, e);
+      game.ui.fade(false);
+      if (falling) game.ui.banner("SPLASH!", "", "You fall out of the sky into the Blue Sea.", 4);
+    }, 700);
+  }
+  function knockUp(game, ship) {
+    const fx = game.fx;
+    game.ui.banner("KNOCK UP STREAM", "", "The sea explodes upward \u2014 a pillar of water ten thousand metres high!", 4);
+    fx.shake(1.2);
+    fx.burst(ship.x, ship.y, 60, { color: ["#e3f2fd", "#90caf9", "#ffffff"], speed: 10, vz: 12, g: 4, life: 1.4, kind: "smoke", size: 0.5 });
+    game.audio?.sfx("explosion");
+    game.ui.fade(true);
+    setTimeout(() => {
+      game.enterZoneById("skypiea", { byShip: true });
+      game.ui.fade(false);
+      game.log(`The ${ship.name} bursts through the clouds and lands on a sea of white: the Upper Sea. Welcome to Skypiea (entry tax at Heaven's Gate: ${formatBerries(0)} for rookies \u2014 they only take extol).`, "#80deea");
+    }, 1400);
+  }
+
+  // src/game/crew.js
+  var CREW_ROLES = {
+    fighter: { name: "Combatant", icon: "\u2694", desc: "Fights beside you on land." },
+    swordsman: { name: "Swordsman", icon: "\u{1F5E1}", desc: "Fights beside you on land with a blade." },
+    navigator: { name: "Navigator", icon: "\u{1F9ED}", desc: "Log Pose sets twice as fast, storms are announced early, +10% sailing speed." },
+    cook: { name: "Cook", icon: "\u{1F373}", desc: "Food heals 50% more; stamina regenerates at sea." },
+    doctor: { name: "Doctor", icon: "\u{1FA7A}", desc: "Patches you up after every battle (heals 30% when combat ends)." },
+    shipwright: { name: "Shipwright", icon: "\u{1F528}", desc: "Repairs your ship slowly while sailing." },
+    sniper: { name: "Sniper", icon: "\u{1F3AF}", desc: "Cannons deal 30% more damage." },
+    musician: { name: "Musician", icon: "\u{1F3BB}", desc: "Stamina regenerates 25% faster." },
+    archaeologist: { name: "Archaeologist", icon: "\u{1F4DC}", desc: "Can read Poneglyphs." },
+    helmsman: { name: "Helmsman", icon: "\u2388", desc: "Your ship turns 25% faster." }
+  };
+  var MAX_FOLLOWERS = 2;
+  function computeMods(members) {
+    const has = (r) => members.some((m) => m.role === r);
+    return {
+      speedMul: has("navigator") ? 1.1 : 1,
+      logMul: has("navigator") ? 2 : 1,
+      foodMul: has("cook") ? 1.5 : 1,
+      seaStamina: has("cook"),
+      doctor: has("doctor"),
+      repair: has("shipwright") ? 0.6 : 0,
+      cannonMul: has("sniper") ? 1.3 : 1,
+      staminaMul: has("musician") ? 1.25 : 1,
+      poneglyphs: has("archaeologist"),
+      turnMul: has("helmsman") ? 1.25 : 1
+    };
+  }
+  var Crew = class {
+    constructor(game) {
+      this.game = game;
+      game.crew = this;
+      game.crewMods = computeMods([]);
+      this.followers = /* @__PURE__ */ new Map();
+      this.t = 0;
+      this.wasFighting = false;
+      game.on("characterStart", () => {
+        this.followers.clear();
+        this.refresh();
+      });
+      game.on("tick", (dt) => this.tick(dt));
+      game.on("enterZone", () => this.followers.clear());
+      game.on("leaveZone", () => this.followers.clear());
+      game.on("bossDefeated", () => {
+        for (const m of this.members()) m.level = Math.min((m.baseLevel || m.level) + 40, (m.level || 5) + 1.5);
+      });
+    }
+    get char() {
+      return this.game.state?.char;
+    }
+    members() {
+      return this.char?.crew || [];
+    }
+    has(id) {
+      return this.members().some((m) => m.id === id);
+    }
+    count() {
+      return this.members().length;
+    }
+    hasRole(role) {
+      return this.members().some((m) => m.role === role);
+    }
+    refresh() {
+      this.game.crewMods = computeMods(this.members());
+    }
+    canRecruit(def) {
+      const c = this.char;
+      if (!c || !def.recruit || this.has(def.id)) return false;
+      if (def.boss && !c.bosses.includes(def.id) && def.recruit.afterDefeat) return false;
+      try {
+        if (def.recruit.requires && !def.recruit.requires(c, this.game)) return false;
+      } catch {
+        return false;
+      }
+      return true;
+    }
+    /** Add the "Join my crew" choice to an NPC's dialogue tree. */
+    decorate(tree, npc) {
+      const def = npc?.def;
+      if (!def?.recruit || !tree?.nodes) return tree;
+      const startId = tree.start || "start";
+      const start2 = tree.nodes[startId];
+      if (!start2) return tree;
+      const r = def.recruit;
+      const role = CREW_ROLES[r.role] || CREW_ROLES.fighter;
+      const cost = r.cost || 0;
+      const nodes = { ...tree.nodes };
+      const choice = {
+        text: `${role.icon} "Join my crew!"${cost ? ` (${formatBerries(cost)})` : ""}`,
+        if: () => this.canRecruit(def),
+        next: "__recruit"
+      };
+      nodes[startId] = { ...start2, choices: [choice, ...start2.choices || []] };
+      if (!start2.choices || !start2.choices.length) nodes[startId].choices.push({ text: "Goodbye.", end: true });
+      nodes.__recruit = {
+        text: r.pitch || `"You want me as your ${role.name.toLowerCase()}? ...Alright. I'm in!"`,
+        choices: [
+          { text: `Welcome aboard! (${role.name}: ${role.desc})`, do: () => {
+            if (cost && !pay(this.game, cost)) {
+              this.game.log("Not enough berries.", "#ff8a80");
+              return;
+            }
+            this.recruit(def, npc);
+          }, end: true },
+          { text: "On second thought...", end: true }
+        ]
+      };
+      return { ...tree, nodes };
+    }
+    recruit(def, actor) {
+      const c = this.char, g = this.game;
+      if (!c || this.has(def.id)) return;
+      const m = {
+        id: def.id,
+        name: def.name,
+        title: def.title,
+        role: def.recruit.role,
+        fighter: def.recruit.fighter ?? (def.recruit.role === "fighter" || def.recruit.role === "swordsman"),
+        level: def.level ?? 6,
+        baseLevel: def.level ?? 6,
+        joined: g.env.day,
+        follow: true
+      };
+      const fighters = this.members().filter((x) => x.fighter && x.follow).length;
+      if (m.fighter && fighters >= MAX_FOLLOWERS) m.follow = false;
+      c.crew.push(m);
+      this.refresh();
+      const role = CREW_ROLES[m.role];
+      g.ui.toast("NEW NAKAMA!", `${m.name} joins your crew as ${role?.name || m.role}.`, "#ffd54f");
+      g.log(`${m.name} joined the crew. ${role?.desc || ""} (Crew: U)`, "#ffe082");
+      g.audio?.sfx("breakthrough");
+      if (actor && actor.alive) {
+        if (m.fighter && m.follow) this.adopt(actor, m);
+        else {
+          actor.alive = false;
+          g.fx.burst(actor.x, actor.y - 0.6, 10, { color: ["#ffe082"], speed: 3, g: 0, life: 0.4, kind: "star" });
+        }
+      }
+      g.emit("crewJoined", def.id);
+      persist(g);
+    }
+    dismiss(id) {
+      const c = this.char;
+      const i = c.crew.findIndex((m2) => m2.id === id);
+      if (i < 0) return;
+      const [m] = c.crew.splice(i, 1);
+      const a = this.followers.get(id);
+      if (a) a.alive = false;
+      this.followers.delete(id);
+      c.flags["leftCrew_" + id] = true;
+      this.refresh();
+      this.game.log(`${m.name} leaves the crew. "Take care of yourself, captain."`, "#b0bec5");
+      persist(this.game);
+    }
+    setFollow(id, on) {
+      const m = this.members().find((x) => x.id === id);
+      if (!m) return false;
+      if (on && this.members().filter((x) => x.fighter && x.follow && x !== m).length >= MAX_FOLLOWERS) return false;
+      m.follow = !!on;
+      if (!on) {
+        const a = this.followers.get(id);
+        if (a) a.alive = false;
+        this.followers.delete(id);
+      }
+      return true;
+    }
+    adopt(a, m) {
+      const g = this.game;
+      a.faction = "player";
+      a.crewId = m.id;
+      a.persistent = true;
+      a.aggroPlayer = false;
+      a.provoked = false;
+      a.boss = false;
+      a.talk = a.def?.dialogue ? { def: a.def } : null;
+      a.nameColor = "#ffe082";
+      a.showName = true;
+      a.controller = new AIController({ kind: "follower", skill: 0.45, moves: a.def?.moves || [], ranged: a.def?.ranged });
+      a.stationary = false;
+      for (const list of g.spawner.populated.values()) {
+        const k = list.indexOf(a);
+        if (k >= 0) list.splice(k, 1);
+      }
+      this.followers.set(m.id, a);
+    }
+    spawnFollower(m) {
+      const g = this.game, p = g.player;
+      const def = npcDef(m.id);
+      if (!def) return null;
+      const a = makeNPC({ ...def, hostile: false, boss: false, level: Math.round(m.level || def.level || 6), when: void 0 }, p.x - 1, p.y + 0.8);
+      a.game = g;
+      g.addActor(a);
+      this.adopt(a, m);
+      return a;
+    }
+    tick(dt) {
+      const g = this.game, p = g.player, c = this.char;
+      if (!c || !p) return;
+      this.t -= dt;
+      if (this.t <= 0) {
+        this.t = 0.5;
+        for (const m of this.members()) {
+          if (!m.fighter || !m.follow) continue;
+          let a = this.followers.get(m.id);
+          if (a && !a.alive) {
+            this.followers.delete(m.id);
+            a = null;
+          }
+          if (!a && p.mode === "foot" && p.state === "idle") a = this.spawnFollower(m);
+          if (a && a.state === "knocked" && !p.inCombat) {
+            a.state = "idle";
+            a.hp = Math.round(a.d.maxHp * 0.3);
+            g.fx.text(a.x, a.y - 2, "Still standing!", "#ffe082", 0.35);
+          }
+        }
+      }
+      const mods = g.crewMods;
+      const fighting = !!p.inCombat;
+      if (this.wasFighting && !fighting && mods.doctor && p.state === "idle" && p.hp < p.d.maxHp) {
+        const heal = Math.round(p.d.maxHp * 0.3);
+        p.hp = Math.min(p.d.maxHp, p.hp + heal);
+        g.fx.text(p.x, p.y - 1.6, `+${heal}`, "#69f0ae", 0.45);
+        const doc = this.members().find((m) => m.role === "doctor");
+        g.log(`${doc?.name || "Your doctor"} patches you up.`, "#a5d6a7");
+      }
+      this.wasFighting = fighting;
+      if (p.mode === "sail" && p.ship && !p.ship.sunk) {
+        if (mods.repair && p.ship.hull < p.ship.maxHull) p.ship.hull = Math.min(p.ship.maxHull, p.ship.hull + mods.repair * dt);
+        if (mods.seaStamina) p.stamina = Math.min(p.d.maxStamina, p.stamina + 4 * dt);
+      }
+    }
+  };
+
+  // src/ui/crewPanel.js
+  function openCrew(game) {
+    const body = h("div");
+    const entry = game.ui.openPanel(body, { wide: true, id: "crew" });
+    if (!entry) return;
+    const render = () => {
+      clear(body);
+      const crew = game.crew.members();
+      body.append(h("h2", `Crew of the ${game.state.char.jr?.name || game.state.char.name}`));
+      body.append(h("p.muted", 'Companions you recruit in the world. Look for "Join my crew!" when you talk to people \u2014 a navigator, a cook, a doctor\u2026 Up to two fighters follow you on land; everyone else stays with the ship and helps from there.'));
+      if (!crew.length) body.append(h("p", "Your crew is just you, for now. Every great pirate started alone."));
+      const list = h("div.list");
+      for (const m of crew) {
+        const role = CREW_ROLES[m.role] || CREW_ROLES.fighter;
+        const actions = [];
+        if (m.fighter) {
+          actions.push(h("button.btn" + (m.follow ? ".green" : ""), {
+            on: { click: () => {
+              if (!game.crew.setFollow(m.id, !m.follow)) game.log("Only two companions can follow you on land at once.", "#ff8a80");
+              render();
+            } }
+          }, m.follow ? "Following" : "Stays aboard"));
+        }
+        actions.push(h("button.btn.red", { on: { click: () => {
+          if (confirm(`Part ways with ${m.name}? They will not come back.`)) {
+            game.crew.dismiss(m.id);
+            render();
+          }
+        } } }, "Part ways"));
+        list.appendChild(h(
+          "div.row-item",
+          h("span.ico", role.icon),
+          h("div.grow", h("b", `${m.name}`), h("div.sub", `${role.name}${m.title ? " \xB7 " + m.title : ""} \xB7 Lv ${Math.round(m.level || 1)} \xB7 joined day ${m.joined || 1}`), h("div.sub", role.desc)),
+          ...actions
+        ));
+      }
+      body.appendChild(list);
+      const mods = game.crewMods;
+      const perks = [];
+      if (mods.speedMul > 1) perks.push("+10% sailing speed");
+      if (mods.logMul > 1) perks.push("Log Pose sets twice as fast");
+      if (mods.foodMul > 1) perks.push("+50% healing from food");
+      if (mods.doctor) perks.push("Healed after every battle");
+      if (mods.repair) perks.push("Ship repairs itself at sea");
+      if (mods.cannonMul > 1) perks.push("+30% cannon damage");
+      if (mods.staminaMul > 1) perks.push("+25% stamina regeneration");
+      if (mods.poneglyphs) perks.push("Can read Poneglyphs");
+      if (mods.turnMul > 1) perks.push("Ship turns 25% faster");
+      if (perks.length) body.append(h("h3", "Crew bonuses"), h("p", perks.join(" \xB7 ")));
+    };
+    render();
+  }
+
+  // src/game/factions.js
+  var MARINE_RANKS = [
+    { name: "Seaman Recruit", merit: 0 },
+    { name: "Seaman Apprentice", merit: 40 },
+    { name: "Seaman First Class", merit: 100 },
+    { name: "Petty Officer", merit: 200 },
+    { name: "Chief Petty Officer", merit: 350 },
+    { name: "Master Chief Petty Officer", merit: 550 },
+    { name: "Warrant Officer", merit: 800 },
+    { name: "Ensign", merit: 1100, perk: "Command of a Marine sloop." },
+    { name: "Lieutenant Junior Grade", merit: 1500 },
+    { name: "Lieutenant", merit: 2e3, perk: "Rokushiki instruction at any Marine base." },
+    { name: "Lieutenant Commander", merit: 2700 },
+    { name: "Commander", merit: 3500 },
+    { name: "Captain", merit: 4500, perk: "A Marine brig, and Bondola passage across the Red Line.", req: (c) => c.flags.enteredGrandLine ? null : "Serve in the Grand Line first." },
+    { name: "Commodore", merit: 6e3, perk: "The coat of Justice.", req: (c) => c.haki.armament > 0 ? null : "Awaken Armament Haki." },
+    { name: "Rear Admiral", merit: 8e3 },
+    { name: "Vice Admiral", merit: 11e3, perk: "A Marine battleship.", req: (c) => c.haki.armament >= 30 && c.haki.observation > 0 ? null : "Armament Haki 30 and Observation Haki." },
+    { name: "Admiral", merit: 16e3, req: (c) => (c.bosses || []).length >= 25 ? null : "Defeat 25 great foes." },
+    { name: "Fleet Admiral", merit: 25e3 }
+  ];
+  var rankIndex = (name) => MARINE_RANKS.findIndex((r) => r.name === name);
+  var CRIMINALS = /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "rival"]);
+  function installFactions(game) {
+    game.marines = {
+      rank: () => game.state?.char?.marineRank || null,
+      rankIndex: () => rankIndex(game.state?.char?.marineRank),
+      isMarine: () => game.state?.char?.faction === "marine"
+    };
+    game.on("marineEnlist", (where) => enlist(game, where));
+    game.on("marineOffice", (building, island) => office(game, building, island));
+    game.on("bountyBoard", (building, island) => bountyOffice(game, building, island));
+    game.on("knockout", (a, att) => onKnockout(game, a, att));
+    game.on("enterRegion", (reg) => {
+      const c = game.state?.char;
+      if (c && isGrandLine(reg)) c.flags.enteredGrandLine = true;
+    });
+  }
+  function enlist(game, where) {
+    const c = game.state.char;
+    if (c.faction === "marine") {
+      game.log("You are already a Marine.", "#b0bec5");
+      return;
+    }
+    if (c.bounty > 0 || c.flags.deserter) {
+      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Recruiting Officer", text: `"${c.flags.deserter ? "A deserter wants back in? Guards!" : `Enlist? With a ${formatBerries(c.bounty)} bounty on your head? Get out before I arrest you.`}"` } } });
+      return;
+    }
+    game.dialogue.open(null, { start: "a", nodes: {
+      a: {
+        speaker: "Recruiting Officer",
+        text: `"You want to join the Marines? The pay is modest and the work is dangerous. You'll swear to uphold Absolute Justice and hunt pirates wherever they sail. Once you sign, there's no going back to piracy \u2014 not without a price on your head."`,
+        choices: [{ text: "I swear it. Sign me up.", next: "b" }, { text: "Not yet.", end: true }]
+      },
+      b: {
+        speaker: "Recruiting Officer",
+        text: `"Welcome to the Marines, Seaman Recruit ${c.name}! Here's your cap. Report to any Marine base for missions and pay. Capture pirates \u2014 the more notorious, the better."`,
+        onEnter: () => {
+          c.faction = "marine";
+          c.marineRank = MARINE_RANKS[0].name;
+          c.merit = 0;
+          c.marinePayDay = game.env.day;
+          c.enlistedAt = where;
+          addItem(game, "marine_cap", 1, { silent: true });
+          if (!c.equipped.hat) equip(game, "marine_cap");
+          game.ui.toast("ENLISTED", "Seaman Recruit of the Marines", "#64b5f6");
+          game.emit("marineRankChanged", c.marineRank);
+          persist(game);
+        }
+      }
+    } });
+  }
+  function nextRank(c) {
+    const i = rankIndex(c.marineRank);
+    return i >= 0 && i < MARINE_RANKS.length - 1 ? MARINE_RANKS[i + 1] : null;
+  }
+  function promote(game) {
+    const c = game.state.char;
+    const n = nextRank(c);
+    if (!n || c.merit < n.merit) return null;
+    const why = n.req ? n.req(c) : null;
+    if (why) return why;
+    c.marineRank = n.name;
+    game.ui.toast("PROMOTED!", n.name, "#64b5f6");
+    game.log(`Promoted to ${n.name}.${n.perk ? " " + n.perk : ""}`, "#90caf9");
+    const i = rankIndex(n.name);
+    const dock = game.currentIsland?.docks?.[0];
+    const pos = dock ? dock.moor : { x: game.player.x, y: game.player.y + 5 };
+    if (n.name === "Ensign") game.giveShip("sloop", pos.x, pos.y, "Marine Cutter");
+    if (n.name === "Captain") game.giveShip("brig", pos.x, pos.y, "Marine Warship");
+    if (n.name === "Vice Admiral") game.giveShip("galleon", pos.x, pos.y, "Marine Battleship");
+    if (n.name === "Commodore") {
+      addItem(game, "marine_coat", 1);
+      equip(game, "marine_coat");
+    }
+    if (i >= rankIndex("Captain")) c.flags.bondolaPass = true;
+    game.progression.breakthrough(1, `Promotion to ${n.name}`);
+    game.emit("marineRankChanged", n.name);
+    game.progression.checkDream();
+    persist(game);
+    return null;
+  }
+  function missionTarget(game) {
+    const c = game.state.char;
+    const here = REGION_INFO[regionAt(game.player.x, game.player.y)]?.id;
+    const cands = allNpcDefs().filter((d) => d.bounty && (d.boss || d.named) && d.faction !== "marine" && !c.bosses.includes(d.id) && !c.defeated[d.id]).map((d) => {
+      const isl = game.surface.islands.find((i) => i.id === d.island);
+      return { d, isl, sea: isl?.def?.sea };
+    }).filter((x) => x.isl && (x.sea === here || here === "calm_belt" && x.sea === "paradise"));
+    cands.sort((a, b) => a.d.bounty - b.d.bounty);
+    return cands[0] || null;
+  }
+  function office(game, building, island) {
+    const c = game.state.char;
+    if (c.faction !== "marine") {
+      game.dialogue.open(null, { start: "a", nodes: { a: {
+        speaker: building?.name || "Marine Base",
+        text: c.bounty > 0 ? `"Halt! This is a Marine base \u2014 and you're on our wanted list!"` : '"This is a Marine base. Here to enlist? Or to report a pirate sighting?"',
+        choices: [
+          { text: "I want to enlist.", if: () => !c.bounty, do: () => {
+            game.dialogue.close();
+            enlist(game, island?.name);
+          } },
+          { text: "Turn in bounties.", if: () => (c.claims || []).length > 0 && !c.bounty, do: () => {
+            game.dialogue.close();
+            bountyOffice(game, building, island);
+          } },
+          { text: "Leave.", end: true }
+        ]
+      } } });
+      return;
+    }
+    const n = nextRank(c);
+    const days = Math.max(0, game.env.day - (c.marinePayDay || game.env.day));
+    const idx = rankIndex(c.marineRank);
+    const pay2 = days * (300 + idx * 450);
+    const target = missionTarget(game);
+    const mission = c.marineMission;
+    game.dialogue.open(null, { start: "a", nodes: {
+      a: {
+        speaker: building?.name || "Marine Base",
+        text: () => `"${c.marineRank} ${c.name}! Merit: ${Math.floor(c.merit)}${n ? ` / ${n.merit} for ${n.name}` : ""}."${mission ? ` Current orders: capture ${mission.name}.` : ""}`,
+        choices: [
+          { text: `Collect pay (${formatBerries(pay2)})`, if: () => pay2 > 0, do: () => {
+            earn(game, pay2, "Marine salary");
+            c.marinePayDay = game.env.day;
+          }, next: "a" },
+          { text: n ? `Request promotion to ${n.name}` : "Request promotion", if: () => !!n && c.merit >= n.merit, do: () => {
+            const why = promote(game);
+            if (why) game.log(`Promotion denied: ${why}`, "#ff8a80");
+          }, next: "a" },
+          { text: () => `Orders: capture ${target?.d.name} (${formatBerries(target?.d.bounty || 0)}) on ${target?.isl.name}`, if: () => !!target && !mission, do: () => {
+            c.marineMission = { id: target.d.id, name: target.d.name, island: target.isl.name, merit: meritFor(target.d) };
+            game.log(`New orders: capture ${target.d.name} at ${target.isl.name}.`, "#90caf9");
+          }, next: "a" },
+          { text: "Rokushiki training", if: () => idx >= rankIndex("Lieutenant"), do: () => {
+            game.dialogue.close();
+            openTrainer(game, "marine_instructor", "Marine Instructor");
+          } },
+          { text: "Resign from the Marines", do: () => {
+          }, next: "resign" },
+          { text: "Dismissed.", end: true }
+        ]
+      },
+      resign: { speaker: building?.name || "Marine Base", text: `"Resign? You may hand in your cap. You'll lose your rank \u2014 but at least you won't be hunted."`, choices: [
+        { text: "Hand in the cap.", do: () => {
+          c.faction = "civilian";
+          c.flags.formerMarine = c.marineRank;
+          c.marineRank = null;
+          c.marineMission = null;
+          game.log("You resign from the Marines.", "#b0bec5");
+          persist(game);
+        }, end: true },
+        { text: "Never mind.", next: "a" }
+      ] }
+    } });
+  }
+  function meritFor(d) {
+    const b = d.bounty || d.bountyValue || 0;
+    return Math.round(Math.max(20, Math.sqrt(b / 1e3)) * (d.boss ? 1.2 : 0.8));
+  }
+  function onKnockout(game, a, att) {
+    const c = game.state?.char;
+    if (!c || !att || !att.isPlayer || a.isPlayer || a.faction === "player") return;
+    const p = game.player;
+    if (c.faction === "marine" && (a.faction === "marine" || a.faction === "cp") && !a.spar) {
+      c.flags.deserter = true;
+      c.flags.formerMarine = c.marineRank;
+      c.faction = "pirate";
+      c.marineRank = null;
+      c.marineMission = null;
+      game.ui.toast("DESERTER!", "You struck down a fellow Marine. The Navy will hunt you.", "#ff5252");
+      game.progression.addBounty(Math.max(3e7, (a.bountyValue || 0) + 2e7), "Marine deserter");
+      return;
+    }
+    if (!CRIMINALS.has(a.faction)) return;
+    const tf = threatFactor(a.power(), p.power());
+    const bounty = a.bountyValue || a.def?.bounty || 0;
+    if (c.faction === "marine") {
+      let merit = 0;
+      if (a.boss || a.named) merit = meritFor({ bounty, boss: a.boss });
+      else if (tf > 0.2) merit = 1 + Math.round(tf * 3);
+      if (c.marineMission && a.npcId === c.marineMission.id) {
+        merit += c.marineMission.merit;
+        game.ui.toast("ORDERS COMPLETE", `${a.name} captured`, "#64b5f6");
+        c.marineMission = null;
+      }
+      if (merit > 0) {
+        c.merit = (c.merit || 0) + merit;
+        game.log(`+${merit} merit (${Math.floor(c.merit)})`, "#90caf9");
+        const n = nextRank(c);
+        if (n && c.merit >= n.merit) game.hint("promote", "You have enough merit for a promotion. Report to any Marine base.");
+      }
+    } else if (c.faction !== "pirate" && bounty > 0 && (a.boss || a.named)) {
+      c.claims = c.claims || [];
+      c.claims.push({ name: a.name, amount: bounty });
+      game.log(`${a.name} is worth ${formatBerries(bounty)} to the Marines. Turn them in at a Marine base or bounty office.`, "#ffe082");
+    }
+  }
+  function bountyOffice(game, building, island) {
+    const c = game.state.char;
+    const body = h("div");
+    game.ui.openPanel(body, { wide: true });
+    body.append(h("h2", building?.name || "Bounty Office"));
+    const claims = c.claims || [];
+    if (claims.length && c.faction !== "pirate" && !c.bounty) {
+      const total = claims.reduce((s, x) => s + x.amount, 0);
+      const payout = Math.round(total * (c.faction === "marine" ? 0.1 : 0.3));
+      body.append(
+        h("p", `Bounties to claim: ${claims.map((x) => `${x.name} (${formatBerries(x.amount)})`).join(", ")}`),
+        h("button.btn.gold", { on: { click: (e) => {
+          earn(game, payout, "bounties");
+          c.claims = [];
+          e.target.disabled = true;
+          e.target.textContent = "Paid!";
+          persist(game);
+        } } }, `Collect ${formatBerries(payout)}${c.faction === "marine" ? " (Marines only receive a commendation bonus)" : ""}`)
+      );
+    }
+    if (c.bounty > 0) body.append(h("h3", "Your poster"), wantedPoster(c));
+    const wanted = allNpcDefs().filter((d) => d.bounty && d.infamy && !c.bosses.includes(d.id) && !c.defeated[d.id]).sort((a, b) => b.bounty - a.bounty).slice(0, 12);
+    body.append(h("h3", "Most Wanted"));
+    const list = h("div.list");
+    for (const d of wanted) {
+      const isl = game.surface.islands.find((i) => i.id === d.island);
+      const known = c.discovered.includes(d.island);
+      list.appendChild(h("div.row-item", h("span.ico", "\u2620"), h("div.grow", h("b", d.name), h("div.sub", `${d.title || ""}${known && isl ? " \xB7 last seen: " + isl.name : ""}`)), h("span.price", formatBerries(d.bounty))));
+    }
+    body.appendChild(list);
+    if (c.faction === "pirate") body.append(h("p.muted", "The clerk eyes you nervously and keeps one hand near the Den Den Mushi."));
+  }
+
+  // src/game/legends.js
+  var LORE2 = {
+    alabasta: "The text speaks of an ancient weapon \u2014 Pluton \u2014 and of the place where it sleeps. No wonder a certain Warlord wanted it read.",
+    shandora: 'It tells of another ancient weapon, Poseidon. And beside the ancient script, scratched in ordinary letters: "I came here and will lead this text to the very end of the world. \u2014 Pirate Gol D. Roger."',
+    apology: "An apology from a man named Joy Boy to Poseidon: he could not keep his promise to bring Fish-Man Island up into the sunlight.",
+    ohara: "Scorched, but unbroken: the stone the scholars of Ohara died to read. It speaks of a great kingdom that existed during the Void Century.",
+    laugh_tale: "The last Poneglyph. It tells the true history of the Void Century \u2014 of a great kingdom, of Joy Boy, of a promise made eight hundred years ago. You finally understand why Gol D. Roger laughed."
+  };
+  var ROAD_TEXT = "A red Road Poneglyph. Its text names a place \u2014 one of four points that, joined together on a chart, mark the location of the final island.";
+  var DEFAULT_TEXT = "It records a fragment of the Void Century \u2014 the hundred years the World Government erased from history.";
+  function installLegends(game) {
+    const canRead = () => {
+      const c = game.state.char;
+      return !!(game.crewMods?.poneglyphs || c.flags.canReadPoneglyphs || c.race === "three_eye" && (c.haki.observation || 0) >= 20);
+    };
+    game.canReadPoneglyphs = canRead;
+    game.interactions.onObject("poneglyph", (o) => {
+      const c = game.state.char;
+      const id = o.poneglyph || `${Math.round(o.x)}_${Math.round(o.y)}`;
+      const readable = canRead();
+      const seen = c.flags.poneglyphsSeen = c.flags.poneglyphsSeen || [];
+      if (!seen.includes(id)) seen.push(id);
+      let text;
+      if (!readable) {
+        text = `(A perfect cube of indestructible stone, covered in an ancient script.${o.road ? " It is red." : ""} You can't read a single word. An archaeologist could \u2014 though the World Government executes anyone who tries.)`;
+      } else {
+        const read2 = c.flags.poneglyphsReadIds = c.flags.poneglyphsReadIds || [];
+        const first = !read2.includes(id);
+        if (first) {
+          read2.push(id);
+          c.flags.poneglyphsRead = read2.length;
+          game.progression.raiseAttr("wil", 1);
+          game.emit("poneglyphRead", id);
+          game.progression.checkDream();
+        }
+        text = `${o.road ? ROAD_TEXT : LORE2[id] || DEFAULT_TEXT}${first ? ` (+1 Willpower \xB7 Poneglyphs read: ${read2.length})` : ""}`;
+      }
+      if (o.road && o.giveRubbing && !c.flags["rubbing_" + id]) {
+        c.flags["rubbing_" + id] = true;
+        addItem(game, "poneglyph_rubbing", 1);
+        text += " You press paper against the stone and take a rubbing.";
+      }
+      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: o.name || (o.road ? "Road Poneglyph" : "Poneglyph"), text } } });
+      persist(game);
+    });
+    game.interactions.onObject("bell", (o) => {
+      game.audio?.sfx("bell");
+      game.fx.ring(o.x, o.y - 2, 0.5, 14, "#ffd54f", 1.2, 0.15);
+      game.log(`The ${o.name || "bell"} rings out across the ${game.world === game.surface ? "sea" : "clouds"}.`, "#ffe082");
+      game.emit("questEvent", "rang_bell", o);
+    });
+    const laughTale = () => game.surface.islands.find((i) => i.def?.hidden);
+    let warnT = 0;
+    game.on("tick", (dt) => {
+      const c = game.state?.char, p = game.player;
+      if (!c || !p || game.world !== game.surface) return;
+      const lt = laughTale();
+      if (!lt || c.flags.laughTaleRevealed) return;
+      const d = game.world.distance(p.x, p.y, lt.x, lt.y);
+      const R = lt.radius + 70;
+      if (d < R) {
+        game.env.storm = Math.max(game.env.storm, 0.9 * (1 - d / R) + 0.3);
+        const ang = Math.atan2(p.y - lt.y, game.world.dx(lt.x, p.x));
+        const push = 9 * (1 - d / R) + 2;
+        const s = p.mode === "sail" ? p.ship : null;
+        if (s) {
+          s.x = game.world.wx(s.x + Math.cos(ang) * push * dt);
+          s.y += Math.sin(ang) * push * dt;
+          if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world);
+        } else {
+          p.x = game.world.wx(p.x + Math.cos(ang) * push * dt);
+          p.y += Math.sin(ang) * push * dt;
+        }
+        if ((warnT -= dt) <= 0) {
+          warnT = 12;
+          game.log("A storm that never ends and currents that turn back on themselves: the sea itself refuses to let you pass. Without the four Road Poneglyphs, no one can reach the final island.", "#ce93d8");
+        }
+      }
+    });
+    let revealed = false;
+    game.on("tick", () => {
+      const c = game.state?.char;
+      if (!c) {
+        revealed = false;
+        return;
+      }
+      if (c.flags.laughTaleRevealed && !revealed) {
+        revealed = true;
+        const lt = laughTale();
+        if (lt && !c.flags.laughTaleAnnounced) {
+          c.flags.laughTaleAnnounced = true;
+          game.surface.reveal(lt.x, lt.y, lt.radius + 20);
+          game.renderer.terrain.updateFog(game.surface.fog);
+          game.ui.toast("THE ROAD IS OPEN", "The four Road Poneglyphs point to the final island: Laugh Tale.", "#ffd54f");
+        }
+      }
+    });
+    game.on("characterStart", () => {
+      revealed = false;
+    });
+    game.interactions.onObject("bondola", (o) => {
+      const c = game.state.char;
+      const allowed = c.flags.bondolaPass || count(c, "wg_permit") > 0 || c.flags.celestialGuest;
+      const MG = MARY_GEOISE;
+      const up = o.port === "paradise" || o.port === "newworld";
+      if (!allowed) {
+        game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "World Government Guard", text: c.bounty > 0 ? '"A PIRATE at the Red Port?! Seize them!" (Pirates cross the Red Line the hard way: coat your ship at Sabaody and dive to Fish-Man Island.)' : '"The Bondola is reserved for the World Government, Marine officers of Captain rank and above, and guests of the Holy Land. Move along."' } } });
+        if (c.bounty > 0) game.emit("redPortAlarm", o);
+        return;
+      }
+      const go = (x, y, msg) => {
+        game.ui.fade(true);
+        setTimeout(() => {
+          const s = findShore(game.world, x, y, 8) || { x, y };
+          game.player.x = s.x;
+          game.player.y = s.y;
+          game.snapCamera();
+          game.ui.fade(false);
+          if (msg) game.ui.banner(msg[0], msg[1], msg[2], 5);
+          persist(game);
+        }, 800);
+      };
+      const moveShipTo = (port) => {
+        const mine = game.ships.filter((s2) => s2.owner === "player" && !s2.sunk && game.world.distance(s2.x, s2.y, game.player.x, game.player.y) < 80);
+        const s = mine[0];
+        if (!s) return false;
+        s.x = port.moor.x;
+        s.y = port.moor.y;
+        s.speed = 0;
+        if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world);
+        return true;
+      };
+      if (up) {
+        const here = o.port === "paradise" ? MG.portParadise : MG.portNewWorld;
+        const other = o.port === "paradise" ? MG.portNewWorld : MG.portParadise;
+        game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Bondola Operator", text: '"Destination?"', choices: [
+          { text: "Up to Mary Geoise, the Holy Land.", do: () => go(o.port === "paradise" ? W - 16 : 16, EQ + 3, ["MARY GEOISE", "The Holy Land", "Keep your eyes down. The Celestial Dragons do not like to be looked at."]), end: true },
+          { text: "Carry my ship over the Red Line.", do: () => {
+            if (!moveShipTo(other)) {
+              game.log("You have no ship in this harbour.", "#ff8a80");
+              return;
+            }
+            go(other.bondola.x - other.dir * 3, other.bondola.y + 3, ["THE RED LINE", other === MG.portNewWorld ? "New World" : "Paradise", "Your ship is hauled over the Red Line on the Bondola."]);
+          }, end: true },
+          { text: "Never mind.", end: true }
+        ] } } });
+      } else {
+        const port = o.port === "down_paradise" ? MG.portParadise : MG.portNewWorld;
+        go(port.bondola.x - port.dir * 3, port.bondola.y + 3, null);
+      }
+    });
+    game.on("tick", () => {
+      const c = game.state?.char, p = game.player;
+      if (!c || !p || c.flags.allBlue || game.world !== game.surface || p.mode !== "sail") return;
+      if (!(c.dream === "all_blue" || game.crew?.hasRole("cook"))) return;
+      const ab = allBluePoint(c);
+      if (game.world.distance(p.x, p.y, ab.x, ab.y) < 26) {
+        c.flags.allBlue = true;
+        game.ui.banner("ALL BLUE", "The miracle sea", "Fish from the East, West, North and South Blue swim together beneath your hull. The legend was true.", 8);
+        game.progression.checkDream();
+        addItem(game, "sea_king_steak", 3);
+        persist(game);
+      } else if (game.world.distance(p.x, p.y, ab.x, ab.y) < 120 && !c.flags.allBlueHint) {
+        c.flags.allBlueHint = true;
+        game.log("The fish around your ship\u2026 these are East Blue sea bream, North Blue salmon\u2026 all in one place? The All Blue must be close.", "#80deea");
+      }
+    });
+  }
+  function allBluePoint(c) {
+    const r = (c.runSeed || 1) % 1e3 / 1e3;
+    return { x: 260 + r * 1400, y: 880 + (c.runSeed || 7) % 7 * 45 };
+  }
+
   // src/main.js
   var root = document.createElement("div");
   root.id = "game";
@@ -17795,6 +19637,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     game.spawner.addBuilder(npcBuilder);
     installMap(game);
     installSea(game);
+    installZones(game);
+    new Crew(game);
+    installFactions(game);
+    installLegends(game);
     installContent(game);
     const toTitle = (afterDeath) => {
       if (!afterDeath && game.player && game.state?.char && !game.state.char.dead) persist(game);
@@ -17817,7 +19663,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       { key: "C", when: playing, fn: () => openCharacter(game) },
       { key: "K", when: playing, fn: () => openSkills(game) },
       { key: "J", when: playing, fn: () => openJournal(game) },
-      { key: "H", when: playing, fn: () => ui.openPanel(helpContent(), { wide: true, id: "help" }) }
+      { key: "H", when: playing, fn: () => ui.openPanel(helpContent(), { wide: true, id: "help" }) },
+      { key: "U", when: playing, fn: () => openCrew(game) }
     );
     ui.openMenu = () => {
       if (!playing()) return;

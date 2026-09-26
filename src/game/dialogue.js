@@ -49,6 +49,7 @@ export class Dialogue {
     const ctx = this.ctx(npc);
     if (typeof tree === 'function') tree = tree(ctx);
     if (!tree) return;
+    if (npc?.def?.recruit && this.game.crew) tree = this.game.crew.decorate(tree, npc);
     this.active = { npc, tree, ctx, node: null, typing: 0, full: '' };
     this.game.paused = true;
     if (npc && this.game.player) {

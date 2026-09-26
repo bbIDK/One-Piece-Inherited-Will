@@ -322,6 +322,31 @@ const npcs = [
       { text: 'Leave', end: true }] },
       b: { text: '(Gin eats, crying.) "...Thank you. I\'m sorry. Don Krieg is coming. Fifty ships went into the Grand Line, and one came back. He wants this restaurant. Run..."' } } }),
   },
+  {
+    id: 'johnny', name: 'Johnny', title: 'Bounty hunter', island: 'baratie', at: { spot: 'baratie_deck', ox: -5 }, level: 7, style: 'ittoryu', weapon: 'sword',
+    look: { hair: 'short', hairColor: '#212121', top: '#8d6e63', bottom: '#3e2723', goggles: true, swords: 1 },
+    recruit: { role: 'swordsman', fighter: true, requires: (c) => !!c.flags.yosakuCured, pitch: '"Aniki! You saved Yosaku\'s life! Johnny and Yosaku, the pirate-hunting duo — we\'ll follow you anywhere!"' },
+    dialogue: (ctx) => ({ start: 'a', nodes: {
+      a: { text: () => ctx.flag('yosakuCured') ? '"Yosaku\'s back on his feet! We owe you big, aniki!"' : '"H-hey! You there! My partner Yosaku collapsed — his teeth are falling out and his old wounds opened up! Is this some kind of plague?!"',
+        choices: [
+          { text: 'That\'s scurvy. He needs fresh fruit — here, a tangerine.', if: () => !ctx.flag('yosakuCured') && (ctx.has('tangerine') || ctx.has('rice_ball')), do: (c) => { if (c.has('tangerine')) c.take('tangerine', 1); else c.take('rice_ball', 1); c.setFlag('yosakuCured'); c.log('Yosaku wolfs down the fruit and colour returns to his face. (Scurvy: a lack of vitamin C.)', '#a5d6a7'); }, next: 'b' },
+          { text: 'Good luck.', end: true },
+        ] },
+      b: { text: '"He\'s... he\'s getting better already?! Aniki, you\'re a genius!"' },
+    } }),
+  },
+  {
+    id: 'yosaku', name: 'Yosaku', title: 'Bounty hunter', island: 'baratie', at: { spot: 'baratie_deck', ox: -6.5 }, level: 7, style: 'ittoryu', weapon: 'sword',
+    look: { hair: 'short', hairColor: '#6d4c41', top: '#43a047', bottom: '#2e7d32', hat: 'bandana', hatColor: '#1b5e20', swords: 1 },
+    recruit: { role: 'swordsman', fighter: true, requires: (c) => !!c.flags.yosakuCured, pitch: '"You cured me with a piece of fruit... I thought I was done for. Take me along — I\'m handy with a blade!"' },
+    dialogue: (ctx) => ({ start: 'a', nodes: { a: { text: () => ctx.flag('yosakuCured') ? '"Never felt better! Scurvy, huh? I\'ll never skip my fruit again."' : '"(Yosaku lies pale on the deck, groaning. His gums are bleeding.)"' } } }),
+  },
+  {
+    id: 'patty', name: 'Patty', title: 'Cook of the Baratie', island: 'baratie', at: { spot: 'baratie_deck', ox: 2 }, level: 9,
+    look: { hair: 'bald', skin: '#e0ac7e', top: '#fafafa', bottom: '#212121', hat: 'captain', hatColor: '#fafafa', bulk: 1.2 },
+    recruit: { role: 'cook', fighter: false, requires: (c, g) => g.quests.isDone('baratie_krieg'), pitch: '"The old geezer says a cook who\'s never seen the Grand Line is only half a cook. Fine! I\'ll cook for your crew — and you\'d better eat every bite!"' },
+    dialogue: (ctx) => ({ start: 'a', nodes: { a: { text: () => ctx.game.quests.isDone('baratie_krieg') ? '"You fought for this restaurant like one of us. Hungry? Of course you are."' : '"Welcome, you shitty customer! Sit down, eat, pay, get out!"' } } }),
+  },
   { id: 'krieg', name: 'Don Krieg', title: 'Admiral of the Krieg Pirate Armada', island: 'baratie', at: { spot: 'baratie_deck', ox: -3 }, hostile: true, boss: true, hpMul: 1.4, faction: 'pirate', level: 15,
     look: { hair: 'short', hairColor: '#212121', top: '#ffd54f', bottom: '#5d4037', skin: '#e0ac7e', bulk: 1.5, coat: '#b71c1c' }, bulk: 1.5, defMul: 0.8, moves: ['krieg_mh5', 'krieg_spears', 'krieg_cape'],
     bounty: 17000000, infamy: true, breakthrough: 3, skill: 0.4, alert: 'I am the strongest! Give me your ship and your food!',

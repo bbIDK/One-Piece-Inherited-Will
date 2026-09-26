@@ -40,13 +40,15 @@ class SeaSystem {
     const g = this.game, c = this.char;
     if (!c || !isl.name || isl.def?.islet) return;
     const first = !c.discovered.includes(isl.id);
+    const inZone = g.world !== g.surface;
     if (first) {
       c.discovered.push(isl.id);
-      g.surface.reveal(isl.x, isl.y, isl.radius + 10);
+      if (!inZone) g.surface.reveal(isl.x, isl.y, isl.radius + 10);
       g.progression?.checkDream();
     }
-    const reg = REGION_INFO[regionAt(isl.x, isl.y)];
+    const reg = inZone ? { name: g.world.name } : REGION_INFO[regionAt(isl.x, isl.y)];
     g.ui.banner(isl.name, reg?.name || '', first ? (isl.def.tagline || 'New island charted!') : isl.def.tagline || '', first ? 5 : 3);
+    if (first) g.emit('discovered', isl);
     g.audio?.music(isl.def.music || (isl.towns.length ? 'town' : 'sea'));
     if (first) persist(g);
   }
@@ -74,7 +76,7 @@ class SeaSystem {
     if (!c || g.world !== g.surface) return null;
     const p = g.player;
     const reg = regionAt(p.x, p.y);
-    const hasPose = count(c, 'log_pose') || count(c, 'new_world_log_pose');
+    const hasPose = count(c, 'log_pose') || count(c, 'new_world_log_pose') || (c.logPose.eternal && count(c, c.logPose.eternal));
     if (!hasPose) return null;
     const lp = c.logPose;
     const t = this.logTarget();
@@ -99,9 +101,14 @@ class SeaSystem {
     const isl = g.currentIsland;
     if (!isl || !isl.def?.logNext || p.mode !== 'foot' || g.world !== g.surface) return;
     const lp = c.logPose;
+    if (lp.eternal && count(c, lp.eternal)) {
+      if (lp.target !== isl.id) return; // an Eternal Pose keeps pointing at its island
+      lp.eternal = null; lp.target = null; // arrived: the ordinary log takes over again
+      g.log('You have arrived where the Eternal Pose was pointing.', '#81d4fa');
+    }
     if (lp.last === isl.id && lp.target) return;
     if (lp.setting !== isl.id) { lp.setting = isl.id; lp.progress = 0; }
-    const secs = (isl.def.logTime ?? 1) * 45; // canon log times are compressed
+    const secs = (isl.def.logTime ?? 1) * 45 / (g.crewMods?.logMul || 1); // canon log times are compressed
     lp.progress = Math.min(1, (lp.progress || 0) + dt / secs);
     if (lp.progress >= 1) {
       lp.last = isl.id;
@@ -112,6 +119,7 @@ class SeaSystem {
       lp.progress = 0;
       const t = this.logTarget();
       g.ui.toast('LOG SET', `The needle swings toward ${c.discovered.includes(lp.target) ? t?.name : 'an unknown island'}.`, '#81d4fa');
+      g.emit('logSet', lp.target);
       g.audio?.sfx('reveal');
       persist(g);
     }

@@ -429,7 +429,8 @@ export class Actor extends Entity {
   updateResources(dt) {
     const d = this.d;
     const busy = !!this.action || this.blocking || this.intent.sprint || (this.inWater && !this.gills);
-    if (!busy) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * dt);
+    const regenMul = this.isPlayer ? this.game?.crewMods?.staminaMul || 1 : 1;
+    if (!busy) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * regenMul * dt);
     else if (!this.intent.sprint && !this.inWater) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * 0.25 * dt);
     if (this.hakiUnlocked()) {
       if (this.armament) {

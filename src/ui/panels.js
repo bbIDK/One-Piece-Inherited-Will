@@ -50,8 +50,8 @@ export function openInventory(game) {
       if (!d) continue;
       (groups[d.type] = groups[d.type] || []).push({ it, d });
     }
-    const order = ['weapon', 'hat', 'coat', 'food', 'medicine', 'dial', 'fruit', 'key', 'treasure', 'material'];
-    const names = { weapon: 'Weapons', hat: 'Hats', coat: 'Coats', food: 'Food', medicine: 'Medicine', dial: 'Dials', fruit: 'Devil Fruits', key: 'Key items', treasure: 'Treasure', material: 'Materials' };
+    const order = ['weapon', 'hat', 'coat', 'food', 'medicine', 'dial', 'fruit', 'pose', 'key', 'treasure', 'material'];
+    const names = { weapon: 'Weapons', hat: 'Hats', coat: 'Coats', food: 'Food', medicine: 'Medicine', dial: 'Dials', fruit: 'Devil Fruits', pose: 'Eternal Poses', key: 'Key items', treasure: 'Treasure', material: 'Materials' };
     const right = h('div');
     if (!c.inventory.length) right.appendChild(h('p', 'Your bag is empty.'));
     for (const type of order) {
@@ -63,6 +63,7 @@ export function openInventory(game) {
         const actions = [];
         if (['weapon', 'hat', 'coat'].includes(d.type)) actions.push(h('button.btn' + (isEq ? '.red' : ''), { on: { click: () => { equip(game, it.id); render(); } } }, isEq ? 'Unequip' : 'Equip'));
         if (d.type === 'food' || d.type === 'medicine') actions.push(h('button.btn.green', { on: { click: () => { useItem(game, it.id); render(); } } }, d.type === 'food' ? 'Eat' : 'Use'));
+        if (d.type === 'pose') actions.push(h('button.btn', { on: { click: () => { useItem(game, it.id); render(); } } }, c.logPose?.eternal === it.id ? 'Following' : 'Follow'));
         if (d.type === 'dial') actions.push(h('button.btn', { on: { click: () => { useItem(game, it.id); render(); } } }, 'Learn'));
         if (d.type === 'fruit') actions.push(h('button.btn.red', { on: { click: () => confirmEat(game, it.id, () => { ui.closePanel(entry); }) } }, 'Eat…'));
         list.appendChild(h('div.row-item', { title: d.desc || '' },
@@ -346,7 +347,7 @@ export function openShipyard(game, building, island, dock) {
           card.appendChild(h('button.btn.green', { disabled: s.hull >= s.maxHull || c.berries < rp, on: { click: () => { S.repair(s, island); render(); } } }, `Repair — ${formatBerries(rp)}`));
           const ups = h('div.list', { style: { marginTop: '6px' } });
           for (const [id, u] of Object.entries(SHIP_UPGRADES)) {
-            if (id === 'coating' && !(building.coating || island?.id === 'sabaody')) continue;
+            if (id === 'coating' && !(building.coating || /sabaody/i.test(island?.id || '') || /coat/i.test(building.name || ''))) continue;
             if (id === 'seastone_keel' && !(building.seastone || island?.def?.sea === 'paradise' || island?.def?.sea === 'new_world')) continue;
             const has = s.upgrades.includes(id) || (id === 'coating' && s.coated);
             const up = S.upgradePrice(id, island);

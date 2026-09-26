@@ -50,9 +50,15 @@ export function installMap(game) {
     game.paused = true;
     const p = game.player;
     const r = game.renderer;
-    cam.zoom = Math.max(0.18, Math.min(r.cw / W * 1.02, 0.5));
-    cam.x = game.world === game.surface ? p.x : W / 2;
-    cam.y = game.world === game.surface ? Math.max(H * 0.3, Math.min(H * 0.7, p.y)) : H / 2;
+    if (game.world === game.surface) {
+      cam.zoom = Math.max(0.18, Math.min(r.cw / W * 1.02, 0.5));
+      cam.x = p.x;
+      cam.y = Math.max(H * 0.3, Math.min(H * 0.7, p.y));
+    } else {
+      const zw = game.world;
+      cam.zoom = Math.min(r.cw / zw.width, r.ch / zw.height) * 0.92;
+      cam.x = zw.width / 2; cam.y = zw.height / 2;
+    }
     wrap.classList.remove('hidden');
     layer.classList.remove('hidden');
     game.audio?.sfx('page');
@@ -73,7 +79,7 @@ export function installMap(game) {
     const env = game.env;
     const prevMode = env.mapMode;
     env.mapMode = true;
-    r.renderTerrain(game.surface, env);
+    r.renderTerrain(game.world, env);
     env.mapMode = prevMode;
     const g = r.ctx;
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -85,11 +91,12 @@ export function installMap(game) {
 
 function drawLabels(game, r, cam, layer) {
   clear(layer);
-  const w = game.surface;
+  const w = game.world;
+  const zone = w !== game.surface;
   const c = game.state.char;
   const toS = (x, y) => {
     let dx = x - cam.x;
-    dx -= W * Math.round(dx / W);
+    if (!zone) dx -= W * Math.round(dx / W);
     return [dx * cam.zoom + r.cw / 2, (y - cam.y) * cam.zoom + r.ch / 2];
   };
   const add = (cls, text, x, y, extra = {}) => {
@@ -97,28 +104,31 @@ function drawLabels(game, r, cam, layer) {
     if (sx < -200 || sy < -50 || sx > r.cw + 200 || sy > r.ch + 50) return;
     layer.appendChild(h('div.wm-label' + cls, { style: { left: sx + 'px', top: sy + 'px', ...extra } }, text));
   };
-  for (const s of SEA_LABELS) add('.sea', s.name, s.x, s.y, s.vertical ? { writingMode: 'vertical-rl', fontSize: Math.max(16, 26 * cam.zoom / 0.3) + 'px' } : { fontSize: Math.max(14, 30 * cam.zoom / 0.3) + 'px' });
+  if (zone) add('.sea', w.name, w.width / 2, 14 / cam.zoom, { fontSize: '26px' });
+  if (!zone) for (const s of SEA_LABELS) add('.sea', s.name, s.x, s.y, s.vertical ? { writingMode: 'vertical-rl', fontSize: Math.max(16, 26 * cam.zoom / 0.3) + 'px' } : { fontSize: Math.max(14, 30 * cam.zoom / 0.3) + 'px' });
   const discovered = new Set(c.discovered || []);
   for (const isl of w.islands) {
     if (!isl.name) continue;
-    const known = discovered.has(isl.id) || w.isExplored(isl.x, isl.y);
+    if (isl.def?.hidden && !c.flags.laughTaleRevealed) continue;
+    const known = zone || discovered.has(isl.id) || w.isExplored(isl.x, isl.y);
     if (!known) continue;
     add('', isl.name, isl.x, isl.y + isl.radius * 0.2 + 6 / cam.zoom, { fontSize: Math.max(11, Math.min(20, 14 * Math.sqrt(cam.zoom / 0.3))) + 'px' });
   }
-  add('', '⛰ Reverse Mountain', RM_X, EQ - 40, { fontSize: '14px' });
-  if (discovered.has('mary_geoise') || w.isExplored(0, EQ)) add('', '🏛 Mary Geoise', 4, EQ - 70, { fontSize: '13px' });
+  if (!zone) {
+    add('', '⛰ Reverse Mountain', RM_X, EQ - 40, { fontSize: '14px' });
+    if (discovered.has('mary_geoise') || w.isExplored(0, EQ)) add('', '🏛 Mary Geoise', 4, EQ - 70, { fontSize: '13px' });
+  }
   // quests
   for (const { id } of game.quests.active()) {
     const m = game.quests.marker(id);
-    if (m) add('.quest', '❗ ' + m.label, m.x, m.y - 12 / cam.zoom);
+    if (m && (!zone || m.zone === w.id)) add('.quest', '❗ ' + m.label, m.x, m.y - 12 / cam.zoom);
   }
   // log pose target
   const lp = game.logPoseTarget?.();
-  if (lp) add('.quest', '🧭', lp.x, lp.y);
+  if (lp && !zone) add('.quest', '🧭', lp.x, lp.y);
   // ships
-  for (const s of game.ships) if (s.owner === 'player' && !s.sunk && game.world === game.surface) add('', '⛵', s.x, s.y, { fontSize: '16px' });
+  for (const s of game.ships) if (s.owner === 'player' && !s.sunk) add('', '⛵', s.x, s.y, { fontSize: '16px' });
   // me
   const p = game.player;
-  if (game.world === game.surface) add('.me', '✖ You', p.x, p.y);
-  else add('.me', `✖ You (${game.world.name})`, game.zoneAnchor?.x ?? p.x, game.zoneAnchor?.y ?? p.y);
+  add('.me', '✖ You', p.x, p.y);
 }

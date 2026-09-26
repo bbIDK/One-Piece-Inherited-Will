@@ -340,7 +340,7 @@ export class UI {
       for (let i = 0; i < W; i++) {
         const tx = p.x + (i - W / 2) * scale, ty = p.y + (j - H / 2) * scale;
         const o = (j * W + i) * 4;
-        if (ty < 0 || ty >= w.height) { img[o] = 30; img[o + 1] = 40; img[o + 2] = 50; img[o + 3] = 255; continue; }
+        if (ty < 0 || ty >= w.height || (!w.wrap && (tx < 0 || tx >= w.width))) { img[o] = 30; img[o + 1] = 40; img[o + 2] = 50; img[o + 3] = 255; continue; }
         const mx = Math.floor(w.wx(tx) / 2) % map.w, my = Math.floor(ty / 2);
         const k = (my * map.w + mx) * 4;
         const explored = w.isExplored(tx, ty);

@@ -718,6 +718,93 @@ export function drawProp(g, o, t, night) {
       g.fillRect(-0.5, -0.5, 1.0, 0.07); g.fillRect(-0.5, -0.28, 1.0, 0.07);
       break;
     }
+    case 'poneglyph': {
+      // a perfect cube of indestructible stone; Road Poneglyphs are red
+      const red = !!o.road;
+      g.fillStyle = 'rgba(0,0,0,0.25)'; g.beginPath(); g.ellipse(0, 0, 1.1, 0.3, 0, 0, TAU); g.fill();
+      g.fillStyle = red ? '#8e2b22' : '#37474f'; g.fillRect(-0.95, -1.9, 1.9, 1.9);
+      g.fillStyle = red ? '#b03a2e' : '#546e7a'; g.beginPath(); g.moveTo(-0.95, -1.9); g.lineTo(-0.6, -2.25); g.lineTo(1.3, -2.25); g.lineTo(0.95, -1.9); g.closePath(); g.fill();
+      g.fillStyle = red ? '#6e2019' : '#263238'; g.beginPath(); g.moveTo(0.95, -1.9); g.lineTo(1.3, -2.25); g.lineTo(1.3, -0.35); g.lineTo(0.95, 0); g.closePath(); g.fill();
+      g.fillStyle = red ? 'rgba(255,205,180,0.45)' : 'rgba(200,230,240,0.35)';
+      for (let r = 0; r < 6; r++) for (let c = 0; c < 5; c++) {
+        const k = (r * 7 + c * 3 + (o.v || 0)) % 5;
+        g.fillRect(-0.8 + c * 0.33, -1.75 + r * 0.28, 0.1 + k * 0.03, 0.12);
+      }
+      if (night) { g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(-0.95, -1.9, 1.9, 1.9); }
+      break;
+    }
+    case 'shipwreck': {
+      g.save(); g.rotate(-0.25);
+      g.fillStyle = '#5d4037'; g.beginPath(); g.moveTo(-2.4, -0.2); g.quadraticCurveTo(0, 0.6, 2.4, -0.4); g.lineTo(2.0, -1.4); g.lineTo(-2.0, -1.1); g.closePath(); g.fill();
+      g.fillStyle = '#4e342e'; for (let x = -1.8; x < 2; x += 0.5) g.fillRect(x, -1.2, 0.08, 1.0);
+      g.fillStyle = '#3e2723'; g.fillRect(-0.1, -3.4, 0.16, 2.3);
+      g.fillStyle = 'rgba(236,239,241,0.7)'; g.beginPath(); g.moveTo(0.06, -3.2); g.lineTo(1.1, -2.7); g.lineTo(0.06, -2.2); g.fill();
+      g.restore();
+      break;
+    }
+    case 'totem': {
+      g.fillStyle = '#8d6e63'; g.fillRect(-0.3, -2.6, 0.6, 2.6);
+      for (let k = 0; k < 3; k++) {
+        const y = -2.5 + k * 0.85;
+        g.fillStyle = ['#c0392b', '#f39c12', '#27ae60'][k]; g.fillRect(-0.36, y, 0.72, 0.7);
+        g.fillStyle = '#2d3436'; g.fillRect(-0.2, y + 0.18, 0.1, 0.1); g.fillRect(0.1, y + 0.18, 0.1, 0.1); g.fillRect(-0.15, y + 0.45, 0.3, 0.06);
+      }
+      g.fillStyle = '#6d4c41'; g.fillRect(-0.7, -2.2, 0.35, 0.15); g.fillRect(0.35, -2.2, 0.35, 0.15);
+      break;
+    }
+    case 'portal': {
+      // stairwell (Impel Down) or passage
+      g.fillStyle = 'rgba(0,0,0,0.55)'; g.beginPath(); g.ellipse(0, -0.2, 1.0, 0.5, 0, 0, TAU); g.fill();
+      g.fillStyle = '#5d5d5d';
+      for (let k = 0; k < 4; k++) g.fillRect(-0.8 + k * 0.1, -0.5 + k * 0.12, 1.6 - k * 0.2, 0.1);
+      g.fillStyle = o.up ? '#90caf9' : '#ff8a65'; g.font = 'bold 0.5px sans-serif'; g.textAlign = 'center';
+      g.fillText(o.up ? '▲' : '▼', 0, -0.9 + Math.sin(t * 3) * 0.08);
+      break;
+    }
+    case 'gate': {
+      g.fillStyle = '#455a64'; g.fillRect(-2.2, -3.2, 0.6, 3.2); g.fillRect(1.6, -3.2, 0.6, 3.2);
+      g.fillStyle = '#37474f'; g.fillRect(-2.4, -3.6, 4.8, 0.5);
+      g.fillStyle = '#263238'; for (let x = -1.5; x < 1.6; x += 0.35) g.fillRect(x, -3.1, 0.1, 3.1);
+      break;
+    }
+    case 'elevator': {
+      // the Bondola: a gondola lift up the Red Line
+      g.strokeStyle = '#90a4ae'; g.lineWidth = 0.06; g.beginPath(); g.moveTo(-0.6, -6); g.lineTo(-0.6, -1.4); g.moveTo(0.6, -6); g.lineTo(0.6, -1.4); g.stroke();
+      g.fillStyle = '#eceff1'; g.strokeStyle = '#546e7a'; g.lineWidth = 0.05;
+      g.beginPath(); g.roundRect(-1.1, -1.5 + Math.sin(t) * 0.05, 2.2, 1.3, 0.2); g.fill(); g.stroke();
+      g.fillStyle = '#81d4fa'; g.fillRect(-0.9, -1.3, 0.8, 0.5); g.fillRect(0.1, -1.3, 0.8, 0.5);
+      g.fillStyle = '#1565c0'; g.font = 'bold 0.26px sans-serif'; g.textAlign = 'center'; g.fillText('W.G.', 0, -0.45);
+      break;
+    }
+    case 'skull': {
+      blob(g, 0, -0.9, 0.8, '#ecf0f1');
+      g.fillStyle = '#2d3436'; g.beginPath(); g.arc(-0.28, -1.0, 0.18, 0, TAU); g.arc(0.28, -1.0, 0.18, 0, TAU); g.fill();
+      g.fillRect(-0.3, -0.45, 0.6, 0.1);
+      break;
+    }
+    case 'tower': {
+      g.fillStyle = '#b0bec5'; g.fillRect(-0.8, -5, 1.6, 5);
+      g.fillStyle = '#78909c'; g.fillRect(-1.0, -5.3, 2.0, 0.4);
+      g.fillStyle = '#37474f'; for (let y = -4.6; y < -0.5; y += 0.9) { g.fillRect(-0.45, y, 0.25, 0.4); g.fillRect(0.2, y, 0.25, 0.4); }
+      break;
+    }
+    case 'crystal': {
+      g.fillStyle = 'rgba(128,222,234,0.85)'; g.strokeStyle = '#006064'; g.lineWidth = 0.04;
+      g.beginPath(); g.moveTo(0, -1.8); g.lineTo(0.4, -0.6); g.lineTo(0, 0); g.lineTo(-0.4, -0.6); g.closePath(); g.fill(); g.stroke();
+      break;
+    }
+    case 'mushroom': {
+      g.fillStyle = '#efebe9'; g.fillRect(-0.12, -0.8, 0.24, 0.8);
+      g.fillStyle = '#e53935'; g.beginPath(); g.ellipse(0, -0.8, 0.6, 0.35, 0, Math.PI, 0); g.fill();
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(-0.2, -0.95, 0.08, 0, TAU); g.arc(0.18, -1.0, 0.06, 0, TAU); g.fill();
+      break;
+    }
+    case 'wheel': {
+      g.strokeStyle = '#6d4c41'; g.lineWidth = 0.12;
+      g.beginPath(); g.arc(0, -1.2, 0.8, 0, TAU); g.stroke();
+      for (let k = 0; k < 8; k++) { const a = k * TAU / 8 + t * 0.2; g.beginPath(); g.moveTo(0, -1.2); g.lineTo(Math.cos(a) * 1.05, -1.2 + Math.sin(a) * 1.05); g.stroke(); }
+      break;
+    }
     default: {
       // unknown landmark: a signpost-sized marker
       g.fillStyle = '#e17055'; g.beginPath(); g.arc(0, -0.6, 0.3, 0, TAU); g.fill();
@@ -726,7 +813,7 @@ export function drawProp(g, o, t, night) {
 }
 
 export function propHeight(o) {
-  const hts = { lighthouse: 6, windmill: 5, flagpole: 3.6, torii: 3.3, platform: 4.5, bell: 3.8, arch: 3.5, statue: 2.8, pillar: 2.6, lamp: 2.4, lantern: 2.4, well: 1.9, fountain: 1.6, building: 6, tree: 4 };
+  const hts = { poneglyph: 2.3, shipwreck: 3.4, totem: 2.7, gate: 3.6, elevator: 6, tower: 5.4, lighthouse: 6, windmill: 5, flagpole: 3.6, torii: 3.3, platform: 4.5, bell: 3.8, arch: 3.5, statue: 2.8, pillar: 2.6, lamp: 2.4, lantern: 2.4, well: 1.9, fountain: 1.6, building: 6, tree: 4 };
   return hts[o.kind] ?? 1.5;
 }
 

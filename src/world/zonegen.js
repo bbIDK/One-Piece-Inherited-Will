@@ -36,8 +36,8 @@ export function generateZoneWorld(z) {
     const A = world.islands.find((i) => i.id === a), B = world.islands.find((i) => i.id === b);
     const pa = A?.spots[sa], pb = B?.spots[sb];
     if (!pa || !pb) continue;
-    placeObject(world, { kind: 'portal', x: pa.x, y: pa.y, block: false, to: { x: pb.x, y: pb.y + 1.5 }, label: `Stairs to ${B.name}` });
-    placeObject(world, { kind: 'portal', x: pb.x, y: pb.y, block: false, to: { x: pa.x, y: pa.y + 1.5 }, label: `Stairs to ${A.name}`, up: true });
+    placeObject(world, { kind: 'portal', x: pa.x, y: pa.y, block: false, to: { x: pb.x, y: pb.y + 1.5 }, interact: `Take the stairs down to ${B.name}`, use: 'portal' });
+    placeObject(world, { kind: 'portal', x: pb.x, y: pb.y, block: false, to: { x: pa.x, y: pa.y + 1.5 }, interact: `Climb the stairs to ${A.name}`, use: 'portal', up: true });
   }
   computeDistanceField(world);
   world.map = buildMapImage(world);

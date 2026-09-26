@@ -88,6 +88,7 @@ export function useItem(game, id) {
     if (d.type === 'food') {
       if (c.traits.includes('iron_stomach')) heal *= 1.3;
       if (c.dream === 'all_blue') heal *= 1.5;
+      heal *= game.crewMods?.foodMul || 1;
     }
     if (d.costsLife) {
       if (c.lives <= 1) { game.log('Ivankov refuses: "You don\'t have the years to spare, candy-boy!"', '#ff8a80'); return false; }
@@ -104,6 +105,14 @@ export function useItem(game, id) {
     return true;
   }
   if (d.type === 'fruit') return eatFruit(game, id);
+  if (d.type === 'pose' && d.target) {
+    // Eternal Pose: always points to one island, no matter where you are
+    const tgt = game.surface.islands.find((i) => i.id === d.target);
+    c.logPose.target = d.target;
+    c.logPose.eternal = id;
+    game.ui.toast('ETERNAL POSE', `The needle points to ${tgt?.name || d.target}.`, '#81d4fa');
+    return true;
+  }
   if (d.type === 'dial' && d.ability) {
     const learned = c.techniques.includes(d.ability);
     if (!learned) { c.techniques.push(d.ability); game.log(`You can now use the ${d.name} as a technique — assign it in Skills (K).`, '#80deea'); }

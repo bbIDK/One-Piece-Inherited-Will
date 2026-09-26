@@ -214,7 +214,7 @@ export class Game {
 
   updateLocation() {
     const p = this.player;
-    const isl = this.world.zone === 0 ? this.world.islandAt(p.x, p.y) || this.world.nearestIsland(p.x, p.y, 25) : this.world.islands[0] || null;
+    const isl = this.world.islandAt(p.x, p.y) || this.world.nearestIsland(p.x, p.y, this.world.zone === 0 ? 25 : 12);
     if (isl !== this.currentIsland) {
       this.currentIsland = isl;
       if (isl && isl.name && isl.name !== this.lastIslandName) {
@@ -304,7 +304,31 @@ export class Game {
     const env = this.env;
     g.setTransform(1, 0, 0, 1, 0, 0);
     const W = r.canvas.width, H = r.canvas.height;
-    if (env.rain > 0.05) {
+    const zk = this.world.zone;
+    if (zk === 2) {
+      // 10,000 m under the sea: blue light, slow bubbles, light shafts
+      g.fillStyle = 'rgba(0,70,130,0.16)'; g.fillRect(0, 0, W, H);
+      g.fillStyle = 'rgba(255,255,255,0.05)';
+      for (let k = 0; k < 4; k++) {
+        const x = ((k * 431 + env.time * 12) % (W + 400)) - 200;
+        g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 120 * r.dpr, 0); g.lineTo(x - 80 * r.dpr, H); g.lineTo(x - 180 * r.dpr, H); g.fill();
+      }
+      g.strokeStyle = 'rgba(220,245,255,0.5)'; g.lineWidth = 1.2 * r.dpr;
+      for (let i = 0; i < 40; i++) {
+        const x = (i * 173.3 + Math.sin(env.time + i) * 20) % W;
+        const y = H - ((i * 97.1 + env.time * (30 + (i % 5) * 12)) % (H + 40));
+        g.beginPath(); g.arc(x, y, (2 + (i % 3)) * r.dpr, 0, TAU); g.stroke();
+      }
+    } else if (zk === 3) {
+      const grd = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.2, W / 2, H / 2, Math.max(W, H) * 0.7);
+      grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, 'rgba(10,0,0,0.75)');
+      g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    } else if (zk === 1) {
+      const grd = g.createLinearGradient(0, 0, 0, H);
+      grd.addColorStop(0, 'rgba(255,255,255,0.18)'); grd.addColorStop(0.5, 'rgba(255,255,255,0)'); grd.addColorStop(1, 'rgba(255,250,235,0.12)');
+      g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    }
+    if (env.rain > 0.05 && !zk) {
       g.strokeStyle = `rgba(200,220,255,${0.25 + env.rain * 0.35})`;
       g.lineWidth = 1.2 * r.dpr;
       g.beginPath();
@@ -317,7 +341,7 @@ export class Game {
       }
       g.stroke();
     }
-    if (env.snow > 0.05) {
+    if (env.snow > 0.05 && zk !== 2 && zk !== 1) {
       g.fillStyle = 'rgba(255,255,255,0.85)';
       const n = Math.floor(env.snow * 200);
       const t = env.time;

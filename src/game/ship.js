@@ -90,7 +90,7 @@ export class Ship extends Entity {
     this.sailSet += (this.sail - this.sailSet) * Math.min(1, dt * 1.5);
     const rel = Math.cos(angleDiff(this.heading, windA));
     const windFactor = (0.35 + 0.65 * clamp((rel + 0.4) / 1.4, 0, 1)) * windS;
-    let target = this.def.speed * this.sailSet * windFactor;
+    let target = this.def.speed * this.sailSet * windFactor * (this.owner === 'player' ? game.crewMods?.speedMul || 1 : 1);
     // rowing / paddles work without wind
     const rowSpeed = this.def.paddle ? 0.6 : this.def.oars || this.type === 'dinghy' ? 0.42 : 0.12;
     if (this.rowing) target = Math.max(target, this.def.speed * rowSpeed * this.rowing);
@@ -187,7 +187,7 @@ export class Ship extends Entity {
       const sp = 17;
       game.combat.projectile({
         owner, ownerShip: this, x: game.world.wx(px), y: py + 0.5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, range: 16 + Math.random() * 3,
-        radius: 0.3, damage: 22, shipDamage: 26, element: 'explosion', knockback: 6, stun: 0.4, sprite: 'cannonball', hitShips: true, passWalls: true,
+        radius: 0.3, damage: 22 * (owner?.isPlayer ? game.crewMods?.cannonMul || 1 : 1), shipDamage: 26 * (owner?.isPlayer ? game.crewMods?.cannonMul || 1 : 1), element: 'explosion', knockback: 6, stun: 0.4, sprite: 'cannonball', hitShips: true, passWalls: true,
         draw: drawProjectile, delay: i * 0.05,
         onEnd: (p, g) => {
           if (g.world.isLiquid(p.x, p.y)) g.fx.burst(p.x, p.y, 10, { color: ['#e1f5fe', '#81d4fa'], speed: 3, vz: 5, g: 10, life: 0.6, size: 0.14 });
