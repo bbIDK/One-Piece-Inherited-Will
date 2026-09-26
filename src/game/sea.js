@@ -83,7 +83,7 @@ class SeaSystem {
     if (g.currentIsland?.def?.logSpins) return { angle: g.time * 9, label: 'The needle spins wildly…' };
     if (!t) {
       const isl = g.currentIsland;
-      if (isl && isGrandLine(regionAt(isl.x, isl.y)) && isl.def?.logNext) return { angle: -Math.PI / 2 + Math.sin(g.time * 7) * 0.3, label: `Setting log… ${Math.round((lp.progress || 0) * 100)}%` };
+      if (isl && isGrandLine(regionAt(isl.x, isl.y)) && isl.def?.logNext?.length) return { angle: -Math.PI / 2 + Math.sin(g.time * 7) * 0.3, label: `Setting log… ${Math.round((lp.progress || 0) * 100)}%` };
       return { angle: g.time * 3, label: isGrandLine(reg) ? 'Needle spinning…' : 'Log Pose' };
     }
     const ang = Math.atan2(t.y - p.y, g.world.dx(p.x, t.x));
@@ -100,7 +100,7 @@ class SeaSystem {
     const g = this.game, c = this.char, p = g.player;
     if (!count(c, 'log_pose') && !count(c, 'new_world_log_pose')) return;
     const isl = g.currentIsland;
-    if (!isl || !isl.def?.logNext || p.mode !== 'foot' || g.world !== g.surface) return;
+    if (!isl || !isl.def?.logNext?.length || isl.def.logSpins || p.mode !== 'foot' || g.world !== g.surface) return;
     const lp = c.logPose;
     if (lp.eternal && count(c, lp.eternal)) {
       if (lp.target !== isl.id) return; // an Eternal Pose keeps pointing at its island

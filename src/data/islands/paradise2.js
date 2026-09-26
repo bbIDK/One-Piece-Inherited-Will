@@ -340,7 +340,9 @@ export const PARADISE_2 = [
       { id: 'grove_41', dx: 0.52, dy: -0.22 }, { id: 'grove_50', dx: 0.52, dy: 0.4 },
       { id: 'grove_66', dx: 0, dy: 0.55 }, { id: 'kizaru_arrival', dx: -0.36, dy: 0.44 },
     ],
-    logNext: [], logTime: 1, danger: 6, music: 'town',
+    // The mangroves have no magnetic field of their own: the Log Pose cannot be set here (the next log is set
+    // after the dive, beyond Fish-Man Island). An empty logNext would make the engine set an undefined target.
+    logSpins: true, danger: 6, music: 'town',
     tagline: 'Seventy-nine giant mangroves at the foot of the Red Line. Bubbles, bounty hunters — and Celestial Dragons.',
   },
 

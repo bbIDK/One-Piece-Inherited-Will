@@ -95,6 +95,8 @@ const abilities = [
   // Thriller Bark
   { id: 'p2_kage_kakumei', name: 'Kage Kakumei', anim: 'cast', windup: 0.5, recover: 0.4, cd: 9, cost: { stamina: 12 }, say: 'Kage Kakumei!',
     steps: [{ hit: { shape: 'line', range: 9, width: 1.4, damage: 28, knockback: 5, stun: 0.5, heavy: true }, vfx: 'beam', color: '#263238' }] },
+  { id: 'p2_kage_zombies', name: 'Zombie Soldiers, Rise!', anim: 'cast', windup: 0.6, recover: 0.4, cd: 22, cost: { stamina: 14 }, say: 'Kishishishi! Get him, my zombies!',
+    steps: [{ summon: { archetype: 'zombie', level: 40, count: 3, name: 'Soldier Zombie', duration: 25, look: { top: '#4e342e', bottom: '#3e2723', skin: '#9e9d89', scar: true } } }] },
   { id: 'p2_tsuno_tokage', name: 'Tsuno-Tokage', anim: 'cast', windup: 0.8, recover: 0.4, cd: 12, cost: { stamina: 16 }, say: 'Tsuno-Tokage!',
     steps: [{ zone: { range: 1.8, duration: 0.6, interval: 0.3, damage: 42, color: '#37474f', atTarget: true, kind: 'field' } }] },
   { id: 'p2_tokuhollow', name: 'Tokuhollow', anim: 'cast', windup: 0.7, recover: 0.4, cd: 14, cost: { stamina: 14 }, say: 'Tokuhollow!',
@@ -226,7 +228,7 @@ const stationmaster = (id, name, island, town, building, look) => ({
 const npcs = [
   // ================================================================ WATER 7
   {
-    id: 'p2_iceburg', name: 'Iceburg', title: 'Mayor of Water 7, President of Galley-La', island: 'water_7', at: { town: 'w7_main_street', building: 'Galley-La Company Headquarters' },
+    id: 'p2_iceburg', invulnerable: true, name: 'Iceburg', title: 'Mayor of Water 7, President of Galley-La', island: 'water_7', at: { town: 'w7_main_street', building: 'Galley-La Company Headquarters' },
     look: { hair: 'pompadour', hairColor: '#1e88e5', top: '#fafafa', bottom: '#263238', coat: '#37474f', skin: '#f1c9a0' }, level: 32,
     marker: (c, g) => (['iceburg', 'truth'].includes(S(g, 'p2_cp9_conspiracy')) || S(g, 'p2_enies_lobby') === 'report' ? '?' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -255,7 +257,7 @@ const npcs = [
     } }),
   },
   {
-    id: 'p2_paulie', name: 'Paulie', title: 'Galley-La foreman, Dock 1', island: 'water_7', at: { town: 'w7_main_street', building: 'Galley-La Dock 1' }, trainer: 'galley_la',
+    id: 'p2_paulie', invulnerable: true, name: 'Paulie', title: 'Galley-La foreman, Dock 1', island: 'water_7', at: { town: 'w7_main_street', building: 'Galley-La Dock 1' }, trainer: 'galley_la',
     look: { hair: 'short', hairColor: '#fdd835', hat: 'goggles', top: '#1565c0', bottom: '#263238', skin: '#f1c9a0' }, level: 36, style: 'brawler', moves: ['p2_rope_action'],
     marker: (c, g) => (!g.quests.state('p2_cp9_conspiracy') ? '!' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -277,7 +279,7 @@ const npcs = [
     } }),
   },
   {
-    id: 'p2_lucci_w7', name: 'Rob Lucci', title: 'Galley-La shipwright (with Hattori the pigeon)', island: 'water_7', at: { town: 'w7_main_street', building: 'Galley-La Dock 1', ox: 2.6 }, ai: 'idle',
+    id: 'p2_lucci_w7', invulnerable: true, name: 'Rob Lucci', title: 'Galley-La shipwright (with Hattori the pigeon)', island: 'water_7', at: { town: 'w7_main_street', building: 'Galley-La Dock 1', ox: 2.6 }, ai: 'idle',
     look: { hair: 'long', hairColor: '#212121', top: '#fafafa', bottom: '#37474f', hat: 'captain', hatColor: '#212121', skin: '#f1c9a0' }, level: 40,
     when: (c) => !c.flags.p2_cp9Unmasked,
     dialogue: () => ({ start: 'a', nodes: {
@@ -285,7 +287,7 @@ const npcs = [
     } }),
   },
   {
-    id: 'p2_kaku_w7', name: 'Kaku', title: 'Galley-La foreman — "Mountain Wind"', island: 'water_7', at: { town: 'w7_main_street', building: 'Galley-La Dock 1', ox: -1.4 }, ai: 'idle',
+    id: 'p2_kaku_w7', invulnerable: true, name: 'Kaku', title: 'Galley-La foreman — "Mountain Wind"', island: 'water_7', at: { town: 'w7_main_street', building: 'Galley-La Dock 1', ox: -1.4 }, ai: 'idle',
     look: { hair: 'short', hairColor: '#8d6e63', nose: 'long', top: '#fafafa', bottom: '#37474f', hat: 'beanie', hatColor: '#1565c0' }, level: 40,
     when: (c) => !c.flags.p2_cp9Unmasked,
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -299,7 +301,7 @@ const npcs = [
     } }),
   },
   {
-    id: 'p2_kalifa_w7', name: 'Kalifa', title: 'Secretary to Mayor Iceburg', island: 'water_7', at: { town: 'w7_main_street', building: 'Galley-La Company Headquarters', ox: 2.4 }, ai: 'idle',
+    id: 'p2_kalifa_w7', invulnerable: true, name: 'Kalifa', title: 'Secretary to Mayor Iceburg', island: 'water_7', at: { town: 'w7_main_street', building: 'Galley-La Company Headquarters', ox: 2.4 }, ai: 'idle',
     look: { hair: 'long', hairColor: '#fdd835', top: '#212121', bottom: '#212121', skin: '#fdeee4' }, level: 36,
     when: (c) => !c.flags.p2_cp9Unmasked,
     dialogue: () => ({ start: 'a', nodes: {
@@ -307,7 +309,7 @@ const npcs = [
     } }),
   },
   {
-    id: 'p2_blueno', name: 'Blueno', title: 'Bartender', island: 'water_7', at: { town: 'w7_downtown', building: "Blueno's Bar" },
+    id: 'p2_blueno', invulnerable: true, name: 'Blueno', title: 'Bartender', island: 'water_7', at: { town: 'w7_downtown', building: "Blueno's Bar" },
     look: { hat: 'horns', hatColor: '#212121', hair: 'short', hairColor: '#212121', top: '#fafafa', bottom: '#212121', bulk: 1.3 }, bulk: 1.3, level: 38,
     when: (c) => !c.flags.p2_cp9Unmasked,
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -351,7 +353,7 @@ const npcs = [
     } }),
   },
   {
-    id: 'p2_kokoro', name: 'Kokoro', title: 'Stationmaster of Shift Station', island: 'water_7', ai: 'idle',
+    id: 'p2_kokoro', invulnerable: true, name: 'Kokoro', title: 'Stationmaster of Shift Station', island: 'water_7', ai: 'idle',
     look: { hair: 'curly', hairColor: '#fafafa', top: '#7b1fa2', bottom: '#4a148c', skin: '#f1c9a0', bulk: 1.5 }, bulk: 1.5, level: 12,
     marker: (c, g) => (S(g, 'p2_enies_lobby') === 'rocketman' ? '!' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -394,7 +396,7 @@ const npcs = [
     } }),
   },
   {
-    id: 'p2_franky', name: 'Franky', title: 'Cyborg shipwright (formerly Cutty Flam)', island: 'water_7', trainer: 'franky', adam: true, ai: 'idle',
+    id: 'p2_franky', name: 'Franky', title: 'Cyborg shipwright (formerly Cutty Flam)', island: 'water_7', trainer: 'franky', adam: true, ai: 'idle', invulnerable: true, style: 'brawler', moves: ['p2_strong_right', 'brawl_tackle'],
     look: { hair: 'pompadour', hairColor: '#29b6f6', top: '#e53935', bottom: '#1565c0', skin: '#f1c9a0', hand: '#b0bec5', bulk: 1.4, openShirt: true }, bulk: 1.4, level: 45,
     when: (c, g) => D(g, 'p2_enies_lobby'),
     marker: (c, g) => (!g.quests.state('p2_adam_wood') ? '!' : S(g, 'p2_adam_wood') === 'build' ? '?' : null),
@@ -452,7 +454,7 @@ const npcs = [
     } }),
   },
   {
-    id: 'p2_kaku_exile', name: 'Kaku', title: 'Former CP9 agent (in hiding)', island: 'st_poplar', at: { town: 'st_poplar_town', plaza: true, ox: -3 }, trainer: 'cp_defector', faction: 'civilian',
+    id: 'p2_kaku_exile', invulnerable: true, name: 'Kaku', title: 'Former CP9 agent (in hiding)', island: 'st_poplar', at: { town: 'st_poplar_town', plaza: true, ox: -3 }, trainer: 'cp_defector', faction: 'civilian',
     look: { hair: 'short', hairColor: '#8d6e63', nose: 'long', top: '#6d4c41', bottom: '#3e2723', hat: 'beanie', hatColor: '#3e2723' }, level: 48,
     when: (c, g) => D(g, 'p2_enies_lobby'),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -533,7 +535,7 @@ const npcs = [
     } }),
   },
   {
-    id: 'p2_kashii', name: 'Kashii', title: 'Giant gatekeeper of Enies Lobby', island: 'enies_lobby', at: { spot: 'main_gate' }, faction: 'civilian', level: 38, scale: 2.2, bulk: 1.6, ai: 'idle',
+    id: 'p2_kashii', invulnerable: true, name: 'Kashii', title: 'Giant gatekeeper of Enies Lobby', island: 'enies_lobby', at: { spot: 'main_gate' }, faction: 'civilian', level: 38, scale: 2.2, bulk: 1.6, ai: 'idle',
     look: { hair: 'long', hairColor: '#8d6e63', hat: 'horns', hatColor: '#9e9e9e', top: '#795548', bottom: '#4e342e', skin: '#e0ac7e' },
     when: (c, g) => !D(g, 'p2_enies_lobby'),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -625,7 +627,7 @@ const withIf = (choice, ctx) => ({ ...choice, if: choice.if ? () => choice.if(ct
 npcs.push(
   // =========================================================== THRILLER BARK
   {
-    id: 'p2_brook', name: 'Brook', title: '"Humming" Brook — the living skeleton', island: 'thriller_bark', at: { spot: 'mouth_gate' }, ai: 'idle',
+    id: 'p2_brook', invulnerable: true, name: 'Brook', title: '"Humming" Brook — the living skeleton', island: 'thriller_bark', at: { spot: 'mouth_gate' }, ai: 'idle',
     look: { skin: '#fafafa', hair: 'afro', hairColor: '#212121', top: '#212121', bottom: '#212121', hat: 'captain', hatColor: '#212121', scale: 1.15 }, level: 45,
     when: (c, g) => !D(g, TB_Q),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -640,7 +642,7 @@ npcs.push(
     } }),
   },
   {
-    id: 'p2_lola', name: 'Lola', title: '"Proposal" Lola, captain of the Rolling Pirates', island: 'thriller_bark', at: { spot: 'victims_camp' },
+    id: 'p2_lola', invulnerable: true, name: 'Lola', title: '"Proposal" Lola, captain of the Rolling Pirates', island: 'thriller_bark', at: { spot: 'victims_camp' },
     look: { hair: 'curly', hairColor: '#ffd54f', top: '#f06292', bottom: '#ad1457', skin: '#f1c9a0' }, bulk: 1.5, level: 38, bounty: 24000000,
     marker: (c, g) => (S(g, TB_Q) === 'lola' ? '!' : S(g, TB_Q) === 'dawn' ? '?' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -662,7 +664,7 @@ npcs.push(
     } }),
   },
   {
-    id: 'p2_spoil', name: 'Spoil', title: 'Chairman of the Thriller Bark Victims\' Association', island: 'thriller_bark', at: { spot: 'victims_camp' },
+    id: 'p2_spoil', invulnerable: true, name: 'Spoil', title: 'Chairman of the Thriller Bark Victims\' Association', island: 'thriller_bark', at: { spot: 'victims_camp' },
     look: { hair: 'bald', skin: '#e0ac7e', top: '#5d4037', bottom: '#3e2723', bulk: 1.2 }, level: 20, doctor: { line: '"Hold still. We\'ve all learned a little medicine, hiding in this forest."' },
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: { text: '"The Victims\' Association. Every one of us lost a shadow to Moria. We can\'t go into the sun, so we trade in the dark: salt, bandages, gossip. (He lowers his voice.) Never fall asleep on Thriller Bark."',
@@ -731,7 +733,7 @@ npcs.push(
   {
     id: 'p2_ryuma', name: 'Ryuma', title: 'General Zombie — the legendary samurai of Wano', island: 'thriller_bark', at: { spot: 'dead_forest' }, faction: 'zombie', level: 52, boss: true, hpMul: 1.3,
     look: { skin: '#e0e0e0', hair: 'topknot', hairColor: '#212121', top: '#37474f', bottom: '#263238', swords: 1 }, style: 'ittoryu', weapon: 'sword', weaponPower: 1.75,
-    moves: ['p2_shishi_sonson', 'itto_iai', 'itto_whirl', 'itto_pound'], skill: 0.65, breakthrough: 4, alert: 'Draw.',
+    moves: ['p2_shishi_sonson', 'itto_iai', 'itto_whirl', 'itto_pound'], skill: 0.65, breakthrough: 4, alert: 'Draw.', duel: true,
     marker: (c, g) => (!g.quests.state('p2_ryuma_duel') && /ittoryu|nitoryu|santoryu/.test(c.style || '') ? '!' : null),
     when: (c, g) => !D(g, 'p2_ryuma_duel'),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -745,7 +747,7 @@ npcs.push(
   {
     id: 'p2_moria', name: 'Gecko Moria', title: 'Warlord of the Sea, master of Thriller Bark', island: 'thriller_bark', faction: 'pirate', level: 58, boss: true, hpMul: 1.6, scale: 1.9, bulk: 1.5,
     look: { hair: 'spiky', hairColor: '#212121', hat: 'horns', hatColor: '#212121', skin: '#b0bec5', top: '#212121', bottom: '#4a148c', coat: '#6a1b9a', grin: true, sharpTeeth: true },
-    fruit: 'kage', fruitMastery: 80, moves: ['kage_brickbat', 'kage_steal', 'kage_doppelman', 'p2_kage_kakumei', 'p2_tsuno_tokage'], skill: 0.55,
+    fruit: 'kage', fruitMastery: 80, moves: ['kage_brickbat', 'kage_steal', 'kage_doppelman', 'p2_kage_zombies', 'p2_kage_kakumei', 'p2_tsuno_tokage'], skill: 0.55,
     bounty: 320000000, infamy: true, breakthrough: 5, lethal: true,
     alert: 'Kishishishi! Your shadow will make a fine soldier!', barks: ['Kishishishi!', 'Shadows Asgard!', 'Brick Bat!'],
     phases: [{ at: 0.5, run: (a, g) => {
@@ -765,7 +767,7 @@ npcs.push(
     alert: 'This body... it moves like you do.', when: (c) => !!c.flags.p2_shadowless,
   },
   {
-    id: 'p2_kuma_tb', name: 'Bartholomew Kuma', title: '"The Tyrant", Warlord of the Sea', island: 'thriller_bark', at: { spot: 'mast_hall' }, faction: 'marine', level: 90, ai: 'idle', scale: 1.8, bulk: 1.8,
+    id: 'p2_kuma_tb', invulnerable: true, name: 'Bartholomew Kuma', title: '"The Tyrant", Warlord of the Sea', island: 'thriller_bark', at: { spot: 'mast_hall' }, faction: 'marine', level: 90, ai: 'idle', scale: 1.8, bulk: 1.8,
     look: { hair: 'short', hairColor: '#212121', hat: 'beanie', hatColor: '#263238', ears: 'round', fur: '#263238', top: '#212121', bottom: '#212121', skin: '#8d6e63' },
     fruit: 'nikyu', when: (c, g) => S(g, TB_Q) === 'dawn' && !c.flags.p2_kumaPain,
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -814,7 +816,7 @@ npcs.push(
 
   // ========================================================= SABAODY ARCHIPELAGO
   {
-    id: 'p2_shakky', name: 'Shakky', title: 'Owner of Shakky\'s Rip-off Bar', island: 'sabaody', at: { town: 'sabaody_grove13', building: "Shakky's Rip-off Bar" },
+    id: 'p2_shakky', invulnerable: true, name: 'Shakky', title: 'Owner of Shakky\'s Rip-off Bar', island: 'sabaody', at: { town: 'sabaody_grove13', building: "Shakky's Rip-off Bar" },
     look: { hair: 'short', hairColor: '#212121', top: '#7b1fa2', bottom: '#212121', skin: '#f1c9a0' }, level: 70,
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: { text: '"Welcome to my Rip-off Bar. (She smiles through a curl of cigarette smoke.) Drinks are expensive, information is more expensive, and pirates who start trouble get their bill doubled. I used to be a pirate myself, you know — a long time ago, on an island where men aren\'t allowed."',
@@ -829,7 +831,7 @@ npcs.push(
     } }),
   },
   {
-    id: 'p2_rayleigh', name: 'Silvers Rayleigh', title: '"Dark King" — former first mate of the Roger Pirates', island: 'sabaody', at: { town: 'sabaody_grove13', building: "Shakky's Rip-off Bar", ox: 2.5 }, trainer: 'rayleigh', ai: 'idle',
+    id: 'p2_rayleigh', invulnerable: true, name: 'Silvers Rayleigh', title: '"Dark King" — former first mate of the Roger Pirates', island: 'sabaody', at: { town: 'sabaody_grove13', building: "Shakky's Rip-off Bar", ox: 2.5 }, trainer: 'rayleigh', ai: 'idle',
     look: { hair: 'long', hairColor: '#fafafa', top: '#fafafa', bottom: '#5d4037', coat: '#8d6e63', scarEye: true, swords: 1, skin: '#f1c9a0' }, level: 90,
     when: (c, g) => D(g, 'p2_sabaody_auction') && !ON(g, 'p2_rusukaina'),
     marker: (c, g) => (D(g, 'p2_summit_war') && !g.quests.state('p2_rusukaina') ? '!' : null),
@@ -847,7 +849,7 @@ npcs.push(
     } }),
   },
   {
-    id: 'p2_rayleigh_slave', name: 'Silvers Rayleigh', title: 'Lot 16 at the Human Auctioning House', island: 'sabaody', at: { spot: 'grove_1', ox: -3 }, ai: 'idle',
+    id: 'p2_rayleigh_slave', invulnerable: true, name: 'Silvers Rayleigh', title: 'Lot 16 at the Human Auctioning House', island: 'sabaody', at: { spot: 'grove_1', ox: -3 }, ai: 'idle',
     look: { hair: 'long', hairColor: '#fafafa', top: '#fafafa', bottom: '#5d4037', scarEye: true, skin: '#f1c9a0' }, level: 90,
     when: (c, g) => S(g, 'p2_sabaody_auction') === 'charlos',
     dialogue: () => ({ start: 'a', nodes: { a: { text: '(An old man in an explosive slave collar sits calmly among the lots, sipping something he definitely brought in himself.) "Hm? Don\'t mind me. I needed gambling money. ...Though I will say, that mermaid girl up on the stage is a friend of a friend."' } } }),
@@ -860,7 +862,7 @@ npcs.push(
       : '"Welcome, welcome to the Human Auctioning House of Grove 1! Giants, fish-men, a real mermaid tonight — the Celestial Dragons themselves bid here! (He grins.) Pirates are welcome too. Just don\'t make a scene."') } } }),
   },
   {
-    id: 'p2_charlos', name: 'Saint Charlos', title: 'World Noble (Celestial Dragon)', island: 'sabaody', at: { spot: 'grove_1', ox: 3 }, faction: 'civilian', level: 5, ai: 'idle',
+    id: 'p2_charlos', invulnerable: true, name: 'Saint Charlos', title: 'World Noble (Celestial Dragon)', island: 'sabaody', at: { spot: 'grove_1', ox: 3 }, faction: 'civilian', level: 5, ai: 'idle',
     look: { hat: 'bubble', hair: 'curly', hairColor: '#fafafa', top: '#fafafa', bottom: '#eceff1', bulk: 1.4, skin: '#fdeee4' }, bulk: 1.4,
     when: (c, g) => S(g, 'p2_sabaody_auction') === 'charlos',
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -882,13 +884,13 @@ npcs.push(
     } }),
   },
   {
-    id: 'p2_roswald', name: 'Saint Roswald', title: 'World Noble (Celestial Dragon)', island: 'sabaody', at: { spot: 'grove_1', ox: 5 }, faction: 'civilian', level: 5, ai: 'idle',
+    id: 'p2_roswald', invulnerable: true, name: 'Saint Roswald', title: 'World Noble (Celestial Dragon)', island: 'sabaody', at: { spot: 'grove_1', ox: 5 }, faction: 'civilian', level: 5, ai: 'idle',
     look: { hat: 'bubble', hair: 'short', hairColor: '#e0e0e0', top: '#fafafa', bottom: '#eceff1', bulk: 1.3 },
     when: (c, g) => S(g, 'p2_sabaody_auction') === 'charlos',
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"Hm? A commoner breathing near me. (He adjusts his bubble helmet so as not to share the air.) My son buys whatever he wants. That is what the world is for."' } } }),
   },
   {
-    id: 'p2_hatchan', name: 'Hatchan', title: 'Takoyaki Hachi — Fish-Man (octopus)', island: 'sabaody', at: { town: 'sabaody_grove41', building: 'Takoyaki Hachi' }, race: 'fishman',
+    id: 'p2_hatchan', invulnerable: true, name: 'Hatchan', title: 'Takoyaki Hachi — Fish-Man (octopus)', island: 'sabaody', at: { town: 'sabaody_grove41', building: 'Takoyaki Hachi' }, race: 'fishman',
     look: { hair: 'curly', hairColor: '#e53935', skin: '#ef9a9a', top: '#ffeb3b', bottom: '#5d4037' }, level: 30, bounty: 8000000,
     marker: (c, g) => (!g.quests.state('p2_sabaody_auction') ? '!' : S(g, 'p2_sabaody_auction') === 'freed' ? '?' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -908,13 +910,13 @@ npcs.push(
     } }),
   },
   {
-    id: 'p2_camie', name: 'Camie', title: 'Mermaid (kissing gourami)', island: 'sabaody', at: { town: 'sabaody_grove41', building: 'Takoyaki Hachi', ox: 2.2 }, race: 'fishman',
+    id: 'p2_camie', invulnerable: true, name: 'Camie', title: 'Mermaid (kissing gourami)', island: 'sabaody', at: { town: 'sabaody_grove41', building: 'Takoyaki Hachi', ox: 2.2 }, race: 'fishman',
     look: { hair: 'short', hairColor: '#4caf50', top: '#f8bbd0', bottom: '#f06292', skin: '#fdeee4', fin: true }, level: 3,
     when: (c, g) => D(g, 'p2_sabaody_auction'),
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"You came for me! (She flops forward and hugs you, tail and all.) Pappag says we\'re going home to Fish-Man Island. If you ever dive down, come to the Mermaid Café in Mermaid Cove! Coat your ship first, okay? Or you\'ll be squished!"' } } }),
   },
   {
-    id: 'p2_pappag', name: 'Pappag', title: 'Designer of the "Criminal" brand (starfish)', island: 'sabaody', at: { town: 'sabaody_grove41', building: 'Takoyaki Hachi', ox: -1.6 }, race: 'fishman',
+    id: 'p2_pappag', invulnerable: true, name: 'Pappag', title: 'Designer of the "Criminal" brand (starfish)', island: 'sabaody', at: { town: 'sabaody_grove41', building: 'Takoyaki Hachi', ox: -1.6 }, race: 'fishman',
     look: { hair: 'bald', skin: '#f48fb1', top: '#f48fb1', bottom: '#f06292', scale: 0.55 }, level: 3, ai: 'idle',
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"I am Pappag, the famous designer! My brand, Criminal, is worn by every fashionable Fish-Man! ...Yes, a starfish can design clothes. Have you seen my hands? No? Exactly. Genius."' } } }),
   },
@@ -954,13 +956,13 @@ npcs.push(
       : '"Gil, Rosy Life Riders. I fly flying fish between the groves. Fastest way around Sabaody — if you don\'t mind the smell."') } } }),
   },
   {
-    id: 'p2_kid', name: 'Eustass Kid', title: 'Captain of the Kid Pirates (Supernova)', island: 'sabaody', at: { spot: 'grove_1', ox: -6 }, faction: 'civilian', level: 60, ai: 'idle', bounty: 315000000,
+    id: 'p2_kid', invulnerable: true, name: 'Eustass Kid', title: 'Captain of the Kid Pirates (Supernova)', island: 'sabaody', at: { spot: 'grove_1', ox: -6 }, faction: 'civilian', level: 60, ai: 'idle', bounty: 315000000,
     look: { hair: 'spiky', hairColor: '#e53935', goggles: true, coat: '#212121', top: '#212121', bottom: '#3e2723', skin: '#f1c9a0' },
     when: (c, g) => ['auction', 'charlos'].includes(S(g, 'p2_sabaody_auction')),
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"Another rookie. There\'s eleven of us Supernovas on this archipelago right now, all heading for the New World. (He sneers at the Celestial Dragons\' box.) Only one of us is going to be Pirate King. Get in my way and I\'ll crush you."' } } }),
   },
   {
-    id: 'p2_law', name: 'Trafalgar Law', title: 'Captain of the Heart Pirates (Supernova)', island: 'sabaody', at: { spot: 'grove_1', ox: -8 }, faction: 'civilian', level: 60, ai: 'idle', bounty: 200000000,
+    id: 'p2_law', invulnerable: true, name: 'Trafalgar Law', title: 'Captain of the Heart Pirates (Supernova)', island: 'sabaody', at: { spot: 'grove_1', ox: -8 }, faction: 'civilian', level: 60, ai: 'idle', bounty: 200000000,
     look: { hair: 'short', hairColor: '#212121', hat: 'beanie', hatColor: '#fafafa', top: '#fdd835', bottom: '#5d4037', swords: 1, skin: '#e0ac7e' },
     when: (c, g) => ['auction', 'charlos'].includes(S(g, 'p2_sabaody_auction')),
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"Trafalgar Law. (He doesn\'t look up from his nodachi.) The Celestial Dragons are sitting in the front row. Someone in this room is going to do something stupid today. I\'d like to watch."' } } }),
@@ -998,7 +1000,7 @@ npcs.push(
     } }),
   },
   {
-    id: 'p2_kuma_sb', name: 'Bartholomew Kuma', title: '"The Tyrant", Warlord of the Sea', island: 'sabaody', at: { spot: 'kizaru_arrival', ox: 3 }, faction: 'marine', level: 90, ai: 'idle', scale: 1.8, bulk: 1.8,
+    id: 'p2_kuma_sb', invulnerable: true, name: 'Bartholomew Kuma', title: '"The Tyrant", Warlord of the Sea', island: 'sabaody', at: { spot: 'kizaru_arrival', ox: 3 }, faction: 'marine', level: 90, ai: 'idle', scale: 1.8, bulk: 1.8,
     look: { hair: 'short', hairColor: '#212121', hat: 'beanie', hatColor: '#263238', ears: 'round', fur: '#263238', top: '#212121', bottom: '#212121', skin: '#8d6e63' },
     fruit: 'nikyu', when: (c, g) => S(g, 'p2_sabaody_auction') === 'kuma',
     marker: () => '!',
@@ -1035,7 +1037,8 @@ function kumaTrip(c, id, name, blurb) {
 const challenge = (id, label = 'Challenge them. (Extremely dangerous)') => ({ text: label, do: (c) => { const a = findActor(c.game, id); if (a) aggro(c.game, a); }, end: true });
 const WAR = 'p2_summit_war';
 const warOn = (g, ...st) => st.includes(S(g, WAR));
-const ADMIRAL = { lethal: false, skill: 0.85, breakthrough: 8, boss: true, hpMul: 3, faction: 'marine', ai: 'guard' };
+// Headquarters' heavyweights stay at their posts: knocked down, they stand back up (and are there next visit).
+const ADMIRAL = { lethal: false, skill: 0.85, breakthrough: 8, boss: true, hpMul: 3, faction: 'marine', ai: 'guard', respawn: true, recover: 10, recoverLine: '"Hmph. Not bad... for a rookie."' };
 const kujaLook = (hair, top) => ({ hair: 'long', hairColor: hair, top, bottom: '#f5f5f5', skin: '#f1c9a0' });
 
 npcs.push(
@@ -1065,7 +1068,7 @@ npcs.push(
   {
     id: 'p2_garp', name: 'Monkey D. Garp', title: 'Vice Admiral — "Garp the Fist", Hero of the Marines', island: 'marineford', at: { town: 'marine_hq', plaza: true, ox: -4 }, ...ADMIRAL, level: 105,
     look: { hair: 'short', hairColor: '#e0e0e0', hat: 'marine', top: '#fafafa', bottom: '#1b4f72', coat: '#fafafa', coatText: 'JUSTICE', bulk: 1.4, scarEye: true, skin: '#e0ac7e' },
-    style: 'brawler', moves: ['p2_fist_of_love', 'p2_cannonball_pitch', 'brawl_tackle'], haki: { armament: 90, observation: 70 }, bounty: 200000000,
+    style: 'brawler', moves: ['p2_fist_of_love', 'p2_cannonball_pitch', 'brawl_tackle'], haki: { armament: 90, observation: 70 }, bounty: 200000000, duel: true, recoverLine: '"Bwahahaha! That\'s the spirit! Have a cracker."',
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: { text: '"Bwahahaha! (He is eating rice crackers out of a bag the size of a barrel.) So you\'re the rookie everybody\'s talking about. My grandson is a pirate, my son is a revolutionary, and I\'m a Vice Admiral because they keep trying to make me an Admiral! Want a cracker?"',
         choices: [
@@ -1107,7 +1110,7 @@ npcs.push(
     } }),
   },
   {
-    id: 'p2_tsuru', name: 'Vice Admiral Tsuru', title: '"Great Staff Officer"', island: 'marineford', at: { town: 'marine_hq', plaza: true, ox: 4 }, faction: 'marine', level: 90, ai: 'idle',
+    id: 'p2_tsuru', invulnerable: true, name: 'Vice Admiral Tsuru', title: '"Great Staff Officer"', island: 'marineford', at: { town: 'marine_hq', plaza: true, ox: 4 }, faction: 'marine', level: 90, ai: 'idle',
     look: { hair: 'bun', hairColor: '#e0e0e0', top: '#1a237e', bottom: '#1a237e', coat: '#fafafa', coatText: 'JUSTICE', skin: '#f1c9a0' },
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"Garp and Sengoku were boys when I first scolded them. (She sips tea.) Every pirate thinks they are the exception. The Wash-Wash Fruit has cleaned up many exceptions."' } } }),
   },
@@ -1176,6 +1179,7 @@ npcs.push(
     look: { hair: 'short', hairColor: '#212121', top: '#212121', bottom: '#3e2723', coat: '#212121', hat: 'captain', hatColor: '#212121', eyeColor: '#fbc02d', swords: 1, skin: '#f1c9a0' },
     level: 120, boss: true, hpMul: 3, faction: 'rival', ai: 'guard', style: 'ittoryu', weapon: 'sword', weaponPower: 2.3,
     moves: ['p2_yoru_slash', 'itto_iai', 'itto_whirl', 'itto_pound'], haki: { armament: 95, observation: 85 }, skill: 0.95, lethal: false, breakthrough: 10,
+    duel: true, respawn: true, recover: 10, recoverLine: '"...So. You have surpassed me. I will wait for you to do it again."',
     alert: 'Show me the weight of your blade.',
     marker: (c, g) => (!g.quests.state('p2_kuraigana_trial') ? '!' : S(g, 'p2_kuraigana_trial') === 'report' ? '?' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -1196,7 +1200,7 @@ npcs.push(
     } }),
   },
   {
-    id: 'p2_perona_kg', name: 'Perona', title: 'The Ghost Princess (stranded)', island: 'kuraigana', at: { spot: 'castle_gate', ox: 3 }, ai: 'idle',
+    id: 'p2_perona_kg', invulnerable: true, name: 'Perona', title: 'The Ghost Princess (stranded)', island: 'kuraigana', at: { spot: 'castle_gate', ox: 3 }, ai: 'idle',
     look: { hair: 'long', hairColor: '#f48fb1', top: '#212121', bottom: '#e91e63', hat: 'crown', hatColor: '#ffd54f', scale: 0.92 }, level: 45,
     when: (c, g) => D(g, TB_Q),
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"Horohorohoro! Some bear-man pushed me across the sea and I landed HERE. It\'s gloomy, it\'s foggy, the castle is full of bats... I LOVE it. (A tiny ghost pats your head.) The owner never talks. The baboons have swords. Don\'t tell him I ate his cake."' } } }),
@@ -1210,7 +1214,7 @@ npcs.push(
 
   // =================================================================== BOIN
   {
-    id: 'p2_heracles', name: 'Heracles', title: 'Forest Scholar of the Boin Archipelago', island: 'boin', at: { spot: 'heracles_camp' }, trainer: 'p2_heracles',
+    id: 'p2_heracles', invulnerable: true, name: 'Heracles', title: 'Forest Scholar of the Boin Archipelago', island: 'boin', at: { spot: 'heracles_camp' }, trainer: 'p2_heracles',
     look: { hat: 'horns', hatColor: '#4e342e', hair: 'long', hairColor: '#5d4037', top: '#8d6e63', bottom: '#5d4037', bulk: 1.2 }, level: 40,
     marker: (c, g) => (!g.quests.state('p2_gluttony') ? '!' : S(g, 'p2_gluttony') === 'report' ? '?' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -1259,6 +1263,7 @@ npcs.push(
   {
     id: 'p2_ivankov', name: 'Emporio Ivankov', title: 'Queen of the Kamabakka Kingdom (Revolutionary Army)', island: 'momoiro', at: { town: 'kamabakka', building: 'Kamabakka Palace' }, trainer: 'ivankov',
     look: { hair: 'afro', hairColor: '#7b1fa2', top: '#ec407a', bottom: '#4a148c', coat: '#311b92', grin: true, scale: 1.25, skin: '#f1c9a0' }, level: 80,
+    style: 'okama_kenpo', moves: ['p2_hell_wink', 'okama_pirouette'], invulnerable: true,
     when: (c, g) => D(g, 'p2_impel_down'),
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: { text: '"Hee-haw! Candy-boy! You made it out of Impel Down alive — Vanatta! (He poses.) Welcome to my kingdom. Hormones, Newkama Kenpo, Hell Wink — the queen teaches everything to her friends!"',
@@ -1304,14 +1309,16 @@ npcs.push(
 
   // ============================================================== RUSUKAINA
   {
-    id: 'p2_rayleigh_rk', name: 'Silvers Rayleigh', title: 'Your Haki teacher', island: 'rusukaina', at: { spot: 'rayleigh_camp' }, trainer: 'rayleigh', ai: 'idle',
+    id: 'p2_rayleigh_rk', invulnerable: true, name: 'Silvers Rayleigh', title: 'Your Haki teacher', island: 'rusukaina', at: { spot: 'rayleigh_camp' }, trainer: 'rayleigh', ai: 'idle',
     look: { hair: 'long', hairColor: '#fafafa', top: '#fafafa', bottom: '#5d4037', coat: '#8d6e63', scarEye: true, swords: 1, skin: '#f1c9a0' }, level: 90,
     when: (c, g) => ON(g, 'p2_rusukaina'),
     marker: (c, g) => (S(g, 'p2_rusukaina') === 'report' ? '?' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: { text: () => (at(ctx, 'p2_rusukaina', 'report')
         ? '"The lord of the plains... fell to you. (He smiles over the campfire.) The beasts will not challenge you now. That is the difference between strength and Haki: they felt it before you struck."'
-        : '"Welcome to Rusukaina. Forty-eight seasons a year, five hundred beasts you cannot beat. (He pokes the fire.) Haki is the power of doubt-free will. Go to the plains. Their lord is a monster. Win, and your will has hardened."'),
+        : at(ctx, 'p2_rusukaina', 'train')
+          ? '"Good. Now stay a while. Meditate, spar with me, hunt. Haki grows the way trees do — while you are not watching it. Come back to the fire tomorrow."'
+          : '"Welcome to Rusukaina. Forty-eight seasons a year, five hundred beasts you cannot beat. (He pokes the fire.) Haki is the power of doubt-free will. Go to the plains. Their lord is a monster. Win, and your will has hardened."'),
       choices: [
         { text: 'Train Haki', do: (c) => c.open('trainer', { trainer: 'rayleigh' }) },
         { text: 'It\'s done, Rayleigh.', if: () => at(ctx, 'p2_rusukaina', 'report'), do: (c) => c.complete('p2_rusukaina'), end: true },
@@ -1350,7 +1357,7 @@ npcs.push(
     } }),
   },
   {
-    id: 'p2_nyon', name: 'Elder Nyon', title: 'Gloriosa, former Empress of the Kuja', island: 'amazon_lily', at: { town: 'kuja_village', building: "Elder Nyon's Hut" },
+    id: 'p2_nyon', invulnerable: true, name: 'Elder Nyon', title: 'Gloriosa, former Empress of the Kuja', island: 'amazon_lily', at: { town: 'kuja_village', building: "Elder Nyon's Hut" },
     look: { hair: 'bun', hairColor: '#fafafa', top: '#7b1fa2', bottom: '#4a148c', scale: 0.6, skin: '#f1c9a0' }, level: 50,
     marker: (c, g) => (S(g, 'p2_amazon_lily') === 'nyon' ? '!' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -1382,6 +1389,7 @@ npcs.push(
     look: { hair: 'long', hairColor: '#212121', top: '#c62828', bottom: '#fafafa', coat: '#8e0000', skin: '#fdeee4' },
     style: 'black_leg', moves: ['p2_pistol_kiss', 'p2_slave_arrow', 'p2_mero_mellow', 'p2_perfume_femur'], haki: { armament: 60, observation: 55, conqueror: 30 }, skill: 0.7,
     bounty: 80000000, infamy: true, breakthrough: 5, lethal: false, alert: 'Kneel. Even if I insult you, the world will forgive me — because I am beautiful.',
+    respawn: true, recover: 12, recoverLine: '"...Enough. I have seen what I needed to see."',
     marker: (c, g) => (S(g, 'p2_amazon_lily') === 'secret' ? '!' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: {
@@ -1433,7 +1441,7 @@ npcs.push(
 
   // =========================================================== IMPEL DOWN (zone)
   {
-    id: 'p2_id_buggy', name: 'Buggy the Clown', title: 'Prisoner, Level 1 (Crimson Hell)', island: 'id_level1', at: { spot: 'cell' }, ai: 'idle', bounty: 15000000,
+    id: 'p2_id_buggy', invulnerable: true, name: 'Buggy the Clown', title: 'Prisoner, Level 1 (Crimson Hell)', island: 'id_level1', at: { spot: 'cell' }, ai: 'idle', bounty: 15000000,
     look: { hair: 'long', hairColor: '#1976d2', nose: 'red', top: '#fafafa', bottom: '#fafafa', skin: '#fafafa', hat: 'captain', hatColor: '#6d4c41' }, level: 30, fruit: 'bara',
     when: (c, g) => !D(g, 'p2_impel_down'),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -1443,12 +1451,12 @@ npcs.push(
     } }),
   },
   {
-    id: 'p2_saldeath', name: 'Saldeath', title: 'Chief Guard — commander of the Blugori', island: 'id_level1', at: { spot: 'stairs_down' }, faction: 'marine', level: 42, named: true, hostile: true, scale: 0.75,
+    id: 'p2_saldeath', name: 'Saldeath', title: 'Chief Guard — warden of Level 1 and commander of the Blugori', island: 'id_level1', at: { spot: 'stairs_down' }, faction: 'marine', level: 42, boss: true, hpMul: 1.2, breakthrough: 2, hostile: true, scale: 0.75,
     look: { hat: 'horns', hatColor: '#212121', hair: 'short', hairColor: '#212121', top: '#212121', bottom: '#4a148c', skin: '#f1c9a0' }, style: 'brawler', weapon: 'staff', moves: ['brawl_tackle', 'p2_red_demon_whip'], skill: 0.4, lethal: false,
     alert: 'Blugori! Crush the escapee!', when: (c, g) => ON(g, 'p2_impel_down'),
   },
   {
-    id: 'p2_id_mr3', name: 'Galdino (Mr. 3)', title: 'Prisoner, Level 2 (Wild Beast Hell)', island: 'id_level2', at: { spot: 'stairs_up' }, ai: 'idle', bounty: 24000000, fruit: 'doru',
+    id: 'p2_id_mr3', invulnerable: true, name: 'Galdino (Mr. 3)', title: 'Prisoner, Level 2 (Wild Beast Hell)', island: 'id_level2', at: { spot: 'stairs_up' }, ai: 'idle', bounty: 24000000, fruit: 'doru',
     look: { hair: 'spiky', hairColor: '#212121', top: '#fafafa', bottom: '#fafafa', skin: '#f1c9a0', goggles: true }, level: 34,
     when: (c, g) => !D(g, 'p2_impel_down'),
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"Hah! A breakout? How ARTISTIC. (He moulds a key out of wax in three seconds flat.) Candle Key. Opens any lock on this level. ...The Sphinx guards the stairs down. It says the names of noodles and it will eat you. Good luck, my canvas."' } } }),
@@ -1465,7 +1473,7 @@ npcs.push(
     alert: 'RAMEN! UDON! ...ITADAKIMASU!', barks: ['Soba!', 'Tanmen!', 'Thanks for the meal!'], when: (c, g) => ON(g, 'p2_impel_down'),
   },
   {
-    id: 'p2_id_bon_clay', name: 'Bentham (Mr. 2 Bon Clay)', title: 'Prisoner, Level 3 (Starvation Hell)', island: 'id_level3', at: { spot: 'stairs_up' }, ai: 'idle', fruit: 'mane',
+    id: 'p2_id_bon_clay', invulnerable: true, name: 'Bentham (Mr. 2 Bon Clay)', title: 'Prisoner, Level 3 (Starvation Hell)', island: 'id_level3', at: { spot: 'stairs_up' }, ai: 'idle', fruit: 'mane',
     look: { hair: 'short', hairColor: '#212121', top: '#fafafa', bottom: '#fafafa', skin: '#f1c9a0' }, level: 36,
     when: (c, g) => !D(g, 'p2_impel_down'),
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"Un, deux, trois! A friend breaking out of hell? The way of the okama is the way of friendship! (He strikes a swan pose on one leg, starving.) Listen: prisoners on Level 5 vanish — the guards call it the Oni Sleeve Pull. I think they go somewhere... fabulous."' } } }),
@@ -1496,7 +1504,7 @@ npcs.push(
   },
   {
     id: 'p2_ivankov_id', name: 'Emporio Ivankov', title: 'Queen of Newkama Land (Revolutionary Army)', island: 'id_newkama', at: { town: 'newkama_land', building: "Ivankov's Party Hall" }, trainer: 'ivankov',
-    look: { hair: 'afro', hairColor: '#7b1fa2', top: '#ec407a', bottom: '#4a148c', coat: '#311b92', grin: true, scale: 1.25, skin: '#f1c9a0' }, level: 80, style: 'okama_kenpo',
+    look: { hair: 'afro', hairColor: '#7b1fa2', top: '#ec407a', bottom: '#4a148c', coat: '#311b92', grin: true, scale: 1.25, skin: '#f1c9a0' }, level: 80, style: 'okama_kenpo', moves: ['p2_hell_wink', 'okama_pirouette'], invulnerable: true,
     when: (c, g) => !D(g, 'p2_impel_down'),
     marker: (c, g) => (S(g, 'p2_impel_down') === 'newkama' ? '!' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -1515,7 +1523,7 @@ npcs.push(
     } }),
   },
   {
-    id: 'p2_inazuma', name: 'Inazuma', title: 'Revolutionary — Choki Choki no Mi', island: 'id_newkama', at: { town: 'newkama_land', plaza: true, ox: 3 }, ai: 'idle',
+    id: 'p2_inazuma', invulnerable: true, name: 'Inazuma', title: 'Revolutionary — Choki Choki no Mi', island: 'id_newkama', at: { town: 'newkama_land', plaza: true, ox: 3 }, ai: 'idle',
     look: { hair: 'short', hairColor: '#e53935', top: '#212121', bottom: '#212121', skin: '#f1c9a0' }, level: 55,
     when: (c, g) => !D(g, 'p2_impel_down'),
     dialogue: () => ({ start: 'a', nodes: { a: { text: '(Inazuma snips a stone wall into a neat staircase with a pair of hands that are scissors.) "Iva-san has waited years for someone to start a breakout. Do not disappoint the queen."' } } }),
@@ -1536,17 +1544,17 @@ npcs.push(
     alert: 'Over my dead body! This is MY prison! Well — it will be!', when: (c, g) => S(g, 'p2_impel_down') === 'escape',
   },
   {
-    id: 'p2_id_jinbe', name: 'Jinbe', title: 'Warlord of the Sea (imprisoned) — "Knight of the Sea"', island: 'id_level6', at: { spot: 'deepest_cell' }, race: 'fishman', ai: 'idle',
+    id: 'p2_id_jinbe', invulnerable: true, name: 'Jinbe', title: 'Warlord of the Sea (imprisoned) — "Knight of the Sea"', island: 'id_level6', at: { spot: 'deepest_cell' }, race: 'fishman', ai: 'idle',
     look: { hair: 'long', hairColor: '#212121', skin: '#1565c0', top: '#ff7043', bottom: '#fafafa', bulk: 1.6 }, bulk: 1.6, level: 85,
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"I refused to fight Whitebeard, so they took my title and chained me here. (Jinbe sits in perfect stillness beside an empty cell.) Portgas D. Ace was held in this cell until yesterday. They moved him to Marineford for the execution. If you are going there... I will follow."' } } }),
   },
   {
-    id: 'p2_id_crocodile', name: 'Sir Crocodile', title: 'Former Warlord (Level 6 prisoner)', island: 'id_level6', at: { spot: 'deepest_cell', ox: 4 }, ai: 'idle', bounty: 81000000,
+    id: 'p2_id_crocodile', invulnerable: true, name: 'Sir Crocodile', title: 'Former Warlord (Level 6 prisoner)', island: 'id_level6', at: { spot: 'deepest_cell', ox: 4 }, ai: 'idle', bounty: 81000000,
     look: { hair: 'short', hairColor: '#212121', top: '#fafafa', bottom: '#fafafa', skin: '#f1c9a0', scar: true, hand: '#ffd54f' }, level: 80,
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"Kuhahaha. A rookie on Level 6. (The former Warlord doesn\'t get up.) Open this cell and I\'ll show you what a desert does to a prison. Or don\'t — I\'ve got nothing but time down here."' } } }),
   },
   {
-    id: 'p2_shiryu', name: 'Shiryu of the Rain', title: 'Former Head Jailer (Level 6 death row)', island: 'id_level6', at: { spot: 'deepest_cell', ox: -4 }, ai: 'idle',
+    id: 'p2_shiryu', invulnerable: true, name: 'Shiryu of the Rain', title: 'Former Head Jailer (Level 6 death row)', island: 'id_level6', at: { spot: 'deepest_cell', ox: -4 }, ai: 'idle',
     look: { hair: 'long', hairColor: '#212121', top: '#fafafa', bottom: '#fafafa', skin: '#bcaaa4', swords: 1 }, level: 88,
     dialogue: () => ({ start: 'a', nodes: { a: { text: '(A tall man in prisoner stripes smokes a cigarette he should not have.) "I used to guard this level. Then I got bored and cut down the prisoners. Now I\'m bored in here instead. ...Someone will come for me one day. It won\'t be you."' } } }),
   },
@@ -1860,15 +1868,16 @@ const quests = [
       { id: 'vice_admiral', desc: 'The war has begun! Fight across Oris Plaza: defeat Vice Admiral Momonga — or, if you wear the coat, the pirate captain Squard.', goal: { type: 'defeat', any: ['p2_momonga', 'p2_squard'], count: 1 },
         onStart: (ctx, g) => {
           const c = g.state?.char;
-          summon(g, marine(c) ? 'p2_squard' : 'p2_momonga', true);
-          spawnHere(g, { island: 'marineford', spot: 'oris_plaza', radius: 10, enemies: marine(c) ? MF_PIRATES : MF_MARINES, aggro: true });
+          const mar = marine(c || {});
+          summon(g, mar ? 'p2_squard' : 'p2_momonga', true);
+          spawnHere(g, { island: 'marineford', spot: 'oris_plaza', radius: 10, enemies: mar ? MF_PIRATES : MF_MARINES, aggro: true });
           bannerG(g, 'THE SUMMIT WAR', 'Marineford', 'Whitebeard\'s fleet surfaces inside the bay. The old man strikes the air and the sea rises into tidal waves. Three Admirals stand up from their chairs.', 7);
         } },
       { id: 'akainu', desc: 'Whitebeard has fallen. Survive until the war ends — or escape Marineford by sea.', goal: { type: 'event', event: 'p2_war_end' },
         onStart: (ctx, g) => {
           const c = g.state?.char;
           despawn(g, 'p2_ace'); despawn(g, 'p2_whitebeard');
-          if (!marine(c)) summon(g, 'p2_akainu_war', true);
+          if (!marine(c || {})) summon(g, 'p2_akainu_war', true);
           bannerG(g, 'THE END OF AN ERA', 'Oris Plaza', 'Ace falls shielding his brother from a magma fist. Whitebeard dies on his feet, without a single wound in his back. "The One Piece... is real!" Magma rains on the plaza.', 8);
         } },
     ],
@@ -1883,7 +1892,7 @@ const quests = [
   { id: 'p2_impel_down', name: 'Breakout from Impel Down', island: 'impel_down', kind: 'story',
     summary: 'Nobody has ever escaped the Great Underwater Prison. Six levels down, a queen throws a party in a secret paradise — and she is waiting for a breakout.',
     stages: [
-      { id: 'level1', island: 'id_level1', desc: 'Level 1, Crimson Hell: cross the Blade Forest to the stairs down on the east side.', goal: { type: 'reach', island: 'id_level2' } },
+      { id: 'level1', island: 'id_level1', desc: 'Level 1, Crimson Hell: cross the Blade Forest to the stairs down on the east side. Chief Guard Saldeath guards them — and beating a warden unseals the Main Gate.', goal: { type: 'reach', island: 'id_level2' } },
       { id: 'level2', island: 'id_level2', desc: 'Level 2, Wild Beast Hell: defeat the Sphinx guarding the stairs down (south-east).', goal: { type: 'defeat', npc: 'p2_sphinx' }, onStart: skipBeaten('p2_impel_down', 'level2', ['p2_sphinx']) },
       { id: 'level3', island: 'id_level3', desc: 'Level 3, Starvation Hell: defeat the Jailer Beast Minotaurus at the stairs down (south-west).', goal: { type: 'defeat', npc: 'p2_minotaurus' }, onStart: skipBeaten('p2_impel_down', 'level3', ['p2_minotaurus']) },
       { id: 'level4', island: 'id_level4', desc: 'Level 4, Burning Hell, is Chief Warden Magellan\'s level: slip past his office. On Level 5, look for a secret passage to "Newkama Land".', goal: { type: 'reach', island: 'id_newkama' } },

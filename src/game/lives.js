@@ -132,6 +132,12 @@ export class LivesSystem {
 
   capture(marine) {
     const g = this.game, p = g.player, c = p.char;
+    // already a prisoner: dragged back to the cell
+    if (g.world.id === 'impel_down' && c.flags.imprisoned) {
+      g.ui.fade(true);
+      setTimeout(() => { p.state = 'idle'; p.hp = Math.round(p.d.maxHp * 0.5); p.iframes = 2; this.placeAtRest(); g.ui.fade(false); }, 900);
+      return;
+    }
     // notorious pirates go to the Great Prison
     if (c.bounty >= 30000000 && g.sendToImpelDown && g.world === g.surface) {
       c.bounty = Math.round(c.bounty * 1.1);
@@ -199,6 +205,17 @@ export class LivesSystem {
 
   placeAtRest() {
     const g = this.game, p = g.player, c = p.char;
+    // prisoners wake up back in their cell — getting beaten is not a jailbreak
+    if (g.world.id === 'impel_down' && c.flags.imprisoned) {
+      const isl = g.world.islands.find((i) => i.id === 'id_level1');
+      const cell = isl?.spots?.cell || { x: isl?.x ?? p.x, y: isl?.y ?? p.y };
+      p.mode = 'foot'; p.onShip = false;
+      p.x = cell.x; p.y = cell.y;
+      for (const a of g.actorsNear(p.x, p.y, 16)) if (a.controller?.target === p) { a.controller.target = null; a.controller.state = 'return'; }
+      g.snapCamera();
+      g.log('You wake up back in your cell on Level 1. The guards laugh through the bars.', '#ff8a80');
+      return;
+    }
     if (g.world !== g.surface) g.leaveZone?.(true);
     const r = c.rest || c.spawn;
     if (p.onShip && p.ship) { p.ship.captain = null; p.onShip = false; }
