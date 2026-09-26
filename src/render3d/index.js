@@ -79,6 +79,12 @@ export class Renderer3D {
       viewRect: () => r2d.viewRect(),
       is3d: true,
       project: (x, y, h) => self.project(x, y, h),
+      /** Pixels per metre at a world point (h metres above ground); 0 when behind the camera. */
+      scaleAt: (x, y, h = 0.9) => self.scaleAt(x, y, h),
+      /** True in first person (the player's own body isn't drawn). */
+      get firstPerson() { return self.rig.mode === 'first'; },
+      get yaw() { return self.rig.yaw; },
+      get pitch() { return self.rig.pitch; },
     };
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -132,6 +138,13 @@ export class Renderer3D {
     v.project(this.rig.camera);
     if (v.z > 1 || v.z < -1) return [-99999, -99999];
     return [(v.x + 1) / 2 * this.r2d.cw, (1 - v.y) / 2 * this.r2d.ch];
+  }
+
+  /** Pixels per metre at a point: the projected size of a 1 m vertical step there. */
+  scaleAt(x, y, h = 0.9) {
+    const a = this.project(x, y, h), b = this.project(x, y, h + 1);
+    if (a[0] < -9999 || b[0] < -9999) return 0;
+    return Math.hypot(a[0] - b[0], a[1] - b[1]);
   }
 
   /** Where the player is aiming, in world tiles (the crosshair, or the free mouse). */

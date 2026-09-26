@@ -5,6 +5,59 @@ const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k 
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
 
 export const scenarios = {
+  // special places in first person: Reverse Mountain, the Red Line, zones, and a fight
+  fp2: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human'));
+      await step(page, 0.5);
+      const settle = async () => { for (let i = 0; i < 10; i++) { await step(page, 0.1); await frames(page, 2); } };
+      // Reverse Mountain from the sea (North Blue canal mouth)
+      await page.evaluate(() => {
+        const g = window.OP.game, p = g.player;
+        const s = g.ships.find((x) => x.owner === 'player');
+        s.x = 1860; s.y = 690; s.heading = 0.4;
+        p.mode = 'sail'; p.ship = s; p.onShip = true; s.captain = p; p.x = s.x; p.y = s.y;
+        g.view3d.rig.yaw = 0.35; g.view3d.rig.pitch = 0.12; g.env.clock = 10;
+      });
+      await settle();
+      await snap('reverse-mountain');
+      // a fight in first person
+      await page.evaluate(() => {
+        const g = window.OP.game, p = g.player;
+        p.mode = 'foot'; p.onShip = false; if (p.ship) p.ship.captain = null;
+        const { npcDef, makeNPC } = window.OP.debug;
+        const def = npcDef('arlong');
+        const isl = g.surface.islands.find((i) => i.id === def.island);
+        const t = isl.towns[0];
+        window.OP.teleport(t.plaza.x, t.plaza.y + 2);
+        const a = makeNPC({ ...def, when: undefined }, p.x + 3, p.y);
+        g.addActor(a);
+        a.provoked = true; a.aggroPlayer = true; a.controller.target = p; a.controller.state = 'chase'; g.bossTarget = a;
+        g.view3d.rig.yaw = 0; g.view3d.rig.pitch = -0.05;
+      });
+      await settle();
+      for (let k = 0; k < 6; k++) {
+        await page.evaluate(() => { const g = window.OP.game; const b = g.bossTarget; if (b) g.view3d.rig.yaw = (Math.atan2(b.y - g.player.y, g.world.dx(g.player.x, b.x)) + Math.PI * 2) % (Math.PI * 2); window.OP.input.mouse.pressed = [true, false, false]; window.OP.input.mouse.down = [true, false, false]; });
+        await step(page, 0.3);
+        await page.evaluate(() => { window.OP.input.mouse.down = [false, false, false]; });
+        await step(page, 0.2);
+        await frames(page, 2);
+        if (k === 2) await snap('fight-mid');
+      }
+      await snap('fight-late');
+      // zones
+      for (const z of ['skypiea', 'fishman_island', 'impel_down']) {
+        await page.evaluate((z) => { const g = window.OP.game; g.actors = g.actors.filter((a) => a === g.player); g.bossTarget = null; g.enterZoneById(z); g.view3d.rig.pitch = 0; }, z);
+        await settle();
+        await snap('zone-' + z);
+        await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = (v.rig.yaw + Math.PI) % (Math.PI * 2); });
+        await step(page, 0.1); await frames(page, 3);
+        await snap('zone-' + z + '-back');
+      }
+    },
+  },
   fp: {
     async run(page, snap, args) {
       await page.evaluate(() => localStorage.clear());

@@ -54,6 +54,8 @@ function installLab() {
       if (!lab.home) lab.findOpenGround();
       p.x = lab.home.x; p.y = lab.home.y;
       p.facing = 0;
+      // the lab films the classic top-down view (unless --view3d asks otherwise)
+      if (g.view3d && !lab.view3d) { if (g.settings) g.settings.view = 'classic'; g.view3d.setActive(false); }
       lab.studio();
       g.zoomBias = lab.zoom;
       g.snapCamera();
