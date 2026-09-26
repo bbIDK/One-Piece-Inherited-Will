@@ -1,6 +1,8 @@
 import { Entity } from './entity.js';
 import { derive, baseAttrs, doriki } from './stats.js';
-import { drawCharacter } from '../render/character.js';
+import { drawCharacter, drawCharacterTinted, starPath, dir4 } from '../render/character.js';
+import { actionClip, stanceFor, STANCES, STANCE_ARMED, gunKind } from '../render/anims.js';
+import { actorVisuals, drawActorExtras } from '../render/combatfx.js';
 import { getAbility, canUse, startAbility, updateAbility } from './abilities.js';
 import { STYLES } from '../data/styles.js';
 import { FRUITS } from '../data/fruits.js';
@@ -228,8 +230,9 @@ export class Actor extends Entity {
   tryM1(game) {
     if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.despair) return false;
     if (this.action) {
-      // buffer next combo hit near the end of the current swing
-      if (this.action.def.m1Chain && this.action.t > this.action.total * 0.55) this.combo.queued = true;
+      // buffer the next combo hit from partway through the current swing
+      const a = this.action;
+      if (a.def.m1Chain && a.t > a.total * this.atkSpeed() * 0.3) this.combo.queued = true;
       return false;
     }
     const style = STYLES[this.style] || STYLES.brawler;
@@ -243,7 +246,17 @@ export class Actor extends Entity {
     this.combo.step = (this.combo.step + 1) % chain.length;
     this.combo.window = 0.55 + (def.recover || 0.2);
     this.applyElementBuff();
+    this.stepIn(def);
     return true;
+  }
+
+  /** A small step into melee swings: basic attacks lunge a few inches (feel only). */
+  stepIn(def) {
+    const s = def.steps && def.steps[0];
+    if (!s || !s.hit || def.lunge === 0 || this.inWater) return;
+    const push = def.lunge ?? 1.4; // tiles/s, decays with the knockback damping (~0.17 tiles)
+    this.kb.x += Math.cos(this.facing) * push;
+    this.kb.y += Math.sin(this.facing) * push;
   }
 
   applyElementBuff() {
@@ -256,10 +269,16 @@ export class Actor extends Entity {
   }
 
   tryHeavy(game) {
-    if (!this.canAct()) return false;
     const style = STYLES[this.style] || STYLES.brawler;
     let def = getAbility(style.heavyId);
     if (style.weapon && !this.hasWeapon(style.weapon)) def = getAbility(STYLES.brawler.heavyId);
+    // a heavy may cancel the recovery of a basic swing once that swing has landed
+    const a = this.action;
+    if (a && a.def.m1Chain && a.step >= (a.def.steps || []).length && a.t > (a.def.windup ?? 0.07) + 0.04 && this.state === 'idle' && this.hitstun <= 0 && canUse(this, def)) {
+      this.action = null;
+      this.combo.queued = false;
+    }
+    if (!this.canAct()) return false;
     if (!canUse(this, def)) return false;
     startAbility(this, def, game);
     this.applyElementBuff();
@@ -302,10 +321,12 @@ export class Actor extends Entity {
     const R = RACES[this.race] || {};
     const dist = 3.2 * (this.race === 'skypiean' ? 1.3 : 1) * (this.race === 'lunarian' ? 1.4 : 1) * (this.dashMul || 1);
     const time = 0.22;
-    this.dash = { vx: dx / len * dist / time, vy: dy / len * dist / time, t: time, dodge: true, ignoreWater: this.race === 'lunarian' };
+    this.dash = { vx: dx / len * dist / time, vy: dy / len * dist / time, t: time, t0: time, dodge: true, ignoreWater: this.race === 'lunarian' };
     this.iframes = Math.max(this.iframes, 0.2 + (this.race === 'mink' ? 0.05 : 0));
     this.dodgeCd = 0.42 - this.attrs.agi * 0.0015;
-    game.fx.burst(this.x, this.y, 6, { color: '#d7ccc8', speed: 2, g: 3, life: 0.3, kind: 'smoke', size: 0.18 });
+    // visuals: a kick of dust where you pushed off (afterimages follow the dash, see fx.js)
+    this._ghostTint = this.race === 'lunarian' ? '#ffab91' : this.race === 'skypiean' ? '#ffffff' : '#b3e5fc';
+    game.fx.burst(this.x, this.y, 7, { angle: Math.atan2(-dy, -dx), spread: 1.6, color: ['#d7ccc8', '#bcaaa4', '#efebe9'], speed: 2.4, z: 0.08, vz: 0.6, g: 1.2, life: 0.5, kind: 'dust', size: 0.2, grow: 0.45 });
     game.audio?.sfx('dodge');
     if (this.isPlayer) game.emit('playerDodge');
     return R;
@@ -548,6 +569,73 @@ export class Actor extends Entity {
   }
 
   // --- drawing -------------------------------------------------------------------
+  /**
+   * Everything the renderer needs to pose this actor this frame: the
+   * technique's clip, the style's stance, eased transitions between clips and
+   * states, dodge/hurt/launch/get-up poses and the hit squash. Visual only.
+   */
+  visualPose(env, look, act, aura, alphaBuff) {
+    const now = env.time;
+    const vdt = Math.min(0.1, Math.max(0, now - (this._vt ?? now)));
+    this._vt = now;
+    const wpn = this.weapon ? { kind: this.weapon.kind, count: this.weapon.count || 1, gun: gunKind(this.weapon) } : null;
+    const stance = stanceFor(this.style, wpn);
+    if (act) this._lastActT = now;
+    const ai = this.controller;
+    const npcFight = !this.isPlayer && ai && ai.target && ai.state === 'chase';
+    const combat = now - (this._lastActT ?? -99) < 2.5 || this.blocking || this.hitstun > 0 || (this.isPlayer ? !!this.inCombat : !!npcFight);
+    const hurt = this.state === 'idle' && this.hitstun > 0.2 && !act;
+    const dodging = !!(this.dash && this.dash.dodge);
+    let anim = null;
+    if (act) {
+      if (!act.clip) act.clip = actionClip(act.def, this, stance);
+      anim = act.clip;
+      anim.t = act.t;
+    }
+    // ease between clips, stances and states instead of snapping
+    const mode = act || `${this.state}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${this.inWater ? 'w' : ''}`;
+    if (mode !== this._mode) {
+      this._blendFrom = this._lastP || null;
+      this._blendT = 0;
+      this._blendDur = act ? Math.min(0.06, (act.def.windup ?? 0.1) * 0.45) : hurt ? 0.05 : 0.12;
+      this._mode = mode;
+    }
+    this._blendT = (this._blendT || 0) + vdt;
+    // getting back up after a knockdown
+    if (this._wasDown && this.state === 'idle') this._getUpT = 0.5;
+    this._wasDown = this.state === 'knocked';
+    if (this._getUpT > 0) this._getUpT -= vdt;
+    const pose = {
+      facing: this.facing, walk: this.walk, moving: this.moving, time: now + this.seed,
+      state: this.state === 'knocked' ? 'knocked' : hurt ? 'hurt' : this.state,
+      swimming: this.inWater, alpha: alphaBuff ? alphaBuff.alpha : this.fadeAlpha, aura,
+      anim, stanceP: STANCES[stance], combat, sprint: !!(this.intent.sprint && this.moving),
+      weapon: wpn, armed: !!wpn && ((combat && !!STANCE_ARMED[stance]) || !!(anim && anim.weapon)), armament: this.armament,
+      knockT: this.knockT,
+    };
+    if (this.blocking) { pose.block = this.blockTime; pose.armedBlock = pose.armed; }
+    if (dodging && !act) {
+      const d = this.dash;
+      pose.dodge = Math.min(1, Math.max(0, 1 - d.t / (d.t0 || 0.22)));
+      const dl = Math.hypot(d.vx, d.vy) || 1;
+      const view = dir4(this.facing);
+      pose.dodgeDir = view === 'left' || view === 'right' ? (d.vx * Math.cos(this.facing) + d.vy * Math.sin(this.facing)) / dl : 0;
+    }
+    if (hurt) pose.hurtK = Math.min(1, this.hitstun / 0.35);
+    const kbm = Math.hypot(this.kb.x, this.kb.y);
+    if (kbm > 6 && this.hitstun > 0 && !act && this.state === 'idle') { pose.launch = Math.min(1, (kbm - 6) / 10); pose.z = 0.25 * pose.launch; }
+    if (this._getUpT > 0 && this.state === 'idle' && !act) pose.getUp = 1 - this._getUpT / 0.5;
+    if (this._blendFrom && this._blendT < this._blendDur && this.state === 'idle') pose.blend = { P: this._blendFrom, k: this._blendT / this._blendDur };
+    // squash on a landed hit
+    const hf = this.hitFx;
+    if (hf) {
+      const hk = (now - hf.t0) / 0.18;
+      if (hk >= 0 && hk < 1) pose.squash = 1 - 0.14 * Math.min(1, hf.w) * Math.sin(hk * Math.PI);
+    }
+    Object.assign(pose, actorVisuals(this, act, anim));
+    return pose;
+  }
+
   draw(g, env) {
     const buffLook = this.buffs.find((b) => b.look);
     let look = buffLook ? { ...this.look, ...buffLook.look } : this.look;
@@ -556,17 +644,20 @@ export class Actor extends Entity {
     if (scaleBuff) look = { ...look, scale: (look.scale || 1) * scaleBuff.mods.scale };
     const act = this.action;
     const alphaBuff = this.buffs.find((b) => b.alpha !== undefined);
-    const aura = this.buffs.find((b) => b.aura)?.aura || (this.armament && !this.isPlayer ? null : null) || (this.conquerorInfused ? 'rgba(0,0,0,0.8)' : null);
-    const pose = {
-      facing: this.facing, walk: this.walk, moving: this.moving, time: env.time + this.seed,
-      action: this.blocking ? 'block' : act ? act.def.anim : null,
-      actionT: act ? Math.min(1, act.t / Math.max(0.05, act.total)) : 0,
-      state: this.state === 'knocked' ? 'knocked' : this.hitstun > 0.2 ? 'hurt' : this.state,
-      swimming: this.inWater, alpha: alphaBuff ? alphaBuff.alpha : this.fadeAlpha, aura,
-    };
-    if (this.flashT > 0) g.filter = 'brightness(2.4)';
-    drawCharacter(g, look, pose);
-    if (this.flashT > 0) g.filter = 'none';
+    const aura = this.buffs.find((b) => b.aura)?.aura || (this.conquerorInfused ? 'rgba(0,0,0,0.8)' : null);
+    const pose = this.visualPose(env, look, act, aura, alphaBuff);
+    // a quick shiver while the hit-stop holds the frame
+    const hf = this.hitFx;
+    const shiver = hf ? (env.time - hf.t0) / 0.14 : 1;
+    g.save();
+    if (shiver >= 0 && shiver < 1 && this.state === 'idle') g.translate(Math.sin(env.time * 170) * 0.045 * Math.min(1, hf.w) * (1 - shiver), 0);
+    drawActorExtras(g, this, look, pose, env, 'back');
+    // hit flash: a pure white body for a few frames, then fading back
+    if (this.flashT > 0) drawCharacterTinted(g, look, pose, '#ffffff', this.flashT > 0.075 ? 1 : this.flashT / 0.075 * 0.8);
+    else drawCharacter(g, look, pose);
+    drawActorExtras(g, this, look, pose, env, 'front');
+    g.restore();
+    this._lastP = pose.P; this._lastPose = pose; this._lastLook = look;
     const s = look.scale || 1;
     // status visuals
     if (this.status.freeze) {
@@ -576,10 +667,13 @@ export class Actor extends Entity {
     if (this.status.root) { g.strokeStyle = '#8d6e63'; g.lineWidth = 0.06; g.beginPath(); g.ellipse(0, -0.2, 0.4, 0.15, 0, 0, TAU); g.stroke(); }
     if (this.status.despair) { g.fillStyle = 'rgba(80,60,120,0.6)'; g.font = 'bold 0.3px sans-serif'; g.textAlign = 'center'; g.fillText('...sorry I was born', 0, -2.0 * s); }
     if (this.hitstun > 0.4 || this.status.shock) {
+      // dazed: little drawn stars circling the head
+      g.lineWidth = 0.018; g.strokeStyle = 'rgba(90,60,0,0.85)';
       for (let k = 0; k < 3; k++) {
         const a = env.time * 6 + k * TAU / 3;
-        g.fillStyle = '#ffeb3b'; g.font = '0.26px sans-serif'; g.textAlign = 'center';
-        g.fillText('✦', Math.cos(a) * 0.35, -1.75 * s + Math.sin(a) * 0.1);
+        g.fillStyle = k % 2 ? '#fff59d' : '#ffeb3b';
+        starPath(g, Math.cos(a) * 0.36, -1.78 * s + Math.sin(a) * 0.1, 0.085 * (0.85 + 0.15 * Math.sin(a * 2)), 4, 0.42, a);
+        g.fill(); g.stroke();
       }
     }
     if (this.armament) {

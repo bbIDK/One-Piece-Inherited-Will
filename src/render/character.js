@@ -1191,6 +1191,39 @@ export function drawCharacter(g, look, pose) {
   g.restore();
 }
 
+let tintCanvas = null;
+/**
+ * Draw a character washed toward a flat colour (the white hit flash): the
+ * body is rendered once into a scratch canvas, tinted there, then composited.
+ * Much cheaper than a context filter on every stroke.
+ */
+export function drawCharacterTinted(g, look, pose, color = '#ffffff', amount = 1) {
+  if (typeof document === 'undefined' || !g.getTransform) { drawCharacter(g, look, pose); return; }
+  const m = g.getTransform();
+  const px = Math.hypot(m.a, m.b) || 1;
+  const s = (look.scale || 1) * (look.legs > 1 ? 1.3 : 1);
+  const W = Math.ceil(4.4 * s * px), H = Math.ceil(4.6 * s * px);
+  if (W * H > 4e6) { drawCharacter(g, look, pose); return; }
+  if (!tintCanvas) tintCanvas = document.createElement('canvas');
+  if (tintCanvas.width < W || tintCanvas.height < H) { tintCanvas.width = Math.max(W, tintCanvas.width); tintCanvas.height = Math.max(H, tintCanvas.height); }
+  const c = tintCanvas.getContext('2d');
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  c.clearRect(0, 0, W, H);
+  const ox = W / 2, oy = H - 0.8 * s * px;
+  c.setTransform(px, 0, 0, px, ox, oy);
+  drawCharacter(c, look, pose);
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.globalCompositeOperation = 'source-atop';
+  c.globalAlpha = Math.max(0, Math.min(1, amount));
+  c.fillStyle = color; c.fillRect(0, 0, W, H);
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  g.save();
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.drawImage(tintCanvas, 0, 0, W, H, m.e - ox, m.f - oy, W, H);
+  g.restore();
+}
+
 /** Gatling-style flurries: a fan of fists (or feet) blurring in front of the body. */
 function drawFlurry(g, look, pose, rig, side, t) {
   const f = pose.flurry;

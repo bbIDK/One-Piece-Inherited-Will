@@ -2637,6 +2637,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     p.arc(cx, cy, r, a0, a1, ccw);
     return p;
   }
+  var CTX = { willReadFrequently: true };
   var cache = /* @__PURE__ */ new Map();
   var scratch = {};
   function scr(name, px) {
@@ -2646,7 +2647,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       s.width = px;
       s.height = px;
     }
-    const t = s.getContext("2d");
+    const t = s.getContext("2d", CTX);
     t.setTransform(1, 0, 0, 1, 0, 0);
     t.globalCompositeOperation = "source-over";
     t.globalAlpha = 1;
@@ -2660,7 +2661,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const c = document.createElement("canvas");
     c.width = c.height = px;
     c.style.width = c.style.height = size + "px";
-    const g = c.getContext("2d");
+    const g = c.getContext("2d", CTX);
     const k = px / U;
     g.setTransform(k, 0, 0, k, 0, 0);
     g.lineJoin = "round";
@@ -2726,7 +2727,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     I.inBadge ? fn() : after(I, fn, true);
   }
   function hilite(I, p, color, hd, a, inset, rule) {
-    const s = scr("hl", I.px), t = s.getContext("2d");
+    const s = scr("hl", I.px), t = s.getContext("2d", CTX);
     t.setTransform(I.g.getTransform());
     t.fillStyle = color;
     const [ix, iy] = lvec(I, inset, inset), [hx, hy] = lvec(I, inset + hd, inset + hd);
@@ -2846,7 +2847,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var HALO_A = 0.5;
   function rim(I, rpx = I.rimPx, hpx = 0) {
     if (rpx <= 0) return;
-    const s = scr("rim", I.px), t = s.getContext("2d");
+    const s = scr("rim", I.px), t = s.getContext("2d", CTX);
     t.drawImage(I.c, 0, 0);
     t.globalCompositeOperation = "source-in";
     t.fillStyle = OUT;
@@ -2854,7 +2855,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     let h2 = null;
     if (hpx > 0) {
       h2 = scr("halo", I.px);
-      const u = h2.getContext("2d");
+      const u = h2.getContext("2d", CTX);
       for (let i = 0; i < 16; i++) {
         const a = i / 16 * TAU3;
         u.drawImage(s, Math.cos(a) * (rpx + hpx), Math.sin(a) * (rpx + hpx));
@@ -3474,6 +3475,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       part(I, "M18 31 C9 29 3.5 19 6 6 C9 14 14 19.5 22 21.5 Z", horn, { sd: 1.6, hd: 1.2 });
       part(I, "M46 31 C55 29 60.5 19 58 6 C55 14 50 19.5 42 21.5 Z", horn, { sd: 1.6, hd: 1.2 });
     }
+    if (o.crest) part(I, "M32 24 C26 18 20 10 18 2 C24 6 29 12 32 18 C35 12 40 6 46 2 C44 10 38 18 32 24 Z", C.gold, { sd: 1, hd: 0.8 });
     part(I, "M13 43 C13 26 21 15 32 15 C43 15 51 26 51 43 Z", metal, { sd: 2.8, hd: 2 });
     part(I, rrect(29.3, 14.5, 5.4, 27, 2), trim, { sd: 0.8, hd: 0.6 });
     part(I, "M11 38.5 C22 41.5 42 41.5 53 38.5 L53 46 C42 49 22 49 11 46 Z", trim, { sd: 1.2, hd: 1 });
@@ -3524,7 +3526,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const r = new Path2D();
     r.addPath(ellipse(32, 30, 24, 10));
     r.addPath(ellipse(32, 30, 17, 5.6));
-    alpha(I, 0.35, () => fl(I, ellipse(32, 30, 29, 14), "#fff3b0"));
+    glow(I, ellipse(32, 30, 29, 14), "#fff3b0", 0.45);
     part(I, r, "#ffe27a", { rule: "evenodd", sd: 1.4, hd: 1 });
   };
   D.marineCoat = (I, o = {}) => {
@@ -4281,9 +4283,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     part(I, circle(41, 32, 15), shell, { sd: 2.8, hd: 1.8 });
     ln(I, spiral(41, 32, 12, 1.7, 0.4), dk(shell, 0.42), 1.6);
     ln(I, "M54 19 c3 1 1 3 3 4 c3 1 0 3 2 5 c2 2 -1 3 0 5", OUT, 1.3);
-    tube(I, "M29.5 15 C32 9 48 9 51 15", "#2f2a33", 4.2, { hi: "#6b6478" });
-    part(I, ellipse(28.5, 16.5, 4.6, 3.3, 0.45), "#2f2a33", { sd: 0.8, hd: 0.8, hi: "#6b6478" });
-    part(I, ellipse(52, 16.5, 4.6, 3.3, -0.45), "#2f2a33", { sd: 0.8, hd: 0.8, hi: "#6b6478" });
+    tube(I, "M29.5 15 C32 9 48 9 51 15", "#ece6d6", 4.2);
+    part(I, ellipse(28.5, 16.5, 4.8, 3.4, 0.45), "#ece6d6", { sd: 1, shT: 0.25, hd: 0.8 });
+    part(I, ellipse(52, 16.5, 4.8, 3.4, -0.45), "#ece6d6", { sd: 1, shT: 0.25, hd: 0.8 });
   };
   D.cuffs = (I, o = {}) => {
     const m = o.color || "#6f8e92";
@@ -4816,6 +4818,88 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       fl(I, circle(15, 51, 3), "#fff6ff");
     } else if (fx === "water") part(I, "M14 42 C17 46 19 49 19 52 C19 55 16.8 57 14 57 C11.2 57 9 55 9 52 C9 49 11 46 14 42 Z", "#6cc3ef", { sd: 1, hd: 0.8, ol: I.ol * 0.8 });
   };
+  D.watermelon = (I) => {
+    tf(I, { r: -0.25 }, () => {
+      const w = "M6 26 H58 C58 44 46 56 32 56 C18 56 6 44 6 26 Z";
+      part(I, w, "#3f8a34", { sd: 2.4, hd: 1.4 });
+      part(I, "M10 26 H54 C54 41 44 51 32 51 C20 51 10 41 10 26 Z", "#f4f1d8", { sd: 0, hd: 0, ol: I.ol * 0.5 });
+      part(I, "M12.5 26 H51.5 C51.5 39 43 48.5 32 48.5 C21 48.5 12.5 39 12.5 26 Z", "#e0404a", { sd: 1.6, hd: 1.2, ol: 0 });
+      for (const [x, y] of [[22, 33], [32, 38], [42, 33], [27, 42], [37, 42], [32, 30]]) fl(I, ellipse(x, y, 1.1, 1.8), "#2b1d14");
+    });
+  };
+  D.carrot = (I) => {
+    for (const [d, c] of [["M34 18 C30 10 30 4 34 2 C36 8 36 13 36 18 Z", C.leaf], ["M36 18 C38 10 44 6 48 8 C44 12 40 15 38 19 Z", "#4f9a3a"], ["M33 19 C28 12 22 11 18 13 C23 16 28 18 32 21 Z", "#6fb24a"]]) part(I, d, c, { sd: 0.8, hd: 0.6 });
+    const b = "M22 22 C28 16 42 16 44 24 C46 30 34 44 16 58 C14 60 12 58 13 56 C20 44 20 28 22 22 Z";
+    part(I, b, "#f0842a", { sd: 2.4, hd: 1.6 });
+    if (!I.small) clip(I, b, () => {
+      for (const [x, y] of [[30, 30], [26, 38], [22, 46]]) ln(I, `M${x - 6} ${y - 2} L${x + 2} ${y + 2}`, dk("#f0842a", 0.3), 1.2);
+    });
+  };
+  D.pineapple = (I) => {
+    for (const [r, c] of [[-0.5, "#4f9a3a"], [0.5, "#4f9a3a"], [0, C.leaf]]) part(I, xf("M32 22 C28 16 28 8 32 2 C36 8 36 16 32 22 Z", { r, ox: 32, oy: 22 }), c, { sd: 0.8, hd: 0.6 });
+    const b = ellipse(32, 40, 15, 19);
+    part(I, b, "#e8a82c", { sd: 3, hd: 2 });
+    clip(I, b, () => {
+      for (let i = -4; i <= 4; i++) {
+        ln(I, `M${16 + i * 7} 20 L${40 + i * 7} 62`, dk("#e8a82c", 0.35), 1.2);
+        ln(I, `M${48 + i * 7} 20 L${24 + i * 7} 62`, dk("#e8a82c", 0.35), 1.2);
+      }
+    });
+  };
+  D.candy = (I) => {
+    tube(I, "M32 36 L22 62", "#f4f1ea", 3.2);
+    part(I, circle(34, 24, 18), "#f27bb0", { sd: 2.4, hd: 1.6 });
+    ln(I, spiral(34, 24, 15, 2.2, 0.5), "#ffffff", 3.4);
+    gloss(I, 27, 16, 4, 2.2, 0.6);
+  };
+  D.chefHat = (I) => {
+    part(I, union(circle(20, 24, 10), circle(32, 17, 12), circle(44, 24, 10), rrect(16, 22, 32, 14, 3)), "#fbf8f0", { sd: 2.4, shT: 0.15, hd: 1.4 });
+    part(I, rrect(16, 34, 32, 16, 3), "#f1ede2", { sd: 1.8, shT: 0.15, hd: 1 });
+    if (!I.small) for (const x of [24, 32, 40]) ln(I, `M${x} 36 V48`, "#d9d2c2", 1.2);
+  };
+  D.bubbleHelm = (I) => {
+    part(I, circle(32, 30, 23), rg(I, 32, 30, 24, [[0, "#f4fbff"], [0.75, "#d4ecf7"], [1, "#a9d2e6"]], 26, 22, 2), { base: "#d4ecf7", sd: 0, hd: 1.6, hi: "#ffffff" });
+    gloss(I, 22, 18, 7, 3.4, 0.85, -0.6);
+    gloss(I, 44, 42, 3, 1.4, 0.5, -0.6);
+    part(I, "M12 48 C18 56 46 56 52 48 L52 54 C46 61 18 61 12 54 Z", "#c9d1d8", { sd: 1.2, hd: 1 });
+  };
+  D.eyepatch = (I) => {
+    tube(I, "M6 22 C22 16 42 16 58 24", "#2b2631", 2.6);
+    part(I, "M20 26 C26 22 38 22 42 28 C44 36 38 44 31 44 C24 44 18 36 20 26 Z", "#2b2631", { sd: 1.8, hd: 1.4, hi: "#6b6478" });
+    if (!I.small) skull(I, 31, 31, 3.8, "#f4f1ea", false);
+  };
+  D.photo = (I) => {
+    tf(I, { r: -0.14 }, () => {
+      part(I, rrect(10, 12, 44, 40, 1.5), "#f7f4ec", { sd: 2, shT: 0.15, hd: 1.2 });
+      part(I, rrect(14, 16, 36, 27, 0.5), "#9fc4d8", { sd: 0, hd: 0, ol: I.ol * 0.5 });
+      clip(I, rrect(14, 16, 36, 27, 0.5), () => {
+        fl(I, "M14 36 C22 30 30 34 36 30 C42 26 46 30 50 28 V44 H14 Z", "#6f9a4f");
+        part(I, circle(40, 23, 3.4), "#f6d24a", { flat: true, ol: 0 });
+      });
+    });
+  };
+  D.chalice = (I, o = {}) => {
+    const m = o.metal || "#d6dde2";
+    part(I, ellipse(32, 56, 14, 4), dk(m, 0.1), { sd: 0.8, hd: 0.6 });
+    part(I, "M29 38 H35 L36 54 H28 Z", m, { sd: 1, hd: 0.8 });
+    part(I, "M12 12 H52 C52 28 44 38 32 38 C20 38 12 28 12 12 Z", m, { sd: 2.6, hd: 1.8 });
+    part(I, ellipse(32, 12, 20, 4.4), dk(m, 0.4), { sd: 0, hd: 0 });
+    gem(I, 32, 25, 4.6, "#d7263d", { ol: I.ol * 0.7 });
+  };
+  D.rope = (I) => {
+    const c = "#c9a060";
+    for (const [r, a] of [[24, 1], [17.5, 0.95], [11, 0.9]]) {
+      const p = new Path2D();
+      p.addPath(ellipse(32, 36, r, r * 0.72));
+      p.addPath(ellipse(32, 36, r - 5, (r - 5) * 0.72));
+      part(I, p, lt(c, (1 - a) * 2), { rule: "evenodd", sd: 1.2, hd: 0.8 });
+    }
+    if (!I.small) for (let i = 0; i < 18; i++) {
+      const a = i / 18 * TAU3;
+      ln(I, `M${32 + Math.cos(a) * 19.5} ${36 + Math.sin(a) * 14} L${32 + Math.cos(a + 0.12) * 23} ${36 + Math.sin(a + 0.12) * 16.6}`, dk(c, 0.35), 1);
+    }
+    tube(I, "M54 36 C58 44 56 52 50 58", c, 4);
+  };
   var FRUIT_SHAPE = {
     gomu: "round",
     mera: "round",
@@ -4854,7 +4938,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   function swirls(I, path, box, col, rr, seed) {
     const dark = lum(col) < 0.32;
-    const sw = dark ? lt(col, 0.42) : dk(col, 0.45), hi = dark ? dk(col, 0.5) : lt(col, 0.55), [x0, y0, x1, y1] = box;
+    const sw2 = dark ? lt(col, 0.42) : dk(col, 0.45), hi = dark ? dk(col, 0.5) : lt(col, 0.55), [x0, y0, x1, y1] = box;
     const w = I.small ? 2.3 : 1.9, step = rr * 2.1;
     clip(I, path, () => {
       let k = 0;
@@ -4862,7 +4946,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const q = hash(seed + ":" + k++), jx = ((q & 15) / 15 - 0.5) * rr * 0.45, jy = ((q >> 4 & 15) / 15 - 0.5) * rr * 0.45, rot = (q >> 8 & 63) / 63 * TAU3, dir = q & 4096 ? 1 : -1;
         const sp = spiral(x + jx, y + jy, rr, I.small ? 1.2 : 1.45, rot, dir);
         if (!I.small) ln(I, xf(sp, { x: -0.6, y: -0.6 }), hi, w * 0.5, { a: 0.75 });
-        ln(I, sp, sw, w);
+        ln(I, sp, sw2, w);
       }
     });
   }
@@ -5014,6 +5098,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var NAME_RULES = [
     [/invitation|\bletter\b|envelope/, "envelope", (n) => ({ heart: /tea|love|party|invitation/.test(n) })],
     // ---- fruit & food
+    [/watermelon|\bmelon/, "watermelon"],
+    [/carrot/, "carrot"],
+    [/pineapple/, "pineapple"],
+    [/lollipop|candy|sweets?\b|toffee/, "candy"],
     [/coconut/, "coconut"],
     [/\bapples?\b/, "apple"],
     [/banana/, "banana"],
@@ -5043,10 +5131,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     [/whisk|brandy|\brum\b|grog|\bgin\b|liquor|bourbon|vodka/, "whisky"],
     [/\bale\b|beer|mead|cider|lager|stout|tankard/, "mug"],
     [/\btea\b|coffee|cocoa/, "teacup", (n) => ({ tea: /hibiscus|rose|berry/.test(n) ? "#b3123f" : /coffee|cocoa/.test(n) ? "#4a2a1a" : void 0 })],
-    [/water|dew\b/, "drop", {}, ["food", "medicine"]],
+    [/\bwater\b|\bdew\b/, "drop", {}, ["food", "medicine"]],
     [/milk|juice|lemonade|soda/, "bottle", (n) => ({ liquid: /milk/.test(n) ? "#f7f4ec" : "#f29a2e" })],
-    [/platter|course|feast|banquet|meal|dish|plate|bento|lunch|dinner|cuisine/, "plate", (n) => ({ food: /platter|bento|feast|banquet/.test(n) ? "platter" : void 0 })],
-    [/\bfish|salmon|tuna|\beel\b|mackerel|sardine/, "fish", {}, ["food", "material"]],
+    [/platter|course|feast|banquet|meal|dish|plate|bento|lunch|dinner|cuisine|sushi|sashimi/, "plate", (n) => ({ food: /platter|bento|feast|banquet/.test(n) ? "platter" : void 0 }), ["food"]],
+    [/\bfish|salmon|tuna|\beel\b|mackerel|sardine|squid|shrimp|prawn|crab|lobster/, "fish", {}, ["food", "material"]],
     // ---- medicine
     [/bandage|gauze|splint/, "bandage"],
     [/syringe|injection|hormone|serum|vaccine/, "syringe"],
@@ -5069,6 +5157,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     [/staff|\brod\b|cane|stick|\bpole\b|clima/, "staff", {}, ["weapon"]],
     [/katana|sword|blade|tachi|wakizashi|nodachi|kitetsu/, "katana", {}, ["weapon"]],
     // ---- hats & masks
+    [/bubble/, "bubbleHelm", {}, ["hat"]],
+    [/chef|toque/, "chefHat", {}, ["hat"]],
+    [/kabuto|samurai/, "hornHelm", { horns: false, crest: true, metal: "#3a3540", trim: "#c8372d" }, ["hat"]],
+    [/eye ?patch/, "eyepatch"],
     [/mask/, "mask", (n, d) => ({ color: d?.look?.hatColor, eye: /carnival|masquerade|domino/.test(n) }), ["hat", "accessory", "key", "treasure"]],
     [/fedora|trilby|bowler|gangster/, "fedora", (n, d) => ({ color: d?.look?.hatColor })],
     [/crown|tiara|diadem/, "crownHat", {}, ["hat", "treasure", "accessory"]],
@@ -5124,6 +5216,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     [/\bpage\b|leaflet|flyer|sheet/, "page", (n) => ({ wet: /water|soak|wet/.test(n) })],
     [/poster|playbill|wanted|bill\b/, "poster", (n) => ({ play: /play|theat|concert|show|signed/.test(n) })],
     [/scroll|survey|register|permit|decree|\blog\b|promise|orders|edict|charter|record|document|deed|certificate|contract|papers|report/, "scroll", (n) => ({ seal: /sealed|government|permit|holy|royal/.test(n) ? "#c8372d" : void 0 })],
+    [/photo|portrait|picture|snapshot/, "photo"],
+    [/chalice|goblet|grail|\bcup\b/, "chalice", (n) => ({ metal: metalOf(n) === C.gold ? "#f0bf45" : "#d6dde2" })],
+    [/\brope\b|cord\b|twine|hawser/, "rope"],
+    [/\biron\b|\bsteel\b|\bplates?\b/, "ingot", { color: "#9aa6af" }, ["material"]],
     [/\bdice\b|\bdie\b/, "dice"],
     [/\btag\b|label/, "tag", (n) => ({ rabbit: /rabbit|bunny/.test(n) })],
     [/\bhorn\b|bugle/, "horn"],
@@ -5150,7 +5246,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     [/herb|\bleaf|leaves|moss|\broot|grass|seaweed/, "herbs"],
     [/powder|dust/, "jar", { color: "#f3c6d6" }]
   ];
-  var HAT_LOOK = { straw: "strawHat", bandana: "bandana", tricorne: "tricorne", captain: "captainHat", cowboy: "cowboyHat", marine: "marineCap", pinkhat: "topHat", goggles: "goggles", headband: "headband", horns: "hornHelm", beanie: "beanie", crown: "crownHat", halo: "halo", bubble: "halo" };
+  var HAT_LOOK = { straw: "strawHat", bandana: "bandana", tricorne: "tricorne", captain: "captainHat", cowboy: "cowboyHat", marine: "marineCap", pinkhat: "topHat", goggles: "goggles", headband: "headband", horns: "hornHelm", beanie: "beanie", crown: "crownHat", halo: "halo", bubble: "bubbleHelm", chef: "chefHat" };
   var KIND_DEFAULT = { sword: "katana", gun: "flintlock", staff: "staff", axe: "axe" };
   var DIAL_FX = [[/impact/, "impact"], [/reject/, "reject"], [/flame|fire|heat/, "flame"], [/breath|wind|air|jet/, "breath"], [/flash|lamp|light/, "flash"], [/water|aqua/, "water"]];
   var DIAL_COLORS = [
@@ -5290,14 +5386,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return xf("M32 36 C26 30 16 26 5 27 C12 30 16 34 18 38 C12 38 8 40 6 43 C14 42 22 42 28 42 L24 52 L32 46 L40 52 L36 42 C42 42 50 42 58 43 C56 40 52 38 46 38 C48 34 52 30 59 27 C48 26 38 30 32 36 Z", { ox: 32, oy: 38, x: x - 32, y: y - 38, s });
   }
   function dragonHead(I, col, o = {}) {
-    part(I, "M52 16 C46 20 44 26 45 32 C38 30 30 30 22 34 C16 37 10 38 5 37 C8 42 14 45 22 45 C28 45 34 43 40 44 C44 45 47 48 48 53 C52 48 54 42 53 36 C56 30 58 22 52 16 Z", col, { sd: 2.4, hd: 1.6 });
-    part(I, "M45 18 C48 12 54 8 60 8 C58 12 54 16 49 19 Z", o.horn || "#f3e6c4", { sd: 0.8, hd: 0.6 });
-    part(I, "M40 22 C42 16 46 12 52 11 C50 15 46 19 42 23 Z", o.horn || "#f3e6c4", { sd: 0.8, hd: 0.6 });
-    fl(I, ellipse(38, 35, 3, 1.8, -0.3), "#fff36b");
-    fl(I, circle(38.4, 35, 1), OUT);
+    const horn = o.horn || "#f3e6c4";
+    part(I, "M44 17 C47 9 53 5 61 5 C57 9 53 14 51 20 Z", horn, { sd: 0.8, hd: 0.6 });
+    part(I, "M36 17 C37 10 41 6 47 4 C45 9 43 14 43 19 Z", horn, { sd: 0.8, hd: 0.6 });
+    part(I, "M52 22 L62 22 L56 27 L63 30 L55 33 L61 38 L52 38 Z", dk(col, 0.25), { sd: 0.8, hd: 0.6 });
+    part(I, "M12 40 C18 42 26 44 34 44 C39 44 43 46 45 50 C39 53 30 53 22 51 C16 49 13 45 12 40 Z", dk(col, 0.12), { sd: 1.2, hd: 0.8 });
+    for (const x of [18, 24, 30]) fl(I, poly([[x, 42.5], [x + 3, 42.8], [x + 1.4, 46]]), "#f7f4ec");
+    part(I, "M6 33 C10 28 18 26 26 26 C32 21 39 17 47 17 C54 17 58 22 57 29 C56.5 34 53 37.5 48 39 L40 40 C34 41.5 26 41 20 39.5 L12 38 C8 37 6 35.5 6 33 Z", col, { sd: 2.2, hd: 1.6, hi: lt(col, 0.5) });
+    for (const x of [13, 19, 25]) fl(I, poly([[x, 38.5], [x + 3, 38.8], [x + 1.6, 35.6]]), "#f7f4ec");
+    fl(I, ellipse(41, 26, 3.2, 2.1, -0.25), "#fff36b");
+    fl(I, ellipse(41.4, 26.1, 1, 1.9, -0.2), OUT);
     if (!I.small) {
-      ln(I, "M8 40 C14 41 20 40 26 39", dk(col, 0.45), 1.2);
-      ln(I, "M20 46 C16 52 12 54 6 55", lt(col, 0.3), 1.4);
+      ln(I, "M9 31 C4 34 3 40 6 45", lt(col, 0.45), 1.3);
+      ln(I, "M13 28 C14 24 18 22 22 22", dk(col, 0.35), 1.1);
+      fl(I, circle(10, 31.5, 1.1), dk(col, 0.5));
     }
   }
   SK.fist = (I, o) => {
@@ -5318,7 +5420,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     else if (fx === "cracks") crackLines(I, 48, 16, 12, "#e8f7ff");
     else if (fx === "mochi") {
       for (const [x, y, s] of [[18, 56, 0.5], [30, 60, 0.4], [44, 56, 0.45]]) part(I, dropP(x, y, s), "#fbf6ea", { sd: 0.8, shT: 0.2, hd: 0.6 });
-      part(I, cloudP(48, 16, 0.4), "#fbf6ea", { sd: 0.8, shT: 0.2, hd: 0.6 });
     } else if (fx === "smoke") for (const [x, y, r] of [[14, 52, 6], [8, 44, 4.6], [52, 50, 5]]) part(I, circle(x, y, r), "#eef2f4", { sd: 1, hd: 0.8 });
   };
   function crackLines(I, x, y, r, col) {
@@ -5561,8 +5662,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   SK.meteor = (I, o) => {
     const c = o.c || "#8a5a3a", tail = o.tail || ["#e8452c", "#f7931e", "#ffe066"];
-    part(I, taper(bez([56, 6], [48, 14], [40, 22], [30, 30], 12), 3, 22), tail[1], { sd: 1, hd: 0.8 });
-    part(I, taper(bez([54, 10], [46, 17], [40, 23], [32, 29], 12), 1, 12), tail[2], { flat: true, ol: 0 });
+    const tp = taper(bez([60, 2], [50, 12], [40, 22], [30, 31], 14), 2, 24);
+    fl(I, tp, lg(I, 58, 4, 30, 31, [[0, fade(tail[0], 0)], [0.45, fade(tail[0], 0.85)], [1, tail[1]]]));
+    fl(I, taper(bez([58, 5], [48, 14], [40, 22], [32, 30], 14), 1, 13), lg(I, 58, 5, 32, 30, [[0, fade(tail[2], 0)], [1, tail[2]]]));
     part(I, circle(26, 38, 14), c, { sd: 2.6, hd: 1.8 });
     if (!I.small) for (const [x, y, r] of [[22, 34, 3], [30, 42, 2.4], [20, 44, 1.8]]) fl(I, circle(x, y, r), dk(c, 0.3));
     if (o.two) {
@@ -5855,7 +5957,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   SK.bird = (I, o) => {
     const cols = o.cols || ["#3ab8e0", "#7fe0f0", "#e8fbff"];
-    if (o.fire) glow(I, circle(32, 34, 24), cols[1], 0.4);
+    if (o.fire) glow(I, ellipse(32, 38, 26, 14), cols[1], 0.22);
     part(I, birdP(32, 36, 1.05), cols[0], { sd: 2, hd: 1.4, hi: cols[2] });
     if (!I.small) clip(I, birdP(32, 36, 1.05), () => {
       for (const x of [12, 20, 44, 52]) ln(I, `M${x} 30 L${x + (x < 32 ? 4 : -4)} 40`, cols[1], 1.4, { a: 0.8 });
@@ -5882,9 +5984,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (const [x, y, r] of [[46, 16, 6], [52, 24, 4.5], [40, 10, 4], [54, 12, 3.4]]) part(I, circle(x, y, r), "#f8e4ea", { sd: 0.8, hd: 0.6 });
   };
   SK.spring = (I, o) => {
-    const d = "M20 58 C44 58 44 52 20 52 C-2 52 44 46 20 46 C-2 46 44 40 20 40 C-2 40 44 34 20 34".replace(/-2/g, "8");
-    ln(I, "M18 58 C46 57 46 52 18 51 C8 50 46 46 18 45 C8 44 46 40 18 39", OUT, 4.4);
-    ln(I, "M18 58 C46 57 46 52 18 51 C8 50 46 46 18 45 C8 44 46 40 18 39", "#c9d1d8", 2.4);
+    const coil = "M18 58 C46 57 46 52 18 51 C8 50 46 46 18 45 C8 44 46 40 18 39";
+    ln(I, coil, OUT, 4.4);
+    ln(I, coil, "#c9d1d8", 2.4);
     tf(I, { r: -0.2, s: 0.66, x: 4, y: -12 }, () => fistShape(I, o.c || "#3a1f24"));
   };
   SK.crosshair = (I, o) => {
@@ -5956,12 +6058,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   SK.drill = (I, o) => {
     const c = o.c || "#c9d1d8";
-    const d = "M6 32 L50 18 C56 22 58 28 58 32 C58 36 56 42 50 46 Z";
+    const d = "M58 32 L14 18 C8 22 6 28 6 32 C6 36 8 42 14 46 Z";
     part(I, d, c, { sd: 2, hd: 1.4 });
     clip(I, d, () => {
-      for (let x = 14; x < 60; x += 7) ln(I, `M${x} 16 C${x + 5} 26 ${x - 3} 38 ${x + 2} 48`, dk(c, 0.35), 1.6);
+      for (let x = 4; x < 50; x += 7) ln(I, `M${x} 16 C${x + 5} 26 ${x - 3} 38 ${x + 2} 48`, dk(c, 0.35), 1.6);
     });
-    speed(I, [[60, 20, 64, 18], [60, 44, 64, 46]], "#ffffff", 2);
+    speed(I, [[4, 14, 12, 18], [4, 50, 12, 46]], "#ffffff", 2);
   };
   SK.axe = (I, o) => tf(I, { s: 0.86, r: 0.1 }, () => o.big ? D.battleAxe(I, {}) : D.axe(I, {}));
   SK.staff = (I, o) => {
@@ -5969,13 +6071,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     tf(I, { s: 0.86 }, () => D.climaTact(I, { orb: o.orb }));
   };
   SK.oni = (I, o) => {
+    if (o.swords) {
+      for (const [r, x] of [[-1.35, -6], [-0.2, 0], [0.95, 6]]) tf(I, { r, s: 0.78, x, y: -3 }, () => D.katana(I, {}));
+      tf(I, { s: 0.66, y: 9 }, () => SK.oni(I, { c: o.c }));
+      return;
+    }
     const c = o.c || "#c8372d";
     part(I, union("M16 22 L12 6 L24 16 Z", "M48 22 L52 6 L40 16 Z"), "#f3e6c4", { sd: 0.8, hd: 0.6 });
     part(I, "M32 12 C46 12 52 24 50 36 C48 48 40 56 32 56 C24 56 16 48 14 36 C12 24 18 12 32 12 Z", c, { sd: 2.4, hd: 1.6 });
     for (const f of [1, -1]) fl(I, xf("M20 28 L29 32 L20 34 Z", { sx: f, ox: 32 }), "#ffe066");
     part(I, "M22 42 C26 48 38 48 42 42 L40 46 C36 50 28 50 24 46 Z", "#f7f4ec", { flat: true, ol: I.ol * 0.7 });
     for (const f of [1, -1]) fl(I, xf(poly([[24, 43], [27, 43], [25.5, 49]]), { sx: f, ox: 32 }), "#f7f4ec");
-    if (o.swords) for (const r of [-0.9, 0.9]) tf(I, { r, s: 0.66 }, () => D.katana(I, {}));
   };
   SK.net = (I, o) => {
     const c = o.c || "#e9dcc0";
@@ -6020,16 +6126,24 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   SK.shadowFigure = (I, o) => SK.figure(I, { c: "#1f1a26", aura: "#8a6ad6", eyes: "#ff5a5a" });
   SK.steal = (I, o) => {
-    SK.figure(I, { c: "#1f1a26", eyes: "#ff5a5a" });
-    tf(I, { s: 0.5, x: 14, y: -14, r: 0.6 }, () => {
-      D.dagger(I, {});
+    tf(I, { s: 0.72, x: -11, y: 9 }, () => SK.figure(I, { c: "#1f1a26", eyes: "#ff5a5a" }));
+    tf(I, { r: -0.75, ox: 38, oy: 30, x: 2, y: -2 }, () => {
+      for (const f of [1, -1]) {
+        part(I, xf("M36 29 L62 25.5 C64 26.5 63.5 29.5 61 30.5 L36 32 Z", { sy: f, oy: 30.5 }), "#e4ecf2", { sd: 0.8, hd: 0.6 });
+        const r = new Path2D();
+        r.addPath(ellipse(25, 30.5 + 6 * f, 8, 5.4));
+        r.addPath(ellipse(25, 30.5 + 6 * f, 4.6, 2.6));
+        part(I, r, "#d23b32", { rule: "evenodd", sd: 1, hd: 0.8 });
+        tube(I, `M31 ${30.5 + 3.4 * f} L37 ${30.5 + 1 * f}`, "#d23b32", 3.2);
+      }
+      part(I, circle(37, 30.5, 2.2), "#8a949b", { sd: 0.4, hd: 0.3 });
     });
   };
   SK.dryCracks = (I, o) => {
     const c = o.c || "#c9a060";
     part(I, "M4 34 C18 30 46 30 60 34 L60 58 H4 Z", c, { sd: 1.6, hd: 1.2 });
     clip(I, "M4 34 C18 30 46 30 60 34 L60 58 H4 Z", () => ln(I, "M10 36 L16 44 L12 52 M16 44 L26 46 L30 54 M26 46 L34 38 L44 42 L48 52 M44 42 L54 38", dk(c, 0.5), 1.8));
-    for (const [x, y, s] of [[20, 20, 0.6], [44, 16, 0.7]]) part(I, xf(crescentP(x, y, 10, -2.6, -0.5, 3), { s: 1 }), lt(c, 0.3), { sd: 0.6, hd: 0.4, ol: I.ol * 0.8 });
+    tf(I, { s: 0.52, x: 0, y: -14, r: Math.PI }, () => palmShape(I, "#d9b26f"));
   };
   SK.spikes = (I, o) => {
     const c = o.c || "#d9b26f";
@@ -6048,6 +6162,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     tube(I, "M60 60 C50 40 38 30 44 22", c, 6);
     tf(I, { s: 0.36, x: 12, y: -14, r: -0.3 }, () => palmShape(I, c));
     speed(I, [[20, 56, 26, 46], [30, 58, 34, 50], [40, 58, 42, 50]], "#ffffff", 2);
+  };
+  SK.drums = (I, o) => {
+    ln(I, circle(32, 32, 19), OUT, 4.4);
+    ln(I, circle(32, 32, 19), "#e0b24a", 2.4);
+    for (let i = 0; i < 6; i++) {
+      const a = i / 6 * TAU3 - Math.PI / 2, x = 32 + Math.cos(a) * 19, y = 32 + Math.sin(a) * 19;
+      part(I, circle(x, y, 5.2), "#c8372d", { sd: 0.8, hd: 0.6 });
+      if (!I.small) ln(I, spiral(x, y, 3.2, 1, a), "#f6d24a", 1);
+    }
+    bolt(I, { s: 0.55 });
   };
   SK.impact = (I, o) => {
     burst(I, 32, 32, 25, 13, o.c || "#ffd23f", 12);
@@ -6092,8 +6216,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     zushi: "#5b4a9a",
     hito: "#b86a82",
     neko_leopard: "#b8782a",
-    tori_phoenix: "#1f7a9a",
-    uo_seiryu: "#2a5aa0",
+    tori_phoenix: "#223a66",
+    uo_seiryu: "#1f2c52",
     mera: "#c24a26",
     hie: "#3a86b8",
     goro: "#3c3f86",
@@ -6107,7 +6231,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var ELEM_BADGE = { fire: "#c24a26", ice: "#3a86b8", snow: "#3a86b8", lightning: "#3c3f86", water: "#1f78a0", poison: "#6d2a86", gas: "#6d2a86", sand: "#a8843e", smoke: "#6f7f8a", light: "#b8901e", magma: "#8a2a18", dark: "#4a2a86", explosion: "#c0762a", quake: "#3d7f93", haki: "#8a1c2a" };
   var ANIM_BADGE = { slash: "#4a5a6a", punch: "#8a4a2a", kick: "#5a6f96", shoot: "#6a5a3a", thrust: "#5a5a66", heavy: "#7a3a2a", grab: "#6a4a5a", cast: "#4a4a7a", block: "#4a6a7a" };
   var FIRE = ["#e8452c", "#f7931e", "#ffe066"];
-  var BLUEFIRE = ["#1f8fc0", "#4dd0e1", "#e0fbff"];
+  var BLUEFIRE = ["#3ab8ec", "#8fe8ff", "#e8fcff"];
   var BLACKFIST = "#2a2530";
   var SKILL_MAP = {
     // Gomu
@@ -6206,7 +6330,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     goro_vari: ["bolt"],
     goro_sango: ["bolt", { two: true }],
     goro_elthor: ["cloud", { bolt: true, c: "#b8c0d8" }],
-    goro_amaru: ["figure", { c: "#3c3f86", aura: "#fff36b", eyes: "#fff36b" }],
+    goro_amaru: ["drums"],
     goro_raigo: ["cloud", { bolt: true, c: "#5a5f7a" }],
     suna_barjan: ["airblade", { c: "#e8c77a" }],
     suna_sables: ["tornado", { c: "#e8c77a" }],
@@ -6550,7 +6674,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     fl(I, rrect(30, 39.5, 4, 4, 1), dk(C.gold, 0.45));
   };
   UI.character = (I) => {
-    part(I, "M8 60 C8 45 17 37 32 37 C47 37 56 45 56 60 Z", "#c8372d", { sd: 2.4, hd: 1.6 });
+    part(I, "M8 60 C8 45 17 37 32 37 C47 37 56 45 56 60 Z", "#2f5f96", { sd: 2.4, hd: 1.6 });
+    if (!I.small) ln(I, "M20 44 L22 60 M44 44 L42 60", "#e0b24a", 1.6);
     part(I, "M25 37.5 L32 49 L39 37.5 Z", SKIN, { sd: 0.8, hd: 0.5, ol: I.ol * 0.8 });
     part(I, rrect(27, 30, 10, 9, 3), dk(SKIN, 0.08), { sd: 0.8, hd: 0.5 });
     part(I, circle(32, 23, 12.5), SKIN, { sd: 2, hd: 1.4 });
@@ -6570,7 +6695,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   UI.crew = (I) => {
     person(I, 15, 30, 0.72, "#2f5f96", SKIN, "#e0b24a");
     person(I, 49, 30, 0.72, "#3f8a44", SKIN, "#2b2226");
-    person(I, 32, 30, 0.95, "#c8372d", SKIN, "#2b2226");
+    person(I, 32, 30, 0.95, "#e0a932", SKIN, "#2b2226");
   };
   UI.menu = (I) => {
     const wood = "#8e5a30";
@@ -6644,11 +6769,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (!I.small) for (const x of [20, 30, 40]) fl(I, circle(x, 45, 1.6), dk("#8e5a30", 0.5));
   };
   UI.trainer = (I) => {
-    for (const f of [1, -1]) tf(I, { sx: f, ox: 32 }, () => {
-      tube(I, "M8 60 L30 30", SKIN, 8.5);
-      tube(I, "M8 60 L14 52", "#f4f1ea", 10);
-      tf(I, { r: 0.55, s: 0.5, x: -2, y: -14 }, () => fistShape(I, SKIN));
-    });
+    const bokken = () => {
+      part(I, "M12 49 L46 15 C48.5 12.5 52 11.5 54 12 C54.5 14 53.5 17.5 51 20 L17 54 Z", "#c8955a", { sd: 1.6, hd: 1.2 });
+      part(I, "M8.5 49.5 L16 42 L22 48 L14.5 55.5 C13 57 10.5 57 9 55.5 L8.5 55 C7 53.5 7 51 8.5 49.5 Z", "#5a3222", { sd: 1, hd: 0.8 });
+      part(I, xf(ellipse(19.5, 44.5, 6.2, 2.2), { r: Math.PI / 4, ox: 19.5, oy: 44.5 }), "#3a2418", { sd: 0.6, hd: 0.4 });
+    };
+    bokken();
+    tf(I, { sx: -1, ox: 32 }, bokken);
+    tube(I, "M32 32 C28 38 27 44 29 50", "#c8372d", 2.2);
+    part(I, "M26 49 H32 L33.5 58 H24.5 Z", "#c8372d", { sd: 0.8, hd: 0.6 });
+    part(I, circle(32, 32, 3.4), "#e0b24a", { sd: 0.6, hd: 0.4 });
   };
   UI.haki = (I) => {
     glow(I, circle(32, 32, 28), "#b58ce0", 0.55);
@@ -6700,7 +6830,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     part(I, ellipse(20, 32, 7, 4.6, -0.15), "#fbf8f0", { sd: 1, shT: 0.15, hd: 0.8 });
     part(I, rrect(8, 47, 48, 6, 2), "#6e4526", { sd: 1, hd: 0.8 });
   };
-  UI.sword = (I) => tf(I, { s: 1.06 }, () => D.cutlass(I, { blade: "#e4ecf2", wrap: "#5a3d2b" }));
+  UI.sword = (I) => tf(I, { s: 0.94, x: 1, y: 1 }, () => D.cutlass(I, { blade: "#e4ecf2", wrap: "#5a3d2b" }));
   UI.weapon = UI.sword;
   UI.gun = (I) => D.flintlock(I, {});
   UI.staff = (I) => D.staff(I, {});
@@ -8339,8 +8469,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.ellipse(0, 0, 0.3, 0.1, 0, 0, TAU4);
     g.fill();
     if (this.id && this.id.startsWith("fruit_")) {
-      const glow2 = 0.4 + 0.3 * Math.sin(t * 4);
-      g.fillStyle = `rgba(255,171,145,${glow2 * 0.5})`;
+      const glow3 = 0.4 + 0.3 * Math.sin(t * 4);
+      g.fillStyle = `rgba(255,171,145,${glow3 * 0.5})`;
       g.beginPath();
       g.arc(0, -0.5 + bob, 0.55, 0, TAU4);
       g.fill();
@@ -9014,15 +9144,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     restaurant: [6, 4]
   };
   function generateTown(world, town, rng, noise) {
-    const S2 = TOWN_STYLES[town.style] || TOWN_STYLES.village;
+    const S3 = TOWN_STYLES[town.style] || TOWN_STYLES.village;
     const cx = town.x, cy = town.y;
     const w = Math.max(10, Math.round(town.w)), h2 = Math.max(8, Math.round(town.h));
     const x0 = Math.round(cx - w / 2), y0 = Math.round(cy - h2 / 2);
     const x1 = x0 + w, y1 = y0 + h2;
-    const roadTile = town.road ?? S2.road;
-    const groundTile = town.ground === void 0 ? S2.ground : town.ground;
-    const plazaTile = town.plazaTile ?? S2.plaza;
-    const big = !!S2.big;
+    const roadTile = town.road ?? S3.road;
+    const groundTile = town.ground === void 0 ? S3.ground : town.ground;
+    const plazaTile = town.plazaTile ?? S3.plaza;
+    const big = !!S3.big;
     const okLand = (x, y) => {
       const t = world.type(x, y);
       return !IS_LIQUID[t] && WALKABLE[t] && !OVERLAY[t];
@@ -9035,7 +9165,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (v > 0) world.setType(x, y, groundTile);
       }
     }
-    const rowStep = town.rowStep ?? S2.rowStep;
+    const rowStep = town.rowStep ?? S3.rowStep;
     const rows = [];
     for (let ry = y0 + rowStep - 1; ry < y1 - 1; ry += rowStep) rows.push(ry);
     if (!rows.length) rows.push(Math.round(cy));
@@ -9051,7 +9181,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       for (let y = Math.floor(plaza.y - plazaR); y <= plaza.y + plazaR; y++) for (let x = Math.floor(plaza.x - plazaR); x <= plaza.x + plazaR; x++) {
         if ((x + 0.5 - plaza.x) ** 2 + (y + 0.5 - plaza.y) ** 2 <= plazaR * plazaR && okLand(x, y)) world.setType(x, y, plazaTile);
       }
-      const feature = town.plaza || (S2.flags ? "flagpole" : town.style === "desert" ? "well" : w > 30 ? "fountain" : "well");
+      const feature = town.plaza || (S3.flags ? "flagpole" : town.style === "desert" ? "well" : w > 30 ? "fountain" : "well");
       placeObject(world, { kind: feature, x: plaza.x, y: plaza.y + 0.8, block: true, fw: feature === "platform" ? 3 : 1, fd: feature === "platform" ? 2 : 1, town: town.id });
     }
     if (town.walls) {
@@ -9096,18 +9226,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (fx0 + fw > x1 - 1) continue;
         if (occupied(fx0, fy0, fw, fd)) continue;
         const colors = {
-          wall: spec.wall || rng.pick(S2.walls),
-          roof: spec.roof || rng.pick(S2.roofs)
+          wall: spec.wall || rng.pick(S3.walls),
+          roof: spec.roof || rng.pick(S3.roofs)
         };
         const b = placeObject(world, {
           kind: "building",
           style: spec.style || town.style || "village",
-          roofType: spec.roofType || S2.roof,
+          roofType: spec.roofType || S3.roof,
           x: fx0 + fw / 2,
           y: lot.ry,
           fw,
           fd,
-          hgt: spec.hgt ?? (S2.tall ? rng.int(3, 4) : big ? 5 : spec.role === "house" ? 2 : 3),
+          hgt: spec.hgt ?? (S3.tall ? rng.int(3, 4) : big ? 5 : spec.role === "house" ? 2 : 3),
           ...colors,
           role: spec.role,
           name: spec.name,
@@ -9129,10 +9259,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (const spec of specials) tryPlace(spec);
     const houseCount = town.houses ?? Math.round(w * h2 / (big ? 160 : 55));
     for (let i = 0; i < houseCount; i++) tryPlace({ role: "house" });
-    if (S2.lamps) {
+    if (S3.lamps) {
       for (const ry of rows) for (let x = x0 + 2; x < x1 - 1; x += 7) {
         if (okLand(x, ry + 2) && !world.isBlocked(x, ry + 2) && Math.abs(x - mainX) > 2) {
-          placeObject(world, { kind: S2.lantern ? "lantern" : "lamp", x: x + 0.5, y: ry + 3, block: true, light: true });
+          placeObject(world, { kind: S3.lantern ? "lantern" : "lamp", x: x + 0.5, y: ry + 3, block: true, light: true });
         }
       }
     }
@@ -9143,7 +9273,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (okLand(px, py - 0.5) && !world.isBlocked(px, py - 0.5)) placeObject(world, { kind: rng.pick(propKinds), x: px, y: py, block: true, v: rng.int(0, 3) });
       }
     }
-    if (S2.fences) {
+    if (S3.fences) {
       for (const b of buildings) {
         if (b.role !== "house" || rng.next() < 0.5) continue;
         const gy = b.y - b.fd - 1;
@@ -16172,6 +16302,36 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var BALLET = { ...GUARD, b: [0, 0.02], l: 0.02, hF: [0.3, -0.12], hB: [-0.26, -0.1], hand: "palm", handB: "palm", fF: [0.08, 0], fB: [-0.1, 0] };
   var CLAWS = { ...GUARD, hand: "claw", handB: "claw", b: [0, 0.06], l: 0.14, hF: [0.25, -0.04], hB: [0.13, 0.04] };
   var FINGER = { ...GUARD, b: [0, 0.02], l: 0.03, hF: [0.2, 0.04], hB: [-0.05, 0.3], hand: "finger", fF: [0.14, 0], fB: [-0.11, 0] };
+  var STANCES = { guard: GUARD, palms: PALMS, sword: SWORD2, sword2: SWORD22, gun: GUN, heavyw: HEAVYW, staff: STAFF, legs: POCKETS, ballet: BALLET, claw: CLAWS, finger: FINGER, stand: STAND };
+  var STANCE_ARMED = { sword: "sword", sword2: "sword", gun: "gun", heavyw: "axe", staff: "staff" };
+  var STYLE_STANCE = {
+    brawler: "guard",
+    ittoryu: "sword",
+    nitoryu: "sword2",
+    santoryu: "sword2",
+    black_leg: "legs",
+    fishman_karate: "palms",
+    rokushiki: "finger",
+    okama_kenpo: "ballet",
+    electro: "claw",
+    hasshoken: "guard",
+    weather_science: "staff",
+    elbaf: "heavyw",
+    ryusoken: "claw",
+    sniper: "gun"
+  };
+  function stanceFor(style, weapon) {
+    let s = STYLE_STANCE[style] || "guard";
+    const need = STANCE_ARMED[s];
+    if (need && (!weapon || weapon.kind !== need)) s = "guard";
+    if (s === "sword2" && (weapon.count || 1) < 2) s = "sword";
+    return s;
+  }
+  function gunKind(weapon) {
+    if (!weapon || weapon.kind !== "gun") return void 0;
+    const ids = weapon.ids || [];
+    return ids.some((id) => /sling|kabuto/.test(id)) ? "sling" : weapon.gun;
+  }
   var EASE = {
     lin: (k) => k,
     out: (k) => 1 - (1 - k) ** 3,
@@ -16195,6 +16355,305 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     if (typeof a === "boolean" || typeof b === "boolean") return k < 0.5 ? a : b;
     return k < 0.35 ? a : b;
+  }
+  function finalize(keys) {
+    let prev = STAND;
+    for (const k of keys) {
+      k.P = { ...prev, ...k.p };
+      prev = k.P;
+    }
+    return keys;
+  }
+  function strike(w, T3, o) {
+    const st = o.stance || GUARD;
+    const tLoad = Math.max(0.016, Math.min(w * (o.loadAt ?? 0.64), w - 0.014));
+    const tHit = Math.max(tLoad + 0.014, w);
+    const rest = Math.max(0.04, T3 - tHit);
+    const tHold = tHit + Math.min(o.holdT ?? 0.055, rest * (o.holdK ?? 0.4));
+    const keys = [
+      { t: 0, p: st },
+      { t: tLoad, p: o.load, e: o.loadEase || "out" },
+      { t: tHit, p: o.hit, e: o.hitEase || "snap" },
+      { t: tHold, p: o.hold || o.hit, e: "lin" }
+    ];
+    if (o.follow) keys.push({ t: tHold + (Math.max(T3, tHold + 0.05) - tHold) * (o.followAt ?? 0.4), p: o.follow, e: "out" });
+    keys.push({ t: Math.max(T3, tHold + 0.05), p: o.end || st, e: "inout" });
+    return finalize(keys);
+  }
+  var S = (c, o) => ({ ...o, stance: o.stance || c.stance, holdT: c.dashT ? Math.max(o.holdT ?? 0.055, c.dashT) : o.holdT, holdK: c.dashT ? 0.9 : o.holdK });
+  var sw = (c) => c.two ? SWORD22 : SWORD2;
+  var spun = (c, base) => ({ ...c.stance || base || GUARD, sp: 1 });
+  var CLIPS = {
+    // ---------------------------------------------------------------- fists
+    jab: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.02, 0.05], l: 0.02, hF: [0.12, 0.07] }, hit: { b: [0.1, 0.02], l: 0.18, hF: [0.46, -0.07], hB: [0.1, 0.1], fF: [0.22, 0], fB: [-0.14, 0], face: "fierce" } })) }),
+    cross: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.03, 0.05], l: -0.06, hB: [0.04, 0.1], hF: [0.18, 0.02] }, hit: { b: [0.13, 0.02], l: 0.3, hB: [0.48, -0.08], hF: [0.08, 0.12], fF: [0.24, 0], fB: [-0.16, -0.02], face: "fierce" } })) }),
+    hook: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.03, 0.06], l: -0.18, hF: [-0.12, 0.02], eF: 1 }, hit: { b: [0.08, 0.03], l: 0.26, hF: [0.34, -0.1], eF: -0.9, hB: [0.1, 0.1], face: "fierce" }, follow: { l: 0.32, hF: [0.22, -0.02], eF: -0.4 } })) }),
+    uppercut: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.16], l: 0.22, hF: [0.12, 0.3], eF: 1, fF: [0.2, 0], fB: [-0.16, 0] }, hit: { b: [0.08, -0.06], z: 0.08, l: -0.16, hF: [0.2, -0.46], eF: 0.5, hB: [0.14, 0.14], fF: [0.18, -0.03], fB: [-0.12, -0.12], face: "shout" }, follow: { z: 0, l: -0.1 } })), legs: true }),
+    haymaker: (w, T3, c) => ({ keys: strike(w, T3, S(c, { loadAt: 0.72, load: { b: [-0.1, 0.08], l: -0.34, hF: [-0.36, -0.12], eF: 0.9, hB: [0.2, 0], fF: [0.24, 0], fB: [-0.18, 0], face: "fierce" }, hit: { b: [0.24, 0.03], l: 0.42, hF: [0.5, -0.03], eF: 0.2, hB: [-0.12, 0.2], fF: [0.34, 0], fB: [-0.14, -0.06], face: "shout" }, follow: { b: [0.26, 0.06], l: 0.46, hF: [0.44, 0.1] } })), jitter: 0.012 }),
+    palm: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: PALMS, load: { b: [-0.02, 0.08], l: 0, hF: [0.1, 0.1] }, hit: { b: [0.12, 0.05], l: 0.22, hF: [0.48, -0.02], hB: [0.08, 0.14], fF: [0.26, 0], face: "fierce" } })) }),
+    palm2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: PALMS, load: { b: [-0.03, 0.08], l: -0.08, hB: [0, 0.12], hF: [0.2, 0.04] }, hit: { b: [0.14, 0.05], l: 0.3, hB: [0.5, -0.03], hF: [0.06, 0.14], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
+    palm_double: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: PALMS, loadAt: 0.7, load: { b: [-0.08, 0.12], l: -0.2, hF: [-0.12, 0.14], hB: [-0.16, 0.18] }, hit: { b: [0.22, 0.06], l: 0.32, hF: [0.5, -0.06], hB: [0.46, 0.06], fF: [0.32, 0], fB: [-0.18, -0.03], face: "shout" }, follow: { l: 0.36 } })), jitter: 0.01 }),
+    shigan: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.03, 0.05], l: -0.06, hF: [0.04, 0.1], hand: "finger" }, hit: { b: [0.16, 0.02], l: 0.32, hF: [0.52, -0.06], hand: "finger", hB: [-0.08, 0.2], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
+    shigan2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.03, 0.05], l: -0.08, hB: [0, 0.12], handB: "finger" }, hit: { b: [0.17, 0.02], l: 0.34, hB: [0.52, -0.06], handB: "finger", hF: [0.06, 0.16], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
+    claw: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.12, hF: [0.02, -0.38], hand: "claw", eF: 1 }, hit: { l: 0.28, b: [0.1, 0.05], hF: [0.34, 0.26], hand: "claw", face: "fierce" } })) }),
+    claw2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: 0.12, b: [0, 0.08], hB: [0.02, 0.32], handB: "claw" }, hit: { l: -0.12, b: [0.1, 0], hB: [0.36, -0.32], handB: "claw", hF: [0.12, 0.12], face: "fierce" } })) }),
+    claw_x: (w, T3, c) => ({ keys: strike(w, T3, S(c, { loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.04], hF: [0, -0.4], hB: [-0.06, -0.36], hand: "claw", handB: "claw", face: "fierce" }, hit: { l: 0.36, b: [0.18, 0.08], hF: [0.36, 0.28], hB: [0.3, 0.32], hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 8e-3 }),
+    grab: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.02, 0.06], l: -0.08, hF: [0.1, 0.02], hand: "claw" }, hit: { b: [0.12, 0.03], l: 0.26, hF: [0.5, -0.05], hand: "claw", face: "fierce" }, follow: { hand: "fist", hF: [0.4, -0.02], l: 0.18 } })) }),
+    grab2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.02, 0.06], l: -0.1, hB: [0.02, 0.06], handB: "claw" }, hit: { b: [0.13, 0.03], l: 0.3, hB: [0.5, -0.04], handB: "claw", hF: [0.08, 0.14], face: "fierce" }, follow: { handB: "fist", hB: [0.4, 0] } })) }),
+    chop: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.14, b: [-0.02, 0.04], hF: { a: -2.1, r: 0.36 }, hand: "palm" }, hit: { l: 0.26, b: [0.12, 0.06], hF: { a: 0.55, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
+    chop2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: 0.12, b: [0, 0.08], hF: { a: 2, r: 0.34 }, hand: "palm" }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
+    thrust: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.05, 0.09], l: -0.06, hF: [0.08, 0.06] }, hit: { b: [0.14, 0.04], l: 0.46, hF: [0.44, 0], hB: [-0.22, 0.16], fF: [0.26, 0], fB: [-0.32, -0.08], face: "shout" } })) }),
+    charge: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.06, 0.12], l: 0.1, hF: [0.1, 0.18], hB: [-0.1, 0.2] }, hit: { b: [0.12, 0.08], l: 0.58, hF: [0.18, 0.2], hB: [-0.2, 0.2], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
+    headbutt: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.4, b: [-0.06, 0.02], hF: [0.1, 0.25], hB: [0.02, 0.28] }, hit: { l: 0.52, b: [0.18, 0.06], ht: 0.3, face: "shout" } })) }),
+    // ---------------------------------------------------------------- kicks
+    kick: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.1, fF: [0.12, -0.3], hF: [0.18, 0.04], hB: [0.06, 0.14] }, hit: { l: -0.22, b: [0.05, -0.02], fF: [0.68, -0.42], fB: [-0.08, 0], hF: [0.1, 0.12], hB: [-0.12, 0.16], face: "fierce" } })), legs: true }),
+    kick_high: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.18, fF: [0.02, -0.36], fB: [-0.05, 0] }, hit: { l: -0.44, b: [0.02, -0.02], fF: [0.58, -0.84], fB: [-0.06, 0], hF: [-0.16, 0.12], hB: [0.26, -0.06], face: "fierce" }, follow: { l: -0.3, fF: [0.44, -0.6] } })), legs: true }),
+    kick_low: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.2], l: 0.08, fF: [-0.1, -0.05], fB: [-0.12, 0] }, hit: { b: [0.05, 0.27], l: 0.2, fF: [0.74, -0.06], fB: [-0.22, 0], hF: [0.26, 0.34], hB: [0, 0.3], face: "fierce" } })), legs: true }),
+    kick_spin: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { sp: 0, fF: [0.05, -0.22], l: -0.06 }, hit: { sp: 1, fF: [0.7, -0.54], fB: [-0.06, 0], l: -0.32, hF: [-0.1, 0.15], hB: [0.22, -0.05], face: "shout" }, hitEase: "out", end: spun(c) })), legs: true }),
+    sweep: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.22], l: 0.22, fF: [0.06, -0.04], hF: [0.22, 0.3], hB: [-0.04, 0.3] }, hit: { sp: 1, b: [0.02, 0.3], l: 0.3, fF: [0.8, -0.05], fB: [-0.2, 0], hF: [0.26, 0.42], hB: [-0.1, 0.36], face: "fierce" }, hitEase: "out", end: spun(c) })), legs: true }),
+    knee: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { fF: [0.1, -0.1], l: 0.05, b: [0, 0.06] }, hit: { fF: [0.26, -0.42], l: 0.12, b: [0.08, -0.05], z: 0.06, hF: [0.32, 0.04], hB: [0.26, 0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
+    axe_kick: (w, T3, c) => ({ keys: strike(w, T3, S(c, { loadAt: 0.75, load: { z: 0.55, l: -0.32, fF: [0.2, -0.95], fB: [-0.1, -0.12], hF: [-0.1, -0.1], hB: [0.2, -0.2] }, hit: { z: 0, b: [0.1, 0.08], l: 0.3, fF: [0.58, -0.06], fB: [-0.16, 0], hF: [-0.1, 0.2], hB: [0.1, 0.15], face: "shout" } })), legs: true }),
+    rise_kick: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.18], l: 0.14, fF: [0.28, -0.04], hF: [0.1, 0.3] }, hit: { b: [0, -0.04], z: 0.18, l: -0.52, fF: [0.3, -1.02], fB: [-0.04, 0], hF: [-0.22, 0.1], hB: [0.12, 0.2], face: "shout" }, follow: { z: 0.05 } })), legs: true }),
+    mouton: (w, T3, c) => ({ keys: strike(w, T3, S(c, { loadAt: 0.7, load: { l: -0.32, z: 0.08, fF: [-0.05, -0.46], hF: [0.1, -0.1] }, hit: { l: -0.78, b: [0.26, 0], z: 0.16, fF: [0.88, -0.56], fB: [-0.12, -0.12], hF: [-0.36, 0.25], hB: [-0.32, 0.3], face: "shout" }, follow: { z: 0, l: -0.4 } })), legs: true }),
+    handstand: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.14], l: 0.3, hF: [0.3, 0.4], hB: [0.2, 0.4] }, hit: { r: Math.PI, b: [0, 0], l: 0, hF: [0.12, -0.72], hB: [-0.08, -0.72], hand: "palm", handB: "palm", fF: [0.58, -0.45], fB: [-0.58, -0.45] }, hold: { r: Math.PI, fF: [0.58, -0.4], fB: [-0.58, -0.5] }, holdT: c.hitDur || 0.4, holdK: 0.85 })), legs: true }),
+    flying_kick: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0] }, hit: { z: 0.3, l: -0.34, fF: [0.78, -0.46], fB: [-0.06, -0.3], hF: [-0.2, 0.05], hB: [0.2, -0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
+    stomp: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { fF: [0.18, -0.55], l: -0.1, hF: [0.2, -0.1], hB: [-0.1, -0.1] }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
+    // Okama Kenpo: ballet
+    ballet_kick: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.24], hB: [-0.08, 0.24] }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.03], hF: [0.34, -0.24], hB: [-0.36, -0.22], face: "fierce" } })), legs: true }),
+    pirouette: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 1, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hF: [0.14, -0.44], hB: [0, -0.46], face: "fierce" }, hitEase: "out", end: { ...BALLET, sp: 1 } })), legs: true }),
+    jete: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], face: "fierce" }, follow: { z: 0 } })), legs: true }),
+    arabesque: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], face: "fierce" } })), legs: true }),
+    // ---------------------------------------------------------------- blades
+    slash: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.04], hF: { a: -2.1, r: 0.34 }, wF: -2.55, hB: [-0.04, 0.18] }, hit: { l: 0.27, b: [0.13, 0.08], hF: { a: 0.55, r: 0.43 }, wF: 0.8, hB: [0.2, 0.16], fF: [0.3, 0], fB: [-0.17, 0], face: "fierce" }, follow: { l: 0.3, hF: { a: 0.9, r: 0.42 }, wF: 1.15 } })) }),
+    slash2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: sw(c), load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, face: "fierce" }, follow: { hF: { a: -0.95, r: 0.42 }, wF: -1.35 } })) }),
+    rise_slash: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.15], l: 0.26, hF: { a: 1.85, r: 0.36 }, wF: 2.5, hB: [0, 0.22], face: "fierce" }, hit: { b: [0.12, -0.03], z: 0.04, l: -0.22, hF: { a: -1.2, r: 0.43 }, wF: -1.5, hB: [-0.1, 0.12], fF: [0.26, 0], fB: [-0.16, -0.04], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.8, l: -0.26 } })) }),
+    slash3: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: sw(c), loadAt: 0.7, load: { l: -0.22, b: [-0.04, 0.08], hF: { a: 2.7, r: 0.36 }, wF: 3, sp: 0 }, hit: { sp: 1, l: 0.22, b: [0.16, 0.06], hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, hitEase: "out", end: { ...sw(c), sp: 1 } })) }),
+    stab: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: sw(c), load: { l: -0.14, b: [-0.08, 0.06], hF: [-0.02, 0.08], wF: 0, hB: [-0.06, 0.1] }, hit: { l: 0.32, b: [0.22, 0.04], hF: [0.46, -0.03], wF: -0.03, hB: [-0.2, 0.16], fF: [0.36, 0], fB: [-0.22, -0.03], face: "shout" } })) }),
+    cleave: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: HEAVYW, loadAt: 0.72, load: { l: -0.24, b: [-0.06, 0], hF: { a: -1.85, r: 0.36 }, hB: { a: -1.75, r: 0.33 }, wF: -2.25, face: "fierce" }, hit: { l: 0.4, b: [0.22, 0.15], hF: { a: 0.78, r: 0.4 }, hB: { a: 0.88, r: 0.35 }, wF: 1, fF: [0.36, 0], fB: [-0.22, 0], face: "shout" }, follow: { l: 0.44, b: [0.24, 0.17] } })), jitter: 0.01 }),
+    iai: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: { ...SWORD2, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.16], l: 0.34, hF: [0.02, 0.3], wF: 2.7, face: "fierce" }, hit: { l: 0.5, b: [0.2, 0.08], hF: [0.46, 0.04], wF: 0.1, fB: [-0.36, -0.12], face: "shout" }, follow: { l: 0.2, hF: [0.1, 0.28], wF: 2.6 } })) }),
+    // two blades (Nitoryu): alternating cuts, then an X
+    dual1: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: SWORD22, load: { l: -0.16, hF: { a: -2.1, r: 0.34 }, wF: -2.55 }, hit: { l: 0.26, b: [0.12, 0.07], hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" } })) }),
+    dual2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: SWORD22, load: { l: -0.14, hB: { a: -2.2, r: 0.33 }, wB: -2.6 }, hit: { l: 0.28, b: [0.13, 0.07], hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" } })) }),
+    dual3: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: SWORD22, load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
+    dualx: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: SWORD22, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, face: "fierce" }, hit: { l: 0.32, b: [0.18, 0.1], hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, face: "shout" } })) }),
+    dual_stab: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: SWORD22, load: { l: -0.16, b: [-0.1, 0.07], hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "fierce" }, hit: { l: 0.36, b: [0.24, 0.05], hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
+    tora: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: SWORD22, loadAt: 0.72, load: { z: 0.4, l: -0.32, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "fierce" }, hit: { z: 0, l: 0.46, b: [0.24, 0.15], hF: { a: 0.9, r: 0.4 }, hB: { a: 1.1, r: 0.38 }, wF: 1, wB: 1.2, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
+    bladespin: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], hF: { a: 2.6, r: 0.38 }, wF: 2.9 }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
+    // big weapons
+    axe: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "fierce" }, hit: { l: 0.36, b: [0.2, 0.12], hF: { a: 0.7, r: 0.42 }, hB: { a: 0.9, r: 0.36 }, wF: 1, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4 } })) }),
+    axe2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6 }, hit: { l: -0.2, b: [0.16, 0.02], hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" } })) }),
+    axe_slam: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "fierce" }, hit: { z: 0, l: 0.52, b: [0.24, 0.24], hF: { a: 1.05, r: 0.42 }, hB: { a: 1.15, r: 0.36 }, wF: 1.35, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.5, b: [0.24, 0.24] } })), jitter: 0.012 }),
+    staff: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAFF, load: { l: -0.14, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2] }, hit: { l: 0.24, b: [0.1, 0.05], hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" } })) }),
+    staff2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], hF: { a: 1.9, r: 0.34 }, wF: 2.3 }, hit: { l: -0.12, b: [0.1, 0.02], hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" } })) }),
+    staff_jab: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], hF: [0, 0.06], wF: 0.02 }, hit: { l: 0.3, b: [0.2, 0.04], hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
+    // ---------------------------------------------------------------- guns & throws
+    shoot: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.42, -0.04], wF: 0, hB: c.sling ? [0.02, -0.04] : [0.3, 0.05], l: 0.03 }, hit: { hF: [0.34, -0.13], wF: -0.4, hB: c.sling ? [0.34, -0.02] : [0.26, 0.04], l: -0.1, b: [-0.07, 0] }, follow: { hF: [0.4, -0.06], wF: -0.1, l: 0 } })) }),
+    aim: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, hB: c.sling ? [-0.02, -0.06] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02] }, hit: { hF: [0.3, -0.24], wF: -0.7, hB: c.sling ? [0.36, -0.04] : [0.24, 0.02], l: -0.16, b: [-0.14, 0.02] } })) }),
+    flick: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { hF: [0.02, 0.2], l: -0.06 }, hit: { hF: [0.46, -0.1], l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
+    throw: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { hF: { a: -2.4, r: 0.4 }, l: -0.16, b: [-0.04, 0.04] }, hit: { hF: { a: 0.15, r: 0.43 }, l: 0.26, b: [0.1, 0.04], hand: "palm", face: "fierce" } })) }),
+    // ---------------------------------------------------------------- casting
+    push: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.04, 0.1], l: -0.14, hF: [-0.12, 0.18], hB: [-0.16, 0.2], hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.16, 0], face: "fierce" }, hit: { b: [0.1, 0.04], l: 0.22, hF: [0.47, -0.06], hB: [0.43, 0.03], hand: "palm", handB: "palm", fF: [0.28, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 6e-3 }),
+    point: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, load: { hF: [0.1, 0.1], l: -0.06, face: "fierce" }, hit: { hF: [0.48, -0.12], hand: "finger", l: 0.1, hB: [-0.05, 0.3], fF: [0.18, 0], fB: [-0.12, 0] } })) }),
+    raise: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.14, b: [0.04, 0.04], face: "shout" } })), jitter: 4e-3 }),
+    summon: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.1], l: 0.18, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, -0.02], l: -0.16, hF: [0.18, -0.5], hB: [-0.16, -0.48], hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
+    powerup: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.16], l: 0.26, hF: [0.02, 0.27], hB: [-0.06, 0.29], fF: [0.2, 0], fB: [-0.2, 0], face: "fierce" }, hit: { b: [0, -0.03], l: -0.18, hF: [0.3, -0.34], hB: [-0.28, -0.34], hand: "palm", handB: "palm", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.14 })), jitter: 0.012 }),
+    spread: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], hF: [0.1, 0.26], hB: [0, 0.26], l: 0.22, face: "fierce" }, hit: { b: [0, -0.02], hF: [0.4, -0.14], hB: [-0.38, -0.14], hand: "palm", handB: "palm", l: -0.1, fF: [0.2, 0], fB: [-0.2, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
+    hana: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85 })) }),
+    slam: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, hF: [0.14, -0.46], hB: [0.06, -0.46], l: -0.22, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "fierce" }, hit: { z: 0, b: [0.1, 0.26], l: 0.48, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.26, 0], fB: [-0.2, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
+    quake: (w, T3, c) => ({ keys: strike(w, T3, S(c, { loadAt: 0.72, load: { b: [-0.06, 0.08], l: -0.26, hF: [-0.24, -0.04], hB: [0.2, 0.05], face: "fierce" }, hit: { b: [0.2, 0.05], l: 0.36, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 0.014 }),
+    pray: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
+    blink: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.16], l: 0.32, hF: [-0.1, 0.2], hB: [-0.14, 0.22] }, hit: { l: 0.5, b: [0.2, 0.06], hF: [-0.2, 0.2], hB: [-0.24, 0.22], fB: [-0.3, -0.1] } })), legs: true }),
+    will: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.1], hF: [0, 0.32], hB: [-0.04, 0.32], l: 0.1, ht: 0.15, face: "fierce" }, hit: { b: [0, -0.04], l: -0.12, ht: -0.12, hF: [0.14, 0.36], hB: [-0.1, 0.36], face: "shout" }, holdT: 0.2 })), jitter: 0.01 }),
+    guardup: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: GUARD, load: { b: [0, 0.07], hF: [0.14, -0.1], hB: [0.2, -0.02], eB: -1 }, hit: { b: [0, 0.06], hF: [0.16, -0.12], hB: [0.2, -0.02], eB: -1, face: "fierce" }, holdT: 0.3 })) }),
+    flex: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, load: { b: [0, 0.1], hF: [0.18, -0.2], hB: [-0.18, -0.2], eF: 1, eB: 1, face: "fierce" }, hit: { b: [0, 0.12], hF: [0.2, -0.24], hB: [-0.2, -0.24], face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
+    breath: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "fierce" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
+    pull: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
+    // ---------------------------------------------------------------- rubber
+    pistol: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.22, b: [-0.06, 0.05], hF: [-0.56, -0.02], stretch: true, face: "fierce" }, hit: { l: 0.26, b: [0.12, 0.02], hF: [0.47, -0.05], stretch: true, face: "shout" }, holdT: 0.12 })) }),
+    bazooka: (w, T3, c) => ({ keys: strike(w, T3, S(c, { loadAt: 0.74, load: { b: [-0.06, 0.07], l: -0.3, hF: [-0.66, 0], hB: [-0.7, 0.08], hand: "palm", handB: "palm", stretch: true, face: "fierce" }, hit: { b: [0.22, 0.04], l: 0.32, hF: [0.52, -0.04], hB: [0.5, 0.07], hand: "palm", handB: "palm", stretch: true, face: "shout" }, holdT: 0.1 })) }),
+    gatling: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.12, hF: [-0.14, 0.04], hB: [-0.16, 0.08], face: "fierce" }, hit: { l: 0.2, b: [0.08, 0.04], hF: [0.4, -0.02], hB: [0.36, 0.05], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
+    kneel: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
+    rocket: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.12], l: -0.26, hF: [-0.54, 0.08], hB: [-0.56, 0.12], stretch: true }, hit: { l: 0.62, z: 0.16, hF: [0.46, 0], hB: [0.44, 0.06], fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" } })), legs: true }),
+    fly: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true })
+  };
+  var LIMB = {
+    cross: "hB",
+    palm2: "hB",
+    shigan2: "hB",
+    claw2: "hB",
+    grab2: "hB",
+    dual2: "wB",
+    kick: "fF",
+    kick_high: "fF",
+    kick_low: "fF",
+    kick_spin: "fF",
+    sweep: "fF",
+    knee: "fF",
+    axe_kick: "fF",
+    rise_kick: "fF",
+    mouton: "fF",
+    handstand: "fF",
+    flying_kick: "fF",
+    stomp: "fF",
+    ballet_kick: "fF",
+    pirouette: "fF",
+    jete: "fF",
+    arabesque: "fB",
+    rocket: "hF",
+    slash: "wF",
+    slash2: "wF",
+    rise_slash: "wF",
+    slash3: "wF",
+    stab: "wF",
+    cleave: "wF",
+    iai: "wF",
+    dual1: "wF",
+    dual3: "wF",
+    dualx: "wF",
+    dual_stab: "wF",
+    tora: "wF",
+    bladespin: "wF",
+    axe: "wF",
+    axe2: "wF",
+    axe_slam: "wF",
+    staff: "wF",
+    staff2: "wF",
+    staff_jab: "wF",
+    shoot: "wF",
+    aim: "wF",
+    headbutt: "head",
+    breath: "head"
+  };
+  var SWEEP = { slash: 1, slash2: -1, rise_slash: -1, slash3: 1, cleave: 1, dual1: 1, dual2: 1, dual3: -1, dualx: 1, tora: 1, axe: 1, axe2: -1, axe_slam: 1, staff: 1, staff2: -1, chop: 1, chop2: -1, claw: 1, claw2: -1, claw_x: 1, bladespin: 1, kick_spin: -1, sweep: -1, pirouette: -1, iai: 1 };
+  var FLURRY = /* @__PURE__ */ new Set(["gatling", "jab", "cross", "shigan", "shigan2", "palm", "claw", "grab", "kick", "thrust"]);
+  var SPINS = /* @__PURE__ */ new Set(["kick_spin", "pirouette", "bladespin", "handstand", "sweep", "slash3"]);
+  function buildClip(name, w, T3, c = {}) {
+    const key2 = CLIPS[name] ? name : ALIAS[name] || "jab";
+    const f = CLIPS[key2];
+    const clip2 = f(Math.max(0, w), Math.max(T3, w + 0.08), c);
+    clip2.name = key2;
+    clip2.w = w;
+    if (c.flurry) clip2.flurry = c.flurry;
+    if (c.spin) clip2.spin = c.spin;
+    clip2.limb = LIMB[key2] || (clip2.legs ? "fF" : "hF");
+    clip2.sweep = SWEEP[key2] || 0;
+    const K = clip2.keys;
+    clip2.trailFrom = K[1] ? K[1].t : 0;
+    clip2.trailTo = Math.max((K[3] ? K[3].t : w) + 0.07, c.flurry ? c.flurry.t1 : 0, c.spin ? c.spin.t1 : 0);
+    return clip2;
+  }
+  var ALIAS = { punch: "cross", heavy: "haymaker", cast: "push", block: "guardup", slashing: "slash", kick: "kick", grab: "grab" };
+  var GENERIC = /* @__PURE__ */ new Set(["punch", "heavy", "slash", "thrust", "kick", "grab", "cast", "shoot", "block"]);
+  var MAIN = (s) => s.hit || s.proj || s.dash || s.zone || s.teleport || s.pull || s.conqueror || s.heal || s.buff || s.summon;
+  function defTotal(def) {
+    const last = Math.max(0, ...(def.steps || []).map((s) => (s.at ?? def.windup ?? 0) + (s.dash ? s.dash.time : 0) + (s.hit ? s.hit.duration ?? 0.1 : 0)));
+    return Math.max((def.windup ?? 0) + (def.active ?? 0.1), last) + (def.recover ?? 0.2);
+  }
+  function weaponFor(def, actor) {
+    const wpn = actor && actor.weapon;
+    if (!wpn) return null;
+    if (def.weapon) return actor.hasWeapon ? actor.hasWeapon(def.weapon) ? def.weapon : null : wpn.kind === def.weapon ? def.weapon : null;
+    const s = (def.steps || []).find(MAIN) || {};
+    const slashing = s.hit?.slashing || s.dash?.hit?.slashing || s.proj?.slashing;
+    if (wpn.kind === "gun") return def.anim === "shoot" ? "gun" : null;
+    if (wpn.kind === "sword" && slashing || (wpn.kind === "axe" || wpn.kind === "staff") && (def.anim === "slash" || def.anim === "heavy" || def.anim === "thrust")) return wpn.kind;
+    return null;
+  }
+  function actionClip(def, actor, stanceName) {
+    const w = Math.max(0, def.windup ?? 0.1);
+    const steps = def.steps || [];
+    const T3 = defTotal(def);
+    const main = steps.find(MAIN) || steps[0] || {};
+    const wk = weaponFor(def, actor);
+    const c = { stance: STANCES[stanceName] || GUARD };
+    for (const s of steps) if (s.dash) c.dashT = Math.max(c.dashT || 0, (s.at ?? w) - w + s.dash.time);
+    const hitDur = main.hit ? main.hit.duration || 0 : 0;
+    if (hitDur > 0.2) c.hitDur = hitDur;
+    if (wk === "sword" && (actor.weapon?.count || 1) >= 2) c.two = true;
+    if (wk === "gun" && gunKind(actor.weapon) === "sling") c.sling = true;
+    const name = pickClip(def, actor, main, steps, c, wk);
+    if (c.hitDur) {
+      if (FLURRY.has(name) && !SPINS.has(name)) c.flurry = { t0: w, t1: w + c.hitDur, rate: 12, legs: name.startsWith("kick") };
+      if (SPINS.has(name) && name !== "handstand") c.spin = { t0: w, t1: w + c.hitDur, turns: Math.max(1, Math.round(c.hitDur * 5)) };
+    }
+    const clip2 = buildClip(name, w, T3, c);
+    clip2.weapon = wk;
+    return clip2;
+  }
+  function pickClip(def, actor, s, steps, c, wk) {
+    if (def.clip && CLIPS[def.clip]) return def.clip;
+    const a = def.anim || "punch";
+    if (CLIPS[a] && !GENERIC.has(a)) return a;
+    const hit = s.hit, dash = s.dash, proj = s.proj;
+    const rubber = actor && actor.fruit === "gomu" && (def.source || "").startsWith("fruit");
+    const multi = hit && (hit.duration || 0) > 0.3;
+    const buffy = steps.some((x) => x.buff);
+    switch (a) {
+      case "punch":
+        if (rubber) return multi ? "gatling" : "pistol";
+        if (multi) return "gatling";
+        if (hit && hit.shape === "circle") return "slam";
+        return proj && proj.count > 2 ? "push" : "cross";
+      case "heavy":
+        if (wk === "sword") return dash ? "iai" : c.two ? "tora" : "cleave";
+        if (wk === "axe") return hit && hit.shape === "circle" ? "axe_slam" : "axe";
+        if (wk === "staff") return "staff";
+        if (wk === "gun") return "aim";
+        if (dash) return "charge";
+        if (rubber) return proj ? "bazooka" : "bazooka";
+        if (hit && (hit.shape === "circle" || hit.shape === "ring")) return "slam";
+        if (s.zone) return "slam";
+        if (hit && hit.shape === "line") return "quake";
+        return "haymaker";
+      case "slash":
+        if (wk === "sword") return dash ? "iai" : hit && hit.shape === "circle" ? "bladespin" : c.two ? "dual1" : "slash";
+        if (wk === "axe") return hit && hit.shape === "circle" ? "axe_slam" : "axe";
+        if (wk === "staff") return "staff";
+        if (dash) return "charge";
+        if (proj) return "throw";
+        if (hit && hit.shape === "circle") return "kick_spin";
+        return "chop";
+      case "thrust":
+        if (dash) return wk === "sword" ? "iai" : rubber ? "rocket" : "charge";
+        if (wk === "sword") return c.two ? "dual_stab" : "stab";
+        if (wk === "staff") return "staff_jab";
+        if (proj) return "thrust";
+        return "thrust";
+      case "kick":
+        if (hit && (hit.shape === "circle" || hit.shape === "ring")) return multi ? "handstand" : "kick_spin";
+        if (dash) return "flying_kick";
+        if (proj) return "kick_high";
+        if (hit && (hit.stun || 0) >= 1) return "rise_kick";
+        if (hit && hit.heavy) return "mouton";
+        return "kick";
+      case "grab":
+        if (s.pull) return "pull";
+        if (s.zone) return "raise";
+        if (hit && hit.shape === "line") return "slam";
+        if (proj) return "throw";
+        return "grab";
+      case "cast":
+        if (s.conqueror) return "will";
+        if (s.heal) return "pray";
+        if (s.teleport) return "blink";
+        if (dash) return dash.air ? "fly" : "charge";
+        if (s.summon) return "summon";
+        if (buffy && !hit && !proj && !s.zone) return "powerup";
+        if (s.zone) return s.zone.atTarget ? "point" : "spread";
+        if (s.pull) return "pull";
+        if (hit && (hit.shape === "circle" || hit.shape === "ring")) return multi ? "spread" : "spread";
+        if (hit && hit.shape === "line") return "push";
+        if (proj) return proj.count > 3 ? "spread" : "push";
+        return "powerup";
+      case "shoot":
+        if (wk === "gun") return (def.windup ?? 0.1) >= 0.45 ? "aim" : "shoot";
+        if (s.zone) return "throw";
+        return proj && proj.count > 1 ? "throw" : "flick";
+      case "block":
+        return "guardup";
+      default:
+        return "cross";
+    }
   }
   function samplePose(A, t, pose) {
     const keys = A.keys;
@@ -17057,9 +17516,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const bulk = look.bulk || 1;
     const front = d === "down";
     const lean = side ? P2.l : 0;
-    const fwd = side ? P2.b[0] : 0;
+    const fwd2 = side ? P2.b[0] : 0;
     const hipY0 = -0.42 * legLen - 0.05;
-    const hip = { x: fwd, y: hipY0 + P2.b[1] + (side ? 0 : Math.abs(P2.l) * 0.06 + (front ? P2.b[0] * 0.25 : -P2.b[0] * 0.25)) };
+    const hip = { x: fwd2, y: hipY0 + P2.b[1] + (side ? 0 : Math.abs(P2.l) * 0.06 + (front ? P2.b[0] * 0.25 : -P2.b[0] * 0.25)) };
     const cosL = Math.cos(lean), sinL = Math.sin(lean);
     const U2 = (x, y) => {
       const ry = y - hipY0;
@@ -18447,6 +18906,45 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     g.restore();
   }
+  var tintCanvas = null;
+  function drawCharacterTinted(g, look, pose, color = "#ffffff", amount = 1) {
+    if (typeof document === "undefined" || !g.getTransform) {
+      drawCharacter(g, look, pose);
+      return;
+    }
+    const m = g.getTransform();
+    const px = Math.hypot(m.a, m.b) || 1;
+    const s = (look.scale || 1) * (look.legs > 1 ? 1.3 : 1);
+    const W2 = Math.ceil(4.4 * s * px), H2 = Math.ceil(4.6 * s * px);
+    if (W2 * H2 > 4e6) {
+      drawCharacter(g, look, pose);
+      return;
+    }
+    if (!tintCanvas) tintCanvas = document.createElement("canvas");
+    if (tintCanvas.width < W2 || tintCanvas.height < H2) {
+      tintCanvas.width = Math.max(W2, tintCanvas.width);
+      tintCanvas.height = Math.max(H2, tintCanvas.height);
+    }
+    const c = tintCanvas.getContext("2d");
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalCompositeOperation = "source-over";
+    c.globalAlpha = 1;
+    c.clearRect(0, 0, W2, H2);
+    const ox = W2 / 2, oy = H2 - 0.8 * s * px;
+    c.setTransform(px, 0, 0, px, ox, oy);
+    drawCharacter(c, look, pose);
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalCompositeOperation = "source-atop";
+    c.globalAlpha = Math.max(0, Math.min(1, amount));
+    c.fillStyle = color;
+    c.fillRect(0, 0, W2, H2);
+    c.globalCompositeOperation = "source-over";
+    c.globalAlpha = 1;
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(tintCanvas, 0, 0, W2, H2, m.e - ox, m.f - oy, W2, H2);
+    g.restore();
+  }
   function drawFlurry(g, look, pose, rig, side, t) {
     const f = pose.flurry;
     const n = f.n || 7;
@@ -18982,14 +19480,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const segs = Math.max(4, Math.round(L2 * 3));
       for (let i = 1; i <= segs; i++) {
         const x = i / segs * L2;
-        const ripple = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 - c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash3(s.seed + i + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
-        g.lineTo(x, -wd / 2 - ripple);
+        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 - c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash3(s.seed + i + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
+        g.lineTo(x, -wd / 2 - ripple2);
       }
       g.lineTo(L2 + wd * 0.3, 0);
       for (let i = segs; i >= 1; i--) {
         const x = i / segs * L2;
-        const ripple = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 + c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash3(s.seed + i * 3 + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
-        g.lineTo(x, wd / 2 + ripple);
+        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 + c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash3(s.seed + i * 3 + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
+        g.lineTo(x, wd / 2 + ripple2);
       }
       g.lineTo(0, wd / 2);
       g.closePath();
@@ -19920,25 +20418,1543 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
 
   // src/render/combatfx.js
-  function hitFeedback() {
+  var TAU9 = Math.PI * 2;
+  var rnd = (a, b) => a + Math.random() * (b - a);
+  var clamp012 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  var ELEM = {
+    physical: { c: "#ffffff", spark: ["#ffffff", "#fff8e1", "#ffe0b2"], kind: "spark" },
+    slash: { c: "#e3f2fd", spark: ["#ffffff", "#e3f2fd"], kind: "spark" },
+    fire: { c: "#ff7043", spark: ["#ffca28", "#ff7043", "#ff5722", "#fff176"], kind: "fire", add: true },
+    bluefire: { c: "#4dd0e1", spark: ["#4dd0e1", "#80deea", "#e0f7fa"], kind: "fire", add: true },
+    magma: { c: "#ff5722", spark: ["#ff6f00", "#ffab40", "#bf360c"], kind: "ember", add: true },
+    ice: { c: "#81d4fa", spark: ["#e1f5fe", "#b3e5fc", "#ffffff"], kind: "shard" },
+    snow: { c: "#ffffff", spark: ["#ffffff", "#e3f2fd"], kind: "shard" },
+    lightning: { c: "#fff176", spark: ["#ffffff", "#fff59d", "#fff176"], kind: "spark", add: true },
+    water: { c: "#4fc3f7", spark: ["#e1f5fe", "#81d4fa", "#4fc3f7"], kind: "drop" },
+    sand: { c: "#e1c16e", spark: ["#e1c16e", "#d7b56d", "#fff3c4"], kind: "sand" },
+    smoke: { c: "#cfd8dc", spark: ["#eceff1", "#cfd8dc"], kind: "smoke" },
+    gas: { c: "#b2dfdb", spark: ["#b2dfdb", "#e0f2f1"], kind: "smoke" },
+    light: { c: "#fff9c4", spark: ["#ffffff", "#fff9c4", "#fff59d"], kind: "spark", add: true },
+    dark: { c: "#7e57c2", spark: ["#311b92", "#7e57c2", "#1a0033"], kind: "smoke" },
+    quake: { c: "#e0f7fa", spark: ["#ffffff", "#e0f7fa"], kind: "spark" },
+    poison: { c: "#ab47bc", spark: ["#8e24aa", "#ab47bc", "#aed581"], kind: "drop" },
+    haki: { c: "#9c27b0", spark: ["#1a0033", "#7b1fa2", "#ff1744"], kind: "spark" },
+    explosion: { c: "#ffab40", spark: ["#ffab40", "#ff7043", "#fff176"], kind: "fire", add: true },
+    string: { c: "#f8bbd0", spark: ["#f8bbd0", "#ffffff"], kind: "spark" },
+    wax: { c: "#fff8e1", spark: ["#fff8e1", "#ffffff"], kind: "shard" },
+    swamp: { c: "#6d4c41", spark: ["#6d4c41", "#8d6e63"], kind: "drop" }
+  };
+  var elemOf = (e) => ELEM[e] || ELEM.physical;
+  var STYLE_FX = {
+    brawler: { trail: "#fff3e0", spark: ["#ffffff", "#ffe0b2", "#fff8e1"] },
+    ittoryu: { trail: "#e3f2fd", spark: ["#ffffff", "#e3f2fd"], arcs: 1 },
+    nitoryu: { trail: "#e3f2fd", spark: ["#ffffff", "#e3f2fd"], arcs: 2 },
+    santoryu: { trail: "#e8f5e9", spark: ["#ffffff", "#e8f5e9", "#c8e6c9"], arcs: 3, oni: true },
+    black_leg: { trail: "#ffe0b2", spark: ["#ffffff", "#ffcc80"], legArc: "#ffe0b2" },
+    fishman_karate: { trail: "#b3e5fc", spark: ["#e1f5fe", "#81d4fa"], ripple: "#81d4fa" },
+    rokushiki: { trail: "#eceff1", spark: ["#ffffff", "#eceff1"], pierce: true },
+    okama_kenpo: { trail: "#f8bbd0", spark: ["#f48fb1", "#fce4ec", "#ffffff"], sparkle: ["#f48fb1", "#fce4ec", "#ffffff"], legArc: "#f8bbd0" },
+    electro: { trail: "#fff59d", spark: ["#ffffff", "#fff176"], bolt: "#fff176", claw: "#fff59d", elem: "lightning" },
+    hasshoken: { trail: "#ffe0b2", spark: ["#ffffff", "#ffcc80"], vibrate: "#ffcc80" },
+    weather_science: { trail: "#81d4fa", spark: ["#ffffff", "#b3e5fc"] },
+    elbaf: { trail: "#ffe082", spark: ["#ffffff", "#ffe082", "#ffca28"], arcs: 1, giant: true },
+    ryusoken: { trail: "#ffccbc", spark: ["#ffffff", "#ffab91"], clawMarks: "#ffab91", claw: "#ffffff" },
+    sniper: { trail: "#fff8e1", spark: ["#ffffff", "#ffe082"] }
+  };
+  function styleOf(def, actor) {
+    if (!def || !(def.source || "").startsWith("style")) return null;
+    return STYLE_FX[def.style || actor && actor.style] || null;
   }
-  function parryFx() {
+  var BLADES = {
+    hie_saber: "#b3e5fc",
+    pika_murakumo: "#fff59d",
+    noro_mirror: "#80deea",
+    ope_amputate: "#b3e5fc",
+    supa_sparkling: "#eceff1",
+    zushi_blade: "#b39ddb",
+    mochi_zangiri: "#fff8e1"
+  };
+  function sparks(fx, x, y, z, ang, n, cols, o = {}) {
+    if (n <= 0) return;
+    fx.burst(x, y, n, { angle: ang, spread: o.spread ?? 1.8, speed: o.speed ?? 7, z, vz: o.vz ?? 1.2, g: o.g ?? 6, life: o.life ?? 0.28, size: o.size ?? 0.09, color: cols, kind: o.kind || "spark", drag: o.drag ?? 4, add: o.add });
   }
-  function guardBreakFx() {
+  function dust(fx, x, y, n, o = {}) {
+    fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU9, speed: o.speed ?? 2.2, z: o.z ?? 0.08, vz: o.vz ?? 0.6, g: 1.2, life: o.life ?? 0.55, size: o.size ?? 0.2, grow: o.grow ?? 0.45, color: o.color || ["#d7ccc8", "#bcaaa4", "#efebe9"], kind: "dust", drag: 3 });
   }
-  function techFx() {
+  function glow2(fx, x, y, z, size, color, life = 0.2) {
+    fx.particle({ x, y, z, size, color, kind: "glow", life, g: 0, drag: 0, vz: 0, add: true });
   }
-  function zoneFx() {
+  function flames(fx, x, y, z, n, cols, o = {}) {
+    fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU9, speed: o.speed ?? 2, z, vz: o.vz ?? 2.4, g: -2.5, life: o.life ?? 0.5, size: o.size ?? 0.2, grow: -0.15, color: cols, kind: "fire", drag: 3 });
   }
-  function explosionFx() {
+  function embers(fx, x, y, z, n, cols) {
+    fx.burst(x, y, n, { speed: 2.4, z, vz: 3, g: 2, life: 0.8, size: 0.07, color: cols || ["#ffab40", "#ff6f00", "#ffd54f"], kind: "ember", drag: 1.5 });
   }
-  function projTrailFx() {
+  function splash(fx, x, y, z, n, ang) {
+    fx.burst(x, y, n, { angle: ang, spread: ang === void 0 ? TAU9 : 2.2, speed: 5, z, vz: 3, g: 12, life: 0.45, size: 0.08, color: ["#e1f5fe", "#81d4fa", "#4fc3f7"], kind: "drop", drag: 1.5 });
   }
-  function conquerorFx() {
+  function shards(fx, x, y, z, n, cols, ang) {
+    fx.burst(x, y, n, { angle: ang, spread: ang === void 0 ? TAU9 : 2.4, speed: 5.5, z, vz: 2.5, g: 10, life: 0.5, size: 0.11, color: cols || ["#e1f5fe", "#b3e5fc", "#ffffff"], kind: "shard", drag: 2 });
   }
-  function afterimage() {
+  function sparkle2(fx, x, y, z, n, cols) {
+    for (let i = 0; i < n; i++) fx.particle({ x: x + rnd(-0.4, 0.4), y: y + rnd(-0.25, 0.25), z: z + rnd(-0.2, 0.4), vx: rnd(-0.6, 0.6), vy: rnd(-0.4, 0.4), vz: rnd(0.3, 1.2), g: 0, drag: 1.5, life: rnd(0.35, 0.6), size: rnd(0.08, 0.14), color: cols[i % cols.length], kind: "star", add: true, rot: rnd(0, TAU9), vr: rnd(-4, 4) });
   }
-  function motion() {
+  function smoke(fx, x, y, z, n, cols, o = {}) {
+    fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU9, speed: o.speed ?? 1.6, z, vz: o.vz ?? 0.8, g: -0.4, life: o.life ?? 0.9, size: o.size ?? 0.3, grow: o.grow ?? 0.5, color: cols, kind: "smoke", drag: 2 });
+  }
+  function miniBolts(fx, x, y, z, n, r, col) {
+    for (let i = 0; i < n; i++) {
+      const a = rnd(0, TAU9);
+      fx.bolt(x, y, x + Math.cos(a) * r * rnd(0.6, 1), y + Math.sin(a) * r * 0.7 * rnd(0.6, 1), col, 0.14, 0.035, { z0: z, z1: z + rnd(-0.35, 0.35), branches: 0, amp: -0.2 });
+    }
+  }
+  function vibration(fx, x, y, z, R, col, n = 3) {
+    for (let i = 0; i < n; i++) fx.ring(x, y, 0.05, R * (0.6 + i * 0.25), col, 0.28 + i * 0.05, 0.05, { z, flat: 0.85, wobble: 0.18, lobes: 11, delay: i * 0.05, noCore: true, add: true });
+  }
+  function ripple(fx, x, y, R, col, n = 2) {
+    for (let i = 0; i < n; i++) fx.ring(x, y, 0.1, R * (0.8 + i * 0.35), col, 0.45, 0.07, { z: 0.06, flat: 0.55, delay: i * 0.08, add: true });
+  }
+  var clipOf = (actor, a) => a.clip || (a.clip = actionClip(a.def, actor));
+  var lastLook = (a) => a._lastLook || a.look;
+  function hitFeedback(fx, att, tgt, h2, o = {}) {
+    const game = fx.game;
+    const final = o.final || 0, crit = !!o.crit, blocked = !!o.blocked;
+    const elem = o.el || "physical";
+    const E = elemOf(elem);
+    const ang = o.ang ?? 0;
+    const def = h2.def || (att && att.action ? att.action.def : null);
+    const st = att && !h2.sprite ? styleOf(def, att) : null;
+    const m12 = !!(def && def.m1Chain && !h2.sprite);
+    let w = m12 ? 0.22 : h2.sprite ? 0.35 : 0.45;
+    if (m12 && (h2.knockback ?? 0) >= 3.2) w = 0.52;
+    if (h2.heavy) w = Math.max(w, 0.72);
+    if (h2.guardBreak) w += 0.06;
+    if (h2.impactFrame) w = Math.max(w, 1);
+    const maxHp = tgt.d ? tgt.d.maxHp : 100;
+    w += Math.min(0.3, final / maxHp * 1.2);
+    if (crit) w += 0.22;
+    if (h2.interval) w *= 0.55;
+    w = Math.min(1.25, w);
+    const scale = tgt.look && tgt.look.scale || 1;
+    const z = 0.78 * scale;
+    const cx = tgt.x - Math.cos(ang) * 0.22 * scale, cy = tgt.y - Math.sin(ang) * 0.14 * scale;
+    if (blocked) blockFx(fx, tgt, ang, w, z);
+    else if (final > 0 || h2.trueDamage) {
+      const col = st ? st.spark[1] || st.spark[0] : E.c;
+      fx.add("impact", { x: cx, y: cy, z, angle: ang, size: 0.24 + 0.42 * w, color: col, core: "#ffffff", life: 0.1 + 0.09 * w, spikes: 8 + Math.round(w * 5), lines: 2 + Math.round(w * 5) });
+      sparks(fx, cx, cy, z, ang, Math.round(3 + 9 * w), st ? st.spark : E.spark, { speed: 5 + 6 * w, life: 0.2 + 0.14 * w, size: 0.07 + 0.05 * w });
+      elemHit(fx, elem, E, cx, cy, z, ang, w);
+      if (st) styleHit(fx, st, def, tgt, cx, cy, z, ang, w);
+      if (w >= 0.68) {
+        fx.ring(tgt.x, tgt.y, 0.25, 0.9 + 0.8 * w, rgba2(col, 0.9), 0.3, 0.08 + 0.06 * w, { z: 0.06, flat: 0.55, add: true });
+        dust(fx, tgt.x, tgt.y + 0.04, Math.round(4 + 6 * w), { angle: ang, spread: 2.4, speed: 2.5 + 2 * w });
+        if ((h2.knockback ?? 2) * (tgt.kbResist ?? 1) >= 4) fx.add("skid", { x: tgt.x, y: tgt.y, angle: ang + Math.PI, length: 0.7 + 0.7 * w, life: 1.4 });
+      }
+      if (crit) {
+        fx.add("flare", { x: cx, y: cy, z: z + 0.08, size: 0.8 + 0.3 * w, color: "#ffd740", life: 0.3 });
+        sparkle2(fx, cx, cy, z, 4, ["#ffd740", "#fff59d", "#ffffff"]);
+      }
+      if (att && att.conquerorInfused) {
+        miniBolts(fx, cx, cy, z, 3, 0.9, "#d50000");
+        miniBolts(fx, cx, cy, z, 2, 0.8, "#000000");
+      } else if (att && att.armament && elem === "physical") {
+        fx.ring(cx, cy, 0.08, 0.5 + 0.3 * w, "#7c4dff", 0.2, 0.06, { z, flat: 1, noCore: true, add: true });
+      }
+      tgt.hitFx = { t0: game.env ? game.env.time : fx.time, w, ang };
+    }
+    if (final > 0) fx.damage(tgt, final, { crit, blocked, toPlayer: tgt.isPlayer });
+    if (o.playerInvolved) {
+      const stop = blocked ? 0.035 : h2.interval ? 0.018 : 0.028 + 0.075 * Math.min(1, w) + (crit ? 0.02 : 0);
+      fx.stop(stop);
+      fx.kick(ang, blocked ? 2.5 : 1.5 + 8 * Math.min(1, w));
+      if (!blocked && w >= 0.7) fx.shake(0.12 + 0.25 * (w - 0.7));
+      if (!blocked && h2.impactFrame) {
+        fx.impactFrame(0.07);
+        fx.focus(tgt.x, tgt.y, 0.22);
+      } else if (!blocked && (crit || w >= 0.95)) fx.focus(tgt.x, tgt.y, 0.14);
+    }
+  }
+  function elemHit(fx, elem, E, x, y, z, ang, w) {
+    switch (elem) {
+      case "fire":
+      case "explosion":
+        flames(fx, x, y, z, Math.round(4 + 6 * w), E.spark, { speed: 2 + 2 * w });
+        if (elem === "explosion") {
+          glow2(fx, x, y, z, 0.8 + w, "#ffab40", 0.25);
+          fx.ring(x, y, 0.1, 0.8 + 0.6 * w, "#ffab40", 0.28, 0.1, { z, flat: 0.9, add: true });
+        } else embers(fx, x, y, z, Math.round(2 + 3 * w));
+        break;
+      case "bluefire":
+        flames(fx, x, y, z, Math.round(4 + 6 * w), E.spark);
+        break;
+      case "magma":
+        flames(fx, x, y, z, Math.round(3 + 5 * w), ["#ff6f00", "#bf360c", "#ffab40"]);
+        embers(fx, x, y, z, Math.round(4 + 5 * w));
+        smoke(fx, x, y, z + 0.2, 2, ["#5d4037", "#4e342e"], { size: 0.25 });
+        fx.add("scorch", { x, y: y + 0.12, r: 0.35 + 0.3 * w, life: 2.6 });
+        break;
+      case "ice":
+      case "snow":
+        shards(fx, x, y, z, Math.round(5 + 7 * w), E.spark, ang);
+        fx.ring(x, y, 0.1, 0.6 + 0.4 * w, "#e1f5fe", 0.25, 0.07, { z, flat: 0.9, add: true });
+        break;
+      case "lightning":
+        miniBolts(fx, x, y, z, 2 + Math.round(w * 2), 0.7 + 0.5 * w, "#fff176");
+        glow2(fx, x, y, z, 0.6 + 0.5 * w, "#fff59d", 0.15);
+        break;
+      case "water":
+        splash(fx, x, y, z, Math.round(5 + 6 * w), ang);
+        ripple(fx, x, y + 0.05, 0.8 + 0.5 * w, "#81d4fa");
+        break;
+      case "sand":
+        fx.burst(x, y, Math.round(8 + 8 * w), { angle: ang, spread: 2, speed: 4, z, vz: 1.5, g: 6, life: 0.5, size: 0.05, color: E.spark, kind: "sand" });
+        break;
+      case "smoke":
+      case "gas":
+        smoke(fx, x, y, z, Math.round(3 + 3 * w), E.spark, { size: 0.28 });
+        break;
+      case "light":
+        glow2(fx, x, y, z, 0.8 + 0.6 * w, "#fff9c4", 0.2);
+        fx.add("flare", { x, y, z, size: 0.6 + 0.4 * w, color: "#fff9c4", life: 0.2 });
+        break;
+      case "dark":
+        smoke(fx, x, y, z, Math.round(3 + 4 * w), ["#1a0033", "#311b92", "#4a148c"], { speed: 1, size: 0.25 });
+        fx.ring(x, y, 0.7 + 0.3 * w, 0.1, "#7e57c2", 0.3, 0.07, { z, flat: 0.9, noCore: true });
+        break;
+      case "quake":
+        fx.add("aircrack", { x, y, z, size: 0.5 + 0.6 * w, life: 0.4, color: "#e0f7fa" });
+        break;
+      case "poison":
+        fx.burst(x, y, Math.round(4 + 5 * w), { angle: ang, spread: 2.4, speed: 3.5, z, vz: 2, g: 9, life: 0.5, size: 0.09, color: E.spark, kind: "drop" });
+        fx.burst(x, y, 3, { speed: 0.8, z, vz: 0.8, g: -0.5, life: 0.7, size: 0.08, color: "#ce93d8", kind: "bubble" });
+        break;
+      case "haki":
+        miniBolts(fx, x, y, z, 2, 0.7, "#7c4dff");
+        break;
+      case "string":
+        sparks(fx, x, y, z, ang, 4, ["#f8bbd0", "#ffffff"], { kind: "line", size: 0.05 });
+        break;
+      default:
+        break;
+    }
+  }
+  function styleHit(fx, st, def, tgt, x, y, z, ang, w) {
+    if (st.ripple) ripple(fx, x, y + 0.05, 0.6 + 0.6 * w, st.ripple, w > 0.6 ? 3 : 2);
+    if (st.vibrate) vibration(fx, x, y, z, 0.5 + 0.7 * w, st.vibrate, w > 0.6 ? 4 : 2);
+    if (st.sparkle) sparkle2(fx, x, y, z, Math.round(2 + 3 * w), st.sparkle);
+    if (st.clawMarks) fx.add("claw", { x: tgt.x, y: tgt.y, z: z * 0.95, angle: ang, size: 0.5 + 0.4 * w, color: st.clawMarks, life: 0.35 });
+    if (st.bolt && w > 0.5) miniBolts(fx, x, y, z, 2, 0.8, st.bolt);
+    if (st.pierce) fx.ring(x, y, 0.02, 0.32 + 0.25 * w, "#ffffff", 0.18, 0.04, { z, flat: 1, add: true });
+    if (st.giant && w > 0.5) {
+      fx.crack(tgt.x, tgt.y + 0.1, 0.8 + 0.5 * w, 1.6);
+      dust(fx, tgt.x, tgt.y, 6, { speed: 3 });
+    }
+    if (st.oni && w > 0.6) fx.add("flare", { x, y, z, size: 0.7, color: "#ff1744", life: 0.2 });
+  }
+  function blockFx(fx, tgt, ang, w, z) {
+    const fa = ang + Math.PI;
+    const px = tgt.x + Math.cos(fa) * 0.35, py = tgt.y + Math.sin(fa) * 0.22;
+    fx.add("crescent", { x: tgt.x, y: tgt.y, angle: fa, radius: 0.62, arc: 1.8, width: 0.17, color: "#90caf9", core: "#ffffff", life: 0.22, z, reveal: 0.01, dir: 1, tilt: 0.85 });
+    sparks(fx, px, py, z, fa, 4 + Math.round(3 * w), ["#e3f2fd", "#90caf9", "#ffffff"], { speed: 5, life: 0.2 });
+    tgt._blockFlash = fx.game.env ? fx.game.env.time : fx.time;
+  }
+  function parryFx(fx, tgt, att, ang) {
+    const fa = ang + Math.PI;
+    const s = tgt.look && tgt.look.scale || 1;
+    const px = tgt.x + Math.cos(fa) * 0.45, py = tgt.y + Math.sin(fa) * 0.3, z = 0.85 * s;
+    fx.add("flare", { x: px, y: py, z, size: 1.3, color: "#fff59d", life: 0.36 });
+    fx.add("impact", { x: px, y: py, z, angle: fa, size: 0.8, color: "#fff59d", core: "#ffffff", life: 0.2, spikes: 12, lines: 8 });
+    fx.ring(tgt.x, tgt.y, 0.3, 2, "#fff59d", 0.4, 0.12, { add: true });
+    sparks(fx, px, py, z, fa, 16, ["#ffffff", "#fff59d", "#ffe082"], { speed: 9, spread: 2.6, life: 0.35 });
+    fx.callout(tgt.x, tgt.y - 1.45, "PARRY!", "#fff59d", 0.5);
+    fx.stop(0.12);
+    if (tgt.isPlayer || att && att.isPlayer) {
+      fx.slowmo(0.45, 0.3);
+      fx.flashScreen(0.05);
+      fx.kick(fa, 6);
+      fx.focus(px, py, 0.28);
+    }
+  }
+  function guardBreakFx(fx, tgt, att, ang) {
+    const s = tgt.look && tgt.look.scale || 1, z = 0.85 * s;
+    fx.burst(tgt.x, tgt.y, 14, { kind: "shard", color: ["#e3f2fd", "#90caf9", "#ffffff"], speed: 6, z, vz: 3, g: 9, life: 0.55, size: 0.12, drag: 2 });
+    fx.add("impact", { x: tgt.x, y: tgt.y, z, angle: ang, size: 0.75, color: "#ff8a65", core: "#ffffff", life: 0.2, spikes: 11 });
+    fx.ring(tgt.x, tgt.y, 0.3, 1.6, "#ff7675", 0.35, 0.12, { add: true });
+    fx.callout(tgt.x, tgt.y - 1.4, "GUARD BREAK", "#ff7675", 0.42);
+    if (tgt.isPlayer || att && att.isPlayer) {
+      fx.slowmo(0.28, 0.4);
+      fx.kick(ang, 7);
+      fx.focus(tgt.x, tgt.y, 0.2);
+    }
+  }
+  function techFx(fx, actor, s, a, kind, extra = {}) {
+    const def = a && a.def || {};
+    const f = SIG[def.id] && SIG[def.id][kind];
+    try {
+      if (f) f(fx, actor, s, a, extra);
+      else if (DEFAULTS[kind]) DEFAULTS[kind](fx, actor, s, a, extra);
+    } catch (e) {
+      if (!fx._techWarned) {
+        fx._techWarned = true;
+        console.warn("technique fx", def.id, kind, e);
+      }
+    }
+  }
+  function beamStyle(el, def) {
+    const s = SIG[def.id] && SIG[def.id].beam;
+    if (s) return s;
+    return { lightning: "lightning", fire: "fire", magma: "fire", explosion: "fire", light: "light", ice: "ice", snow: "ice", sand: "sand", quake: "quake", string: "string", dark: "dark", water: "water", smoke: "wind", gas: "wind" }[el] || "energy";
+  }
+  function slashFx(fx, actor, a, h2, ang, range, col, st, clip2, o = {}) {
+    const n = o.arcs || (st ? st.arcs || 1 : 1);
+    const dir = o.dir || clip2 && clip2.sweep || 1;
+    const heavy = !!h2.heavy;
+    const baseW = o.width || (h2.width ? h2.width * 0.35 : heavy ? 0.34 : 0.22);
+    const arc = h2.arc ?? 1.8;
+    const life = heavy ? 0.27 : 0.2;
+    const x = actor.x + Math.cos(ang) * 0.12, y = actor.y + Math.sin(ang) * 0.08;
+    if (h2.shape === "line") {
+      const L2 = range;
+      for (let i = 0; i < Math.max(1, n); i++) {
+        const off = (i - (n - 1) / 2) * 0.22;
+        fx.add("cutline", { x: actor.x, y: actor.y, x1: actor.x + Math.cos(ang) * L2, y1: actor.y + Math.sin(ang) * L2, off, z: 0.6, color: col, life: 0.4, delay: i * 0.03 });
+      }
+      fx.add("crescent", { x, y, angle: ang, radius: Math.min(2.2, range * 0.6), arc: 1.4, width: baseW, color: col, core: "#ffffff", dir, life, z: 0.65 });
+      if (heavy) fx.crack(actor.x + Math.cos(ang) * L2 * 0.6, actor.y + Math.sin(ang) * L2 * 0.6, 0.9, 1.4);
+      return;
+    }
+    for (let i = 0; i < n; i++) {
+      fx.add("crescent", {
+        x,
+        y,
+        angle: ang + (i - (n - 1) / 2) * 0.14 * dir,
+        radius: range * (0.9 - i * 0.08),
+        arc: arc * (1 - i * 0.07),
+        width: baseW * (1 - i * 0.2),
+        color: col,
+        core: "#ffffff",
+        dir,
+        life: life + i * 0.02,
+        delay: i * 0.022,
+        z: 0.62 + (i - (n - 1) / 2) * 0.1
+      });
+    }
+    if (st && st.giant) {
+      fx.add("crescent", { x, y, angle: ang, radius: range * 1.08, arc: arc * 1.05, width: baseW * 1.7, color: "#ffe082", core: "#fffde7", dir, life: life + 0.05, z: 0.55 });
+      if (heavy) {
+        fx.crack(actor.x + Math.cos(ang) * range * 0.7, actor.y + Math.sin(ang) * range * 0.7, 1, 1.6);
+        dust(fx, actor.x + Math.cos(ang) * range * 0.7, actor.y + Math.sin(ang) * range * 0.7, 6, { speed: 3 });
+      }
+    }
+  }
+  function ringFx(fx, actor, a, h2, hb, col, E, st) {
+    const R = h2.range || 2;
+    const x = hb.x, y = hb.y + 0.4;
+    fx.ring(x, y, 0.2, R, col, 0.36, 0.2, { add: !!E.add || col === "#ffffff" });
+    fx.ring(x, y, 0.1, R * 0.7, "#ffffff", 0.26, 0.07, { add: true });
+    if ((h2.duration || 0) > 0.3) {
+      for (let t = 0.12; t < h2.duration; t += 0.14) fx.ring(x, y, 0.2, R * 0.9, col, 0.3, 0.1, { delay: t, add: true });
+    }
+    fx.burst(x, y, Math.round(8 + R * 3), { speed: R * 3, spread: TAU9, kind: E.kind === "drop" ? "drop" : E.kind, color: E.spark, z: 0.45, vz: 1, g: 3, life: 0.4, size: 0.1 });
+    const el = h2.element || "physical";
+    if (el === "lightning") miniBolts(fx, x, y, 0.6, 5, R * 0.9, "#fff176");
+    else if (el === "fire" || el === "explosion") flames(fx, x, y, 0.3, 14, ELEM.fire.spark, { speed: R * 1.6 });
+    else if (el === "ice") ringSpikes(fx, x, y, R * 0.75, Math.round(R * 4), "ice");
+    else if (el === "quake") {
+      for (let i = 0; i < 3; i++) fx.add("aircrack", { x: x + rnd(-R, R) * 0.5, y: y + rnd(-R, R) * 0.3, z: rnd(0.6, 1.4), size: R * 0.3, life: 0.45, delay: i * 0.05 });
+    } else if (el === "water") ripple(fx, x, y, R, "#81d4fa", 3);
+    else if (el === "dark") fx.add("vortex", { x, y, r: R * 0.7, kind: "dark", life: 0.5, spin: -6 });
+    else if (el === "light") glow2(fx, x, y, 0.8, R, "#fff9c4", 0.25);
+    if (st && st.vibrate) vibration(fx, x, y, 0.7, R, st.vibrate, 3);
+    if (st && st.sparkle) sparkle2(fx, x, y, 0.8, 6, st.sparkle);
+    if (h2.heavy) {
+      fx.crack(x, y, R * 0.7);
+      dust(fx, x, y, Math.round(6 + R * 2), { speed: R * 1.5 });
+    }
+  }
+  function ringSpikes(fx, x, y, R, n, kind, col) {
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const th = i / n * TAU9 + rnd(-0.2, 0.2);
+      const rr = R * rnd(0.55, 1);
+      pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, h: rnd(0.5, 1.1), w: rnd(0.12, 0.2), delay: rr / R * 0.12, lean: Math.cos(th) * 0.25 });
+    }
+    pts.sort((p, q) => p.dy - q.dy);
+    fx.add("spikes", { x, y, pts, kind, color: col || (kind === "ice" ? "#b3e5fc" : kind === "sand" ? "#d7b56d" : "#8d6e63"), edge: kind === "ice" ? "#e1f5fe" : "#5d4037", life: 1.1 });
+  }
+  function lineSpikes(fx, x, y, ang, L2, kind, col, width = 0.6) {
+    const pts = [];
+    const n = Math.max(3, Math.round(L2 * 2.2));
+    for (let i = 0; i < n; i++) {
+      const d = (i + 0.5) / n * L2, side = rnd(-width, width);
+      pts.push({ dx: Math.cos(ang) * d - Math.sin(ang) * side, dy: Math.sin(ang) * d + Math.cos(ang) * side, h: rnd(0.45, 1), w: rnd(0.1, 0.18), delay: d / L2 * 0.25, lean: Math.cos(ang) * 0.3 });
+    }
+    pts.sort((p, q) => p.dy - q.dy);
+    fx.add("spikes", { x, y, pts, kind, color: col || (kind === "ice" ? "#b3e5fc" : kind === "sand" ? "#d7b56d" : "#8d6e63"), edge: kind === "ice" ? "#e1f5fe" : "#6d4c41", life: 1.2 });
+  }
+  function beamFx(fx, actor, s, a, h2, ang, range, col, E) {
+    const style = beamStyle(h2.element, a.def);
+    fx.beam(actor.x, actor.y, ang, range, h2.width || 0.6, col, h2.duration ? Math.max(0.26, h2.duration) : 0.3, s.core || "#ffffff", { style });
+    fx.add("flare", { x: actor.x + Math.cos(ang) * 0.5, y: actor.y + Math.sin(ang) * 0.35, z: 0.75, size: 0.6 + (h2.width || 0.6) * 0.3, color: col, life: 0.22 });
+    const W2 = h2.width || 0.6;
+    if (style === "ice") lineSpikes(fx, actor.x, actor.y, ang, range, "ice", null, W2 * 0.5);
+    else if (style === "sand") lineSpikes(fx, actor.x, actor.y, ang, range, "sand", null, W2 * 0.5);
+    else if (style === "quake") {
+      for (let i = 1; i <= 4; i++) {
+        const d = i / 4.5 * range;
+        fx.add("aircrack", { x: actor.x + Math.cos(ang) * d, y: actor.y + Math.sin(ang) * d, z: rnd(0.5, 1.2), size: W2 * 0.6 + 0.3, life: 0.5, delay: i * 0.04 });
+      }
+      fx.crack(actor.x + Math.cos(ang) * range * 0.5, actor.y + Math.sin(ang) * range * 0.5, range * 0.35, 2);
+    } else if (style === "lightning") {
+      for (let i = 0; i < 3; i++) {
+        const d = rnd(0.3, 1) * range;
+        const px = actor.x + Math.cos(ang) * d, py = actor.y + Math.sin(ang) * d;
+        miniBolts(fx, px, py, 0.7, 1, W2 * 1.5, "#fff176");
+      }
+    } else if (style === "fire") {
+      for (let i = 0; i < 6; i++) {
+        const d = rnd(0.2, 1) * range;
+        flames(fx, actor.x + Math.cos(ang) * d, actor.y + Math.sin(ang) * d, 0.6, 2, ELEM.fire.spark, { speed: 1 });
+      }
+    }
+    if (h2.heavy) {
+      const ex = actor.x + Math.cos(ang) * range, ey = actor.y + Math.sin(ang) * range;
+      glow2(fx, ex, ey, 0.7, W2 * 1.6, col, 0.3);
+    }
+  }
+  function swingFx(fx, actor, a, h2, hb, ang, range, col, E, st, clip2) {
+    const reachPt = (h2.offset ?? 0) * (actor.reach ?? 1) + range * 0.62;
+    const px = actor.x + Math.cos(ang) * reachPt, py = actor.y + Math.sin(ang) * reachPt * 0.8;
+    const legs = !!(clip2 && (clip2.legs || clip2.limb === "fF" || clip2.limb === "fB"));
+    const z = legs ? 0.55 : 0.8;
+    const heavy = !!h2.heavy;
+    const diable = actor.buffs && actor.buffs.some((b) => b.id === "diable");
+    if (legs) {
+      fx.add("crescent", { x: actor.x, y: actor.y, angle: ang, radius: range * 0.85, arc: heavy ? 1.9 : 1.5, width: heavy ? 0.24 : 0.15, color: diable ? "#ff9800" : st && st.legArc || col, core: diable ? "#ffeb3b" : "#ffffff", dir: clip2 && clip2.sweep || -1, life: heavy ? 0.22 : 0.16, z: 0.5, tilt: 0.62 });
+      if (diable) flames(fx, px, py, z, 5, ELEM.fire.spark, { speed: 2 });
+    } else {
+      fx.burst(px, py, heavy ? 5 : 3, { angle: ang, spread: 0.35, speed: 7, kind: "line", color: "rgba(255,255,255,0.85)", z, vz: 0, g: 0, life: 0.12, size: 0.05, drag: 2 });
+    }
+    if (heavy) fx.ring(px, py, 0.1, 0.7, "#ffffff", 0.2, 0.06, { z, flat: 1, add: true });
+    if (st) {
+      if (st.ripple) {
+        fx.ring(px, py, 0.04, 0.45, st.ripple, 0.28, 0.05, { z, flat: 1, wobble: 0.1, add: true });
+        splash(fx, px, py, z, 3, ang);
+      }
+      if (st.pierce && !legs) fx.ring(px, py, 0.02, 0.22, "#ffffff", 0.14, 0.035, { z, flat: 1, add: true });
+      if (st.sparkle) sparkle2(fx, px, py, z, 2, st.sparkle);
+      if (st.bolt) miniBolts(fx, px, py, z, 1, 0.45, st.bolt);
+      if (st.vibrate) fx.ring(px, py, 0.05, 0.38, st.vibrate, 0.2, 0.04, { z, flat: 0.9, wobble: 0.25, lobes: 12, add: true });
+      if (st.clawMarks) sparks(fx, px, py, z, ang, 3, ["#ffffff"], { kind: "line", speed: 5, spread: 0.6, size: 0.05 });
+    }
+    if (h2.element && h2.element !== "physical" && !diable) fx.burst(px, py, 4, { kind: E.kind === "spark" ? "spark" : E.kind, color: E.spark, z, speed: 2, g: -1, life: 0.3, size: 0.12 });
+  }
+  function ghostsAlong(fx, actor, x0, y0, n, tint, o = {}) {
+    const w = fx.game.world;
+    const dx = w ? w.dx(x0, actor.x) : actor.x - x0, dy = actor.y - y0;
+    for (let i = 0; i < n; i++) {
+      const k = (i + 0.5) / n;
+      afterimage(fx, actor, { x: x0 + dx * k, y: y0 + dy * k, tint, life: 0.2 + k * 0.15, alpha: 0.25 + 0.3 * k, add: o.add });
+    }
+  }
+  function muzzle(fx, actor, ang, col = "#ffe082") {
+    const mx = actor.x + Math.cos(ang) * 0.62, my = actor.y + Math.sin(ang) * 0.45;
+    fx.add("flare", { x: mx, y: my, z: 0.8, size: 0.45, color: col, life: 0.1, rot: ang });
+    glow2(fx, mx, my, 0.8, 0.5, col, 0.1);
+    sparks(fx, mx, my, 0.8, ang, 3, ["#ffffff", col], { speed: 6, spread: 0.6, life: 0.12, size: 0.05 });
+    smoke(fx, mx, my, 0.8, 2, ["#eceff1", "#cfd8dc"], { speed: 0.6, size: 0.14, life: 0.45, angle: ang, spread: 0.8 });
+  }
+  var DEFAULTS = {
+    hit(fx, actor, s, a, hb) {
+      const h2 = s.hit, def = a.def;
+      const ang = hb.angle;
+      const reach = actor.reach ?? 1;
+      const E = elemOf(h2.element);
+      const st = styleOf(def, actor);
+      const col = s.color || h2.color || (h2.element && h2.element !== "physical" ? E.c : st ? st.trail : "#ffffff");
+      const vfx = s.vfx || h2.vfx;
+      const clip2 = clipOf(actor, a);
+      const range = (h2.range || 1.4) * (h2.shape === "circle" ? 1 : reach);
+      if (vfx === "slash" || !vfx && h2.slashing) slashFx(fx, actor, a, h2, ang, range, col, st, clip2);
+      else if (vfx === "ring" || h2.shape === "circle" || h2.shape === "ring") ringFx(fx, actor, a, h2, hb, col, E, st);
+      else if (vfx === "beam" || h2.shape === "line") beamFx(fx, actor, s, a, h2, ang, range, col, E);
+      else swingFx(fx, actor, a, h2, hb, ang, range, col, E, st, clip2);
+    },
+    proj(fx, actor, s, a) {
+      const p = s.proj;
+      const ang = a.angle + (s.angleOffset || 0);
+      const E = elemOf(p.element);
+      const col = p.color || E.c;
+      const gun = weaponFor(a.def, actor) === "gun" || p.sprite === "bullet";
+      const hx = actor.x + Math.cos(ang) * 0.55, hy = actor.y + Math.sin(ang) * 0.4;
+      if (gun) muzzle(fx, actor, ang, p.element === "fire" ? "#ff9800" : "#ffe082");
+      else if (p.element && p.element !== "physical") {
+        glow2(fx, hx, hy, 0.8, 0.7 + (p.size || 1) * 0.2, col, 0.18);
+        fx.burst(hx, hy, 5, { angle: ang, spread: 1.2, speed: 3, kind: E.kind, color: E.spark, z: 0.8, vz: 0.5, g: 0, life: 0.3, size: 0.12 });
+      } else fx.ring(hx, hy, 0.05, 0.45, col === "#ffffff" ? "#ffffff" : col, 0.18, 0.05, { z: 0.8, flat: 1, add: true });
+    },
+    dash(fx, actor, s, a) {
+      const d = s.dash;
+      const ang = a.angle + (s.angleOffset || 0);
+      actor._ghostT = d.time + 0.05;
+      actor._ghostTint = d.trail || (d.hit ? "#e3f2fd" : "#ffffff");
+      dust(fx, actor.x, actor.y, 6, { angle: ang + Math.PI, spread: 1.3, speed: 3 });
+      fx.add("streaks", { follow: actor, angle: ang, life: d.time + 0.08, color: d.trail || "#ffffff" });
+      if (d.air) fx.ring(actor.x, actor.y, 0.1, 0.9, "#ffffff", 0.3, 0.08, { z: 0.1, flat: 0.5, add: true });
+      if (d.trail) fx.burst(actor.x, actor.y, 8, { color: d.trail, speed: 2, g: 0, life: 0.3, kind: "smoke", size: 0.25, z: 0.5 });
+      const wk = weaponFor(a.def, actor);
+      if (wk === "sword" || d.hit && d.hit.slashing) {
+        const x0 = actor.x, y0 = actor.y;
+        const n = wk === "sword" ? Math.min(3, actor.weapon ? actor.weapon.count || 1 : 1) : 1;
+        for (let i = 0; i < n; i++) {
+          fx.add("cutline", { x: x0, y: y0, x1: x0, y1: y0, off: (i - (n - 1) / 2) * 0.28, z: 0.65 + (i - 1) * 0.12, color: "#e3f2fd", life: 0.5, delay: d.time + 0.03 + i * 0.03, onStart: (sh) => {
+            sh.x1 = actor.x;
+            sh.y1 = actor.y;
+          } });
+        }
+      }
+    },
+    teleport(fx, actor, s, a, ex) {
+      const col = s.teleport.color || "#ffffff";
+      ghostsAlong(fx, actor, ex.x0, ex.y0, 3, col);
+      fx.burst(ex.x0, ex.y0, 10, { color: col, speed: 3, g: 0, life: 0.25, kind: "line", z: 0.6 });
+      fx.burst(actor.x, actor.y, 10, { color: col, speed: 3, g: 0, life: 0.25, kind: "line", z: 0.6 });
+      fx.add("flare", { x: actor.x, y: actor.y, z: 0.8, size: 0.6, color: col, life: 0.2 });
+    },
+    heal(fx, actor, s) {
+      const col = s.color || "#80deea";
+      flames(fx, actor.x, actor.y, 0.3, 14, [col, "#ffffff", col], { speed: 1.5, vz: 2.5, life: 0.9, size: 0.18 });
+      fx.ring(actor.x, actor.y, 0.2, 1.3, col, 0.5, 0.1, { z: 0.1, flat: 0.55, add: true });
+      sparkle2(fx, actor.x, actor.y, 1.2, 4, [col, "#ffffff"]);
+    },
+    pull(fx, actor, s, a) {
+      const R = s.pull.range;
+      const col = s.color || "#7e57c2";
+      const ang = a.angle;
+      fx.add("vortex", { x: actor.x + Math.cos(ang) * 0.6, y: actor.y + Math.sin(ang) * 0.4, r: 1.1, kind: "dark", life: 0.6, spin: -8, arms: 5 });
+      fx.ring(actor.x, actor.y, R, 0.3, col, 0.5, 0.3);
+      for (let i = 0; i < 18; i++) {
+        const th = rnd(0, TAU9), rr = R * rnd(0.5, 0.95);
+        fx.particle({ x: actor.x + Math.cos(th) * rr, y: actor.y + Math.sin(th) * rr * 0.7, z: rnd(0.3, 1.2), vx: -Math.cos(th) * rr * 2.2, vy: -Math.sin(th) * rr * 1.6, vz: 0, g: 0, drag: 0.5, life: 0.45, size: 0.12, color: i % 2 ? "#311b92" : "#7e57c2", kind: "spark", add: false });
+      }
+    },
+    buff(fx, actor, s, a, ex) {
+      const b = ex && ex.buff || s.buff || {};
+      const col = b.aura || "#ffffff";
+      fx.ring(actor.x, actor.y, 0.2, 1.8, col, 0.45, 0.14, { add: true });
+      fx.burst(actor.x, actor.y, 16, { color: [col, "#ffffff"], speed: 4, z: 0.7, vz: 2, g: 2, life: 0.5, kind: "spark" });
+      fx.add("pillar", { x: actor.x, y: actor.y, r: 0.5, h: 2.6, color: col, life: 0.35, kind: "light" });
+    },
+    fx(fx, actor, s) {
+      const f = s.fx;
+      const col = f.color || "#ffffff";
+      if (f.ring) fx.ring(actor.x, actor.y, 0.3, f.ring, col, f.life || 0.45, f.width || 0.2, { add: col !== "#000000" && col !== "#212121" });
+      if (f.burst) fx.burst(actor.x, actor.y, f.burst, { color: col, speed: f.speed || 5, g: f.g ?? 2, life: f.life || 0.5, kind: f.kind || "spark", size: f.size || 0.14, z: 0.8 });
+      if (f.shake) fx.shake(f.shake);
+      if (f.impact) fx.impactFrame(f.impact);
+      if (f.flash) fx.flashScreen(f.flash);
+      if (f.text) fx.callout(actor.x, actor.y - 2.2, f.text, f.color || "#fff", 0.5, { life: 1.1 });
+    }
+  };
+  var SIG = {};
+  function sig(ids, o) {
+    for (const id of ids.split(/\s+/)) if (id) SIG[id] = { ...SIG[id] || {}, ...o };
+  }
+  var fwd = (actor, ang, d, zy = 0.8) => [actor.x + Math.cos(ang) * d, actor.y + Math.sin(ang) * d * zy];
+  sig("itto_pound santo_108", {
+    proj(fx, actor, s, a) {
+      const n = a.def.id === "santo_108" ? 3 : 1;
+      for (let i = 0; i < n; i++) fx.add("crescent", { x: actor.x, y: actor.y, angle: a.angle, radius: 1.3 - i * 0.1, arc: 2, width: 0.2, color: "#e3f2fd", dir: 1, life: 0.2, delay: i * 0.03, z: 0.55 + i * 0.12 });
+    }
+  });
+  sig("itto_whirl", {
+    hit(fx, actor, s, a, hb) {
+      fx.add("vortex", { x: actor.x, y: actor.y, r: 2.4, h: 2, kind: "wind", color: "#b3e5fc", color2: "#ffffff", life: 0.7, spin: 14, follow: actor });
+      for (let i = 0; i < 5; i++) fx.add("crescent", { x: actor.x, y: actor.y, follow: actor, angle: a.angle + i * 1.3, radius: 2.1, arc: 2.2, width: 0.2, color: "#e3f2fd", dir: 1, life: 0.2, delay: i * 0.11, z: 0.6 });
+    }
+  });
+  sig("nito_nigiri santo_onigiri", {
+    dash(fx, actor, s, a) {
+      DEFAULTS.dash(fx, actor, s, a);
+      const d = s.dash, x0 = actor.x, y0 = actor.y, oni = a.def.id === "santo_onigiri";
+      for (const [off, z] of [[-0.35, 0.3], [0.35, 1.1]]) {
+        fx.add("cutline", { x: x0, y: y0, x1: x0, y1: y0, off, z, color: oni ? "#ffcdd2" : "#e3f2fd", life: 0.55, delay: d.time + 0.08, onStart: (sh) => {
+          sh.x1 = actor.x;
+          sh.y1 = actor.y;
+        } });
+      }
+      if (oni) actor._ghostTint = "#ff8a80";
+    }
+  });
+  sig("santo_heavy", {
+    hit(fx, actor, s, a, hb) {
+      const h2 = s.hit, ang = hb.angle, R = (h2.range || 2.4) * (actor.reach ?? 1);
+      for (const [dir, z] of [[1, 0.9], [-1, 0.45]]) fx.add("crescent", { x: actor.x, y: actor.y, angle: ang, radius: R * 0.9, arc: 1.9, width: 0.3, color: "#e8f5e9", dir, life: 0.28, z, tilt: 0.55 });
+      fx.add("flare", { x: actor.x + Math.cos(ang) * R * 0.7, y: actor.y + Math.sin(ang) * R * 0.5, z: 0.7, size: 0.9, color: "#ff5252", life: 0.22 });
+    }
+  });
+  sig("santo_sanzen", {
+    fx(fx, actor, s, a) {
+      DEFAULTS.fx(fx, actor, s, a);
+      if (!s.fx.ring) return;
+      for (let i = 0; i < 6; i++) fx.add("crescent", { x: actor.x, y: actor.y, follow: actor, angle: a.angle + i * 2.1, radius: 1.2, arc: 2.6, width: 0.16, color: "#e8f5e9", dir: 1, life: 0.2, delay: i * 0.09, z: 0.7 + (i % 3 - 1) * 0.25 });
+    },
+    dash(fx, actor, s, a) {
+      DEFAULTS.dash(fx, actor, s, a);
+      const d = s.dash, x0 = actor.x, y0 = actor.y;
+      for (let i = 0; i < 3; i++) fx.add("cutline", { x: x0, y: y0, x1: x0, y1: y0, off: (i - 1) * 0.4, z: 0.4 + i * 0.35, color: "#e8f5e9", life: 0.6, delay: d.time + 0.05 + i * 0.04, onStart: (sh) => {
+        sh.x1 = actor.x;
+        sh.y1 = actor.y;
+      } });
+    }
+  });
+  sig("santo_asura", {
+    fx(fx, actor, s, a) {
+      DEFAULTS.fx(fx, actor, s, a);
+      smoke(fx, actor.x, actor.y, 0.6, 10, ["#212121", "#424242", "#000000"], { speed: 2, size: 0.4 });
+    }
+  });
+  sig("bleg_party", {
+    hit(fx, actor, s, a, hb) {
+      for (let i = 0; i < 6; i++) fx.add("crescent", { x: actor.x, y: actor.y, follow: actor, angle: a.angle + i * 1.05, radius: 2.1, arc: 2.4, width: 0.18, color: "#ffe0b2", dir: -1, life: 0.18, delay: i * 0.08, z: 0.35 + i % 2 * 0.35, tilt: 0.6 });
+      dust(fx, actor.x, actor.y, 8, { speed: 3 });
+    }
+  });
+  sig("bleg_antimanner", {
+    hit(fx, actor, s, a, hb) {
+      const [px, py] = fwd(actor, hb.angle, 1.1);
+      fx.add("pillar", { x: px, y: py, r: 0.28, h: 3, color: "#ffe0b2", life: 0.3, kind: "light" });
+      sparks(fx, px, py, 0.8, -Math.PI / 2, 10, ["#ffffff", "#ffe0b2"], { spread: 0.8, speed: 8, g: 2 });
+      fx.add("crescent", { x: actor.x, y: actor.y, angle: hb.angle, radius: 1.2, arc: 1.6, width: 0.2, color: "#ffe0b2", dir: -1, life: 0.2, z: 0.9, tilt: 1.3 });
+    }
+  });
+  sig("bleg_concasse", {
+    hit(fx, actor, s, a, hb) {
+      DEFAULTS.hit(fx, actor, s, a, hb);
+      fx.add("pillar", { x: hb.x, y: hb.y + 0.4, r: 0.35, h: 3.5, color: "#ffffff", life: 0.18, kind: "light" });
+      for (let i = 0; i < 3; i++) fx.add("aircrack", { x: hb.x + rnd(-0.6, 0.6), y: hb.y + 0.4 + rnd(-0.3, 0.3), z: 0.15, size: 0.7, life: 0.5, color: "#ffe0b2" });
+    }
+  });
+  sig("bleg_diable", {
+    fx(fx, actor, s, a) {
+      for (let i = 0; i < 3; i++) fx.add("crescent", { x: actor.x, y: actor.y, follow: actor, angle: i * 2.1, radius: 0.9, arc: 3, width: 0.22, color: "#ff7043", core: "#ffeb3b", dir: 1, life: 0.3, delay: i * 0.1, z: 0.3 + i * 0.15, tilt: 0.5 });
+      flames(fx, actor.x, actor.y, 0.3, 20, ELEM.fire.spark, { speed: 2.5 });
+    },
+    buff(fx, actor, s, a, ex) {
+      DEFAULTS.buff(fx, actor, s, a, ex);
+      fx.add("pillar", { x: actor.x, y: actor.y, r: 0.55, h: 2.4, color: "#ff7043", life: 0.4, kind: "fire" });
+    }
+  });
+  var skyStep = {
+    dash(fx, actor, s, a) {
+      DEFAULTS.dash(fx, actor, s, a);
+      for (let i = 1; i <= 3; i++) fx.add("ring", { x: actor.x, y: actor.y, r0: 0.1, r1: 0.8, color: "#ffffff", width: 0.07, life: 0.3, z: 0.05, flat: 0.5, add: true, delay: i * s.dash.time / 3.5, onStart: (sh) => {
+        sh.x = actor.x;
+        sh.y = actor.y;
+      } });
+    }
+  };
+  sig("bleg_skywalk roku_geppo", skyStep);
+  sig("fmk_arabesque fmk_vagabond", {
+    proj(fx, actor, s, a) {
+      const [px, py] = fwd(actor, a.angle, 0.6);
+      ripple(fx, px, py, 0.9, "#81d4fa", 3);
+      splash(fx, px, py, 0.8, 10, a.angle);
+      if (a.def.id === "fmk_vagabond") for (let i = 0; i < 4; i++) fx.ring(px, py, 0.05, 0.5 + i * 0.12, "#4fc3f7", 0.3, 0.06, { z: 0.8, flat: 1, wobble: 0.15, delay: i * 0.05, add: true });
+    }
+  });
+  sig("fmk_5000 fmk_heavy", {
+    hit(fx, actor, s, a, hb) {
+      const [px, py] = fwd(actor, hb.angle, 1.2);
+      for (let i = 0; i < 4; i++) fx.ring(px, py, 0.1, 0.9 + i * 0.45, "#81d4fa", 0.45, 0.08, { z: 0.8, flat: 0.9, wobble: 0.12, delay: i * 0.05, add: true });
+      splash(fx, px, py, 0.8, 14, hb.angle);
+    }
+  });
+  sig("roku_soru", {
+    teleport(fx, actor, s, a, ex) {
+      ghostsAlong(fx, actor, ex.x0, ex.y0, 4, "#eceff1");
+      dust(fx, ex.x0, ex.y0, 8, { speed: 3.5 });
+      fx.ring(ex.x0, ex.y0, 0.2, 1.1, "#ffffff", 0.3, 0.08, { z: 0.05, flat: 0.5, add: true });
+      fx.burst(actor.x, actor.y, 8, { color: "#ffffff", speed: 4, g: 0, life: 0.2, kind: "line", z: 0.6 });
+    }
+  });
+  sig("roku_rankyaku", {
+    proj(fx, actor, s, a) {
+      fx.add("crescent", { x: actor.x, y: actor.y, angle: a.angle, radius: 1.3, arc: 2.2, width: 0.26, color: "#e3f2fd", dir: -1, life: 0.22, z: 0.5, tilt: 0.6 });
+      const [px, py] = fwd(actor, a.angle, 0.9);
+      fx.burst(px, py, 6, { angle: a.angle, spread: 0.5, speed: 8, kind: "line", color: "#ffffff", z: 0.6, g: 0, life: 0.18, size: 0.05 });
+    }
+  });
+  sig("roku_heavy", {
+    hit(fx, actor, s, a, hb) {
+      const h2 = s.hit;
+      for (let t = 0; t < (h2.duration || 0.4); t += 0.06) {
+        const d = rnd(0.6, 1.4), th = hb.angle + rnd(-0.35, 0.35);
+        const [px, py] = fwd(actor, th, d);
+        fx.ring(px, py, 0.02, 0.3, "#ffffff", 0.15, 0.035, { z: rnd(0.6, 1.1), flat: 1, delay: t, add: true });
+      }
+    }
+  });
+  sig("roku_rokuogan", {
+    hit(fx, actor, s, a, hb) {
+      const [px, py] = fwd(actor, hb.angle, 1.3);
+      for (let i = 0; i < 4; i++) fx.ring(px, py, 0.1, 1.2 + i * 0.6, "#e0f7fa", 0.5, 0.12, { z: 0.8, flat: 0.85, wobble: 0.1, delay: i * 0.04, add: true });
+      fx.add("aircrack", { x: px, y: py, z: 0.8, size: 1.5, life: 0.5 });
+      fx.focus(px, py, 0.3);
+    }
+  });
+  sig("roku_tekkai", { buff(fx, actor, s, a, ex) {
+    DEFAULTS.buff(fx, actor, s, a, ex);
+    sparks(fx, actor.x, actor.y, 0.9, 0, 10, ["#cfd8dc", "#ffffff"], { spread: TAU9, speed: 3, size: 0.06 });
+  } });
+  sig("roku_kamie", { buff(fx, actor) {
+    fx.burst(actor.x, actor.y, 14, { kind: "petal", color: ["#ffffff", "#f5f5f5"], speed: 2.5, z: 0.9, vz: 1, g: -0.2, life: 0.9, size: 0.12 });
+  } });
+  sig("okama_pirouette", {
+    hit(fx, actor, s, a) {
+      for (let i = 0; i < 5; i++) fx.add("crescent", { x: actor.x, y: actor.y, follow: actor, angle: a.angle + i * 1.25, radius: 1.9, arc: 2.2, width: 0.16, color: "#f8bbd0", dir: -1, life: 0.18, delay: i * 0.09, z: 0.3 + i % 2 * 0.5, tilt: 0.6 });
+      sparkle2(fx, actor.x, actor.y, 0.9, 10, STYLE_FX.okama_kenpo.sparkle);
+    }
+  });
+  sig("okama_swan_dash", {
+    dash(fx, actor, s, a) {
+      DEFAULTS.dash(fx, actor, s, a);
+      actor._ghostTint = "#f8bbd0";
+      fx.burst(actor.x, actor.y, 12, { kind: "petal", color: ["#ffffff", "#f8bbd0"], speed: 2, z: 0.8, vz: 1, g: -0.3, life: 0.8, size: 0.1 });
+    }
+  });
+  sig("okama_hell_wink", {
+    proj(fx, actor, s, a) {
+      const [px, py] = fwd(actor, a.angle, 0.35);
+      fx.add("flare", { x: px, y: py, z: 1.25, size: 0.8, color: "#f48fb1", life: 0.3 });
+      sparkle2(fx, px, py, 1.2, 6, STYLE_FX.okama_kenpo.sparkle);
+    }
+  });
+  sig("okama_heavy", {
+    hit(fx, actor, s, a, hb) {
+      const ang = hb.angle, L2 = (s.hit.range || 2.4) * (actor.reach ?? 1);
+      fx.add("cutline", { x: actor.x, y: actor.y, x1: actor.x + Math.cos(ang) * L2, y1: actor.y + Math.sin(ang) * L2, z: 0.5, color: "#f8bbd0", life: 0.4 });
+      sparkle2(fx, actor.x + Math.cos(ang) * L2 * 0.6, actor.y + Math.sin(ang) * L2 * 0.6, 0.8, 6, STYLE_FX.okama_kenpo.sparkle);
+    }
+  });
+  sig("elec_discharge", {
+    hit(fx, actor, s, a, hb) {
+      DEFAULTS.hit(fx, actor, s, a, hb);
+      for (let i = 0; i < 8; i++) {
+        const th = i / 8 * TAU9 + rnd(-0.2, 0.2);
+        fx.bolt(actor.x, actor.y, actor.x + Math.cos(th) * 2.6, actor.y + Math.sin(th) * 1.8, "#fff176", 0.22, 0.05, { z0: 0.9, z1: rnd(0.1, 1), branches: 1 });
+      }
+      glow2(fx, actor.x, actor.y, 0.9, 2.2, "#fff59d", 0.25);
+    }
+  });
+  sig("elec_heavy ryu_claw neko_claw kuro_claws", {
+    hit(fx, actor, s, a, hb) {
+      const h2 = s.hit, R = (h2.range || 1.8) * (actor.reach ?? 1);
+      const col = a.def.id === "elec_heavy" ? "#fff59d" : a.def.id === "neko_claw" ? "#ffcc80" : "#ffffff";
+      const [px, py] = fwd(actor, hb.angle, R * 0.65);
+      fx.add("claw", { x: px, y: py, z: 0.8, angle: hb.angle, size: 0.9 + R * 0.2, color: col, life: 0.4, n: a.def.id === "ryu_claw" ? 4 : 3 });
+      if (a.def.id === "elec_heavy") miniBolts(fx, px, py, 0.8, 3, 1, "#fff176");
+      if (a.def.id === "ryu_claw") fx.crack(px, py + 0.1, 0.8, 1.6);
+    }
+  });
+  sig("elec_sulong", {
+    buff(fx, actor, s, a, ex) {
+      DEFAULTS.buff(fx, actor, s, a, ex);
+      fx.add("pillar", { x: actor.x, y: actor.y, r: 0.9, h: 6, color: "#ffffff", core: "#fffde7", life: 0.6, kind: "light" });
+      glow2(fx, actor.x, actor.y, 2.5, 1.5, "#fffde7", 0.6);
+    }
+  });
+  sig("hassho_bushin", { proj(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle, 0.6);
+    vibration(fx, px, py, 0.8, 1, "#ffcc80", 4);
+  } });
+  sig("hassho_heavy", { hit(fx, actor, s, a, hb) {
+    const [px, py] = fwd(actor, hb.angle, 1);
+    vibration(fx, px, py, 0.8, 1.6, "#ffcc80", 5);
+  } });
+  sig("hassho_drill", { dash(fx, actor, s, a) {
+    DEFAULTS.dash(fx, actor, s, a);
+    fx.add("vortex", { x: actor.x, y: actor.y, follow: actor, r: 0.9, h: 1.4, kind: "wind", color: "#ffe0b2", life: s.dash.time + 0.1, spin: 20 });
+  } });
+  sig("clima_heavy clima_cyclone", {
+    proj(fx, actor, s, a) {
+      const [px, py] = fwd(actor, a.angle, 0.9);
+      if (a.def.id === "clima_cyclone") fx.add("vortex", { x: px, y: py, r: 0.7, h: 1.1, kind: "wind", color: "#b3e5fc", life: 0.4, spin: 16 });
+      else {
+        glow2(fx, px, py, 0.9, 0.7, "#ff8a65", 0.3);
+        fx.burst(px, py, 6, { kind: "bubble", color: "#ffccbc", speed: 1, z: 0.9, vz: 1, g: -1, life: 0.6, size: 0.08 });
+      }
+    }
+  });
+  sig("clima_thunderbolt", {
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "thunder", color: zone.color, zone, life: 1e6 });
+      fx.add("cloud", { x: zone.x, y: zone.y, r: 1.6, z: 4.5, life: 1, color: "#37474f" });
+      const [px, py] = fwd(actor, a.angle, 0.8);
+      fx.burst(px, py, 8, { kind: "bubble", color: ["#b3e5fc", "#e1f5fe"], speed: 1, z: 1, vz: 2.5, g: -1, life: 0.7, size: 0.09 });
+      return true;
+    }
+  });
+  sig("clima_mirage", { buff(fx, actor, s, a, ex) {
+    fx.ring(actor.x, actor.y, 0.2, 1.4, "#e1f5fe", 0.5, 0.06, { wobble: 0.2, add: true });
+    sparkle2(fx, actor.x, actor.y, 0.9, 6, ["#ffffff", "#e1f5fe"]);
+  } });
+  sig("clima_zeus", {
+    hit(fx, actor, s, a, hb) {
+      DEFAULTS.hit(fx, actor, s, a, hb);
+      const L2 = (s.hit.range || 12) * (actor.reach ?? 1);
+      const ex = actor.x + Math.cos(hb.angle) * L2 * 0.7, ey = actor.y + Math.sin(hb.angle) * L2 * 0.7;
+      fx.bolt(ex, ey - 0.01, ex, ey, "#fff176", 0.35, 0.12, { z0: 9, z1: 0.1, branches: 3 });
+      fx.flashScreen(0.08, "rgba(255,253,231,1)");
+    }
+  });
+  sig("elbaf_heavy", {
+    hit(fx, actor, s, a, hb) {
+      const R = s.hit.range || 2.3;
+      fx.add("crescent", { x: actor.x, y: actor.y, angle: a.angle, radius: R, arc: TAU9 * 0.95, width: 0.42, color: "#ffe082", core: "#fffde7", dir: 1, life: 0.35, z: 0.45, reveal: 0.35 });
+      fx.crack(actor.x, actor.y, R * 0.8);
+      dust(fx, actor.x, actor.y, 14, { speed: R * 1.8, size: 0.26 });
+      fx.ring(actor.x, actor.y, 0.3, R * 1.2, "#ffe082", 0.35, 0.14, { z: 0.05, flat: 0.55, add: true });
+    }
+  });
+  sig("elbaf_hakoku", {
+    hit(fx, actor, s, a, hb) {
+      DEFAULTS.hit(fx, actor, s, a, hb);
+      const L2 = (s.hit.range || 8) * (actor.reach ?? 1);
+      for (let i = 1; i <= 3; i++) fx.crack(actor.x + Math.cos(hb.angle) * L2 * i / 4, actor.y + Math.sin(hb.angle) * L2 * i / 4, 0.9, 1.8);
+    }
+  });
+  sig("ryu_heavy", {
+    hit(fx, actor, s, a, hb) {
+      DEFAULTS.hit(fx, actor, s, a, hb);
+      for (let i = 0; i < 4; i++) {
+        const th = i / 4 * TAU9 + 0.4;
+        fx.add("claw", { x: actor.x + Math.cos(th) * 1.3, y: actor.y + Math.sin(th) * 0.9, z: 0.5, angle: th, size: 0.9, color: "#ffab91", life: 0.45, delay: i * 0.04 });
+      }
+    }
+  });
+  sig("snipe_kabuto", { proj(fx, actor, s, a) {
+    muzzle(fx, actor, a.angle, "#ffe082");
+    sparkle2(fx, actor.x + Math.cos(a.angle) * 0.7, actor.y + Math.sin(a.angle) * 0.5, 0.8, 4, ["#ffeb3b", "#ffffff"]);
+  } });
+  sig("snipe_popgreen", {
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "plant", color: zone.color, zone, life: 1e6 });
+      fx.burst(zone.x, zone.y, 12, { kind: "leaf", color: ["#43a047", "#66bb6a", "#2e7d32"], speed: 3, z: 0.4, vz: 3, g: 6, life: 0.8, size: 0.12 });
+      return true;
+    }
+  });
+  sig("gomu_pistol gomu_gear3", {
+    proj(fx, actor, s, a) {
+      const big = a.def.id === "gomu_gear3";
+      const [px, py] = fwd(actor, a.angle, 0.4);
+      fx.ring(px, py, 0.05, big ? 1.4 : 0.6, "#ffffff", 0.2, big ? 0.12 : 0.06, { z: 0.8, flat: 1, add: true });
+      if (big) {
+        smoke(fx, px, py, 0.8, 8, ["#ffffff", "#eceff1"], { speed: 2.5, size: 0.35 });
+        fx.shake(0.2, a.angle);
+      }
+    }
+  });
+  sig("gomu_gatling", {
+    hit(fx, actor, s, a, hb) {
+      fx.add("gatling", { x: actor.x, y: actor.y, follow: actor, range: (s.hit.range || 3.2) * 0.85, arc: 0.9, skin: lastLook(actor).skin, dark: !!actor.armament, life: s.hit.duration || 0.9 });
+    }
+  });
+  sig("gomu_rocket", { dash(fx, actor, s, a) {
+    DEFAULTS.dash(fx, actor, s, a);
+    actor._ghostTint = "#ffcdd2";
+    fx.ring(actor.x, actor.y, 0.1, 1, "#ffffff", 0.25, 0.08, { add: true });
+  } });
+  sig("gomu_bazooka", {
+    hit(fx, actor, s, a, hb) {
+      const [px, py] = fwd(actor, hb.angle, 1.6);
+      fx.add("impact", { x: px, y: py, z: 0.8, angle: hb.angle, size: 1.2, color: "#ffffff", core: "#ffffff", life: 0.2, spikes: 14, lines: 8 });
+      for (let i = 0; i < 2; i++) fx.ring(px, py, 0.1, 1.4 + i * 0.6, "#ffffff", 0.3, 0.1, { z: 0.8, flat: 0.9, delay: i * 0.05, add: true });
+      dust(fx, px, py, 8, { speed: 3 });
+    }
+  });
+  sig("gomu_gear2", {
+    fx(fx, actor, s, a) {
+      DEFAULTS.fx(fx, actor, s, a);
+      smoke(fx, actor.x, actor.y, 0.8, 16, ["#ffffff", "#ffebee", "#ffcdd2"], { speed: 2.5, size: 0.35, vz: 2 });
+    },
+    buff(fx, actor, s, a, ex) {
+      DEFAULTS.buff(fx, actor, s, a, ex);
+      fx.flashScreen(0.05, "rgba(255,205,210,1)");
+    }
+  });
+  sig("gomu_gear4", {
+    fx(fx, actor, s, a) {
+      DEFAULTS.fx(fx, actor, s, a);
+      smoke(fx, actor.x, actor.y, 0.8, 18, ["#ffffff", "#eceff1", "#b71c1c"], { speed: 3.5, size: 0.4 });
+    },
+    buff(fx, actor, s, a, ex) {
+      DEFAULTS.buff(fx, actor, s, a, ex);
+      fx.ring(actor.x, actor.y, 0.5, 3.2, "#b71c1c", 0.5, 0.25);
+      smoke(fx, actor.x, actor.y, 1, 14, ["#ffffff", "#f5f5f5"], { speed: 4, size: 0.5 });
+      fx.shake(0.4);
+      fx.focus(actor.x, actor.y, 0.25);
+    }
+  });
+  sig("gomu_gear5", {
+    fx(fx, actor, s, a) {
+      DEFAULTS.fx(fx, actor, s, a);
+      sparkle2(fx, actor.x, actor.y, 1.2, 12, ["#ffffff", "#fffde7"]);
+      for (let i = 0; i < 3; i++) fx.ring(actor.x, actor.y, 0.3, 3 + i * 1.5, "#ffffff", 0.6, 0.18, { delay: i * 0.1, add: true, wobble: 0.08 });
+    },
+    buff(fx, actor, s, a, ex) {
+      DEFAULTS.buff(fx, actor, s, a, ex);
+      fx.flashScreen(0.35, "#ffffff");
+      fx.add("pillar", { x: actor.x, y: actor.y, r: 1.1, h: 7, color: "#ffffff", core: "#ffffff", life: 0.7, kind: "light" });
+      smoke(fx, actor.x, actor.y, 1.3, 16, ["#ffffff"], { speed: 3.5, size: 0.45, vz: 2.5 });
+    }
+  });
+  sig("gura_punch", {
+    hit(fx, actor, s, a, hb) {
+      const [px, py] = fwd(actor, hb.angle, 1.1);
+      fx.add("aircrack", { x: px, y: py, z: 0.8, size: 1.3, life: 0.55 });
+      for (let i = 0; i < 3; i++) fx.ring(px, py, 0.1, 1.2 + i * 0.7, "#e0f7fa", 0.45, 0.1, { z: 0.8, flat: 0.8, delay: i * 0.05, add: true });
+      fx.focus(px, py, 0.2);
+    }
+  });
+  sig("gura_kaishin gura_tsunami", {
+    hit(fx, actor, s, a, hb) {
+      const R = s.hit.range || 4.5, big = a.def.id === "gura_tsunami";
+      const n = big ? 9 : 5;
+      for (let i = 0; i < n; i++) {
+        const th = i / n * TAU9 + rnd(-0.3, 0.3), rr = R * rnd(0.3, 0.8);
+        fx.add("aircrack", { x: actor.x + Math.cos(th) * rr, y: actor.y + Math.sin(th) * rr * 0.6, z: rnd(0.6, 2), size: rnd(0.8, 1.4) * (big ? 1.5 : 1), life: 0.6, delay: i * 0.03 });
+      }
+      for (let i = 0; i < 4; i++) fx.ring(actor.x, actor.y, 0.5, R * (0.5 + i * 0.2), "#e0f7fa", 0.55, 0.14, { delay: i * 0.06, add: true, wobble: 0.05 });
+      fx.crack(actor.x, actor.y, R * 0.6, 2.5);
+      if (big) {
+        fx.flashScreen(0.1, "rgba(224,247,250,1)");
+        fx.focus(actor.x, actor.y, 0.35);
+      }
+    }
+  });
+  sig("ope_room", {
+    fx(fx, actor, s, a) {
+      if (!s.fx.ring) return DEFAULTS.fx(fx, actor, s, a);
+      fx.ring(actor.x, actor.y, 0.3, s.fx.ring, "#81d4fa", 0.5, 0.1, { add: true });
+    },
+    buff(fx, actor, s, a, ex) {
+      const b = ex.buff;
+      fx.add("dome", { x: actor.x, y: actor.y, follow: actor, r: 7, kind: "room", color: "#81d4fa", life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(b) });
+    }
+  });
+  sig("ope_shambles", {
+    teleport(fx, actor, s, a, ex) {
+      for (const [x, y] of [[ex.x0, ex.y0], [actor.x, actor.y]]) {
+        fx.add("cube", { x, y, z: 0.85, size: 0.55, color: "#81d4fa", life: 0.4, spin: 3 });
+        fx.ring(x, y, 0.1, 1.1, "#81d4fa", 0.3, 0.07, { add: true });
+      }
+      fx.flashScreen(0.04, "rgba(129,212,250,1)");
+    }
+  });
+  sig("ope_amputate", {
+    hit(fx, actor, s, a, hb) {
+      DEFAULTS.hit(fx, actor, s, a, hb);
+      const R = (s.hit.range || 4) * (actor.reach ?? 1);
+      fx.add("cutline", { x: actor.x - Math.sin(hb.angle) * R * 0.6, y: actor.y + Math.cos(hb.angle) * R * 0.4, x1: actor.x + Math.sin(hb.angle) * R * 0.6 + Math.cos(hb.angle) * R * 0.5, y1: actor.y - Math.cos(hb.angle) * R * 0.4 + Math.sin(hb.angle) * R * 0.5, z: 0.7, color: "#b3e5fc", life: 0.45 });
+      for (let i = 0; i < 3; i++) {
+        const [px, py] = fwd(actor, hb.angle + rnd(-0.5, 0.5), rnd(1, R * 0.8));
+        fx.add("cube", { x: px, y: py, z: rnd(0.5, 1.2), size: 0.2, color: "#81d4fa", life: 0.5, delay: 0.05 * i });
+      }
+    }
+  });
+  sig("ope_mes", { hit(fx, actor, s, a, hb) {
+    const [px, py] = fwd(actor, hb.angle, 1.1);
+    fx.add("cube", { x: px, y: py, z: 1, size: 0.3, color: "#81d4fa", heart: true, life: 0.8, spin: 1.5 });
+  } });
+  sig("ope_counter", { hit(fx, actor, s, a, hb) {
+    const [px, py] = fwd(actor, hb.angle, 0.9);
+    miniBolts(fx, px, py, 0.8, 6, 1.2, "#fff176");
+    glow2(fx, px, py, 0.8, 1, "#fff59d", 0.2);
+  } });
+  sig("bara_festival", { hit(fx, actor, s, a) {
+    const l = lastLook(actor);
+    fx.add("pieces", { x: actor.x, y: actor.y, follow: actor, r: 2.6, skin: l.skin, top: l.top, bottom: l.bottom, life: s.hit.duration || 1.2 });
+  } });
+  sig("bara_escape", { dash(fx, actor, s, a) {
+    DEFAULTS.dash(fx, actor, s, a);
+    const l = lastLook(actor);
+    fx.burst(actor.x, actor.y, 8, { kind: "square", color: [l.skin || "#f1c9a0", l.top || "#e53935", l.bottom || "#1565c0"], speed: 3, z: 0.7, vz: 2, g: 8, life: 0.5, size: 0.14 });
+  } });
+  sig("bomu_kick bomu_breeze", {
+    hit(fx, actor, s, a, hb) {
+      const R = (s.hit.range || 1.8) * (actor.reach ?? 1);
+      const [px, py] = fwd(actor, hb.angle, R * 0.6);
+      explosionFx(fx, px, py + 0.45, { range: R * 0.6, element: "explosion" }, actor, true);
+    }
+  });
+  sig("hana_mil", {
+    hit(fx, actor, s, a) {
+      const pts = [];
+      for (let i = 0; i < 12; i++) {
+        const th = rnd(0, TAU9), rr = rnd(0.8, 3.2);
+        pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, L: rnd(0.7, 1.1), ang: th, delay: i * 0.05, seed: i });
+      }
+      pts.sort((p, q) => p.dy - q.dy);
+      const l = lastLook(actor);
+      fx.add("arms", { x: actor.x, y: actor.y, pts, skin: l.skin, sleeve: l.top || "#7e57c2", life: (s.hit.duration || 1) + 0.2 });
+      fx.burst(actor.x, actor.y, 16, { kind: "petal", color: ["#f48fb1", "#f8bbd0", "#ffffff"], speed: 3, z: 0.6, vz: 1.5, g: 1, life: 0.9, size: 0.1 });
+    }
+  });
+  sig("ito_parasite", { proj(fx, actor, s, a) {
+    const tx = a.tx ?? actor.x + Math.cos(a.angle) * 6, ty = a.ty ?? actor.y + Math.sin(a.angle) * 6;
+    fx.add("strings", { x: actor.x, y: actor.y, x1: tx, y1: ty, color: "#f8bbd0", n: 5, life: 0.6 });
+  } });
+  sig("ito_fivecolor", { hit(fx, actor, s, a, hb) {
+    const R = (s.hit.range || 3.4) * (actor.reach ?? 1);
+    for (let i = 0; i < 5; i++) fx.add("crescent", { x: actor.x, y: actor.y, angle: hb.angle + (i - 2) * 0.08, radius: R * (0.95 - i * 0.05), arc: 1.4, width: 0.05, color: ["#f48fb1", "#ce93d8", "#90caf9", "#a5d6a7", "#fff59d"][i], dir: 1, life: 0.28, delay: i * 0.02, z: 0.5 + i * 0.1 });
+  } });
+  sig("ito_overheat", { beam: "string" });
+  sig("mochi_zangiri", { beam: "mochi" });
+  sig("noro_beam", { beam: "light", hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const L2 = s.hit.range || 9;
+    for (let i = 0; i < 6; i++) {
+      const [px, py] = fwd(actor, hb.angle, rnd(0.5, L2), 1);
+      sparkle2(fx, px, py, 0.7, 1, ["#80deea", "#ffffff"]);
+    }
+  } });
+  sig("zushi_blade", { beam: "gravity" });
+  sig("bari_barrier", { buff(fx, actor, s, a, ex) {
+    const b = ex.buff;
+    fx.add("barrier", { x: actor.x, y: actor.y, follow: actor, color: "#b3e5fc", life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(b) });
+  } });
+  sig("bari_crash", { dash(fx, actor, s, a) {
+    DEFAULTS.dash(fx, actor, s, a);
+    fx.add("barrier", { x: actor.x, y: actor.y, follow: actor, color: "#b3e5fc", life: s.dash.time + 0.15 });
+  } });
+  sig("suke_vanish", { buff(fx, actor) {
+    fx.ring(actor.x, actor.y, 1.4, 0.1, "#eceff1", 0.5, 0.05, { add: true });
+    sparkle2(fx, actor.x, actor.y, 0.9, 5, ["#ffffff", "#eceff1"]);
+  } });
+  sig("sube_slide", { dash(fx, actor, s, a) {
+    DEFAULTS.dash(fx, actor, s, a);
+    actor._ghostTint = "#fce4ec";
+    sparkle2(fx, actor.x, actor.y, 0.6, 4, ["#ffffff", "#fce4ec"]);
+  } });
+  sig("supa_sparkling", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    for (let i = 0; i < 4; i++) fx.add("crescent", { x: actor.x, y: actor.y, angle: hb.angle + i * 1.57, radius: 1.5, arc: 1.6, width: 0.12, color: "#eceff1", dir: 1, life: 0.2, delay: i * 0.03, z: 0.7 });
+  } });
+  sig("nikyu_repel", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    for (let i = 0; i < 6; i++) fx.burst(actor.x, actor.y, 1, { kind: "bubble", color: "#ffffff", speed: 4, z: 0.8, vz: 0.5, g: 0, life: 0.6, size: 0.25 });
+  } });
+  sig("nikyu_travel", { teleport(fx, actor, s, a, ex) {
+    DEFAULTS.teleport(fx, actor, s, a, ex);
+    fx.burst(ex.x0, ex.y0, 6, { kind: "bubble", color: "#ffffff", speed: 2, z: 0.8, vz: 1, g: -1, life: 0.8, size: 0.2 });
+  } });
+  sig("nikyu_ursus", { proj(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle, 0.8);
+    fx.ring(px, py, 0.2, 2, "#ffffff", 0.4, 0.12, { z: 0.8, add: true });
+    smoke(fx, px, py, 0.8, 10, ["#ffffff", "#e0f7fa"], { speed: 3 });
+  } });
+  sig("kage_steal", { hit(fx, actor, s, a, hb) {
+    const [px, py] = fwd(actor, hb.angle, 1.6);
+    fx.add("claw", { x: px, y: py, z: 0.1, angle: hb.angle, size: 1.1, color: "#263238", life: 0.5, n: 2, tilt: 0 });
+    smoke(fx, px, py, 0.3, 8, ["#263238", "#37474f", "#000000"], { speed: 1.5 });
+  } });
+  sig("kage_doppelman", { buff(fx, actor, s, a, ex) {
+    DEFAULTS.buff(fx, actor, s, a, ex);
+    smoke(fx, actor.x, actor.y, 0.6, 12, ["#263238", "#000000"], { speed: 2 });
+  } });
+  sig("doku_fist", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const [px, py] = fwd(actor, hb.angle, 1);
+    fx.burst(px, py, 10, { kind: "drop", color: ["#8e24aa", "#ab47bc"], speed: 4, z: 0.8, vz: 2, g: 9, life: 0.5, size: 0.1 });
+  } });
+  sig("doku_hydra", { proj(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle, 0.6);
+    smoke(fx, px, py, 0.8, 10, ["#6a1b9a", "#8e24aa", "#4a148c"], { speed: 2.5, size: 0.3 });
+  } });
+  sig("mera_hiken ryu_hiken", { proj(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle, 0.7);
+    flames(fx, px, py, 0.8, 16, ELEM.fire.spark, { speed: 3, angle: a.angle, spread: 1.6 });
+    glow2(fx, px, py, 0.8, 1.2, "#ff9100", 0.25);
+    fx.ring(px, py, 0.1, 0.9, "#ffab40", 0.22, 0.08, { z: 0.8, flat: 1, add: true });
+  } });
+  sig("mera_hidaruma", { proj(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle, 0.5);
+    fx.burst(px, py, 10, { kind: "glow", color: ["#aeea00", "#ffab40"], speed: 2, z: 0.9, vz: 0.5, g: 0, life: 0.5, size: 0.2 });
+  } });
+  sig("mera_enkai", {
+    hit(fx, actor, s, a, hb) {
+      DEFAULTS.hit(fx, actor, s, a, hb);
+      const R = s.hit.range || 3;
+      for (let i = 0; i < 6; i++) {
+        const th = i / 6 * TAU9;
+        fx.add("pillar", { x: actor.x + Math.cos(th) * R * 0.75, y: actor.y + Math.sin(th) * R * 0.5, r: 0.35, h: 3, color: "#ff7043", core: "#ffeb3b", life: 0.6, kind: "fire", delay: i * 0.03 });
+      }
+      fx.add("pillar", { x: actor.x, y: actor.y, r: 0.8, h: 4.5, color: "#ff5722", core: "#ffeb3b", life: 0.6, kind: "fire" });
+      fx.add("scorch", { x: actor.x, y: actor.y, r: R * 0.8, life: 3 });
+    }
+  });
+  sig("mera_entei", {
+    charge: { kind: "sun", color: "#ff9100", at: "hF" },
+    proj(fx, actor, s, a) {
+      const [px, py] = fwd(actor, a.angle, 0.8);
+      glow2(fx, px, py, 1.4, 3, "#ff6d00", 0.4);
+      fx.flashScreen(0.08, "rgba(255,145,0,1)");
+      fx.shake(0.3, a.angle);
+    }
+  });
+  sig("hie_pheasant", { proj(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle, 0.7);
+    shards(fx, px, py, 0.8, 12, null, a.angle);
+    fx.ring(px, py, 0.1, 1, "#e1f5fe", 0.3, 0.08, { z: 0.8, flat: 1, add: true });
+  } });
+  sig("hie_ageand", {
+    hit(fx, actor, s, a, hb) {
+      const R = s.hit.range || 5;
+      ringSpikes(fx, actor.x, actor.y, R * 0.85, 22, "ice");
+      fx.ring(actor.x, actor.y, 0.3, R, "#e1f5fe", 0.6, 0.2, { add: true });
+      shards(fx, actor.x, actor.y, 0.6, 20);
+      fx.flashScreen(0.06, "rgba(225,245,254,1)");
+    }
+  });
+  sig("hie_time", { beam: "ice" });
+  sig("goro_sango", { charge: { kind: "bolt", color: "#fff176" }, proj(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle, 0.7);
+    miniBolts(fx, px, py, 0.9, 6, 1.4, "#fff176");
+    glow2(fx, px, py, 0.9, 1.5, "#fff59d", 0.3);
+  } });
+  sig("goro_elthor", {
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "thunder", color: zone.color, zone, life: 1e6 });
+      fx.add("pillar", { x: zone.x, y: zone.y, r: zone.r * 0.55, h: 10, color: "#fff176", core: "#ffffff", life: 0.5, kind: "lightning" });
+      fx.bolt(zone.x, zone.y - 0.01, zone.x, zone.y, "#fff176", 0.5, 0.2, { z0: 10, z1: 0.1, branches: 4 });
+      fx.flashScreen(0.08, "rgba(255,253,231,1)");
+      return true;
+    }
+  });
+  sig("goro_raigo", {
+    charge: { kind: "bolt", color: "#fff176" },
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "thunder", color: zone.color, zone, life: 1e6 });
+      fx.add("cloud", { x: zone.x, y: zone.y, r: zone.r * 0.9, z: 6.5, life: 3.2, color: "#212121", glow: "#fff176" });
+      return true;
+    }
+  });
+  sig("goro_amaru", { buff(fx, actor, s, a, ex) {
+    DEFAULTS.buff(fx, actor, s, a, ex);
+    fx.add("pillar", { x: actor.x, y: actor.y, r: 0.8, h: 7, color: "#fff176", core: "#ffffff", life: 0.5, kind: "lightning" });
+    miniBolts(fx, actor.x, actor.y, 1, 8, 2, "#fff176");
+  } });
+  sig("suna_barjan", { proj(fx, actor, s, a) {
+    fx.add("crescent", { x: actor.x, y: actor.y, angle: a.angle, radius: 1.1, arc: 1.8, width: 0.2, color: "#e1c16e", dir: 1, life: 0.2, z: 0.7, add: false });
+  } });
+  sig("suna_sables", {
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "storm", color: "#e1c16e", zone, life: 1e6 });
+      fx.add("vortex", { x: zone.x, y: zone.y, r: zone.r * 0.85, h: zone.r * 2.2, kind: "sand", color: "#d7b56d", color2: "#fff3c4", life: zone.t, spin: 9 });
+      return true;
+    }
+  });
+  sig("suna_dry", { zone(fx, actor, spec, a, zone) {
+    fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "field", color: "#d7b56d", zone, life: 1e6 });
+    fx.crack(zone.x, zone.y, zone.r * 0.9, zone.t);
+    return true;
+  } });
+  sig("moku_snake moku_blow", { proj(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle, 0.6);
+    smoke(fx, px, py, 0.8, 8, ["#ffffff", "#eceff1", "#cfd8dc"], { speed: 1.8, size: 0.3 });
+  } });
+  sig("moku_launcher", { dash(fx, actor, s, a) {
+    DEFAULTS.dash(fx, actor, s, a);
+    actor._ghostTint = "#eceff1";
+    smoke(fx, actor.x, actor.y, 0.4, 12, ["#ffffff", "#eceff1"], { speed: 2.5, size: 0.4 });
+  } });
+  sig("pika_yata", {
+    teleport(fx, actor, s, a, ex) {
+      const w = fx.game.world;
+      const dx = w ? w.dx(ex.x0, actor.x) : actor.x - ex.x0, dy = actor.y - ex.y0;
+      fx.beam(ex.x0, ex.y0, Math.atan2(dy, dx), Math.hypot(dx, dy), 0.35, "#fff59d", 0.22, "#ffffff", { style: "light", z: 0.8 });
+      ghostsAlong(fx, actor, ex.x0, ex.y0, 3, "#fff59d", { add: true });
+      fx.add("flare", { x: actor.x, y: actor.y, z: 0.85, size: 1.4, color: "#fff59d", life: 0.3 });
+      fx.flashScreen(0.05, "rgba(255,253,231,1)");
+    }
+  });
+  sig("pika_yasakani", { proj(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle, 0.6);
+    glow2(fx, px, py, 0.9, 1.3, "#fff59d", 0.3);
+    fx.add("flare", { x: px, y: py, z: 0.9, size: 0.9, color: "#fff9c4", life: 0.2 });
+  } });
+  sig("pika_amaterasu", { charge: { kind: "glow", color: "#fff59d", size: 0.35 }, hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    fx.flashScreen(0.1, "rgba(255,253,231,1)");
+  } });
+  sig("magu_daifunka", { proj(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle, 0.7);
+    flames(fx, px, py, 0.8, 10, ["#ff6f00", "#bf360c", "#ffab40"], { speed: 2.5 });
+    embers(fx, px, py, 0.8, 8);
+    smoke(fx, px, py, 1, 4, ["#4e342e", "#5d4037"], { size: 0.3 });
+  } });
+  sig("magu_meigo", { dash(fx, actor, s, a) {
+    DEFAULTS.dash(fx, actor, s, a);
+    actor._ghostTint = "#ff7043";
+    const x0 = actor.x, y0 = actor.y;
+    fx.add("scorch", { x: x0, y: y0, r: 0.6, life: 3 });
+    embers(fx, x0, y0, 0.6, 10);
+  } });
+  sig("magu_ryusei zushi_meteor mochi_chikara hana_gigante hana_clutch", {
+    zone(fx, actor, spec, a, zone) {
+      const id = a.def.id;
+      const kind = id === "magu_ryusei" ? "fist" : id === "mochi_chikara" ? "mochi" : id === "zushi_meteor" ? "rock" : "hand";
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: id.startsWith("hana") ? "arms" : zone.kind, color: zone.color, zone, life: 1e6 });
+      if (id.startsWith("hana")) {
+        if (id === "hana_gigante") {
+          const l = lastLook(actor);
+          fx.add("arms", { x: zone.x, y: zone.y, pts: [{ dx: -zone.r * 0.6, dy: 0.1, L: 1, ang: 0.6, delay: 0, seed: 1 }, { dx: zone.r * 0.6, dy: 0.1, L: 1, ang: Math.PI - 0.6, delay: 0.05, seed: 2 }], skin: l.skin, sleeve: l.top || "#7e57c2", big: true, life: 0.9 });
+        }
+        fx.burst(zone.x, zone.y, 14, { kind: "petal", color: ["#f48fb1", "#f8bbd0", "#ffffff"], speed: 2.5, z: 0.4, vz: 2, g: 2, life: 0.9, size: 0.1 });
+        return true;
+      }
+      const n = Math.max(1, Math.ceil(zone.t / zone.interval));
+      for (let i = 0; i < n; i++) {
+        const t = i * zone.interval;
+        const r = i === 0 ? 0 : Math.sqrt(Math.random()) * zone.r * 0.8, th = rnd(0, TAU9);
+        const big = id === "zushi_meteor";
+        fx.add("meteor", { x: zone.x + Math.cos(th) * r, y: zone.y + Math.sin(th) * r * 0.62, size: big ? zone.r * 0.4 : kind === "mochi" ? 0.5 : 0.45, fall: i === 0 ? 0.14 : 0.3, h: big ? 14 : 9, drift: big ? 3 : 1.2, kind, color: kind === "fist" ? "#bf360c" : big ? "#5d4037" : void 0, glow: kind === "mochi" ? "#fff8e1" : "#ff9100", life: 1, delay: Math.max(0, t - (i === 0 ? 0 : 0.3)) });
+      }
+      return true;
+    }
+  });
+  sig("yami_kurouzu", { charge: { kind: "dark" } });
+  sig("yami_blackhole", { charge: { kind: "dark" }, zone(fx, actor, spec, a, zone) {
+    fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "dark", color: "#311b92", zone, life: 1e6 });
+    smoke(fx, actor.x, actor.y, 0.3, 12, ["#12001c", "#311b92"], { speed: 3 });
+    return true;
+  } });
+  sig("yami_liberation", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    smoke(fx, actor.x, actor.y, 0.8, 20, ["#12001c", "#311b92", "#4a148c"], { speed: 5, size: 0.4 });
+    fx.add("pillar", { x: actor.x, y: actor.y, r: 1, h: 5, color: "#311b92", core: "#b388ff", life: 0.5, kind: "dark" });
+  } });
+  sig("yami_nullify", { hit(fx, actor, s, a, hb) {
+    const [px, py] = fwd(actor, hb.angle, 1);
+    fx.add("vortex", { x: px, y: py, r: 0.6, kind: "dark", life: 0.4, spin: -10 });
+    smoke(fx, px, py, 0.8, 6, ["#12001c", "#311b92"], { speed: 1 });
+  } });
+  sig("phoenix_fly phoenix_brand", {
+    dash(fx, actor, s, a) {
+      DEFAULTS.dash(fx, actor, s, a);
+      actor._ghostTint = "#4dd0e1";
+      actor._ghostAdd = true;
+      flames(fx, actor.x, actor.y, 0.7, 14, ["#4dd0e1", "#80deea", "#fff59d"], { speed: 2 });
+    }
+  });
+  sig("phoenix_rebirth", { heal(fx, actor, s, a) {
+    DEFAULTS.heal(fx, actor, s, a);
+    fx.add("pillar", { x: actor.x, y: actor.y, r: 1, h: 5, color: "#4dd0e1", core: "#e0f7fa", life: 0.7, kind: "fire" });
+  } });
+  sig("seiryu_bolo", { beam: "fire" });
+  sig("seiryu_kaifu", { proj(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle, 0.8);
+    fx.burst(px, py, 8, { angle: a.angle, spread: 1, speed: 7, kind: "line", color: "#e3f2fd", z: 1, g: 0, life: 0.25, size: 0.05 });
+  } });
+  sig("seiryu_raimei", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const [px, py] = fwd(actor, hb.angle, 1.8);
+    miniBolts(fx, px, py, 0.8, 6, 2, "#fff176");
+    fx.bolt(px, py - 0.01, px, py, "#fff176", 0.3, 0.14, { z0: 8, z1: 0.3, branches: 3 });
+  } });
+  sig("hito_heavy hito_monster neko_hybrid seiryu_form mane_disguise doru_armor supa_spider", {
+    buff(fx, actor, s, a, ex) {
+      DEFAULTS.buff(fx, actor, s, a, ex);
+      smoke(fx, actor.x, actor.y, 0.8, 14, ["#ffffff", "#eceff1", "#cfd8dc"], { speed: 3, size: 0.4 });
+      if (a.def.id === "seiryu_form") {
+        miniBolts(fx, actor.x, actor.y, 1.5, 6, 2.5, "#90caf9");
+        fx.shake(0.4);
+      }
+    }
+  });
+  sig("haki_emission", { proj(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle, 0.6);
+    miniBolts(fx, px, py, 0.8, 3, 0.9, "#7c4dff");
+    fx.ring(px, py, 0.1, 0.8, "#212121", 0.25, 0.1, { z: 0.8, flat: 1 });
+  } });
+  sig("haki_ryuo", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const [px, py] = fwd(actor, hb.angle, 1.1);
+    for (let i = 0; i < 3; i++) fx.ring(px, py, 0.05, 0.6 + i * 0.3, "#7c4dff", 0.3, 0.06, { z: 0.8, flat: 0.9, wobble: 0.2, delay: i * 0.05, add: true });
+  } });
+  sig("haki_infusion", { buff(fx, actor, s, a, ex) {
+    DEFAULTS.buff(fx, actor, s, a, ex);
+    miniBolts(fx, actor.x, actor.y, 1, 6, 1.6, "#d50000");
+    miniBolts(fx, actor.x, actor.y, 1, 4, 1.6, "#000000");
+  } });
+  sig("haki_futuresight", { buff(fx, actor, s, a, ex) {
+    DEFAULTS.buff(fx, actor, s, a, ex);
+    fx.add("flare", { x: actor.x, y: actor.y, z: 1.5, size: 0.9, color: "#ce93d8", life: 0.4 });
+  } });
+  function zoneFx(fx, zone, spec, actor, a) {
+    const def = a && a.def || {};
+    const f = SIG[def.id] && SIG[def.id].zone;
+    try {
+      if (f && f(fx, actor, spec, a, zone) === true) return;
+    } catch (e) {
+      if (!fx._techWarned) {
+        fx._techWarned = true;
+        console.warn("zone fx", def.id, e);
+      }
+    }
+    const kind = zone.kind || "field";
+    fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind, color: zone.color, zone, life: 1e6 });
+    switch (kind) {
+      case "meteor":
+        fx.add("meteor", { x: zone.x, y: zone.y, size: Math.max(0.4, zone.r * 0.3), fall: 0.16, life: 0.7, kind: "rock", color: "#5d4037", glow: "#ff9100" });
+        break;
+      case "thunder":
+        fx.add("cloud", { x: zone.x, y: zone.y, r: Math.max(1.2, zone.r), z: 4.8, life: Math.max(0.8, zone.t + 0.3), color: "#37474f" });
+        break;
+      case "ice":
+        ringSpikes(fx, zone.x, zone.y, zone.r * 0.8, Math.round(zone.r * 4), "ice");
+        break;
+      case "dark":
+        smoke(fx, zone.x, zone.y, 0.3, 10, ["#12001c", "#311b92"], { speed: 2 });
+        break;
+      case "storm":
+        smoke(fx, zone.x, zone.y, 0.5, 10, [zone.color || "#eceff1", "#ffffff"], { speed: 3, size: 0.4 });
+        break;
+      case "cage":
+        for (let i = 0; i < 10; i++) {
+          const th = i / 10 * TAU9;
+          fx.add("strings", { x: actor.x, y: actor.y, x1: zone.x + Math.cos(th) * zone.r, y1: zone.y + Math.sin(th) * zone.r * 0.62, color: "#f8bbd0", n: 1, life: 0.6 });
+        }
+        break;
+      default:
+        fx.ring(zone.x, zone.y, 0.2, zone.r, zone.color || "#ffffff", 0.4, 0.1, { z: 0.05, flat: 0.62, add: true });
+    }
+  }
+  function explosionFx(fx, x, y, e, owner, small) {
+    const R = e.range || 1.8;
+    const el = e.element || "explosion";
+    const E = elemOf(el);
+    const cols = e.colors || (el === "explosion" ? ["#ffab40", "#ff7043", "#fff176", "#616161"] : E.spark);
+    const gy = y + 0.45;
+    glow2(fx, x, gy, 0.5, R * 1.1, cols[0], 0.3);
+    fx.add("impact", { x, y: gy, z: 0.5, angle: 0, size: R * 0.55, color: cols[0], core: "#ffffff", life: 0.22, spikes: 12, lines: 6 });
+    fx.ring(x, gy, 0.2, R, e.color || cols[0], 0.35, 0.3, { add: true });
+    fx.burst(x, gy, Math.round(10 + R * 5), { color: cols, speed: 3 + R * 2, g: 3, z: 0.4, vz: 3, life: 0.6, kind: el === "explosion" || el === "fire" ? "fire" : E.kind, size: 0.22 + R * 0.03 });
+    smoke(fx, x, gy, 0.6, Math.round(4 + R * 2), ["#616161", "#757575", "#424242"], { speed: R * 1.2, size: 0.35 + R * 0.05, vz: 1.5 });
+    dust(fx, x, gy, Math.round(4 + R), { speed: R * 1.5 });
+    if (!small) fx.crack(x, gy, R * 0.6, 1.5);
+    if (el === "explosion" || el === "fire") fx.add("scorch", { x, y: gy, r: R * 0.55, life: 3 });
+    const pl = fx.game.player;
+    if (!small && (owner?.isPlayer || pl && fx.game.world && fx.game.world.distance(x, y, pl.x, pl.y) < 12)) fx.shake(0.3);
+  }
+  function projTrailFx(fx, p, t) {
+    if (Math.random() >= (t.rate || 0.6)) return;
+    const col = Array.isArray(t.color) ? t.color[Math.floor(Math.random() * t.color.length)] : t.color;
+    fx.particle({ x: p.x, y: p.y + 0.5, z: 1, vx: Math.random() - 0.5, vy: Math.random() - 0.5, vz: 0.4, g: 0, life: t.life || 0.35, size: t.size || 0.18, color: col, kind: t.kind || "fire", grow: t.grow ?? -0.2 });
+  }
+  function conquerorFx(fx, actor, c) {
+    const R = c.range;
+    fx.ring(actor.x, actor.y, 0.5, R, "#1a1a1a", 0.7, 0.45);
+    fx.ring(actor.x, actor.y, 0.3, R * 0.8, "#d50000", 0.55, 0.16, { add: true });
+    fx.ring(actor.x, actor.y, 0.2, R * 1.1, "#000000", 0.9, 0.08, { wobble: 0.08 });
+    for (let k = 0; k < 10; k++) {
+      const a = Math.random() * TAU9;
+      fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * R * rnd(0.5, 0.8), actor.y + Math.sin(a) * R * rnd(0.35, 0.55), k % 2 ? "#d50000" : "#000000", 0.4, 0.09, { z0: 0.9, z1: rnd(0, 1.6), branches: 2 });
+    }
+    fx.add("pillar", { x: actor.x, y: actor.y, r: 0.6, h: 5, color: "#000000", core: "#d50000", kind: "dark", life: 0.5 });
+    dust(fx, actor.x, actor.y, 14, { speed: R * 0.8, size: 0.3 });
+    fx.impactFrame(0.12);
+    fx.shake(0.7);
+    fx.focus(actor.x, actor.y, 0.3);
+  }
+  function ghostLook(look, c) {
+    return {
+      ...look,
+      skin: c,
+      top: c,
+      bottom: c,
+      hairColor: c,
+      shoes: c,
+      sleeve: c,
+      hand: c,
+      hatColor: c,
+      fur: c,
+      belt: c,
+      vest: void 0,
+      coat: look.coat ? c : void 0,
+      eyeColor: c,
+      furWhite: false,
+      hat: null,
+      wings: void 0,
+      backFlame: false,
+      drums: false,
+      dragonForm: false,
+      asura: false,
+      spots: false
+    };
+  }
+  function afterimage(fx, a, o = {}) {
+    const P2 = a._lastPose;
+    if (!P2 || !P2.P) return null;
+    const tint = o.tint || "#e3f2fd";
+    return fx.add("ghost", {
+      x: o.x ?? a.x,
+      y: o.y ?? a.y,
+      look: ghostLook(lastLook(a), tint),
+      pose: { facing: P2.facing, P: P2.P, time: P2.time, state: P2.state === "hurt" ? "idle" : P2.state, swimming: P2.swimming, z: P2.z, squash: P2.squash },
+      life: o.life ?? 0.24,
+      alpha: o.alpha ?? 0.45,
+      add: o.add
+    });
+  }
+  function motion(fx, a, dt) {
+    if (a._ghostT > 0) a._ghostT -= dt;
+    const dash = a.dash;
+    if ((dash || a._ghostT > 0) && a._lastPose && a.state === "idle") {
+      a._ghostAcc = (a._ghostAcc || 0) + dt;
+      const every = dash && dash.dodge ? 0.035 : 0.03;
+      if (a._ghostAcc >= every) {
+        a._ghostAcc = 0;
+        afterimage(fx, a, { tint: a._ghostTint || (dash && dash.dodge ? "#b3e5fc" : "#e3f2fd"), life: 0.22, alpha: 0.42, add: a._ghostAdd });
+      }
+    } else if (!(a._ghostT > 0)) {
+      a._ghostTint = null;
+      a._ghostAdd = false;
+    }
+    if (a.moving && a.intent && a.intent.sprint && !a.inWater && a.state === "idle" && !a.onShip) {
+      a._dustAcc = (a._dustAcc || 0) + dt;
+      if (a._dustAcc > 0.12) {
+        a._dustAcc = 0;
+        dust(fx, a.x - Math.cos(a.facing) * 0.18, a.y + 0.02, 2, { speed: 0.9, size: 0.14, life: 0.45, angle: a.facing + Math.PI, spread: 1.2 });
+      }
+    }
+    const kbm = Math.hypot(a.kb.x, a.kb.y);
+    if (kbm > 3.5 && !a.inWater) {
+      a._skidAcc = (a._skidAcc || 0) + dt;
+      if (a._skidAcc > 0.045) {
+        a._skidAcc = 0;
+        dust(fx, a.x, a.y + 0.03, 1, { speed: 0.6, size: 0.16 + kbm * 0.01, life: 0.5, angle: Math.atan2(-a.kb.y, -a.kb.x), spread: 1 });
+      }
+    }
+    if (a.state === "knocked") {
+      if (!a._fxLanded && a.knockT > 0.26) {
+        a._fxLanded = true;
+        const s = a.look && a.look.scale || 1;
+        dust(fx, a.x + 0.35 * s, a.y, 7, { speed: 2, size: 0.22 });
+        fx.ring(a.x + 0.3 * s, a.y, 0.2, 1 * s, "rgba(215,204,200,0.9)", 0.35, 0.08, { z: 0.05, flat: 0.5, noCore: true });
+        if (a.isPlayer || a.lastHitBy?.isPlayer) fx.kick(Math.PI / 2, 3);
+      }
+    } else a._fxLanded = false;
+  }
+  function defaultCharge(def, actor, elem, st) {
+    const src = def.source || "";
+    if (st && st.oni && weaponFor(def, actor) === "sword") return { kind: "oni" };
+    if (!elem || elem === "physical") {
+      if (src.startsWith("haki")) return { kind: "glow", color: "#7c4dff" };
+      if (src.startsWith("fruit")) return { kind: "glow", color: "#ffffff", size: 0.16 };
+      return null;
+    }
+    if (elem === "lightning") return { kind: "bolt", color: "#fff176" };
+    if (elem === "dark") return { kind: "dark" };
+    const E = elemOf(elem);
+    return { kind: "glow", color: elem === "fire" || elem === "magma" || elem === "explosion" ? "#ff9100" : E.c };
+  }
+  function actorVisuals(actor, act2, clip2) {
+    const out = {};
+    const bufs = actor.buffs || [];
+    const diable = bufs.find((b) => b.id === "diable");
+    const elemBuff = bufs.find((b) => b.element);
+    if (diable) {
+      out.legFx = "#ff6d00";
+      out.legFxAll = true;
+    }
+    if (actor.armament && (actor.style === "black_leg" || actor.style === "okama_kenpo")) out.armLegs = true;
+    if (bufs.some((b) => b.id === "gear4")) out.bounce = true;
+    if (bufs.some((b) => b.id === "gear5")) out.toon = true;
+    if (!act2 || !clip2) return out;
+    const def = act2.def;
+    const w = def.windup ?? 0.1;
+    const t = act2.t;
+    const steps = def.steps || [];
+    const main = steps.find((s) => s.hit || s.proj || s.dash || s.zone) || {};
+    const elem = main.hit?.element || main.proj?.element || main.dash?.hit?.element || main.zone?.element || (elemBuff ? elemBuff.element : null);
+    const sg = SIG[def.id] || {};
+    const st = styleOf(def, actor);
+    const E = elem ? elemOf(elem) : null;
+    const k = t < w ? clamp012(t / Math.max(0.04, w)) : Math.max(0, 1 - (t - w) / 0.3);
+    const trail2 = sg.trail || (E && elem !== "physical" ? E.c : st ? st.trail : "#ffffff");
+    const fxElem = sg.elem || (elem && elem !== "physical" ? elem : st && st.elem) || null;
+    out.fx = { elem: fxElem, color: E ? E.c : trail2, trail: trail2, limb: sg.limb || clip2.limb, k, additive: !!(E && E.add), claw: st && st.claw };
+    if (diable && (clip2.limb === "fF" || clip2.limb === "fB")) {
+      out.fx.elem = "fire";
+      out.fx.trail = "#ff9800";
+      out.fx.additive = true;
+    }
+    const blade = sg.blade || BLADES[def.id];
+    if (blade) {
+      out.blade = blade;
+      out.bladeLen = 1;
+    }
+    if (t < w && w >= 0.3 && !def.m1Chain) {
+      const ch = sg.charge !== void 0 ? sg.charge : defaultCharge(def, actor, elem, st);
+      if (ch) out.charge = { ...ch, k: t / w };
+    }
+    if (clip2.flurry && t >= clip2.flurry.t0 && t <= clip2.flurry.t1) {
+      const rubber = actor.fruit === "gomu" && (def.source || "").startsWith("fruit");
+      out.flurry = { n: rubber ? 9 : 7, rate: 10, reach: rubber ? 1.9 : 0.85, spread: rubber ? 1.1 : 0.8, stretch: rubber, legs: clip2.flurry.legs };
+    }
+    return out;
+  }
+  function drawActorExtras(g, actor, look, pose, env, phase) {
+    const bufs = actor.buffs || [];
+    const t = env.time;
+    if (phase === "back") {
+      if (!actor._lastP) return;
+      const base = { facing: pose.facing, P: actor._lastP, time: pose.time, state: "idle", noShadow: true, ghost: true };
+      if (bufs.some((b) => b.id === "doppel")) {
+        g.save();
+        g.translate(-Math.cos(pose.facing) * 0.55 + 0.25, -0.04 - Math.sin(pose.facing) * 0.25);
+        g.globalAlpha *= 0.62;
+        drawCharacter(g, ghostLook(look, "#263238"), { ...base });
+        g.restore();
+      }
+      if (bufs.some((b) => b.id === "mirage")) {
+        for (const sx of [-0.7, 0.7]) {
+          g.save();
+          g.translate(sx + Math.sin(t * 3 + sx) * 0.1, 0);
+          g.globalAlpha *= 0.14 + 0.08 * Math.sin(t * 5 + sx);
+          drawCharacter(g, ghostLook(look, "#e1f5fe"), { ...base });
+          g.restore();
+        }
+      }
+      return;
+    }
+    if (actor.blocking) {
+      const since = t - (actor._blockFlash ?? -9);
+      const hitK = since >= 0 && since < 0.25 ? 1 - since / 0.25 : 0;
+      const fresh = Math.max(0, 1 - (actor.blockTime || 0) / 0.2);
+      const f = pose.facing || 0;
+      const s = look.scale || 1;
+      g.save();
+      g.translate(Math.cos(f) * 0.32 * s, -0.8 * s + Math.sin(f) * 0.2 * s);
+      g.globalCompositeOperation = "lighter";
+      g.globalAlpha = 0.18 + 0.2 * fresh + 0.5 * hitK;
+      g.strokeStyle = fresh > 0 ? "#fff59d" : "#90caf9";
+      g.lineWidth = 0.06 + 0.05 * hitK;
+      g.lineCap = "round";
+      g.beginPath();
+      g.ellipse(0, 0, 0.55 * s, 0.75 * s, 0, f - 1.1, f + 1.1);
+      g.stroke();
+      g.restore();
+    }
+    if (bufs.some((b) => b.id === "invisible") && pose.P) {
+      g.save();
+      g.globalCompositeOperation = "lighter";
+      g.globalAlpha = 0.06 + 0.05 * Math.sin(t * 7);
+      drawCharacter(g, ghostLook(look, "#ffffff"), { facing: pose.facing, P: pose.P, time: pose.time, state: "idle", noShadow: true, ghost: true });
+      g.restore();
+    }
   }
 
   // src/game/fx.js
@@ -20983,7 +22999,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
 
   // src/render/ship.js
-  var TAU9 = Math.PI * 2;
+  var TAU10 = Math.PI * 2;
   function drawJollyRoger(g, jr = {}, size = 1, bg = "#111") {
     g.save();
     g.scale(size, size);
@@ -21001,8 +23017,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.stroke();
       for (const [x, y] of [[-0.42, -0.3], [0.42, 0.35], [0.42, -0.3], [-0.42, 0.35]]) {
         g.beginPath();
-        g.arc(x + (x < 0 ? -0.03 : 0.03), y - 0.04, 0.06, 0, TAU9);
-        g.arc(x + (x < 0 ? 0.03 : -0.03), y + 0.04, 0.06, 0, TAU9);
+        g.arc(x + (x < 0 ? -0.03 : 0.03), y - 0.04, 0.06, 0, TAU10);
+        g.arc(x + (x < 0 ? 0.03 : -0.03), y + 0.04, 0.06, 0, TAU10);
         g.fillStyle = fg;
         g.fill();
       }
@@ -21032,14 +23048,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const skull2 = jr.skull || "classic";
     g.fillStyle = fg;
     g.beginPath();
-    g.ellipse(0, -0.05, 0.3, 0.27, 0, 0, TAU9);
+    g.ellipse(0, -0.05, 0.3, 0.27, 0, 0, TAU10);
     g.fill();
     g.fillRect(-0.17, 0.1, 0.34, 0.16);
     g.fillStyle = bg;
     const eye = skull2 === "grin" ? 0.07 : 0.085;
     g.beginPath();
-    g.ellipse(-0.11, -0.05, eye, eye * 1.15, 0, 0, TAU9);
-    g.ellipse(0.11, -0.05, eye, eye * 1.15, 0, 0, TAU9);
+    g.ellipse(-0.11, -0.05, eye, eye * 1.15, 0, 0, TAU10);
+    g.ellipse(0.11, -0.05, eye, eye * 1.15, 0, 0, TAU10);
     g.fill();
     g.beginPath();
     g.moveTo(0, 0.04);
@@ -21064,7 +23080,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (acc === "strawhat") {
       g.fillStyle = "#f2d16b";
       g.beginPath();
-      g.ellipse(0, -0.24, 0.42, 0.1, 0, 0, TAU9);
+      g.ellipse(0, -0.24, 0.42, 0.1, 0, 0, TAU10);
       g.fill();
       g.beginPath();
       g.ellipse(0, -0.3, 0.23, 0.15, 0, Math.PI, 0);
@@ -21121,7 +23137,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.strokeStyle = "#f1c40f";
       g.lineWidth = 0.04;
       g.beginPath();
-      g.ellipse(0, -0.42, 0.25, 0.07, 0, 0, TAU9);
+      g.ellipse(0, -0.42, 0.25, 0.07, 0, 0, TAU10);
       g.stroke();
     }
     g.restore();
@@ -21140,7 +23156,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.quadraticCurveTo(0.22, -0.3, 0.42, -0.05);
     g.stroke();
     g.beginPath();
-    g.ellipse(0, 0.02, 0.08, 0.12, 0, 0, TAU9);
+    g.ellipse(0, 0.02, 0.08, 0.12, 0, 0, TAU10);
     g.fill();
     g.lineWidth = 0.06;
     g.beginPath();
@@ -21158,7 +23174,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.scale(1, 1 + bobRoll);
     g.fillStyle = "rgba(0,20,40,0.28)";
     g.beginPath();
-    g.ellipse(0.1, 0.12, L2 * 0.55, B * 0.62, 0, 0, TAU9);
+    g.ellipse(0.1, 0.12, L2 * 0.55, B * 0.62, 0, 0, TAU10);
     g.fill();
     const hullCol = def.color || "#8d5b33";
     const hullPath = () => {
@@ -21205,25 +23221,25 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (def.figurehead === "ram") {
       g.fillStyle = "#f5f6fa";
       g.beginPath();
-      g.arc(L2 * 0.52, 0, 0.26, 0, TAU9);
+      g.arc(L2 * 0.52, 0, 0.26, 0, TAU10);
       g.fill();
       g.strokeStyle = "#d4a373";
       g.lineWidth = 0.08;
       g.beginPath();
-      g.arc(L2 * 0.5, -0.12, 0.12, 0, TAU9);
-      g.arc(L2 * 0.5, 0.12, 0.12, 0, TAU9);
+      g.arc(L2 * 0.5, -0.12, 0.12, 0, TAU10);
+      g.arc(L2 * 0.5, 0.12, 0.12, 0, TAU10);
       g.stroke();
     } else if (def.figurehead === "lion") {
       g.fillStyle = "#f39c12";
       for (let k = 0; k < 10; k++) {
-        const a = k / 10 * TAU9;
+        const a = k / 10 * TAU10;
         g.beginPath();
-        g.arc(L2 * 0.52 + Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.14, 0, TAU9);
+        g.arc(L2 * 0.52 + Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.14, 0, TAU10);
         g.fill();
       }
       g.fillStyle = "#fdcb6e";
       g.beginPath();
-      g.arc(L2 * 0.52, 0, 0.26, 0, TAU9);
+      g.arc(L2 * 0.52, 0, 0.26, 0, TAU10);
       g.fill();
     } else if (def.figurehead === "seagull") {
       g.fillStyle = "#f5f6fa";
@@ -21239,13 +23255,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const set = st.sailSet ?? 0;
     for (let m = 0; m < masts; m++) {
       const mx = masts === 1 ? 0.05 * L2 : L2 * (0.28 - m * (0.56 / Math.max(1, masts - 1)));
-      const sw = B * (m === 0 && masts > 1 ? 1 : 1.2);
+      const sw2 = B * (m === 0 && masts > 1 ? 1 : 1.2);
       const billow = 0.12 + set * 0.35;
       g.save();
       g.translate(mx, 0);
       g.rotate(Math.sin(rel2) * 0.35);
       g.fillStyle = "#5d4037";
-      g.fillRect(-0.06, -sw / 2 - 0.1, 0.12, sw + 0.2);
+      g.fillRect(-0.06, -sw2 / 2 - 0.1, 0.12, sw2 + 0.2);
       if (set > 0.05) {
         const marine2 = def.sail === "marine" || st.marine;
         const sc = marine2 ? "#f5f6fa" : st.sailColor || "#f3ecd8";
@@ -21253,10 +23269,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.strokeStyle = "rgba(60,40,20,0.7)";
         g.lineWidth = 0.035;
         g.beginPath();
-        g.moveTo(0, -sw / 2);
-        g.quadraticCurveTo(billow * 2.2, 0, 0, sw / 2);
-        g.lineTo(-0.12, sw / 2 - 0.05);
-        g.quadraticCurveTo(billow * 1.4 - 0.12, 0, -0.12, -sw / 2 + 0.05);
+        g.moveTo(0, -sw2 / 2);
+        g.quadraticCurveTo(billow * 2.2, 0, 0, sw2 / 2);
+        g.lineTo(-0.12, sw2 / 2 - 0.05);
+        g.quadraticCurveTo(billow * 1.4 - 0.12, 0, -0.12, -sw2 / 2 + 0.05);
         g.closePath();
         g.fill();
         g.stroke();
@@ -21271,12 +23287,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       } else {
         g.fillStyle = "#e8dfc8";
-        g.fillRect(-0.1, -sw / 2, 0.2, sw);
+        g.fillRect(-0.1, -sw2 / 2, 0.2, sw2);
       }
       g.restore();
       g.fillStyle = "#4e342e";
       g.beginPath();
-      g.arc(mx, 0, 0.12, 0, TAU9);
+      g.arc(mx, 0, 0.12, 0, TAU10);
       g.fill();
     }
     const marineFlag = def.sail === "marine" || st.marine;
@@ -21307,7 +23323,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const ph = (t * 0.7 + k / 3) % 1;
         g.fillStyle = `rgba(60,60,60,${0.5 * (1 - ph)})`;
         g.beginPath();
-        g.arc(-L2 * 0.2 + k * 0.3, -ph * 1.5, 0.2 + ph * 0.4, 0, TAU9);
+        g.arc(-L2 * 0.2 + k * 0.3, -ph * 1.5, 0.2 + ph * 0.4, 0, TAU10);
         g.fill();
       }
     }
@@ -21316,7 +23332,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.fillStyle = "rgba(200,240,255,0.18)";
       g.lineWidth = 0.06;
       g.beginPath();
-      g.ellipse(0, 0, L2 * 0.7, B * 1.2, 0, 0, TAU9);
+      g.ellipse(0, 0, L2 * 0.7, B * 1.2, 0, 0, TAU10);
       g.fill();
       g.stroke();
     }
@@ -23165,7 +25181,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     tryM1(game) {
       if (this.state !== "idle" || this.hitstun > 0 || this.status.freeze || this.status.despair) return false;
       if (this.action) {
-        if (this.action.def.m1Chain && this.action.t > this.action.total * 0.55) this.combo.queued = true;
+        const a = this.action;
+        if (a.def.m1Chain && a.t > a.total * this.atkSpeed() * 0.3) this.combo.queued = true;
         return false;
       }
       const style = STYLES[this.style] || STYLES.brawler;
@@ -23179,7 +25196,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.combo.step = (this.combo.step + 1) % chain.length;
       this.combo.window = 0.55 + (def.recover || 0.2);
       this.applyElementBuff();
+      this.stepIn(def);
       return true;
+    }
+    /** A small step into melee swings: basic attacks lunge a few inches (feel only). */
+    stepIn(def) {
+      const s = def.steps && def.steps[0];
+      if (!s || !s.hit || def.lunge === 0 || this.inWater) return;
+      const push = def.lunge ?? 1.4;
+      this.kb.x += Math.cos(this.facing) * push;
+      this.kb.y += Math.sin(this.facing) * push;
     }
     applyElementBuff() {
       const eb = this.buffs.find((b) => b.element);
@@ -23189,10 +25215,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
     tryHeavy(game) {
-      if (!this.canAct()) return false;
       const style = STYLES[this.style] || STYLES.brawler;
       let def = getAbility(style.heavyId);
       if (style.weapon && !this.hasWeapon(style.weapon)) def = getAbility(STYLES.brawler.heavyId);
+      const a = this.action;
+      if (a && a.def.m1Chain && a.step >= (a.def.steps || []).length && a.t > (a.def.windup ?? 0.07) + 0.04 && this.state === "idle" && this.hitstun <= 0 && canUse(this, def)) {
+        this.action = null;
+        this.combo.queued = false;
+      }
+      if (!this.canAct()) return false;
       if (!canUse(this, def)) return false;
       startAbility(this, def, game);
       this.applyElementBuff();
@@ -23245,10 +25276,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const R = RACES[this.race] || {};
       const dist = 3.2 * (this.race === "skypiean" ? 1.3 : 1) * (this.race === "lunarian" ? 1.4 : 1) * (this.dashMul || 1);
       const time = 0.22;
-      this.dash = { vx: dx / len * dist / time, vy: dy / len * dist / time, t: time, dodge: true, ignoreWater: this.race === "lunarian" };
+      this.dash = { vx: dx / len * dist / time, vy: dy / len * dist / time, t: time, t0: time, dodge: true, ignoreWater: this.race === "lunarian" };
       this.iframes = Math.max(this.iframes, 0.2 + (this.race === "mink" ? 0.05 : 0));
       this.dodgeCd = 0.42 - this.attrs.agi * 15e-4;
-      game.fx.burst(this.x, this.y, 6, { color: "#d7ccc8", speed: 2, g: 3, life: 0.3, kind: "smoke", size: 0.18 });
+      this._ghostTint = this.race === "lunarian" ? "#ffab91" : this.race === "skypiean" ? "#ffffff" : "#b3e5fc";
+      game.fx.burst(this.x, this.y, 7, { angle: Math.atan2(-dy, -dx), spread: 1.6, color: ["#d7ccc8", "#bcaaa4", "#efebe9"], speed: 2.4, z: 0.08, vz: 0.6, g: 1.2, life: 0.5, kind: "dust", size: 0.2, grow: 0.45 });
       game.audio?.sfx("dodge");
       if (this.isPlayer) game.emit("playerDodge");
       return R;
@@ -23536,6 +25568,85 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (dmg && !this.inWater) this.takeDamage(dmg * dt, null, { element: "fire" }, game);
     }
     // --- drawing -------------------------------------------------------------------
+    /**
+     * Everything the renderer needs to pose this actor this frame: the
+     * technique's clip, the style's stance, eased transitions between clips and
+     * states, dodge/hurt/launch/get-up poses and the hit squash. Visual only.
+     */
+    visualPose(env, look, act2, aura, alphaBuff) {
+      const now = env.time;
+      const vdt = Math.min(0.1, Math.max(0, now - (this._vt ?? now)));
+      this._vt = now;
+      const wpn = this.weapon ? { kind: this.weapon.kind, count: this.weapon.count || 1, gun: gunKind(this.weapon) } : null;
+      const stance = stanceFor(this.style, wpn);
+      if (act2) this._lastActT = now;
+      const ai = this.controller;
+      const npcFight = !this.isPlayer && ai && ai.target && ai.state === "chase";
+      const combat = now - (this._lastActT ?? -99) < 2.5 || this.blocking || this.hitstun > 0 || (this.isPlayer ? !!this.inCombat : !!npcFight);
+      const hurt = this.state === "idle" && this.hitstun > 0.2 && !act2;
+      const dodging = !!(this.dash && this.dash.dodge);
+      let anim = null;
+      if (act2) {
+        if (!act2.clip) act2.clip = actionClip(act2.def, this, stance);
+        anim = act2.clip;
+        anim.t = act2.t;
+      }
+      const mode = act2 || `${this.state}${this.blocking ? "b" : ""}${dodging ? "d" : ""}${hurt ? "h" : ""}${this.moving ? "m" : ""}${combat ? "c" : ""}${this.intent.sprint ? "s" : ""}${this.inWater ? "w" : ""}`;
+      if (mode !== this._mode) {
+        this._blendFrom = this._lastP || null;
+        this._blendT = 0;
+        this._blendDur = act2 ? Math.min(0.06, (act2.def.windup ?? 0.1) * 0.45) : hurt ? 0.05 : 0.12;
+        this._mode = mode;
+      }
+      this._blendT = (this._blendT || 0) + vdt;
+      if (this._wasDown && this.state === "idle") this._getUpT = 0.5;
+      this._wasDown = this.state === "knocked";
+      if (this._getUpT > 0) this._getUpT -= vdt;
+      const pose = {
+        facing: this.facing,
+        walk: this.walk,
+        moving: this.moving,
+        time: now + this.seed,
+        state: this.state === "knocked" ? "knocked" : hurt ? "hurt" : this.state,
+        swimming: this.inWater,
+        alpha: alphaBuff ? alphaBuff.alpha : this.fadeAlpha,
+        aura,
+        anim,
+        stanceP: STANCES[stance],
+        combat,
+        sprint: !!(this.intent.sprint && this.moving),
+        weapon: wpn,
+        armed: !!wpn && (combat && !!STANCE_ARMED[stance] || !!(anim && anim.weapon)),
+        armament: this.armament,
+        knockT: this.knockT
+      };
+      if (this.blocking) {
+        pose.block = this.blockTime;
+        pose.armedBlock = pose.armed;
+      }
+      if (dodging && !act2) {
+        const d = this.dash;
+        pose.dodge = Math.min(1, Math.max(0, 1 - d.t / (d.t0 || 0.22)));
+        const dl = Math.hypot(d.vx, d.vy) || 1;
+        const view = dir4(this.facing);
+        pose.dodgeDir = view === "left" || view === "right" ? (d.vx * Math.cos(this.facing) + d.vy * Math.sin(this.facing)) / dl : 0;
+      }
+      if (hurt) pose.hurtK = Math.min(1, this.hitstun / 0.35);
+      const kbm = Math.hypot(this.kb.x, this.kb.y);
+      if (kbm > 6 && this.hitstun > 0 && !act2 && this.state === "idle") {
+        pose.launch = Math.min(1, (kbm - 6) / 10);
+        pose.z = 0.25 * pose.launch;
+      }
+      if (this._getUpT > 0 && this.state === "idle" && !act2) pose.getUp = 1 - this._getUpT / 0.5;
+      if (this._blendFrom && this._blendT < this._blendDur && this.state === "idle") pose.blend = { P: this._blendFrom, k: this._blendT / this._blendDur };
+      const hf = this.hitFx;
+      if (hf) {
+        const hk = (now - hf.t0) / 0.18;
+        if (hk >= 0 && hk < 1) pose.squash = 1 - 0.14 * Math.min(1, hf.w) * Math.sin(hk * Math.PI);
+      }
+      Object.assign(pose, actorVisuals(this, act2, anim));
+      return pose;
+    }
     draw(g, env) {
       const buffLook = this.buffs.find((b) => b.look);
       let look = buffLook ? { ...this.look, ...buffLook.look } : this.look;
@@ -23544,22 +25655,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (scaleBuff) look = { ...look, scale: (look.scale || 1) * scaleBuff.mods.scale };
       const act2 = this.action;
       const alphaBuff = this.buffs.find((b) => b.alpha !== void 0);
-      const aura = this.buffs.find((b) => b.aura)?.aura || (this.armament && !this.isPlayer ? null : null) || (this.conquerorInfused ? "rgba(0,0,0,0.8)" : null);
-      const pose = {
-        facing: this.facing,
-        walk: this.walk,
-        moving: this.moving,
-        time: env.time + this.seed,
-        action: this.blocking ? "block" : act2 ? act2.def.anim : null,
-        actionT: act2 ? Math.min(1, act2.t / Math.max(0.05, act2.total)) : 0,
-        state: this.state === "knocked" ? "knocked" : this.hitstun > 0.2 ? "hurt" : this.state,
-        swimming: this.inWater,
-        alpha: alphaBuff ? alphaBuff.alpha : this.fadeAlpha,
-        aura
-      };
-      if (this.flashT > 0) g.filter = "brightness(2.4)";
-      drawCharacter(g, look, pose);
-      if (this.flashT > 0) g.filter = "none";
+      const aura = this.buffs.find((b) => b.aura)?.aura || (this.conquerorInfused ? "rgba(0,0,0,0.8)" : null);
+      const pose = this.visualPose(env, look, act2, aura, alphaBuff);
+      const hf = this.hitFx;
+      const shiver = hf ? (env.time - hf.t0) / 0.14 : 1;
+      g.save();
+      if (shiver >= 0 && shiver < 1 && this.state === "idle") g.translate(Math.sin(env.time * 170) * 0.045 * Math.min(1, hf.w) * (1 - shiver), 0);
+      drawActorExtras(g, this, look, pose, env, "back");
+      if (this.flashT > 0) drawCharacterTinted(g, look, pose, "#ffffff", this.flashT > 0.075 ? 1 : this.flashT / 0.075 * 0.8);
+      else drawCharacter(g, look, pose);
+      drawActorExtras(g, this, look, pose, env, "front");
+      g.restore();
+      this._lastP = pose.P;
+      this._lastPose = pose;
+      this._lastLook = look;
       const s = look.scale || 1;
       if (this.status.freeze) {
         g.fillStyle = "rgba(179,229,252,0.55)";
@@ -23589,12 +25698,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.fillText("...sorry I was born", 0, -2 * s);
       }
       if (this.hitstun > 0.4 || this.status.shock) {
+        g.lineWidth = 0.018;
+        g.strokeStyle = "rgba(90,60,0,0.85)";
         for (let k = 0; k < 3; k++) {
           const a = env.time * 6 + k * TAU / 3;
-          g.fillStyle = "#ffeb3b";
-          g.font = "0.26px sans-serif";
-          g.textAlign = "center";
-          g.fillText("\u2726", Math.cos(a) * 0.35, -1.75 * s + Math.sin(a) * 0.1);
+          g.fillStyle = k % 2 ? "#fff59d" : "#ffeb3b";
+          starPath(g, Math.cos(a) * 0.36, -1.78 * s + Math.sin(a) * 0.1, 0.085 * (0.85 + 0.15 * Math.sin(a * 2)), 4, 0.42, a);
+          g.fill();
+          g.stroke();
         }
       }
       if (this.armament) {
@@ -26331,9 +28442,9 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
   // src/game/session.js
   var shipCounter = 0;
   function installSession(game, { onReturnToTitle }) {
-    const ALIAS = { rowboat: "dinghy", boat: "dinghy", brig: "brigantine", sunny: "adam_brig", thousand_sunny: "adam_brig", merry: "caravel", going_merry: "caravel", warship: "marine_warship" };
+    const ALIAS2 = { rowboat: "dinghy", boat: "dinghy", brig: "brigantine", sunny: "adam_brig", thousand_sunny: "adam_brig", merry: "caravel", going_merry: "caravel", warship: "marine_warship" };
     game.giveShip = (type, x, y, name, extra = {}) => {
-      type = ALIAS[type] || type;
+      type = ALIAS2[type] || type;
       const s = game.addShip({ type, x, y, heading: extra.heading ?? Math.PI / 2, owner: "player", faction: "player", name: name || void 0, jr: game.state?.char?.jr, upgrades: extra.upgrades || [], hull: extra.hull, coated: extra.coated });
       s.uid = extra.uid || `s${Date.now().toString(36)}${shipCounter++}`;
       if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world);
@@ -29639,20 +31750,20 @@ Trains by: ${TRAINS_BY[k]}` },
     return entry;
   }
   function openInn(game, building, island, town) {
-    const S2 = game.services;
-    const price = S2.innPrice(island);
+    const S3 = game.services;
+    const price = S3.innPrice(island);
     game.ui.openPanel(h(
       "div",
       h("h2", building.name || "Inn"),
       h("p", "A warm bed, a hot meal and a roof over your head. Resting here also makes this town the place you wake up if you fall in battle, and restores your second winds."),
       h("p", h("b", "Price: "), formatBerries(price)),
       h("button.btn.gold", { on: { click: () => {
-        if (S2.rest(island, town)) game.ui.closePanel();
+        if (S3.rest(island, town)) game.ui.closePanel();
       } } }, "Rest until morning")
     ), { id: "inn" });
   }
   function openDoctor(game, building, island, doc) {
-    const S2 = game.services;
+    const S3 = game.services;
     const c = game.state.char;
     const p = game.player;
     const body = h("div");
@@ -29665,9 +31776,9 @@ Trains by: ${TRAINS_BY[k]}` },
         h("p", doc?.line || "Let's have a look at you."),
         h("p", `Health ${Math.ceil(p.hp)}/${p.d.maxHp}${Object.keys(p.status).length ? " \xB7 " + Object.keys(p.status).join(", ") : ""}`),
         h("button.btn.green", { disabled: p.hp >= p.d.maxHp && !Object.keys(p.status).length, on: { click: () => {
-          S2.heal(island);
+          S3.heal(island);
           render2();
-        } } }, `Treat wounds \u2014 ${formatBerries(S2.healPrice(island))}`)
+        } } }, `Treat wounds \u2014 ${formatBerries(S3.healPrice(island))}`)
       );
       if (doc?.restoresLife) {
         const done6 = c.flags["lifeRestored_" + doc.id];
@@ -29676,9 +31787,9 @@ Trains by: ${TRAINS_BY[k]}` },
           h("h3", "Mend a vivre card"),
           h("p", `${doc.name} is one of the few doctors in the world who can pull someone back from the edge. (Restores one lost life, once.)`),
           h("button.btn.gold", { disabled: done6 || c.lives >= c.maxLives, on: { click: () => {
-            S2.restoreLife(doc);
+            S3.restoreLife(doc);
             render2();
-          } } }, done6 ? "Already treated" : c.lives >= c.maxLives ? "No lives lost" : `Treatment \u2014 ${formatBerries(S2.lifePrice(doc))}`)
+          } } }, done6 ? "Already treated" : c.lives >= c.maxLives ? "No lives lost" : `Treatment \u2014 ${formatBerries(S3.lifePrice(doc))}`)
         );
       }
     };
@@ -29686,7 +31797,7 @@ Trains by: ${TRAINS_BY[k]}` },
     return entry;
   }
   function openShipyard(game, building, island, dock) {
-    const S2 = game.services;
+    const S3 = game.services;
     const c = game.state.char;
     const body = h("div");
     game.ui.openPanel(body, { wide: true, id: "shipyard" });
@@ -29696,9 +31807,9 @@ Trains by: ${TRAINS_BY[k]}` },
       add(body, h("h2", building.name || "Shipyard"), berriesLine(c));
       add(body, h("h3", "Buy a ship"));
       const list = h("div.list");
-      for (const type of S2.shipsFor(island)) {
+      for (const type of S3.shipsFor(island)) {
         const d = SHIPS[type];
-        const price = S2.shipPrice(type, island);
+        const price = S3.shipPrice(type, island);
         list.appendChild(h(
           "div.row-item",
           uiImg("ship", 30),
@@ -29707,7 +31818,7 @@ Trains by: ${TRAINS_BY[k]}` },
           h("button.btn.gold", { disabled: c.berries < price, on: { click: async () => {
             const n = await game.ui.ask({ title: `Buy a ${d.name}`, text: `Name your new ship (${formatBerries(price)}).`, input: d.name, ok: "Buy" });
             if (n === null) return;
-            S2.buyShip(type, island, dock, (n || d.name).slice(0, 24));
+            S3.buyShip(type, island, dock, (n || d.name).slice(0, 24));
             game.emit("shipBought", type);
             render2();
           } } }, "Buy")
@@ -29719,12 +31830,12 @@ Trains by: ${TRAINS_BY[k]}` },
         add(body, h("h3", "Your ships"));
         for (const s of ships) {
           const near = game.world.distance(s.x, s.y, game.player.x, game.player.y) < 60;
-          const rp = S2.repairPrice(s, island);
+          const rp = S3.repairPrice(s, island);
           const card = h("div.card", h("h4", `${s.name} \u2014 ${s.def.name}`), h("div", `Hull ${Math.ceil(s.hull)}/${s.maxHull} \xB7 upgrades: ${s.upgrades.map((u) => SHIP_UPGRADES[u]?.name).join(", ") || "none"}${s.coated ? " \xB7 coated" : ""}`));
           if (!near) card.appendChild(h("p.muted", "Bring this ship to the harbour to work on it."));
           else {
             card.appendChild(h("button.btn.green", { disabled: s.hull >= s.maxHull || c.berries < rp, on: { click: () => {
-              S2.repair(s, island);
+              S3.repair(s, island);
               render2();
             } } }, `Repair \u2014 ${formatBerries(rp)}`));
             const ups = h("div.list", { style: { marginTop: "6px" } });
@@ -29732,13 +31843,13 @@ Trains by: ${TRAINS_BY[k]}` },
               if (id === "coating" && !(building.coating || /sabaody/i.test(island?.id || "") || /coat/i.test(building.name || ""))) continue;
               if (id === "seastone_keel" && !(building.seastone || island?.def?.sea === "paradise" || island?.def?.sea === "new_world")) continue;
               const has2 = s.upgrades.includes(id) || id === "coating" && s.coated;
-              const up = S2.upgradePrice(id, island);
+              const up = S3.upgradePrice(id, island);
               ups.appendChild(h(
                 "div.row-item",
                 h("div.grow", h("b", u.name), h("div.sub", u.desc)),
                 h("span.price", formatBerries(up)),
                 h("button.btn", { disabled: has2 || c.berries < up, on: { click: () => {
-                  S2.upgrade(s, id, island);
+                  S3.upgrade(s, id, island);
                   render2();
                 } } }, has2 ? "Fitted" : "Fit")
               ));
@@ -29774,7 +31885,7 @@ Trains by: ${TRAINS_BY[k]}` },
     render2();
   }
   function openTrainer(game, tid, npcName) {
-    const S2 = game.services;
+    const S3 = game.services;
     const t = TRAINERS[tid];
     const c = game.state.char;
     const body = h("div");
@@ -29805,15 +31916,15 @@ Trains by: ${TRAINS_BY[k]}` },
         if (!styles.length) list.appendChild(h("p", `${t.name} doesn't teach a fighting style \u2014 but can train your body.`));
         for (const s of styles) {
           const st = STYLES[s];
-          const chk = S2.canLearnStyle(tid, s);
-          const price = S2.stylePrice(tid, s);
+          const chk = S3.canLearnStyle(tid, s);
+          const price = S3.stylePrice(tid, s);
           list.appendChild(h(
             "div.row-item",
             uiImg("skills", 30),
             h("div.grow", h("b", st.name), h("div.sub", st.desc), chk.warn ? h("div.sub", { style: { color: "#b71c1c" } }, chk.warn) : null),
             h("span.price", price ? formatBerries(price) : "free"),
             h("button.btn.gold", { disabled: !chk.ok || c.berries < price, on: { click: () => {
-              S2.learnStyle(tid, s);
+              S3.learnStyle(tid, s);
               render2();
             } } }, chk.ok ? "Learn" : chk.why)
           ));
@@ -29822,32 +31933,32 @@ Trains by: ${TRAINS_BY[k]}` },
         for (const id of t.teaches || []) {
           const d = getAbility(id);
           if (!d || needsHaki(d) && !hakiKnown(c)) continue;
-          const chk = S2.canLearnTech(id);
-          const price = S2.techPrice(id);
+          const chk = S3.canLearnTech(id);
+          const price = S3.techPrice(id);
           list.appendChild(h(
             "div.row-item",
             skillImg(d, 34, ".ico"),
             h("div.grow", h("b", d.name), h("span.tag", STYLES[d.style]?.name || (d.hakiType ? title(d.hakiType) + " Haki" : "")), h("div.sub", d.desc || ""), h("div.sub", `Requires: ${d.learn?.mastery ? STYLES[d.style]?.name + " mastery " + d.learn.mastery : d.learn?.level ? title(d.hakiType) + " Haki " + d.learn.level : "\u2014"}`)),
             h("span.price", formatBerries(price)),
             h("button.btn.gold", { disabled: !chk.ok || c.berries < price, on: { click: () => {
-              S2.learnTech(id);
+              S3.learnTech(id);
               render2();
             } } }, chk.ok ? "Learn" : chk.why)
           ));
         }
         if (!list.children.length) list.appendChild(h("p", "No techniques to teach you yet."));
       } else if (tab === "training") {
-        list.appendChild(h("p.muted", `A master pushes your body further than fighting alone. Training sessions left today: ${S2.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
+        list.appendChild(h("p.muted", `A master pushes your body further than fighting alone. Training sessions left today: ${S3.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
         for (const [k, cap] of Object.entries(t.train || {})) {
-          const price = S2.trainPrice(k);
+          const price = S3.trainPrice(k);
           const maxed = c.attrs[k] >= cap;
           list.appendChild(h(
             "div.row-item",
             uiImg("trainer", 30),
             h("div.grow", h("b", ATTRS[k].name), h("div.sub", `${c.attrs[k]} / ${cap} with this master \xB7 ${ATTRS[k].desc}`)),
             h("span.price", formatBerries(price)),
-            h("button.btn.gold", { disabled: maxed || S2.trainsLeft() <= 0 || c.berries < price, on: { click: () => {
-              S2.train(tid, k);
+            h("button.btn.gold", { disabled: maxed || S3.trainsLeft() <= 0 || c.berries < price, on: { click: () => {
+              S3.train(tid, k);
               render2();
             } } }, maxed ? "Mastered" : "Train")
           ));
@@ -29856,24 +31967,24 @@ Trains by: ${TRAINS_BY[k]}` },
         for (const k of hakiTypes) {
           const cap = t.haki[k];
           const lvl = c.haki[k] || 0;
-          const price = S2.hakiTrainPrice(k);
+          const price = S3.hakiTrainPrice(k);
           list.appendChild(h(
             "div.row-item",
             uiImg("haki", 30),
             h("div.grow", h("b", HAKI[k].name), h("div.sub", HAKI[k].desc), h("div.sub", `Level ${Math.floor(lvl)} / ${cap} with this master`)),
             h("span.price", formatBerries(price)),
             h("button.btn.gold", { disabled: c.berries < price || lvl >= cap, on: { click: () => {
-              S2.hakiTrain(tid, k);
+              S3.hakiTrain(tid, k);
               render2();
             } } }, "Train")
           ));
         }
       } else if (tab === "spar") {
-        const chk = S2.canSpar(tid);
+        const chk = S3.canSpar(tid);
         list.appendChild(h("p", `A real duel against ${t.spar.name} (level ${t.spar.level}). Nobody dies in a spar. Win to gain mastery and possibly a breakthrough \u2014 beating someone stronger than you is how warriors grow. Once per day.`));
         list.appendChild(h("button.btn.red", { disabled: !chk.ok, on: { click: () => {
           game.ui.closePanel();
-          S2.startSpar(tid);
+          S3.startSpar(tid);
         } } }, chk.ok ? "Begin the spar" : chk.why));
       }
       body.appendChild(list);
@@ -42828,12 +44939,12 @@ Trains by: ${TRAINS_BY[k]}` },
   ];
   function drawWhale(g, env, marked) {
     const t = env?.time || 0;
-    const TAU10 = Math.PI * 2;
+    const TAU11 = Math.PI * 2;
     g.save();
     g.translate(0, Math.sin(t * 0.7) * 0.12);
     g.fillStyle = "rgba(255,255,255,0.28)";
     g.beginPath();
-    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU10);
+    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU11);
     g.fill();
     g.fillStyle = "#4e6177";
     g.beginPath();
@@ -42845,7 +44956,7 @@ Trains by: ${TRAINS_BY[k]}` },
     g.fill();
     g.fillStyle = "#5d7389";
     g.beginPath();
-    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU10);
+    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU11);
     g.fill();
     g.fillStyle = "#d7e1ea";
     g.beginPath();
@@ -42861,16 +44972,16 @@ Trains by: ${TRAINS_BY[k]}` },
     }
     g.fillStyle = "#fafafa";
     g.beginPath();
-    g.arc(-6.6, -1.8, 0.45, 0, TAU10);
+    g.arc(-6.6, -1.8, 0.45, 0, TAU11);
     g.fill();
     g.fillStyle = "#1a1a1a";
     g.beginPath();
-    g.arc(-6.7, -1.8, 0.24, 0, TAU10);
+    g.arc(-6.7, -1.8, 0.24, 0, TAU11);
     g.fill();
     if (marked) {
       g.fillStyle = "#fafafa";
       g.beginPath();
-      g.arc(-8.2, -3.1, 0.8, 0, TAU10);
+      g.arc(-8.2, -3.1, 0.8, 0, TAU11);
       g.fill();
       g.strokeStyle = "#fafafa";
       g.lineWidth = 0.25;
@@ -42882,8 +44993,8 @@ Trains by: ${TRAINS_BY[k]}` },
       g.stroke();
       g.fillStyle = "#1a1a1a";
       g.beginPath();
-      g.arc(-8.45, -3.2, 0.16, 0, TAU10);
-      g.arc(-7.95, -3.2, 0.16, 0, TAU10);
+      g.arc(-8.45, -3.2, 0.16, 0, TAU11);
+      g.arc(-7.95, -3.2, 0.16, 0, TAU11);
       g.fill();
     }
     const ph = t % 14;
@@ -42891,7 +45002,7 @@ Trains by: ${TRAINS_BY[k]}` },
       const h2 = Math.sin(ph / 1.6 * Math.PI) * 3.2;
       g.fillStyle = "rgba(225,245,254,0.8)";
       g.beginPath();
-      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU10);
+      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU11);
       g.fill();
     }
     g.font = "bold 0.5px Nunito, sans-serif";
@@ -43077,7 +45188,7 @@ Trains by: ${TRAINS_BY[k]}` },
   };
 
   // src/content/paradise2.js
-  var S = (g, id) => g.quests.stageId(id);
+  var S2 = (g, id) => g.quests.stageId(id);
   var D2 = (g, id) => g.quests.isDone(id);
   var ON = (g, id) => !!g.quests.state(id) && !g.quests.isDone(id);
   var at3 = (ctx, id, st) => ctx.game.quests.stageId(id) === st;
@@ -43693,7 +45804,7 @@ Trains by: ${TRAINS_BY[k]}` },
       at: { town: "w7_main_street", building: "Galley-La Company Headquarters" },
       look: { hair: "pompadour", hairColor: "#1e88e5", top: "#fafafa", bottom: "#263238", coat: "#37474f", skin: "#f1c9a0" },
       level: 32,
-      marker: (c, g) => ["iceburg", "truth"].includes(S(g, "p2_cp9_conspiracy")) || S(g, "p2_enies_lobby") === "report" ? "?" : null,
+      marker: (c, g) => ["iceburg", "truth"].includes(S2(g, "p2_cp9_conspiracy")) || S2(g, "p2_enies_lobby") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
@@ -43846,7 +45957,7 @@ Trains by: ${TRAINS_BY[k]}` },
       bounty: 15e6,
       alert: "You should have stayed at the bar.",
       barks: ["Air Door.", "Tekkai."],
-      when: (c, g) => S(g, "p2_cp9_conspiracy") === "masks"
+      when: (c, g) => S2(g, "p2_cp9_conspiracy") === "masks"
     },
     {
       id: "p2_kalifa_mask",
@@ -43864,7 +45975,7 @@ Trains by: ${TRAINS_BY[k]}` },
       skill: 0.55,
       lethal: false,
       alert: "Protecting the mayor? That's sexual harassment.",
-      when: (c, g) => S(g, "p2_cp9_conspiracy") === "masks"
+      when: (c, g) => S2(g, "p2_cp9_conspiracy") === "masks"
     },
     {
       id: "p2_zambai",
@@ -43878,7 +45989,7 @@ Trains by: ${TRAINS_BY[k]}` },
       look: { hair: "pompadour", hairColor: "#212121", top: "#ff7043", bottom: "#1565c0", goggles: true, skin: "#e0ac7e" },
       style: "brawler",
       moves: ["brawl_tackle", "brawl_headbutt"],
-      marker: (c, g) => S(g, "p2_cp9_conspiracy") === "franky" ? "!" : null,
+      marker: (c, g) => S2(g, "p2_cp9_conspiracy") === "franky" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.char.defeated.p2_zambai ? `"OW! Okay, okay! Here's your rudder. (He hands over a plank.) ...Listen. Big Bro Franky's gone into hiding. Men in black suits keep asking about some blueprints. And somebody sent the mayor a death threat. Go tell Iceburg. And don't tell him we told you!"` : `"AOW! (He strikes a pose.) We're the Franky Family, Water 7's finest dismantlers! Your ship looked abandoned. Abandoned ships are ours. Now beat it before Big Bro Franky gets back!"`,
@@ -43901,7 +46012,7 @@ Trains by: ${TRAINS_BY[k]}` },
       look: { hair: "curly", hairColor: "#fafafa", top: "#7b1fa2", bottom: "#4a148c", skin: "#f1c9a0", bulk: 1.5 },
       bulk: 1.5,
       level: 12,
-      marker: (c, g) => S(g, "p2_enies_lobby") === "rocketman" ? "!" : null,
+      marker: (c, g) => S2(g, "p2_enies_lobby") === "rocketman" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => at3(ctx, "p2_enies_lobby", "rocketman") ? `"Nngaa~ha~ha! (She takes a long swig from her bottle.) The Aqua Laguna's coming and you want to chase the Puffing Tom to Enies Lobby? The Rocketman's got no brakes and she's never been tested. Chimney! Gonbe! We're going on a trip!"` : ctx.game.quests.isDone("p2_enies_lobby") ? `"Nngaa~ha~ha! You rode the Rocketman through the Aqua Laguna and came back alive. Tom would've liked you."` : `"Nngaa~ha~ha! Shift Station. The trains out of here don't take passengers, dear \u2014 only criminals and Government men ride the line to Enies Lobby."`,
@@ -43961,7 +46072,7 @@ Trains by: ${TRAINS_BY[k]}` },
       bulk: 1.4,
       level: 45,
       when: (c, g) => D2(g, "p2_enies_lobby"),
-      marker: (c, g) => !g.quests.state("p2_adam_wood") ? "!" : S(g, "p2_adam_wood") === "build" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_adam_wood") ? "!" : S2(g, "p2_adam_wood") === "build" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"SUUUPER! (He slams his forearms together; the stars on them line up.) I'm building a dream ship \u2014 one that can sail to the end of the sea and back! Know what that takes? ADAM WOOD, bro. The toughest timber in the world."`,
@@ -44001,7 +46112,7 @@ Trains by: ${TRAINS_BY[k]}` },
       at: { town: "st_poplar_town", building: "Back-Alley Dealer" },
       look: { hair: "long", hairColor: "#424242", top: "#37474f", bottom: "#212121", hat: "cowboy", hatColor: "#212121", scarEye: true },
       level: 20,
-      marker: (c, g) => D2(g, "p2_enies_lobby") && !g.quests.state("p2_candy_pirates") ? "!" : S(g, "p2_candy_pirates") === "report" ? "?" : null,
+      marker: (c, g) => D2(g, "p2_enies_lobby") && !g.quests.state("p2_candy_pirates") ? "!" : S2(g, "p2_candy_pirates") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.game.quests.isDone("p2_candy_pirates") ? `"You ran the Candy Pirates out of St. Poplar. The town doesn't know your name \u2014 which is how I like my friends. What do you need?"` : '"Timber, stone that makes Devil Fruit users sweat, things that fell off Government ships... (He lowers his voice.) Two girls from the Franky Family bought a plank of Adam wood here once. Two hundred million. Cash."',
@@ -44062,7 +46173,7 @@ Trains by: ${TRAINS_BY[k]}` },
       infamy: true,
       breakthrough: 2,
       alert: "Sweet! Another sucker for the Candy Pirates!",
-      when: (c, g) => S(g, "p2_candy_pirates") === "candy"
+      when: (c, g) => S2(g, "p2_candy_pirates") === "candy"
     },
     {
       id: "p2_pucci_chef",
@@ -44142,7 +46253,7 @@ Trains by: ${TRAINS_BY[k]}` },
       bounty: 8e6,
       alert: "No one passes the Main Gate!",
       when: (c, g) => ON(g, "p2_enies_lobby") && !c.flags.p2_giantsTruth,
-      marker: (c, g) => S(g, "p2_enies_lobby") === "main_gate" ? "!" : null,
+      marker: (c, g) => S2(g, "p2_enies_lobby") === "main_gate" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: '"HALT, TINY ONE! I am Oimo, gatekeeper of Enies Lobby! For fifty years we have served the World Government, so that our captains Dorry and Brogy are released from prison! None shall pass!"',
@@ -44205,7 +46316,7 @@ Trains by: ${TRAINS_BY[k]}` },
       alert: "GUILTY! ...Innocent! ...DEATH!",
       barks: ["Guilty!", "Innocent!", "The court finds you... DEAD!"],
       when: (c, g) => ON(g, "p2_enies_lobby"),
-      marker: (c, g) => S(g, "p2_enies_lobby") === "courthouse" ? "!" : null,
+      marker: (c, g) => S2(g, "p2_enies_lobby") === "courthouse" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: '(Three heads, one robe.) LEFT: "Guilty. Everyone is guilty." RIGHT: "Innocent! Let them go!" MIDDLE: "I am perfectly fair. Execute them!" (The jury box is full of prisoners who want company in Impel Down.)',
@@ -44234,7 +46345,7 @@ Trains by: ${TRAINS_BY[k]}` },
       moves: ["p2_ramen_kenpo", "brawl_knee"],
       skill: 0.4,
       alert: "Ramen Kenpo! You have been noodled!",
-      when: (c, g) => ["courthouse", "keys"].includes(S(g, "p2_enies_lobby"))
+      when: (c, g) => ["courthouse", "keys"].includes(S2(g, "p2_enies_lobby"))
     },
     {
       id: "p2_spandam",
@@ -44285,7 +46396,7 @@ Trains by: ${TRAINS_BY[k]}` },
       bounty: 25e6,
       alert: "Gyahahaha! The Wolf of the Six Powers! Tekkai Kenpo!",
       barks: ["Tekkai Kenpo!", "Grrrah!"],
-      when: (c, g) => ["keys", "lucci"].includes(S(g, "p2_enies_lobby"))
+      when: (c, g) => ["keys", "lucci"].includes(S2(g, "p2_enies_lobby"))
     },
     {
       id: "p2_kumadori",
@@ -44308,7 +46419,7 @@ Trains by: ${TRAINS_BY[k]}` },
       bounty: 25e6,
       alert: "YOYOI! I am Kumadori! I shall atone with my life \u2014 after I take yours!",
       barks: ["Yoyoi!", "Life Return!"],
-      when: (c, g) => ["keys", "lucci"].includes(S(g, "p2_enies_lobby"))
+      when: (c, g) => ["keys", "lucci"].includes(S2(g, "p2_enies_lobby"))
     },
     {
       id: "p2_fukurou",
@@ -44330,7 +46441,7 @@ Trains by: ${TRAINS_BY[k]}` },
       bounty: 2e7,
       alert: "Chapapa! Your doriki is... not bad! Don't tell anyone I said so. Chapapa!",
       barks: ["Chapapa!"],
-      when: (c, g) => ["keys", "lucci"].includes(S(g, "p2_enies_lobby"))
+      when: (c, g) => ["keys", "lucci"].includes(S2(g, "p2_enies_lobby"))
     },
     {
       id: "p2_kalifa",
@@ -44350,7 +46461,7 @@ Trains by: ${TRAINS_BY[k]}` },
       breakthrough: 3,
       bounty: 25e6,
       alert: "Coming all the way to the Tower of Justice? That's sexual harassment.",
-      when: (c, g) => ["keys", "lucci"].includes(S(g, "p2_enies_lobby"))
+      when: (c, g) => ["keys", "lucci"].includes(S2(g, "p2_enies_lobby"))
     },
     {
       id: "p2_kaku",
@@ -44376,7 +46487,7 @@ Trains by: ${TRAINS_BY[k]}` },
         g.fx.text(a.x, a.y - 2.4, "GIRAFFE FORM!", "#ffd54f", 0.6);
         a.addBuff({ id: "p2_giraffe", name: "Giraffe Form", dur: 60, mods: { damage: 1.3, scale: 1.4 } });
       } }],
-      when: (c, g) => ["keys", "lucci"].includes(S(g, "p2_enies_lobby"))
+      when: (c, g) => ["keys", "lucci"].includes(S2(g, "p2_enies_lobby"))
     },
     {
       id: "p2_lucci",
@@ -44405,7 +46516,7 @@ Trains by: ${TRAINS_BY[k]}` },
         g.fx.text(a.x, a.y - 2.4, "LEOPARD FORM", "#ffb74d", 0.6);
         a.addBuff({ id: "p2_lucci_leopard", name: "Leopard Form", dur: 90, mods: { damage: 1.4, speedMul: 1.2 }, aura: "rgba(255,183,77,0.5)" });
       } }],
-      when: (c, g) => S(g, "p2_enies_lobby") === "lucci"
+      when: (c, g) => S2(g, "p2_enies_lobby") === "lucci"
     }
   ];
   var TB_Q = "p2_thriller_bark";
@@ -44457,7 +46568,7 @@ Trains by: ${TRAINS_BY[k]}` },
       bulk: 1.5,
       level: 38,
       bounty: 24e6,
-      marker: (c, g) => S(g, TB_Q) === "lola" ? "!" : S(g, TB_Q) === "dawn" ? "?" : null,
+      marker: (c, g) => S2(g, TB_Q) === "lola" ? "!" : S2(g, TB_Q) === "dawn" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
@@ -44698,7 +46809,7 @@ Trains by: ${TRAINS_BY[k]}` },
         a.addBuff({ id: "p2_asgard", name: "Shadows' Asgard", dur: 120, mods: { damage: 1.5, defMul: 0.75, scale: 1.4 }, aura: "rgba(38,50,56,0.8)" });
       } }],
       when: (c, g) => !D2(g, TB_Q),
-      marker: (c, g) => S(g, TB_Q) === "moria" ? "!" : null,
+      marker: (c, g) => S2(g, TB_Q) === "moria" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Kishishishi! A guest in my Mast Mansion. I lost my whole crew in the New World, you know. Kaido. Since then I don't keep subordinates who can die. I make them out of corpses and stolen shadows! Why work hard when zombies can make me Pirate King?"`,
@@ -44738,7 +46849,7 @@ Trains by: ${TRAINS_BY[k]}` },
       bulk: 1.8,
       look: { hair: "short", hairColor: "#212121", hat: "beanie", hatColor: "#263238", ears: "round", fur: "#263238", top: "#212121", bottom: "#212121", skin: "#8d6e63" },
       fruit: "nikyu",
-      when: (c, g) => S(g, TB_Q) === "dawn" && !c.flags.p2_kumaPain,
+      when: (c, g) => S2(g, TB_Q) === "dawn" && !c.flags.p2_kumaPain,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `(A giant with a Bible and paws for palms stands in the ruins.) "The Government ordered me to erase everyone on this ship. ...I will spare them. But someone must take the pain of this battle in their place." (He pushes a bubble of pure suffering out of a sleeping victim's body.)`,
@@ -44772,7 +46883,7 @@ Trains by: ${TRAINS_BY[k]}` },
       at: { town: "spa_resort", building: "Spa Island Hot Springs" },
       look: { hair: "short", hairColor: "#ff7043", top: "#ffcc80", bottom: "#8d6e63", bulk: 1.2 },
       level: 14,
-      marker: (c, g) => !g.quests.state("p2_spa_foxy") ? "!" : S(g, "p2_spa_foxy") === "report" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_spa_foxy") ? "!" : S2(g, "p2_spa_foxy") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.game.quests.isDone("p2_spa_foxy") ? '"Fifty attractions and not a single Silver Fox in any of them! Stay as long as you like \u2014 slides, cola baths, the high dive!"' : '"Welcome to Spa Island \u2014 fifty attractions: slides, pools, a cola bath! ...Though right now, two girls are hiding in my caf\xE9 from Foxy the Silver Fox. He wants their notebook \u2014 it explains how to make gems."',
@@ -44816,7 +46927,7 @@ Trains by: ${TRAINS_BY[k]}` },
       infamy: true,
       breakthrough: 2,
       alert: "Fehfehfeh! A Davy Back Fight! Loser gives the winner... that notebook!",
-      when: (c, g) => S(g, "p2_spa_foxy") === "foxy"
+      when: (c, g) => S2(g, "p2_spa_foxy") === "foxy"
     },
     // ========================================================= SABAODY ARCHIPELAGO
     {
@@ -44883,7 +46994,7 @@ Trains by: ${TRAINS_BY[k]}` },
       ai: "idle",
       look: { hair: "long", hairColor: "#fafafa", top: "#fafafa", bottom: "#5d4037", scarEye: true, skin: "#f1c9a0" },
       level: 90,
-      when: (c, g) => S(g, "p2_sabaody_auction") === "charlos",
+      when: (c, g) => S2(g, "p2_sabaody_auction") === "charlos",
       dialogue: () => ({ start: "a", nodes: { a: { text: `(An old man in an explosive slave collar sits calmly among the lots, sipping something he definitely brought in himself.) "Hm? Don't mind me. I needed gambling money. ...Though I will say, that mermaid girl up on the stage is a friend of a friend."` } } })
     },
     {
@@ -44909,7 +47020,7 @@ Trains by: ${TRAINS_BY[k]}` },
       ai: "idle",
       look: { hat: "bubble", hair: "curly", hairColor: "#fafafa", top: "#fafafa", bottom: "#eceff1", bulk: 1.4, skin: "#fdeee4" },
       bulk: 1.4,
-      when: (c, g) => S(g, "p2_sabaody_auction") === "charlos",
+      when: (c, g) => S2(g, "p2_sabaody_auction") === "charlos",
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Five hundred million for the mermaid! I always wanted a fish for my aquarium! (A Fish-Man pushes through the crowd toward the stage. Charlos draws a pistol and shoots him in the chest.) He moved without permission. Kneel, commoner, or you're next!"`,
@@ -44948,7 +47059,7 @@ Trains by: ${TRAINS_BY[k]}` },
       level: 5,
       ai: "idle",
       look: { hat: "bubble", hair: "short", hairColor: "#e0e0e0", top: "#fafafa", bottom: "#eceff1", bulk: 1.3 },
-      when: (c, g) => S(g, "p2_sabaody_auction") === "charlos",
+      when: (c, g) => S2(g, "p2_sabaody_auction") === "charlos",
       dialogue: () => ({ start: "a", nodes: { a: { text: '"Hm? A commoner breathing near me. (He adjusts his bubble helmet so as not to share the air.) My son buys whatever he wants. That is what the world is for."' } } })
     },
     {
@@ -44962,7 +47073,7 @@ Trains by: ${TRAINS_BY[k]}` },
       look: { hair: "curly", hairColor: "#e53935", skin: "#ef9a9a", top: "#ffeb3b", bottom: "#5d4037" },
       level: 30,
       bounty: 8e6,
-      marker: (c, g) => !g.quests.state("p2_sabaody_auction") ? "!" : S(g, "p2_sabaody_auction") === "freed" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_sabaody_auction") ? "!" : S2(g, "p2_sabaody_auction") === "freed" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
@@ -45026,7 +47137,7 @@ Trains by: ${TRAINS_BY[k]}` },
       infamy: true,
       breakthrough: 2,
       alert: "A mermaid sells for seventy million! Stay out of our business!",
-      when: (c, g) => S(g, "p2_sabaody_auction") === "macro"
+      when: (c, g) => S2(g, "p2_sabaody_auction") === "macro"
     },
     {
       id: "p2_coater",
@@ -45086,7 +47197,7 @@ Trains by: ${TRAINS_BY[k]}` },
       ai: "idle",
       bounty: 315e6,
       look: { hair: "spiky", hairColor: "#e53935", goggles: true, coat: "#212121", top: "#212121", bottom: "#3e2723", skin: "#f1c9a0" },
-      when: (c, g) => ["auction", "charlos"].includes(S(g, "p2_sabaody_auction")),
+      when: (c, g) => ["auction", "charlos"].includes(S2(g, "p2_sabaody_auction")),
       dialogue: () => ({ start: "a", nodes: { a: { text: `"Another rookie. There's eleven of us Supernovas on this archipelago right now, all heading for the New World. (He sneers at the Celestial Dragons' box.) Only one of us is going to be Pirate King. Get in my way and I'll crush you."` } } })
     },
     {
@@ -45101,7 +47212,7 @@ Trains by: ${TRAINS_BY[k]}` },
       ai: "idle",
       bounty: 2e8,
       look: { hair: "short", hairColor: "#212121", hat: "beanie", hatColor: "#fafafa", top: "#fdd835", bottom: "#5d4037", swords: 1, skin: "#e0ac7e" },
-      when: (c, g) => ["auction", "charlos"].includes(S(g, "p2_sabaody_auction")),
+      when: (c, g) => ["auction", "charlos"].includes(S2(g, "p2_sabaody_auction")),
       dialogue: () => ({ start: "a", nodes: { a: { text: `"Trafalgar Law. (He doesn't look up from his nodachi.) The Celestial Dragons are sitting in the front row. Someone in this room is going to do something stupid today. I'd like to watch."` } } })
     },
     {
@@ -45124,7 +47235,7 @@ Trains by: ${TRAINS_BY[k]}` },
       lethal: false,
       breakthrough: 8,
       bounty: 25e7,
-      when: (c, g) => ["kizaru", "kuma"].includes(S(g, "p2_sabaody_auction")) && !c.flags.p2_fledKizaru,
+      when: (c, g) => ["kizaru", "kuma"].includes(S2(g, "p2_sabaody_auction")) && !c.flags.p2_fledKizaru,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Ooh~ how scary~. You're the one who punched a World Noble? (He yawns.) I'm supposed to capture you. But let's see if you can survive the Pacifista first~. Have you ever been kicked at the speed of light?"`,
@@ -45159,7 +47270,7 @@ Trains by: ${TRAINS_BY[k]}` },
       breakthrough: 4,
       bounty: 5e7,
       alert: "Target identified. Bounty confirmed. Eliminating.",
-      when: (c, g) => S(g, "p2_sabaody_auction") === "kizaru"
+      when: (c, g) => S2(g, "p2_sabaody_auction") === "kizaru"
     },
     {
       id: "p2_sentomaru",
@@ -45181,7 +47292,7 @@ Trains by: ${TRAINS_BY[k]}` },
       lethal: false,
       breakthrough: 3,
       bounty: 4e7,
-      when: (c, g) => S(g, "p2_sabaody_auction") === "kizaru",
+      when: (c, g) => S2(g, "p2_sabaody_auction") === "kizaru",
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Oi oi! Captain of the Science Unit, Sentomaru! I have the tightest defence in the world! (He plants a huge axe.) The Pacifista are Dr. Vegapunk's masterpieces. You'll never get past them \u2014 or me!"`,
@@ -45209,7 +47320,7 @@ Trains by: ${TRAINS_BY[k]}` },
       bulk: 1.8,
       look: { hair: "short", hairColor: "#212121", hat: "beanie", hatColor: "#263238", ears: "round", fur: "#263238", top: "#212121", bottom: "#212121", skin: "#8d6e63" },
       fruit: "nikyu",
-      when: (c, g) => S(g, "p2_sabaody_auction") === "kuma",
+      when: (c, g) => S2(g, "p2_sabaody_auction") === "kuma",
       marker: () => "!",
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
@@ -45250,7 +47361,7 @@ Trains by: ${TRAINS_BY[k]}` },
     if (a) aggro(c.game, a);
   }, end: true });
   var WAR = "p2_summit_war";
-  var warOn = (g, ...st) => st.includes(S(g, WAR));
+  var warOn = (g, ...st) => st.includes(S2(g, WAR));
   var ADMIRAL = { lethal: false, skill: 0.85, breakthrough: 8, boss: true, hpMul: 3, faction: "marine", ai: "guard", respawn: true, recover: 10, recoverLine: '"Hmph. Not bad... for a rookie."' };
   var kujaLook = (hair, top) => ({ hair: "long", hairColor: hair, top, bottom: "#f5f5f5", skin: "#f1c9a0" });
   npcs6.push(
@@ -45540,7 +47651,7 @@ Trains by: ${TRAINS_BY[k]}` },
       recover: 10,
       recoverLine: '"...So. You have surpassed me. I will wait for you to do it again."',
       alert: "Show me the weight of your blade.",
-      marker: (c, g) => !g.quests.state("p2_kuraigana_trial") ? "!" : S(g, "p2_kuraigana_trial") === "report" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_kuraigana_trial") ? "!" : S2(g, "p2_kuraigana_trial") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.game.quests.isDone("p2_kuraigana_trial") ? '"You bowed your head to an enemy to learn his craft. That is not weakness. (He sets his glass of wine down.) The castle training grounds are open to you. Try not to bore me."' : '"This is Kuraigana. There was a kingdom here once; the war left ruins and baboons that learned to fight by watching men die. (His hawk eyes rest on you.) Why have you come to my island?"',
@@ -45588,7 +47699,7 @@ Trains by: ${TRAINS_BY[k]}` },
       skill: 0.55,
       breakthrough: 3,
       alert: "(It raises a sword in a perfect, stolen stance.)",
-      when: (c, g) => S(g, "p2_kuraigana_trial") === "chieftain"
+      when: (c, g) => S2(g, "p2_kuraigana_trial") === "chieftain"
     },
     // =================================================================== BOIN
     {
@@ -45601,7 +47712,7 @@ Trains by: ${TRAINS_BY[k]}` },
       trainer: "p2_heracles",
       look: { hat: "horns", hatColor: "#4e342e", hair: "long", hairColor: "#5d4037", top: "#8d6e63", bottom: "#5d4037", bulk: 1.2 },
       level: 40,
-      marker: (c, g) => !g.quests.state("p2_gluttony") ? "!" : S(g, "p2_gluttony") === "report" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_gluttony") ? "!" : S2(g, "p2_gluttony") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: '"Heraclesun! I am the Forest Scholar of Boin \u2014 the only man who has survived these islands. (He wears a beetle for a helmet.) This is the Forest of Gluttony: a ramen river, trees of meat, and plants that would like to eat you back."',
@@ -45634,7 +47745,7 @@ Trains by: ${TRAINS_BY[k]}` },
       moves: ["p2_beast_pounce", "brawl_tackle", "brawl_headbutt"],
       skill: 0.3,
       breakthrough: 3,
-      when: (c, g) => S(g, "p2_gluttony") === "beetle"
+      when: (c, g) => S2(g, "p2_gluttony") === "beetle"
     },
     // ================================================================ MOMOIRO
     {
@@ -45662,7 +47773,7 @@ Trains by: ${TRAINS_BY[k]}` },
       at: { town: "kamabakka", building: "Attack Cuisine Kitchen" },
       look: { hair: "curly", hairColor: "#ff80ab", top: "#fafafa", bottom: "#f06292", hat: "captain", hatColor: "#fafafa", bulk: 1.3 },
       level: 38,
-      marker: (c, g) => !g.quests.state("p2_kamabakka") ? "!" : S(g, "p2_kamabakka") === "report" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_kamabakka") ? "!" : S2(g, "p2_kamabakka") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Attack Cuisine! One hundred secret recipes that make a warrior stronger with every bite! (She winks \u2014 hard.) The recipes are guarded by the Kamabakka Candidates. Beat them and I'll teach you. Lose and you wear a dress for a week."`,
@@ -45705,7 +47816,7 @@ Trains by: ${TRAINS_BY[k]}` },
       at: { town: "baldimore", building: "Baldimore Workshop" },
       look: { hair: "spiky", hairColor: "#bdbdbd", top: "#607d8b", bottom: "#37474f", goggles: true, skin: "#f1c9a0" },
       level: 22,
-      marker: (c, g) => !g.quests.state("p2_baldimore") ? "!" : S(g, "p2_baldimore") === "button" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_baldimore") ? "!" : S2(g, "p2_baldimore") === "button" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: '"Welcome to Future Land Baldimore, birthplace of the genius Dr. Vegapunk! (His goggles steam in the snow.) Everything here is made by hand: cyborg limbs, heated boots, ships that walk. Need repairs? My workshop is open."',
@@ -45768,7 +47879,7 @@ Trains by: ${TRAINS_BY[k]}` },
       look: { hair: "long", hairColor: "#fafafa", top: "#fafafa", bottom: "#5d4037", coat: "#8d6e63", scarEye: true, swords: 1, skin: "#f1c9a0" },
       level: 90,
       when: (c, g) => ON(g, "p2_rusukaina"),
-      marker: (c, g) => S(g, "p2_rusukaina") === "report" ? "?" : null,
+      marker: (c, g) => S2(g, "p2_rusukaina") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => at3(ctx, "p2_rusukaina", "report") ? '"The lord of the plains... fell to you. (He smiles over the campfire.) The beasts will not challenge you now. That is the difference between strength and Haki: they felt it before you struck."' : at3(ctx, "p2_rusukaina", "train") ? '"Good. Now stay a while. Meditate, spar with me, hunt. Haki grows the way trees do \u2014 while you are not watching it. Come back to the fire tomorrow."' : '"Welcome to Rusukaina. Forty-eight seasons a year, five hundred beasts you cannot beat. (He pokes the fire.) Haki is the power of doubt-free will. Go to the plains. Their lord is a monster. Win, and your will has hardened."',
@@ -45798,7 +47909,7 @@ Trains by: ${TRAINS_BY[k]}` },
       moves: ["p2_beast_pounce", "p2_oars_smash", "brawl_tackle"],
       skill: 0.35,
       breakthrough: 4,
-      when: (c, g) => S(g, "p2_rusukaina") === "beasts"
+      when: (c, g) => S2(g, "p2_rusukaina") === "beasts"
     },
     // ============================================================ AMAZON LILY
     {
@@ -45812,7 +47923,7 @@ Trains by: ${TRAINS_BY[k]}` },
       level: 38,
       style: "sniper",
       weapon: "gun",
-      marker: (c, g) => S(g, "p2_amazon_lily") === "gate" ? "!" : null,
+      marker: (c, g) => S2(g, "p2_amazon_lily") === "gate" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.char.flags.p2_kujaFriend ? `"The Empress favours you! Every Kuja warrior uses Haki \u2014 Armament to harden our arrows, Observation to see the enemy's next move. I'll teach you. Just don't laugh at my aim."` : at3(ctx, "p2_amazon_lily", "gate") ? `(A blonde warrior aims a snake-bow at your heart.) "Stop right there! No outsider sets foot on Amazon Lily. ...You're strange. Are you... a man? We've only read about them in books."` : '"Marguerite, Kuja warrior. Amazon Lily is not a place for strangers."',
@@ -45842,7 +47953,7 @@ Trains by: ${TRAINS_BY[k]}` },
       at: { town: "kuja_village", building: "Elder Nyon's Hut" },
       look: { hair: "bun", hairColor: "#fafafa", top: "#7b1fa2", bottom: "#4a148c", scale: 0.6, skin: "#f1c9a0" },
       level: 50,
-      marker: (c, g) => S(g, "p2_amazon_lily") === "nyon" ? "!" : null,
+      marker: (c, g) => S2(g, "p2_amazon_lily") === "nyon" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => at3(ctx, "p2_amazon_lily", "nyon") ? '"Nyon. I was Empress once, long ago \u2014 before I left to see the world and caught the Love Sickness. (She taps her staff.) The Empress Hancock and her sisters have a secret. They were not always proud. That is all I will say. The Arena waits for you."' : '"Nyon. The Kuja have lived on this island in the Calm Belt for centuries. The Sea Kings are our walls. Outsiders bring nothing but trouble \u2014 and, now and then, something wonderful."',
@@ -45875,7 +47986,7 @@ Trains by: ${TRAINS_BY[k]}` },
       infamy: true,
       breakthrough: 3,
       alert: "Sister, look! An outsider in our arena!",
-      when: (c, g) => S(g, "p2_amazon_lily") === "arena"
+      when: (c, g) => S2(g, "p2_amazon_lily") === "arena"
     },
     {
       id: "p2_marigold",
@@ -45899,7 +48010,7 @@ Trains by: ${TRAINS_BY[k]}` },
       infamy: true,
       breakthrough: 3,
       alert: "You will be turned to stone for your insolence!",
-      when: (c, g) => S(g, "p2_amazon_lily") === "arena"
+      when: (c, g) => S2(g, "p2_amazon_lily") === "arena"
     },
     {
       id: "p2_hancock",
@@ -45925,7 +48036,7 @@ Trains by: ${TRAINS_BY[k]}` },
       respawn: true,
       recover: 12,
       recoverLine: '"...Enough. I have seen what I needed to see."',
-      marker: (c, g) => S(g, "p2_amazon_lily") === "secret" ? "!" : null,
+      marker: (c, g) => S2(g, "p2_amazon_lily") === "secret" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
@@ -46172,7 +48283,7 @@ Trains by: ${TRAINS_BY[k]}` },
       bounty: 15e7,
       alert: "Hydra. Nobody escapes Impel Down on my watch.",
       barks: ["Hydra!", "Venom Demon: Hell's Judgement!", "(He heads off to the toilet for the ninth time today.)"],
-      when: (c, g) => ["level4", "newkama", "escape"].includes(S(g, "p2_impel_down"))
+      when: (c, g) => ["level4", "newkama", "escape"].includes(S2(g, "p2_impel_down"))
     },
     {
       id: "p2_domino",
@@ -46225,7 +48336,7 @@ Trains by: ${TRAINS_BY[k]}` },
       moves: ["p2_hell_wink", "okama_pirouette"],
       invulnerable: true,
       when: (c, g) => !D2(g, "p2_impel_down"),
-      marker: (c, g) => S(g, "p2_impel_down") === "newkama" ? "!" : null,
+      marker: (c, g) => S2(g, "p2_impel_down") === "newkama" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => at3(ctx, "p2_impel_down", "newkama") ? `"Hee-haw! Welcome to Newkama Land, the paradise inside hell! (A spotlight finds you. Two hundred okama cheer.) You came through Magellan's poison? Vanatta! Candy-boy, you need Tension Hormones. They save you now... and take ten years off your life later. Hee-haw!"` : '"Hee-haw! Candy-boy! Newkama Land welcomes everyone with the heart to party. Train with the queen, or dance!"',
@@ -46267,7 +48378,7 @@ Trains by: ${TRAINS_BY[k]}` },
       look: { hair: "pompadour", hairColor: "#ff4081", top: "#ce93d8", bottom: "#6a1b9a", bulk: 1.3, skin: "#e0ac7e" },
       bulk: 1.3,
       level: 44,
-      recruit: { role: "fighter", fighter: true, requires: (c, g) => ["escape", "gate"].includes(S(g, "p2_impel_down")), pitch: '"A breakout AND a pirate crew? Hee-haw! (She cracks her knuckles in a ballgown.) Newkama Kenpo, at your service, candy-captain!"' },
+      recruit: { role: "fighter", fighter: true, requires: (c, g) => ["escape", "gate"].includes(S2(g, "p2_impel_down")), pitch: '"A breakout AND a pirate crew? Hee-haw! (She cracks her knuckles in a ballgown.) Newkama Kenpo, at your service, candy-captain!"' },
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Welcome to the Newkama Bar, darling! We steal newspapers from the jailers' bins and watch them on a stolen snail. (She pours something pink.) Twelve years in hell, and I've never had a better party."`,
@@ -46295,7 +48406,7 @@ Trains by: ${TRAINS_BY[k]}` },
       breakthrough: 4,
       bounty: 3e7,
       alert: "Over my dead body! This is MY prison! Well \u2014 it will be!",
-      when: (c, g) => S(g, "p2_impel_down") === "escape"
+      when: (c, g) => S2(g, "p2_impel_down") === "escape"
     },
     {
       id: "p2_id_jinbe",
@@ -46397,7 +48508,7 @@ Trains by: ${TRAINS_BY[k]}` },
       skill: 0.5,
       alert: "Want the recipes, candy-boy? Dance for them!",
       barks: ["Swan Arabesque!", "Fabulous!"],
-      when: (c, g) => S(g, "p2_kamabakka") === "candidates"
+      when: (c, g) => S2(g, "p2_kamabakka") === "candidates"
     }
   );
   var ON_TB = (c, g) => ON(g, TB_Q);
@@ -46464,13 +48575,13 @@ Trains by: ${TRAINS_BY[k]}` },
   ];
   var groups6 = [
     // Water 7 and the sea-train towns
-    { island: "water_7", spot: "franky_house", radius: 6, enemies: FRANKY_FAMILY, when: (c, g) => S(g, "p2_cp9_conspiracy") === "franky" },
-    { island: "water_7", spot: "galley_la", radius: 5, enemies: MASKED, when: (c, g) => S(g, "p2_cp9_conspiracy") === "masks" },
-    { island: "st_poplar", spot: "poplar_harbor", radius: 6, enemies: CANDY, when: (c, g) => S(g, "p2_candy_pirates") === "candy" },
+    { island: "water_7", spot: "franky_house", radius: 6, enemies: FRANKY_FAMILY, when: (c, g) => S2(g, "p2_cp9_conspiracy") === "franky" },
+    { island: "water_7", spot: "galley_la", radius: 5, enemies: MASKED, when: (c, g) => S2(g, "p2_cp9_conspiracy") === "masks" },
+    { island: "st_poplar", spot: "poplar_harbor", radius: 6, enemies: CANDY, when: (c, g) => S2(g, "p2_candy_pirates") === "candy" },
     // Enies Lobby
-    { island: "enies_lobby", spot: "main_gate", radius: 5, enemies: EL_GUARDS, when: (c, g) => S(g, "p2_enies_lobby") === "main_gate" && !c.flags.p2_giantsTruth },
-    { island: "enies_lobby", spot: "courtyard", radius: 7, enemies: EL_COURT, when: (c, g) => ["courthouse", "keys"].includes(S(g, "p2_enies_lobby")) },
-    { island: "enies_lobby", spot: "courtyard", radius: 8, enemies: BUSTER, when: (c, g) => S(g, "p2_enies_lobby") === "buster_call" },
+    { island: "enies_lobby", spot: "main_gate", radius: 5, enemies: EL_GUARDS, when: (c, g) => S2(g, "p2_enies_lobby") === "main_gate" && !c.flags.p2_giantsTruth },
+    { island: "enies_lobby", spot: "courtyard", radius: 7, enemies: EL_COURT, when: (c, g) => ["courthouse", "keys"].includes(S2(g, "p2_enies_lobby")) },
+    { island: "enies_lobby", spot: "courtyard", radius: 8, enemies: BUSTER, when: (c, g) => S2(g, "p2_enies_lobby") === "buster_call" },
     // Thriller Bark: Moria's zombies (while the ship still has a master)
     { island: "thriller_bark", spot: "graveyard", radius: 7, when: ON_TB, enemies: [
       ["swordsman", 40, { name: "General Zombie Jigoro of the Wind", faction: "zombie", look: zlook("#37474f", { hat: "headband", hatColor: "#212121", swords: 2 }) }],
@@ -46487,14 +48598,14 @@ Trains by: ${TRAINS_BY[k]}` },
     ] },
     { island: "thriller_bark", spot: "mast_hall", radius: 6, when: ON_TB, enemies: [["zombie", 36, { name: "Wild Zombie", look: zlook("#3e2723") }], ["zombie", 36, { name: "Wild Zombie", look: zlook("#263238") }]] },
     // Spa Island and Sabaody
-    { island: "spa_island", spot: "hot_springs", radius: 5, enemies: FOXY_CREW2, when: (c, g) => S(g, "p2_spa_foxy") === "foxy" },
-    { island: "sabaody", spot: "grove_13", radius: 6, enemies: MACRO_CREW, when: (c, g) => S(g, "p2_sabaody_auction") === "macro" },
+    { island: "spa_island", spot: "hot_springs", radius: 5, enemies: FOXY_CREW2, when: (c, g) => S2(g, "p2_spa_foxy") === "foxy" },
+    { island: "sabaody", spot: "grove_13", radius: 6, enemies: MACRO_CREW, when: (c, g) => S2(g, "p2_sabaody_auction") === "macro" },
     {
       island: "sabaody",
       spot: "grove_1",
       radius: 7,
       enemies: [["marine", 44, { name: "Marine (auction house siege)" }], ["marine", 44, { name: "Marine (auction house siege)" }], ["marine_rifle", 44, { name: "Marine Rifleman" }]],
-      when: (c, g) => S(g, "p2_sabaody_auction") === "kizaru"
+      when: (c, g) => S2(g, "p2_sabaody_auction") === "kizaru"
     },
     // Marineford: sentries for wanted pirates, and the war itself (by side)
     { island: "marineford", spot: "oris_plaza", radius: 8, enemies: MF_MARINES.slice(0, 3), when: (c, g) => wanted(c) && !warOn(g, "vice_admiral", "akainu") },
@@ -46503,7 +48614,7 @@ Trains by: ${TRAINS_BY[k]}` },
     // the islands Kuma sent them to
     { island: "kuraigana", spot: "humandrill_woods", radius: 8, enemies: [HUMANDRILL(0), HUMANDRILL(1), HUMANDRILL(2)], when: (c, g) => !D2(g, "p2_kuraigana_trial") },
     { island: "boin", spot: "boin_depths", radius: 8, enemies: [["beast", 40, { name: "Boin Hunting Boar" }], ["tiger", 42, { name: "Boin Jungle Tiger" }]] },
-    { island: "momoiro", dx: 0.02, dy: 0.1, radius: 6, enemies: CANDIDATES, when: (c, g) => S(g, "p2_kamabakka") === "candidates" },
+    { island: "momoiro", dx: 0.02, dy: 0.1, radius: 6, enemies: CANDIDATES, when: (c, g) => S2(g, "p2_kamabakka") === "candidates" },
     { island: "rusukaina", spot: "beast_plains", radius: 9, enemies: [["tiger", 50, { name: "Rusukaina Tiger" }], ["gorilla", 50, { name: "Rusukaina Ape" }], ["beast", 50, { name: "Rusukaina Boar", hpMul: 1.5 }]] },
     // Impel Down (zone levels): only for prisoners and intruders, never for a Marine on a tour
     {
@@ -46519,7 +48630,7 @@ Trains by: ${TRAINS_BY[k]}` },
       spot: "main_gate",
       radius: 6,
       enemies: [["marine", 48, { name: "Impel Down Jailer", look: lk("#78909c", "#37474f", { hat: "marine", hatColor: "#37474f" }) }], ["marine", 48, { name: "Impel Down Jailer", look: lk("#78909c", "#37474f", { hat: "marine", hatColor: "#37474f" }) }], ["marine_rifle", 48, { name: "Jailer Rifleman", look: lk("#78909c", "#37474f", { hat: "marine", hatColor: "#37474f" }) }]],
-      when: (c, g) => S(g, "p2_impel_down") === "escape"
+      when: (c, g) => S2(g, "p2_impel_down") === "escape"
     },
     {
       island: "id_level2",
@@ -47293,7 +49404,7 @@ Trains by: ${TRAINS_BY[k]}` },
         const k = 1 - (env.storm * 0.35 + env.fog * 0.15);
         env.ambient = [k, k * 0.98, k * 0.94];
       }
-      if (S(game, "p2_enies_lobby") === "rocketman" && near("water_7", 20)) {
+      if (S2(game, "p2_enies_lobby") === "rocketman" && near("water_7", 20)) {
         env.storm = Math.max(env.storm, 0.75);
         env.rain = env.storm;
       }
@@ -47321,7 +49432,7 @@ Trains by: ${TRAINS_BY[k]}` },
         c.flags.p2_florian = true;
         game.ui.banner("THE FLORIAN TRIANGLE", "Paradise", "A sea of fog where a hundred ships a year vanish \u2014 and ghost ships drift out again with no one aboard. Somewhere ahead, someone is singing.", 6);
       }
-      if (S(game, "p2_cp9_conspiracy") === "night" && here === "water_7") {
+      if (S2(game, "p2_cp9_conspiracy") === "night" && here === "water_7") {
         const door = hqDoor();
         if (door && W2().distance(p.x, p.y, door.x, door.y) < 18) {
           watchT += 0.5;
@@ -47335,7 +49446,7 @@ Trains by: ${TRAINS_BY[k]}` },
           }
         } else watchT = 0;
       }
-      if (surface && here === "enies_lobby" && S(game, "p2_enies_lobby") === "buster_call") {
+      if (surface && here === "enies_lobby" && S2(game, "p2_enies_lobby") === "buster_call") {
         shellT -= 0.5;
         if (shellT <= 0) {
           shellT = 1;
@@ -47350,14 +49461,14 @@ Trains by: ${TRAINS_BY[k]}` },
           shell(5, 16);
         }
       }
-      if (S(game, WAR) === "akainu") {
+      if (S2(game, WAR) === "akainu") {
         warT += 0.5;
         if (warT >= 75 || surface && !near("marineford", 120)) {
           warT = 0;
           game.emit("questEvent", "p2_war_end");
         }
       } else warT = 0;
-      if (S(game, "p2_coating") === "coat" && !c.flags.p2_shipCoated && (game.ships || []).some((s) => s.owner === "player" && !s.sunk && s.coated)) c.flags.p2_shipCoated = true;
+      if (S2(game, "p2_coating") === "coat" && !c.flags.p2_shipCoated && (game.ships || []).some((s) => s.owner === "player" && !s.sunk && s.coated)) c.flags.p2_shipCoated = true;
       if (surface && here === "thriller_bark" && q.isActive(TB_Q) && !c.flags.p2_shadowTaken && !beat2(c, "p2_moria") && env.isNight && p.state === "idle") {
         nightT += 0.5;
         if (nightT === 15) game.log("Your eyelids are so heavy... (Never fall asleep on Thriller Bark.)", "#b39ddb");
@@ -54585,11 +56696,11 @@ Trains by: ${TRAINS_BY[k]}` },
       game.setWorld(game.surface);
       game.renderer.terrain.updateFog(game.surface.fog);
       game.env.zoneKind = null;
-      const S2 = game.surface;
+      const S3 = game.surface;
       let target = null;
       const tgt = exit?.surface || z?.exits?.find((e) => e.to === "surface")?.surface;
       if (tgt?.island) {
-        const isl = S2.islands.find((i) => i.id === tgt.island);
+        const isl = S3.islands.find((i) => i.id === tgt.island);
         if (isl) target = tgt.spot && isl.spots[tgt.spot] ? isl.spots[tgt.spot] : tgt.dock && isl.docks[0] ? isl.docks[0].moor : { x: isl.x, y: isl.y };
       } else if (tgt && tgt.x !== void 0) target = { x: tgt.x, y: tgt.y };
       if (!target || forced) target = game.state.char.rest || game.state.char.spawn;
@@ -54598,16 +56709,16 @@ Trains by: ${TRAINS_BY[k]}` },
         carried.x = target.x;
         carried.y = target.y;
         carried.speed = 0;
-        if (!carried.fits(S2, carried.x, carried.y, carried.heading)) carried.unstick(S2);
+        if (!carried.fits(S3, carried.x, carried.y, carried.heading)) carried.unstick(S3);
         p.x = carried.x;
         p.y = carried.y;
       } else {
         p.mode = "foot";
         p.onShip = false;
-        const s = findShore(S2, target.x, target.y, 10) || target;
+        const s = findShore(S3, target.x, target.y, 10) || target;
         p.x = s.x;
         p.y = s.y;
-        if (!S2.walkable(p.x, p.y - 0.1)) {
+        if (!S3.walkable(p.x, p.y - 0.1)) {
           const r = game.state.char.rest || game.state.char.spawn;
           p.x = r.x;
           p.y = r.y;

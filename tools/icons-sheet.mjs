@@ -26,6 +26,11 @@ const EXTRA_ITEMS = [
   ['acc_gloves', 'accessory', 'Boxing Gloves'], ['acc_charm', 'accessory', 'Lucky Charm'],
   ['acc_goggles', 'accessory', 'Aviator Goggles'], ['acc_amulet', 'accessory', 'Sea Amulet'],
   ['acc_misc', 'accessory', 'Captain\'s Brooch'],
+  // plausible future content-pack items, to check the keyword rules
+  ['x_watermelon', 'food', 'Watermelon'], ['x_carrot', 'food', 'Carrot'], ['x_pineapple', 'food', 'Pineapple'], ['x_candy', 'food', 'Lollipop'],
+  ['x_chef_hat', 'hat', 'Chef Hat'], ['x_bubble', 'hat', 'Bubble Helmet'], ['x_kabuto', 'hat', 'Samurai Kabuto'], ['x_eyepatch', 'accessory', 'Pirate Eyepatch'],
+  ['x_photo', 'key', 'Old Photograph'], ['x_chalice', 'treasure', 'Golden Chalice'], ['x_rope', 'material', 'Rope'], ['x_iron', 'material', 'Iron Plate'],
+  ['x_squid', 'food', 'Grilled Squid'], ['x_trident', 'weapon', 'Trident', 'spear'], ['x_kunai', 'weapon', 'Kunai', 'sword'],
   ['x_unknown', 'weird', 'Mystery Thing'],
 ];
 
@@ -69,7 +74,7 @@ function cell(grid, canvas, label, w) {
 function clone(c) { const n = document.createElement('canvas'); n.width = c.width; n.height = c.height; n.style.cssText = c.style.cssText; n.getContext('2d').drawImage(c, 0, 0); n.dataset.fallback = c.dataset.fallback || ''; if (!n.dataset.fallback) delete n.dataset.fallback; return n; }
 
 const itemIds = Object.keys(ITEMS);
-const itemList = [...itemIds.map((id) => [id, id]), ...EXTRA.filter(([id]) => !ITEMS[id]).map(([id, type, name]) => [id, { id, type, name }])];
+const itemList = [...itemIds.map((id) => [id, id]), ...EXTRA.filter(([id]) => !ITEMS[id]).map(([id, type, name, kind]) => [id, { id, type, name, kind }])];
 const order = ['food','medicine','weapon','hat','coat','accessory','dial','key','pose','material','treasure','fruit'];
 const typeOf = (x) => (typeof x[1] === 'string' ? ITEMS[x[1]]?.type : x[1].type) || 'zzz';
 itemList.sort((a, b) => { const ta = order.indexOf(typeOf(a)), tb = order.indexOf(typeOf(b)); return (ta < 0 ? 99 : ta) - (tb < 0 ? 99 : tb); });
