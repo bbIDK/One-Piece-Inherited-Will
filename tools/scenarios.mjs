@@ -173,4 +173,24 @@ export const scenarios = {
       await snap('mary-geoise');
     },
   },
+  resume: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human'));
+      await step(page, 0.5);
+      const before = await page.evaluate(() => { const g = window.OP.game; g.enterZoneById('skypiea'); return { world: g.world.id, x: g.player.x, y: g.player.y }; });
+      console.log('before', JSON.stringify(before));
+      await step(page, 1);
+      await page.reload();
+      await waitReady(page);
+      await frames(page, 5);
+      await page.getByText('Continue').first().click();
+      await frames(page, 5);
+      await step(page, 1);
+      const after = await page.evaluate(() => { const g = window.OP.game; return { world: g.world.id, x: g.player.x, y: g.player.y, ships: g.ships.length }; });
+      console.log('after', JSON.stringify(after));
+      await snap('resumed');
+    },
+  },
 };

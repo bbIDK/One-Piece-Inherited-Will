@@ -490,6 +490,13 @@ function drawHat(g, hat, hy, r, d, look) {
       g.beginPath(); g.moveTo(-r * 0.7, hy - r * 0.7); g.lineTo(-r * 0.8, hy - r * 1.4); g.lineTo(-r * 0.35, hy - r * 1.05); g.lineTo(0, hy - r * 1.5); g.lineTo(r * 0.35, hy - r * 1.05); g.lineTo(r * 0.8, hy - r * 1.4); g.lineTo(r * 0.7, hy - r * 0.7); g.closePath(); g.fill(); g.stroke();
       break;
     }
+    case 'bubble': {
+      // Celestial Dragon air bubble
+      g.fillStyle = 'rgba(200,235,255,0.22)'; g.strokeStyle = 'rgba(220,245,255,0.8)'; g.lineWidth = 0.04;
+      g.beginPath(); g.arc(0, hy - r * 0.1, r * 1.7, 0, TAU); g.fill(); g.stroke();
+      g.fillStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.arc(-r * 0.7, hy - r * 0.9, r * 0.22, 0, TAU); g.fill();
+      break;
+    }
     case 'halo': {
       g.strokeStyle = '#ffe082'; g.lineWidth = 0.06;
       g.beginPath(); g.ellipse(0, hy - r * 1.55, r * 0.7, r * 0.2, 0, 0, TAU); g.stroke();

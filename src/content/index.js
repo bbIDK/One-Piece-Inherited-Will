@@ -19,14 +19,16 @@ import paradise1 from './paradise1.js';
 import paradise2 from './paradise2.js';
 import newWorld from './newWorld.js';
 import newWorld2 from './newWorld2.js';
+import redLine from './redLine.js';
 
-export const PACKS = [eastBlue, northBlue, westBlue, southBlue, paradise1, paradise2, newWorld, newWorld2];
+export const PACKS = [eastBlue, northBlue, westBlue, southBlue, paradise1, paradise2, newWorld, newWorld2, redLine];
 
 for (const p of PACKS) {
   if (p.abilities) registerAbilities(p.abilities, 'npc');
   if (p.items) Object.assign(ITEMS, p.items);
   if (p.trainers) Object.assign(TRAINERS, p.trainers);
   if (p.stock) Object.assign(STOCK, p.stock);
+  if (p.stockAdd) for (const [k, list] of Object.entries(p.stockAdd)) (STOCK[k] = STOCK[k] || []).push(...list);
   if (p.archetypes) Object.assign(ARCHETYPES, p.archetypes);
 }
 
