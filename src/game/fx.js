@@ -9,6 +9,7 @@ import { TAU } from '../core/math.js';
 import { drawShapeLayer, hasLayer } from '../render/fxshapes.js';
 import { starPath } from '../render/character.js';
 import * as CFX from '../render/combatfx.js';
+import { drawShapes3d, drawParticles3d, textPlace3d, drawFirstPerson } from '../render/fx3d.js';
 
 const NUMERIC = /^[+-]?\d[\d,.]*$/;
 const glowCache = new Map();
@@ -328,8 +329,22 @@ export class FX {
     g.setTransform(1, 0, 0, 1, 0, 0);
   }
 
-  /** Air-level effects (after entities). */
+  /** Air-level effects (after entities). In the 3D view: everything, projected (see render/fx3d.js). */
   draw(g, r) {
+    if (r.is3d) {
+      drawShapes3d(this, g, r);
+      const part = (gg, p, vx, vy) => this.drawPart(gg, p, vx, vy);
+      drawParticles3d(this, g, r, false, part);
+      g.globalCompositeOperation = 'lighter';
+      drawParticles3d(this, g, r, true, part);
+      g.globalCompositeOperation = 'source-over';
+      g.globalAlpha = 1;
+      this.drawTexts(g, r, (t) => textPlace3d(r, t));
+      g.globalAlpha = 1;
+      drawFirstPerson(this, g, r);
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      return;
+    }
     this.drawShapes(g, r, 'air');
     this.drawParticles(g, r, false);
     g.globalCompositeOperation = 'lighter';
@@ -348,84 +363,93 @@ export class FX {
       if (!!p.add !== additive) continue;
       const [sx, sy] = r.toScreen(w, p.x, p.y);
       if (sx < -60 || sy < -140 || sx > r.cw + 60 || sy > r.ch + 60) continue;
-      const a = Math.min(1, (p.life / p.max) * 1.6);
       g.setTransform(dpr * z, 0, 0, dpr * z, sx * dpr, (sy - p.z * z) * dpr);
-      g.globalAlpha = a * (p.alpha ?? 1);
-      const sz = p.size;
-      switch (p.kind) {
-        case 'spark':
-        case 'line': {
-          const vx = p.vx, vy = p.vy - p.vz * 0.6;
-          const sp = Math.hypot(vx, vy) || 1;
-          const L = Math.min(0.7, sp * 0.04 + sz * 0.5);
-          g.strokeStyle = p.color; g.lineWidth = Math.max(0.018, sz * 0.5); g.lineCap = 'round';
-          g.beginPath(); g.moveTo(0, 0); g.lineTo(-vx / sp * L, -vy / sp * L); g.stroke();
-          break;
-        }
-        case 'smoke':
-          g.globalAlpha *= 0.7;
-          g.fillStyle = p.color; g.beginPath(); g.arc(0, 0, sz, 0, TAU); g.fill(); break;
-        case 'dust':
-          g.globalAlpha *= 0.5;
-          g.fillStyle = p.color; g.beginPath(); g.ellipse(0, 0, sz, sz * 0.7, 0, 0, TAU); g.fill(); break;
-        case 'fire': {
-          const spr = glowSprite(p.color);
-          const rr = sz * (0.6 + 0.6 * a) * 1.8;
-          if (spr) g.drawImage(spr, -rr, -rr, rr * 2, rr * 2);
-          else { g.fillStyle = p.color; g.beginPath(); g.arc(0, 0, sz * (0.5 + a * 0.5), 0, TAU); g.fill(); }
-          break;
-        }
-        case 'glow': {
-          const spr = glowSprite(p.color);
-          if (spr) g.drawImage(spr, -sz, -sz, sz * 2, sz * 2);
-          break;
-        }
-        case 'ember':
-          g.globalAlpha *= 0.6 + 0.4 * Math.sin(p.life * 40 + p.x * 10);
-          g.fillStyle = p.color; g.beginPath(); g.arc(0, 0, sz * 0.5, 0, TAU); g.fill(); break;
-        case 'petal':
-        case 'leaf':
-          g.fillStyle = p.color; g.rotate(p.rot || p.life * 6); g.beginPath(); g.ellipse(0, 0, sz, sz * 0.5, 0, 0, TAU); g.fill(); break;
-        case 'star':
-          g.fillStyle = p.color; starPath(g, 0, 0, sz * 1.2, p.points || 4, 0.4, p.rot || 0); g.fill(); break;
-        case 'bubble':
-          g.strokeStyle = p.color; g.lineWidth = 0.03; g.beginPath(); g.arc(0, 0, sz, 0, TAU); g.stroke();
-          g.fillStyle = 'rgba(255,255,255,0.6)'; g.beginPath(); g.arc(-sz * 0.35, -sz * 0.35, sz * 0.25, 0, TAU); g.fill(); break;
-        case 'shard':
-          g.fillStyle = p.color; g.rotate(p.rot || 0);
-          g.beginPath(); g.moveTo(sz, 0); g.lineTo(-sz * 0.6, -sz * 0.4); g.lineTo(-sz * 0.3, sz * 0.45); g.closePath(); g.fill(); break;
-        case 'drop': {
-          const vx = p.vx, vy = p.vy - p.vz * 0.6, sp = Math.hypot(vx, vy) || 1;
-          g.rotate(Math.atan2(vy, vx));
-          g.fillStyle = p.color; g.beginPath(); g.moveTo(sz * 1.6, 0); g.quadraticCurveTo(0, -sz, -sz * 0.4, 0); g.quadraticCurveTo(0, sz, sz * 1.6, 0); g.fill();
-          void sp;
-          break;
-        }
-        case 'sand':
-          g.fillStyle = p.color; g.fillRect(-sz / 2, -sz / 2, sz, sz); break;
-        case 'ring':
-          g.strokeStyle = p.color; g.lineWidth = 0.03; g.beginPath(); g.ellipse(0, 0, sz, sz * 0.62, 0, 0, TAU); g.stroke(); break;
-        default:
-          g.fillStyle = p.color; g.fillRect(-sz / 2, -sz / 2, sz, sz);
-      }
+      this.drawPart(g, p, p.vx, p.vy - p.vz * 0.6);
     }
   }
 
-  drawTexts(g, r) {
+  /** One particle at the current transform (tile units); (vx, vy) its on-screen velocity. */
+  drawPart(g, p, vx, vy) {
+    const a = Math.min(1, (p.life / p.max) * 1.6);
+    g.globalAlpha = a * (p.alpha ?? 1);
+    const sz = p.size;
+    switch (p.kind) {
+      case 'spark':
+      case 'line': {
+        const sp = Math.hypot(vx, vy) || 1;
+        const L = Math.min(0.7, sp * 0.04 + sz * 0.5);
+        g.strokeStyle = p.color; g.lineWidth = Math.max(0.018, sz * 0.5); g.lineCap = 'round';
+        g.beginPath(); g.moveTo(0, 0); g.lineTo(-vx / sp * L, -vy / sp * L); g.stroke();
+        break;
+      }
+      case 'smoke':
+        g.globalAlpha *= 0.7;
+        g.fillStyle = p.color; g.beginPath(); g.arc(0, 0, sz, 0, TAU); g.fill(); break;
+      case 'dust':
+        g.globalAlpha *= 0.5;
+        g.fillStyle = p.color; g.beginPath(); g.ellipse(0, 0, sz, sz * 0.7, 0, 0, TAU); g.fill(); break;
+      case 'fire': {
+        const spr = glowSprite(p.color);
+        const rr = sz * (0.6 + 0.6 * a) * 1.8;
+        if (spr) g.drawImage(spr, -rr, -rr, rr * 2, rr * 2);
+        else { g.fillStyle = p.color; g.beginPath(); g.arc(0, 0, sz * (0.5 + a * 0.5), 0, TAU); g.fill(); }
+        break;
+      }
+      case 'glow': {
+        const spr = glowSprite(p.color);
+        if (spr) g.drawImage(spr, -sz, -sz, sz * 2, sz * 2);
+        break;
+      }
+      case 'ember':
+        g.globalAlpha *= 0.6 + 0.4 * Math.sin(p.life * 40 + p.x * 10);
+        g.fillStyle = p.color; g.beginPath(); g.arc(0, 0, sz * 0.5, 0, TAU); g.fill(); break;
+      case 'petal':
+      case 'leaf':
+        g.fillStyle = p.color; g.rotate(p.rot || p.life * 6); g.beginPath(); g.ellipse(0, 0, sz, sz * 0.5, 0, 0, TAU); g.fill(); break;
+      case 'star':
+        g.fillStyle = p.color; starPath(g, 0, 0, sz * 1.2, p.points || 4, 0.4, p.rot || 0); g.fill(); break;
+      case 'bubble':
+        g.strokeStyle = p.color; g.lineWidth = 0.03; g.beginPath(); g.arc(0, 0, sz, 0, TAU); g.stroke();
+        g.fillStyle = 'rgba(255,255,255,0.6)'; g.beginPath(); g.arc(-sz * 0.35, -sz * 0.35, sz * 0.25, 0, TAU); g.fill(); break;
+      case 'shard':
+        g.fillStyle = p.color; g.rotate(p.rot || 0);
+        g.beginPath(); g.moveTo(sz, 0); g.lineTo(-sz * 0.6, -sz * 0.4); g.lineTo(-sz * 0.3, sz * 0.45); g.closePath(); g.fill(); break;
+      case 'drop': {
+        g.rotate(Math.atan2(vy, vx));
+        g.fillStyle = p.color; g.beginPath(); g.moveTo(sz * 1.6, 0); g.quadraticCurveTo(0, -sz, -sz * 0.4, 0); g.quadraticCurveTo(0, sz, sz * 1.6, 0); g.fill();
+        break;
+      }
+      case 'sand':
+        g.fillStyle = p.color; g.fillRect(-sz / 2, -sz / 2, sz, sz); break;
+      case 'ring':
+        g.strokeStyle = p.color; g.lineWidth = 0.03; g.beginPath(); g.ellipse(0, 0, sz, sz * 0.62, 0, 0, TAU); g.stroke(); break;
+      default:
+        g.fillStyle = p.color; g.fillRect(-sz / 2, -sz / 2, sz, sz);
+    }
+  }
+
+  drawTexts(g, r, place) {
     const w = this.game.world;
     const z = r.cam.zoom, dpr = r.dpr;
     g.textAlign = 'center';
     g.textBaseline = 'alphabetic';
     g.lineJoin = 'round';
     for (const t of this.texts) {
-      const [sx, sy] = r.toScreen(w, t.x, t.y);
+      let sx, sy, fz = Math.min(z, 44);
+      if (place) {
+        const q = place(t);
+        if (!q) continue;
+        [sx, sy, fz] = q;
+      } else {
+        [sx, sy] = r.toScreen(w, t.x, t.y);
+        sy -= (t.dmg ? t.oy + t.z : t.z) * z;
+      }
       const fade = t.dmg ? Math.min(1, t.life / (t.max * 0.4)) : Math.min(1, (t.life / t.max) * 2.4);
       const pk = Math.min(1, t.pop / 0.13);
       const pop = 1 + (t.dmg ? 0.6 : 0.3) * (1 - pk) * (1 - pk);
-      const zy = (t.dmg ? t.oy + t.z : t.z) * z;
-      g.setTransform(dpr, 0, 0, dpr, sx * dpr, (sy - zy) * dpr);
+      g.setTransform(dpr, 0, 0, dpr, sx * dpr, sy * dpr);
       g.globalAlpha = fade;
-      const px = Math.round(t.size * Math.min(z, 44) * pop * (t.crit && !t.dmg ? 1.35 : 1));
+      const px = Math.round(t.size * fz * pop * (t.crit && !t.dmg ? 1.35 : 1));
       if (px < 4) continue;
       if (t.crit && t.dmg) {
         // a gold burst behind critical numbers
@@ -462,8 +486,9 @@ export class FX {
   /** Screen-space post effects (impact frames, flashes, slow-mo vignette, focus lines). */
   drawScreen(g, r) {
     const W = r.canvas.width, H = r.canvas.height;
-    if (this.focusT > 0) {
-      const [fx, fy] = r.toScreen(this.game.world, this.focusX, this.focusY - 0.8);
+    const fp = this.focusT > 0 ? (r.is3d ? r.project(this.focusX, this.focusY, 0.9) : r.toScreen(this.game.world, this.focusX, this.focusY - 0.8)) : null;
+    if (fp && fp[0] > -9000) {
+      const [fx, fy] = fp;
       const k = this.focusT / this.focusMax;
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.globalAlpha = Math.min(1, k * 1.6) * 0.8;

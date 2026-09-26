@@ -1194,9 +1194,12 @@ export function motion(fx, a, dt) {
   if (a.state === 'knocked') {
     if (!a._fxLanded && a.knockT > 0.26) {
       a._fxLanded = true;
-      const s = (a.look && a.look.scale) || 1;
-      dust(fx, a.x + 0.35 * s, a.y, 7, { speed: 2, size: 0.22 });
-      fx.ring(a.x + 0.3 * s, a.y, 0.2, 1.0 * s, 'rgba(215,204,200,0.9)', 0.35, 0.08, { z: 0.05, flat: 0.5, noCore: true });
+      // (the body lies centred on the spot, its head away from where it faced)
+      const s = (a.look && a.look.scale) || 1, dir = Math.cos(a.facing || 0) < 0 ? 1 : -1;
+      dust(fx, a.x + dir * 0.75 * s, a.y - 0.05, 3, { speed: 1.6, size: 0.16 });
+      dust(fx, a.x - dir * 0.6 * s, a.y - 0.05, 3, { speed: 1.6, size: 0.16 });
+      dust(fx, a.x, a.y - 0.05, 3, { speed: 2.2, size: 0.18 });
+      fx.ring(a.x + dir * 0.1 * s, a.y - 0.05, 0.3, 1.2 * s, 'rgba(215,204,200,0.8)', 0.32, 0.06, { z: 0.03, flat: 0.42, noCore: true });
       if (a.isPlayer || a.lastHitBy?.isPlayer) fx.kick(Math.PI / 2, 3);
     }
   } else a._fxLanded = false;

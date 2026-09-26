@@ -7,7 +7,7 @@
 // foreshortening so punches come at the camera and blades sweep across.
 import { shade } from '../core/math.js';
 import { samplePose, STAND, GUARD, restPose, blendPose } from './anims.js';
-import { drawHead, drawHair, drawHat } from './charart.js';
+import { drawHead } from './charart.js';
 
 const TAU = Math.PI * 2;
 const OUTLINE = 'rgba(30,20,20,0.85)';
@@ -785,13 +785,15 @@ export function drawCharacter(g, look, pose) {
   const s = look.scale || 1;
   const t = pose.time || 0;
   // body spin (pirouettes, spinning slashes) cycles the facing through all views
-  let P = pose.P;
+  // knocked down (or dead): the same body, lying on its back
+  const lying = pose.state === 'knocked' || pose.state === 'dead';
+  let P = lying ? LYING : pose.P;
   if (!P) {
     P = pose.anim ? samplePose(pose.anim, pose.anim.t, pose) : restPose(pose, look);
     if (pose.blend && pose.blend.P) P = blendPose(pose.blend.P, P, pose.blend.k);
     pose.P = P;
   }
-  const facing = (pose.facing || 0) + (P.sp || 0) * TAU * (Math.cos(pose.facing || 0) < 0 ? -1 : 1);
+  const facing = lying ? Math.PI / 2 : (pose.facing || 0) + (P.sp || 0) * TAU * (Math.cos(pose.facing || 0) < 0 ? -1 : 1);
   const d = dir4(facing);
   const flip = d === 'left';
   const side = d === 'left' || d === 'right';
@@ -807,27 +809,39 @@ export function drawCharacter(g, look, pose) {
   g.save();
   if (pose.alpha !== undefined) g.globalAlpha *= pose.alpha;
 
-  // shadow stays on the ground and shrinks while airborne
+  // falling over: tip backwards (away from where it faced), bounce once, lie flat
+  const kt = pose.knockT ?? 1;
+  const fall = Math.min(1, kt / 0.28);
+  const lieK = lying ? fall * fall : 0;
+  const lieDir = Math.cos(pose.facing || 0) < 0 ? 1 : -1; // +1: the head ends up on the right
+
+  // shadow stays on the ground and shrinks while airborne (stretches under a lying body)
   if (!pose.swimming && !pose.noShadow && !ghost) {
     const k = 1 / (1 + z * 1.2);
     g.fillStyle = `rgba(0,0,0,${0.25 * k})`;
-    g.beginPath(); g.ellipse(0, 0, 0.36 * s * bulk * k, 0.13 * s * k, 0, 0, TAU); g.fill();
+    g.beginPath();
+    if (lying) g.ellipse(lieDir * 0.1 * s * lieK, -0.08 * s * lieK, (0.36 + 0.56 * lieK) * s * bulk, (0.13 + 0.1 * lieK) * s, 0, 0, TAU);
+    else g.ellipse(0, 0, 0.36 * s * bulk * k, 0.13 * s * k, 0, 0, TAU);
+    g.fill();
+  }
+  if (pose.shadowOnly) { g.restore(); return; }
+
+  if (lying) {
+    const bounce = kt > 0.28 && kt < 0.5 ? Math.sin((kt - 0.28) / 0.22 * Math.PI) * 0.12 : 0;
+    // pivot on the feet while they slide back, so the body ends up centred on the spot
+    g.translate(-lieDir * 0.65 * s * lieK, -(0.23 * lieK + bounce) * s);
+    g.rotate(lieDir * Math.PI / 2 * 0.94 * lieK);
+    g.scale(s, s);
+  } else {
+    if (pose.squash) g.scale(1 / Math.sqrt(pose.squash), pose.squash);
+    if (pose.toon) { const w = Math.sin(t * 9) * 0.05; g.scale(1 + w, 1 - w); }
+    g.translate(0, -z * s);
+    g.scale(flip ? -s : s, s);
+    const roll = (P.r || 0) + (pose.roll || 0);
+    if (roll) { g.translate(0, -0.72); g.rotate(roll); g.translate(0, 0.72); }
   }
 
-  if (pose.state === 'knocked' || pose.state === 'dead') {
-    drawLying(g, look, pose, s);
-    g.restore();
-    return;
-  }
-
-  if (pose.squash) g.scale(1 / Math.sqrt(pose.squash), pose.squash);
-  if (pose.toon) { const w = Math.sin(t * 9) * 0.05; g.scale(1 + w, 1 - w); }
-  g.translate(0, -z * s);
-  g.scale(flip ? -s : s, s);
-  const roll = (P.r || 0) + (pose.roll || 0);
-  if (roll) { g.translate(0, -0.72); g.rotate(roll); g.translate(0, 0.72); }
-
-  const rig = solveRig(look, P, d, side, back);
+  const rig = lying ? lyingRig(look, t, lieK, lieDir) : solveRig(look, P, d, side, back);
   // level of detail: far-away crowds skip the cel-shade passes
   const xf = g.getTransform ? g.getTransform() : null;
   const pxTile = xf ? Math.hypot(xf.a, xf.b) : 60;
@@ -1192,45 +1206,116 @@ export function drawCharacter(g, look, pose) {
   }
 
   // smears, flurries and charge-ups on top of everything
-  if (!ghost) {
+  if (!ghost && !lying) {
     if (pose.anim && !pose.noTrails) drawTrails(g, look, pose, rig, d, side, back);
     if (pose.flurry) drawFlurry(g, look, pose, rig, side, t);
     if (pose.charge && pose.charge.kind !== 'oni') drawCharge(g, pose, rig, t, headY, bulk);
+  }
+  // knocked out: drawn stars circling the head
+  if (lying && pose.state === 'knocked' && fall >= 1 && !ghost) {
+    const [hx, hy] = rig.head;
+    for (let i = 0; i < 3; i++) {
+      const a = t * 4 + i * TAU / 3;
+      g.fillStyle = '#ffd54f'; g.strokeStyle = 'rgba(80,50,0,0.8)'; g.lineWidth = 0.02;
+      // (drawn in the body's turned frame: a flat circle just above the head on screen)
+      starPath(g, hx - lieDir * 0.34 + Math.sin(a) * 0.13 * lieDir, hy - 0.05 - Math.cos(a) * 0.42 * lieDir, 0.11 * (0.8 + 0.2 * Math.sin(a * 2)), 5, 0.45, a);
+      g.fill(); g.stroke();
+    }
   }
 
   g.restore();
 }
 
-let tintCanvas = null;
+/** The lying (knocked-down) pose: a front-view body with its limbs flopped out. */
+const LYING = { ...STAND, hand: 'palm', handB: 'palm', ht: 0.28, face: null };
+function lyingRig(look, t, k, dir) {
+  const rig = solveRig(look, LYING, 'down', false, false);
+  const armLen = look.arms || 1, legLen = look.legs || 1;
+  const L1 = 0.215 * armLen, L2 = 0.215 * armLen;
+  const twitch = k >= 1 ? Math.sin(t * 2.3) * 0.04 : 0;
+  // one arm thrown up past the head, the other flopped out by the side
+  const place = (arm, sx, a1, a2) => {
+    const [x0, y0] = arm.s;
+    const j = [x0 + sx * Math.cos(a1) * L1, y0 + Math.sin(a1) * L1];
+    const e = [j[0] + sx * Math.cos(a2) * L2, j[1] + Math.sin(a2) * L2];
+    const m = (p, q) => [p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k];
+    arm.j = m(arm.j, j); arm.e = m(arm.e, e);
+    arm.u = 0; arm.v = 0; arm.scale = 1; arm.raised = false;
+  };
+  place(rig.armF, 1, -0.55 - twitch, -1.05 - twitch);
+  place(rig.armB, -1, 0.55, 1.0 + twitch);
+  // legs apart, one knee a little bent
+  const legs = (L, sx, kx, ex) => {
+    const [hx, hy] = L.h;
+    const kk = [hx + sx * kx, hy + 0.245 * legLen];
+    const e = [hx + sx * ex, hy + 0.47 * legLen];
+    const m = (p, q) => [p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k];
+    L.k = m(L.k, kk); L.e = m(L.e, e); L.u = 0; L.scale = 1;
+  };
+  legs(rig.legF, 1, 0.1, 0.17);
+  legs(rig.legB, -1, 0.16, 0.1);
+  void dir;
+  return rig;
+}
+
+let tintCanvas = null, silCanvas = null;
 /**
  * Draw a character washed toward a flat colour (the white hit flash): the
- * body is rendered once into a scratch canvas, tinted there, then composited.
- * Much cheaper than a context filter on every stroke.
+ * body is rendered once into a scratch canvas, tinted there, then composited
+ * pixel-aligned over a dark silhouette outline so a fully white body still
+ * reads crisply. Much cheaper than a context filter on every stroke. The
+ * ground shadow is drawn untinted.
  */
-export function drawCharacterTinted(g, look, pose, color = '#ffffff', amount = 1) {
+export function drawCharacterTinted(g, look, pose, color = '#ffffff', amount = 1, outline = '#1c1420') {
   if (typeof document === 'undefined' || !g.getTransform) { drawCharacter(g, look, pose); return; }
   const m = g.getTransform();
   const px = Math.hypot(m.a, m.b) || 1;
   const s = (look.scale || 1) * (look.legs > 1 ? 1.3 : 1);
   const W = Math.ceil(4.4 * s * px), H = Math.ceil(4.6 * s * px);
   if (W * H > 4e6) { drawCharacter(g, look, pose); return; }
-  if (!tintCanvas) tintCanvas = document.createElement('canvas');
-  if (tintCanvas.width < W || tintCanvas.height < H) { tintCanvas.width = Math.max(W, tintCanvas.width); tintCanvas.height = Math.max(H, tintCanvas.height); }
+  const noShadow = pose.noShadow;
+  if (!noShadow) { pose.shadowOnly = true; drawCharacter(g, look, pose); pose.shadowOnly = false; }
+  if (!tintCanvas) { tintCanvas = document.createElement('canvas'); silCanvas = document.createElement('canvas'); }
+  if (tintCanvas.width < W || tintCanvas.height < H) {
+    for (const cv of [tintCanvas, silCanvas]) { cv.width = Math.max(W, cv.width); cv.height = Math.max(H, cv.height); }
+  }
   const c = tintCanvas.getContext('2d');
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
   c.clearRect(0, 0, W, H);
-  const ox = W / 2, oy = H - 0.8 * s * px;
-  c.setTransform(px, 0, 0, px, ox, oy);
+  const ox = Math.round(W / 2), oy = Math.round(H - 0.8 * s * px);
+  // keep the sub-pixel position inside the scratch canvas so the copy lands pixel-aligned
+  const fx = m.e - Math.floor(m.e), fy = m.f - Math.floor(m.f);
+  c.setTransform(px, 0, 0, px, ox + fx, oy + fy);
+  pose.noShadow = true;
   drawCharacter(c, look, pose);
+  pose.noShadow = noShadow;
+  const k = Math.max(0, Math.min(1, amount));
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.globalCompositeOperation = 'source-atop';
-  c.globalAlpha = Math.max(0, Math.min(1, amount));
+  c.globalAlpha = k;
   c.fillStyle = color; c.fillRect(0, 0, W, H);
   c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  const dx = Math.floor(m.e) - ox, dy = Math.floor(m.f) - oy;
   g.save();
   g.setTransform(1, 0, 0, 1, 0, 0);
-  g.drawImage(tintCanvas, 0, 0, W, H, m.e - ox, m.f - oy, W, H);
+  if (outline && k > 0.35) {
+    // a dark silhouette nudged out on four sides: the outline the tint washed away
+    const sc = silCanvas.getContext('2d');
+    sc.setTransform(1, 0, 0, 1, 0, 0);
+    sc.globalCompositeOperation = 'source-over'; sc.globalAlpha = 1;
+    sc.clearRect(0, 0, W, H);
+    sc.drawImage(tintCanvas, 0, 0, W, H, 0, 0, W, H);
+    sc.globalCompositeOperation = 'source-in';
+    sc.fillStyle = outline; sc.fillRect(0, 0, W, H);
+    sc.globalCompositeOperation = 'source-over';
+    const o = Math.max(1, Math.round(px * 0.024));
+    const a0 = g.globalAlpha;
+    g.globalAlpha = a0 * Math.min(1, (k - 0.35) / 0.35);
+    for (const [ex, ey] of [[o, 0], [-o, 0], [0, o], [0, -o]]) g.drawImage(silCanvas, 0, 0, W, H, dx + ex, dy + ey, W, H);
+    g.globalAlpha = a0;
+  }
+  g.drawImage(tintCanvas, 0, 0, W, H, dx, dy, W, H);
   g.restore();
 }
 
@@ -1304,37 +1389,4 @@ function drawAsura(g, t, shoulderY, headY) {
 }
 
 /** Knocked out: fall over (with a bounce) and lie on the back, dazed. */
-function drawLying(g, look, pose, s) {
-  const kt = pose.knockT ?? 1;
-  const fall = Math.min(1, kt / 0.28);
-  const bounce = kt > 0.28 && kt < 0.5 ? Math.sin((kt - 0.28) / 0.22 * Math.PI) * 0.12 : 0;
-  const k = fall * fall;
-  g.save();
-  g.scale(s, s);
-  g.translate(0, -bounce);
-  g.rotate(-Math.PI / 2 * 0.92 * k);
-  g.translate(0.55 * k, -0.1 * k);
-  const skin = look.skin || '#f1c9a0';
-  rrect(g, -0.25, -0.75, 0.5, 0.55, 0.12, look.top || '#d63031', OUTLINE);
-  limb(g, -0.1, -0.2, -0.12, 0.25, 0.15, look.bottom || '#2d3436', OUTLINE);
-  limb(g, 0.1, -0.2, 0.14, 0.25, 0.15, look.bottom || '#2d3436', OUTLINE);
-  limb(g, -0.22, -0.68, -0.42 + k * 0.1, -0.35, 0.11, look.sleeve || skin, OUTLINE);
-  limb(g, 0.22, -0.68, 0.44 - k * 0.1, -0.4, 0.11, look.sleeve || skin, OUTLINE);
-  circ(g, 0, -1.0, 0.3, look.furWhite ? '#fafafa' : skin, OUTLINE);
-  drawHair(g, look.hair || 'short', look.hairColor || '#2d2d2d', -1.0, 0.3, 'down', null);
-  g.strokeStyle = '#222'; g.lineWidth = 0.03;
-  for (const ex of [-0.1, 0.1]) { g.beginPath(); g.moveTo(ex - 0.04, -1.02); g.lineTo(ex + 0.04, -0.96); g.moveTo(ex + 0.04, -1.02); g.lineTo(ex - 0.04, -0.96); g.stroke(); }
-  g.restore();
-  if (pose.state === 'knocked' && pose.time !== undefined && fall >= 1 && !pose.ghost) {
-    // dazed: drawn stars circling the head
-    for (let i = 0; i < 3; i++) {
-      const a = pose.time * 4 + i * TAU / 3;
-      const x = Math.cos(a) * 0.4 * s - 0.6 * s, y = -0.55 * s + Math.sin(a) * 0.15;
-      g.fillStyle = '#ffd54f'; g.strokeStyle = 'rgba(80,50,0,0.8)'; g.lineWidth = 0.02;
-      starPath(g, x, y, 0.11 * (0.8 + 0.2 * Math.sin(a * 2)), 5, 0.45, a);
-      g.fill(); g.stroke();
-    }
-  }
-}
-
 export { STAND, GUARD, solveRig };

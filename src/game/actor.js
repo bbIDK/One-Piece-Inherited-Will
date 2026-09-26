@@ -195,7 +195,8 @@ export class Actor extends Entity {
     this.buffs = [];
     this.armament = false;
     this.recalc();
-    game.fx.burst(this.x, this.y - 0.3, 12, { color: '#d7ccc8', speed: 3, g: 5, life: 0.5, kind: 'smoke', size: 0.25 });
+    // a kick of dust at the feet (the thud when the body lands comes from the fx layer)
+    game.fx.burst(this.x, this.y, 8, { color: ['#d7ccc8', '#efebe9'], speed: 2.4, g: 1.2, z: 0.1, vz: 0.6, life: 0.45, kind: 'dust', size: 0.14, grow: 0.3, drag: 3 });
     game.audio?.sfx('ko');
     if (this.onKO) this.onKO(this, att, game);
     game.onKnockOut(this, att);
@@ -653,7 +654,7 @@ export class Actor extends Entity {
     if (shiver >= 0 && shiver < 1 && this.state === 'idle') g.translate(Math.sin(env.time * 170) * 0.045 * Math.min(1, hf.w) * (1 - shiver), 0);
     drawActorExtras(g, this, look, pose, env, 'back');
     // hit flash: a pure white body for a few frames, then fading back
-    if (this.flashT > 0) drawCharacterTinted(g, look, pose, '#ffffff', Math.min(0.78, this.flashT / 0.12 * 0.95));
+    if (this.flashT > 0) { const fk = this.flashT / 0.12; drawCharacterTinted(g, look, pose, '#ffffff', fk > 0.5 ? 1 : fk / 0.5); }
     else drawCharacter(g, look, pose);
     drawActorExtras(g, this, look, pose, env, 'front');
     g.restore();

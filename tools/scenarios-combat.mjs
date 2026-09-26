@@ -35,6 +35,8 @@ const waitReady = (page) => page.waitForFunction(() => window.OP && window.OP.re
 /** In-page helpers (serialised into the page). */
 function installLab() {
   const OP = window.OP;
+  // heads drawn live: each new cached head bitmap costs seconds to rasterise under SwiftShader
+  globalThis.CHARART_NOCACHE = true;
   const lab = {
     home: null,
     zoom: 1.5,
@@ -287,6 +289,7 @@ export const scenarios = {
       const out = await page.evaluate((src) => { const OP = window.OP; void OP; return new Function('OP', 'LAB', src)(window.OP, window.LAB); }, String(args.js || 'return LAB.home'));
       console.log('probe', JSON.stringify(out));
       await snap('probe');
+      if (args.post) console.log('post', JSON.stringify(await page.evaluate((src) => new Function('OP', 'LAB', src)(window.OP, window.LAB), String(args.post))));
     },
   },
   'combat-races': {

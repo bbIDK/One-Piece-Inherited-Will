@@ -18,6 +18,8 @@
 //   cache     the same townsfolk drawn live and from the head bitmap cache
 //   api       drawHair / drawHat called on their own, every style/hat/view
 //   bench     (only with --only=bench) ms per head and per character at 46 px/tile
+//   scene     (only with --only=scene) 30 fighters over 90 frames, live vs cached; add --gpu for the harness's
+//             SwiftShader, --cachedfirst to time the cache on a cold page, --frames=N
 // Exits non-zero if any drawing threw. Nothing here is part of the game bundle.
 import * as esbuild from 'esbuild';
 import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -28,7 +30,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'shots');
 
 const ENTRY = `
-import { drawCharacter, STAND } from './src/render/character.js';
+import { drawCharacter, STAND, GUARD } from './src/render/character.js';
 import { drawHead, drawHair, drawHat } from './src/render/charart.js';
 import { makeLook } from './src/data/races.js';
 
@@ -226,6 +228,50 @@ if (only.includes('heads')) {
     }
   }
 }
+// --scene: a crowd mid-combat, timed frame by frame (with a GPU sync per frame), live vs cached heads.
+// Run with --gpu to use the play-test harness's SwiftShader flags.
+let scene = null;
+if (only.includes('scene')) {
+  const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 720; document.body.appendChild(cv);
+  const g = cv.getContext('2d');
+  const races = ['human', 'human', 'fishman', 'mink', 'skypiean', 'longarm', 'longleg', 'buccaneer', 'three_eye', 'lunarian'];
+  const hats = [null, 'straw', 'bandana', null, 'cowboy', 'marine', 'beanie', 'captain', 'headband', null, 'goggles', 'tricorne'];
+  const cast = [];
+  for (let i = 0; i < 30; i++) {
+    const L = makeLook(races[i % races.length], 7000 + i * 29);
+    L.hat = hats[i % hats.length];
+    if (i % 5 === 0) L.grin = true;
+    cast.push({ L, x: 70 + (i % 10) * 120, y: 200 + Math.floor(i / 10) * 220, facing: [Math.PI / 2, 0, Math.PI, -Math.PI / 2][i % 4], role: i % 6 });
+  }
+  const frame = (f) => {
+    const t = 1.3 + f / 30;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = GRASS; g.fillRect(0, 0, 1280, 720);
+    for (const c of cast) {
+      g.setTransform(46, 0, 0, 46, c.x, c.y);
+      // roles: 0 fierce jab, 1 shout, 2 hurt (flinching every other beat), 3 blocking, 4 walking, 5 idle (blinks)
+      const beat = Math.floor(t * 2 + c.x) % 2;
+      const pose = { facing: c.facing, time: t, walk: t * 8, moving: c.role === 4, state: c.role === 2 && beat ? 'hurt' : 'idle', combat: c.role < 4 };
+      if (c.role === 0) pose.P = { ...GUARD, face: beat ? 'fierce' : null };
+      else if (c.role === 1) pose.P = { ...GUARD, face: beat ? 'shout' : 'fierce' };
+      else if (c.role === 3) pose.block = true;
+      drawCharacter(g, c.L, pose);
+    }
+    g.getImageData(0, 0, 1, 1); // wait for the raster (GPU canvases draw lazily)
+  };
+  const run = (live, n) => {
+    globalThis.CHARART_NOCACHE = live;
+    const ms = [];
+    for (let f = 0; f < n; f++) { const t0 = performance.now(); frame(f); ms.push(performance.now() - t0); }
+    const s = ms.slice(5).sort((a, b) => a - b);
+    return { first: +ms[0].toFixed(1), first5: ms.slice(0, 5).map((v) => +v.toFixed(1)), max: +Math.max(...ms).toFixed(1), median: +s[s.length >> 1].toFixed(1), total: Math.round(ms.reduce((a, b) => a + b, 0)) };
+  };
+  const n = Number(q.get('frames') || 90);
+  // --cachedfirst: the cached pass runs on a cold page (it pays the renderer's warm-up, as the game would)
+  if (q.get('cachedfirst')) { const cached = run(false, n); scene = { cached, live: run(true, n), frames: n, order: 'cached first' }; }
+  else scene = { live: run(true, n), cached: run(false, n), frames: n, order: 'live first' };
+  globalThis.CHARART_NOCACHE = false;
+  console.log('SCENE ' + JSON.stringify(scene));
+}
 if (only.includes('eyes')) {
   // eye shapes (look.eyeShape) and expressions, big
   const sec = section('eyes', 'Eye shapes (look.eyeShape) at 260 px/tile');
@@ -278,7 +324,7 @@ if (only.includes('bench')) {
   bench = { headMs: +run(head, n).toFixed(4), characterMs: +run(full, n).toFixed(4), n };
   console.log('BENCH ' + JSON.stringify(bench));
 }
-window.SHEET = { done: true, sections, errors, bench };
+window.SHEET = { done: true, sections, errors, bench, scene };
 console.log('SHEET ' + JSON.stringify({ sections: sections.length, errors: errors.slice(0, 5) }));
 `;
 
@@ -310,7 +356,7 @@ export async function buildSheet() {
 
 /** Wait for the sheet, screenshot every section. */
 export async function shootSheet(page) {
-  await page.waitForFunction(() => window.SHEET && window.SHEET.done, null, { timeout: 120000 });
+  await page.waitForFunction(() => window.SHEET && window.SHEET.done, null, { timeout: 1800000 });
   const { sections, errors } = await page.evaluate(() => window.SHEET);
   const files = [];
   for (const s of sections) {
@@ -330,13 +376,14 @@ if (process.argv[1] && normalize(process.argv[1]) === fileURLToPath(import.meta.
   const chromePath = ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome', '/opt/pw-browsers/chromium/chrome-linux/chrome'].find((p) => existsSync(p));
   const port = 22000 + Math.floor(Math.random() * 2000);
   const server = await startServer(port);
-  const browser = await chromium.launch({ executablePath: chromePath });
+  // --gpu: the play-test harness's flags (tools/shot.mjs): canvases are GPU-accelerated through SwiftShader
+  const browser = await chromium.launch({ executablePath: chromePath, args: args.gpu ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : [] });
   const page = await browser.newPage({ viewport: { width: Number(args.w || 1400), height: 900 }, deviceScaleFactor: Number(args.dsf || 1) });
   const errors = [];
-  page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) { errors.push(m.text()); console.log('[error]', m.text()); } else if (/^(SHEET|BENCH)/.test(m.text())) console.log(m.text().slice(0, 2000)); });
+  page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) { errors.push(m.text()); console.log('[error]', m.text()); } else if (/^(SHEET|BENCH|SCENE)/.test(m.text())) console.log(m.text().slice(0, 2000)); });
   page.on('pageerror', (e) => { errors.push(e.message); console.log('[pageerror]', e.stack || e.message); });
-  const qs = new URLSearchParams(); if (args.only) qs.set('only', args.only);
-  await page.goto(`http://localhost:${port}${pagePath}?${qs}`);
+  const qs = new URLSearchParams(); for (const k of ['only', 'frames', 'cachedfirst']) if (args[k]) qs.set(k, args[k]);
+  await page.goto(`http://localhost:${port}${pagePath}?${qs}`, { waitUntil: 'commit', timeout: 0 });
   try {
     const res = await shootSheet(page);
     for (const f of res.files) console.log('shot →', f);

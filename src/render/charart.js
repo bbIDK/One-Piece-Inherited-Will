@@ -331,7 +331,7 @@ const capLongB = pb().M(-1.14, -0.1).arc(0, -0.08, 1.15, 1.13, 181, 359).C(1.22,
   .zz([[1.04, 1.36], [0.9, 1.62], [0.72, 1.4], [0.54, 1.66], [0.36, 1.42], [0.18, 1.68], [0, 1.44], [-0.18, 1.68], [-0.36, 1.42], [-0.54, 1.66], [-0.72, 1.4], [-0.9, 1.62], [-1.04, 1.36], [-1.2, 1.55]], 0.05)
   .C(-1.26, 1.1, -1.22, 0.5, -1.14, -0.1).Z().s;
 STYLES.long = {
-  F: { back: [{ d: backLongF, tone: 'shadow', strands: 'M1.1 0.3 Q1.16 0.8 1.1 1.3 M-1.1 0.3 Q-1.16 0.8 -1.1 1.3', sway: [0, -0.3, 0.018, 1.6, 0] }],
+  F: { back: [{ d: backLongF, tone: 'shadow', strands: 'M1.1 0.3 Q1.16 0.8 1.1 1.3 M-1.1 0.3 Q-1.16 0.8 -1.1 1.3' }],
     front: [{ d: capLongF, shine: [0, -0.06, 0.82, 198, 262, 4], strands: 'M0.48 -0.52 Q0.44 -0.8 0.3 -0.96 M0.13 -0.54 Q0.1 -0.84 0.0 -1.0 M-0.24 -0.54 Q-0.26 -0.8 -0.36 -0.94 M1.06 0.2 Q1.1 0.7 1.0 1.2 M-1.06 0.2 Q-1.1 0.7 -1.0 1.2', fringe: true }] },
   S: { back: [], front: [{ d: capLongS, shine: SHINE_S, strands: 'M0.74 -0.46 Q0.5 -0.8 0.1 -0.96 M-0.6 -0.2 Q-0.8 0.6 -0.72 1.3 M-0.3 0.1 Q-0.5 0.7 -0.5 1.2 M0.1 0.2 Q-0.1 0.6 -0.2 0.9', fringe: true }] },
   B: { back: [], front: [{ d: capLongB, shine: SHINE_B, strands: CROWN_STRAND + ' M0.8 0.2 Q0.86 0.8 0.72 1.36 M0.36 0.1 Q0.4 0.8 0.36 1.4 M-0.1 0.1 Q-0.1 0.8 0 1.4 M-0.5 0.2 Q-0.56 0.8 -0.54 1.4 M-0.9 0.2 Q-0.96 0.8 -0.9 1.4' }] },
@@ -1221,9 +1221,41 @@ const BALD_SHINE = { S: 'M-0.3 -0.8 Q0.0 -0.95 0.34 -0.88', F: 'M-0.62 -0.52 Q-0
 // quantised sway), so a cached head matches a live one; bigger heads
 // (portraits, the creation preview, the wanted poster) are drawn live.
 // Debug: globalThis.CHARART_NOCACHE = true draws every head live.
-const CACHE_MAX_PX = 40;     // head radius in device pixels
-const CACHE_SIZE = 600;      // bitmaps kept (least recently used go first)
-const HEADS = new Map();
+// The cache is a shared atlas: a few small pages per cell size, each split
+// into fixed cells recycled least-recently-used. Pages are CPU-backed canvases
+// (willReadFrequently): heads rasterise fast on the CPU, and a page is only
+// re-uploaded when one of its cells changes. A canvas per head would be a GPU
+// surface of its own each, very slow to create and sample under software GL.
+// Heads seen for the first time are drawn live; they are cached when seen again.
+const CELL_CLASSES = [
+  { cell: 80, page: 512, maxPages: 8 },   // the classic top-down view (head radius ≤ ~15 px)
+  { cell: 128, page: 512, maxPages: 6 },  // 3D billboards, zoomed in
+  { cell: 192, page: 768, maxPages: 6 },  // high-DPI screens
+];
+const CACHE_MAX_PX = 38;                  // bigger heads (portraits, previews) are drawn live
+const SEEN = new Map();
+for (const K of CELL_CLASSES) { K.per = Math.floor(K.page / K.cell); K.pages = []; K.free = []; K.lru = new Map(); }
+/** A cell of class K for `key`: a free one, a new page's, or the least recently used. */
+function takeCell(K, key) {
+  let e = K.free.pop();
+  if (!e && K.pages.length < K.maxPages) {
+    const c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(K.page, K.page) : Object.assign(document.createElement('canvas'), { width: K.page, height: K.page });
+    const g = c.getContext('2d', { willReadFrequently: true });
+    if (!g) { K.maxPages = K.pages.length; return null; }
+    const pg = { c, g };
+    K.pages.push(pg);
+    for (let i = K.per * K.per - 1; i > 0; i--) K.free.push({ pg, cx: (i % K.per) * K.cell, cy: Math.floor(i / K.per) * K.cell });
+    e = { pg, cx: 0, cy: 0 };
+  }
+  if (!e) {
+    const first = K.lru.entries().next().value;
+    if (!first) return null;
+    K.lru.delete(first[0]);
+    e = first[1];
+  }
+  K.lru.set(key, e);
+  return e;
+}
 const q = (v, step) => Math.round(v / step) * step;
 
 /** Everything that decides what a head looks like this frame. */
@@ -1237,10 +1269,10 @@ function headState(look, v, pose, P, t, sx) {
     swayA: undefined, tailA: undefined, haloY: undefined,
   };
   if (S.sw === undefined) { const sp = S.back.concat(S.front).find((pt) => pt.sway); S.sw = sp ? sp.sway : null; }
-  if (S.sw) H.swayA = q(swayAngle(S.sw, H), 0.02);
-  if (kind === 'bandana' || kind === 'headband') H.tailA = q(tailAngle(H), 0.04);
+  if (S.sw) H.swayA = q(swayAngle(S.sw, H), 0.05);
+  if (kind === 'bandana' || kind === 'headband') H.tailA = q(tailAngle(H), 0.08);
   const HT = kind ? hatCtx(look, style, t, pose) : null;
-  if (HT) { HT.tailA = H.tailA; if (kind === 'halo') HT.haloY = q(Math.sin(HT.t * 2.2) * 0.04, 0.02); }
+  if (HT) { HT.tailA = H.tailA; if (kind === 'halo') HT.haloY = q(Math.sin(HT.t * 2.2) * 0.04, 0.04); }
   return { style, S, kind, HT, clip: clipY === null ? null : -0.2 + (clipY + 0.2) * hatKy(HT.hatK), H, X: expression(look, pose, P, t || 0), ghost: !!pose.ghost };
 }
 function lookKey(look) {
@@ -1280,20 +1312,33 @@ function cachedHead(look, v, pose, st, px, sx, r) {
   const b = Math.ceil(Math.log2(px) * 12);
   const X = st.X, H = st.H;
   const key = `${lookKey(look)}~${v}${sx}~${X.eyes}${X.mouth}${X.brow}${X.small ? 1 : 0}${st.ghost ? 1 : 0}~${b}~${H.swayA}~${H.tailA}~${st.HT ? st.HT.haloY : ''}`;
-  let e = HEADS.get(key);
-  if (e) { HEADS.delete(key); HEADS.set(key, e); return e; }
+  for (const K of CELL_CLASSES) {
+    const e = K.lru.get(key);
+    if (e) { K.lru.delete(key); K.lru.set(key, e); return e; }
+  }
+  // first sighting: draw live (passing expressions and sway frames never churn the atlas)
+  if (!SEEN.has(key)) {
+    SEEN.set(key, 1);
+    if (SEEN.size > 4096) { let n = 512; for (const k of SEEN.keys()) { SEEN.delete(k); if (--n <= 0) break; } }
+    return null;
+  }
+  SEEN.delete(key);
   const pxb = Math.pow(2, b / 12);
   const [x0, y0, x1, y1] = headBounds(look, st, v);
   const W = Math.ceil((x1 - x0) * pxb) + 2, Ht = Math.ceil((y1 - y0) * pxb) + 2;
-  const c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(W, Ht) : Object.assign(document.createElement('canvas'), { width: W, height: Ht });
-  const cg = c.getContext('2d');
-  if (!cg) return null;
-  cg.setTransform(pxb, 0, 0, pxb, (1 - x0 * pxb), (1 - y0 * pxb));
+  const K = CELL_CLASSES.find((c) => W <= c.cell && Ht <= c.cell);
+  const e = K && takeCell(K, key);
+  if (!e) return null;
+  const cg = e.pg.g, cs = K.cell;
+  cg.save();
+  cg.setTransform(1, 0, 0, 1, 0, 0);
+  cg.clearRect(e.cx, e.cy, cs, cs);
+  cg.beginPath(); cg.rect(e.cx, e.cy, cs, cs); cg.clip();
+  cg.setTransform(pxb, 0, 0, pxb, e.cx + 1 - x0 * pxb, e.cy + 1 - y0 * pxb);
   cg.lineJoin = 'round'; cg.lineCap = 'round';
   renderHead(cg, look, v, pose, st, headCtx(pxb, sx, r, v));
-  e = { c, x: x0 - 1 / pxb, y: y0 - 1 / pxb, w: W / pxb, h: Ht / pxb };
-  HEADS.set(key, e);
-  if (HEADS.size > CACHE_SIZE) { let n = 64; for (const k of HEADS.keys()) { HEADS.delete(k); if (--n <= 0) break; } }
+  cg.restore();
+  e.W = W; e.H = Ht; e.x = x0 - 1 / pxb; e.y = y0 - 1 / pxb; e.w = W / pxb; e.h = Ht / pxb;
   return e;
 }
 
@@ -1303,9 +1348,9 @@ export function drawHead(g, look, hy, r, d, pose, t, P) {
   const m = g.getTransform();
   const px = Math.hypot(m.a, m.b) * r, sx = m.a * m.d - m.b * m.c < 0 ? -1 : 1;
   const st = headState(look, v, pose, P, t, sx);
-  if (px <= CACHE_MAX_PX && px > 0.5 && !look.nika && !pose.flash && !globalThis.CHARART_NOCACHE) {
+  if (px > 0.5 && px <= CACHE_MAX_PX && !look.nika && !pose.flash && !globalThis.CHARART_NOCACHE) {
     const e = cachedHead(look, v, pose, st, px, sx, r);
-    if (e) { g.drawImage(e.c, e.x * r, hy + e.y * r, e.w * r, e.h * r); return; }
+    if (e) { g.drawImage(e.pg.c, e.cx, e.cy, e.W, e.H, e.x * r, hy + e.y * r, e.w * r, e.h * r); return; }
   }
   const C = begin(g, hy, r, v);
   renderHead(g, look, v, pose, st, C);
