@@ -1,0 +1,18 @@
+{
+  "name": "one-piece-inherited-will",
+  "version": "0.1.0",
+  "description": "A One Piece fan roguelike (Rogue Lineage style) set on the full Blue Planet: four Blues, the Grand Line, the Red Line, devil fruits, haki, ships and lineage-based permadeath.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "watch": "node tools/build.mjs --watch",
+    "serve": "node tools/serve.mjs",
+    "test": "node --test tests/",
+    "shot": "node tools/shot.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "playwright-core": "^1.56.0"
+  }
+}
