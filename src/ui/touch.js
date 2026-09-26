@@ -38,6 +38,7 @@ export function installTouch(game, root) {
   // --- input plumbing ----------------------------------------------------------
   const press = (c) => {
     if (c === 'dodge') { game.player?.controller?.requestDodge?.(); return; }
+    if (c === 'heal') { game.emit('quickHeal'); return; }
     if (c === 'mouse0' || c === 'mouse2') {
       const b = +c[5], m = inp.mouse;
       if (!m.down[b]) m.pressed[b] = true;
@@ -45,7 +46,7 @@ export function installTouch(game, root) {
     } else inp.simKey(c, true);
   };
   const release = (c) => {
-    if (c === 'dodge') return;
+    if (c === 'dodge' || c === 'heal') return;
     if (c === 'mouse0' || c === 'mouse2') {
       const b = +c[5];
       inp.mouse.down[b] = false;
@@ -83,7 +84,7 @@ export function installTouch(game, root) {
   bind(B.dodge, () => (sailing() ? null : 'dodge'));
   bind(B.block, () => (sailing() ? null : 'F'));
   bind(B.use, () => 'E');
-  bind(B.heal, () => 'Q');
+  bind(B.heal, () => 'heal');
 
   // --- stick and look -------------------------------------------------------------
   const stick = { id: null, ox: 0, oy: 0 };

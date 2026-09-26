@@ -145,7 +145,7 @@ export class CharacterModel {
     const w = o.wpn;
     this.showBone(B.hilts, !(armed && w && (w.kind === 'sword' || w.kind === 'gun')));
     this.showBone(B.backWpn, !(armed && w && (w.kind === 'axe' || w.kind === 'staff')));
-    const want0 = o.blade ? 'energy:' + o.blade : armed ? `${w.kind}:main:${w.gun || ''}:${o.armament ? 1 : 0}` : '';
+    const want0 = o.blade ? 'energy:' + o.blade : armed ? `${w.kind}:main:${w.gun || ''}:${o.armament ? 1 : 0}` : o.prop ? `prop:${o.prop}` : '';
     const want1 = o.bladeB ? 'energy:' + o.bladeB : armed && w.kind === 'sword' && (w.count || 1) >= 2 ? `sword:second::${o.armament ? 1 : 0}` : '';
     const want2 = armed && w.kind === 'sword' && (w.count || 1) >= 3 ? `sword:mouth::${o.armament ? 1 : 0}` : '';
     this.setHeld(0, want0, o);

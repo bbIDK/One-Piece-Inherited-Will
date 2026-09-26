@@ -102,6 +102,29 @@ export class HeightField {
     for (let j = 0; j < N; j++) {
       for (let i = 0; i < N; i++) g[j * N + i] = cornerHeight(w, x0 + i, y0 + j);
     }
+    // the ground inside a walk-in building is dug down to the street in front
+    // of it (the walls hide the cut), so its floor is a step up from the street
+    if (w.objects) {
+      for (const b of w.objects.query(x0 - 8, y0 - 8, x0 + CHUNK + 8, y0 + CHUNK + 8)) {
+        if (!b.enterable) continue;
+        const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+        const bx0 = b.x - fw / 2, bx1 = b.x + fw / 2, by0 = b.y - fd, by1 = b.y;
+        // the street level: the front edge's corners (outside the cut)
+        const fy = Math.round(by1), fx = Math.round(b.x);
+        const front = cornerHeight(w, fx, fy);
+        for (let j = 0; j < N; j++) {
+          const cy = y0 + j;
+          if (cy <= by0 || cy >= by1) continue;
+          for (let i = 0; i < N; i++) {
+            const cx = x0 + i;
+            const dx = w.dx(bx0, cx);
+            if (dx <= 0 || dx >= bx1 - bx0) continue;
+            const q = j * N + i;
+            if (g[q] > front + 0.2) g[q] = front + 0.2;
+          }
+        }
+      }
+    }
     this.chunks.set(k, g);
     if (this.chunks.size > 2400) {
       // forget the oldest grids (they are cheap to rebuild)

@@ -75,6 +75,12 @@ class ActorView {
       const { pose, P } = actorPose(a, env, look);
       const o = rigOptions(a, pose, P, this.o);
       o.wpn = this.wpn;
+      // sit down (and get up) over a moment
+      const dtv = this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT);
+      this.sitK = (this.sitK || 0) + ((o.seatH !== null ? 1 : 0) - (this.sitK || 0)) * Math.min(1, dtv * 6);
+      if (o.seatH !== null) this.sitH = o.seatH;
+      o.sitK = this.sitK > 0.01 ? this.sitK : 0;
+      o.sitY = (this.sitH || 0) / s;
       // rubber punch in flight: the arm stretches out to the fist
       o.reachR = null;
       if (a.fruit === 'gomu') o.reachR = this.stretchTarget(a, ctx, s);

@@ -70,6 +70,10 @@ export function rigOptions(a, pose, P, o = {}) {
   // a side-step leans into the slide
   o.sideRoll = 0;
   if (pose.dodge !== undefined && pose.dodgeSide !== undefined && Math.abs(pose.dodgeDir) <= 0.35) o.sideRoll = Math.sign(pose.dodgeSide) * 0.38 * Math.sin(pose.dodge * Math.PI);
+  // everyday poses: arms folded across the chest, a seat under you, something in your hand
+  if (pose.activity === 'lean') o.spread = -0.17;
+  o.seatH = pose.activity === 'sit' || pose.activity === 'fish' ? pose.seatH || 0 : null;
+  o.prop = pose.prop || null;
   return o;
 }
 

@@ -33,11 +33,28 @@ export function fruitOf(o) {
 
 export const fruitKey = (worldId, o) => `${worldId || 's'}:${Math.round(o.x * 10)},${Math.round(o.y * 10)}`;
 
-// picked trees: key → the day the fruit is back
+// picked fruit: key → the day it's back ("<tree>#<i>" for one fruit; a bare
+// tree key — from older saves — means the whole tree was stripped)
 export const PICKED = new Map();
+const gone = (k, day) => { const d = PICKED.get(k); return d !== undefined && day < d; };
+/** How many fruits hang on a tree (the 3D model tells; otherwise by kind). */
+export function fruitCount(o) {
+  if (o._fruitN) return o._fruitN;
+  const f = fruitOf(o);
+  if (!f) return 0;
+  if (o.sub === 'palm') return f === 'banana' ? 1 : 3;
+  return f === 'banana' ? 3 : 6;
+}
+/** Has fruit `i` of this tree been picked (and not grown back yet)? */
+export function fruitPicked(worldId, o, i, day) {
+  const k = fruitKey(worldId, o);
+  return gone(k, day) || gone(k + '#' + i, day);
+}
+/** Is the whole tree bare? */
 export function isPicked(worldId, o, day) {
-  const d = PICKED.get(fruitKey(worldId, o));
-  return d !== undefined && day < d;
+  const n = fruitCount(o);
+  for (let i = 0; i < n; i++) if (!fruitPicked(worldId, o, i, day)) return false;
+  return true;
 }
 
 /** Fruit positions for a tree, in the tree's local tile units (origin at its base). */

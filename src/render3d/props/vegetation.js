@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { Mesher, cyl, cone, box, ribbon, tube, slab, C, shade, hash, rng, radial, KIT } from './kit.js';
 import { instanced, setPartVisible } from './instancer.js';
 import { registerPropBuilder } from '../registry.js';
-import { fruitOf, fruitSpots, isPicked } from '../../world/fruitTrees.js';
+import { fruitOf, fruitSpots, isPicked, fruitPicked } from '../../world/fruitTrees.js';
 import { T, CLIMATE } from '../../world/tiles.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -487,25 +487,35 @@ function addFruit(k, fruit, at, s = 1) {
   if (fruit !== 'coconut') k.add(cyl(0.01, 0.012, 0.07, 3, true), { at: [x, y + r * 0.9, z], color: '#5d4037' });
 }
 
-function fruitModel(sub, v, fruit, model) {
-  const var2 = (v || 0) % 2;
-  return cached(`fruit:${sub}:${var2}:${fruit}`, () => {
-    const k = new Mesher();
-    const cr = model.crown;
-    if (cr?.palm) {
-      const [tx, ty] = cr.top;
-      if (fruit === 'banana') addFruit(k, 'banana', [tx + 0.25, ty - 0.15, 0.1]);
-      else for (let i = 0; i < 3; i++) { const a = i * 2.1 + 0.5; addFruit(k, fruit, [tx + Math.cos(a) * 0.2, ty - 0.2 - (i === 1 ? 0.08 : 0), Math.sin(a) * 0.2]); }
-    } else if (cr) {
-      const n = fruit === 'banana' ? 3 : 6;
-      for (let i = 0; i < n; i++) {
-        const a = i / n * Math.PI * 2 + 0.35;
-        const e = fruit === 'banana' ? -0.55 : (i % 2 ? -0.3 : 0.05);
-        const d = [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)];
-        const p = crownPoint(cr.blobs, cr.c, d, fruit === 'banana' ? 0.7 : 0.9, cr.squash || 1);
-        addFruit(k, fruit, p, 1.05);
-      }
+/** Where each fruit hangs on a tree model (model space), cached per species/variant/fruit. */
+const FRUIT_PTS = new Map();
+function fruitPoints(sub, v, fruit, model) {
+  const key = `${sub}:${(v || 0) % 2}:${fruit}`;
+  let pts = FRUIT_PTS.get(key);
+  if (pts) return pts;
+  pts = [];
+  const cr = model.crown;
+  if (cr?.palm) {
+    const [tx, ty] = cr.top;
+    if (fruit === 'banana') pts.push({ p: [tx + 0.25, ty - 0.15, 0.1], s: 1 });
+    else for (let i = 0; i < 3; i++) { const a = i * 2.1 + 0.5; pts.push({ p: [tx + Math.cos(a) * 0.2, ty - 0.2 - (i === 1 ? 0.08 : 0), Math.sin(a) * 0.2], s: 1 }); }
+  } else if (cr) {
+    const n = fruit === 'banana' ? 3 : 6;
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2 + 0.35;
+      const e = fruit === 'banana' ? -0.55 : (i % 2 ? -0.3 : 0.05);
+      const d = [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)];
+      pts.push({ p: crownPoint(cr.blobs, cr.c, d, fruit === 'banana' ? 0.7 : 0.9, cr.squash || 1), s: 1.05 });
     }
+  }
+  FRUIT_PTS.set(key, pts);
+  return pts;
+}
+/** One fruit (each is its own part, so each can be picked). */
+function fruitGeo(sub, v, fruit, i, q) {
+  return cached(`fruit1:${sub}:${(v || 0) % 2}:${fruit}:${i}`, () => {
+    const k = new Mesher();
+    addFruit(k, fruit, q.p, q.s);
     return k.build();
   });
 }
@@ -611,14 +621,22 @@ function buildTree(o, ctx, sub) {
   const parts = [part];
   let dyn = null;
   const fr = fruitOf(o);
-  if (fr && model.crown) {
-    const fp = { key: `f:${sub}:${v % 2}:${fr}`, geo: fruitModel(sub, v, fr, model), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false };
-    parts.push(fp);
-    dyn = (oo, env, c, u) => setPartVisible(u, fp, !isPicked(c.world?.id, oo, env.day));
-    void fruitSpots;
-  }
   const yaw = hash(o.x, o.y) * Math.PI * 2;
-  return instanced(o, ctx, parts, { yaw, scale: o.s || 1, dyn });
+  if (fr && model.crown) {
+    const pts = fruitPoints(sub, v, fr, model);
+    const fps = pts.map((q, i) => ({ key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false }));
+    parts.push(...fps);
+    dyn = (oo, env, c, u) => { for (let i = 0; i < fps.length; i++) setPartVisible(u, fps[i], !fruitPicked(c.world?.id, oo, i, env.day)); };
+    // where each fruit is, for aiming at it (see game/forage.js)
+    o._fruitPts = pts.map((q) => q.p);
+    o._fruitN = pts.length;
+    o._yaw = yaw;
+    o._gy = ctx?.ground ? ctx.ground(o.x, o.y) : 0;
+    void fruitSpots; void isPicked;
+  }
+  const mk = instanced(o, ctx, parts, { yaw, scale: o.s || 1, dyn });
+  if (dyn) o._fruitRefresh = (env) => { const u = mk.userData; if (u.live) u.dyn(o, env, ctx, u); };
+  return mk;
 }
 
 registerPropBuilder('tree', (o, ctx) => buildTree(o, ctx, o.sub || 'oak'));

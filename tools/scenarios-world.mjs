@@ -2,6 +2,90 @@
 const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
 export const scenarios = {
+  // everyday poses in a row, facing the camera
+  poses: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => window.OP.quickStart('human'));
+      await page.evaluate((list) => {
+        const g = window.OP.game, w = g.world, p = g.player;
+        g.env.clock = 11;
+        g.settings.view = 'first'; g.applySettings();
+        // an open, flat spot: walk out from the spawn until there's room
+        const kinds = list.split(',');
+        const { makeNPC } = window.OP.debug;
+        const fx = Math.cos(p.facing || 0), fy = Math.sin(p.facing || 0);
+        const x0 = p.x + fx * 3.2, y0 = p.y + fy * 3.2;
+        kinds.forEach((k, i) => {
+          const off = (i - (kinds.length - 1) / 2) * 1.25;
+          const a = makeNPC({ id: 'pose_' + k, name: k, level: 3, faction: 'civilian', ai: 'idle' }, x0 - fy * off, y0 + fx * off);
+          a.game = g; g.addActor(a);
+          a.facing = Math.atan2(-fy, -fx);
+          const [pose, h] = k.split('@');
+          a.act3d = { pose, h: +(h || 0), prop: { sweep: 'broom', fish: 'rod', drunk: 'mug' }[pose] || null };
+          a.showName = true;
+        });
+        const v = g.view3d; v.rig.yaw = p.facing || 0; v.rig.pitch = -0.12;
+      }, args.kinds || 'sit@0.62,sit@0.22,lean,sweep,vend,fish@0.05,drunk,chat');
+      for (let i = 0; i < 12; i++) { await step(page, 0.1); await frames(page, 1); }
+      await page.evaluate(() => { const v = window.OP.game.view3d; if (v.vm) v.vm.root.visible = false; });
+      await frames(page, 2);
+      await snap('row');
+    },
+  },
+  // town life: what people are doing, and a look at each kind of activity
+  townlife: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => window.OP.quickStart('human'));
+      const id = await page.evaluate(({ id, clock }) => {
+        const g = window.OP.game, w = g.world, p = g.player;
+        const isl = (id && w.islands.find((i) => i.id === id)) || w.islandAt(p.x, p.y) || w.nearestIsland(p.x, p.y, 80);
+        g.env.clock = clock;
+        const t = isl.towns[0];
+        window.OP.teleport(t.plaza.x + 2, t.plaza.y + 3);
+        g.spawner.refresh(isl.id);
+        return isl.id;
+      }, { id: args.island || null, clock: +(args.clock || 11) });
+      for (let i = 0; i < 40; i++) await step(page, 0.1);
+      const census = await page.evaluate(() => {
+        const g = window.OP.game;
+        const out = {};
+        for (const a of g.actors) if (a.townsfolk && a.alive) { const k = (a.activity?.kind || 'none') + (a.activity?.phase ? ':' + a.activity.phase : ''); out[k] = (out[k] || 0) + 1; }
+        return out;
+      });
+      console.log('townlife', id, JSON.stringify(census));
+      await page.evaluate((c) => { const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); window.__closeup = c; }, !!args.closeup);
+      for (const kind of (args.kinds || 'lean,sit,chat,vend,sweep,fish,play,drunk,stroll').split(',')) {
+        const ok = await page.evaluate((kind) => {
+          const g = window.OP.game, w = g.world, p = g.player;
+          const a = g.actors.find((x) => x.townsfolk && x.alive && x.activity?.kind === kind && (x.activity.phase === 'do' || kind === 'stroll' || kind === 'play'));
+          if (!a) return false;
+          // stand 3.5 m in front of them, looking back at them
+          const f = a.facing || 0;
+          const R = window.__closeup ? 2.0 : 3.2;
+          let best = null;
+          for (let k = 0; k < 12 && !best; k++) {
+            const ang = f + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.45;
+            const x = a.x + Math.cos(ang) * R, y = a.y + Math.sin(ang) * R;
+            if (w.walkable(x, y) && !w.isBlocked(x, y) && p.canOccupy(w, x, y)) best = { x, y };
+          }
+          if (!best) return false;
+          window.OP.teleport(best.x, best.y);
+          const v = g.view3d;
+          v.rig.yaw = Math.atan2(a.y - p.y, w.dx(p.x, a.x));
+          v.rig.pitch = -0.18;
+          window.__watch = a;
+          return true;
+        }, kind);
+        if (!ok) { console.log('no', kind); continue; }
+        for (let i = 0; i < 6; i++) { await step(page, 0.1); await frames(page, 1); }
+        await snap(kind);
+      }
+    },
+  },
   // walk-in buildings: a door that opens, walls that hold, a keeper at the counter, a house door kicked in
   interior: {
     async run(page, snap, args) {
@@ -183,17 +267,43 @@ export const scenarios = {
         return { trees: trees.length, fruitTrees: withFruit.length, at: [t.x, t.y], sub: t.sub };
       });
       console.log('tree', JSON.stringify(r));
+      await page.evaluate(() => { const g = window.OP.game; g.settings.view = 'first'; g.applySettings(); });
       for (let i = 0; i < 5; i++) { await step(page, 0.1); await frames(page, 1); }
-      const res = await page.evaluate(() => {
+      // looking away from the fruit: no prompt; looking at one fruit: pick just that one
+      const aimAt = (k) => page.evaluate((k) => {
+        const g = window.OP.game, w = g.world, p = g.player, v = g.view3d;
+        const t = w.objects.near(p.x, p.y, 4, (o) => o.kind === 'tree' && o._fruitPts)[0];
+        if (!t) return null;
+        if (k < 0) { v.rig.yaw += Math.PI; v.rig.pitch = 0; return { away: true }; }
+        const [px, py, pz] = t._fruitPts[k];
+        const s = t.s || 1, cy = Math.cos(t._yaw), sy = Math.sin(t._yaw);
+        const fx = t.x + (px * cy + pz * sy) * s, fy = t.y + (-px * sy + pz * cy) * s, fh = t._gy + py * s;
+        const ray = v.aimRay();
+        v.rig.yaw = Math.atan2(fy - ray.y, w.dx(ray.x, fx));
+        v.rig.pitch = Math.atan2(fh - ray.h, Math.hypot(w.dx(ray.x, fx), fy - ray.y));
+        window.__tree = t;
+        return { n: t._fruitPts.length };
+      }, k);
+      const read = () => page.evaluate(() => {
         const g = window.OP.game, p = g.player, c = g.state.char;
-        const before = c.inventory.map((i) => i.id + 'x' + (i.qty || 1)).join(',');
+        g.update(1 / 60);
         const it = p.controller?.interaction;
-        const label = it ? it.label : null;
-        if (it) it.run();
-        const after = c.inventory.map((i) => i.id + 'x' + (i.qty || 1)).join(',');
-        return { label, before, after };
+        return { label: it ? it.label : null, bag: c.inventory.map((i) => i.id + 'x' + (i.qty || 1)).join(',') };
       });
-      console.log('pick', JSON.stringify(res));
+      await aimAt(-1); await step(page, 0.1);
+      console.log('away', JSON.stringify(await read()));
+      console.log('aim', JSON.stringify(await aimAt(0))); await step(page, 0.1);
+      const before = await read();
+      await page.evaluate(() => { const it = window.OP.game.player.controller?.interaction; if (it) it.run(); });
+      const after = await read();
+      const state = await page.evaluate(() => {
+        const g = window.OP.game, t = window.__tree;
+        const { fruitPicked } = window.OP.debug;
+        return fruitPicked ? [...Array(t._fruitN).keys()].map((i) => fruitPicked(g.world.id, t, i, g.env.day)) : null;
+      });
+      console.log('pick', JSON.stringify({ before, after, picked: state }));
+      await step(page, 0.2); await frames(page, 3);
+      await snap('picked-one');
     },
   },
   // Otto on the Notice Cup ring (he used to stand inside it)

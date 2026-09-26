@@ -38,7 +38,7 @@ export class PlayerController {
       my = Math.sin(yaw) * fwd + Math.cos(yaw) * right;
     }
     p.intent.mx = mx; p.intent.my = my;
-    // Shift: a quick tap dodges, holding it sprints
+    // Shift: holding it sprints (a quick tap dodges in first person); Q dashes
     if (inp.wasPressed('Shift')) this.shiftT = 0;
     if (inp.isDown('Shift')) this.shiftT = (this.shiftT ?? 0) + dt;
     const tapDodge = inp.wasReleased('Shift') && (this.shiftT ?? 1) < 0.22;
@@ -69,7 +69,8 @@ export class PlayerController {
     buf.m1 = Math.max(0, buf.m1 - dt); buf.heavy = Math.max(0, buf.heavy - dt); buf.dodge = Math.max(0, buf.dodge - dt); buf.jump = Math.max(0, (buf.jump || 0) - dt);
     if (inp.mousePressed(0)) buf.m1 = 0.22;
     if (inp.mousePressed(2)) buf.heavy = 0.25;
-    if (tapDodge) buf.dodge = 0.16;
+    if (tapDodge && !(v3 && v3.rig.mode === 'third')) buf.dodge = 0.16; // (in third person a tap of Shift toggles shift lock)
+    if (inp.wasPressed('Q')) buf.dodge = 0.16; // Q dashes
     if (inp.wasPressed('Space')) buf.jump = 0.14;
     if (buf.dodge > 0 && p.tryDodge(game, mx, my)) { buf.dodge = 0; buf.m1 = 0; }
     if (buf.jump > 0 && p.tryJump(game)) buf.jump = 0;
@@ -95,7 +96,6 @@ export class PlayerController {
       // (nothing happens — and nothing is said — until the power awakens)
       if (p.hakiLevel('conqueror')) { p.facing = aim; p.tryTechnique('haki_conqueror', game); }
     }
-    if (inp.wasPressed('Q')) game.emit('quickHeal');
 
     // interaction
     this.interaction = findInteraction(game, p);

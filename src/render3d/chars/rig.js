@@ -91,6 +91,8 @@ export class Rig {
     const l = (P.l || 0) + (o.leanAdd || 0);
     const bx = P.b ? P.b[0] : 0, by = P.b ? P.b[1] : 0;
     this.hip.set(bx * d.kL * 0.8, d.hip0 - by * d.kHip, 0);
+    // on a seat (o.sitY: model units over the feet; o.sitK: 0..1 eased in)
+    if (o.sitK > 0) this.hip.y += ((o.sitY ?? d.hA) + 0.07 - this.hip.y) * o.sitK;
     const hip = this.hip;
     const hF = toXY(P.hF, [0.05, 0.4]), hB = toXY(P.hB, [-0.03, 0.4]);
     const fF = P.fF || [0.05, 0], fB = P.fB || [-0.05, 0];

@@ -28,8 +28,9 @@ import { addItem, useItem } from './game/inventory.js';
 import { ITEMS } from './data/items.js';
 import { installReputation } from './game/reputation.js';
 import { installBuildings } from './game/buildings.js';
+import { installTownLife } from './game/townlife.js';
 import { installForaging } from './game/forage.js';
-import { fruitOf } from './world/fruitTrees.js';
+import { fruitOf, fruitPicked } from './world/fruitTrees.js';
 import { installContent } from './content/index.js';
 import { Audio } from './audio/audio.js';
 import { installSea } from './game/sea.js';
@@ -159,6 +160,7 @@ async function start() {
   installWorld(game);
   installReputation(game);
   installBuildings(game);
+  installTownLife(game);
   installForaging(game);
   installContent(game);
 
@@ -302,7 +304,7 @@ async function start() {
       startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', look: null });
       return game.player;
     },
-    debug: { npcDef, makeNPC, addItem, fruitOf, portrait: renderPortrait },
+    debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, portrait: renderPortrait },
     ready: true,
   });
 

@@ -26,6 +26,9 @@ export const TOWN_STYLES = {
   ruins: { ground: null, road: T.GRAVEL, plaza: T.STONE, walls: ['#9e9e9e', '#bdbdbd', '#a1887f'], roofs: ['#757575'], roof: 'ruin', rowStep: 8, lamps: false },
 };
 
+// tile types the height model lifts above their elevation (see render3d/height.js)
+const RAISED = new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK, T.ROCK, T.FOREST, T.JUNGLE].filter((t) => t !== undefined));
+
 const ROLE_SIZES = {
   tavern: [6, 4], inn: [5, 4], shop: [4, 3], weapons: [4, 3], dojo: [7, 5], doctor: [4, 3], shipwright: [7, 4],
   marine_base: [9, 6], bounty: [4, 3], house: [4, 3], hall: [8, 5], palace: [12, 8], church: [5, 5], bank: [5, 4],
@@ -160,7 +163,9 @@ export function generateTown(world, town, rng, noise) {
       for (let y = fy0 - 1; y < lot.ry; y++) {
         for (let x = fx0 - 1; x <= fx0 + fw; x++) {
           if (!okLand(x, y) && !(x >= fx0 && x < fx0 + fw && y >= fy0)) continue;
-          world.setTile(x, y, world.type(x, y), e0);
+          // rock, forest and the like stand taller than their elevation: plain ground instead
+          const t = world.type(x, y);
+          world.setTile(x, y, RAISED.has(t) ? (groundTile ?? T.GRASS) : t, e0);
         }
       }
       return b;

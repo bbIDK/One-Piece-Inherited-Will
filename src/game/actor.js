@@ -641,11 +641,14 @@ export class Actor extends Entity {
       anim.t = act.t;
     }
     // ease between clips, stances and states instead of snapping
-    const mode = act || `${this.state}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${this.inWater ? 'w' : ''}`;
+    const busy = this.act3d && !act && !combat && !this.moving && this.state === 'idle' ? this.act3d : null;
+    const mode = act || `${this.state}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${this.inWater ? 'w' : ''}${busy ? busy.pose : ''}`;
     if (mode !== this._mode) {
       this._blendFrom = this._lastP || null;
       this._blendT = 0;
-      this._blendDur = act ? Math.min(0.06, (act.def.windup ?? 0.1) * 0.45) : hurt ? 0.05 : 0.12;
+      // settling into (or getting up from) a seat or a lean takes a moment
+      const slow = busy || (this._mode && /(lean|sit|sweep|vend|fish|drunk|chat)$/.test(this._mode));
+      this._blendDur = act ? Math.min(0.06, (act.def.windup ?? 0.1) * 0.45) : hurt ? 0.05 : slow ? 0.45 : 0.12;
       this._mode = mode;
     }
     this._blendT = (this._blendT || 0) + vdt;
@@ -660,6 +663,7 @@ export class Actor extends Entity {
       anim, stanceP: STANCES[stance], combat, sprint: !!(this.intent.sprint && this.moving),
       weapon: wpn, armed: !!wpn && ((combat && !!STANCE_ARMED[stance]) || !!(anim && anim.weapon)), armament: this.armament,
       knockT: this.knockT,
+      activity: busy ? busy.pose : null, prop: busy ? busy.prop : null, seatH: busy ? busy.h : 0,
     };
     if (this.blocking) { pose.block = this.blockTime; pose.armedBlock = pose.armed; }
     if (dodging && !act) {

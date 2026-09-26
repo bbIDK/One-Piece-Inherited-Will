@@ -23,6 +23,8 @@ registerPropBuilder('building', (o, ctx) => buildBuilding(o, ctx));
 const ACTOR_RANGE = 75;
 const SHIP_RANGE = 520;
 
+const _ray1 = new THREE.Vector3(), _ray2 = new THREE.Vector3();
+
 export class Renderer3D {
   constructor(root, r2d, game) {
     this.root = root;
@@ -277,6 +279,14 @@ export class Renderer3D {
     for (const fn of FRAME_HOOKS) {
       try { fn(env, this.ctx, dt); } catch (e) { if (!fn.warned) { fn.warned = true; console.warn('3D frame hook failed', e); } }
     }
+  }
+
+  /** The view ray in world terms: from (x, y, height h) along (dx, dy, dh), unit length. */
+  aimRay() {
+    const cam = this.rig.camera;
+    cam.updateMatrixWorld();
+    const p = cam.getWorldPosition(_ray1), d = cam.getWorldDirection(_ray2);
+    return { x: (this.ox || 0) + p.x, y: (this.oy || 0) + p.z, h: p.y, dx: d.x, dy: d.z, dh: d.y };
   }
 
   /** First-person arms and weapon (a plug-in; see registry.js). */

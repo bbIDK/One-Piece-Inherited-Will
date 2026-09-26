@@ -431,6 +431,66 @@ export function blendPose(A, B, k) {
   return P;
 }
 
+/**
+ * Everyday poses for townsfolk (see game/townlife.js): leaning on a wall with
+ * the arms folded, sitting, chatting with the hands, sweeping, minding a
+ * stall, fishing, swaying with a mug. (The 3D rig adds the seat height and
+ * folds the arms across; see chars/pose.js.)
+ */
+function activityPose(P, act, t) {
+  const s1 = Math.sin(t * 1.3), s2 = Math.sin(t * 0.7);
+  switch (act) {
+    case 'lean':
+      P.l = -0.1; P.b = [-0.05, 0.005];
+      P.hF = [0.14, 0.2]; P.hB = [0.13, 0.22]; P.eF = 1; P.eB = 1;
+      P.fF = [0.15, 0]; P.fB = [0.01, 0];
+      P.ht = -0.05 + s2 * 0.035;
+      break;
+    case 'sit':
+      P.l = 0.1; P.b = [-0.07, 0];
+      P.fF = [0.3, 0]; P.fB = [0.27, 0];
+      P.hF = [0.27, 0.34]; P.hB = [0.25, 0.36]; P.hand = 'palm'; P.handB = 'palm';
+      P.ht = s2 * 0.04;
+      break;
+    case 'chat': {
+      // talking with the hands, a nod now and then
+      const g = Math.max(0, Math.sin(t * 1.9 + 1));
+      P.hF = [0.1 + g * 0.12, 0.36 - g * 0.24]; P.hand = g > 0.3 ? 'palm' : 'fist';
+      P.hB = [0.02, 0.4];
+      P.ht = Math.sin(t * 2.3) * 0.05;
+      P.fF = [0.08, 0]; P.fB = [-0.08, 0];
+      break;
+    }
+    case 'sweep': {
+      const k = Math.sin(t * 3.2);
+      P.l = 0.2; P.b = [0.02, 0.03];
+      P.hF = [0.22 + k * 0.1, 0.34]; P.hB = [0.1 + k * 0.1, 0.12];
+      P.wF = 1.25 + k * 0.22; P.wB = null;
+      P.fF = [0.15, 0]; P.fB = [-0.12, 0];
+      break;
+    }
+    case 'vend': {
+      const call = Math.sin(t * 0.5) > 0.85;
+      P.l = 0.1;
+      P.hF = call ? [0.12, -0.3] : [0.27, 0.3]; P.hB = [0.25, 0.31]; P.hand = 'palm'; P.handB = 'palm';
+      P.ht = call ? -0.12 : 0;
+      break;
+    }
+    case 'fish':
+      P.l = 0.12; P.b = [-0.06, 0];
+      P.fF = [0.32, 0]; P.fB = [0.28, 0];
+      P.hF = [0.26, 0.2]; P.hB = [0.2, 0.28];
+      P.wF = -0.5 + s1 * 0.03; P.wB = null;
+      break;
+    case 'drunk':
+      P.l = 0.1 + s2 * 0.09; P.b = [0.035 * s1, 0.025];
+      P.hF = [0.17, 0.06 + Math.max(0, s1) * 0.1]; P.wF = -1.35; P.hB = [-0.02, 0.4];
+      P.ht = 0.14 * s2;
+      P.fF = [0.1, 0]; P.fB = [-0.12, 0];
+      break;
+  }
+}
+
 /** Pose when no action is running: idle, fighting stance, walk, sprint, swim, hurt, block, dodge. */
 export function restPose(pose) {
   const t = pose.time || 0;
@@ -465,6 +525,7 @@ export function restPose(pose) {
       P.hB = [s * 0.14 - 0.02, 0.38];
     }
   }
+  if (pose.activity) activityPose(P, pose.activity, t);
   if (pose.bounce) {
     // Gear Fourth: the whole body bounces like a ball
     const k = Math.abs(Math.sin(t * 5.2));

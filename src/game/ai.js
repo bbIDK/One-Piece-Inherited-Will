@@ -48,7 +48,7 @@ export class AIController {
 
   onHurt(a, att, game) {
     if (att && att !== a) {
-      if (this.kind === 'wander' || this.kind === 'civilian') { this.state = 'flee'; this.fleeFrom = att; this.fleeT = 4; return; }
+      if (this.kind === 'wander' || this.kind === 'civilian' || this.kind === 'townsfolk') { this.state = 'flee'; this.fleeFrom = att; this.fleeT = 4; return; }
       if (!this.target || Math.random() < 0.5) this.target = att;
       this.state = 'chase';
       // alert allies
@@ -94,6 +94,7 @@ export class AIController {
 
     if (this.kind === 'follower') return this.follow(a, dt, game);
     if (this.kind === 'wander' || this.kind === 'civilian') return this.wander(a, dt, game);
+    if (this.kind === 'townsfolk') return game.townLife ? game.townLife.update(a, this, dt) : this.wander(a, dt, game);
     if (this.kind === 'idle') return;
 
     // validate target

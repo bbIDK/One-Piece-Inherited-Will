@@ -72,6 +72,27 @@ export function axeGeo() {
     }
   });
 }
+/** Everyday things townsfolk hold, along +X from the grip: a broom, a fishing rod, a mug. */
+export function propGeo(kind) {
+  return geo('prop:' + kind, (b) => {
+    if (kind === 'broom') {
+      b.add(Prim.cyl(6), between([-0.5, 0, 0], [0.82, 0, 0], 0.016), '#9c6b3f');
+      b.add(Prim.frustum(0.45, 8), M(0.95, 0, 0, 0, 0, Math.PI / 2, [0.11, 0.3, 0.05]), '#d9b45a');
+      b.add(Prim.cyl(6), M(0.83, 0, 0, 0, 0, Math.PI / 2, [0.055, 0.05, 0.035]), '#7a4f2a');
+    } else if (kind === 'rod') {
+      b.add(Prim.cyl(5), between([-0.25, 0, 0], [1.75, 0, 0], 0.012, 0.012), '#6d4c33');
+      b.add(Prim.torus(0.35, 5, 10), M(0.05, -0.04, 0, 0, Math.PI / 2, 0, 0.04), '#37474f');
+      // the line, hanging from the tip
+      b.add(Prim.cyl(4), between([1.75, 0, 0], [1.9, -1.1, 0], 0.003, 0.003), '#eceff1');
+      b.add(Prim.sphere(6, 4), M(1.9, -1.1, 0, 0, 0, 0, 0.025), '#e53935');
+    } else if (kind === 'mug') {
+      // the mug stands along +X (the pose points it up)
+      b.add(Prim.cyl(10), M(0.07, 0, 0.0, 0, 0, Math.PI / 2, [0.055, 0.13, 0.055]), '#8d6e4a');
+      b.add(Prim.cyl(10), M(0.137, 0, 0, 0, 0, Math.PI / 2, [0.05, 0.012, 0.05]), '#fff3e0');
+      for (const x of [0.03, 0.11]) b.add(Prim.cyl(10), M(x, 0, 0, 0, 0, Math.PI / 2, [0.058, 0.012, 0.058]), '#5d4037');
+    }
+  });
+}
 export function staffGeo() {
   return geo('staff', (b) => {
     b.add(Prim.cyl(7), between([-0.34, 0, 0], [0.74, 0, 0], 0.016), '#4fc3f7');
@@ -119,6 +140,7 @@ export class HeldWeapon {
     else if (kind === 'axe') g = axeGeo();
     else if (kind === 'staff') g = staffGeo();
     else if (kind === 'gun') g = gunGeo(opts.gun);
+    else if (kind === 'prop') g = propGeo(opts.variant);
     else if (kind === 'energy') {
       this.mesh = new THREE.Mesh(energyBladeGeo(), glowMaterial(opts.color || '#b3e5fc', 0.8));
       this.core = new THREE.Mesh(energyBladeGeo(), glowMaterial('#ffffff', 0.9));

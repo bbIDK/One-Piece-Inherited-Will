@@ -197,9 +197,12 @@ export function openInventory(game) {
     const tabs = h('div.tabs.icon-tabs', CATS.map((k) => h('button' + (st.cat === k.id ? '.on' : ''), { on: { click: () => { st.cat = k.id; render(); } } }, uiImg(k.icon, 16), k.name)));
     const cat = CATS.find((k) => k.id === st.cat);
     const seen = new Map();
+    // what's on the hotbar lives there, not in the bag
+    const onBar = new Set((c.hotbar || []).filter((x) => typeof x === 'string' && x.startsWith('item:')).map((x) => x.slice(5)));
     for (const it of c.inventory) {
       const d = ITEMS[it.id];
       if (!d || (cat.types && !cat.types.includes(d.type))) continue;
+      if (onBar.has(it.id)) continue;
       const ex = seen.get(it.id);
       if (ex) { ex.qty += it.qty || 1; if (it.heirloom) ex.heirloom = it; } else seen.set(it.id, { id: it.id, d, qty: it.qty || 1, heirloom: it.heirloom ? it : null });
     }
@@ -207,7 +210,16 @@ export function openInventory(game) {
     const grid = h('div.inv-grid', {
       on: {
         dragover: (ev) => ev.preventDefault(),
-        drop: (ev) => { ev.preventDefault(); const data = ev.dataTransfer.getData('text/plain'); if (data.startsWith('eq:')) { unequipSlot(game, data.slice(3)); render(); } },
+        drop: (ev) => {
+          ev.preventDefault();
+          const data = ev.dataTransfer.getData('text/plain');
+          if (data.startsWith('eq:')) { unequipSlot(game, data.slice(3)); render(); }
+          else if (data.startsWith('slot:')) {
+            // a hotbar slot dragged back into the bag
+            const i = +data.slice(5), hb = ensureHotbar(c);
+            if (typeof hb[i] === 'string' && hb[i].startsWith('item:')) { hb[i] = null; refreshPlayer(game); game.audio?.sfx('equip'); render(); }
+          }
+        },
       },
     });
     for (const x of items) {
@@ -223,8 +235,10 @@ export function openInventory(game) {
       grid.appendChild(tile);
     }
     if (!items.length) grid.appendChild(h('p.muted', { style: { gridColumn: '1 / -1' } }, st.cat === 'all' ? 'Your bag is empty.' : 'Nothing here.'));
+    if (onBar.size) grid.appendChild(h('p.muted.inv-onbar', { style: { gridColumn: '1 / -1' } }, `${onBar.size === 1 ? 'One item is' : onBar.size + ' items are'} on your hotbar — drag a slot back here to put it away.`));
 
     // ----------------------------------------------------------- details
+    if (onBar.has(st.selected)) st.selected = null;
     const sd = ITEMS[st.selected];
     let details;
     if (sd && count(c, st.selected)) {

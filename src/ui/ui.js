@@ -441,6 +441,8 @@ export class UI {
       }
       if (isItem) {
         const n = (ch.inventory || []).filter((x) => x.id === id.slice(5)).reduce((a, x) => a + (x.qty || 1), 0);
+        // the last one's gone: the slot empties (the item lived in it)
+        if (n <= 0) { p.hotbar[i] = null; if (ch.hotbar) ch.hotbar[i] = null; this.cache[k] = null; continue; }
         if (s.qty.textContent !== String(n)) s.qty.textContent = String(n);
         s.el.classList.toggle('none-left', n <= 0);
         s.cd.style.transform = 'scaleY(0)';
