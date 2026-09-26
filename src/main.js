@@ -124,8 +124,8 @@ async function start() {
       legacy, hasSave: !!saved,
       saveInfo: saved ? `${saved.name} (${RACES[saved.race]?.name}, day ${saved.world?.day || 1})` : '',
       onContinue: () => { ui.hideScreen(); resumeCharacter(game, saved); audio.music('sea'); },
-      onNew: () => {
-        if (saved && !confirm(`Abandon ${saved.name}? Their journey will be lost (no Inherited Will is earned for abandoning).`)) return;
+      onNew: async () => {
+        if (saved && !(await ui.ask({ title: `Abandon ${saved.name}?`, text: 'Their journey will be lost, and no Inherited Will is earned for abandoning a life.', ok: 'Abandon', cancel: 'Keep them', danger: true }))) return;
         if (saved) clearChar();
         creationScreen(ui, loadLegacy(), {
           onBack: showTitle,

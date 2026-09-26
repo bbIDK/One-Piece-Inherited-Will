@@ -401,4 +401,22 @@ export const scenarios = {
       await snap('map');
     },
   },
+  ask: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human'));
+      await step(page, 0.5);
+      await page.reload();
+      await waitReady(page);
+      await frames(page, 3);
+      await page.getByText('Abandon & Begin Anew').first().click();
+      await frames(page, 3);
+      await snap('abandon-ask');
+      await page.getByText('Keep them').click();
+      await frames(page, 3);
+      const still = await page.evaluate(() => !!localStorage.getItem('op-inherited-will:char:v1'));
+      console.log('save kept', still);
+    },
+  },
 };

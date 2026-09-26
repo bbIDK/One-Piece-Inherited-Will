@@ -30,7 +30,10 @@ export const NEW_WORLD_2 = [
       ],
     }],
     landmarks: [
-      { kind: 'flagpole', dx: 0.62, dy: 0.02, name: "Whitebeard's flag (slashed in half)", spot: 'town_gate' },
+      { kind: 'flagpole', dx: 0.62, dy: 0.02, name: "Whitebeard's flag (slashed in half)", spot: 'town_gate',
+        lore: (c, g) => (g.quests?.isDone?.('foodvalten_flag')
+          ? "Whitebeard's Jolly Roger, stitched back together with feather-cord by the whole village. The seam runs right through the moustache. Nobody minds."
+          : "For decades Whitebeard's Jolly Roger hung over the entrance of Foodvalten, and no pirate dared land. The day he died at Marineford, the Brownbeard Pirates came ashore and slashed it in half.") },
       { kind: 'totem', dx: -0.62, dy: -0.35 },
       { kind: 'tent', dx: 0.45, dy: -0.5, name: 'Brownbeard Pirates camp', spot: 'brownbeard_camp' },
       { kind: 'campfire', dx: 0.55, dy: -0.42 },
@@ -126,17 +129,23 @@ export const NEW_WORLD_2 = [
       { kind: 'building', role: 'palace', name: 'Shogun Castle', npc: 'momonosuke_wano', fw: 14, fd: 8, hgt: 6, style: 'wano', roofType: 'pagoda', wall: '#efebe9', roof: '#263238', dx: -0.05, dy: -0.11, spot: 'shogun_castle' },
       { kind: 'poneglyph', road: true, dx: 0.3, dy: -0.11, poneglyph: 'road_wano', name: 'Road Poneglyph of Wano (Mt. Fuji cavern)', spot: 'fuji_poneglyph' },
       { kind: 'ruins', dx: 0.05, dy: 0.52, name: 'Ruins of Oden Castle', spot: 'oden_castle' },
-      { kind: 'grave', dx: 0.12, dy: 0.53, name: 'Graves of the Kozuki and their retainers' },
+      { kind: 'grave', dx: 0.12, dy: 0.53, name: 'Graves of the Kozuki and their retainers',
+        lore: 'Plain stones for Kozuki Oden, boiled alive in the Flower Capital, for Lady Toki, and for the retainers who fell the night Kaido and Orochi burned the castle. Toki\'s last words are still whispered in Kuri: in twenty years, nine would return to open the borders of Wano.' },
       { kind: 'torii', dx: -0.19, dy: 0.64, name: 'Great Torii of Bakura Town' },
       { kind: 'building', role: 'hall', name: "Holdem's Hall", fw: 8, fd: 5, hgt: 3, style: 'wano', roofType: 'pagoda', dx: 0.0, dy: 0.72, spot: 'bakura_town' },
       { kind: 'grave', dx: -0.2, dy: -0.66, name: 'Northern Cemetery' },
       { kind: 'grave', dx: -0.26, dy: -0.62, name: 'Northern Cemetery' },
-      { kind: 'grave', dx: -0.12, dy: -0.6, name: 'Grave of Shimotsuki Ryuma', spot: 'ryuma_grave' },
+      { kind: 'grave', dx: -0.12, dy: -0.6, name: 'Grave of Shimotsuki Ryuma', spot: 'ryuma_grave',
+        lore: (c, g) => (g.quests?.isDone?.('enma_blade') || g.quests?.stageId?.('enma_blade') === 'report'
+          ? 'The grave of the samurai who cut down a dragon. The black blade Shusui rests across the stone again, where it belongs.'
+          : 'The grave of Shimotsuki Ryuma, the samurai who cut down a dragon. Grave robbers — a pirate, they say — stole his body and his black blade Shusui long ago. Wano still mourns its national treasure.') },
       { kind: 'sign', dx: -0.2, dy: -0.49, name: 'Oihagi Bridge — entrance to Ringo' },
-      { kind: 'torii', dx: 0.66, dy: -0.36, name: 'Enma Shrine', spot: 'enma_shrine' },
+      { kind: 'torii', dx: 0.66, dy: -0.36, name: 'Enma Shrine', spot: 'enma_shrine',
+        lore: 'A mossy shrine in the red woods of Hakumai. Swordsmen from every region of Wano leave broken blades at the torii as offerings. Someone has carved into the post: "Enma drinks the Haki of the hand that holds it. Hold tighter."' },
       { kind: 'lighthouse', dx: 0.74, dy: -0.46, name: 'Habu Port tower' },
       { kind: 'building', role: 'hall', name: 'Weapons Factory of Kibi', fw: 7, fd: 5, hgt: 3, style: 'wano', roofType: 'pagoda', dx: -0.8, dy: -0.12 },
-      { kind: 'sign', dx: -0.34, dy: 0.86, name: 'Climbing Koi Waterfall' },
+      { kind: 'sign', dx: -0.34, dy: 0.86, name: 'Climbing Koi Waterfall',
+        lore: 'Wano stands on a plateau high above the sea, walled in by cliffs. The only way in is up the great waterfall — riding one of the giant carp that climb it. Most ships that try are smashed on the rocks below. That is how Wano has stayed closed for so long.' },
     ],
     spots: [{ id: 'kuri_beach', dx: -0.34, dy: 0.84 }],
     logNext: ['winner_island', 'egghead', 'elbaf'], logTime: 1.5,
@@ -148,6 +157,7 @@ export const NEW_WORLD_2 = [
   {
     id: 'onigashima', name: 'Onigashima', sea: 'new_world', x: 1205, y: 1140, w: 110, h: 90,
     climate: 'rocky', rough: 0.22, trees: ['dead', 'pine', 'rock'], treeDensity: 0.02,
+    weather: { storm: 0.45 }, // thunderheads hang over Kaido's island
     blobs: [[0, 0.05, 0.8, 0.72], [-0.52, -0.62, 0.2, 0.3], [0.52, -0.62, 0.2, 0.3], [0, 0.62, 0.42, 0.3]],
     mountains: [{ name: 'Skull Mountain', dx: 0, dy: -0.45, r: 0.16, h: 0.9 }],
     areas: [{ name: 'Wisteria boardwalk', tile: T.FLOWERS, dx: 0.5, dy: 0.1, rx: 0.2, ry: 0.18 }],
@@ -193,7 +203,8 @@ export const NEW_WORLD_2 = [
       ],
     }],
     landmarks: [
-      { kind: 'ruins', dx: 0.15, dy: -0.4, name: 'Collapsed vault of the Army', spot: 'burned_archive' },
+      { kind: 'ruins', dx: 0.15, dy: -0.4, name: 'Collapsed vault of the Army', spot: 'burned_archive',
+        lore: 'For years Baltigo hid the headquarters of Dragon\'s Revolutionary Army. Then Blackbeard\'s crew attacked and levelled it. The Army escaped to Momoiro Island; its papers did not. Half-burned charts and wanted posters still flutter in the rubble.' },
       { kind: 'ruins', dx: -0.6, dy: 0.1, name: 'Ancient ruins' },
     ],
     spots: [{ id: 'scavenger_camp', dx: -0.45, dy: -0.15 }],
@@ -236,7 +247,10 @@ export const NEW_WORLD_2 = [
         { role: 'shipwright', name: 'Gartel Dockyard' },
       ],
     }],
-    landmarks: [{ kind: 'flagpole', dx: 0.28, dy: 0.02, name: "The Red Hair Pirates' flagpole (burned)", spot: 'red_hair_flag' }],
+    landmarks: [{ kind: 'flagpole', dx: 0.28, dy: 0.02, name: "The Red Hair Pirates' flagpole", spot: 'red_hair_flag',
+      lore: (c, g) => (g.quests?.isDone?.('red_hair_flag') || g.quests?.stageId?.('red_hair_flag') === 'shanks'
+        ? 'The Red Hair Jolly Roger snaps in the wind above Gartel Town again. The townsfolk sleep with their windows open.'
+        : 'Charred rope and a scrap of black cloth. The Red Hair Pirates protect Gartel — until a loud crew of "Straw Hat fans" with a rooster-crest captain burned the flag down. The whole town is waiting to see what the Emperor will do.') }],
     spots: [{ id: 'gartel_pier', dx: -0.72, dy: 0.32 }],
     logNext: ['elbaf', 'egghead', 'hachinosu'], logTime: 1,
     danger: 6, tagline: 'Under the protection of the Red Hair Pirates. Someone just burned their flag.',
@@ -271,7 +285,8 @@ export const NEW_WORLD_2 = [
     landmarks: [
       { kind: 'building', role: 'hall', name: 'Cloud Plant', fw: 7, fd: 6, hgt: 8, style: 'future', roofType: 'dome', wall: '#e0f7fa', roof: '#80deea', dx: 0.2, dy: 0.2 },
       { kind: 'ruins', dx: -0.55, dy: -0.3, name: 'Scrapyard' },
-      { kind: 'statue', dx: -0.66, dy: -0.18, name: 'Emet, the Iron Giant', spot: 'emet' },
+      { kind: 'statue', dx: -0.66, dy: -0.18, name: 'Emet, the Iron Giant', spot: 'emet',
+        lore: 'A robot as tall as a hill, lying among Vegapunk\'s failed inventions in the scrapyard. It was built about nine hundred years ago. Two hundred years ago it walked on Mary Geoise, then ran out of power. The Government ordered it destroyed; someone hid it instead.' },
     ],
     spots: [
       { id: 'labophase_gate', dx: 0.36, dy: 0.05 },
@@ -334,9 +349,12 @@ export const NEW_WORLD_2 = [
       { kind: 'bones', dx: -0.08, dy: 0.36 },
       { kind: 'bones', dx: 0.1, dy: 0.4 },
       { kind: 'elevator', dx: 0.2, dy: 0.25, name: 'Boat Elevator to the Sun World' },
-      { kind: 'pillar', dx: 0.3, dy: 0.05, name: 'The Great Longsword' },
-      { kind: 'statue', dx: 0.05, dy: -0.18, name: "Mural on Adam's bark (carved during the Void Century)" },
-      { kind: 'ruins', dx: 0.75, dy: -0.05, name: 'Ancient Facility (3,000 years old)' },
+      { kind: 'pillar', dx: 0.3, dy: 0.05, name: 'The Great Longsword',
+        lore: 'A longsword so huge it pierces the Sun World and reaches all the way down to the Underworld. Nobody in Elbaph remembers who forged it, or whose hand could ever have swung it.' },
+      { kind: 'statue', dx: 0.05, dy: -0.18, name: "Mural on Adam's bark (carved during the Void Century)",
+        lore: 'A mural carved into the living bark of the Adam Tree during the Void Century. It matches the Harley, Elbaph\'s oldest text: the world has already been destroyed twice, and the Sun God Nika was there both times. Its third panel, Saul says, is the present day.' },
+      { kind: 'ruins', dx: 0.75, dy: -0.05, name: 'Ancient Facility (3,000 years old)',
+        lore: 'Doorways built for giants, grown over by the Adam Tree. Vegapunk\'s satellite Lilith guesses the facility is at least three thousand years old — and there is no record of it anywhere in the history of Elbaph.' },
       { kind: 'building', role: 'house', name: "Road's Castle", fw: 10, fd: 7, hgt: 6, style: 'giant', roofType: 'gable', wall: '#90a4ae', roof: '#455a64', dx: 0.52, dy: 0.72 },
     ],
     spots: [
@@ -370,9 +388,10 @@ export const NEW_WORLD_2 = [
       ],
     }],
     landmarks: [
-      { kind: 'building', role: 'palace', name: 'Skull Fortress', fw: 16, fd: 10, hgt: 8, style: 'city', roofType: 'dome', wall: '#d4b96a', roof: '#a1887f', dx: 0, dy: -0.38, spot: 'skull_fortress' },
+      { kind: 'building', role: 'palace', name: 'Skull Fortress', npc: 'teach_hachinosu', fw: 16, fd: 10, hgt: 8, style: 'city', roofType: 'dome', wall: '#d4b96a', roof: '#a1887f', dx: 0, dy: -0.38, spot: 'skull_fortress' },
       { kind: 'poneglyph', dx: 0.55, dy: -0.3, poneglyph: 'hachinosu', name: 'Poneglyph of Hachinosu' },
-      { kind: 'ruins', dx: -0.6, dy: -0.22, name: "Ruins of Shakuyaku's first bar" },
+      { kind: 'ruins', dx: -0.6, dy: -0.22, name: "Ruins of Shakuyaku's first bar",
+        lore: 'Forty-two years ago the Kuja captain Shakuyaku quit piracy and opened a bar here; the Rocks Pirates helped build it. Three years later she was abducted. When word came she was a prize in the hunt on God Valley, every pirate on the island set sail.' },
     ],
     spots: [
       { id: 'captains_yard', dx: -0.28, dy: -0.12 },
@@ -400,7 +419,8 @@ export const NEW_WORLD_2 = [
     }],
     landmarks: [
       { kind: 'tent', dx: -0.62, dy: 0.1 }, { kind: 'tent', dx: 0.62, dy: 0.05 }, { kind: 'tent', dx: 0.55, dy: 0.5, v: 1 },
-      { kind: 'flagpole', dx: -0.1, dy: -0.25, name: 'Flag of the Cross Guild' },
+      { kind: 'flagpole', dx: -0.1, dy: -0.25, name: 'Flag of the Cross Guild',
+        lore: 'When the Warlords were abolished, a Marine fleet surrounded this island to arrest Buggy. Crocodile sank it — Buggy owed him money. Then Buggy\'s followers printed a flyer naming him leader of the new Cross Guild. "Karai bari" means "false bravado".' },
     ],
     logNext: ['lodestar', 'hachinosu', 'elbaf'], logTime: 1,
     danger: 7, tagline: 'Buggy Town — a circus of tents, and the headquarters of the Cross Guild.',
@@ -414,12 +434,15 @@ export const NEW_WORLD_2 = [
     climate: 'rocky', rough: 0.3, trees: ['pine', 'rock'], treeDensity: 0.03,
     areas: [{ tile: T.GRASS, dx: -0.2, dy: 0.1, rx: 0.45, ry: 0.35 }],
     landmarks: [
-      { kind: 'statue', dx: -0.08, dy: -0.12, name: 'The Needle Stone', spot: 'needle_stone' },
+      { kind: 'statue', dx: -0.08, dy: -0.12, name: 'The Needle Stone', spot: 'needle_stone',
+        lore: 'Every route of the Grand Line ends at this island. At the foot of the stone lie hundreds of Log Poses left by the crews who got this far, every needle still spinning. None of them could record the next island.' },
       { kind: 'tent', dx: -0.45, dy: 0.2, name: "Watcher's tent", spot: 'watcher_tent' },
       { kind: 'campfire', dx: -0.38, dy: 0.3 },
-      { kind: 'ruins', dx: 0.2, dy: -0.4, name: 'Camp of the Roger Pirates (39 years old)' },
+      { kind: 'ruins', dx: 0.2, dy: -0.4, name: 'Camp of the Roger Pirates (39 years old)',
+        lore: 'A ring of fire-blackened stones. Thirty-nine years ago the Roger Pirates camped here — the first crew in eight hundred years to reach Lodestar. Here they learned about the Poneglyphs, and that one more island lay ahead that no Log Pose would ever find.' },
       { kind: 'poneglyph', road: true, dx: 0.76, dy: 0.1, poneglyph: 'road_4', name: 'The Lost Road Poneglyph', spot: 'road4_cave' },
-      { kind: 'shipwreck', dx: 0.9, dy: 0.45, name: 'An all-black ship' },
+      { kind: 'shipwreck', dx: 0.9, dy: 0.45, name: 'Wreck of a ship that followed the black ship',
+        lore: 'A pirate ship broken on the eastern rocks. The last entry in its log reads: "Sighted the all-black ship again. It sailed into the whirlpools and went down. It came up on the other side. We follow it at dawn." There are no more entries.' },
     ],
     spots: [{ id: 'vortex_bay', dx: 1.35, dy: 0.1 }],
     docks: [{ dx: -0.6, dy: 0.5, dir: 'sw', name: 'Lodestar Anchorage' }],
@@ -438,11 +461,18 @@ export const NEW_WORLD_2 = [
     areas: [{ tile: T.FOREST, dx: -0.2, dy: 0.1, rx: 0.4, ry: 0.35 }],
     paint: [{ op: 'path', points: [[-0.6, 0.55], [-0.2, 0.2], [0.1, -0.1], [0.32, -0.36]], width: 3, tile: T.STONE, onlyLand: true }],
     landmarks: [
-      { kind: 'ruins', dx: -0.45, dy: 0.05, name: 'Fortifications of the Great Kingdom' },
+      { kind: 'ruins', dx: -0.45, dy: 0.05, name: 'Fortifications of the Great Kingdom',
+        lore: 'Walls of the same unbreakable stone as the Poneglyphs, eight hundred years old and still standing. Whoever built them knew a war was coming.' },
       { kind: 'ruins', dx: 0.45, dy: 0.12, name: 'Fallen ramparts' },
       { kind: 'poneglyph', dx: 0.02, dy: -0.2, poneglyph: 'laugh_tale', name: 'The Last Poneglyph', spot: 'last_poneglyph' },
-      { kind: 'pillar', dx: 0.2, dy: -0.42, name: "Joy Boy's Message", spot: 'joy_boy_message', interact: "Read Joy Boy's message", use: 'nw2_joyboy', interactRange: 2.4 },
-      { kind: 'arch', dx: 0.36, dy: -0.42, name: 'Resting place of the One Piece', spot: 'one_piece' },
+      { kind: 'pillar', dx: 0.2, dy: -0.42, name: "Joy Boy's Message", spot: 'joy_boy_message', loreLabel: "Read Joy Boy's message", loreEvent: 'nw2_joyboy', interactRange: 2.4,
+        lore: (c, g) => (c.flags.canReadPoneglyphs || c.flags.laughTaleRevealed || g.canReadPoneglyphs?.()
+          ? '(The ancient script speaks of a promise made to someone who waited in the dark, of a dawn that never came, and of a treasure left "for the one who comes to keep it". It is signed with a single name: Joy Boy.)'
+          : '(Lines of the ancient script, carved deep into the stone. You cannot read a word — but whoever carved them was smiling. You are sure of it.)') },
+      { kind: 'arch', dx: 0.36, dy: -0.42, name: 'Resting place of the One Piece', spot: 'one_piece',
+        lore: (c) => (c.flags.laughTale
+          ? '(You already know what lies beyond the arch. You laugh again anyway.)'
+          : '(The path runs on through the arch, to the very top of the cliffs.)') },
     ],
     spots: [
       { id: 'landing', dx: -0.55, dy: 0.5 },

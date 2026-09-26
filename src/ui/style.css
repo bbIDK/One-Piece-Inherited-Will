@@ -189,3 +189,9 @@ input.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radiu
 .kbd-help div { margin: 3px 0; }
 .kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }
 @media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }
+
+.panel.ask { max-width: 420px; }
+.panel.ask p { line-height: 1.5; }
+.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
+.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }
+.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }

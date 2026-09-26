@@ -81,6 +81,8 @@ export class UI {
     R.appendChild(this.panelLayer);
     this.screenLayer = h('div');
     R.appendChild(this.screenLayer);
+    this.modalLayer = h('div');
+    R.appendChild(this.modalLayer);
   }
 
   setHudVisible(v) { this.hudVisible = v; this.hud.classList.toggle('hidden', !v); }
@@ -184,6 +186,41 @@ export class UI {
   }
 
   closeAll() { while (this.stack.length) this.closePanel(); }
+
+  /**
+   * In-game replacement for confirm()/prompt() (native dialogs are blocked in
+   * some embeds). Resolves to true / the typed text, or null when cancelled.
+   */
+  ask({ title = '', text = '', input, ok = 'OK', cancel = 'Cancel', danger = false } = {}) {
+    return new Promise((resolve) => {
+      let done = false;
+      const wasPaused = this.game ? this.game.paused : false;
+      const field = input !== undefined ? h('input.ask-input#ask-input', { value: input, maxLength: 24, spellcheck: false }) : null;
+      const finish = (v) => {
+        if (done) return;
+        done = true;
+        bg.remove();
+        if (this.game && !wasPaused && !this.stack.length && !this.dialogueEl && !this.mapOpen) this.game.paused = false;
+        resolve(v);
+      };
+      const okBtn = h('button.btn' + (danger ? '.red' : '.gold'), { on: { click: () => finish(field ? field.value.trim() || null : true) } }, ok);
+      const panel = h('div.panel.ask',
+        title ? h('h2', title) : null,
+        text ? h('p', text) : null,
+        field,
+        h('div.ask-row', okBtn, h('button.btn', { on: { click: () => finish(null) } }, cancel)));
+      const bg = h('div.panel-bg', panel);
+      bg.addEventListener('mousedown', (e) => { if (e.target === bg) finish(null); });
+      panel.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); okBtn.click(); }
+        else if (e.key === 'Escape') { e.preventDefault(); finish(null); }
+        e.stopPropagation();
+      });
+      this.modalLayer.appendChild(bg);
+      if (this.game) this.game.paused = true;
+      setTimeout(() => (field || okBtn).focus(), 0);
+    });
+  }
 
   showScreen(el) {
     this.hideScreen();

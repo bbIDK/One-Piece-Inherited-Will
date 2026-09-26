@@ -332,7 +332,7 @@ export function openShipyard(game, building, island, dock) {
       list.appendChild(h('div.row-item', h('span.ico', '⛵'),
         h('div.grow', h('b', d.name), h('div.sub', `${d.desc} · hull ${d.hull} · speed ${d.speed} · cannons ${d.cannons}${d.grandLine ? '' : ' · NOT fit for the Grand Line'}`)),
         h('span.price', formatBerries(price)),
-        h('button.btn.gold', { disabled: c.berries < price, on: { click: () => { const n = prompt('Name your ship:', d.name) || d.name; S.buyShip(type, island, dock, n.slice(0, 24)); render(); } } }, 'Buy')));
+        h('button.btn.gold', { disabled: c.berries < price, on: { click: async () => { const n = await game.ui.ask({ title: `Buy a ${d.name}`, text: `Name your new ship (${formatBerries(price)}).`, input: d.name, ok: 'Buy' }); if (n === null) return; S.buyShip(type, island, dock, (n || d.name).slice(0, 24)); render(); } } }, 'Buy')));
     }
     body.appendChild(list);
     const ships = myShips();
@@ -355,7 +355,7 @@ export function openShipyard(game, building, island, dock) {
               h('button.btn', { disabled: has || c.berries < up, on: { click: () => { S.upgrade(s, id, island); render(); } } }, has ? 'Fitted' : 'Fit')));
           }
           card.appendChild(ups);
-          card.appendChild(h('button.btn', { style: { marginTop: '6px' }, on: { click: () => { const n = prompt('Rename your ship:', s.name); if (n) { s.name = n.slice(0, 24); persist(game); render(); } } } }, 'Rename'));
+          card.appendChild(h('button.btn', { style: { marginTop: '6px' }, on: { click: async () => { const n = await game.ui.ask({ title: 'Rename your ship', input: s.name, ok: 'Rename' }); if (n) { s.name = n.slice(0, 24); persist(game); render(); } } } }, 'Rename'));
         }
         body.appendChild(card);
       }

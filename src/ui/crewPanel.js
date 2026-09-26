@@ -21,7 +21,7 @@ export function openCrew(game) {
           on: { click: () => { if (!game.crew.setFollow(m.id, !m.follow)) game.log('Only two companions can follow you on land at once.', '#ff8a80'); render(); } },
         }, m.follow ? 'Following' : 'Stays aboard'));
       }
-      actions.push(h('button.btn.red', { on: { click: () => { if (confirm(`Part ways with ${m.name}? They will not come back.`)) { game.crew.dismiss(m.id); render(); } } } }, 'Part ways'));
+      actions.push(h('button.btn.red', { on: { click: async () => { if (await game.ui.ask({ title: 'Part ways?', text: `${m.name} will leave the crew and will not come back.`, ok: 'Part ways', danger: true })) { game.crew.dismiss(m.id); render(); } } } }, 'Part ways'));
       list.appendChild(h('div.row-item',
         h('span.ico', role.icon),
         h('div.grow', h('b', `${m.name}`), h('div.sub', `${role.name}${m.title ? ' · ' + m.title : ''} · Lv ${Math.round(m.level || 1)} · joined day ${m.joined || 1}`), h('div.sub', role.desc)),
