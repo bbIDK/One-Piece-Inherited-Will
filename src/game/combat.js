@@ -180,6 +180,7 @@ export class Combat {
         tgt.iframes = 0.2;
         fx.text(tgt.x, tgt.y - 1.2, 'FORESIGHT', '#e1bee7', 0.3);
         fx.burst(tgt.x, tgt.y - 0.5, 6, { color: '#ce93d8', speed: 3, g: 0, life: 0.3 });
+        fx.afterimage(tgt, { tint: '#ce93d8', life: 0.35, alpha: 0.5 });
         return false;
       }
     }
