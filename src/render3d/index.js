@@ -155,7 +155,9 @@ export class Renderer3D {
     const g = this.game;
     if (!g.player) return [0, 0];
     const free = !this.rig.locked && this.rig.lockFailed && sx !== undefined;
-    return this.rig.aimPoint(g, (x, y) => this.ground(x, y), free ? sx : undefined, free ? sy : undefined);
+    const [x, y] = this.rig.aimPoint(g, (x, y) => this.ground(x, y), free ? sx : undefined, free ? sy : undefined);
+    // the simulation aims along the 2D "chest line" (y - 0.5), so shift the ground point to match
+    return [x, y - 0.5];
   }
 
   render(game) {
@@ -385,7 +387,8 @@ export class Renderer3D {
       let m = this.projViews.get(pr);
       if (!m) { m = projectileMesh(pr); this.projViews.set(pr, m); this.ents.add(m); }
       const h = pr.sprite === 'cannonball' ? 1.3 : 1.15;
-      m.position.set(w.dx(ox, pr.x), Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y)) + h + (pr.z || 0), pr.y - oy);
+      // projectiles fly on the 2D "chest line" (y - 0.5): their ground point is y + 0.5
+      m.position.set(w.dx(ox, pr.x), Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y + 0.5)) + h + (pr.z || 0), pr.y + 0.5 - oy);
     }
     for (const [pr, m] of this.projViews) {
       if (seenP.has(pr)) continue;
