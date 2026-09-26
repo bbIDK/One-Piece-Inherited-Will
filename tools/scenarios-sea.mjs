@@ -510,6 +510,78 @@ export const scenarios = {
   },
 
   // a ship under way from astern and the side: the foam wake behind her
+  // Shift lock under water: the swimmer must face where the camera looks, never back at it.
+  divelock: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = 12; g.env.storm = 0; g.env.fog = 0; document.querySelector('.look-hint')?.remove(); });
+      const spot = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island');
+        for (let k = 0; k < 40000; k++) {
+          const a = Math.random() * Math.PI * 2, r = isl.radius * (0.6 + Math.random() * 1.2);
+          const x = Math.floor(isl.x + Math.cos(a) * r), y = Math.floor(isl.y + Math.sin(a) * r);
+          const d = w.sd(x, y);
+          if (d < -18 && d > -19.5) return [x + 0.5, y + 0.5, a + Math.PI];
+        }
+      });
+      await page.evaluate(([x, y]) => window.OP.teleport(x, y), spot);
+      for (let i = 0; i < 6; i++) { await step(page, 0.1); await frames(page, 1); }
+      // shift lock on (the harness can't take the pointer: pretend it did)
+      await page.evaluate((a) => { const v = window.OP.game.view3d; v.rig.setShiftLock(true); v.rig.locked = true; v.rig.lockFailed = false; v.rig.yaw = a; v.rig.pitch = -0.2; }, spot[2]);
+      const st = (tag) => page.evaluate((tag) => {
+        const g = window.OP.game, p = g.player, v = g.view3d;
+        const d = ((p.facing - v.rig.yaw) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+        return { tag, depth: +p.depth.toFixed(2), under: p.under, yaw: +v.rig.yaw.toFixed(2), pitch: +v.rig.pitch.toFixed(2), facing: +p.facing.toFixed(2), off: +d.toFixed(2) };
+      }, tag);
+      const out = [];
+      for (let i = 0; i < 5; i++) { await step(page, 0.1); await frames(page, 1); }
+      out.push(await st('surface'));
+      await snap('surface');
+      await page.evaluate(() => window.OP.key('C', true));
+      for (let i = 0; i < 25; i++) await step(page, 0.1);
+      await page.evaluate(() => window.OP.key('C', false));
+      for (let i = 0; i < 3; i++) { await step(page, 0.1); await frames(page, 1); }
+      out.push(await st('under'));
+      await snap('under');
+      for (const [yawOff, pitch, tag] of [[1.2, -0.2, 'turn-right'], [-1.0, 0.5, 'look-up'], [0.3, -0.9, 'look-down'], [2.8, 0.1, 'about-face']]) {
+        await page.evaluate(([o, pt]) => { const v = window.OP.game.view3d; v.rig.yaw = ((v.rig.yaw + o) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2); v.rig.pitch = pt; }, [yawOff, pitch]);
+        await page.evaluate(() => window.OP.key('W', true));
+        for (let i = 0; i < 6; i++) { await step(page, 0.1); await frames(page, 1); }
+        out.push(await st(tag));
+        await snap(tag);
+        await page.evaluate(() => window.OP.key('W', false));
+      }
+      for (const o of out) console.log(JSON.stringify(o));
+      const bad = out.filter((o) => Math.abs(o.off) > 0.6);
+      if (bad.length) console.log('FACING WRONG WAY:', bad.map((o) => o.tag).join(', '));
+      else console.log('facing follows the camera everywhere');
+    },
+  },
+  // Shift lock on land: facing follows the camera whether you look ahead, up at the sky or down at your feet.
+  landlock: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = 12; document.querySelector('.look-hint')?.remove(); });
+      for (let i = 0; i < 6; i++) { await step(page, 0.1); await frames(page, 1); }
+      await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.setShiftLock(true); v.rig.locked = true; v.rig.lockFailed = false; });
+      const out = [];
+      for (const [yaw, pitch, tag] of [[0.5, -0.1, 'ahead'], [2.0, -1.2, 'feet'], [3.5, 0.9, 'sky'], [5.0, -0.5, 'down']]) {
+        await page.evaluate(([y, pt]) => { const v = window.OP.game.view3d; v.rig.yaw = y; v.rig.pitch = pt; }, [yaw, pitch]);
+        for (let i = 0; i < 4; i++) { await step(page, 0.1); await frames(page, 1); }
+        out.push(await page.evaluate((tag) => {
+          const g = window.OP.game, p = g.player, v = g.view3d;
+          const d = ((p.facing - v.rig.yaw) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+          return { tag, yaw: +v.rig.yaw.toFixed(2), facing: +p.facing.toFixed(2), off: +d.toFixed(2) };
+        }, tag));
+      }
+      await snap('feet');
+      for (const o of out) console.log(JSON.stringify(o));
+      const bad = out.filter((o) => Math.abs(o.off) > 0.6);
+      console.log(bad.length ? 'FACING WRONG WAY: ' + bad.map((o) => o.tag).join(', ') : 'facing follows the camera everywhere');
+    },
+  },
   wake: {
     async run(page, snap, args) {
       await page.evaluate(() => localStorage.clear());

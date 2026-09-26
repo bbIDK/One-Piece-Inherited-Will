@@ -37315,6 +37315,7 @@ void main() {
       this.lastZ = p.z || 0;
       this.dip = (this.dip || 0) * Math.max(0, 1 - dt * 7);
       gh -= this.dip;
+      this.footY = gh;
       const spd = Math.hypot(p.vx || 0, p.vy || 0);
       const moving = !sailing && !(p.z > 0.05) && (spd > 0.5 || p.moving);
       this.bob += dt * (moving ? 5.5 + Math.min(spd, 9) * 0.9 : 0);
@@ -37395,12 +37396,17 @@ void main() {
       const ray = new Raycaster();
       ray.setFromCamera(ndc, cam);
       const o = ray.ray.origin, d = ray.ray.direction;
-      const p = game.player;
+      const p = game.player, w = game.world;
+      const diving = o.y < -0.05 && game.seaDepth;
+      const floor = (x, y) => {
+        const g = ground(x, y);
+        return diving && g < 0.1 && w.isLiquid(x, y) ? -game.seaDepth(x, y) : g;
+      };
       let hit = null;
-      let t = 0.5;
+      let t = Math.max(0.5, -o.x * d.x + ((this.footY ?? o.y) + 1 - o.y) * d.y - o.z * d.z - 0.3);
       for (let i = 0; i < 160 && t < 90; i++) {
         const x = o.x + d.x * t, y = o.y + d.y * t, z = o.z + d.z * t;
-        const g = ground(p.x + x, p.y + z);
+        const g = floor(p.x + x, p.y + z);
         if (y <= g) {
           hit = [p.x + x, p.y + z];
           break;
@@ -37410,6 +37416,8 @@ void main() {
       if (!hit) {
         const l = Math.hypot(d.x, d.z) || 1;
         hit = [p.x + d.x / l * 30, p.y + d.z / l * 30];
+      } else if (this.mode === "third" && Math.hypot(hit[0] - p.x, hit[1] - p.y) < 2.5) {
+        hit = [p.x + Math.cos(this.yaw) * 2.5, p.y + Math.sin(this.yaw) * 2.5];
       }
       const res = [game.world.wx(hit[0]), hit[1]];
       if (sx === void 0) this.aimCache = res;

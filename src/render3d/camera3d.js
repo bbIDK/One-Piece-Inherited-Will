@@ -192,6 +192,7 @@ export class CameraRig {
     this.lastZ = p.z || 0;
     this.dip = (this.dip || 0) * Math.max(0, 1 - dt * 7);
     gh -= this.dip;
+    this.footY = gh;
     // walking bob (faster and deeper when running), a lean into strafes, and
     // a knocked-down camera
     const spd = Math.hypot(p.vx || 0, p.vy || 0);
@@ -270,12 +271,20 @@ export class CameraRig {
     const ray = new THREE.Raycaster();
     ray.setFromCamera(ndc, cam);
     const o = ray.ray.origin, d = ray.ray.direction;
-    const p = game.player;
+    const p = game.player, w = game.world;
+    // with the camera under the sea, the surface is no floor (the sea bed is)
+    const diving = o.y < -0.05 && game.seaDepth;
+    const floor = (x, y) => {
+      const g = ground(x, y);
+      return diving && g < 0.1 && w.isLiquid(x, y) ? -game.seaDepth(x, y) : g;
+    };
     let hit = null;
-    let t = 0.5;
+    // start level with the player: in third person nothing between the camera
+    // and them counts (or you'd turn round to face the camera)
+    let t = Math.max(0.5, -o.x * d.x + ((this.footY ?? o.y) + 1 - o.y) * d.y - o.z * d.z - 0.3);
     for (let i = 0; i < 160 && t < 90; i++) {
       const x = o.x + d.x * t, y = o.y + d.y * t, z = o.z + d.z * t;
-      const g = ground(p.x + x, p.y + z);
+      const g = floor(p.x + x, p.y + z);
       if (y <= g) { hit = [p.x + x, p.y + z]; break; }
       t += 0.35 + t * 0.04;
     }
@@ -283,6 +292,9 @@ export class CameraRig {
       // nothing under the ray: a point straight ahead along the view
       const l = Math.hypot(d.x, d.z) || 1;
       hit = [p.x + d.x / l * 30, p.y + d.z / l * 30];
+    } else if (this.mode === 'third' && Math.hypot(hit[0] - p.x, hit[1] - p.y) < 2.5) {
+      // looking down at your own feet over the shoulder: straight ahead of the camera
+      hit = [p.x + Math.cos(this.yaw) * 2.5, p.y + Math.sin(this.yaw) * 2.5];
     }
     const res = [game.world.wx(hit[0]), hit[1]];
     if (sx === undefined) this.aimCache = res;
