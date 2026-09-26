@@ -3888,19 +3888,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     part(I, ellipse(32, 12.4, 13.4, 3), lt(col, 0.18), { sd: 0.8, hd: 0.6 });
   };
   D.goggles = (I, o = {}) => {
-    const lens = o.lens || "#f0a53a", frame = o.frame || "#c9a04a", strap = o.strap || "#6b4a32";
+    const lens = o.lens || "#f0a53a", frame2 = o.frame || "#c9a04a", strap = o.strap || "#6b4a32";
     tube(I, "M5 40 C3 25 17 18 32 18 C47 18 61 25 59 40", strap, 5.5);
     for (const x of [19.5, 44.5]) {
-      part(I, circle(x, 38, 12), frame, { sd: 1.6, hd: 1.2 });
+      part(I, circle(x, 38, 12), frame2, { sd: 1.6, hd: 1.2 });
       part(I, circle(x, 38, 8), lens, { sd: 2, hd: 1.4, ol: I.ol * 0.8, gloss: [x - 3, 34.5, 2.6, 1.5, 0.85] });
     }
-    tube(I, "M30 37 C31 34.5 33 34.5 34 37", frame, 3.2);
+    tube(I, "M30 37 C31 34.5 33 34.5 34 37", frame2, 3.2);
   };
   D.glasses = (I, o = {}) => {
-    const lens = o.lens || "#3a3440", frame = o.frame || "#2b2631";
-    tube(I, "M8 30 L4 26 M56 30 L60 26", frame, 2.2);
+    const lens = o.lens || "#3a3440", frame2 = o.frame || "#2b2631";
+    tube(I, "M8 30 L4 26 M56 30 L60 26", frame2, 2.2);
     for (const x of [20, 44]) part(I, ellipse(x, 34, 11, 8), lens, { sd: 1.6, hd: 1.2, hi: "#8fb3d9", gloss: [x - 4, 31, 2.8, 1.3, 0.8] });
-    tube(I, "M30 32 C31 30 33 30 34 32", frame, 2.4);
+    tube(I, "M30 32 C31 30 33 30 34 32", frame2, 2.4);
   };
   D.bandana = (I, o = {}) => {
     const col = o.color || "#2f5f96";
@@ -17697,8 +17697,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     let isAnimating = false;
     let animationLoop = null;
     let requestId = null;
-    function onAnimationFrame(time, frame) {
-      animationLoop(time, frame);
+    function onAnimationFrame(time, frame2) {
+      animationLoop(time, frame2);
       requestId = context.requestAnimationFrame(onAnimationFrame);
     }
     return {
@@ -20509,30 +20509,30 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function WebGLObjects(gl, geometries, attributes, info) {
     let updateMap = /* @__PURE__ */ new WeakMap();
     function update(object) {
-      const frame = info.render.frame;
+      const frame2 = info.render.frame;
       const geometry = object.geometry;
       const buffergeometry = geometries.get(object, geometry);
-      if (updateMap.get(buffergeometry) !== frame) {
+      if (updateMap.get(buffergeometry) !== frame2) {
         geometries.update(buffergeometry);
-        updateMap.set(buffergeometry, frame);
+        updateMap.set(buffergeometry, frame2);
       }
       if (object.isInstancedMesh) {
         if (object.hasEventListener("dispose", onInstancedMeshDispose) === false) {
           object.addEventListener("dispose", onInstancedMeshDispose);
         }
-        if (updateMap.get(object) !== frame) {
+        if (updateMap.get(object) !== frame2) {
           attributes.update(object.instanceMatrix, gl.ARRAY_BUFFER);
           if (object.instanceColor !== null) {
             attributes.update(object.instanceColor, gl.ARRAY_BUFFER);
           }
-          updateMap.set(object, frame);
+          updateMap.set(object, frame2);
         }
       }
       if (object.isSkinnedMesh) {
         const skeleton = object.skeleton;
-        if (updateMap.get(skeleton) !== frame) {
+        if (updateMap.get(skeleton) !== frame2) {
           skeleton.update();
-          updateMap.set(skeleton, frame);
+          updateMap.set(skeleton, frame2);
         }
       }
       return buffergeometry;
@@ -25238,9 +25238,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return renderTarget.samples > 0 && extensions.has("WEBGL_multisampled_render_to_texture") === true && renderTargetProperties.__useRenderToTexture !== false;
     }
     function updateVideoTexture(texture2) {
-      const frame = info.render.frame;
-      if (_videoTextures.get(texture2) !== frame) {
-        _videoTextures.set(texture2, frame);
+      const frame2 = info.render.frame;
+      if (_videoTextures.get(texture2) !== frame2) {
+        _videoTextures.set(texture2, frame2);
         texture2.update();
       }
     }
@@ -25496,18 +25496,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       return this;
     }
-    update(inputSource, frame, referenceSpace) {
+    update(inputSource, frame2, referenceSpace) {
       let inputPose = null;
       let gripPose = null;
       let handPose = null;
       const targetRay = this._targetRay;
       const grip = this._grip;
       const hand = this._hand;
-      if (inputSource && frame.session.visibilityState !== "visible-blurred") {
+      if (inputSource && frame2.session.visibilityState !== "visible-blurred") {
         if (hand && inputSource.hand) {
           handPose = true;
           for (const inputjoint of inputSource.hand.values()) {
-            const jointPose = frame.getJointPose(inputjoint, referenceSpace);
+            const jointPose = frame2.getJointPose(inputjoint, referenceSpace);
             const joint = this._getHandJoint(hand, inputjoint);
             if (jointPose !== null) {
               joint.matrix.fromArray(jointPose.transform.matrix);
@@ -25539,7 +25539,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           }
         } else {
           if (grip !== null && inputSource.gripSpace) {
-            gripPose = frame.getPose(inputSource.gripSpace, referenceSpace);
+            gripPose = frame2.getPose(inputSource.gripSpace, referenceSpace);
             if (gripPose !== null) {
               grip.matrix.fromArray(gripPose.transform.matrix);
               grip.matrix.decompose(grip.position, grip.rotation, grip.scale);
@@ -25560,7 +25560,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           }
         }
         if (targetRay !== null) {
-          inputPose = frame.getPose(inputSource.targetRaySpace, referenceSpace);
+          inputPose = frame2.getPose(inputSource.targetRaySpace, referenceSpace);
           if (inputPose === null && gripPose !== null) {
             inputPose = gripPose;
           }
@@ -26051,9 +26051,9 @@ void main() {
         return depthSensing.getMesh(cameraXR);
       };
       let onAnimationFrameCallback = null;
-      function onAnimationFrame(time, frame) {
-        pose = frame.getViewerPose(customReferenceSpace || referenceSpace);
-        xrFrame = frame;
+      function onAnimationFrame(time, frame2) {
+        pose = frame2.getViewerPose(customReferenceSpace || referenceSpace);
+        xrFrame = frame2;
         if (pose !== null) {
           const views = pose.views;
           if (glBaseLayer !== null) {
@@ -26114,12 +26114,12 @@ void main() {
           const inputSource = controllerInputSources[i];
           const controller = controllers[i];
           if (inputSource !== null && controller !== void 0) {
-            controller.update(inputSource, frame, customReferenceSpace || referenceSpace);
+            controller.update(inputSource, frame2, customReferenceSpace || referenceSpace);
           }
         }
-        if (onAnimationFrameCallback) onAnimationFrameCallback(time, frame);
-        if (frame.detectedPlanes) {
-          scope.dispatchEvent({ type: "planesdetected", data: frame });
+        if (onAnimationFrameCallback) onAnimationFrameCallback(time, frame2);
+        if (frame2.detectedPlanes) {
+          scope.dispatchEvent({ type: "planesdetected", data: frame2 });
         }
         xrFrame = null;
       }
@@ -26462,10 +26462,10 @@ void main() {
       }
       const webglProgram = program2.program;
       state.updateUBOMapping(uniformsGroup, webglProgram);
-      const frame = info.render.frame;
-      if (updateList[uniformsGroup.id] !== frame) {
+      const frame2 = info.render.frame;
+      if (updateList[uniformsGroup.id] !== frame2) {
         updateBufferData(uniformsGroup);
-        updateList[uniformsGroup.id] = frame;
+        updateList[uniformsGroup.id] = frame2;
       }
     }
     function createBuffer(uniformsGroup) {
@@ -34263,8 +34263,8 @@ void main() {
       const times = [];
       const values = [];
       for (let j = 0; j < track.times.length; ++j) {
-        const frame = track.times[j] * fps;
-        if (frame < startFrame || frame >= endFrame) continue;
+        const frame2 = track.times[j] * fps;
+        if (frame2 < startFrame || frame2 >= endFrame) continue;
         times.push(track.times[j]);
         for (let k = 0; k < valueSize; ++k) {
           values.push(track.values[j * valueSize + k]);
@@ -41930,6 +41930,23 @@ void main() {
     };
   }
 
+  // src/render3d/registry.js
+  var PROP_BUILDERS = /* @__PURE__ */ new Map();
+  var VIEWS = { actor: null, ship: null, viewmodel: null };
+  function registerPropBuilder(kind, fn) {
+    PROP_BUILDERS.set(kind, fn);
+  }
+  function registerActorView(fn) {
+    VIEWS.actor = fn;
+  }
+  function registerViewmodel(fn) {
+    VIEWS.viewmodel = fn;
+  }
+  var FRAME_HOOKS = [];
+  function registerFrameHook(fn) {
+    FRAME_HOOKS.push(fn);
+  }
+
   // src/render3d/props/mats.js
   var U2 = {
     time: { value: 0 },
@@ -42007,8 +42024,8 @@ void main() {
       STATE.game = ctx.game;
     }
   }
-  function tick(night) {
-    const env = STATE.game?.env;
+  function tick(night, envArg) {
+    const env = envArg || STATE.game?.env;
     STATE.env = env;
     STATE.t = env ? env.time : performance.now() / 1e3;
     STATE.night = night;
@@ -42025,6 +42042,10 @@ void main() {
       }
     }
   }
+  registerFrameHook((env, ctx) => {
+    bindCtx(ctx);
+    tick(Math.max(0, 0.9 - (env?.daylight ?? 1)), env);
+  });
 
   // src/render3d/ships3d.js
   var clamp01 = (x) => Math.max(0, Math.min(1, x));
@@ -43204,7 +43225,6 @@ void main() {
   var windowMat = new MeshToonMaterial({ color: 2832970, emissive: 0 });
   function setNightWindows(k) {
     windowMat.emissive.setRGB(1 * k, 0.78 * k, 0.42 * k);
-    tick(k);
   }
   var STYLE = {
     village: { wall: "timber", beam: "#5a3a22", base: "#8d8a82", win: "cross", shutters: true, flowers: true, door: "plank" },
@@ -43235,7 +43255,7 @@ void main() {
   function windowAt(k, b, S3, x, y, w, h2, faceZ, litOn, wallCol, flowers) {
     k.save();
     k.translate(x, y, faceZ);
-    const frame = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" || S3.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
+    const frame2 = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" || S3.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
     const glass = "#2d4150";
     const glow3 = litOn ? WARM : null;
     switch (S3.win) {
@@ -43255,9 +43275,9 @@ void main() {
       }
       case "round": {
         const r = Math.min(w, h2) * 0.5;
-        k.add(new TorusGeometry(r, 0.07, 5, 14), { at: [0, 0, 0.03], color: frame });
+        k.add(new TorusGeometry(r, 0.07, 5, 14), { at: [0, 0, 0.03], color: frame2 });
         k.add(new CircleGeometry(r, 14), { at: [0, 0, 0.02], color: S3.wall === "smooth" && b.style === "sky" ? "#bde3ff" : glass, glow: glow3 });
-        B(k, -0.015, -r, 0.03, 0.015, r, 0.05, frame);
+        B(k, -0.015, -r, 0.03, 0.015, r, 0.05, frame2);
         break;
       }
       case "arch":
@@ -43275,9 +43295,9 @@ void main() {
         const g = new ShapeGeometry(s, 8);
         const out = new ShapeGeometry(s, 8);
         out.scale((r + 0.09) / r, (h2 / 2 + 0.09) / (h2 / 2), 1);
-        k.add(out, { at: [0, 0, 0.012], color: frame });
+        k.add(out, { at: [0, 0, 0.012], color: frame2 });
         k.add(g, { at: [0, 0, 0.025], color: S3.win === "gothic" ? "#2a3a2a" : glass, glow: litOn ? S3.win === "gothic" ? "#b6ff8a" : WARM : null });
-        if (S3.win === "gothic") B(k, -0.015, -h2 / 2, 0.03, 0.015, h2 / 2, 0.045, frame);
+        if (S3.win === "gothic") B(k, -0.015, -h2 / 2, 0.03, 0.015, h2 / 2, 0.045, frame2);
         if (b.style === "desert") B(k, -r - 0.12, -h2 / 2 - 0.12, 0, r + 0.12, -h2 / 2 - 0.04, 0.12, shade2(wallCol, -0.15));
         break;
       }
@@ -43289,11 +43309,11 @@ void main() {
         break;
       default: {
         const hh = S3.win === "tall" ? h2 * 1.2 : h2;
-        B(k, -w / 2 - 0.08, -hh / 2 - 0.08, -0.02, w / 2 + 0.08, hh / 2 + 0.08, 0.05, frame);
+        B(k, -w / 2 - 0.08, -hh / 2 - 0.08, -0.02, w / 2 + 0.08, hh / 2 + 0.08, 0.05, frame2);
         B(k, -w / 2, -hh / 2, 0, w / 2, hh / 2, 0.06, glass, { glow: glow3 });
-        B(k, -0.025, -hh / 2, 0.05, 0.025, hh / 2, 0.08, frame);
-        B(k, -w / 2, -0.025, 0.05, w / 2, 0.025, 0.08, frame);
-        B(k, -w / 2 - 0.12, -hh / 2 - 0.14, -0.02, w / 2 + 0.12, -hh / 2 - 0.06, 0.14, shade2(frame, 0.1));
+        B(k, -0.025, -hh / 2, 0.05, 0.025, hh / 2, 0.08, frame2);
+        B(k, -w / 2, -0.025, 0.05, w / 2, 0.025, 0.08, frame2);
+        B(k, -w / 2 - 0.12, -hh / 2 - 0.14, -0.02, w / 2 + 0.12, -hh / 2 - 0.06, 0.14, shade2(frame2, 0.1));
         if (S3.shutters) {
           const sc = ["#2e6b8a", "#4f7d3a", "#8a3b2e", "#6d4c33"][(b.v || 0) % 4];
           for (const s of [-1, 1]) {
@@ -43316,7 +43336,7 @@ void main() {
   function doorAt(k, b, S3, x, g, wallCol, big) {
     const dw = (big ? 1.7 : 1.05) * g, dh = (big ? 2.5 : 2.15) * g;
     const wood = S3.door === "panel" && (b.style === "marine" || b.role === "marine_base") ? "#1b4f72" : b.style === "noble" ? "#6d3b1f" : "#5a3a22";
-    const frame = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" ? shade2(wallCol, 0.4) : shade2(wallCol, -0.4);
+    const frame2 = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" ? shade2(wallCol, 0.4) : shade2(wallCol, -0.4);
     k.save();
     k.translate(x, 0, 0);
     B(k, -dw / 2 - 0.2, -0.3, -0.02, dw / 2 + 0.2, 0.12, 0.45, "#9a948a", { outline: 0.02 });
@@ -43332,7 +43352,7 @@ void main() {
         s.closePath();
         const out = new ShapeGeometry(s, 10);
         out.scale((r + 0.13) / r, (dh + 0.13) / dh, 1);
-        if (S3.door !== "hole") k.add(out, { at: [0, 0.1, 0.012], color: frame });
+        if (S3.door !== "hole") k.add(out, { at: [0, 0.1, 0.012], color: frame2 });
         k.add(new ShapeGeometry(s, 10), { at: [0, 0.1, 0.03], color: S3.door === "hole" ? "#231f1b" : wood });
         if (S3.door !== "hole") k.add(new SphereGeometry(0.05, 5, 4), { at: [r * 0.6, 0.1 + dh * 0.45, 0.06], color: "#f1c40f" });
         break;
@@ -43357,7 +43377,7 @@ void main() {
         break;
       }
       default: {
-        B(k, -dw / 2 - 0.14, 0.1, -0.02, dw / 2 + 0.14, dh + 0.16, 0.07, frame, { outline: 0.015 });
+        B(k, -dw / 2 - 0.14, 0.1, -0.02, dw / 2 + 0.14, dh + 0.16, 0.07, frame2, { outline: 0.015 });
         B(k, -dw / 2, 0.1, 0, dw / 2, dh, 0.09, wood);
         if (S3.door === "plank") for (let i = 1; i < 4; i++) B(k, -dw / 2 + i * dw / 4 - 0.012, 0.15, 0.08, -dw / 2 + i * dw / 4 + 0.012, dh - 0.05, 0.1, shade2(wood, -0.3));
         else {
@@ -43904,20 +43924,6 @@ void main() {
     }
   }
 
-  // src/render3d/registry.js
-  var PROP_BUILDERS = /* @__PURE__ */ new Map();
-  var VIEWS = { actor: null, ship: null, viewmodel: null };
-  function registerPropBuilder(kind, fn) {
-    PROP_BUILDERS.set(kind, fn);
-  }
-  function registerActorView(fn) {
-    VIEWS.actor = fn;
-  }
-  function registerViewmodel(fn) {
-    VIEWS.viewmodel = fn;
-  }
-  var FRAME_HOOKS = [];
-
   // src/render3d/props/instancer.js
   var CELL = 32;
   var cells = /* @__PURE__ */ new Map();
@@ -44028,7 +44034,7 @@ void main() {
     const key2 = `${ctx?.world?.id || ""}:${cx},${cy}`;
     let c = cells.get(key2);
     if (!c) {
-      c = { key: key2, x0: cx * CELL, y0: cy * CELL, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent };
+      c = { key: key2, x0: cx * CELL, y0: cy * CELL, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent, markers: /* @__PURE__ */ new Set(), rep: null };
       cells.set(key2, c);
     }
     if (!c.parent && parent) c.parent = parent;
@@ -44058,35 +44064,68 @@ void main() {
     part4.ref.batch.remove(part4.ref.slot);
     part4.ref = null;
   }
+  var dynMarkers = /* @__PURE__ */ new Set();
+  var dynList = [];
+  var dynDirty = false;
+  var dynAt = 0;
   function onAdded(e) {
     const mk3 = e.target;
     const u = mk3.userData;
-    u.cell = cellFor(u.o, u.ctx, mk3.parent);
+    const cell = cellFor(u.o, u.ctx, mk3.parent);
+    u.cell = cell;
+    cell.markers.add(mk3);
+    if (!cell.rep) cell.rep = mk3;
     for (const p of u.parts) if (!p.hidden) claim(u, p);
     u.live = true;
+    u.placed = false;
+    if (u.dyn) {
+      dynMarkers.add(mk3);
+      dynDirty = true;
+    }
   }
   function onRemoved(e) {
-    const u = e.target.userData;
+    const mk3 = e.target;
+    const u = mk3.userData;
     for (const p of u.parts) release(p);
     u.live = false;
-  }
-  function onUpdate(o, env, ctx) {
-    const u = this;
-    if (!u.live) return;
-    const mk3 = u.marker;
     const cell = u.cell;
-    const px2 = mk3.position.x - (o.x - cell.x0), pz2 = mk3.position.z - (o.y - cell.y0);
-    if (Math.abs(px2 - cell.px) > 1e-3 || Math.abs(pz2 - cell.pz) > 1e-3) {
-      cell.px = px2;
-      cell.pz = pz2;
-      for (const b of cell.batches.values()) b.mesh.position.set(px2, 0, pz2);
+    if (cell) {
+      cell.markers.delete(mk3);
+      if (cell.rep === mk3) cell.rep = cell.markers.values().next().value || null;
     }
-    if (Math.abs(mk3.position.y - u.y) > 1e-3) {
-      u.y = mk3.position.y;
-      for (const p of u.parts) if (p.ref) p.ref.batch.write(p.ref.slot, partMatrix(u, p, _m), p.color, u.y);
+    if (u.dyn) {
+      dynMarkers.delete(mk3);
+      dynDirty = true;
     }
-    if (u.dyn) u.dyn(o, env, ctx, u);
   }
+  function frame(env, ctx) {
+    for (const cell of cells.values()) {
+      const mk3 = cell.rep;
+      if (!mk3) continue;
+      const o = mk3.userData.o;
+      const px2 = mk3.position.x - (o.x - cell.x0), pz2 = mk3.position.z - (o.y - cell.y0);
+      if (Math.abs(px2 - cell.px) > 1e-3 || Math.abs(pz2 - cell.pz) > 1e-3) {
+        cell.px = px2;
+        cell.pz = pz2;
+        for (const b of cell.batches.values()) b.mesh.position.set(px2, 0, pz2);
+      }
+    }
+    if (dynDirty) {
+      dynList = [...dynMarkers];
+      dynDirty = false;
+      dynAt = 0;
+    }
+    const n = dynList.length;
+    if (!n || !env) return;
+    const step = Math.max(1, Math.ceil(n / 20));
+    for (let i = 0; i < step; i++) {
+      const mk3 = dynList[(dynAt + i) % n];
+      const u = mk3.userData;
+      if (u.live) u.dyn(u.o, env, ctx, u);
+    }
+    dynAt = (dynAt + step) % n;
+  }
+  registerFrameHook(frame);
   function setPartVisible(u, part4, on) {
     if (on === !part4.hidden) return;
     part4.hidden = !on;
@@ -44107,7 +44146,6 @@ void main() {
     u.scale = opts.scale || 1;
     u.y = ctx?.ground ? ctx.ground(o.x, o.y) : 0;
     u.dyn = opts.dyn || null;
-    u.update = onUpdate;
     u.live = false;
     mk3.addEventListener("added", onAdded);
     mk3.addEventListener("removed", onRemoved);
@@ -46153,26 +46191,26 @@ void main() {
       }
     },
     goggles(g, C3, v, H2) {
-      const lens = H2.hatColor || "#f0a53a", lk2 = hatPal(lens), frame = "#c9a04a", strap = "#6b4a32", w = H2.w;
+      const lens = H2.hatColor || "#f0a53a", lk2 = hatPal(lens), frame2 = "#c9a04a", strap = "#6b4a32", w = H2.w;
       if (v === "S") {
         part2(g, C3, memo("ggS" + w, () => `M0.9 -0.7 Q-0.1 -0.78 ${-w} -0.66 L${-w + 0.02} -0.5 Q-0.1 -0.6 0.9 -0.54 Z`), strap, "#4a3222", 0.04, 0, true);
-        part2(g, C3, EL(0.8, -0.62, 0.15, 0.28), frame, "#9b7a30", 0.05, 0, true);
+        part2(g, C3, EL(0.8, -0.62, 0.15, 0.28), frame2, "#9b7a30", 0.05, 0, true);
         part2(g, C3, EL(0.84, -0.62, 0.08, 0.19), lk2.base, lk2.dk, 0.04, 0, true);
         return;
       }
       part2(g, C3, memo("ggF" + w, () => `M${-w} -0.74 Q0 -0.9 ${w} -0.74 L${w - 0.01} -0.56 Q0 -0.72 ${-w + 0.01} -0.56 Z`), strap, "#4a3222", 0.04, 0, true);
       if (v === "B") {
-        part2(g, C3, "M-0.14 -0.8 L0.14 -0.8 L0.14 -0.56 L-0.14 -0.56 Z", frame, "#9b7a30", 0.03, 0, true);
+        part2(g, C3, "M-0.14 -0.8 L0.14 -0.8 L0.14 -0.56 L-0.14 -0.56 Z", frame2, "#9b7a30", 0.03, 0, true);
         return;
       }
-      part2(g, C3, EL(-0.37, -0.66, 0.28, 0.26, 0.37, -0.66, 0.28, 0.26), frame, "#9b7a30", 0.05, 0, true);
+      part2(g, C3, EL(-0.37, -0.66, 0.28, 0.26, 0.37, -0.66, 0.28, 0.26), frame2, "#9b7a30", 0.05, 0, true);
       part2(g, C3, EL(-0.37, -0.66, 0.19, 0.17, 0.37, -0.66, 0.19, 0.17), lk2.base, lk2.dk, 0.06, 0, true);
       if (C3.lod) {
         g.fillStyle = "rgba(255,255,255,0.85)";
         g.fill(EL(-0.44, -0.73, 0.06, 0.04, 0.3, -0.73, 0.06, 0.04));
       }
       g.lineWidth = 0.08;
-      g.strokeStyle = frame;
+      g.strokeStyle = frame2;
       g.stroke(pp("M-0.1 -0.68 Q0 -0.74 0.1 -0.68"));
     },
     horns(g, C3, v, H2) {
@@ -46731,10 +46769,10 @@ void main() {
     bridge: "M-0.14 0.06 Q0 0.02 0.14 0.06"
   };
   function eyewear(g, C3, v) {
-    const lens = "#241f2c", frame = "#15121a", side = v === "S";
+    const lens = "#241f2c", frame2 = "#15121a", side = v === "S";
     if (side) {
       g.lineWidth = 0.05;
-      g.strokeStyle = frame;
+      g.strokeStyle = frame2;
       g.stroke(pp(SHADES.armS));
     }
     part2(g, C3, side ? SHADES.lensS : SHADES.lens, lens, null, 0, C3.lw * 0.8);
@@ -46744,7 +46782,7 @@ void main() {
     }
     if (!side) {
       g.lineWidth = 0.06;
-      g.strokeStyle = frame;
+      g.strokeStyle = frame2;
       g.stroke(pp(SHADES.bridge));
     }
   }
@@ -55004,6 +55042,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (!this.clear) this.clear = function(renderer) {
         if (self2.cleared !== self2.frame) {
           self2.cleared = self2.frame;
+          renderer.state.buffers.depth.setMask(true);
           renderer.clearDepth();
         }
       };
@@ -63548,21 +63587,28 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
   };
+  function softDisc(g, r, col, al, sy = 0.6) {
+    g.save();
+    g.scale(1, sy);
+    const gr = g.createRadialGradient(0, 0, 0, 0, 0, r);
+    gr.addColorStop(0, rgba2(col, al));
+    gr.addColorStop(0.55, rgba2(col, al * 0.85));
+    gr.addColorStop(1, rgba2(col, 0));
+    g.fillStyle = gr;
+    g.beginPath();
+    g.arc(0, 0, Math.max(1e-3, r), 0, TAU16);
+    g.fill();
+    g.restore();
+  }
   SHAPES2.decal = {
     ground(g, s, k, a) {
-      g.globalAlpha = Math.min(1, (1 - k) * 2) * 0.6 * a;
-      g.fillStyle = s.color;
-      ellipsePath(g, s.r, s.r * 0.6);
-      g.fill();
+      softDisc(g, s.r, s.color || "#000000", Math.min(1, (1 - k) * 2) * 0.6 * a);
     }
   };
   SHAPES2.scorch = {
     ground(g, s, k, a) {
       const alpha2 = Math.min(1, (1 - k) * 2) * a;
-      g.globalAlpha = alpha2 * 0.7;
-      g.fillStyle = s.color || "rgba(30,18,12,1)";
-      ellipsePath(g, s.r, s.r * 0.6);
-      g.fill();
+      softDisc(g, s.r, s.color || "rgba(30,18,12,1)", alpha2 * 0.62);
       const hot = clamp014(1 - k * 2.5);
       if (hot > 0) {
         g.globalCompositeOperation = "lighter";
@@ -65466,11 +65512,41 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.fillRect(0, 0, W2, H2);
     }
   }
+  function teleWarn(fx, g, r, p) {
+    const w = fx.game.world;
+    let inside = 0;
+    for (const s of fx.shapes) {
+      if (s.type !== "tele" || s.delay > 0) continue;
+      const dx = w.dx(s.x, p.x), dy = p.y - s.y, d = Math.hypot(dx, dy);
+      let hit = false;
+      if (s.shape === "circle") hit = d < s.r;
+      else if (s.shape === "arc") {
+        let da = Math.atan2(dy, dx) - s.angle;
+        da = Math.atan2(Math.sin(da), Math.cos(da));
+        hit = d < s.r && Math.abs(da) < s.arc / 2;
+      } else if (s.shape === "line") {
+        const u = dx * Math.cos(s.angle) + dy * Math.sin(s.angle), v = -dx * Math.sin(s.angle) + dy * Math.cos(s.angle);
+        hit = u > -0.3 && u < s.length && Math.abs(v) < s.width / 2 + 0.3;
+      }
+      if (hit) inside = Math.max(inside, s.max > 0 ? 1 - s.life / s.max : 1);
+    }
+    if (!inside) return;
+    const W2 = r.cw * r.dpr, H2 = r.ch * r.dpr;
+    const pulse = 0.5 + 0.5 * Math.sin(fx.time * 22);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    const gr = g.createLinearGradient(0, H2, 0, H2 * 0.62);
+    gr.addColorStop(0, `rgba(255,50,40,${0.28 + 0.2 * inside + 0.12 * pulse})`);
+    gr.addColorStop(1, "rgba(255,50,40,0)");
+    g.globalAlpha = 1;
+    g.fillStyle = gr;
+    g.fillRect(0, H2 * 0.62, W2, H2 * 0.38);
+  }
   function drawFirstPerson(fx, g, r) {
     const p = fx.game.player;
     if (!p || !r.firstPerson || p.mode === "sail") return;
     try {
       edges(fx, g, r, p);
+      teleWarn(fx, g, r, p);
       swingSmear(fx, g, r, p);
     } catch (e) {
       if (!fx._warnedFp) {
@@ -65578,9 +65654,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      * 3D view that would be 1.5 m to the north: when an actor stands right
      * below such a spot, the offset is handed back as height instead.
      */
-    lift3d(x, y) {
+    lift3d(x, y, always) {
       const g = this.game;
-      if (!g.view3d || !g.view3d.active || !g.actors) return 0;
+      if (this._cfx && !always || !g.view3d || !g.view3d.active || !g.actors) return 0;
       const w = g.world;
       let best = 0, bd = 0.45;
       for (const a of g.actors) {
@@ -65658,7 +65734,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      */
     text(x, y, str, color = "#fff", size = 0.42, o = {}) {
       str = String(str);
-      const lift = this.lift3d(x, y);
+      const lift = this.lift3d(x, y, true);
       if (lift) y += lift;
       const num = NUMERIC.test(str);
       if (!num) {
@@ -65783,32 +65859,42 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return this.add("decal", { x, y, r, color, life });
     }
     // ------------------------------------------------------------------ combat recipes (see render/combatfx.js)
+    // (these place heights with z themselves: no y-offset guessing for the 3D view inside them)
+    cfx(fn) {
+      const was = this._cfx;
+      this._cfx = true;
+      try {
+        return fn();
+      } finally {
+        this._cfx = was;
+      }
+    }
     hit(att, tgt, h2, info) {
-      return hitFeedback(this, att, tgt, h2, info);
+      return this.cfx(() => hitFeedback(this, att, tgt, h2, info));
     }
     parry(tgt, att, ang) {
-      return parryFx(this, tgt, att, ang);
+      return this.cfx(() => parryFx(this, tgt, att, ang));
     }
     guardBreak(tgt, att, ang) {
-      return guardBreakFx(this, tgt, att, ang);
+      return this.cfx(() => guardBreakFx(this, tgt, att, ang));
     }
     tech(actor, step, action, kind, extra) {
-      return techFx(this, actor, step, action, kind, extra);
+      return this.cfx(() => techFx(this, actor, step, action, kind, extra));
     }
     zone(zone, spec, actor, action) {
-      return zoneFx(this, zone, spec, actor, action);
+      return this.cfx(() => zoneFx(this, zone, spec, actor, action));
     }
     explosion(x, y, e, owner) {
-      return explosionFx(this, x, y, e, owner);
+      return this.cfx(() => explosionFx(this, x, y, e, owner));
     }
     projTrail(p, t) {
-      return projTrailFx(this, p, t);
+      return this.cfx(() => projTrailFx(this, p, t));
     }
     conqueror(actor, c) {
-      return conquerorFx(this, actor, c);
+      return this.cfx(() => conquerorFx(this, actor, c));
     }
     afterimage(actor, o) {
-      return afterimage(this, actor, o);
+      return this.cfx(() => afterimage(this, actor, o));
     }
     // ------------------------------------------------------------------ update
     update(dt) {
@@ -65927,7 +66013,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (const a of g.actors) {
         if (!a.alive || a.hidden || a.onShip) continue;
         if (Math.abs(w.dx(p.x, a.x)) > 28 || Math.abs(a.y - p.y) > 18) continue;
-        motion(this, a, dt);
+        this._cfx = true;
+        try {
+          motion(this, a, dt);
+        } finally {
+          this._cfx = false;
+        }
       }
     }
     /**
@@ -99833,7 +99924,7 @@ Trains by: ${TRAINS_BY[k]}` },
     });
     showTitle();
     let last = performance.now();
-    const frame = (now2) => {
+    const frame2 = (now2) => {
       const dt = Math.min(0.05, (now2 - last) / 1e3);
       last = now2;
       if (game.player) {
@@ -99871,9 +99962,9 @@ Trains by: ${TRAINS_BY[k]}` },
         ui.update(dt);
         input.endFrame();
       }
-      requestAnimationFrame(frame);
+      requestAnimationFrame(frame2);
     };
-    requestAnimationFrame(frame);
+    requestAnimationFrame(frame2);
   }
   start();
 })();

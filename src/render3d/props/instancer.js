@@ -3,14 +3,16 @@
 // drawn by one InstancedMesh, so a dense forest costs a few dozen draw calls
 // instead of thousands.
 //
-// A builder returns a lightweight marker (an empty Object3D). The renderer
-// adds it to its props group, positions it and calls userData.update on every
+// A builder returns a lightweight marker (an empty Object3D with no per-frame
+// update). The renderer adds it to its props group and positions it on every
 // prop rebuild; the marker's 'added' / 'removed' events claim and free the
-// instance slots, and update() keeps the cell meshes placed relative to the
-// renderer's floating origin. Instance matrices are relative to the cell
-// corner, so they never change while the player walks.
+// instance slots, and one frame hook keeps each cell's meshes placed relative
+// to the renderer's floating origin (read from any live marker of the cell)
+// and re-checks dynamic parts (fruit) a slice at a time. Instance matrices
+// are relative to the cell corner, so they never change while the player walks.
 import * as THREE from 'three';
 import { vcMat, bindCtx } from './mats.js';
+import { registerFrameHook } from '../registry.js';
 
 export const CELL = 32;
 const cells = new Map();
@@ -121,7 +123,7 @@ function cellFor(o, ctx, parent) {
   const key = `${ctx?.world?.id || ''}:${cx},${cy}`;
   let c = cells.get(key);
   if (!c) {
-    c = { key, x0: cx * CELL, y0: cy * CELL, px: 0, pz: 0, batches: new Map(), parent };
+    c = { key, x0: cx * CELL, y0: cy * CELL, px: 0, pz: 0, batches: new Map(), parent, markers: new Set(), rep: null };
     cells.set(key, c);
   }
   if (!c.parent && parent) c.parent = parent;
@@ -156,37 +158,61 @@ function release(part) {
   part.ref = null;
 }
 
+const dynMarkers = new Set();
+let dynList = [];
+let dynDirty = false;
+let dynAt = 0;
+
 function onAdded(e) {
   const mk = e.target;
   const u = mk.userData;
-  u.cell = cellFor(u.o, u.ctx, mk.parent);
+  const cell = cellFor(u.o, u.ctx, mk.parent);
+  u.cell = cell;
+  cell.markers.add(mk);
+  if (!cell.rep) cell.rep = mk;
   for (const p of u.parts) if (!p.hidden) claim(u, p);
   u.live = true;
+  u.placed = false;
+  if (u.dyn) { dynMarkers.add(mk); dynDirty = true; }
 }
 
 function onRemoved(e) {
-  const u = e.target.userData;
+  const mk = e.target;
+  const u = mk.userData;
   for (const p of u.parts) release(p);
   u.live = false;
+  const cell = u.cell;
+  if (cell) {
+    cell.markers.delete(mk);
+    if (cell.rep === mk) cell.rep = cell.markers.values().next().value || null;
+  }
+  if (u.dyn) { dynMarkers.delete(mk); dynDirty = true; }
 }
 
-// shared update (called as marker.userData.update(o, env, ctx), so `this` is userData)
-function onUpdate(o, env, ctx) {
-  const u = this;
-  if (!u.live) return;
-  const mk = u.marker;
-  const cell = u.cell;
-  const px = mk.position.x - (o.x - cell.x0), pz = mk.position.z - (o.y - cell.y0);
-  if (Math.abs(px - cell.px) > 1e-3 || Math.abs(pz - cell.pz) > 1e-3) {
-    cell.px = px; cell.pz = pz;
-    for (const b of cell.batches.values()) b.mesh.position.set(px, 0, pz);
+/** Once per frame: place every cell from one of its markers; re-check a slice of the dynamic parts. */
+function frame(env, ctx) {
+  for (const cell of cells.values()) {
+    const mk = cell.rep;
+    if (!mk) continue;
+    const o = mk.userData.o;
+    const px = mk.position.x - (o.x - cell.x0), pz = mk.position.z - (o.y - cell.y0);
+    if (Math.abs(px - cell.px) > 1e-3 || Math.abs(pz - cell.pz) > 1e-3) {
+      cell.px = px; cell.pz = pz;
+      for (const b of cell.batches.values()) b.mesh.position.set(px, 0, pz);
+    }
   }
-  if (Math.abs(mk.position.y - u.y) > 1e-3) {
-    u.y = mk.position.y;
-    for (const p of u.parts) if (p.ref) p.ref.batch.write(p.ref.slot, partMatrix(u, p, _m), p.color, u.y);
+  if (dynDirty) { dynList = [...dynMarkers]; dynDirty = false; dynAt = 0; }
+  const n = dynList.length;
+  if (!n || !env) return;
+  const step = Math.max(1, Math.ceil(n / 20));
+  for (let i = 0; i < step; i++) {
+    const mk = dynList[(dynAt + i) % n];
+    const u = mk.userData;
+    if (u.live) u.dyn(u.o, env, ctx, u);
   }
-  if (u.dyn) u.dyn(o, env, ctx, u);
+  dynAt = (dynAt + step) % n;
 }
+registerFrameHook(frame);
 
 /** Show or hide one part of an instanced prop (e.g. the fruit on a tree). */
 export function setPartVisible(u, part, on) {
@@ -214,7 +240,6 @@ export function instanced(o, ctx, parts, opts = {}) {
   u.scale = opts.scale || 1;
   u.y = ctx?.ground ? ctx.ground(o.x, o.y) : 0;
   u.dyn = opts.dyn || null;
-  u.update = onUpdate;
   u.live = false;
   mk.addEventListener('added', onAdded);
   mk.addEventListener('removed', onRemoved);

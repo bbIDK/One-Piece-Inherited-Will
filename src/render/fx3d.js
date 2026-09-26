@@ -606,12 +606,35 @@ function edges(fx, g, r, p) {
   }
 }
 
+/** Standing inside an enemy's wind-up area (drawn on the ground under your feet, out of view): a red pulse at the bottom edge. */
+function teleWarn(fx, g, r, p) {
+  const w = fx.game.world;
+  let inside = 0;
+  for (const s of fx.shapes) {
+    if (s.type !== 'tele' || s.delay > 0) continue;
+    const dx = w.dx(s.x, p.x), dy = p.y - s.y, d = Math.hypot(dx, dy);
+    let hit = false;
+    if (s.shape === 'circle') hit = d < s.r;
+    else if (s.shape === 'arc') { let da = Math.atan2(dy, dx) - s.angle; da = Math.atan2(Math.sin(da), Math.cos(da)); hit = d < s.r && Math.abs(da) < s.arc / 2; }
+    else if (s.shape === 'line') { const u = dx * Math.cos(s.angle) + dy * Math.sin(s.angle), v = -dx * Math.sin(s.angle) + dy * Math.cos(s.angle); hit = u > -0.3 && u < s.length && Math.abs(v) < s.width / 2 + 0.3; }
+    if (hit) inside = Math.max(inside, s.max > 0 ? 1 - s.life / s.max : 1);
+  }
+  if (!inside) return;
+  const W = r.cw * r.dpr, H = r.ch * r.dpr;
+  const pulse = 0.5 + 0.5 * Math.sin(fx.time * 22);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  const gr = g.createLinearGradient(0, H, 0, H * 0.62);
+  gr.addColorStop(0, `rgba(255,50,40,${0.28 + 0.2 * inside + 0.12 * pulse})`); gr.addColorStop(1, 'rgba(255,50,40,0)');
+  g.globalAlpha = 1; g.fillStyle = gr; g.fillRect(0, H * 0.62, W, H * 0.38);
+}
+
 /** Screen-space extras that only make sense from behind the player's eyes. */
 export function drawFirstPerson(fx, g, r) {
   const p = fx.game.player;
   if (!p || !r.firstPerson || p.mode === 'sail') return;
   try {
     edges(fx, g, r, p);
+    teleWarn(fx, g, r, p);
     swingSmear(fx, g, r, p);
   } catch (e) { if (!fx._warnedFp) { fx._warnedFp = true; console.warn('fx3d first person', e); } }
   g.setTransform(1, 0, 0, 1, 0, 0);

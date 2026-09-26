@@ -84,9 +84,9 @@ export class FX {
    * 3D view that would be 1.5 m to the north: when an actor stands right
    * below such a spot, the offset is handed back as height instead.
    */
-  lift3d(x, y) {
+  lift3d(x, y, always) {
     const g = this.game;
-    if (!g.view3d || !g.view3d.active || !g.actors) return 0;
+    if ((this._cfx && !always) || !g.view3d || !g.view3d.active || !g.actors) return 0;
     const w = g.world;
     let best = 0, bd = 0.45;
     for (const a of g.actors) {
@@ -143,7 +143,7 @@ export class FX {
    */
   text(x, y, str, color = '#fff', size = 0.42, o = {}) {
     str = String(str);
-    const lift = this.lift3d(x, y);
+    const lift = this.lift3d(x, y, true); // (words always float over someone)
     if (lift) y += lift;
     const num = NUMERIC.test(str);
     if (!num) {
@@ -212,15 +212,17 @@ export class FX {
   decal(x, y, r, color, life = 3) { return this.add('decal', { x, y, r, color, life }); }
 
   // ------------------------------------------------------------------ combat recipes (see render/combatfx.js)
-  hit(att, tgt, h, info) { return CFX.hitFeedback(this, att, tgt, h, info); }
-  parry(tgt, att, ang) { return CFX.parryFx(this, tgt, att, ang); }
-  guardBreak(tgt, att, ang) { return CFX.guardBreakFx(this, tgt, att, ang); }
-  tech(actor, step, action, kind, extra) { return CFX.techFx(this, actor, step, action, kind, extra); }
-  zone(zone, spec, actor, action) { return CFX.zoneFx(this, zone, spec, actor, action); }
-  explosion(x, y, e, owner) { return CFX.explosionFx(this, x, y, e, owner); }
-  projTrail(p, t) { return CFX.projTrailFx(this, p, t); }
-  conqueror(actor, c) { return CFX.conquerorFx(this, actor, c); }
-  afterimage(actor, o) { return CFX.afterimage(this, actor, o); }
+  // (these place heights with z themselves: no y-offset guessing for the 3D view inside them)
+  cfx(fn) { const was = this._cfx; this._cfx = true; try { return fn(); } finally { this._cfx = was; } }
+  hit(att, tgt, h, info) { return this.cfx(() => CFX.hitFeedback(this, att, tgt, h, info)); }
+  parry(tgt, att, ang) { return this.cfx(() => CFX.parryFx(this, tgt, att, ang)); }
+  guardBreak(tgt, att, ang) { return this.cfx(() => CFX.guardBreakFx(this, tgt, att, ang)); }
+  tech(actor, step, action, kind, extra) { return this.cfx(() => CFX.techFx(this, actor, step, action, kind, extra)); }
+  zone(zone, spec, actor, action) { return this.cfx(() => CFX.zoneFx(this, zone, spec, actor, action)); }
+  explosion(x, y, e, owner) { return this.cfx(() => CFX.explosionFx(this, x, y, e, owner)); }
+  projTrail(p, t) { return this.cfx(() => CFX.projTrailFx(this, p, t)); }
+  conqueror(actor, c) { return this.cfx(() => CFX.conquerorFx(this, actor, c)); }
+  afterimage(actor, o) { return this.cfx(() => CFX.afterimage(this, actor, o)); }
 
   // ------------------------------------------------------------------ update
   update(dt) {
@@ -305,7 +307,8 @@ export class FX {
     for (const a of g.actors) {
       if (!a.alive || a.hidden || a.onShip) continue;
       if (Math.abs(w.dx(p.x, a.x)) > 28 || Math.abs(a.y - p.y) > 18) continue;
-      CFX.motion(this, a, dt);
+      this._cfx = true;
+      try { CFX.motion(this, a, dt); } finally { this._cfx = false; }
     }
   }
 

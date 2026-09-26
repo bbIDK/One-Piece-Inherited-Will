@@ -66,7 +66,8 @@ class Viewmodel {
   /** Everything in the viewmodel draws last, over a cleared depth buffer (never clips into walls). */
   fixup() {
     const self = this;
-    if (!this.clear) this.clear = function (renderer) { if (self.cleared !== self.frame) { self.cleared = self.frame; renderer.clearDepth(); } };
+    // (clearDepth ignores a disabled depth mask: re-enable it through three's state cache first)
+    if (!this.clear) this.clear = function (renderer) { if (self.cleared !== self.frame) { self.cleared = self.frame; renderer.state.buffers.depth.setMask(true); renderer.clearDepth(); } };
     this.model.group.traverse((o) => {
       if (o.userData.vm || !(o.isMesh || o.isSprite)) return;
       o.userData.vm = true;

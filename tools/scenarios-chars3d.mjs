@@ -310,7 +310,30 @@ async function crowd(page, snap) {
   await snap('crowd-moving');
 }
 
+async function vmDebug(page, snap) {
+  await page.evaluate(() => { const C = window.__C3; C.clear(); C.spawn({ name: 'Dummy', id: 'dummy1', look: { hair: 'bald' } }, 2.2, 0.2); C.view(0, -0.05, 'first'); });
+  await settle(page, 3);
+  const dump = () => page.evaluate(() => {
+    const v = window.OP.game.view3d, vm = v.vm, m = vm && vm.model;
+    if (!m) return 'no vm';
+    const cam = v.rig.camera;
+    const inv = cam.matrixWorldInverse.elements;
+    const tx = (e) => { const x = e[12], y = e[13], z = e[14]; return [inv[0] * x + inv[4] * y + inv[8] * z + inv[12], inv[1] * x + inv[5] * y + inv[9] * z + inv[13], inv[2] * x + inv[6] * y + inv[10] * z + inv[14]].map((q) => +q.toFixed(3)); };
+    const out = { visible: vm.root.visible, parent: vm.root.parent && vm.root.parent.type, bodyPos: vm.body.position.toArray().map((q) => +q.toFixed(3)) };
+    for (const n of ['uarmR', 'farmR', 'handR', 'handL', 'chest']) { const b = m.bones.find((q) => q.name === n); out[n] = tx(b.matrixWorld.elements); }
+    out.meshVisible = m.mesh.visible; out.render = { calls: v.renderer.info.render.calls };
+    return out;
+  });
+  console.log('vm-idle', JSON.stringify(await dump()));
+  await snap('dbg-idle');
+  await page.evaluate(() => { const g = window.OP.game; g.player.setBlock(true); });
+  await step(page, 0.15); await frames(page, 2);
+  console.log('vm-block', JSON.stringify(await dump()));
+  await snap('dbg-block');
+}
+
 export const scenarios = {
+  c3dbg: { async run(page, snap) { await boot(page); await vmDebug(page, snap); } },
   chars3d: {
     async run(page, snap) {
       await boot(page);

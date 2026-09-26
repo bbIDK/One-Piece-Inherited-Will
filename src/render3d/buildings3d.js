@@ -10,7 +10,6 @@
 // building goes back to z = -fd; x runs from -fw/2 to fw/2; y is up.
 import * as THREE from 'three';
 import { uiIcon } from '../render/icons.js';
-import { tick } from './props/mats.js';
 import { vcMat, bindCtx, STATE } from './props/mats.js';
 import { Mesher, box, cyl, cone, lathe, slab, C, shade, hash } from './props/kit.js';
 import { CLIMATE } from '../world/tiles.js';
@@ -63,7 +62,6 @@ function nameBoard(text, marine) {
 const windowMat = new THREE.MeshToonMaterial({ color: 0x2b3a4a, emissive: 0x000000 });
 export function setNightWindows(k) {
   windowMat.emissive.setRGB(1.0 * k, 0.78 * k, 0.42 * k);
-  tick(k); // per-frame: shared uniforms and animated props
 }
 
 // ---------------------------------------------------------------- styles

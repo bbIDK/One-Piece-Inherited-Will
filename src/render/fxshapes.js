@@ -98,10 +98,19 @@ SHAPES.crack = {
   },
 };
 
+/** A soft-edged stain on the ground (scuffs, puddles, blood, frost). */
+function softDisc(g, r, col, al, sy = 0.6) {
+  g.save();
+  g.scale(1, sy);
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, r);
+  gr.addColorStop(0, rgba(col, al)); gr.addColorStop(0.55, rgba(col, al * 0.85)); gr.addColorStop(1, rgba(col, 0));
+  g.fillStyle = gr;
+  g.beginPath(); g.arc(0, 0, Math.max(0.001, r), 0, TAU); g.fill();
+  g.restore();
+}
 SHAPES.decal = {
   ground(g, s, k, a) {
-    g.globalAlpha = Math.min(1, (1 - k) * 2) * 0.6 * a;
-    g.fillStyle = s.color; ellipsePath(g, s.r, s.r * 0.6); g.fill();
+    softDisc(g, s.r, s.color || '#000000', Math.min(1, (1 - k) * 2) * 0.6 * a);
   },
 };
 
@@ -109,8 +118,8 @@ SHAPES.decal = {
 SHAPES.scorch = {
   ground(g, s, k, a) {
     const alpha = Math.min(1, (1 - k) * 2) * a;
-    g.globalAlpha = alpha * 0.7; g.fillStyle = s.color || 'rgba(30,18,12,1)';
-    ellipsePath(g, s.r, s.r * 0.6); g.fill();
+    // soft-edged soot, darkest in the middle
+    softDisc(g, s.r, s.color || 'rgba(30,18,12,1)', alpha * 0.62);
     const hot = clamp01(1 - k * 2.5);
     if (hot > 0) {
       g.globalCompositeOperation = 'lighter';

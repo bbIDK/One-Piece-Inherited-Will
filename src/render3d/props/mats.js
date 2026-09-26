@@ -11,6 +11,7 @@
 // the shared uniforms and the animated props (flags, windmills, fires…).
 import * as THREE from 'three';
 import { toonGradient } from '../materials.js';
+import { registerFrameHook } from '../registry.js';
 
 export const U = {
   time: { value: 0 },
@@ -127,8 +128,8 @@ export function bindCtx(ctx) {
 }
 
 /** Called every frame with the night factor (0 by day … ~0.9 at night). */
-export function tick(night) {
-  const env = STATE.game?.env;
+export function tick(night, envArg) {
+  const env = envArg || STATE.game?.env;
   STATE.env = env;
   STATE.t = env ? env.time : performance.now() / 1000;
   STATE.night = night;
@@ -140,3 +141,9 @@ export function tick(night) {
     try { a.fn(STATE.t, env, STATE); } catch (e) { animators.delete(a); console.warn('prop animation failed', e); }
   }
 }
+
+// the renderer calls this once per rendered frame
+registerFrameHook((env, ctx) => {
+  bindCtx(ctx);
+  tick(Math.max(0, 0.9 - (env?.daylight ?? 1)), env);
+});
