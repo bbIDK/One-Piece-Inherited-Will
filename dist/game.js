@@ -731,18 +731,22 @@ void main() {
   function formatBerries(n) {
     return "\u0E3F" + Math.round(n).toLocaleString("en-US");
   }
-  function hexToRgb(hex) {
-    const h2 = hex.replace("#", "");
+  function hexToRgb(hex2) {
+    const h2 = hex2.replace("#", "");
     const n = parseInt(h2.length === 3 ? h2.split("").map((c) => c + c).join("") : h2, 16);
     return [n >> 16 & 255, n >> 8 & 255, n & 255];
   }
   function rgbToHex(r, g, b) {
     return "#" + [r, g, b].map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("");
   }
-  function shade(hex, amt) {
-    const [r, g, b] = hexToRgb(hex);
+  function shade(hex2, amt) {
+    const [r, g, b] = hexToRgb(hex2);
     if (amt >= 0) return rgbToHex(r + (255 - r) * amt, g + (255 - g) * amt, b + (255 - b) * amt);
     return rgbToHex(r * (1 + amt), g * (1 + amt), b * (1 + amt));
+  }
+  function mixHex(a, b, t) {
+    const A = hexToRgb(a), B = hexToRgb(b);
+    return rgbToHex(lerp(A[0], B[0], t), lerp(A[1], B[1], t), lerp(A[2], B[2], t));
   }
 
   // src/render/terrain.js
@@ -2677,8 +2681,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const m = I.g.getTransform(), det = m.a * m.d - m.b * m.c, px = x * I.k, py = y * I.k;
     return [(m.d * px - m.c * py) / det, (-m.b * px + m.a * py) / det];
   }
-  function part(I, path, color, o = {}) {
-    const g = I.g, p = P(path), rule = o.rule || "nonzero", s = lsc(I);
+  function part(I, path2, color, o = {}) {
+    const g = I.g, p = P(path2), rule = o.rule || "nonzero", s = lsc(I);
     const base = typeof color === "string" ? color : o.base || "#888888";
     const ol = (o.ol ?? I.ol) / s;
     if (ol > 0) {
@@ -2722,8 +2726,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     });
     I.inBadge ? fn() : after(I, fn);
   }
-  function glow(I, path, col, a = 0.45) {
-    const fn = () => alpha(I, a, () => fl(I, path, col));
+  function glow(I, path2, col, a = 0.45) {
+    const fn = () => alpha(I, a, () => fl(I, path2, col));
     I.inBadge ? fn() : after(I, fn, true);
   }
   function hilite(I, p, color, hd, a, inset, rule) {
@@ -2759,8 +2763,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.fill();
     g.restore();
   }
-  function tube(I, path, color, w, o = {}) {
-    const g = I.g, p = P(path), s = lsc(I), ol = (o.ol ?? I.ol) / s;
+  function tube(I, path2, color, w, o = {}) {
+    const g = I.g, p = P(path2), s = lsc(I), ol = (o.ol ?? I.ol) / s;
     g.save();
     g.lineCap = o.cap || "round";
     g.lineJoin = "round";
@@ -2792,7 +2796,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     g.restore();
   }
-  function ln(I, path, color, w, o = {}) {
+  function ln(I, path2, color, w, o = {}) {
     const g = I.g;
     g.save();
     g.lineCap = o.cap || "round";
@@ -2801,29 +2805,29 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.lineWidth = w;
     if (o.a != null) g.globalAlpha = o.a;
     if (o.dash) g.setLineDash(o.dash);
-    g.stroke(P(path));
+    g.stroke(P(path2));
     g.restore();
   }
-  function fl(I, path, color, o = {}) {
+  function fl(I, path2, color, o = {}) {
     const g = I.g;
     g.save();
     if (o.a != null) g.globalAlpha = o.a;
     g.fillStyle = color;
-    g.fill(P(path), o.rule || "nonzero");
+    g.fill(P(path2), o.rule || "nonzero");
     g.restore();
   }
-  function clip(I, path, fn) {
+  function clip(I, path2, fn) {
     const g = I.g;
     g.save();
-    g.clip(P(path));
+    g.clip(P(path2));
     fn();
     g.restore();
   }
-  function cut(I, path) {
+  function cut(I, path2) {
     const g = I.g;
     g.save();
     g.globalCompositeOperation = "destination-out";
-    g.fill(P(path));
+    g.fill(P(path2));
     g.restore();
   }
   function tf(I, { r = 0, s = 1, sx, sy, x = 0, y = 0, ox = 32, oy = 32 } = {}, fn) {
@@ -4936,11 +4940,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     gourd: [() => union(circle(32, 25, 11.5), circle(32, 44, 16), rrect(26, 25, 12, 14, 4)), [32, 14]],
     banana: [() => taper(bez([15, 25], [15, 47], [38, 58], [57, 43], 22), (t) => 9 + 13 * Math.sin(Math.PI * Math.min(1, t * 1.1)) - (t > 0.9 ? (t - 0.9) * 40 : 0)), [15, 22]]
   };
-  function swirls(I, path, box, col, rr, seed) {
+  function swirls(I, path2, box, col, rr, seed) {
     const dark = lum(col) < 0.32;
     const sw2 = dark ? lt(col, 0.42) : dk(col, 0.45), hi = dark ? dk(col, 0.5) : lt(col, 0.55), [x0, y0, x1, y1] = box;
     const w = I.small ? 2.3 : 1.9, step = rr * 2.1;
-    clip(I, path, () => {
+    clip(I, path2, () => {
       let k = 0;
       for (let y = y0; y <= y1; y += step * 0.86) for (let x = x0 + (Math.round((y - y0) / (step * 0.86)) % 2 ? step / 2 : 0); x <= x1; x += step) {
         const q = hash(seed + ":" + k++), jx = ((q & 15) / 15 - 0.5) * rr * 0.45, jy = ((q >> 4 & 15) / 15 - 0.5) * rr * 0.45, rot = (q >> 8 & 63) / 63 * TAU3, dir = q & 4096 ? 1 : -1;
@@ -6633,8 +6637,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   var UI = {};
   var SLOT = "#5b4330";
-  function slotGhost(I, path, rule) {
-    part(I, path, SLOT, { sd: 0, hd: 0, ol: I.ol * 0.8, line: "#3a2a1c", rule });
+  function slotGhost(I, path2, rule) {
+    part(I, path2, SLOT, { sd: 0, hd: 0, ol: I.ol * 0.8, line: "#3a2a1c", rule });
   }
   function questionP() {
     const p = new Path2D();
@@ -7010,14 +7014,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   }
   function canopy(g, cx, cy, r, base, n = 5, seed = 0) {
-    const dark = shade(base, -0.28), light = shade(base, 0.22), line = shade(base, -0.5);
+    const dark = shade(base, -0.28), light = shade(base, 0.22), line2 = shade(base, -0.5);
     const pts = [];
     for (let i = 0; i < n; i++) {
       const a = i / n * TAU4 + seed;
       pts.push([cx + Math.cos(a) * r * 0.45, cy + Math.sin(a) * r * 0.35, r * (0.55 + (i * 37 + seed * 11) % 7 / 20)]);
     }
     pts.push([cx, cy - r * 0.15, r * 0.7]);
-    for (const [x, y, rr] of pts) blob(g, x, y + rr * 0.12, rr, dark, line);
+    for (const [x, y, rr] of pts) blob(g, x, y + rr * 0.12, rr, dark, line2);
     for (const [x, y, rr] of pts) blob(g, x, y, rr * 0.92, base);
     for (const [x, y, rr] of pts) blob(g, x - rr * 0.25, y - rr * 0.28, rr * 0.45, light);
   }
@@ -9365,13 +9369,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     y0 = Math.max(1, Math.floor(y0 - m));
     x1 = Math.ceil(x1 + m);
     y1 = Math.min(world.height - 2, Math.ceil(y1 + m));
-    const LW = x1 - x0, LH = y1 - y0;
-    if (LW <= 0 || LH <= 0) return null;
-    const L2 = new Uint8Array(LW * LH);
-    const li = (i, j) => j * LW + i;
+    const LW2 = x1 - x0, LH = y1 - y0;
+    if (LW2 <= 0 || LH <= 0) return null;
+    const L2 = new Uint8Array(LW2 * LH);
+    const li = (i, j) => j * LW2 + i;
     const seedOff = def.id.length * 131.7 % 1e3;
     for (let j = 0; j < LH; j++) {
-      for (let i = 0; i < LW; i++) {
+      for (let i = 0; i < LW2; i++) {
         const px = x0 + i + 0.5, py = y0 + j + 0.5;
         let v = -1;
         for (const b of blobs) {
@@ -9385,18 +9389,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
     if (def.ring) {
-      for (let j = 0; j < LH; j++) for (let i = 0; i < LW; i++) {
+      for (let j = 0; j < LH; j++) for (let i = 0; i < LW2; i++) {
         const px = x0 + i + 0.5, py = y0 + j + 0.5;
         const ex = (px - cx) / (hw * def.ring), ey = (py - cy) / (hh * def.ring);
         if (ex * ex + ey * ey < 1 + noise.noise2(px * 0.1, py * 0.1) * 0.15) L2[li(i, j)] = 0;
       }
     }
-    if (def.keepLargest !== false && !def.archipelago) keepLargestComponent(L2, LW, LH);
-    const CD = localCoastDistance(L2, LW, LH);
+    if (def.keepLargest !== false && !def.archipelago) keepLargestComponent(L2, LW2, LH);
+    const CD = localCoastDistance(L2, LW2, LH);
     const beachW = def.beachWidth ?? (ground === T.SNOW ? 1.2 : 2.2);
     let landCount = 0;
     for (let j = 0; j < LH; j++) {
-      for (let i = 0; i < LW; i++) {
+      for (let i = 0; i < LW2; i++) {
         const k = li(i, j);
         if (!L2[k]) continue;
         landCount++;
@@ -9429,13 +9433,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (i < 0) i += world.width;
         if (i >= world.width) i -= world.width;
         const jj = Math.floor(y) - y0;
-        if (i < 0 || jj < 0 || i >= LW || jj >= LH) return false;
+        if (i < 0 || jj < 0 || i >= LW2 || jj >= LH) return false;
         return L2[li(i, jj)] === 1 || world.isOverlay(x, y);
       }
     };
-    const P2 = (f) => ({ x: cx + rel(f.dx ?? 0, hw), y: cy + rel(f.dy ?? 0, hh) });
+    const P3 = (f) => ({ x: cx + rel(f.dx ?? 0, hw), y: cy + rel(f.dy ?? 0, hh) });
     for (const f of def.mountains || []) {
-      const c = P2(f);
+      const c = P3(f);
       const r = rel(f.r ?? 0.3, Math.max(hw, hh));
       const peak = f.h ?? 1;
       stampRadial(world, c.x, c.y, r * 1.3, (x, y, dn) => {
@@ -9453,7 +9457,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       rec.landmarks.push({ type: "mountain", name: f.name, x: c.x, y: c.y, r });
     }
     for (const f of def.areas || []) {
-      const c = P2(f);
+      const c = P3(f);
       const rx = rel(f.rx ?? f.r ?? 0.3, hw), ry = rel(f.ry ?? f.r ?? 0.3, hh);
       stampEllipse(world, c.x, c.y, rx, ry, noise, f.rough ?? 0.35, (x, y) => {
         const t = world.type(x, y);
@@ -9464,7 +9468,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (f.name) rec.landmarks.push({ type: "area", name: f.name, x: c.x, y: c.y, r: Math.max(rx, ry) });
     }
     for (const f of def.lakes || []) {
-      const c = P2(f);
+      const c = P3(f);
       const rx = rel(f.rx ?? f.r ?? 0.1, hw), ry = rel(f.ry ?? f.r ?? 0.1, hh);
       stampEllipse(world, c.x, c.y, rx, ry, noise, 0.3, (x, y) => {
         if (!world.isLiquid(x, y)) world.setTile(x, y, f.tile ?? T.POND, 0);
@@ -9476,7 +9480,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     for (const p of def.paint || []) paintOp(world, p, cx, cy, hw, hh, noise);
     for (const town of def.towns || []) {
-      const c = P2(town);
+      const c = P3(town);
       const t = generateTown(world, {
         ...town,
         x: c.x,
@@ -9496,7 +9500,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const town = rec.towns.find((t) => t.id === dd.near || t.name === dd.near);
         if (town) from = { x: town.x, y: town.y };
       }
-      if (!from) from = P2(dd);
+      if (!from) from = P3(dd);
       const dock = buildDock(world, from, dd.dir, dd.len ?? 8, rec, dd);
       if (dock) {
         const nearTown = dd.near && rec.towns.find((t) => t.id === dd.near || t.name === dd.near);
@@ -9516,7 +9520,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
     for (const lm of def.landmarks || []) {
-      const c = P2(lm);
+      const c = P3(lm);
       const o = { ...lm, x: c.x, y: c.y, kind: lm.kind || lm.type };
       delete o.dx;
       delete o.dy;
@@ -9542,16 +9546,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (lm.spot) rec.spots[lm.spot] = { x: c.x, y: c.y + 1.2 };
     }
     for (const s of def.spots || []) {
-      const c = P2(s);
+      const c = P3(s);
       rec.spots[s.id] = { x: c.x, y: c.y, ...s, dx: void 0, dy: void 0 };
     }
     const treeKinds = def.treeKind ? [def.treeKind] : def.trees || preset.trees;
     const density = def.treeDensity ?? preset.density;
-    populateVegetation(world, rng, x0, y0, LW, LH, L2, li, treeKinds, density, def);
+    populateVegetation(world, rng, x0, y0, LW2, LH, L2, li, treeKinds, density, def);
     return rec;
   }
-  function keepLargestComponent(L2, LW, LH) {
-    const comp = new Int32Array(LW * LH).fill(-1);
+  function keepLargestComponent(L2, LW2, LH) {
+    const comp = new Int32Array(LW2 * LH).fill(-1);
     let best = -1, bestSize = 0, id = 0;
     const stack = [];
     for (let s = 0; s < L2.length; s++) {
@@ -9562,8 +9566,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       while (stack.length) {
         const k = stack.pop();
         size++;
-        const i = k % LW, j = k / LW | 0;
-        const nb = [i > 0 ? k - 1 : -1, i < LW - 1 ? k + 1 : -1, j > 0 ? k - LW : -1, j < LH - 1 ? k + LW : -1];
+        const i = k % LW2, j = k / LW2 | 0;
+        const nb = [i > 0 ? k - 1 : -1, i < LW2 - 1 ? k + 1 : -1, j > 0 ? k - LW2 : -1, j < LH - 1 ? k + LW2 : -1];
         for (const q of nb) if (q >= 0 && L2[q] && comp[q] < 0) {
           comp[q] = id;
           stack.push(q);
@@ -9581,14 +9585,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (L2[k] && comp[k] !== best && sizes[comp[k]] < Math.max(30, bestSize * 0.08)) L2[k] = 0;
     }
   }
-  function localCoastDistance(L2, LW, LH) {
-    const CD = new Float32Array(LW * LH).fill(1e6);
-    const q = new Int32Array(LW * LH);
+  function localCoastDistance(L2, LW2, LH) {
+    const CD = new Float32Array(LW2 * LH).fill(1e6);
+    const q = new Int32Array(LW2 * LH);
     let head = 0, tail = 0;
-    for (let j = 0; j < LH; j++) for (let i = 0; i < LW; i++) {
-      const k = j * LW + i;
+    for (let j = 0; j < LH; j++) for (let i = 0; i < LW2; i++) {
+      const k = j * LW2 + i;
       if (!L2[k]) continue;
-      const edge = i === 0 || j === 0 || i === LW - 1 || j === LH - 1 || !L2[k - 1] || !L2[k + 1] || !L2[k - LW] || !L2[k + LW];
+      const edge = i === 0 || j === 0 || i === LW2 - 1 || j === LH - 1 || !L2[k - 1] || !L2[k + 1] || !L2[k - LW2] || !L2[k + LW2];
       if (edge) {
         CD[k] = 1;
         q[tail++] = k;
@@ -9596,23 +9600,23 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     while (head < tail) {
       const k = q[head++];
-      const i = k % LW, j = k / LW | 0;
+      const i = k % LW2, j = k / LW2 | 0;
       const nd = CD[k] + 1;
       if (i > 0 && L2[k - 1] && CD[k - 1] > nd) {
         CD[k - 1] = nd;
         q[tail++] = k - 1;
       }
-      if (i < LW - 1 && L2[k + 1] && CD[k + 1] > nd) {
+      if (i < LW2 - 1 && L2[k + 1] && CD[k + 1] > nd) {
         CD[k + 1] = nd;
         q[tail++] = k + 1;
       }
-      if (j > 0 && L2[k - LW] && CD[k - LW] > nd) {
-        CD[k - LW] = nd;
-        q[tail++] = k - LW;
+      if (j > 0 && L2[k - LW2] && CD[k - LW2] > nd) {
+        CD[k - LW2] = nd;
+        q[tail++] = k - LW2;
       }
-      if (j < LH - 1 && L2[k + LW] && CD[k + LW] > nd) {
-        CD[k + LW] = nd;
-        q[tail++] = k + LW;
+      if (j < LH - 1 && L2[k + LW2] && CD[k + LW2] > nd) {
+        CD[k + LW2] = nd;
+        q[tail++] = k + LW2;
       }
     }
     return CD;
@@ -9756,10 +9760,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (!world.objects) return null;
     return world.objects.add(o);
   }
-  function populateVegetation(world, rng, x0, y0, LW, LH, L2, li, kinds, density, def) {
+  function populateVegetation(world, rng, x0, y0, LW2, LH, L2, li, kinds, density, def) {
     const forestTypes = /* @__PURE__ */ new Set([T.FOREST, T.JUNGLE]);
     for (let j = 0; j < LH; j++) {
-      for (let i = 0; i < LW; i++) {
+      for (let i = 0; i < LW2; i++) {
         if (!L2[li(i, j)]) continue;
         const x = x0 + i, y = y0 + j;
         const t = world.type(x, y);
@@ -16665,671 +16669,1704 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k = k < 0 ? 0 : k > 1 ? 1 : k;
     k = (EASE[k1.e] || EASE.inout)(k);
     const A0 = k0.P, A1 = k1.P;
-    const P2 = {};
-    for (const key2 in A0) P2[key2] = lerpVal(A0[key2], A1[key2], k);
+    const P3 = {};
+    for (const key2 in A0) P3[key2] = lerpVal(A0[key2], A1[key2], k);
     if (A.jitter && t < (A.w ?? keys[2]?.t ?? 0)) {
       const amp = A.jitter * Math.min(1, t / 0.2);
-      P2.b = [P2.b[0] + Math.sin(t * 91) * amp, P2.b[1] + Math.cos(t * 77) * amp];
+      P3.b = [P3.b[0] + Math.sin(t * 91) * amp, P3.b[1] + Math.cos(t * 77) * amp];
     }
     const f = A.flurry;
     if (f && t >= f.t0 && t <= f.t1) {
       const ph = (t - f.t0) * (f.rate || 11);
       const tri = Math.abs(ph % 2 - 1);
       if (f.legs) {
-        P2.fF = [0.12 + 0.52 * tri, -0.3 - 0.2 * tri];
-        P2.fB = [-0.05, 0];
+        P3.fF = [0.12 + 0.52 * tri, -0.3 - 0.2 * tri];
+        P3.fB = [-0.05, 0];
       } else {
-        P2.hF = [0.12 + 0.34 * tri, -0.04 + 0.06 * (1 - tri)];
-        P2.hB = [0.12 + 0.34 * (1 - tri), 0.02 + 0.05 * tri];
+        P3.hF = [0.12 + 0.34 * tri, -0.04 + 0.06 * (1 - tri)];
+        P3.hB = [0.12 + 0.34 * (1 - tri), 0.02 + 0.05 * tri];
       }
     }
     const s = A.spin;
-    if (s && t >= s.t0 && t <= s.t1) P2.sp = (P2.sp || 0) + (t - s.t0) / Math.max(0.05, s.t1 - s.t0) * s.turns;
-    if (pose && pose.moving && !A.legs) walkLegs(P2, pose);
-    return P2;
+    if (s && t >= s.t0 && t <= s.t1) P3.sp = (P3.sp || 0) + (t - s.t0) / Math.max(0.05, s.t1 - s.t0) * s.turns;
+    if (pose && pose.moving && !A.legs) walkLegs(P3, pose);
+    return P3;
   }
-  function walkLegs(P2, pose) {
+  function walkLegs(P3, pose) {
     const w = pose.walk || 0;
     const s = Math.sin(w), c = Math.cos(w);
     const stride = 0.15;
-    P2.fF = [0.04 + s * stride, -Math.max(0, c) * 0.08];
-    P2.fB = [-0.04 - s * stride, -Math.max(0, -c) * 0.08];
+    P3.fF = [0.04 + s * stride, -Math.max(0, c) * 0.08];
+    P3.fB = [-0.04 - s * stride, -Math.max(0, -c) * 0.08];
   }
   function blendPose(A, B, k) {
     if (!A || k >= 1) return B;
     if (k <= 0) return A;
-    const P2 = {};
+    const P3 = {};
     for (const key2 in B) {
       let a = A[key2];
       const b = B[key2];
       if (key2 === "sp" && typeof a === "number" && typeof b === "number") a = b + ((a - b) % 1 + 1.5) % 1 - 0.5;
       else if (key2 === "r" && typeof a === "number" && typeof b === "number") a = b + ((a - b) % TAU5 + TAU5 * 1.5) % TAU5 - Math.PI;
-      P2[key2] = lerpVal(a, b, k);
+      P3[key2] = lerpVal(a, b, k);
     }
-    return P2;
+    return P3;
   }
   function restPose(pose) {
     const t = pose.time || 0;
     const stance = pose.stanceP || GUARD;
     const base = pose.block !== void 0 ? GUARD : pose.combat ? stance : STAND;
-    const P2 = { ...base };
-    P2.b = [base.b[0], base.b[1] + Math.sin(t * 2.2) * 0.012];
+    const P3 = { ...base };
+    P3.b = [base.b[0], base.b[1] + Math.sin(t * 2.2) * 0.012];
     if (pose.combat && !pose.moving) {
       const bounce = Math.abs(Math.sin(t * 4.2));
-      P2.b = [base.b[0], base.b[1] + bounce * 0.022];
-      if (Array.isArray(base.hF)) P2.hF = [base.hF[0], base.hF[1] + bounce * 0.015];
-      if (Array.isArray(base.hB)) P2.hB = [base.hB[0], base.hB[1] + bounce * 0.012];
+      P3.b = [base.b[0], base.b[1] + bounce * 0.022];
+      if (Array.isArray(base.hF)) P3.hF = [base.hF[0], base.hF[1] + bounce * 0.015];
+      if (Array.isArray(base.hB)) P3.hB = [base.hB[0], base.hB[1] + bounce * 0.012];
     }
     if (pose.moving) {
       const w = pose.walk || 0;
       const s = Math.sin(w), c = Math.cos(w);
       const sprint = !!pose.sprint;
       const stride = sprint ? 0.27 : 0.15;
-      P2.fF = [0.03 + s * stride, -Math.max(0, c) * (sprint ? 0.18 : 0.08)];
-      P2.fB = [-0.03 - s * stride, -Math.max(0, -c) * (sprint ? 0.18 : 0.08)];
-      P2.b = [sprint ? 0.04 : 0, 0.02 - Math.abs(c) * (sprint ? 0.05 : 0.035)];
+      P3.fF = [0.03 + s * stride, -Math.max(0, c) * (sprint ? 0.18 : 0.08)];
+      P3.fB = [-0.03 - s * stride, -Math.max(0, -c) * (sprint ? 0.18 : 0.08)];
+      P3.b = [sprint ? 0.04 : 0, 0.02 - Math.abs(c) * (sprint ? 0.05 : 0.035)];
       if (sprint) {
-        P2.l = 0.34;
-        P2.hF = [-s * 0.26 + 0.06, 0.16 + Math.max(0, s) * 0.06];
-        P2.hB = [s * 0.26 + 0.02, 0.16 + Math.max(0, -s) * 0.06];
-        P2.eF = 1;
-        P2.eB = 1;
-        P2.hand = "fist";
-        P2.handB = "fist";
-        P2.wF = base.wF === null ? null : -2.4;
-        P2.wB = base.wB === null ? null : -2.5;
+        P3.l = 0.34;
+        P3.hF = [-s * 0.26 + 0.06, 0.16 + Math.max(0, s) * 0.06];
+        P3.hB = [s * 0.26 + 0.02, 0.16 + Math.max(0, -s) * 0.06];
+        P3.eF = 1;
+        P3.eB = 1;
+        P3.hand = "fist";
+        P3.handB = "fist";
+        P3.wF = base.wF === null ? null : -2.4;
+        P3.wB = base.wB === null ? null : -2.5;
       } else if (!pose.combat) {
-        P2.hF = [-s * 0.14 + 0.03, 0.38];
-        P2.hB = [s * 0.14 - 0.02, 0.38];
+        P3.hF = [-s * 0.14 + 0.03, 0.38];
+        P3.hB = [s * 0.14 - 0.02, 0.38];
       }
     }
     if (pose.bounce) {
       const k = Math.abs(Math.sin(t * 5.2));
-      P2.z = (P2.z || 0) + k * 0.32;
-      P2.b = [P2.b[0], P2.b[1] + (1 - k) * 0.08];
-      P2.hF = [0.28, -0.02];
-      P2.hB = [0.16, 0.04];
+      P3.z = (P3.z || 0) + k * 0.32;
+      P3.b = [P3.b[0], P3.b[1] + (1 - k) * 0.08];
+      P3.hF = [0.28, -0.02];
+      P3.hB = [0.16, 0.04];
     }
     if (pose.swimming) {
       const s = Math.sin(t * 5);
-      P2.hF = [0.3 + s * 0.12, -0.05 + Math.cos(t * 5) * 0.1];
-      P2.hB = [0.28 - s * 0.12, -0.02 - Math.cos(t * 5) * 0.1];
-      P2.wF = null;
-      P2.wB = null;
+      P3.hF = [0.3 + s * 0.12, -0.05 + Math.cos(t * 5) * 0.1];
+      P3.hB = [0.28 - s * 0.12, -0.02 - Math.cos(t * 5) * 0.1];
+      P3.wF = null;
+      P3.wB = null;
     }
     if (pose.block !== void 0) {
       const fresh = Math.max(0, 1 - pose.block / 0.2);
-      P2.hF = [0.2 + fresh * 0.04, -0.13 - fresh * 0.03];
-      P2.hB = [0.23, -0.03];
-      P2.eF = 1;
-      P2.eB = -0.8;
-      P2.b = [-0.02 * fresh, 0.08];
-      P2.l = 0.14;
-      P2.fF = [0.21, 0];
-      P2.fB = [-0.19, 0];
-      P2.hand = "fist";
-      P2.handB = "fist";
+      P3.hF = [0.2 + fresh * 0.04, -0.13 - fresh * 0.03];
+      P3.hB = [0.23, -0.03];
+      P3.eF = 1;
+      P3.eB = -0.8;
+      P3.b = [-0.02 * fresh, 0.08];
+      P3.l = 0.14;
+      P3.fF = [0.21, 0];
+      P3.fB = [-0.19, 0];
+      P3.hand = "fist";
+      P3.handB = "fist";
       if (base.wF !== null && pose.armedBlock) {
-        P2.wF = -1.35;
-        P2.hF = [0.2, -0.05];
-      } else P2.wF = null;
-      P2.wB = null;
-      P2.face = "fierce";
+        P3.wF = -1.35;
+        P3.hF = [0.2, -0.05];
+      } else P3.wF = null;
+      P3.wB = null;
+      P3.face = "fierce";
     }
     if (pose.state === "hurt") {
       const k = pose.hurtK ?? 1;
-      P2.l = -0.4 * k;
-      P2.b = [-0.07 * k, 0.05];
-      P2.hF = [-0.2, 0.08];
-      P2.hB = [0.2, 0];
-      P2.eF = 0.3;
-      P2.eB = 0.3;
-      P2.fF = [0.12, 0];
-      P2.fB = [-0.14, -0.02];
-      P2.ht = -0.24;
-      P2.wF = null;
-      P2.wB = null;
+      P3.l = -0.4 * k;
+      P3.b = [-0.07 * k, 0.05];
+      P3.hF = [-0.2, 0.08];
+      P3.hB = [0.2, 0];
+      P3.eF = 0.3;
+      P3.eB = 0.3;
+      P3.fF = [0.12, 0];
+      P3.fB = [-0.14, -0.02];
+      P3.ht = -0.24;
+      P3.wF = null;
+      P3.wB = null;
     }
     if (pose.dodge !== void 0) {
       const k = pose.dodge;
       const dir = pose.dodgeDir ?? 1;
       if (Math.abs(dir) > 0.35) {
-        P2.r = Math.sign(dir) * k * TAU5;
-        P2.b = [0, 0.22 * Math.sin(k * Math.PI)];
-        P2.hF = [0.2, 0.18];
-        P2.hB = [0.16, 0.2];
-        P2.fF = [0.18, -0.26 * Math.sin(k * Math.PI)];
-        P2.fB = [0.06, -0.3 * Math.sin(k * Math.PI)];
-        P2.l = 0.4 * Math.sin(k * Math.PI);
+        P3.r = Math.sign(dir) * k * TAU5;
+        P3.b = [0, 0.22 * Math.sin(k * Math.PI)];
+        P3.hF = [0.2, 0.18];
+        P3.hB = [0.16, 0.2];
+        P3.fF = [0.18, -0.26 * Math.sin(k * Math.PI)];
+        P3.fB = [0.06, -0.3 * Math.sin(k * Math.PI)];
+        P3.l = 0.4 * Math.sin(k * Math.PI);
       } else {
         const e = Math.sin(k * Math.PI);
-        P2.b = [0, 0.16 * e];
-        P2.l = 0.2 * e;
-        P2.fF = [0.28, 0];
-        P2.fB = [-0.3, -0.04];
-        P2.hF = [0.26, 0.1];
-        P2.hB = [-0.2, 0.16];
+        P3.b = [0, 0.16 * e];
+        P3.l = 0.2 * e;
+        P3.fF = [0.28, 0];
+        P3.fB = [-0.3, -0.04];
+        P3.hF = [0.26, 0.1];
+        P3.hB = [-0.2, 0.16];
       }
-      P2.wF = null;
-      P2.wB = null;
+      P3.wF = null;
+      P3.wB = null;
     }
     if (pose.getUp !== void 0) {
       const k = pose.getUp;
       const e = 1 - (1 - k) * (1 - k);
-      P2.b = [0, 0.3 * (1 - e)];
-      P2.l = 0.55 * (1 - e);
-      P2.hF = [0.22, 0.46 * (1 - e) + 0.08];
-      P2.hB = [0.12, 0.42 - 0.1 * e];
-      P2.fF = [0.24 * (1 - e) + 0.06, 0];
-      P2.fB = [-0.2, -0.02 * (1 - e)];
-      P2.ht = 0.2 * (1 - e);
+      P3.b = [0, 0.3 * (1 - e)];
+      P3.l = 0.55 * (1 - e);
+      P3.hF = [0.22, 0.46 * (1 - e) + 0.08];
+      P3.hB = [0.12, 0.42 - 0.1 * e];
+      P3.fF = [0.24 * (1 - e) + 0.06, 0];
+      P3.fB = [-0.2, -0.02 * (1 - e)];
+      P3.ht = 0.2 * (1 - e);
     }
     if (pose.launch) {
-      P2.r = -pose.launch * 0.9;
-      P2.hF = [-0.1, -0.3];
-      P2.hB = [0.14, -0.26];
-      P2.fF = [0.3, -0.25];
-      P2.fB = [0.12, -0.12];
-      P2.ht = -0.3;
+      P3.r = -pose.launch * 0.9;
+      P3.hF = [-0.1, -0.3];
+      P3.hB = [0.14, -0.26];
+      P3.fF = [0.3, -0.25];
+      P3.fB = [0.12, -0.12];
+      P3.ht = -0.3;
     }
-    return P2;
+    return P3;
   }
 
   // src/render/charart.js
   var TAU6 = Math.PI * 2;
+  var DEG = Math.PI / 180;
   var OUTLINE = "rgba(30,20,20,0.85)";
-  function circ(g, x, y, r, fill, stroke, lw = 0.04) {
-    g.beginPath();
-    g.arc(x, y, Math.max(1e-3, r), 0, TAU6);
-    if (fill) {
-      g.fillStyle = fill;
-      g.fill();
-    }
-    if (stroke) {
-      g.lineWidth = lw;
-      g.strokeStyle = stroke;
-      g.stroke();
-    }
+  var INK = "#2a1a1e";
+  var LW = 0.04;
+  var LW_IN = 0.02;
+  function hex(col, fb) {
+    if (typeof col !== "string") return fb;
+    if (col[0] === "#") return col.length === 4 || col.length === 7 ? col : col.length > 7 ? col.slice(0, 7) : fb;
+    const m = col.match(/rgba?\(([^)]+)\)/);
+    if (!m) return fb;
+    return "#" + m[1].split(",").slice(0, 3).map((v) => Math.max(0, Math.min(255, parseFloat(v) | 0)).toString(16).padStart(2, "0")).join("");
   }
-  function drawHead(g, look, hy, r, d, pose, t, P2) {
-    const skin = look.skin || "#f1c9a0";
-    const hair = look.hairColor || "#2d2d2d";
-    const side = d === "left" || d === "right";
-    const back = d === "up";
-    const white = look.furWhite;
-    if (look.ears) {
-      const ec = white ? "#fafafa" : look.fur || hair;
-      for (const sx of [-1, 1]) {
-        g.save();
-        g.translate(sx * r * 0.62, hy - r * 0.75);
-        g.rotate(sx * 0.35);
-        g.fillStyle = ec;
-        g.strokeStyle = OUTLINE;
-        g.lineWidth = 0.03;
-        g.beginPath();
-        if (look.ears === "long") g.ellipse(0, -0.2, 0.08, 0.26, 0, 0, TAU6);
-        else if (look.ears === "round") g.arc(0, -0.02, 0.12, 0, TAU6);
-        else {
-          g.moveTo(-0.11, 0.05);
-          g.lineTo(0, -0.22);
-          g.lineTo(0.11, 0.05);
-          g.closePath();
-        }
-        g.fill();
-        g.stroke();
-        g.restore();
-        if (side) break;
-      }
-    }
-    if (look.fin) {
-      g.fillStyle = shade(skin, -0.2);
-      g.strokeStyle = OUTLINE;
-      g.lineWidth = 0.03;
-      g.beginPath();
-      g.moveTo(-0.12, hy - r * 0.8);
-      g.quadraticCurveTo(0.05, hy - r * 1.9, 0.22, hy - r * 0.75);
-      g.closePath();
-      g.fill();
-      g.stroke();
-    }
-    const faceCol = white ? "#fafafa" : look.fur && look.furFace ? look.fur : skin;
-    circ(g, 0, hy, r, faceCol, OUTLINE, 0.04);
-    if (look.muzzle && !back && !pose.ghost) {
-      circ(g, side ? r * 0.55 : 0, hy + r * 0.3, r * 0.38, shade(white ? "#fafafa" : look.fur || skin, 0.35), null);
-      circ(g, side ? r * 0.82 : 0, hy + r * 0.18, 0.045, "#2d2d2d");
-    }
-    drawHair(g, look.hair || "short", white ? "#fafafa" : hair, hy, r, d, look.nika ? t : null);
-    if (!back && !pose.ghost) {
-      const ex = side ? r * 0.4 : r * 0.36;
-      const eyeY = hy + r * 0.05;
-      const eyeCol = white ? "#ff1744" : look.eyeColor || "#222";
-      const blink = Math.sin(t * 1.7 + (look.seed || 0)) > 0.985;
-      const fierce = P2 && (P2.face === "shout" || P2.face === "fierce");
-      const drawEye = (x) => {
-        if (pose.state === "hurt") {
-          g.strokeStyle = "#222";
-          g.lineWidth = 0.028;
-          g.beginPath();
-          g.moveTo(x - 0.05, eyeY - 0.04);
-          g.lineTo(x + 0.04, eyeY);
-          g.lineTo(x - 0.05, eyeY + 0.04);
-          g.stroke();
-          return;
-        }
-        if (blink && !fierce) {
-          g.strokeStyle = "#222";
-          g.lineWidth = 0.025;
-          g.beginPath();
-          g.moveTo(x - 0.05, eyeY);
-          g.lineTo(x + 0.05, eyeY);
-          g.stroke();
-          return;
-        }
-        g.fillStyle = "#fff";
-        g.beginPath();
-        g.ellipse(x, eyeY, 0.06, 0.075, 0, 0, TAU6);
-        g.fill();
-        g.fillStyle = eyeCol;
-        g.beginPath();
-        g.ellipse(x + (side ? 0.015 : 0), eyeY + 0.01, 0.035, 0.05, 0, 0, TAU6);
-        g.fill();
-        g.fillStyle = "#fff";
-        g.beginPath();
-        g.arc(x - 0.01, eyeY - 0.02, 0.012, 0, TAU6);
-        g.fill();
-        if (fierce) {
-          g.strokeStyle = "#222";
-          g.lineWidth = 0.03;
-          g.beginPath();
-          g.moveTo(x - 0.07, eyeY - 0.1 + (side ? 0 : x > 0 ? 0.03 : 0));
-          g.lineTo(x + 0.06, eyeY - 0.06 + (side ? 0 : x > 0 ? -0.03 : 0.03));
-          g.stroke();
-        }
-      };
-      if (side) drawEye(ex);
-      else {
-        drawEye(-ex);
-        drawEye(ex);
-      }
-      if (look.thirdEye) {
-        g.fillStyle = "#fff";
-        g.beginPath();
-        g.ellipse(side ? r * 0.2 : 0, hy - r * 0.35, 0.05, 0.065, 0, 0, TAU6);
-        g.fill();
-        g.fillStyle = look.eyeColor || "#8e44ad";
-        g.beginPath();
-        g.arc(side ? r * 0.21 : 0, hy - r * 0.34, 0.028, 0, TAU6);
-        g.fill();
-      }
-      g.strokeStyle = "#6b2b2b";
-      g.lineWidth = 0.025;
-      const my = hy + r * 0.5;
-      const mx = side ? r * 0.35 : 0;
-      g.beginPath();
-      if (pose.state === "hurt" || P2 && P2.face === "shout") {
-        g.ellipse(mx, my, 0.06, 0.045, 0, 0, TAU6);
-        g.fillStyle = "#6b2b2b";
-        g.fill();
-      } else if (look.nika || look.grin) {
-        g.arc(mx, my - 0.04, 0.08, 0.2, Math.PI - 0.2);
-        g.stroke();
-        if (look.sharpTeeth) {
-          g.fillStyle = "#fff";
-          g.fillRect(mx - 0.06, my - 0.01, 0.12, 0.03);
-        }
-      } else {
-        g.moveTo(mx - 0.04, my);
-        g.lineTo(mx + 0.04, my);
-        g.stroke();
-      }
-      if (look.scarEye) {
-        g.strokeStyle = "#b0413e";
-        g.lineWidth = 0.025;
-        g.beginPath();
-        g.moveTo(-ex - 0.02, eyeY - 0.12);
-        g.lineTo(-ex + 0.03, eyeY + 0.12);
-        g.stroke();
-      }
-      if (look.nose === "long") {
-        g.fillStyle = skin;
-        g.strokeStyle = OUTLINE;
-        g.lineWidth = 0.02;
-        g.beginPath();
-        g.moveTo(side ? r * 0.7 : -0.04, hy + r * 0.2);
-        g.lineTo(side ? r * 1.6 : 0, hy + r * 0.25);
-        g.lineTo(side ? r * 0.7 : 0.04, hy + r * 0.32);
-        g.fill();
-        g.stroke();
-      }
-      if (pose.flash) {
-        g.fillStyle = "rgba(255,255,255,0.6)";
-        g.beginPath();
-        g.arc(0, hy, r, 0, TAU6);
-        g.fill();
-      }
-    }
-    drawHat(g, look.hat, hy, r, d, look);
+  function lum2(h2) {
+    const s = h2.length === 4 ? h2[1] + h2[1] + h2[2] + h2[2] + h2[3] + h2[3] : h2.slice(1, 7);
+    const n = parseInt(s, 16);
+    return ((n >> 16 & 255) * 0.299 + (n >> 8 & 255) * 0.587 + (n & 255) * 0.114) / 255;
   }
-  function drawHair(g, style, col, hy, r, d, nikaT) {
-    if (style === "bald" && nikaT === null) return;
-    const back = d === "up";
-    g.fillStyle = col;
-    g.strokeStyle = OUTLINE;
-    g.lineWidth = 0.035;
-    g.beginPath();
-    if (nikaT !== null && nikaT !== void 0) {
-      g.moveTo(-r * 1.05, hy);
-      for (let k = 0; k <= 8; k++) {
-        const a = Math.PI + k / 8 * Math.PI;
-        const rr = r * (k % 2 ? 1.25 + 0.2 * Math.sin(nikaT * 9 + k) : 1);
-        g.lineTo(Math.cos(a) * rr * 1.1, hy + Math.sin(a) * rr * 1.25 - (k % 2 ? r * 0.2 : 0));
+  var PALS = /* @__PURE__ */ new Map();
+  function hairPal(col) {
+    const key2 = "h" + col;
+    let p = PALS.get(key2);
+    if (p) return p;
+    const h2 = hex(col, "#2d2d2d"), L2 = lum2(h2);
+    const base = L2 < 0.16 ? mixHex(h2, "#474c69", 0.3) : h2;
+    p = {
+      base,
+      shadow: L2 > 0.78 ? mixHex(h2, "#9796c2", 0.36) : mixHex(base, "#22122c", L2 < 0.16 ? 0.52 : 0.34),
+      light: L2 < 0.3 ? mixHex(base, "#b9cdee", 0.5) : mixHex(base, "#ffffff", L2 > 0.78 ? 0.9 : 0.55),
+      line: mixHex(base, "#120a12", L2 < 0.16 ? 0.62 : 0.5),
+      brow: L2 > 0.62 ? mixHex(h2, "#5b4a46", 0.6) : L2 < 0.16 ? "#1d1418" : mixHex(base, "#140c10", 0.5)
+    };
+    PALS.set(key2, p);
+    return p;
+  }
+  function skinPal(col) {
+    const key2 = "s" + col;
+    let p = PALS.get(key2);
+    if (p) return p;
+    const h2 = hex(col, "#f1c9a0"), L2 = lum2(h2);
+    p = {
+      base: h2,
+      shadow: L2 > 0.3 ? mixHex(h2, "#a23f45", 0.22) : mixHex(h2, "#12060c", 0.34),
+      line: mixHex(h2, "#3a1418", 0.6),
+      light: mixHex(h2, "#ffffff", 0.42),
+      muzzle: mixHex(h2, "#ffffff", L2 > 0.85 ? 0 : 0.5),
+      inner: mixHex(h2, "#f48fb1", 0.55),
+      blush: mixHex(h2, "#ff5a6e", 0.32)
+    };
+    PALS.set(key2, p);
+    return p;
+  }
+  function tint(col, other, k) {
+    const key2 = "t" + col + other + k;
+    let p = PALS.get(key2);
+    if (!p) {
+      p = mixHex(hex(col, "#888888"), hex(other, "#888888"), k);
+      PALS.set(key2, p);
+    }
+    return p;
+  }
+  var RD = (v) => Math.round(v * 1e3) / 1e3;
+  var PB = class {
+    constructor() {
+      this.s = "";
+      this.x = 0;
+      this.y = 0;
+    }
+    M(x, y) {
+      this.s += ` M${RD(x)} ${RD(y)}`;
+      this.x = x;
+      this.y = y;
+      return this;
+    }
+    L(x, y) {
+      this.s += ` L${RD(x)} ${RD(y)}`;
+      this.x = x;
+      this.y = y;
+      return this;
+    }
+    Q(cx, cy, x, y) {
+      this.s += ` Q${RD(cx)} ${RD(cy)} ${RD(x)} ${RD(y)}`;
+      this.x = x;
+      this.y = y;
+      return this;
+    }
+    C(a, b, c, d, x, y) {
+      this.s += ` C${RD(a)} ${RD(b)} ${RD(c)} ${RD(d)} ${RD(x)} ${RD(y)}`;
+      this.x = x;
+      this.y = y;
+      return this;
+    }
+    /** Quadratic to (x, y) whose control is pushed `b` × length to the right of travel (screen space). */
+    q(x, y, b = 0.1) {
+      const mx = (this.x + x) / 2 - (y - this.y) * b, my = (this.y + y) / 2 + (x - this.x) * b;
+      return this.Q(mx, my, x, y);
+    }
+    /** Chain of q() through points [x, y, bend?]. */
+    zz(pts, b = 0.1) {
+      for (const p of pts) this.q(p[0], p[1], p[2] ?? b);
+      return this;
+    }
+    /** Elliptical arc (degrees, either direction) as cubics; the pen must be at the a0 point. */
+    arc(cx, cy, rx, ry, a0, a1) {
+      const n = Math.max(1, Math.ceil(Math.abs(a1 - a0) / 90));
+      for (let i = 0; i < n; i++) {
+        const b0 = (a0 + (a1 - a0) * i / n) * DEG, b1 = (a0 + (a1 - a0) * (i + 1) / n) * DEG;
+        const k = 4 / 3 * Math.tan((b1 - b0) / 4);
+        const x0 = Math.cos(b0), y0 = Math.sin(b0), x3 = Math.cos(b1), y3 = Math.sin(b1);
+        this.C(cx + (x0 - k * y0) * rx, cy + (y0 + k * x0) * ry, cx + (x3 + k * y3) * rx, cy + (y3 - k * x3) * ry, cx + x3 * rx, cy + y3 * ry);
       }
-      g.lineTo(r * 1.05, hy);
-      g.quadraticCurveTo(0, hy - r * 0.4, -r * 1.05, hy);
-      g.fill();
-      g.stroke();
+      return this;
+    }
+    /** Scalloped arc (curls): n bumps from a0 to a1 (degrees); the pen must be at the a0 point. */
+    bumps(cx, cy, r, a0, a1, n, k = 0.14) {
+      for (let i = 0; i < n; i++) {
+        const am = (a0 + (a1 - a0) * (i + 0.5) / n) * DEG, ae = (a0 + (a1 - a0) * (i + 1) / n) * DEG;
+        this.Q(cx + Math.cos(am) * r * (1 + k), cy + Math.sin(am) * r * (1 + k), cx + Math.cos(ae) * r, cy + Math.sin(ae) * r);
+      }
+      return this;
+    }
+    ell(cx, cy, rx, ry) {
+      this.M(cx + rx, cy);
+      return this.arc(cx, cy, rx, ry, 0, 360).Z();
+    }
+    Z() {
+      this.s += " Z";
+      return this;
+    }
+  };
+  var pb = () => new PB();
+  var at2 = (cx, cy, r, a) => [cx + Math.cos(a * DEG) * r, cy + Math.sin(a * DEG) * r];
+  function spikePts(cx, cy, r0, r1, a0, a1, n, lean = 0) {
+    const out = [];
+    for (let i = 0; i <= 2 * n; i++) {
+      const a = a0 + (a1 - a0) * i / (2 * n) + (i % 2 ? lean : 0);
+      out.push(at2(cx, cy, i % 2 ? r1 : r0, a));
+    }
+    return out;
+  }
+  var mirror = (pts) => pts.map((p) => [-p[0], p[1], p[2]]).reverse();
+  var P2 = /* @__PURE__ */ new Map();
+  function path(d) {
+    if (typeof d !== "string") return d;
+    let p = P2.get(d);
+    if (!p) {
+      p = new Path2D(d);
+      P2.set(d, p);
+    }
+    return p;
+  }
+  var FACE_F = pb().M(-1, 0).arc(0, 0, 1, 1, 180, 360).C(1, 0.44, 0.8, 0.8, 0.3, 0.97).Q(0, 1.06, -0.3, 0.97).C(-0.8, 0.8, -1, 0.44, -1, 0).Z().s;
+  var FACE_S = pb().M(0, -1).C(0.55, -1, 0.94, -0.62, 0.97, -0.12).Q(0.99, 0.08, 1.04, 0.2).L(1.13, 0.34).Q(1.07, 0.41, 0.97, 0.42).Q(1, 0.5, 0.96, 0.58).Q(0.94, 0.7, 0.9, 0.8).Q(0.86, 0.95, 0.66, 0.96).Q(0.2, 0.94, -0.25, 0.86).Q(-0.62, 0.8, -0.83, 0.56).arc(0, 0, 1, 1, 146, 270).Z().s;
+  var EAR_F = {
+    l: "M-0.93 0.02 C-1.2 -0.06 -1.24 0.42 -0.95 0.4 Z",
+    r: "M0.93 0.02 C1.2 -0.06 1.24 0.42 0.95 0.4 Z",
+    li: "M-0.99 0.12 Q-1.11 0.2 -1.0 0.31",
+    ri: "M0.99 0.12 Q1.11 0.2 1.0 0.31"
+  };
+  var EAR_S = { p: "M0.04 0.02 C-0.14 -0.08 -0.32 0.08 -0.27 0.28 C-0.23 0.44 -0.06 0.5 0.04 0.4 Z", i: "M-0.02 0.12 C-0.15 0.1 -0.2 0.27 -0.09 0.32" };
+  var TIE = "#c8372d";
+  var STYLES = {};
+  var META = {
+    short: { top: -1.16, w: 1.15, hatK: 1 },
+    spiky: { top: -1.5, w: 1.18, hatK: 1.03 },
+    long: { top: -1.18, w: 1.16, hatK: 1 },
+    ponytail: { top: -1.16, w: 1.12, hatK: 1 },
+    buzz: { top: -1.1, w: 1.08, hatK: 0.97 },
+    curly: { top: -1.36, w: 1.24, hatK: 1.08 },
+    afro: { top: -2.05, w: 1.5, hatK: 1.3 },
+    topknot: { top: -1.56, w: 1.1, hatK: 1 },
+    mohawk: { top: -2.18, w: 1.08, hatK: 0.98 },
+    bald: { top: -1, w: 1.02, hatK: 0.95 },
+    bun: { top: -1.62, w: 1.12, hatK: 1 },
+    pompadour: { top: -1.9, w: 1.1, hatK: 1.03 },
+    nika: { top: -1.7, w: 1.2, hatK: 1.05 }
+  };
+  var ALIAS2 = { straight: "long", braid: "ponytail", bob: "short", crew: "buzz", shaved: "buzz", dreads: "curly", wavy: "curly", twintails: "ponytail", odango: "bun", quiff: "pompadour" };
+  function styleId(s) {
+    if (s && META[s]) return s;
+    if (s && ALIAS2[s]) return ALIAS2[s];
+    return "short";
+  }
+  function capF(V, sb, fringe, bend = 0.07, cy = -0.04) {
+    const b = pb().M(-1.07, sb).q(-V, cy, -0.06).arc(0, cy, V, V - 0.01, 180, 360).q(1.07, sb, -0.06).L(0.93, -0.02);
+    b.zz(fringe, bend).L(-0.93, -0.02).Z();
+    return b.s;
+  }
+  function sideEdgeS(b, nape, sbY = 0.3) {
+    b.zz(nape, 0.05).C(-0.38, 0.26, -0.3, 0.06, -0.2, -0.04).Q(0, -0.14, 0.16, -0.04).L(0.24, sbY).L(0.36, -0.08);
+    return b;
+  }
+  var FRINGE_S = [[0.5, -0.42], [0.64, -0.22], [0.74, -0.46], [0.88, -0.24], [0.92, -0.44]];
+  function capS(backC, nape, fringe = FRINGE_S, sbY = 0.3) {
+    const b = pb().M(1.02, -0.24).Q(1.14, -0.5, 1.04, -0.72).C(0.92, -1.02, 0.56, -1.16, 0.14, -1.16);
+    backC(b);
+    sideEdgeS(b, nape, sbY).zz(fringe, 0.06).L(1.02, -0.24).Z();
+    return b.s;
+  }
+  var NAPE_S = [[-0.84, 0.34], [-0.72, 0.56], [-0.6, 0.34], [-0.46, 0.46]];
+  var backRound = (b) => b.C(-0.46, -1.16, -1.13, -0.86, -1.15, -0.22).C(-1.16, 0.1, -1.06, 0.36, -0.94, 0.52);
+  function capB(V, nape, sy = 0.3, cy = -0.04) {
+    return pb().M(-1.08, sy).q(-V, cy, -0.06).arc(0, cy, V, V - 0.01, 180, 360).q(1.08, sy, -0.06).zz(nape, 0.06).L(-1.08, sy).Z().s;
+  }
+  var NAPE_B = [[0.92, 0.46], [0.8, 0.3], [0.64, 0.6], [0.48, 0.4], [0.3, 0.64], [0.12, 0.42], [-0.06, 0.66], [-0.24, 0.42], [-0.42, 0.62], [-0.58, 0.4], [-0.76, 0.56], [-0.9, 0.34]];
+  var SHINE_F = [0, -0.06, 0.8, 200, 262, 4];
+  var SHINE_S = [-0.1, -0.12, 0.8, 204, 266, 4];
+  var SHINE_B = [0, -0.06, 0.8, 202, 262, 4];
+  var CROWN_SWIRL = "M0.22 -0.52 Q0.08 -0.6 0.12 -0.44 Q0.18 -0.34 0.3 -0.42";
+  function slickF(V, hl) {
+    return pb().M(-1, 0.12).q(-V, -0.06, -0.04).arc(0, -0.06, V, V - 0.02, 180, 360).q(1, 0.12, -0.04).L(0.94, 0.02).C(0.9, -0.3, 0.72, hl + 0.04, 0.48, hl + 0.02).Q(0.2, hl + 0.04, 0, hl - 0.06).Q(-0.2, hl + 0.04, -0.48, hl + 0.02).C(-0.72, hl + 0.04, -0.9, -0.3, -0.94, 0.02).Z().s;
+  }
+  function slickS(V, hlx = 0.9) {
+    return pb().M(hlx, -0.5).C(hlx - 0.12, -0.96, 0.42, -V + 0.02, 0.08, -V + 0.02).C(-0.52, -V + 0.02, -V, -0.8, -V, -0.16).C(-V, 0.16, -1, 0.36, -0.88, 0.5).C(-0.6, 0.44, -0.4, 0.24, -0.24, -0.02).Q(0, -0.12, 0.14, -0.02).L(0.2, 0.16).L(0.3, -0.12).C(0.46, -0.36, 0.7, -0.48, hlx, -0.5).Z().s;
+  }
+  function slickB(V, ny = 0.58) {
+    return pb().M(-1, 0.36).q(-V, -0.06, -0.05).arc(0, -0.06, V, V - 0.02, 180, 360).q(1, 0.36, -0.05).Q(0.5, ny, 0, ny).Q(-0.5, ny, -1, 0.36).Z().s;
+  }
+  var FRINGE_SHORT = [[0.84, -0.44], [0.7, -0.24], [0.54, -0.56], [0.36, -0.26], [0.18, -0.58], [-0.02, -0.25], [-0.2, -0.57], [-0.4, -0.27], [-0.58, -0.53], [-0.78, -0.25], [-0.88, -0.44]];
+  var STRANDS_SHORT = "M0.54 -0.56 Q0.5 -0.78 0.38 -0.92 M0.18 -0.58 Q0.16 -0.82 0.06 -0.98 M-0.2 -0.57 Q-0.2 -0.8 -0.28 -0.95 M-0.58 -0.53 Q-0.56 -0.72 -0.66 -0.84";
+  var backShortF = pb().M(-1.1, -0.2).arc(0, -0.04, 1.12, 1.1, 188, 352).q(1.12, 0.38, -0.05).zz([[1, 0.3], [1.02, 0.56], [0.86, 0.44], [0.7, 0.5]], 0.05).L(0.6, 0.3).L(-0.6, 0.3).L(-0.7, 0.5).zz([[-0.86, 0.44], [-1.02, 0.56], [-1, 0.3], [-1.12, 0.38]], 0.05).q(-1.1, -0.2, -0.05).Z().s;
+  STYLES.short = {
+    F: { back: [{ d: backShortF, tone: "shadow" }], front: [{ d: capF(1.13, 0.3, FRINGE_SHORT), shine: SHINE_F, strands: STRANDS_SHORT, fringe: true }] },
+    S: { back: [], front: [{ d: capS(backRound, NAPE_S), shine: SHINE_S, strands: "M0.74 -0.46 Q0.5 -0.8 0.1 -0.96 M0.5 -0.42 Q0.2 -0.66 -0.2 -0.8 M-0.6 0.34 Q-0.8 0 -0.84 -0.4 M-0.84 0.34 Q-1.0 0.0 -1.0 -0.3", fringe: true }] },
+    B: { back: [], front: [{ d: capB(1.13, NAPE_B), shine: SHINE_B, strands: CROWN_SWIRL + " M0.64 0.6 Q0.7 0.2 0.8 -0.1 M0.3 0.64 Q0.3 0.2 0.4 -0.2 M-0.06 0.66 Q-0.1 0.3 -0.1 0.0 M-0.42 0.62 Q-0.5 0.2 -0.6 -0.1" }] }
+  };
+  var FRINGE_SPIKY = [[0.84, -0.5], [0.68, -0.2], [0.5, -0.6], [0.3, -0.2], [0.12, -0.62], [-0.1, -0.21], [-0.3, -0.62], [-0.52, -0.22], [-0.7, -0.56], [-0.88, -0.24], [-0.9, -0.46]];
+  var capSpikyF = (() => {
+    const b = pb().M(-1.1, 0.36).q(-1.12, -0.04, -0.05).zz(spikePts(0, -0.06, 1.1, 1.46, 184, 356, 5, -3), 0.05).q(1.1, 0.36, -0.05).L(0.93, -0.02);
+    return b.zz(FRINGE_SPIKY, 0.07).L(-0.93, -0.02).Z().s;
+  })();
+  var backSpikyF = pb().M(-1.02, -0.3).L(1.02, -0.3).zz([[1.42, -0.04], [1.1, 0.06], [1.36, 0.42], [1, 0.34], [1.08, 0.68], [0.7, 0.46]], 0.04).L(-0.7, 0.46).zz(mirror([[1.02, -0.3], [1.42, -0.04], [1.1, 0.06], [1.36, 0.42], [1, 0.34], [1.08, 0.68]]), 0.04).Z().s;
+  var capSpikyS = (() => {
+    const b = pb().M(1.02, -0.24).Q(1.16, -0.52, 1.06, -0.7);
+    b.zz([
+      [1.3, -0.92],
+      [0.82, -0.98],
+      [0.88, -1.4],
+      [0.4, -1.12],
+      [0.18, -1.58],
+      [-0.08, -1.14],
+      [-0.56, -1.48],
+      [-0.66, -0.96],
+      [-1.24, -1.04],
+      [-1.04, -0.58],
+      [-1.5, -0.44],
+      [-1.1, -0.14],
+      [-1.42, 0.2],
+      [-1, 0.24],
+      [-1.08, 0.6],
+      [-0.74, 0.4],
+      [-0.64, 0.62],
+      [-0.48, 0.4]
+    ], 0.04);
+    b.C(-0.38, 0.24, -0.3, 0.06, -0.2, -0.04).Q(0, -0.14, 0.16, -0.04).L(0.26, 0.34).L(0.36, -0.08);
+    return b.zz([[0.5, -0.46], [0.66, -0.2], [0.76, -0.5], [0.9, -0.22], [0.94, -0.46]], 0.06).L(1.02, -0.24).Z().s;
+  })();
+  var capSpikyB = (() => {
+    const s0 = at2(0, -0.08, 1.1, 150);
+    const b = pb().M(s0[0], s0[1]).zz(spikePts(0, -0.08, 1.1, 1.46, 150, 390, 8, 0), 0.04);
+    return b.zz([[0.8, 0.68], [0.66, 0.44], [0.48, 0.72], [0.3, 0.46], [0.12, 0.74], [-0.06, 0.46], [-0.24, 0.72], [-0.42, 0.46], [-0.6, 0.7], [-0.76, 0.44], [s0[0], s0[1]]], 0.04).Z().s;
+  })();
+  STYLES.spiky = {
+    F: { back: [{ d: backSpikyF, tone: "shadow" }], front: [{ d: capSpikyF, shine: [0, -0.06, 0.82, 200, 262, 4], strands: "M0.5 -0.6 Q0.5 -0.9 0.56 -1.1 M0.12 -0.62 Q0.1 -0.95 0.02 -1.2 M-0.3 -0.62 Q-0.34 -0.9 -0.5 -1.08 M-0.7 -0.56 Q-0.8 -0.7 -1.0 -0.8", fringe: true }] },
+    S: { back: [], front: [{ d: capSpikyS, shine: SHINE_S, strands: "M0.76 -0.5 Q0.5 -0.84 0.18 -1.0 M0.5 -0.46 Q0.2 -0.7 -0.3 -0.86 M-0.2 -0.6 Q-0.6 -0.66 -1.0 -0.5 M-0.64 0.3 Q-0.8 0 -0.9 -0.2", fringe: true }] },
+    B: { back: [], front: [{ d: capSpikyB, shine: SHINE_B, strands: CROWN_SWIRL + " M0.48 0.7 Q0.5 0.3 0.6 0.0 M0.12 0.72 Q0.1 0.3 0.12 0.0 M-0.24 0.7 Q-0.3 0.3 -0.4 0.0 M-0.6 0.66 Q-0.7 0.3 -0.8 0.1" }] }
+  };
+  var backLongF = pb().M(-1.11, -0.3).arc(0, -0.06, 1.14, 1.12, 192, 348).C(1.24, 0.2, 1.3, 0.85, 1.27, 1.32).zz([[1.15, 1.52], [1.05, 1.3], [0.93, 1.48], [0.84, 1.18]], 0.05).C(0.8, 1, 0.7, 0.92, 0.5, 0.88).L(-0.5, 0.88).C(-0.7, 0.92, -0.8, 1, -0.84, 1.18).zz([[-0.93, 1.48], [-1.05, 1.3], [-1.15, 1.52], [-1.27, 1.32]], 0.05).C(-1.3, 0.85, -1.24, 0.2, -1.11, -0.3).Z().s;
+  var FRINGE_LONG = [[0.8, -0.36], [0.64, -0.24], [0.48, -0.52], [0.3, -0.26], [0.13, -0.54], [-0.06, -0.26], [-0.24, -0.54], [-0.44, -0.27], [-0.62, -0.5], [-0.8, -0.26], [-0.86, -0.38]];
+  var capLongF = pb().M(-0.92, -0.06).C(-0.98, 0.3, -0.95, 0.8, -0.8, 1.1).zz([[-0.9, 1.4], [-0.98, 1.18], [-1.08, 1.42], [-1.15, 1.12]], 0.06).C(-1.24, 0.7, -1.22, 0.2, -1.14, -0.06).arc(0, -0.06, 1.14, 1.12, 180, 360).C(1.22, 0.2, 1.24, 0.7, 1.15, 1.12).zz([[1.08, 1.42], [0.98, 1.18], [0.9, 1.4], [0.8, 1.1]], 0.06).C(0.95, 0.8, 0.98, 0.3, 0.92, -0.06).zz(FRINGE_LONG, 0.06).L(-0.92, -0.06).Z().s;
+  var capLongS = (() => {
+    const b = pb().M(1.02, -0.24).Q(1.14, -0.5, 1.04, -0.72).C(0.92, -1.02, 0.56, -1.16, 0.14, -1.16).C(-0.5, -1.16, -1.16, -0.84, -1.18, -0.12).C(-1.2, 0.5, -1.14, 1.1, -1.06, 1.6).zz([[-0.94, 1.38], [-0.82, 1.64], [-0.68, 1.38], [-0.54, 1.6], [-0.42, 1.3]], 0.05).C(-0.3, 1.06, -0.04, 0.86, 0.2, 0.62).C(0.32, 0.4, 0.32, 0.1, 0.36, -0.08);
+    return b.zz(FRINGE_S, 0.06).L(1.02, -0.24).Z().s;
+  })();
+  var capLongB = pb().M(-1.14, -0.1).arc(0, -0.08, 1.15, 1.13, 181, 359).C(1.22, 0.5, 1.26, 1.1, 1.2, 1.55).zz([[1.04, 1.36], [0.9, 1.62], [0.72, 1.4], [0.54, 1.66], [0.36, 1.42], [0.18, 1.68], [0, 1.44], [-0.18, 1.68], [-0.36, 1.42], [-0.54, 1.66], [-0.72, 1.4], [-0.9, 1.62], [-1.04, 1.36], [-1.2, 1.55]], 0.05).C(-1.26, 1.1, -1.22, 0.5, -1.14, -0.1).Z().s;
+  STYLES.long = {
+    F: {
+      back: [{ d: backLongF, tone: "shadow", strands: "M1.1 0.3 Q1.16 0.8 1.1 1.3 M-1.1 0.3 Q-1.16 0.8 -1.1 1.3", sway: [0, -0.3, 0.018, 1.6, 0] }],
+      front: [{ d: capLongF, shine: [0, -0.06, 0.82, 198, 262, 4], strands: "M0.48 -0.52 Q0.44 -0.8 0.3 -0.96 M0.13 -0.54 Q0.1 -0.84 0.0 -1.0 M-0.24 -0.54 Q-0.26 -0.8 -0.36 -0.94 M1.06 0.2 Q1.1 0.7 1.0 1.2 M-1.06 0.2 Q-1.1 0.7 -1.0 1.2", fringe: true }]
+    },
+    S: { back: [], front: [{ d: capLongS, shine: SHINE_S, strands: "M0.74 -0.46 Q0.5 -0.8 0.1 -0.96 M-0.6 -0.2 Q-0.8 0.6 -0.72 1.3 M-0.3 0.1 Q-0.5 0.7 -0.5 1.2 M0.1 0.2 Q-0.1 0.6 -0.2 0.9", fringe: true }] },
+    B: { back: [], front: [{ d: capLongB, shine: SHINE_B, strands: CROWN_SWIRL + " M0.8 0.2 Q0.86 0.8 0.72 1.36 M0.36 0.1 Q0.4 0.8 0.36 1.4 M-0.1 0.1 Q-0.1 0.8 0 1.4 M-0.5 0.2 Q-0.56 0.8 -0.54 1.4 M-0.9 0.2 Q-0.96 0.8 -0.9 1.4" }] }
+  };
+  var FRINGE_PONY = [[0.8, -0.42], [0.62, -0.25], [0.46, -0.56], [0.22, -0.27], [0.06, -0.58], [-0.2, -0.3], [-0.36, -0.58], [-0.6, -0.3], [-0.74, -0.52], [-0.88, -0.3]];
+  var capPonyF = pb().M(-1, 0.2).q(-1.11, -0.06, -0.06).arc(0, -0.06, 1.11, 1.1, 180, 360).q(1, 0.2, -0.06).L(0.92, -0.04).zz(FRINGE_PONY, 0.08).L(-0.92, -0.04).Z().s;
+  var tailPonyF = pb().M(0.3, -0.98).C(0.95, -1.42, 1.72, -0.9, 1.6, 0.1).q(1.3, 1.02, -0.06).q(1.22, 0.1, -0.08).C(1.2, -0.42, 0.92, -0.62, 0.48, -0.64).Z().s;
+  var capPonyS = pb().M(1.02, -0.26).Q(1.12, -0.52, 1.02, -0.72).C(0.9, -1, 0.54, -1.13, 0.12, -1.13).C(-0.46, -1.13, -0.98, -0.9, -1.1, -0.5).C(-1.12, -0.2, -1.02, 0.1, -0.84, 0.3).C(-0.6, 0.26, -0.36, 0.1, -0.22, -0.04).Q(0, -0.14, 0.16, -0.04).L(0.22, 0.2).L(0.34, -0.1).zz([[0.5, -0.42], [0.64, -0.24], [0.74, -0.48], [0.88, -0.26], [0.92, -0.46]], 0.06).L(1.02, -0.26).Z().s;
+  var tailPonyS = pb().M(-0.86, -0.78).C(-1.5, -0.92, -1.78, -0.3, -1.64, 0.42).q(-1.36, 1.16, -0.05).q(-1.3, 0.44, -0.08).C(-1.24, -0.12, -1.1, -0.4, -0.86, -0.44).Z().s;
+  var capPonyB = pb().M(-1.04, 0.3).q(-1.11, -0.06, -0.06).arc(0, -0.06, 1.11, 1.1, 180, 360).q(1.04, 0.3, -0.06).C(0.8, 0.5, 0.4, 0.56, 0, 0.56).C(-0.4, 0.56, -0.8, 0.5, -1.04, 0.3).Z().s;
+  var tailPonyB = pb().M(-0.16, -0.36).C(-0.36, 0.1, -0.32, 0.7, -0.18, 1.2).q(0, 1.44, -0.1).q(0.18, 1.2, -0.1).C(0.32, 0.7, 0.36, 0.1, 0.16, -0.36).Z().s;
+  var PULLED_B = "M-0.8 0.4 Q-0.5 0.0 -0.12 -0.3 M0.8 0.4 Q0.5 0.0 0.12 -0.3 M-0.34 0.52 Q-0.2 0.1 -0.05 -0.26 M0.34 0.52 Q0.2 0.1 0.05 -0.26 M-0.92 -0.36 Q-0.5 -0.42 -0.14 -0.34 M0.92 -0.36 Q0.5 -0.42 0.14 -0.34";
+  STYLES.ponytail = {
+    F: {
+      back: [{ d: tailPonyF, tone: "shadow", sway: [0.55, -0.8, 0.06, 2.1, 0], strands: "M0.6 -0.9 Q1.3 -0.9 1.4 0.2" }],
+      front: [{ d: capPonyF, shine: [0, -0.06, 0.8, 200, 262, 4], strands: "M0.46 -0.56 Q0.44 -0.84 0.3 -1.0 M0.06 -0.58 Q0.04 -0.86 -0.06 -1.04 M-0.36 -0.58 Q-0.4 -0.8 -0.5 -0.92", fringe: true }]
+    },
+    S: { back: [], front: [
+      { d: tailPonyS, sway: [-0.95, -0.62, 0.07, 2.1, 0.35], strands: "M-1.0 -0.6 Q-1.5 -0.3 -1.46 0.7 M-1.2 -0.6 Q-1.6 -0.2 -1.5 0.4" },
+      { d: capPonyS, shine: SHINE_S, strands: "M0.74 -0.48 Q0.4 -0.8 -0.2 -0.84 M0.5 -0.42 Q0.2 -0.62 -0.4 -0.66 M0.2 -0.1 Q-0.3 -0.3 -0.7 -0.5 M-0.5 0.2 Q-0.8 0 -0.9 -0.4", fringe: true },
+      { d: pb().ell(0, 0, 0.12, 0.2).s, tone: "tie", at: [-0.99, -0.61, 0.35] }
+    ] },
+    B: { back: [], front: [
+      { d: capPonyB, shine: SHINE_B, strands: PULLED_B },
+      { d: tailPonyB, sway: [0, -0.32, 0.06, 2.1, 0], shine: [0, 0.3, 0.5, 250, 290, 2], strands: "M-0.08 -0.2 Q-0.14 0.5 -0.06 1.2 M0.08 -0.2 Q0.14 0.5 0.06 1.2" },
+      { d: pb().ell(0, 0, 0.2, 0.11).s, tone: "tie", at: [0, -0.32, 0] }
+    ] }
+  };
+  STYLES.buzz = {
+    F: { back: [], front: [{ d: slickF(1.07, -0.54), shine: [0, -0.05, 0.78, 205, 255, 3], strands: "M0.48 -0.52 L0.44 -0.62 M0.24 -0.52 L0.22 -0.63 M0 -0.6 L0 -0.7 M-0.24 -0.52 L-0.22 -0.63 M-0.48 -0.52 L-0.44 -0.62", fringe: true, off: 0.08 }] },
+    S: { back: [], front: [{ d: slickS(1.08), shine: [-0.1, -0.1, 0.78, 205, 262, 3], off: 0.08, fringe: true }] },
+    B: { back: [], front: [{ d: slickB(1.07), shine: [0, -0.05, 0.78, 205, 255, 3], strands: CROWN_SWIRL, off: 0.08 }] }
+  };
+  var backCurlyF = (() => {
+    const s = at2(0, -0.12, 1.22, 150);
+    return pb().M(s[0], s[1]).bumps(0, -0.12, 1.22, 150, 390, 12, 0.15).L(0.6, 0.55).L(-0.6, 0.55).Z().s;
+  })();
+  var capCurlyF = (() => {
+    const b = pb().M(-1.02, 0.28).q(-1.13, -0.12, -0.05);
+    const s = at2(0, -0.1, 1.14, 186);
+    b.L(s[0], s[1]).bumps(0, -0.1, 1.14, 186, 354, 8, 0.11).q(1.02, 0.28, -0.05).L(0.92, -0.04);
+    return b.q(0.72, -0.4, -0.6).zz([[0.38, -0.44], [0.02, -0.42], [-0.34, -0.44], [-0.72, -0.4]], -0.8).q(-0.92, -0.04, -0.6).Z().s;
+  })();
+  var CURLS = "M0.5 -0.62 q-0.12 -0.02 -0.1 0.1 q0.04 0.08 0.12 0.02 M-0.1 -0.8 q-0.12 -0.02 -0.1 0.1 q0.04 0.08 0.12 0.02 M-0.62 -0.6 q-0.12 -0.02 -0.1 0.1 q0.04 0.08 0.12 0.02 M0.2 -0.96 q-0.1 0 -0.08 0.08 M0.84 -0.6 q-0.1 0 -0.08 0.08";
+  var capCurlyS = (() => {
+    const b = pb().M(1, -0.2).q(0.93, -0.67, -0.5).bumps(-0.06, -0.1, 1.14, 330, 150, 9, 0.13);
+    b.zz([[-0.8, 0.62], [-0.52, 0.5]], -0.7).C(-0.4, 0.3, -0.3, 0.06, -0.2, -0.04).Q(0, -0.14, 0.16, -0.04).q(0.28, 0.3, -0.5).q(0.38, -0.06, -0.3);
+    return b.zz([[0.6, -0.36], [0.82, -0.36]], -0.7).q(1, -0.2, -0.6).Z().s;
+  })();
+  var capCurlyB = (() => {
+    const s = at2(0, -0.1, 1.2, 160);
+    return pb().M(s[0], s[1]).bumps(0, -0.1, 1.2, 160, 380, 11, 0.15).zz([[0.84, 0.62], [0.5, 0.7], [0.16, 0.72], [-0.18, 0.72], [-0.52, 0.7], [-0.86, 0.62], [s[0], s[1]]], -0.7).Z().s;
+  })();
+  STYLES.curly = {
+    F: { back: [{ d: backCurlyF, tone: "shadow" }], front: [{ d: capCurlyF, shine: [0, -0.1, 0.8, 204, 262, 4], strands: CURLS, fringe: true }] },
+    S: { back: [], front: [{ d: capCurlyS, shine: SHINE_S, strands: "M0.4 -0.7 q-0.12 -0.02 -0.1 0.1 q0.04 0.08 0.12 0.02 M-0.3 -0.8 q-0.12 -0.02 -0.1 0.1 q0.04 0.08 0.12 0.02 M-0.8 -0.3 q-0.12 -0.02 -0.1 0.1 q0.04 0.08 0.12 0.02 M-0.6 0.3 q-0.1 0 -0.08 0.08", fringe: true }] },
+    B: { back: [], front: [{ d: capCurlyB, shine: SHINE_B, strands: CURLS + " M-0.4 0.3 q-0.12 -0.02 -0.1 0.1 q0.04 0.08 0.12 0.02 M0.4 0.3 q-0.12 -0.02 -0.1 0.1 q0.04 0.08 0.12 0.02" }] }
+  };
+  var AFRO_BUMPS = "M-0.9 -0.9 q-0.14 0 -0.12 0.14 M-0.3 -1.4 q-0.14 0 -0.12 0.14 M0.4 -1.3 q-0.14 0 -0.12 0.14 M0.9 -0.7 q-0.14 0 -0.12 0.14 M-1.2 -0.2 q-0.14 0 -0.12 0.14 M0.1 -0.9 q-0.14 0 -0.12 0.14";
+  var backAfroF = pb().M(1.52, -0.5).bumps(0, -0.5, 1.52, 0, 360, 18, 0.09).Z().s;
+  var capAfroF = pb().M(-1.52, -0.5).bumps(0, -0.5, 1.52, 180, 360, 9, 0.09).q(0.98, -0.12, 0.1).zz([[0.66, -0.4], [0.3, -0.46], [-0.06, -0.46], [-0.42, -0.44], [-0.76, -0.36], [-0.98, -0.12]], -0.7).q(-1.52, -0.5, 0.1).Z().s;
+  var capAfroS = (() => {
+    const b = pb().M(0.86, -0.36).q(1.11, -0.99, -0.4).bumps(-0.28, -0.48, 1.48, 340, 150, 12, 0.09);
+    return b.zz([[-1.3, 0.62], [-0.96, 0.78], [-0.62, 0.68]], -0.6).C(-0.3, 0.6, 0, 0.56, 0.3, 0.5).q(0.42, -0.06, -0.4).zz([[0.62, -0.3], [0.86, -0.36]], -0.6).Z().s;
+  })();
+  var capAfroB = pb().M(1.52, -0.45).bumps(0, -0.45, 1.52, 0, 360, 18, 0.09).Z().s;
+  STYLES.afro = {
+    F: { back: [{ d: backAfroF, tone: "shadow", strands: AFRO_BUMPS }], front: [{ d: capAfroF, shine: [0, -0.5, 1.02, 200, 258, 4], strands: AFRO_BUMPS, fringe: true, off: 0.16 }] },
+    S: { back: [], front: [{ d: capAfroS, shine: [-0.28, -0.5, 1, 204, 262, 4], strands: AFRO_BUMPS, fringe: true, off: 0.16 }] },
+    B: { back: [], front: [{ d: capAfroB, shine: [0, -0.45, 1.02, 200, 258, 4], strands: AFRO_BUMPS, off: 0.16 }] }
+  };
+  var knotF = pb().M(-0.2, -1.04).C(-0.34, -1.3, -0.22, -1.56, 0, -1.58).C(0.22, -1.56, 0.34, -1.3, 0.2, -1.04).Q(0, -0.98, -0.2, -1.04).Z().s;
+  var knotS = pb().M(-0.34, -0.98).C(-0.38, -1.3, -0.1, -1.44, 0.22, -1.42).C(0.52, -1.4, 0.7, -1.26, 0.64, -1.12).C(0.42, -1.2, 0.12, -1.18, -0.02, -1).Z().s;
+  STYLES.topknot = {
+    F: { back: [], front: [
+      { d: slickF(1.08, -0.56), shine: [0, -0.06, 0.8, 204, 258, 3], strands: "M-0.6 -0.5 Q-0.4 -0.9 -0.14 -1.04 M0.6 -0.5 Q0.4 -0.9 0.14 -1.04 M0 -0.66 L0 -1.04", fringe: true },
+      { d: knotF, shine: [0, -1.2, 0.3, 210, 260, 2], strands: "M-0.08 -1.1 Q-0.1 -1.3 0 -1.5 M0.1 -1.1 Q0.12 -1.3 0.06 -1.46" },
+      { d: pb().ell(0, 0, 0.21, 0.07).s, tone: "tie", at: [0, -1.06, 0] }
+    ] },
+    S: { back: [], front: [
+      { d: slickS(1.1), shine: [-0.1, -0.1, 0.8, 205, 262, 3], strands: "M0.8 -0.5 Q0.4 -0.9 -0.1 -1.0 M0.3 -0.12 Q-0.1 -0.5 -0.2 -0.96", fringe: true },
+      { d: knotS, shine: [0.2, -1.2, 0.2, 215, 265, 2] },
+      { d: pb().ell(0, 0, 0.08, 0.14).s, tone: "tie", at: [-0.2, -1.08, -0.5] }
+    ] },
+    B: { back: [], front: [
+      { d: slickB(1.09), shine: SHINE_B, strands: "M-0.8 0.4 Q-0.4 -0.4 -0.1 -1.0 M0.8 0.4 Q0.4 -0.4 0.1 -1.0 M0 0.56 L0 -1.0" },
+      { d: knotF, shine: [0, -1.2, 0.3, 210, 260, 2] },
+      { d: pb().ell(0, 0, 0.21, 0.07).s, tone: "tie", at: [0, -1.06, 0] }
+    ] }
+  };
+  var crestF = pb().M(-0.26, -0.86).C(-0.34, -1.2, -0.34, -1.5, -0.3, -1.62).zz([[-0.46, -1.74], [-0.2, -1.82], [-0.32, -2.06], [-0.04, -1.96], [0.04, -2.2], [0.2, -1.92], [0.42, -2], [0.3, -1.66], [0.46, -1.6]], 0.05).C(0.36, -1.4, 0.34, -1.1, 0.26, -0.86).Q(0, -0.8, -0.26, -0.86).Z().s;
+  var crestS = pb().M(0.7, -0.72).zz([[0.92, -1.08], [0.56, -1.14], [0.68, -1.66], [0.24, -1.3], [0.22, -1.96], [-0.16, -1.36], [-0.32, -2], [-0.56, -1.3], [-0.92, -1.74], [-0.9, -1.1], [-1.28, -1.24], [-1.02, -0.72]], 0.05).C(-0.8, -1, 0.3, -1.1, 0.7, -0.72).Z().s;
+  STYLES.mohawk = {
+    F: { back: [], front: [{ d: slickF(1.05, -0.5), tone: "stubble", off: 0.06 }, { d: crestF, shine: [0, -1.4, 0.36, 215, 265, 2], strands: "M-0.1 -0.9 Q-0.14 -1.4 -0.2 -1.8 M0.12 -0.9 Q0.14 -1.5 0.2 -1.9" }] },
+    S: { back: [], front: [{ d: slickS(1.06), tone: "stubble", off: 0.06 }, { d: crestS, shine: [-0.1, -1.1, 0.7, 225, 280, 3], strands: "M0.6 -0.84 Q0.4 -1.2 0.3 -1.5 M0.1 -1.0 Q-0.1 -1.4 -0.2 -1.7 M-0.5 -0.96 Q-0.7 -1.3 -0.8 -1.5" }] },
+    B: { back: [], front: [{ d: slickB(1.05), tone: "stubble", off: 0.06 }, { d: crestF, shine: [0, -1.4, 0.36, 215, 265, 2], strands: "M-0.1 -0.9 Q-0.14 -1.4 -0.2 -1.8 M0.12 -0.9 Q0.14 -1.5 0.2 -1.9" }] }
+  };
+  STYLES.bald = { F: { back: [], front: [] }, S: { back: [], front: [] }, B: { back: [], front: [] } };
+  var bunBall = pb().ell(0, 0, 0.44, 0.42).s;
+  var BUN_STRANDS = "M-0.3 -0.1 Q-0.1 -0.34 0.28 -0.2 M-0.34 0.1 Q0 -0.16 0.34 0.04 M-0.2 0.28 Q0.1 0.12 0.3 0.24";
+  STYLES.bun = {
+    F: {
+      back: [{ d: bunBall, at: [0, -1.18, 0], shine: [0, 0, 0.3, 205, 260, 2], strands: BUN_STRANDS }],
+      front: [{ d: capPonyF, shine: [0, -0.06, 0.8, 200, 262, 4], strands: "M0.46 -0.56 Q0.44 -0.84 0.3 -1.0 M0.06 -0.58 Q0.04 -0.86 -0.06 -1.04 M-0.36 -0.58 Q-0.4 -0.8 -0.5 -0.92", fringe: true }]
+    },
+    S: { back: [], front: [
+      { d: capPonyS, shine: SHINE_S, strands: "M0.74 -0.48 Q0.4 -0.8 -0.2 -0.84 M0.5 -0.42 Q0.2 -0.62 -0.4 -0.66", fringe: true },
+      { d: bunBall, at: [-0.8, -0.84, 0], shine: [0, 0, 0.3, 205, 260, 2], strands: BUN_STRANDS }
+    ] },
+    B: { back: [], front: [{ d: capPonyB, shine: SHINE_B, strands: PULLED_B }, { d: pb().ell(0, 0, 0.46, 0.44).s, at: [0, -0.56, 0], shine: [0, 0, 0.32, 205, 260, 2], strands: BUN_STRANDS }] }
+  };
+  var capPompF = pb().M(-1, 0.18).q(-1.06, -0.1, -0.04).C(-1.08, -0.4, -1, -0.62, -0.92, -0.7).C(-1.12, -1.3, -0.74, -1.9, 0.06, -1.9).C(0.86, -1.9, 1.16, -1.32, 0.92, -0.7).C(1, -0.62, 1.08, -0.4, 1.06, -0.1).q(1, 0.18, -0.04).L(0.93, 0).C(0.88, -0.34, 0.66, -0.5, 0.42, -0.5).Q(0.16, -0.46, 0.02, -0.56).Q(-0.16, -0.46, -0.42, -0.5).C(-0.66, -0.5, -0.88, -0.34, -0.93, 0).Z().s;
+  var capPompS = pb().M(0.8, -0.48).Q(1.1, -0.58, 1.34, -0.82).C(1.62, -1.08, 1.42, -1.58, 0.9, -1.64).C(0.36, -1.72, -0.5, -1.5, -0.94, -0.94).C(-1.14, -0.6, -1.14, 0, -1.02, 0.3).C(-0.96, 0.44, -0.9, 0.5, -0.82, 0.54).C(-0.56, 0.44, -0.36, 0.22, -0.22, -0.02).Q(0, -0.12, 0.14, -0.02).L(0.22, 0.24).L(0.32, -0.1).C(0.44, -0.36, 0.62, -0.46, 0.8, -0.48).Z().s;
+  var quiffB = pb().M(-0.92, -0.6).C(-1.1, -1.3, -0.7, -1.85, 0.05, -1.85).C(0.8, -1.85, 1.12, -1.3, 0.92, -0.6).Z().s;
+  STYLES.pompadour = {
+    F: { back: [], front: [{ d: capPompF, shine: [0, -1.05, 0.62, 200, 262, 4], strands: "M-0.6 -0.6 C-0.7 -1.2 -0.3 -1.6 0.2 -1.7 M-0.2 -0.56 C-0.3 -1.0 0 -1.4 0.5 -1.5 M0.3 -0.5 C0.3 -0.9 0.5 -1.1 0.8 -1.2", fringe: true }] },
+    S: { back: [], front: [{ d: capPompS, shine: [0.2, -0.8, 0.72, 205, 265, 4], strands: "M1.28 -0.8 C1.0 -0.9 0.9 -1.1 1.1 -1.3 M0.6 -0.6 C0.4 -1.0 0.2 -1.3 -0.3 -1.3 M0.2 -0.4 C-0.1 -0.7 -0.5 -0.8 -0.8 -0.7", fringe: true }] },
+    B: { back: [{ d: quiffB, tone: "shadow" }], front: [{ d: slickB(1.1, 0.6), shine: SHINE_B, strands: "M-0.8 0.4 Q-0.9 -0.3 -0.5 -0.9 M0.8 0.4 Q0.9 -0.3 0.5 -0.9 M0 0.58 Q0 -0.2 0 -1.0" }] }
+  };
+  STYLES.nika = { F: STYLES.spiky.F, S: STYLES.spiky.S, B: STYLES.spiky.B };
+  function nikaFlames(v, t) {
+    const b = pb();
+    const cx = v === "S" ? -0.2 : 0, cy = -0.12;
+    const a0 = v === "S" ? 170 : 188, a1 = v === "S" ? 330 : 352, n = 7;
+    for (let k = 0; k < n; k++) {
+      const a = a0 + (a1 - a0) * (k + 0.5) / n;
+      const w = (a1 - a0) / n * 0.62;
+      const tipR = 1.5 + 0.2 * Math.sin(t * 8 + k * 1.7) + (k % 2 ? 0.12 : 0);
+      const bend = 9 * Math.sin(t * 6 + k * 2.1) + (v === "S" ? -14 : 0);
+      const p0 = at2(cx, cy, 1.02, a - w), p1 = at2(cx, cy, tipR, a + bend), p2 = at2(cx, cy, 1.02, a + w);
+      const c0 = at2(cx, cy, (1.02 + tipR) * 0.55, a - w * 0.2 + bend * 0.2), c1 = at2(cx, cy, (1.02 + tipR) * 0.55, a + w * 1.2 + bend * 0.6);
+      b.M(p0[0], p0[1]).Q(c0[0], c0[1], p1[0], p1[1]).Q(c1[0], c1[1], p2[0], p2[1]).Z();
+    }
+    return b.s;
+  }
+  function begin(g, hy, r) {
+    g.save();
+    const m = g.getTransform();
+    const sc = Math.hypot(m.a, m.b);
+    const mir = m.a * m.d - m.b * m.c < 0 ? -1 : 1;
+    g.translate(0, hy);
+    g.scale(r, r);
+    g.lineJoin = "round";
+    g.lineCap = "round";
+    const px = sc * r;
+    return { px, lod: px < 7 ? 0 : px < 16 ? 1 : 2, sx: mir, lw: LW / r, lwIn: LW_IN / r };
+  }
+  function cel(g, p, base, shadow, C2, off = 0.12) {
+    if (C2.lod === 0 || !shadow) {
+      g.fillStyle = base;
+      g.fill(p);
       return;
     }
-    switch (style) {
-      case "spiky":
-        g.moveTo(-r * 1.05, hy);
-        for (let k = 0; k <= 6; k++) {
-          const a = Math.PI + k / 6 * Math.PI;
-          const rr = k % 2 ? r * 1.35 : r * 1.02;
-          g.lineTo(Math.cos(a) * rr, hy + Math.sin(a) * rr);
-        }
-        g.lineTo(r * 1.05, hy);
-        g.quadraticCurveTo(0, hy - r * 0.4, -r * 1.05, hy);
-        break;
-      case "long":
-        g.moveTo(-r * 1.05, hy + r * 1.3);
-        g.lineTo(-r * 1.1, hy);
-        g.arc(0, hy, r * 1.1, Math.PI, 0);
-        g.lineTo(r * 1.05, hy + r * 1.3);
-        g.quadraticCurveTo(0, hy + (back ? r * 1.5 : r * 0.2), -r * 1.05, hy + r * 1.3);
-        break;
-      case "ponytail":
-        g.arc(0, hy, r * 1.06, Math.PI * 1.02, -0.02);
-        g.quadraticCurveTo(0, hy - r * 0.5, -r * 1.05, hy);
-        g.moveTo(r * 0.6, hy - r * 0.7);
-        g.quadraticCurveTo(r * 1.6, hy - r * 0.2, r * 1.1, hy + r * 1.1);
-        g.lineTo(r * 0.8, hy - r * 0.3);
-        break;
-      case "afro":
-        g.arc(0, hy - r * 0.35, r * 1.35, 0, TAU6);
-        break;
-      case "topknot":
-        g.arc(0, hy, r * 1.04, Math.PI, 0);
-        g.quadraticCurveTo(0, hy - r * 0.55, -r * 1.04, hy);
-        g.moveTo(r * 0.2, hy - r * 1);
-        g.arc(0, hy - r * 1.2, r * 0.25, 0, TAU6);
-        break;
-      case "buzz":
-        g.arc(0, hy, r * 1.02, Math.PI * 1.05, -0.05);
-        g.quadraticCurveTo(0, hy - r * 0.7, -r * 1, hy - r * 0.15);
-        break;
-      case "mohawk":
-        g.moveTo(-r * 0.2, hy - r * 0.8);
-        g.lineTo(-r * 0.1, hy - r * 1.7);
-        g.lineTo(r * 0.3, hy - r * 1.6);
-        g.lineTo(r * 0.3, hy - r * 0.8);
-        break;
-      case "bun":
-        g.arc(0, hy, r * 1.05, Math.PI * 1.02, -0.02);
-        g.quadraticCurveTo(0, hy - r * 0.5, -r * 1.03, hy);
-        g.moveTo(r * 0.45, hy - r * 1.25);
-        g.arc(0, hy - r * 1.25, r * 0.45, 0, TAU6);
-        break;
-      case "pompadour":
-        g.moveTo(-r * 1.02, hy);
-        g.arc(0, hy, r * 1.02, Math.PI, Math.PI * 1.4);
-        g.quadraticCurveTo(r * 0.2, hy - r * 2.1, r * 1.9, hy - r * 1.3);
-        g.quadraticCurveTo(r * 0.8, hy - r * 1.05, r * 1.02, hy);
-        g.quadraticCurveTo(0, hy - r * 0.5, -r * 1.02, hy);
-        break;
-      case "curly":
-        for (let k = 0; k < 7; k++) {
-          const a = Math.PI + k / 6 * Math.PI;
-          g.moveTo(Math.cos(a) * r + r * 0.28, hy + Math.sin(a) * r * 0.95);
-          g.arc(Math.cos(a) * r, hy + Math.sin(a) * r * 0.95, r * 0.28, 0, TAU6);
-        }
-        break;
-      default:
-        g.arc(0, hy, r * 1.06, Math.PI * 1.02, -0.02);
-        g.lineTo(r * 0.9, hy - r * 0.1);
-        g.lineTo(r * 0.55, hy - r * 0.45);
-        g.lineTo(r * 0.2, hy - r * 0.2);
-        g.lineTo(-r * 0.2, hy - r * 0.5);
-        g.lineTo(-r * 0.6, hy - r * 0.2);
-        g.lineTo(-r * 0.95, hy - r * 0.05);
+    g.fillStyle = shadow;
+    g.fill(p);
+    g.save();
+    g.clip(p);
+    g.translate(-off * C2.sx, -off);
+    g.fillStyle = base;
+    g.fill(p);
+    g.restore();
+  }
+  function ink(g, p, C2, w) {
+    g.lineWidth = w || C2.lw;
+    g.strokeStyle = OUTLINE;
+    g.stroke(p);
+  }
+  var SHINE_CACHE = /* @__PURE__ */ new Map();
+  function shinePath(s, sx) {
+    const key2 = s.join(",") + sx;
+    let p = SHINE_CACHE.get(key2);
+    if (p) return p;
+    const [cx, cy, r, a0, a1, n] = s;
+    const b = pb();
+    for (let i = 0; i < n; i++) {
+      const k = n === 1 ? 0.5 : i / (n - 1);
+      const a = (a0 + (a1 - a0) * k) * DEG;
+      const len = r * (0.2 + 0.16 * Math.sin(Math.PI * (0.25 + k * 0.5))) * (n <= 2 ? 1.1 : 1);
+      const w = r * 0.075;
+      const ux = Math.cos(a), uy = Math.sin(a);
+      const x = cx + ux * r, y = cy + uy * r;
+      const tx = -uy, ty = ux;
+      b.M(x - ux * len * 0.5, y - uy * len * 0.5).Q(x + tx * w, y + ty * w, x + ux * len * 0.5, y + uy * len * 0.5).Q(x - tx * w, y - ty * w, x - ux * len * 0.5, y - uy * len * 0.5).Z();
     }
-    g.fill();
-    g.stroke();
-    if (back && style !== "bald") {
+    p = new Path2D();
+    p.addPath(new Path2D(b.s), sx < 0 ? new DOMMatrix([-1, 0, 0, 1, 2 * cx, 0]) : void 0);
+    SHINE_CACHE.set(key2, p);
+    return p;
+  }
+  function drawParts(g, parts, C2, H2) {
+    for (const pt of parts) {
+      const p = path(pt.d);
+      g.save();
+      if (pt.at) {
+        g.translate(pt.at[0], pt.at[1]);
+        if (pt.at[2]) g.rotate(pt.at[2]);
+      }
+      if (pt.sway) {
+        const [px, py, amp, spd, lift] = pt.sway;
+        let a = amp * Math.sin(H2.t * spd + H2.seed);
+        if (H2.moving) a += amp * 1.6 * Math.sin((H2.walk || 0) * 1) + lift;
+        g.translate(px, py);
+        g.rotate(a);
+        g.translate(-px, -py);
+      }
+      const pal = H2.pal;
+      if (pt.tone === "tie") {
+        g.fillStyle = TIE;
+        g.fill(p);
+        ink(g, p, C2, C2.lw * 0.8);
+        g.restore();
+        continue;
+      }
+      const base = pt.tone === "shadow" ? pal.shadow : pt.tone === "stubble" ? H2.stubble : pal.base;
+      const shadow = pt.tone === "shadow" ? mixHexCached(pal.shadow, "#120a14", 0.25) : pt.tone === "stubble" ? null : pal.shadow;
+      if (C2.lod === 0) {
+        g.fillStyle = base;
+        g.fill(p);
+      } else {
+        g.fillStyle = shadow || base;
+        g.fill(p);
+        g.save();
+        g.clip(p);
+        if (shadow) {
+          g.save();
+          g.translate(-(pt.off ?? 0.13) * C2.sx, -(pt.off ?? 0.13));
+          g.fillStyle = base;
+          g.fill(p);
+          g.restore();
+        }
+        if (pt.shine && pt.tone !== "shadow") {
+          g.fillStyle = pal.light;
+          g.fill(shinePath(pt.shine, C2.sx));
+        }
+        if (pt.strands && C2.lod === 2) {
+          g.lineWidth = C2.lwIn;
+          g.strokeStyle = pt.tone === "shadow" ? pal.line : pal.shadow;
+          g.stroke(path(pt.strands));
+        }
+        g.restore();
+      }
+      ink(g, p, C2, pt.tone === "stubble" ? C2.lw * 0.7 : C2.lw);
+      g.restore();
+    }
+  }
+  function mixHexCached(a, b, k) {
+    return tint(a, b, k);
+  }
+  function viewOf(d) {
+    return d === "up" ? "B" : d === "left" || d === "right" ? "S" : "F";
+  }
+  var HAT_COVER = {
+    straw: -0.74,
+    captain: -0.8,
+    tricorne: -0.74,
+    cowboy: -0.74,
+    marine: -0.62,
+    pinkhat: -0.68,
+    tophat: -0.68,
+    topHat: -0.68,
+    beanie: -0.5,
+    bandana: -0.46,
+    cap: -0.6
+  };
+  function hatKind(hat, look) {
+    if (!hat) return null;
+    if (hat === "horns" && !(look && look.hatColor)) return "helm";
+    if (HATS[hat]) return hat;
+    return "cap";
+  }
+  function hatClip(kind) {
+    if (!kind) return null;
+    if (kind === "helm") return -0.5;
+    return HAT_COVER[kind] ?? null;
+  }
+  var pp = path;
+  function part2(g, C2, d, base, shadow, off = 0.1, w) {
+    const p = pp(d);
+    cel(g, p, base, shadow, C2, off);
+    ink(g, p, C2, w);
+    return p;
+  }
+  function line(g, C2, d, col, w) {
+    g.lineWidth = (w || LW_IN) / 0.3 * (0.3 / C2.r0);
+    g.strokeStyle = col;
+    g.stroke(pp(d));
+  }
+  var STRAW = "#f0cd62";
+  var STRAW_D = "#c9a23f";
+  var BAND_RED = "#c8372d";
+  var GOLD = "#e0b24a";
+  var HAT_STRAW = {
+    brimF: pb().ell(0, -0.74, 1.62, 0.34).s,
+    crownF: pb().M(-0.92, -0.74).C(-0.96, -1.3, -0.56, -1.62, 0, -1.62).C(0.56, -1.62, 0.96, -1.3, 0.92, -0.74).arc(0, -0.74, 0.92, 0.2, 0, 180).Z().s,
+    bandF: "M-1 -1.0 Q0 -0.84 1 -1.0 L1 -0.4 L-1 -0.4 Z",
+    weaveF: "M-1.2 -0.62 Q0 -0.36 1.2 -0.62 M-1.44 -0.7 Q0 -0.32 1.44 -0.7 M-0.5 -1.5 Q-0.56 -1.2 -0.6 -1.0 M0 -1.6 L0 -1.0 M0.5 -1.5 Q0.56 -1.2 0.6 -1.0",
+    brimS: pb().ell(-0.04, -0.76, 1.6, 0.16).s,
+    crownS: pb().M(-0.84, -0.76).C(-0.88, -1.28, -0.5, -1.58, 0, -1.58).C(0.5, -1.58, 0.88, -1.28, 0.84, -0.76).arc(0, -0.76, 0.84, 0.1, 0, 180).Z().s
+  };
+  var HATS = {
+    straw(g, C2, v, H2) {
+      const s = HAT_STRAW;
+      const brim = v === "S" ? s.brimS : s.brimF, crown = v === "S" ? s.crownS : s.crownF;
+      part2(g, C2, brim, STRAW, STRAW_D, 0.12);
+      if (C2.lod === 2) {
+        g.save();
+        g.clip(pp(brim));
+        line(g, C2, s.weaveF, "rgba(150,110,40,0.55)");
+        g.restore();
+      }
+      const cp = part2(g, C2, crown, "#f5d777", STRAW_D, 0.14);
+      g.save();
+      g.clip(cp);
+      g.fillStyle = BAND_RED;
+      g.fill(pp(s.bandF));
+      if (C2.lod) {
+        g.fillStyle = "#8f231c";
+        g.save();
+        g.translate(0.1 * C2.sx, 0.06);
+        g.fill(pp("M-1 -0.4 L1 -0.4 L1 0 L-1 0 Z"));
+        g.restore();
+      }
+      if (C2.lod === 2) line(g, C2, "M-0.5 -1.5 Q-0.56 -1.26 -0.62 -1.02 M0 -1.6 L0 -1.02 M0.5 -1.5 Q0.56 -1.26 0.62 -1.02", "rgba(150,110,40,0.5)");
+      g.restore();
+      ink(g, pp("M-1 -1.0 Q0 -0.84 1 -1.0"), C2, C2.lw * 0.6);
+      ink(g, cp, C2);
+    },
+    captain(g, C2, v, H2) {
+      const col = H2.hatColor || "#2c2831", dk3 = tint(col, "#000000", 0.35), plume = "#c8372d";
+      const side = v === "S";
+      const plumeD = side ? "M-0.46 -1.36 C-1.0 -2.02 -1.62 -2.12 -2.02 -1.96 C-1.72 -1.62 -1.12 -1.3 -0.7 -1.14 Z" : "M0.52 -1.34 C0.9 -2.02 1.5 -2.26 1.96 -2.1 C1.72 -1.74 1.2 -1.36 0.74 -1.12 Z";
+      part2(g, C2, v === "B" ? plumeD.replace(/(-?\d*\.?\d+) (-?\d*\.?\d+)/g, (m, x, y) => `${-x} ${y}`) : plumeD, plume, "#8f231c", 0.1);
+      const crown = side ? "M-0.8 -0.8 C-0.86 -1.44 -0.48 -1.84 0 -1.84 C0.48 -1.84 0.86 -1.44 0.8 -0.8 Z" : "M-0.86 -0.8 C-0.9 -1.46 -0.5 -1.86 0 -1.86 C0.5 -1.86 0.9 -1.46 0.86 -0.8 Z";
+      part2(g, C2, crown, col, dk3, 0.14);
+      const brim = side ? "M-1.72 -1.02 Q-1.5 -0.7 -0.2 -0.68 Q1.3 -0.7 1.62 -0.98 Q1.3 -0.84 -0.1 -0.84 Q-1.4 -0.86 -1.72 -1.02 Z" : "M-1.74 -1.04 Q-1.52 -0.46 0 -0.44 Q1.52 -0.46 1.74 -1.04 Q1.32 -0.8 0 -0.84 Q-1.32 -0.8 -1.74 -1.04 Z";
+      const bp = part2(g, C2, brim, col, dk3, 0.1);
+      g.save();
+      g.clip(bp);
+      g.lineWidth = 0.1;
+      g.strokeStyle = GOLD;
+      g.stroke(pp(side ? "M-1.72 -1.02 Q-1.5 -0.7 -0.2 -0.68 Q1.3 -0.7 1.62 -0.98" : "M-1.74 -1.04 Q-1.52 -0.46 0 -0.44 Q1.52 -0.46 1.74 -1.04"));
+      g.restore();
+      ink(g, bp, C2);
+      if (v === "F") skull2(g, C2, 0, -1.3, 0.24);
+    },
+    tricorne(g, C2, v, H2) {
+      const col = H2.hatColor || "#302b35", dk3 = tint(col, "#000000", 0.35);
+      if (v === "S") {
+        part2(g, C2, "M-0.72 -0.84 C-0.62 -1.5 0.5 -1.62 0.72 -0.84 Z", col, dk3, 0.14);
+        const bp2 = part2(g, C2, "M1.28 -0.72 C0.8 -0.76 0.42 -1.2 0.0 -1.26 C-0.52 -1.3 -0.92 -0.9 -1.4 -0.6 C-0.9 -0.5 0.42 -0.48 1.28 -0.72 Z", col, dk3, 0.1);
+        g.save();
+        g.clip(bp2);
+        g.lineWidth = 0.12;
+        g.strokeStyle = GOLD;
+        g.stroke(pp("M1.28 -0.72 C0.8 -0.76 0.42 -1.2 0.0 -1.26 C-0.52 -1.3 -0.92 -0.9 -1.4 -0.6"));
+        g.restore();
+        ink(g, bp2, C2);
+        return;
+      }
+      part2(g, C2, "M-0.76 -0.9 C-0.72 -1.46 -0.36 -1.64 0 -1.64 C0.36 -1.64 0.72 -1.46 0.76 -0.9 Z", col, dk3, 0.14);
+      const brim = "M-1.56 -0.8 C-1.26 -0.72 -0.92 -1.06 -0.52 -1.2 C-0.26 -1.28 0.26 -1.28 0.52 -1.2 C0.92 -1.06 1.26 -0.72 1.56 -0.8 C1.2 -0.52 0.6 -0.5 0 -0.3 C-0.6 -0.5 -1.2 -0.52 -1.56 -0.8 Z";
+      const bp = part2(g, C2, brim, col, dk3, 0.1);
+      g.save();
+      g.clip(bp);
+      g.lineWidth = 0.12;
+      g.strokeStyle = GOLD;
+      g.stroke(pp("M-1.56 -0.8 C-1.26 -0.72 -0.92 -1.06 -0.52 -1.2 C-0.26 -1.28 0.26 -1.28 0.52 -1.2 C0.92 -1.06 1.26 -0.72 1.56 -0.8"));
+      g.restore();
+      ink(g, bp, C2);
+      if (v === "F") {
+        g.fillStyle = GOLD;
+        g.fill(pp(pb().ell(0, -0.5, 0.1, 0.1).s));
+        ink(g, pp(pb().ell(0, -0.5, 0.1, 0.1).s), C2, C2.lw * 0.6);
+      }
+    },
+    cowboy(g, C2, v, H2) {
+      const col = H2.hatColor || "#9a6a3f", dk3 = tint(col, "#000000", 0.32), band = tint(col, "#1a1010", 0.6);
+      const side = v === "S";
+      const crown = side ? "M-0.74 -0.78 C-0.82 -1.36 -0.5 -1.72 0 -1.68 C0.36 -1.66 0.56 -1.58 0.72 -1.42 C0.8 -1.2 0.78 -0.96 0.74 -0.78 Z" : "M-0.8 -0.74 C-0.86 -1.26 -0.7 -1.72 -0.35 -1.72 C-0.15 -1.72 -0.1 -1.58 0 -1.58 C0.1 -1.58 0.15 -1.72 0.35 -1.72 C0.7 -1.72 0.86 -1.26 0.8 -0.74 Z";
+      const cp = part2(g, C2, crown, tint(col, "#ffffff", 0.08), dk3, 0.14);
+      g.save();
+      g.clip(cp);
+      g.fillStyle = band;
+      g.fill(pp("M-1 -1.0 Q0 -0.9 1 -1.0 L1 -0.5 L-1 -0.5 Z"));
+      g.restore();
+      ink(g, cp, C2);
+      if (C2.lod === 2 && !side) line(g, C2, "M0 -1.56 Q-0.04 -1.3 0.02 -1.06", dk3);
+      const brim = side ? "M-1.62 -0.94 Q-1.3 -0.66 0 -0.66 Q1.3 -0.66 1.64 -0.88 Q1.36 -0.8 0 -0.84 Q-1.2 -0.82 -1.62 -0.94 Z" : "M-1.8 -1.04 C-1.62 -0.72 -1.1 -0.62 -0.8 -0.7 C-0.4 -0.8 0.4 -0.8 0.8 -0.7 C1.1 -0.62 1.62 -0.72 1.8 -1.04 C1.82 -0.6 1.2 -0.34 0 -0.36 C-1.2 -0.34 -1.82 -0.6 -1.8 -1.04 Z";
+      part2(g, C2, brim, col, dk3, 0.1);
+    },
+    marine(g, C2, v, H2) {
+      const white = "#f6f5f0", shadow = "#c9cfdc", navy = "#27466e";
+      if (v !== "F") {
+        const flap = v === "S" ? "M-0.6 -0.56 L-1.14 -0.5 C-1.2 -0.1 -1.18 0.2 -1.12 0.46 L-0.7 0.42 C-0.66 0.1 -0.62 -0.2 -0.6 -0.56 Z" : "M-1.08 -0.5 L1.08 -0.5 C1.1 -0.1 1.08 0.24 1.02 0.54 Q0 0.66 -1.02 0.54 C-1.08 0.24 -1.1 -0.1 -1.08 -0.5 Z";
+        const fp = part2(g, C2, flap, white, shadow, 0.1);
+        if (C2.lod === 2) {
+          g.save();
+          g.clip(fp);
+          line(g, C2, v === "S" ? "M-0.9 -0.4 L-0.92 0.4" : "M-0.5 -0.4 L-0.54 0.56 M0.5 -0.4 L0.54 0.56", shadow);
+          g.restore();
+        }
+      }
+      const crown = "M-1.1 -0.62 C-1.16 -1.1 -0.8 -1.42 0 -1.42 C0.8 -1.42 1.16 -1.1 1.1 -0.62 Z";
+      part2(g, C2, crown, white, shadow, 0.14);
+      part2(g, C2, "M-1.12 -0.66 Q0 -0.76 1.12 -0.66 L1.1 -0.44 Q0 -0.54 -1.1 -0.44 Z", navy, "#1b3354", 0.06);
+      if (v === "F") {
+        part2(g, C2, "M-0.74 -0.46 Q0 -0.56 0.74 -0.46 Q0.5 -0.24 0 -0.22 Q-0.5 -0.24 -0.74 -0.46 Z", "#1d1a20", null);
+        if (C2.lod) {
+          g.lineWidth = 0.07;
+          g.strokeStyle = "#2f5f96";
+          g.stroke(pp("M-0.26 -1.04 Q-0.13 -1.16 0 -1.02 Q0.13 -1.16 0.26 -1.04"));
+        }
+      } else if (v === "S") {
+        part2(g, C2, "M0.7 -0.5 Q1.1 -0.52 1.3 -0.4 Q1.0 -0.34 0.66 -0.4 Z", "#1d1a20", null);
+      }
+    },
+    pinkhat(g, C2, v, H2) {
+      topHat(g, C2, v, H2.hatColor || "#f190b7", v === "F");
+    },
+    tophat(g, C2, v, H2) {
+      topHat(g, C2, v, H2.hatColor || "#2b2631", false);
+    },
+    topHat(g, C2, v, H2) {
+      topHat(g, C2, v, H2.hatColor || "#2b2631", false);
+    },
+    beanie(g, C2, v, H2) {
+      const col = H2.hatColor || "#e74c3c", dk3 = tint(col, "#000000", 0.3);
+      const dome = v === "S" ? "M-1.12 -0.4 C-1.2 -1.0 -0.72 -1.36 0 -1.34 C0.62 -1.32 1.02 -0.96 1.0 -0.46 Z" : "M-1.12 -0.44 C-1.18 -1.0 -0.75 -1.36 0 -1.36 C0.75 -1.36 1.18 -1.0 1.12 -0.44 Z";
+      part2(g, C2, dome, col, dk3, 0.14);
+      const fold = v === "S" ? "M-1.16 -0.62 Q-0.1 -0.76 1.04 -0.64 L1.02 -0.38 Q-0.1 -0.5 -1.14 -0.36 Z" : "M-1.16 -0.62 Q0 -0.74 1.16 -0.62 L1.14 -0.36 Q0 -0.46 -1.14 -0.36 Z";
+      const fp = part2(g, C2, fold, tint(col, "#000000", 0.12), dk3, 0.06);
+      if (C2.lod === 2) {
+        g.save();
+        g.clip(fp);
+        line(g, C2, "M-0.8 -0.7 L-0.8 -0.36 M-0.4 -0.72 L-0.4 -0.38 M0 -0.74 L0 -0.4 M0.4 -0.72 L0.4 -0.38 M0.8 -0.7 L0.8 -0.36", dk3);
+        g.restore();
+      }
+      if ((H2.seed || 0) % 3 !== 0) part2(g, C2, pb().ell(v === "S" ? -0.06 : 0, -1.44, 0.26, 0.24).s, tint(col, "#ffffff", 0.55), tint(col, "#ffffff", 0.2), 0.08);
+    },
+    bandana(g, C2, v, H2) {
+      const col = H2.hatColor || "#2f5f96", dk3 = tint(col, "#000000", 0.3);
+      if (v === "S") {
+        tails(g, C2, H2, -1.08, -0.36, col, dk3, 1);
+        part2(g, C2, "M0.98 -0.36 C1.04 -0.92 0.62 -1.24 0.04 -1.26 C-0.62 -1.26 -1.16 -0.9 -1.16 -0.24 Q-0.1 -0.42 0.98 -0.36 Z", col, dk3, 0.14);
+        part2(g, C2, pb().ell(-1.1, -0.36, 0.16, 0.14).s, dk3, null);
+      } else {
+        const cap = "M-1.14 -0.26 C-1.2 -0.9 -0.8 -1.28 0 -1.28 C0.8 -1.28 1.2 -0.9 1.14 -0.26 Q0 -0.52 -1.14 -0.26 Z";
+        const cp = part2(g, C2, cap, col, dk3, 0.14);
+        if (!H2.hatColor && C2.lod) {
+          g.save();
+          g.clip(cp);
+          g.fillStyle = "rgba(255,255,255,0.85)";
+          g.fill(pp(dots()));
+          g.restore();
+          ink(g, cp, C2);
+        }
+        part2(g, C2, "M-1.14 -0.26 Q0 -0.52 1.14 -0.26 L1.16 -0.42 Q0 -0.68 -1.16 -0.42 Z", dk3, null);
+        if (v === "B") {
+          tails(g, C2, H2, 0, -0.36, col, dk3, 0);
+          part2(g, C2, pb().ell(0, -0.38, 0.17, 0.14).s, dk3, null);
+        }
+      }
+    },
+    headband(g, C2, v, H2) {
+      const col = H2.hatColor || "#2e2a31", dk3 = tint(col, "#000000", 0.3), lt2 = tint(col, "#ffffff", 0.25);
+      const w = H2.w;
+      if (v === "S") {
+        tails(g, C2, H2, -w + 0.02, -0.52, col, dk3, 1);
+        part2(g, C2, `M1.0 -0.66 Q-0.1 -0.72 ${-w} -0.64 L${-w + 0.02} -0.4 Q-0.1 -0.48 0.98 -0.42 Z`, col, dk3, 0.05);
+        part2(g, C2, pb().ell(-w + 0.04, -0.52, 0.14, 0.13).s, lt2, dk3, 0.04);
+        return;
+      }
+      const band = `M${-w} -0.64 Q0 -0.8 ${w} -0.64 L${w - 0.01} -0.4 Q0 -0.56 ${-w + 0.01} -0.4 Z`;
+      part2(g, C2, band, col, dk3, 0.05);
+      if (v === "B") {
+        tails(g, C2, H2, 0, -0.5, col, dk3, 0);
+        part2(g, C2, pb().ell(0, -0.52, 0.15, 0.13).s, lt2, dk3, 0.04);
+      }
+    },
+    goggles(g, C2, v, H2) {
+      const lens = H2.hatColor || "#f0a53a", frame = "#c9a04a", strap = "#6b4a32";
+      const w = H2.w;
+      if (v === "S") {
+        part2(g, C2, `M0.9 -0.7 Q-0.1 -0.78 ${-w} -0.66 L${-w + 0.02} -0.5 Q-0.1 -0.6 0.9 -0.54 Z`, strap, "#4a3222", 0.04);
+        part2(g, C2, pb().ell(0.8, -0.62, 0.15, 0.28).s, frame, "#9b7a30", 0.05);
+        part2(g, C2, pb().ell(0.84, -0.62, 0.08, 0.19).s, lens, tint(lens, "#000000", 0.3), 0.04);
+        return;
+      }
+      part2(g, C2, `M${-w} -0.74 Q0 -0.9 ${w} -0.74 L${w - 0.01} -0.56 Q0 -0.72 ${-w + 0.01} -0.56 Z`, strap, "#4a3222", 0.04);
+      if (v === "B") {
+        part2(g, C2, "M-0.14 -0.8 L0.14 -0.8 L0.14 -0.56 L-0.14 -0.56 Z", frame, "#9b7a30", 0.03);
+        return;
+      }
+      for (const x of [-0.37, 0.37]) {
+        part2(g, C2, pb().ell(x, -0.66, 0.28, 0.26).s, frame, "#9b7a30", 0.05);
+        part2(g, C2, pb().ell(x, -0.66, 0.19, 0.17).s, lens, tint(lens, "#000000", 0.3), 0.06);
+        if (C2.lod) {
+          g.fillStyle = "rgba(255,255,255,0.85)";
+          g.fill(pp(pb().ell(x - 0.07, -0.73, 0.06, 0.04).s));
+        }
+      }
+      g.lineWidth = 0.08;
+      g.strokeStyle = frame;
+      g.stroke(pp("M-0.1 -0.68 Q0 -0.74 0.1 -0.68"));
+    },
+    horns(g, C2, v, H2) {
+      horns(g, C2, v, H2, H2.hatColor || "#efe4c8");
+    },
+    helm(g, C2, v, H2) {
+      const metal = "#aab5bd", mdk = "#6f7c86", trim = "#8a6a44";
+      horns(g, C2, v, H2, "#efe4c8", true);
+      const dome = v === "S" ? "M-1.12 -0.38 C-1.18 -1.0 -0.74 -1.36 0 -1.36 C0.7 -1.36 1.08 -1.0 1.02 -0.46 Z" : "M-1.14 -0.4 C-1.18 -1.0 -0.76 -1.38 0 -1.38 C0.76 -1.38 1.18 -1.0 1.14 -0.4 Z";
+      const dp = part2(g, C2, dome, metal, mdk, 0.14);
+      if (v !== "S") {
+        g.save();
+        g.clip(dp);
+        g.fillStyle = trim;
+        g.fill(pp("M-0.1 -1.5 L0.1 -1.5 L0.1 -0.4 L-0.1 -0.4 Z"));
+        g.restore();
+        ink(g, dp, C2);
+      }
+      part2(g, C2, v === "S" ? "M-1.16 -0.56 Q-0.1 -0.68 1.04 -0.6 L1.02 -0.38 Q-0.1 -0.46 -1.14 -0.34 Z" : "M-1.16 -0.58 Q0 -0.7 1.16 -0.58 L1.14 -0.38 Q0 -0.5 -1.14 -0.38 Z", trim, "#5e4630", 0.05);
+    },
+    crown(g, C2, v, H2) {
+      const col = H2.hatColor || "#ffd54f", dk3 = tint(col, "#6d4c00", 0.45);
+      const by = H2.top + 0.34, w = v === "S" ? 0.56 : 0.62;
+      const d = `M${-w} ${by} L${-w - 0.1} ${by - 0.62} L${-w * 0.55} ${by - 0.3} L0 ${by - 0.74} L${w * 0.55} ${by - 0.3} L${w + 0.1} ${by - 0.62} L${w} ${by} Q0 ${by + 0.12} ${-w} ${by} Z`;
+      part2(g, C2, d, col, dk3, 0.08);
+      if (C2.lod) {
+        g.fillStyle = "#e53935";
+        g.fill(pp(pb().ell(0, by - 0.1, 0.09, 0.08).s));
+        g.fillStyle = "#42a5f5";
+        g.fill(pp(pb().ell(-w * 0.62, by - 0.08, 0.06, 0.06).s + pb().ell(w * 0.62, by - 0.08, 0.06, 0.06).s));
+      }
+    },
+    halo(g, C2, v, H2) {
+      const col = H2.hatColor || "#ffe082";
+      const y = H2.top - 0.36 + Math.sin(H2.t * 2.2) * 0.04;
+      const e = pp(pb().ell(0, y, v === "S" ? 0.56 : 0.74, v === "S" ? 0.13 : 0.2).s);
+      g.lineWidth = 0.22;
+      g.strokeStyle = OUTLINE;
+      g.stroke(e);
+      g.lineWidth = 0.13;
+      g.strokeStyle = col;
+      g.stroke(e);
+      if (C2.lod) {
+        g.lineWidth = 0.04;
+        g.strokeStyle = "rgba(255,255,255,0.9)";
+        g.stroke(pp(pb().M(-0.5, y - 0.12).Q(-0.2, y - 0.2, 0.2, y - 0.2).s));
+      }
+    },
+    bubble(g, C2, v, H2) {
+      const R = 1.72 * H2.hatK;
+      const b = pp(pb().ell(0, -0.2 - (H2.hatK - 1) * 0.6, R, R).s);
+      g.fillStyle = "rgba(200,235,255,0.2)";
+      g.fill(b);
+      g.lineWidth = 0.08;
+      g.strokeStyle = "rgba(225,245,255,0.85)";
+      g.stroke(b);
+      if (C2.lod) {
+        g.lineWidth = 0.1;
+        g.strokeStyle = "rgba(255,255,255,0.75)";
+        g.stroke(pp(pb().M(-R * 0.72, -0.2 - R * 0.34).Q(-R * 0.62, -0.2 - R * 0.72, -R * 0.2, -0.2 - R * 0.86).s));
+        g.fillStyle = "rgba(255,255,255,0.8)";
+        g.fill(pp(pb().ell(R * 0.5, -0.2 - R * 0.5, 0.1, 0.07).s));
+      }
+    },
+    antlers(g, C2, v, H2) {
+      const col = H2.hatColor || "#8d6e63";
+      const d = v === "S" ? "M0.1 -0.9 L-0.2 -1.7 M-0.08 -1.36 L-0.5 -1.5 M-0.14 -1.56 L0.1 -1.96" : "M-0.45 -0.9 L-1.0 -1.8 M-0.74 -1.36 L-1.3 -1.34 M-0.92 -1.66 L-0.76 -2.08 M0.45 -0.9 L1.0 -1.8 M0.74 -1.36 L1.3 -1.34 M0.92 -1.66 L0.76 -2.08";
+      const p = pp(d);
+      g.lineWidth = 0.34;
+      g.strokeStyle = OUTLINE;
+      g.stroke(p);
+      g.lineWidth = 0.22;
+      g.strokeStyle = col;
+      g.stroke(p);
+    },
+    cap(g, C2, v, H2) {
+      const col = H2.hatColor || "#5d6d7e", dk3 = tint(col, "#000000", 0.3);
+      part2(g, C2, v === "S" ? "M-1.12 -0.5 C-1.16 -1.06 -0.7 -1.32 0 -1.32 C0.66 -1.32 1.02 -1.0 1.0 -0.54 Z" : "M-1.12 -0.54 C-1.16 -1.06 -0.76 -1.34 0 -1.34 C0.76 -1.34 1.16 -1.06 1.12 -0.54 Z", col, dk3, 0.14);
+      if (v === "S") part2(g, C2, "M0.8 -0.6 Q1.3 -0.62 1.5 -0.48 Q1.1 -0.4 0.76 -0.46 Z", dk3, null);
+      else if (v === "F") part2(g, C2, "M-0.86 -0.56 Q0 -0.66 0.86 -0.56 Q0.6 -0.3 0 -0.28 Q-0.6 -0.3 -0.86 -0.56 Z", dk3, null);
+    }
+  };
+  var HAT_BEHIND = {
+    bandana(g, C2, v, H2) {
+      if (v === "F") tails(g, C2, H2, 0.92, -0.42, H2.hatColor || "#2f5f96", tint(H2.hatColor || "#2f5f96", "#000000", 0.3), 1);
+    },
+    headband(g, C2, v, H2) {
+      if (v === "F") tails(g, C2, H2, H2.w - 0.1, -0.52, H2.hatColor || "#2e2a31", tint(H2.hatColor || "#2e2a31", "#000000", 0.3), 1);
+    }
+  };
+  function tails(g, C2, H2, x, y, col, dk3, dir) {
+    const f = Math.sin(H2.t * 3.1 + H2.seed) * 0.08 + (H2.moving ? 0.1 * Math.sin((H2.walk || 0) * 2) : 0);
+    g.save();
+    g.translate(x, y);
+    if (dir) g.scale(dir === 1 && C2.view === "S" ? -1 : 1, 1);
+    const a = dir ? 0.32 + f : f;
+    g.rotate(a);
+    part2(g, C2, dir ? "M0 0 Q0.34 0.1 0.6 0.46 L0.44 0.44 L0.52 0.66 Q0.18 0.3 0 0.12 Z" : "M-0.02 0 Q-0.2 0.3 -0.16 0.66 L-0.04 0.58 L0 0.72 Q0.04 0.3 0.04 0 Z", col, dk3, 0.05);
+    part2(g, C2, dir ? "M0 0.04 Q0.22 0.3 0.28 0.7 L0.16 0.62 L0.14 0.8 Q0.06 0.4 -0.04 0.14 Z" : "M0.02 0 Q0.24 0.34 0.22 0.64 L0.1 0.58 L0.08 0.72 Q0.04 0.3 -0.02 0.02 Z", tint(col, "#000000", 0.12), dk3, 0.05);
+    g.restore();
+  }
+  var DOTS = null;
+  function dots() {
+    if (!DOTS) {
+      const b = pb();
+      for (const [x, y] of [[-0.5, -1], [0, -1.12], [0.5, -1], [-0.8, -0.66], [-0.28, -0.76], [0.28, -0.76], [0.8, -0.66], [0, -0.46]]) b.ell(x, y, 0.07, 0.06);
+      DOTS = b.s;
+    }
+    return DOTS;
+  }
+  function skull2(g, C2, x, y, s) {
+    g.fillStyle = "#f4f1ea";
+    g.fill(pp(pb().ell(x, y, s, s * 0.9).s));
+    g.fill(pp(pb().ell(x, y + s * 0.7, s * 0.55, s * 0.4).s));
+    if (C2.lod) {
+      g.fillStyle = "#1d1a20";
+      g.fill(pp(pb().ell(x - s * 0.36, y, s * 0.22, s * 0.24).s + pb().ell(x + s * 0.36, y, s * 0.22, s * 0.24).s));
+    }
+  }
+  function topHat(g, C2, v, col, cross) {
+    const dk3 = tint(col, "#000000", 0.3), band = tint(col, "#000000", 0.25);
+    const sy = v === "S" ? 0.12 : 0.26;
+    part2(g, C2, pb().ell(0, -0.68, v === "S" ? 1.2 : 1.28, sy).s, tint(col, "#000000", 0.08), dk3, 0.08);
+    const crown = pb().M(-0.82, -0.68).C(-0.86, -1.2, -0.84, -1.7, -0.72, -2).C(-0.3, -2.1, 0.3, -2.1, 0.72, -2).C(0.84, -1.7, 0.86, -1.2, 0.82, -0.68).arc(0, -0.68, 0.82, sy * 0.66, 0, 180).Z().s;
+    const cp = part2(g, C2, crown, col, dk3, 0.14);
+    g.save();
+    g.clip(cp);
+    g.fillStyle = band;
+    g.fill(pp("M-1 -1.0 Q0 -0.9 1 -1.0 L1 -0.4 L-1 -0.4 Z"));
+    g.restore();
+    ink(g, cp, C2);
+    part2(g, C2, pb().ell(0, -2, 0.72, 0.14).s, tint(col, "#ffffff", 0.18), null);
+    if (cross) {
+      const x = pp("M-0.3 -1.66 L0.3 -1.18 M0.3 -1.66 L-0.3 -1.18");
+      g.lineWidth = 0.22;
+      g.strokeStyle = OUTLINE;
+      g.stroke(x);
+      g.lineWidth = 0.14;
+      g.strokeStyle = "#ffffff";
+      g.stroke(x);
+    }
+  }
+  function horns(g, C2, v, H2, col, helm) {
+    const dk3 = tint(col, "#000000", 0.3);
+    const L2 = helm ? "M-0.84 -0.72 C-1.3 -0.9 -1.5 -1.3 -1.36 -1.86 C-1.12 -1.5 -0.9 -1.3 -0.56 -1.1 Z" : "M-0.5 -0.86 C-0.78 -1.12 -1.06 -1.5 -0.98 -1.96 C-0.8 -1.62 -0.54 -1.38 -0.2 -1.06 Z";
+    if (v === "S") {
+      const S3 = helm ? "M0.2 -1.0 C0.0 -1.4 -0.2 -1.7 -0.66 -1.9 C-0.46 -1.5 -0.3 -1.22 -0.2 -0.96 Z" : "M0.3 -0.94 C0.2 -1.36 -0.02 -1.66 -0.4 -1.9 C-0.3 -1.5 -0.14 -1.2 -0.06 -0.92 Z";
+      part2(g, C2, S3, col, dk3, 0.08);
+      return;
+    }
+    part2(g, C2, L2, col, dk3, 0.08);
+    part2(g, C2, L2.replace(/(-?\d*\.?\d+) (-?\d*\.?\d+)/g, (m, x, y) => `${-x} ${y}`), col, dk3, 0.08);
+    if (C2.lod === 2 && !helm) line(g, C2, "M-0.62 -1.18 L-0.38 -1.24 M-0.8 -1.5 L-0.62 -1.54 M0.62 -1.18 L0.38 -1.24 M0.8 -1.5 L0.62 -1.54", dk3);
+  }
+  var EYE = {
+    white: "M-0.18 -0.01 C-0.16 -0.25 0.13 -0.27 0.19 -0.07 C0.22 0.12 0.12 0.26 0 0.26 C-0.12 0.26 -0.19 0.14 -0.18 -0.01 Z",
+    lash: "M-0.22 0.03 C-0.2 -0.3 0.16 -0.34 0.23 -0.08 L0.3 -0.12 L0.22 0.01 C0.14 -0.2 -0.13 -0.21 -0.2 0.05 Z",
+    lower: "M0.02 0.26 Q0.14 0.24 0.19 0.12",
+    fWhite: "M-0.19 0.06 L0.2 -0.12 C0.22 0.1 0.12 0.24 0 0.24 C-0.12 0.24 -0.19 0.16 -0.19 0.06 Z",
+    fLash: "M-0.23 0.03 L0.22 -0.2 L0.3 -0.2 L0.21 -0.09 L-0.19 0.1 Z",
+    blink: "M-0.2 0.06 Q0 0.2 0.21 0.03 L0.27 0",
+    hurt: "M0.18 -0.12 L-0.12 0.06 L0.18 0.24",
+    // fish-man: round, bulging, small pupils
+    fishWhite: pb().ell(0, 0.06, 0.2, 0.21).s,
+    fishLash: "M-0.22 0.02 C-0.2 -0.22 0.2 -0.24 0.23 0.0 L0.18 0.02 C0.14 -0.16 -0.14 -0.16 -0.18 0.04 Z"
+  };
+  var EYE_S = {
+    white: "M-0.1 -0.02 C-0.08 -0.24 0.08 -0.26 0.12 -0.08 C0.15 0.1 0.1 0.24 0.02 0.25 C-0.07 0.25 -0.11 0.14 -0.1 -0.02 Z",
+    lash: "M0.14 -0.06 C0.1 -0.31 -0.1 -0.31 -0.12 -0.02 L-0.19 -0.07 L-0.12 0.05 C-0.08 -0.2 0.08 -0.21 0.14 -0.06 Z",
+    fWhite: "M-0.1 -0.14 L0.13 0.0 C0.15 0.12 0.1 0.24 0.02 0.24 C-0.07 0.24 -0.11 0.12 -0.1 -0.14 Z",
+    fLash: "M-0.12 -0.2 L0.16 -0.04 L0.12 0.03 L-0.1 -0.1 L-0.19 -0.12 Z",
+    blink: "M-0.18 0.02 L-0.12 0.06 Q0 0.16 0.13 0.06",
+    hurt: "M-0.08 -0.12 L0.12 0.06 L-0.08 0.22",
+    fishWhite: pb().ell(0.01, 0.06, 0.12, 0.2).s,
+    fishLash: "M-0.13 0.02 C-0.12 -0.2 0.12 -0.2 0.14 0.0 L0.1 0.02 C0.08 -0.14 -0.08 -0.14 -0.1 0.04 Z"
+  };
+  var SPIRAL = null;
+  function spiral2() {
+    if (!SPIRAL) {
+      const b = pb();
+      for (let i = 0; i <= 26; i++) {
+        const a = i * 0.62, rr = 0.02 + i * 75e-4;
+        const x = Math.cos(a) * rr, y = 0.06 + Math.sin(a) * rr * 1.1;
+        if (i) b.L(x, y);
+        else b.M(x, y);
+      }
+      SPIRAL = b.s;
+    }
+    return SPIRAL;
+  }
+  function expression(look, pose, P3, t) {
+    const st = pose && pose.state;
+    if (st === "knocked" || st === "dead") return { eyes: "ko", mouth: "ko", brow: "worried" };
+    if (st === "hurt") return { eyes: "hurt", mouth: "grimace", brow: "worried" };
+    const face = P3 && P3.face;
+    const fierce = face === "fierce" || face === "shout";
+    const s = (look.seed || 0) * 0.6180339 % 1 * 0.9 + 0.1;
+    const blink = pose && pose.blink === true ? true : !fierce && ((t * 0.29 + s - 0.29) % 1 + 1) % 1 < 0.035;
+    return {
+      eyes: blink ? "blink" : fierce ? "fierce" : "open",
+      mouth: face === "shout" ? "shout" : fierce ? "fierce" : look.grin || look.nika ? "grin" : "neutral",
+      brow: fierce ? "fierce" : "neutral",
+      small: face === "shout"
+    };
+  }
+  var EYE_SHAPES = ["round", "round", "sharp", "soft"];
+  function eyeShapeOf(look) {
+    if (look.eyeShape) return look.eyeShape;
+    if (look.race === "fishman") return "fish";
+    if (look.race === "mink") return "round";
+    return EYE_SHAPES[(look.seed || 0) % 4];
+  }
+  function drawEyes(g, C2, v, look, X, skinP) {
+    const shape = eyeShapeOf(look);
+    const white = look.furWhite;
+    const iris = white ? "#ff1744" : hex(look.eyeColor, "#2d2226");
+    const irisLt = tint(iris, "#ffffff", white ? 0.55 : 0.38), pupil = white ? "#ff8a80" : tint(iris, "#000000", 0.7);
+    const side = v === "S";
+    const E = side ? EYE_S : EYE;
+    const xs = side ? [0.66] : [-0.39, 0.39];
+    const ey = 0.17;
+    for (const x of xs) {
+      g.save();
+      g.translate(x, ey);
+      const flip = !side && x < 0 ? -1 : 1;
+      if (flip < 0) g.scale(-1, 1);
+      if (shape === "sharp") {
+        g.rotate(-0.12);
+        g.scale(1.06, 0.8);
+      } else if (shape === "soft") {
+        g.rotate(0.1);
+        g.scale(1, 0.92);
+      }
+      if (X.eyes === "blink" || X.eyes === "hurt" || X.eyes === "ko") {
+        g.lineWidth = X.eyes === "ko" ? 0.045 : 0.075;
+        g.strokeStyle = INK;
+        if (X.eyes === "ko") {
+          g.scale(flip, 1);
+          g.stroke(pp(spiral2()));
+        } else g.stroke(pp(X.eyes === "blink" ? E.blink : E.hurt));
+        g.restore();
+        continue;
+      }
+      const fierce = X.eyes === "fierce";
+      const fish = shape === "fish" && !fierce;
+      const wp = pp(fish ? E.fishWhite : fierce ? E.fWhite : E.white);
+      g.fillStyle = "#ffffff";
+      g.fill(wp);
+      const ir = fish ? 0.55 : X.small ? 0.72 : fierce ? 0.85 : 1;
+      const ix = side ? 0.04 : -0.01, iy = fierce ? 0.08 : 0.05;
+      if (C2.lod) {
+        g.save();
+        g.clip(wp);
+      }
+      g.fillStyle = iris;
       g.beginPath();
-      g.arc(0, hy, r * 1.02, 0, TAU6);
+      g.ellipse(ix, iy, (side ? 0.075 : 0.125) * ir, 0.19 * ir, 0, 0, TAU6);
+      g.fill();
+      if (C2.lod) {
+        if (C2.lod === 2) {
+          g.fillStyle = irisLt;
+          g.beginPath();
+          g.ellipse(ix, iy + 0.1 * ir, (side ? 0.05 : 0.085) * ir, 0.07 * ir, 0, 0, TAU6);
+          g.fill();
+        }
+        g.fillStyle = pupil;
+        g.beginPath();
+        g.ellipse(ix + (side ? 0.015 : 0), iy + 0.015, (side ? 0.036 : 0.062) * ir, 0.105 * ir, 0, 0, TAU6);
+        g.fill();
+        g.restore();
+      }
+      g.fillStyle = INK;
+      g.fill(pp(fish ? E.fishLash : fierce ? E.fLash : E.lash));
+      if (C2.lod === 2 && !side && !fierce) {
+        g.lineWidth = 0.028;
+        g.strokeStyle = INK;
+        g.stroke(pp(E.lower));
+      }
+      g.restore();
+      if (C2.lod) {
+        const hx = side ? x + 0.04 - 0.035 * C2.sx : x - 0.06, hly = ey + (fierce ? 0.04 : -0.03);
+        g.fillStyle = "#ffffff";
+        g.beginPath();
+        g.arc(hx, hly, 0.052 * (fish ? 0.8 : 1), 0, TAU6);
+        g.fill();
+        if (C2.lod === 2 && !side) {
+          g.beginPath();
+          g.arc(x + 0.055, ey + 0.14, 0.026, 0, TAU6);
+          g.fill();
+        }
+      }
+    }
+    if (look.scarEye) {
+      const sx0 = side ? 0.64 : -0.42;
+      const sc = pp(`M${sx0 - 0.1} ${-0.12} L${sx0 + 0.12} ${0.5}`);
+      g.lineWidth = 0.06;
+      g.strokeStyle = "#9b3a36";
+      g.stroke(sc);
+      if (C2.lod === 2) {
+        g.lineWidth = 0.03;
+        g.stroke(pp(`M${sx0 - 0.1} 0.02 L${sx0 + 0.04} -0.02 M${sx0 - 0.04} 0.24 L${sx0 + 0.1} 0.2`));
+      }
+    }
+  }
+  function drawBrows(g, C2, v, X, pal) {
+    const side = v === "S";
+    const col = pal.brow;
+    let d;
+    if (side) d = X.brow === "fierce" ? "M0.5 -0.3 Q0.66 -0.26 0.88 -0.12" : X.brow === "worried" ? "M0.5 -0.16 Q0.66 -0.28 0.86 -0.3" : "M0.5 -0.2 Q0.66 -0.29 0.86 -0.22";
+    else if (X.brow === "fierce") d = "M0.17 -0.1 Q0.38 -0.2 0.62 -0.31 M-0.17 -0.1 Q-0.38 -0.2 -0.62 -0.31";
+    else if (X.brow === "worried") d = "M0.2 -0.3 Q0.42 -0.3 0.6 -0.16 M-0.2 -0.3 Q-0.42 -0.3 -0.6 -0.16";
+    else d = "M0.2 -0.19 Q0.4 -0.3 0.6 -0.22 M-0.2 -0.19 Q-0.4 -0.3 -0.6 -0.22";
+    g.lineWidth = C2.lod ? 0.075 : 0.09;
+    g.strokeStyle = col;
+    g.stroke(pp(d));
+  }
+  var MOUTH_COL = "#5c1c20";
+  var TONGUE = "#e0626a";
+  var TEETH = "#ffffff";
+  function drawMouth(g, C2, v, look, X, skinP) {
+    const side = v === "S";
+    const my = look.muzzle ? 0.05 : 0;
+    const sharp = !!look.sharpTeeth;
+    g.save();
+    g.translate(0, my);
+    const kind = X.mouth;
+    if (kind === "neutral" || kind === "fierce" || kind === "ko") {
+      let d2;
+      if (side) d2 = kind === "fierce" ? "M0.94 0.6 Q0.86 0.56 0.76 0.62" : "M0.94 0.58 Q0.86 0.62 0.78 0.6";
+      else if (kind === "fierce") d2 = "M-0.14 0.66 Q0 0.58 0.14 0.66";
+      else if (kind === "ko") d2 = "M-0.16 0.62 Q-0.08 0.54 0 0.62 Q0.08 0.7 0.16 0.62";
+      else if (look.muzzle || look.race === "mink") d2 = "M-0.16 0.56 Q-0.08 0.66 0 0.54 Q0.08 0.66 0.16 0.56";
+      else d2 = (look.seed || 0) % 2 ? "M-0.12 0.61 Q0 0.67 0.12 0.6" : "M-0.11 0.62 L0.11 0.62";
+      g.lineWidth = 0.05;
+      g.strokeStyle = MOUTH_COL;
+      g.stroke(pp(d2));
+      g.restore();
+      return;
+    }
+    let d, teeth, tongue;
+    if (side) {
+      if (kind === "grin") {
+        d = "M0.98 0.49 L0.62 0.55 Q0.72 0.8 0.94 0.8 Z";
+        teeth = "M0.62 0.55 L1 0.48 L1 0.6 L0.66 0.62 Z";
+        tongue = pb().ell(0.86, 0.78, 0.14, 0.07).s;
+      } else if (kind === "shout") {
+        d = "M0.98 0.5 L0.7 0.52 Q0.7 0.88 0.92 0.88 Z";
+        teeth = "M0.7 0.52 L1 0.49 L1 0.57 L0.7 0.58 Z";
+        tongue = pb().ell(0.86, 0.86, 0.14, 0.08).s;
+      } else {
+        d = "M0.98 0.52 L0.72 0.56 L0.94 0.72 Z";
+        teeth = "M0.7 0.5 L1 0.5 L1 0.8 L0.7 0.8 Z";
+      }
+    } else if (kind === "grin") {
+      d = "M-0.46 0.46 Q0 0.58 0.46 0.46 Q0.36 0.95 0 0.95 Q-0.36 0.95 -0.46 0.46 Z";
+      teeth = "M-0.5 0.4 L0.5 0.4 L0.5 0.56 Q0 0.72 -0.5 0.56 Z";
+      tongue = pb().ell(0, 0.93, 0.24, 0.11).s;
+    } else if (kind === "shout") {
+      d = "M-0.25 0.5 Q0 0.45 0.25 0.5 Q0.3 0.92 0 0.94 Q-0.3 0.92 -0.25 0.5 Z";
+      teeth = "M-0.3 0.4 L0.3 0.4 L0.3 0.55 Q0 0.6 -0.3 0.55 Z";
+      tongue = pb().ell(0, 0.92, 0.17, 0.1).s;
+    } else {
+      d = "M-0.3 0.55 Q0 0.5 0.3 0.55 L0.26 0.74 Q0 0.7 -0.26 0.74 Z";
+      teeth = "M-0.4 0.4 L0.4 0.4 L0.4 0.9 L-0.4 0.9 Z";
+    }
+    const mp = pp(d);
+    g.fillStyle = MOUTH_COL;
+    g.fill(mp);
+    g.save();
+    g.clip(mp);
+    if (tongue && C2.lod) {
+      g.fillStyle = TONGUE;
+      g.fill(pp(tongue));
+    }
+    if (sharp && C2.lod) {
+      g.fillStyle = TEETH;
+      g.fill(pp(side ? "M0.6 0.54 L1 0.47 L1 0.56 L0.92 0.64 L0.86 0.56 L0.8 0.64 L0.74 0.56 L0.68 0.63 Z" : sharpTeeth(kind)));
+    } else {
+      g.fillStyle = TEETH;
+      g.fill(pp(teeth));
+    }
+    if (kind === "grimace" && C2.lod) {
+      g.lineWidth = 0.025;
+      g.strokeStyle = "rgba(90,40,40,0.8)";
+      g.stroke(pp(side ? "M0.76 0.62 L0.95 0.62" : "M-0.28 0.64 L0.28 0.64 M-0.12 0.54 L-0.12 0.72 M0.06 0.53 L0.06 0.72"));
+    }
+    g.restore();
+    g.lineWidth = 0.035;
+    g.strokeStyle = MOUTH_COL;
+    g.stroke(mp);
+    g.restore();
+  }
+  var SHARP = /* @__PURE__ */ new Map();
+  function sharpTeeth(kind) {
+    let s = SHARP.get(kind);
+    if (s) return s;
+    const [x0, x1, y0, h2] = kind === "grin" ? [-0.46, 0.46, 0.46, 0.13] : kind === "shout" ? [-0.26, 0.26, 0.48, 0.1] : [-0.3, 0.3, 0.53, 0.1];
+    const n = kind === "grin" ? 7 : 4;
+    const b = pb().M(x0, y0 - 0.1);
+    for (let i = 0; i <= n; i++) {
+      const x = x0 + (x1 - x0) * i / n;
+      b.L(x, y0 + (i === 0 || i === n ? 0 : 0.02));
+      if (i < n) b.L(x + (x1 - x0) / n / 2, y0 + h2);
+    }
+    b.L(x1, y0 - 0.1).Z();
+    const yb = kind === "grin" ? 0.9 : kind === "shout" ? 0.9 : 0.74;
+    b.M(x0 * 0.7, yb + 0.1);
+    for (let i = 0; i <= n - 1; i++) {
+      const x = x0 * 0.7 + (x1 - x0) * 0.7 * i / (n - 1);
+      b.L(x, yb);
+      if (i < n - 1) b.L(x + (x1 - x0) * 0.7 / (n - 1) / 2, yb - h2 * 0.9);
+    }
+    b.L(x1 * 0.7, yb + 0.1).Z();
+    s = b.s;
+    SHARP.set(kind, s);
+    return s;
+  }
+  function minkEars(g, C2, v, look, furCol) {
+    const kind = look.ears;
+    const skinP = skinPal(furCol);
+    const inner = look.kind === "Panda" ? "#2b2b2b" : skinP.inner;
+    const col = look.kind === "Panda" ? "#2b2b2b" : furCol;
+    const shapes = {
+      pointy: ["M-0.9 -0.44 L-1.02 -1.34 Q-0.64 -1.12 -0.28 -0.9 Z", "M-0.82 -0.6 L-0.9 -1.14 Q-0.66 -1.02 -0.46 -0.86 Z"],
+      round: [pb().ell(-0.74, -0.86, 0.32, 0.3).s, pb().ell(-0.74, -0.88, 0.18, 0.17).s],
+      long: ["M-0.62 -0.8 C-0.8 -1.4 -0.78 -2.0 -0.52 -2.1 C-0.28 -2.0 -0.2 -1.4 -0.3 -0.84 Z", "M-0.56 -0.96 C-0.66 -1.4 -0.64 -1.86 -0.52 -1.94 C-0.4 -1.86 -0.36 -1.4 -0.4 -0.96 Z"]
+    };
+    const [o, i] = shapes[kind] || shapes.pointy;
+    const dk3 = skinP.shadow;
+    const one = (dx, flipX, shade2) => {
+      g.save();
+      g.translate(dx, 0);
+      if (flipX) g.scale(-1, 1);
+      part2(g, C2, o, shade2 ? dk3 : col, shade2 ? tint(dk3, "#000000", 0.2) : dk3, 0.1);
+      if (v !== "B" && C2.lod) {
+        g.fillStyle = shade2 ? tint(inner, "#000000", 0.2) : inner;
+        g.fill(pp(i));
+      }
+      g.restore();
+    };
+    if (v === "S") {
+      one(0.62, false, true);
+      one(0.9, false, false);
+    } else {
+      one(0, false, false);
+      one(0, true, false);
+    }
+  }
+  function antennae(g, C2, v, skinP) {
+    const d = v === "S" ? "M0.2 -0.9 Q0.3 -1.3 0.5 -1.44 M-0.06 -0.94 Q0.0 -1.34 0.16 -1.5" : "M-0.24 -0.92 Q-0.34 -1.3 -0.46 -1.46 M0.24 -0.92 Q0.34 -1.3 0.46 -1.46";
+    g.lineWidth = 0.13;
+    g.strokeStyle = OUTLINE;
+    g.stroke(pp(d));
+    g.lineWidth = 0.06;
+    g.strokeStyle = skinP.shadow;
+    g.stroke(pp(d));
+    const tips = v === "S" ? [[0.5, -1.44], [0.16, -1.5]] : [[-0.46, -1.46], [0.46, -1.46]];
+    for (const [x, y] of tips) part2(g, C2, pb().ell(x, y, 0.09, 0.09).s, skinP.base, skinP.shadow, 0.04);
+  }
+  function fin(g, C2, v, skinP) {
+    const d = v === "S" ? "M0.3 -0.92 C0.1 -1.36 -0.3 -1.62 -0.7 -1.8 C-0.62 -1.36 -0.7 -1.02 -0.92 -0.72 Z" : "M-0.18 -0.88 Q-0.12 -1.4 0.04 -1.76 Q0.22 -1.36 0.18 -0.88 Z";
+    const p = part2(g, C2, d, skinP.shadow, tint(skinP.shadow, "#000000", 0.25), 0.08);
+    if (C2.lod === 2 && v === "S") {
+      g.save();
+      g.clip(p);
+      line(g, C2, "M0.0 -0.94 Q-0.3 -1.3 -0.56 -1.6 M-0.4 -0.84 Q-0.56 -1.2 -0.66 -1.4", skinP.line);
+      g.restore();
+    }
+  }
+  function gills(g, C2, v, skinP) {
+    g.lineWidth = 0.035;
+    g.strokeStyle = skinP.line;
+    g.stroke(pp(v === "S" ? "M0.3 0.5 Q0.24 0.6 0.3 0.7 M0.2 0.52 Q0.14 0.62 0.2 0.74 M0.1 0.56 Q0.04 0.66 0.1 0.78" : "M0.74 0.44 Q0.68 0.52 0.72 0.6 M0.68 0.54 Q0.62 0.62 0.66 0.7 M-0.74 0.44 Q-0.68 0.52 -0.72 0.6 M-0.68 0.54 Q-0.62 0.62 -0.66 0.7"));
+  }
+  function muzzle(g, C2, v, look, skinP) {
+    const col = skinP.muzzle;
+    if (v === "S") {
+      part2(g, C2, "M0.6 0.24 C0.9 0.16 1.2 0.24 1.22 0.42 C1.24 0.62 1.02 0.74 0.8 0.76 C0.64 0.72 0.58 0.5 0.6 0.24 Z", col, skinP.shadow, 0.06);
+      part2(g, C2, pb().ell(1.16, 0.3, 0.09, 0.07).s, "#2d2226", null, 0, C2.lw * 0.5);
+      return;
+    }
+    g.fillStyle = col;
+    g.fill(pp(pb().ell(0, 0.56, 0.36, 0.27).s));
+    part2(g, C2, "M-0.11 0.35 Q0 0.3 0.11 0.35 Q0.07 0.45 0 0.47 Q-0.07 0.45 -0.11 0.35 Z", "#2d2226", null, 0, C2.lw * 0.5);
+    if (C2.lod) {
+      g.fillStyle = "rgba(255,255,255,0.7)";
+      g.fill(pp(pb().ell(-0.04, 0.35, 0.03, 0.02).s));
+    }
+  }
+  function noseF(g, C2, look, skinP, v) {
+    const side = v === "S";
+    if (look.nose === "red") {
+      part2(g, C2, pb().ell(side ? 1.12 : 0, side ? 0.33 : 0.4, 0.15, 0.15).s, "#e53935", "#a61d1d", 0.05);
+      if (C2.lod) {
+        g.fillStyle = "rgba(255,255,255,0.8)";
+        g.fill(pp(pb().ell((side ? 1.12 : 0) - 0.05, (side ? 0.33 : 0.4) - 0.05, 0.04, 0.03).s));
+      }
+      return;
+    }
+    if (look.nose === "long" || look.kind === "Saw Shark") {
+      const saw = look.kind === "Saw Shark";
+      const d = side ? "M0.96 0.2 L1.95 0.2 Q2.04 0.27 1.95 0.34 L0.96 0.42 Z" : "M-0.06 0.28 L0.52 0.44 Q0.6 0.5 0.52 0.56 L-0.02 0.46 Z";
+      part2(g, C2, d, saw ? "#9fb0bf" : skinP.base, saw ? "#6d8193" : skinP.shadow, 0.05);
+      if (saw && C2.lod) {
+        g.fillStyle = "#f4f1ea";
+        g.fill(pp(side ? "M1.1 0.2 L1.16 0.12 L1.22 0.2 M1.34 0.2 L1.4 0.12 L1.46 0.2 M1.58 0.2 L1.64 0.12 L1.7 0.2 M1.1 0.41 L1.16 0.48 L1.22 0.4 M1.34 0.39 L1.4 0.46 L1.46 0.38 M1.58 0.37 L1.64 0.44 L1.7 0.36" : "M0.1 0.32 L0.14 0.25 L0.2 0.35 M0.28 0.37 L0.32 0.3 L0.38 0.4"));
+      }
+      return;
+    }
+    if (!side && C2.lod && look.race !== "mink") {
+      g.lineWidth = 0.04;
+      g.strokeStyle = skinP.line;
+      g.stroke(pp("M0.03 0.35 Q0.08 0.42 0.02 0.45"));
+    }
+  }
+  function eyewear(g, C2, v) {
+    const lens = "#241f2c", frame = "#15121a";
+    if (v === "S") {
+      g.lineWidth = 0.05;
+      g.strokeStyle = frame;
+      g.stroke(pp("M0.58 0.08 L0.0 0.14"));
+      part2(g, C2, "M0.52 0.02 L0.84 0.02 Q0.86 0.26 0.7 0.3 Q0.54 0.3 0.52 0.02 Z", lens, null, 0, C2.lw * 0.8);
+      if (C2.lod) {
+        g.fillStyle = "rgba(255,255,255,0.6)";
+        g.fill(pp("M0.62 0.06 L0.7 0.06 L0.64 0.2 L0.58 0.2 Z"));
+      }
+      return;
+    }
+    for (const s of [-1, 1]) {
+      g.save();
+      g.scale(s, 1);
+      part2(g, C2, "M0.14 0.02 L0.64 0.0 Q0.66 0.28 0.46 0.34 Q0.2 0.36 0.14 0.02 Z", lens, null, 0, C2.lw * 0.8);
+      g.restore();
+      if (C2.lod) {
+        g.fillStyle = "rgba(255,255,255,0.55)";
+        g.fill(pp(`M${s < 0 ? -0.5 : 0.3} 0.04 L${s < 0 ? -0.4 : 0.4} 0.04 L${s < 0 ? -0.48 : 0.32} 0.24 L${s < 0 ? -0.58 : 0.22} 0.24 Z`));
+      }
+    }
+    g.lineWidth = 0.06;
+    g.strokeStyle = frame;
+    g.stroke(pp("M-0.14 0.06 Q0 0.02 0.14 0.06"));
+  }
+  function thirdEye(g, C2, v, look) {
+    const x = v === "S" ? 0.86 : 0, w = v === "S" ? 0.05 : 0.11;
+    const d = `M${x} -0.28 Q${x + w} -0.12 ${x} 0.04 Q${x - w} -0.12 ${x} -0.28 Z`;
+    part2(g, C2, d, "#ffffff", null, 0, C2.lw * 0.6);
+    if (C2.lod) {
+      g.fillStyle = hex(look.eyeColor, "#8e44ad");
+      g.beginPath();
+      g.ellipse(x, -0.11, w * 0.55, 0.1, 0, 0, TAU6);
+      g.fill();
+      g.fillStyle = "#1a1020";
+      g.beginPath();
+      g.ellipse(x, -0.1, w * 0.25, 0.05, 0, 0, TAU6);
+      g.fill();
+      g.fillStyle = "#ffffff";
+      g.beginPath();
+      g.arc(x - 0.02, -0.15, 0.025, 0, TAU6);
       g.fill();
     }
   }
-  function drawHat(g, hat, hy, r, d, look) {
-    if (!hat) return;
-    g.strokeStyle = OUTLINE;
-    g.lineWidth = 0.035;
-    switch (hat) {
-      case "straw": {
-        g.fillStyle = "#f2d16b";
-        g.beginPath();
-        g.ellipse(0, hy - r * 0.55, r * 1.55, r * 0.42, 0, 0, TAU6);
-        g.fill();
-        g.stroke();
-        g.fillStyle = "#f5da7a";
-        g.beginPath();
-        g.ellipse(0, hy - r * 0.85, r * 0.85, r * 0.62, 0, Math.PI, 0);
-        g.fill();
-        g.stroke();
-        g.fillStyle = "#c0392b";
-        g.fillRect(-r * 0.85, hy - r * 0.8, r * 1.7, r * 0.2);
-        break;
-      }
-      case "bandana": {
-        g.fillStyle = look.hatColor || "#2d3436";
-        g.beginPath();
-        g.arc(0, hy - r * 0.1, r * 1.05, Math.PI * 1.05, -0.05);
-        g.closePath();
-        g.fill();
-        g.stroke();
-        if (d !== "up") {
-          g.beginPath();
-          g.moveTo(-r, hy - r * 0.1);
-          g.lineTo(-r * 1.5, hy + r * 0.3);
-          g.lineTo(-r * 1.2, hy + r * 0.4);
-          g.closePath();
-          g.fill();
-        }
-        break;
-      }
-      case "marine": {
-        g.fillStyle = "#ffffff";
-        g.beginPath();
-        g.ellipse(0, hy - r * 0.75, r * 1, r * 0.45, 0, 0, TAU6);
-        g.fill();
-        g.stroke();
-        g.fillStyle = "#1b4f72";
-        g.fillRect(-r * 0.95, hy - r * 0.6, r * 1.9, r * 0.2);
-        if (d === "down" || d === "right") {
-          g.fillStyle = "#34495e";
-          g.beginPath();
-          g.ellipse(r * 0.3, hy - r * 0.45, r * 0.6, r * 0.15, 0, 0, TAU6);
-          g.fill();
-        }
-        break;
-      }
-      case "tricorne": {
-        g.fillStyle = look.hatColor || "#2d3436";
-        g.beginPath();
-        g.moveTo(-r * 1.5, hy - r * 0.6);
-        g.quadraticCurveTo(0, hy - r * 2.1, r * 1.5, hy - r * 0.6);
-        g.quadraticCurveTo(0, hy - r * 0.9, -r * 1.5, hy - r * 0.6);
-        g.fill();
-        g.stroke();
-        g.fillStyle = "#f1c40f";
-        g.beginPath();
-        g.arc(0, hy - r * 1.15, r * 0.15, 0, TAU6);
-        g.fill();
-        break;
-      }
-      case "captain": {
-        g.fillStyle = look.hatColor || "#1e272e";
-        g.beginPath();
-        g.ellipse(0, hy - r * 0.6, r * 1.6, r * 0.38, 0, 0, TAU6);
-        g.fill();
-        g.stroke();
-        g.beginPath();
-        g.ellipse(0, hy - r * 0.95, r * 0.95, r * 0.6, 0, Math.PI, 0);
-        g.fill();
-        g.stroke();
-        g.fillStyle = "#fff";
-        g.beginPath();
-        g.arc(0, hy - r * 1.1, r * 0.18, 0, TAU6);
-        g.fill();
-        g.fillStyle = "#e74c3c";
-        g.beginPath();
-        g.moveTo(r * 0.8, hy - r * 1);
-        g.quadraticCurveTo(r * 1.6, hy - r * 1.9, r * 1.3, hy - r * 0.8);
-        g.fill();
-        break;
-      }
-      case "cowboy": {
-        g.fillStyle = look.hatColor || "#8d6e4a";
-        g.beginPath();
-        g.ellipse(0, hy - r * 0.6, r * 1.6, r * 0.35, 0, 0, TAU6);
-        g.fill();
-        g.stroke();
-        g.beginPath();
-        g.roundRect(-r * 0.7, hy - r * 1.5, r * 1.4, r * 0.95, r * 0.3);
-        g.fill();
-        g.stroke();
-        break;
-      }
-      case "beanie": {
-        g.fillStyle = look.hatColor || "#e74c3c";
-        g.beginPath();
-        g.arc(0, hy - r * 0.2, r * 1.05, Math.PI, 0);
-        g.closePath();
-        g.fill();
-        g.stroke();
-        g.fillStyle = "#fff";
-        g.beginPath();
-        g.arc(0, hy - r * 1.25, r * 0.22, 0, TAU6);
-        g.fill();
-        break;
-      }
-      case "pinkhat": {
-        g.fillStyle = "#f78fb3";
-        g.beginPath();
-        g.ellipse(0, hy - r * 0.55, r * 1.3, r * 0.35, 0, 0, TAU6);
-        g.fill();
-        g.stroke();
-        g.beginPath();
-        g.roundRect(-r * 0.8, hy - r * 1.6, r * 1.6, r * 1.05, r * 0.4);
-        g.fill();
-        g.stroke();
-        g.strokeStyle = "#fff";
-        g.lineWidth = 0.05;
-        g.beginPath();
-        g.moveTo(-r * 0.3, hy - r * 1.1);
-        g.lineTo(r * 0.3, hy - r * 1.1);
-        g.moveTo(0, hy - r * 1.4);
-        g.lineTo(0, hy - r * 0.8);
-        g.stroke();
-        break;
-      }
-      case "horns": {
-        g.fillStyle = "#ecf0f1";
-        for (const sx of [-1, 1]) {
-          g.beginPath();
-          g.moveTo(sx * r * 0.5, hy - r * 0.7);
-          g.quadraticCurveTo(sx * r * 1.4, hy - r * 1.4, sx * r * 1.1, hy - r * 2);
-          g.lineTo(sx * r * 0.3, hy - r * 0.8);
-          g.fill();
-          g.stroke();
-        }
-        break;
-      }
-      case "antlers": {
-        g.strokeStyle = "#8d6e63";
-        g.lineWidth = 0.06;
-        g.lineCap = "round";
-        for (const sx of [-1, 1]) {
-          g.beginPath();
-          g.moveTo(sx * r * 0.5, hy - r * 0.8);
-          g.lineTo(sx * r * 1.2, hy - r * 1.9);
-          g.moveTo(sx * r * 0.85, hy - r * 1.35);
-          g.lineTo(sx * r * 1.5, hy - r * 1.4);
-          g.moveTo(sx * r * 1.05, hy - r * 1.7);
-          g.lineTo(sx * r * 0.8, hy - r * 2.2);
-          g.stroke();
-        }
-        break;
-      }
-      case "crown": {
-        g.fillStyle = "#f1c40f";
-        g.beginPath();
-        g.moveTo(-r * 0.7, hy - r * 0.7);
-        g.lineTo(-r * 0.8, hy - r * 1.4);
-        g.lineTo(-r * 0.35, hy - r * 1.05);
-        g.lineTo(0, hy - r * 1.5);
-        g.lineTo(r * 0.35, hy - r * 1.05);
-        g.lineTo(r * 0.8, hy - r * 1.4);
-        g.lineTo(r * 0.7, hy - r * 0.7);
-        g.closePath();
-        g.fill();
-        g.stroke();
-        break;
-      }
-      case "bubble": {
-        g.fillStyle = "rgba(200,235,255,0.22)";
-        g.strokeStyle = "rgba(220,245,255,0.8)";
-        g.lineWidth = 0.04;
-        g.beginPath();
-        g.arc(0, hy - r * 0.1, r * 1.7, 0, TAU6);
-        g.fill();
-        g.stroke();
-        g.fillStyle = "rgba(255,255,255,0.7)";
-        g.beginPath();
-        g.arc(-r * 0.7, hy - r * 0.9, r * 0.22, 0, TAU6);
-        g.fill();
-        break;
-      }
-      case "halo": {
-        g.strokeStyle = "#ffe082";
-        g.lineWidth = 0.06;
-        g.beginPath();
-        g.ellipse(0, hy - r * 1.55, r * 0.7, r * 0.2, 0, 0, TAU6);
-        g.stroke();
-        break;
-      }
-      case "headband": {
-        g.fillStyle = look.hatColor || "#c0392b";
-        g.fillRect(-r * 1.02, hy - r * 0.55, r * 2.04, r * 0.22);
-        break;
-      }
-      case "goggles": {
-        g.fillStyle = "#2d3436";
-        g.fillRect(-r * 1.02, hy - r * 0.62, r * 2.04, r * 0.14);
-        circ(g, -r * 0.35, hy - r * 0.55, r * 0.22, "#74b9ff", OUTLINE);
-        circ(g, r * 0.35, hy - r * 0.55, r * 0.22, "#74b9ff", OUTLINE);
-        break;
-      }
-      default:
-        break;
+  function hairCtx(look, style, hairCol, skinCol, t, pose, C2) {
+    const pal = hairPal(hairCol);
+    return {
+      pal,
+      t: t || 0,
+      seed: (look && look.seed || 0) * 0.37,
+      moving: !!(pose && pose.moving),
+      walk: pose && pose.walk,
+      stubble: tint(hex(skinCol, "#f1c9a0"), pal.base, 0.42),
+      sx: C2.sx
+    };
+  }
+  function withClip(g, y, fn) {
+    if (y === null || y === void 0) {
+      fn();
+      return;
     }
+    g.save();
+    g.beginPath();
+    g.rect(-12, y, 24, 24);
+    g.clip();
+    fn();
+    g.restore();
+  }
+  function hatCtx(look, style, t, pose) {
+    const m = META[style] || META.short;
+    return { hatColor: look && look.hatColor, seed: look && look.seed || 0, t: t || 0, top: m.top, w: m.w, hatK: m.hatK, moving: !!(pose && pose.moving), walk: pose && pose.walk };
+  }
+  function hatLayer(g, C2, kind, v, H2, behind) {
+    const fn = behind ? HAT_BEHIND[kind] : HATS[kind];
+    if (!fn) return;
+    const k = kind === "crown" || kind === "halo" || kind === "bubble" ? 1 : H2.hatK;
+    if (k !== 1) {
+      g.save();
+      g.translate(0, -0.2);
+      g.scale(k, k);
+      g.translate(0, 0.2);
+    }
+    fn(g, C2, v, H2);
+    if (k !== 1) g.restore();
+  }
+  function drawHead(g, look, hy, r, d, pose, t, P3) {
+    pose = pose || {};
+    const v = viewOf(d);
+    const white = !!look.furWhite;
+    const skinCol = white ? "#fafafa" : hex(look.fur && look.furFace ? look.fur : look.skin, "#f1c9a0");
+    const hairCol = white ? "#fafafa" : hex(look.nika ? "#ffffff" : look.hairColor, "#2d2d2d");
+    const style = look.nika ? "nika" : styleId(look.hair);
+    const S3 = STYLES[style][v];
+    const C2 = begin(g, hy, r);
+    C2.view = v;
+    C2.r0 = r;
+    const skinP = skinPal(skinCol);
+    const H2 = hairCtx(look, style, hairCol, skinCol, t, pose, C2);
+    const kind = hatKind(look.hat, look);
+    const clipY = hatClip(kind);
+    const HT = kind ? hatCtx(look, style, t, pose) : null;
+    const k = HT ? HT.hatK : 1;
+    const clip2 = clipY === null ? null : -0.2 + (clipY + 0.2) * k;
+    const ghost = !!pose.ghost;
+    const X = expression(look, pose, P3, t || 0);
+    if (kind) hatLayer(g, C2, kind, v, HT, true);
+    withClip(g, clip2, () => {
+      if (look.ears) minkEars(g, C2, v, look, white ? "#fafafa" : hex(look.fur || look.hairColor, skinCol));
+      if (look.race === "skypiean" && !ghost) antennae(g, C2, v, skinP);
+      if (look.fin) fin(g, C2, v, skinP);
+      if (style === "nika") {
+        g.save();
+        drawParts(g, [{ d: new Path2D(nikaFlames(v, t || 0)), tone: "shadow" }], C2, H2);
+        g.restore();
+      }
+      drawParts(g, S3.back, C2, H2);
+    });
+    if (!look.ears && v !== "S") {
+      for (const s of ["l", "r"]) part2(g, C2, EAR_F[s], skinP.base, skinP.shadow, 0.06);
+      if (C2.lod === 2 && v === "F") {
+        g.lineWidth = C2.lwIn;
+        g.strokeStyle = skinP.line;
+        g.stroke(pp(EAR_F.li));
+        g.stroke(pp(EAR_F.ri));
+      }
+    }
+    const face = P2face(v);
+    if (look.furFace && look.ears && v !== "B" && C2.lod) {
+      part2(g, C2, v === "S" ? "M-0.3 0.84 L-0.46 1.02 L-0.14 0.9 L-0.1 1.06 L0.1 0.92 Z" : "M-0.86 0.5 L-1.08 0.66 L-0.84 0.66 L-0.94 0.84 L-0.66 0.78 Z M0.86 0.5 L1.08 0.66 L0.84 0.66 L0.94 0.84 L0.66 0.78 Z", skinP.base, skinP.shadow, 0.05);
+    }
+    cel(g, face, skinP.base, skinP.shadow, C2, 0.11);
+    ink(g, face, C2);
+    if (v === "S" && !look.ears) {
+      part2(g, C2, EAR_S.p, skinP.base, skinP.shadow, 0.05);
+      if (C2.lod === 2) {
+        g.lineWidth = C2.lwIn;
+        g.strokeStyle = skinP.line;
+        g.stroke(pp(EAR_S.i));
+      }
+    }
+    if (v === "B" && style === "bald" && C2.lod) {
+      g.lineWidth = 0.09;
+      g.strokeStyle = skinP.light;
+      g.stroke(pp("M-0.62 -0.5 Q-0.52 -0.8 -0.2 -0.9"));
+    }
+    if (v !== "B" && !ghost) {
+      const fr = S3.front.find((p) => p.fringe);
+      if (fr && C2.lod) {
+        g.save();
+        g.clip(face);
+        g.translate(0.03 * C2.sx, 0.1);
+        g.fillStyle = skinP.shadow;
+        withClip(g, clip2 === null ? null : clip2 - 0.1, () => g.fill(path(fr.d)));
+        g.restore();
+      }
+      if (look.kind === "Panda" && v === "F") {
+        g.fillStyle = "#2b2b2b";
+        g.fill(pp(pb().ell(-0.4, 0.2, 0.26, 0.3).s + pb().ell(0.4, 0.2, 0.26, 0.3).s));
+      }
+      if (look.muzzle) muzzle(g, C2, v, look, skinP);
+      if (look.gills && C2.lod) gills(g, C2, v, skinP);
+      if (style === "bald" && C2.lod) {
+        g.lineWidth = 0.09;
+        g.strokeStyle = skinP.light;
+        g.stroke(pp(v === "S" ? "M-0.3 -0.8 Q0.0 -0.95 0.34 -0.88" : "M-0.62 -0.52 Q-0.5 -0.8 -0.18 -0.9"));
+      }
+      drawEyes(g, C2, v, look, X, skinP);
+      if (look.grin && X.mouth === "grin" && C2.lod === 2 && v === "F") {
+        g.fillStyle = skinP.blush;
+        g.globalAlpha *= 0.5;
+        g.fill(pp(pb().ell(-0.66, 0.46, 0.14, 0.07).s + pb().ell(0.66, 0.46, 0.14, 0.07).s));
+        g.globalAlpha /= 0.5;
+      }
+      if (!look.nose && look.kind !== "Saw Shark") noseF(g, C2, look, skinP, v);
+      drawMouth(g, C2, v, look, X, skinP);
+    }
+    withClip(g, clip2, () => drawParts(g, S3.front, C2, H2));
+    if (v !== "B" && !ghost) {
+      drawBrows(g, C2, v, X, H2.pal);
+      if (look.thirdEye) thirdEye(g, C2, v, look);
+      if (look.nose || look.kind === "Saw Shark") noseF(g, C2, look, skinP, v);
+      if (look.goggles === true) eyewear(g, C2, v);
+    }
+    if (kind) hatLayer(g, C2, kind, v, HT, false);
+    if (pose.flash && !ghost) {
+      g.fillStyle = "rgba(255,255,255,0.6)";
+      g.fill(face);
+      for (const pt of S3.front) {
+        g.save();
+        if (pt.at) {
+          g.translate(pt.at[0], pt.at[1]);
+          if (pt.at[2]) g.rotate(pt.at[2]);
+        }
+        g.fill(path(pt.d));
+        g.restore();
+      }
+    }
+    g.restore();
+  }
+  function P2face(v) {
+    return path(v === "S" ? FACE_S : FACE_F);
+  }
+  function drawHair(g, style, col, hy, r, d, nikaT) {
+    const nika = nikaT !== null && nikaT !== void 0;
+    const s = nika ? "nika" : styleId(style);
+    if (s === "bald") return;
+    const v = viewOf(d);
+    const S3 = STYLES[s][v];
+    const C2 = begin(g, hy, r);
+    C2.view = v;
+    C2.r0 = r;
+    const H2 = hairCtx(null, s, nika ? "#ffffff" : hex(col, "#2d2d2d"), "#f1c9a0", nika ? nikaT : 0, null, C2);
+    g.save();
+    g.beginPath();
+    g.rect(-9, -9, 18, 18);
+    g.arc(0, 0, 1, 0, TAU6, true);
+    g.clip();
+    if (nika) drawParts(g, [{ d: new Path2D(nikaFlames(v, nikaT)), tone: "shadow" }], C2, H2);
+    drawParts(g, S3.back, C2, H2);
+    g.restore();
+    drawParts(g, S3.front, C2, H2);
+    g.restore();
   }
 
   // src/render/character.js
   var TAU7 = Math.PI * 2;
   var OUTLINE2 = "rgba(30,20,20,0.85)";
-  function circ2(g, x, y, r, fill, stroke, lw = 0.04) {
+  function circ(g, x, y, r, fill, stroke, lw = 0.04) {
     g.beginPath();
     g.arc(x, y, Math.max(1e-3, r), 0, TAU7);
     if (fill) {
@@ -17510,15 +18547,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return [ax + Math.cos(base + a) * l1, ay + Math.sin(base + a) * l1, ex, ey];
   }
   var toXY2 = (h2) => Array.isArray(h2) ? h2 : [Math.cos(h2.a) * h2.r, Math.sin(h2.a) * h2.r];
-  function solveRig(look, P2, d, side, back) {
+  function solveRig(look, P3, d, side, back) {
     const legLen = look.legs || 1;
     const armLen = look.arms || 1;
     const bulk = look.bulk || 1;
     const front = d === "down";
-    const lean = side ? P2.l : 0;
-    const fwd2 = side ? P2.b[0] : 0;
+    const lean = side ? P3.l : 0;
+    const fwd2 = side ? P3.b[0] : 0;
     const hipY0 = -0.42 * legLen - 0.05;
-    const hip = { x: fwd2, y: hipY0 + P2.b[1] + (side ? 0 : Math.abs(P2.l) * 0.06 + (front ? P2.b[0] * 0.25 : -P2.b[0] * 0.25)) };
+    const hip = { x: fwd2, y: hipY0 + P3.b[1] + (side ? 0 : Math.abs(P3.l) * 0.06 + (front ? P3.b[0] * 0.25 : -P3.b[0] * 0.25)) };
     const cosL = Math.cos(lean), sinL = Math.sin(lean);
     const U2 = (x, y) => {
       const ry = y - hipY0;
@@ -17529,11 +18566,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const out = { hip, lean, shoulderY, headY, hipY0, U: U2 };
     const L1 = 0.215 * armLen, L2 = 0.215 * armLen;
     const T1 = 0.245 * legLen, T22 = 0.245 * legLen;
-    const stretch = !!P2.stretch;
+    const stretch = !!P3.stretch;
+    const reachY = (u) => u * 0.26 + Math.max(0, u - 0.24) * 1.35;
     const project = (u, v, inward) => {
       if (side) return [u, v];
-      if (front) return [inward * u * 0.34, v * 0.92 + u * 0.26];
-      return [inward * u * 0.3, v * 0.92 - u * 0.24];
+      if (front) return [inward * u * 0.32, v * 0.92 + reachY(u)];
+      return [-inward * u * 0.18, v * 0.92 - reachY(u)];
     };
     const depth = (u, L3) => side ? 1 : front ? 1 + 0.55 * Math.max(0, u) / L3 : 1 - 0.28 * Math.max(0, u) / L3;
     const arm = (hand, bend, sx, inward) => {
@@ -17550,8 +18588,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return { s: s0, j, e, u: ex, v: ey, scale: depth(ex, L1 + L2), raised: ey < -0.15 };
     };
     const shx = side ? 0.03 : 0.27 * bulk;
-    out.armF = arm(P2.hF, P2.eF, side ? 0.05 : shx, -1);
-    out.armB = arm(P2.hB, P2.eB, side ? -0.05 : -shx, 1);
+    out.armF = arm(P3.hF, P3.eF, side ? 0.05 : shx, -1);
+    out.armB = arm(P3.hB, P3.eB, side ? -0.05 : -shx, 1);
     const leg = (foot, hx0, inward) => {
       const [fx, fy] = foot;
       const root2 = [hip.x + hx0, hip.y];
@@ -17568,8 +18606,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return { h: root2, k: [kx, ky], e: [ex, ey], u, v, scale: depth(u, T1 + T22) };
     };
     const spread = side ? 0 : 0.11 * bulk;
-    out.legF = leg(P2.fF, side ? 0.02 : spread, -1);
-    out.legB = leg(P2.fB, side ? -0.02 : -spread, 1);
+    out.legF = leg(P3.fF, side ? 0.02 : spread, -1);
+    out.legB = leg(P3.fB, side ? -0.02 : -spread, 1);
     out.head = U2(0, headY);
     out.neck = U2(0, shoulderY);
     out.bladeLen = 0.95;
@@ -17725,9 +18763,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.moveTo(-0.28, -0.01);
     g.lineTo(0.7, -0.01);
     g.stroke();
-    circ2(g, 0.74, 0, 0.07, "#0288d1", OUTLINE2, 0.025);
-    circ2(g, 0.2, 0, 0.045, "#0288d1", null);
-    circ2(g, -0.3, 0, 0.055, "#0288d1", OUTLINE2, 0.02);
+    circ(g, 0.74, 0, 0.07, "#0288d1", OUTLINE2, 0.025);
+    circ(g, 0.2, 0, 0.045, "#0288d1", null);
+    circ(g, -0.3, 0, 0.055, "#0288d1", OUTLINE2, 0.02);
     g.restore();
   }
   function drawGun(g, x, y, dx, dy, kind) {
@@ -17928,9 +18966,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (let k = 0; k < N2; k++) {
       const t = A.t - k * dt;
       if (t < tMin) break;
-      const P2 = k === 0 ? pose.P : samplePose(A, t, pose);
-      const rg2 = k === 0 ? rig : solveRig(look, P2, d, side, back);
-      rg2.P = P2;
+      const P3 = k === 0 ? pose.P : samplePose(A, t, pose);
+      const rg2 = k === 0 ? rig : solveRig(look, P3, d, side, back);
+      rg2.P = P3;
       samples.push(rg2);
     }
     if (samples.length < 3) return;
@@ -18369,13 +19407,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function drawCharacter(g, look, pose) {
     const s = look.scale || 1;
     const t = pose.time || 0;
-    let P2 = pose.P;
-    if (!P2) {
-      P2 = pose.anim ? samplePose(pose.anim, pose.anim.t, pose) : restPose(pose, look);
-      if (pose.blend && pose.blend.P) P2 = blendPose(pose.blend.P, P2, pose.blend.k);
-      pose.P = P2;
+    let P3 = pose.P;
+    if (!P3) {
+      P3 = pose.anim ? samplePose(pose.anim, pose.anim.t, pose) : restPose(pose, look);
+      if (pose.blend && pose.blend.P) P3 = blendPose(pose.blend.P, P3, pose.blend.k);
+      pose.P = P3;
     }
-    const facing = (pose.facing || 0) + (P2.sp || 0) * TAU7 * (Math.cos(pose.facing || 0) < 0 ? -1 : 1);
+    const facing = (pose.facing || 0) + (P3.sp || 0) * TAU7 * (Math.cos(pose.facing || 0) < 0 ? -1 : 1);
     const d = dir4(facing);
     const flip = d === "left";
     const side = d === "left" || d === "right";
@@ -18386,7 +19424,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const bottom = look.bottom || "#2d3436";
     const hair = look.hairColor || "#2d2d2d";
     const bulk = look.bulk || 1;
-    const z = (pose.z || 0) + (P2.z || 0);
+    const z = (pose.z || 0) + (P3.z || 0);
     g.save();
     if (pose.alpha !== void 0) g.globalAlpha *= pose.alpha;
     if (!pose.swimming && !pose.noShadow && !ghost) {
@@ -18408,13 +19446,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     g.translate(0, -z * s);
     g.scale(flip ? -s : s, s);
-    const roll = (P2.r || 0) + (pose.roll || 0);
+    const roll = (P3.r || 0) + (pose.roll || 0);
     if (roll) {
       g.translate(0, -0.72);
       g.rotate(roll);
       g.translate(0, 0.72);
     }
-    const rig = solveRig(look, P2, d, side, back);
+    const rig = solveRig(look, P3, d, side, back);
     pose.rig = rig;
     const { hip, lean } = rig;
     const hipY = rig.hipY0;
@@ -18510,7 +19548,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const a = Math.PI + k / 5 * Math.PI;
         const x = Math.cos(a) * 0.62, y = shoulderY - 0.05 + Math.sin(a) * 0.5;
         rrect2(g, x - 0.09, y - 0.07, 0.18, 0.14, 0.05, "#ffb300", OUTLINE2, 0.025);
-        circ2(g, x, y, 0.045, "#6d4c41");
+        circ(g, x, y, 0.045, "#6d4c41");
       }
       g.strokeStyle = "#ffca28";
       g.lineWidth = 0.035;
@@ -18594,8 +19632,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       if (armLen > 1.2) {
         const j2 = mix2(arm.j, arm.e, 0.5);
-        circ2(g, arm.j[0], arm.j[1], rs[1] * 1.12, upperCol, OUTLINE2, 0.03);
-        circ2(g, j2[0], j2[1], rs[2] * 1.12, foreC, OUTLINE2, 0.03);
+        circ(g, arm.j[0], arm.j[1], rs[1] * 1.12, upperCol, OUTLINE2, 0.03);
+        circ(g, j2[0], j2[1], rs[2] * 1.12, foreC, OUTLINE2, 0.03);
       }
       if (!look.sleeve && !look.noSleeves) {
         const m = mix2(arm.s, arm.j, 0.42);
@@ -18613,13 +19651,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.stroke();
       }
     };
-    const handShape = (which) => which === "F" ? P2.hand || "fist" : P2.handB || "fist";
+    const handShape = (which) => which === "F" ? P3.hand || "fist" : P3.handB || "fist";
     const limbFxOn = (which) => {
       const l = pose.fx?.limb;
       return l === "both" || l === (which === "F" ? "hF" : "hB");
     };
     const drawHandAt = (arm, which) => {
-      const r = 0.088 * bulk * arm.scale;
+      const r = 0.098 * bulk * arm.scale;
       const dx = arm.e[0] - arm.j[0], dy = arm.e[1] - arm.j[1];
       const hc = dk2(handCol, farDim(which));
       drawHand(g, arm.e[0], arm.e[1], r, hc, handShape(which), dx, dy, pose.fx?.claw);
@@ -18634,7 +19672,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const drawWeaponIn = (arm, which) => {
       if (!armed) return;
       const kind = wpn.kind;
-      const a = which === "F" ? P2.wF : P2.wB;
+      const a = which === "F" ? P3.wF : P3.wB;
       if (which === "B" && kind === "sword" && (wpn.count || 1) < 2) return;
       if (which === "B" && kind !== "sword") return;
       let dx, dy;
@@ -18651,7 +19689,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const drawBlade = (arm, which) => {
       const col = which === "F" ? pose.blade : pose.bladeB;
       if (!col) return;
-      const a = which === "F" ? P2.wF : P2.wB;
+      const a = which === "F" ? P3.wF : P3.wB;
       let dx, dy;
       if (a === void 0 || a === null) {
         const fx = arm.e[0] - arm.j[0], fy = arm.e[1] - arm.j[1], l = Math.hypot(fx, fy) || 1;
@@ -18700,8 +19738,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     } else if (back) {
       drawLeg(rig.legB, "B");
       drawLeg(rig.legF, "F");
-      if (!rig.armF.raised) drawArmFull(rig.armF, "F");
-      if (!rig.armB.raised) drawArmFull(rig.armB, "B");
+      if (!rig.armF.raised && rig.armF.u <= 0.18) drawArmFull(rig.armF, "F");
+      if (!rig.armB.raised && rig.armB.u <= 0.18) drawArmFull(rig.armB, "B");
     } else {
       drawLeg(rig.legB, "B");
       if (!legFForward) drawLeg(rig.legF, "F");
@@ -18870,8 +19908,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (side) {
       drawArmFull(rig.armF, "F");
     } else if (back) {
-      if (rig.armF.raised) drawArmFull(rig.armF, "F");
-      if (rig.armB.raised) drawArmFull(rig.armB, "B");
+      if (rig.armF.raised || rig.armF.u > 0.18) drawArmFull(rig.armF, "F");
+      if (rig.armB.raised || rig.armB.u > 0.18) drawArmFull(rig.armB, "B");
     } else {
       if (!armBForward) drawArmFull(rig.armB, "B");
       if (!armFForward) drawArmFull(rig.armF, "F");
@@ -18879,15 +19917,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     upper(() => drawLimb(g, [[0, shoulderY + 0.04], [0, headY + headR * 0.55]], [0.075, 0.068], skin, ghost ? null : dk2(skin, -0.2), ghost ? null : sd));
     upper(() => {
       g.save();
-      const tilt = (P2.ht || 0) + (pose.state === "hurt" ? -0.25 : 0);
+      const tilt = (P3.ht || 0) + (pose.state === "hurt" ? -0.25 : 0);
       if (tilt) {
         g.translate(0, headY + headR);
         g.rotate(tilt);
         g.translate(0, -headY - headR);
       }
-      drawHead(g, look, headY, headR, d, pose, t, P2);
+      drawHead(g, look, headY, headR, d, pose, t, P3);
       if (armed && wpn.kind === "sword" && (wpn.count || 0) >= 3 && !back) {
-        const m = P2.m ?? 0.15;
+        const m = P3.m ?? 0.15;
         const mx = side ? headR * 0.45 : 0, my = headY + headR * 0.45;
         const [dx, dy] = side ? [Math.cos(m), Math.sin(m)] : [0.8, 0.35];
         drawSword(g, mx - dx * 0.1, my - dy * 0.1, dx, dy, 0.8, { hilt: "#fafafa", guard: "#b71c1c", haki: pose.armament });
@@ -18969,7 +20007,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.lineTo(side ? ex - 0.25 * ext : ex, side ? ey : ey - 0.2 * ext);
       g.stroke();
       if (f.legs) rrect2(g, ex - 0.1, ey - 0.05, 0.2, 0.1, 0.05, look.shoes || "#3b2a1a", OUTLINE2, 0.02);
-      else circ2(g, ex, ey, 0.09 * (side ? 1 : 1.2), col, OUTLINE2, 0.025);
+      else circ(g, ex, ey, 0.09 * (side ? 1 : 1.2), col, OUTLINE2, 0.025);
     }
     g.restore();
   }
@@ -18990,7 +20028,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.stroke();
     }
     const [hx, hy] = pts[0];
-    circ2(g, hx, hy, 0.24, "#42a5f5", OUTLINE2, 0.03);
+    circ(g, hx, hy, 0.24, "#42a5f5", OUTLINE2, 0.03);
     g.fillStyle = "#fff59d";
     g.beginPath();
     g.arc(hx + 0.08, hy - 0.05, 0.05, 0, TAU7);
@@ -19010,7 +20048,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.globalAlpha *= 0.45 + 0.1 * Math.sin(t * 5);
     g.fillStyle = "rgba(30,30,30,0.9)";
     for (const sx of [-1, 1]) {
-      circ2(g, sx * 0.42, headY - 0.05, 0.22, "rgba(30,30,30,0.9)", null);
+      circ(g, sx * 0.42, headY - 0.05, 0.22, "rgba(30,30,30,0.9)", null);
       for (let k = 0; k < 3; k++) {
         g.strokeStyle = "rgba(30,30,30,0.9)";
         g.lineWidth = 0.1;
@@ -19051,7 +20089,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     limb(g, 0.1, -0.2, 0.14, 0.25, 0.15, look.bottom || "#2d3436", OUTLINE2);
     limb(g, -0.22, -0.68, -0.42 + k * 0.1, -0.35, 0.11, look.sleeve || skin, OUTLINE2);
     limb(g, 0.22, -0.68, 0.44 - k * 0.1, -0.4, 0.11, look.sleeve || skin, OUTLINE2);
-    circ2(g, 0, -1, 0.3, look.furWhite ? "#fafafa" : skin, OUTLINE2);
+    circ(g, 0, -1, 0.3, look.furWhite ? "#fafafa" : skin, OUTLINE2);
     drawHair(g, look.hair || "short", look.hairColor || "#2d2d2d", -1, 0.3, "down", null);
     g.strokeStyle = "#222";
     g.lineWidth = 0.03;
@@ -19282,7 +20320,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         ellipsePath(g, rad, rad * ry);
         g.fill();
       }
-      const path = () => {
+      const path2 = () => {
         if (s.wobble) {
           g.beginPath();
           const n = 48;
@@ -19298,13 +20336,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.globalAlpha = alpha2;
       g.strokeStyle = s.color;
       g.lineWidth = s.width * (1 - k * 0.6);
-      path();
+      path2();
       g.stroke();
       if (!s.noCore) {
         g.globalAlpha = alpha2 * 0.7;
         g.strokeStyle = "#ffffff";
         g.lineWidth = s.width * 0.3 * (1 - k);
-        path();
+        path2();
         g.stroke();
       }
     }
@@ -20849,15 +21887,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     if (h2.element && h2.element !== "physical" && !diable) fx.burst(px, py, 4, { kind: E.kind === "spark" ? "spark" : E.kind, color: E.spark, z, speed: 2, g: -1, life: 0.3, size: 0.12 });
   }
-  function ghostsAlong(fx, actor, x0, y0, n, tint, o = {}) {
+  function ghostsAlong(fx, actor, x0, y0, n, tint2, o = {}) {
     const w = fx.game.world;
     const dx = w ? w.dx(x0, actor.x) : actor.x - x0, dy = actor.y - y0;
     for (let i = 0; i < n; i++) {
       const k = (i + 0.5) / n;
-      afterimage(fx, actor, { x: x0 + dx * k, y: y0 + dy * k, tint, life: 0.2 + k * 0.15, alpha: 0.25 + 0.3 * k, add: o.add });
+      afterimage(fx, actor, { x: x0 + dx * k, y: y0 + dy * k, tint: tint2, life: 0.2 + k * 0.15, alpha: 0.25 + 0.3 * k, add: o.add });
     }
   }
-  function muzzle(fx, actor, ang, col = "#ffe082") {
+  function muzzle2(fx, actor, ang, col = "#ffe082") {
     const mx = actor.x + Math.cos(ang) * 0.62, my = actor.y + Math.sin(ang) * 0.45;
     fx.add("flare", { x: mx, y: my, z: 0.8, size: 0.45, color: col, life: 0.1, rot: ang });
     glow2(fx, mx, my, 0.8, 0.5, col, 0.1);
@@ -20887,7 +21925,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const col = p.color || E.c;
       const gun = weaponFor(a.def, actor) === "gun" || p.sprite === "bullet";
       const hx = actor.x + Math.cos(ang) * 0.55, hy = actor.y + Math.sin(ang) * 0.4;
-      if (gun) muzzle(fx, actor, ang, p.element === "fire" ? "#ff9800" : "#ffe082");
+      if (gun) muzzle2(fx, actor, ang, p.element === "fire" ? "#ff9800" : "#ffe082");
       else if (p.element && p.element !== "physical") {
         glow2(fx, hx, hy, 0.8, 0.7 + (p.size || 1) * 0.2, col, 0.18);
         fx.burst(hx, hy, 5, { angle: ang, spread: 1.2, speed: 3, kind: E.kind, color: E.spark, z: 0.8, vz: 0.5, g: 0, life: 0.3, size: 0.12 });
@@ -21234,7 +22272,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   });
   sig("snipe_kabuto", { proj(fx, actor, s, a) {
-    muzzle(fx, actor, a.angle, "#ffe082");
+    muzzle2(fx, actor, a.angle, "#ffe082");
     sparkle2(fx, actor.x + Math.cos(a.angle) * 0.7, actor.y + Math.sin(a.angle) * 0.5, 0.8, 4, ["#ffeb3b", "#ffffff"]);
   } });
   sig("snipe_popgreen", {
@@ -21795,14 +22833,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     };
   }
   function afterimage(fx, a, o = {}) {
-    const P2 = a._lastPose;
-    if (!P2 || !P2.P) return null;
-    const tint = o.tint || "#e3f2fd";
+    const P3 = a._lastPose;
+    if (!P3 || !P3.P) return null;
+    const tint2 = o.tint || "#e3f2fd";
     return fx.add("ghost", {
       x: o.x ?? a.x,
       y: o.y ?? a.y,
-      look: ghostLook(lastLook(a), tint),
-      pose: { facing: P2.facing, P: P2.P, time: P2.time, state: P2.state === "hurt" ? "idle" : P2.state, swimming: P2.swimming, z: P2.z, squash: P2.squash },
+      look: ghostLook(lastLook(a), tint2),
+      pose: { facing: P3.facing, P: P3.P, time: P3.time, state: P3.state === "hurt" ? "idle" : P3.state, swimming: P3.swimming, z: P3.z, squash: P3.squash },
       life: o.life ?? 0.24,
       alpha: o.alpha ?? 0.45,
       add: o.add
@@ -23045,14 +24083,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.arc(0, 0.15, 0.35, Math.PI * 0.15, Math.PI * 0.85);
       g.stroke();
     }
-    const skull2 = jr.skull || "classic";
+    const skull3 = jr.skull || "classic";
     g.fillStyle = fg;
     g.beginPath();
     g.ellipse(0, -0.05, 0.3, 0.27, 0, 0, TAU10);
     g.fill();
     g.fillRect(-0.17, 0.1, 0.34, 0.16);
     g.fillStyle = bg;
-    const eye = skull2 === "grin" ? 0.07 : 0.085;
+    const eye = skull3 === "grin" ? 0.07 : 0.085;
     g.beginPath();
     g.ellipse(-0.11, -0.05, eye, eye * 1.15, 0, 0, TAU10);
     g.ellipse(0.11, -0.05, eye, eye * 1.15, 0, 0, TAU10);
@@ -23062,13 +24100,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.lineTo(-0.035, 0.1);
     g.lineTo(0.035, 0.1);
     g.fill();
-    if (skull2 === "grin") {
+    if (skull3 === "grin") {
       g.fillRect(-0.12, 0.17, 0.24, 0.03);
       for (let k = -2; k <= 2; k++) g.fillRect(k * 0.05 - 5e-3, 0.14, 0.01, 0.1);
     } else {
       for (let k = -1; k <= 1; k++) g.fillRect(k * 0.07 - 0.01, 0.16, 0.02, 0.1);
     }
-    if (skull2 === "eyepatch") {
+    if (skull3 === "eyepatch") {
       g.strokeStyle = bg;
       g.lineWidth = 0.03;
       g.beginPath();
@@ -23935,7 +24973,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     telegraph: false,
     steps: [{ hit: { shape: o.shape || "arc", range: o.range ?? 1.35, arc: o.arc ?? 1.7, offset: o.offset ?? 0.2, damage: dmg, knockback: o.kb ?? 1.2, stun: o.stun ?? 0.22, slashing: o.slashing, element: o.element, status: o.status, width: o.width }, vfx: o.vfx }]
   });
-  var STYLES = {
+  var STYLES2 = {
     brawler: {
       name: "Street Brawling",
       icon: "\u{1F44A}",
@@ -24701,8 +25739,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       ]
     }
   };
-  var STYLE_IDS = Object.keys(STYLES);
-  for (const [sid, s] of Object.entries(STYLES)) {
+  var STYLE_IDS = Object.keys(STYLES2);
+  for (const [sid, s] of Object.entries(STYLES2)) {
     const list = [...s.m1, s.heavy, ...s.techniques].map((a) => ({ ...a, style: sid, source: "style:" + sid, weapon: a.weapon ?? s.weapon ?? void 0 }));
     registerAbilities(list, "style:" + sid);
     s.m1Ids = s.m1.map((a) => a.id);
@@ -25054,7 +26092,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     hasWeapon(kind) {
       if (!this.weapon) return false;
-      if (kind === "sword") return this.weapon.kind === "sword" && (this.weapon.count || 1) >= (STYLES[this.style]?.swords || 1);
+      if (kind === "sword") return this.weapon.kind === "sword" && (this.weapon.count || 1) >= (STYLES2[this.style]?.swords || 1);
       return this.weapon.kind === kind;
     }
     weaponMul() {
@@ -25185,9 +26223,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (a.def.m1Chain && a.t > a.total * this.atkSpeed() * 0.3) this.combo.queued = true;
         return false;
       }
-      const style = STYLES[this.style] || STYLES.brawler;
+      const style = STYLES2[this.style] || STYLES2.brawler;
       let chain = style.m1Ids;
-      if (style.weapon && !this.hasWeapon(style.weapon)) chain = STYLES.brawler.m1Ids;
+      if (style.weapon && !this.hasWeapon(style.weapon)) chain = STYLES2.brawler.m1Ids;
       if (this.combo.window <= 0) this.combo.step = 0;
       const id = chain[this.combo.step % chain.length];
       const def = getAbility(id);
@@ -25215,9 +26253,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
     tryHeavy(game) {
-      const style = STYLES[this.style] || STYLES.brawler;
+      const style = STYLES2[this.style] || STYLES2.brawler;
       let def = getAbility(style.heavyId);
-      if (style.weapon && !this.hasWeapon(style.weapon)) def = getAbility(STYLES.brawler.heavyId);
+      if (style.weapon && !this.hasWeapon(style.weapon)) def = getAbility(STYLES2.brawler.heavyId);
       const a = this.action;
       if (a && a.def.m1Chain && a.step >= (a.def.steps || []).length && a.t > (a.def.windup ?? 0.07) + 0.04 && this.state === "idle" && this.hitstun <= 0 && canUse(this, def)) {
         this.action = null;
@@ -25250,7 +26288,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (this.isPlayer) {
           if ((this.cooldowns[def.id] || 0) > 0) game.ui?.flashSlot(id);
           else if (def.source?.startsWith("fruit") && this.inWater) game.log("Your Devil Fruit power is useless in the sea!", "#ff8a80");
-          else if (def.weapon && !this.hasWeapon(def.weapon)) game.log(`${def.name} needs ${def.weapon === "sword" ? `${STYLES[this.style]?.swords || 1} sword(s)` : "a " + def.weapon}.`, "#ff8a80");
+          else if (def.weapon && !this.hasWeapon(def.weapon)) game.log(`${def.name} needs ${def.weapon === "sword" ? `${STYLES2[this.style]?.swords || 1} sword(s)` : "a " + def.weapon}.`, "#ff8a80");
           else game.log("Not enough " + (def.cost?.haki && this.haki < def.cost.haki ? this.hakiUnlocked() ? "Haki." : "strength of will." : "stamina."), "#ff8a80");
         }
         return false;
@@ -25662,7 +26700,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.save();
       if (shiver >= 0 && shiver < 1 && this.state === "idle") g.translate(Math.sin(env.time * 170) * 0.045 * Math.min(1, hf.w) * (1 - shiver), 0);
       drawActorExtras(g, this, look, pose, env, "back");
-      if (this.flashT > 0) drawCharacterTinted(g, look, pose, "#ffffff", this.flashT > 0.075 ? 1 : this.flashT / 0.075 * 0.8);
+      if (this.flashT > 0) drawCharacterTinted(g, look, pose, "#ffffff", this.flashT > 0.07 ? 0.88 : this.flashT / 0.07 * 0.6);
       else drawCharacter(g, look, pose);
       drawActorExtras(g, this, look, pose, env, "front");
       g.restore();
@@ -26657,9 +27695,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const m = sel.match(/^([a-z0-9]+)?((?:[.#][\w-]+)*)$/i);
     const el = document.createElement(m && m[1] ? m[1] : "div");
     if (m && m[2]) {
-      for (const part2 of m[2].match(/[.#][\w-]+/g) || []) {
-        if (part2[0] === ".") el.classList.add(part2.slice(1));
-        else el.id = part2.slice(1);
+      for (const part3 of m[2].match(/[.#][\w-]+/g) || []) {
+        if (part3[0] === ".") el.classList.add(part3.slice(1));
+        else el.id = part3.slice(1);
       }
     }
     if (props !== null && props !== void 0 && (typeof props !== "object" || props instanceof Node || Array.isArray(props))) {
@@ -28442,9 +29480,9 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
   // src/game/session.js
   var shipCounter = 0;
   function installSession(game, { onReturnToTitle }) {
-    const ALIAS2 = { rowboat: "dinghy", boat: "dinghy", brig: "brigantine", sunny: "adam_brig", thousand_sunny: "adam_brig", merry: "caravel", going_merry: "caravel", warship: "marine_warship" };
+    const ALIAS3 = { rowboat: "dinghy", boat: "dinghy", brig: "brigantine", sunny: "adam_brig", thousand_sunny: "adam_brig", merry: "caravel", going_merry: "caravel", warship: "marine_warship" };
     game.giveShip = (type, x, y, name, extra = {}) => {
-      type = ALIAS2[type] || type;
+      type = ALIAS3[type] || type;
       const s = game.addShip({ type, x, y, heading: extra.heading ?? Math.PI / 2, owner: "player", faction: "player", name: name || void 0, jr: game.state?.char?.jr, upgrades: extra.upgrades || [], hull: extra.hull, coated: extra.coated });
       s.uid = extra.uid || `s${Date.now().toString(36)}${shipCounter++}`;
       if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world);
@@ -29181,7 +30219,7 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       const before = p.masteries[style] || 0;
       const after2 = Math.min(100, before + amt);
       p.masteries[style] = after2;
-      if (Math.floor(after2 / 5) > Math.floor(before / 5)) this.game.log(`${STYLES[style]?.name || style} mastery ${Math.floor(after2)}`, "#90caf9");
+      if (Math.floor(after2 / 5) > Math.floor(before / 5)) this.game.log(`${STYLES2[style]?.name || style} mastery ${Math.floor(after2)}`, "#90caf9");
     }
     addWeaponMastery(kind, amt) {
       const c = this.char;
@@ -30122,8 +31160,8 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       const t = TRAINERS[tid], c = this.char;
       if (c.masteries[style] !== void 0) return { ok: false, why: "Already learned" };
       if (t.marineOnly && c.faction !== "marine") return { ok: false, why: "Marines only" };
-      for (const [s, m] of Object.entries(t.requires?.mastery || {})) if ((c.masteries[s] || 0) < m) return { ok: false, why: `Needs ${STYLES[s].name} mastery ${m}` };
-      const st = STYLES[style];
+      for (const [s, m] of Object.entries(t.requires?.mastery || {})) if ((c.masteries[s] || 0) < m) return { ok: false, why: `Needs ${STYLES2[s].name} mastery ${m}` };
+      const st = STYLES2[style];
       if (st.weapon === "sword" && st.swords > 1) {
         const swords = (c.inventory || []).filter((i) => i.id && /sword|katana|cutlass|saber|kitetsu|yubashiri|shigure|wado|shusui|enma|yoru/.test(i.id)).length;
         if (swords < st.swords) return { ok: true, warn: `You will need ${st.swords} swords to use it.` };
@@ -30144,8 +31182,8 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       if (!pay(g, this.stylePrice(tid, style))) return false;
       c.masteries[style] = 0;
       g.player.masteries = c.masteries;
-      g.ui.toast("NEW STYLE", STYLES[style].name, "#90caf9");
-      g.log(`You can switch to ${STYLES[style].name} in the Skills menu (K).`, "#90caf9");
+      g.ui.toast("NEW STYLE", STYLES2[style].name, "#90caf9");
+      g.log(`You can switch to ${STYLES2[style].name} in the Skills menu (K).`, "#90caf9");
       persist(g);
       return true;
     }
@@ -30167,8 +31205,8 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
         if ((c.haki[d.hakiType] || 0) < (learn.level || 0)) return { ok: false, why: `Needs ${d.hakiType} Haki level ${learn.level}` };
         return { ok: true };
       }
-      if (d.style && c.masteries[d.style] === void 0) return { ok: false, why: `Learn ${STYLES[d.style]?.name} first` };
-      if ((c.masteries[d.style] || 0) < (learn.mastery || 0)) return { ok: false, why: `Needs ${STYLES[d.style]?.name} mastery ${learn.mastery}` };
+      if (d.style && c.masteries[d.style] === void 0) return { ok: false, why: `Learn ${STYLES2[d.style]?.name} first` };
+      if ((c.masteries[d.style] || 0) < (learn.mastery || 0)) return { ok: false, why: `Needs ${STYLES2[d.style]?.name} mastery ${learn.mastery}` };
       if (learn.special === "full_moon" && !(this.game.env.fullMoon && this.game.env.isNight)) return { ok: false, why: "Only under a full moon" };
       return { ok: true };
     }
@@ -30291,11 +31329,11 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
         attrs: { str: L2, agi: L2, end: L2, vit: L2, wil: L2 },
         style: sp.style,
         lethal: false,
-        weapon: sp.weapon ? { kind: sp.weapon, power: 1.2, count: STYLES[sp.style]?.swords || 1 } : null,
+        weapon: sp.weapon ? { kind: sp.weapon, power: 1.2, count: STYLES2[sp.style]?.swords || 1 } : null,
         hakiSkill: sp.haki ? { armament: Math.min(80, L2), observation: Math.min(80, L2) } : {}
       });
       opp.masteries = { [sp.style]: Math.min(100, L2 * 1.3) };
-      opp.techniques = [...(STYLES[sp.style]?.techniques || []).slice(0, 3).map((x) => x.id)];
+      opp.techniques = [...(STYLES2[sp.style]?.techniques || []).slice(0, 3).map((x) => x.id)];
       opp.controller = new AIController({ kind: "hostile", skill: Math.min(0.85, 0.3 + L2 / 100), aggroRange: 20, moves: opp.techniques, leash: 0, fleeAt: 0 });
       opp.controller.target = p;
       opp.provoked = true;
@@ -31427,9 +32465,9 @@ Trains by: ${TRAINS_BY[k]}` },
         h("span.val", Math.floor(wm[k] || 0)),
         h("div.meter", h("i", { style: { width: (wm[k] || 0) + "%", background: "linear-gradient(90deg,#6d4c33,#d4a373)" } }))
       ));
-      const masteryRows = Object.entries(c.masteries).filter(([s]) => STYLES[s]).map(([s, m]) => h(
+      const masteryRows = Object.entries(c.masteries).filter(([s]) => STYLES2[s]).map(([s, m]) => h(
         "div.stat-row",
-        h("span.nm", STYLES[s]?.name || s),
+        h("span.nm", STYLES2[s]?.name || s),
         h("span.val", Math.floor(m)),
         h("div.meter", h("i", { style: { width: m + "%", background: "linear-gradient(90deg,#1565c0,#90caf9)" } }))
       ));
@@ -31486,23 +32524,23 @@ Trains by: ${TRAINS_BY[k]}` },
     const sel = { pick: null, slot: null };
     const render2 = () => {
       clear(body);
-      const styles = Object.keys(c.masteries).filter((s) => STYLES[s]);
+      const styles = Object.keys(c.masteries).filter((s) => STYLES2[s]);
       const styleBtns = styles.map((s) => h(
         "button" + (c.style === s ? ".on" : ""),
         { on: { click: () => {
           c.style = s;
           refreshPlayer(game);
           render2();
-        } }, title: STYLES[s].desc },
-        `${STYLES[s].name} (${Math.floor(c.masteries[s])})`
+        } }, title: STYLES2[s].desc },
+        `${STYLES2[s].name} (${Math.floor(c.masteries[s])})`
       ));
-      const cur = STYLES[c.style];
+      const cur = STYLES2[c.style];
       const needW = cur?.weapon && !p.hasWeapon(cur.weapon);
       const techs = c.techniques.map(getAbility).filter((d) => d && (!needsHaki(d) || hakiKnown(c)));
       const byGroup = {};
       for (const d of techs) {
         const src = d.source || "";
-        const g = src.startsWith("fruit") ? "Devil Fruit" : src.startsWith("haki") ? "Haki" : src.startsWith("style:") ? STYLES[src.slice(6)]?.name || "Style" : d.style ? STYLES[d.style]?.name || "Style" : "Other";
+        const g = src.startsWith("fruit") ? "Devil Fruit" : src.startsWith("haki") ? "Haki" : src.startsWith("style:") ? STYLES2[src.slice(6)]?.name || "Style" : d.style ? STYLES2[d.style]?.name || "Style" : "Other";
         (byGroup[g] = byGroup[g] || []).push(d);
       }
       const lists = Object.entries(byGroup).map(([g, ds]) => h(
@@ -31915,7 +32953,7 @@ Trains by: ${TRAINS_BY[k]}` },
         const styles = Object.keys(t.styles || {});
         if (!styles.length) list.appendChild(h("p", `${t.name} doesn't teach a fighting style \u2014 but can train your body.`));
         for (const s of styles) {
-          const st = STYLES[s];
+          const st = STYLES2[s];
           const chk = S3.canLearnStyle(tid, s);
           const price = S3.stylePrice(tid, s);
           list.appendChild(h(
@@ -31938,7 +32976,7 @@ Trains by: ${TRAINS_BY[k]}` },
           list.appendChild(h(
             "div.row-item",
             skillImg(d, 34, ".ico"),
-            h("div.grow", h("b", d.name), h("span.tag", STYLES[d.style]?.name || (d.hakiType ? title(d.hakiType) + " Haki" : "")), h("div.sub", d.desc || ""), h("div.sub", `Requires: ${d.learn?.mastery ? STYLES[d.style]?.name + " mastery " + d.learn.mastery : d.learn?.level ? title(d.hakiType) + " Haki " + d.learn.level : "\u2014"}`)),
+            h("div.grow", h("b", d.name), h("span.tag", STYLES2[d.style]?.name || (d.hakiType ? title(d.hakiType) + " Haki" : "")), h("div.sub", d.desc || ""), h("div.sub", `Requires: ${d.learn?.mastery ? STYLES2[d.style]?.name + " mastery " + d.learn.mastery : d.learn?.level ? title(d.hakiType) + " Haki " + d.learn.level : "\u2014"}`)),
             h("span.price", formatBerries(price)),
             h("button.btn.gold", { disabled: !chk.ok || c.berries < price, on: { click: () => {
               S3.learnTech(id);
@@ -32077,8 +33115,8 @@ Trains by: ${TRAINS_BY[k]}` },
     if (quest && rng.chance(0.35)) return quest;
     const known = !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
     const heard = known ? pool : pool.filter((l) => !/haki|mantra/i.test(l));
-    const line = heard.length ? rng.pick(heard) : "Nice weather today.";
-    return npc ? `"${line.replace(/^"|"$/g, "")}"` : line;
+    const line2 = heard.length ? rng.pick(heard) : "Nice weather today.";
+    return npc ? `"${line2.replace(/^"|"$/g, "")}"` : line2;
   }
 
   // src/game/npcs.js
@@ -32129,7 +33167,7 @@ Trains by: ${TRAINS_BY[k]}` },
       style: def.style || "brawler",
       fruit: def.fruit || null,
       fruitMastery: def.fruitMastery ?? (def.fruit ? 60 : 0),
-      weapon: def.weapon ? { kind: def.weapon, power: def.weaponPower || 1.2, count: STYLES[def.style]?.swords || 1 } : null,
+      weapon: def.weapon ? { kind: def.weapon, power: def.weaponPower || 1.2, count: STYLES2[def.style]?.swords || 1 } : null,
       hakiSkill: def.haki || {},
       boss: def.boss,
       hpMul: (def.hpMul || 1) * (def.boss ? 2.2 : 1),
@@ -32471,12 +33509,12 @@ Trains by: ${TRAINS_BY[k]}` },
       const g = this.game;
       const rng = new RNG((b.id || 1) * 13 + g.env.day);
       const lines = [`"Who's there? ...Go away, we don't want trouble."`, '"Nobody home!" (someone is clearly home)', `"If you're a pirate, keep walking!"`, '"Oh, a traveller? Here, take this for the road." You receive a rice ball.', '"Shh! The baby is sleeping."', '"Are you the new postman? No? Then shoo."'];
-      const line = rng.pick(lines);
-      if (line.includes("rice ball") && !g.state.char.flags["door_" + b.id]) {
+      const line2 = rng.pick(lines);
+      if (line2.includes("rice ball") && !g.state.char.flags["door_" + b.id]) {
         g.state.char.flags["door_" + b.id] = true;
         addItem(g, "rice_ball", 1, { silent: true });
       }
-      g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: line, choices: [
+      g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: line2, choices: [
         { text: "Leave them be.", end: true },
         { text: "Force the door and rob the place. (a crime)", do: () => {
           g.dialogue.close();
@@ -33576,9 +34614,9 @@ Trains by: ${TRAINS_BY[k]}` },
     const list = game.spawner.populated.get(def.island);
     if (!list && !pos) return null;
     let p = pos;
-    const at4 = typeof def.at === "function" ? def.at(game.state?.char, game) : def.at;
+    const at5 = typeof def.at === "function" ? def.at(game.state?.char, game) : def.at;
     if (!p && isl) {
-      const s = at4?.spot && isl.spots[at4.spot];
+      const s = at5?.spot && isl.spots[at5.spot];
       p = s ? game.spawner.findFree(s.x, s.y, 4) : game.spawner.findFree(game.player.x + 4, game.player.y, 6);
     }
     if (!p) p = { x: game.player.x + 4, y: game.player.y };
@@ -34893,7 +35931,7 @@ Trains by: ${TRAINS_BY[k]}` },
   var eastBlue_default = { id: "east_blue", npcs, groups, quests, install, dynamicIds: ["lord_of_the_coast"] };
 
   // src/content/northBlue.js
-  var at2 = (ctx, id, stage2) => ctx.game.quests.stageId(id) === stage2;
+  var at3 = (ctx, id, stage2) => ctx.game.quests.stageId(id) === stage2;
   var done2 = (ctx, id) => ctx.game.quests.isDone(id);
   var stageOf = (g, id) => g.quests.stageId(id);
   var spawnAggro = (g, id) => {
@@ -34932,9 +35970,9 @@ Trains by: ${TRAINS_BY[k]}` },
             },
             choices: [
               { text: "I'll stand with Rakesh.", if: () => !ctx.quest("nb_rakesh_raid"), do: (c) => c.startQuest("nb_rakesh_raid"), end: true },
-              { text: "The raiders are beaten.", if: () => at2(ctx, "nb_rakesh_raid", "report"), do: (c) => c.complete("nb_rakesh_raid"), next: "thanks" },
+              { text: "The raiders are beaten.", if: () => at3(ctx, "nb_rakesh_raid", "report"), do: (c) => c.complete("nb_rakesh_raid"), next: "thanks" },
               { text: "I'll get your strongbox back.", if: () => done2(ctx, "nb_rakesh_raid") && !ctx.quest("nb_rakesh_strongbox"), do: (c) => c.startQuest("nb_rakesh_strongbox"), end: true },
-              { text: "Here is Rakesh's strongbox.", if: () => at2(ctx, "nb_rakesh_strongbox", "report") && ctx.has("nb_rakesh_strongbox"), do: (c) => {
+              { text: "Here is Rakesh's strongbox.", if: () => at3(ctx, "nb_rakesh_strongbox", "report") && ctx.has("nb_rakesh_strongbox"), do: (c) => {
                 c.take("nb_rakesh_strongbox", 1);
                 c.complete("nb_rakesh_strongbox");
               }, next: "box" },
@@ -35107,12 +36145,12 @@ Trains by: ${TRAINS_BY[k]}` },
         nodes: {
           a: {
             text: () => {
-              if (at2(ctx, "nb_boy_grenades", "talk")) return `(The boy crawls out of the scrap, blood running down his forehead. He glares up at the broken window.) "...That tall clown threw me out a window. Doesn't matter. I'm going back up. They're going to take me."`;
+              if (at3(ctx, "nb_boy_grenades", "talk")) return `(The boy crawls out of the scrap, blood running down his forehead. He glares up at the broken window.) "...That tall clown threw me out a window. Doesn't matter. I'm going back up. They're going to take me."`;
               if (done2(ctx, "nb_white_city")) return `"You went to Flevance? ...Then you saw it. Don't call it a tragedy. It was MURDER. And the World Government watched and did nothing."`;
               return `"I'm part of the family now. Diamante teaches me the sword, Gladius the gun, Lao G the fists. I read 'Sora, Warrior of the Sea' at night. ...Three years. I'll use every day of them."`;
             },
             choices: [
-              { text: "Why go back to them?", if: () => at2(ctx, "nb_boy_grenades", "talk"), next: "flev" },
+              { text: "Why go back to them?", if: () => at3(ctx, "nb_boy_grenades", "talk"), next: "flev" },
               { text: "Leave him be.", end: true }
             ]
           },
@@ -35171,7 +36209,7 @@ Trains by: ${TRAINS_BY[k]}` },
         nodes: {
           a: {
             text: () => {
-              if (at2(ctx, "nb_rakesh_strongbox", "escape")) return `"Fuffuffuffu! So you're the rat who knocked Trebol down. Relax \u2014 I'm in a generous mood today. Run along... before I change my mind."`;
+              if (at3(ctx, "nb_rakesh_strongbox", "escape")) return `"Fuffuffuffu! So you're the rat who knocked Trebol down. Relax \u2014 I'm in a generous mood today. Run along... before I change my mind."`;
               if (ctx.char.faction === "marine") return `"Fuffuffu... a Marine, all alone in my junkyard? Brave. Tell your masters I send my regards. ...Or don't. I'll deliver them myself, one day."`;
               return `"Fuffuffuffu! A new face. Everyone who comes here wants something \u2014 money, revenge, a family. Careful how you answer. In this family, betrayal is paid for in blood."`;
             },
@@ -35364,24 +36402,24 @@ Trains by: ${TRAINS_BY[k]}` },
           a: {
             text: () => {
               if (done2(ctx, "nb_white_city")) return `"The dead don't need the truth. The living do. ...Thank you for carrying it as far as you did. The lodge is yours whenever you need a bed."`;
-              if (at2(ctx, "nb_white_city", "choice")) return `"You found it. A hundred years of lies in one envelope \u2014 and the Government came running to take it back." (He leans on his shovel.) "So. What will you do with it?"`;
+              if (at3(ctx, "nb_white_city", "choice")) return `"You found it. A hundred years of lies in one envelope \u2014 and the Government came running to take it back." (He leans on his shovel.) "So. What will you do with it?"`;
               if (ctx.quest("nb_white_city")) return `"The hospital is east of the square, the palace north. Mind the white dust \u2014 it's only poison if you breathe it for a lifetime."`;
               return `"Welcome to the White Town. Or what we left of it." (He leans on his shovel.) "I stood on the quarantine line. We were told the white sickness spread by touch, so we shot anyone who crossed. Children too. It never spread. So I stay, and I dig."`;
             },
             choices: [
               { text: "Rest at the lodge.", do: (c) => c.open("inn") },
               { text: "What really happened here?", if: () => !ctx.quest("nb_white_city"), next: "story" },
-              { text: "Give the survey to the Revolutionary.", if: () => at2(ctx, "nb_white_city", "choice") && ctx.has("nb_amber_survey"), do: (c) => {
+              { text: "Give the survey to the Revolutionary.", if: () => at3(ctx, "nb_white_city", "choice") && ctx.has("nb_amber_survey"), do: (c) => {
                 c.take("nb_amber_survey", 1);
                 c.setFlag("nbSurveyRevolution");
                 c.complete("nb_white_city");
               }, next: "rev" },
-              { text: "Burn it. No one would believe it.", if: () => at2(ctx, "nb_white_city", "choice") && ctx.has("nb_amber_survey"), do: (c) => {
+              { text: "Burn it. No one would believe it.", if: () => at3(ctx, "nb_white_city", "choice") && ctx.has("nb_amber_survey"), do: (c) => {
                 c.take("nb_amber_survey", 1);
                 c.setFlag("nbSurveyBurned");
                 c.complete("nb_white_city");
               }, next: "burn" },
-              { text: "I'll keep it. One day the world will listen.", if: () => at2(ctx, "nb_white_city", "choice"), do: (c) => {
+              { text: "I'll keep it. One day the world will listen.", if: () => at3(ctx, "nb_white_city", "choice"), do: (c) => {
                 c.setFlag("nbSurveyKept");
                 c.complete("nb_white_city");
               }, next: "keep" },
@@ -35468,8 +36506,8 @@ Trains by: ${TRAINS_BY[k]}` },
           a: {
             text: () => {
               if (done2(ctx, "nb_liar_noland")) return `"Carry the log well. If you ever reach Jaya, find Noland's descendant, Montblanc Cricket. Tell him the archive of Lvneel remembers the truth \u2014 even if the Crown never will."`;
-              if (at2(ctx, "nb_liar_noland", "report")) return `"The Sea King is slain? Then you have done what the picture book says a KING did." (He smiles thinly.) "The log tells it otherwise: ADMIRAL Noland dragged that beast aboard alone, while His Majesty hid below deck."`;
-              if (at2(ctx, "nb_liar_noland", "archive")) return `"You have the picture book? Good \u2014 you know what the Crown tells children. Now read what it wrote in private." (He unlocks a cabinet sealed with royal wax.) "The ship's log of the royal expedition to Jaya. Four hundred years old."`;
+              if (at3(ctx, "nb_liar_noland", "report")) return `"The Sea King is slain? Then you have done what the picture book says a KING did." (He smiles thinly.) "The log tells it otherwise: ADMIRAL Noland dragged that beast aboard alone, while His Majesty hid below deck."`;
+              if (at3(ctx, "nb_liar_noland", "archive")) return `"You have the picture book? Good \u2014 you know what the Crown tells children. Now read what it wrote in private." (He unlocks a cabinet sealed with royal wax.) "The ship's log of the royal expedition to Jaya. Four hundred years old."`;
               if (ctx.char.race === "skypiean") return `"...Wings? Then the stories are true. Noland wrote of fish that swim through clouds, and a golden bell ringing above Jaya. Welcome to the Royal Archive, child of the sky. I have thirty years of questions for you."`;
               return `"Welcome to the Royal Archive. Every child in the North Blue learns 'Liar Noland' before they can read. I have spent thirty years in these stacks, and I will tell you a secret: I do not believe a word of it."`;
             },
@@ -35477,8 +36515,8 @@ Trains by: ${TRAINS_BY[k]}` },
               { text: "Browse the archive.", do: (c) => c.open("library") },
               { text: "Why don't you believe it?", if: () => !ctx.quest("nb_liar_noland"), next: "why" },
               { text: "Let's find out the truth.", if: () => !ctx.quest("nb_liar_noland"), do: (c) => c.startQuest("nb_liar_noland"), end: true },
-              { text: "Read the sealed log.", if: () => at2(ctx, "nb_liar_noland", "archive"), next: "log" },
-              { text: "The Sea King is dead.", if: () => at2(ctx, "nb_liar_noland", "report"), do: (c) => c.complete("nb_liar_noland"), next: "end" },
+              { text: "Read the sealed log.", if: () => at3(ctx, "nb_liar_noland", "archive"), next: "log" },
+              { text: "The Sea King is dead.", if: () => at3(ctx, "nb_liar_noland", "report"), do: (c) => c.complete("nb_liar_noland"), next: "end" },
               { text: "Goodbye.", end: true }
             ]
           },
@@ -35548,14 +36586,14 @@ Trains by: ${TRAINS_BY[k]}` },
         nodes: {
           a: {
             text: () => {
-              if (at2(ctx, "nb_ope_ope", "call")) return `(Before you can speak, the Den Den Mushi in Corazon's coat rings. "Corazon. It's me." Doflamingo's voice. Corazon taps the receiver \u2014 three taps for yes, two for no. "...I've found the Ope Ope no Mi. We steal it, you eat it, you cure the brat." Click.)`;
-              if (at2(ctx, "nb_ope_ope", "rubeck")) return `(Corazon mouths two words: "RUBECK. SOUTH-EAST." Then he gets up, trips over the bench and lands face-first on the cobbles.)`;
-              if (at2(ctx, "nb_ope_ope", "whiteland")) return `(Corazon writes on his notepad: "WHITELAND ROYAL HOSPITAL. NORTH OF HERE. ASK FOR A DOCTOR WHO'LL TREAT HIM. I CAN'T GO IN \u2014 I BROKE THE LAST DOCTOR'S JAW.")`;
+              if (at3(ctx, "nb_ope_ope", "call")) return `(Before you can speak, the Den Den Mushi in Corazon's coat rings. "Corazon. It's me." Doflamingo's voice. Corazon taps the receiver \u2014 three taps for yes, two for no. "...I've found the Ope Ope no Mi. We steal it, you eat it, you cure the brat." Click.)`;
+              if (at3(ctx, "nb_ope_ope", "rubeck")) return `(Corazon mouths two words: "RUBECK. SOUTH-EAST." Then he gets up, trips over the bench and lands face-first on the cobbles.)`;
+              if (at3(ctx, "nb_ope_ope", "whiteland")) return `(Corazon writes on his notepad: "WHITELAND ROYAL HOSPITAL. NORTH OF HERE. ASK FOR A DOCTOR WHO'LL TREAT HIM. I CAN'T GO IN \u2014 I BROKE THE LAST DOCTOR'S JAW.")`;
               return `(Corazon sits on a harbour bench beside the white-spotted boy, who is shivering. He writes: "SIX MONTHS. EVERY HOSPITAL IN THE NORTH BLUE. THEY CALL HIM A MONSTER." He looks at you for a long time. Then: "WILL YOU HELP US?")`;
             },
             choices: [
               { text: "I'll help.", if: () => !ctx.quest("nb_ope_ope"), do: (c) => c.startQuest("nb_ope_ope"), next: "help" },
-              { text: "...Wait. Can you talk?", if: () => at2(ctx, "nb_ope_ope", "call"), next: "talk" },
+              { text: "...Wait. Can you talk?", if: () => at3(ctx, "nb_ope_ope", "call"), next: "talk" },
               { text: "Leave", end: true }
             ]
           },
@@ -35582,7 +36620,7 @@ Trains by: ${TRAINS_BY[k]}` },
         start: "a",
         nodes: {
           a: {
-            text: () => at2(ctx, "nb_ope_ope", "rubeck") ? `"...Cora-san can talk. He lied to everybody. Even to Doflamingo." (The boy almost smiles.) "A Devil Fruit that can cure me? I don't believe in anything anymore. But he does. Idiot."` : `(The boy shivers, the white patches creeping up his neck.) "Cora-san keeps dragging me to hospitals. They all scream the same thing: 'Get the white monster out.' ...It's pointless. I'm going to die anyway."`
+            text: () => at3(ctx, "nb_ope_ope", "rubeck") ? `"...Cora-san can talk. He lied to everybody. Even to Doflamingo." (The boy almost smiles.) "A Devil Fruit that can cure me? I don't believe in anything anymore. But he does. Idiot."` : `(The boy shivers, the white patches creeping up his neck.) "Cora-san keeps dragging me to hospitals. They all scream the same thing: 'Get the white monster out.' ...It's pointless. I'm going to die anyway."`
           }
         }
       })
@@ -35625,7 +36663,7 @@ Trains by: ${TRAINS_BY[k]}` },
             text: () => ctx.has("nb_amber_survey") ? `"What is that \u2014 a Government seal? '...not contagious.'" (He reads it twice, then sits down heavily.) "We turned away dying children. For NOTHING."` : `"Whiteland Royal Hospital. Frostbite, broken bones, fever. Sit down, sit down."`,
             choices: [
               { text: "Treat me.", do: (c) => c.open("doctor", {}) },
-              { text: "Will you treat a boy with Amber Lead Syndrome?", if: () => at2(ctx, "nb_ope_ope", "whiteland"), next: "refuse" },
+              { text: "Will you treat a boy with Amber Lead Syndrome?", if: () => at3(ctx, "nb_ope_ope", "whiteland"), next: "refuse" },
               { text: "Goodbye.", end: true }
             ]
           },
@@ -35698,7 +36736,7 @@ Trains by: ${TRAINS_BY[k]}` },
             choices: [
               { text: "Train at the club", do: (c) => c.open("trainer", { trainer: "nb_longarm" }) },
               { text: "Is there a tournament?", if: () => !ctx.quest("nb_notice_cup"), next: "cup" },
-              { text: "Otto is down.", if: () => at2(ctx, "nb_notice_cup", "report"), do: (c) => c.complete("nb_notice_cup"), next: "won" },
+              { text: "Otto is down.", if: () => at3(ctx, "nb_notice_cup", "report"), do: (c) => c.complete("nb_notice_cup"), next: "won" },
               { text: "Goodbye.", end: true }
             ]
           },
@@ -35733,11 +36771,11 @@ Trains by: ${TRAINS_BY[k]}` },
           a: {
             text: () => {
               if (done2(ctx, "nb_notice_cup")) return `"Champ! My arms still hurt. Both elbows on both of them."`;
-              if (at2(ctx, "nb_notice_cup", "bout")) return `"So you're my opponent! Keep your guard up \u2014 my Lover Elbow comes in from angles you won't believe!"`;
+              if (at3(ctx, "nb_notice_cup", "bout")) return `"So you're my opponent! Keep your guard up \u2014 my Lover Elbow comes in from angles you won't believe!"`;
               return `"Notice is the richest, most BORING town in the North Blue. Banks, gardens, tea at four. I want OUT. ...You're a sailor, right? What's it like out there?"`;
             },
             choices: [
-              { text: "Fight! (Notice Cup)", if: () => at2(ctx, "nb_notice_cup", "bout"), do: (c) => aggro(c.game, findActor(c.game, "nb_otto")), end: true },
+              { text: "Fight! (Notice Cup)", if: () => at3(ctx, "nb_notice_cup", "bout"), do: (c) => aggro(c.game, findActor(c.game, "nb_otto")), end: true },
               { text: "See you around.", end: true }
             ]
           }
@@ -35785,12 +36823,12 @@ Trains by: ${TRAINS_BY[k]}` },
           a: {
             text: () => {
               if (done2(ctx, "nb_kuen")) return `"...She's alive. Somewhere out there she's alive, and eating. That's more than I could ever give her."`;
-              if (at2(ctx, "nb_kuen", "report")) return `"You went up the mountain? ...What did you find? Tell me. Please."`;
+              if (at3(ctx, "nb_kuen", "report")) return `"You went up the mountain? ...What did you find? Tell me. Please."`;
               return `(A thin woman sits on her doorstep, staring at the mountain.) "Four years ago the rains stopped. The elders said a child who can't work is a mouth we can't feed. So I walked my little girl up the mountain... and came back alone. She was four. Every night I hear her calling."`;
             },
             choices: [
               { text: "I'll search the mountain.", if: () => !ctx.quest("nb_kuen"), do: (c) => c.startQuest("nb_kuen"), end: true },
-              { text: "I found a ribbon... and a pink feather.", if: () => at2(ctx, "nb_kuen", "report"), next: "news" },
+              { text: "I found a ribbon... and a pink feather.", if: () => at3(ctx, "nb_kuen", "report"), next: "news" },
               { text: "Goodbye.", end: true }
             ]
           },
@@ -35814,9 +36852,9 @@ Trains by: ${TRAINS_BY[k]}` },
         start: "a",
         nodes: {
           a: {
-            text: () => at2(ctx, "nb_kuen", "elder") ? `"Rice? REAL rice? ...You don't know what you're carrying, stranger. That's five children who eat tonight."` : `"Kuen, they call this place. 'Can't eat', the old folk say it means. The name came true: the wells are dust and the fields are straw. Any food you bring here is a life."`,
+            text: () => at3(ctx, "nb_kuen", "elder") ? `"Rice? REAL rice? ...You don't know what you're carrying, stranger. That's five children who eat tonight."` : `"Kuen, they call this place. 'Can't eat', the old folk say it means. The name came true: the wells are dust and the fields are straw. Any food you bring here is a life."`,
             choices: [
-              { text: "Give 5 Rice Balls.", if: () => at2(ctx, "nb_kuen", "elder") && ctx.has("rice_ball", 5), do: (c) => {
+              { text: "Give 5 Rice Balls.", if: () => at3(ctx, "nb_kuen", "elder") && ctx.has("rice_ball", 5), do: (c) => {
                 c.take("rice_ball", 5);
                 c.stage("nb_kuen", "mountain");
               }, next: "thanks" },
@@ -35892,7 +36930,7 @@ Trains by: ${TRAINS_BY[k]}` },
           a: {
             text: () => {
               if (done2(ctx, "nb_third_prince")) return `"A cook, on a sea restaurant. Alive, and cooking." (A real smile, quickly hidden.) "Father must never know I asked. And neither must my brothers."`;
-              if (at2(ctx, "nb_third_prince", "report")) return `"You went all the way to the East Blue? ...Well? Tell me. Did he look happy?"`;
+              if (at3(ctx, "nb_third_prince", "report")) return `"You went all the way to the East Blue? ...Well? Tell me. Did he look happy?"`;
               if (ctx.quest("nb_third_prince")) return `"The Baratie \u2014 a floating restaurant in the East Blue. I can't go myself. Germa never sails anywhere without a war to sell."`;
               return `"You're brave, or stupid, to wander around Germa." (She lowers her voice.) "I had a brother once. Everyone was told he died in a shipwreck. There's a rumour of a young cook in the East Blue, on a sea restaurant \u2014 curly eyebrow, kicks like a cannon. If it's true... just tell me he's alive."`;
             },
@@ -35901,7 +36939,7 @@ Trains by: ${TRAINS_BY[k]}` },
                 c.startQuest("nb_third_prince");
                 if (c.game.quests.isDone("baratie_krieg")) c.setFlag("nbSawSanji");
               }, end: true },
-              { text: "He's alive. He cooks at the Baratie \u2014 and he's happy.", if: () => at2(ctx, "nb_third_prince", "report"), do: (c) => c.complete("nb_third_prince"), next: "thanks" },
+              { text: "He's alive. He cooks at the Baratie \u2014 and he's happy.", if: () => at3(ctx, "nb_third_prince", "report"), do: (c) => c.complete("nb_third_prince"), next: "thanks" },
               { text: "Goodbye, princess.", end: true }
             ]
           },
@@ -35950,13 +36988,13 @@ Trains by: ${TRAINS_BY[k]}` },
           a: {
             text: () => {
               if (done2(ctx, "nb_germa")) return `"Prince Niji won't be throwing plates for a while..." (She laughs, covers her mouth, then laughs again.) "Nobody here has ever stood up for a servant. Would you... let me cook for YOUR table?"`;
-              if (at2(ctx, "nb_germa", "report")) return `"You... you beat Prince Niji? In his raid suit?!"`;
-              if (ctx.quest("nb_germa") && !at2(ctx, "nb_germa", "cosette")) return `"The soldiers drill on the west platform. They all have the same face \u2014 they come out of the Depot like that. Please be careful."`;
+              if (at3(ctx, "nb_germa", "report")) return `"You... you beat Prince Niji? In his raid suit?!"`;
+              if (ctx.quest("nb_germa") && !at3(ctx, "nb_germa", "cosette")) return `"The soldiers drill on the west platform. They all have the same face \u2014 they come out of the Depot like that. Please be careful."`;
               return `(A young cook with a bruised, freckled face is scrubbing a pot.) "Oh! You shouldn't be in the royal kitchen... Please keep your voice down. Prince Niji doesn't like noise. He doesn't like anything. Least of all the servants."`;
             },
             choices: [
-              { text: "Who did this to you?", if: () => !ctx.quest("nb_germa") || at2(ctx, "nb_germa", "cosette"), next: "who" },
-              { text: "Niji is beaten.", if: () => at2(ctx, "nb_germa", "report"), do: (c) => c.complete("nb_germa"), next: "a" },
+              { text: "Who did this to you?", if: () => !ctx.quest("nb_germa") || at3(ctx, "nb_germa", "cosette"), next: "who" },
+              { text: "Niji is beaten.", if: () => at3(ctx, "nb_germa", "report"), do: (c) => c.complete("nb_germa"), next: "a" },
               { text: "Something to eat?", do: (c) => c.open("shop", { shop: "nb_germa_kitchen", building: { name: "Royal Kitchen", role: "restaurant" } }) },
               { text: "Goodbye.", end: true }
             ]
@@ -36029,9 +37067,9 @@ Trains by: ${TRAINS_BY[k]}` },
         start: "a",
         nodes: {
           a: {
-            text: () => at2(ctx, "nb_ope_ope", "rubeck") ? `"This island is under Marine control. ...The 'exchange'? (He glances around, then lowers his voice.) Five BILLION berries, for one Devil Fruit. Makes you sick, doesn't it?"` : `"This island is under Marine control until further notice. Move along \u2014 nothing to see here."`,
+            text: () => at3(ctx, "nb_ope_ope", "rubeck") ? `"This island is under Marine control. ...The 'exchange'? (He glances around, then lowers his voice.) Five BILLION berries, for one Devil Fruit. Makes you sick, doesn't it?"` : `"This island is under Marine control until further notice. Move along \u2014 nothing to see here."`,
             choices: [
-              { text: "Who is selling it?", if: () => at2(ctx, "nb_ope_ope", "rubeck"), next: "where" },
+              { text: "Who is selling it?", if: () => at3(ctx, "nb_ope_ope", "rubeck"), next: "where" },
               { text: "Marine business", if: () => ctx.char.faction === "marine", do: (c) => c.emit("marineOffice", { name: "Rubeck Exchange Camp" }), end: true },
               { text: "Moving along.", end: true }
             ]
@@ -36082,7 +37120,7 @@ Trains by: ${TRAINS_BY[k]}` },
         start: "a",
         nodes: {
           a: {
-            text: () => at2(ctx, "nb_ope_ope", "vergo") ? `"The fruit's gone. Father's down... and there's something glittering in the sky. Strings?" (He looks at the sea, then at the mansion.) "...I'm sorry, Father."` : `(A tall, orange-haired youth stands guard, bruises on his arms.) "My father was a Marine officer once. A good one \u2014 people saluted him in the street. Now he hits me when a deal goes wrong. Don't look at me like that. He's still my father."`,
+            text: () => at3(ctx, "nb_ope_ope", "vergo") ? `"The fruit's gone. Father's down... and there's something glittering in the sky. Strings?" (He looks at the sea, then at the mansion.) "...I'm sorry, Father."` : `(A tall, orange-haired youth stands guard, bruises on his arms.) "My father was a Marine officer once. A good one \u2014 people saluted him in the street. Now he hits me when a deal goes wrong. Don't look at me like that. He's still my father."`,
             choices: [{ text: "You could leave.", next: "b" }, { text: "Leave", end: true }]
           },
           b: { text: `"...Someday I'll wear the Marine coat myself. The way he used to, before all this." (He says it quietly, as if the mansion might hear.)` }
@@ -36147,12 +37185,12 @@ Trains by: ${TRAINS_BY[k]}` },
         nodes: {
           a: {
             text: () => {
-              if (at2(ctx, "nb_ope_ope", "farewell")) return `(Rosinante sits against a ruined wall, the snow around him red. The strings above hum like a harp. He smiles \u2014 a wide, painted, clumsy smile.) "...You got him into the chest. Good. Now he's free."`;
-              if (at2(ctx, "nb_ope_ope", "birdcage")) return `"Strings... Doffy's Birdcage. He'll comb every inch." (He coughs red onto the snow.) "The Barrels' treasure chests, east of the mansion \u2014 his crew will load them onto their ship. Put Law in one. I'll make sure no one can hear him. Go!"`;
+              if (at3(ctx, "nb_ope_ope", "farewell")) return `(Rosinante sits against a ruined wall, the snow around him red. The strings above hum like a harp. He smiles \u2014 a wide, painted, clumsy smile.) "...You got him into the chest. Good. Now he's free."`;
+              if (at3(ctx, "nb_ope_ope", "birdcage")) return `"Strings... Doffy's Birdcage. He'll comb every inch." (He coughs red onto the snow.) "The Barrels' treasure chests, east of the mansion \u2014 his crew will load them onto their ship. Put Law in one. I'll make sure no one can hear him. Go!"`;
               return `(Corazon is slumped in the snow, riddled with bullets, a cigarette still between his lips. And he SPEAKS, softly.) "He ate it. Law ate the fruit. ...I sent him to the Marines with a letter. If the wrong Marine reads it..."`;
             },
             choices: [
-              { text: "Tell me who you really are.", if: () => at2(ctx, "nb_ope_ope", "farewell"), next: "f1" },
+              { text: "Tell me who you really are.", if: () => at3(ctx, "nb_ope_ope", "farewell"), next: "f1" },
               { text: "Hold on!", end: true }
             ]
           },
@@ -36179,14 +37217,14 @@ Trains by: ${TRAINS_BY[k]}` },
         nodes: {
           a: {
             text: () => {
-              if (at2(ctx, "nb_bacca", "report")) return `"You beat Bacca? ...Then you know. He's my son." (Wolf stares at his hands.) "I sailed with him for years to keep him in line. It didn't work. When he came home and burned this town, I cut him off. I should have stopped him myself."`;
+              if (at3(ctx, "nb_bacca", "report")) return `"You beat Bacca? ...Then you know. He's my son." (Wolf stares at his hands.) "I sailed with him for years to keep him in line. It didn't work. When he came home and burned this town, I cut him off. I should have stopped him myself."`;
               if (done2(ctx, "nb_heart_pirates")) return `"Those four brats eat like a crew of forty. Give and take! They pay me back in chores. ...Don't you dare tell them I said they're good kids."`;
               return `"Hm? Who are you? If you want something from Wolf the genius inventor, you give something back. Give and take! That's my policy. Firewood, bullets, a hand in the greenhouse \u2014 or money. Money is also good."`;
             },
             choices: [
               { text: "Teach me to shoot.", do: (c) => c.open("trainer", { trainer: "nb_wolf" }) },
               { text: "What do you invent?", next: "inv" },
-              { text: "You gave this town a chance, too.", if: () => at2(ctx, "nb_bacca", "report"), do: (c) => c.complete("nb_bacca"), next: "gift" },
+              { text: "You gave this town a chance, too.", if: () => at3(ctx, "nb_bacca", "report"), do: (c) => c.complete("nb_bacca"), next: "gift" },
               { text: "Goodbye.", end: true }
             ]
           },
@@ -36302,11 +37340,11 @@ Trains by: ${TRAINS_BY[k]}` },
           a: {
             text: () => {
               if (done2(ctx, "nb_heart_pirates")) return `"Cora-san's business in the New World isn't finished. I'll finish it. Someday Doflamingo will pay. ...Don't get in my way. And don't die before then."`;
-              if (at2(ctx, "nb_heart_pirates", "report")) return `"...You were on Minion Island." (He watches three boys squabble over firewood.) "Three years ago I wanted to destroy the world. Now I have something to do in it. We're going to be pirates."`;
+              if (at3(ctx, "nb_heart_pirates", "report")) return `"...You were on Minion Island." (He watches three boys squabble over firewood.) "Three years ago I wanted to destroy the world. Now I have something to do in it. We're going to be pirates."`;
               return `"...Don't say his name. Not yet." (The boy turns away. The white patches on his skin are fading.)`;
             },
             choices: [
-              { text: "What will you call your crew?", if: () => at2(ctx, "nb_heart_pirates", "report"), do: (c) => c.complete("nb_heart_pirates"), next: "heart" },
+              { text: "What will you call your crew?", if: () => at3(ctx, "nb_heart_pirates", "report"), do: (c) => c.complete("nb_heart_pirates"), next: "heart" },
               { text: "Take care, Law.", end: true }
             ]
           },
@@ -41734,7 +42772,7 @@ Trains by: ${TRAINS_BY[k]}` },
   var stg2 = (g, id) => g.quests.stageId(id);
   var isDone = (g, id) => g.quests.isDone(id);
   var act = (ctx, id, s) => ctx.game.quests.stageId(id) === s;
-  var fin = (ctx, id) => ctx.game.quests.isDone(id);
+  var fin2 = (ctx, id) => ctx.game.quests.isDone(id);
   var beat = (c, id) => (c.bosses || []).includes(id) || !!(c.defeated || {})[id];
   var inCrew = (c, id) => (c.crew || []).some((m) => m.id === id);
   var giver = (id, report = "report") => (c, g) => !g.quests.state(id) ? "!" : g.quests.stageId(id) === report ? "?" : null;
@@ -41804,7 +42842,7 @@ Trains by: ${TRAINS_BY[k]}` },
         nodes: {
           a: {
             text: () => {
-              if (fin(ctx, "p1_laboon_promise")) return `"Laboon has stopped ramming the Red Line. He's waiting for you now \u2014 so don't you dare die out there."`;
+              if (fin2(ctx, "p1_laboon_promise")) return `"Laboon has stopped ramming the Red Line. He's waiting for you now \u2014 so don't you dare die out there."`;
               if (act(ctx, "p1_laboon_promise", "hunters")) return `"Whale hunters on the north cape, harpoon and all! Stop them before they hurt him!"`;
               if (act(ctx, "p1_laboon_promise", "promise")) return `"The hunters are gone. Go down to the western shore \u2014 Laboon is right there. Talk to him. He understands more than you'd think."`;
               return `"...Hm. Another crew made it down the mountain alive. Don't mind the whale \u2014 that's Laboon. He has been waiting at this cape for fifty years."`;
@@ -41947,7 +42985,7 @@ Trains by: ${TRAINS_BY[k]}` },
         start: "a",
         nodes: {
           a: {
-            text: () => fin(ctx, "p1_ruluka_rainbow") ? `"No more taxes on breathing! I can finally finish my research. One day the Rainbow Mist will come back \u2014 and I'll bring my friends home."` : `"Fifty years I've waited for the Rainbow Mist to return. My friends sailed into it as boys and never came out. And Mayor Wetton taxes me for every breath I take while I wait."`,
+            text: () => fin2(ctx, "p1_ruluka_rainbow") ? `"No more taxes on breathing! I can finally finish my research. One day the Rainbow Mist will come back \u2014 and I'll bring my friends home."` : `"Fifty years I've waited for the Rainbow Mist to return. My friends sailed into it as boys and never came out. And Mayor Wetton taxes me for every breath I take while I wait."`,
             choices: [
               { text: "Who is this Wetton?", if: () => !ctx.quest("p1_ruluka_rainbow"), next: "wet" },
               { text: "Wetton won't tax anyone again.", if: () => act(ctx, "p1_ruluka_rainbow", "report"), do: (c) => c.complete("p1_ruluka_rainbow"), next: "thx" },
@@ -42010,7 +43048,7 @@ Trains by: ${TRAINS_BY[k]}` },
         start: "a",
         nodes: {
           a: {
-            text: () => fin(ctx, "p1_kenzan_whirlpool") ? `"The boats come home full again! Two elbows or one, you have a long reach, friend. Come eat with us whenever you like."` : `"Welcome to the Tehna Gehna Kingdom! We Longarms have two elbows \u2014 we can pull a fish out of the sea without getting our feet wet. Well... we could."`,
+            text: () => fin2(ctx, "p1_kenzan_whirlpool") ? `"The boats come home full again! Two elbows or one, you have a long reach, friend. Come eat with us whenever you like."` : `"Welcome to the Tehna Gehna Kingdom! We Longarms have two elbows \u2014 we can pull a fish out of the sea without getting our feet wet. Well... we could."`,
             choices: [
               { text: "What happened?", if: () => !ctx.quest("p1_kenzan_whirlpool"), next: "what" },
               { text: "The Whirlpool Lord is dead.", if: () => act(ctx, "p1_kenzan_whirlpool", "report"), do: (c) => c.complete("p1_kenzan_whirlpool"), next: "thx" },
@@ -42039,7 +43077,7 @@ Trains by: ${TRAINS_BY[k]}` },
         start: "a",
         nodes: {
           a: {
-            text: () => fin(ctx, "p1_foolshout_sun") ? `"I keep the sun flag folded by the window. If Koala ever comes home again, the first thing she'll see is the mark of the people who saved her."` : `"Years ago my daughter Koala was taken to Mary Geoise as a slave. A crew of fish-men \u2014 the Sun Pirates \u2014 brought her all the way home. Their captain, Fisher Tiger, died on this island."`,
+            text: () => fin2(ctx, "p1_foolshout_sun") ? `"I keep the sun flag folded by the window. If Koala ever comes home again, the first thing she'll see is the mark of the people who saved her."` : `"Years ago my daughter Koala was taken to Mary Geoise as a slave. A crew of fish-men \u2014 the Sun Pirates \u2014 brought her all the way home. Their captain, Fisher Tiger, died on this island."`,
             choices: [
               { text: "How did he die?", if: () => !ctx.quest("p1_foolshout_sun"), next: "how" },
               { text: "I found the Sun Pirates' flag.", if: () => act(ctx, "p1_foolshout_sun", "report") && ctx.has("p1_sun_flag"), do: (c) => {
@@ -42085,7 +43123,7 @@ Trains by: ${TRAINS_BY[k]}` },
               { text: "Drink until you pass out.", if: () => act(ctx, "p1_whisky_peak", "party"), next: "drunk" },
               { text: "Pretend to drink. Stay awake.", if: () => act(ctx, "p1_whisky_peak", "party"), next: "sober" },
               { text: "What happens now?", if: () => act(ctx, "p1_whisky_peak", "report"), next: "plan" },
-              { text: "Something to drink.", if: () => !ctx.quest("p1_whisky_peak") || fin(ctx, "p1_whisky_peak"), do: (c) => c.open("shop", { shop: "p1_whisky_stock", building: { name: "Whisky Peak Saloon", role: "bar" } }) },
+              { text: "Something to drink.", if: () => !ctx.quest("p1_whisky_peak") || fin2(ctx, "p1_whisky_peak"), do: (c) => c.open("shop", { shop: "p1_whisky_stock", building: { name: "Whisky Peak Saloon", role: "bar" } }) },
               { text: "Goodbye.", end: true }
             ]
           },
@@ -42104,7 +43142,7 @@ Trains by: ${TRAINS_BY[k]}` },
       look: { hair: "short", hairColor: "#8d6e63", skin: "#e0ac7e", top: "#795548", bottom: "#3e2723", hat: "cowboy", hatColor: "#5d4037" },
       level: 12,
       dialogue: (ctx) => ({ start: "a", nodes: { a: {
-        text: () => fin(ctx, "p1_whisky_peak") ? `"No hard feelings about the ambush, eh? The whisky, at least, was always honest. Best in the Grand Line."` : `"Whisky Peak whisky! Aged in cactus barrels. One sip and you'll sleep like a baby. ...Heh. Just a figure of speech."`,
+        text: () => fin2(ctx, "p1_whisky_peak") ? `"No hard feelings about the ambush, eh? The whisky, at least, was always honest. Best in the Grand Line."` : `"Whisky Peak whisky! Aged in cactus barrels. One sip and you'll sleep like a baby. ...Heh. Just a figure of speech."`,
         choices: [{ text: "Buy", do: (c) => c.open("shop", { shop: "p1_whisky_stock", building: { name: "Whisky Peak Distillery", role: "shop" } }) }, { text: "Leave", end: true }]
       } } })
     },
@@ -42338,7 +43376,7 @@ Trains by: ${TRAINS_BY[k]}` },
         start: "a",
         nodes: {
           a: {
-            text: () => fin(ctx, "p1_vira_logbook") ? `"The register is whole again. Four hundred years of ships, every one written down. History is what you choose to keep, traveller."` : `"Vira was a sunny little town once. Four hundred years of ships came through this harbour, and every one is in our register. Two years ago the Revolutionary Army toppled the king... and the palace burned."`,
+            text: () => fin2(ctx, "p1_vira_logbook") ? `"The register is whole again. Four hundred years of ships, every one written down. History is what you choose to keep, traveller."` : `"Vira was a sunny little town once. Four hundred years of ships came through this harbour, and every one is in our register. Two years ago the Revolutionary Army toppled the king... and the palace burned."`,
             choices: [
               { text: "Read in the archives.", do: (c) => c.open("library", { building: { name: "Vira Harbour Archives", role: "library" } }) },
               { text: "Anything lost in the fire?", if: () => !ctx.quest("p1_vira_logbook"), next: "lost" },
@@ -42417,7 +43455,7 @@ Trains by: ${TRAINS_BY[k]}` },
           a: {
             text: () => {
               const s = ctx.game.quests.stageId("p1_little_garden");
-              if (fin(ctx, "p1_little_garden")) return `"GEGYAGYAGYA! The duel goes on \u2014 as it should, with no filthy tricks! Come, little warrior, and I'll teach you the ways of Elbaf!"`;
+              if (fin2(ctx, "p1_little_garden")) return `"GEGYAGYAGYA! The duel goes on \u2014 as it should, with no filthy tricks! Come, little warrior, and I'll teach you the ways of Elbaf!"`;
               if (s === "ale") return `"Brogy sent me ale? Before a duel? ...GEGYAGYA! That stubborn old fool. Pour it, pour it!"`;
               if (["wax", "goldenweek", "mr3", "pose"].includes(s)) return `"Ugh... the ale exploded in my belly. There was a bomb in it. Brogy would never \u2014 it was that wax man in the south. Go! A warrior's duel must not be soiled!"`;
               if (s === "report") return `"The wax man is beaten? And the tiny birds brought an Eternal Pose? GEGYAGYAGYA! Then you can leave this island without waiting a year!"`;
@@ -42463,7 +43501,7 @@ Trains by: ${TRAINS_BY[k]}` },
               const s = ctx.game.quests.stageId("p1_little_garden");
               if (s === "brogy") return `"GABABABA! A guest! Sit, sit \u2014 dinosaur meat! Dorry and I fight whenever the volcano erupts. This will be our seventy-three thousand, four hundred and sixty-seventh duel!"`;
               if (s === "mr3") return `"Grrh... wax... it's hardening on my body! The cake \u2014 the wax man wants to make a statue of me! Stop him, little one!"`;
-              if (fin(ctx, "p1_little_garden")) return `"GABABABA! A warrior of the sea came to Little Garden! When you reach Elbaf one day, tell them Brogy sent you!"`;
+              if (fin2(ctx, "p1_little_garden")) return `"GABABABA! A warrior of the sea came to Little Garden! When you reach Elbaf one day, tell them Brogy sent you!"`;
               return `"GABABABA! A tiny guest! I am Brogy of Elbaf. The volcano will erupt soon, and then I fight Dorry again. Sit and watch!"`;
             },
             choices: [
@@ -42580,7 +43618,7 @@ Trains by: ${TRAINS_BY[k]}` },
         nodes: {
           a: {
             text: () => {
-              if (fin(ctx, "p1_drum_kingdom")) return `"They want to make me king. Me! ...Hiriluk's flag flies over the castle now, and the snow fell pink. This country will be called the Sakura Kingdom."`;
+              if (fin2(ctx, "p1_drum_kingdom")) return `"They want to make me king. Me! ...Hiriluk's flag flies over the castle now, and the snow fell pink. This country will be called the Sakura Kingdom."`;
               if (ctx.quest("p1_drum_kingdom")) return `"The castle is at the top of Drum Rock. The ropeway is cut \u2014 you'll have to climb. Watch out for the Lapahn; those snow rabbits eat people."`;
               return ctx.char.bounty > 0 ? `"Pirates. Turn back \u2014 this country has suffered enough... Wait. You haven't drawn a weapon. Then hear me out."` : `"A traveller? In winter? Welcome to Drum Island. Keep your coat on and your voice down \u2014 avalanches."`;
             },
@@ -42614,7 +43652,7 @@ Trains by: ${TRAINS_BY[k]}` },
             text: () => {
               const s = ctx.game.quests.stageId("p1_drum_kingdom");
               if (s === "report") return `"Hee-hee! You threw that tin-plated fool off my mountain. Now watch the sky, brat. Watch it closely."`;
-              if (fin(ctx, "p1_drum_kingdom")) return `"Pink snow... that quack Hiriluk's dream. Don't get sentimental on me. Doctors fix bodies, not countries. ...Though sometimes it's the same thing."`;
+              if (fin2(ctx, "p1_drum_kingdom")) return `"Pink snow... that quack Hiriluk's dream. Don't get sentimental on me. Doctors fix bodies, not countries. ...Though sometimes it's the same thing."`;
               if (s && s !== "climb") return `"Wapol's back, with his Bliking Pirates, and he wants his castle. Well? You climbed my mountain. Don't just stand there!"`;
               return `"Hee-hee! You climbed Drum Rock in this snow? Either you're sick or you're stupid. I'm a doctor, and I only treat one of those. What is it?"`;
             },
@@ -42731,7 +43769,7 @@ Trains by: ${TRAINS_BY[k]}` },
       when: (c) => !inCrew(c, "p1_dr_lapin") && !c.flags["leftCrew_p1_dr_lapin"],
       recruit: { role: "doctor", requires: (c, g) => isDone(g, "p1_drum_kingdom"), pitch: `"Dr. Hiriluk used to say there's no disease a doctor can't cure. I want to test that \u2014 on the Grand Line, with you. Count me in, captain!"` },
       dialogue: (ctx) => ({ start: "a", nodes: { a: {
-        text: () => fin(ctx, "p1_drum_kingdom") ? `"The snow turned pink... I was one of Wapol's twenty doctors, you know. The Isshi-20. I let people die because the king said so. I want to be a real doctor now. A pirate's doctor, maybe."` : `"Shh \u2014 patients. I was one of Wapol's twenty doctors, the Isshi-20. When he fled, I stayed. Somebody had to."`,
+        text: () => fin2(ctx, "p1_drum_kingdom") ? `"The snow turned pink... I was one of Wapol's twenty doctors, you know. The Isshi-20. I let people die because the king said so. I want to be a real doctor now. A pirate's doctor, maybe."` : `"Shh \u2014 patients. I was one of Wapol's twenty doctors, the Isshi-20. When he fled, I stayed. Somebody had to."`,
         choices: [{ text: "Treat my wounds.", do: (c) => c.open("doctor", {}) }, { text: "Goodbye.", end: true }]
       } } })
     },
@@ -42789,7 +43827,7 @@ Trains by: ${TRAINS_BY[k]}` },
           a: {
             text: () => {
               if (act(ctx, "p1_alabasta", "report")) return `"Rain... on Alubarna, on Yuba, on the whole country. You fought for a kingdom that was not yours. Alabasta will never forget."`;
-              if (fin(ctx, "p1_alabasta")) return `"A king who cannot protect his people is no king. You reminded me what one is. Our palace is always open to you."`;
+              if (fin2(ctx, "p1_alabasta")) return `"A king who cannot protect his people is no king. You reminded me what one is. Our palace is always open to you."`;
               return `"A visitor, in these times? Forgive the guards. My people believe I stole their rain. I did not \u2014 but a king who cannot prove it may as well have."`;
             },
             choices: [
@@ -42812,7 +43850,7 @@ Trains by: ${TRAINS_BY[k]}` },
       look: { hair: "short", hairColor: "#212121", skin: "#c68642", top: "#fafafa", bottom: "#8d6e63", hat: "bandana", hatColor: "#fafafa" },
       level: 34,
       dialogue: (ctx) => ({ start: "a", nodes: { a: {
-        text: () => act(ctx, "p1_alabasta", "bomb") ? `"The bomb in the Clock Tower! If it falls on the square, everything within five kilometres dies. Get to the tower \u2014 I'll carry it into the sky myself if I must!"` : fin(ctx, "p1_alabasta") ? `"I flew the bomb out over the desert. My body is still recovering... but the sky is ours again."` : `"I am Pell, one of the two Guardian Deities of Alabasta. The Tori Tori fruit gave me the falcon's wings. They are the kingdom's wings now."`
+        text: () => act(ctx, "p1_alabasta", "bomb") ? `"The bomb in the Clock Tower! If it falls on the square, everything within five kilometres dies. Get to the tower \u2014 I'll carry it into the sky myself if I must!"` : fin2(ctx, "p1_alabasta") ? `"I flew the bomb out over the desert. My body is still recovering... but the sky is ours again."` : `"I am Pell, one of the two Guardian Deities of Alabasta. The Tori Tori fruit gave me the falcon's wings. They are the kingdom's wings now."`
       } } })
     },
     {
@@ -42834,7 +43872,7 @@ Trains by: ${TRAINS_BY[k]}` },
       look: { hair: "curly", hairColor: "#d7ccc8", skin: "#f1c9a0", top: "#fafafa", bottom: "#212121", coat: "#fafafa", bulk: 1.15 },
       level: 28,
       dialogue: (ctx) => ({ start: "a", nodes: { a: {
-        text: () => fin(ctx, "p1_whisky_peak") ? `"Ma-ma-maaa~! You thought my ship went up in flames? Some of it did. A royal guard is hard to kill. Thank you for looking after the princess."` : `"Ma-ma-maaa~! I am Igaram, Captain of the Royal Guard. These are dark days for Alabasta, traveller."`,
+        text: () => fin2(ctx, "p1_whisky_peak") ? `"Ma-ma-maaa~! You thought my ship went up in flames? Some of it did. A royal guard is hard to kill. Thank you for looking after the princess."` : `"Ma-ma-maaa~! I am Igaram, Captain of the Royal Guard. These are dark days for Alabasta, traveller."`,
         choices: [{ text: "Rest at the guest house.", do: (c) => c.open("inn", { building: { name: "Palace Guest House", role: "inn" } }) }, { text: "Goodbye.", end: true }]
       } } })
     },
@@ -42853,7 +43891,7 @@ Trains by: ${TRAINS_BY[k]}` },
           a: {
             text: () => {
               if (act(ctx, "p1_alabasta", "kohza")) return `"Crocodile? The hero who drives off pirates? ...The king stole our rain. We found Dance Powder in Alubarna's port with our own eyes."`;
-              if (fin(ctx, "p1_alabasta")) return `"We almost destroyed our own country for a lie. Now we rebuild Yuba \u2014 my father's town. Every well, every tree."`;
+              if (fin2(ctx, "p1_alabasta")) return `"We almost destroyed our own country for a lie. Now we rebuild Yuba \u2014 my father's town. Every well, every tree."`;
               return `"Rebels, they call us. We're just people who want water. Stay out of Katorea if you're one of the king's."`;
             },
             choices: [
@@ -42879,13 +43917,13 @@ Trains by: ${TRAINS_BY[k]}` },
         nodes: {
           a: {
             text: () => {
-              if (fin(ctx, "p1_toto_well")) return `"Water! Real water! Take the barrel \u2014 it's the first water Yuba has given in three years. Somehow I think you'll need it more than I will."`;
+              if (fin2(ctx, "p1_toto_well")) return `"Water! Real water! Take the barrel \u2014 it's the first water Yuba has given in three years. Somehow I think you'll need it more than I will."`;
               if (act(ctx, "p1_alabasta", "yuba")) return `"The rebels? They left for Katorea days ago. Yuba is dead... every night the sandstorms come. But the ground here is still damp. I dig."`;
               return `"Yuba was built on an oasis. Every night the sandstorms bury it again. I dig all day. One day the water will come back \u2014 I know it will."`;
             },
             choices: [
-              { text: "Let me help you dig.", if: () => !fin(ctx, "p1_toto_well"), next: "dig" },
-              { text: "Could I have more of that water?", if: () => fin(ctx, "p1_toto_well") && !ctx.has("p1_yuba_water"), do: (c) => c.give("p1_yuba_water", 2), next: "a" },
+              { text: "Let me help you dig.", if: () => !fin2(ctx, "p1_toto_well"), next: "dig" },
+              { text: "Could I have more of that water?", if: () => fin2(ctx, "p1_toto_well") && !ctx.has("p1_yuba_water"), do: (c) => c.give("p1_yuba_water", 2), next: "a" },
               { text: "Goodbye, Toto.", end: true }
             ]
           },
@@ -43153,12 +44191,12 @@ Trains by: ${TRAINS_BY[k]}` },
           a: {
             text: () => {
               if (act(ctx, "p1_noland_honor", "tell")) return `"...You've got a strange look on your face. Don't tell me. You saw it. You were up there..."`;
-              if (fin(ctx, "p1_noland_honor")) return `"Every morning I dive anyway. Old habits. Noland was no liar \u2014 and now the whole of Mock Town knows it. Hahaha!"`;
+              if (fin2(ctx, "p1_noland_honor")) return `"Every morning I dive anyway. Old habits. Noland was no liar \u2014 and now the whole of Mock Town knows it. Hahaha!"`;
               const s = ctx.game.quests.stageId("p1_golden_city");
               if (s === "bird") return `"You need a South Bird. Its head always points south, even in the sky. They live in the woods on the southern arm \u2014 careful, they sic their giant bugs on hunters."`;
               if (s === "ship") return `"Got the bird? Then go see Masira by the boat. He and his boys will turn your ship into a bird \u2014 a ship that can't fly gets eaten by the stream."`;
               if (s === "stream") return `"South. Follow the bird. When the sea starts to churn, don't you dare turn back. If you die, at least you'll die chasing something!"`;
-              if (fin(ctx, "p1_golden_city")) return `"You came back down alive? Hah! Did you see it? The city of gold? ...Don't tell me yet. I'm not ready."`;
+              if (fin2(ctx, "p1_golden_city")) return `"You came back down alive? Hah! Did you see it? The city of gold? ...Don't tell me yet. I'm not ready."`;
               return `"Hah? Come to steal my gold? ...No? Then sit. You've got a dreamer's face. Everyone in Mock Town laughs at the words 'City of Gold'. My ancestor, Mont Blanc Noland, saw it with his own eyes."`;
             },
             choices: [
@@ -43352,7 +44390,7 @@ Trains by: ${TRAINS_BY[k]}` },
         nodes: {
           a: {
             text: () => {
-              if (fin(ctx, "p1_skypiea_god")) return `"The sky is quiet. No more Judgments, no more Ordeals. Heso \u2014 thank you! Come and have cloud-fish stew with us any time."`;
+              if (fin2(ctx, "p1_skypiea_god")) return `"The sky is quiet. No more Judgments, no more Ordeals. Heso \u2014 thank you! Come and have cloud-fish stew with us any time."`;
               if (act(ctx, "p1_skypiea_god", "angel")) return `"Heso! Welcome to Angel Island! You came up the Knock Up Stream? That's amazing! ...Have you heard of God Enel? You shouldn't go near the Sacred Land."`;
               return `"Heso! That's our greeting \u2014 it means 'hello'. Try the Dial shop in Lovely Street; my father Pagaya can fix any Dial boat."`;
             },
@@ -43402,9 +44440,9 @@ Trains by: ${TRAINS_BY[k]}` },
         start: "a",
         nodes: {
           a: {
-            text: () => ctx.flag("p1_skyIllegal") && !ctx.flag("p1_finePaid") && !fin(ctx, "p1_class_eleven") ? `"Halt! You entered Skypiea without paying the toll \u2014 a Class-11 crime! The fine is ten times the toll: ten billion extol (\u0E3F1,000,000). Pay now, or face Heaven's Judgment!"` : `"The White Berets keep the peace on Angel Island. Remember: catching sky sharks is a Class-9 crime, and snoring loudly is Class-6."`,
+            text: () => ctx.flag("p1_skyIllegal") && !ctx.flag("p1_finePaid") && !fin2(ctx, "p1_class_eleven") ? `"Halt! You entered Skypiea without paying the toll \u2014 a Class-11 crime! The fine is ten times the toll: ten billion extol (\u0E3F1,000,000). Pay now, or face Heaven's Judgment!"` : `"The White Berets keep the peace on Angel Island. Remember: catching sky sharks is a Class-9 crime, and snoring loudly is Class-6."`,
             choices: [
-              { text: "Pay the fine (\u0E3F1,000,000)", if: () => ctx.flag("p1_skyIllegal") && !ctx.flag("p1_finePaid") && !fin(ctx, "p1_class_eleven"), do: (c) => {
+              { text: "Pay the fine (\u0E3F1,000,000)", if: () => ctx.flag("p1_skyIllegal") && !ctx.flag("p1_finePaid") && !fin2(ctx, "p1_class_eleven"), do: (c) => {
                 if (!c.pay(1e6)) return "a";
                 c.setFlag("p1_finePaid");
                 if (!c.quest("p1_class_eleven")) c.startQuest("p1_class_eleven");
@@ -43436,7 +44474,7 @@ Trains by: ${TRAINS_BY[k]}` },
         start: "a",
         nodes: {
           a: {
-            text: () => fin(ctx, "p1_skypiea_god") ? `"The Sacred Land is free. Skypieans and Shandia will share Upper Yard at last \u2014 as it should have been all along. A knight thanks you."` : `"I am the Sky Knight! When you are in trouble in the sky, blow a whistle and I shall come. Six years ago Enel's army took Upper Yard from me \u2014 I was God of Skypiea before him."`,
+            text: () => fin2(ctx, "p1_skypiea_god") ? `"The Sacred Land is free. Skypieans and Shandia will share Upper Yard at last \u2014 as it should have been all along. A knight thanks you."` : `"I am the Sky Knight! When you are in trouble in the sky, blow a whistle and I shall come. Six years ago Enel's army took Upper Yard from me \u2014 I was God of Skypiea before him."`,
             choices: [
               { text: "What is Upper Yard?", next: "uy" },
               { text: "Train with the Sky Knight.", do: (c) => c.open("trainer", { trainer: "p1_sky_knight" }) },
@@ -43623,7 +44661,7 @@ Trains by: ${TRAINS_BY[k]}` },
         nodes: {
           a: {
             text: () => {
-              if (fin(ctx, "p1_skypiea_god")) return `"Shandora's bell rang. Kalgara... our ancestors can rest now. Upper Yard belongs to everyone again. Even to you, Blue Sea dweller."`;
+              if (fin2(ctx, "p1_skypiea_god")) return `"Shandora's bell rang. Kalgara... our ancestors can rest now. Upper Yard belongs to everyone again. Even to you, Blue Sea dweller."`;
               if (beat(ctx.char, "p1_wyper")) return `"...You're strong. Go to the Chief. Tell him Wyper sent you."`;
               if (act(ctx, "p1_skypiea_god", "shandia")) return `"Blue Sea dweller. Why come to our village? ...You beat Enel's priests? Then show me. If you want to stand beside the Shandia, you'll stand against me first!"`;
               return `"This is the Hidden Village of the Shandia. Leave, Blue Sea dweller, before I decide you're one of Enel's."`;
@@ -43650,7 +44688,7 @@ Trains by: ${TRAINS_BY[k]}` },
         nodes: {
           a: {
             text: () => {
-              if (fin(ctx, "p1_skypiea_god")) return `"The Light of Shandora has rung. The Shandia and the Skypieans will share this land now. Go in peace, friend of Kalgara."`;
+              if (fin2(ctx, "p1_skypiea_god")) return `"The Light of Shandora has rung. The Shandia and the Skypieans will share this land now. Go in peace, friend of Kalgara."`;
               if (act(ctx, "p1_skypiea_god", "chief")) return `"Wyper accepted you? Then sit and hear our story. Four hundred years ago, our great warrior Kalgara befriended a man from the Blue Sea \u2014 an explorer named Noland."`;
               return `"Welcome to the Hidden Village. We have little, but you may rest by our fire."`;
             },
@@ -43678,7 +44716,7 @@ Trains by: ${TRAINS_BY[k]}` },
       look: { hair: "short", hairColor: "#212121", skin: "#a0643a", top: "#ffb74d", bottom: "#5d4037", hat: "headband", hatColor: "#e53935", scale: 0.75 },
       level: 3,
       dialogue: (ctx) => ({ start: "a", nodes: { a: {
-        text: () => fin(ctx, "p1_skypiea_god") ? `"The voices are loud and happy now! Did you know you can hear them too, if you try? Close your eyes... there. That's Mantra."` : `"I can hear voices \u2014 everyone's voices \u2014 the way Enel does. It's called Mantra. When he strikes, the voices go out like candles. I hate it."`
+        text: () => fin2(ctx, "p1_skypiea_god") ? `"The voices are loud and happy now! Did you know you can hear them too, if you try? Close your eyes... there. That's Mantra."` : `"I can hear voices \u2014 everyone's voices \u2014 the way Enel does. It's called Mantra. When he strikes, the voices go out like candles. I hate it."`
       } } })
     },
     {
@@ -43694,7 +44732,7 @@ Trains by: ${TRAINS_BY[k]}` },
       when: (c) => !inCrew(c, "p1_braham") && !c.flags["leftCrew_p1_braham"],
       recruit: { role: "sniper", requires: (c, g) => isDone(g, "p1_skypiea_god"), pitch: `"The war is over. My ancestors came from the Blue Sea \u2014 from Jaya, under the clouds. I want to see it before I die. My Flash Guns are yours, captain."` },
       dialogue: (ctx) => ({ start: "a", nodes: { a: {
-        text: () => fin(ctx, "p1_skypiea_god") ? `"No more war. It's strange... I don't know what a warrior does when there is nothing to fight. Maybe he goes to see the sea his ancestors sailed."` : `"My Flash Guns have Flash Dials built in. You never see the bullet \u2014 only the light. Enel's soldiers learned that the hard way."`
+        text: () => fin2(ctx, "p1_skypiea_god") ? `"No more war. It's strange... I don't know what a warrior does when there is nothing to fight. Maybe he goes to see the sea his ancestors sailed."` : `"My Flash Guns have Flash Dials built in. You never see the bullet \u2014 only the light. Enel's soldiers learned that the hard way."`
       } } })
     },
     // ---------------------------------------------------------------- Weatheria
@@ -43726,7 +44764,7 @@ Trains by: ${TRAINS_BY[k]}` },
         start: "a",
         nodes: {
           a: {
-            text: () => fin(ctx, "p1_davy_back_fight") ? `"You beat that Foxy! He shot my Shelly, you know, just for being in his way. Thank you, young one. Shelly thanks you too. Neigh."` : `"Oh! You're back! ...Hm? We've never met? That explains why I didn't recognise you. I've been up on these stilts for ten years \u2014 I wanted a record, and I'm afraid of heights."`,
+            text: () => fin2(ctx, "p1_davy_back_fight") ? `"You beat that Foxy! He shot my Shelly, you know, just for being in his way. Thank you, young one. Shelly thanks you too. Neigh."` : `"Oh! You're back! ...Hm? We've never met? That explains why I didn't recognise you. I've been up on these stilts for ten years \u2014 I wanted a record, and I'm afraid of heights."`,
             choices: [{ text: "Where is your tribe?", next: "tribe" }, { text: "Goodbye.", end: true }]
           },
           tribe: { text: `"The path between our ten islands only rises from the sea once a year. My tribe moved on while I was up here. Only my horse Shelly waited for me. Good Shelly. Everything here grows long \u2014 even the waiting."`, next: "a" }
@@ -43873,7 +44911,7 @@ Trains by: ${TRAINS_BY[k]}` },
           a: {
             text: () => {
               if (act(ctx, "p1_davy_back_fight", "claim")) return `"You... you beat Foxy?! Then by the Three Articles of Defeat, you get to claim one of us. Everyone's looking at me. ...Me? Really? Kero!"`;
-              if (fin(ctx, "p1_davy_back_fight")) return `"My old crew, the Fanged Toad Pirates, lost me in a Davy Back Fight. Now I'm free. A navigator without a ship is just a frog on a log, though. Kero."`;
+              if (fin2(ctx, "p1_davy_back_fight")) return `"My old crew, the Fanged Toad Pirates, lost me in a Davy Back Fight. Now I'm free. A navigator without a ship is just a frog on a log, though. Kero."`;
               return `"...Foxy won me from the Fanged Toad Pirates, along with our captain, our doctor and our flag. Our ship's still drifting out there, full of crying men. Nobody beats Foxy."`;
             },
             choices: [
@@ -45191,7 +46229,7 @@ Trains by: ${TRAINS_BY[k]}` },
   var S2 = (g, id) => g.quests.stageId(id);
   var D2 = (g, id) => g.quests.isDone(id);
   var ON = (g, id) => !!g.quests.state(id) && !g.quests.isDone(id);
-  var at3 = (ctx, id, st) => ctx.game.quests.stageId(id) === st;
+  var at4 = (ctx, id, st) => ctx.game.quests.stageId(id) === st;
   var beat2 = (c, id) => (c.bosses || []).includes(id) || !!(c.defeated || {})[id];
   var marine = (c) => c.faction === "marine";
   var wanted = (c) => (c.bounty || 0) > 0 && c.faction !== "marine";
@@ -45809,7 +46847,7 @@ Trains by: ${TRAINS_BY[k]}` },
         a: {
           text: () => {
             const st = ctx.game.quests.stageId("p2_cp9_conspiracy");
-            if (at3(ctx, "p2_enies_lobby", "report")) return '"Nma! You came back from Enies Lobby \u2014 through a Buster Call. Franky too, the idiot. (For the first time, the mayor laughs.) Tom would have been proud of every one of you."';
+            if (at4(ctx, "p2_enies_lobby", "report")) return '"Nma! You came back from Enies Lobby \u2014 through a Buster Call. Franky too, the idiot. (For the first time, the mayor laughs.) Tom would have been proud of every one of you."';
             if (st === "iceburg") return '"Nma. You are the rookie who handled the Franky Family. (A mouse peeks out of his breast pocket: Tyrannosaurus.) I will be honest. Someone has been sending threats. I do not think they want my life. They want something I do not have."';
             if (st === "night" || st === "masks") return '"Nma. Lucci, Kaku, Kalifa \u2014 my people are all here tonight. Keep watch on the grounds after dark. Whoever they are, they come at night."';
             if (st === "truth") return `(Iceburg is bandaged and pale.) "...The masks came off. Lucci. Kaku. Kalifa, my secretary of five years. Blueno the bartender. CP9 \u2014 the Government's assassins, hidden in my company for five years."`;
@@ -45817,9 +46855,9 @@ Trains by: ${TRAINS_BY[k]}` },
             return '"Nma. This is Galley-La, the finest shipwrights in the world. If you want a ship built or repaired, Dock 1 will take care of you. Even pirates \u2014 if they pay."';
           },
           choices: [
-            { text: "I'll stand guard tonight.", if: () => at3(ctx, "p2_cp9_conspiracy", "iceburg"), next: "guard" },
-            { text: "What did CP9 want?", if: () => at3(ctx, "p2_cp9_conspiracy", "truth"), next: "pluton" },
-            { text: "We're back, Mayor.", if: () => at3(ctx, "p2_enies_lobby", "report"), next: "back" },
+            { text: "I'll stand guard tonight.", if: () => at4(ctx, "p2_cp9_conspiracy", "iceburg"), next: "guard" },
+            { text: "What did CP9 want?", if: () => at4(ctx, "p2_cp9_conspiracy", "truth"), next: "pluton" },
+            { text: "We're back, Mayor.", if: () => at4(ctx, "p2_enies_lobby", "report"), next: "back" },
             { text: "Galley-La shipyard", do: (c) => c.open("shipwright", {}) },
             { text: "Goodbye, Mayor.", end: true }
           ]
@@ -45994,7 +47032,7 @@ Trains by: ${TRAINS_BY[k]}` },
         a: {
           text: () => ctx.char.defeated.p2_zambai ? `"OW! Okay, okay! Here's your rudder. (He hands over a plank.) ...Listen. Big Bro Franky's gone into hiding. Men in black suits keep asking about some blueprints. And somebody sent the mayor a death threat. Go tell Iceburg. And don't tell him we told you!"` : `"AOW! (He strikes a pose.) We're the Franky Family, Water 7's finest dismantlers! Your ship looked abandoned. Abandoned ships are ours. Now beat it before Big Bro Franky gets back!"`,
           choices: [
-            { text: "Give back my rudder. Now.", if: () => at3(ctx, "p2_cp9_conspiracy", "franky") && !ctx.char.defeated.p2_zambai, do: (c) => aggro(c.game, findActor(c.game, "p2_zambai")), end: true },
+            { text: "Give back my rudder. Now.", if: () => at4(ctx, "p2_cp9_conspiracy", "franky") && !ctx.char.defeated.p2_zambai, do: (c) => aggro(c.game, findActor(c.game, "p2_zambai")), end: true },
             { text: "Who is Franky?", next: "franky" },
             { text: "Leave", end: true }
           ]
@@ -46015,9 +47053,9 @@ Trains by: ${TRAINS_BY[k]}` },
       marker: (c, g) => S2(g, "p2_enies_lobby") === "rocketman" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
-          text: () => at3(ctx, "p2_enies_lobby", "rocketman") ? `"Nngaa~ha~ha! (She takes a long swig from her bottle.) The Aqua Laguna's coming and you want to chase the Puffing Tom to Enies Lobby? The Rocketman's got no brakes and she's never been tested. Chimney! Gonbe! We're going on a trip!"` : ctx.game.quests.isDone("p2_enies_lobby") ? `"Nngaa~ha~ha! You rode the Rocketman through the Aqua Laguna and came back alive. Tom would've liked you."` : `"Nngaa~ha~ha! Shift Station. The trains out of here don't take passengers, dear \u2014 only criminals and Government men ride the line to Enies Lobby."`,
+          text: () => at4(ctx, "p2_enies_lobby", "rocketman") ? `"Nngaa~ha~ha! (She takes a long swig from her bottle.) The Aqua Laguna's coming and you want to chase the Puffing Tom to Enies Lobby? The Rocketman's got no brakes and she's never been tested. Chimney! Gonbe! We're going on a trip!"` : ctx.game.quests.isDone("p2_enies_lobby") ? `"Nngaa~ha~ha! You rode the Rocketman through the Aqua Laguna and came back alive. Tom would've liked you."` : `"Nngaa~ha~ha! Shift Station. The trains out of here don't take passengers, dear \u2014 only criminals and Government men ride the line to Enies Lobby."`,
           choices: [
-            { text: "Ride the Rocketman to Enies Lobby!", if: () => at3(ctx, "p2_enies_lobby", "rocketman"), do: (c) => {
+            { text: "Ride the Rocketman to Enies Lobby!", if: () => at4(ctx, "p2_enies_lobby", "rocketman"), do: (c) => {
               c.game.env.stormTarget = 1;
               travel(c.game, "enies_lobby", { spot: "main_gate", banner: ["THE ROCKETMAN", "Through the Aqua Laguna", "It leaves the rails twice. It lands on them both times. Enies Lobby rises out of the storm, bathed in endless daylight.", 6] });
             }, end: true },
@@ -46119,7 +47157,7 @@ Trains by: ${TRAINS_BY[k]}` },
           choices: [
             { text: "Show me the black market.", do: (c) => c.open("shop", { shop: "p2_poplar_black_market", building: { name: "Back-Alley Dealer", role: "shop" } }) },
             { text: "You look worried.", if: () => ctx.game.quests.isDone("p2_enies_lobby") && !ctx.quest("p2_candy_pirates"), next: "candy" },
-            { text: "The Candy Pirates are finished.", if: () => at3(ctx, "p2_candy_pirates", "report"), next: "paid" },
+            { text: "The Candy Pirates are finished.", if: () => at4(ctx, "p2_candy_pirates", "report"), next: "paid" },
             { text: "Leave", end: true }
           ]
         },
@@ -46223,9 +47261,9 @@ Trains by: ${TRAINS_BY[k]}` },
       level: 20,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
-          text: () => at3(ctx, "p2_enies_lobby", "buster_call") ? `"THE BUSTER CALL! They're shelling their own island! (He points at the rails.) Kokoro brought the Puffing Tom back for the survivors \u2014 get on, now!"` : ctx.game.quests.isDone("p2_enies_lobby") ? '(The platform is scorched. Beyond it, the Judicial Island is a ruin \u2014 but the sun still has not set.) "The trains still stop here. Old habits."' : '"Day Station, Enies Lobby. The sun never sets on the Judicial Island. You are not on the list. Turn around."',
+          text: () => at4(ctx, "p2_enies_lobby", "buster_call") ? `"THE BUSTER CALL! They're shelling their own island! (He points at the rails.) Kokoro brought the Puffing Tom back for the survivors \u2014 get on, now!"` : ctx.game.quests.isDone("p2_enies_lobby") ? '(The platform is scorched. Beyond it, the Judicial Island is a ruin \u2014 but the sun still has not set.) "The trains still stop here. Old habits."' : '"Day Station, Enies Lobby. The sun never sets on the Judicial Island. You are not on the list. Turn around."',
           choices: [
-            { text: "Ride back to Water 7", if: () => at3(ctx, "p2_enies_lobby", "buster_call") || ctx.game.quests.isDone("p2_enies_lobby") || ctx.has("p2_sea_train_pass"), do: (c) => travel(c.game, "water_7", { banner: ["PUFFING TOM", "Water 7", "The sea train pulls away from the Judicial Island.", 4] }), end: true },
+            { text: "Ride back to Water 7", if: () => at4(ctx, "p2_enies_lobby", "buster_call") || ctx.game.quests.isDone("p2_enies_lobby") || ctx.has("p2_sea_train_pass"), do: (c) => travel(c.game, "water_7", { banner: ["PUFFING TOM", "Water 7", "The sea train pulls away from the Judicial Island.", 4] }), end: true },
             { text: "Leave", end: true }
           ]
         }
@@ -46258,8 +47296,8 @@ Trains by: ${TRAINS_BY[k]}` },
         a: {
           text: '"HALT, TINY ONE! I am Oimo, gatekeeper of Enies Lobby! For fifty years we have served the World Government, so that our captains Dorry and Brogy are released from prison! None shall pass!"',
           choices: [
-            { text: `"Dorry and Brogy aren't prisoners. They're still dueling on Little Garden!"`, if: () => at3(ctx, "p2_enies_lobby", "main_gate") && ctx.char.discovered.includes("little_garden"), next: "truth" },
-            { text: "Then I'll go through you.", if: () => at3(ctx, "p2_enies_lobby", "main_gate"), do: (c) => {
+            { text: `"Dorry and Brogy aren't prisoners. They're still dueling on Little Garden!"`, if: () => at4(ctx, "p2_enies_lobby", "main_gate") && ctx.char.discovered.includes("little_garden"), next: "truth" },
+            { text: "Then I'll go through you.", if: () => at4(ctx, "p2_enies_lobby", "main_gate"), do: (c) => {
               const o = findActor(c.game, "p2_oimo");
               if (o) aggro(c.game, o);
             }, end: true },
@@ -46321,7 +47359,7 @@ Trains by: ${TRAINS_BY[k]}` },
         a: {
           text: '(Three heads, one robe.) LEFT: "Guilty. Everyone is guilty." RIGHT: "Innocent! Let them go!" MIDDLE: "I am perfectly fair. Execute them!" (The jury box is full of prisoners who want company in Impel Down.)',
           choices: [
-            { text: "I object!", if: () => at3(ctx, "p2_enies_lobby", "courthouse"), do: (c) => {
+            { text: "I object!", if: () => at4(ctx, "p2_enies_lobby", "courthouse"), do: (c) => {
               const b = findActor(c.game, "p2_baskerville");
               if (b) aggro(c.game, b);
             }, end: true },
@@ -46572,13 +47610,13 @@ Trains by: ${TRAINS_BY[k]}` },
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
-            if (at3(ctx, TB_Q, "dawn")) return '"The sun is up and nobody burned! (All around the camp, shadowless people are laughing and crying.) Our shadows came home! ...Will you marry me? No? HA! Nobody ever says yes."';
+            if (at4(ctx, TB_Q, "dawn")) return '"The sun is up and nobody burned! (All around the camp, shadowless people are laughing and crying.) Our shadows came home! ...Will you marry me? No? HA! Nobody ever says yes."';
             if (ctx.game.quests.isDone(TB_Q)) return `"Moria's gone and we've got our shadows back. The Rolling Pirates sail on! ...Last chance: marry me? No? Ha!"`;
             return `"Will you marry me? ...No? Ha, nobody ever says yes. I'm Lola, captain of the Rolling Pirates. Gecko Moria took our shadows, so we hide in this forest from the sun. (She looks at your feet.) You still have yours. Not for long, if you sleep here."`;
           },
           choices: [
-            { text: "How does Moria steal shadows?", if: () => at3(ctx, TB_Q, "lola"), next: "how" },
-            { text: "It's over, Lola.", if: () => at3(ctx, TB_Q, "dawn"), next: "end" },
+            { text: "How does Moria steal shadows?", if: () => at4(ctx, TB_Q, "lola"), next: "how" },
+            { text: "It's over, Lola.", if: () => at4(ctx, TB_Q, "dawn"), next: "end" },
             { text: "Leave", end: true }
           ]
         },
@@ -46890,7 +47928,7 @@ Trains by: ${TRAINS_BY[k]}` },
           choices: [
             { text: "Rest at the hot springs", do: (c) => c.open("inn", {}) },
             { text: "I'll deal with Foxy.", if: () => !ctx.quest("p2_spa_foxy"), do: (c) => c.startQuest("p2_spa_foxy"), end: true },
-            { text: "Foxy won't bother anyone.", if: () => at3(ctx, "p2_spa_foxy", "report"), do: (c) => c.complete("p2_spa_foxy"), next: "thx" },
+            { text: "Foxy won't bother anyone.", if: () => at4(ctx, "p2_spa_foxy", "report"), do: (c) => c.complete("p2_spa_foxy"), next: "thx" },
             { text: "Leave", end: true }
           ]
         },
@@ -47077,14 +48115,14 @@ Trains by: ${TRAINS_BY[k]}` },
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
-            if (at3(ctx, "p2_sabaody_auction", "freed")) return `"Nyu~! Camie's safe! (He wipes his eyes with four hands at once.) I used to be one of Arlong's crew, you know. I did bad things. And still you helped us. Takoyaki for life, on the house!"`;
+            if (at4(ctx, "p2_sabaody_auction", "freed")) return `"Nyu~! Camie's safe! (He wipes his eyes with four hands at once.) I used to be one of Arlong's crew, you know. I did bad things. And still you helped us. Takoyaki for life, on the house!"`;
             if (ctx.game.quests.isDone("p2_sabaody_auction")) return '"Nyu~! Best takoyaki in Sabaody! Six arms, six times the flavour!"';
             return '"Nyu~! Takoyaki Hachi, best in Sabaody! (His face falls.) ...Have you seen a mermaid? Green hair, pink tail, very excitable? Camie went to deliver takoyaki at Grove 13 and never came back. Fish-Men and mermaids get kidnapped here all the time..."';
           },
           choices: [
             { text: "Buy takoyaki", do: (c) => c.open("shop", { shop: "p2_takoyaki_menu", building: { name: "Takoyaki Hachi", role: "restaurant" } }) },
             { text: "I'll find Camie.", if: () => !ctx.quest("p2_sabaody_auction"), do: (c) => c.startQuest("p2_sabaody_auction"), end: true },
-            { text: "Camie is safe.", if: () => at3(ctx, "p2_sabaody_auction", "freed"), do: (c) => c.complete("p2_sabaody_auction"), end: true },
+            { text: "Camie is safe.", if: () => at4(ctx, "p2_sabaody_auction", "freed"), do: (c) => c.complete("p2_sabaody_auction"), end: true },
             { text: "Leave", end: true }
           ]
         }
@@ -47171,7 +48209,7 @@ Trains by: ${TRAINS_BY[k]}` },
       at: { spot: "grove_13", ox: -4 },
       look: { hair: "short", hairColor: "#fdd835", top: "#fafafa", bottom: "#1565c0", hat: "cowboy", hatColor: "#6d4c41" },
       level: 34,
-      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: () => at3(ctx, "p2_sabaody_auction", "macro") ? `"The mermaid? The Macro Pirates grabbed her right here in Grove 13 \u2014 Fish-Man slavers. They'll sell her to Disco's auction at Grove 1 if nobody stops them. My Rosy Life Riders will watch the bridges. Handsome, right?"` : '"Duval of the Rosy Life Riders. I used to wear an iron mask and hunt a man with my face. Then somebody kicked my face into THIS. (He poses, sparkling.) Handsome, right? Now my boys and I help people. Mostly handsome people."' } } })
+      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: () => at4(ctx, "p2_sabaody_auction", "macro") ? `"The mermaid? The Macro Pirates grabbed her right here in Grove 13 \u2014 Fish-Man slavers. They'll sell her to Disco's auction at Grove 1 if nobody stops them. My Rosy Life Riders will watch the bridges. Handsome, right?"` : '"Duval of the Rosy Life Riders. I used to wear an iron mask and hunt a man with my face. Then somebody kicked my face into THIS. (He poses, sparkling.) Handsome, right? Now my boys and I help people. Mostly handsome people."' } } })
     },
     {
       id: "p2_gil",
@@ -47657,7 +48695,7 @@ Trains by: ${TRAINS_BY[k]}` },
           text: () => ctx.game.quests.isDone("p2_kuraigana_trial") ? '"You bowed your head to an enemy to learn his craft. That is not weakness. (He sets his glass of wine down.) The castle training grounds are open to you. Try not to bore me."' : '"This is Kuraigana. There was a kingdom here once; the war left ruins and baboons that learned to fight by watching men die. (His hawk eyes rest on you.) Why have you come to my island?"',
           choices: [
             { text: "Teach me the way of the sword.", if: () => !ctx.quest("p2_kuraigana_trial"), next: "ask" },
-            { text: "The Humandrill chieftain is defeated.", if: () => at3(ctx, "p2_kuraigana_trial", "report"), next: "done" },
+            { text: "The Humandrill chieftain is defeated.", if: () => at4(ctx, "p2_kuraigana_trial", "report"), next: "done" },
             { text: "Train with Mihawk", if: () => ctx.game.quests.isDone("p2_kuraigana_trial"), do: (c) => c.open("trainer", { trainer: "mihawk" }) },
             { ...challenge("mihawk", "Challenge the World's Greatest Swordsman. (Extremely dangerous)") },
             { text: "Leave", end: true }
@@ -47719,7 +48757,7 @@ Trains by: ${TRAINS_BY[k]}` },
           choices: [
             { text: "Teach me to survive here (sniper)", do: (c) => c.open("trainer", { trainer: "p2_heracles" }) },
             { text: "Anything I can hunt for you?", if: () => !ctx.quest("p2_gluttony"), next: "hunt" },
-            { text: "The beetle is dead.", if: () => at3(ctx, "p2_gluttony", "report"), next: "done" },
+            { text: "The beetle is dead.", if: () => at4(ctx, "p2_gluttony", "report"), next: "done" },
             { text: "Leave", end: true }
           ]
         },
@@ -47780,7 +48818,7 @@ Trains by: ${TRAINS_BY[k]}` },
           choices: [
             { text: "Buy Attack Cuisine", do: (c) => c.open("shop", { shop: "p2_attack_menu", building: { name: "Attack Cuisine Kitchen", role: "restaurant" } }) },
             { text: "I'll take on the Candidates.", if: () => !ctx.quest("p2_kamabakka"), do: (c) => c.startQuest("p2_kamabakka"), end: true },
-            { text: "The Candidates are down!", if: () => at3(ctx, "p2_kamabakka", "report"), do: (c) => c.complete("p2_kamabakka"), next: "win" },
+            { text: "The Candidates are down!", if: () => at4(ctx, "p2_kamabakka", "report"), do: (c) => c.complete("p2_kamabakka"), next: "win" },
             { text: "Leave", end: true }
           ]
         },
@@ -47823,7 +48861,7 @@ Trains by: ${TRAINS_BY[k]}` },
           choices: [
             { text: "Workshop (ship repairs and upgrades)", do: (c) => c.open("shipwright", {}) },
             { text: "Tell me about Vegapunk.", if: () => !ctx.quest("p2_baldimore"), next: "vp" },
-            { text: "I've read the old lab's notes.", if: () => at3(ctx, "p2_baldimore", "button"), next: "button" },
+            { text: "I've read the old lab's notes.", if: () => at4(ctx, "p2_baldimore", "button"), next: "button" },
             { text: "Leave", end: true }
           ]
         },
@@ -47882,10 +48920,10 @@ Trains by: ${TRAINS_BY[k]}` },
       marker: (c, g) => S2(g, "p2_rusukaina") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
-          text: () => at3(ctx, "p2_rusukaina", "report") ? '"The lord of the plains... fell to you. (He smiles over the campfire.) The beasts will not challenge you now. That is the difference between strength and Haki: they felt it before you struck."' : at3(ctx, "p2_rusukaina", "train") ? '"Good. Now stay a while. Meditate, spar with me, hunt. Haki grows the way trees do \u2014 while you are not watching it. Come back to the fire tomorrow."' : '"Welcome to Rusukaina. Forty-eight seasons a year, five hundred beasts you cannot beat. (He pokes the fire.) Haki is the power of doubt-free will. Go to the plains. Their lord is a monster. Win, and your will has hardened."',
+          text: () => at4(ctx, "p2_rusukaina", "report") ? '"The lord of the plains... fell to you. (He smiles over the campfire.) The beasts will not challenge you now. That is the difference between strength and Haki: they felt it before you struck."' : at4(ctx, "p2_rusukaina", "train") ? '"Good. Now stay a while. Meditate, spar with me, hunt. Haki grows the way trees do \u2014 while you are not watching it. Come back to the fire tomorrow."' : '"Welcome to Rusukaina. Forty-eight seasons a year, five hundred beasts you cannot beat. (He pokes the fire.) Haki is the power of doubt-free will. Go to the plains. Their lord is a monster. Win, and your will has hardened."',
           choices: [
             { text: "Train Haki", do: (c) => c.open("trainer", { trainer: "rayleigh" }) },
-            { text: "It's done, Rayleigh.", if: () => at3(ctx, "p2_rusukaina", "report"), do: (c) => c.complete("p2_rusukaina"), end: true },
+            { text: "It's done, Rayleigh.", if: () => at4(ctx, "p2_rusukaina", "report"), do: (c) => c.complete("p2_rusukaina"), end: true },
             { text: "Leave", end: true }
           ]
         }
@@ -47926,10 +48964,10 @@ Trains by: ${TRAINS_BY[k]}` },
       marker: (c, g) => S2(g, "p2_amazon_lily") === "gate" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
-          text: () => ctx.char.flags.p2_kujaFriend ? `"The Empress favours you! Every Kuja warrior uses Haki \u2014 Armament to harden our arrows, Observation to see the enemy's next move. I'll teach you. Just don't laugh at my aim."` : at3(ctx, "p2_amazon_lily", "gate") ? `(A blonde warrior aims a snake-bow at your heart.) "Stop right there! No outsider sets foot on Amazon Lily. ...You're strange. Are you... a man? We've only read about them in books."` : '"Marguerite, Kuja warrior. Amazon Lily is not a place for strangers."',
+          text: () => ctx.char.flags.p2_kujaFriend ? `"The Empress favours you! Every Kuja warrior uses Haki \u2014 Armament to harden our arrows, Observation to see the enemy's next move. I'll teach you. Just don't laugh at my aim."` : at4(ctx, "p2_amazon_lily", "gate") ? `(A blonde warrior aims a snake-bow at your heart.) "Stop right there! No outsider sets foot on Amazon Lily. ...You're strange. Are you... a man? We've only read about them in books."` : '"Marguerite, Kuja warrior. Amazon Lily is not a place for strangers."',
           choices: [
-            { text: `"I'm a woman."`, if: () => at3(ctx, "p2_amazon_lily", "gate"), next: "woman" },
-            { text: `"I'm a man."`, if: () => at3(ctx, "p2_amazon_lily", "gate"), next: "man" },
+            { text: `"I'm a woman."`, if: () => at4(ctx, "p2_amazon_lily", "gate"), next: "woman" },
+            { text: `"I'm a man."`, if: () => at4(ctx, "p2_amazon_lily", "gate"), next: "man" },
             { text: "Train Haki with the Kuja", if: () => !!ctx.char.flags.p2_kujaFriend, do: (c) => c.open("trainer", { trainer: "kuja" }) },
             { text: "Leave", end: true }
           ]
@@ -47956,9 +48994,9 @@ Trains by: ${TRAINS_BY[k]}` },
       marker: (c, g) => S2(g, "p2_amazon_lily") === "nyon" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
-          text: () => at3(ctx, "p2_amazon_lily", "nyon") ? '"Nyon. I was Empress once, long ago \u2014 before I left to see the world and caught the Love Sickness. (She taps her staff.) The Empress Hancock and her sisters have a secret. They were not always proud. That is all I will say. The Arena waits for you."' : '"Nyon. The Kuja have lived on this island in the Calm Belt for centuries. The Sea Kings are our walls. Outsiders bring nothing but trouble \u2014 and, now and then, something wonderful."',
+          text: () => at4(ctx, "p2_amazon_lily", "nyon") ? '"Nyon. I was Empress once, long ago \u2014 before I left to see the world and caught the Love Sickness. (She taps her staff.) The Empress Hancock and her sisters have a secret. They were not always proud. That is all I will say. The Arena waits for you."' : '"Nyon. The Kuja have lived on this island in the Calm Belt for centuries. The Sea Kings are our walls. Outsiders bring nothing but trouble \u2014 and, now and then, something wonderful."',
           choices: [
-            { text: "To the Arena.", if: () => at3(ctx, "p2_amazon_lily", "nyon"), do: (c) => c.stage("p2_amazon_lily", "arena"), end: true },
+            { text: "To the Arena.", if: () => at4(ctx, "p2_amazon_lily", "nyon"), do: (c) => c.stage("p2_amazon_lily", "arena"), end: true },
             { text: "Leave", end: true }
           ]
         }
@@ -48040,13 +49078,13 @@ Trains by: ${TRAINS_BY[k]}` },
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
-            if (at3(ctx, "p2_amazon_lily", "secret")) return `(In the arena, the sisters' robes tore away... and you saw it on their backs: the Hoof of the Soaring Dragon, the brand of the Celestial Dragons' slaves. Hancock's voice is ice.) "You saw. Every one who has seen it has turned to stone. Why should you be different?"`;
+            if (at4(ctx, "p2_amazon_lily", "secret")) return `(In the arena, the sisters' robes tore away... and you saw it on their backs: the Hoof of the Soaring Dragon, the brand of the Celestial Dragons' slaves. Hancock's voice is ice.) "You saw. Every one who has seen it has turned to stone. Why should you be different?"`;
             if (ctx.char.flags.p2_kujaFriend) return `"Oh. It's you. (She looks away, cheeks faintly pink \u2014 or is it the sun?) The Kuja will train you. The ship is at your disposal. ...Do not mistake this for kindness."`;
             return '"Who allowed this commoner into my castle? (She leans back so far she is looking down at you from above.) Kneel. Even if I insult you, the world forgives me \u2014 because I am beautiful."';
           },
           choices: [
-            { text: `"I'll never tell a soul. Some things should never have happened to anyone."`, if: () => at3(ctx, "p2_amazon_lily", "secret"), next: "swear" },
-            { text: '"Then turn me to stone \u2014 if you can."', if: () => at3(ctx, "p2_amazon_lily", "secret"), do: (c) => {
+            { text: `"I'll never tell a soul. Some things should never have happened to anyone."`, if: () => at4(ctx, "p2_amazon_lily", "secret"), next: "swear" },
+            { text: '"Then turn me to stone \u2014 if you can."', if: () => at4(ctx, "p2_amazon_lily", "secret"), do: (c) => {
               const h2 = findActor(c.game, "p2_hancock");
               if (h2) aggro(c.game, h2);
             }, end: true },
@@ -48339,9 +49377,9 @@ Trains by: ${TRAINS_BY[k]}` },
       marker: (c, g) => S2(g, "p2_impel_down") === "newkama" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
-          text: () => at3(ctx, "p2_impel_down", "newkama") ? `"Hee-haw! Welcome to Newkama Land, the paradise inside hell! (A spotlight finds you. Two hundred okama cheer.) You came through Magellan's poison? Vanatta! Candy-boy, you need Tension Hormones. They save you now... and take ten years off your life later. Hee-haw!"` : '"Hee-haw! Candy-boy! Newkama Land welcomes everyone with the heart to party. Train with the queen, or dance!"',
+          text: () => at4(ctx, "p2_impel_down", "newkama") ? `"Hee-haw! Welcome to Newkama Land, the paradise inside hell! (A spotlight finds you. Two hundred okama cheer.) You came through Magellan's poison? Vanatta! Candy-boy, you need Tension Hormones. They save you now... and take ten years off your life later. Hee-haw!"` : '"Hee-haw! Candy-boy! Newkama Land welcomes everyone with the heart to party. Train with the queen, or dance!"',
           choices: [
-            { text: "Give me the Tension Hormones.", if: () => at3(ctx, "p2_impel_down", "newkama"), next: "hormones" },
+            { text: "Give me the Tension Hormones.", if: () => at4(ctx, "p2_impel_down", "newkama"), next: "hormones" },
             { text: "Train with Ivankov (Newkama Kenpo)", do: (c) => c.open("trainer", { trainer: "ivankov" }) },
             { text: "Leave", end: true }
           ]
@@ -56578,10 +57616,10 @@ Trains by: ${TRAINS_BY[k]}` },
     }
     for (const [a, sa, b, sb] of z.links || []) {
       const A = world.islands.find((i) => i.id === a), B = world.islands.find((i) => i.id === b);
-      const pa = A?.spots[sa], pb = B?.spots[sb];
-      if (!pa || !pb) continue;
-      placeObject(world, { kind: "portal", x: pa.x, y: pa.y, block: false, to: { x: pb.x, y: pb.y + 1.5 }, interact: `Take the stairs down to ${B.name}`, use: "portal" });
-      placeObject(world, { kind: "portal", x: pb.x, y: pb.y, block: false, to: { x: pa.x, y: pa.y + 1.5 }, interact: `Climb the stairs to ${A.name}`, use: "portal", up: true });
+      const pa = A?.spots[sa], pb2 = B?.spots[sb];
+      if (!pa || !pb2) continue;
+      placeObject(world, { kind: "portal", x: pa.x, y: pa.y, block: false, to: { x: pb2.x, y: pb2.y + 1.5 }, interact: `Take the stairs down to ${B.name}`, use: "portal" });
+      placeObject(world, { kind: "portal", x: pb2.x, y: pb2.y, block: false, to: { x: pa.x, y: pa.y + 1.5 }, interact: `Climb the stairs to ${A.name}`, use: "portal", up: true });
     }
     computeDistanceField(world);
     world.map = buildMapImage(world);

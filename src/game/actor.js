@@ -653,7 +653,7 @@ export class Actor extends Entity {
     if (shiver >= 0 && shiver < 1 && this.state === 'idle') g.translate(Math.sin(env.time * 170) * 0.045 * Math.min(1, hf.w) * (1 - shiver), 0);
     drawActorExtras(g, this, look, pose, env, 'back');
     // hit flash: a pure white body for a few frames, then fading back
-    if (this.flashT > 0) drawCharacterTinted(g, look, pose, '#ffffff', this.flashT > 0.075 ? 1 : this.flashT / 0.075 * 0.8);
+    if (this.flashT > 0) drawCharacterTinted(g, look, pose, '#ffffff', this.flashT > 0.07 ? 0.88 : this.flashT / 0.07 * 0.6);
     else drawCharacter(g, look, pose);
     drawActorExtras(g, this, look, pose, env, 'front');
     g.restore();

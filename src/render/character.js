@@ -199,10 +199,14 @@ function solveRig(look, P, d, side, back) {
   const L1 = 0.215 * armLen, L2 = 0.215 * armLen;
   const T1 = 0.245 * legLen, T2 = 0.245 * legLen;
   const stretch = !!P.stretch;
+  // front/back views: reaching forward means reaching toward (or away from)
+  // the camera — small reaches barely move, strikes travel well down (or up)
+  // the screen so punches read from every side
+  const reachY = (u) => u * 0.26 + Math.max(0, u - 0.24) * 1.35;
   const project = (u, v, inward) => {
     if (side) return [u, v];
-    if (front) return [inward * u * 0.34, v * 0.92 + u * 0.26];
-    return [inward * u * 0.3, v * 0.92 - u * 0.24];
+    if (front) return [inward * u * 0.32, v * 0.92 + reachY(u)];
+    return [-inward * u * 0.18, v * 0.92 - reachY(u)];
   };
   const depth = (u, L) => (side ? 1 : front ? 1 + 0.55 * Math.max(0, u) / L : 1 - 0.28 * Math.max(0, u) / L);
   // --- arms
@@ -987,7 +991,7 @@ export function drawCharacter(g, look, pose) {
   const handShape = (which) => (which === 'F' ? P.hand || 'fist' : P.handB || 'fist');
   const limbFxOn = (which) => { const l = pose.fx?.limb; return l === 'both' || l === (which === 'F' ? 'hF' : 'hB'); };
   const drawHandAt = (arm, which) => {
-    const r = 0.088 * bulk * arm.scale;
+    const r = 0.098 * bulk * arm.scale;
     const dx = arm.e[0] - arm.j[0], dy = arm.e[1] - arm.j[1];
     const hc = dk(handCol, farDim(which));
     drawHand(g, arm.e[0], arm.e[1], r, hc, handShape(which), dx, dy, pose.fx?.claw);
@@ -1055,9 +1059,9 @@ export function drawCharacter(g, look, pose) {
     drawLeg(rig.legB, 'B'); drawLeg(rig.legF, 'F');
   } else if (back) {
     drawLeg(rig.legB, 'B'); drawLeg(rig.legF, 'F');
-    // arms reaching forward are hidden behind the body
-    if (!rig.armF.raised) drawArmFull(rig.armF, 'F');
-    if (!rig.armB.raised) drawArmFull(rig.armB, 'B');
+    // arms at rest hang behind the body; reaching ones are drawn over the back
+    if (!rig.armF.raised && rig.armF.u <= 0.18) drawArmFull(rig.armF, 'F');
+    if (!rig.armB.raised && rig.armB.u <= 0.18) drawArmFull(rig.armB, 'B');
   } else {
     drawLeg(rig.legB, 'B'); if (!legFForward) drawLeg(rig.legF, 'F');
   }
@@ -1148,8 +1152,8 @@ export function drawCharacter(g, look, pose) {
   if (side) {
     drawArmFull(rig.armF, 'F');
   } else if (back) {
-    if (rig.armF.raised) drawArmFull(rig.armF, 'F');
-    if (rig.armB.raised) drawArmFull(rig.armB, 'B');
+    if (rig.armF.raised || rig.armF.u > 0.18) drawArmFull(rig.armF, 'F');
+    if (rig.armB.raised || rig.armB.u > 0.18) drawArmFull(rig.armB, 'B');
   } else {
     if (!armBForward) drawArmFull(rig.armB, 'B');
     if (!armFForward) drawArmFull(rig.armF, 'F');

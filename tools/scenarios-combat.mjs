@@ -54,6 +54,7 @@ function installLab() {
       if (!lab.home) lab.findOpenGround();
       p.x = lab.home.x; p.y = lab.home.y;
       p.facing = 0;
+      lab.studio();
       g.zoomBias = lab.zoom;
       g.snapCamera();
       // the lab frames shots itself: the camera stays where center() puts it
@@ -64,27 +65,39 @@ function installLab() {
       // an open, dry patch (no water, no props): first around Dawn Island's
       // grasslands (East Blue), else around the spawn
       const g = OP.game, p = g.player, w = g.world;
-      const good = new Set([16, 17, 18, 32, 47]);
+      const good = new Set([16, 17, 18, 19, 32, 47]);
       const ok = (x, y) => good.has(w.type(x, y)) && w.walkable(x, y);
       const starts = [];
       const dawn = g.surface && g.surface.islands && g.surface.islands.find((i) => i.id === 'dawn_island');
       if (dawn && dawn.towns && dawn.towns[0] && dawn.towns[0].plaza) starts.push(dawn.towns[0].plaza);
       starts.push({ x: p.x, y: p.y });
       for (const st of starts) {
-        for (let r = 6; r < 160; r += 3) {
-          for (let k = 0; k < 32; k++) {
-            const a = (k / 28) * Math.PI * 2;
-            const cx = Math.round(st.x + Math.cos(a) * r), cy = Math.round(st.y + Math.sin(a) * r);
-            let fine = true;
-            for (let dx = -8; dx <= 10 && fine; dx += 1) for (let dy = -4; dy <= 4 && fine; dy += 1) if (!ok(cx + dx, cy + dy)) fine = false;
-            // nothing standing in front of (or right behind) the fighters; buildings reach far up
-            if (fine && w.objects) { const near = w.objects.query(cx - 10, cy - 2, cx + 12, cy + 16); if (near.some((o) => o.kind === 'building' || o.y > cy - 2)) fine = false; }
-            if (fine) { lab.home = { x: cx + 0.5, y: cy + 0.5 }; return lab.home; }
+        let best = null, bestN = 0;
+        for (let x = -70; x <= 70; x += 2) {
+          for (let y = -70; y <= 70; y += 2) {
+            const cx = Math.round(st.x + x), cy = Math.round(st.y + y);
+            let n = 0;
+            for (let dx = -8; dx <= 10; dx++) for (let dy = -4; dy <= 4; dy++) if (ok(cx + dx, cy + dy)) n++;
+            if (n > bestN) { bestN = n; best = { x: cx + 0.5, y: cy + 0.5 }; }
           }
         }
+        if (best && bestN >= 19 * 9 * 0.95) { lab.home = best; return best; }
       }
       lab.home = { x: p.x, y: p.y };
       return lab.home;
+    },
+    /** Studio mode: no props drawn (trees, houses...), clear skies. */
+    studio() {
+      const g = OP.game, w = g.world;
+      if (w.objects && !w.objects.__lab) {
+        const q = w.objects.query.bind(w.objects);
+        w.objects.query = (x0, y0, x1, y1, out) => (lab.props ? q(x0, y0, x1, y1, out) : out || []);
+        w.objects.__lab = true;
+      }
+      const env = g.env;
+      env.storm = 0; env.stormTarget = 0; env.weatherTimer = 1e9; env.rain = 0; env.snow = 0; env.fog = 0;
+      const ui = document.getElementById('ui');
+      if (ui && !lab.hud) ui.style.visibility = 'hidden';
     },
     equip(o = {}) {
       const g = OP.game, p = g.player;
@@ -295,12 +308,12 @@ export const scenarios = {
         const clip = await page.evaluate(() => window.LAB.clip(760, 300, 0.3, -0.8));
         // jab then cross: capture the strike frame of each
         await filmAt(page, frames, {
-          label: `${race} jab`, clip, times: [0.07],
+          label: `${race} jab`, clip, times: [0.065],
           start: () => { const L = window.LAB, g = window.OP.game; for (const f of L.fighters) { f.combo.step = 0; f.combo.window = 0; f.tryM1(g); } },
         });
         await page.evaluate(() => { const L = window.LAB; for (let i = 0; i < 30; i++) L.tick(1 / 60); });
         await filmAt(page, frames, {
-          label: `${race} cross`, clip, times: [0.08],
+          label: `${race} cross`, clip, times: [0.065],
           start: () => { const L = window.LAB, g = window.OP.game; for (const f of L.fighters) f.tryM1(g); },
         });
       }
