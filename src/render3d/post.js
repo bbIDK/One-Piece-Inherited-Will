@@ -22,6 +22,7 @@ const InkGradeShader = {
     uNear: { value: 0.08 },
     uFar: { value: 2600 },
     uInk: { value: 1 },
+    uInkFar: { value: 160 },
     uInkColor: { value: new THREE.Color(0.16, 0.1, 0.08) },
     uSat: { value: 1.12 },
     uContrast: { value: 1.06 },
@@ -37,7 +38,7 @@ const InkGradeShader = {
     uniform sampler2D tDiffuse;
     uniform sampler2D tDepth;
     uniform vec2 uRes;
-    uniform float uNear, uFar, uInk, uSat, uContrast, uVignette, uImpact;
+    uniform float uNear, uFar, uInk, uInkFar, uSat, uContrast, uVignette, uImpact;
     uniform vec3 uInkColor, uImpactCol;
     varying vec2 vUv;
     float linDepth(vec2 uv) {
@@ -58,7 +59,7 @@ const InkGradeShader = {
       // changes linearly on screen, so its second difference is ~0
       float iz = 1.0 / d;
       float lap = max(abs(1.0 / dl + 1.0 / dr - 2.0 * iz), abs(1.0 / du + 1.0 / dd - 2.0 * iz)) / iz;
-      float ink = smoothstep(0.1, 0.35, edge) * smoothstep(0.04, 0.12, lap) * (1.0 - smoothstep(45.0, 160.0, near)) * uInk;
+      float ink = smoothstep(0.1, 0.35, edge) * smoothstep(0.04, 0.12, lap) * (1.0 - smoothstep(uInkFar * 0.28, uInkFar, near)) * uInk;
       c.rgb = mix(c.rgb, uInkColor * (0.3 + 0.2 * c.rgb), ink * 0.85);
       // grading (linear light): saturation, contrast, cool shadows / warm highlights
       float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
@@ -144,6 +145,9 @@ export class Post {
     const bw = Math.round(w * dpr), bh = Math.round(h * dpr);
     this.fxaa.material.uniforms.resolution.value.set(1 / bw, 1 / bh);
   }
+
+  /** How far out outlines are drawn (m): short under water, where the fog swallows the view. */
+  setInkFar(v) { this.scenePass.material.uniforms.uInkFar.value = v; }
 
   /** The impact frame (0..1) and its tint. */
   setImpact(k, color) {

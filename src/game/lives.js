@@ -36,7 +36,7 @@ export class LivesSystem {
   info() {
     const k = this.k, c = this.game.player.char;
     if (!k) return { text: '', frac: 0 };
-    if (k.drowned) return { text: 'The sea drags you down... a Devil Fruit user cannot swim.', frac: 1 - k.t / k.max };
+    if (k.drowned) return { text: this.game.player?.fruit ? 'The sea drags you down... a Devil Fruit user cannot swim.' : 'Your lungs burn... the sea closes over you.', frac: 1 - k.t / k.max };
     const charges = c.getUpCharges || 0;
     const txt = charges > 0 ? `Mash SPACE to get up! (${k.mash}/${k.need}) · Second winds left: ${charges}` : 'No strength left to stand...';
     return { text: txt, frac: 1 - k.t / k.max };
@@ -99,7 +99,7 @@ export class LivesSystem {
     const g = this.game, p = g.player, c = p.char;
     const k = this.k;
     this.k = null;
-    if (k.drowned) return this.loseLife('Drowned — the sea swallowed a Devil Fruit user.');
+    if (k.drowned) return this.loseLife(g.player?.fruit ? 'Drowned — the sea swallowed a Devil Fruit user.' : 'Drowned.');
     const threats = g.actorsNear(p.x, p.y, 10).filter((a) => a !== p && a.state === 'idle' && engaged(a, p));
     const marine = threats.find((a) => a.faction === 'marine');
     if (marine && c.bounty > 0) return this.capture(marine);

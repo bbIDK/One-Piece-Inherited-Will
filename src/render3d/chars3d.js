@@ -15,6 +15,7 @@ import { expression } from './chars/face.js';
 import { B } from './chars/bones.js';
 import { Label, Marker, Glow, Aura, iceShell, Stars, rootRing, guardShimmer } from './chars/fx.js';
 import { SeaKingView } from './chars/seaking.js';
+import { SharkView } from './chars/seacreature.js';
 import { Trail } from './chars/trail.js';
 import { createViewmodel } from './chars/viewmodel.js';
 import { currentLook, weaponOf, actorPose, rigOptions, LYING } from './chars/pose.js';
@@ -288,6 +289,7 @@ const baseDraw = Actor.prototype.draw;
 registerActorView((a, ctx) => {
   try {
     if (a.look && a.look.race === 'seaking') return new SeaKingView(a);
+    if (a.look && a.look.race === 'beast_shark') return new SharkView(a);
     if (a.draw !== baseDraw) return null; // custom-drawn creatures keep their sprite
     return new ActorView(a, ctx);
   } catch (e) {

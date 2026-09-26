@@ -47,6 +47,42 @@ function landHeight(world, x, t, e) {
 
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
+/** Smooth value noise in [0, 1). */
+function vnoise(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const h = (i, j) => {
+    let v = Math.imul(i | 0, 374761393) ^ Math.imul(j | 0, 668265263);
+    v = Math.imul(v ^ (v >>> 13), 1274126177);
+    return ((v ^ (v >>> 16)) >>> 0) / 4294967296;
+  };
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const a = h(xi, yi), b = h(xi + 1, yi), c = h(xi, yi + 1), d = h(xi + 1, yi + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+
+/**
+ * The sea floor (metres, negative) by distance from the coast: a sandy shelf
+ * you can nearly stand on by the beach, a drop-off, a slope into deep water,
+ * and far out at sea a rolling abyss 35–60 m down. (Zones keep their own
+ * shallow basins.)
+ */
+function seaFloor(world, cx, cy, sd) {
+  if (world.zone !== 0) return Math.max(-12, sd * 0.9) - 0.25;
+  const d = -sd; // tiles out from the coast (the distance field stops at 32)
+  let h;
+  if (d < 5) h = -0.25 - d * 0.3;
+  else if (d < 14) h = -1.75 - (d - 5) * 0.95;
+  else h = -10.3 - (d - 14) * 1.3;
+  if (d > 24) {
+    const k = smooth(24, 32, d);
+    const abyss = -(35 + vnoise(cx * 0.004, cy * 0.004) * 25);
+    h = h * (1 - k) + abyss * k;
+  }
+  // sand ripples, rocks and hollows on the bottom
+  h += (vnoise(cx * 0.19, cy * 0.19) - 0.5) * Math.min(1.4, d * 0.09);
+  return h;
+}
+
 /**
  * Height at a tile corner (integer cx, cy). Averages the land tiles around the
  * corner and ramps down to the waterline using the smooth coastline distance.
@@ -67,7 +103,7 @@ export function cornerHeight(world, cx, cy) {
   const sd = world.sd(cx, cy);
   if (!n) {
     if (walls) return 0.4; // wall blocks stand on flat ground
-    return Math.max(-12, sd * 0.9) - 0.25;
+    return seaFloor(world, cx, cy, sd);
   }
   // mostly keep the average, but let peaks read as peaks
   const land = sum / n * 0.75 + tall * 0.25;

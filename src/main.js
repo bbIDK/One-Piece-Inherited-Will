@@ -3,6 +3,8 @@ import { Renderer } from './render/renderer.js';
 import { Renderer3D } from './render3d/index.js';
 import './render3d/pickups3d.js';
 import './render3d/groundcover.js';
+import './render3d/seabed.js';
+import './render3d/sealife3d.js';
 import { renderPortrait } from './ui/preview3d.js';
 import { generateWorld } from './world/worldgen.js';
 import { ALL_ISLANDS } from './data/islands/index.js';
@@ -29,6 +31,8 @@ import { ITEMS } from './data/items.js';
 import { installReputation } from './game/reputation.js';
 import { installBuildings } from './game/buildings.js';
 import { installTownLife } from './game/townlife.js';
+import { installSeaLife } from './game/sealife.js';
+import { clamAt } from './world/seabed.js';
 import { installForaging } from './game/forage.js';
 import { fruitOf, fruitPicked } from './world/fruitTrees.js';
 import { installContent } from './content/index.js';
@@ -81,6 +85,8 @@ async function start() {
   try {
     view3d = new Renderer3D(root, renderer, game);
     game.view3d = view3d;
+    // how deep the water is (m) at a point, from the 3D sea floor
+    game.seaDepth = (x, y) => Math.max(0, -view3d.terrain.terrainAt(x, y));
     renderer.view3d = view3d;
   } catch (e) {
     console.error('3D view unavailable', e);
@@ -167,6 +173,7 @@ async function start() {
   installReputation(game);
   installBuildings(game);
   installTownLife(game);
+  installSeaLife(game);
   installForaging(game);
   installContent(game);
 
@@ -206,7 +213,7 @@ async function start() {
     { key: 'V', when: playing, fn: () => game.cycleView() },
     { key: 'I', when: playing, fn: () => ui.sideAction('inventory') },
     { key: 'Tab', when: playing, fn: () => ui.sideAction('inventory') },
-    { key: 'C', when: playing, fn: () => ui.sideAction('character') },
+    { key: 'C', when: () => playing() && !game.player?.inWater, fn: () => ui.sideAction('character') }, // (in the sea, C dives)
     { key: 'K', when: playing, fn: () => ui.sideAction('skills') },
     { key: 'J', when: playing, fn: () => ui.sideAction('journal') },
     { key: 'H', when: playing, fn: () => ui.sideAction('help') },
@@ -310,7 +317,7 @@ async function start() {
       startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', look: null });
       return game.player;
     },
-    debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, portrait: renderPortrait },
+    debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, portrait: renderPortrait },
     ready: true,
   });
 

@@ -491,6 +491,73 @@ function activityPose(P, act, t) {
   }
 }
 
+/**
+ * Swimming. The horizontal strokes turn the whole body face-down (P.r), so an
+ * arm "overhead" in the body's frame reaches forward through the water.
+ *   tread: upright, sculling hands, egg-beater legs (a rest at the surface)
+ *   crawl: front crawl along the surface, alternating overhead strokes, flutter kick
+ *   dive: underwater breaststroke (both arms sweep, a frog kick), tipping with the dive
+ *   float: hanging in the water, slow sculling
+ *   fish: a Fish-Man's dolphin kick, arms along the sides, fast and smooth
+ *   struggle: a Devil Fruit user going under, arms flailing
+ */
+function swimPose(P, kind, t, dir) {
+  P.wF = null; P.wB = null; P.b = [0, 0]; P.l = 0;
+  switch (kind) {
+    case 'crawl': {
+      const w = t * 4.2;
+      const arm = (a) => [0.1 + 0.2 * Math.sin(a), -0.1 - 0.5 * Math.cos(a)];
+      P.hF = arm(w); P.hB = arm(w + Math.PI);
+      P.eF = 0.6; P.eB = 0.6; P.hand = 'flat'; P.handB = 'flat';
+      const k = Math.sin(w * 2.5) * 0.07;
+      P.fF = [0.02 + k, 0]; P.fB = [0.02 - k, 0];
+      P.r = 1.38; P.ht = -0.25;
+      break;
+    }
+    case 'dive': {
+      const w = t * 2.3, s = Math.sin(w);
+      P.hF = [0.16 + 0.12 * Math.cos(w), -0.48 + 0.36 * Math.max(0, s)]; P.hB = P.hF.slice();
+      P.eF = 0.5; P.eB = 0.5; P.hand = 'flat'; P.handB = 'flat';
+      const kick = Math.max(0, -s);
+      P.fF = [0.05 * kick, -0.16 * kick]; P.fB = [0.05 * kick, -0.16 * kick];
+      P.r = 1.28 - dir * 0.4; P.ht = -0.3;
+      P.spread = 0.12 * Math.max(0, s);
+      break;
+    }
+    case 'fish': {
+      const w = t * 5.5;
+      P.hF = [0.02, 0.42]; P.hB = [0.02, 0.42]; P.eF = 0.2; P.eB = 0.2;
+      const k = Math.sin(w) * 0.12;
+      P.fF = [k, 0]; P.fB = [k, 0];
+      P.r = 1.45 + Math.sin(w - 0.8) * 0.07 - dir * 0.3; P.ht = -0.35;
+      break;
+    }
+    case 'float': {
+      const w = t * 1.6;
+      P.hF = [0.22 + 0.05 * Math.sin(w), 0.18]; P.hB = [0.2 - 0.05 * Math.sin(w), 0.2];
+      P.hand = 'flat'; P.handB = 'flat';
+      P.fF = [0.05 * Math.sin(w * 0.7), -0.04 * Math.max(0, Math.sin(w * 0.7))]; P.fB = [-0.05 * Math.sin(w * 0.7), -0.04 * Math.max(0, -Math.sin(w * 0.7))];
+      P.r = 0.4;
+      break;
+    }
+    case 'struggle': {
+      const w = t * 9;
+      P.hF = [0.1 + 0.1 * Math.sin(w), -0.42 + 0.16 * Math.cos(w)]; P.hB = [0.08 - 0.1 * Math.sin(w + 1), -0.36 + 0.16 * Math.cos(w + 1)];
+      P.hand = 'palm'; P.handB = 'palm'; P.eF = 0.4; P.eB = 0.4;
+      P.fF = [0.12 * Math.sin(w * 0.8), -0.12 * Math.max(0, Math.cos(w * 0.8))]; P.fB = [-0.12 * Math.sin(w * 0.8), -0.12 * Math.max(0, -Math.cos(w * 0.8))];
+      P.ht = -0.28; P.r = -0.08; P.face = 'hurt';
+      break;
+    }
+    default: { // tread
+      const w = t * 2.6;
+      P.hF = [0.2 + 0.06 * Math.sin(w), 0.26]; P.hB = [0.18 - 0.06 * Math.sin(w), 0.28];
+      P.hand = 'flat'; P.handB = 'flat';
+      P.fF = [0.1 * Math.sin(w), -0.1 * Math.max(0, Math.cos(w))]; P.fB = [-0.1 * Math.sin(w), -0.1 * Math.max(0, -Math.cos(w))];
+      P.r = 0.08; P.ht = 0.05;
+    }
+  }
+}
+
 /** Pose when no action is running: idle, fighting stance, walk, sprint, swim, hurt, block, dodge. */
 export function restPose(pose) {
   const t = pose.time || 0;
@@ -533,12 +600,7 @@ export function restPose(pose) {
     P.b = [P.b[0], P.b[1] + (1 - k) * 0.08];
     P.hF = [0.28, -0.02]; P.hB = [0.16, 0.04];
   }
-  if (pose.swimming) {
-    const s = Math.sin(t * 5);
-    P.hF = [0.3 + s * 0.12, -0.05 + Math.cos(t * 5) * 0.1];
-    P.hB = [0.28 - s * 0.12, -0.02 - Math.cos(t * 5) * 0.1];
-    P.wF = null; P.wB = null;
-  }
+  if (pose.swimming) swimPose(P, pose.swim || 'tread', t, pose.swimDir || 0);
   if (pose.block !== undefined) {
     // cross-arm guard in front of the face; a fresh guard (parry window) snaps up
     const fresh = Math.max(0, 1 - pose.block / 0.2);

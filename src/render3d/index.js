@@ -5,9 +5,9 @@
 // projectiles. The existing 2D overlay canvas stays on top for effects,
 // weather and damage numbers, projected through the 3D camera.
 import * as THREE from 'three';
-import './fog.js'; // the atmospheric fog shader chunks (before any material compiles)
+import { FOG } from './fog.js'; // the atmospheric fog shader chunks (before any material compiles)
 import { Post } from './post.js';
-import { TerrainManager } from './terrain3d.js';
+import { TerrainManager , CTIME } from './terrain3d.js';
 import { Water } from './water3d.js';
 import { Sky } from './sky3d.js';
 import { CameraRig } from './camera3d.js';
@@ -203,7 +203,9 @@ export class Renderer3D {
     this.sky.update(env, w, sailing);
     this.sky.mesh.position.copy(cam.position);
     this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
+    this.underwater(env, -cam.position.y);
     this.terrain.update(ox, oy);
+    CTIME.value = env.time;
     // the shadow camera follows the player
     const gh = this.ground(ox, oy);
     this.sky.sun.target.position.set(0, gh, 0);
@@ -279,6 +281,36 @@ export class Renderer3D {
     for (const fn of FRAME_HOOKS) {
       try { fn(env, this.ctx, dt); } catch (e) { if (!fn.warned) { fn.warned = true; console.warn('3D frame hook failed', e); } }
     }
+  }
+
+  /**
+   * Under the surface (depth = metres the camera is below sea level): the sea
+   * closes in blue-green (darker and nearer the deeper you go), the sky is
+   * gone and the surface becomes a bright rippling ceiling.
+   */
+  underwater(env, depth) {
+    const on = depth > 0.06 && this.world?.zone === 0;
+    this.water.uniforms.uUnder.value = on ? 1 : 0;
+    this.sky.mesh.visible = !on;
+    this.isUnder = on;
+    this.post?.setInkFar(on ? 14 : 160);
+    if (!on) {
+      if (this.wasUnder) { this.renderer.setClearColor(0x000000, 1); this.wasUnder = false; }
+      return;
+    }
+    this.wasUnder = true;
+    const k = Math.min(1, depth / 45);
+    const day = 0.22 + 0.78 * (env.daylight ?? 1);
+    const col = (this._uc || (this._uc = new THREE.Color())).setRGB(0.02 + 0.03 * (1 - k), 0.07 + 0.22 * (1 - k), 0.14 + 0.24 * (1 - k)).multiplyScalar(day);
+    const fog = this.sky.fog;
+    fog.color.copy(col);
+    fog.near = 0.5;
+    fog.far = 34 - k * 14;
+    FOG.fogDensity2.value = 0.065 + k * 0.05;
+    FOG.fogHeightK.value = 0.0001;
+    FOG.fogBase.value = 0;
+    FOG.fogSunColor.value.copy(col);
+    this.renderer.setClearColor(col, 1);
   }
 
   /** The view ray in world terms: from (x, y, height h) along (dx, dy, dh), unit length. */
@@ -384,7 +416,15 @@ export class Renderer3D {
         this.actorViews.set(a, v);
         this.ents.add(v.root);
       }
-      const gh = a.inWater ? -0.9 : this.ground(a.x, a.y);
+      let gh;
+      if (a.seaCreature) gh = Math.max(-(a.depth || 0), this.terrain.terrainAt(a.x, a.y) + 0.35);
+      else if (a.inWater) {
+        // afloat with the head out, stretched out along the surface when swimming,
+        // or deeper when diving (and standing on the bottom in the shallows)
+        const flat = (a.moving || a.under || a.gills) && !(a.fruit && !a.gills);
+        gh = -(a.depth || 0) - (flat ? 0.95 : 1.3) * (a.look?.scale || 1);
+        gh = Math.max(gh, this.terrain.terrainAt(a.x, a.y));
+      } else gh = this.ground(a.x, a.y);
       v.root.position.set(dx, gh + (a.z || 0), dy);
       v.update(a, env, this.ctx, { camYaw3, redraw: i < 18 || (this.frame + i) % 3 === 0 });
       i++;

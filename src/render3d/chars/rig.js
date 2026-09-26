@@ -84,7 +84,7 @@ export class Rig {
    * Solve a pose. `o`: { tilt, walkRel (radians, when the legs follow the walk
    * cycle), spread (extra arm spread), legSpread, leanAdd, tiltAdd (head),
    * lookYaw, reachR / reachL (Vector3 targets overriding a hand: rubber
-   * punches in flight), shape: ['fist'|'palm'|'finger'|'claw', …] }.
+   * punches in flight), shape: ['fist'|'palm'|'finger'|'claw'|'flat', …] }.
    */
   solve(P, o = {}) {
     const d = this.d;
@@ -147,7 +147,8 @@ export class Rig {
       // hand: fingers continue the forearm, back of the hand up/outward
       _u.subVectors(E, J).normalize();
       const shape = o.shape ? o.shape[k] : 'fist';
-      this._ref.set(-0.3, 0.6, side * 0.8);
+      // (a flat hand — swimming — keeps its fingers in line and its back up)
+      if (shape === 'flat') this._ref.set(0.1, 1, side * 0.35); else this._ref.set(-0.3, 0.6, side * 0.8);
       aimNegY(this.quat[Hd], _u, this._ref);
       if (shape === 'palm' || shape === 'claw') {
         // wrist bent back so an open palm faces where the arm reaches

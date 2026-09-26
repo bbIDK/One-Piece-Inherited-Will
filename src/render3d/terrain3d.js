@@ -312,6 +312,23 @@ function detailTexture() {
   return tex;
 }
 
+// the caustic network on the sea floor (edges between drifting Voronoi cells)
+export const CTIME = { value: 0 };
+export const CAUSTIC = /* glsl */`
+  vec2 cHash2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
+  float causticNet(vec2 p, float t) {
+    vec2 i = floor(p), f = fract(p);
+    float d1 = 8.0, d2 = 8.0;
+    for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+      vec2 g = vec2(float(x), float(y));
+      vec2 o = 0.5 + 0.42 * sin(t * 0.8 + 6.2831 * cHash2(i + g));
+      float d = length(g + o - f);
+      if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d;
+    }
+    return 1.0 - smoothstep(0.0, 0.09, d2 - d1);
+  }
+`;
+
 /**
  * The terrain's cel-shaded material, with world-anchored detail: broad colour
  * drift, fine grain, and bare rock showing on steep slopes.
@@ -322,12 +339,13 @@ function terrainMaterial() {
   const uDetail = { value: detailTexture() };
   m.userData.uOrigin = uOrigin;
   m.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, FOG, { uOrigin, uDetail });
+    Object.assign(shader.uniforms, FOG, { uOrigin, uDetail, uCTime: CTIME });
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nuniform vec2 uOrigin;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvec4 tWorld = modelMatrix * vec4(transformed, 1.0);\nvTerrainXZ = tWorld.xz + uOrigin;\nvTerrainUp = normalize(objectNormal).y;');
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvec4 tWorld = modelMatrix * vec4(transformed, 1.0);\nvTerrainXZ = tWorld.xz + uOrigin;\nvTerrainUp = normalize(objectNormal).y;\nvTerrainY = tWorld.y;')
+      .replace('varying float vTerrainUp;', 'varying float vTerrainUp;\nvarying float vTerrainY;');
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform sampler2D uDetail;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;')
+      .replace('#include <common>', '#include <common>\nuniform sampler2D uDetail;\nuniform float uCTime;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;\nvarying float vTerrainY;\n' + CAUSTIC)
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
           float broad = texture2D(uDetail, vTerrainXZ / 64.0).r;
@@ -337,6 +355,13 @@ function terrainMaterial() {
           float steep = smoothstep(0.62, 0.42, vTerrainUp);
           vec3 rock = vec3(0.47, 0.43, 0.39) * (0.85 + grain * 0.3);
           diffuseColor.rgb = mix(diffuseColor.rgb, rock * (0.7 + 0.3 * diffuseColor.rgb / max(max(diffuseColor.r, diffuseColor.g), 0.2)), steep * 0.75);
+          // under the sea: bluer with depth, and sunlight rippling across the bottom
+          if (vTerrainY < -0.15) {
+            float dd = -vTerrainY;
+            diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.5, 0.8, 0.95), clamp(0.2 + dd / 12.0, 0.0, 0.85));
+            float c = causticNet(vTerrainXZ * 0.9 + vec2(uCTime * 0.05, uCTime * 0.03), uCTime * 1.2) * 0.7 + causticNet(vTerrainXZ * 1.45 - vec2(uCTime * 0.03, -uCTime * 0.05) + 3.1, uCTime * 1.6) * 0.45;
+            diffuseColor.rgb += vec3(0.5, 0.85, 0.8) * c * 0.16 * exp(-dd * 0.08) * smoothstep(0.1, 0.8, vTerrainUp);
+          }
         }`);
   };
   m.customProgramCacheKey = () => 'terrain-detail';

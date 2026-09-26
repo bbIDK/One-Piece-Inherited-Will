@@ -116,7 +116,7 @@ export class CharacterModel {
       let s = this.shape[k];
       if (armed && (k === 0 || (o.wpn.kind === 'sword' && (o.wpn.count || 1) >= 2))) s = 'fist';
       if ((k === 0 && o.blade) || (k === 1 && o.bladeB)) s = 'fist';
-      if (s === 'claw') s = 'palm';
+      if (s === 'claw' || s === 'flat') s = 'palm';
       const H = k === 0 ? 'R' : 'L';
       for (const sh of SHAPES) this.showBone(B[sh + H], sh === s);
     }

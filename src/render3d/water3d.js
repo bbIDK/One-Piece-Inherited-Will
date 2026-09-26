@@ -65,6 +65,7 @@ const FRAG = /* glsl */`
   uniform float uZone;
   uniform float uStorm;
   uniform float uDetail;
+  uniform float uUnder;
   varying vec3 vWorld;
   varying vec3 vView;
   varying vec3 vSwell;
@@ -98,6 +99,25 @@ const FRAG = /* glsl */`
   }
 
   void main() {
+    // seen from below (diving): a bright rippling ceiling — the sky shows through
+    // a window straight overhead, beyond it the surface mirrors the deep
+    if (!gl_FrontFacing) {
+      if (uUnder < 0.5) discard;
+      float tu = uTime;
+      vec2 pu = vWorld.xz;
+      vec3 vu = normalize(vView);
+      float up = clamp(-vu.y, 0.0, 1.0);
+      float r0u = ripples(pu, tu);
+      float wob = (ripples(pu + vec2(0.3, 0.0), tu) - r0u) * 0.8;
+      float win = smoothstep(0.62, 0.8, up + wob * 0.12);
+      vec3 deepU = vec3(0.02, 0.2, 0.3) * mix(0.3, 1.0, uDay);
+      vec3 skyU = mix(uSky, uSkyTop, 0.5) * (0.35 + 0.75 * uDay) + uSunCol * pow(up, 24.0) * 0.8 * uDay;
+      vec3 colU = mix(deepU * (0.8 + 0.4 * r0u), skyU, win);
+      colU += vec3(0.6, 0.9, 1.0) * caustic(pu * 0.35 + vec2(tu * 0.05, tu * 0.03), tu) * 0.12 * uDay * win;
+      gl_FragColor = vec4(colU, 1.0);
+      #include <fog_fragment>
+      return;
+    }
     vec2 uv = vec2(vWorld.x / uSize.x, vWorld.z / uSize.y);
     vec4 m = texture2D(uMap, uv);
     float sd = (m.r * 255.0 - 128.0) * 0.25;   // + land, - water (tiles)
@@ -224,12 +244,13 @@ export class Water {
         uZone: { value: 0 },
         uStorm: { value: 0 },
         uDetail: { value: 1 },
+        uUnder: { value: 0 },
       },
     ]);
     // the water writes depth, so the ink outlines see its surface (not the sea floor under it)
     this.material = new THREE.ShaderMaterial({
       uniforms: this.uniforms, vertexShader: VERT, fragmentShader: FRAG,
-      transparent: true, depthWrite: true, fog: true,
+      transparent: true, depthWrite: true, fog: true, side: THREE.DoubleSide,
     });
     this.mesh = new THREE.Mesh(discGeometry(), this.material);
     this.mesh.renderOrder = 1;

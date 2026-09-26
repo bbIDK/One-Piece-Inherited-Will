@@ -2181,7 +2181,7 @@ const NAME_RULES = [
   [/\bale\b|beer|mead|cider|lager|stout|tankard/, 'mug'], [/\btea\b|coffee|cocoa/, 'teacup', (n) => ({ tea: /hibiscus|rose|berry/.test(n) ? '#b3123f' : /coffee|cocoa/.test(n) ? '#4a2a1a' : undefined })],
   [/\bwater\b|\bdew\b/, 'drop', {}, ['food', 'medicine']], [/milk|juice|lemonade|soda/, 'bottle', (n) => ({ liquid: /milk/.test(n) ? '#f7f4ec' : '#f29a2e' })],
   [/platter|course|feast|banquet|meal|dish|plate|bento|lunch|dinner|cuisine|sushi|sashimi/, 'plate', (n) => ({ food: /platter|bento|feast|banquet/.test(n) ? 'platter' : undefined }), ['food']],
-  [/\bfish|salmon|tuna|\beel\b|mackerel|sardine|squid|shrimp|prawn|crab|lobster/, 'fish', {}, ['food', 'material']],
+  [/\bfish|salmon|tuna|\beel\b|mackerel|sardine|squid|shrimp|prawn|crab|lobster|shark/, 'fish', {}, ['food', 'material']],
   // ---- medicine
   [/bandage|gauze|splint/, 'bandage'], [/syringe|injection|hormone|serum|vaccine/, 'syringe'],
   [/rumble|\bpill|tablet|capsule/, 'pill'], [/golden ball/, 'pill', { color: '#f0bf45', engrave: true }],

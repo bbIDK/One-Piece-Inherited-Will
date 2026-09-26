@@ -45,7 +45,7 @@ export class Actor extends Entity {
     this.facing = o.facing ?? Math.PI / 2;
     this.walk = 0;
     this.moving = false;
-    this.intent = { mx: 0, my: 0, sprint: false };
+    this.intent = { mx: 0, my: 0, mz: 0, sprint: false };
     this.action = null;
     this.combo = { step: 0, window: 0 };
     this.state = 'idle';
@@ -61,6 +61,9 @@ export class Actor extends Entity {
     this.knockT = 0;
     this.inWater = false;
     this.drownT = 0;
+    this.depth = 0; // metres below the surface while swimming (diving)
+    this.under = false; // head under water
+    this.oxygen = null; // seconds of breath left (see maxOxygen)
     this.lastHitBy = null;
     this.lastHitT = 0;
     this.damageShown = 0;
@@ -126,6 +129,20 @@ export class Actor extends Entity {
     const haki = (this.hakiSkill.armament || 0) + (this.hakiSkill.observation || 0) + (this.hakiSkill.conqueror || 0) * 1.5;
     return doriki(this.attrs, { mastery: best, haki, fruit: !!this.fruit, fruitMastery: this.fruitMastery });
   }
+
+  /** Out of the sea (climbing out, or hauled aboard): a Devil Fruit user stays weak for a while. */
+  leaveWater(game, out = false) {
+    const df = !!this.fruit && !this.gills;
+    this.inWater = false;
+    this.depth = 0; this.under = false; this.drownT = 0;
+    if (df && this.state === 'idle') {
+      this.addBuff({ id: 'drenched', name: 'Drenched', dur: 16, mods: { speedMul: 0.7, damage: 0.75 } });
+      if (this.isPlayer) game.log(out ? 'Drenched in seawater — your body feels heavy and weak.' : 'Hauled out of the sea, dripping and weak.', '#81d4fa');
+    }
+  }
+
+  /** Seconds of breath (Fish-Men and merfolk breathe water). */
+  get maxOxygen() { return this.gills ? Infinity : 24 + (this.attrs?.end || 0) * 0.35 + (this.attrs?.vit || 0) * 0.1; }
 
   addBuff(b) {
     this.buffs = this.buffs.filter((x) => x.id !== b.id);
@@ -497,8 +514,11 @@ export class Actor extends Entity {
 
   updateResources(dt) {
     const d = this.d;
-    const busy = !!this.action || this.blocking || this.intent.sprint || (this.inWater && !this.gills);
-    const regenMul = this.isPlayer ? this.game?.crewMods?.staminaMul || 1 : 1;
+    // treading water at the surface is a rest (swimming isn't; a Devil Fruit user can't)
+    const swim = this.inWater && !this.gills;
+    const treading = swim && !this.fruit && !this.moving && !this.under && !this.intent.mz;
+    const busy = !!this.action || this.blocking || this.intent.sprint || (swim && !treading);
+    const regenMul = (this.isPlayer ? this.game?.crewMods?.staminaMul || 1 : 1) * (treading ? 0.6 : 1);
     if (!busy) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * regenMul * dt);
     else if (!this.intent.sprint && !this.inWater) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * 0.25 * dt);
     if (this.hakiUnlocked()) {
@@ -543,9 +563,9 @@ export class Actor extends Entity {
     if (!knocked) {
       const i = this.intent;
       let sp = this.d.speed * (w.speedAt(this.x, this.y - 0.1) || 1);
-      if (this.inWater) sp *= this.fruit ? 0.12 : 0.55 * this.canSwimRace;
-      if (i.sprint && this.stamina > 1 && !this.inWater) { sp *= 1.55; this.stamina -= 9 * dt; }
-      if (this.inWater && !this.gills && (i.mx || i.my)) this.stamina -= 3.5 * dt;
+      if (this.inWater) sp *= this.fruit && !this.gills ? 0.12 : 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1);
+      if (i.sprint && this.stamina > 1 && (!this.inWater || this.gills)) { sp *= this.inWater ? 1.35 : 1.55; if (!this.inWater) this.stamina -= 9 * dt; }
+      if (this.inWater && !this.gills && (i.mx || i.my || i.mz)) this.stamina = Math.max(0, this.stamina - (this.under ? 4 : 3.5) * dt);
       if (this.blocking) sp *= 0.4;
       if (this.action) sp *= this.action.def.moveMul ?? (this.action.def.m1Chain ? 0.55 : 0.25);
       if (this.hitstun > 0 || this.status.root || this.status.freeze || this.status.despair) sp = 0;
@@ -592,26 +612,57 @@ export class Actor extends Entity {
     const t = w.type(this.x, this.y - 0.1);
     const was = this.inWater;
     this.inWater = IS_LIQUID[t] === 1 && !OVERLAY[t] && !(this.dash && this.dash.ignoreWater);
+    const df = !!this.fruit && !this.gills; // the sea takes a Devil Fruit user's strength
     if (this.inWater && !was) {
       game.fx.burst(this.x, this.y, 10, { color: ['#e1f5fe', '#81d4fa'], speed: 3, vz: 3, g: 9, life: 0.5, size: 0.12 });
       game.audio?.sfx('splash');
+      this.depth = 0;
       if (this.fruit) { this.armament = this.armament && this.hakiUnlocked(); this.buffs = this.buffs.filter((b) => !b.source || !getAbility(b.source)?.source?.startsWith('fruit')); this.recalc(); }
     }
+    if (!this.inWater && was) this.leaveWater(game, true);
     if (this.inWater) {
       if (t === T.LAVA) { this.takeDamage(this.d.maxHp * 0.25 * dt, null, { element: 'fire' }, game); }
-      if (this.fruit) {
-        // Devil Fruit users sink.
-        this.drownT += dt;
+      // up and down: dive (intent.mz < 0), rise (> 0); air floats you up, a Devil Fruit user sinks
+      const floor = game.seaDepth ? game.seaDepth(this.x, this.y) : 3;
+      const bottom = Math.max(0, floor - 0.45);
+      const iz = this.intent.mz || 0;
+      // out of stamina and still swimming: you go under, and the sea starts to take you
+      // (stop and tread water to get your breath back)
+      const spent = !df && !this.gills && this.stamina <= 0.5 && (this.moving || iz);
+      let vz;
+      if (df) vz = 0.9;
+      else if (spent) vz = 0.8;
+      else if (iz) vz = -iz * (this.gills ? 3.4 : 1.7);
+      else vz = this.depth > 0.05 && !this.gills ? -0.5 : 0;
+      this.depth = clamp(this.depth + vz * dt, 0, bottom);
+      if (spent) {
+        this.hp -= this.d.maxHp * 0.05 * dt;
+        if (this.isPlayer && !this.spentHint) { this.spentHint = true; game.log('Exhausted! Stop swimming and tread water to get your strength back.', '#ff8a80'); }
+        if (this.hp <= 0) { this.hp = 0; this.drowned = true; this.knockOut(game, null); }
+      } else if (this.stamina > this.d.maxStamina * 0.5) this.spentHint = false;
+      this.under = this.depth > 0.35;
+      // breath
+      const maxO2 = this.maxOxygen;
+      if (this.oxygen == null || this.oxygen > maxO2) this.oxygen = maxO2;
+      if (!this.gills) {
+        if (this.under) this.oxygen = Math.max(0, this.oxygen - dt * (df ? 2.6 : 1));
+        else this.oxygen = Math.min(maxO2, this.oxygen + dt * 9);
+      }
+      if (df) {
         this.stamina = Math.max(0, this.stamina - 30 * dt);
-        if (this.drownT > 1.2) this.hp -= this.d.maxHp * 0.16 * dt;
-        if (Math.random() < dt * 6) game.fx.particle({ x: this.x, y: this.y, z: 0.3, vx: 0, vy: 0, vz: 1, g: -0.5, life: 0.6, size: 0.1, color: '#e1f5fe', kind: 'bubble' });
-        if (this.hp <= 0) { this.hp = 0; this.drowned = true; this.knockOut(game, null); }
-      } else if (!this.gills && this.stamina <= 0) {
         this.drownT += dt;
-        this.hp -= this.d.maxHp * 0.06 * dt;
-        if (this.hp <= 0) { this.hp = 0; this.drowned = true; this.knockOut(game, null); }
       } else this.drownT = Math.max(0, this.drownT - dt);
-    } else this.drownT = 0;
+      // out of air: drowning (faster for a Devil Fruit user)
+      if (!this.gills && this.oxygen <= 0) {
+        this.hp -= this.d.maxHp * (df ? 0.16 : 0.08) * dt;
+        if (this.hp <= 0) { this.hp = 0; this.drowned = true; this.knockOut(game, null); }
+      }
+      if (this.under && Math.random() < dt * (this.gills ? 1.5 : 4)) game.fx.particle({ x: this.x + (Math.random() - 0.5) * 0.3, y: this.y, z: 0.2, vx: 0, vy: 0, vz: 1.2, g: -0.6, life: 0.7, size: 0.07, color: '#e1f5fe', kind: 'bubble', under: this.depth });
+    } else {
+      this.drownT = 0;
+      this.under = false;
+      if (this.oxygen != null && !this.gills) this.oxygen = Math.min(this.maxOxygen, this.oxygen + dt * 9);
+    }
     const dmg = w.damageAt(this.x, this.y - 0.1);
     if (dmg && !this.inWater) this.takeDamage(dmg * dt, null, { element: 'fire' }, game);
   }
@@ -642,12 +693,18 @@ export class Actor extends Entity {
     }
     // ease between clips, stances and states instead of snapping
     const busy = this.act3d && !act && !combat && !this.moving && this.state === 'idle' ? this.act3d : null;
-    const mode = act || `${this.state}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${this.inWater ? 'w' : ''}${busy ? busy.pose : ''}`;
+    // how you're swimming: treading water, front crawl, diving (breaststroke), a Fish-Man's dolphin kick, sinking
+    const swim = !this.inWater ? null
+      : this.fruit && !this.gills ? 'struggle'
+        : this.gills && (this.moving || this.under) ? 'fish'
+          : this.under ? (this.moving || this.intent.mz ? 'dive' : 'float')
+            : this.moving ? 'crawl' : 'tread';
+    const mode = act || `${this.state}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${swim || ''}${busy ? busy.pose : ''}`;
     if (mode !== this._mode) {
       this._blendFrom = this._lastP || null;
       this._blendT = 0;
       // settling into (or getting up from) a seat or a lean takes a moment
-      const slow = busy || (this._mode && /(lean|sit|sweep|vend|fish|drunk|chat)$/.test(this._mode));
+      const slow = busy || swim || (this._mode && /(lean|sit|sweep|vend|fish|drunk|chat|tread|crawl|dive|float|struggle)$/.test(this._mode));
       this._blendDur = act ? Math.min(0.06, (act.def.windup ?? 0.1) * 0.45) : hurt ? 0.05 : slow ? 0.45 : 0.12;
       this._mode = mode;
     }
@@ -659,7 +716,7 @@ export class Actor extends Entity {
     const pose = {
       facing: this.facing, walk: this.walk, moving: this.moving, time: now + this.seed,
       state: this.state === 'knocked' ? 'knocked' : hurt ? 'hurt' : this.state,
-      swimming: this.inWater, alpha: alphaBuff ? alphaBuff.alpha : this.fadeAlpha, aura,
+      swimming: this.inWater, swim, swimDir: this.intent.mz || 0, alpha: alphaBuff ? alphaBuff.alpha : this.fadeAlpha, aura,
       anim, stanceP: STANCES[stance], combat, sprint: !!(this.intent.sprint && this.moving),
       weapon: wpn, armed: !!wpn && ((combat && !!STANCE_ARMED[stance]) || !!(anim && anim.weapon)), armament: this.armament,
       knockT: this.knockT,

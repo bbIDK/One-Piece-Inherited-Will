@@ -11,6 +11,8 @@ export const ITEMS = {
   rice_ball: { name: 'Rice Ball', icon: '🍙', type: 'food', heal: 40, stamina: 20, price: 45, desc: 'Simple, salty, filling.' },
   fish_stew: { name: 'Sea Fish Stew', icon: '🍲', type: 'food', heal: 110, stamina: 60, price: 180, desc: 'A sailor\'s favourite.' },
   tangerine: { name: 'Bell-mère\'s Tangerine', icon: '🍊', type: 'food', heal: 35, stamina: 60, price: 60, desc: 'From the groves of Cocoyasi Village.' },
+  fresh_fish: { name: 'Fresh Fish', icon: '🐟', type: 'food', heal: 45, stamina: 35, price: 40, desc: 'Caught with your bare hands. Better cooked, but it will do.' },
+  tuna: { name: 'Bluefin Tuna', icon: '🐟', type: 'food', heal: 160, stamina: 90, price: 420, desc: 'A fat, fast fish from the open sea. A cook would weep with joy.' },
   sea_king_steak: { name: 'Sea King Steak', icon: '🥩', type: 'food', heal: 400, stamina: 200, price: 2500, desc: 'Enough meat to feed a crew for a week.' },
   baratie_course: { name: 'Baratie Full Course', icon: '🍽', type: 'food', heal: 300, stamina: 150, price: 1200, buff: { id: 'well_fed', name: 'Well Fed', dur: 180, mods: { damage: 1.1 } }, desc: 'Cooked by "Red Leg" Zeff\'s kitchen. Leaves you Well Fed.' },
   sake: { name: 'Sake', icon: '🍶', type: 'food', heal: 10, stamina: 80, price: 120, buff: { id: 'tipsy', name: 'Tipsy', dur: 60, mods: { damage: 1.08, defMul: 1.1 } }, desc: 'Dutch courage.' },
@@ -111,6 +113,7 @@ export const ITEMS = {
   // ------------------------------------------------------------ treasure
   gold_coins: { name: 'Gold Doubloons', icon: '🪙', type: 'treasure', price: 1200, desc: 'Sell them.' },
   jewels: { name: 'Jewels', icon: '💎', type: 'treasure', price: 6000 },
+  shark_fin: { name: 'Shark Fin', icon: '🦈', type: 'material', price: 1500, desc: 'Prized by cooks across the Grand Line.' },
   shandora_gold: { name: 'Shandora Gold', icon: '🔔', type: 'treasure', price: 80000, desc: 'Gold from the lost city of Shandora.' },
   golden_statue: { name: 'Golden Statue', icon: '🗿', type: 'treasure', price: 25000 },
   pearl: { name: 'Mermaid Pearl', icon: '⚪', type: 'treasure', price: 15000 },

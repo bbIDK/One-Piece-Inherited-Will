@@ -23,7 +23,9 @@ export function findInteraction(game, p) {
   for (const s of game.ships) {
     if (s.sunk || s.owner !== 'player') continue;
     const d = w.distance(p.x, p.y, s.x, s.y);
-    if (d < s.def.length * 0.55 + 1.6) cands.push({ d: d - 1, x: s.x, y: s.y, label: `Board the ${s.name}`, run: () => board(game, p, s) });
+    // a Devil Fruit user in the sea can't climb, but can grab a line thrown from the deck
+    const sinking = p.inWater && p.fruit && !p.gills;
+    if (d < s.def.length * 0.55 + (sinking ? 6 : 1.6)) cands.push({ d: d - 1, x: s.x, y: s.y, label: sinking ? `Grab the line from the ${s.name}` : `Board the ${s.name}`, run: () => board(game, p, s) });
   }
   for (const a of game.actorsNear(p.x, p.y, 2.4)) {
     if (a === p || a.state !== 'idle' || !a.talk) continue;
@@ -104,6 +106,7 @@ export function disembark(game, p, spot) {
 }
 
 export function board(game, p, s) {
+  if (p.inWater) p.leaveWater?.(game);
   p.mode = 'sail';
   p.ship = s;
   p.onShip = true;

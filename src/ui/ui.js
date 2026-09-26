@@ -55,10 +55,14 @@ export class UI {
     E.name = h('div.hud-name');
     E.sub = h('div.hud-sub');
     E.hp = bar('hp'); E.st = bar('st'); E.hk = bar('hk');
+    // breath under water: a row of bubbles that pop as it runs out
+    E.o2 = h('div.o2.hidden', { title: 'Breath' });
+    E.o2b = [];
+    for (let i = 0; i < 10; i++) { const b = h('i'); E.o2b.push(b); E.o2.appendChild(b); }
     E.lives = h('div.lives');
     E.bounty = h('div.hud-bounty');
     E.buffs = h('div.buffs');
-    this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.st.el, E.hk.el, E.lives, E.bounty, E.buffs));
+    this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.st.el, E.o2, E.hk.el, E.lives, E.bounty, E.buffs));
     // hotbar: click a slot to use it, drag slots to rearrange
     E.hotbar = h('div.hotbar');
     E.slots = [];
@@ -399,6 +403,18 @@ export class UI {
     this.set(E.sub, 'sub', `${raceLabel(p.look)} · ${title} · Doriki ${p.power().toLocaleString()}`);
     E.hp.set(p.hp / p.d.maxHp, `${Math.ceil(p.hp)} / ${p.d.maxHp}`);
     E.st.set(p.stamina / p.d.maxStamina, `${Math.ceil(p.stamina)}`);
+    const o2max = p.maxOxygen, o2 = p.oxygen;
+    const showO2 = !p.gills && o2 != null && Number.isFinite(o2max) && o2 < o2max - 0.05;
+    if (showO2 !== this.cache.o2on) { E.o2.classList.toggle('hidden', !showO2); this.cache.o2on = showO2; }
+    if (showO2) {
+      const f = (o2 / o2max) * 10;
+      const key = Math.ceil(f * 2) + (f < 2.5 ? 'L' : '');
+      if (key !== this.cache.o2k) {
+        this.cache.o2k = key;
+        for (let i = 0; i < 10; i++) E.o2b[i].className = i < Math.floor(f) ? '' : i < f ? 'half' : 'pop';
+        E.o2.classList.toggle('low', f < 2.5);
+      }
+    }
     // the spirit (Haki) bar doesn't exist until Haki awakens
     const hakiOn = p.hakiUnlocked();
     E.hk.el.classList.toggle('hidden', !hakiOn);

@@ -31,6 +31,7 @@ export class PlayerController {
     // the touch stick (analog: a light push walks slowly)
     const tc = inp.touch?.on && (inp.touch.mx || inp.touch.my) ? inp.touch : null;
     if (tc && !l) { mx = tc.mx; my = tc.my; l = Math.min(1, Math.hypot(mx, my)); }
+    const fwdIn = -my;
     if (v3 && l > 0) {
       // W walks where the camera looks, A/D strafe
       const yaw = v3.rig.yaw, fwd = -my, right = mx;
@@ -38,6 +39,17 @@ export class PlayerController {
       my = Math.sin(yaw) * fwd + Math.cos(yaw) * right;
     }
     p.intent.mx = mx; p.intent.my = my;
+    // swimming: Space rises, C (or Ctrl) dives — and swimming forward follows the view up or down
+    p.intent.mz = 0;
+    if (p.inWater) {
+      if (inp.isDown('Space')) p.intent.mz = 1;
+      else if (inp.isDown('C')) p.intent.mz = -1;
+      else if (v3 && fwdIn > 0.3) {
+        const pitch = v3.rig.pitch;
+        if (pitch < -0.28 || (pitch > 0.2 && p.depth > 0.05)) p.intent.mz = Math.max(-1, Math.min(1, pitch * 1.5)) * fwdIn;
+      }
+      if (!p.gills && p.under && !this.o2Hint) { this.o2Hint = true; game.hint?.('diving', 'Under water you hold your breath — watch the bubbles under your stamina and come up for air (Space). Look down and swim, or hold C, to dive.'); }
+    }
     // Shift: holding it sprints (a quick tap dodges in first person); Q dashes
     if (inp.wasPressed('Shift')) this.shiftT = 0;
     if (inp.isDown('Shift')) this.shiftT = (this.shiftT ?? 0) + dt;

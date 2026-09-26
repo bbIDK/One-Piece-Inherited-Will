@@ -5,7 +5,8 @@
 // with a muzzle flash, staffs, axes and energy blades are held in the hands;
 // Devil Fruit techniques glow in the fruit's colour; Gum-Gum punches stretch
 // the arm out to the flying fist; Armament Haki turns the forearms glossy
-// black. Hidden when knocked down or swimming.
+// black. Swimming, the hands pull a breaststroke (or scull, treading water;
+// or flail, for a Devil Fruit user going under). Hidden when knocked down.
 //
 // The model is the same CharacterModel as a world character with its body,
 // head and hips hidden; it draws after the world with the depth buffer
@@ -86,7 +87,7 @@ class Viewmodel {
     const key = `${look === p.look ? '' : JSON.stringify(look)}|${wpn ? wpn.kind + wpn.count + (wpn.gun || '') : ''}`;
     if (!this.model || key !== this.key || this.baseLook !== p.look) { this.key = key; this.baseLook = p.look; this.build(p, look, wpn); }
     const m = this.model;
-    const hidden = p.state === 'knocked' || p.state === 'dead' || p.inWater || p.hidden;
+    const hidden = p.state === 'knocked' || p.state === 'dead' || p.hidden;
     this.root.visible = !hidden;
     if (hidden) return;
     const { pose, P } = actorPose(p, env, look);
@@ -107,7 +108,28 @@ class Viewmodel {
     if (p.reachT > 0) p.reachT = Math.max(0, p.reachT - dtv);
     const reach = p.reachT > 0 ? Math.sin((1 - p.reachT / 0.45) * Math.PI) : 0;
     this.pump = (this.pump ?? 0) + ((pose.sprint && !busy ? 1 : 0) - (this.pump ?? 0)) * Math.min(1, dtv * 6);
-    if (!busy) {
+    const swimming = p.inWater && !busy;
+    if (swimming) {
+      // breaststroke: reach out together, sweep wide and back, tuck in under the chin
+      const df = !!p.fruit && !p.gills;
+      const stroking = pose.moving || !!p.intent?.mz;
+      this.swimPh = (this.swimPh || 0) + dtv * (df ? 9 : stroking ? (p.gills ? 5.5 : 3.6) : 1.9);
+      const ph = this.swimPh, s = Math.sin(ph);
+      let hF, hB, spread;
+      if (df) {
+        hF = [0.16 + 0.08 * s, 0.02 + 0.1 * Math.cos(ph)];
+        hB = [0.13 - 0.08 * Math.sin(ph + 1.9), 0.06 + 0.1 * Math.cos(ph + 1.9)];
+        spread = 0.2 + 0.06 * Math.sin(ph * 0.7);
+      } else if (stroking) {
+        hF = [0.34 + 0.12 * Math.cos(ph), 0.02 - 0.05 * s]; hB = hF.slice();
+        spread = 0.02 + 0.24 * Math.max(0, s);
+      } else {
+        hF = [0.3 + 0.04 * Math.cos(ph), 0.1 + 0.03 * s]; hB = [0.3 + 0.04 * Math.cos(ph + 0.5), 0.1 + 0.03 * Math.sin(ph + 0.5)];
+        spread = 0.14 + 0.07 * s;
+      }
+      PP = { ...P, r: 0, hF, hB, eF: 1, eB: 1, hand: df ? 'palm' : 'flat', handB: df ? 'palm' : 'flat' };
+      o.spread = spread;
+    } else if (!busy) {
       const w = pose.walk || 0, sw = pose.moving ? Math.sin(w) : 0;
       const k = this.ready, q = this.pump * (1 - k);
       // relaxed: hanging at the sides; sprinting: swinging up into the lower corners
@@ -160,7 +182,7 @@ class Viewmodel {
     const bx = Math.cos(this.bob * 0.5) * bobA, by = -Math.abs(Math.sin(this.bob * 0.5)) * bobA * 1.4 + Math.sin(env.time * 1.3) * 0.003;
     this.body.rotation.set(0, Math.PI / 2, 0);
     // the shoulders ride up toward the eye when the hands are in use, and sink when they aren't
-    const use = Math.max(this.ready ?? 0, reach, (this.pump ?? 0) * 0.28);
+    const use = swimming ? 0.8 : Math.max(this.ready ?? 0, reach, (this.pump ?? 0) * 0.28);
     this.body.position.set(this.sway.x + bx, -0.1 + 0.26 * use - eyeY + this.sway.y + by, -0.06);
     this.body.updateMatrix();
     // ---- effects: haki, flash, fruit glow, muzzle flash

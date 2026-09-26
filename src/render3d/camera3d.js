@@ -181,7 +181,10 @@ export class CameraRig {
       eyeH = hp.eye - hp.floor + 0.15;
       rollSea = Math.sin(t * 0.9) * 0.03 * Math.cos(this.yaw - s.heading);
     } else if (p.inWater) {
-      gh = -0.2; eyeH = 0.55;
+      // the head just out of the water — or under it, diving (never through the sea floor)
+      gh = -(p.depth || 0) - 0.2; eyeH = 0.55;
+      const floor = game.seaDepth ? -game.seaDepth(p.x, p.y) : -99;
+      if (gh + eyeH < floor + 0.3) gh = floor + 0.3 - eyeH;
     }
     // a small dip when you land from a jump or a fall
     if (!sailing && this.lastZ > 0.3 && !(p.z > 0)) this.dip = Math.min(0.22, 0.05 + this.lastZ * 0.12);
@@ -230,9 +233,15 @@ export class CameraRig {
           if (w.isBlocked(p.x + cx * t, p.y + cz * t)) { const k = Math.max(0.12, t - 0.16); cx *= k; cz *= k; break; }
         }
       }
-      // keep the camera above the ground
-      const under = ground(p.x + cx, p.y + cz) + 0.4;
-      if (cy < under) cy = under;
+      if (p.inWater && p.under) {
+        // follow a diver down: under the surface, over the sea floor
+        const floor = game.seaDepth ? -game.seaDepth(p.x + cx, p.y + cz) : -99;
+        cy = Math.max(floor + 0.4, Math.min(cy, -0.35));
+      } else {
+        // keep the camera above the ground
+        const under = ground(p.x + cx, p.y + cz) + 0.4;
+        if (cy < under) cy = under;
+      }
       cam.position.set(cx, cy, cz);
       cam.rotation.set(this.pitch * 0.8 - 0.12 + this.shake.y, yaw3 + this.shake.x, 0);
     } else {

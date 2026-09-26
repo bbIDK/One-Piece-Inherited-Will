@@ -28,6 +28,12 @@
 .bar.st > i { background: linear-gradient(#81c784, var(--st)); }
 .bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }
 .bar.hk.locked { opacity: .35; }
+.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }
+.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }
+.o2 > i.half { transform: scale(.72); opacity: .7; }
+.o2 > i.pop { transform: scale(.2); opacity: 0; }
+.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }
+@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }
 .lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }
 .vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }
 .vivre:nth-child(2n) { transform: rotate(5deg); }
