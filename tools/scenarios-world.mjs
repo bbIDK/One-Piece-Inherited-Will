@@ -2,6 +2,38 @@
 const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
 export const scenarios = {
+  // picking fruit from a tree puts it in the bag
+  pickfruit: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => window.OP.quickStart('human'));
+      const r = await page.evaluate(async () => {
+        const g = window.OP.game, w = g.world, p = g.player;
+        const isl = w.islands.find((i) => i.id === 'dawn_island');
+        const { fruitOf } = window.OP.debug;
+        // find a fruit tree on the island
+        const trees = w.objects.near(isl.x, isl.y, isl.radius, (o) => o.kind === 'tree');
+        const withFruit = trees.filter((o) => window.OP.debug.fruitOf ? window.OP.debug.fruitOf(o) : false);
+        const t = withFruit[0];
+        if (!t) return { trees: trees.length, fruitTrees: 0 };
+        window.OP.teleport(t.x + 0.7, t.y + 0.4);
+        return { trees: trees.length, fruitTrees: withFruit.length, at: [t.x, t.y], sub: t.sub };
+      });
+      console.log('tree', JSON.stringify(r));
+      for (let i = 0; i < 5; i++) { await step(page, 0.1); await frames(page, 1); }
+      const res = await page.evaluate(() => {
+        const g = window.OP.game, p = g.player, c = g.state.char;
+        const before = c.inventory.map((i) => i.id + 'x' + (i.qty || 1)).join(',');
+        const it = p.controller?.interaction;
+        const label = it ? it.label : null;
+        if (it) it.run();
+        const after = c.inventory.map((i) => i.id + 'x' + (i.qty || 1)).join(',');
+        return { label, before, after };
+      });
+      console.log('pick', JSON.stringify(res));
+    },
+  },
   // Otto on the Notice Cup ring (he used to stand inside it)
   otto: {
     async run(page, snap) {

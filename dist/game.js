@@ -79302,18 +79302,18 @@ Trains by: ${TRAINS_BY[k]}` },
       const other = prevFoot ? prevFoot(p) : null;
       const w = game.world;
       if (!w.objects || p.mode !== "foot") return other;
-      let best = null, bd = 1.9;
-      for (const o of w.objects.near(p.x, p.y, 2.2, (o2) => o2.kind === "tree")) {
+      let best = null, bd = 2.4;
+      for (const o of w.objects.near(p.x, p.y, 2.8, (o2) => o2.kind === "tree")) {
         const fr = fruitOf(o);
         if (!fr || isPicked(w.id, o, game.env.day)) continue;
-        const d = w.distance(p.x, p.y, o.x, o.y - 0.3);
+        const d = w.distance(p.x, p.y, o.x, o.y) - 0.5 * (o.s || 1);
         if (d < bd) {
           bd = d;
           best = { o, fr };
         }
       }
       if (!best) return other;
-      const mine = { d: bd + 0.4, label: `Pick ${PLURAL[best.fr] || best.fr}`, run: () => pick(game, best.o, best.fr) };
+      const mine = { d: Math.max(0, bd) + 0.3, x: best.o.x, y: best.o.y, label: `Pick ${PLURAL[best.fr] || best.fr}`, run: () => pick(game, best.o, best.fr) };
       return !other || mine.d < other.d ? mine : other;
     };
   }
@@ -79322,8 +79322,11 @@ Trains by: ${TRAINS_BY[k]}` },
     if (isPicked(w.id, o, game.env.day)) return;
     const n = fruit === "cherry" ? 3 : fruit === "coconut" ? 1 + (Math.random() < 0.5 ? 1 : 0) : 1 + Math.floor(Math.random() * 2);
     if (!ITEMS[fruit]) return;
-    addItem(game, fruit, n, { silent: true });
-    game.log(`You pick ${n} ${n > 1 ? PLURAL[fruit] || fruit : ITEMS[fruit].name.toLowerCase()}.`, "#c5e1a5");
+    if (!addItem(game, fruit, n, { silent: true })) return;
+    const have = c.inventory.filter((i) => i.id === fruit).reduce((s, i) => s + (i.qty || 1), 0);
+    const nm = n > 1 ? PLURAL[fruit] || fruit : ITEMS[fruit].name.toLowerCase();
+    game.log(`You pick ${n} ${nm} \u2014 ${have} in your bag.`, "#c5e1a5");
+    game.fx.text(p.x, p.y, `+${n} ${ITEMS[fruit].name}`, "#c5e1a5", 0.36, { life: 1.3 });
     const key2 = fruitKey(w.id, o);
     const back = game.env.day + REGROW_DAYS;
     PICKED.set(key2, back);
