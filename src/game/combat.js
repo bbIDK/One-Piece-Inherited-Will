@@ -185,12 +185,13 @@ export class Combat {
 
     // Logia intangibility
     const armed = att && (att.armament || h.haki || h.seastone);
-    if (tgt.fruitDef && tgt.fruitDef.logia && !tgt.seastoned && tgt.intangibleOK()) {
-      const weakness = tgt.fruitDef.weakTo || [];
+    const lg = tgt.fruitDef && tgt.fruitDef.logia ? tgt.fruitDef : tgt.fakeLogia || null;
+    if (lg && !tgt.seastoned && (lg === tgt.fakeLogia ? tgt.state !== 'knocked' && !tgt.inWater && !tgt.status.freeze : tgt.intangibleOK())) {
+      const weakness = lg.weakTo || [];
       const counters = weakness.includes(el) || (el === 'water' && tgt.status.wet) || (att && att.status.wet && weakness.includes('water'));
       if (!armed && !counters && !h.trueDamage) {
-        fx.burst(tgt.x, tgt.y - 0.7, 8, { color: tgt.fruitDef.color || '#fff', speed: 3, g: 0, life: 0.35, kind: 'smoke', size: 0.2 });
-        if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, 'INTANGIBLE', tgt.fruitDef.color || '#fff', 0.3);
+        fx.burst(tgt.x, tgt.y - 0.7, 8, { color: lg.color || '#fff', speed: 3, g: 0, life: 0.35, kind: 'smoke', size: 0.2 });
+        if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, 'INTANGIBLE', lg.color || '#fff', 0.3);
         if (att && att.isPlayer) game.hint('logia', 'Logia users are intangible. Use Armament Haki, Seastone, or their elemental weakness to hit them.');
         return false;
       }

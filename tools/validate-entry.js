@@ -22,7 +22,7 @@ import { regionAt, REGION_INFO, W, H, RL_HALF, RM_X, POLAR, EQ } from '../src/wo
 import { REVERSE_MOUNTAIN, MARY_GEOISE_DEF } from '../src/world/worldgen.js';
 
 const SEAS = new Set(['east_blue', 'north_blue', 'west_blue', 'south_blue', 'paradise', 'new_world', 'calm_belt', 'sky', 'undersea', 'zone']);
-const GOALS = new Set(['defeat', 'reach', 'item', 'flag', 'event', 'reachXY']);
+const GOALS = new Set(['defeat', 'reach', 'item', 'flag', 'event', 'reachXY', 'days']);
 const HAKI = new Set(['armament', 'observation', 'conqueror']);
 const WEAPONS = new Set(['sword', 'gun', 'staff', 'axe', 'spear', 'mace', 'claw', 'whip', 'club', 'trident', 'bow']);
 const PROP_KINDS = new Set(['tree', 'rock', 'bush', 'building', 'barrel', 'crate', 'haystack', 'lamp', 'lantern', 'well', 'fountain', 'flagpole', 'stall', 'platform', 'statue', 'torii', 'lighthouse', 'mooring', 'grave', 'chest', 'campfire', 'tent', 'cannon', 'bench', 'dummy', 'boat', 'bell', 'pillar', 'bubble', 'sign', 'windmill', 'arch', 'ruins', 'bones', 'anchor', 'fence', 'poneglyph', 'gate', 'shipwreck', 'skull', 'totem', 'tower', 'crystal', 'mushroom', 'palm', 'cactus', 'wheel', 'elevator', 'portal']);

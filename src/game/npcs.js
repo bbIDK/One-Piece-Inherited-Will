@@ -72,6 +72,8 @@ export function makeNPC(def, x, y, extra = {}) {
   a.def = def;
   if (def.armament) a.armament = true;
   if (def.invulnerable) a.invulnerable = true;
+  // Logia bodies for NPC-only fruits (gas, snow…): { weakTo: ['fire'], color }
+  if (def.logia && !a.fruitDef?.logia) a.fakeLogia = { logia: true, weakTo: def.logia.weakTo || [], color: def.logia.color || '#fff' };
   if (def.recover) a.recoverAfter = def.recover;
   if (def.fixedPower) a.fixedPower = def.fixedPower;
   a.showName = def.showName ?? (!!def.dialogue || !!def.boss || !!def.named);

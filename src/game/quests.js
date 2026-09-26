@@ -55,6 +55,7 @@ export class Quests {
     cur?.onComplete?.(this.ctx(), this.game);
     if (idx >= d.stages.length) return this.complete(id);
     s.stage = idx;
+    s.stageDay = this.game.env.day;
     const st = d.stages[idx];
     this.game.log(`${d.name}: ${st.desc}`, '#90caf9');
     st.onStart?.(this.ctx(), this.game);
@@ -128,6 +129,7 @@ export class Quests {
       const goal = def.stages[s.stage]?.goal;
       if (!goal) continue;
       if (goal.type === 'flag' && this.char.flags[goal.flag]) this.next(id);
+      else if (goal.type === 'days' && g.env.day - (s.stageDay ?? s.day ?? g.env.day) >= (goal.n || 1)) this.next(id);
       else if (goal.type === 'reach' && goal.spot) {
         const pos = this.spotPos(goal.island, goal.spot);
         if (pos && g.world.distance(p.x, p.y, pos.x, pos.y) < (goal.r || 4)) this.next(id);

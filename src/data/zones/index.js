@@ -25,6 +25,7 @@ export const ZONES = {
       },
       {
         id: 'angel_island', name: 'Angel Island', sea: 'sky', x: 190, y: 285, w: 160, h: 110, climate: 'sky', rough: 0.25,
+        population: [['skypiean', 92], ['human', 8]],
         trees: ['cloudtree', 'palm'],
         towns: [{
           id: 'lovely_street', name: 'Lovely Street', dx: 0.05, dy: 0.05, w: 56, h: 38, style: 'sky', dockDir: 's', plaza: 'fountain',
@@ -61,11 +62,13 @@ export const ZONES = {
       },
       {
         id: 'shandia_village', name: 'Hidden Shandian Village', sea: 'sky', x: 95, y: 110, w: 90, h: 64, climate: 'sky', rough: 0.3,
+        population: [['skypiean', 100]],
         towns: [{ id: 'shandia_camp', name: 'Shandian Village', dx: 0, dy: 0, w: 34, h: 24, style: 'tribal', dockDir: 's', plaza: 'well',
           buildings: [{ role: 'hall', name: "Chief's Hut" }, { role: 'house', name: "Wyper's Hut" }] }],
       },
       {
         id: 'weatheria', name: 'Weatheria', sea: 'sky', x: 565, y: 60, w: 70, h: 48, climate: 'sky', rough: 0.2,
+        population: [['human', 70], ['skypiean', 30]],
         towns: [{ id: 'weatheria_town', name: 'Weatheria', dx: 0, dy: 0.05, w: 34, h: 24, style: 'sky', dockDir: 'w', plaza: 'fountain',
           buildings: [{ role: 'library', name: 'Weatheria Library' }, { role: 'trainer', name: 'Weather Laboratory', trainer: 'weatheria_scholar' }] }],
       },
@@ -82,6 +85,7 @@ export const ZONES = {
     islands: [
       {
         id: 'fishman_island', name: 'Fish-Man Island', sea: 'undersea', x: 245, y: 195, w: 230, h: 190, climate: 'undersea', rough: 0.2,
+        population: [['fishman', 82], ['human', 12], ['mink', 2]],
         trees: ['coral', 'kelp'],
         towns: [
           { id: 'ryugu_kingdom', name: 'Ryugu Kingdom', dx: 0.0, dy: -0.35, w: 56, h: 34, style: 'fishman', walls: true, dockDir: 'n', plaza: 'fountain',

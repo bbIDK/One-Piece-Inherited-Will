@@ -549,3 +549,6 @@ node tools/validate.mjs --pack=paradise1   # only report your pack's NPC/quest p
   `bellRung(o)`.
 - **Dock names.** A dock built for a town (`dockDir`) is named after that
   town.
+- **Bouts and duels.** `duel: true` on an NPC: they never finish you off, and losing to them costs nothing.
+- **Waiting.** Quest goal `{ type: 'days', n }` completes n in-game days after the stage started.
+- **Local weather.** Island def `weather: { storm: 0..1, snow: 0..1 }` gives an island its own permanent weather.

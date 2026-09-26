@@ -8,10 +8,8 @@
 // who arrives in the middle of each canon arc. Every Road Poneglyph here has
 // its own quest that grants one `poneglyph_rubbing`.
 import './bossMoves.js';
-import { spawnNow, findActor, aggro, despawn } from './helpers.js';
+import { spawnNow, findActor, aggro, despawn, spawnGroup } from './helpers.js';
 import { count } from '../game/inventory.js';
-import { makeEnemy } from '../game/npcs.js';
-import { makeLook } from '../data/races.js';
 import { persist } from '../game/lineage.js';
 
 // ------------------------------------------------------------------ helpers
@@ -42,18 +40,9 @@ function fightAt(game, id, islandId, spotId, ox, oy) {
   return a;
 }
 /** Story mobs that must appear right now (groups only re-spawn when an island repopulates). */
-function spawnMob(game, islandId, spotId, list) {
-  const pop = game.spawner?.populated?.get(islandId);
-  if (!pop) return;
-  const s = spotXY(game, islandId, spotId);
-  if (!s) return;
-  for (const [arch, lvl, over] of list) {
-    const p = game.spawner.findFree(s.x, s.y, 6) || s;
-    const e = makeEnemy(arch, lvl, p.x, p.y, over || {});
-    e.game = game;
-    game.addActor(e);
-    pop.push(e);
-  }
+function spawnMob(game, islandId, spotId, enemies) {
+  if (!game.spawner?.populated?.has(islandId)) return;
+  spawnGroup(game, { island: islandId, spot: spotId, radius: 6, enemies });
 }
 /** Logia body for bosses whose fruit isn't in the fruit registry: only Haki, Seastone or a weakness land. */
 function logiaBody(color, weakTo = []) {
@@ -274,6 +263,10 @@ const abilities = [
     steps: [{ zone: { range: 2, duration: 0.4, interval: 0.35, damage: 32, color: '#d7ccc8', atTarget: true, kind: 'fists', status: { root: 1.5 } } }] },
   { id: 'nw_cracker_roll', name: 'Double Roll Pretzel', anim: 'slash', windup: 0.5, recover: 0.4, cd: 8, cost: { stamina: 12 },
     steps: [{ hit: { shape: 'circle', range: 2.8, damage: 8, knockback: 2, stun: 0.2, slashing: true, duration: 0.9, interval: 0.15 }, vfx: 'ring', color: '#d7ccc8' }] },
+  { id: 'nw_cracker_soldiers', name: 'Biscuit Soldiers', anim: 'cast', windup: 0.8, recover: 0.4, cd: 24, cost: { stamina: 14 }, say: 'Biscuit Soldiers!',
+    steps: [{ summon: { archetype: 'brute', level: 60, count: 2, name: 'Biscuit Soldier', hpMul: 0.7, duration: 40, color: '#d7ccc8', look: { top: '#d7ccc8', bottom: '#bcaaa4', skin: '#d7ccc8', hat: 'horns', hatColor: '#a1887f' } } }] },
+  { id: 'nw_bm_homies', name: 'Homies of Totto Land', anim: 'cast', windup: 0.9, recover: 0.4, cd: 30, cost: { stamina: 14 }, say: 'Children! Homies! Get them!',
+    steps: [{ summon: { archetype: 'nw_chess_soldier', level: 68, count: 3, name: 'Chess Peacekeeper', duration: 35, color: '#fafafa' } }] },
   { id: 'nw_smoothie_wring', name: 'Shibo Shibo: Wring', anim: 'grab', windup: 0.4, recover: 0.35, cd: 6, cost: { stamina: 10 },
     steps: [{ hit: { shape: 'arc', range: 2.2, arc: 1.2, offset: 0.2, damage: 18, knockback: 1, stun: 0.6, status: { dry: 4 } } }] },
   { id: 'nw_smoothie_juice', name: 'Juice Blade', anim: 'slash', windup: 0.35, recover: 0.3, cd: 5, cost: { stamina: 8 },
@@ -339,7 +332,7 @@ const TONTATTA = (o) => ({ scale: 0.34, tail: 'fluffy', nose: 'long', ...o });
 const npcs = [
   // ======================================================= FISH-MAN ISLAND
   {
-    id: 'nw_neptune', name: 'King Neptune', title: '"Sea God" of the Ryugu Kingdom', island: 'fishman_island', at: { town: 'ryugu_kingdom', building: 'Ryugu Palace' },
+    id: 'nw_neptune', invulnerable: true, name: 'King Neptune', title: '"Sea God" of the Ryugu Kingdom', island: 'fishman_island', at: { town: 'ryugu_kingdom', building: 'Ryugu Palace' },
     race: 'fishman', level: 72, scale: 1.9, bulk: 1.8,
     look: { hair: 'long', hairColor: '#eceff1', skin: '#e0ac7e', top: '#1565c0', bottom: '#0d47a1', coat: '#1a237e', hat: 'crown', hatColor: '#ffd54f' },
     marker: (c, g) => (!g.quests.state('nw_fmi_coup') ? '!' : stageIs(g, 'nw_fmi_coup', 'report') || stageIs(g, 'nw_otohime', 'report') ? '?' : g.quests.isDone('nw_fmi_coup') && !g.quests.state('nw_otohime') ? '!' : null),
@@ -382,7 +375,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_shirahoshi', name: 'Princess Shirahoshi', title: 'The Mermaid Princess', island: 'fishman_island', at: { town: 'ryugu_kingdom', building: 'Hard Shell Tower' },
+    id: 'nw_shirahoshi', invulnerable: true, name: 'Princess Shirahoshi', title: 'The Mermaid Princess', island: 'fishman_island', at: { town: 'ryugu_kingdom', building: 'Hard Shell Tower' },
     race: 'fishman', level: 20, scale: 2.4, ai: 'idle',
     look: { hair: 'long', hairColor: '#f48fb1', skin: '#f9dcc4', top: '#f8bbd0', bottom: '#f48fb1', hat: 'crown', hatColor: '#ffd54f' },
     marker: (c, g) => (!g.quests.state('nw_decken') ? '!' : stageIs(g, 'nw_decken', 'report') ? '?' : null),
@@ -407,7 +400,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_fukaboshi', name: 'Prince Fukaboshi', title: 'First Prince of the Ryugu Kingdom', island: 'sea_forest', at: { dx: -0.2, dy: 0.32 },
+    id: 'nw_fukaboshi', invulnerable: true, name: 'Prince Fukaboshi', title: 'First Prince of the Ryugu Kingdom', island: 'sea_forest', at: { dx: -0.2, dy: 0.32 },
     race: 'fishman', level: 62, scale: 1.5, style: 'fishman_karate',
     look: { hair: 'long', hairColor: '#90caf9', skin: '#e0ac7e', top: '#1565c0', bottom: '#0d47a1', coat: '#283593', bulk: 1.4 },
     marker: (c, g) => (stageIs(g, 'nw_fmi_coup', 'truth') ? '?' : null),
@@ -437,7 +430,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_ryuboshi', name: 'Prince Ryuboshi', title: 'Second Prince of the Ryugu Kingdom', island: 'fishman_island', at: { town: 'ryugu_kingdom', plaza: true, ox: -4 },
+    id: 'nw_ryuboshi', invulnerable: true, name: 'Prince Ryuboshi', title: 'Second Prince of the Ryugu Kingdom', island: 'fishman_island', at: { town: 'ryugu_kingdom', plaza: true, ox: -4 },
     race: 'fishman', level: 56, scale: 1.6, style: 'ittoryu', weapon: 'sword', ai: 'idle',
     look: { hair: 'long', hairColor: '#ad1457', skin: '#eceff1', top: '#1565c0', bottom: '#0d47a1', swords: 1 },
     dialogue: (ctx) => ({ start: 'a', nodes: { a: {
@@ -447,7 +440,7 @@ const npcs = [
     } } }),
   },
   {
-    id: 'nw_manboshi', name: 'Prince Manboshi', title: 'Third Prince of the Ryugu Kingdom', island: 'fishman_island', at: { town: 'ryugu_kingdom', plaza: true, ox: 4 },
+    id: 'nw_manboshi', invulnerable: true, name: 'Prince Manboshi', title: 'Third Prince of the Ryugu Kingdom', island: 'fishman_island', at: { town: 'ryugu_kingdom', plaza: true, ox: 4 },
     race: 'fishman', level: 54, scale: 1.5, bulk: 1.6, ai: 'idle',
     look: { hair: 'short', hairColor: '#6d4c41', skin: '#ef9a9a', top: '#1565c0', bottom: '#0d47a1' },
     dialogue: (ctx) => ({ start: 'a', nodes: { a: {
@@ -457,7 +450,7 @@ const npcs = [
     } } }),
   },
   {
-    id: 'nw_den', name: 'Den', title: 'Coating mechanic & Sea Forest researcher', island: 'sea_forest', at: { dx: 0.3, dy: 0.05 },
+    id: 'nw_den', invulnerable: true, name: 'Den', title: 'Coating mechanic & Sea Forest researcher', island: 'sea_forest', at: { dx: 0.3, dy: 0.05 },
     race: 'fishman', level: 18,
     look: { hair: 'bald', skin: '#78909c', top: '#6d4c41', bottom: '#4e342e', goggles: true },
     marker: (c, g) => (stageIs(g, 'nw_otohime', 'signatures') && !c.flags.nw_sig_den ? '!' : null),
@@ -483,7 +476,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_shyarly', name: 'Madam Shyarly', title: 'Proprietor of the Mermaid Café', island: 'fishman_island', at: { town: 'mermaid_cove', building: 'Mermaid Café' },
+    id: 'nw_shyarly', invulnerable: true, name: 'Madam Shyarly', title: 'Proprietor of the Mermaid Café', island: 'fishman_island', at: { town: 'mermaid_cove', building: 'Mermaid Café' },
     race: 'fishman', level: 16,
     look: { hair: 'long', hairColor: '#1a237e', skin: '#f9dcc4', top: '#ce93d8', bottom: '#4a148c' },
     marker: (c, g) => (stageIs(g, 'nw_otohime', 'signatures') && !c.flags.nw_sig_shyarly ? '!' : null),
@@ -516,7 +509,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_jinbe', name: 'Jinbe', title: '"Knight of the Sea", Fish-Man Karate master', island: 'fishman_island', at: { town: 'fishman_district', building: 'Fish-Man Karate Dojo' }, trainer: 'jinbe',
+    id: 'nw_jinbe', invulnerable: true, name: 'Jinbe', title: '"Knight of the Sea", Fish-Man Karate master', island: 'fishman_island', at: { town: 'fishman_district', building: 'Fish-Man Karate Dojo' }, trainer: 'jinbe',
     race: 'fishman', level: 84, scale: 1.35, bulk: 1.6, style: 'fishman_karate', haki: { armament: 70, observation: 60 },
     look: { hair: 'long', hairColor: '#212121', skin: '#4a69bd', top: '#e65100', bottom: '#3e2723', belt: '#212121' },
     marker: (c, g) => (stageIs(g, 'nw_otohime', 'signatures') && !c.flags.nw_sig_jinbe ? '!' : null),
@@ -620,7 +613,7 @@ const npcs = [
 
   // ============================================================ NEW MARINEFORD
   {
-    id: 'nw_sakazuki', name: 'Fleet Admiral Sakazuki', title: '"Akainu"', island: 'new_marineford', at: { town: 'marine_hq_nw', building: 'Marine Headquarters' },
+    id: 'nw_sakazuki', invulnerable: true, name: 'Fleet Admiral Sakazuki', title: '"Akainu"', island: 'new_marineford', at: { town: 'marine_hq_nw', building: 'Marine Headquarters' },
     level: 118, faction: 'marine', fruit: 'magu', fixedPower: 99999, ai: 'idle', scale: 1.2, bulk: 1.3,
     look: { hair: 'short', hairColor: '#212121', skin: '#c68642', top: '#b71c1c', bottom: '#b71c1c', coat: '#fafafa', coatText: 'JUSTICE', hat: 'marine', hatColor: '#fafafa' },
     marker: (c, g) => (isMarine(c) && !g.quests.state('nw_new_justice') ? '!' : stageIs(g, 'nw_new_justice', 'report') ? '?' : null),
@@ -651,7 +644,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_hq_recruiter', name: 'Recruiting Officer', title: 'Marine Headquarters', island: 'new_marineford', at: { town: 'marine_hq_nw', plaza: true, ox: 3 },
+    id: 'nw_hq_recruiter', invulnerable: true, name: 'Recruiting Officer', title: 'Marine Headquarters', island: 'new_marineford', at: { town: 'marine_hq_nw', plaza: true, ox: 3 },
     level: 40, faction: 'marine', look: { hair: 'short', hairColor: '#5d4037', top: '#fafafa', bottom: '#1b4f72', hat: 'marine' },
     when: (c) => !(c.bounty > 0 && c.faction !== 'marine'),
     dialogue: (ctx) => ({
@@ -671,7 +664,7 @@ const npcs = [
 
   // ======================================================================= G-5
   {
-    id: 'nw_vergo_g5', name: 'Vice Admiral Vergo', title: 'Commander of Marine Base G-5', island: 'g5_base', at: { town: 'g5_base_town', building: 'G-5 Headquarters' },
+    id: 'nw_vergo_g5', invulnerable: true, name: 'Vice Admiral Vergo', title: 'Commander of Marine Base G-5', island: 'g5_base', at: { town: 'g5_base_town', building: 'G-5 Headquarters' },
     level: 66, faction: 'marine', ai: 'idle',
     look: { hair: 'short', hairColor: '#212121', skin: '#e0ac7e', top: '#fafafa', bottom: '#1b4f72', coat: '#fafafa', coatText: 'JUSTICE' },
     when: (c, g) => !g.quests.isDone('nw_punk_hazard') && !['vergo', 'report'].includes(g.quests.stageId('nw_punk_hazard')) && !c.bosses.includes('nw_vergo'),
@@ -691,7 +684,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_g5_marine', name: 'G-5 Marine', title: 'Rowdy soldier of G-5', island: 'g5_base', at: { town: 'g5_base_town', plaza: true, ox: -3 },
+    id: 'nw_g5_marine', invulnerable: true, name: 'G-5 Marine', title: 'Rowdy soldier of G-5', island: 'g5_base', at: { town: 'g5_base_town', plaza: true, ox: -3 },
     level: 38, faction: 'marine', look: { hair: 'mohawk', hairColor: '#fdd835', top: '#fafafa', bottom: '#1b4f72', hat: 'bandana', hatColor: '#fafafa' },
     dialogue: (ctx) => ({
       start: 'a',
@@ -712,7 +705,7 @@ const npcs = [
 
   // ============================================================== RAIJIN ISLAND
   {
-    id: 'nw_kasa', name: 'Kasa', title: 'Umbrella seller of Raijin Island', island: 'raijin_island', at: { town: 'raijin_hamlet', building: "Kasa's Umbrella Stand" },
+    id: 'nw_kasa', invulnerable: true, name: 'Kasa', title: 'Umbrella seller of Raijin Island', island: 'raijin_island', at: { town: 'raijin_hamlet', building: "Kasa's Umbrella Stand" },
     level: 4, look: { hair: 'bun', hairColor: '#bdbdbd', skin: '#e0ac7e', top: '#795548', bottom: '#5d4037', scale: 0.8 },
     dialogue: (ctx) => ({
       start: 'a',
@@ -730,7 +723,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_urouge', name: 'Urouge', title: '"Mad Monk", Worst Generation', island: 'raijin_island', at: { spot: 'thunder_plain' },
+    id: 'nw_urouge', duel: true, recover: 10, recoverLine: '"Hahaha! Fate favoured you today!"', name: 'Urouge', title: '"Mad Monk", Worst Generation', island: 'raijin_island', at: { spot: 'thunder_plain' },
     race: 'skypiean', level: 62, boss: true, hpMul: 1.1, style: 'brawler', bulk: 1.6, scale: 1.3, skill: 0.45, bounty: 108000000, infamy: true, breakthrough: 3,
     look: { hair: 'bald', skin: '#c68642', top: '#212121', bottom: '#3e2723' },
     moves: ['nw_urouge_mallet', 'nw_urouge_quake', 'brawl_tackle'], haki: { armament: 45 },
@@ -758,7 +751,7 @@ const npcs = [
 
   // =========================================================== RISKY RED ISLAND
   {
-    id: 'nw_hawkins', name: 'Basil Hawkins', title: '"Magician", Worst Generation', island: 'risky_red_island', at: { spot: 'hawkins_camp' },
+    id: 'nw_hawkins', duel: true, recover: 10, recoverLine: '"...The cards were wrong. Interesting."', name: 'Basil Hawkins', title: '"Magician", Worst Generation', island: 'risky_red_island', at: { spot: 'hawkins_camp' },
     level: 66, boss: true, hpMul: 1.1, style: 'ittoryu', weapon: 'sword', skill: 0.55, bounty: 320000000, infamy: true, breakthrough: 3,
     look: { hair: 'long', hairColor: '#fff59d', skin: '#fdeee4', top: '#4a148c', bottom: '#311b92', coat: '#5d4037', eyeColor: '#b71c1c', swords: 1 },
     moves: ['nw_hawkins_straw_sword', 'nw_hawkins_nail', 'nw_hawkins_effigy'], haki: { armament: 40, observation: 50 },
@@ -786,7 +779,7 @@ const npcs = [
 
   // ============================================================= MYSTORIA ISLAND
   {
-    id: 'nw_vivre_maker', name: 'Vivre Card Craftsman', title: 'Vivre Card Workshop', island: 'mystoria_island', at: { town: 'mystoria_town', building: 'Vivre Card Workshop' },
+    id: 'nw_vivre_maker', invulnerable: true, name: 'Vivre Card Craftsman', title: 'Vivre Card Workshop', island: 'mystoria_island', at: { town: 'mystoria_town', building: 'Vivre Card Workshop' },
     level: 6, look: { hair: 'bald', skin: '#f1c9a0', top: '#8d6e63', bottom: '#5d4037', goggles: true },
     dialogue: (ctx) => ({
       start: 'a',
@@ -812,7 +805,7 @@ const npcs = [
 
   // ================================================================ PUNK HAZARD
   {
-    id: 'nw_law', name: 'Trafalgar Law', title: '"Surgeon of Death", Warlord of the Sea', island: 'punk_hazard', at: { spot: 'law_camp' },
+    id: 'nw_law', invulnerable: true, name: 'Trafalgar Law', title: '"Surgeon of Death", Warlord of the Sea', island: 'punk_hazard', at: { spot: 'law_camp' },
     level: 78, fruit: 'ope', fruitMastery: 85, style: 'ittoryu', weapon: 'sword', ai: 'idle', haki: { armament: 60, observation: 55 },
     look: { hair: 'short', hairColor: '#212121', skin: '#e0ac7e', top: '#212121', bottom: '#90caf9', coat: '#212121', hat: 'beanie', hatColor: '#fafafa', swords: 1 },
     doctor: { line: '"Sit still. I\'m a doctor. They call me the Surgeon of Death, but I\'ve never lost a patient I wanted to keep."' },
@@ -855,7 +848,7 @@ const npcs = [
     when: (c, g) => stageIs(g, 'nw_punk_hazard', 'brownbeard') && !c.defeated.nw_brownbeard,
   },
   {
-    id: 'nw_mocha', name: 'Mocha', title: 'Kidnapped child', island: 'punk_hazard', at: { town: 'ph_laboratory', building: 'Biscuits Room' },
+    id: 'nw_mocha', invulnerable: true, name: 'Mocha', title: 'Kidnapped child', island: 'punk_hazard', at: { town: 'ph_laboratory', building: 'Biscuits Room' },
     level: 8, scale: 1.3, ai: 'idle', look: { hair: 'long', hairColor: '#212121', skin: '#c68642', top: '#ffcc80', bottom: '#8d6e63' },
     marker: (c, g) => (stageIs(g, 'nw_punk_hazard', 'children') ? '?' : null),
     dialogue: (ctx) => ({
@@ -919,7 +912,7 @@ const npcs = [
     when: (c, g) => stageIs(g, 'nw_punk_hazard', 'vergo'),
   },
   {
-    id: 'nw_smoker_ph', name: 'Vice Admiral Smoker', title: 'G-5 (currently in the wrong body)', island: 'punk_hazard', at: { spot: 'g5_camp' },
+    id: 'nw_smoker_ph', invulnerable: true, name: 'Vice Admiral Smoker', title: 'G-5 (currently in the wrong body)', island: 'punk_hazard', at: { spot: 'g5_camp' },
     level: 80, faction: 'marine', fruit: 'moku', ai: 'idle',
     look: { hair: 'short', hairColor: '#212121', skin: '#f9dcc4', top: '#e1bee7', bottom: '#1565c0', coat: '#fafafa', coatText: 'JUSTICE', goggles: true },
     dialogue: (ctx) => ({
@@ -940,7 +933,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_tashigi_ph', name: 'Captain Tashigi', title: 'G-5 (currently in Smoker\'s body)', island: 'punk_hazard', at: { spot: 'g5_camp', ox: 2.5 },
+    id: 'nw_tashigi_ph', invulnerable: true, name: 'Captain Tashigi', title: 'G-5 (currently in Smoker\'s body)', island: 'punk_hazard', at: { spot: 'g5_camp', ox: 2.5 },
     level: 44, faction: 'marine', style: 'ittoryu', weapon: 'sword', ai: 'idle',
     look: { hair: 'short', hairColor: '#eceff1', skin: '#e0ac7e', top: '#37474f', bottom: '#263238', coat: '#fafafa', coatText: 'JUSTICE', swords: 1 },
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"(Smoker\'s huge body sits hugging its knees.) Please stop staring... I keep reaching for my glasses and poking myself in the eye. Vice Admiral Smoker is VERY angry. He\'s using my body to be angry. It\'s very confusing."' } } }),
@@ -948,7 +941,7 @@ const npcs = [
 
   // ================================================================== DRESSROSA
   {
-    id: 'nw_gatz', name: 'Gatz', title: 'Announcer of the Corrida Colosseum', island: 'dressrosa', at: { town: 'acacia', building: 'Corrida Colosseum' },
+    id: 'nw_gatz', invulnerable: true, name: 'Gatz', title: 'Announcer of the Corrida Colosseum', island: 'dressrosa', at: { town: 'acacia', building: 'Corrida Colosseum' },
     level: 12, look: { hair: 'pompadour', hairColor: '#212121', skin: '#e0ac7e', top: '#fafafa', bottom: '#212121', goggles: true },
     marker: (c, g) => (!g.quests.state('nw_corrida') ? '!' : stageIs(g, 'nw_corrida', 'prize') ? '?' : null),
     dialogue: (ctx) => ({
@@ -981,7 +974,7 @@ const npcs = [
   },
   // Colosseum gladiators: friendly outside the ring, turned on you during your block.
   {
-    id: 'nw_bellamy', name: 'Bellamy', title: '"The Hyena", gladiator', island: 'dressrosa', at: { spot: 'colosseum_arena', ox: -6 },
+    id: 'nw_bellamy', duel: true, recover: 8, recoverLine: '"Tch... Fine. You win this round."', name: 'Bellamy', title: '"The Hyena", gladiator', island: 'dressrosa', at: { spot: 'colosseum_arena', ox: -6 },
     level: 55, named: true, style: 'brawler', skill: 0.4, bounty: 55000000,
     look: { hair: 'short', hairColor: '#fdd835', skin: '#f1c9a0', top: '#212121', bottom: '#5d4037', grin: true },
     moves: ['nw_bellamy_spring', 'brawl_tackle'],
@@ -990,7 +983,7 @@ const npcs = [
       choices: [{ text: 'Let\'s settle it in the arena!', if: () => active(ctx, 'nw_corrida', 'block') && !ctx.char.defeated.nw_bellamy, do: (c) => provoke(c.game, 'nw_bellamy', 'rival'), end: true }, { text: 'Later.', end: true }] } } }),
   },
   {
-    id: 'nw_ideo', name: 'Ideo', title: '"Destruction Cannon", boxer', island: 'dressrosa', at: { spot: 'colosseum_arena', ox: -2 },
+    id: 'nw_ideo', duel: true, recover: 8, recoverLine: '"What a punch! You\'ve got it, champ!"', name: 'Ideo', title: '"Destruction Cannon", boxer', island: 'dressrosa', at: { spot: 'colosseum_arena', ox: -2 },
     race: 'longarm', level: 58, named: true, style: 'brawler', skill: 0.45,
     look: { hair: 'short', hairColor: '#212121', skin: '#e0ac7e', top: '#fafafa', bottom: '#b71c1c' },
     moves: ['nw_ideo_cannon', 'brawl_knee'],
@@ -1000,7 +993,7 @@ const npcs = [
       choices: [{ text: 'Let\'s settle it in the arena!', if: () => active(ctx, 'nw_corrida', 'block') && !ctx.char.defeated.nw_ideo, do: (c) => provoke(c.game, 'nw_ideo', 'rival'), end: true }, { text: 'Later.', end: true }] } } }),
   },
   {
-    id: 'nw_hajrudin', name: 'Hajrudin', title: 'Captain of the New Giant Warrior Pirates', island: 'dressrosa', at: { spot: 'colosseum_arena', ox: 2 },
+    id: 'nw_hajrudin', duel: true, recover: 8, recoverLine: '"GEGYAGYA! A true warrior!"', name: 'Hajrudin', title: 'Captain of the New Giant Warrior Pirates', island: 'dressrosa', at: { spot: 'colosseum_arena', ox: 2 },
     level: 60, named: true, style: 'elbaf', weapon: 'axe', scale: 2.4, bulk: 1.6, skill: 0.35, hpMul: 1.5,
     look: { hair: 'long', hairColor: '#795548', skin: '#e0ac7e', top: '#5d4037', bottom: '#3e2723', hat: 'horns', hatColor: '#9e9e9e' },
     moves: ['elbaf_hakoku'],
@@ -1009,7 +1002,7 @@ const npcs = [
       choices: [{ text: 'Let\'s settle it in the arena!', if: () => active(ctx, 'nw_corrida', 'block') && !ctx.char.defeated.nw_hajrudin, do: (c) => provoke(c.game, 'nw_hajrudin', 'rival'), end: true }, { text: 'Later.', end: true }] } } }),
   },
   {
-    id: 'nw_chinjao', name: 'Don Chinjao', title: '"Chinjao the Drill", Happo Navy', island: 'dressrosa', at: { spot: 'colosseum_arena', ox: 6 },
+    id: 'nw_chinjao', duel: true, recover: 8, recoverLine: '"Hmph! Not bad... for Garp\'s kind."', name: 'Don Chinjao', title: '"Chinjao the Drill", Happo Navy', island: 'dressrosa', at: { spot: 'colosseum_arena', ox: 6 },
     level: 66, named: true, style: 'hasshoken', scale: 1.8, bulk: 1.4, skill: 0.5, bounty: 542000000, haki: { armament: 50 },
     look: { hair: 'bald', skin: '#f1c9a0', top: '#b71c1c', bottom: '#4e342e' },
     moves: ['nw_chinjao_drill', 'hassho_bushin'],
@@ -1027,7 +1020,7 @@ const npcs = [
     when: (c, g) => stageIs(g, 'nw_corrida', 'final') || stageIs(g, 'nw_birdcage', 'officers'),
   },
   {
-    id: 'nw_rebecca', name: 'Rebecca', title: '"The Undefeated Woman", gladiator', island: 'dressrosa', at: { town: 'acacia', plaza: true, ox: -4 },
+    id: 'nw_rebecca', invulnerable: true, name: 'Rebecca', title: '"The Undefeated Woman", gladiator', island: 'dressrosa', at: { town: 'acacia', plaza: true, ox: -4 },
     level: 40, style: 'ittoryu', weapon: 'sword', look: { hair: 'long', hairColor: '#f48fb1', skin: '#f9dcc4', top: '#bdbdbd', bottom: '#9e9e9e', swords: 1 },
     dialogue: (ctx) => ({ start: 'a', nodes: { a: {
       text: () => (ctx.flag('nw_toysFreed')
@@ -1036,19 +1029,20 @@ const npcs = [
     } } }),
   },
   {
-    id: 'nw_cavendish', name: 'Cavendish', title: '"Cavendish of the White Horse", Pirate Prince', island: 'dressrosa', at: { town: 'acacia', plaza: true, ox: 4 },
+    id: 'nw_cavendish', invulnerable: true, name: 'Cavendish', title: '"Cavendish of the White Horse", Pirate Prince', island: 'dressrosa', at: { town: 'acacia', plaza: true, ox: 4 },
     level: 70, style: 'ittoryu', weapon: 'sword', ai: 'idle', bounty: 280000000,
     look: { hair: 'long', hairColor: '#fdd835', skin: '#fdeee4', top: '#fafafa', bottom: '#fafafa', coat: '#1565c0', swords: 1 },
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"(He flips his golden hair.) Cavendish of the White Horse. Yes, THAT Cavendish. My fans were everything, until the \'Worst Generation\' stole the headlines. I entered this tournament to take back the spotlight. ...Why is nobody looking at me?"' } } }),
   },
   {
-    id: 'nw_bartolomeo', name: 'Bartolomeo', title: '"The Cannibal", Barto Club captain', island: 'dressrosa', at: { town: 'acacia', plaza: true, ox: 7 },
+    id: 'nw_bartolomeo', invulnerable: true, name: 'Bartolomeo', title: '"The Cannibal", Barto Club captain', island: 'dressrosa', at: { town: 'acacia', plaza: true, ox: 7 },
     level: 64, fruit: 'bari', ai: 'idle', bounty: 150000000,
     look: { hair: 'mohawk', hairColor: '#66bb6a', skin: '#f1c9a0', top: '#fafafa', bottom: '#1565c0', coat: '#212121', grin: true, sharpTeeth: true },
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"Oi. OI. You\'re blocking my view of the entrance. Luffy-senpai might walk through it any second! Straw Hat Luffy is my HERO, get it?! ...Barrier! Nothing gets through my Barrier. Except tears. Tears get through."' } } }),
   },
   {
-    id: 'nw_riku', name: 'Ricky', title: 'Masked gladiator (King Riku Dold III)', island: 'dressrosa', at: { town: 'acacia', building: 'Colosseum Tavern' },
+    id: 'nw_riku', invulnerable: true, name: 'Ricky', title: 'Masked gladiator (King Riku Dold III)', island: 'dressrosa',
+    at: (c, g) => (g.quests.isDone('nw_birdcage') ? { town: 'royal_palace_dr', plaza: true, ox: -2 } : { town: 'acacia', building: 'Colosseum Tavern' }),
     level: 48, style: 'ittoryu', weapon: 'sword', look: { hair: 'short', hairColor: '#bdbdbd', skin: '#f1c9a0', top: '#8d6e63', bottom: '#5d4037', hat: 'goggles', hatColor: '#78909c', swords: 1 },
     marker: (c, g) => (stageIs(g, 'nw_birdcage', 'report') ? '?' : null),
     dialogue: (ctx) => ({
@@ -1067,7 +1061,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_viola', name: 'Violet', title: 'Dancer (Princess Viola)', island: 'dressrosa', at: { town: 'primula', building: 'Café Bar La Baltad' },
+    id: 'nw_viola', invulnerable: true, name: 'Violet', title: 'Dancer (Princess Viola)', island: 'dressrosa', at: { town: 'primula', building: 'Café Bar La Baltad' },
     level: 38, look: { hair: 'long', hairColor: '#212121', skin: '#f1c9a0', top: '#e91e63', bottom: '#880e4f' },
     dialogue: (ctx) => ({ start: 'a', nodes: { a: {
       text: () => (done(ctx, 'nw_birdcage')
@@ -1076,7 +1070,7 @@ const npcs = [
     } } }),
   },
   {
-    id: 'nw_fujitora', name: 'Admiral Fujitora', title: 'Issho, Admiral of the Marines', island: 'dressrosa', at: { town: 'acacia', building: 'Colosseum Tavern', ox: 3 },
+    id: 'nw_fujitora', invulnerable: true, name: 'Admiral Fujitora', title: 'Issho, Admiral of the Marines', island: 'dressrosa', at: { town: 'acacia', building: 'Colosseum Tavern', ox: 3 },
     level: 112, faction: 'marine', fruit: 'zushi', fixedPower: 99999, ai: 'idle',
     look: { hair: 'short', hairColor: '#212121', skin: '#c68642', top: '#6a1b9a', bottom: '#4a148c', coat: '#fafafa', coatText: 'JUSTICE', scarEye: true },
     dialogue: (ctx) => ({
@@ -1096,7 +1090,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_sabo', name: 'Sabo', title: 'Chief of Staff of the Revolutionary Army', island: 'dressrosa', at: { town: 'acacia', plaza: true, ox: -7 }, trainer: 'revolutionary',
+    id: 'nw_sabo', invulnerable: true, name: 'Sabo', title: 'Chief of Staff of the Revolutionary Army', island: 'dressrosa', at: { town: 'acacia', plaza: true, ox: -7 }, trainer: 'revolutionary',
     level: 88, faction: 'revolutionary', style: 'ryusoken', ai: 'idle', haki: { armament: 70, observation: 60 },
     look: { hair: 'curly', hairColor: '#fdd835', skin: '#f9dcc4', top: '#fafafa', bottom: '#1565c0', coat: '#1565c0', hat: 'captain', hatColor: '#212121', scarEye: true },
     when: (c) => !!c.flags.nw_corridaDone,
@@ -1111,7 +1105,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_doflamingo_king', name: 'Donquixote Doflamingo', title: 'King of Dressrosa, Warlord of the Sea', island: 'dressrosa', at: { town: 'royal_palace_dr', plaza: true, ox: 2 },
+    id: 'nw_doflamingo_king', invulnerable: true, name: 'Donquixote Doflamingo', title: 'King of Dressrosa, Warlord of the Sea', island: 'dressrosa', at: { town: 'royal_palace_dr', plaza: true, ox: 2 },
     level: 92, fruit: 'ito', ai: 'idle', scale: 1.25,
     look: { hair: 'short', hairColor: '#fdd835', skin: '#f1c9a0', top: '#fafafa', bottom: '#ffb74d', coat: '#f48fb1', goggles: true, grin: true },
     when: (c, g) => !g.quests.state('nw_birdcage'),
@@ -1148,7 +1142,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_toy_soldier', name: 'One-Legged Toy Soldier', title: 'Thunder Soldier', island: 'dressrosa', at: { spot: 'flower_hill' },
+    id: 'nw_toy_soldier', invulnerable: true, name: 'One-Legged Toy Soldier', title: 'Thunder Soldier', island: 'dressrosa', at: { spot: 'flower_hill' },
     level: 60, style: 'ittoryu', weapon: 'sword', scale: 0.6, skill: 0.6,
     look: { hair: 'short', hairColor: '#212121', skin: '#ffcc80', top: '#b71c1c', bottom: '#212121', hat: 'captain', hatColor: '#212121', swords: 1 },
     marker: (c, g) => (stageIs(g, 'nw_sop', 'soldier') ? '?' : null),
@@ -1170,7 +1164,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_kyros', name: 'Kyros', title: '"Thunder Soldier", legend of the Colosseum', island: 'dressrosa', at: { spot: 'flower_hill' }, trainer: 'nw_kyros',
+    id: 'nw_kyros', invulnerable: true, name: 'Kyros', title: '"Thunder Soldier", legend of the Colosseum', island: 'dressrosa', at: { spot: 'flower_hill' }, trainer: 'nw_kyros',
     level: 82, style: 'ittoryu', weapon: 'sword', bulk: 1.4, haki: { armament: 60 },
     look: { hair: 'short', hairColor: '#212121', skin: '#e0ac7e', top: '#fafafa', bottom: '#212121', scarEye: true, swords: 1 },
     when: (c) => !!c.flags.nw_toysFreed,
@@ -1193,7 +1187,7 @@ const npcs = [
     when: (c, g) => stageIs(g, 'nw_sop', 'sugar'),
   },
   {
-    id: 'nw_leo', name: 'Leo', title: 'Leader of the Tonta Corps', island: 'green_bit', at: { town: 'tontatta_kingdom', plaza: true, ox: 2 },
+    id: 'nw_leo', invulnerable: true, name: 'Leo', title: 'Leader of the Tonta Corps', island: 'green_bit', at: { town: 'tontatta_kingdom', plaza: true, ox: 2 },
     level: 50, style: 'brawler', skill: 0.5,
     look: TONTATTA({ hair: 'spiky', hairColor: '#fdd835', skin: '#f9dcc4', top: '#fafafa', bottom: '#6d4c41', hat: 'bandana', hatColor: '#43a047' }),
     marker: (c, g) => (stageIs(g, 'nw_sop', 'leo') || stageIs(g, 'nw_sop', 'report') ? '?' : null),
@@ -1217,7 +1211,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_gancho', name: 'King Gancho', title: 'King of the Tontatta Kingdom', island: 'green_bit', at: { town: 'tontatta_kingdom', building: "King Gancho's Hall" },
+    id: 'nw_gancho', invulnerable: true, name: 'King Gancho', title: 'King of the Tontatta Kingdom', island: 'green_bit', at: { town: 'tontatta_kingdom', building: "King Gancho's Hall" },
     level: 30, look: TONTATTA({ hair: 'bald', skin: '#f9dcc4', top: '#6d4c41', bottom: '#4e342e', hat: 'crown', hatColor: '#ffd54f' }),
     dialogue: (ctx) => ({ start: 'a', nodes: { a: {
       text: () => (done(ctx, 'nw_sop')
@@ -1226,7 +1220,7 @@ const npcs = [
     } } }),
   },
   {
-    id: 'nw_mansherry', name: 'Princess Mansherry', title: 'Tontatta princess (Chiyu Chiyu no Mi)', island: 'green_bit', at: { town: 'tontatta_kingdom', building: "Mansherry's Healing Room" },
+    id: 'nw_mansherry', invulnerable: true, name: 'Princess Mansherry', title: 'Tontatta princess (Chiyu Chiyu no Mi)', island: 'green_bit', at: { town: 'tontatta_kingdom', building: "Mansherry's Healing Room" },
     level: 20, look: TONTATTA({ scale: 0.3, hair: 'long', hairColor: '#ffcc80', skin: '#f9dcc4', top: '#f8bbd0', bottom: '#f48fb1', hat: 'crown', hatColor: '#ffd54f' }),
     doctor: { line: '"Hold still, please. My tears heal anything — but don\'t make me cry on purpose, it\'s rude."' },
     when: (c) => !!c.flags.nw_toysFreed,
@@ -1287,7 +1281,7 @@ const npcs = [
 
   // ================================================================= APPLENINE
   {
-    id: 'nw_applenine_elder', name: 'Cider-Maker Nonna', title: 'Elder of Applenine Village', island: 'applenine_island', at: { town: 'applenine_village', plaza: true, ox: 2 },
+    id: 'nw_applenine_elder', invulnerable: true, name: 'Cider-Maker Nonna', title: 'Elder of Applenine Village', island: 'applenine_island', at: { town: 'applenine_village', plaza: true, ox: 2 },
     level: 5, look: { hair: 'bun', hairColor: '#eceff1', skin: '#f9dcc4', top: '#b71c1c', bottom: '#5d4037', hat: 'beanie', hatColor: '#c62828' },
     dialogue: (ctx) => ({ start: 'a', nodes: { a: {
       text: () => (done(ctx, 'nw_birdcage')
@@ -1299,7 +1293,7 @@ const npcs = [
 
   // ==================================================================== SPHINX
   {
-    id: 'nw_marco', name: 'Marco', title: '"Marco the Phoenix", doctor of Sphinx', island: 'sphinx', at: { town: 'sphinx_village', building: "Marco's Clinic" }, trainer: 'nw_marco',
+    id: 'nw_marco', invulnerable: true, name: 'Marco', title: '"Marco the Phoenix", doctor of Sphinx', island: 'sphinx', at: { town: 'sphinx_village', building: "Marco's Clinic" }, trainer: 'nw_marco',
     level: 90, fruit: 'tori_phoenix', fruitMastery: 90, style: 'black_leg', ai: 'idle', haki: { armament: 70, observation: 75 },
     look: { hair: 'spiky', hairColor: '#fdd835', skin: '#f1c9a0', top: '#7e57c2', bottom: '#1565c0', openShirt: true },
     doctor: { line: '"Sit down, yoi. I was the Whitebeard Pirates\' doctor for a long time. I\'ve patched up worse than you."' },
@@ -1338,7 +1332,7 @@ const npcs = [
     when: (c, g) => stageIs(g, 'nw_sphinx', 'weevil'),
   },
   {
-    id: 'nw_stussy', name: 'Buckingham Stussy', title: 'Weevil\'s mother', island: 'sphinx', at: { spot: 'old_town_ruins', ox: 4 },
+    id: 'nw_stussy', invulnerable: true, name: 'Buckingham Stussy', title: 'Weevil\'s mother', island: 'sphinx', at: { spot: 'old_town_ruins', ox: 4 },
     level: 30, ai: 'idle', look: { hair: 'bun', hairColor: '#eceff1', skin: '#f1c9a0', top: '#6d4c41', bottom: '#3e2723', bulk: 1.2 },
     when: (c, g) => stageIs(g, 'nw_sphinx', 'weevil'),
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"Outta the way, you! My Weevil is Whitebeard\'s real son — I should know! Newgate\'s fortune belongs to his flesh and blood, not to some bird doctor and a village of beggars!"' } } }),
@@ -1346,7 +1340,7 @@ const npcs = [
 
   // ======================================================================= ZOU
   {
-    id: 'nw_wanda', name: 'Wanda', title: 'Kingsbird of the Mokomo Dukedom', island: 'zou', at: { town: 'kurau_city', plaza: true, ox: -3 },
+    id: 'nw_wanda', invulnerable: true, name: 'Wanda', title: 'Kingsbird of the Mokomo Dukedom', island: 'zou', at: { town: 'kurau_city', plaza: true, ox: -3 },
     race: 'mink', level: 50, style: 'electro', skill: 0.5,
     look: { ears: 'pointy', fur: '#eceff1', skin: '#eceff1', hairColor: '#212121', hand: '#eceff1', tail: 'fluffy', muzzle: true, furFace: true, hair: 'long', top: '#ce93d8', bottom: '#6a1b9a' },
     marker: (c, g) => (stageIs(g, 'nw_zou_jack', 'wanda') ? '?' : null),
@@ -1374,13 +1368,13 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_carrot', name: 'Carrot', title: 'Kingsbird of the Mokomo Dukedom', island: 'zou', at: { town: 'kurau_city', plaza: true, ox: 3 },
+    id: 'nw_carrot', invulnerable: true, name: 'Carrot', title: 'Kingsbird of the Mokomo Dukedom', island: 'zou', at: { town: 'kurau_city', plaza: true, ox: 3 },
     race: 'mink', level: 44, style: 'electro',
     look: { ears: 'long', fur: '#fafafa', skin: '#fafafa', hairColor: '#fff59d', hand: '#fafafa', tail: 'fluffy', furFace: true, hair: 'short', top: '#ffb74d', bottom: '#ef6c00' },
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"Garchu! You came all the way up Zunesha\'s legs? It takes ages! I want to go to sea someday and see the whole world. Everyone says I\'m too young. I\'m FIFTEEN!"' } } }),
   },
   {
-    id: 'nw_miyagi', name: 'Doctor Miyagi', title: 'Physician of Kurau City', island: 'zou', at: { town: 'kurau_city', building: 'Kurau City Infirmary' },
+    id: 'nw_miyagi', invulnerable: true, name: 'Doctor Miyagi', title: 'Physician of Kurau City', island: 'zou', at: { town: 'kurau_city', building: 'Kurau City Infirmary' },
     race: 'mink', level: 22,
     look: { ears: 'pointy', fur: '#d7ccc8', skin: '#d7ccc8', hairColor: '#eceff1', hand: '#d7ccc8', furFace: true, hair: 'bald', top: '#fafafa', bottom: '#90a4ae', goggles: true },
     doctor: { line: '"Hold still — you\'re not a gas victim, are you? No? Then this will be quick."' },
@@ -1406,7 +1400,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_inuarashi', name: 'Duke Inuarashi', title: '"Ruler of Day" of the Mokomo Dukedom', island: 'zou', at: { town: 'kurau_city', building: "Duke Inuarashi's Hall" }, trainer: 'zou_minks',
+    id: 'nw_inuarashi', invulnerable: true, name: 'Duke Inuarashi', title: '"Ruler of Day" of the Mokomo Dukedom', island: 'zou', at: { town: 'kurau_city', building: "Duke Inuarashi's Hall" }, trainer: 'zou_minks',
     race: 'mink', level: 84, style: 'electro', weapon: 'sword', haki: { armament: 65, observation: 60 },
     look: { ears: 'pointy', fur: '#fafafa', skin: '#fafafa', hairColor: '#fafafa', hand: '#fafafa', tail: 'fluffy', muzzle: true, furFace: true, hair: 'long', top: '#1565c0', bottom: '#0d47a1', swords: 1 },
     marker: (c, g) => ((stageIs(g, 'nw_zou_jack', 'report') || (stageIs(g, 'nw_zou_poneglyph', 'blessings') && !c.flags.nw_blessDay)) && !isNight(g) ? '?' : g.quests.isDone('nw_zou_jack') && !g.quests.state('nw_zou_poneglyph') && !isNight(g) ? '!' : null),
@@ -1439,7 +1433,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_nekomamushi', name: 'Master Nekomamushi', title: '"Ruler of Night", Guardians of the Whale Forest', island: 'zou', at: { spot: 'the_whale' }, trainer: 'zou_minks',
+    id: 'nw_nekomamushi', invulnerable: true, name: 'Master Nekomamushi', title: '"Ruler of Night", Guardians of the Whale Forest', island: 'zou', at: { spot: 'the_whale' }, trainer: 'zou_minks',
     race: 'mink', level: 84, style: 'electro', haki: { armament: 65, observation: 60 }, bulk: 1.4,
     look: { ears: 'pointy', fur: '#f4a460', skin: '#f4a460', hairColor: '#ff8a65', hand: '#f4a460', tail: 'thin', furFace: true, hair: 'curly', top: '#5d4037', bottom: '#3e2723' },
     marker: (c, g) => ((stageIs(g, 'nw_zou_jack', 'report') || (stageIs(g, 'nw_zou_poneglyph', 'blessings') && !c.flags.nw_blessNight)) && isNight(g) ? '?' : g.quests.isDone('nw_zou_jack') && !g.quests.state('nw_zou_poneglyph') && isNight(g) ? '!' : null),
@@ -1472,7 +1466,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_pedro', name: 'Pedro', title: '"Pedro of the Treetops", captain of the Guardians', island: 'zou', at: { spot: 'whale_forest' },
+    id: 'nw_pedro', invulnerable: true, name: 'Pedro', title: '"Pedro of the Treetops", captain of the Guardians', island: 'zou', at: { spot: 'whale_forest' },
     race: 'mink', level: 76, style: 'electro', weapon: 'sword', ai: 'idle', haki: { observation: 60 },
     look: { ears: 'round', fur: '#e1b12c', skin: '#e1b12c', hairColor: '#e1b12c', hand: '#e1b12c', tail: 'thin', furFace: true, hair: 'short', top: '#3e2723', bottom: '#212121', scarEye: true, swords: 1 },
     dialogue: (ctx) => ({ start: 'a', nodes: { a: {
@@ -1482,7 +1476,7 @@ const npcs = [
     } } }),
   },
   {
-    id: 'nw_raizo', name: 'Raizo', title: '"Raizo of the Mist", ninja of Wano', island: 'zou', at: { spot: 'zou_poneglyph', ox: 2 },
+    id: 'nw_raizo', invulnerable: true, name: 'Raizo', title: '"Raizo of the Mist", ninja of Wano', island: 'zou', at: { spot: 'zou_poneglyph', ox: 2 },
     level: 70, style: 'brawler', ai: 'idle',
     look: { hair: 'spiky', hairColor: '#212121', skin: '#e0ac7e', top: '#37474f', bottom: '#263238', bulk: 1.3, hat: 'headband', hatColor: '#212121' },
     when: (c, g) => g.quests.isDone('nw_zou_jack'),
@@ -1518,7 +1512,7 @@ const npcs = [
     when: (c, g) => stageIs(g, 'nw_zou_jack', 'jack'),
   },
   {
-    id: 'nw_bariete', name: 'Bariete', title: 'Gatekeeper of the Mokomo Dukedom', island: 'zou', at: { spot: 'front_gate', ox: 3 },
+    id: 'nw_bariete', invulnerable: true, name: 'Bariete', title: 'Gatekeeper of the Mokomo Dukedom', island: 'zou', at: { spot: 'front_gate', ox: 3 },
     race: 'mink', level: 40, style: 'electro',
     look: { ears: 'round', fur: '#8d6e63', skin: '#8d6e63', hairColor: '#5d4037', hand: '#8d6e63', tail: 'thin', furFace: true, hair: 'short', top: '#795548', bottom: '#4e342e' },
     when: (c, g) => !stageIs(g, 'nw_zou_jack', 'jack'),
@@ -1531,7 +1525,7 @@ const npcs = [
     level: 110, boss: true, hpMul: 1.6, style: 'brawler', weapon: 'sword', scale: 2, bulk: 1.8, skill: 0.55,
     bounty: 4388000000, infamy: true, breakthrough: 6, haki: { armament: 90, observation: 70, conqueror: 85 },
     look: { hair: 'curly', hairColor: '#f06292', skin: '#f9dcc4', top: '#f48fb1', bottom: '#f8bbd0', coat: '#b71c1c', hat: 'tricorne', hatColor: '#212121', grin: true },
-    moves: ['nw_soul_pocus', 'nw_heavenly_fire', 'nw_raitei', 'nw_ikoku'],
+    moves: ['nw_soul_pocus', 'nw_heavenly_fire', 'nw_raitei', 'nw_ikoku', 'nw_bm_homies'],
     alert: 'Mamamamama! You want to fight ME, at my own tea table?!', barks: ['Mamamamama!', 'LIFE OR TREATS?!', 'CROQUEMBOUCHE!'],
     phases: [
       { at: 1, run: both(hakiOn(), (a) => a.addBuff({ id: 'nw_iron_balloon', name: 'Iron Balloon Skin', dur: 9999, mods: { defMul: 0.85 } })) },
@@ -1575,7 +1569,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_bege', name: 'Capone "Gang" Bege', title: 'Captain of the Fire Tank Pirates', island: 'whole_cake_island', at: { town: 'fire_tank_hideout', building: 'Fire Tank Pirates Hideout' },
+    id: 'nw_bege', invulnerable: true, name: 'Capone "Gang" Bege', title: 'Captain of the Fire Tank Pirates', island: 'whole_cake_island', at: { town: 'fire_tank_hideout', building: 'Fire Tank Pirates Hideout' },
     level: 74, style: 'sniper', weapon: 'gun', ai: 'idle', bounty: 350000000,
     look: { hair: 'short', hairColor: '#212121', skin: '#f1c9a0', top: '#212121', bottom: '#212121', hat: 'cowboy', hatColor: '#212121' },
     marker: (c, g) => (stageIs(g, 'nw_tea_party', 'bege') ? '?' : g.quests.isDone('nw_tea_party') && !g.quests.state('nw_wci_poneglyph') ? '!' : null),
@@ -1627,12 +1621,9 @@ const npcs = [
     level: 72, boss: true, hostile: true, hpMul: 1.4, faction: 'pirate', style: 'ittoryu', weapon: 'sword', scale: 1.3, bulk: 1.3, skill: 0.5,
     bounty: 860000000, infamy: true, breakthrough: 4, haki: { armament: 65 },
     look: { hair: 'long', hairColor: '#9c27b0', skin: '#f1c9a0', top: '#d7ccc8', bottom: '#8d6e63', swords: 1 },
-    moves: ['nw_cracker_pretzel', 'nw_cracker_hard_biscuit', 'nw_cracker_roll'],
+    moves: ['nw_cracker_pretzel', 'nw_cracker_hard_biscuit', 'nw_cracker_roll', 'nw_cracker_soldiers'],
     alert: 'Nobody enters Totto Land without Mama\'s permission. My biscuit army will crush you!', barks: ['Biscuits never tire!', 'Pretzel!'],
-    phases: [
-      { at: 0.65, run: (a, g) => biscuitSoldiers(a, g, 2) },
-      { at: 0.35, run: both((a, g) => biscuitSoldiers(a, g, 2), hakiOn('Hard Biscuit armour!')) },
-    ],
+    phases: [{ at: 0.4, run: hakiOn('Hard Biscuit armour!') }],
     when: (c, g) => stageIs(g, 'nw_tea_party', 'cracker'),
   },
   {
@@ -1659,7 +1650,7 @@ const npcs = [
     when: (c, g) => stageIs(g, 'nw_tea_party', 'katakuri'),
   },
   {
-    id: 'nw_pudding', name: 'Charlotte Pudding', title: 'Owner of Caramel, Chocolat Town', island: 'cacao_island', at: { town: 'chocolat_town', building: 'Caramel' },
+    id: 'nw_pudding', invulnerable: true, name: 'Charlotte Pudding', title: 'Owner of Caramel, Chocolat Town', island: 'cacao_island', at: { town: 'chocolat_town', building: 'Caramel' },
     race: 'three_eye', level: 30,
     look: { hair: 'long', hairColor: '#795548', skin: '#f9dcc4', top: '#f8bbd0', bottom: '#f48fb1' },
     dialogue: (ctx) => ({
@@ -1680,7 +1671,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nw_chiffon', name: 'Charlotte Chiffon', title: 'Wife of Capone Bege', island: 'cacao_island', at: { town: 'chocolat_town', building: 'Sweets Factory' },
+    id: 'nw_chiffon', invulnerable: true, name: 'Charlotte Chiffon', title: 'Wife of Capone Bege', island: 'cacao_island', at: { town: 'chocolat_town', building: 'Sweets Factory' },
     level: 26, look: { hair: 'long', hairColor: '#f48fb1', skin: '#f9dcc4', top: '#fafafa', bottom: '#f8bbd0' },
     marker: (c, g) => (stageIs(g, 'nw_tea_party', 'report') ? '?' : null),
     dialogue: (ctx) => ({
@@ -1700,20 +1691,6 @@ const npcs = [
     }),
   },
 ];
-
-// Cracker's Biscuit Soldiers (hollow warriors of biscuit).
-function biscuitSoldiers(a, g, n) {
-  g.fx.text(a.x, a.y - 2.4, 'Biscuit Soldiers!', '#d7ccc8', 0.5, { life: 1.4 });
-  const list = g.spawner?.populated?.get('whole_cake_island');
-  for (let k = 0; k < n; k++) {
-    const p = g.spawner?.findFree(a.x + (k ? 2 : -2), a.y + 1.5, 4) || { x: a.x + (k ? 2 : -2), y: a.y + 1.5 };
-    const e = makeEnemy('brute', 60, p.x, p.y, { name: 'Biscuit Soldier', faction: 'pirate', look: { top: '#d7ccc8', bottom: '#bcaaa4', skin: '#d7ccc8', hat: 'horns', hatColor: '#a1887f' }, hpMul: 0.7 });
-    e.game = g;
-    g.addActor(e);
-    if (list) list.push(e);
-    e.aggroPlayer = true;
-  }
-}
 
 // ------------------------------------------------------------------ groups
 const groups = [
@@ -2100,19 +2077,13 @@ function install(game) {
     }
   });
 
-  // Townsfolk: tiny Tontatta dwarves on Green Bit, fish-men and merfolk under the sea.
+  // Townsfolk: the dwarves of the Tontatta Kingdom are tiny (and have fluffy tails).
   game.spawner.addBuilder((ctx) => {
-    const id = ctx.island?.id;
-    if (id !== 'green_bit' && id !== 'fishman_island') return;
+    if (ctx.island?.id !== 'green_bit') return;
     const prev = ctx.onTownsfolk;
     ctx.onTownsfolk = (a, town) => {
       if (prev) prev(a, town);
-      if (id === 'green_bit') {
-        a.look = { ...a.look, scale: 0.34, tail: 'fluffy', nose: 'long' };
-      } else if (Math.random() < 0.8) {
-        a.look = makeLook('fishman', Math.floor(Math.random() * 1e9), { top: a.look.top, bottom: a.look.bottom });
-        a.race = 'fishman';
-      }
+      a.look = { ...a.look, scale: 0.34, tail: 'fluffy', nose: 'long' };
     };
   });
 

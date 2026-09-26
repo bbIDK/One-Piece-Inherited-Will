@@ -1180,6 +1180,7 @@ const npcsC = [
     id: 'p1_wyper', name: 'Wyper', title: '"Berserker", Warrior of the Shandia', island: 'shandia_village', at: { town: 'shandia_camp', building: "Wyper's Hut" },
     look: { hair: 'mohawk', hairColor: '#212121', skin: '#a0643a', top: '#a0643a', bottom: '#5d4037', hat: 'headband', hatColor: '#fafafa', scarEye: true }, level: 34,
     named: true, style: 'brawler', weapon: 'gun', ranged: true, prefRange: 5, moves: ['p1_burn_bazooka', 'dial_reject'], skill: 0.55, breakthrough: 2, hpMul: 1.3,
+    duel: true, recover: 8, recoverLine: `"...Hah. You're strong, Blue Sea dweller. Go and see the Chief."`,
     alert: `"Stand against me, then! BURN BAZOOKA!"`, barks: ['For Kalgara!', 'The Sacred Land is ours!'],
     marker: (c, g) => (g.quests.stageId('p1_skypiea_god') === 'shandia' ? '!' : null),
     dialogue: (ctx) => ({
@@ -1276,6 +1277,7 @@ const npcsC = [
     id: 'p1_foxy', name: 'Foxy', title: '"Silver Fox" Foxy, Captain of the Foxy Pirates', island: 'long_ring_long_land', at: { town: 'foxy_camp', plaza: true },
     look: { hair: 'short', hairColor: '#ff7043', skin: '#f1c9a0', top: '#fafafa', bottom: '#ff7043', coat: '#fafafa', nose: 'long', grin: true }, level: 33,
     boss: true, hpMul: 1.05, faction: 'pirate', fruit: 'noro', fruitMastery: 55, moves: ['noro_beam', 'noro_mirror', 'p1_gorilla_puncher'], bounty: 24000000, infamy: true, breakthrough: 3, skill: 0.5,
+    duel: true, recover: 10, recoverLine: '"...I lost..." (Foxy sinks into a bottomless depression.)',
     alert: `"Game three: COMBAT! Noro Noro Beam!"`, barks: ['Fe fe fe!', 'Noro Noro Beam!', 'Foxy Face!'],
     marker: (c, g) => (!g.quests.state('p1_davy_back_fight') ? '!' : g.quests.stageId('p1_davy_back_fight') === 'combat' ? '!' : null),
     when: (c) => !c.bosses.includes('p1_foxy'),
@@ -1285,6 +1287,7 @@ const npcsC = [
         a: {
           text: () => {
             const s = ctx.game.quests.stageId('p1_davy_back_fight');
+            if (ctx.char.bosses.includes('p1_foxy')) return `"...Nine hundred and twenty wins, and I lost... (Foxy stares at the grass, radiating gloom. Then he bounces back.) Fe fe fe! Next time, you're MINE!"`;
             if (s === 'combat') return `"Fe fe fe! Game three — COMBAT! I haven't lost a Davy Back Fight in nine hundred and twenty games!"`;
             if (s) return `"Fe fe fe! The games have begun! No backing out — you promised Davy Jones himself!"`;
             return `"Fe fe fe! A new crew! I am the Silver Fox Foxy, and I challenge you to a DAVY BACK FIGHT! Three coins, three games. The winner of each game takes one member of the losing crew!"`;
@@ -1308,6 +1311,7 @@ const npcsC = [
     id: 'p1_hamburg', name: 'Hamburg', title: 'Leader of the Groggy Monsters', island: 'long_ring_long_land', at: { spot: 'groggy_ring' },
     look: { hair: 'bald', skin: '#e0ac7e', top: '#ff7043', bottom: '#3e2723', bulk: 1.5, grin: true }, bulk: 1.5, level: 28,
     hostile: true, named: true, faction: 'pirate', style: 'brawler', moves: ['p1_monster_rush', 'brawl_headbutt'], skill: 0.35, hpMul: 1.3,
+    duel: true, recover: 10, recoverLine: 'Pupupu... this game is yours.',
     alert: `"Pupupu! GROGGY RING! The ball is you!"`,
     when: (c, g) => stg(g, 'p1_davy_back_fight') === 'groggy' && !c.defeated.p1_hamburg,
   },
@@ -1315,6 +1319,7 @@ const npcsC = [
     id: 'p1_pickles', name: 'Pickles', title: 'Groggy Monster', island: 'long_ring_long_land', at: { spot: 'groggy_ring' },
     look: { hair: 'short', hairColor: '#212121', skin: '#f1c9a0', top: '#ffb74d', bottom: '#3e2723', bulk: 1.3 }, bulk: 1.3, level: 26,
     hostile: true, named: true, faction: 'pirate', style: 'brawler', moves: ['p1_monster_rush', 'brawl_tackle'], skill: 0.3, hpMul: 1.2,
+    duel: true, recover: 10, recoverLine: 'Ugh... foul...',
     alert: `"Pickles' Pass! Foul? What foul?"`,
     when: (c, g) => stg(g, 'p1_davy_back_fight') === 'groggy' && !c.defeated.p1_pickles,
   },
@@ -1322,6 +1327,7 @@ const npcsC = [
     id: 'p1_big_pan', name: 'Big Pan', title: 'Groggy Monster', island: 'long_ring_long_land', at: { spot: 'groggy_ring' },
     look: { hair: 'short', hairColor: '#5d4037', skin: '#e0ac7e', top: '#8d6e63', bottom: '#3e2723', bulk: 1.8 }, bulk: 1.8, scale: 1.6, level: 27,
     hostile: true, named: true, faction: 'pirate', style: 'brawler', moves: ['p1_pan_slam', 'brawl_tackle'], skill: 0.2, hpMul: 1.6,
+    duel: true, recover: 10, recoverLine: 'Big Pan... lost...',
     alert: `"BIG PAN... SLAM!"`,
     when: (c, g) => stg(g, 'p1_davy_back_fight') === 'groggy' && !c.defeated.p1_big_pan,
   },
@@ -1372,6 +1378,15 @@ const npcsC = [
 ];
 
 const npcs = [...npcsA, ...npcsB, ...npcsC];
+// Cameos and quest-givers can't be struck down (a knocked-out Kohza would stall the war).
+const UNTOUCHABLE = new Set([
+  'p1_crocus', 'p1_miss_wednesday', 'p1_jonathan', 'p1_jessica', 'p1_henzo', 'p1_tenaga', 'p1_koala_mother', 'p1_igaram', 'p1_distiller', 'p1_vivi_wp',
+  'p1_miss_all_sunday', 'p1_kyuka_manager', 'p1_mr3_vacation', 'p1_goldenweek_vacation', 'p1_hina_kyuka', 'p1_vira_archivist', 'p1_vira_revolutionary',
+  'p1_dorry', 'p1_brogy', 'p1_dalton', 'p1_kureha', 'p1_vivi', 'p1_vivi_palace', 'p1_cobra', 'p1_pell', 'p1_chaka', 'p1_igaram_ala', 'p1_kohza', 'p1_toto',
+  'p1_paula', 'p1_bon_clay', 'p1_ace_nanohana', 'p1_smoker_ala', 'p1_robin_tomb', 'p1_cricket', 'p1_masira', 'p1_shoujou', 'p1_teach_jaya', 'p1_amazon',
+  'p1_conis', 'p1_pagaya', 'p1_gan_fall', 'p1_satori_humbled', 'p1_shandia_chief', 'p1_aisa', 'p1_haredas', 'p1_tonjit', 'p1_porche', 'p1_aokiji',
+]);
+for (const n of npcs) if (UNTOUCHABLE.has(n.id)) n.invulnerable = true;
 
 // ============================================================ enemy groups
 // Few, small and tied to a story beat (or to canon wildlife).
@@ -1603,7 +1618,7 @@ const quests = [
       { id: 'chief', desc: 'Talk to the Chief of the Shandia.' },
       { id: 'enel', desc: "Defeat God Enel at his shrine in the heart of Upper Yard. (Lightning flows around blades and fists: strike with Haki — or use the Shandia's golden balls.)", goal: { type: 'defeat', npc: 'p1_enel' },
         onStart: (ctx, g) => { spawnAt(g, 'p1_yama', 'upper_yard', 'god_shrine', -4); spawnAt(g, 'p1_enel', 'upper_yard', 'god_shrine'); spawnGroupNow(g, 'upper_yard', 'god_shrine', DIVINE, 8); } },
-      { id: 'bell', desc: 'Ring the Golden Bell of Shandora beside Giant Jack, the great beanstalk of Upper Yard.', goal: { type: 'reach', island: 'upper_yard', spot: 'golden_bell', r: 5 } },
+      { id: 'bell', desc: 'Ring the Golden Bell of Shandora, beside Giant Jack — the great beanstalk of Upper Yard.', goal: { type: 'event', event: 'rang_bell:golden_bell' } },
     ],
     rewards: { berries: 50000, points: 3, haki: { observation: 5 }, items: [['shandora_gold', 2]], attrs: { wil: 1 }, liberate: 'Angel Island', flag: 'p1_bellRung' },
     onComplete: (ctx, g) => {

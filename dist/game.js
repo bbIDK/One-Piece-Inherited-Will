@@ -6925,7 +6925,7 @@ void main() {
       landmarks: [
         { kind: "lighthouse", dx: -0.62, dy: -0.5, name: "Crocus' Lighthouse", spot: "lighthouse" },
         { kind: "lighthouse", dx: -0.62, dy: 0.5, name: "South Lighthouse" },
-        { kind: "sign", dx: -0.2, dy: -0.58, name: "The Rumbar Pirates promised to come back", spot: "rumbar_sign" },
+        { kind: "sign", dx: -0.2, dy: -0.58, name: "The Rumbar Pirates promised to come back", spot: "rumbar_sign", loreLabel: "Read the old carving", lore: '(Carved into the post and worn by fifty years of sea spray:) "LABOON \u2014 wait for us here. We will sail around the world and come back for you. \u2014 The Rumbar Pirates."' },
         { kind: "bench", dx: 0.05, dy: -0.62 },
         { kind: "boat", dx: 0.55, dy: -0.72 },
         { kind: "anchor", dx: -0.3, dy: 0.62 }
@@ -6975,7 +6975,7 @@ void main() {
         houses: 2
       }],
       landmarks: [
-        { kind: "gate", dx: 0, dy: 0.82, name: "Navarone Main Gate", spot: "main_gate" },
+        { kind: "gate", dx: 0, dy: 0.82, name: "Navarone Main Gate", spot: "main_gate", lore: '"MARINE BASE G-8 \u2014 NAVARONE." One gate, a hundred and eight cannons. Rule one, painted beside the gate: "FINISH YOUR MEAL."' },
         { kind: "cannon", dx: -0.6, dy: 0.5 },
         { kind: "cannon", dx: 0.6, dy: 0.5 },
         { kind: "cannon", dx: 0.75, dy: 0.1 }
@@ -7099,7 +7099,7 @@ void main() {
       }],
       landmarks: [
         { kind: "shipwreck", dx: -0.72, dy: 0.62, name: "The old anchorage", spot: "sun_anchorage" },
-        { kind: "grave", dx: -0.45, dy: 0.35, name: "Stone for the Sun Pirates who fell here" }
+        { kind: "grave", dx: -0.45, dy: 0.35, name: "Stone for the Sun Pirates who fell here", lore: '"For the Sun Pirates, who brought our Koala home, and for their captain, Fisher Tiger." Someone keeps fresh flowers on it.' }
       ],
       logNext: ["drum_island"],
       logTime: 1,
@@ -7148,10 +7148,10 @@ void main() {
         houses: 8
       }],
       landmarks: [
-        { kind: "grave", dx: 0.36, dy: -0.28, name: "Grave of Mr. Sacrifice" },
+        { kind: "grave", dx: 0.36, dy: -0.28, name: "Grave of Mr. Sacrifice", lore: '"Here lies Mr. Sacrifice." The Sapoten Graveyard: so many tombstones on the rock spires that from the sea the mountains look like giant cacti.' },
         { kind: "grave", dx: 0.52, dy: -0.25 },
         { kind: "grave", dx: 0.3, dy: -0.4 },
-        { kind: "sign", dx: -0.3, dy: 0.05, name: "Welcome to Whisky Peak! Brave sailors, rejoice!" }
+        { kind: "sign", dx: -0.3, dy: 0.05, name: "Welcome to Whisky Peak! Brave sailors, rejoice!", lore: '"WELCOME TO WHISKY PEAK! Every brave crew that conquers Reverse Mountain drinks for free!" (Someone has scratched underneath: "...once.")' }
       ],
       spots: [{ id: "sapoten_graveyard", dx: 0.38, dy: -0.25 }, { id: "wp_outskirts", dx: -0.3, dy: -0.05 }, { id: "wp_square", dx: 0.08, dy: 0.34 }],
       logNext: ["little_garden"],
@@ -7230,7 +7230,7 @@ void main() {
         ],
         houses: 5
       }],
-      landmarks: [{ kind: "ruins", dx: 0.45, dy: -0.3, name: "The burnt royal palace", spot: "old_palace" }, { kind: "ruins", dx: 0.55, dy: -0.2 }],
+      landmarks: [{ kind: "ruins", dx: 0.45, dy: -0.3, name: "The burnt royal palace", spot: "old_palace", lore: "The palace of Vira's last king, burnt in the coup two years ago. Revolutionary slogans are painted over the royal crest." }, { kind: "ruins", dx: 0.55, dy: -0.2 }],
       logNext: ["drum_island"],
       logTime: 1,
       danger: 3,
@@ -7262,7 +7262,7 @@ void main() {
         { kind: "campfire", dx: -0.45, dy: 0.25, spot: "dorry_camp", name: "Dorry's camp" },
         { kind: "campfire", dx: 0.45, dy: 0.25, spot: "brogy_camp", name: "Brogy's camp" },
         { kind: "building", role: "house", name: "Mr. 3's Candle House", style: "village", roofType: "gable", fw: 6, fd: 4, hgt: 3, wall: "#fff8e1", roof: "#ffe0b2", dx: 0.3, dy: 0.55 },
-        { kind: "statue", dx: -0.2, dy: 0.5, name: "The Candle Service Set", spot: "candle_service" }
+        { kind: "statue", dx: -0.2, dy: 0.5, name: "The Candle Service Set", spot: "candle_service", lore: "A wax platform shaped like a giant cake. A spinning pumpkin on top pours wax mist over anyone standing on it, slowly turning them into a statue. Mr. 3 calls it art." }
       ],
       spots: [{ id: "duel_ground", dx: 0, dy: 0.12 }, { id: "wax_house", dx: 0.3, dy: 0.66 }],
       docks: [{ dx: -0.1, dy: 0.7, dir: "s", len: 5, name: "Little Garden Landing" }],
@@ -7345,13 +7345,14 @@ void main() {
         }
       ],
       landmarks: [
-        { kind: "flagpole", dx: 0.12, dy: -0.47, name: "Dr. Hiriluk's Jolly Roger", spot: "hiriluk_flag" },
+        { kind: "flagpole", dx: 0.12, dy: -0.47, name: "Dr. Hiriluk's Jolly Roger", spot: "hiriluk_flag", lore: `(A skull with a cross of cherry blossoms instead of bones.) Dr. Hiriluk said a pirate's flag is a symbol of conviction. "When do you think people die? When they are forgotten."` },
         { kind: "cannon", dx: 0.02, dy: -0.47 },
         { kind: "cannon", dx: 0.22, dy: -0.47 },
-        { kind: "sign", dx: -0.1, dy: 0.05, name: "Drum Ropeway (closed by royal decree)", spot: "castle_road" }
+        { kind: "sign", dx: -0.1, dy: 0.05, name: "Drum Ropeway (closed by royal decree)", spot: "castle_road", lore: '"DRUM ROPEWAY \u2014 closed by order of King Wapol. Doctors and peasants may not visit the castle." The cable is cut. The only way up Drum Rock is to climb.' }
       ],
       spots: [{ id: "castle_gate", dx: 0.12, dy: -0.02 }, { id: "lapahn_slope", dx: -0.35, dy: -0.45 }],
       docks: [{ near: "bighorn", dir: "w", name: "Bighorn River Mouth" }, { near: "gyasta", dir: "se", name: "Gyasta" }],
+      weather: { snow: 0.55 },
       logNext: ["alabasta", "nanimonai_island"],
       logTime: 2,
       danger: 4,
@@ -7373,7 +7374,7 @@ void main() {
       rough: 0.3,
       treeDensity: 0.01,
       noDock: true,
-      landmarks: [{ kind: "sign", dx: 0, dy: 0, name: "Nanimonai Island \u2014 there is nothing here", spot: "nothing" }, { kind: "bones", dx: 0.35, dy: 0.2 }],
+      landmarks: [{ kind: "sign", dx: 0, dy: 0, name: "Nanimonai Island \u2014 there is nothing here", spot: "nothing", lore: `"NANIMONAI ISLAND. There is nothing here." (Underneath, in a giant's enormous handwriting:) "DON'T DIG. \u2014 the Giant Warrior Pirates"` }, { kind: "bones", dx: 0.35, dy: 0.2 }],
       logNext: ["alabasta"],
       logTime: 1,
       danger: 3,
@@ -7518,11 +7519,11 @@ void main() {
         { kind: "poneglyph", dx: 0.3, dy: -0.76, poneglyph: "alabasta", name: "Poneglyph \u2014 the Tomb of the Kings", spot: "tomb_of_kings" },
         { kind: "pillar", dx: 0.26, dy: -0.78 },
         { kind: "pillar", dx: 0.34, dy: -0.78 },
-        { kind: "statue", dx: 0.22, dy: -0.73, name: "Statue of the Kings" },
+        { kind: "statue", dx: 0.22, dy: -0.73, name: "Statue of the Kings", lore: "The kings of the Nefertari family, carved in sandstone. Beneath the tomb, a black cube of stone that nobody may read." },
         { kind: "ruins", dx: -0.2, dy: 0.4, name: "Erumalu", spot: "erumalu" },
         { kind: "ruins", dx: -0.13, dy: 0.46 },
         { kind: "bones", dx: -0.24, dy: 0.47 },
-        { kind: "sign", dx: -0.06, dy: 0.66, name: "Beware: Kung-Fu Dugongs", spot: "dugong_beach" }
+        { kind: "sign", dx: -0.06, dy: 0.66, name: "Beware: Kung-Fu Dugongs", spot: "dugong_beach", lore: '"BEWARE: KUNG-FU DUGONGS. They challenge every traveller who crosses the Sandora River. Whoever beats one becomes its master \u2014 and gets a hundred pupils."' }
       ],
       spots: [
         { id: "spiders_cafe", dx: -0.7, dy: 0.46 },
@@ -7582,7 +7583,7 @@ void main() {
         { kind: "building", role: "house", name: "Montblanc Cricket's House", npc: "p1_cricket", style: "noble", roofType: "gable", fw: 8, fd: 4, hgt: 4, wall: "#fdfefe", roof: "#d4ac0d", dx: 0.62, dy: -0.52 },
         { kind: "boat", dx: 0.74, dy: -0.4, name: "Cricket's diving boat" },
         { kind: "anchor", dx: 0.42, dy: -0.4 },
-        { kind: "sign", dx: 0.5, dy: -0.62, name: "Saruyama Alliance \u2014 Treasure Salvage" }
+        { kind: "sign", dx: 0.5, dy: -0.62, name: "Saruyama Alliance \u2014 Treasure Salvage", lore: '"SARUYAMA ALLIANCE \u2014 Treasure Salvage! Anything that sinks near Jaya is OURS!" Signed: Masira, Shoujou, and (smaller) Cricket.' }
       ],
       spots: [
         { id: "cricket_house", dx: 0.62, dy: -0.44 },
@@ -7634,7 +7635,7 @@ void main() {
       landmarks: [
         { kind: "tent", dx: -0.72, dy: -0.1, name: "Tonjit's tent", spot: "tonjit_camp" },
         { kind: "fence", dx: 0.3, dy: 0.55, name: "The Groggy Ring", spot: "groggy_ring" },
-        { kind: "flagpole", dx: -0.15, dy: 0.5, name: "The Foxy Pirates' Jolly Roger" },
+        { kind: "flagpole", dx: -0.15, dy: 0.5, name: "The Foxy Pirates' Jolly Roger", lore: "A fox-faced skull. Beneath it hang dozens of flags won in Davy Back Fights \u2014 including a toad with fangs." },
         { kind: "bench", dx: 0, dy: -0.72, spot: "aokiji_grass", name: "A long, long meadow" },
         { kind: "mooring", dx: 0, dy: -0.05, name: "Donut Race buoy" }
       ],
@@ -8519,7 +8520,8 @@ void main() {
         { kind: "bubble", dx: 0.62, dy: -0.35 },
         { kind: "bubble", dx: -0.3, dy: 0.55 },
         { kind: "cannon", dx: -0.72, dy: 0.15 },
-        { kind: "cannon", dx: 0.74, dy: 0.2 }
+        { kind: "cannon", dx: 0.74, dy: 0.2 },
+        { kind: "sign", dx: 0.2, dy: 0.45, name: "Headquarters notice board", lore: `By order of Fleet Admiral Sakazuki, Marine Headquarters has moved to the New World \u2014 to the former site of G-1, exactly opposite old Marineford across the Red Line. "Absolute Justice." Below it, fresh wanted posters: an Emperor's commander, a Warlord, a doctor with a spotted hat.` }
       ],
       spots: [{ id: "hq_gate", dx: 0.05, dy: 0.45 }],
       logNext: ["g5_base", "raijin_island", "punk_hazard"],
@@ -8597,11 +8599,12 @@ void main() {
         ]
       }],
       landmarks: [
-        { kind: "pillar", dx: 0.2, dy: -0.35, name: "Lightning rod" },
+        { kind: "pillar", dx: 0.2, dy: -0.35, name: "Lightning rod", lore: 'An iron rod, scorched black and half melted. Raijin Island takes its name from the god of thunder: lightning falls here hundreds of times an hour. Scratched into the base: "Oden was here. It hit him twice. \u2014 R."' },
         { kind: "pillar", dx: 0.5, dy: -0.05, name: "Lightning rod" },
         { kind: "bones", dx: 0.35, dy: 0.15 }
       ],
       spots: [{ id: "thunder_plain", dx: 0.28, dy: -0.18 }],
+      weather: { storm: 0.85 },
       logNext: ["punk_hazard", "mystoria_island", "g5_base"],
       logTime: 1,
       danger: 7,
@@ -8640,7 +8643,11 @@ void main() {
           { role: "inn", name: "Red Rock Inn" }
         ]
       }],
-      landmarks: [{ kind: "tent", dx: 0.35, dy: 0.25, name: "Hawkins's camp", spot: "hawkins_camp" }, { kind: "campfire", dx: 0.4, dy: 0.3 }],
+      landmarks: [
+        { kind: "tent", dx: 0.35, dy: 0.25, name: "Hawkins's camp", spot: "hawkins_camp" },
+        { kind: "campfire", dx: 0.4, dy: 0.3 },
+        { kind: "sign", dx: -0.05, dy: 0.05, name: "Weathered warning post", lore: '"TO ALL WHO FOLLOW THE SHAKING NEEDLE: the red cliffs eat ships, the tide eats swimmers, and the pirates who camp here eat everyone else. Turn back." Someone has added underneath, in neat handwriting: "Probability of heeding this sign: 4%."' }
+      ],
       logNext: ["punk_hazard", "applenine_island", "g5_base"],
       logTime: 1,
       danger: 7,
@@ -8674,7 +8681,11 @@ void main() {
           { role: "inn", name: "Mist Inn" }
         ]
       }],
-      landmarks: [{ kind: "ruins", dx: 0.45, dy: 0.3, name: "Fog-bound ruins" }, { kind: "lantern", dx: -0.5, dy: -0.1 }],
+      landmarks: [
+        { kind: "ruins", dx: 0.45, dy: 0.3, name: "Fog-bound ruins", lore: "Broken columns carved with fingernail-shaped marks. The craftsmen of Mystoria say their ancestors made the first Vivre Card here \u2014 a paper that crawls toward its owner and burns as their life burns down." },
+        { kind: "lantern", dx: -0.5, dy: -0.1 }
+      ],
+      fog: { density: 0.55 },
       logNext: ["punk_hazard", "green_bit", "sphinx"],
       logTime: 1,
       danger: 6,
@@ -8728,7 +8739,7 @@ void main() {
         { kind: "campfire", dx: -0.6, dy: 0.13 },
         { kind: "tent", dx: 0.42, dy: 0.55, name: "G-5 field camp", spot: "g5_camp" },
         { kind: "shipwreck", dx: -0.78, dy: 0.5, name: "Wrecked tanker" },
-        { kind: "skull", dx: 0.3, dy: -0.15, name: "Ruined Government research facility" }
+        { kind: "skull", dx: 0.3, dy: -0.15, name: "Ruined Government research facility", lore: 'A plaque half-buried in ash: "World Government Research Facility \u2014 Dr. Vegapunk." Four years ago a chemical-weapon accident poisoned the whole island and the Government sealed it off. Two years ago, Admirals Aokiji and Akainu fought here for ten days. Half the island never stopped burning; the other half never thawed.' }
       ],
       spots: [
         { id: "centaur_patrol", dx: -0.38, dy: -0.25 },
@@ -8838,7 +8849,7 @@ void main() {
       landmarks: [
         { kind: "building", role: "hall", name: "Toy House", npc: "nw_sugar", fw: 8, fd: 5, hgt: 4, wall: "#ffcc80", roof: "#e53935", roofType: "dome", dx: 0.16, dy: 0.04, spot: "toy_house" },
         { kind: "gate", dx: -0.44, dy: 0.3, name: "SMILE Factory (beneath the Colosseum)", spot: "smile_factory" },
-        { kind: "gate", dx: 0, dy: -0.8, name: "Iron Bridge to Green Bit", spot: "bridge_gate" },
+        { kind: "gate", dx: 0, dy: -0.8, name: "Iron Bridge to Green Bit", spot: "bridge_gate", lore: '"BRIDGE CLOSED." The iron bridge to Green Bit has been shut for two hundred years: the Fighting Fish in the channel below leap out and swallow anyone who crosses. Locals say Green Bit is uninhabited. Locals also leave little offerings out at night for the fairies.' },
         { kind: "bench", dx: 0.5, dy: -0.06, name: "Flower Hill", spot: "flower_hill" },
         { kind: "fountain", dx: 0.25, dy: 0.22 }
       ],
@@ -8883,7 +8894,7 @@ void main() {
         houses: 4
       }],
       landmarks: [
-        { kind: "shipwreck", dx: -0.62, dy: -0.3, name: "Crashed Marine warship" },
+        { kind: "shipwreck", dx: -0.62, dy: -0.3, name: "Crashed Marine warship", lore: "A Marine warship lies in the jungle a long way from the water, its hull wrapped in vines. Tiny footprints run all over the deck. Something very small, very strong, and very organised has been taking it apart for parts." },
         { kind: "gate", dx: 0, dy: 0.82, name: "Iron Bridge (Green Bit end)", spot: "bridge_end" }
       ],
       spots: [{ id: "green_bit_woods", dx: -0.35, dy: 0.05 }],
@@ -8909,6 +8920,7 @@ void main() {
         { op: "circle", x: 0.44, y: 0.02, r: 2.5, tile: T.RED_ROCK, onlyLand: true },
         { op: "circle", x: 0.1, y: -0.02, r: 2.5, tile: T.RED_ROCK, onlyLand: true }
       ],
+      landmarks: [{ kind: "sign", dx: 0.02, dy: 0.05, name: "The Colossal Apple", lore: 'A red apple the size of a mountain, with eight smaller apples clinging around it \u2014 nine in all, hence "Applenine". It has frozen solid every winter for as long as anyone remembers. Nobody has ever managed to take a bite. Many have tried.' }],
       towns: [{
         id: "applenine_village",
         name: "Applenine Village",
@@ -8957,7 +8969,7 @@ void main() {
         ]
       }],
       landmarks: [
-        { kind: "ruins", dx: -0.45, dy: 0.35, name: "Ruins of the Old Town", spot: "old_town_ruins" },
+        { kind: "ruins", dx: -0.45, dy: 0.35, name: "Ruins of the Old Town", spot: "old_town_ruins", lore: "The old shore town of Sphinx, abandoned when the World Government cut the island off for failing to pay the Heavenly Tribute. Edward Newgate was born near here, seventy-four years ago. The people live in a hidden valley now \u2014 behind the waterfall \u2014 in a village Whitebeard paid for." },
         { kind: "ruins", dx: -0.6, dy: 0.15 },
         { kind: "arch", dx: 0.22, dy: -0.02, name: "Waterfall entrance" }
       ],
@@ -9000,7 +9012,7 @@ void main() {
         plaza: "fountain",
         buildings: [
           { role: "hall", name: "Duke Inuarashi's Hall", npc: "nw_inuarashi" },
-          { role: "doctor", name: "Kurau City Infirmary", npc: "nw_zou_doctor" },
+          { role: "doctor", name: "Kurau City Infirmary", npc: "nw_miyagi" },
           { role: "dojo", name: "Musketeer Training Hall", trainer: "zou_minks" },
           { role: "shop", name: "Mokomo Market", shop: "nw_mink_market" },
           { role: "inn", name: "Mokomo Inn" }
@@ -9009,7 +9021,7 @@ void main() {
       landmarks: [
         { kind: "building", role: "hall", name: "The Whale", npc: "nw_nekomamushi", fw: 9, fd: 6, hgt: 7, wall: "#6d4c41", roof: "#2e7d32", roofType: "hut", dx: 0.5, dy: -0.2, spot: "the_whale" },
         { kind: "poneglyph", road: true, poneglyph: "road_zou", name: "Road Poneglyph (in the Whale's tail)", dx: 0.38, dy: -0.34, spot: "zou_poneglyph" },
-        { kind: "gate", dx: -0.84, dy: 0.02, name: "Front Gate of the Mokomo Dukedom", spot: "front_gate" }
+        { kind: "gate", dx: -0.84, dy: 0.02, name: "Front Gate of the Mokomo Dukedom", spot: "front_gate", lore: '"MOKOMO DUKEDOM." The steel gate has been ripped off its hinges by something enormous. Beyond it, the whole island rises and falls gently: you are standing on the back of Zunesha, an elephant that has walked the sea for a thousand years.' }
       ],
       spots: [{ id: "whale_forest", dx: 0.42, dy: 0.02 }, { id: "rightflank", dx: -0.1, dy: 0.56 }],
       logNext: ["whole_cake_island", "cacao_island", "wano"],
@@ -9079,10 +9091,11 @@ void main() {
         { kind: "pillar", dx: 0.07, dy: -0.4 },
         { kind: "pillar", dx: 0.17, dy: -0.4 },
         { kind: "chest", dx: 0.16, dy: -0.35, tier: 3 },
-        { kind: "bench", dx: -0.04, dy: -0.34, name: "Tea party tables", spot: "tea_party_garden" }
+        { kind: "bench", dx: -0.04, dy: -0.34, name: "Tea party tables", spot: "tea_party_garden", lore: `Tables set for every race in the world: giants' teacups beside dwarves' thimbles, fish-man chairs with holes for fins. At the head of the garden, a framed photograph of a kindly old nun \u2014 "Mother Carmel" \u2014 watches over the cakes. Nobody is allowed to touch it.` }
       ],
       docks: [{ near: "sweet_city", dir: "n", name: "Sweet City Port" }, { near: "fire_tank_hideout", dir: "nw", name: "Fire Tank Cove" }],
       spots: [{ id: "seducing_woods", dx: -0.48, dy: 0.38 }, { id: "northeast_coast", dx: 0.7, dy: -0.55 }],
+      weather: { snow: 0.2 },
       logNext: ["wano", "cacao_island", "elbaf"],
       logTime: 1,
       danger: 9,
@@ -9119,7 +9132,7 @@ void main() {
           { role: "inn", name: "Chocolat Hot Springs" }
         ]
       }],
-      landmarks: [{ kind: "crystal", dx: -0.55, dy: 0.1, name: "Great Mirror (to the Mirro-World)", spot: "mirror_world" }],
+      landmarks: [{ kind: "crystal", dx: -0.55, dy: 0.1, name: "Great Mirror (to the Mirro-World)", spot: "mirror_world", lore: "Your reflection hesitates a heartbeat before copying you. Every mirror in Totto Land opens onto Charlotte Br\xFBl\xE9e's Mirro-World, a silent country of glass where the Big Mom Pirates move unseen from island to island." }],
       logNext: ["whole_cake_island", "wano", "sphinx"],
       logTime: 1,
       danger: 8,
@@ -10518,12 +10531,13 @@ void main() {
         }
       }
       const armed = att && (att.armament || h2.haki || h2.seastone);
-      if (tgt.fruitDef && tgt.fruitDef.logia && !tgt.seastoned && tgt.intangibleOK()) {
-        const weakness = tgt.fruitDef.weakTo || [];
+      const lg = tgt.fruitDef && tgt.fruitDef.logia ? tgt.fruitDef : tgt.fakeLogia || null;
+      if (lg && !tgt.seastoned && (lg === tgt.fakeLogia ? tgt.state !== "knocked" && !tgt.inWater && !tgt.status.freeze : tgt.intangibleOK())) {
+        const weakness = lg.weakTo || [];
         const counters = weakness.includes(el) || el === "water" && tgt.status.wet || att && att.status.wet && weakness.includes("water");
         if (!armed && !counters && !h2.trueDamage) {
-          fx.burst(tgt.x, tgt.y - 0.7, 8, { color: tgt.fruitDef.color || "#fff", speed: 3, g: 0, life: 0.35, kind: "smoke", size: 0.2 });
-          if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, "INTANGIBLE", tgt.fruitDef.color || "#fff", 0.3);
+          fx.burst(tgt.x, tgt.y - 0.7, 8, { color: lg.color || "#fff", speed: 3, g: 0, life: 0.35, kind: "smoke", size: 0.2 });
+          if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, "INTANGIBLE", lg.color || "#fff", 0.3);
           if (att && att.isPlayer) game.hint("logia", "Logia users are intangible. Use Armament Haki, Seastone, or their elemental weakness to hit them.");
           return false;
         }
@@ -15618,6 +15632,11 @@ void main() {
           }
         }
       }
+      if (a.hakiSkill && !a.isPlayer) {
+        const fighting = !!this.target && a.haki > 2;
+        if (a.hakiSkill.armament > 0) a.armament = fighting;
+        if (a.hakiSkill.observation > 0) a.observation = fighting;
+      }
       if (this.home && this.leash && w.distance(a.x, a.y, this.home.x, this.home.y) > this.leash && this.state !== "return") {
         this.state = "return";
         this.target = null;
@@ -18176,7 +18195,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       }
       if (!k.drowned && k.t > 2.2) {
-        const finisher = g.actorsNear(p.x, p.y, 1.8).find((a) => a !== p && a.state === "idle" && hostile(a, p) && a.lethal !== false && !(a.faction === "marine" && c.bounty > 0));
+        const finisher = g.actorsNear(p.x, p.y, 1.8).find((a) => a !== p && a.state === "idle" && hostile(a, p) && a.lethal !== false && !a.def?.duel && !a.spar && !(a.faction === "marine" && c.bounty > 0));
         if (finisher && k.t > 3.5) {
           this.resolve(finisher);
           return;
@@ -18224,7 +18243,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const threats = g.actorsNear(p.x, p.y, 10).filter((a) => a !== p && a.state === "idle" && hostile(a, p));
       const marine = threats.find((a) => a.faction === "marine");
       if (marine && c.bounty > 0) return this.capture(marine);
-      const killer = finisher || threats.find((a) => a.lethal !== false);
+      const killer = finisher || threats.find((a) => a.lethal !== false && !a.def?.duel && !a.spar);
       if (killer) {
         if (c.traits.includes("will_of_d") && !c.flags.dLuckUsed) {
           c.flags.dLuckUsed = true;
@@ -18239,7 +18258,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.fx.impactFrame(0.15);
         return this.loseLife(`Finished off by ${killer.name}${killer.title ? ", " + killer.title : ""}.`);
       }
-      if (threats.length) {
+      const duelist = k.killer && (k.killer.def?.duel || k.killer.spar);
+      if (duelist) {
+        g.log(`You lost the bout against ${k.killer.name}. Nothing hurt but your pride.`, "#b0bec5");
+      } else if (threats.length) {
         const lost = Math.floor(c.berries * 0.35);
         c.berries -= lost;
         g.log(`You wake up with a splitting headache. Someone took ${formatBerries(lost)} from your purse.`, "#ff8a80");
@@ -18911,6 +18933,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       cur?.onComplete?.(this.ctx(), this.game);
       if (idx >= d.stages.length) return this.complete(id);
       s.stage = idx;
+      s.stageDay = this.game.env.day;
       const st = d.stages[idx];
       this.game.log(`${d.name}: ${st.desc}`, "#90caf9");
       st.onStart?.(this.ctx(), this.game);
@@ -18992,6 +19015,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const goal = def.stages[s.stage]?.goal;
         if (!goal) continue;
         if (goal.type === "flag" && this.char.flags[goal.flag]) this.next(id);
+        else if (goal.type === "days" && g.env.day - (s.stageDay ?? s.day ?? g.env.day) >= (goal.n || 1)) this.next(id);
         else if (goal.type === "reach" && goal.spot) {
           const pos = this.spotPos(goal.island, goal.spot);
           if (pos && g.world.distance(p.x, p.y, pos.x, pos.y) < (goal.r || 4)) this.next(id);
@@ -20495,6 +20519,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     a.def = def;
     if (def.armament) a.armament = true;
     if (def.invulnerable) a.invulnerable = true;
+    if (def.logia && !a.fruitDef?.logia) a.fakeLogia = { logia: true, weakTo: def.logia.weakTo || [], color: def.logia.color || "#fff" };
     if (def.recover) a.recoverAfter = def.recover;
     if (def.fixedPower) a.fixedPower = def.fixedPower;
     a.showName = def.showName ?? (!!def.dialogue || !!def.boss || !!def.named);
@@ -21869,6 +21894,26 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     game.addActor(k);
     game.bossTarget = k;
     return k;
+  }
+  function spawnGroup(game, grp) {
+    const isl = game.world.islands.find((i) => i.id === grp.island);
+    if (!isl) return [];
+    const base = grp.spot ? isl.spots[grp.spot] : grp.x !== void 0 ? { x: grp.x, y: grp.y } : { x: isl.x + (grp.dx || 0) * isl.def.w / 2, y: isl.y + (grp.dy || 0) * isl.def.h / 2 };
+    if (!base) return [];
+    const out = [];
+    const list = game.spawner.populated.get(isl.id);
+    for (const e of grp.enemies || []) {
+      const [arch, lvl, over] = Array.isArray(e) ? e : [e, grp.level || 6, {}];
+      const p = game.spawner.findFree(base.x, base.y, grp.radius || 5) || base;
+      const a = makeEnemy(arch, lvl, p.x, p.y, over || {});
+      a.game = game;
+      if (grp.leash) a.controller.leash = grp.leash;
+      if (grp.aggro) aggro(game, a);
+      game.addActor(a);
+      if (list) list.push(a);
+      out.push(a);
+    }
+    return out;
   }
 
   // src/content/eastBlue.js
@@ -31848,6 +31893,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       skill: 0.55,
       breakthrough: 2,
       hpMul: 1.3,
+      duel: true,
+      recover: 8,
+      recoverLine: `"...Hah. You're strong, Blue Sea dweller. Go and see the Chief."`,
       alert: `"Stand against me, then! BURN BAZOOKA!"`,
       barks: ["For Kalgara!", "The Sacred Land is ours!"],
       marker: (c, g) => g.quests.stageId("p1_skypiea_god") === "shandia" ? "!" : null,
@@ -31984,6 +32032,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       infamy: true,
       breakthrough: 3,
       skill: 0.5,
+      duel: true,
+      recover: 10,
+      recoverLine: '"...I lost..." (Foxy sinks into a bottomless depression.)',
       alert: `"Game three: COMBAT! Noro Noro Beam!"`,
       barks: ["Fe fe fe!", "Noro Noro Beam!", "Foxy Face!"],
       marker: (c, g) => !g.quests.state("p1_davy_back_fight") ? "!" : g.quests.stageId("p1_davy_back_fight") === "combat" ? "!" : null,
@@ -31994,6 +32045,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           a: {
             text: () => {
               const s = ctx.game.quests.stageId("p1_davy_back_fight");
+              if (ctx.char.bosses.includes("p1_foxy")) return `"...Nine hundred and twenty wins, and I lost... (Foxy stares at the grass, radiating gloom. Then he bounces back.) Fe fe fe! Next time, you're MINE!"`;
               if (s === "combat") return `"Fe fe fe! Game three \u2014 COMBAT! I haven't lost a Davy Back Fight in nine hundred and twenty games!"`;
               if (s) return `"Fe fe fe! The games have begun! No backing out \u2014 you promised Davy Jones himself!"`;
               return `"Fe fe fe! A new crew! I am the Silver Fox Foxy, and I challenge you to a DAVY BACK FIGHT! Three coins, three games. The winner of each game takes one member of the losing crew!"`;
@@ -32034,6 +32086,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       moves: ["p1_monster_rush", "brawl_headbutt"],
       skill: 0.35,
       hpMul: 1.3,
+      duel: true,
+      recover: 10,
+      recoverLine: "Pupupu... this game is yours.",
       alert: `"Pupupu! GROGGY RING! The ball is you!"`,
       when: (c, g) => stg2(g, "p1_davy_back_fight") === "groggy" && !c.defeated.p1_hamburg
     },
@@ -32053,6 +32108,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       moves: ["p1_monster_rush", "brawl_tackle"],
       skill: 0.3,
       hpMul: 1.2,
+      duel: true,
+      recover: 10,
+      recoverLine: "Ugh... foul...",
       alert: `"Pickles' Pass! Foul? What foul?"`,
       when: (c, g) => stg2(g, "p1_davy_back_fight") === "groggy" && !c.defeated.p1_pickles
     },
@@ -32073,6 +32131,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       moves: ["p1_pan_slam", "brawl_tackle"],
       skill: 0.2,
       hpMul: 1.6,
+      duel: true,
+      recover: 10,
+      recoverLine: "Big Pan... lost...",
       alert: `"BIG PAN... SLAM!"`,
       when: (c, g) => stg2(g, "p1_davy_back_fight") === "groggy" && !c.defeated.p1_big_pan
     },
@@ -32140,6 +32201,58 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   ];
   var npcs5 = [...npcsA, ...npcsB, ...npcsC];
+  var UNTOUCHABLE = /* @__PURE__ */ new Set([
+    "p1_crocus",
+    "p1_miss_wednesday",
+    "p1_jonathan",
+    "p1_jessica",
+    "p1_henzo",
+    "p1_tenaga",
+    "p1_koala_mother",
+    "p1_igaram",
+    "p1_distiller",
+    "p1_vivi_wp",
+    "p1_miss_all_sunday",
+    "p1_kyuka_manager",
+    "p1_mr3_vacation",
+    "p1_goldenweek_vacation",
+    "p1_hina_kyuka",
+    "p1_vira_archivist",
+    "p1_vira_revolutionary",
+    "p1_dorry",
+    "p1_brogy",
+    "p1_dalton",
+    "p1_kureha",
+    "p1_vivi",
+    "p1_vivi_palace",
+    "p1_cobra",
+    "p1_pell",
+    "p1_chaka",
+    "p1_igaram_ala",
+    "p1_kohza",
+    "p1_toto",
+    "p1_paula",
+    "p1_bon_clay",
+    "p1_ace_nanohana",
+    "p1_smoker_ala",
+    "p1_robin_tomb",
+    "p1_cricket",
+    "p1_masira",
+    "p1_shoujou",
+    "p1_teach_jaya",
+    "p1_amazon",
+    "p1_conis",
+    "p1_pagaya",
+    "p1_gan_fall",
+    "p1_satori_humbled",
+    "p1_shandia_chief",
+    "p1_aisa",
+    "p1_haredas",
+    "p1_tonjit",
+    "p1_porche",
+    "p1_aokiji"
+  ]);
+  for (const n of npcs5) if (UNTOUCHABLE.has(n.id)) n.invulnerable = true;
   var LOOTERS = [["bandit", 17, { name: "Palace Looter" }], ["bandit", 17, { name: "Palace Looter" }], ["bandit", 18, { name: "Palace Looter" }]];
   var TAXMEN = [["pirate", 16, { name: "Tax Collector" }], ["pirate_gunner", 16, { name: "Tax Collector" }]];
   var FOXY_CREW = [["p1_foxy_pirate", 24, { name: "Foxy Pirate" }], ["p1_foxy_pirate", 24, { name: "Foxy Pirate" }]];
@@ -32600,7 +32713,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             spawnGroupNow(g, "upper_yard", "god_shrine", DIVINE, 8);
           }
         },
-        { id: "bell", desc: "Ring the Golden Bell of Shandora beside Giant Jack, the great beanstalk of Upper Yard.", goal: { type: "reach", island: "upper_yard", spot: "golden_bell", r: 5 } }
+        { id: "bell", desc: "Ring the Golden Bell of Shandora, beside Giant Jack \u2014 the great beanstalk of Upper Yard.", goal: { type: "event", event: "rang_bell:golden_bell" } }
       ],
       rewards: { berries: 5e4, points: 3, haki: { observation: 5 }, items: [["shandora_gold", 2]], attrs: { wil: 1 }, liberate: "Angel Island", flag: "p1_bellRung" },
       onComplete: (ctx, g) => {
@@ -33381,18 +33494,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (a) aggro(game, a);
     return a;
   }
-  function spawnMob(game, islandId, spotId, list) {
-    const pop = game.spawner?.populated?.get(islandId);
-    if (!pop) return;
-    const s = spotXY(game, islandId, spotId);
-    if (!s) return;
-    for (const [arch, lvl, over] of list) {
-      const p = game.spawner.findFree(s.x, s.y, 6) || s;
-      const e = makeEnemy(arch, lvl, p.x, p.y, over || {});
-      e.game = game;
-      game.addActor(e);
-      pop.push(e);
-    }
+  function spawnMob(game, islandId, spotId, enemies) {
+    if (!game.spawner?.populated?.has(islandId)) return;
+    spawnGroup(game, { island: islandId, spot: spotId, radius: 6, enemies });
   }
   function logiaBody(color, weakTo = []) {
     return (a, game) => {
@@ -34211,6 +34315,28 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       steps: [{ hit: { shape: "circle", range: 2.8, damage: 8, knockback: 2, stun: 0.2, slashing: true, duration: 0.9, interval: 0.15 }, vfx: "ring", color: "#d7ccc8" }]
     },
     {
+      id: "nw_cracker_soldiers",
+      name: "Biscuit Soldiers",
+      anim: "cast",
+      windup: 0.8,
+      recover: 0.4,
+      cd: 24,
+      cost: { stamina: 14 },
+      say: "Biscuit Soldiers!",
+      steps: [{ summon: { archetype: "brute", level: 60, count: 2, name: "Biscuit Soldier", hpMul: 0.7, duration: 40, color: "#d7ccc8", look: { top: "#d7ccc8", bottom: "#bcaaa4", skin: "#d7ccc8", hat: "horns", hatColor: "#a1887f" } } }]
+    },
+    {
+      id: "nw_bm_homies",
+      name: "Homies of Totto Land",
+      anim: "cast",
+      windup: 0.9,
+      recover: 0.4,
+      cd: 30,
+      cost: { stamina: 14 },
+      say: "Children! Homies! Get them!",
+      steps: [{ summon: { archetype: "nw_chess_soldier", level: 68, count: 3, name: "Chess Peacekeeper", duration: 35, color: "#fafafa" } }]
+    },
+    {
       id: "nw_smoothie_wring",
       name: "Shibo Shibo: Wring",
       anim: "grab",
@@ -34314,6 +34440,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // ======================================================= FISH-MAN ISLAND
     {
       id: "nw_neptune",
+      invulnerable: true,
       name: "King Neptune",
       title: '"Sea God" of the Ryugu Kingdom',
       island: "fishman_island",
@@ -34362,6 +34489,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_shirahoshi",
+      invulnerable: true,
       name: "Princess Shirahoshi",
       title: "The Mermaid Princess",
       island: "fishman_island",
@@ -34392,6 +34520,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_fukaboshi",
+      invulnerable: true,
       name: "Prince Fukaboshi",
       title: "First Prince of the Ryugu Kingdom",
       island: "sea_forest",
@@ -34429,6 +34558,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_ryuboshi",
+      invulnerable: true,
       name: "Prince Ryuboshi",
       title: "Second Prince of the Ryugu Kingdom",
       island: "fishman_island",
@@ -34446,6 +34576,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_manboshi",
+      invulnerable: true,
       name: "Prince Manboshi",
       title: "Third Prince of the Ryugu Kingdom",
       island: "fishman_island",
@@ -34462,6 +34593,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_den",
+      invulnerable: true,
       name: "Den",
       title: "Coating mechanic & Sea Forest researcher",
       island: "sea_forest",
@@ -34496,6 +34628,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_shyarly",
+      invulnerable: true,
       name: "Madam Shyarly",
       title: "Proprietor of the Mermaid Caf\xE9",
       island: "fishman_island",
@@ -34535,6 +34668,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_jinbe",
+      invulnerable: true,
       name: "Jinbe",
       title: '"Knight of the Sea", Fish-Man Karate master',
       island: "fishman_island",
@@ -34743,6 +34877,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // ============================================================ NEW MARINEFORD
     {
       id: "nw_sakazuki",
+      invulnerable: true,
       name: "Fleet Admiral Sakazuki",
       title: '"Akainu"',
       island: "new_marineford",
@@ -34782,6 +34917,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_hq_recruiter",
+      invulnerable: true,
       name: "Recruiting Officer",
       title: "Marine Headquarters",
       island: "new_marineford",
@@ -34807,6 +34943,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // ======================================================================= G-5
     {
       id: "nw_vergo_g5",
+      invulnerable: true,
       name: "Vice Admiral Vergo",
       title: "Commander of Marine Base G-5",
       island: "g5_base",
@@ -34833,6 +34970,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_g5_marine",
+      invulnerable: true,
       name: "G-5 Marine",
       title: "Rowdy soldier of G-5",
       island: "g5_base",
@@ -34857,6 +34995,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // ============================================================== RAIJIN ISLAND
     {
       id: "nw_kasa",
+      invulnerable: true,
       name: "Kasa",
       title: "Umbrella seller of Raijin Island",
       island: "raijin_island",
@@ -34880,6 +35019,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_urouge",
+      duel: true,
+      recover: 10,
+      recoverLine: '"Hahaha! Fate favoured you today!"',
       name: "Urouge",
       title: '"Mad Monk", Worst Generation',
       island: "raijin_island",
@@ -34925,6 +35067,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // =========================================================== RISKY RED ISLAND
     {
       id: "nw_hawkins",
+      duel: true,
+      recover: 10,
+      recoverLine: '"...The cards were wrong. Interesting."',
       name: "Basil Hawkins",
       title: '"Magician", Worst Generation',
       island: "risky_red_island",
@@ -34968,6 +35113,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // ============================================================= MYSTORIA ISLAND
     {
       id: "nw_vivre_maker",
+      invulnerable: true,
       name: "Vivre Card Craftsman",
       title: "Vivre Card Workshop",
       island: "mystoria_island",
@@ -35001,6 +35147,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // ================================================================ PUNK HAZARD
     {
       id: "nw_law",
+      invulnerable: true,
       name: "Trafalgar Law",
       title: '"Surgeon of Death", Warlord of the Sea',
       island: "punk_hazard",
@@ -35070,6 +35217,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_mocha",
+      invulnerable: true,
       name: "Mocha",
       title: "Kidnapped child",
       island: "punk_hazard",
@@ -35195,6 +35343,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_smoker_ph",
+      invulnerable: true,
       name: "Vice Admiral Smoker",
       title: "G-5 (currently in the wrong body)",
       island: "punk_hazard",
@@ -35221,6 +35370,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_tashigi_ph",
+      invulnerable: true,
       name: "Captain Tashigi",
       title: "G-5 (currently in Smoker's body)",
       island: "punk_hazard",
@@ -35236,6 +35386,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // ================================================================== DRESSROSA
     {
       id: "nw_gatz",
+      invulnerable: true,
       name: "Gatz",
       title: "Announcer of the Corrida Colosseum",
       island: "dressrosa",
@@ -35270,6 +35421,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // Colosseum gladiators: friendly outside the ring, turned on you during your block.
     {
       id: "nw_bellamy",
+      duel: true,
+      recover: 8,
+      recoverLine: '"Tch... Fine. You win this round."',
       name: "Bellamy",
       title: '"The Hyena", gladiator',
       island: "dressrosa",
@@ -35288,6 +35442,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_ideo",
+      duel: true,
+      recover: 8,
+      recoverLine: `"What a punch! You've got it, champ!"`,
       name: "Ideo",
       title: '"Destruction Cannon", boxer',
       island: "dressrosa",
@@ -35307,6 +35464,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_hajrudin",
+      duel: true,
+      recover: 8,
+      recoverLine: '"GEGYAGYA! A true warrior!"',
       name: "Hajrudin",
       title: "Captain of the New Giant Warrior Pirates",
       island: "dressrosa",
@@ -35328,6 +35488,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_chinjao",
+      duel: true,
+      recover: 8,
+      recoverLine: `"Hmph! Not bad... for Garp's kind."`,
       name: "Don Chinjao",
       title: '"Chinjao the Drill", Happo Navy',
       island: "dressrosa",
@@ -35375,6 +35538,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_rebecca",
+      invulnerable: true,
       name: "Rebecca",
       title: '"The Undefeated Woman", gladiator',
       island: "dressrosa",
@@ -35389,6 +35553,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_cavendish",
+      invulnerable: true,
       name: "Cavendish",
       title: '"Cavendish of the White Horse", Pirate Prince',
       island: "dressrosa",
@@ -35403,6 +35568,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_bartolomeo",
+      invulnerable: true,
       name: "Bartolomeo",
       title: '"The Cannibal", Barto Club captain',
       island: "dressrosa",
@@ -35416,10 +35582,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_riku",
+      invulnerable: true,
       name: "Ricky",
       title: "Masked gladiator (King Riku Dold III)",
       island: "dressrosa",
-      at: { town: "acacia", building: "Colosseum Tavern" },
+      at: (c, g) => g.quests.isDone("nw_birdcage") ? { town: "royal_palace_dr", plaza: true, ox: -2 } : { town: "acacia", building: "Colosseum Tavern" },
       level: 48,
       style: "ittoryu",
       weapon: "sword",
@@ -35442,6 +35609,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_viola",
+      invulnerable: true,
       name: "Violet",
       title: "Dancer (Princess Viola)",
       island: "dressrosa",
@@ -35454,6 +35622,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_fujitora",
+      invulnerable: true,
       name: "Admiral Fujitora",
       title: "Issho, Admiral of the Marines",
       island: "dressrosa",
@@ -35482,6 +35651,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_sabo",
+      invulnerable: true,
       name: "Sabo",
       title: "Chief of Staff of the Revolutionary Army",
       island: "dressrosa",
@@ -35506,6 +35676,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_doflamingo_king",
+      invulnerable: true,
       name: "Donquixote Doflamingo",
       title: "King of Dressrosa, Warlord of the Sea",
       island: "dressrosa",
@@ -35553,6 +35724,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_toy_soldier",
+      invulnerable: true,
       name: "One-Legged Toy Soldier",
       title: "Thunder Soldier",
       island: "dressrosa",
@@ -35581,6 +35753,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_kyros",
+      invulnerable: true,
       name: "Kyros",
       title: '"Thunder Soldier", legend of the Colosseum',
       island: "dressrosa",
@@ -35626,6 +35799,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_leo",
+      invulnerable: true,
       name: "Leo",
       title: "Leader of the Tonta Corps",
       island: "green_bit",
@@ -35656,6 +35830,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_gancho",
+      invulnerable: true,
       name: "King Gancho",
       title: "King of the Tontatta Kingdom",
       island: "green_bit",
@@ -35668,6 +35843,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_mansherry",
+      invulnerable: true,
       name: "Princess Mansherry",
       title: "Tontatta princess (Chiyu Chiyu no Mi)",
       island: "green_bit",
@@ -35824,6 +36000,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // ================================================================= APPLENINE
     {
       id: "nw_applenine_elder",
+      invulnerable: true,
       name: "Cider-Maker Nonna",
       title: "Elder of Applenine Village",
       island: "applenine_island",
@@ -35838,6 +36015,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // ==================================================================== SPHINX
     {
       id: "nw_marco",
+      invulnerable: true,
       name: "Marco",
       title: '"Marco the Phoenix", doctor of Sphinx',
       island: "sphinx",
@@ -35902,6 +36080,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_stussy",
+      invulnerable: true,
       name: "Buckingham Stussy",
       title: "Weevil's mother",
       island: "sphinx",
@@ -35915,6 +36094,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // ======================================================================= ZOU
     {
       id: "nw_wanda",
+      invulnerable: true,
       name: "Wanda",
       title: "Kingsbird of the Mokomo Dukedom",
       island: "zou",
@@ -35950,6 +36130,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_carrot",
+      invulnerable: true,
       name: "Carrot",
       title: "Kingsbird of the Mokomo Dukedom",
       island: "zou",
@@ -35962,6 +36143,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_miyagi",
+      invulnerable: true,
       name: "Doctor Miyagi",
       title: "Physician of Kurau City",
       island: "zou",
@@ -35994,6 +36176,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_inuarashi",
+      invulnerable: true,
       name: "Duke Inuarashi",
       title: '"Ruler of Day" of the Mokomo Dukedom',
       island: "zou",
@@ -36041,6 +36224,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_nekomamushi",
+      invulnerable: true,
       name: "Master Nekomamushi",
       title: '"Ruler of Night", Guardians of the Whale Forest',
       island: "zou",
@@ -36087,6 +36271,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_pedro",
+      invulnerable: true,
       name: "Pedro",
       title: '"Pedro of the Treetops", captain of the Guardians',
       island: "zou",
@@ -36104,6 +36289,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_raizo",
+      invulnerable: true,
       name: "Raizo",
       title: '"Raizo of the Mist", ninja of Wano',
       island: "zou",
@@ -36187,6 +36373,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_bariete",
+      invulnerable: true,
       name: "Bariete",
       title: "Gatekeeper of the Mokomo Dukedom",
       island: "zou",
@@ -36218,7 +36405,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       breakthrough: 6,
       haki: { armament: 90, observation: 70, conqueror: 85 },
       look: { hair: "curly", hairColor: "#f06292", skin: "#f9dcc4", top: "#f48fb1", bottom: "#f8bbd0", coat: "#b71c1c", hat: "tricorne", hatColor: "#212121", grin: true },
-      moves: ["nw_soul_pocus", "nw_heavenly_fire", "nw_raitei", "nw_ikoku"],
+      moves: ["nw_soul_pocus", "nw_heavenly_fire", "nw_raitei", "nw_ikoku", "nw_bm_homies"],
       alert: "Mamamamama! You want to fight ME, at my own tea table?!",
       barks: ["Mamamamama!", "LIFE OR TREATS?!", "CROQUEMBOUCHE!"],
       phases: [
@@ -36272,6 +36459,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_bege",
+      invulnerable: true,
       name: 'Capone "Gang" Bege',
       title: "Captain of the Fire Tank Pirates",
       island: "whole_cake_island",
@@ -36355,13 +36543,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       breakthrough: 4,
       haki: { armament: 65 },
       look: { hair: "long", hairColor: "#9c27b0", skin: "#f1c9a0", top: "#d7ccc8", bottom: "#8d6e63", swords: 1 },
-      moves: ["nw_cracker_pretzel", "nw_cracker_hard_biscuit", "nw_cracker_roll"],
+      moves: ["nw_cracker_pretzel", "nw_cracker_hard_biscuit", "nw_cracker_roll", "nw_cracker_soldiers"],
       alert: "Nobody enters Totto Land without Mama's permission. My biscuit army will crush you!",
       barks: ["Biscuits never tire!", "Pretzel!"],
-      phases: [
-        { at: 0.65, run: (a, g) => biscuitSoldiers(a, g, 2) },
-        { at: 0.35, run: both((a, g) => biscuitSoldiers(a, g, 2), hakiOn("Hard Biscuit armour!")) }
-      ],
+      phases: [{ at: 0.4, run: hakiOn("Hard Biscuit armour!") }],
       when: (c, g) => stageIs(g, "nw_tea_party", "cracker")
     },
     {
@@ -36424,6 +36609,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_pudding",
+      invulnerable: true,
       name: "Charlotte Pudding",
       title: "Owner of Caramel, Chocolat Town",
       island: "cacao_island",
@@ -36448,6 +36634,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     },
     {
       id: "nw_chiffon",
+      invulnerable: true,
       name: "Charlotte Chiffon",
       title: "Wife of Capone Bege",
       island: "cacao_island",
@@ -36470,18 +36657,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       })
     }
   ];
-  function biscuitSoldiers(a, g, n) {
-    g.fx.text(a.x, a.y - 2.4, "Biscuit Soldiers!", "#d7ccc8", 0.5, { life: 1.4 });
-    const list = g.spawner?.populated?.get("whole_cake_island");
-    for (let k = 0; k < n; k++) {
-      const p = g.spawner?.findFree(a.x + (k ? 2 : -2), a.y + 1.5, 4) || { x: a.x + (k ? 2 : -2), y: a.y + 1.5 };
-      const e = makeEnemy("brute", 60, p.x, p.y, { name: "Biscuit Soldier", faction: "pirate", look: { top: "#d7ccc8", bottom: "#bcaaa4", skin: "#d7ccc8", hat: "horns", hatColor: "#a1887f" }, hpMul: 0.7 });
-      e.game = g;
-      g.addActor(e);
-      if (list) list.push(e);
-      e.aggroPlayer = true;
-    }
-  }
   var groups6 = [
     {
       island: "fishman_island",
@@ -37147,7 +37322,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     game.ui?.banner?.("THE FOUR POINTS", "The Road Poneglyphs are read", `${who} lays the four rubbings side by side. Four places \u2014 join them on a chart and two lines cross in an X, beyond Lodestar, where no Log Pose can lead.`, 8);
     game.log?.("The four Road Poneglyphs point to the final island. Laugh Tale lies just before Reverse Mountain, east of Lodestar.", "#ffd54f");
   }
-  function spawnGroup(game, islandId, spotId, enemies, radius = 5) {
+  function spawnGroup2(game, islandId, spotId, enemies, radius = 5) {
     const list = game.spawner?.populated?.get(islandId);
     if (!list || game.world !== game.surface) return [];
     const isl = game.surface.islands.find((i) => i.id === islandId);
@@ -38609,7 +38784,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           goal: { type: "reach", island: "wano", spot: "shogun_castle", r: 4 },
           onStart: (ctx, g) => {
             if (!beat2(ctx.char, "kaido")) {
-              spawnGroup(g, "wano", "shogun_castle", ONIWABANSHU, 6);
+              spawnGroup2(g, "wano", "shogun_castle", ONIWABANSHU, 6);
               spawnNow(g, "orochi");
               spawnNow(g, "fukurokuju");
             }
@@ -38652,7 +38827,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           id: "scavengers",
           desc: "Drive the Blackbeard scavengers out of the ruins of Baltigo.",
           goal: { type: "defeat", any: ["bb_scavenger"], count: 3 },
-          onStart: (ctx, g) => spawnGroup(g, "baltigo", "scavenger_camp", SCAVENGERS, 6)
+          onStart: (ctx, g) => spawnGroup2(g, "baltigo", "scavenger_camp", SCAVENGERS, 6)
         },
         { id: "archive", desc: "Search the collapsed vault north of the ruins for Dragon's sealed dossier.", goal: { type: "reach", island: "baltigo", spot: "burned_archive", r: 3 } },
         { id: "report", desc: "Bring the dossier to the Revolutionary officer." }
@@ -38713,7 +38888,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           desc: "York has handed control of the Seraphim to CP0. Stop the Seraphim at the Labophase gate.",
           goal: { type: "defeat", any: ["s_hawk", "s_bear", "s_snake", "s_shark"], count: 3 },
           onStart: (ctx, g) => {
-            spawnGroup(g, "egghead", "labophase_gate", SERAPHIM, 6);
+            spawnGroup2(g, "egghead", "labophase_gate", SERAPHIM, 6);
             g.ui.banner("THE SERAPHIM", "Egghead", "Winged children with the faces of Warlords drop from the Labophase \u2014 and turn on their creator.", 5);
           }
         },
@@ -38735,7 +38910,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             const a = spawnNow(g, "kizaru_egghead");
             if (a) aggro(g, a);
             spawnNow(g, "saturn_cameo");
-            spawnGroup(g, "egghead", "labophase_gate", BUSTER_CALL, 9);
+            spawnGroup2(g, "egghead", "labophase_gate", BUSTER_CALL, 9);
             g.ui.banner("BUSTER CALL", "Admiral Kizaru \u2014 and one of the Five Elders", "Battleships ring the island. A flash of yellow light lands at the gate... and behind it, an old man in black.", 6);
           }
         },
@@ -38758,7 +38933,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           desc: "The children's nightmares walk as MMA. Protect the Walrus School and the Owl Library \u2014 defeat three of the monsters.",
           goal: { type: "defeat", any: ["mma_beast"], count: 3 },
           onStart: (ctx, g) => {
-            spawnGroup(g, "elbaf", "walrus_school", MMA, 8);
+            spawnGroup2(g, "elbaf", "walrus_school", MMA, 8);
             g.ui.banner("MMA", "Nightmares made flesh", "Monsters taller than giants stalk out of the children's dreams toward the Walrus School.", 5);
           }
         },
@@ -40000,6 +40175,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           h: 110,
           climate: "sky",
           rough: 0.25,
+          population: [["skypiean", 92], ["human", 8]],
           trees: ["cloudtree", "palm"],
           towns: [{
             id: "lovely_street",
@@ -40062,6 +40238,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           h: 64,
           climate: "sky",
           rough: 0.3,
+          population: [["skypiean", 100]],
           towns: [{
             id: "shandia_camp",
             name: "Shandian Village",
@@ -40085,6 +40262,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           h: 48,
           climate: "sky",
           rough: 0.2,
+          population: [["human", 70], ["skypiean", 30]],
           towns: [{
             id: "weatheria_town",
             name: "Weatheria",
@@ -40124,6 +40302,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           h: 190,
           climate: "undersea",
           rough: 0.2,
+          population: [["fishman", 82], ["human", 12], ["mink", 2]],
           trees: ["coral", "kelp"],
           towns: [
             {
@@ -41472,6 +41651,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (game.world !== game.surface) {
         env.stormTarget = 0;
         env.storm = Math.min(env.storm, 0.1);
+      }
+      const wx = game.currentIsland?.def?.weather;
+      if (wx) {
+        if (wx.storm) env.stormTarget = Math.max(env.stormTarget, wx.storm);
+        if (wx.snow) env.snow = Math.max(env.snow, wx.snow);
       }
     });
     game.on("characterStart", () => {

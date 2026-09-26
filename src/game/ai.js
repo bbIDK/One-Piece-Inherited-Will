@@ -97,6 +97,12 @@ export class AIController {
         }
       }
     }
+    // Haki users fight with it on, and rest it when the fight is over
+    if (a.hakiSkill && !a.isPlayer) {
+      const fighting = !!this.target && a.haki > 2;
+      if (a.hakiSkill.armament > 0) a.armament = fighting;
+      if (a.hakiSkill.observation > 0) a.observation = fighting;
+    }
     // leash
     if (this.home && this.leash && w.distance(a.x, a.y, this.home.x, this.home.y) > this.leash && this.state !== 'return') {
       this.state = 'return'; this.target = null;
