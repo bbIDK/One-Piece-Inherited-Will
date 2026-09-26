@@ -94,7 +94,7 @@ function palette(def) {
 // ---------------------------------------------------------------- hull
 const hullCache = new Map();
 
-function hullGeometry(def) {
+export function hullGeometry(def) {
   const key = `${def.length}|${def.beam}|${def.color}|${def.figurehead}|${def.cannons}|${def.paddle}|${def.sail}|${def.seastone}|${def.masts}`;
   let g = hullCache.get(key);
   if (g) return g;

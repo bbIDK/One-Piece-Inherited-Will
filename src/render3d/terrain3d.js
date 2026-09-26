@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { T, IS_LIQUID, OVERLAY, PALETTE } from '../world/tiles.js';
 import { CHUNK, DECK_Y, WALL_H, HeightField } from './height.js';
 import { toonGradient } from './materials.js';
+import { dockDetails } from './props/docks.js';
 
 const NEAR_R = 6; // chunks of full detail around the camera
 const FAR_R = 15; // coarse chunks out to here (islands on the horizon)
@@ -244,6 +245,10 @@ export class TerrainManager {
       const m = boxes(walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, this.wallMat);
       m.castShadow = true;
       root.add(m);
+    }
+    // planks, pilings, rope rails, rails on sleepers, crenellations
+    if (decks.length || walls.length) {
+      try { const det = dockDetails(w, x0, y0); if (det) root.add(det); } catch (e) { console.warn('dock details failed', e); }
     }
   }
 }

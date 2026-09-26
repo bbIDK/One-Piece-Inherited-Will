@@ -38,16 +38,35 @@ function helpers() {
       v.rig.yaw = ((yaw % TAU) + TAU) % TAU; v.rig.pitch = pitch;
       if (dist) v.rig.tp.dist = dist;
     },
-    /** A clear sunny spot: Conomi's town plaza at noon. */
+    /** A clear sunny spot on Conomi (no trees or houses in the 14 m east of you) at noon. */
     goSunny() {
-      const g = OP.game;
+      const g = OP.game, w = g.world;
       const def = OP.debug.npcDef('arlong');
       const isl = g.surface.islands.find((i) => i.id === def.island);
       const t = isl.towns[0];
-      OP.teleport(t.plaza.x, t.plaza.y + 1);
+      const p = g.player;
+      const ok = (x, y) => {
+        for (let dx = -3; dx <= 13; dx += 1) for (let dy = -7; dy <= 7; dy += 1) {
+          if (w.isLiquid(x + dx, y + dy) || w.isBlocked(x + dx, y + dy) || !p.passable(w, x + dx, y + dy)) return false;
+        }
+        return w.objects.query(x - 9, y - 12, x + 20, y + 12).filter((o) => !o.hidden && o.kind !== 'flower' && o.kind !== 'grass').length === 0;
+      };
+      let spot = null;
+      for (let r = 0; r < 160 && !spot; r += 3) {
+        const n = Math.max(1, Math.round(r / 2));
+        for (let k = 0; k < n && !spot; k++) {
+          const a = (k / n) * TAU;
+          const x = t.plaza.x + Math.cos(a) * r, y = t.plaza.y + Math.sin(a) * r;
+          if (ok(x, y)) spot = [x, y];
+        }
+      }
+      if (!spot) spot = [t.plaza.x, t.plaza.y + 1];
+      OP.teleport(spot[0], spot[1]);
       g.env.clock = 11.5;
       g.env.rain = 0; g.env.storm = 0; g.env.fog = 0; g.env.snow = 0;
-      const p = g.player; p.facing = 0;
+      p.facing = 0;
+      if (p.controller) p.controller.aimT = 0;
+      return spot;
     },
     perf() {
       const v = OP.game.view3d, i = v.renderer.info;
@@ -121,12 +140,13 @@ async function closeups(page, snap) {
     const C = window.__C3; C.clear();
     const g = window.OP.game, p = g.player;
     p.look = { ...p.look, hat: 'straw', hair: 'short', hairColor: '#1e1e1e', top: '#d63031', openShirt: true, bottom: '#1e3799', coat: null };
-    p.facing = Math.PI;
     C.view(0, 0.05, 'third', 2.4);
   });
-  await settle(page, 4);
+  await settle(page, 6);
+  await page.evaluate(() => { const p = window.OP.game.player; p.controller.aimT = 0; p.facing = Math.PI; });
+  await settle(page, 2);
   await snap('tp-face');
-  await page.evaluate(() => { const p = window.OP.game.player; p.facing = Math.PI * 0.75; });
+  await page.evaluate(() => { const p = window.OP.game.player; p.controller.aimT = 0; p.facing = Math.PI * 0.75; });
   await settle(page, 2);
   await snap('tp-three-quarter');
   await page.evaluate(() => { const g = window.OP.game, p = g.player; p.facing = 0; window.__C3.view(0, 0.1, 'third', 3.2); });
@@ -210,10 +230,10 @@ async function viewmodel(page, snap) {
   await act('vm-jab', () => { const g = window.OP.game; g.player.tryM1(g); }, [0.05, 0.03]);
   await act('vm-cross', () => { const g = window.OP.game, p = g.player; p.combo.window = 1; p.combo.step = 1; p.tryM1(g); }, [0.05, 0.03]);
   await act('vm-heavy', () => { const g = window.OP.game; g.player.tryHeavy(g); }, [0.05, 0.05, 0.05, 0.05]);
-  await page.evaluate(() => { const g = window.OP.game; g.player.setBlock(true); });
+  await page.evaluate(() => { window.OP.key('F', true); });
   await step(page, 0.15); await frames(page, 2);
   await snap('vm-block');
-  await page.evaluate(() => { const g = window.OP.game; g.player.setBlock(false); });
+  await page.evaluate(() => { window.OP.key('F', false); });
   await step(page, 0.4);
   // black leg kick
   await page.evaluate(() => { const p = window.OP.game.player; p.style = 'black_leg'; p.masteries = { black_leg: 30 }; });
@@ -326,10 +346,16 @@ async function vmDebug(page, snap) {
   });
   console.log('vm-idle', JSON.stringify(await dump()));
   await snap('dbg-idle');
-  await page.evaluate(() => { const g = window.OP.game; g.player.setBlock(true); });
+  await page.evaluate(() => { window.OP.key('F', true); });
   await step(page, 0.15); await frames(page, 2);
   console.log('vm-block', JSON.stringify(await dump()));
   await snap('dbg-block');
+  await page.evaluate(() => { window.OP.key('F', false); });
+  await step(page, 0.3);
+  await page.evaluate(() => { const g = window.OP.game; g.player.tryM1(g); });
+  await step(page, 0.1); await frames(page, 2);
+  console.log('vm-jab', JSON.stringify(await dump()));
+  await snap('dbg-jab');
 }
 
 export const scenarios = {

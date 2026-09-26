@@ -756,7 +756,7 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter) {
       k.add(box(aw / n + 0.005, 0.05, 1.0), { at: [x0 + aw / n / 2, ay, 0.45], rot: [0.42, 0, 0], color: i % 2 ? '#ffffff' : c });
     }
     // scalloped valance
-    for (let i = 0; i < n; i++) k.add(new THREE.CylinderGeometry(aw / n / 2, aw / n / 2, 0.04, 8, 1, false, 0, Math.PI), { at: [door.x - aw / 2 + (i + 0.5) * aw / n, ay - 0.42, 0.9], rot: [Math.PI / 2, 0, 0], color: i % 2 ? '#ffffff' : c });
+    for (let i = 0; i < n; i++) k.add(new THREE.CircleGeometry(aw / n / 2, 8, Math.PI, Math.PI), { at: [door.x - aw / 2 + (i + 0.5) * aw / n, ay - 0.4, 0.92], rot: [-0.42, 0, 0], color: i % 2 ? '#ffffff' : c, double: true, backShade: 0.85 });
   }
   if (S.engawa) {
     // a raised wooden veranda along the front

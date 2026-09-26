@@ -6,10 +6,22 @@
 //  * outline: the anime ink line — back faces pushed out along the normal
 //    (after skinning), scaled with view depth so it stays ~2 px wide.
 import * as THREE from 'three';
-import { toonGradient } from '../materials.js';
 
 const BODY_KEY = 'op-char-body-2';
 const INK = 0x24160f;
+
+let GRAD = null;
+/** Characters' cel ramp: anime two-tone with a soft mid band and bright shadows (faces stay readable). */
+export function charGradient() {
+  if (GRAD) return GRAD;
+  const data = new Uint8Array([150, 150, 150, 255, 196, 196, 196, 255, 255, 255, 255, 255, 255, 255, 255, 255]);
+  GRAD = new THREE.DataTexture(data, 4, 1, THREE.RGBAFormat);
+  GRAD.minFilter = THREE.NearestFilter;
+  GRAD.magFilter = THREE.NearestFilter;
+  GRAD.generateMipmaps = false;
+  GRAD.needsUpdate = true;
+  return GRAD;
+}
 
 /** A per-character body material (see the uniforms in `mat.userData.u`). */
 export function bodyMaterial(opts = {}) {
@@ -19,7 +31,7 @@ export function bodyMaterial(opts = {}) {
     uLegFx: { value: new THREE.Vector2() }, uLegFxCol: { value: new THREE.Color(1.0, 0.36, 0.0) },
     uFreeze: { value: 0 },
   };
-  const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient(), fog: opts.fog ?? true });
+  const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), fog: opts.fog ?? true });
   m.userData.u = u;
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, u);
@@ -87,7 +99,7 @@ export function sharedOutline() {
 let WEAPON = null;
 /** Cel-shaded vertex-coloured material for weapons and props held by characters. */
 export function weaponMaterial() {
-  if (!WEAPON) WEAPON = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient() });
+  if (!WEAPON) WEAPON = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient() });
   return WEAPON;
 }
 

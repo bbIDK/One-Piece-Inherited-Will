@@ -83,7 +83,97 @@ async function spawnFleet(page, x, y, types) {
   }, { x, y, types });
 }
 
+/**
+ * The tour: [label, where] — where is { at: island id, town: index } (the town
+ * plaza), { x, y } or { kind, near: [x, y] } (stand `dist` m from the nearest
+ * object of that kind), plus yaw/pitch/clock/zone overrides.
+ */
+const TOUR = [
+  ['foosha-forest', { x: 3772, y: 318, yaw: 0.2, pitch: 0.02, perf: true }],
+  ['foosha-windmill', { kind: 'windmill', near: [3725, 334], dist: 12, ang: 1.9, pitch: 0.12 }],
+  ['foosha-village', { at: 'dawn_island', town: 0, dy: 3, yaw: -1.2, pitch: 0.02 }],
+  ['goa-noble', { at: 'dawn_island', town: 1, dy: 2, yaw: -1.57, pitch: 0.05, perf: true }],
+  ['alabasta-nanohana', { at: 'alabasta', town: 0, dy: 2, yaw: -1.3, pitch: 0.04, clock: 11 }],
+  ['alabasta-tomb', { kind: 'poneglyph', near: [3018, 1036], dist: 8, ang: 1.57, pitch: 0.05 }],
+  ['yuba-tribal', { at: 'alabasta', town: 4, dy: 3, yaw: -1.57, pitch: 0.02 }],
+  ['wano-capital', { at: 'wano', town: 0, dy: 2, yaw: -1.57, pitch: 0.06, perf: true }],
+  ['wano-torii', { kind: 'torii', near: [1157, 1020], dist: 9, ang: 1.57, pitch: 0.1 }],
+  ['wano-bamboo', { kind: 'tree', sub: 'bamboo', near: [1178, 966], dist: 6, ang: 0.8, pitch: 0.12 }],
+  ['sabaody-wheel', { kind: 'wheel', near: [3880, 1011], dist: 22, ang: 1.57, pitch: 0.2 }],
+  ['sabaody-grove', { at: 'sabaody', town: 1, dy: 2, yaw: 0.3, pitch: 0.05 }],
+  ['sabaody-bubbles', { kind: 'bubble', near: [3840, 1071], dist: 5, ang: 1.2, pitch: 0.15 }],
+  ['water7-port', { at: 'water_7', town: 2, dy: 2, yaw: 1.57, pitch: 0.03 }],
+  ['dock-moorings', { dock: 'water_7', n: 0, back: 4, pitch: -0.12 }],
+  ['twin-cape-lighthouse', { kind: 'lighthouse', near: [2244, 988], dist: 14, ang: 1.2, pitch: 0.22 }],
+  ['drum-snow', { at: 'drum_island', town: 0, dy: 2, yaw: -1.57, pitch: 0.04 }],
+  ['whole-cake-candy', { at: 'whole_cake_island', town: 0, dy: 3, yaw: -1.3, pitch: 0.05 }],
+  ['marineford', { kind: 'platform', near: [3880, 892], dist: 12, ang: 1.57, pitch: 0.1 }],
+  ['jaya-jungle', { x: 2935, y: 862, yaw: 2.5, pitch: 0.05, perf: true }],
+  ['red-port-bondola', { kind: 'elevator', near: [4066, 1025], dist: 12, ang: 3.14, pitch: 0.25 }],
+  ['foosha-night', { at: 'dawn_island', town: 0, dy: 3, yaw: -1.2, pitch: 0.02, clock: 22 }],
+];
+
+async function tourStop(page, snap, label, w) {
+  const info = await page.evaluate((w) => {
+    const g = window.OP.game, P = window.P3D, v = g.view3d;
+    const p = g.player;
+    if (p.ship) p.ship.captain = null;
+    p.mode = 'foot'; p.onShip = false; p.ship = null; p.state = 'idle';
+    g.env.clock = w.clock ?? 10.5;
+    let x = w.x, y = w.y;
+    if (w.at) { const isl = P.isl(w.at); const t = isl.towns[w.town || 0]; x = t.plaza.x + (w.dx || 0); y = t.plaza.y + (w.dy || 0); }
+    if (w.dock) {
+      const isl = P.isl(w.dock); const d = isl.docks[w.n || 0];
+      const back = w.back || 4;
+      window.OP.teleport(d.x + 0.5 - d.dirX * back, d.y + 0.5 - d.dirY * back);
+      v.rig.yaw = (Math.atan2(d.dirY, d.dirX) + Math.PI * 2) % (Math.PI * 2);
+      v.rig.pitch = w.pitch ?? 0; v.rig.roll = 0;
+      return { dock: [d.x, d.y] };
+    }
+    if (w.kind) {
+      const list = P.near(w.kind, w.near[0], w.near[1], 160).filter((o) => !w.sub || o.sub === w.sub);
+      const o = list[0];
+      if (!o) return { error: 'no ' + w.kind };
+      P.standAt(o.x, o.y, w.dist || 8, w.ang ?? Math.PI / 2, w.pitch ?? 0.05);
+      v.rig.roll = 0;
+      return { kind: o.kind, x: Math.round(o.x), y: Math.round(o.y), name: o.name };
+    }
+    window.OP.teleport(x, y);
+    v.rig.yaw = ((w.yaw || 0) + Math.PI * 2) % (Math.PI * 2);
+    v.rig.pitch = w.pitch ?? 0; v.rig.roll = 0;
+    return { x: Math.round(x), y: Math.round(y) };
+  }, w);
+  console.log(label, JSON.stringify(info));
+  await still(page);
+  await settle(page, 9);
+  await page.evaluate(() => { const p = window.OP.game.player; p.state = 'idle'; window.OP.game.view3d.rig.roll = 0; });
+  await settle(page, 2);
+  await snap(label);
+  if (w.perf) console.log('perf', label, JSON.stringify(await page.evaluate(() => window.P3D.perf())));
+}
+
 export const scenarios = {
+  // the world-object tour: forests, towns in every style, landmarks, docks, zones
+  props3d: {
+    async run(page, snap, args) {
+      await boot(page);
+      const only = args.only ? String(args.only).split(',') : null;
+      for (const [label, w] of TOUR) {
+        if (only && !only.some((k) => label.includes(k))) continue;
+        await tourStop(page, snap, label, w);
+      }
+      if (!only || only.includes('skypiea')) {
+        await page.evaluate(() => { const g = window.OP.game; g.enterZoneById('skypiea'); g.view3d.rig.pitch = 0.05; g.env.clock = 10.5; });
+        await still(page);
+        await settle(page, 12);
+        await snap('skypiea');
+        await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = (v.rig.yaw + Math.PI) % (Math.PI * 2); });
+        await settle(page, 4);
+        await snap('skypiea-back');
+      }
+    },
+  },
+
   // every hull type up close, then the view from the helm of three of them
   ships3d: {
     async run(page, snap) {

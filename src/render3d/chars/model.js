@@ -26,7 +26,8 @@ export class CharacterModel {
     this.look = look;
     this.wpn = wpn;
     this.opts = opts;
-    this.body = getBody(look, wpn);
+    this.lod = opts.lod ?? 0;
+    this.body = getBody(look, wpn, this.lod);
     this.d = this.body.dims;
     this.rig = new Rig(this.d);
     this.group = new THREE.Group();
@@ -69,6 +70,17 @@ export class CharacterModel {
     this.shape = ['fist', 'fist'];
     this.t = 0;
     this.visibleParts = null;
+  }
+
+  /** Switch detail level (near / far): same skeleton, another shared geometry. */
+  setLod(lod) {
+    if (lod === this.lod) return;
+    const nb = getBody(this.look, this.wpn, lod);
+    releaseBody(this.body);
+    this.body = nb;
+    this.lod = lod;
+    this.mesh.geometry = nb.geo;
+    this.outline.geometry = nb.geo;
   }
 
   /** Swap the face texture for this frame's expression. */

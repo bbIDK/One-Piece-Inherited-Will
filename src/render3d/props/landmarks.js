@@ -1,0 +1,916 @@
+// Unique and animated world objects: windmills with turning sails, flags that
+// wave in the wind, fountains with falling water, campfires, Sabaody's
+// soap bubbles, the Ferris wheel, lighthouses with a sweeping beam at night,
+// treasure chests that open, the Bondola up the Red Line, fortress gates,
+// cave and mine arches, torii, execution platforms and rings, Shandora's
+// golden bell, Poneglyphs, statues, shipwrecks, towers, stairwells, named
+// signposts and Laboon. Static parts are merged, cached geometries; the moving
+// parts animate every frame through animate() (see mats.js).
+import * as THREE from 'three';
+import { Mesher, box, cbox, cyl, cone, lathe, torus, extrude, slab, ribbon, C, shade, hash, rng } from './kit.js';
+import { vcMat, glowMat, meshOf, animate, bindCtx, STATE, U } from './mats.js';
+import { model, simple, signModel } from './street.js';
+import { registerPropBuilder } from '../registry.js';
+import { canvasTexture } from '../materials.js';
+import { drawJollyRoger, drawMarineEmblem } from '../../render/ship.js';
+import { hullGeometry } from '../ships3d.js';
+import { SHIPS } from '../../data/ships.js';
+
+const reg = (kind, fn) => registerPropBuilder(kind, (o, ctx) => { bindCtx(ctx); return fn(o, ctx); });
+const group = (name) => { const g = new THREE.Group(); g.name = name; return g; };
+const add = (g, geo, opts) => { const m = meshOf(geo, opts); g.add(m); return m; };
+const envOf = () => STATE.env || STATE.game?.env;
+
+// ------------------------------------------------------------ soap bubbles
+let bubbleMat = null;
+export function bubbleMaterial() {
+  if (bubbleMat) return bubbleMat;
+  bubbleMat = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTime: { value: 0 } }]),
+    vertexShader: /* glsl */`
+      varying vec3 vN; varying vec3 vV; varying vec3 vP;
+      #include <common>
+      #include <fog_pars_vertex>
+      void main() {
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vN = normalize(normalMatrix * normal);
+        vV = -mvPosition.xyz;
+        vP = position;
+        gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
+      }`,
+    fragmentShader: /* glsl */`
+      uniform float uTime;
+      varying vec3 vN; varying vec3 vV; varying vec3 vP;
+      #include <common>
+      #include <fog_pars_fragment>
+      void main() {
+        vec3 n = normalize(vN), v = normalize(vV);
+        float f = 1.0 - abs(dot(n, v));
+        float rim = pow(f, 2.0);
+        vec3 irid = 0.55 + 0.45 * cos(6.2831 * (f * 1.3 + vP.y * 0.35 + uTime * 0.05 + vec3(0.0, 0.33, 0.67)));
+        vec3 col = mix(vec3(0.82, 0.93, 1.0), irid, 0.5);
+        float spec = pow(max(0.0, dot(n, normalize(vec3(-0.35, 0.55, 0.75)))), 40.0);
+        col += spec * 1.5;
+        gl_FragColor = vec4(col, clamp(0.05 + rim * 0.8 + spec, 0.0, 0.95));
+        #include <fog_fragment>
+      }`,
+    transparent: true, depthWrite: false, fog: true,
+  });
+  bubbleMat.uniforms.uTime = U.time;
+  return bubbleMat;
+}
+
+// ------------------------------------------------------------ flags
+const flagMats = new Map();
+function flagMaterial(kind) {
+  let m = flagMats.get(kind);
+  if (m) return m;
+  const { ctx: g, tex } = canvasTexture(256, 170);
+  if (kind === 'jr') {
+    g.fillStyle = '#141414'; g.fillRect(0, 0, 256, 170);
+    g.setTransform(110, 0, 0, 110, 128, 88); drawJollyRoger(g, { skull: 'classic', bones: 'cross' }, 1, '#141414');
+  } else if (kind === 'wg') {
+    g.fillStyle = '#f5f6fa'; g.fillRect(0, 0, 256, 170);
+    g.strokeStyle = '#1f3a68'; g.lineWidth = 10;
+    g.beginPath(); g.arc(128, 85, 52, 0, Math.PI * 2); g.stroke();
+    g.lineWidth = 7;
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; g.beginPath(); g.arc(128 + Math.cos(a) * 30, 85 + Math.sin(a) * 30, 24, a + 2.2, a + 4.1); g.stroke(); }
+  } else {
+    g.fillStyle = '#f5f6fa'; g.fillRect(0, 0, 256, 170);
+    g.setTransform(120, 0, 0, 120, 128, 80); drawMarineEmblem(g, 1);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = '#2874a6'; g.fillRect(0, 150, 256, 20);
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  tex.needsUpdate = true;
+  m = new THREE.MeshToonMaterial({ map: tex, side: THREE.DoubleSide });
+  flagMats.set(kind, m);
+  return m;
+}
+
+/** A waving flag mesh (w × h), hoist at x = 0; animated in place. */
+function wavingFlag(kind, w, h) {
+  const geo = new THREE.PlaneGeometry(w, h, 10, 3);
+  geo.translate(w / 2, 0, 0);
+  const mesh = new THREE.Mesh(geo, flagMaterial(kind));
+  mesh.castShadow = true;
+  const base = geo.attributes.position.array.slice();
+  mesh.userData.wave = (t, amp = 1) => {
+    const a = geo.attributes.position;
+    for (let i = 0; i < a.count; i++) {
+      const x = base[i * 3];
+      a.array[i * 3 + 2] = base[i * 3 + 2] + Math.sin(t * 6 + x * 2.6) * 0.12 * x / w * amp * 1.6;
+      a.array[i * 3 + 1] = base[i * 3 + 1] - x * x * 0.02;
+    }
+    a.needsUpdate = true;
+    geo.computeVertexNormals();
+  };
+  return mesh;
+}
+
+const poleGeo = () => model('flagpole', (k) => {
+  k.add(box(0.9, 0.3, 0.9), { color: '#9e9a90', outline: 0.02 });
+  k.add(box(0.6, 0.25, 0.6), { at: [0, 0.3, 0], color: '#b0aba2' });
+  k.add(cyl(0.05, 0.085, 6.6, 8), { at: [0, 0.5, 0], color: '#b2bec3', outline: 0.015 });
+  k.add(new THREE.SphereGeometry(0.12, 8, 6), { at: [0, 7.15, 0], color: '#d4ac0d', outline: 0.012 });
+});
+
+reg('flagpole', (o) => {
+  const root = group('flagpole');
+  add(root, poleGeo());
+  const name = o.name || '';
+  const kind = /jolly roger|pirate/i.test(name) ? 'jr' : /world government|\bwg\b/i.test(name) ? 'wg' : 'marine';
+  const flag = wavingFlag(kind, 2.1, 1.35);
+  flag.position.set(0.08, 6.3, 0);
+  root.add(flag);
+  animate(root, (t, env) => {
+    flag.rotation.y = Math.PI - (env?.windAngle || 0);
+    flag.userData.wave(t + hash(o.x, o.y) * 10, 0.7 + (env?.windStrength ?? 1) * 0.4);
+  });
+  return root;
+});
+
+// ------------------------------------------------------------ windmill
+const windmillBody = () => model('windmill-body', (k) => {
+  k.add(cyl(1.7, 1.78, 0.75, 8), { at: [0, -0.35, 0], flat: true, color: '#9e9a90', outline: 0.03 });
+  k.add(lathe([[1.5, 0], [1.38, 1.5], [1.18, 3.4], [1.02, 5.0]], 8), { at: [0, 0.38, 0], flat: true, color: '#efe4d2', outline: 0.045 });
+  k.add(box(1.0, 1.95, 0.14), { at: [0, 0.35, 1.4], rot: [-0.05, 0, 0], color: '#5a3a22' });
+  k.add(box(0.8, 1.78, 0.1), { at: [0, 0.4, 1.46], rot: [-0.05, 0, 0], color: '#8d5b33' });
+  for (const [y, z, w] of [[2.4, 1.33, 0.5], [3.8, 1.2, 0.42]]) {
+    k.add(box(w + 0.14, w + 0.24, 0.1), { at: [0, y - 0.07, z], rot: [-0.08, 0, 0], color: '#6d4c33' });
+    k.add(box(w, w + 0.1, 0.1), { at: [0, y, z + 0.03], rot: [-0.08, 0, 0], color: '#2d4150', glow: '#ffc766' });
+  }
+  k.add(cyl(1.3, 1.3, 0.14, 8), { at: [0, 5.3, 0], flat: true, color: '#6d4c33' });
+  k.add(cone(1.32, 1.9, 8), { at: [0, 5.42, 0], flat: true, color: '#8d6e63', outline: 0.04 });
+  k.add(new THREE.SphereGeometry(0.14, 6, 4), { at: [0, 7.32, 0], color: '#5d4037' });
+  k.add(box(0.6, 0.6, 0.75), { at: [0, 4.72, 0.95], color: '#6d4c33', outline: 0.02 });
+});
+
+const windmillBlades = () => model('windmill-blades', (k) => {
+  k.add(cyl(0.22, 0.24, 0.35, 8), { rot: [Math.PI / 2, 0, 0], color: '#5d4037', outline: 0.015 });
+  k.add(new THREE.SphereGeometry(0.16, 8, 6), { at: [0, 0, 0.36], color: '#4e342e' });
+  for (let i = 0; i < 4; i++) {
+    k.save(); k.rotateZ(i * Math.PI / 2 + 0.3);
+    k.add(box(0.13, 3.7, 0.1), { at: [0, 0.15, 0.22], color: '#6d4c33', outline: 0.015 });
+    k.add(box(0.98, 2.85, 0.03), { at: [0.6, 0.8, 0.2], color: '#f5efe4', double: true, backShade: 0.85, outline: 0.012 });
+    for (let j = 0; j < 5; j++) k.add(box(1.08, 0.05, 0.06), { at: [0.55, 0.8 + j * 0.7, 0.24], color: '#5d4037' });
+    k.add(box(0.05, 2.85, 0.06), { at: [1.08, 0.8, 0.24], color: '#5d4037' });
+    k.restore();
+  }
+});
+
+reg('windmill', (o) => {
+  const root = group('windmill');
+  add(root, windmillBody());
+  const blades = add(root, windmillBlades());
+  blades.position.set(0, 4.95, 1.45);
+  const ph = hash(o.x, o.y) * 6;
+  animate(root, (t, env) => { blades.rotation.z = -(t * (0.45 + (env?.windStrength ?? 1) * 0.35) + ph); });
+  return root;
+});
+
+// ------------------------------------------------------------ fountain
+const fountainGeo = () => model('fountain', (k) => {
+  const stone = '#d5cdbf';
+  k.add(lathe([[1.18, 0.22], [1.2, 0.58], [1.3, 0.64], [1.44, 0.6], [1.46, 0.05], [1.5, -0.2]], 18), { color: stone, outline: 0.03 });
+  k.add(new THREE.CircleGeometry(1.2, 18), { at: [0, 0.22, 0], rot: [-Math.PI / 2, 0, 0], color: '#8fa7ad' });
+  k.add(new THREE.CircleGeometry(1.19, 18), { at: [0, 0.46, 0], rot: [-Math.PI / 2, 0, 0], color: '#4fb3d9' });
+  k.add(new THREE.RingGeometry(0.62, 0.74, 18), { at: [0, 0.462, 0], rot: [-Math.PI / 2, 0, 0], color: '#bfe9ff' });
+  k.add(cyl(0.16, 0.24, 1.35, 10), { at: [0, 0.2, 0], color: '#bdb5a6', outline: 0.02 });
+  k.add(lathe([[0.1, 0], [0.42, 0.1], [0.56, 0.24], [0.6, 0.3], [0.52, 0.3], [0.12, 0.2]], 14), { at: [0, 1.45, 0], color: stone, outline: 0.02 });
+  k.add(new THREE.CircleGeometry(0.5, 14), { at: [0, 1.72, 0], rot: [-Math.PI / 2, 0, 0], color: '#4fb3d9' });
+  k.add(cyl(0.06, 0.09, 0.3, 8), { at: [0, 1.62, 0], color: '#bdb5a6' });
+  k.add(new THREE.SphereGeometry(0.1, 8, 6), { at: [0, 1.95, 0], color: '#bdb5a6' });
+});
+
+reg('fountain', (o) => {
+  const root = group('fountain');
+  add(root, fountainGeo());
+  // the sheet of water falling from the bowl
+  const sheet = new THREE.Mesh(new THREE.CylinderGeometry(0.57, 0.62, 1.28, 18, 1, true), glowMat(0xcfeeff, { opacity: 0.33 }));
+  sheet.position.y = 1.1;
+  root.add(sheet);
+  // droplets thrown from the top
+  const N = 12;
+  const drop = new THREE.IcosahedronGeometry(0.055, 0);
+  const dp = drop.attributes.position.array;
+  const per = dp.length;
+  const arr = new Float32Array(per * N);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  const drops = new THREE.Mesh(g, glowMat(0xe6f7ff, { opacity: 0.85 }));
+  drops.frustumCulled = false;
+  root.add(drops);
+  animate(root, (t) => {
+    for (let k = 0; k < N; k++) {
+      const a = (k / N) * Math.PI * 2 + t * 0.4;
+      const ph = (t * 0.9 + k / N) % 1;
+      const r = 0.1 + ph * 0.55, y = 2.0 + ph * 0.55 - ph * ph * 1.3;
+      const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
+      for (let v = 0; v < per; v += 3) { arr[k * per + v] = dp[v] + cx; arr[k * per + v + 1] = dp[v + 1] + y; arr[k * per + v + 2] = dp[v + 2] + cz; }
+    }
+    g.attributes.position.needsUpdate = true;
+    sheet.scale.set(1 + Math.sin(t * 5) * 0.01, 1, 1 + Math.cos(t * 5.3) * 0.01);
+  });
+  return root;
+});
+
+// ------------------------------------------------------------ campfire
+const fireBase = () => model('campfire', (k) => {
+  const R = rng(4);
+  for (let i = 0; i < 9; i++) {
+    const a = i / 9 * Math.PI * 2;
+    k.add(new THREE.IcosahedronGeometry(0.14 + R() * 0.05, 0), { at: [Math.cos(a) * 0.58, 0.05, Math.sin(a) * 0.58], scale: [1, 0.7, 1], flat: true, color: '#8e8a82', outline: 0.012 });
+  }
+  k.add(new THREE.CircleGeometry(0.5, 10), { at: [0, 0.02, 0], rot: [-Math.PI / 2, 0, 0], color: '#2e2622' });
+  for (let i = 0; i < 4; i++) {
+    const a = i / 4 * Math.PI * 2 + 0.3;
+    k.save(); k.translate(Math.cos(a) * 0.35, 0.08, Math.sin(a) * 0.35); k.rotateY(-a); k.rotateZ(Math.PI / 2 - 0.5);
+    k.add(cyl(0.06, 0.07, 0.62, 6), { color: '#5d4037', outline: 0.01 });
+    k.add(cyl(0.061, 0.061, 0.12, 6), { at: [0, 0.5, 0], color: '#1d1512' });
+    k.restore();
+  }
+  for (let i = 0; i < 6; i++) k.add(new THREE.IcosahedronGeometry(0.05, 0), { at: [(R() - 0.5) * 0.4, 0.06, (R() - 0.5) * 0.4], color: '#ff7043', glow: '#ff5722', flicker: 0.6 });
+});
+
+const flameGeo = () => model('flame', (k) => {
+  const prof = (s) => [[0.001, 0], [0.16 * s, 0.1 * s], [0.2 * s, 0.25 * s], [0.14 * s, 0.5 * s], [0.06 * s, 0.75 * s], [0.001, 0.95 * s]];
+  k.add(lathe(prof(1), 8), { color: '#ff6d1f' });
+  k.add(lathe(prof(0.72), 8), { at: [0.03, 0.02, 0.02], color: '#ffae1a' });
+  k.add(lathe(prof(0.45), 8), { at: [0.0, 0.03, 0.03], color: '#ffe46b' });
+});
+let flameMat = null;
+
+let glowTex = null;
+function groundGlowTexture() {
+  if (glowTex) return glowTex;
+  const { ctx: g, tex } = canvasTexture(64, 64);
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,170,80,1)'); gr.addColorStop(0.5, 'rgba(255,120,40,0.35)'); gr.addColorStop(1, 'rgba(255,90,20,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  tex.needsUpdate = true;
+  glowTex = tex;
+  return tex;
+}
+
+reg('campfire', (o) => {
+  const root = group('campfire');
+  add(root, fireBase());
+  const cold = /cold|ashes/i.test(o.name || '');
+  if (cold) return root;
+  if (!flameMat) flameMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: true });
+  const flames = [];
+  for (let i = 0; i < 3; i++) {
+    const f = new THREE.Mesh(flameGeo(), flameMat);
+    f.position.set(Math.cos(i * 2.1) * 0.12, 0.08, Math.sin(i * 2.1) * 0.12);
+    f.scale.setScalar(i ? 0.72 : 1.05);
+    root.add(f);
+    flames.push(f);
+  }
+  if (!fireGlowMat) fireGlowMat = new THREE.MeshBasicMaterial({ map: groundGlowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: true, opacity: 0.5 });
+  const glow = new THREE.Mesh(GLOW_PLANE, fireGlowMat);
+  glow.rotation.x = -Math.PI / 2;
+  glow.position.y = 0.06;
+  glow.renderOrder = 2;
+  root.add(glow);
+  const ph = hash(o.x, o.y) * 10;
+  animate(root, (t, env, st) => {
+    flames.forEach((f, i) => {
+      const s = (i ? 0.72 : 1.05) * (1 + Math.sin(t * 13 + i * 2 + ph) * 0.08 + Math.sin(t * 7.3 + i) * 0.06);
+      f.scale.set(s * (1 - Math.sin(t * 9 + i) * 0.05), s * (1.1 + Math.sin(t * 11 + i * 3 + ph) * 0.14), s);
+      f.rotation.y = t * (0.5 + i * 0.3);
+    });
+    fireGlowMat.opacity = 0.18 + st.night * 0.7;
+    glow.scale.setScalar(0.9 + Math.sin(t * 12 + ph) * 0.06 + Math.sin(t * 5.1 + ph) * 0.05);
+  });
+  return root;
+});
+
+// ------------------------------------------------------------ Sabaody bubbles
+const BUBBLE_GEO = new THREE.SphereGeometry(1, 20, 14);
+BUBBLE_GEO.userData.shared = true;
+const AURA_GEO = new THREE.SphereGeometry(0.75, 12, 8);
+AURA_GEO.userData.shared = true;
+const GLOW_PLANE = new THREE.PlaneGeometry(5, 5);
+GLOW_PLANE.userData.shared = true;
+let fireGlowMat = null;
+
+reg('bubble', (o) => {
+  const root = group('bubbles');
+  const R = rng(hash(o.x, o.y) * 1000 + (o.v || 0));
+  const bubbles = [];
+  const n = 2 + Math.floor(R() * 2);
+  for (let i = 0; i < n; i++) {
+    const r = 0.35 + R() * 0.6 + (i === 0 ? 0.3 : 0);
+    const m = new THREE.Mesh(BUBBLE_GEO, bubbleMaterial());
+    m.scale.setScalar(r);
+    m.renderOrder = 3;
+    const b = { m, r, x: (R() - 0.5) * 2.4, y: 1.3 + R() * 2.4, z: (R() - 0.5) * 2.4, ph: R() * 6, sp: 0.4 + R() * 0.5 };
+    root.add(m);
+    bubbles.push(b);
+  }
+  animate(root, (t) => {
+    for (const b of bubbles) {
+      b.m.position.set(b.x + Math.sin(t * 0.3 * b.sp + b.ph) * 0.6, b.y + Math.sin(t * b.sp + b.ph) * 0.35, b.z + Math.cos(t * 0.25 * b.sp + b.ph) * 0.6);
+      const w = 1 + Math.sin(t * 2.3 + b.ph) * 0.03;
+      b.m.scale.set(b.r * w, b.r / w, b.r * w);
+    }
+  });
+  return root;
+});
+
+// ------------------------------------------------------------ wheels
+const ferrisStatic = () => model('ferris-frame', (k) => {
+  const R = 7.4, hy = R + 1.4;
+  for (const z of [-1.3, 1.3]) {
+    for (const s of [-1, 1]) {
+      const a = [s * 3.2, 0, z], b = [0, hy, z * 0.55];
+      const d = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+      const len = d.length();
+      k.save(); k.transform(new THREE.Matrix4().compose(new THREE.Vector3(...a), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()), new THREE.Vector3(1, 1, 1)));
+      k.add(box(0.28, len, 0.28), { color: '#eceff1', outline: 0.025 });
+      k.restore();
+    }
+    k.add(box(4.2, 0.2, 0.2), { at: [0, 2.5, z * 0.9], color: '#eceff1' });
+  }
+  k.add(cyl(0.35, 0.35, 1.8, 10), { at: [0, hy, -0.9], rot: [Math.PI / 2, 0, 0], color: '#b0bec5' });
+  k.add(box(3.4, 0.5, 2.6), { at: [0, -0.2, 0], color: '#b0aba2', outline: 0.02 });
+  k.add(box(1.6, 2.3, 1.4), { at: [2.6, 0, 1.8], color: '#f06292', outline: 0.02 });
+  k.add(cone(1.2, 0.8, 4), { at: [2.6, 2.3, 1.8], rot: [0, Math.PI / 4, 0], color: '#ffd54f', outline: 0.02 });
+});
+
+const ferrisWheel = () => model('ferris-wheel', (k) => {
+  const R = 7.4;
+  for (const z of [-0.55, 0.55]) {
+    k.add(torus(R, 0.12, 5, 40), { at: [0, 0, z], color: '#ff8a65', outline: 0.02 });
+    k.add(torus(R * 0.55, 0.08, 5, 28), { at: [0, 0, z], color: '#4fc3f7' });
+    for (let i = 0; i < 16; i++) k.add(box(0.07, R, 0.07), { at: [0, 0, z], rot: [0, 0, i / 16 * Math.PI * 2], color: '#eceff1' });
+  }
+  for (let i = 0; i < 12; i++) {
+    const a = i / 12 * Math.PI * 2;
+    k.add(cyl(0.05, 0.05, 1.1, 4), { at: [Math.cos(a) * R, Math.sin(a) * R, -0.55], rot: [Math.PI / 2, 0, 0], color: '#eceff1' });
+    k.add(new THREE.SphereGeometry(0.12, 6, 4), { at: [Math.cos(a) * R, Math.sin(a) * R, 0.6], color: '#ffeb3b', glow: '#fff176' });
+  }
+  k.add(cyl(0.5, 0.5, 1.3, 12), { at: [0, 0, -0.65], rot: [Math.PI / 2, 0, 0], color: '#90a4ae' });
+});
+
+function gondolaGeo() {
+  const k = new Mesher();
+  const cols = ['#ef5350', '#42a5f5', '#66bb6a', '#ffca28', '#ab47bc', '#26c6da'];
+  for (let i = 0; i < 12; i++) {
+    const c = cols[i % cols.length];
+    k.save(); k.translate(i * 100, 0, 0); // parked apart; moved per frame
+    k.add(cyl(0.02, 0.02, 0.5, 3), { at: [0, -0.5, 0], color: '#546e7a' });
+    k.add(cyl(0.55, 0.45, 0.85, 8), { at: [0, -1.45, 0], color: c, outline: 0.02 });
+    k.add(cone(0.62, 0.35, 8), { at: [0, -0.6, 0], color: shade(c, -0.25), outline: 0.015 });
+    k.add(cyl(0.56, 0.56, 0.3, 8, true), { at: [0, -0.95, 0], color: '#2d4150', glow: '#ffe28a' });
+    k.restore();
+  }
+  return k.build(false);
+}
+
+const millWheel = () => model('mill-wheel', (k) => {
+  const R = 1.5;
+  for (const z of [-0.3, 0.3]) {
+    k.add(torus(R, 0.07, 5, 20), { at: [0, 0, z], color: '#6d4c41', outline: 0.015 });
+    for (let i = 0; i < 8; i++) k.add(box(0.08, R, 0.08), { at: [0, 0, z], rot: [0, 0, i / 8 * Math.PI * 2], color: '#795548' });
+  }
+  for (let i = 0; i < 12; i++) {
+    const a = i / 12 * Math.PI * 2;
+    k.add(box(0.06, 0.4, 0.7), { at: [-Math.sin(a) * (R - 0.05), Math.cos(a) * (R - 0.05), 0], rot: [0, 0, a], color: '#8d6e4a' });
+  }
+  k.add(cyl(0.15, 0.15, 1.0, 8), { at: [0, 0, -0.5], rot: [Math.PI / 2, 0, 0], color: '#4e342e' });
+});
+
+const millFrame = () => model('mill-frame', (k) => {
+  for (const z of [-0.6, 0.6]) {
+    for (const s of [-1, 1]) k.add(box(0.14, 2.0, 0.14), { at: [s * 0.55, 0, z], rot: [0, 0, s * -0.25], color: '#5d4037', outline: 0.015 });
+  }
+  k.add(box(1.8, 0.12, 1.6), { at: [0, -0.06, 0], color: '#6d4c33' });
+});
+
+reg('wheel', (o) => {
+  const root = group('wheel');
+  const ferris = /ferris/i.test(o.name || '');
+  if (ferris) {
+    add(root, ferrisStatic());
+    const wheel = add(root, ferrisWheel());
+    wheel.position.set(0, 8.8, 0);
+    const gg = gondolaGeo();
+    const gond = new THREE.Mesh(gg, vcMat());
+    gond.castShadow = true;
+    gond.frustumCulled = false;
+    root.add(gond);
+    const base = gg.attributes.position.array.slice();
+    const per = gg.attributes.position.count / 12;
+    animate(root, (t) => {
+      const a0 = t * 0.12;
+      wheel.rotation.z = a0;
+      const a = gg.attributes.position.array;
+      for (let i = 0; i < 12; i++) {
+        const ang = a0 + i / 12 * Math.PI * 2;
+        const cx = Math.cos(ang) * 7.4, cy = 8.8 + Math.sin(ang) * 7.4;
+        const sway = Math.sin(t * 1.3 + i) * 0.04;
+        for (let v = i * per; v < (i + 1) * per; v++) {
+          const lx = base[v * 3] - i * 100, ly = base[v * 3 + 1];
+          a[v * 3] = cx + lx + ly * sway; a[v * 3 + 1] = cy + ly; a[v * 3 + 2] = base[v * 3 + 2] + 0.0;
+        }
+      }
+      gg.attributes.position.needsUpdate = true;
+    });
+    return root;
+  }
+  add(root, millFrame());
+  const wheel = add(root, millWheel());
+  wheel.position.set(0, 1.75, 0);
+  animate(root, (t) => { wheel.rotation.z = -t * 0.35; });
+  return root;
+});
+
+// ------------------------------------------------------------ lighthouse
+const lighthouseGeo = () => model('lighthouse', (k) => {
+  const bands = [[0, 2.2, '#fdfefe'], [2.2, 3.3, '#c0392b'], [3.3, 5.4, '#fdfefe'], [5.4, 6.5, '#c0392b'], [6.5, 8.2, '#fdfefe']];
+  const r = (y) => 1.7 - y / 8.2 * 0.62;
+  k.add(cyl(1.95, 2.0, 0.6, 12), { at: [0, -0.3, 0], color: '#9e9a90', outline: 0.03 });
+  for (const [y0, y1, c] of bands) k.add(cyl(r(y1), r(y0), y1 - y0 + 0.01, 14, true), { at: [0, y0 + 0.28, 0], color: c, outline: 0.045 });
+  k.add(box(0.85, 1.9, 0.2), { at: [0, 0.28, 1.62], rot: [-0.07, 0, 0], color: '#5a3a22' });
+  for (const [y, z] of [[3.9, 1.38], [6.9, 1.2]]) k.add(box(0.36, 0.6, 0.12), { at: [0, y, z], rot: [-0.07, 0, 0], color: '#2d4150', glow: '#ffc766' });
+  k.add(cyl(1.5, 1.5, 0.16, 14), { at: [0, 8.48, 0], color: '#2d3436', outline: 0.02 });
+  k.add(torus(1.45, 0.03, 4, 20), { at: [0, 9.1, 0], rot: [Math.PI / 2, 0, 0], color: '#2d3436' });
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; k.add(cyl(0.025, 0.025, 0.62, 4), { at: [Math.cos(a) * 1.45, 8.62, Math.sin(a) * 1.45], color: '#2d3436' }); }
+  k.add(cyl(0.78, 0.78, 1.15, 12, true), { at: [0, 8.64, 0], color: '#cfe8f7', glow: '#fff3b0', double: true, backShade: 0.9 });
+  for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; k.add(box(0.06, 1.15, 0.06), { at: [Math.cos(a) * 0.78, 8.64, Math.sin(a) * 0.78], color: '#2d3436' }); }
+  k.add(new THREE.SphereGeometry(0.34, 10, 8), { at: [0, 9.2, 0], color: '#fff8d0', glow: '#fff3b0' });
+  k.add(cone(1.0, 1.0, 12), { at: [0, 9.78, 0], color: '#c0392b', outline: 0.03 });
+  k.add(new THREE.SphereGeometry(0.14, 6, 4), { at: [0, 10.8, 0], color: '#2d3436' });
+});
+
+let beamMat = null;
+reg('lighthouse', (o) => {
+  const root = group('lighthouse');
+  add(root, lighthouseGeo());
+  if (!beamMat) beamMat = new THREE.MeshBasicMaterial({ color: 0xfff1b8, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: true });
+  const beam = new THREE.Group();
+  beam.position.y = 9.2;
+  for (const s of [-1, 1]) {
+    const c = new THREE.Mesh(new THREE.ConeGeometry(4.5, 45, 16, 1, true), beamMat);
+    c.rotation.z = s * Math.PI / 2;
+    c.position.x = s * 22.5;
+    c.renderOrder = 4;
+    beam.add(c);
+  }
+  root.add(beam);
+  animate(root, (t, env, st) => {
+    beam.visible = st.night > 0.25;
+    beam.rotation.y = t * 0.8;
+  });
+  return root;
+});
+
+// ------------------------------------------------------------ treasure chest
+const chestBody = (tier) => model('chest-body:' + tier, (k) => {
+  const [wood, band] = tier >= 3 ? ['#8e2b22', '#f1c40f'] : tier === 2 ? ['#5d4037', '#cfd8dc'] : ['#8d5b33', '#f1c40f'];
+  k.add(box(0.92, 0.5, 0.6), { color: wood, outline: 0.02 });
+  for (const x of [-0.34, 0.34]) k.add(box(0.08, 0.52, 0.62), { at: [x, -0.005, 0], color: band });
+  k.add(box(0.94, 0.06, 0.62), { at: [0, 0.44, 0], color: band });
+  k.add(box(0.16, 0.2, 0.04), { at: [0, 0.25, 0.31], color: band });
+  k.add(box(0.05, 0.08, 0.02), { at: [0, 0.3, 0.335], color: '#2d3436' });
+  for (const x of [-0.4, 0.4]) for (const z of [-0.24, 0.24]) k.add(box(0.1, 0.06, 0.1), { at: [x, -0.04, z], color: band });
+  k.add(new THREE.CircleGeometry(0.3, 10), { at: [0, 0.47, 0], rot: [-Math.PI / 2, 0, 0], scale: [1.4, 0.9, 1], color: '#3b2a1a' });
+});
+const chestLid = (tier) => model('chest-lid:' + tier, (k) => {
+  const [wood, band] = tier >= 3 ? ['#a63a2e', '#f1c40f'] : tier === 2 ? ['#6d4c33', '#cfd8dc'] : ['#a86f3f', '#f1c40f'];
+  // hinge at the origin (back top edge); the lid extends towards +z
+  k.add(new THREE.CylinderGeometry(0.3, 0.3, 0.92, 12, 1, false, 0, Math.PI), { at: [0, 0, 0.3], rot: [0, 0, Math.PI / 2], color: wood, outline: 0.02 });
+  for (const x of [-0.34, 0, 0.34]) k.add(new THREE.CylinderGeometry(0.31, 0.31, 0.08, 12, 1, false, 0, Math.PI), { at: [x, 0, 0.3], rot: [0, 0, Math.PI / 2], color: band });
+});
+const coinsGeo = () => model('coins', (k) => {
+  const R = rng(5);
+  for (let i = 0; i < 14; i++) k.add(new THREE.CylinderGeometry(0.06, 0.06, 0.02, 8), { at: [(R() - 0.5) * 0.7, 0.42 + R() * 0.12, (R() - 0.5) * 0.4], rot: [R(), 0, R()], color: '#ffd54f', glow: '#ffb300' });
+  k.add(new THREE.SphereGeometry(0.3, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), { at: [0, 0.4, 0], scale: [1.3, 0.35, 0.8], color: '#f1c40f' });
+});
+
+reg('chest', (o) => {
+  const root = group('chest');
+  const tier = o.tier ?? 1;
+  add(root, chestBody(tier));
+  const lid = add(root, chestLid(tier));
+  lid.position.set(0, 0.5, -0.3);
+  const coins = add(root, coinsGeo(), { castShadow: false });
+  const aura = new THREE.Mesh(AURA_GEO, glowMat(0xffe066, { opacity: 0.16, additive: true }));
+  aura.position.y = 0.35;
+  aura.renderOrder = 3;
+  root.add(aura);
+  let open = o.opened ? 1 : 0;
+  root.rotation.y = (hash(o.x, o.y) - 0.5) * 0.6;
+  animate(root, (t) => {
+    open += ((o.opened ? 1 : 0) - open) * 0.08;
+    lid.rotation.x = -open * 1.95;
+    coins.visible = open > 0.05 && !o.empty;
+    aura.visible = !o.opened;
+    const s = 1 + Math.sin(t * 3 + (o.id || 0)) * 0.12;
+    aura.scale.setScalar(s);
+  });
+  return root;
+});
+
+// ------------------------------------------------------------ the Bondola
+const bondolaStation = () => model('bondola-station', (k) => {
+  k.add(box(5.2, 0.4, 5.2), { at: [0, -0.2, 0], color: '#b0aba2', outline: 0.03 });
+  for (const s of [-1, 1]) {
+    k.add(box(0.35, 7.5, 0.35), { at: [s * 1.9, 0.2, -1.2], color: '#78909c', outline: 0.02 });
+    k.add(box(0.35, 7.5, 0.35), { at: [s * 1.9, 0.2, 1.2], color: '#78909c', outline: 0.02 });
+  }
+  k.add(box(4.3, 0.4, 2.8), { at: [0, 7.6, 0], color: '#546e7a', outline: 0.02 });
+  for (const s of [-1, 1]) k.add(cyl(0.06, 0.06, 70, 5), { at: [s * 0.6, 7.9, 0], color: '#90a4ae' });
+  k.add(torus(0.35, 0.08, 5, 12), { at: [-0.6, 8.2, 0], color: '#37474f' });
+  k.add(torus(0.35, 0.08, 5, 12), { at: [0.6, 8.2, 0], color: '#37474f' });
+});
+const bondolaCar = () => model('bondola-car', (k) => {
+  k.add(box(2.6, 1.7, 2.1), { at: [0, 0, 0], color: '#eceff1', outline: 0.03 });
+  for (const s of [-1, 1]) k.add(cyl(1.05, 1.05, 1.7, 12, false, 1, false), { at: [s * 1.3, 0, 0], scale: [0.35, 1, 1], color: '#eceff1', outline: 0.02 });
+  k.add(box(2.7, 0.18, 2.15), { at: [0, 0.55, 0], color: '#1565c0' });
+  for (const z of [-1.06, 1.06]) for (let i = -1; i <= 1; i++) k.add(box(0.55, 0.5, 0.05), { at: [i * 0.75, 0.85, z], color: '#81d4fa', glow: '#fff3b0' });
+  k.add(box(2.8, 0.2, 2.2), { at: [0, 1.7, 0], color: '#1565c0', outline: 0.02 });
+  k.add(cyl(0.08, 0.08, 1.4, 6), { at: [0, 1.9, 0], color: '#546e7a' });
+});
+
+reg('elevator', (o) => {
+  const root = group('bondola');
+  add(root, bondolaStation());
+  const car = add(root, bondolaCar());
+  const bub = new THREE.Mesh(BUBBLE_GEO, bubbleMaterial());
+  bub.scale.set(2.2, 1.7, 1.9);
+  bub.renderOrder = 3;
+  root.add(bub);
+  animate(root, (t) => {
+    const y = 1.5 + Math.sin(t * 0.8) * 0.12;
+    car.position.y = y; bub.position.y = y + 0.9;
+  });
+  return root;
+});
+
+// ------------------------------------------------------------ gates & arches
+const gateGeo = (big) => model('gate:' + big, (k) => {
+  const stone = big ? '#e8e2d4' : '#607d8b', dark = big ? '#b0a58f' : '#455a64';
+  const W = 6.6, H = 6.4;
+  for (const s of [-1, 1]) {
+    k.add(box(1.5, H, 1.8), { at: [s * (W / 2 + 0.2), -0.5, 0], color: stone, outline: 0.04 });
+    for (let i = -1; i <= 1; i += 2) k.add(box(0.42, 0.55, 0.42), { at: [s * (W / 2 + 0.2) + i * 0.45, H - 0.5, 0.55], color: stone });
+    for (let i = -1; i <= 1; i += 2) k.add(box(0.42, 0.55, 0.42), { at: [s * (W / 2 + 0.2) + i * 0.45, H - 0.5, -0.55], color: stone });
+    for (let y = 0.6; y < H - 1; y += 0.55) k.add(box(1.52, 0.04, 1.82), { at: [s * (W / 2 + 0.2), y, 0], color: dark });
+    k.add(box(0.25, 0.9, 0.05), { at: [s * (W / 2 + 0.2), H - 2.4, 0.91], color: '#1d2a30', glow: '#ffcc80' });
+  }
+  k.add(box(W, 1.3, 1.5), { at: [0, H - 1.9, 0], color: stone, outline: 0.04 });
+  k.add(box(W + 0.4, 0.2, 1.7), { at: [0, H - 0.65, 0], color: dark });
+  for (let x = -W / 2 + 0.35; x < W / 2 - 0.2; x += 0.45) k.add(box(0.1, H - 2.1, 0.1), { at: [x, 0, 0.3], color: '#263238' });
+  for (const y of [1.2, 2.8]) k.add(box(W, 0.1, 0.1), { at: [0, y, 0.3], color: '#263238' });
+  for (let x = -W / 2 + 0.35; x < W / 2 - 0.2; x += 0.45) k.add(cone(0.08, 0.25, 4), { at: [x, -0.25, 0.3], rot: [Math.PI, 0, 0], color: '#263238' });
+});
+
+reg('gate', (o) => {
+  const root = group('gate');
+  const big = /justice/i.test(o.name || '') ? 1 : 0;
+  const m = add(root, gateGeo(big));
+  if (big) m.scale.setScalar(2.2);
+  if (o.name && !/^main gate$/i.test(o.name)) root.add(nameBoard(o.name, big ? 13 : 6, (big ? 2.2 : 1) * 4.75, big ? 1.8 : 0.85, big));
+  return root;
+});
+
+function nameBoard(text, maxW, y, z, marine) {
+  const c = document.createElement('canvas');
+  const g = c.getContext('2d');
+  const font = 'bold 44px Nunito, "Trebuchet MS", sans-serif';
+  g.font = font;
+  const w = Math.min(1024, Math.ceil(g.measureText(text).width) + 56);
+  c.width = w; c.height = 72;
+  g.font = font;
+  g.fillStyle = marine ? '#f5f6fa' : '#5a3a22'; g.strokeStyle = marine ? '#1b4f72' : '#2b1d14'; g.lineWidth = 6;
+  g.beginPath(); g.roundRect(3, 3, w - 6, 66, 10); g.fill(); g.stroke();
+  g.fillStyle = marine ? '#1b4f72' : '#f5e6c4'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, w / 2, 38, w - 40);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  const aspect = w / 72;
+  const bw = Math.min(maxW, 0.62 * aspect);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(bw, bw / aspect), new THREE.MeshToonMaterial({ map: t }));
+  m.position.set(0, y, z);
+  m.userData.ownTexture = t;
+  return m;
+}
+
+const stoneArch = () => model('arch-stone', (k) => {
+  const s = new THREE.Shape();
+  const R = 2.3, r = 1.55, H = 2.2;
+  s.moveTo(-R, 0); s.lineTo(-R, H); s.absarc(0, H, R, Math.PI, 0, true); s.lineTo(R, 0); s.lineTo(r, 0); s.lineTo(r, H);
+  s.absarc(0, H, r, 0, Math.PI, false); s.lineTo(-r, 0); s.closePath();
+  k.add(extrude(s, 1.2, 0.06, 10), { at: [0, -0.3, 0], flat: true, color: '#8e7a66', outline: 0.04 });
+  const d = new THREE.Shape();
+  d.moveTo(-r, 0); d.lineTo(r, 0); d.lineTo(r, H); d.absarc(0, H, r, 0, Math.PI, false); d.closePath();
+  k.add(new THREE.ShapeGeometry(d, 10), { at: [0, -0.3, -0.3], color: '#15100c' });
+  const R2 = rng(3);
+  for (let i = 0; i < 7; i++) k.add(new THREE.IcosahedronGeometry(0.3 + R2() * 0.4, 0), { at: [(R2() > 0.5 ? 1 : -1) * (R + 0.3 + R2() * 0.6), R2() * 0.5, (R2() - 0.5) * 1.2], flat: true, color: '#7d6b5a', outline: 0.02 });
+  for (let i = 0; i < 9; i++) { const a = i / 8 * Math.PI; k.add(box(0.3, 0.12, 1.25), { at: [Math.cos(a) * (R - 0.05), H - 0.3 + Math.sin(a) * (R - 0.05), 0], rot: [0, 0, a - Math.PI / 2], color: '#a8927c' }); }
+});
+
+const mineArch = () => model('arch-mine', (k) => {
+  const g = new THREE.SphereGeometry(3.2, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+  k.add(g, { at: [0, -0.4, -1.8], scale: [1, 0.75, 0.8], flat: true, color: '#7d7066', outline: 0.04 });
+  k.add(box(2.2, 2.6, 0.2), { at: [0, -0.2, 0.62], color: '#120d0a' });
+  for (const s of [-1, 1]) k.add(box(0.28, 2.8, 0.28), { at: [s * 1.2, -0.2, 0.75], color: '#6d4c33', outline: 0.02 });
+  k.add(box(3.0, 0.32, 0.36), { at: [0, 2.5, 0.75], color: '#6d4c33', outline: 0.02 });
+  k.add(box(0.8, 0.12, 0.05), { at: [0, 2.2, 0.95], color: '#c8a878' });
+  for (const s of [-1, 1]) k.add(box(0.12, 0.05, 3), { at: [s * 0.45, 0, 1.5], color: '#5d4037' });
+  for (let z = 0.3; z < 3; z += 0.45) k.add(box(1.2, 0.06, 0.16), { at: [0, -0.02, z], color: '#6d4c33' });
+});
+
+const heavensGate = () => model('arch-heaven', (k) => {
+  const R = rng(7);
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < 6; i++) k.add(new THREE.IcosahedronGeometry(0.8 + R() * 0.3, 1), { at: [s * 3.2 + (R() - 0.5) * 0.4, i * 0.9, (R() - 0.5) * 0.4], color: '#ffffff', outline: 0.03, outlineColor: '#9fb7cc' });
+  }
+  k.add(box(7.8, 1.1, 0.9), { at: [0, 5.1, 0], color: '#f5f6fa', outline: 0.04 });
+  for (let i = 0; i < 9; i++) k.add(new THREE.IcosahedronGeometry(0.7 + R() * 0.3, 1), { at: [-3.6 + i * 0.9, 6.1 + R() * 0.3, (R() - 0.5) * 0.3], color: '#ffffff', outline: 0.03, outlineColor: '#9fb7cc' });
+  for (let i = 0; i < 8; i++) k.add(new THREE.IcosahedronGeometry(0.6 + R() * 0.4, 1), { at: [(R() - 0.5) * 8, 0, 0.6 + R() * 0.8], color: '#f4f8ff' });
+});
+
+const grandArch = () => model('arch-grand', (k) => {
+  const s = new THREE.Shape();
+  const R = 3.6, r = 2.6, H = 3.2;
+  s.moveTo(-R, 0); s.lineTo(-R, H); s.absarc(0, H, R, Math.PI, 0, true); s.lineTo(R, 0); s.lineTo(r, 0); s.lineTo(r, H);
+  s.absarc(0, H, r, 0, Math.PI, false); s.lineTo(-r, 0); s.closePath();
+  k.add(extrude(s, 1.6, 0.08, 12), { at: [0, -0.3, 0], color: '#cfc3a8', outline: 0.05 });
+  const t = new THREE.Shape();
+  t.moveTo(-R - 0.05, H); t.absarc(0, H, R + 0.05, Math.PI, 0, true); t.lineTo(R - 0.25, H); t.absarc(0, H, R - 0.25, 0, Math.PI, false); t.closePath();
+  k.add(extrude(t, 1.7, 0, 12), { at: [0, -0.3, 0], color: '#d4ac0d' });
+});
+
+reg('arch', (o) => {
+  const root = group('arch');
+  const n = o.name || '';
+  if (/heaven/i.test(n)) { add(root, heavensGate()); root.add(nameBoard("HEAVEN'S GATE", 6, 5.65, 0.47)); }
+  else if (/mine|hatch|laboratory/i.test(n)) add(root, mineArch());
+  else if (/one piece|resting/i.test(n)) add(root, grandArch());
+  else add(root, stoneArch());
+  return root;
+});
+
+// ------------------------------------------------------------ torii
+const toriiGeo = () => model('torii', (k) => {
+  const red = '#c0392b', black = '#2d3436';
+  for (const s of [-1, 1]) {
+    k.add(cyl(0.2, 0.24, 4.3, 12), { at: [s * 1.55, 0, 0], color: red, outline: 0.03 });
+    k.add(cyl(0.3, 0.32, 0.45, 12), { at: [s * 1.55, -0.1, 0], color: black });
+  }
+  k.add(box(3.9, 0.26, 0.3), { at: [0, 3.25, 0], color: red, outline: 0.02 });
+  k.add(box(0.28, 0.72, 0.24), { at: [0, 3.5, 0], color: red });
+  // the curved top lintel with upturned ends
+  const n = 9;
+  for (let i = 0; i < n; i++) {
+    const u = i / (n - 1) * 2 - 1;
+    const x = u * 2.6, y = 4.3 + Math.pow(Math.abs(u), 2.4) * 0.38;
+    const slope = 0.38 * 2.4 * Math.pow(Math.abs(u), 1.4) * Math.sign(u) / 2.6;
+    const ang = Math.atan(slope);
+    k.add(cbox(5.25 / (n - 1) + 0.08, 0.3, 0.5), { at: [x, y, 0], rot: [0, 0, ang], color: red, outline: 0.02 });
+    k.add(cbox(5.25 / (n - 1) + 0.08, 0.18, 0.56), { at: [x - Math.sin(ang) * 0.23, y + Math.cos(ang) * 0.23, 0], rot: [0, 0, ang], color: black });
+  }
+});
+reg('torii', (o, ctx) => simple(o, ctx, 'torii', toriiGeo(), { yaw: 0 }));
+
+// ------------------------------------------------------------ platforms
+const scaffoldGeo = () => model('platform-exec', (k) => {
+  const wood = '#7b5e3b', dark = '#4e3a22';
+  k.add(box(3.4, 2.5, 2.6), { at: [0, -0.3, -0.2], color: wood, outline: 0.035 });
+  for (let x = -1.5; x <= 1.5; x += 0.42) k.add(box(0.05, 2.45, 0.02), { at: [x, -0.25, 1.11], color: dark });
+  k.add(box(3.6, 0.2, 2.8), { at: [0, 2.2, -0.2], color: '#9c7a4f', outline: 0.02 });
+  for (let i = 0; i < 6; i++) k.add(box(1.0, 0.1, 0.34), { at: [0, i * 0.38, 1.2 + (5 - i) * 0.3], color: '#6d4c33', outline: 0.012 });
+  for (const s of [-1, 1]) {
+    k.add(box(0.2, 2.6, 0.2), { at: [s * 1.25, 2.4, -0.8], color: dark, outline: 0.02 });
+    k.add(box(0.06, 0.9, 0.06), { at: [s * 1.6, 2.4, 0.9], color: dark });
+  }
+  k.add(box(2.9, 0.22, 0.24), { at: [0, 4.95, -0.8], color: dark, outline: 0.02 });
+  k.add(box(3.4, 0.06, 0.06), { at: [0, 3.2, 0.9], color: dark });
+});
+const ringGeo = () => model('platform-ring', (k) => {
+  k.add(box(4.6, 1.0, 4.6), { at: [0, -0.2, 0], color: '#546e7a', outline: 0.03 });
+  k.add(box(4.4, 0.08, 4.4), { at: [0, 0.8, 0], color: '#eceff1' });
+  const cols = ['#e53935', '#1e88e5', '#e53935', '#1e88e5'];
+  [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([x, z], i) => k.add(cyl(0.1, 0.1, 1.5, 6), { at: [x * 2.1, 0.8, z * 2.1], color: cols[i], outline: 0.012 }));
+  for (const y of [1.25, 1.65, 2.05]) for (const [a, b] of [[[-2.1, -2.1], [2.1, -2.1]], [[2.1, -2.1], [2.1, 2.1]], [[2.1, 2.1], [-2.1, 2.1]], [[-2.1, 2.1], [-2.1, -2.1]]]) {
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    k.add(cyl(0.025, 0.025, len, 4), { at: [a[0], y, a[1]], rot: [0, -Math.atan2(b[1] - a[1], b[0] - a[0]), -Math.PI / 2], color: '#fafafa' });
+  }
+  for (let i = 0; i < 4; i++) k.add(box(0.9, 0.12, 0.3), { at: [1.4, i * 0.2 - 0.1, 2.5 + (3 - i) * 0.28], color: '#90a4ae' });
+});
+const stageGeo = () => model('platform-stage', (k) => {
+  k.add(box(4.6, 1.1, 3.2), { at: [0, -0.2, 0], color: '#8d6e4a', outline: 0.03 });
+  k.add(box(4.8, 0.12, 3.4), { at: [0, 0.9, 0], color: '#a1887f' });
+  for (const s of [-1, 1]) {
+    k.add(box(0.3, 3.4, 0.3), { at: [s * 2.25, 0.9, -1.4], color: '#6d4c33', outline: 0.02 });
+    k.add(box(1.3, 2.8, 0.1), { at: [s * 1.6, 1.4, -1.3], color: '#c62828', double: true });
+  }
+  k.add(box(4.9, 0.6, 0.35), { at: [0, 4.2, -1.4], color: '#c62828', outline: 0.02 });
+  k.add(box(4.6, 2.6, 0.08), { at: [0, 1.0, -1.55], color: '#5d1a1a' });
+  for (let i = 0; i < 4; i++) k.add(box(1.2, 0.14, 0.34), { at: [0, i * 0.24 - 0.1, 1.8 + (3 - i) * 0.3], color: '#6d4c33' });
+});
+
+reg('platform', (o) => {
+  const root = group('platform');
+  const n = o.name || '';
+  add(root, /ring/i.test(n) ? ringGeo() : /stage|carnival/i.test(n) ? stageGeo() : scaffoldGeo());
+  return root;
+});
+
+// ------------------------------------------------------------ bell
+const bellGeo = (big) => model('bell:' + big, (k) => {
+  const s = big ? 1 : 0.32;
+  const frame = big ? '#b7950b' : '#6d4c33';
+  const P = [[0.02, 2.15], [0.3, 2.12], [0.5, 1.98], [0.6, 1.7], [0.66, 1.3], [0.78, 0.95], [0.95, 0.72], [1.0, 0.64], [0.9, 0.62]].map(([r, y]) => [r * s, y * s]);
+  k.save(); k.translate(0, (big ? 1.2 : 1.0), 0);
+  k.add(lathe(P, 16), { color: '#f1c40f', outline: 0.04 * s + 0.01 });
+  k.add(torus(0.95 * s, 0.05 * s, 5, 16), { at: [0, 0.72 * s, 0], rot: [Math.PI / 2, 0, 0], color: '#d4ac0d' });
+  k.add(new THREE.SphereGeometry(0.18 * s, 8, 6), { at: [0, 0.75 * s, 0], color: '#b7950b' });
+  k.add(cyl(0.12 * s, 0.12 * s, 0.3 * s, 8), { at: [0, 2.12 * s, 0], color: '#b7950b' });
+  k.restore();
+  const top = (big ? 1.2 : 1.0) + 2.45 * s;
+  for (const sx of [-1, 1]) k.add(box(0.3 * s + 0.08, top + 0.2, 0.3 * s + 0.08), { at: [sx * (1.35 * s + 0.2), 0, 0], color: frame, outline: 0.03 });
+  k.add(box(2.9 * s + 0.7, 0.3 * s + 0.1, 0.4 * s + 0.1), { at: [0, top + 0.1, 0], color: frame, outline: 0.02 });
+  if (big) for (const sx of [-1, 1]) k.add(cone(0.35, 0.5, 4), { at: [sx * 1.9, top + 0.4, 0], rot: [0, Math.PI / 4, 0], color: frame });
+});
+reg('bell', (o, ctx) => simple(o, ctx, 'bell:' + (/harbou?r/i.test(o.name || '') ? 0 : 1), bellGeo(/harbou?r/i.test(o.name || '') ? 0 : 1), { yaw: 0 }));
+
+// ------------------------------------------------------------ poneglyph
+const poneglyphGeo = (red) => model('poneglyph:' + red, (k) => {
+  const stone = red ? '#8e2b22' : '#37474f', light = red ? '#ffcdb4' : '#c8e6f0';
+  k.add(box(2.6, 0.35, 2.4), { at: [0, -0.2, 0], color: red ? '#6e5a50' : '#5d6468', outline: 0.025 });
+  k.add(box(2.05, 2.05, 2.05), { at: [0, 0.15, 0], color: stone, outline: 0.04, flat: true });
+  const R = rng(red ? 5 : 3);
+  for (const face of [0, 1, 2, 3]) {
+    k.save(); k.rotateY(face * Math.PI / 2);
+    for (let r = 0; r < 7; r++) {
+      let x = -0.85;
+      while (x < 0.8) {
+        const w = 0.08 + R() * 0.16;
+        k.add(box(w, 0.11, 0.02), { at: [x + w / 2, 0.42 + r * 0.25, 1.03], color: light, glow: red ? '#ff8a65' : '#4fc3f7' });
+        x += w + 0.06 + R() * 0.06;
+      }
+    }
+    k.restore();
+  }
+});
+reg('poneglyph', (o, ctx) => simple(o, ctx, 'poneglyph:' + (o.road ? 1 : 0), poneglyphGeo(o.road ? 1 : 0), { yaw: 0, scale: 1 }));
+
+// ------------------------------------------------------------ statue
+const statueGeo = () => model('statue', (k) => {
+  const stone = '#a3adb0', base = '#8a8378';
+  k.add(box(1.8, 1.1, 1.8), { at: [0, -0.2, 0], color: base, outline: 0.03 });
+  k.add(box(2.0, 0.18, 2.0), { at: [0, 0.9, 0], color: shade(base, 0.1) });
+  k.add(box(1.5, 0.16, 1.5), { at: [0, -0.2, 0], color: shade(base, -0.1) });
+  k.save(); k.translate(0, 1.08, 0);
+  for (const s of [-1, 1]) k.add(cyl(0.16, 0.2, 1.3, 7), { at: [s * 0.22, 0, 0], color: stone, outline: 0.02 });
+  k.add(cyl(0.42, 0.34, 1.2, 8), { at: [0, 1.25, 0], color: stone, outline: 0.03 });
+  k.add(new THREE.SphereGeometry(0.3, 10, 8), { at: [0, 2.72, 0], color: stone, outline: 0.02 });
+  k.add(cyl(0.34, 0.34, 0.12, 10), { at: [0, 2.9, 0], color: stone });
+  k.add(cyl(0.16, 0.22, 0.28, 8), { at: [0, 2.98, 0], color: stone });
+  // one arm raised with a sword, one at the side
+  k.add(cyl(0.1, 0.12, 0.95, 6), { at: [0.45, 2.25, 0], rot: [0, 0, -2.6], color: stone, outline: 0.015 });
+  k.add(box(0.07, 1.3, 0.16), { at: [0.9, 2.95, 0], rot: [0, 0, -0.25], color: '#cfd8dc', outline: 0.012 });
+  k.add(cyl(0.1, 0.12, 0.9, 6), { at: [-0.44, 2.35, 0], rot: [0, 0, 0.35], color: stone, outline: 0.015 });
+  k.add(slab([[-0.55, 0], [0.55, 0], [0.4, 1.3], [-0.4, 1.3]], 0.1), { at: [0, 1.25, -0.4], color: shade(stone, -0.1) });
+  k.restore();
+});
+reg('statue', (o, ctx) => simple(o, ctx, 'statue', statueGeo(), { yaw: 0 }));
+
+// ------------------------------------------------------------ shipwreck
+const wreckGeo = () => model('shipwreck', (k) => {
+  const g = hullGeometry(SHIPS.brigantine);
+  k.save(); k.translate(0, 0.35, 0); k.rotateZ(-0.12); k.rotateX(0.42);
+  k.add(g, { attrs: true, colorMul: 0.72 });
+  // a snapped mast with a torn sail, broken ribs
+  k.add(cyl(0.1, 0.13, 3.8, 7), { at: [0.6, 0.6, 0], rot: [0, 0, 0.25], color: '#3e2723', outline: 0.02 });
+  k.add(ribbon([[0.2, 3.7, 0, 0.05], [0.9, 3.2, 0.4, 0.5], [1.4, 2.5, 0.2, 0.35], [1.6, 2.0, 0.5, 0.12]], { side: [0, 0, 1] }), { color: '#ece6d6', double: true });
+  for (let i = 0; i < 5; i++) k.add(torus(1.2, 0.07, 4, 8, Math.PI * 0.7), { at: [-2.4 - i * 0.35, 0.6, 0], rot: [Math.PI / 2, Math.PI / 2, 0], color: '#4e342e' });
+  k.restore();
+  const R = rng(6);
+  for (let i = 0; i < 6; i++) k.add(box(1.2 + R(), 0.08, 0.22), { at: [(R() - 0.5) * 7, 0.03, 2 + R() * 2], rot: [0, R() * 3, 0], color: '#6d4c33' });
+});
+reg('shipwreck', (o, ctx) => {
+  const m = simple(o, ctx, 'shipwreck', wreckGeo(), { yaw: hash(o.x, o.y) * Math.PI * 2 });
+  return m;
+});
+
+// ------------------------------------------------------------ boats
+const boatGeo = (big) => model('boat:' + big, (k) => {
+  const g = hullGeometry(big ? SHIPS.brigantine : SHIPS.dinghy);
+  k.save(); k.translate(0, big ? 0.2 : 0.42, 0); k.rotateX(big ? 0.05 : 0.18);
+  k.add(g, { attrs: true });
+  k.restore();
+});
+reg('boat', (o, ctx) => {
+  const big = /flagship|perfume/i.test(o.name || '') ? 1 : 0;
+  return simple(o, ctx, 'boat:' + big, boatGeo(big), { yaw: hash(o.x, o.y) * Math.PI * 2 });
+});
+
+// ------------------------------------------------------------ tower
+const towerGeo = (h) => model('tower:' + h, (k) => {
+  const stone = '#b0bec5', dark = '#78909c';
+  k.add(cyl(2.0, 2.2, 0.8, 12), { at: [0, -0.4, 0], color: dark, outline: 0.03 });
+  k.add(cyl(1.6, 1.8, h, 12), { at: [0, 0.3, 0], color: stone, outline: 0.045 });
+  for (let y = 1.2; y < h; y += 1.1) k.add(cyl(1.62 + (1 - y / h) * 0.2, 1.62 + (1 - y / h) * 0.2, 0.05, 12, true), { at: [0, y, 0], color: shade(stone, -0.12) });
+  k.add(cyl(2.05, 1.85, 0.6, 12), { at: [0, h + 0.2, 0], color: dark, outline: 0.03 });
+  for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; k.add(box(0.5, 0.6, 0.4), { at: [Math.cos(a) * 1.8, h + 0.8, Math.sin(a) * 1.8], rot: [0, -a, 0], color: stone, outline: 0.015 }); }
+  for (let y = 2.2; y < h - 0.5; y += 2.2) for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + y; k.add(box(0.28, 0.75, 0.2), { at: [Math.cos(a) * 1.68, y, Math.sin(a) * 1.68], rot: [0, -a + Math.PI / 2, 0], color: '#1d2a30', glow: '#ffcc80' }); }
+  k.add(box(1.0, 2.0, 0.3), { at: [0, 0.3, 1.72], color: '#4e342e' });
+});
+reg('tower', (o, ctx) => {
+  const n = o.name || '';
+  const h = /justice/i.test(n) ? 16 : /impel/i.test(n) ? 12 : /umbrella|lodge/i.test(n) ? 7 : 10;
+  const s = Math.max(1, (o.fw || 1) / 2.5);
+  return simple(o, ctx, 'tower:' + h, towerGeo(h), { yaw: 0, scale: s });
+});
+
+// ------------------------------------------------------------ stairwell
+const portalGeo = (up) => model('portal:' + up, (k) => {
+  k.add(box(2.7, 0.35, 2.7), { at: [0, -0.2, 0], color: '#5d5d5d', outline: 0.025 });
+  k.add(box(2.1, 0.06, 2.1), { at: [0, 0.14, 0], color: '#0b0b0d' });
+  for (let i = 0; i < 5; i++) k.add(box(1.7, 0.1, 0.34), { at: [0, 0.1 - i * 0.24, -0.8 + i * 0.36], color: shade('#6d6d6d', -i * 0.1) });
+  for (const s of [-1, 1]) k.add(box(0.2, 0.9, 2.3), { at: [s * 1.2, 0, 0], color: '#6d6d6d', outline: 0.02 });
+});
+const arrowGeo = () => model('portal-arrow', (k) => {
+  k.add(cone(0.28, 0.42, 4), { at: [0, 0, 0], rot: [Math.PI, 0, 0], color: '#ffffff', glow: '#ffffff', outline: 0.02 });
+  k.add(box(0.14, 0.35, 0.14), { at: [0, 0, 0], color: '#ffffff', glow: '#ffffff', outline: 0.015 });
+});
+reg('portal', (o) => {
+  const root = group('portal');
+  add(root, portalGeo(o.up ? 1 : 0));
+  const arrow = new THREE.Mesh(arrowGeo(), glowMat(o.up ? 0x90caf9 : 0xff8a65));
+  root.add(arrow);
+  if (o.up) arrow.rotation.z = Math.PI;
+  animate(root, (t) => { arrow.position.y = 1.4 + Math.sin(t * 3) * 0.15; arrow.rotation.y = t * 1.5; });
+  return root;
+});
+
+// ------------------------------------------------------------ signs
+reg('sign', (o, ctx) => {
+  if (!o.name) return simple(o, ctx, 'sign', signModel(), { yaw: 0 });
+  const root = group('sign');
+  const board = nameBoard(o.name, 2.6, 0, 0);
+  const bw = board.geometry.parameters.width, bh = Math.max(0.3, board.geometry.parameters.height);
+  board.scale.set(1, bh / board.geometry.parameters.height, 1);
+  const k = new Mesher();
+  const y0 = 1.05;
+  for (const s2 of bw > 1.2 ? [-1, 1] : [0]) k.add(box(0.1, y0 + bh + 0.1, 0.1), { at: [s2 * (bw / 2 - 0.12), 0, 0], color: '#6d4c33', outline: 0.012 });
+  k.add(box(bw + 0.14, bh + 0.14, 0.07), { at: [0, y0 - 0.07, 0.07], color: '#5a3a22', outline: 0.018 });
+  root.add(meshOf(k.build(false)));
+  board.position.set(0, y0 + bh / 2, 0.112);
+  root.add(board);
+  return root;
+});
+
+// ------------------------------------------------------------ Laboon
+const whaleGeo = () => model('laboon', (k) => {
+  const top = C('#5d7389'), belly = C('#d7e1ea'), tmp = new THREE.Color();
+  const body = new THREE.SphereGeometry(1, 28, 18);
+  k.add(body, { scale: [10.5, 3.6, 4.2], color: (p, n) => tmp.copy(n.y < -0.25 ? belly : top), outline: 0.1 });
+  // head bulge, eyes, scars and the tail
+  k.add(new THREE.SphereGeometry(1, 16, 12), { at: [-7.2, 0.4, 0], scale: [3.6, 3.2, 3.8], color: '#5a6f85' });
+  for (const s of [-1, 1]) {
+    k.add(new THREE.SphereGeometry(0.5, 10, 8), { at: [-7.0, 0.3, s * 3.55], color: '#fafafa' });
+    k.add(new THREE.SphereGeometry(0.27, 8, 6), { at: [-7.25, 0.3, s * 3.85], color: '#1a1a1a' });
+  }
+  for (let i = 0; i < 6; i++) k.add(box(0.14, 1.6, 0.12), { at: [-9.4 + i * 0.28, 1.4 + i * 0.15, (i - 2.5) * 0.35], rot: [0.3, 0, 0.6], color: '#ffebee' });
+  k.add(cyl(0.8, 1.6, 3.2, 10), { at: [9.5, 0.2, 0], rot: [0, 0, -Math.PI / 2], scale: [1, 1, 0.55], color: '#4e6177', outline: 0.05 });
+  k.add(slab([[0, 0], [3.2, 2.2], [2.4, 0], [3.2, -2.2]], 0.35), { at: [12.4, 0.6, 0], rot: [Math.PI / 2, 0, 0], color: '#4e6177', outline: 0.05 });
+});
+reg('p1_laboon', (o) => {
+  const root = group('laboon');
+  root.userData.noGround = true;
+  const whale = add(root, whaleGeo());
+  // the Jolly Roger you painted over his scars
+  const mark = new Mesher();
+  mark.add(new THREE.SphereGeometry(0.8, 10, 8), { at: [0, 0.3, 0], scale: [0.2, 1, 1], color: '#fafafa' });
+  for (const a of [0.8, -0.8]) mark.add(box(0.1, 2.6, 0.26), { at: [0, -0.6, 0], rot: [a, 0, 0], color: '#fafafa' });
+  const markMesh = new THREE.Mesh(mark.build(false), vcMat());
+  markMesh.position.set(-10.2, 1.6, 0);
+  markMesh.rotation.z = 0.5;
+  root.add(markMesh);
+  const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.9, 1, 10, 1, true), glowMat(0xe1f5fe, { opacity: 0.6 }));
+  spout.position.set(-3, 3.4, 0);
+  root.add(spout);
+  animate(root, (t) => {
+    const y = -0.7 + Math.sin(t * 0.7) * 0.12;
+    whale.position.y = y; markMesh.position.y = 1.6 + y;
+    markMesh.visible = !!STATE.game?.state?.char?.flags?.p1_laboonMark;
+    const ph = t % 14;
+    const h = ph < 1.6 ? Math.sin((ph / 1.6) * Math.PI) * 4.5 : 0;
+    spout.visible = h > 0.05;
+    spout.scale.set(1 + h * 0.08, h, 1 + h * 0.08);
+    spout.position.y = 3.2 + y + h / 2;
+  });
+  return root;
+});
+reg('p1_laboon_talk', () => { const g = new THREE.Object3D(); return g; });
+
+export { bubbleMaterial as bubbleMat };

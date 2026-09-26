@@ -97,7 +97,10 @@ class ActorView {
       this.lastT = env.time;
     }
     this.labels(a, env, dist, s);
-    m.outline.visible = dist < 60 && this.alpha > 0.5;
+    // detail by distance (with a little hysteresis)
+    const lod = m.lod === 0 ? (dist > 24 ? 1 : 0) : (dist < 20 ? 0 : 1);
+    if (lod !== m.lod) m.setLod(lod);
+    m.outline.visible = dist < 55 && this.alpha > 0.5;
   }
 
   /** Head yaw toward the camera for nearby idle NPCs. */

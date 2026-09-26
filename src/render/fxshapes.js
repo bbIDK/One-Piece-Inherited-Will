@@ -72,9 +72,10 @@ SHAPES.tele = {
 SHAPES.crack = {
   ground(g, s, k, a) {
     const alpha = Math.min(1, (1 - k) * 2.5) * a;
-    const n = s.n || 8;
+    const n = s.n || 7;
     g.lineCap = 'round'; g.lineJoin = 'round';
-    for (const [col, lw] of [['rgba(255,255,255,0.18)', 0.12], ['rgba(35,25,18,0.85)', 0.065]]) {
+    // thin earthy fissures with a pale lip (not black ink)
+    for (const [col, lw] of [['rgba(255,248,225,0.16)', 0.085], ['rgba(62,44,28,0.62)', 0.042]]) {
       g.globalAlpha = alpha; g.strokeStyle = col; g.lineWidth = lw;
       g.beginPath();
       for (let i = 0; i < n; i++) {

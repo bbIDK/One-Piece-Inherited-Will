@@ -13,8 +13,7 @@
 import * as THREE from 'three';
 import { CharacterModel } from './model.js';
 import { B } from './bones.js';
-import { bodyMaterial, outlineMaterial, glowMaterial } from './mats.js';
-import { toonGradient } from '../materials.js';
+import { bodyMaterial, outlineMaterial, glowMaterial, charGradient } from './mats.js';
 import { Glow } from './fx.js';
 import { actorPose, rigOptions, currentLook, weaponOf } from './pose.js';
 import { FRUITS } from '../../data/fruits.js';
@@ -47,12 +46,12 @@ class Viewmodel {
     this.frame = 0;
     this.outlineMat = outlineMaterial(0.0036, undefined, { fog: false });
     this.outlineMat.transparent = true;
-    this.weaponMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient(), transparent: true, fog: false });
+    this.weaponMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), transparent: true, fog: false });
   }
 
   build(p, look, wpn) {
     if (this.model) this.model.dispose();
-    const m = new CharacterModel(look, wpn, { viewmodel: true, fog: false, outline: this.outlineMat, weaponOpts: { material: this.weaponMat, outline: this.outlineMat, noShadow: true } });
+    const m = new CharacterModel(look, wpn, { viewmodel: true, lod: -1, fog: false, outline: this.outlineMat, weaponOpts: { material: this.weaponMat, outline: this.outlineMat, noShadow: true } });
     m.mat.transparent = true;
     m.mat.fog = false;
     m.visibleParts = HIDE.map((i) => [i, false]);
@@ -138,7 +137,7 @@ class Viewmodel {
     const bobA = moving ? (pose.sprint ? 0.028 : 0.014) : 0.004;
     const bx = Math.cos(this.bob * 0.5) * bobA, by = -Math.abs(Math.sin(this.bob * 0.5)) * bobA * 1.4 + Math.sin(env.time * 1.3) * 0.003;
     this.body.rotation.set(0, Math.PI / 2, 0);
-    this.body.position.set(this.sway.x + bx, 0.155 - eyeY + this.sway.y + by, 0.12);
+    this.body.position.set(this.sway.x + bx, 0.16 - eyeY + this.sway.y + by, -0.06);
     this.body.updateMatrix();
     // ---- effects: haki, flash, fruit glow, muzzle flash
     const fx = m.fx;

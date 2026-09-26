@@ -19,6 +19,18 @@ const _n = new THREE.Vector3();
 const _m3 = new THREE.Matrix3();
 const OUTLINE = new THREE.Color(0x1d130c);
 
+/** Build-time switches: KIT.noOutline builds the far (distance LOD) variant of a model. */
+export const KIT = { noOutline: false };
+
+/** Build a model twice: as-is and without outlines (for far cells). */
+export function withFar(build) {
+  const near = build();
+  KIT.noOutline = true;
+  let far;
+  try { far = build(); } finally { KIT.noOutline = false; }
+  return { near, far };
+}
+
 /** Anything colour-like → a THREE.Color (linear working space). */
 export function C(c) {
   if (c && c.isColor) return c;
@@ -196,24 +208,29 @@ export class Mesher {
     _m3.getNormalMatrix(M);
     const P = g.attributes.position, NA = g.attributes.normal;
     const base = this.pos.length / 3;
+    // o.attrs: keep the source geometry's own colour / tint / glow (e.g. a ship hull reused as a wreck)
+    const sC = o.attrs ? g.attributes.color : null, sT = o.attrs ? g.attributes.tint : null, sG = o.attrs ? g.attributes.glow : null;
+    const mul = o.colorMul ?? 1;
     const cfn = typeof o.color === 'function' ? o.color : null;
     const cc = cfn ? null : C(o.color ?? 0xffffff);
+    const _sc = new THREE.Color();
     const tfn = typeof o.tint === 'function' ? o.tint : null;
     const tint = o.tint ? 1 : 0;
     const gl = o.glow ? C(o.glow) : null;
     const fl = o.flicker || 0;
-    const geomN = o.outline ? new Float32Array(P.count * 3) : null;
+    const geomN = o.outline && !KIT.noOutline ? new Float32Array(P.count * 3) : null;
     for (let i = 0; i < P.count; i++) {
       _v.fromBufferAttribute(P, i).applyMatrix4(M);
       _n.fromBufferAttribute(NA, i).applyMatrix3(_m3).normalize();
       if (geomN) { geomN[i * 3] = _n.x; geomN[i * 3 + 1] = _n.y; geomN[i * 3 + 2] = _n.z; }
-      const c = cfn ? C(cfn(_v, _n, i)) : cc;
+      const c = sC ? _sc.fromBufferAttribute(sC, i) : cfn ? C(cfn(_v, _n, i)) : cc;
       const n = o.normals ? o.normals(_v, _n) : _n;
       this.pos.push(_v.x, _v.y, _v.z);
       this.nor.push(n.x, n.y, n.z);
-      this.col.push(c.r, c.g, c.b);
-      this.tnt.push(tfn ? tfn(_v, _n, i) : tint);
-      if (gl) this.glw.push(gl.r, gl.g, gl.b, fl); else this.glw.push(0, 0, 0, 0);
+      this.col.push(c.r * mul, c.g * mul, c.b * mul);
+      this.tnt.push(sT ? sT.getX(i) : tfn ? tfn(_v, _n, i) : tint);
+      if (sG) this.glw.push(sG.getX(i), sG.getY(i), sG.getZ(i), sG.getW(i));
+      else if (gl) this.glw.push(gl.r, gl.g, gl.b, fl); else this.glw.push(0, 0, 0, 0);
     }
     const tris = [];
     if (g.index) for (let i = 0; i < g.index.count; i++) tris.push(g.index.getX(i));
@@ -232,7 +249,7 @@ export class Mesher {
       }
       for (let i = 0; i < tris.length; i += 3) this.idx.push(tris[i] + b2, tris[i + 2] + b2, tris[i + 1] + b2);
     }
-    if (o.outline) this.shell(base, P.count, tris, geomN, o.outline, o.outlineColor);
+    if (o.outline && !KIT.noOutline) this.shell(base, P.count, tris, geomN, o.outline, o.outlineColor);
     return this;
   }
 

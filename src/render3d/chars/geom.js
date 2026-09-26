@@ -64,9 +64,11 @@ export const Prim = {
   /** cone, apex at +0.5, base radius 1 at -0.5 */
   cone: (r = 6) => prim(`k${r}`, () => new THREE.ConeGeometry(1, 1, r, 1)),
   torus: (t = 0.3, r = 6, s = 12) => prim(`t${t}.${r}.${s}`, () => new THREE.TorusGeometry(1, t, r, s)),
+  /** a flat box (hard edges; for tiny details only) */
+  box: () => prim('box', () => new THREE.BoxGeometry(2, 2, 2)),
   /** a rounded box of half-size 1 (smooth normals so outlines stay closed) */
-  rbox: (k = 0.35) => prim(`rb${k}`, () => {
-    const g = new THREE.SphereGeometry(1, 10, 8);
+  rbox: (k = 0.35, w = 8, h = 6) => prim(`rb${k}.${w}.${h}`, () => {
+    const g = new THREE.SphereGeometry(1, w, h);
     const p = g.attributes.position;
     for (let i = 0; i < p.count; i++) {
       _v.fromBufferAttribute(p, i);

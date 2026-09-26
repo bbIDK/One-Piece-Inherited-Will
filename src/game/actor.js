@@ -653,9 +653,15 @@ export class Actor extends Entity {
     g.save();
     if (shiver >= 0 && shiver < 1 && this.state === 'idle') g.translate(Math.sin(env.time * 170) * 0.045 * Math.min(1, hf.w) * (1 - shiver), 0);
     drawActorExtras(g, this, look, pose, env, 'back');
-    // hit flash: a pure white body for a few frames, then fading back
-    if (this.flashT > 0) { const fk = this.flashT / 0.12; drawCharacterTinted(g, look, pose, '#ffffff', fk > 0.5 ? 1 : fk / 0.5); }
-    else drawCharacter(g, look, pose);
+    // hit flash: the body washed white for a few frames, then fading back. The hit's
+    // weight decides how white (a jab tints, a heavy blanks the body) and rapid
+    // multi-hits stay readable
+    if (this.flashT > 0) {
+      const fk = this.flashT / 0.12;
+      const rapid = hf && hf.t0 - (hf.prev ?? -9) < 0.2;
+      const peak = rapid ? 0.5 : 0.52 + 0.36 * Math.min(1, hf ? hf.w : 0.5);
+      drawCharacterTinted(g, look, pose, '#ffffff', fk > 0.5 ? peak : fk / 0.5 * peak);
+    } else drawCharacter(g, look, pose);
     drawActorExtras(g, this, look, pose, env, 'front');
     g.restore();
     this._lastP = pose.P; this._lastPose = pose; this._lastLook = look;

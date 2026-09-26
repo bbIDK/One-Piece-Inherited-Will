@@ -161,7 +161,7 @@ export function hitFeedback(fx, att, tgt, h, o = {}) {
     } else if (att && att.armament && elem === 'physical') {
       fx.ring(cx, cy, 0.08, 0.5 + 0.3 * w, '#7c4dff', 0.2, 0.06, { z, flat: 1, noCore: true, add: true });
     }
-    tgt.hitFx = { t0: game.env ? game.env.time : fx.time, w, ang };
+    tgt.hitFx = { t0: game.env ? game.env.time : fx.time, w, ang, prev: tgt.hitFx ? tgt.hitFx.t0 : -9 };
   }
   if (final > 0) fx.damage(tgt, final, { crit, blocked, toPlayer: tgt.isPlayer });
   if (o.playerInvolved) {
@@ -317,11 +317,11 @@ function slashFx(fx, actor, a, h, ang, range, col, st, clip, o = {}) {
   const life = heavy ? 0.27 : 0.2;
   const x = actor.x + Math.cos(ang) * 0.12, y = actor.y + Math.sin(ang) * 0.08;
   if (h.shape === 'line') {
-    // a straight cleave down the line
+    // a straight cleave down the line: heavy ones gash the ground, light ones cut the air
     const L = range;
     for (let i = 0; i < Math.max(1, n); i++) {
       const off = (i - (n - 1) / 2) * 0.22;
-      fx.add('cutline', { x: actor.x, y: actor.y, x1: actor.x + Math.cos(ang) * L, y1: actor.y + Math.sin(ang) * L, off, z: 0.6, color: col, life: 0.4, delay: i * 0.03 });
+      fx.add('cutline', { x: actor.x, y: actor.y, x1: actor.x + Math.cos(ang) * L, y1: actor.y + Math.sin(ang) * L, off, z: heavy ? 0.04 : 0.6, color: col, life: heavy ? 0.55 : 0.4, delay: i * 0.03 });
     }
     fx.add('crescent', { x, y, angle: ang, radius: Math.min(2.2, range * 0.6), arc: 1.4, width: baseW, color: col, core: '#ffffff', dir, life, z: 0.65 });
     if (heavy) fx.crack(actor.x + Math.cos(ang) * L * 0.6, actor.y + Math.sin(ang) * L * 0.6, 0.9, 1.4);

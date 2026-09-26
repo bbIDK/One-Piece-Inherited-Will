@@ -458,7 +458,8 @@ function drawTrails(g, look, pose, rig, d, side, back) {
   const A = pose.anim;
   if (!A || A.t <= 0.005) return;
   if (A.t < (A.trailFrom ?? 0) - 0.005 || A.t > (A.trailTo ?? 99)) return;
-  const N = 7, dt = A.trailDt || 0.015;
+  // dense samples so fast swings still sweep a smooth arc (not a few flat quads)
+  const N = 11, dt = A.trailDt || 0.0085;
   const tMin = Math.max(0, (A.trailFrom ?? 0) - 0.02);
   const samples = [];
   for (let k = 0; k < N; k++) {

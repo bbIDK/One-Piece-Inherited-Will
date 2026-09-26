@@ -589,8 +589,8 @@ const jitter = (col, o) => {
   return c.multiplyScalar(k);
 };
 
-registerPropBuilder('tree', (o, ctx) => {
-  const sub = o.sub || 'oak';
+/** A tree of the given species (o.sub for 'tree' objects, or the kind itself). */
+function buildTree(o, ctx, sub) {
   const v = o.v || 0;
   const model = treeModel(sub, v);
   const pal = paletteOf(sub);
@@ -607,7 +607,13 @@ registerPropBuilder('tree', (o, ctx) => {
   }
   const yaw = hash(o.x, o.y) * Math.PI * 2;
   return instanced(o, ctx, parts, { yaw, scale: o.s || 1, dyn });
-});
+}
+
+registerPropBuilder('tree', (o, ctx) => buildTree(o, ctx, o.sub || 'oak'));
+// the species also work as object kinds of their own
+for (const sub of ['palm', 'pine', 'snowpine', 'jungle', 'cactus', 'dead', 'deadsnow', 'spooky', 'lollipop', 'candycane', 'bamboo', 'coral', 'kelp', 'sakura', 'blossom', 'oak', 'autumn', 'cottoncandy', 'cloudtree']) {
+  registerPropBuilder(sub, (o, ctx) => buildTree(o, ctx, sub));
+}
 
 registerPropBuilder('bush', (o, ctx) => {
   const sub = o.sub || 'bush';

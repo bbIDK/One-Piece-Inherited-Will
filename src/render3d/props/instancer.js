@@ -29,6 +29,7 @@ class Batch {
     this.cell = cell;
     this.key = key;
     this.geo = part.geo;
+    this.farGeo = part.far || null;
     this.material = part.material || vcMat({ sway: part.sway, side: part.side });
     this.tinted = !!part.tinted;
     this.castShadow = part.castShadow !== false;
@@ -45,7 +46,7 @@ class Batch {
 
   alloc(cap) {
     const old = this.mesh;
-    const m = new THREE.InstancedMesh(this.geo, this.material, cap);
+    const m = new THREE.InstancedMesh(this.cell.far && this.farGeo ? this.farGeo : this.geo, this.material, cap);
     m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     if (this.tinted) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
     m.count = this.count;
@@ -123,7 +124,7 @@ function cellFor(o, ctx, parent) {
   const key = `${ctx?.world?.id || ''}:${cx},${cy}`;
   let c = cells.get(key);
   if (!c) {
-    c = { key, x0: cx * CELL, y0: cy * CELL, px: 0, pz: 0, batches: new Map(), parent, markers: new Set(), rep: null };
+    c = { key, x0: cx * CELL, y0: cy * CELL, px: 0, pz: 0, batches: new Map(), parent, markers: new Set(), rep: null, far: false };
     cells.set(key, c);
   }
   if (!c.parent && parent) c.parent = parent;
@@ -189,7 +190,9 @@ function onRemoved(e) {
   if (u.dyn) { dynMarkers.delete(mk); dynDirty = true; }
 }
 
-/** Once per frame: place every cell from one of its markers; re-check a slice of the dynamic parts. */
+export const LOD = { far: 62 }; // cells farther than this (m) drop their outlines
+
+/** Once per frame: place every cell from one of its markers, pick its detail level; re-check a slice of the dynamic parts. */
 function frame(env, ctx) {
   for (const cell of cells.values()) {
     const mk = cell.rep;
@@ -199,6 +202,16 @@ function frame(env, ctx) {
     if (Math.abs(px - cell.px) > 1e-3 || Math.abs(pz - cell.pz) > 1e-3) {
       cell.px = px; cell.pz = pz;
       for (const b of cell.batches.values()) b.mesh.position.set(px, 0, pz);
+    }
+    // distance from the camera origin (the player) to the nearest point of the cell
+    const gp = mk.parent ? mk.parent.position : null;
+    const cx = (gp ? gp.x : 0) + px, cz = (gp ? gp.z : 0) + pz;
+    const nx = Math.max(cx, Math.min(0, cx + CELL)), nz = Math.max(cz, Math.min(0, cz + CELL));
+    const d = Math.hypot(nx, nz);
+    const far = cell.far ? d > LOD.far - 4 : d > LOD.far + 4;
+    if (far !== cell.far) {
+      cell.far = far;
+      for (const b of cell.batches.values()) if (b.farGeo) b.mesh.geometry = far ? b.farGeo : b.geo;
     }
   }
   if (dynDirty) { dynList = [...dynMarkers]; dynDirty = false; dynAt = 0; }
