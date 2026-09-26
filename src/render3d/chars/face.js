@@ -122,7 +122,7 @@ export function expression(look, pose, P, t) {
   const s = (((look.seed || 0) * 0.6180339) % 1) * 0.9 + 0.1;
   const blink = !fierce && ((t * 0.29 + s - 0.29) % 1 + 1) % 1 < 0.035;
   let mouth = face === 'shout' ? 'shout' : fierce ? 'fierce' : look.grin || look.nika ? 'grin' : 'neutral';
-  if (mouth === 'neutral') mouth = look.muzzle || look.race === 'mink' ? 'animal' : (look.seed || 0) % 2 ? 'smile' : 'flat';
+  if (mouth === 'neutral') mouth = look.muzzle || look.race === 'mink' ? 'animal' : look.mouth || ((look.seed || 0) % 2 ? 'smile' : 'flat');
   return { eyes: blink ? 'blink' : fierce ? 'fierce' : 'open', mouth, brow: fierce ? 'fierce' : 'neutral', small: face === 'shout' };
 }
 const EYE_SHAPES = ['round', 'round', 'sharp', 'soft'];

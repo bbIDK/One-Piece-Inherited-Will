@@ -22,13 +22,29 @@ export const scenarios = {
       await page.waitForTimeout(3200);
       await snap('roll');
       await page.getByText('Accept my fate').click();
-      await frames(page, 3);
+      await frames(page, 8);
       await snap('identity');
+      // customise: sharp eyes and a big grin, a mohawk, a wide build, an open shirt
+      const click = async (name) => { await page.getByRole('button', { name, exact: true }).first().click(); await frames(page, 3); };
+      await click('Sharp'); await click('Big grin');
+      await click('Hair'); await click('Mohawk');
+      await snap('identity-hair');
+      await click('Body');
+      await page.locator('input.build-slider').fill('1');
+      await frames(page, 6);
+      await snap('identity-wide');
+      await page.locator('input.build-slider').fill('0');
+      await frames(page, 6);
+      await snap('identity-thin');
+      await click('Clothes'); await click('Open');
+      await frames(page, 6);
+      const look = await page.evaluate(() => { const s = document.querySelector('.preview3d canvas'); return { canvas: !!s && s.width > 0 }; });
+      console.log('preview', JSON.stringify(look));
       await page.getByRole('button', { name: 'Set Sail', exact: true }).click();
       await frames(page, 5);
       await step(page, 1);
       await snap('spawned');
-      const info = await page.evaluate(() => ({ name: window.OP.game.state.char.name, race: window.OP.game.state.char.race, spawn: window.OP.game.state.char.spawn }));
+      const info = await page.evaluate(() => { const c = window.OP.game.state.char; return { name: c.name, race: c.race, spawn: c.spawn, look: { eyeShape: c.look.eyeShape, grin: c.look.grin, hair: c.look.hair, build: c.look.build, bulk: c.look.bulk, openShirt: c.look.openShirt } }; });
       console.log('spawn', JSON.stringify(info));
     },
   },

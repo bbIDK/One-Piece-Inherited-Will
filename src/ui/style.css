@@ -499,3 +499,13 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .hitmark.blocked { color: #b0bec5; }
 .hitmark.show { animation: hitmark .24s ease-out; }
 @keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }
+
+/* ---------- character creation: live 3D preview ---------- */
+.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }
+.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+.preview3d canvas:active { cursor: grabbing; }
+.look-tabs { margin: 10px 0 6px; }
+.look-opts { min-height: 150px; }
+.build-row { display: flex; align-items: center; gap: 8px; }
+.build-slider { flex: 1; accent-color: #8e1b16; }
+@media (max-height: 520px) { .preview3d { height: 220px; } }

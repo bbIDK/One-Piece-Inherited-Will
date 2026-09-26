@@ -1,28 +1,49 @@
 // Title (three lineage slots), character creation (birth roll → identity),
 // death and Inherited Will screens.
-import { h, clear } from './dom.js';
+import { h, clear, add } from './dom.js';
 import { RACES, RARITY, makeLook, raceLabel, MINK_KINDS, FISHMAN_KINDS } from '../data/races.js';
 import { LEGENDS } from '../data/dreams.js';
 import { TRAITS, PERKS, perkLevel, perkCost, rollBirth, dChance, nameWithD } from '../game/lineage.js';
-import { drawCharacter } from '../render/character.js';
 import { ITEMS } from '../data/items.js';
 import { FRUITS } from '../data/fruits.js';
 import { formatBerries } from '../core/math.js';
 import { RNG } from '../core/rng.js';
 import { itemImg, uiImg } from './icon.js';
+import { createPreview, renderPortrait } from './preview3d.js';
+
+/** What each race's height looks like (height isn't customisable: it's in the blood). */
+const HEIGHT_NOTE = {
+  human: 'Humans stand at an ordinary height.',
+  buccaneer: 'Buccaneers stand head and shoulders above everyone.',
+  longarm: 'Longarms are ordinary in height, with an extra joint in each arm.',
+  longleg: 'Longlegs tower on their long legs.',
+  fishman: 'Fish-Men are tall and broad.',
+  mink: 'Minks are about as tall as humans.',
+  skypiean: 'Skypieans are human-sized, with small wings.',
+  three_eye: 'The Three-Eye Tribe are human-sized.',
+  lunarian: 'Lunarians are tall, with black wings.',
+};
+
+/** Keep the parts of a look that follow from others in step (build → bulk, kinds → colours). */
+function applyLook(L, race) {
+  const base = race === 'buccaneer' ? 1.25 : race === 'fishman' ? 1.1 : 1;
+  L.bulk = +(base * (0.84 + (L.build ?? 0.5) * 0.36)).toFixed(3);
+  if (race === 'mink') { const k = MINK_KINDS.find((m) => m.name === L.kind); if (k) Object.assign(L, { ears: k.ears, fur: k.fur, tail: k.tail, muzzle: k.muzzle, skin: k.fur, hairColor: k.fur, hand: k.fur }); }
+  if (race === 'fishman') { const k = FISHMAN_KINDS.find((m) => m.name === L.kind); if (k) L.skin = k.skin; }
+}
 
 const SEA_NAMES = { east_blue: 'East Blue', north_blue: 'North Blue', west_blue: 'West Blue', south_blue: 'South Blue' };
 const pct = (x) => `${Math.round(x * 1000) / 10}%`;
 
-/** A small still portrait of a character look. */
+/** A small still portrait of a character look (rendered with the 3D model). */
 export function portrait(look, w = 96, hgt = 110, bg = null) {
   const cv = h('canvas.portrait', { width: w * 2, height: hgt * 2, style: { width: w + 'px', height: hgt + 'px' } });
   const g = cv.getContext('2d');
   if (bg) { g.fillStyle = bg; g.fillRect(0, 0, w * 2, hgt * 2); }
-  try {
-    g.setTransform(w * 0.72, 0, 0, w * 0.72, w, hgt * 1.72);
-    drawCharacter(g, look, { facing: Math.PI / 2, moving: false, time: 1, state: 'idle', action: null });
-  } catch { /* a look from an older version */ }
+  if (look) {
+    const img = renderPortrait(look, { w, h: hgt, view: w < 64 ? 'bust' : 'full' });
+    if (img) g.drawImage(img, 0, 0, w * 2, hgt * 2);
+  }
   return cv;
 }
 
@@ -100,7 +121,8 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
   ui.showScreen(root);
   let raf = 0;
   let timers = [];
-  const stopAnim = () => { cancelAnimationFrame(raf); for (const t of timers) clearTimeout(t); timers = []; };
+  let previewCleanup = null;
+  const stopAnim = () => { cancelAnimationFrame(raf); for (const t of timers) clearTimeout(t); timers = []; previewCleanup?.(); previewCleanup = null; };
   const later = (ms, fn) => timers.push(setTimeout(fn, ms));
   const hasD = () => birth.traits.includes('will_of_d');
 
@@ -172,9 +194,10 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
   function stepIdentity() {
     stopAnim();
     clear(root);
-    if (!state.look) state.look = makeLook(birth.race, birth.seed);
+    if (!state.look) { state.look = makeLook(birth.race, birth.seed); state.look.build = 0.5; }
     if (!state.name) state.name = randomCharName();
-    const preview = h('canvas', { width: 260, height: 300, style: { width: '100%', height: '300px' } });
+    const L = state.look;
+    const race = birth.race;
     const finalName = h('div.final-name');
     const updateName = () => {
       clear(finalName);
@@ -183,23 +206,21 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
     };
     const nameInput = h('input.name', { value: state.name, maxLength: 24, spellcheck: false, on: { input: (e) => { state.name = e.target.value; updateName(); } } });
     updateName();
-    const L = state.look;
-    const race = birth.race;
     const row = (label, ...kids) => h('div.opt-row', h('div.opt-label', label), ...kids);
-    const swatch = (key, colors) => h('div.swatches', ...colors.map((c) => h('button' + (L[key] === c ? '.on' : ''), { style: { background: c }, on: { click: () => { L[key] = c; if (key === 'fur') { L.skin = c; L.hairColor = c; L.hand = c; } refresh(); } } })));
-    const opts = (key, values, labels) => h('div.swatches', ...values.map((v, i) => h('button.chip' + (L[key] === v ? '.on' : ''), { on: { click: () => { L[key] = v; refresh(); } } }, labels ? labels[i] : v)));
-    const left = h('div', h('div.preview', preview), h('p.muted', { style: { textAlign: 'center' } }, raceLabel(L)));
+    const swatch = (key, colors) => h('div.swatches', ...colors.map((c) => h('button' + (L[key] === c ? '.on' : ''), { title: c, style: { background: c }, on: { click: () => { L[key] = c; changed(); } } })));
+    const chips = (current, values, labels, set) => h('div.swatches', ...values.map((v, i) => h('button.chip' + (current === v ? '.on' : ''), { on: { click: () => { set(v); changed(); } } }, labels ? labels[i] : v)));
+    const opts = (key, values, labels) => chips(L[key], values, labels, (v) => { L[key] = v; });
+
+    // the live 3D preview (drag to turn)
+    const previewBox = h('div.preview3d');
+    const left = h('div', previewBox,
+      h('p.muted', { style: { textAlign: 'center', margin: '6px 0 0' } }, raceLabel(L)),
+      h('p.muted', { style: { textAlign: 'center', margin: '2px 0 0', fontSize: '12px' } }, HEIGHT_NOTE[race] || 'Your height comes from your race.'));
+    const tabsEl = h('div.tabs.look-tabs');
+    const optsEl = h('div.look-opts');
     const right = h('div',
       row('Name', h('div', { style: { display: 'flex', gap: '6px' } }, nameInput, h('button.btn', { on: { click: () => { state.name = randomCharName(); nameInput.value = state.name; updateName(); } } }, 'Random'))),
-      finalName,
-      race === 'mink' ? row('Mink', opts('kind', MINK_KINDS.map((k) => k.name))) : null,
-      race === 'fishman' ? row('Fish-Man kind', opts('kind', FISHMAN_KINDS.map((k) => k.name))) : null,
-      row('Hair', opts('hair', ['short', 'spiky', 'long', 'ponytail', 'buzz', 'curly', 'afro', 'topknot', 'mohawk', 'bald'])),
-      race !== 'mink' ? row('Hair colour', swatch('hairColor', ['#1e1e1e', '#3b2a1a', '#6b4423', '#c69c6d', '#f2d16b', '#e67e22', '#c0392b', '#2ecc71', '#2980b9', '#e84393', '#dfe6e9', '#8e44ad'])) : null,
-      ['human', 'longarm', 'longleg', 'three_eye', 'buccaneer', 'skypiean', 'lunarian'].includes(race) ? row('Skin', swatch('skin', ['#f9dcc4', '#f1c9a0', '#e0ac7e', '#c68642', '#a0643a', '#7a4a2a', '#5c3a21'])) : null,
-      row('Shirt', swatch('top', ['#d63031', '#0984e3', '#00b894', '#fdcb6e', '#e17055', '#6c5ce7', '#2d3436', '#dfe6e9', '#e84393', '#00cec9', '#a0522d', '#ffffff'])),
-      row('Trousers', swatch('bottom', ['#2d3436', '#1e3799', '#3b3b98', '#6d4c41', '#636e72', '#0a3d62', '#b8860b', '#e1b12c'])),
-      row('Shirt open', opts('openShirt', [false, true], ['closed', 'open'])),
+      finalName, tabsEl, optsEl,
       h('p.muted', { style: { marginTop: '12px' } }, 'No destiny is chosen for you. Pirate, Marine, adventurer, bounty hunter or none of these — the sea is free, and what you become is up to you. You can found your own pirate crew and raise your Jolly Roger later, from the Crew menu.'),
     );
     const born = RACES[birth.race];
@@ -210,24 +231,60 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
           h('button.btn', { on: { click: () => stepRoll(false) } }, 'Back'),
           h('button.btn.red.big', { on: { click: () => { stopAnim(); onDone(birth, { name: (state.name || '').trim() || 'Nameless', look: state.look }); } } }, 'Set Sail'))));
     root.appendChild(panel);
-    function refresh() {
-      if (race === 'mink') { const k = MINK_KINDS.find((m) => m.name === L.kind); if (k) Object.assign(L, { ears: k.ears, fur: k.fur, tail: k.tail, muzzle: k.muzzle, skin: k.fur, hairColor: k.fur, hand: k.fur }); }
-      if (race === 'fishman') { const k = FISHMAN_KINDS.find((m) => m.name === L.kind); if (k) L.skin = k.skin; }
-      stepIdentity();
-    }
-    // animate the preview
-    const g = preview.getContext('2d');
-    const t0 = performance.now();
-    const tick = (now) => {
-      const t = (now - t0) / 1000;
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.clearRect(0, 0, 260, 300);
-      g.setTransform(95, 0, 0, 95, 130, 250);
-      const facing = [Math.PI / 2, 0, Math.PI, -Math.PI / 2][Math.floor(t / 2) % 4];
-      try { drawCharacter(g, L, { facing, walk: t * 8, moving: Math.floor(t / 2) % 4 !== 0, time: t, state: 'idle' }); } catch { /* ignore */ }
-      raf = requestAnimationFrame(tick);
+    applyLook(L, race);
+    let preview = null;
+    try { preview = createPreview(previewBox, L, { game: ui.game }); } catch (e) { console.warn('3D preview unavailable', e); }
+    previewCleanup = () => { preview?.dispose(); preview = null; };
+
+    const TABS = [['face', 'Face'], ['hair', 'Hair'], ['body', 'Body'], ['clothes', 'Clothes']];
+    const renderTabs = () => {
+      clear(tabsEl);
+      for (const [id, name] of TABS) tabsEl.appendChild(h('button' + (state.tab === id ? '.on' : ''), { on: { click: () => { state.tab = id; renderTabs(); renderOpts(); } } }, name));
     };
-    raf = requestAnimationFrame(tick);
+    const skinnable = ['human', 'longarm', 'longleg', 'three_eye', 'buccaneer', 'skypiean', 'lunarian'].includes(race);
+    const renderOpts = () => {
+      clear(optsEl);
+      const tab = state.tab;
+      if (tab === 'face') {
+        add(optsEl,
+          row('Eyes', opts('eyeShape', ['round', 'sharp', 'soft', 'fish'], ['Round', 'Sharp', 'Gentle', 'Fish'])),
+          row('Eye colour', swatch('eyeColor', ['#222222', '#3b2a1a', '#6d4c41', '#1e3799', '#0984e3', '#00a8a8', '#27ae60', '#6c5ce7', '#8e44ad', '#c0392b', '#e1b12c', '#b2bec3'])),
+          row('Mouth', chips(L.grin ? 'grin' : L.mouth || 'smile', ['smile', 'flat', 'grin'], ['Smile', 'Calm', 'Big grin'], (v) => { L.grin = v === 'grin'; L.mouth = v === 'grin' ? undefined : v; })),
+          row('Nose', chips(L.nose === 'long' ? 'long' : 'normal', ['normal', 'long'], ['Normal', 'Long'], (v) => { L.nose = v === 'long' ? 'long' : undefined; })),
+          row('Teeth', chips(L.sharpTeeth ? 'sharp' : 'normal', ['normal', 'sharp'], ['Normal', 'Sharp'], (v) => { L.sharpTeeth = v === 'sharp'; })),
+          row('Scar', chips(L.scarEye ? 'eye' : 'none', ['none', 'eye'], ['None', 'Across the eye'], (v) => { L.scarEye = v === 'eye'; })),
+        );
+      } else if (tab === 'hair') {
+        add(optsEl,
+          row('Style', opts('hair', ['short', 'spiky', 'long', 'ponytail', 'buzz', 'curly', 'afro', 'topknot', 'mohawk', 'bald'], ['Short', 'Spiky', 'Long', 'Ponytail', 'Buzz', 'Curly', 'Afro', 'Topknot', 'Mohawk', 'Bald'])),
+          race !== 'mink' ? row('Colour', swatch('hairColor', ['#1e1e1e', '#3b2a1a', '#6b4423', '#c69c6d', '#f2d16b', '#e67e22', '#c0392b', '#e84393', '#8e44ad', '#2980b9', '#2ecc71', '#dfe6e9'])) : h('p.muted', 'Minks grow fur of their kind.'),
+        );
+      } else if (tab === 'body') {
+        const build = h('input.build-slider', { type: 'range', min: 0, max: 1, step: 0.05, value: L.build ?? 0.5, on: { input: (e) => { L.build = Number(e.target.value); applyLook(L, race); preview?.setLook(L); } } });
+        add(optsEl,
+          row('Build', h('div.build-row', h('span.muted', 'Thin'), build, h('span.muted', 'Wide'))),
+          h('p.muted', { style: { margin: '0 0 8px', fontSize: '12px' } }, 'Your height is set by your race. ' + (HEIGHT_NOTE[race] || '')),
+          skinnable ? row('Skin', swatch('skin', ['#fbe3cf', '#f9dcc4', '#f1c9a0', '#e0ac7e', '#c68642', '#a0643a', '#7a4a2a', '#5c3a21'])) : null,
+          race === 'mink' ? row('Mink', opts('kind', MINK_KINDS.map((k) => k.name))) : null,
+          race === 'fishman' ? row('Fish-Man kind', opts('kind', FISHMAN_KINDS.map((k) => k.name))) : null,
+        );
+      } else {
+        add(optsEl,
+          row('Shirt', swatch('top', ['#d63031', '#0984e3', '#00b894', '#fdcb6e', '#e17055', '#6c5ce7', '#2d3436', '#dfe6e9', '#e84393', '#00cec9', '#a0522d', '#ffffff'])),
+          row('Shirt open', opts('openShirt', [false, true], ['Closed', 'Open'])),
+          row('Trousers', swatch('bottom', ['#2d3436', '#1e3799', '#3b3b98', '#6d4c41', '#636e72', '#0a3d62', '#b8860b', '#e1b12c', '#f5f6fa'])),
+          row('Shoes', swatch('shoes', ['#3b2a1a', '#2d3436', '#8d6e4a', '#c8a878', '#c0392b', '#f5f6fa'])),
+        );
+      }
+    };
+    function changed() {
+      applyLook(L, race);
+      preview?.setLook(L);
+      renderOpts();
+    }
+    if (!state.tab) state.tab = 'face';
+    renderTabs();
+    renderOpts();
   }
 
   stepRoll(true);
@@ -370,9 +427,8 @@ export function wantedPoster(char) {
   const g = cv.getContext('2d');
   g.fillStyle = '#e8d5a8'; g.fillRect(0, 0, 240, 200);
   g.fillStyle = '#d4bd8a'; for (let i = 0; i < 40; i++) g.fillRect((i * 53) % 240, (i * 37) % 200, 3, 3);
-  g.setTransform(110, 0, 0, 110, 120, 235);
-  try { drawCharacter(g, char.look, { facing: Math.PI / 2, moving: false, time: 1, state: 'idle', action: null }); } catch { /* ignore */ }
-  g.setTransform(1, 0, 0, 1, 0, 0);
+  const img = char.look ? renderPortrait(char.look, { w: 240, h: 200, view: 'bust' }) : null;
+  if (img) g.drawImage(img, 0, 0, 240, 200);
   g.globalCompositeOperation = 'multiply';
   g.fillStyle = '#d9c28f'; g.fillRect(0, 0, 240, 200);
   g.globalCompositeOperation = 'source-over';
