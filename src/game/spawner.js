@@ -102,7 +102,7 @@ export class Spawner {
   freeSpot(x, y) {
     const w = this.game.world;
     const t = w.type(x, y - 0.1);
-    return WALKABLE[t] && !IS_LIQUID[t] && !w.isBlocked(x, y - 0.1) && !w.isBlocked(x, y - 0.35);
+    return WALKABLE[t] && !IS_LIQUID[t] && !w.isBlocked(x, y - 0.1) && !w.isBlocked(x, y - 0.35) && !w.hitsProp(x, y, 0.45);
   }
 
   /** Find a walkable point near (x, y). */

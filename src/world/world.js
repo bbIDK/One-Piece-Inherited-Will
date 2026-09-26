@@ -13,6 +13,8 @@ export class World {
     // RGBA per tile: type, elevation, climate, variant
     this.data = new Uint8Array(width * height * 4);
     this.blocked = new Uint8Array(width * height); // objects occupying tiles
+    this.colliders = new Map(); // 4 m cell → small props' colliders (objects.js COLLIDE)
+    this.colW = Math.ceil(width / 4);
     this.dist = new Uint8Array(width * height); // encoded signed distance
     this.objects = null; // ObjectIndex
     this.islands = []; // generated island records
@@ -96,6 +98,30 @@ export class World {
     if (!this.inBounds(Math.floor(x), Math.floor(y))) return true;
     return this.blocked[this.idx(x, y)] !== 0;
   }
+  colKey(cx, cy) {
+    if (this.wrap) cx = ((cx % this.colW) + this.colW) % this.colW;
+    return cy * this.colW + cx;
+  }
+  /** Does a circle of radius r at (x, y) overlap a small prop (lamp, barrel, tree trunk...)? */
+  hitsProp(x, y, r) {
+    if (!this.colliders.size) return false;
+    for (let cy = Math.floor((y - r) / 4); cy <= Math.floor((y + r) / 4); cy++) {
+      for (let cx = Math.floor((x - r) / 4); cx <= Math.floor((x + r) / 4); cx++) {
+        const list = this.colliders.get(this.colKey(cx, cy));
+        if (!list) continue;
+        for (const c of list) {
+          const dx = this.dx(c.x, x), dy = y - c.y;
+          if (c.r !== undefined) { const rr = c.r + r; if (dx * dx + dy * dy < rr * rr) return true; }
+          else {
+            const qx = Math.max(Math.abs(dx) - c.hw, 0), qy = Math.max(Math.abs(dy) - c.hd, 0);
+            if (qx * qx + qy * qy < r * r) return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   /** Can a character stand here on foot? */
   walkable(x, y) {
     const t = this.type(x, y);

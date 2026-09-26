@@ -449,7 +449,7 @@ function populateVegetation(world, rng, x0, y0, LW, LH, L, li, kinds, density, d
       if (!L[li(i, j)]) continue;
       const x = x0 + i, y = y0 + j;
       const t = world.type(x, y);
-      if (world.isBlocked(x, y) || IS_LIQUID[t] || !WALKABLE[t]) continue;
+      if (world.isBlocked(x, y) || IS_LIQUID[t] || !WALKABLE[t] || world.hitsProp(x + 0.5, y + 0.5, 1.1)) continue;
       let p = density;
       let kindList = kinds;
       if (forestTypes.has(t)) {
@@ -470,7 +470,7 @@ function populateVegetation(world, rng, x0, y0, LW, LH, L, li, kinds, density, d
       if (world.elev(x, y) > 200) continue;
       if (rng.next() > p) continue;
       // spacing: skip if a neighbour already has a tree
-      if (world.isBlocked(x - 1, y) || world.isBlocked(x, y - 1) || world.isBlocked(x + 1, y) || world.isBlocked(x, y + 1)) {
+      if (world.hitsProp(x + 0.5, y + 1, 1.2) || world.isBlocked(x - 1, y) || world.isBlocked(x, y - 1) || world.isBlocked(x + 1, y) || world.isBlocked(x, y + 1)) {
         if (rng.next() < 0.7) continue;
       }
       const kind = rng.pick(kindList);

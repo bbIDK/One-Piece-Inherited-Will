@@ -81,7 +81,7 @@ export function findShore(w, x, y, r) {
       if (d > r || d >= bd) continue;
       const tx = x + dx, ty = y + dy;
       const t = w.type(tx, ty);
-      if (!WALKABLE[t] || w.isBlocked(tx, ty)) continue;
+      if (!WALKABLE[t] || w.isBlocked(tx, ty) || w.hitsProp(tx, ty, 0.4)) continue;
       // need a little standing room
       if (!WALKABLE[w.type(tx, ty - 0.4)] || w.isBlocked(tx, ty - 0.4)) continue;
       bd = d; best = { x: Math.floor(tx) + 0.5, y: Math.floor(ty) + 0.8 };

@@ -166,7 +166,7 @@ export function generateTown(world, town, rng, noise) {
   // props along streets
   if (S.lamps) {
     for (const ry of rows) for (let x = x0 + 2; x < x1 - 1; x += 7) {
-      if (okLand(x, ry + 2) && !world.isBlocked(x, ry + 2) && Math.abs(x - mainX) > 2) {
+      if (okLand(x, ry + 2) && !world.isBlocked(x, ry + 2) && !world.hitsProp(x + 0.5, ry + 3, 0.9) && Math.abs(x - mainX) > 2) {
         placeObject(world, { kind: S.lantern ? 'lantern' : 'lamp', x: x + 0.5, y: ry + 3, block: true, light: true });
       }
     }
@@ -175,7 +175,7 @@ export function generateTown(world, town, rng, noise) {
   for (const b of buildings) {
     if (rng.next() < 0.4) {
       const px = b.x + (b.fw / 2 + 0.6) * (rng.next() < 0.5 ? -1 : 1), py = b.y - 0.2;
-      if (okLand(px, py - 0.5) && !world.isBlocked(px, py - 0.5)) placeObject(world, { kind: rng.pick(propKinds), x: px, y: py, block: true, v: rng.int(0, 3) });
+      if (okLand(px, py - 0.5) && !world.isBlocked(px, py - 0.5) && !world.hitsProp(px, py, 0.9)) placeObject(world, { kind: rng.pick(propKinds), x: px, y: py, block: true, v: rng.int(0, 3) });
     }
   }
   if (S.fences) {
@@ -192,7 +192,7 @@ export function generateTown(world, town, rng, noise) {
     for (let k = 0; k < 4; k++) {
       const a = (k / 4) * Math.PI * 2 + 0.4;
       const px = plaza.x + Math.cos(a) * (plazaR + 1.5), py = plaza.y + Math.sin(a) * (plazaR + 1.2);
-      if (okLand(px, py - 0.5) && !world.isBlocked(px, py - 0.5)) placeObject(world, { kind: 'stall', x: px, y: py, block: true, v: rng.int(0, 5) });
+      if (okLand(px, py - 0.5) && !world.isBlocked(px, py - 0.5) && !world.hitsProp(px, py, 1.6)) placeObject(world, { kind: 'stall', x: px, y: py, block: true, v: rng.int(0, 5) });
     }
   }
 

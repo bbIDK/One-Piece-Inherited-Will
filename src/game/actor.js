@@ -529,9 +529,12 @@ export class Actor extends Entity {
     if (this.fruit && !this.inWater) return false; // Devil Fruit users won't walk into the sea
     return this.swimmer !== false;
   }
+  /** The body is a circle around (x, y) (the 3D model stands centred on it). */
   canOccupy(w, x, y) {
-    const r = this.r;
-    return this.passable(w, x - r, y - 0.05) && this.passable(w, x + r, y - 0.05) && this.passable(w, x - r, y - 0.32) && this.passable(w, x + r, y - 0.32);
+    const r = this.r, e = r * 0.85;
+    if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
+    if (!this.passable(w, x - r, y) || !this.passable(w, x + r, y) || !this.passable(w, x, y - r) || !this.passable(w, x, y + r)) return false;
+    return !w.hitsProp(x, y, r * 0.9);
   }
 
   updateMovement(dt, game, knocked) {
