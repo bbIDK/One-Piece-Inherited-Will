@@ -114,4 +114,30 @@ export const scenarios = {
       await snap('crew-faces');
     },
   },
+  // first-person hands: idle, a jab, a block (Foosha's plaza at noon)
+  vmquick: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human'));
+      await page.evaluate(() => {
+        const g = window.OP.game, w = g.world;
+        const t = w.islands.find((i) => i.id === 'dawn_island').towns[0];
+        window.OP.teleport(t.plaza.x, t.plaza.y + 10.5);
+        g.env.clock = 11.5;
+        const v = g.view3d; v.rig.yaw = -Math.PI / 2; v.rig.pitch = -0.12;
+        g.player.stamina = 999;
+      });
+      for (let i = 0; i < 8; i++) { await step(page, 0.1); await frames(page, 2); }
+      await snap('vm-idle');
+      await page.evaluate(() => { const g = window.OP.game; g.player.tryM1(g); });
+      await step(page, 0.08); await frames(page, 2);
+      await snap('vm-jab');
+      await step(page, 0.8);
+      await page.evaluate(() => { window.OP.key('F', true); });
+      await step(page, 0.2); await frames(page, 2);
+      await snap('vm-block');
+      await page.evaluate(() => { window.OP.key('F', false); });
+    },
+  },
 };

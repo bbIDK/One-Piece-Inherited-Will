@@ -44,7 +44,7 @@ class Viewmodel {
     this.lastActT = -1;
     this.cleared = -1;
     this.frame = 0;
-    this.outlineMat = outlineMaterial(0.0036, undefined, { fog: false });
+    this.outlineMat = outlineMaterial(0.0022, 0x3a2418, { fog: false });
     this.outlineMat.transparent = true;
     this.weaponMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), transparent: true, fog: false });
   }
@@ -106,6 +106,12 @@ class Viewmodel {
         hF: [0.22 - sw * (sprint ? 0.2 : 0.04), 0.07 + (sprint ? Math.max(0, sw) * 0.08 : 0)], hB: [0.2 + sw * (sprint ? 0.2 : 0.04), 0.09 + (sprint ? Math.max(0, -sw) * 0.08 : 0)],
         eF: 1, eB: 1, hand: P.hand === 'fist' ? 'fist' : P.hand, handB: P.handB,
       };
+    }
+    // attacks aim at the crosshair: an extending hand rises toward eye level
+    // (the shoulders sit well below the eye) and swings in toward the centre
+    if (A) {
+      const lift = (h) => (h ? [h[0], h[1] - 0.17 * clamp(h[0] / 0.43, 0, 1)] : h);
+      PP = { ...PP, hF: lift(PP.hF), hB: lift(PP.hB) };
     }
     // the body lean mostly stays out of first person
     o.leanAdd = -(PP.l || 0) * 0.55;

@@ -603,6 +603,11 @@ function hands(b, H, s, col, Bk, part, q) {
       b.add(tcap(0.0115 * k, 0.0105 * k, 0.034 * k * len, 8, 2), mul(M(0.012 * k, -0.074 * k, z), M(0, 0, 0, 0, 0, -Math.PI / 2 - 0.35)), f % 2 ? col : dark, fist, part);
     }
     b.add(tcap(0.012 * k, 0.011 * k, 0.045 * k, 8, 2), mul(M(-0.02 * k, -0.045 * k, th * 0.032 * k), M(0, 0, 0, th * 1.2, 0, -0.9)), col, fist, part);
+    // knuckles along the back of the fist
+    for (let f = 0; f < 4; f++) {
+      const z = (f - 1.5) * 0.0205 * k;
+      b.add(Prim.sphere(8, 6), M(-0.006 * k, -0.078 * k, z, 0, 0, 0, S(0.012, 0.011, 0.0105)), shade(col, 0.05), fist, part);
+    }
     // open palm: plate, four fingers, thumb out
     b.add(Prim.rbox(0.4, 10, 8), M(0, -0.045 * k, 0, 0, 0, 0, S(0.017, 0.048, 0.044)), col, palm, part);
     for (let f = 0; f < 4; f++) {

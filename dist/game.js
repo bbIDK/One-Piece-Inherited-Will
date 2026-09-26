@@ -55927,6 +55927,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         b.add(tcap(0.0115 * k, 0.0105 * k, 0.034 * k * len, 8, 2), mul(M(0.012 * k, -0.074 * k, z), M(0, 0, 0, 0, 0, -Math.PI / 2 - 0.35)), f % 2 ? col : dark, fist, part4);
       }
       b.add(tcap(0.012 * k, 0.011 * k, 0.045 * k, 8, 2), mul(M(-0.02 * k, -0.045 * k, th * 0.032 * k), M(0, 0, 0, th * 1.2, 0, -0.9)), col, fist, part4);
+      for (let f = 0; f < 4; f++) {
+        const z = (f - 1.5) * 0.0205 * k;
+        b.add(Prim.sphere(8, 6), M(-6e-3 * k, -0.078 * k, z, 0, 0, 0, S3(0.012, 0.011, 0.0105)), shade(col, 0.05), fist, part4);
+      }
       b.add(Prim.rbox(0.4, 10, 8), M(0, -0.045 * k, 0, 0, 0, 0, S3(0.017, 0.048, 0.044)), col, palm, part4);
       for (let f = 0; f < 4; f++) {
         const z = (f - 1.5) * 0.021 * k;
@@ -57644,7 +57648,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lastActT = -1;
       this.cleared = -1;
       this.frame = 0;
-      this.outlineMat = outlineMaterial2(36e-4, void 0, { fog: false });
+      this.outlineMat = outlineMaterial2(22e-4, 3810328, { fog: false });
       this.outlineMat.transparent = true;
       this.weaponMat = new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), transparent: true, fog: false });
     }
@@ -57715,6 +57719,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           hand: P3.hand === "fist" ? "fist" : P3.hand,
           handB: P3.handB
         };
+      }
+      if (A) {
+        const lift = (h2) => h2 ? [h2[0], h2[1] - 0.17 * clamp4(h2[0] / 0.43, 0, 1)] : h2;
+        PP = { ...PP, hF: lift(PP.hF), hB: lift(PP.hB) };
       }
       o.leanAdd = -(PP.l || 0) * 0.55;
       o.lift = 0;
