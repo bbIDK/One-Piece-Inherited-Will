@@ -41,4 +41,27 @@ export const scenarios = {
       await snap('post-dusk');
     },
   },
+  gfxisland: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human'));
+      const id = args.island || 'dawn_island';
+      await page.evaluate((id) => {
+        const g = window.OP.game;
+        const isl = g.world.islands.find((i) => i.id === id);
+        const t = isl.towns[0];
+        window.OP.teleport(t ? t.plaza.x : isl.x, t ? t.plaza.y + 3 : isl.y);
+        g.env.clock = 10.5;
+      }, id);
+      for (let i = 0; i < 14; i++) { await step(page, 0.1); await frames(page, 2); }
+      for (const [yaw, name] of [[0, 'e'], [Math.PI / 2, 's'], [Math.PI, 'w'], [-Math.PI / 2, 'n']]) {
+        await page.evaluate((yaw) => { const v = window.OP.game.view3d; v.rig.yaw = (yaw + Math.PI * 2) % (Math.PI * 2); v.rig.pitch = -0.04; }, yaw);
+        await step(page, 0.1); await frames(page, 3);
+        await snap(id + '-' + name);
+      }
+      const perf = await page.evaluate(() => { const v = window.OP.game.view3d; const i = v.renderer.info; return { calls: i.render.calls, tris: i.render.triangles, chunks: v.terrain.live.size }; });
+      console.log('perf', JSON.stringify(perf));
+    },
+  },
 };

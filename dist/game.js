@@ -34245,7 +34245,8 @@ void main() {
       this.group = new Group();
       this.group.name = "terrain";
       scene.add(this.group);
-      this.material = new MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient() });
+      this.material = terrainMaterial();
+      this.uOrigin = this.material.userData.uOrigin;
       this.deckMat = new MeshToonMaterial({ color: 10119740, gradientMap: toonGradient() });
       this.postMat = new MeshToonMaterial({ color: 6111280, gradientMap: toonGradient() });
       this.wallMat = new MeshToonMaterial({ color: 9076592, gradientMap: toonGradient() });
@@ -34315,6 +34316,7 @@ void main() {
     }
     /** Stream chunks around (ox, oy) and place them relative to that origin. */
     update(ox, oy) {
+      if (this.uOrigin) this.uOrigin.value.set(this.world ? this.world.wx(ox) : ox, oy);
       const w = this.world;
       if (!w) return;
       const ccx = Math.floor(w.wx(ox) / CHUNK), ccy = Math.floor(oy / CHUNK);
@@ -34484,6 +34486,69 @@ void main() {
       }
     }
   };
+  function detailTexture() {
+    const N3 = 256;
+    const data = new Uint8Array(N3 * N3 * 4);
+    const lattice = (n, seed) => {
+      const g = new Float32Array(n * n);
+      let h2 = seed;
+      for (let i = 0; i < g.length; i++) {
+        h2 = h2 * 1103515245 + 12345 & 2147483647;
+        g[i] = h2 % 1e3 / 1e3;
+      }
+      return (x, y) => {
+        const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
+        const at5 = (i, j) => g[(j % n + n) % n * n + (i % n + n) % n];
+        const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+        const a = at5(xi, yi) + (at5(xi + 1, yi) - at5(xi, yi)) * sx;
+        const b = at5(xi, yi + 1) + (at5(xi + 1, yi + 1) - at5(xi, yi + 1)) * sx;
+        return a + (b - a) * sy;
+      };
+    };
+    const big = lattice(8, 7), mid = lattice(16, 31), fine = lattice(64, 97), finer = lattice(128, 151);
+    for (let y = 0; y < N3; y++) {
+      for (let x = 0; x < N3; x++) {
+        const u = x / N3, v = y / N3;
+        const r = big(u * 8, v * 8) * 0.65 + mid(u * 16, v * 16) * 0.35;
+        const g = fine(u * 64, v * 64) * 0.6 + finer(u * 128, v * 128) * 0.4;
+        const o = (y * N3 + x) * 4;
+        data[o] = r * 255;
+        data[o + 1] = g * 255;
+        data[o + 2] = 0;
+        data[o + 3] = 255;
+      }
+    }
+    const tex2 = new DataTexture(data, N3, N3, RGBAFormat);
+    tex2.wrapS = tex2.wrapT = RepeatWrapping;
+    tex2.magFilter = LinearFilter;
+    tex2.minFilter = LinearMipmapLinearFilter;
+    tex2.generateMipmaps = true;
+    tex2.anisotropy = 4;
+    tex2.needsUpdate = true;
+    return tex2;
+  }
+  function terrainMaterial() {
+    const m = new MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient() });
+    const uOrigin = { value: new Vector2() };
+    const uDetail = { value: detailTexture() };
+    m.userData.uOrigin = uOrigin;
+    m.onBeforeCompile = (shader) => {
+      Object.assign(shader.uniforms, FOG, { uOrigin, uDetail });
+      shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nuniform vec2 uOrigin;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvec4 tWorld = modelMatrix * vec4(transformed, 1.0);\nvTerrainXZ = tWorld.xz + uOrigin;\nvTerrainUp = normalize(objectNormal).y;");
+      shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nuniform sampler2D uDetail;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;").replace("#include <color_fragment>", `#include <color_fragment>
+        {
+          float broad = texture2D(uDetail, vTerrainXZ / 64.0).r;
+          float grain = texture2D(uDetail, vTerrainXZ / 6.0).g;
+          diffuseColor.rgb *= 0.86 + broad * 0.2 + (grain - 0.5) * 0.12;
+          // steep ground shows bare rock (not on beaches and water edges, which are flat)
+          float steep = smoothstep(0.62, 0.42, vTerrainUp);
+          vec3 rock = vec3(0.47, 0.43, 0.39) * (0.85 + grain * 0.3);
+          diffuseColor.rgb = mix(diffuseColor.rgb, rock * (0.7 + 0.3 * diffuseColor.rgb / max(max(diffuseColor.r, diffuseColor.g), 0.2)), steep * 0.75);
+        }`);
+    };
+    m.customProgramCacheKey = () => "terrain-detail";
+    return m;
+  }
   function boxes(list, sx, sy, sz, cy, mat, inset = 0) {
     const n = list.length / 2;
     const base2 = new BoxGeometry(sx, sy, sz);
