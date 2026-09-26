@@ -413,6 +413,19 @@ function buildDock(world, from, dir, len, rec, dd) {
     }
     endX = px; endY = py;
   }
+  // a stone quay at the foot of the pier, level with its deck, so it runs into the land
+  const half = Math.floor(width / 2) + 1;
+  for (let s = -3; s <= 1; s++) {
+    for (let w = -half; w <= half; w++) {
+      const px = sx + vx * s, py = sy + vy * s;
+      const x = horizontal ? px : px + w, y = horizontal ? py + w : py;
+      if (world.isLiquid(x, y) || world.isOverlay(x, y) || world.isBlocked(x, y)) continue;
+      if (Math.abs(w) === half && s < -1) continue; // round the landward corners off
+      const t = world.type(x, y);
+      if (t !== T.WALL && t !== T.CLIFF && t !== T.MOUNTAIN) world.setTile(x, y, T.STONE);
+      world.markQuay(x, y);
+    }
+  }
   // mooring point: open water past the end of the pier, offset to one side
   const side = horizontal ? [0, 2.5] : [2.5, 0];
   const moor = { x: world.wx(endX + vx * 2.5 + side[0]), y: endY + vy * 2.5 + side[1] };

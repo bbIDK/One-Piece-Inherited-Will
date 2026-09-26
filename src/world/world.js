@@ -17,6 +17,7 @@ export class World {
     this.colW = Math.ceil(width / 4);
     this.floors = new Map(); // 4 m cell → raised floors (rings, stages) over the ground
     this.dist = new Uint8Array(width * height); // encoded signed distance
+    this.quays = new Set(); // tiles of the stone quays at the foot of piers (level with the deck)
     this.objects = null; // ObjectIndex
     this.islands = []; // generated island records
     this.fogW = Math.ceil(width / 8);
@@ -63,6 +64,9 @@ export class World {
     if (!this.inBounds(Math.floor(x), Math.floor(y))) return 0;
     return this.data[(this.idx(x, y) << 2) + 1];
   }
+  markQuay(x, y) { if (this.inBounds(Math.floor(x), Math.floor(y))) this.quays.add(this.idx(x, y)); }
+  isQuay(x, y) { return this.quays.size > 0 && this.inBounds(Math.floor(x), Math.floor(y)) && this.quays.has(this.idx(x, y)); }
+
   climate(x, y) {
     if (!this.inBounds(Math.floor(x), Math.floor(y))) return 0;
     return this.data[(this.idx(x, y) << 2) + 2];

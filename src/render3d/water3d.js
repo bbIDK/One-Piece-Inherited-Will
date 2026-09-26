@@ -36,7 +36,8 @@ const VERT = /* glsl */`
     // calmer in the shallows (the sea floor rises), fading out with distance
     vec4 m = texture2D(uMap, P / uSize);
     float sd = (m.r * 255.0 - 128.0) * 0.25;
-    float kind = floor(m.g * 255.0 + 0.5);
+    // (the tile type is read at the tile's centre: blending types makes phantom liquids)
+    float kind = floor(texture2D(uMap, (floor(P) + 0.5) / uSize).g * 255.0 + 0.5);
     float liquid = kind < 2.5 || kind == 5.0 || kind == 7.0 ? 1.0 : kind == 3.0 ? 0.5 : 0.15;
     float shore = mix(0.35, 1.0, smoothstep(0.5, -7.0, sd));
     float fade = 1.0 - smoothstep(70.0, 190.0, length(wp.xz - cameraPosition.xz));
@@ -121,7 +122,7 @@ const FRAG = /* glsl */`
     vec2 uv = vec2(vWorld.x / uSize.x, vWorld.z / uSize.y);
     vec4 m = texture2D(uMap, uv);
     float sd = (m.r * 255.0 - 128.0) * 0.25;   // + land, - water (tiles)
-    float kind = floor(m.g * 255.0 + 0.5);
+    float kind = floor(texture2D(uMap, (floor(vWorld.xz) + 0.5) / uSize).g * 255.0 + 0.5);
     float depth = clamp(-sd, 0.0, 30.0);
     bool water = kind < 2.5 || kind == 5.0 || kind == 7.0;
 

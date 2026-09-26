@@ -680,4 +680,36 @@ export const scenarios = {
       console.log('perf', JSON.stringify(perf));
     },
   },
+
+  // where a dock meets the shore
+  dock: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.env.clock = 11; g.settings.view = 'third'; g.applySettings(); document.querySelector('.look-hint')?.remove(); });
+      for (let i = 0; i < 6; i++) await step(page, 0.1);
+      const islId = args.island || null;
+      const dk = await page.evaluate((islId) => {
+        const g = window.OP.game, w = g.world, p = g.player;
+        const isl = islId ? w.islands.find((i) => i.id === islId) : w.islands.filter((i) => i.docks?.length).sort((a, b) => w.distance(a.x, a.y, p.x, p.y) - w.distance(b.x, b.y, p.x, p.y))[0];
+        const d = isl.docks[0];
+        return { isl: isl.name, ...d };
+      }, islId);
+      console.log('dock', JSON.stringify(dk));
+      const view = async (name, at, yaw, pitch, dist = 5) => {
+        await page.evaluate(([at, yaw, pitch, dist]) => { const g = window.OP.game; window.OP.teleport(at.x, at.y); g.view3d.rig.yaw = yaw; g.view3d.rig.pitch = pitch; g.view3d.rig.tp.dist = dist; }, [at, yaw, pitch, dist]);
+        for (let i = 0; i < 8; i++) { await step(page, 0.1); await frames(page, 1); }
+        await snap(name);
+      };
+      const out = Math.atan2(dk.dirY, dk.dirX);
+      // standing on the shore at the foot of the pier, looking out along it
+      await view('shore-end', { x: dk.land.x + dk.dirX * 1.5, y: dk.land.y + dk.dirY * 1.5 }, out, -0.25, 5);
+      // from the side, where the planks meet the land
+      const side = { x: dk.land.x + dk.dirX * 3 + -dk.dirY * 0.2, y: dk.land.y + dk.dirY * 3 + dk.dirX * 0.2 };
+      await view('side', side, out + Math.PI / 2, -0.15, 7);
+      await view('side-2', side, out - Math.PI / 2, -0.15, 7);
+      // looking back at the land from the end of the pier
+      await view('from-end', { x: dk.end.x, y: dk.end.y }, out + Math.PI, -0.2, 6);
+    },
+  },
 };

@@ -88,6 +88,8 @@ function seaFloor(world, cx, cy, sd) {
  * corner and ramps down to the waterline using the smooth coastline distance.
  */
 export function cornerHeight(world, cx, cy) {
+  // the quay at the foot of a pier is built up level with the deck
+  if (world.quays?.size && (world.isQuay(cx, cy) || world.isQuay(cx - 1, cy) || world.isQuay(cx, cy - 1) || world.isQuay(cx - 1, cy - 1))) return DECK_Y - 0.03;
   let sum = 0, n = 0, walls = 0, tall = 0;
   for (let j = -1; j <= 0; j++) {
     for (let i = -1; i <= 0; i++) {

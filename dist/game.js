@@ -34272,6 +34272,7 @@ void main() {
     return h2;
   }
   function cornerHeight(world, cx, cy) {
+    if (world.quays?.size && (world.isQuay(cx, cy) || world.isQuay(cx - 1, cy) || world.isQuay(cx, cy - 1) || world.isQuay(cx - 1, cy - 1))) return DECK_Y - 0.03;
     let sum = 0, n = 0, walls = 0, tall = 0;
     for (let j = -1; j <= 0; j++) {
       for (let i = -1; i <= 0; i++) {
@@ -35380,7 +35381,8 @@ void main() {
     // calmer in the shallows (the sea floor rises), fading out with distance
     vec4 m = texture2D(uMap, P / uSize);
     float sd = (m.r * 255.0 - 128.0) * 0.25;
-    float kind = floor(m.g * 255.0 + 0.5);
+    // (the tile type is read at the tile's centre: blending types makes phantom liquids)
+    float kind = floor(texture2D(uMap, (floor(P) + 0.5) / uSize).g * 255.0 + 0.5);
     float liquid = kind < 2.5 || kind == 5.0 || kind == 7.0 ? 1.0 : kind == 3.0 ? 0.5 : 0.15;
     float shore = mix(0.35, 1.0, smoothstep(0.5, -7.0, sd));
     float fade = 1.0 - smoothstep(70.0, 190.0, length(wp.xz - cameraPosition.xz));
@@ -35467,7 +35469,7 @@ void main() {
     vec2 uv = vec2(vWorld.x / uSize.x, vWorld.z / uSize.y);
     vec4 m = texture2D(uMap, uv);
     float sd = (m.r * 255.0 - 128.0) * 0.25;   // + land, - water (tiles)
-    float kind = floor(m.g * 255.0 + 0.5);
+    float kind = floor(texture2D(uMap, (floor(vWorld.xz) + 0.5) / uSize).g * 255.0 + 0.5);
     float depth = clamp(-sd, 0.0, 30.0);
     bool water = kind < 2.5 || kind == 5.0 || kind == 7.0;
 
@@ -63862,6 +63864,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.colW = Math.ceil(width / 4);
       this.floors = /* @__PURE__ */ new Map();
       this.dist = new Uint8Array(width * height);
+      this.quays = /* @__PURE__ */ new Set();
       this.objects = null;
       this.islands = [];
       this.fogW = Math.ceil(width / 8);
@@ -63908,6 +63911,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     elev(x, y) {
       if (!this.inBounds(Math.floor(x), Math.floor(y))) return 0;
       return this.data[(this.idx(x, y) << 2) + 1];
+    }
+    markQuay(x, y) {
+      if (this.inBounds(Math.floor(x), Math.floor(y))) this.quays.add(this.idx(x, y));
+    }
+    isQuay(x, y) {
+      return this.quays.size > 0 && this.inBounds(Math.floor(x), Math.floor(y)) && this.quays.has(this.idx(x, y));
     }
     climate(x, y) {
       if (!this.inBounds(Math.floor(x), Math.floor(y))) return 0;
@@ -65053,6 +65062,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       endX = px2;
       endY = py2;
+    }
+    const half2 = Math.floor(width / 2) + 1;
+    for (let s = -3; s <= 1; s++) {
+      for (let w = -half2; w <= half2; w++) {
+        const px2 = sx + vx * s, py2 = sy + vy * s;
+        const x = horizontal ? px2 : px2 + w, y = horizontal ? py2 + w : py2;
+        if (world.isLiquid(x, y) || world.isOverlay(x, y) || world.isBlocked(x, y)) continue;
+        if (Math.abs(w) === half2 && s < -1) continue;
+        const t = world.type(x, y);
+        if (t !== T.WALL && t !== T.CLIFF && t !== T.MOUNTAIN) world.setTile(x, y, T.STONE);
+        world.markQuay(x, y);
+      }
     }
     const side = horizontal ? [0, 2.5] : [2.5, 0];
     const moor = { x: world.wx(endX + vx * 2.5 + side[0]), y: endY + vy * 2.5 + side[1] };
