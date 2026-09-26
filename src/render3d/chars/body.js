@@ -122,20 +122,32 @@ function shapeOf(d, o) {
 
 // chest, abs and shoulder blades (mS scales them down under clothes)
 function frontBump(sh, s, z, mS) {
-  const Bk = sh.Bk;
+  const Bk = sh.Bk, cl = sh.cl;
   let b = 0;
-  if (sh.fem) {
-    for (const zc of [-0.06, 0.06]) {
-      const dz = (z - zc * Bk) / (0.066 * Bk), ds = (s - 0.665) * sh.cl / 0.068;
-      const r2 = dz * dz + ds * ds;
-      if (r2 < 1) b = Math.max(b, Math.pow(1 - r2, 0.6) * 0.046 * sh.bust);
+  // collarbones from the notch at the top of the breastbone out to the shoulders
+  if (s > 0.84) {
+    const zc = Math.abs(z), zEnd = (sh.fem ? 0.14 : 0.17) * Bk;
+    if (zc > 0.015 && zc < zEnd) {
+      const t = (zc - 0.015) / (zEnd - 0.015);
+      const ds = (s - (0.955 - t * 0.05)) * cl / 0.018;
+      if (ds > -1 && ds < 1) b += (1 - ds * ds) * (sh.fem ? 0.007 : 0.011) * (1 - t * 0.5);
     }
-    return b;
+    const dn = Math.sqrt((z / 0.024) ** 2 + ((s - 0.965) * cl / 0.018) ** 2);
+    if (dn < 1) b -= (1 - dn * dn) * 0.007;
+  }
+  if (sh.fem) {
+    let bust = 0;
+    for (const zc of [-0.06, 0.06]) {
+      const dz = (z - zc * Bk) / (0.066 * Bk), ds = (s - 0.665) * cl / 0.068;
+      const r2 = dz * dz + ds * ds;
+      if (r2 < 1) bust = Math.max(bust, Math.pow(1 - r2, 0.6) * 0.046 * sh.bust);
+    }
+    return b * mS + bust;
   }
   const m = sh.m;
   const pz = Math.abs(z) / (0.19 * Bk);
   const lobe = Math.max(0, 1 - ((pz - 0.4) / 0.52) ** 2);
-  b = sstep(0.55, 0.62, s) * (1 - sstep(0.8, 0.94, s)) * lobe * (0.012 + 0.024 * m);
+  b += sstep(0.55, 0.62, s) * (1 - sstep(0.8, 0.94, s)) * lobe * (0.012 + 0.024 * m);
   if (s > 0.1 && s < 0.53) {
     const az = Math.abs(z) / 0.075;
     if (az < 1) b += Math.sin(((s - 0.1) / 0.43 * 3 % 1) * Math.PI) * Math.sin(az * Math.PI) * 0.008 * m;
@@ -266,7 +278,7 @@ export function buildFigure(add, look, d, pal, q) {
 
   // ---- torso rows (s, top → bottom)
   const TR = cloth
-    ? [1.0, 0.955, 0.91, 0.86, 0.81, 0.765, 0.72, 0.68, 0.64, 0.6, 0.565, 0.5, 0.42, 0.33, 0.24, 0.14, 0.03, -0.1]
+    ? [1.0, 0.975, 0.955, 0.935, 0.915, 0.89, 0.86, 0.81, 0.765, 0.72, 0.68, 0.64, 0.6, 0.565, 0.5, 0.42, 0.33, 0.24, 0.14, 0.03, -0.1]
     : [1.0, 0.93, 0.82, 0.7, 0.58, 0.4, 0.2, -0.1];
   const tpt = (mS, off = 0) => (s, a) => torsoPt(sh, s, a, off, mS);
   const skinTorso = tpt(1);
@@ -305,7 +317,7 @@ export function buildFigure(add, look, d, pal, q) {
   }
   // the neck
   const nk = o.fem ? 0.04 : 0.05 * (1 + (d.Bk - 1) * 0.5);
-  add(Prim.cyl(Math.max(6, rs - 2), true), M(0, d.chestLen + d.neck * 0.5 - 0.01, 0, 0, 0, 0, [nk * 0.96, d.neck + 0.08, nk]), skin, B.chest);
+  add(neckGeo(nk, d.chestLen - 0.05, d.chestLen + d.neck + 0.035, o, cloth), M(), skin, B.chest);
 
   // ---- tops worn over the body
   const edge = (a) => (s) => a(s), rest = (a) => (s) => TAU - a(s);
@@ -441,6 +453,8 @@ export function buildFigure(add, look, d, pal, q) {
       add(limbSeg(fa, d.A2, rs, 2, { t0: 0.8, capBot: true }), M(), skin, Fb, part);
     }
     if (d.Am > 1.2) add(Prim.sphere(q.sph[0], q.sph[1]), M(0, -d.A2 * 0.5, 0, 0, 0, 0, fa(0.5) * 1.1), sl === 'long' || sl === 'wide' ? armCol : skin, Fb, part);
+    // the point of the elbow on bare arms
+    if (cloth && (sl === 'none' || sl === 'short')) add(Prim.sphere(q.sph[0], q.sph[1]), M(ua(1) * 0.55, -d.A1 * 0.985, 0, 0, 0, 0, [0.022 * d.Bk, 0.026 * d.Bk, 0.024 * d.Bk]), skin, Ub);
   }
 
   // ---- legs
@@ -486,6 +500,13 @@ export function buildFigure(add, look, d, pal, q) {
         if (cloth) add(torus(q), ringAt(-d.T2 * (t0 + 0.02), sn(t0) + (tuck ? 0.044 : 0.027), sn(t0) + (tuck ? 0.044 : 0.027), 0.03), shade(bc, -0.2), S, part);
       }
     }
+    // kneecaps and ankle bones where the leg is bare
+    if (cloth) {
+      const bareKnee = skirtPelvis ? o.bottom !== 'longskirt' || true : bot === 'shorts';
+      if (bareKnee) add(Prim.sphere(q.sph[0], q.sph[1]), M(sn(0) * 0.62, -0.012, 0, 0, 0, 0, [0.026 * d.Bk, 0.034 * d.Bk, 0.032 * d.Bk]), skin, S, part);
+      const bareAnkle = (skirtPelvis || bot === 'shorts' || bot === 'capri') && !boots && o.bottom !== 'longskirt';
+      if (bareAnkle) for (const [zz, yy] of [[1, 0.975], [-1, 0.955]]) add(Prim.sphere(q.sph[0], q.sph[1]), M(0.004, -d.T2 * yy, zz * sn(0.97) * 0.8, 0, 0, 0, 0.017 * d.Bk), skin, S, part);
+    }
     feet(add, o, pal, d, q, Ft, part);
   }
 
@@ -493,6 +514,39 @@ export function buildFigure(add, look, d, pal, q) {
   if (look.coat && TOP !== 'coat' || TOP === 'coat' && !look.top2 && look.coat) coat(add, sh, look.coat, TR, U, cloth, d, q);
   else if (TOP === 'coat') coatTail(add, sh, look.coat || pal.top, U, cloth, d, 0.03);
   return o;
+}
+
+/**
+ * The neck, from inside the collar up into the head: a little wider at the
+ * base, the two tendons running from behind the ears down to the notch
+ * between the collarbones, and an Adam's apple on men.
+ */
+function neckGeo(nk, y0, y1, o, cloth) {
+  const U = cloth ? 14 : 7, V = cloth ? 6 : 2;
+  const g = grid((u, v) => {
+    const a = -Math.PI + u * TAU, h = 1 - v; // h: 0 at the base, 1 at the top
+    const y = y0 + (y1 - y0) * h;
+    let r = nk * (1.1 - 0.12 * sstep(0, 0.5, h));
+    if (cloth) {
+      // tendons: behind the ears at the top, meeting at the front at the base
+      const ang = 0.4 + (1.75 - 0.4) * h;
+      const da = Math.abs(Math.abs(a) - ang) / 0.3;
+      if (da < 1) r += (1 - da * da) * nk * (o.fem ? 0.05 : 0.09) * sstep(0.05, 0.3, h) * (1 - sstep(0.85, 1, h));
+      if (!o.fem) {
+        const dx = Math.abs(a) / 0.3, dh = (h - 0.5) / 0.2;
+        if (dx < 1 && Math.abs(dh) < 1) r += (1 - dx * dx) * (1 - dh * dh) * nk * 0.16;
+      }
+    }
+    return [Math.cos(a) * r * 0.95, y, Math.sin(a) * r];
+  }, U, V);
+  // weld the seam at the back
+  const n = g.attributes.normal, W = U + 1;
+  for (let j = 0; j <= V; j++) {
+    const a = j * W, b = j * W + U;
+    const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b), l = Math.hypot(x, y, z) || 1;
+    n.setXYZ(a, x / l, y / l, z / l); n.setXYZ(b, x / l, y / l, z / l);
+  }
+  return g;
 }
 
 /** Shoulder straps (tank tops, crop tops, dresses) from a front neckline at s. */

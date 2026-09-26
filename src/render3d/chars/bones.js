@@ -41,6 +41,7 @@ export function dims(look) {
   return {
     Lg, Am, Bk, T1, T2, hA, hip0, chestLen, headR, A1, A2, neck, fem,
     hc: headR * 0.84,               // head centre above the neck top
+    hx: headR * 0.15,               // … and in front of it (the neck meets the skull behind the jaw)
     hipW: (fem ? 0.094 : 0.085) * Bk, // hip joints either side of the pelvis
     shY: chestLen - 0.07,           // shoulder joints below the top of the chest
     shW: fem ? 0.152 * Bk + 0.004 : 0.184 * Bk + 0.006,

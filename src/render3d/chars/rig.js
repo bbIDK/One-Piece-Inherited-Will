@@ -109,7 +109,7 @@ export class Rig {
     if (o.lookYaw) this.qHead.multiply(_qb.setFromAxisAngle(Y, o.lookYaw));
     if (o.headRoll) this.qHead.multiply(_qb.setFromAxisAngle(X, o.headRoll));
     this.pos[B.head].copy(this.neck); this.quat[B.head].copy(this.qHead);
-    this.headC.set(0, d.hc, 0).applyQuaternion(this.qHead).add(this.neck);
+    this.headC.set(d.hx || 0, d.hc, 0).applyQuaternion(this.qHead).add(this.neck);
 
     // arms
     const tiltA = o.tilt || 0;

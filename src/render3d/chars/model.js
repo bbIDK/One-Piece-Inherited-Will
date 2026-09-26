@@ -46,13 +46,13 @@ export class CharacterModel {
     this.group.add(this.mesh, this.outline);
     // attachments' rest offsets
     const d = this.d;
-    this.bones[B.hairTail].position.set(0, d.hc, 0);
+    this.bones[B.hairTail].position.set(d.hx, d.hc, 0);
     this.bones[B.tail].position.set(-0.13 * d.Bk, -0.06, 0);
     this.bones[B.wingR].position.set(-0.11 * d.Bk, d.chestLen * 0.8, 0.05);
     this.bones[B.wingL].position.set(-0.11 * d.Bk, d.chestLen * 0.8, -0.05);
     // face decal on the head
-    this.face = new THREE.Mesh(faceGeo(), undefined);
-    this.face.position.set(0, d.hc, 0);
+    this.face = new THREE.Mesh(faceGeo(look, this.lod === 0 ? 'near' : 'far'), undefined);
+    this.face.position.set(d.hx, d.hc, 0);
     this.face.scale.setScalar(d.headR);
     this.face.renderOrder = 1;
     this.bones[B.head].add(this.face);
@@ -60,7 +60,7 @@ export class CharacterModel {
     this.faceKey = '';
     if (this.body.bubble) {
       const bub = new THREE.Mesh(new THREE.SphereGeometry(d.headR * 1.85, 16, 12), new THREE.MeshBasicMaterial({ color: 0xc8ebff, transparent: true, opacity: 0.22, depthWrite: false }));
-      bub.position.set(0, d.hc + d.headR * 0.1, 0);
+      bub.position.set(d.hx, d.hc + d.headR * 0.1, 0);
       this.bones[B.head].add(bub);
       this.bubble = bub;
     }
@@ -81,6 +81,7 @@ export class CharacterModel {
     this.lod = lod;
     this.mesh.geometry = nb.geo;
     this.outline.geometry = nb.geo;
+    this.face.geometry = faceGeo(this.look, lod === 0 ? 'near' : 'far');
   }
 
   /** Swap the face texture for this frame's expression. */
@@ -164,7 +165,7 @@ export class CharacterModel {
       const hw = this.held[2];
       const m = P.m ?? 0.15;
       _v.set(0.18, -Math.sin(m) * 0.3 - 0.1, 1).normalize();
-      _v2.set(d.headR * 0.9, d.hc - d.headR * 0.5, -d.headR * 0.12);
+      _v2.set(d.hx + d.headR * 0.9, d.hc - d.headR * 0.55, -d.headR * 0.12);
       _v3.set(0, 1, 0);
       hw.place(_v2, _v, _v3);
       hw.group.position.addScaledVector(_v, -0.12);

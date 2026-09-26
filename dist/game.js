@@ -4293,9 +4293,9 @@ void main() {
     intersectsBox(box2) {
       return box2.max.x >= this.min.x && box2.min.x <= this.max.x && box2.max.y >= this.min.y && box2.min.y <= this.max.y && box2.max.z >= this.min.z && box2.min.z <= this.max.z;
     }
-    intersectsSphere(sphere) {
-      this.clampPoint(sphere.center, _vector$b);
-      return _vector$b.distanceToSquared(sphere.center) <= sphere.radius * sphere.radius;
+    intersectsSphere(sphere2) {
+      this.clampPoint(sphere2.center, _vector$b);
+      return _vector$b.distanceToSquared(sphere2.center) <= sphere2.radius * sphere2.radius;
     }
     intersectsPlane(plane2) {
       let min, max;
@@ -4485,9 +4485,9 @@ void main() {
       this.radius = Math.sqrt(maxRadiusSq);
       return this;
     }
-    copy(sphere) {
-      this.center.copy(sphere.center);
-      this.radius = sphere.radius;
+    copy(sphere2) {
+      this.center.copy(sphere2.center);
+      this.radius = sphere2.radius;
       return this;
     }
     isEmpty() {
@@ -4504,9 +4504,9 @@ void main() {
     distanceToPoint(point) {
       return point.distanceTo(this.center) - this.radius;
     }
-    intersectsSphere(sphere) {
-      const radiusSum = this.radius + sphere.radius;
-      return sphere.center.distanceToSquared(this.center) <= radiusSum * radiusSum;
+    intersectsSphere(sphere2) {
+      const radiusSum = this.radius + sphere2.radius;
+      return sphere2.center.distanceToSquared(this.center) <= radiusSum * radiusSum;
     }
     intersectsBox(box2) {
       return box2.intersectsSphere(this);
@@ -4557,25 +4557,25 @@ void main() {
       }
       return this;
     }
-    union(sphere) {
-      if (sphere.isEmpty()) {
+    union(sphere2) {
+      if (sphere2.isEmpty()) {
         return this;
       }
       if (this.isEmpty()) {
-        this.copy(sphere);
+        this.copy(sphere2);
         return this;
       }
-      if (this.center.equals(sphere.center) === true) {
-        this.radius = Math.max(this.radius, sphere.radius);
+      if (this.center.equals(sphere2.center) === true) {
+        this.radius = Math.max(this.radius, sphere2.radius);
       } else {
-        _v2$3.subVectors(sphere.center, this.center).setLength(sphere.radius);
-        this.expandByPoint(_v1$6.copy(sphere.center).add(_v2$3));
-        this.expandByPoint(_v1$6.copy(sphere.center).sub(_v2$3));
+        _v2$3.subVectors(sphere2.center, this.center).setLength(sphere2.radius);
+        this.expandByPoint(_v1$6.copy(sphere2.center).add(_v2$3));
+        this.expandByPoint(_v1$6.copy(sphere2.center).sub(_v2$3));
       }
       return this;
     }
-    equals(sphere) {
-      return sphere.center.equals(this.center) && sphere.radius === this.radius;
+    equals(sphere2) {
+      return sphere2.center.equals(this.center) && sphere2.radius === this.radius;
     }
     clone() {
       return new this.constructor().copy(this);
@@ -4693,11 +4693,11 @@ void main() {
       }
       return sqrDist;
     }
-    intersectSphere(sphere, target) {
-      _vector$a.subVectors(sphere.center, this.origin);
+    intersectSphere(sphere2, target) {
+      _vector$a.subVectors(sphere2.center, this.origin);
       const tca = _vector$a.dot(this.direction);
       const d2 = _vector$a.dot(_vector$a) - tca * tca;
-      const radius2 = sphere.radius * sphere.radius;
+      const radius2 = sphere2.radius * sphere2.radius;
       if (d2 > radius2) return null;
       const thc = Math.sqrt(radius2 - d2);
       const t0 = tca - thc;
@@ -4706,8 +4706,8 @@ void main() {
       if (t0 < 0) return this.at(t1, target);
       return this.at(t0, target);
     }
-    intersectsSphere(sphere) {
-      return this.distanceSqToPoint(sphere.center) <= sphere.radius * sphere.radius;
+    intersectsSphere(sphere2) {
+      return this.distanceSqToPoint(sphere2.center) <= sphere2.radius * sphere2.radius;
     }
     distanceToPlane(plane2) {
       const denominator = plane2.normal.dot(this.direction);
@@ -9320,8 +9320,8 @@ void main() {
     distanceToPoint(point) {
       return this.normal.dot(point) + this.constant;
     }
-    distanceToSphere(sphere) {
-      return this.distanceToPoint(sphere.center) - sphere.radius;
+    distanceToSphere(sphere2) {
+      return this.distanceToPoint(sphere2.center) - sphere2.radius;
     }
     projectPoint(point, target) {
       return target.copy(point).addScaledVector(this.normal, -this.distanceToPoint(point));
@@ -9349,8 +9349,8 @@ void main() {
     intersectsBox(box2) {
       return box2.intersectsPlane(this);
     }
-    intersectsSphere(sphere) {
-      return sphere.intersectsPlane(this);
+    intersectsSphere(sphere2) {
+      return sphere2.intersectsPlane(this);
     }
     coplanarPoint(target) {
       return target.copy(this.normal).multiplyScalar(-this.constant);
@@ -9434,10 +9434,10 @@ void main() {
       _sphere$5.applyMatrix4(sprite.matrixWorld);
       return this.intersectsSphere(_sphere$5);
     }
-    intersectsSphere(sphere) {
+    intersectsSphere(sphere2) {
       const planes = this.planes;
-      const center = sphere.center;
-      const negRadius = -sphere.radius;
+      const center = sphere2.center;
+      const negRadius = -sphere2.radius;
       for (let i = 0; i < 6; i++) {
         const distance = planes[i].distanceToPoint(center);
         if (distance < negRadius) {
@@ -21351,12 +21351,12 @@ void main() {
         return null;
       }
       const bound = this._bounds[geometryId];
-      const sphere = bound.sphere;
+      const sphere2 = bound.sphere;
       const geometry = this.geometry;
       if (bound.sphereInitialized === false) {
-        sphere.makeEmpty();
+        sphere2.makeEmpty();
         this.getBoundingBoxAt(geometryId, _box$1);
-        _box$1.getCenter(sphere.center);
+        _box$1.getCenter(sphere2.center);
         const index = geometry.index;
         const position = geometry.attributes.position;
         const drawRange = this._drawRanges[geometryId];
@@ -21367,12 +21367,12 @@ void main() {
             iv = index.getX(iv);
           }
           _vector$5.fromBufferAttribute(position, iv);
-          maxRadiusSq = Math.max(maxRadiusSq, sphere.center.distanceToSquared(_vector$5));
+          maxRadiusSq = Math.max(maxRadiusSq, sphere2.center.distanceToSquared(_vector$5));
         }
-        sphere.radius = Math.sqrt(maxRadiusSq);
+        sphere2.radius = Math.sqrt(maxRadiusSq);
         bound.sphereInitialized = true;
       }
-      target.copy(sphere);
+      target.copy(sphere2);
       return target;
     }
     setMatrixAt(instanceId, matrix) {
@@ -28759,14 +28759,14 @@ void main() {
             const box2 = new Box3();
             box2.min.fromArray(bound.boxMin);
             box2.max.fromArray(bound.boxMax);
-            const sphere = new Sphere();
-            sphere.radius = bound.sphereRadius;
-            sphere.center.fromArray(bound.sphereCenter);
+            const sphere2 = new Sphere();
+            sphere2.radius = bound.sphereRadius;
+            sphere2.center.fromArray(bound.sphereCenter);
             return {
               boxInitialized: bound.boxInitialized,
               box: box2,
               sphereInitialized: bound.sphereInitialized,
-              sphere
+              sphere: sphere2
             };
           });
           object._maxInstanceCount = data.maxInstanceCount;
@@ -55142,6 +55142,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       fem,
       hc: headR * 0.84,
       // head centre above the neck top
+      hx: headR * 0.15,
+      // … and in front of it (the neck meets the skull behind the jaw)
       hipW: (fem ? 0.094 : 0.085) * Bk,
       // hip joints either side of the pelvis
       shY: chestLen - 0.07,
@@ -55500,20 +55502,31 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     };
   }
   function frontBump(sh, s, z, mS) {
-    const Bk = sh.Bk;
+    const Bk = sh.Bk, cl = sh.cl;
     let b = 0;
-    if (sh.fem) {
-      for (const zc of [-0.06, 0.06]) {
-        const dz = (z - zc * Bk) / (0.066 * Bk), ds = (s - 0.665) * sh.cl / 0.068;
-        const r2 = dz * dz + ds * ds;
-        if (r2 < 1) b = Math.max(b, Math.pow(1 - r2, 0.6) * 0.046 * sh.bust);
+    if (s > 0.84) {
+      const zc = Math.abs(z), zEnd = (sh.fem ? 0.14 : 0.17) * Bk;
+      if (zc > 0.015 && zc < zEnd) {
+        const t = (zc - 0.015) / (zEnd - 0.015);
+        const ds = (s - (0.955 - t * 0.05)) * cl / 0.018;
+        if (ds > -1 && ds < 1) b += (1 - ds * ds) * (sh.fem ? 7e-3 : 0.011) * (1 - t * 0.5);
       }
-      return b;
+      const dn = Math.sqrt((z / 0.024) ** 2 + ((s - 0.965) * cl / 0.018) ** 2);
+      if (dn < 1) b -= (1 - dn * dn) * 7e-3;
+    }
+    if (sh.fem) {
+      let bust = 0;
+      for (const zc of [-0.06, 0.06]) {
+        const dz = (z - zc * Bk) / (0.066 * Bk), ds = (s - 0.665) * cl / 0.068;
+        const r2 = dz * dz + ds * ds;
+        if (r2 < 1) bust = Math.max(bust, Math.pow(1 - r2, 0.6) * 0.046 * sh.bust);
+      }
+      return b * mS + bust;
     }
     const m = sh.m;
     const pz2 = Math.abs(z) / (0.19 * Bk);
     const lobe = Math.max(0, 1 - ((pz2 - 0.4) / 0.52) ** 2);
-    b = sstep(0.55, 0.62, s) * (1 - sstep(0.8, 0.94, s)) * lobe * (0.012 + 0.024 * m);
+    b += sstep(0.55, 0.62, s) * (1 - sstep(0.8, 0.94, s)) * lobe * (0.012 + 0.024 * m);
     if (s > 0.1 && s < 0.53) {
       const az = Math.abs(z) / 0.075;
       if (az < 1) b += Math.sin((s - 0.1) / 0.43 * 3 % 1 * Math.PI) * Math.sin(az * Math.PI) * 8e-3 * m;
@@ -55624,7 +55637,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const rs = cloth ? 12 : 7;
     const lrows = cloth ? 5 : 2;
     const skin = pal.skin;
-    const TR = cloth ? [1, 0.955, 0.91, 0.86, 0.81, 0.765, 0.72, 0.68, 0.64, 0.6, 0.565, 0.5, 0.42, 0.33, 0.24, 0.14, 0.03, -0.1] : [1, 0.93, 0.82, 0.7, 0.58, 0.4, 0.2, -0.1];
+    const TR = cloth ? [1, 0.975, 0.955, 0.935, 0.915, 0.89, 0.86, 0.81, 0.765, 0.72, 0.68, 0.64, 0.6, 0.565, 0.5, 0.42, 0.33, 0.24, 0.14, 0.03, -0.1] : [1, 0.93, 0.82, 0.7, 0.58, 0.4, 0.2, -0.1];
     const tpt = (mS, off = 0) => (s, a) => torsoPt(sh, s, a, off, mS);
     const skinTorso = tpt(1);
     const TOP = o.top;
@@ -55657,7 +55670,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
     const nk = o.fem ? 0.04 : 0.05 * (1 + (d.Bk - 1) * 0.5);
-    add4(Prim.cyl(Math.max(6, rs - 2), true), M(0, d.chestLen + d.neck * 0.5 - 0.01, 0, 0, 0, 0, [nk * 0.96, d.neck + 0.08, nk]), skin, B2.chest);
+    add4(neckGeo(nk, d.chestLen - 0.05, d.chestLen + d.neck + 0.035, o, cloth), M(), skin, B2.chest);
     const edge = (a) => (s) => a(s), rest = (a) => (s) => TAU11 - a(s);
     const shell = (rows, aFn, off, mS, col, lin2) => {
       add4(band(tpt(mS, off), rows, edge(aFn), rest(aFn), U3), M(), col, B2.chest);
@@ -55780,6 +55793,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         add4(limbSeg(fa, d.A2, rs, 2, { t0: 0.8, capBot: true }), M(), skin, Fb, part4);
       }
       if (d.Am > 1.2) add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(0, -d.A2 * 0.5, 0, 0, 0, 0, fa(0.5) * 1.1), sl === "long" || sl === "wide" ? armCol : skin, Fb, part4);
+      if (cloth && (sl === "none" || sl === "short")) add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(ua(1) * 0.55, -d.A1 * 0.985, 0, 0, 0, 0, [0.022 * d.Bk, 0.026 * d.Bk, 0.024 * d.Bk]), skin, Ub);
     }
     const bot = o.bottom;
     const bcol = pal.bottom, cuffCol = shade(pal.bottom, -0.22);
@@ -55821,11 +55835,43 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           if (cloth) add4(torus2(q2), ringAt(-d.T2 * (t0 + 0.02), sn(t0) + (tuck ? 0.044 : 0.027), sn(t0) + (tuck ? 0.044 : 0.027), 0.03), shade(bc, -0.2), S3, part4);
         }
       }
+      if (cloth) {
+        const bareKnee = skirtPelvis ? o.bottom !== "longskirt" || true : bot === "shorts";
+        if (bareKnee) add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(sn(0) * 0.62, -0.012, 0, 0, 0, 0, [0.026 * d.Bk, 0.034 * d.Bk, 0.032 * d.Bk]), skin, S3, part4);
+        const bareAnkle = (skirtPelvis || bot === "shorts" || bot === "capri") && !boots && o.bottom !== "longskirt";
+        if (bareAnkle) for (const [zz, yy] of [[1, 0.975], [-1, 0.955]]) add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(4e-3, -d.T2 * yy, zz * sn(0.97) * 0.8, 0, 0, 0, 0.017 * d.Bk), skin, S3, part4);
+      }
       feet(add4, o, pal, d, q2, Ft, part4);
     }
     if (look.coat && TOP !== "coat" || TOP === "coat" && !look.top2 && look.coat) coat(add4, sh, look.coat, TR, U3, cloth, d, q2);
     else if (TOP === "coat") coatTail(add4, sh, look.coat || pal.top, U3, cloth, d, 0.03);
     return o;
+  }
+  function neckGeo(nk, y0, y1, o, cloth) {
+    const U3 = cloth ? 14 : 7, V2 = cloth ? 6 : 2;
+    const g = grid((u, v) => {
+      const a = -Math.PI + u * TAU11, h2 = 1 - v;
+      const y = y0 + (y1 - y0) * h2;
+      let r = nk * (1.1 - 0.12 * sstep(0, 0.5, h2));
+      if (cloth) {
+        const ang = 0.4 + (1.75 - 0.4) * h2;
+        const da = Math.abs(Math.abs(a) - ang) / 0.3;
+        if (da < 1) r += (1 - da * da) * nk * (o.fem ? 0.05 : 0.09) * sstep(0.05, 0.3, h2) * (1 - sstep(0.85, 1, h2));
+        if (!o.fem) {
+          const dx = Math.abs(a) / 0.3, dh = (h2 - 0.5) / 0.2;
+          if (dx < 1 && Math.abs(dh) < 1) r += (1 - dx * dx) * (1 - dh * dh) * nk * 0.16;
+        }
+      }
+      return [Math.cos(a) * r * 0.95, y, Math.sin(a) * r];
+    }, U3, V2);
+    const n = g.attributes.normal, W3 = U3 + 1;
+    for (let j = 0; j <= V2; j++) {
+      const a = j * W3, b = j * W3 + U3;
+      const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b), l = Math.hypot(x, y, z) || 1;
+      n.setXYZ(a, x / l, y / l, z / l);
+      n.setXYZ(b, x / l, y / l, z / l);
+    }
+    return g;
   }
   function straps(add4, sh, s, col, q2) {
     for (const side of [-1, 1]) {
@@ -55901,24 +55947,726 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (cloth) add4(band(tp(6e-3), half(tr), openT, TAU11 - openT, U3 / 2, true), M(), lining, B2.coatTail);
   }
 
-  // src/render3d/chars/build.js
+  // src/render3d/chars/mats.js
+  var BODY_KEY = "op-char-body-3";
+  var INK2 = 2364943;
+  var GRAD = null;
+  function charGradient() {
+    if (GRAD) return GRAD;
+    const data = new Uint8Array([158, 158, 158, 255, 176, 176, 176, 255, 255, 255, 255, 255, 255, 255, 255, 255]);
+    GRAD = new DataTexture(data, 4, 1, RGBAFormat);
+    GRAD.minFilter = NearestFilter;
+    GRAD.magFilter = NearestFilter;
+    GRAD.generateMipmaps = false;
+    GRAD.needsUpdate = true;
+    return GRAD;
+  }
+  function bodyMaterial(opts = {}) {
+    const u = {
+      uFlash: { value: 0 },
+      uFlashCol: { value: new Color(1, 1, 1) },
+      uHaki: { value: new Vector4() },
+      uHakiCol: { value: new Color(1512733) },
+      uLegFx: { value: new Vector2() },
+      uLegFxCol: { value: new Color(1, 0.36, 0) },
+      uFreeze: { value: 0 }
+    };
+    const m = new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), fog: opts.fog ?? true });
+    m.userData.u = u;
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, FOG, u);
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute float aPart;\nvarying float vPart;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvPart = aPart;");
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
+varying float vPart;
+uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec3 uHakiCol;
+uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze;`).replace("#include <color_fragment>", `#include <color_fragment>
+float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);
+float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart);
+float hakiK = pR * uHaki.x + pL * uHaki.y + lR * uHaki.z + lL * uHaki.w;
+float legK = lR * uLegFx.x + lL * uLegFx.y;
+diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);
+diffuseColor.rgb = mix(diffuseColor.rgb, uLegFxCol, legK * 0.8);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.7, 0.88, 1.0), uFreeze * 0.55);
+diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+{
+  float rim = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
+  // the anime rim light: a bright edge along the top and sides of the figure
+  float rimUp = smoothstep(-0.25, 0.55, normalize(normal).y);
+  totalEmissiveRadiance += diffuseColor.rgb * vec3(1.0, 0.96, 0.9) * smoothstep(0.55, 0.9, rim) * rimUp * 0.55 * (1.0 - hakiK);
+  totalEmissiveRadiance += vec3(0.42, 0.28, 0.72) * pow(rim, 2.2) * hakiK * 0.9;
+  totalEmissiveRadiance += vec3(0.5, 0.75, 1.0) * pow(rim, 1.6) * uFreeze * 0.35;
+  totalEmissiveRadiance += uLegFxCol * legK * 0.85 + uFlashCol * uFlash * 0.8;
+}`);
+    };
+    m.customProgramCacheKey = () => BODY_KEY;
+    return m;
+  }
+  function outlineMaterial2(width = 0.0105, color = INK2, opts = {}) {
+    const u = { uOutline: { value: width } };
+    const m = new MeshBasicMaterial({ color, side: BackSide, fog: opts.fog ?? true });
+    m.userData.u = u;
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, FOG);
+      sh.uniforms.uOutline = u.uOutline;
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uOutline;").replace("#include <skinning_vertex>", `#include <skinning_vertex>
+{
+#ifdef USE_SKINNING
+  vec3 onrm = normalize( objectNormal );
+#else
+  vec3 onrm = normalize( normal );
+#endif
+  vec4 mvq = modelViewMatrix * vec4( transformed, 1.0 );
+  float sc = length( modelMatrix[ 1 ].xyz );
+  transformed += onrm * uOutline * clamp( -mvq.z * 0.34, 0.75, 5.0 ) / max( sc, 0.2 );
+}`);
+    };
+    m.customProgramCacheKey = () => "op-char-outline-2";
+    return m;
+  }
+  var SHARED_OUTLINE = null;
+  function sharedOutline() {
+    if (!SHARED_OUTLINE) SHARED_OUTLINE = outlineMaterial2();
+    return SHARED_OUTLINE;
+  }
+  var WEAPON = null;
+  function weaponMaterial() {
+    if (!WEAPON) WEAPON = new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient() });
+    return WEAPON;
+  }
+  var GLOW = /* @__PURE__ */ new Map();
+  function glowMaterial(color, opacity = 0.85) {
+    const key2 = `${color}|${opacity}`;
+    let m = GLOW.get(key2);
+    if (!m) {
+      m = new MeshBasicMaterial({ color: new Color(color), transparent: true, opacity, blending: AdditiveBlending, depthWrite: false, fog: true });
+      GLOW.set(key2, m);
+    }
+    return m;
+  }
+
+  // src/render3d/chars/face.js
+  var FACE_S2 = 96;
+  var FACE_TOP = 0.5;
+  var FACE_BOTTOM = -1.25;
+  var FACE_ANCHOR = 0.05;
+  var FACE_W = 192;
+  var FACE_H = Math.round((FACE_TOP - FACE_BOTTOM) * FACE_S2);
   var TAU12 = Math.PI * 2;
+  var INK3 = "#2a1a1e";
+  function hex2(col, fb) {
+    if (typeof col !== "string") return fb;
+    if (col[0] === "#") return col.length === 4 || col.length === 7 ? col : col.length > 7 ? col.slice(0, 7) : fb;
+    const m = col.match(/rgba?\(([^)]+)\)/);
+    if (!m) return fb;
+    return "#" + m[1].split(",").slice(0, 3).map((v) => Math.max(0, Math.min(255, parseFloat(v) | 0)).toString(16).padStart(2, "0")).join("");
+  }
+  function lum3(h2) {
+    const s = h2.length === 4 ? h2[1] + h2[1] + h2[2] + h2[2] + h2[3] + h2[3] : h2.slice(1, 7);
+    const n = parseInt(s, 16);
+    return ((n >> 16 & 255) * 0.299 + (n >> 8 & 255) * 0.587 + (n & 255) * 0.114) / 255;
+  }
+  function browCol(hairCol) {
+    const h2 = hex2(hairCol, "#2d2d2d"), L2 = lum3(h2);
+    const base2 = L2 < 0.16 ? mixHex(h2, "#474c69", 0.3) : h2;
+    return L2 > 0.62 ? mixHex(h2, "#5b4a46", 0.6) : L2 < 0.16 ? "#1d1418" : mixHex(base2, "#140c10", 0.5);
+  }
+  function skinTones(col) {
+    const h2 = hex2(col, "#f1c9a0"), L2 = lum3(h2);
+    return {
+      base: h2,
+      line: mixHex(h2, "#3a1418", 0.6),
+      muzzle: mixHex(h2, "#ffffff", L2 > 0.85 ? 0 : 0.5),
+      blush: mixHex(h2, "#ff5a6e", 0.32),
+      shadow: L2 > 0.3 ? mixHex(h2, "#a23f45", 0.22) : mixHex(h2, "#12060c", 0.34)
+    };
+  }
+  var P22 = /* @__PURE__ */ new Map();
+  var pp2 = (d) => {
+    let p = P22.get(d);
+    if (!p) {
+      p = new Path2D(d);
+      P22.set(d, p);
+    }
+    return p;
+  };
+  var EYE2 = {
+    white: "M-0.18 -0.01 C-0.16 -0.25 0.13 -0.27 0.19 -0.07 C0.22 0.12 0.12 0.26 0 0.26 C-0.12 0.26 -0.19 0.14 -0.18 -0.01 Z",
+    lash: "M-0.22 0.03 C-0.2 -0.3 0.16 -0.34 0.23 -0.08 L0.3 -0.12 L0.22 0.01 C0.14 -0.2 -0.13 -0.21 -0.2 0.05 Z",
+    lower: "M0.02 0.26 Q0.14 0.24 0.19 0.12",
+    fWhite: "M-0.19 0.06 L0.2 -0.12 C0.22 0.1 0.12 0.24 0 0.24 C-0.12 0.24 -0.19 0.16 -0.19 0.06 Z",
+    fLash: "M-0.23 0.03 L0.22 -0.2 L0.3 -0.2 L0.21 -0.09 L-0.19 0.1 Z",
+    blink: "M-0.2 0.06 Q0 0.2 0.21 0.03 L0.27 0",
+    hurt: "M0.18 -0.12 L-0.12 0.06 L0.18 0.24",
+    fishWhite: "M0.2 0.06 C0.2 -0.07 0.11 -0.15 0 -0.15 C-0.11 -0.15 -0.2 -0.07 -0.2 0.06 C-0.2 0.18 -0.11 0.27 0 0.27 C0.11 0.27 0.2 0.18 0.2 0.06 Z",
+    fishLash: "M-0.22 0.02 C-0.2 -0.22 0.2 -0.24 0.23 0.0 L0.18 0.02 C0.14 -0.16 -0.14 -0.16 -0.18 0.04 Z"
+  };
+  var SPIRAL2 = null;
+  function spiral3() {
+    if (!SPIRAL2) {
+      let s = "";
+      for (let i = 0; i <= 26; i++) {
+        const a = i * 0.62, rr = 0.02 + i * 75e-4;
+        const x = Math.cos(a) * rr, y = 0.06 + Math.sin(a) * rr * 1.1;
+        s += `${i ? "L" : "M"}${x.toFixed(3)} ${y.toFixed(3)} `;
+      }
+      SPIRAL2 = s;
+    }
+    return SPIRAL2;
+  }
+  var BROWS_M = {
+    fierce: "M0.14 -0.08 Q0.36 -0.17 0.64 -0.27 M-0.14 -0.08 Q-0.36 -0.17 -0.64 -0.27",
+    worried: "M0.18 -0.27 Q0.42 -0.27 0.62 -0.14 M-0.18 -0.27 Q-0.42 -0.27 -0.62 -0.14",
+    neutral: "M0.16 -0.16 Q0.4 -0.24 0.64 -0.19 M-0.16 -0.16 Q-0.4 -0.24 -0.64 -0.19"
+  };
+  var BROWS_F = {
+    fierce: "M0.19 -0.14 Q0.4 -0.25 0.6 -0.33 M-0.19 -0.14 Q-0.4 -0.25 -0.6 -0.33",
+    worried: "M0.21 -0.33 Q0.42 -0.35 0.58 -0.22 M-0.21 -0.33 Q-0.42 -0.35 -0.58 -0.22",
+    neutral: "M0.21 -0.24 Q0.4 -0.37 0.59 -0.28 M-0.21 -0.24 Q-0.4 -0.37 -0.59 -0.28"
+  };
+  var MOUTH_COL2 = "#5c1c20";
+  var TONGUE2 = "#e0626a";
+  var TEETH2 = "#ffffff";
+  var MOUTHS2 = {
+    fierce: "M-0.14 0.66 Q0 0.58 0.14 0.66",
+    ko: "M-0.16 0.62 Q-0.08 0.54 0 0.62 Q0.08 0.7 0.16 0.62",
+    animal: "M-0.16 0.56 Q-0.08 0.66 0 0.54 Q0.08 0.66 0.16 0.56",
+    smile: "M-0.12 0.61 Q0 0.67 0.12 0.6",
+    flat: "M-0.11 0.62 L0.11 0.62",
+    grin: ["M-0.46 0.46 Q0 0.58 0.46 0.46 Q0.36 0.95 0 0.95 Q-0.36 0.95 -0.46 0.46 Z", "M-0.5 0.4 L0.5 0.4 L0.5 0.56 Q0 0.72 -0.5 0.56 Z", [0, 0.93, 0.24, 0.11]],
+    shout: ["M-0.25 0.5 Q0 0.45 0.25 0.5 Q0.3 0.92 0 0.94 Q-0.3 0.92 -0.25 0.5 Z", "M-0.3 0.4 L0.3 0.4 L0.3 0.55 Q0 0.6 -0.3 0.55 Z", [0, 0.92, 0.17, 0.1]],
+    grimace: ["M-0.3 0.55 Q0 0.5 0.3 0.55 L0.26 0.74 Q0 0.7 -0.26 0.74 Z", "M-0.4 0.4 L0.4 0.4 L0.4 0.9 L-0.4 0.9 Z", null, "M-0.28 0.64 L0.28 0.64 M-0.12 0.54 L-0.12 0.72 M0.06 0.53 L0.06 0.72"]
+  };
+  var SHARP2 = /* @__PURE__ */ new Map();
+  function sharpTeeth2(kind) {
+    let s = SHARP2.get(kind);
+    if (s) return s;
+    const [x0, x1, y0, h2] = kind === "grin" ? [-0.46, 0.46, 0.46, 0.13] : kind === "shout" ? [-0.26, 0.26, 0.48, 0.1] : [-0.3, 0.3, 0.53, 0.1];
+    const n = kind === "grin" ? 7 : 4;
+    let d = `M${x0} ${y0 - 0.1}`;
+    for (let i = 0; i <= n; i++) {
+      const x = x0 + (x1 - x0) * i / n;
+      d += ` L${x.toFixed(3)} ${(y0 + (i === 0 || i === n ? 0 : 0.02)).toFixed(3)}`;
+      if (i < n) d += ` L${(x + (x1 - x0) / n / 2).toFixed(3)} ${(y0 + h2).toFixed(3)}`;
+    }
+    d += ` L${x1} ${y0 - 0.1} Z`;
+    const yb = kind === "grin" ? 0.9 : kind === "shout" ? 0.9 : 0.74;
+    d += ` M${(x0 * 0.7).toFixed(3)} ${(yb + 0.1).toFixed(3)}`;
+    for (let i = 0; i <= n - 1; i++) {
+      const x = x0 * 0.7 + (x1 - x0) * 0.7 * i / (n - 1);
+      d += ` L${x.toFixed(3)} ${yb.toFixed(3)}`;
+      if (i < n - 1) d += ` L${(x + (x1 - x0) * 0.7 / (n - 1) / 2).toFixed(3)} ${(yb - h2 * 0.9).toFixed(3)}`;
+    }
+    d += ` L${(x1 * 0.7).toFixed(3)} ${(yb + 0.1).toFixed(3)} Z`;
+    SHARP2.set(kind, d);
+    return d;
+  }
+  var SCAR2 = { F: "M-0.52 -0.12 L-0.3 0.5", Fx: "M-0.52 0.02 L-0.38 -0.02 M-0.46 0.24 L-0.32 0.2" };
+  var PANDA2 = "M0.14 0.02 C0.2 -0.2 0.58 -0.22 0.68 0.12 C0.76 0.4 0.62 0.58 0.44 0.52 C0.24 0.46 0.1 0.26 0.14 0.02 Z M-0.14 0.02 C-0.2 -0.2 -0.58 -0.22 -0.68 0.12 C-0.76 0.4 -0.62 0.58 -0.44 0.52 C-0.24 0.46 -0.1 0.26 -0.14 0.02 Z";
+  var THIRD2 = "M0 -0.28 Q0.11 -0.12 0 0.04 Q-0.11 -0.12 0 -0.28 Z";
+  var GILLS2 = "M0.74 0.44 Q0.68 0.52 0.72 0.6 M0.68 0.54 Q0.62 0.62 0.66 0.7 M-0.74 0.44 Q-0.68 0.52 -0.72 0.6 M-0.68 0.54 Q-0.62 0.62 -0.66 0.7";
+  var NOSE_ANIMAL2 = "M-0.11 0.35 Q0 0.3 0.11 0.35 Q0.07 0.45 0 0.47 Q-0.07 0.45 -0.11 0.35 Z";
+  var SHADES2 = {
+    lens: "M0.14 0.02 L0.64 0.0 Q0.66 0.28 0.46 0.34 Q0.2 0.36 0.14 0.02 Z M-0.14 0.02 L-0.64 0.0 Q-0.66 0.28 -0.46 0.34 Q-0.2 0.36 -0.14 0.02 Z",
+    glint: "M-0.5 0.04 L-0.4 0.04 L-0.48 0.24 L-0.58 0.24 Z M0.3 0.04 L0.4 0.04 L0.32 0.24 L0.22 0.24 Z",
+    bridge: "M-0.14 0.06 Q0 0.02 0.14 0.06"
+  };
+  function expression2(look, pose, P3, t) {
+    const st = pose && pose.state;
+    if (st === "knocked" || st === "dead") return { eyes: "ko", mouth: "ko", brow: "worried", small: false };
+    if (st === "hurt") return { eyes: "hurt", mouth: "grimace", brow: "worried", small: false };
+    const face = P3 && P3.face;
+    const fierce = face === "fierce" || face === "shout";
+    const s = (look.seed || 0) * 0.6180339 % 1 * 0.9 + 0.1;
+    const blink = !fierce && ((t * 0.29 + s - 0.29) % 1 + 1) % 1 < 0.035;
+    let mouth = face === "shout" ? "shout" : fierce ? "fierce" : look.grin || look.nika ? "grin" : "neutral";
+    if (mouth === "neutral") mouth = look.muzzle || look.race === "mink" ? "animal" : look.mouth || ((look.seed || 0) % 2 ? "smile" : "flat");
+    return { eyes: blink ? "blink" : fierce ? "fierce" : "open", mouth, brow: fierce ? "fierce" : "neutral", small: face === "shout" };
+  }
+  var EYE_STYLES = {
+    // men: smaller irises, a heavy upper line, no lash flicks
+    bold: { w: 1, h: 0.84, tilt: 0.02, iris: 0.84, lid: 0.085, drop: 0.12, flick: 0, lashes: 0, lower: 0.3, hl: 1 },
+    sharp: { w: 1.1, h: 0.64, tilt: -0.15, iris: 0.78, lid: 0.09, drop: 0.24, flick: 0, lashes: 0, lower: 0.5, hl: 1 },
+    narrow: { w: 1.08, h: 0.4, tilt: -0.05, iris: 0.72, lid: 0.085, drop: 0.46, flick: 0, lashes: 0, lower: 0.65, hl: 0 },
+    beady: { w: 0.84, h: 0.8, tilt: 0, iris: 0.36, lid: 0.07, drop: 0.04, flick: 0, lashes: 0, lower: 0, hl: 0, beady: true },
+    tired: { w: 1.02, h: 0.62, tilt: 0.1, iris: 0.82, lid: 0.095, drop: 0.42, flick: 0, lashes: 0, lower: 0.45, hl: 1, bags: true },
+    // women: bigger irises, lashes flicking out at the corners
+    bright: { w: 1, h: 1, tilt: 0, iris: 1, lid: 0.065, drop: 0.02, flick: 1, lashes: 2, lower: 1, hl: 2 },
+    soft: { w: 1.02, h: 0.88, tilt: 0.1, iris: 0.96, lid: 0.06, drop: 0.1, flick: 0.8, lashes: 2, lower: 1, hl: 2 },
+    cool: { w: 1.12, h: 0.64, tilt: -0.12, iris: 0.86, lid: 0.07, drop: 0.22, flick: 1.1, lashes: 3, lower: 0.7, hl: 2 },
+    cat: { w: 1.08, h: 0.8, tilt: -0.22, iris: 0.92, lid: 0.07, drop: 0.06, flick: 1.4, lashes: 2, lower: 0.85, hl: 2 },
+    // Fish-Men
+    fish: { w: 1, h: 0.84, tilt: 0, iris: 0.55, lid: 0.07, drop: 0, flick: 0, lashes: 0, lower: 0, hl: 1, round: true }
+  };
+  var EYES_M = ["bold", "sharp", "narrow", "beady", "tired"];
+  var EYES_F = ["bright", "soft", "cool", "cat"];
+  var EYE_NAMES = { bold: "Bold", sharp: "Sharp", narrow: "Narrow", beady: "Beady", tired: "Heavy-lidded", bright: "Bright", soft: "Gentle", cool: "Cool", cat: "Cat-eye", fish: "Fish" };
+  var LEGACY_EYES = { round: ["bold", "bright"], sharp: ["sharp", "cool"], soft: ["bold", "soft"] };
+  function eyeShapeOf2(look) {
+    const fem = !!look.fem;
+    const e = look.eyeShape;
+    if (e === "fish" || !e && look.race === "fishman") return "fish";
+    const set = fem ? EYES_F : EYES_M;
+    if (e && set.includes(e)) return e;
+    if (e && LEGACY_EYES[e]) return LEGACY_EYES[e][fem ? 1 : 0];
+    const SWAP = { bold: "bright", sharp: "cool", narrow: "cool", beady: "bright", tired: "soft", bright: "bold", soft: "bold", cool: "sharp", cat: "sharp" };
+    if (e && SWAP[e] && set.includes(SWAP[e])) return SWAP[e];
+    const seed = look.seed || 0;
+    if (look.race === "mink") return fem ? "bright" : "bold";
+    return fem ? EYES_F[seed % 4] : ["bold", "bold", "sharp", "sharp", "narrow", "tired"][seed % 6];
+  }
+  function faceKey(look) {
+    const hairCol = look.furWhite ? "#fafafa" : look.nika ? "#ffffff" : look.hairColor;
+    const skin = look.furWhite ? "#fafafa" : look.fur && look.furFace ? look.fur : look.skin;
+    return `${eyeShapeOf2(look)}|${look.eyeColor}|${hairCol}|${skin}|${look.fem ? "F" : "M"}|${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.race === "mink" ? 1 : 0}${look.gills ? 1 : 0}${look.grin || look.nika ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.goggles === true ? 1 : 0}|${look.kind === "Panda" ? "P" : ""}|${look.nose || (look.kind === "Saw Shark" ? "saw" : "")}|${look.fem ? "F" : ""}`;
+  }
+  var WHITES = /* @__PURE__ */ new Map();
+  function eyeWhite(st, key2) {
+    let p = WHITES.get(key2);
+    if (p) return p;
+    const w = st.w, h2 = st.h;
+    const ix = -0.19 * w, iy = 0.02, ox = 0.2 * w, oy = -0.04;
+    const top = (-0.26 + st.drop * 0.52) * h2 - 0.02, bot = 0.26 * h2;
+    p = new Path2D();
+    p.moveTo(ix, iy);
+    p.bezierCurveTo(ix + 0.03 * w, top, ox - 0.08 * w, top - 0.015, ox, oy);
+    p.bezierCurveTo(ox + 0.02 * w, oy + 0.2 * h2, 0.12 * w, bot, 0, bot);
+    p.bezierCurveTo(-0.12 * w, bot, ix - 0.01 * w, iy + 0.14 * h2, ix, iy);
+    p.closePath();
+    const lid = new Path2D();
+    lid.moveTo(ix - 0.015, iy + 0.01);
+    lid.bezierCurveTo(ix + 0.03 * w, top, ox - 0.08 * w, top - 0.015, ox + 0.01, oy);
+    const lower = new Path2D();
+    const f = st.lower;
+    lower.moveTo(ox, oy + 0.02);
+    lower.bezierCurveTo(ox + 0.02 * w, oy + 0.2 * h2 * f, 0.12 * w + (1 - f) * 0.08, bot - (1 - f) * 0.1, (1 - f) * 0.12 * w, bot);
+    const r = { white: p, lid, lower, ix, iy, ox, oy, top, bot };
+    WHITES.set(key2, r);
+    return r;
+  }
+  function drawEyes2(g, look, X2) {
+    const id = eyeShapeOf2(look);
+    const base2 = EYE_STYLES[id] || EYE_STYLES.bold;
+    const white = !!look.furWhite;
+    const iris = white ? "#ff1744" : hex2(look.eyeColor, "#2d2226");
+    const lt2 = mixHex(iris, "#ffffff", white ? 0.55 : 0.38);
+    const pupil = white ? "#ff8a80" : mixHex(iris, "#000000", 0.7);
+    const ey = 0.17;
+    const closed = X2.eyes === "blink" || X2.eyes === "hurt" || X2.eyes === "ko";
+    const fierce = X2.eyes === "fierce";
+    const st = fierce ? { ...base2, tilt: base2.tilt - 0.18, drop: Math.min(0.5, base2.drop + 0.16), iris: base2.iris * 0.85, h: base2.h * 0.9 } : base2;
+    const key2 = id + (fierce ? "F" : "");
+    const E = eyeWhite(st, key2);
+    for (let n = 0; n < 2; n++) {
+      const x = n ? 0.39 : -0.39;
+      g.save();
+      g.translate(x, ey);
+      if (x < 0) g.scale(-1, 1);
+      g.rotate(st.tilt);
+      g.lineCap = "round";
+      g.lineJoin = "round";
+      if (closed) {
+        g.lineWidth = X2.eyes === "ko" ? 0.05 : 0.075;
+        g.strokeStyle = look.kind === "Panda" ? "#f4f1ea" : INK3;
+        if (X2.eyes === "ko") {
+          g.rotate(-st.tilt);
+          g.scale(x < 0 ? -1 : 1, 1);
+          g.stroke(pp2(spiral3()));
+        } else g.stroke(pp2(X2.eyes === "blink" ? EYE2.blink : EYE2.hurt));
+        g.restore();
+        continue;
+      }
+      g.fillStyle = "#ffffff";
+      g.fill(E.white);
+      g.save();
+      g.clip(E.white);
+      const ir = st.iris * (X2.small ? 0.8 : 1);
+      const ix = -0.01, iy = 0.05 + st.drop * 0.08;
+      if (st.beady) {
+        g.fillStyle = "#16100f";
+        g.beginPath();
+        g.ellipse(0, 0.05, 0.05, 0.065, 0, 0, TAU12);
+        g.fill();
+      } else {
+        const rx = 0.125 * ir * Math.min(1.08, st.w), ry = (st.round ? 0.125 : 0.19) * ir;
+        g.fillStyle = iris;
+        g.beginPath();
+        g.ellipse(ix, iy, rx, ry, 0, 0, TAU12);
+        g.fill();
+        g.fillStyle = lt2;
+        g.beginPath();
+        g.ellipse(ix, iy + ry * 0.52, rx * 0.68, ry * 0.36, 0, 0, TAU12);
+        g.fill();
+        g.fillStyle = pupil;
+        g.beginPath();
+        g.ellipse(ix, iy + 0.012, rx * 0.5, ry * 0.55, 0, 0, TAU12);
+        g.fill();
+        g.fillStyle = "rgba(40,20,30,0.28)";
+        g.beginPath();
+        g.ellipse(0, E.top - 0.02, 0.3, 0.09, 0, 0, TAU12);
+        g.fill();
+      }
+      g.restore();
+      g.strokeStyle = INK3;
+      g.lineWidth = st.lid;
+      g.stroke(E.lid);
+      if (st.flick) {
+        const f = st.flick;
+        g.fillStyle = INK3;
+        g.beginPath();
+        g.moveTo(E.ox - 0.06, E.oy - 0.035);
+        g.quadraticCurveTo(E.ox + 0.05 * f, E.oy - 0.06 * f, E.ox + 0.1 * f, E.oy - 0.1 * f);
+        g.quadraticCurveTo(E.ox + 0.06 * f, E.oy + 0, E.ox + 0.01, E.oy + 0.03);
+        g.closePath();
+        g.fill();
+        g.lineWidth = 0.022;
+        for (let k = 0; k < st.lashes; k++) {
+          const t = 0.35 + k * 0.2, lx = E.ix + (E.ox - E.ix) * (0.45 + k * 0.18), ly = E.top * (1 - t * 0.4) + 0.01;
+          g.beginPath();
+          g.moveTo(lx, ly);
+          g.lineTo(lx + 0.05, ly - 0.07 - k * 0.01);
+          g.stroke();
+        }
+      } else {
+        g.lineWidth = st.lid * 0.8;
+        g.beginPath();
+        g.moveTo(E.ox - 0.03, E.oy - 0.01);
+        g.lineTo(E.ox + 0.045, E.oy + 0.012);
+        g.stroke();
+      }
+      if (st.lower > 0) {
+        g.lineWidth = 0.026;
+        g.stroke(E.lower);
+      }
+      if (st.bags) {
+        g.lineWidth = 0.022;
+        g.strokeStyle = "rgba(60,30,30,0.7)";
+        g.beginPath();
+        g.moveTo(-0.08, E.bot + 0.07);
+        g.quadraticCurveTo(0.04, E.bot + 0.11, 0.15, E.bot + 0.04);
+        g.stroke();
+      }
+      g.restore();
+      if (!st.beady && st.hl > 0) {
+        g.fillStyle = "#ffffff";
+        const cy = ey + 0.02 + st.drop * 0.1 + (fierce ? 0.03 : -0.02);
+        g.beginPath();
+        g.arc(x - 0.055, cy, (st.hl > 1 ? 0.052 : 0.04) * (id === "fish" ? 0.8 : 1), 0, TAU12);
+        g.fill();
+        if (st.hl > 1) {
+          g.beginPath();
+          g.arc(x + 0.05, ey + 0.13, 0.026, 0, TAU12);
+          g.fill();
+        }
+      } else if (st.beady) {
+        g.fillStyle = "#ffffff";
+        g.beginPath();
+        g.arc(x - 0.015, ey + 0.03, 0.016, 0, TAU12);
+        g.fill();
+      }
+    }
+    if (look.scarEye) {
+      g.lineWidth = 0.06;
+      g.strokeStyle = "#9b3a36";
+      g.stroke(pp2(SCAR2.F));
+      g.lineWidth = 0.03;
+      g.stroke(pp2(SCAR2.Fx));
+    }
+  }
+  function drawMouth2(g, look, X2) {
+    const kind = X2.mouth;
+    g.save();
+    g.translate(0, 0.06);
+    if (look.muzzle) {
+      g.save();
+      g.translate(0, 0.05);
+    }
+    if (typeof MOUTHS2[kind] === "string") {
+      g.lineWidth = look.fem ? 0.058 : 0.05;
+      g.strokeStyle = look.fem && (kind === "smile" || kind === "flat") ? "#b8405a" : MOUTH_COL2;
+      g.lineCap = "round";
+      g.stroke(pp2(MOUTHS2[kind]));
+    } else {
+      const [d, teeth, tongue, lines] = MOUTHS2[kind];
+      const mp = pp2(d);
+      g.fillStyle = MOUTH_COL2;
+      g.fill(mp);
+      g.save();
+      g.clip(mp);
+      if (tongue) {
+        g.fillStyle = TONGUE2;
+        g.beginPath();
+        g.ellipse(tongue[0], tongue[1], tongue[2], tongue[3], 0, 0, TAU12);
+        g.fill();
+      }
+      g.fillStyle = TEETH2;
+      g.fill(pp2(look.sharpTeeth ? sharpTeeth2(kind) : teeth));
+      if (lines) {
+        g.lineWidth = 0.025;
+        g.strokeStyle = "rgba(90,40,40,0.8)";
+        g.stroke(pp2(lines));
+      }
+      g.restore();
+      g.lineWidth = 0.035;
+      g.strokeStyle = MOUTH_COL2;
+      g.stroke(mp);
+    }
+    if (look.muzzle) g.restore();
+    g.restore();
+  }
+  function paintFace(g, look, X2) {
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, FACE_W, FACE_H);
+    g.setTransform(FACE_S2, 0, 0, FACE_S2, FACE_W / 2, (FACE_TOP - FACE_ANCHOR) * FACE_S2);
+    g.lineJoin = "round";
+    g.lineCap = "round";
+    const white = !!look.furWhite;
+    const skin = skinTones(white ? "#fafafa" : hex2(look.fur && look.furFace ? look.fur : look.skin, "#f1c9a0"));
+    const brow = white ? "#b0a6a2" : browCol(look.nika ? "#ffffff" : look.hairColor);
+    if (look.kind === "Panda") {
+      g.fillStyle = "#2b2b2b";
+      g.fill(pp2(PANDA2));
+    }
+    if (look.muzzle) {
+      g.fillStyle = skin.muzzle;
+      g.beginPath();
+      g.ellipse(0, 0.56, 0.36, 0.27, 0, 0, TAU12);
+      g.fill();
+      g.fillStyle = "#2d2226";
+      g.fill(pp2(NOSE_ANIMAL2));
+      g.fillStyle = "rgba(255,255,255,0.7)";
+      g.beginPath();
+      g.ellipse(-0.04, 0.35, 0.03, 0.02, 0, 0, TAU12);
+      g.fill();
+    }
+    if (look.gills) {
+      g.lineWidth = 0.035;
+      g.strokeStyle = skin.line;
+      g.stroke(pp2(GILLS2));
+    }
+    drawEyes2(g, look, X2);
+    if ((look.grin || look.nika) && X2.mouth === "grin") {
+      g.fillStyle = skin.blush;
+      g.globalAlpha = 0.5;
+      g.beginPath();
+      g.ellipse(-0.66, 0.46, 0.14, 0.07, 0, 0, TAU12);
+      g.ellipse(0.66, 0.46, 0.14, 0.07, 0, 0, TAU12);
+      g.fill();
+      g.globalAlpha = 1;
+    }
+    drawMouth2(g, look, X2);
+    const BR = look.fem ? BROWS_F : BROWS_M;
+    g.lineWidth = look.fem ? 0.055 : 0.088;
+    g.strokeStyle = brow;
+    g.stroke(pp2(BR[X2.brow] || BR.neutral));
+    if (look.thirdEye) {
+      g.fillStyle = "#ffffff";
+      g.fill(pp2(THIRD2));
+      g.lineWidth = 0.025;
+      g.strokeStyle = INK3;
+      g.stroke(pp2(THIRD2));
+      g.fillStyle = hex2(look.eyeColor, "#8e44ad");
+      g.beginPath();
+      g.ellipse(0, -0.11, 0.06, 0.1, 0, 0, TAU12);
+      g.fill();
+      g.fillStyle = "#1a1020";
+      g.beginPath();
+      g.ellipse(0, -0.1, 0.028, 0.05, 0, 0, TAU12);
+      g.fill();
+      g.fillStyle = "#ffffff";
+      g.beginPath();
+      g.arc(-0.02, -0.15, 0.025, 0, TAU12);
+      g.fill();
+    }
+    if (look.goggles === true) {
+      g.fillStyle = "#241f2c";
+      g.fill(pp2(SHADES2.lens));
+      g.lineWidth = 0.03;
+      g.strokeStyle = "#15121a";
+      g.stroke(pp2(SHADES2.lens));
+      g.fillStyle = "rgba(255,255,255,0.55)";
+      g.fill(pp2(SHADES2.glint));
+      g.lineWidth = 0.06;
+      g.strokeStyle = "#15121a";
+      g.stroke(pp2(SHADES2.bridge));
+    }
+  }
+  var CACHE = /* @__PURE__ */ new Map();
+  var MAX = 150;
+  var tick2 = 0;
+  function faceMaterial(look, X2) {
+    const key2 = `${faceKey(look)}~${X2.eyes}${X2.mouth}${X2.brow}${X2.small ? 1 : 0}`;
+    let e = CACHE.get(key2);
+    if (!e) {
+      const c = document.createElement("canvas");
+      c.width = FACE_W;
+      c.height = FACE_H;
+      paintFace(c.getContext("2d"), look, X2);
+      const tex2 = new CanvasTexture(c);
+      tex2.colorSpace = SRGBColorSpace;
+      tex2.anisotropy = 4;
+      const mat = new MeshToonMaterial({ map: tex2, gradientMap: charGradient(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
+      e = { key: key2, tex: tex2, mat, refs: 1, t: ++tick2 };
+      CACHE.set(key2, e);
+      if (CACHE.size > MAX) evict();
+      return e;
+    }
+    e.refs++;
+    e.t = ++tick2;
+    return e;
+  }
+  function releaseFace(e) {
+    if (e) e.refs = Math.max(0, e.refs - 1);
+  }
+  function evict() {
+    const idle = [...CACHE.values()].filter((e) => e.refs <= 0).sort((a, b) => a.t - b.t);
+    for (let i = 0; i < idle.length && CACHE.size > MAX * 0.8; i++) {
+      const e = idle[i];
+      CACHE.delete(e.key);
+      e.tex.dispose();
+      e.mat.dispose();
+    }
+  }
+
+  // src/render3d/chars/build.js
+  var TAU13 = Math.PI * 2;
   var DEG2 = Math.PI / 180;
   var DETAIL = {
-    0: { head: [16, 12], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1, cloth: 1 },
+    0: { head: [20, 16], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1, cloth: 1 },
     1: { head: [8, 6], cap: [10, 4], cone: 3, sph: [5, 3], blob: [6, 4], limb: [5, 1], lathe: 7, rbox: [5, 4], rboxS: [4, 3], hat: 9, hatS: [7, 4], fringe: 0, hands: 0, cloth: 0 },
     [-1]: { head: [14, 10], cap: [16, 6], cone: 5, sph: [8, 6], blob: [10, 7], limb: [10, 3], lathe: 14, rbox: [10, 8], rboxS: [8, 6], hat: 16, hatS: [12, 8], fringe: 1, hands: 2, cloth: 1 }
   };
-  function headShape(x, y, z) {
-    let X2 = x * 0.955, Y2 = y * 1.04, Z2 = z * 0.985;
-    if (Y2 < 0) {
-      const k = Math.min(1, -Y2 / 1.04);
-      const f = 1 - 0.34 * k * k;
-      X2 *= f + 0.16 * k * k * Math.max(0, x);
-      Z2 *= f;
-      Y2 *= 1 + 0.07 * k;
+  var clampU = (v, a, b) => v < a ? a : v > b ? b : v;
+  var smin = (a, b, k) => {
+    const h2 = Math.max(k - Math.abs(a - b), 0) / k;
+    return Math.min(a, b) - h2 * h2 * k * 0.25;
+  };
+  var smax = (a, b, k) => -smin(-a, -b, k);
+  function ellipsoid(px2, py2, pz2, rx, ry, rz) {
+    const ax = px2 / rx, ay = py2 / ry, az = pz2 / rz, bx = ax / rx, by = ay / ry, bz = az / rz;
+    const k0 = Math.sqrt(ax * ax + ay * ay + az * az), k1 = Math.sqrt(bx * bx + by * by + bz * bz);
+    return k1 > 1e-9 ? k0 * (k0 - 1) / k1 : -Math.min(rx, ry, rz);
+  }
+  function capsule(px2, py2, pz2, ax, ay, az, bx, by, bz, r) {
+    const pax = px2 - ax, pay2 = py2 - ay, paz = pz2 - az, bax = bx - ax, bay = by - ay, baz = bz - az;
+    const h2 = clampU((pax * bax + pay2 * bay + paz * baz) / (bax * bax + bay * bay + baz * baz), 0, 1);
+    const x = pax - bax * h2, y = pay2 - bay * h2, z = paz - baz * h2;
+    return Math.sqrt(x * x + y * y + z * z) - r;
+  }
+  var sphere = (px2, py2, pz2, r) => Math.sqrt(px2 * px2 + py2 * py2 + pz2 * pz2) - r;
+  var FACE_SHAPES = ["oval", "round", "square", "long", "heart"];
+  var CHINS = ["pointed", "round", "strong"];
+  var NOSES2 = ["small", "normal", "big", "button", "hooked", "long", "red"];
+  var NOSE_DIM = {
+    small: { len: 0.1, h: 0.95, r0: 0.028, tip: 0.045, wing: 0.034 },
+    normal: { len: 0.14, h: 1, r0: 0.034, tip: 0.055, wing: 0.042 },
+    big: { len: 0.2, h: 1.08, r0: 0.044, tip: 0.075, wing: 0.056 },
+    button: { len: 0.1, h: 0.86, r0: 0.02, tip: 0.07, wing: 0.036 },
+    hooked: { len: 0.2, h: 1.1, r0: 0.05, tip: 0.05, wing: 0.042, hook: 0.035 }
+  };
+  function headParams(look) {
+    const fem = !!look.fem;
+    const seed = look.seed || 0;
+    const shape = FACE_SHAPES.includes(look.faceShape) ? look.faceShape : fem ? ["oval", "heart", "oval", "round"][seed % 4] : ["oval", "square", "oval", "long", "square", "round"][seed % 6];
+    const chin = CHINS.includes(look.chin) ? look.chin : fem ? "pointed" : shape === "square" ? "strong" : "round";
+    let nose = NOSES2.includes(look.noseShape) ? look.noseShape : look.nose === "long" ? "long" : look.nose === "red" ? "red" : fem ? "small" : ["normal", "normal", "small", "big", "hooked"][(seed >> 1) % 5];
+    if (look.race === "mink" || look.muzzle || look.race === "fishman") nose = "flat";
+    const q2 = (v, d) => Math.round((v ?? d) * 4) / 4;
+    return { fem, shape, chin, nose, jaw: q2(look.jaw, 0.5), cheek: q2(look.cheek, fem ? 0.5 : 0.5), brow: q2(look.brow, fem ? 0.25 : 0.6) };
+  }
+  var headKey = (hp) => `${hp.fem ? "f" : "m"}.${hp.shape}.${hp.chin}.${hp.nose}.${hp.jaw}.${hp.cheek}.${hp.brow}`;
+  function headKind(hp) {
+    const S3 = {
+      oval: { cw: 0.72, jw: 0.5, jy: -0.58, cy: -1.03, jr: 0.16 },
+      round: { cw: 0.8, jw: 0.56, jy: -0.54, cy: -0.96, jr: 0.2 },
+      square: { cw: 0.76, jw: 0.6, jy: -0.62, cy: -1.03, jr: 0.18 },
+      long: { cw: 0.7, jw: 0.49, jy: -0.64, cy: -1.15, jr: 0.16 },
+      heart: { cw: 0.77, jw: 0.42, jy: -0.54, cy: -1, jr: 0.14 }
+    }[hp.shape] || { cw: 0.72, jw: 0.5, jy: -0.58, cy: -1.03, jr: 0.16 };
+    const k = { ...S3 };
+    if (hp.fem) {
+      k.jw *= 0.9;
+      k.jr *= 0.88;
+      k.cw *= 0.96;
     }
-    return [X2, Y2, Z2];
+    k.jw *= 0.86 + hp.jaw * 0.28;
+    const C3 = { pointed: { cx: 0.6, cz: 0.02, cr: 0.15 }, round: { cx: 0.6, cz: 0.1, cr: 0.19 }, strong: { cx: 0.65, cz: 0.2, cr: 0.21 } }[hp.chin];
+    Object.assign(k, C3);
+    k.cheek = hp.cheek;
+    k.brow = hp.brow;
+    k.nose = NOSE_DIM[hp.nose] || null;
+    k.fem = hp.fem;
+    return k;
+  }
+  function sdfHead(x, y, z, k) {
+    const az = Math.abs(z);
+    let d = ellipsoid(x + 0.06, y - 0.07, z, 1, 0.99, 0.9);
+    d = smin(d, ellipsoid(x - 0.2, y + 0.3, z, 0.64, 0.6, k.cw), 0.3);
+    d = smin(d, capsule(x, y, az, -0.24, -0.2, k.jw + 0.08, -0.14, k.jy, k.jw, k.jr * 0.8), 0.2);
+    d = smin(d, capsule(x, y, az, -0.14, k.jy, k.jw, k.cx - 0.12, k.cy + 0.1, k.cz, k.jr), 0.24);
+    d = smin(d, ellipsoid(x - k.cx, y - k.cy - 0.02, z, k.cr, k.cr * 0.92, k.cr + k.cz * 0.7), 0.18);
+    d = smin(d, ellipsoid(x - 0.58, y + 0.6, z, 0.24, 0.19, 0.32), 0.2);
+    d = smin(d, ellipsoid(x - 0.66, y + 0.12, az - 0.5, 0.2, 0.12, 0.2), 0.05 + 0.12 * k.cheek);
+    d = smax(d, az - 0.87, 0.3);
+    d = smax(d, -ellipsoid(x - 0.96, y + 0.04, az - 0.34, 0.13, 0.12, 0.19), 0.08);
+    d = smin(d, capsule(x, y, az, 0.88, 0.19, 0, 0.76, 0.17, 0.52, 0.035 + 0.04 * k.brow), 0.08 + 0.04 * k.brow);
+    const n = k.nose;
+    if (n) {
+      const tx = 0.9 + n.len, ty = -0.36 * n.h;
+      let nd = capsule(x, y, z, 0.9, 0.02, 0, tx, ty + 0.02, 0, n.r0);
+      if (n.hook) nd = smin(nd, sphere(x - 0.92 - n.len * 0.55, y + 0.15, z, n.r0 + n.hook), 0.05);
+      nd = smin(nd, sphere(x - tx + 0.01, y - ty, z, n.tip), 0.05);
+      nd = smin(nd, sphere(x - tx + 0.07, y - ty + 0.03, az - 0.07, n.wing), 0.04);
+      d = smin(d, nd, 0.06);
+    }
+    return d;
+  }
+  var HEAD = null;
+  var HEAD_R = /* @__PURE__ */ new Map();
+  function headRay(dx, dy, dz) {
+    const H2 = HEAD || headOf({});
+    let cache3 = H2.cache;
+    if (!cache3) {
+      cache3 = HEAD_R.get(H2.key);
+      if (!cache3) {
+        if (HEAD_R.size > 400) HEAD_R.clear();
+        cache3 = /* @__PURE__ */ new Map();
+        HEAD_R.set(H2.key, cache3);
+      }
+      H2.cache = cache3;
+    }
+    const key2 = (Math.round(dx * 1e4) + 10001) * 40004e4 + (Math.round(dy * 1e4) + 10001) * 20002 + (Math.round(dz * 1e4) + 10001);
+    let t = cache3.get(key2);
+    if (t !== void 0) return t;
+    const k = H2.k;
+    let out = 1.7, cur = 1.7;
+    for (let i = 0; i < 80; i++) {
+      const d = sdfHead(dx * cur, dy * cur, dz * cur, k);
+      if (d < 0) break;
+      out = cur;
+      cur -= Math.max(d * 0.9, 6e-3);
+      if (cur < 0.1) {
+        cur = 0.1;
+        break;
+      }
+    }
+    let lo = cur, hi = out;
+    for (let i = 0; i < 9; i++) {
+      const m = (lo + hi) / 2;
+      if (sdfHead(dx * m, dy * m, dz * m, k) < 0) lo = m;
+      else hi = m;
+    }
+    t = (lo + hi) / 2;
+    cache3.set(key2, t);
+    return t;
+  }
+  function headOf(look) {
+    const hp = headParams(look);
+    return { hp, key: headKey(hp), k: headKind(hp) };
+  }
+  function headShape(x, y, z) {
+    const l = Math.hypot(x, y, z) || 1;
+    const t = headRay(x / l, y / l, z / l);
+    return [x / l * t, y / l * t, z / l * t];
   }
   var dirOf = (thD, phD) => {
     const t = thD * DEG2, p = phD * DEG2;
@@ -55929,35 +56677,122 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const p = headShape(d[0], d[1], d[2]);
     return [p[0] * k, p[1] * k, p[2] * k];
   }
+  function faceNormals(g, U3, V2) {
+    const P3 = g.attributes.position, N3 = g.attributes.normal;
+    const W3 = U3 + 1, n = N3.count;
+    let a = Float32Array.from(N3.array), b = new Float32Array(a.length);
+    for (let it = 0; it < 3; it++) {
+      for (let j = 0; j <= V2; j++) {
+        for (let i = 0; i <= U3; i++) {
+          const k = (j * W3 + i) * 3;
+          const il = i === 0 ? U3 - 1 : i - 1, ir = i === U3 ? 1 : i + 1;
+          const nb = [j * W3 + il, j * W3 + ir, Math.max(0, j - 1) * W3 + i, Math.min(V2, j + 1) * W3 + i];
+          let x = a[k] * 2, y = a[k + 1] * 2, z = a[k + 2] * 2;
+          for (const q2 of nb) {
+            x += a[q2 * 3];
+            y += a[q2 * 3 + 1];
+            z += a[q2 * 3 + 2];
+          }
+          const l = Math.hypot(x, y, z) || 1;
+          b[k] = x / l;
+          b[k + 1] = y / l;
+          b[k + 2] = z / l;
+        }
+      }
+      [a, b] = [b, a];
+    }
+    for (let i = 0; i < n; i++) {
+      const px2 = P3.getX(i), py2 = P3.getY(i), pz2 = P3.getZ(i);
+      const l = Math.hypot(px2, py2, pz2) || 1;
+      const dx = px2 / l, dy = py2 / l, dz = pz2 / l;
+      const feat = Math.max(0, 1 - Math.abs(py2 + 0.12) / 0.5) * Math.max(0, 1 - Math.abs(pz2) / 0.7) * Math.max(0, Math.min(1, dx * 2));
+      const wg = 0.3 + 0.4 * feat;
+      const f = Math.max(0, Math.min(1, (dx + 0.1) / 0.7));
+      const nx = a[i * 3] * wg + dx * (1 - wg) + f * 0.2, ny = a[i * 3 + 1] * wg + dy * (1 - wg) + f * 0.05, nz = a[i * 3 + 2] * wg + dz * (1 - wg);
+      const m = Math.hypot(nx, ny, nz) || 1;
+      N3.setXYZ(i, nx / m, ny / m, nz / m);
+    }
+    return g;
+  }
+  var HEAD_GRID = {
+    near: { U: 34, warp: 0.74, rows: [0, 16, 32, 46, 58, 67, 74, 80, 85, 90, 94, 98, 102, 106, 110, 114, 118, 122, 126, 130, 134, 138, 142, 146, 150, 155, 160, 166, 173, 180] },
+    far: { U: 12, warp: 0.4, rows: [0, 36, 66, 86, 102, 118, 134, 150, 166, 180] }
+  };
+  var phOf = (G, i) => {
+    const u = i / G.U;
+    return (u + G.warp * Math.sin((u - 0.5) * TAU13) / TAU13) * TAU13 - Math.PI;
+  };
+  function headPoint(G, i, j) {
+    const ph = phOf(G, i), th = G.rows[j] * DEG2;
+    return headShape(Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph));
+  }
   var HEADS = /* @__PURE__ */ new Map();
-  function headGeo(U3, V2) {
-    const key2 = U3 + "x" + V2;
+  function headGeo(level) {
+    const G = HEAD_GRID[level];
+    const key2 = HEAD.key + "|" + level;
     let g = HEADS.get(key2);
     if (!g) {
-      g = grid((u, v) => {
-        const ph = Math.PI + u * TAU12, th = v * Math.PI;
-        return headShape(Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph));
-      }, U3, V2);
+      const V2 = G.rows.length - 1;
+      g = grid((u, v) => headPoint(G, Math.round(u * G.U), Math.round(v * V2)), G.U, V2);
+      const n = g.attributes.normal, W3 = G.U + 1;
+      for (let j = 0; j <= V2; j++) {
+        const a = j * W3, b = j * W3 + G.U;
+        const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b), l = Math.hypot(x, y, z) || 1;
+        n.setXYZ(a, x / l, y / l, z / l);
+        n.setXYZ(b, x / l, y / l, z / l);
+      }
+      faceNormals(g, G.U, V2);
+      if (HEADS.size > 300) HEADS.clear();
       HEADS.set(key2, g);
     }
     return g;
   }
-  var FACE_GEO = null;
-  function faceGeo() {
-    if (FACE_GEO) return FACE_GEO;
-    const ph0 = -64 * DEG2, ph1 = 64 * DEG2, th0 = 48 * DEG2, th1 = 154 * DEG2;
-    FACE_GEO = grid((u, v) => {
-      const ph = ph0 + u * (ph1 - ph0), th = th0 + v * (th1 - th0);
-      const p = headShape(Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph));
-      const k = 1.012;
-      return [p[0] * k, p[1] * k, p[2] * k, 0.5 - p[2] / 2, (p[1] + 1.05) / 1.67];
-    }, 12, 10, true);
-    FACE_GEO.userData.shared = true;
-    return FACE_GEO;
+  var FACE_GEO = /* @__PURE__ */ new Map();
+  function faceGeo(look = {}, level = "near") {
+    const was = HEAD;
+    HEAD = headOf(look);
+    const key2 = HEAD.key + "|" + level;
+    let g = FACE_GEO.get(key2);
+    if (!g) {
+      const G = HEAD_GRID[level];
+      const head = headGeo(level);
+      const HP = head.attributes.position, HN = head.attributes.normal, W3 = G.U + 1;
+      const cols = [], rws = [];
+      for (let i = 0; i <= G.U; i++) if (Math.abs(phOf(G, i)) <= 72 * DEG2) cols.push(i);
+      for (let j = 0; j < G.rows.length; j++) if (G.rows[j] >= 55 && G.rows[j] <= 172) rws.push(j);
+      const pos = [], nor = [], uv = [], idx = [];
+      for (const j of rws) {
+        for (const i of cols) {
+          const v = j * W3 + i, s = 1.006;
+          const x = HP.getX(v) * s, y = HP.getY(v) * s, z = HP.getZ(v) * s;
+          pos.push(x, y, z);
+          nor.push(HN.getX(v), HN.getY(v), HN.getZ(v));
+          uv.push(0.5 - z / 2, (y - FACE_BOTTOM) / (FACE_TOP - FACE_BOTTOM));
+        }
+      }
+      const C3 = cols.length;
+      for (let r = 0; r < rws.length - 1; r++) {
+        for (let c = 0; c < C3 - 1; c++) {
+          const a = r * C3 + c, b = a + 1, cc = a + C3, d = cc + 1;
+          idx.push(a, b, cc, b, d, cc);
+        }
+      }
+      g = new three_module_exports.BufferGeometry();
+      g.setAttribute("position", new three_module_exports.Float32BufferAttribute(pos, 3));
+      g.setAttribute("normal", new three_module_exports.Float32BufferAttribute(nor, 3));
+      g.setAttribute("uv", new three_module_exports.Float32BufferAttribute(uv, 2));
+      g.setIndex(idx);
+      g.computeBoundingSphere();
+      g.userData.shared = true;
+      if (FACE_GEO.size > 300) FACE_GEO.clear();
+      FACE_GEO.set(key2, g);
+    }
+    HEAD = was;
+    return g;
   }
   function capGeo(rs, thF, thS, thB, zig = null, U3 = 16, V2 = 6) {
     return grid((u, v) => {
-      const ph = Math.PI + u * TAU12;
+      const ph = Math.PI + u * TAU13;
       const c = Math.cos(ph);
       let th = thS + (thF - thS) * Math.pow(Math.max(0, c), 1.4) + (thB - thS) * Math.pow(Math.max(0, -c), 1.4);
       if (zig && v >= 1) th += zig(ph);
@@ -56093,7 +56928,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       h2.cap(1.08, 58, 100, 118);
       blob2(h2, [-0.36, 0.56, 0], 1.42, [0, 0, 0], [h2.q.blob[0] + 2, h2.q.blob[1] + 2]);
       for (let i = 0; i < 9; i++) {
-        const a = i / 9 * TAU12;
+        const a = i / 9 * TAU13;
         const c = [-0.36 + Math.cos(a) * 1.32 * 0.72, 0.56 + Math.sin(a) * 1.32, Math.sin(a * 2.3) * 0.5];
         if (c[0] > 0.2 && c[1] < 0.1) continue;
         blob2(h2, c, 0.36, [0, 0, 0], h2.q.sph);
@@ -56160,7 +56995,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       h2.addC(Prim.frustum(0.8, h2.q.hat), M(0, 0.86, 0, 0, 0, 0, [1, 0.62, 1]), c, h2.bone);
       dome(h2, 1.16, [0.8, 0.26, 0.8], c);
       for (let i = 0; i < 3; i++) {
-        const a = i / 3 * TAU12 + Math.PI / 3;
+        const a = i / 3 * TAU13 + Math.PI / 3;
         const x = Math.cos(a), z = Math.sin(a);
         h2.addC(Prim.rbox(0.3, h2.q.rboxS[0], h2.q.rboxS[1]), mul(M(x * 1.02, 0.78, z * 1.02, 0, -a, 0), M(0, 0, 0, 0, 0, 0.9, [0.36, 0.06, 1])), c, h2.bone);
         h2.addC(Prim.box(), mul(M(x * 1.14, 0.92, z * 1.14, 0, -a, 0), M(0, 0, 0, 0, 0, 0.9, [0.06, 0.04, 0.9])), GOLD2, h2.bone);
@@ -56246,7 +57081,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const y = top - 0.12;
       h2.add(lathe2([[0.62, y], [0.66, y + 0.3]], h2.q.hat), M(), c, h2.bone);
       for (let i = 0; i < 5; i++) {
-        const a = i / 5 * TAU12;
+        const a = i / 5 * TAU13;
         spike({ ...h2, col: lin(c) }, [Math.cos(a) * 0.64, y + 0.26, Math.sin(a) * 0.64], [Math.cos(a) * 0.7, y + 0.62, Math.sin(a) * 0.7], 0.14, 0.1, 4);
       }
       h2.addC(Prim.sphere(h2.q.sph[0], h2.q.sph[1]), M(0.66, y + 0.14, 0, 0, 0, 0, 0.09), "#e53935", h2.bone);
@@ -56338,10 +57173,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       L2.bust,
       L2.tie,
       L2.tucked,
-      L2.buckle
+      L2.buckle,
+      headKey(headParams(L2))
     ].join("|");
   }
   function buildBody(look, wpn, lod = 0) {
+    const was = HEAD;
+    HEAD = headOf(look);
+    try {
+      return buildBody0(look, wpn, lod);
+    } finally {
+      HEAD = was;
+    }
+  }
+  function buildBody0(look, wpn, lod) {
     const q2 = DETAIL[lod] || DETAIL[0];
     const d = dims(look);
     const pal = palette2(look);
@@ -56351,9 +57196,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const rb = (k = 0.4, small = true) => Prim.rbox(k, ...small ? q2.rboxS : q2.rbox);
     const outfit = buildFigure(add4, look, d, pal, q2);
     const R2 = d.headR;
-    const HM = (m) => mul(M(0, d.hc, 0, 0, 0, 0, R2), m || M());
+    const HM = (m) => mul(M(d.hx, d.hc, 0, 0, 0, 0, R2), m || M());
     const hb = B2.head;
-    add4(headGeo(q2.head[0], q2.head[1]), HM(), pal.face, hb);
+    add4(headGeo(lod === 0 ? "near" : "far"), HM(), pal.face, hb);
     const style = styleId2(look.hair, look);
     const meta = META2[style];
     const kind = hatKind2(look.hat, look);
@@ -56386,8 +57231,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     (HAIR2[style] || HAIR2.short)(h2);
     if (look.ears) minkEars2(b, HM, look, pal, hb, q2);
     else for (const s of [-1, 1]) {
-      const e = surf(96, s * 88, 0.98);
-      add4(Prim.sphere(q2.sph[0], q2.sph[1]), HM(M(e[0] - 0.03, e[1], e[2], 0, 0, s * 0.1, [0.2, 0.3, 0.14])), pal.face, hb);
+      const e = surf(98, s * 95, 0.97);
+      add4(Prim.sphere(q2.sph[0], q2.sph[1]), HM(M(e[0] - 0.02, e[1], e[2], 0, 0, s * 0.12, [0.19, 0.28, 0.13])), pal.face, hb);
     }
     if (look.fin && look.kind !== "Octopus") {
       const a = surf(18, 180, 0.9);
@@ -56398,8 +57243,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       b.add(Prim.cyl(4), HM(between(a, t, 0.035)), pal.skin, hb);
       b.add(Prim.sphere(q2.sph[0], q2.sph[1]), HM(M(t[0], t[1], t[2], 0, 0, 0, 0.09)), pal.skin, hb);
     }
-    if (look.nose === "long") b.add(Prim.frustum(0.75, 6), HM(between([0.9, -0.28, 0], [1.95, -0.22, 0], 0.075)), pal.face, hb);
-    else if (look.nose === "red") b.add(Prim.sphere(q2.sph[0] + 2, q2.sph[1] + 2), HM(M(0.98, -0.34, 0, 0, 0, 0, 0.17)), "#e53935", hb);
+    const hp = HEAD.hp;
+    if (hp.nose === "long") b.add(Prim.frustum(0.75, 6), HM(between([0.88, -0.2, 0], [1.95, -0.16, 0], 0.075)), pal.face, hb);
+    else if (hp.nose === "red") b.add(Prim.sphere(q2.sph[0] + 2, q2.sph[1] + 2), HM(M(1, -0.3, 0, 0, 0, 0, 0.17)), "#e53935", hb);
     if (look.kind === "Saw Shark") {
       b.add(rb(0.3), HM(M(1.5, -0.3, 0, 0, 0, 0.05, [0.6, 0.06, 0.1])), "#9fb0bf", hb);
       for (let i = 0; i < 5; i++) for (const s of [-1, 1]) b.add(Prim.cone(3), HM(M(1.1 + i * 0.18, -0.3, s * 0.1, s * Math.PI / 2, 0, 0, [0.04, 0.08, 0.03])), "#f4f1ea", hb);
@@ -56664,7 +57510,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (o.headRoll) this.qHead.multiply(_qb.setFromAxisAngle(X, o.headRoll));
       this.pos[B2.head].copy(this.neck);
       this.quat[B2.head].copy(this.qHead);
-      this.headC.set(0, d.hc, 0).applyQuaternion(this.qHead).add(this.neck);
+      this.headC.set(d.hx || 0, d.hc, 0).applyQuaternion(this.qHead).add(this.neck);
       const tiltA = o.tilt || 0;
       for (let k = 0; k < 2; k++) {
         const side = k === 0 ? 1 : -1;
@@ -56758,485 +57604,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return this;
     }
   };
-
-  // src/render3d/chars/mats.js
-  var BODY_KEY = "op-char-body-3";
-  var INK2 = 2364943;
-  var GRAD = null;
-  function charGradient() {
-    if (GRAD) return GRAD;
-    const data = new Uint8Array([158, 158, 158, 255, 176, 176, 176, 255, 255, 255, 255, 255, 255, 255, 255, 255]);
-    GRAD = new DataTexture(data, 4, 1, RGBAFormat);
-    GRAD.minFilter = NearestFilter;
-    GRAD.magFilter = NearestFilter;
-    GRAD.generateMipmaps = false;
-    GRAD.needsUpdate = true;
-    return GRAD;
-  }
-  function bodyMaterial(opts = {}) {
-    const u = {
-      uFlash: { value: 0 },
-      uFlashCol: { value: new Color(1, 1, 1) },
-      uHaki: { value: new Vector4() },
-      uHakiCol: { value: new Color(1512733) },
-      uLegFx: { value: new Vector2() },
-      uLegFxCol: { value: new Color(1, 0.36, 0) },
-      uFreeze: { value: 0 }
-    };
-    const m = new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), fog: opts.fog ?? true });
-    m.userData.u = u;
-    m.onBeforeCompile = (sh) => {
-      Object.assign(sh.uniforms, FOG, u);
-      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute float aPart;\nvarying float vPart;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvPart = aPart;");
-      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
-varying float vPart;
-uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec3 uHakiCol;
-uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze;`).replace("#include <color_fragment>", `#include <color_fragment>
-float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);
-float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart);
-float hakiK = pR * uHaki.x + pL * uHaki.y + lR * uHaki.z + lL * uHaki.w;
-float legK = lR * uLegFx.x + lL * uLegFx.y;
-diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);
-diffuseColor.rgb = mix(diffuseColor.rgb, uLegFxCol, legK * 0.8);
-diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.7, 0.88, 1.0), uFreeze * 0.55);
-diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
-{
-  float rim = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
-  // the anime rim light: a bright edge along the top and sides of the figure
-  float rimUp = smoothstep(-0.25, 0.55, normalize(normal).y);
-  totalEmissiveRadiance += diffuseColor.rgb * vec3(1.0, 0.96, 0.9) * smoothstep(0.55, 0.9, rim) * rimUp * 0.55 * (1.0 - hakiK);
-  totalEmissiveRadiance += vec3(0.42, 0.28, 0.72) * pow(rim, 2.2) * hakiK * 0.9;
-  totalEmissiveRadiance += vec3(0.5, 0.75, 1.0) * pow(rim, 1.6) * uFreeze * 0.35;
-  totalEmissiveRadiance += uLegFxCol * legK * 0.85 + uFlashCol * uFlash * 0.8;
-}`);
-    };
-    m.customProgramCacheKey = () => BODY_KEY;
-    return m;
-  }
-  function outlineMaterial2(width = 0.0105, color = INK2, opts = {}) {
-    const u = { uOutline: { value: width } };
-    const m = new MeshBasicMaterial({ color, side: BackSide, fog: opts.fog ?? true });
-    m.userData.u = u;
-    m.onBeforeCompile = (sh) => {
-      Object.assign(sh.uniforms, FOG);
-      sh.uniforms.uOutline = u.uOutline;
-      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uOutline;").replace("#include <skinning_vertex>", `#include <skinning_vertex>
-{
-#ifdef USE_SKINNING
-  vec3 onrm = normalize( objectNormal );
-#else
-  vec3 onrm = normalize( normal );
-#endif
-  vec4 mvq = modelViewMatrix * vec4( transformed, 1.0 );
-  float sc = length( modelMatrix[ 1 ].xyz );
-  transformed += onrm * uOutline * clamp( -mvq.z * 0.34, 0.75, 5.0 ) / max( sc, 0.2 );
-}`);
-    };
-    m.customProgramCacheKey = () => "op-char-outline-2";
-    return m;
-  }
-  var SHARED_OUTLINE = null;
-  function sharedOutline() {
-    if (!SHARED_OUTLINE) SHARED_OUTLINE = outlineMaterial2();
-    return SHARED_OUTLINE;
-  }
-  var WEAPON = null;
-  function weaponMaterial() {
-    if (!WEAPON) WEAPON = new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient() });
-    return WEAPON;
-  }
-  var GLOW = /* @__PURE__ */ new Map();
-  function glowMaterial(color, opacity = 0.85) {
-    const key2 = `${color}|${opacity}`;
-    let m = GLOW.get(key2);
-    if (!m) {
-      m = new MeshBasicMaterial({ color: new Color(color), transparent: true, opacity, blending: AdditiveBlending, depthWrite: false, fog: true });
-      GLOW.set(key2, m);
-    }
-    return m;
-  }
-
-  // src/render3d/chars/face.js
-  var FACE_W = 192;
-  var FACE_H = 160;
-  var FACE_S2 = 96;
-  var FACE_Y0 = 0.62;
-  var TAU13 = Math.PI * 2;
-  var INK3 = "#2a1a1e";
-  function hex2(col, fb) {
-    if (typeof col !== "string") return fb;
-    if (col[0] === "#") return col.length === 4 || col.length === 7 ? col : col.length > 7 ? col.slice(0, 7) : fb;
-    const m = col.match(/rgba?\(([^)]+)\)/);
-    if (!m) return fb;
-    return "#" + m[1].split(",").slice(0, 3).map((v) => Math.max(0, Math.min(255, parseFloat(v) | 0)).toString(16).padStart(2, "0")).join("");
-  }
-  function lum3(h2) {
-    const s = h2.length === 4 ? h2[1] + h2[1] + h2[2] + h2[2] + h2[3] + h2[3] : h2.slice(1, 7);
-    const n = parseInt(s, 16);
-    return ((n >> 16 & 255) * 0.299 + (n >> 8 & 255) * 0.587 + (n & 255) * 0.114) / 255;
-  }
-  function browCol(hairCol) {
-    const h2 = hex2(hairCol, "#2d2d2d"), L2 = lum3(h2);
-    const base2 = L2 < 0.16 ? mixHex(h2, "#474c69", 0.3) : h2;
-    return L2 > 0.62 ? mixHex(h2, "#5b4a46", 0.6) : L2 < 0.16 ? "#1d1418" : mixHex(base2, "#140c10", 0.5);
-  }
-  function skinTones(col) {
-    const h2 = hex2(col, "#f1c9a0"), L2 = lum3(h2);
-    return {
-      base: h2,
-      line: mixHex(h2, "#3a1418", 0.6),
-      muzzle: mixHex(h2, "#ffffff", L2 > 0.85 ? 0 : 0.5),
-      blush: mixHex(h2, "#ff5a6e", 0.32),
-      shadow: L2 > 0.3 ? mixHex(h2, "#a23f45", 0.22) : mixHex(h2, "#12060c", 0.34)
-    };
-  }
-  var P22 = /* @__PURE__ */ new Map();
-  var pp2 = (d) => {
-    let p = P22.get(d);
-    if (!p) {
-      p = new Path2D(d);
-      P22.set(d, p);
-    }
-    return p;
-  };
-  var EYE2 = {
-    white: "M-0.18 -0.01 C-0.16 -0.25 0.13 -0.27 0.19 -0.07 C0.22 0.12 0.12 0.26 0 0.26 C-0.12 0.26 -0.19 0.14 -0.18 -0.01 Z",
-    lash: "M-0.22 0.03 C-0.2 -0.3 0.16 -0.34 0.23 -0.08 L0.3 -0.12 L0.22 0.01 C0.14 -0.2 -0.13 -0.21 -0.2 0.05 Z",
-    lower: "M0.02 0.26 Q0.14 0.24 0.19 0.12",
-    fWhite: "M-0.19 0.06 L0.2 -0.12 C0.22 0.1 0.12 0.24 0 0.24 C-0.12 0.24 -0.19 0.16 -0.19 0.06 Z",
-    fLash: "M-0.23 0.03 L0.22 -0.2 L0.3 -0.2 L0.21 -0.09 L-0.19 0.1 Z",
-    blink: "M-0.2 0.06 Q0 0.2 0.21 0.03 L0.27 0",
-    hurt: "M0.18 -0.12 L-0.12 0.06 L0.18 0.24",
-    fishWhite: "M0.2 0.06 C0.2 -0.07 0.11 -0.15 0 -0.15 C-0.11 -0.15 -0.2 -0.07 -0.2 0.06 C-0.2 0.18 -0.11 0.27 0 0.27 C0.11 0.27 0.2 0.18 0.2 0.06 Z",
-    fishLash: "M-0.22 0.02 C-0.2 -0.22 0.2 -0.24 0.23 0.0 L0.18 0.02 C0.14 -0.16 -0.14 -0.16 -0.18 0.04 Z"
-  };
-  var SPIRAL2 = null;
-  function spiral3() {
-    if (!SPIRAL2) {
-      let s = "";
-      for (let i = 0; i <= 26; i++) {
-        const a = i * 0.62, rr = 0.02 + i * 75e-4;
-        const x = Math.cos(a) * rr, y = 0.06 + Math.sin(a) * rr * 1.1;
-        s += `${i ? "L" : "M"}${x.toFixed(3)} ${y.toFixed(3)} `;
-      }
-      SPIRAL2 = s;
-    }
-    return SPIRAL2;
-  }
-  var BROWS2 = {
-    fierce: "M0.17 -0.1 Q0.38 -0.2 0.62 -0.31 M-0.17 -0.1 Q-0.38 -0.2 -0.62 -0.31",
-    worried: "M0.2 -0.3 Q0.42 -0.3 0.6 -0.16 M-0.2 -0.3 Q-0.42 -0.3 -0.6 -0.16",
-    neutral: "M0.2 -0.19 Q0.4 -0.3 0.6 -0.22 M-0.2 -0.19 Q-0.4 -0.3 -0.6 -0.22"
-  };
-  var MOUTH_COL2 = "#5c1c20";
-  var TONGUE2 = "#e0626a";
-  var TEETH2 = "#ffffff";
-  var MOUTHS2 = {
-    fierce: "M-0.14 0.66 Q0 0.58 0.14 0.66",
-    ko: "M-0.16 0.62 Q-0.08 0.54 0 0.62 Q0.08 0.7 0.16 0.62",
-    animal: "M-0.16 0.56 Q-0.08 0.66 0 0.54 Q0.08 0.66 0.16 0.56",
-    smile: "M-0.12 0.61 Q0 0.67 0.12 0.6",
-    flat: "M-0.11 0.62 L0.11 0.62",
-    grin: ["M-0.46 0.46 Q0 0.58 0.46 0.46 Q0.36 0.95 0 0.95 Q-0.36 0.95 -0.46 0.46 Z", "M-0.5 0.4 L0.5 0.4 L0.5 0.56 Q0 0.72 -0.5 0.56 Z", [0, 0.93, 0.24, 0.11]],
-    shout: ["M-0.25 0.5 Q0 0.45 0.25 0.5 Q0.3 0.92 0 0.94 Q-0.3 0.92 -0.25 0.5 Z", "M-0.3 0.4 L0.3 0.4 L0.3 0.55 Q0 0.6 -0.3 0.55 Z", [0, 0.92, 0.17, 0.1]],
-    grimace: ["M-0.3 0.55 Q0 0.5 0.3 0.55 L0.26 0.74 Q0 0.7 -0.26 0.74 Z", "M-0.4 0.4 L0.4 0.4 L0.4 0.9 L-0.4 0.9 Z", null, "M-0.28 0.64 L0.28 0.64 M-0.12 0.54 L-0.12 0.72 M0.06 0.53 L0.06 0.72"]
-  };
-  var SHARP2 = /* @__PURE__ */ new Map();
-  function sharpTeeth2(kind) {
-    let s = SHARP2.get(kind);
-    if (s) return s;
-    const [x0, x1, y0, h2] = kind === "grin" ? [-0.46, 0.46, 0.46, 0.13] : kind === "shout" ? [-0.26, 0.26, 0.48, 0.1] : [-0.3, 0.3, 0.53, 0.1];
-    const n = kind === "grin" ? 7 : 4;
-    let d = `M${x0} ${y0 - 0.1}`;
-    for (let i = 0; i <= n; i++) {
-      const x = x0 + (x1 - x0) * i / n;
-      d += ` L${x.toFixed(3)} ${(y0 + (i === 0 || i === n ? 0 : 0.02)).toFixed(3)}`;
-      if (i < n) d += ` L${(x + (x1 - x0) / n / 2).toFixed(3)} ${(y0 + h2).toFixed(3)}`;
-    }
-    d += ` L${x1} ${y0 - 0.1} Z`;
-    const yb = kind === "grin" ? 0.9 : kind === "shout" ? 0.9 : 0.74;
-    d += ` M${(x0 * 0.7).toFixed(3)} ${(yb + 0.1).toFixed(3)}`;
-    for (let i = 0; i <= n - 1; i++) {
-      const x = x0 * 0.7 + (x1 - x0) * 0.7 * i / (n - 1);
-      d += ` L${x.toFixed(3)} ${yb.toFixed(3)}`;
-      if (i < n - 1) d += ` L${(x + (x1 - x0) * 0.7 / (n - 1) / 2).toFixed(3)} ${(yb - h2 * 0.9).toFixed(3)}`;
-    }
-    d += ` L${(x1 * 0.7).toFixed(3)} ${(yb + 0.1).toFixed(3)} Z`;
-    SHARP2.set(kind, d);
-    return d;
-  }
-  var SCAR2 = { F: "M-0.52 -0.12 L-0.3 0.5", Fx: "M-0.52 0.02 L-0.38 -0.02 M-0.46 0.24 L-0.32 0.2" };
-  var PANDA2 = "M0.14 0.02 C0.2 -0.2 0.58 -0.22 0.68 0.12 C0.76 0.4 0.62 0.58 0.44 0.52 C0.24 0.46 0.1 0.26 0.14 0.02 Z M-0.14 0.02 C-0.2 -0.2 -0.58 -0.22 -0.68 0.12 C-0.76 0.4 -0.62 0.58 -0.44 0.52 C-0.24 0.46 -0.1 0.26 -0.14 0.02 Z";
-  var THIRD2 = "M0 -0.28 Q0.11 -0.12 0 0.04 Q-0.11 -0.12 0 -0.28 Z";
-  var GILLS2 = "M0.74 0.44 Q0.68 0.52 0.72 0.6 M0.68 0.54 Q0.62 0.62 0.66 0.7 M-0.74 0.44 Q-0.68 0.52 -0.72 0.6 M-0.68 0.54 Q-0.62 0.62 -0.66 0.7";
-  var NOSE_HINT = "M0.03 0.35 Q0.08 0.42 0.02 0.45";
-  var NOSE_ANIMAL2 = "M-0.11 0.35 Q0 0.3 0.11 0.35 Q0.07 0.45 0 0.47 Q-0.07 0.45 -0.11 0.35 Z";
-  var SHADES2 = {
-    lens: "M0.14 0.02 L0.64 0.0 Q0.66 0.28 0.46 0.34 Q0.2 0.36 0.14 0.02 Z M-0.14 0.02 L-0.64 0.0 Q-0.66 0.28 -0.46 0.34 Q-0.2 0.36 -0.14 0.02 Z",
-    glint: "M-0.5 0.04 L-0.4 0.04 L-0.48 0.24 L-0.58 0.24 Z M0.3 0.04 L0.4 0.04 L0.32 0.24 L0.22 0.24 Z",
-    bridge: "M-0.14 0.06 Q0 0.02 0.14 0.06"
-  };
-  function expression2(look, pose, P3, t) {
-    const st = pose && pose.state;
-    if (st === "knocked" || st === "dead") return { eyes: "ko", mouth: "ko", brow: "worried", small: false };
-    if (st === "hurt") return { eyes: "hurt", mouth: "grimace", brow: "worried", small: false };
-    const face = P3 && P3.face;
-    const fierce = face === "fierce" || face === "shout";
-    const s = (look.seed || 0) * 0.6180339 % 1 * 0.9 + 0.1;
-    const blink = !fierce && ((t * 0.29 + s - 0.29) % 1 + 1) % 1 < 0.035;
-    let mouth = face === "shout" ? "shout" : fierce ? "fierce" : look.grin || look.nika ? "grin" : "neutral";
-    if (mouth === "neutral") mouth = look.muzzle || look.race === "mink" ? "animal" : look.mouth || ((look.seed || 0) % 2 ? "smile" : "flat");
-    return { eyes: blink ? "blink" : fierce ? "fierce" : "open", mouth, brow: fierce ? "fierce" : "neutral", small: face === "shout" };
-  }
-  var EYE_SHAPES2 = ["round", "round", "sharp", "soft"];
-  function eyeShapeOf2(look) {
-    if (look.eyeShape) return look.eyeShape;
-    if (look.race === "fishman") return "fish";
-    if (look.race === "mink") return "round";
-    return EYE_SHAPES2[(look.seed || 0) % 4];
-  }
-  function faceKey(look) {
-    const hairCol = look.furWhite ? "#fafafa" : look.nika ? "#ffffff" : look.hairColor;
-    const skin = look.furWhite ? "#fafafa" : look.fur && look.furFace ? look.fur : look.skin;
-    return `${eyeShapeOf2(look)}|${look.eyeColor}|${hairCol}|${skin}|${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.race === "mink" ? 1 : 0}${look.gills ? 1 : 0}${look.grin || look.nika ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.goggles === true ? 1 : 0}|${look.kind === "Panda" ? "P" : ""}|${look.nose || (look.kind === "Saw Shark" ? "saw" : "")}|${look.fem ? "F" : ""}`;
-  }
-  function drawEyes2(g, look, X2) {
-    const shape = eyeShapeOf2(look);
-    const white = !!look.furWhite;
-    const iris = white ? "#ff1744" : hex2(look.eyeColor, "#2d2226");
-    const lt2 = mixHex(iris, "#ffffff", white ? 0.55 : 0.38);
-    const pupil = white ? "#ff8a80" : mixHex(iris, "#000000", 0.7);
-    const E = EYE2;
-    const ey = 0.17;
-    const closed = X2.eyes === "blink" || X2.eyes === "hurt" || X2.eyes === "ko";
-    const fierce = X2.eyes === "fierce";
-    const fish = shape === "fish" && !fierce;
-    for (let n = 0; n < 2; n++) {
-      const x = n ? 0.39 : -0.39;
-      g.save();
-      g.translate(x, ey);
-      const flip = x < 0 ? -1 : 1;
-      if (flip < 0) g.scale(-1, 1);
-      if (shape === "sharp") {
-        g.rotate(-0.12);
-        g.scale(1.06, 0.8);
-      } else if (shape === "soft") {
-        g.rotate(0.1);
-        g.scale(1, 0.92);
-      }
-      if (closed) {
-        g.lineWidth = X2.eyes === "ko" ? 0.05 : 0.075;
-        g.strokeStyle = look.kind === "Panda" ? "#f4f1ea" : INK3;
-        g.lineCap = "round";
-        g.lineJoin = "round";
-        if (X2.eyes === "ko") {
-          g.scale(flip, 1);
-          g.stroke(pp2(spiral3()));
-        } else g.stroke(pp2(X2.eyes === "blink" ? E.blink : E.hurt));
-        g.restore();
-        continue;
-      }
-      g.fillStyle = "#ffffff";
-      g.fill(pp2(fish ? E.fishWhite : fierce ? E.fWhite : E.white));
-      const ir = fish ? 0.55 : X2.small ? 0.72 : fierce ? 0.85 : 1;
-      const ix = -0.01, iy = fierce ? 0.08 : 0.05;
-      g.fillStyle = iris;
-      g.beginPath();
-      g.ellipse(ix, iy, 0.125 * ir, 0.19 * ir, 0, 0, TAU13);
-      g.fill();
-      g.fillStyle = lt2;
-      g.beginPath();
-      g.ellipse(ix, iy + 0.1 * ir, 0.085 * ir, 0.07 * ir, 0, 0, TAU13);
-      g.fill();
-      g.fillStyle = pupil;
-      g.beginPath();
-      g.ellipse(ix, iy + 0.015, 0.062 * ir, 0.105 * ir, 0, 0, TAU13);
-      g.fill();
-      g.fillStyle = INK3;
-      g.fill(pp2(fish ? E.fishLash : fierce ? E.fLash : E.lash));
-      if (!fierce) {
-        g.lineWidth = 0.028;
-        g.strokeStyle = INK3;
-        g.stroke(pp2(E.lower));
-      }
-      if (look.fem && !fish) {
-        g.lineWidth = 0.032;
-        g.strokeStyle = INK3;
-        g.lineCap = "round";
-        g.stroke(pp2(fierce ? "M0.22 -0.18 L0.33 -0.26 M0.24 -0.1 L0.36 -0.14" : "M0.2 -0.2 Q0.3 -0.26 0.36 -0.3 M0.23 -0.11 Q0.33 -0.14 0.39 -0.15"));
-      }
-      g.restore();
-      g.fillStyle = "#ffffff";
-      g.beginPath();
-      g.arc(x - 0.06, ey + (fierce ? 0.04 : -0.03), 0.055 * (fish ? 0.8 : 1), 0, TAU13);
-      g.fill();
-      g.beginPath();
-      g.arc(x + 0.055, ey + 0.14, 0.028, 0, TAU13);
-      g.fill();
-    }
-    if (look.scarEye) {
-      g.lineWidth = 0.06;
-      g.strokeStyle = "#9b3a36";
-      g.stroke(pp2(SCAR2.F));
-      g.lineWidth = 0.03;
-      g.stroke(pp2(SCAR2.Fx));
-    }
-  }
-  function drawMouth2(g, look, X2) {
-    const kind = X2.mouth;
-    if (look.muzzle) {
-      g.save();
-      g.translate(0, 0.05);
-    }
-    if (typeof MOUTHS2[kind] === "string") {
-      g.lineWidth = look.fem ? 0.058 : 0.05;
-      g.strokeStyle = look.fem && (kind === "smile" || kind === "flat") ? "#b8405a" : MOUTH_COL2;
-      g.lineCap = "round";
-      g.stroke(pp2(MOUTHS2[kind]));
-    } else {
-      const [d, teeth, tongue, lines] = MOUTHS2[kind];
-      const mp = pp2(d);
-      g.fillStyle = MOUTH_COL2;
-      g.fill(mp);
-      g.save();
-      g.clip(mp);
-      if (tongue) {
-        g.fillStyle = TONGUE2;
-        g.beginPath();
-        g.ellipse(tongue[0], tongue[1], tongue[2], tongue[3], 0, 0, TAU13);
-        g.fill();
-      }
-      g.fillStyle = TEETH2;
-      g.fill(pp2(look.sharpTeeth ? sharpTeeth2(kind) : teeth));
-      if (lines) {
-        g.lineWidth = 0.025;
-        g.strokeStyle = "rgba(90,40,40,0.8)";
-        g.stroke(pp2(lines));
-      }
-      g.restore();
-      g.lineWidth = 0.035;
-      g.strokeStyle = MOUTH_COL2;
-      g.stroke(mp);
-    }
-    if (look.muzzle) g.restore();
-  }
-  function paintFace(g, look, X2) {
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.clearRect(0, 0, FACE_W, FACE_H);
-    g.setTransform(FACE_S2, 0, 0, FACE_S2, FACE_W / 2, FACE_Y0 * FACE_S2);
-    g.lineJoin = "round";
-    g.lineCap = "round";
-    const white = !!look.furWhite;
-    const skin = skinTones(white ? "#fafafa" : hex2(look.fur && look.furFace ? look.fur : look.skin, "#f1c9a0"));
-    const brow = white ? "#b0a6a2" : browCol(look.nika ? "#ffffff" : look.hairColor);
-    if (look.kind === "Panda") {
-      g.fillStyle = "#2b2b2b";
-      g.fill(pp2(PANDA2));
-    }
-    if (look.muzzle) {
-      g.fillStyle = skin.muzzle;
-      g.beginPath();
-      g.ellipse(0, 0.56, 0.36, 0.27, 0, 0, TAU13);
-      g.fill();
-      g.fillStyle = "#2d2226";
-      g.fill(pp2(NOSE_ANIMAL2));
-      g.fillStyle = "rgba(255,255,255,0.7)";
-      g.beginPath();
-      g.ellipse(-0.04, 0.35, 0.03, 0.02, 0, 0, TAU13);
-      g.fill();
-    }
-    if (look.gills) {
-      g.lineWidth = 0.035;
-      g.strokeStyle = skin.line;
-      g.stroke(pp2(GILLS2));
-    }
-    drawEyes2(g, look, X2);
-    if ((look.grin || look.nika) && X2.mouth === "grin") {
-      g.fillStyle = skin.blush;
-      g.globalAlpha = 0.5;
-      g.beginPath();
-      g.ellipse(-0.66, 0.46, 0.14, 0.07, 0, 0, TAU13);
-      g.ellipse(0.66, 0.46, 0.14, 0.07, 0, 0, TAU13);
-      g.fill();
-      g.globalAlpha = 1;
-    }
-    if (!look.nose && look.kind !== "Saw Shark" && look.race !== "mink" && !look.muzzle) {
-      g.lineWidth = 0.04;
-      g.strokeStyle = skin.line;
-      g.stroke(pp2(NOSE_HINT));
-    }
-    drawMouth2(g, look, X2);
-    g.lineWidth = 0.075;
-    g.strokeStyle = brow;
-    g.stroke(pp2(BROWS2[X2.brow] || BROWS2.neutral));
-    if (look.thirdEye) {
-      g.fillStyle = "#ffffff";
-      g.fill(pp2(THIRD2));
-      g.lineWidth = 0.025;
-      g.strokeStyle = INK3;
-      g.stroke(pp2(THIRD2));
-      g.fillStyle = hex2(look.eyeColor, "#8e44ad");
-      g.beginPath();
-      g.ellipse(0, -0.11, 0.06, 0.1, 0, 0, TAU13);
-      g.fill();
-      g.fillStyle = "#1a1020";
-      g.beginPath();
-      g.ellipse(0, -0.1, 0.028, 0.05, 0, 0, TAU13);
-      g.fill();
-      g.fillStyle = "#ffffff";
-      g.beginPath();
-      g.arc(-0.02, -0.15, 0.025, 0, TAU13);
-      g.fill();
-    }
-    if (look.goggles === true) {
-      g.fillStyle = "#241f2c";
-      g.fill(pp2(SHADES2.lens));
-      g.lineWidth = 0.03;
-      g.strokeStyle = "#15121a";
-      g.stroke(pp2(SHADES2.lens));
-      g.fillStyle = "rgba(255,255,255,0.55)";
-      g.fill(pp2(SHADES2.glint));
-      g.lineWidth = 0.06;
-      g.strokeStyle = "#15121a";
-      g.stroke(pp2(SHADES2.bridge));
-    }
-  }
-  var CACHE = /* @__PURE__ */ new Map();
-  var MAX = 150;
-  var tick2 = 0;
-  function faceMaterial(look, X2) {
-    const key2 = `${faceKey(look)}~${X2.eyes}${X2.mouth}${X2.brow}${X2.small ? 1 : 0}`;
-    let e = CACHE.get(key2);
-    if (!e) {
-      const c = document.createElement("canvas");
-      c.width = FACE_W;
-      c.height = FACE_H;
-      paintFace(c.getContext("2d"), look, X2);
-      const tex2 = new CanvasTexture(c);
-      tex2.colorSpace = SRGBColorSpace;
-      tex2.anisotropy = 4;
-      const mat = new MeshToonMaterial({ map: tex2, gradientMap: charGradient(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
-      e = { key: key2, tex: tex2, mat, refs: 1, t: ++tick2 };
-      CACHE.set(key2, e);
-      if (CACHE.size > MAX) evict();
-      return e;
-    }
-    e.refs++;
-    e.t = ++tick2;
-    return e;
-  }
-  function releaseFace(e) {
-    if (e) e.refs = Math.max(0, e.refs - 1);
-  }
-  function evict() {
-    const idle = [...CACHE.values()].filter((e) => e.refs <= 0).sort((a, b) => a.t - b.t);
-    for (let i = 0; i < idle.length && CACHE.size > MAX * 0.8; i++) {
-      const e = idle[i];
-      CACHE.delete(e.key);
-      e.tex.dispose();
-      e.mat.dispose();
-    }
-  }
 
   // src/render3d/chars/weapons.js
   function blade(b, x0, L2, w, t, cols) {
@@ -57433,12 +57800,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.outline.boundingSphere = this.mesh.boundingSphere;
       this.group.add(this.mesh, this.outline);
       const d = this.d;
-      this.bones[B2.hairTail].position.set(0, d.hc, 0);
+      this.bones[B2.hairTail].position.set(d.hx, d.hc, 0);
       this.bones[B2.tail].position.set(-0.13 * d.Bk, -0.06, 0);
       this.bones[B2.wingR].position.set(-0.11 * d.Bk, d.chestLen * 0.8, 0.05);
       this.bones[B2.wingL].position.set(-0.11 * d.Bk, d.chestLen * 0.8, -0.05);
-      this.face = new Mesh(faceGeo(), void 0);
-      this.face.position.set(0, d.hc, 0);
+      this.face = new Mesh(faceGeo(look, this.lod === 0 ? "near" : "far"), void 0);
+      this.face.position.set(d.hx, d.hc, 0);
       this.face.scale.setScalar(d.headR);
       this.face.renderOrder = 1;
       this.bones[B2.head].add(this.face);
@@ -57446,7 +57813,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.faceKey = "";
       if (this.body.bubble) {
         const bub = new Mesh(new SphereGeometry(d.headR * 1.85, 16, 12), new MeshBasicMaterial({ color: 13167615, transparent: true, opacity: 0.22, depthWrite: false }));
-        bub.position.set(0, d.hc + d.headR * 0.1, 0);
+        bub.position.set(d.hx, d.hc + d.headR * 0.1, 0);
         this.bones[B2.head].add(bub);
         this.bubble = bub;
       }
@@ -57465,6 +57832,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lod = lod;
       this.mesh.geometry = nb.geo;
       this.outline.geometry = nb.geo;
+      this.face.geometry = faceGeo(this.look, lod === 0 ? "near" : "far");
     }
     /** Swap the face texture for this frame's expression. */
     setExpression(X2) {
@@ -57538,7 +57906,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const hw = this.held[2];
         const m = P3.m ?? 0.15;
         _v5.set(0.18, -Math.sin(m) * 0.3 - 0.1, 1).normalize();
-        _v22.set(d.headR * 0.9, d.hc - d.headR * 0.5, -d.headR * 0.12);
+        _v22.set(d.hx + d.headR * 0.9, d.hc - d.headR * 0.55, -d.headR * 0.12);
         _v32.set(0, 1, 0);
         hw.place(_v22, _v5, _v32);
         hw.group.position.addScaledVector(_v5, -0.12);
@@ -59774,6 +60142,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const ctx = { THREE: three_module_exports, scene, game: game || null, ground: () => 0, terrain: () => 0, camera, world: null, yaw: 0, mode: "third" };
     let actor = null, view = null, h2 = 1.8;
     let turn = 0.35, drag = null, raf = 0, last = performance.now();
+    let framing = "full", zoom = 0;
     const t0 = last;
     const setLook = (lk2) => {
       if (view) {
@@ -59802,11 +60171,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const pr = renderer.getPixelRatio();
       if (canvas2.width !== Math.round(w * pr) || canvas2.height !== Math.round(hh * pr)) renderer.setSize(w, hh, false);
       camera.aspect = w / Math.max(1, hh);
+      zoom += ((framing === "face" ? 1 : 0) - zoom) * Math.min(1, dt * 6);
       const fovY = camera.fov * Math.PI / 180;
-      const fitH = h2 * 1.34, fitW = h2 * 0.8 / camera.aspect;
+      const fitH = h2 * (1.34 - 0.94 * zoom), fitW = h2 * (0.8 - 0.46 * zoom) / camera.aspect;
       const dist = Math.max(fitH, fitW) / (2 * Math.tan(fovY / 2));
-      camera.position.set(0, h2 * 0.6, dist);
-      camera.lookAt(0, h2 * 0.54, 0);
+      const cy = h2 * (0.54 + 0.35 * zoom);
+      camera.position.set(0, cy + h2 * 0.06 * (1 - zoom) + h2 * 0.01 * zoom, dist);
+      camera.lookAt(0, cy, 0);
       camera.updateProjectionMatrix();
       if (!drag) turn += dt * 0.45;
       if (actor && view) {
@@ -59842,6 +60213,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     raf = requestAnimationFrame(frame2);
     return {
       setLook,
+      /** 'full' (the whole figure) or 'face' (head and shoulders). */
+      setFraming(f) {
+        framing = f;
+      },
       dispose() {
         cancelAnimationFrame(raf);
         canvas2.removeEventListener("pointerdown", down);
@@ -59859,7 +60234,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     };
   }
-  function renderPortrait(look, { w = 120, h: h2 = 140, view: framing = "bust", game = null, turn = 0 } = {}) {
+  function renderPortrait(look, { w = 120, h: h2 = 140, view: framing = "bust", game = null, turn = 0, elev = 0 } = {}) {
     try {
       const renderer = sharedRenderer();
       const { scene, camera } = makeStage();
@@ -59877,6 +60252,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const dist = H2 * 1.15 / (2 * Math.tan(fovY / 2));
         camera.position.set(0, H2 * 0.55, dist);
         camera.lookAt(0, H2 * 0.5, 0);
+      } else if (framing === "head") {
+        const head = H2 * 0.915, dist = H2 * 0.52;
+        camera.position.set(0, head + Math.sin(elev) * dist, Math.cos(elev) * dist);
+        camera.lookAt(0, head, 0);
       } else {
         const head = H2 * 0.86;
         camera.position.set(0, head, H2 * 0.95);
@@ -73715,6 +74094,20 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       );
       const tabsEl = h("div.tabs.look-tabs");
       const optsEl = h("div.look-opts");
+      const genderEl = h("div");
+      const renderGender = () => {
+        clear(genderEl);
+        genderEl.appendChild(row("You are", chips(L2.fem ? "f" : "m", ["m", "f"], ["Male", "Female"], (v) => setGender(v === "f"))));
+      };
+      const setGender = (fem) => {
+        L2.fem = fem;
+        if (!fem && ["dress", "crop", "bikini"].includes(L2.topStyle)) L2.topStyle = "tee";
+        if (!fem && ["skirt", "longskirt"].includes(L2.bottomStyle)) L2.bottomStyle = "trousers";
+        if (L2.eyeShape !== "fish") L2.eyeShape = eyeShapeOf2({ ...L2, eyeShape: L2.eyeShape });
+        if (fem && L2.bust === void 0) L2.bust = 1;
+        renderGender();
+      };
+      renderGender();
       const right = h(
         "div",
         row("Name", h("div", { style: { display: "flex", gap: "6px" } }, nameInput, h("button.btn", { on: { click: () => {
@@ -73723,6 +74116,7 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
           updateName();
         } } }, "Random"))),
         finalName,
+        genderEl,
         tabsEl,
         optsEl,
         h("p.muted", { style: { marginTop: "12px" } }, "No destiny is chosen for you. Pirate, Marine, adventurer, bounty hunter or none of these \u2014 the sea is free, and what you become is up to you. You can found your own pirate crew and raise your Jolly Roger later, from the Crew menu.")
@@ -73771,17 +74165,39 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       const renderOpts = () => {
         clear(optsEl);
         const tab = state.tab;
+        preview?.setFraming?.(tab === "face" || tab === "hair" ? "face" : "full");
         if (tab === "face") {
           add2(
             optsEl,
-            row("Eyes", opts("eyeShape", ["round", "sharp", "soft", "fish"], ["Round", "Sharp", "Gentle", "Fish"])),
+            row("Eyes", (() => {
+              const set = [...L2.fem ? EYES_F : EYES_M, ...race === "fishman" ? ["fish"] : []];
+              return chips(eyeShapeOf2(L2), set, set.map((e) => EYE_NAMES[e]), (v) => {
+                L2.eyeShape = v;
+              });
+            })()),
             row("Eye colour", swatch("eyeColor", ["#222222", "#3b2a1a", "#6d4c41", "#1e3799", "#0984e3", "#00a8a8", "#27ae60", "#6c5ce7", "#8e44ad", "#c0392b", "#e1b12c", "#b2bec3"])),
             row("Mouth", chips(L2.grin ? "grin" : L2.mouth || "smile", ["smile", "flat", "grin"], ["Smile", "Calm", "Big grin"], (v) => {
               L2.grin = v === "grin";
               L2.mouth = v === "grin" ? void 0 : v;
             })),
-            row("Nose", chips(L2.nose === "long" ? "long" : "normal", ["normal", "long"], ["Normal", "Long"], (v) => {
-              L2.nose = v === "long" ? "long" : void 0;
+            row("Face shape", chips(headParams(L2).shape, FACE_SHAPES, ["Oval", "Round", "Square", "Long", "Heart"], (v) => {
+              L2.faceShape = v;
+            })),
+            row("Jaw", chips(L2.jaw ?? 0.5, [0.25, 0.5, 0.75, 1], ["Narrow", "Medium", "Wide", "Very wide"], (v) => {
+              L2.jaw = v;
+            })),
+            row("Chin", chips(headParams(L2).chin, CHINS, ["Pointed", "Round", "Strong"], (v) => {
+              L2.chin = v;
+            })),
+            race !== "mink" && race !== "fishman" ? row("Nose", chips(headParams(L2).nose, NOSES2, ["Small", "Normal", "Big", "Button", "Hooked", "Long", "Red ball"], (v) => {
+              L2.noseShape = v;
+              L2.nose = v === "long" ? "long" : v === "red" ? "red" : void 0;
+            })) : null,
+            row("Cheekbones", chips(L2.cheek ?? 0.5, [0, 0.5, 1], ["Soft", "Defined", "High"], (v) => {
+              L2.cheek = v;
+            })),
+            row("Brow", chips(headParams(L2).brow, [0, 0.5, 1], ["Smooth", "Medium", "Heavy"], (v) => {
+              L2.brow = v;
             })),
             row("Teeth", chips(L2.sharpTeeth ? "sharp" : "normal", ["normal", "sharp"], ["Normal", "Sharp"], (v) => {
               L2.sharpTeeth = v === "sharp";
@@ -73805,11 +74221,6 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
           const mus = L2.muscle ?? 0.5;
           add2(
             optsEl,
-            row("Body type", chips(L2.fem ? "f" : "m", ["m", "f"], ["Masculine", "Feminine"], (v) => {
-              L2.fem = v === "f";
-              if (!L2.fem && ["dress", "crop", "bikini"].includes(L2.topStyle)) L2.topStyle = "tee";
-              if (!L2.fem && ["skirt", "longskirt"].includes(L2.bottomStyle)) L2.bottomStyle = "trousers";
-            })),
             row("Build", h("div.build-row", h("span.muted", "Thin"), build, h("span.muted", "Wide"))),
             row("Muscle", chips(mus < 0.35 ? 0.2 : mus < 0.75 ? 0.55 : 1, [0.2, 0.55, 1], ["Lean", "Toned", "Muscular"], (v) => {
               L2.muscle = v;

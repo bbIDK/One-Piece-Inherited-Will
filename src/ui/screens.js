@@ -3,6 +3,8 @@
 import { h, clear, add } from './dom.js';
 import { RACES, RARITY, makeLook, raceLabel, MINK_KINDS, FISHMAN_KINDS } from '../data/races.js';
 import { outfitOf } from '../render3d/chars/body.js';
+import { EYES_M, EYES_F, EYE_NAMES, eyeShapeOf } from '../render3d/chars/face.js';
+import { headParams, FACE_SHAPES, CHINS, NOSES } from '../render3d/chars/build.js';
 import { LEGENDS } from '../data/dreams.js';
 import { TRAITS, PERKS, perkLevel, perkCost, rollBirth, dChance, nameWithD } from '../game/lineage.js';
 import { ITEMS } from '../data/items.js';
@@ -219,9 +221,24 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
       h('p.muted', { style: { textAlign: 'center', margin: '2px 0 0', fontSize: '12px' } }, HEIGHT_NOTE[race] || 'Your height comes from your race.'));
     const tabsEl = h('div.tabs.look-tabs');
     const optsEl = h('div.look-opts');
+    const genderEl = h('div');
+    const renderGender = () => {
+      clear(genderEl);
+      genderEl.appendChild(row('You are', chips(L.fem ? 'f' : 'm', ['m', 'f'], ['Male', 'Female'], (v) => setGender(v === 'f'))));
+    };
+    const setGender = (fem) => {
+      L.fem = fem;
+      // clothes and eyes that only suit the other build are swapped for ones that suit this one
+      if (!fem && ['dress', 'crop', 'bikini'].includes(L.topStyle)) L.topStyle = 'tee';
+      if (!fem && ['skirt', 'longskirt'].includes(L.bottomStyle)) L.bottomStyle = 'trousers';
+      if (L.eyeShape !== 'fish') L.eyeShape = eyeShapeOf({ ...L, eyeShape: L.eyeShape });
+      if (fem && L.bust === undefined) L.bust = 1;
+      renderGender();
+    };
+    renderGender();
     const right = h('div',
       row('Name', h('div', { style: { display: 'flex', gap: '6px' } }, nameInput, h('button.btn', { on: { click: () => { state.name = randomCharName(); nameInput.value = state.name; updateName(); } } }, 'Random'))),
-      finalName, tabsEl, optsEl,
+      finalName, genderEl, tabsEl, optsEl,
       h('p.muted', { style: { marginTop: '12px' } }, 'No destiny is chosen for you. Pirate, Marine, adventurer, bounty hunter or none of these — the sea is free, and what you become is up to you. You can found your own pirate crew and raise your Jolly Roger later, from the Crew menu.'),
     );
     const born = RACES[birth.race];
@@ -246,12 +263,21 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
     const renderOpts = () => {
       clear(optsEl);
       const tab = state.tab;
+      preview?.setFraming?.(tab === 'face' || tab === 'hair' ? 'face' : 'full');
       if (tab === 'face') {
         add(optsEl,
-          row('Eyes', opts('eyeShape', ['round', 'sharp', 'soft', 'fish'], ['Round', 'Sharp', 'Gentle', 'Fish'])),
+          row('Eyes', (() => {
+            const set = [...(L.fem ? EYES_F : EYES_M), ...(race === 'fishman' ? ['fish'] : [])];
+            return chips(eyeShapeOf(L), set, set.map((e) => EYE_NAMES[e]), (v) => { L.eyeShape = v; });
+          })()),
           row('Eye colour', swatch('eyeColor', ['#222222', '#3b2a1a', '#6d4c41', '#1e3799', '#0984e3', '#00a8a8', '#27ae60', '#6c5ce7', '#8e44ad', '#c0392b', '#e1b12c', '#b2bec3'])),
           row('Mouth', chips(L.grin ? 'grin' : L.mouth || 'smile', ['smile', 'flat', 'grin'], ['Smile', 'Calm', 'Big grin'], (v) => { L.grin = v === 'grin'; L.mouth = v === 'grin' ? undefined : v; })),
-          row('Nose', chips(L.nose === 'long' ? 'long' : 'normal', ['normal', 'long'], ['Normal', 'Long'], (v) => { L.nose = v === 'long' ? 'long' : undefined; })),
+          row('Face shape', chips(headParams(L).shape, FACE_SHAPES, ['Oval', 'Round', 'Square', 'Long', 'Heart'], (v) => { L.faceShape = v; })),
+          row('Jaw', chips(L.jaw ?? 0.5, [0.25, 0.5, 0.75, 1], ['Narrow', 'Medium', 'Wide', 'Very wide'], (v) => { L.jaw = v; })),
+          row('Chin', chips(headParams(L).chin, CHINS, ['Pointed', 'Round', 'Strong'], (v) => { L.chin = v; })),
+          race !== 'mink' && race !== 'fishman' ? row('Nose', chips(headParams(L).nose, NOSES, ['Small', 'Normal', 'Big', 'Button', 'Hooked', 'Long', 'Red ball'], (v) => { L.noseShape = v; L.nose = v === 'long' ? 'long' : v === 'red' ? 'red' : undefined; })) : null,
+          row('Cheekbones', chips(L.cheek ?? 0.5, [0, 0.5, 1], ['Soft', 'Defined', 'High'], (v) => { L.cheek = v; })),
+          row('Brow', chips(headParams(L).brow, [0, 0.5, 1], ['Smooth', 'Medium', 'Heavy'], (v) => { L.brow = v; })),
           row('Teeth', chips(L.sharpTeeth ? 'sharp' : 'normal', ['normal', 'sharp'], ['Normal', 'Sharp'], (v) => { L.sharpTeeth = v === 'sharp'; })),
           row('Scar', chips(L.scarEye ? 'eye' : 'none', ['none', 'eye'], ['None', 'Across the eye'], (v) => { L.scarEye = v === 'eye'; })),
         );
@@ -264,12 +290,6 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
         const build = h('input.build-slider', { type: 'range', min: 0, max: 1, step: 0.05, value: L.build ?? 0.5, on: { input: (e) => { L.build = Number(e.target.value); applyLook(L, race); preview?.setLook(L); } } });
         const mus = L.muscle ?? 0.5;
         add(optsEl,
-          row('Body type', chips(L.fem ? 'f' : 'm', ['m', 'f'], ['Masculine', 'Feminine'], (v) => {
-            L.fem = v === 'f';
-            // swap clothes that only suit the other build
-            if (!L.fem && ['dress', 'crop', 'bikini'].includes(L.topStyle)) L.topStyle = 'tee';
-            if (!L.fem && ['skirt', 'longskirt'].includes(L.bottomStyle)) L.bottomStyle = 'trousers';
-          })),
           row('Build', h('div.build-row', h('span.muted', 'Thin'), build, h('span.muted', 'Wide'))),
           row('Muscle', chips(mus < 0.35 ? 0.2 : mus < 0.75 ? 0.55 : 1, [0.2, 0.55, 1], ['Lean', 'Toned', 'Muscular'], (v) => { L.muscle = v; })),
           L.fem ? row('Figure', chips((L.bust ?? 1) < 0.9 ? 0.8 : (L.bust ?? 1) < 1.15 ? 1 : 1.3, [0.8, 1, 1.3], ['Slim', 'Average', 'Curvy'], (v) => { L.bust = v; })) : null,

@@ -269,6 +269,44 @@ export const scenarios = {
       }
     },
   },
+  // heads from every angle: a bald head (the bare skull), then hair styles
+  heads: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human'));
+      const looks = [
+        { hair: 'bald', skin: '#f1c9a0', eyeShape: 'round' },
+        { hair: 'short', hairColor: '#3b2a1a', skin: '#f1c9a0', eyeShape: 'sharp' },
+        { fem: true, hair: 'long', hairColor: '#ef6c00', skin: '#f9dcc4', eyeShape: 'soft', mouth: 'smile' },
+        { hair: 'spiky', hairColor: '#1a1a1a', skin: '#e0ac7e', grin: true },
+      ];
+      const pick = args.look !== undefined ? [looks[Number(args.look)]] : looks;
+      const angles = [[0, 0, 'front'], [0.7, 0, '3/4'], [1.5708, 0, 'side'], [2.4, 0, 'back 3/4'], [3.1416, 0, 'back'], [0.4, 0.75, 'above'], [0.4, -0.55, 'below']];
+      for (let li = 0; li < pick.length; li++) {
+        await page.evaluate(({ lk, angles, li }) => {
+          document.getElementById('sheet')?.remove();
+          const box = document.createElement('div');
+          box.id = 'sheet';
+          Object.assign(box.style, { position: 'fixed', inset: '0', background: '#cfd8dc', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', zIndex: 99999, alignItems: 'center', justifyItems: 'center' });
+          for (const [turn, elev, name] of angles) {
+            const cell = document.createElement('div');
+            Object.assign(cell.style, { position: 'relative' });
+            const c = window.OP.debug.portrait({ race: 'human', seed: 3 + li, topStyle: 'tee', top: '#90a4ae', ...lk }, { w: 300, h: 330, view: 'head', turn, elev });
+            if (c) cell.appendChild(c);
+            const t = document.createElement('div');
+            t.textContent = name;
+            Object.assign(t.style, { position: 'absolute', left: '6px', top: '4px', font: '700 14px sans-serif', color: '#37474f' });
+            cell.appendChild(t);
+            box.appendChild(cell);
+          }
+          document.body.appendChild(box);
+        }, { lk: pick[li], angles, li });
+        await frames(page, 2);
+        await snap('head-' + (args.look ?? li));
+      }
+    },
+  },
   // first-person hands: idle, a jab, a block (Foosha's plaza at noon)
   vmquick: {
     async run(page, snap) {

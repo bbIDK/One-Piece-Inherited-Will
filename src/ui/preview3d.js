@@ -68,6 +68,7 @@ export function createPreview(container, look, { game } = {}) {
   const ctx = { THREE, scene, game: game || null, ground: () => 0, terrain: () => 0, camera, world: null, yaw: 0, mode: 'third' };
   let actor = null, view = null, h = 1.8;
   let turn = 0.35, drag = null, raf = 0, last = performance.now();
+  let framing = 'full', zoom = 0; // zoom eases between the full figure (0) and the face (1)
   const t0 = last;
 
   const setLook = (lk) => {
@@ -87,12 +88,14 @@ export function createPreview(container, look, { game } = {}) {
     const pr = renderer.getPixelRatio();
     if (canvas.width !== Math.round(w * pr) || canvas.height !== Math.round(hh * pr)) renderer.setSize(w, hh, false);
     camera.aspect = w / Math.max(1, hh);
-    // frame the whole figure
+    // frame the whole figure, or the head when choosing a face or hair
+    zoom += ((framing === 'face' ? 1 : 0) - zoom) * Math.min(1, dt * 6);
     const fovY = camera.fov * Math.PI / 180;
-    const fitH = h * 1.34, fitW = h * 0.8 / camera.aspect;
+    const fitH = h * (1.34 - 0.94 * zoom), fitW = h * (0.8 - 0.46 * zoom) / camera.aspect;
     const dist = Math.max(fitH, fitW) / (2 * Math.tan(fovY / 2));
-    camera.position.set(0, h * 0.6, dist);
-    camera.lookAt(0, h * 0.54, 0);
+    const cy = h * (0.54 + 0.35 * zoom);
+    camera.position.set(0, cy + h * 0.06 * (1 - zoom) + h * 0.01 * zoom, dist);
+    camera.lookAt(0, cy, 0);
     camera.updateProjectionMatrix();
     if (!drag) turn += dt * 0.45;
     if (actor && view) {
@@ -117,6 +120,8 @@ export function createPreview(container, look, { game } = {}) {
   raf = requestAnimationFrame(frame);
   return {
     setLook,
+    /** 'full' (the whole figure) or 'face' (head and shoulders). */
+    setFraming(f) { framing = f; },
     dispose() {
       cancelAnimationFrame(raf);
       canvas.removeEventListener('pointerdown', down);
@@ -133,7 +138,7 @@ export function createPreview(container, look, { game } = {}) {
  * A still portrait as a 2D canvas: 'bust' (head and shoulders) or 'full'.
  * Falls back to null when 3D isn't available.
  */
-export function renderPortrait(look, { w = 120, h = 140, view: framing = 'bust', game = null, turn = 0 } = {}) {
+export function renderPortrait(look, { w = 120, h = 140, view: framing = 'bust', game = null, turn = 0, elev = 0 } = {}) {
   try {
     const renderer = sharedRenderer();
     const { scene, camera } = makeStage();
@@ -151,6 +156,11 @@ export function renderPortrait(look, { w = 120, h = 140, view: framing = 'bust',
       const dist = H * 1.15 / (2 * Math.tan(fovY / 2));
       camera.position.set(0, H * 0.55, dist);
       camera.lookAt(0, H * 0.5, 0);
+    } else if (framing === 'head') {
+      // a close study of the head (elev: camera angle above the eye line)
+      const head = H * 0.915, dist = H * 0.52;
+      camera.position.set(0, head + Math.sin(elev) * dist, Math.cos(elev) * dist);
+      camera.lookAt(0, head, 0);
     } else {
       const head = H * 0.86;
       camera.position.set(0, head, H * 0.95);
