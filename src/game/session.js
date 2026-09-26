@@ -118,6 +118,7 @@ export function startNewCharacter(game, birth, choices) {
   game.ui.setHudVisible(true);
   const seaName = REGION_INFO[SEA_IDS[spawn.sea]]?.name || '';
   setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : 'An Uncharted Islet', seaName, `${char.name} begins their journey. The sea is yours to choose.`, 5), 400);
+  setTimeout(() => { if (game.state?.char === char) game.hint('menus', 'Your menus are on the right: Inventory, Character, Skills, Journal and Crew (or Tab, C, K, J, U). Esc pauses and saves. Talk to people, pick fruit from the trees, find a boat — where you go is up to you.'); }, 6500);
   game.emit('characterStart', { char, isNew: true, spawn });
   persist(game);
   return p;

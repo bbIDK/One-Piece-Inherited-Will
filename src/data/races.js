@@ -50,7 +50,7 @@ export const RACES = {
     origin: 'Fell from a sky island; raised in Lvneel (North Blue).',
     stats: { str: 0, agi: 2, end: 0, vit: 0, wil: 3 },
     lives: 3,
-    traits: ['Mantra: Observation Haki is learned twice as fast', 'Light-footed: dodge travels 30% further', 'Dial-savvy: dials are 25% stronger'],
+    traits: ['Mantra: once their sixth sense awakens, it grows twice as fast', 'Light-footed: dodge travels 30% further', 'Dial-savvy: dials are 25% stronger'],
     spawnSeas: ['north_blue'], spawnTowns: ['lvneel_town'],
     swim: 0.9, hpMul: 0.95,
   },

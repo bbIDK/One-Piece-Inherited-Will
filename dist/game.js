@@ -17561,7 +17561,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       origin: "Fell from a sky island; raised in Lvneel (North Blue).",
       stats: { str: 0, agi: 2, end: 0, vit: 0, wil: 3 },
       lives: 3,
-      traits: ["Mantra: Observation Haki is learned twice as fast", "Light-footed: dodge travels 30% further", "Dial-savvy: dials are 25% stronger"],
+      traits: ["Mantra: once their sixth sense awakens, it grows twice as fast", "Light-footed: dodge travels 30% further", "Dial-savvy: dials are 25% stronger"],
       spawnSeas: ["north_blue"],
       spawnTowns: ["lvneel_town"],
       swim: 0.9,
@@ -21268,6 +21268,9 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
     game.ui.setHudVisible(true);
     const seaName = REGION_INFO[SEA_IDS[spawn.sea]]?.name || "";
     setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : "An Uncharted Islet", seaName, `${char.name} begins their journey. The sea is yours to choose.`, 5), 400);
+    setTimeout(() => {
+      if (game.state?.char === char) game.hint("menus", "Your menus are on the right: Inventory, Character, Skills, Journal and Crew (or Tab, C, K, J, U). Esc pauses and saves. Talk to people, pick fruit from the trees, find a boat \u2014 where you go is up to you.");
+    }, 6500);
     game.emit("characterStart", { char, isNew: true, spawn });
     persist(game);
     return p;
@@ -28802,7 +28805,7 @@ Trains by: ${TRAINS_BY[k]}` },
       skill: 0.6,
       breakthrough: 4,
       alert: "A letter to the Marines, from Corazon? ...How unfortunate. For both of you.",
-      barks: ["Haki-hardened bamboo. It does not break.", "Don't misunderstand. I'm not trying to kill you. Yet."],
+      barks: ["Hardened bamboo. It does not break.", "Don't misunderstand. I'm not trying to kill you. Yet."],
       when: (c, g) => stageOf(g, "nb_ope_ope") === "vergo"
     },
     {
@@ -37007,7 +37010,7 @@ Trains by: ${TRAINS_BY[k]}` },
         },
         {
           id: "crocodile",
-          desc: "Crocodile has gone to the Tomb of the Kings, just north of Alubarna, for its Poneglyph. Defeat the Desert King! (Sand can't be struck unless you're soaked \u2014 Toto's water, the river \u2014 or your fists carry Haki.)",
+          desc: "Crocodile has gone to the Tomb of the Kings, just north of Alubarna, for its Poneglyph. Defeat the Desert King! (Sand can't be struck unless you're soaked \u2014 Toto's water, the river \u2014 or you find some other way to touch a Logia.)",
           goal: { type: "defeat", npc: "p1_crocodile" },
           onStart: (ctx, g) => {
             aggro(g, spawnAt(g, "p1_crocodile", "alabasta", "tomb_of_kings"));
@@ -37118,7 +37121,7 @@ Trains by: ${TRAINS_BY[k]}` },
         { id: "chief", desc: "Talk to the Chief of the Shandia." },
         {
           id: "enel",
-          desc: "Defeat God Enel at his shrine in the heart of Upper Yard. (Lightning flows around blades and fists: strike with Haki \u2014 or use the Shandia's golden balls.)",
+          desc: "Defeat God Enel at his shrine in the heart of Upper Yard. (Lightning flows around blades and fists. Rubber doesn't conduct it \u2014 and the Shandia say gold can catch it.)",
           goal: { type: "defeat", npc: "p1_enel" },
           onStart: (ctx, g) => {
             spawnAt(g, "p1_yama", "upper_yard", "god_shrine", -4);

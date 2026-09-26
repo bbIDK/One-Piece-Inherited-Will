@@ -839,7 +839,7 @@ const npcs = [
     id: 'nb_vergo', name: 'Vergo', title: '"Demon Bamboo", Marine officer (secretly a Donquixote executive)', island: 'minion_island', at: { spot: 'law_hideaway' }, hostile: true, boss: true, hpMul: 1.3, faction: 'pirate', level: 21,
     look: { hair: 'short', hairColor: '#212121', top: '#fafafa', bottom: '#1b4f72', coat: '#fafafa', coatText: 'JUSTICE', hat: 'marine', goggles: true, skin: '#f1c9a0' },
     style: 'rokushiki', moves: ['nb_demon_bamboo', 'roku_soru', 'roku_tekkai', 'roku_rankyaku'], haki: { armament: 35, observation: 20 }, armament: true, skill: 0.6, breakthrough: 4,
-    alert: 'A letter to the Marines, from Corazon? ...How unfortunate. For both of you.', barks: ['Haki-hardened bamboo. It does not break.', 'Don\'t misunderstand. I\'m not trying to kill you. Yet.'],
+    alert: 'A letter to the Marines, from Corazon? ...How unfortunate. For both of you.', barks: ['Hardened bamboo. It does not break.', 'Don\'t misunderstand. I\'m not trying to kill you. Yet.'],
     when: (c, g) => stageOf(g, 'nb_ope_ope') === 'vergo',
   },
   {
