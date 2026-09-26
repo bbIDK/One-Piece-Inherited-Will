@@ -220,6 +220,7 @@ export class Renderer3D {
     // effects layer scale: pixels per metre at arm's length in front of the camera
     const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
     this.proj.cam.zoom = f / 7;
+    if (this.post) this.post.setImpact(game.fx && game.fx.impact > 0 ? 1 : 0, game.fx?.impactColor);
     this.draw(cam);
   }
 

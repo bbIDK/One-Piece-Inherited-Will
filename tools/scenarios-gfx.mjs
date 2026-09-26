@@ -307,6 +307,47 @@ export const scenarios = {
       }
     },
   },
+  // One Piece hit effects: a heavy punch with its sound word, a sword finisher, the impact frame
+  hitfx: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human'));
+      await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player;
+        const t = w.islands.find((i) => i.id === 'dawn_island').towns[0];
+        window.OP.teleport(t.plaza.x, t.plaza.y + 10.5);
+        g.env.clock = 11.5;
+        g.actors = g.actors.filter((a) => a === p);
+        const e = window.OP.debug.makeNPC({ name: 'Bandit', faction: 'bandit', level: 10, race: 'human' }, p.x, p.y - 2.6);
+        e.controller = null; e.facing = Math.PI / 2;
+        g.addActor(e);
+        window.__e = e;
+        const v = g.view3d; v.rig.yaw = -Math.PI / 2; v.rig.pitch = -0.05;
+      });
+      for (let i = 0; i < 6; i++) { await step(page, 0.1); await frames(page, 2); }
+      const hit = (o) => page.evaluate((o) => {
+        const g = window.OP.game, e = window.__e, p = g.player;
+        g.fx.hit(p, e, { def: null, heavy: true, knockback: 1, impactFrame: o.impact, sprite: false }, { final: 40, crit: !!o.crit, el: o.el || 'physical', ang: -Math.PI / 2, playerInvolved: true });
+      }, o);
+      await hit({ crit: true });
+      await step(page, 0.05); await frames(page, 2);
+      await snap('heavy-punch');
+      await step(page, 0.8);
+      await hit({ el: 'fire' });
+      await step(page, 0.08); await frames(page, 2);
+      await snap('fire-hit');
+      await step(page, 0.8);
+      await hit({ impact: true });
+      await page.evaluate(() => window.OP.game.fx.impactFrame(0.2));
+      await frames(page, 2);
+      await snap('impact-frame');
+      await step(page, 1.2);
+      await page.evaluate(() => { const p = window.OP.game.player; p.y += 3; p.dash = { vx: 0, vy: -0.05, t: 6, t0: 0.22, dodge: true }; });
+      await frames(page, 2);
+      await snap('dash-lines');
+    },
+  },
   // first-person hands: idle, a jab, a block (Foosha's plaza at noon)
   vmquick: {
     async run(page, snap) {

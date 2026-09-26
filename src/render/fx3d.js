@@ -628,12 +628,35 @@ function teleWarn(fx, g, r, p) {
   g.globalAlpha = 1; g.fillStyle = gr; g.fillRect(0, H * 0.62, W, H * 0.38);
 }
 
+/** Speed lines streaming past the edges of the view while you dash. */
+function dashLines(fx, g, r, p) {
+  const d = p.dash;
+  if (!d || !(d.t > 0)) return;
+  const k = Math.min(1, d.t / (d.t0 || 0.2));
+  const W = r.cw * r.dpr, H = r.ch * r.dpr, cx = W / 2, cy = H / 2;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 0.55 * k;
+  g.fillStyle = '#ffffff';
+  const R = Math.hypot(W, H) * 0.55, n = 40;
+  g.beginPath();
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU + ((i * 7919) % 17) * 0.013 + fx.time * 0.3;
+    const r0 = R * (0.62 + ((i * 131) % 7) * 0.04), wd = 0.004 + ((i * 53) % 5) * 0.002;
+    g.moveTo(cx + Math.cos(a) * R * 1.3, cy + Math.sin(a) * R * 1.3);
+    g.lineTo(cx + Math.cos(a + wd) * r0, cy + Math.sin(a + wd) * r0);
+    g.lineTo(cx + Math.cos(a + wd * 2) * R * 1.3, cy + Math.sin(a + wd * 2) * R * 1.3);
+  }
+  g.fill();
+  g.globalAlpha = 1;
+}
+
 /** Screen-space extras that only make sense from behind the player's eyes. */
 export function drawFirstPerson(fx, g, r) {
   const p = fx.game.player;
   if (!p || !r.firstPerson || p.mode === 'sail') return;
   try {
     edges(fx, g, r, p);
+    dashLines(fx, g, r, p);
     teleWarn(fx, g, r, p);
     swingSmear(fx, g, r, p);
   } catch (e) { if (!fx._warnedFp) { fx._warnedFp = true; console.warn('fx3d first person', e); } }

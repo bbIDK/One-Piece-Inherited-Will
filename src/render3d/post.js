@@ -26,6 +26,8 @@ const InkGradeShader = {
     uSat: { value: 1.12 },
     uContrast: { value: 1.06 },
     uVignette: { value: 0.28 },
+    uImpact: { value: 0 },
+    uImpactCol: { value: new THREE.Color(1, 1, 1) },
   },
   vertexShader: /* glsl */`
     varying vec2 vUv;
@@ -35,8 +37,8 @@ const InkGradeShader = {
     uniform sampler2D tDiffuse;
     uniform sampler2D tDepth;
     uniform vec2 uRes;
-    uniform float uNear, uFar, uInk, uSat, uContrast, uVignette;
-    uniform vec3 uInkColor;
+    uniform float uNear, uFar, uInk, uSat, uContrast, uVignette, uImpact;
+    uniform vec3 uInkColor, uImpactCol;
     varying vec2 vUv;
     float linDepth(vec2 uv) {
       float z = texture2D(tDepth, uv).x * 2.0 - 1.0;
@@ -66,6 +68,12 @@ const InkGradeShader = {
       // vignette
       vec2 q = vUv - 0.5;
       c.rgb *= 1.0 - uVignette * dot(q, q) * 1.6;
+      // the anime impact frame: a hard-inked negative for a blink on the biggest blows
+      if (uImpact > 0.0) {
+        float il = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
+        vec3 neg = vec3(1.0 - smoothstep(0.16, 0.24, il));
+        c.rgb = mix(c.rgb, mix(neg, neg * uImpactCol, 0.4), uImpact);
+      }
       gl_FragColor = c;
     }
   `,
@@ -135,6 +143,13 @@ export class Post {
     this.composer.setSize(w, h);
     const bw = Math.round(w * dpr), bh = Math.round(h * dpr);
     this.fxaa.material.uniforms.resolution.value.set(1 / bw, 1 / bh);
+  }
+
+  /** The impact frame (0..1) and its tint. */
+  setImpact(k, color) {
+    const u = this.scenePass.material.uniforms;
+    u.uImpact.value = k;
+    if (color) u.uImpactCol.value.set(color); else u.uImpactCol.value.setRGB(1, 1, 1);
   }
 
   render(camera) {

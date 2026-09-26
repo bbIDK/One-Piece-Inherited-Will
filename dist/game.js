@@ -33422,7 +33422,9 @@ void main() {
       uInkColor: { value: new Color(0.16, 0.1, 0.08) },
       uSat: { value: 1.12 },
       uContrast: { value: 1.06 },
-      uVignette: { value: 0.28 }
+      uVignette: { value: 0.28 },
+      uImpact: { value: 0 },
+      uImpactCol: { value: new Color(1, 1, 1) }
     },
     vertexShader: (
       /* glsl */
@@ -33437,8 +33439,8 @@ void main() {
     uniform sampler2D tDiffuse;
     uniform sampler2D tDepth;
     uniform vec2 uRes;
-    uniform float uNear, uFar, uInk, uSat, uContrast, uVignette;
-    uniform vec3 uInkColor;
+    uniform float uNear, uFar, uInk, uSat, uContrast, uVignette, uImpact;
+    uniform vec3 uInkColor, uImpactCol;
     varying vec2 vUv;
     float linDepth(vec2 uv) {
       float z = texture2D(tDepth, uv).x * 2.0 - 1.0;
@@ -33468,6 +33470,12 @@ void main() {
       // vignette
       vec2 q = vUv - 0.5;
       c.rgb *= 1.0 - uVignette * dot(q, q) * 1.6;
+      // the anime impact frame: a hard-inked negative for a blink on the biggest blows
+      if (uImpact > 0.0) {
+        float il = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
+        vec3 neg = vec3(1.0 - smoothstep(0.16, 0.24, il));
+        c.rgb = mix(c.rgb, mix(neg, neg * uImpactCol, 0.4), uImpact);
+      }
       gl_FragColor = c;
     }
   `
@@ -33532,6 +33540,13 @@ void main() {
       this.composer.setSize(w, h2);
       const bw = Math.round(w * dpr), bh = Math.round(h2 * dpr);
       this.fxaa.material.uniforms.resolution.value.set(1 / bw, 1 / bh);
+    }
+    /** The impact frame (0..1) and its tint. */
+    setImpact(k, color) {
+      const u = this.scenePass.material.uniforms;
+      u.uImpact.value = k;
+      if (color) u.uImpactCol.value.set(color);
+      else u.uImpactCol.value.setRGB(1, 1, 1);
     }
     render(camera) {
       this.scenePass.camera = camera;
@@ -51816,6 +51831,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       } else if (att && att.armament && elem === "physical") {
         fx.ring(cx, cy, 0.08, 0.5 + 0.3 * w, "#7c4dff", 0.2, 0.06, { z, flat: 1, noCore: true, add: true });
       }
+      if ((w >= 0.7 || crit || h2.impactFrame) && (o.playerInvolved || tgt.boss)) {
+        const blade2 = !!(att && att.weapon && att.weapon.kind === "sword") || !!(st && st.arcs);
+        const big = crit || h2.impactFrame || w >= 1;
+        fx.sfx?.(cx, cy, sfxWord(elem, blade2, big, !!(att && att.armament)), sfxColor(elem, blade2, col), 0.5 + 0.3 * Math.min(1, w) + (big ? 0.15 : 0), { z: z + 0.45 });
+      }
       tgt.hitFx = { t0: game.env ? game.env.time : fx.time, w, ang, prev: tgt.hitFx ? tgt.hitFx.t0 : -9 };
     }
     if (final > 0) fx.damage(tgt, final, { crit, blocked, toPlayer: tgt.isPlayer });
@@ -51829,6 +51849,36 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         fx.focus(tgt.x, tgt.y, 0.22);
       } else if (!blocked && (crit || w >= 0.95)) fx.focus(tgt.x, tgt.y, 0.14);
     }
+  }
+  var SFX = {
+    punch: ["DON!", "BAM!", "DOGA!", "BAKI!", "GOSHA!", "DOKA!"],
+    punchBig: ["DOOON!!", "DOGOOON!!", "BOOOM!!", "DOKAAN!!"],
+    blade: ["ZAN!", "ZUBA!", "SHUBA!", "ZASH!"],
+    bladeBig: ["ZUBAAAN!!", "ZANN!!", "SHAKIIN!!"],
+    haki: ["GAKIN!", "DOGON!"],
+    fire: ["GOOO!", "BOOO!"],
+    explosion: ["DOOON!", "KABOOM!"],
+    lightning: ["BZZZT!", "GORO GORO!"],
+    ice: ["PAKIN!", "KIIN!"],
+    water: ["ZABAN!", "SPLASH!"],
+    sand: ["ZAAA!"],
+    smoke: ["MOKU!"],
+    gas: ["SHUUU!"],
+    light: ["PIKA!"],
+    dark: ["ZUZUZU!"],
+    quake: ["GOGOGO!!"],
+    poison: ["JUU!"],
+    magma: ["JUUU!"],
+    string: ["PIN!"]
+  };
+  function sfxWord(elem, blade2, big, haki) {
+    let list = SFX[elem] || null;
+    if (!list || elem === "physical") list = haki && !blade2 ? SFX.haki : blade2 ? big ? SFX.bladeBig : SFX.blade : big ? SFX.punchBig : SFX.punch;
+    return list[Math.floor(Math.random() * list.length)];
+  }
+  function sfxColor(elem, blade2, col) {
+    if (elem === "physical") return blade2 ? "#b3e5fc" : "#ffd54f";
+    return col || "#ffd54f";
   }
   function elemHit(fx, elem, E, x, y, z, ang, w) {
     switch (elem) {
@@ -51915,6 +51965,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     tgt._blockFlash = fx.game.env ? fx.game.env.time : fx.time;
   }
   function parryFx(fx, tgt, att, ang) {
+    fx.sfx?.(tgt.x, tgt.y, "KIIN!", "#e3f2fd", 0.55, { z: 1.5 });
     const fa = ang + Math.PI;
     const s = tgt.look && tgt.look.scale || 1;
     const px2 = tgt.x + Math.cos(fa) * 0.45, py2 = tgt.y + Math.sin(fa) * 0.3, z = 0.85 * s;
@@ -51932,6 +51983,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   }
   function guardBreakFx(fx, tgt, att, ang) {
+    fx.sfx?.(tgt.x, tgt.y, "GASHAN!!", "#ff8a65", 0.7, { z: 1.4, gap: 0 });
     const s = tgt.look && tgt.look.scale || 1, z = 0.85 * s;
     fx.burst(tgt.x, tgt.y, 14, { kind: "shard", color: ["#e3f2fd", "#90caf9", "#ffffff"], speed: 6, z, vz: 3, g: 9, life: 0.55, size: 0.12, drag: 2 });
     fx.add("impact", { x: tgt.x, y: tgt.y, z, angle: ang, size: 0.75, color: "#ff8a65", core: "#ffffff", life: 0.2, spikes: 11 });
@@ -59487,6 +59539,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       setNightWindows(Math.max(0, 0.9 - env.daylight));
       const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
       this.proj.cam.zoom = f / 7;
+      if (this.post) this.post.setImpact(game.fx && game.fx.impact > 0 ? 1 : 0, game.fx?.impactColor);
       this.draw(cam);
     }
     /**
@@ -70101,11 +70154,32 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.fillStyle = gr;
     g.fillRect(0, H2 * 0.62, W3, H2 * 0.38);
   }
+  function dashLines(fx, g, r, p) {
+    const d = p.dash;
+    if (!d || !(d.t > 0)) return;
+    const k = Math.min(1, d.t / (d.t0 || 0.2));
+    const W3 = r.cw * r.dpr, H2 = r.ch * r.dpr, cx = W3 / 2, cy = H2 / 2;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalAlpha = 0.55 * k;
+    g.fillStyle = "#ffffff";
+    const R2 = Math.hypot(W3, H2) * 0.55, n = 40;
+    g.beginPath();
+    for (let i = 0; i < n; i++) {
+      const a = i / n * TAU18 + i * 7919 % 17 * 0.013 + fx.time * 0.3;
+      const r0 = R2 * (0.62 + i * 131 % 7 * 0.04), wd = 4e-3 + i * 53 % 5 * 2e-3;
+      g.moveTo(cx + Math.cos(a) * R2 * 1.3, cy + Math.sin(a) * R2 * 1.3);
+      g.lineTo(cx + Math.cos(a + wd) * r0, cy + Math.sin(a + wd) * r0);
+      g.lineTo(cx + Math.cos(a + wd * 2) * R2 * 1.3, cy + Math.sin(a + wd * 2) * R2 * 1.3);
+    }
+    g.fill();
+    g.globalAlpha = 1;
+  }
   function drawFirstPerson(fx, g, r) {
     const p = fx.game.player;
     if (!p || !r.firstPerson || p.mode === "sail") return;
     try {
       edges(fx, g, r, p);
+      dashLines(fx, g, r, p);
       teleWarn(fx, g, r, p);
       swingSmear(fx, g, r, p);
     } catch (e) {
@@ -70142,6 +70216,33 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (glowCache.size > 64) glowCache.clear();
     glowCache.set(color, c);
     return c;
+  }
+  function drawSfx(g, t, sx, sy, fz, dpr) {
+    const age = t.age, k = age / t.max;
+    const pop = age < 0.08 ? 2.1 - age / 0.08 * 1.1 : 1 + (age - 0.08) * 0.22;
+    const px2 = Math.round(t.size * Math.max(fz, 30) * 1.25 * pop);
+    if (px2 < 6) return;
+    const c = Math.cos(t.rot), s = Math.sin(t.rot);
+    const jit = age < 0.14 ? (Math.random() - 0.5) * px2 * 0.08 : 0;
+    g.setTransform(dpr * c, dpr * s, -dpr * s, dpr * c, (sx + jit) * dpr, sy * dpr);
+    g.globalAlpha = k > 0.72 ? Math.max(0, (1 - k) / 0.28) : 1;
+    g.font = `${px2}px Bangers, Impact, sans-serif`;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.lineJoin = "round";
+    g.lineWidth = px2 * 0.3;
+    g.strokeStyle = "#140c0c";
+    g.strokeText(t.str, 0, 0);
+    g.lineWidth = px2 * 0.12;
+    g.strokeStyle = "#ffffff";
+    g.strokeText(t.str, 0, 0);
+    const gr = g.createLinearGradient(0, -px2 * 0.5, 0, px2 * 0.5);
+    gr.addColorStop(0, "#ffffff");
+    gr.addColorStop(0.35, t.color);
+    gr.addColorStop(1, t.color);
+    g.fillStyle = gr;
+    g.fillText(t.str, 0, 0);
+    g.textBaseline = "alphabetic";
   }
   var FX = class {
     constructor(game) {
@@ -70324,6 +70425,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         age: 0,
         kind: num ? "num" : "call"
       };
+      this.texts.push(t);
+      if (this.texts.length > 48) this.texts.shift();
+      return t;
+    }
+    /**
+     * A manga sound word at a hit ("DON!", "ZUBAN!", "GOOO!"): big, tilted,
+     * inked, popping in and hanging a moment. Rate-limited so fights stay readable.
+     */
+    sfx(x, y, str, color = "#ffd54f", size = 0.7, o = {}) {
+      const now2 = this.time;
+      if (now2 - (this._sfxT ?? -9) < (o.gap ?? 0.28)) return null;
+      this._sfxT = now2;
+      const life = o.life ?? 0.75;
+      const t = { x: x + (Math.random() - 0.5) * 0.4, y, z: (o.z ?? 1.25) + Math.random() * 0.3, str, color, size, life, max: life, vz: 0.35, pop: 0, age: 0, kind: "sfx", rot: (Math.random() - 0.5) * 0.5 };
       this.texts.push(t);
       if (this.texts.length > 48) this.texts.shift();
       return t;
@@ -70813,6 +70928,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           [sx, sy] = r.toScreen(w, t.x, t.y);
           sy -= (t.dmg ? t.oy + t.z : t.z) * z;
         }
+        if (t.kind === "sfx") {
+          drawSfx(g, t, sx, sy, fz, dpr);
+          continue;
+        }
         const fade2 = t.dmg ? Math.min(1, t.life / (t.max * 0.4)) : Math.min(1, t.life / t.max * 2.4);
         const pk = Math.min(1, t.pop / 0.13);
         const pop = 1 + (t.dmg ? 0.6 : 0.3) * (1 - pk) * (1 - pk);
@@ -70885,7 +71004,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = gr;
         g.fillRect(0, 0, W3, H2);
       }
-      if (this.impact > 0) {
+      if (this.impact > 0 && !(r.is3d && this.game.view3d?.post)) {
         g.setTransform(1, 0, 0, 1, 0, 0);
         g.globalCompositeOperation = "difference";
         g.fillStyle = this.impactColor || "#ffffff";

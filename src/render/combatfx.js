@@ -161,6 +161,12 @@ export function hitFeedback(fx, att, tgt, h, o = {}) {
     } else if (att && att.armament && elem === 'physical') {
       fx.ring(cx, cy, 0.08, 0.5 + 0.3 * w, '#7c4dff', 0.2, 0.06, { z, flat: 1, noCore: true, add: true });
     }
+    // a manga sound word on the big ones (only in fights the player is in, or on bosses)
+    if ((w >= 0.7 || crit || h.impactFrame) && (o.playerInvolved || tgt.boss)) {
+      const blade = !!(att && att.weapon && att.weapon.kind === 'sword') || !!(st && st.arcs);
+      const big = crit || h.impactFrame || w >= 1;
+      fx.sfx?.(cx, cy, sfxWord(elem, blade, big, !!(att && att.armament)), sfxColor(elem, blade, col), 0.5 + 0.3 * Math.min(1, w) + (big ? 0.15 : 0), { z: z + 0.45 });
+    }
     tgt.hitFx = { t0: game.env ? game.env.time : fx.time, w, ang, prev: tgt.hitFx ? tgt.hitFx.t0 : -9 };
   }
   if (final > 0) fx.damage(tgt, final, { crit, blocked, toPlayer: tgt.isPlayer });
@@ -172,6 +178,27 @@ export function hitFeedback(fx, att, tgt, h, o = {}) {
     if (!blocked && h.impactFrame) { fx.impactFrame(0.07); fx.focus(tgt.x, tgt.y, 0.22); }
     else if (!blocked && (crit || w >= 0.95)) fx.focus(tgt.x, tgt.y, 0.14);
   }
+}
+
+// manga sound words by what hit (romaji, the way the English releases letter them)
+const SFX = {
+  punch: ['DON!', 'BAM!', 'DOGA!', 'BAKI!', 'GOSHA!', 'DOKA!'],
+  punchBig: ['DOOON!!', 'DOGOOON!!', 'BOOOM!!', 'DOKAAN!!'],
+  blade: ['ZAN!', 'ZUBA!', 'SHUBA!', 'ZASH!'],
+  bladeBig: ['ZUBAAAN!!', 'ZANN!!', 'SHAKIIN!!'],
+  haki: ['GAKIN!', 'DOGON!'],
+  fire: ['GOOO!', 'BOOO!'], explosion: ['DOOON!', 'KABOOM!'], lightning: ['BZZZT!', 'GORO GORO!'], ice: ['PAKIN!', 'KIIN!'],
+  water: ['ZABAN!', 'SPLASH!'], sand: ['ZAAA!'], smoke: ['MOKU!'], gas: ['SHUUU!'], light: ['PIKA!'], dark: ['ZUZUZU!'], quake: ['GOGOGO!!'],
+  poison: ['JUU!'], magma: ['JUUU!'], string: ['PIN!'],
+};
+function sfxWord(elem, blade, big, haki) {
+  let list = SFX[elem] || null;
+  if (!list || elem === 'physical') list = haki && !blade ? SFX.haki : blade ? (big ? SFX.bladeBig : SFX.blade) : (big ? SFX.punchBig : SFX.punch);
+  return list[Math.floor(Math.random() * list.length)];
+}
+function sfxColor(elem, blade, col) {
+  if (elem === 'physical') return blade ? '#b3e5fc' : '#ffd54f';
+  return col || '#ffd54f';
 }
 
 function elemHit(fx, elem, E, x, y, z, ang, w) {
@@ -257,6 +284,7 @@ function blockFx(fx, tgt, ang, w, z) {
 
 /** A perfect parry: a clean flash, a ring, focus lines and a beat of slow motion. */
 export function parryFx(fx, tgt, att, ang) {
+  fx.sfx?.(tgt.x, tgt.y, 'KIIN!', '#e3f2fd', 0.55, { z: 1.5 });
   const fa = ang + Math.PI;
   const s = (tgt.look && tgt.look.scale) || 1;
   const px = tgt.x + Math.cos(fa) * 0.45, py = tgt.y + Math.sin(fa) * 0.3, z = 0.85 * s;
@@ -276,6 +304,7 @@ export function parryFx(fx, tgt, att, ang) {
 
 /** Guard broken: the guard shatters, a jolt and a short slow-down. */
 export function guardBreakFx(fx, tgt, att, ang) {
+  fx.sfx?.(tgt.x, tgt.y, 'GASHAN!!', '#ff8a65', 0.7, { z: 1.4, gap: 0 });
   const s = (tgt.look && tgt.look.scale) || 1, z = 0.85 * s;
   fx.burst(tgt.x, tgt.y, 14, { kind: 'shard', color: ['#e3f2fd', '#90caf9', '#ffffff'], speed: 6, z, vz: 3, g: 9, life: 0.55, size: 0.12, drag: 2 });
   fx.add('impact', { x: tgt.x, y: tgt.y, z, angle: ang, size: 0.75, color: '#ff8a65', core: '#ffffff', life: 0.2, spikes: 11 });

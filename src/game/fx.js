@@ -31,6 +31,26 @@ function glowSprite(color) {
   return c;
 }
 
+/** A manga sound word: black ink outline, white rim, a bright gradient fill, popping in. */
+function drawSfx(g, t, sx, sy, fz, dpr) {
+  const age = t.age, k = age / t.max;
+  const pop = age < 0.08 ? 2.1 - (age / 0.08) * 1.1 : 1 + (age - 0.08) * 0.22;
+  const px = Math.round(t.size * Math.max(fz, 30) * 1.25 * pop);
+  if (px < 6) return;
+  const c = Math.cos(t.rot), s = Math.sin(t.rot);
+  const jit = age < 0.14 ? (Math.random() - 0.5) * px * 0.08 : 0;
+  g.setTransform(dpr * c, dpr * s, -dpr * s, dpr * c, (sx + jit) * dpr, sy * dpr);
+  g.globalAlpha = k > 0.72 ? Math.max(0, (1 - k) / 0.28) : 1;
+  g.font = `${px}px Bangers, Impact, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  g.lineWidth = px * 0.3; g.strokeStyle = '#140c0c'; g.strokeText(t.str, 0, 0);
+  g.lineWidth = px * 0.12; g.strokeStyle = '#ffffff'; g.strokeText(t.str, 0, 0);
+  const gr = g.createLinearGradient(0, -px * 0.5, 0, px * 0.5);
+  gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.35, t.color); gr.addColorStop(1, t.color);
+  g.fillStyle = gr; g.fillText(t.str, 0, 0);
+  g.textBaseline = 'alphabetic';
+}
+
 export class FX {
   constructor(game) {
     this.game = game;
@@ -158,6 +178,20 @@ export class FX {
       x: x + (Math.random() - 0.5) * (num ? 0.5 : 0.15), y, z: 1.6 + bump * 0.34 + lift, str, color, size, life, max: life, vz: num ? 2.4 : 2.0,
       crit: o.crit, pop: 0, age: 0, kind: num ? 'num' : 'call',
     };
+    this.texts.push(t);
+    if (this.texts.length > 48) this.texts.shift();
+    return t;
+  }
+  /**
+   * A manga sound word at a hit ("DON!", "ZUBAN!", "GOOO!"): big, tilted,
+   * inked, popping in and hanging a moment. Rate-limited so fights stay readable.
+   */
+  sfx(x, y, str, color = '#ffd54f', size = 0.7, o = {}) {
+    const now = this.time;
+    if (now - (this._sfxT ?? -9) < (o.gap ?? 0.28)) return null;
+    this._sfxT = now;
+    const life = o.life ?? 0.75;
+    const t = { x: x + (Math.random() - 0.5) * 0.4, y, z: (o.z ?? 1.25) + Math.random() * 0.3, str, color, size, life, max: life, vz: 0.35, pop: 0, age: 0, kind: 'sfx', rot: (Math.random() - 0.5) * 0.5 };
     this.texts.push(t);
     if (this.texts.length > 48) this.texts.shift();
     return t;
@@ -475,6 +509,7 @@ export class FX {
         [sx, sy] = r.toScreen(w, t.x, t.y);
         sy -= (t.dmg ? t.oy + t.z : t.z) * z;
       }
+      if (t.kind === 'sfx') { drawSfx(g, t, sx, sy, fz, dpr); continue; }
       const fade = t.dmg ? Math.min(1, t.life / (t.max * 0.4)) : Math.min(1, (t.life / t.max) * 2.4);
       const pk = Math.min(1, t.pop / 0.13);
       const pop = 1 + (t.dmg ? 0.6 : 0.3) * (1 - pk) * (1 - pk);
@@ -547,7 +582,7 @@ export class FX {
       gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, `rgba(10,10,30,${0.45 * k})`);
       g.fillStyle = gr; g.fillRect(0, 0, W, H);
     }
-    if (this.impact > 0) {
+    if (this.impact > 0 && !(r.is3d && this.game.view3d?.post)) {
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.globalCompositeOperation = 'difference';
       g.fillStyle = this.impactColor || '#ffffff';
