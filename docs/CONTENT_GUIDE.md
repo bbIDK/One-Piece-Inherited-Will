@@ -22,7 +22,8 @@ Read both before you write anything.
 | South Blue | `src/data/islands/southBlue.js` (`SOUTH_BLUE`) | `src/content/southBlue.js` |
 | Paradise, first half (Reverse Mountain → Jaya / Skypiea / Long Ring Long Land) | `src/data/islands/paradise1.js` (`PARADISE_1`) | `src/content/paradise1.js` |
 | Paradise, second half (Water 7 → Sabaody) + Calm Belt | `src/data/islands/paradise2.js` (`PARADISE_2`) | `src/content/paradise2.js` |
-| New World | `src/data/islands/newWorld.js` (`NEW_WORLD`) | `src/content/newWorld.js` |
+| New World, first half (Fish-Man Island → Punk Hazard, Dressrosa, Zou, Whole Cake…) x 90..1000 | `src/data/islands/newWorld.js` (`NEW_WORLD`) | `src/content/newWorld.js` |
+| New World, second half (Wano, Egghead, Elbaf, Hachinosu… Laugh Tale) x 1000..1880 | `src/data/islands/newWorld2.js` (`NEW_WORLD_2`) | `src/content/newWorld2.js` |
 | Zones (Skypiea, Fish-Man Island, Impel Down) | `src/data/zones/index.js` (engine-owned) | the NPCs go in the pack of the matching sea |
 
 All of these are already imported by `src/data/islands/index.js` and
