@@ -170,6 +170,7 @@ async function start() {
     { key: 'U', when: playing, fn: () => ui.sideAction('crew') },
   );
   game.on('saved', () => ui.savedNote());
+  game.on('playerLanded', (tgt, info) => { if (view3d?.active) ui.hitMarker(info); });
   // food and medicine on the hotbar
   game.useHotbarItem = (id) => {
     const c = game.state?.char;

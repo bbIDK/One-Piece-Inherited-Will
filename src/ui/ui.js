@@ -114,6 +114,10 @@ export class UI {
     this.hud.appendChild(E.knocked);
     // first person: a crosshair, and a prompt to capture the mouse
     E.crosshair = h('div.crosshair.hidden', h('i'), h('b'));
+    // hit marker: flashes when your blows land
+    E.hitMark = h('span.hitmark');
+    E.hitMark.innerHTML = '<svg viewBox="-20 -20 40 40" width="40" height="40"><path d="M-13 -13 L-6.5 -6.5 M13 -13 L6.5 -6.5 M-13 13 L-6.5 6.5 M13 13 L6.5 6.5" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
+    E.crosshair.appendChild(E.hitMark);
     this.hud.appendChild(E.crosshair);
     E.lookHint = h('div.look-hint.hidden', 'Click to look around', h('small', 'Esc frees the mouse · V switches view'));
     this.hud.appendChild(E.lookHint);
@@ -226,6 +230,14 @@ export class UI {
   fade(on) { this.fadeEl.classList.toggle('on', on); }
 
   onPlayerHurt() { this.hurtT = 0.3; }
+
+  /** Flash the crosshair's hit marker (first person). */
+  hitMarker({ crit, blocked } = {}) {
+    const el = this.el.hitMark;
+    el.className = 'hitmark' + (crit ? ' crit' : blocked ? ' blocked' : '');
+    void el.offsetWidth;
+    el.classList.add('show');
+  }
 
   flashSlot(id) {
     const p = this.game?.player;

@@ -492,3 +492,9 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 #ui.touch .compass { top: 52px; width: min(320px, 40vw); }
 #ui.touch.v3 .bossbar { top: 104px; }
 #ui.touch.v3 .hint { top: 150px; }
+.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }
+.hitmark svg { display: block; }
+.hitmark.crit { color: #ffd54f; }
+.hitmark.blocked { color: #b0bec5; }
+.hitmark.show { animation: hitmark .24s ease-out; }
+@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }

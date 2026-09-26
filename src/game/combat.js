@@ -264,6 +264,7 @@ export class Combat {
     // feedback: impact star, sparks, hit-stop, camera kick and a combined damage
     // number, all scaled by the weight of the blow (see render/combatfx.js)
     fx.hit(att, tgt, h, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved });
+    if (att?.isPlayer) game.emit('playerLanded', tgt, { final, crit, blocked });
     game.audio?.sfx(blocked ? 'block' : h.sfxHit || (el === 'physical' ? (h.slashing ? 'slash_hit' : 'punch') : el));
     return true;
   }
