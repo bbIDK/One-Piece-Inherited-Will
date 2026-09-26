@@ -1,5 +1,5 @@
 // Helpers for content packs.
-import { makeNPC, npcDef } from '../game/npcs.js';
+import { makeNPC, npcDef, makeEnemy } from '../game/npcs.js';
 import { makeSeaKing } from '../game/sea.js';
 
 /** Spawn a registered NPC right now if its island is loaded. */
@@ -59,3 +59,28 @@ export function lines(...texts) {
 }
 
 export const Q = (game) => game.quests;
+
+/** Respawn an island's population right now (new quest stage → new people). */
+export function refreshIsland(game, islandId) { return game.spawner.refresh(islandId); }
+
+/** Spawn an enemy group immediately (same format as pack groups). Returns the actors. */
+export function spawnGroup(game, grp) {
+  const isl = game.world.islands.find((i) => i.id === grp.island);
+  if (!isl) return [];
+  const base = grp.spot ? isl.spots[grp.spot] : grp.x !== undefined ? { x: grp.x, y: grp.y } : { x: isl.x + (grp.dx || 0) * isl.def.w / 2, y: isl.y + (grp.dy || 0) * isl.def.h / 2 };
+  if (!base) return [];
+  const out = [];
+  const list = game.spawner.populated.get(isl.id);
+  for (const e of grp.enemies || []) {
+    const [arch, lvl, over] = Array.isArray(e) ? e : [e, grp.level || 6, {}];
+    const p = game.spawner.findFree(base.x, base.y, grp.radius || 5) || base;
+    const a = makeEnemy(arch, lvl, p.x, p.y, over || {});
+    a.game = game;
+    if (grp.leash) a.controller.leash = grp.leash;
+    if (grp.aggro) aggro(game, a);
+    game.addActor(a);
+    if (list) list.push(a);
+    out.push(a);
+  }
+  return out;
+}

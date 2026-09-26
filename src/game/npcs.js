@@ -71,6 +71,8 @@ export function makeNPC(def, x, y, extra = {}) {
   a.talk = def.dialogue ? { def } : null;
   a.def = def;
   if (def.armament) a.armament = true;
+  if (def.invulnerable) a.invulnerable = true;
+  if (def.recover) a.recoverAfter = def.recover;
   if (def.fixedPower) a.fixedPower = def.fixedPower;
   a.showName = def.showName ?? (!!def.dialogue || !!def.boss || !!def.named);
   a.nameColor = def.boss ? '#ff8a80' : def.dialogue ? '#ffe082' : '#fff';
@@ -133,7 +135,7 @@ export function npcBuilder(ctx) {
 }
 
 function placeNPC(game, island, def, rng, spawner) {
-  const pl = def.at || {};
+  const pl = (typeof def.at === 'function' ? def.at(game.state?.char, game) : def.at) || {};
   if (pl.spot && island.spots[pl.spot]) {
     const s = island.spots[pl.spot];
     const x = s.x + (pl.ox || 0), y = s.y + (pl.oy || 0);
@@ -172,6 +174,35 @@ export class Interactions {
     game.on('quickHeal', () => this.quickHeal());
     this.objectHandlers = {};
     game.on('useObject', (o) => this.objectHandlers[o.use]?.(o, game));
+    // `summon` ability steps: call allies to the fight (they leave when it ends)
+    game.summon = (owner, spec) => {
+      const n = spec.count || 1;
+      for (let i = 0; i < n; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const p = game.spawner.findFree(owner.x + Math.cos(ang) * 2, owner.y + Math.sin(ang) * 2, 3) || { x: owner.x, y: owner.y + 1 };
+        const a = makeEnemy(spec.archetype || 'pirate', spec.level || Math.max(3, Math.round((owner.attrs?.str || 8) * 0.8)), p.x, p.y, { name: spec.name, look: spec.look, moves: spec.moves, hpMul: spec.hpMul });
+        a.game = game;
+        a.faction = owner.faction;
+        a.summonedBy = owner;
+        a.summonT = spec.duration || 30;
+        a.aggroPlayer = owner.aggroPlayer || owner.faction !== 'player';
+        if (owner.isPlayer || owner.faction === 'player') { a.aggroPlayer = false; a.controller = new AIController({ kind: 'follower', skill: 0.3, moves: spec.moves || [] }); }
+        else if (owner.controller?.target) { a.controller.target = owner.controller.target; a.controller.state = 'chase'; }
+        game.addActor(a);
+        game.fx.burst(a.x, a.y - 0.6, 12, { color: spec.color || '#eeeeee', speed: 3, g: 0, life: 0.4, kind: 'smoke', size: 0.3 });
+      }
+    };
+    game.on('tick', (dt) => {
+      for (const a of game.actors) {
+        if (!a.summonedBy) continue;
+        a.summonT -= dt;
+        if (a.summonT <= 0 || !a.summonedBy.alive || a.summonedBy.state === 'knocked') { a.alive = false; game.fx.burst(a.x, a.y - 0.6, 8, { color: '#eeeeee', speed: 2, g: 0, life: 0.3, kind: 'smoke' }); }
+      }
+    });
+    this.onObject('lore', (o) => {
+      game.dialogue.open(null, { start: 'a', nodes: { a: { speaker: o.name || 'Inscription', text: typeof o.lore === 'function' ? o.lore(game.state.char, game) : o.lore } } });
+      if (o.loreEvent) game.emit('questEvent', o.loreEvent, o);
+    });
     // quest markers (! / ?) over NPC heads
     let mt = 0;
     game.on('tick', (dt) => {
@@ -180,6 +211,12 @@ export class Interactions {
       const c = game.state?.char;
       if (!c) return;
       for (const a of game.actors) {
+        // duelists and sparring partners get back up after a while
+        if (a.recoverAfter && a.state === 'knocked' && a.knockT > a.recoverAfter && a.alive) {
+          a.state = 'idle'; a.hp = Math.round(a.d.maxHp * 0.5); a.provoked = false; a.aggroPlayer = !!a.def?.hostile;
+          if (a.controller) { a.controller.target = null; a.controller.state = 'return'; }
+          game.fx.text(a.x, a.y - 2, a.def?.recoverLine || '...Hah. You win.', '#fff', 0.32);
+        }
         const m = a.def?.marker;
         if (!m || !a.alive) continue;
         try { a.questMarker = m(c, game) || null; } catch (e) { a.questMarker = null; }

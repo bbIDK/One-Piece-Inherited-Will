@@ -197,7 +197,8 @@ export function generateIsland(world, def, noise, rng) {
     if (!from) from = P(dd);
     const dock = buildDock(world, from, dd.dir, dd.len ?? 8, rec, dd);
     if (dock) {
-      dock.name = dd.name || (rec.towns[0] && rec.towns[0].name) || def.name;
+      const nearTown = dd.near && rec.towns.find((t) => t.id === dd.near || t.name === dd.near);
+      dock.name = dd.name || nearTown?.name || (rec.towns[0] && rec.towns[0].name) || def.name;
       rec.docks.push(dock);
       // road from the town to the dock
       if (dd.near) {
@@ -217,6 +218,8 @@ export function generateIsland(world, def, noise, rng) {
     const o = { ...lm, x: c.x, y: c.y, kind: lm.kind || lm.type };
     delete o.dx; delete o.dy;
     if (o.block === undefined) o.block = true;
+    if (o.kind === 'building' && o.role && !o.door) o.door = { x: o.x, y: o.y + 0.5 };
+    if (o.lore && !o.interact) { o.interact = o.loreLabel || `Examine ${o.name || 'it'}`; o.use = 'lore'; o.interactRange = o.interactRange || 2.2; }
     if (o.kind === 'poneglyph' && !o.interact) { o.interact = o.road ? 'Examine the red Road Poneglyph' : 'Examine the Poneglyph'; o.use = 'poneglyph'; o.interactRange = 2.4; }
     if (o.kind === 'bell' && !o.interact) { o.interact = 'Ring the bell'; o.use = 'bell'; o.interactRange = 2.4; }
     placeObject(world, o);

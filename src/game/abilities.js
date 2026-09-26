@@ -213,6 +213,7 @@ function runStep(actor, s, game, a) {
     game.fx.ring(actor.x, actor.y, s.pull.range, 0.3, s.color || '#7e57c2', 0.5, 0.3);
   }
   if (s.conqueror) conquerorBurst(actor, game, s.conqueror, mult);
+  if (s.summon && game.summon) game.summon(actor, s.summon);
   if (s.self) {
     if (s.self.iframes) actor.iframes = Math.max(actor.iframes, s.self.iframes);
     if (s.self.cleanse) actor.status = {};

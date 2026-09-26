@@ -46,6 +46,15 @@ export class Spawner {
     if (!ctx.skipTownsfolk) for (const town of isl.towns) this.townsfolk(town, isl, rng, list, ctx);
   }
 
+  /** Re-run an island's builders now (e.g. after a quest stage changes who should be there). */
+  refresh(islandId) {
+    const isl = this.game.world.islands.find((i) => i.id === islandId);
+    if (!isl || !this.populated.has(isl.id)) return false;
+    this.depopulate(isl);
+    this.populate(isl);
+    return true;
+  }
+
   depopulate(isl) {
     const list = this.populated.get(isl.id) || [];
     for (const a of list) {

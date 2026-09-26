@@ -58,6 +58,9 @@ export function installLegends(game) {
     game.fx.ring(o.x, o.y - 2, 0.5, 14, '#ffd54f', 1.2, 0.15);
     game.log(`The ${o.name || 'bell'} rings out across the ${game.world === game.surface ? 'sea' : 'clouds'}.`, '#ffe082');
     game.emit('questEvent', 'rang_bell', o);
+    const bid = o.bell || o.spot || (o.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    if (bid) game.emit('questEvent', `rang_bell:${bid}`, o);
+    game.emit('bellRung', o);
   });
 
   // ------------------------------------------------------ Laugh Tale

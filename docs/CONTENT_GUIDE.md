@@ -520,3 +520,32 @@ node tools/validate.mjs --pack=paradise1   # only report your pack's NPC/quest p
   on your files for syntax.
 - Do not run `node tools/build.mjs` or the browser harness; the integrator
   does that.
+
+## 13. Engine features added during content passes
+
+- **NPC placement per quest stage.** `at` may be a function:
+  `at: (char, game) => (game.quests.stageId('q') === 'x' ? { spot: 'a' } : { town: 't', building: 'B' })`.
+- **Untouchable cameos.** `invulnerable: true` means the NPC can't be hit.
+- **Duelists get back up.** `recover: 8` makes the NPC stand up again 8 s
+  after being knocked out, at half HP and no longer hostile.
+  `recoverLine: '"Good fight!"'` sets what they say.
+- **Readable landmarks.** Give any landmark `lore: 'text'` (or a function
+  `(char, game) => text`). It becomes examinable, and `loreLabel` sets the
+  prompt. With `loreEvent: 'name'`, examining it fires
+  `questEvent('name')`.
+- **Landmark buildings have doors.** A `kind: 'building'` landmark with a
+  `role` gets a door automatically, so `npc`/`role` services work like town
+  buildings.
+- **Immediate spawns.** Both helpers live in `helpers.js`:
+  - `refreshIsland(game, islandId)` re-runs the island's population now, for
+    example in a quest stage's `onStart`;
+  - `spawnGroup(game, { island, spot | dx/dy | x/y, radius, enemies: [...], aggro: true })`
+    spawns a group immediately.
+- **Summons.** An ability step `{ summon: { archetype, level, count, name, look, moves, duration } }`
+  calls allies. They share the caster's side and vanish after `duration` s
+  or when the caster falls.
+- **Bells.** Ringing a `bell` landmark fires `questEvent('rang_bell')`, then
+  `questEvent('rang_bell:<bell|spot|slug-of-name>')`, then the event
+  `bellRung(o)`.
+- **Dock names.** A dock built for a town (`dockDir`) is named after that
+  town.

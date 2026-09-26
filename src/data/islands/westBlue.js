@@ -117,6 +117,7 @@ export const WEST_BLUE = [
       { kind: 'bones', dx: -0.45, dy: 0.26 }, { kind: 'grave', dx: -0.5, dy: 0.42, name: 'Graves of the hunted' }, { kind: 'grave', dx: -0.36, dy: 0.46 },
       { kind: 'shipwreck', dx: 0.52, dy: 0.1, name: 'Wreck of a Rocks Pirates longboat', spot: 'rocks_wreck' },
       { kind: 'tent', dx: -0.52, dy: 0.08, v: 1, spot: 'coyote_camp' }, { kind: 'campfire', dx: -0.46, dy: 0.14 },
+      { kind: 'chest', dx: 0.5, dy: 0.42, name: 'A World Noble\'s strongbox', key: 'wb_gv_strongbox', tier: 3, item: 'gold_coins' },
     ],
     spots: [
       { id: 'hunting_lodge', dx: -0.38, dy: 0.34 },
@@ -175,6 +176,7 @@ export const WEST_BLUE = [
       { kind: 'building', role: 'house', name: 'The old music school', dx: -0.5, dy: 0.04, fw: 7, fd: 4, hgt: 3, style: 'ruins', roofType: 'ruin', wall: '#bcaaa4', roof: '#795548' },
       { kind: 'statue', dx: 0.12, dy: -0.2, name: 'Statue of Queen Candelle' },
       { kind: 'crate', dx: -0.72, dy: 0.24 }, { kind: 'barrel', dx: -0.66, dy: 0.34 }, { kind: 'bones', dx: -0.76, dy: 0.36 },
+      { kind: 'chest', dx: -0.64, dy: 0.24, name: 'A rusted instrument case', key: 'wb_esperia_dump', tier: 1 },
       { kind: 'lighthouse', dx: 0.82, dy: 0.3, name: 'Cello Point Light' },
     ],
     spots: [{ id: 'trash_dump', dx: -0.7, dy: 0.3 }, { id: 'theater_street', dx: 0.16, dy: -0.04 }],
@@ -208,10 +210,15 @@ export const WEST_BLUE = [
       { name: 'Hasshoken training ground', tile: T.STONE, dx: 0.4, dy: -0.26, rx: 0.08, ry: 0.07 },
     ],
     rivers: [{ points: [[-0.02, -0.75], [0.0, -0.2], [0.18, 0.2], [0.22, 0.95]], width: 3 }],
+    paint: [
+      // bridges over the river between the Royal Capital and the harbour / spires
+      { op: 'rect', x0: -0.06, x1: 0.26, y0: -0.02, y1: 0.02, tile: T.BRIDGE, onlyWater: true },
+      { op: 'rect', x0: 0.04, x1: 0.36, y0: 0.44, y1: 0.48, tile: T.BRIDGE, onlyWater: true },
+    ],
     trees: ['blossom', 'bamboo', 'oak', 'bamboo'], treeDensity: 0.05,
     towns: [
       {
-        id: 'kano_town', name: 'Kano Royal Capital', dx: -0.4, dy: 0.02, w: 66, h: 46, style: 'chinese', walls: true, dockDir: 'w', plaza: 'statue', plazaR: 5,
+        id: 'kano_town', name: 'Kano Royal Capital', dx: -0.4, dy: 0.02, w: 66, h: 46, style: 'chinese', walls: true, dockDir: 's', plaza: 'statue', plazaR: 5,
         buildings: [
           { role: 'palace', name: 'Palace of King Ramen', npc: 'wb_ramen', w: 12, d: 7 },
           { role: 'dojo', name: 'Chinjao Family Hall', npc: 'wb_chinjao', trainer: 'chinjao_master' },
@@ -223,7 +230,7 @@ export const WEST_BLUE = [
         ],
       },
       {
-        id: 'wb_happo_harbor', name: 'Happo Navy Harbor', dx: 0.45, dy: 0.3, w: 46, h: 30, style: 'chinese', dockDir: 'e', plaza: 'flagpole',
+        id: 'wb_happo_harbor', name: 'Happo Navy Harbor', dx: 0.45, dy: 0.3, w: 46, h: 30, style: 'chinese', dockDir: 'se', plaza: 'flagpole',
         buildings: [
           { role: 'hall', name: 'Happo Navy Headquarters', npc: 'wb_sai' },
           { role: 'shipwright', name: 'Happosai Drydock' },
@@ -236,9 +243,11 @@ export const WEST_BLUE = [
       { kind: 'dummy', dx: 0.34, dy: -0.22 }, { kind: 'dummy', dx: 0.46, dy: -0.2 },
       { kind: 'pillar', dx: 0.32, dy: -0.32 }, { kind: 'pillar', dx: 0.5, dy: -0.32 },
       { kind: 'gate', dx: 0.4, dy: -0.12, name: 'Gate of the Hasshoken' },
+      { kind: 'chest', dx: 0.66, dy: -0.3, name: 'Happo Navy supply cache', key: 'wb_happo_cache', tier: 2 },
       { kind: 'lantern', dx: -0.02, dy: 0.02, light: true }, { kind: 'lantern', dx: 0.12, dy: 0.12, light: true },
     ],
     spots: [{ id: 'trial_ground', dx: 0.4, dy: -0.24 }],
+    docks: [{ near: 'kano_town', dir: 's', name: 'Kano Royal Capital' }, { near: 'wb_happo_harbor', dir: 'se', name: 'Happo Navy Harbor' }],
     danger: 2,
     tagline: 'The Country of Flowers — where fists make armour ring like a bell.',
     rumors: [
@@ -318,7 +327,7 @@ export const WEST_BLUE = [
     danger: 1,
     tagline: 'Vineyards, violins, and a family of musicians older than the town hall.',
     rumors: [
-      'Byron\'s family has made music in Toroa for seven generations. He plays anything with strings — and makes a red wine to cry for.',
+      'Byron comes from a long line of musicians — his family has played in Toroa for generations. He plays anything with strings, and makes a red wine to cry for.',
       'Strangers have been asking about Byron. Men with nets and very clean hands.',
       'They say at the Sabaody Archipelago you can buy a person. A human shop. I thought it was a story to scare children.',
     ],
@@ -382,7 +391,7 @@ export const WEST_BLUE = [
         ],
       },
       {
-        id: 'wb_ilisia_harbor', name: 'Ilisia Harbor', dx: 0.42, dy: 0.42, w: 46, h: 26, style: 'port', dockDir: 's', plaza: 'well',
+        id: 'wb_ilisia_harbor', name: 'Ilisia Harbor', dx: 0.42, dy: 0.42, w: 46, h: 26, style: 'port', dockDir: 'se', plaza: 'well',
         buildings: [
           { role: 'tavern', name: 'The Salted Crown' },
           { role: 'shipwright', name: 'Ilisia Shipyard' },
@@ -393,6 +402,7 @@ export const WEST_BLUE = [
     ],
     landmarks: [{ kind: 'statue', dx: 0.1, dy: 0.3, name: 'Statue of the first King of Ilisia' }, { kind: 'lighthouse', dx: 0.82, dy: 0.2 }],
     spots: [{ id: 'smugglers_cove', dx: 0.72, dy: 0.36 }],
+    docks: [{ near: 'ilisia_town', dir: 'n', name: 'Ilisia Royal Capital' }, { near: 'wb_ilisia_harbor', dir: 'se', name: 'Ilisia Harbor' }],
     danger: 2,
     tagline: 'A loyal kingdom of the World Government, and a king who reads the wind.',
     rumors: [
@@ -436,7 +446,8 @@ export const WEST_BLUE = [
     id: 'las_camp', name: 'Las Camp', sea: 'west_blue', x: 1700, y: 1890, w: 170, h: 100,
     climate: 'temperate', rough: 0.28, archipelago: true,
     blobs: [[-0.1, 0, 0.75, 0.8], [0.8, 0.36, 0.16, 0.24], [0.74, -0.52, 0.13, 0.18]],
-    areas: [{ tile: T.GRAVEL, dx: 0.48, dy: 0.4, rx: 0.12, ry: 0.1, name: 'Raiders\' landing' }],
+    areas: [{ tile: T.GRAVEL, dx: 0.36, dy: 0.28, rx: 0.12, ry: 0.1, name: 'Raiders\' landing' }],
+    spots: [{ id: 'raider_landing', dx: 0.32, dy: 0.24 }],
     trees: ['oak', 'bush'], treeDensity: 0.03,
     towns: [
       {
@@ -454,9 +465,10 @@ export const WEST_BLUE = [
       },
     ],
     landmarks: [
-      { kind: 'shipwreck', dx: 0.52, dy: 0.46, name: "Raccoon Pirates' landing boat", spot: 'raider_landing' },
-      { kind: 'crate', dx: 0.42, dy: 0.34 }, { kind: 'barrel', dx: 0.46, dy: 0.3 },
+      { kind: 'shipwreck', dx: 0.46, dy: 0.36, name: "Raccoon Pirates' landing boat" },
+      { kind: 'crate', dx: 0.38, dy: 0.34 }, { kind: 'barrel', dx: 0.42, dy: 0.3 },
       { kind: 'statue', dx: 0.3, dy: -0.4, name: 'Monument to the Five Families (defaced)' },
+      { kind: 'chest', dx: 0.36, dy: -0.44, name: 'A mafia strongbox', key: 'wb_family_stash', tier: 2, item: 'jewels' },
     ],
     danger: 3,
     tagline: 'Five Families, one city, and every one of them wants the others\' heads.',
@@ -470,7 +482,8 @@ export const WEST_BLUE = [
 
   // ------------------------------------------------- Asshina Gainone Kingdom
   {
-    // Homeland of the Longleg Tribe in this world, famous for its colosseum.
+    // The Longleg Tribe's homeland (canon name; canon never says which sea it is
+    // in — the game places it in the West Blue). Famous here for its colosseum.
     id: 'asshina', name: 'Asshina Gainone Kingdom', sea: 'west_blue', x: 520, y: 1880, w: 150, h: 100,
     climate: 'tropical', rough: 0.24,
     blobs: [[0, 0, 0.85, 0.8], [-0.4, -0.35, 0.4, 0.4]],
@@ -490,7 +503,7 @@ export const WEST_BLUE = [
       },
     ],
     landmarks: [{ kind: 'dummy', dx: 0.36, dy: -0.26 }, { kind: 'dummy', dx: 0.44, dy: -0.26 }, { kind: 'flagpole', dx: 0.4, dy: -0.4 }],
-    spots: [{ id: 'arena_sands', dx: 0.36, dy: -0.18 }],
+    spots: [{ id: 'arena_sands', dx: 0.42, dy: -0.12 }],
     population: [['longleg', 78], ['human', 16], ['longarm', 6]],
     danger: 1,
     tagline: 'The kingdom of the Longleg Tribe. Everything here is built one storey too tall.',
