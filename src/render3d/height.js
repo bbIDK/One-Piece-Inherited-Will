@@ -9,7 +9,7 @@
 //  * Decks (docks, bridges, sea-train rails) are platforms above the water.
 //  * Walls are vertical blocks (see WALL_H), not hills.
 import { T, IS_LIQUID, OVERLAY } from '../world/tiles.js';
-import { RM_X, RL_HALF } from '../world/constants.js';
+import { RM_X, RL_HALF, chart } from '../world/constants.js';
 
 export const SEA_Y = 0;
 export const DECK_Y = 0.55; // top of docks and bridges
@@ -32,7 +32,7 @@ export const isWallTile = (t) => t === T.WALL;
 function onRedLine(world, x) {
   if (world.zone !== 0) return false;
   const dm = Math.abs(world.dx(x, RM_X)), ds = Math.abs(world.dx(x, 0));
-  return dm < RL_HALF + 90 || ds < RL_HALF + 30;
+  return dm < RL_HALF + chart(90) || ds < RL_HALF + chart(30);
 }
 
 /** Height of one land tile before the coastal ramp. */

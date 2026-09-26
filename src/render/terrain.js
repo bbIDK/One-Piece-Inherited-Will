@@ -40,8 +40,18 @@ export class TerrainRenderer {
     const gl = this.gl;
     for (const k of ['world', 'dist', 'map', 'fog']) if (this.textures[k]) gl.deleteTexture(this.textures[k]);
     this.width = width; this.height = height;
-    this.textures.world = texture(gl, { width, height, internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, data: world });
-    this.textures.dist = texture(gl, { width, height, internal: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, data: dist, filter: gl.LINEAR, mipmaps: true });
+    // The game is drawn in 3D now: this renderer only paints the world chart,
+    // which needs the half-resolution map and coastline distance. (Full-size
+    // world textures would also exceed phones' 4096-pixel texture limit.)
+    void world;
+    this.textures.world = texture(gl, { width: 1, height: 1, internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, data: new Uint8Array(4) });
+    const half = new Uint8Array(mapW * mapH);
+    const sx = width / mapW, sy = height / mapH;
+    for (let y = 0; y < mapH; y++) {
+      const row = Math.min(height - 1, Math.floor(y * sy)) * width;
+      for (let x = 0; x < mapW; x++) half[y * mapW + x] = dist[row + Math.min(width - 1, Math.floor(x * sx))];
+    }
+    this.textures.dist = texture(gl, { width: mapW, height: mapH, internal: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, data: half, filter: gl.LINEAR, mipmaps: true });
     this.textures.map = texture(gl, { width: mapW, height: mapH, internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, data: map, filter: gl.LINEAR, mipmaps: true });
     this.fogW = fogW; this.fogH = fogH;
     this.textures.fog = texture(gl, { width: fogW, height: fogH, internal: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, data: fog, filter: gl.LINEAR });
@@ -56,6 +66,8 @@ export class TerrainRenderer {
 
   /** Re-upload a rectangle of tiles after the map changed (x0,y0 inclusive, w,h). */
   updateTiles(worldRGBA, dist, x0, y0, w, h, fullW) {
+    // (the chart doesn't need tile-accurate updates; the 3D view rebuilds its own chunks)
+    if (this.textures.world) return;
     const gl = this.gl;
     const sub = new Uint8Array(w * h * 4);
     const subD = new Uint8Array(w * h);

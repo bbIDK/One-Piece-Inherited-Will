@@ -1,21 +1,21 @@
 // Full-screen world chart (M). Uses the terrain shader's parchment "map mode".
 import { uiImg } from './icon.js';
 import { h, clear } from './dom.js';
-import { W, H, EQ, RM_X, GL_TOP, GL_BOTTOM } from '../world/constants.js';
+import { W, H, EQ, RM_X, GL_TOP, GL_BOTTOM, chart } from '../world/constants.js';
 
 const SEA_LABELS = [
-  { name: 'EAST BLUE', x: 3070, y: 390 },
-  { name: 'NORTH BLUE', x: 1020, y: 390 },
-  { name: 'WEST BLUE', x: 1020, y: 1660 },
-  { name: 'SOUTH BLUE', x: 3070, y: 1660 },
-  { name: 'PARADISE', x: 3070, y: EQ + 150 },
-  { name: 'NEW WORLD', x: 1020, y: EQ + 150 },
-  { name: 'GRAND LINE', x: 2560, y: GL_TOP + 28 },
-  { name: 'GRAND LINE', x: 1530, y: GL_TOP + 28 },
-  { name: 'CALM BELT', x: 2900, y: GL_TOP - 36 },
-  { name: 'CALM BELT', x: 2900, y: GL_BOTTOM + 36 },
-  { name: 'RED LINE', x: RM_X, y: 300, vertical: true },
-  { name: 'RED LINE', x: 12, y: 300, vertical: true },
+  { name: 'EAST BLUE', x: chart(3070), y: chart(390) },
+  { name: 'NORTH BLUE', x: chart(1020), y: chart(390) },
+  { name: 'WEST BLUE', x: chart(1020), y: chart(1660) },
+  { name: 'SOUTH BLUE', x: chart(3070), y: chart(1660) },
+  { name: 'PARADISE', x: chart(3070), y: EQ + chart(150) },
+  { name: 'NEW WORLD', x: chart(1020), y: EQ + chart(150) },
+  { name: 'GRAND LINE', x: chart(2560), y: GL_TOP + chart(28) },
+  { name: 'GRAND LINE', x: chart(1530), y: GL_TOP + chart(28) },
+  { name: 'CALM BELT', x: chart(2900), y: GL_TOP - chart(36) },
+  { name: 'CALM BELT', x: chart(2900), y: GL_BOTTOM + chart(36) },
+  { name: 'RED LINE', x: RM_X, y: chart(300), vertical: true },
+  { name: 'RED LINE', x: chart(12), y: chart(300), vertical: true },
 ];
 
 export function installMap(game) {
@@ -160,8 +160,8 @@ function drawLabels(game, r, cam, layer) {
     add('', isl.name, isl.x, isl.y + isl.radius * 0.2 + 6 / cam.zoom, { fontSize: Math.max(11, Math.min(20, 14 * Math.sqrt(cam.zoom / 0.3))) + 'px' }, true);
   }
   if (!zone) {
-    add('', 'Reverse Mountain', RM_X, EQ - 40, { fontSize: '14px' });
-    if (discovered.has('mary_geoise') || w.isExplored(0, EQ)) add('', 'Mary Geoise', 4, EQ - 70, { fontSize: '13px' });
+    add('', 'Reverse Mountain', RM_X, EQ - chart(40), { fontSize: '14px' });
+    if (discovered.has('mary_geoise') || w.isExplored(0, EQ)) add('', 'Mary Geoise', 4, EQ - chart(70), { fontSize: '13px' });
   }
   // quests
   for (const { id } of game.quests.active()) {

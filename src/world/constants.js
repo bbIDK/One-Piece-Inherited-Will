@@ -11,18 +11,26 @@
 //    West Blue and runs from Mary Geoise back around to Reverse Mountain.
 //
 // Our map is an equirectangular strip that wraps east↔west like a planet:
-// Reverse Mountain sits in the middle (x = 2048) and Mary Geoise on the seam
-// (x = 0 ≡ 4096), so the Red Line shows in the centre and at both edges.
+// Reverse Mountain sits in the middle (x = W / 2) and Mary Geoise on the seam
+// (x = 0 ≡ W), so the Red Line shows in the centre and at both edges.
 
-export const W = 4096;
-export const H = 2048;
-export const EQ = 1024; // equator (Grand Line centre row)
-export const GL_HALF = 200; // half height of the Grand Line
-export const CB = 72; // width of each Calm Belt
-export const RL_HALF = 46; // half width of the Red Line
-export const RM_X = 2048; // Reverse Mountain meridian
+// The world was charted on a 4096 × 2048 grid. For the 3D view it is built
+// WORLD_SCALE times bigger (islands, seas, distances), 1 tile = 1 metre.
+// Island data and the few hand-placed points stay in chart units and go
+// through chart() (or the island loader) when used.
+export const WORLD_SCALE = 1.5;
+/** A distance or coordinate from the chart, in world tiles. */
+export const chart = (v) => Math.round(v * WORLD_SCALE);
+
+export const W = chart(4096); // 6144
+export const H = chart(2048); // 3072
+export const EQ = chart(1024); // equator (Grand Line centre row)
+export const GL_HALF = chart(200); // half height of the Grand Line
+export const CB = chart(72); // width of each Calm Belt
+export const RL_HALF = chart(46); // half width of the Red Line
+export const RM_X = chart(2048); // Reverse Mountain meridian
 export const MG_X = 0; // Mary Geoise meridian (the wrap seam)
-export const POLAR = 26; // pack-ice rows at each pole
+export const POLAR = chart(26); // pack-ice rows at each pole
 
 export const GL_TOP = EQ - GL_HALF; // 824
 export const GL_BOTTOM = EQ + GL_HALF; // 1224

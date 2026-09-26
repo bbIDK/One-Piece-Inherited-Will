@@ -521,7 +521,7 @@ export function openSettings(game) {
     clear(body);
     add(body, h('h2', 'Settings'),
       h('h3', 'View'),
-      choice('Camera', 'view', [['first', 'First person'], ['third', 'Third person'], ['classic', 'Classic top-down']]),
+      choice('Camera', 'view', [['first', 'First person'], ['third', 'Third person']]),
       slider(game.input.touch?.on ? 'Look sensitivity' : 'Mouse sensitivity', 'sensitivity'),
       check('Invert mouse look', 'invertY'),
       slider(() => `Field of view ${Math.round(60 + (s.fov ?? 0.5) * 35)}°`, 'fov'),
@@ -530,7 +530,7 @@ export function openSettings(game) {
       h('h3', 'Sound & feel'),
       slider('Sound effects', 'volume'), slider('Music', 'music'), slider('Screen shake', 'shake'),
       check('Show tutorial hints', 'showHints'),
-      h('p.muted', 'Press V in game to switch between first person, third person and the classic view. Settings are saved in this browser.'));
+      h('p.muted', 'Press V in game to switch between first and third person. Settings are saved in this browser.'));
   };
   render();
   game.ui.openPanel(body, { onClose: () => game.applySettings(true), id: 'settings' });

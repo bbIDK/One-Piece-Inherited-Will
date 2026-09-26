@@ -333,6 +333,47 @@ export class Actor extends Entity {
     return R;
   }
 
+  /**
+   * Jump (Space): a real hop with height `z` (metres) and vertical speed `vz`.
+   * Races change the take-off: Skypieans and Longlegs spring higher, giants
+   * and Buccaneers are heavier.
+   */
+  tryJump(game) {
+    if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root || this.blocking) return false;
+    if ((this.z || 0) > 0.02 || this.inWater || this.onShip) return false;
+    if (this.action && !this.action.def.m1Chain && this.action.t < this.action.total * 0.7) return false;
+    if (this.stamina < 2) return false;
+    const r = this.race;
+    const v = (r === 'skypiean' || r === 'longleg' ? 8.4 : r === 'mink' || r === 'lunarian' ? 7.6 : r === 'giant' || r === 'buccaneer' ? 6.1 : 6.8) * (this.jumpMul || 1);
+    this.vz = v;
+    this.z = 0.001;
+    this.airT = 0;
+    this.stamina = Math.max(0, this.stamina - 3);
+    if (this.action?.def.m1Chain) this.action = null;
+    game.fx.burst(this.x, this.y, 6, { color: ['#d7ccc8', '#efebe9'], speed: 1.8, z: 0.05, vz: 0.5, g: 1.2, life: 0.4, kind: 'dust', size: 0.16, grow: 0.35 });
+    game.audio?.sfx('dodge');
+    if (this.isPlayer) game.emit('playerJump');
+    return true;
+  }
+
+  /** Gravity for jumps, launches and falls; lands with a puff of dust. */
+  updateVertical(dt, game) {
+    if (!(this.z > 0) && !this.vz) return;
+    this.airT = (this.airT || 0) + dt;
+    this.vz -= 22 * dt;
+    this.z += this.vz * dt;
+    if (this.z <= 0) {
+      const impact = -this.vz;
+      this.z = 0;
+      this.vz = 0;
+      this.airT = 0;
+      if (impact > 3) {
+        game.fx.burst(this.x, this.y, Math.min(14, 4 + impact), { color: ['#d7ccc8', '#bcaaa4', '#efebe9'], speed: 1.5 + impact * 0.25, z: 0.05, vz: 0.6, g: 1.2, life: 0.45, kind: 'dust', size: 0.18, grow: 0.4 });
+        if (this.isPlayer) game.emit('playerLand', impact);
+      }
+    }
+  }
+
   setBlock(on) {
     if (on && !this.blocking) {
       if (this.state !== 'idle' || this.action || this.hitstun > 0 || this.status.freeze) return;
@@ -347,6 +388,7 @@ export class Actor extends Entity {
     this.sortY = this.y;
     if (this.state === 'knocked') {
       this.knockT += dt;
+      this.updateVertical(dt, game);
       this.updateMovement(dt, game, true);
       if (this.controller && this.controller.whileKnocked) this.controller.whileKnocked(this, dt, game);
       return;
@@ -396,7 +438,9 @@ export class Actor extends Entity {
       }
     }
     this.updateMovement(dt, game, false);
-    this.updateWater(dt, game);
+    this.updateVertical(dt, game);
+    // (in the air over water you haven't splashed down yet)
+    if (!(this.z > 0.25)) this.updateWater(dt, game);
 
     const sp = Math.hypot(this.vx, this.vy);
     this.moving = sp > 0.4;

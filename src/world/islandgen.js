@@ -31,9 +31,13 @@ export const CLIMATES = {
 const CLIMATE_BY_ID = Object.fromEntries(Object.entries(CLIMATES).map(([k, v]) => [v.clim, k]));
 
 /** Resolve a relative coordinate. */
-function rel(v, half) { return Math.abs(v) <= 1.5 ? v * half : v; }
+// Absolute sizes (|v| > 1.5 tiles) grow with the island's scale too (the
+// world is built bigger than the chart the data was written on).
+let SCALE = 1;
+function rel(v, half) { return Math.abs(v) <= 1.5 ? v * half : v * SCALE; }
 
 export function generateIsland(world, def, noise, rng) {
+  SCALE = def._scale || 1;
   const preset = CLIMATES[def.climateName || def.climate] || CLIMATES[CLIMATE_BY_ID[def.climate]] || CLIMATES.temperate;
   const ground = def.ground ?? preset.ground;
   const beach = def.beach ?? preset.beach;
@@ -346,13 +350,13 @@ function paintOp(world, p, cx, cy, hw, hh, noise) {
       world.setTile(x, y, p.tile, p.elev, p.climate);
     }
   } else if (p.op === 'circle') {
-    const r = Math.abs(p.r) <= 1.5 ? p.r * Math.max(hw, hh) : p.r;
+    const r = Math.abs(p.r) <= 1.5 ? p.r * Math.max(hw, hh) : p.r * SCALE;
     stampRadial(world, X(p.x), Y(p.y), r, (x, y) => {
       if (p.onlyLand && world.isLiquid(x, y)) return;
       world.setTile(x, y, p.tile, p.elev, p.climate);
     });
   } else if (p.op === 'ring') {
-    const r = Math.abs(p.r) <= 1.5 ? p.r * Math.max(hw, hh) : p.r;
+    const r = Math.abs(p.r) <= 1.5 ? p.r * Math.max(hw, hh) : p.r * SCALE;
     stampRadial(world, X(p.x), Y(p.y), r + (p.width || 2) / 2, (x, y, dn) => {
       const d = dn * (r + (p.width || 2) / 2);
       if (Math.abs(d - r) <= (p.width || 2) / 2) world.setTile(x, y, p.tile, p.elev, p.climate);
@@ -360,7 +364,7 @@ function paintOp(world, p, cx, cy, hw, hh, noise) {
   } else if (p.op === 'path') {
     carvePath(world, p.points.map(([a, b]) => [X(a), Y(b)]), p.width ?? 2, p.tile, p.wobble ? noise : null, p.wobble ?? 0, { elev: p.elev, onlyLand: p.onlyLand, overWater: !p.onlyLand });
   } else if (p.op === 'blob') {
-    stampEllipse(world, X(p.x), Y(p.y), Math.abs(p.rx) <= 1.5 ? p.rx * hw : p.rx, Math.abs(p.ry) <= 1.5 ? p.ry * hh : p.ry, noise, p.rough ?? 0.3, (x, y) => {
+    stampEllipse(world, X(p.x), Y(p.y), rel(p.rx, hw), rel(p.ry, hh), noise, p.rough ?? 0.3, (x, y) => {
       if (p.onlyLand && world.isLiquid(x, y)) return;
       world.setTile(x, y, p.tile, p.elev, p.climate);
     });

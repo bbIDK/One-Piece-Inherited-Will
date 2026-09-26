@@ -419,7 +419,8 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }
 .t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }
 .t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }
-.t-btn.dodge { right: 12px; bottom: 98px; width: 62px; height: 62px; }
+.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }
+.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }
 .t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }
 .t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }
 .t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }

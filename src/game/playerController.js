@@ -38,7 +38,11 @@ export class PlayerController {
       my = Math.sin(yaw) * fwd + Math.cos(yaw) * right;
     }
     p.intent.mx = mx; p.intent.my = my;
-    p.intent.sprint = (inp.isDown('Shift') || !!tc?.run) && l > 0;
+    // Shift: a quick tap dodges, holding it sprints
+    if (inp.wasPressed('Shift')) this.shiftT = 0;
+    if (inp.isDown('Shift')) this.shiftT = (this.shiftT ?? 0) + dt;
+    const tapDodge = inp.wasReleased('Shift') && (this.shiftT ?? 1) < 0.22;
+    p.intent.sprint = ((inp.isDown('Shift') && this.shiftT > 0.16) || !!tc?.run) && l > 0;
     // in first person you always face where you look
     if (v3 && v3.rig.mode === 'first') this.aimT = Math.max(this.aimT, 0.25);
 
@@ -61,12 +65,14 @@ export class PlayerController {
 
     // combat: presses are buffered for a moment, so a click made slightly
     // early still fires as soon as the current move allows it
-    const buf = this.buf || (this.buf = { m1: 0, heavy: 0, dodge: 0 });
-    buf.m1 = Math.max(0, buf.m1 - dt); buf.heavy = Math.max(0, buf.heavy - dt); buf.dodge = Math.max(0, buf.dodge - dt);
+    const buf = this.buf || (this.buf = { m1: 0, heavy: 0, dodge: 0, jump: 0 });
+    buf.m1 = Math.max(0, buf.m1 - dt); buf.heavy = Math.max(0, buf.heavy - dt); buf.dodge = Math.max(0, buf.dodge - dt); buf.jump = Math.max(0, (buf.jump || 0) - dt);
     if (inp.mousePressed(0)) buf.m1 = 0.22;
     if (inp.mousePressed(2)) buf.heavy = 0.25;
-    if (inp.wasPressed('Space')) buf.dodge = 0.16;
+    if (tapDodge) buf.dodge = 0.16;
+    if (inp.wasPressed('Space')) buf.jump = 0.14;
     if (buf.dodge > 0 && p.tryDodge(game, mx, my)) { buf.dodge = 0; buf.m1 = 0; }
+    if (buf.jump > 0 && p.tryJump(game)) buf.jump = 0;
     if (buf.heavy > 0) {
       const prev = p.facing;
       p.facing = aimM;
@@ -98,6 +104,9 @@ export class PlayerController {
       this.interaction.run();
     }
   }
+
+  /** A dodge requested from outside the keyboard (the touch pad's Dodge button). */
+  requestDodge() { if (this.buf) this.buf.dodge = 0.16; else this.buf = { m1: 0, heavy: 0, dodge: 0.16, jump: 0 }; }
 
   /** Soft melee aim assist: face a foe that is close and roughly where you aim. */
   assist(p, game, aim) {

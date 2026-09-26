@@ -10,6 +10,7 @@
 // Island definitions use the same format as surface islands (see
 // docs/CONTENT_GUIDE.md); coordinates are zone tiles.
 import { T } from '../../world/tiles.js';
+import { chart } from '../../world/constants.js';
 
 export const ZONES = {
   skypiea: {
@@ -79,8 +80,8 @@ export const ZONES = {
     id: 'fishman_island', name: 'Fish-Man Island', kind: 'undersea', w: 480, h: 380, fill: T.SEA, altitude: '10,000 m below',
     arrive: { x: 420, y: 200, heading: Math.PI },
     exits: [
-      { id: 'new_world', x: 20, y: 60, r: 16, to: 'surface', surface: { x: 118, y: 990 }, label: 'Rise to the New World' },
-      { id: 'paradise', x: 462, y: 330, r: 16, to: 'surface', surface: { x: 3985, y: 1070 }, label: 'Rise back to Sabaody' },
+      { id: 'new_world', x: 20, y: 60, r: 16, to: 'surface', surface: { x: chart(118), y: chart(990) }, label: 'Rise to the New World' },
+      { id: 'paradise', x: 462, y: 330, r: 16, to: 'surface', surface: { x: chart(3985), y: chart(1070) }, label: 'Rise back to Sabaody' },
     ],
     islands: [
       {

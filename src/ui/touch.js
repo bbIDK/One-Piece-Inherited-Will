@@ -23,6 +23,7 @@ export function installTouch(game, root) {
   const B = {
     attack: btn('attack', 'Attack'),
     heavy: btn('heavy', 'Heavy'),
+    jump: btn('jump', 'Jump'),
     dodge: btn('dodge', 'Dodge'),
     block: btn('block', 'Block'),
     use: btn('use', 'Use'),
@@ -36,6 +37,7 @@ export function installTouch(game, root) {
 
   // --- input plumbing ----------------------------------------------------------
   const press = (c) => {
+    if (c === 'dodge') { game.player?.controller?.requestDodge?.(); return; }
     if (c === 'mouse0' || c === 'mouse2') {
       const b = +c[5], m = inp.mouse;
       if (!m.down[b]) m.pressed[b] = true;
@@ -43,6 +45,7 @@ export function installTouch(game, root) {
     } else inp.simKey(c, true);
   };
   const release = (c) => {
+    if (c === 'dodge') return;
     if (c === 'mouse0' || c === 'mouse2') {
       const b = +c[5];
       inp.mouse.down[b] = false;
@@ -76,7 +79,8 @@ export function installTouch(game, root) {
   const sailing = () => game.player?.mode === 'sail';
   bind(B.attack, () => 'mouse0');
   bind(B.heavy, () => (sailing() ? 'Shift' : 'mouse2'));
-  bind(B.dodge, () => 'Space');
+  bind(B.jump, () => 'Space');
+  bind(B.dodge, () => (sailing() ? null : 'dodge'));
   bind(B.block, () => (sailing() ? null : 'F'));
   bind(B.use, () => 'E');
   bind(B.heal, () => 'Q');
@@ -176,7 +180,8 @@ export function installTouch(game, root) {
       const knocked = p.state === 'knocked';
       set(B.attack, sail ? 'Fire' : 'Attack');
       B.attack.classList.toggle('hidden', sail && !p.ship?.def?.cannons && p.ship?.cannonsOverride === undefined);
-      set(B.dodge, knocked ? 'Get up' : sail ? 'Row' : 'Dodge');
+      set(B.jump, knocked ? 'Get up' : sail ? 'Row' : 'Jump');
+      B.dodge.classList.toggle('hidden', sail || knocked);
       set(B.heavy, sail ? 'Burst' : 'Heavy');
       B.heavy.classList.toggle('hidden', sail && !p.ship?.def?.coupDeBurst);
       B.block.classList.toggle('hidden', sail);
@@ -184,7 +189,7 @@ export function installTouch(game, root) {
       B.use.classList.toggle('hidden', !p.controller?.interaction);
       if (!hinted && game.view3d?.active) {
         hinted = true;
-        ui.hint('Left thumb: move (push all the way to run). Right thumb: drag to look around. The buttons fight; tap a hotbar slot to use a technique.', 10);
+        ui.hint('Left thumb: move (push all the way to run). Right thumb: drag to look around. Jump, dodge and fight with the buttons; tap a hotbar slot to use a technique.', 10);
       }
     },
   };

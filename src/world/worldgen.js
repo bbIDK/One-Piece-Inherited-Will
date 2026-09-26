@@ -5,7 +5,7 @@
 import { World } from './world.js';
 import { ObjectIndex } from './objects.js';
 import { T, CLIMATE, IS_LIQUID, OVERLAY, PALETTE } from './tiles.js';
-import { W, H, EQ, RL_HALF, RM_X, POLAR, GL_TOP, GL_BOTTOM, CB_TOP, CB_BOTTOM, regionAt, REGION, isBlue } from './constants.js';
+import { W, H, EQ, RL_HALF, RM_X, POLAR, GL_TOP, GL_BOTTOM, CB_TOP, CB_BOTTOM, regionAt, REGION, isBlue, chart, WORLD_SCALE } from './constants.js';
 import { Noise } from '../core/noise.js';
 import { RNG, hash2 } from '../core/rng.js';
 import { hexToRgb, clamp } from '../core/math.js';
@@ -15,16 +15,16 @@ import { generateTown } from './towngen.js';
 export const REVERSE_MOUNTAIN = {
   x: RM_X,
   y: EQ,
-  rx: 118,
-  ry: 350,
+  rx: chart(118),
+  ry: chart(350),
   // canal mouths in each Blue and the exit into Paradise (Twin Cape)
   mouths: {
-    east_blue: { x: RM_X + 150, y: EQ - 318 },
-    north_blue: { x: RM_X - 150, y: EQ - 318 },
-    west_blue: { x: RM_X - 150, y: EQ + 318 },
-    south_blue: { x: RM_X + 150, y: EQ + 318 },
+    east_blue: { x: RM_X + chart(150), y: EQ - chart(318) },
+    north_blue: { x: RM_X - chart(150), y: EQ - chart(318) },
+    west_blue: { x: RM_X - chart(150), y: EQ + chart(318) },
+    south_blue: { x: RM_X + chart(150), y: EQ + chart(318) },
   },
-  exit: { x: RM_X + 150, y: EQ },
+  exit: { x: RM_X + chart(150), y: EQ },
 };
 
 export const MARY_GEOISE = {
@@ -96,13 +96,13 @@ function buildPoles(world, noise) {
     const n1 = noise.fbm(x * 0.02, 3.3, 3) * 10 + 4;
     const n2 = noise.fbm(x * 0.02, 91.7, 3) * 10 + 4;
     const top = POLAR + n1, bottom = H - POLAR - n2;
-    for (let y = 0; y < POLAR + 20; y++) {
+    for (let y = 0; y < POLAR + chart(20); y++) {
       if (y < top) {
         const i = (y * W + x) * 4;
         d[i] = T.PACK_ICE; d[i + 1] = 20 + Math.floor((top - y) * 3); d[i + 2] = CLIMATE.WINTER;
       }
     }
-    for (let y = H - POLAR - 20; y < H; y++) {
+    for (let y = H - POLAR - chart(20); y < H; y++) {
       if (y > bottom) {
         const i = (y * W + x) * 4;
         d[i] = T.PACK_ICE; d[i + 1] = 20 + Math.floor((y - bottom) * 3); d[i + 2] = CLIMATE.WINTER;
@@ -131,8 +131,9 @@ function buildRedLine(world, noise, rng) {
   // Two meridians: the centre (Reverse Mountain) and the seam (Mary Geoise).
   for (const mx of [RM_X, 0]) {
     for (let y = 0; y < H; y++) {
-      const wobL = noise.fbm(mx * 0.01 + 5, y * 0.012, 4) * 14 + noise.noise2(y * 0.08, mx) * 3;
-      const wobR = noise.fbm(mx * 0.01 + 50, y * 0.012, 4) * 14 + noise.noise2(y * 0.08, mx + 9) * 3;
+      const yc = y / WORLD_SCALE; // noise in chart units keeps the coast's shape
+      const wobL = noise.fbm(mx * 0.01 + 5, yc * 0.012, 4) * chart(14) + noise.noise2(yc * 0.08, mx) * 3;
+      const wobR = noise.fbm(mx * 0.01 + 50, yc * 0.012, 4) * chart(14) + noise.noise2(yc * 0.08, mx + 9) * 3;
       let left = -RL_HALF + wobL, right = RL_HALF + wobR;
       // Reverse Mountain massif bulges out around the equator.
       if (mx === RM_X) {
@@ -154,11 +155,11 @@ function buildRedLine(world, noise, rng) {
           const r = Math.hypot((x - M.x) / M.rx, (y - M.y) / M.ry);
           if (r < 1) e = clamp(e + (1 - r) * 140, 0, 255);
         }
-        const polar = y < POLAR + 40 || y > H - POLAR - 40;
-        const summit = mx === RM_X && Math.hypot((x - M.x) * 1.6, y - M.y) < 70 + noise.noise2(x * 0.05, y * 0.05) * 12;
+        const polar = y < POLAR + chart(40) || y > H - POLAR - chart(40);
+        const summit = mx === RM_X && Math.hypot((x - M.x) * 1.6, y - M.y) < chart(70) + noise.noise2(x * 0.05, y * 0.05) * 12;
         world.data[i] = polar || summit ? T.SNOWROCK : T.RED_ROCK;
         world.data[i + 1] = e;
-        world.data[i + 2] = y < POLAR + 30 || y > H - POLAR - 30 ? CLIMATE.WINTER : CLIMATE.TEMPERATE;
+        world.data[i + 2] = y < POLAR + chart(30) || y > H - POLAR - chart(30) ? CLIMATE.WINTER : CLIMATE.TEMPERATE;
       }
     }
   }
@@ -168,13 +169,14 @@ function buildRedLine(world, noise, rng) {
   for (const key of Object.keys(M.mouths)) {
     const m = M.mouths[key];
     // start a little out at sea so the mouth opens into the Blue
-    const sx = m.x + Math.sign(m.x - M.x) * 20, sy = m.y + Math.sign(m.y - M.y) * 20;
-    carvePath(world, [[sx, sy], [m.x, m.y], [summit.x + Math.sign(m.x - M.x) * 6, summit.y + Math.sign(m.y - M.y) * 6]], 7, T.SEA, noise, 0.5, { elev: 0 });
+    const sx = m.x + Math.sign(m.x - M.x) * chart(20), sy = m.y + Math.sign(m.y - M.y) * chart(20);
+    carvePath(world, [[sx, sy], [m.x, m.y], [summit.x + Math.sign(m.x - M.x) * 6, summit.y + Math.sign(m.y - M.y) * 6]], chart(7), T.SEA, noise, 0.5, { elev: 0 });
   }
-  carvePath(world, [[summit.x, summit.y], [M.exit.x, M.exit.y], [M.exit.x + 24, M.exit.y]], 9, T.SEA, noise, 0.4, { elev: 0 });
+  carvePath(world, [[summit.x, summit.y], [M.exit.x, M.exit.y], [M.exit.x + chart(24), M.exit.y]], chart(9), T.SEA, noise, 0.4, { elev: 0 });
   // the summit pool where the four currents meet
-  for (let j = -9; j <= 9; j++) for (let i = -9; i <= 9; i++) {
-    if (i * i + j * j <= 81) world.setTile(summit.x + i, summit.y + j, T.SEA, 0);
+  const pr = chart(9);
+  for (let j = -pr; j <= pr; j++) for (let i = -pr; i <= pr; i++) {
+    if (i * i + j * j <= pr * pr) world.setTile(summit.x + i, summit.y + j, T.SEA, 0);
   }
   // Mouth arches: ten gates per canal (drawn as objects later by the renderer)
   world.reverseMountain = M;
@@ -205,10 +207,11 @@ function buildRedLine(world, noise, rng) {
     port.moor = { x: world.wx(port.x - dir * 4), y: port.y };
   }
   // Mary Geoise: a marble city on top of the Red Line, reachable only by Bondola.
-  for (let j = -58; j <= 58; j++) {
-    for (let i = -22; i <= 22; i++) {
+  const mgW = chart(22), mgH = chart(58);
+  for (let j = -mgH; j <= mgH; j++) {
+    for (let i = -mgW; i <= mgW; i++) {
       const x = world.wx(MG.x + i), y = MG.y + j;
-      const r = Math.hypot(i / 22, j / 58);
+      const r = Math.hypot(i / mgW, j / mgH);
       if (r < 0.95) world.setTile(x, y, r < 0.35 ? T.MARBLE : (r < 0.8 ? T.LAWN : T.STONE), 180, CLIMATE.SPRING);
     }
   }
@@ -217,9 +220,9 @@ function buildRedLine(world, noise, rng) {
 
 /** The Holy Land on top of the Red Line, as an island record (NPCs, town). */
 export const MARY_GEOISE_DEF = {
-  id: 'mary_geoise', name: 'Mary Geoise', sea: 'red_line', x: 0, y: EQ, w: 44, h: 116, noFruit: true, noDock: true, danger: 10,
+  id: 'mary_geoise', name: 'Mary Geoise', sea: 'red_line', x: 0, y: EQ, w: chart(44), h: chart(116), noFruit: true, noDock: true, danger: 10,
   tagline: 'The Holy Land. Home of the Celestial Dragons, 10,000 metres above the sea.',
-  towns: [{ id: 'holy_land', name: 'The Holy Land', dx: 0, dy: -0.05, w: 36, h: 70, style: 'noble', walls: false, plaza: 'fountain',
+  towns: [{ id: 'holy_land', name: 'The Holy Land', dx: 0, dy: -0.05, w: chart(36), h: chart(70), style: 'noble', walls: false, plaza: 'fountain',
     buildings: [
       { role: 'palace', name: 'Pangaea Castle', w: 12, d: 7, hgt: 6 },
       { role: 'hall', name: 'Reverie Assembly Hall' },
@@ -231,20 +234,20 @@ export const MARY_GEOISE_DEF = {
 function buildMaryGeoise(world, rng) {
   const def = MARY_GEOISE_DEF;
   const rec = {
-    id: def.id, name: def.name, def, x: 0, y: EQ, sea: 'red_line', radius: 58,
-    bbox: { cx: 0, hw: 22, x0: -22, x1: 22, y0: EQ - 58, y1: EQ + 58 },
+    id: def.id, name: def.name, def, x: 0, y: EQ, sea: 'red_line', radius: chart(58),
+    bbox: { cx: 0, hw: chart(22), x0: -chart(22), x1: chart(22), y0: EQ - chart(58), y1: EQ + chart(58) },
     towns: [], docks: [], spots: {}, landmarks: [], treeSpots: [],
-    containsTile: (x, y) => { const dx = world.dx(0, x); return Math.hypot(dx / 22, (y - EQ) / 58) < 0.95; },
+    containsTile: (x, y) => { const dx = world.dx(0, x); return Math.hypot(dx / chart(22), (y - EQ) / chart(58)) < 0.95; },
   };
   const t = def.towns[0];
   const town = generateTown(world, { ...t, x: 0, y: EQ - 3, islandId: def.id }, rng.fork('mary_geoise'), { noise2: () => 0 });
   town.island = rec;
   rec.towns.push(town);
-  rec.spots.bondola_newworld = { x: 16, y: EQ + 3 };
-  rec.spots.bondola_paradise = { x: world.wx(-16), y: EQ + 3 };
+  rec.spots.bondola_newworld = { x: chart(16), y: EQ + 3 };
+  rec.spots.bondola_paradise = { x: world.wx(-chart(16)), y: EQ + 3 };
   rec.spots.empty_throne = { x: town.plaza.x, y: town.plaza.y - 6 };
-  placeObject(world, { kind: 'elevator', x: world.wx(-19), y: EQ + 1, block: true, interact: 'Ride the Bondola down to the Paradise side', use: 'bondola', port: 'down_paradise' });
-  placeObject(world, { kind: 'elevator', x: 19, y: EQ + 1, block: true, interact: 'Ride the Bondola down to the New World side', use: 'bondola', port: 'down_newworld' });
+  placeObject(world, { kind: 'elevator', x: world.wx(-chart(19)), y: EQ + 1, block: true, interact: 'Ride the Bondola down to the Paradise side', use: 'bondola', port: 'down_paradise' });
+  placeObject(world, { kind: 'elevator', x: chart(19), y: EQ + 1, block: true, interact: 'Ride the Bondola down to the New World side', use: 'bondola', port: 'down_newworld' });
   world.islands.push(rec);
   // Red Port lifts at the foot of the wall
   const MG = MARY_GEOISE;
@@ -255,27 +258,27 @@ function buildMaryGeoise(world, rng) {
 /** Small uncharted islands for exploration (treasure, hermits, wildlife). */
 function scatterIslets(world, noise, rng) {
   world.islets = [];
-  const tries = 1400;
+  const tries = 2600;
   let placed = 0;
-  for (let k = 0; k < tries && placed < 260; k++) {
-    const x = rng.range(60, W - 60);
-    const y = rng.range(POLAR + 40, H - POLAR - 40);
+  for (let k = 0; k < tries && placed < 420; k++) {
+    const x = rng.range(chart(60), W - chart(60));
+    const y = rng.range(POLAR + chart(40), H - POLAR - chart(40));
     const reg = regionAt(x, y);
     if (reg === REGION.RED_LINE || reg === REGION.POLAR) continue;
-    if (Math.abs(x - RM_X) < REVERSE_MOUNTAIN.rx + 40 && Math.abs(y - EQ) < REVERSE_MOUNTAIN.ry + 40) continue;
-    const r = rng.range(3, reg === REGION.PARADISE || reg === REGION.NEW_WORLD ? 11 : 9);
+    if (Math.abs(x - RM_X) < REVERSE_MOUNTAIN.rx + chart(40) && Math.abs(y - EQ) < REVERSE_MOUNTAIN.ry + chart(40)) continue;
+    const r = rng.range(3, reg === REGION.PARADISE || reg === REGION.NEW_WORLD ? 11 : 9) * WORLD_SCALE;
     // keep clear of charted islands
     let ok = true;
     for (const isl of world.islands) {
       const dd = world.distance(x, y, isl.x, isl.y);
-      if (dd < isl.radius + r + 30) { ok = false; break; }
+      if (dd < isl.radius + r + chart(30)) { ok = false; break; }
     }
     if (!ok) continue;
-    for (const o of world.islets) if (world.distance(x, y, o.x, o.y) < o.r + r + 40) { ok = false; break; }
+    for (const o of world.islets) if (world.distance(x, y, o.x, o.y) < o.r + r + chart(40)) { ok = false; break; }
     if (!ok) continue;
     const calm = reg === REGION.CALM_NORTH || reg === REGION.CALM_SOUTH;
-    const cold = y < 260 || y > H - 260;
-    const tropical = !cold && Math.abs(y - EQ) < 500;
+    const cold = y < chart(260) || y > H - chart(260);
+    const tropical = !cold && Math.abs(y - EQ) < chart(500);
     const kind = rng.next();
     let ground = T.GRASS, clim = CLIMATE.TEMPERATE, trees = 'oak';
     if (cold) { ground = T.SNOW; clim = CLIMATE.WINTER; trees = 'snowpine'; }

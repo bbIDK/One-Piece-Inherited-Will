@@ -48,6 +48,11 @@ export class CameraRig {
       e.preventDefault();
       this.requestLock();
     });
+    // the mouse wheel pulls the third-person camera in and out
+    canvas.addEventListener('wheel', (e) => {
+      if (!this.active || this.mode !== 'third') return;
+      this.tp.dist = Math.max(2.2, Math.min(9, this.tp.dist * (e.deltaY > 0 ? 1.12 : 0.89)));
+    }, { passive: true });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === this.canvas;
       this.onLockChange?.(this.locked);
@@ -121,7 +126,7 @@ export class CameraRig {
     const scale = p.look?.scale || 1;
     let eyeH = 1.62 * scale;
     let gx = 0, gz = 0; // eye position relative to the player (origin)
-    let gh = ground(p.x, p.y);
+    let gh = ground(p.x, p.y) + (p.z || 0);
     let rollSea = 0;
     if (sailing) {
       // standing at the helm on the stern deck (your own rigging turns
@@ -136,8 +141,13 @@ export class CameraRig {
     } else if (p.inWater) {
       gh = -0.2; eyeH = 0.55;
     }
+    // a small dip when you land from a jump or a fall
+    if (!sailing && this.lastZ > 0.3 && !(p.z > 0)) this.dip = Math.min(0.22, 0.05 + this.lastZ * 0.12);
+    this.lastZ = p.z || 0;
+    this.dip = (this.dip || 0) * Math.max(0, 1 - dt * 7);
+    gh -= this.dip;
     // walking bob and a knocked-down camera
-    const moving = !sailing && (Math.abs(p.vx || 0) + Math.abs(p.vy || 0) > 0.5 || p.moving);
+    const moving = !sailing && !(p.z > 0.05) && (Math.abs(p.vx || 0) + Math.abs(p.vy || 0) > 0.5 || p.moving);
     this.bob += dt * (moving ? 9 : 0);
     let bobY = moving && this.bobOn ? Math.sin(this.bob) * 0.045 : 0;
     let roll = 0;

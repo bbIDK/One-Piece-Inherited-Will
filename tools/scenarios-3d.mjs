@@ -17,7 +17,8 @@ export const scenarios = {
       await page.evaluate(() => {
         const g = window.OP.game, p = g.player;
         const s = g.ships.find((x) => x.owner === 'player');
-        s.x = 1860; s.y = 690; s.heading = 0.4;
+        const m = g.world.reverseMountain.mouths.north_blue;
+        s.x = m.x - 55; s.y = m.y - 24; s.heading = 0.4;
         p.mode = 'sail'; p.ship = s; p.onShip = true; s.captain = p; p.x = s.x; p.y = s.y;
         g.view3d.rig.yaw = 0.35; g.view3d.rig.pitch = 0.12; g.env.clock = 10;
       });

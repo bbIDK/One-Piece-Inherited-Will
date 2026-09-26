@@ -1,6 +1,7 @@
 // Entry point: boot the world, show the title, run the loop.
 import { Renderer } from './render/renderer.js';
 import { Renderer3D } from './render3d/index.js';
+import './render3d/pickups3d.js';
 import { generateWorld } from './world/worldgen.js';
 import { ALL_ISLANDS } from './data/islands/index.js';
 import { Input } from './core/input.js';
@@ -70,18 +71,22 @@ async function start() {
   // phones and tablets start on the fast graphics setting unless the player picked one
   const phone = !!window.matchMedia?.('(hover: none) and (pointer: coarse)')?.matches;
   if (phone && !settings.qualityPicked) settings.quality = 'low';
-  // the 3D view (first / third person); 'classic' keeps the top-down view
+  // the 3D view: first person, or third person
+  if (settings.view !== 'third') settings.view = 'first';
   let view3d = null;
   try {
     view3d = new Renderer3D(root, renderer, game);
     game.view3d = view3d;
     renderer.view3d = view3d;
   } catch (e) {
-    console.warn('3D view unavailable', e);
+    console.error('3D view unavailable', e);
+    boot.style.display = 'grid';
+    boot.textContent = 'This game needs 3D graphics (WebGL 2). Please open it in a recent Chrome, Edge, Firefox or Safari, with hardware acceleration turned on.';
+    return;
   }
   const applyView = () => {
     if (!view3d) return;
-    const on = !!game.player && settings.view !== 'classic';
+    const on = !!game.player;
     view3d.setMode(settings.view === 'third' ? 'third' : 'first');
     view3d.setActive(on);
   };
@@ -99,11 +104,10 @@ async function start() {
     if (save) saveSettings(settings);
   };
   game.cycleView = () => {
-    const order = ['first', 'third', 'classic'];
-    settings.view = order[(order.indexOf(settings.view) + 1) % order.length];
+    settings.view = settings.view === 'first' ? 'third' : 'first';
     applyView();
     saveSettings(settings);
-    ui.toast(settings.view === 'first' ? 'FIRST PERSON' : settings.view === 'third' ? 'THIRD PERSON' : 'CLASSIC VIEW', input.touch?.on ? 'Tap View to switch' : 'Press V to switch views', '#ffe082');
+    ui.toast(settings.view === 'first' ? 'FIRST PERSON' : 'THIRD PERSON', input.touch?.on ? 'Tap View to switch' : 'Press V to switch views', '#ffe082');
   };
   // start looking down the longest clear line of sight (not at a wall)
   const openYaw = (p) => {
@@ -272,7 +276,9 @@ async function start() {
   };
 
   // attract-mode camera for the title screen
-  const attract = { x: 3790, y: 300, t: 0 };
+  // (the flyover circles Dawn Island, wherever the world put it)
+  const dawn = world.islands.find((i) => i.id === 'dawn_island');
+  const attract = { x: dawn ? dawn.x : world.width * 0.93, y: dawn ? dawn.y : world.height * 0.15, t: 0 };
   renderer.cam.x = attract.x; renderer.cam.y = attract.y; renderer.cam.zoom = 9;
 
   Object.assign(debug, {
@@ -307,17 +313,16 @@ async function start() {
       game.update(dt);
       // menus and dialogue need the mouse back
       if (view3d?.rig.locked && ui.blocksInput()) view3d.rig.releaseLock();
-      if (view3d?.active) {
-        view3d.canvas.style.display = ui.mapOpen ? 'none' : 'block';
-        renderer.glCanvas.style.display = ui.mapOpen ? 'block' : 'none';
-      }
+      // the world chart has its own canvas
+      view3d.canvas.style.display = ui.mapOpen ? 'none' : 'block';
+      renderer.glCanvas.style.display = ui.mapOpen ? 'block' : 'none';
       if (ui.mapOpen) game.renderMap();
       else game.render();
     } else {
       attract.t += dt;
       game.env.update(dt, game);
-      if (view3d && settings.view !== 'classic' && !attract.no3d) {
-        // a slow 3D flyover of Dawn Island behind the title
+      // a slow 3D flyover of Dawn Island behind the title
+      if (!attract.failed) {
         try {
           if (!view3d.active) view3d.setActive(true);
           view3d.renderAttract(game, attract.x, attract.y, attract.t);
@@ -325,16 +330,9 @@ async function start() {
           g.setTransform(1, 0, 0, 1, 0, 0);
           g.clearRect(0, 0, renderer.canvas.width, renderer.canvas.height);
         } catch (e) {
-          console.warn('3D title view failed', e);
-          attract.no3d = true;
-          view3d.setActive(false);
+          console.error('3D title view failed', e);
+          attract.failed = true;
         }
-      } else {
-        if (view3d?.active) view3d.setActive(false);
-        renderer.cam.x = world.wx(attract.x + attract.t * 3);
-        renderer.cam.y = attract.y + 30 + Math.sin(attract.t * 0.1) * 20;
-        renderer.renderTerrain(world, game.env);
-        renderer.renderWorld(world, [], game.env);
       }
       ui.update(dt);
       input.endFrame();

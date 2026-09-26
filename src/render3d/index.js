@@ -213,7 +213,7 @@ export class Renderer3D {
     this.frame++;
     const env = game.env;
     const a = t * 0.035;
-    const R = this.attractR || 80;
+    const R = this.attractR || 120;
     const ox = w.wx(cx + Math.cos(a) * R), oy = cy + Math.sin(a) * R;
     this.ox = ox; this.oy = oy;
     // look across the island, past its centre

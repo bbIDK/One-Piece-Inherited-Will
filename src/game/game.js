@@ -7,7 +7,6 @@ import { regionAt, REGION, REGION_INFO, isCalmBelt } from '../world/constants.js
 import { clamp, lerp, TAU } from '../core/math.js';
 import { PlayerController } from './playerController.js';
 import { Spawner } from './spawner.js';
-import { drawGroundItem } from '../render/sprites.js';
 
 export class Game {
   constructor({ renderer, input, ui, audio, world }) {
@@ -259,46 +258,9 @@ export class Game {
 
   // --- rendering ---------------------------------------------------------------------
   render() {
-    const r = this.renderer;
-    const env = this.env;
-    if (!this.player) return;
-    if (this.view3d?.active && !this.ui?.mapOpen) { this.render3d(); return; }
-    // lights: lamps & glowing things near the camera at night
-    r.terrain.clearLights();
-    if (env.daylight < 0.6 && this.world.objects) {
-      const v = r.viewRect();
-      const objs = this.world.objects.query(v.x0 - 4, v.y0 - 4, v.x1 + 4, v.y1 + 4);
-      for (const o of objs) {
-        if (o.light || o.kind === 'lamp' || o.kind === 'lantern' || o.kind === 'campfire' || o.kind === 'lighthouse') {
-          r.terrain.addLight(o.x, o.y - 0.3, o.kind === 'lighthouse' ? 14 : o.kind === 'campfire' ? 6 : 5, 1.2 * (1 - env.daylight), 1.0, 0.75, 0.4);
-        } else if (o.kind === 'building' && o.role && o.role !== 'house') {
-          r.terrain.addLight(o.x, o.y + 0.5, 3.5, 0.8 * (1 - env.daylight), 1.0, 0.8, 0.5);
-        }
-      }
-      // player lantern glow
-      r.terrain.addLight(this.player.x, this.player.y, 6, 0.6 * (1 - env.daylight), 1, 0.85, 0.6);
-    }
-    for (const s of this.fx.shapes) if (s.type === 'beam' || s.type === 'bolt') r.terrain.addLight(s.x ?? s.x1, s.y ?? s.y1, 6, 1.5, 1, 0.9, 0.6);
-    r.renderTerrain(this.world, env);
-    const ents = [];
-    for (const a of this.actors) if (a.alive && !a.hidden && !(a.onShip)) ents.push(a);
-    for (const s of this.ships) ents.push(s);
-    for (const p of this.combat.projectiles) { p.sortY = p.y + 0.5; ents.push(p); }
-    if (this.extraDrawables) for (const d of this.extraDrawables) ents.push(d);
-    for (const f of this.flotsam || []) if (f.alive) ents.push(f);
-    for (const it of this.groundItems || []) { if (!it.draw) it.draw = drawGroundItem; it.sortY = it.y; ents.push(it); }
-    const g = r.ctx;
-    r.renderWorld(this.world, ents, env, (ctx) => {
-      this.fx.draw(ctx, r);
-      this.drawWeather(ctx, r);
-      this.fx.drawScreen(ctx, r);
-    }, (ctx) => this.fx.drawGround(ctx, r));
-    // anime impact frame: invert the whole screen for a heartbeat
-    const root = r.root;
-    const want = this.fx.impact > 0 ? 'invert(1) grayscale(1) contrast(1.6)' : '';
-    if (root.style.filter !== want) root.style.filter = want;
-    this.ui?.render(this);
-    void g;
+    // the game is drawn in 3D (first or third person); the world chart has its own renderer
+    if (!this.player || this.ui?.mapOpen || !this.view3d) return;
+    this.render3d();
   }
 
   /** First/third-person frame: the 3D view, then effects and weather on the overlay. */

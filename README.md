@@ -25,17 +25,17 @@ be reloaded to undo a death.
 The game plays in **first person** by default: the world is 3D (three.js),
 with terrain, sea, sky, towns and ships built from the same map the
 simulation uses. Click the game to capture the mouse and look around (Esc
-frees it). **V** switches between first person, third person and the classic
-top-down view. Settings has mouse sensitivity, invert-Y and a fast graphics
-mode.
+frees it). **V** switches between first and third person (the mouse wheel
+sets the third-person distance). Settings has mouse sensitivity, invert-Y,
+field of view, view bobbing and a fast graphics mode.
 
 **Phones and tablets** get touch controls (hold the device sideways):
 
 - a stick for the left thumb (push it all the way to run; at sea it steers and
   sets the sails);
 - drag anywhere on the right to look around;
-- round buttons to attack, heavy attack, dodge, block, use and heal (fire and
-  row at sea);
+- round buttons to jump, attack, heavy attack, dodge, block, use and heal
+  (fire and row at sea);
 - a strip at the top for the menus, the world map and the camera view.
 
 ### Controls
@@ -43,10 +43,10 @@ mode.
 | Key | On foot | At sea |
 |---|---|---|
 | Mouse | look around | look around |
-| V | first person / third person / top-down | |
+| V | first person / third person | |
 | WASD | move where you look | W/S sails, A/D steer |
-| Shift | sprint | Coup de Burst (some ships) |
-| Space | dodge (i-frames) | row (works without wind) |
+| Space | jump | row (works without wind) |
+| Shift | hold to sprint, tap to dodge (i-frames) | Coup de Burst (some ships) |
 | Left / right click | combo / heavy attack | broadside toward where you aim |
 | F | block — tap just before a hit to **parry** | |
 | 1–6 | hotbar: techniques and food | |
