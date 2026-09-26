@@ -18369,7 +18369,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       }
       if (!k.drowned && k.t > 2.2) {
-        const finisher = g.actorsNear(p.x, p.y, 1.8).find((a) => a !== p && a.state === "idle" && hostile(a, p) && a.lethal !== false && !a.def?.duel && !a.spar && !(a.faction === "marine" && c.bounty > 0));
+        const finisher = g.actorsNear(p.x, p.y, 1.8).find((a) => a !== p && a.state === "idle" && engaged(a, p) && a.lethal !== false && !a.def?.duel && !a.spar && !(a.faction === "marine" && c.bounty > 0));
         if (finisher && k.t > 3.5) {
           this.resolve(finisher);
           return;
@@ -18414,7 +18414,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const k = this.k;
       this.k = null;
       if (k.drowned) return this.loseLife("Drowned \u2014 the sea swallowed a Devil Fruit user.");
-      const threats = g.actorsNear(p.x, p.y, 10).filter((a) => a !== p && a.state === "idle" && hostile(a, p));
+      const threats = g.actorsNear(p.x, p.y, 10).filter((a) => a !== p && a.state === "idle" && engaged(a, p));
       const marine = threats.find((a) => a.faction === "marine");
       if (marine && c.bounty > 0) return this.capture(marine);
       const killer = finisher || threats.find((a) => a.lethal !== false && !a.def?.duel && !a.spar);
@@ -18535,6 +18535,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.snapCamera();
     }
   };
+  function engaged(a, p) {
+    return hostile(a, p) && (a.aggroPlayer || a.provoked || a.controller?.target === p || a.summonedBy);
+  }
   function describe(att, p) {
     if (!att) return p.inWater ? "Lost at sea." : "Collapsed.";
     return `${att.name}${att.title ? ", " + att.title : ""}`;

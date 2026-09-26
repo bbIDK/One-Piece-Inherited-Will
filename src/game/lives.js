@@ -54,7 +54,7 @@ export class LivesSystem {
     }
     // an enemy standing over you finishes you early
     if (!k.drowned && k.t > 2.2) {
-      const finisher = g.actorsNear(p.x, p.y, 1.8).find((a) => a !== p && a.state === 'idle' && hostile(a, p) && a.lethal !== false && !a.def?.duel && !a.spar && !(a.faction === 'marine' && c.bounty > 0));
+      const finisher = g.actorsNear(p.x, p.y, 1.8).find((a) => a !== p && a.state === 'idle' && engaged(a, p) && a.lethal !== false && !a.def?.duel && !a.spar && !(a.faction === 'marine' && c.bounty > 0));
       if (finisher && k.t > 3.5) { this.resolve(finisher); return; }
     }
     if (k.t >= k.max) this.resolve(null);
@@ -99,7 +99,7 @@ export class LivesSystem {
     const k = this.k;
     this.k = null;
     if (k.drowned) return this.loseLife('Drowned — the sea swallowed a Devil Fruit user.');
-    const threats = g.actorsNear(p.x, p.y, 10).filter((a) => a !== p && a.state === 'idle' && hostile(a, p));
+    const threats = g.actorsNear(p.x, p.y, 10).filter((a) => a !== p && a.state === 'idle' && engaged(a, p));
     const marine = threats.find((a) => a.faction === 'marine');
     if (marine && c.bounty > 0) return this.capture(marine);
     const killer = finisher || threats.find((a) => a.lethal !== false && !a.def?.duel && !a.spar);
@@ -219,6 +219,11 @@ export class LivesSystem {
     g.snapCamera();
     void findShore;
   }
+}
+
+/** Someone actually fighting the player (not a peaceful NPC of a hostile faction standing nearby). */
+function engaged(a, p) {
+  return hostile(a, p) && (a.aggroPlayer || a.provoked || a.controller?.target === p || a.summonedBy);
 }
 
 function describe(att, p) {
