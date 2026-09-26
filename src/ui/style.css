@@ -167,7 +167,9 @@
 .poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }
 
 /* title & creation */
-.screen { position: absolute; inset: 0; pointer-events: auto; display: grid; place-items: center; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }
+.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }
+/* centred while it fits, scrollable from the top when it doesn't (small screens) */
+.screen > * { margin: auto; }
 .title { text-align: center; }
 .title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }
 .title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }
@@ -403,3 +405,68 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }
 .set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
 .set-row .nm { width: 130px; font-weight: 800; }
+
+/* ---------- touch (phones and tablets) ---------- */
+#ui .t-only { display: none; }
+#ui.touch .t-only { display: flex; }
+.touch-pad, .t-stick, .t-rotate { display: none; }
+#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }
+#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }
+.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }
+.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }
+.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }
+.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }
+.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }
+.t-btn.dodge { right: 12px; bottom: 98px; width: 62px; height: 62px; }
+.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }
+.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }
+.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }
+.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }
+.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }
+.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }
+#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }
+#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }
+#ui.touch .minimap { width: 104px; height: 104px; }
+#ui.touch .loc-name { font-size: 15px; line-height: 18px; }
+#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }
+#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }
+#ui.touch .minimap { pointer-events: auto; }
+#ui.touch .sidebar { top: 8px; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }
+#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }
+#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }
+#ui.touch .side-btn:hover { transform: none; }
+#ui.touch .panel-bg.side-pad { padding-right: 0; padding-top: 52px; }
+#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }
+#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }
+#ui.touch .slot .ico img { width: 30px; height: 30px; }
+#ui.touch .slot .nm { display: none; }
+#ui.touch .slot.toggle { width: 38px; height: 38px; }
+#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }
+#ui.touch .prompt kbd { display: none; }
+#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }
+#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }
+#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }
+#ui.touch .bossbar h3 { font-size: 19px; }
+#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }
+#ui.touch .banner h1 { font-size: 40px; }
+#ui.touch .knocked-overlay h1 { font-size: 38px; }
+.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }
+@media (max-height: 520px) {
+  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }
+  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }
+  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }
+  .panel { max-height: 92vh; padding: 12px 16px; }
+  .panel h2 { font-size: 28px; }
+  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }
+  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }
+  .title h1 { font-size: clamp(40px, 7vw, 64px); }
+  .title h2 { margin: 2px 0 10px; }
+  /* a phone held sideways is wide enough for two columns */
+  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }
+  .char-head { grid-template-columns: auto 1fr; }
+  .eq-slot { width: 74px; height: 50px; }
+  .doll { padding: 6px; gap: 6px; }
+}

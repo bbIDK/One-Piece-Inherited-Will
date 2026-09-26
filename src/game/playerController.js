@@ -26,8 +26,11 @@ export class PlayerController {
     if (inp.isDown('S') || (!v3 && inp.isDown('ArrowDown'))) my += 1;
     if (inp.isDown('A') || (!v3 && inp.isDown('ArrowLeft'))) mx -= 1;
     if (inp.isDown('D') || (!v3 && inp.isDown('ArrowRight'))) mx += 1;
-    const l = Math.hypot(mx, my);
+    let l = Math.hypot(mx, my);
     if (l > 0) { mx /= l; my /= l; }
+    // the touch stick (analog: a light push walks slowly)
+    const tc = inp.touch?.on && (inp.touch.mx || inp.touch.my) ? inp.touch : null;
+    if (tc && !l) { mx = tc.mx; my = tc.my; l = Math.min(1, Math.hypot(mx, my)); }
     if (v3 && l > 0) {
       // W walks where the camera looks, A/D strafe
       const yaw = v3.rig.yaw, fwd = -my, right = mx;
@@ -35,12 +38,14 @@ export class PlayerController {
       my = Math.sin(yaw) * fwd + Math.cos(yaw) * right;
     }
     p.intent.mx = mx; p.intent.my = my;
-    p.intent.sprint = inp.isDown('Shift') && l > 0;
+    p.intent.sprint = (inp.isDown('Shift') || !!tc?.run) && l > 0;
     // in first person you always face where you look
     if (v3 && v3.rig.mode === 'first') this.aimT = Math.max(this.aimT, 0.25);
 
     // aim at the mouse (melee swings snap onto a foe near that direction)
-    const [wx, wy] = game.renderer.toWorld(game.world, inp.mouse.x, inp.mouse.y);
+    let [wx, wy] = game.renderer.toWorld(game.world, inp.mouse.x, inp.mouse.y);
+    // touch in the top-down view has no pointer: aim at the nearest foe ahead
+    if (inp.touch?.on && !v3) [wx, wy] = this.touchAim(p, game);
     const aim = Math.atan2(wy - (p.y - 0.5), game.world.dx(p.x, wx));
     const melee = p.style !== 'sniper';
     const aimM = melee ? this.assist(p, game, aim) : aim;
@@ -111,6 +116,22 @@ export class PlayerController {
     return best === null ? aim : best;
   }
 
+  /** Touch aim for the top-down view: the closest foe in front, else straight ahead. */
+  touchAim(p, game) {
+    let best = null, bs = Infinity;
+    for (const a of game.actorsNear(p.x, p.y, 9)) {
+      if (a === p || a.state !== 'idle' || !game.combat.canHit(p, a, {})) continue;
+      if (!(a.aggroPlayer || a.provoked || a.controller?.target === p || a === game.bossTarget)) continue;
+      const dx = game.world.dx(p.x, a.x), dy = a.y - p.y;
+      const d = Math.hypot(dx, dy);
+      const off = Math.abs(angleDiff(p.facing, Math.atan2(dy, dx)));
+      const score = d + off * 3;
+      if (score < bs) { bs = score; best = a; }
+    }
+    if (best) return [best.x, best.y - 0.5];
+    return [p.x + Math.cos(p.facing) * 4, p.y - 0.5 + Math.sin(p.facing) * 4];
+  }
+
   aimTarget(p, game, wx, wy) {
     let best = null, bd = 3.5 * 3.5;
     for (const a of game.actorsNear(wx, wy, 3.5)) {
@@ -140,13 +161,17 @@ export class PlayerController {
     let turn = 0;
     if (inp.isDown('A') || inp.isDown('ArrowLeft')) turn -= 1;
     if (inp.isDown('D') || inp.isDown('ArrowRight')) turn += 1;
+    // touch stick: left/right steers, up raises the sails, down lowers them
+    const tc = inp.touch?.on ? inp.touch : null;
+    if (tc && !turn && Math.abs(tc.mx) > 0.2) turn = clamp(tc.mx * 1.3, -1, 1);
     const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp(Math.abs(s.speed) / 3, 0, 1));
     s.heading += turn * steer * dt;
-    if (inp.isDown('W') || inp.isDown('ArrowUp')) { s.sail = Math.min(1, s.sail + dt * 0.9); s.anchored = false; }
-    if (inp.isDown('S') || inp.isDown('ArrowDown')) s.sail = Math.max(0, s.sail - dt * 1.2);
+    if (inp.isDown('W') || inp.isDown('ArrowUp') || (tc && tc.my < -0.45)) { s.sail = Math.min(1, s.sail + dt * 0.9); s.anchored = false; }
+    if (inp.isDown('S') || inp.isDown('ArrowDown') || (tc && tc.my > 0.45)) s.sail = Math.max(0, s.sail - dt * 1.2);
     s.rowing = inp.isDown('Space') ? 1 : 0;
     if (s.rowing) s.anchored = false;
-    const [wx, wy] = game.renderer.toWorld(game.world, inp.mouse.x, inp.mouse.y);
+    let [wx, wy] = game.renderer.toWorld(game.world, inp.mouse.x, inp.mouse.y);
+    if (tc && !game.view3d?.active) [wx, wy] = this.touchShipAim(s, game);
     this.mouseWorld = { x: wx, y: wy };
     if (inp.mousePressed(0)) {
       if (!s.fireBroadside(game, wx, wy, p) && !s.def.cannons) game.log('This boat has no cannons.', '#b0bec5');
@@ -175,6 +200,19 @@ export class PlayerController {
       }
     }
     void angleDiff;
+  }
+
+  /** Touch aim at sea in the top-down view: the nearest other ship, else off the starboard side. */
+  touchShipAim(s, game) {
+    let best = null, bd = 34 * 34;
+    for (const o of game.ships) {
+      if (o === s || o.sunk || o.owner === 'player') continue;
+      const d = game.world.dist2(s.x, s.y, o.x, o.y);
+      if (d < bd) { bd = d; best = o; }
+    }
+    if (best) return [best.x, best.y];
+    const a = s.heading + Math.PI / 2;
+    return [s.x + Math.cos(a) * 10, s.y + Math.sin(a) * 10];
   }
 
   whileKnocked(p, dt, game) {

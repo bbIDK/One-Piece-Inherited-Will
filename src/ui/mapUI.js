@@ -23,26 +23,55 @@ export function installMap(game) {
   const layer = h('div.worldmap-labels.hidden');
   const title = h('div.wm-title', 'Chart of the Blue Planet');
   const help = h('div.wm-help', 'Drag to pan · wheel to zoom · M or Esc to close');
-  const wrap = h('div', { style: { position: 'absolute', inset: '0', pointerEvents: 'auto', cursor: 'grab' } }, layer, title, help);
+  const close = h('button.wm-close', { title: 'Close the chart (M)', on: { pointerdown: (e) => e.stopPropagation(), click: () => game.closeMap() } }, uiImg('close', 22));
+  const wrap = h('div', { style: { position: 'absolute', inset: '0', pointerEvents: 'auto', cursor: 'grab', touchAction: 'none' } }, layer, title, help, close);
   wrap.classList.add('hidden');
   ui.root.appendChild(wrap);
   const cam = { x: 0, y: 0, zoom: 0.3 };
-  let drag = null;
-  wrap.addEventListener('mousedown', (e) => { drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y }; wrap.style.cursor = 'grabbing'; });
-  window.addEventListener('mouseup', () => { drag = null; wrap.style.cursor = 'grab'; });
-  window.addEventListener('mousemove', (e) => {
-    if (!drag || !ui.mapOpen) return;
-    cam.x = drag.cx - (e.clientX - drag.x) / cam.zoom;
-    cam.y = Math.max(0, Math.min(H, drag.cy - (e.clientY - drag.y) / cam.zoom));
+  // drag (mouse or one finger) pans; the wheel or a two-finger pinch zooms
+  let drag = null, pinch = null;
+  const ptrs = new Map();
+  const zoomAt = (sx, sy, f) => {
+    const r = game.renderer;
+    const wx = cam.x + (sx - r.cw / 2) / cam.zoom, wy = cam.y + (sy - r.ch / 2) / cam.zoom;
+    cam.zoom = Math.max(0.18, Math.min(6, cam.zoom * f));
+    cam.x = wx - (sx - r.cw / 2) / cam.zoom;
+    cam.y = Math.max(0, Math.min(H, wy - (sy - r.ch / 2) / cam.zoom));
+  };
+  const startDrag = (x, y) => { drag = { x, y, cx: cam.x, cy: cam.y }; wrap.style.cursor = 'grabbing'; };
+  wrap.addEventListener('pointerdown', (e) => {
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { wrap.setPointerCapture(e.pointerId); } catch { /* not supported */ }
+    if (ptrs.size === 1) startDrag(e.clientX, e.clientY);
+    else if (ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()];
+      pinch = { d: Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)) };
+      drag = null;
+    }
   });
+  wrap.addEventListener('pointermove', (e) => {
+    if (!ptrs.has(e.pointerId) || !ui.mapOpen) return;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && ptrs.size >= 2) {
+      const [a, b] = [...ptrs.values()];
+      const d = Math.max(20, Math.hypot(a.x - b.x, a.y - b.y));
+      zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinch.d);
+      pinch.d = d;
+    } else if (drag) {
+      cam.x = drag.cx - (e.clientX - drag.x) / cam.zoom;
+      cam.y = Math.max(0, Math.min(H, drag.cy - (e.clientY - drag.y) / cam.zoom));
+    }
+  });
+  const up = (e) => {
+    ptrs.delete(e.pointerId);
+    if (ptrs.size < 2) pinch = null;
+    if (!ptrs.size) { drag = null; wrap.style.cursor = 'grab'; } else if (ptrs.size === 1 && !drag) { const [a] = [...ptrs.values()]; startDrag(a.x, a.y); }
+  };
+  wrap.addEventListener('pointerup', up);
+  wrap.addEventListener('pointercancel', up);
   wrap.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const f = e.deltaY > 0 ? 0.85 : 1.18;
-    const r = game.renderer;
-    const wx = cam.x + (e.clientX - r.cw / 2) / cam.zoom, wy = cam.y + (e.clientY - r.ch / 2) / cam.zoom;
-    cam.zoom = Math.max(0.18, Math.min(6, cam.zoom * f));
-    cam.x = wx - (e.clientX - r.cw / 2) / cam.zoom;
-    cam.y = wy - (e.clientY - r.ch / 2) / cam.zoom;
+    zoomAt(e.clientX, e.clientY, e.deltaY > 0 ? 0.85 : 1.18);
   }, { passive: false });
 
   game.openMap = () => {
@@ -60,14 +89,20 @@ export function installMap(game) {
       cam.zoom = Math.min(r.cw / zw.width, r.ch / zw.height) * 0.92;
       cam.x = zw.width / 2; cam.y = zw.height / 2;
     }
+    help.textContent = game.input.touch?.on ? 'Drag to pan · pinch to zoom · tap the cross to close' : 'Drag to pan · wheel to zoom · M or Esc to close';
     wrap.classList.remove('hidden');
     layer.classList.remove('hidden');
+    // the chart gets the whole screen
+    ui.hud.classList.add('hidden');
+    ui.el.side.classList.add('hidden');
     game.audio?.sfx('page');
   };
   ui.closeMap = game.closeMap = () => {
     ui.mapOpen = false;
     wrap.classList.add('hidden');
     layer.classList.add('hidden');
+    ui.hud.classList.toggle('hidden', !ui.hudVisible);
+    ui.el.side.classList.toggle('hidden', !ui.hudVisible);
     if (!ui.stack.length && !ui.dialogueEl) game.paused = false;
   };
   ui.keyHandlers.push({ key: 'M', fn: () => (ui.mapOpen ? game.closeMap() : game.openMap()) });

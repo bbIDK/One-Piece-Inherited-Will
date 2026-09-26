@@ -73,10 +73,13 @@ export class CameraRig {
   }
 
   turn(dx, dy) {
-    this.yaw += dx * this.sensitivity;
-    this.pitch -= dy * this.sensitivity * (this.invertY ? -1 : 1);
-    this.yaw = ((this.yaw % TAU) + TAU) % TAU;
-    this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch));
+    this.lookBy(dx * this.sensitivity, -dy * this.sensitivity * (this.invertY ? -1 : 1));
+  }
+
+  /** Turn by angles (radians): used by mouse look and by touch drags. */
+  lookBy(dyaw, dpitch) {
+    this.yaw = (((this.yaw + dyaw) % TAU) + TAU) % TAU;
+    this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch + dpitch));
   }
 
   resize(w, h) {
@@ -101,7 +104,7 @@ export class CameraRig {
       if (inp.isDown('ArrowRight')) t += 1;
       if (inp.isDown('ArrowUp')) l += 1;
       if (inp.isDown('ArrowDown')) l -= 1;
-      if (this.lockFailed) {
+      if (this.lockFailed && !inp.touch?.on) {
         const w = window.innerWidth, h = window.innerHeight;
         const ex = (this.mouse.x / w - 0.5) * 2, ey = (this.mouse.y / h - 0.5) * 2;
         if (Math.abs(ex) > 0.55) t += Math.sign(ex) * (Math.abs(ex) - 0.55) / 0.45 * 1.6;

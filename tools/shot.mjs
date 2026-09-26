@@ -39,7 +39,12 @@ const browser = await chromium.launch({
   executablePath: chromePath,
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'],
 });
-const page = await browser.newPage({ viewport: { width: Number(args.w || 1280), height: Number(args.h || 720) } });
+// --mobile (or a scenario with mobile: true) emulates a phone held sideways
+const mobile = !!(args.mobile || scenario.mobile);
+const page = await browser.newPage({
+  viewport: { width: Number(args.w || (mobile ? 844 : 1280)), height: Number(args.h || (mobile ? 390 : 720)) },
+  ...(mobile ? { hasTouch: true, isMobile: true, deviceScaleFactor: 2 } : {}),
+});
 const errors = [];
 page.on('console', (m) => {
   const t = m.type();

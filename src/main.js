@@ -35,6 +35,7 @@ import { openCrew } from './ui/crewPanel.js';
 import { installFactions } from './game/factions.js';
 import { installLegends } from './game/legends.js';
 import { installWorld } from './game/news.js';
+import { installTouch } from './ui/touch.js';
 
 const root = document.createElement('div');
 root.id = 'game';
@@ -65,6 +66,9 @@ async function start() {
   boot.style.display = 'none';
   const game = new Game({ renderer, input, ui, audio, world });
   game.settings = settings;
+  // phones and tablets start on the fast graphics setting unless the player picked one
+  const phone = !!window.matchMedia?.('(hover: none) and (pointer: coarse)')?.matches;
+  if (phone && !settings.qualityPicked) settings.quality = 'low';
   // the 3D view (first / third person); 'classic' keeps the top-down view
   let view3d = null;
   try {
@@ -96,7 +100,7 @@ async function start() {
     settings.view = order[(order.indexOf(settings.view) + 1) % order.length];
     applyView();
     saveSettings(settings);
-    ui.toast(settings.view === 'first' ? 'FIRST PERSON' : settings.view === 'third' ? 'THIRD PERSON' : 'CLASSIC VIEW', 'Press V to switch views', '#ffe082');
+    ui.toast(settings.view === 'first' ? 'FIRST PERSON' : settings.view === 'third' ? 'THIRD PERSON' : 'CLASSIC VIEW', input.touch?.on ? 'Tap View to switch' : 'Press V to switch views', '#ffe082');
   };
   game.on('characterStart', () => {
     applyView();
@@ -151,7 +155,10 @@ async function start() {
     crew: () => openCrew(game),
     menu: () => ui.openMenu(),
     help: () => ui.openPanel(helpContent(game.state?.char), { wide: true, id: 'help' }),
+    map: () => game.openMap(),
+    view: () => game.cycleView(),
   };
+  const touch = installTouch(game, root);
   ui.keyHandlers.push(
     { key: 'V', when: playing, fn: () => game.cycleView() },
     { key: 'I', when: playing, fn: () => ui.sideAction('inventory') },
@@ -242,6 +249,7 @@ async function start() {
 
   Object.assign(debug, {
     get view3d() { return game.view3d; },
+    touch,
     world, renderer, game, input, ui,
     get player() { return game.player; },
     get env() { return game.env; },
@@ -267,6 +275,7 @@ async function start() {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if (game.player) {
+      touch.update();
       game.update(dt);
       // menus and dialogue need the mouse back
       if (view3d?.rig.locked && ui.blocksInput()) view3d.rig.releaseLock();

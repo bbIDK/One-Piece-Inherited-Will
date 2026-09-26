@@ -3236,6 +3236,19 @@ UI.lives = (I) => {
 };
 UI.jolly_roger = (I) => D.flag(I, {});
 UI.map = (I) => D.map(I, { chart: true });
+/** Camera view switch: an eye. */
+UI.view = (I) => {
+  part(I, 'M4 32 C14 15 50 15 60 32 C50 49 14 49 4 32 Z', '#fbf8f0', { sd: 2, shT: 0.15, hd: 1.4 });
+  part(I, circle(32, 32, 12), '#2f6fb0', { sd: 1.4, hd: 1 });
+  fl(I, circle(32, 32, 5.5), '#10202e');
+  fl(I, circle(28, 28, 2.6), '#ffffff');
+};
+/** Full screen: four corner brackets. */
+UI.fullscreen = (I) => {
+  for (const [x, y, sx, sy] of [[8, 8, 1, 1], [56, 8, -1, 1], [8, 56, 1, -1], [56, 56, -1, -1]]) {
+    tube(I, `M${x} ${y + sy * 16} L${x} ${y} L${x + sx * 16} ${y}`, '#fbf1e0', 9, { flat: true });
+  }
+};
 UI.log_pose = (I) => D.logPose(I, {});
 UI.ship = (I) => {
   part(I, 'M4 50 C10 46 16 50 22 47 C28 44 34 49 40 46 C46 43 52 48 60 45 V60 H4 Z', '#3f86c8', { sd: 1.6, hd: 1.2, hi: '#a8d8f5' });

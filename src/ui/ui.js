@@ -15,6 +15,9 @@ const SIDEBAR = [
   { id: 'journal', label: 'Journal', key: 'J' },
   { id: 'crew', label: 'Crew', key: 'U' },
   { id: 'menu', label: 'Menu', key: 'Esc' },
+  // on phones: no keyboard, so the map and the camera get buttons too
+  { id: 'map', label: 'Map', key: 'M', touch: true },
+  { id: 'view', label: 'View', key: 'V', touch: true },
 ];
 const HAKI_TOGGLES = [
   { type: 'armament', key: 'R', name: 'Armament Haki', icon: { id: 'toggle_armament', name: 'Armament', hakiType: 'armament', source: 'haki:armament' } },
@@ -77,17 +80,20 @@ export class UI {
     }
     E.toggles = {};
     for (const t of HAKI_TOGGLES) {
-      const el = h('div.slot.toggle.hidden', h('span.ico', skillImg(t.icon, 28)), h('span.k', t.key));
+      const el = h('div.slot.toggle.hidden.interactive', h('span.ico', skillImg(t.icon, 28)), h('span.k', t.key));
+      el.addEventListener('click', () => { const inp = this.game?.input; if (inp && !this.blocksInput()) { inp.simKey(t.key, true); inp.simKey(t.key, false); } });
       E.toggles[t.type] = el;
       E.hotbar.appendChild(el);
     }
     this.hud.appendChild(E.hotbar);
-    E.prompt = h('div.prompt.hidden');
+    // the interaction prompt; tapping it does the same as E
+    E.prompt = h('div.prompt.hidden.interactive', { on: { click: () => { const inp = this.game?.input; if (inp && !this.blocksInput()) { inp.simKey('E', true); inp.simKey('E', false); } } } });
     this.hud.appendChild(E.prompt);
     E.log = h('div.log');
     this.hud.appendChild(E.log);
     // minimap
     E.mm = h('canvas.minimap', { width: 190, height: 190 });
+    E.mm.addEventListener('click', () => this.sideAction('map')); // (tappable in touch mode)
     E.loc = h('div.loc-name');
     E.locSub = h('div.loc-sub');
     E.clock = h('div.clock');
@@ -118,7 +124,7 @@ export class UI {
     E.side = h('div.sidebar.hidden');
     E.sideBtns = {};
     for (const b of SIDEBAR) {
-      const el = h('button.side-btn', { title: `${b.label} (${b.key})`, on: { click: (ev) => { ev.currentTarget.blur(); this.sideAction(b.id); } } },
+      const el = h('button.side-btn' + (b.touch ? '.t-only' : ''), { title: `${b.label} (${b.key})`, on: { click: (ev) => { ev.currentTarget.blur(); this.sideAction(b.id); } } },
         uiImg(b.id, 22), h('span.lbl', b.label), h('span.key', b.key));
       E.sideBtns[b.id] = el;
       E.side.appendChild(el);
@@ -141,7 +147,7 @@ export class UI {
     const g = this.game;
     if (!g?.player || this.screenEl) return;
     if (this.dialogueEl) return;
-    if (this.mapOpen) this.closeMap?.();
+    if (this.mapOpen) { this.closeMap?.(); if (id === 'map') return; }
     const top = this.stack[this.stack.length - 1];
     if (top && top.id === id) { this.closeAll(); return; }
     this.closeAll();
@@ -163,8 +169,12 @@ export class UI {
     if (!p || this.blocksInput()) return;
     const id = p.hotbar[i];
     if (!id) return;
-    const aim = p.facing;
-    p.tryTechnique(id, g, { x: p.x + Math.cos(aim) * 4, y: p.y + Math.sin(aim) * 4 });
+    // aim where the player is aiming (the crosshair / pointer), at a foe there if any
+    const pc = p.controller, mw = pc?.mouseWorld;
+    const aim = mw ? Math.atan2(mw.y - (p.y - 0.5), g.world.dx(p.x, mw.x)) : p.facing;
+    const target = mw && pc.aimTarget ? pc.aimTarget(p, g, mw.x, mw.y) : null;
+    if (p.mode !== 'sail') p.facing = aim;
+    p.tryTechnique(id, g, target || (mw ? { x: mw.x, y: mw.y } : { x: p.x + Math.cos(aim) * 4, y: p.y + Math.sin(aim) * 4 }));
   }
 
   blocksInput() { return this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen; }
@@ -341,7 +351,7 @@ export class UI {
     const v3 = game.view3d?.active ? game.view3d : null;
     const free = !!v3 && !this.blocksInput();
     E.crosshair.classList.toggle('hidden', !free || v3.rig.mode !== 'first' || p.mode === 'sail' && !v3.rig.locked);
-    E.lookHint.classList.toggle('hidden', !free || v3.rig.locked || v3.rig.lockFailed);
+    E.lookHint.classList.toggle('hidden', !free || v3.rig.locked || v3.rig.lockFailed || !!game.input.touch?.on);
     this.set(E.name, 'name', ch.name || p.name);
     const title = ch.title || (ch.faction === 'marine' ? `Marine ${ch.marineRank || 'Recruit'}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === 'pirate' ? 'Pirate' : 'Wanderer');
     this.set(E.sub, 'sub', `${raceLabel(p.look)} · ${title} · Doriki ${p.power().toLocaleString()}`);

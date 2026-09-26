@@ -482,6 +482,7 @@ export function openMenu(game, { onQuit, onRetire, onSave }) {
       btn('save', 'Save game', () => { if (onSave()) saved.textContent = `Saved just now (lineage ${game.saveSlot || 1})`; }),
       btn('help', 'How to Play', () => { ui.closePanel(); ui.openPanel(helpContent(c), { wide: true, id: 'help' }); }),
       btn('settings', 'Settings', () => { ui.closePanel(); openSettings(game); }),
+      fullscreenOK() ? btn('fullscreen', fullscreenOn() ? 'Leave full screen' : 'Full screen', () => { ui.closePanel(); toggleFullscreen(); }) : null,
       (c.legends || []).length ? btn('journal', 'Retire as a legend', async () => {
         if (!(await ui.ask({ title: 'Retire?', text: `${c.name} hangs up their hat and becomes a legend. This life ends here and its Inherited Will passes to the next generation.`, ok: 'Retire', danger: true }))) return;
         ui.closePanel(); onRetire();
@@ -493,18 +494,31 @@ export function openMenu(game, { onQuit, onRetire, onSave }) {
   ui.openPanel(body, { id: 'menu' });
 }
 
+const fullscreenOK = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const fullscreenOn = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function toggleFullscreen() {
+  try {
+    if (fullscreenOn()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    else {
+      const el = document.documentElement;
+      const r = (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: 'hide' });
+      if (r && r.catch) r.catch(() => {});
+    }
+  } catch { /* not allowed here */ }
+}
+
 export function openSettings(game) {
   const s = game.settings;
   const body = h('div');
   const slider = (label, key) => h('div.stat-row', h('span.nm', label), h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: s[key], style: { flex: 1 }, on: { input: (e) => { s[key] = Number(e.target.value); game.applySettings(); } } }));
   const check = (label, key) => h('label.check-row', h('input', { type: 'checkbox', checked: !!s[key], on: { change: (e) => { s[key] = e.target.checked; game.applySettings(); } } }), label);
-  const choice = (label, key, opts) => h('div.set-row', h('span.nm', label), h('div.tabs', { style: { margin: 0 } }, opts.map(([v, name]) => h('button' + (s[key] === v ? '.on' : ''), { on: { click: () => { s[key] = v; game.applySettings(); render(); } } }, name))));
+  const choice = (label, key, opts) => h('div.set-row', h('span.nm', label), h('div.tabs', { style: { margin: 0 } }, opts.map(([v, name]) => h('button' + (s[key] === v ? '.on' : ''), { on: { click: () => { s[key] = v; if (key === 'quality') s.qualityPicked = true; game.applySettings(); render(); } } }, name))));
   const render = () => {
     clear(body);
     add(body, h('h2', 'Settings'),
       h('h3', 'View'),
       choice('Camera', 'view', [['first', 'First person'], ['third', 'Third person'], ['classic', 'Classic top-down']]),
-      slider('Mouse sensitivity', 'sensitivity'),
+      slider(game.input.touch?.on ? 'Look sensitivity' : 'Mouse sensitivity', 'sensitivity'),
       check('Invert mouse look', 'invertY'),
       choice('Graphics', 'quality', [['high', 'High (shadows)'], ['low', 'Fast']]),
       h('h3', 'Sound & feel'),
