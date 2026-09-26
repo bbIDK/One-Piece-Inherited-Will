@@ -102,6 +102,8 @@ export const scenarios = {
         const w = g.world;
         let x = Number(a.x), y = Number(a.y);
         if (a.island) { const i = w.islands.find((k) => k.id === a.island); if (i) { const t = i.towns[0]; x = t ? t.plaza.x : i.x; y = t ? t.plaza.y + 2 : i.y; } }
+        if (a.town) { for (const i of w.islands) { const t = i.towns.find((k) => k.id === a.town); if (t) { x = t.plaza.x; y = t.plaza.y + 2; } } }
+        if (a.spot) { for (const i of w.islands) { const sp = i.spots[a.spot]; if (sp) { x = sp.x; y = sp.y; } } }
         if (!isNaN(x)) window.OP.teleport(x, y);
         if (a.clock) g.env.clock = Number(a.clock);
         return { world: w.id, x: g.player.x, y: g.player.y };

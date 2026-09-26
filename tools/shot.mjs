@@ -52,7 +52,7 @@ const snap = async (label) => {
 
 const t0 = Date.now();
 try {
-  await page.goto(`http://localhost:${port}/index.html${scenario.query || '?debug=1'}`);
+  await page.goto(`http://localhost:${port}${args.page ? '/' + args.page : scenario.path || '/index.html'}${scenario.query || '?debug=1'}`);
   await scenario.run(page, snap, args);
 } catch (e) {
   console.log(`[scenario-error] ${e.stack || e}`);

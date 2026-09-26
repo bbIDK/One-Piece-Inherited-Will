@@ -23,9 +23,9 @@ const options = {
   logLevel: 'info',
 };
 
-function writeSingleFile() {
+function writeSingleFile(code) {
   const html = readFileSync(join(root, 'index.html'), 'utf8');
-  const js = readFileSync(join(root, 'dist/game.js'), 'utf8');
+  const js = code ?? readFileSync(join(root, 'dist/game.js'), 'utf8');
   // Inline the bundle; escape any "</script" sequences inside the code.
   const inlined = html.replace(
     /<script src="dist\/game\.js"><\/script>/,
@@ -45,5 +45,7 @@ if (watch) {
   console.log('watching…');
 } else {
   await esbuild.build(options);
-  writeSingleFile();
+  // the shareable single-file build is minified
+  const min = await esbuild.build({ ...options, minify: true, write: false, logLevel: 'silent' });
+  writeSingleFile(min.outputFiles[0].text);
 }
