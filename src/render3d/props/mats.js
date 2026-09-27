@@ -58,10 +58,13 @@ const matCache = new Map();
 /**
  * The shared vertex-coloured toon material.
  * opts.sway: bend in the wind; opts.side: THREE.DoubleSide for thin sheets;
- * opts.transparent/opacity for see-through things (bubbles, crystals).
+ * opts.transparent/opacity for see-through things (bubbles, crystals);
+ * opts.inst: for instanced meshes ('c' with instance colours). (Instanced and
+ * plain meshes each get their own copy: one material drawn both ways makes
+ * the renderer look up its shader afresh every time it switches.)
  */
 export function vcMat(opts = {}) {
-  const key = `${opts.sway ? 's' : ''}|${opts.side || 0}|${opts.transparent ? opts.opacity ?? 0.5 : 1}|${opts.depthWrite === false ? 0 : 1}`;
+  const key = `${opts.sway ? 's' : ''}|${opts.side || 0}|${opts.transparent ? opts.opacity ?? 0.5 : 1}|${opts.depthWrite === false ? 0 : 1}|${opts.inst || ''}`;
   let m = matCache.get(key);
   if (m) return m;
   m = new THREE.MeshToonMaterial({
@@ -146,4 +149,4 @@ export function tick(night, envArg) {
 registerFrameHook((env, ctx) => {
   bindCtx(ctx);
   tick(Math.max(0, 0.9 - (env?.daylight ?? 1)), env);
-});
+}, 'mats');

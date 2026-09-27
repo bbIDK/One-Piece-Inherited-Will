@@ -153,7 +153,7 @@ export class HeldWeapon {
     this.mesh.castShadow = !opts.noShadow;
     this.group.add(this.mesh);
     if (!opts.noOutline) {
-      this.outline = new THREE.Mesh(g, opts.outline || sharedOutline());
+      this.outline = new THREE.Mesh(g, opts.outline || sharedOutline(false));
       this.group.add(this.outline);
     }
   }

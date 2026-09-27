@@ -4,7 +4,7 @@
 // 2D-rig pose through the 3D rig; the caller turns the model to its facing.
 import * as THREE from 'three';
 import { BONES, B, PARENT } from './bones.js';
-import { getBody, releaseBody, faceGeo } from './build.js';
+import { getBody, releaseBody, faceGeo, headLevel } from './build.js';
 import { Rig } from './rig.js';
 import { bodyMaterial, sharedOutline, glowMaterial } from './mats.js';
 import { faceMaterial, releaseFace, expression } from './face.js';
@@ -66,7 +66,7 @@ export class CharacterModel {
     this.bones[B.wingL].position.set(-0.11 * d.Bk, d.chestLen * 0.8, -0.05);
     this.restFingers();
     // face decal on the head
-    this.face = new THREE.Mesh(faceGeo(look, this.lod === 0 ? 'near' : 'far'), undefined);
+    this.face = new THREE.Mesh(faceGeo(look, headLevel(this.lod)), undefined);
     this.face.position.set(d.hx, d.hc, 0);
     this.face.scale.setScalar(d.headR);
     this.face.renderOrder = 1;
@@ -152,7 +152,7 @@ export class CharacterModel {
     tc.quaternion.setFromUnitVectors(DOWN, _t2).premultiply(_q2);
   }
 
-  /** Switch detail level (near / far): same skeleton, another shared geometry. */
+  /** Switch detail level (0 near, 2 mid, 1 far): same skeleton, another shared geometry. */
   setLod(lod) {
     if (lod === this.lod) return;
     const nb = getBody(this.look, this.wpn, lod, !!this.opts.fingers);
@@ -162,7 +162,7 @@ export class CharacterModel {
     this.mesh.geometry = nb.geo;
     this.outline.geometry = nb.geo;
     this.restFingers();
-    this.face.geometry = faceGeo(this.look, lod === 0 ? 'near' : 'far');
+    this.face.geometry = faceGeo(this.look, headLevel(lod));
   }
 
   /** Swap the face texture for this frame's expression. */

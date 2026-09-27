@@ -190,6 +190,18 @@ export function animateDoor(pivot, b, dt) {
 
 /** The furnished room of an enterable building (one merged, shadow-free mesh). */
 export function buildRoom(b, o) {
+  const it = roomSteps(b, o);
+  let r = it.next();
+  while (!r.done) r = it.next();
+  return r.value;
+}
+
+/**
+ * buildRoom one piece at a time: a generator that yields between the shell
+ * and each piece of furniture and returns the mesh, so a room can be built a
+ * few milliseconds per frame (see requestRoom).
+ */
+export function* roomSteps(b, o) {
   const { fw, fd, y0, ceil } = o;
   const L = layoutOf(b);
   const P = palOf(b);
@@ -230,10 +242,12 @@ export function buildRoom(b, o) {
   }
   B(k, x0, top - 0.05, z0, x1, top + 0.02, z1, P.ceil);
   if (P.beams) for (let x = x0 + 0.6; x < x1 - 0.3; x += 1.25) B(k, x - 0.07, top - 0.2, z0, x + 0.07, top - 0.05, z1, P.beam, { outline: 0.01 });
+  yield;
   // curtains in homes, inns and taverns
   if (L.room === 'house' || L.room === 'tavern' || L.room === 'inn' || L.room === 'restaurant' || L.room === 'doctor') curtains(k, ops, P, cloth, x0, x1, z0, z1, y0, lowStyle(b));
   // furniture
   for (const it of L.items) {
+    yield;
     k.save();
     const y = it.k === 'lamp' ? top : y0;
     k.translate(it.x, y, it.z);
@@ -241,6 +255,7 @@ export function buildRoom(b, o) {
     try { piece(k, it, P, cloth, R, top - y0); } catch (e) { console.warn('furniture failed', it.k, e); }
     k.restore();
   }
+  yield;
   const mesh = new THREE.Mesh(k.build(false), vcMat());
   mesh.castShadow = false;
   mesh.receiveShadow = false;
@@ -715,13 +730,31 @@ function piece(k, it, P, cloth, R, ceilH) {
   void woodD;
 }
 
-// Rooms are big merges: one is built per frame, the nearest waiting one first.
-const pending = [];
-export function requestRoom(d, build) { pending.push([d, build]); }
+// Rooms are big merges, so they're built a piece at a time, a few
+// milliseconds a frame: the nearest room wanted (asked for again every frame
+// while it's wanted) is started, and carries on in the following frames.
+const ROOM_BUDGET_MS = 3;
+const pending = new Map(); // key → [distance, make() → steps, done(mesh)]
+let job = null; // { key, it, done }
+/** Ask for a room (this frame): make() gives its roomSteps, done(mesh) takes the result. */
+export function requestRoom(key, d, make, done) { pending.set(key, [d, make, done]); }
+/** No longer wanted (out of range, or its building has gone). */
+export function cancelRoom(key) {
+  pending.delete(key);
+  if (job && job.key === key) job = null;
+}
 registerFrameHook(() => {
-  if (!pending.length) return;
-  let best = pending[0];
-  for (const q of pending) if (q[0] < best[0]) best = q;
-  pending.length = 0;
-  best[1]();
-});
+  const t0 = performance.now();
+  do {
+    if (!job) {
+      let best = null, bk = null;
+      for (const [k, q] of pending) if (!best || q[0] < best[0]) { best = q; bk = k; }
+      pending.clear();
+      if (!best) return;
+      job = { key: bk, it: best[1](), done: best[2] };
+    }
+    let r;
+    try { r = job.it.next(); } catch (e) { console.warn('room failed', e); job = null; continue; }
+    if (r.done) { const j = job; job = null; pending.delete(j.key); j.done(r.value); }
+  } while (performance.now() - t0 < ROOM_BUDGET_MS);
+}, 'interiors');

@@ -9,7 +9,7 @@ const looks = {
 };
 const orig = Builder.prototype.add;
 for (const [name, look] of Object.entries(looks)) {
-  for (const lod of [0, 1]) {
+  for (const lod of [0, 2, 1]) {
     const per = {};
     Builder.prototype.add = function (g, m, col, bone, part) {
       const n = g.index ? g.index.count / 3 : g.attributes.position.count / 3;

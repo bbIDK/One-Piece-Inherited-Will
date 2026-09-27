@@ -843,12 +843,16 @@ export class ShipView {
     const set = s.sailSet ?? 0.5;
     const billow = (0.15 + set * 0.45) * (0.6 + 0.4 * Math.max(0, rel));
     const side = Math.sin(relA) >= 0 ? 1 : -1;
+    // (a sail's shape only changes with the wind and how far it's set: reshaped
+    // and sent to the GPU again only then)
     for (const sl of this.sails) {
       sl.mesh.visible = set > 0.05 || sl.kind === 'fore';
       const a = sl.mesh.geometry.attributes.position;
       const base = sl.mesh.userData.base;
       if (sl.kind === 'square') {
         sl.mesh.scale.y = 0.35 + set * 0.65;
+        if (Math.abs((sl.shaped ?? -9) - billow) < 0.002) continue;
+        sl.shaped = billow;
         for (let i = 0; i < a.count; i++) {
           const z = base[i * 3 + 2], y = base[i * 3 + 1];
           const k = 1 - (z / (sl.sw / 2)) ** 2;
@@ -858,16 +862,20 @@ export class ShipView {
       } else {
         // fore-and-aft sails belly out to leeward
         const amt = (0.1 + set * 0.35) * side * (sl.kind === 'jib' ? 0.6 : 1);
+        if (sl.kind === 'fore') sl.mesh.scale.y = 1;
+        if (Math.abs((sl.shaped ?? -9) - amt) < 0.002) continue;
+        sl.shaped = amt;
         const uv = sl.mesh.geometry.attributes.uv.array;
         for (let i = 0; i < a.count; i++) {
           const uu = uv[i * 2], vv = uv[i * 2 + 1], w = Math.max(0, 1 - uu - vv);
           a.array[i * 3 + 2] = base[i * 3 + 2] + amt * 27 * uu * vv * w * 0.8;
         }
-        if (sl.kind === 'fore') sl.mesh.scale.y = 1;
       }
       a.needsUpdate = true;
     }
-    if (this.flag) {
+    // (far off, the flags wave at a lower rate)
+    this.frame = (this.frame || 0) + 1;
+    if (this.flag && (rx * rx + rz * rz < 120 * 120 || this.frame % 4 === 0)) {
       const a = this.flag.geometry.attributes.position, base = this.flag.userData.base;
       for (let i = 0; i < a.count; i++) {
         const x = base[i * 3];

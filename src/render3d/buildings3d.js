@@ -15,7 +15,7 @@ import { Mesher, box, cyl, cone, lathe, slab, C, shade, hash } from './props/kit
 import { CLIMATE } from '../world/tiles.js';
 import { doorOf, doorLocalX, windowSlots } from '../world/interiors.js';
 import { bw, bangle } from '../world/bframe.js';
-import { hollowWalls, rectFrame, shapeFrame, doorLeaf, animateDoor, buildRoom, requestRoom } from './interiors3d.js';
+import { hollowWalls, rectFrame, shapeFrame, doorLeaf, animateDoor, roomSteps, requestRoom, cancelRoom } from './interiors3d.js';
 
 const ROLE_ICON = {
   tavern: 'bar', bar: 'bar', inn: 'inn', shop: 'shop', market: 'shop', weapons: 'sword', dojo: 'trainer', doctor: 'doctor', shipwright: 'shipwright',
@@ -623,14 +623,15 @@ function walkIn(grp, b, S, o) {
     if (!p || !w) return;
     const c = bw(b, 0, -o.fd / 2);
     const d = w.distance(p.x, p.y, c.x, c.y);
-    if (!st.room && d < 38) {
-      requestRoom(d, () => {
-        if (st.room) return;
-        st.room = buildRoom(b, o);
-        grp.add(st.room);
+    if (!st.room && d < 26) {
+      requestRoom(st, d, () => roomSteps(b, o), (room) => {
+        if (st.room || (!grp.parent && !grp.userData.pendingAdd)) { room.geometry.dispose(); return; } // (already has one, or the building's gone)
+        st.room = room;
+        grp.add(room);
         if (glass) glass.material = GLASS_CLEAR;
       });
-    } else if (st.room && d > 50) {
+    } else if (!st.room) cancelRoom(st);
+    else if (d > 36) {
       grp.remove(st.room);
       st.room.geometry.dispose();
       st.room = null;

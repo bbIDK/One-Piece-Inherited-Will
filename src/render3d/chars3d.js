@@ -25,8 +25,18 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3();
 
 // ------------------------------------------------------------------ actor view
+/**
+ * Detail level at a distance (m): 0 (full) up close, 2 (mid) across the
+ * street, 1 (far) beyond; with a metre and a half of hysteresis either way
+ * from the current level, so nobody flickers between two.
+ */
+function lodFor(dist, cur) {
+  const near = cur === 0 ? 10.5 : 7.5, mid = cur === 1 ? 22 : 25.5;
+  return dist < near ? 0 : dist < mid ? 2 : 1;
+}
+
 class ActorView {
-  constructor(a, ctx) {
+  constructor(a, ctx, opts = {}) {
     this.a = a;
     this.lookCache = {};
     this.look = currentLook(a, this.lookCache);
@@ -38,7 +48,8 @@ class ActorView {
     this.root = new THREE.Group();
     this.yaw = new THREE.Group();
     this.root.add(this.yaw);
-    this.model = new CharacterModel(this.look, this.wpn, { fingers: !!a.isPlayer });
+    // (start at the detail its distance calls for: no near model built just to swap it out)
+    this.model = new CharacterModel(this.look, this.wpn, { fingers: !!a.isPlayer, lod: a.isPlayer ? 0 : lodFor(opts.dist ?? 0, -1) });
     this.yaw.add(this.model.group);
     this.o = {};
     this.label = null; this.marker = null; this.aura = null; this.glows = []; this.ice = null; this.stars = null;
@@ -106,10 +117,11 @@ class ActorView {
       this.lastT = env.time;
     }
     this.labels(a, env, dist, s);
-    // detail by distance (with a little hysteresis)
-    const lod = m.lod === 0 ? (dist > 24 ? 1 : 0) : (dist < 20 ? 0 : 1);
+    // detail by distance
+    const lod = a.isPlayer ? 0 : lodFor(dist, m.lod);
     if (lod !== m.lod) m.setLod(lod);
-    m.outline.visible = dist < 55 && this.alpha > 0.5;
+    // (far off, the ink pass's outlines are enough, when it's on)
+    m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
   }
 
   /** Head yaw toward the camera for nearby idle NPCs. */
@@ -286,13 +298,13 @@ class ActorView {
 
 // ------------------------------------------------------------------ registration
 const baseDraw = Actor.prototype.draw;
-registerActorView((a, ctx) => {
+registerActorView((a, ctx, opts) => {
   try {
     if (a.look && a.look.race === 'seaking') return new SeaKingView(a);
     if (a.look && a.look.race === 'beast_seacow') return new SeaCowView(a);
     if (a.look && a.look.race === 'beast_fightfish') return new FightingFishView(a);
     if (a.draw !== baseDraw) return null; // custom-drawn creatures keep their sprite
-    return new ActorView(a, ctx);
+    return new ActorView(a, ctx, opts);
   } catch (e) {
     console.warn('3D character failed', e);
     return null;

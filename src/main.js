@@ -1,5 +1,7 @@
 // Entry point: boot the world, show the title, run the loop.
+import * as THREE from 'three';
 import { Renderer } from './render/renderer.js';
+import { PROF, prof, profFrame, profReset } from './core/prof.js';
 import { Renderer3D } from './render3d/index.js';
 import './render3d/pickups3d.js';
 import './render3d/groundcover.js';
@@ -91,6 +93,8 @@ async function start() {
   // phones and tablets start on the fast graphics setting unless the player picked one
   const phone = !!window.matchMedia?.('(hover: none) and (pointer: coarse)')?.matches;
   if (phone && !settings.qualityPicked) settings.quality = 'low';
+  // (automated test browsers draw in software, always slowly: keep their screenshots sharp)
+  if (navigator.webdriver) settings.autoRes = false;
   // the 3D view: first person, or third person
   if (settings.view !== 'third') settings.view = 'first';
   let view3d = null;
@@ -318,6 +322,7 @@ async function start() {
 
   Object.assign(debug, {
     get view3d() { return game.view3d; },
+    THREE,
     touch,
     world, renderer, game, input, ui,
     get player() { return game.player; },
@@ -333,6 +338,7 @@ async function start() {
       startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', look: null });
       return game.player;
     },
+    prof: { PROF, reset: profReset },
     debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld },
     ready: true,
   });
@@ -341,18 +347,25 @@ async function start() {
 
   let last = performance.now();
   const frame = (now) => {
-    const dt = Math.min(0.05, (now - last) / 1000);
+    const frameMs = now - last;
+    const dt = Math.min(0.05, frameMs / 1000);
     last = now;
     if (game.player) {
       touch.update();
+      const t0 = performance.now();
       game.update(dt);
+      prof('sim', t0);
       // menus and dialogue need the mouse back
       if (view3d?.rig.locked && ui.blocksInput()) view3d.rig.releaseLock();
       // the world chart has its own canvas
       view3d.canvas.style.display = ui.mapOpen ? 'none' : 'block';
       renderer.glCanvas.style.display = ui.mapOpen ? 'block' : 'none';
+      const t1 = performance.now();
       if (ui.mapOpen) game.renderMap();
       else game.render();
+      prof('render', t1);
+      profFrame();
+      if (!ui.mapOpen) view3d?.adapt(frameMs, performance.now() - t0);
     } else {
       attract.t += dt;
       game.env.update(dt, game);

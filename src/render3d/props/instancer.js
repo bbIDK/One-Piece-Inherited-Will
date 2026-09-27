@@ -30,8 +30,8 @@ class Batch {
     this.key = key;
     this.geo = part.geo;
     this.farGeo = part.far || part.geo.userData.far || null;
-    this.material = part.material || vcMat({ sway: part.sway, side: part.side });
     this.tinted = !!part.tinted;
+    this.material = part.material || vcMat({ sway: part.sway, side: part.side, inst: this.tinted ? 'c' : 'i' });
     this.castShadow = part.castShadow !== false;
     this.receiveShadow = part.receiveShadow !== false;
     this.count = 0;
@@ -226,7 +226,7 @@ function frame(env, ctx) {
   }
   dynAt = (dynAt + step) % n;
 }
-registerFrameHook(frame);
+registerFrameHook(frame, 'instancer');
 
 /** Show or hide one part of an instanced prop (e.g. the fruit on a tree). */
 export function setPartVisible(u, part, on) {
@@ -245,6 +245,10 @@ export function instanced(o, ctx, parts, opts = {}) {
   bindCtx(ctx);
   const mk = new THREE.Object3D();
   mk.name = 'prop:' + o.kind;
+  // (only its position is read: no matrices to keep up, nothing to draw)
+  mk.matrixAutoUpdate = false;
+  mk.matrixWorldAutoUpdate = false;
+  mk.visible = false;
   const u = mk.userData;
   u.marker = mk;
   u.o = o;

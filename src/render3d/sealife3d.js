@@ -488,4 +488,4 @@ let life = null;
 registerFrameHook((env, ctx) => {
   if (!life) { life = new SeaLife3D(ctx.scene); if (ctx.game?.view3d) ctx.game.view3d.seaLife3d = life; }
   life.update(ctx, env);
-});
+}, 'sealife');

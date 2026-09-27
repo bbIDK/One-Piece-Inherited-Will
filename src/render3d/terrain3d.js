@@ -10,7 +10,7 @@ import { dockDetails } from './props/docks.js';
 
 const NEAR_R = 6; // chunks of full detail around the camera
 const FAR_R = 15; // coarse chunks out to here (islands on the horizon)
-const BUILD_BUDGET_MS = 6; // per frame
+const BUILD_BUDGET_MS = 4; // per frame
 
 // tile colours as linear-ish floats
 const COL = new Float32Array(256 * 3);
@@ -74,6 +74,7 @@ export class TerrainManager {
   setWorld(world) {
     for (const c of this.live.values()) this.disposeChunk(c);
     this.live.clear();
+    this.wantAt = null;
     this.world = world;
     this.hf = new HeightField(world);
     this.cw = Math.ceil(world.width / CHUNK);
@@ -114,6 +115,27 @@ export class TerrainManager {
     const w = this.world;
     if (!w) return;
     const ccx = Math.floor(w.wx(ox) / CHUNK), ccy = Math.floor(oy / CHUNK);
+    // what's wanted only changes when the camera crosses into another chunk
+    // (or the reach changes): the rest of the time there's nothing to decide
+    const at = this.wantAt;
+    if (!at || at[0] !== ccx || at[1] !== ccy || at[2] !== this.nearR || at[3] !== this.farR || at[4] !== this.floorR) {
+      this.wantAt = [ccx, ccy, this.nearR, this.farR, this.floorR];
+      this.want = this.wanted(ccx, ccy);
+      this.dropUnwanted();
+      this.missing = true;
+    }
+    if (this.missing) this.buildMissing();
+    // place relative to the origin (the world wraps around on X)
+    for (const c of this.live.values()) {
+      if (!c.mesh) continue;
+      const rx = w.wrap ? w.dx(ox, c.x0 + CHUNK / 2) - CHUNK / 2 : c.x0 - ox;
+      c.mesh.position.set(rx, 0, c.y0 - oy);
+    }
+  }
+
+  /** The chunks to show around chunk (ccx, ccy), with their detail level. */
+  wanted(ccx, ccy) {
+    const w = this.world;
     const want = new Map();
     const NR = this.nearR, FR = this.farR;
     for (let j = -FR; j <= FR; j++) {
@@ -136,9 +158,13 @@ export class TerrainManager {
         want.set(cy * 100000 + cx, { cx, cy, lod, d2 });
       }
     }
-    // drop what is no longer wanted (or wanted at another detail level)
+    return want;
+  }
+
+  /** Drop what is no longer wanted (or wanted at another detail level). */
+  dropUnwanted() {
     for (const [k, c] of this.live) {
-      const wnt = want.get(k);
+      const wnt = this.want.get(k);
       if (!wnt || wnt.lod !== c.lod) {
         if (wnt && c.mesh) {
           // keep showing the old mesh until the new one is built
@@ -149,27 +175,27 @@ export class TerrainManager {
         this.live.delete(k);
       }
     }
-    // build the nearest missing chunks within the frame budget
+  }
+
+  /** Build the nearest missing chunks within the frame budget. */
+  buildMissing() {
     const todo = [];
-    for (const [k, wnt] of want) {
+    for (const [k, wnt] of this.want) {
       const c = this.live.get(k);
       if (!c || c.stale) todo.push([k, wnt]);
     }
     todo.sort((a, b) => a[1].d2 - b[1].d2);
     const t0 = performance.now();
+    let n = 0;
     for (const [k, wnt] of todo) {
       if (performance.now() - t0 > BUILD_BUDGET_MS) break;
       const old = this.live.get(k);
       const c = this.buildChunk(wnt.cx, wnt.cy, wnt.lod);
       if (old) this.disposeChunk(old);
       this.live.set(k, c);
+      n++;
     }
-    // place relative to the origin (the world wraps around on X)
-    for (const c of this.live.values()) {
-      if (!c.mesh) continue;
-      const rx = w.wrap ? w.dx(ox, c.x0 + CHUNK / 2) - CHUNK / 2 : c.x0 - ox;
-      c.mesh.position.set(rx, 0, c.y0 - oy);
-    }
+    this.missing = n < todo.length;
   }
 
   disposeChunk(c) {

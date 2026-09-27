@@ -126,11 +126,15 @@ export const scenarios = {
         // the grassiest open tile and a sandy beach tile on the island
         let best = null, beach = null, bs = -1;
         const G = new Set([17, 32, 47]);
+        // (a fixed sequence, so every build looks at the same spots; none right by a tree)
+        let seed = 12345;
+        const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+        const clear = (x, y) => !(w.objects?.query(x - 2.5, y - 2.5, x + 3.5, y + 3.5) || []).some((o) => o.kind === 'tree' || o.kind === 'bush' || o.kind === 'rock');
         for (let k = 0; k < 6000; k++) {
-          const x = Math.floor(isl.x + (Math.random() - 0.5) * 2 * isl.radius), y = Math.floor(isl.y + (Math.random() - 0.5) * 2 * isl.radius);
+          const x = Math.floor(isl.x + (rnd() - 0.5) * 2 * isl.radius), y = Math.floor(isl.y + (rnd() - 0.5) * 2 * isl.radius);
           const t = w.type(x, y);
           if (t === 16 && !beach && w.sd(x, y) > 1.5 && w.sd(x, y) < 4 && !w.isBlocked(x, y)) beach = [x, y];
-          if (!G.has(t) || w.isBlocked(x, y)) continue;
+          if (!G.has(t) || w.isBlocked(x, y) || !clear(x, y)) continue;
           let s = 0;
           for (let j = -6; j <= 6; j += 2) for (let i = -6; i <= 6; i += 2) if (G.has(w.type(x + i, y + j)) && !w.isBlocked(x + i, y + j)) s++;
           if (s > bs) { bs = s; best = [x, y]; }
@@ -143,7 +147,9 @@ export const scenarios = {
       for (let i = 0; i < 20; i++) { await step(page, 0.1); await frames(page, 2); }
       const stat = () => page.evaluate(() => {
         const v = window.OP.game.view3d, c = v.groundCover, i = v.renderer.info;
-        return { counts: c ? Object.fromEntries(Object.entries(c.meshes).map(([k, m]) => [k, m.count])) : null, cells: c?.cells.size, calls: i.render.calls, tris: i.render.triangles };
+        // (near and far sets; older builds had one mesh per kind)
+        const count = (k) => (c.meshes ? c.meshes[k].count : c.sets[k].count);
+        return { counts: c ? Object.fromEntries(['grass', 'flower', 'fern', 'pebble', 'shell', 'rock'].map((k) => [k, count(k)])) : null, cells: c?.cells.size, calls: i.render.calls, tris: i.render.triangles };
       });
       console.log('meadow', JSON.stringify(await stat()));
       for (const [yaw, name] of [[0, 'e'], [Math.PI / 2, 's'], [Math.PI, 'w'], [-Math.PI / 2, 'n']]) {
@@ -161,7 +167,8 @@ export const scenarios = {
         for (let k = 0; k < 30; k++) {
           const x = p.x + k * 2;
           const t0 = performance.now();
-          c.rebuild(v.ctx, w, Math.floor(w.wx(x) / 16), Math.floor(p.y / 16), 64, false);
+          if (c.place) c.place(w, Math.floor(w.wx(x) / 16), Math.floor(p.y / 16), 64, false);
+          else c.rebuild(v.ctx, w, Math.floor(w.wx(x) / 16), Math.floor(p.y / 16), 64, false);
           out.push(performance.now() - t0);
         }
         out.sort((a, b) => a - b);

@@ -196,7 +196,7 @@ export const scenarios = {
       await page.evaluate(() => window.OP.key('C', true));
       for (let i = 0; i < 40; i++) { await step(page, 0.1); await frames(page, 1); }
       await page.evaluate(() => window.OP.key('C', false));
-      const st = await page.evaluate(() => { const p = window.OP.game.player, v = window.OP.game.view3d; return { depth: +p.depth.toFixed(2), floor: +window.OP.game.seaDepth(p.x, p.y).toFixed(1), counts: Object.fromEntries(Object.entries(v.seabed?.meshes || {}).map(([k, m]) => [k, m.count])) }; });
+      const st = await page.evaluate(() => { const p = window.OP.game.player, v = window.OP.game.view3d; return { depth: +p.depth.toFixed(2), floor: +window.OP.game.seaDepth(p.x, p.y).toFixed(1), counts: Object.fromEntries(Object.entries(v.seabed?.sets || v.seabed?.meshes || {}).map(([k, m]) => [k, m.count])) }; });
       console.log('bottom', JSON.stringify(st));
       await page.evaluate(() => { window.OP.game.view3d.rig.pitch = -0.15; });
       await step(page, 0.1); await frames(page, 3);

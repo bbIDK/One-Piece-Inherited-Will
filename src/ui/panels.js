@@ -541,6 +541,7 @@ export function openSettings(game) {
       slider(() => `Field of view ${Math.round(60 + (s.fov ?? 0.5) * 35)}°`, 'fov'),
       check('View bobbing while walking', 'bob'),
       choice('Graphics', 'quality', [['high', 'High (shadows)'], ['low', 'Fast']]),
+      check('Lower the resolution a little when the game is slow', 'autoRes'),
       h('h3', 'Sound & feel'),
       slider('Sound effects', 'volume'), slider('Music', 'music'), slider('Screen shake', 'shake'),
       check('Show tutorial hints', 'showHints'),

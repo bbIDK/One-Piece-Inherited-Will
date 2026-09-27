@@ -10,6 +10,15 @@ import { clearLine, findPath } from './path.js';
 import { getAbility, canUse } from './abilities.js';
 import { hostile } from './entity.js';
 
+// Path searches are the expensive part of walking about: a few a frame at
+// most (anyone else heads straight on for a frame and asks again).
+const PATHS_PER_FRAME = 2;
+let pathFrame = -1, pathsLeft = 0;
+function mayPath(game) {
+  if (game.time !== pathFrame) { pathFrame = game.time; pathsLeft = PATHS_PER_FRAME; }
+  return pathsLeft-- > 0;
+}
+
 /** Can `a` see `b` — both out in the open, both in the same room, or `b` at the open door of `a`'s room? */
 function sameRoom(game, a, b) {
   const w = game.world;
@@ -254,8 +263,8 @@ export class AIController {
       this.lineT = now + 0.5; this.lineX = x; this.lineY = y;
       if (this.lineOk) { this.path = null; return { x, y }; }
     }
-    if (now < (this.pathCd || 0)) return { x, y };
-    const pts = findPath(w, a.x, a.y, x, y, a.r * 0.85);
+    if (now < (this.pathCd || 0) || !mayPath(game)) return { x, y };
+    const pts = findPath(w, a.x, a.y, x, y, a.r * 0.85, 1600);
     this.pathCd = now + (pts ? 0.7 : 2);
     if (!pts || !pts.length) return { x, y };
     this.path = { pts, i: 0, tx: x, ty: y, t: now };

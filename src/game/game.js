@@ -1,4 +1,5 @@
 // The Game: owns the world, entities and subsystems and runs the main loop.
+import { PROF, prof } from '../core/prof.js';
 import { FX } from './fx.js';
 import { Combat } from './combat.js';
 import { Env, currentAt } from './env.js';
@@ -43,7 +44,16 @@ export class Game {
   }
 
   on(ev, fn) { (this.hooks[ev] = this.hooks[ev] || []).push(fn); }
-  emit(ev, ...args) { for (const fn of this.hooks[ev] || []) fn(...args); }
+  emit(ev, ...args) {
+    const list = this.hooks[ev];
+    if (!list) return;
+    if (PROF.on && ev === 'tick') {
+      // (the profiler times each system's tick on its own)
+      list.forEach((fn, i) => { const t0 = performance.now(); fn(...args); prof(fn.profName || (fn.profName = 'tick#' + i + ' ' + fn.toString().replace(/\s+/g, ' ').slice(0, 48)), t0); });
+      return;
+    }
+    for (const fn of list) fn(...args);
+  }
 
   setPlayer(actor) {
     this.player = actor;
@@ -124,11 +134,15 @@ export class Game {
   // --- main loop ------------------------------------------------------------------------
   update(rawDt) {
     const dt = Math.min(rawDt, 0.05);
+    let t0 = performance.now();
     this.ui?.update(dt);
+    prof('s.ui', t0);
     if (this.paused || !this.player) { this.input.endFrame(); return; }
     this.time += dt;
+    t0 = performance.now();
     this.env.update(dt, this);
     this.fx.update(dt);
+    prof('s.env+fx', t0); t0 = performance.now();
     let simDt = dt * this.slowmo;
     if (this.fx.hitstop > 0) { this.fx.hitstop -= dt; simDt *= 0.08; }
     this.combatT = Math.max(0, (this.combatT || 0) - dt);
@@ -142,16 +156,21 @@ export class Game {
       if (a !== p && this.world.dist2(a.x, a.y, p.x, p.y) > 70 * 70 && !a.persistent) continue;
       a.update(simDt, this);
     }
+    prof('s.actors', t0); t0 = performance.now();
     for (let i = this.ships.length - 1; i >= 0; i--) {
       const s = this.ships[i];
       if (!s.alive) { this.ships.splice(i, 1); continue; }
       s.update(simDt, this);
     }
+    prof('s.ships', t0); t0 = performance.now();
     this.combat.update(simDt);
     this.updateZones(simDt);
+    prof('s.combat', t0); t0 = performance.now();
     this.spawner.update(dt);
     this.updateLocation();
+    prof('s.spawn+where', t0);
     this.emit('tick', dt);
+    t0 = performance.now();
     this.updateCamera(dt);
     // explore
     this.world.reveal(p.x, p.y, p.mode === 'sail' ? 30 : 20);
@@ -160,6 +179,7 @@ export class Game {
       this.world.fogDirty = false;
       this.renderer.terrain.updateFog(this.world.fog);
     }
+    prof('s.map', t0);
     this.input.endFrame();
   }
 

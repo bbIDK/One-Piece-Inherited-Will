@@ -219,9 +219,20 @@ export class Mesher {
     const gl = o.glow ? C(o.glow) : null;
     const fl = o.flicker || 0;
     const geomN = o.outline && !KIT.noOutline ? new Float32Array(P.count * 3) : null;
+    // (plain arrays are read directly: this loop runs for every vertex of every model)
+    const direct = !P.isInterleavedBufferAttribute && !NA.isInterleavedBufferAttribute && P.itemSize === 3 && NA.itemSize === 3 && !P.normalized && !NA.normalized;
+    const pa = P.array, na = NA.array, me = M.elements, ne = _m3.elements;
     for (let i = 0; i < P.count; i++) {
-      _v.fromBufferAttribute(P, i).applyMatrix4(M);
-      _n.fromBufferAttribute(NA, i).applyMatrix3(_m3).normalize();
+      if (direct) {
+        const x = pa[i * 3], y = pa[i * 3 + 1], z = pa[i * 3 + 2];
+        const w = 1 / (me[3] * x + me[7] * y + me[11] * z + me[15]);
+        _v.set((me[0] * x + me[4] * y + me[8] * z + me[12]) * w, (me[1] * x + me[5] * y + me[9] * z + me[13]) * w, (me[2] * x + me[6] * y + me[10] * z + me[14]) * w);
+        const nx = na[i * 3], ny = na[i * 3 + 1], nz = na[i * 3 + 2];
+        _n.set(ne[0] * nx + ne[3] * ny + ne[6] * nz, ne[1] * nx + ne[4] * ny + ne[7] * nz, ne[2] * nx + ne[5] * ny + ne[8] * nz).normalize();
+      } else {
+        _v.fromBufferAttribute(P, i).applyMatrix4(M);
+        _n.fromBufferAttribute(NA, i).applyMatrix3(_m3).normalize();
+      }
       if (geomN) { geomN[i * 3] = _n.x; geomN[i * 3 + 1] = _n.y; geomN[i * 3 + 2] = _n.z; }
       const c = sC ? _sc.fromBufferAttribute(sC, i) : cfn ? C(cfn(_v, _n, i)) : cc;
       const n = o.normals ? o.normals(_v, _n) : _n;
@@ -233,7 +244,9 @@ export class Mesher {
       else if (gl) this.glw.push(gl.r, gl.g, gl.b, fl); else this.glw.push(0, 0, 0, 0);
     }
     const tris = [];
-    if (g.index) for (let i = 0; i < g.index.count; i++) tris.push(g.index.getX(i));
+    const ia = g.index && !g.index.isInterleavedBufferAttribute ? g.index.array : null;
+    if (ia) for (let i = 0; i < g.index.count; i++) tris.push(ia[i]);
+    else if (g.index) for (let i = 0; i < g.index.count; i++) tris.push(g.index.getX(i));
     else for (let i = 0; i < P.count; i++) tris.push(i);
     for (const t of tris) this.idx.push(t + base);
     if (o.double) {
@@ -256,7 +269,13 @@ export class Mesher {
   /** Inverted hull: the primitive pushed out along its (position-averaged) normals, faces flipped. */
   shell(base, count, tris, geomN, thick, color) {
     const avg = new Map();
-    const key = (k) => `${Math.round(this.pos[k] * 500)},${Math.round(this.pos[k + 1] * 500)},${Math.round(this.pos[k + 2] * 500)}`;
+    // vertices at the same spot (to 2 mm) share an averaged normal; the key packs the
+    // three rounded coordinates into one number (within ±65 m), or a string beyond
+    const key = (k) => {
+      const x = Math.round(this.pos[k] * 500), y = Math.round(this.pos[k + 1] * 500), z = Math.round(this.pos[k + 2] * 500);
+      if (x > -32768 && x < 32768 && y > -32768 && y < 32768 && z > -32768 && z < 32768) return ((x + 32768) * 65536 + (y + 32768)) * 65536 + (z + 32768);
+      return `${x},${y},${z}`;
+    };
     for (let i = 0; i < count; i++) {
       const kk = key((base + i) * 3);
       let a = avg.get(kk);

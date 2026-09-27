@@ -124,4 +124,4 @@ let lights = null;
 registerFrameHook((env, ctx, dt) => {
   if (!lights) { lights = new LampLight(ctx.scene); if (ctx.game?.view3d) ctx.game.view3d.lampLight = lights; }
   lights.update(ctx, env, dt || 1 / 60);
-});
+}, 'lamplight');

@@ -94,11 +94,15 @@ export function outlineMaterial(width = 0.0105, color = INK, opts = {}) {
   return m;
 }
 
-let SHARED_OUTLINE = null;
-/** One outline material for all world characters. */
-export function sharedOutline() {
-  if (!SHARED_OUTLINE) SHARED_OUTLINE = outlineMaterial();
-  return SHARED_OUTLINE;
+const SHARED_OUTLINE = {};
+/**
+ * One outline material for all world characters' bodies (skinned), and
+ * another for what they hold (a material drawn both ways makes the renderer
+ * look up its shader afresh every time it switches).
+ */
+export function sharedOutline(skinned = true) {
+  const k = skinned ? 'skin' : 'solid';
+  return SHARED_OUTLINE[k] || (SHARED_OUTLINE[k] = outlineMaterial());
 }
 
 let WEAPON = null;

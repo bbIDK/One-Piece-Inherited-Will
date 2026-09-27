@@ -386,4 +386,4 @@ let precip = null;
 registerFrameHook((env, ctx, dt) => {
   if (!precip) { precip = new Precipitation(ctx.scene); if (ctx.game?.view3d) ctx.game.view3d.precip = precip; }
   precip.update(env, ctx, dt || 1 / 60);
-});
+}, 'precip');

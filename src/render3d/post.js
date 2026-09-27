@@ -5,9 +5,11 @@
 //    cool shadows, a soft vignette;
 //  * bloom on the brightest things (the sun, glints on the sea, fire, lamps);
 //  * FXAA to smooth the edges.
-// 'low' quality (phones) skips all of this and renders straight to screen.
+// 'low' quality (phones) skips all of this and renders straight to screen, or
+// (lite) through FXAA alone when the screen has no multisampling of its own.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
@@ -122,14 +124,20 @@ class SceneInkPass extends Pass {
 }
 
 export class Post {
-  constructor(renderer, scene, camera) {
+  constructor(renderer, scene, camera, { lite = false } = {}) {
+    this.kind = lite ? 'lite' : 'full';
     this.renderer = renderer;
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
     this.composer = new EffectComposer(renderer);
-    this.scenePass = new SceneInkPass(scene, camera);
-    this.composer.addPass(this.scenePass);
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.32, 0.55, 0.92);
-    this.composer.addPass(this.bloom);
+    if (lite) {
+      this.renderPass = new RenderPass(scene, camera);
+      this.composer.addPass(this.renderPass);
+    } else {
+      this.scenePass = new SceneInkPass(scene, camera);
+      this.composer.addPass(this.scenePass);
+      this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.32, 0.55, 0.92);
+      this.composer.addPass(this.bloom);
+    }
     this.composer.addPass(new OutputPass());
     this.fxaa = new ShaderPass(FXAAShader);
     this.composer.addPass(this.fxaa);
@@ -147,17 +155,18 @@ export class Post {
   }
 
   /** How far out outlines are drawn (m): short under water, where the fog swallows the view. */
-  setInkFar(v) { this.scenePass.material.uniforms.uInkFar.value = v; }
+  setInkFar(v) { if (this.scenePass) this.scenePass.material.uniforms.uInkFar.value = v; }
 
   /** The impact frame (0..1) and its tint. */
   setImpact(k, color) {
+    if (!this.scenePass) return;
     const u = this.scenePass.material.uniforms;
     u.uImpact.value = k;
     if (color) u.uImpactCol.value.set(color); else u.uImpactCol.value.setRGB(1, 1, 1);
   }
 
   render(camera) {
-    this.scenePass.camera = camera;
+    (this.scenePass || this.renderPass).camera = camera;
     this.composer.render();
   }
 

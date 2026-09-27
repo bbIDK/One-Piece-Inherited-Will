@@ -63,5 +63,5 @@ export function slotInfo(s) {
   return { slot: s, char, legacy: legacy ? { ...defaultLegacy(), ...legacy } : null, empty: !char && !legacy };
 }
 
-export const loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, view: 'first', sensitivity: 0.5, invertY: false, quality: 'high', fov: 0.5, bob: true, ...(read(KEY_SETTINGS) || {}) });
+export const loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, view: 'first', sensitivity: 0.5, invertY: false, quality: 'high', autoRes: true, fov: 0.5, bob: true, ...(read(KEY_SETTINGS) || {}) });
 export const saveSettings = (s) => write(KEY_SETTINGS, s);

@@ -13,6 +13,8 @@ import { hash, warmth, clamAt } from '../world/seabed.js';
 import { toonGradient } from './materials.js';
 import { FOG } from './fog.js';
 import { CAUSTIC, CTIME } from './terrain3d.js';
+import { WedgeSet } from './wedges.js';
+import { prof } from '../core/prof.js';
 
 const TAU = Math.PI * 2;
 const CELL = 16; // tiles per cached cell
@@ -21,6 +23,10 @@ const MAX = { branch: 1400, brain: 1000, table: 420, fan: 800, tube: 600, anemon
 const SWAY = { fan: 0.5, anemone: 0.7, kelp: 1, seagrass: 0.9 };
 const GLOW = { branch: 0.07, brain: 0.04, table: 0.05, fan: 0.08, tube: 0.06, anemone: 0.16, clam: 0.14, star: 0.06 };
 const STRIDE = 9; // x, y, h, rot, scale, yScale, r, g, b
+const NEAR = 16; // m: one set near the centre, the rest in wedges (see wedges.js)
+const PAD = { branch: 1, brain: 1, table: 1.5, fan: 1.2, tube: 1, anemone: 0.5, kelp: 1, seagrass: 0.5, boulder: 2, star: 0.3, clam: 0.8 };
+const WEDGES = { branch: 4, brain: 4, table: 1, fan: 4, tube: 1, anemone: 1, kelp: 4, seagrass: 8, boulder: 4, star: 1, clam: 1 };
+const CELL_BUDGET_MS = 2.5; // building new cells, per frame
 
 function vnoise(x, y, k) {
   const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
@@ -398,29 +404,25 @@ class SeaBed {
     this.group.name = 'seabed';
     scene.add(this.group);
     const geos = { branch: branchGeo(), brain: brainGeo(), table: tableGeo(), fan: fanGeo(), tube: tubeGeo(), anemone: anemoneGeo(), kelp: kelpGeo(), seagrass: seagrassGeo(), boulder: boulderGeo(), star: starGeo(), clam: clamGeo() };
-    this.meshes = {};
+    this.sets = {};
     for (const k of KINDS) {
-      const m = new THREE.InstancedMesh(geos[k], seabedMaterial(k), MAX[k]);
-      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-      m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX[k] * 3), 3);
-      m.count = 0;
-      m.frustumCulled = false;
-      m.receiveShadow = false;
-      m.castShadow = false;
-      this.group.add(m);
-      this.meshes[k] = m;
+      this.sets[k] = new WedgeSet(this.group, k, {
+        geo: geos[k], mat: seabedMaterial(k), capNear: Math.ceil(MAX[k] * 0.3), capFar: MAX[k], near: NEAR, wedges: WEDGES[k], pad: PAD[k],
+        setup: (m) => { m.receiveShadow = false; m.castShadow = false; },
+      });
     }
     this.cells = new Map();
     this.world = null;
     this.origin = null;
     this.key = '';
+    this.want = null; // the centre wanted, until its floor is placed
     this.t = 0;
   }
 
   update(ctx, env, dt) {
     const game = ctx.game, v = game.view3d, w = ctx.world;
     if (!w || !v) return;
-    if (w !== this.world) { this.world = w; this.cells.clear(); this.key = ''; }
+    if (w !== this.world) { this.world = w; this.cells.clear(); this.key = ''; this.want = null; }
     uTime.value = env.time;
     uOrigin.value.set(w.wx(v.ox), v.oy);
     const low = v.quality === 'low';
@@ -435,68 +437,77 @@ class SeaBed {
     const ccx = Math.floor(w.wx(v.ox) / CELL), ccy = Math.floor(v.oy / CELL);
     const key = `${ccx},${ccy},${R}`;
     this.t -= dt;
-    if (key !== this.key && this.t <= 0) {
-      this.t = 0.3;
-      this.key = key;
-      this.rebuild(ctx, w, ccx, ccy, R);
+    if (key !== this.key) { this.key = key; this.want = { ccx, ccy, R, placed: false }; }
+    const wt = this.want;
+    if (wt && this.t <= 0) {
+      // build the cells it needs (nearest first, a little a frame), then place
+      // the floor: as soon as it's ready around the centre, and again once
+      // it's ready out to the edge
+      const t0 = performance.now();
+      const cr = Math.ceil(wt.R / CELL) + 1;
+      let nearReady = true, allReady = true;
+      for (const [i, j] of ring(cr)) {
+        const k = this.cellKey(w, wt.ccx + i, wt.ccy + j);
+        if (k < 0 || this.cells.has(k)) continue;
+        if (performance.now() - t0 > CELL_BUDGET_MS) {
+          allReady = false;
+          if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR / CELL) + 1) nearReady = false;
+          break;
+        }
+        this.cells.set(k, buildCell(w, ctx.terrain, k % 100000, wt.ccy + j));
+      }
+      prof('sb.cells', t0);
+      if (allReady || (nearReady && !wt.placed)) {
+        const t1 = performance.now();
+        this.place(w, wt.ccx, wt.ccy, wt.R);
+        prof('sb.place', t1);
+        wt.placed = true;
+        this.t = 0.2;
+        if (allReady) this.want = null;
+      }
     }
     if (this.origin) this.group.position.set(w.dx(v.ox, this.origin.x), 0, this.origin.y - v.oy);
   }
 
-  rebuild(ctx, w, ccx, ccy, R) {
+  /** The cache key of cell (cx, cy) (wrapped around the world on X), or -1 off the map. */
+  cellKey(w, cx, cy) {
+    if (cy < 0 || cy * CELL >= w.height) return -1;
+    const n = Math.ceil(w.width / CELL);
+    if (w.wrap) cx = ((cx % n) + n) % n;
+    else if (cx < 0 || cx >= n) return -1;
+    return cy * 100000 + cx;
+  }
+
+  /** Lay out the floor around the centre of cell (ccx, ccy). */
+  place(w, ccx, ccy, R) {
     const cr = Math.ceil(R / CELL) + 1;
     const ox = (ccx + 0.5) * CELL, oy = (ccy + 0.5) * CELL;
     this.origin = { x: ox, y: oy };
-    const counts = {};
-    for (const k of KINDS) counts[k] = 0;
-    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
+    for (const k of KINDS) this.sets[k].reset();
     const keep = new Set();
-    let built = 0, missing = false;
-    const n = Math.ceil(w.width / CELL);
     for (const [i, j] of ring(cr)) {
-      const cy = ccy + j;
-      if (cy < 0 || cy * CELL >= w.height) continue;
-      let cx = ccx + i;
-      if (w.wrap) cx = ((cx % n) + n) % n;
-      const k = cy * 100000 + cx;
+      const k = this.cellKey(w, ccx + i, ccy + j);
+      if (k < 0) continue;
       keep.add(k);
-      let cell = this.cells.get(k);
-      if (!cell) {
-        if (built >= 16) { missing = true; continue; }
-        cell = buildCell(w, ctx.terrain, cx, cy);
-        this.cells.set(k, cell);
-        built++;
-      }
+      const cell = this.cells.get(k);
+      if (!cell) continue;
       for (const kind of KINDS) {
         const list = cell[kind];
         if (!list.length) continue;
-        const mesh = this.meshes[kind];
+        const set = this.sets[kind];
         const small = kind === 'seagrass' || kind === 'star' || kind === 'anemone';
+        const R2 = (small ? R * 0.7 : R) ** 2;
         for (let o = 0; o < list.length; o += STRIDE) {
-          if (counts[kind] >= MAX[kind]) break;
           const x = list[o], y = list[o + 1];
           const dx = w.dx(ox, x), dz = y - oy;
-          const d2 = dx * dx + dz * dz;
-          if (d2 > (small ? R * 0.7 : R) ** 2) continue;
+          if (dx * dx + dz * dz > R2) continue;
           const sc = list[o + 4];
-          p.set(dx, list[o + 2], dz);
-          q.setFromAxisAngle(UP, list[o + 3]);
-          s.set(sc, sc * list[o + 5], sc);
-          m4.compose(p, q, s);
-          const idx = counts[kind]++;
-          mesh.setMatrixAt(idx, m4);
-          mesh.instanceColor.setXYZ(idx, list[o + 6], list[o + 7], list[o + 8]);
+          set.put(dx, list[o + 2], dz, list[o + 3], sc, sc * list[o + 5], list[o + 6], list[o + 7], list[o + 8]);
         }
       }
     }
-    for (const kind of KINDS) {
-      const mesh = this.meshes[kind];
-      mesh.count = counts[kind];
-      mesh.instanceMatrix.needsUpdate = true;
-      mesh.instanceColor.needsUpdate = true;
-    }
+    for (const k of KINDS) this.sets[k].finish();
     if (this.cells.size > 700) for (const k of this.cells.keys()) if (!keep.has(k)) this.cells.delete(k);
-    if (missing) { this.key = ''; this.t = 0.05; }
   }
 }
 
@@ -504,4 +515,4 @@ let bed = null;
 registerFrameHook((env, ctx, dt) => {
   if (!bed) { bed = new SeaBed(ctx.scene); if (ctx.game?.view3d) ctx.game.view3d.seabed = bed; }
   bed.update(ctx, env, dt || 1 / 60);
-});
+}, 'seabed');

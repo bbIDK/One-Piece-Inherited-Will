@@ -21,6 +21,8 @@ const DEG = Math.PI / 180;
 const DETAIL = {
   0: { head: [20, 16], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1, cloth: 1 },
   1: { head: [8, 6], cap: [10, 4], cone: 3, sph: [5, 3], blob: [6, 4], limb: [5, 1], lathe: 7, rbox: [5, 4], rboxS: [4, 3], hat: 9, hatS: [7, 4], fringe: 0, hands: 0, cloth: 0 },
+  // (2: across the street, between near and far)
+  2: { head: [14, 10], cap: [12, 5], cone: 4, sph: [6, 4], blob: [8, 5], limb: [7, 2], lathe: 10, rbox: [6, 5], rboxS: [5, 4], hat: 13, hatS: [9, 5], fringe: 1, hands: 0, cloth: 0, body: 1 },
   [-1]: { head: [14, 10], cap: [16, 6], cone: 5, sph: [8, 6], blob: [10, 7], limb: [10, 3], lathe: 14, rbox: [10, 8], rboxS: [8, 6], hat: 16, hatS: [12, 8], fringe: 1, hands: 2, cloth: 1 },
 };
 
@@ -220,8 +222,11 @@ function faceNormals(g, U, V) {
 // bunched at the front, so the nose, brow and lips have enough vertices.
 const HEAD_GRID = {
   near: { U: 34, warp: 0.74, rows: [0, 16, 32, 46, 58, 67, 74, 80, 85, 90, 94, 98, 102, 106, 110, 114, 118, 122, 126, 130, 134, 138, 142, 146, 150, 155, 160, 166, 173, 180] },
+  mid: { U: 20, warp: 0.6, rows: [0, 24, 46, 62, 74, 84, 92, 100, 108, 116, 124, 132, 140, 148, 157, 168, 180] },
   far: { U: 12, warp: 0.4, rows: [0, 36, 66, 86, 102, 118, 134, 150, 166, 180] },
 };
+/** The head grid a detail level uses. */
+export const headLevel = (lod) => (lod === 0 ? 'near' : lod === 2 ? 'mid' : 'far');
 const phOf = (G, i) => { const u = i / G.U; return (u + G.warp * Math.sin((u - 0.5) * TAU) / TAU) * TAU - Math.PI; }; // -π..π, front at 0
 function headPoint(G, i, j) {
   const ph = phOf(G, i), th = G.rows[j] * DEG;
@@ -655,7 +660,7 @@ function buildBody0(look, wpn, lod, articulated) {
   const R = d.headR;
   const HM = (m) => mul(M(d.hx, d.hc, 0, 0, 0, 0, R), m || M());
   const hb = B.head;
-  add(headGeo(lod === 0 ? 'near' : 'far'), HM(), pal.face, hb);
+  add(headGeo(headLevel(lod)), HM(), pal.face, hb);
   const style = styleId(look.hair, look);
   const meta = META[style];
   const kind = hatKind(look.hat, look);

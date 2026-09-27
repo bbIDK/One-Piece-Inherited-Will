@@ -27,7 +27,9 @@ with terrain, sea, sky, towns and ships built from the same map the
 simulation uses. Click the game to capture the mouse and look around (Esc
 frees it). **V** switches between first and third person (the mouse wheel
 sets the third-person distance). Settings has mouse sensitivity, invert-Y,
-field of view, view bobbing and a fast graphics mode.
+field of view, view bobbing, a fast graphics mode, and (on by default) a
+slightly lower resolution whenever drawing can't keep up, so the game stays
+smooth on weaker graphics chips.
 
 **Phones and tablets** get touch controls (hold the device sideways):
 
@@ -262,7 +264,14 @@ npm run serve        # http://localhost:8080
 npm test             # content validator: generates the world and cross-checks every island/NPC/quest/dialogue
 node tools/validate.mjs [--fast] [--pack=<id>]
 node tools/shot.mjs <scenario>   # headless Chromium play-tests with screenshots (boot, create, play, zones, systems, quest, resume, look, menus, marines, dreveal, fight…)
+node tools/shot.mjs perf         # frame cost in a town (day and night), a harbour, at sea and on a reef
+node tools/shot.mjs hitch --w=320 --h=180 [--cpu]   # per-frame JS time running through a town and sailing past an island: the worst frames, shaders compiled on the way
 ```
+
+In the page, `window.OP.prof` is a frame profiler: set `OP.prof.PROF.on = true`
+and `OP.prof.PROF.t` fills with milliseconds per section (sim, render, each
+frame hook, each built prop kind…); `OP.prof.PROF.trace = []` records every
+frame separately.
 
 **Engine.** Plain ES modules bundled by esbuild.
 

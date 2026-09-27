@@ -271,15 +271,17 @@ export function buildFigure(add, look, d, pal, q) {
   const cc = clothColours(look, pal, o);
   const sh = shapeOf(d, o);
   const cloth = q.cloth; // linings, cuffs, buttons (near detail only)
-  const U = cloth ? 16 : 9;
-  const rs = cloth ? 12 : 7;
-  const lrows = cloth ? 5 : 2;
+  const bd = q.body ?? (cloth ? 2 : 0); // how finely the body is divided: 2 near, 1 mid, 0 far
+  const U = [9, 12, 16][bd];
+  const rs = [7, 9, 12][bd];
+  const lrows = [2, 3, 5][bd];
   const skin = pal.skin;
 
   // ---- torso rows (s, top → bottom)
-  const TR = cloth
+  const TR = bd === 2
     ? [1.0, 0.975, 0.955, 0.935, 0.915, 0.89, 0.86, 0.81, 0.765, 0.72, 0.68, 0.64, 0.6, 0.565, 0.5, 0.42, 0.33, 0.24, 0.14, 0.03, -0.1]
-    : [1.0, 0.93, 0.82, 0.7, 0.58, 0.4, 0.2, -0.1];
+    : bd === 1 ? [1.0, 0.975, 0.935, 0.89, 0.81, 0.72, 0.64, 0.565, 0.42, 0.24, 0.03, -0.1]
+      : [1.0, 0.93, 0.82, 0.7, 0.58, 0.4, 0.2, -0.1];
   const tpt = (mS, off = 0) => (s, a) => torsoPt(sh, s, a, off, mS);
   const skinTorso = tpt(1);
   const TOP = o.top;

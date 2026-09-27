@@ -159,4 +159,4 @@ registerFrameHook((env, ctx) => {
     if (view.kind === 'item') view.root.traverse((o) => { if (o.geometry && o.geometry !== ringGeo) o.geometry.dispose(); });
     views.delete(rec);
   }
-});
+}, 'pickups');

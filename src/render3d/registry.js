@@ -7,7 +7,7 @@
 //    object's foot point (o.x, o.y) — the renderer positions and grounds it.
 //    Return null to fall back to the sprite for that particular object.
 //
-//  registerActorView((actor, ctx) => view)      view: { root, update(actor, env, ctx), dispose(), stale?() }
+//  registerActorView((actor, ctx, { dist }) => view)   view: { root, update(actor, env, ctx), dispose(), stale?() }
 //  registerShipView((ship, ctx) => view)        same shape; update(ship, env, rx, rz, windAngle)
 //  registerViewmodel((ctx) => vm)               first-person arms: { root, update(player, env, ctx), dispose() }
 //  registerFrameHook((env, ctx, dt) => void)    called once per rendered frame (animated props, effects)
@@ -23,4 +23,4 @@ export function registerActorView(fn) { VIEWS.actor = fn; }
 export function registerShipView(fn) { VIEWS.ship = fn; }
 export function registerViewmodel(fn) { VIEWS.viewmodel = fn; }
 export const FRAME_HOOKS = [];
-export function registerFrameHook(fn) { FRAME_HOOKS.push(fn); }
+export function registerFrameHook(fn, label = null) { if (label) fn.label = label; FRAME_HOOKS.push(fn); }
