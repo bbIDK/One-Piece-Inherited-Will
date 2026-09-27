@@ -203,7 +203,8 @@ export class Ship extends Entity {
     const end = dock.end || dock;
     for (let k = 0; k < 10; k++) {
       for (const sg of [1, -1]) {
-        const along = L * 0.5 - 5 + k * 2.5, off = sg * (B * 0.5 + 2.4);
+        // (alongside the pier's T-head, clear of it)
+        const along = L * 0.5 - 5 + k * 2.5, off = sg * (B * 0.5 + (dock.headHalf ?? 1) + 1.4);
         const x = w.wx(end.x + 0.5 + dx * along - dy * off), y = end.y + 0.5 + dy * along + dx * off;
         if (this.fits(w, x, y, hd)) { this.x = x; this.y = y; this.heading = hd; return true; }
       }

@@ -3,7 +3,7 @@
 // horizon), plus wooden decks over the water and vertical wall blocks.
 import * as THREE from 'three';
 import { T, IS_LIQUID, OVERLAY, PALETTE } from '../world/tiles.js';
-import { CHUNK, DECK_Y, WALL_H, HeightField } from './height.js';
+import { CHUNK, DECK_Y, DOCK_Y, WALL_H, HeightField } from './height.js';
 import { toonGradient } from './materials.js';
 import { FOG } from './fog.js';
 import { dockDetails } from './props/docks.js';
@@ -256,17 +256,22 @@ export class TerrainManager {
   /** Wooden decks over water, and wall blocks, for one full-detail chunk. */
   addDecksAndWalls(root, x0, y0) {
     const w = this.world;
-    const decks = [], walls = [], posts = [];
+    const decks = [], piers = [], walls = [], posts = [];
+    let quays = 0;
     for (let j = 0; j < CHUNK; j++) {
       for (let i = 0; i < CHUNK; i++) {
         const t = w.type(x0 + i, y0 + j);
         if (OVERLAY[t]) {
+          // harbour piers stand tall on their own pilings (see props/docks.js); bridges on short posts
+          if (w.docks.size && w.isDock(x0 + i, y0 + j)) { piers.push(i, j); continue; }
           decks.push(i, j);
           if (((x0 + i) % 3 === 0) && ((y0 + j) % 3 === 0)) posts.push(i, j);
         } else if (t === T.WALL) walls.push(i, j);
+        else if (w.quays.size && w.isQuay(x0 + i, y0 + j)) quays++;
       }
     }
     if (decks.length) root.add(boxes(decks, 1, 0.22, 1, DECK_Y - 0.11, this.deckMat));
+    if (piers.length) root.add(boxes(piers, 1, 0.26, 1, DOCK_Y - 0.13, this.deckMat));
     if (posts.length) root.add(boxes(posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, this.postMat, 0.15));
     if (walls.length) {
       const m = boxes(walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, this.wallMat);
@@ -274,8 +279,8 @@ export class TerrainManager {
       root.add(m);
     }
     // planks, pilings, rope rails, rails on sleepers, crenellations
-    if (decks.length || walls.length) {
-      try { const det = dockDetails(w, x0, y0); if (det) root.add(det); } catch (e) { console.warn('dock details failed', e); }
+    if (decks.length || piers.length || walls.length || quays) {
+      try { const det = dockDetails(w, x0, y0, CHUNK, this.hf); if (det) root.add(det); } catch (e) { console.warn('dock details failed', e); }
     }
   }
 }

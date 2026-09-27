@@ -383,56 +383,90 @@ function paintOp(world, p, cx, cy, hw, hh, noise) {
 }
 
 function buildDock(world, from, dir, len, rec, dd) {
-  // Walk outward from `from` in the requested (or best) direction to the coast.
-  const dirs = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0], ne: [0.707, -0.707], nw: [-0.707, -0.707], se: [0.707, 0.707], sw: [-0.707, 0.707] };
-  const tryDirs = dir ? [dirs[dir]] : Object.values(dirs);
-  let best = null;
-  for (const [vx, vy] of tryDirs) {
-    for (let s = 0; s < 400; s++) {
-      const x = from.x + vx * s, y = from.y + vy * s;
-      if (!world.inBounds(Math.floor(x), Math.floor(y))) break;
-      if (world.isLiquid(x, y) && world.sailable(x, y)) {
-        // make sure it's open water, not a pond
-        let open = 0;
-        for (let k = 1; k <= 12; k++) if (world.isLiquid(x + vx * k, y + vy * k)) open++;
-        if (open >= 10 && (!best || s < best.s)) best = { s, x, y, vx, vy };
-        break;
+  // A harbour pier: built square to the grid (a diagonal one would be a
+  // staircase of tiles), so a diagonal request takes whichever of its two
+  // sides reaches open water first. Walk out from `from` to the coast.
+  const dirs = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
+  const split = { ne: ['n', 'e'], nw: ['n', 'w'], se: ['s', 'e'], sw: ['s', 'w'] };
+  const fx = Math.floor(from.x), fy = Math.floor(from.y);
+  const search = (list, need) => {
+    let found = null;
+    for (const [vx, vy] of list) {
+      for (let s = 0; s < 400; s++) {
+        const x = fx + vx * s, y = fy + vy * s;
+        if (!world.inBounds(x, y)) break;
+        if (world.isLiquid(x, y) && world.sailable(x, y)) {
+          // make sure it's open water, not a pond
+          let open = 0;
+          for (let k = 1; k <= 14; k++) if (world.isLiquid(x + vx * k, y + vy * k)) open++;
+          if (open >= need && (!found || s < found.s)) found = { s, x, y, vx, vy };
+          break;
+        }
       }
     }
-  }
+    return found;
+  };
+  // the way asked for, then any way at all, wanting open water ahead (a little less, at a pinch)
+  const want = dir ? (split[dir] || [dir]).map((k) => dirs[k]).filter(Boolean) : Object.values(dirs);
+  const best = search(want, 12) || search(Object.values(dirs), 12) || search(want, 9) || search(Object.values(dirs), 9);
   if (!best) return null;
   const { vx, vy } = best;
-  const horizontal = Math.abs(vx) > Math.abs(vy);
-  const sx = best.x - vx * 1.5, sy = best.y - vy * 1.5; // start just on land
-  const width = dd.width ?? 3;
-  let endX = sx, endY = sy;
-  for (let s = 0; s <= len; s++) {
-    const px = sx + vx * s, py = sy + vy * s;
-    for (let w = -Math.floor(width / 2); w <= Math.floor(width / 2); w++) {
-      const x = horizontal ? px : px + w, y = horizontal ? py + w : py;
-      if (world.isLiquid(x, y) || s < 2) world.setTile(x, y, world.isLiquid(x, y) ? T.PLANK : world.type(x, y), world.isLiquid(x, y) ? 0 : undefined);
+  const px = -vy, py = vx; // across the pier
+  const W = Math.max(3, dd.width ?? 5) | 1; // an odd number of planks wide, centred on its axis
+  const half = (W - 1) / 2, headHalf = half + 2, HEAD = 3;
+  const L = Math.max(6, Math.round(len * 1.5));
+  // tile a along the pier (0 = the first tile of open water), b across it
+  const at = (a, b) => ({ x: world.wx(best.x + vx * a + px * b), y: best.y + vy * a + py * b });
+  // the pier: a deck on pilings out over the water, and a T-shaped head to berth at
+  let lastA = 0;
+  for (let a = 0; a < L; a++) {
+    const head = a >= L - HEAD, hb = head ? headHalf : half;
+    let placed = false;
+    for (let b = -hb; b <= hb; b++) {
+      const { x, y } = at(a, b);
+      if (!world.isLiquid(x, y) || world.isOverlay(x, y)) continue;
+      world.setTile(x, y, T.PLANK, 0);
+      world.markDock(x, y, { vx, vy, a, b, hb, head, last: a === L - 1, half });
+      placed = true;
     }
-    endX = px; endY = py;
+    if (placed) lastA = a;
   }
-  // a stone quay at the foot of the pier, level with its deck, so it runs into the land
-  const half = Math.floor(width / 2) + 1;
-  for (let s = -3; s <= 1; s++) {
-    for (let w = -half; w <= half; w++) {
-      const px = sx + vx * s, py = sy + vy * s;
-      const x = horizontal ? px : px + w, y = horizontal ? py + w : py;
-      if (world.isLiquid(x, y) || world.isOverlay(x, y) || world.isBlocked(x, y)) continue;
-      if (Math.abs(w) === half && s < -1) continue; // round the landward corners off
+  // the quay: a stone landing at the head of the beach, level with the deck;
+  // the ground ramps up (or down) into it (see render3d/height.js), and a sea
+  // wall faces the water
+  const Q = 4, qh = half + 1;
+  for (let a = -Q; a < 0; a++) {
+    for (let b = -qh; b <= qh; b++) {
+      const { x, y } = at(a, b);
+      if (world.isBlocked(x, y) || world.isOverlay(x, y)) continue;
       const t = world.type(x, y);
-      if (t !== T.WALL && t !== T.CLIFF && t !== T.MOUNTAIN) world.setTile(x, y, T.STONE);
+      if (t === T.WALL || t === T.CLIFF || t === T.MOUNTAIN) continue;
+      // (a little inlet under the quay is filled in)
+      world.setTile(x, y, T.STONE, world.isLiquid(x, y) ? 0 : undefined);
       world.markQuay(x, y);
     }
   }
-  // mooring point: open water past the end of the pier, offset to one side
-  const side = horizontal ? [0, 2.5] : [2.5, 0];
-  const moor = { x: world.wx(endX + vx * 2.5 + side[0]), y: endY + vy * 2.5 + side[1] };
-  const land = { x: world.wx(sx - vx * 2), y: sy - vy * 2 };
-  placeObject(world, { kind: 'mooring', x: endX + 0.5, y: endY + 1, block: false });
-  return { x: world.wx(endX), y: endY, dirX: vx, dirY: vy, moor, land, end: { x: world.wx(endX), y: endY } };
+  world.dockPads.push({
+    // the middle of its front edge (tile corners), which way the sea lies, its size, and how far the ground ramps
+    cx: best.x + 0.5 - vx * 0.5, cy: best.y + 0.5 - vy * 0.5, vx, vy, depth: Q, halfW: qh + 0.5, r: 7,
+    x0: Math.min(at(-Q, -qh).x, at(-1, qh).x), x1: Math.max(at(-Q, -qh).x, at(-1, qh).x),
+    y0: Math.min(at(-Q, -qh).y, at(-1, qh).y), y1: Math.max(at(-Q, -qh).y, at(-1, qh).y),
+  });
+  world.padIndex = null;
+  // bollards and a lamp on the quay's corners, a crate or two and a barrel
+  for (const sg of [-1, 1]) {
+    const c = at(-1, sg * qh);
+    placeObject(world, { kind: 'lamp', x: c.x + 0.5, y: c.y + 0.5, block: true });
+    const k = at(-Q + 1, sg * qh);
+    placeObject(world, { kind: sg > 0 ? 'crate' : 'barrel', x: k.x + 0.5, y: k.y + 0.5, block: true });
+  }
+  const end = at(lastA, 0);
+  const side = headHalf + 3;
+  const moor = { x: world.wx(end.x + 0.5 - vx + px * side), y: end.y + 0.5 - vy + py * side };
+  const land = at(-Q - 2, 0);
+  const tip = at(lastA, headHalf);
+  placeObject(world, { kind: 'mooring', x: tip.x + 0.5, y: tip.y + 0.5, block: false });
+  return { x: end.x, y: end.y, dirX: vx, dirY: vy, moor, land: { x: land.x + 0.5, y: land.y + 0.5 }, end: { x: end.x, y: end.y }, half, headHalf, len: lastA + 1 };
 }
 
 export function connectRoad(world, ax, ay, bx, by, tile) {

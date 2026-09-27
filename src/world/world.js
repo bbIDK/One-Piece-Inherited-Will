@@ -18,6 +18,9 @@ export class World {
     this.floors = new Map(); // 4 m cell → raised floors (rings, stages) over the ground
     this.dist = new Uint8Array(width * height); // encoded signed distance
     this.quays = new Set(); // tiles of the stone quays at the foot of piers (level with the deck)
+    this.docks = new Map(); // tiles of the harbour piers (taller than bridges) → how the pier runs there
+    this.dockPads = []; // the quays as rectangles, for blending the ground into them (see render3d/height.js)
+    this.padIndex = null;
     this.objects = null; // ObjectIndex
     this.islands = []; // generated island records
     this.fogW = Math.ceil(width / 8);
@@ -66,6 +69,30 @@ export class World {
   }
   markQuay(x, y) { if (this.inBounds(Math.floor(x), Math.floor(y))) this.quays.add(this.idx(x, y)); }
   isQuay(x, y) { return this.quays.size > 0 && this.inBounds(Math.floor(x), Math.floor(y)) && this.quays.has(this.idx(x, y)); }
+  /** A pier tile: `info` says which way the pier runs (vx, vy), how far out (a) and across (b) the tile is. */
+  markDock(x, y, info = {}) { if (this.inBounds(Math.floor(x), Math.floor(y))) this.docks.set(this.idx(x, y), info); }
+  isDock(x, y) { return this.docks.size > 0 && this.inBounds(Math.floor(x), Math.floor(y)) && this.docks.has(this.idx(x, y)); }
+  dockAt(x, y) { return this.docks.size && this.inBounds(Math.floor(x), Math.floor(y)) ? this.docks.get(this.idx(x, y)) || null : null; }
+  /** The quays whose ground ramp reaches tile corner (cx, cy) (indexed by 32-tile cell). */
+  padsNear(cx, cy) {
+    if (!this.dockPads.length) return null;
+    const cw = Math.ceil(this.width / 32);
+    const cell = (x) => (this.wrap ? ((x % cw) + cw) % cw : x);
+    if (!this.padIndex) {
+      this.padIndex = new Map();
+      for (const p of this.dockPads) {
+        for (let y = Math.floor((p.y0 - p.r) / 32); y <= Math.floor((p.y1 + 1 + p.r) / 32); y++) {
+          for (let x = Math.floor((p.x0 - p.r) / 32); x <= Math.floor((p.x1 + 1 + p.r) / 32); x++) {
+            const k = y * 65536 + cell(x);
+            let l = this.padIndex.get(k);
+            if (!l) this.padIndex.set(k, (l = []));
+            if (!l.includes(p)) l.push(p);
+          }
+        }
+      }
+    }
+    return this.padIndex.get(Math.floor(cy / 32) * 65536 + cell(Math.floor(this.wx(cx) / 32))) || null;
+  }
 
   climate(x, y) {
     if (!this.inBounds(Math.floor(x), Math.floor(y))) return 0;

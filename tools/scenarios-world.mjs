@@ -1157,6 +1157,22 @@ export const scenarios = {
       await view('side-2', side, out - Math.PI / 2, -0.15, 7);
       // looking back at the land from the end of the pier
       await view('from-end', { x: dk.end.x, y: dk.end.y }, out + Math.PI, -0.2, 6);
+      // from the water off to the side: the whole pier, the quay and its sea wall
+      const px = -dk.dirY, py = dk.dirX, hh = (dk.headHalf || 2) + 9;
+      const wat = { x: dk.end.x + 0.5 - dk.dirX * 5 + px * hh, y: dk.end.y + 0.5 - dk.dirY * 5 + py * hh };
+      await view('overview', wat, Math.atan2(-py, -px) - 0.45 * Math.sign(1), 0.12, 9);
+      // from up the road behind the quay, looking down it to the sea
+      await view('from-land', { x: dk.land.x - dk.dirX * 3, y: dk.land.y - dk.dirY * 3 }, out, -0.12, 5);
+      const hts = await page.evaluate((dk) => {
+        const g = window.OP.game, hf = g.view3d.terrain.hf;
+        const out = [];
+        for (let a = -10; a <= 3; a++) {
+          const x = dk.land.x + dk.dirX * (a + 6), y = dk.land.y + dk.dirY * (a + 6);
+          out.push(+hf.ground(x, y).toFixed(2));
+        }
+        return out;
+      }, dk);
+      console.log('ground along the pier axis (inland → sea)', JSON.stringify(hts));
     },
   },
 };

@@ -14,7 +14,11 @@ import { PLINTH } from '../world/interiors.js';
 import { bw, bfoot } from '../world/bframe.js';
 
 export const SEA_Y = 0;
-export const DECK_Y = 0.55; // top of docks and bridges
+export const DECK_Y = 0.55; // top of bridges (and sea-train tracks)
+export const DOCK_Y = 1.5; // top of the harbour piers and their stone quays
+
+/** The top of the deck at an overlay tile: a harbour pier stands taller than a bridge. */
+export const deckTop = (world, x, y) => (world.docks?.size && world.isDock(x, y) ? DOCK_Y : DECK_Y);
 export const WALL_H = 3.2; // town walls, prison walls
 export const CHUNK = 32; // tiles per terrain chunk side
 
@@ -89,8 +93,35 @@ function seaFloor(world, cx, cy, sd) {
  * corner and ramps down to the waterline using the smooth coastline distance.
  */
 export function cornerHeight(world, cx, cy) {
-  // the quay at the foot of a pier is built up level with the deck
-  if (world.quays?.size && (world.isQuay(cx, cy) || world.isQuay(cx - 1, cy) || world.isQuay(cx, cy - 1) || world.isQuay(cx - 1, cy - 1))) return DECK_Y - 0.03;
+  const h = naturalHeight(world, cx, cy);
+  const pads = world.dockPads?.length ? world.padsNear(cx, cy) : null;
+  return pads ? quayRamp(world, cx, cy, h, pads) : h;
+}
+
+/**
+ * The ground round a harbour quay: level with the pier under the quay itself,
+ * ramping smoothly back to the lie of the land over a few metres behind and
+ * beside it (never out into the water in front: the sea wall stands there).
+ */
+function quayRamp(world, cx, cy, h, pads) {
+  for (const p of pads) {
+    const dx = world.dx(p.cx, cx), dy = cy - p.cy;
+    const along = dx * p.vx + dy * p.vy; // + out to sea
+    if (along > -0.01) continue;
+    const across = Math.abs(dy * p.vx - dx * p.vy);
+    const d = Math.hypot(Math.max(0, -p.depth - along), Math.max(0, across - p.halfW));
+    // (the further the ground has to come down (or up) to the quay, the longer the ramp)
+    const R = Math.min(p.r, 3 + Math.abs(h - DOCK_Y) * 0.8);
+    if (d >= R) continue;
+    // (the beach down at the water's edge stays a beach)
+    const w = d <= 0 ? 1 : (1 - smooth(0, R, d)) * smooth(-0.3, 0.7, h);
+    h += (DOCK_Y - 0.06 - h) * w;
+  }
+  return h;
+}
+
+/** Height at a tile corner before anything is built on it. */
+function naturalHeight(world, cx, cy) {
   let sum = 0, n = 0, walls = 0, tall = 0;
   for (let j = -1; j <= 0; j++) {
     for (let i = -1; i <= 0; i++) {
@@ -190,13 +221,14 @@ export class HeightField {
     return a + (d - c) * fx + (c - a) * fy;
   }
 
-  /** Where feet rest at (x, y): decks and wall tops over the terrain. */
+  /** Where feet rest at (x, y): decks, quays and wall tops over the terrain. */
   ground(x, y) {
-    const t = this.world.type(x, y);
-    if (OVERLAY[t]) return DECK_Y;
+    const w = this.world, t = w.type(x, y);
+    if (OVERLAY[t]) return deckTop(w, x, y);
+    if (w.quays.size && w.isQuay(x, y)) return DOCK_Y;
     const h = this.terrain(x, y);
     if (IS_LIQUID[t]) return Math.max(h, SEA_Y);
-    const f = this.world.floorRec ? this.world.floorRec(x, y) : null;
+    const f = w.floorRec ? w.floorRec(x, y) : null;
     if (!f) return h;
     return f.interior ? this.floorY(f.o) : h + f.h;
   }
