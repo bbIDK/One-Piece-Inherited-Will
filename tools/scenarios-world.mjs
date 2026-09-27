@@ -3,6 +3,49 @@ const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k 
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
 const window_step = async (page, dt) => { await page.evaluate((dt) => window.OP.step(dt), dt); await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r()))); };
 export const scenarios = {
+  // Every harbour pier: gaps along it, and water too shallow at its berth.
+  //   node tools/shot.mjs dockaudit
+  dockaudit: {
+    async run(page) {
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => window.OP.quickStart('human'));
+      const res = await page.evaluate(() => { const g = window.OP.game;
+        const w = g.world, hf = g.view3d.terrain.hf;
+        const out = [];
+        for (const isl of w.islands) {
+          for (const d of isl.docks || []) {
+            const vx = d.dirX, vy = d.dirY;
+            // walk the pier axis from the land end to the end
+            let gaps = 0, dockTiles = 0, a0 = null;
+            const L = Math.round(Math.hypot(d.end.x - d.land.x, d.end.y - d.land.y)) + 2;
+            const sx = Math.floor(d.land.x), sy = Math.floor(d.land.y);
+            let seenDock = false, inGap = false;
+            for (let s = 0; s <= L; s++) {
+              const x = w.wx(sx + vx * s), y = sy + vy * s;
+              const isD = w.isDock(x, y);
+              if (isD) { dockTiles++; if (inGap) gaps++; inGap = false; seenDock = true; }
+              else if (seenDock && !(x === Math.floor(d.end.x) && y === Math.floor(d.end.y))) inGap = true;
+            }
+            // ground behind the quay (a few metres inland) and at the land point
+            const behind = [];
+            for (let s = 1; s <= 8; s++) behind.push(hf.terrain(sx - vx * s + 0.5, sy - vy * s + 0.5));
+            const landH = hf.terrain(d.land.x, d.land.y);
+            const maxBehind = Math.max(...behind);
+            const moorDepth = g.seaDepth(d.moor.x, d.moor.y);
+            const flags = [];
+            if (gaps) flags.push('gaps' + gaps);
+    
+    
+            if (moorDepth < 1.5) flags.push('shallow' + moorDepth.toFixed(1));
+            if (dockTiles < 5) flags.push('short' + dockTiles);
+            if (flags.length) out.push([isl.id, flags.join(' '), [Math.round(d.land.x), Math.round(d.land.y)]]);
+          }
+        }
+        return { n: w.islands.reduce((a, i) => a + (i.docks?.length || 0), 0), bad: out.length, list: out.slice(0, 80) };
+      });
+      console.log('docks', JSON.stringify(res, null, 1));
+    },
+  },
   // third person: free mouse, then shift lock (crosshair, over the shoulder)
   camctl: {
     async run(page, snap) {
