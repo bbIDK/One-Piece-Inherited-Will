@@ -35757,6 +35757,7 @@ void main() {
       const n = CHUNK / step + 1;
       const pos = new Float32Array(n * n * 3);
       const col = new Float32Array(n * n * 3);
+      const pave = new Float32Array(n * n * 3);
       let minH = Infinity;
       for (let j = 0; j < n; j++) {
         for (let i = 0; i < n; i++) {
@@ -35767,7 +35768,7 @@ void main() {
           pos[k] = gi;
           pos[k + 1] = h2;
           pos[k + 2] = gj;
-          this.cornerColor(x0 + gi, y0 + gj, h2, col, k);
+          this.cornerColor(x0 + gi, y0 + gj, h2, col, k, pave);
         }
       }
       const idx = [];
@@ -35780,6 +35781,7 @@ void main() {
       const geo2 = new BufferGeometry();
       geo2.setAttribute("position", new BufferAttribute(pos, 3));
       geo2.setAttribute("color", new BufferAttribute(col, 3));
+      geo2.setAttribute("pave", new BufferAttribute(pave, 3));
       geo2.setIndex(idx);
       geo2.computeVertexNormals();
       geo2.computeBoundingSphere();
@@ -35792,13 +35794,16 @@ void main() {
       this.group.add(root2);
       return { mesh: root2, lod, x0, y0, minH };
     }
-    cornerColor(cx, cy, h2, out, k) {
+    cornerColor(cx, cy, h2, out, k, pave = null) {
       const w = this.world;
-      let r = 0, gg = 0, b = 0, n = 0;
+      let r = 0, gg = 0, b = 0, n = 0, pf = 0, pc = 0, pm = 0;
       for (let j = -1; j <= 0; j++) {
         for (let i = -1; i <= 0; i++) {
           const t = w.type(cx + i, cy + j);
           if (IS_LIQUID[t] || OVERLAY[t]) continue;
+          if (t === T.STONE) pf++;
+          else if (t === T.COBBLE) pc++;
+          else if (t === T.MARBLE) pm++;
           const v = w.variant(cx + i, cy + j) / 255;
           const mix3 = 0.18 + v * 0.3 * hash3(cx + i, cy + j);
           r += COL[t * 3] * (1 - mix3) + ACC[t * 3] * mix3;
@@ -35817,6 +35822,11 @@ void main() {
       r /= n;
       gg /= n;
       b /= n;
+      if (pave) {
+        pave[k] = pf / n;
+        pave[k + 1] = pc / n;
+        pave[k + 2] = pm / n;
+      }
       if (h2 < 0.9) {
         const s = Math.max(0, Math.min(1, (0.9 - h2) / 0.7));
         r = r + (0.91 - r) * s * 0.6;
@@ -35944,6 +35954,45 @@ void main() {
   }
 `
   );
+  var PAVING = (
+    /* glsl */
+    `
+  float paveHash(vec2 c) { return fract(sin(dot(c, vec2(127.1, 311.7))) * 43758.5453); }
+  // one course of stones w x h metres, every other row shifted half a stone:
+  // .x the stone's shade (0..1), .y distance (m) to its edge
+  vec2 paveCourse(vec2 p, vec2 size, float round) {
+    float row = floor(p.y / size.y);
+    vec2 q = vec2(p.x / size.x + fract(row * 0.5) * 1.0, p.y / size.y);
+    vec2 cell = floor(q), f = fract(q);
+    vec2 d = min(f, 1.0 - f) * size; // metres to the nearest edges
+    float e = min(d.x, d.y);
+    // rounded corners (cobbles)
+    vec2 c = max(round - d, 0.0);
+    e = min(e, round - length(c));
+    return vec2(paveHash(cell + row * 7.13), e);
+  }
+  vec3 paving(vec3 base, vec2 p, vec3 kind, float broad, float grain) {
+    float fw = fwidth(p.x) + fwidth(p.y);
+    float fade = 1.0 - smoothstep(0.05, 0.22, fw);
+    if (fade <= 0.0) return base;
+    float tot = kind.x + kind.y + kind.z;
+    vec2 flag = paveCourse(p, vec2(1.15, 0.72), 0.05);
+    vec2 cob = paveCourse(p + vec2(0.13, 0.0), vec2(0.34, 0.27), 0.1);
+    vec2 mar = paveCourse(p, vec2(1.6, 1.6), 0.0);
+    vec2 s = (flag * kind.x + cob * kind.y + mar * kind.z) / max(tot, 0.001);
+    float gap = mix(0.035, 0.018, kind.z / max(tot, 0.001));
+    float joint = 1.0 - smoothstep(gap * 0.4, gap + fw * 0.5, s.y);
+    // each stone a little lighter or darker (marble barely), a hint of wear in the middle
+    float shade = 0.9 + (s.x - 0.5) * mix(0.22, 0.08, kind.z / max(tot, 0.001)) + smoothstep(0.02, 0.2, s.y) * 0.05;
+    vec3 stone = base * shade;
+    // the joints: dark, and green with moss and grass where the ground is damp
+    float green = smoothstep(0.52, 0.72, broad + (grain - 0.5) * 0.3) * (1.0 - kind.z / max(tot, 0.001) * 0.8);
+    vec3 grout = mix(base * 0.55, vec3(0.32, 0.46, 0.2), green * 0.85);
+    vec3 paved = mix(stone, grout, joint);
+    return mix(base, paved, fade * min(1.0, tot * 1.2));
+  }
+`
+  );
   function terrainMaterial() {
     const m = new MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient() });
     const uOrigin2 = { value: new Vector2() };
@@ -35951,12 +36000,13 @@ void main() {
     m.userData.uOrigin = uOrigin2;
     m.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, FOG, { uOrigin: uOrigin2, uDetail, uCTime: CTIME });
-      shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nuniform vec2 uOrigin;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvec4 tWorld = modelMatrix * vec4(transformed, 1.0);\nvTerrainXZ = tWorld.xz + uOrigin;\nvTerrainUp = normalize(objectNormal).y;\nvTerrainY = tWorld.y;").replace("varying float vTerrainUp;", "varying float vTerrainUp;\nvarying float vTerrainY;");
-      shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nuniform sampler2D uDetail;\nuniform float uCTime;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;\nvarying float vTerrainY;\n" + CAUSTIC).replace("#include <color_fragment>", `#include <color_fragment>
+      shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nuniform vec2 uOrigin;\nattribute vec3 pave;\nvarying vec3 vPave;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvec4 tWorld = modelMatrix * vec4(transformed, 1.0);\nvTerrainXZ = tWorld.xz + uOrigin;\nvTerrainUp = normalize(objectNormal).y;\nvTerrainY = tWorld.y;\nvPave = pave;").replace("varying float vTerrainUp;", "varying float vTerrainUp;\nvarying float vTerrainY;");
+      shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nuniform sampler2D uDetail;\nuniform float uCTime;\nvarying vec3 vPave;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;\nvarying float vTerrainY;\n" + CAUSTIC + PAVING).replace("#include <color_fragment>", `#include <color_fragment>
         {
           float broad = texture2D(uDetail, vTerrainXZ / 64.0).r;
           float grain = texture2D(uDetail, vTerrainXZ / 6.0).g;
           diffuseColor.rgb *= 0.86 + broad * 0.2 + (grain - 0.5) * 0.12;
+          if (vPave.x + vPave.y + vPave.z > 0.01) diffuseColor.rgb = paving(diffuseColor.rgb, vTerrainXZ, vPave, broad, grain);
           // steep ground shows bare rock (not on beaches and water edges, which are flat)
           float steep = smoothstep(0.62, 0.42, vTerrainUp);
           vec3 rock = vec3(0.47, 0.43, 0.39) * (0.85 + grain * 0.3);
@@ -35970,7 +36020,7 @@ void main() {
           }
         }`);
     };
-    m.customProgramCacheKey = () => "terrain-detail";
+    m.customProgramCacheKey = () => "terrain-detail-paved";
     return m;
   }
   function boxes(list, sx, sy, sz, cy, mat, inset = 0) {
@@ -39413,7 +39463,7 @@ void main() {
             tgt.stamina = Math.min(tgt.d.maxStamina, tgt.stamina + 15);
             if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + 6);
             fx.parry(tgt, att, ang);
-            game.audio?.sfx("parry");
+            game.audio?.sfx("parry", tgt);
             if (tgt.isPlayer) game.onPlayerParry(att);
             return false;
           }
@@ -39426,9 +39476,9 @@ void main() {
             tgt.blocking = false;
             tgt.stagger(1.1);
             fx.guardBreak(tgt, att, ang);
-            game.audio?.sfx("guardbreak");
+            game.audio?.sfx("guardbreak", tgt);
           } else {
-            game.audio?.sfx("block");
+            game.audio?.sfx("block", tgt);
           }
         }
       }
@@ -39446,7 +39496,8 @@ void main() {
       }
       fx.hit(att, tgt, h2, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved });
       if (att?.isPlayer) game.emit("playerLanded", tgt, { final, crit, blocked });
-      game.audio?.sfx(blocked ? "block" : h2.sfxHit || (el === "physical" ? h2.slashing ? "slash_hit" : "punch" : el));
+      const thud = h2.slashing ? h2.heavy ? "slash_heavy" : "slash_hit" : h2.heavy ? "punch_heavy" : "punch";
+      game.audio?.sfx(blocked ? "block" : h2.sfxHit || (el === "physical" ? thud : el), tgt);
       return true;
     }
   };
@@ -40298,7 +40349,7 @@ void main() {
     if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, "#ffffff", 0.34, { life: 1.2 });
     if (!actor.isPlayer && def.telegraph !== false) telegraph(actor, def, game);
     if (def.onStart) def.onStart(actor, game);
-    game.audio?.sfx(def.sfxStart || "whoosh");
+    game.audio?.sfx(def.sfxStart || "whoosh", actor);
   }
   function telegraph(actor, def, game) {
     const wind = def.windup ?? 0.2;
@@ -40514,7 +40565,7 @@ void main() {
       }
     }
     if (s.fx) game.fx.tech(actor, s.fx.color ? s : { ...s, fx: { ...s.fx, color: col } }, a, "fx");
-    if (s.sfx) game.audio?.sfx(s.sfx);
+    if (s.sfx) game.audio?.sfx(s.sfx, actor);
   }
   function def_isPhysical(h2) {
     return !h2.element || h2.element === "physical";
@@ -40522,7 +40573,7 @@ void main() {
   function explode(p, game, e, mult) {
     game.combat.hitbox({ owner: p.owner, x: p.x, y: p.y, shape: "circle", range: e.range || 1.8, damage: (e.damage || 10) * mult, knockback: e.knockback ?? 6, stun: e.stun ?? 0.4, element: e.element || "explosion", duration: 0.1, radial: true, heavy: true, hitShips: true, status: e.status });
     game.fx.explosion(p.x, p.y, e, p.owner);
-    game.audio?.sfx("explosion");
+    game.audio?.sfx("explosion", p);
   }
   function trail(p, game, t) {
     game.fx.projTrail(p, t);
@@ -51940,7 +51991,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           this.damage(Math.round(cur.steer ? Math.min(28, impact * 1.6) : impact * 2), null, { crash: true });
           game.fx.shake(0.4);
           game.fx.burst(this.x + Math.cos(this.heading) * this.def.length * 0.5, this.y + Math.sin(this.heading) * this.def.length * 0.5, 14, { color: ["#8d6e63", "#e1f5fe"], speed: 4, g: 8, life: 0.6 });
-          game.audio?.sfx("crash");
+          game.audio?.sfx("crash", this);
           if (cur.steer) game.log("CRASH! Steer with the current \u2014 hit the canal walls and you will sink!", "#ff8a80");
         }
         this.speed *= -0.25;
@@ -52113,7 +52164,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         game.fx.burst(px2, py2, 6, { color: ["#eeeeee", "#9e9e9e"], speed: 2, g: -0.5, life: 0.8, kind: "smoke", size: 0.3, grow: 0.4, angle: a, spread: 0.6 });
       }
       game.fx.shake(0.15);
-      game.audio?.sfx("cannon");
+      game.audio?.sfx("cannon", this);
       return true;
     }
     draw(g, env) {
@@ -60084,7 +60135,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.armament = false;
       this.recalc();
       game.fx.burst(this.x, this.y, 8, { color: ["#d7ccc8", "#efebe9"], speed: 2.4, g: 1.2, z: 0.1, vz: 0.6, life: 0.45, kind: "dust", size: 0.14, grow: 0.3, drag: 3 });
-      game.audio?.sfx("ko");
+      game.audio?.sfx("ko", this);
       if (this.onKO) this.onKO(this, att, game);
       game.onKnockOut(this, att);
     }
@@ -60221,7 +60272,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.dodgeCd = 0.42 - this.attrs.agi * 15e-4;
       this._ghostTint = this.race === "lunarian" ? "#ffab91" : this.race === "skypiean" ? "#ffffff" : "#b3e5fc";
       game.fx.burst(this.x, this.y, 7, { angle: Math.atan2(-dy, -dx), spread: 1.6, color: ["#d7ccc8", "#bcaaa4", "#efebe9"], speed: 2.4, z: 0.08, vz: 0.6, g: 1.2, life: 0.5, kind: "dust", size: 0.2, grow: 0.45 });
-      game.audio?.sfx("dodge");
+      game.audio?.sfx("dodge", this);
       if (this.isPlayer) game.emit("playerDodge");
       return R3;
     }
@@ -118399,7 +118450,60 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       this.musicGain.gain.value = s.music * 0.28;
     }
     // ---------------------------------------------------------------- sfx
-    noise(t, dur, { freq = 1e3, q: q2 = 1, type = "bandpass", gain = 0.5, attack = 5e-3, sweep } = {}) {
+    // Every effect is a few layers built from the pieces below, in the loud,
+    // snappy spirit of an anime fight: a sharp transient to hear it land, a
+    // body with some weight (pushed through a soft clipper for grit), and a
+    // tail — metal ringing, debris crackling, a touch of shared room echo —
+    // each a little different every time.
+    /** The echo send and the soft clipper, made once. */
+    fxBus() {
+      if (this.verb) return;
+      const c = this.ctx;
+      const len = Math.floor(c.sampleRate * 1.6), ir = c.createBuffer(2, len, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = ir.getChannelData(ch);
+        for (let i = 0; i < len; i++) {
+          const t = i / c.sampleRate;
+          d[i] = (Math.random() * 2 - 1) * Math.exp(-t / 0.32) * (t < 0.012 ? t / 0.012 : 1);
+        }
+      }
+      this.verb = c.createConvolver();
+      this.verb.buffer = ir;
+      const lp = c.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 3800;
+      this.verb.connect(lp);
+      lp.connect(this.sfxGain);
+      const curve = new Float32Array(1024);
+      for (let i = 0; i < 1024; i++) {
+        const x = i / 1023 * 2 - 1;
+        curve[i] = Math.tanh(x * 2.6) / Math.tanh(2.6);
+      }
+      this.clipCurve = curve;
+    }
+    /** Where a sound goes: `out` (its level, and how far off it is), echo `send`, and grit (`drive`). */
+    route(out, { send = 0, drive = 0 } = {}) {
+      const c = this.ctx;
+      const g = c.createGain();
+      g.gain.value = out;
+      g.connect(this.sfxGain);
+      if (send > 0) {
+        const s = c.createGain();
+        s.gain.value = send;
+        g.connect(s);
+        s.connect(this.verb);
+      }
+      if (!drive) return g;
+      const pre = c.createGain();
+      pre.gain.value = 1 + drive;
+      const ws = c.createWaveShaper();
+      ws.curve = this.clipCurve;
+      ws.oversample = "2x";
+      pre.connect(ws);
+      ws.connect(g);
+      return pre;
+    }
+    noise(t, dur, { freq = 1e3, q: q2 = 1, type = "bandpass", gain = 0.5, attack = 5e-3, sweep, dest } = {}) {
       const c = this.ctx;
       const src = c.createBufferSource();
       src.buffer = this.noiseBuf;
@@ -118414,16 +118518,25 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
       src.connect(f);
       f.connect(g);
-      g.connect(this.sfxGain);
+      g.connect(dest || this.sfxGain);
       src.start(t, Math.random() * 0.5);
       src.stop(t + dur + 0.05);
     }
-    tone(t, dur, { freq = 440, to, type = "sine", gain = 0.3, attack = 5e-3, dest } = {}) {
+    tone(t, dur, { freq = 440, to, type = "sine", gain = 0.3, attack = 5e-3, dest, vib } = {}) {
       const c = this.ctx;
       const o = c.createOscillator();
       o.type = type;
       o.frequency.setValueAtTime(freq, t);
       if (to) o.frequency.exponentialRampToValueAtTime(Math.max(20, to), t + dur);
+      if (vib) {
+        const lfo = c.createOscillator(), lg2 = c.createGain();
+        lfo.frequency.value = vib.rate;
+        lg2.gain.value = vib.depth;
+        lfo.connect(lg2);
+        lg2.connect(o.frequency);
+        lfo.start(t);
+        lfo.stop(t + dur + 0.05);
+      }
       const g = c.createGain();
       g.gain.setValueAtTime(1e-4, t);
       g.gain.exponentialRampToValueAtTime(gain, t + attack);
@@ -118433,179 +118546,357 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       o.start(t);
       o.stop(t + dur + 0.05);
     }
-    sfx(name) {
+    /** Struck metal: inharmonic partials over `base`, each dying away at its own pace. */
+    ring(t, base2, dur, gain, dest, parts = [1, 1.51, 2.29, 3.13, 4.02]) {
+      parts.forEach((m, i) => this.tone(t, dur * (1 - i * 0.12), { freq: base2 * m * (0.99 + Math.random() * 0.02), type: "sine", gain: gain / (1 + i * 0.6), attack: 2e-3, dest }));
+    }
+    /** Debris, sparks, splinters, bubbles: `n` tiny random pops over `dur`. */
+    crackle(t, dur, n, { freq = 3e3, gain = 0.12, spread = 0.6, dest } = {}) {
+      for (let i = 0; i < n; i++) {
+        const at5 = t + Math.random() * dur, f = freq * (1 - spread / 2 + Math.random() * spread);
+        this.noise(at5, 0.012 + Math.random() * 0.025, { freq: f, q: 2.2, gain: gain * (0.4 + Math.random() * 0.6), attack: 1e-3, dest });
+      }
+    }
+    /**
+     * Play an effect. `at`: where it happens ({ x, y }); a hit across the
+     * harbour is quieter than one in your face, and one out of earshot silent.
+     */
+    sfx(name, at5 = null) {
       if (!this.ctx || this.ctx.state !== "running") {
         if (this.ctx) this.ctx.resume();
         return;
       }
+      this.fxBus();
       const t = this.ctx.currentTime;
-      const lim = { punch: 0.04, slash_hit: 0.04, block: 0.05, whoosh: 0.05, splash: 0.2, splash_big: 0.3, wade: 0.2, choke: 0.5, gasp: 1, thunder_small: 0.15, coin: 0.05 }[name] ?? 0.02;
+      let vol = 1;
+      if (at5 && this.ear) {
+        const e = this.ear();
+        if (e) {
+          const d2 = Math.hypot(this.dxOf ? this.dxOf(e.x, at5.x) : at5.x - e.x, at5.y - e.y);
+          if (d2 > 70) return;
+          vol = 1 / (1 + Math.max(0, d2 - 4) / 10);
+        }
+      }
+      const lim = { punch: 0.04, punch_heavy: 0.06, slash_hit: 0.04, slash_heavy: 0.06, block: 0.05, whoosh: 0.05, splash: 0.2, splash_big: 0.3, wade: 0.2, choke: 0.5, gasp: 1, thunder_small: 0.15, lightning: 0.12, coin: 0.05, fire: 0.08, water: 0.08, step: 0.08 }[name] ?? 0.02;
       if (this.last[name] && t - this.last[name] < lim) return;
       this.last[name] = t;
-      const r = () => 0.9 + Math.random() * 0.2;
+      const r = () => 0.92 + Math.random() * 0.16;
+      const R3 = (o = {}) => this.route(vol, o);
+      let d;
       switch (name) {
+        // ---- the fight
         case "whoosh":
-          this.noise(t, 0.12, { freq: 1800 * r(), q: 0.8, gain: 0.12, sweep: 600 });
+          d = R3({ send: 0.05 });
+          this.noise(t, 0.17, { freq: 700 * r(), q: 1.3, gain: 0.16, sweep: 2600, dest: d });
+          this.noise(t + 0.06, 0.1, { freq: 2400, q: 1, gain: 0.06, sweep: 900, dest: d });
           break;
         case "punch":
-          this.noise(t, 0.09, { freq: 500 * r(), q: 1.2, gain: 0.5 });
-          this.tone(t, 0.09, { freq: 140, to: 60, type: "sine", gain: 0.4 });
+          d = R3({ send: 0.06, drive: 2.2 });
+          this.noise(t, 0.016, { freq: 3200 * r(), q: 0.7, type: "highpass", gain: 0.35, attack: 1e-3, dest: d });
+          this.tone(t, 0.13, { freq: 165 * r(), to: 48, gain: 0.55, attack: 2e-3, dest: d });
+          this.noise(t, 0.075, { freq: 1100 * r(), q: 1.3, gain: 0.32, attack: 2e-3, dest: d });
+          break;
+        case "punch_heavy":
+          d = R3({ send: 0.16, drive: 3.2 });
+          this.noise(t, 0.022, { freq: 2600, q: 0.6, type: "highpass", gain: 0.4, attack: 1e-3, dest: d });
+          this.tone(t, 0.3, { freq: 120 * r(), to: 32, gain: 0.75, attack: 2e-3, dest: d });
+          this.noise(t, 0.28, { freq: 520, q: 0.8, type: "lowpass", gain: 0.45, sweep: 110, dest: d });
+          this.noise(t + 0.01, 0.1, { freq: 900, q: 1.1, gain: 0.25, dest: d });
           break;
         case "slash_hit":
-          this.noise(t, 0.12, { freq: 3500 * r(), q: 2, gain: 0.35, sweep: 1500 });
-          this.tone(t, 0.06, { freq: 900, to: 300, type: "sawtooth", gain: 0.06 });
+          d = R3({ send: 0.12, drive: 0.8 });
+          this.noise(t, 0.09, { freq: 5200 * r(), q: 0.8, type: "highpass", gain: 0.34, attack: 1e-3, sweep: 2600, dest: d });
+          this.tone(t, 0.1, { freq: 200, to: 70, gain: 0.3, dest: d });
+          this.ring(t + 5e-3, 1480 * r(), 0.38, 0.07, d);
+          break;
+        case "slash_heavy":
+          d = R3({ send: 0.2, drive: 1.6 });
+          this.noise(t, 0.16, { freq: 4200 * r(), q: 0.7, type: "highpass", gain: 0.42, attack: 1e-3, sweep: 1800, dest: d });
+          this.tone(t, 0.24, { freq: 140, to: 40, gain: 0.55, dest: d });
+          this.ring(t + 0.01, 1180 * r(), 0.6, 0.09, d);
           break;
         case "block":
-          this.tone(t, 0.12, { freq: 620 * r(), type: "square", gain: 0.08 });
-          this.noise(t, 0.06, { freq: 2500, gain: 0.2 });
+          d = R3({ send: 0.05, drive: 0.6 });
+          this.noise(t, 0.06, { freq: 620 * r(), q: 2, gain: 0.35, attack: 1e-3, dest: d });
+          this.tone(t, 0.09, { freq: 125, to: 70, gain: 0.28, dest: d });
+          this.ring(t, 900 * r(), 0.16, 0.035, d, [1, 2.1]);
           break;
         case "parry":
-          this.tone(t, 0.25, { freq: 1300, to: 1900, type: "triangle", gain: 0.25 });
-          this.tone(t + 0.02, 0.3, { freq: 2600, type: "sine", gain: 0.12 });
+          d = R3({ send: 0.35 });
+          this.noise(t, 0.03, { freq: 4e3, q: 0.6, type: "highpass", gain: 0.35, attack: 1e-3, dest: d });
+          this.ring(t, 1320 * r(), 0.95, 0.14, d, [1, 1.5, 2.25, 3.14, 3.96]);
+          this.tone(t + 0.01, 0.4, { freq: 2640, to: 2900, type: "triangle", gain: 0.05, dest: d });
           break;
         case "guardbreak":
-          this.tone(t, 0.3, { freq: 300, to: 80, type: "sawtooth", gain: 0.2 });
+          d = R3({ send: 0.15, drive: 2.5 });
+          this.noise(t, 0.26, { freq: 480, type: "lowpass", gain: 0.5, dest: d });
+          this.tone(t, 0.32, { freq: 260, to: 65, type: "sawtooth", gain: 0.3, dest: d });
+          this.ring(t, 700, 0.3, 0.05, d, [1, 1.7, 2.6]);
           break;
         case "dodge":
-          this.noise(t, 0.15, { freq: 900, q: 0.6, gain: 0.12, sweep: 2400 });
+          d = R3({ send: 0.04 });
+          this.noise(t, 0.15, { freq: 1200 * r(), q: 0.9, gain: 0.13, sweep: 3200, dest: d });
           break;
         case "ko":
-          this.tone(t, 0.35, { freq: 220, to: 55, type: "triangle", gain: 0.3 });
-          this.noise(t, 0.3, { freq: 300, gain: 0.2, type: "lowpass" });
+          d = R3({ send: 0.25, drive: 2 });
+          this.tone(t, 0.55, { freq: 95, to: 30, gain: 0.7, dest: d });
+          this.noise(t, 0.4, { freq: 380, type: "lowpass", gain: 0.35, sweep: 90, dest: d });
+          this.crackle(t + 0.05, 0.25, 6, { freq: 900, gain: 0.08, dest: d });
           break;
         case "knocked":
-          this.tone(t, 0.8, { freq: 330, to: 110, type: "sawtooth", gain: 0.12 });
+          d = R3({ send: 0.3 });
+          this.tone(t, 0.95, { freq: 330, to: 105, type: "sawtooth", gain: 0.1, vib: { rate: 5, depth: 14 }, dest: d });
+          this.tone(t, 0.9, { freq: 165, to: 52, gain: 0.14, dest: d });
           break;
         case "getup":
-          [392, 523, 659].forEach((f, i) => this.tone(t + i * 0.08, 0.25, { freq: f, type: "square", gain: 0.1 }));
+          d = R3({ send: 0.25 });
+          [392, 523, 659].forEach((f, i) => this.tone(t + i * 0.08, 0.28, { freq: f, type: "triangle", gain: 0.12, dest: d }));
           break;
         case "death":
-          [330, 311, 294, 220].forEach((f, i) => this.tone(t + i * 0.25, 0.5, { freq: f, type: "triangle", gain: 0.18 }));
+          d = R3({ send: 0.45 });
+          [330, 311, 294, 220].forEach((f, i) => this.tone(t + i * 0.26, 0.6, { freq: f, type: "triangle", gain: 0.18, dest: d }));
           break;
+        case "haki":
+          d = R3({ send: 0.3, drive: 2.4 });
+          this.tone(t, 0.5, { freq: 62, to: 124, type: "sawtooth", gain: 0.2, attack: 0.03, dest: d });
+          this.tone(t, 0.45, { freq: 46, to: 38, gain: 0.35, attack: 0.02, dest: d });
+          this.crackle(t + 0.05, 0.35, 8, { freq: 2400, gain: 0.06, dest: d });
+          break;
+        case "haki_obs":
+          d = R3({ send: 0.5 });
+          this.tone(t, 0.7, { freq: 880, to: 1320, gain: 0.1, attack: 0.04, dest: d });
+          this.tone(t + 0.05, 0.6, { freq: 1760, to: 2200, gain: 0.04, attack: 0.05, dest: d });
+          break;
+        // ---- the elements (a Devil Fruit's blows sound like what they're made of)
+        case "fire":
+          d = R3({ send: 0.15, drive: 0.8 });
+          this.noise(t, 0.45, { freq: 1300 * r(), q: 0.5, type: "lowpass", gain: 0.4, attack: 0.02, sweep: 380, dest: d });
+          this.crackle(t, 0.4, 10, { freq: 2600, gain: 0.07, dest: d });
+          break;
+        case "magma":
+          d = R3({ send: 0.2, drive: 2 });
+          this.tone(t, 0.5, { freq: 70, to: 36, gain: 0.5, dest: d });
+          this.noise(t, 0.6, { freq: 700, type: "lowpass", gain: 0.45, attack: 0.03, sweep: 150, dest: d });
+          this.crackle(t + 0.05, 0.5, 12, { freq: 1500, gain: 0.08, dest: d });
+          break;
+        case "ice":
+          d = R3({ send: 0.3 });
+          this.noise(t, 0.08, { freq: 5e3, type: "highpass", gain: 0.28, attack: 1e-3, dest: d });
+          this.ring(t, 2400 * r(), 0.45, 0.06, d, [1, 1.34, 1.87, 2.51]);
+          this.crackle(t, 0.15, 6, { freq: 6e3, gain: 0.07, dest: d });
+          break;
+        case "snow":
+          d = R3({ send: 0.25 });
+          this.noise(t, 0.2, { freq: 3e3, q: 0.5, gain: 0.14, attack: 0.01, sweep: 1200, dest: d });
+          this.ring(t, 3100, 0.3, 0.025, d, [1, 1.5]);
+          break;
+        case "lightning":
+        case "thunder_small":
+          d = R3({ send: 0.2, drive: 1.8 });
+          for (let i = 0; i < 4; i++) this.tone(t + i * 0.025, 0.04, { freq: 1600 + Math.random() * 2800, type: "square", gain: 0.07, attack: 1e-3, dest: d });
+          this.noise(t, 0.35, { freq: 2800, gain: 0.3, attack: 2e-3, sweep: 400, dest: d });
+          this.tone(t, 0.3, { freq: 62, gain: 0.3, dest: d });
+          break;
+        case "water":
+          d = R3({ send: 0.12 });
+          this.noise(t, 0.32, { freq: 950 * r(), q: 0.6, type: "lowpass", gain: 0.35, sweep: 280, dest: d });
+          for (let i = 0; i < 3; i++) this.tone(t + 0.04 + i * 0.05, 0.07, { freq: 300 + Math.random() * 250, to: 700, gain: 0.07, dest: d });
+          break;
+        case "swamp":
+          d = R3({ send: 0.1 });
+          for (let i = 0; i < 5; i++) this.tone(t + i * 0.07, 0.1, { freq: 110 + Math.random() * 90, to: 260, gain: 0.12, dest: d });
+          this.noise(t, 0.4, { freq: 300, type: "lowpass", gain: 0.2, dest: d });
+          break;
+        case "poison":
+          d = R3({ send: 0.12 });
+          this.noise(t, 0.5, { freq: 6e3, q: 0.5, type: "highpass", gain: 0.1, attack: 0.02, dest: d });
+          this.tone(t, 0.45, { freq: 180, to: 120, type: "sawtooth", gain: 0.07, vib: { rate: 9, depth: 18 }, dest: d });
+          break;
+        case "gas":
+          d = R3({ send: 0.1 });
+          this.noise(t, 0.55, { freq: 4500, q: 0.4, type: "highpass", gain: 0.12, attack: 0.05, sweep: 2500, dest: d });
+          break;
+        case "smoke":
+          d = R3({ send: 0.15 });
+          this.noise(t, 0.4, { freq: 650 * r(), q: 0.5, type: "lowpass", gain: 0.3, attack: 0.03, sweep: 220, dest: d });
+          break;
+        case "sand":
+          d = R3({ send: 0.1 });
+          this.noise(t, 0.42, { freq: 1900 * r(), q: 0.45, gain: 0.22, attack: 0.02, sweep: 900, dest: d });
+          this.crackle(t, 0.4, 14, { freq: 4200, gain: 0.05, dest: d });
+          break;
+        case "light":
+          d = R3({ send: 0.45 });
+          this.tone(t, 0.3, { freq: 1760, to: 3520, gain: 0.12, attack: 2e-3, dest: d });
+          this.ring(t + 0.03, 2640, 0.55, 0.035, d, [1, 1.5, 2]);
+          break;
+        case "dark":
+          d = R3({ send: 0.3, drive: 1.5 });
+          this.noise(t, 0.35, { freq: 380, type: "lowpass", gain: 0.4, attack: 0.25, dest: d });
+          this.tone(t, 0.45, { freq: 55, to: 30, gain: 0.45, attack: 0.2, dest: d });
+          break;
+        case "quake":
+          d = R3({ send: 0.3, drive: 2.5 });
+          this.tone(t, 0.9, { freq: 48, to: 30, gain: 0.7, vib: { rate: 14, depth: 6 }, dest: d });
+          this.noise(t, 0.9, { freq: 300, type: "lowpass", gain: 0.5, dest: d });
+          this.crackle(t + 0.1, 0.7, 10, { freq: 800, gain: 0.1, dest: d });
+          break;
+        case "string":
+          d = R3({ send: 0.15 });
+          this.tone(t, 0.35, { freq: 440 * r(), to: 400, type: "sawtooth", gain: 0.1, attack: 1e-3, dest: d });
+          this.noise(t, 0.05, { freq: 3e3, gain: 0.15, dest: d });
+          break;
+        case "explosion":
+          d = R3({ send: 0.35, drive: 3 });
+          this.noise(t, 0.05, { freq: 1500, type: "highpass", gain: 0.5, attack: 1e-3, dest: d });
+          this.tone(t, 0.9, { freq: 72, to: 26, gain: 0.85, dest: d });
+          this.noise(t, 1.1, { freq: 900, type: "lowpass", gain: 0.7, sweep: 55, dest: d });
+          this.crackle(t + 0.08, 0.7, 16, { freq: 1800, gain: 0.1, dest: d });
+          break;
+        case "cannon":
+          d = R3({ send: 0.45, drive: 2.6 });
+          this.noise(t, 0.04, { freq: 1600, type: "highpass", gain: 0.5, attack: 1e-3, dest: d });
+          this.tone(t, 0.8, { freq: 88, to: 30, gain: 0.85, dest: d });
+          this.noise(t, 1.3, { freq: 600, type: "lowpass", gain: 0.55, sweep: 60, dest: d });
+          break;
+        case "crash":
+          d = R3({ send: 0.2, drive: 1.5 });
+          this.noise(t, 0.5, { freq: 320, type: "lowpass", gain: 0.55, dest: d });
+          this.tone(t, 0.3, { freq: 100, to: 45, gain: 0.4, dest: d });
+          this.crackle(t, 0.45, 14, { freq: 1300, gain: 0.12, dest: d });
+          break;
+        case "thunder":
+          d = R3({ send: 0.4, drive: 1 });
+          this.noise(t, 0.12, { freq: 3e3, gain: 0.35, attack: 2e-3, sweep: 900, dest: d });
+          this.noise(t + 0.05, 2.3, { freq: 220, gain: 0.7, type: "lowpass", attack: 0.03, sweep: 40, dest: d });
+          break;
+        // ---- moving about
         case "splash":
-          this.noise(t, 0.4, { freq: 700, q: 0.5, gain: 0.3, type: "lowpass", sweep: 200 });
+          this.noise(t, 0.4, { freq: 700, q: 0.5, gain: 0.3, type: "lowpass", sweep: 200, dest: R3({ send: 0.08 }) });
           break;
         case "splash_big":
-          this.noise(t, 0.75, { freq: 950, q: 0.4, gain: 0.45, type: "lowpass", sweep: 140 });
-          this.tone(t, 0.3, { freq: 90, to: 42, gain: 0.3 });
-          this.noise(t + 0.05, 0.4, { freq: 2600, q: 0.6, gain: 0.1, sweep: 900 });
+          d = R3({ send: 0.15 });
+          this.noise(t, 0.75, { freq: 950, q: 0.4, gain: 0.45, type: "lowpass", sweep: 140, dest: d });
+          this.tone(t, 0.3, { freq: 90, to: 42, gain: 0.3, dest: d });
+          this.noise(t + 0.05, 0.4, { freq: 2600, q: 0.6, gain: 0.1, sweep: 900, dest: d });
           break;
         case "splash_out":
-          this.noise(t, 0.35, { freq: 1300, q: 0.5, gain: 0.26, sweep: 420 });
-          this.tone(t + 0.04, 0.12, { freq: 300, to: 620, gain: 0.08 });
+          d = R3();
+          this.noise(t, 0.35, { freq: 1300, q: 0.5, gain: 0.26, sweep: 420, dest: d });
+          this.tone(t + 0.04, 0.12, { freq: 300, to: 620, gain: 0.08, dest: d });
           break;
         case "wade":
-          this.noise(t, 0.2, { freq: 1400 * r(), q: 0.8, gain: 0.06, sweep: 600 });
+          this.noise(t, 0.2, { freq: 1400 * r(), q: 0.8, gain: 0.06, sweep: 600, dest: R3() });
           break;
         case "jump":
-          this.noise(t, 0.12, { freq: 1100 * r(), q: 0.7, gain: 0.08, sweep: 2400 });
+          this.noise(t, 0.12, { freq: 1100 * r(), q: 0.7, gain: 0.08, sweep: 2400, dest: R3() });
           break;
         case "jump_big":
-          this.tone(t, 0.18, { freq: 120, to: 60, gain: 0.25 });
-          this.noise(t, 0.32, { freq: 900, q: 0.6, gain: 0.15, sweep: 3200 });
+          d = R3({ send: 0.08 });
+          this.tone(t, 0.18, { freq: 120, to: 60, gain: 0.25, dest: d });
+          this.noise(t, 0.32, { freq: 900, q: 0.6, gain: 0.15, sweep: 3200, dest: d });
           break;
         case "land_heavy":
-          this.noise(t, 0.18, { freq: 260, gain: 0.45, type: "lowpass" });
-          this.tone(t, 0.16, { freq: 110, to: 48, gain: 0.35 });
+          d = R3({ send: 0.1, drive: 1.4 });
+          this.noise(t, 0.18, { freq: 260, gain: 0.45, type: "lowpass", dest: d });
+          this.tone(t, 0.16, { freq: 110, to: 48, gain: 0.35, dest: d });
           break;
         // breaking the surface out of breath: a long gulp of air
         case "gasp":
-          this.noise(t, 0.5, { freq: 800, q: 0.9, gain: 0.2, attack: 0.1, sweep: 2300 });
-          this.noise(t + 0.55, 0.3, { freq: 600, q: 0.7, gain: 0.08, attack: 0.05, sweep: 300 });
+          d = R3();
+          this.noise(t, 0.5, { freq: 800, q: 0.9, gain: 0.2, attack: 0.1, sweep: 2300, dest: d });
+          this.noise(t + 0.55, 0.3, { freq: 600, q: 0.7, gain: 0.08, attack: 0.05, sweep: 300, dest: d });
           break;
         // out of air under water: the last bubbles gurgling out
         case "choke":
-          for (let i = 0; i < 5; i++) this.tone(t + i * 0.07 * r(), 0.08, { freq: 170 + Math.random() * 140, to: 420 + Math.random() * 200, gain: 0.13 });
-          this.noise(t, 0.35, { freq: 380, gain: 0.12, type: "lowpass" });
-          break;
-        case "cannon":
-          this.tone(t, 0.5, { freq: 90, to: 35, type: "sine", gain: 0.8 });
-          this.noise(t, 0.6, { freq: 400, gain: 0.6, type: "lowpass", sweep: 80 });
-          break;
-        case "explosion":
-          this.tone(t, 0.7, { freq: 70, to: 30, type: "sine", gain: 0.8 });
-          this.noise(t, 0.9, { freq: 800, gain: 0.7, type: "lowpass", sweep: 60 });
-          break;
-        case "crash":
-          this.noise(t, 0.5, { freq: 300, gain: 0.6, type: "lowpass" });
-          this.tone(t, 0.3, { freq: 100, to: 50, gain: 0.4 });
-          break;
-        case "thunder":
-          this.noise(t, 2.2, { freq: 200, gain: 0.7, type: "lowpass", attack: 0.02, sweep: 40 });
-          break;
-        case "thunder_small":
-        case "lightning":
-          this.noise(t, 0.5, { freq: 2500, gain: 0.3, sweep: 300 });
-          this.tone(t, 0.3, { freq: 60, gain: 0.3 });
-          break;
-        case "fire":
-          this.noise(t, 0.4, { freq: 1200, q: 0.4, gain: 0.25, sweep: 400 });
-          break;
-        case "ice":
-          this.tone(t, 0.3, { freq: 2400, to: 3200, type: "triangle", gain: 0.1 });
-          this.noise(t, 0.2, { freq: 5e3, gain: 0.15 });
-          break;
-        case "haki":
-          this.tone(t, 0.4, { freq: 80, to: 160, type: "sawtooth", gain: 0.15 });
-          break;
-        case "haki_obs":
-          this.tone(t, 0.6, { freq: 880, to: 1320, type: "sine", gain: 0.1 });
-          break;
-        case "knock":
-          [0, 0.17, 0.34].forEach((d) => {
-            this.noise(t + d, 0.07, { freq: 260 * r(), q: 1.6, gain: 0.55 });
-            this.tone(t + d, 0.08, { freq: 130, to: 80, gain: 0.25 });
-          });
-          break;
-        case "door":
-          this.tone(t, 0.4, { freq: 170 * r(), to: 250, type: "sawtooth", gain: 0.025, attack: 0.05 });
-          this.noise(t, 0.3, { freq: 900, q: 0.6, gain: 0.05 });
-          break;
-        case "doorshut":
-          this.noise(t, 0.12, { freq: 220, gain: 0.35, type: "lowpass" });
-          this.tone(t, 0.12, { freq: 95, to: 60, gain: 0.3 });
-          break;
-        case "doorbreak":
-          this.noise(t, 0.6, { freq: 320, gain: 0.7, type: "lowpass" });
-          this.noise(t, 0.35, { freq: 2600, gain: 0.3, sweep: 700 });
-          this.tone(t, 0.3, { freq: 110, to: 45, gain: 0.5 });
+          d = R3();
+          for (let i = 0; i < 5; i++) this.tone(t + i * 0.07 * r(), 0.08, { freq: 170 + Math.random() * 140, to: 420 + Math.random() * 200, gain: 0.13, dest: d });
+          this.noise(t, 0.35, { freq: 380, gain: 0.12, type: "lowpass", dest: d });
           break;
         case "board":
         case "step":
-          this.noise(t, 0.12, { freq: 300, gain: 0.2, type: "lowpass" });
+          d = R3();
+          this.noise(t, 0.1, { freq: 280 * r(), q: 1.2, gain: 0.22, attack: 2e-3, dest: d });
+          this.tone(t, 0.07, { freq: 140, to: 90, gain: 0.1, dest: d });
+          break;
+        // ---- doors, loot and the like
+        case "knock":
+          d = R3({ send: 0.12 });
+          [0, 0.17, 0.34].forEach((k) => {
+            this.noise(t + k, 0.07, { freq: 260 * r(), q: 1.6, gain: 0.55, dest: d });
+            this.tone(t + k, 0.08, { freq: 130, to: 80, gain: 0.25, dest: d });
+          });
+          break;
+        case "door":
+          d = R3({ send: 0.1 });
+          this.noise(t, 0.03, { freq: 2600, q: 2, gain: 0.18, attack: 1e-3, dest: d });
+          this.tone(t + 0.04, 0.42, { freq: 170 * r(), to: 250, type: "sawtooth", gain: 0.05, attack: 0.06, vib: { rate: 22, depth: 18 }, dest: d });
+          this.noise(t + 0.04, 0.3, { freq: 900, q: 0.6, gain: 0.08, dest: d });
+          break;
+        case "doorshut":
+          d = R3({ send: 0.12 });
+          this.noise(t, 0.12, { freq: 220, gain: 0.35, type: "lowpass", dest: d });
+          this.tone(t, 0.12, { freq: 95, to: 60, gain: 0.3, dest: d });
+          break;
+        case "doorbreak":
+          d = R3({ send: 0.2, drive: 2 });
+          this.noise(t, 0.6, { freq: 320, gain: 0.7, type: "lowpass", dest: d });
+          this.noise(t, 0.35, { freq: 2600, gain: 0.3, sweep: 700, dest: d });
+          this.tone(t, 0.3, { freq: 110, to: 45, gain: 0.5, dest: d });
+          this.crackle(t, 0.4, 12, { freq: 1500, gain: 0.12, dest: d });
           break;
         case "coin":
-          this.tone(t, 0.08, { freq: 1568, type: "square", gain: 0.07 });
-          this.tone(t + 0.07, 0.18, { freq: 2093, type: "square", gain: 0.07 });
+          d = R3({ send: 0.15 });
+          this.ring(t, 1568, 0.18, 0.07, d, [1, 2.76]);
+          this.ring(t + 0.07, 2093, 0.3, 0.07, d, [1, 2.76]);
           break;
         case "treasure":
-          [523, 659, 784, 1046].forEach((f, i) => this.tone(t + i * 0.09, 0.3, { freq: f, type: "triangle", gain: 0.14 }));
+          d = R3({ send: 0.3 });
+          [523, 659, 784, 1046].forEach((f, i) => this.tone(t + i * 0.09, 0.35, { freq: f, type: "triangle", gain: 0.14, dest: d }));
+          this.ring(t + 0.36, 2093, 0.5, 0.04, d, [1, 2.76, 5.4]);
+          break;
+        case "bell":
+          this.ring(t, 196, 3.2, 0.2, R3({ send: 0.5 }), [0.5, 1, 1.2, 1.5, 2, 2.6, 3]);
           break;
         case "eat":
-          this.noise(t, 0.08, { freq: 900, gain: 0.2 });
-          this.noise(t + 0.12, 0.08, { freq: 800, gain: 0.2 });
+          d = R3();
+          this.noise(t, 0.08, { freq: 900, gain: 0.2, dest: d });
+          this.noise(t + 0.12, 0.08, { freq: 800, gain: 0.2, dest: d });
+          this.tone(t + 0.26, 0.12, { freq: 220, to: 160, gain: 0.08, dest: d });
           break;
         case "equip":
-          this.tone(t, 0.1, { freq: 700, type: "square", gain: 0.06 });
+          d = R3({ send: 0.08 });
+          this.noise(t, 0.03, { freq: 3500, q: 1.5, gain: 0.2, attack: 1e-3, dest: d });
+          this.ring(t + 0.01, 1900, 0.18, 0.05, d, [1, 1.6]);
           break;
         case "page":
-          this.noise(t, 0.2, { freq: 3e3, q: 0.5, gain: 0.08 });
+          this.noise(t, 0.2, { freq: 3e3, q: 0.5, gain: 0.08, dest: R3() });
           break;
         case "reveal":
-          [392, 494, 587].forEach((f, i) => this.tone(t + i * 0.1, 0.35, { freq: f, type: "triangle", gain: 0.12 }));
+          d = R3({ send: 0.3 });
+          [392, 494, 587].forEach((f, i) => this.tone(t + i * 0.1, 0.4, { freq: f, type: "triangle", gain: 0.16, dest: d }));
           break;
         case "fanfare":
-          [523, 659, 784, 1046, 784, 1046].forEach((f, i) => this.tone(t + i * 0.11, 0.3, { freq: f, type: "square", gain: 0.08 }));
+          d = R3({ send: 0.35, drive: 0.4 });
+          [523, 659, 784, 1046].forEach((f, i) => {
+            this.tone(t + i * 0.1, 0.24, { freq: f, type: "sawtooth", gain: 0.06, dest: d });
+            this.tone(t + i * 0.1, 0.24, { freq: f, type: "triangle", gain: 0.12, dest: d });
+          });
+          [523, 659, 784, 1046].forEach((f) => this.tone(t + 0.42, 0.95, { freq: f, type: "triangle", gain: 0.065, attack: 0.02, dest: d }));
+          this.ring(t + 0.42, 2093, 0.6, 0.03, d, [1, 2.76]);
           break;
         case "breakthrough":
-          [440, 554, 659, 880].forEach((f, i) => this.tone(t + i * 0.07, 0.4, { freq: f, type: "sawtooth", gain: 0.06 }));
+          d = R3({ send: 0.35, drive: 0.6 });
+          [440, 554, 659, 880].forEach((f, i) => this.tone(t + i * 0.07, 0.45, { freq: f, type: "sawtooth", gain: 0.06, dest: d }));
+          this.tone(t, 0.6, { freq: 55, to: 110, gain: 0.2, dest: d });
           break;
         case "seaking":
-          this.tone(t, 1.6, { freq: 70, to: 45, type: "sawtooth", gain: 0.3, attack: 0.3 });
-          this.noise(t, 1.5, { freq: 250, gain: 0.3, type: "lowpass" });
+          d = R3({ send: 0.5, drive: 1.5 });
+          this.tone(t, 1.8, { freq: 72, to: 44, type: "sawtooth", gain: 0.3, attack: 0.3, vib: { rate: 3, depth: 4 }, dest: d });
+          this.noise(t, 1.6, { freq: 250, gain: 0.3, type: "lowpass", dest: d });
           break;
         default:
-          this.noise(t, 0.05, { freq: 1500, gain: 0.05 });
+          this.noise(t, 0.05, { freq: 1500, gain: 0.05, dest: R3() });
       }
     }
     // --------------------------------------------------------------- music
@@ -121396,6 +121687,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     await nextFrame();
     const game = new Game({ renderer, input, ui, audio, world });
     game.settings = settings;
+    audio.ear = () => game.player;
+    audio.dxOf = (a, b) => game.world?.dx ? game.world.dx(a, b) : b - a;
     const phone = !!window.matchMedia?.("(hover: none) and (pointer: coarse)")?.matches;
     if (phone && !settings.qualityPicked) settings.quality = "low";
     if (navigator.webdriver) settings.autoRes = false;

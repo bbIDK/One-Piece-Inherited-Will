@@ -226,6 +226,7 @@ export class TerrainManager {
     const n = CHUNK / step + 1;
     const pos = new Float32Array(n * n * 3);
     const col = new Float32Array(n * n * 3);
+    const pave = new Float32Array(n * n * 3); // how much of the ground round each corner is flagstones / cobbles / marble
     let minH = Infinity;
     for (let j = 0; j < n; j++) {
       for (let i = 0; i < n; i++) {
@@ -234,7 +235,7 @@ export class TerrainManager {
         if (h < minH) minH = h;
         const k = (j * n + i) * 3;
         pos[k] = gi; pos[k + 1] = h; pos[k + 2] = gj;
-        this.cornerColor(x0 + gi, y0 + gj, h, col, k);
+        this.cornerColor(x0 + gi, y0 + gj, h, col, k, pave);
       }
     }
     const idx = [];
@@ -247,6 +248,7 @@ export class TerrainManager {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    geo.setAttribute('pave', new THREE.BufferAttribute(pave, 3));
     geo.setIndex(idx);
     geo.computeVertexNormals();
     geo.computeBoundingSphere();
@@ -260,13 +262,14 @@ export class TerrainManager {
     return { mesh: root, lod, x0, y0, minH };
   }
 
-  cornerColor(cx, cy, h, out, k) {
+  cornerColor(cx, cy, h, out, k, pave = null) {
     const w = this.world;
-    let r = 0, gg = 0, b = 0, n = 0;
+    let r = 0, gg = 0, b = 0, n = 0, pf = 0, pc = 0, pm = 0;
     for (let j = -1; j <= 0; j++) {
       for (let i = -1; i <= 0; i++) {
         const t = w.type(cx + i, cy + j);
         if (IS_LIQUID[t] || OVERLAY[t]) continue;
+        if (t === T.STONE) pf++; else if (t === T.COBBLE) pc++; else if (t === T.MARBLE) pm++;
         const v = w.variant(cx + i, cy + j) / 255;
         const mix = 0.18 + v * 0.3 * hash(cx + i, cy + j);
         r += COL[t * 3] * (1 - mix) + ACC[t * 3] * mix;
@@ -282,6 +285,7 @@ export class TerrainManager {
       return;
     }
     r /= n; gg /= n; b /= n;
+    if (pave) { pave[k] = pf / n; pave[k + 1] = pc / n; pave[k + 2] = pm / n; }
     // beaches: blend towards sand right at the waterline
     if (h < 0.9) {
       const s = Math.max(0, Math.min(1, (0.9 - h) / 0.7));
@@ -398,6 +402,48 @@ export const CAUSTIC = /* glsl */`
  * The terrain's cel-shaded material, with world-anchored detail: broad colour
  * drift, fine grain, and bare rock showing on steep slopes.
  */
+// Town paving, drawn on the ground rather than painted flat: flagstones in
+// offset rows (STONE), small rounded cobbles (COBBLE), big polished squares
+// (MARBLE), each stone its own shade, with dark joints that moss and grass
+// grow in here and there. It fades out with distance (a pattern finer than a
+// pixel would only shimmer), leaving the plain colour.
+const PAVING = /* glsl */`
+  float paveHash(vec2 c) { return fract(sin(dot(c, vec2(127.1, 311.7))) * 43758.5453); }
+  // one course of stones w x h metres, every other row shifted half a stone:
+  // .x the stone's shade (0..1), .y distance (m) to its edge
+  vec2 paveCourse(vec2 p, vec2 size, float round) {
+    float row = floor(p.y / size.y);
+    vec2 q = vec2(p.x / size.x + fract(row * 0.5) * 1.0, p.y / size.y);
+    vec2 cell = floor(q), f = fract(q);
+    vec2 d = min(f, 1.0 - f) * size; // metres to the nearest edges
+    float e = min(d.x, d.y);
+    // rounded corners (cobbles)
+    vec2 c = max(round - d, 0.0);
+    e = min(e, round - length(c));
+    return vec2(paveHash(cell + row * 7.13), e);
+  }
+  vec3 paving(vec3 base, vec2 p, vec3 kind, float broad, float grain) {
+    float fw = fwidth(p.x) + fwidth(p.y);
+    float fade = 1.0 - smoothstep(0.05, 0.22, fw);
+    if (fade <= 0.0) return base;
+    float tot = kind.x + kind.y + kind.z;
+    vec2 flag = paveCourse(p, vec2(1.15, 0.72), 0.05);
+    vec2 cob = paveCourse(p + vec2(0.13, 0.0), vec2(0.34, 0.27), 0.1);
+    vec2 mar = paveCourse(p, vec2(1.6, 1.6), 0.0);
+    vec2 s = (flag * kind.x + cob * kind.y + mar * kind.z) / max(tot, 0.001);
+    float gap = mix(0.035, 0.018, kind.z / max(tot, 0.001));
+    float joint = 1.0 - smoothstep(gap * 0.4, gap + fw * 0.5, s.y);
+    // each stone a little lighter or darker (marble barely), a hint of wear in the middle
+    float shade = 0.9 + (s.x - 0.5) * mix(0.22, 0.08, kind.z / max(tot, 0.001)) + smoothstep(0.02, 0.2, s.y) * 0.05;
+    vec3 stone = base * shade;
+    // the joints: dark, and green with moss and grass where the ground is damp
+    float green = smoothstep(0.52, 0.72, broad + (grain - 0.5) * 0.3) * (1.0 - kind.z / max(tot, 0.001) * 0.8);
+    vec3 grout = mix(base * 0.55, vec3(0.32, 0.46, 0.2), green * 0.85);
+    vec3 paved = mix(stone, grout, joint);
+    return mix(base, paved, fade * min(1.0, tot * 1.2));
+  }
+`;
+
 function terrainMaterial() {
   const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient() });
   const uOrigin = { value: new THREE.Vector2() };
@@ -406,16 +452,17 @@ function terrainMaterial() {
   m.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, FOG, { uOrigin, uDetail, uCTime: CTIME });
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nuniform vec2 uOrigin;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvec4 tWorld = modelMatrix * vec4(transformed, 1.0);\nvTerrainXZ = tWorld.xz + uOrigin;\nvTerrainUp = normalize(objectNormal).y;\nvTerrainY = tWorld.y;')
+      .replace('#include <common>', '#include <common>\nuniform vec2 uOrigin;\nattribute vec3 pave;\nvarying vec3 vPave;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvec4 tWorld = modelMatrix * vec4(transformed, 1.0);\nvTerrainXZ = tWorld.xz + uOrigin;\nvTerrainUp = normalize(objectNormal).y;\nvTerrainY = tWorld.y;\nvPave = pave;')
       .replace('varying float vTerrainUp;', 'varying float vTerrainUp;\nvarying float vTerrainY;');
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform sampler2D uDetail;\nuniform float uCTime;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;\nvarying float vTerrainY;\n' + CAUSTIC)
+      .replace('#include <common>', '#include <common>\nuniform sampler2D uDetail;\nuniform float uCTime;\nvarying vec3 vPave;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;\nvarying float vTerrainY;\n' + CAUSTIC + PAVING)
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
           float broad = texture2D(uDetail, vTerrainXZ / 64.0).r;
           float grain = texture2D(uDetail, vTerrainXZ / 6.0).g;
           diffuseColor.rgb *= 0.86 + broad * 0.2 + (grain - 0.5) * 0.12;
+          if (vPave.x + vPave.y + vPave.z > 0.01) diffuseColor.rgb = paving(diffuseColor.rgb, vTerrainXZ, vPave, broad, grain);
           // steep ground shows bare rock (not on beaches and water edges, which are flat)
           float steep = smoothstep(0.62, 0.42, vTerrainUp);
           vec3 rock = vec3(0.47, 0.43, 0.39) * (0.85 + grain * 0.3);
@@ -429,7 +476,7 @@ function terrainMaterial() {
           }
         }`);
   };
-  m.customProgramCacheKey = () => 'terrain-detail';
+  m.customProgramCacheKey = () => 'terrain-detail-paved';
   return m;
 }
 

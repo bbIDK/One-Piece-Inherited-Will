@@ -232,7 +232,7 @@ export class Combat {
           tgt.stamina = Math.min(tgt.d.maxStamina, tgt.stamina + 15);
           if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + 6);
           fx.parry(tgt, att, ang); // flash, ring, "PARRY!", hit-stop and a beat of slow motion
-          game.audio?.sfx('parry');
+          game.audio?.sfx('parry', tgt);
           if (tgt.isPlayer) game.onPlayerParry(att);
           return false;
         }
@@ -245,9 +245,9 @@ export class Combat {
           tgt.blocking = false;
           tgt.stagger(1.1);
           fx.guardBreak(tgt, att, ang); // shattered guard, "GUARD BREAK", a jolt
-          game.audio?.sfx('guardbreak');
+          game.audio?.sfx('guardbreak', tgt);
         } else {
-          game.audio?.sfx('block');
+          game.audio?.sfx('block', tgt);
         }
       }
     }
@@ -271,7 +271,8 @@ export class Combat {
     // number, all scaled by the weight of the blow (see render/combatfx.js)
     fx.hit(att, tgt, h, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved });
     if (att?.isPlayer) game.emit('playerLanded', tgt, { final, crit, blocked });
-    game.audio?.sfx(blocked ? 'block' : h.sfxHit || (el === 'physical' ? (h.slashing ? 'slash_hit' : 'punch') : el));
+    const thud = h.slashing ? (h.heavy ? 'slash_heavy' : 'slash_hit') : (h.heavy ? 'punch_heavy' : 'punch');
+    game.audio?.sfx(blocked ? 'block' : h.sfxHit || (el === 'physical' ? thud : el), tgt);
     return true;
   }
 }

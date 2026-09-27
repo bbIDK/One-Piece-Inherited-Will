@@ -215,7 +215,7 @@ export class Actor extends Entity {
     this.recalc();
     // a kick of dust at the feet (the thud when the body lands comes from the fx layer)
     game.fx.burst(this.x, this.y, 8, { color: ['#d7ccc8', '#efebe9'], speed: 2.4, g: 1.2, z: 0.1, vz: 0.6, life: 0.45, kind: 'dust', size: 0.14, grow: 0.3, drag: 3 });
-    game.audio?.sfx('ko');
+    game.audio?.sfx('ko', this);
     if (this.onKO) this.onKO(this, att, game);
     game.onKnockOut(this, att);
   }
@@ -348,7 +348,7 @@ export class Actor extends Entity {
     // visuals: a kick of dust where you pushed off (afterimages follow the dash, see fx.js)
     this._ghostTint = this.race === 'lunarian' ? '#ffab91' : this.race === 'skypiean' ? '#ffffff' : '#b3e5fc';
     game.fx.burst(this.x, this.y, 7, { angle: Math.atan2(-dy, -dx), spread: 1.6, color: ['#d7ccc8', '#bcaaa4', '#efebe9'], speed: 2.4, z: 0.08, vz: 0.6, g: 1.2, life: 0.5, kind: 'dust', size: 0.2, grow: 0.45 });
-    game.audio?.sfx('dodge');
+    game.audio?.sfx('dodge', this);
     if (this.isPlayer) game.emit('playerDodge');
     return R;
   }

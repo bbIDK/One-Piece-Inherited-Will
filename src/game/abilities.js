@@ -91,7 +91,7 @@ export function startAbility(actor, def, game, target) {
   if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, '#ffffff', 0.34, { life: 1.2 });
   if (!actor.isPlayer && def.telegraph !== false) telegraph(actor, def, game);
   if (def.onStart) def.onStart(actor, game);
-  game.audio?.sfx(def.sfxStart || 'whoosh');
+  game.audio?.sfx(def.sfxStart || 'whoosh', actor);
 }
 
 function telegraph(actor, def, game) {
@@ -247,7 +247,7 @@ function runStep(actor, s, game, a) {
     }
   }
   if (s.fx) game.fx.tech(actor, s.fx.color ? s : { ...s, fx: { ...s.fx, color: col } }, a, 'fx'); // rings, bursts, shake, impact frame, flash, callout
-  if (s.sfx) game.audio?.sfx(s.sfx);
+  if (s.sfx) game.audio?.sfx(s.sfx, actor);
 }
 
 function def_isPhysical(h) { return !h.element || h.element === 'physical'; }
@@ -255,7 +255,7 @@ function def_isPhysical(h) { return !h.element || h.element === 'physical'; }
 function explode(p, game, e, mult) {
   game.combat.hitbox({ owner: p.owner, x: p.x, y: p.y, shape: 'circle', range: e.range || 1.8, damage: (e.damage || 10) * mult, knockback: e.knockback ?? 6, stun: e.stun ?? 0.4, element: e.element || 'explosion', duration: 0.1, radial: true, heavy: true, hitShips: true, status: e.status });
   game.fx.explosion(p.x, p.y, e, p.owner); // fireball, shock ring, smoke, debris, scorch, shake
-  game.audio?.sfx('explosion');
+  game.audio?.sfx('explosion', p);
 }
 
 function trail(p, game, t) {

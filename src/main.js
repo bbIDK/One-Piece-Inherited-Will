@@ -135,6 +135,9 @@ async function start() {
   await nextFrame();
   const game = new Game({ renderer, input, ui, audio, world });
   game.settings = settings;
+  // sounds out in the world fade with distance from the player
+  audio.ear = () => game.player;
+  audio.dxOf = (a, b) => (game.world?.dx ? game.world.dx(a, b) : b - a);
   // phones and tablets start on the fast graphics setting unless the player picked one
   const phone = !!window.matchMedia?.('(hover: none) and (pointer: coarse)')?.matches;
   if (phone && !settings.qualityPicked) settings.quality = 'low';

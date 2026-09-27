@@ -33,9 +33,12 @@ with terrain, sea, sky, towns and ships built from the same map the
 simulation uses. Click the game to capture the mouse and look around (Esc
 frees it). **V** switches between first and third person (the mouse wheel
 sets the third-person distance). Settings has mouse sensitivity, invert-Y,
-field of view, view bobbing, a fast graphics mode, and (on by default) a
+field of view, view bobbing, a fast graphics mode, a **render distance**
+(in 32 m chunks, like Minecraft's: 4 to 24, 12 by default; at sea you see
+half as far again, and a haze closes in at the edge), and (on by default) a
 slightly lower resolution whenever drawing can't keep up, so the game stays
-smooth on weaker graphics chips.
+smooth on weaker graphics chips. Buildings beyond about 100 m are drawn as
+simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 
 **Phones and tablets** get touch controls (hold the device sideways):
 
@@ -162,7 +165,14 @@ rearrange them.
 
 - Fighting styles with canon techniques: brawling, One/Two/Three Sword Style,
   Black Leg, Fish-Man Karate, Rokushiki, sniping, Okama Kenpo, Electro,
-  Hasshoken, Weather Science, Elbaf, and Dragon Claw.
+  Hasshoken, Weather Science, Elbaf, and Dragon Claw. A weapon in your hand
+  is what you fight with: pick up a cutlass as a brawler and you swing it
+  with the sword's plain moves (or a sword style you've learned).
+- **Foes take turns**: in the four Blues only one of a gang attacks you at a
+  time (two in Paradise, three in the New World; bosses always may). The
+  rest circle and wait, and whoever you hit goes next. Nobody runs off when
+  nearly beaten, and pirates at home in a village leave you alone until you
+  break in or strike one of them.
 - About 32 **Devil Fruits** (Paramecia, Zoan, Logia), with canon rules:
   - Logia intangibility unless you use Haki, seastone or their weakness;
   - rubber versus lightning;
@@ -318,6 +328,10 @@ node tools/shot.mjs <scenario>   # headless Chromium play-tests with screenshots
 node tools/shot.mjs perf         # frame cost in a town (day and night), a harbour, at sea and on a reef
 node tools/shot.mjs hitch --w=320 --h=180 [--cpu]   # per-frame JS time running through a town and sailing past an island: the worst frames, shaders compiled on the way
 node tools/storycheck.mjs        # the main story: every chapter, road, contact and target resolves
+node tools/townaudit.mjs [--all] # every town (built-on share, empty paving, crowd), landmark (floating, sunk, in water, trees through it), overlap, and the walk from each town to its pier
+node tools/shot.mjs townwatch [--island=lvneel]   # a town's people over a minute (stuck, inside things, on steps, bunched up), street and air shots
+node tools/shot.mjs towntour --islands=a,b,c      # each town photographed from the air
+node tools/shot.mjs viewdist [--rd=<chunks>]      # the render distance: a big town from its square, 130 m and 250 m off, the air and the sea
 node tools/shot.mjs story [--path=pirate|marine|hunter]   # plays the story's start, then fast-forwards through all three parts
 node tools/shot.mjs storydrift | storyswitch               # the Grand Line's currents; the story following a change of road
 node tools/shot.mjs rmride       # rides Reverse Mountain from the East Blue gate to the Grand Line

@@ -150,7 +150,7 @@ export class Ship extends Entity {
         this.damage(Math.round(cur.steer ? Math.min(28, impact * 1.6) : impact * 2), null, { crash: true });
         game.fx.shake(0.4);
         game.fx.burst(this.x + Math.cos(this.heading) * this.def.length * 0.5, this.y + Math.sin(this.heading) * this.def.length * 0.5, 14, { color: ['#8d6e63', '#e1f5fe'], speed: 4, g: 8, life: 0.6 });
-        game.audio?.sfx('crash');
+        game.audio?.sfx('crash', this);
         if (cur.steer) game.log('CRASH! Steer with the current — hit the canal walls and you will sink!', '#ff8a80');
       }
       this.speed *= -0.25;
@@ -305,7 +305,7 @@ export class Ship extends Entity {
       game.fx.burst(px, py, 6, { color: ['#eeeeee', '#9e9e9e'], speed: 2, g: -0.5, life: 0.8, kind: 'smoke', size: 0.3, grow: 0.4, angle: a, spread: 0.6 });
     }
     game.fx.shake(0.15);
-    game.audio?.sfx('cannon');
+    game.audio?.sfx('cannon', this);
     return true;
   }
 

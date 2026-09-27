@@ -165,7 +165,9 @@ towns: [{
   style: 'desert',       // village town port city desert snow wano sky candy fishman marine noble
                          // spooky future tribal chinese mink giant ruins
   walls: true, dockDir: 's'|'n'|'e'|'w'|'ne'|'nw'|'se'|'sw', plaza: 'fountain'|'well'|'statue'|'flagpole'|'platform'|false, plazaR: 5,
-  houses: 6,             // extra plain houses (default scales with size)
+  houses: 6,             // plain houses besides the named buildings. Leave it out and the town fills
+                         // its outline (a few dozen to a few hundred); give a number and the outline is
+                         // shrunk to fit what's built (grown until every named building has a lot)
   buildings: [
     { role: 'inn', name: 'Oasis Inn' },
     { role: 'shop', name: 'Spice Bazaar' },                // general store
