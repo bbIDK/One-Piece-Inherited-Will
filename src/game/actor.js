@@ -9,6 +9,9 @@ import { FRUITS } from '../data/fruits.js';
 import { RACES } from '../data/races.js';
 import { WALKABLE, SWIMMABLE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
 import { clamp, TAU } from '../core/math.js';
+import { shipDims, topAt, deckToWorld } from '../world/hull.js';
+
+const smooth01 = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 const STATUS_DEFAULTS = {
   burn: { dps: 0.035, color: '#ff7043' }, poison: { dps: 0.03, color: '#8e24aa' }, bleed: { dps: 0.025, color: '#c62828' }, dry: { dps: 0.04, color: '#d7b56d' },
@@ -204,6 +207,7 @@ export class Actor extends Entity {
 
   knockOut(game, att) {
     if (this.state === 'knocked' || this.state === 'dead') return;
+    if (this.climb) this.endClimb(game, true);
     this.state = 'knocked';
     this.knockT = 0;
     this.action = null;
@@ -359,7 +363,7 @@ export class Actor extends Entity {
   /** Can you jump right now: on your feet, or at the surface of the water (not a Devil Fruit user). */
   canJump() {
     if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root || this.blocking) return false;
-    if (this.onShip || this.stamina < 2) return false;
+    if (this.onShip || this.climb || this.stamina < 2) return false;
     if (this.action && !this.action.def.m1Chain && this.action.t < this.action.total * 0.7) return false;
     if (this.inWater) return !this.under && (this.depth || 0) < 0.15 && !(this.fruit && !this.gills) && this.state === 'idle';
     return !((this.z || 0) > 0.02);
@@ -376,10 +380,13 @@ export class Actor extends Entity {
     if (!this.canJump()) return false;
     const J = this.jumpStats();
     const k = clamp(charge, 0, 1);
-    // swimming against a ship's side: haul yourself up it and over the rail
-    if (this.isPlayer && this.inWater && game.climbAboard?.(this, k)) { this.stamina = Math.max(0, this.stamina - 6); return true; }
+    // swimming against a ship's side: haul yourself up it and over the rail —
+    // or against a pier, a quay or a steep bank: up onto it
+    if (this.inWater && ((this.isPlayer && game.climbAboard?.(this, k)) || this.climbOut(game))) { this.stamina = Math.max(0, this.stamina - 6); return true; }
     let v = J.v * (1 + (J.charge - 1) * k);
     const fromWater = this.inWater;
+    // (wading, you spring off the bottom: the jump starts where your feet are)
+    if (this.wading && !fromWater) { this.z = -this.wading; this.wading = 0; }
     if (fromWater) {
       // up from treading water (the body starts where it floats, so the leap is continuous)
       v *= 1.3 * J.leap;
@@ -391,7 +398,7 @@ export class Actor extends Entity {
       game.fx.burst(this.x, this.y, 12 + Math.round(k * 8), { color: ['#e1f5fe', '#b3e5fc', '#ffffff'], speed: 2.4, z: 0.1, vz: 5 + k * 2, g: 11, life: 0.7, size: 0.1 });
       game.audio?.sfx('splash_out');
     } else {
-      this.z = 0.001;
+      this.z = Math.min(0, this.z || 0) + 0.001;
       game.fx.burst(this.x, this.y, 6 + Math.round(k * 8), { color: ['#d7ccc8', '#efebe9'], speed: 1.8 + k * 1.6, z: 0.05, vz: 0.5, g: 1.2, life: 0.4 + k * 0.2, kind: 'dust', size: 0.16 + k * 0.08, grow: 0.35 });
       game.audio?.sfx(k > 0.5 ? 'jump_big' : 'jump');
     }
