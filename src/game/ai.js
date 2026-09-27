@@ -32,6 +32,27 @@ function sameRoom(game, a, b) {
   return !!d && w.distance(out.x, out.y, d.mid.x, d.mid.y) < 3;
 }
 
+/**
+ * Can `a` see `b`? Not through a wall, a house or a cliff (trees, carts and
+ * the like don't hide you), and only into or out of a room by its open door.
+ */
+export function canSee(game, a, b) {
+  if (!sameRoom(game, a, b)) return false;
+  const w = game.world;
+  const dx = w.dx(a.x, b.x), dy = b.y - a.y;
+  const n = Math.ceil(Math.hypot(dx, dy) / 0.45);
+  const inside = w.interiorAt ? w.interiorAt(a.x, a.y) || w.interiorAt(b.x, b.y) : null;
+  for (let i = 1; i < n; i++) {
+    const t = i / n, x = w.wx(a.x + dx * t), y = a.y + dy * t;
+    if (w.solid(x, y)) return false;
+    if (!inside && w.isBlocked(x, y)) return false;
+    if (w.hitsProp(x, y, 0.05, true)) return false;
+  }
+  return true;
+}
+
+const LOST_LINES = ["Tch... where'd they go?", 'Lost them...', 'Get back here, coward!', 'Next time...', "They're gone."];
+
 export class AIController {
   constructor(o = {}) {
     this.kind = o.kind || 'hostile';
@@ -55,6 +76,10 @@ export class AIController {
     this.barks = o.barks || null;
     this.barkT = 3 + Math.random() * 5;
     this.lastSeen = 0;
+    // how long they'll hunt for you once you're out of sight, and how far
+    // from where the fight started they'll follow
+    this.patience = o.patience ?? (o.kind === 'guard' ? 5 : 7);
+    this.pursuit = o.pursuit ?? (this.leash ? Math.max(36, this.leash * 2.2) : 0);
   }
 
   onHurt(a, att, game) {
@@ -62,10 +87,11 @@ export class AIController {
       if (this.kind === 'wander' || this.kind === 'civilian' || this.kind === 'townsfolk') { this.state = 'flee'; this.fleeFrom = att; this.fleeT = 4; return; }
       if (!this.target || Math.random() < 0.5) this.target = att;
       this.state = 'chase';
+      this.sawAt(att, game, a);
       // alert allies
       for (const b of game.actorsNear(a.x, a.y, 10)) {
         if (b !== a && b.faction === a.faction && b.controller instanceof AIController && !b.controller.target && b.state === 'idle') {
-          b.controller.target = att; b.controller.state = 'chase';
+          b.controller.target = att; b.controller.state = 'chase'; b.controller.sawAt(att, game, b);
           if (att.isPlayer) b.provoked = true;
         }
       }
@@ -83,8 +109,13 @@ export class AIController {
       const stealth = b.buffs?.find((x) => x.mods?.stealth);
       if (stealth) d *= 1 + stealth.mods.stealth * 6;
       if (b.isPlayer && b.disguised && a.faction === 'marine' && !a.provoked) continue;
-      if (!sameRoom(game, a, b)) continue;
-      if (d < bd) { bd = d; best = b; }
+      if (d >= bd) continue;
+      // they see what's in front of them (a wide cone) and hear what's close behind
+      const real = game.world.distance(a.x, a.y, b.x, b.y);
+      const off = Math.abs(angleDiff(a.facing || 0, Math.atan2(b.y - a.y, game.world.dx(a.x, b.x))));
+      if (off > 1.95 && real > 4) continue;
+      if (!canSee(game, a, b)) continue;
+      bd = d; best = b;
     }
     return best;
   }
@@ -108,17 +139,30 @@ export class AIController {
     if (this.kind === 'townsfolk') return game.townLife ? game.townLife.update(a, this, dt) : this.wander(a, dt, game);
     if (this.kind === 'idle') return;
 
-    // validate target
-    if (this.target && (!this.target.alive || this.target.state !== 'idle' || this.target.onShip || w.distance(a.x, a.y, this.target.x, this.target.y) > this.aggroRange * 2.5)) {
-      this.target = null;
-      this.state = this.home ? 'return' : 'idle';
+    // validate target: gone, down, or aboard a ship
+    if (this.target && (!this.target.alive || this.target.state !== 'idle' || this.target.onShip)) this.loseTarget(a);
+    // keep an eye on them: where they were last seen, and for how long they've been out of sight
+    if (this.target) {
+      const t = this.target;
+      if (!this.engage) this.sawAt(t, game, a);
+      if ((this.seeT = (this.seeT || 0) - dt) <= 0) {
+        this.seeT = 0.25;
+        this.sees = w.distance(a.x, a.y, t.x, t.y) < 50 && canSee(game, a, t);
+        if (this.sees) this.sawAt(t, game);
+      }
+      const lost = (game.time || 0) - this.seenT;
+      const far = this.pursuit && w.distance(a.x, a.y, this.engage.x, this.engage.y) > this.pursuit;
+      if (lost > this.patience * (a.boss ? 1.6 : 1) || far) {
+        if (t.isPlayer && lost > 1 && !far && Math.random() < 0.6) game.fx.text(a.x, a.y - 2.1, LOST_LINES[Math.floor(Math.random() * LOST_LINES.length)], '#fff', 0.3, { life: 1.6 });
+        this.loseTarget(a);
+      }
     }
     if (!this.target && this.think <= 0) {
       this.think = 0.4;
       if (this.kind !== 'guard' || a.provoked) {
         const t = this.findTarget(a, game);
         if (t) {
-          this.target = t; this.state = 'chase';
+          this.target = t; this.state = 'chase'; this.sawAt(t, game, a);
           if (t.isPlayer && a.alertLine && !a.saidAlert) { a.saidAlert = true; game.fx.text(a.x, a.y - 2.1, a.alertLine, '#fff', 0.32, { life: 1.8 }); }
         }
       }
@@ -129,13 +173,15 @@ export class AIController {
       if (a.hakiSkill.armament > 0) a.armament = fighting;
       if (a.hakiSkill.observation > 0) a.observation = fighting;
     }
-    // leash
-    if (this.home && this.leash && w.distance(a.x, a.y, this.home.x, this.home.y) > this.leash && this.state !== 'return') {
-      this.state = 'return'; this.target = null;
+    // leash: wandering too far from home (a chase has its own limits, above)
+    if (!this.target && this.home && this.leash && w.distance(a.x, a.y, this.home.x, this.home.y) > this.leash && this.state !== 'return') {
+      this.state = 'return';
     }
     if (this.state === 'return') {
       if (!this.home) { this.state = 'idle'; return; }
+      // (back home at a walk)
       const d = this.moveToward(a, this.home.x, this.home.y, game);
+      a.intent.mx *= 0.6; a.intent.my *= 0.6;
       // (no healing up on the way home: walk away from a fight and come back, and it's still hurt)
       if (d < 1) this.state = 'idle';
       return;
@@ -145,6 +191,14 @@ export class AIController {
       return;
     }
     const t = this.target;
+    if (!this.sees && w.distance(a.x, a.y, t.x, t.y) > 2.2) {
+      // out of sight: make for where they were last seen, then look about
+      const d = w.distance(a.x, a.y, this.seenX, this.seenY);
+      if (d > 1.2) { this.moveToward(a, this.seenX, this.seenY, game); a.intent.sprint = d > 5 && a.stamina > a.d.maxStamina * 0.4; }
+      else a.facing += dt * 2.2 * this.strafeDir;
+      if (a.blocking) a.setBlock(false);
+      return;
+    }
     const dx = w.dx(a.x, t.x), dy = t.y - a.y;
     const dist = Math.hypot(dx, dy);
     const ang = Math.atan2(dy, dx);
@@ -210,6 +264,20 @@ export class AIController {
     const l = Math.hypot(mx, my);
     if (l > 0) { a.intent.mx = mx / l; a.intent.my = my / l; }
     this.avoidStuck(a, dt, game);
+  }
+
+  /** Seen them just now (and, starting a hunt, remember where it began). */
+  sawAt(t, game, a = null) {
+    this.seenT = game.time || 0; this.seenX = t.x; this.seenY = t.y; this.sees = true;
+    if (a && !this.engage) this.engage = { x: a.x, y: a.y };
+    else if (!this.engage) this.engage = { x: t.x, y: t.y };
+  }
+
+  /** Give up the hunt: home (or stand down). */
+  loseTarget(a) {
+    this.target = null; this.engage = null; this.sees = false;
+    this.state = this.home ? 'return' : 'idle';
+    if (a.blocking) a.setBlock(false);
   }
 
   meleeRange(a) { return 1.3 * (a.reach || 1) * (a.look?.scale || 1); }

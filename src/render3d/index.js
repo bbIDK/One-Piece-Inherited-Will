@@ -30,6 +30,7 @@ const PROP_BUDGET_MS = 4; // building props per frame (beyond the nearest)
 const SHIP_RANGE = 520;
 
 const _ray1 = new THREE.Vector3(), _ray2 = new THREE.Vector3();
+const _ndc = new THREE.Vector2(), _caster = new THREE.Raycaster();
 const _clearSea = new THREE.Color(0.06, 0.34, 0.42);
 
 export class Renderer3D {
@@ -405,6 +406,45 @@ export class Renderer3D {
     cam.updateMatrixWorld();
     const p = cam.getWorldPosition(_ray1), d = cam.getWorldDirection(_ray2);
     return { x: (this.ox || 0) + p.x, y: (this.oy || 0) + p.z, h: p.y, dx: d.x, dy: d.z, dh: d.y };
+  }
+
+  /**
+   * The ray the player points with: through the crosshair, or through the
+   * cursor while the mouse is free (third person without shift lock).
+   */
+  pointerRay(game) {
+    const free = !this.rig.locked && (this.rig.lockFailed || this.rig.freeMouse) && !game.input?.touch?.on;
+    if (!free) return this.aimRay();
+    const cam = this.rig.camera, m = game.input.mouse;
+    cam.updateMatrixWorld();
+    _ndc.set(m.x / window.innerWidth * 2 - 1, -(m.y / window.innerHeight * 2 - 1));
+    _caster.setFromCamera(_ndc, cam);
+    const o = _caster.ray.origin, d = _caster.ray.direction;
+    return { x: (this.ox || 0) + o.x, y: (this.oy || 0) + o.z, h: o.y, dx: d.x, dy: d.z, dh: d.y };
+  }
+
+  /**
+   * Does the ray pass through this actor's figure (a standing capsule where
+   * the model is drawn)? The distance along the ray and how close it came.
+   */
+  rayHitsActor(ray, a) {
+    const w = this.world, v = this.actorViews.get(a);
+    const s = a.look?.scale || 1;
+    const base = v ? v.root.position.y : this.ground(a.x, a.y) + (a.z || 0);
+    const top = base + 1.95 * s, r = 0.42 * s + 0.12;
+    const ox = w ? w.dx(ray.x, a.x) : a.x - ray.x, oy = a.y - ray.y;
+    let t0 = 0, t1 = 14;
+    if (Math.abs(ray.dh) > 1e-5) {
+      let ta = (base - ray.h) / ray.dh, tb = (top - ray.h) / ray.dh;
+      if (ta > tb) { const q = ta; ta = tb; tb = q; }
+      t0 = Math.max(t0, ta); t1 = Math.min(t1, tb);
+    } else if (ray.h < base || ray.h > top) return null;
+    if (t1 < t0) return null;
+    const hh = ray.dx * ray.dx + ray.dy * ray.dy;
+    let t = hh > 1e-8 ? (ox * ray.dx + oy * ray.dy) / hh : t0;
+    t = Math.min(t1, Math.max(t0, t));
+    const miss = Math.hypot(ox - ray.dx * t, oy - ray.dy * t);
+    return miss <= r ? { t, miss: miss / r } : null;
   }
 
   /** First-person arms and weapon (a plug-in; see registry.js). */

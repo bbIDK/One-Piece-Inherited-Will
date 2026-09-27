@@ -32,11 +32,19 @@ export function findInteraction(game, p) {
     const sinking = p.inWater && p.fruit && !p.gills;
     if (d < s.def.length * 0.55 + (sinking ? 6 : 1.6)) cands.push({ d: d - 1, x: s.x, y: s.y, label: sinking ? `Grab the line from the ${s.name}` : `Board the ${s.name}`, run: () => board(game, p, s) });
   }
-  for (const a of game.actorsNear(p.x, p.y, 2.4)) {
+  // people: only the one under your crosshair (or cursor) — standing near
+  // someone isn't the same as talking to them
+  const v3a = game.view3d?.active && game.view3d.rayHitsActor ? game.view3d : null;
+  const ray = v3a ? v3a.pointerRay(game) : null;
+  for (const a of game.actorsNear(p.x, p.y, ray ? 3.4 : 2.4)) {
     if (a === p || a.state !== 'idle' || !a.talk) continue;
     if (a.provoked && a.hostileNow) continue;
     const d = w.distance(p.x, p.y, a.x, a.y);
-    cands.push({ d, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit('talk', a) });
+    if (ray) {
+      const hit = v3a.rayHitsActor(ray, a);
+      if (!hit) continue;
+      cands.push({ d: hit.miss * 0.4 + d * 0.05, aimed: true, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit('talk', a) });
+    } else cands.push({ d, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit('talk', a) });
   }
   for (const a of game.actorsNear(p.x, p.y, 2.2)) {
     if (a === p || a.state !== 'knocked' || !a.canCarry) continue;
@@ -76,7 +84,7 @@ export function findInteraction(game, p) {
   const v3 = game.view3d?.active ? game.view3d : null;
   if (v3 && cands.length > 1) {
     for (const c of cands) {
-      if (c.x === undefined) continue;
+      if (c.x === undefined || c.aimed) continue;
       c.d += Math.abs(angleDiff(v3.rig.yaw, Math.atan2(c.y - p.y, w.dx(p.x, c.x)))) * 0.9;
     }
   }

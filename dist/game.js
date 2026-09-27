@@ -63975,6 +63975,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var SHIP_RANGE = 520;
   var _ray1 = new Vector3();
   var _ray2 = new Vector3();
+  var _ndc = new Vector2();
+  var _caster = new Raycaster();
   var _clearSea = new Color(0.06, 0.34, 0.42);
   var Renderer3D = class {
     constructor(root2, r2d, game) {
@@ -64403,6 +64405,48 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       cam.updateMatrixWorld();
       const p = cam.getWorldPosition(_ray1), d = cam.getWorldDirection(_ray2);
       return { x: (this.ox || 0) + p.x, y: (this.oy || 0) + p.z, h: p.y, dx: d.x, dy: d.z, dh: d.y };
+    }
+    /**
+     * The ray the player points with: through the crosshair, or through the
+     * cursor while the mouse is free (third person without shift lock).
+     */
+    pointerRay(game) {
+      const free = !this.rig.locked && (this.rig.lockFailed || this.rig.freeMouse) && !game.input?.touch?.on;
+      if (!free) return this.aimRay();
+      const cam = this.rig.camera, m = game.input.mouse;
+      cam.updateMatrixWorld();
+      _ndc.set(m.x / window.innerWidth * 2 - 1, -(m.y / window.innerHeight * 2 - 1));
+      _caster.setFromCamera(_ndc, cam);
+      const o = _caster.ray.origin, d = _caster.ray.direction;
+      return { x: (this.ox || 0) + o.x, y: (this.oy || 0) + o.z, h: o.y, dx: d.x, dy: d.z, dh: d.y };
+    }
+    /**
+     * Does the ray pass through this actor's figure (a standing capsule where
+     * the model is drawn)? The distance along the ray and how close it came.
+     */
+    rayHitsActor(ray, a) {
+      const w = this.world, v = this.actorViews.get(a);
+      const s = a.look?.scale || 1;
+      const base2 = v ? v.root.position.y : this.ground(a.x, a.y) + (a.z || 0);
+      const top = base2 + 1.95 * s, r = 0.42 * s + 0.12;
+      const ox = w ? w.dx(ray.x, a.x) : a.x - ray.x, oy = a.y - ray.y;
+      let t0 = 0, t1 = 14;
+      if (Math.abs(ray.dh) > 1e-5) {
+        let ta = (base2 - ray.h) / ray.dh, tb = (top - ray.h) / ray.dh;
+        if (ta > tb) {
+          const q2 = ta;
+          ta = tb;
+          tb = q2;
+        }
+        t0 = Math.max(t0, ta);
+        t1 = Math.min(t1, tb);
+      } else if (ray.h < base2 || ray.h > top) return null;
+      if (t1 < t0) return null;
+      const hh = ray.dx * ray.dx + ray.dy * ray.dy;
+      let t = hh > 1e-8 ? (ox * ray.dx + oy * ray.dy) / hh : t0;
+      t = Math.min(t1, Math.max(t0, t));
+      const miss = Math.hypot(ox - ray.dx * t, oy - ray.dy * t);
+      return miss <= r ? { t, miss: miss / r } : null;
     }
     /** First-person arms and weapon (a plug-in; see registry.js). */
     updateViewmodel(game, env) {
@@ -78673,11 +78717,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const sinking = p.inWater && p.fruit && !p.gills;
       if (d < s.def.length * 0.55 + (sinking ? 6 : 1.6)) cands.push({ d: d - 1, x: s.x, y: s.y, label: sinking ? `Grab the line from the ${s.name}` : `Board the ${s.name}`, run: () => board(game, p, s) });
     }
-    for (const a of game.actorsNear(p.x, p.y, 2.4)) {
+    const v3a = game.view3d?.active && game.view3d.rayHitsActor ? game.view3d : null;
+    const ray = v3a ? v3a.pointerRay(game) : null;
+    for (const a of game.actorsNear(p.x, p.y, ray ? 3.4 : 2.4)) {
       if (a === p || a.state !== "idle" || !a.talk) continue;
       if (a.provoked && a.hostileNow) continue;
       const d = w.distance(p.x, p.y, a.x, a.y);
-      cands.push({ d, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit("talk", a) });
+      if (ray) {
+        const hit = v3a.rayHitsActor(ray, a);
+        if (!hit) continue;
+        cands.push({ d: hit.miss * 0.4 + d * 0.05, aimed: true, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit("talk", a) });
+      } else cands.push({ d, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit("talk", a) });
     }
     for (const a of game.actorsNear(p.x, p.y, 2.2)) {
       if (a === p || a.state !== "knocked" || !a.canCarry) continue;
@@ -78719,7 +78769,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const v3 = game.view3d?.active ? game.view3d : null;
     if (v3 && cands.length > 1) {
       for (const c of cands) {
-        if (c.x === void 0) continue;
+        if (c.x === void 0 || c.aimed) continue;
         c.d += Math.abs(angleDiff(v3.rig.yaw, Math.atan2(c.y - p.y, w.dx(p.x, c.x)))) * 0.9;
       }
     }
@@ -79246,6 +79296,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const d = game.buildings?.doorPts(room);
     return !!d && w.distance(out.x, out.y, d.mid.x, d.mid.y) < 3;
   }
+  function canSee(game, a, b) {
+    if (!sameRoom(game, a, b)) return false;
+    const w = game.world;
+    const dx = w.dx(a.x, b.x), dy = b.y - a.y;
+    const n = Math.ceil(Math.hypot(dx, dy) / 0.45);
+    const inside2 = w.interiorAt ? w.interiorAt(a.x, a.y) || w.interiorAt(b.x, b.y) : null;
+    for (let i = 1; i < n; i++) {
+      const t = i / n, x = w.wx(a.x + dx * t), y = a.y + dy * t;
+      if (w.solid(x, y)) return false;
+      if (!inside2 && w.isBlocked(x, y)) return false;
+      if (w.hitsProp(x, y, 0.05, true)) return false;
+    }
+    return true;
+  }
+  var LOST_LINES = ["Tch... where'd they go?", "Lost them...", "Get back here, coward!", "Next time...", "They're gone."];
   var AIController = class _AIController {
     constructor(o = {}) {
       this.kind = o.kind || "hostile";
@@ -79269,6 +79334,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.barks = o.barks || null;
       this.barkT = 3 + Math.random() * 5;
       this.lastSeen = 0;
+      this.patience = o.patience ?? (o.kind === "guard" ? 5 : 7);
+      this.pursuit = o.pursuit ?? (this.leash ? Math.max(36, this.leash * 2.2) : 0);
     }
     onHurt(a, att, game) {
       if (att && att !== a) {
@@ -79280,10 +79347,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         if (!this.target || Math.random() < 0.5) this.target = att;
         this.state = "chase";
+        this.sawAt(att, game, a);
         for (const b of game.actorsNear(a.x, a.y, 10)) {
           if (b !== a && b.faction === a.faction && b.controller instanceof _AIController && !b.controller.target && b.state === "idle") {
             b.controller.target = att;
             b.controller.state = "chase";
+            b.controller.sawAt(att, game, b);
             if (att.isPlayer) b.provoked = true;
           }
         }
@@ -79300,11 +79369,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const stealth = b.buffs?.find((x) => x.mods?.stealth);
         if (stealth) d *= 1 + stealth.mods.stealth * 6;
         if (b.isPlayer && b.disguised && a.faction === "marine" && !a.provoked) continue;
-        if (!sameRoom(game, a, b)) continue;
-        if (d < bd) {
-          bd = d;
-          best = b;
-        }
+        if (d >= bd) continue;
+        const real = game.world.distance(a.x, a.y, b.x, b.y);
+        const off = Math.abs(angleDiff(a.facing || 0, Math.atan2(b.y - a.y, game.world.dx(a.x, b.x))));
+        if (off > 1.95 && real > 4) continue;
+        if (!canSee(game, a, b)) continue;
+        bd = d;
+        best = b;
       }
       return best;
     }
@@ -79326,9 +79397,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (this.kind === "wander" || this.kind === "civilian") return this.wander(a, dt, game);
       if (this.kind === "townsfolk") return game.townLife ? game.townLife.update(a, this, dt) : this.wander(a, dt, game);
       if (this.kind === "idle") return;
-      if (this.target && (!this.target.alive || this.target.state !== "idle" || this.target.onShip || w.distance(a.x, a.y, this.target.x, this.target.y) > this.aggroRange * 2.5)) {
-        this.target = null;
-        this.state = this.home ? "return" : "idle";
+      if (this.target && (!this.target.alive || this.target.state !== "idle" || this.target.onShip)) this.loseTarget(a);
+      if (this.target) {
+        const t2 = this.target;
+        if (!this.engage) this.sawAt(t2, game, a);
+        if ((this.seeT = (this.seeT || 0) - dt) <= 0) {
+          this.seeT = 0.25;
+          this.sees = w.distance(a.x, a.y, t2.x, t2.y) < 50 && canSee(game, a, t2);
+          if (this.sees) this.sawAt(t2, game);
+        }
+        const lost = (game.time || 0) - this.seenT;
+        const far = this.pursuit && w.distance(a.x, a.y, this.engage.x, this.engage.y) > this.pursuit;
+        if (lost > this.patience * (a.boss ? 1.6 : 1) || far) {
+          if (t2.isPlayer && lost > 1 && !far && Math.random() < 0.6) game.fx.text(a.x, a.y - 2.1, LOST_LINES[Math.floor(Math.random() * LOST_LINES.length)], "#fff", 0.3, { life: 1.6 });
+          this.loseTarget(a);
+        }
       }
       if (!this.target && this.think <= 0) {
         this.think = 0.4;
@@ -79337,6 +79420,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           if (t2) {
             this.target = t2;
             this.state = "chase";
+            this.sawAt(t2, game, a);
             if (t2.isPlayer && a.alertLine && !a.saidAlert) {
               a.saidAlert = true;
               game.fx.text(a.x, a.y - 2.1, a.alertLine, "#fff", 0.32, { life: 1.8 });
@@ -79349,9 +79433,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (a.hakiSkill.armament > 0) a.armament = fighting;
         if (a.hakiSkill.observation > 0) a.observation = fighting;
       }
-      if (this.home && this.leash && w.distance(a.x, a.y, this.home.x, this.home.y) > this.leash && this.state !== "return") {
+      if (!this.target && this.home && this.leash && w.distance(a.x, a.y, this.home.x, this.home.y) > this.leash && this.state !== "return") {
         this.state = "return";
-        this.target = null;
       }
       if (this.state === "return") {
         if (!this.home) {
@@ -79359,6 +79442,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           return;
         }
         const d = this.moveToward(a, this.home.x, this.home.y, game);
+        a.intent.mx *= 0.6;
+        a.intent.my *= 0.6;
         if (d < 1) this.state = "idle";
         return;
       }
@@ -79367,6 +79452,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         return;
       }
       const t = this.target;
+      if (!this.sees && w.distance(a.x, a.y, t.x, t.y) > 2.2) {
+        const d = w.distance(a.x, a.y, this.seenX, this.seenY);
+        if (d > 1.2) {
+          this.moveToward(a, this.seenX, this.seenY, game);
+          a.intent.sprint = d > 5 && a.stamina > a.d.maxStamina * 0.4;
+        } else a.facing += dt * 2.2 * this.strafeDir;
+        if (a.blocking) a.setBlock(false);
+        return;
+      }
       const dx = w.dx(a.x, t.x), dy = t.y - a.y;
       const dist = Math.hypot(dx, dy);
       const ang = Math.atan2(dy, dx);
@@ -79462,6 +79556,23 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         a.intent.my = my / l;
       }
       this.avoidStuck(a, dt, game);
+    }
+    /** Seen them just now (and, starting a hunt, remember where it began). */
+    sawAt(t, game, a = null) {
+      this.seenT = game.time || 0;
+      this.seenX = t.x;
+      this.seenY = t.y;
+      this.sees = true;
+      if (a && !this.engage) this.engage = { x: a.x, y: a.y };
+      else if (!this.engage) this.engage = { x: t.x, y: t.y };
+    }
+    /** Give up the hunt: home (or stand down). */
+    loseTarget(a) {
+      this.target = null;
+      this.engage = null;
+      this.sees = false;
+      this.state = this.home ? "return" : "idle";
+      if (a.blocking) a.setBlock(false);
     }
     meleeRange(a) {
       return 1.3 * (a.reach || 1) * (a.look?.scale || 1);
