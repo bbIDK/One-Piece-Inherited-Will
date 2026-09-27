@@ -8,6 +8,7 @@
 // Breaking a door down is a crime (a bounty — or, for a Marine, lost standing)
 // unless the house belongs to pirates: nobody reports a burglary on them.
 import { layoutOf, doorOf, HOURS, KEEPER, WALL_T, roomOf, interiorRect } from '../world/interiors.js';
+import { bw, bl } from '../world/bframe.js';
 import { crime, raiseAlarm, robHouse, seaOf } from './reputation.js';
 import { makeLook } from '../data/races.js';
 import { makeEnemy } from './npcs.js';
@@ -25,11 +26,11 @@ export function installBuildings(game) {
     near: [],
     t: 0,
     key(b) { return `${game.world.id}:${Math.round(b.x * 2)}:${Math.round(b.y * 2)}`; },
-    /** World points of the door: out front, in the doorway, just inside. */
+    /** World points of the door: out front, in the doorway, just inside (and its local x). */
     doorPts(b) {
-      const d = doorOf(b);
-      const x = game.world.wx(b.x + d.x);
-      return { x, out: b.y + 0.75, mid: b.y - WALL_T / 2, in: b.y - WALL_T - 0.75, dw: d.dw };
+      const d = doorOf(b), w = game.world;
+      const pt = (z) => { const q = bw(b, d.x, z); return { x: w.wx(q.x), y: q.y }; };
+      return { out: pt(0.75), mid: pt(-WALL_T / 2), in: pt(-WALL_T - 0.75), dw: d.dw, lx: d.x };
     },
     isBroken(b) {
       const day = game.state?.char?.world?.doors?.[B.key(b)];
@@ -51,7 +52,7 @@ export function installBuildings(game) {
     /** Clear floor inside `b` at a world point (not in any furniture, chairs and rugs aside)? */
     freeAt(b, x, y, r = 0.35) {
       const L = layoutOf(b);
-      const lx = game.world.dx(b.x, x), lz = y - b.y;
+      const { lx, lz } = bl(b, x, y, game.world);
       if (lx < L.x0 + r || lx > L.x1 - r || lz < L.z0 + r || lz > L.z1 - r) return false;
       for (const it of L.items) {
         if (FLAT[it.k]) continue;
@@ -94,9 +95,10 @@ export function installBuildings(game) {
       const locked = !broken && B.isLocked(b);
       let want = broken, blocking = false;
       if (!want) {
-        for (const a of game.actorsNear(d.x, d.mid, 2.1)) {
+        for (const a of game.actorsNear(d.mid.x, d.mid.y, 2.1)) {
           if (!a.alive || a.state === 'dead' || a.onShip) continue;
-          const dx = Math.abs(w.dx(d.x, a.x)), dy = Math.abs(a.y - d.mid);
+          const q = bl(b, a.x, a.y, w);
+          const dx = Math.abs(q.lx - d.lx), dy = Math.abs(q.lz + WALL_T / 2);
           if (dx < d.dw / 2 + a.r + 0.05 && dy < WALL_T / 2 + a.r + 0.05) blocking = true; // someone in the doorway
           const allowed = a.isPlayer ? !locked || B.inside(a, b) : !locked || a.homeB === b;
           if (allowed && a.state !== 'knocked' && (dx < 1.2 && dy < 1.5)) want = true;
@@ -107,7 +109,7 @@ export function installBuildings(game) {
         b.doorOpen = want;
         if (want && b.doorCol) { w.removeCol(b.doorCol); b.doorCol = null; }
         if (!want && !b.doorCol && b.doorBox) b.doorCol = w.addCol({ ...b.doorBox });
-        if (!broken && w.distance(p.x, p.y, d.x, d.mid) < 14) game.audio?.sfx(want ? 'door' : 'doorshut');
+        if (!broken && w.distance(p.x, p.y, d.mid.x, d.mid.y) < 14) game.audio?.sfx(want ? 'door' : 'doorshut');
       }
       b.doorBroken = broken;
       b.doorLocked = locked;
@@ -136,15 +138,16 @@ export function installBuildings(game) {
         if (b.doorOpen || !b.doorLocked) continue;
         const d = B.doorPts(b);
         const reach = (h.range || 1.2) + 0.8;
-        if (w.distance(h.x, h.y, d.x, d.mid + 0.3) > reach || w.distance(p.x, p.y, d.x, d.mid) > 2.6) continue;
-        if (p.y < b.y - WALL_T && !B.inside(p, b)) continue;
+        const face = bw(b, d.lx, 0.2);
+        if (w.distance(h.x, h.y, face.x, face.y) > reach || w.distance(p.x, p.y, d.mid.x, d.mid.y) > 2.6) continue;
+        if (bl(b, p.x, p.y, w).lz < -WALL_T && !B.inside(p, b)) continue;
         b.doorHp = (b.doorHp ?? (b.pirate ? 5 : 3)) - (h.heavy || (h.damage || 0) > 20 ? 2 : 1);
         b.doorShake = 0.35;
-        game.fx.burst(d.x, d.mid + 0.1, 6, { color: ['#8d6e4a', '#5a3a22', '#c8a27a'], speed: 3, vz: 2, g: 9, life: 0.5, kind: 'shard', size: 0.1 });
+        game.fx.burst(face.x, face.y, 6, { color: ['#8d6e4a', '#5a3a22', '#c8a27a'], speed: 3, vz: 2, g: 9, life: 0.5, kind: 'shard', size: 0.1 });
         game.fx.shake(0.15);
         game.audio?.sfx('knock');
         if (b.doorHp <= 0) B.breakDoor(b);
-        else if (b.doorHp === 1) game.fx.text(d.x, d.mid - 1.6, 'CRACK!', '#ffcc80', 0.34, { life: 0.8 });
+        else if (b.doorHp === 1) game.fx.text(d.mid.x, d.mid.y - 1.6, 'CRACK!', '#ffcc80', 0.34, { life: 0.8 });
         return;
       }
     },
@@ -159,9 +162,9 @@ export function installBuildings(game) {
       b.doorHp = undefined;
       b.doorOpen = true;
       if (b.doorCol) { game.world.removeCol(b.doorCol); b.doorCol = null; }
-      game.fx.burst(d.x, d.mid, 22, { color: ['#8d6e4a', '#5a3a22', '#c8a27a', '#3e2723'], speed: 5, vz: 3.5, g: 9, life: 0.8, kind: 'shard', size: 0.14 });
-      game.fx.burst(d.x, d.mid, 10, { color: ['#d7ccc8', '#bcaaa4'], speed: 2, vz: 1, g: 0.5, life: 0.9, kind: 'dust', size: 0.3, grow: 0.6 });
-      game.fx.sfx?.(d.x, d.mid - 1.2, 'BAKOOM!!', '#ffcc80', 0.5);
+      game.fx.burst(d.mid.x, d.mid.y, 22, { color: ['#8d6e4a', '#5a3a22', '#c8a27a', '#3e2723'], speed: 5, vz: 3.5, g: 9, life: 0.8, kind: 'shard', size: 0.14 });
+      game.fx.burst(d.mid.x, d.mid.y, 10, { color: ['#d7ccc8', '#bcaaa4'], speed: 2, vz: 1, g: 0.5, life: 0.9, kind: 'dust', size: 0.3, grow: 0.6 });
+      game.fx.sfx?.(d.mid.x, d.mid.y - 1.2, 'BAKOOM!!', '#ffcc80', 0.5);
       game.fx.shake(0.45);
       game.audio?.sfx('doorbreak');
       const home = game.actors.filter((a) => a.homeB === b && a.alive && a.state === 'idle');
@@ -178,8 +181,8 @@ export function installBuildings(game) {
             game.fx.text(a.x, a.y - 2.1, a.keeper ? 'THIEF! GUARDS!' : 'BURGLAR!!', '#ff5252', 0.4, { life: 1.6 });
             if (a.controller && !a.keeper) { a.controller.state = 'flee'; a.controller.fleeFrom = game.player; a.controller.fleeT = 6; }
           }
-          raiseAlarm(game, d.x, d.mid, 'Burglar');
-        } else if (Math.random() < 0.35) raiseAlarm(game, d.x, d.mid, 'Burglar'); // a neighbour saw
+          raiseAlarm(game, d.mid.x, d.mid.y, 'Burglar');
+        } else if (Math.random() < 0.35) raiseAlarm(game, d.mid.x, d.mid.y, 'Burglar'); // a neighbour saw
       }
       persist(game);
     },
@@ -208,16 +211,20 @@ export function installBuildings(game) {
       if (ba === bt) return null;
       const b = ba || bt;
       const d = B.doorPts(b);
-      const ax = Math.abs(w.dx(d.x, a.x));
+      // (worked out in the building's own frame: the door in the front wall at z = 0)
+      const q = bl(b, a.x, a.y, w);
+      const ax = Math.abs(q.lx - d.lx);
+      const zIn = -WALL_T - 0.75, zOut = 0.75;
+      const at = (z) => { const r = bw(b, d.lx, z); return { x: w.wx(r.x), y: r.y }; };
       if (ba) {
         // inside: line up with the door, then walk out
-        if (ax > 0.3 && a.y < d.in + 0.35) return { x: d.x, y: d.in };
-        if (ax > 0.3) return { x: d.x, y: Math.min(a.y, d.in) };
-        return { x: d.x, y: d.out };
+        if (ax > 0.3 && q.lz < zIn + 0.35) return at(zIn);
+        if (ax > 0.3) return at(Math.min(q.lz, zIn));
+        return at(zOut);
       }
       // outside: get in front of the door, then walk in
-      if (ax > 0.3 || a.y > d.out + 0.4 || a.y < b.y) return { x: d.x, y: d.out };
-      return { x: d.x, y: d.in };
+      if (ax > 0.3 || q.lz > zOut + 0.4 || q.lz < 0) return at(zOut);
+      return at(zIn);
     },
 
     /** "E" things around enterable buildings (for interact.js). */
@@ -228,18 +235,19 @@ export function installBuildings(game) {
         const d = B.doorPts(b);
         // a shut, locked door in front of you
         if (!inB && b.doorLocked && !b.doorOpen) {
-          const dist = w.distance(p.x, p.y, d.x, d.out - 0.2);
+          const step = bw(b, d.lx, 0.55);
+          const dist = w.distance(p.x, p.y, step.x, step.y);
           if (dist < 1.4) {
             const house = (b.role || 'house') === 'house';
             const label = house || b.pirate ? 'Knock on the door' : `${b.name || 'Closed'} — closed until ${B.opensAt(b)}:00`;
-            out.push({ d: dist, x: d.x, y: d.mid, label, run: () => game.emit('knockDoor', b) });
+            out.push({ d: dist, x: d.mid.x, y: d.mid.y, label, run: () => game.emit('knockDoor', b) });
           }
         }
         if (inB !== b) continue;
         // things to use inside
         const L = layoutOf(b);
         for (const u of L.use) {
-          const ux = b.x + u.x, uy = b.y + u.z;
+          const { x: ux, y: uy } = bw(b, u.x, u.z);
           const dist = w.distance(p.x, p.y, ux, uy);
           if (dist > 1.25) continue;
           if (u.kind === 'loot') {
@@ -263,7 +271,7 @@ export function installBuildings(game) {
       if (watchers.length) {
         for (const a of watchers) game.fx.text(a.x, a.y - 2.1, 'THIEF!!', '#ff5252', 0.4, { life: 1.4 });
         const d = B.doorPts(b);
-        raiseAlarm(game, d.x, d.mid, 'Thief');
+        raiseAlarm(game, d.mid.x, d.mid.y, 'Thief');
         crime(game, 400000, 'caught robbing a home', { rep: 5 });
       }
     },
@@ -276,7 +284,7 @@ export function installBuildings(game) {
 
 // ------------------------------------------------------------ people inside
 
-function worldPt(b, x, z) { return { x: b.x + x, y: b.y + z }; }
+function worldPt(b, x, z) { return bw(b, x, z); }
 
 function populate(game, ctx) {
   const { island, rng, list, spawner } = ctx;

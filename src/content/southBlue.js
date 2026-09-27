@@ -12,6 +12,7 @@
 import './bossMoves.js';
 import { spawnNow, findActor, aggro, despawn } from './helpers.js';
 import { makeEnemy } from '../game/npcs.js';
+import { bw } from '../world/bframe.js';
 
 // ------------------------------------------------------------------ helpers
 const stageOf = (g, id) => g.quests?.stageId(id) ?? null;
@@ -1636,7 +1637,7 @@ function install(game) {
       const town = islandRec(game, 'sorbet_kingdom')?.towns?.find((t) => t.id === 'sorbet_elder_village');
       if (!sq || !town || game.world.distance(p.x, p.y, sq.x, sq.y) > 45) return;
       const houses = town.buildings.filter((b) => b.role === 'house').slice(0, 4);
-      for (const b of houses) game.fx.burst(b.x + (Math.random() - 0.5) * (b.fw || 4), b.y - (b.fd || 3) - 0.5, 4, { color: ['#ff7043', '#ffca28', '#6d4c41'], speed: 1.5, vz: 4, g: -1, life: 0.9, kind: 'fire', size: 0.25 });
+      for (const b of houses) { const c = bw(b, (Math.random() - 0.5) * (b.fw || 4), -(b.fd || 3) / 2); game.fx.burst(c.x, c.y, 4, { color: ['#ff7043', '#ffca28', '#6d4c41'], speed: 1.5, vz: 4, g: -1, life: 0.9, kind: 'fire', size: 0.25 }); }
     } else {
       const sq = spotOf(game, 'sorbet_kingdom', 'sorbet_south_beach');
       if (!sq || game.world.distance(p.x, p.y, sq.x, sq.y) > 60) return;

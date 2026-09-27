@@ -7,6 +7,7 @@
 import { T, CLIMATE, IS_LIQUID, OVERLAY, WALKABLE, MANMADE } from './tiles.js';
 import { clamp, lerp } from '../core/math.js';
 import { generateTown } from './towngen.js';
+import { bw } from './bframe.js';
 
 export const CLIMATES = {
   temperate: { ground: T.GRASS, beach: T.SAND, clim: CLIMATE.TEMPERATE, trees: ['oak', 'oak', 'pine', 'bush'], density: 0.05 },
@@ -222,7 +223,7 @@ export function generateIsland(world, def, noise, rng) {
     const o = { ...lm, x: c.x, y: c.y, kind: lm.kind || lm.type };
     delete o.dx; delete o.dy;
     if (o.block === undefined) o.block = true;
-    if (o.kind === 'building' && o.role && !o.door) o.door = { x: o.x, y: o.y + 0.5 };
+    if (o.kind === 'building' && o.role && !o.door) o.door = bw(o, 0, 0.5);
     if (o.lore && !o.interact) { o.interact = o.loreLabel || `Examine ${o.name || 'it'}`; o.use = 'lore'; o.interactRange = o.interactRange || 2.2; }
     if (o.kind === 'poneglyph' && !o.interact) { o.interact = o.road ? 'Examine the red Road Poneglyph' : 'Examine the Poneglyph'; o.use = 'poneglyph'; o.interactRange = 2.4; }
     if (o.kind === 'bell' && !o.interact) { o.interact = 'Ring the bell'; o.use = 'bell'; o.interactRange = 2.4; }

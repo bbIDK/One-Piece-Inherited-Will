@@ -7,7 +7,10 @@
 //
 // Local frame (as in buildings3d.js): the front wall — street side, with the
 // door — is at z = 0 and faces +z; the building goes back to z = -fd; x runs
-// from -fw/2 to fw/2. World coordinates: x = b.x + lx, y = b.y + lz.
+// from -fw/2 to fw/2. The building is turned in the world by b.rot (see
+// bframe.js: bw() takes a local point to the world, bl() back).
+
+import { bw, bl, bbox } from './bframe.js';
 
 export const WALL_T = 0.22; // wall thickness (m)
 export const PLINTH = 0.35; // the ground floor over the street in front
@@ -48,8 +51,14 @@ export function doorOf(b) {
   const fw = Math.max(2, b.fw || 3), g = styleScale(b);
   const role = b.role || 'house';
   const big = (role === 'marine_base' || role === 'palace' || role === 'hall' || role === 'church') && fw >= 5;
-  const x = Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, (b.door?.x ?? b.x) - b.x));
+  const x = Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b)));
   return { x, dw: (big ? 1.7 : 1.05) * g, dh: (big ? 2.5 : 2.15) * g, big, kind: doorKind(b) };
+}
+
+/** Where along the front the door is (local x): set by the town, else from its world spot. */
+export function doorLocalX(b) {
+  if (b.doorX !== undefined) return b.doorX;
+  return b.door ? bl(b, b.door.x, b.door.y).lx : 0;
 }
 
 /** Storeys and heights over the ground floor. */
@@ -87,7 +96,7 @@ export function groundWindows(b) {
 /** World-space rectangle of the free floor inside (x0..x1 × y0..y1). */
 export function interiorRect(b) {
   const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-  return { x0: b.x - fw / 2 + WALL_T, x1: b.x + fw / 2 - WALL_T, y0: b.y - fd + WALL_T, y1: b.y - WALL_T };
+  return bbox(b, -fw / 2 + WALL_T, fw / 2 - WALL_T, -fd + WALL_T, -WALL_T);
 }
 
 // ------------------------------------------------------------------ layout
@@ -597,11 +606,11 @@ const ROOMS = {
 };
 
 /** Local (x, z) → world. */
-export const toWorld = (b, x, z) => ({ x: b.x + x, y: b.y + z });
+export const toWorld = (b, x, z) => bw(b, x, z);
 
 /** Is the world point inside this building's walls? */
 export function insideBuilding(b, x, y, dx = (a, c) => c - a, pad = 0) {
   const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-  const lx = dx(b.x, x), lz = y - b.y;
+  const { lx, lz } = bl(b, b.x + dx(b.x, x), y);
   return lx > -fw / 2 + pad && lx < fw / 2 - pad && lz > -fd + pad && lz < -pad;
 }

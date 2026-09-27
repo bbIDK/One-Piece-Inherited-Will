@@ -13,7 +13,8 @@ import { uiIcon } from '../render/icons.js';
 import { vcMat, bindCtx, STATE } from './props/mats.js';
 import { Mesher, box, cyl, cone, lathe, slab, C, shade, hash } from './props/kit.js';
 import { CLIMATE } from '../world/tiles.js';
-import { doorOf } from '../world/interiors.js';
+import { doorOf, doorLocalX } from '../world/interiors.js';
+import { bw, bangle } from '../world/bframe.js';
 import { hollowWalls, rectFrame, shapeFrame, doorLeaf, animateDoor, buildRoom, requestRoom } from './interiors3d.js';
 
 const ROLE_ICON = {
@@ -432,6 +433,13 @@ function domeRoof(k, cx, cz, y, r, sy, col, kind = 'dome') {
 // ---------------------------------------------------------------- building
 
 export function buildBuilding(b, ctx) {
+  const grp = buildBuilding0(b, ctx);
+  // (built in its own frame, then turned to face its street: see world/bframe.js)
+  if (grp) grp.rotation.y = bangle(b);
+  return grp;
+}
+
+function buildBuilding0(b, ctx) {
   bindCtx(ctx);
   ctx = ctx || STATE.ctx;
   const S = STYLE[b.style] || STYLE.village;
@@ -451,14 +459,15 @@ export function buildBuilding(b, ctx) {
   const enter = !!b.enterable && S.wall !== 'hut' && rt !== 'hut' && rt !== 'ruin' && S.wall !== 'stone';
   let plinth = 0.35;
   if (enter && ctx?.ground) {
-    const rise = ctx.ground(b.x, b.y - fd / 2) - ctx.ground(b.x, b.y);
+    const mid = bw(b, 0, -fd / 2);
+    const rise = ctx.ground(mid.x, mid.y) - ctx.ground(b.x, b.y);
     if (Number.isFinite(rise)) plinth = Math.max(0.35, Math.min(3, rise));
   }
   const H = plinth + 3.0 * g + (storeys - 1) * storeyH;
   const Hc = plinth + (storeys > 1 ? storeyH : 3.0 * g); // the ground floor's ceiling
   const hd = fd / 2;
   const winter = S.snow || (ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER);
-  const door = { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, (b.door?.x ?? b.x) - b.x)) };
+  const door = { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b))) };
 
   // round huts are their own thing
   if (S.wall === 'hut' || rt === 'hut') return finish(b, hut(k, b, S, fw, fd, H, wallCol, roofCol), null, H + fd);
@@ -586,7 +595,8 @@ function walkIn(grp, b, S, o) {
     animateDoor(leaf, b, dt);
     const p = ctx?.game?.player, w = ctx?.world;
     if (!p || !w) return;
-    const d = w.distance(p.x, p.y, b.x, b.y - o.fd / 2);
+    const c = bw(b, 0, -o.fd / 2);
+    const d = w.distance(p.x, p.y, c.x, c.y);
     if (!st.room && d < 38) {
       requestRoom(d, () => {
         if (st.room) return;

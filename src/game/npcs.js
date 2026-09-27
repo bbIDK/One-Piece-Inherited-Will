@@ -13,8 +13,9 @@ import { STYLES } from '../data/styles.js';
 import { FRUITS } from '../data/fruits.js';
 import { persist } from './lineage.js';
 import { rumorFor } from './rumors.js';
-import { layoutOf, interiorRect } from '../world/interiors.js';
+import { layoutOf, interiorRect, doorLocalX } from '../world/interiors.js';
 import { formatBerries } from '../core/math.js';
+import { bw } from '../world/bframe.js';
 
 const NPC_DEFS = new Map();
 const GROUPS = []; // enemy groups: { island, spot|dx/dy, enemies: [archetype...], when }
@@ -171,7 +172,7 @@ function inside(b) {
   const spots = [L.keeper, ...L.residents].filter(Boolean);
   const s = spots[(b.npcCount = (b.npcCount || 0) + 1) - 1];
   if (!s) return null;
-  return { x: b.x + s.x, y: b.y + s.z, building: b, inside: true };
+  return { ...bw(b, s.x, s.z), building: b, inside: true };
 }
 
 function placeNPC(game, island, def, rng, spawner) {
@@ -186,14 +187,14 @@ function placeNPC(game, island, def, rng, spawner) {
     if (pl.town && town.id !== pl.town) continue;
     if (pl.building) {
       const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
-      if (b) return inside(b) || clear(spawner, b.door.x + (pl.ox || 0.9), b.door.y + 0.9, rng, { building: b });
+      if (b) { const q = bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4); return inside(b) || clear(spawner, q.x, q.y, rng, { building: b }); }
     }
     if (pl.plaza || (!pl.building && !pl.dx)) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5, 3, rng);
   }
   // any building that names this NPC
   for (const town of island.towns) {
     const b = town.buildings.find((x) => x.npc === def.id);
-    if (b) return inside(b) || clear(spawner, b.door.x + 0.9, b.door.y + 0.9, rng, { building: b });
+    if (b) { const q = bw(b, doorLocalX(b) + 0.9, 1.4); return inside(b) || clear(spawner, q.x, q.y, rng, { building: b }); }
   }
   const lm = island.landmarks.find((l) => l.npc === def.id);
   if (lm) return clear(spawner, lm.x + 0.6, lm.y + 1.2, rng);

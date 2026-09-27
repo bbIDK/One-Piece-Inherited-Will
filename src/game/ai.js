@@ -20,7 +20,7 @@ function sameRoom(game, a, b) {
   if (!room.doorOpen) return false;
   const out = ra ? b : a; // whoever is outside must be at the doorway
   const d = game.buildings?.doorPts(room);
-  return !!d && w.distance(out.x, out.y, d.x, d.mid) < 3;
+  return !!d && w.distance(out.x, out.y, d.mid.x, d.mid.y) < 3;
 }
 
 export class AIController {

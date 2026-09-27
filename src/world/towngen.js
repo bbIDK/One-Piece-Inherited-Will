@@ -3,6 +3,7 @@
 // and street props. Returns a record used for NPC placement and interaction.
 import { T, IS_LIQUID, WALKABLE, OVERLAY } from './tiles.js';
 import { placeObject } from './islandgen.js';
+import { bw } from './bframe.js';
 
 export const TOWN_STYLES = {
   village: { ground: null, road: T.DIRT, plaza: T.DIRT, walls: ['#caa77a', '#b8915f', '#d8c29d', '#c49a6c'], roofs: ['#9c4a2a', '#7d5a3a', '#b5452f', '#6d7a4a'], roof: 'gable', rowStep: 8, lamps: false, fences: true },
@@ -213,7 +214,7 @@ export function generateTown(world, town, rng, noise) {
   // NPC standing spots: in front of doors and along the streets
   const npcSpots = [];
   // (beside the door, not in it)
-  for (const b of buildings) npcSpots.push({ x: b.door.x + (b.fw >= 5 ? 1.6 : 1.25), y: b.door.y + 0.8, building: b });
+  for (const b of buildings) npcSpots.push({ ...bw(b, (b.doorX || 0) + (b.fw >= 5 ? 1.6 : 1.25), 1.3), building: b });
   for (const ry of rows) for (let x = x0 + 3; x < x1 - 2; x += 5) if (okLand(x, ry + 1)) npcSpots.push({ x: x + 0.5, y: ry + 1.5 });
 
   return {

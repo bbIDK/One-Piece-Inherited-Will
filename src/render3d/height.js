@@ -11,6 +11,7 @@
 import { T, IS_LIQUID, OVERLAY } from '../world/tiles.js';
 import { RM_X, RL_HALF, chart } from '../world/constants.js';
 import { PLINTH } from '../world/interiors.js';
+import { bw, bfoot } from '../world/bframe.js';
 
 export const SEA_Y = 0;
 export const DECK_Y = 0.55; // top of docks and bridges
@@ -143,13 +144,13 @@ export class HeightField {
     // the ground inside a walk-in building is dug down to the street in front
     // of it (the walls hide the cut), so its floor is a step up from the street
     if (w.objects) {
-      for (const b of w.objects.query(x0 - 8, y0 - 8, x0 + CHUNK + 8, y0 + CHUNK + 8)) {
+      for (const b of w.objects.query(x0 - 12, y0 - 12, x0 + CHUNK + 12, y0 + CHUNK + 12)) {
         if (!b.enterable) continue;
-        const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-        const bx0 = b.x - fw / 2, bx1 = b.x + fw / 2, by0 = b.y - fd, by1 = b.y;
+        const r = bfoot(b);
+        const bx0 = r.x0, bx1 = r.x1, by0 = r.y0, by1 = r.y1;
         // the street level: the front edge's corners (outside the cut)
-        const fy = Math.round(by1), fx = Math.round(b.x);
-        const front = cornerHeight(w, fx, fy);
+        const fc = bw(b, 0, 0);
+        const front = cornerHeight(w, Math.round(fc.x), Math.round(fc.y));
         for (let j = 0; j < N; j++) {
           const cy = y0 + j;
           if (cy <= by0 || cy >= by1) continue;
@@ -210,7 +211,7 @@ export class HeightField {
     const front = this.terrain(b.x, b.y);
     let top = -Infinity;
     for (let z = -fd + 0.3; z <= -0.3 + 1e-6; z += Math.max(0.5, (fd - 0.6) / 4)) {
-      for (let x = -fw / 2 + 0.3; x <= fw / 2 - 0.3 + 1e-6; x += Math.max(0.5, (fw - 0.6) / 5)) top = Math.max(top, this.terrain(b.x + x, b.y + z));
+      for (let x = -fw / 2 + 0.3; x <= fw / 2 - 0.3 + 1e-6; x += Math.max(0.5, (fw - 0.6) / 5)) { const q = bw(b, x, z); top = Math.max(top, this.terrain(q.x, q.y)); }
     }
     b._floorW = this.world;
     b._floorY = Math.max(front + PLINTH, top + 0.08);

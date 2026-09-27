@@ -2,6 +2,7 @@
 import { WALKABLE } from '../world/tiles.js';
 import { angleDiff } from '../core/math.js';
 import { placeOnDeck, helmSpot } from './decks.js';
+import { bfront } from '../world/bframe.js';
 
 export function findInteraction(game, p) {
   const w = game.world;
@@ -45,10 +46,12 @@ export function findInteraction(game, p) {
     for (const o of w.objects.near(p.x, p.y, 3.2)) {
       if (o.enterable) continue; // walk in (see game/buildings.js)
       if (o.kind === 'building' && o.role && o.role !== 'house' && o.door) {
-        const d = w.distance(p.x, p.y, o.door.x, o.door.y + 0.3);
+        const f = bfront(o);
+        const d = w.distance(p.x, p.y, o.door.x + f.x * 0.3, o.door.y + f.y * 0.3);
         if (d < 1.6) cands.push({ d, x: o.door.x, y: o.door.y, label: o.name ? `Enter ${o.name}` : 'Enter', run: () => game.emit('enterBuilding', o) });
       } else if (o.kind === 'building' && o.role === 'house' && o.door) {
-        const d = w.distance(p.x, p.y, o.door.x, o.door.y + 0.3);
+        const f = bfront(o);
+        const d = w.distance(p.x, p.y, o.door.x + f.x * 0.3, o.door.y + f.y * 0.3);
         if (d < 1.2) cands.push({ d: d + 0.5, x: o.door.x, y: o.door.y, label: 'Knock on the door', run: () => game.emit('knockDoor', o) });
       } else if (o.kind === 'chest' && !o.opened) {
         const d = w.distance(p.x, p.y, o.x, o.y);

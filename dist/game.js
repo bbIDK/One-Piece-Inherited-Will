@@ -33544,8 +33544,8 @@ void main() {
       const w = r.domElement.clientWidth || window.innerWidth, h2 = r.domElement.clientHeight || window.innerHeight;
       this.composer.setPixelRatio(dpr);
       this.composer.setSize(w, h2);
-      const bw = Math.round(w * dpr), bh = Math.round(h2 * dpr);
-      this.fxaa.material.uniforms.resolution.value.set(1 / bw, 1 / bh);
+      const bw2 = Math.round(w * dpr), bh = Math.round(h2 * dpr);
+      this.fxaa.material.uniforms.resolution.value.set(1 / bw2, 1 / bh);
     }
     /** How far out outlines are drawn (m): short under water, where the fog swallows the view. */
     setInkFar(v) {
@@ -33566,6 +33566,54 @@ void main() {
       this.composer.dispose();
     }
   };
+
+  // src/world/bframe.js
+  var FRONT = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+  var rotOf = (b) => ((b.rot | 0) % 4 + 4) % 4;
+  function bw(b, lx, lz) {
+    switch (rotOf(b)) {
+      case 1:
+        return { x: b.x + lz, y: b.y - lx };
+      case 2:
+        return { x: b.x - lx, y: b.y - lz };
+      case 3:
+        return { x: b.x - lz, y: b.y + lx };
+      default:
+        return { x: b.x + lx, y: b.y + lz };
+    }
+  }
+  function bl(b, x, y, world = null) {
+    const dx = world ? world.dx(b.x, x) : x - b.x, dy = y - b.y;
+    switch (rotOf(b)) {
+      case 1:
+        return { lx: -dy, lz: dx };
+      case 2:
+        return { lx: -dx, lz: -dy };
+      case 3:
+        return { lx: dy, lz: -dx };
+      default:
+        return { lx: dx, lz: dy };
+    }
+  }
+  function bbox(b, x0, x1, z0, z1) {
+    const a = bw(b, x0, z0), c = bw(b, x1, z1);
+    return { x0: Math.min(a.x, c.x), x1: Math.max(a.x, c.x), y0: Math.min(a.y, c.y), y1: Math.max(a.y, c.y) };
+  }
+  function bfoot(b) {
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+    return bbox(b, -fw / 2, fw / 2, -fd, 0);
+  }
+  function bfront(b) {
+    const f = FRONT[rotOf(b)];
+    return { x: f[0], y: f[1] };
+  }
+  function bfacing(b) {
+    const f = FRONT[rotOf(b)];
+    return Math.atan2(f[1], f[0]);
+  }
+  function bangle(b) {
+    return rotOf(b) * Math.PI / 2;
+  }
 
   // src/world/interiors.js
   var WALL_T = 0.22;
@@ -33648,8 +33696,12 @@ void main() {
     const fw = Math.max(2, b.fw || 3), g = styleScale(b);
     const role = b.role || "house";
     const big = (role === "marine_base" || role === "palace" || role === "hall" || role === "church") && fw >= 5;
-    const x = Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, (b.door?.x ?? b.x) - b.x));
+    const x = Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b)));
     return { x, dw: (big ? 1.7 : 1.05) * g, dh: (big ? 2.5 : 2.15) * g, big, kind: doorKind(b) };
+  }
+  function doorLocalX(b) {
+    if (b.doorX !== void 0) return b.doorX;
+    return b.door ? bl(b, b.door.x, b.door.y).lx : 0;
   }
   function heightsOf(b) {
     const g = styleScale(b);
@@ -33678,7 +33730,7 @@ void main() {
   }
   function interiorRect(b) {
     const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-    return { x0: b.x - fw / 2 + WALL_T, x1: b.x + fw / 2 - WALL_T, y0: b.y - fd + WALL_T, y1: b.y - WALL_T };
+    return bbox(b, -fw / 2 + WALL_T, fw / 2 - WALL_T, -fd + WALL_T, -WALL_T);
   }
   function hash(a, b = 0, c = 0) {
     let h2 = Math.imul(a * 1e3 | 0, 374761393) ^ Math.imul(b * 1e3 | 0, 668265263) ^ Math.imul(c * 1e3 | 0, 1274126177);
@@ -33905,9 +33957,9 @@ void main() {
     const cz = L2.z0 + bd + gapBehind * g + S3("counter").d / 2;
     const counter = P4.at({ ...S3("counter"), w: cw }, L2.x0 + cw / 2 + 0.02, cz, 0) || P4.at({ ...S3("counter"), w: cw * 0.8 }, L2.x0 + cw * 0.4 + 0.02, cz, 0);
     if (!counter) return null;
-    const bw = Math.min(width - 0.1, cw + 0.4 * g);
-    P4.deco({ k: shelf, w: bw, d: bd, h: 1.9 * g }, L2.x0 + bw / 2 + 0.02, L2.z0 + bd / 2 + 0.01, 0);
-    P4.rects.push({ x0: L2.x0, x1: L2.x0 + bw + 0.02, z0: L2.z0, z1: counter.rect.z0 });
+    const bw2 = Math.min(width - 0.1, cw + 0.4 * g);
+    P4.deco({ k: shelf, w: bw2, d: bd, h: 1.9 * g }, L2.x0 + bw2 / 2 + 0.02, L2.z0 + bd / 2 + 0.01, 0);
+    P4.rects.push({ x0: L2.x0, x1: L2.x0 + bw2 + 0.02, z0: L2.z0, z1: counter.rect.z0 });
     P4.keep.push({ x0: counter.x - 0.55, x1: counter.x + 0.55, z0: counter.rect.z1, z1: counter.rect.z1 + 0.85 });
     L2.keeper = { x: counter.x, z: L2.z0 + bd + gapBehind * g * 0.5 };
     L2.use.push({ kind: "service", x: counter.x, z: counter.rect.z1 + 0.45, label: null });
@@ -34322,12 +34374,12 @@ void main() {
         for (let i = 0; i < N4; i++) g[j * N4 + i] = cornerHeight(w, x0 + i, y0 + j);
       }
       if (w.objects) {
-        for (const b of w.objects.query(x0 - 8, y0 - 8, x0 + CHUNK + 8, y0 + CHUNK + 8)) {
+        for (const b of w.objects.query(x0 - 12, y0 - 12, x0 + CHUNK + 12, y0 + CHUNK + 12)) {
           if (!b.enterable) continue;
-          const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-          const bx0 = b.x - fw / 2, bx1 = b.x + fw / 2, by0 = b.y - fd, by1 = b.y;
-          const fy = Math.round(by1), fx = Math.round(b.x);
-          const front = cornerHeight(w, fx, fy);
+          const r = bfoot(b);
+          const bx0 = r.x0, bx1 = r.x1, by0 = r.y0, by1 = r.y1;
+          const fc = bw(b, 0, 0);
+          const front = cornerHeight(w, Math.round(fc.x), Math.round(fc.y));
           for (let j = 0; j < N4; j++) {
             const cy2 = y0 + j;
             if (cy2 <= by0 || cy2 >= by1) continue;
@@ -34383,7 +34435,10 @@ void main() {
       const front = this.terrain(b.x, b.y);
       let top = -Infinity;
       for (let z = -fd + 0.3; z <= -0.3 + 1e-6; z += Math.max(0.5, (fd - 0.6) / 4)) {
-        for (let x = -fw / 2 + 0.3; x <= fw / 2 - 0.3 + 1e-6; x += Math.max(0.5, (fw - 0.6) / 5)) top = Math.max(top, this.terrain(b.x + x, b.y + z));
+        for (let x = -fw / 2 + 0.3; x <= fw / 2 - 0.3 + 1e-6; x += Math.max(0.5, (fw - 0.6) / 5)) {
+          const q2 = bw(b, x, z);
+          top = Math.max(top, this.terrain(q2.x, q2.y));
+        }
       }
       b._floorW = this.world;
       b._floorY = Math.max(front + PLINTH, top + 0.08);
@@ -45836,9 +45891,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           while (x < w / 2 - 0.08) {
             const r = R3(row * 31 + i * 7 + (it.x * 13 | 0));
             if (kind === "books" || kind === "bookcase") {
-              const bw = 0.04 + r * 0.05, bh = gap * (0.6 + r * 0.35);
-              B(k, x, y, -d / 2 + 0.05, x + bw, y + bh, d / 2 - 0.04, BOOKS[Math.floor(r * BOOKS.length)]);
-              x += bw + 4e-3;
+              const bw2 = 0.04 + r * 0.05, bh = gap * (0.6 + r * 0.35);
+              B(k, x, y, -d / 2 + 0.05, x + bw2, y + bh, d / 2 - 0.04, BOOKS[Math.floor(r * BOOKS.length)]);
+              x += bw2 + 4e-3;
             } else if (kind === "bottles" || kind === "medcabinet") {
               const bh = gap * (0.45 + r * 0.4);
               const col = kind === "medcabinet" ? ["#fafafa", "#aed6f1", "#f5b7b1", "#abebc6"][Math.floor(r * 4)] : BOTTLES[Math.floor(r * BOTTLES.length)];
@@ -46578,6 +46633,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return r * sy * (kind === "onion" ? 1.25 : 1);
   }
   function buildBuilding(b, ctx) {
+    const grp = buildBuilding0(b, ctx);
+    if (grp) grp.rotation.y = bangle(b);
+    return grp;
+  }
+  function buildBuilding0(b, ctx) {
     bindCtx(ctx);
     ctx = ctx || STATE.ctx;
     const S3 = STYLE[b.style] || STYLE.village;
@@ -46595,14 +46655,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const enter = !!b.enterable && S3.wall !== "hut" && rt !== "hut" && rt !== "ruin" && S3.wall !== "stone";
     let plinth = 0.35;
     if (enter && ctx?.ground) {
-      const rise = ctx.ground(b.x, b.y - fd / 2) - ctx.ground(b.x, b.y);
+      const mid = bw(b, 0, -fd / 2);
+      const rise = ctx.ground(mid.x, mid.y) - ctx.ground(b.x, b.y);
       if (Number.isFinite(rise)) plinth = Math.max(0.35, Math.min(3, rise));
     }
     const H2 = plinth + 3 * g + (storeys - 1) * storeyH;
     const Hc = plinth + (storeys > 1 ? storeyH : 3 * g);
     const hd = fd / 2;
     const winter = S3.snow || ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER;
-    const door = { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, (b.door?.x ?? b.x) - b.x)) };
+    const door = { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b))) };
     if (S3.wall === "hut" || rt === "hut") return finish(b, hut(k, b, S3, fw, fd, H2, wallCol, roofCol), null, H2 + fd);
     B2(k, -fw / 2 - 0.08, -2, -fd - 0.08, fw / 2 + 0.08, plinth, 0.08, baseCol, { outline: 0.03 });
     const ruined = rt === "ruin" || S3.wall === "stone";
@@ -46711,7 +46772,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       animateDoor(leaf, b, dt);
       const p = ctx?.game?.player, w = ctx?.world;
       if (!p || !w) return;
-      const d = w.distance(p.x, p.y, b.x, b.y - o.fd / 2);
+      const c = bw(b, 0, -o.fd / 2);
+      const d = w.distance(p.x, p.y, c.x, c.y);
       if (!st.room && d < 38) {
         requestRoom(d, () => {
           if (st.room) return;
@@ -49103,8 +49165,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     t.colorSpace = SRGBColorSpace;
     t.anisotropy = 4;
     const aspect2 = w / 72;
-    const bw = Math.min(maxW, 0.62 * aspect2);
-    const m = new Mesh(new PlaneGeometry(bw, bw / aspect2), new MeshToonMaterial({ map: t }));
+    const bw2 = Math.min(maxW, 0.62 * aspect2);
+    const m = new Mesh(new PlaneGeometry(bw2, bw2 / aspect2), new MeshToonMaterial({ map: t }));
     m.position.set(0, y, z);
     m.userData.ownTexture = t;
     return m;
@@ -49381,12 +49443,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (!o.name) return simple(o, ctx, "sign", sign2(), { yaw: 0 });
     const root2 = group("sign");
     const board2 = nameBoard2(o.name, 2.6, 0, 0);
-    const bw = board2.geometry.parameters.width, bh = Math.max(0.3, board2.geometry.parameters.height);
+    const bw2 = board2.geometry.parameters.width, bh = Math.max(0.3, board2.geometry.parameters.height);
     board2.scale.set(1, bh / board2.geometry.parameters.height, 1);
     const k = new Mesher();
     const y0 = 1.05;
-    for (const s2 of bw > 1.2 ? [-1, 1] : [0]) k.add(box(0.1, y0 + bh + 0.1, 0.1), { at: [s2 * (bw / 2 - 0.12), 0, 0], color: "#6d4c33", outline: 0.012 });
-    k.add(box(bw + 0.14, bh + 0.14, 0.07), { at: [0, y0 - 0.07, 0.07], color: "#5a3a22", outline: 0.018 });
+    for (const s2 of bw2 > 1.2 ? [-1, 1] : [0]) k.add(box(0.1, y0 + bh + 0.1, 0.1), { at: [s2 * (bw2 / 2 - 0.12), 0, 0], color: "#6d4c33", outline: 0.012 });
+    k.add(box(bw2 + 0.14, bh + 0.14, 0.07), { at: [0, y0 - 0.07, 0.07], color: "#5a3a22", outline: 0.018 });
     root2.add(meshOf(k.build(false)));
     board2.position.set(0, y0 + bh / 2, 0.112);
     root2.add(board2);
@@ -53505,12 +53567,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.stroke();
         g.restore();
       }
-      const bw = torsoW * 0.94;
+      const bw2 = torsoW * 0.94;
       g.fillStyle = look.belt || dk2(bottom, -0.32);
       g.strokeStyle = OUTLINE3;
       g.lineWidth = 0.025;
       g.beginPath();
-      g.rect(-bw / 2, hipY - 0.1, bw, 0.06);
+      g.rect(-bw2 / 2, hipY - 0.1, bw2, 0.06);
       g.fill();
       if (!ghost) g.stroke();
       if (!ghost) {
@@ -53523,9 +53585,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         } else if (side) {
           g.fillStyle = look.belt || dk2(bottom, -0.32);
           g.beginPath();
-          g.moveTo(-bw / 2, hipY - 0.07);
-          g.quadraticCurveTo(-bw / 2 - 0.12, hipY - 0.02, -bw / 2 - 0.08, hipY + 0.1);
-          g.lineTo(-bw / 2 - 0.02, hipY - 0.04);
+          g.moveTo(-bw2 / 2, hipY - 0.07);
+          g.quadraticCurveTo(-bw2 / 2 - 0.12, hipY - 0.02, -bw2 / 2 - 0.08, hipY + 0.1);
+          g.lineTo(-bw2 / 2 - 0.02, hipY - 0.04);
           g.closePath();
           g.fill();
           g.stroke();
@@ -61554,8 +61616,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lookCache = {};
       this.look = currentLook(a, this.lookCache);
       this.baseLook = a.look;
-      const bl = a.buffs.find((b) => b.look);
-      this.buffLookObj = bl ? bl.look : null;
+      const bl2 = a.buffs.find((b) => b.look);
+      this.buffLookObj = bl2 ? bl2.look : null;
       this.wpn = weaponOf(a);
       this.wpnKey = this.wpn ? `${this.wpn.kind}${this.wpn.count}${this.wpn.gun || ""}` : "";
       this.root = new Group();
@@ -61580,8 +61642,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     stale() {
       const a = this.a;
-      const bl = a.buffs.find((b) => b.look);
-      if (a.look !== this.baseLook || (bl ? bl.look : null) !== this.buffLookObj) return true;
+      const bl2 = a.buffs.find((b) => b.look);
+      if (a.look !== this.baseLook || (bl2 ? bl2.look : null) !== this.buffLookObj) return true;
       const w = weaponOf(a);
       const k = w ? `${w.kind}${w.count}${w.gun || ""}` : "";
       return k !== this.wpnKey;
@@ -63899,7 +63961,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (room) {
         const floor = v.terrain?.hf?.floorY ? v.terrain.hf.floorY(room) : ctx.ground(p.x, p.y);
         const fd = room.fd || 3;
-        cands.push({ d: -1, x: w.dx(ox, room.x), y: floor + 2.1, z: room.y - fd / 2 - oy, k: (0.35 + night * 0.65) * 0.5, col: [1, 0.8, 0.56], range: 6 });
+        const c = bw(room, 0, -fd / 2);
+        cands.push({ d: -1, x: w.dx(ox, c.x), y: floor + 2.1, z: c.y - oy, k: (0.35 + night * 0.65) * 0.5, col: [1, 0.8, 0.56], range: 6 });
       }
       cands.sort((a, b) => a.d - b.d);
       for (let i = 0; i < NLIGHTS; i++) {
@@ -63963,9 +64026,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           if (!b.fw || !b.fd || !(b.hgt || b.enterable)) continue;
           const floor = b.enterable && hf ? hf.floorY(b) : ctx.ground(b.x, b.y);
           const top = floor + heightsOf(b).H + 0.4;
-          const bx = w.dx(x0, b.x);
-          const i0 = Math.max(0, Math.floor(bx - b.fw / 2 - 0.45)), i1 = Math.min(SH - 1, Math.floor(bx + b.fw / 2 + 0.45));
-          const j0 = Math.max(0, Math.floor(b.y - b.fd - y0 - 0.45)), j1 = Math.min(SH - 1, Math.floor(b.y - y0 + 0.45));
+          const r = bfoot(b), bx = w.dx(x0, r.x0);
+          const i0 = Math.max(0, Math.floor(bx - 0.45)), i1 = Math.min(SH - 1, Math.floor(bx + (r.x1 - r.x0) + 0.45));
+          const j0 = Math.max(0, Math.floor(r.y0 - y0 - 0.45)), j1 = Math.min(SH - 1, Math.floor(r.y1 - y0 + 0.45));
           for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
             const k = (j * SH + i) * 4 + 1;
             if (top > d[k]) d[k] = top;
@@ -64906,9 +64969,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), T3 = WALL_T;
       const d = doorOf(b);
       const cols = [];
+      const rect = (x0, x1, z0, z1) => {
+        const r = bbox(b, x0, x1, z0, z1);
+        return { x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2, hw: (r.x1 - r.x0) / 2, hd: (r.y1 - r.y0) / 2 };
+      };
       const box2 = (x0, x1, z0, z1, extra) => {
         if (x1 - x0 < 0.01 || z1 - z0 < 0.01) return null;
-        const col = w.addCol({ x: b.x + (x0 + x1) / 2, y: b.y + (z0 + z1) / 2, hw: (x1 - x0) / 2, hd: (z1 - z0) / 2, o: b, ...extra });
+        const col = w.addCol({ ...rect(x0, x1, z0, z1), o: b, ...extra });
         cols.push(col);
         return col;
       };
@@ -64919,9 +64986,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       box2(-fw / 2, -fw / 2 + T3, -fd, 0, wall);
       box2(fw / 2 - T3, fw / 2, -fd, 0, wall);
       b.cols = cols;
-      b.doorBox = { x: b.x + d.x, y: b.y - T3 / 2, hw: d.dw / 2, hd: T3 / 2, o: b, wall: true, door: true };
+      b.doorBox = { ...rect(d.x - d.dw / 2, d.x + d.dw / 2, -T3, 0), o: b, wall: true, door: true };
       b.doorCol = w.addCol({ ...b.doorBox });
-      b.floor = { x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - fd, y1: b.y - 2e-3, h: PLINTH, o: b, interior: true };
+      b.floor = { ...bbox(b, -fw / 2, fw / 2, -fd, -2e-3), h: PLINTH, o: b, interior: true };
       w.addFloor(b.floor);
     }
     /** The furniture collides too (laid out lazily: when someone comes near or the island fills with people). */
@@ -64932,8 +64999,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (const it of L2.items) {
         if (it.ghost || !it.rect) continue;
         const r = it.rect, sh = 0.03;
-        if (ROUND.has(it.k)) b.cols.push(w.addCol({ x: b.x + it.x, y: b.y + it.z, r: Math.min(r.x1 - r.x0, r.z1 - r.z0) / 2 - sh, o: b }));
-        else b.cols.push(w.addCol({ x: b.x + (r.x0 + r.x1) / 2, y: b.y + (r.z0 + r.z1) / 2, hw: (r.x1 - r.x0) / 2 - sh, hd: (r.z1 - r.z0) / 2 - sh, o: b }));
+        if (ROUND.has(it.k)) b.cols.push(w.addCol({ ...bw(b, it.x, it.z), r: Math.min(r.x1 - r.x0, r.z1 - r.z0) / 2 - sh, o: b }));
+        else {
+          const q2 = bbox(b, r.x0 + sh, r.x1 - sh, r.z0 + sh, r.z1 - sh);
+          b.cols.push(w.addCol({ x: (q2.x0 + q2.x1) / 2, y: (q2.y0 + q2.y1) / 2, hw: (q2.x1 - q2.x0) / 2, hd: (q2.y1 - q2.y0) / 2, o: b }));
+        }
       }
     }
     removeInterior(b) {
@@ -64995,6 +65065,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
   };
   function footprint(o) {
+    if (o.rot) {
+      const r = bfoot(o);
+      const x02 = Math.floor(r.x0 + 1e-3), y02 = Math.floor(r.y0 + 1e-3);
+      return { x0: x02, y0: y02, x1: x02 + Math.round(r.x1 - r.x0), y1: y02 + Math.round(r.y1 - r.y0) };
+    }
     const w = o.fw || 1, d = o.fd || 1;
     const x0 = Math.floor(o.x - w / 2 + 1e-3), y0 = Math.floor(o.y - d + 1e-3);
     return { x0, y0, x1: x0 + w, y1: y0 + d };
@@ -65280,7 +65355,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
     const npcSpots = [];
-    for (const b of buildings) npcSpots.push({ x: b.door.x + (b.fw >= 5 ? 1.6 : 1.25), y: b.door.y + 0.8, building: b });
+    for (const b of buildings) npcSpots.push({ ...bw(b, (b.doorX || 0) + (b.fw >= 5 ? 1.6 : 1.25), 1.3), building: b });
     for (const ry of rows) for (let x = x0 + 3; x < x1 - 2; x += 5) if (okLand(x, ry + 1)) npcSpots.push({ x: x + 0.5, y: ry + 1.5 });
     return {
       id: town.id,
@@ -65396,8 +65471,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const cd = CD[k];
         const n = noise.fbm(x * 0.05 + 11, y * 0.05 - 7, 3);
         const e = clamp(20 + cd * (def.elevRate ?? 5) + n * 25, 8, 170);
-        const bw = beachW + noise.noise2(x * 0.15, y * 0.15) * 1.2;
-        const t = cd <= bw ? beach : ground;
+        const bw2 = beachW + noise.noise2(x * 0.15, y * 0.15) * 1.2;
+        const t = cd <= bw2 ? beach : ground;
         world.setTile(x, y, t, Math.round(e), clim);
       }
     }
@@ -65513,7 +65588,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       delete o.dx;
       delete o.dy;
       if (o.block === void 0) o.block = true;
-      if (o.kind === "building" && o.role && !o.door) o.door = { x: o.x, y: o.y + 0.5 };
+      if (o.kind === "building" && o.role && !o.door) o.door = bw(o, 0, 0.5);
       if (o.lore && !o.interact) {
         o.interact = o.loreLabel || `Examine ${o.name || "it"}`;
         o.use = "lore";
@@ -72825,8 +72900,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const t0 = 0.25 + hash8(seed + b) * 0.5;
           const bx = dx * t0, by = (dy - z1 + z0) * t0 - z0;
           const ba = Math.atan2(dy - z1 + z0, dx) + (hash8(seed + b * 3) - 0.5) * 2;
-          const bl = 0.4 + hash8(seed + b * 5) * 0.8;
-          jagged(g, bx, by, bx + Math.cos(ba) * bl, by + Math.sin(ba) * bl, seed + b * 11, 0.15, 4);
+          const bl2 = 0.4 + hash8(seed + b * 5) * 0.8;
+          jagged(g, bx, by, bx + Math.cos(ba) * bl2, by + Math.sin(ba) * bl2, seed + b * 11, 0.15, 4);
         }
         g.stroke();
       }
@@ -75794,10 +75869,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (const o of w.objects.near(p.x, p.y, 3.2)) {
         if (o.enterable) continue;
         if (o.kind === "building" && o.role && o.role !== "house" && o.door) {
-          const d = w.distance(p.x, p.y, o.door.x, o.door.y + 0.3);
+          const f = bfront(o);
+          const d = w.distance(p.x, p.y, o.door.x + f.x * 0.3, o.door.y + f.y * 0.3);
           if (d < 1.6) cands.push({ d, x: o.door.x, y: o.door.y, label: o.name ? `Enter ${o.name}` : "Enter", run: () => game.emit("enterBuilding", o) });
         } else if (o.kind === "building" && o.role === "house" && o.door) {
-          const d = w.distance(p.x, p.y, o.door.x, o.door.y + 0.3);
+          const f = bfront(o);
+          const d = w.distance(p.x, p.y, o.door.x + f.x * 0.3, o.door.y + f.y * 0.3);
           if (d < 1.2) cands.push({ d: d + 0.5, x: o.door.x, y: o.door.y, label: "Knock on the door", run: () => game.emit("knockDoor", o) });
         } else if (o.kind === "chest" && !o.opened) {
           const d = w.distance(p.x, p.y, o.x, o.y);
@@ -76321,7 +76398,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (!room.doorOpen) return false;
     const out = ra ? b : a;
     const d = game.buildings?.doorPts(room);
-    return !!d && w.distance(out.x, out.y, d.x, d.mid) < 3;
+    return !!d && w.distance(out.x, out.y, d.mid.x, d.mid.y) < 3;
   }
   var AIController = class _AIController {
     constructor(o = {}) {
@@ -83311,7 +83388,7 @@ Trains by: ${TRAINS_BY[k]}` },
     const spots = [L2.keeper, ...L2.residents].filter(Boolean);
     const s = spots[(b.npcCount = (b.npcCount || 0) + 1) - 1];
     if (!s) return null;
-    return { x: b.x + s.x, y: b.y + s.z, building: b, inside: true };
+    return { ...bw(b, s.x, s.z), building: b, inside: true };
   }
   function placeNPC(game, island, def, rng4, spawner) {
     const pl = (typeof def.at === "function" ? def.at(game.state?.char, game) : def.at) || {};
@@ -83325,13 +83402,19 @@ Trains by: ${TRAINS_BY[k]}` },
       if (pl.town && town.id !== pl.town) continue;
       if (pl.building) {
         const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
-        if (b) return inside(b) || clear2(spawner, b.door.x + (pl.ox || 0.9), b.door.y + 0.9, rng4, { building: b });
+        if (b) {
+          const q2 = bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4);
+          return inside(b) || clear2(spawner, q2.x, q2.y, rng4, { building: b });
+        }
       }
       if (pl.plaza || !pl.building && !pl.dx) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5, 3, rng4);
     }
     for (const town of island.towns) {
       const b = town.buildings.find((x) => x.npc === def.id);
-      if (b) return inside(b) || clear2(spawner, b.door.x + 0.9, b.door.y + 0.9, rng4, { building: b });
+      if (b) {
+        const q2 = bw(b, doorLocalX(b) + 0.9, 1.4);
+        return inside(b) || clear2(spawner, q2.x, q2.y, rng4, { building: b });
+      }
     }
     const lm = island.landmarks.find((l) => l.npc === def.id);
     if (lm) return clear2(spawner, lm.x + 0.6, lm.y + 1.2, rng4);
@@ -83841,11 +83924,14 @@ Trains by: ${TRAINS_BY[k]}` },
       key(b) {
         return `${game.world.id}:${Math.round(b.x * 2)}:${Math.round(b.y * 2)}`;
       },
-      /** World points of the door: out front, in the doorway, just inside. */
+      /** World points of the door: out front, in the doorway, just inside (and its local x). */
       doorPts(b) {
-        const d = doorOf(b);
-        const x = game.world.wx(b.x + d.x);
-        return { x, out: b.y + 0.75, mid: b.y - WALL_T / 2, in: b.y - WALL_T - 0.75, dw: d.dw };
+        const d = doorOf(b), w = game.world;
+        const pt = (z) => {
+          const q2 = bw(b, d.x, z);
+          return { x: w.wx(q2.x), y: q2.y };
+        };
+        return { out: pt(0.75), mid: pt(-WALL_T / 2), in: pt(-WALL_T - 0.75), dw: d.dw, lx: d.x };
       },
       isBroken(b) {
         const day = game.state?.char?.world?.doors?.[B4.key(b)];
@@ -83869,7 +83955,7 @@ Trains by: ${TRAINS_BY[k]}` },
       /** Clear floor inside `b` at a world point (not in any furniture, chairs and rugs aside)? */
       freeAt(b, x, y, r = 0.35) {
         const L2 = layoutOf(b);
-        const lx = game.world.dx(b.x, x), lz = y - b.y;
+        const { lx, lz } = bl(b, x, y, game.world);
         if (lx < L2.x0 + r || lx > L2.x1 - r || lz < L2.z0 + r || lz > L2.z1 - r) return false;
         for (const it of L2.items) {
           if (FLAT[it.k]) continue;
@@ -83910,9 +83996,10 @@ Trains by: ${TRAINS_BY[k]}` },
         const locked = !broken && B4.isLocked(b);
         let want = broken, blocking = false;
         if (!want) {
-          for (const a of game.actorsNear(d.x, d.mid, 2.1)) {
+          for (const a of game.actorsNear(d.mid.x, d.mid.y, 2.1)) {
             if (!a.alive || a.state === "dead" || a.onShip) continue;
-            const dx = Math.abs(w.dx(d.x, a.x)), dy = Math.abs(a.y - d.mid);
+            const q2 = bl(b, a.x, a.y, w);
+            const dx = Math.abs(q2.lx - d.lx), dy = Math.abs(q2.lz + WALL_T / 2);
             if (dx < d.dw / 2 + a.r + 0.05 && dy < WALL_T / 2 + a.r + 0.05) blocking = true;
             const allowed = a.isPlayer ? !locked || B4.inside(a, b) : !locked || a.homeB === b;
             if (allowed && a.state !== "knocked" && (dx < 1.2 && dy < 1.5)) want = true;
@@ -83926,7 +84013,7 @@ Trains by: ${TRAINS_BY[k]}` },
             b.doorCol = null;
           }
           if (!want && !b.doorCol && b.doorBox) b.doorCol = w.addCol({ ...b.doorBox });
-          if (!broken && w.distance(p.x, p.y, d.x, d.mid) < 14) game.audio?.sfx(want ? "door" : "doorshut");
+          if (!broken && w.distance(p.x, p.y, d.mid.x, d.mid.y) < 14) game.audio?.sfx(want ? "door" : "doorshut");
         }
         b.doorBroken = broken;
         b.doorLocked = locked;
@@ -83958,15 +84045,16 @@ Trains by: ${TRAINS_BY[k]}` },
           if (b.doorOpen || !b.doorLocked) continue;
           const d = B4.doorPts(b);
           const reach = (h2.range || 1.2) + 0.8;
-          if (w.distance(h2.x, h2.y, d.x, d.mid + 0.3) > reach || w.distance(p.x, p.y, d.x, d.mid) > 2.6) continue;
-          if (p.y < b.y - WALL_T && !B4.inside(p, b)) continue;
+          const face = bw(b, d.lx, 0.2);
+          if (w.distance(h2.x, h2.y, face.x, face.y) > reach || w.distance(p.x, p.y, d.mid.x, d.mid.y) > 2.6) continue;
+          if (bl(b, p.x, p.y, w).lz < -WALL_T && !B4.inside(p, b)) continue;
           b.doorHp = (b.doorHp ?? (b.pirate ? 5 : 3)) - (h2.heavy || (h2.damage || 0) > 20 ? 2 : 1);
           b.doorShake = 0.35;
-          game.fx.burst(d.x, d.mid + 0.1, 6, { color: ["#8d6e4a", "#5a3a22", "#c8a27a"], speed: 3, vz: 2, g: 9, life: 0.5, kind: "shard", size: 0.1 });
+          game.fx.burst(face.x, face.y, 6, { color: ["#8d6e4a", "#5a3a22", "#c8a27a"], speed: 3, vz: 2, g: 9, life: 0.5, kind: "shard", size: 0.1 });
           game.fx.shake(0.15);
           game.audio?.sfx("knock");
           if (b.doorHp <= 0) B4.breakDoor(b);
-          else if (b.doorHp === 1) game.fx.text(d.x, d.mid - 1.6, "CRACK!", "#ffcc80", 0.34, { life: 0.8 });
+          else if (b.doorHp === 1) game.fx.text(d.mid.x, d.mid.y - 1.6, "CRACK!", "#ffcc80", 0.34, { life: 0.8 });
           return;
         }
       },
@@ -83983,9 +84071,9 @@ Trains by: ${TRAINS_BY[k]}` },
           game.world.removeCol(b.doorCol);
           b.doorCol = null;
         }
-        game.fx.burst(d.x, d.mid, 22, { color: ["#8d6e4a", "#5a3a22", "#c8a27a", "#3e2723"], speed: 5, vz: 3.5, g: 9, life: 0.8, kind: "shard", size: 0.14 });
-        game.fx.burst(d.x, d.mid, 10, { color: ["#d7ccc8", "#bcaaa4"], speed: 2, vz: 1, g: 0.5, life: 0.9, kind: "dust", size: 0.3, grow: 0.6 });
-        game.fx.sfx?.(d.x, d.mid - 1.2, "BAKOOM!!", "#ffcc80", 0.5);
+        game.fx.burst(d.mid.x, d.mid.y, 22, { color: ["#8d6e4a", "#5a3a22", "#c8a27a", "#3e2723"], speed: 5, vz: 3.5, g: 9, life: 0.8, kind: "shard", size: 0.14 });
+        game.fx.burst(d.mid.x, d.mid.y, 10, { color: ["#d7ccc8", "#bcaaa4"], speed: 2, vz: 1, g: 0.5, life: 0.9, kind: "dust", size: 0.3, grow: 0.6 });
+        game.fx.sfx?.(d.mid.x, d.mid.y - 1.2, "BAKOOM!!", "#ffcc80", 0.5);
         game.fx.shake(0.45);
         game.audio?.sfx("doorbreak");
         const home = game.actors.filter((a) => a.homeB === b && a.alive && a.state === "idle");
@@ -84010,8 +84098,8 @@ Trains by: ${TRAINS_BY[k]}` },
                 a.controller.fleeT = 6;
               }
             }
-            raiseAlarm(game, d.x, d.mid, "Burglar");
-          } else if (Math.random() < 0.35) raiseAlarm(game, d.x, d.mid, "Burglar");
+            raiseAlarm(game, d.mid.x, d.mid.y, "Burglar");
+          } else if (Math.random() < 0.35) raiseAlarm(game, d.mid.x, d.mid.y, "Burglar");
         }
         persist(game);
       },
@@ -84044,14 +84132,20 @@ Trains by: ${TRAINS_BY[k]}` },
         if (ba === bt) return null;
         const b = ba || bt;
         const d = B4.doorPts(b);
-        const ax = Math.abs(w.dx(d.x, a.x));
+        const q2 = bl(b, a.x, a.y, w);
+        const ax = Math.abs(q2.lx - d.lx);
+        const zIn = -WALL_T - 0.75, zOut = 0.75;
+        const at5 = (z) => {
+          const r = bw(b, d.lx, z);
+          return { x: w.wx(r.x), y: r.y };
+        };
         if (ba) {
-          if (ax > 0.3 && a.y < d.in + 0.35) return { x: d.x, y: d.in };
-          if (ax > 0.3) return { x: d.x, y: Math.min(a.y, d.in) };
-          return { x: d.x, y: d.out };
+          if (ax > 0.3 && q2.lz < zIn + 0.35) return at5(zIn);
+          if (ax > 0.3) return at5(Math.min(q2.lz, zIn));
+          return at5(zOut);
         }
-        if (ax > 0.3 || a.y > d.out + 0.4 || a.y < b.y) return { x: d.x, y: d.out };
-        return { x: d.x, y: d.in };
+        if (ax > 0.3 || q2.lz > zOut + 0.4 || q2.lz < 0) return at5(zOut);
+        return at5(zIn);
       },
       /** "E" things around enterable buildings (for interact.js). */
       candidates(p, out) {
@@ -84060,17 +84154,18 @@ Trains by: ${TRAINS_BY[k]}` },
         for (const b of B4.near) {
           const d = B4.doorPts(b);
           if (!inB && b.doorLocked && !b.doorOpen) {
-            const dist = w.distance(p.x, p.y, d.x, d.out - 0.2);
+            const step = bw(b, d.lx, 0.55);
+            const dist = w.distance(p.x, p.y, step.x, step.y);
             if (dist < 1.4) {
               const house = (b.role || "house") === "house";
               const label = house || b.pirate ? "Knock on the door" : `${b.name || "Closed"} \u2014 closed until ${B4.opensAt(b)}:00`;
-              out.push({ d: dist, x: d.x, y: d.mid, label, run: () => game.emit("knockDoor", b) });
+              out.push({ d: dist, x: d.mid.x, y: d.mid.y, label, run: () => game.emit("knockDoor", b) });
             }
           }
           if (inB !== b) continue;
           const L2 = layoutOf(b);
           for (const u of L2.use) {
-            const ux = b.x + u.x, uy = b.y + u.z;
+            const { x: ux, y: uy } = bw(b, u.x, u.z);
             const dist = w.distance(p.x, p.y, ux, uy);
             if (dist > 1.25) continue;
             if (u.kind === "loot") {
@@ -84093,7 +84188,7 @@ Trains by: ${TRAINS_BY[k]}` },
         if (watchers.length) {
           for (const a of watchers) game.fx.text(a.x, a.y - 2.1, "THIEF!!", "#ff5252", 0.4, { life: 1.4 });
           const d = B4.doorPts(b);
-          raiseAlarm(game, d.x, d.mid, "Thief");
+          raiseAlarm(game, d.mid.x, d.mid.y, "Thief");
           crime(game, 4e5, "caught robbing a home", { rep: 5 });
         }
       }
@@ -84107,7 +84202,7 @@ Trains by: ${TRAINS_BY[k]}` },
     game.spawner.addBuilder((ctx) => populate(game, ctx));
   }
   function worldPt(b, x, z) {
-    return { x: b.x + x, y: b.y + z };
+    return bw(b, x, z);
   }
   function populate(game, ctx) {
     const { island, rng: rng4, list, spawner } = ctx;
@@ -84282,20 +84377,21 @@ Trains by: ${TRAINS_BY[k]}` },
     const clear3 = (x, y, r = 0.3) => w.walkable(x, y) && !w.isBlocked(x, y) && !w.hitsProp(x, y, r);
     for (const b of town.buildings) {
       const fw = Math.max(2, b.fw || 3);
-      const d = isEnterable(b) ? doorOf(b) : { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, (b.door?.x ?? b.x) - b.x)), dw: 1.05 };
+      const d = isEnterable(b) ? doorOf(b) : { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b))), dw: 1.05 };
       const role = b.role || "house";
+      const face = bfacing(b);
       for (let x = -fw / 2 + 0.45; x <= fw / 2 - 0.45; x += 0.55) {
         if (Math.abs(x - d.x) < d.dw / 2 + 0.55) continue;
-        const p = { x: b.x + x, y: b.y + 0.36, face: Math.PI / 2, b };
+        const p = { ...bw(b, x, 0.36), face, b };
         if (!clear3(p.x, p.y)) continue;
         S3.wall.push(p);
-        if (role !== "house") S3.shopfront.push({ ...p, y: b.y + 0.75 });
+        if (role !== "house") S3.shopfront.push({ ...p, ...bw(b, x, 0.75) });
       }
       if (role === "house") {
-        const p = { x: b.x + d.x + d.dw / 2 + 0.1, y: b.y + 0.42, face: Math.PI / 2, h: SEAT_H.step, stand: { x: b.x + d.x + d.dw / 2 + 0.1, y: b.y + 1 }, b };
+        const p = { ...bw(b, d.x + d.dw / 2 + 0.1, 0.42), face, h: SEAT_H.step, stand: bw(b, d.x + d.dw / 2 + 0.1, 1), b };
         if (clear3(p.stand.x, p.stand.y)) S3.seat.push(p);
       }
-      const out = { x: b.x + d.x, y: b.y + 0.95, b };
+      const out = { ...bw(b, d.x, 0.95), b };
       if (clear3(out.x, out.y)) {
         if (role === "house") S3.door.push(out);
         if (role === "tavern" || role === "bar" || role === "inn") S3.tavern.push(out);
@@ -94127,7 +94223,10 @@ Trains by: ${TRAINS_BY[k]}` },
         const town = islandRec(game, "sorbet_kingdom")?.towns?.find((t) => t.id === "sorbet_elder_village");
         if (!sq || !town || game.world.distance(p.x, p.y, sq.x, sq.y) > 45) return;
         const houses = town.buildings.filter((b) => b.role === "house").slice(0, 4);
-        for (const b of houses) game.fx.burst(b.x + (Math.random() - 0.5) * (b.fw || 4), b.y - (b.fd || 3) - 0.5, 4, { color: ["#ff7043", "#ffca28", "#6d4c41"], speed: 1.5, vz: 4, g: -1, life: 0.9, kind: "fire", size: 0.25 });
+        for (const b of houses) {
+          const c2 = bw(b, (Math.random() - 0.5) * (b.fw || 4), -(b.fd || 3) / 2);
+          game.fx.burst(c2.x, c2.y, 4, { color: ["#ff7043", "#ffca28", "#6d4c41"], speed: 1.5, vz: 4, g: -1, life: 0.9, kind: "fire", size: 0.25 });
+        }
       } else {
         const sq = spotOf(game, "sorbet_kingdom", "sorbet_south_beach");
         if (!sq || game.world.distance(p.x, p.y, sq.x, sq.y) > 60) return;
@@ -111463,7 +111562,7 @@ Trains by: ${TRAINS_BY[k]}` },
         startNewCharacter(game, birth, { name: opts.name || "Test Pirate", look: null });
         return game.player;
       },
-      debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, layoutOf, portrait: renderPortrait, deckSpot: (s, which) => {
+      debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => {
         const sp = which === "hatch" ? hatchSpot(s) : helmSpot(s);
         return deckToWorld(s, sp.t, sp.v);
       } },

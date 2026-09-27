@@ -475,9 +475,10 @@ export const scenarios = {
         g.env.clock = +(window.__clock || 12);
         g.settings.view = 'first'; g.applySettings();
         g.buildings.t = 0;
-        const d = g.buildings.doorPts(shop);
-        window.OP.teleport(d.x, d.out + 1.6);
-        const v = g.view3d; v.rig.yaw = -Math.PI / 2; v.rig.pitch = -0.02;
+        const d = g.buildings.doorPts(shop), D = window.OP.debug;
+        const o = D.bw(shop, d.lx, 2.35), f = D.bfront(shop);
+        window.OP.teleport(o.x, o.y);
+        const v = g.view3d; v.rig.yaw = (Math.atan2(-f.y, -f.x) + Math.PI * 2) % (Math.PI * 2); v.rig.pitch = -0.02;
         window.__shop = shop;
         return { buildings: all.length, enterable: all.filter((b) => b.enterable).length, pirates: all.filter((b) => b.pirate).length, shop: { role: shop.role, name: shop.name, fw: shop.fw, fd: shop.fd, style: shop.style } };
       }, { id: args.island || (args.role ? null : 'dawn_island'), role: args.role || null });
@@ -490,28 +491,31 @@ export const scenarios = {
       await page.evaluate(() => window.OP.key('W', true));
       for (let i = 0; i < 30; i++) {
         await step(page, 0.1); await frames(page, 1);
-        if (await page.evaluate(() => { const b = window.__shop, p = window.OP.game.player; return p.y < b.y - 0.9; })) break;
+        if (await page.evaluate(() => { const b = window.__shop, p = window.OP.game.player; return window.OP.debug.bl(b, p.x, p.y).lz < -0.9; })) break;
       }
       await page.evaluate(() => window.OP.key('W', false));
       await step(page, 0.3); await frames(page, 3);
       const inside = await page.evaluate(() => {
-        const g = window.OP.game, w = g.world, p = g.player, b = window.__shop;
+        const g = window.OP.game, w = g.world, p = g.player, b = window.__shop, D = window.OP.debug;
         const d = g.buildings.doorPts(b);
+        const at = (lx, lz) => D.bw(b, lx, lz);
+        const q = D.bl(b, p.x, p.y), out = at(d.lx, 1.75);
+        const occ = (pt) => p.canOccupy(w, pt.x, pt.y);
         return {
-          inside: w.interiorAt(p.x, p.y) === b, pos: [+(p.x - b.x).toFixed(2), +(p.y - b.y).toFixed(2)], doorOpen: b.doorOpen,
+          inside: w.interiorAt(p.x, p.y) === b, pos: [+q.lx.toFixed(2), +q.lz.toFixed(2)], doorOpen: b.doorOpen, rot: b.rot || 0,
           people: g.actors.filter((a) => a.homeB === b).map((a) => a.name),
-          floor: +(g.view3d.ground(p.x, p.y) - g.view3d.ground(d.x, d.out + 1)).toFixed(2),
+          floor: +(g.view3d.ground(p.x, p.y) - g.view3d.ground(out.x, out.y)).toFixed(2),
           walls: {
-            back: p.canOccupy(w, b.x, b.y - b.fd + 0.12), left: p.canOccupy(w, b.x - b.fw / 2 + 0.12, b.y - b.fd / 2),
-            frontBesideDoor: p.canOccupy(w, d.x - d.dw / 2 - 0.3, b.y - 0.1), doorway: p.canOccupy(w, d.x, d.mid),
+            back: occ(at(0, -b.fd + 0.12)), left: occ(at(-b.fw / 2 + 0.12, -b.fd / 2)),
+            frontBesideDoor: occ(at(d.lx - d.dw / 2 - 0.3, -0.1)), doorway: occ(d.mid),
           },
         };
       });
       console.log('inside', JSON.stringify(inside));
       await snap('inside');
-      await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = -Math.PI / 2 + 1.0; });
+      await page.evaluate(() => { const v = window.OP.game.view3d, f = window.OP.debug.bfront(window.__shop); v.rig.yaw = (Math.atan2(-f.y, -f.x) + 1.0 + Math.PI * 2) % (Math.PI * 2); });
       await step(page, 0.1); await frames(page, 2); await snap('inside-left');
-      await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = Math.PI / 2; });
+      await page.evaluate(() => { const v = window.OP.game.view3d, f = window.OP.debug.bfront(window.__shop); v.rig.yaw = (Math.atan2(f.y, f.x) + Math.PI * 2) % (Math.PI * 2); });
       await step(page, 0.1); await frames(page, 2); await snap('inside-door');
       // a house: locked, then kicked in
       const kick = await page.evaluate(() => {
@@ -520,15 +524,17 @@ export const scenarios = {
         const house = isl.towns.flatMap((t) => t.buildings).find((b) => b.enterable && (b.role || 'house') === 'house' && !b.npc && !b.pirate);
         if (!house) return null;
         window.__house = house;
-        const d = B.doorPts(house);
-        window.OP.teleport(d.x, d.out + 0.4);
+        const d = B.doorPts(house), D = window.OP.debug, f = D.bfront(house);
+        const st = D.bw(house, d.lx, 1.15);
+        window.OP.teleport(st.x, st.y);
         B.t = 0; B.update(0.016);
-        const before = { locked: house.doorLocked, open: !!house.doorOpen, blocked: !p.canOccupy(w, d.x, d.mid), bounty: g.state.char.bounty };
+        const before = { locked: house.doorLocked, open: !!house.doorOpen, blocked: !p.canOccupy(w, d.mid.x, d.mid.y), bounty: g.state.char.bounty };
         B.breakDoor(house);
         B.update(0.016);
-        const after = { open: house.doorOpen, broken: house.doorBroken, walkIn: p.canOccupy(w, d.x, d.mid), bounty: g.state.char.bounty };
-        const v = g.view3d; v.rig.yaw = -Math.PI / 2; v.rig.pitch = -0.1;
-        window.OP.teleport(d.x + 0.3, d.out + 1.8);
+        const after = { open: house.doorOpen, broken: house.doorBroken, walkIn: p.canOccupy(w, d.mid.x, d.mid.y), bounty: g.state.char.bounty };
+        const v = g.view3d; v.rig.yaw = (Math.atan2(-f.y, -f.x) + Math.PI * 2) % (Math.PI * 2); v.rig.pitch = -0.1;
+        const back = D.bw(house, d.lx + 0.3, 2.55);
+        window.OP.teleport(back.x, back.y);
         return { before, after };
       });
       console.log('kick', JSON.stringify(kick));
@@ -538,10 +544,11 @@ export const scenarios = {
       await page.evaluate(() => {
         const g = window.OP.game, p = g.player, house = window.__house;
         if (!house) return;
-        const d = g.buildings.doorPts(house);
+        const d = g.buildings.doorPts(house), D = window.OP.debug;
         p.invulnerable = true;
-        window.OP.teleport(d.x + 0.5, house.y - house.fd + 0.9);
-        const e = window.OP.debug.makeNPC({ id: 'test_bandit', name: 'Test Bandit', level: 3, hostile: true, faction: 'bandit' }, d.x + 3.5, d.out + 2.5);
+        const inn = D.bw(house, d.lx + 0.5, -house.fd + 0.9), from = D.bw(house, d.lx + 3.5, 3.25);
+        window.OP.teleport(inn.x, inn.y);
+        const e = window.OP.debug.makeNPC({ id: 'test_bandit', name: 'Test Bandit', level: 3, hostile: true, faction: 'bandit' }, from.x, from.y);
         e.game = g; g.addActor(e); e.aggroPlayer = true; e.controller.target = p; e.controller.state = 'chase'; e.controller.leash = 60;
         window.__bandit = e;
       });

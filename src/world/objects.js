@@ -2,6 +2,7 @@
 // Stored in a chunked spatial index so rendering and interaction only look
 // at nearby objects.
 import { isEnterable, isPirateHouse, layoutOf, doorOf, WALL_T, PLINTH } from './interiors.js';
+import { bw, bbox, bfoot } from './bframe.js';
 
 export const CHUNK = 32;
 
@@ -95,9 +96,11 @@ export class ObjectIndex {
     const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), T = WALL_T;
     const d = doorOf(b);
     const cols = [];
+    // (a box in the building's frame, as a world rectangle)
+    const rect = (x0, x1, z0, z1) => { const r = bbox(b, x0, x1, z0, z1); return { x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2, hw: (r.x1 - r.x0) / 2, hd: (r.y1 - r.y0) / 2 }; };
     const box = (x0, x1, z0, z1, extra) => {
       if (x1 - x0 < 0.01 || z1 - z0 < 0.01) return null;
-      const col = w.addCol({ x: b.x + (x0 + x1) / 2, y: b.y + (z0 + z1) / 2, hw: (x1 - x0) / 2, hd: (z1 - z0) / 2, o: b, ...extra });
+      const col = w.addCol({ ...rect(x0, x1, z0, z1), o: b, ...extra });
       cols.push(col);
       return col;
     };
@@ -109,10 +112,10 @@ export class ObjectIndex {
     box(fw / 2 - T, fw / 2, -fd, 0, wall);
     b.cols = cols;
     // the doorway, closed until something opens it (see game/buildings.js)
-    b.doorBox = { x: b.x + d.x, y: b.y - T / 2, hw: d.dw / 2, hd: T / 2, o: b, wall: true, door: true };
+    b.doorBox = { ...rect(d.x - d.dw / 2, d.x + d.dw / 2, -T, 0), o: b, wall: true, door: true };
     b.doorCol = w.addCol({ ...b.doorBox });
     // the ground floor (its height is worked out by the 3D view from the ground under it)
-    b.floor = { x0: b.x - fw / 2, x1: b.x + fw / 2, y0: b.y - fd, y1: b.y - 0.002, h: PLINTH, o: b, interior: true };
+    b.floor = { ...bbox(b, -fw / 2, fw / 2, -fd, -0.002), h: PLINTH, o: b, interior: true };
     w.addFloor(b.floor);
   }
 
@@ -124,8 +127,11 @@ export class ObjectIndex {
     for (const it of L.items) {
       if (it.ghost || !it.rect) continue;
       const r = it.rect, sh = 0.03;
-      if (ROUND.has(it.k)) b.cols.push(w.addCol({ x: b.x + it.x, y: b.y + it.z, r: Math.min(r.x1 - r.x0, r.z1 - r.z0) / 2 - sh, o: b }));
-      else b.cols.push(w.addCol({ x: b.x + (r.x0 + r.x1) / 2, y: b.y + (r.z0 + r.z1) / 2, hw: (r.x1 - r.x0) / 2 - sh, hd: (r.z1 - r.z0) / 2 - sh, o: b }));
+      if (ROUND.has(it.k)) b.cols.push(w.addCol({ ...bw(b, it.x, it.z), r: Math.min(r.x1 - r.x0, r.z1 - r.z0) / 2 - sh, o: b }));
+      else {
+        const q = bbox(b, r.x0 + sh, r.x1 - sh, r.z0 + sh, r.z1 - sh);
+        b.cols.push(w.addCol({ x: (q.x0 + q.x1) / 2, y: (q.y0 + q.y1) / 2, hw: (q.x1 - q.x0) / 2, hd: (q.y1 - q.y0) / 2, o: b }));
+      }
     }
   }
 
@@ -187,8 +193,13 @@ export class ObjectIndex {
   }
 }
 
-/** Tile rect covered by an object (x,y is the base centre; w/d footprint). */
+/** Tile rect covered by an object (x,y is the base centre; w/d footprint; buildings turn: see bframe.js). */
 export function footprint(o) {
+  if (o.rot) {
+    const r = bfoot(o);
+    const x0 = Math.floor(r.x0 + 0.001), y0 = Math.floor(r.y0 + 0.001);
+    return { x0, y0, x1: x0 + Math.round(r.x1 - r.x0), y1: y0 + Math.round(r.y1 - r.y0) };
+  }
   const w = o.fw || 1, d = o.fd || 1;
   const x0 = Math.floor(o.x - w / 2 + 0.001), y0 = Math.floor(o.y - d + 0.001);
   return { x0, y0, x1: x0 + w, y1: y0 + d };

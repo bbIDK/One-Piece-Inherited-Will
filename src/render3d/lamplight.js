@@ -5,6 +5,7 @@
 // own lamp lights the room. Flames flicker; the pools breathe with them.
 import * as THREE from 'three';
 import { registerFrameHook } from './registry.js';
+import { bw } from '../world/bframe.js';
 
 const KINDS = {
   lamp: { h: 2.62, r: 6.5, col: [1, 0.72, 0.4], power: 1 },
@@ -104,7 +105,8 @@ class LampLight {
     if (room) {
       const floor = v.terrain?.hf?.floorY ? v.terrain.hf.floorY(room) : ctx.ground(p.x, p.y);
       const fd = room.fd || 3;
-      cands.push({ d: -1, x: w.dx(ox, room.x), y: floor + 2.1, z: room.y - fd / 2 - oy, k: (0.35 + night * 0.65) * 0.5, col: [1, 0.8, 0.56], range: 6 });
+      const c = bw(room, 0, -fd / 2);
+      cands.push({ d: -1, x: w.dx(ox, c.x), y: floor + 2.1, z: c.y - oy, k: (0.35 + night * 0.65) * 0.5, col: [1, 0.8, 0.56], range: 6 });
     }
     cands.sort((a, b) => a.d - b.d);
     for (let i = 0; i < NLIGHTS; i++) {

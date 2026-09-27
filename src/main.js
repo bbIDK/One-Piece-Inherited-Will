@@ -54,6 +54,7 @@ import { installLegends } from './game/legends.js';
 import { installWorld } from './game/news.js';
 import { installTouch } from './ui/touch.js';
 import { IS_LIQUID } from './world/tiles.js';
+import { bw, bl, bfront } from './world/bframe.js';
 
 const root = document.createElement('div');
 root.id = 'game';
@@ -329,7 +330,7 @@ async function start() {
       startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', look: null });
       return game.player;
     },
-    debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, layoutOf, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); } },
+    debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); } },
     ready: true,
   });
 

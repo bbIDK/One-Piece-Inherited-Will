@@ -6,7 +6,8 @@
 // of the pier. Children play tag. At dusk people drift home through their
 // front doors, the streets empty out and a drunk or two wobbles outside the
 // tavern; in the morning they come out again.
-import { doorOf, isEnterable } from '../world/interiors.js';
+import { doorOf, isEnterable, doorLocalX } from '../world/interiors.js';
+import { bw, bfacing } from '../world/bframe.js';
 import { makeLook } from '../data/races.js';
 import { civilianOutfit, randomName, townRaces } from './spawner.js';
 import { RNG } from '../core/rng.js';
@@ -55,22 +56,23 @@ function spotsOf(game, town, isl) {
   const clear = (x, y, r = 0.3) => w.walkable(x, y) && !w.isBlocked(x, y) && !w.hitsProp(x, y, r);
   for (const b of town.buildings) {
     const fw = Math.max(2, b.fw || 3);
-    const d = isEnterable(b) ? doorOf(b) : { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, (b.door?.x ?? b.x) - b.x)), dw: 1.05 };
+    const d = isEnterable(b) ? doorOf(b) : { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b))), dw: 1.05 };
     const role = b.role || 'house';
+    const face = bfacing(b); // (standing with your back to the wall, looking out)
     // along the front wall, clear of the door
     for (let x = -fw / 2 + 0.45; x <= fw / 2 - 0.45; x += 0.55) {
       if (Math.abs(x - d.x) < d.dw / 2 + 0.55) continue;
-      const p = { x: b.x + x, y: b.y + 0.36, face: Math.PI / 2, b };
+      const p = { ...bw(b, x, 0.36), face, b };
       if (!clear(p.x, p.y)) continue;
       S.wall.push(p);
-      if (role !== 'house') S.shopfront.push({ ...p, y: b.y + 0.75 });
+      if (role !== 'house') S.shopfront.push({ ...p, ...bw(b, x, 0.75) });
     }
     // a doorstep to sit on (homes)
     if (role === 'house') {
-      const p = { x: b.x + d.x + d.dw / 2 + 0.1, y: b.y + 0.42, face: Math.PI / 2, h: SEAT_H.step, stand: { x: b.x + d.x + d.dw / 2 + 0.1, y: b.y + 1.0 }, b };
+      const p = { ...bw(b, d.x + d.dw / 2 + 0.1, 0.42), face, h: SEAT_H.step, stand: bw(b, d.x + d.dw / 2 + 0.1, 1.0), b };
       if (clear(p.stand.x, p.stand.y)) S.seat.push(p);
     }
-    const out = { x: b.x + d.x, y: b.y + 0.95, b };
+    const out = { ...bw(b, d.x, 0.95), b };
     if (clear(out.x, out.y)) {
       if (role === 'house') S.door.push(out);
       if (role === 'tavern' || role === 'bar' || role === 'inn') S.tavern.push(out);

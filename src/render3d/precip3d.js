@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { registerFrameHook } from './registry.js';
 import { heightsOf } from '../world/interiors.js';
+import { bfoot } from '../world/bframe.js';
 
 const RAIN = { n: 9000, box: 34, tall: 20, below: 6, fall: 11, near: 2.6 };
 const SNOW = { n: 7000, box: 30, tall: 16, below: 5, fall: 1.25, near: 0.9 };
@@ -53,9 +54,9 @@ class Shelter {
         if (!b.fw || !b.fd || !(b.hgt || b.enterable)) continue;
         const floor = b.enterable && hf ? hf.floorY(b) : ctx.ground(b.x, b.y);
         const top = floor + heightsOf(b).H + 0.4;
-        const bx = w.dx(x0, b.x);
-        const i0 = Math.max(0, Math.floor(bx - b.fw / 2 - 0.45)), i1 = Math.min(SH - 1, Math.floor(bx + b.fw / 2 + 0.45));
-        const j0 = Math.max(0, Math.floor(b.y - b.fd - y0 - 0.45)), j1 = Math.min(SH - 1, Math.floor(b.y - y0 + 0.45));
+        const r = bfoot(b), bx = w.dx(x0, r.x0);
+        const i0 = Math.max(0, Math.floor(bx - 0.45)), i1 = Math.min(SH - 1, Math.floor(bx + (r.x1 - r.x0) + 0.45));
+        const j0 = Math.max(0, Math.floor(r.y0 - y0 - 0.45)), j1 = Math.min(SH - 1, Math.floor(r.y1 - y0 + 0.45));
         for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
           const k = (j * SH + i) * 4 + 1;
           if (top > d[k]) d[k] = top;
