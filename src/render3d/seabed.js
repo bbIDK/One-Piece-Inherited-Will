@@ -428,7 +428,7 @@ class SeaBed {
     // near the water only: the floor can't be seen from inland or the open ocean's surface
     const cam = ctx.camera;
     const camH = cam ? cam.position.y : 0;
-    const R = low ? 28 : under ? 46 : 40;
+    const R = low ? 28 : under ? (game.player?.gills ? 58 : 46) : 40;
     const show = camH < 40;
     this.group.visible = show;
     if (!show) return;

@@ -35002,6 +35002,7 @@ void main() {
       this.queue = [];
       this.nearR = NEAR_R;
       this.farR = FAR_R;
+      this.floorR = 0;
     }
     /** Fast graphics draws less terrain detail and a nearer horizon. */
     setDetail(q2) {
@@ -35013,6 +35014,10 @@ void main() {
     reach(sailing) {
       const low = this.quality === "low";
       return sailing ? low ? 15 : 22 : low ? 11 : 17;
+    }
+    /** Draw the open-sea floor this many chunks around (0: none — nobody's in the water). */
+    setSeaFloor(r) {
+      this.floorR = r;
     }
     setSailing(on) {
       const r = this.reach(!!on);
@@ -35078,7 +35083,10 @@ void main() {
           if (w.wrap) cx = (cx % this.cw + this.cw) % this.cw;
           else if (cx < 0 || cx >= this.cw) continue;
           const land = this.hasLand[cy * this.cw + cx];
-          if (!land) continue;
+          if (!land) {
+            if (d2 <= this.floorR * this.floorR) want.set(cy * 1e5 + cx, { cx, cy, lod: 1, d2 });
+            continue;
+          }
           const lod = d2 <= NR * NR ? 1 : 4;
           if (lod === 4 && land === 1) continue;
           want.set(cy * 1e5 + cx, { cx, cy, lod, d2 });
@@ -61747,6 +61755,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var SHIP_RANGE = 520;
   var _ray1 = new Vector3();
   var _ray2 = new Vector3();
+  var _clearSea = new Color(0.06, 0.34, 0.42);
   var Renderer3D = class {
     constructor(root2, r2d, game) {
       this.root = root2;
@@ -61956,6 +61965,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.sky.mesh.position.copy(cam.position);
       this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
       this.underwater(env, -cam.position.y);
+      this.terrain.setSeaFloor(p.inWater || this.isUnder ? p.gills ? 4 : 3 : 0);
       this.terrain.update(ox, oy);
       CTIME.value = env.time;
       const gh = this.ground(ox, oy);
@@ -62053,7 +62063,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.water.uniforms.uUnder.value = on ? 1 : 0;
       this.sky.mesh.visible = !on;
       this.isUnder = on;
-      this.post?.setInkFar(on ? 14 : 160);
+      const clear3 = !!this.game?.player?.gills;
+      this.post?.setInkFar(on ? clear3 ? 48 : 14 : 160);
       if (!on) {
         if (this.wasUnder) {
           this.renderer.setClearColor(0, 1);
@@ -62062,14 +62073,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         return;
       }
       this.wasUnder = true;
-      const k = Math.min(1, depth / 45);
-      const day = 0.22 + 0.78 * (env.daylight ?? 1);
-      const col = (this._uc || (this._uc = new Color())).setRGB(0.02 + 0.03 * (1 - k), 0.07 + 0.22 * (1 - k), 0.14 + 0.24 * (1 - k)).multiplyScalar(day);
+      const k = Math.min(1, depth / 45) * (clear3 ? 0.45 : 1);
+      const day = (clear3 ? 0.45 : 0.22) + (clear3 ? 0.55 : 0.78) * (env.daylight ?? 1);
+      const col = (this._uc || (this._uc = new Color())).setRGB(0.02 + 0.03 * (1 - k), 0.07 + 0.22 * (1 - k), 0.14 + 0.24 * (1 - k));
+      if (clear3) col.lerp(_clearSea, 0.25);
+      col.multiplyScalar(day);
       const fog = this.sky.fog;
       fog.color.copy(col);
       fog.near = 0.5;
-      fog.far = 34 - k * 14;
-      FOG.fogDensity2.value = 0.065 + k * 0.05;
+      fog.far = clear3 ? 90 - k * 24 : 34 - k * 14;
+      FOG.fogDensity2.value = clear3 ? 0.024 + k * 0.012 : 0.062 + k * 0.036;
       FOG.fogHeightK.value = 1e-4;
       FOG.fogBase.value = 0;
       FOG.fogSunColor.value.copy(col);
@@ -63264,7 +63277,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const under = !!v.isUnder;
       const cam = ctx.camera;
       const camH = cam ? cam.position.y : 0;
-      const R3 = low ? 28 : under ? 46 : 40;
+      const R3 = low ? 28 : under ? game.player?.gills ? 58 : 46 : 40;
       const show = camH < 40;
       this.group.visible = show;
       if (!show) return;

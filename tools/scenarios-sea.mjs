@@ -582,6 +582,49 @@ export const scenarios = {
       console.log(bad.length ? 'FACING WRONG WAY: ' + bad.map((o) => o.tag).join(', ') : 'facing follows the camera everywhere');
     },
   },
+  // The open ocean, far from any land: the sea floor is there below a diver, and a
+  // Fish-Man sees much further and clearer under water than a human.
+  abyss: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      const races = String(args.races || 'human,fishman').split(',');
+      for (const race of races) {
+        await page.evaluate((race) => { window.OP.quickStart(race); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = 12; g.env.storm = 0; g.env.fog = 0; document.querySelector('.look-hint')?.remove(); }, race);
+        // a spot in a chunk of open sea (no land in it or next to it)
+        const spot = await page.evaluate(() => {
+          const g = window.OP.game, w = g.world, t = g.view3d.terrain, isl = w.islands.find((i) => i.id === 'dawn_island');
+          for (let k = 0; k < 40000; k++) {
+            const a = Math.random() * Math.PI * 2, r = isl.radius + 70 + Math.random() * 120;
+            const x = Math.floor(isl.x + Math.cos(a) * r) + 0.5, y = Math.floor(isl.y + Math.sin(a) * r) + 0.5;
+            const cx = Math.floor(w.wx(x) / 32), cy = Math.floor(y / 32);
+            if (t.hasLand[cy * t.cw + cx] === 0 && w.isLiquid(x, y)) return [x, y, a];
+          }
+        });
+        await page.evaluate(([x, y]) => window.OP.teleport(x, y), spot);
+        for (let i = 0; i < 4; i++) { await step(page, 0.1); await frames(page, 1); }
+        // sink to 8 m above the bottom
+        const info = await page.evaluate(() => {
+          const g = window.OP.game, p = g.player;
+          const floor = g.seaDepth(p.x, p.y);
+          p.depth = Math.max(0, floor - 9); p.under = true; p.oxygen = 999;
+          return { floor: +floor.toFixed(1), depth: +p.depth.toFixed(1), gills: !!p.gills };
+        });
+        await page.evaluate((a) => { const v = window.OP.game.view3d; v.rig.yaw = a; v.rig.pitch = -0.45; }, spot[2]);
+        for (let i = 0; i < 25; i++) { await step(page, 0.05); await frames(page, 1); }
+        const chunks = await page.evaluate(() => { const t = window.OP.game.view3d.terrain; let open = 0; for (const c of t.live.values()) { const cx = Math.floor(c.x0 / 32), cy = Math.floor(c.y0 / 32); if (t.hasLand[cy * t.cw + cx] === 0) open++; } return { open, floorR: t.floorR }; });
+        console.log(race, JSON.stringify(info), JSON.stringify(chunks));
+        await snap(race + '-floor');
+        await page.evaluate(() => { const g = window.OP.game, p = g.player; p.depth = Math.max(0, g.seaDepth(p.x, p.y) * 0.5); g.view3d.rig.pitch = -0.05; });
+        for (let i = 0; i < 6; i++) { await step(page, 0.05); await frames(page, 1); }
+        await snap(race + '-mid');
+        // leave the water: the open-sea floor goes away again
+        await page.evaluate(() => { const g = window.OP.game, p = g.player, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island'); p.depth = 0; p.under = false; window.OP.teleport(isl.x, isl.y); });
+        for (let i = 0; i < 6; i++) { await step(page, 0.1); await frames(page, 1); }
+        console.log('ashore', JSON.stringify(await page.evaluate(() => { const t = window.OP.game.view3d.terrain; let open = 0; for (const c of t.live.values()) { const cx = Math.floor(c.x0 / 32), cy = Math.floor(c.y0 / 32); if (t.hasLand[cy * t.cw + cx] === 0) open++; } return { open, floorR: t.floorR, inWater: window.OP.game.player.inWater }; })));
+      }
+    },
+  },
   wake: {
     async run(page, snap, args) {
       await page.evaluate(() => localStorage.clear());

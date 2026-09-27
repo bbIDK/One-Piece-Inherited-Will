@@ -44,6 +44,7 @@ export class TerrainManager {
     this.queue = [];
     this.nearR = NEAR_R;
     this.farR = FAR_R;
+    this.floorR = 0;
   }
 
   /** Fast graphics draws less terrain detail and a nearer horizon. */
@@ -58,6 +59,9 @@ export class TerrainManager {
     const low = this.quality === 'low';
     return sailing ? (low ? 15 : 22) : (low ? 11 : 17);
   }
+
+  /** Draw the open-sea floor this many chunks around (0: none — nobody's in the water). */
+  setSeaFloor(r) { this.floorR = r; }
 
   setSailing(on) {
     const r = this.reach(!!on);
@@ -122,7 +126,11 @@ export class TerrainManager {
         if (w.wrap) cx = ((cx % this.cw) + this.cw) % this.cw;
         else if (cx < 0 || cx >= this.cw) continue;
         const land = this.hasLand[cy * this.cw + cx];
-        if (!land) continue;
+        if (!land) {
+          // open sea: just its floor, and only while someone is down in the water
+          if (d2 <= this.floorR * this.floorR) want.set(cy * 100000 + cx, { cx, cy, lod: 1, d2 });
+          continue;
+        }
         const lod = d2 <= NR * NR ? 1 : 4;
         if (lod === 4 && land === 1) continue; // far shallows are invisible anyway
         want.set(cy * 100000 + cx, { cx, cy, lod, d2 });

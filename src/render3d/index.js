@@ -25,6 +25,7 @@ const ACTOR_RANGE = 75;
 const SHIP_RANGE = 520;
 
 const _ray1 = new THREE.Vector3(), _ray2 = new THREE.Vector3();
+const _clearSea = new THREE.Color(0.06, 0.34, 0.42);
 
 export class Renderer3D {
   constructor(root, r2d, game) {
@@ -205,6 +206,8 @@ export class Renderer3D {
     this.sky.mesh.position.copy(cam.position);
     this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
     this.underwater(env, -cam.position.y);
+    // the floor of the open sea (far from any land) is only drawn for a swimmer
+    this.terrain.setSeaFloor(p.inWater || this.isUnder ? (p.gills ? 4 : 3) : 0);
     this.terrain.update(ox, oy);
     CTIME.value = env.time;
     // the shadow camera follows the player
@@ -294,20 +297,25 @@ export class Renderer3D {
     this.water.uniforms.uUnder.value = on ? 1 : 0;
     this.sky.mesh.visible = !on;
     this.isUnder = on;
-    this.post?.setInkFar(on ? 14 : 160);
+    // Fish-Men and merfolk see far and clearly under the sea; for anyone else
+    // it closes in, darker and murkier the deeper they go
+    const clear = !!this.game?.player?.gills;
+    this.post?.setInkFar(on ? (clear ? 48 : 14) : 160);
     if (!on) {
       if (this.wasUnder) { this.renderer.setClearColor(0x000000, 1); this.wasUnder = false; }
       return;
     }
     this.wasUnder = true;
-    const k = Math.min(1, depth / 45);
-    const day = 0.22 + 0.78 * (env.daylight ?? 1);
-    const col = (this._uc || (this._uc = new THREE.Color())).setRGB(0.02 + 0.03 * (1 - k), 0.07 + 0.22 * (1 - k), 0.14 + 0.24 * (1 - k)).multiplyScalar(day);
+    const k = Math.min(1, depth / 45) * (clear ? 0.45 : 1);
+    const day = (clear ? 0.45 : 0.22) + (clear ? 0.55 : 0.78) * (env.daylight ?? 1);
+    const col = (this._uc || (this._uc = new THREE.Color())).setRGB(0.02 + 0.03 * (1 - k), 0.07 + 0.22 * (1 - k), 0.14 + 0.24 * (1 - k));
+    if (clear) col.lerp(_clearSea, 0.25);
+    col.multiplyScalar(day);
     const fog = this.sky.fog;
     fog.color.copy(col);
     fog.near = 0.5;
-    fog.far = 34 - k * 14;
-    FOG.fogDensity2.value = 0.065 + k * 0.05;
+    fog.far = clear ? 90 - k * 24 : 34 - k * 14;
+    FOG.fogDensity2.value = clear ? 0.024 + k * 0.012 : 0.062 + k * 0.036;
     FOG.fogHeightK.value = 0.0001;
     FOG.fogBase.value = 0;
     FOG.fogSunColor.value.copy(col);
