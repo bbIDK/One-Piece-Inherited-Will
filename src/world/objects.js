@@ -72,6 +72,13 @@ export class ObjectIndex {
       obj.pirate = isPirateHouse(obj);
       this.stamp(obj, 2);
       this.addInterior(obj);
+    } else if (obj.block && isHut(obj)) {
+      // a round hut: its wall collides where it's drawn (an ellipse inside its
+      // plot, see render3d/buildings3d hut) and the plot's corners stay open
+      // to walk through; the plot is still kept clear of trees and spawns (2)
+      obj.hut = true;
+      this.stamp(obj, 2);
+      this.addHutWall(obj);
     } else if (c !== undefined && obj.block && (fl || ((obj.fw || 1) <= 2 && (obj.fd || 1) <= 2))) {
       // collider-sized props don't block tiles (see COLLIDE)
       obj.soft = true;
@@ -91,6 +98,26 @@ export class ObjectIndex {
       const x = -fw / 2 + i * fw / n;
       if (d && x > d.x - d.dw / 2 - 0.33 && x < d.x + d.dw / 2 + 0.33) continue; // (none in the doorway)
       b.colCols.push(this.world.addCol({ ...bw(b, x, 0.25), r: 0.2, o: b }));
+    }
+  }
+
+  /**
+   * A hut's elliptical wall (see render3d/buildings3d hut) as a chain of
+   * circles along its long axis, each the biggest that fits inside the
+   * ellipse there, the last ones round its ends: within a few centimetres of
+   * the drawn wall and never outside it.
+   */
+  addHutWall(b) {
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+    const A = Math.max(fw, fd) / 2, Bm = Math.min(fw, fd) / 2; // the semi-axes
+    const end = A - (Bm * Bm) / A; // (the centre of curvature at each end)
+    const inside = (u) => { let d = Infinity; for (let i = 0; i <= 48; i++) { const t = (i / 48) * Math.PI; d = Math.min(d, Math.hypot(A * Math.cos(t) - u, Bm * Math.sin(t))); } return d; };
+    const n = end > 0.01 ? Math.ceil((2 * end) / 0.5) + 1 : 1;
+    b.cols = [];
+    for (let i = 0; i < n; i++) {
+      const u = n === 1 ? 0 : -end + (2 * end * i) / (n - 1);
+      const p = fw >= fd ? bw(b, u, -fd / 2) : bw(b, 0, -fd / 2 + u);
+      b.cols.push(this.world.addCol({ x: p.x, y: p.y, r: inside(u) - 0.02, o: b }));
     }
   }
 
@@ -172,6 +199,7 @@ export class ObjectIndex {
     this.byId.delete(obj.id);
     this.count--;
     if (obj.enterable) { this.removeInterior(obj); this.stamp(obj, 0); }
+    else if (obj.hut) { for (const c of obj.cols || []) this.world.removeCol(c); obj.cols = null; this.stamp(obj, 0); }
     else if (obj.soft) this.removeCollider(obj);
     else if (obj.block) this.stamp(obj, 0);
   }
@@ -214,6 +242,11 @@ export class ObjectIndex {
 }
 
 /** Tile rect covered by an object (x,y is the base centre; w/d footprint; buildings turn: see bframe.js). */
+/** Drawn as a round hut (see render3d/buildings3d: the tribal style's walls, or a hut roof). */
+export function isHut(o) {
+  return o.kind === 'building' && (o.style === 'tribal' || o.roofType === 'hut');
+}
+
 export function footprint(o) {
   if (o.rot) {
     const r = bfoot(o);

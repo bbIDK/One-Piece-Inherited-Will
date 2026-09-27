@@ -142,6 +142,7 @@ export class Renderer3D {
       THREE, scene: this.scene, game,
       ground: (x, y) => this.ground(x, y),
       terrain: (x, y) => this.terrain.terrainAt(x, y),
+      landDrawn: (x, y) => this.terrain.landDrawn(x, y),
     };
     this.buildingsFar = new FarBuildings(this.props, this.ctx);
     Object.defineProperty(this.ctx, 'camera', { get: () => this.rig.camera });
@@ -770,6 +771,7 @@ export class Renderer3D {
       while (q && q.length) {
         const [o, d2] = q[q.length - 1];
         if (d2 > 24 * 24 && performance.now() > end) return;
+        if (d2 > 24 * 24 && !this.terrain.landDrawn(o.x, o.y)) break; // (its ground first: see TerrainView.buildMissing)
         q.pop();
         this.buildProp(o);
       }

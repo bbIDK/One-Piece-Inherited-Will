@@ -35548,6 +35548,7 @@ void main() {
   // src/render3d/terrain3d.js
   var NEAR_R = 6;
   var BUILD_BUDGET_MS = 4;
+  var COARSE = 4;
   var COL = new Float32Array(256 * 3);
   var ACC = new Float32Array(256 * 3);
   {
@@ -35620,6 +35621,7 @@ void main() {
       for (const c of this.live.values()) this.disposeChunk(c);
       this.live.clear();
       this.wantAt = null;
+      this.want = null;
       this.world = world;
       this.hf = new HeightField(world);
       this.cw = Math.ceil(world.width / CHUNK);
@@ -35643,6 +35645,13 @@ void main() {
           this.hasLand[cy * this.cw + cx] = v;
         }
       }
+    }
+    /** Is the land at (x, y) on screen, or none wanted there (nothing to wait for)? */
+    landDrawn(x, y) {
+      const w = this.world;
+      if (!w || !this.want) return false;
+      const k = Math.floor(y / CHUNK) * 1e5 + Math.floor(w.wx(x) / CHUNK);
+      return !this.want.has(k) || this.live.has(k);
     }
     groundAt(x, y) {
       return this.hf ? this.hf.ground(x, y) : 0;
@@ -35700,8 +35709,8 @@ void main() {
             if (d2 <= this.floorR * this.floorR) want.set(cy * 1e5 + cx, { cx, cy, lod: 1, d2 });
             continue;
           }
-          const lod = d2 <= NR * NR ? 1 : 4;
-          if (lod === 4 && land === 1) continue;
+          const lod = d2 <= NR * NR ? 1 : COARSE;
+          if (lod === COARSE && land === 1) continue;
           want.set(cy * 1e5 + cx, { cx, cy, lod, d2 });
         }
       }
@@ -35718,23 +35727,32 @@ void main() {
           }
           this.disposeChunk(c);
           this.live.delete(k);
-        }
+        } else c.stale = false;
       }
     }
-    /** Build the nearest missing chunks within the frame budget. */
+    /**
+     * Build the nearest missing chunks within the frame budget. Holes come
+     * first, and a hole beyond the ground at your feet is first filled with a
+     * quick coarse mesh (a sixteenth of the work), so after a jump across the
+     * world the whole island is there within a few frames (never houses
+     * standing on the sea) and the detail follows, nearest first.
+     */
     buildMissing() {
       const todo = [];
       for (const [k, wnt] of this.want) {
         const c = this.live.get(k);
-        if (!c || c.stale) todo.push([k, wnt]);
+        if (!c) todo.push([k, wnt, 0]);
+        else if (c.stale) todo.push([k, wnt, 1]);
       }
-      todo.sort((a, b) => a[1].d2 - b[1].d2);
+      todo.sort((a, b) => a[2] - b[2] || a[1].d2 - b[1].d2);
       const t0 = performance.now();
       let n = 0;
-      for (const [k, wnt] of todo) {
+      for (const [k, wnt, stage2] of todo) {
         if (performance.now() - t0 > BUILD_BUDGET_MS) break;
         const old = this.live.get(k);
-        const c = this.buildChunk(wnt.cx, wnt.cy, wnt.lod);
+        const lod = stage2 === 0 && wnt.lod < COARSE && wnt.d2 > 2 ? COARSE : wnt.lod;
+        const c = this.buildChunk(wnt.cx, wnt.cy, lod);
+        if (lod !== wnt.lod) c.stale = true;
         if (old) this.disposeChunk(old);
         this.live.set(k, c);
         n++;
@@ -54305,6 +54323,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const w = this.ctx.world;
       for (const c of this.cells.values()) {
         if (!c.dirty) continue;
+        if (!c.mesh && this.ctx.landDrawn && !this.ctx.landDrawn(c.x0 + CELL2 / 2, c.y0 + CELL2 / 2)) continue;
         const dx = w.dx(ox, c.x0 + CELL2 / 2), dy = c.y0 + CELL2 / 2 - oy;
         (todo || (todo = [])).push([c, dx * dx + dy * dy]);
       }
@@ -54494,6 +54513,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         obj.pirate = isPirateHouse(obj);
         this.stamp(obj, 2);
         this.addInterior(obj);
+      } else if (obj.block && isHut(obj)) {
+        obj.hut = true;
+        this.stamp(obj, 2);
+        this.addHutWall(obj);
       } else if (c !== void 0 && obj.block && (fl2 || (obj.fw || 1) <= 2 && (obj.fd || 1) <= 2)) {
         obj.soft = true;
         if (c) this.addCollider(obj, c);
@@ -54511,6 +54534,32 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const x = -fw / 2 + i * fw / n;
         if (d && x > d.x - d.dw / 2 - 0.33 && x < d.x + d.dw / 2 + 0.33) continue;
         b.colCols.push(this.world.addCol({ ...bw(b, x, 0.25), r: 0.2, o: b }));
+      }
+    }
+    /**
+     * A hut's elliptical wall (see render3d/buildings3d hut) as a chain of
+     * circles along its long axis, each the biggest that fits inside the
+     * ellipse there, the last ones round its ends: within a few centimetres of
+     * the drawn wall and never outside it.
+     */
+    addHutWall(b) {
+      const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+      const A = Math.max(fw, fd) / 2, Bm = Math.min(fw, fd) / 2;
+      const end = A - Bm * Bm / A;
+      const inside2 = (u) => {
+        let d = Infinity;
+        for (let i = 0; i <= 48; i++) {
+          const t = i / 48 * Math.PI;
+          d = Math.min(d, Math.hypot(A * Math.cos(t) - u, Bm * Math.sin(t)));
+        }
+        return d;
+      };
+      const n = end > 0.01 ? Math.ceil(2 * end / 0.5) + 1 : 1;
+      b.cols = [];
+      for (let i = 0; i < n; i++) {
+        const u = n === 1 ? 0 : -end + 2 * end * i / (n - 1);
+        const p = fw >= fd ? bw(b, u, -fd / 2) : bw(b, 0, -fd / 2 + u);
+        b.cols.push(this.world.addCol({ x: p.x, y: p.y, r: inside2(u) - 0.02, o: b }));
       }
     }
     addCollider(obj, c) {
@@ -54590,6 +54639,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (obj.enterable) {
         this.removeInterior(obj);
         this.stamp(obj, 0);
+      } else if (obj.hut) {
+        for (const c of obj.cols || []) this.world.removeCol(c);
+        obj.cols = null;
+        this.stamp(obj, 0);
       } else if (obj.soft) this.removeCollider(obj);
       else if (obj.block) this.stamp(obj, 0);
     }
@@ -54627,6 +54680,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return out;
     }
   };
+  function isHut(o) {
+    return o.kind === "building" && (o.style === "tribal" || o.roofType === "hut");
+  }
   function footprint(o) {
     if (o.rot) {
       const r = bfoot(o);
@@ -65587,7 +65643,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         scene: this.scene,
         game,
         ground: (x, y) => this.ground(x, y),
-        terrain: (x, y) => this.terrain.terrainAt(x, y)
+        terrain: (x, y) => this.terrain.terrainAt(x, y),
+        landDrawn: (x, y) => this.terrain.landDrawn(x, y)
       };
       this.buildingsFar = new FarBuildings(this.props, this.ctx);
       Object.defineProperty(this.ctx, "camera", { get: () => this.rig.camera });
@@ -66284,6 +66341,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         while (q2 && q2.length) {
           const [o, d2] = q2[q2.length - 1];
           if (d2 > 24 * 24 && performance.now() > end) return;
+          if (d2 > 24 * 24 && !this.terrain.landDrawn(o.x, o.y)) break;
           q2.pop();
           this.buildProp(o);
         }
@@ -122000,7 +122058,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         return game.player;
       },
       prof: { PROF, reset: profReset },
-      debug: { npcDef, allNpcDefs, VIEWS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => {
+      debug: { npcDef, allNpcDefs, VIEWS, builders: PROP_BUILDERS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => {
         const sp = which === "hatch" ? hatchSpot(s) : helmSpot(s);
         return deckToWorld(s, sp.t, sp.v);
       }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld },

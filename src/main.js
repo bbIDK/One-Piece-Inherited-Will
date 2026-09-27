@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { Renderer } from './render/renderer.js';
 import { PROF, prof, profFrame, profReset } from './core/prof.js';
 import { Renderer3D } from './render3d/index.js';
-import { VIEWS } from './render3d/registry.js';
+import { VIEWS, PROP_BUILDERS } from './render3d/registry.js';
 import './render3d/pickups3d.js';
 import './render3d/groundcover.js';
 import './render3d/ripples3d.js';
@@ -401,7 +401,7 @@ async function start() {
       return game.player;
     },
     prof: { PROF, reset: profReset },
-    debug: { npcDef, allNpcDefs, VIEWS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld },
+    debug: { npcDef, allNpcDefs, VIEWS, builders: PROP_BUILDERS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld },
     ready: true,
   });
 

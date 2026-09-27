@@ -87,6 +87,8 @@ export class FarBuildings {
     const w = this.ctx.world;
     for (const c of this.cells.values()) {
       if (!c.dirty) continue;
+      // (a town waits for the ground it stands on: never houses on the open sea)
+      if (!c.mesh && this.ctx.landDrawn && !this.ctx.landDrawn(c.x0 + CELL / 2, c.y0 + CELL / 2)) continue;
       const dx = w.dx(ox, c.x0 + CELL / 2), dy = c.y0 + CELL / 2 - oy;
       (todo ||= []).push([c, dx * dx + dy * dy]);
     }

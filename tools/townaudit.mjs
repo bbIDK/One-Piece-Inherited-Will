@@ -23,6 +23,13 @@ await build({
 const origErr = console.error;
 console.error = (...a) => { if (typeof a[0] === 'string' && a[0].startsWith('island ')) return; origErr(...a); };
 const mod = await import(pathToFileURL(out).href);
+if (args.barriers) {
+  const kinds = await mod.barriers();
+  const rows = Object.entries(kinds).sort((a, b) => b[1].town - a[1].town || b[1].n - a[1].n);
+  console.log('solid, tile-stamped objects (kind, count, in towns, footprints, model collider, examples):');
+  for (const [k, v] of rows) console.log(`  ${k.padEnd(34)}${String(v.n).padEnd(6)}${String(v.town).padEnd(6)}${Object.entries(v.sizes).map(([s, n]) => `${s}×${n}`).join(' ').slice(0, 60).padEnd(62)}${JSON.stringify(v.collide ?? null).padEnd(12)}${v.at.join(' | ').slice(0, 90)}`);
+  process.exit(0);
+}
 const res = await mod.run();
 if (args.json) writeFileSync(args.json, JSON.stringify(res, null, 1));
 const pad = (s, n) => String(s).padEnd(n);

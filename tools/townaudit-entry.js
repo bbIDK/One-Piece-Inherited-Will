@@ -198,3 +198,30 @@ export async function inspect(island, kind, R = 4) {
   }
   return out.join('\n');
 }
+
+/**
+ * What blocks whole tiles (not a collider shaped like its model): every
+ * solid, non-enterable object on the islands, by kind, with its footprint
+ * and the collider its model would have (see objects.js COLLIDE). A tile
+ * footprint much bigger than the model is an invisible wall.
+ */
+export async function barriers() {
+  const world = await generateWorld({ seed: 'blue-planet', islands: ALL_ISLANDS });
+  const kinds = {};
+  for (const isl of world.islands) {
+    if (!isl.def || !isl.landBox) continue;
+    const { x0, y0, x1, y1 } = isl.landBox;
+    const inTown = (o) => isl.towns.some((t) => o.x > t.x - 4 && o.x < t.x + t.w + 4 && o.y > t.y - 4 && o.y < t.y + t.h + 4);
+    for (const o of world.objects.query(x0, y0, x1, y1)) {
+      if (!o.block || o.enterable || o.soft) continue;
+      const key = o.kind === 'building' ? `building:${o.style || '?'}${o.role ? '/' + o.role : ''}` : o.kind;
+      const k = (kinds[key] ||= { n: 0, town: 0, sizes: {}, collide: COLLIDE[o.kind], at: [] });
+      k.n++;
+      if (inTown(o)) k.town++;
+      const sz = `${o.fw || 1}x${o.fd || 1}${o.s && o.s !== 1 ? '@' + o.s : ''}`;
+      k.sizes[sz] = (k.sizes[sz] || 0) + 1;
+      if (k.at.length < 3) k.at.push(`${isl.id} ${Math.round(o.x)},${Math.round(o.y)}${o.name ? ' ' + o.name : ''}`);
+    }
+  }
+  return kinds;
+}

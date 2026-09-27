@@ -12,6 +12,7 @@ import { vcMat } from './props/mats.js';
 
 const NEAR_R = 6; // chunks of full detail around the camera
 const BUILD_BUDGET_MS = 4; // per frame
+const COARSE = 4; // far chunks' detail: one corner in four each way
 
 // tile colours as linear-ish floats
 const COL = new Float32Array(256 * 3);
@@ -83,6 +84,7 @@ export class TerrainManager {
     for (const c of this.live.values()) this.disposeChunk(c);
     this.live.clear();
     this.wantAt = null;
+    this.want = null;
     this.world = world;
     this.hf = new HeightField(world);
     this.cw = Math.ceil(world.width / CHUNK);
@@ -107,6 +109,14 @@ export class TerrainManager {
         this.hasLand[cy * this.cw + cx] = v;
       }
     }
+  }
+
+  /** Is the land at (x, y) on screen, or none wanted there (nothing to wait for)? */
+  landDrawn(x, y) {
+    const w = this.world;
+    if (!w || !this.want) return false;
+    const k = Math.floor(y / CHUNK) * 100000 + Math.floor(w.wx(x) / CHUNK);
+    return !this.want.has(k) || this.live.has(k);
   }
 
   groundAt(x, y) { return this.hf ? this.hf.ground(x, y) : 0; }
@@ -166,8 +176,8 @@ export class TerrainManager {
           if (d2 <= this.floorR * this.floorR) want.set(cy * 100000 + cx, { cx, cy, lod: 1, d2 });
           continue;
         }
-        const lod = d2 <= NR * NR ? 1 : 4;
-        if (lod === 4 && land === 1) continue; // far shallows are invisible anyway
+        const lod = d2 <= NR * NR ? 1 : COARSE;
+        if (lod === COARSE && land === 1) continue; // far shallows are invisible anyway
         want.set(cy * 100000 + cx, { cx, cy, lod, d2 });
       }
     }
@@ -186,24 +196,33 @@ export class TerrainManager {
         }
         this.disposeChunk(c);
         this.live.delete(k);
-      }
+      } else c.stale = false; // (a coarse stand-in that is now all that's wanted)
     }
   }
 
-  /** Build the nearest missing chunks within the frame budget. */
+  /**
+   * Build the nearest missing chunks within the frame budget. Holes come
+   * first, and a hole beyond the ground at your feet is first filled with a
+   * quick coarse mesh (a sixteenth of the work), so after a jump across the
+   * world the whole island is there within a few frames (never houses
+   * standing on the sea) and the detail follows, nearest first.
+   */
   buildMissing() {
     const todo = [];
     for (const [k, wnt] of this.want) {
       const c = this.live.get(k);
-      if (!c || c.stale) todo.push([k, wnt]);
+      if (!c) todo.push([k, wnt, 0]);
+      else if (c.stale) todo.push([k, wnt, 1]);
     }
-    todo.sort((a, b) => a[1].d2 - b[1].d2);
+    todo.sort((a, b) => a[2] - b[2] || a[1].d2 - b[1].d2);
     const t0 = performance.now();
     let n = 0;
-    for (const [k, wnt] of todo) {
+    for (const [k, wnt, stage] of todo) {
       if (performance.now() - t0 > BUILD_BUDGET_MS) break;
       const old = this.live.get(k);
-      const c = this.buildChunk(wnt.cx, wnt.cy, wnt.lod);
+      const lod = stage === 0 && wnt.lod < COARSE && wnt.d2 > 2 ? COARSE : wnt.lod;
+      const c = this.buildChunk(wnt.cx, wnt.cy, lod);
+      if (lod !== wnt.lod) c.stale = true; // (the detailed mesh replaces it in its turn)
       if (old) this.disposeChunk(old);
       this.live.set(k, c);
       n++;
