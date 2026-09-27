@@ -860,7 +860,14 @@ export const scenarios = {
         let stray = 0; const where = [];
         for (let y = Math.floor(t.plaza.y - 30); y < t.plaza.y + 30; y++) for (let x = Math.floor(t.plaza.x - 30); x < t.plaza.x + 30; x++) {
           if (!w.isBlocked(x, y)) continue;
-          const own = w.objects.near(x + 0.5, y + 0.5, 14).some((o) => { if (!o.block || o.soft) return false; const w0 = o.fw || 1, d0 = o.fd || 1; const x0 = Math.floor(o.x - w0 / 2 + 0.001), y0 = Math.floor(o.y - d0 + 0.001); return x >= x0 && x < x0 + w0 && y >= y0 && y < y0 + d0; });
+          const own = w.objects.near(x + 0.5, y + 0.5, 14).some((o) => {
+            if (!o.block || o.soft) return false;
+            const w0 = o.fw || 1, d0 = o.fd || 1;
+            // (buildings turn to face their street: their footprint turns with them)
+            const a = window.OP.debug.bw(o, -w0 / 2, -d0), b = window.OP.debug.bw(o, w0 / 2, 0);
+            const x0 = Math.floor(Math.min(a.x, b.x) + 0.001), x1 = Math.ceil(Math.max(a.x, b.x) - 0.001), y0 = Math.floor(Math.min(a.y, b.y) + 0.001), y1 = Math.ceil(Math.max(a.y, b.y) - 0.001);
+            return x >= x0 && x < x1 && y >= y0 && y < y1;
+          });
           if (!own) { stray++; if (where.length < 6) where.push([x, y]); }
         }
         for (const k of Object.values(kinds)) { k.min = +k.min.toFixed(2); k.max = +k.max.toFixed(2); }

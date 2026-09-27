@@ -5,7 +5,7 @@
 //   follower – crew companions: follow the player and fight beside them
 //   boss     – hostile + phase scripts
 import { angleDiff, clamp, TAU } from '../core/math.js';
-import { placeOnDeck } from './decks.js';
+import { placeOnDeck, freeDeckSpot, crewStation } from './decks.js';
 import { clearLine, findPath } from './path.js';
 import { getAbility, canUse } from './abilities.js';
 import { hostile } from './entity.js';
@@ -147,6 +147,10 @@ export class AIController {
       return;
     }
 
+    // on another deck of a big ship: make for the stairs before anything else
+    const up = game.deckRoute?.(a, t.x, t.y);
+    if (up) { this.moveToward(a, up.x, up.y, game, true); a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4; return; }
+
     // defend against incoming attacks
     const ta = t.action;
     if (ta && dist < 4 && !a.action && ta.t < (ta.def.windup ?? 0.1) + 0.05 && this.think <= 0.35) {
@@ -219,7 +223,7 @@ export class AIController {
     let tx = x, ty = y;
     if (!direct) {
       // in or out of a building by its door, and round anything in the way
-      const via = game.buildings?.route(a, x, y);
+      const via = game.deckRoute?.(a, x, y) || game.buildings?.route(a, x, y);
       if (via) { tx = via.x; ty = via.y; }
       const wp = this.steer(a, tx, ty, game);
       tx = wp.x; ty = wp.y;
@@ -320,12 +324,34 @@ export class AIController {
   follow(a, dt, game) {
     const p = game.player;
     if (!p) return;
-    if (p.onShip) { a.hidden = true; a.x = p.x; a.y = p.y; return; }
+    if (p.onShip) {
+      const s = p.ship;
+      if (s && !s.sunk && s.def.big) {
+        // a big ship's crew stand their stations on deck while you steer
+        if (a.deck?.ship !== s) {
+          const crew = game.actors.filter((b) => b.alive && b.controller?.kind === 'follower');
+          const st = crewStation(s, Math.max(0, crew.indexOf(a)));
+          placeOnDeck(game, a, s, st.t, st.v);
+          a.facing = s.heading;
+        }
+        a.hidden = false;
+        a.intent.mx = 0; a.intent.my = 0;
+        this.target = null;
+        return;
+      }
+      a.hidden = true; a.x = p.x; a.y = p.y; return;
+    }
     if (a.hidden) {
       a.hidden = false;
       // come up on deck with you (or ashore beside you)
-      if (p.deck) placeOnDeck(game, a, p.deck.ship, Math.min(0.8, p.deck.t + 0.12 + Math.random() * 0.25), (Math.random() - 0.5) * p.deck.ship.def.beam * 0.4);
+      if (p.deck && p.deck.lvl !== undefined) { const sp = freeDeckSpot(p.deck.ship, p.deck.t + 0.04, (Math.random() - 0.5) * 2, typeof p.deck.lvl === 'string' ? p.deck.lvl : 'main'); placeOnDeck(game, a, p.deck.ship, sp.t, sp.v); }
+      else if (p.deck) placeOnDeck(game, a, p.deck.ship, Math.min(0.8, p.deck.t + 0.12 + Math.random() * 0.25), (Math.random() - 0.5) * p.deck.ship.def.beam * 0.4);
       else { a.x = p.x + (Math.random() - 0.5) * 2; a.y = p.y + 1; }
+    }
+    // you went ashore and left them standing on deck: they come ashore with you
+    if (a.deck && !p.deck && !p.inWater && !a.deck.ship.traffic) {
+      a.deck.ship.aboard?.delete(a); a.deck = null; a.z = 0; a.vz = 0;
+      a.x = p.x + (Math.random() - 0.5) * 2; a.y = p.y + 1;
     }
     // fight nearby enemies of the captain
     if (!this.target || this.target.state !== 'idle' || !this.target.alive) {
@@ -351,7 +377,13 @@ export class AIController {
       return;
     }
     const d = game.world.distance(a.x, a.y, p.x, p.y);
-    if (d > 22) { a.x = p.x - Math.cos(p.facing) * 1.5; a.y = p.y + 0.5; return; }
+    if (d > 22) {
+      // left behind (on a ship's deck, or ashore): catch up
+      if (a.deck) { a.deck.ship.aboard?.delete(a); a.deck = null; }
+      a.z = 0; a.vz = 0;
+      a.x = p.x - Math.cos(p.facing) * 1.5; a.y = p.y + 0.5;
+      return;
+    }
     if (d > 2.2) {
       this.moveToward(a, p.x - Math.cos(p.facing) * 1.2, p.y - Math.sin(p.facing) * 1.2 + 0.3, game);
       a.intent.sprint = d > 5;

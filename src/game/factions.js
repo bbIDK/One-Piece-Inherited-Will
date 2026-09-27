@@ -5,6 +5,7 @@
 //    you the most wanted traitor in the sea.
 //  * Bounty offices post the most-wanted list. Anyone who is not a pirate can
 //    turn in the bounties of pirates they defeat (the bounty hunter's life).
+import { SHIPS } from '../data/ships.js';
 import { addItem, earn, equip, count } from './inventory.js';
 import { persist } from './lineage.js';
 import { threatFactor } from './stats.js';
@@ -117,10 +118,14 @@ function installFleet(game) {
 function spawnEscort(game, slot) {
   const c = game.state.char, p = game.player, lead = p.ship;
   const big = rankIndex(c.marineRank) >= rankIndex('Vice Admiral');
-  const pos = formationPoint(game, lead, slot, 1.6);
+  const type = big ? 'marine_warship' : 'brigantine';
+  // (a fleet of big ships keeps its distance)
+  const spread = Math.max(1, (lead.def.length + SHIPS[type].length) / 14);
+  const pos = formationPoint(game, lead, slot, 1.6 * spread);
   if (!game.world.sailable(pos.x, pos.y)) return;
-  const s = game.addShip({ type: big ? 'marine_warship' : 'brigantine', x: pos.x, y: pos.y, heading: lead.heading, owner: 'marine', faction: 'marine', name: big ? 'Marine Battleship' : 'Marine Escort' });
+  const s = game.addShip({ type, x: pos.x, y: pos.y, heading: lead.heading, owner: 'marine', faction: 'marine', name: big ? 'Marine Warship' : 'Marine Escort' });
   if (!s.fits(game.world, s.x, s.y, s.heading)) { s.alive = false; return; }
+  s.formSpread = spread;
   s.escortOf = 'player';
   s.escortSlot = slot;
   s.level = 10 + rankIndex(c.marineRank) * 3;
@@ -159,11 +164,11 @@ function escortAI(s, dt, game) {
     return;
   }
   // hold formation behind the flagship
-  const pt = formationPoint(game, lead, s.escortSlot || 0);
+  const pt = formationPoint(game, lead, s.escortSlot || 0, s.formSpread || 1);
   const d = w.distance(s.x, s.y, pt.x, pt.y);
-  if (d > 60) {
+  if (d > 60 * (s.formSpread || 1)) {
     // fell far behind: it catches up out of sight
-    const q = formationPoint(game, lead, s.escortSlot || 0, 1.6);
+    const q = formationPoint(game, lead, s.escortSlot || 0, 1.6 * (s.formSpread || 1));
     if (s.fits(w, q.x, q.y, lead.heading)) { s.x = q.x; s.y = q.y; s.heading = lead.heading; s.speed = lead.speed; }
     return;
   }
@@ -244,7 +249,8 @@ function promote(game) {
   const pos = dock ? dock.moor : { x: game.player.x, y: game.player.y + 5 };
   if (n.name === 'Ensign') game.giveShip('sloop', pos.x, pos.y, 'Marine Cutter');
   if (n.name === 'Captain') game.giveShip('brigantine', pos.x, pos.y, 'Marine Brig');
-  if (n.name === 'Vice Admiral') game.giveShip('marine_warship', pos.x, pos.y, 'Marine Battleship');
+  if (n.name === 'Rear Admiral') game.giveShip('marine_warship', pos.x, pos.y, 'Marine Warship');
+  if (n.name === 'Vice Admiral') game.giveShip('marine_battleship', pos.x, pos.y, 'Marine Battleship');
   if (n.name === 'Commodore') { addItem(game, 'marine_coat', 1); equip(game, 'marine_coat'); }
   if (n.name === 'Captain' || n.name === 'Vice Admiral') addItem(game, 'marine_medal', 1);
   if (i >= rankIndex('Captain')) c.flags.bondolaPass = true;

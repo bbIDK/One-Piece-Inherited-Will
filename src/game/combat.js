@@ -7,6 +7,7 @@
 //  * Blocking reduces damage from the front; a well-timed block is a parry.
 //  * Rubber (Gomu Gomu) shrugs off blunt force and lightning.
 import { angleDiff, clamp, TAU } from '../core/math.js';
+import { hullGap, BIG_SHIP } from '../world/hull.js';
 import { hostile } from './entity.js';
 
 const ELEMENT_COLORS = {
@@ -100,7 +101,8 @@ export class Combat {
         if (p.hitShips && !dead) {
           for (const s of game.ships) {
             if (s === p.ownerShip || s.sunk) continue;
-            if (game.world.dist2(p.x, p.y, s.x, s.y) < (s.def.length * 0.45) ** 2) { s.damage(p.shipDamage ?? p.damage, p.owner, p); dead = true; break; }
+            const on = s.def.length >= BIG_SHIP ? hullGap(s, game.world.dx(s.x, p.x), p.y - s.y) < 0.5 + (p.radius || 0.3) : game.world.dist2(p.x, p.y, s.x, s.y) < (s.def.length * 0.45) ** 2;
+            if (on) { s.damage(p.shipDamage ?? p.damage, p.owner, p); dead = true; break; }
           }
         }
       }
@@ -120,6 +122,10 @@ export class Combat {
     if (owner && owner.faction === 'player' && target.faction === 'player') return false;
     if (!owner) return true;
     if (target.invulnerable) return false;
+    // up on a big ship's quarterdeck, out of reach of a blade swung on the main deck below (shots and blasts still carry)
+    if (owner.deck && target.deck && owner.deck.ship === target.deck.ship && h.vx === undefined && !h.radial) {
+      if (Math.abs(owner.deck.h + (owner.z || 0) - target.deck.h - (target.z || 0)) > 1.6) return false;
+    }
     return hostile(owner, target) || (owner.isPlayer && target.provoked) || (target.isPlayer && owner.provoked) || h.hitsAll;
   }
 
@@ -149,7 +155,7 @@ export class Combat {
       if (s.sunk || s === h.ownerShip) continue;
       if (h.hitShipSet && h.hitShipSet.has(s.id)) continue;
       const d = this.game.world.distance(h.x, h.y, s.x, s.y);
-      if (d < h.range + s.def.length * 0.4) {
+      if (s.def.length >= BIG_SHIP ? hullGap(s, this.game.world.dx(s.x, h.x), h.y - s.y) < h.range : d < h.range + s.def.length * 0.4) {
         h.hitShipSet = h.hitShipSet || new Set();
         h.hitShipSet.add(s.id);
         s.damage((h.shipDamage ?? h.damage * 0.5), h.owner, h);

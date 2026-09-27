@@ -590,7 +590,8 @@ export class UI {
       const dx = w.dx(p.x, s.x) / scale + W / 2, dy = (s.y - p.y) / scale + H / 2;
       if (Math.hypot(dx - W / 2, dy - H / 2) > W / 2 - 4) continue;
       g.fillStyle = s.owner === 'player' ? '#ffeb3b' : s.faction === 'marine' ? '#64b5f6' : '#ef5350';
-      g.beginPath(); g.arc(dx, dy, 3, 0, Math.PI * 2); g.fill();
+      // (the big ships show their length)
+      g.beginPath(); g.ellipse(dx, dy, Math.max(3, s.def.length / scale / 2), Math.max(3, s.def.beam / scale / 2), s.heading || 0, 0, Math.PI * 2); g.fill();
     }
     // hostiles (with observation haki you sense everything)
     for (const a of game.actors) {

@@ -166,7 +166,8 @@ export class CameraRig {
     let gx = 0, gz = 0; // eye position relative to the player (origin)
     // the ground under your feet, smoothed so bumps and steps don't jolt the view
     const g0 = p.deck ? p.deck.h + shipBob(p.deck.ship, game.env?.time || 0) : ground(p.x, p.y);
-    if (this.smoothG === undefined || Math.abs(g0 - this.smoothG) > 2.5 || p.mode !== this.lastMode) this.smoothG = g0;
+    // (dropping off an upper deck: the fall itself carries you down)
+    if (this.smoothG === undefined || Math.abs(g0 - this.smoothG) > 2.5 || p.mode !== this.lastMode || (p.deck && g0 < this.smoothG - 0.6 && p.z > 0.3)) this.smoothG = g0;
     this.smoothG += (g0 - this.smoothG) * Math.min(1, dt * 14);
     this.lastMode = p.mode;
     let gh = this.smoothG + (p.z || 0);
@@ -229,10 +230,16 @@ export class CameraRig {
         cz = Math.max(r.y0 + 0.25, Math.min(r.y1 - 0.25, p.y + cz)) - p.y;
         cy = Math.min(cy, ground(p.x, p.y) + heightsOf(room).ceil - 0.3);
       } else if (w) {
-        // outdoors: pull in rather than end up inside a building
+        // outdoors: pull in rather than end up inside a building (or a ship's cabins and hull)
+        const ey = gh + eyeH * 0.9, ships = game.ships?.length && game.shipSolidAt;
         for (let i = 1; i <= 8; i++) {
           const t = i / 8;
-          if (w.isBlocked(p.x + cx * t, p.y + cz * t)) { const k = Math.max(0.12, t - 0.16); cx *= k; cz *= k; break; }
+          const bx = p.x + cx * t, bz = p.y + cz * t;
+          if (w.isBlocked(bx, bz) || (ships && game.shipSolidAt(bx, bz, ey + (cy - ey) * t))) {
+            const k = Math.max(0.12, t - 0.16); cx *= k; cz *= k;
+            if (ships) cy = ey + (cy - ey) * k;
+            break;
+          }
         }
       }
       if (p.inWater && p.under) {

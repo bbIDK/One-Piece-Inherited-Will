@@ -12,6 +12,7 @@ import { crime } from './reputation.js';
 import { RNG } from '../core/rng.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
 import { drawShip } from '../render/ship.js';
+import { hullGap } from '../world/hull.js';
 
 export function installSea(game) {
   const sea = new SeaSystem(game);
@@ -156,7 +157,8 @@ class SeaSystem {
     if (s && g.flotsam) {
       for (const f of g.flotsam) {
         if (!f.alive) continue;
-        if (g.world.distance(f.x, f.y, s.x, s.y) < s.def.length * 0.6) {
+        // (sailing through it: a big ship's hull, or within a small boat's reach)
+        if (s.def.big ? hullGap(s, g.world.dx(s.x, f.x), f.y - s.y) < 2 : g.world.distance(f.x, f.y, s.x, s.y) < s.def.length * 0.6) {
           f.alive = false;
           const rng = new RNG(Math.floor(f.x * 7 + f.y));
           const item = rng.pick(['meat', 'fish_stew', 'sake', 'bandage', 'gold_coins', 'cola', 'rice_ball']);
@@ -204,7 +206,9 @@ class SeaSystem {
   spawnSeaKing(p, reg) {
     const g = this.game;
     const a = Math.random() * TAU;
-    const x = g.world.wx(p.x + Math.cos(a) * 14), y = p.y + Math.sin(a) * 10;
+    // (clear of the hull, however big the ship)
+    const R = 14 + (p.ship?.def.length || 0) * 0.5;
+    const x = g.world.wx(p.x + Math.cos(a) * R), y = p.y + Math.sin(a) * R * 0.75;
     if (!g.world.isLiquid(x, y)) return;
     const lvl = reg === REGION.CALM_NORTH || reg === REGION.CALM_SOUTH ? (Math.abs(p.x - RM_X) < 1000 && p.x > RM_X ? 40 : 55) : 30;
     const k = makeSeaKing(g, x, y, lvl);
@@ -218,7 +222,9 @@ class SeaSystem {
     const g = this.game, c = this.char;
     const rng = new RNG(Math.floor(g.time * 1000));
     const a = rng.range(0, TAU);
-    const x = g.world.wx(s.x + Math.cos(a) * 26), y = s.y + Math.sin(a) * 18;
+    // (far enough off that even two big ships don't meet hull to hull)
+    const off = 18 + s.def.length * 0.5 + 20;
+    const x = g.world.wx(s.x + Math.cos(a) * (off + 8)), y = s.y + Math.sin(a) * off;
     if (!g.world.sailable(x, y)) return;
     const gl = isGrandLine(reg);
     const nw = reg === REGION.NEW_WORLD;
@@ -228,13 +234,14 @@ class SeaSystem {
     else if (roll < 0.7) kind = 'pirate';
     else kind = 'merchant';
     const lvl = nw ? rng.int(45, 70) : gl ? rng.int(22, 40) : isBlue(reg) && reg !== REGION.EAST_BLUE ? rng.int(10, 18) : rng.int(5, 12);
-    const type = nw ? rng.pick(['frigate', 'galleon', 'brigantine']) : gl ? rng.pick(['brigantine', 'caravel', 'frigate']) : rng.pick(['sloop', 'caravel', 'sloop']);
+    const type = nw ? rng.pick(['frigate', 'galleon', 'war_galleon', 'man_o_war']) : gl ? rng.pick(['brigantine', 'caravel', 'frigate', 'war_galleon']) : rng.pick(['sloop', 'caravel', 'sloop']);
     const faction = kind === 'marine' ? 'marine' : kind === 'pirate' ? 'pirate' : 'civilian';
     const ship = g.addShip({
-      type: kind === 'marine' ? (gl ? 'marine_warship' : 'brigantine') : type, x, y, heading: a + Math.PI, owner: kind, faction,
+      type: kind === 'marine' ? (nw ? 'marine_battleship' : gl ? rng.pick(['marine_warship', 'marine_battleship']) : 'brigantine') : type, x, y, heading: a + Math.PI, owner: kind, faction,
       name: kind === 'marine' ? 'Marine Patrol' : kind === 'pirate' ? pirateShipName(rng) : 'Merchant Ship',
       jr: kind === 'pirate' ? { skull: rng.pick(['classic', 'grin', 'eyepatch']), bones: rng.pick(['cross', 'swords']), accessory: rng.pick(['bandana', 'horns', 'tricorne', 'none', 'flames']), color: '#f5f6fa' } : null,
     });
+    if (!ship.fits(g.world, ship.x, ship.y, ship.heading) && !ship.unstick(g.world)) { ship.alive = false; return; }
     ship.level = lvl;
     ship.label = `${ship.name} (Lv ${lvl})`;
     ship.showBar = true;
@@ -275,7 +282,8 @@ class SeaSystem {
   spawnFlotsam(p, s) {
     const g = this.game;
     const a = s.heading + (Math.random() - 0.5) * 1.2;
-    const x = g.world.wx(s.x + Math.cos(a) * 20), y = s.y + Math.sin(a) * 20;
+    const R = 20 + s.def.length * 0.6;
+    const x = g.world.wx(s.x + Math.cos(a) * R), y = s.y + Math.sin(a) * R;
     if (!g.world.isLiquid(x, y)) return;
     g.flotsam = g.flotsam || [];
     const f = { x, y, alive: true, sortY: y, draw: drawBarrel, t: Math.random() * 10 };

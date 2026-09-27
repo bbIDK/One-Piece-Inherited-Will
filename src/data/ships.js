@@ -40,6 +40,32 @@ export const SHIPS = {
     length: 9.2, beam: 3.1, hull: 800, speed: 12, turn: 1.0, masts: 3, sail: 'marine', cannons: 18, crew: 30, cargo: 30,
     price: 0, stormResist: 0.85, grandLine: true, seastone: true, figurehead: 'seagull', color: '#f5f6fa', special: true,
   },
+  // ---- the big ships: One Piece scale, with decks you can hold a feast on
+  carrack: {
+    name: 'Carrack', desc: 'A deep-bellied three-master with high castles fore and aft: the workhorse of the Grand Line trade routes, with room for a real crew and a hold you could get lost in.',
+    length: 16, beam: 5.2, hull: 1400, speed: 11.6, turn: 0.95, masts: 3, sail: 'square', cannons: 12, crew: 20, cargo: 90,
+    price: 1800000, stormResist: 0.88, grandLine: true, color: '#8a5a32', figurehead: 'mermaid', big: true,
+  },
+  war_galleon: {
+    name: 'War Galleon', desc: 'Two gun decks, a towering stern castle and a deck big enough for a party: the kind of ship a Supernova crosses the Grand Line in.',
+    length: 24, beam: 7, hull: 2600, speed: 12.2, turn: 0.8, masts: 3, sail: 'square', cannons: 32, crew: 45, cargo: 140,
+    price: 5200000, stormResist: 0.92, grandLine: true, color: '#5b3a24', figurehead: 'dragon', big: true,
+  },
+  man_o_war: {
+    name: 'Man-o\'-War', desc: 'A three-decked giant bristling with guns, her poop deck higher than most ships\' mastheads. Fleets scatter when she shows her colours.',
+    length: 32, beam: 9, hull: 4200, speed: 12.6, turn: 0.64, masts: 3, sail: 'square', cannons: 56, crew: 90, cargo: 200,
+    price: 12000000, stormResist: 0.95, grandLine: true, color: '#3f2a1c', figurehead: 'lion_gold', big: true,
+  },
+  great_galleon: {
+    name: 'Great Galleon', desc: 'A Yonko\'s flagship: a white whale of a four-master with a whale\'s head for a bow. A whole pirate fleet could live aboard.',
+    length: 44, beam: 12, hull: 7000, speed: 12.8, turn: 0.5, masts: 4, sail: 'square', cannons: 80, crew: 160, cargo: 320,
+    price: 30000000, stormResist: 0.98, grandLine: true, color: '#f1ece0', figurehead: 'whale', big: true,
+  },
+  marine_battleship: {
+    name: 'Marine Battleship', desc: 'A Vice Admiral\'s flagship: a great grey-and-white warship with a seagull at the bow, MARINE across her sails and a seastone keel.',
+    length: 38, beam: 10.5, hull: 6000, speed: 13, turn: 0.55, masts: 3, sail: 'marine', cannons: 64, crew: 140, cargo: 120,
+    price: 0, stormResist: 0.96, grandLine: true, seastone: true, figurehead: 'seagull', color: '#f5f6fa', special: true, big: true,
+  },
 };
 
 export const SHIP_UPGRADES = {

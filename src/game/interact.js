@@ -2,6 +2,7 @@
 import { WALKABLE } from '../world/tiles.js';
 import { angleDiff } from '../core/math.js';
 import { placeOnDeck, helmSpot } from './decks.js';
+import { shipDims } from '../world/hull.js';
 import { bfront } from '../world/bframe.js';
 
 export function findInteraction(game, p) {
@@ -118,7 +119,8 @@ export function leaveHelm(game, p, s) {
   p.mode = 'foot';
   p.onShip = false;
   const hs = helmSpot(s);
-  placeOnDeck(game, p, s, hs.t + 0.05, 0);
+  if (shipDims(s.def).big) placeOnDeck(game, p, s, hs.t, 0.9);
+  else placeOnDeck(game, p, s, hs.t + 0.05, 0);
   game.emit('disembark', s, null);
   game.hint?.('deck', 'Walk your deck freely — jump over the rail for a swim, and press E at the wheel to take the helm again.');
 }

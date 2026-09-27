@@ -16,6 +16,7 @@ import { drawJollyRoger, drawMarineEmblem } from '../render/ship.js';
 import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
 import { vcMat } from './props/mats.js';
 import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt } from '../world/hull.js';
+import { bigHull, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging } from './bigship.js';
 
 export { shipDims, helmPoint };
 
@@ -54,6 +55,12 @@ export function hullGeometry(def) {
   let g = hullCache.get(key);
   if (g) return g;
   const d = shipDims(def);
+  if (d.big) {
+    // the One Piece-scale ships are built like the real thing (see bigship.js)
+    g = bigHull(def, d).build(true);
+    hullCache.set(key, g);
+    return g;
+  }
   const P = palette(def);
   const k = new Mesher();
   const N = 22;
@@ -400,6 +407,14 @@ function mastGeometry(def, d, plan) {
   return g;
 }
 
+/** The big ships' masts, tops and bowsprit (cached per ship type). */
+function bigRigGeometry(def, d, plan) {
+  const key = `big|${def.length}|${def.beam}|${def.masts}`;
+  let g = rigCache.get(key);
+  if (!g) { g = bigMastGeometry(def, d, plan); rigCache.set(key, g); }
+  return g;
+}
+
 // ---------------------------------------------------------------- textures
 function sailTexture(kind, jr, sailColor) {
   const { ctx: g, tex } = canvasTexture(256, 256);
@@ -609,8 +624,8 @@ export class ShipView {
     root.add(hull);
     this.hull = hull;
     // masts
-    const plan = mastPlan(def, d);
-    this.rig = new THREE.Mesh(mastGeometry(def, d, plan), SOLID());
+    const plan = d.big ? bigMastPlan(d) : mastPlan(def, d);
+    this.rig = new THREE.Mesh(d.big ? bigRigGeometry(def, d, plan) : mastGeometry(def, d, plan), SOLID());
     this.rig.castShadow = true;
     root.add(this.rig);
     // yards + sails per mast (they brace to the wind around the mast)
@@ -628,16 +643,16 @@ export class ShipView {
       root.add(grp);
       this.braces.push(grp);
       const yk = new Mesher();
-      for (const sp of sailPlan(def, d, m)) {
+      for (const sp of (d.big ? bigSailPlan(def, d, m) : sailPlan(def, d, m))) {
         if (sp.type === 'square') {
-          const sw = sp.w, sh = sp.y1 - sp.y0;
-          yk.add(cyl(0.035, 0.05, sw * 1.08, 6), { at: [0.1, sp.y1 + 0.04, -sw * 0.54], rot: [Math.PI / 2, 0, 0], color: '#5d4037' });
+          const sw = sp.w, sh = sp.y1 - sp.y0, yr = sp.yardR || 0.05;
+          yk.add(cyl(yr * 0.7, yr, sw * 1.08, 6), { at: [0.1 + (d.big ? m.r * 1.2 + yr : 0), sp.y1 + 0.04, -sw * 0.54], rot: [Math.PI / 2, 0, 0], color: '#5d4037' });
           const geo = new THREE.PlaneGeometry(sw, sh, 6, 4);
           geo.rotateY(Math.PI / 2);
           const tex = sp.emblem && kind !== 'none' ? sailTexture(kind, s.jr, sailCol) : null;
           const mat = own(new THREE.MeshToonMaterial({ color: tex ? 0xffffff : sailCol, map: tex, side: THREE.DoubleSide }));
           const mesh = new THREE.Mesh(geo, mat);
-          mesh.position.set(0.16, sp.y0 + sh / 2, 0);
+          mesh.position.set(0.16 + (d.big ? m.r * 1.2 + (sp.yardR || 0) * 2 : 0), sp.y0 + sh / 2, 0);
           mesh.castShadow = true;
           mesh.userData.base = geo.attributes.position.array.slice();
           grp.add(mesh);
@@ -654,7 +669,8 @@ export class ShipView {
           this.sails.push({ mesh, kind: 'fore', len: sp.len, y0: sp.y0, y1: sp.y1 });
         } else if (sp.type === 'jib') {
           // the jib is fixed to the hull (not braced)
-          const a = [m.x + 0.05, sp.y1, 0], b = [sp.tipX, sp.tipY, 0], c = [m.x + 0.1, floorAt(d, (m.x + d.L / 2) / d.L) + 1.1, 0];
+          const a = sp.head ? [sp.head[0], sp.head[1], 0] : [m.x + 0.05, sp.y1, 0], b = [sp.tipX, sp.tipY, 0];
+          const c = sp.clew ? [sp.clew[0], sp.clew[1], 0] : [m.x + 0.1, floorAt(d, (m.x + d.L / 2) / d.L) + 1.1, 0];
           const geo = triGeometry(a, b, c, 4);
           const mat = own(new THREE.MeshToonMaterial({ color: sailCol, side: THREE.DoubleSide }));
           const mesh = new THREE.Mesh(geo, mat);
@@ -670,7 +686,7 @@ export class ShipView {
     }
     void yardK;
     // rigging lines
-    this.lines = this.rigging(def, d, plan);
+    this.lines = d.big ? this.lineSet(bigRigging(d, plan)) : this.rigging(def, d, plan);
     root.add(this.lines);
     // paddle wheels
     if (def.paddle) {
@@ -694,16 +710,28 @@ export class ShipView {
     }
     // the masthead flag
     if (kind !== 'none') {
-      const fg = new THREE.PlaneGeometry(1.1, 0.75, 5, 1);
-      fg.translate(0.55, 0, 0);
-      const flag = new THREE.Mesh(fg, own(new THREE.MeshToonMaterial({ map: flagTexture(kind, s.jr), side: THREE.DoubleSide })));
+      const fs = d.big ? d.L / 11 : 1;
+      const fg = new THREE.PlaneGeometry(1.1 * fs, 0.75 * fs, 5, 1);
+      fg.translate(0.55 * fs, 0, 0);
+      const fmat = own(new THREE.MeshToonMaterial({ map: flagTexture(kind, s.jr), side: THREE.DoubleSide }));
+      const flag = new THREE.Mesh(fg, fmat);
       const mm = plan.find((p) => p.main) || plan[0];
-      flag.position.set(mm.x, mm.h + 0.35, 0);
+      const mx = mm.x + (d.big ? mm.r * 1.7 : 0);
+      flag.position.set(mx, mm.h + 0.35 * fs, 0);
       flag.userData.base = fg.attributes.position.array.slice();
       root.add(flag);
       this.flag = flag;
+      if (d.big) {
+        // the ensign, flying from the flagstaff at the taffrail
+        const eg = fg.clone();
+        const ens = new THREE.Mesh(eg, fmat);
+        ens.position.set(-d.L / 2 + 0.5 - 3.4 * Math.sin(0.18) - 0.1, topAt(d, 0.01) + 3.4 * Math.cos(0.18) - 0.75 * fs * 0.5, 0);
+        ens.userData.base = eg.attributes.position.array.slice();
+        root.add(ens);
+        this.ensign = ens;
+      }
       const pole = new Mesher();
-      pole.add(cyl(0.015, 0.02, 0.55, 4), { at: [mm.x, mm.h, 0], color: '#3e2723' });
+      pole.add(cyl(0.015 * fs, 0.02 * fs, 0.55 * fs, 4), { at: [mx, mm.h, 0], color: '#3e2723' });
       const pm = new THREE.Mesh(pole.build(false), SOLID());
       root.add(pm);
       this.ghostables.push(pm);
@@ -720,6 +748,14 @@ export class ShipView {
     }
     this.root = root;
     this.kindKey = kind + ':' + JSON.stringify(s.jr || null) + ':' + !!s.coated;
+  }
+
+  lineSet(pts) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    const mat = new THREE.LineBasicMaterial({ color: 0x3a2a1e, transparent: true, opacity: 0.85, fog: true });
+    this.lineMat = mat;
+    return new THREE.LineSegments(g, mat);
   }
 
   rigging(def, d, plan) {
@@ -779,6 +815,7 @@ export class ShipView {
       const mt = this.flag.material;
       mt.transparent = on; mt.opacity = on ? 0.3 : 1; mt.depthWrite = !on; mt.needsUpdate = true;
       this.flag.renderOrder = on ? 2 : 0;
+      if (this.ensign) this.ensign.renderOrder = on ? 2 : 0;
     }
   }
 
@@ -791,7 +828,8 @@ export class ShipView {
     const v3 = ctx?.game?.view3d;
     if (v3 && ctx.world) this.wake.update(s, env.time, v3.ox, v3.oy, ctx.world);
     // from the helm of your own ship the rig is see-through, so you can steer
-    const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === 'sail' && ctx.mode === 'first';
+    // (sailing puts the camera at the helm in either view mode)
+    const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === 'sail';
     if (own !== this.ghost) this.setGhost(own);
     const t = env.time + (s.seed || 0);
     const sinking = s.sunk ? Math.min(1, s.sinkT / 4) : 0;
@@ -837,6 +875,12 @@ export class ShipView {
       }
       a.needsUpdate = true;
       this.flag.rotation.y = (s.heading - (windAngle || 0)) + Math.PI;
+      if (this.ensign) {
+        const e = this.ensign.geometry.attributes.position, eb = this.ensign.userData.base;
+        for (let i = 0; i < e.count; i++) e.array[i * 3 + 2] = eb[i * 3 + 2] + Math.sin(t * 6 + eb[i * 3] * 3) * 0.12 * eb[i * 3];
+        e.needsUpdate = true;
+        this.ensign.rotation.y = this.flag.rotation.y;
+      }
     }
     if (this.paddles) {
       const spin = (s.speed || 0) * 1.4 + (s.rowing ? 2 : 0);

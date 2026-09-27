@@ -42,8 +42,8 @@ import { fruitOf, fruitPicked } from './world/fruitTrees.js';
 import { installContent } from './content/index.js';
 import { Audio } from './audio/audio.js';
 import { installSea } from './game/sea.js';
-import { installDecks, hatchSpot, helmSpot } from './game/decks.js';
-import { deckToWorld } from './world/hull.js';
+import { installDecks, hatchSpot, helmSpot, placeOnDeck } from './game/decks.js';
+import { deckToWorld, shipDims } from './world/hull.js';
 import { installTraffic } from './game/traffic.js';
 import { installWanted } from './game/wanted.js';
 import { installLoot } from './game/loot.js';
@@ -333,7 +333,7 @@ async function start() {
       startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', look: null });
       return game.player;
     },
-    debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); } },
+    debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld },
     ready: true,
   });
 

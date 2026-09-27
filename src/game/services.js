@@ -72,11 +72,15 @@ export class Services {
 
   // -------------------------------------------------------- shipwright
   shipsFor(island) {
-    const sea = island?.def?.sea || 'east_blue';
+    const sea = island?.def?.sea || 'east_blue', id = island?.id || '';
     const list = ['dinghy', 'sloop', 'caravel'];
     if (sea !== 'east_blue') list.push('brigantine');
-    if (sea === 'paradise' || sea === 'new_world') list.push('frigate', 'galleon');
-    return list;
+    // the big ships: a carrack wherever there's real trade, the warships in the Grand Line
+    if (sea !== 'east_blue' || id === 'loguetown') list.push('carrack');
+    if (sea === 'paradise' || sea === 'new_world') list.push('frigate', 'galleon', 'war_galleon');
+    if (sea === 'new_world' || id === 'water_7') list.push('man_o_war');
+    if (sea === 'new_world') list.push('great_galleon');
+    return list.sort((a, b) => SHIPS[a].price - SHIPS[b].price);
   }
   shipPrice(type, island) { return Math.round(SHIPS[type].price * (1 + (this.seaMul(island) - 1) * 0.3)); }
   buyShip(type, island, dock, name) {

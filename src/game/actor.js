@@ -563,13 +563,27 @@ export class Actor extends Entity {
     if (g && g.deckAt && g.ships.length) {
       if (this.deck) {
         const dk = g.deckAt(x, y, r * 0.7);
-        if (dk && dk.ship === this.deck.ship) return true;
+        if (dk && dk.ship === this.deck.ship) {
+          // into a mast (or the like) only while already in it and getting out
+          if (dk.solid && !((g.deckAt(this.x, this.y, r * 0.7)?.solid || 0) >= dk.solid - 1e-4)) return false;
+          return this.deckStep(dk);
+        }
         if (!(this.z > 0.3)) return false;
       } else if (g.deckAt(x, y, -0.15)) return false;
     }
     if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
     if (!this.passable(w, x - r, y) || !this.passable(w, x + r, y) || !this.passable(w, x, y - r) || !this.passable(w, x, y + r)) return false;
     return !w.hitsProp(x, y, r * 0.9);
+  }
+
+  /**
+   * Can you step to this spot on your own deck? On the big ships the upper
+   * decks are a storey up: you climb the stairs (or jump down), and masts and
+   * the like are in the way.
+   */
+  deckStep(dk) {
+    if (dk.lvl === undefined) return true;
+    return dk.h <= this.deck.h + Math.max(0, this.z || 0) + 0.55;
   }
 
   updateMovement(dt, game, knocked) {
@@ -626,14 +640,22 @@ export class Actor extends Entity {
   updateDeck(game) {
     const was = this.deck;
     const dk = game.deckAt && game.ships.length ? game.deckAt(this.x, this.y, was ? 0 : 0.1) : null;
-    if (dk && was && dk.ship === was.ship) { this.deck = dk; return; }
+    if (dk && was && dk.ship === was.ship) {
+      // off the edge of an upper deck: drop to the one below (stairs are gentler than this)
+      const drop = was.h - dk.h;
+      if (drop > 0.35) { this.z = (this.z || 0) + drop; this.vz = Math.min(this.vz || 0, 0); }
+      else if (drop < -0.35) this.z = Math.max(0, (this.z || 0) + drop);
+      this.deck = dk;
+      return;
+    }
     if (was) {
       was.ship.aboard?.delete(this);
       // over the side: fall from the deck's height
       if (!dk) { this.z = (this.z || 0) + was.h; this.vz = Math.min(this.vz || 0, 0.5); }
     }
     if (dk) {
-      if (!was) this.z = Math.max(0, (this.z || 0) - dk.h);
+      // (from one ship's deck across to another's, the height changes too)
+      this.z = Math.max(0, (this.z || 0) + (was ? was.h : 0) - dk.h);
       (dk.ship.aboard || (dk.ship.aboard = new Set())).add(this);
     }
     this.deck = dk;

@@ -454,7 +454,8 @@ export const scenarios = {
           if (w.sd(x, y) < -28) return { x, y, a };
         }
       });
-      await page.evaluate((s) => { const g = window.OP.game, p = g.player; const sh = g.giveShip('caravel', s.x, s.y, 'Going Test', { heading: s.a }); p.x = sh.x; p.y = sh.y + 1; window.__s = sh; }, spot);
+      // (in the water beside her, not on her deck: from there E boards and takes the helm)
+      await page.evaluate((s) => { const g = window.OP.game, p = g.player; const sh = g.giveShip('caravel', s.x, s.y, 'Going Test', { heading: s.a }); const off = sh.def.beam / 2 + 0.8; p.x = sh.x - Math.sin(sh.heading) * off; p.y = sh.y + Math.cos(sh.heading) * off; window.__s = sh; }, spot);
       await step(page, 0.1);
       await page.evaluate(() => { window.OP.key('E', true); }); await step(page, 0.05); await page.evaluate(() => { window.OP.key('E', false); });
       await page.evaluate(() => window.OP.key('W', true));

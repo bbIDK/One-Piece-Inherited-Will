@@ -7,6 +7,10 @@ import { drawCharacter } from '../render/character.js';
 import { SAILABLE } from '../world/tiles.js';
 import { angleDiff, clamp, TAU } from '../core/math.js';
 import { drawProjectile } from '../render/projectiles.js';
+import { hbAt, hullGap, BIG_SHIP } from '../world/hull.js';
+
+// where the hull meets the water, as fractions of the length and beam (the small ships)
+const SMALL_HULL = [[0.47, 0], [-0.46, 0], [0.2, 0.42], [0.2, -0.42], [-0.25, 0.42], [-0.25, -0.42]];
 
 /** Sailing speed multiplier for the bigger world (see WORLD_SCALE). */
 const SEA_PACE = 1.25;
@@ -61,9 +65,15 @@ export class Ship extends Entity {
     const L = this.def.length, B = this.def.beam;
     const c = Math.cos(h), s = Math.sin(h);
     const pts = [];
-    for (const [ax, ay] of [[0.47, 0], [-0.46, 0], [0.2, 0.42], [0.2, -0.42], [-0.25, 0.42], [-0.25, -0.42]]) {
-      pts.push([x + c * ax * L - s * ay * B, y + s * ax * L + c * ay * B]);
+    const add = (ax, ay) => pts.push([x + c * ax * L - s * ay * B, y + s * ax * L + c * ay * B]);
+    if (L < BIG_SHIP) { for (const [ax, ay] of SMALL_HULL) add(ax, ay); return pts; }
+    // the big ships: all the way round the waterline, every few metres
+    const n = Math.ceil(L / 3);
+    for (let i = 0; i <= n; i++) {
+      const t = 0.03 + 0.93 * i / n, hb = hbAt(t, 1) * 0.95;
+      add(t - 0.5, hb); add(t - 0.5, -hb);
     }
+    add(0.49, 0);
     return pts;
   }
 
@@ -112,11 +122,13 @@ export class Ship extends Entity {
     // heading follows strong currents a little (Reverse Mountain)
     if (cur.steer) this.heading += clamp(angleDiff(this.heading, Math.atan2(cur.y, cur.x)), -1, 1) * dt * cur.steer;
     const nx = w.wx(this.x + vx * dt), ny = this.y + vy * dt;
-    if (this.fits(w, nx, ny, this.heading)) {
+    // (hulls don't pass through each other: a ship alongside is as solid as a quay)
+    const ok = (x, y) => this.fits(w, x, y, this.heading) && !this.shipIn(game, x, y, this.heading);
+    if (ok(nx, ny)) {
       this.x = nx; this.y = ny;
-    } else if (this.fits(w, nx, this.y, this.heading)) {
+    } else if (ok(nx, this.y)) {
       this.x = nx; this.speed *= 0.7;
-    } else if (this.fits(w, this.x, ny, this.heading)) {
+    } else if (ok(this.x, ny)) {
       this.y = ny; this.speed *= 0.7;
     } else {
       const impact = Math.hypot(vx, vy);
@@ -146,13 +158,57 @@ export class Ship extends Entity {
     }
   }
 
-  unstick(w) {
-    for (let r = 0.5; r < 6; r += 0.5) {
-      for (let a = 0; a < TAU; a += 0.5) {
-        const x = w.wx(this.x + Math.cos(a) * r), y = this.y + Math.sin(a) * r;
-        if (this.fits(w, x, y, this.heading)) { this.x = x; this.y = y; return; }
+  /**
+   * Find the nearest clear water (a big ship searches further, and swings
+   * round to lie along the coast if she must; `far`: a fresh berth, not a nudge).
+   */
+  /** Another ship's hull where this one's would be at (x, y, h), if any. */
+  shipIn(game, x, y, h) {
+    const w = game.world;
+    let pts = null;
+    for (const o of game.ships) {
+      if (o === this || o.sunk || o.alive === false) continue;
+      const reach = (this.def.length + o.def.length) * 0.5 + 1;
+      const dx = w.dx(o.x, x), dy = y - o.y;
+      if (dx * dx + dy * dy > reach * reach) continue;
+      // (already overlapping — say, launched on top of each other: let them part)
+      if (hullGap(o, w.dx(o.x, this.x), this.y - o.y) <= 0) continue;
+      pts = pts || this.hullPoints(x, y, h);
+      for (const [px, py] of pts) if (hullGap(o, w.dx(o.x, px), py - o.y) <= 0) return o;
+    }
+    return null;
+  }
+
+  unstick(w, far = false) {
+    const big = this.def.length >= BIG_SHIP;
+    const R = big ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big ? 1.5 : 0.5;
+    const hs = big ? [this.heading, this.heading + Math.PI / 2, this.heading - Math.PI / 2, this.heading + Math.PI] : [this.heading];
+    for (const h of hs) {
+      for (let r = dr; r < R; r += dr) {
+        const da = big ? Math.min(0.5, 2.2 / r) : 0.5;
+        for (let a = 0; a < TAU; a += da) {
+          const x = w.wx(this.x + Math.cos(a) * r), y = this.y + Math.sin(a) * r;
+          if (this.fits(w, x, y, h)) { this.x = x; this.y = y; this.heading = h; return true; }
+        }
+      }
+      if (!far) break;
+    }
+    return false;
+  }
+
+  /** A big ship moors alongside a pier head, bow out to sea (as near as she'll fit). */
+  berth(w, dock) {
+    const L = this.def.length, B = this.def.beam;
+    const dx = dock.dirX || 0, dy = dock.dirY || 1, hd = Math.atan2(dy, dx);
+    const end = dock.end || dock;
+    for (let k = 0; k < 10; k++) {
+      for (const sg of [1, -1]) {
+        const along = L * 0.5 - 5 + k * 2.5, off = sg * (B * 0.5 + 2.4);
+        const x = w.wx(end.x + 0.5 + dx * along - dy * off), y = end.y + 0.5 + dy * along + dx * off;
+        if (this.fits(w, x, y, hd)) { this.x = x; this.y = y; this.heading = hd; return true; }
       }
     }
+    return false;
   }
 
   damage(n, attacker, info = {}) {

@@ -16,13 +16,14 @@ import { board } from './interact.js';
 import { regionAt, REGION, isGrandLine, isCalmBelt } from '../world/constants.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
 import { RNG } from '../core/rng.js';
-import { placeOnDeck, helmSpot, hatchSpot, deckDist, nearestDeck } from './decks.js';
-import { shipDims } from '../world/hull.js';
+import { placeOnDeck, helmSpot, hatchSpot, deckDist, nearestDeck, freeDeckSpot } from './decks.js';
+import { shipDims, hullGap } from '../world/hull.js';
+import { SHIPS } from '../data/ships.js';
 import { wantedTier } from './wanted.js';
 
 const SAILOR = { name: 'Sailor', faction: 'civilian', style: 'brawler', look: { top: '#eceff1', bottom: '#37474f', hat: 'bandana', hatColor: '#1565c0' }, skill: 0.1, barks: ['Repel boarders!', 'Get off our ship!'] };
 const FISHER = { name: 'Fisherman', faction: 'civilian', style: 'brawler', look: { top: '#8d6e63', bottom: '#455a64', hat: 'cap', hatColor: '#6d8f5e' }, skill: 0.05, barks: ['Not the catch!', 'Help!'] };
-const CREW = { dinghy: 1, sloop: 2, caravel: 3, brigantine: 4 };
+const CREW = { dinghy: 1, sloop: 2, caravel: 3, brigantine: 4, carrack: 6, war_galleon: 8, man_o_war: 10, great_galleon: 12, marine_battleship: 10 };
 
 export function installTraffic(game) {
   const T = game.traffic = { t: 3, ships: [] };
@@ -43,7 +44,8 @@ export function installTraffic(game) {
     const w = game.world;
     for (const o of T.ships) {
       if (o.sunk || !o.alive || o.owner === 'player') continue;
-      const gap = w.distance(o.x, o.y, s.x, s.y) - (o.def.beam + s.def.beam) * 0.5;
+      // (the gap between the hulls, however long either ship is)
+      const gap = hullGap(o, w.dx(o.x, s.x), s.y - o.y) - s.def.beam * 0.5;
       // alongside, and near enough the same speed to jump across
       const rvx = Math.cos(s.heading) * s.speed - Math.cos(o.heading) * o.speed, rvy = Math.sin(s.heading) * s.speed - Math.sin(o.heading) * o.speed;
       if (gap < 3.5 && Math.hypot(rvx, rvy) < 3.5) return { label: `Board and raid the ${o.name}`, key: 'E', run: () => boardFromHelm(game, T, p, s, o) };
@@ -116,20 +118,22 @@ function spawnShip(game, T, p, reg, force = null) {
     // out in the haze, on open water, heading past you
     const a = rng.range(0, TAU), r = rng.range(150, 210);
     const x = force ? force.x : w.wx(p.x + Math.cos(a) * r), y = force ? force.y : p.y + Math.sin(a) * r;
-    if (!force && (!w.sailable(x, y) || w.sd(x, y) > -8)) continue;
     const kind = force?.kind || pickKind(rng, reg, game);
     const gl = isGrandLine(reg), nw = reg === REGION.NEW_WORLD;
+    // from rowboats to One Piece-scale galleons and battleships
     const type = force?.type || (kind === 'fishing' ? rng.pick(['dinghy', 'sloop'])
-      : kind === 'marine' ? (gl ? rng.pick(['brigantine', 'marine_warship']) : rng.pick(['sloop', 'brigantine']))
-        : kind === 'merchant' ? rng.pick(gl ? ['caravel', 'brigantine', 'galleon'] : ['sloop', 'caravel', 'caravel'])
-          : rng.pick(nw ? ['brigantine', 'frigate', 'galleon'] : gl ? ['caravel', 'brigantine', 'frigate'] : ['sloop', 'caravel']));
+      : kind === 'marine' ? (nw ? rng.pick(['marine_warship', 'marine_battleship', 'marine_battleship']) : gl ? rng.pick(['brigantine', 'marine_warship', 'marine_battleship']) : rng.pick(['sloop', 'brigantine', 'brigantine', 'marine_warship']))
+        : kind === 'merchant' ? rng.pick(gl ? ['caravel', 'brigantine', 'galleon', 'carrack', 'carrack'] : ['sloop', 'caravel', 'caravel', 'carrack'])
+          : rng.pick(nw ? ['galleon', 'war_galleon', 'man_o_war', 'man_o_war', 'great_galleon'] : gl ? ['caravel', 'brigantine', 'frigate', 'war_galleon'] : ['sloop', 'caravel', 'sloop', 'caravel', 'war_galleon']));
+    // (a big ship wants plenty of sea room)
+    if (!force && (!w.sailable(x, y) || w.sd(x, y) > -8 - SHIPS[type].length * 0.5)) continue;
     const pass = a + Math.PI + rng.range(-0.5, 0.5);
     const dest = force?.dest || { x: w.wx(p.x + Math.cos(pass) * r), y: p.y + Math.sin(pass) * r };
     const heading = force?.heading ?? Math.atan2(dest.y - y, w.dx(x, dest.x));
     const faction = kind === 'marine' ? 'marine' : kind === 'pirate' ? 'pirate' : 'civilian';
     const s = game.addShip({
       type, x, y, heading, owner: kind, faction,
-      name: kind === 'marine' ? rng.pick(['Marine Patrol', 'Marine Cutter', 'Marine Escort']) : kind === 'pirate' ? pirateName(rng) : kind === 'fishing' ? rng.pick(['Fishing Boat', 'Trawler', 'Little Catch']) : rng.pick(['Merchant Ship', 'Trading Brig', 'Cargo Ship', 'Supply Ship']),
+      name: kind === 'marine' ? (type === 'marine_battleship' ? 'Marine Battleship' : rng.pick(['Marine Patrol', 'Marine Cutter', 'Marine Escort'])) : kind === 'pirate' ? pirateName(rng) : kind === 'fishing' ? rng.pick(['Fishing Boat', 'Trawler', 'Little Catch']) : rng.pick(['Merchant Ship', 'Trading Brig', 'Cargo Ship', 'Supply Ship']),
       jr: kind === 'pirate' ? { skull: rng.pick(['classic', 'grin', 'eyepatch']), bones: rng.pick(['cross', 'swords']), accessory: rng.pick(['bandana', 'horns', 'tricorne', 'none', 'flames']), color: '#f5f6fa' } : null,
     });
     if (!s.fits(w, x, y, heading)) { s.alive = false; if (force) return null; continue; }
@@ -138,7 +142,7 @@ function spawnShip(game, T, p, reg, force = null) {
     s.traffic = { kind, dest, level: lvl, crew: null, raided: false, cleared: false, plundered: false };
     s.ai = trafficAI;
     s.hull = s.maxHull = Math.round(s.maxHull * (0.5 + lvl / 40));
-    s.loot = Math.round((kind === 'merchant' ? 3500 : kind === 'marine' ? 2500 : kind === 'fishing' ? 400 : 2000) * (1 + lvl / 10));
+    s.loot = Math.round((kind === 'merchant' ? 3500 : kind === 'marine' ? 2500 : kind === 'fishing' ? 400 : 2000) * (1 + lvl / 10) * Math.max(1, s.def.length / 10));
     if (kind === 'merchant' || kind === 'fishing') s.cannonsOverride = 0;
     s.expire = Infinity;
     s.onDamage = (sh, n, att) => { if (att?.isPlayer || att === game.player || att?.ownerShip?.owner === 'player') underFire(game, sh); };
@@ -233,8 +237,9 @@ function spawnCrew(game, s) {
     a.stationary = true;
     game.addActor(a);
     // spread along the deck: the helmsman aft, the rest forward of him
-    const t = i === 0 ? Math.min(0.46, (d.helmX + d.L / 2) / d.L + 0.08) : 0.3 + (i / Math.max(1, n)) * 0.5;
-    const v = i === 0 ? 0 : ((i % 2) ? 1 : -1) * s.def.beam * 0.18;
+    let t = i === 0 ? Math.min(0.46, (d.helmX + d.L / 2) / d.L + 0.08) : 0.3 + (i / Math.max(1, n)) * 0.5;
+    let v = i === 0 ? 0 : ((i % 2) ? 1 : -1) * s.def.beam * 0.18;
+    if (d.big) ({ t, v } = i === 0 ? helmSpot(s) : freeDeckSpot(s, 0.34 + (i / Math.max(1, n)) * 0.46, ((i % 2) ? 1 : -1) * s.def.beam * (0.12 + (i % 3) * 0.08)));
     placeOnDeck(game, a, s, t, v);
     a.facing = s.heading + (i === 0 ? 0 : (i % 2 ? 1 : -1) * 1.2);
     if (a.controller) a.controller.home = null;
