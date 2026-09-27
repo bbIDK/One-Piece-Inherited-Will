@@ -110,6 +110,10 @@ export class UI {
     E.mmNorth = h('div.mm-north.hidden', 'N');
     this.hud.appendChild(h('div.minimap-wrap', h('div.mm-box', E.mm, E.mmArrow, E.mmNorth), E.logpose, E.loc, E.locSub, E.clock, E.saved));
     this.compass = new Compass(this.hud);
+    // under the compass while you're fighting (or being hunted)
+    E.combat = h('div.combat-tag.off');
+    E.combat.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14"><g stroke="#fff3e0" stroke-width="1.8" stroke-linecap="round" fill="none"><path d="M3 3 L12.5 12.5"/><path d="M13 3 L3.5 12.5"/><path d="M10 14 L14 10"/><path d="M2 10 L6 14"/></g></svg><span>In combat</span>';
+    this.hud.appendChild(E.combat);
     E.boss = h('div.bossbar.hidden', h('h3'), bar('boss').el);
     this.hud.appendChild(E.boss);
     E.ship = h('div.shiphud.hidden');
@@ -397,6 +401,8 @@ export class UI {
     }
     this.root.classList.toggle('v3', !!v3);
     this.compass.update(game, v3 ? v3.rig.yaw : 0, !!v3 && !this.mapOpen);
+    const fighting = !!p.inCombat && p.state === 'idle' && !this.mapOpen && E.boss.classList.contains('hidden');
+    if (fighting !== this.cache.combat) { this.cache.combat = fighting; E.combat.classList.toggle('off', !fighting); }
     // the minimap turns so that where you look is up
     const up = v3 ? v3.rig.yaw : null;
     if (up !== null) E.mm.style.transform = `rotate(${(-Math.PI / 2 - up).toFixed(4)}rad)`;

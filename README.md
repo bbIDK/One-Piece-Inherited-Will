@@ -10,7 +10,7 @@ lives, death is permanent, and your will passes on to the next generation.
 
 **To play:**
 
-- Play online at **<https://bbidk.github.io/One-piece-game/>** (GitHub Pages,
+- Play online at **<https://bbidk.github.io/One-Piece-Inherited-Will/>** (GitHub Pages,
   served straight from this branch, so every push updates it). To switch it
   on, once: the repository's Settings → Pages → Build and deployment → Source
   "Deploy from a branch" → branch `claude/one-piece-roguelike-game-9l776l`,

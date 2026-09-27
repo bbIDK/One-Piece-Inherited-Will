@@ -146,10 +146,15 @@ export class Game {
     let simDt = dt * this.slowmo;
     if (this.fx.hitstop > 0) { this.fx.hitstop -= dt; simDt *= 0.08; }
     this.combatT = Math.max(0, (this.combatT || 0) - dt);
-    this.player.inCombat = this.combatT > 0;
+    // (being hunted counts too: anyone close by who's after you)
+    const p = this.player;
+    if ((this.engageT = (this.engageT || 0) - dt) <= 0) {
+      this.engageT = 0.25;
+      this.engaged = p.state === 'idle' && this.actorsNear(p.x, p.y, 40).some((a) => a !== p && a.alive && a.state === 'idle' && a.controller?.target === p && (a.controller.state === 'chase' || a.controller.state === 'attack'));
+    }
+    p.inCombat = this.combatT > 0 || !!this.engaged;
 
     // actors
-    const p = this.player;
     for (let i = this.actors.length - 1; i >= 0; i--) {
       const a = this.actors[i];
       if (!a.alive) { this.actors.splice(i, 1); continue; }

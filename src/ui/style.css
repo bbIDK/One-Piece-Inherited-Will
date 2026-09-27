@@ -227,13 +227,13 @@ img.icon { vertical-align: middle; image-rendering: auto; }
 .icon.ghost { opacity: .32; }
 
 /* ---------- sidebar ---------- */
-.sidebar { position: absolute; right: 14px; top: 288px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }
+.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }
 .side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }
 .side-btn .lbl { flex: 1; letter-spacing: .3px; }
 .side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }
-.side-btn:hover { border-color: var(--gold); transform: translateX(-2px); }
+.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }
 .side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }
-.panel-bg.side-pad { padding-right: 222px; box-sizing: border-box; }
+.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }
 .panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }
 .panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }
 .saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }
@@ -387,16 +387,17 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .jolly > .flag { display: block; margin: 8px auto; }
 
 @media (max-width: 900px) {
-  .sidebar { width: 50px; top: 220px; }
+  .sidebar { width: 50px; top: 170px; }
   .side-btn .lbl, .side-btn .key { display: none; }
   .side-btn { justify-content: center; padding: 5px; }
-  .panel-bg.side-pad { padding-right: 70px; }
+  .panel-bg.side-pad { padding-left: 70px; }
   .inv-cols, .char-head { grid-template-columns: 1fr; }
   .slots { grid-template-columns: 1fr; }
   .roll-cols { grid-template-columns: 1fr; }
 }
 @media (max-height: 640px) {
-  .sidebar { top: 214px; gap: 3px; }
+  .sidebar { top: 170px; gap: 3px; }
+  .log { max-height: 130px; }
   .side-btn { padding: 3px 8px 3px 6px; }
 }
 
@@ -446,11 +447,11 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 #ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }
 #ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }
 #ui.touch .minimap { pointer-events: auto; }
-#ui.touch .sidebar { top: 8px; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }
+#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }
 #ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }
 #ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }
 #ui.touch .side-btn:hover { transform: none; }
-#ui.touch .panel-bg.side-pad { padding-right: 0; padding-top: 52px; }
+#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }
 #ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }
 #ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }
 #ui.touch .slot .ico img { width: 30px; height: 30px; }
@@ -490,6 +491,9 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }
 .compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }
 .compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }
+.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }
+.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }
+@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }
 .compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }
 .compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }
 .compass .cp.major.n { color: #ff8a80; }

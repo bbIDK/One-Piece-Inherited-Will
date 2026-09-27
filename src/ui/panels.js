@@ -496,6 +496,21 @@ export function openMenu(game, { onQuit, onRetire, onSave }) {
       btn('save', 'Save game', () => { if (onSave()) saved.textContent = `Saved just now (lineage ${game.saveSlot || 1})`; }),
       btn('help', 'How to Play', () => { ui.closePanel(); ui.openPanel(helpContent(c), { wide: true, id: 'help' }); }),
       btn('settings', 'Settings', () => { ui.closePanel(); openSettings(game); }),
+      btn('inn', 'Get unstuck: back to your bed', async () => {
+        const p = game.player, r = c.rest || c.spawn;
+        if (p.inCombat) { saved.textContent = "Not in the middle of a fight — get clear of it first."; return; }
+        if (p.state !== 'idle') return;
+        if (!(await ui.ask({ title: 'Back to your bed?', text: `Stuck somewhere? You'll wake up back at ${r?.name || 'where you last rested'}. Your ship stays where you left it.`, ok: 'Go back' }))) return;
+        ui.closePanel();
+        ui.fade(true);
+        setTimeout(() => {
+          p.leaveWater?.(game); p.deck?.ship.aboard?.delete(p); p.deck = null;
+          p.z = 0; p.vz = 0; p.vx = p.vy = 0; p.kb.x = p.kb.y = 0; p.dash = null; p.action = null;
+          game.lives.placeAtRest();
+          game.log(`You find your way back to ${r?.name || 'your bed'}.`, '#b0bec5');
+          ui.fade(false);
+        }, 450);
+      }),
       fullscreenOK() ? btn('fullscreen', fullscreenOn() ? 'Leave full screen' : 'Full screen', () => { ui.closePanel(); toggleFullscreen(); }) : null,
       (c.legends || []).length ? btn('journal', 'Retire as a legend', async () => {
         if (!(await ui.ask({ title: 'Retire?', text: `${c.name} hangs up their hat and becomes a legend. This life ends here and its Inherited Will passes to the next generation.`, ok: 'Retire', danger: true }))) return;
