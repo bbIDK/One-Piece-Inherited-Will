@@ -36,32 +36,29 @@ export class TerrainRenderer {
    * Upload a tile map. `world` = RGBA8 (type, elevation, climate, variant),
    * `dist` = R8 signed distance, `map` = RGBA8 half-res painted map, `fog` = R8 explored mask.
    */
-  setWorld({ width, height, world, dist, map, mapW, mapH, fog, fogW, fogH }) {
+  setWorld({ width, height, mapDist, map, mapW, mapH, fog, fogW, fogH }) {
     const gl = this.gl;
     for (const k of ['world', 'dist', 'map', 'fog']) if (this.textures[k]) gl.deleteTexture(this.textures[k]);
     this.width = width; this.height = height;
     // The game is drawn in 3D now: this renderer only paints the world chart,
-    // which needs the half-resolution map and coastline distance. (Full-size
-    // world textures would also exceed phones' 4096-pixel texture limit.)
-    void world;
+    // from the chart image and the coastline distance sampled at the same size.
     this.textures.world = texture(gl, { width: 1, height: 1, internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, data: new Uint8Array(4) });
-    const half = new Uint8Array(mapW * mapH);
-    const sx = width / mapW, sy = height / mapH;
-    for (let y = 0; y < mapH; y++) {
-      const row = Math.min(height - 1, Math.floor(y * sy)) * width;
-      for (let x = 0; x < mapW; x++) half[y * mapW + x] = dist[row + Math.min(width - 1, Math.floor(x * sx))];
-    }
-    this.textures.dist = texture(gl, { width: mapW, height: mapH, internal: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, data: half, filter: gl.LINEAR, mipmaps: true });
+    this.textures.dist = texture(gl, { width: mapW, height: mapH, internal: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, data: mapDist, filter: gl.LINEAR, mipmaps: true });
     this.textures.map = texture(gl, { width: mapW, height: mapH, internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, data: map, filter: gl.LINEAR, mipmaps: true });
     this.fogW = fogW; this.fogH = fogH;
     this.textures.fog = texture(gl, { width: fogW, height: fogH, internal: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, data: fog, filter: gl.LINEAR });
   }
 
-  updateFog(fog) {
+  /** Upload the explored mask (all of it, or just the rectangle of cells that changed). */
+  updateFog(fog, rect = null) {
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.textures.fog);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.fogW, this.fogH, gl.RED, gl.UNSIGNED_BYTE, fog);
+    if (!rect) { gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.fogW, this.fogH, gl.RED, gl.UNSIGNED_BYTE, fog); return; }
+    const w = rect.x1 - rect.x0 + 1, h = rect.y1 - rect.y0 + 1;
+    const sub = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) sub.set(fog.subarray((rect.y0 + y) * this.fogW + rect.x0, (rect.y0 + y) * this.fogW + rect.x0 + w), y * w);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, rect.x0, rect.y0, w, h, gl.RED, gl.UNSIGNED_BYTE, sub);
   }
 
   /** Re-upload a rectangle of tiles after the map changed (x0,y0 inclusive, w,h). */

@@ -16,7 +16,6 @@ import { SHIPS, SHIP_UPGRADES } from '../data/ships.js';
 import { TRAINERS } from '../data/trainers.js';
 import { formatBerries, clamp } from '../core/math.js';
 import { helpContent, wantedPoster, portrait } from './screens.js';
-import { questDef } from '../game/quests.js';
 import { WEAPON_KINDS } from '../game/progression.js';
 import { repTier, stealFromShop, bannedFromShop } from '../game/reputation.js';
 import { itemImg, skillImg, uiImg } from './icon.js';
@@ -428,42 +427,24 @@ export function openJournal(game) {
   const body = h('div.journal');
   const entry = ui.openPanel(body, { wide: true, id: 'journal' });
   if (!entry) return;
-  let tab = 'quests';
-  const render = () => {
-    clear(body);
-    const tabs = h('div.tabs', ['quests', 'legends'].map((k) => h('button' + (tab === k ? '.on' : ''), { on: { click: () => { tab = k; render(); } } }, k === 'quests' ? 'Quests' : 'Legends')));
-    add(body, h('h2', 'Journal'), tabs);
-    if (tab === 'quests') {
-      const q = game.quests;
-      const active = q.active();
-      const done = Object.entries(c.quests).filter(([, s]) => s.done).map(([id]) => questDef(id)).filter(Boolean);
-      add(body, 
-        h('h3', 'Active'),
-        active.length ? h('div.list', ...active.map(({ s, def }) => h('div.card',
-          h('h4', uiImg('quest', 18), ' ', def.name, h('span.tag', def.kind || 'story')),
-          h('div', def.summary || ''),
-          h('div.objective', def.stages[s.stage]?.desc || ''),
-          def.island ? h('div.muted', 'Location: ' + (game.surface.islands.find((i) => i.id === def.island)?.name || def.island)) : null))) : h('p', 'No active quests. Talk to people — every island has a story.'),
-        h('h3', 'Completed'),
-        done.length ? h('div.list.compact', ...done.map((d) => h('div.row-item', uiImg('check', 18), h('div.grow', h('b', d.name))))) : h('p.muted', 'None yet.'));
-    } else {
-      add(body, h('p.muted', 'Nobody chooses your destiny. But the sea remembers those who do the impossible — every legend you write adds to your Inherited Will.'));
-      const list = h('div.list');
-      for (const id of LEGEND_IDS) {
-        const L = LEGENDS[id];
-        const got = (c.legends || []).includes(id);
-        let pr = null;
-        try { pr = L.progress ? L.progress(c) : null; } catch { pr = null; }
-        list.appendChild(h('div.row-item' + (got ? '.legend-done' : ''),
-          uiImg(got ? 'check' : 'journal', 22),
-          h('div.grow', h('b', L.name), h('div.sub', L.desc),
-            pr && !got ? h('div.stat-row', h('div.meter', h('i', { style: { width: Math.min(100, 100 * pr[0] / pr[1]) + '%' } })), h('span.sub', `${pr[0].toLocaleString()} / ${pr[1].toLocaleString()} ${pr[2]}`)) : null),
-          h('span.price', got ? 'Achieved' : `+${L.will} Will`)));
-      }
-      body.appendChild(list);
-    }
-  };
-  render();
+  // (quests have a menu of their own now: Quests, L)
+  add(body, h('h2', 'Journal'),
+    h('div.journal-quests', uiImg('quest', 18), h('span', ' Your main story and side quests are in the Quests menu.'), h('button.btn.small', { on: { click: () => ui.sideAction?.('quests') } }, 'Open Quests (L)')),
+    h('h3', 'Legends'),
+    h('p.muted', 'Nobody chooses your destiny. But the sea remembers those who do the impossible — every legend you write adds to your Inherited Will.'));
+  const list = h('div.list');
+  for (const id of LEGEND_IDS) {
+    const L = LEGENDS[id];
+    const got = (c.legends || []).includes(id);
+    let pr = null;
+    try { pr = L.progress ? L.progress(c) : null; } catch { pr = null; }
+    list.appendChild(h('div.row-item' + (got ? '.legend-done' : ''),
+      uiImg(got ? 'check' : 'journal', 22),
+      h('div.grow', h('b', L.name), h('div.sub', L.desc),
+        pr && !got ? h('div.stat-row', h('div.meter', h('i', { style: { width: Math.min(100, 100 * pr[0] / pr[1]) + '%' } })), h('span.sub', `${pr[0].toLocaleString()} / ${pr[1].toLocaleString()} ${pr[2]}`)) : null),
+      h('span.price', got ? 'Achieved' : `+${L.will} Will`)));
+  }
+  body.appendChild(list);
 }
 
 // =================================================================== menu

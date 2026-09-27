@@ -3,7 +3,8 @@
 // has no wind at all, and each Grand Line island has its own climate.
 import { regionAt, REGION, isGrandLine, isCalmBelt, EQ, RM_X } from '../world/constants.js';
 import { clamp, lerp, smoothstep, TAU, angleDiff } from '../core/math.js';
-import { REVERSE_MOUNTAIN } from '../world/worldgen.js';
+import { RM, canalAt, canalLevel, nearRM } from '../world/reverseMountain.js';
+import { T } from '../world/tiles.js';
 
 export const DAY_SECONDS = 960; // one in-game day = 16 real minutes
 
@@ -99,31 +100,38 @@ export class Env {
   }
 }
 
-/** Sea currents: Reverse Mountain canals flow uphill into the Grand Line. */
-export function currentAt(world, x, y, out = { x: 0, y: 0, steer: 0 }) {
-  out.x = 0; out.y = 0; out.steer = 0;
+/**
+ * Sea currents: Reverse Mountain's canals run up the mountain from every
+ * Blue and down into the Grand Line — always one way. `level` is the height
+ * of the water there and `slope` how steeply it climbs (+) or falls (−)
+ * along the flow; `canal` says you're in one.
+ */
+export function currentAt(world, x, y, out = { x: 0, y: 0, steer: 0, level: 0, slope: 0, canal: null }) {
+  out.x = 0; out.y = 0; out.steer = 0; out.level = 0; out.slope = 0; out.canal = null;
   if (world.zone !== 0) return out;
-  const M = REVERSE_MOUNTAIN;
-  const dx = world.dx(M.x, x), dy = y - M.y;
-  if (Math.abs(dx) > M.rx + 70 || Math.abs(dy) > M.ry + 70) return out;
-  if (!world.isLiquid(x, y)) return out;
-  const d = Math.hypot(dx, dy);
-  // exit canal into Paradise
-  if (dx > 4 && Math.abs(dy) < 9 && dx < M.rx + 40) {
-    out.x = 15; out.y = -dy * 0.6; out.steer = 1.5;
+  const ux = world.wx(x);
+  if (!nearRM(ux, y)) return out;
+  const k = canalAt(ux, y, 70);
+  if (!k) return out;
+  const c = k.canal;
+  if (world.type(x, y) === T.RAPIDS || k.pool) {
+    // in the canal: carried along it, and back toward the middle
+    const sp = k.pool ? 12 : c.exit ? RM.downSpeed : k.level > 0.5 ? RM.upSpeed : RM.upSpeed * 0.75;
+    const back = Math.max(-6, Math.min(6, -k.side * 0.55));
+    out.x = k.fx * sp - k.fy * back;
+    out.y = k.fy * sp + k.fx * back;
+    out.steer = 2.6;
+    out.level = k.level;
+    out.slope = k.pool ? 0 : (canalLevel(c, k.s + 3) - canalLevel(c, k.s - 3)) / 6;
+    out.canal = c;
     return out;
   }
-  const inside = Math.abs(dx) < M.rx * Math.sqrt(Math.max(0, 1 - (dy / M.ry) ** 2)) + 6;
-  if (d < 10) { out.x = 12; out.y = -dy * 0.8; out.steer = 1.5; return out; }
-  if (inside) {
-    out.x = -dx / d * 16; out.y = -dy / d * 16; out.steer = 1.2;
-    return out;
-  }
-  // gentle pull toward the nearest canal mouth
-  for (const m of Object.values(M.mouths)) {
-    const mx = world.dx(x, m.x), my = m.y - y;
-    const md = Math.hypot(mx, my);
-    if (md < 45) { out.x = mx / md * 3.5; out.y = my / md * 3.5; out.steer = 0.2; return out; }
+  // out at sea before a gate: a strengthening pull into the mouth
+  if (!c.exit && k.s < c.s[c.i0 ?? 0] + 10) {
+    const f = 3 + 5 * Math.min(1, k.s / Math.max(1, c.s[c.i0 ?? 0]));
+    out.x = k.fx * f + k.fy * k.side * 0.12;
+    out.y = k.fy * f - k.fx * k.side * 0.12;
+    out.steer = 0.35;
   }
   return out;
 }

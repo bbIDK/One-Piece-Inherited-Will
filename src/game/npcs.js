@@ -119,7 +119,7 @@ export function npcBuilder(ctx) {
   const { island, game, spawner, list, rng } = ctx;
   const c = game.state?.char;
   if (!c) return;
-  for (const t of island.towns || []) for (const b of t.buildings) b.npcCount = 0;
+  for (const t of island.towns || []) for (const b of t.buildings) { b.npcCount = 0; b.guestCount = 0; }
   for (const def of NPC_DEFS.values()) {
     if (def.island !== island.id) continue;
     if (def.when && !def.when(c, game)) continue;
@@ -138,7 +138,7 @@ export function npcBuilder(ctx) {
     }
     game.addActor(a);
     list.push(a);
-    if (pos.building) pos.building.npcSpawned = true;
+    if (pos.building && !pos.guest) pos.building.npcSpawned = true;
   }
   for (const grp of GROUPS) {
     if (grp.island !== island.id) continue;
@@ -166,13 +166,15 @@ function clear(spawner, x, y, rng, extra = {}) {
 }
 
 /** Behind the counter (or at home) in a building you can walk into. */
-function inside(b) {
+function inside(b, guest = false) {
   if (!b.enterable) return null;
   const L = layoutOf(b);
-  const spots = [L.keeper, ...L.residents].filter(Boolean);
-  const s = spots[(b.npcCount = (b.npcCount || 0) + 1) - 1];
+  // (a guest takes a seat and leaves the counter to whoever keeps the place)
+  const spots = guest ? L.residents.slice().reverse() : [L.keeper, ...L.residents].filter(Boolean);
+  const k = guest ? (b.guestCount = (b.guestCount || 0) + 1) : (b.npcCount = (b.npcCount || 0) + 1);
+  const s = spots[k - 1];
   if (!s) return null;
-  return { ...bw(b, s.x, s.z), building: b, inside: true };
+  return { ...bw(b, s.x, s.z), building: b, inside: true, guest };
 }
 
 function placeNPC(game, island, def, rng, spawner) {
@@ -185,11 +187,21 @@ function placeNPC(game, island, def, rng, spawner) {
   }
   for (const town of island.towns) {
     if (pl.town && town.id !== pl.town) continue;
+    // by the town's pier
+    if (pl.dock) {
+      const d = island.docks.slice().sort((a, b) => Math.hypot(a.land.x - town.x, a.land.y - town.y) - Math.hypot(b.land.x - town.x, b.land.y - town.y))[0];
+      if (d) return spawner.findFree(d.land.x + (pl.ox || 0), d.land.y + (pl.oy || 0), 4, rng) || spawner.findFree(town.plaza.x, town.plaza.y + 2.5, 4, rng);
+    }
+    // on the street outside a building (whoever keeps it stays inside)
+    if (pl.door) {
+      const b = town.buildings.find((x) => x.name === pl.door || x.role === pl.door);
+      if (b) { const q = bw(b, doorLocalX(b) + (pl.ox ?? 1.6), 1.6); return clear(spawner, q.x, q.y, rng); }
+    }
     if (pl.building) {
       const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
-      if (b) { const q = bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4); return inside(b) || clear(spawner, q.x, q.y, rng, { building: b }); }
+      if (b) { const q = bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4); return inside(b, pl.guest) || clear(spawner, q.x, q.y, rng, { building: b }); }
     }
-    if (pl.plaza || (!pl.building && !pl.dx)) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5, 3, rng);
+    if (pl.plaza || (!pl.building && !pl.dx && !pl.door)) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5 + (pl.oy || 0), 3, rng);
   }
   // any building that names this NPC
   for (const town of island.towns) {
@@ -260,8 +272,9 @@ export class Interactions {
           game.fx.text(a.x, a.y - 2, a.def?.recoverLine || '...Hah. You win.', '#fff', 0.32);
         }
         const m = a.def?.marker;
-        if (!m || !a.alive) continue;
-        try { a.questMarker = m(c, game) || null; } catch (e) { a.questMarker = null; }
+        if ((!m && !a.npcId) || !a.alive) continue;
+        // (the main story's own marks come first: see content/mainStory.js)
+        try { a.questMarker = game.storyMarker?.(a) || (m ? m(c, game) : null) || null; } catch (e) { a.questMarker = null; }
       }
     });
   }

@@ -66,6 +66,10 @@ export function generateIsland(world, def, noise, rng) {
   const L = new Uint8Array(LW * LH); // 1 = land
   const li = (i, j) => j * LW + i;
   const seedOff = (def.id.length * 131.7) % 1000;
+  const shapeNoise = (px, py) => noise.fbm(px * nf + seedOff, py * nf - seedOff, 4) + noise.noise2(px * nf * 4.1, py * nf * 4.1) * 0.25;
+  // (on a big island the coast's noise is smooth over a couple of tiles:
+  // work it out every other tile and blend between)
+  const shape = nf * 4.1 < 0.12 ? coarseField(shapeNoise, x0 + 0.5, y0 + 0.5, LW, LH) : shapeNoise;
   for (let j = 0; j < LH; j++) {
     for (let i = 0; i < LW; i++) {
       const px = x0 + i + 0.5, py = y0 + j + 0.5;
@@ -75,9 +79,7 @@ export function generateIsland(world, def, noise, rng) {
         v = Math.max(v, 1 - Math.sqrt(ex * ex + ey * ey));
       }
       if (v < -rough * 1.4) continue;
-      const n = noise.fbm(px * nf + seedOff, py * nf - seedOff, 4);
-      const detail = noise.noise2(px * nf * 4.1, py * nf * 4.1) * 0.25;
-      if (v + (n + detail) * rough > 0) L[li(i, j)] = 1;
+      if (v + shape(px, py) * rough > 0) L[li(i, j)] = 1;
     }
   }
   if (def.ring) {
@@ -89,6 +91,12 @@ export function generateIsland(world, def, noise, rng) {
     }
   }
   if (def.keepLargest !== false && !def.archipelago) keepLargestComponent(L, LW, LH);
+  // the land's own extent (the coastline's distance field is measured round it)
+  let lx0 = LW, ly0 = LH, lx1 = -1, ly1 = -1;
+  for (let j = 0; j < LH; j++) {
+    const row = j * LW;
+    for (let i = 0; i < LW; i++) if (L[row + i]) { if (i < lx0) lx0 = i; if (i > lx1) lx1 = i; if (j < ly0) ly0 = j; if (j > ly1) ly1 = j; }
+  }
 
   // local distance to water (4-connected BFS)
   const CD = localCoastDistance(L, LW, LH);
@@ -96,6 +104,7 @@ export function generateIsland(world, def, noise, rng) {
   // write base terrain
   const beachW = def.beachWidth ?? (ground === T.SNOW ? 1.2 : 2.2);
   let landCount = 0;
+  const lumps = coarseField((x, y) => noise.fbm(x * 0.05 + 11, y * 0.05 - 7, 3), x0, y0, LW, LH);
   for (let j = 0; j < LH; j++) {
     for (let i = 0; i < LW; i++) {
       const k = li(i, j);
@@ -103,7 +112,7 @@ export function generateIsland(world, def, noise, rng) {
       landCount++;
       const x = x0 + i, y = y0 + j;
       const cd = CD[k];
-      const n = noise.fbm(x * 0.05 + 11, y * 0.05 - 7, 3);
+      const n = lumps(x, y);
       const e = clamp(20 + cd * (def.elevRate ?? 5) + n * 25, 8, 170);
       const bw = beachW + noise.noise2(x * 0.15, y * 0.15) * 1.2;
       const t = cd <= bw ? beach : ground;
@@ -116,6 +125,8 @@ export function generateIsland(world, def, noise, rng) {
     id: def.id, name: def.name, def, x: cx, y: cy, sea: def.sea,
     radius: Math.max(hw, hh),
     bbox: { cx, hw: (x1 - x0) / 2, x0, x1, y0, y1 },
+    // (a few tiles over for quays and sea walls at the water's edge)
+    landBox: { x0: x0 + lx0 - 6, y0: y0 + ly0 - 6, x1: x0 + lx1 + 7, y1: y0 + ly1 + 7 },
     towns: [], docks: [], spots: {}, landmarks: [], treeSpots: [],
     containsTile: (x, y) => {
       let i = Math.floor(x) - x0;
@@ -141,10 +152,9 @@ export function generateIsland(world, def, noise, rng) {
       const add = falloff * peak * (140 + ridge * 120);
       const cur = world.elev(x, y);
       const e = clamp(cur + add, 0, 255);
-      const idx = world.idx(x, y) << 2;
-      world.data[idx + 1] = e;
-      if (e > (f.cliff ?? 222)) world.data[idx] = f.snow || clim === CLIMATE.WINTER ? T.SNOWROCK : (f.peak ?? T.MOUNTAIN);
-      else if (e > (f.slopeAt ?? 170) && f.slope && world.data[idx] !== beach) world.data[idx] = f.slope;
+      world.setElev(x, y, e);
+      if (e > (f.cliff ?? 222)) world.setType(x, y, f.snow || clim === CLIMATE.WINTER ? T.SNOWROCK : (f.peak ?? T.MOUNTAIN));
+      else if (e > (f.slopeAt ?? 170) && f.slope && world.type(x, y) !== beach) world.setType(x, y, f.slope);
     });
     rec.landmarks.push({ type: 'mountain', name: f.name, x: c.x, y: c.y, r });
   }
@@ -245,6 +255,28 @@ export function generateIsland(world, def, noise, rng) {
 }
 
 // ---------------------------------------------------------------------------
+
+/**
+ * A smooth field sampled every other tile over [x0, x0+w) × [y0, y0+h),
+ * worked out only where it's asked for, and blended in between.
+ */
+function coarseField(fn, x0, y0, w, h) {
+  const GW = (w >> 1) + 2, GH = (h >> 1) + 2;
+  const g = new Float32Array(GW * GH).fill(NaN);
+  const at = (gi, gj) => {
+    const k = gj * GW + gi;
+    let v = g[k];
+    if (v !== v) v = g[k] = fn(x0 + gi * 2, y0 + gj * 2);
+    return v;
+  };
+  return (x, y) => {
+    const fx = (x - x0) * 0.5, fy = (y - y0) * 0.5;
+    const gi = Math.max(0, Math.min(GW - 2, Math.floor(fx))), gj = Math.max(0, Math.min(GH - 2, Math.floor(fy)));
+    const tx = fx - gi, ty = fy - gj;
+    const a = at(gi, gj), b = at(gi + 1, gj), c = at(gi, gj + 1), d = at(gi + 1, gj + 1);
+    return (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
+  };
+}
 
 /** A raised floor (ring, stage) at or within r of (x, y)? */
 function nearFloor(world, x, y, r) {
@@ -534,9 +566,7 @@ function populateVegetation(world, rng, x0, y0, LW, LH, L, li, kinds, density, d
       if (!L[li(i, j)]) continue;
       const x = x0 + i, y = y0 + j;
       const t = world.type(x, y);
-      if (world.isBlocked(x, y) || IS_LIQUID[t] || !WALKABLE[t] || world.hitsProp(x + 0.5, y + 0.5, 1.1)) continue;
-      // (nothing grows through a ring or a stage, or crowds round one)
-      if (world.floors.size && nearFloor(world, x + 0.5, y + 0.8, 3)) continue;
+      if (IS_LIQUID[t] || !WALKABLE[t]) continue;
       let p = density;
       let kindList = kinds;
       if (forestTypes.has(t)) {
@@ -554,8 +584,12 @@ function populateVegetation(world, rng, x0, y0, LW, LH, L, li, kinds, density, d
       } else if (t === T.MOUNTAIN || t === T.ROCK) {
         p = 0.02; kindList = ['rock'];
       }
-      if (world.elev(x, y) > 200) continue;
+      // (the dice first: the checks below are the dear part)
       if (rng.next() > p) continue;
+      if (world.elev(x, y) > 200) continue;
+      if (world.isBlocked(x, y) || world.hitsProp(x + 0.5, y + 0.5, 1.1)) continue;
+      // (nothing grows through a ring or a stage, or crowds round one)
+      if (world.floors.size && nearFloor(world, x + 0.5, y + 0.8, 3)) continue;
       // spacing: skip if a neighbour already has a tree
       if (world.hitsProp(x + 0.5, y + 1, 1.2) || world.isBlocked(x - 1, y) || world.isBlocked(x, y - 1) || world.isBlocked(x + 1, y) || world.isBlocked(x, y + 1)) {
         if (rng.next() < 0.7) continue;

@@ -1440,9 +1440,10 @@ const quests = [
   { id: 'p1_laboon_promise', name: 'The Whale Who Waits', island: 'twin_cape', kind: 'story',
     summary: 'Laboon has waited fifty years at Twin Cape for the Rumbar Pirates. Now whale hunters from Cactus Island are after him.',
     stages: [
-      { id: 'hunters', desc: 'Whale hunters are sneaking up on Laboon from the west shore of the north cape. Stop Mr. 9.', goal: { type: 'defeat', npc: 'p1_mr9_cape' },
+      { id: 'hunters', desc: 'Whale hunters are sneaking up on Laboon from Harpoon Point. Stop Mr. 9.', goal: { type: 'defeat', npc: 'p1_mr9_cape' },
         onStart: (ctx, g) => { spawnAt(g, 'p1_mr9_cape', 'twin_cape', 'harpoon_point'); spawnAt(g, 'p1_miss_wednesday', 'twin_cape', 'harpoon_point', 2); } },
-      { id: 'promise', desc: 'Go to the western shore of the north cape and speak to Laboon.', goal: { type: 'event', event: 'p1_laboon_promise' } },
+      { id: 'promise', desc: 'Go down to the water where Laboon waits, at the foot of the torrent, and speak to him.', goal: { type: 'event', event: 'p1_laboon_promise' },
+        where: (g) => { const lb = g.surface?._p1LaboonAt; return lb ? { x: lb.x - 4, y: lb.y + 25, place: 'Laboon' } : null; } },
       { id: 'report', desc: 'Return to Crocus at the lighthouse.' },
     ],
     rewards: { berries: 6000, points: 1, attrs: { wil: 1 }, items: [['bandage', 3], ['antidote', 1]] } },
@@ -1856,19 +1857,26 @@ function install(game) {
   const onSurface = () => game.world === game.surface;
   const surfIsland = (id) => game.surface?.islands?.find((i) => i.id === id) || null;
 
-  // ---- Laboon, floating in the bay west of the north cape
-  game.spawner.addBuilder(({ island }) => {
-    if (island.id !== 'twin_cape' || island._p1Laboon || !onSurface() || !game.world?.objects) return;
-    const s = island.spots?.laboon_bay;
-    if (!s) return;
-    const w = game.world;
-    let shoreX = null;
-    for (let k = 0; k < 70; k++) if (!w.isLiquid(s.x + k, s.y)) { shoreX = s.x + k; break; }
-    if (shoreX === null) return;
-    island._p1Laboon = true;
-    w.objects.add({ kind: 'p1_laboon', x: shoreX - 13, y: s.y + 0.5, block: false, draw(g, env) { try { drawWhale(g, env, !!game.state?.char?.flags?.p1_laboonMark); } catch (e) { /* never break the frame */ } } });
-    w.objects.add({ kind: 'p1_laboon_talk', x: shoreX - 0.6, y: s.y + 0.4, block: false, interact: 'Speak to Laboon', interactRange: 2.6, use: 'p1_laboon', draw() {} });
-  });
+  // ---- Laboon: right where the torrent comes down off Reverse Mountain,
+  // his scarred forehead to the Red Line (a whale the size of a hill: seen
+  // from far off, and solid — ships go round him)
+  const placeLaboon = () => {
+    const w = game.surface, M = w?.reverseMountain;
+    if (!w?.objects || w._p1Laboon || !M?.exit) return;
+    w._p1Laboon = true;
+    const ax = M.exit.x + 68, ay = M.exit.y - 47;
+    w._p1LaboonAt = { x: ax, y: ay };
+    w.objects.add({ kind: 'p1_laboon', x: ax, y: ay, block: false, far: 1500, draw(g, env) { try { drawWhale(g, env, !!game.state?.char?.flags?.p1_laboonMark); } catch (e) { /* never break the frame */ } } });
+    for (let j = -23; j <= 23; j++) {
+      for (let i = -60; i <= 62; i++) {
+        if ((i / 60) ** 2 + (j / 22.5) ** 2 < 1 && w.isLiquid(ax + i, ay + j)) w.setBlocked(ax + i, ay + j, 1);
+      }
+    }
+    // (talk to him from the water or a deck on his southern side, by the torrent)
+    w.objects.add({ kind: 'p1_laboon_talk', x: ax - 4, y: ay + 25, block: false, interact: 'Speak to Laboon', interactRange: 26, use: 'p1_laboon', draw() {} });
+  };
+  game.on('characterStart', placeLaboon);
+  placeLaboon();
   game.on('useObject', (o) => { if (o?.use === 'p1_laboon') game.dialogue?.open(null, laboonDialogue); });
 
   // ---- quest items lying in the world
@@ -1937,17 +1945,17 @@ function install(game) {
     if ((tt -= dt) > 0) return;
     tt = 0.5;
     if (!onSurface()) return;
-    // Laboon rams the Red Line until someone gives him a new promise.
-    const bay = surfIsland('twin_cape')?.spots?.laboon_bay;
-    if (bay && !c.flags.p1_laboonPromise && game.world.distance(p.x, p.y, bay.x, bay.y) < 70) {
-      ramT -= 0.5;
-      if (ramT <= 0) {
-        ramT = 28 + Math.random() * 20;
-        game.fx?.shake?.(0.35);
-        game.audio?.sfx?.('explosion');
-        game.log('BOOM... BOOM... Laboon rams his scarred head against the Red Line.', '#b0bec5');
-      }
+    // Laboon rams the Red Line until someone gives him a new promise (in time
+    // with his model: every 26 seconds, the blow lands 1.6 s in)
+    const lb = game.surface?._p1LaboonAt;
+    const ph = game.env.time % 26;
+    if (lb && !c.flags.p1_laboonPromise && ph >= 1.6 && ramT < 1.6 && game.world.distance(p.x, p.y, lb.x, lb.y) < 320) {
+      const near = game.world.distance(p.x, p.y, lb.x, lb.y) < 140;
+      game.fx?.shake?.(near ? 0.45 : 0.2);
+      game.audio?.sfx?.('explosion');
+      if (!(c.flags.p1_laboonBoomSeen > 2)) { c.flags.p1_laboonBoomSeen = (c.flags.p1_laboonBoomSeen || 0) + 1; game.log('BOOM... BOOM... Laboon rams his scarred head against the Red Line.', '#b0bec5'); }
     }
+    ramT = ph;
     // The Whirlpool Lord surfaces when you sail into the Kenzan whirlpools.
     if (stg(game, 'p1_kenzan_whirlpool') === 'hunt' && !findActor(game, 'p1_whirlpool_lord')) {
       const s = surfIsland('kenzan_island')?.spots?.whirlpool;

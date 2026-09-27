@@ -10,6 +10,8 @@ export class Dialogue {
     this.game = game;
     this.active = null;
     this.trees = {}; // registered named trees
+    // fns (tree, npc, ctx) → tree: add to anyone's conversation (the main story uses this)
+    this.decorators = [];
     game.ui.dialogueKeys = (inp) => this.keys(inp);
     game.ui.onDialogueEscape = () => this.close();
   }
@@ -50,6 +52,7 @@ export class Dialogue {
     if (typeof tree === 'function') tree = tree(ctx);
     if (!tree) return;
     if (npc?.def?.recruit && this.game.crew) tree = this.game.crew.decorate(tree, npc);
+    for (const dec of this.decorators) tree = dec(tree, npc, ctx) || tree;
     this.active = { npc, tree, ctx, node: null, typing: 0, full: '' };
     this.game.paused = true;
     if (npc && this.game.player) {

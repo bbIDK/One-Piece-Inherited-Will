@@ -5,7 +5,7 @@ import { ObjectIndex } from './objects.js';
 import { Noise } from '../core/noise.js';
 import { RNG } from '../core/rng.js';
 import { generateIsland, placeObject } from './islandgen.js';
-import { computeDistanceField, buildMapImage } from './worldgen.js';
+import { computeDistanceField, compactDistance, buildMapImage } from './worldgen.js';
 
 const ZONE_KIND = { sky: 1, undersea: 2, prison: 3 };
 
@@ -14,13 +14,7 @@ export function generateZoneWorld(z) {
   world.name = z.name;
   world.zoneDef = z;
   world.objects = new ObjectIndex(world);
-  const d = world.data;
-  for (let i = 0, n = z.w * z.h; i < n; i++) {
-    d[i * 4] = z.fill;
-    d[i * 4 + 1] = 0;
-    d[i * 4 + 2] = 0;
-    d[i * 4 + 3] = (Math.imul(i, 2654435761) >>> 25) & 127;
-  }
+  world.fillAll(z.fill, 0, 0);
   const noise = new Noise(z.id);
   const rng = new RNG(z.id + ':zone');
   for (const def of z.islands) {
@@ -40,6 +34,7 @@ export function generateZoneWorld(z) {
     placeObject(world, { kind: 'portal', x: pb.x, y: pb.y, block: false, to: { x: pa.x, y: pa.y + 1.5 }, interact: `Climb the stairs to ${A.name}`, use: 'portal', up: true });
   }
   computeDistanceField(world);
+  compactDistance(world);
   world.map = buildMapImage(world);
   return world;
 }

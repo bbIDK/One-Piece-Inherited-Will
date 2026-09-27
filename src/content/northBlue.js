@@ -569,7 +569,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nb_otto', name: 'Otto', title: 'Longarm boxer, champion of Notice', island: 'notice', race: 'longarm', at: { spot: 'notice_ring' }, faction: 'civilian', level: 9, named: true, lethal: false,
+    id: 'nb_otto', name: 'Otto', title: 'Longarm boxer, champion of Notice', island: 'notice', race: 'longarm', at: { spot: 'notice_ring' }, faction: 'civilian', level: 9, named: true, lethal: false, duel: true,
     look: { hair: 'spiky', hairColor: '#ff7043', top: '#1565c0', bottom: '#212121', skin: '#f1c9a0' }, style: 'brawler', moves: ['brawl_tackle', 'brawl_knee'], skill: 0.4,
     alert: 'Friend Elbow! Lover Elbow! Here I come!',
     recruit: { role: 'fighter', requires: (c, g) => g.quests.isDone('nb_notice_cup'), pitch: `"You beat me fair and square. ...Take me to sea! The Bellamy boys left this boring town to be pirates and everyone laughed. Nobody's laughing now. My turn!"` },

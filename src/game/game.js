@@ -87,7 +87,12 @@ export class Game {
   }
 
   isCalmAt(x, y) { return this.world.zone === 0 && isCalmBelt(regionAt(x, y)); }
-  currentAt(x, y) { return currentAt(this.world, x, y, this.cur); }
+  /** The sea's current at (x, y) — for `who` (a ship or a swimmer), with the main story's say (see content/mainStory.js). */
+  currentAt(x, y, who = null) {
+    const c = currentAt(this.world, x, y, this.cur);
+    if (this.storyCurrent && who) this.storyCurrent(x, y, c, who);
+    return c;
+  }
   inFogRegion(x, y) {
     const f = this.fogRegions || [];
     for (const r of f) if (this.world.distance(x, y, r.x, r.y) < r.r) return r.density;
@@ -121,7 +126,7 @@ export class Game {
   setWorld(world) {
     this.world = world;
     this.renderer.terrain.setWorld({
-      width: world.width, height: world.height, world: world.data, dist: world.dist,
+      width: world.width, height: world.height, mapDist: world.map.dist,
       map: world.map.data, mapW: world.map.w, mapH: world.map.h, fog: world.fog, fogW: world.fogW, fogH: world.fogH,
     });
     this.fx.parts.length = 0;
@@ -178,11 +183,14 @@ export class Game {
     t0 = performance.now();
     this.updateCamera(dt);
     // explore
-    this.world.reveal(p.x, p.y, p.mode === 'sail' ? 30 : 20);
+    // (at sea you see a long way: the chart fills in wide around the ship)
+    this.world.reveal(p.x, p.y, p.mode === 'sail' ? 120 : 45);
     if (this.world.fogDirty && Math.floor(this.time * 2) !== this.lastFogPush) {
       this.lastFogPush = Math.floor(this.time * 2);
       this.world.fogDirty = false;
-      this.renderer.terrain.updateFog(this.creative?.on && this.world === this.surface ? this.creative.fullFog() || this.world.fog : this.world.fog);
+      const full = this.creative?.on && this.world === this.surface ? this.creative.fullFog() : null;
+      this.renderer.terrain.updateFog(full || this.world.fog, full ? null : this.world.fogRect);
+      this.world.fogRect = null;
     }
     prof('s.map', t0);
     this.input.endFrame();

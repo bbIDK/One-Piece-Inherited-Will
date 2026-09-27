@@ -147,10 +147,12 @@ const npcs = [
           },
           choices: [
             { text: 'Rika made you rice balls.', if: () => active(ctx, 'pirate_hunter', 'deliver') && ctx.has('rice_ball'), do: (c) => { c.take('rice_ball', 1); c.stage('pirate_hunter', 'free'); }, next: 'eat' },
+            { text: 'Morgan is finished. You\'re free.', if: () => active(ctx, 'pirate_hunter', 'zoro'), next: 'freed' },
             { text: 'Leave', end: true },
           ],
         },
         eat: { text: '(He eats it in one bite, sugar-for-salt and all.) "...Tell the kid it was delicious. Every last grain."', next: 'a' },
+        freed: { text: '(You cut the ropes. He rolls his shoulders, picks up his three swords, and grins.) "Heh. So Axe-Hand went down. ...I owe you one. I don\'t forget debts."', onEnter: (c) => { if (active(c, 'pirate_hunter', 'zoro')) c.complete('pirate_hunter'); }, next: 'a' },
       },
     }),
   },
@@ -540,7 +542,8 @@ const quests = [
       { id: 'report', desc: 'Return to Nojiko in Cocoyasi Village.' },
     ],
     rewards: { berries: 20000, points: 2, liberate: 'Cocoyasi Village', items: [['tangerine', 6]] },
-    onComplete: (ctx, g) => { if (ctx.char.faction !== 'marine') g.progression.addBounty(10000000, 'Toppled Arlong Park'); } },
+    // (a pirate who topples Arlong gets a poster; a hunter or a Marine gets thanks)
+    onComplete: (ctx, g) => { if (ctx.char.faction === 'pirate' || ctx.char.crewName) g.progression.addBounty(10000000, 'Toppled Arlong Park'); } },
   { id: 'town_of_beginning', name: 'The Town of the Beginning and the End', island: 'polestar_islands', kind: 'story', summary: 'Loguetown, where Gol D. Roger was born and executed. The last stop before the Grand Line.',
     stages: [
       { id: 'platform', desc: 'Stand before the execution platform in Loguetown\'s square.', goal: { type: 'event', event: 'saw_platform' } },

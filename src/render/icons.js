@@ -3217,6 +3217,7 @@ UI.quest = (I) => {
   part(I, b, '#f0bf45', { sd: 2.4, hd: 1.6 });
   tf(I, { s: 0.62, y: -4 }, () => part(I, exclaimP(), '#8a2a1e', { flat: true, ol: I.ol * 0.6 }));
 };
+UI.quests = (I) => UI.quest(I);
 UI.reputation = (I) => {
   const g = '#e0b24a';
   tube(I, 'M32 10 V54', dk(g, 0.1), 3.6);

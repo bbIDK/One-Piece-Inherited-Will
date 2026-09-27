@@ -218,15 +218,20 @@ function enlist(game, where) {
     a: { speaker: 'Recruiting Officer', text: '"You want to join the Marines? The pay is modest and the work is dangerous. You\'ll swear to uphold Absolute Justice and hunt pirates wherever they sail. Once you sign, there\'s no going back to piracy — not without a price on your head."',
       choices: [{ text: 'I swear it. Sign me up.', next: 'b' }, { text: 'Not yet.', end: true }] },
     b: { speaker: 'Recruiting Officer', text: `"Welcome to the Marines, Seaman Recruit ${c.name}! Here's your cap. Report to any Marine base for missions and pay. Capture pirates — the more notorious, the better."`,
-      onEnter: () => {
-        c.faction = 'marine'; c.marineRank = MARINE_RANKS[0].name; c.merit = 0; c.marinePayDay = game.env.day; c.enlistedAt = where;
-        addItem(game, 'marine_cap', 1, { silent: true });
-        if (!c.equipped.hat) equip(game, 'marine_cap');
-        game.ui.toast('ENLISTED', 'Seaman Recruit of the Marines', '#64b5f6');
-        game.emit('marineRankChanged', c.marineRank);
-        persist(game);
-      } },
+      onEnter: () => enlistNow(game, where) },
   } });
+}
+
+/** Swear the character in as a Seaman Recruit (the checks are the caller's business). */
+export function enlistNow(game, where) {
+  const c = game.state.char;
+  if (c.faction === 'marine') return;
+  c.faction = 'marine'; c.marineRank = MARINE_RANKS[0].name; c.merit = c.merit || 0; c.marinePayDay = game.env.day; c.enlistedAt = where;
+  addItem(game, 'marine_cap', 1, { silent: true });
+  if (!c.equipped.hat) equip(game, 'marine_cap');
+  game.ui.toast('ENLISTED', 'Seaman Recruit of the Marines', '#64b5f6');
+  game.emit('marineRankChanged', c.marineRank);
+  persist(game);
 }
 
 function nextRank(c) {
@@ -326,7 +331,7 @@ function onKnockout(game, a, att) {
   }
   if (!c || !att || !att.isPlayer || a.isPlayer || a.faction === 'player') return;
   // a Marine who strikes down Marines is a deserter
-  if (c.faction === 'marine' && (a.faction === 'marine' || a.faction === 'cp') && !a.spar) {
+  if (c.faction === 'marine' && (a.faction === 'marine' || a.faction === 'cp') && !a.spar && !a.def?.duel) {
     c.flags.deserter = true;
     c.flags.formerMarine = c.marineRank;
     c.faction = 'pirate';

@@ -1,5 +1,6 @@
 // Starting, resuming and ending a character's journey.
-import { buildPlayer, resolveSpawn, persist, decodeFog, createCharacter, refreshPlayer, upgradeChar } from './lineage.js';
+import { buildPlayer, resolveSpawn, persist, decodeFog, createCharacter, refreshPlayer, upgradeChar, migrateWorld } from './lineage.js';
+import { ALL_ISLANDS } from '../data/islands/index.js';
 import { saveLegacy, loadLegacy, saveChar } from './save.js';
 import { board } from './interact.js';
 import { lifeLostScreen, lineageEndScreen, legacyShopScreen } from '../ui/screens.js';
@@ -131,7 +132,7 @@ export function startNewCharacter(game, birth, choices) {
   game.ui.setHudVisible(true);
   const seaName = REGION_INFO[SEA_IDS[spawn.sea]]?.name || '';
   setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : 'An Uncharted Islet', seaName, `${char.name} begins their journey. The sea is yours to choose.`, 5), 400);
-  setTimeout(() => { if (game.state?.char === char) game.hint('menus', 'Your menus are on the right: Inventory, Character, Skills, Journal and Crew (or Tab, C, K, J, U). Esc pauses and saves. Talk to people, pick fruit from the trees, find a boat — where you go is up to you.'); }, 6500);
+  setTimeout(() => { if (game.state?.char === char) game.hint('menus', 'Your menus are on the left: Inventory, Character, Skills, Journal, Crew and Quests (or Tab, C, K, J, U, L). Esc pauses and saves. People with an orange ! over their heads can start your story — as a pirate, a Marine or a bounty hunter.'); }, 6500);
   game.emit('characterStart', { char, isNew: true, spawn });
   persist(game);
   return p;
@@ -143,7 +144,10 @@ export function resumeCharacter(game, char) {
   resetGame(game);
   const world = game.surface;
   game.state = { char, legacy };
+  // (saved on the old, smaller world: everything moves onto this one)
+  const moved = migrateWorld(char, world, ALL_ISLANDS);
   if (char.fogSurface) decodeFog(char.fogSurface, world.fog); else world.fog.fill(0);
+  if (moved) for (const id of char.discovered || []) revealIsland(game, id);
   game.renderer.terrain.updateFog(world.fog);
   const p = buildPlayer(game, char);
   const pos = char.pos || char.rest || char.spawn;

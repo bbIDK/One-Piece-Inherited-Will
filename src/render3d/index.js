@@ -10,12 +10,13 @@ import { FOG } from './fog.js'; // the atmospheric fog shader chunks (before any
 import './lighting.js'; // cheaper point lights and shadow filtering (also shader chunks)
 import { Post } from './post.js';
 import { TerrainManager , CTIME } from './terrain3d.js';
+import { waterLevel } from './height.js';
 import { Water } from './water3d.js';
 import { Sky } from './sky3d.js';
 import { CameraRig } from './camera3d.js';
 import { SpriteForest, ActorSprite, propSprite, projectileMesh, tintSprites } from './billboards.js';
 import { ShipView } from './ships3d.js';
-import { shipBob } from '../world/hull.js';
+import { shipBob, pitchRise } from '../world/hull.js';
 import { Ship } from '../game/ship.js';
 import { buildBuilding, setNightWindows } from './buildings3d.js';
 import { PROP_BUILDERS, VIEWS, FRAME_HOOKS, registerPropBuilder } from './registry.js';
@@ -97,7 +98,7 @@ export class Renderer3D {
     this.renderer.info.autoReset = false;
     this.scene = new THREE.Scene();
     this.sky = new Sky(this.scene);
-    this.water = new Water(this.scene);
+    this.water = new Water(this.scene, this.renderer);
     this.terrain = new TerrainManager(this.scene);
     this.rig = new CameraRig(canvas, game);
     this.props = new THREE.Group();
@@ -579,7 +580,18 @@ export class Renderer3D {
     const items = [];
     const keep = new Set();
     const queue = [];
+    // landmarks seen from far off (a whale the size of a hill): in view from much further
+    for (const o of w.farObjects || []) {
+      if (o.hidden || !PROP_BUILDERS.has(o.kind)) continue;
+      const dx = w.dx(ox, o.x), dy = o.y - oy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > o.far * o.far) continue;
+      const v = this.built.get(o);
+      if (v === undefined) { queue.push([o, Math.min(d2, 23 * 23)]); continue; }
+      if (v) { keep.add(o); v.position.set(dx, v.userData.noGround ? 0 : this.ground(o.x, o.y), dy); }
+    }
     for (const o of objs) {
+      if (o.far) continue;
       const dx = w.dx(ox, o.x), dy = o.y - oy;
       const d2 = dx * dx + dy * dy;
       if (d2 > RK * RK) continue;
@@ -773,14 +785,14 @@ export class Renderer3D {
         this.attach(v.root, this.ents);
       }
       let gh;
-      if (a.deck) gh = a.deck.h + shipBob(a.deck.ship, env.time);
+      if (a.deck) gh = a.deck.h + shipBob(a.deck.ship, env.time) + pitchRise(a.deck.ship, (a.deck.t - 0.5) * a.deck.ship.def.length);
       else if (a.flying) gh = Math.max(0, this.ground(a.x, a.y));
       else if (a.seaCreature) gh = Math.max(-(a.depth || 0), this.terrain.terrainAt(a.x, a.y) + 0.35);
       else if (a.inWater) {
         // afloat with the head out, stretched out along the surface when swimming,
         // or deeper when diving (and standing on the bottom in the shallows)
         const flat = (a.moving || a.under || a.gills) && !(a.fruit && !a.gills);
-        gh = -(a.depth || 0) - (flat ? 0.95 : 1.3) * (a.look?.scale || 1);
+        gh = waterLevel(this.game.world, a.x, a.y) - (a.depth || 0) - (flat ? 0.95 : 1.3) * (a.look?.scale || 1);
         // (a Devil Fruit user fighting to keep their head up bobs and splutters)
         if (a.fruit && !a.gills && !a.sinking) gh += Math.sin(env.time * 5.5 + a.x * 3) * 0.09;
         gh = Math.max(gh, this.terrain.terrainAt(a.x, a.y));

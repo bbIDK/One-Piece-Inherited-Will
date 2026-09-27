@@ -8,6 +8,7 @@ import './render3d/pickups3d.js';
 import './render3d/groundcover.js';
 import './render3d/ripples3d.js';
 import './render3d/seabed.js';
+import './render3d/rmCanals3d.js';
 import './render3d/sealife3d.js';
 import './render3d/lamplight.js';
 import './render3d/precip3d.js';
@@ -56,6 +57,7 @@ import { installCreative } from './game/creative.js';
 import { installZones } from './game/zones.js';
 import { Crew } from './game/crew.js';
 import { openCrew } from './ui/crewPanel.js';
+import { openQuests } from './ui/questsPanel.js';
 import { installFactions } from './game/factions.js';
 import { installLegends } from './game/legends.js';
 import { installWorld } from './game/news.js';
@@ -272,6 +274,7 @@ async function start() {
     skills: () => openSkills(game),
     journal: () => openJournal(game),
     crew: () => openCrew(game),
+    quests: () => openQuests(game),
     menu: () => ui.openMenu(),
     help: () => ui.openPanel(helpContent(game.state?.char), { wide: true, id: 'help' }),
     map: () => game.openMap(),
@@ -287,8 +290,11 @@ async function start() {
     { key: 'J', when: playing, fn: () => ui.sideAction('journal') },
     { key: 'H', when: playing, fn: () => ui.sideAction('help') },
     { key: 'U', when: playing, fn: () => ui.sideAction('crew') },
+    { key: 'L', when: playing, fn: () => ui.sideAction('quests') },
   );
   game.on('saved', () => ui.savedNote());
+  // (the quest tracker catches up the moment a quest moves on)
+  for (const ev of ['questStarted', 'questStage', 'questDone', 'questAbandoned']) game.on(ev, () => { ui.qtT = 0; });
   game.on('playerLanded', (tgt, info) => { if (view3d?.active) ui.hitMarker(info); });
   // food and medicine on the hotbar
   game.useHotbarItem = (id) => {

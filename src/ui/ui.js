@@ -4,7 +4,22 @@ import { getAbility } from '../game/abilities.js';
 import { formatBerries, clamp } from '../core/math.js';
 import { raceLabel } from '../data/races.js';
 import { ITEMS } from '../data/items.js';
-import { REGION_INFO, regionAt } from '../world/constants.js';
+import { REGION_INFO, regionAt, REGION, RM_X, EQ } from '../world/constants.js';
+import { PALETTE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
+
+// minimap colours: land by tile, the sea by region (lighter over the shallows)
+const MM_LAND = new Uint8Array(256 * 3);
+{
+  const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  for (let t = 0; t < 256; t++) MM_LAND.set(PALETTE[t] ? hex(PALETTE[t][0]) : [200, 190, 160], t * 3);
+  MM_LAND.set([168, 69, 47], T.RED_ROCK * 3);
+  MM_LAND.set([201, 195, 189], T.SNOWROCK * 3);
+}
+const MM_SEA = {
+  [REGION.EAST_BLUE]: [79, 150, 196], [REGION.NORTH_BLUE]: [83, 128, 184], [REGION.WEST_BLUE]: [74, 139, 175],
+  [REGION.SOUTH_BLUE]: [67, 156, 166], [REGION.PARADISE]: [47, 138, 128], [REGION.NEW_WORLD]: [98, 84, 170],
+  [REGION.CALM_NORTH]: [120, 136, 146], [REGION.CALM_SOUTH]: [120, 136, 146], [REGION.RED_LINE]: [79, 150, 196], [REGION.POLAR]: [170, 196, 210],
+};
 import { itemImg, skillImg, uiImg } from './icon.js';
 import { Compass } from './compass.js';
 import { assignHotbar } from './panels.js';
@@ -17,6 +32,7 @@ const SIDEBAR = [
   { id: 'skills', label: 'Skills', key: 'K' },
   { id: 'journal', label: 'Journal', key: 'J' },
   { id: 'crew', label: 'Crew', key: 'U' },
+  { id: 'quests', label: 'Quests', key: 'L' },
   { id: 'menu', label: 'Menu', key: 'Esc' },
   // on phones: no keyboard, so the map and the camera get buttons too
   { id: 'map', label: 'Map', key: 'M', touch: true },
@@ -128,6 +144,9 @@ export class UI {
     E.combat = h('div.combat-tag.off');
     E.combat.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14"><g stroke="#fff3e0" stroke-width="1.8" stroke-linecap="round" fill="none"><path d="M3 3 L12.5 12.5"/><path d="M13 3 L3.5 12.5"/><path d="M10 14 L14 10"/><path d="M2 10 L6 14"/></g></svg><span>In combat</span>';
     this.hud.appendChild(E.combat);
+    // the quest tracker: the main story and up to two side quests, right of centre
+    E.track = h('div.qtrack.hidden');
+    this.hud.appendChild(E.track);
     E.boss = h('div.bossbar.hidden', h('h3'), bar('boss').el);
     this.hud.appendChild(E.boss);
     E.ship = h('div.shiphud.hidden');
@@ -565,7 +584,8 @@ export class UI {
     }
     // location
     const isl = game.currentIsland;
-    const locName = game.world.zone !== 0 ? game.world.name : isl && isl.name ? isl.name : 'Open Sea';
+    const rmHere = game.world.zone === 0 && !isl?.name && Math.abs(game.world.dx(p.x, RM_X)) < 1000 && Math.abs(p.y - EQ) < 2300 && regionAt(p.x, p.y) === REGION.RED_LINE;
+    const locName = game.world.zone !== 0 ? game.world.name : isl && isl.name ? isl.name : rmHere ? 'Reverse Mountain' : 'Open Sea';
     this.set(E.loc, 'loc', locName);
     const reg = game.world.zone === 0 ? REGION_INFO[regionAt(p.x, p.y)]?.name || '' : game.world.subtitle || '';
     this.set(E.locSub, 'locSub', reg);
@@ -575,6 +595,9 @@ export class UI {
     // minimap
     this.mmT -= 1 / 60;
     if (this.mmT <= 0) { this.mmT = 0.2; this.drawMinimap(game); }
+    // quest tracker
+    this.qtT = (this.qtT || 0) - 1 / 60;
+    if (this.qtT <= 0) { this.qtT = 0.35; this.drawTracker(game); }
     // log pose
     const lp = game.logPoseInfo ? game.logPoseInfo() : null;
     E.logpose.classList.toggle('hidden', !lp);
@@ -616,6 +639,43 @@ export class UI {
     }
   }
 
+  /** The quest tracker: what to do next in the main story (and where), and the tracked side quests. */
+  drawTracker(game) {
+    const E = this.el, q = game.quests, c = game.state?.char, p = game.player;
+    if (!q || !c || !p) { E.track.classList.add('hidden'); return; }
+    const w = game.world;
+    const where = (id) => {
+      const m = q.marker(id);
+      if (!m || !Number.isFinite(m.x) || (m.zone ? m.zone !== w.id : w !== game.surface)) return '';
+      const d = w.distance(p.x, p.y, m.x, m.y);
+      if (d < 12) return 'here';
+      const a = Math.atan2(m.y - p.y, w.dx(p.x, m.x));
+      const dir = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'][((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8];
+      return `${d >= 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d / 10) * 10 + ' m'} ${dir}`;
+    };
+    const card = (qq, main) => {
+      const st = qq.def.stages[qq.s.stage];
+      const pr = q.progress(qq.id);
+      const at = where(qq.id);
+      return [
+        main ? h('div.qt-head', uiImg('quest', 14), qq.def.part ? `MAIN STORY · PART ${qq.def.part}` : 'MAIN STORY') : null,
+        h('div.qt-title', qq.def.name),
+        h('div.qt-obj', st?.desc || '', pr ? h('span.qt-n', ` ${pr.n}/${pr.of}`) : null),
+        at ? h('div.qt-where', at === 'here' ? 'You are here' : at) : null,
+      ];
+    };
+    const main = q.main();
+    const side = q.tracked();
+    const key = JSON.stringify([main && [main.id, main.s.stage, q.progress(main.id), where(main.id)], side.map((x) => [x.id, x.s.stage, q.progress(x.id), where(x.id)]), c.mainIntro || null]);
+    if (key === this.cache.track) return;
+    this.cache.track = key;
+    clear(E.track);
+    if (main) E.track.appendChild(h('div.qt-main', ...card(main, true)));
+    else if (c.mainIntro) E.track.appendChild(h('div.qt-main', h('div.qt-head', uiImg('quest', 14), 'MAIN STORY'), h('div.qt-title', 'Find your calling'), h('div.qt-obj', c.mainIntro)));
+    for (const x of side) E.track.appendChild(h('div.qt-side', ...card(x, false)));
+    E.track.classList.toggle('hidden', !E.track.childNodes.length);
+  }
+
   drawMinimap(game) {
     const c = this.el.mm;
     const g = c.getContext('2d');
@@ -625,17 +685,29 @@ export class UI {
     const scale = p.mode === 'sail' ? 2.2 : 1; // tiles per pixel
     if (!this.mmImg) this.mmImg = g.createImageData(W, H);
     const img = this.mmImg.data;
-    const map = w.map;
+    // (read straight from the tiles: the chart is too coarse for this close a view)
+    const zoneSea = w.zone === 2 ? [40, 90, 150] : w.zone === 3 ? [20, 16, 24] : [150, 200, 230];
+    let sea = w.zone === 0 ? MM_SEA[regionAt(p.x, p.y)] || MM_SEA[REGION.EAST_BLUE] : zoneSea;
     for (let j = 0; j < H; j++) {
+      const ty = p.y + (j - H / 2) * scale;
       for (let i = 0; i < W; i++) {
-        const tx = p.x + (i - W / 2) * scale, ty = p.y + (j - H / 2) * scale;
+        const tx = p.x + (i - W / 2) * scale;
         const o = (j * W + i) * 4;
         if (ty < 0 || ty >= w.height || (!w.wrap && (tx < 0 || tx >= w.width))) { img[o] = 30; img[o + 1] = 40; img[o + 2] = 50; img[o + 3] = 255; continue; }
-        const mx = Math.floor(w.wx(tx) / 2) % map.w, my = Math.floor(ty / 2);
-        const k = (my * map.w + mx) * 4;
-        const explored = w.isExplored(tx, ty);
-        const f = explored ? 1 : 0.35;
-        img[o] = map.data[k] * f; img[o + 1] = map.data[k + 1] * f; img[o + 2] = map.data[k + 2] * f; img[o + 3] = 255;
+        if (w.zone === 0 && (i & 15) === 0) sea = MM_SEA[regionAt(tx, ty)] || sea;
+        const t = w.type(tx, ty);
+        let r, g, b;
+        if (IS_LIQUID[t] || OVERLAY[t]) {
+          if (OVERLAY[t]) { r = MM_LAND[t * 3]; g = MM_LAND[t * 3 + 1]; b = MM_LAND[t * 3 + 2]; }
+          else if (t === T.LAVA) { r = 220; g = 90; b = 40; }
+          else if (t === T.CLOUD_SEA) { r = 235; g = 242; b = 250; }
+          else {
+            const sh = Math.max(0, 1 + (w.distRaw(tx, ty) - 128) / 64); // 1 at the shore, 0 from 16 tiles out
+            r = sea[0] + (150 - sea[0]) * sh * 0.6; g = sea[1] + (215 - sea[1]) * sh * 0.6; b = sea[2] + (215 - sea[2]) * sh * 0.6;
+          }
+        } else { r = MM_LAND[t * 3]; g = MM_LAND[t * 3 + 1]; b = MM_LAND[t * 3 + 2]; }
+        const f = 0.35 + 0.65 * Math.min(1, w.exploredAt(tx, ty) * 1.6);
+        img[o] = r * f; img[o + 1] = g * f; img[o + 2] = b * f; img[o + 3] = 255;
       }
     }
     g.putImageData(this.mmImg, 0, 0);
@@ -660,7 +732,7 @@ export class UI {
       if (!hostileNow && !a.questMarker) continue;
       const dx = w.dx(p.x, a.x) / scale + W / 2, dy = (a.y - p.y) / scale + H / 2;
       if (Math.hypot(dx - W / 2, dy - H / 2) > W / 2 - 3) continue;
-      g.fillStyle = a.questMarker ? '#ffd54f' : '#ff5252';
+      g.fillStyle = a.questMarker ? (a.questMarker[0] === 'M' ? '#ff9100' : '#ffd54f') : '#ff5252';
       g.fillRect(dx - 1.5, dy - 1.5, 3, 3);
     }
     // player arrow (the 3D view draws a fixed one over the turning map)

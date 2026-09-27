@@ -28,13 +28,17 @@ export function installMap(game) {
   wrap.classList.add('hidden');
   ui.root.appendChild(wrap);
   const cam = { x: 0, y: 0, zoom: 0.3 };
+  // (the chart is W tiles across: all of it fits the screen at the least zoom;
+  // at the most, a chart pixel is a few screen pixels)
+  const MIN_ZOOM = () => Math.min(0.18, (game.renderer.cw || 1280) / W * 0.9);
+  const MAX_ZOOM = 1.6;
   // drag (mouse or one finger) pans; the wheel or a two-finger pinch zooms
   let drag = null, pinch = null;
   const ptrs = new Map();
   const zoomAt = (sx, sy, f) => {
     const r = game.renderer;
     const wx = cam.x + (sx - r.cw / 2) / cam.zoom, wy = cam.y + (sy - r.ch / 2) / cam.zoom;
-    cam.zoom = Math.max(0.18, Math.min(6, cam.zoom * f));
+    cam.zoom = Math.max(game.world === game.surface ? MIN_ZOOM() : 0.18, Math.min(game.world === game.surface ? MAX_ZOOM : 6, cam.zoom * f));
     cam.x = wx - (sx - r.cw / 2) / cam.zoom;
     cam.y = Math.max(0, Math.min(H, wy - (sy - r.ch / 2) / cam.zoom));
   };
@@ -95,7 +99,8 @@ export function installMap(game) {
     const p = game.player;
     const r = game.renderer;
     if (game.world === game.surface) {
-      cam.zoom = Math.max(0.18, Math.min(r.cw / W * 1.02, 0.5));
+      // (about a quarter of the world across: the sea you're in and its neighbours)
+      cam.zoom = Math.max(MIN_ZOOM(), Math.min(r.cw / (W * 0.28), 0.5));
       cam.x = p.x;
       cam.y = Math.max(H * 0.3, Math.min(H * 0.7, p.y));
     } else {
@@ -177,10 +182,17 @@ function drawLabels(game, r, cam, layer) {
     add('', 'Reverse Mountain', RM_X, EQ - chart(40), { fontSize: '14px' });
     if (discovered.has('mary_geoise') || w.isExplored(0, EQ)) add('', 'Mary Geoise', 4, EQ - chart(70), { fontSize: '13px' });
   }
-  // quests
-  for (const { id } of game.quests.active()) {
+  // quest givers: who can start your story, and side quests waiting on the islands you know
+  if (!zone) {
+    for (const pin of game.storyPins?.() || []) {
+      add(pin.main ? '.giver.main' : '.giver', [h('b.pin', { style: { background: pin.color } }, '!'), ' ' + pin.label], pin.x, pin.y, { fontSize: pin.main ? '15px' : '13px' }, true);
+    }
+  }
+  // quests (the main story's objective in orange, on top)
+  const act = game.quests.active().sort((a, b) => (a.def.kind === 'main') - (b.def.kind === 'main'));
+  for (const { id, def } of act) {
     const m = game.quests.marker(id);
-    if (m && (!zone || m.zone === w.id)) add('.quest', [uiImg('quest', 18), ' ' + m.label], m.x, m.y - 12 / cam.zoom);
+    if (m && (!zone || m.zone === w.id)) add(def.kind === 'main' ? '.quest.main' : '.quest', [uiImg('quest', 18), ' ' + m.label], m.x, m.y - 12 / cam.zoom);
   }
   // log pose target
   const lp = game.logPoseTarget?.();

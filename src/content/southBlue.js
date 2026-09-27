@@ -1057,7 +1057,7 @@ const npcs = [
     }),
   },
   {
-    id: 'sb_killer', name: 'Killer', title: 'Gang boss of North Town', island: 'kutsukku_island', at: { town: 'kutsukku_north', building: 'The Masked Tavern' }, lethal: false, named: true,
+    id: 'sb_killer', name: 'Killer', title: 'Gang boss of North Town', island: 'kutsukku_island', at: { town: 'kutsukku_north', building: 'The Masked Tavern' }, lethal: false, named: true, duel: true,
     look: { hair: 'long', hairColor: '#fff59d', top: '#fafafa', bottom: '#1565c0', skin: '#f1c9a0', hat: 'goggles', hatColor: '#90a4ae', swords: 2 }, level: 13, style: 'nitoryu', weapon: 'sword', moves: ['sb_killer_punisher', 'nito_taka'], skill: 0.5,
     alert: '...', barks: ['...', 'Fassh— ...no.'],
     marker: (c, g) => (stageOf(g, 'sb_victoria_punk') === 'test' ? '!' : null),
@@ -1642,7 +1642,7 @@ const quests = [
       { id: 'find', desc: 'Find the slavers\' boat in a cove on the east coast.', goal: { type: 'reach', island: 'samba_kingdom', spot: 'slaver_cove', r: 8 } },
       { id: 'fight', desc: 'Defeat "Net-Hand" Bakalao and free the captives.', goal: { type: 'defeat', npc: 'sb_bakalao' },
         onStart: bossStage('sb_samba_carnival', 'sb_bakalao', 'samba_kingdom', 'slaver_cove', (ctx, g) => spawnSquad(g, 'samba_kingdom', 'slaver_cove')) },
-      { id: 'report', desc: 'Find Pascia at the Carnival Stage in Samba Royal City.' },
+      { id: 'report', desc: 'Find Pascia at the Carnival Stage in Samba Royal City.', npc: 'sb_pascia', onStart: (ctx, g) => spawnNow(g, 'sb_pascia') },
     ],
     rewards: { berries: 10000, points: 1, items: [['jewels', 1]] },
   },

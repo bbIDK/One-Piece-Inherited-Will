@@ -22,7 +22,7 @@ import { regionAt, REGION_INFO, W, H, RL_HALF, RM_X, POLAR, EQ } from '../src/wo
 import { REVERSE_MOUNTAIN, MARY_GEOISE_DEF } from '../src/world/worldgen.js';
 
 const SEAS = new Set(['east_blue', 'north_blue', 'west_blue', 'south_blue', 'paradise', 'new_world', 'calm_belt', 'sky', 'undersea', 'zone']);
-const GOALS = new Set(['defeat', 'reach', 'item', 'flag', 'event', 'reachXY', 'days']);
+const GOALS = new Set(['defeat', 'reach', 'item', 'flag', 'event', 'reachXY', 'days', 'quest', 'weapon', 'ship', 'crew', 'faction', 'bounty', 'counter', 'check']);
 const HAKI = new Set(['armament', 'observation', 'conqueror']);
 const WEAPONS = new Set(['sword', 'gun', 'staff', 'axe', 'spear', 'mace', 'claw', 'whip', 'club', 'trident', 'bow']);
 const PROP_KINDS = new Set(['tree', 'rock', 'bush', 'building', 'barrel', 'crate', 'haystack', 'lamp', 'lantern', 'well', 'fountain', 'flagpole', 'stall', 'platform', 'statue', 'torii', 'lighthouse', 'mooring', 'grave', 'chest', 'campfire', 'tent', 'cannon', 'bench', 'dummy', 'boat', 'bell', 'pillar', 'bubble', 'sign', 'windmill', 'arch', 'ruins', 'bones', 'anchor', 'fence', 'poneglyph', 'gate', 'shipwreck', 'skull', 'totem', 'tower', 'crystal', 'mushroom', 'palm', 'cactus', 'wheel', 'elevator', 'portal']);
@@ -181,13 +181,15 @@ export async function run(opts = {}) {
           else if (g.spot && !spotsOf(isl).has(g.spot)) E(`${where}: reach goal names unknown spot "${g.spot}" on ${g.island}`);
         }
         if (g.type === 'item' && !ITEMS[g.item]) E(`${where}: item goal names unknown item "${g.item}"`);
+        if (g.type === 'quest' && !PACKS.some((pp) => (pp.quests || []).some((x) => x.id === g.quest))) E(`${where}: quest goal names unknown quest "${g.quest}"`);
       }
       const r = q.rewards || {};
       for (const [it] of r.items || []) if (!ITEMS[it]) E(`${where}: reward item "${it}" unknown`);
       for (const k of Object.keys(r.mastery || {})) if (!STYLES[k]) E(`${where}: reward mastery style "${k}" unknown`);
       for (const k of Object.keys(r.haki || {})) if (!HAKI.has(k)) E(`${where}: reward haki "${k}" unknown`);
       for (const k of Object.keys(r.attrs || {})) if (!['str', 'agi', 'end', 'vit', 'wil'].includes(k)) E(`${where}: reward attr "${k}" unknown`);
-      if (allSource && !new RegExp(`['"\`]${q.id}['"\`]`).test(allSource.replace(new RegExp(`id: ['"]${q.id}['"]`, 'g'), ''))) Wn(`${where}: nothing seems to start this quest (no startQuest('${q.id}') found)`);
+      // (the main story's chapters are started by the story itself: content/mainStory.js)
+      if (q.kind !== 'main' && allSource && !new RegExp(`['"\`]${q.id}['"\`]`).test(allSource.replace(new RegExp(`id: ['"]${q.id}['"]`, 'g'), ''))) Wn(`${where}: nothing seems to start this quest (no startQuest('${q.id}') found)`);
     }
   }
   // trainers & shops

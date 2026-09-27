@@ -958,6 +958,64 @@ export const scenarios = {
       console.log('perf', JSON.stringify(perf));
     },
   },
+  // Riding Reverse Mountain: in at the East Blue gate, up the gorge and the
+  // climb, over the summit pool and down the torrent past Laboon
+  // (node tools/shot.mjs rmride [--canal=east_blue])
+  rmride: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = 11; g.env.storm = 0; g.env.stormTarget = 0; g.env.fog = 0; document.querySelector('.look-hint')?.remove(); });
+      const start = await page.evaluate((id) => {
+        const g = window.OP.game, M = g.world.reverseMountain, m = M.mouths[id];
+        const a = Math.atan2(m.gate.y - m.y, m.gate.x - m.x);
+        const p = g.player;
+        const sh = g.giveShip('sloop', m.x, m.y, 'Merry Test', { heading: a });
+        const hs = window.OP.debug.deckSpot(sh, 'helm'); p.x = hs.x; p.y = hs.y;
+        return { m, a };
+      }, args.canal || 'east_blue');
+      for (let i = 0; i < 3; i++) await step(page, 0.1);
+      await page.evaluate(() => { const it = window.OP.game.player.controller.interaction; it?.run(); });
+      await page.evaluate(() => window.OP.key('W', true));
+      const st = () => page.evaluate(() => { const g = window.OP.game, s = g.player.ship; const c = g.currentAt(s.x, s.y); return { mode: g.player.mode, x: Math.round(s.x), y: Math.round(s.y), lvl: +(s.lvl || 0).toFixed(1), pitch: +((s.pitch || 0) * 57.3).toFixed(1), sp: +s.speed.toFixed(1), hull: Math.round(s.hull), canal: c.canal?.id || null, t: g.world.type(s.x, s.y) }; });
+      const look = (back = Math.PI * 0.9, pitch = -0.2) => page.evaluate(([b, pt]) => { const g = window.OP.game; g.view3d.rig.yaw = g.player.ship.heading + b; g.view3d.rig.pitch = pt; }, [back, pitch]);
+      const until = async (label, test, max, shot, view) => {
+        for (let i = 0; i < max; i++) {
+          await step(page, 0.5);
+          const s = await st();
+          if (test(s)) { console.log(label.padEnd(10), JSON.stringify(s)); if (view) await look(...view); for (let k = 0; k < 3; k++) { await step(page, 0.05); await frames(page, 1); } if (shot) await snap(label); return s; }
+        }
+        console.log(label.padEnd(10), 'NOT REACHED', JSON.stringify(await st()));
+        await snap(label + '-fail');
+        return null;
+      };
+      console.log('start', JSON.stringify(start));
+      await until('approach', () => true, 1, true, [Math.PI * 0.9, -0.15]);
+      await until('gate', (s) => s.canal && s.t === 9, 240, true, [Math.PI * 0.95, -0.1]);
+      await until('gorge', (s) => s.canal && s.lvl === 0, 1, false);
+      for (let i = 0; i < 20; i++) await step(page, 0.5);
+      await look(0.2, 0.05); for (let k = 0; k < 3; k++) { await step(page, 0.05); await frames(page, 1); }
+      await snap('gorge-ahead');
+      await until('climb', (s) => s.lvl > 50, 240, true, [Math.PI * 0.85, -0.25]);
+      await until('summit', (s) => s.lvl > 155 || s.canal === 'exit', 240, true, [0.3, -0.25]);
+      await until('descent', (s) => s.canal === 'exit' && s.lvl < 110, 240, true, [0.1, -0.35]);
+      await until('bottom', (s) => !s.canal && s.lvl === 0, 240, true, [-0.5, 0.02]);
+      await page.evaluate(() => window.OP.key('W', false));
+      const flags = await page.evaluate(() => { const g = window.OP.game; return { entered: !!g.state.char.flags.enteredGrandLine, laboon: !!g.surface._p1LaboonAt }; });
+      console.log('flags', JSON.stringify(flags));
+      // the whole mountain from the sky
+      await page.evaluate(() => {
+        const g = window.OP.game, M = g.world.reverseMountain, p = g.player;
+        g.creative.set(true, true);
+        p.mode = 'foot'; p.ship.captain = null; p.onShip = false;
+        window.OP.teleport(M.x + 1500, M.y + 900);
+        g.creative.fly(); p.alt = 520;
+        g.view3d.rig.yaw = Math.atan2(M.y - p.y, M.x - p.x); g.view3d.rig.pitch = -0.42;
+      });
+      for (let i = 0; i < 12; i++) { await step(page, 0.3); await frames(page, 2); }
+      await snap('overview');
+    },
+  },
   wake: {
     async run(page, snap, args) {
       await page.evaluate(() => localStorage.clear());

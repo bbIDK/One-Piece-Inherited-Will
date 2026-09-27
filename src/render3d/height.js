@@ -10,6 +10,7 @@
 //  * Walls are vertical blocks (see WALL_H), not hills.
 import { T, IS_LIQUID, OVERLAY } from '../world/tiles.js';
 import { RM_X, RL_HALF, chart } from '../world/constants.js';
+import { RM, canalAt, coneAt, nearRM } from '../world/reverseMountain.js';
 import { PLINTH } from '../world/interiors.js';
 import { bw, bl, bfoot } from '../world/bframe.js';
 
@@ -33,6 +34,13 @@ BOOST[T.FOREST] = 0.3;
 BOOST[T.JUNGLE] = 0.4;
 
 export const isWallTile = (t) => t === T.WALL;
+
+/** The height of the water's surface at (x, y): the sea, or up Reverse Mountain in its canals. */
+export function waterLevel(world, x, y) {
+  if (world.zone !== 0 || world.type(x, y) !== T.RAPIDS) return SEA_Y;
+  const k = canalAt(world.wx(x), y, 60);
+  return k ? k.level : SEA_Y;
+}
 
 /** Is this surface tile part of the Red Line (or the Reverse Mountain massif)? */
 function onRedLine(world, x) {
@@ -134,11 +142,12 @@ function quayRamp(world, cx, cy, h, pads) {
 
 /** Height at a tile corner before anything is built on it. */
 function naturalHeight(world, cx, cy) {
-  let sum = 0, n = 0, walls = 0, tall = 0;
+  let sum = 0, n = 0, walls = 0, tall = 0, rapids = 0;
   for (let j = -1; j <= 0; j++) {
     for (let i = -1; i <= 0; i++) {
       const x = cx + i, y = cy + j;
       const t = world.type(x, y);
+      if (t === T.RAPIDS) rapids++;
       if (IS_LIQUID[t] || OVERLAY[t]) continue;
       if (t === T.WALL) { walls++; continue; }
       const h = landHeight(world, x, t, world.elev(x, y));
@@ -147,14 +156,44 @@ function naturalHeight(world, cx, cy) {
     }
   }
   const sd = world.sd(cx, cy);
+  // Reverse Mountain: its canals run up the mountain, so their water (and
+  // the banks either side) are as high as the canal has climbed
+  const rm = world.zone === 0 && nearRM(cx, cy) ? rmShape(cx, cy, !!rapids) : null;
   if (!n) {
     if (walls) return 0.4; // wall blocks stand on flat ground
+    if (rm && rapids) return rm.level - 2.4; // the canal's bed
     return seaFloor(world, cx, cy, sd);
   }
   // mostly keep the average, but let peaks read as peaks
-  const land = sum / n * 0.75 + tall * 0.25;
-  if (sd <= 0) return 0.2 + sd * 0.4;
-  return 0.25 + (land - 0.25) * smooth(0, 3.2, sd);
+  let land = sum / n * 0.75 + tall * 0.25;
+  const base = rm ? rm.level : 0;
+  if (rm) land = Math.min(land + rm.cone, rm.bank);
+  if (sd <= 0) return base + 0.2 + sd * 0.4;
+  return base + 0.25 + (land - base - 0.25) * smooth(0, 3.2, sd);
+}
+
+/**
+ * Reverse Mountain at a tile corner: the mountain on the Red Line (cone), the
+ * water level of the nearest canal (level) and how high the rock may stand
+ * there (bank: the canal's groove, with steep walls).
+ */
+const RMS = { cone: 0, level: 0, bank: 0 };
+function rmShape(cx, cy, wet) {
+  const cone = coneAt(cx, cy);
+  const k = canalAt(cx, cy, 90);
+  const pd = Math.hypot(cx - RM.x, cy - RM.y);
+  if (!k && pd > RM.poolR + 90) { if (!cone) return null; RMS.cone = cone; RMS.level = 0; RMS.bank = 1e9; return RMS; }
+  let level = k ? k.level : RM.top, bank = 1e9;
+  const rough = (vnoise(cx * 0.21, cy * 0.21) - 0.5) * 1.6;
+  if (k) bank = k.level + 1.6 + Math.max(0, k.d - RM.halfW) * 2.6 + rough;
+  // the rim of the summit pool
+  if (pd < RM.poolR + 90) {
+    const rim = RM.top + 1.6 + Math.max(0, pd - RM.poolR) * 2.2 + rough;
+    if (rim < bank) bank = rim;
+    if (pd < RM.poolR + 4 && (!k || wet)) level = RM.top;
+  }
+  RMS.cone = cone; RMS.level = level; RMS.bank = bank;
+  return RMS;
 }
 
 /**
@@ -239,7 +278,7 @@ export class HeightField {
     if (OVERLAY[t]) return deckTop(w, x, y);
     if (w.quays.size && w.isQuay(x, y)) return DOCK_Y;
     const h = this.terrain(x, y);
-    if (IS_LIQUID[t]) return Math.max(h, SEA_Y);
+    if (IS_LIQUID[t]) return Math.max(h, t === T.RAPIDS ? waterLevel(w, x, y) : SEA_Y);
     const f = w.floorRec ? w.floorRec(x, y) : null;
     if (!f) return h;
     if (f.interior) return this.floorY(f.o);

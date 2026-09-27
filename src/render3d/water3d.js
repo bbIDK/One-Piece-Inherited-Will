@@ -49,6 +49,7 @@ const VERT = /* glsl */`
   uniform vec2 uSize;
   uniform float uTime;
   uniform float uAmp;
+  uniform vec2 uWin;
   varying vec3 vWorld;
   varying vec3 vView;
   varying vec3 vSwell;   // slope x, slope z, height (-1..1)
@@ -64,6 +65,8 @@ const VERT = /* glsl */`
     float sd = (m.r * 255.0 - 128.0) * 0.25;
     // (the tile type is read at the tile's centre: blending types makes phantom liquids)
     float kind = floor(texture2D(uMap, (floor(P) + 0.5) / uSize).g * 255.0 + 0.5);
+    // (past the edge of the window round the camera: open sea)
+    if (max(abs(P.x - uWin.x), abs(P.y - uWin.y)) > 1000.0) { sd = -32.0; kind = 0.0; }
     float liquid = kind < 2.5 || kind == 5.0 || kind == 7.0 ? 1.0 : kind == 3.0 ? 0.5 : 0.15;
     float shore = mix(0.35, 1.0, smoothstep(0.5, -7.0, sd));
     float fade = 1.0 - smoothstep(70.0, 190.0, length(wp.xz - cameraPosition.xz));
@@ -82,7 +85,8 @@ const VERT = /* glsl */`
 
 const FRAG = /* glsl */`
   uniform sampler2D uMap;   // r = coastline distance (128 = shore), g = liquid tile type
-  uniform vec2 uSize;       // world size in tiles
+  uniform vec2 uSize;       // the window's size in tiles (it repeats)
+  uniform vec2 uWin;        // the window's centre
   uniform float uTime;
   uniform vec3 uSunDir;
   uniform vec3 uSunCol;
@@ -151,6 +155,9 @@ const FRAG = /* glsl */`
     vec4 m = texture2D(uMap, uv);
     float sd = (m.r * 255.0 - 128.0) * 0.25;   // + land, - water (tiles)
     float kind = floor(texture2D(uMap, (floor(vWorld.xz) + 0.5) / uSize).g * 255.0 + 0.5);
+    if (max(abs(vWorld.x - uWin.x), abs(vWorld.z - uWin.y)) > 1000.0) { sd = -32.0; kind = 0.0; }
+    // (Reverse Mountain's canals run up the mountain: they draw their own water)
+    if (kind == 9.0) discard;
     float depth = clamp(-sd, 0.0, 30.0);
     bool water = kind < 2.5 || kind == 5.0 || kind == 7.0;
 
@@ -250,6 +257,15 @@ const FRAG = /* glsl */`
   }
 `;
 
+// The coastline map the water reads (r = distance to the coast, g = liquid
+// type) is a window of WIN × WIN tiles round the camera, addressed modulo WIN
+// (the texture repeats), so moving it on means filling in only the strip of
+// tiles it moved onto.
+const WIN = 2048;
+const WMASK = WIN - 1;
+const STEP = 256; // the window moves on in steps this big
+const SLICE = 32; // columns (or rows) filled in per frame while it does
+
 /** A disc of rings: ~0.6 m apart at the centre, growing outward to the horizon. */
 function discGeometry(radius = 1600, segs = 96) {
   const rings = [0];
@@ -279,7 +295,8 @@ function discGeometry(radius = 1600, segs = 96) {
 }
 
 export class Water {
-  constructor(scene) {
+  constructor(scene, renderer = null) {
+    this.renderer = renderer;
     this.uniforms = THREE.UniformsUtils.merge([
       THREE.UniformsLib.fog,
       {
@@ -297,6 +314,7 @@ export class Water {
         uStorm: { value: 0 },
         uDetail: { value: 1 },
         uUnder: { value: 0 },
+        uWin: { value: new THREE.Vector2(-1e9, -1e9) },
       },
     ]);
     // the water writes depth, so the ink outlines see its surface (not the sea floor under it)
@@ -315,30 +333,127 @@ export class Water {
   setDetail(q) { this.uniforms.uDetail.value = q === 'low' ? 0 : 1; }
 
   setWorld(world) {
-    if (this.tex) this.tex.dispose();
-    const W = world.width, H = world.height;
-    const data = new Uint8Array(W * H * 2);
-    const d = world.data, dist = world.dist;
-    for (let i = 0, n = W * H; i < n; i++) {
-      data[i * 2] = dist[i];
-      const t = d[i << 2];
-      data[i * 2 + 1] = t < 16 ? t : 255;
+    this.world = world;
+    if (!this.tex) {
+      this.winData = new Uint8Array(WIN * WIN * 2);
+      const mk = () => {
+        const t = new THREE.DataTexture(this.winData, WIN, WIN, THREE.RGFormat, THREE.UnsignedByteType);
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+        t.magFilter = THREE.LinearFilter;
+        t.minFilter = THREE.LinearFilter;
+        t.generateMipmaps = false;
+        return t;
+      };
+      this.tex = mk();
+      this.src = mk(); // (the same bytes: the source of the partial uploads)
+      this.box = new THREE.Box2();
+      this.pos = new THREE.Vector2();
     }
-    const tex = new THREE.DataTexture(data, W, H, THREE.RGFormat, THREE.UnsignedByteType);
-    tex.wrapS = world.wrap ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
-    tex.wrapT = THREE.ClampToEdgeWrapping;
-    tex.magFilter = THREE.LinearFilter;
-    tex.minFilter = THREE.LinearFilter;
-    tex.generateMipmaps = false;
-    tex.needsUpdate = true;
-    this.tex = tex;
-    this.uniforms.uMap.value = tex;
-    this.uniforms.uSize.value.set(W, H);
+    this.win = null; // filled in round the camera on the next update
+    this.pending = [];
+    this.uniforms.uMap.value = this.tex;
+    this.uniforms.uSize.value.set(WIN, WIN);
     this.uniforms.uZone.value = world.zone || 0;
+  }
+
+  /** Fill in the tiles of [x0, x0+w) × [y0, y0+h) (world tiles, unwrapped) in the window's bytes. */
+  fill(x0, y0, w, h) {
+    const world = this.world, d = this.winData;
+    const x1 = x0 + w, y1 = y0 + h;
+    // a block at a time: most of the sea is one flat block
+    for (let by = Math.floor(y0 / 32); by <= Math.floor((y1 - 1) / 32); by++) {
+      const ya = Math.max(y0, by * 32), yb = Math.min(y1, by * 32 + 32);
+      for (let bx = Math.floor(x0 / 32); bx <= Math.floor((x1 - 1) / 32); bx++) {
+        const xa = Math.max(x0, bx * 32), xb = Math.min(x1, bx * 32 + 32);
+        let wbx = bx;
+        if (world.wrap) wbx = ((bx % world.bw) + world.bw) % world.bw;
+        const inside = by >= 0 && by < world.bh && wbx >= 0 && wbx < world.bw;
+        const u = inside ? world.blockUniform(wbx, by) : -1;
+        const b = inside ? by * world.bw + wbx : -1;
+        if (u >= 0 && !world.bs[b]) {
+          const r = world.us[b], g = u < 16 ? u : 255;
+          for (let y = ya; y < yb; y++) {
+            const row = (y & WMASK) * WIN;
+            for (let x = xa; x < xb; x++) { const o = (row + (x & WMASK)) * 2; d[o] = r; d[o + 1] = g; }
+          }
+          continue;
+        }
+        for (let y = ya; y < yb; y++) {
+          const row = (y & WMASK) * WIN;
+          for (let x = xa; x < xb; x++) {
+            const o = (row + (x & WMASK)) * 2;
+            d[o] = world.distRaw(x, y);
+            const t = world.type(x, y);
+            d[o + 1] = t < 16 ? t : 255;
+          }
+        }
+      }
+    }
+  }
+
+  /** Send [x0, x0+w) × [y0, y0+h) of the window's bytes to the GPU (split where it wraps). */
+  upload(x0, y0, w, h) {
+    const r = this.renderer;
+    if (!r || !this.tex.__uploaded) { this.tex.needsUpdate = true; return; }
+    const tx = x0 & WMASK, ty = y0 & WMASK;
+    const xs = tx + w > WIN ? [[tx, WIN - tx], [0, tx + w - WIN]] : [[tx, w]];
+    const ys = ty + h > WIN ? [[ty, WIN - ty], [0, ty + h - WIN]] : [[ty, h]];
+    for (const [ax, aw] of xs) {
+      for (const [ay, ah] of ys) {
+        this.box.min.set(ax, ay); this.box.max.set(ax + aw, ay + ah);
+        this.pos.set(ax, ay);
+        r.copyTextureToTexture(this.src, this.tex, this.box, this.pos);
+      }
+    }
+  }
+
+  /** Keep the window centred on the camera. */
+  follow(ox, oy) {
+    const cx = Math.floor(ox), cy = Math.floor(oy);
+    const w = this.win;
+    const far = w && this.world.wrap ? Math.abs(this.world.dx(w.cx, cx)) : w ? Math.abs(cx - w.cx) : 0;
+    if (!w || far > WIN / 2 - 200 || Math.abs(cy - w.cy) > WIN / 2 - 200) {
+      // (a jump: fill it all in at once)
+      const x0 = Math.floor(cx / 32) * 32 - WIN / 2, y0 = Math.floor(cy / 32) * 32 - WIN / 2;
+      this.fill(x0, y0, WIN, WIN);
+      this.tex.needsUpdate = true;
+      this.win = { x0, y0, cx: x0 + WIN / 2, cy: y0 + WIN / 2 };
+      this.pending.length = 0;
+    } else if (!this.pending.length) {
+      // (the camera's x is kept near the window's even across the world's seam)
+      const dx = this.world.wrap ? this.world.dx(w.cx, cx) : cx - w.cx, dy = cy - w.cy;
+      const sx = Math.abs(dx) >= STEP ? Math.sign(dx) * STEP : 0, sy = Math.abs(dy) >= STEP ? Math.sign(dy) * STEP : 0;
+      if (sx || sy) {
+        const nx0 = w.x0 + sx, ny0 = w.y0 + sy;
+        if (sx > 0) this.pending.push({ x0: w.x0 + WIN, y0: ny0, w: sx, h: WIN, cols: true });
+        else if (sx < 0) this.pending.push({ x0: nx0, y0: ny0, w: -sx, h: WIN, cols: true });
+        if (sy > 0) this.pending.push({ x0: nx0, y0: w.y0 + WIN, w: WIN, h: sy });
+        else if (sy < 0) this.pending.push({ x0: nx0, y0: ny0, w: WIN, h: -sy });
+        this.win = { x0: nx0, y0: ny0, cx: nx0 + WIN / 2, cy: ny0 + WIN / 2 };
+      }
+    }
+    // a slice of the strips it moved onto, each frame
+    const p = this.pending[0];
+    if (p) {
+      if (p.cols) {
+        const n = Math.min(SLICE, p.w);
+        this.fill(p.x0, p.y0, n, p.h); this.upload(p.x0, p.y0, n, p.h);
+        p.x0 += n; p.w -= n;
+      } else {
+        const n = Math.min(SLICE, p.h);
+        this.fill(p.x0, p.y0, p.w, n); this.upload(p.x0, p.y0, p.w, n);
+        p.y0 += n; p.h -= n;
+      }
+      if (p.w <= 0 || p.h <= 0) this.pending.shift();
+    }
+    this.uniforms.uWin.value.set(this.win.cx, this.win.cy);
   }
 
   update(ox, oy, env, sunDir, sunCol, sky, skyTop) {
     const u = this.uniforms;
+    if (this.world) this.follow(ox, oy);
+    // (once three.js has made the texture, strips go up on their own)
+    if (this.tex && !this.tex.__uploaded && this.renderer?.properties.get(this.tex).__webglTexture) this.tex.__uploaded = true;
     u.uOrigin.value.set(ox, oy);
     u.uTime.value = env.time;
     u.uDay.value = env.daylight;

@@ -64,15 +64,23 @@ export class Label {
 }
 
 const MARKERS = {};
-/** The shared '!' / '?' quest marker sprite material. */
+/** The shared '!' / '?' quest marker sprite material ('M!' / 'M?': the main story's, in orange). */
 function markerMat(ch) {
   if (MARKERS[ch]) return MARKERS[ch];
+  const main = ch[0] === 'M', glyph = main ? ch.slice(1) : ch;
   const c = canvas(64, 96), g = c.getContext('2d');
   g.font = 'bold 84px Bangers, Impact, sans-serif';
   g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (main) {
+    // a warm halo so the story stands out from the side quests
+    const gr = g.createRadialGradient(32, 50, 4, 32, 50, 34);
+    gr.addColorStop(0, 'rgba(255,183,77,0.55)'); gr.addColorStop(1, 'rgba(255,183,77,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 96);
+  }
   g.lineWidth = 10; g.strokeStyle = '#000'; g.lineJoin = 'round';
-  g.strokeText(ch, 32, 52);
-  g.fillStyle = ch === '!' ? '#ffd54f' : '#90caf9'; g.fillText(ch, 32, 52);
+  g.strokeText(glyph, 32, 52);
+  g.fillStyle = main ? (glyph === '!' ? '#ff9100' : '#ffb74d') : glyph === '!' ? '#ffd54f' : '#90caf9';
+  g.fillText(glyph, 32, 52);
   MARKERS[ch] = new THREE.SpriteMaterial({ map: tex(c), transparent: true, depthWrite: false, fog: false });
   return MARKERS[ch];
 }

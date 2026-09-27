@@ -833,8 +833,9 @@ export class ShipView {
     if (own !== this.ghost) this.setGhost(own);
     const t = env.time + (s.seed || 0);
     const sinking = s.sunk ? Math.min(1, s.sinkT / 4) : 0;
-    r.position.set(rx, 0.05 + Math.sin(t * 1.3) * 0.07 - sinking * 3, rz);
-    r.rotation.set(Math.sin(t * 0.9) * 0.035 + sinking * 0.5, -s.heading, Math.sin(t * 1.1) * 0.02, 'YXZ');
+    r.position.set(rx, (s.lvl || 0) + 0.05 + Math.sin(t * 1.3) * 0.07 - sinking * 3, rz);
+    // (riding up or down Reverse Mountain, the bow points up or down the slope)
+    r.rotation.set(Math.sin(t * 0.9) * 0.035 + sinking * 0.5, -s.heading, Math.sin(t * 1.1) * 0.02 + (s.pitch || 0), 'YXZ');
     // yards brace round to the wind; sails fill
     const relA = (windAngle || 0) - s.heading;
     const brace = Math.max(-0.5, Math.min(0.5, Math.sin(relA) * 0.45));

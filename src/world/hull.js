@@ -183,7 +183,9 @@ export function solidAt(d, u, v, margin = 0) {
 }
 
 /** The ship's gentle rise and fall on the swell (as the 3D view draws it). */
-export function shipBob(ship, time) { return 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.07; }
+export function shipBob(ship, time) { return (ship.lvl || 0) + 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.07; }
+/** How much higher than the middle a point `along` metres toward the bow rides (the ship pitched up a slope). */
+export const pitchRise = (ship, along) => (ship.pitch ? along * Math.tan(ship.pitch) : 0);
 
 /**
  * The deck under a point (dx, dy = offset from the ship's centre, world tiles):

@@ -151,6 +151,7 @@ export function createCharacter(legacy, birth, choices) {
     world: { day: 1, clock: 8.5, chests: {}, npc: {}, fruitSpawns: null },
     pos: null,
     rest: null,
+    worldVer: WORLD_VERSION,
     createdAt: Date.now(),
   };
   if (perkLevel(legacy, 'chart')) char.discovered = (legacy.charted || []).slice();
@@ -381,3 +382,55 @@ export function endLineage(game, cause) {
 }
 
 export { DREAMS, FRUITS, STYLES, unlockedFruitTechniques };
+
+// ------------------------------------------------------------- old saves
+
+/**
+ * The layout of the world a character's positions were saved in. 1: the seas
+ * 1.5× the chart; 2: the seas 6× (islands 2.25×) — see POS_SCALE.
+ */
+export const WORLD_VERSION = 2;
+const OLD_SCALE = 1.5;
+
+/**
+ * Move a character saved on an older, smaller world onto this one: a place on
+ * or near an island keeps its spot on that island (which has grown), a place
+ * out at sea keeps its spot on the chart. Their chart starts over from the
+ * islands they know.
+ */
+export function migrateWorld(char, world, islandDefs) {
+  if ((char.worldVer || 1) >= WORLD_VERSION) return false;
+  const move = (pt) => {
+    if (!pt || typeof pt.x !== 'number' || (pt.zone && pt.zone !== 'surface')) return;
+    // the nearest charted island, where it used to be
+    let best = null, bd = Infinity;
+    for (const d of islandDefs) {
+      const ox = (d.x / POS_SCALE) * OLD_SCALE, oy = (d.y / POS_SCALE) * OLD_SCALE;
+      const r = (Math.max(d.w, d.h) / SIZE_SCALE) * OLD_SCALE * 0.5;
+      const dd = Math.hypot(pt.x - ox, pt.y - oy) - r;
+      if (dd < bd) { bd = dd; best = { d, ox, oy }; }
+    }
+    if (best && bd < 40) {
+      const k = SIZE_SCALE / OLD_SCALE;
+      pt.x = best.d.x + (pt.x - best.ox) * k;
+      pt.y = best.d.y + (pt.y - best.oy) * k;
+    } else {
+      pt.x *= POS_SCALE / OLD_SCALE;
+      pt.y *= POS_SCALE / OLD_SCALE;
+    }
+    pt.x = world.wx(pt.x);
+    // (onto solid ground, or at least not inside a wall)
+    if (!pt.mode || pt.mode === 'foot') {
+      if (!world.walkable(pt.x, pt.y) && !world.swimmable(pt.x, pt.y)) {
+        const spot = findShore(world, pt.x, pt.y, 24);
+        if (spot) { pt.x = spot.x; pt.y = spot.y; }
+      }
+    }
+  };
+  move(char.pos); move(char.rest); move(char.spawn);
+  for (const s of char.ships || []) if (!s.zone || s.zone === 'surface') move(s);
+  for (const s of char.zoneShips || []) move(s);
+  char.fogSurface = null; // (the chart is redrawn from the islands they know)
+  char.worldVer = WORLD_VERSION;
+  return true;
+}

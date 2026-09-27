@@ -20,6 +20,8 @@ import { placeOnDeck, helmSpot, hatchSpot, deckDist, nearestDeck, freeDeckSpot }
 import { shipDims, hullGap } from '../world/hull.js';
 import { SHIPS } from '../data/ships.js';
 import { wantedTier } from './wanted.js';
+import { T as TT } from '../world/tiles.js';
+import { nearRM } from '../world/reverseMountain.js';
 
 const SAILOR = { name: 'Sailor', faction: 'civilian', style: 'brawler', look: { top: '#eceff1', bottom: '#37474f', hat: 'bandana', hatColor: '#1565c0' }, skill: 0.1, barks: ['Repel boarders!', 'Get off our ship!'] };
 const FISHER = { name: 'Fisherman', faction: 'civilian', style: 'brawler', look: { top: '#8d6e63', bottom: '#455a64', hat: 'cap', hatColor: '#6d8f5e' }, skill: 0.05, barks: ['Not the catch!', 'Help!'] };
@@ -88,7 +90,7 @@ function tick(game, T, dt) {
     return keep;
   });
   const reg = regionAt(p.x, p.y);
-  if (isCalmBelt(reg) || (game.sea?.rmState)) return;
+  if (isCalmBelt(reg) || game.sea?.rmState || nearRM(w.wx(p.x), p.y)) return;
   const nearCoast = w.sd && w.sd(p.x, p.y) < 30;
   const want = p.mode === 'sail' ? 3 : nearCoast ? 2 : 0;
   if (T.ships.filter((s) => !s.traffic?.raided).length < want) spawnShip(game, T, p, reg);
@@ -131,8 +133,8 @@ function spawnShip(game, T, p, reg, force = null) {
       : kind === 'marine' ? (nw ? rng.pick(['marine_warship', 'marine_battleship', 'marine_battleship']) : gl ? rng.pick(['brigantine', 'marine_warship', 'marine_battleship']) : rng.pick(['sloop', 'brigantine', 'brigantine', 'marine_warship']))
         : kind === 'merchant' ? rng.pick(gl ? ['caravel', 'brigantine', 'galleon', 'carrack', 'carrack'] : ['sloop', 'caravel', 'caravel', 'carrack'])
           : rng.pick(nw ? ['galleon', 'war_galleon', 'man_o_war', 'man_o_war', 'great_galleon'] : gl ? ['caravel', 'brigantine', 'frigate', 'war_galleon'] : ['sloop', 'caravel', 'sloop', 'caravel', 'war_galleon']));
-    // (a big ship wants plenty of sea room)
-    if (!force && (!w.sailable(x, y) || w.sd(x, y) > -8 - SHIPS[type].length * 0.5)) continue;
+    // (a big ship wants plenty of sea room — and nobody sails the canals of Reverse Mountain for fun)
+    if (!force && (!w.sailable(x, y) || w.sd(x, y) > -8 - SHIPS[type].length * 0.5 || w.type(x, y) === TT.RAPIDS || nearRM(w.wx(x), y))) continue;
     const pass = a + Math.PI + rng.range(-0.5, 0.5);
     const dest = force?.dest || { x: w.wx(p.x + Math.cos(pass) * r), y: p.y + Math.sin(pass) * r };
     const heading = force?.heading ?? Math.atan2(dest.y - y, w.dx(x, dest.x));

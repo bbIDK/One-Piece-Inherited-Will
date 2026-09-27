@@ -13,6 +13,7 @@ export const T = {
   ABYSS: 6,
   POND: 7,
   ACID: 8,
+  RAPIDS: 9, // Reverse Mountain's canals: the sea running up (and down) a mountain
 
   SAND: 16,
   GRASS: 17,
@@ -69,7 +70,7 @@ export const DAMAGE = new Float32Array(N); // hp/sec standing in it
 
 for (let i = 0; i < 16; i++) IS_LIQUID[i] = 1;
 for (let i = 16; i < N; i++) WALKABLE[i] = 1;
-for (const t of [T.SEA, T.RIVER, T.CANAL, T.CLOUD_SEA, T.POND]) { SAILABLE[t] = 1; SWIMMABLE[t] = 1; }
+for (const t of [T.SEA, T.RIVER, T.CANAL, T.CLOUD_SEA, T.POND, T.RAPIDS]) { SAILABLE[t] = 1; SWIMMABLE[t] = 1; }
 SWIMMABLE[T.REEF] = 1;
 SWIMMABLE[T.ACID] = 1;
 for (const t of [T.MOUNTAIN, T.CLIFF, T.RED_ROCK, T.WALL, T.SNOWROCK]) WALKABLE[t] = 0;
@@ -97,6 +98,7 @@ export const PALETTE = {
   [T.SEA]: ['#1d6fb8', '#39a7d8'],
   [T.RIVER]: ['#2b8fc4', '#58bde0'],
   [T.CANAL]: ['#2a86b0', '#4fb0cf'],
+  [T.RAPIDS]: ['#3a9ccf', '#bfe9f5'],
   [T.CLOUD_SEA]: ['#dbe9f7', '#ffffff'],
   [T.LAVA]: ['#e8420e', '#ffb02e'],
   [T.REEF]: ['#34b3b8', '#e7d9a8'],

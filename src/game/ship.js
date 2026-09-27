@@ -12,8 +12,12 @@ import { hbAt, hullGap, BIG_SHIP } from '../world/hull.js';
 // where the hull meets the water, as fractions of the length and beam (the small ships)
 const SMALL_HULL = [[0.47, 0], [-0.46, 0], [0.2, 0.42], [0.2, -0.42], [-0.25, 0.42], [-0.25, -0.42]];
 
-/** Sailing speed multiplier for the bigger world (see WORLD_SCALE). */
-const SEA_PACE = 1.25;
+/**
+ * Sailing speed multiplier: the seas are wide (islands kilometres apart, see
+ * POS_SCALE), so a ship under full sail with the wind behind her makes a
+ * crossing between neighbouring islands in a couple of minutes.
+ */
+const SEA_PACE = 2;
 
 export class Ship extends Entity {
   constructor(o) {
@@ -94,6 +98,7 @@ export class Ship extends Entity {
     const w = game.world;
     const x0 = this.x, y0 = this.y, h0 = this.heading;
     this.sortY = this.y;
+    if (this.crashT > 0) this.crashT -= dt;
     this.cannonCd = Math.max(0, this.cannonCd - dt);
     this.burstCd = Math.max(0, this.burstCd - dt);
     if (this.ai) this.ai(this, dt, game);
@@ -115,8 +120,15 @@ export class Ship extends Entity {
       target *= 1 - env.storm * 0.25;
       if (this.owner === 'player' && Math.random() < dt * env.storm * 0.3 * (1 - (this.def.stormResist || 0.3))) this.damage(4 + env.storm * 8, null, { weather: true });
     }
+    const cur = game.currentAt(this.x, this.y, this);
+    // riding Reverse Mountain the current does the sailing: the sails can only help a little
+    if (cur.canal) target *= 0.35;
     this.speed += (target - this.speed) * Math.min(1, dt * (target > this.speed ? 0.7 : 1.2));
-    const cur = game.currentAt(this.x, this.y);
+    // the water's height under the keel (up the mountain's canals) and the slope she's riding
+    this.lvl = cur.level;
+    const along = cur.canal ? Math.cos(angleDiff(this.heading, Math.atan2(cur.y, cur.x))) : 0;
+    const pitchT = Math.atan(cur.slope) * along;
+    this.pitch = (this.pitch || 0) + (pitchT - (this.pitch || 0)) * Math.min(1, dt * 3);
     let vx = Math.cos(this.heading) * this.speed + cur.x;
     let vy = Math.sin(this.heading) * this.speed + cur.y;
     // heading follows strong currents a little (Reverse Mountain)
@@ -132,8 +144,10 @@ export class Ship extends Entity {
       this.y = ny; this.speed *= 0.7;
     } else {
       const impact = Math.hypot(vx, vy);
-      if (impact > 5 && this.owner === 'player') {
-        this.damage(Math.round(impact * (cur.steer ? 5 : 2)), null, { crash: true });
+      if (impact > 5 && this.owner === 'player' && !(this.crashT > 0)) {
+        // (a scrape along Reverse Mountain's walls hurts — but one knock doesn't sink you)
+        this.crashT = cur.steer ? 0.9 : 0.4;
+        this.damage(Math.round(cur.steer ? Math.min(28, impact * 1.6) : impact * 2), null, { crash: true });
         game.fx.shake(0.4);
         game.fx.burst(this.x + Math.cos(this.heading) * this.def.length * 0.5, this.y + Math.sin(this.heading) * this.def.length * 0.5, 14, { color: ['#8d6e63', '#e1f5fe'], speed: 4, g: 8, life: 0.6 });
         game.audio?.sfx('crash');

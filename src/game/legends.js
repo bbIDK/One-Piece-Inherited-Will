@@ -4,7 +4,7 @@ import { count, addItem } from './inventory.js';
 import { persist } from './lineage.js';
 import { MARY_GEOISE } from '../world/worldgen.js';
 import { findShore } from './interact.js';
-import { W, EQ, chart } from '../world/constants.js';
+import { W, EQ, chart, csize } from '../world/constants.js';
 
 const LORE = {
   alabasta: 'The text speaks of an ancient weapon — Pluton — and of the place where it sleeps. No wonder a certain Warlord wanted it read.',
@@ -142,7 +142,7 @@ export function installLegends(game) {
       const here = o.port === 'paradise' ? MG.portParadise : MG.portNewWorld;
       const other = o.port === 'paradise' ? MG.portNewWorld : MG.portParadise;
       game.dialogue.open(null, { start: 'a', nodes: { a: { speaker: 'Bondola Operator', text: '"Destination?"', choices: [
-        { text: 'Up to Mary Geoise, the Holy Land.', do: () => go(o.port === 'paradise' ? W - chart(16) : chart(16), EQ + 3, ['MARY GEOISE', 'The Holy Land', 'Keep your eyes down. The Celestial Dragons do not like to be looked at.']), end: true },
+        { text: 'Up to Mary Geoise, the Holy Land.', do: () => go(o.port === 'paradise' ? W - csize(16) : csize(16), EQ + 3, ['MARY GEOISE', 'The Holy Land', 'Keep your eyes down. The Celestial Dragons do not like to be looked at.']), end: true },
         { text: 'Carry my ship over the Red Line.', do: () => {
           if (!moveShipTo(other)) { game.log('You have no ship in this harbour.', '#ff8a80'); return; }
           go(other.bondola.x - other.dir * 3, other.bondola.y + 3, ['THE RED LINE', other === MG.portNewWorld ? 'New World' : 'Paradise', 'Your ship is hauled over the Red Line on the Bondola.']);

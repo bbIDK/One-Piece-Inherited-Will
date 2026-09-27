@@ -569,6 +569,44 @@ const gateGeo = (big) => model('gate:' + big, (k) => {
   for (let x = -W / 2 + 0.35; x < W / 2 - 0.2; x += 0.45) k.add(cone(0.08, 0.25, 4), { at: [x, -0.25, 0.3], rot: [Math.PI, 0, 0], color: '#263238' });
 });
 
+// the great stone gates over Reverse Mountain's canals (origin: the canal's
+// middle at the water; the pillars stand on the banks either side)
+const rmArchGeo = () => model('rm_arch', (k) => {
+  const stone = '#9c5b4a', dark = '#6f3d31', light = '#c08a74', moss = '#5d7a3a';
+  const X = 15.2;
+  for (const s of [-1, 1]) {
+    const x = s * X;
+    k.add(box(6.2, 12, 6.2), { at: [x, -10, 0], color: dark, outline: 0.05 });
+    k.add(box(5.4, 12, 5.4), { at: [x, 2, 0], color: stone, outline: 0.05 });
+    k.add(box(4.8, 9, 4.8), { at: [x, 14, 0], color: stone, outline: 0.05 });
+    k.add(box(5.8, 1.2, 5.8), { at: [x, 13.4, 0], color: light });
+    k.add(box(5.6, 1.4, 5.6), { at: [x, 22.6, 0], color: light, outline: 0.05 });
+    // moss down the weather side
+    k.add(box(0.3, 7, 3.2), { at: [x - s * 2.75, 1, 0.4], color: moss });
+    k.add(box(2.6, 4, 0.3), { at: [x, 4, 2.75], color: moss });
+  }
+  // the arch
+  const band = new THREE.Shape();
+  const Ro = 18.1, Ri = 12.4;
+  band.moveTo(-Ro, 0); band.absarc(0, 0, Ro, Math.PI, 0, true); band.lineTo(Ri, 0); band.absarc(0, 0, Ri, 0, Math.PI, false); band.closePath();
+  k.add(extrude(band, 4.6, 0, 20), { at: [0, 24, 0], color: stone, outline: 0.06 });
+  const trim = new THREE.Shape();
+  trim.moveTo(-Ro - 0.4, 0); trim.absarc(0, 0, Ro + 0.4, Math.PI, 0, true); trim.lineTo(Ro - 0.9, 0); trim.absarc(0, 0, Ro - 0.9, 0, Math.PI, false); trim.closePath();
+  k.add(extrude(trim, 5.2, 0, 20), { at: [0, 24, 0], color: dark });
+  // the keystone, carved with the four seas' waves
+  k.add(box(4, 5.2, 5.8), { at: [0, 24 + Ro - 3.6, 0], color: light, outline: 0.05 });
+  k.add(box(2.6, 0.5, 0.2), { at: [0, 24 + Ro - 1.4, 2.95], color: '#3d6f8f' });
+  k.add(box(2.6, 0.5, 0.2), { at: [0, 24 + Ro - 2.4, 2.95], color: '#3d6f8f' });
+});
+/** A gate over a Reverse Mountain canal, `a` the way the current runs (the canal water draws these: see rmCanals3d.js). */
+export function rmArch(a) {
+  const root = group('rm_arch');
+  add(root, rmArchGeo());
+  // (across the canal: its local z runs with the current)
+  root.rotation.y = Math.PI / 2 - (a || 0);
+  return root;
+}
+
 reg('gate', (o) => {
   const root = group('gate');
   const big = /justice/i.test(o.name || '') ? 1 : 0;
@@ -871,44 +909,149 @@ reg('sign', (o, ctx) => {
 });
 
 // ------------------------------------------------------------ Laboon
-const whaleGeo = () => model('laboon', (k) => {
-  const top = C('#5d7389'), belly = C('#d7e1ea'), tmp = new THREE.Color();
-  const body = new THREE.SphereGeometry(1, 28, 18);
-  k.add(body, { scale: [10.5, 3.6, 4.2], color: (p, n) => tmp.copy(n.y < -0.25 ? belly : top), outline: 0.1 });
-  // head bulge, eyes, scars and the tail
-  k.add(new THREE.SphereGeometry(1, 16, 12), { at: [-7.2, 0.4, 0], scale: [3.6, 3.2, 3.8], color: '#5a6f85' });
-  for (const s of [-1, 1]) {
-    k.add(new THREE.SphereGeometry(0.5, 10, 8), { at: [-7.0, 0.3, s * 3.55], color: '#fafafa' });
-    k.add(new THREE.SphereGeometry(0.27, 8, 6), { at: [-7.25, 0.3, s * 3.85], color: '#1a1a1a' });
+// The Island Whale of Twin Cape: a hill of a whale, most of him a blunt,
+// towering head — a front like a cliff face, battered pink with fifty years
+// of scars from ramming the Red Line — a long mouth line low down, a pale
+// pleated throat and belly, a small sad eye set just above the corner of the
+// mouth, little flippers, and a body that tapers away behind to the flukes.
+// Model units are metres; +x runs from his forehead (−x, facing the Red Line)
+// back to his tail; y = 0 is the waterline.
+const LB = { L: 112, X0: -52 };
+// (half height, half width and the height of the middle, along him: t 0 forehead → 1 tail)
+const lbCurve = (t, pts) => {
+  for (let i = 1; i < pts.length; i++) {
+    if (t <= pts[i][0]) {
+      const [t0, a] = pts[i - 1], [t1, b] = pts[i];
+      const k = (t - t0) / (t1 - t0), s = k * k * (3 - 2 * k);
+      return a + (b - a) * s;
+    }
   }
-  for (let i = 0; i < 6; i++) k.add(box(0.14, 1.6, 0.12), { at: [-9.4 + i * 0.28, 1.4 + i * 0.15, (i - 2.5) * 0.35], rot: [0.3, 0, 0.6], color: '#ffebee' });
-  k.add(cyl(0.8, 1.6, 3.2, 10), { at: [9.5, 0.2, 0], rot: [0, 0, -Math.PI / 2], scale: [1, 1, 0.55], color: '#4e6177', outline: 0.05 });
-  k.add(slab([[0, 0], [3.2, 2.2], [2.4, 0], [3.2, -2.2]], 0.35), { at: [12.4, 0.6, 0], rot: [Math.PI / 2, 0, 0], color: '#4e6177', outline: 0.05 });
+  return pts[pts.length - 1][1];
+};
+const LB_H = [[0, 21], [0.035, 26.5], [0.12, 28.5], [0.38, 27.5], [0.52, 22], [0.68, 14], [0.84, 7.5], [0.95, 3.6], [1, 2.4]];
+const LB_W = [[0, 16], [0.035, 20.5], [0.2, 22], [0.42, 21], [0.58, 15.5], [0.74, 9.5], [0.9, 4.6], [1, 2.6]];
+const LB_Y = [[0, 3.5], [0.2, 3], [0.6, 1.5], [1, 0.6]];
+const LB_N = [[0, 3.4], [0.35, 3], [0.6, 2.4], [1, 2]]; // squarer at the head, rounder toward the tail
+const lbMouthY = (t) => lbCurve(t, LB_Y) - lbCurve(t, LB_H) * 0.34; // the mouth line (to t ≈ 0.5)
+const lbX = (t) => LB.X0 + t * LB.L;
+const lbT = (x) => (x - LB.X0) / LB.L;
+
+function laboonBody() {
+  const NU = 96, NV = 72;
+  const pos = [], idx = [];
+  const ring = [];
+  for (let i = 0; i <= NU; i++) {
+    const u = i / NU, t = Math.pow(u, 1.25); // (closer rings at the head)
+    const H = lbCurve(t, LB_H), Wd = lbCurve(t, LB_W), Y = lbCurve(t, LB_Y), n = lbCurve(t, LB_N);
+    const e = 2 / n;
+    const x = lbX(t) - (t < 0.03 ? 0 : 0);
+    ring.push(pos.length / 3);
+    for (let j = 0; j < NV; j++) {
+      const a = (j / NV) * Math.PI * 2;
+      const c = Math.cos(a), sn = Math.sin(a);
+      const yy = Math.sign(sn) * Math.pow(Math.abs(sn), e) * H;
+      const zz = Math.sign(c) * Math.pow(Math.abs(c), e) * Wd;
+      // (the forehead bulges forward a little in the middle, like a cliff that leans)
+      const bulge = t < 0.06 ? (1 - t / 0.06) * (1 - (yy / H) ** 2 * 0.6) * 2.2 : 0;
+      pos.push(x - bulge, Y + yy, zz);
+    }
+  }
+  for (let i = 0; i < NU; i++) {
+    for (let j = 0; j < NV; j++) {
+      const a = ring[i] + j, b = ring[i] + ((j + 1) % NV), c = ring[i + 1] + j, d = ring[i + 1] + ((j + 1) % NV);
+      idx.push(a, b, c, b, d, c);
+    }
+  }
+  // caps: the flat forehead and the tail tip
+  const front = pos.length / 3; pos.push(LB.X0 - 3.2, lbCurve(0, LB_Y), 0);
+  for (let j = 0; j < NV; j++) idx.push(front, ring[0] + ((j + 1) % NV), ring[0] + j);
+  const back = pos.length / 3; pos.push(lbX(1) + 1.5, lbCurve(1, LB_Y), 0);
+  for (let j = 0; j < NV; j++) idx.push(back, ring[NU] + j, ring[NU] + ((j + 1) % NV));
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+const laboonGeo = () => model('laboon2', (k) => {
+  const slate = C('#56708e'), slateTop = C('#4a6180'), belly = C('#e7edf0'), pleat = C('#b8c6cf'), scar = C('#d9b7b1'), scarDark = C('#b98e8a');
+  const tmp = new THREE.Color();
+  k.add(laboonBody(), {
+    outline: 0.18,
+    color: (p) => {
+      const t = lbT(p.x);
+      const H = lbCurve(Math.max(0, t), LB_H), Y = lbCurve(Math.max(0, t), LB_Y);
+      const my = t < 0.52 ? lbMouthY(Math.max(0, t)) : Y - H * (0.34 + (t - 0.52) * 0.5);
+      if (p.y < my) {
+        // the throat and belly, pleated from the chin back
+        const d = my - p.y;
+        return (t < 0.62 && ((d * 0.42) % 1) < 0.2) ? pleat : belly;
+      }
+      // fifty years of scars across the forehead
+      if (t < 0.07 && p.y > my + 2) {
+        const h = hash(Math.floor(p.y * 0.55), Math.floor(p.z * 0.55), 7);
+        if (h > 0.58) return h > 0.8 ? scarDark : scar;
+      }
+      const up = Math.max(0, (p.y - Y) / H);
+      return tmp.copy(slate).lerp(slateTop, up * 0.8);
+    },
+  });
+  // the mouth line: along both sides and across the forehead's foot
+  for (const s of [-1, 1]) {
+    const pts = [];
+    for (let t = 0; t <= 0.5; t += 0.02) {
+      const W = lbCurve(t, LB_W);
+      pts.push(new THREE.Vector3(lbX(t) + (t === 0 ? -1.6 : 0), lbMouthY(t), s * (t === 0 ? 0 : W * 0.985)));
+    }
+    k.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.55, 5), { color: '#26313d' });
+  }
+  // the eyes: small, set just above the corner of the mouth, with a heavy lid
+  const te = 0.43, xe = lbX(te), ye = lbMouthY(te) + 3.4, we = lbCurve(te, LB_W);
+  for (const s of [-1, 1]) {
+    k.add(new THREE.SphereGeometry(2.1, 14, 10), { at: [xe, ye, s * (we - 0.9)], color: '#f4f6f8' });
+    k.add(new THREE.SphereGeometry(1.25, 12, 8), { at: [xe - 0.5, ye - 0.2, s * (we + 0.35)], color: '#111418' });
+    k.add(new THREE.SphereGeometry(0.35, 6, 5), { at: [xe - 0.9, ye + 0.35, s * (we + 1.2)], color: '#ffffff' });
+    k.add(new THREE.SphereGeometry(2.5, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.42), { at: [xe + 0.2, ye + 0.35, s * (we - 0.8)], rot: [s * 0.35, 0, 0.25], color: '#4d6481', outline: 0.06 });
+    // a flipper low behind the mouth
+    k.add(new THREE.SphereGeometry(1, 12, 8), { at: [lbX(0.55), lbMouthY(0.5) - 5, s * (lbCurve(0.55, LB_W) + 1.5)], rot: [s * 0.9, -s * 0.55, -0.35], scale: [7.5, 0.9, 3.2], color: '#4e6785', outline: 0.08 });
+  }
+  // the blowhole on the crown, a hump along the back, and the flukes
+  k.add(new THREE.SphereGeometry(1, 10, 6), { at: [lbX(0.13), lbCurve(0.13, LB_Y) + lbCurve(0.13, LB_H) - 0.25, 0], scale: [2.2, 0.35, 1.1], color: '#2e3a47' });
+  k.add(new THREE.SphereGeometry(1, 10, 8), { at: [lbX(0.66), lbCurve(0.66, LB_Y) + lbCurve(0.66, LB_H) - 0.6, 0], scale: [4.5, 1.8, 1.6], color: '#4a6180', outline: 0.06 });
+  for (const s of [-1, 1]) {
+    k.add(new THREE.SphereGeometry(1, 14, 8), { at: [lbX(1) + 5.5, lbCurve(1, LB_Y) + 0.2, s * 6.5], rot: [0, s * 0.45, 0], scale: [5.5, 0.8, 8.5], color: '#4a6180', outline: 0.08 });
+  }
 });
 reg('p1_laboon', (o) => {
   const root = group('laboon');
   root.userData.noGround = true;
-  const whale = add(root, whaleGeo());
+  const whale = add(root, laboonGeo());
   // the Jolly Roger you painted over his scars
   const mark = new Mesher();
   mark.add(new THREE.SphereGeometry(0.8, 10, 8), { at: [0, 0.3, 0], scale: [0.2, 1, 1], color: '#fafafa' });
   for (const a of [0.8, -0.8]) mark.add(box(0.1, 2.6, 0.26), { at: [0, -0.6, 0], rot: [a, 0, 0], color: '#fafafa' });
   const markMesh = new THREE.Mesh(mark.build(false), vcMat());
-  markMesh.position.set(-10.2, 1.6, 0);
-  markMesh.rotation.z = 0.5;
+  markMesh.scale.setScalar(5.5);
+  markMesh.position.set(LB.X0 - 3.0, 12, 0);
   root.add(markMesh);
-  const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.9, 1, 10, 1, true), glowMat(0xe1f5fe, { opacity: 0.6 }));
-  spout.position.set(-3, 3.4, 0);
+  const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 3.2, 1, 12, 1, true), glowMat(0xe1f5fe, { opacity: 0.6 }));
+  spout.position.set(lbX(0.13), 30, 0);
   root.add(spout);
   animate(root, (t) => {
-    const y = -0.7 + Math.sin(t * 0.7) * 0.12;
-    whale.position.y = y; markMesh.position.y = 1.6 + y;
-    markMesh.visible = !!STATE.game?.state?.char?.flags?.p1_laboonMark;
-    const ph = t % 14;
-    const h = ph < 1.6 ? Math.sin((ph / 1.6) * Math.PI) * 4.5 : 0;
-    spout.visible = h > 0.05;
-    spout.scale.set(1 + h * 0.08, h, 1 + h * 0.08);
-    spout.position.y = 3.2 + y + h / 2;
+    const c = STATE.game?.state?.char;
+    // until he's made his promise he still rams the Red Line, every so often
+    const ph = t % 26;
+    const ram = !c?.flags?.p1_laboonPromise && ph < 3.2 ? Math.sin((ph / 3.2) * Math.PI) : 0;
+    const y = -0.8 + Math.sin(t * 0.45) * 0.35 - ram * 0.6;
+    whale.position.set(-ram * 7, y, 0);
+    markMesh.position.set(LB.X0 - 3.0 - ram * 7, 12 + y, 0);
+    markMesh.visible = !!c?.flags?.p1_laboonMark;
+    const sp = t % 17;
+    const h = sp < 2.4 ? Math.sin((sp / 2.4) * Math.PI) * 18 : 0;
+    spout.visible = h > 0.2;
+    spout.scale.set(1 + h * 0.04, h, 1 + h * 0.04);
+    spout.position.set(lbX(0.13) - ram * 7, 28 + y + h / 2, 0);
   });
   return root;
 });

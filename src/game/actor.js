@@ -720,6 +720,11 @@ export class Actor extends Entity {
     this.kb.x *= decay; this.kb.y *= decay;
     if (Math.abs(this.kb.x) < 0.05) this.kb.x = 0;
     if (Math.abs(this.kb.y) < 0.05) this.kb.y = 0;
+    // a swimmer in Reverse Mountain's canals goes where the current goes
+    if (this.inWater && w.zone === 0 && game.currentAt) {
+      const cur = game.currentAt(this.x, this.y, this);
+      if (cur.canal) { vx += cur.x * 0.85; vy += cur.y * 0.85; }
+    }
     this.moveBy(w, vx * dt, vy * dt);
   }
 
@@ -1046,8 +1051,9 @@ export class Actor extends Entity {
     if (this.questMarker) {
       const bob = Math.sin(env.time * 4) * 0.08;
       g.font = 'bold 0.5px Bangers, sans-serif'; g.textAlign = 'center';
-      g.lineWidth = 0.08; g.strokeStyle = '#000'; g.strokeText(this.questMarker, 0, -2.5 * s + bob);
-      g.fillStyle = this.questMarker === '!' ? '#ffd54f' : '#90caf9'; g.fillText(this.questMarker, 0, -2.5 * s + bob);
+      const qm = this.questMarker.replace(/^M/, '');
+      g.lineWidth = 0.08; g.strokeStyle = '#000'; g.strokeText(qm, 0, -2.5 * s + bob);
+      g.fillStyle = this.questMarker[0] === 'M' ? '#ff9100' : qm === '!' ? '#ffd54f' : '#90caf9'; g.fillText(qm, 0, -2.5 * s + bob);
     }
   }
 }

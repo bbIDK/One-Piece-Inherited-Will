@@ -1,8 +1,8 @@
 (() => {
   var __defProp = Object.defineProperty;
-  var __export = (target, all) => {
+  var __export = (target2, all) => {
     for (var name in all)
-      __defProp(target, name, { get: all[name], enumerable: true });
+      __defProp(target2, name, { get: all[name], enumerable: true });
   };
 
   // node_modules/three/build/three.module.js
@@ -1561,8 +1561,8 @@
       if (colorSpace === NoColorSpace) return LinearTransfer;
       return COLOR_SPACES[colorSpace].transfer;
     },
-    getLuminanceCoefficients: function(target, colorSpace = this._workingColorSpace) {
-      return target.fromArray(COLOR_SPACES[colorSpace].luminanceCoefficients);
+    getLuminanceCoefficients: function(target2, colorSpace = this._workingColorSpace) {
+      return target2.fromArray(COLOR_SPACES[colorSpace].luminanceCoefficients);
     }
   };
   function SRGBToLinear(c) {
@@ -3271,11 +3271,11 @@
     isEmpty() {
       return this.max.x < this.min.x || this.max.y < this.min.y || this.max.z < this.min.z;
     }
-    getCenter(target) {
-      return this.isEmpty() ? target.set(0, 0, 0) : target.addVectors(this.min, this.max).multiplyScalar(0.5);
+    getCenter(target2) {
+      return this.isEmpty() ? target2.set(0, 0, 0) : target2.addVectors(this.min, this.max).multiplyScalar(0.5);
     }
-    getSize(target) {
-      return this.isEmpty() ? target.set(0, 0, 0) : target.subVectors(this.max, this.min);
+    getSize(target2) {
+      return this.isEmpty() ? target2.set(0, 0, 0) : target2.subVectors(this.max, this.min);
     }
     expandByPoint(point) {
       this.min.min(point);
@@ -3335,8 +3335,8 @@
     containsBox(box2) {
       return this.min.x <= box2.min.x && box2.max.x <= this.max.x && this.min.y <= box2.min.y && box2.max.y <= this.max.y && this.min.z <= box2.min.z && box2.max.z <= this.max.z;
     }
-    getParameter(point, target) {
-      return target.set(
+    getParameter(point, target2) {
+      return target2.set(
         (point.x - this.min.x) / (this.max.x - this.min.x),
         (point.y - this.min.y) / (this.max.y - this.min.y),
         (point.z - this.min.z) / (this.max.z - this.min.z)
@@ -3426,20 +3426,20 @@
       axes = [_triangleNormal.x, _triangleNormal.y, _triangleNormal.z];
       return satForAxes(axes, _v0$3, _v1$7, _v2$4, _extents);
     }
-    clampPoint(point, target) {
-      return target.copy(point).clamp(this.min, this.max);
+    clampPoint(point, target2) {
+      return target2.copy(point).clamp(this.min, this.max);
     }
     distanceToPoint(point) {
       return this.clampPoint(point, _vector$b).distanceTo(point);
     }
-    getBoundingSphere(target) {
+    getBoundingSphere(target2) {
       if (this.isEmpty()) {
-        target.makeEmpty();
+        target2.makeEmpty();
       } else {
-        this.getCenter(target.center);
-        target.radius = this.getSize(_vector$b).length() * 0.5;
+        this.getCenter(target2.center);
+        target2.radius = this.getSize(_vector$b).length() * 0.5;
       }
-      return target;
+      return target2;
     }
     intersect(box2) {
       this.min.max(box2.min);
@@ -3566,23 +3566,23 @@
     intersectsPlane(plane2) {
       return Math.abs(plane2.distanceToPoint(this.center)) <= this.radius;
     }
-    clampPoint(point, target) {
+    clampPoint(point, target2) {
       const deltaLengthSq = this.center.distanceToSquared(point);
-      target.copy(point);
+      target2.copy(point);
       if (deltaLengthSq > this.radius * this.radius) {
-        target.sub(this.center).normalize();
-        target.multiplyScalar(this.radius).add(this.center);
+        target2.sub(this.center).normalize();
+        target2.multiplyScalar(this.radius).add(this.center);
       }
-      return target;
+      return target2;
     }
-    getBoundingBox(target) {
+    getBoundingBox(target2) {
       if (this.isEmpty()) {
-        target.makeEmpty();
-        return target;
+        target2.makeEmpty();
+        return target2;
       }
-      target.set(this.center, this.center);
-      target.expandByScalar(this.radius);
-      return target;
+      target2.set(this.center, this.center);
+      target2.expandByScalar(this.radius);
+      return target2;
     }
     applyMatrix4(matrix) {
       this.center.applyMatrix4(matrix);
@@ -3655,8 +3655,8 @@
       this.direction.copy(ray.direction);
       return this;
     }
-    at(t, target) {
-      return target.copy(this.origin).addScaledVector(this.direction, t);
+    at(t, target2) {
+      return target2.copy(this.origin).addScaledVector(this.direction, t);
     }
     lookAt(v) {
       this.direction.copy(v).sub(this.origin).normalize();
@@ -3666,13 +3666,13 @@
       this.origin.copy(this.at(t, _vector$a));
       return this;
     }
-    closestPointToPoint(point, target) {
-      target.subVectors(point, this.origin);
-      const directionDistance = target.dot(this.direction);
+    closestPointToPoint(point, target2) {
+      target2.subVectors(point, this.origin);
+      const directionDistance = target2.dot(this.direction);
       if (directionDistance < 0) {
-        return target.copy(this.origin);
+        return target2.copy(this.origin);
       }
-      return target.copy(this.origin).addScaledVector(this.direction, directionDistance);
+      return target2.copy(this.origin).addScaledVector(this.direction, directionDistance);
     }
     distanceToPoint(point) {
       return Math.sqrt(this.distanceSqToPoint(point));
@@ -3745,7 +3745,7 @@
       }
       return sqrDist;
     }
-    intersectSphere(sphere2, target) {
+    intersectSphere(sphere2, target2) {
       _vector$a.subVectors(sphere2.center, this.origin);
       const tca = _vector$a.dot(this.direction);
       const d2 = _vector$a.dot(_vector$a) - tca * tca;
@@ -3755,8 +3755,8 @@
       const t0 = tca - thc;
       const t1 = tca + thc;
       if (t1 < 0) return null;
-      if (t0 < 0) return this.at(t1, target);
-      return this.at(t0, target);
+      if (t0 < 0) return this.at(t1, target2);
+      return this.at(t0, target2);
     }
     intersectsSphere(sphere2) {
       return this.distanceSqToPoint(sphere2.center) <= sphere2.radius * sphere2.radius;
@@ -3772,12 +3772,12 @@
       const t = -(this.origin.dot(plane2.normal) + plane2.constant) / denominator;
       return t >= 0 ? t : null;
     }
-    intersectPlane(plane2, target) {
+    intersectPlane(plane2, target2) {
       const t = this.distanceToPlane(plane2);
       if (t === null) {
         return null;
       }
-      return this.at(t, target);
+      return this.at(t, target2);
     }
     intersectsPlane(plane2) {
       const distToPoint = plane2.distanceToPoint(this.origin);
@@ -3790,7 +3790,7 @@
       }
       return false;
     }
-    intersectBox(box2, target) {
+    intersectBox(box2, target2) {
       let tmin, tmax, tymin, tymax, tzmin, tzmax;
       const invdirx = 1 / this.direction.x, invdiry = 1 / this.direction.y, invdirz = 1 / this.direction.z;
       const origin = this.origin;
@@ -3822,12 +3822,12 @@
       if (tzmin > tmin || tmin !== tmin) tmin = tzmin;
       if (tzmax < tmax || tmax !== tmax) tmax = tzmax;
       if (tmax < 0) return null;
-      return this.at(tmin >= 0 ? tmin : tmax, target);
+      return this.at(tmin >= 0 ? tmin : tmax, target2);
     }
     intersectsBox(box2) {
       return this.intersectBox(box2, _vector$a) !== null;
     }
-    intersectTriangle(a, b, c, backfaceCulling, target) {
+    intersectTriangle(a, b, c, backfaceCulling, target2) {
       _edge1.subVectors(b, a);
       _edge2.subVectors(c, a);
       _normal$1.crossVectors(_edge1, _edge2);
@@ -3858,7 +3858,7 @@
       if (QdN < 0) {
         return null;
       }
-      return this.at(QdN / DdN, target);
+      return this.at(QdN / DdN, target2);
     }
     applyMatrix4(matrix4) {
       this.origin.applyMatrix4(matrix4);
@@ -4127,9 +4127,9 @@
     makeRotationFromQuaternion(q2) {
       return this.compose(_zero, q2, _one);
     }
-    lookAt(eye, target, up) {
+    lookAt(eye, target2, up) {
       const te = this.elements;
-      _z.subVectors(eye, target);
+      _z.subVectors(eye, target2);
       if (_z.lengthSq() === 0) {
         _z.z = 1;
       }
@@ -5114,24 +5114,24 @@
       }
       return result;
     }
-    getWorldPosition(target) {
+    getWorldPosition(target2) {
       this.updateWorldMatrix(true, false);
-      return target.setFromMatrixPosition(this.matrixWorld);
+      return target2.setFromMatrixPosition(this.matrixWorld);
     }
-    getWorldQuaternion(target) {
+    getWorldQuaternion(target2) {
       this.updateWorldMatrix(true, false);
-      this.matrixWorld.decompose(_position$3, target, _scale$2);
-      return target;
+      this.matrixWorld.decompose(_position$3, target2, _scale$2);
+      return target2;
     }
-    getWorldScale(target) {
+    getWorldScale(target2) {
       this.updateWorldMatrix(true, false);
-      this.matrixWorld.decompose(_position$3, _quaternion$2, target);
-      return target;
+      this.matrixWorld.decompose(_position$3, _quaternion$2, target2);
+      return target2;
     }
-    getWorldDirection(target) {
+    getWorldDirection(target2) {
       this.updateWorldMatrix(true, false);
       const e = this.matrixWorld.elements;
-      return target.set(e[8], e[9], e[10]).normalize();
+      return target2.set(e[8], e[9], e[10]).normalize();
     }
     raycast() {
     }
@@ -5425,19 +5425,19 @@
       this.b = b;
       this.c = c;
     }
-    static getNormal(a, b, c, target) {
-      target.subVectors(c, b);
+    static getNormal(a, b, c, target2) {
+      target2.subVectors(c, b);
       _v0$2.subVectors(a, b);
-      target.cross(_v0$2);
-      const targetLengthSq = target.lengthSq();
+      target2.cross(_v0$2);
+      const targetLengthSq = target2.lengthSq();
       if (targetLengthSq > 0) {
-        return target.multiplyScalar(1 / Math.sqrt(targetLengthSq));
+        return target2.multiplyScalar(1 / Math.sqrt(targetLengthSq));
       }
-      return target.set(0, 0, 0);
+      return target2.set(0, 0, 0);
     }
     // static/instance method to calculate barycentric coordinates
     // based on: http://www.blackpawn.com/texts/pointinpoly/default.html
-    static getBarycoord(point, a, b, c, target) {
+    static getBarycoord(point, a, b, c, target2) {
       _v0$2.subVectors(c, a);
       _v1$3.subVectors(b, a);
       _v2$2.subVectors(point, a);
@@ -5448,13 +5448,13 @@
       const dot12 = _v1$3.dot(_v2$2);
       const denom = dot00 * dot11 - dot01 * dot01;
       if (denom === 0) {
-        target.set(0, 0, 0);
+        target2.set(0, 0, 0);
         return null;
       }
       const invDenom = 1 / denom;
       const u = (dot11 * dot02 - dot01 * dot12) * invDenom;
       const v = (dot00 * dot12 - dot01 * dot02) * invDenom;
-      return target.set(1 - u - v, v, u);
+      return target2.set(1 - u - v, v, u);
     }
     static containsPoint(point, a, b, c) {
       if (this.getBarycoord(point, a, b, c, _v3$2) === null) {
@@ -5462,32 +5462,32 @@
       }
       return _v3$2.x >= 0 && _v3$2.y >= 0 && _v3$2.x + _v3$2.y <= 1;
     }
-    static getInterpolation(point, p1, p2, p3, v1, v2, v3, target) {
+    static getInterpolation(point, p1, p2, p3, v1, v2, v3, target2) {
       if (this.getBarycoord(point, p1, p2, p3, _v3$2) === null) {
-        target.x = 0;
-        target.y = 0;
-        if ("z" in target) target.z = 0;
-        if ("w" in target) target.w = 0;
+        target2.x = 0;
+        target2.y = 0;
+        if ("z" in target2) target2.z = 0;
+        if ("w" in target2) target2.w = 0;
         return null;
       }
-      target.setScalar(0);
-      target.addScaledVector(v1, _v3$2.x);
-      target.addScaledVector(v2, _v3$2.y);
-      target.addScaledVector(v3, _v3$2.z);
-      return target;
+      target2.setScalar(0);
+      target2.addScaledVector(v1, _v3$2.x);
+      target2.addScaledVector(v2, _v3$2.y);
+      target2.addScaledVector(v3, _v3$2.z);
+      return target2;
     }
-    static getInterpolatedAttribute(attr, i1, i2, i3, barycoord, target) {
+    static getInterpolatedAttribute(attr, i1, i2, i3, barycoord, target2) {
       _v40.setScalar(0);
       _v41.setScalar(0);
       _v42.setScalar(0);
       _v40.fromBufferAttribute(attr, i1);
       _v41.fromBufferAttribute(attr, i2);
       _v42.fromBufferAttribute(attr, i3);
-      target.setScalar(0);
-      target.addScaledVector(_v40, barycoord.x);
-      target.addScaledVector(_v41, barycoord.y);
-      target.addScaledVector(_v42, barycoord.z);
-      return target;
+      target2.setScalar(0);
+      target2.addScaledVector(_v40, barycoord.x);
+      target2.addScaledVector(_v41, barycoord.y);
+      target2.addScaledVector(_v42, barycoord.z);
+      return target2;
     }
     static isFrontFacing(a, b, c, direction) {
       _v0$2.subVectors(c, b);
@@ -5526,20 +5526,20 @@
       _v1$3.subVectors(this.a, this.b);
       return _v0$2.cross(_v1$3).length() * 0.5;
     }
-    getMidpoint(target) {
-      return target.addVectors(this.a, this.b).add(this.c).multiplyScalar(1 / 3);
+    getMidpoint(target2) {
+      return target2.addVectors(this.a, this.b).add(this.c).multiplyScalar(1 / 3);
     }
-    getNormal(target) {
-      return _Triangle.getNormal(this.a, this.b, this.c, target);
+    getNormal(target2) {
+      return _Triangle.getNormal(this.a, this.b, this.c, target2);
     }
-    getPlane(target) {
-      return target.setFromCoplanarPoints(this.a, this.b, this.c);
+    getPlane(target2) {
+      return target2.setFromCoplanarPoints(this.a, this.b, this.c);
     }
-    getBarycoord(point, target) {
-      return _Triangle.getBarycoord(point, this.a, this.b, this.c, target);
+    getBarycoord(point, target2) {
+      return _Triangle.getBarycoord(point, this.a, this.b, this.c, target2);
     }
-    getInterpolation(point, v1, v2, v3, target) {
-      return _Triangle.getInterpolation(point, this.a, this.b, this.c, v1, v2, v3, target);
+    getInterpolation(point, v1, v2, v3, target2) {
+      return _Triangle.getInterpolation(point, this.a, this.b, this.c, v1, v2, v3, target2);
     }
     containsPoint(point) {
       return _Triangle.containsPoint(point, this.a, this.b, this.c);
@@ -5550,7 +5550,7 @@
     intersectsBox(box2) {
       return box2.intersectsTriangle(this);
     }
-    closestPointToPoint(p, target) {
+    closestPointToPoint(p, target2) {
       const a = this.a, b = this.b, c = this.c;
       let v, w;
       _vab.subVectors(b, a);
@@ -5559,40 +5559,40 @@
       const d1 = _vab.dot(_vap);
       const d2 = _vac.dot(_vap);
       if (d1 <= 0 && d2 <= 0) {
-        return target.copy(a);
+        return target2.copy(a);
       }
       _vbp.subVectors(p, b);
       const d3 = _vab.dot(_vbp);
       const d4 = _vac.dot(_vbp);
       if (d3 >= 0 && d4 <= d3) {
-        return target.copy(b);
+        return target2.copy(b);
       }
       const vc = d1 * d4 - d3 * d2;
       if (vc <= 0 && d1 >= 0 && d3 <= 0) {
         v = d1 / (d1 - d3);
-        return target.copy(a).addScaledVector(_vab, v);
+        return target2.copy(a).addScaledVector(_vab, v);
       }
       _vcp.subVectors(p, c);
       const d5 = _vab.dot(_vcp);
       const d6 = _vac.dot(_vcp);
       if (d6 >= 0 && d5 <= d6) {
-        return target.copy(c);
+        return target2.copy(c);
       }
       const vb = d5 * d2 - d1 * d6;
       if (vb <= 0 && d2 >= 0 && d6 <= 0) {
         w = d2 / (d2 - d6);
-        return target.copy(a).addScaledVector(_vac, w);
+        return target2.copy(a).addScaledVector(_vac, w);
       }
       const va = d3 * d6 - d5 * d4;
       if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
         _vbc.subVectors(c, b);
         w = (d4 - d3) / (d4 - d3 + (d5 - d6));
-        return target.copy(b).addScaledVector(_vbc, w);
+        return target2.copy(b).addScaledVector(_vbc, w);
       }
       const denom = 1 / (va + vb + vc);
       v = vb * denom;
       w = vc * denom;
-      return target.copy(a).addScaledVector(_vab, v).addScaledVector(_vac, w);
+      return target2.copy(a).addScaledVector(_vab, v).addScaledVector(_vac, w);
     }
     equals(triangle) {
       return triangle.a.equals(this.a) && triangle.b.equals(this.b) && triangle.c.equals(this.c);
@@ -5932,7 +5932,7 @@
     getHexString(colorSpace = SRGBColorSpace) {
       return ("000000" + this.getHex(colorSpace).toString(16)).slice(-6);
     }
-    getHSL(target, colorSpace = ColorManagement.workingColorSpace) {
+    getHSL(target2, colorSpace = ColorManagement.workingColorSpace) {
       ColorManagement.fromWorkingColorSpace(_color.copy(this), colorSpace);
       const r = _color.r, g = _color.g, b = _color.b;
       const max = Math.max(r, g, b);
@@ -5958,17 +5958,17 @@
         }
         hue /= 6;
       }
-      target.h = hue;
-      target.s = saturation;
-      target.l = lightness;
-      return target;
+      target2.h = hue;
+      target2.s = saturation;
+      target2.l = lightness;
+      return target2;
     }
-    getRGB(target, colorSpace = ColorManagement.workingColorSpace) {
+    getRGB(target2, colorSpace = ColorManagement.workingColorSpace) {
       ColorManagement.fromWorkingColorSpace(_color.copy(this), colorSpace);
-      target.r = _color.r;
-      target.g = _color.g;
-      target.b = _color.b;
-      return target;
+      target2.r = _color.r;
+      target2.g = _color.g;
+      target2.b = _color.b;
+      return target2;
     }
     getStyle(colorSpace = SRGBColorSpace) {
       ColorManagement.fromWorkingColorSpace(_color.copy(this), colorSpace);
@@ -7481,12 +7481,12 @@
         }
       }
     }
-    getVertexPosition(index, target) {
+    getVertexPosition(index, target2) {
       const geometry = this.geometry;
       const position = geometry.attributes.position;
       const morphPosition = geometry.morphAttributes.position;
       const morphTargetsRelative = geometry.morphTargetsRelative;
-      target.fromBufferAttribute(position, index);
+      target2.fromBufferAttribute(position, index);
       const morphInfluences = this.morphTargetInfluences;
       if (morphPosition && morphInfluences) {
         _morphA.set(0, 0, 0);
@@ -7498,12 +7498,12 @@
           if (morphTargetsRelative) {
             _morphA.addScaledVector(_tempA, influence);
           } else {
-            _morphA.addScaledVector(_tempA.sub(target), influence);
+            _morphA.addScaledVector(_tempA.sub(target2), influence);
           }
         }
-        target.add(_morphA);
+        target2.add(_morphA);
       }
-      return target;
+      return target2;
     }
     raycast(raycaster, intersects2) {
       const geometry = this.geometry;
@@ -7923,8 +7923,8 @@
       this.coordinateSystem = source.coordinateSystem;
       return this;
     }
-    getWorldDirection(target) {
-      return super.getWorldDirection(target).negate();
+    getWorldDirection(target2) {
+      return super.getWorldDirection(target2).negate();
     }
     updateMatrixWorld(force) {
       super.updateMatrixWorld(force);
@@ -8015,9 +8015,9 @@
      * Computes the width and height of the camera's viewable rectangle at a given distance along the viewing direction.
      * Copies the result into the target Vector2, where x is width and y is height.
      */
-    getViewSize(distance, target) {
+    getViewSize(distance, target2) {
       this.getViewBounds(distance, _minTarget, _maxTarget);
-      return target.subVectors(_maxTarget, _minTarget);
+      return target2.subVectors(_maxTarget, _minTarget);
     }
     /**
      * Sets an offset in a larger frustum. This is useful for multi-window or
@@ -8375,15 +8375,15 @@
     distanceToSphere(sphere2) {
       return this.distanceToPoint(sphere2.center) - sphere2.radius;
     }
-    projectPoint(point, target) {
-      return target.copy(point).addScaledVector(this.normal, -this.distanceToPoint(point));
+    projectPoint(point, target2) {
+      return target2.copy(point).addScaledVector(this.normal, -this.distanceToPoint(point));
     }
-    intersectLine(line2, target) {
+    intersectLine(line2, target2) {
       const direction = line2.delta(_vector1);
       const denominator = this.normal.dot(direction);
       if (denominator === 0) {
         if (this.distanceToPoint(line2.start) === 0) {
-          return target.copy(line2.start);
+          return target2.copy(line2.start);
         }
         return null;
       }
@@ -8391,7 +8391,7 @@
       if (t < 0 || t > 1) {
         return null;
       }
-      return target.copy(line2.start).addScaledVector(direction, t);
+      return target2.copy(line2.start).addScaledVector(direction, t);
     }
     intersectsLine(line2) {
       const startSign = this.distanceToPoint(line2.start);
@@ -8404,8 +8404,8 @@
     intersectsSphere(sphere2) {
       return sphere2.intersectsPlane(this);
     }
-    coplanarPoint(target) {
-      return target.copy(this.normal).multiplyScalar(-this.constant);
+    coplanarPoint(target2) {
+      return target2.copy(this.normal).multiplyScalar(-this.constant);
     }
     applyMatrix4(matrix, optionalNormalMatrix) {
       const normalMatrix = optionalNormalMatrix || _normalMatrix.getNormalMatrix(matrix);
@@ -10702,9 +10702,9 @@
     cubeUVRenderTarget.scissorTest = true;
     return cubeUVRenderTarget;
   }
-  function _setViewport(target, x, y, width, height) {
-    target.viewport.set(x, y, width, height);
-    target.scissor.set(x, y, width, height);
+  function _setViewport(target2, x, y, width, height) {
+    target2.viewport.set(x, y, width, height);
+    target2.scissor.set(x, y, width, height);
   }
   function _getBlurShader(lodMax, width, height) {
     const weights = new Float32Array(MAX_SAMPLES);
@@ -14324,7 +14324,7 @@
     const viewportParam = gl.getParameter(gl.VIEWPORT);
     const currentScissor = new Vector4().fromArray(scissorParam);
     const currentViewport = new Vector4().fromArray(viewportParam);
-    function createTexture(type, target, count2, dimensions) {
+    function createTexture(type, target2, count2, dimensions) {
       const data = new Uint8Array(4);
       const texture2 = gl.createTexture();
       gl.bindTexture(type, texture2);
@@ -14332,9 +14332,9 @@
       gl.texParameteri(type, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
       for (let i = 0; i < count2; i++) {
         if (type === gl.TEXTURE_3D || type === gl.TEXTURE_2D_ARRAY) {
-          gl.texImage3D(target, 0, gl.RGBA, 1, 1, dimensions, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+          gl.texImage3D(target2, 0, gl.RGBA, 1, 1, dimensions, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
         } else {
-          gl.texImage2D(target + i, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+          gl.texImage2D(target2 + i, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
         }
       }
       return texture2;
@@ -14365,14 +14365,14 @@
         enabledCapabilities[id] = false;
       }
     }
-    function bindFramebuffer(target, framebuffer) {
-      if (currentBoundFramebuffers[target] !== framebuffer) {
-        gl.bindFramebuffer(target, framebuffer);
-        currentBoundFramebuffers[target] = framebuffer;
-        if (target === gl.DRAW_FRAMEBUFFER) {
+    function bindFramebuffer(target2, framebuffer) {
+      if (currentBoundFramebuffers[target2] !== framebuffer) {
+        gl.bindFramebuffer(target2, framebuffer);
+        currentBoundFramebuffers[target2] = framebuffer;
+        if (target2 === gl.DRAW_FRAMEBUFFER) {
           currentBoundFramebuffers[gl.FRAMEBUFFER] = framebuffer;
         }
-        if (target === gl.FRAMEBUFFER) {
+        if (target2 === gl.FRAMEBUFFER) {
           currentBoundFramebuffers[gl.DRAW_FRAMEBUFFER] = framebuffer;
         }
         return true;
@@ -15041,8 +15041,8 @@
     function textureNeedsGenerateMipmaps(texture2) {
       return texture2.generateMipmaps && texture2.minFilter !== NearestFilter && texture2.minFilter !== LinearFilter;
     }
-    function generateMipmap(target) {
-      _gl.generateMipmap(target);
+    function generateMipmap(target2) {
+      _gl.generateMipmap(target2);
     }
     function getInternalFormat(internalFormatName, glFormat, glType, colorSpace, forceLinearTransfer = false) {
       if (internalFormatName !== null) {
@@ -15989,10 +15989,10 @@
       for (let i = 0, il = textures.length; i < il; i++) {
         const texture2 = textures[i];
         if (textureNeedsGenerateMipmaps(texture2)) {
-          const target = renderTarget.isWebGLCubeRenderTarget ? _gl.TEXTURE_CUBE_MAP : _gl.TEXTURE_2D;
+          const target2 = renderTarget.isWebGLCubeRenderTarget ? _gl.TEXTURE_CUBE_MAP : _gl.TEXTURE_2D;
           const webglTexture = properties.get(texture2).__webglTexture;
-          state.bindTexture(target, webglTexture);
-          generateMipmap(target);
+          state.bindTexture(target2, webglTexture);
+          generateMipmap(target2);
           state.unbindTexture();
         }
       }
@@ -17662,8 +17662,8 @@ void main() {
         _pixelRatio = value;
         this.setSize(_width, _height, false);
       };
-      this.getSize = function(target) {
-        return target.set(_width, _height);
+      this.getSize = function(target2) {
+        return target2.set(_width, _height);
       };
       this.setSize = function(width, height, updateStyle = true) {
         if (xr.isPresenting) {
@@ -17680,8 +17680,8 @@ void main() {
         }
         this.setViewport(0, 0, width, height);
       };
-      this.getDrawingBufferSize = function(target) {
-        return target.set(_width * _pixelRatio, _height * _pixelRatio).floor();
+      this.getDrawingBufferSize = function(target2) {
+        return target2.set(_width * _pixelRatio, _height * _pixelRatio).floor();
       };
       this.setDrawingBufferSize = function(width, height, pixelRatio) {
         _width = width;
@@ -17691,11 +17691,11 @@ void main() {
         canvas2.height = Math.floor(height * pixelRatio);
         this.setViewport(0, 0, width, height);
       };
-      this.getCurrentViewport = function(target) {
-        return target.copy(_currentViewport);
+      this.getCurrentViewport = function(target2) {
+        return target2.copy(_currentViewport);
       };
-      this.getViewport = function(target) {
-        return target.copy(_viewport);
+      this.getViewport = function(target2) {
+        return target2.copy(_viewport);
       };
       this.setViewport = function(x, y, width, height) {
         if (x.isVector4) {
@@ -17705,8 +17705,8 @@ void main() {
         }
         state.viewport(_currentViewport.copy(_viewport).multiplyScalar(_pixelRatio).round());
       };
-      this.getScissor = function(target) {
-        return target.copy(_scissor);
+      this.getScissor = function(target2) {
+        return target2.copy(_scissor);
       };
       this.setScissor = function(x, y, width, height) {
         if (x.isVector4) {
@@ -17728,8 +17728,8 @@ void main() {
       this.setTransparentSort = function(method) {
         _transparentSort = method;
       };
-      this.getClearColor = function(target) {
-        return target.copy(background.getClearColor());
+      this.getClearColor = function(target2) {
+        return target2.copy(background.getClearColor());
       };
       this.setClearColor = function() {
         background.setClearColor.apply(background, arguments);
@@ -18925,9 +18925,9 @@ void main() {
         if (level === 0 && dstTexture.generateMipmaps) _gl.generateMipmap(glTarget);
         state.unbindTexture();
       };
-      this.initRenderTarget = function(target) {
-        if (properties.get(target).__webglFramebuffer === void 0) {
-          textures.setupRenderTarget(target);
+      this.initRenderTarget = function(target2) {
+        if (properties.get(target2).__webglFramebuffer === void 0) {
+          textures.setupRenderTarget(target2);
         }
       };
       this.initTexture = function(texture2) {
@@ -19644,10 +19644,10 @@ void main() {
       }
       this._computeIntersections(raycaster, intersects2, _ray$2);
     }
-    getVertexPosition(index, target) {
-      super.getVertexPosition(index, target);
-      this.applyBoneTransform(index, target);
-      return target;
+    getVertexPosition(index, target2) {
+      super.getVertexPosition(index, target2);
+      this.applyBoneTransform(index, target2);
+      return target2;
     }
     bind(skeleton, bindMatrix) {
       this.skeleton = skeleton;
@@ -20065,19 +20065,19 @@ void main() {
   var _renderList = /* @__PURE__ */ new MultiDrawRenderList();
   var _mesh = /* @__PURE__ */ new Mesh();
   var _batchIntersects = [];
-  function copyAttributeData(src, target, targetOffset = 0) {
-    const itemSize = target.itemSize;
-    if (src.isInterleavedBufferAttribute || src.array.constructor !== target.array.constructor) {
+  function copyAttributeData(src, target2, targetOffset = 0) {
+    const itemSize = target2.itemSize;
+    if (src.isInterleavedBufferAttribute || src.array.constructor !== target2.array.constructor) {
       const vertexCount = src.count;
       for (let i = 0; i < vertexCount; i++) {
         for (let c = 0; c < itemSize; c++) {
-          target.setComponent(i + targetOffset, c, src.getComponent(i, c));
+          target2.setComponent(i + targetOffset, c, src.getComponent(i, c));
         }
       }
     } else {
-      target.array.set(src.array, targetOffset * itemSize);
+      target2.array.set(src.array, targetOffset * itemSize);
     }
-    target.needsUpdate = true;
+    target2.needsUpdate = true;
   }
   var BatchedMesh = class extends Mesh {
     get maxInstanceCount() {
@@ -20373,7 +20373,7 @@ void main() {
       return this;
     }
     // get bounding box and compute it if it doesn't exist
-    getBoundingBoxAt(geometryId, target) {
+    getBoundingBoxAt(geometryId, target2) {
       if (geometryId >= this._geometryCount) {
         return null;
       }
@@ -20394,11 +20394,11 @@ void main() {
         }
         bound.boxInitialized = true;
       }
-      target.copy(box2);
-      return target;
+      target2.copy(box2);
+      return target2;
     }
     // get bounding sphere and compute it if it doesn't exist
-    getBoundingSphereAt(geometryId, target) {
+    getBoundingSphereAt(geometryId, target2) {
       if (geometryId >= this._geometryCount) {
         return null;
       }
@@ -20424,8 +20424,8 @@ void main() {
         sphere2.radius = Math.sqrt(maxRadiusSq);
         bound.sphereInitialized = true;
       }
-      target.copy(sphere2);
-      return target;
+      target2.copy(sphere2);
+      return target2;
     }
     setMatrixAt(instanceId, matrix) {
       const drawInfo = this._drawInfo;
@@ -20502,14 +20502,14 @@ void main() {
       }
       return drawInfo[instanceId].geometryIndex;
     }
-    getGeometryRangeAt(geometryId, target = {}) {
+    getGeometryRangeAt(geometryId, target2 = {}) {
       if (geometryId < 0 || geometryId >= this._geometryCount) {
         return null;
       }
       const drawRange = this._drawRanges[geometryId];
-      target.start = drawRange.start;
-      target.count = drawRange.count;
-      return target;
+      target2.start = drawRange.start;
+      target2.count = drawRange.count;
+      return target2;
     }
     raycast(raycaster, intersects2) {
       const drawInfo = this._drawInfo;
@@ -21101,14 +21101,14 @@ void main() {
       }
       this.needsUpdate = false;
       const cache3 = [];
-      let current, last = this.getPoint(0);
+      let current2, last = this.getPoint(0);
       let sum = 0;
       cache3.push(0);
       for (let p = 1; p <= divisions; p++) {
-        current = this.getPoint(p / divisions);
-        sum += current.distanceTo(last);
+        current2 = this.getPoint(p / divisions);
+        sum += current2.distanceTo(last);
         cache3.push(sum);
-        last = current;
+        last = current2;
       }
       this.cacheArcLengths = cache3;
       return cache3;
@@ -24218,16 +24218,16 @@ void main() {
       const P1 = new Vector3();
       const P23 = new Vector3();
       const B4 = new Vector3();
-      const T3 = new Vector3();
+      const T4 = new Vector3();
       const N4 = new Vector3();
       for (let i = 0; i <= tubularSegments; ++i) {
         const u = i / tubularSegments * p * Math.PI * 2;
         calculatePositionOnCurve(u, p, q2, radius, P1);
         calculatePositionOnCurve(u + 0.01, p, q2, radius, P23);
-        T3.subVectors(P23, P1);
+        T4.subVectors(P23, P1);
         N4.addVectors(P23, P1);
-        B4.crossVectors(T3, N4);
-        N4.crossVectors(B4, T3);
+        B4.crossVectors(T4, N4);
+        N4.crossVectors(B4, T4);
         B4.normalize();
         N4.normalize();
         for (let j = 0; j <= radialSegments; ++j) {
@@ -26138,9 +26138,9 @@ void main() {
           case "blob":
             return response.blob();
           case "document":
-            return response.text().then((text) => {
+            return response.text().then((text2) => {
               const parser = new DOMParser();
-              return parser.parseFromString(text, mimeType);
+              return parser.parseFromString(text2, mimeType);
             });
           case "json":
             return response.json();
@@ -26199,9 +26199,9 @@ void main() {
       loader.setPath(this.path);
       loader.setRequestHeader(this.requestHeader);
       loader.setWithCredentials(this.withCredentials);
-      loader.load(url, function(text) {
+      loader.load(url, function(text2) {
         try {
-          onLoad(scope.parse(JSON.parse(text)));
+          onLoad(scope.parse(JSON.parse(text2)));
         } catch (e) {
           if (onError) {
             onError(e);
@@ -26825,36 +26825,36 @@ void main() {
     }
     // get the radiance in the direction of the normal
     // target is a Vector3
-    getAt(normal, target) {
+    getAt(normal, target2) {
       const x = normal.x, y = normal.y, z = normal.z;
       const coeff = this.coefficients;
-      target.copy(coeff[0]).multiplyScalar(0.282095);
-      target.addScaledVector(coeff[1], 0.488603 * y);
-      target.addScaledVector(coeff[2], 0.488603 * z);
-      target.addScaledVector(coeff[3], 0.488603 * x);
-      target.addScaledVector(coeff[4], 1.092548 * (x * y));
-      target.addScaledVector(coeff[5], 1.092548 * (y * z));
-      target.addScaledVector(coeff[6], 0.315392 * (3 * z * z - 1));
-      target.addScaledVector(coeff[7], 1.092548 * (x * z));
-      target.addScaledVector(coeff[8], 0.546274 * (x * x - y * y));
-      return target;
+      target2.copy(coeff[0]).multiplyScalar(0.282095);
+      target2.addScaledVector(coeff[1], 0.488603 * y);
+      target2.addScaledVector(coeff[2], 0.488603 * z);
+      target2.addScaledVector(coeff[3], 0.488603 * x);
+      target2.addScaledVector(coeff[4], 1.092548 * (x * y));
+      target2.addScaledVector(coeff[5], 1.092548 * (y * z));
+      target2.addScaledVector(coeff[6], 0.315392 * (3 * z * z - 1));
+      target2.addScaledVector(coeff[7], 1.092548 * (x * z));
+      target2.addScaledVector(coeff[8], 0.546274 * (x * x - y * y));
+      return target2;
     }
     // get the irradiance (radiance convolved with cosine lobe) in the direction of the normal
     // target is a Vector3
     // https://graphics.stanford.edu/papers/envmap/envmap.pdf
-    getIrradianceAt(normal, target) {
+    getIrradianceAt(normal, target2) {
       const x = normal.x, y = normal.y, z = normal.z;
       const coeff = this.coefficients;
-      target.copy(coeff[0]).multiplyScalar(0.886227);
-      target.addScaledVector(coeff[1], 2 * 0.511664 * y);
-      target.addScaledVector(coeff[2], 2 * 0.511664 * z);
-      target.addScaledVector(coeff[3], 2 * 0.511664 * x);
-      target.addScaledVector(coeff[4], 2 * 0.429043 * x * y);
-      target.addScaledVector(coeff[5], 2 * 0.429043 * y * z);
-      target.addScaledVector(coeff[6], 0.743125 * z * z - 0.247708);
-      target.addScaledVector(coeff[7], 2 * 0.429043 * x * z);
-      target.addScaledVector(coeff[8], 0.429043 * (x * x - y * y));
-      return target;
+      target2.copy(coeff[0]).multiplyScalar(0.886227);
+      target2.addScaledVector(coeff[1], 2 * 0.511664 * y);
+      target2.addScaledVector(coeff[2], 2 * 0.511664 * z);
+      target2.addScaledVector(coeff[3], 2 * 0.511664 * x);
+      target2.addScaledVector(coeff[4], 2 * 0.429043 * x * y);
+      target2.addScaledVector(coeff[5], 2 * 0.429043 * y * z);
+      target2.addScaledVector(coeff[6], 0.743125 * z * z - 0.247708);
+      target2.addScaledVector(coeff[7], 2 * 0.429043 * x * z);
+      target2.addScaledVector(coeff[8], 0.429043 * (x * x - y * y));
+      return target2;
     }
     add(sh) {
       for (let i = 0; i < 9; i++) {
@@ -26956,9 +26956,9 @@ void main() {
       loader.setPath(scope.path);
       loader.setRequestHeader(scope.requestHeader);
       loader.setWithCredentials(scope.withCredentials);
-      loader.load(url, function(text) {
+      loader.load(url, function(text2) {
         try {
-          onLoad(scope.parse(JSON.parse(text)));
+          onLoad(scope.parse(JSON.parse(text2)));
         } catch (e) {
           if (onError) {
             onError(e);
@@ -27242,9 +27242,9 @@ void main() {
       loader.setPath(scope.path);
       loader.setRequestHeader(scope.requestHeader);
       loader.setWithCredentials(scope.withCredentials);
-      loader.load(url, function(text) {
+      loader.load(url, function(text2) {
         try {
-          onLoad(scope.parse(JSON.parse(text)));
+          onLoad(scope.parse(JSON.parse(text2)));
         } catch (e) {
           if (onError) {
             onError(e);
@@ -27356,10 +27356,10 @@ void main() {
       loader.setPath(this.path);
       loader.setRequestHeader(this.requestHeader);
       loader.setWithCredentials(this.withCredentials);
-      loader.load(url, function(text) {
+      loader.load(url, function(text2) {
         let json = null;
         try {
-          json = JSON.parse(text);
+          json = JSON.parse(text2);
         } catch (error) {
           if (onError !== void 0) onError(error);
           console.error("THREE:ObjectLoader: Can't parse " + url + ".", error.message);
@@ -27382,8 +27382,8 @@ void main() {
       loader.setPath(this.path);
       loader.setRequestHeader(this.requestHeader);
       loader.setWithCredentials(this.withCredentials);
-      const text = await loader.loadAsync(url, onProgress);
-      const json = JSON.parse(text);
+      const text2 = await loader.loadAsync(url, onProgress);
+      const json = JSON.parse(text2);
       const metadata = json.metadata;
       if (metadata === void 0 || metadata.type === void 0 || metadata.type.toLowerCase() === "geometry") {
         throw new Error("THREE.ObjectLoader: Can't load " + url);
@@ -27928,9 +27928,9 @@ void main() {
       object.traverse(function(child) {
         if (child.isDirectionalLight || child.isSpotLight) {
           const uuid = child.target;
-          const target = object.getObjectByProperty("uuid", uuid);
-          if (target !== void 0) {
-            child.target = target;
+          const target2 = object.getObjectByProperty("uuid", uuid);
+          if (target2 !== void 0) {
+            child.target = target2;
           } else {
             child.target = new Object3D();
           }
@@ -30284,11 +30284,11 @@ void main() {
     isEmpty() {
       return this.max.x < this.min.x || this.max.y < this.min.y;
     }
-    getCenter(target) {
-      return this.isEmpty() ? target.set(0, 0) : target.addVectors(this.min, this.max).multiplyScalar(0.5);
+    getCenter(target2) {
+      return this.isEmpty() ? target2.set(0, 0) : target2.addVectors(this.min, this.max).multiplyScalar(0.5);
     }
-    getSize(target) {
-      return this.isEmpty() ? target.set(0, 0) : target.subVectors(this.max, this.min);
+    getSize(target2) {
+      return this.isEmpty() ? target2.set(0, 0) : target2.subVectors(this.max, this.min);
     }
     expandByPoint(point) {
       this.min.min(point);
@@ -30311,8 +30311,8 @@ void main() {
     containsBox(box2) {
       return this.min.x <= box2.min.x && box2.max.x <= this.max.x && this.min.y <= box2.min.y && box2.max.y <= this.max.y;
     }
-    getParameter(point, target) {
-      return target.set(
+    getParameter(point, target2) {
+      return target2.set(
         (point.x - this.min.x) / (this.max.x - this.min.x),
         (point.y - this.min.y) / (this.max.y - this.min.y)
       );
@@ -30320,8 +30320,8 @@ void main() {
     intersectsBox(box2) {
       return box2.max.x >= this.min.x && box2.min.x <= this.max.x && box2.max.y >= this.min.y && box2.min.y <= this.max.y;
     }
-    clampPoint(point, target) {
-      return target.copy(point).clamp(this.min, this.max);
+    clampPoint(point, target2) {
+      return target2.copy(point).clamp(this.min, this.max);
     }
     distanceToPoint(point) {
       return this.clampPoint(point, _vector$4).distanceTo(point);
@@ -30363,11 +30363,11 @@ void main() {
       this.end.copy(line2.end);
       return this;
     }
-    getCenter(target) {
-      return target.addVectors(this.start, this.end).multiplyScalar(0.5);
+    getCenter(target2) {
+      return target2.addVectors(this.start, this.end).multiplyScalar(0.5);
     }
-    delta(target) {
-      return target.subVectors(this.end, this.start);
+    delta(target2) {
+      return target2.subVectors(this.end, this.start);
     }
     distanceSq() {
       return this.start.distanceToSquared(this.end);
@@ -30375,8 +30375,8 @@ void main() {
     distance() {
       return this.start.distanceTo(this.end);
     }
-    at(t, target) {
-      return this.delta(target).multiplyScalar(t).add(this.start);
+    at(t, target2) {
+      return this.delta(target2).multiplyScalar(t).add(this.start);
     }
     closestPointToPointParameter(point, clampToLine) {
       _startP.subVectors(point, this.start);
@@ -30389,9 +30389,9 @@ void main() {
       }
       return t;
     }
-    closestPointToPoint(point, clampToLine, target) {
+    closestPointToPoint(point, clampToLine, target2) {
       const t = this.closestPointToPointParameter(point, clampToLine);
-      return this.delta(target).multiplyScalar(t).add(this.start);
+      return this.delta(target2).multiplyScalar(t).add(this.start);
     }
     applyMatrix4(matrix) {
       this.start.applyMatrix4(matrix);
@@ -30829,7 +30829,7 @@ void main() {
       const colorCross = new Color(3355443);
       this.setColors(colorFrustum, colorCone, colorUp, colorTarget, colorCross);
     }
-    setColors(frustum, cone2, up, target, cross) {
+    setColors(frustum, cone2, up, target2, cross) {
       const geometry = this.geometry;
       const colorAttribute = geometry.getAttribute("color");
       colorAttribute.setXYZ(0, frustum.r, frustum.g, frustum.b);
@@ -30870,8 +30870,8 @@ void main() {
       colorAttribute.setXYZ(35, up.r, up.g, up.b);
       colorAttribute.setXYZ(36, up.r, up.g, up.b);
       colorAttribute.setXYZ(37, up.r, up.g, up.b);
-      colorAttribute.setXYZ(38, target.r, target.g, target.b);
-      colorAttribute.setXYZ(39, target.r, target.g, target.b);
+      colorAttribute.setXYZ(38, target2.r, target2.g, target2.b);
+      colorAttribute.setXYZ(39, target2.r, target2.g, target2.b);
       colorAttribute.setXYZ(40, cross.r, cross.g, cross.b);
       colorAttribute.setXYZ(41, cross.r, cross.g, cross.b);
       colorAttribute.setXYZ(42, cross.r, cross.g, cross.b);
@@ -31436,13 +31436,15 @@ void main() {
   }
 
   // src/world/constants.js
-  var WORLD_SCALE = 1.5;
-  var chart = (v) => Math.round(v * WORLD_SCALE);
+  var POS_SCALE2 = 6;
+  var SIZE_SCALE2 = 2.25;
+  var chart = (v) => Math.round(v * POS_SCALE2);
+  var csize = (v) => Math.round(v * SIZE_SCALE2);
   var W = chart(4096);
   var H = chart(2048);
   var EQ = chart(1024);
   var GL_HALF = chart(200);
-  var CB = chart(72);
+  var CB = chart(100);
   var RL_HALF = chart(46);
   var RM_X = chart(2048);
   var POLAR = chart(26);
@@ -31485,10 +31487,14 @@ void main() {
     red_line: REGION.RED_LINE
   };
   var wrapX = (x) => (x % W + W) % W;
+  var RMX = 900;
+  var RMY = 2150;
   function regionAt(x, y) {
     x = wrapX(x);
     if (y < POLAR || y >= H - POLAR) return REGION.POLAR;
     if (Math.abs(x - RM_X) < RL_HALF || x < RL_HALF || x >= W - RL_HALF) return REGION.RED_LINE;
+    const ey = (y - EQ) / RMY;
+    if (Math.abs(ey) < 1 && Math.abs(x - RM_X) < RMX * Math.sqrt(1 - ey * ey)) return REGION.RED_LINE;
     const east = x > RM_X;
     if (y >= GL_TOP && y < GL_BOTTOM) return east ? REGION.PARADISE : REGION.NEW_WORLD;
     if (y >= CB_TOP && y < GL_TOP) return REGION.CALM_NORTH;
@@ -31948,6 +31954,8 @@ void main() {
     ABYSS: 6,
     POND: 7,
     ACID: 8,
+    RAPIDS: 9,
+    // Reverse Mountain's canals: the sea running up (and down) a mountain
     SAND: 16,
     GRASS: 17,
     DIRT: 18,
@@ -32000,7 +32008,7 @@ void main() {
   var DAMAGE = new Float32Array(N);
   for (let i = 0; i < 16; i++) IS_LIQUID[i] = 1;
   for (let i = 16; i < N; i++) WALKABLE[i] = 1;
-  for (const t of [T.SEA, T.RIVER, T.CANAL, T.CLOUD_SEA, T.POND]) {
+  for (const t of [T.SEA, T.RIVER, T.CANAL, T.CLOUD_SEA, T.POND, T.RAPIDS]) {
     SAILABLE[t] = 1;
     SWIMMABLE[t] = 1;
   }
@@ -32030,6 +32038,7 @@ void main() {
     [T.SEA]: ["#1d6fb8", "#39a7d8"],
     [T.RIVER]: ["#2b8fc4", "#58bde0"],
     [T.CANAL]: ["#2a86b0", "#4fb0cf"],
+    [T.RAPIDS]: ["#3a9ccf", "#bfe9f5"],
     [T.CLOUD_SEA]: ["#dbe9f7", "#ffffff"],
     [T.LAVA]: ["#e8420e", "#ffb02e"],
     [T.REEF]: ["#34b3b8", "#e7d9a8"],
@@ -32166,29 +32175,31 @@ void main() {
      * Upload a tile map. `world` = RGBA8 (type, elevation, climate, variant),
      * `dist` = R8 signed distance, `map` = RGBA8 half-res painted map, `fog` = R8 explored mask.
      */
-    setWorld({ width, height, world, dist, map, mapW, mapH, fog, fogW, fogH }) {
+    setWorld({ width, height, mapDist, map, mapW, mapH, fog, fogW, fogH }) {
       const gl = this.gl;
       for (const k of ["world", "dist", "map", "fog"]) if (this.textures[k]) gl.deleteTexture(this.textures[k]);
       this.width = width;
       this.height = height;
       this.textures.world = texture(gl, { width: 1, height: 1, internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, data: new Uint8Array(4) });
-      const half2 = new Uint8Array(mapW * mapH);
-      const sx = width / mapW, sy = height / mapH;
-      for (let y = 0; y < mapH; y++) {
-        const row = Math.min(height - 1, Math.floor(y * sy)) * width;
-        for (let x = 0; x < mapW; x++) half2[y * mapW + x] = dist[row + Math.min(width - 1, Math.floor(x * sx))];
-      }
-      this.textures.dist = texture(gl, { width: mapW, height: mapH, internal: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, data: half2, filter: gl.LINEAR, mipmaps: true });
+      this.textures.dist = texture(gl, { width: mapW, height: mapH, internal: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, data: mapDist, filter: gl.LINEAR, mipmaps: true });
       this.textures.map = texture(gl, { width: mapW, height: mapH, internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, data: map, filter: gl.LINEAR, mipmaps: true });
       this.fogW = fogW;
       this.fogH = fogH;
       this.textures.fog = texture(gl, { width: fogW, height: fogH, internal: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, data: fog, filter: gl.LINEAR });
     }
-    updateFog(fog) {
+    /** Upload the explored mask (all of it, or just the rectangle of cells that changed). */
+    updateFog(fog, rect = null) {
       const gl = this.gl;
       gl.bindTexture(gl.TEXTURE_2D, this.textures.fog);
       gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.fogW, this.fogH, gl.RED, gl.UNSIGNED_BYTE, fog);
+      if (!rect) {
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.fogW, this.fogH, gl.RED, gl.UNSIGNED_BYTE, fog);
+        return;
+      }
+      const w = rect.x1 - rect.x0 + 1, h2 = rect.y1 - rect.y0 + 1;
+      const sub = new Uint8Array(w * h2);
+      for (let y = 0; y < h2; y++) sub.set(fog.subarray((rect.y0 + y) * this.fogW + rect.x0, (rect.y0 + y) * this.fogW + rect.x0 + w), y * w);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, rect.x0, rect.y0, w, h2, gl.RED, gl.UNSIGNED_BYTE, sub);
     }
     /** Re-upload a rectangle of tiles after the map changed (x0,y0 inclusive, w,h). */
     updateTiles(worldRGBA, dist, x0, y0, w, h2, fullW) {
@@ -33683,6 +33694,168 @@ void main() {
     }
   };
 
+  // src/world/reverseMountain.js
+  var RM = {
+    x: RM_X,
+    y: EQ,
+    rx: 900,
+    // the massif's reach across the Red Line (the coast bulges out this far)…
+    ry: 2150,
+    // …and along it
+    top: 160,
+    // water level of the summit pool, metres above the sea
+    poolR: 36,
+    halfW: 11,
+    // half the width of a canal
+    climb: 740,
+    // the last stretch of each canal, where it climbs the mountain
+    drop: 620,
+    // the torrent down to Paradise
+    cone: { rx: 760, ry: 1250, h: 110 },
+    // the mountain standing on the Red Line
+    upSpeed: 20,
+    // m/s of the currents up the mountain…
+    downSpeed: 28
+    // …and of the torrent down
+  };
+  var UP_PTS = [[1150, 2020], [620, 1900], [300, 1560], [150, 950], [70, 420], [24, 70], [8, 22]];
+  var EXIT_PTS = [[30, 0], [260, 6], [620, -8], [980, 4], [1230, 0]];
+  var CANALS = [
+    { id: "east_blue", sx: 1, sy: -1 },
+    { id: "north_blue", sx: -1, sy: -1 },
+    { id: "west_blue", sx: -1, sy: 1 },
+    { id: "south_blue", sx: 1, sy: 1 },
+    { id: "exit", exit: true }
+  ];
+  var STEP = 4;
+  var CELL = 32;
+  function catmull(pts, step) {
+    const out = [];
+    const P4 = [pts[0], ...pts, pts[pts.length - 1]];
+    for (let i = 1; i < P4.length - 2; i++) {
+      const [p0, p1, p2, p3] = [P4[i - 1], P4[i], P4[i + 1], P4[i + 2]];
+      const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+      const n = Math.max(1, Math.ceil(len / step));
+      for (let k = 0; k < n; k++) {
+        const t = k / n, t2 = t * t, t3 = t2 * t;
+        const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+        out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+      }
+    }
+    out.push(pts[pts.length - 1]);
+    return out;
+  }
+  var smooth = (t) => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+  function build() {
+    for (const c of CANALS) {
+      const pts = c.exit ? EXIT_PTS : UP_PTS.map(([x, y]) => [x * c.sx, y * c.sy]);
+      const raw = catmull(pts, STEP);
+      const n = raw.length;
+      c.x = new Float32Array(n);
+      c.y = new Float32Array(n);
+      c.s = new Float32Array(n);
+      c.lv = new Float32Array(n);
+      c.fx = new Float32Array(n);
+      c.fy = new Float32Array(n);
+      let s = 0;
+      for (let i = 0; i < n; i++) {
+        if (i) s += Math.hypot(raw[i][0] - raw[i - 1][0], raw[i][1] - raw[i - 1][1]);
+        c.x[i] = RM.x + raw[i][0];
+        c.y[i] = RM.y + raw[i][1];
+        c.s[i] = s;
+      }
+      c.len = s;
+      for (let i = 0; i < n; i++) {
+        const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1);
+        const dx = c.x[b] - c.x[a], dy = c.y[b] - c.y[a], d = Math.hypot(dx, dy) || 1;
+        c.fx[i] = dx / d;
+        c.fy[i] = dy / d;
+        const si = c.s[i];
+        c.lv[i] = c.exit ? RM.top * (1 - smooth((si - 30) / RM.drop)) : RM.top * smooth((si - (s - RM.climb)) / RM.climb);
+      }
+    }
+    const grid2 = /* @__PURE__ */ new Map();
+    CANALS.forEach((c, ci) => {
+      for (let i = 0; i < c.x.length; i++) {
+        const k = Math.floor(c.x[i] / CELL) * 65536 + Math.floor(c.y[i] / CELL);
+        let l = grid2.get(k);
+        if (!l) grid2.set(k, l = []);
+        l.push(ci, i);
+      }
+    });
+    RM.grid = grid2;
+  }
+  build();
+  function canalLevel(c, s) {
+    if (c.exit) return RM.top * (1 - smooth((s - 30) / RM.drop));
+    return RM.top * smooth((s - (c.len - RM.climb)) / RM.climb);
+  }
+  var HIT = { canal: null, i: 0, d: 0, s: 0, level: 0, fx: 0, fy: 0, side: 0, pool: false };
+  function canalAt(x, y, reach = 40, out = HIT) {
+    const dxs = x - RM.x, dys = y - RM.y;
+    if (Math.abs(dxs) > 1400 || Math.abs(dys) > 2200) return null;
+    const pd = Math.hypot(dxs, dys);
+    if (pd < RM.poolR) {
+      out.canal = CANALS[4];
+      out.i = 0;
+      out.d = 0;
+      out.s = 0;
+      out.level = RM.top;
+      out.pool = true;
+      out.fx = pd > 1 ? -dxs / pd * 0.3 + 0.95 : 1;
+      out.fy = pd > 1 ? -dys / pd * 0.3 : 0;
+      const f = Math.hypot(out.fx, out.fy);
+      out.fx /= f;
+      out.fy /= f;
+      out.side = 0;
+      return out;
+    }
+    let best = -1, bc = 0, bd = reach * reach;
+    const r = Math.ceil(reach / CELL);
+    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+    for (let j = -r; j <= r; j++) {
+      for (let i = -r; i <= r; i++) {
+        const l = RM.grid.get((cx + i) * 65536 + (cy + j));
+        if (!l) continue;
+        for (let k = 0; k < l.length; k += 2) {
+          const c2 = CANALS[l[k]], si = l[k + 1];
+          const ex = x - c2.x[si], ey = y - c2.y[si];
+          const d2 = ex * ex + ey * ey;
+          if (d2 < bd) {
+            bd = d2;
+            best = si;
+            bc = l[k];
+          }
+        }
+      }
+    }
+    if (best < 0) return null;
+    const c = CANALS[bc];
+    let s = c.s[best], px2 = c.x[best], py2 = c.y[best];
+    const ax = x - px2, ay = y - py2;
+    const along = ax * c.fx[best] + ay * c.fy[best];
+    s = Math.max(0, Math.min(c.len, s + along));
+    const side = ax * -c.fy[best] + ay * c.fx[best];
+    out.canal = c;
+    out.i = best;
+    out.s = s;
+    out.d = Math.abs(side);
+    out.side = side;
+    out.level = canalLevel(c, s);
+    out.fx = c.fx[best];
+    out.fy = c.fy[best];
+    out.pool = false;
+    return out;
+  }
+  function coneAt(x, y) {
+    const C3 = RM.cone;
+    const r = Math.hypot((x - RM.x) / C3.rx, (y - RM.y) / C3.ry);
+    if (r >= 1) return 0;
+    const k = 1 - r;
+    return C3.h * k * k * (3 - 2 * k);
+  }
+  var nearRM = (x, y) => Math.abs(x - RM.x) < RM.rx + 500 && Math.abs(y - RM.y) < RM.ry + 400;
+
   // src/world/bframe.js
   var FRONT = [[0, 1], [1, 0], [0, -1], [-1, 0]];
   var rotOf = (b) => ((b.rot | 0) % 4 + 4) % 4;
@@ -34064,9 +34237,9 @@ void main() {
   function layoutOf(b) {
     if (b._layout) return b._layout;
     const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
-    const T3 = WALL_T;
+    const T4 = WALL_T;
     const door = doorOf(b);
-    const L2 = { x0: -fw / 2 + T3, x1: fw / 2 - T3, z0: -fd + T3, z1: -T3, door, items: [], use: [], keeper: null, residents: [], rest: null, room: roomOf(b) };
+    const L2 = { x0: -fw / 2 + T4, x1: fw / 2 - T4, z0: -fd + T4, z1: -T4, door, items: [], use: [], keeper: null, residents: [], rest: null, room: roomOf(b) };
     const R3 = rng(hash(b.x, b.y, (b.v || 0) + 1));
     const P4 = new Placer(L2, R3);
     P4.keep.push({ x0: door.x - door.dw / 2 - 0.22, x1: door.x + door.dw / 2 + 0.22, z0: L2.z1 - Math.max(1, door.dw) - 0.06, z1: L2.z1 + 1 });
@@ -34416,6 +34589,11 @@ void main() {
   BOOST[T.ROCK] = 1.2;
   BOOST[T.FOREST] = 0.3;
   BOOST[T.JUNGLE] = 0.4;
+  function waterLevel(world, x, y) {
+    if (world.zone !== 0 || world.type(x, y) !== T.RAPIDS) return SEA_Y;
+    const k = canalAt(world.wx(x), y, 60);
+    return k ? k.level : SEA_Y;
+  }
   function onRedLine(world, x) {
     if (world.zone !== 0) return false;
     const dm = Math.abs(world.dx(x, RM_X)), ds = Math.abs(world.dx(x, 0));
@@ -34427,7 +34605,7 @@ void main() {
     }
     return 0.45 + Math.min(e, 190) * ELEV_K + BOOST[t];
   }
-  var smooth = (a, b, x) => {
+  var smooth2 = (a, b, x) => {
     const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
@@ -34450,7 +34628,7 @@ void main() {
     else if (d < 14) h2 = -1.75 - (d - 5) * 0.95;
     else h2 = -10.3 - (d - 14) * 1.3;
     if (d > 24) {
-      const k = smooth(24, 32, d);
+      const k = smooth2(24, 32, d);
       const abyss = -(35 + vnoise(cx * 4e-3, cy * 4e-3) * 25);
       h2 = h2 * (1 - k) + abyss * k;
     }
@@ -34480,17 +34658,18 @@ void main() {
       const d = Math.hypot(Math.max(0, -p.depth - along), Math.max(0, across - p.halfW));
       const R3 = Math.min(p.r, 3 + Math.abs(h2 - DOCK_Y) * 0.8);
       if (d >= R3) continue;
-      const w = d <= 0 ? 1 : (1 - smooth(0, R3, d)) * smooth(-0.3, 0.7, h2);
+      const w = d <= 0 ? 1 : (1 - smooth2(0, R3, d)) * smooth2(-0.3, 0.7, h2);
       h2 += (DOCK_Y - 0.06 - h2) * w;
     }
     return h2;
   }
   function naturalHeight(world, cx, cy) {
-    let sum = 0, n = 0, walls = 0, tall = 0;
+    let sum = 0, n = 0, walls = 0, tall = 0, rapids = 0;
     for (let j = -1; j <= 0; j++) {
       for (let i = -1; i <= 0; i++) {
         const x = cx + i, y = cy + j;
         const t = world.type(x, y);
+        if (t === T.RAPIDS) rapids++;
         if (IS_LIQUID[t] || OVERLAY[t]) continue;
         if (t === T.WALL) {
           walls++;
@@ -34503,13 +34682,42 @@ void main() {
       }
     }
     const sd = world.sd(cx, cy);
+    const rm = world.zone === 0 && nearRM(cx, cy) ? rmShape(cx, cy, !!rapids) : null;
     if (!n) {
       if (walls) return 0.4;
+      if (rm && rapids) return rm.level - 2.4;
       return seaFloor(world, cx, cy, sd);
     }
-    const land = sum / n * 0.75 + tall * 0.25;
-    if (sd <= 0) return 0.2 + sd * 0.4;
-    return 0.25 + (land - 0.25) * smooth(0, 3.2, sd);
+    let land = sum / n * 0.75 + tall * 0.25;
+    const base2 = rm ? rm.level : 0;
+    if (rm) land = Math.min(land + rm.cone, rm.bank);
+    if (sd <= 0) return base2 + 0.2 + sd * 0.4;
+    return base2 + 0.25 + (land - base2 - 0.25) * smooth2(0, 3.2, sd);
+  }
+  var RMS = { cone: 0, level: 0, bank: 0 };
+  function rmShape(cx, cy, wet) {
+    const cone2 = coneAt(cx, cy);
+    const k = canalAt(cx, cy, 90);
+    const pd = Math.hypot(cx - RM.x, cy - RM.y);
+    if (!k && pd > RM.poolR + 90) {
+      if (!cone2) return null;
+      RMS.cone = cone2;
+      RMS.level = 0;
+      RMS.bank = 1e9;
+      return RMS;
+    }
+    let level = k ? k.level : RM.top, bank = 1e9;
+    const rough = (vnoise(cx * 0.21, cy * 0.21) - 0.5) * 1.6;
+    if (k) bank = k.level + 1.6 + Math.max(0, k.d - RM.halfW) * 2.6 + rough;
+    if (pd < RM.poolR + 90) {
+      const rim2 = RM.top + 1.6 + Math.max(0, pd - RM.poolR) * 2.2 + rough;
+      if (rim2 < bank) bank = rim2;
+      if (pd < RM.poolR + 4 && (!k || wet)) level = RM.top;
+    }
+    RMS.cone = cone2;
+    RMS.level = level;
+    RMS.bank = bank;
+    return RMS;
   }
   var HeightField = class {
     constructor(world) {
@@ -34582,7 +34790,7 @@ void main() {
       if (OVERLAY[t]) return deckTop(w, x, y);
       if (w.quays.size && w.isQuay(x, y)) return DOCK_Y;
       const h2 = this.terrain(x, y);
-      if (IS_LIQUID[t]) return Math.max(h2, SEA_Y);
+      if (IS_LIQUID[t]) return Math.max(h2, t === T.RAPIDS ? waterLevel(w, x, y) : SEA_Y);
       const f = w.floorRec ? w.floorRec(x, y) : null;
       if (!f) return h2;
       if (f.interior) return this.floorY(f.o);
@@ -35152,7 +35360,7 @@ void main() {
   function dockDetails(world, x0, y0, size = CHUNK, hf = null) {
     const k = new Mesher();
     const type = (i, j) => world.type(x0 + i, y0 + j);
-    const water = (i, j) => {
+    const water2 = (i, j) => {
       const t = type(i, j);
       return IS_LIQUID[t] && !OVERLAY[t];
     };
@@ -35169,13 +35377,13 @@ void main() {
           any = true;
           const info = world.dockAt(x0 + i, y0 + j);
           if (info) {
-            pierTile(k, i, j, x0, y0, info, { water, pier, floor });
+            pierTile(k, i, j, x0, y0, info, { water: water2, pier, floor });
             continue;
           }
-          bridgeTile(k, i, j, x0, y0, t, { water, deck });
+          bridgeTile(k, i, j, x0, y0, t, { water: water2, deck });
         } else if (world.quays.size && quay(i, j)) {
           any = true;
-          quayTile(k, i, j, x0, y0, { water, quay, pier, floor });
+          quayTile(k, i, j, x0, y0, { water: water2, quay, pier, floor });
         } else if (t === T.WALL) {
           any = true;
           const cx = i + 0.5, cz = j + 0.5;
@@ -35194,7 +35402,7 @@ void main() {
     return mesh;
   }
   var EDGES = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-  function pierTile(k, i, j, x0, y0, info, { water, pier, floor }) {
+  function pierTile(k, i, j, x0, y0, info, { water: water2, pier, floor }) {
     const top = DOCK_Y, cx = i + 0.5, cz = j + 0.5;
     const alongX = info.vx !== 0;
     const wx = x0 + i, wy = y0 + j;
@@ -35206,7 +35414,7 @@ void main() {
       k.add(cyl(0.16, 0.18, top - f - 0.1, 7), { at: [cx, f, cz], color: PILE });
     }
     for (const [dx, dz] of EDGES) {
-      if (pier(i + dx, j + dz) || !water(i + dx, j + dz)) continue;
+      if (pier(i + dx, j + dz) || !water2(i + dx, j + dz)) continue;
       const alongEdgeX = dz !== 0;
       const ex = dx > 0 ? i + 1 : dx < 0 ? i : cx, ez = dz > 0 ? j + 1 : dz < 0 ? j : cz;
       const side = alongEdgeX === alongX;
@@ -35221,7 +35429,7 @@ void main() {
         k.add(cyl(0.15, 0.18, top + up - f, 8), { at: [px2, f, pz2], color: PILE, outline: 0.015 });
         if (rail2) k.add(cyl(0.17, 0.17, 0.06, 8), { at: [px2, top + up, pz2], color: "#4a3223" });
         const nx = alongEdgeX ? px2 + 2 : px2, nz = alongEdgeX ? pz2 : pz2 + 2;
-        const next = alongEdgeX ? pier(i + 1, j) && water(i + 1 + dx, j + dz) : pier(i, j + 1) && water(i + dx, j + 1 + dz);
+        const next = alongEdgeX ? pier(i + 1, j) && water2(i + 1 + dx, j + dz) : pier(i, j + 1) && water2(i + dx, j + 1 + dz);
         if (next) {
           const y0b = -0.2, y1b = top - 0.6, len = Math.hypot(2, y1b - y0b), ang = Math.atan2(y1b - y0b, 2);
           for (const flip of [1, -1]) {
@@ -35254,7 +35462,7 @@ void main() {
       k.add(cyl(0.02, 0.22, 0.18, 6), { at: [lx, top + 2.22, lz], color: IRON });
     }
   }
-  function bridgeTile(k, i, j, x0, y0, t, { water, deck }) {
+  function bridgeTile(k, i, j, x0, y0, t, { water: water2, deck }) {
     const top = DECK_Y, cx = i + 0.5, cz = j + 0.5;
     const alongX = (deck(i - 1, j) ? 1 : 0) + (deck(i + 1, j) ? 1 : 0) >= (deck(i, j - 1) ? 1 : 0) + (deck(i, j + 1) ? 1 : 0);
     if (t === T.RAIL) {
@@ -35270,7 +35478,7 @@ void main() {
     }
     const edges2 = [[-1, 0, i, cz], [1, 0, i + 1, cz], [0, -1, cx, j], [0, 1, cx, j + 1]];
     for (const [dx, dz, ex, ez] of edges2) {
-      if (!water(i + dx, j + dz)) continue;
+      if (!water2(i + dx, j + dz)) continue;
       const alongEdgeX = dz !== 0;
       k.add(box(alongEdgeX ? 1 : 0.12, 0.3, alongEdgeX ? 0.12 : 1), { at: [ex - dx * 0.06, top - 0.26, ez - dz * 0.06], color: TRIM });
       const wx = x0 + i, wy = y0 + j;
@@ -35279,7 +35487,7 @@ void main() {
         k.add(cyl(0.12, 0.14, 3.3, 7), { at: [px2, top - 2.8, pz2], color: PILE, outline: 0.015 });
         k.add(cyl(0.13, 0.13, 0.06, 7), { at: [px2, top + 0.5, pz2], color: "#4a3223" });
         const nx = alongEdgeX ? i + 2 : px2, nz = alongEdgeX ? pz2 : j + 2;
-        const nextDeck = alongEdgeX ? deck(i + 1, j) && water(i + 1 + dx, j + dz) : deck(i, j + 1) && water(i + dx, j + 1 + dz);
+        const nextDeck = alongEdgeX ? deck(i + 1, j) && water2(i + 1 + dx, j + dz) : deck(i, j + 1) && water2(i + dx, j + 1 + dz);
         if (nextDeck) {
           const len = Math.hypot(nx - px2, nz - pz2);
           k.add(cyl(0.022, 0.022, len, 4), { at: [px2, top + 0.36, pz2], rot: alongEdgeX ? [0, 0, -Math.PI / 2] : [Math.PI / 2, 0, 0], color: ROPE });
@@ -35287,7 +35495,7 @@ void main() {
       }
     }
   }
-  function quayTile(k, i, j, x0, y0, { water, quay, pier, floor }) {
+  function quayTile(k, i, j, x0, y0, { water: water2, quay, pier, floor }) {
     const top = DOCK_Y, cx = i + 0.5, cz = j + 0.5;
     const shadeOf = STONE[Math.abs((x0 + i) * 7 + (y0 + j) * 13) % 3];
     k.add(box(1, 0.24, 1), { at: [cx, top - 0.24, cz], color: shadeOf });
@@ -35297,13 +35505,13 @@ void main() {
       const alongEdgeX = dz !== 0;
       const ex = dx > 0 ? i + 1 : dx < 0 ? i : cx, ez = dz > 0 ? j + 1 : dz < 0 ? j : cz;
       const wlen = 1.02;
-      const f = water(ni, nj) ? Math.min(floor(ex + dx * 0.6, ez + dz * 0.6), -0.6) : Math.min(floor(ex + dx * 0.3 + (alongEdgeX ? 0.45 : 0), ez + dz * 0.3 + (alongEdgeX ? 0 : 0.45)), floor(ex + dx * 0.3 - (alongEdgeX ? 0.45 : 0), ez + dz * 0.3 - (alongEdgeX ? 0 : 0.45)));
+      const f = water2(ni, nj) ? Math.min(floor(ex + dx * 0.6, ez + dz * 0.6), -0.6) : Math.min(floor(ex + dx * 0.3 + (alongEdgeX ? 0.45 : 0), ez + dz * 0.3 + (alongEdgeX ? 0 : 0.45)), floor(ex + dx * 0.3 - (alongEdgeX ? 0.45 : 0), ez + dz * 0.3 - (alongEdgeX ? 0 : 0.45)));
       if (f > top - 0.3) continue;
       k.add(box(alongEdgeX ? wlen : 0.34, 0.14, alongEdgeX ? 0.34 : wlen), { at: [ex - dx * 0.12, top - 0.02, ez - dz * 0.12], color: COPING, outline: 0.01 });
       if (f > top - 0.35) continue;
       const h2 = top - 0.02 - (f - 0.3);
       k.add(box(alongEdgeX ? wlen : 0.3, h2, alongEdgeX ? 0.3 : wlen), { at: [ex + dx * 0.02, f - 0.3, ez + dz * 0.02], color: WALLSTONE, outline: 0.012 });
-      if (water(ni, nj)) k.add(box(alongEdgeX ? wlen : 0.06, 0.5, alongEdgeX ? 0.06 : wlen), { at: [ex + dx * 0.17, -0.3, ez + dz * 0.17], color: WEED });
+      if (water2(ni, nj)) k.add(box(alongEdgeX ? wlen : 0.06, 0.5, alongEdgeX ? 0.06 : wlen), { at: [ex + dx * 0.17, -0.3, ez + dz * 0.17], color: WEED });
     }
   }
 
@@ -35379,13 +35587,8 @@ void main() {
       this.cw = Math.ceil(world.width / CHUNK);
       this.ch = Math.ceil(world.height / CHUNK);
       const has2 = new Uint8Array(this.cw * this.ch);
-      const W3 = world.width, H2 = world.height, d = world.data;
-      for (let y = 0; y < H2; y++) {
-        const row = y * W3;
-        const cy = Math.floor(y / CHUNK) * this.cw;
-        for (let x = 0; x < W3; x++) {
-          if (d[row + x << 2] >= 16) has2[cy + Math.floor(x / CHUNK)] = 1;
-        }
+      for (let cy = 0; cy < this.ch; cy++) {
+        for (let cx = 0; cx < this.cw; cx++) if (world.blockHasLand(cx, cy)) has2[cy * this.cw + cx] = 1;
       }
       this.hasLand = new Uint8Array(has2.length);
       for (let cy = 0; cy < this.ch; cy++) {
@@ -35547,7 +35750,7 @@ void main() {
         for (let i = -1; i <= 0; i++) {
           const t = w.type(cx + i, cy + j);
           if (IS_LIQUID[t] || OVERLAY[t]) continue;
-          const v = (w.data[(w.idx(cx + i, cy + j) << 2) + 3] || 0) / 255;
+          const v = w.variant(cx + i, cy + j) / 255;
           const mix3 = 0.18 + v * 0.3 * hash3(cx + i, cy + j);
           r += COL[t * 3] * (1 - mix3) + ACC[t * 3] * mix3;
           gg += COL[t * 3 + 1] * (1 - mix3) + ACC[t * 3 + 1] * mix3;
@@ -35772,6 +35975,7 @@ void main() {
   uniform vec2 uSize;
   uniform float uTime;
   uniform float uAmp;
+  uniform vec2 uWin;
   varying vec3 vWorld;
   varying vec3 vView;
   varying vec3 vSwell;   // slope x, slope z, height (-1..1)
@@ -35787,6 +35991,8 @@ void main() {
     float sd = (m.r * 255.0 - 128.0) * 0.25;
     // (the tile type is read at the tile's centre: blending types makes phantom liquids)
     float kind = floor(texture2D(uMap, (floor(P) + 0.5) / uSize).g * 255.0 + 0.5);
+    // (past the edge of the window round the camera: open sea)
+    if (max(abs(P.x - uWin.x), abs(P.y - uWin.y)) > 1000.0) { sd = -32.0; kind = 0.0; }
     float liquid = kind < 2.5 || kind == 5.0 || kind == 7.0 ? 1.0 : kind == 3.0 ? 0.5 : 0.15;
     float shore = mix(0.35, 1.0, smoothstep(0.5, -7.0, sd));
     float fade = 1.0 - smoothstep(70.0, 190.0, length(wp.xz - cameraPosition.xz));
@@ -35807,7 +36013,8 @@ void main() {
     /* glsl */
     `
   uniform sampler2D uMap;   // r = coastline distance (128 = shore), g = liquid tile type
-  uniform vec2 uSize;       // world size in tiles
+  uniform vec2 uSize;       // the window's size in tiles (it repeats)
+  uniform vec2 uWin;        // the window's centre
   uniform float uTime;
   uniform vec3 uSunDir;
   uniform vec3 uSunCol;
@@ -35876,6 +36083,9 @@ void main() {
     vec4 m = texture2D(uMap, uv);
     float sd = (m.r * 255.0 - 128.0) * 0.25;   // + land, - water (tiles)
     float kind = floor(texture2D(uMap, (floor(vWorld.xz) + 0.5) / uSize).g * 255.0 + 0.5);
+    if (max(abs(vWorld.x - uWin.x), abs(vWorld.z - uWin.y)) > 1000.0) { sd = -32.0; kind = 0.0; }
+    // (Reverse Mountain's canals run up the mountain: they draw their own water)
+    if (kind == 9.0) discard;
     float depth = clamp(-sd, 0.0, 30.0);
     bool water = kind < 2.5 || kind == 5.0 || kind == 7.0;
 
@@ -35975,6 +36185,10 @@ void main() {
   }
 `
   );
+  var WIN2 = 2048;
+  var WMASK = WIN2 - 1;
+  var STEP2 = 256;
+  var SLICE = 32;
   function discGeometry(radius = 1600, segs = 96) {
     const rings2 = [0];
     let r = 0.6, dr = 0.6;
@@ -36006,7 +36220,8 @@ void main() {
     return g;
   }
   var Water = class {
-    constructor(scene) {
+    constructor(scene, renderer = null) {
+      this.renderer = renderer;
       this.uniforms = UniformsUtils.merge([
         UniformsLib.fog,
         {
@@ -36023,7 +36238,8 @@ void main() {
           uZone: { value: 0 },
           uStorm: { value: 0 },
           uDetail: { value: 1 },
-          uUnder: { value: 0 }
+          uUnder: { value: 0 },
+          uWin: { value: new Vector2(-1e9, -1e9) }
         }
       ]);
       this.material = new ShaderMaterial({
@@ -36046,29 +36262,130 @@ void main() {
       this.uniforms.uDetail.value = q2 === "low" ? 0 : 1;
     }
     setWorld(world) {
-      if (this.tex) this.tex.dispose();
-      const W3 = world.width, H2 = world.height;
-      const data = new Uint8Array(W3 * H2 * 2);
-      const d = world.data, dist = world.dist;
-      for (let i = 0, n = W3 * H2; i < n; i++) {
-        data[i * 2] = dist[i];
-        const t = d[i << 2];
-        data[i * 2 + 1] = t < 16 ? t : 255;
+      this.world = world;
+      if (!this.tex) {
+        this.winData = new Uint8Array(WIN2 * WIN2 * 2);
+        const mk3 = () => {
+          const t = new DataTexture(this.winData, WIN2, WIN2, RGFormat, UnsignedByteType);
+          t.wrapS = t.wrapT = RepeatWrapping;
+          t.magFilter = LinearFilter;
+          t.minFilter = LinearFilter;
+          t.generateMipmaps = false;
+          return t;
+        };
+        this.tex = mk3();
+        this.src = mk3();
+        this.box = new Box2();
+        this.pos = new Vector2();
       }
-      const tex2 = new DataTexture(data, W3, H2, RGFormat, UnsignedByteType);
-      tex2.wrapS = world.wrap ? RepeatWrapping : ClampToEdgeWrapping;
-      tex2.wrapT = ClampToEdgeWrapping;
-      tex2.magFilter = LinearFilter;
-      tex2.minFilter = LinearFilter;
-      tex2.generateMipmaps = false;
-      tex2.needsUpdate = true;
-      this.tex = tex2;
-      this.uniforms.uMap.value = tex2;
-      this.uniforms.uSize.value.set(W3, H2);
+      this.win = null;
+      this.pending = [];
+      this.uniforms.uMap.value = this.tex;
+      this.uniforms.uSize.value.set(WIN2, WIN2);
       this.uniforms.uZone.value = world.zone || 0;
+    }
+    /** Fill in the tiles of [x0, x0+w) × [y0, y0+h) (world tiles, unwrapped) in the window's bytes. */
+    fill(x0, y0, w, h2) {
+      const world = this.world, d = this.winData;
+      const x1 = x0 + w, y1 = y0 + h2;
+      for (let by = Math.floor(y0 / 32); by <= Math.floor((y1 - 1) / 32); by++) {
+        const ya = Math.max(y0, by * 32), yb = Math.min(y1, by * 32 + 32);
+        for (let bx = Math.floor(x0 / 32); bx <= Math.floor((x1 - 1) / 32); bx++) {
+          const xa = Math.max(x0, bx * 32), xb = Math.min(x1, bx * 32 + 32);
+          let wbx = bx;
+          if (world.wrap) wbx = (bx % world.bw + world.bw) % world.bw;
+          const inside2 = by >= 0 && by < world.bh && wbx >= 0 && wbx < world.bw;
+          const u = inside2 ? world.blockUniform(wbx, by) : -1;
+          const b = inside2 ? by * world.bw + wbx : -1;
+          if (u >= 0 && !world.bs[b]) {
+            const r = world.us[b], g = u < 16 ? u : 255;
+            for (let y = ya; y < yb; y++) {
+              const row = (y & WMASK) * WIN2;
+              for (let x = xa; x < xb; x++) {
+                const o = (row + (x & WMASK)) * 2;
+                d[o] = r;
+                d[o + 1] = g;
+              }
+            }
+            continue;
+          }
+          for (let y = ya; y < yb; y++) {
+            const row = (y & WMASK) * WIN2;
+            for (let x = xa; x < xb; x++) {
+              const o = (row + (x & WMASK)) * 2;
+              d[o] = world.distRaw(x, y);
+              const t = world.type(x, y);
+              d[o + 1] = t < 16 ? t : 255;
+            }
+          }
+        }
+      }
+    }
+    /** Send [x0, x0+w) × [y0, y0+h) of the window's bytes to the GPU (split where it wraps). */
+    upload(x0, y0, w, h2) {
+      const r = this.renderer;
+      if (!r || !this.tex.__uploaded) {
+        this.tex.needsUpdate = true;
+        return;
+      }
+      const tx = x0 & WMASK, ty = y0 & WMASK;
+      const xs = tx + w > WIN2 ? [[tx, WIN2 - tx], [0, tx + w - WIN2]] : [[tx, w]];
+      const ys = ty + h2 > WIN2 ? [[ty, WIN2 - ty], [0, ty + h2 - WIN2]] : [[ty, h2]];
+      for (const [ax, aw] of xs) {
+        for (const [ay, ah] of ys) {
+          this.box.min.set(ax, ay);
+          this.box.max.set(ax + aw, ay + ah);
+          this.pos.set(ax, ay);
+          r.copyTextureToTexture(this.src, this.tex, this.box, this.pos);
+        }
+      }
+    }
+    /** Keep the window centred on the camera. */
+    follow(ox, oy) {
+      const cx = Math.floor(ox), cy = Math.floor(oy);
+      const w = this.win;
+      const far = w && this.world.wrap ? Math.abs(this.world.dx(w.cx, cx)) : w ? Math.abs(cx - w.cx) : 0;
+      if (!w || far > WIN2 / 2 - 200 || Math.abs(cy - w.cy) > WIN2 / 2 - 200) {
+        const x0 = Math.floor(cx / 32) * 32 - WIN2 / 2, y0 = Math.floor(cy / 32) * 32 - WIN2 / 2;
+        this.fill(x0, y0, WIN2, WIN2);
+        this.tex.needsUpdate = true;
+        this.win = { x0, y0, cx: x0 + WIN2 / 2, cy: y0 + WIN2 / 2 };
+        this.pending.length = 0;
+      } else if (!this.pending.length) {
+        const dx = this.world.wrap ? this.world.dx(w.cx, cx) : cx - w.cx, dy = cy - w.cy;
+        const sx = Math.abs(dx) >= STEP2 ? Math.sign(dx) * STEP2 : 0, sy = Math.abs(dy) >= STEP2 ? Math.sign(dy) * STEP2 : 0;
+        if (sx || sy) {
+          const nx0 = w.x0 + sx, ny0 = w.y0 + sy;
+          if (sx > 0) this.pending.push({ x0: w.x0 + WIN2, y0: ny0, w: sx, h: WIN2, cols: true });
+          else if (sx < 0) this.pending.push({ x0: nx0, y0: ny0, w: -sx, h: WIN2, cols: true });
+          if (sy > 0) this.pending.push({ x0: nx0, y0: w.y0 + WIN2, w: WIN2, h: sy });
+          else if (sy < 0) this.pending.push({ x0: nx0, y0: ny0, w: WIN2, h: -sy });
+          this.win = { x0: nx0, y0: ny0, cx: nx0 + WIN2 / 2, cy: ny0 + WIN2 / 2 };
+        }
+      }
+      const p = this.pending[0];
+      if (p) {
+        if (p.cols) {
+          const n = Math.min(SLICE, p.w);
+          this.fill(p.x0, p.y0, n, p.h);
+          this.upload(p.x0, p.y0, n, p.h);
+          p.x0 += n;
+          p.w -= n;
+        } else {
+          const n = Math.min(SLICE, p.h);
+          this.fill(p.x0, p.y0, p.w, n);
+          this.upload(p.x0, p.y0, p.w, n);
+          p.y0 += n;
+          p.h -= n;
+        }
+        if (p.w <= 0 || p.h <= 0) this.pending.shift();
+      }
+      this.uniforms.uWin.value.set(this.win.cx, this.win.cy);
     }
     update(ox, oy, env, sunDir, sunCol, sky, skyTop) {
       const u = this.uniforms;
+      if (this.world) this.follow(ox, oy);
+      if (this.tex && !this.tex.__uploaded && this.renderer?.properties.get(this.tex).__webglTexture) this.tex.__uploaded = true;
       u.uOrigin.value.set(ox, oy);
       u.uTime.value = env.time;
       u.uDay.value = env.daylight;
@@ -36654,7 +36971,7 @@ void main() {
 
   // src/world/hull.js
   var clamp01 = (x) => Math.max(0, Math.min(1, x));
-  var smooth2 = (a, b, x) => {
+  var smooth3 = (a, b, x) => {
     const t = clamp01((x - a) / (b - a));
     return t * t * (3 - 2 * t);
   };
@@ -36810,9 +37127,9 @@ void main() {
   }
   function topAt(d, t) {
     let y = d.deckY + d.bulH + d.sheer * Math.pow(Math.abs(t - 0.45) / 0.55, 2);
-    if (d.castle) y += d.hq * (1 - smooth2(d.tq - 0.015, d.tq + 0.035, t));
-    if (d.poop) y += d.hp * (1 - smooth2(d.tp - 0.012, d.tp + 0.03, t));
-    if (d.fore) y += d.hf * smooth2(d.tf - 0.035, d.tf + 0.015, t);
+    if (d.castle) y += d.hq * (1 - smooth3(d.tq - 0.015, d.tq + 0.035, t));
+    if (d.poop) y += d.hp * (1 - smooth3(d.tp - 0.012, d.tp + 0.03, t));
+    if (d.fore) y += d.hf * smooth3(d.tf - 0.035, d.tf + 0.015, t);
     return y;
   }
   var xAt = (d, t) => -d.L / 2 + t * d.L;
@@ -36847,8 +37164,9 @@ void main() {
     return depth;
   }
   function shipBob(ship, time) {
-    return 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.07;
+    return (ship.lvl || 0) + 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.07;
   }
+  var pitchRise = (ship, along) => ship.pitch ? along * Math.tan(ship.pitch) : 0;
   function deckPoint(ship, dx, dy, margin = 0.2) {
     const d = shipDims(ship.def);
     const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
@@ -37350,12 +37668,12 @@ void main() {
     }
     if (fh === "seagull") {
       const g = s * 1.25;
-      const hc = [stem[0] + 0.9 * g, stem[1] + 1.1 * g, 0];
+      const hc2 = [stem[0] + 0.9 * g, stem[1] + 1.1 * g, 0];
       k.add(cyl(0.3 * g, 0.45 * g, 1.3 * g, 8), { at: [stem[0] - 0.2, stem[1] - 0.4, 0], rot: [0, 0, -0.6], color: "#f5f6fa", outline: 0.03 });
-      k.add(new SphereGeometry(0.75 * g, 14, 10), { at: hc, color: "#f5f6fa", outline: 0.04 });
-      k.add(cone(0.26 * g, 1.1 * g, 8), { at: [hc[0] + 0.55 * g, hc[1] - 0.12 * g, 0], rot: [0, 0, -Math.PI / 2], color: "#f5a623", outline: 0.02 });
-      for (const z of [-1, 1]) k.add(new SphereGeometry(0.12 * g, 8, 6), { at: [hc[0] + 0.36 * g, hc[1] + 0.25 * g, z * 0.5 * g], color: "#1d1d1d" });
-      k.add(new CylinderGeometry(0.5 * g, 0.66 * g, 0.26 * g, 12), { at: [hc[0] - 0.05, hc[1] + 0.75 * g, 0], color: "#1b4f72", outline: 0.02 });
+      k.add(new SphereGeometry(0.75 * g, 14, 10), { at: hc2, color: "#f5f6fa", outline: 0.04 });
+      k.add(cone(0.26 * g, 1.1 * g, 8), { at: [hc2[0] + 0.55 * g, hc2[1] - 0.12 * g, 0], rot: [0, 0, -Math.PI / 2], color: "#f5a623", outline: 0.02 });
+      for (const z of [-1, 1]) k.add(new SphereGeometry(0.12 * g, 8, 6), { at: [hc2[0] + 0.36 * g, hc2[1] + 0.25 * g, z * 0.5 * g], color: "#1d1d1d" });
+      k.add(new CylinderGeometry(0.5 * g, 0.66 * g, 0.26 * g, 12), { at: [hc2[0] - 0.05, hc2[1] + 0.75 * g, 0], color: "#1b4f72", outline: 0.02 });
       return;
     }
     if (fh === "dragon") {
@@ -37367,32 +37685,32 @@ void main() {
         new Vector3(stem[0] + 1.2 * s, stem[1] + 1.8 * s, 0)
       ]);
       k.add(tube(neck, 12, 0.34 * s, 8), { color: green, outline: 0.03 });
-      const hc = [stem[0] + 1.45 * s, stem[1] + 2 * s, 0];
-      k.add(new SphereGeometry(0.5 * s, 12, 9), { at: hc, scale: [1.2, 0.85, 0.85], color: green, outline: 0.03 });
-      k.add(box(0.9 * s, 0.28 * s, 0.5 * s), { at: [hc[0] + 0.55 * s, hc[1] - 0.05 * s, 0], color: green, outline: 0.02 });
-      k.add(box(0.8 * s, 0.14 * s, 0.44 * s), { at: [hc[0] + 0.45 * s, hc[1] - 0.42 * s, 0], rot: [0, 0, -0.35], color: "#1b5e20", outline: 0.02 });
+      const hc2 = [stem[0] + 1.45 * s, stem[1] + 2 * s, 0];
+      k.add(new SphereGeometry(0.5 * s, 12, 9), { at: hc2, scale: [1.2, 0.85, 0.85], color: green, outline: 0.03 });
+      k.add(box(0.9 * s, 0.28 * s, 0.5 * s), { at: [hc2[0] + 0.55 * s, hc2[1] - 0.05 * s, 0], color: green, outline: 0.02 });
+      k.add(box(0.8 * s, 0.14 * s, 0.44 * s), { at: [hc2[0] + 0.45 * s, hc2[1] - 0.42 * s, 0], rot: [0, 0, -0.35], color: "#1b5e20", outline: 0.02 });
       for (const z of [-1, 1]) {
-        k.add(cone(0.1 * s, 0.75 * s, 6), { at: [hc[0] - 0.2 * s, hc[1] + 0.25 * s, z * 0.25 * s], rot: [z * 0.5, 0, 1.9], color: gold, outline: 0.015 });
-        k.add(new SphereGeometry(0.1 * s, 8, 6), { at: [hc[0] + 0.25 * s, hc[1] + 0.22 * s, z * 0.36 * s], color: "#ffd54f", glow: "#ffb300" });
-        for (let i = 0; i < 3; i++) k.add(cone(0.035 * s, 0.14 * s, 4), { at: [hc[0] + (0.75 - i * 0.2) * s, hc[1] - 0.2 * s, z * 0.2 * s], rot: [Math.PI, 0, 0], color: "#ffffff" });
+        k.add(cone(0.1 * s, 0.75 * s, 6), { at: [hc2[0] - 0.2 * s, hc2[1] + 0.25 * s, z * 0.25 * s], rot: [z * 0.5, 0, 1.9], color: gold, outline: 0.015 });
+        k.add(new SphereGeometry(0.1 * s, 8, 6), { at: [hc2[0] + 0.25 * s, hc2[1] + 0.22 * s, z * 0.36 * s], color: "#ffd54f", glow: "#ffb300" });
+        for (let i = 0; i < 3; i++) k.add(cone(0.035 * s, 0.14 * s, 4), { at: [hc2[0] + (0.75 - i * 0.2) * s, hc2[1] - 0.2 * s, z * 0.2 * s], rot: [Math.PI, 0, 0], color: "#ffffff" });
       }
       for (let i = 0; i < 5; i++) k.add(cone(0.12 * s, 0.35 * s, 4), { at: [stem[0] + (0.3 + i * 0.25) * s, stem[1] + (0.1 + i * 0.45) * s, 0], rot: [0, 0, 0.6], color: gold });
       return;
     }
     if (fh === "lion_gold") {
-      const hc = [stem[0] + 0.7 * s, stem[1] + 1.2 * s, 0];
+      const hc2 = [stem[0] + 0.7 * s, stem[1] + 1.2 * s, 0];
       k.add(cyl(0.3 * s, 0.42 * s, 1.4 * s, 8), { at: [stem[0] - 0.3, stem[1] - 0.5, 0], rot: [0, 0, -0.5], color: "#c9a227", outline: 0.03 });
       for (let i = 0; i < 16; i++) {
         const a = i / 16 * TAU3;
         k.save();
-        k.translate(hc[0] - 0.18 * s, hc[1], 0);
+        k.translate(hc2[0] - 0.18 * s, hc2[1], 0);
         k.rotateX(a);
         k.add(cone(0.34 * s, 0.85 * s, 6), { at: [0, 0.72 * s, 0], color: i % 2 ? "#e0b12b" : "#c9962a", outline: 0.02 });
         k.restore();
       }
-      k.add(new SphereGeometry(0.85 * s, 14, 10), { at: hc, scale: [0.75, 1, 1], color: "#f2cc4a", outline: 0.04 });
-      for (const z of [-1, 1]) k.add(new SphereGeometry(0.13 * s, 8, 6), { at: [hc[0] + 0.58 * s, hc[1] + 0.22 * s, z * 0.32 * s], color: "#1d1d1d" });
-      k.add(new SphereGeometry(0.17 * s, 8, 6), { at: [hc[0] + 0.66 * s, hc[1] - 0.1 * s, 0], color: "#8d5524" });
+      k.add(new SphereGeometry(0.85 * s, 14, 10), { at: hc2, scale: [0.75, 1, 1], color: "#f2cc4a", outline: 0.04 });
+      for (const z of [-1, 1]) k.add(new SphereGeometry(0.13 * s, 8, 6), { at: [hc2[0] + 0.58 * s, hc2[1] + 0.22 * s, z * 0.32 * s], color: "#1d1d1d" });
+      k.add(new SphereGeometry(0.17 * s, 8, 6), { at: [hc2[0] + 0.66 * s, hc2[1] - 0.1 * s, 0], color: "#8d5524" });
       return;
     }
     if (fh === "mermaid") {
@@ -37781,41 +38099,41 @@ void main() {
     const s = Math.max(0.7, d.B / 2.4);
     if (def.figurehead === "ram") {
       k.add(cyl(0.12 * s, 0.16 * s, 0.6 * s, 7), { at: [tip[0] - 0.12, tip[1] - 0.25, 0], rot: [0, 0, -0.5], color: "#f5f6fa", outline: 0.02 });
-      const hc = [tip[0] + 0.28 * s, tip[1] + 0.42 * s, 0];
-      k.add(new SphereGeometry(0.36 * s, 12, 9), { at: hc, scale: [1.15, 1, 1], color: "#f7f5ef", outline: 0.03 });
-      k.add(new SphereGeometry(0.22 * s, 10, 7), { at: [hc[0] + 0.3 * s, hc[1] - 0.1 * s, 0], scale: [1, 0.85, 1.05], color: "#efe8da", outline: 0.02 });
+      const hc2 = [tip[0] + 0.28 * s, tip[1] + 0.42 * s, 0];
+      k.add(new SphereGeometry(0.36 * s, 12, 9), { at: hc2, scale: [1.15, 1, 1], color: "#f7f5ef", outline: 0.03 });
+      k.add(new SphereGeometry(0.22 * s, 10, 7), { at: [hc2[0] + 0.3 * s, hc2[1] - 0.1 * s, 0], scale: [1, 0.85, 1.05], color: "#efe8da", outline: 0.02 });
       for (const z of [-1, 1]) {
-        k.add(new SphereGeometry(0.06 * s, 6, 4), { at: [hc[0] + 0.22 * s, hc[1] + 0.12 * s, z * 0.2 * s], color: "#1d1d1d" });
-        k.add(new SphereGeometry(0.035 * s, 5, 3), { at: [hc[0] + 0.47 * s, hc[1] - 0.08 * s, z * 0.07 * s], color: "#5a4a3a" });
+        k.add(new SphereGeometry(0.06 * s, 6, 4), { at: [hc2[0] + 0.22 * s, hc2[1] + 0.12 * s, z * 0.2 * s], color: "#1d1d1d" });
+        k.add(new SphereGeometry(0.035 * s, 5, 3), { at: [hc2[0] + 0.47 * s, hc2[1] - 0.08 * s, z * 0.07 * s], color: "#5a4a3a" });
         const pts = [];
         for (let i = 0; i <= 24; i++) {
           const a = i / 24 * Math.PI * 2.4 + Math.PI * 0.5;
           const r = 0.24 * s * (1 - i / 24 * 0.72);
-          pts.push(new Vector3(hc[0] - 0.1 * s + Math.cos(a) * r, hc[1] + 0.05 * s + Math.sin(a) * r, z * (0.3 * s + i / 24 * 0.12 * s)));
+          pts.push(new Vector3(hc2[0] - 0.1 * s + Math.cos(a) * r, hc2[1] + 0.05 * s + Math.sin(a) * r, z * (0.3 * s + i / 24 * 0.12 * s)));
         }
         k.add(tube(new CatmullRomCurve3(pts), 24, 0.065 * s, 6), { color: "#c8955a", outline: 0.015 });
       }
     } else if (def.figurehead === "lion") {
-      const hc = [tip[0] + 0.3 * s, tip[1] + 0.55 * s, 0];
+      const hc2 = [tip[0] + 0.3 * s, tip[1] + 0.55 * s, 0];
       k.add(cyl(0.14 * s, 0.2 * s, 0.7 * s, 7), { at: [tip[0] - 0.15, tip[1] - 0.25, 0], rot: [0, 0, -0.45], color: "#e8c26b" });
       for (let i = 0; i < 14; i++) {
         const a = i / 14 * Math.PI * 2;
         k.save();
-        k.translate(hc[0] - 0.08 * s, hc[1], 0);
+        k.translate(hc2[0] - 0.08 * s, hc2[1], 0);
         k.rotateX(a);
         k.add(cone(0.17 * s, 0.42 * s, 6), { at: [0, 0.38 * s, 0], color: i % 2 ? "#f39c12" : "#e67e22", outline: 0.015 });
         k.restore();
       }
-      k.add(new SphereGeometry(0.44 * s, 12, 9), { at: hc, scale: [0.75, 1, 1], color: "#fdd663", outline: 0.03 });
-      for (const z of [-1, 1]) k.add(new SphereGeometry(0.07 * s, 6, 4), { at: [hc[0] + 0.3 * s, hc[1] + 0.12 * s, z * 0.17 * s], color: "#1d1d1d" });
-      k.add(new SphereGeometry(0.09 * s, 6, 4), { at: [hc[0] + 0.34 * s, hc[1] - 0.05 * s, 0], color: "#8d5524" });
-      k.add(torus(0.12 * s, 0.022 * s, 4, 10, Math.PI), { at: [hc[0] + 0.32 * s, hc[1] - 0.14 * s, 0], rot: [0, Math.PI / 2, Math.PI], color: "#5a3a22" });
+      k.add(new SphereGeometry(0.44 * s, 12, 9), { at: hc2, scale: [0.75, 1, 1], color: "#fdd663", outline: 0.03 });
+      for (const z of [-1, 1]) k.add(new SphereGeometry(0.07 * s, 6, 4), { at: [hc2[0] + 0.3 * s, hc2[1] + 0.12 * s, z * 0.17 * s], color: "#1d1d1d" });
+      k.add(new SphereGeometry(0.09 * s, 6, 4), { at: [hc2[0] + 0.34 * s, hc2[1] - 0.05 * s, 0], color: "#8d5524" });
+      k.add(torus(0.12 * s, 0.022 * s, 4, 10, Math.PI), { at: [hc2[0] + 0.32 * s, hc2[1] - 0.14 * s, 0], rot: [0, Math.PI / 2, Math.PI], color: "#5a3a22" });
     } else if (def.figurehead === "seagull") {
-      const hc = [tip[0] + 0.2 * s, tip[1] + 0.3 * s, 0];
-      k.add(new SphereGeometry(0.3 * s, 10, 8), { at: hc, color: "#f5f6fa", outline: 0.025 });
-      k.add(cone(0.1 * s, 0.42 * s, 6), { at: [hc[0] + 0.22 * s, hc[1] - 0.04 * s, 0], rot: [0, 0, -Math.PI / 2], color: "#f5a623", outline: 0.015 });
-      for (const z of [-1, 1]) k.add(new SphereGeometry(0.05 * s, 6, 4), { at: [hc[0] + 0.14 * s, hc[1] + 0.1 * s, z * 0.2 * s], color: "#1d1d1d" });
-      k.add(new CylinderGeometry(0.2 * s, 0.26 * s, 0.1 * s, 10), { at: [hc[0] - 0.02, hc[1] + 0.3 * s, 0], color: "#1b4f72" });
+      const hc2 = [tip[0] + 0.2 * s, tip[1] + 0.3 * s, 0];
+      k.add(new SphereGeometry(0.3 * s, 10, 8), { at: hc2, color: "#f5f6fa", outline: 0.025 });
+      k.add(cone(0.1 * s, 0.42 * s, 6), { at: [hc2[0] + 0.22 * s, hc2[1] - 0.04 * s, 0], rot: [0, 0, -Math.PI / 2], color: "#f5a623", outline: 0.015 });
+      for (const z of [-1, 1]) k.add(new SphereGeometry(0.05 * s, 6, 4), { at: [hc2[0] + 0.14 * s, hc2[1] + 0.1 * s, z * 0.2 * s], color: "#1d1d1d" });
+      k.add(new CylinderGeometry(0.2 * s, 0.26 * s, 0.1 * s, 10), { at: [hc2[0] - 0.02, hc2[1] + 0.3 * s, 0], color: "#1b4f72" });
     } else if (!d.open) {
       k.add(torus(0.14, 0.05, 5, 10, Math.PI * 1.5), { at: [tip[0] + 0.02, tip[1] + 0.05, 0], rot: [0, 0, 0], color: P4.trim, outline: 0.012 });
     }
@@ -37826,10 +38144,10 @@ void main() {
     const n = d.masts;
     for (let m = 0; m < n; m++) {
       const x = n === 1 ? 0.05 * d.L : d.L * (0.28 - m * (0.56 / Math.max(1, n - 1)));
-      const main = m === (n > 1 ? 1 : 0) || n === 1;
-      const h2 = d.mastH * (n === 1 ? 1 : main ? 1 : m === 0 ? 0.9 : 0.8);
+      const main2 = m === (n > 1 ? 1 : 0) || n === 1;
+      const h2 = d.mastH * (n === 1 ? 1 : main2 ? 1 : m === 0 ? 0.9 : 0.8);
       const base2 = floorAt(d, (x + d.L / 2) / d.L);
-      out.push({ x, h: h2, base: base2, main, m });
+      out.push({ x, h: h2, base: base2, main: main2, m });
     }
     return out;
   }
@@ -38334,8 +38652,8 @@ void main() {
       if (own !== this.ghost) this.setGhost(own);
       const t = env.time + (s.seed || 0);
       const sinking = s.sunk ? Math.min(1, s.sinkT / 4) : 0;
-      r.position.set(rx, 0.05 + Math.sin(t * 1.3) * 0.07 - sinking * 3, rz);
-      r.rotation.set(Math.sin(t * 0.9) * 0.035 + sinking * 0.5, -s.heading, Math.sin(t * 1.1) * 0.02, "YXZ");
+      r.position.set(rx, (s.lvl || 0) + 0.05 + Math.sin(t * 1.3) * 0.07 - sinking * 3, rz);
+      r.rotation.set(Math.sin(t * 0.9) * 0.035 + sinking * 0.5, -s.heading, Math.sin(t * 1.1) * 0.02 + (s.pitch || 0), "YXZ");
       const relA = (windAngle || 0) - s.heading;
       const brace = Math.max(-0.5, Math.min(0.5, Math.sin(relA) * 0.45));
       for (const b of this.braces) b.rotation.y = -brace;
@@ -38568,23 +38886,25 @@ void main() {
       const scale = p.look?.scale || 1;
       let eyeH = 1.72 * scale;
       let gx = 0, gz = 0;
-      const g0 = p.deck ? p.deck.h + shipBob(p.deck.ship, game.env?.time || 0) : ground(p.x, p.y) - (p.wading || 0);
+      const g0 = p.deck ? p.deck.h + shipBob(p.deck.ship, game.env?.time || 0) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) : ground(p.x, p.y) - (p.wading || 0);
       if (this.smoothG === void 0 || Math.abs(g0 - this.smoothG) > 2.5 || p.mode !== this.lastMode || p.deck && g0 < this.smoothG - 0.6 && p.z > 0.3) this.smoothG = g0;
       this.smoothG += (g0 - this.smoothG) * Math.min(1, dt * 14);
       this.lastMode = p.mode;
       let gh = p.flying && p.alt != null ? p.alt : this.smoothG + (p.z || 0);
       let rollSea = 0;
+      if (!sailing) this.seaPitch = 0;
       if (sailing) {
         const s = p.ship;
         const hp = helmPoint(s.def);
         gx = Math.cos(s.heading) * hp.x;
         gz = Math.sin(s.heading) * hp.x;
         const t = (game.env?.time || 0) + (s.seed || 0);
-        gh = 0.05 + hp.floor + Math.sin(t * 1.3) * 0.07;
+        gh = (s.lvl || 0) + 0.05 + hp.floor + Math.sin(t * 1.3) * 0.07 + pitchRise(s, hp.x);
         eyeH = hp.eye - hp.floor + 0.15;
         rollSea = Math.sin(t * 0.9) * 0.03 * Math.cos(this.yaw - s.heading);
+        this.seaPitch = (s.pitch || 0) * Math.cos(this.yaw - s.heading);
       } else if (p.inWater) {
-        gh = -(p.depth || 0) - 0.2;
+        gh = waterLevel(game.world, p.x, p.y) - (p.depth || 0) - 0.2;
         eyeH = 0.55;
         const floor = game.seaDepth ? -game.seaDepth(p.x, p.y) : -99;
         if (gh + eyeH < floor + 0.3) gh = floor + 0.3 - eyeH;
@@ -38653,7 +38973,7 @@ void main() {
         cam.rotation.set(this.pitch * 0.8 - 0.12 + this.shake.y, yaw3 + this.shake.x, 0);
       } else {
         cam.position.set(gx + Math.cos(this.yaw + Math.PI / 2) * bobX, gh + eyeH + bobY, gz + Math.sin(this.yaw + Math.PI / 2) * bobX);
-        cam.rotation.set(this.pitch + this.shake.y, yaw3 + this.shake.x, this.roll + rollSea);
+        cam.rotation.set(this.pitch + this.shake.y + (sailing ? this.seaPitch || 0 : 0), yaw3 + this.shake.x, this.roll + rollSea);
       }
       const sprint = !sailing && p.intent?.sprint && moving;
       const dashing = !!p.dash;
@@ -38881,18 +39201,18 @@ void main() {
         }
       }
     }
-    canHit(owner, target, h2) {
-      if (!target.alive || target === owner) return false;
-      if (target.state === "dead") return false;
-      if (target.state === "knocked" && !h2.hitsDowned) return false;
+    canHit(owner, target2, h2) {
+      if (!target2.alive || target2 === owner) return false;
+      if (target2.state === "dead") return false;
+      if (target2.state === "knocked" && !h2.hitsDowned) return false;
       if (h2.friendly) return false;
-      if (owner && owner.faction === "player" && target.faction === "player") return false;
+      if (owner && owner.faction === "player" && target2.faction === "player") return false;
       if (!owner) return true;
-      if (target.invulnerable) return false;
-      if (owner.deck && target.deck && owner.deck.ship === target.deck.ship && h2.vx === void 0 && !h2.radial) {
-        if (Math.abs(owner.deck.h + (owner.z || 0) - target.deck.h - (target.z || 0)) > 1.6) return false;
+      if (target2.invulnerable) return false;
+      if (owner.deck && target2.deck && owner.deck.ship === target2.deck.ship && h2.vx === void 0 && !h2.radial) {
+        if (Math.abs(owner.deck.h + (owner.z || 0) - target2.deck.h - (target2.z || 0)) > 1.6) return false;
       }
-      return hostile(owner, target) || owner.isPlayer && target.provoked || target.isPlayer && owner.provoked || h2.hitsAll;
+      return hostile(owner, target2) || owner.isPlayer && target2.provoked || target2.isPlayer && owner.provoked || h2.hitsAll;
     }
     overlaps(h2, a) {
       const w = this.game.world;
@@ -39857,16 +40177,16 @@ void main() {
     if (def.requiresBuff && !actor.hasBuff(def.requiresBuff)) return false;
     return true;
   }
-  function startAbility(actor, def, game, target) {
+  function startAbility(actor, def, game, target2) {
     const c = def.cost || {};
     if (c.stamina) actor.stamina = Math.max(0, actor.stamina - c.stamina);
     if (c.haki) actor.haki -= c.haki;
     const cdMul = actor.cdMul ?? 1;
     if (def.cd) actor.cooldowns[def.id] = def.cd * cdMul;
     const angle = actor.facing;
-    const tx = target ? target.x : actor.x + Math.cos(angle) * 5;
-    const ty = target ? target.y : actor.y + Math.sin(angle) * 5;
-    actor.action = { def, t: 0, step: 0, angle, tx, ty, target, total: abilityTotal(def) / (def.noSpeedup ? 1 : actor.atkSpeed()), mult: powerFor(actor, def) };
+    const tx = target2 ? target2.x : actor.x + Math.cos(angle) * 5;
+    const ty = target2 ? target2.y : actor.y + Math.sin(angle) * 5;
+    actor.action = { def, t: 0, step: 0, angle, tx, ty, target: target2, total: abilityTotal(def) / (def.noSpeedup ? 1 : actor.atkSpeed()), mult: powerFor(actor, def) };
     if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, "#ffffff", 0.34, { life: 1.2 });
     if (!actor.isPlayer && def.telegraph !== false) telegraph(actor, def, game);
     if (def.onStart) def.onStart(actor, game);
@@ -44931,17 +45251,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (L2 < 0.16) return mix(c, "#8a7fa0", 0.3);
     return c;
   }
-  var WIN2 = 27;
+  var WIN3 = 27;
   function skillBadge(I, col) {
     const c = badgeTone(col);
     part(I, circle(32, 32, 30), dk(c, 0.35), { sd: 0, hd: 0 });
-    fl(I, circle(32, 32, WIN2 + 0.5), rg(I, 32, 32, 29, [[0, lt(c, 0.3)], [0.55, c], [1, dk(c, 0.3)]], 22, 20, 1));
+    fl(I, circle(32, 32, WIN3 + 0.5), rg(I, 32, 32, 29, [[0, lt(c, 0.3)], [0.55, c], [1, dk(c, 0.3)]], 22, 20, 1));
     return c;
   }
   function skillFrame(I, c) {
     const ring4 = new Path2D();
     ring4.addPath(circle(32, 32, 30));
-    ring4.addPath(circle(32, 32, WIN2));
+    ring4.addPath(circle(32, 32, WIN3));
     part(I, ring4, dk(c, 0.3), { rule: "evenodd", sd: 1.2, hd: 1.1, hi: lt(c, 0.35), sh: dk(c, 0.55), ol: I.ol });
   }
   var UI = {};
@@ -45045,6 +45365,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     part(I, b, "#f0bf45", { sd: 2.4, hd: 1.6 });
     tf(I, { s: 0.62, y: -4 }, () => part(I, exclaimP(), "#8a2a1e", { flat: true, ol: I.ol * 0.6 }));
   };
+  UI.quests = (I) => UI.quest(I);
   UI.reputation = (I) => {
     const g = "#e0b24a";
     tube2(I, "M32 10 V54", dk(g, 0.1), 3.6);
@@ -45281,7 +45602,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const r = resolveSkill(def);
     return render(key2, size, (I) => {
       const c = skillBadge(I, r.badge);
-      clip(I, circle(32, 32, WIN2 + 0.4), () => {
+      clip(I, circle(32, 32, WIN3 + 0.4), () => {
         if (r.o.aura) fl(I, circle(32, 34, 22), rg(I, 32, 34, 24, [[0, fade(r.o.aura === true ? "#c9a0ff" : r.o.aura, 0.8)], [1, fade(r.o.aura === true ? "#c9a0ff" : r.o.aura, 0)]]));
         I.inBadge = true;
         (SK[r.motif] || SK.impact)(I, r.o);
@@ -47065,11 +47386,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     return keys;
   }
-  function strike(w, T3, o) {
+  function strike(w, T4, o) {
     const st = o.stance || GUARD;
     const tLoad = Math.max(0.016, Math.min(w * (o.loadAt ?? 0.64), w - 0.014));
     const tHit = Math.max(tLoad + 0.014, w);
-    const rest = Math.max(0.04, T3 - tHit);
+    const rest = Math.max(0.04, T4 - tHit);
     const tHold = tHit + Math.min(o.holdT ?? 0.055, rest * (o.holdK ?? 0.4));
     const keys = [
       { t: 0, p: st },
@@ -47077,8 +47398,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       { t: tHit, p: o.hit, e: o.hitEase || "snap" },
       { t: tHold, p: o.hold || o.hit, e: "lin" }
     ];
-    if (o.follow) keys.push({ t: tHold + (Math.max(T3, tHold + 0.05) - tHold) * (o.followAt ?? 0.4), p: o.follow, e: "out" });
-    keys.push({ t: Math.max(T3, tHold + 0.05), p: o.end || st, e: "inout" });
+    if (o.follow) keys.push({ t: tHold + (Math.max(T4, tHold + 0.05) - tHold) * (o.followAt ?? 0.4), p: o.follow, e: "out" });
+    keys.push({ t: Math.max(T4, tHold + 0.05), p: o.end || st, e: "inout" });
     return finalize(keys);
   }
   var S = (c, o) => ({ ...o, stance: o.stance || c.stance, holdT: c.dashT ? Math.max(o.holdT ?? 0.055, c.dashT) : o.holdT, holdK: c.dashT ? 0.9 : o.holdK });
@@ -47086,96 +47407,96 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var spun = (c, base2) => ({ ...c.stance || base2 || GUARD, sp: 1 });
   var CLIPS = {
     // ---------------------------------------------------------------- fists
-    jab: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.02, 0.05], l: 0.02, hF: [0.12, 0.07] }, hit: { b: [0.1, 0.02], l: 0.18, hF: [0.46, -0.07], hB: [0.1, 0.1], fF: [0.22, 0], fB: [-0.14, 0], face: "fierce" } })) }),
-    cross: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.03, 0.05], l: -0.06, hB: [0.04, 0.1], hF: [0.18, 0.02] }, hit: { b: [0.13, 0.02], l: 0.3, hB: [0.48, -0.08], hF: [0.08, 0.12], fF: [0.24, 0], fB: [-0.16, -0.02], face: "fierce" } })) }),
-    hook: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.03, 0.06], l: -0.18, hF: [-0.12, 0.02], eF: 1 }, hit: { b: [0.08, 0.03], l: 0.26, hF: [0.34, -0.1], eF: -0.9, hB: [0.1, 0.1], face: "fierce" }, follow: { l: 0.32, hF: [0.22, -0.02], eF: -0.4 } })) }),
-    uppercut: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.16], l: 0.22, hF: [0.12, 0.3], eF: 1, fF: [0.2, 0], fB: [-0.16, 0] }, hit: { b: [0.08, -0.06], z: 0.08, l: -0.16, hF: [0.2, -0.46], eF: 0.5, hB: [0.14, 0.14], fF: [0.18, -0.03], fB: [-0.12, -0.12], face: "shout" }, follow: { z: 0, l: -0.1 } })), legs: true }),
-    haymaker: (w, T3, c) => ({ keys: strike(w, T3, S(c, { loadAt: 0.72, load: { b: [-0.1, 0.08], l: -0.34, hF: [-0.36, -0.12], eF: 0.9, hB: [0.2, 0], fF: [0.24, 0], fB: [-0.18, 0], face: "fierce" }, hit: { b: [0.24, 0.03], l: 0.42, hF: [0.5, -0.03], eF: 0.2, hB: [-0.12, 0.2], fF: [0.34, 0], fB: [-0.14, -0.06], face: "shout" }, follow: { b: [0.26, 0.06], l: 0.46, hF: [0.44, 0.1] } })), jitter: 0.012 }),
-    palm: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: PALMS, load: { b: [-0.02, 0.08], l: 0, hF: [0.1, 0.1] }, hit: { b: [0.12, 0.05], l: 0.22, hF: [0.48, -0.02], hB: [0.08, 0.14], fF: [0.26, 0], face: "fierce" } })) }),
-    palm2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: PALMS, load: { b: [-0.03, 0.08], l: -0.08, hB: [0, 0.12], hF: [0.2, 0.04] }, hit: { b: [0.14, 0.05], l: 0.3, hB: [0.5, -0.03], hF: [0.06, 0.14], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
-    palm_double: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: PALMS, loadAt: 0.7, load: { b: [-0.08, 0.12], l: -0.2, hF: [-0.12, 0.14], hB: [-0.16, 0.18] }, hit: { b: [0.22, 0.06], l: 0.32, hF: [0.5, -0.06], hB: [0.46, 0.06], fF: [0.32, 0], fB: [-0.18, -0.03], face: "shout" }, follow: { l: 0.36 } })), jitter: 0.01 }),
-    shigan: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.03, 0.05], l: -0.06, hF: [0.04, 0.1], hand: "finger" }, hit: { b: [0.16, 0.02], l: 0.32, hF: [0.52, -0.06], hand: "finger", hB: [-0.08, 0.2], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
-    shigan2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.03, 0.05], l: -0.08, hB: [0, 0.12], handB: "finger" }, hit: { b: [0.17, 0.02], l: 0.34, hB: [0.52, -0.06], handB: "finger", hF: [0.06, 0.16], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
-    claw: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.12, hF: [0.02, -0.38], hand: "claw", eF: 1 }, hit: { l: 0.28, b: [0.1, 0.05], hF: [0.34, 0.26], hand: "claw", face: "fierce" } })) }),
-    claw2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: 0.12, b: [0, 0.08], hB: [0.02, 0.32], handB: "claw" }, hit: { l: -0.12, b: [0.1, 0], hB: [0.36, -0.32], handB: "claw", hF: [0.12, 0.12], face: "fierce" } })) }),
-    claw_x: (w, T3, c) => ({ keys: strike(w, T3, S(c, { loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.04], hF: [0, -0.4], hB: [-0.06, -0.36], hand: "claw", handB: "claw", face: "fierce" }, hit: { l: 0.36, b: [0.18, 0.08], hF: [0.36, 0.28], hB: [0.3, 0.32], hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 8e-3 }),
-    grab: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.02, 0.06], l: -0.08, hF: [0.1, 0.02], hand: "claw" }, hit: { b: [0.12, 0.03], l: 0.26, hF: [0.5, -0.05], hand: "claw", face: "fierce" }, follow: { hand: "fist", hF: [0.4, -0.02], l: 0.18 } })) }),
-    grab2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.02, 0.06], l: -0.1, hB: [0.02, 0.06], handB: "claw" }, hit: { b: [0.13, 0.03], l: 0.3, hB: [0.5, -0.04], handB: "claw", hF: [0.08, 0.14], face: "fierce" }, follow: { handB: "fist", hB: [0.4, 0] } })) }),
-    chop: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.14, b: [-0.02, 0.04], hF: { a: -2.1, r: 0.36 }, hand: "palm" }, hit: { l: 0.26, b: [0.12, 0.06], hF: { a: 0.55, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
-    chop2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: 0.12, b: [0, 0.08], hF: { a: 2, r: 0.34 }, hand: "palm" }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
-    thrust: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.05, 0.09], l: -0.06, hF: [0.08, 0.06] }, hit: { b: [0.14, 0.04], l: 0.46, hF: [0.44, 0], hB: [-0.22, 0.16], fF: [0.26, 0], fB: [-0.32, -0.08], face: "shout" } })) }),
-    charge: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [-0.06, 0.12], l: 0.1, hF: [0.1, 0.18], hB: [-0.1, 0.2] }, hit: { b: [0.12, 0.08], l: 0.58, hF: [0.18, 0.2], hB: [-0.2, 0.2], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
-    headbutt: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.4, b: [-0.06, 0.02], hF: [0.1, 0.25], hB: [0.02, 0.28] }, hit: { l: 0.52, b: [0.18, 0.06], ht: 0.3, face: "shout" } })) }),
+    jab: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.02, 0.05], l: 0.02, hF: [0.12, 0.07] }, hit: { b: [0.1, 0.02], l: 0.18, hF: [0.46, -0.07], hB: [0.1, 0.1], fF: [0.22, 0], fB: [-0.14, 0], face: "fierce" } })) }),
+    cross: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.03, 0.05], l: -0.06, hB: [0.04, 0.1], hF: [0.18, 0.02] }, hit: { b: [0.13, 0.02], l: 0.3, hB: [0.48, -0.08], hF: [0.08, 0.12], fF: [0.24, 0], fB: [-0.16, -0.02], face: "fierce" } })) }),
+    hook: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.03, 0.06], l: -0.18, hF: [-0.12, 0.02], eF: 1 }, hit: { b: [0.08, 0.03], l: 0.26, hF: [0.34, -0.1], eF: -0.9, hB: [0.1, 0.1], face: "fierce" }, follow: { l: 0.32, hF: [0.22, -0.02], eF: -0.4 } })) }),
+    uppercut: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.16], l: 0.22, hF: [0.12, 0.3], eF: 1, fF: [0.2, 0], fB: [-0.16, 0] }, hit: { b: [0.08, -0.06], z: 0.08, l: -0.16, hF: [0.2, -0.46], eF: 0.5, hB: [0.14, 0.14], fF: [0.18, -0.03], fB: [-0.12, -0.12], face: "shout" }, follow: { z: 0, l: -0.1 } })), legs: true }),
+    haymaker: (w, T4, c) => ({ keys: strike(w, T4, S(c, { loadAt: 0.72, load: { b: [-0.1, 0.08], l: -0.34, hF: [-0.36, -0.12], eF: 0.9, hB: [0.2, 0], fF: [0.24, 0], fB: [-0.18, 0], face: "fierce" }, hit: { b: [0.24, 0.03], l: 0.42, hF: [0.5, -0.03], eF: 0.2, hB: [-0.12, 0.2], fF: [0.34, 0], fB: [-0.14, -0.06], face: "shout" }, follow: { b: [0.26, 0.06], l: 0.46, hF: [0.44, 0.1] } })), jitter: 0.012 }),
+    palm: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: PALMS, load: { b: [-0.02, 0.08], l: 0, hF: [0.1, 0.1] }, hit: { b: [0.12, 0.05], l: 0.22, hF: [0.48, -0.02], hB: [0.08, 0.14], fF: [0.26, 0], face: "fierce" } })) }),
+    palm2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: PALMS, load: { b: [-0.03, 0.08], l: -0.08, hB: [0, 0.12], hF: [0.2, 0.04] }, hit: { b: [0.14, 0.05], l: 0.3, hB: [0.5, -0.03], hF: [0.06, 0.14], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
+    palm_double: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: PALMS, loadAt: 0.7, load: { b: [-0.08, 0.12], l: -0.2, hF: [-0.12, 0.14], hB: [-0.16, 0.18] }, hit: { b: [0.22, 0.06], l: 0.32, hF: [0.5, -0.06], hB: [0.46, 0.06], fF: [0.32, 0], fB: [-0.18, -0.03], face: "shout" }, follow: { l: 0.36 } })), jitter: 0.01 }),
+    shigan: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.03, 0.05], l: -0.06, hF: [0.04, 0.1], hand: "finger" }, hit: { b: [0.16, 0.02], l: 0.32, hF: [0.52, -0.06], hand: "finger", hB: [-0.08, 0.2], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
+    shigan2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.03, 0.05], l: -0.08, hB: [0, 0.12], handB: "finger" }, hit: { b: [0.17, 0.02], l: 0.34, hB: [0.52, -0.06], handB: "finger", hF: [0.06, 0.16], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
+    claw: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.12, hF: [0.02, -0.38], hand: "claw", eF: 1 }, hit: { l: 0.28, b: [0.1, 0.05], hF: [0.34, 0.26], hand: "claw", face: "fierce" } })) }),
+    claw2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: 0.12, b: [0, 0.08], hB: [0.02, 0.32], handB: "claw" }, hit: { l: -0.12, b: [0.1, 0], hB: [0.36, -0.32], handB: "claw", hF: [0.12, 0.12], face: "fierce" } })) }),
+    claw_x: (w, T4, c) => ({ keys: strike(w, T4, S(c, { loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.04], hF: [0, -0.4], hB: [-0.06, -0.36], hand: "claw", handB: "claw", face: "fierce" }, hit: { l: 0.36, b: [0.18, 0.08], hF: [0.36, 0.28], hB: [0.3, 0.32], hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 8e-3 }),
+    grab: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.02, 0.06], l: -0.08, hF: [0.1, 0.02], hand: "claw" }, hit: { b: [0.12, 0.03], l: 0.26, hF: [0.5, -0.05], hand: "claw", face: "fierce" }, follow: { hand: "fist", hF: [0.4, -0.02], l: 0.18 } })) }),
+    grab2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.02, 0.06], l: -0.1, hB: [0.02, 0.06], handB: "claw" }, hit: { b: [0.13, 0.03], l: 0.3, hB: [0.5, -0.04], handB: "claw", hF: [0.08, 0.14], face: "fierce" }, follow: { handB: "fist", hB: [0.4, 0] } })) }),
+    chop: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.14, b: [-0.02, 0.04], hF: { a: -2.1, r: 0.36 }, hand: "palm" }, hit: { l: 0.26, b: [0.12, 0.06], hF: { a: 0.55, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
+    chop2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: 0.12, b: [0, 0.08], hF: { a: 2, r: 0.34 }, hand: "palm" }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
+    thrust: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.05, 0.09], l: -0.06, hF: [0.08, 0.06] }, hit: { b: [0.14, 0.04], l: 0.46, hF: [0.44, 0], hB: [-0.22, 0.16], fF: [0.26, 0], fB: [-0.32, -0.08], face: "shout" } })) }),
+    charge: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.06, 0.12], l: 0.1, hF: [0.1, 0.18], hB: [-0.1, 0.2] }, hit: { b: [0.12, 0.08], l: 0.58, hF: [0.18, 0.2], hB: [-0.2, 0.2], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
+    headbutt: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.4, b: [-0.06, 0.02], hF: [0.1, 0.25], hB: [0.02, 0.28] }, hit: { l: 0.52, b: [0.18, 0.06], ht: 0.3, face: "shout" } })) }),
     // ---------------------------------------------------------------- kicks
-    kick: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.1, fF: [0.12, -0.3], hF: [0.18, 0.04], hB: [0.06, 0.14] }, hit: { l: -0.22, b: [0.05, -0.02], fF: [0.68, -0.42], fB: [-0.08, 0], hF: [0.1, 0.12], hB: [-0.12, 0.16], face: "fierce" } })), legs: true }),
-    kick_high: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.18, fF: [0.02, -0.36], fB: [-0.05, 0] }, hit: { l: -0.44, b: [0.02, -0.02], fF: [0.58, -0.84], fB: [-0.06, 0], hF: [-0.16, 0.12], hB: [0.26, -0.06], face: "fierce" }, follow: { l: -0.3, fF: [0.44, -0.6] } })), legs: true }),
-    kick_low: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.2], l: 0.08, fF: [-0.1, -0.05], fB: [-0.12, 0] }, hit: { b: [0.05, 0.27], l: 0.2, fF: [0.74, -0.06], fB: [-0.22, 0], hF: [0.26, 0.34], hB: [0, 0.3], face: "fierce" } })), legs: true }),
-    kick_spin: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { sp: 0, fF: [0.05, -0.22], l: -0.06 }, hit: { sp: 1, fF: [0.7, -0.54], fB: [-0.06, 0], l: -0.32, hF: [-0.1, 0.15], hB: [0.22, -0.05], face: "shout" }, hitEase: "out", end: spun(c) })), legs: true }),
-    sweep: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.22], l: 0.22, fF: [0.06, -0.04], hF: [0.22, 0.3], hB: [-0.04, 0.3] }, hit: { sp: 1, b: [0.02, 0.3], l: 0.3, fF: [0.8, -0.05], fB: [-0.2, 0], hF: [0.26, 0.42], hB: [-0.1, 0.36], face: "fierce" }, hitEase: "out", end: spun(c) })), legs: true }),
-    knee: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { fF: [0.1, -0.1], l: 0.05, b: [0, 0.06] }, hit: { fF: [0.26, -0.42], l: 0.12, b: [0.08, -0.05], z: 0.06, hF: [0.32, 0.04], hB: [0.26, 0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
-    axe_kick: (w, T3, c) => ({ keys: strike(w, T3, S(c, { loadAt: 0.75, load: { z: 0.55, l: -0.32, fF: [0.2, -0.95], fB: [-0.1, -0.12], hF: [-0.1, -0.1], hB: [0.2, -0.2] }, hit: { z: 0, b: [0.1, 0.08], l: 0.3, fF: [0.58, -0.06], fB: [-0.16, 0], hF: [-0.1, 0.2], hB: [0.1, 0.15], face: "shout" } })), legs: true }),
-    rise_kick: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.18], l: 0.14, fF: [0.28, -0.04], hF: [0.1, 0.3] }, hit: { b: [0, -0.04], z: 0.18, l: -0.52, fF: [0.3, -1.02], fB: [-0.04, 0], hF: [-0.22, 0.1], hB: [0.12, 0.2], face: "shout" }, follow: { z: 0.05 } })), legs: true }),
-    mouton: (w, T3, c) => ({ keys: strike(w, T3, S(c, { loadAt: 0.7, load: { l: -0.32, z: 0.08, fF: [-0.05, -0.46], hF: [0.1, -0.1] }, hit: { l: -0.78, b: [0.26, 0], z: 0.16, fF: [0.88, -0.56], fB: [-0.12, -0.12], hF: [-0.36, 0.25], hB: [-0.32, 0.3], face: "shout" }, follow: { z: 0, l: -0.4 } })), legs: true }),
-    handstand: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.14], l: 0.3, hF: [0.3, 0.4], hB: [0.2, 0.4] }, hit: { r: Math.PI, b: [0, 0], l: 0, hF: [0.12, -0.72], hB: [-0.08, -0.72], hand: "palm", handB: "palm", fF: [0.58, -0.45], fB: [-0.58, -0.45] }, hold: { r: Math.PI, fF: [0.58, -0.4], fB: [-0.58, -0.5] }, holdT: c.hitDur || 0.4, holdK: 0.85 })), legs: true }),
-    flying_kick: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0] }, hit: { z: 0.3, l: -0.34, fF: [0.78, -0.46], fB: [-0.06, -0.3], hF: [-0.2, 0.05], hB: [0.2, -0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
-    stomp: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { fF: [0.18, -0.55], l: -0.1, hF: [0.2, -0.1], hB: [-0.1, -0.1] }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
+    kick: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.1, fF: [0.12, -0.3], hF: [0.18, 0.04], hB: [0.06, 0.14] }, hit: { l: -0.22, b: [0.05, -0.02], fF: [0.68, -0.42], fB: [-0.08, 0], hF: [0.1, 0.12], hB: [-0.12, 0.16], face: "fierce" } })), legs: true }),
+    kick_high: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.18, fF: [0.02, -0.36], fB: [-0.05, 0] }, hit: { l: -0.44, b: [0.02, -0.02], fF: [0.58, -0.84], fB: [-0.06, 0], hF: [-0.16, 0.12], hB: [0.26, -0.06], face: "fierce" }, follow: { l: -0.3, fF: [0.44, -0.6] } })), legs: true }),
+    kick_low: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.2], l: 0.08, fF: [-0.1, -0.05], fB: [-0.12, 0] }, hit: { b: [0.05, 0.27], l: 0.2, fF: [0.74, -0.06], fB: [-0.22, 0], hF: [0.26, 0.34], hB: [0, 0.3], face: "fierce" } })), legs: true }),
+    kick_spin: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { sp: 0, fF: [0.05, -0.22], l: -0.06 }, hit: { sp: 1, fF: [0.7, -0.54], fB: [-0.06, 0], l: -0.32, hF: [-0.1, 0.15], hB: [0.22, -0.05], face: "shout" }, hitEase: "out", end: spun(c) })), legs: true }),
+    sweep: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.22], l: 0.22, fF: [0.06, -0.04], hF: [0.22, 0.3], hB: [-0.04, 0.3] }, hit: { sp: 1, b: [0.02, 0.3], l: 0.3, fF: [0.8, -0.05], fB: [-0.2, 0], hF: [0.26, 0.42], hB: [-0.1, 0.36], face: "fierce" }, hitEase: "out", end: spun(c) })), legs: true }),
+    knee: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { fF: [0.1, -0.1], l: 0.05, b: [0, 0.06] }, hit: { fF: [0.26, -0.42], l: 0.12, b: [0.08, -0.05], z: 0.06, hF: [0.32, 0.04], hB: [0.26, 0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
+    axe_kick: (w, T4, c) => ({ keys: strike(w, T4, S(c, { loadAt: 0.75, load: { z: 0.55, l: -0.32, fF: [0.2, -0.95], fB: [-0.1, -0.12], hF: [-0.1, -0.1], hB: [0.2, -0.2] }, hit: { z: 0, b: [0.1, 0.08], l: 0.3, fF: [0.58, -0.06], fB: [-0.16, 0], hF: [-0.1, 0.2], hB: [0.1, 0.15], face: "shout" } })), legs: true }),
+    rise_kick: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.18], l: 0.14, fF: [0.28, -0.04], hF: [0.1, 0.3] }, hit: { b: [0, -0.04], z: 0.18, l: -0.52, fF: [0.3, -1.02], fB: [-0.04, 0], hF: [-0.22, 0.1], hB: [0.12, 0.2], face: "shout" }, follow: { z: 0.05 } })), legs: true }),
+    mouton: (w, T4, c) => ({ keys: strike(w, T4, S(c, { loadAt: 0.7, load: { l: -0.32, z: 0.08, fF: [-0.05, -0.46], hF: [0.1, -0.1] }, hit: { l: -0.78, b: [0.26, 0], z: 0.16, fF: [0.88, -0.56], fB: [-0.12, -0.12], hF: [-0.36, 0.25], hB: [-0.32, 0.3], face: "shout" }, follow: { z: 0, l: -0.4 } })), legs: true }),
+    handstand: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.14], l: 0.3, hF: [0.3, 0.4], hB: [0.2, 0.4] }, hit: { r: Math.PI, b: [0, 0], l: 0, hF: [0.12, -0.72], hB: [-0.08, -0.72], hand: "palm", handB: "palm", fF: [0.58, -0.45], fB: [-0.58, -0.45] }, hold: { r: Math.PI, fF: [0.58, -0.4], fB: [-0.58, -0.5] }, holdT: c.hitDur || 0.4, holdK: 0.85 })), legs: true }),
+    flying_kick: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0] }, hit: { z: 0.3, l: -0.34, fF: [0.78, -0.46], fB: [-0.06, -0.3], hF: [-0.2, 0.05], hB: [0.2, -0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
+    stomp: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { fF: [0.18, -0.55], l: -0.1, hF: [0.2, -0.1], hB: [-0.1, -0.1] }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
     // Okama Kenpo: ballet
-    ballet_kick: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.24], hB: [-0.08, 0.24] }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.03], hF: [0.34, -0.24], hB: [-0.36, -0.22], face: "fierce" } })), legs: true }),
-    pirouette: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 1, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hF: [0.14, -0.44], hB: [0, -0.46], face: "fierce" }, hitEase: "out", end: { ...BALLET, sp: 1 } })), legs: true }),
-    jete: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], face: "fierce" }, follow: { z: 0 } })), legs: true }),
-    arabesque: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], face: "fierce" } })), legs: true }),
+    ballet_kick: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.24], hB: [-0.08, 0.24] }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.03], hF: [0.34, -0.24], hB: [-0.36, -0.22], face: "fierce" } })), legs: true }),
+    pirouette: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 1, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hF: [0.14, -0.44], hB: [0, -0.46], face: "fierce" }, hitEase: "out", end: { ...BALLET, sp: 1 } })), legs: true }),
+    jete: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], face: "fierce" }, follow: { z: 0 } })), legs: true }),
+    arabesque: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], face: "fierce" } })), legs: true }),
     // ---------------------------------------------------------------- blades
-    slash: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.04], hF: { a: -2.1, r: 0.34 }, wF: -2.55, hB: [-0.04, 0.18] }, hit: { l: 0.27, b: [0.13, 0.08], hF: { a: 0.55, r: 0.43 }, wF: 0.8, hB: [0.2, 0.16], fF: [0.3, 0], fB: [-0.17, 0], face: "fierce" }, follow: { l: 0.3, hF: { a: 0.9, r: 0.42 }, wF: 1.15 } })) }),
-    slash2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: sw(c), load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, face: "fierce" }, follow: { hF: { a: -0.95, r: 0.42 }, wF: -1.35 } })) }),
-    rise_slash: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.15], l: 0.26, hF: { a: 1.85, r: 0.36 }, wF: 2.5, hB: [0, 0.22], face: "fierce" }, hit: { b: [0.12, -0.03], z: 0.04, l: -0.22, hF: { a: -1.2, r: 0.43 }, wF: -1.5, hB: [-0.1, 0.12], fF: [0.26, 0], fB: [-0.16, -0.04], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.8, l: -0.26 } })) }),
-    slash3: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: sw(c), loadAt: 0.7, load: { l: -0.22, b: [-0.04, 0.08], hF: { a: 2.7, r: 0.36 }, wF: 3, sp: 0 }, hit: { sp: 1, l: 0.22, b: [0.16, 0.06], hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, hitEase: "out", end: { ...sw(c), sp: 1 } })) }),
-    stab: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: sw(c), load: { l: -0.14, b: [-0.08, 0.06], hF: [-0.02, 0.08], wF: 0, hB: [-0.06, 0.1] }, hit: { l: 0.32, b: [0.22, 0.04], hF: [0.46, -0.03], wF: -0.03, hB: [-0.2, 0.16], fF: [0.36, 0], fB: [-0.22, -0.03], face: "shout" } })) }),
-    cleave: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: HEAVYW, loadAt: 0.72, load: { l: -0.24, b: [-0.06, 0], hF: { a: -1.85, r: 0.36 }, hB: { a: -1.75, r: 0.33 }, wF: -2.25, face: "fierce" }, hit: { l: 0.4, b: [0.22, 0.15], hF: { a: 0.78, r: 0.4 }, hB: { a: 0.88, r: 0.35 }, wF: 1, fF: [0.36, 0], fB: [-0.22, 0], face: "shout" }, follow: { l: 0.44, b: [0.24, 0.17] } })), jitter: 0.01 }),
-    iai: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: { ...SWORD2, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.16], l: 0.34, hF: [0.02, 0.3], wF: 2.7, face: "fierce" }, hit: { l: 0.5, b: [0.2, 0.08], hF: [0.46, 0.04], wF: 0.1, fB: [-0.36, -0.12], face: "shout" }, follow: { l: 0.2, hF: [0.1, 0.28], wF: 2.6 } })) }),
+    slash: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.04], hF: { a: -2.1, r: 0.34 }, wF: -2.55, hB: [-0.04, 0.18] }, hit: { l: 0.27, b: [0.13, 0.08], hF: { a: 0.55, r: 0.43 }, wF: 0.8, hB: [0.2, 0.16], fF: [0.3, 0], fB: [-0.17, 0], face: "fierce" }, follow: { l: 0.3, hF: { a: 0.9, r: 0.42 }, wF: 1.15 } })) }),
+    slash2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: sw(c), load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, face: "fierce" }, follow: { hF: { a: -0.95, r: 0.42 }, wF: -1.35 } })) }),
+    rise_slash: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.15], l: 0.26, hF: { a: 1.85, r: 0.36 }, wF: 2.5, hB: [0, 0.22], face: "fierce" }, hit: { b: [0.12, -0.03], z: 0.04, l: -0.22, hF: { a: -1.2, r: 0.43 }, wF: -1.5, hB: [-0.1, 0.12], fF: [0.26, 0], fB: [-0.16, -0.04], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.8, l: -0.26 } })) }),
+    slash3: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: sw(c), loadAt: 0.7, load: { l: -0.22, b: [-0.04, 0.08], hF: { a: 2.7, r: 0.36 }, wF: 3, sp: 0 }, hit: { sp: 1, l: 0.22, b: [0.16, 0.06], hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, hitEase: "out", end: { ...sw(c), sp: 1 } })) }),
+    stab: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: sw(c), load: { l: -0.14, b: [-0.08, 0.06], hF: [-0.02, 0.08], wF: 0, hB: [-0.06, 0.1] }, hit: { l: 0.32, b: [0.22, 0.04], hF: [0.46, -0.03], wF: -0.03, hB: [-0.2, 0.16], fF: [0.36, 0], fB: [-0.22, -0.03], face: "shout" } })) }),
+    cleave: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: HEAVYW, loadAt: 0.72, load: { l: -0.24, b: [-0.06, 0], hF: { a: -1.85, r: 0.36 }, hB: { a: -1.75, r: 0.33 }, wF: -2.25, face: "fierce" }, hit: { l: 0.4, b: [0.22, 0.15], hF: { a: 0.78, r: 0.4 }, hB: { a: 0.88, r: 0.35 }, wF: 1, fF: [0.36, 0], fB: [-0.22, 0], face: "shout" }, follow: { l: 0.44, b: [0.24, 0.17] } })), jitter: 0.01 }),
+    iai: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: { ...SWORD2, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.16], l: 0.34, hF: [0.02, 0.3], wF: 2.7, face: "fierce" }, hit: { l: 0.5, b: [0.2, 0.08], hF: [0.46, 0.04], wF: 0.1, fB: [-0.36, -0.12], face: "shout" }, follow: { l: 0.2, hF: [0.1, 0.28], wF: 2.6 } })) }),
     // two blades (Nitoryu): alternating cuts, then an X
-    dual1: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: SWORD22, load: { l: -0.16, hF: { a: -2.1, r: 0.34 }, wF: -2.55 }, hit: { l: 0.26, b: [0.12, 0.07], hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" } })) }),
-    dual2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: SWORD22, load: { l: -0.14, hB: { a: -2.2, r: 0.33 }, wB: -2.6 }, hit: { l: 0.28, b: [0.13, 0.07], hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" } })) }),
-    dual3: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: SWORD22, load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
-    dualx: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: SWORD22, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, face: "fierce" }, hit: { l: 0.32, b: [0.18, 0.1], hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, face: "shout" } })) }),
-    dual_stab: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: SWORD22, load: { l: -0.16, b: [-0.1, 0.07], hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "fierce" }, hit: { l: 0.36, b: [0.24, 0.05], hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
-    tora: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: SWORD22, loadAt: 0.72, load: { z: 0.4, l: -0.32, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "fierce" }, hit: { z: 0, l: 0.46, b: [0.24, 0.15], hF: { a: 0.9, r: 0.4 }, hB: { a: 1.1, r: 0.38 }, wF: 1, wB: 1.2, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
-    bladespin: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], hF: { a: 2.6, r: 0.38 }, wF: 2.9 }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
+    dual1: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: SWORD22, load: { l: -0.16, hF: { a: -2.1, r: 0.34 }, wF: -2.55 }, hit: { l: 0.26, b: [0.12, 0.07], hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" } })) }),
+    dual2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: SWORD22, load: { l: -0.14, hB: { a: -2.2, r: 0.33 }, wB: -2.6 }, hit: { l: 0.28, b: [0.13, 0.07], hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" } })) }),
+    dual3: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: SWORD22, load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
+    dualx: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: SWORD22, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, face: "fierce" }, hit: { l: 0.32, b: [0.18, 0.1], hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, face: "shout" } })) }),
+    dual_stab: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: SWORD22, load: { l: -0.16, b: [-0.1, 0.07], hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "fierce" }, hit: { l: 0.36, b: [0.24, 0.05], hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
+    tora: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: SWORD22, loadAt: 0.72, load: { z: 0.4, l: -0.32, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "fierce" }, hit: { z: 0, l: 0.46, b: [0.24, 0.15], hF: { a: 0.9, r: 0.4 }, hB: { a: 1.1, r: 0.38 }, wF: 1, wB: 1.2, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
+    bladespin: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], hF: { a: 2.6, r: 0.38 }, wF: 2.9 }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
     // big weapons
-    axe: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "fierce" }, hit: { l: 0.36, b: [0.2, 0.12], hF: { a: 0.7, r: 0.42 }, hB: { a: 0.9, r: 0.36 }, wF: 1, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4 } })) }),
-    axe2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6 }, hit: { l: -0.2, b: [0.16, 0.02], hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" } })) }),
-    axe_slam: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "fierce" }, hit: { z: 0, l: 0.52, b: [0.24, 0.24], hF: { a: 1.05, r: 0.42 }, hB: { a: 1.15, r: 0.36 }, wF: 1.35, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.5, b: [0.24, 0.24] } })), jitter: 0.012 }),
-    staff: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAFF, load: { l: -0.14, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2] }, hit: { l: 0.24, b: [0.1, 0.05], hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" } })) }),
-    staff2: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], hF: { a: 1.9, r: 0.34 }, wF: 2.3 }, hit: { l: -0.12, b: [0.1, 0.02], hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" } })) }),
-    staff_jab: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], hF: [0, 0.06], wF: 0.02 }, hit: { l: 0.3, b: [0.2, 0.04], hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
+    axe: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "fierce" }, hit: { l: 0.36, b: [0.2, 0.12], hF: { a: 0.7, r: 0.42 }, hB: { a: 0.9, r: 0.36 }, wF: 1, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4 } })) }),
+    axe2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6 }, hit: { l: -0.2, b: [0.16, 0.02], hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" } })) }),
+    axe_slam: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "fierce" }, hit: { z: 0, l: 0.52, b: [0.24, 0.24], hF: { a: 1.05, r: 0.42 }, hB: { a: 1.15, r: 0.36 }, wF: 1.35, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.5, b: [0.24, 0.24] } })), jitter: 0.012 }),
+    staff: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAFF, load: { l: -0.14, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2] }, hit: { l: 0.24, b: [0.1, 0.05], hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" } })) }),
+    staff2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], hF: { a: 1.9, r: 0.34 }, wF: 2.3 }, hit: { l: -0.12, b: [0.1, 0.02], hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" } })) }),
+    staff_jab: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], hF: [0, 0.06], wF: 0.02 }, hit: { l: 0.3, b: [0.2, 0.04], hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
     // ---------------------------------------------------------------- guns & throws
-    shoot: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.42, -0.04], wF: 0, hB: c.sling ? [0.02, -0.04] : [0.3, 0.05], l: 0.03 }, hit: { hF: [0.34, -0.13], wF: -0.4, hB: c.sling ? [0.34, -0.02] : [0.26, 0.04], l: -0.1, b: [-0.07, 0] }, follow: { hF: [0.4, -0.06], wF: -0.1, l: 0 } })) }),
-    aim: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, hB: c.sling ? [-0.02, -0.06] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02] }, hit: { hF: [0.3, -0.24], wF: -0.7, hB: c.sling ? [0.36, -0.04] : [0.24, 0.02], l: -0.16, b: [-0.14, 0.02] } })) }),
-    flick: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { hF: [0.02, 0.2], l: -0.06 }, hit: { hF: [0.46, -0.1], l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
-    throw: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { hF: { a: -2.4, r: 0.4 }, l: -0.16, b: [-0.04, 0.04] }, hit: { hF: { a: 0.15, r: 0.43 }, l: 0.26, b: [0.1, 0.04], hand: "palm", face: "fierce" } })) }),
+    shoot: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.42, -0.04], wF: 0, hB: c.sling ? [0.02, -0.04] : [0.3, 0.05], l: 0.03 }, hit: { hF: [0.34, -0.13], wF: -0.4, hB: c.sling ? [0.34, -0.02] : [0.26, 0.04], l: -0.1, b: [-0.07, 0] }, follow: { hF: [0.4, -0.06], wF: -0.1, l: 0 } })) }),
+    aim: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, hB: c.sling ? [-0.02, -0.06] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02] }, hit: { hF: [0.3, -0.24], wF: -0.7, hB: c.sling ? [0.36, -0.04] : [0.24, 0.02], l: -0.16, b: [-0.14, 0.02] } })) }),
+    flick: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { hF: [0.02, 0.2], l: -0.06 }, hit: { hF: [0.46, -0.1], l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
+    throw: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { hF: { a: -2.4, r: 0.4 }, l: -0.16, b: [-0.04, 0.04] }, hit: { hF: { a: 0.15, r: 0.43 }, l: 0.26, b: [0.1, 0.04], hand: "palm", face: "fierce" } })) }),
     // ---------------------------------------------------------------- casting
-    push: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.04, 0.1], l: -0.14, hF: [-0.12, 0.18], hB: [-0.16, 0.2], hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.16, 0], face: "fierce" }, hit: { b: [0.1, 0.04], l: 0.22, hF: [0.47, -0.06], hB: [0.43, 0.03], hand: "palm", handB: "palm", fF: [0.28, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 6e-3 }),
-    point: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, load: { hF: [0.1, 0.1], l: -0.06, face: "fierce" }, hit: { hF: [0.48, -0.12], hand: "finger", l: 0.1, hB: [-0.05, 0.3], fF: [0.18, 0], fB: [-0.12, 0] } })) }),
-    raise: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.14, b: [0.04, 0.04], face: "shout" } })), jitter: 4e-3 }),
-    summon: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.1], l: 0.18, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, -0.02], l: -0.16, hF: [0.18, -0.5], hB: [-0.16, -0.48], hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
-    powerup: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.16], l: 0.26, hF: [0.02, 0.27], hB: [-0.06, 0.29], fF: [0.2, 0], fB: [-0.2, 0], face: "fierce" }, hit: { b: [0, -0.03], l: -0.18, hF: [0.3, -0.34], hB: [-0.28, -0.34], hand: "palm", handB: "palm", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.14 })), jitter: 0.012 }),
-    spread: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], hF: [0.1, 0.26], hB: [0, 0.26], l: 0.22, face: "fierce" }, hit: { b: [0, -0.02], hF: [0.4, -0.14], hB: [-0.38, -0.14], hand: "palm", handB: "palm", l: -0.1, fF: [0.2, 0], fB: [-0.2, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
-    hana: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85 })) }),
-    slam: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, hF: [0.14, -0.46], hB: [0.06, -0.46], l: -0.22, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "fierce" }, hit: { z: 0, b: [0.1, 0.26], l: 0.48, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.26, 0], fB: [-0.2, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
-    quake: (w, T3, c) => ({ keys: strike(w, T3, S(c, { loadAt: 0.72, load: { b: [-0.06, 0.08], l: -0.26, hF: [-0.24, -0.04], hB: [0.2, 0.05], face: "fierce" }, hit: { b: [0.2, 0.05], l: 0.36, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 0.014 }),
-    pray: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
-    blink: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.16], l: 0.32, hF: [-0.1, 0.2], hB: [-0.14, 0.22] }, hit: { l: 0.5, b: [0.2, 0.06], hF: [-0.2, 0.2], hB: [-0.24, 0.22], fB: [-0.3, -0.1] } })), legs: true }),
-    will: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.1], hF: [0, 0.32], hB: [-0.04, 0.32], l: 0.1, ht: 0.15, face: "fierce" }, hit: { b: [0, -0.04], l: -0.12, ht: -0.12, hF: [0.14, 0.36], hB: [-0.1, 0.36], face: "shout" }, holdT: 0.2 })), jitter: 0.01 }),
-    guardup: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: GUARD, load: { b: [0, 0.07], hF: [0.14, -0.1], hB: [0.2, -0.02], eB: -1 }, hit: { b: [0, 0.06], hF: [0.16, -0.12], hB: [0.2, -0.02], eB: -1, face: "fierce" }, holdT: 0.3 })) }),
-    flex: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, load: { b: [0, 0.1], hF: [0.18, -0.2], hB: [-0.18, -0.2], eF: 1, eB: 1, face: "fierce" }, hit: { b: [0, 0.12], hF: [0.2, -0.24], hB: [-0.2, -0.24], face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
-    breath: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "fierce" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
-    pull: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
+    push: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.04, 0.1], l: -0.14, hF: [-0.12, 0.18], hB: [-0.16, 0.2], hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.16, 0], face: "fierce" }, hit: { b: [0.1, 0.04], l: 0.22, hF: [0.47, -0.06], hB: [0.43, 0.03], hand: "palm", handB: "palm", fF: [0.28, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 6e-3 }),
+    point: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, load: { hF: [0.1, 0.1], l: -0.06, face: "fierce" }, hit: { hF: [0.48, -0.12], hand: "finger", l: 0.1, hB: [-0.05, 0.3], fF: [0.18, 0], fB: [-0.12, 0] } })) }),
+    raise: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.14, b: [0.04, 0.04], face: "shout" } })), jitter: 4e-3 }),
+    summon: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.1], l: 0.18, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, -0.02], l: -0.16, hF: [0.18, -0.5], hB: [-0.16, -0.48], hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
+    powerup: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.16], l: 0.26, hF: [0.02, 0.27], hB: [-0.06, 0.29], fF: [0.2, 0], fB: [-0.2, 0], face: "fierce" }, hit: { b: [0, -0.03], l: -0.18, hF: [0.3, -0.34], hB: [-0.28, -0.34], hand: "palm", handB: "palm", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.14 })), jitter: 0.012 }),
+    spread: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], hF: [0.1, 0.26], hB: [0, 0.26], l: 0.22, face: "fierce" }, hit: { b: [0, -0.02], hF: [0.4, -0.14], hB: [-0.38, -0.14], hand: "palm", handB: "palm", l: -0.1, fF: [0.2, 0], fB: [-0.2, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
+    hana: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85 })) }),
+    slam: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, hF: [0.14, -0.46], hB: [0.06, -0.46], l: -0.22, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "fierce" }, hit: { z: 0, b: [0.1, 0.26], l: 0.48, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.26, 0], fB: [-0.2, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
+    quake: (w, T4, c) => ({ keys: strike(w, T4, S(c, { loadAt: 0.72, load: { b: [-0.06, 0.08], l: -0.26, hF: [-0.24, -0.04], hB: [0.2, 0.05], face: "fierce" }, hit: { b: [0.2, 0.05], l: 0.36, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 0.014 }),
+    pray: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
+    blink: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.16], l: 0.32, hF: [-0.1, 0.2], hB: [-0.14, 0.22] }, hit: { l: 0.5, b: [0.2, 0.06], hF: [-0.2, 0.2], hB: [-0.24, 0.22], fB: [-0.3, -0.1] } })), legs: true }),
+    will: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.1], hF: [0, 0.32], hB: [-0.04, 0.32], l: 0.1, ht: 0.15, face: "fierce" }, hit: { b: [0, -0.04], l: -0.12, ht: -0.12, hF: [0.14, 0.36], hB: [-0.1, 0.36], face: "shout" }, holdT: 0.2 })), jitter: 0.01 }),
+    guardup: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: GUARD, load: { b: [0, 0.07], hF: [0.14, -0.1], hB: [0.2, -0.02], eB: -1 }, hit: { b: [0, 0.06], hF: [0.16, -0.12], hB: [0.2, -0.02], eB: -1, face: "fierce" }, holdT: 0.3 })) }),
+    flex: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, load: { b: [0, 0.1], hF: [0.18, -0.2], hB: [-0.18, -0.2], eF: 1, eB: 1, face: "fierce" }, hit: { b: [0, 0.12], hF: [0.2, -0.24], hB: [-0.2, -0.24], face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
+    breath: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "fierce" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
+    pull: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
     // ---------------------------------------------------------------- rubber
-    pistol: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.22, b: [-0.06, 0.05], hF: [-0.56, -0.02], stretch: true, face: "fierce" }, hit: { l: 0.26, b: [0.12, 0.02], hF: [0.47, -0.05], stretch: true, face: "shout" }, holdT: 0.12 })) }),
-    bazooka: (w, T3, c) => ({ keys: strike(w, T3, S(c, { loadAt: 0.74, load: { b: [-0.06, 0.07], l: -0.3, hF: [-0.66, 0], hB: [-0.7, 0.08], hand: "palm", handB: "palm", stretch: true, face: "fierce" }, hit: { b: [0.22, 0.04], l: 0.32, hF: [0.52, -0.04], hB: [0.5, 0.07], hand: "palm", handB: "palm", stretch: true, face: "shout" }, holdT: 0.1 })) }),
-    gatling: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { l: -0.12, hF: [-0.14, 0.04], hB: [-0.16, 0.08], face: "fierce" }, hit: { l: 0.2, b: [0.08, 0.04], hF: [0.4, -0.02], hB: [0.36, 0.05], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
-    kneel: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
-    rocket: (w, T3, c) => ({ keys: strike(w, T3, S(c, { load: { b: [0, 0.12], l: -0.26, hF: [-0.54, 0.08], hB: [-0.56, 0.12], stretch: true }, hit: { l: 0.62, z: 0.16, hF: [0.46, 0], hB: [0.44, 0.06], fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" } })), legs: true }),
-    fly: (w, T3, c) => ({ keys: strike(w, T3, S(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true })
+    pistol: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.22, b: [-0.06, 0.05], hF: [-0.56, -0.02], stretch: true, face: "fierce" }, hit: { l: 0.26, b: [0.12, 0.02], hF: [0.47, -0.05], stretch: true, face: "shout" }, holdT: 0.12 })) }),
+    bazooka: (w, T4, c) => ({ keys: strike(w, T4, S(c, { loadAt: 0.74, load: { b: [-0.06, 0.07], l: -0.3, hF: [-0.66, 0], hB: [-0.7, 0.08], hand: "palm", handB: "palm", stretch: true, face: "fierce" }, hit: { b: [0.22, 0.04], l: 0.32, hF: [0.52, -0.04], hB: [0.5, 0.07], hand: "palm", handB: "palm", stretch: true, face: "shout" }, holdT: 0.1 })) }),
+    gatling: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.12, hF: [-0.14, 0.04], hB: [-0.16, 0.08], face: "fierce" }, hit: { l: 0.2, b: [0.08, 0.04], hF: [0.4, -0.02], hB: [0.36, 0.05], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
+    kneel: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
+    rocket: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.12], l: -0.26, hF: [-0.54, 0.08], hB: [-0.56, 0.12], stretch: true }, hit: { l: 0.62, z: 0.16, hF: [0.46, 0], hB: [0.44, 0.06], fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" } })), legs: true }),
+    fly: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true })
   };
   var LIMB = {
     cross: "hB",
@@ -47228,10 +47549,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var SWEEP = { slash: 1, slash2: -1, rise_slash: -1, slash3: 1, cleave: 1, dual1: 1, dual2: 1, dual3: -1, dualx: 1, tora: 1, axe: 1, axe2: -1, axe_slam: 1, staff: 1, staff2: -1, chop: 1, chop2: -1, claw: 1, claw2: -1, claw_x: 1, bladespin: 1, kick_spin: -1, sweep: -1, pirouette: -1, iai: 1 };
   var FLURRY = /* @__PURE__ */ new Set(["gatling", "jab", "cross", "shigan", "shigan2", "palm", "claw", "grab", "kick", "thrust"]);
   var SPINS = /* @__PURE__ */ new Set(["kick_spin", "pirouette", "bladespin", "handstand", "sweep", "slash3"]);
-  function buildClip(name, w, T3, c = {}) {
+  function buildClip(name, w, T4, c = {}) {
     const key2 = CLIPS[name] ? name : ALIAS[name] || "jab";
     const f = CLIPS[key2];
-    const clip2 = f(Math.max(0, w), Math.max(T3, w + 0.08), c);
+    const clip2 = f(Math.max(0, w), Math.max(T4, w + 0.08), c);
     clip2.name = key2;
     clip2.w = w;
     if (c.flurry) clip2.flurry = c.flurry;
@@ -47263,21 +47584,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function actionClip(def, actor, stanceName) {
     const w = Math.max(0, def.windup ?? 0.1);
     const steps = def.steps || [];
-    const T3 = defTotal(def);
-    const main = steps.find(MAIN) || steps[0] || {};
+    const T4 = defTotal(def);
+    const main2 = steps.find(MAIN) || steps[0] || {};
     const wk = weaponFor(def, actor);
     const c = { stance: STANCES[stanceName] || GUARD };
     for (const s of steps) if (s.dash) c.dashT = Math.max(c.dashT || 0, (s.at ?? w) - w + s.dash.time);
-    const hitDur = main.hit ? main.hit.duration || 0 : 0;
+    const hitDur = main2.hit ? main2.hit.duration || 0 : 0;
     if (hitDur > 0.2) c.hitDur = hitDur;
     if (wk === "sword" && (actor.weapon?.count || 1) >= 2) c.two = true;
     if (wk === "gun" && gunKind(actor.weapon) === "sling") c.sling = true;
-    const name = pickClip(def, actor, main, steps, c, wk);
+    const name = pickClip(def, actor, main2, steps, c, wk);
     if (c.hitDur) {
       if (FLURRY.has(name) && !SPINS.has(name)) c.flurry = { t0: w, t1: w + c.hitDur, rate: 12, legs: name.startsWith("kick") };
       if (SPINS.has(name) && name !== "handstand") c.spin = { t0: w, t1: w + c.hitDur, turns: Math.max(1, Math.round(c.hitDur * 5)) };
     }
-    const clip2 = buildClip(name, w, T3, c);
+    const clip2 = buildClip(name, w, T4, c);
     clip2.weapon = wk;
     return clip2;
   }
@@ -48523,7 +48844,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       part2(g, C3, brim, k.mid, k.dk, 0.1);
     },
     marine(g, C3, v, H2) {
-      const white = "#f6f5f0", shadow = "#c9cfdc", navy = "#27466e";
+      const white = "#f6f5f0", shadow = "#c9cfdc", navy2 = "#27466e";
       if (v !== "F") {
         const flap = v === "S" ? "M-0.6 -0.56 L-1.14 -0.5 C-1.2 -0.1 -1.18 0.2 -1.12 0.46 L-0.7 0.42 C-0.66 0.1 -0.62 -0.2 -0.6 -0.56 Z" : "M-1.08 -0.5 L1.08 -0.5 C1.1 -0.14 1.1 0.14 1.04 0.4 Q0.78 0.54 0.52 0.46 Q0.26 0.56 0 0.48 Q-0.26 0.56 -0.52 0.46 Q-0.78 0.54 -1.04 0.4 C-1.1 0.14 -1.1 -0.14 -1.08 -0.5 Z";
         const fp = part2(g, C3, flap, white, shadow, 0.1);
@@ -48535,7 +48856,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       }
       part2(g, C3, "M-1.1 -0.62 C-1.16 -1.1 -0.8 -1.42 0 -1.42 C0.8 -1.42 1.16 -1.1 1.1 -0.62 Z", white, shadow, 0.14);
-      part2(g, C3, "M-1.12 -0.66 Q0 -0.76 1.12 -0.66 L1.1 -0.44 Q0 -0.54 -1.1 -0.44 Z", navy, "#1b3354", 0.06, 0, true);
+      part2(g, C3, "M-1.12 -0.66 Q0 -0.76 1.12 -0.66 L1.1 -0.44 Q0 -0.54 -1.1 -0.44 Z", navy2, "#1b3354", 0.06, 0, true);
       if (v === "F") {
         part2(g, C3, "M-0.74 -0.46 Q0 -0.56 0.74 -0.46 Q0.5 -0.24 0 -0.22 Q-0.5 -0.24 -0.74 -0.46 Z", "#1d1a20", null);
         if (C3.lod) {
@@ -48739,9 +49060,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.translate(x, y);
     if (dir && C3.view === "S") g.scale(-1, 1);
     g.rotate(dir ? 0.32 + f : f);
-    const T3 = dir ? TAILS.side : TAILS.down;
-    part2(g, C3, T3[0], k.base, k.dk, 0.05, 0, true);
-    part2(g, C3, T3[1], k.mid, k.dk, 0.05, 0, true);
+    const T4 = dir ? TAILS.side : TAILS.down;
+    part2(g, C3, T4[0], k.base, k.dk, 0.05, 0, true);
+    part2(g, C3, T4[1], k.mid, k.dk, 0.05, 0, true);
     g.restore();
   }
   var DOTS = null;
@@ -50155,7 +50476,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     g.restore();
   }
-  function catmull(p0, p1, p2, p3, t) {
+  function catmull2(p0, p1, p2, p3, t) {
     const t2 = t * t, t3 = t2 * t;
     return [
       0.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
@@ -50167,7 +50488,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const out = [];
     for (let i = 0; i < pts.length - 1; i++) {
       const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
-      for (let k = 0; k < sub; k++) out.push(catmull(p0, p1, p2, p3, k / sub));
+      for (let k = 0; k < sub; k++) out.push(catmull2(p0, p1, p2, p3, k / sub));
     }
     out.push(pts[pts.length - 1]);
     return out;
@@ -50886,8 +51207,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const drawHandAt = (arm, which) => {
       const r = 0.098 * bulk * arm.scale;
       const dx = arm.e[0] - arm.j[0], dy = arm.e[1] - arm.j[1];
-      const hc = dk2(handCol, farDim(which));
-      drawHand(g, arm.e[0], arm.e[1], r, hc, handShape(which), dx, dy, pose.fx?.claw);
+      const hc2 = dk2(handCol, farDim(which));
+      drawHand(g, arm.e[0], arm.e[1], r, hc2, handShape(which), dx, dy, pose.fx?.claw);
       if (pose.armament && !ghost) {
         g.fillStyle = "rgba(180,140,255,0.55)";
         g.beginPath();
@@ -51383,7 +51704,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
 
   // src/game/ship.js
   var SMALL_HULL = [[0.47, 0], [-0.46, 0], [0.2, 0.42], [0.2, -0.42], [-0.25, 0.42], [-0.25, -0.42]];
-  var SEA_PACE = 1.25;
+  var SEA_PACE = 2;
   var Ship = class extends Entity {
     constructor(o) {
       super({ ...o, kind: "ship" });
@@ -51432,18 +51753,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const L2 = this.def.length, B4 = this.def.beam;
       const c = Math.cos(h2), s = Math.sin(h2);
       const pts = [];
-      const add4 = (ax, ay) => pts.push([x + c * ax * L2 - s * ay * B4, y + s * ax * L2 + c * ay * B4]);
+      const add5 = (ax, ay) => pts.push([x + c * ax * L2 - s * ay * B4, y + s * ax * L2 + c * ay * B4]);
       if (L2 < BIG_SHIP) {
-        for (const [ax, ay] of SMALL_HULL) add4(ax, ay);
+        for (const [ax, ay] of SMALL_HULL) add5(ax, ay);
         return pts;
       }
       const n = Math.ceil(L2 / 3);
       for (let i = 0; i <= n; i++) {
         const t = 0.03 + 0.93 * i / n, hb = hbAt(t, 1) * 0.95;
-        add4(t - 0.5, hb);
-        add4(t - 0.5, -hb);
+        add5(t - 0.5, hb);
+        add5(t - 0.5, -hb);
       }
-      add4(0.49, 0);
+      add5(0.49, 0);
       return pts;
     }
     fits(w, x, y, h2) {
@@ -51462,6 +51783,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const w = game.world;
       const x0 = this.x, y0 = this.y, h0 = this.heading;
       this.sortY = this.y;
+      if (this.crashT > 0) this.crashT -= dt;
       this.cannonCd = Math.max(0, this.cannonCd - dt);
       this.burstCd = Math.max(0, this.burstCd - dt);
       if (this.ai) this.ai(this, dt, game);
@@ -51471,19 +51793,24 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.sailSet += (this.sail - this.sailSet) * Math.min(1, dt * 1.5);
       const rel2 = Math.cos(angleDiff(this.heading, windA));
       const windFactor = (0.35 + 0.65 * clamp2((rel2 + 0.4) / 1.4, 0, 1)) * windS;
-      let target = this.def.speed * SEA_PACE * this.sailSet * windFactor * (this.owner === "player" ? game.crewMods?.speedMul || 1 : 1);
+      let target2 = this.def.speed * SEA_PACE * this.sailSet * windFactor * (this.owner === "player" ? game.crewMods?.speedMul || 1 : 1);
       const rowSpeed = this.def.paddle ? 0.6 : this.def.oars || this.type === "dinghy" ? 0.42 : 0.12;
-      if (this.rowing) target = Math.max(target, this.def.speed * rowSpeed * this.rowing);
+      if (this.rowing) target2 = Math.max(target2, this.def.speed * rowSpeed * this.rowing);
       if (this.coupT > 0) {
         this.coupT -= dt;
-        target = this.def.speed * 5;
+        target2 = this.def.speed * 5;
       }
       if (env.storm > 0.3 && !game.isCalmAt(this.x, this.y)) {
-        target *= 1 - env.storm * 0.25;
+        target2 *= 1 - env.storm * 0.25;
         if (this.owner === "player" && Math.random() < dt * env.storm * 0.3 * (1 - (this.def.stormResist || 0.3))) this.damage(4 + env.storm * 8, null, { weather: true });
       }
-      this.speed += (target - this.speed) * Math.min(1, dt * (target > this.speed ? 0.7 : 1.2));
-      const cur = game.currentAt(this.x, this.y);
+      const cur = game.currentAt(this.x, this.y, this);
+      if (cur.canal) target2 *= 0.35;
+      this.speed += (target2 - this.speed) * Math.min(1, dt * (target2 > this.speed ? 0.7 : 1.2));
+      this.lvl = cur.level;
+      const along = cur.canal ? Math.cos(angleDiff(this.heading, Math.atan2(cur.y, cur.x))) : 0;
+      const pitchT = Math.atan(cur.slope) * along;
+      this.pitch = (this.pitch || 0) + (pitchT - (this.pitch || 0)) * Math.min(1, dt * 3);
       let vx = Math.cos(this.heading) * this.speed + cur.x;
       let vy = Math.sin(this.heading) * this.speed + cur.y;
       if (cur.steer) this.heading += clamp2(angleDiff(this.heading, Math.atan2(cur.y, cur.x)), -1, 1) * dt * cur.steer;
@@ -51500,8 +51827,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.speed *= 0.7;
       } else {
         const impact = Math.hypot(vx, vy);
-        if (impact > 5 && this.owner === "player") {
-          this.damage(Math.round(impact * (cur.steer ? 5 : 2)), null, { crash: true });
+        if (impact > 5 && this.owner === "player" && !(this.crashT > 0)) {
+          this.crashT = cur.steer ? 0.9 : 0.4;
+          this.damage(Math.round(cur.steer ? Math.min(28, impact * 1.6) : impact * 2), null, { crash: true });
           game.fx.shake(0.4);
           game.fx.burst(this.x + Math.cos(this.heading) * this.def.length * 0.5, this.y + Math.sin(this.heading) * this.def.length * 0.5, 14, { color: ["#8d6e63", "#e1f5fe"], speed: 4, g: 8, life: 0.6 });
           game.audio?.sfx("crash");
@@ -51821,18 +52149,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function hollowWalls(k, b, o) {
     const { fw, fd, y0, top, wallCol } = o;
-    const T3 = WALL_T, yb = y0 - 0.05;
+    const T4 = WALL_T, yb = y0 - 0.05;
     const ops = openingsOf(b, y0);
     const front = wallShape(-fw / 2, fw / 2, yb, top, doorOf(b), y0);
     for (const w of ops.front) front.holes.push(openingPath(w.kind, w.u, w.y, w.w, w.h));
-    k.add(extrude(front, T3, 0, 10), { at: [0, 0, -T3 / 2], color: wallCol, outline: 0.045 });
+    k.add(extrude(front, T4, 0, 10), { at: [0, 0, -T4 / 2], color: wallCol, outline: 0.045 });
     for (const side of ["left", "right"]) {
-      const s = wallShape(-fd + T3, -T3, yb, top, null, y0);
+      const s = wallShape(-fd + T4, -T4, yb, top, null, y0);
       for (const w of ops[side]) s.holes.push(openingPath(w.kind, w.u, w.y, w.w, w.h));
-      const x = side === "left" ? -fw / 2 + T3 / 2 : fw / 2 - T3 / 2;
-      k.add(extrude(s, T3, 0, 10), { at: [x, 0, 0], rot: [0, -Math.PI / 2, 0], color: wallCol, outline: 0.045 });
+      const x = side === "left" ? -fw / 2 + T4 / 2 : fw / 2 - T4 / 2;
+      k.add(extrude(s, T4, 0, 10), { at: [x, 0, 0], rot: [0, -Math.PI / 2, 0], color: wallCol, outline: 0.045 });
     }
-    B(k, -fw / 2, yb, -fd, fw / 2, top, -fd + T3, wallCol, { outline: 0.045 });
+    B(k, -fw / 2, yb, -fd, fw / 2, top, -fd + T4, wallCol, { outline: 0.045 });
     return ops;
   }
   function rectFrame(k, w, h2, t, z0, z1, color) {
@@ -51912,14 +52240,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const { fw, fd, y0, ceil } = o;
     const L2 = layoutOf(b);
     const P4 = palOf(b);
-    const T3 = WALL_T;
+    const T4 = WALL_T;
     const k = new Mesher();
-    const x0 = -fw / 2 + T3, x1 = fw / 2 - T3, z0 = -fd + T3, z1 = -T3;
+    const x0 = -fw / 2 + T4, x1 = fw / 2 - T4, z0 = -fd + T4, z1 = -T4;
     const top = y0 + ceil;
     const R3 = (i) => hash2(b.x, b.y, i + 0.37);
     const cloth = P4.cloth[Math.floor(R3(1) * P4.cloth.length)];
     B(k, x0, y0 - 0.04, z0, x1, y0 + 0.012, z1, P4.floor);
-    B(k, L2.door.x - L2.door.dw / 2, y0 - 0.04, -T3, L2.door.x + L2.door.dw / 2, y0 + 8e-3, 0, P4.floor2);
+    B(k, L2.door.x - L2.door.dw / 2, y0 - 0.04, -T4, L2.door.x + L2.door.dw / 2, y0 + 8e-3, 0, P4.floor2);
     floorPattern(k, P4, x0, x1, z0, z1, y0 + 0.012);
     const ops = openingsOf(b, y0);
     const lf = wallShape(x0, x1, y0, top, L2.door, y0);
@@ -52523,12 +52851,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     signMats.set(name, m);
     return m;
   }
-  function nameBoard(text, marine2) {
+  function nameBoard(text2, marine2) {
     const c = document.createElement("canvas");
     const g = c.getContext("2d");
     const font = 'bold 44px Nunito, "Trebuchet MS", sans-serif';
     g.font = font;
-    const w = Math.min(1024, Math.ceil(g.measureText(text).width) + 56);
+    const w = Math.min(1024, Math.ceil(g.measureText(text2).width) + 56);
     c.width = w;
     c.height = 72;
     g.font = font;
@@ -52542,7 +52870,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.fillStyle = marine2 ? "#1b4f72" : "#f5e6c4";
     g.textAlign = "center";
     g.textBaseline = "middle";
-    g.fillText(text, w / 2, 38, w - 40);
+    g.fillText(text2, w / 2, 38, w - 40);
     const t = new CanvasTexture(c);
     t.colorSpace = SRGBColorSpace;
     t.anisotropy = 4;
@@ -53545,7 +53873,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
 
   // src/render3d/props/instancer.js
-  var CELL = 32;
+  var CELL2 = 32;
   var cells = /* @__PURE__ */ new Map();
   var _m = new Matrix4();
   var _t = new Matrix4();
@@ -53582,7 +53910,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m.count = this.count;
       m.castShadow = this.castShadow;
       m.receiveShadow = this.receiveShadow;
-      m.boundingSphere = new Sphere(new Vector3(CELL / 2, 0, CELL / 2), CELL);
+      m.boundingSphere = new Sphere(new Vector3(CELL2 / 2, 0, CELL2 / 2), CELL2);
       m.name = "inst:" + this.key;
       if (old) {
         m.instanceMatrix.array.set(old.instanceMatrix.array.subarray(0, this.count * 16));
@@ -53623,8 +53951,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.minY = Math.min(this.minY, y);
         this.maxY = Math.max(this.maxY, y);
         const half2 = (this.maxY - this.minY + this.h) / 2;
-        m.boundingSphere.center.set(CELL / 2, this.minY + half2, CELL / 2);
-        m.boundingSphere.radius = Math.hypot(CELL / 2, CELL / 2, half2) + this.r;
+        m.boundingSphere.center.set(CELL2 / 2, this.minY + half2, CELL2 / 2);
+        m.boundingSphere.radius = Math.hypot(CELL2 / 2, CELL2 / 2, half2) + this.r;
       }
     }
     remove(slot2) {
@@ -53652,11 +53980,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   };
   function cellFor(o, ctx, parent) {
-    const cx = Math.floor(o.x / CELL), cy = Math.floor(o.y / CELL);
+    const cx = Math.floor(o.x / CELL2), cy = Math.floor(o.y / CELL2);
     const key2 = `${ctx?.world?.id || ""}:${cx},${cy}`;
     let c = cells.get(key2);
     if (!c) {
-      c = { key: key2, x0: cx * CELL, y0: cy * CELL, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent, markers: /* @__PURE__ */ new Set(), rep: null, far: false };
+      c = { key: key2, x0: cx * CELL2, y0: cy * CELL2, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent, markers: /* @__PURE__ */ new Set(), rep: null, far: false };
       cells.set(key2, c);
     }
     if (!c.parent && parent) c.parent = parent;
@@ -53734,7 +54062,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       const gp = mk3.parent ? mk3.parent.position : null;
       const cx = (gp ? gp.x : 0) + px2, cz = (gp ? gp.z : 0) + pz2;
-      const nx = Math.max(cx, Math.min(0, cx + CELL)), nz = Math.max(cz, Math.min(0, cz + CELL));
+      const nx = Math.max(cx, Math.min(0, cx + CELL2)), nz = Math.max(cz, Math.min(0, cz + CELL2));
       const d = Math.hypot(nx, nz);
       const far = cell.far ? d > LOD2.far - 4 : d > LOD2.far + 4;
       if (far !== cell.far) {
@@ -54978,11 +55306,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   reg2("windmill", (o) => {
     const root2 = group("windmill");
     add(root2, windmillBody());
-    const blades = add(root2, windmillBlades());
-    blades.position.set(0, 4.95, 1.45);
+    const blades2 = add(root2, windmillBlades());
+    blades2.position.set(0, 4.95, 1.45);
     const ph = hash2(o.x, o.y) * 6;
     animate(root2, (t, env) => {
-      blades.rotation.z = -(t * (0.45 + (env?.windStrength ?? 1) * 0.35) + ph);
+      blades2.rotation.z = -(t * (0.45 + (env?.windStrength ?? 1) * 0.35) + ph);
     });
     return root2;
   });
@@ -55376,6 +55704,44 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (const y of [1.2, 2.8]) k.add(box(W3, 0.1, 0.1), { at: [0, y, 0.3], color: "#263238" });
     for (let x = -W3 / 2 + 0.35; x < W3 / 2 - 0.2; x += 0.45) k.add(cone(0.08, 0.25, 4), { at: [x, -0.25, 0.3], rot: [Math.PI, 0, 0], color: "#263238" });
   });
+  var rmArchGeo = () => model("rm_arch", (k) => {
+    const stone = "#9c5b4a", dark = "#6f3d31", light = "#c08a74", moss = "#5d7a3a";
+    const X2 = 15.2;
+    for (const s of [-1, 1]) {
+      const x = s * X2;
+      k.add(box(6.2, 12, 6.2), { at: [x, -10, 0], color: dark, outline: 0.05 });
+      k.add(box(5.4, 12, 5.4), { at: [x, 2, 0], color: stone, outline: 0.05 });
+      k.add(box(4.8, 9, 4.8), { at: [x, 14, 0], color: stone, outline: 0.05 });
+      k.add(box(5.8, 1.2, 5.8), { at: [x, 13.4, 0], color: light });
+      k.add(box(5.6, 1.4, 5.6), { at: [x, 22.6, 0], color: light, outline: 0.05 });
+      k.add(box(0.3, 7, 3.2), { at: [x - s * 2.75, 1, 0.4], color: moss });
+      k.add(box(2.6, 4, 0.3), { at: [x, 4, 2.75], color: moss });
+    }
+    const band2 = new Shape();
+    const Ro = 18.1, Ri = 12.4;
+    band2.moveTo(-Ro, 0);
+    band2.absarc(0, 0, Ro, Math.PI, 0, true);
+    band2.lineTo(Ri, 0);
+    band2.absarc(0, 0, Ri, 0, Math.PI, false);
+    band2.closePath();
+    k.add(extrude(band2, 4.6, 0, 20), { at: [0, 24, 0], color: stone, outline: 0.06 });
+    const trim = new Shape();
+    trim.moveTo(-Ro - 0.4, 0);
+    trim.absarc(0, 0, Ro + 0.4, Math.PI, 0, true);
+    trim.lineTo(Ro - 0.9, 0);
+    trim.absarc(0, 0, Ro - 0.9, 0, Math.PI, false);
+    trim.closePath();
+    k.add(extrude(trim, 5.2, 0, 20), { at: [0, 24, 0], color: dark });
+    k.add(box(4, 5.2, 5.8), { at: [0, 24 + Ro - 3.6, 0], color: light, outline: 0.05 });
+    k.add(box(2.6, 0.5, 0.2), { at: [0, 24 + Ro - 1.4, 2.95], color: "#3d6f8f" });
+    k.add(box(2.6, 0.5, 0.2), { at: [0, 24 + Ro - 2.4, 2.95], color: "#3d6f8f" });
+  });
+  function rmArch(a) {
+    const root2 = group("rm_arch");
+    add(root2, rmArchGeo());
+    root2.rotation.y = Math.PI / 2 - (a || 0);
+    return root2;
+  }
   reg2("gate", (o) => {
     const root2 = group("gate");
     const big = /justice/i.test(o.name || "") ? 1 : 0;
@@ -55384,12 +55750,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (o.name && !/^main gate$/i.test(o.name)) root2.add(nameBoard2(o.name, big ? 13 : 6, (big ? 2.2 : 1) * 4.75, big ? 1.8 : 0.85, big));
     return root2;
   });
-  function nameBoard2(text, maxW, y, z, marine2) {
+  function nameBoard2(text2, maxW, y, z, marine2) {
     const c = document.createElement("canvas");
     const g = c.getContext("2d");
     const font = 'bold 44px Nunito, "Trebuchet MS", sans-serif';
     g.font = font;
-    const w = Math.min(1024, Math.ceil(g.measureText(text).width) + 56);
+    const w = Math.min(1024, Math.ceil(g.measureText(text2).width) + 56);
     c.width = w;
     c.height = 72;
     g.font = font;
@@ -55403,7 +55769,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.fillStyle = marine2 ? "#1b4f72" : "#f5e6c4";
     g.textAlign = "center";
     g.textBaseline = "middle";
-    g.fillText(text, w / 2, 38, w - 40);
+    g.fillText(text2, w / 2, 38, w - 40);
     const t = new CanvasTexture(c);
     t.colorSpace = SRGBColorSpace;
     t.anisotropy = 4;
@@ -55698,43 +56064,131 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     root2.add(board2);
     return root2;
   });
-  var whaleGeo = () => model("laboon", (k) => {
-    const top = C("#5d7389"), belly = C("#d7e1ea"), tmp2 = new Color();
-    const body = new SphereGeometry(1, 28, 18);
-    k.add(body, { scale: [10.5, 3.6, 4.2], color: (p, n) => tmp2.copy(n.y < -0.25 ? belly : top), outline: 0.1 });
-    k.add(new SphereGeometry(1, 16, 12), { at: [-7.2, 0.4, 0], scale: [3.6, 3.2, 3.8], color: "#5a6f85" });
-    for (const s of [-1, 1]) {
-      k.add(new SphereGeometry(0.5, 10, 8), { at: [-7, 0.3, s * 3.55], color: "#fafafa" });
-      k.add(new SphereGeometry(0.27, 8, 6), { at: [-7.25, 0.3, s * 3.85], color: "#1a1a1a" });
+  var LB = { L: 112, X0: -52 };
+  var lbCurve = (t, pts) => {
+    for (let i = 1; i < pts.length; i++) {
+      if (t <= pts[i][0]) {
+        const [t0, a] = pts[i - 1], [t1, b] = pts[i];
+        const k = (t - t0) / (t1 - t0), s = k * k * (3 - 2 * k);
+        return a + (b - a) * s;
+      }
     }
-    for (let i = 0; i < 6; i++) k.add(box(0.14, 1.6, 0.12), { at: [-9.4 + i * 0.28, 1.4 + i * 0.15, (i - 2.5) * 0.35], rot: [0.3, 0, 0.6], color: "#ffebee" });
-    k.add(cyl(0.8, 1.6, 3.2, 10), { at: [9.5, 0.2, 0], rot: [0, 0, -Math.PI / 2], scale: [1, 1, 0.55], color: "#4e6177", outline: 0.05 });
-    k.add(slab([[0, 0], [3.2, 2.2], [2.4, 0], [3.2, -2.2]], 0.35), { at: [12.4, 0.6, 0], rot: [Math.PI / 2, 0, 0], color: "#4e6177", outline: 0.05 });
+    return pts[pts.length - 1][1];
+  };
+  var LB_H = [[0, 21], [0.035, 26.5], [0.12, 28.5], [0.38, 27.5], [0.52, 22], [0.68, 14], [0.84, 7.5], [0.95, 3.6], [1, 2.4]];
+  var LB_W = [[0, 16], [0.035, 20.5], [0.2, 22], [0.42, 21], [0.58, 15.5], [0.74, 9.5], [0.9, 4.6], [1, 2.6]];
+  var LB_Y = [[0, 3.5], [0.2, 3], [0.6, 1.5], [1, 0.6]];
+  var LB_N = [[0, 3.4], [0.35, 3], [0.6, 2.4], [1, 2]];
+  var lbMouthY = (t) => lbCurve(t, LB_Y) - lbCurve(t, LB_H) * 0.34;
+  var lbX = (t) => LB.X0 + t * LB.L;
+  var lbT = (x) => (x - LB.X0) / LB.L;
+  function laboonBody() {
+    const NU = 96, NV = 72;
+    const pos = [], idx = [];
+    const ring4 = [];
+    for (let i = 0; i <= NU; i++) {
+      const u = i / NU, t = Math.pow(u, 1.25);
+      const H2 = lbCurve(t, LB_H), Wd = lbCurve(t, LB_W), Y2 = lbCurve(t, LB_Y), n = lbCurve(t, LB_N);
+      const e = 2 / n;
+      const x = lbX(t) - (t < 0.03 ? 0 : 0);
+      ring4.push(pos.length / 3);
+      for (let j = 0; j < NV; j++) {
+        const a = j / NV * Math.PI * 2;
+        const c = Math.cos(a), sn = Math.sin(a);
+        const yy = Math.sign(sn) * Math.pow(Math.abs(sn), e) * H2;
+        const zz = Math.sign(c) * Math.pow(Math.abs(c), e) * Wd;
+        const bulge = t < 0.06 ? (1 - t / 0.06) * (1 - (yy / H2) ** 2 * 0.6) * 2.2 : 0;
+        pos.push(x - bulge, Y2 + yy, zz);
+      }
+    }
+    for (let i = 0; i < NU; i++) {
+      for (let j = 0; j < NV; j++) {
+        const a = ring4[i] + j, b = ring4[i] + (j + 1) % NV, c = ring4[i + 1] + j, d = ring4[i + 1] + (j + 1) % NV;
+        idx.push(a, b, c, b, d, c);
+      }
+    }
+    const front = pos.length / 3;
+    pos.push(LB.X0 - 3.2, lbCurve(0, LB_Y), 0);
+    for (let j = 0; j < NV; j++) idx.push(front, ring4[0] + (j + 1) % NV, ring4[0] + j);
+    const back = pos.length / 3;
+    pos.push(lbX(1) + 1.5, lbCurve(1, LB_Y), 0);
+    for (let j = 0; j < NV; j++) idx.push(back, ring4[NU] + j, ring4[NU] + (j + 1) % NV);
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
+  var laboonGeo = () => model("laboon2", (k) => {
+    const slate = C("#56708e"), slateTop = C("#4a6180"), belly = C("#e7edf0"), pleat = C("#b8c6cf"), scar = C("#d9b7b1"), scarDark = C("#b98e8a");
+    const tmp2 = new Color();
+    k.add(laboonBody(), {
+      outline: 0.18,
+      color: (p) => {
+        const t = lbT(p.x);
+        const H2 = lbCurve(Math.max(0, t), LB_H), Y2 = lbCurve(Math.max(0, t), LB_Y);
+        const my = t < 0.52 ? lbMouthY(Math.max(0, t)) : Y2 - H2 * (0.34 + (t - 0.52) * 0.5);
+        if (p.y < my) {
+          const d = my - p.y;
+          return t < 0.62 && d * 0.42 % 1 < 0.2 ? pleat : belly;
+        }
+        if (t < 0.07 && p.y > my + 2) {
+          const h2 = hash2(Math.floor(p.y * 0.55), Math.floor(p.z * 0.55), 7);
+          if (h2 > 0.58) return h2 > 0.8 ? scarDark : scar;
+        }
+        const up = Math.max(0, (p.y - Y2) / H2);
+        return tmp2.copy(slate).lerp(slateTop, up * 0.8);
+      }
+    });
+    for (const s of [-1, 1]) {
+      const pts = [];
+      for (let t = 0; t <= 0.5; t += 0.02) {
+        const W3 = lbCurve(t, LB_W);
+        pts.push(new Vector3(lbX(t) + (t === 0 ? -1.6 : 0), lbMouthY(t), s * (t === 0 ? 0 : W3 * 0.985)));
+      }
+      k.add(new TubeGeometry(new CatmullRomCurve3(pts), 40, 0.55, 5), { color: "#26313d" });
+    }
+    const te = 0.43, xe = lbX(te), ye = lbMouthY(te) + 3.4, we = lbCurve(te, LB_W);
+    for (const s of [-1, 1]) {
+      k.add(new SphereGeometry(2.1, 14, 10), { at: [xe, ye, s * (we - 0.9)], color: "#f4f6f8" });
+      k.add(new SphereGeometry(1.25, 12, 8), { at: [xe - 0.5, ye - 0.2, s * (we + 0.35)], color: "#111418" });
+      k.add(new SphereGeometry(0.35, 6, 5), { at: [xe - 0.9, ye + 0.35, s * (we + 1.2)], color: "#ffffff" });
+      k.add(new SphereGeometry(2.5, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.42), { at: [xe + 0.2, ye + 0.35, s * (we - 0.8)], rot: [s * 0.35, 0, 0.25], color: "#4d6481", outline: 0.06 });
+      k.add(new SphereGeometry(1, 12, 8), { at: [lbX(0.55), lbMouthY(0.5) - 5, s * (lbCurve(0.55, LB_W) + 1.5)], rot: [s * 0.9, -s * 0.55, -0.35], scale: [7.5, 0.9, 3.2], color: "#4e6785", outline: 0.08 });
+    }
+    k.add(new SphereGeometry(1, 10, 6), { at: [lbX(0.13), lbCurve(0.13, LB_Y) + lbCurve(0.13, LB_H) - 0.25, 0], scale: [2.2, 0.35, 1.1], color: "#2e3a47" });
+    k.add(new SphereGeometry(1, 10, 8), { at: [lbX(0.66), lbCurve(0.66, LB_Y) + lbCurve(0.66, LB_H) - 0.6, 0], scale: [4.5, 1.8, 1.6], color: "#4a6180", outline: 0.06 });
+    for (const s of [-1, 1]) {
+      k.add(new SphereGeometry(1, 14, 8), { at: [lbX(1) + 5.5, lbCurve(1, LB_Y) + 0.2, s * 6.5], rot: [0, s * 0.45, 0], scale: [5.5, 0.8, 8.5], color: "#4a6180", outline: 0.08 });
+    }
   });
   reg2("p1_laboon", (o) => {
     const root2 = group("laboon");
     root2.userData.noGround = true;
-    const whale = add(root2, whaleGeo());
+    const whale = add(root2, laboonGeo());
     const mark = new Mesher();
     mark.add(new SphereGeometry(0.8, 10, 8), { at: [0, 0.3, 0], scale: [0.2, 1, 1], color: "#fafafa" });
     for (const a of [0.8, -0.8]) mark.add(box(0.1, 2.6, 0.26), { at: [0, -0.6, 0], rot: [a, 0, 0], color: "#fafafa" });
     const markMesh = new Mesh(mark.build(false), vcMat());
-    markMesh.position.set(-10.2, 1.6, 0);
-    markMesh.rotation.z = 0.5;
+    markMesh.scale.setScalar(5.5);
+    markMesh.position.set(LB.X0 - 3, 12, 0);
     root2.add(markMesh);
-    const spout = new Mesh(new CylinderGeometry(0.3, 0.9, 1, 10, 1, true), glowMat(14808574, { opacity: 0.6 }));
-    spout.position.set(-3, 3.4, 0);
+    const spout = new Mesh(new CylinderGeometry(0.9, 3.2, 1, 12, 1, true), glowMat(14808574, { opacity: 0.6 }));
+    spout.position.set(lbX(0.13), 30, 0);
     root2.add(spout);
     animate(root2, (t) => {
-      const y = -0.7 + Math.sin(t * 0.7) * 0.12;
-      whale.position.y = y;
-      markMesh.position.y = 1.6 + y;
-      markMesh.visible = !!STATE.game?.state?.char?.flags?.p1_laboonMark;
-      const ph = t % 14;
-      const h2 = ph < 1.6 ? Math.sin(ph / 1.6 * Math.PI) * 4.5 : 0;
-      spout.visible = h2 > 0.05;
-      spout.scale.set(1 + h2 * 0.08, h2, 1 + h2 * 0.08);
-      spout.position.y = 3.2 + y + h2 / 2;
+      const c = STATE.game?.state?.char;
+      const ph = t % 26;
+      const ram = !c?.flags?.p1_laboonPromise && ph < 3.2 ? Math.sin(ph / 3.2 * Math.PI) : 0;
+      const y = -0.8 + Math.sin(t * 0.45) * 0.35 - ram * 0.6;
+      whale.position.set(-ram * 7, y, 0);
+      markMesh.position.set(LB.X0 - 3 - ram * 7, 12 + y, 0);
+      markMesh.visible = !!c?.flags?.p1_laboonMark;
+      const sp = t % 17;
+      const h2 = sp < 2.4 ? Math.sin(sp / 2.4 * Math.PI) * 18 : 0;
+      spout.visible = h2 > 0.2;
+      spout.scale.set(1 + h2 * 0.04, h2, 1 + h2 * 0.04);
+      spout.position.set(lbX(0.13) - ram * 7, 28 + y + h2 / 2, 0);
     });
     return root2;
   });
@@ -57293,8 +57747,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const w = def.windup ?? 0.1;
     const t = act2.t;
     const steps = def.steps || [];
-    const main = steps.find((s) => s.hit || s.proj || s.dash || s.zone) || {};
-    const elem = main.hit?.element || main.proj?.element || main.dash?.hit?.element || main.zone?.element || (elemBuff ? elemBuff.element : null);
+    const main2 = steps.find((s) => s.hit || s.proj || s.dash || s.zone) || {};
+    const elem = main2.hit?.element || main2.proj?.element || main2.dash?.hit?.element || main2.zone?.element || (elemBuff ? elemBuff.element : null);
     const sg = SIG[def.id] || {};
     const st = styleOf(def, actor);
     const E = elem ? elemOf(elem) : null;
@@ -58497,13 +58951,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     const set = DRESS[role] || DRESS.civilian;
     const fem = over.fem ?? rng4.chance(FEM_ROLES[role] ?? 0.45);
-    const T3 = set[fem ? "f" : "m"];
+    const T4 = set[fem ? "f" : "m"];
     look.fem = fem;
     const legacyTop = over.openShirt !== void 0 || over.noSleeves || over.sleeve || over.vest;
-    if (!over.topStyle && !legacyTop) look.topStyle = rng4.weighted(T3.top);
-    if (!over.bottomStyle) look.bottomStyle = rng4.weighted(T3.bottom);
-    if (!over.waist) look.waist = rng4.weighted(T3.waist);
-    if (!over.shoeStyle && over.sandals === void 0) look.shoeStyle = rng4.weighted(T3.shoes);
+    if (!over.topStyle && !legacyTop) look.topStyle = rng4.weighted(T4.top);
+    if (!over.bottomStyle) look.bottomStyle = rng4.weighted(T4.bottom);
+    if (!over.waist) look.waist = rng4.weighted(T4.waist);
+    if (!over.shoeStyle && over.sandals === void 0) look.shoeStyle = rng4.weighted(T4.shoes);
     if (!over.top2) look.top2 = look.topStyle === "striped" ? rng4.pick(LIGHT) : look.topStyle === "jacket" ? rng4.pick(["#f5f5f5", "#f5f5f5", "#90caf9", "#fce4ec"]) : void 0;
     if (!over.waistCol && (look.waist === "sash" || look.waist === "obi")) look.waistCol = rng4.pick(SASH);
     if (look.topStyle === "jacket" && !over.tie && rng4.chance(0.5)) look.tie = rng4.pick(["#212121", "#c62828", "#1e3a8a"]);
@@ -58847,14 +59301,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         return false;
       }
       const style = STYLES2[this.style] || STYLES2.brawler;
-      let chain = style.m1Ids;
-      if (style.weapon && !this.hasWeapon(style.weapon)) chain = STYLES2.brawler.m1Ids;
+      let chain2 = style.m1Ids;
+      if (style.weapon && !this.hasWeapon(style.weapon)) chain2 = STYLES2.brawler.m1Ids;
       if (this.combo.window <= 0) this.combo.step = 0;
-      const id = chain[this.combo.step % chain.length];
+      const id = chain2[this.combo.step % chain2.length];
       const def = getAbility(id);
       if (!def || this.stamina < 1) return false;
       startAbility(this, { ...def, m1Chain: true }, game);
-      this.combo.step = (this.combo.step + 1) % chain.length;
+      this.combo.step = (this.combo.step + 1) % chain2.length;
       this.combo.window = 0.55 + (def.recover || 0.2);
       this.applyElementBuff();
       this.stepIn(def);
@@ -58890,7 +59344,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.applyElementBuff();
       return true;
     }
-    tryTechnique(id, game, target) {
+    tryTechnique(id, game, target2) {
       if (typeof id === "string" && id.startsWith("item:")) return this.isPlayer && this.state === "idle" && !!game.useHotbarItem?.(id.slice(5));
       if (!this.canAct()) return false;
       const def = getAbility(id);
@@ -58916,7 +59370,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
         return false;
       }
-      startAbility(this, def, game, target);
+      startAbility(this, def, game, target2);
       if (def.source?.startsWith("style")) this.applyElementBuff();
       return true;
     }
@@ -59330,6 +59784,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.kb.y *= decay;
       if (Math.abs(this.kb.x) < 0.05) this.kb.x = 0;
       if (Math.abs(this.kb.y) < 0.05) this.kb.y = 0;
+      if (this.inWater && w.zone === 0 && game.currentAt) {
+        const cur = game.currentAt(this.x, this.y, this);
+        if (cur.canal) {
+          vx += cur.x * 0.85;
+          vy += cur.y * 0.85;
+        }
+      }
       this.moveBy(w, vx * dt, vy * dt);
     }
     moveBy(w, dx, dy) {
@@ -59717,11 +60178,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const bob = Math.sin(env.time * 4) * 0.08;
         g.font = "bold 0.5px Bangers, sans-serif";
         g.textAlign = "center";
+        const qm = this.questMarker.replace(/^M/, "");
         g.lineWidth = 0.08;
         g.strokeStyle = "#000";
-        g.strokeText(this.questMarker, 0, -2.5 * s + bob);
-        g.fillStyle = this.questMarker === "!" ? "#ffd54f" : "#90caf9";
-        g.fillText(this.questMarker, 0, -2.5 * s + bob);
+        g.strokeText(qm, 0, -2.5 * s + bob);
+        g.fillStyle = this.questMarker[0] === "M" ? "#ff9100" : qm === "!" ? "#ffd54f" : "#90caf9";
+        g.fillText(qm, 0, -2.5 * s + bob);
       }
     }
   };
@@ -60295,7 +60757,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   var torus2 = (q2) => Prim.torus(0.2, 3, q2.cloth ? 12 : 7);
   var ringAt = (y, rx, rz, thick = 0.014) => M(0, y, 0, Math.PI / 2, 0, 0, [rx, rz, thick / 0.2]);
-  function buildFigure(add4, look, d, pal, q2) {
+  function buildFigure(add5, look, d, pal, q2) {
     const o = outfitOf(look);
     const cc = clothColours(look, pal, o);
     const sh = shapeOf(d, o);
@@ -60310,7 +60772,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const skinTorso = tpt(1);
     const TOP = o.top;
     const shirtM = 0.45;
-    const addT = (rows, pt, col, a0 = -Math.PI, a1 = Math.PI, inward = false) => add4(band(pt, rows, a0, a1, U3, inward), M(), col, B3.chest);
+    const addT = (rows, pt, col, a0 = -Math.PI, a1 = Math.PI, inward = false) => add5(band(pt, rows, a0, a1, U3, inward), M(), col, B3.chest);
     const neckS = TOP === "shirt" || TOP === "jacket" ? 0.955 : TOP === "tank" || TOP === "dress" ? 0.84 : 0.93;
     if (TOP === "bare" || TOP === "vest" || TOP === "open" || TOP === "coat" && !look.top2) {
       addT(TR, skinTorso, skin);
@@ -60319,7 +60781,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       addT(cut2(TR, hi, 1), skinTorso, skin);
       addT(cut2(TR, lo, hi), tpt(1, 2e-3), pal.top);
       addT(cut2(TR, -0.1, lo), skinTorso, skin);
-      straps(add4, sh, hi, pal.top, q2);
+      straps(add5, sh, hi, pal.top, q2);
     } else if (TOP === "striped") {
       addT(cut2(TR, neckS, 1), skinTorso, skin);
       const n = cloth ? 7 : 4;
@@ -60331,18 +60793,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const col = TOP === "jacket" || TOP === "coat" ? cc.top2 : pal.top;
       addT(cut2(TR, neckS, 1), skinTorso, skin);
       addT(cut2(TR, -0.1, neckS), tpt(shirtM), col);
-      if (TOP === "tank" || TOP === "dress") straps(add4, sh, neckS, col, q2);
+      if (TOP === "tank" || TOP === "dress") straps(add5, sh, neckS, col, q2);
       if (cloth && TOP !== "tank" && TOP !== "dress") {
         const f = torsoPt(sh, neckS, 0, 0, shirtM)[0], bk = -torsoPt(sh, neckS, Math.PI, 0, shirtM)[0], W3 = torsoPt(sh, neckS, Math.PI / 2, 0, shirtM)[2];
-        add4(torus2(q2), mul(M((f - bk) / 2, 0, 0), ringAt(neckS * sh.cl, (f + bk) / 2 + 2e-3, W3 + 2e-3, 0.012)), shade(col, -0.18), B3.chest);
+        add5(torus2(q2), mul(M((f - bk) / 2, 0, 0), ringAt(neckS * sh.cl, (f + bk) / 2 + 2e-3, W3 + 2e-3, 0.012)), shade(col, -0.18), B3.chest);
       }
     }
     const nk = o.fem ? 0.04 : 0.05 * (1 + (d.Bk - 1) * 0.5);
-    add4(neckGeo(nk, d.chestLen - 0.05, d.chestLen + d.neck + 0.035, o, cloth), M(), skin, B3.chest);
+    add5(neckGeo(nk, d.chestLen - 0.05, d.chestLen + d.neck + 0.035, o, cloth), M(), skin, B3.chest);
     const edge = (a) => (s) => a(s), rest = (a) => (s) => TAU12 - a(s);
     const shell2 = (rows, aFn, off, mS, col, lin2) => {
-      add4(band(tpt(mS, off), rows, edge(aFn), rest(aFn), U3), M(), col, B3.chest);
-      if (cloth) add4(band(tpt(mS, off - 5e-3), half(rows), edge(aFn), rest(aFn), U3 / 2, true), M(), lin2, B3.chest);
+      add5(band(tpt(mS, off), rows, edge(aFn), rest(aFn), U3), M(), col, B3.chest);
+      if (cloth) add5(band(tpt(mS, off - 5e-3), half(rows), edge(aFn), rest(aFn), U3 / 2, true), M(), lin2, B3.chest);
     };
     if (TOP === "vest") {
       const rows = cut2(TR, 0.1, 0.975);
@@ -60350,12 +60812,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (cloth) for (let k = 0; k < 3; k++) {
         const s = 0.3 + k * 0.17, a = -(0.36 + (s - 0.1) * 0.36) - 0.12;
         const p = torsoPt(sh, s, a, 0.016, 1);
-        add4(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), "#ffd54f", B3.chest);
+        add5(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), "#ffd54f", B3.chest);
       }
     } else if (TOP === "open") {
       const rows = cut2(TR, -0.08, 0.97);
       shell2(rows, (s) => 0.3 + Math.max(0, s - 0.25) * 0.5, 0.01, 1, pal.top, cc.lining);
-      if (cloth) collarFlaps(add4, sh, pal.top, 0.62);
+      if (cloth) collarFlaps(add5, sh, pal.top, 0.62);
     } else if (TOP === "jacket" || TOP === "kimono" || TOP === "coat" && look.top2) {
       const kim = TOP === "kimono";
       const col = TOP === "coat" ? look.coat || pal.top : pal.top;
@@ -60366,22 +60828,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const trim = kim ? cc.top2 : shade(col, -0.12);
         const up = cut2(TR, kim ? 0.28 : 0.46, 0.985);
         const tw = kim ? 0.3 : 0.24;
-        add4(band(tpt(0.2, 0.017), up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U3 / 6)), M(), trim, B3.chest);
-        add4(band(tpt(0.2, 0.017), up, (s) => TAU12 - open(s) - tw, (s) => TAU12 - open(s), Math.max(3, U3 / 6)), M(), trim, B3.chest);
+        add5(band(tpt(0.2, 0.017), up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U3 / 6)), M(), trim, B3.chest);
+        add5(band(tpt(0.2, 0.017), up, (s) => TAU12 - open(s) - tw, (s) => TAU12 - open(s), Math.max(3, U3 / 6)), M(), trim, B3.chest);
         if (!kim) for (let k = 0; k < 2; k++) {
           const p = torsoPt(sh, 0.3 - k * 0.14, 0, 0.017, 0.2);
-          add4(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), shade(col, -0.35), B3.chest);
+          add5(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), shade(col, -0.35), B3.chest);
         }
         if (cc.tie && !kim) {
           const a = torsoPt(sh, 0.92, 0, 8e-3, 0.2), b = torsoPt(sh, 0.5, 0, 0.012, 0.2);
-          add4(Prim.rbox(0.4, 6, 5), between(a, b, 0.024, 6e-3), cc.tie, B3.chest);
+          add5(Prim.rbox(0.4, 6, 5), between(a, b, 0.024, 6e-3), cc.tie, B3.chest);
         }
       }
       if (TOP === "jacket") {
         const rows2 = cloth ? [0.075, 0, -0.08, -0.16] : [0.075, -0.16];
         const pp3 = (y, a) => pelvisPt(sh, y, a, 0.022 + (0.075 - y) * 0.12);
-        add4(band(pp3, rows2, 0.22, TAU12 - 0.22, U3), M(), col, B3.hips);
-        if (cloth) add4(band((y, a) => pelvisPt(sh, y, a, 0.017 + (0.075 - y) * 0.12), rows2, 0.22, TAU12 - 0.22, U3, true), M(), shade(col, -0.3), B3.hips);
+        add5(band(pp3, rows2, 0.22, TAU12 - 0.22, U3), M(), col, B3.hips);
+        if (cloth) add5(band((y, a) => pelvisPt(sh, y, a, 0.017 + (0.075 - y) * 0.12), rows2, 0.22, TAU12 - 0.22, U3, true), M(), shade(col, -0.3), B3.hips);
       }
     }
     if (look.vest && TOP !== "vest") {
@@ -60393,33 +60855,33 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const col = TOP === "striped" ? pal.top : pal.top;
       const off = (s) => 6e-3 + (0.2 - s) * 0.03;
       const a0 = TOP === "open" ? 0.3 : -Math.PI, a1 = TOP === "open" ? TAU12 - 0.3 : Math.PI;
-      add4(band((s, a) => torsoPt(sh, s, a, off(s), shirtM * 0.5), hem, a0, a1, U3), M(), col, B3.chest);
-      if (cloth) add4(band((s, a) => torsoPt(sh, s, a, off(s) - 6e-3, 0.2), hem.slice(-2), a0, a1, U3, true), M(), cc.lining, B3.chest);
+      add5(band((s, a) => torsoPt(sh, s, a, off(s), shirtM * 0.5), hem, a0, a1, U3), M(), col, B3.chest);
+      if (cloth) add5(band((s, a) => torsoPt(sh, s, a, off(s) - 6e-3, 0.2), hem.slice(-2), a0, a1, U3, true), M(), cc.lining, B3.chest);
     }
     const PR = cloth ? [0.08, 0.05, 0.02, -0.02, -0.06, -0.1, -0.13, -0.155, -0.18, -0.2, -0.215] : [0.08, 0, -0.08, -0.15, -0.215];
     const skirtPelvis = o.skirt || TOP === "dress";
     const pelvisCol = TOP === "dress" ? pal.top : pal.bottom;
-    add4(band((y, a) => pelvisPt(sh, y, a), PR, -Math.PI, Math.PI, U3), M(), pelvisCol, B3.hips);
+    add5(band((y, a) => pelvisPt(sh, y, a), PR, -Math.PI, Math.PI, U3), M(), pelvisCol, B3.hips);
     if (o.waist === "belt") {
       const rows = [0.082, 0.04];
-      add4(band((y, a) => pelvisPt(sh, y, a, 7e-3), rows, -Math.PI, Math.PI, U3), M(), pal.belt, B3.hips);
+      add5(band((y, a) => pelvisPt(sh, y, a, 7e-3), rows, -Math.PI, Math.PI, U3), M(), pal.belt, B3.hips);
       const p = pelvisPt(sh, 0.061, 0, 0.012);
-      add4(Prim.rbox(0.4, 6, 5), M(p[0], p[1], p[2], 0, 0, 0, [8e-3, 0.026, 0.032]), look.buckle || "#ffd54f", B3.hips);
+      add5(Prim.rbox(0.4, 6, 5), M(p[0], p[1], p[2], 0, 0, 0, [8e-3, 0.026, 0.032]), look.buckle || "#ffd54f", B3.hips);
     } else if (o.waist === "sash") {
       const rows = cloth ? [0.1, 0.07, 0.04, 0.01] : [0.1, 0.01];
-      add4(band((y, a) => pelvisPt(sh, y, a, 0.011 + Math.abs(y - 0.055) * 0.08), rows, -Math.PI, Math.PI, U3), M(), cc.waist, B3.hips);
+      add5(band((y, a) => pelvisPt(sh, y, a, 0.011 + Math.abs(y - 0.055) * 0.08), rows, -Math.PI, Math.PI, U3), M(), cc.waist, B3.hips);
       const k = pelvisPt(sh, 0.05, -1.25, 0.02);
-      add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(k[0], k[1], k[2], 0, 0, 0, [0.03, 0.032, 0.026]), shade(cc.waist, -0.08), B3.hips);
+      add5(Prim.sphere(q2.sph[0], q2.sph[1]), M(k[0], k[1], k[2], 0, 0, 0, [0.03, 0.032, 0.026]), shade(cc.waist, -0.08), B3.hips);
       for (const [dx, len, rot] of [[0.012, 0.2, 0.12], [-0.02, 0.16, -0.08]]) {
-        add4(Prim.rbox(0.35, ...q2.rboxS), mul(M(k[0] + dx, k[1] - len / 2, k[2] - 0.01, rot, 0, 0.1), M(0, 0, 0, 0, 0, 0, [0.022, len / 2, 8e-3])), cc.waist, B3.hips);
+        add5(Prim.rbox(0.35, ...q2.rboxS), mul(M(k[0] + dx, k[1] - len / 2, k[2] - 0.01, rot, 0, 0.1), M(0, 0, 0, 0, 0, 0, [0.022, len / 2, 8e-3])), cc.waist, B3.hips);
       }
     } else if (o.waist === "haramaki" || o.waist === "obi") {
       const hi = o.waist === "obi" ? 0.32 : 0.3, lo = o.waist === "obi" ? 0.08 : -0.06;
       const rows = cut2(TR, lo, hi);
-      add4(band(tpt(0.3, o.waist === "obi" ? 0.02 : 0.016), rows, -Math.PI, Math.PI, U3), M(), cc.waist, B3.chest);
+      add5(band(tpt(0.3, o.waist === "obi" ? 0.02 : 0.016), rows, -Math.PI, Math.PI, U3), M(), cc.waist, B3.chest);
       if (o.waist === "obi" && cloth) {
         const p = torsoPt(sh, 0.2, Math.PI, 0.04, 0.3);
-        add4(Prim.rbox(0.4, ...q2.rboxS), M(p[0], p[1], p[2], 0, 0, 0, [0.03, 0.05, 0.1]), shade(cc.waist, -0.1), B3.chest);
+        add5(Prim.rbox(0.4, ...q2.rboxS), M(p[0], p[1], p[2], 0, 0, 0, [0.03, 0.05, 0.1]), shade(cc.waist, -0.1), B3.chest);
       }
     }
     if (skirtPelvis) {
@@ -60435,62 +60897,62 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const hx = Math.cos(a) * (Dh - inset), hz = Math.sin(a) * (Wh - inset);
         return [p[0] + (hx - p[0]) * f, y, p[2] + (hz - p[2]) * f];
       };
-      add4(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U3), M(), col, B3.hips);
-      if (cloth) add4(band((y, a) => sp(y, a, 8e-3), rows.slice(-2), -Math.PI, Math.PI, U3, true), M(), shade(col, -0.35), B3.hips);
+      add5(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U3), M(), col, B3.hips);
+      if (cloth) add5(band((y, a) => sp(y, a, 8e-3), rows.slice(-2), -Math.PI, Math.PI, U3, true), M(), shade(col, -0.35), B3.hips);
     }
     const armCol = pal.sleeve || (TOP === "coat" ? look.coat || pal.top : TOP === "jacket" ? pal.top : TOP === "striped" ? pal.top : pal.top);
     for (const [s, Ub, Fb, part5] of [[1, B3.uarmR, B3.farmR, 1], [-1, B3.uarmL, B3.farmL, 2]]) {
       const ua = limbFn("uarm", o.fem, o.muscle, d.Bk), fa = limbFn("farm", o.fem, o.muscle, d.Bk);
       const sl = o.sleeves;
       if (sl === "none") {
-        add4(limbSeg(ua, d.A1, rs, lrows, { capTop: true, capBot: true }), M(), skin, Ub);
-        add4(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part5);
+        add5(limbSeg(ua, d.A1, rs, lrows, { capTop: true, capBot: true }), M(), skin, Ub);
+        add5(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part5);
       } else if (sl === "short") {
-        add4(limbSeg(ua, d.A1, rs, lrows, { t1: 0.5, off: 0.012, capTop: true, flare: 0.012, lining: cloth }), M(), armCol, Ub);
-        add4(limbSeg(ua, d.A1, rs, lrows, { t0: 0.42, capBot: true }), M(), skin, Ub);
-        add4(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part5);
+        add5(limbSeg(ua, d.A1, rs, lrows, { t1: 0.5, off: 0.012, capTop: true, flare: 0.012, lining: cloth }), M(), armCol, Ub);
+        add5(limbSeg(ua, d.A1, rs, lrows, { t0: 0.42, capBot: true }), M(), skin, Ub);
+        add5(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part5);
       } else if (sl === "rolled") {
-        add4(limbSeg(ua, d.A1, rs, lrows, { off: 0.012, capTop: true, capBot: true }), M(), armCol, Ub);
-        if (cloth) add4(torus2(q2), ringAt(-d.A1 * 0.96, ua(0.96) + 0.02, ua(0.96) + 0.02, 0.03), shade(armCol, -0.12), Ub);
-        add4(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part5);
+        add5(limbSeg(ua, d.A1, rs, lrows, { off: 0.012, capTop: true, capBot: true }), M(), armCol, Ub);
+        if (cloth) add5(torus2(q2), ringAt(-d.A1 * 0.96, ua(0.96) + 0.02, ua(0.96) + 0.02, 0.03), shade(armCol, -0.12), Ub);
+        add5(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part5);
       } else {
         const wide = sl === "wide";
-        add4(limbSeg(ua, d.A1, rs, lrows, { off: wide ? 0.02 : 0.012, capTop: true, capBot: true }), M(), armCol, Ub);
-        add4(limbSeg(fa, d.A2, rs, lrows, { off: wide ? 0.022 : 0.011, capTop: true, flare: wide ? 0.075 : 8e-3, lining: cloth, t1: wide ? 1.02 : 0.98 }), M(), armCol, Fb, part5);
-        if (cloth && !wide) add4(torus2(q2), ringAt(-d.A2 * 0.95, fa(0.95) + 0.018, fa(0.95) + 0.018, 0.022), shade(armCol, -0.15), Fb, part5);
-        add4(limbSeg(fa, d.A2, rs, 2, { t0: 0.8, capBot: true }), M(), skin, Fb, part5);
+        add5(limbSeg(ua, d.A1, rs, lrows, { off: wide ? 0.02 : 0.012, capTop: true, capBot: true }), M(), armCol, Ub);
+        add5(limbSeg(fa, d.A2, rs, lrows, { off: wide ? 0.022 : 0.011, capTop: true, flare: wide ? 0.075 : 8e-3, lining: cloth, t1: wide ? 1.02 : 0.98 }), M(), armCol, Fb, part5);
+        if (cloth && !wide) add5(torus2(q2), ringAt(-d.A2 * 0.95, fa(0.95) + 0.018, fa(0.95) + 0.018, 0.022), shade(armCol, -0.15), Fb, part5);
+        add5(limbSeg(fa, d.A2, rs, 2, { t0: 0.8, capBot: true }), M(), skin, Fb, part5);
       }
-      if (d.Am > 1.2) add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(0, -d.A2 * 0.5, 0, 0, 0, 0, fa(0.5) * 1.1), sl === "long" || sl === "wide" ? armCol : skin, Fb, part5);
-      if (cloth && (sl === "none" || sl === "short")) add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(ua(1) * 0.55, -d.A1 * 0.985, 0, 0, 0, 0, [0.022 * d.Bk, 0.026 * d.Bk, 0.024 * d.Bk]), skin, Ub);
+      if (d.Am > 1.2) add5(Prim.sphere(q2.sph[0], q2.sph[1]), M(0, -d.A2 * 0.5, 0, 0, 0, 0, fa(0.5) * 1.1), sl === "long" || sl === "wide" ? armCol : skin, Fb, part5);
+      if (cloth && (sl === "none" || sl === "short")) add5(Prim.sphere(q2.sph[0], q2.sph[1]), M(ua(1) * 0.55, -d.A1 * 0.985, 0, 0, 0, 0, [0.022 * d.Bk, 0.026 * d.Bk, 0.024 * d.Bk]), skin, Ub);
     }
     const bot = o.bottom;
     const bcol = pal.bottom, cuffCol = shade(pal.bottom, -0.22);
-    for (const [T3, S3, Ft, part5] of [[B3.thighR, B3.shinR, B3.footR, 3], [B3.thighL, B3.shinL, B3.footL, 4]]) {
+    for (const [T4, S3, Ft, part5] of [[B3.thighR, B3.shinR, B3.footR, 3], [B3.thighL, B3.shinL, B3.footL, 4]]) {
       const th = limbFn("thigh", o.fem, o.muscle, d.Bk), sn = limbFn("shin", o.fem, o.muscle, d.Bk);
       const boots = o.shoes === "boots";
       if (skirtPelvis) {
-        add4(limbSeg(th, d.T1, rs, lrows, { capTop: true, capBot: true }), M(), skin, T3);
-        if (!boots) add4(limbSeg(sn, d.T2, rs, lrows, { capTop: true, capBot: true }), M(), skin, S3, part5);
+        add5(limbSeg(th, d.T1, rs, lrows, { capTop: true, capBot: true }), M(), skin, T4);
+        if (!boots) add5(limbSeg(sn, d.T2, rs, lrows, { capTop: true, capBot: true }), M(), skin, S3, part5);
       } else if (bot === "shorts") {
-        add4(limbSeg(th, d.T1, rs, lrows, { t1: 0.86, off: 0.014, capTop: true, flare: 0.024, lining: cloth }), M(), bcol, T3);
-        if (cloth) add4(torus2(q2), ringAt(-d.T1 * 0.85, th(0.86) + 0.036, th(0.86) + 0.036, 0.03), cuffCol, T3);
-        add4(limbSeg(th, d.T1, rs, lrows, { t0: 0.78, capBot: true }), M(), skin, T3);
-        if (!boots) add4(limbSeg(sn, d.T2, rs, lrows, { capTop: true, capBot: true }), M(), skin, S3, part5);
+        add5(limbSeg(th, d.T1, rs, lrows, { t1: 0.86, off: 0.014, capTop: true, flare: 0.024, lining: cloth }), M(), bcol, T4);
+        if (cloth) add5(torus2(q2), ringAt(-d.T1 * 0.85, th(0.86) + 0.036, th(0.86) + 0.036, 0.03), cuffCol, T4);
+        add5(limbSeg(th, d.T1, rs, lrows, { t0: 0.78, capBot: true }), M(), skin, T4);
+        if (!boots) add5(limbSeg(sn, d.T2, rs, lrows, { capTop: true, capBot: true }), M(), skin, S3, part5);
       } else {
         const baggy = bot === "baggy" || bot === "hakama";
         const offT = bot === "slim" ? 8e-3 : bot === "hakama" ? 0.04 : baggy ? 0.03 : 0.014;
-        add4(limbSeg(th, d.T1, rs, lrows, { off: offT, capTop: true, capBot: true }), M(), bcol, T3);
+        add5(limbSeg(th, d.T1, rs, lrows, { off: offT, capTop: true, capBot: true }), M(), bcol, T4);
         if (bot === "capri") {
-          add4(limbSeg(sn, d.T2, rs, lrows, { t1: 0.55, off: 0.013, capTop: true, flare: 0.02, lining: cloth }), M(), bcol, S3, part5);
-          if (cloth) add4(torus2(q2), ringAt(-d.T2 * 0.54, sn(0.55) + 0.032, sn(0.55) + 0.032, 0.03), cuffCol, S3, part5);
-          if (!boots) add4(limbSeg(sn, d.T2, rs, lrows, { t0: 0.48, capBot: true }), M(), skin, S3, part5);
+          add5(limbSeg(sn, d.T2, rs, lrows, { t1: 0.55, off: 0.013, capTop: true, flare: 0.02, lining: cloth }), M(), bcol, S3, part5);
+          if (cloth) add5(torus2(q2), ringAt(-d.T2 * 0.54, sn(0.55) + 0.032, sn(0.55) + 0.032, 0.03), cuffCol, S3, part5);
+          if (!boots) add5(limbSeg(sn, d.T2, rs, lrows, { t0: 0.48, capBot: true }), M(), skin, S3, part5);
         } else if (boots && (baggy || bot === "slim")) {
-          add4(limbSeg(sn, d.T2, rs, lrows, { t1: 0.6, off: bot === "slim" ? 8e-3 : 0.028, capTop: true, bulge: baggy ? 0.012 : 0 }), M(), bcol, S3, part5);
+          add5(limbSeg(sn, d.T2, rs, lrows, { t1: 0.6, off: bot === "slim" ? 8e-3 : 0.028, capTop: true, bulge: baggy ? 0.012 : 0 }), M(), bcol, S3, part5);
         } else {
           const hem = bot === "hakama" ? 0.075 : baggy ? 4e-3 : bot === "slim" ? 4e-3 : 0.026;
           const offS = bot === "hakama" ? 0.04 : baggy ? 0.03 : bot === "slim" ? 8e-3 : 0.014;
-          add4(limbSeg(sn, d.T2, rs, lrows, { off: offS, capTop: true, flare: hem, lining: cloth, t1: bot === "slim" ? 0.97 : 0.99, bulge: baggy ? 0.014 : 0 }), M(), bcol, S3, part5);
-          if (baggy && bot !== "hakama" && cloth) add4(torus2(q2), ringAt(-d.T2 * 0.96, sn(0.96) + 0.034, sn(0.96) + 0.034, 0.024), cuffCol, S3, part5);
+          add5(limbSeg(sn, d.T2, rs, lrows, { off: offS, capTop: true, flare: hem, lining: cloth, t1: bot === "slim" ? 0.97 : 0.99, bulge: baggy ? 0.014 : 0 }), M(), bcol, S3, part5);
+          if (baggy && bot !== "hakama" && cloth) add5(torus2(q2), ringAt(-d.T2 * 0.96, sn(0.96) + 0.034, sn(0.96) + 0.034, 0.024), cuffCol, S3, part5);
         }
       }
       if (boots) {
@@ -60498,21 +60960,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const tuck = bot === "baggy" || bot === "slim" || bot === "hakama";
         if (skirtPelvis || bot === "shorts" || bot === "capri" || tuck) {
           const t0 = 0.42;
-          if (!tuck) add4(limbSeg(sn, d.T2, rs, lrows, { capTop: true, t1: t0 + 0.06 }), M(), skin, S3, part5);
-          add4(limbSeg(sn, d.T2, rs, lrows, { t0, off: tuck ? 0.034 : 0.016, flareTop: 0.01, capBot: true }), M(), bc, S3, part5);
-          if (cloth) add4(torus2(q2), ringAt(-d.T2 * (t0 + 0.02), sn(t0) + (tuck ? 0.044 : 0.027), sn(t0) + (tuck ? 0.044 : 0.027), 0.03), shade(bc, -0.2), S3, part5);
+          if (!tuck) add5(limbSeg(sn, d.T2, rs, lrows, { capTop: true, t1: t0 + 0.06 }), M(), skin, S3, part5);
+          add5(limbSeg(sn, d.T2, rs, lrows, { t0, off: tuck ? 0.034 : 0.016, flareTop: 0.01, capBot: true }), M(), bc, S3, part5);
+          if (cloth) add5(torus2(q2), ringAt(-d.T2 * (t0 + 0.02), sn(t0) + (tuck ? 0.044 : 0.027), sn(t0) + (tuck ? 0.044 : 0.027), 0.03), shade(bc, -0.2), S3, part5);
         }
       }
       if (cloth) {
         const bareKnee = skirtPelvis ? o.bottom !== "longskirt" || true : bot === "shorts";
-        if (bareKnee) add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(sn(0) * 0.62, -0.012, 0, 0, 0, 0, [0.026 * d.Bk, 0.034 * d.Bk, 0.032 * d.Bk]), skin, S3, part5);
+        if (bareKnee) add5(Prim.sphere(q2.sph[0], q2.sph[1]), M(sn(0) * 0.62, -0.012, 0, 0, 0, 0, [0.026 * d.Bk, 0.034 * d.Bk, 0.032 * d.Bk]), skin, S3, part5);
         const bareAnkle = (skirtPelvis || bot === "shorts" || bot === "capri") && !boots && o.bottom !== "longskirt";
-        if (bareAnkle) for (const [zz, yy] of [[1, 0.975], [-1, 0.955]]) add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(4e-3, -d.T2 * yy, zz * sn(0.97) * 0.8, 0, 0, 0, 0.017 * d.Bk), skin, S3, part5);
+        if (bareAnkle) for (const [zz, yy] of [[1, 0.975], [-1, 0.955]]) add5(Prim.sphere(q2.sph[0], q2.sph[1]), M(4e-3, -d.T2 * yy, zz * sn(0.97) * 0.8, 0, 0, 0, 0.017 * d.Bk), skin, S3, part5);
       }
-      feet(add4, o, pal, d, q2, Ft, part5);
+      feet(add5, o, pal, d, q2, Ft, part5);
     }
-    if (look.coat && TOP !== "coat" || TOP === "coat" && !look.top2 && look.coat) coat(add4, sh, look.coat, TR, U3, cloth, d, q2);
-    else if (TOP === "coat") coatTail(add4, sh, look.coat || pal.top, U3, cloth, d, 0.03);
+    if (look.coat && TOP !== "coat" || TOP === "coat" && !look.top2 && look.coat) coat(add5, sh, look.coat, TR, U3, cloth, d, q2);
+    else if (TOP === "coat") coatTail(add5, sh, look.coat || pal.top, U3, cloth, d, 0.03);
     return o;
   }
   function neckGeo(nk, y0, y1, o, cloth) {
@@ -60541,67 +61003,67 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     return g;
   }
-  function straps(add4, sh, s, col, q2) {
+  function straps(add5, sh, s, col, q2) {
     for (const side of [-1, 1]) {
       const f = torsoPt(sh, s, side * 0.62, 4e-3, 0.5), back = torsoPt(sh, s - 0.02, side * (Math.PI - 0.62), 4e-3, 0.5);
       const top = torsoPt(sh, 0.95, side * Math.PI / 2, 6e-3, 0.5);
       top[1] += 0.012;
-      add4(Prim.cyl(5), between(f, top, 0.013, 5e-3), col, B3.chest);
-      add4(Prim.cyl(5), between(top, back, 0.013, 5e-3), col, B3.chest);
+      add5(Prim.cyl(5), between(f, top, 0.013, 5e-3), col, B3.chest);
+      add5(Prim.cyl(5), between(top, back, 0.013, 5e-3), col, B3.chest);
     }
   }
-  function collarFlaps(add4, sh, col, a) {
+  function collarFlaps(add5, sh, col, a) {
     for (const side of [-1, 1]) {
       const p = torsoPt(sh, 0.9, side * a, 0.016, 1);
-      add4(Prim.rbox(0.4, 6, 5), mul(M(p[0], p[1], p[2], 0, 0, 0), M(0, 0, 0, side * 0.5, -side * 0.3, 0.35, [0.03, 0.045, 6e-3])), shade(col, -0.05), B3.chest);
+      add5(Prim.rbox(0.4, 6, 5), mul(M(p[0], p[1], p[2], 0, 0, 0), M(0, 0, 0, side * 0.5, -side * 0.3, 0.35, [0.03, 0.045, 6e-3])), shade(col, -0.05), B3.chest);
     }
   }
-  function feet(add4, o, pal, d, q2, Ft, part5) {
+  function feet(add5, o, pal, d, q2, Ft, part5) {
     const k = o.fem ? 0.9 : 1.06;
     const w = (o.fem ? 0.048 : 0.058) * d.Bk;
     const S3 = (x, y, z) => [x * k, y, z];
     const skin = pal.skin;
     const rb = (small = true) => Prim.rbox(0.42, ...small ? q2.rboxS : q2.rbox);
     if (o.shoes === "sandals" || o.shoes === "geta" || o.shoes === "bare") {
-      add4(rb(), M(0.05 * k, -0.046, 0, 0, 0, 0, S3(0.11, 0.034, w * 0.9)), skin, Ft, part5);
-      add4(rb(), M(0.148 * k, -0.058, 0, 0, 0, 0.1, S3(0.034, 0.022, w * 0.86)), shade(skin, -0.04), Ft, part5);
-      add4(Prim.cyl(6, true), M(0, -0.02, 0, 0, 0, 0, [0.042 * d.Bk, 0.05, 0.042 * d.Bk]), skin, Ft, part5);
+      add5(rb(), M(0.05 * k, -0.046, 0, 0, 0, 0, S3(0.11, 0.034, w * 0.9)), skin, Ft, part5);
+      add5(rb(), M(0.148 * k, -0.058, 0, 0, 0, 0.1, S3(0.034, 0.022, w * 0.86)), shade(skin, -0.04), Ft, part5);
+      add5(Prim.cyl(6, true), M(0, -0.02, 0, 0, 0, 0, [0.042 * d.Bk, 0.05, 0.042 * d.Bk]), skin, Ft, part5);
       if (o.shoes === "bare") return;
       const sole2 = o.shoes === "geta" ? "#8d6e4a" : shade(pal.shoes, -0.1);
-      add4(rb(), M(0.055 * k, -0.079, 0, 0, 0, 0, S3(0.125, 8e-3, w * 1.02)), sole2, Ft, part5);
-      add4(Prim.torus(0.28, 3, 10), M(0.078 * k, -0.05, 0, 0, Math.PI / 2, 0, [w * 0.98, 0.03, 0.022 / 0.28]), o.shoes === "geta" ? "#c62828" : pal.shoes, Ft, part5);
-      if (o.shoes === "geta") for (const x of [-0.02, 0.1]) add4(Prim.box(), M(x * k, -0.1, 0, 0, 0, 0, [0.012, 0.014, w * 0.9]), "#6d4c41", Ft, part5);
+      add5(rb(), M(0.055 * k, -0.079, 0, 0, 0, 0, S3(0.125, 8e-3, w * 1.02)), sole2, Ft, part5);
+      add5(Prim.torus(0.28, 3, 10), M(0.078 * k, -0.05, 0, 0, Math.PI / 2, 0, [w * 0.98, 0.03, 0.022 / 0.28]), o.shoes === "geta" ? "#c62828" : pal.shoes, Ft, part5);
+      if (o.shoes === "geta") for (const x of [-0.02, 0.1]) add5(Prim.box(), M(x * k, -0.1, 0, 0, 0, 0, [0.012, 0.014, w * 0.9]), "#6d4c41", Ft, part5);
       return;
     }
     const boot2 = o.shoes === "boots";
     const col = pal.shoes, sole = shade(col, -0.4);
-    add4(Prim.rbox(0.4, ...q2.rbox), M(0.055 * k, -0.04, 0, 0, 0, 0, S3(0.128, 0.045, w)), col, Ft, part5);
-    add4(rb(), M(0.056 * k, -0.078, 0, 0, 0, 0, S3(0.132, 0.01, w * 1.04)), sole, Ft, part5);
-    if (!boot2) add4(Prim.cyl(6, true), M(-5e-3, 0.02, 0, 0, 0, 0, [0.05 * d.Bk, 0.1, 0.05 * d.Bk]), col, Ft, part5);
-    else add4(Prim.cyl(7, true), M(-4e-3, 0.03, 0, 0, 0, 0, [0.055 * d.Bk, 0.12, 0.055 * d.Bk]), col, Ft, part5);
+    add5(Prim.rbox(0.4, ...q2.rbox), M(0.055 * k, -0.04, 0, 0, 0, 0, S3(0.128, 0.045, w)), col, Ft, part5);
+    add5(rb(), M(0.056 * k, -0.078, 0, 0, 0, 0, S3(0.132, 0.01, w * 1.04)), sole, Ft, part5);
+    if (!boot2) add5(Prim.cyl(6, true), M(-5e-3, 0.02, 0, 0, 0, 0, [0.05 * d.Bk, 0.1, 0.05 * d.Bk]), col, Ft, part5);
+    else add5(Prim.cyl(7, true), M(-4e-3, 0.03, 0, 0, 0, 0, [0.055 * d.Bk, 0.12, 0.055 * d.Bk]), col, Ft, part5);
   }
-  function coat(add4, sh, c, TR, U3, cloth, d, q2) {
+  function coat(add5, sh, c, TR, U3, cloth, d, q2) {
     const lining = shade(c, -0.3);
     const off = (s) => 0.024 + sstep(0.55, 0.85, s) * 0.03 - sstep(0.9, 1, s) * 0.02;
     const rows = cut2(TR, -0.1, 0.99);
     const open = (s) => 0.5 + sstep(0.75, 1, s) * 0.3;
     const pt = (k) => (s, a) => torsoPt(sh, s, a, off(s) - k, 0);
-    add4(band(pt(0), rows, open, (s) => TAU12 - open(s), U3), M(), c, B3.chest);
-    if (cloth) add4(band(pt(6e-3), rows, open, (s) => TAU12 - open(s), U3, true), M(), lining, B3.chest);
+    add5(band(pt(0), rows, open, (s) => TAU12 - open(s), U3), M(), c, B3.chest);
+    if (cloth) add5(band(pt(6e-3), rows, open, (s) => TAU12 - open(s), U3, true), M(), lining, B3.chest);
     const cr = cloth ? [1.1, 1.04, 0.98] : [1.1, 0.98];
     const col = (s, a) => {
       const p = torsoPt(sh, 0.97, a, 0.03, 0);
       const k = 1 + (s - 0.97) * 1.6;
       return [p[0] * k, s * sh.cl, p[2] * k];
     };
-    add4(band(col, cr, 1.25, TAU12 - 1.25, Math.max(4, U3 / 2)), M(), c, B3.chest);
-    if (cloth) add4(band((s, a) => {
+    add5(band(col, cr, 1.25, TAU12 - 1.25, Math.max(4, U3 / 2)), M(), c, B3.chest);
+    if (cloth) add5(band((s, a) => {
       const p = col(s, a);
       return [p[0] * 0.95, p[1], p[2] * 0.95];
     }, cr, 1.25, TAU12 - 1.25, Math.max(4, U3 / 2), true), M(), lining, B3.chest);
-    coatTail(add4, sh, c, U3, cloth, d, off(-0.1));
+    coatTail(add5, sh, c, U3, cloth, d, off(-0.1));
   }
-  function coatTail(add4, sh, c, U3, cloth, d, off0) {
+  function coatTail(add5, sh, c, U3, cloth, d, off0) {
     const lining = shade(c, -0.3);
     const L2 = 0.62 * d.Lg;
     const tr = cloth ? [0.02, -0.12, -0.28, -0.45, -L2] : [0.02, -0.3, -L2];
@@ -60611,8 +61073,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return [p[0] * k - 8e-3, y, p[2] * k];
     };
     const openT = 0.62;
-    add4(band(tp(0), tr, openT, TAU12 - openT, U3), M(), c, B3.coatTail);
-    if (cloth) add4(band(tp(6e-3), half(tr), openT, TAU12 - openT, U3 / 2, true), M(), lining, B3.coatTail);
+    add5(band(tp(0), tr, openT, TAU12 - openT, U3), M(), c, B3.coatTail);
+    if (cloth) add5(band(tp(6e-3), half(tr), openT, TAU12 - openT, U3 / 2, true), M(), lining, B3.coatTail);
   }
 
   // src/render3d/chars/mats.js
@@ -61879,13 +62341,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const pal = palette2(look);
     const b = new Builder();
     const Bk = d.Bk;
-    const add4 = (g, m, col, bone, part5 = 0) => b.add(g, m, col, bone, part5);
+    const add5 = (g, m, col, bone, part5 = 0) => b.add(g, m, col, bone, part5);
     const rb = (k = 0.4, small = true) => Prim.rbox(k, ...small ? q2.rboxS : q2.rbox);
-    const outfit = buildFigure(add4, look, d, pal, q2);
+    const outfit = buildFigure(add5, look, d, pal, q2);
     const R3 = d.headR;
     const HM = (m) => mul(M(d.hx, d.hc, 0, 0, 0, 0, R3), m || M());
     const hb = B3.head;
-    add4(headGeo(headLevel(lod)), HM(), pal.face, hb);
+    add5(headGeo(headLevel(lod)), HM(), pal.face, hb);
     const style = styleId2(look.hair, look);
     const meta = META2[style];
     const kind = hatKind2(look.hat, look);
@@ -61919,7 +62381,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (look.ears) minkEars2(b, HM, look, pal, hb, q2);
     else for (const s of [-1, 1]) {
       const e = surf(98, s * 95, 0.97);
-      add4(Prim.sphere(q2.sph[0], q2.sph[1]), HM(M(e[0] - 0.02, e[1], e[2], 0, 0, s * 0.12, [0.19, 0.28, 0.13])), pal.face, hb);
+      add5(Prim.sphere(q2.sph[0], q2.sph[1]), HM(M(e[0] - 0.02, e[1], e[2], 0, 0, s * 0.12, [0.19, 0.28, 0.13])), pal.face, hb);
     }
     if (look.fin && look.kind !== "Octopus") {
       const a = surf(18, 180, 0.9);
@@ -61951,15 +62413,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (look.drums) {
       for (let k = 0; k < 6; k++) {
         const a = Math.PI * 0.55 + k / 5 * Math.PI * 0.9;
-        add4(Prim.cyl(6), M(Math.cos(a) * 0.5 - 0.15, d.chestLen + 0.1 + Math.sin(k / 5 * Math.PI) * 0.35, Math.sin(a) * 0.5, Math.PI / 2, 0, 0, [0.08, 0.07, 0.08]), "#ffb300", B3.chest);
+        add5(Prim.cyl(6), M(Math.cos(a) * 0.5 - 0.15, d.chestLen + 0.1 + Math.sin(k / 5 * Math.PI) * 0.35, Math.sin(a) * 0.5, Math.PI / 2, 0, 0, [0.08, 0.07, 0.08]), "#ffb300", B3.chest);
       }
     }
     if (look.tail) {
       const fl2 = look.tail === "fluffy";
       const r = fl2 ? 0.055 : 0.024;
       const pts = [[0, 0, 0], [-0.16, 0.02, 0], [-0.3, 0.12, 0], [-0.36, 0.3, 0]];
-      for (let i = 0; i < 3; i++) add4(Prim.cyl(5), between(pts[i], pts[i + 1], r * (1 - i * 0.12) * (fl2 ? 1 + i * 0.25 : 1)), pal.fur, B3.tail);
-      for (let i = 1; i < 4; i++) add4(Prim.sphere(q2.sph[0], q2.sph[1]), M(...pts[i], 0, 0, 0, r * (fl2 ? 1.35 + i * 0.1 : 1)), pal.fur, B3.tail);
+      for (let i = 0; i < 3; i++) add5(Prim.cyl(5), between(pts[i], pts[i + 1], r * (1 - i * 0.12) * (fl2 ? 1 + i * 0.25 : 1)), pal.fur, B3.tail);
+      for (let i = 1; i < 4; i++) add5(Prim.sphere(q2.sph[0], q2.sph[1]), M(...pts[i], 0, 0, 0, r * (fl2 ? 1.35 + i * 0.1 : 1)), pal.fur, B3.tail);
     }
     if (look.wings === "sky" || look.wings === "lunar") {
       const lunar = look.wings === "lunar";
@@ -61968,7 +62430,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         for (let i = 0; i < 3; i++) {
           const a = (lunar ? 0.35 : 0.55) - i * 0.42;
           const L2 = (lunar ? 0.62 : 0.34) * (1 - i * 0.12);
-          add4(Prim.sphere(q2.sph[0], q2.sph[1]), mul(M(0, 0, 0, s * (Math.PI / 2 - a), 0, 0), M(0, L2 * 0.5, 0, 0, 0, 0, [0.03, L2 * 0.55, lunar ? 0.11 : 0.085])), i ? shade(col, lunar ? 0.1 : -0.08) : col, W3);
+          add5(Prim.sphere(q2.sph[0], q2.sph[1]), mul(M(0, 0, 0, s * (Math.PI / 2 - a), 0, 0), M(0, L2 * 0.5, 0, 0, 0, 0, [0.03, L2 * 0.55, lunar ? 0.11 : 0.085])), i ? shade(col, lunar ? 0.1 : -0.08) : col, W3);
         }
       }
     }
@@ -61977,18 +62439,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (let k = 0; k < Math.min(3, wpn.count || 1); k++) {
         const z = -(0.165 * Bk + 0.02 + k * 0.035);
         const a = [0.1 - k * 0.03, 0.02 + k * 0.01, z], e = [-0.62 - k * 0.04, -0.4 + k * 0.03, z - 0.1];
-        add4(Prim.cyl(5), between(a, e, 0.019), cols[k], B3.sheath);
+        add5(Prim.cyl(5), between(a, e, 0.019), cols[k], B3.sheath);
         const dir = norm([a[0] - e[0], a[1] - e[1], a[2] - e[2]]);
-        add4(Prim.cyl(6), between(add3(a, dir, -0.01), add3(a, dir, 0.012), 0.036), GOLD2, B3.hilts);
-        add4(Prim.cyl(5), between(add3(a, dir, 0.012), add3(a, dir, 0.23), 0.017), k === 2 ? "#fafafa" : "#2d2a32", B3.hilts);
+        add5(Prim.cyl(6), between(add3(a, dir, -0.01), add3(a, dir, 0.012), 0.036), GOLD2, B3.hilts);
+        add5(Prim.cyl(5), between(add3(a, dir, 0.012), add3(a, dir, 0.23), 0.017), k === 2 ? "#fafafa" : "#2d2a32", B3.hilts);
       }
     } else if (wpn && wpn.kind === "gun") {
-      add4(Prim.box(), M(0.02, -0.06, 0.17 * Bk, 0, 0, 0.3, [0.05, 0.08, 0.02]), "#6d4c41", B3.sheath);
-      add4(Prim.box(), M(0.05, 0.03, 0.17 * Bk, 0, 0, 0.9, [0.02, 0.05, 0.018]), "#8d5b33", B3.hilts);
+      add5(Prim.box(), M(0.02, -0.06, 0.17 * Bk, 0, 0, 0.3, [0.05, 0.08, 0.02]), "#6d4c41", B3.sheath);
+      add5(Prim.box(), M(0.05, 0.03, 0.17 * Bk, 0, 0, 0.9, [0.02, 0.05, 0.018]), "#8d5b33", B3.hilts);
     } else if (wpn && (wpn.kind === "axe" || wpn.kind === "staff")) {
       const a = [-0.16 * Bk, d.chestLen - 0.02, 0.22], e = [-0.17 * Bk, 0.05, -0.28];
-      add4(Prim.cyl(5), between(a, e, 0.018, 0.018, 0.5), wpn.kind === "axe" ? "#6d4c41" : "#4fc3f7", B3.backWpn);
-      if (wpn.kind === "axe") add4(Prim.box(), M(a[0] - 0.02, a[1] + 0.1, a[2] + 0.05, 0.9, 0, 0, [0.015, 0.12, 0.16]), "#cfd8dc", B3.backWpn);
+      add5(Prim.cyl(5), between(a, e, 0.018, 0.018, 0.5), wpn.kind === "axe" ? "#6d4c41" : "#4fc3f7", B3.backWpn);
+      if (wpn.kind === "axe") add5(Prim.box(), M(a[0] - 0.02, a[1] + 0.1, a[2] + 0.05, 0.9, 0, 0, [0.015, 0.12, 0.16]), "#cfd8dc", B3.backWpn);
     }
     const geo2 = b.build();
     return { geo: geo2, dims: d, style, meta, hatKind: kind, bubble: kind === "bubble", lod, fingers: fingers.R ? fingers : null };
@@ -62113,8 +62575,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     _m4.makeBasis(_a, _b, _c);
     return q2.setFromRotationMatrix(_m4);
   }
-  function ik2(S3, T3, L1, L2, pole, bend, stretch, J, E) {
-    _d.subVectors(T3, S3);
+  function ik2(S3, T4, L1, L2, pole, bend, stretch, J, E) {
+    _d.subVectors(T4, S3);
     let dist = _d.length();
     const max = (L1 + L2) * 0.999;
     if (dist > max && !stretch) {
@@ -62202,24 +62664,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const h2 = k === 0 ? hF : hB;
         const S3 = this.S[k], J = this.J[k], E = this.E[k];
         S3.set(0, d.shY, side * d.shW).applyQuaternion(this.qChest).add(hip);
-        const T3 = this._T;
+        const T4 = this._T;
         const reach = k === 0 ? o.reachR : o.reachL;
-        if (reach) T3.copy(reach);
+        if (reach) T4.copy(reach);
         else {
           const hx = h2[0], hy = h2[1];
           const fwdK = clamp4(hx / 0.43, 0, 1);
           const restK = clamp4(1 - hx / 0.2, 0, 1) * clamp4(hy / 0.3, 0, 1);
           const lat = side * (-d.shW * 0.74 * fwdK + 0.055 * restK + (o.spread || 0));
-          T3.set(hx * d.kA, -hy * d.kA, lat);
-          if (tiltA) T3.applyAxisAngle(X, tiltA * side);
-          T3.applyQuaternion(this.qLean).add(S3);
+          T4.set(hx * d.kA, -hy * d.kA, lat);
+          if (tiltA) T4.applyAxisAngle(X, tiltA * side);
+          T4.applyQuaternion(this.qLean).add(S3);
         }
         const e = k === 0 ? P4.eF ?? 1 : P4.eB ?? 1;
-        _t2.subVectors(T3, S3);
+        _t2.subVectors(T4, S3);
         const lxy = Math.hypot(_t2.x, _t2.y) || 1;
         const sg = e < 0 ? -1 : 1;
         this._pole.set(_t2.y / lxy * sg, -_t2.x / lxy * sg, side * 0.42);
-        ik2(S3, T3, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P4.stretch || !!reach, J, E);
+        ik2(S3, T4, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P4.stretch || !!reach, J, E);
         const U3 = k === 0 ? B3.uarmR : B3.uarmL, F4 = k === 0 ? B3.farmR : B3.farmL, Hd = k === 0 ? B3.handR : B3.handL;
         this.pos[U3].copy(S3);
         aimNegY(this.quat[U3], _t2.subVectors(J, S3), this._pole);
@@ -62259,19 +62721,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const side = k === 0 ? 1 : -1;
         const f = k === 0 ? fF : fB;
         const Hj = _c.set(0, -0.07, side * d.hipW).applyQuaternion(this.qPelvis).add(hip);
-        const T3 = this._T;
+        const T4 = this._T;
         let fx = f[0] * d.kL, fz = side * (d.hipW + 0.012 + (o.legSpread || 0));
         if (walk !== void 0 && walk !== null) {
           fz += fx * Math.sin(walk);
           fx *= Math.cos(walk);
         }
-        T3.set(hip.x + fx, d.hA + Math.max(0, -f[1] * d.kL), fz);
-        _t2.subVectors(T3, Hj);
+        T4.set(hip.x + fx, d.hA + Math.max(0, -f[1] * d.kL), fz);
+        _t2.subVectors(T4, Hj);
         const lxy = Math.hypot(_t2.x, _t2.y) || 1;
         this._pole.set(-_t2.y / lxy, _t2.x / lxy, side * 0.12);
         const Kn = this.K[k], Ft = this.F[k];
         const Hs = this.pos[k === 0 ? B3.thighR : B3.thighL].copy(Hj);
-        ik2(Hs, T3, d.T1, d.T2, this._pole, 1, false, Kn, Ft);
+        ik2(Hs, T4, d.T1, d.T2, this._pole, 1, false, Kn, Ft);
         const Th = k === 0 ? B3.thighR : B3.thighL, Sh = k === 0 ? B3.shinR : B3.shinL, Fo = k === 0 ? B3.footR : B3.footL;
         aimNegY(this.quat[Th], _t2.subVectors(Kn, Hs), this._pole);
         this.pos[Sh].copy(Kn);
@@ -62833,16 +63295,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var MARKERS = {};
   function markerMat(ch) {
     if (MARKERS[ch]) return MARKERS[ch];
+    const main2 = ch[0] === "M", glyph = main2 ? ch.slice(1) : ch;
     const c = canvas(64, 96), g = c.getContext("2d");
     g.font = "bold 84px Bangers, Impact, sans-serif";
     g.textAlign = "center";
     g.textBaseline = "middle";
+    if (main2) {
+      const gr = g.createRadialGradient(32, 50, 4, 32, 50, 34);
+      gr.addColorStop(0, "rgba(255,183,77,0.55)");
+      gr.addColorStop(1, "rgba(255,183,77,0)");
+      g.fillStyle = gr;
+      g.fillRect(0, 0, 64, 96);
+    }
     g.lineWidth = 10;
     g.strokeStyle = "#000";
     g.lineJoin = "round";
-    g.strokeText(ch, 32, 52);
-    g.fillStyle = ch === "!" ? "#ffd54f" : "#90caf9";
-    g.fillText(ch, 32, 52);
+    g.strokeText(glyph, 32, 52);
+    g.fillStyle = main2 ? glyph === "!" ? "#ff9100" : "#ffb74d" : glyph === "!" ? "#ffd54f" : "#90caf9";
+    g.fillText(glyph, 32, 52);
     MARKERS[ch] = new SpriteMaterial({ map: tex(c), transparent: true, depthWrite: false, fog: false });
     return MARKERS[ch];
   }
@@ -64187,7 +64657,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.renderer.info.autoReset = false;
       this.scene = new Scene();
       this.sky = new Sky(this.scene);
-      this.water = new Water(this.scene);
+      this.water = new Water(this.scene, this.renderer);
       this.terrain = new TerrainManager(this.scene);
       this.rig = new CameraRig(canvas2, game);
       this.props = new Group();
@@ -64733,7 +65203,23 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const items9 = [];
       const keep = /* @__PURE__ */ new Set();
       const queue = [];
+      for (const o of w.farObjects || []) {
+        if (o.hidden || !PROP_BUILDERS.has(o.kind)) continue;
+        const dx = w.dx(ox, o.x), dy = o.y - oy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > o.far * o.far) continue;
+        const v = this.built.get(o);
+        if (v === void 0) {
+          queue.push([o, Math.min(d2, 23 * 23)]);
+          continue;
+        }
+        if (v) {
+          keep.add(o);
+          v.position.set(dx, v.userData.noGround ? 0 : this.ground(o.x, o.y), dy);
+        }
+      }
       for (const o of objs) {
+        if (o.far) continue;
         const dx = w.dx(ox, o.x), dy = o.y - oy;
         const d2 = dx * dx + dy * dy;
         if (d2 > RK * RK) continue;
@@ -64875,10 +65361,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      * be added to the scene: people you could talk to but not see. This one
      * shrugs that off, and gives up waiting after a couple of seconds.)
      */
-    compileAsync(obj, target = this.scene) {
+    compileAsync(obj, target2 = this.scene) {
       let mats;
       try {
-        mats = this.renderer.compile(obj, this.rig.camera, target || obj);
+        mats = this.renderer.compile(obj, this.rig.camera, target2 || obj);
       } catch (e) {
         return Promise.resolve();
       }
@@ -64941,12 +65427,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           this.attach(v.root, this.ents);
         }
         let gh;
-        if (a.deck) gh = a.deck.h + shipBob(a.deck.ship, env.time);
+        if (a.deck) gh = a.deck.h + shipBob(a.deck.ship, env.time) + pitchRise(a.deck.ship, (a.deck.t - 0.5) * a.deck.ship.def.length);
         else if (a.flying) gh = Math.max(0, this.ground(a.x, a.y));
         else if (a.seaCreature) gh = Math.max(-(a.depth || 0), this.terrain.terrainAt(a.x, a.y) + 0.35);
         else if (a.inWater) {
           const flat = (a.moving || a.under || a.gills) && !(a.fruit && !a.gills);
-          gh = -(a.depth || 0) - (flat ? 0.95 : 1.3) * (a.look?.scale || 1);
+          gh = waterLevel(this.game.world, a.x, a.y) - (a.depth || 0) - (flat ? 0.95 : 1.3) * (a.look?.scale || 1);
           if (a.fruit && !a.gills && !a.sinking) gh += Math.sin(env.time * 5.5 + a.x * 3) * 0.09;
           gh = Math.max(gh, this.terrain.terrainAt(a.x, a.y));
         } else if (a.wading) gh = this.ground(a.x, a.y) - a.wading;
@@ -65315,7 +65801,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
 
   // src/render3d/groundcover.js
-  var CELL2 = 16;
+  var CELL3 = 16;
   var NEAR = 22;
   var KINDS = ["grass", "flower", "fern", "pebble", "shell", "rock"];
   var REACH = { grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
@@ -65524,7 +66010,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function buildCell(world, terrain, cx, cy) {
     const out = {};
     for (const k of KINDS) out[k] = [];
-    const x0 = cx * CELL2, y0 = cy * CELL2;
+    const x0 = cx * CELL3, y0 = cy * CELL3;
     const col = new Color();
     const put2 = (k, x, y, rot, s, c) => {
       let h2 = terrain(x, y);
@@ -65532,10 +66018,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       else if (!(h2 > 0.05)) return;
       out[k].push(x, y, h2, rot, s, c.r, c.g, c.b);
     };
-    for (let j = 0; j < CELL2; j++) {
+    for (let j = 0; j < CELL3; j++) {
       const y = y0 + j;
       if (y < 1 || y >= world.height - 1) continue;
-      for (let i = 0; i < CELL2; i++) {
+      for (let i = 0; i < CELL3; i++) {
         const x = world.wx(x0 + i);
         const t = world.type(x, y);
         const r1 = hash6(x, y, 1), r2 = hash6(x, y, 2), r3 = hash6(x, y, 3);
@@ -65649,7 +66135,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const low = v.quality === "low";
       const R3 = low ? 36 : 64;
       const ox = v.ox, oy = v.oy;
-      const ccx = Math.floor(w.wx(ox) / CELL2), ccy = Math.floor(oy / CELL2);
+      const ccx = Math.floor(w.wx(ox) / CELL3), ccy = Math.floor(oy / CELL3);
       const key2 = `${ccx},${ccy},${low ? 1 : 0}`;
       this.t -= dt;
       if (key2 !== this.key) {
@@ -65659,14 +66145,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const wt = this.want;
       if (wt && this.t <= 0) {
         const t0 = performance.now();
-        const cr = Math.ceil(wt.R / CELL2) + 1;
+        const cr = Math.ceil(wt.R / CELL3) + 1;
         let nearReady = true, allReady = true;
         for (const [i, j] of ring2(cr)) {
           const k = this.cellKey(w, wt.ccx + i, wt.ccy + j);
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > FILL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR / CELL2)) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR / CELL3)) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -65685,16 +66171,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** The cache key of cell (cx, cy) (wrapped around the world on X), or -1 off the map. */
     cellKey(w, cx, cy) {
-      if (cy < 0 || cy * CELL2 >= w.height) return -1;
-      const n = Math.ceil(w.width / CELL2);
+      if (cy < 0 || cy * CELL3 >= w.height) return -1;
+      const n = Math.ceil(w.width / CELL3);
       if (w.wrap) cx = (cx % n + n) % n;
       else if (cx < 0 || cx >= n) return -1;
       return cy * 1e5 + cx;
     }
     /** Lay out the instances around the centre of cell (ccx, ccy). */
     place(w, ccx, ccy, R3, low) {
-      const cr = Math.ceil(R3 / CELL2) + 1;
-      const ox = (ccx + 0.5) * CELL2, oy = (ccy + 0.5) * CELL2;
+      const cr = Math.ceil(R3 / CELL3) + 1;
+      const ox = (ccx + 0.5) * CELL3, oy = (ccy + 0.5) * CELL3;
       this.origin = { x: ox, y: oy };
       for (const k of KINDS) this.sets[k].reset();
       const keep = /* @__PURE__ */ new Set();
@@ -65841,7 +66327,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     h2 ^= h2 >>> 16;
     return (h2 >>> 0) / 4294967296;
   }
-  var smooth3 = (a, b, x) => {
+  var smooth4 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
@@ -65857,7 +66343,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (world.zone !== 0) w = world.zone === 2 ? 0.9 : 0.5;
     else {
       const lat = Math.abs(y - EQ) / (H / 2);
-      w = 1 - smooth3(0.2, 0.72, lat);
+      w = 1 - smooth4(0.2, 0.72, lat);
       const isl = world.nearestIsland ? world.nearestIsland(x, y, 260) : null;
       if (isl) {
         const c = world.climate(isl.x, isl.y);
@@ -65881,7 +66367,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
 
   // src/render3d/seabed.js
   var TAU18 = Math.PI * 2;
-  var CELL3 = 16;
+  var CELL4 = 16;
   var KINDS2 = ["branch", "brain", "table", "fan", "tube", "anemone", "kelp", "seagrass", "boulder", "star", "clam"];
   var MAX3 = { branch: 1400, brain: 1e3, table: 420, fan: 800, tube: 600, anemone: 700, kelp: 1500, seagrass: 5e3, boulder: 1100, star: 500, clam: 60 };
   var SWAY3 = { fan: 0.5, anemone: 0.7, kelp: 1, seagrass: 0.9 };
@@ -65906,7 +66392,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     };
   }
-  var smooth4 = (a, b, x) => {
+  var smooth5 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
@@ -66097,11 +66583,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function starGeo() {
     const pos = [];
-    const arms = 5, ro = 0.13, ri = 0.05, hc = 0.03;
+    const arms = 5, ro = 0.13, ri = 0.05, hc2 = 0.03;
     for (let i = 0; i < arms * 2; i++) {
       const a0 = i / (arms * 2) * TAU18, a1 = (i + 1) / (arms * 2) * TAU18;
       const r0 = i % 2 ? ri : ro, r1 = i % 2 ? ro : ri;
-      pos.push(0, hc, 0, Math.cos(a1) * r1, 8e-3, Math.sin(a1) * r1, Math.cos(a0) * r0, 8e-3, Math.sin(a0) * r0);
+      pos.push(0, hc2, 0, Math.cos(a1) * r1, 8e-3, Math.sin(a1) * r1, Math.cos(a0) * r0, 8e-3, Math.sin(a0) * r0);
     }
     const g = new BufferGeometry();
     g.setAttribute("position", new Float32BufferAttribute(pos, 3));
@@ -66173,9 +66659,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function buildCell2(world, terrain, cx, cy) {
     const out = {};
     for (const k of KINDS2) out[k] = [];
-    const x0 = cx * CELL3, y0 = cy * CELL3;
+    const x0 = cx * CELL4, y0 = cy * CELL4;
     const col = new Color();
-    const warm = warmth(world, x0 + CELL3 / 2, y0 + CELL3 / 2);
+    const warm = warmth(world, x0 + CELL4 / 2, y0 + CELL4 / 2);
     const reefy = warm > 0.55, cold = warm < 0.35;
     const put2 = (k, x, y, rot, s, sy, c, sink = 0.04) => {
       const h2 = terrain(x, y);
@@ -66185,10 +66671,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       col.setRGB(c[0] * k, c[1] * k, c[2] * k, SRGB2);
       return [col.r, col.g, col.b];
     };
-    for (let j = 0; j < CELL3; j++) {
+    for (let j = 0; j < CELL4; j++) {
       const y = y0 + j;
       if (y < 1 || y >= world.height - 1) continue;
-      for (let i = 0; i < CELL3; i++) {
+      for (let i = 0; i < CELL4; i++) {
         const x = world.wx(x0 + i);
         const t = world.type(x, y);
         if (t !== T.SEA && t !== T.REEF) continue;
@@ -66205,7 +66691,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             put2("seagrass", x + a, y + b, a * 40, 0.8 + b * 0.7, 1 + depth * 0.05, rgb([0.36 + b * 0.1, 0.56 + a * 0.08, 0.26]));
           }
         }
-        const reefK = reefTile ? 1.2 : reefy && depth > 0.8 && depth < 20 ? smooth4(0.36, 0.62, patch2) * (1 - smooth4(14, 20, depth)) * 1.4 : 0;
+        const reefK = reefTile ? 1.2 : reefy && depth > 0.8 && depth < 20 ? smooth5(0.36, 0.62, patch2) * (1 - smooth5(14, 20, depth)) * 1.4 : 0;
         if (reefK > 0) {
           for (let q2 = 0; q2 < 3; q2++) {
             const a = hash7(x, y, 130 + q2), b = hash7(x, y, 140 + q2), c = hash7(x, y, 150 + q2);
@@ -66291,7 +66777,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const show = camH < 40;
       this.group.visible = show;
       if (!show) return;
-      const ccx = Math.floor(w.wx(v.ox) / CELL3), ccy = Math.floor(v.oy / CELL3);
+      const ccx = Math.floor(w.wx(v.ox) / CELL4), ccy = Math.floor(v.oy / CELL4);
       const key2 = `${ccx},${ccy},${R3}`;
       this.t -= dt;
       if (key2 !== this.key) {
@@ -66301,14 +66787,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const wt = this.want;
       if (wt && this.t <= 0) {
         const t0 = performance.now();
-        const cr = Math.ceil(wt.R / CELL3) + 1;
+        const cr = Math.ceil(wt.R / CELL4) + 1;
         let nearReady = true, allReady = true;
         for (const [i, j] of ring3(cr)) {
           const k = this.cellKey(w, wt.ccx + i, wt.ccy + j);
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > CELL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR2 / CELL3) + 1) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR2 / CELL4) + 1) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell2(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -66327,16 +66813,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** The cache key of cell (cx, cy) (wrapped around the world on X), or -1 off the map. */
     cellKey(w, cx, cy) {
-      if (cy < 0 || cy * CELL3 >= w.height) return -1;
-      const n = Math.ceil(w.width / CELL3);
+      if (cy < 0 || cy * CELL4 >= w.height) return -1;
+      const n = Math.ceil(w.width / CELL4);
       if (w.wrap) cx = (cx % n + n) % n;
       else if (cx < 0 || cx >= n) return -1;
       return cy * 1e5 + cx;
     }
     /** Lay out the floor around the centre of cell (ccx, ccy). */
     place(w, ccx, ccy, R3) {
-      const cr = Math.ceil(R3 / CELL3) + 1;
-      const ox = (ccx + 0.5) * CELL3, oy = (ccy + 0.5) * CELL3;
+      const cr = Math.ceil(R3 / CELL4) + 1;
+      const ox = (ccx + 0.5) * CELL4, oy = (ccy + 0.5) * CELL4;
       this.origin = { x: ox, y: oy };
       for (const k of KINDS2) this.sets[k].reset();
       const keep = /* @__PURE__ */ new Set();
@@ -66375,6 +66861,203 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     bed.update(ctx, env, dt || 1 / 60);
   }, "seabed");
+
+  // src/render3d/rmCanals3d.js
+  var VERT3 = (
+    /* glsl */
+    `
+  attribute float aSlope;
+  attribute float aSpeed;
+  varying vec2 vUv;
+  varying float vSlope;
+  varying float vSpeed;
+  varying vec3 vWorld;
+  varying vec3 vView;
+  #include <fog_pars_vertex>
+  void main() {
+    vUv = uv; vSlope = aSlope; vSpeed = aSpeed;
+    vec4 wp = modelMatrix * vec4(position, 1.0);
+    vWorld = wp.xyz;
+    vView = cameraPosition - wp.xyz;
+    vec4 mvPosition = viewMatrix * wp;
+    gl_Position = projectionMatrix * mvPosition;
+    #include <fog_vertex>
+  }
+`
+  );
+  var FRAG3 = (
+    /* glsl */
+    `
+  uniform float uTime;
+  uniform float uDay;
+  uniform vec3 uSunDir;
+  uniform vec3 uSunCol;
+  uniform vec3 uSky;
+  uniform float uPool;
+  varying vec2 vUv;
+  varying float vSlope;
+  varying float vSpeed;
+  varying vec3 vWorld;
+  varying vec3 vView;
+  #include <fog_pars_fragment>
+
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float noise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
+  }
+
+  void main() {
+    float t = uTime;
+    vec2 uv = vUv;
+    // along the canal (metres) and across it (0..1); the pool swirls round
+    float along = uv.y, across = uv.x;
+    if (uPool > 0.5) {
+      vec2 d = uv - 0.5;
+      float r = length(d) * 2.0, a = atan(d.y, d.x);
+      along = a * 18.0 + r * 30.0; across = r;
+    }
+    float run = t * vSpeed;
+    // streaks stretched along the flow, racing with it
+    float s1 = noise(vec2(across * 9.0, along * 0.22 - run * 0.22));
+    float s2 = noise(vec2(across * 23.0 + 5.0, along * 0.6 - run * 0.55));
+    float streak = s1 * 0.65 + s2 * 0.35;
+    // the surface: a normal tilted by the streaks
+    float e = 0.02;
+    float sx = noise(vec2((across + e) * 9.0, along * 0.22 - run * 0.22)) - s1;
+    vec3 n = normalize(vec3(-sx * 3.0, 1.0, -(s2 - 0.5) * 0.4));
+    vec3 v = normalize(vView);
+    float light = mix(0.3, 1.0, uDay);
+    vec3 deep = vec3(0.02, 0.26, 0.44), bright = vec3(0.12, 0.62, 0.72);
+    vec3 col = mix(deep, bright, streak * 0.7 + 0.15);
+    // foam: against the walls, in the steep runs, and in the churning pool
+    float wall = 1.0 - smoothstep(0.0, 0.16, min(across, 1.0 - across));
+    float steep = smoothstep(0.08, 0.3, abs(vSlope));
+    float foamN = noise(vec2(across * 14.0, along * 0.9 - run * 0.9)) * 0.6 + noise(vec2(across * 31.0, along * 2.1 - run * 1.7)) * 0.4;
+    float foam = smoothstep(0.66, 0.88, foamN + wall * 0.4 + steep * 0.16);
+    if (uPool > 0.5) foam = max(foam, smoothstep(0.5, 0.75, foamN + (1.0 - across) * 0.2));
+    col = mix(col, vec3(0.93, 0.98, 1.0), foam * 0.85);
+    col *= light * (0.8 + 0.2 * max(dot(n, uSunDir), 0.0));
+    // sky at a glance, and the sun glinting off the rush
+    float fres = 0.02 + 0.98 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
+    col = mix(col, uSky * (0.45 + 0.55 * uDay), fres * 0.6);
+    vec3 h = normalize(uSunDir + v);
+    col += uSunCol * pow(max(dot(n, h), 0.0), 120.0) * 1.4 * smoothstep(-0.05, 0.1, uSunDir.y);
+    gl_FragColor = vec4(col, 1.0);
+    #include <fog_fragment>
+  }
+`
+  );
+  var CanalWater = class {
+    constructor(scene) {
+      this.group = new Group();
+      this.group.name = "rm-canals";
+      scene.add(this.group);
+      this.uniforms = UniformsUtils.merge([
+        UniformsLib.fog,
+        {
+          uTime: { value: 0 },
+          uDay: { value: 1 },
+          uPool: { value: 0 },
+          uSunDir: { value: new Vector3(0.3, 0.8, 0.2) },
+          uSunCol: { value: new Color(1, 0.95, 0.85) },
+          uSky: { value: new Color(0.6, 0.8, 1) }
+        }
+      ]);
+      const mat = (pool) => {
+        const m = new ShaderMaterial({ uniforms: { ...this.uniforms, uPool: { value: pool ? 1 : 0 } }, vertexShader: VERT3, fragmentShader: FRAG3, fog: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+        for (const k of Object.keys(this.uniforms)) if (k !== "uPool") m.uniforms[k] = this.uniforms[k];
+        return m;
+      };
+      this.mat = mat(false);
+      this.poolMat = mat(true);
+      this.built = false;
+    }
+    build(world) {
+      this.built = true;
+      for (const c of CANALS) {
+        const i0 = Math.max(0, (c.i0 ?? 0) - (c.exit ? 0 : 1)), i1 = Math.min(c.x.length - 1, (c.i1 ?? c.x.length - 1) + (c.exit ? 1 : 0));
+        if (i1 <= i0) continue;
+        const n2 = i1 - i0 + 1;
+        const pos = new Float32Array(n2 * 2 * 3), uv = new Float32Array(n2 * 2 * 2), slope = new Float32Array(n2 * 2), speed2 = new Float32Array(n2 * 2);
+        const W3 = RM.halfW + 0.9;
+        for (let k = 0; k < n2; k++) {
+          const i = i0 + k;
+          const nx = -c.fy[i], ny = c.fx[i];
+          const a = Math.max(i0, i - 1), b = Math.min(i1, i + 1);
+          const sl = (c.lv[b] - c.lv[a]) / Math.max(0.1, c.s[b] - c.s[a]);
+          const sp = c.exit ? RM.downSpeed : c.lv[i] > 0.5 ? RM.upSpeed : RM.upSpeed * 0.75;
+          for (let side = 0; side < 2; side++) {
+            const f = side ? 1 : -1;
+            const o = k * 2 + side;
+            pos[o * 3] = c.x[i] + nx * W3 * f - RM.x;
+            pos[o * 3 + 1] = c.lv[i] + 0.06;
+            pos[o * 3 + 2] = c.y[i] + ny * W3 * f - RM.y;
+            uv[o * 2] = side;
+            uv[o * 2 + 1] = c.s[i];
+            slope[o] = sl;
+            speed2[o] = sp;
+          }
+        }
+        const idx = [];
+        for (let k = 0; k < n2 - 1; k++) {
+          const a = k * 2, b = a + 1, cc = a + 2, d = a + 3;
+          idx.push(a, b, cc, b, d, cc);
+        }
+        const g = new BufferGeometry();
+        g.setAttribute("position", new BufferAttribute(pos, 3));
+        g.setAttribute("uv", new BufferAttribute(uv, 2));
+        g.setAttribute("aSlope", new BufferAttribute(slope, 1));
+        g.setAttribute("aSpeed", new BufferAttribute(speed2, 1));
+        g.setIndex(idx);
+        g.computeBoundingSphere();
+        const m = new Mesh(g, this.mat);
+        m.renderOrder = 1;
+        this.group.add(m);
+      }
+      const pg = new CircleGeometry(RM.poolR + 1.5, 48);
+      pg.rotateX(-Math.PI / 2);
+      pg.translate(0, RM.top + 0.03, 0);
+      const n = pg.attributes.position.count;
+      pg.setAttribute("aSlope", new BufferAttribute(new Float32Array(n), 1));
+      pg.setAttribute("aSpeed", new BufferAttribute(new Float32Array(n).fill(9), 1));
+      const pool = new Mesh(pg, this.poolMat);
+      pool.renderOrder = 1;
+      this.group.add(pool);
+      for (const gt of world.rmGates || []) {
+        const arch = rmArch(gt.a);
+        arch.position.set(gt.x - RM.x, gt.level, gt.y - RM.y);
+        this.group.add(arch);
+      }
+    }
+    update(ctx, env) {
+      const w = ctx.world, g = ctx.game, v = g?.view3d;
+      const on = !!(w && w.zone === 0 && w.reverseMountain && v);
+      this.group.visible = on;
+      if (!on) return;
+      if (!this.built) this.build(w);
+      const ox = v.ox, oy = v.oy;
+      const dx = w.dx(ox, RM.x), dz = RM.y - oy;
+      this.group.visible = Math.abs(dx) < 3500 && Math.abs(dz) < 4e3;
+      if (!this.group.visible) return;
+      this.group.position.set(dx, 0, dz);
+      const u = this.uniforms;
+      u.uTime.value = env.time % 3600;
+      u.uDay.value = env.daylight ?? 1;
+      const wu = v.water?.uniforms;
+      if (wu) {
+        u.uSunDir.value.copy(wu.uSunDir.value);
+        u.uSunCol.value.copy(wu.uSunCol.value);
+        u.uSky.value.copy(wu.uSky.value);
+      }
+    }
+  };
+  var water = null;
+  registerFrameHook((env, ctx) => {
+    if (!water) water = new CanalWater(ctx.scene);
+    water.update(ctx, env);
+  }, "rm-canals");
 
   // src/render3d/sealife3d.js
   var TAU19 = Math.PI * 2;
@@ -67229,8 +67912,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const x = w.wx(wx + Math.cos(a) * r), y = wy + Math.sin(a) * r;
         const h2 = shelter.open(w, x, y);
         if (h2 === null) continue;
-        const water = w.isLiquid(x, y) && !w.isOverlay(x, y);
-        this.list.push({ x, y, h: h2, t: time, water, life: water ? 0.55 : 0.22 });
+        const water2 = w.isLiquid(x, y) && !w.isOverlay(x, y);
+        this.list.push({ x, y, h: h2, t: time, water: water2, life: water2 ? 0.55 : 0.22 });
       }
       if (this.acc > 1) this.acc = 1;
       this.list = this.list.filter((s) => time - s.t < s.life);
@@ -67567,29 +68250,49 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/world/world.js
+  var BS = 32;
+  var BSH = 5;
+  var BM = BS - 1;
+  var BN = BS * BS;
+  var MIXED = 255;
+  var PRISTINE_MAX = 6e3;
+  var variantAt = (x, y) => Math.imul((Math.imul(y, 2654435761) ^ x) >>> 0, 2654435761) >>> 25 & 127;
   var World = class {
-    constructor(width, height, { wrap = true, zone = 0, id = "surface" } = {}) {
+    constructor(width, height, { wrap = true, zone = 0, id = "surface", fill: fill2 = T.SEA, fogCell = 8 } = {}) {
       this.width = width;
       this.height = height;
       this.wrap = wrap;
       this.zone = zone;
       this.id = id;
-      this.data = new Uint8Array(width * height * 4);
-      this.blocked = new Uint8Array(width * height);
+      this.bw = Math.ceil(width / BS);
+      this.bh = Math.ceil(height / BS);
+      const nb = this.bw * this.bh;
+      this.bd = new Array(nb).fill(null);
+      this.ut = new Uint8Array(nb).fill(fill2);
+      this.ue = new Uint8Array(nb);
+      this.uc = new Uint8Array(nb);
+      this.bs = new Array(nb).fill(null);
+      this.us = new Uint8Array(nb).fill(IS_LIQUID[fill2] ? 0 : 255);
+      this.bo = new Array(nb).fill(null);
+      this.base = null;
+      this.pristine = /* @__PURE__ */ new Map();
+      this.editedMixed = /* @__PURE__ */ new Set();
       this.colliders = /* @__PURE__ */ new Map();
       this.colW = Math.ceil(width / 4);
       this.floors = /* @__PURE__ */ new Map();
-      this.dist = new Uint8Array(width * height);
       this.quays = /* @__PURE__ */ new Set();
       this.docks = /* @__PURE__ */ new Map();
       this.dockPads = [];
       this.padIndex = null;
       this.objects = null;
       this.islands = [];
-      this.fogW = Math.ceil(width / 8);
-      this.fogH = Math.ceil(height / 8);
+      this.fogCell = fogCell;
+      this.fogW = Math.ceil(width / fogCell);
+      this.fogH = Math.ceil(height / fogCell);
       this.fog = new Uint8Array(this.fogW * this.fogH);
       this.fogDirty = false;
+      this.fogRect = null;
+      this._t = [0, 0, 0];
     }
     wx(x) {
       const w = this.width;
@@ -67614,22 +68317,145 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     inBounds(x, y) {
       return y >= 0 && y < this.height && (this.wrap || x >= 0 && x < this.width);
     }
+    /** A tile's number (a key for sets and maps: y × width + x). */
     idx(x, y) {
       x = Math.floor(x);
       y = Math.floor(y);
       if (this.wrap) x = (x % this.width + this.width) % this.width;
       return y * this.width + x;
     }
+    // --- blocks ---------------------------------------------------------------------
+    /** The tile data of block b, filled in if it is procedural (null if uniform). */
+    _read(b) {
+      const d = this.bd[b];
+      if (d || this.ut[b] !== MIXED) return d;
+      return this._fill(b, true);
+    }
+    /** Make block b real (to write to it). */
+    _mat(b) {
+      let d = this.bd[b];
+      if (d) {
+        if (this.pristine.size && this.pristine.delete(b)) {
+          d.edited = true;
+          this.editedMixed?.add(b);
+        }
+        return d;
+      }
+      if (this.ut[b] === MIXED) {
+        d = this._fill(b, false);
+        this.editedMixed?.add(b);
+        return d;
+      }
+      d = new Uint8Array(BN * 4);
+      const t = this.ut[b], e = this.ue[b], c = this.uc[b];
+      const x0 = b % this.bw << BSH, y0 = Math.floor(b / this.bw) << BSH;
+      for (let i = 0; i < BN; i++) {
+        const o = i << 2;
+        d[o] = t;
+        d[o + 1] = e;
+        d[o + 2] = c;
+        d[o + 3] = variantAt(x0 + (i & BM), y0 + (i >> BSH));
+      }
+      this.bd[b] = d;
+      return d;
+    }
+    /** Fill in a procedural block from world.base; `keepLoose` lets it go again later. */
+    _fill(b, keepLoose) {
+      const d = new Uint8Array(BN * 4);
+      const x0 = b % this.bw << BSH, y0 = Math.floor(b / this.bw) << BSH;
+      const out = this._t, base2 = this.base;
+      for (let i = 0; i < BN; i++) {
+        const x = x0 + (i & BM), y = y0 + (i >> BSH);
+        base2.tile(x, y, out);
+        const o = i << 2;
+        d[o] = out[0];
+        d[o + 1] = out[1];
+        d[o + 2] = out[2];
+        d[o + 3] = variantAt(x, y);
+      }
+      this.bd[b] = d;
+      if (keepLoose) {
+        this.pristine.set(b, d);
+        if (this.pristine.size > PRISTINE_MAX) {
+          let n = this.pristine.size - PRISTINE_MAX + 256;
+          for (const k of this.pristine.keys()) {
+            if (n-- <= 0) break;
+            this.pristine.delete(k);
+            this.bd[k] = null;
+          }
+        }
+      } else d.edited = true;
+      return d;
+    }
+    /** Block number and index within the block of an in-bounds tile (x already wrapped). */
+    _b(x, y) {
+      return (y >> BSH) * this.bw + (x >> BSH);
+    }
+    /** Fill a whole world (zones) with one tile. */
+    fillAll(t, elev = 0, clim = 0) {
+      this.bd.fill(null);
+      this.pristine.clear();
+      this.ut.fill(t);
+      this.ue.fill(elev);
+      this.uc.fill(clim);
+      this.us.fill(IS_LIQUID[t] ? 0 : 255);
+    }
+    /** Does block (bx, by) hold any land (or deck)? */
+    blockHasLand(bx, by) {
+      const b = by * this.bw + bx;
+      const d = this.bd[b];
+      if (d) {
+        for (let i = 0; i < BN * 4; i += 4) if (d[i] >= 16) return true;
+        return false;
+      }
+      if (this.ut[b] === MIXED) return this.base?.hasLand ? this.base.hasLand(bx, by) : true;
+      return this.ut[b] >= 16;
+    }
+    /** Is block (bx, by) all one open (never written, not procedural) tile? */
+    blockUniform(bx, by) {
+      const b = by * this.bw + bx;
+      return !this.bd[b] && this.ut[b] !== MIXED ? this.ut[b] : -1;
+    }
     type(x, y) {
       x = Math.floor(x);
       y = Math.floor(y);
       if (y < 0 || y >= this.height) return this.zone === 1 ? T.CLOUD_SEA : T.PACK_ICE;
-      if (!this.wrap && (x < 0 || x >= this.width)) return this.zone === 1 ? T.CLOUD_SEA : T.SEA;
-      return this.data[this.idx(x, y) << 2];
+      if (x < 0 || x >= this.width) {
+        if (!this.wrap) return this.zone === 1 ? T.CLOUD_SEA : T.SEA;
+        x = (x % this.width + this.width) % this.width;
+      }
+      const b = (y >> BSH) * this.bw + (x >> BSH);
+      const d = this.bd[b];
+      if (d) return d[((y & BM) << BSH | x & BM) << 2];
+      const u = this.ut[b];
+      return u !== MIXED ? u : this.base.type(x, y);
     }
     elev(x, y) {
-      if (!this.inBounds(Math.floor(x), Math.floor(y))) return 0;
-      return this.data[(this.idx(x, y) << 2) + 1];
+      x = Math.floor(x);
+      y = Math.floor(y);
+      if (!this.inBounds(x, y)) return 0;
+      if (this.wrap) x = (x % this.width + this.width) % this.width;
+      const b = (y >> BSH) * this.bw + (x >> BSH);
+      const d = this._read(b);
+      return d ? d[(((y & BM) << BSH | x & BM) << 2) + 1] : this.ue[b];
+    }
+    climate(x, y) {
+      x = Math.floor(x);
+      y = Math.floor(y);
+      if (!this.inBounds(x, y)) return 0;
+      if (this.wrap) x = (x % this.width + this.width) % this.width;
+      const b = (y >> BSH) * this.bw + (x >> BSH);
+      const d = this._read(b);
+      return d ? d[(((y & BM) << BSH | x & BM) << 2) + 2] : this.uc[b];
+    }
+    /** The tile's variation byte (0..127). */
+    variant(x, y) {
+      x = Math.floor(x);
+      y = Math.floor(y);
+      if (!this.inBounds(x, y)) return 0;
+      if (this.wrap) x = (x % this.width + this.width) % this.width;
+      const d = this._read(this._b(x, y));
+      return d ? d[(((y & BM) << BSH | x & BM) << 2) + 3] : variantAt(x, y);
     }
     markQuay(x, y) {
       if (this.inBounds(Math.floor(x), Math.floor(y))) this.quays.add(this.idx(x, y));
@@ -67675,31 +68501,128 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       return this.padIndex.get(Math.floor(cy / 32) * 65536 + cell(Math.floor(this.wx(cx) / 32))) || null;
     }
-    climate(x, y) {
-      if (!this.inBounds(Math.floor(x), Math.floor(y))) return 0;
-      return this.data[(this.idx(x, y) << 2) + 2];
-    }
     setType(x, y, t) {
-      if (!this.inBounds(Math.floor(x), Math.floor(y))) return;
-      this.data[this.idx(x, y) << 2] = t;
+      x = Math.floor(x);
+      y = Math.floor(y);
+      if (!this.inBounds(x, y)) return;
+      if (this.wrap) x = (x % this.width + this.width) % this.width;
+      const d = this._mat(this._b(x, y));
+      d[((y & BM) << BSH | x & BM) << 2] = t;
     }
     setTile(x, y, t, elev, clim) {
-      if (!this.inBounds(Math.floor(x), Math.floor(y))) return;
-      const i = this.idx(x, y) << 2;
-      this.data[i] = t;
-      if (elev !== void 0) this.data[i + 1] = elev;
-      if (clim !== void 0) this.data[i + 2] = clim;
+      x = Math.floor(x);
+      y = Math.floor(y);
+      if (!this.inBounds(x, y)) return;
+      if (this.wrap) x = (x % this.width + this.width) % this.width;
+      const d = this._mat(this._b(x, y));
+      const i = ((y & BM) << BSH | x & BM) << 2;
+      d[i] = t;
+      if (elev !== void 0) d[i + 1] = elev;
+      if (clim !== void 0) d[i + 2] = clim;
+    }
+    setElev(x, y, e) {
+      x = Math.floor(x);
+      y = Math.floor(y);
+      if (!this.inBounds(x, y)) return;
+      if (this.wrap) x = (x % this.width + this.width) % this.width;
+      this._mat(this._b(x, y))[(((y & BM) << BSH | x & BM) << 2) + 1] = e;
+    }
+    /** 1 for ground (not a deck over water), 0 for water, for tiles x..x+n-1 of row y, into out[off..]. */
+    solidRow(y, x, n, out, off) {
+      const W3 = this.width;
+      for (let i = 0; i < n; ) {
+        let xx = x + i;
+        if (this.wrap) {
+          if (xx < 0 || xx >= W3) xx = (xx % W3 + W3) % W3;
+        } else xx = xx < 0 ? 0 : xx >= W3 ? W3 - 1 : xx;
+        const run = this.wrap || x + i >= 0 && x + i < W3 ? Math.min(n - i, BS - (xx & BM)) : 1;
+        const b = (y >> BSH) * this.bw + (xx >> BSH);
+        const d = this.bd[b];
+        if (d) {
+          let o = ((y & BM) << BSH | xx & BM) << 2;
+          for (let k = 0; k < run; k++, o += 4) {
+            const t = d[o];
+            out[off + i + k] = t >= 16 && !OVERLAY[t] ? 1 : 0;
+          }
+        } else if (this.ut[b] === MIXED) {
+          for (let k = 0; k < run; k++) {
+            const t = this.base.type(xx + k, y);
+            out[off + i + k] = t >= 16 && !OVERLAY[t] ? 1 : 0;
+          }
+        } else {
+          const t = this.ut[b];
+          out.fill(t >= 16 && !OVERLAY[t] ? 1 : 0, off + i, off + i + run);
+        }
+        i += run;
+      }
+    }
+    /** Store encoded coastline distances for tiles x..x+n-1 of row y from vals[off..]. */
+    setDistRow(y, x, n, vals, off) {
+      const W3 = this.width;
+      for (let i = 0; i < n; ) {
+        let xx = x + i;
+        if (this.wrap) {
+          if (xx < 0 || xx >= W3) xx = (xx % W3 + W3) % W3;
+        } else if (xx < 0 || xx >= W3) {
+          i++;
+          continue;
+        }
+        const run = Math.min(n - i, BS - (xx & BM), this.wrap ? n : W3 - xx);
+        const b = (y >> BSH) * this.bw + (xx >> BSH);
+        let s = this.bs[b];
+        if (!s) {
+          const u = this.ut[b] === MIXED ? -1 : this.us[b];
+          let same = u >= 0;
+          for (let k = 0; k < run && same; k++) if (vals[off + i + k] !== u) same = false;
+          if (same) {
+            i += run;
+            continue;
+          }
+          s = this._distBlock(b);
+        }
+        const o = (y & BM) << BSH | xx & BM;
+        for (let k = 0; k < run; k++) s[o + k] = vals[off + i + k];
+        i += run;
+      }
+    }
+    /** The encoded coastline distance (128 + 4 × tiles) at an integer tile. */
+    distRaw(x, y) {
+      if (y < 0 || y >= this.height) return 0;
+      if (x < 0 || x >= this.width) {
+        if (!this.wrap) return 0;
+        x = (x % this.width + this.width) % this.width;
+      }
+      const b = (y >> BSH) * this.bw + (x >> BSH);
+      const s = this.bs[b];
+      if (s) return s[(y & BM) << BSH | x & BM];
+      return this.ut[b] === MIXED ? this.base.dist(x, y) : this.us[b];
+    }
+    /** Store an encoded coastline distance (only where it differs from the block's own). */
+    setDistRaw(x, y, v) {
+      const b = (y >> BSH) * this.bw + (x >> BSH);
+      let s = this.bs[b];
+      if (!s) {
+        if (v === (this.ut[b] === MIXED ? -1 : this.us[b])) return;
+        s = this._distBlock(b);
+      }
+      s[(y & BM) << BSH | x & BM] = v;
+    }
+    /** Give block b a coastline-distance array of its own (filled with what it had). */
+    _distBlock(b) {
+      const s = this.bs[b] = new Uint8Array(BN);
+      if (this.ut[b] !== MIXED) s.fill(this.us[b]);
+      else {
+        const x0 = b % this.bw << BSH, y0 = Math.floor(b / this.bw) << BSH;
+        for (let i = 0; i < BN; i++) s[i] = this.base.dist(x0 + (i & BM), y0 + (i >> BSH));
+      }
+      return s;
     }
     /** Signed distance to the coast in tiles (+ land, - water). Bilinear. */
     sd(x, y) {
       const fx = x - 0.5, fy = y - 0.5;
       const x0 = Math.floor(fx), y0 = Math.floor(fy);
       const tx = fx - x0, ty = fy - y0;
-      const s = (xx, yy) => {
-        if (yy < 0 || yy >= this.height) return -32;
-        if (!this.wrap && (xx < 0 || xx >= this.width)) return -32;
-        return (this.dist[this.idx(xx, yy)] - 128) * 0.25;
-      };
+      const s = (xx, yy) => (this.distRaw(xx, yy) - 128) * 0.25;
       const a = s(x0, y0), b = s(x0 + 1, y0), c = s(x0, y0 + 1), d = s(x0 + 1, y0 + 1);
       return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
     }
@@ -67710,8 +68633,32 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return OVERLAY[this.type(x, y)] === 1;
     }
     isBlocked(x, y) {
-      if (!this.inBounds(Math.floor(x), Math.floor(y))) return true;
-      return this.blocked[this.idx(x, y)] !== 0;
+      return this.blockedAt(x, y) !== 0;
+    }
+    /** What stands on a tile: 0 nothing, 1 solid, 2 an enterable building's floor (outside the world: 1). */
+    blockedAt(x, y) {
+      x = Math.floor(x);
+      y = Math.floor(y);
+      if (y < 0 || y >= this.height) return 1;
+      if (x < 0 || x >= this.width) {
+        if (!this.wrap) return 1;
+        x = (x % this.width + this.width) % this.width;
+      }
+      const o = this.bo[(y >> BSH) * this.bw + (x >> BSH)];
+      return o ? o[(y & BM) << BSH | x & BM] : 0;
+    }
+    setBlocked(x, y, v) {
+      x = Math.floor(x);
+      y = Math.floor(y);
+      if (!this.inBounds(x, y)) return;
+      if (this.wrap) x = (x % this.width + this.width) % this.width;
+      const b = (y >> BSH) * this.bw + (x >> BSH);
+      let o = this.bo[b];
+      if (!o) {
+        if (!v) return;
+        o = this.bo[b] = new Uint8Array(BN);
+      }
+      o[(y & BM) << BSH | x & BM] = v;
     }
     /**
      * Solid to walk into? Like isBlocked, except the floor inside an enterable
@@ -67719,8 +68666,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      * isBlocked still counts it (nothing spawns or grows indoors).
      */
     solid(x, y) {
-      if (!this.inBounds(Math.floor(x), Math.floor(y))) return true;
-      return this.blocked[this.idx(x, y)] === 1;
+      return this.blockedAt(x, y) === 1;
     }
     /** Register a collider ({ x, y, r } circle or { x, y, hw, hd } box) in the 4 m hash. */
     addCol(col) {
@@ -67832,7 +68778,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** Mark a circle of the fog-of-war as explored. */
     reveal(x, y, r) {
-      const fx = Math.floor(this.wx(x) / 8), fy = Math.floor(y / 8), fr = Math.ceil(r / 8);
+      const F4 = this.fogCell;
+      const fx = Math.floor(this.wx(x) / F4), fy = Math.floor(y / F4), fr = Math.ceil(r / F4);
       for (let j = -fr; j <= fr; j++) {
         const yy = fy + j;
         if (yy < 0 || yy >= this.fogH) continue;
@@ -67845,13 +68792,36 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           if (this.fog[k] !== 255) {
             this.fog[k] = 255;
             this.fogDirty = true;
+            const R3 = this.fogRect;
+            if (!R3) this.fogRect = { x0: xx, y0: yy, x1: xx, y1: yy };
+            else {
+              if (xx < R3.x0) R3.x0 = xx;
+              if (xx > R3.x1) R3.x1 = xx;
+              if (yy < R3.y0) R3.y0 = yy;
+              if (yy > R3.y1) R3.y1 = yy;
+            }
           }
         }
       }
     }
+    /** How explored (0..1) round (x, y): the fog-of-war cells blended, for soft edges. */
+    exploredAt(x, y) {
+      const F4 = this.fogCell;
+      const fx = this.wx(x) / F4 - 0.5, fy = y / F4 - 0.5;
+      const ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy;
+      const c = (i, j) => {
+        if (j < 0 || j >= this.fogH) return 0;
+        if (this.wrap) i = (i % this.fogW + this.fogW) % this.fogW;
+        else if (i < 0 || i >= this.fogW) return 0;
+        return this.fog[j * this.fogW + i];
+      };
+      const a = c(ix, iy), b = c(ix + 1, iy), d = c(ix, iy + 1), e = c(ix + 1, iy + 1);
+      return ((a + (b - a) * tx) * (1 - ty) + (d + (e - d) * tx) * ty) / 255;
+    }
     isExplored(x, y) {
-      const fx = Math.floor(this.wx(x) / 8), fy = Math.floor(y / 8);
-      if (fy < 0 || fy >= this.fogH) return false;
+      const F4 = this.fogCell;
+      const fx = Math.floor(this.wx(x) / F4), fy = Math.floor(y / F4);
+      if (fy < 0 || fy >= this.fogH || fx < 0 || fx >= this.fogW) return false;
       return this.fog[fy * this.fogW + fx] > 0;
     }
     islandAt(x, y) {
@@ -67963,6 +68933,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return cy * this.cw + cx;
     }
     add(obj) {
+      var _a2;
       obj.id = obj.id || nextObjectId++;
       obj.x = this.world.wx(obj.x);
       const cx = Math.floor(obj.x / CHUNK2), cy = Math.floor(obj.y / CHUNK2);
@@ -67973,6 +68944,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       obj._chunk = k;
       this.byId.set(obj.id, obj);
       this.count++;
+      if (obj.far) ((_a2 = this.world).farObjects || (_a2.farObjects = [])).push(obj);
       const fl2 = floorOf(obj);
       if (fl2) this.world.addFloor({ x0: obj.x - fl2.hw, x1: obj.x + fl2.hw, y0: obj.y + fl2.oy - fl2.hd, y1: obj.y + fl2.oy + fl2.hd, h: fl2.h, o: obj });
       const c = obj.block && COLLIDE[obj.kind];
@@ -68013,7 +68985,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     /** Walls (with a doorway) and the ground floor of an enterable building (furniture: see addFurniture). */
     addInterior(b) {
       const w = this.world;
-      const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), T3 = WALL_T;
+      const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), T4 = WALL_T;
       const d = doorOf(b);
       const cols = [];
       const rect = (x0, x1, z0, z1) => {
@@ -68027,13 +68999,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         return col;
       };
       const wall = { wall: true };
-      box2(-fw / 2, d.x - d.dw / 2, -T3, 0, wall);
-      box2(d.x + d.dw / 2, fw / 2, -T3, 0, wall);
-      box2(-fw / 2, fw / 2, -fd, -fd + T3, wall);
-      box2(-fw / 2, -fw / 2 + T3, -fd, 0, wall);
-      box2(fw / 2 - T3, fw / 2, -fd, 0, wall);
+      box2(-fw / 2, d.x - d.dw / 2, -T4, 0, wall);
+      box2(d.x + d.dw / 2, fw / 2, -T4, 0, wall);
+      box2(-fw / 2, fw / 2, -fd, -fd + T4, wall);
+      box2(-fw / 2, -fw / 2 + T4, -fd, 0, wall);
+      box2(fw / 2 - T4, fw / 2, -fd, 0, wall);
       b.cols = cols;
-      b.doorBox = { ...rect(d.x - d.dw / 2, d.x + d.dw / 2, -T3, 0), o: b, wall: true, door: true };
+      b.doorBox = { ...rect(d.x - d.dw / 2, d.x + d.dw / 2, -T4, 0), o: b, wall: true, door: true };
       b.doorCol = w.addCol({ ...b.doorBox });
       b.floor = { ...bbox(b, -fw / 2, fw / 2, -fd, -2e-3), h: PLINTH, o: b, interior: true };
       w.addFloor(b.floor);
@@ -68071,6 +69043,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const i = list.indexOf(obj);
         if (i >= 0) list.splice(i, 1);
       }
+      if (obj.far && this.world.farObjects) this.world.farObjects = this.world.farObjects.filter((o) => o !== obj);
       this.byId.delete(obj.id);
       this.count--;
       if (obj.enterable) {
@@ -68086,7 +69059,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (let y = fp.y0; y < fp.y1; y++) {
         for (let x = fp.x0; x < fp.x1; x++) {
           if (y < 0 || y >= w.height) continue;
-          w.blocked[w.idx(x, y)] = v;
+          w.setBlocked(x, y, v);
         }
       }
     }
@@ -68715,6 +69688,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const L2 = new Uint8Array(LW2 * LH);
     const li = (i, j) => j * LW2 + i;
     const seedOff = def.id.length * 131.7 % 1e3;
+    const shapeNoise = (px2, py2) => noise.fbm(px2 * nf + seedOff, py2 * nf - seedOff, 4) + noise.noise2(px2 * nf * 4.1, py2 * nf * 4.1) * 0.25;
+    const shape = nf * 4.1 < 0.12 ? coarseField(shapeNoise, x0 + 0.5, y0 + 0.5, LW2, LH) : shapeNoise;
     for (let j = 0; j < LH; j++) {
       for (let i = 0; i < LW2; i++) {
         const px2 = x0 + i + 0.5, py2 = y0 + j + 0.5;
@@ -68724,9 +69699,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           v = Math.max(v, 1 - Math.sqrt(ex * ex + ey * ey));
         }
         if (v < -rough * 1.4) continue;
-        const n = noise.fbm(px2 * nf + seedOff, py2 * nf - seedOff, 4);
-        const detail = noise.noise2(px2 * nf * 4.1, py2 * nf * 4.1) * 0.25;
-        if (v + (n + detail) * rough > 0) L2[li(i, j)] = 1;
+        if (v + shape(px2, py2) * rough > 0) L2[li(i, j)] = 1;
       }
     }
     if (def.ring) {
@@ -68737,9 +69710,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
     if (def.keepLargest !== false && !def.archipelago) keepLargestComponent(L2, LW2, LH);
+    let lx0 = LW2, ly0 = LH, lx1 = -1, ly1 = -1;
+    for (let j = 0; j < LH; j++) {
+      const row = j * LW2;
+      for (let i = 0; i < LW2; i++) if (L2[row + i]) {
+        if (i < lx0) lx0 = i;
+        if (i > lx1) lx1 = i;
+        if (j < ly0) ly0 = j;
+        if (j > ly1) ly1 = j;
+      }
+    }
     const CD = localCoastDistance(L2, LW2, LH);
     const beachW = def.beachWidth ?? (ground === T.SNOW ? 1.2 : 2.2);
     let landCount = 0;
+    const lumps = coarseField((x, y) => noise.fbm(x * 0.05 + 11, y * 0.05 - 7, 3), x0, y0, LW2, LH);
     for (let j = 0; j < LH; j++) {
       for (let i = 0; i < LW2; i++) {
         const k = li(i, j);
@@ -68747,7 +69731,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         landCount++;
         const x = x0 + i, y = y0 + j;
         const cd = CD[k];
-        const n = noise.fbm(x * 0.05 + 11, y * 0.05 - 7, 3);
+        const n = lumps(x, y);
         const e = clamp2(20 + cd * (def.elevRate ?? 5) + n * 25, 8, 170);
         const bw2 = beachW + noise.noise2(x * 0.15, y * 0.15) * 1.2;
         const t = cd <= bw2 ? beach : ground;
@@ -68764,6 +69748,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       sea: def.sea,
       radius: Math.max(hw, hh),
       bbox: { cx, hw: (x1 - x0) / 2, x0, x1, y0, y1 },
+      // (a few tiles over for quays and sea walls at the water's edge)
+      landBox: { x0: x0 + lx0 - 6, y0: y0 + ly0 - 6, x1: x0 + lx1 + 7, y1: y0 + ly1 + 7 },
       towns: [],
       docks: [],
       spots: {},
@@ -68787,13 +69773,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (world.isLiquid(x, y)) return;
         const ridge = noise.ridged(x * 0.06 + seedOff, y * 0.06, 4);
         const falloff = Math.pow(clamp2(1 - dn, 0, 1), 1.6);
-        const add4 = falloff * peak * (140 + ridge * 120);
+        const add5 = falloff * peak * (140 + ridge * 120);
         const cur = world.elev(x, y);
-        const e = clamp2(cur + add4, 0, 255);
-        const idx = world.idx(x, y) << 2;
-        world.data[idx + 1] = e;
-        if (e > (f.cliff ?? 222)) world.data[idx] = f.snow || clim === CLIMATE.WINTER ? T.SNOWROCK : f.peak ?? T.MOUNTAIN;
-        else if (e > (f.slopeAt ?? 170) && f.slope && world.data[idx] !== beach) world.data[idx] = f.slope;
+        const e = clamp2(cur + add5, 0, 255);
+        world.setElev(x, y, e);
+        if (e > (f.cliff ?? 222)) world.setType(x, y, f.snow || clim === CLIMATE.WINTER ? T.SNOWROCK : f.peak ?? T.MOUNTAIN);
+        else if (e > (f.slopeAt ?? 170) && f.slope && world.type(x, y) !== beach) world.setType(x, y, f.slope);
       });
       rec.landmarks.push({ type: "mountain", name: f.name, x: c.x, y: c.y, r });
     }
@@ -68894,6 +69879,23 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const density = def.treeDensity ?? preset.density;
     populateVegetation(world, rng4, x0, y0, LW2, LH, L2, li, treeKinds, density, def);
     return rec;
+  }
+  function coarseField(fn, x0, y0, w, h2) {
+    const GW = (w >> 1) + 2, GH = (h2 >> 1) + 2;
+    const g = new Float32Array(GW * GH).fill(NaN);
+    const at5 = (gi, gj) => {
+      const k = gj * GW + gi;
+      let v = g[k];
+      if (v !== v) v = g[k] = fn(x0 + gi * 2, y0 + gj * 2);
+      return v;
+    };
+    return (x, y) => {
+      const fx = (x - x0) * 0.5, fy = (y - y0) * 0.5;
+      const gi = Math.max(0, Math.min(GW - 2, Math.floor(fx))), gj = Math.max(0, Math.min(GH - 2, Math.floor(fy)));
+      const tx = fx - gi, ty = fy - gj;
+      const a = at5(gi, gj), b = at5(gi + 1, gj), c = at5(gi, gj + 1), d = at5(gi + 1, gj + 1);
+      return (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
+    };
   }
   function nearFloor(world, x, y, r) {
     if (world.floorRec(x, y)) return true;
@@ -69189,8 +70191,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (!L2[li(i, j)]) continue;
         const x = x0 + i, y = y0 + j;
         const t = world.type(x, y);
-        if (world.isBlocked(x, y) || IS_LIQUID[t] || !WALKABLE[t] || world.hitsProp(x + 0.5, y + 0.5, 1.1)) continue;
-        if (world.floors.size && nearFloor(world, x + 0.5, y + 0.8, 3)) continue;
+        if (IS_LIQUID[t] || !WALKABLE[t]) continue;
         let p = density;
         let kindList = kinds;
         if (forestTypes.has(t)) {
@@ -69209,8 +70210,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           p = 0.02;
           kindList = ["rock"];
         }
-        if (world.elev(x, y) > 200) continue;
         if (rng4.next() > p) continue;
+        if (world.elev(x, y) > 200) continue;
+        if (world.isBlocked(x, y) || world.hitsProp(x + 0.5, y + 0.5, 1.1)) continue;
+        if (world.floors.size && nearFloor(world, x + 0.5, y + 0.8, 3)) continue;
         if (world.hitsProp(x + 0.5, y + 1, 1.2) || world.isBlocked(x - 1, y) || world.isBlocked(x, y - 1) || world.isBlocked(x + 1, y) || world.isBlocked(x, y + 1)) {
           if (rng4.next() < 0.7) continue;
         }
@@ -69227,20 +70230,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/world/worldgen.js
-  var REVERSE_MOUNTAIN = {
-    x: RM_X,
-    y: EQ,
-    rx: chart(118),
-    ry: chart(350),
-    // canal mouths in each Blue and the exit into Paradise (Twin Cape)
-    mouths: {
-      east_blue: { x: RM_X + chart(150), y: EQ - chart(318) },
-      north_blue: { x: RM_X - chart(150), y: EQ - chart(318) },
-      west_blue: { x: RM_X - chart(150), y: EQ + chart(318) },
-      south_blue: { x: RM_X + chart(150), y: EQ + chart(318) }
-    },
-    exit: { x: RM_X + chart(150), y: EQ }
-  };
+  var REVERSE_MOUNTAIN = RM;
   var MARY_GEOISE = {
     x: 0,
     y: EQ,
@@ -69252,16 +70242,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   async function generateWorld({ seed = "blue-planet", islands = [], onProgress = () => {
   } } = {}) {
-    const world = new World(W, H, { wrap: true, zone: 0, id: "surface" });
+    const world = new World(W, H, { wrap: true, zone: 0, id: "surface", fogCell: 16 });
     world.seed = seed;
     world.objects = new ObjectIndex(world);
     const noise = new Noise(seed);
     const rng4 = new RNG(seed + ":gen");
-    const d = world.data;
-    onProgress(0.02, "Filling the Blue Sea");
-    for (let i = 0, n = W * H; i < n; i++) d[i * 4 + 3] = Math.imul(i, 2654435761) >>> 25 & 127;
     onProgress(0.05, "Freezing the poles");
-    buildPoles(world, noise);
+    setupBase(world, noise);
+    buildFloes(world, noise);
     await yieldFrame();
     onProgress(0.1, "Raising the Red Line");
     buildRedLine(world, noise, rng4);
@@ -69270,7 +70258,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (let i = 0; i < total; i++) {
       const def = islands[i];
       if (i % 4 === 0) {
-        onProgress(0.18 + 0.55 * (i / Math.max(1, total)), `Charting ${def.name}`);
+        onProgress(0.18 + 0.5 * (i / Math.max(1, total)), `Charting ${def.name}`);
         await yieldFrame();
       }
       try {
@@ -69281,60 +70269,32 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
     buildMaryGeoise(world, rng4);
-    onProgress(0.75, "Scattering uncharted islets");
+    onProgress(0.7, "Scattering uncharted islets");
     scatterIslets(world, noise, rng4);
     await yieldFrame();
-    onProgress(0.82, "Measuring the coasts");
-    computeDistanceField(world);
-    await yieldFrame();
+    onProgress(0.8, "Measuring the coasts");
+    await computeDistanceField(world, yieldFrame);
+    compactDistance(world);
     onProgress(0.92, "Drawing the chart");
     world.map = buildMapImage(world);
     onProgress(1, "Ready");
     return world;
   }
-  function buildPoles(world, noise) {
-    const d = world.data;
-    for (let x = 0; x < W; x++) {
-      const n1 = noise.fbm(x * 0.02, 3.3, 3) * 10 + 4;
-      const n2 = noise.fbm(x * 0.02, 91.7, 3) * 10 + 4;
-      const top = POLAR + n1, bottom = H - POLAR - n2;
-      for (let y = 0; y < POLAR + chart(20); y++) {
-        if (y < top) {
-          const i = (y * W + x) * 4;
-          d[i] = T.PACK_ICE;
-          d[i + 1] = 20 + Math.floor((top - y) * 3);
-          d[i + 2] = CLIMATE.WINTER;
-        }
-      }
-      for (let y = H - POLAR - chart(20); y < H; y++) {
-        if (y > bottom) {
-          const i = (y * W + x) * 4;
-          d[i] = T.PACK_ICE;
-          d[i + 1] = 20 + Math.floor((y - bottom) * 3);
-          d[i + 2] = CLIMATE.WINTER;
-        }
-      }
-    }
-    for (let k = 0; k < 900; k++) {
-      const x = Math.floor(hash22(k, 1, 77) * W);
-      const north = k % 2 === 0;
-      const y = north ? POLAR + 6 + Math.floor(hash22(k, 2, 77) * 60) : H - POLAR - 6 - Math.floor(hash22(k, 2, 77) * 60);
-      const r = 1.5 + hash22(k, 3, 77) * 4;
-      for (let j = -Math.ceil(r); j <= Math.ceil(r); j++) {
-        for (let i = -Math.ceil(r); i <= Math.ceil(r); i++) {
-          if (i * i + j * j > r * r) continue;
-          const regn = regionAt(x + i, y + j);
-          if (regn === REGION.RED_LINE) continue;
-          world.setTile(x + i, y + j, T.PACK_ICE, 30, CLIMATE.WINTER);
-        }
-      }
-    }
-  }
-  function buildRedLine(world, noise, rng4) {
+  var POLE_EDGE = chart(20);
+  var EDGE_PAD = 34;
+  function setupBase(world, noise) {
     const M2 = REVERSE_MOUNTAIN;
-    for (const mx of [RM_X, 0]) {
+    const ptop = new Float32Array(W), pbot = new Float32Array(W);
+    for (let x = 0; x < W; x++) {
+      ptop[x] = POLAR + noise.fbm(x * 0.02, 3.3, 3) * 10 + 4;
+      pbot[x] = H - POLAR - (noise.fbm(x * 0.02, 91.7, 3) * 10 + 4);
+    }
+    const MER = [RM_X, 0];
+    const L2 = [new Float32Array(H), new Float32Array(H)], R3 = [new Float32Array(H), new Float32Array(H)];
+    for (let m = 0; m < 2; m++) {
+      const mx = MER[m];
       for (let y = 0; y < H; y++) {
-        const yc = y / WORLD_SCALE;
+        const yc = y / POS_SCALE2;
         const wobL = noise.fbm(mx * 0.01 + 5, yc * 0.012, 4) * chart(14) + noise.noise2(yc * 0.08, mx) * 3;
         const wobR = noise.fbm(mx * 0.01 + 50, yc * 0.012, 4) * chart(14) + noise.noise2(yc * 0.08, mx + 9) * 3;
         let left = -RL_HALF + wobL, right = RL_HALF + wobR;
@@ -69346,35 +70306,180 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             right = Math.max(right, bulge + wobR * 0.6);
           }
         }
-        for (let dx = Math.floor(left) - 1; dx <= Math.ceil(right) + 1; dx++) {
-          if (dx < left || dx > right) continue;
-          const x = world.wx(mx + dx);
-          const edge = Math.min(dx - left, right - dx);
-          const i = (y * W + x) * 4;
-          const ridge = noise.ridged(x * 0.03, y * 0.03, 4);
-          let e = clamp2(90 + edge * 4 + ridge * 90, 0, 255);
-          if (mx === RM_X) {
-            const r = Math.hypot((x - M2.x) / M2.rx, (y - M2.y) / M2.ry);
-            if (r < 1) e = clamp2(e + (1 - r) * 140, 0, 255);
-          }
-          const polar = y < POLAR + chart(40) || y > H - POLAR - chart(40);
-          const summit2 = mx === RM_X && Math.hypot((x - M2.x) * 1.6, y - M2.y) < chart(70) + noise.noise2(x * 0.05, y * 0.05) * 12;
-          world.data[i] = polar || summit2 ? T.SNOWROCK : T.RED_ROCK;
-          world.data[i + 1] = e;
-          world.data[i + 2] = y < POLAR + chart(30) || y > H - POLAR - chart(30) ? CLIMATE.WINTER : CLIMATE.TEMPERATE;
-        }
+        L2[m][y] = left;
+        R3[m][y] = right;
       }
     }
-    const summit = { x: M2.x, y: M2.y };
-    for (const key2 of Object.keys(M2.mouths)) {
-      const m = M2.mouths[key2];
-      const sx = m.x + Math.sign(m.x - M2.x) * chart(20), sy = m.y + Math.sign(m.y - M2.y) * chart(20);
-      carvePath(world, [[sx, sy], [m.x, m.y], [summit.x + Math.sign(m.x - M2.x) * 6, summit.y + Math.sign(m.y - M2.y) * 6]], chart(7), T.SEA, noise, 0.5, { elev: 0 });
+    const polarRow = (y) => y < POLAR + chart(40) || y > H - POLAR - chart(40);
+    const wintry = (y) => y < POLAR + chart(30) || y > H - POLAR - chart(30);
+    const base2 = {
+      ptop,
+      pbot,
+      L: L2,
+      R: R3,
+      /** The tile type alone (cheap: no elevation). */
+      type(x, y) {
+        for (let m = 0; m < 2; m++) {
+          const dx = world.dx(MER[m], x);
+          if (dx < L2[m][y] || dx > R3[m][y]) continue;
+          if (polarRow(y)) return T.SNOWROCK;
+          if (m === 0 && Math.hypot((x - M2.x) * 1.6, y - M2.y) < chart(70) + noise.noise2(x * 0.05, y * 0.05) * 12) return T.SNOWROCK;
+          return T.RED_ROCK;
+        }
+        if (y < ptop[x] || y > pbot[x]) return T.PACK_ICE;
+        return T.SEA;
+      },
+      /** Type, elevation and climate. */
+      tile(x, y, out) {
+        for (let m = 0; m < 2; m++) {
+          const dx = world.dx(MER[m], x);
+          const left = L2[m][y], right = R3[m][y];
+          if (dx < left || dx > right) continue;
+          const edge = Math.min(dx - left, right - dx);
+          const ridge = noise.ridged(x * 0.03, y * 0.03, 4);
+          let e = clamp2(90 + edge * 4 + ridge * 90, 0, 255);
+          let summit = false;
+          if (m === 0) {
+            const r = Math.hypot((x - M2.x) / M2.rx, (y - M2.y) / M2.ry);
+            if (r < 1) e = clamp2(e + (1 - r) * 140, 0, 255);
+            summit = Math.hypot((x - M2.x) * 1.6, y - M2.y) < chart(70) + noise.noise2(x * 0.05, y * 0.05) * 12;
+          }
+          out[0] = polarRow(y) || summit ? T.SNOWROCK : T.RED_ROCK;
+          out[1] = Math.round(e);
+          out[2] = wintry(y) ? CLIMATE.WINTER : CLIMATE.TEMPERATE;
+          return out;
+        }
+        if (y < ptop[x]) {
+          out[0] = T.PACK_ICE;
+          out[1] = clamp2(20 + Math.floor((ptop[x] - y) * 3), 0, 255);
+          out[2] = CLIMATE.WINTER;
+          return out;
+        }
+        if (y > pbot[x]) {
+          out[0] = T.PACK_ICE;
+          out[1] = clamp2(20 + Math.floor((y - pbot[x]) * 3), 0, 255);
+          out[2] = CLIMATE.WINTER;
+          return out;
+        }
+        out[0] = T.SEA;
+        out[1] = 0;
+        out[2] = 0;
+        return out;
+      },
+      /** Encoded coastline distance: across to the Red Line's coast, up or down to the ice edge. */
+      dist(x, y) {
+        let best = -32;
+        for (let m = 0; m < 2; m++) {
+          const dx = world.dx(MER[m], x);
+          const left = L2[m][y], right = R3[m][y];
+          if (dx >= left && dx <= right) {
+            best = Math.max(best, Math.min(32, dx - left, right - dx));
+            continue;
+          }
+          best = Math.max(best, -(dx < left ? left - dx : dx - right));
+        }
+        const t = ptop[x], b = pbot[x];
+        if (y < t) best = Math.max(best, Math.min(32, t - y));
+        else best = Math.max(best, -(y - t));
+        if (y > b) best = Math.max(best, Math.min(32, y - b));
+        else best = Math.max(best, -(b - y));
+        return clamp2(Math.round(128 + clamp2(best, -32, 32) * 4), 0, 255);
+      },
+      /** Is there Red Line or ice anywhere in block (bx, by)? */
+      hasLand(bx, by) {
+        const x0 = bx * BS, y0 = by * BS, y1 = Math.min(H, y0 + BS);
+        for (let m = 0; m < 2; m++) {
+          const a = world.dx(MER[m], x0), b = a + BS - 1;
+          for (let y = y0; y < y1; y++) if (b >= L2[m][y] && a <= R3[m][y]) return true;
+        }
+        for (let x = x0; x < x0 + BS; x++) if (ptop[x] > y0 || pbot[x] < y1 - 1) return true;
+        return false;
+      }
+    };
+    world.base = base2;
+    const bw2 = world.bw, bh = world.bh;
+    for (let by = 0; by < bh; by++) {
+      const y0 = by * BS, y1 = Math.min(H, y0 + BS);
+      for (let m = 0; m < 2; m++) {
+        let lo = Infinity, hi = -Infinity;
+        for (let y = y0; y < y1; y++) {
+          lo = Math.min(lo, L2[m][y]);
+          hi = Math.max(hi, R3[m][y]);
+        }
+        const bx0 = Math.floor((MER[m] + lo - EDGE_PAD) / BS), bx1 = Math.floor((MER[m] + hi + EDGE_PAD) / BS);
+        for (let bx = bx0; bx <= bx1; bx++) world.ut[by * bw2 + (bx % bw2 + bw2) % bw2] = MIXED;
+      }
     }
-    carvePath(world, [[summit.x, summit.y], [M2.exit.x, M2.exit.y], [M2.exit.x + chart(24), M2.exit.y]], chart(9), T.SEA, noise, 0.4, { elev: 0 });
-    const pr = chart(9);
+    const topMax = POLAR + 14 + EDGE_PAD, botMin = H - POLAR - 14 - EDGE_PAD;
+    for (let by = 0; by < bh; by++) {
+      const y0 = by * BS, y1 = y0 + BS;
+      if (y0 > topMax && y1 < botMin) continue;
+      for (let bx = 0; bx < bw2; bx++) world.ut[by * bw2 + bx] = MIXED;
+    }
+  }
+  function buildFloes(world, noise) {
+    world.floes = [];
+    for (let k = 0; k < 180; k++) {
+      const x = Math.floor(hash22(k, 1, 77) * W);
+      const north = k % 2 === 0;
+      const y = north ? POLAR + 20 + Math.floor(hash22(k, 2, 77) * chart(12)) : H - POLAR - 20 - Math.floor(hash22(k, 2, 77) * chart(12));
+      const r = 2 + hash22(k, 3, 77) * 6;
+      if (regionAt(x, y) === REGION.RED_LINE) continue;
+      for (let j = -Math.ceil(r); j <= Math.ceil(r); j++) {
+        for (let i = -Math.ceil(r); i <= Math.ceil(r); i++) {
+          if (i * i + j * j > r * r * (0.85 + noise.noise2((x + i) * 0.3, (y + j) * 0.3) * 0.25)) continue;
+          world.setTile(x + i, y + j, T.PACK_ICE, 30, CLIMATE.WINTER);
+        }
+      }
+      world.floes.push({ x, y, r });
+    }
+    world.editedMixed.clear();
+  }
+  function buildRedLine(world, noise, rng4) {
+    const M2 = REVERSE_MOUNTAIN;
+    world.rmGates = [];
+    M2.mouths = {};
+    for (const c of CANALS) {
+      const n = c.x.length;
+      const land = (i) => world.base.type(Math.round(c.x[i]), Math.round(c.y[i])) !== T.SEA;
+      let i0 = 0, i1 = n - 1;
+      if (!c.exit) {
+        while (i0 < n - 1 && !land(i0)) i0++;
+        i0 = Math.max(0, i0 - 3);
+      } else {
+        while (i1 > 0 && !land(i1)) i1--;
+        i1 = Math.min(n - 1, i1 + 3);
+      }
+      c.i0 = i0;
+      c.i1 = i1;
+      const R3 = M2.halfW;
+      for (let i = i0; i <= i1; i++) {
+        const cx = c.x[i], cy = c.y[i];
+        for (let j = -R3 - 1; j <= R3 + 1; j++) {
+          for (let k = -R3 - 1; k <= R3 + 1; k++) {
+            if (k * k + j * j > (R3 + 0.5) * (R3 + 0.5)) continue;
+            const tx = Math.floor(cx + k), ty = Math.floor(cy + j);
+            if (world.isLiquid(tx, ty) && world.type(tx, ty) !== T.RAPIDS) continue;
+            world.setTile(tx, ty, T.RAPIDS, 0, CLIMATE.TEMPERATE);
+          }
+        }
+      }
+      if (!c.exit) {
+        M2.mouths[c.id] = { x: c.x[0], y: c.y[0], gate: { x: c.x[i0 + 3], y: c.y[i0 + 3] } };
+        const sGate = c.s[i0 + 3];
+        for (const s of [sGate + 2, sGate + (c.len - M2.climb - sGate) * 0.5, c.len - M2.climb + 20, c.len - M2.climb * 0.45]) {
+          let i = 0;
+          while (i < n - 1 && c.s[i] < s) i++;
+          world.rmGates.push({ x: c.x[i], y: c.y[i], a: Math.atan2(c.fy[i], c.fx[i]), level: c.lv[i], canal: c.id });
+        }
+      } else {
+        M2.exit = { x: c.x[i1], y: c.y[i1] };
+        world.rmGates.push({ x: c.x[i1 - 4], y: c.y[i1 - 4], a: 0, level: 0, canal: "exit" });
+      }
+    }
+    const pr = M2.poolR;
     for (let j = -pr; j <= pr; j++) for (let i = -pr; i <= pr; i++) {
-      if (i * i + j * j <= pr * pr) world.setTile(summit.x + i, summit.y + j, T.SEA, 0);
+      if (i * i + j * j <= pr * pr) world.setTile(M2.x + i, M2.y + j, T.RAPIDS, 0, CLIMATE.WINTER);
     }
     world.reverseMountain = M2;
     const MG = MARY_GEOISE;
@@ -69400,7 +70505,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       port.bondola = { x: world.wx(port.x + dir * 12), y: port.y };
       port.moor = { x: world.wx(port.x - dir * 4), y: port.y };
     }
-    const mgW = chart(22), mgH = chart(58);
+    const mgW = csize(22), mgH = csize(58);
     for (let j = -mgH; j <= mgH; j++) {
       for (let i = -mgW; i <= mgW; i++) {
         const x = world.wx(MG.x + i), y = MG.y + j;
@@ -69416,8 +70521,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     sea: "red_line",
     x: 0,
     y: EQ,
-    w: chart(44),
-    h: chart(116),
+    w: csize(44),
+    h: csize(116),
     noFruit: true,
     noDock: true,
     danger: 10,
@@ -69427,8 +70532,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       name: "The Holy Land",
       dx: 0,
       dy: -0.05,
-      w: chart(36),
-      h: chart(70),
+      w: csize(36),
+      h: csize(70),
       style: "noble",
       walls: false,
       plaza: "fountain",
@@ -69450,8 +70555,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       x: 0,
       y: EQ,
       sea: "red_line",
-      radius: chart(58),
-      bbox: { cx: 0, hw: chart(22), x0: -chart(22), x1: chart(22), y0: EQ - chart(58), y1: EQ + chart(58) },
+      radius: csize(58),
+      bbox: { cx: 0, hw: csize(22), x0: -csize(22), x1: csize(22), y0: EQ - csize(58), y1: EQ + csize(58) },
       towns: [],
       docks: [],
       spots: {},
@@ -69459,18 +70564,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       treeSpots: [],
       containsTile: (x, y) => {
         const dx = world.dx(0, x);
-        return Math.hypot(dx / chart(22), (y - EQ) / chart(58)) < 0.95;
+        return Math.hypot(dx / csize(22), (y - EQ) / csize(58)) < 0.95;
       }
     };
     const t = def.towns[0];
     const town = generateTown(world, { ...t, x: 0, y: EQ - 3, islandId: def.id }, rng4.fork("mary_geoise"), { noise2: () => 0 });
     town.island = rec;
     rec.towns.push(town);
-    rec.spots.bondola_newworld = { x: chart(16), y: EQ + 3 };
-    rec.spots.bondola_paradise = { x: world.wx(-chart(16)), y: EQ + 3 };
+    rec.spots.bondola_newworld = { x: csize(16), y: EQ + 3 };
+    rec.spots.bondola_paradise = { x: world.wx(-csize(16)), y: EQ + 3 };
     rec.spots.empty_throne = { x: town.plaza.x, y: town.plaza.y - 6 };
-    placeObject(world, { kind: "elevator", x: world.wx(-chart(19)), y: EQ + 1, block: true, interact: "Ride the Bondola down to the Paradise side", use: "bondola", port: "down_paradise" });
-    placeObject(world, { kind: "elevator", x: chart(19), y: EQ + 1, block: true, interact: "Ride the Bondola down to the New World side", use: "bondola", port: "down_newworld" });
+    placeObject(world, { kind: "elevator", x: world.wx(-csize(19)), y: EQ + 1, block: true, interact: "Ride the Bondola down to the Paradise side", use: "bondola", port: "down_paradise" });
+    placeObject(world, { kind: "elevator", x: csize(19), y: EQ + 1, block: true, interact: "Ride the Bondola down to the New World side", use: "bondola", port: "down_newworld" });
     world.islands.push(rec);
     const MG = MARY_GEOISE;
     placeObject(world, { kind: "elevator", x: MG.portParadise.bondola.x, y: MG.portParadise.bondola.y + 1, block: true, interact: "Ride the Bondola up to Mary Geoise", use: "bondola", port: "paradise" });
@@ -69478,15 +70583,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function scatterIslets(world, noise, rng4) {
     world.islets = [];
-    const tries = 2600;
+    const tries = 6e3;
     let placed = 0;
-    for (let k = 0; k < tries && placed < 420; k++) {
+    for (let k = 0; k < tries && placed < 640; k++) {
       const x = rng4.range(chart(60), W - chart(60));
       const y = rng4.range(POLAR + chart(40), H - POLAR - chart(40));
       const reg3 = regionAt(x, y);
       if (reg3 === REGION.RED_LINE || reg3 === REGION.POLAR) continue;
       if (Math.abs(x - RM_X) < REVERSE_MOUNTAIN.rx + chart(40) && Math.abs(y - EQ) < REVERSE_MOUNTAIN.ry + chart(40)) continue;
-      const r = rng4.range(3, reg3 === REGION.PARADISE || reg3 === REGION.NEW_WORLD ? 11 : 9) * WORLD_SCALE;
+      if (world.ut[world._b(Math.floor(world.wx(x)), Math.floor(y))] === MIXED) continue;
+      const r = rng4.range(3, reg3 === REGION.PARADISE || reg3 === REGION.NEW_WORLD ? 11 : 9) * SIZE_SCALE2;
       let ok = true;
       for (const isl of world.islands) {
         const dd = world.distance(x, y, isl.x, isl.y);
@@ -69550,86 +70656,154 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
   }
-  function computeDistanceField(world) {
-    const w = world.width, h2 = world.height, n = w * h2;
-    const d = world.data;
-    const f = new Float32Array(n);
+  async function computeDistanceField(world, yieldFn = null) {
+    const wins = [];
+    const G3 = 8;
+    const patches = /* @__PURE__ */ new Set();
+    for (const b of world.editedMixed) patches.add(Math.floor(Math.floor(b / world.bw) / G3) * 1e5 + Math.floor(b % world.bw / G3));
+    for (const k of patches) {
+      const py2 = Math.floor(k / 1e5), px2 = k % 1e5;
+      wins.push({ x0: px2 * G3 * BS, y0: py2 * G3 * BS, x1: (px2 + 1) * G3 * BS, y1: (py2 + 1) * G3 * BS });
+    }
+    for (const isl of world.islands) {
+      const b = isl.bbox;
+      wins.push(isl.landBox ? { ...isl.landBox } : { x0: b.cx - b.hw, y0: b.y0, x1: b.cx + b.hw, y1: b.y1 });
+    }
+    for (const f of world.floes || []) wins.push({ x0: f.x - f.r - 1, y0: f.y - f.r - 1, x1: f.x + f.r + 1, y1: f.y + f.r + 1 });
+    if (!world.wrap) wins.splice(0, wins.length, { x0: 0, y0: 0, x1: world.width, y1: world.height });
+    let t0 = performance.now();
+    const S3 = 1100;
+    const boxes2 = wins.map((w) => ({ x0: Math.floor(w.x0) - 34, y0: Math.floor(w.y0) - 34, x1: Math.ceil(w.x1) + 34, y1: Math.ceil(w.y1) + 34 }));
+    const near = (a, b) => {
+      const dx = Math.abs(world.dx((a.x0 + a.x1) / 2, (b.x0 + b.x1) / 2)), dy = Math.abs((a.y0 + a.y1) / 2 - (b.y0 + b.y1) / 2);
+      return dx < (a.x1 - a.x0 + b.x1 - b.x0) / 2 + 40 && dy < (a.y1 - a.y0 + b.y1 - b.y0) / 2 + 40;
+    };
+    const mixedNear = (a) => {
+      for (let by = Math.floor((a.y0 - 40) / BS); by <= Math.floor((a.y1 + 40) / BS); by++) {
+        if (by < 0 || by >= world.bh) continue;
+        for (let bx = Math.floor((a.x0 - 40) / BS); bx <= Math.floor((a.x1 + 40) / BS); bx++) {
+          const wb = world.wrap ? (bx % world.bw + world.bw) % world.bw : bx;
+          if (wb >= 0 && wb < world.bw && world.ut[by * world.bw + wb] === MIXED) return true;
+        }
+      }
+      return false;
+    };
+    for (let i = 0; i < boxes2.length; i++) {
+      const a = boxes2[i];
+      let crowded = !world.wrap || mixedNear(a);
+      for (let j = 0; j < boxes2.length && !crowded; j++) if (j !== i && near(a, boxes2[j])) crowded = true;
+      for (let y = a.y0; y < a.y1; y += S3) {
+        for (let x = a.x0; x < a.x1; x += S3) {
+          distanceWindow(world, x, y, Math.min(a.x1, x + S3), Math.min(a.y1, y + S3), crowded || a.x1 - a.x0 > S3 || a.y1 - a.y0 > S3 ? 34 : 0);
+          if (yieldFn && performance.now() - t0 > 60) {
+            await yieldFn();
+            t0 = performance.now();
+          }
+        }
+      }
+    }
+  }
+  var SCR = { n: 0 };
+  function scratch2(n, w) {
+    if (SCR.n < n) SCR = { n, sol: new Uint8Array(n), f: new Float32Array(n), tmp: new Float32Array(n), row: SCR.row };
+    if (!SCR.row || SCR.row.length < w) SCR.row = new Uint8Array(w);
+    return SCR;
+  }
+  function distanceWindow(world, X0, Y0, X1, Y1, PAD3 = 34) {
+    const h0 = Math.max(0, Y0 - PAD3), h1 = Math.min(world.height, Y1 + PAD3);
+    const x0 = X0 - PAD3, x1 = X1 + PAD3;
+    const w = x1 - x0, h2 = h1 - h0;
+    if (w <= 0 || h2 <= 0) return;
+    const n = w * h2;
+    const { sol, f, tmp: tmp2, row } = scratch2(n, w);
+    for (let j = 0; j < h2; j++) world.solidRow(h0 + j, x0, w, sol, j * w);
     const INF = 1e6;
-    const solid = (i) => d[i << 2] >= 16 && !OVERLAY[d[i << 2]];
-    for (let y = 0; y < h2; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = y * w + x;
-        const s = solid(i);
+    for (let j = 0; j < h2; j++) {
+      for (let i = 0; i < w; i++) {
+        const k = j * w + i, s = sol[k];
         let boundary = false;
-        const xl = world.wrap ? (x + w - 1) % w : Math.max(0, x - 1);
-        const xr = world.wrap ? (x + 1) % w : Math.min(w - 1, x + 1);
-        if (solid(y * w + xl) !== s || solid(y * w + xr) !== s) boundary = true;
-        else if (y > 0 && solid(i - w) !== s) boundary = true;
-        else if (y < h2 - 1 && solid(i + w) !== s) boundary = true;
-        f[i] = boundary ? 0.5 : INF;
+        if (i > 0 && sol[k - 1] !== s) boundary = true;
+        else if (i < w - 1 && sol[k + 1] !== s) boundary = true;
+        else if (j > 0 && sol[k - w] !== s) boundary = true;
+        else if (j < h2 - 1 && sol[k + w] !== s) boundary = true;
+        f[k] = boundary ? 0.5 : INF;
       }
     }
     const D3 = Math.SQRT2;
-    for (let y = 0; y < h2; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = y * w + x;
-        let v = f[i];
-        if (x > 0) v = Math.min(v, f[i - 1] + 1);
-        if (y > 0) {
-          v = Math.min(v, f[i - w] + 1);
-          if (x > 0) v = Math.min(v, f[i - w - 1] + D3);
-          if (x < w - 1) v = Math.min(v, f[i - w + 1] + D3);
+    for (let j = 0; j < h2; j++) {
+      for (let i = 0; i < w; i++) {
+        const k = j * w + i;
+        let v = f[k];
+        if (i > 0) v = Math.min(v, f[k - 1] + 1);
+        if (j > 0) {
+          v = Math.min(v, f[k - w] + 1);
+          if (i > 0) v = Math.min(v, f[k - w - 1] + D3);
+          if (i < w - 1) v = Math.min(v, f[k - w + 1] + D3);
         }
-        f[i] = v;
+        f[k] = v;
       }
     }
-    for (let y = h2 - 1; y >= 0; y--) {
-      for (let x = w - 1; x >= 0; x--) {
-        const i = y * w + x;
-        let v = f[i];
-        if (x < w - 1) v = Math.min(v, f[i + 1] + 1);
-        if (y < h2 - 1) {
-          v = Math.min(v, f[i + w] + 1);
-          if (x < w - 1) v = Math.min(v, f[i + w + 1] + D3);
-          if (x > 0) v = Math.min(v, f[i + w - 1] + D3);
+    for (let j = h2 - 1; j >= 0; j--) {
+      for (let i = w - 1; i >= 0; i--) {
+        const k = j * w + i;
+        let v = f[k];
+        if (i < w - 1) v = Math.min(v, f[k + 1] + 1);
+        if (j < h2 - 1) {
+          v = Math.min(v, f[k + w] + 1);
+          if (i < w - 1) v = Math.min(v, f[k + w + 1] + D3);
+          if (i > 0) v = Math.min(v, f[k + w - 1] + D3);
         }
-        f[i] = v;
+        f[k] = v;
       }
     }
-    for (let i = 0; i < n; i++) f[i] = clamp2(solid(i) ? f[i] : -f[i], -32, 32);
-    const tmp2 = new Float32Array(n);
-    const K = [0.1, 0.2, 0.4, 0.2, 0.1];
-    for (let y = 0; y < h2; y++) {
-      const row = y * w;
-      for (let x = 0; x < w; x++) {
-        let acc = 0;
-        for (let k = -2; k <= 2; k++) {
-          let xx = x + k;
-          if (world.wrap) xx = (xx + w) % w;
-          else xx = clamp2(xx, 0, w - 1);
-          acc += f[row + xx] * K[k + 2];
-        }
-        tmp2[row + x] = acc;
+    for (let k = 0; k < n; k++) {
+      const v = sol[k] ? f[k] : -f[k];
+      f[k] = v < -32 ? -32 : v > 32 ? 32 : v;
+    }
+    for (let j = 0; j < h2; j++) {
+      const row2 = j * w, last = row2 + w - 1;
+      for (let i = 0; i < w; i++) {
+        const c = row2 + i;
+        const a = c - 2 < row2 ? row2 : c - 2, b = c - 1 < row2 ? row2 : c - 1, d = c + 1 > last ? last : c + 1, e = c + 2 > last ? last : c + 2;
+        tmp2[c] = f[a] * 0.1 + f[b] * 0.2 + f[c] * 0.4 + f[d] * 0.2 + f[e] * 0.1;
       }
     }
-    const out = world.dist;
-    for (let y = 0; y < h2; y++) {
-      for (let x = 0; x < w; x++) {
-        let acc = 0;
-        for (let k = -2; k <= 2; k++) acc += tmp2[clamp2(y + k, 0, h2 - 1) * w + x] * K[k + 2];
-        const i = y * w + x;
-        const raw = f[i];
-        let v = acc;
+    const jy0 = Math.max(0, Y0) - h0, jy1 = Math.min(world.height, Y1) - h0;
+    for (let j = jy0; j < jy1; j++) {
+      const r0 = Math.max(0, j - 2) * w, r1 = Math.max(0, j - 1) * w, r2 = j * w, r3 = Math.min(h2 - 1, j + 1) * w, r4 = Math.min(h2 - 1, j + 2) * w;
+      for (let i = PAD3; i < w - PAD3; i++) {
+        let v = tmp2[r0 + i] * 0.1 + tmp2[r1 + i] * 0.2 + tmp2[r2 + i] * 0.4 + tmp2[r3 + i] * 0.2 + tmp2[r4 + i] * 0.1;
+        const raw = f[r2 + i];
         if (raw > 0 && v < 0.15) v = 0.15;
         if (raw < 0 && v > -0.15) v = -0.15;
-        out[i] = clamp2(Math.round(128 + v * 4), 0, 255);
+        const e = Math.round(128 + v * 4);
+        row[i] = e < 0 ? 0 : e > 255 ? 255 : e;
+      }
+      world.setDistRow(h0 + j, x0 + PAD3, w - 2 * PAD3, row, PAD3);
+    }
+  }
+  function compactDistance(world) {
+    const N4 = BS * BS;
+    for (let b = 0; b < world.bs.length; b++) {
+      const s = world.bs[b];
+      if (!s || world.ut[b] === MIXED) continue;
+      const v = s[0];
+      let same = true;
+      for (let i = 1; i < N4; i++) if (s[i] !== v) {
+        same = false;
+        break;
+      }
+      if (same) {
+        world.us[b] = v;
+        world.bs[b] = null;
       }
     }
   }
   function buildMapImage(world) {
-    const mw = world.width >> 1, mh = world.height >> 1;
+    const mw = world.wrap ? 3072 : Math.max(1, world.width >> 1), mh = world.wrap ? 1536 : Math.max(1, world.height >> 1);
+    const sx = world.width / mw, sy = world.height / mh;
     const img2 = new Uint8Array(mw * mh * 4);
-    const d = world.data;
+    const dist = new Uint8Array(mw * mh);
     const seaCol = {
       [REGION.EAST_BLUE]: "#9fd0e6",
       [REGION.NORTH_BLUE]: "#a3c4e3",
@@ -69649,9 +70823,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     landRGB[T.RED_ROCK] = hexToRgb("#a8452f");
     landRGB[T.SNOWROCK] = hexToRgb("#c9c3bd");
     for (let y = 0; y < mh; y++) {
+      const ty = Math.min(world.height - 1, Math.floor((y + 0.5) * sy));
       for (let x = 0; x < mw; x++) {
-        const tx = x * 2, ty = y * 2;
-        const t = d[(ty * world.width + tx) * 4];
+        const tx = Math.min(world.width - 1, Math.floor((x + 0.5) * sx));
+        const t = world.type(tx, ty);
         let c;
         if (IS_LIQUID[t] || OVERLAY[t]) {
           c = world.zone === 0 ? seaRGB[regionAt(tx, ty)] : world.zone === 2 ? [40, 90, 150] : world.zone === 3 ? [20, 16, 24] : [150, 200, 230];
@@ -69665,9 +70840,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         img2[o + 1] = c[1];
         img2[o + 2] = c[2];
         img2[o + 3] = 255;
+        dist[y * mw + x] = world.distRaw(tx, ty);
       }
     }
-    return { data: img2, w: mw, h: mh };
+    return { data: img2, w: mw, h: mh, dist };
   }
 
   // src/data/islands/eastBlue.js
@@ -75613,22 +76789,58 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
   ];
 
+  // src/data/islands/marinePosts.js
+  var MARINE_POSTS = {
+    shimotsuki_village: "Shimotsuki Marine Post",
+    orange_town: "Orange Town Marine Post",
+    syrup_village: "Syrup Village Marine Post",
+    oykot_castle_town: "Oykot Marine Post",
+    lvneel_town: "Lvneel Marine Post",
+    notice_town: "Notice Marine Post",
+    spider_miles_port: "Spider Miles Marine Post",
+    swallow_town: "Swallow Island Marine Post",
+    rakesh_port: "Rakesh Marine Post",
+    whiteland_town: "Flevance Quarantine Post",
+    kano_town: "Kano Marine Post",
+    ilisia_town: "Ilisia Marine Post",
+    toroa_town: "Toroa Marine Post",
+    las_camp_town: "Las Camp Marine Post",
+    soja_village: "Soja Marine Post",
+    esperia_town: "Esperia Marine Post",
+    asshina_town: "Asshina Marine Post",
+    ohara_camp: "Ohara Watch Post",
+    karate_dojo_town: "Karate Island Marine Post",
+    sorbet_town: "Sorbet Marine Post",
+    briss_town: "Briss Marine Post",
+    centaurea_town: "Centaurea Marine Post",
+    kutsukku_town: "Kutsukku Marine Post",
+    torino_village: "Torino Marine Post"
+  };
+
   // src/data/islands/index.js
   function toWorld(d) {
     if (d._scale) return d;
-    d.x = Math.round(d.x * WORLD_SCALE);
-    d.y = Math.round(d.y * WORLD_SCALE);
-    d.w = Math.round(d.w * WORLD_SCALE);
-    d.h = Math.round(d.h * WORLD_SCALE);
-    d._scale = WORLD_SCALE;
+    d.x = Math.round(d.x * POS_SCALE2);
+    d.y = Math.round(d.y * POS_SCALE2);
+    d.w = Math.round(d.w * SIZE_SCALE2);
+    d.h = Math.round(d.h * SIZE_SCALE2);
+    d._scale = SIZE_SCALE2;
     return d;
   }
-  var ALL_ISLANDS = [...EAST_BLUE, ...NORTH_BLUE, ...WEST_BLUE, ...SOUTH_BLUE, ...PARADISE_1, ...PARADISE_2, ...NEW_WORLD, ...NEW_WORLD_2].map(toWorld);
+  function marinePosts(d) {
+    for (const t of d.towns || []) {
+      const name = MARINE_POSTS[t.id];
+      if (!name || (t.buildings || []).some((b) => b.role === "marine_base")) continue;
+      t.buildings = [...t.buildings || [], { role: "marine_base", name }];
+    }
+    return d;
+  }
+  var ALL_ISLANDS = [...EAST_BLUE, ...NORTH_BLUE, ...WEST_BLUE, ...SOUTH_BLUE, ...PARADISE_1, ...PARADISE_2, ...NEW_WORLD, ...NEW_WORLD_2].map(marinePosts).map(toWorld);
   var ISLAND_BY_ID = Object.fromEntries(ALL_ISLANDS.map((i) => [i.id, i]));
 
   // src/core/input.js
   var Input = class {
-    constructor(target) {
+    constructor(target2) {
       this.down = /* @__PURE__ */ new Set();
       this.pressed = /* @__PURE__ */ new Set();
       this.released = /* @__PURE__ */ new Set();
@@ -75654,11 +76866,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.down.clear();
         this.mouse.down = [false, false, false];
       });
-      target.addEventListener("mousemove", (e) => {
+      target2.addEventListener("mousemove", (e) => {
         this.mouse.x = e.clientX;
         this.mouse.y = e.clientY;
       });
-      target.addEventListener("mousedown", (e) => {
+      target2.addEventListener("mousedown", (e) => {
         this.mouse.x = e.clientX;
         this.mouse.y = e.clientY;
         this.mouse.down[e.button] = true;
@@ -75668,8 +76880,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.mouse.down[e.button] = false;
         this.mouse.released[e.button] = true;
       });
-      target.addEventListener("contextmenu", (e) => e.preventDefault());
-      target.addEventListener("wheel", (e) => {
+      target2.addEventListener("contextmenu", (e) => e.preventDefault());
+      target2.addEventListener("wheel", (e) => {
         this.mouse.wheel += Math.sign(e.deltaY);
         e.preventDefault();
       }, { passive: false });
@@ -76115,8 +77327,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.stroke();
         return;
       }
-      const add4 = style !== "dark" && style !== "sand" && style !== "mochi";
-      if (add4) g.globalCompositeOperation = "lighter";
+      const add5 = style !== "dark" && style !== "sand" && style !== "mochi";
+      if (add5) g.globalCompositeOperation = "lighter";
       g.globalAlpha = fade2 * 0.3;
       g.fillStyle = col;
       g.beginPath();
@@ -76697,8 +77909,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (let i = 0; i < n; i++) {
         const off = (i - (n - 1) / 2) * L2 * 0.22;
         const x0 = -L2 / 2, x1 = -L2 / 2 + L2 * reveal;
-        for (const [col, lw, add4] of [[s.color || "#ffffff", 0.11, true], ["#ffffff", 0.04, true]]) {
-          g.globalCompositeOperation = add4 ? "lighter" : "source-over";
+        for (const [col, lw, add5] of [[s.color || "#ffffff", 0.11, true], ["#ffffff", 0.04, true]]) {
+          g.globalCompositeOperation = add5 ? "lighter" : "source-over";
           g.globalAlpha = a * fade2;
           g.strokeStyle = col;
           g.lineWidth = lw * (1 - Math.abs(off) / L2);
@@ -78844,44 +80056,35 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return `${String(h2).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
     }
   };
-  function currentAt(world, x, y, out = { x: 0, y: 0, steer: 0 }) {
+  function currentAt(world, x, y, out = { x: 0, y: 0, steer: 0, level: 0, slope: 0, canal: null }) {
     out.x = 0;
     out.y = 0;
     out.steer = 0;
+    out.level = 0;
+    out.slope = 0;
+    out.canal = null;
     if (world.zone !== 0) return out;
-    const M2 = REVERSE_MOUNTAIN;
-    const dx = world.dx(M2.x, x), dy = y - M2.y;
-    if (Math.abs(dx) > M2.rx + 70 || Math.abs(dy) > M2.ry + 70) return out;
-    if (!world.isLiquid(x, y)) return out;
-    const d = Math.hypot(dx, dy);
-    if (dx > 4 && Math.abs(dy) < 9 && dx < M2.rx + 40) {
-      out.x = 15;
-      out.y = -dy * 0.6;
-      out.steer = 1.5;
+    const ux = world.wx(x);
+    if (!nearRM(ux, y)) return out;
+    const k = canalAt(ux, y, 70);
+    if (!k) return out;
+    const c = k.canal;
+    if (world.type(x, y) === T.RAPIDS || k.pool) {
+      const sp = k.pool ? 12 : c.exit ? RM.downSpeed : k.level > 0.5 ? RM.upSpeed : RM.upSpeed * 0.75;
+      const back = Math.max(-6, Math.min(6, -k.side * 0.55));
+      out.x = k.fx * sp - k.fy * back;
+      out.y = k.fy * sp + k.fx * back;
+      out.steer = 2.6;
+      out.level = k.level;
+      out.slope = k.pool ? 0 : (canalLevel(c, k.s + 3) - canalLevel(c, k.s - 3)) / 6;
+      out.canal = c;
       return out;
     }
-    const inside2 = Math.abs(dx) < M2.rx * Math.sqrt(Math.max(0, 1 - (dy / M2.ry) ** 2)) + 6;
-    if (d < 10) {
-      out.x = 12;
-      out.y = -dy * 0.8;
-      out.steer = 1.5;
-      return out;
-    }
-    if (inside2) {
-      out.x = -dx / d * 16;
-      out.y = -dy / d * 16;
-      out.steer = 1.2;
-      return out;
-    }
-    for (const m of Object.values(M2.mouths)) {
-      const mx = world.dx(x, m.x), my = m.y - y;
-      const md = Math.hypot(mx, my);
-      if (md < 45) {
-        out.x = mx / md * 3.5;
-        out.y = my / md * 3.5;
-        out.steer = 0.2;
-        return out;
-      }
+    if (!c.exit && k.s < c.s[c.i0 ?? 0] + 10) {
+      const f = 3 + 5 * Math.min(1, k.s / Math.max(1, c.s[c.i0 ?? 0]));
+      out.x = k.fx * f + k.fy * k.side * 0.12;
+      out.y = k.fy * f - k.fx * k.side * 0.12;
+      out.steer = 0.35;
     }
     return out;
   }
@@ -79989,8 +81192,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const id = p.hotbar[i];
           if (id) {
             p.facing = aim;
-            const target = this.aimTarget(p, game, wx, wy);
-            p.tryTechnique(id, game, target || { x: wx, y: wy });
+            const target2 = this.aimTarget(p, game, wx, wy);
+            p.tryTechnique(id, game, target2 || { x: wx, y: wy });
           }
         }
       }
@@ -80384,32 +81587,35 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     isCalmAt(x, y) {
       return this.world.zone === 0 && isCalmBelt(regionAt(x, y));
     }
-    currentAt(x, y) {
-      return currentAt(this.world, x, y, this.cur);
+    /** The sea's current at (x, y) — for `who` (a ship or a swimmer), with the main story's say (see content/mainStory.js). */
+    currentAt(x, y, who = null) {
+      const c = currentAt(this.world, x, y, this.cur);
+      if (this.storyCurrent && who) this.storyCurrent(x, y, c, who);
+      return c;
     }
     inFogRegion(x, y) {
       const f = this.fogRegions || [];
       for (const r of f) if (this.world.distance(x, y, r.x, r.y) < r.r) return r.density;
       return 0;
     }
-    log(text, color = "#fff") {
-      this.logLines.push({ text, color, t: this.time });
+    log(text2, color = "#fff") {
+      this.logLines.push({ text: text2, color, t: this.time });
       if (this.logLines.length > 60) this.logLines.shift();
-      this.ui?.log(text, color);
+      this.ui?.log(text2, color);
     }
-    hint(key2, text) {
+    hint(key2, text2) {
       if (this.hintsShown.has(key2)) return;
       this.hintsShown.add(key2);
-      this.ui?.hint(text);
+      this.ui?.hint(text2);
     }
     // --- events from combat ----------------------------------------------------------
-    onDamage(target, att, n) {
-      if (target.isPlayer) {
+    onDamage(target2, att, n) {
+      if (target2.isPlayer) {
         this.ui?.onPlayerHurt(n);
         this.emit("playerHurt", att, n);
       }
-      if (att && att.isPlayer) this.emit("playerHit", target, n);
-      if (target.isPlayer || att && att.isPlayer) {
+      if (att && att.isPlayer) this.emit("playerHit", target2, n);
+      if (target2.isPlayer || att && att.isPlayer) {
         this.combatT = 6;
       }
     }
@@ -80428,8 +81634,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.renderer.terrain.setWorld({
         width: world.width,
         height: world.height,
-        world: world.data,
-        dist: world.dist,
+        mapDist: world.map.dist,
         map: world.map.data,
         mapW: world.map.w,
         mapH: world.map.h,
@@ -80502,11 +81707,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.emit("tick", dt);
       t0 = performance.now();
       this.updateCamera(dt);
-      this.world.reveal(p.x, p.y, p.mode === "sail" ? 30 : 20);
+      this.world.reveal(p.x, p.y, p.mode === "sail" ? 120 : 45);
       if (this.world.fogDirty && Math.floor(this.time * 2) !== this.lastFogPush) {
         this.lastFogPush = Math.floor(this.time * 2);
         this.world.fogDirty = false;
-        this.renderer.terrain.updateFog(this.creative?.on && this.world === this.surface ? this.creative.fullFog() || this.world.fog : this.world.fog);
+        const full = this.creative?.on && this.world === this.surface ? this.creative.fullFog() : null;
+        this.renderer.terrain.updateFog(full || this.world.fog, full ? null : this.world.fogRect);
+        this.world.fogRect = null;
       }
       prof("s.map", t0);
       this.input.endFrame();
@@ -80585,9 +81792,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const cam = this.renderer.cam;
       const p = this.player;
       const sailing = p.mode === "sail";
-      const target = (sailing ? this.camZoomSea * (p.ship ? clamp2(6 / p.ship.def.length, 0.75, 1.2) : 1) : this.camZoomFoot) * this.zoomBias;
+      const target2 = (sailing ? this.camZoomSea * (p.ship ? clamp2(6 / p.ship.def.length, 0.75, 1.2) : 1) : this.camZoomFoot) * this.zoomBias;
       if (this.input.mouse.wheel && !this.env.mapMode) this.zoomBias = clamp2(this.zoomBias * (this.input.mouse.wheel > 0 ? 0.9 : 1.1), 0.45, 1.6);
-      cam.zoom += (target - cam.zoom) * Math.min(1, dt * 3);
+      cam.zoom += (target2 - cam.zoom) * Math.min(1, dt * 3);
       let lx = 0, ly = 0;
       if (sailing && p.ship) {
         lx = Math.cos(p.ship.heading) * p.ship.speed * 0.25;
@@ -80784,7 +81991,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/ui/style.css
-  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #b8860b; font-size: 18px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: -1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.quest small { color: #ffd54f; }\n.compass .pin.ship small { color: #e3f2fd; }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n";
+  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #b8860b; font-size: 18px; }\n.wm-label.quest.main { color: #d35400; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: -1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.quest small { color: #ffd54f; }\n.compass .pin.ship small { color: #e3f2fd; }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n";
 
   // src/ui/icon.js
   var img = (canvas2, px2, cls = "") => h("img.icon" + cls, { src: iconURL(canvas2), width: px2, height: px2, draggable: false, alt: "" });
@@ -81266,6 +82473,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       world: { day: 1, clock: 8.5, chests: {}, npc: {}, fruitSpawns: null },
       pos: null,
       rest: null,
+      worldVer: WORLD_VERSION,
       createdAt: Date.now()
     };
     if (perkLevel(legacy, "chart")) char.discovered = (legacy.charted || []).slice();
@@ -81500,6 +82708,50 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     clearChar();
     saveLegacy(legacy);
     return will;
+  }
+  var WORLD_VERSION = 2;
+  var OLD_SCALE = 1.5;
+  function migrateWorld(char, world, islandDefs) {
+    if ((char.worldVer || 1) >= WORLD_VERSION) return false;
+    const move = (pt) => {
+      if (!pt || typeof pt.x !== "number" || pt.zone && pt.zone !== "surface") return;
+      let best = null, bd = Infinity;
+      for (const d of islandDefs) {
+        const ox = d.x / POS_SCALE * OLD_SCALE, oy = d.y / POS_SCALE * OLD_SCALE;
+        const r = Math.max(d.w, d.h) / SIZE_SCALE * OLD_SCALE * 0.5;
+        const dd = Math.hypot(pt.x - ox, pt.y - oy) - r;
+        if (dd < bd) {
+          bd = dd;
+          best = { d, ox, oy };
+        }
+      }
+      if (best && bd < 40) {
+        const k = SIZE_SCALE / OLD_SCALE;
+        pt.x = best.d.x + (pt.x - best.ox) * k;
+        pt.y = best.d.y + (pt.y - best.oy) * k;
+      } else {
+        pt.x *= POS_SCALE / OLD_SCALE;
+        pt.y *= POS_SCALE / OLD_SCALE;
+      }
+      pt.x = world.wx(pt.x);
+      if (!pt.mode || pt.mode === "foot") {
+        if (!world.walkable(pt.x, pt.y) && !world.swimmable(pt.x, pt.y)) {
+          const spot = findShore(world, pt.x, pt.y, 24);
+          if (spot) {
+            pt.x = spot.x;
+            pt.y = spot.y;
+          }
+        }
+      }
+    };
+    move(char.pos);
+    move(char.rest);
+    move(char.spawn);
+    for (const s of char.ships || []) if (!s.zone || s.zone === "surface") move(s);
+    for (const s of char.zoneShips || []) move(s);
+    char.fogSurface = null;
+    char.worldVer = WORLD_VERSION;
+    return true;
   }
 
   // src/game/inventory.js
@@ -82242,7 +83494,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         L2[key2] = c;
         changed();
       } } })));
-      const chips = (current, values, labels, set) => h("div.swatches", ...values.map((v, i) => h("button.chip" + (current === v ? ".on" : ""), { on: { click: () => {
+      const chips = (current2, values, labels, set) => h("div.swatches", ...values.map((v, i) => h("button.chip" + (current2 === v ? ".on" : ""), { on: { click: () => {
         set(v);
         changed();
       } } }, labels ? labels[i] : v)));
@@ -82377,7 +83629,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             race !== "mink" ? row("Colour", swatch("hairColor", ["#1e1e1e", "#3b2a1a", "#6b4423", "#c69c6d", "#f2d16b", "#e67e22", "#c0392b", "#e84393", "#8e44ad", "#2980b9", "#2ecc71", "#dfe6e9"])) : h("p.muted", "Minks grow fur of their kind.")
           );
         } else if (tab === "body") {
-          const build = h("input.build-slider", { type: "range", min: 0, max: 1, step: 0.05, value: L2.build ?? 0.5, on: { input: (e) => {
+          const build2 = h("input.build-slider", { type: "range", min: 0, max: 1, step: 0.05, value: L2.build ?? 0.5, on: { input: (e) => {
             L2.build = Number(e.target.value);
             applyLook(L2, race);
             preview?.setLook(L2);
@@ -82385,7 +83637,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const mus = L2.muscle ?? 0.5;
           add2(
             optsEl,
-            row("Build", h("div.build-row", h("span.muted", "Thin"), build, h("span.muted", "Wide"))),
+            row("Build", h("div.build-row", h("span.muted", "Thin"), build2, h("span.muted", "Wide"))),
             row("Muscle", chips(mus < 0.35 ? 0.2 : mus < 0.75 ? 0.55 : 1, [0.2, 0.55, 1], ["Lean", "Toned", "Muscular"], (v) => {
               L2.muscle = v;
             })),
@@ -82574,7 +83826,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function helpContent(char) {
     const haki = !!(char && (char.haki?.armament || char.haki?.observation || char.haki?.conqueror));
-    const k = (key2, text) => h("div", h("kbd", key2), text);
+    const k = (key2, text2) => h("div", h("kbd", key2), text2);
     return h(
       "div",
       h("h2", "How to Play"),
@@ -82650,8 +83902,647 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return `${r.pick(FIRST2)} ${r.pick(LAST)}`;
   }
 
+  // src/game/rumors.js
+  var SEA_TIPS = {
+    [REGION.EAST_BLUE]: [
+      "They call the East Blue the weakest sea. Funny \u2014 the Pirate King was born here.",
+      'Loguetown is the "town of the beginning and the end". Gol D. Roger was executed on the platform in its square. Every pirate heading for the Grand Line stops there \u2014 and so do the Marines.',
+      "To reach the Grand Line you sail to Reverse Mountain, at the southwest edge of the East Blue where the Red Line meets the four seas. The current carries you UP the mountain. Steer true or you'll smash into the canal walls.",
+      "Don't even think about crossing the Calm Belt. No wind, no current \u2014 and it's the nest of the Sea Kings.",
+      "A Fish-Man named Arlong took over the Conomi Islands. The villagers pay him tribute or die.",
+      `There's a floating restaurant called the Baratie out past the Gecko Islands. The head chef, "Red Leg" Zeff, was once a pirate captain.`,
+      'The Marine captain in Shells Town, "Axe-Hand" Morgan, rules that town like a tyrant.',
+      "If you want to learn the sword, the Isshin Dojo in Shimotsuki Village takes students."
+    ],
+    [REGION.NORTH_BLUE]: [
+      "The North Blue has cold seas and colder people. The Donquixote Family started out in Spider Miles, you know.",
+      "Lvneel is the homeland of Noland the Liar, who claimed he saw a city of gold on an island in the Grand Line.",
+      "Flevance, the White Town, was destroyed by its neighbours. They said the amber lead sickness was contagious. It wasn't.",
+      "Reverse Mountain lies at the southeast corner of the North Blue. Ride the canal up the mountain to enter the Grand Line.",
+      "The Vinsmoke family once ruled the whole North Blue. Their kingdom, Germa, now roams the seas on giant snail ships."
+    ],
+    [REGION.WEST_BLUE]: [
+      "The West Blue is ruled from the shadows by the mafia families. Watch your purse.",
+      "Ohara was an island of scholars, burned to ash by a Buster Call for studying the Poneglyphs. A few survivors still camp in the ruins.",
+      "The Chinjao Family of Kano Country teaches the Hasshoken \u2014 a fist that vibrates through armour.",
+      "Reverse Mountain rises at the northeast corner of the West Blue."
+    ],
+    [REGION.SOUTH_BLUE]: [
+      "The South Blue is full of giant animals \u2014 gryphons, super sparrows, birds the size of houses in the Torino Kingdom.",
+      "Karate Island is where fighters from all over come to train until their fists bleed.",
+      "Baterilla... the Marines once searched every pregnant woman on that island, looking for the Pirate King's child.",
+      "Reverse Mountain lies at the northwest corner of the South Blue, where the four seas meet.",
+      "The Sorbet Kingdom once had a kind king named Kuma. They say he was a Buccaneer."
+    ],
+    [REGION.PARADISE]: [
+      "In the Grand Line your compass is useless. Trust the Log Pose and nothing else.",
+      "From Reverse Mountain there are seven routes, all ending at the Sabaody Archipelago.",
+      "Islands in the Grand Line each have their own climate. The sea between them goes mad.",
+      "To cross the Red Line, pirates must have their ship coated at Sabaody and sink ten thousand metres to Fish-Man Island. Only the World Government may pass over Mary Geoise.",
+      "The Knock Up Stream near Jaya shoots ships into the sky. Nobody believes the sky islands are real... except the ones who've been.",
+      "Never, ever touch a Celestial Dragon. An Admiral will come.",
+      "The Warlords of the Sea have government pardons. Crocodile of Alabasta is treated like a hero there."
+    ],
+    [REGION.NEW_WORLD]: [
+      "In the New World, Haki is everything. If you can't use it, turn back now.",
+      "You need a three-needle Log Pose here. Islands change their magnetism on a whim.",
+      "The Four Emperors rule these seas: Big Mom in Totto Land, Kaido in Wano, Red-Haired Shanks, and... they say Blackbeard now.",
+      "Laugh Tale cannot be found with a Log Pose. You need the four Road Poneglyphs.",
+      "Zou is not an island. It's on the back of an elephant that has walked the sea for a thousand years."
+    ],
+    [REGION.CALM_NORTH]: ["You're in the Calm Belt?! Get out before the Sea Kings wake!"],
+    [REGION.CALM_SOUTH]: ["You're in the Calm Belt?! Get out before the Sea Kings wake!"]
+  };
+  var LORE = [
+    `Twenty-two years ago, Gol D. Roger's last words started the Great Pirate Era: "My treasure? If you want it, you can have it! I left everything I own in that place!"`,
+    "The Void Century: one hundred years of history, erased. Only the Poneglyphs remember \u2014 and reading them is a crime.",
+    "Poneglyphs come in three kinds: historical ones, instructional ones, and four red Road Poneglyphs that point to Laugh Tale.",
+    "Haki comes in three colours: Armament, Observation, and the rare Conqueror's \u2014 the Haki of kings.",
+    "Devil Fruits: Paramecia change the body, Zoan transform it into beasts, Logia turn it into an element. Every user becomes a hammer in the sea.",
+    "When a Devil Fruit user dies, their power is reborn in an ordinary fruit somewhere nearby.",
+    "The Red Line is the only continent in the world. It circles the planet. Where it crosses the Grand Line stand Reverse Mountain \u2014 and on the opposite side, Mary Geoise.",
+    "Seastone emits the same energy as the sea itself. It weakens Devil Fruit users on touch, and Marines line their hulls with it to cross the Calm Belt unnoticed.",
+    'The Rokushiki are six superhuman arts taught to the Marines and to Cipher Pol: Soru, Geppo, Tekkai, Shigan, Rankyaku and Kami-e. Strength is measured in "Doriki".',
+    'Some families carry the initial "D." in their name. The World Government fears it. Nobody knows why.',
+    "Vivre Cards are made from a person's fingernail. They point toward that person \u2014 and burn away as their life fades.",
+    'Log Poses must stay on an island a while to "set" before they point to the next one. Eternal Poses always point to a single island.'
+  ];
+  function rumorFor(game, island, rng4, npc, tavern, kind) {
+    if (kind === "lore") {
+      const c0 = game.state?.char;
+      const known0 = !!(c0?.haki && (c0.haki.armament || c0.haki.observation || c0.haki.conqueror));
+      return rng4.pick(known0 ? LORE : LORE.filter((l) => !/haki/i.test(l)));
+    }
+    const p = game.player;
+    const reg3 = regionAt(p.x, p.y);
+    const pool = [];
+    if (island?.def?.rumors) pool.push(...island.def.rumors, ...island.def.rumors);
+    pool.push(...SEA_TIPS[reg3] || []);
+    if (tavern) pool.push(...LORE.slice(0, 6));
+    const fr = game.fruitRumor?.(rng4);
+    if (fr && rng4.chance(tavern ? 0.45 : 0.2)) return fr;
+    const c = game.state?.char;
+    if (c?.bounty && rng4.chance(0.2)) return `"Hey... aren't you the one on that wanted poster? \u0E3F${c.bounty.toLocaleString()}... I didn't see anything!"`;
+    const quest = game.questRumor?.(island, rng4);
+    if (quest && rng4.chance(0.35)) return quest;
+    const known = !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
+    const heard = known ? pool : pool.filter((l) => !/haki|mantra/i.test(l));
+    const line2 = heard.length ? rng4.pick(heard) : "Nice weather today.";
+    return npc ? `"${line2.replace(/^"|"$/g, "")}"` : line2;
+  }
+
+  // src/game/npcs.js
+  var NPC_DEFS = /* @__PURE__ */ new Map();
+  var GROUPS = [];
+  function registerNPCs(list) {
+    for (const n of list) NPC_DEFS.set(n.id, n);
+  }
+  function registerGroups(list) {
+    for (const g of list) GROUPS.push(g);
+  }
+  var npcDef = (id) => NPC_DEFS.get(id);
+  var allNpcDefs = () => [...NPC_DEFS.values()];
+  var ARCHETYPES = {
+    bandit: { name: "Mountain Bandit", faction: "bandit", style: "brawler", look: { top: "#6d4c41", hat: "bandana", hatColor: "#8d6e63" }, skill: 0.15, barks: ["Hand over your money!", "Heh heh heh!"] },
+    pirate: { name: "Pirate Grunt", faction: "pirate", style: "ittoryu", weapon: "sword", look: { top: "#37474f", hat: "bandana", hatColor: "#b71c1c" }, skill: 0.2, barks: ["Yo-ho!", "Get 'em!"] },
+    pirate_gunner: { name: "Pirate Gunner", faction: "pirate", style: "sniper", weapon: "gun", ranged: true, look: { top: "#5d4037", hat: "tricorne" }, skill: 0.15 },
+    marine: { name: "Marine", faction: "marine", style: "ittoryu", weapon: "sword", look: { top: "#ffffff", bottom: "#1b4f72", hat: "marine" }, skill: 0.25, lethal: false, barks: ["For Justice!", "Halt, pirate!"] },
+    marine_rifle: { name: "Marine Rifleman", faction: "marine", style: "sniper", weapon: "gun", ranged: true, look: { top: "#ffffff", bottom: "#1b4f72", hat: "marine" }, skill: 0.2, lethal: false },
+    marine_officer: { name: "Marine Officer", faction: "marine", style: "rokushiki", look: { top: "#ffffff", bottom: "#1b4f72", hat: "marine", coat: "#fafafa", coatText: "JUSTICE" }, skill: 0.5, lethal: false, moves: ["roku_soru", "roku_rankyaku"] },
+    swordsman: { name: "Wandering Swordsman", faction: "rival", style: "nitoryu", weapon: "sword", look: { top: "#455a64", hat: "headband", hatColor: "#212121" }, skill: 0.45, moves: ["nito_taka"] },
+    brute: { name: "Brute", faction: "pirate", style: "brawler", look: { top: "#795548" }, bulk: 1.35, skill: 0.1, moves: ["brawl_tackle", "brawl_headbutt"], hpMul: 1.6 },
+    fishman_thug: { name: "Fish-Man Pirate", faction: "pirate", race: "fishman", style: "fishman_karate", look: {}, skill: 0.3, moves: ["fmk_uchimizu"], hpMul: 1.2 },
+    baroque: { name: "Baroque Works Agent", faction: "baroque", style: "sniper", weapon: "gun", look: { top: "#212121", hat: "cowboy", hatColor: "#212121" }, skill: 0.35, moves: ["snipe_explode"] },
+    cp: { name: "Cipher Pol Agent", faction: "cp", style: "rokushiki", look: { top: "#212121", bottom: "#212121" }, skill: 0.6, moves: ["roku_soru", "roku_rankyaku", "roku_tekkai"] },
+    zombie: { name: "Zombie", faction: "zombie", style: "brawler", look: { top: "#4e342e", skin: "#9e9d89" }, skill: 0.05, barks: ["Uuurgh..."] },
+    beast: { name: "Wild Boar", faction: "beast", style: "brawler", beast: "boar", look: { top: "#6d4c41", skin: "#6d4c41", hair: "bald", ears: "round", fur: "#6d4c41", muzzle: true, tail: "thin" }, skill: 0, hpMul: 1.3 },
+    tiger: { name: "Mountain Tiger", faction: "beast", style: "electro", beast: "tiger", look: { skin: "#f39c12", fur: "#f39c12", hairColor: "#f39c12", ears: "round", tail: "thin", muzzle: true, top: "#f39c12", bottom: "#e67e22", hair: "bald", furFace: true }, skill: 0.2, hpMul: 1.5 },
+    dinosaur: { name: "Dinosaur", faction: "beast", style: "brawler", look: { skin: "#558b2f", top: "#558b2f", bottom: "#33691e", hair: "bald", fin: true, muzzle: true, tail: "fluffy", fur: "#558b2f" }, bulk: 1.6, scale: 1.5, hpMul: 2.5, skill: 0 },
+    gorilla: { name: "Snow Gorilla", faction: "beast", style: "brawler", look: { skin: "#eceff1", fur: "#eceff1", hairColor: "#eceff1", top: "#eceff1", bottom: "#cfd8dc", ears: "round", furFace: true, muzzle: true, hair: "bald" }, bulk: 1.4, hpMul: 1.8, skill: 0.1 },
+    pacifista: { name: "Pacifista", faction: "marine", style: "brawler", look: { top: "#263238", bottom: "#263238", skin: "#607d8b", hat: "bandana", hatColor: "#263238" }, bulk: 1.5, scale: 1.4, hpMul: 3, skill: 0.3, moves: ["kuma_laser"], lethal: true }
+  };
+  var WOMEN = /\b(Makino|Dadan|Alvida|Rika|Kaya|Nojiko|Bell-?m[eè]re|Tashigi|Kuina|Nami|Robin|Vivi|Kureha|Conis|Laki|Aisa|Hina|Isuka|Hancock|Sandersonia|Marigold|Nyon|Perona|Kalifa|Bonney|Shirahoshi|Otohime|Shyarly|Big Mom|Linlin|Pudding|Smoothie|Br[uû]l[eé]e|Galette|Flampe|Praline|Amande|Chiffon|Lola|Viola|Rebecca|Monet|Baby 5|Koala|Carrot|Wanda|Yamato|Hiyori|Kiku|Tama|Ulti|Black Maria|Sugar|Kokoro|Chimney|Shakky|Valentine|Doublefinger|Goldenweek|All ?Sunday|Merry ?Christmas|Paula|Porche|Cindry|Stussy|Lilith|Jewelry|Catarina|Tsuru|Gion|Momousagi|Olvia|Toki|Rouge|Uta|Betty|Hibari|Carina|Mozu|Kiwi|Ishley|Nico)\b/i;
+  var ROLE_OF = { pirate: "pirate", bandit: "bandit", marine: "marine", cp: "agent", baroque: "agent", rival: "swordsman", beast: "beast", fishman: "fishman" };
+  function makeNPC(def, x, y, extra = {}) {
+    const L2 = def.level ?? 6;
+    let role = def.role || (def.beast || def.faction === "beast" ? "beast" : ROLE_OF[def.faction]) || "civilian";
+    if (role === "marine" && (def.look?.coat || def.boss || def.named)) role = "officer";
+    const lookOver = { ...def.look || {}, role };
+    if (lookOver.fem === void 0 && def.name && WOMEN.test(def.name)) lookOver.fem = true;
+    if (lookOver.fem === void 0 && (def.named || def.boss || def.dialogue)) lookOver.fem = false;
+    const look = def.fullLook ? { ...def.fullLook } : makeLook(def.race || "human", def.seed ?? hashSeed(def.id || def.name), lookOver);
+    if (def.bulk) look.bulk = def.bulk;
+    if (def.scale) look.scale = def.scale;
+    const attrs = def.attrs || { str: L2, agi: L2, end: L2, vit: L2, wil: L2 };
+    const a = new Actor({
+      x,
+      y,
+      name: def.name,
+      title: def.title,
+      look,
+      race: def.race || look.race,
+      faction: def.faction || "civilian",
+      attrs,
+      style: def.style || "brawler",
+      fruit: def.fruit || null,
+      fruitMastery: def.fruitMastery ?? (def.fruit ? 60 : 0),
+      weapon: def.weapon ? { kind: def.weapon, power: def.weaponPower || 1.2, count: STYLES2[def.style]?.swords || 1 } : null,
+      hakiSkill: def.haki || {},
+      boss: def.boss,
+      hpMul: (def.hpMul || 1) * (def.boss ? 2.2 : 1),
+      lethal: def.lethal ?? true,
+      poise: def.poise,
+      dmgMul: def.dmgMul,
+      defMul: def.defMul,
+      ...extra
+    });
+    a.npcId = def.id || null;
+    a.masteries = { [a.style]: def.mastery ?? Math.min(100, L2 * 1.5) };
+    a.techniques = def.moves || [];
+    a.tier = def.tier || Math.max(1, Math.round(L2 / 12));
+    a.named = !!def.named || !!def.boss;
+    a.bountyValue = def.bounty;
+    a.infamy = def.infamy;
+    a.reward = def.reward;
+    a.breakthrough = def.breakthrough;
+    a.alertLine = def.alert;
+    a.defeatLine = def.defeatLine;
+    a.talk = def.dialogue ? { def } : null;
+    a.def = def;
+    if (def.armament) a.armament = true;
+    if (def.invulnerable) a.invulnerable = true;
+    if (def.logia && !a.fruitDef?.logia) a.fakeLogia = { logia: true, weakTo: def.logia.weakTo || [], color: def.logia.color || "#fff" };
+    if (def.recover) a.recoverAfter = def.recover;
+    if (def.fixedPower) a.fixedPower = def.fixedPower;
+    a.showName = def.showName ?? (!!def.dialogue || !!def.boss || !!def.named);
+    a.nameColor = def.boss ? "#ff8a80" : def.dialogue ? "#ffe082" : "#fff";
+    const kind = def.ai || (def.hostile ? "hostile" : def.dialogue ? "guard" : "wander");
+    a.controller = new AIController({
+      kind,
+      home: { x, y },
+      skill: def.skill ?? (def.boss ? 0.55 : 0.25),
+      moves: def.moves || [],
+      aggroRange: def.aggroRange ?? (def.boss ? 12 : 8),
+      ranged: def.ranged,
+      leash: def.leash ?? (def.boss ? 18 : 16),
+      phases: def.phases,
+      barks: def.barks,
+      fleeAt: def.boss || def.named ? 0 : def.fleeAt
+    });
+    if (kind === "guard" || kind === "idle") {
+      a.stationary = true;
+      a.faceHome = Math.PI / 2;
+    }
+    if (def.hostile) a.aggroPlayer = true;
+    return a;
+  }
+  function hashSeed(s) {
+    let h2 = 7;
+    for (const ch of String(s)) h2 = h2 * 31 + ch.charCodeAt(0) >>> 0;
+    return h2;
+  }
+  function makeEnemy(arch, level, x, y, over = {}) {
+    const A = ARCHETYPES[arch] || ARCHETYPES.bandit;
+    over = Object.fromEntries(Object.entries(over || {}).filter(([, v]) => v !== void 0));
+    return makeNPC({
+      ...A,
+      level,
+      hostile: true,
+      name: over.name || A.name,
+      look: { ...A.look || {}, ...over.look || {} },
+      moves: over.moves || A.moves,
+      id: over.id,
+      seed: over.seed ?? Math.floor(Math.random() * 1e9),
+      // every grunt looks different
+      hpMul: (A.hpMul || 1) * (over.hpMul || 1),
+      skill: over.skill ?? A.skill,
+      fleeAt: 0.15,
+      ...over
+    }, x, y);
+  }
+  function npcBuilder(ctx) {
+    const { island, game, spawner, list, rng: rng4 } = ctx;
+    const c = game.state?.char;
+    if (!c) return;
+    for (const t of island.towns || []) for (const b of t.buildings) {
+      b.npcCount = 0;
+      b.guestCount = 0;
+    }
+    for (const def of NPC_DEFS.values()) {
+      if (def.island !== island.id) continue;
+      if (def.when && !def.when(c, game)) continue;
+      if (def.boss && c.bosses.includes(def.id) && !def.respawn) continue;
+      if (def.once && c.defeated[def.id]) continue;
+      if ((c.crew || []).some((m) => m.id === def.id) || c.flags["leftCrew_" + def.id]) continue;
+      const pos = placeNPC(game, island, def, rng4, spawner);
+      if (!pos) continue;
+      const a = makeNPC(def, pos.x, pos.y);
+      a.game = game;
+      if (pos.inside) {
+        a.homeB = pos.building;
+        a.facing = a.faceHome = Math.PI / 2;
+        a.stationary = true;
+        a.wanderBox = interiorRect(pos.building);
+      }
+      game.addActor(a);
+      list.push(a);
+      if (pos.building && !pos.guest) pos.building.npcSpawned = true;
+    }
+    for (const grp of GROUPS) {
+      if (grp.island !== island.id) continue;
+      if (grp.when && !grp.when(c, game)) continue;
+      if (grp.cleared && c.flags[grp.cleared]) continue;
+      const base2 = grp.spot ? island.spots[grp.spot] : { x: island.x + (grp.dx || 0) * island.def.w / 2, y: island.y + (grp.dy || 0) * island.def.h / 2 };
+      if (!base2) continue;
+      for (const e of grp.enemies) {
+        const [arch, lvl, over] = Array.isArray(e) ? e : [e, grp.level || 6, {}];
+        const p = spawner.findFree(base2.x, base2.y, grp.radius || 5, rng4);
+        if (!p) continue;
+        const a = makeEnemy(arch, lvl, p.x, p.y, over || {});
+        a.game = game;
+        if (grp.leash) a.controller.leash = grp.leash;
+        game.addActor(a);
+        list.push(a);
+      }
+    }
+  }
+  function clear2(spawner, x, y, rng4, extra = {}) {
+    const p = spawner.freeSpot(x, y) ? { x, y } : spawner.findFree(x, y, 2.5, rng4) || spawner.findFree(x, y, 5, rng4) || { x, y };
+    return { ...p, ...extra };
+  }
+  function inside(b, guest = false) {
+    if (!b.enterable) return null;
+    const L2 = layoutOf(b);
+    const spots = guest ? L2.residents.slice().reverse() : [L2.keeper, ...L2.residents].filter(Boolean);
+    const k = guest ? b.guestCount = (b.guestCount || 0) + 1 : b.npcCount = (b.npcCount || 0) + 1;
+    const s = spots[k - 1];
+    if (!s) return null;
+    return { ...bw(b, s.x, s.z), building: b, inside: true, guest };
+  }
+  function placeNPC(game, island, def, rng4, spawner) {
+    const pl = (typeof def.at === "function" ? def.at(game.state?.char, game) : def.at) || {};
+    if (pl.spot && island.spots[pl.spot]) {
+      const s = island.spots[pl.spot];
+      const x = s.x + (pl.ox || 0), y = s.y + (pl.oy || 0);
+      if (spawner.freeSpot(x, y)) return { x, y };
+      return spawner.findFree(x, y, 2.5, rng4) || spawner.findFree(s.x, s.y, 3, rng4) || s;
+    }
+    for (const town of island.towns) {
+      if (pl.town && town.id !== pl.town) continue;
+      if (pl.dock) {
+        const d = island.docks.slice().sort((a, b) => Math.hypot(a.land.x - town.x, a.land.y - town.y) - Math.hypot(b.land.x - town.x, b.land.y - town.y))[0];
+        if (d) return spawner.findFree(d.land.x + (pl.ox || 0), d.land.y + (pl.oy || 0), 4, rng4) || spawner.findFree(town.plaza.x, town.plaza.y + 2.5, 4, rng4);
+      }
+      if (pl.door) {
+        const b = town.buildings.find((x) => x.name === pl.door || x.role === pl.door);
+        if (b) {
+          const q2 = bw(b, doorLocalX(b) + (pl.ox ?? 1.6), 1.6);
+          return clear2(spawner, q2.x, q2.y, rng4);
+        }
+      }
+      if (pl.building) {
+        const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
+        if (b) {
+          const q2 = bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4);
+          return inside(b, pl.guest) || clear2(spawner, q2.x, q2.y, rng4, { building: b });
+        }
+      }
+      if (pl.plaza || !pl.building && !pl.dx && !pl.door) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5 + (pl.oy || 0), 3, rng4);
+    }
+    for (const town of island.towns) {
+      const b = town.buildings.find((x) => x.npc === def.id);
+      if (b) {
+        const q2 = bw(b, doorLocalX(b) + 0.9, 1.4);
+        return inside(b) || clear2(spawner, q2.x, q2.y, rng4, { building: b });
+      }
+    }
+    const lm = island.landmarks.find((l) => l.npc === def.id);
+    if (lm) return clear2(spawner, lm.x + 0.6, lm.y + 1.2, rng4);
+    if (pl.dx !== void 0) return spawner.findFree(island.x + pl.dx * island.def.w / 2, island.y + pl.dy * island.def.h / 2, 5, rng4);
+    return spawner.findFree(island.x, island.y, 10, rng4);
+  }
+  var Interactions = class {
+    constructor(game) {
+      this.game = game;
+      game.on("talk", (a) => this.talk(a));
+      game.on("enterBuilding", (b) => this.building(b));
+      game.on("knockDoor", (b) => this.knock(b));
+      game.on("openChest", (o) => this.chest(o));
+      game.on("trainDummy", (o) => this.dummy(o));
+      game.on("openService", (kind, arg, npc) => this.service(kind, arg, npc));
+      game.on("quickHeal", () => this.quickHeal());
+      this.objectHandlers = {};
+      game.on("useObject", (o) => this.objectHandlers[o.use]?.(o, game));
+      game.summon = (owner, spec) => {
+        const n = spec.count || 1;
+        for (let i = 0; i < n; i++) {
+          const ang = Math.random() * Math.PI * 2;
+          const p = game.spawner.findFree(owner.x + Math.cos(ang) * 2, owner.y + Math.sin(ang) * 2, 3) || { x: owner.x, y: owner.y + 1 };
+          const a = makeEnemy(spec.archetype || "pirate", spec.level || Math.max(3, Math.round((owner.attrs?.str || 8) * 0.8)), p.x, p.y, { name: spec.name, look: spec.look, moves: spec.moves, hpMul: spec.hpMul });
+          a.game = game;
+          a.faction = owner.faction;
+          a.summonedBy = owner;
+          a.summonT = spec.duration || 30;
+          a.aggroPlayer = owner.aggroPlayer || owner.faction !== "player";
+          if (owner.isPlayer || owner.faction === "player") {
+            a.aggroPlayer = false;
+            a.controller = new AIController({ kind: "follower", skill: 0.3, moves: spec.moves || [] });
+          } else if (owner.controller?.target) {
+            a.controller.target = owner.controller.target;
+            a.controller.state = "chase";
+          }
+          game.addActor(a);
+          game.fx.burst(a.x, a.y - 0.6, 12, { color: spec.color || "#eeeeee", speed: 3, g: 0, life: 0.4, kind: "smoke", size: 0.3 });
+        }
+      };
+      game.on("tick", (dt) => {
+        for (const a of game.actors) {
+          if (!a.summonedBy) continue;
+          a.summonT -= dt;
+          if (a.summonT <= 0 || !a.summonedBy.alive || a.summonedBy.state === "knocked") {
+            a.alive = false;
+            game.fx.burst(a.x, a.y - 0.6, 8, { color: "#eeeeee", speed: 2, g: 0, life: 0.3, kind: "smoke" });
+          }
+        }
+      });
+      this.onObject("lore", (o) => {
+        game.dialogue.open(null, { start: "a", nodes: { a: { speaker: o.name || "Inscription", text: typeof o.lore === "function" ? o.lore(game.state.char, game) : o.lore } } });
+        if (o.loreEvent) game.emit("questEvent", o.loreEvent, o);
+      });
+      let mt = 0;
+      game.on("tick", (dt) => {
+        if ((mt -= dt) > 0) return;
+        mt = 0.5;
+        const c = game.state?.char;
+        if (!c) return;
+        for (const a of game.actors) {
+          if (a.recoverAfter && a.state === "knocked" && a.knockT > a.recoverAfter && a.alive) {
+            a.state = "idle";
+            a.hp = Math.round(a.d.maxHp * 0.5);
+            a.provoked = false;
+            a.aggroPlayer = !!a.def?.hostile;
+            if (a.controller) {
+              a.controller.target = null;
+              a.controller.state = "return";
+            }
+            if (game.bossTarget === a) game.bossTarget = null;
+            game.fx.text(a.x, a.y - 2, a.def?.recoverLine || "...Hah. You win.", "#fff", 0.32);
+          }
+          const m = a.def?.marker;
+          if (!m && !a.npcId || !a.alive) continue;
+          try {
+            a.questMarker = game.storyMarker?.(a) || (m ? m(c, game) : null) || null;
+          } catch (e) {
+            a.questMarker = null;
+          }
+        }
+      });
+    }
+    onObject(id, fn) {
+      this.objectHandlers[id] = fn;
+    }
+    islandOf(x, y) {
+      const w = this.game.world;
+      return w.islandAt(x, y) || w.nearestIsland(x, y, 60);
+    }
+    talk(a) {
+      const g = this.game;
+      const def = a.def;
+      if (def && def.dialogue) {
+        const tree = typeof def.dialogue === "string" ? def.dialogue : def.dialogue;
+        g.dialogue.open(a, tree);
+        g.emit("talked", def.id);
+        return;
+      }
+      if (a.talk?.kind === "keeper") {
+        this.building(a.talk.building);
+        return;
+      }
+      if (a.talk?.kind === "townsfolk") {
+        const rng4 = new RNG(a.talk.seed + g.env.day);
+        const isl = this.islandOf(a.x, a.y);
+        g.dialogue.open(a, { start: "a", nodes: {
+          a: { text: rumorFor(g, isl, rng4, a), choices: [
+            { text: "Thanks. Take care.", end: true },
+            { text: "Pick their pocket while they talk. (a crime)", do: () => {
+              g.dialogue.close();
+              const r = pickpocket(g, a);
+              if (r === "caught") g.fx.text(a.x, a.y - 2, "HEY! THIEF!", "#ff5252", 0.45);
+            }, end: true }
+          ] }
+        } });
+      }
+    }
+    building(b) {
+      const g = this.game;
+      const isl = this.islandOf(b.x, b.y);
+      const town = isl?.towns.find((t) => t.id === b.town);
+      const npc = b.npc && npcDef(b.npc);
+      if (npc && npc.dialogue && !(npc.boss && g.state.char.bosses.includes(npc.id))) {
+        const live = g.actors.find((x) => x.npcId === npc.id && x.state === "idle");
+        if (live) {
+          g.dialogue.open(live, npc.dialogue);
+          return;
+        }
+      }
+      this.service(b.role, { building: b, island: isl, town });
+    }
+    service(kind, arg = {}, npc) {
+      const g = this.game;
+      let { building, island, town } = arg || {};
+      if (!island) island = this.islandOf(g.player.x, g.player.y);
+      if (!building) building = { name: npc?.def?.shopName || npc?.name, role: kind, shop: arg?.shop };
+      const dock = island?.docks?.[0];
+      switch (kind) {
+        case "shop":
+        case "market":
+        case "weapons":
+        case "bank":
+          openShop(g, { ...building, shop: arg?.shop || building.shop }, island);
+          break;
+        case "tavern":
+        case "bar":
+        case "restaurant":
+        case "cafe":
+          this.tavern(building, island);
+          break;
+        case "inn":
+          openInn(g, building, island, town);
+          break;
+        case "doctor":
+          openDoctor(g, building, island, arg?.doc || (npc?.def?.doctor ? { ...npc.def.doctor, id: npc.def.id, name: npc.name } : null));
+          break;
+        case "shipwright":
+          openShipyard(g, { ...building, adam: arg?.adam || npc?.def?.adam, coating: arg?.coating }, island, dock);
+          break;
+        case "dojo":
+        case "trainer":
+          openTrainer(g, arg?.trainer || npc?.def?.trainer || building.trainer || "dojo_generic", npc?.name);
+          break;
+        case "marine_base":
+          g.emit("marineOffice", building, island);
+          break;
+        case "bounty":
+          g.emit("bountyBoard", building, island);
+          break;
+        case "library":
+          this.library(building, island);
+          break;
+        case "palace":
+        case "hall":
+        case "church":
+        case "house":
+        default:
+          g.dialogue.open(null, { start: "a", nodes: { a: { speaker: building.name || "Door", text: flavorFor(building) } } });
+      }
+    }
+    tavern(building, island) {
+      const g = this.game;
+      const rng4 = new RNG(Math.floor(g.time) + (building.id || 0));
+      g.dialogue.open(null, {
+        start: "a",
+        nodes: {
+          a: {
+            speaker: building.name || "Tavern",
+            text: `The tavern is loud with sailors' songs. The barkeep polishes a mug. "What'll it be?"`,
+            choices: [
+              { text: "Buy food and drink", do: (c) => {
+                c.open("shop", { building: { ...building, role: "tavern" }, island });
+              } },
+              { text: "Buy a round and listen for rumours (\u0E3F100)", do: (c) => c.pay(100) ? "r" : "a" },
+              { text: `Rent a room upstairs for the night (${formatBerries(g.services.innPrice(island))}) \u2014 wake here if you fall`, do: () => {
+                g.dialogue.close();
+                g.services.rest(island, island?.towns?.find((t) => t.id === building.town));
+              }, end: true },
+              { text: "Leave", end: true }
+            ]
+          },
+          r: { speaker: "Sailor at the bar", text: () => rumorFor(g, island, rng4, null, true), next: "a" }
+        }
+      });
+    }
+    library(building, island) {
+      const g = this.game;
+      const c = g.state.char;
+      const key2 = "read_" + (building.id || building.name);
+      const first = !c.flags[key2];
+      g.dialogue.open(null, { start: "a", nodes: { a: { speaker: building.name || "Library", text: () => {
+        if (first) {
+          c.flags[key2] = true;
+          g.progression.raiseAttr("wil", 1);
+        }
+        return (first ? "(+1 Willpower) " : "") + rumorFor(g, island, new RNG(building.id || 1), null, true, "lore");
+      } } } });
+    }
+    knock(b) {
+      const g = this.game, c = g.state.char;
+      const B4 = g.buildings;
+      const rng4 = new RNG((b.id || 1) * 13 + g.env.day * 7 + Math.floor(g.env.clock));
+      g.audio?.sfx("knock");
+      const kick = { text: b.pirate ? "Kick the door in." : "Kick the door in. (a crime)", do: () => {
+        g.dialogue.close();
+        B4 ? B4.breakDoor(b) : robHouse(g, b);
+      }, end: true };
+      const leave = { text: "Leave them be.", end: true };
+      if (b.pirate) {
+        const line2 = rng4.pick([`"Who's there?! Scram before we gut ya!"`, `"Password?" ...You don't know it. "Then get lost!"`, `(Laughter and clinking mugs behind the door. It stops.) "...Who's knockin'?"`, `"If yer a Marine, we ain't here!"`]);
+        g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: line2 + " (A crude Jolly Roger is scratched into the door. Pirates don't call the Marines.)", choices: [leave, kick] } } });
+        return;
+      }
+      if ((b.role || "house") !== "house") {
+        const opens = B4 ? B4.opensAt(b) : 7;
+        g.dialogue.open(null, { start: "a", nodes: { a: { speaker: b.name || "Door", text: `Nobody answers. A sign hangs on the door: CLOSED \u2014 OPEN FROM ${opens}:00.`, choices: [{ text: "Come back later.", end: true }, kick] } } });
+        return;
+      }
+      const night = g.env.clock < 6 || g.env.clock >= 21;
+      const home2 = g.actors.some((a) => a.homeB === b && a.alive && a.state === "idle");
+      const wanted2 = (g.wanted?.tier() ?? 0) >= 2;
+      const invite = home2 && !night && !wanted2 && rng4.chance((b.npc ? 0.85 : 0.3) + (c.reputation || 0) / 200);
+      const lines = !home2 ? ["(No answer. Nobody seems to be home.)", "(Silence. The curtains are drawn.)"] : night ? [`"It's the middle of the night! Go away!"`, `"We're sleeping! Come back in the morning!"`, "(A candle is snuffed out behind the window.)"] : [`"Who's there? ...Go away, we don't want trouble."`, '"Nobody home!" (someone is clearly home)', `"If you're a pirate, keep walking!"`, '"Shh! The baby is sleeping."', '"Are you the new postman? No? Then shoo."'];
+      if (invite) {
+        g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: rng4.pick(['"Oh, a traveller? Come in, come in \u2014 mind your head."', `"Well, don't just stand there \u2014 come in! The kettle's on."`, `"Aren't you the one folk say helped out around here? Come in!"`]), choices: [
+          { text: "Step inside.", do: () => {
+            c.flags["invited_" + (B4 ? B4.key(b) : b.id)] = g.env.day;
+            g.dialogue.close();
+            if (!c.flags["door_" + b.id]) {
+              c.flags["door_" + b.id] = true;
+              addItem(g, "rice_ball", 1);
+            }
+          }, end: true },
+          leave
+        ] } } });
+        return;
+      }
+      g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: rng4.pick(lines), choices: [leave, kick] } } });
+    }
+    chest(o) {
+      const g = this.game, c = g.state.char;
+      const key2 = "chest_" + (o.key || `${Math.round(o.x)}_${Math.round(o.y)}`);
+      if (c.world.chests[key2] && !c.world.containers?.[key2]) {
+        o.opened = true;
+        g.log("Empty. You took it all.", "#b0bec5");
+        return;
+      }
+      const luck = c.traits.includes("lucky") ? 1.5 : 1;
+      const first = !c.world.containers?.[key2];
+      g.containers.open(key2, "treasure", {
+        title: o.tier > 2 ? "A treasure chest" : "A chest",
+        sub: "The lid creaks open\u2026",
+        o: { tier: o.tier || 1, luck, item: o.item },
+        onEmpty: () => {
+          c.world.chests[key2] = true;
+          o.opened = true;
+        }
+      });
+      if (first) g.fx.burst(o.x, o.y - 0.5, 20, { color: ["#ffd54f", "#fff59d"], speed: 4, vz: 4, g: 8, life: 0.8, kind: "star" });
+    }
+    dummy(o) {
+      const g = this.game, c = g.state.char, p = g.player;
+      if (c.flags.dummyDay === g.env.day) {
+        g.log("Your arms are too tired for more practice today.", "#b0bec5");
+        return;
+      }
+      c.flags.dummyDay = g.env.day;
+      const m = c.masteries[p.style] || 0;
+      g.env.clock += 1;
+      if (m < 10) {
+        g.progression.addStyleMastery(p.style, 2);
+        g.log("You practise your forms on the dummy for an hour. (Dummies only teach the very basics \u2014 mastery up to 10.)", "#90caf9");
+      } else g.log("The dummy has nothing left to teach you. Find a real opponent \u2014 or a master.", "#b0bec5");
+    }
+    quickHeal() {
+      const g = this.game, c = g.state.char;
+      const foods = ["meat", "fish_stew", "rice_ball", "tangerine", "sea_king_steak", "baratie_course", "bandage"];
+      const id = foods.find((f) => c.inventory.some((i) => i.id === f));
+      if (!id) {
+        g.log("You have nothing to eat!", "#ff8a80");
+        return;
+      }
+      useItem(g, id);
+    }
+  };
+  function flavorFor(b) {
+    switch (b.role) {
+      case "palace":
+        return 'Guards cross their spears in front of the gate. "The palace is closed to commoners."';
+      case "hall":
+        return "The great doors are shut tight.";
+      case "church":
+        return "Candles flicker inside. A priest nods at you silently.";
+      case "bank":
+        return "A clerk counts berries behind iron bars.";
+      default:
+        return "The door is locked.";
+    }
+  }
+
   // src/game/quests.js
+  function hasWeapon(c) {
+    if ((c.equipped?.weapons || []).length) return true;
+    return (c.inventory || []).some((it) => ITEMS[it.id]?.type === "weapon");
+  }
   var DEFS = /* @__PURE__ */ new Map();
+  var STATE_GOALS = /* @__PURE__ */ new Set(["flag", "item", "quest", "weapon", "ship", "crew", "faction", "bounty", "counter", "check"]);
   function registerQuests(list) {
     for (const q2 of list) DEFS.set(q2.id, q2);
   }
@@ -82676,7 +84567,88 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return this.char?.quests[id] || null;
     }
     active() {
-      return Object.entries(this.char?.quests || {}).filter(([, s]) => !s.done).map(([id, s]) => ({ id, s, def: DEFS.get(id) })).filter((x) => x.def);
+      return Object.entries(this.char?.quests || {}).filter(([, s]) => !s.done && !s.abandoned).map(([id, s]) => ({ id, s, def: DEFS.get(id) })).filter((x) => x.def);
+    }
+    /** The main story quest under way (there's only ever one), or null. */
+    main() {
+      return this.active().find((q2) => q2.def.kind === "main") || null;
+    }
+    /** Active quests that aren't the main story. */
+    side() {
+      return this.active().filter((q2) => q2.def.kind !== "main");
+    }
+    /** The side quests shown on the tracker: the ones pinned, else the two most recent. */
+    tracked() {
+      const c = this.char;
+      if (!c) return [];
+      const side = this.side();
+      const pinned = (c.trackedQuests || []).map((id) => side.find((q2) => q2.id === id)).filter(Boolean);
+      if (pinned.length) return pinned.slice(0, 2);
+      return side.sort((a, b) => (b.s.started || 0) - (a.s.started || 0)).slice(0, 2);
+    }
+    track(id, on = true) {
+      const c = this.char;
+      if (!c) return;
+      const list = (c.trackedQuests || []).filter((x) => x !== id && this.isActive(x));
+      if (on) list.unshift(id);
+      c.trackedQuests = list.slice(0, 2);
+    }
+    /** Give up a quest (never the main story). It can be taken up again from whoever gave it. */
+    abandon(id) {
+      const d = DEFS.get(id), s = this.state(id);
+      if (!d || !s || s.done || d.kind === "main") return false;
+      d.onAbandon?.(this.ctx(), this.game);
+      delete this.char.quests[id];
+      this.char.trackedQuests = (this.char.trackedQuests || []).filter((x) => x !== id);
+      this.game.log(`Quest abandoned: ${d.name}.`, "#b0bec5");
+      this.game.emit("questAbandoned", id);
+      persist(this.game);
+      return true;
+    }
+    /** How far along the current objective is: { n, of, text } (null if it isn't counted). */
+    progress(id) {
+      const s = this.state(id), d = DEFS.get(id), c = this.char;
+      if (!s || s.done || !d) return null;
+      const g = d.stages[s.stage]?.goal;
+      if (!g) return null;
+      if (g.type === "defeat" && g.count) return { n: s.n || 0, of: g.count };
+      if (g.type === "item" && (g.n || 1) > 1) return { n: Math.min(g.n, count(c, g.item)), of: g.n };
+      if (g.type === "crew" && g.n > 1) return { n: Math.min(g.n, this.game.crew?.count?.() || 0), of: g.n };
+      if (g.type === "counter") return { n: Math.min(g.n, s.n || 0), of: g.n };
+      return null;
+    }
+    /** Is a goal met right now (for the goals that are states rather than events)? */
+    met(g) {
+      const c = this.char, game = this.game;
+      switch (g.type) {
+        case "flag":
+          return !!c.flags[g.flag];
+        case "item":
+          return count(c, g.item) >= (g.n || 1);
+        case "quest":
+          return !!c.quests[g.quest]?.done || !!(g.alt && g.alt(c, game));
+        case "weapon":
+          return hasWeapon(c);
+        case "ship":
+          return game.ships.some((sh) => sh.owner === "player" && !sh.sunk && (!g.grandLine || sh.def.grandLine) && (!g.cannons || (sh.def.cannons || 0) >= g.cannons));
+        case "crew":
+          return (game.crew?.count?.() || 0) >= (g.n || 1);
+        case "faction":
+          return c.faction === g.faction || g.faction === "pirate" && !!c.crewName;
+        case "bounty":
+          return (c.bounty || 0) >= (g.n || 1);
+        case "counter":
+          return (this.state(g.of)?.n || 0) >= g.n;
+        // anything else that can be read off the character or the world: { fn(c, game) }
+        case "check":
+          try {
+            return !!g.fn(c, game);
+          } catch (e) {
+            return false;
+          }
+        default:
+          return false;
+      }
     }
     isActive(id) {
       const s = this.state(id);
@@ -82696,9 +84668,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const d = DEFS.get(id);
       const c = this.char;
       if (!d || c.quests[id]) return false;
-      c.quests[id] = { stage: 0, done: false, day: this.game.env.day };
-      this.game.ui.toast("NEW QUEST", d.name, "#90caf9");
-      this.game.log(`Quest started: ${d.name} \u2014 ${d.stages[0]?.desc || ""}`, "#90caf9");
+      c.quests[id] = { stage: 0, done: false, day: this.game.env.day, started: Date.now() };
+      if (d.kind === "main") this.game.ui.toast(d.part ? `MAIN STORY \xB7 PART ${d.part}` : "MAIN STORY", d.name, "#ffd54f");
+      else this.game.ui.toast("NEW QUEST", d.name, "#90caf9");
+      this.game.log(`${d.kind === "main" ? "Main story" : "Quest started"}: ${d.name} \u2014 ${d.stages[0]?.desc || ""}`, d.kind === "main" ? "#ffe082" : "#90caf9");
       d.stages[0]?.onStart?.(this.ctx(), this.game);
       this.game.emit("questStarted", id);
       this.checkImmediate(id);
@@ -82734,11 +84707,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (s.done) return;
       d.stages[s.stage]?.onComplete?.(this.ctx(), this.game);
       s.done = true;
+      s.doneAt = Date.now();
       const g = this.game;
-      const r = d.rewards || {};
-      g.ui.toast("QUEST COMPLETE", d.name, "#a5d6a7");
+      const r = (typeof d.rewards === "function" ? d.rewards(this.ctx(), g) : d.rewards) || {};
+      g.ui.toast(d.kind === "main" ? "CHAPTER COMPLETE" : "QUEST COMPLETE", d.name, d.kind === "main" ? "#ffd54f" : "#a5d6a7");
       if (r.berries) earn(g, r.berries, d.name);
       for (const [it, n] of r.items || []) addItem(g, it, n || 1);
+      if (r.reputation) g.reputation?.change?.(r.reputation, d.name);
+      if (r.merit && this.char.faction === "marine") {
+        this.char.merit = (this.char.merit || 0) + r.merit;
+        g.log(`+${r.merit} merit.`, "#90caf9");
+      }
       if (r.attrs) for (const [k, v] of Object.entries(r.attrs)) g.progression.raiseAttr(k, v);
       if (r.points) g.progression.breakthrough(r.points, d.name);
       if (r.bounty) g.progression.addBounty(r.bounty, d.name);
@@ -82762,6 +84741,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const st = def.stages[s.stage];
         const goal = st?.goal;
         if (!goal) continue;
+        if (goal.type === "counter" && type === "event" && goal.event === key2) {
+          s.n = (s.n || 0) + 1;
+          if (s.n < goal.n) {
+            this.game.log(`${def.name}: ${goal.label || "progress"} ${s.n}/${goal.n}`, "#90caf9");
+            continue;
+          }
+          s.n = 0;
+          this.next(id);
+          continue;
+        }
         if (goal.type === type) {
           if (type === "defeat" && (goal.npc === key2 || goal.any && goal.any.includes(key2))) {
             if (goal.count) {
@@ -82784,9 +84773,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (!s || s.done) return;
       const goal = d.stages[s.stage]?.goal;
       if (!goal) return;
-      if (goal.type === "item" && count(this.char, goal.item) >= (goal.n || 1)) this.next(id);
-      if (goal.type === "flag" && this.char.flags[goal.flag]) this.next(id);
-      if (goal.type === "reach" && !goal.spot && this.game.currentIsland?.id === goal.island) this.next(id);
+      if (goal.type === "reach" && !goal.spot && this.game.currentIsland?.id === goal.island) {
+        this.next(id);
+        return;
+      }
+      if (goal.type === "defeat") {
+        const n = this.beatenFor(goal);
+        if (goal.any && goal.count && n) s.n = Math.max(s.n || 0, n);
+        if (n >= (goal.any ? goal.count || 1 : 1)) {
+          this.game.log(`${d.name}: already done \u2014 you've beaten them before.`, "#90caf9");
+          this.next(id);
+          return;
+        }
+      }
+      if (STATE_GOALS.has(goal.type) && goal.type !== "counter" && this.met(goal)) this.next(id);
     }
     tick(dt) {
       this.t -= dt;
@@ -82796,8 +84796,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (const { id, s, def } of this.active()) {
         const goal = def.stages[s.stage]?.goal;
         if (!goal) continue;
-        if (goal.type === "flag" && this.char.flags[goal.flag]) this.next(id);
-        else if (goal.type === "days" && g.env.day - (s.stageDay ?? s.day ?? g.env.day) >= (goal.n || 1)) this.next(id);
+        if (STATE_GOALS.has(goal.type) && goal.type !== "counter" && goal.type !== "item") {
+          if (this.met(goal)) this.next(id);
+        } else if (goal.type === "days" && g.env.day - (s.stageDay ?? s.day ?? g.env.day) >= (goal.n || 1)) this.next(id);
         else if (goal.type === "reach" && goal.spot) {
           const pos = this.spotPos(goal.island, goal.spot);
           if (pos && g.world.distance(p.x, p.y, pos.x, pos.y) < (goal.r || 4)) this.next(id);
@@ -82806,17 +84807,45 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
       }
     }
+    /** How many of a defeat goal's foes are beaten already and gone for good (bosses don't come back; others only if they'd no longer appear). */
+    beatenFor(g) {
+      const c = this.char, game = this.game;
+      const gone2 = (id) => {
+        const d = npcDef(id);
+        if (!d || !(c.bosses.includes(id) || c.defeated?.[id] > 0)) return false;
+        if (d.boss && c.bosses.includes(id) && !d.respawn) return true;
+        try {
+          return !!d.when && !d.when(c, game);
+        } catch (e) {
+          return false;
+        }
+      };
+      if (g.npc) return gone2(g.npc) ? 1 : 0;
+      return (g.any || []).filter(gone2).length;
+    }
     spotPos(islandId, spotId) {
       const w = this.game.world;
       const isl = (w.islands || []).find((i) => i.id === islandId) || (w === this.game.surface ? null : null);
       return isl?.spots?.[spotId] || null;
     }
     /** Where the current objective of a quest is, for the map. */
-    marker(id) {
+    marker(id, depth = 0) {
       const s = this.state(id), d = DEFS.get(id);
       if (!s || s.done) return null;
       const st = d.stages[s.stage];
       const g = st?.goal || {};
+      if (g.type === "quest" && depth < 2 && this.isActive(g.quest)) {
+        const m = this.marker(g.quest, depth + 1);
+        if (m) return { ...m, label: d.name };
+      }
+      if (st?.npc) {
+        const a = this.game.actors.find((x) => x.alive && x.npcId === st.npc);
+        if (a) return { x: a.x, y: a.y, label: d.name, place: a.name, zone: this.game.world === this.game.surface ? null : this.game.world.id };
+      }
+      if (st?.where) {
+        const w = st.where(this.game);
+        if (w) return { ...w, label: d.name };
+      }
       const island = g.island || st?.island || d.island;
       let isl = island && this.game.surface.islands.find((i) => i.id === island);
       let zone = null;
@@ -82824,9 +84853,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         isl = this.game.world.islands.find((i) => i.id === island);
         if (isl) zone = this.game.world.id;
       }
-      if (g.spot && isl?.spots?.[g.spot]) return { ...isl.spots[g.spot], label: d.name, zone };
-      if (g.type === "reachXY") return { x: g.x, y: g.y, label: d.name };
-      if (isl) return { x: isl.x, y: isl.y, label: d.name, zone };
+      if (g.spot && isl?.spots?.[g.spot]) return { ...isl.spots[g.spot], label: d.name, place: isl.name, zone };
+      if (g.type === "reachXY") return { x: g.x, y: g.y, label: d.name, place: g.place };
+      if (isl) return { x: isl.x, y: isl.y, label: d.name, place: isl.name, zone };
       return null;
     }
   };
@@ -83016,7 +85045,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var Progression = class {
     constructor(game) {
       this.game = game;
-      game.on("playerHit", (target, dmg) => this.onPlayerHit(target, dmg));
+      game.on("playerHit", (target2, dmg) => this.onPlayerHit(target2, dmg));
       game.on("knockout", (a, att) => this.onKnockout(a, att));
       game.on("playerEvaded", (att) => this.onEvade(att));
       game.on("playerBlocked", (att) => this.onBlocked(att));
@@ -83042,10 +85071,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return threatFactor(a.power(), p.power());
     }
     // ------------------------------------------------------------ fighting
-    onPlayerHit(target, dmg) {
+    onPlayerHit(target2, dmg) {
       const g = this.game, p = g.player, c = this.char;
-      if (!c || !target.d) return;
-      const tf2 = this.worth(target);
+      if (!c || !target2.d) return;
+      const tf2 = this.worth(target2);
       if (tf2 <= 0) {
         if (!this.weakNote) {
           this.weakNote = true;
@@ -83053,7 +85082,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         return;
       }
-      const frac2 = Math.min(0.3, dmg / target.d.maxHp);
+      const frac2 = Math.min(0.3, dmg / target2.d.maxHp);
       const def = p.action?.def || {};
       const src = def.source || "";
       let gain = frac2 * tf2 * 6;
@@ -83312,625 +85341,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
   };
-
-  // src/game/rumors.js
-  var SEA_TIPS = {
-    [REGION.EAST_BLUE]: [
-      "They call the East Blue the weakest sea. Funny \u2014 the Pirate King was born here.",
-      'Loguetown is the "town of the beginning and the end". Gol D. Roger was executed on the platform in its square. Every pirate heading for the Grand Line stops there \u2014 and so do the Marines.',
-      "To reach the Grand Line you sail to Reverse Mountain, at the southwest edge of the East Blue where the Red Line meets the four seas. The current carries you UP the mountain. Steer true or you'll smash into the canal walls.",
-      "Don't even think about crossing the Calm Belt. No wind, no current \u2014 and it's the nest of the Sea Kings.",
-      "A Fish-Man named Arlong took over the Conomi Islands. The villagers pay him tribute or die.",
-      `There's a floating restaurant called the Baratie out past the Gecko Islands. The head chef, "Red Leg" Zeff, was once a pirate captain.`,
-      'The Marine captain in Shells Town, "Axe-Hand" Morgan, rules that town like a tyrant.',
-      "If you want to learn the sword, the Isshin Dojo in Shimotsuki Village takes students."
-    ],
-    [REGION.NORTH_BLUE]: [
-      "The North Blue has cold seas and colder people. The Donquixote Family started out in Spider Miles, you know.",
-      "Lvneel is the homeland of Noland the Liar, who claimed he saw a city of gold on an island in the Grand Line.",
-      "Flevance, the White Town, was destroyed by its neighbours. They said the amber lead sickness was contagious. It wasn't.",
-      "Reverse Mountain lies at the southeast corner of the North Blue. Ride the canal up the mountain to enter the Grand Line.",
-      "The Vinsmoke family once ruled the whole North Blue. Their kingdom, Germa, now roams the seas on giant snail ships."
-    ],
-    [REGION.WEST_BLUE]: [
-      "The West Blue is ruled from the shadows by the mafia families. Watch your purse.",
-      "Ohara was an island of scholars, burned to ash by a Buster Call for studying the Poneglyphs. A few survivors still camp in the ruins.",
-      "The Chinjao Family of Kano Country teaches the Hasshoken \u2014 a fist that vibrates through armour.",
-      "Reverse Mountain rises at the northeast corner of the West Blue."
-    ],
-    [REGION.SOUTH_BLUE]: [
-      "The South Blue is full of giant animals \u2014 gryphons, super sparrows, birds the size of houses in the Torino Kingdom.",
-      "Karate Island is where fighters from all over come to train until their fists bleed.",
-      "Baterilla... the Marines once searched every pregnant woman on that island, looking for the Pirate King's child.",
-      "Reverse Mountain lies at the northwest corner of the South Blue, where the four seas meet.",
-      "The Sorbet Kingdom once had a kind king named Kuma. They say he was a Buccaneer."
-    ],
-    [REGION.PARADISE]: [
-      "In the Grand Line your compass is useless. Trust the Log Pose and nothing else.",
-      "From Reverse Mountain there are seven routes, all ending at the Sabaody Archipelago.",
-      "Islands in the Grand Line each have their own climate. The sea between them goes mad.",
-      "To cross the Red Line, pirates must have their ship coated at Sabaody and sink ten thousand metres to Fish-Man Island. Only the World Government may pass over Mary Geoise.",
-      "The Knock Up Stream near Jaya shoots ships into the sky. Nobody believes the sky islands are real... except the ones who've been.",
-      "Never, ever touch a Celestial Dragon. An Admiral will come.",
-      "The Warlords of the Sea have government pardons. Crocodile of Alabasta is treated like a hero there."
-    ],
-    [REGION.NEW_WORLD]: [
-      "In the New World, Haki is everything. If you can't use it, turn back now.",
-      "You need a three-needle Log Pose here. Islands change their magnetism on a whim.",
-      "The Four Emperors rule these seas: Big Mom in Totto Land, Kaido in Wano, Red-Haired Shanks, and... they say Blackbeard now.",
-      "Laugh Tale cannot be found with a Log Pose. You need the four Road Poneglyphs.",
-      "Zou is not an island. It's on the back of an elephant that has walked the sea for a thousand years."
-    ],
-    [REGION.CALM_NORTH]: ["You're in the Calm Belt?! Get out before the Sea Kings wake!"],
-    [REGION.CALM_SOUTH]: ["You're in the Calm Belt?! Get out before the Sea Kings wake!"]
-  };
-  var LORE = [
-    `Twenty-two years ago, Gol D. Roger's last words started the Great Pirate Era: "My treasure? If you want it, you can have it! I left everything I own in that place!"`,
-    "The Void Century: one hundred years of history, erased. Only the Poneglyphs remember \u2014 and reading them is a crime.",
-    "Poneglyphs come in three kinds: historical ones, instructional ones, and four red Road Poneglyphs that point to Laugh Tale.",
-    "Haki comes in three colours: Armament, Observation, and the rare Conqueror's \u2014 the Haki of kings.",
-    "Devil Fruits: Paramecia change the body, Zoan transform it into beasts, Logia turn it into an element. Every user becomes a hammer in the sea.",
-    "When a Devil Fruit user dies, their power is reborn in an ordinary fruit somewhere nearby.",
-    "The Red Line is the only continent in the world. It circles the planet. Where it crosses the Grand Line stand Reverse Mountain \u2014 and on the opposite side, Mary Geoise.",
-    "Seastone emits the same energy as the sea itself. It weakens Devil Fruit users on touch, and Marines line their hulls with it to cross the Calm Belt unnoticed.",
-    'The Rokushiki are six superhuman arts taught to the Marines and to Cipher Pol: Soru, Geppo, Tekkai, Shigan, Rankyaku and Kami-e. Strength is measured in "Doriki".',
-    'Some families carry the initial "D." in their name. The World Government fears it. Nobody knows why.',
-    "Vivre Cards are made from a person's fingernail. They point toward that person \u2014 and burn away as their life fades.",
-    'Log Poses must stay on an island a while to "set" before they point to the next one. Eternal Poses always point to a single island.'
-  ];
-  function rumorFor(game, island, rng4, npc, tavern, kind) {
-    if (kind === "lore") {
-      const c0 = game.state?.char;
-      const known0 = !!(c0?.haki && (c0.haki.armament || c0.haki.observation || c0.haki.conqueror));
-      return rng4.pick(known0 ? LORE : LORE.filter((l) => !/haki/i.test(l)));
-    }
-    const p = game.player;
-    const reg3 = regionAt(p.x, p.y);
-    const pool = [];
-    if (island?.def?.rumors) pool.push(...island.def.rumors, ...island.def.rumors);
-    pool.push(...SEA_TIPS[reg3] || []);
-    if (tavern) pool.push(...LORE.slice(0, 6));
-    const fr = game.fruitRumor?.(rng4);
-    if (fr && rng4.chance(tavern ? 0.45 : 0.2)) return fr;
-    const c = game.state?.char;
-    if (c?.bounty && rng4.chance(0.2)) return `"Hey... aren't you the one on that wanted poster? \u0E3F${c.bounty.toLocaleString()}... I didn't see anything!"`;
-    const quest = game.questRumor?.(island, rng4);
-    if (quest && rng4.chance(0.35)) return quest;
-    const known = !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
-    const heard = known ? pool : pool.filter((l) => !/haki|mantra/i.test(l));
-    const line2 = heard.length ? rng4.pick(heard) : "Nice weather today.";
-    return npc ? `"${line2.replace(/^"|"$/g, "")}"` : line2;
-  }
-
-  // src/game/npcs.js
-  var NPC_DEFS = /* @__PURE__ */ new Map();
-  var GROUPS = [];
-  function registerNPCs(list) {
-    for (const n of list) NPC_DEFS.set(n.id, n);
-  }
-  function registerGroups(list) {
-    for (const g of list) GROUPS.push(g);
-  }
-  var npcDef = (id) => NPC_DEFS.get(id);
-  var allNpcDefs = () => [...NPC_DEFS.values()];
-  var ARCHETYPES = {
-    bandit: { name: "Mountain Bandit", faction: "bandit", style: "brawler", look: { top: "#6d4c41", hat: "bandana", hatColor: "#8d6e63" }, skill: 0.15, barks: ["Hand over your money!", "Heh heh heh!"] },
-    pirate: { name: "Pirate Grunt", faction: "pirate", style: "ittoryu", weapon: "sword", look: { top: "#37474f", hat: "bandana", hatColor: "#b71c1c" }, skill: 0.2, barks: ["Yo-ho!", "Get 'em!"] },
-    pirate_gunner: { name: "Pirate Gunner", faction: "pirate", style: "sniper", weapon: "gun", ranged: true, look: { top: "#5d4037", hat: "tricorne" }, skill: 0.15 },
-    marine: { name: "Marine", faction: "marine", style: "ittoryu", weapon: "sword", look: { top: "#ffffff", bottom: "#1b4f72", hat: "marine" }, skill: 0.25, lethal: false, barks: ["For Justice!", "Halt, pirate!"] },
-    marine_rifle: { name: "Marine Rifleman", faction: "marine", style: "sniper", weapon: "gun", ranged: true, look: { top: "#ffffff", bottom: "#1b4f72", hat: "marine" }, skill: 0.2, lethal: false },
-    marine_officer: { name: "Marine Officer", faction: "marine", style: "rokushiki", look: { top: "#ffffff", bottom: "#1b4f72", hat: "marine", coat: "#fafafa", coatText: "JUSTICE" }, skill: 0.5, lethal: false, moves: ["roku_soru", "roku_rankyaku"] },
-    swordsman: { name: "Wandering Swordsman", faction: "rival", style: "nitoryu", weapon: "sword", look: { top: "#455a64", hat: "headband", hatColor: "#212121" }, skill: 0.45, moves: ["nito_taka"] },
-    brute: { name: "Brute", faction: "pirate", style: "brawler", look: { top: "#795548" }, bulk: 1.35, skill: 0.1, moves: ["brawl_tackle", "brawl_headbutt"], hpMul: 1.6 },
-    fishman_thug: { name: "Fish-Man Pirate", faction: "pirate", race: "fishman", style: "fishman_karate", look: {}, skill: 0.3, moves: ["fmk_uchimizu"], hpMul: 1.2 },
-    baroque: { name: "Baroque Works Agent", faction: "baroque", style: "sniper", weapon: "gun", look: { top: "#212121", hat: "cowboy", hatColor: "#212121" }, skill: 0.35, moves: ["snipe_explode"] },
-    cp: { name: "Cipher Pol Agent", faction: "cp", style: "rokushiki", look: { top: "#212121", bottom: "#212121" }, skill: 0.6, moves: ["roku_soru", "roku_rankyaku", "roku_tekkai"] },
-    zombie: { name: "Zombie", faction: "zombie", style: "brawler", look: { top: "#4e342e", skin: "#9e9d89" }, skill: 0.05, barks: ["Uuurgh..."] },
-    beast: { name: "Wild Boar", faction: "beast", style: "brawler", beast: "boar", look: { top: "#6d4c41", skin: "#6d4c41", hair: "bald", ears: "round", fur: "#6d4c41", muzzle: true, tail: "thin" }, skill: 0, hpMul: 1.3 },
-    tiger: { name: "Mountain Tiger", faction: "beast", style: "electro", beast: "tiger", look: { skin: "#f39c12", fur: "#f39c12", hairColor: "#f39c12", ears: "round", tail: "thin", muzzle: true, top: "#f39c12", bottom: "#e67e22", hair: "bald", furFace: true }, skill: 0.2, hpMul: 1.5 },
-    dinosaur: { name: "Dinosaur", faction: "beast", style: "brawler", look: { skin: "#558b2f", top: "#558b2f", bottom: "#33691e", hair: "bald", fin: true, muzzle: true, tail: "fluffy", fur: "#558b2f" }, bulk: 1.6, scale: 1.5, hpMul: 2.5, skill: 0 },
-    gorilla: { name: "Snow Gorilla", faction: "beast", style: "brawler", look: { skin: "#eceff1", fur: "#eceff1", hairColor: "#eceff1", top: "#eceff1", bottom: "#cfd8dc", ears: "round", furFace: true, muzzle: true, hair: "bald" }, bulk: 1.4, hpMul: 1.8, skill: 0.1 },
-    pacifista: { name: "Pacifista", faction: "marine", style: "brawler", look: { top: "#263238", bottom: "#263238", skin: "#607d8b", hat: "bandana", hatColor: "#263238" }, bulk: 1.5, scale: 1.4, hpMul: 3, skill: 0.3, moves: ["kuma_laser"], lethal: true }
-  };
-  var WOMEN = /\b(Makino|Dadan|Alvida|Rika|Kaya|Nojiko|Bell-?m[eè]re|Tashigi|Kuina|Nami|Robin|Vivi|Kureha|Conis|Laki|Aisa|Hina|Isuka|Hancock|Sandersonia|Marigold|Nyon|Perona|Kalifa|Bonney|Shirahoshi|Otohime|Shyarly|Big Mom|Linlin|Pudding|Smoothie|Br[uû]l[eé]e|Galette|Flampe|Praline|Amande|Chiffon|Lola|Viola|Rebecca|Monet|Baby 5|Koala|Carrot|Wanda|Yamato|Hiyori|Kiku|Tama|Ulti|Black Maria|Sugar|Kokoro|Chimney|Shakky|Valentine|Doublefinger|Goldenweek|All ?Sunday|Merry ?Christmas|Paula|Porche|Cindry|Stussy|Lilith|Jewelry|Catarina|Tsuru|Gion|Momousagi|Olvia|Toki|Rouge|Uta|Betty|Hibari|Carina|Mozu|Kiwi|Ishley|Nico)\b/i;
-  var ROLE_OF = { pirate: "pirate", bandit: "bandit", marine: "marine", cp: "agent", baroque: "agent", rival: "swordsman", beast: "beast", fishman: "fishman" };
-  function makeNPC(def, x, y, extra = {}) {
-    const L2 = def.level ?? 6;
-    let role = def.role || (def.beast || def.faction === "beast" ? "beast" : ROLE_OF[def.faction]) || "civilian";
-    if (role === "marine" && (def.look?.coat || def.boss || def.named)) role = "officer";
-    const lookOver = { ...def.look || {}, role };
-    if (lookOver.fem === void 0 && def.name && WOMEN.test(def.name)) lookOver.fem = true;
-    if (lookOver.fem === void 0 && (def.named || def.boss || def.dialogue)) lookOver.fem = false;
-    const look = def.fullLook ? { ...def.fullLook } : makeLook(def.race || "human", def.seed ?? hashSeed(def.id || def.name), lookOver);
-    if (def.bulk) look.bulk = def.bulk;
-    if (def.scale) look.scale = def.scale;
-    const attrs = def.attrs || { str: L2, agi: L2, end: L2, vit: L2, wil: L2 };
-    const a = new Actor({
-      x,
-      y,
-      name: def.name,
-      title: def.title,
-      look,
-      race: def.race || look.race,
-      faction: def.faction || "civilian",
-      attrs,
-      style: def.style || "brawler",
-      fruit: def.fruit || null,
-      fruitMastery: def.fruitMastery ?? (def.fruit ? 60 : 0),
-      weapon: def.weapon ? { kind: def.weapon, power: def.weaponPower || 1.2, count: STYLES2[def.style]?.swords || 1 } : null,
-      hakiSkill: def.haki || {},
-      boss: def.boss,
-      hpMul: (def.hpMul || 1) * (def.boss ? 2.2 : 1),
-      lethal: def.lethal ?? true,
-      poise: def.poise,
-      dmgMul: def.dmgMul,
-      defMul: def.defMul,
-      ...extra
-    });
-    a.npcId = def.id || null;
-    a.masteries = { [a.style]: def.mastery ?? Math.min(100, L2 * 1.5) };
-    a.techniques = def.moves || [];
-    a.tier = def.tier || Math.max(1, Math.round(L2 / 12));
-    a.named = !!def.named || !!def.boss;
-    a.bountyValue = def.bounty;
-    a.infamy = def.infamy;
-    a.reward = def.reward;
-    a.breakthrough = def.breakthrough;
-    a.alertLine = def.alert;
-    a.defeatLine = def.defeatLine;
-    a.talk = def.dialogue ? { def } : null;
-    a.def = def;
-    if (def.armament) a.armament = true;
-    if (def.invulnerable) a.invulnerable = true;
-    if (def.logia && !a.fruitDef?.logia) a.fakeLogia = { logia: true, weakTo: def.logia.weakTo || [], color: def.logia.color || "#fff" };
-    if (def.recover) a.recoverAfter = def.recover;
-    if (def.fixedPower) a.fixedPower = def.fixedPower;
-    a.showName = def.showName ?? (!!def.dialogue || !!def.boss || !!def.named);
-    a.nameColor = def.boss ? "#ff8a80" : def.dialogue ? "#ffe082" : "#fff";
-    const kind = def.ai || (def.hostile ? "hostile" : def.dialogue ? "guard" : "wander");
-    a.controller = new AIController({
-      kind,
-      home: { x, y },
-      skill: def.skill ?? (def.boss ? 0.55 : 0.25),
-      moves: def.moves || [],
-      aggroRange: def.aggroRange ?? (def.boss ? 12 : 8),
-      ranged: def.ranged,
-      leash: def.leash ?? (def.boss ? 18 : 16),
-      phases: def.phases,
-      barks: def.barks,
-      fleeAt: def.boss || def.named ? 0 : def.fleeAt
-    });
-    if (kind === "guard" || kind === "idle") {
-      a.stationary = true;
-      a.faceHome = Math.PI / 2;
-    }
-    if (def.hostile) a.aggroPlayer = true;
-    return a;
-  }
-  function hashSeed(s) {
-    let h2 = 7;
-    for (const ch of String(s)) h2 = h2 * 31 + ch.charCodeAt(0) >>> 0;
-    return h2;
-  }
-  function makeEnemy(arch, level, x, y, over = {}) {
-    const A = ARCHETYPES[arch] || ARCHETYPES.bandit;
-    over = Object.fromEntries(Object.entries(over || {}).filter(([, v]) => v !== void 0));
-    return makeNPC({
-      ...A,
-      level,
-      hostile: true,
-      name: over.name || A.name,
-      look: { ...A.look || {}, ...over.look || {} },
-      moves: over.moves || A.moves,
-      id: over.id,
-      seed: over.seed ?? Math.floor(Math.random() * 1e9),
-      // every grunt looks different
-      hpMul: (A.hpMul || 1) * (over.hpMul || 1),
-      skill: over.skill ?? A.skill,
-      fleeAt: 0.15,
-      ...over
-    }, x, y);
-  }
-  function npcBuilder(ctx) {
-    const { island, game, spawner, list, rng: rng4 } = ctx;
-    const c = game.state?.char;
-    if (!c) return;
-    for (const t of island.towns || []) for (const b of t.buildings) b.npcCount = 0;
-    for (const def of NPC_DEFS.values()) {
-      if (def.island !== island.id) continue;
-      if (def.when && !def.when(c, game)) continue;
-      if (def.boss && c.bosses.includes(def.id) && !def.respawn) continue;
-      if (def.once && c.defeated[def.id]) continue;
-      if ((c.crew || []).some((m) => m.id === def.id) || c.flags["leftCrew_" + def.id]) continue;
-      const pos = placeNPC(game, island, def, rng4, spawner);
-      if (!pos) continue;
-      const a = makeNPC(def, pos.x, pos.y);
-      a.game = game;
-      if (pos.inside) {
-        a.homeB = pos.building;
-        a.facing = a.faceHome = Math.PI / 2;
-        a.stationary = true;
-        a.wanderBox = interiorRect(pos.building);
-      }
-      game.addActor(a);
-      list.push(a);
-      if (pos.building) pos.building.npcSpawned = true;
-    }
-    for (const grp of GROUPS) {
-      if (grp.island !== island.id) continue;
-      if (grp.when && !grp.when(c, game)) continue;
-      if (grp.cleared && c.flags[grp.cleared]) continue;
-      const base2 = grp.spot ? island.spots[grp.spot] : { x: island.x + (grp.dx || 0) * island.def.w / 2, y: island.y + (grp.dy || 0) * island.def.h / 2 };
-      if (!base2) continue;
-      for (const e of grp.enemies) {
-        const [arch, lvl, over] = Array.isArray(e) ? e : [e, grp.level || 6, {}];
-        const p = spawner.findFree(base2.x, base2.y, grp.radius || 5, rng4);
-        if (!p) continue;
-        const a = makeEnemy(arch, lvl, p.x, p.y, over || {});
-        a.game = game;
-        if (grp.leash) a.controller.leash = grp.leash;
-        game.addActor(a);
-        list.push(a);
-      }
-    }
-  }
-  function clear2(spawner, x, y, rng4, extra = {}) {
-    const p = spawner.freeSpot(x, y) ? { x, y } : spawner.findFree(x, y, 2.5, rng4) || spawner.findFree(x, y, 5, rng4) || { x, y };
-    return { ...p, ...extra };
-  }
-  function inside(b) {
-    if (!b.enterable) return null;
-    const L2 = layoutOf(b);
-    const spots = [L2.keeper, ...L2.residents].filter(Boolean);
-    const s = spots[(b.npcCount = (b.npcCount || 0) + 1) - 1];
-    if (!s) return null;
-    return { ...bw(b, s.x, s.z), building: b, inside: true };
-  }
-  function placeNPC(game, island, def, rng4, spawner) {
-    const pl = (typeof def.at === "function" ? def.at(game.state?.char, game) : def.at) || {};
-    if (pl.spot && island.spots[pl.spot]) {
-      const s = island.spots[pl.spot];
-      const x = s.x + (pl.ox || 0), y = s.y + (pl.oy || 0);
-      if (spawner.freeSpot(x, y)) return { x, y };
-      return spawner.findFree(x, y, 2.5, rng4) || spawner.findFree(s.x, s.y, 3, rng4) || s;
-    }
-    for (const town of island.towns) {
-      if (pl.town && town.id !== pl.town) continue;
-      if (pl.building) {
-        const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
-        if (b) {
-          const q2 = bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4);
-          return inside(b) || clear2(spawner, q2.x, q2.y, rng4, { building: b });
-        }
-      }
-      if (pl.plaza || !pl.building && !pl.dx) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5, 3, rng4);
-    }
-    for (const town of island.towns) {
-      const b = town.buildings.find((x) => x.npc === def.id);
-      if (b) {
-        const q2 = bw(b, doorLocalX(b) + 0.9, 1.4);
-        return inside(b) || clear2(spawner, q2.x, q2.y, rng4, { building: b });
-      }
-    }
-    const lm = island.landmarks.find((l) => l.npc === def.id);
-    if (lm) return clear2(spawner, lm.x + 0.6, lm.y + 1.2, rng4);
-    if (pl.dx !== void 0) return spawner.findFree(island.x + pl.dx * island.def.w / 2, island.y + pl.dy * island.def.h / 2, 5, rng4);
-    return spawner.findFree(island.x, island.y, 10, rng4);
-  }
-  var Interactions = class {
-    constructor(game) {
-      this.game = game;
-      game.on("talk", (a) => this.talk(a));
-      game.on("enterBuilding", (b) => this.building(b));
-      game.on("knockDoor", (b) => this.knock(b));
-      game.on("openChest", (o) => this.chest(o));
-      game.on("trainDummy", (o) => this.dummy(o));
-      game.on("openService", (kind, arg, npc) => this.service(kind, arg, npc));
-      game.on("quickHeal", () => this.quickHeal());
-      this.objectHandlers = {};
-      game.on("useObject", (o) => this.objectHandlers[o.use]?.(o, game));
-      game.summon = (owner, spec) => {
-        const n = spec.count || 1;
-        for (let i = 0; i < n; i++) {
-          const ang = Math.random() * Math.PI * 2;
-          const p = game.spawner.findFree(owner.x + Math.cos(ang) * 2, owner.y + Math.sin(ang) * 2, 3) || { x: owner.x, y: owner.y + 1 };
-          const a = makeEnemy(spec.archetype || "pirate", spec.level || Math.max(3, Math.round((owner.attrs?.str || 8) * 0.8)), p.x, p.y, { name: spec.name, look: spec.look, moves: spec.moves, hpMul: spec.hpMul });
-          a.game = game;
-          a.faction = owner.faction;
-          a.summonedBy = owner;
-          a.summonT = spec.duration || 30;
-          a.aggroPlayer = owner.aggroPlayer || owner.faction !== "player";
-          if (owner.isPlayer || owner.faction === "player") {
-            a.aggroPlayer = false;
-            a.controller = new AIController({ kind: "follower", skill: 0.3, moves: spec.moves || [] });
-          } else if (owner.controller?.target) {
-            a.controller.target = owner.controller.target;
-            a.controller.state = "chase";
-          }
-          game.addActor(a);
-          game.fx.burst(a.x, a.y - 0.6, 12, { color: spec.color || "#eeeeee", speed: 3, g: 0, life: 0.4, kind: "smoke", size: 0.3 });
-        }
-      };
-      game.on("tick", (dt) => {
-        for (const a of game.actors) {
-          if (!a.summonedBy) continue;
-          a.summonT -= dt;
-          if (a.summonT <= 0 || !a.summonedBy.alive || a.summonedBy.state === "knocked") {
-            a.alive = false;
-            game.fx.burst(a.x, a.y - 0.6, 8, { color: "#eeeeee", speed: 2, g: 0, life: 0.3, kind: "smoke" });
-          }
-        }
-      });
-      this.onObject("lore", (o) => {
-        game.dialogue.open(null, { start: "a", nodes: { a: { speaker: o.name || "Inscription", text: typeof o.lore === "function" ? o.lore(game.state.char, game) : o.lore } } });
-        if (o.loreEvent) game.emit("questEvent", o.loreEvent, o);
-      });
-      let mt = 0;
-      game.on("tick", (dt) => {
-        if ((mt -= dt) > 0) return;
-        mt = 0.5;
-        const c = game.state?.char;
-        if (!c) return;
-        for (const a of game.actors) {
-          if (a.recoverAfter && a.state === "knocked" && a.knockT > a.recoverAfter && a.alive) {
-            a.state = "idle";
-            a.hp = Math.round(a.d.maxHp * 0.5);
-            a.provoked = false;
-            a.aggroPlayer = !!a.def?.hostile;
-            if (a.controller) {
-              a.controller.target = null;
-              a.controller.state = "return";
-            }
-            if (game.bossTarget === a) game.bossTarget = null;
-            game.fx.text(a.x, a.y - 2, a.def?.recoverLine || "...Hah. You win.", "#fff", 0.32);
-          }
-          const m = a.def?.marker;
-          if (!m || !a.alive) continue;
-          try {
-            a.questMarker = m(c, game) || null;
-          } catch (e) {
-            a.questMarker = null;
-          }
-        }
-      });
-    }
-    onObject(id, fn) {
-      this.objectHandlers[id] = fn;
-    }
-    islandOf(x, y) {
-      const w = this.game.world;
-      return w.islandAt(x, y) || w.nearestIsland(x, y, 60);
-    }
-    talk(a) {
-      const g = this.game;
-      const def = a.def;
-      if (def && def.dialogue) {
-        const tree = typeof def.dialogue === "string" ? def.dialogue : def.dialogue;
-        g.dialogue.open(a, tree);
-        g.emit("talked", def.id);
-        return;
-      }
-      if (a.talk?.kind === "keeper") {
-        this.building(a.talk.building);
-        return;
-      }
-      if (a.talk?.kind === "townsfolk") {
-        const rng4 = new RNG(a.talk.seed + g.env.day);
-        const isl = this.islandOf(a.x, a.y);
-        g.dialogue.open(a, { start: "a", nodes: {
-          a: { text: rumorFor(g, isl, rng4, a), choices: [
-            { text: "Thanks. Take care.", end: true },
-            { text: "Pick their pocket while they talk. (a crime)", do: () => {
-              g.dialogue.close();
-              const r = pickpocket(g, a);
-              if (r === "caught") g.fx.text(a.x, a.y - 2, "HEY! THIEF!", "#ff5252", 0.45);
-            }, end: true }
-          ] }
-        } });
-      }
-    }
-    building(b) {
-      const g = this.game;
-      const isl = this.islandOf(b.x, b.y);
-      const town = isl?.towns.find((t) => t.id === b.town);
-      const npc = b.npc && npcDef(b.npc);
-      if (npc && npc.dialogue && !(npc.boss && g.state.char.bosses.includes(npc.id))) {
-        const live = g.actors.find((x) => x.npcId === npc.id && x.state === "idle");
-        if (live) {
-          g.dialogue.open(live, npc.dialogue);
-          return;
-        }
-      }
-      this.service(b.role, { building: b, island: isl, town });
-    }
-    service(kind, arg = {}, npc) {
-      const g = this.game;
-      let { building, island, town } = arg || {};
-      if (!island) island = this.islandOf(g.player.x, g.player.y);
-      if (!building) building = { name: npc?.def?.shopName || npc?.name, role: kind, shop: arg?.shop };
-      const dock = island?.docks?.[0];
-      switch (kind) {
-        case "shop":
-        case "market":
-        case "weapons":
-        case "bank":
-          openShop(g, { ...building, shop: arg?.shop || building.shop }, island);
-          break;
-        case "tavern":
-        case "bar":
-        case "restaurant":
-        case "cafe":
-          this.tavern(building, island);
-          break;
-        case "inn":
-          openInn(g, building, island, town);
-          break;
-        case "doctor":
-          openDoctor(g, building, island, arg?.doc || (npc?.def?.doctor ? { ...npc.def.doctor, id: npc.def.id, name: npc.name } : null));
-          break;
-        case "shipwright":
-          openShipyard(g, { ...building, adam: arg?.adam || npc?.def?.adam, coating: arg?.coating }, island, dock);
-          break;
-        case "dojo":
-        case "trainer":
-          openTrainer(g, arg?.trainer || npc?.def?.trainer || building.trainer || "dojo_generic", npc?.name);
-          break;
-        case "marine_base":
-          g.emit("marineOffice", building, island);
-          break;
-        case "bounty":
-          g.emit("bountyBoard", building, island);
-          break;
-        case "library":
-          this.library(building, island);
-          break;
-        case "palace":
-        case "hall":
-        case "church":
-        case "house":
-        default:
-          g.dialogue.open(null, { start: "a", nodes: { a: { speaker: building.name || "Door", text: flavorFor(building) } } });
-      }
-    }
-    tavern(building, island) {
-      const g = this.game;
-      const rng4 = new RNG(Math.floor(g.time) + (building.id || 0));
-      g.dialogue.open(null, {
-        start: "a",
-        nodes: {
-          a: {
-            speaker: building.name || "Tavern",
-            text: `The tavern is loud with sailors' songs. The barkeep polishes a mug. "What'll it be?"`,
-            choices: [
-              { text: "Buy food and drink", do: (c) => {
-                c.open("shop", { building: { ...building, role: "tavern" }, island });
-              } },
-              { text: "Buy a round and listen for rumours (\u0E3F100)", do: (c) => c.pay(100) ? "r" : "a" },
-              { text: `Rent a room upstairs for the night (${formatBerries(g.services.innPrice(island))}) \u2014 wake here if you fall`, do: () => {
-                g.dialogue.close();
-                g.services.rest(island, island?.towns?.find((t) => t.id === building.town));
-              }, end: true },
-              { text: "Leave", end: true }
-            ]
-          },
-          r: { speaker: "Sailor at the bar", text: () => rumorFor(g, island, rng4, null, true), next: "a" }
-        }
-      });
-    }
-    library(building, island) {
-      const g = this.game;
-      const c = g.state.char;
-      const key2 = "read_" + (building.id || building.name);
-      const first = !c.flags[key2];
-      g.dialogue.open(null, { start: "a", nodes: { a: { speaker: building.name || "Library", text: () => {
-        if (first) {
-          c.flags[key2] = true;
-          g.progression.raiseAttr("wil", 1);
-        }
-        return (first ? "(+1 Willpower) " : "") + rumorFor(g, island, new RNG(building.id || 1), null, true, "lore");
-      } } } });
-    }
-    knock(b) {
-      const g = this.game, c = g.state.char;
-      const B4 = g.buildings;
-      const rng4 = new RNG((b.id || 1) * 13 + g.env.day * 7 + Math.floor(g.env.clock));
-      g.audio?.sfx("knock");
-      const kick = { text: b.pirate ? "Kick the door in." : "Kick the door in. (a crime)", do: () => {
-        g.dialogue.close();
-        B4 ? B4.breakDoor(b) : robHouse(g, b);
-      }, end: true };
-      const leave = { text: "Leave them be.", end: true };
-      if (b.pirate) {
-        const line2 = rng4.pick([`"Who's there?! Scram before we gut ya!"`, `"Password?" ...You don't know it. "Then get lost!"`, `(Laughter and clinking mugs behind the door. It stops.) "...Who's knockin'?"`, `"If yer a Marine, we ain't here!"`]);
-        g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: line2 + " (A crude Jolly Roger is scratched into the door. Pirates don't call the Marines.)", choices: [leave, kick] } } });
-        return;
-      }
-      if ((b.role || "house") !== "house") {
-        const opens = B4 ? B4.opensAt(b) : 7;
-        g.dialogue.open(null, { start: "a", nodes: { a: { speaker: b.name || "Door", text: `Nobody answers. A sign hangs on the door: CLOSED \u2014 OPEN FROM ${opens}:00.`, choices: [{ text: "Come back later.", end: true }, kick] } } });
-        return;
-      }
-      const night = g.env.clock < 6 || g.env.clock >= 21;
-      const home = g.actors.some((a) => a.homeB === b && a.alive && a.state === "idle");
-      const wanted2 = (g.wanted?.tier() ?? 0) >= 2;
-      const invite = home && !night && !wanted2 && rng4.chance((b.npc ? 0.85 : 0.3) + (c.reputation || 0) / 200);
-      const lines = !home ? ["(No answer. Nobody seems to be home.)", "(Silence. The curtains are drawn.)"] : night ? [`"It's the middle of the night! Go away!"`, `"We're sleeping! Come back in the morning!"`, "(A candle is snuffed out behind the window.)"] : [`"Who's there? ...Go away, we don't want trouble."`, '"Nobody home!" (someone is clearly home)', `"If you're a pirate, keep walking!"`, '"Shh! The baby is sleeping."', '"Are you the new postman? No? Then shoo."'];
-      if (invite) {
-        g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: rng4.pick(['"Oh, a traveller? Come in, come in \u2014 mind your head."', `"Well, don't just stand there \u2014 come in! The kettle's on."`, `"Aren't you the one folk say helped out around here? Come in!"`]), choices: [
-          { text: "Step inside.", do: () => {
-            c.flags["invited_" + (B4 ? B4.key(b) : b.id)] = g.env.day;
-            g.dialogue.close();
-            if (!c.flags["door_" + b.id]) {
-              c.flags["door_" + b.id] = true;
-              addItem(g, "rice_ball", 1);
-            }
-          }, end: true },
-          leave
-        ] } } });
-        return;
-      }
-      g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: rng4.pick(lines), choices: [leave, kick] } } });
-    }
-    chest(o) {
-      const g = this.game, c = g.state.char;
-      const key2 = "chest_" + (o.key || `${Math.round(o.x)}_${Math.round(o.y)}`);
-      if (c.world.chests[key2] && !c.world.containers?.[key2]) {
-        o.opened = true;
-        g.log("Empty. You took it all.", "#b0bec5");
-        return;
-      }
-      const luck = c.traits.includes("lucky") ? 1.5 : 1;
-      const first = !c.world.containers?.[key2];
-      g.containers.open(key2, "treasure", {
-        title: o.tier > 2 ? "A treasure chest" : "A chest",
-        sub: "The lid creaks open\u2026",
-        o: { tier: o.tier || 1, luck, item: o.item },
-        onEmpty: () => {
-          c.world.chests[key2] = true;
-          o.opened = true;
-        }
-      });
-      if (first) g.fx.burst(o.x, o.y - 0.5, 20, { color: ["#ffd54f", "#fff59d"], speed: 4, vz: 4, g: 8, life: 0.8, kind: "star" });
-    }
-    dummy(o) {
-      const g = this.game, c = g.state.char, p = g.player;
-      if (c.flags.dummyDay === g.env.day) {
-        g.log("Your arms are too tired for more practice today.", "#b0bec5");
-        return;
-      }
-      c.flags.dummyDay = g.env.day;
-      const m = c.masteries[p.style] || 0;
-      g.env.clock += 1;
-      if (m < 10) {
-        g.progression.addStyleMastery(p.style, 2);
-        g.log("You practise your forms on the dummy for an hour. (Dummies only teach the very basics \u2014 mastery up to 10.)", "#90caf9");
-      } else g.log("The dummy has nothing left to teach you. Find a real opponent \u2014 or a master.", "#b0bec5");
-    }
-    quickHeal() {
-      const g = this.game, c = g.state.char;
-      const foods = ["meat", "fish_stew", "rice_ball", "tangerine", "sea_king_steak", "baratie_course", "bandage"];
-      const id = foods.find((f) => c.inventory.some((i) => i.id === f));
-      if (!id) {
-        g.log("You have nothing to eat!", "#ff8a80");
-        return;
-      }
-      useItem(g, id);
-    }
-  };
-  function flavorFor(b) {
-    switch (b.role) {
-      case "palace":
-        return 'Guards cross their spears in front of the gate. "The palace is closed to commoners."';
-      case "hall":
-        return "The great doors are shut tight.";
-      case "church":
-        return "Candles flicker inside. A priest nods at you silently.";
-      case "bank":
-        return "A clerk counts berries behind iron bars.";
-      default:
-        return "The door is locked.";
-    }
-  }
 
   // src/game/crew.js
   var CREW_ROLES = {
@@ -84864,65 +86274,42 @@ Trains by: ${TRAINS_BY[k]}` },
     const body = h("div.journal");
     const entry = ui.openPanel(body, { wide: true, id: "journal" });
     if (!entry) return;
-    let tab = "quests";
-    const render2 = () => {
-      clear(body);
-      const tabs = h("div.tabs", ["quests", "legends"].map((k) => h("button" + (tab === k ? ".on" : ""), { on: { click: () => {
-        tab = k;
-        render2();
-      } } }, k === "quests" ? "Quests" : "Legends")));
-      add2(body, h("h2", "Journal"), tabs);
-      if (tab === "quests") {
-        const q2 = game.quests;
-        const active5 = q2.active();
-        const done6 = Object.entries(c.quests).filter(([, s]) => s.done).map(([id]) => questDef(id)).filter(Boolean);
-        add2(
-          body,
-          h("h3", "Active"),
-          active5.length ? h("div.list", ...active5.map(({ s, def }) => h(
-            "div.card",
-            h("h4", uiImg("quest", 18), " ", def.name, h("span.tag", def.kind || "story")),
-            h("div", def.summary || ""),
-            h("div.objective", def.stages[s.stage]?.desc || ""),
-            def.island ? h("div.muted", "Location: " + (game.surface.islands.find((i) => i.id === def.island)?.name || def.island)) : null
-          ))) : h("p", "No active quests. Talk to people \u2014 every island has a story."),
-          h("h3", "Completed"),
-          done6.length ? h("div.list.compact", ...done6.map((d) => h("div.row-item", uiImg("check", 18), h("div.grow", h("b", d.name))))) : h("p.muted", "None yet.")
-        );
-      } else {
-        add2(body, h("p.muted", "Nobody chooses your destiny. But the sea remembers those who do the impossible \u2014 every legend you write adds to your Inherited Will."));
-        const list = h("div.list");
-        for (const id of LEGEND_IDS) {
-          const L2 = LEGENDS[id];
-          const got = (c.legends || []).includes(id);
-          let pr = null;
-          try {
-            pr = L2.progress ? L2.progress(c) : null;
-          } catch {
-            pr = null;
-          }
-          list.appendChild(h(
-            "div.row-item" + (got ? ".legend-done" : ""),
-            uiImg(got ? "check" : "journal", 22),
-            h(
-              "div.grow",
-              h("b", L2.name),
-              h("div.sub", L2.desc),
-              pr && !got ? h("div.stat-row", h("div.meter", h("i", { style: { width: Math.min(100, 100 * pr[0] / pr[1]) + "%" } })), h("span.sub", `${pr[0].toLocaleString()} / ${pr[1].toLocaleString()} ${pr[2]}`)) : null
-            ),
-            h("span.price", got ? "Achieved" : `+${L2.will} Will`)
-          ));
-        }
-        body.appendChild(list);
+    add2(
+      body,
+      h("h2", "Journal"),
+      h("div.journal-quests", uiImg("quest", 18), h("span", " Your main story and side quests are in the Quests menu."), h("button.btn.small", { on: { click: () => ui.sideAction?.("quests") } }, "Open Quests (L)")),
+      h("h3", "Legends"),
+      h("p.muted", "Nobody chooses your destiny. But the sea remembers those who do the impossible \u2014 every legend you write adds to your Inherited Will.")
+    );
+    const list = h("div.list");
+    for (const id of LEGEND_IDS) {
+      const L2 = LEGENDS[id];
+      const got = (c.legends || []).includes(id);
+      let pr = null;
+      try {
+        pr = L2.progress ? L2.progress(c) : null;
+      } catch {
+        pr = null;
       }
-    };
-    render2();
+      list.appendChild(h(
+        "div.row-item" + (got ? ".legend-done" : ""),
+        uiImg(got ? "check" : "journal", 22),
+        h(
+          "div.grow",
+          h("b", L2.name),
+          h("div.sub", L2.desc),
+          pr && !got ? h("div.stat-row", h("div.meter", h("i", { style: { width: Math.min(100, 100 * pr[0] / pr[1]) + "%" } })), h("span.sub", `${pr[0].toLocaleString()} / ${pr[1].toLocaleString()} ${pr[2]}`)) : null
+        ),
+        h("span.price", got ? "Achieved" : `+${L2.will} Will`)
+      ));
+    }
+    body.appendChild(list);
   }
   function openMenu(game, { onQuit, onRetire, onSave }) {
     const ui = game.ui;
     const c = game.state.char;
     const saved = h("p.muted.save-note", c.lastSaved ? `Last saved ${new Date(c.lastSaved).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Not saved yet");
-    const btn = (icon, text, fn, cls = "") => h("button.btn.menu-btn" + cls, { on: { click: fn } }, uiImg(icon, 20), text);
+    const btn = (icon, text2, fn, cls = "") => h("button.btn.menu-btn" + cls, { on: { click: fn } }, uiImg(icon, 20), text2);
     const body = h(
       "div.pause",
       h("h2", "Paused"),
@@ -85375,12 +86762,32 @@ Trains by: ${TRAINS_BY[k]}` },
   }
 
   // src/ui/ui.js
+  var MM_LAND = new Uint8Array(256 * 3);
+  {
+    const hex3 = (h2) => [parseInt(h2.slice(1, 3), 16), parseInt(h2.slice(3, 5), 16), parseInt(h2.slice(5, 7), 16)];
+    for (let t = 0; t < 256; t++) MM_LAND.set(PALETTE[t] ? hex3(PALETTE[t][0]) : [200, 190, 160], t * 3);
+    MM_LAND.set([168, 69, 47], T.RED_ROCK * 3);
+    MM_LAND.set([201, 195, 189], T.SNOWROCK * 3);
+  }
+  var MM_SEA = {
+    [REGION.EAST_BLUE]: [79, 150, 196],
+    [REGION.NORTH_BLUE]: [83, 128, 184],
+    [REGION.WEST_BLUE]: [74, 139, 175],
+    [REGION.SOUTH_BLUE]: [67, 156, 166],
+    [REGION.PARADISE]: [47, 138, 128],
+    [REGION.NEW_WORLD]: [98, 84, 170],
+    [REGION.CALM_NORTH]: [120, 136, 146],
+    [REGION.CALM_SOUTH]: [120, 136, 146],
+    [REGION.RED_LINE]: [79, 150, 196],
+    [REGION.POLAR]: [170, 196, 210]
+  };
   var SIDEBAR = [
     { id: "inventory", label: "Inventory", key: "Tab" },
     { id: "character", label: "Character", key: "C" },
     { id: "skills", label: "Skills", key: "K" },
     { id: "journal", label: "Journal", key: "J" },
     { id: "crew", label: "Crew", key: "U" },
+    { id: "quests", label: "Quests", key: "L" },
     { id: "menu", label: "Menu", key: "Esc" },
     // on phones: no keyboard, so the map and the camera get buttons too
     { id: "map", label: "Map", key: "M", touch: true },
@@ -85509,6 +86916,8 @@ Trains by: ${TRAINS_BY[k]}` },
       E.combat = h("div.combat-tag.off");
       E.combat.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14"><g stroke="#fff3e0" stroke-width="1.8" stroke-linecap="round" fill="none"><path d="M3 3 L12.5 12.5"/><path d="M13 3 L3.5 12.5"/><path d="M10 14 L14 10"/><path d="M2 10 L6 14"/></g></svg><span>In combat</span>';
       this.hud.appendChild(E.combat);
+      E.track = h("div.qtrack.hidden");
+      this.hud.appendChild(E.track);
       E.boss = h("div.bossbar.hidden", h("h3"), bar("boss").el);
       this.hud.appendChild(E.boss);
       E.ship = h("div.shiphud.hidden");
@@ -85612,22 +87021,22 @@ Trains by: ${TRAINS_BY[k]}` },
       if (!id) return;
       const pc = p.controller, mw = pc?.mouseWorld;
       const aim = mw ? Math.atan2(mw.y - (p.y - 0.5), g.world.dx(p.x, mw.x)) : p.facing;
-      const target = mw && pc.aimTarget ? pc.aimTarget(p, g, mw.x, mw.y) : null;
+      const target2 = mw && pc.aimTarget ? pc.aimTarget(p, g, mw.x, mw.y) : null;
       if (p.mode !== "sail") p.facing = aim;
-      p.tryTechnique(id, g, target || (mw ? { x: mw.x, y: mw.y } : { x: p.x + Math.cos(aim) * 4, y: p.y + Math.sin(aim) * 4 }));
+      p.tryTechnique(id, g, target2 || (mw ? { x: mw.x, y: mw.y } : { x: p.x + Math.cos(aim) * 4, y: p.y + Math.sin(aim) * 4 }));
     }
     blocksInput() {
       return this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen || !!this.consoleOpen;
     }
-    log(text, color = "#fff") {
-      const d = h("div", { style: { color } }, text);
+    log(text2, color = "#fff") {
+      const d = h("div", { style: { color } }, text2);
       this.el.log.appendChild(d);
       while (this.el.log.children.length > 7) this.el.log.removeChild(this.el.log.firstChild);
     }
-    hint(text, dur = 9) {
+    hint(text2, dur = 9) {
       if (this.game?.settings && this.game.settings.showHints === false) return;
       clear(this.hintEl);
-      this.hintEl.append(uiImg("journal", 18), h("span", text));
+      this.hintEl.append(uiImg("journal", 18), h("span", text2));
       this.hintEl.classList.remove("hidden");
       this.hintEl.style.opacity = "1";
       clearTimeout(this.hintTimer);
@@ -85636,11 +87045,11 @@ Trains by: ${TRAINS_BY[k]}` },
         setTimeout(() => this.hintEl.classList.add("hidden"), 500);
       }, dur * 1e3);
     }
-    banner(title2, sub = "", text = "", dur = 4) {
+    banner(title2, sub = "", text2 = "", dur = 4) {
       const [s, t, p] = this.bannerEl.children;
       s.textContent = sub;
       t.textContent = title2;
-      p.textContent = text;
+      p.textContent = text2;
       this.bannerEl.classList.add("show");
       clearTimeout(this.bannerTimer);
       this.bannerTimer = setTimeout(() => this.bannerEl.classList.remove("show"), dur * 1e3);
@@ -85650,7 +87059,7 @@ Trains by: ${TRAINS_BY[k]}` },
      * the last one of that kind still showing (switching views quickly shows
      * only the latest); any other messages still up move out of its way.
      */
-    toast(text, sub = "", color, key2 = null) {
+    toast(text2, sub = "", color, key2 = null) {
       this.toasts = (this.toasts || []).filter((t) => t.el.isConnected);
       if (key2) {
         for (const t of this.toasts) if (t.key === key2) t.el.remove();
@@ -85660,7 +87069,7 @@ Trains by: ${TRAINS_BY[k]}` },
         t.up = (t.up || 0) + 1;
         t.el.style.marginTop = `${-t.up * 76}px`;
       }
-      const el = h("div.toast", text, sub ? h("small", sub) : null);
+      const el = h("div.toast", text2, sub ? h("small", sub) : null);
       if (color) el.style.color = color;
       this.root.appendChild(el);
       this.toasts.push({ el, key: key2 });
@@ -85785,7 +87194,7 @@ Trains by: ${TRAINS_BY[k]}` },
      * In-game replacement for confirm()/prompt() (native dialogs are blocked in
      * some embeds). Resolves to true / the typed text, or null when cancelled.
      */
-    ask({ title: title2 = "", text = "", input, ok = "OK", cancel = "Cancel", danger = false } = {}) {
+    ask({ title: title2 = "", text: text2 = "", input, ok = "OK", cancel = "Cancel", danger = false } = {}) {
       return new Promise((resolve) => {
         let done6 = false;
         const wasPaused = this.game ? this.game.paused : false;
@@ -85801,7 +87210,7 @@ Trains by: ${TRAINS_BY[k]}` },
         const panel = h(
           "div.panel.ask",
           title2 ? h("h2", title2) : null,
-          text ? h("p", text) : null,
+          text2 ? h("p", text2) : null,
           field,
           h("div.ask-row", okBtn, h("button.btn", { on: { click: () => finish2(null) } }, cancel))
         );
@@ -85989,7 +87398,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         if (inter) E.prompt.append(h("kbd", "E"), inter.label);
       }
       const isl = game.currentIsland;
-      const locName = game.world.zone !== 0 ? game.world.name : isl && isl.name ? isl.name : "Open Sea";
+      const rmHere = game.world.zone === 0 && !isl?.name && Math.abs(game.world.dx(p.x, RM_X)) < 1e3 && Math.abs(p.y - EQ) < 2300 && regionAt(p.x, p.y) === REGION.RED_LINE;
+      const locName = game.world.zone !== 0 ? game.world.name : isl && isl.name ? isl.name : rmHere ? "Reverse Mountain" : "Open Sea";
       this.set(E.loc, "loc", locName);
       const reg3 = game.world.zone === 0 ? REGION_INFO[regionAt(p.x, p.y)]?.name || "" : game.world.subtitle || "";
       this.set(E.locSub, "locSub", reg3);
@@ -86000,6 +87410,11 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       if (this.mmT <= 0) {
         this.mmT = 0.2;
         this.drawMinimap(game);
+      }
+      this.qtT = (this.qtT || 0) - 1 / 60;
+      if (this.qtT <= 0) {
+        this.qtT = 0.35;
+        this.drawTracker(game);
       }
       const lp = game.logPoseInfo ? game.logPoseInfo() : null;
       E.logpose.classList.toggle("hidden", !lp);
@@ -86043,6 +87458,45 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         E.knocked.querySelector(".timer i").style.width = 100 * ki.frac + "%";
       }
     }
+    /** The quest tracker: what to do next in the main story (and where), and the tracked side quests. */
+    drawTracker(game) {
+      const E = this.el, q2 = game.quests, c = game.state?.char, p = game.player;
+      if (!q2 || !c || !p) {
+        E.track.classList.add("hidden");
+        return;
+      }
+      const w = game.world;
+      const where = (id) => {
+        const m = q2.marker(id);
+        if (!m || !Number.isFinite(m.x) || (m.zone ? m.zone !== w.id : w !== game.surface)) return "";
+        const d = w.distance(p.x, p.y, m.x, m.y);
+        if (d < 12) return "here";
+        const a = Math.atan2(m.y - p.y, w.dx(p.x, m.x));
+        const dir = ["E", "SE", "S", "SW", "W", "NW", "N", "NE"][(Math.round(a / (Math.PI / 4)) % 8 + 8) % 8];
+        return `${d >= 1e3 ? (d / 1e3).toFixed(1) + " km" : Math.round(d / 10) * 10 + " m"} ${dir}`;
+      };
+      const card = (qq, main3) => {
+        const st = qq.def.stages[qq.s.stage];
+        const pr = q2.progress(qq.id);
+        const at5 = where(qq.id);
+        return [
+          main3 ? h("div.qt-head", uiImg("quest", 14), qq.def.part ? `MAIN STORY \xB7 PART ${qq.def.part}` : "MAIN STORY") : null,
+          h("div.qt-title", qq.def.name),
+          h("div.qt-obj", st?.desc || "", pr ? h("span.qt-n", ` ${pr.n}/${pr.of}`) : null),
+          at5 ? h("div.qt-where", at5 === "here" ? "You are here" : at5) : null
+        ];
+      };
+      const main2 = q2.main();
+      const side = q2.tracked();
+      const key2 = JSON.stringify([main2 && [main2.id, main2.s.stage, q2.progress(main2.id), where(main2.id)], side.map((x) => [x.id, x.s.stage, q2.progress(x.id), where(x.id)]), c.mainIntro || null]);
+      if (key2 === this.cache.track) return;
+      this.cache.track = key2;
+      clear(E.track);
+      if (main2) E.track.appendChild(h("div.qt-main", ...card(main2, true)));
+      else if (c.mainIntro) E.track.appendChild(h("div.qt-main", h("div.qt-head", uiImg("quest", 14), "MAIN STORY"), h("div.qt-title", "Find your calling"), h("div.qt-obj", c.mainIntro)));
+      for (const x of side) E.track.appendChild(h("div.qt-side", ...card(x, false)));
+      E.track.classList.toggle("hidden", !E.track.childNodes.length);
+    }
     drawMinimap(game) {
       const c = this.el.mm;
       const g = c.getContext("2d");
@@ -86052,10 +87506,12 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       const scale = p.mode === "sail" ? 2.2 : 1;
       if (!this.mmImg) this.mmImg = g.createImageData(W3, H2);
       const img2 = this.mmImg.data;
-      const map = w.map;
+      const zoneSea = w.zone === 2 ? [40, 90, 150] : w.zone === 3 ? [20, 16, 24] : [150, 200, 230];
+      let sea = w.zone === 0 ? MM_SEA[regionAt(p.x, p.y)] || MM_SEA[REGION.EAST_BLUE] : zoneSea;
       for (let j = 0; j < H2; j++) {
+        const ty = p.y + (j - H2 / 2) * scale;
         for (let i = 0; i < W3; i++) {
-          const tx = p.x + (i - W3 / 2) * scale, ty = p.y + (j - H2 / 2) * scale;
+          const tx = p.x + (i - W3 / 2) * scale;
           const o = (j * W3 + i) * 4;
           if (ty < 0 || ty >= w.height || !w.wrap && (tx < 0 || tx >= w.width)) {
             img2[o] = 30;
@@ -86064,13 +87520,37 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
             img2[o + 3] = 255;
             continue;
           }
-          const mx = Math.floor(w.wx(tx) / 2) % map.w, my = Math.floor(ty / 2);
-          const k = (my * map.w + mx) * 4;
-          const explored = w.isExplored(tx, ty);
-          const f = explored ? 1 : 0.35;
-          img2[o] = map.data[k] * f;
-          img2[o + 1] = map.data[k + 1] * f;
-          img2[o + 2] = map.data[k + 2] * f;
+          if (w.zone === 0 && (i & 15) === 0) sea = MM_SEA[regionAt(tx, ty)] || sea;
+          const t = w.type(tx, ty);
+          let r, g2, b;
+          if (IS_LIQUID[t] || OVERLAY[t]) {
+            if (OVERLAY[t]) {
+              r = MM_LAND[t * 3];
+              g2 = MM_LAND[t * 3 + 1];
+              b = MM_LAND[t * 3 + 2];
+            } else if (t === T.LAVA) {
+              r = 220;
+              g2 = 90;
+              b = 40;
+            } else if (t === T.CLOUD_SEA) {
+              r = 235;
+              g2 = 242;
+              b = 250;
+            } else {
+              const sh = Math.max(0, 1 + (w.distRaw(tx, ty) - 128) / 64);
+              r = sea[0] + (150 - sea[0]) * sh * 0.6;
+              g2 = sea[1] + (215 - sea[1]) * sh * 0.6;
+              b = sea[2] + (215 - sea[2]) * sh * 0.6;
+            }
+          } else {
+            r = MM_LAND[t * 3];
+            g2 = MM_LAND[t * 3 + 1];
+            b = MM_LAND[t * 3 + 2];
+          }
+          const f = 0.35 + 0.65 * Math.min(1, w.exploredAt(tx, ty) * 1.6);
+          img2[o] = r * f;
+          img2[o + 1] = g2 * f;
+          img2[o + 2] = b * f;
           img2[o + 3] = 255;
         }
       }
@@ -86096,7 +87576,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         if (!hostileNow && !a.questMarker) continue;
         const dx = w.dx(p.x, a.x) / scale + W3 / 2, dy = (a.y - p.y) / scale + H2 / 2;
         if (Math.hypot(dx - W3 / 2, dy - H2 / 2) > W3 / 2 - 3) continue;
-        g.fillStyle = a.questMarker ? "#ffd54f" : "#ff5252";
+        g.fillStyle = a.questMarker ? a.questMarker[0] === "M" ? "#ff9100" : "#ffd54f" : "#ff5252";
         g.fillRect(dx - 1.5, dy - 1.5, 3, 3);
       }
       if (game.view3d?.active) return;
@@ -86123,14 +87603,14 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     let last = -1;
     return {
       el,
-      set(frac2, text) {
+      set(frac2, text2) {
         frac2 = clamp2(frac2, 0, 1);
         if (Math.abs(frac2 - last) > 2e-3) {
           i.style.width = frac2 * 100 + "%";
           b.style.width = frac2 * 100 + "%";
           last = frac2;
         }
-        if (span2.textContent !== text) span2.textContent = text;
+        if (span2.textContent !== text2) span2.textContent = text2;
       }
     };
   }
@@ -86278,7 +87758,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     const seaName = REGION_INFO[SEA_IDS[spawn.sea]]?.name || "";
     setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : "An Uncharted Islet", seaName, `${char.name} begins their journey. The sea is yours to choose.`, 5), 400);
     setTimeout(() => {
-      if (game.state?.char === char) game.hint("menus", "Your menus are on the right: Inventory, Character, Skills, Journal and Crew (or Tab, C, K, J, U). Esc pauses and saves. Talk to people, pick fruit from the trees, find a boat \u2014 where you go is up to you.");
+      if (game.state?.char === char) game.hint("menus", "Your menus are on the left: Inventory, Character, Skills, Journal, Crew and Quests (or Tab, C, K, J, U, L). Esc pauses and saves. People with an orange ! over their heads can start your story \u2014 as a pirate, a Marine or a bounty hunter.");
     }, 6500);
     game.emit("characterStart", { char, isNew: true, spawn });
     persist(game);
@@ -86290,8 +87770,10 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     resetGame(game);
     const world = game.surface;
     game.state = { char, legacy };
+    const moved = migrateWorld(char, world, ALL_ISLANDS);
     if (char.fogSurface) decodeFog(char.fogSurface, world.fog);
     else world.fog.fill(0);
+    if (moved) for (const id of char.discovered || []) revealIsland(game, id);
     game.renderer.terrain.updateFog(world.fog);
     const p = buildPlayer(game, char);
     const pos = char.pos || char.rest || char.spawn;
@@ -86588,6 +88070,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       this.game = game;
       this.active = null;
       this.trees = {};
+      this.decorators = [];
       game.ui.dialogueKeys = (inp) => this.keys(inp);
       game.ui.onDialogueEscape = () => this.close();
     }
@@ -86639,6 +88122,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       if (typeof tree === "function") tree = tree(ctx);
       if (!tree) return;
       if (npc?.def?.recruit && this.game.crew) tree = this.game.crew.decorate(tree, npc);
+      for (const dec of this.decorators) tree = dec(tree, npc, ctx) || tree;
       this.active = { npc, tree, ctx, node: null, typing: 0, full: "" };
       this.game.paused = true;
       if (npc && this.game.player) {
@@ -86671,8 +88155,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
           return;
         }
       }
-      const text = typeof node.text === "function" ? node.text(a.ctx) : node.text || "";
-      a.full = text;
+      const text2 = typeof node.text === "function" ? node.text(a.ctx) : node.text || "";
+      a.full = text2;
       a.typing = 0;
       const choices = (node.choices || []).filter((c) => !c.if || c.if(a.ctx)).map((c) => ({ ...c, label: typeof c.text === "function" ? c.text(a.ctx) : c.text }));
       a.choices = choices;
@@ -87170,12 +88654,14 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     wrap.classList.add("hidden");
     ui.root.appendChild(wrap);
     const cam = { x: 0, y: 0, zoom: 0.3 };
+    const MIN_ZOOM = () => Math.min(0.18, (game.renderer.cw || 1280) / W * 0.9);
+    const MAX_ZOOM = 1.6;
     let drag = null, pinch = null;
     const ptrs = /* @__PURE__ */ new Map();
     const zoomAt = (sx, sy, f) => {
       const r = game.renderer;
       const wx = cam.x + (sx - r.cw / 2) / cam.zoom, wy = cam.y + (sy - r.ch / 2) / cam.zoom;
-      cam.zoom = Math.max(0.18, Math.min(6, cam.zoom * f));
+      cam.zoom = Math.max(game.world === game.surface ? MIN_ZOOM() : 0.18, Math.min(game.world === game.surface ? MAX_ZOOM : 6, cam.zoom * f));
       cam.x = wx - (sx - r.cw / 2) / cam.zoom;
       cam.y = Math.max(0, Math.min(H, wy - (sy - r.ch / 2) / cam.zoom));
     };
@@ -87248,7 +88734,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       const p = game.player;
       const r = game.renderer;
       if (game.world === game.surface) {
-        cam.zoom = Math.max(0.18, Math.min(r.cw / W * 1.02, 0.5));
+        cam.zoom = Math.max(MIN_ZOOM(), Math.min(r.cw / (W * 0.28), 0.5));
         cam.x = p.x;
         cam.y = Math.max(H * 0.3, Math.min(H * 0.7, p.y));
       } else {
@@ -87300,19 +88786,19 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       return [dx * cam.zoom + r.cw / 2, (y - cam.y) * cam.zoom + r.ch / 2];
     };
     const placed = [];
-    const add4 = (cls, text, x, y, extra = {}, declutter = false) => {
+    const add5 = (cls, text2, x, y, extra = {}, declutter = false) => {
       const [sx, sy] = toS(x, y);
       if (sx < -200 || sy < -50 || sx > r.cw + 200 || sy > r.ch + 50) return;
       if (declutter) {
         const fs = parseFloat(extra.fontSize) || 13;
-        const w2 = text.length * fs * 0.28, h2 = fs * 0.62;
+        const w2 = text2.length * fs * 0.28, h2 = fs * 0.62;
         if (placed.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2)) return;
         placed.push({ x: sx, y: sy, w: w2, h: h2 });
       }
-      layer.appendChild(h("div.wm-label" + cls, { style: { left: sx + "px", top: sy + "px", ...extra } }, text));
+      layer.appendChild(h("div.wm-label" + cls, { style: { left: sx + "px", top: sy + "px", ...extra } }, text2));
     };
-    if (zone) add4(".sea", w.name, w.width / 2, 14 / cam.zoom, { fontSize: "26px" });
-    if (!zone) for (const s of SEA_LABELS) add4(".sea", s.name, s.x, s.y, s.vertical ? { writingMode: "vertical-rl", fontSize: Math.max(16, 26 * cam.zoom / 0.3) + "px" } : { fontSize: Math.max(14, 30 * cam.zoom / 0.3) + "px" });
+    if (zone) add5(".sea", w.name, w.width / 2, 14 / cam.zoom, { fontSize: "26px" });
+    if (!zone) for (const s of SEA_LABELS) add5(".sea", s.name, s.x, s.y, s.vertical ? { writingMode: "vertical-rl", fontSize: Math.max(16, 26 * cam.zoom / 0.3) + "px" } : { fontSize: Math.max(14, 30 * cam.zoom / 0.3) + "px" });
     const discovered = new Set(c.discovered || []);
     const byImportance = w.islands.filter((i) => i.name).sort((a, b) => (b.def?.w || 0) * (b.def?.h || 0) - (a.def?.w || 0) * (a.def?.h || 0));
     for (const isl of byImportance) {
@@ -87320,21 +88806,27 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       if (isl.def?.hidden && !c.flags.laughTaleRevealed) continue;
       const known = zone || discovered.has(isl.id) || w.isExplored(isl.x, isl.y);
       if (!known) continue;
-      add4("", isl.name, isl.x, isl.y + isl.radius * 0.2 + 6 / cam.zoom, { fontSize: Math.max(11, Math.min(20, 14 * Math.sqrt(cam.zoom / 0.3))) + "px" }, true);
+      add5("", isl.name, isl.x, isl.y + isl.radius * 0.2 + 6 / cam.zoom, { fontSize: Math.max(11, Math.min(20, 14 * Math.sqrt(cam.zoom / 0.3))) + "px" }, true);
     }
     if (!zone) {
-      add4("", "Reverse Mountain", RM_X, EQ - chart(40), { fontSize: "14px" });
-      if (discovered.has("mary_geoise") || w.isExplored(0, EQ)) add4("", "Mary Geoise", 4, EQ - chart(70), { fontSize: "13px" });
+      add5("", "Reverse Mountain", RM_X, EQ - chart(40), { fontSize: "14px" });
+      if (discovered.has("mary_geoise") || w.isExplored(0, EQ)) add5("", "Mary Geoise", 4, EQ - chart(70), { fontSize: "13px" });
     }
-    for (const { id } of game.quests.active()) {
+    if (!zone) {
+      for (const pin of game.storyPins?.() || []) {
+        add5(pin.main ? ".giver.main" : ".giver", [h("b.pin", { style: { background: pin.color } }, "!"), " " + pin.label], pin.x, pin.y, { fontSize: pin.main ? "15px" : "13px" }, true);
+      }
+    }
+    const act2 = game.quests.active().sort((a, b) => (a.def.kind === "main") - (b.def.kind === "main"));
+    for (const { id, def } of act2) {
       const m = game.quests.marker(id);
-      if (m && (!zone || m.zone === w.id)) add4(".quest", [uiImg("quest", 18), " " + m.label], m.x, m.y - 12 / cam.zoom);
+      if (m && (!zone || m.zone === w.id)) add5(def.kind === "main" ? ".quest.main" : ".quest", [uiImg("quest", 18), " " + m.label], m.x, m.y - 12 / cam.zoom);
     }
     const lp = game.logPoseTarget?.();
-    if (lp && !zone) add4(".quest", [uiImg("log_pose", 22)], lp.x, lp.y);
-    for (const s of game.ships) if (s.owner === "player" && !s.sunk) add4("", [uiImg("ship", 22)], s.x, s.y, { fontSize: "16px" });
+    if (lp && !zone) add5(".quest", [uiImg("log_pose", 22)], lp.x, lp.y);
+    for (const s of game.ships) if (s.owner === "player" && !s.sunk) add5("", [uiImg("ship", 22)], s.x, s.y, { fontSize: "16px" });
     const p = game.player;
-    add4(".me", [h("span.me-dot"), "You"], p.x, p.y);
+    add5(".me", [h("span.me-dot"), "You"], p.x, p.y);
   }
 
   // src/game/buildings.js
@@ -87499,10 +88991,10 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         game.fx.sfx?.(d.mid.x, d.mid.y - 1.2, "BAKOOM!!", "#ffcc80", 0.5);
         game.fx.shake(0.45);
         game.audio?.sfx("doorbreak");
-        const home = game.actors.filter((a) => a.homeB === b && a.alive && a.state === "idle");
+        const home2 = game.actors.filter((a) => a.homeB === b && a.alive && a.state === "idle");
         if (b.pirate) {
           game.log("A pirates' hideout! Nobody here is going to call the Marines \u2014 but the crew inside will fight.", "#ffcc80");
-          for (const a of home) {
+          for (const a of home2) {
             a.provoked = true;
             a.aggroPlayer = true;
             if (a.controller) {
@@ -87512,8 +89004,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
           }
         } else {
           crime(game, 3e5, "broke down a door", { rep: 4 });
-          if (home.length) {
-            for (const a of home) {
+          if (home2.length) {
+            for (const a of home2) {
               game.fx.text(a.x, a.y - 2.1, a.keeper ? "THIEF! GUARDS!" : "BURGLAR!!", "#ff5252", 0.4, { life: 1.6 });
               if (a.controller && !a.keeper) {
                 a.controller.state = "flee";
@@ -87795,15 +89287,15 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
   }
   var crowdOf = (town) => Math.round(4 + town.w * town.h / 90);
   function installTownLife(game) {
-    const T3 = game.townLife = {
+    const T4 = game.townLife = {
       t: 0,
       update: (a, ai, dt) => think(game, a, ai, dt),
       spotsOf: (town, isl) => spotsOf(game, town, isl)
     };
     game.spawner.townsfolk = (town, isl, rng4, list, ctx) => populate2(game, town, isl, rng4, list, ctx);
     game.on("tick", (dt) => {
-      if ((T3.t -= dt) > 0) return;
-      T3.t = 3;
+      if ((T4.t -= dt) > 0) return;
+      T4.t = 3;
       routines(game);
     });
   }
@@ -89228,6 +90720,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       if (!count(c, "log_pose") && !count(c, "new_world_log_pose")) return;
       const isl = g.currentIsland;
       if (!isl || !isl.def?.logNext?.length || isl.def.logSpins || p.mode !== "foot" || g.world !== g.surface) return;
+      if (g.storyLogHold?.(isl)) return;
       const lp = c.logPose;
       if (lp.eternal && count(c, lp.eternal)) {
         if (lp.target !== isl.id) return;
@@ -89264,14 +90757,14 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       const reg3 = regionAt(p.x, p.y);
       const s = p.mode === "sail" ? p.ship : null;
       this.reverseMountain(dt, p, s);
-      if (isCalmBelt(reg3) && (s || p.inWater)) {
+      if (isCalmBelt(reg3) && (s || p.inWater) && !this.rmState && g.world.type(p.x, p.y) !== T.RAPIDS) {
         this.kingT -= dt * (s?.def?.seastone || s?.upgrades?.includes("seastone_keel") ? 0.15 : 1);
         if (this.kingT <= 0) {
           this.kingT = 22 + Math.random() * 20;
           this.spawnSeaKing(p, reg3);
         }
       } else this.kingT = Math.max(this.kingT, 6);
-      if (s && !g.currentIsland) {
+      if (s && !g.currentIsland && !this.rmState) {
         this.encT -= dt;
         if (this.encT <= 0) {
           this.encT = (isGrandLine(reg3) ? 80 : 120) + Math.random() * 80;
@@ -89300,33 +90793,49 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       }
       if (isCalmBelt(reg3) && p.inWater && Math.random() < dt * 0.1) g.hint("calm_swim", "Swimming in the Calm Belt is suicide. Only Silvers Rayleigh ever did it.");
     }
+    /**
+     * Riding Reverse Mountain: into a gate, up the mountain on the current, the
+     * summit where the four seas meet, and the plunge down into Paradise.
+     * (Swimmers get carried up too — see actor.js.)
+     */
     reverseMountain(dt, p, s) {
       const g = this.game, c = this.char;
-      if (!s) return;
-      const M2 = REVERSE_MOUNTAIN;
-      const dx = g.world.dx(M2.x, s.x), dy = s.y - M2.y;
-      const inside2 = Math.abs(dx) < M2.rx * Math.sqrt(Math.max(0, 1 - (dy / M2.ry) ** 2));
-      if (inside2 && !this.rmState) {
-        this.rmState = { t: 0 };
-        g.ui.banner("REVERSE MOUNTAIN", "The gateway to the Grand Line", "The current is dragging you UP the mountain! Keep to the middle of the canal!", 5);
+      const who = s || (p.inWater ? p : null);
+      if (!who) {
+        if (this.rmState && p.mode === "foot" && !p.inWater) this.rmState = null;
+        return;
+      }
+      const cur = g.currentAt(who.x, who.y);
+      const k = cur.canal;
+      if (k && !this.rmState) {
+        this.rmState = { t: 0, from: k.exit ? null : k.id, top: false };
+        g.ui.banner("REVERSE MOUNTAIN", "The gateway to the Grand Line", k.exit ? "Down the torrent into the Grand Line!" : "The sea is running UP the mountain \u2014 and it has you! Keep to the middle of the canal!", 5);
         g.audio?.music("battle");
-        if (!s.def.grandLine) g.log("Your little boat creaks in the current... The Grand Line will not be kind to it.", "#ff8a80");
+        if (s && !s.def.grandLine) g.log("Your little boat creaks in the current... The Grand Line will not be kind to it.", "#ff8a80");
+        if (!s) g.log("The current tears you off your feet and sweeps you up the canal!", "#ff8a80");
       }
-      if (this.rmState) {
-        this.rmState.t += dt;
-        if (dx > M2.rx - 5 && Math.abs(dy) < 20) {
-          this.rmState = null;
-          if (!c.flags.enteredGrandLine) {
-            c.flags.enteredGrandLine = true;
-            g.ui.toast("WELCOME TO THE GRAND LINE", "You rode the current over Reverse Mountain!", "#ffd54f");
-            g.progression.breakthrough(2, "Crossed Reverse Mountain");
-            g.hint("logpose", "In the Grand Line your compass is useless. Carry a Log Pose, stay on an island until the log sets, and follow the needle to the next island.");
-            g.emit("questEvent", "entered_grand_line");
-            persist(g);
-          }
-          g.audio?.music("grandline");
-        } else if (!inside2 && this.rmState.t > 3) this.rmState = null;
+      const st = this.rmState;
+      if (!st) return;
+      st.t += dt;
+      if (k && !st.top && (k.exit || cur.level > 150)) {
+        st.top = true;
+        g.ui.banner("THE SUMMIT", "Where the four seas meet", "Every current in the world crashes together up here... and there's only one way down.", 4);
+        g.fx.shake?.(0.35);
+        g.audio?.sfx("splash_big");
       }
+      if (!k && st.top) {
+        this.rmState = null;
+        c.flags.enteredGrandLine = true;
+        if (!c.flags.rodeReverseMountain) {
+          c.flags.rodeReverseMountain = true;
+          g.ui.toast("WELCOME TO THE GRAND LINE", "You rode the current over Reverse Mountain!", "#ffd54f");
+          g.progression.breakthrough(2, "Crossed Reverse Mountain");
+          g.hint("logpose", "In the Grand Line your compass is useless. Carry a Log Pose, stay on an island until the log sets, and follow the needle to the next island.");
+        }
+        g.emit("questEvent", "entered_grand_line");
+        persist(g);
+        g.audio?.music("grandline");
+      } else if (!k && st.t > 4 && !st.top) this.rmState = null;
     }
     spawnSeaKing(p, reg3) {
       const g = this.game;
@@ -89449,7 +90958,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
   function warshipAI(s, dt, game) {
     const p = game.player;
     s.expire -= dt;
-    const target = p.mode === "sail" && p.ship ? p.ship : null;
+    const target2 = p.mode === "sail" && p.ship ? p.ship : null;
     const d = game.world.distance(s.x, s.y, p.x, p.y);
     if (s.expire <= 0 && d > 40) {
       s.alive = false;
@@ -89458,7 +90967,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     const hostileToPlayer = s.faction === "pirate" || s.faction === "marine" && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked);
     if (!hostileToPlayer) return merchantAI(s, dt, game);
     s.sail = 1;
-    if (!target && d > 50) return;
+    if (!target2 && d > 50) return;
     const toT = Math.atan2(p.y - s.y, game.world.dx(s.x, p.x));
     const want = d > 12 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
     s.heading += clamp2(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
@@ -89953,10 +91462,14 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
                 c.take("rice_ball", 1);
                 c.stage("pirate_hunter", "free");
               }, next: "eat" },
+              { text: "Morgan is finished. You're free.", if: () => active(ctx, "pirate_hunter", "zoro"), next: "freed" },
               { text: "Leave", end: true }
             ]
           },
-          eat: { text: '(He eats it in one bite, sugar-for-salt and all.) "...Tell the kid it was delicious. Every last grain."', next: "a" }
+          eat: { text: '(He eats it in one bite, sugar-for-salt and all.) "...Tell the kid it was delicious. Every last grain."', next: "a" },
+          freed: { text: `(You cut the ropes. He rolls his shoulders, picks up his three swords, and grins.) "Heh. So Axe-Hand went down. ...I owe you one. I don't forget debts."`, onEnter: (c) => {
+            if (active(c, "pirate_hunter", "zoro")) c.complete("pirate_hunter");
+          }, next: "a" }
         }
       })
     },
@@ -90855,8 +92368,9 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         { id: "report", desc: "Return to Nojiko in Cocoyasi Village." }
       ],
       rewards: { berries: 2e4, points: 2, liberate: "Cocoyasi Village", items: [["tangerine", 6]] },
+      // (a pirate who topples Arlong gets a poster; a hunter or a Marine gets thanks)
       onComplete: (ctx, g) => {
-        if (ctx.char.faction !== "marine") g.progression.addBounty(1e7, "Toppled Arlong Park");
+        if (ctx.char.faction === "pirate" || ctx.char.crewName) g.progression.addBounty(1e7, "Toppled Arlong Park");
       }
     },
     {
@@ -91778,6 +93292,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       level: 9,
       named: true,
       lethal: false,
+      duel: true,
       look: { hair: "spiky", hairColor: "#ff7043", top: "#1565c0", bottom: "#212121", skin: "#f1c9a0" },
       style: "brawler",
       moves: ["brawl_tackle", "brawl_knee"],
@@ -95014,7 +96529,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     ["wb_asshina_colosseum", "serena", "wb_serena", 7]
   ];
   function install3(game) {
-    const say = (speaker, text) => game.dialogue?.open(null, { start: "a", nodes: { a: { speaker, text } } });
+    const say2 = (speaker, text2) => game.dialogue?.open(null, { start: "a", nodes: { a: { speaker, text: text2 } } });
     const onObj = (id, fn) => game.interactions?.onObject?.(id, fn);
     onObj("wb_tree_husk", () => {
       const c = game.state?.char;
@@ -95022,7 +96537,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       if (stg(game, "wb_ohara_primer") === "pages" && !c.flags.wbPageHusk) {
         c.flags.wbPageHusk = true;
         game.quests.ctx().give("wb_ohara_page", 1);
-        say("Husk of the Tree of Knowledge", "(Inside the hollow trunk the air still smells of smoke. Under a fallen shelf, pressed flat and dry, you find a page covered in Professor Clover's handwriting \u2014 and lines of the ancient script.)");
+        say2("Husk of the Tree of Knowledge", "(Inside the hollow trunk the air still smells of smoke. Under a fallen shelf, pressed flat and dry, you find a page covered in Professor Clover's handwriting \u2014 and lines of the ancient script.)");
         return;
       }
       const first = !c.flags.wbHuskRead;
@@ -95030,22 +96545,22 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         c.flags.wbHuskRead = true;
         game.progression.raiseAttr("wil", 1);
       }
-      say("Husk of the Tree of Knowledge", `${first ? "(+1 Willpower) " : ""}(A library grown inside a tree five thousand years old \u2014 the oldest structure in the world. Charred shelves spiral up into the dark. On the floor lies a smashed model of the Blue Planet, with six moons still on their wires.)`);
+      say2("Husk of the Tree of Knowledge", `${first ? "(+1 Willpower) " : ""}(A library grown inside a tree five thousand years old \u2014 the oldest structure in the world. Charred shelves spiral up into the dark. On the floor lies a smashed model of the Blue Planet, with six moons still on their wires.)`);
     });
     onObj("wb_harp", () => {
-      say("Ruins of Esperia Palace", "(The frame of a harp as tall as a lighthouse still stands among the rubble, its strings long gone. Sixty years ago the Government demanded a thousand of Esperia's people in place of the Heavenly Tribute. King Reuven refused. This is what refusing cost.)");
+      say2("Ruins of Esperia Palace", "(The frame of a harp as tall as a lighthouse still stands among the rubble, its strings long gone. Sixty years ago the Government demanded a thousand of Esperia's people in place of the Heavenly Tribute. King Reuven refused. This is what refusing cost.)");
     });
     onObj("wb_opera", () => {
       const looting = stg(game, "wb_esperia_convoy") === "opera";
-      say("Opera House (ruins)", looting ? "(Crates of instruments are stacked by the stage, stamped with the crest of the Moulon Family. Somebody has been busy.)" : "(Seventy years ago the Moulon Family attacked this Opera House to carry off Queen Candelle. The captain of the Battle Convoy cut down every gunman \u2014 and finished his song. The velvet seats are rotten now. The acoustics are still perfect.)");
+      say2("Opera House (ruins)", looting ? "(Crates of instruments are stacked by the stage, stamped with the crest of the Moulon Family. Somebody has been busy.)" : "(Seventy years ago the Moulon Family attacked this Opera House to carry off Queen Candelle. The captain of the Battle Convoy cut down every gunman \u2014 and finished his song. The velvet seats are rotten now. The acoustics are still perfect.)");
     });
     onObj("wb_hogback_clinic", () => {
       if (stg(game, "wb_ballywood_star") === "clinic") {
-        say("Dr. Hogback's clinic", '(Dust. Surgical tools. A wall covered with posters of Victoria Cindry \u2014 dozens of them. The last line in the ledger: "She will perform again. The man in the Florian Triangle has promised. \u2014 H." Beneath it, a chart of the Florian Triangle with a route marked in red.)');
+        say2("Dr. Hogback's clinic", '(Dust. Surgical tools. A wall covered with posters of Victoria Cindry \u2014 dozens of them. The last line in the ledger: "She will perform again. The man in the Florian Triangle has promised. \u2014 H." Beneath it, a chart of the Florian Triangle with a route marked in red.)');
         game.emit("questEvent", "wb_searched_clinic");
         return;
       }
-      say("Dr. Hogback's clinic", '(The boarded-up clinic of the "genius surgeon" Hogback. Patients once queued around the block. He vanished ten years ago, and the medical world is still arguing about why.)');
+      say2("Dr. Hogback's clinic", '(The boarded-up clinic of the "genius surgeon" Hogback. Patients once queued around the block. He vanished ten years ago, and the medical world is still arguing about why.)');
     });
     game.on("useObject", (o) => {
       if (o?.use === "poneglyph" && o.poneglyph === "ohara" && game.canReadPoneglyphs?.()) game.emit("questEvent", "wb_read_ohara");
@@ -95090,11 +96605,11 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         game.log("You wade into the shallows of the Lake of Books. Caught in the reeds: a single page the giants missed.", "#b39ddb");
       }
       if (isl?.id === "god_valley" && stg(game, "wb_god_valley") === "relics") {
-        for (const [spot, item, flag, title2, text] of GV_RELICS) {
+        for (const [spot, item, flag, title2, text2] of GV_RELICS) {
           if (c.flags[flag] || !near(spot, 5)) continue;
           c.flags[flag] = true;
           game.quests.ctx().give(item, 1);
-          game.ui.banner(title2, "God Valley", text, 5);
+          game.ui.banner(title2, "God Valley", text2, 5);
         }
         if (c.flags.wbGvTag && c.flags.wbGvHorn && c.flags.wbGvFlag) c.flags.wbGvRelics = true;
       }
@@ -96738,6 +98253,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       at: { town: "kutsukku_north", building: "The Masked Tavern" },
       lethal: false,
       named: true,
+      duel: true,
       look: { hair: "long", hairColor: "#fff59d", top: "#fafafa", bottom: "#1565c0", skin: "#f1c9a0", hat: "goggles", hatColor: "#90a4ae", swords: 2 },
       level: 13,
       style: "nitoryu",
@@ -97756,7 +99272,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
           goal: { type: "defeat", npc: "sb_bakalao" },
           onStart: bossStage("sb_samba_carnival", "sb_bakalao", "samba_kingdom", "slaver_cove", (ctx, g) => spawnSquad(g, "samba_kingdom", "slaver_cove"))
         },
-        { id: "report", desc: "Find Pascia at the Carnival Stage in Samba Royal City." }
+        { id: "report", desc: "Find Pascia at the Carnival Stage in Samba Royal City.", npc: "sb_pascia", onStart: (ctx, g) => spawnNow(g, "sb_pascia") }
       ],
       rewards: { berries: 1e4, points: 1, items: [["jewels", 1]] }
     },
@@ -100216,14 +101732,22 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       stages: [
         {
           id: "hunters",
-          desc: "Whale hunters are sneaking up on Laboon from the west shore of the north cape. Stop Mr. 9.",
+          desc: "Whale hunters are sneaking up on Laboon from Harpoon Point. Stop Mr. 9.",
           goal: { type: "defeat", npc: "p1_mr9_cape" },
           onStart: (ctx, g) => {
             spawnAt(g, "p1_mr9_cape", "twin_cape", "harpoon_point");
             spawnAt(g, "p1_miss_wednesday", "twin_cape", "harpoon_point", 2);
           }
         },
-        { id: "promise", desc: "Go to the western shore of the north cape and speak to Laboon.", goal: { type: "event", event: "p1_laboon_promise" } },
+        {
+          id: "promise",
+          desc: "Go down to the water where Laboon waits, at the foot of the torrent, and speak to him.",
+          goal: { type: "event", event: "p1_laboon_promise" },
+          where: (g) => {
+            const lb = g.surface?._p1LaboonAt;
+            return lb ? { x: lb.x - 4, y: lb.y + 25, place: "Laboon" } : null;
+          }
+        },
         { id: "report", desc: "Return to Crocus at the lighthouse." }
       ],
       rewards: { berries: 6e3, points: 1, attrs: { wil: 1 }, items: [["bandage", 3], ["antidote", 1]] }
@@ -101230,27 +102754,28 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     const C3 = () => game.state?.char;
     const onSurface = () => game.world === game.surface;
     const surfIsland = (id) => game.surface?.islands?.find((i) => i.id === id) || null;
-    game.spawner.addBuilder(({ island }) => {
-      if (island.id !== "twin_cape" || island._p1Laboon || !onSurface() || !game.world?.objects) return;
-      const s = island.spots?.laboon_bay;
-      if (!s) return;
-      const w = game.world;
-      let shoreX = null;
-      for (let k = 0; k < 70; k++) if (!w.isLiquid(s.x + k, s.y)) {
-        shoreX = s.x + k;
-        break;
-      }
-      if (shoreX === null) return;
-      island._p1Laboon = true;
-      w.objects.add({ kind: "p1_laboon", x: shoreX - 13, y: s.y + 0.5, block: false, draw(g, env) {
+    const placeLaboon = () => {
+      const w = game.surface, M2 = w?.reverseMountain;
+      if (!w?.objects || w._p1Laboon || !M2?.exit) return;
+      w._p1Laboon = true;
+      const ax = M2.exit.x + 68, ay = M2.exit.y - 47;
+      w._p1LaboonAt = { x: ax, y: ay };
+      w.objects.add({ kind: "p1_laboon", x: ax, y: ay, block: false, far: 1500, draw(g, env) {
         try {
           drawWhale(g, env, !!game.state?.char?.flags?.p1_laboonMark);
         } catch (e) {
         }
       } });
-      w.objects.add({ kind: "p1_laboon_talk", x: shoreX - 0.6, y: s.y + 0.4, block: false, interact: "Speak to Laboon", interactRange: 2.6, use: "p1_laboon", draw() {
+      for (let j = -23; j <= 23; j++) {
+        for (let i = -60; i <= 62; i++) {
+          if ((i / 60) ** 2 + (j / 22.5) ** 2 < 1 && w.isLiquid(ax + i, ay + j)) w.setBlocked(ax + i, ay + j, 1);
+        }
+      }
+      w.objects.add({ kind: "p1_laboon_talk", x: ax - 4, y: ay + 25, block: false, interact: "Speak to Laboon", interactRange: 26, use: "p1_laboon", draw() {
       } });
-    });
+    };
+    game.on("characterStart", placeLaboon);
+    placeLaboon();
     game.on("useObject", (o) => {
       if (o?.use === "p1_laboon") game.dialogue?.open(null, laboonDialogue);
     });
@@ -101318,16 +102843,18 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       if ((tt -= dt) > 0) return;
       tt = 0.5;
       if (!onSurface()) return;
-      const bay = surfIsland("twin_cape")?.spots?.laboon_bay;
-      if (bay && !c.flags.p1_laboonPromise && game.world.distance(p.x, p.y, bay.x, bay.y) < 70) {
-        ramT -= 0.5;
-        if (ramT <= 0) {
-          ramT = 28 + Math.random() * 20;
-          game.fx?.shake?.(0.35);
-          game.audio?.sfx?.("explosion");
+      const lb = game.surface?._p1LaboonAt;
+      const ph = game.env.time % 26;
+      if (lb && !c.flags.p1_laboonPromise && ph >= 1.6 && ramT < 1.6 && game.world.distance(p.x, p.y, lb.x, lb.y) < 320) {
+        const near = game.world.distance(p.x, p.y, lb.x, lb.y) < 140;
+        game.fx?.shake?.(near ? 0.45 : 0.2);
+        game.audio?.sfx?.("explosion");
+        if (!(c.flags.p1_laboonBoomSeen > 2)) {
+          c.flags.p1_laboonBoomSeen = (c.flags.p1_laboonBoomSeen || 0) + 1;
           game.log("BOOM... BOOM... Laboon rams his scarred head against the Red Line.", "#b0bec5");
         }
       }
+      ramT = ph;
       if (stg2(game, "p1_kenzan_whirlpool") === "hunt" && !findActor(game, "p1_whirlpool_lord")) {
         const s = surfIsland("kenzan_island")?.spots?.whirlpool;
         if (s && game.world.distance(p.x, p.y, s.x, s.y) < 28 && game.world.isLiquid(s.x, s.y)) {
@@ -101390,7 +102917,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     const dest = islandRec3(game, islandId);
     const p = game.player;
     if (!dest || !p || game.world !== game.surface) return false;
-    const target = spot && dest.spots[spot] || dest.docks[0]?.land || { x: dest.x, y: dest.y };
+    const target2 = spot && dest.spots[spot] || dest.docks[0]?.land || { x: dest.x, y: dest.y };
     game.ui.fade(true);
     setTimeout(() => {
       if (ship) {
@@ -101403,7 +102930,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
           if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world);
         }
       }
-      const st = findShore(game.world, target.x, target.y, 12) || target;
+      const st = findShore(game.world, target2.x, target2.y, 12) || target2;
       p.x = st.x;
       p.y = st.y;
       game.snapCamera();
@@ -105763,15 +107290,15 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       return orig(n, att, h2, g);
     };
   }
-  var shout = (text, color = "#ffffff") => (a, g) => g.fx.text(a.x, a.y - 2.4, text, color, 0.55, { life: 1.6 });
-  var buffPhase = (buff, text, color) => (a, g) => {
+  var shout = (text2, color = "#ffffff") => (a, g) => g.fx.text(a.x, a.y - 2.4, text2, color, 0.55, { life: 1.6 });
+  var buffPhase = (buff, text2, color) => (a, g) => {
     a.addBuff(buff);
-    if (text) g.fx.text(a.x, a.y - 2.4, text, color || "#ff5252", 0.55, { life: 1.6 });
+    if (text2) g.fx.text(a.x, a.y - 2.4, text2, color || "#ff5252", 0.55, { life: 1.6 });
   };
-  var hakiOn = (text) => (a, g) => {
+  var hakiOn = (text2) => (a, g) => {
     a.armament = true;
     a.haki = Math.max(a.haki || 0, a.d?.maxHaki || 100);
-    if (text) g.fx.text(a.x, a.y - 2.4, text, "#212121", 0.5, { life: 1.4 });
+    if (text2) g.fx.text(a.x, a.y - 2.4, text2, "#212121", 0.5, { life: 1.4 });
   };
   var foresight = (a) => {
     a.observation = true;
@@ -109422,8 +110949,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       if (game.world !== game.surface || !isl) return;
       if (isl.id === "raijin_island" && (boltT -= dt) <= 0) {
         boltT = 3 + Math.random() * 4;
-        const safe = count(c, "nw_raijin_umbrella") > 0;
-        const ang = Math.random() * Math.PI * 2, d = safe ? 3 + Math.random() * 4 : Math.random() * 3.5;
+        const safe2 = count(c, "nw_raijin_umbrella") > 0;
+        const ang = Math.random() * Math.PI * 2, d = safe2 ? 3 + Math.random() * 4 : Math.random() * 3.5;
         const x = game.world.wx(p.x + Math.cos(ang) * d), y = p.y + Math.sin(ang) * d;
         game.fx.telegraph?.(x, y, "circle", { r: 1.4, life: 0.9, color: "rgba(255,241,118,1)" });
         setTimeout(() => {
@@ -111888,8 +113415,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         broadcast.t -= dt;
         if (broadcast.t <= 0) {
           if (broadcast.i < BROADCAST.length) {
-            const [title2, sub, text] = BROADCAST[broadcast.i++];
-            game.ui.banner(title2, sub, text, 7);
+            const [title2, sub, text2] = BROADCAST[broadcast.i++];
+            game.ui.banner(title2, sub, text2, 7);
             broadcast.t = 7.5;
           } else {
             broadcast = null;
@@ -112057,8 +113584,3712 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
   };
   var redLine_default = { id: "redLine", npcs: npcs9, items: items8, stockAdd: { black_market: ["wg_permit"] } };
 
+  // src/content/main/define.js
+  var PATHS3 = ["pirate", "marine", "hunter"];
+  var CHAPTERS = /* @__PURE__ */ new Map();
+  var PROLOGUES = /* @__PURE__ */ new Map();
+  var TARGETS = [];
+  var PLANS = {};
+  function chapter(id, base2, variants) {
+    const ch = { id, kind: "stop", ...base2, v: {} };
+    const all = variants.all || {};
+    const named = PATHS3.filter((p) => variants[p]);
+    for (const p of named.length ? named : PATHS3) ch.v[p] = { ...all, ...variants[p] || {} };
+    if (CHAPTERS.has(id)) throw new Error(`chapter ${id} defined twice`);
+    CHAPTERS.set(id, ch);
+    if (ch.kind === "start") PROLOGUES.set(ch.island, id);
+    return ch;
+  }
+  function target(def) {
+    TARGETS.push({ hostile: true, named: true, showName: true, level: 4, ...def });
+    return def.id;
+  }
+  var T3 = {
+    weapon: (desc = "Get yourself a weapon \u2014 buy one, win one or find one.") => ({ id: "weapon", desc, goal: { type: "weapon" } }),
+    /** Found a pirate crew and raise its Jolly Roger (Crew menu). */
+    flag: (desc = "Raise your own Jolly Roger: found your crew in the Crew menu (U).") => ({ id: "flag", desc, goal: { type: "faction", faction: "pirate" } }),
+    crew: (n = 1, desc = `Recruit ${n > 1 ? n + " crewmates" : "a crewmate"} \u2014 people who'd follow you anywhere.`) => ({ id: "crew" + n, desc, goal: { type: "crew", n } }),
+    ship: (desc = "Get a ship that can survive the Grand Line (a Sloop or bigger).") => ({ id: "ship", desc, goal: { type: "ship", grandLine: true } }),
+    logPose: (desc = "Get a Log Pose \u2014 no one survives the Grand Line without one.") => ({ id: "pose", desc, goal: { type: "item", item: "log_pose" } }),
+    /**
+     * See another quest through (it's started by whoever gives it; `npc` is who
+     * to see about it). extra.alt(c, game): also done if this is true (the quest
+     * can no longer be had some other way); extra.autoStart: start it at once.
+     */
+    quest: (quest, desc, npc, id = "q_" + quest, extra = {}) => ({ id, desc, goal: { type: "quest", quest, alt: extra.alt }, npc, autoStart: !!extra.autoStart }),
+    defeat: (npc, desc, id = "d_" + npc, extra = {}) => ({ id, desc, goal: { type: "defeat", npc, ...extra } }),
+    item: (item, n, desc, id = "i_" + item) => ({ id, desc, goal: { type: "item", item, n } }),
+    reach: (island, desc, spot, id = "r_" + island + (spot ? "_" + spot : "")) => ({ id, desc, goal: { type: "reach", island, spot } }),
+    event: (event, desc, id = "e_" + event, extra = {}) => ({ id, desc, goal: { type: "event", event }, ...extra }),
+    counter: (event, n, label, desc, id = "c_" + event) => ({ id, desc, goal: { type: "counter", event, n, label } }),
+    /** Anything that can be read off the character: fn(c, game) → true when it's done. */
+    check: (id, desc, fn, extra = {}) => ({ id, desc, goal: { type: "check", fn }, ...extra }),
+    /**
+     * Go and talk to someone else (an NPC already in the world, or a contact):
+     * they say `lines` and the stage is done.
+     */
+    talk: (npc, desc, lines, id = "t_" + npc, extra = {}) => ({ id, desc, goal: { type: "talk", npc }, npc, lines, ...extra }),
+    days: (n, desc, id = "days") => ({ id, desc, goal: { type: "days", n } })
+  };
+  var LOOK = {
+    marine: (o = {}) => ({ top: "#ffffff", bottom: "#1b4f72", hat: "marine", ...o }),
+    officer: (o = {}) => ({ top: "#ffffff", bottom: "#1b4f72", hat: "marine", coat: "#fafafa", coatText: "JUSTICE", ...o })
+  };
+  function nextStop(c) {
+    const m = c?.main;
+    const id = m?.chain?.[m.at + 1];
+    const ch = id && CHAPTERS.get(id);
+    if (!ch) return null;
+    return { ch, v: ch.v[m.path] || {}, place: ch.place || ISLAND_BY_ID[ch.island]?.name || "the next island" };
+  }
+  function onward(c, lead = "I've set the needle for") {
+    const n = nextStop(c);
+    if (!n) return "The rest of the way is yours to find.";
+    return `${lead} ${n.place}${n.v.lure ? " \u2014 " + n.v.lure : ""}.`;
+  }
+
+  // src/game/factions.js
+  var spiritReq = (c, what) => hakiKnown(c) ? what : "Your spirit has not yet awakened the strength the Navy expects of an officer this senior.";
+  var MARINE_RANKS = [
+    { name: "Seaman Recruit", merit: 0, rep: 25 },
+    { name: "Seaman Apprentice", merit: 40, rep: 25 },
+    { name: "Seaman First Class", merit: 100, rep: 28 },
+    { name: "Petty Officer", merit: 200, rep: 30 },
+    { name: "Chief Petty Officer", merit: 350, rep: 33 },
+    { name: "Master Chief Petty Officer", merit: 550, rep: 36 },
+    { name: "Warrant Officer", merit: 800, rep: 40 },
+    { name: "Ensign", merit: 1100, rep: 43, perk: "Command of a Marine sloop." },
+    { name: "Lieutenant Junior Grade", merit: 1500, rep: 46 },
+    { name: "Lieutenant", merit: 2e3, rep: 50, perk: "A Marine seaman under your command on land, and Rokushiki instruction at any Marine base." },
+    { name: "Lieutenant Commander", merit: 2700, rep: 53 },
+    { name: "Commander", merit: 3500, rep: 56 },
+    { name: "Captain", merit: 4500, rep: 60, perk: "A Marine brig with an escort ship, two Marines at your side, and Bondola passage across the Red Line.", req: (c) => c.flags.enteredGrandLine ? null : "Serve in the Grand Line first." },
+    { name: "Commodore", merit: 6e3, rep: 64, perk: "The coat of Justice and a second escort ship.", req: (c) => c.haki.armament > 0 ? null : spiritReq(c, "Awaken Armament Haki.") },
+    { name: "Rear Admiral", merit: 8e3, rep: 68 },
+    { name: "Vice Admiral", merit: 11e3, rep: 74, perk: "A Marine battleship, a fleet of three escorts and a squad of three Marines.", req: (c) => c.haki.armament >= 30 && c.haki.observation > 0 ? null : spiritReq(c, "Armament Haki 30 and Observation Haki.") },
+    { name: "Admiral", merit: 16e3, rep: 82, perk: "The fleets of the Navy answer to you.", req: (c) => (c.bosses || []).length >= 25 ? null : "Defeat 25 great foes." },
+    { name: "Fleet Admiral", merit: 25e3, rep: 90, perk: "Supreme command of every Marine in the world." }
+  ];
+  var rankIndex = (name) => MARINE_RANKS.findIndex((r) => r.name === name);
+  var CRIMINALS2 = /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "rival"]);
+  function installFactions(game) {
+    game.marines = {
+      rank: () => game.state?.char?.marineRank || null,
+      rankIndex: () => rankIndex(game.state?.char?.marineRank),
+      isMarine: () => game.state?.char?.faction === "marine"
+    };
+    game.on("marineEnlist", (where) => enlist(game, where));
+    game.on("marineOffice", (building, island) => office(game, building, island));
+    game.on("bountyBoard", (building, island) => bountyOffice(game, building, island));
+    game.on("knockout", (a, att) => onKnockout(game, a, att));
+    game.on("shipSunk", (s) => {
+      const c = game.state?.char;
+      if (!c || c.faction !== "marine" || s.faction !== "pirate" || !s.lastHitBy?.isPlayer) return;
+      const merit = 6 + Math.round((s.level || 5) / 2);
+      c.merit = (c.merit || 0) + merit;
+      game.log(`Pirate ship sunk: +${merit} merit (${Math.floor(c.merit)})`, "#90caf9");
+    });
+    game.on("enterRegion", (reg3) => {
+      const c = game.state?.char;
+      if (c && isGrandLine(reg3)) c.flags.enteredGrandLine = true;
+    });
+    installFleet(game);
+  }
+  function fleetSize(c) {
+    const i = rankIndex(c.marineRank);
+    return i >= rankIndex("Vice Admiral") ? 3 : i >= rankIndex("Commodore") ? 2 : i >= rankIndex("Captain") ? 1 : 0;
+  }
+  function squadSize(c) {
+    const i = rankIndex(c.marineRank);
+    return i >= rankIndex("Vice Admiral") ? 3 : i >= rankIndex("Captain") ? 2 : i >= rankIndex("Lieutenant") ? 1 : 0;
+  }
+  function installFleet(game) {
+    let t = 0;
+    const clear3 = () => {
+      for (const s of game.ships) if (s.escortOf) s.alive = false;
+      for (const a of game.actors) if (a.marineSquad) a.alive = false;
+    };
+    game.on("characterStart", clear3);
+    game.on("enterZone", clear3);
+    game.on("leaveZone", clear3);
+    game.on("marineRankChanged", (r) => {
+      if (!r) clear3();
+    });
+    game.on("tick", (dt) => {
+      if ((t -= dt) > 0) return;
+      t = 1;
+      const c = game.state?.char, p = game.player;
+      if (!c || !p) return;
+      const marine2 = c.faction === "marine";
+      const escorts = game.ships.filter((s) => s.escortOf && !s.sunk && s.alive !== false);
+      const wantShips = marine2 && p.mode === "sail" && p.ship && game.world === game.surface ? fleetSize(c) : 0;
+      for (let i = escorts.length - 1; i >= wantShips; i--) if (escorts[i] && game.world.distance(escorts[i].x, escorts[i].y, p.x, p.y) > 30) escorts[i].alive = false;
+      for (let i = escorts.length; i < wantShips; i++) spawnEscort(game, i);
+      const squad2 = game.actors.filter((a) => a.marineSquad && a.alive);
+      const wantSquad = marine2 && p.mode === "foot" ? squadSize(c) : 0;
+      for (let i = squad2.length - 1; i >= wantSquad; i--) squad2[i].alive = false;
+      for (let i = squad2.length; i < wantSquad; i++) spawnSoldier(game, i);
+      for (const a of squad2) {
+        if (a.state === "knocked" && !p.inCombat) {
+          a.state = "idle";
+          a.hp = Math.round(a.d.maxHp * 0.4);
+        }
+        if (game.world.distance(a.x, a.y, p.x, p.y) > 40) a.alive = false;
+      }
+    });
+  }
+  function spawnEscort(game, slot2) {
+    const c = game.state.char, p = game.player, lead = p.ship;
+    const big = rankIndex(c.marineRank) >= rankIndex("Vice Admiral");
+    const type = big ? "marine_warship" : "brigantine";
+    const spread = Math.max(1, (lead.def.length + SHIPS[type].length) / 14);
+    const pos = formationPoint(game, lead, slot2, 1.6 * spread);
+    if (!game.world.sailable(pos.x, pos.y)) return;
+    const s = game.addShip({ type, x: pos.x, y: pos.y, heading: lead.heading, owner: "marine", faction: "marine", name: big ? "Marine Warship" : "Marine Escort" });
+    if (!s.fits(game.world, s.x, s.y, s.heading)) {
+      s.alive = false;
+      return;
+    }
+    s.formSpread = spread;
+    s.escortOf = "player";
+    s.escortSlot = slot2;
+    s.level = 10 + rankIndex(c.marineRank) * 3;
+    s.label = `${s.name} (your fleet)`;
+    s.ai = escortAI;
+  }
+  function formationPoint(game, lead, slot2, spread = 1) {
+    const back = -(9 + Math.floor(slot2 / 2) * 7) * spread, side = (slot2 % 2 ? 1 : -1) * 6 * spread * (slot2 === 2 ? 0 : 1);
+    const hx = Math.cos(lead.heading), hy = Math.sin(lead.heading);
+    return { x: game.world.wx(lead.x + hx * back - hy * side), y: lead.y + hy * back + hx * side };
+  }
+  function escortAI(s, dt, game) {
+    const p = game.player, lead = p.ship;
+    const c = game.state?.char;
+    if (!c || c.faction !== "marine" || !lead || lead.sunk || p.mode !== "sail") {
+      s.sail = 0;
+      return;
+    }
+    const w = game.world;
+    let foe = null, fd = 22;
+    for (const o of game.ships) {
+      if (o === s || o.sunk || o.faction !== "pirate") continue;
+      const d2 = w.distance(s.x, s.y, o.x, o.y);
+      if (d2 < fd) {
+        fd = d2;
+        foe = o;
+      }
+    }
+    if (foe) {
+      s.sail = 1;
+      const toT = Math.atan2(foe.y - s.y, w.dx(s.x, foe.x));
+      const want2 = fd > 12 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
+      s.heading += clamp2(angleDiff(s.heading, want2), -1, 1) * s.def.turn * dt;
+      const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
+      const toLead = Math.atan2(lead.y - s.y, w.dx(s.x, lead.x));
+      const clear3 = Math.abs(angleDiff(toT, toLead)) > 0.5 || w.distance(s.x, s.y, lead.x, lead.y) > fd + 3;
+      if (fd < 16 && side < 0.6 && clear3 && s.cannonCd <= 0) s.fireBroadside(game, foe.x, foe.y, { name: s.name, faction: "player", isShip: true, escort: true, power: () => (s.level || 10) * 10 });
+      return;
+    }
+    const pt = formationPoint(game, lead, s.escortSlot || 0, s.formSpread || 1);
+    const d = w.distance(s.x, s.y, pt.x, pt.y);
+    if (d > 60 * (s.formSpread || 1)) {
+      const q2 = formationPoint(game, lead, s.escortSlot || 0, 1.6 * (s.formSpread || 1));
+      if (s.fits(w, q2.x, q2.y, lead.heading)) {
+        s.x = q2.x;
+        s.y = q2.y;
+        s.heading = lead.heading;
+        s.speed = lead.speed;
+      }
+      return;
+    }
+    const toP = Math.atan2(pt.y - s.y, w.dx(s.x, pt.x));
+    const want = d > 3 ? toP : lead.heading;
+    s.heading += clamp2(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
+    s.sail = d > 8 ? 1 : d > 3 ? Math.max(0.3, lead.sailSet) : lead.sailSet;
+    s.rowing = d > 10 && game.isCalmAt(s.x, s.y) ? 1 : 0;
+  }
+  function spawnSoldier(game, i) {
+    const c = game.state.char, p = game.player;
+    const lvl = Math.max(6, Math.round(6 + rankIndex(c.marineRank) * 2.5));
+    const pos = game.spawner.findFree(p.x - 1.5 + i, p.y + 1.2, 3) || { x: p.x, y: p.y + 1 };
+    const names = ["Seaman Coby", "Seaman Helmeppo", "Seaman Rokkaku", "Petty Officer Jango", "Seaman Fullbody", "Seaman Tashigi"];
+    const a = makeEnemy("marine", lvl, pos.x, pos.y, { name: i === 0 && rankIndex(c.marineRank) >= rankIndex("Captain") ? "Your aide" : "Marine Seaman" });
+    a.name = names[(i + (c.runSeed || 0)) % names.length].replace("Seaman ", "Marine ");
+    a.game = game;
+    a.faction = "player";
+    a.marineSquad = true;
+    a.aggroPlayer = false;
+    a.provoked = false;
+    a.lethal = false;
+    a.showName = true;
+    a.nameColor = "#90caf9";
+    a.controller = new AIController({ kind: "follower", skill: 0.4, moves: a.techniques || [] });
+    game.addActor(a);
+    game.fx.burst(a.x, a.y - 0.6, 8, { color: ["#90caf9", "#ffffff"], speed: 2, g: 0, life: 0.4, kind: "smoke" });
+  }
+  function enlist(game, where) {
+    const c = game.state.char;
+    if (c.faction === "marine") {
+      game.log("You are already a Marine.", "#b0bec5");
+      return;
+    }
+    if (c.bounty > 0 || c.flags.deserter) {
+      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Recruiting Officer", text: `"${c.flags.deserter ? "A deserter wants back in? Guards!" : `Enlist? With a ${formatBerries(c.bounty)} bounty on your head? Get out before I arrest you.`}"` } } });
+      return;
+    }
+    if (c.crewName) {
+      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Recruiting Officer", text: `"You fly a Jolly Roger \u2014 the flag of the ${c.crewName}. The Navy doesn't recruit pirate captains."` } } });
+      return;
+    }
+    if ((c.reputation || 0) < ENLIST_REP) {
+      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Recruiting Officer", text: `"The Marines only take people of good standing. Right now folk around here would call you '${repTier(c.reputation || 0).name}'. Help people \u2014 finish their troubles, stand up to pirates \u2014 and come back when your name means something. (Reputation ${Math.round(c.reputation || 0)} / ${ENLIST_REP})"` } } });
+      return;
+    }
+    game.dialogue.open(null, { start: "a", nodes: {
+      a: {
+        speaker: "Recruiting Officer",
+        text: `"You want to join the Marines? The pay is modest and the work is dangerous. You'll swear to uphold Absolute Justice and hunt pirates wherever they sail. Once you sign, there's no going back to piracy \u2014 not without a price on your head."`,
+        choices: [{ text: "I swear it. Sign me up.", next: "b" }, { text: "Not yet.", end: true }]
+      },
+      b: {
+        speaker: "Recruiting Officer",
+        text: `"Welcome to the Marines, Seaman Recruit ${c.name}! Here's your cap. Report to any Marine base for missions and pay. Capture pirates \u2014 the more notorious, the better."`,
+        onEnter: () => enlistNow(game, where)
+      }
+    } });
+  }
+  function enlistNow(game, where) {
+    const c = game.state.char;
+    if (c.faction === "marine") return;
+    c.faction = "marine";
+    c.marineRank = MARINE_RANKS[0].name;
+    c.merit = c.merit || 0;
+    c.marinePayDay = game.env.day;
+    c.enlistedAt = where;
+    addItem(game, "marine_cap", 1, { silent: true });
+    if (!c.equipped.hat) equip(game, "marine_cap");
+    game.ui.toast("ENLISTED", "Seaman Recruit of the Marines", "#64b5f6");
+    game.emit("marineRankChanged", c.marineRank);
+    persist(game);
+  }
+  function nextRank(c) {
+    const i = rankIndex(c.marineRank);
+    return i >= 0 && i < MARINE_RANKS.length - 1 ? MARINE_RANKS[i + 1] : null;
+  }
+  function promote(game) {
+    const c = game.state.char;
+    const n = nextRank(c);
+    if (!n || c.merit < n.merit) return null;
+    const why = n.req ? n.req(c) : null;
+    if (why) return why;
+    if ((c.reputation || 0) < (n.rep || 0)) return `Headquarters wants officers the people trust. Reputation ${Math.round(c.reputation || 0)} / ${n.rep}.`;
+    c.marineRank = n.name;
+    game.ui.toast("PROMOTED!", n.name, "#64b5f6");
+    game.log(`Promoted to ${n.name}.${n.perk ? " " + n.perk : ""}`, "#90caf9");
+    const i = rankIndex(n.name);
+    const dock = game.currentIsland?.docks?.[0];
+    const pos = dock ? dock.moor : { x: game.player.x, y: game.player.y + 5 };
+    if (n.name === "Ensign") game.giveShip("sloop", pos.x, pos.y, "Marine Cutter");
+    if (n.name === "Captain") game.giveShip("brigantine", pos.x, pos.y, "Marine Brig");
+    if (n.name === "Rear Admiral") game.giveShip("marine_warship", pos.x, pos.y, "Marine Warship");
+    if (n.name === "Vice Admiral") game.giveShip("marine_battleship", pos.x, pos.y, "Marine Battleship");
+    if (n.name === "Commodore") {
+      addItem(game, "marine_coat", 1);
+      equip(game, "marine_coat");
+    }
+    if (n.name === "Captain" || n.name === "Vice Admiral") addItem(game, "marine_medal", 1);
+    if (i >= rankIndex("Captain")) c.flags.bondolaPass = true;
+    game.progression.breakthrough(1, `Promotion to ${n.name}`);
+    game.emit("marineRankChanged", n.name);
+    game.progression.checkDream();
+    persist(game);
+    return null;
+  }
+  function missionTarget(game) {
+    const c = game.state.char;
+    const here = REGION_INFO[regionAt(game.player.x, game.player.y)]?.id;
+    const cands = allNpcDefs().filter((d) => d.bounty && (d.boss || d.named) && d.faction !== "marine" && !c.bosses.includes(d.id) && !c.defeated[d.id]).map((d) => {
+      const isl = game.surface.islands.find((i) => i.id === d.island);
+      return { d, isl, sea: isl?.def?.sea };
+    }).filter((x) => x.isl && (x.sea === here || here === "calm_belt" && x.sea === "paradise"));
+    cands.sort((a, b) => a.d.bounty - b.d.bounty);
+    return cands[0] || null;
+  }
+  function office(game, building, island) {
+    const c = game.state.char;
+    if (c.faction !== "marine") {
+      game.dialogue.open(null, { start: "a", nodes: { a: {
+        speaker: building?.name || "Marine Base",
+        text: c.bounty > 0 ? `"Halt! This is a Marine base \u2014 and you're on our wanted list!"` : '"This is a Marine base. Here to enlist? Or to report a pirate sighting?"',
+        choices: [
+          { text: "I want to enlist.", if: () => !c.bounty, do: () => {
+            game.dialogue.close();
+            enlist(game, island?.name);
+          } },
+          { text: "Turn in bounties.", if: () => (c.claims || []).length > 0 && !c.bounty, do: () => {
+            game.dialogue.close();
+            bountyOffice(game, building, island);
+          } },
+          { text: "Leave.", end: true }
+        ]
+      } } });
+      return;
+    }
+    const n = nextRank(c);
+    const days = Math.max(0, game.env.day - (c.marinePayDay || game.env.day));
+    const idx = rankIndex(c.marineRank);
+    const pay2 = days * (300 + idx * 450);
+    const target2 = missionTarget(game);
+    const mission = c.marineMission;
+    game.dialogue.open(null, { start: "a", nodes: {
+      a: {
+        speaker: building?.name || "Marine Base",
+        text: () => `"${c.marineRank} ${c.name}! Merit: ${Math.floor(c.merit)}${n ? ` / ${n.merit} for ${n.name}` : ""}."${mission ? ` Current orders: capture ${mission.name}.` : ""}`,
+        choices: [
+          { text: `Collect pay (${formatBerries(pay2)})`, if: () => pay2 > 0, do: () => {
+            earn(game, pay2, "Marine salary");
+            c.marinePayDay = game.env.day;
+          }, next: "a" },
+          { text: n ? `Request promotion to ${n.name}` : "Request promotion", if: () => !!n && c.merit >= n.merit, do: () => {
+            const why = promote(game);
+            if (why) game.log(`Promotion denied: ${why}`, "#ff8a80");
+          }, next: "a" },
+          { text: () => `Orders: capture ${target2?.d.name} (${formatBerries(target2?.d.bounty || 0)}) on ${target2?.isl.name}`, if: () => !!target2 && !mission, do: () => {
+            c.marineMission = { id: target2.d.id, name: target2.d.name, island: target2.isl.name, merit: meritFor(target2.d) };
+            game.log(`New orders: capture ${target2.d.name} at ${target2.isl.name}.`, "#90caf9");
+          }, next: "a" },
+          { text: "Rokushiki training", if: () => idx >= rankIndex("Lieutenant"), do: () => {
+            game.dialogue.close();
+            openTrainer(game, "marine_instructor", "Marine Instructor");
+          } },
+          { text: "Resign from the Marines", do: () => {
+          }, next: "resign" },
+          { text: "Dismissed.", end: true }
+        ]
+      },
+      resign: { speaker: building?.name || "Marine Base", text: `"Resign? You may hand in your cap. You'll lose your rank \u2014 but at least you won't be hunted."`, choices: [
+        { text: "Hand in the cap.", do: () => {
+          c.faction = "civilian";
+          c.flags.formerMarine = c.marineRank;
+          c.marineRank = null;
+          c.marineMission = null;
+          game.log("You resign from the Marines.", "#b0bec5");
+          persist(game);
+        }, end: true },
+        { text: "Never mind.", next: "a" }
+      ] }
+    } });
+  }
+  function meritFor(d) {
+    const b = d.bounty || d.bountyValue || 0;
+    return Math.round(Math.max(20, Math.sqrt(b / 1e3)) * (d.boss ? 1.2 : 0.8));
+  }
+  function onKnockout(game, a, att) {
+    const c = game.state?.char;
+    const p = game.player;
+    const byCrew = att && !att.isPlayer && (att.crewId || att.summonedBy?.isPlayer);
+    if (byCrew) {
+      if (a.faction === "marine" || a.faction === "cp") return;
+      att = p;
+    }
+    if (!c || !att || !att.isPlayer || a.isPlayer || a.faction === "player") return;
+    if (c.faction === "marine" && (a.faction === "marine" || a.faction === "cp") && !a.spar && !a.def?.duel) {
+      c.flags.deserter = true;
+      c.flags.formerMarine = c.marineRank;
+      c.faction = "pirate";
+      c.marineRank = null;
+      c.marineMission = null;
+      game.ui.toast("DESERTER!", "You struck down a fellow Marine. The Navy will hunt you.", "#ff5252");
+      game.progression.addBounty(Math.max(3e7, (a.bountyValue || 0) + 2e7), "Marine deserter");
+      return;
+    }
+    if (!CRIMINALS2.has(a.faction)) return;
+    const tf2 = threatFactor(a.power(), p.power());
+    const bounty = a.bountyValue || a.def?.bounty || 0;
+    if (c.faction === "marine") {
+      let merit = 0;
+      if (a.boss || a.named) merit = meritFor({ bounty, boss: a.boss });
+      else if (tf2 > 0.2) merit = 1 + Math.round(tf2 * 3);
+      if (c.marineMission && a.npcId === c.marineMission.id) {
+        merit += c.marineMission.merit;
+        game.ui.toast("ORDERS COMPLETE", `${a.name} captured`, "#64b5f6");
+        c.marineMission = null;
+      }
+      if (merit > 0) {
+        c.merit = (c.merit || 0) + merit;
+        game.log(`+${merit} merit (${Math.floor(c.merit)})`, "#90caf9");
+        const n = nextRank(c);
+        if (n && c.merit >= n.merit) game.hint("promote", "You have enough merit for a promotion. Report to any Marine base.");
+      }
+    } else if (c.faction !== "pirate" && bounty > 0 && (a.boss || a.named)) {
+      c.claims = c.claims || [];
+      c.claims.push({ name: a.name, amount: bounty });
+      game.log(`${a.name} is worth ${formatBerries(bounty)} to the Marines. Turn them in at a Marine base or bounty office.`, "#ffe082");
+    }
+  }
+  function bountyOffice(game, building, island) {
+    const c = game.state.char;
+    const body = h("div");
+    game.ui.openPanel(body, { wide: true });
+    body.append(h("h2", building?.name || "Bounty Office"));
+    const claims = c.claims || [];
+    if (claims.length && c.faction !== "pirate" && !c.bounty) {
+      const total = claims.reduce((s, x) => s + x.amount, 0);
+      const payout = Math.round(total * (c.faction === "marine" ? 0.1 : 0.3));
+      body.append(
+        h("p", `Bounties to claim: ${claims.map((x) => `${x.name} (${formatBerries(x.amount)})`).join(", ")}`),
+        h("button.btn.gold", { on: { click: (e) => {
+          earn(game, payout, "bounties");
+          c.claims = [];
+          e.target.disabled = true;
+          e.target.textContent = "Paid!";
+          persist(game);
+        } } }, `Collect ${formatBerries(payout)}${c.faction === "marine" ? " (Marines only receive a commendation bonus)" : ""}`)
+      );
+    }
+    if (c.bounty > 0) body.append(h("h3", "Your poster"), wantedPoster(c));
+    const wanted2 = allNpcDefs().filter((d) => d.bounty && d.infamy && !c.bosses.includes(d.id) && !c.defeated[d.id]).sort((a, b) => b.bounty - a.bounty).slice(0, 12);
+    body.append(h("h3", "Most Wanted"));
+    const list = h("div.list");
+    for (const d of wanted2) {
+      const isl = game.surface.islands.find((i) => i.id === d.island);
+      const known = c.discovered.includes(d.island);
+      list.appendChild(h("div.row-item", uiImg("bounty", 30), h("div.grow", h("b", d.name), h("div.sub", `${d.title || ""}${known && isl ? " \xB7 last seen: " + isl.name : ""}`)), h("span.price", formatBerries(d.bounty))));
+    }
+    body.appendChild(list);
+    if (c.faction === "pirate") body.append(h("p.muted", "The clerk eyes you nervously and keeps one hand near the Den Den Mushi."));
+  }
+
+  // src/content/main/homes.js
+  var logPose = (g) => count(g.state.char, "log_pose") ? {} : { items: [["log_pose", 1]] };
+  var firstName = (c) => String(c.name || "").split(" ")[0];
+  var blades = (name) => ({ text: "Show me those old blades.", do: (c) => c.open("shop", { shop: "weapons_blue", building: { name: `${name}'s old blades`, role: "weapons", shop: "weapons_blue" } }) });
+  var posters = { text: "Show me the posters.", do: (c) => c.open("bounty", {}) };
+  var navy = (post) => ({ text: "Marine business.", if: (c) => c.char.faction === "marine", do: (c) => c.emit("marineOffice", { name: post, role: "marine_base" }), end: true });
+  function home(island, sea, o) {
+    const V3 = o.villain;
+    const vid = target({
+      id: `mq_v_${island}`,
+      island,
+      name: V3.name,
+      title: V3.title,
+      faction: V3.faction || "pirate",
+      race: V3.race,
+      boss: true,
+      hpMul: V3.hpMul ?? 0.45,
+      level: V3.level ?? 4,
+      style: V3.style || "brawler",
+      weapon: V3.weapon,
+      ranged: V3.ranged,
+      look: V3.look,
+      bounty: V3.bounty,
+      at: V3.at,
+      alert: V3.alert,
+      defeatLine: V3.defeat,
+      skill: 0.18,
+      breakthrough: 1,
+      leash: 22
+    });
+    const P4 = o.pirate, M2 = o.marine, H2 = o.hunter;
+    const vname = V3.name.replace(/^"[^"]*"\s*/, "");
+    const bounty = formatBerries(V3.bounty);
+    chapter(`home_${island}`, { part: 1, island, kind: "start", sea, town: o.town }, {
+      pirate: {
+        name: P4.chapter || "A Blade and a Flag",
+        summary: `Every pirate starts with a blade and a flag. ${P4.name} in ${o.townName} will see you off once you've got both.`,
+        contact: { name: P4.name, title: P4.title, look: P4.look, race: P4.race, at: P4.at, where: P4.where, level: 12, choices: [blades(P4.name)] },
+        pitch: P4.pitch,
+        accept: "I'm going to be a pirate.",
+        meet: [
+          P4.first || "Ha! Then listen close. No pirate ever sailed without a blade \u2014 or a fist hard enough to count as one. Buy one, win one, find one. I've a few old ones in the back, if you've the berries.",
+          "And a pirate without a flag is just a sailor who's lost his job. Give your crew a name and raise a Jolly Roger of your own. (Crew menu \u2014 U.)"
+        ],
+        tasks: [T3.weapon(), T3.flag()],
+        wait: P4.wait || "A blade and a flag. You can't sail without either \u2014 well, you can, but you won't be a pirate.",
+        done: [
+          (ctx) => `${P4.done || "Now THAT is a Jolly Roger."} The ${ctx.char.crewName || "new crew"}... I'll remember that name. So will the Marines, soon enough.`,
+          (ctx) => `Here \u2014 my old Log Pose. ${onward(ctx.char)} A crew needs more than one pirate, and your little boat won't last a day in the Grand Line. Get stronger on the way.`
+        ],
+        after: P4.after || ((ctx) => `Off with you, Captain ${firstName(ctx.char)}! The sea doesn't wait for anyone.`),
+        idle: P4.idle || "Already on your way somewhere, are you? Good. The sea rewards those who don't look back.",
+        reward: logPose
+      },
+      marine: {
+        name: M2.chapter || "Seaman Recruit",
+        summary: `${M2.name} of the ${M2.post} will swear you into the Navy \u2014 once you've brought in ${vname}, who has been ${V3.crime}.`,
+        contact: { name: M2.name, title: M2.post, look: M2.look || LOOK.officer(), race: M2.race, faction: "marine", at: M2.at, where: M2.where, level: 16, style: "ittoryu", weapon: "sword", choices: [navy(M2.post)] },
+        pitch: M2.pitch,
+        accept: "I want to join the Marines.",
+        meet: [
+          M2.first || `Words are cheap. Show me what you're made of. There's a pirate called ${V3.name} \u2014 ${bounty} on his head \u2014 who has been ${V3.crime}.`,
+          `Bring ${vname} in ${V3.where}. Knock him down, and I'll see to the cuffs. Do that, and I'll swear you in myself.`
+        ],
+        tasks: [T3.defeat(vid, `Bring in ${V3.name} ${V3.where}.`)],
+        wait: M2.wait || `${vname} is still out there ${V3.where}. The people of ${o.townName} are waiting, recruit.`,
+        done: [
+          M2.done || `Hah! That'll teach him. You've a knack for this \u2014 and a sense of Justice, I think.`,
+          "Raise your right hand. Do you swear to uphold Justice and protect the people of the seas, wherever the Navy sends you? ...Good. Welcome to the Marines, Seaman Recruit.",
+          (ctx) => `Here's your cap, and a Navy-issue Log Pose. ${onward(ctx.char, "Your first orders: report to")}`
+        ],
+        onReport: (g) => enlistNow(g, o.townName),
+        onDone: (g) => enlistNow(g, o.townName),
+        // (however the chapter ends: enlistNow does nothing twice)
+        after: M2.after || ((ctx) => `Stand up straight, ${ctx.char.marineRank || "Seaman"}! You carry the Navy's name now.`),
+        idle: M2.idle || "Carry on, citizen. The Navy keeps watch.",
+        reward: logPose
+      },
+      hunter: {
+        name: H2.chapter || "The First Poster",
+        summary: `${H2.name} deals in bounties in ${o.townName}. Their first poster for you: ${V3.name}, ${bounty}.`,
+        contact: { name: H2.name, title: H2.title || "Bounty Broker", look: H2.look, race: H2.race, at: H2.at, where: H2.where, level: 12, choices: [posters] },
+        pitch: H2.pitch,
+        accept: "I'll hunt pirates for a living.",
+        meet: [
+          H2.first || `Everyone starts with a small one. Here: ${V3.name}, ${bounty}. He's been ${V3.crime}.`,
+          `Last seen ${V3.where}. Knock him down \u2014 dead men can't stand trial, so keep it clean \u2014 and I'll handle the paperwork with the Marines.`
+        ],
+        tasks: [T3.defeat(vid, `Hunt down ${V3.name} (${bounty}) ${V3.where}.`)],
+        wait: H2.wait || `${vname} is still out there ${V3.where}. Money doesn't walk up to you, partner.`,
+        done: [
+          H2.done || `Ha! Look at him. The Marines will be delighted \u2014 and so will I. Here's your cut, and the poster to frame.`,
+          (ctx) => `And here \u2014 a Log Pose, for the road. ${onward(ctx.char, "Word is the big money is at")}`
+        ],
+        // (the broker takes him to the Marines: the claim is theirs now)
+        onReport: (g) => {
+          const c = g.state.char;
+          c.claims = (c.claims || []).filter((x) => x.name !== V3.name);
+          c.flags.bountyHunter = true;
+        },
+        after: H2.after || "Bring me more posters' worth, partner. There are always more.",
+        idle: H2.idle || "Every face on these posters is somebody's payday. Could be yours, one day.",
+        reward: (g) => ({ ...logPose(g), berries: Math.round(V3.bounty * 4e-3) * 10 })
+      }
+    });
+  }
+  var PIER = (town) => ({ town, dock: true, ox: 1.5 });
+  home("dawn_island", "east_blue", {
+    town: "foosha",
+    townName: "Foosha Village",
+    villain: {
+      name: '"Mad Dog" Brannigan',
+      title: "Pirate of the Gray Terminal",
+      bounty: 12e5,
+      crime: "shaking down the fishermen for their catch",
+      where: "at Foosha's pier",
+      at: PIER("foosha"),
+      look: { hair: "spiky", hairColor: "#4e342e", top: "#5d4037", bottom: "#3e2723", hat: "bandana", hatColor: "#b71c1c", scarEye: true },
+      style: "brawler",
+      alert: "Another brat from the village? Go home to your mama!",
+      defeat: "Arf... not the face..."
+    },
+    pirate: {
+      name: "Old Gyoru",
+      title: "Retired Buccaneer",
+      at: { town: "foosha", door: "bar" },
+      where: "outside Party's Bar",
+      look: { hair: "bald", skin: "#e0ac7e", top: "#795548", bottom: "#3e2723", hat: "bandana", hatColor: "#263238", scarEye: true, bulk: 1.15 },
+      pitch: ["Red-Hair Shanks drank in that bar, you know. The day he sailed, a boy from this village swore he'd be King of the Pirates. Everyone laughed.", "You've got that same look in your eye. Want to hear what it takes?"]
+    },
+    marine: {
+      name: "Lieutenant Kessel",
+      post: "Goa Marine Garrison",
+      at: { town: "goa", building: "marine_base" },
+      where: "at the Goa Marine Garrison, over the hill",
+      look: LOOK.officer({ hair: "short", hairColor: "#212121" }),
+      pitch: ["The Goa Kingdom's garrison keeps the peace from these walls to the Gray Terminal \u2014 or tries to. We're short of hands, and shorter of honest ones.", "You look sturdy enough. Ever thought of serving Justice?"]
+    },
+    hunter: {
+      name: "Sly Mahon",
+      at: { town: "foosha", plaza: true, ox: -4 },
+      where: "by the well in Foosha",
+      look: { hair: "long", hairColor: "#212121", top: "#37474f", bottom: "#263238", hat: "cowboy", hatColor: "#3e2723" },
+      pitch: ["Every pirate who sails out of the East Blue gets a price on his head sooner or later. Somebody has to collect it.", "I sell posters and buy captives. Interested in making your money off scoundrels?"]
+    }
+  });
+  home("shells_island", "east_blue", {
+    town: "shells_town",
+    townName: "Shells Town",
+    villain: {
+      name: '"Knuckles" Gorrin',
+      title: "Market Thug",
+      bounty: 9e5,
+      crime: "robbing the market stalls while the Marines look the other way",
+      where: "down by the Shells Town pier",
+      at: PIER("shells_town"),
+      faction: "bandit",
+      look: { hair: "buzz", hairColor: "#3e2723", top: "#8d6e63", bottom: "#4e342e", bulk: 1.3 },
+      alert: "Captain Morgan don't care what I take. Why should you?"
+    },
+    pirate: {
+      name: "Salty Pell",
+      title: "Old Fisherman",
+      at: { town: "shells_town", door: "inn" },
+      where: "outside the Seagull Inn",
+      look: { hair: "short", hairColor: "#cfd8dc", top: "#1565c0", bottom: "#455a64", hat: "beanie", hatColor: "#b0bec5" },
+      pitch: ["Axe-Hand Morgan's Marines have this whole town under their boot. A man who thinks HE is Justice.", "Makes a body want to fly a different flag, doesn't it? A free one."]
+    },
+    marine: {
+      name: "Lieutenant Ripper",
+      post: "Marine Base 153rd Branch",
+      at: { town: "marine_153", building: "marine_base", guest: true },
+      where: "at Marine Base 153, up the hill",
+      look: LOOK.officer({ hair: "short", hairColor: "#212121" }),
+      pitch: ["Captain Morgan runs this base with an iron fist... and not every Marine here is proud of it.", "The Navy is more than one bad captain. Sign up \u2014 and help me prove it."]
+    },
+    hunter: {
+      name: "Tobbs the Tally",
+      at: { town: "shells_town", door: "restaurant" },
+      where: "outside Rika's restaurant",
+      look: { hair: "curly", hairColor: "#6d4c41", top: "#607d8b", bottom: "#37474f", hat: "cap", hatColor: "#263238" },
+      pitch: ["They say a pirate hunter called Roronoa Zoro is tied up in the Marine yard. That's what happens when you hunt for free.", "I make sure hunters get PAID. Want in?"]
+    }
+  });
+  home("shimotsuki", "east_blue", {
+    town: "shimotsuki_village",
+    townName: "Shimotsuki Village",
+    villain: {
+      name: '"Rust-Blade" Kazan',
+      title: "Masterless Ronin",
+      bounty: 1e6,
+      crime: "challenging the dojo's students and stealing their swords",
+      where: "by the village pier",
+      at: PIER("shimotsuki_village"),
+      faction: "rival",
+      style: "ittoryu",
+      weapon: "sword",
+      look: { hair: "topknot", hairColor: "#212121", top: "#455a64", bottom: "#263238" },
+      alert: "Another sword for my collection!"
+    },
+    pirate: {
+      name: "Genba the One-Eyed",
+      title: "Retired Pirate",
+      at: { town: "shimotsuki_village", plaza: true, ox: 3 },
+      where: "in the village square",
+      look: { hair: "long", hairColor: "#9e9e9e", top: "#5d4037", bottom: "#3e2723", scarEye: true },
+      pitch: ["This village breeds swordsmen. Koushirou's dojo turned out a girl who could beat any man \u2014 and a green-haired boy who swore he'd be the greatest in the world.", "The sea's where swordsmen go to become legends. Pirates, too."]
+    },
+    marine: {
+      name: "Ensign Mikoto",
+      post: "Shimotsuki Marine Post",
+      at: { town: "shimotsuki_village", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "ponytail", hairColor: "#1a237e", fem: true }),
+      pitch: ["A village of swords needs someone to keep those swords pointed the right way.", "Join the Navy. Your blade would serve Justice instead of your pride."]
+    },
+    hunter: {
+      name: "Wandering Shiro",
+      at: { town: "shimotsuki_village", door: "shop" },
+      where: "outside the village shop",
+      look: { hair: "spiky", hairColor: "#eceff1", top: "#263238", bottom: "#212121", hat: "straw", hatColor: "#d7ccc8" },
+      pitch: ["Swordsmen who lose their way become ronin. Ronin become posters.", "I pay for the ones who've lost their way. Care to find them for me?"]
+    }
+  });
+  home("organ_islands", "east_blue", {
+    town: "orange_town",
+    townName: "Orange Town",
+    villain: {
+      name: '"Pinwheel" Poko',
+      title: "Buggy Pirates Straggler",
+      bounty: 8e5,
+      crime: "looting the houses Buggy's crew emptied",
+      where: "down at Orange Town's pier",
+      at: PIER("orange_town"),
+      style: "ittoryu",
+      weapon: "sword",
+      look: { hair: "curly", hairColor: "#e53935", top: "#fdd835", bottom: "#1e88e5", hat: "bandana", hatColor: "#e53935" },
+      alert: "Flashy entrance, eh? Captain Buggy would be proud of me!"
+    },
+    pirate: {
+      name: "Hocker the Drifter",
+      title: "Wandering Pirate",
+      at: { town: "orange_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "short", hairColor: "#795548", top: "#2e7d32", bottom: "#4e342e", hat: "tricorne", hatColor: "#3e2723" },
+      pitch: ["Buggy the Clown turned this town into his circus. That's one kind of pirate.", "There's another kind \u2014 the kind who'd tell Buggy to his painted face to get out. Which kind are you?"]
+    },
+    marine: {
+      name: "Lieutenant Mace",
+      post: "Orange Town Marine Post",
+      at: { town: "orange_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "buzz", hairColor: "#5d4037" }),
+      pitch: ["The Buggy Pirates chased half this town into the hills while the Navy was busy elsewhere. I got here too late.", "Never again. Help me hold this post."]
+    },
+    hunter: {
+      name: "Mikka the Tallier",
+      at: { town: "orange_town", plaza: true, ox: -4 },
+      where: "in the town square",
+      look: { hair: "ponytail", hairColor: "#ff7043", top: "#8d6e63", bottom: "#5d4037", fem: true },
+      pitch: ["Buggy the Clown: fifteen million berries. Every one of his crew has a price too \u2014 cheaper, but they add up.", "Start small. Everybody does."]
+    }
+  });
+  home("gecko_islands", "east_blue", {
+    town: "syrup_village",
+    townName: "Syrup Village",
+    villain: {
+      name: '"Sham-Cat" Rudo',
+      title: "Black Cat Pirates Straggler",
+      bounty: 7e5,
+      crime: "sneaking into houses at night \u2014 he says his old captain is coming back",
+      where: "by Syrup Village's pier",
+      at: PIER("syrup_village"),
+      style: "brawler",
+      look: { hair: "spiky", hairColor: "#212121", top: "#212121", bottom: "#37474f", hat: "bandana", hatColor: "#212121" },
+      alert: "The Captain's plan can't fail! Nyaa!"
+    },
+    pirate: {
+      name: "Old Man Gatz",
+      title: "Retired Whaler",
+      at: { town: "syrup_village", door: "bar" },
+      where: "outside the village bar",
+      look: { hair: "bald", skin: "#d7a47a", top: "#eceff1", bottom: "#546e7a", bulk: 1.2 },
+      pitch: [`There's a boy in this village who shouts "Pirates are coming!" every morning. One day, they really did.`, "Some folk run from pirates. Some become them. You've the look of the second kind."]
+    },
+    marine: {
+      name: "Lieutenant Bridget",
+      post: "Syrup Village Marine Post",
+      at: { town: "syrup_village", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "long", hairColor: "#ffb300", fem: true }),
+      pitch: ["Captain Kuro of the Black Cat Pirates was executed three years ago. Or so the reports say.", "The Navy could use sharp eyes in a quiet place like this. Enlist."]
+    },
+    hunter: {
+      name: "Clack the Collector",
+      at: { town: "syrup_village", plaza: true, ox: 4 },
+      where: "in the village square",
+      look: { hair: "short", hairColor: "#424242", top: "#6d4c41", bottom: "#3e2723", hat: "cowboy", hatColor: "#5d4037" },
+      pitch: [`Kuro of a Hundred Plans was worth sixteen million \u2014 before he "died". Posters don't die, though. Not till someone collects.`, "Want to learn the trade?"]
+    }
+  });
+  home("conomi_islands", "east_blue", {
+    town: "cocoyasi",
+    townName: "Cocoyasi Village",
+    villain: {
+      name: '"Chew-Lip" Kobbe',
+      title: "Arlong's Tribute Collector",
+      bounty: 15e5,
+      race: "fishman",
+      crime: `collecting Arlong's "tribute" with his fists`,
+      where: "at Cocoyasi's pier",
+      at: PIER("cocoyasi"),
+      style: "fishman_karate",
+      look: { skin: "#5d9cec", top: "#fafafa", bottom: "#1565c0", fin: true, gills: true, sharpTeeth: true },
+      hpMul: 0.5,
+      alert: "Tribute day, humans! Shahaha!"
+    },
+    pirate: {
+      name: "Captain Bellows",
+      title: "Retired Pirate",
+      at: { town: "cocoyasi", plaza: true, ox: -4 },
+      where: "in Cocoyasi's square",
+      look: { hair: "long", hairColor: "#bdbdbd", top: "#1e88e5", bottom: "#263238", hat: "captain", hatColor: "#212121", bulk: 1.1 },
+      pitch: ["Arlong's Fish-Men squeeze every village on these islands for tribute. Eight years now.", "A pirate who'd stand up to a pirate like that... now there's someone I'd drink to."]
+    },
+    marine: {
+      name: "Ensign Tolles",
+      post: "Marine Branch 16",
+      at: { town: "marine_16", building: "marine_base", guest: true },
+      where: "at Marine Branch 16",
+      look: LOOK.officer({ hair: "short", hairColor: "#6d4c41" }),
+      pitch: [`Captain Nezumi says Arlong's Fish-Men are "no business of the Navy". I say he's taking their money.`, "I can't prove it alone. Join up \u2014 quietly \u2014 and help me."]
+    },
+    hunter: {
+      name: "Pearl-Eye Suzu",
+      at: { town: "cocoyasi", plaza: true, ox: 4 },
+      where: "in Cocoyasi's square",
+      look: { hair: "ponytail", hairColor: "#26a69a", top: "#fff176", bottom: "#5d4037", fem: true },
+      pitch: ["Saw-Tooth Arlong: twenty million berries. Nobody on this island dares touch that poster.", "His collectors, though? Cheaper \u2014 and nobody here would mourn them."]
+    }
+  });
+  home("satsuruzo", "east_blue", {
+    town: "satsuruzo_town",
+    townName: "Satsuruzo Town",
+    villain: {
+      name: '"Pickaxe" Dorren',
+      title: "Claim-Jumper",
+      bounty: 6e5,
+      crime: "robbing the miners on payday",
+      where: "down by the town pier",
+      at: PIER("satsuruzo_town"),
+      faction: "bandit",
+      style: "brawler",
+      look: { hair: "mohawk", hairColor: "#212121", top: "#6d4c41", bottom: "#4e342e", bulk: 1.25 },
+      alert: "Payday's MY day!"
+    },
+    pirate: {
+      name: "Mutt the Sailmaker",
+      title: "Old Sailmaker",
+      at: { town: "satsuruzo_town", plaza: true, ox: 3 },
+      where: "in the town square",
+      look: { hair: "curly", hairColor: "#9e9e9e", top: "#fff8e1", bottom: "#6d4c41" },
+      pitch: ["I've stitched sails for merchants, fishermen and three pirate crews. Guess which paid the best.", "A good sail wants a good flag on it. Thinking of making one?"]
+    },
+    marine: {
+      name: "Lieutenant Varga",
+      post: "Satsuruzo Marine Base",
+      at: { town: "satsuruzo_town", building: "marine_base" },
+      where: "at the Marine base",
+      look: LOOK.officer({ hair: "short", hairColor: "#37474f" }),
+      pitch: ["The mines bring money, and money brings thieves. My base can't be everywhere.", "Put on the cap and help me be everywhere."]
+    },
+    hunter: {
+      name: "Broker Linne",
+      at: { town: "satsuruzo_town", door: "shop" },
+      where: "outside the town shop",
+      look: { hair: "long", hairColor: "#5d4037", top: "#26a69a", bottom: "#37474f", fem: true },
+      pitch: ["Miners dig for gold. I dig for posters. Guess which pays better per hour.", "Care to try a shovel of your own?"]
+    }
+  });
+  home("oykot", "east_blue", {
+    town: "oykot_castle_town",
+    townName: "Oykot Castle Town",
+    villain: {
+      name: '"The Grey Baron"',
+      title: "Pirate Swindler",
+      bounty: 13e5,
+      crime: 'selling "royal pardons" to scared townsfolk',
+      where: "at the castle town's pier",
+      at: PIER("oykot_castle_town"),
+      style: "ittoryu",
+      weapon: "sword",
+      look: { hair: "long", hairColor: "#bdbdbd", top: "#616161", bottom: "#212121", hat: "tophat", hatColor: "#424242" },
+      alert: "Your pardon has expired, I'm afraid."
+    },
+    pirate: {
+      name: "Hiccup Joe",
+      title: "Drunken Navigator",
+      at: { town: "oykot_castle_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "spiky", hairColor: "#ff8f00", top: "#c62828", bottom: "#263238", hat: "bandana", hatColor: "#fdd835" },
+      pitch: ["Hic! I've charted every current between here and Loguetown. Drunk. Every one.", "You look like someone who needs a chart and a reason. I've got one of those."]
+    },
+    marine: {
+      name: "Lieutenant Aldous",
+      post: "Oykot Marine Post",
+      at: { town: "oykot_castle_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#8d6e63" }),
+      pitch: ["The King of Oykot wants his castle town safe. The Navy wants recruits. I want both.", "You could help all three of us."]
+    },
+    hunter: {
+      name: "Madame Sels",
+      at: { town: "oykot_castle_town", plaza: true, ox: -4 },
+      where: "in the castle square",
+      look: { hair: "curly", hairColor: "#4a148c", top: "#6a1b9a", bottom: "#212121", fem: true },
+      pitch: ["Nobles pay for peace and quiet. Pirates disturb it. I arrange the difference \u2014 for a fee.", "Fancy earning some of it?"]
+    }
+  });
+  home("lvneel", "north_blue", {
+    town: "lvneel_town",
+    townName: "Lvneel",
+    villain: {
+      name: '"Cold-Nose" Hagen',
+      title: "Smuggler",
+      bounty: 11e5,
+      crime: "running stolen furs past the harbour-master",
+      where: "at Lvneel's pier",
+      at: PIER("lvneel_town"),
+      style: "ittoryu",
+      weapon: "sword",
+      look: { hair: "short", hairColor: "#eceff1", top: "#37474f", bottom: "#263238", hat: "beanie", hatColor: "#263238" },
+      alert: "Nobody saw anything. Especially not you."
+    },
+    pirate: {
+      name: "Old Rolf",
+      title: "Storyteller",
+      at: { town: "lvneel_town", door: "tavern" },
+      where: "outside the tavern",
+      look: { hair: "long", hairColor: "#e0e0e0", top: "#4e342e", bottom: "#3e2723", bulk: 1.1 },
+      pitch: ["Noland the Liar sailed from this harbour and came back with stories of a city of gold. They hanged him for it.", "I've always thought the sea owes that man an apology. Maybe you're the one to collect it."]
+    },
+    marine: {
+      name: "Lieutenant Isolde",
+      post: "Lvneel Marine Post",
+      at: { town: "lvneel_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "long", hairColor: "#fff176", fem: true }),
+      pitch: ["The North Blue is cold and the smugglers are colder. The kingdom asked the Navy for help.", "I asked the Navy for recruits. They sent me you, I think."]
+    },
+    hunter: {
+      name: "Brekk the Tally-Man",
+      at: { town: "lvneel_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "buzz", hairColor: "#795548", top: "#5d4037", bottom: "#3e2723", hat: "beanie", hatColor: "#6d4c41", bulk: 1.2 },
+      pitch: ["Every smuggler on this coast has a number next to his name. I keep the book.", "Want me to write YOUR name next to one of theirs?"]
+    }
+  });
+  home("notice", "north_blue", {
+    town: "notice_town",
+    townName: "Notice",
+    villain: {
+      name: '"Ringer" Maks',
+      title: "Crooked Prizefighter",
+      bounty: 7e5,
+      crime: "beating townsfolk for their purses after his rigged bouts",
+      where: "at Notice's pier",
+      at: PIER("notice_town"),
+      faction: "bandit",
+      style: "brawler",
+      look: { hair: "buzz", hairColor: "#212121", top: "#b71c1c", bottom: "#212121", bulk: 1.3, openShirt: true },
+      alert: "Round one, pal!"
+    },
+    pirate: {
+      name: "Nell the Deckhand",
+      title: "Former Pirate",
+      at: { town: "notice_town", door: "bar" },
+      where: "outside the bar",
+      look: { hair: "ponytail", hairColor: "#d84315", top: "#37474f", bottom: "#212121", fem: true },
+      pitch: ["Notice builds fighters. The ring here has broken better noses than yours.", "But a ring's got ropes. The sea hasn't. Ever thought of a bigger ring?"]
+    },
+    marine: {
+      name: "Lieutenant Garm",
+      post: "Notice Marine Post",
+      at: { town: "notice_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#212121", bulk: 1.15 }),
+      pitch: ["This town's full of people who can throw a punch. Few of them know where to aim it.", "The Navy will teach you where. Interested?"]
+    },
+    hunter: {
+      name: "Posey Quill",
+      at: { town: "notice_town", door: "bank" },
+      where: "outside the bank",
+      look: { hair: "short", hairColor: "#212121", top: "#546e7a", bottom: "#37474f", hat: "cap", hatColor: "#263238", fem: true },
+      pitch: ["The bank pays me to find the people who rob it. The Marines pay me to find the rest.", "I need legs. Yours look fine."]
+    }
+  });
+  home("spider_miles", "north_blue", {
+    town: "spider_miles_port",
+    townName: "Spider Miles",
+    villain: {
+      name: '"Rat-King" Scorch',
+      title: "Junkyard Pirate",
+      bounty: 14e5,
+      crime: "burning out the scrap-pickers who won't pay him",
+      where: "at the port pier",
+      at: PIER("spider_miles_port"),
+      style: "brawler",
+      look: { hair: "afro", hairColor: "#424242", top: "#3e2723", bottom: "#212121", scarEye: true },
+      alert: "This dump is MINE!"
+    },
+    pirate: {
+      name: "Crooked Vess",
+      title: "Scrap-Pirate",
+      at: { town: "spider_miles_port", door: "bar" },
+      where: "outside the port bar",
+      look: { hair: "spiky", hairColor: "#9e9e9e", top: "#455a64", bottom: "#263238", goggles: true },
+      pitch: ["A young man with a pink feather coat built himself a family out of this junkyard. Now half the North Blue fears the name Donquixote.", "Everyone starts in the dirt. What matters is which flag you raise out of it."]
+    },
+    marine: {
+      name: "Lieutenant Oskar",
+      post: "Spider Miles Marine Post",
+      at: { town: "spider_miles_port", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#3e2723" }),
+      pitch: ["The only Marine post in a town that hates Marines. I asked for this posting. Nobody else would take it.", "If you've the stomach for it, so could you."]
+    },
+    hunter: {
+      name: "Magpie Rett",
+      at: { town: "spider_miles_port", door: "market" },
+      where: "outside the market",
+      look: { hair: "long", hairColor: "#212121", top: "#212121", bottom: "#37474f", hat: "hood", hatColor: "#212121" },
+      pitch: ["Spider Miles is a junkyard of wanted men. Best hunting ground in the North Blue \u2014 if you're not afraid of rust.", "Well? Are you?"]
+    }
+  });
+  home("swallow_island", "north_blue", {
+    town: "swallow_town",
+    townName: "Swallow Island",
+    villain: {
+      name: '"Wolfskin" Grell',
+      title: "Poacher",
+      bounty: 9e5,
+      crime: "poaching the island's bears and threatening anyone who objects",
+      where: "at the town pier",
+      at: PIER("swallow_town"),
+      faction: "bandit",
+      style: "brawler",
+      look: { hair: "long", hairColor: "#8d6e63", top: "#9e9e9e", bottom: "#5d4037", hat: "hood", hatColor: "#9e9e9e", bulk: 1.2 },
+      alert: "Your pelt'll do nicely."
+    },
+    pirate: {
+      name: "Old Birgit",
+      title: "Ferry Captain",
+      at: { town: "swallow_town", door: "bar" },
+      where: "outside the bar",
+      look: { hair: "long", hairColor: "#eeeeee", top: "#1565c0", bottom: "#263238", hat: "beanie", hatColor: "#e53935", fem: true },
+      pitch: ["A surgeon boy lives up the hill with a talking bear. Says he'll sail one day with a crew of his own.", "This island makes dreamers. Are you one?"]
+    },
+    marine: {
+      name: "Lieutenant Halvard",
+      post: "Swallow Island Marine Post",
+      at: { town: "swallow_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#e0e0e0", bulk: 1.1 }),
+      pitch: ["Snow, bears and boredom. That's this post. And now a poacher who thinks the law stops at the treeline.", "Help me prove it doesn't, and I'll put in a word for you."]
+    },
+    hunter: {
+      name: "Fox-Eyed Tamsin",
+      at: { town: "swallow_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "ponytail", hairColor: "#ff7043", top: "#5d4037", bottom: "#3e2723", hat: "beanie", hatColor: "#6d4c41", fem: true },
+      pitch: ["Out here you hunt or you starve. I just prefer my prey with a price tag.", "Want to learn? I'll teach you the tracks."]
+    }
+  });
+  home("rakesh", "north_blue", {
+    town: "rakesh_port",
+    townName: "Rakesh",
+    villain: {
+      name: '"Harpoon" Vigg',
+      title: "Wrecker",
+      bounty: 1e6,
+      crime: "luring merchant ships onto the rocks with false lights",
+      where: "at the Rakesh pier",
+      at: PIER("rakesh_port"),
+      style: "ittoryu",
+      weapon: "sword",
+      look: { hair: "short", hairColor: "#4e342e", top: "#263238", bottom: "#37474f", hat: "tricorne", hatColor: "#212121" },
+      alert: "Another ship for the rocks!"
+    },
+    pirate: {
+      name: "Bosun Harrow",
+      title: "Old Bosun",
+      at: { town: "rakesh_port", door: "bar" },
+      where: "outside the port bar",
+      look: { hair: "bald", skin: "#e0ac7e", top: "#3949ab", bottom: "#263238", bulk: 1.25 },
+      pitch: ["Rakesh has been pillaged twice in my lifetime. Both times by pirates. Both times I swore I'd become one, just to get even.", "Never did. You look like you might."]
+    },
+    marine: {
+      name: "Lieutenant Sabine",
+      post: "Rakesh Marine Post",
+      at: { town: "rakesh_port", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#212121", fem: true }),
+      pitch: ["Three ships wrecked this month. Someone's lighting false beacons on the point.", "I need someone quick and honest. You'll do, if you're both."]
+    },
+    hunter: {
+      name: "Greaves",
+      at: { town: "rakesh_port", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "long", hairColor: "#616161", top: "#4e342e", bottom: "#212121", hat: "cowboy", hatColor: "#212121" },
+      pitch: ["Merchant houses pay better than the Marines for the men who sink their ships.", "Double pay, if you're quick. Interested?"]
+    }
+  });
+  home("flevance", "north_blue", {
+    town: "whiteland_town",
+    townName: "the White City",
+    villain: {
+      name: '"Ash-Hand" Corvin',
+      title: "Grave Robber",
+      bounty: 8e5,
+      crime: "digging up the graves of Flevance for Amber Lead",
+      where: "at the old pier",
+      at: PIER("whiteland_town"),
+      faction: "bandit",
+      style: "brawler",
+      look: { hair: "short", hairColor: "#eeeeee", top: "#616161", bottom: "#424242", hat: "hood", hatColor: "#757575" },
+      alert: "The dead don't need their riches."
+    },
+    pirate: {
+      name: "Konrad's Brother",
+      title: "Survivor of Flevance",
+      at: { town: "whiteland_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "short", hairColor: "#fafafa", top: "#eceff1", bottom: "#90a4ae" },
+      pitch: ["The World Government called this city a plague and burned it. The only ones who survived were the ones who ran.", "Pirates run from the Government too. Some of us never stopped."]
+    },
+    marine: {
+      name: "Lieutenant Weiss",
+      post: "Flevance Quarantine Post",
+      at: { town: "whiteland_town", building: "marine_base" },
+      where: "at the quarantine post",
+      look: LOOK.officer({ hair: "long", hairColor: "#fafafa" }),
+      pitch: ["I was posted here to keep people out. I stay to keep the dead in peace.", "The Navy made mistakes here. Help me make it right \u2014 one grave at a time."]
+    },
+    hunter: {
+      name: "Pale Oda",
+      at: { town: "whiteland_town", door: "church" },
+      where: "outside the church",
+      look: { hair: "long", hairColor: "#212121", top: "#212121", bottom: "#212121", fem: true },
+      pitch: ["Grave robbers dig here every winter. The families left behind pay me to stop them.", "I pay whoever does the stopping."]
+    }
+  });
+  home("kano_country", "west_blue", {
+    town: "kano_town",
+    townName: "Kano Country",
+    villain: {
+      name: '"Iron-Belly" Wu',
+      title: "Hasshoken Dropout",
+      bounty: 1e6,
+      crime: "extorting the noodle stalls with stolen Hasshoken moves",
+      where: "at Kano's pier",
+      at: PIER("kano_town"),
+      faction: "bandit",
+      style: "brawler",
+      look: { hair: "topknot", hairColor: "#212121", top: "#c62828", bottom: "#212121", bulk: 1.35, openShirt: true },
+      alert: "Eight Impacts! Well \u2014 three."
+    },
+    pirate: {
+      name: "Grandpa Luo",
+      title: "Retired Pirate",
+      at: { town: "kano_town", door: "restaurant" },
+      where: "outside the noodle house",
+      look: { hair: "bald", skin: "#e8c4a0", top: "#ffb300", bottom: "#5d4037", bulk: 1.1 },
+      pitch: ["Old Chinjao up in the dojo was a pirate once \u2014 a hundred million on his drill head. Then a man called Garp flattened it.", "The sea humbles everyone. That's why it's worth sailing. Well?"]
+    },
+    marine: {
+      name: "Lieutenant Mei",
+      post: "Kano Marine Post",
+      at: { town: "kano_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "ponytail", hairColor: "#212121", fem: true }),
+      pitch: ["Kano is proud and old and very good at fighting. The Navy mostly keeps out of its way.", "But not all its fighters are honourable. I need one who is."]
+    },
+    hunter: {
+      name: "Two-Coin Fen",
+      at: { town: "kano_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "short", hairColor: "#212121", top: "#2e7d32", bottom: "#212121", hat: "straw", hatColor: "#d7ccc8" },
+      pitch: ["Kano's a country of fighters. Some fight for honour. Some fight for coin. I pay the second kind.", "Which kind are you?"]
+    }
+  });
+  home("ilisia", "west_blue", {
+    town: "ilisia_town",
+    townName: "Ilisia",
+    villain: {
+      name: '"Silver-Tongue" Pell',
+      title: "Con-Man Pirate",
+      bounty: 12e5,
+      crime: "selling fake treasure maps to the King's guards",
+      where: "at the Ilisia pier",
+      at: PIER("ilisia_town"),
+      style: "ittoryu",
+      weapon: "sword",
+      look: { hair: "long", hairColor: "#cfd8dc", top: "#7b1fa2", bottom: "#212121", hat: "tricorne", hatColor: "#4a148c" },
+      alert: "Let's talk this over, friend... no?"
+    },
+    pirate: {
+      name: "Maren the Sail",
+      title: "Old Sailor",
+      at: { town: "ilisia_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "curly", hairColor: "#8d6e63", top: "#eceff1", bottom: "#455a64", fem: true },
+      pitch: ["The King of Ilisia says dragons are coming. Nobody believes him. I've seen stranger things at sea.", "You want to see them too, don't you? I can tell."]
+    },
+    marine: {
+      name: "Lieutenant Dorsey",
+      post: "Ilisia Marine Post",
+      at: { town: "ilisia_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#795548" }),
+      pitch: ["A frightened king, a restless court, and pirates circling like gulls. This post needs steady hands.", "Yours look steady. Join up."]
+    },
+    hunter: {
+      name: "Lady Ansel",
+      at: { town: "ilisia_town", plaza: true, ox: -4 },
+      where: "in the palace square",
+      look: { hair: "long", hairColor: "#ffd54f", top: "#1565c0", bottom: "#263238", fem: true },
+      pitch: ["The court pays handsomely for quiet removals of pirate trouble. Discreetly.", "Can you be discreet?"]
+    }
+  });
+  home("toroa", "west_blue", {
+    town: "toroa_town",
+    townName: "Toroa",
+    villain: {
+      name: '"Cage-Man" Brisco',
+      title: "Slaver's Thug",
+      bounty: 15e5,
+      crime: "snatching musicians off the street to sell at Sabaody",
+      where: "at Toroa's pier",
+      at: PIER("toroa_town"),
+      style: "brawler",
+      look: { hair: "buzz", hairColor: "#212121", top: "#424242", bottom: "#212121", bulk: 1.4 },
+      alert: "You'll fetch a fine price too."
+    },
+    pirate: {
+      name: "Fiddler Moss",
+      title: "Travelling Musician",
+      at: { town: "toroa_town", door: "bar" },
+      where: "outside the bar",
+      look: { hair: "afro", hairColor: "#3e2723", top: "#ffb300", bottom: "#4e342e", hat: "tophat", hatColor: "#212121" },
+      pitch: ["Toroa's a town of songs, and every good pirate crew needs a song. Yohohoho \u2014 that's how the old one goes.", "Write a new one. Start a crew."]
+    },
+    marine: {
+      name: "Lieutenant Corra",
+      post: "Toroa Marine Post",
+      at: { town: "toroa_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "ponytail", hairColor: "#6d4c41", fem: true }),
+      pitch: ["People are disappearing. Musicians, mostly. Slavers pay well for talent at Sabaody.", "The Navy should be stopping it. Help me make it."]
+    },
+    hunter: {
+      name: "Keel Barrow",
+      at: { town: "toroa_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "short", hairColor: "#5d4037", top: "#37474f", bottom: "#263238", hat: "cowboy", hatColor: "#3e2723" },
+      pitch: ["A slaver's thug is worth more than you'd think. The families here pooled their savings.", "Want to earn them?"]
+    }
+  });
+  home("las_camp", "west_blue", {
+    town: "las_camp_town",
+    townName: "Las Camp",
+    villain: {
+      name: '"Dice" Donnie',
+      title: "Fire Tank Errand Boy",
+      bounty: 9e5,
+      crime: 'collecting "protection" money for a family that never asked him to',
+      where: "at the Las Camp pier",
+      at: PIER("las_camp_town"),
+      style: "sniper",
+      weapon: "gun",
+      ranged: true,
+      look: { hair: "short", hairColor: "#212121", top: "#212121", bottom: "#212121", hat: "tophat", hatColor: "#212121" },
+      alert: "The Family sends its regards!"
+    },
+    pirate: {
+      name: "Old Salvatore",
+      title: "Retired Pirate",
+      at: { town: "las_camp_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "short", hairColor: "#e0e0e0", top: "#fafafa", bottom: "#212121", hat: "tophat", hatColor: "#424242" },
+      pitch: ["This city belongs to the gangs. Capone Bege runs his like a fortress. Even the mafia fears a pirate with a good crew.", "Build one. Then no gang owns you."]
+    },
+    marine: {
+      name: "Lieutenant Moretti",
+      post: "Las Camp Marine Post",
+      at: { town: "las_camp_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#212121" }),
+      pitch: ["In Las Camp the mafia pays the police and the police pay the mafia. The Navy is the only honest badge left.", "I could use another."]
+    },
+    hunter: {
+      name: "Gordo's Clerk",
+      title: "Bounty Office Clerk",
+      at: { town: "las_camp_town", door: "bounty" },
+      where: "outside the bounty office",
+      look: { hair: "short", hairColor: "#5d4037", top: "#fafafa", bottom: "#37474f", glasses: true },
+      pitch: ["The boss says we're short of hunters with nerve. Most quit after the first gang shows up at their door.", "You look like you wouldn't."]
+    }
+  });
+  home("soja_island", "west_blue", {
+    town: "soja_village",
+    townName: "Soja",
+    villain: {
+      name: '"Rum-Runner" Kest',
+      title: "Smuggler Captain",
+      bounty: 8e5,
+      crime: "running poisoned rum into the village bar",
+      where: "at the Soja pier",
+      at: PIER("soja_village"),
+      style: "ittoryu",
+      weapon: "sword",
+      look: { hair: "spiky", hairColor: "#6d4c41", top: "#795548", bottom: "#3e2723", hat: "bandana", hatColor: "#795548" },
+      alert: "Have a drink on me \u2014 a sword, I mean!"
+    },
+    pirate: {
+      name: "Lefty Brum",
+      title: "One-Armed Pirate",
+      at: { town: "soja_village", door: "bar" },
+      where: "outside the bar",
+      look: { hair: "long", hairColor: "#212121", top: "#2e7d32", bottom: "#263238", hat: "tricorne", hatColor: "#1b5e20" },
+      pitch: ["Lost the arm to a Sea King off the Calm Belt. Worth it \u2014 I saw the Grand Line.", "Most people never do. You could."]
+    },
+    marine: {
+      name: "Lieutenant Pike",
+      post: "Soja Marine Post",
+      at: { town: "soja_village", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "buzz", hairColor: "#8d6e63" }),
+      pitch: ["Someone's selling poisoned rum. Two fishermen dead already.", "I need a recruit who can move fast. You?"]
+    },
+    hunter: {
+      name: "Widow Ennis",
+      at: { town: "soja_village", door: "bank" },
+      where: "outside the bank",
+      look: { hair: "long", hairColor: "#212121", top: "#212121", bottom: "#263238", fem: true },
+      pitch: ["My husband drank that rum. The village took up a collection for whoever brings in the man who sold it.", "Will it be you?"]
+    }
+  });
+  home("esperia", "west_blue", {
+    town: "esperia_town",
+    townName: "Esperia",
+    villain: {
+      name: '"Scarlet Fang" Oriel',
+      title: "Duelist Pirate",
+      bounty: 11e5,
+      crime: "challenging the town's musicians to duels \u2014 and taking their instruments",
+      where: "at Esperia's pier",
+      at: PIER("esperia_town"),
+      style: "ittoryu",
+      weapon: "sword",
+      look: { hair: "long", hairColor: "#c62828", top: "#212121", bottom: "#b71c1c", fem: true },
+      alert: "En garde, darling!"
+    },
+    pirate: {
+      name: "Ottavio's Cousin",
+      title: "Idle Sailor",
+      at: { town: "esperia_town", door: "bar" },
+      where: "outside the bar",
+      look: { hair: "curly", hairColor: "#3e2723", top: "#ff7043", bottom: "#263238" },
+      pitch: ["Esperia sings every night. Opera, ballads, drinking songs. The best songs are always about pirates.", "Want to be in one?"]
+    },
+    marine: {
+      name: "Lieutenant Vale",
+      post: "Esperia Marine Post",
+      at: { town: "esperia_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#3e2723" }),
+      pitch: ["A quiet town of singers. A duelist has decided to make it her stage.", "Help me close the show, recruit."]
+    },
+    hunter: {
+      name: "Rosso the Agent",
+      at: { town: "esperia_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "short", hairColor: "#212121", top: "#880e4f", bottom: "#212121", hat: "tophat", hatColor: "#212121" },
+      pitch: ["I manage singers \u2014 and I manage bounties. Both are about timing.", "Your timing looks good. Care to audition?"]
+    }
+  });
+  home("asshina", "west_blue", {
+    town: "asshina_town",
+    townName: "Asshina",
+    villain: {
+      name: '"Stilt" Ranulf',
+      title: "Colosseum Cheat",
+      bounty: 1e6,
+      crime: "drugging the fighters he bets against",
+      where: "at the Asshina pier",
+      at: PIER("asshina_town"),
+      style: "brawler",
+      race: "longleg",
+      look: { hair: "spiky", hairColor: "#4e342e", top: "#8d6e63", bottom: "#5d4037" },
+      alert: "Long legs, long reach, short fuse!"
+    },
+    pirate: {
+      name: "Stork-Leg Abe",
+      title: "Old Brawler",
+      at: { town: "asshina_town", door: "inn" },
+      where: "outside the inn",
+      race: "longleg",
+      look: { hair: "short", hairColor: "#9e9e9e", top: "#1565c0", bottom: "#263238" },
+      pitch: ["On Asshina every child learns to kick before they learn to walk. And every one dreams of the sea beyond the colosseum walls.", "I did too, once. You still can."]
+    },
+    marine: {
+      name: "Lieutenant Heron",
+      post: "Asshina Marine Post",
+      at: { town: "asshina_town", building: "marine_base" },
+      where: "at the Marine post",
+      race: "longleg",
+      look: LOOK.officer({ hair: "short", hairColor: "#212121" }),
+      pitch: ["The colosseum makes champions. Some go on to the Navy. Most go on to prison.", "Pick the right one."]
+    },
+    hunter: {
+      name: "Quick-Step Lira",
+      at: { town: "asshina_town", door: "hall" },
+      where: "outside the colosseum hall",
+      race: "longleg",
+      look: { hair: "ponytail", hairColor: "#ffb300", top: "#212121", bottom: "#b71c1c", fem: true },
+      pitch: ["I scout fighters for the colosseum \u2014 and for bounty work. The second pays better.", "Let's see how you move."]
+    }
+  });
+  home("ohara", "west_blue", {
+    town: "ohara_camp",
+    townName: "Ohara",
+    villain: {
+      name: '"Bookburner" Vane',
+      title: "Scavenger",
+      bounty: 9e5,
+      crime: "digging through the ruins of the Tree of Knowledge to sell forbidden pages",
+      where: "at the Ohara pier",
+      at: PIER("ohara_camp"),
+      faction: "bandit",
+      style: "brawler",
+      look: { hair: "short", hairColor: "#795548", top: "#616161", bottom: "#424242", goggles: true },
+      alert: "These pages will fetch a fortune!"
+    },
+    pirate: {
+      name: "Clover's Student",
+      title: "Last Scholar of Ohara",
+      at: { town: "ohara_camp", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "long", hairColor: "#eeeeee", top: "#5d4037", bottom: "#3e2723", glasses: true },
+      pitch: ["The World Government burned this island because its scholars read the Poneglyphs. Only the pirates dare seek the true history now.", "If you sail, sail toward the truth."]
+    },
+    marine: {
+      name: "Lieutenant Saul",
+      post: "Ohara Watch Post",
+      at: { town: "ohara_camp", building: "marine_base" },
+      where: "at the watch post",
+      look: LOOK.officer({ hair: "short", hairColor: "#9e9e9e" }),
+      pitch: ["I watch over what's left of Ohara. Some days I think I'm guarding it; some days I think I'm guarding the world from it.", "The Navy needs people who can live with that. Can you?"]
+    },
+    hunter: {
+      name: "Fennick",
+      at: { town: "ohara_camp", door: "shop" },
+      where: "outside the camp shop",
+      look: { hair: "short", hairColor: "#212121", top: "#455a64", bottom: "#263238", hat: "cap", hatColor: "#37474f" },
+      pitch: ["The Government pays for anyone caught selling pages from Ohara. Pays well, and asks no questions.", "I ask even fewer. Interested?"]
+    }
+  });
+  home("baterilla", "south_blue", {
+    town: "baterilla_town",
+    townName: "Baterilla",
+    villain: {
+      name: '"Hound" Degas',
+      title: "Bounty Poacher",
+      bounty: 1e6,
+      crime: "threatening the villagers and asking about a woman named Rouge",
+      where: "at the Baterilla pier",
+      at: PIER("baterilla_town"),
+      style: "sniper",
+      weapon: "gun",
+      ranged: true,
+      look: { hair: "short", hairColor: "#212121", top: "#3e2723", bottom: "#212121", hat: "cowboy", hatColor: "#212121" },
+      alert: "Tell me where the woman is!"
+    },
+    pirate: {
+      name: "Old Joaqu\xEDn",
+      title: "Fisherman",
+      at: { town: "baterilla_town", door: "bar" },
+      where: "outside the bar",
+      look: { hair: "short", hairColor: "#9e9e9e", top: "#fafafa", bottom: "#1565c0", hat: "straw", hatColor: "#d7ccc8" },
+      pitch: ["They say the Pirate King himself had a sweetheart on this island. The Marines turned it upside down looking for his child.", "His blood or not \u2014 the sea belongs to whoever has the nerve. Have you?"]
+    },
+    marine: {
+      name: "Lieutenant Castell",
+      post: "Baterilla Marine Camp",
+      at: { town: "baterilla_camp", building: "marine_base" },
+      where: "at the Marine camp outside town",
+      look: LOOK.officer({ hair: "short", hairColor: "#4e342e" }),
+      pitch: ["The camp was built to hunt a pregnant woman. I'm not proud of that order. I'd rather we protected this village for once.", "Join, and help me do it."]
+    },
+    hunter: {
+      name: "Santa the Ledger",
+      at: { town: "baterilla_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "long", hairColor: "#ff7043", top: "#fff8e1", bottom: "#5d4037", fem: true },
+      pitch: ["A poacher's been harassing the village. He's got a poster of his own, as it happens.", "Hunt the hunter. Poetic, isn't it?"]
+    }
+  });
+  home("karate_island", "south_blue", {
+    town: "karate_dojo_town",
+    townName: "Karate Island",
+    villain: {
+      name: '"Broken-Belt" Jiro',
+      title: "Disgraced Fighter",
+      bounty: 9e5,
+      crime: "beating up students from the dojos he was thrown out of",
+      where: "at the island pier",
+      at: PIER("karate_dojo_town"),
+      faction: "bandit",
+      style: "brawler",
+      look: { hair: "buzz", hairColor: "#212121", top: "#fafafa", bottom: "#fafafa", belt: "#212121", bulk: 1.2 },
+      alert: "I'll break YOUR belt!"
+    },
+    pirate: {
+      name: "Sensei Umeko",
+      title: "Retired Pirate Brawler",
+      at: { town: "karate_dojo_town", door: "restaurant" },
+      where: "outside the restaurant",
+      look: { hair: "ponytail", hairColor: "#eeeeee", top: "#c62828", bottom: "#212121", fem: true },
+      pitch: ["I learned to fight in these dojos and learned to use it at sea. Twenty years, three crews, one broken nose.", "The dojos teach discipline. The sea teaches everything else. Coming?"]
+    },
+    marine: {
+      name: "Lieutenant Kenta",
+      post: "Karate Island Marine Post",
+      at: { town: "karate_dojo_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#212121", bulk: 1.15 }),
+      pitch: ["This island trains the best unarmed fighters in the South Blue. The Navy recruits a lot of them.", "Show me your fists, then."]
+    },
+    hunter: {
+      name: "Mama Pim",
+      at: { town: "karate_dojo_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "curly", hairColor: "#8d6e63", top: "#ffb300", bottom: "#5d4037", fem: true, bulk: 1.2 },
+      pitch: ["Fighters come here to learn. The ones who get thrown out come back to take revenge \u2014 and they've got prices on their heads.", "I pay by the head. Fair?"]
+    }
+  });
+  home("sorbet_kingdom", "south_blue", {
+    town: "sorbet_town",
+    townName: "Sorbet Kingdom",
+    villain: {
+      name: '"Tax-Man" Gourd',
+      title: "The King's Old Collector",
+      bounty: 12e5,
+      crime: "still collecting the old king's taxes \u2014 for himself",
+      where: "at the Sorbet pier",
+      at: PIER("sorbet_town"),
+      faction: "bandit",
+      style: "brawler",
+      look: { hair: "bald", skin: "#e0ac7e", top: "#6a1b9a", bottom: "#4a148c", bulk: 1.4 },
+      alert: "Pay up, peasant!"
+    },
+    pirate: {
+      name: "Nettle the Bosun",
+      title: "Former Pirate",
+      at: { town: "sorbet_town", door: "bar" },
+      where: "outside the bar",
+      look: { hair: "spiky", hairColor: "#ff8f00", top: "#37474f", bottom: "#212121", scarEye: true },
+      pitch: ["A kind giant of a priest rose up here and threw out the tyrant king. People still pray for him.", "Some rise up with prayers. Some with a flag. Your turn."]
+    },
+    marine: {
+      name: "Lieutenant Anya",
+      post: "Sorbet Marine Post",
+      at: { town: "sorbet_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "long", hairColor: "#d7ccc8", fem: true }),
+      pitch: [`The old king's men haven't all given up his ways. One still "collects taxes".`, "Help me end it properly \u2014 with the law."]
+    },
+    hunter: {
+      name: "Coin-Counter Pasha",
+      at: { town: "sorbet_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "short", hairColor: "#212121", top: "#fdd835", bottom: "#5d4037", hat: "turban", hatColor: "#fafafa" },
+      pitch: ["The new government put a price on the old king's thugs. Nice price, too.", "Help me spend it."]
+    }
+  });
+  home("briss_kingdom", "south_blue", {
+    town: "briss_town",
+    townName: "Briss Kingdom",
+    villain: {
+      name: '"Crab-Claw" Mott',
+      title: "Dockside Pirate",
+      bounty: 1e6,
+      crime: "stealing navigation charts from the kingdom's explorers",
+      where: "at the Briss pier",
+      at: PIER("briss_town"),
+      style: "brawler",
+      look: { hair: "spiky", hairColor: "#d84315", top: "#e64a19", bottom: "#3e2723", bulk: 1.25 },
+      alert: "Snip snip!"
+    },
+    pirate: {
+      name: "Captain Mildred",
+      title: "Retired Explorer",
+      at: { town: "briss_town", door: "bar" },
+      where: "outside the bar",
+      look: { hair: "curly", hairColor: "#eeeeee", top: "#1e88e5", bottom: "#263238", hat: "captain", hatColor: "#0d47a1", fem: true },
+      pitch: ["Briss sent the St. Briss out to find the sky itself. Explorers, pirates \u2014 at sea, what's the difference?", "A flag, mostly. Want one?"]
+    },
+    marine: {
+      name: "Lieutenant Albrecht",
+      post: "Briss Marine Post",
+      at: { town: "briss_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#5d4037" }),
+      pitch: ["Briss is the last port before Reverse Mountain for half the South Blue. Every rookie pirate passes through.", "Every rookie Marine should too. Sign on."]
+    },
+    hunter: {
+      name: "Sal's Nephew",
+      at: { town: "briss_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "short", hairColor: "#212121", top: "#26a69a", bottom: "#37474f", hat: "cap", hatColor: "#004d40" },
+      pitch: ["Uncle Sal sells sextants. I sell pirates \u2014 to the Marines.", "Better margins. Want in?"]
+    }
+  });
+  home("centaurea", "south_blue", {
+    town: "centaurea_town",
+    townName: "Centaurea",
+    villain: {
+      name: '"Deserter" Hask',
+      title: "Rogue Soldier",
+      bounty: 13e5,
+      crime: "looting refugee carts on the coast road",
+      where: "at the Centaurea pier",
+      at: PIER("centaurea_town"),
+      faction: "bandit",
+      style: "ittoryu",
+      weapon: "sword",
+      look: { hair: "buzz", hairColor: "#3e2723", top: "#558b2f", bottom: "#33691e" },
+      alert: "The war's over. Now I take what I want."
+    },
+    pirate: {
+      name: "Gambo's Brother",
+      title: "Smuggler",
+      at: { town: "centaurea_town", door: "bar" },
+      where: "outside the bar",
+      look: { hair: "long", hairColor: "#4e342e", top: "#455a64", bottom: "#263238", hat: "bandana", hatColor: "#455a64" },
+      pitch: ["This country is falling apart. Revolutionaries in the hills, the army in the forts, and the World Government counting the pieces.", "Out at sea, nobody rules you. Fancy it?"]
+    },
+    marine: {
+      name: "Lieutenant Linden",
+      post: "Centaurea Marine Post",
+      at: { town: "centaurea_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#212121" }),
+      pitch: ["A war's ending here. Deserters are turning bandit on every road.", "The Navy can't fix a country. It can protect the people on the road. Help me."]
+    },
+    hunter: {
+      name: "Thorn",
+      at: { town: "centaurea_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "long", hairColor: "#212121", top: "#212121", bottom: "#4e342e", fem: true },
+      pitch: ["War makes posters. Lots of them. Everyone with a grudge has put a price on someone.", "I sort the honest ones from the rest. Want the honest ones?"]
+    }
+  });
+  home("kutsukku_island", "south_blue", {
+    town: "kutsukku_town",
+    townName: "Kutsukku",
+    villain: {
+      name: '"Rivet-Head" Brann',
+      title: "Gang Enforcer",
+      bounty: 11e5,
+      crime: "smashing up the workshops that won't pay his gang",
+      where: "at the Kutsukku pier",
+      at: PIER("kutsukku_town"),
+      faction: "bandit",
+      style: "brawler",
+      look: { hair: "mohawk", hairColor: "#e53935", top: "#212121", bottom: "#424242", goggles: true, bulk: 1.2 },
+      alert: "Victoria Punk rules!"
+    },
+    pirate: {
+      name: "Sparks Dolan",
+      title: "Mechanic",
+      at: { town: "kutsukku_town", door: "restaurant" },
+      where: "outside the noodle shop",
+      look: { hair: "spiky", hairColor: "#ffb300", top: "#546e7a", bottom: "#263238", goggles: true },
+      pitch: ["A red-haired kid runs the gangs in Victoria Punk. Says he'll be King of the Pirates. Half this town believes him.", "Nobody believes in you yet. Fix that."]
+    },
+    marine: {
+      name: "Lieutenant Ferra",
+      post: "Kutsukku Marine Post",
+      at: { town: "kutsukku_town", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#212121", fem: true }),
+      pitch: ["The gangs of Kutsukku make pirates look polite. One of them's leaning on the workshops.", "Help me lean back."]
+    },
+    hunter: {
+      name: "Bolt",
+      at: { town: "kutsukku_town", door: "inn" },
+      where: "outside the inn",
+      look: { hair: "buzz", hairColor: "#212121", top: "#bf360c", bottom: "#212121", goggles: true },
+      pitch: ["Every gang in Victoria Punk has a price list. I've got all of them.", "Pick a name. Let's start small."]
+    }
+  });
+  home("torino_kingdom", "south_blue", {
+    town: "torino_village",
+    townName: "Torino Kingdom",
+    villain: {
+      name: '"Feather-Thief" Crag',
+      title: "Egg Poacher",
+      bounty: 8e5,
+      crime: "stealing the giant birds' eggs to sell to collectors",
+      where: "at the village pier",
+      at: PIER("torino_village"),
+      faction: "bandit",
+      style: "ittoryu",
+      weapon: "sword",
+      look: { hair: "long", hairColor: "#795548", top: "#8d6e63", bottom: "#4e342e", hat: "cowboy", hatColor: "#6d4c41" },
+      alert: "Those eggs are worth a fortune!"
+    },
+    pirate: {
+      name: "Pappug the Parrot-Keeper",
+      title: "Retired Pirate",
+      at: { town: "torino_village", door: "inn" },
+      where: "outside the inn",
+      race: "mink",
+      look: { hat: "tricorne", hatColor: "#212121", top: "#2e7d32", bottom: "#4e342e" },
+      pitch: ["The birds here are big enough to ride. The sea is bigger. I sailed it for thirty years.", "Garchu! Go and see it for yourself."]
+    },
+    marine: {
+      name: "Lieutenant Rook",
+      post: "Torino Marine Post",
+      at: { town: "torino_village", building: "marine_base" },
+      where: "at the Marine post",
+      look: LOOK.officer({ hair: "short", hairColor: "#3e2723" }),
+      pitch: ["The Navy keeps a post here to protect the birds from poachers. It's the strangest posting in the South Blue.", "And I need help. Poachers again."]
+    },
+    hunter: {
+      name: "Tally-Bird Nia",
+      at: { town: "torino_village", door: "library" },
+      where: "outside the library",
+      race: "mink",
+      look: { top: "#fdd835", bottom: "#5d4037", fem: true },
+      pitch: ["The collectors who buy stolen eggs put up bounties on each other. Funny people.", "The poachers are funnier. They've got posters too."]
+    }
+  });
+
+  // src/content/main/blues.js
+  var homeNpc = (island, path2) => ({ npc: `mq_home_${island}_${path2}` });
+  var hc = (island, path2, where) => ({ npc: `mq_home_${island}_${path2}`, where });
+  var shipGift = (name) => (g) => g.ships.some((s) => s.owner === "player" && !s.sunk && s.def.grandLine && (s.def.cannons || 0) >= 4) ? {} : { ship: "caravel", shipName: name };
+  var navyShip = (g) => g.ships.some((s) => s.owner === "player" && !s.sunk && s.def.grandLine) ? {} : { ship: "sloop", shipName: "Navy Cutter" };
+  function rival(id, island, town, name, title2, bounty, look, extra = {}) {
+    return target({ id, island, name, title: title2, faction: "pirate", boss: true, hpMul: 0.7, level: 9, bounty, at: { town, dock: true, ox: -2 }, look, style: "ittoryu", weapon: "sword", skill: 0.3, breakthrough: 2, ...extra });
+  }
+  chapter("eb_syrup", { part: 1, island: "gecko_islands", role: "ship" }, {
+    pirate: {
+      name: "The Going Merry",
+      lure: "they say a rich girl up at the mansion has a ship nobody sails",
+      summary: "Merry, the butler of the Kaya estate, built a caravel with a ram's head and a big heart. It could be yours \u2014 if Syrup Village survives the week.",
+      contact: { npc: "merry", where: "at the boathouse below Kaya's mansion" },
+      meet: [
+        "A ship? Oh, you've heard about the caravel. I designed her myself \u2014 the Going Merry. Miss Kaya meant her for someone brave enough to sail beyond the East Blue.",
+        "But I'm worried. Miss Kaya's new butler, Klahador, is... not what he seems. The Usopp boy keeps shouting that pirates are coming. What if, for once, he's telling the truth?"
+      ],
+      tasks: [T3.quest("black_cat_plot", "Find out what the Black Cat Pirates are plotting against Syrup Village \u2014 Usopp knows something.", "usopp")],
+      wait: "Please \u2014 talk to the Usopp boy. If there's any truth in his stories, Miss Kaya is in danger.",
+      done: ["You saved Miss Kaya \u2014 and the whole village. She insisted: the Going Merry is yours.", (ctx) => `Treat her well, and she'll carry you anywhere. ${onward(ctx.char, "Your next stop should be")}`],
+      after: "How is the Going Merry? Keep her caulked, and talk to her on the long nights. Ships listen."
+    },
+    marine: {
+      name: "The Captain Who Died Twice",
+      lure: 'the post there suspects a pirate captain the Navy "executed" is alive and well',
+      summary: "Captain Kuro of the Black Cat Pirates was executed three years ago \u2014 so says the report. The Syrup Village post has doubts.",
+      contact: { ...homeNpc("gecko_islands", "marine"), where: "at the Syrup Village Marine post" },
+      meet: [
+        `You're the new recruit? Good \u2014 I need someone the locals don't know. Three years ago Captain Kuro was "executed" by Captain Morgan of the 153rd. No one ever saw the body.`,
+        "Now the Kaya estate has a new butler, strangers are camped on the north slope, and a boy is yelling about pirates. Find out what's going on. Talk to the boy \u2014 Usopp."
+      ],
+      tasks: [T3.quest("black_cat_plot", "Find out what the Black Cat Pirates are plotting against Syrup Village \u2014 start with Usopp.", "usopp")],
+      wait: "Kuro of a Hundred Plans didn't hide for three years to be caught by accident. Be careful.",
+      done: ["Kuro, alive, posing as a butler \u2014 for THREE YEARS. The report to headquarters is going to be... interesting. Well done, recruit.", (ctx) => `You've earned more than a pat on the back. ${onward(ctx.char, "Next, report to")}`],
+      after: "The Kuro report went up the chain. Someone at the 153rd has explaining to do."
+    },
+    hunter: {
+      name: "The Sixteen-Million Ghost",
+      lure: "a sixteen-million-berry pirate is supposed to be dead there... supposed to be",
+      summary: 'Kuro of a Hundred Plans was worth sixteen million berries \u2014 until he was "executed". Clack the Collector smells money.',
+      contact: { ...homeNpc("gecko_islands", "hunter"), where: "in the Syrup Village square" },
+      meet: [
+        "Kuro's poster was never cancelled, you know. The Navy says he's dead, but the World Government never paid anyone for his head. Sixteen million berries, sitting in a drawer.",
+        "And now there's a new butler at the Kaya estate who walks like a cat. Talk to the Usopp boy \u2014 he's been shouting about pirates for weeks."
+      ],
+      tasks: [T3.quest("black_cat_plot", "Find out what the Black Cat Pirates are plotting \u2014 Usopp knows something.", "usopp")],
+      wait: "Sixteen million, partner. Sixteen. Million.",
+      done: ["HA! Kuro of a Hundred Plans, alive, and now very much in custody. The Marines will be red in the face \u2014 and we'll be rich.", (ctx) => `Here's your share. ${onward(ctx.char, "Next stop:")}`],
+      after: "I framed Kuro's poster. First one I ever sold twice."
+    }
+  });
+  chapter("eb_orange", { part: 1, island: "organ_islands", role: "ship" }, {
+    pirate: {
+      name: "The Flashy Clown",
+      lure: "Buggy the Clown has taken the whole town hostage \u2014 and left a ship at the pier",
+      summary: "Buggy the Clown has turned Orange Town into his circus. His ship sits at the pier. Hocker thinks you should take both.",
+      contact: { ...homeNpc("organ_islands", "pirate"), where: "outside the Orange Town inn" },
+      meet: ["Buggy's crew are camped in the town, and old Mayor Boodle is fit to burst. Go and see him at the clinic.", "Beat Buggy, and nobody will argue if you sail off in his spare caravel. A pirate ship for a pirate, eh?"],
+      tasks: [T3.quest("buggy_circus", "Drive Buggy the Clown's circus out of Orange Town (Mayor Boodle).", "boodle")],
+      wait: "Buggy's still in town. Don't let the red nose fool you \u2014 he can come apart.",
+      done: ["Ha! The whole town's dancing. And the caravel's yours \u2014 the Big Top, Buggy called her. Paint over the nose.", (ctx) => onward(ctx.char, "Now: head for")],
+      after: "The Big Top suits you. Buggy never deserved her.",
+      reward: shipGift("Big Top")
+    },
+    marine: {
+      name: "The Flashy Clown",
+      lure: "the Buggy Pirates are holding Orange Town and the post there is outnumbered",
+      summary: "Buggy the Clown holds Orange Town. Lieutenant Mace's post is outnumbered ten to one.",
+      contact: { ...homeNpc("organ_islands", "marine"), where: "at the Orange Town Marine post" },
+      meet: ["Buggy the Clown \u2014 fifteen million \u2014 and his whole crew. I've three men and a broken cannon.", "Mayor Boodle wants to fight them himself. See him at the clinic before he gets himself killed."],
+      tasks: [T3.quest("buggy_circus", "Break the Buggy Pirates' hold on Orange Town (Mayor Boodle).", "boodle")],
+      wait: "Buggy's crew are in the town square. Take the officers first \u2014 Mohji and Cabaji.",
+      done: ["You did it. With one recruit, the Navy took back a town. I'll put that in writing.", (ctx) => onward(ctx.char, "Your orders: report to")]
+    },
+    hunter: {
+      name: "The Flashy Clown",
+      lure: "Buggy the Clown is worth fifteen million, and he's sitting in Orange Town",
+      summary: "Buggy the Clown: fifteen million. Mohji and Cabaji: a few more. All of them in one town.",
+      contact: { ...homeNpc("organ_islands", "hunter"), where: "in the Orange Town square" },
+      meet: ["Buggy the Clown, fifteen million. Mohji the Beast Tamer and Acrobat Cabaji too. All in one place \u2014 it's like fishing in a barrel.", "The mayor at the clinic will want in. Talk to him."],
+      tasks: [T3.quest("buggy_circus", "Bring down the Buggy Pirates in Orange Town (Mayor Boodle).", "boodle")],
+      wait: "Mind the bits. Buggy comes apart.",
+      done: ["Buggy the Clown in chains. My first big sale in years. And his caravel's yours, if you want her.", (ctx) => onward(ctx.char, "Next:")],
+      reward: shipGift("Big Top")
+    }
+  });
+  chapter("eb_baratie", { part: 1, island: "baratie", role: "crew" }, {
+    pirate: {
+      name: "The Sea Restaurant",
+      lure: "there's a floating restaurant out there with a cook worth stealing",
+      summary: 'The Baratie is a restaurant at sea, run by "Red Leg" Zeff and a kitchen full of fighting cooks. Every crew needs a cook.',
+      contact: { npc: "zeff", where: "on the deck of the Baratie" },
+      meet: ["A pirate looking for a cook, eh? My kitchen isn't a recruiting office, brat.", "But I'll tell you what. Don Krieg's armada is out there, starving. If he comes here, I'll need every hand. Help me, and maybe one of my cooks will want to see the sea."],
+      tasks: [
+        T3.quest("baratie_krieg", `Defend the Baratie from Don Krieg's armada ("Red Leg" Zeff).`, "zeff"),
+        T3.crew(1, "Recruit a crewmate \u2014 a cook, a swordsman, anyone who'd follow you (Patty, Johnny and Yosaku are right here).")
+      ],
+      wait: "Krieg won't knock. Keep your eyes on the horizon.",
+      done: ["You fought for this restaurant like it was your own. Take care of your crew, brat. Feed them first.", (ctx) => onward(ctx.char, "If you're going to the Grand Line, stop at")],
+      after: "Come back and eat sometime. On the house \u2014 once."
+    },
+    marine: {
+      name: "The Sea Restaurant",
+      lure: "Don Krieg's armada was sighted near the Baratie",
+      summary: "Don Krieg's armada \u2014 the biggest fleet in the East Blue \u2014 was seen heading for the Baratie. Lieutenant Fullbody is already there, having dinner.",
+      contact: { name: "Lieutenant Fullbody", title: '"Ironfist", 153rd Branch', look: LOOK.officer({ hair: "short", hairColor: "#5d4037", coat: "#fafafa" }), faction: "marine", at: { spot: "baratie_deck", ox: 4 }, where: "on the deck of the Baratie", level: 14, style: "brawler" },
+      meet: ["A recruit? Good. Stand there and look useful. I am having dinner with a lady.", "...Fine. Don Krieg escaped from the Navy's last net, and his men are starving. If they come here, they'll take the restaurant. Old Zeff wants help. Go and help him."],
+      tasks: [T3.quest("baratie_krieg", `Defend the Baratie from Don Krieg's armada ("Red Leg" Zeff).`, "zeff")],
+      wait: "I would help, but my soup is getting cold.",
+      done: ["Don Krieg \u2014 defeated! By... a recruit. Hmph. I'll mention you in my report. Near the bottom.", (ctx) => onward(ctx.char, "Next, report to")]
+    },
+    hunter: {
+      name: "The Sea Restaurant",
+      lure: "Don Krieg \u2014 seventeen million \u2014 is starving somewhere near the Baratie",
+      summary: "Johnny and Yosaku are pirate hunters who followed Don Krieg's trail to the Baratie. Seventeen million berries is a lot to split two ways. Three ways is fine.",
+      contact: { npc: "johnny", where: "on the deck of the Baratie" },
+      meet: ["Aniki! \u2014 no, you're not Aniki. But you look like a hunter! Don Krieg \u2014 seventeen million \u2014 his armada got smashed in the Grand Line and his ship's coming this way!", "Old Zeff's going to fight him. We're going to help \u2014 and split the bounty. You in?"],
+      tasks: [T3.quest("baratie_krieg", 'Take down Don Krieg when he comes for the Baratie ("Red Leg" Zeff).', "zeff")],
+      wait: "Krieg's coming. I can feel it in my sunglasses.",
+      done: ["SEVENTEEN MILLION! Aniki would be proud. Here's your share!", (ctx) => onward(ctx.char, "We heard the next good hunting is at")]
+    }
+  });
+  chapter("eb_logue", { part: 1, island: "polestar_islands", role: "last" }, {
+    pirate: {
+      name: "The Town of the Beginning and the End",
+      lure: "every crew that means it stops at Loguetown before the mountain",
+      summary: "Loguetown: Gol D. Roger was born here, and executed here. Every rookie bound for the Grand Line stops to look at the platform \u2014 and the Marines know it.",
+      contact: { name: "Gold-Tooth Sylvie", title: "Tavern Keeper", look: { hair: "curly", hairColor: "#ffb300", top: "#6d4c41", bottom: "#3e2723", fem: true }, at: { town: "loguetown", door: "bar" }, where: "outside Gold Roger's Last Drink Tavern" },
+      meet: ["Another rookie on the way to the mountain. Sit, drink, then go and look at the platform like all the others. Roger laughed up there, you know. Right before the end.", "But mind: Captain Anchor Dunn is in port too, and he means to be first up Reverse Mountain this season. He sinks rivals. Get a ship that can take the Grand Line and a Log Pose \u2014 and don't let Dunn sink you."],
+      tasks: [
+        T3.event("saw_platform", "Stand before the execution platform in the square, where Gol D. Roger died."),
+        T3.defeat("mq_eb_dunn", 'Beat Captain "Anchor" Dunn at the harbour before he sinks you.'),
+        T3.ship(),
+        T3.logPose()
+      ],
+      wait: "Ship, Log Pose, and Dunn out of the way. Then the mountain.",
+      done: ["Dunn's crew are drinking to your health, now that he's in a Marine cell. And look \u2014 your first poster is already on the wall.", "Reverse Mountain is southwest of here. The current runs UP the mountain, rookie. Stay in the middle of the canal, and don't look back."],
+      reward: { bounty: 8e6 }
+    },
+    marine: {
+      name: "The Town of the Beginning and the End",
+      lure: "the Loguetown base is where the East Blue's Marines are sent on to the Grand Line",
+      summary: "Loguetown's Marine base watches every crew bound for the Grand Line. Report there for your posting.",
+      contact: { name: "Lieutenant Commander Oswin", title: "Loguetown Marine Base", look: LOOK.officer({ hair: "short", hairColor: "#9e9e9e" }), faction: "marine", at: { town: "loguetown", building: "marine_base", guest: true }, where: "at the Loguetown Marine Base", level: 24, style: "ittoryu", weapon: "sword" },
+      meet: ["So you're the recruit everyone keeps writing about. Headquarters wants you in the Grand Line \u2014 G-8, at the foot of Reverse Mountain.", "Before that: a pirate called Anchor Dunn is in port, and he means to ride the mountain this week. Stop him. And look at the platform in the square \u2014 every Marine should know what we are guarding against."],
+      tasks: [
+        T3.event("saw_platform", "Stand before the execution platform in the square, where Gol D. Roger died."),
+        T3.defeat("mq_eb_dunn", 'Arrest Captain "Anchor" Dunn at the harbour before he sails for the Grand Line.')
+      ],
+      wait: "Dunn is at the harbour. Every hour he is free, he gets a head start.",
+      done: ["Dunn is in a cell. Good work \u2014 the kind of work that gets noticed.", "The Navy is lending you a cutter for the crossing. Ride the current over Reverse Mountain and report to G-8 at Navarone. Good luck, Marine."],
+      reward: navyShip
+    },
+    hunter: {
+      name: "The Town of the Beginning and the End",
+      lure: "the Loguetown bounty office pays the best in the East Blue",
+      summary: "Loguetown's bounty office pays out for the rookies who try their luck at the Grand Line. There's one in port right now.",
+      contact: { name: "Marta the Clerk", title: "Loguetown Bounty Office", look: { hair: "ponytail", hairColor: "#5d4037", top: "#eceff1", bottom: "#37474f", fem: true, glasses: true }, at: { town: "loguetown", door: "bounty" }, where: "outside the Loguetown Bounty Office" },
+      meet: [`Bounty hunter? Then you're in luck. Captain "Anchor" Dunn, six million, is in port and plans to ride Reverse Mountain this week. Catch him before he does.`, "And if you mean to follow the money into the Grand Line, you'll need a ship that can take it, and a Log Pose. The platform in the square is worth a look too \u2014 it's why every pirate comes here."],
+      tasks: [
+        T3.event("saw_platform", "Stand before the execution platform in the square, where Gol D. Roger died."),
+        T3.defeat("mq_eb_dunn", 'Bring in Captain "Anchor" Dunn (\u0E3F6,000,000) at the harbour.'),
+        T3.ship(),
+        T3.logPose()
+      ],
+      wait: "Dunn's at the harbour. Don't let him reach the mountain.",
+      done: ["Six million \u2014 the office thanks you. You've outgrown the East Blue.", "Reverse Mountain is southwest of here. The real money is on the other side of it."]
+    }
+  });
+  rival("mq_eb_dunn", "polestar_islands", "loguetown", 'Captain "Anchor" Dunn', "Captain of the Anchor Pirates", 6e6, { hair: "short", hairColor: "#212121", top: "#263238", bottom: "#37474f", hat: "tricorne", hatColor: "#212121", beard: true, bulk: 1.2 }, { alert: "Only one crew rides the mountain this week. Mine." });
+  chapter("nb_lvneel", { part: 1, island: "lvneel", role: "ship" }, {
+    all: {
+      name: "Noland the Liar",
+      tasks: [T3.quest("nb_liar_noland", "Find out the truth about Noland the Liar (Archivist Pell, Royal Archive).", "nb_pell")]
+    },
+    pirate: {
+      lure: "the Royal Dockyard there has a caravel no one will buy, because of a liar's curse",
+      summary: `Four hundred years ago Noland the explorer came home to Lvneel with tales of a city of gold, and was hanged as a liar. The dockyard's "cursed" caravel is for sale cheap.`,
+      contact: hc("lvneel", "pirate", "outside the Lvneel tavern"),
+      meet: ["Every child in Lvneel grows up on Noland the Liar. The Royal Dockyard still has a caravel no one will sail \u2014 they say his curse is on her.", "Find out the truth about Noland, and I'll talk the dockyard into letting you have her for nothing. The Archivist, Pell, keeps his log."],
+      wait: "Pell's in the Royal Archive. The truth's in there somewhere.",
+      done: ['A Sea King, guarding the stand where the Liar was hanged... and a log that swears the city of gold was real. Well! The dockyard says the "cursed" caravel is yours.', (ctx) => onward(ctx.char, "Next, sail for")],
+      reward: shipGift("Noland's Promise")
+    },
+    marine: {
+      lure: "the King of Lvneel has asked the Navy about a Sea King troubling the coast",
+      summary: "The King of Lvneel has asked the Navy for help. The Sea King that has been sinking fishing boats seems to be connected to an old legend.",
+      contact: hc("lvneel", "marine", "at the Lvneel Marine post"),
+      meet: ["A Sea King has been sinking fishing boats off the Liar's Stand. The fishermen say it's Noland's curse. The King wants the Navy to deal with it.", "Start at the Royal Archive. Archivist Pell knows more about Noland than anyone alive."],
+      wait: "Pell first. Then the stand. Then the Sea King.",
+      done: ["A Sea King nesting under the stand \u2014 and a log that says Noland wasn't lying. The King owes you. So does the Navy.", (ctx) => onward(ctx.char, "Next, report to")]
+    },
+    hunter: {
+      lure: "the fishermen of Lvneel have a reward out on a Sea King",
+      summary: "The fishermen's guild of Lvneel has put a reward on the Sea King sinking their boats. Brekk keeps the book.",
+      contact: hc("lvneel", "hunter", "outside the Lvneel inn"),
+      meet: ["Not every poster has a face on it. The fishermen's guild pays for the Sea King off the Liar's Stand. Big money, and nobody to split it with.", "They say it's tied up with the Noland story. Start with Pell in the Royal Archive."],
+      wait: "A Sea King is a big target. Big targets pay big.",
+      done: ["The guild paid in full \u2014 and threw in a caravel from the Royal Dockyard. Seems a monster-slayer deserves a proper ship.", (ctx) => onward(ctx.char, "Next:")],
+      reward: shipGift("Liar's Luck")
+    }
+  });
+  chapter("nb_rakesh", { part: 1, island: "rakesh", role: "ship" }, {
+    all: { name: "The Pillage of Rakesh", tasks: [T3.quest("nb_rakesh_raid", "Defend Rakesh from the Donquixote raiders (Harbourmaster Brandt).", "nb_brandt")] },
+    pirate: {
+      lure: "the Rakesh Drydock owes favours to anyone who saves the town",
+      summary: "The Donquixote Family is coming to pillage Rakesh again. Save the town and the Drydock will build you a ship.",
+      contact: hc("rakesh", "pirate", "outside the Rakesh port bar"),
+      meet: ["Donquixote ships were sighted off the point. They're coming to pillage Rakesh again \u2014 a third time.", "Help the Harbourmaster hold the town, and I'll make sure the Drydock gives you the caravel on her slip. Pirate to pirate."],
+      wait: "The bell's about to ring. Go!",
+      done: ["Rakesh stands! The Drydock's caravel is yours \u2014 Brandt signed her over himself.", (ctx) => onward(ctx.char, "Now sail for")],
+      reward: shipGift("Rakesh Rose")
+    },
+    marine: {
+      lure: "the Donquixote Family is about to pillage Rakesh again",
+      summary: "Rakesh has been pillaged twice by the Donquixote Family. It won't be three times, if the Navy has anything to say about it.",
+      contact: hc("rakesh", "marine", "at the Rakesh Marine post"),
+      meet: ["The Donquixote Family again. Se\xF1or Pink and Gladius \u2014 Doflamingo's own officers.", "Help Harbourmaster Brandt hold the town. The Navy stands with Rakesh this time."],
+      wait: "Hold the harbour. They'll come for the warehouses first.",
+      done: ["Two of Doflamingo's officers, beaten by a recruit. The North Blue branch will want to meet you.", (ctx) => onward(ctx.char, "Report to")]
+    },
+    hunter: {
+      lure: "two Donquixote officers with fat posters are about to raid Rakesh",
+      summary: "Se\xF1or Pink and Gladius of the Donquixote Family \u2014 posters with real money on them, coming right to you.",
+      contact: hc("rakesh", "hunter", "outside the Rakesh inn"),
+      meet: ["Se\xF1or Pink. Gladius. Doflamingo's own. They're coming to Rakesh, and the merchant houses have doubled their rewards.", "Help the Harbourmaster. Get paid twice."],
+      wait: "Double pay, partner. Double.",
+      done: ["Paid twice, as promised. And the Drydock threw in a caravel for the town's hero.", (ctx) => onward(ctx.char, "Next:")],
+      reward: shipGift("Double Pay")
+    }
+  });
+  chapter("nb_swallow", { part: 1, island: "swallow_island", role: "crew" }, {
+    all: { name: "The Flying Undersea Swallow", tasks: [T3.quest("nb_bacca", "Help Rudd stop the Bacca Pirates terrorising Swallow Island (police station).", "nb_rudd")] },
+    pirate: {
+      lure: "a pirate crew terrorising Swallow Island has a captain worth humbling \u2014 and the island has people worth recruiting",
+      summary: "The Bacca Pirates are squeezing Swallow Island. Beat them, and maybe someone there will want to sail with you.",
+      contact: hc("swallow_island", "pirate", "outside the Swallow Town bar"),
+      meet: ["The Bacca Pirates think this island is theirs. The police can't stop them. Rudd at the station is at his wits' end.", "A crew is made of people who've seen you fight for something. Go and fight for Swallow Island \u2014 then find someone to sail with."],
+      tasks: [T3.quest("nb_bacca", "Help Rudd stop the Bacca Pirates terrorising Swallow Island (police station).", "nb_rudd"), T3.crew(1, "Recruit a crewmate \u2014 someone who's seen what you can do.")],
+      wait: "Bacca first. Then a crew.",
+      done: ["Now you look like a captain. A crew behind you \u2014 that's the thing the Grand Line can't take away.", (ctx) => onward(ctx.char, "Last stop before the mountain:")]
+    },
+    marine: {
+      lure: "the Swallow Island post is overrun by the Bacca Pirates",
+      summary: "Lieutenant Halvard's post can't handle the Bacca Pirates alone.",
+      contact: hc("swallow_island", "marine", "at the Swallow Island Marine post"),
+      meet: ["The Bacca Pirates have the island by the throat. The police chief, Rudd, is a good man \u2014 help him.", "Bacca is twenty-six million. Take him, and you'll never pay for a drink in this town again."],
+      wait: "Rudd is at the police station.",
+      done: ["Bacca in irons. The whole North Blue branch is talking about you.", (ctx) => onward(ctx.char, "Report to")]
+    },
+    hunter: {
+      lure: "Bacca of the Bacca Pirates is worth twenty-six million",
+      summary: "Bacca: twenty-six million berries. Koni, his first mate: a tidy sum on top.",
+      contact: hc("swallow_island", "hunter", "outside the Swallow Town inn"),
+      meet: ["Twenty-six million for Bacca. That's a real poster. Rudd at the police station will help you find him.", "I'll take my usual cut. You'll take the rest \u2014 and a name for yourself."],
+      wait: "Tracks lead to the old temple. Bacca's men go that way.",
+      done: ["Twenty-six million. You've outgrown this island, hunter.", (ctx) => onward(ctx.char, "Next:")]
+    }
+  });
+  chapter("nb_notice", { part: 1, island: "notice", role: "crew" }, {
+    all: { name: "The Notice Cup", tasks: [T3.quest("nb_notice_cup", "Win the Notice Cup at the Longarm Boxing Club (Ulrich).", "nb_ulrich")] },
+    pirate: {
+      lure: "the Notice Cup is the best place in the North Blue to find a fighter for your crew",
+      summary: "The Notice Cup is where the North Blue's toughest fists meet. The winner gets a purse; you might get a crewmate.",
+      contact: hc("notice", "pirate", "outside the Notice bar"),
+      meet: ["The Cup's on. Otto, the champion, has never been beaten \u2014 and he's been dreaming of the sea since he was a boy.", "Beat him, and ask him to sail with you. That's how the good crews start."],
+      tasks: [T3.quest("nb_notice_cup", "Win the Notice Cup at the Longarm Boxing Club (Ulrich).", "nb_ulrich"), T3.crew(1, "Recruit a crewmate \u2014 Otto the champion dreams of the sea.")],
+      wait: "The Longarm Boxing Club. Ulrich runs the Cup.",
+      done: ["You beat Otto AND took him to sea. Notice will be talking about that for years.", (ctx) => onward(ctx.char, "Last stop before the mountain:")]
+    },
+    marine: {
+      lure: "the Notice Cup draws fighters the Navy would like to recruit",
+      summary: "The Navy scouts the Notice Cup for fighters. Lieutenant Garm wants to see what you can do.",
+      contact: hc("notice", "marine", "at the Notice Marine post"),
+      meet: ["The Cup is the best fighting in the North Blue. Enter it. Show the town what a Marine can do.", "Win, and the recruiters in Deul will know your name."],
+      wait: "Ulrich at the Longarm Boxing Club takes the entries.",
+      done: ["Champion of Notice \u2014 and a Marine. I'll write to Deul tonight.", (ctx) => onward(ctx.char, "Report to")]
+    },
+    hunter: {
+      lure: "the Notice Cup purse is the fattest honest money in the North Blue",
+      summary: "The Notice Cup purse is big, honest money \u2014 and every bounty broker in the North Blue watches the winner.",
+      contact: hc("notice", "hunter", "outside the Notice bank"),
+      meet: ["The Cup purse, and the brokers' attention. Both worth having.", "Win, and I'll have better posters for you."],
+      wait: "Go and win.",
+      done: ["Champion! The brokers in Deul are already asking about you.", (ctx) => onward(ctx.char, "Next:")]
+    }
+  });
+  chapter("nb_deul", { part: 1, island: "deul", role: "last" }, {
+    pirate: {
+      name: "The Last Port of the North",
+      lure: "Deul is the last big port before the mountain \u2014 and a rival crew is racing you there",
+      summary: 'Deul, capital of the North, is the last port before Reverse Mountain. Captain Olav "Frost-Beard" means to ride the mountain first \u2014 and he sinks anyone who tries to beat him.',
+      contact: { name: "Skarn the Fence", title: "Harbour Fence", look: { hair: "long", hairColor: "#9e9e9e", top: "#263238", bottom: "#212121", hat: "beanie", hatColor: "#37474f", scarEye: true }, at: { town: "deul_capital", door: "inn" }, where: "outside the Eagle Barracks Inn" },
+      meet: ["A rookie crew bound for the mountain? Then you've got a problem. Olav Frost-Beard is in the harbour, and he sinks anyone who might beat him up the canal.", "Deal with Olav. And don't even think about the Grand Line without a real ship and a Log Pose."],
+      tasks: [T3.defeat("mq_nb_olav", 'Beat Captain Olav "Frost-Beard" at the Deul harbour.'), T3.ship(), T3.logPose()],
+      wait: "Olav's still in port. Ship, Log Pose, Olav.",
+      done: ["Frost-Beard, beaten. The Marines will have your face on a poster by morning \u2014 congratulations.", "Reverse Mountain is southeast of here, where the Red Line meets the Grand Line. Stay in the middle of the canal, and don't fight the current."],
+      reward: { bounty: 9e6 }
+    },
+    marine: {
+      name: "The Last Port of the North",
+      lure: "the North Blue branch in Deul posts its best recruits to the Grand Line",
+      summary: "Lieutenant Hask of the North Blue branch has orders for you \u2014 and a pirate to stop first.",
+      contact: { npc: "nb_hask", where: "at the North Blue Marine Branch, Deul" },
+      meet: ["So you're the one. Headquarters wants you in the Grand Line \u2014 G-8, at Navarone.", "But first: Olav Frost-Beard is in our harbour, planning to ride the mountain. Arrest him. Then take the cutter we're lending you, and go."],
+      tasks: [T3.defeat("mq_nb_olav", 'Arrest Captain Olav "Frost-Beard" at the Deul harbour.')],
+      wait: "Olav is at the harbour.",
+      done: ["Olav in irons. You're ready. The cutter is at the pier.", "Ride the current over Reverse Mountain and report to G-8. Justice goes with you."],
+      reward: navyShip
+    },
+    hunter: {
+      name: "The Last Port of the North",
+      lure: "the Deul bounty office has a fat poster on a crew in port",
+      summary: 'Captain Olav "Frost-Beard": seven million, in port, planning to ride Reverse Mountain.',
+      contact: { name: "Registrar Voll", title: "Deul Bounty Office", look: { hair: "short", hairColor: "#eceff1", top: "#37474f", bottom: "#263238", glasses: true }, at: { town: "deul_capital", door: "bounty" }, where: "outside the Deul Bounty Office" },
+      meet: ["Olav Frost-Beard. Seven million, and he's in our harbour. Catch him before he reaches the mountain.", "Beyond the mountain the posters get bigger. So do the pirates. Get a ship that can take the Grand Line, and a Log Pose."],
+      tasks: [T3.defeat("mq_nb_olav", 'Bring in Captain Olav "Frost-Beard" (\u0E3F7,000,000) at the Deul harbour.'), T3.ship(), T3.logPose()],
+      wait: "Olav's at the harbour.",
+      done: ["Seven million. The North Blue is too small for you now.", "Reverse Mountain is southeast of here. The Grand Line pays better \u2014 and bites harder."]
+    }
+  });
+  rival("mq_nb_olav", "deul", "deul_capital", 'Captain Olav "Frost-Beard"', "Captain of the Frost Pirates", 7e6, { hair: "long", hairColor: "#e0f7fa", top: "#37474f", bottom: "#263238", hat: "beanie", hatColor: "#0d47a1", bulk: 1.3 }, { style: "brawler", weapon: void 0, alert: "The mountain is MINE this year!" });
+  chapter("wb_kano", { part: 1, island: "kano_country", role: "ship" }, {
+    all: { name: "The Hasshoken Trials", tasks: [T3.quest("wb_hasshoken_trials", "Pass the Hasshoken trials (Don Chinjao, at the Family Hall).", "wb_chinjao")] },
+    pirate: {
+      lure: "Don Chinjao tests anyone who wants to learn how a real fighter hits \u2014 and the Happo harbour has ships",
+      summary: "Don Chinjao was a pirate worth a hundred million before Garp flattened his head. Pass his trials, and the Happo Navy's drydock will have a ship for you.",
+      contact: hc("kano_country", "pirate", "outside the Kano noodle house"),
+      meet: ["Chinjao's trials \u2014 the Hasshoken. Pass them, and the Happo drydock will build for you. The Chinjao Family respects strength.", "Go to the Family Hall. Don't mention Garp."],
+      wait: "The Family Hall. And don't mention Garp.",
+      done: ["Chinjao nodded at you? He hasn't nodded at anyone since Garp. The Happo drydock sent a caravel round.", (ctx) => onward(ctx.char, "Next, sail for")],
+      reward: shipGift("Eight Impacts")
+    },
+    marine: {
+      lure: "the Chinjao Family is testing fighters in Kano, and the Navy wants to know who passes",
+      summary: "The Chinjao Family's trials draw the West Blue's strongest. The Navy wants a Marine to pass them.",
+      contact: hc("kano_country", "marine", "at the Kano Marine post"),
+      meet: ["The Chinjao Family were pirates once. Now they keep order in Kano \u2014 their way. Pass their trials, and they'll respect the Navy.", "Don Chinjao is at the Family Hall."],
+      wait: "The Family Hall.",
+      done: ["A Marine passed the Hasshoken trials. Kano will take the Navy seriously now.", (ctx) => onward(ctx.char, "Report to")]
+    },
+    hunter: {
+      lure: "the Chinjao Family trains fighters in Kano \u2014 the best hunters in the West Blue passed through there",
+      summary: "A bounty hunter who can take a Hasshoken blow can take anything. Two-Coin Fen thinks you should learn.",
+      contact: hc("kano_country", "hunter", "outside the Kano inn"),
+      meet: ["Every hunter who made it big in the West Blue trained in Kano. Pass Chinjao's trials.", "Then the Happo drydock will want to be your friend."],
+      wait: "Chinjao. The Family Hall.",
+      done: ["A Hasshoken graduate! The drydock sent a caravel \u2014 hunters who pass the trials get friends in Kano.", (ctx) => onward(ctx.char, "Next:")],
+      reward: shipGift("Two Coins")
+    }
+  });
+  chapter("wb_ilisia", { part: 1, island: "ilisia", role: "ship" }, {
+    all: { name: "The King Who Saw Dragons Coming", tasks: [T3.quest("wb_ilisia_dragon", "Find out what is troubling the Kingdom of Ilisia (King Lucas at the palace).", "wb_lucas")] },
+    pirate: {
+      lure: "the King of Ilisia is desperate enough to pay pirates, and the harbour has a shipyard",
+      summary: "The King of Ilisia swears dragons are coming. The court whispers of revolution. Somewhere in between is a ship for whoever helps.",
+      contact: hc("ilisia", "pirate", "outside the Ilisia inn"),
+      meet: ["King Lucas is frightened, and frightened kings pay anyone. Even pirates.", "See him at the palace. Pick a side, if it comes to that \u2014 just pick the one that's right."],
+      wait: "The palace. Listen more than you talk.",
+      done: ["Whatever side you chose, Ilisia is quiet again. The harbour shipyard has a caravel with your name on the bill \u2014 paid.", (ctx) => onward(ctx.char, "Next, sail for")],
+      reward: shipGift("Dragon's Eye")
+    },
+    marine: {
+      lure: "the Kingdom of Ilisia has asked the Navy for help",
+      summary: "The Kingdom of Ilisia is close to a revolution. The Navy has been asked to keep the peace.",
+      contact: hc("ilisia", "marine", "at the Ilisia Marine post"),
+      meet: ["The King asked for help, and the Navy answered: with you. See him at the palace.", "Keep the peace. Whatever it takes."],
+      wait: "The palace.",
+      done: ["Ilisia is quiet again. You kept the peace \u2014 the Navy's job, done well.", (ctx) => onward(ctx.char, "Report to")]
+    },
+    hunter: {
+      lure: "the Ilisia court pays well for quiet removals of trouble",
+      summary: "Lady Ansel says the court will pay well to have Ilisia's troubles quietly removed.",
+      contact: hc("ilisia", "hunter", "in the palace square"),
+      meet: ["The King is paying for his troubles to go away. See him at the palace.", "Remove them. Discreetly."],
+      wait: "Discreetly, darling.",
+      done: ["Discreet AND effective. The court sent a caravel, with its thanks.", (ctx) => onward(ctx.char, "Next:")],
+      reward: shipGift("Discretion")
+    }
+  });
+  chapter("wb_toroa", { part: 1, island: "toroa", role: "crew" }, {
+    all: { name: "A Long Line of Musicians", tasks: [T3.quest("wb_toroa_slavers", "Stop the slavers preying on Toroa's musicians (Byron, at the Music Hall).", "wb_byron")] },
+    pirate: {
+      lure: "slavers are snatching Toroa's musicians \u2014 and a crew needs a musician",
+      summary: "Slavers are snatching Toroa's musicians. Byron the fiddler is next on their list \u2014 and every crew needs a musician.",
+      contact: hc("toroa", "pirate", "outside the Toroa bar"),
+      meet: ["Slavers. They're taking musicians off the street and shipping them to Sabaody. Byron at the Music Hall is trying to stop them alone.", "Stop them. And a crew without a song is just a boat full of people. Find yourself a crewmate."],
+      tasks: [T3.quest("wb_toroa_slavers", "Stop the slavers preying on Toroa's musicians (Byron, at the Music Hall).", "wb_byron"), T3.crew(1, "Recruit a crewmate \u2014 Byron has always wanted to play for a pirate crew.")],
+      wait: "The slavers first. The Music Hall.",
+      done: ["A crew, and a song for it. Now you're a pirate crew.", (ctx) => onward(ctx.char, "Last stop before the mountain:")]
+    },
+    marine: {
+      lure: "slavers are operating out of Toroa",
+      summary: "Slavers are taking people off the streets of Toroa. Lieutenant Corra wants them stopped.",
+      contact: hc("toroa", "marine", "at the Toroa Marine post"),
+      meet: ["Slavers. On the Navy's watch. Byron at the Music Hall has been tracking them.", "Help him. Justice isn't only for those with a price on their heads."],
+      wait: "The Music Hall.",
+      done: ["The slavers are finished. The musicians are home. That's Justice.", (ctx) => onward(ctx.char, "Report to")]
+    },
+    hunter: {
+      lure: "the slavers in Toroa have prices on their heads \u2014 and the town has pooled a reward",
+      summary: "The families of Toroa pooled their savings for the slavers' capture.",
+      contact: hc("toroa", "hunter", "outside the Toroa inn"),
+      meet: ["Slavers. The worst kind. The whole town chipped in.", "Byron at the Music Hall knows where they are."],
+      wait: "Byron. The Music Hall.",
+      done: ["The families wept. They paid, too. Good work.", (ctx) => onward(ctx.char, "Next:")]
+    }
+  });
+  chapter("wb_esperia", { part: 1, island: "esperia", role: "crew" }, {
+    all: { name: "The Humming Swordsman", tasks: [T3.quest("wb_esperia_convoy", "Deal with the bandits robbing the instrument convoy (Old Ottavio, Instrument Makers' Guild).", "wb_ottavio")] },
+    pirate: {
+      lure: "Esperia's instrument makers need a protector \u2014 and pay in favours",
+      summary: "Bandits are robbing Esperia's instrument convoys. Help Old Ottavio, then find a crewmate who can keep up with you.",
+      contact: hc("esperia", "pirate", "outside the Esperia bar"),
+      meet: ["The instrument makers are losing their convoys to bandits. Old Ottavio at the Guild wants them stopped.", "Help him. Then find a crewmate \u2014 the Grand Line is no place to sail alone."],
+      tasks: [T3.quest("wb_esperia_convoy", "Deal with the bandits robbing the instrument convoy (Old Ottavio).", "wb_ottavio"), T3.crew(1, "Recruit a crewmate \u2014 the Grand Line is no place to sail alone.")],
+      wait: "Ottavio first.",
+      done: ["A crew, and a town that sings your name. Good.", (ctx) => onward(ctx.char, "Last stop before the mountain:")]
+    },
+    marine: {
+      lure: "bandits are robbing the Esperia convoys",
+      summary: "Esperia's convoys are being robbed. The Navy protects trade.",
+      contact: hc("esperia", "marine", "at the Esperia Marine post"),
+      meet: ["The convoys. Robbed again. See Old Ottavio at the Guild.", "The Navy protects trade. Go."],
+      wait: "Ottavio. The Guild.",
+      done: ["The convoys are safe. Well done.", (ctx) => onward(ctx.char, "Report to")]
+    },
+    hunter: {
+      lure: "the bandits robbing the Esperia convoys have a price on their leader",
+      summary: "The convoy bandits' leader has a poster. Rosso the agent wants him.",
+      contact: hc("esperia", "hunter", "outside the Esperia inn"),
+      meet: ["The convoy bandits. Their leader has a poster. See Ottavio at the Guild.", "Timing, darling."],
+      wait: "Ottavio. The Guild.",
+      done: ["Perfect timing. Here's your fee.", (ctx) => onward(ctx.char, "Next:")]
+    }
+  });
+  chapter("wb_lascamp", { part: 1, island: "las_camp", role: "last" }, {
+    pirate: {
+      name: "A Job for the Gang",
+      lure: 'Capone "Gang" Bege is recruiting in Las Camp, and a job for him is a ticket to the Grand Line',
+      summary: `Capone "Gang" Bege runs Las Camp from a fortress of a restaurant. He's about to take his Fire Tank Pirates into the Grand Line \u2014 and he's hiring.`,
+      contact: hc("las_camp", "pirate", "outside the Las Camp inn"),
+      meet: ["Bege is heading for the Grand Line, and he wants a job done before he goes. Do it, and every gang in the West Blue will know your name.", "Get a ship that can take the Grand Line, and a Log Pose. Then see Bege at the Ristorante Castello."],
+      tasks: [T3.quest("wb_bege_job", 'Do a job for Capone "Gang" Bege (Ristorante Castello).', "wb_bege"), T3.ship(), T3.logPose()],
+      wait: "Bege, a ship, a Log Pose.",
+      done: [`Bege says you're "family". Coming from him, that's a compliment \u2014 and a poster.`, "Reverse Mountain is northeast of here. Ride the current up \u2014 and don't look back."]
+    },
+    marine: {
+      name: "The Fire Tank Family",
+      lure: "the Las Camp police want the Fire Tank Family brought down before it reaches the Grand Line",
+      summary: "Commissioner Gordo has been trying to bring down Capone Bege's Fire Tank Family for years. The Navy is finally helping.",
+      contact: hc("las_camp", "marine", "at the Las Camp Marine post"),
+      meet: ["Bege is about to take the Fire Tank Family into the Grand Line. Commissioner Gordo wants him first.", "Help Gordo. Then take the cutter we're lending you and report to G-8, at the foot of Reverse Mountain."],
+      tasks: [T3.quest("wb_fire_tank_bust", "Help Commissioner Gordo bring down the Fire Tank Family (Police Headquarters).", "wb_gordo")],
+      wait: "Gordo, at Police Headquarters.",
+      done: ["The Fire Tank Family, broken. Headquarters wants you in the Grand Line.", "The cutter is at the pier. Reverse Mountain is northeast. Report to G-8."],
+      reward: navyShip
+    },
+    hunter: {
+      name: "The Fire Tank Family",
+      lure: "the Fire Tank Family's posters are the richest in the West Blue",
+      summary: "Vito, Gotti and Capone Bege himself \u2014 the Fire Tank Family's posters are the richest in the West Blue.",
+      contact: hc("las_camp", "hunter", "outside the bounty office"),
+      meet: ["The boss finally approved it. The Fire Tank Family: every one of them. See Commissioner Gordo at Police Headquarters.", "And get a ship that can take the Grand Line, and a Log Pose. After this, you won't be welcome in Las Camp."],
+      tasks: [T3.quest("wb_fire_tank_bust", "Help Commissioner Gordo bring down the Fire Tank Family (Police Headquarters).", "wb_gordo"), T3.ship(), T3.logPose()],
+      wait: "Gordo, a ship, a Log Pose.",
+      done: ["The whole Fire Tank Family. The office has never paid out this much.", "Reverse Mountain is northeast of here. The Grand Line pays better."]
+    }
+  });
+  chapter("wb_soja", { part: 1, island: "soja_island", role: "last" }, {
+    all: { name: "The Velvet Sable", tasks: [T3.defeat("mq_wb_sable", 'Beat Captain "Velvet" Sable at the Soja pier.'), T3.ship(), T3.logPose()] },
+    pirate: {
+      lure: "Soja is the last quiet port before the mountain \u2014 though a rival crew is there already",
+      summary: "Captain Velvet Sable is in Soja, and she sinks anyone who might beat her up the mountain.",
+      contact: hc("soja_island", "pirate", "outside the Soja bar"),
+      meet: ["Velvet Sable's in port. She's sunk three rookie crews this season.", "Beat her. Get a ship that can take it, and a Log Pose."],
+      wait: "Sable, a ship, a Log Pose.",
+      done: ["Sable's beaten, and you've a poster. Welcome to piracy.", "Reverse Mountain is northeast. Don't look back."],
+      reward: { bounty: 9e6 }
+    },
+    marine: {
+      lure: "a pirate captain who sinks rookie crews is in port at Soja",
+      summary: "Captain Velvet Sable sinks rookie crews on their way to the mountain. Arrest her.",
+      contact: hc("soja_island", "marine", "at the Soja Marine post"),
+      tasks: [T3.defeat("mq_wb_sable", 'Arrest Captain "Velvet" Sable at the Soja pier.')],
+      meet: ["Velvet Sable. In port. Arrest her.", "Then take the cutter and report to G-8, beyond the mountain."],
+      wait: "Sable is at the pier.",
+      done: ["Sable in irons. The cutter is yours. Report to G-8.", "Reverse Mountain is northeast."],
+      reward: navyShip
+    },
+    hunter: {
+      lure: "Captain Velvet Sable is worth seven million and sitting in Soja",
+      summary: "Captain Velvet Sable: seven million berries.",
+      contact: hc("soja_island", "hunter", "outside the Soja bank"),
+      meet: ["Sable. Seven million. At the pier.", "Then a ship, and a Log Pose. The Grand Line waits."],
+      wait: "Sable, a ship, a Log Pose.",
+      done: ["Seven million. The Grand Line is next.", "Reverse Mountain is northeast."]
+    }
+  });
+  rival("mq_wb_sable", "soja_island", "soja_village", 'Captain "Velvet" Sable', "Captain of the Velvet Pirates", 7e6, { hair: "long", hairColor: "#212121", top: "#4a148c", bottom: "#212121", hat: "tricorne", hatColor: "#4a148c", fem: true }, { alert: "Another rookie for the bottom of the sea." });
+  chapter("sb_karate", { part: 1, island: "karate_island", role: "crew" }, {
+    all: { name: "The Karate Island Open", tasks: [T3.quest("sb_karate_open", "Win the Karate Island Open (Grandmaster Ippon's dojo; the entry fee is \u0E3F500).", "sb_ippon", void 0, { manual: true })] },
+    pirate: {
+      lure: "the Karate Island Open is where the South Blue's fighters show off \u2014 good crew material",
+      summary: "The Karate Island Open is on. Win it \u2014 and maybe someone you beat will want to sail with you.",
+      contact: hc("karate_island", "pirate", "outside the Karate Island restaurant"),
+      meet: ["The Open. Every dojo on the island sends its best. Win it, and you'll have your pick of fighters for a crew.", "Grandmaster Ippon takes the entries. Five hundred berries."],
+      tasks: [T3.quest("sb_karate_open", "Win the Karate Island Open (Grandmaster Ippon; entry \u0E3F500).", "sb_ippon", void 0, { manual: true }), T3.crew(1, "Recruit a crewmate \u2014 Yaguara fights like a storm and wants to see the sea.")],
+      wait: "The Open first. Then a crew.",
+      done: ["Champion AND captain. The dojos will be talking about you for a generation.", (ctx) => onward(ctx.char, "Next, sail for")]
+    },
+    marine: {
+      lure: "the Navy scouts the Karate Island Open for recruits \u2014 and wants a Marine to win it",
+      summary: "The Navy wants a Marine to win the Open. Lieutenant Kenta is watching.",
+      contact: hc("karate_island", "marine", "at the Karate Island Marine post"),
+      meet: ["A Marine hasn't won the Open in twelve years. Change that.", "Grandmaster Ippon takes entries. Five hundred berries."],
+      wait: "The Open. Go.",
+      done: ["A Marine champion! The recruiters will line up now.", (ctx) => onward(ctx.char, "Report to")]
+    },
+    hunter: {
+      lure: "the Karate Island Open purse is the fattest in the South Blue",
+      summary: "The Open's purse, and the attention of every broker in the South Blue.",
+      contact: hc("karate_island", "hunter", "outside the Karate Island inn"),
+      meet: ["The purse is big. The attention is bigger. Win it.", "Grandmaster Ippon takes the entries."],
+      wait: "Win it.",
+      done: ["Champion! Mama Pim is proud.", (ctx) => onward(ctx.char, "Next:")]
+    }
+  });
+  chapter("sb_tumi", { part: 1, island: "tumi", role: "crew" }, {
+    all: {
+      name: "The Tower of Tumi",
+      contact: { npc: "sb_inti", where: "at the Rebel Command in Tumi" },
+      tasks: [T3.quest("sb_tumi_tower", "Help Inti's rebels take back the Tower of Tumi.", "sb_inti")],
+      wait: "The tower. We go when you're ready."
+    },
+    pirate: {
+      lure: "the rebels of Tumi need fighters \u2014 and fighters make crewmates",
+      summary: "Inti's rebels are trying to take back the Tower of Tumi from a bandit lord.",
+      meet: ["You're a pirate? Good. We need fighters, not saints.", "Help us take the tower. Some of my people might follow you to sea afterwards."],
+      tasks: [T3.quest("sb_tumi_tower", "Help Inti's rebels take back the Tower of Tumi.", "sb_inti"), T3.crew(1, "Recruit a crewmate.")],
+      done: ["The tower is ours. Tumi is free. Go well, captain.", (ctx) => onward(ctx.char, "Next, sail for")]
+    },
+    marine: {
+      lure: "a bandit lord holds the Tower of Tumi",
+      summary: "A bandit lord holds the Tower of Tumi, and the rebels are trying to take it back. The Navy should help.",
+      meet: ["A Marine? We don't usually trust Marines. But the bandit lord in the tower is worse.", "Help us take it."],
+      done: ["The tower is ours. Maybe the Navy isn't so bad.", (ctx) => onward(ctx.char, "Report to")]
+    },
+    hunter: {
+      lure: "the bandit lord of Tumi has a poster",
+      summary: "The bandit lord in the Tower of Tumi has a price on his head.",
+      meet: ["A hunter? The man in the tower has a poster. We just want him gone.", "Help us take the tower."],
+      done: ["The tower is ours. Take his poster, hunter \u2014 you earned it.", (ctx) => onward(ctx.char, "Next:")]
+    }
+  });
+  chapter("sb_kutsukku", { part: 1, island: "kutsukku_island", role: "ship" }, {
+    all: { name: "Victoria Punk", tasks: [T3.quest("sb_victoria_punk", "Help Eustass Kid settle things in Victoria Punk (Victoria's grave).", "sb_kid")] },
+    pirate: {
+      lure: "a red-haired kid is recruiting in Victoria Punk \u2014 and the scrapyard builds ships",
+      summary: "A red-haired boy named Kid runs a gang in Victoria Punk and swears he'll be King of the Pirates. The scrapyard slipway builds ships for his friends.",
+      contact: hc("kutsukku_island", "pirate", "outside the Kutsukku noodle shop"),
+      meet: ["Kid's gang has a score to settle with the syndicate. Help them, and Rivet at the slipway will build you something that floats.", `Kid's at Victoria's grave. Don't call him "kid".`],
+      wait: "Kid. Victoria's grave.",
+      done: ["Kid owes you. So does Rivet \u2014 there's a caravel on the slipway with your flag on it.", (ctx) => onward(ctx.char, "Last stop before the mountain:")],
+      reward: shipGift("Scrap Queen")
+    },
+    marine: {
+      lure: "the gangs of Victoria Punk are at war, and the syndicate behind them has a price",
+      summary: "The gangs of Kutsukku are at war. The syndicate behind them is the real enemy.",
+      contact: hc("kutsukku_island", "marine", "at the Kutsukku Marine post"),
+      meet: ["The syndicate runs Kutsukku. The kid gangs are fighting back. The enemy of my enemy...", "Find Eustass Kid at Victoria's grave. Help him break the syndicate."],
+      wait: "Victoria's grave.",
+      done: ["The syndicate's broken. The kid gangs will be trouble one day \u2014 but not today.", (ctx) => onward(ctx.char, "Report to")]
+    },
+    hunter: {
+      lure: "the syndicate bosses in Victoria Punk have posters",
+      summary: "The syndicate bosses of Victoria Punk have posters. Kid's gang knows where they are.",
+      contact: hc("kutsukku_island", "hunter", "outside the Kutsukku inn"),
+      meet: ["The syndicate. Every boss has a poster. Eustass Kid's gang wants them gone too.", "He's at Victoria's grave."],
+      wait: "Victoria's grave.",
+      done: ["The syndicate's posters, paid. And Rivet sent a caravel from the slipway, for the town's hero.", (ctx) => onward(ctx.char, "Next:")],
+      reward: shipGift("Rivet's Pride")
+    }
+  });
+  chapter("sb_samba", { part: 1, island: "samba_kingdom", role: "ship" }, {
+    all: {
+      name: "Carnival Night",
+      contact: { npc: "sb_moqueca", where: "at the palace of King Moqueca" },
+      tasks: [T3.quest("sb_samba_carnival", "Save the carnival from the slavers of Samba (King Moqueca).", "sb_moqueca")],
+      wait: "The carnival! It must go on!"
+    },
+    pirate: {
+      lure: "the King of Samba rewards the carnival's heroes with ships",
+      summary: "Slavers are hiding in the carnival crowds of Samba. King Moqueca rewards those who save his carnival.",
+      meet: ["Slavers! In MY carnival! Find them! Save my dancers!", "Do it, and a ship from the royal slip is yours."],
+      done: ["The carnival is saved! A ship for the hero \u2014 from the royal slip!", (ctx) => onward(ctx.char, "Last stop before the mountain:")],
+      reward: shipGift("Carnaval")
+    },
+    marine: {
+      lure: "slavers are hiding in Samba's carnival",
+      summary: "Slavers in the carnival crowds. The Navy stops slavers.",
+      meet: ["A Marine! Slavers are hiding in my carnival! Find them!", "Save my dancers!"],
+      done: ["The carnival is saved! The Navy has my gratitude!", (ctx) => onward(ctx.char, "Report to")]
+    },
+    hunter: {
+      lure: "the slavers in Samba's carnival have prices on their heads",
+      summary: "The slavers of Samba have posters \u2014 and King Moqueca adds a ship.",
+      meet: ["A hunter! The slavers have posters! Take them all!", "And a ship for the one who saves my carnival!"],
+      done: ["The carnival is saved! A ship for the hero!", (ctx) => onward(ctx.char, "Next:")],
+      reward: shipGift("Carnaval")
+    }
+  });
+  chapter("sb_briss", { part: 1, island: "briss_kingdom", role: "last" }, {
+    all: {
+      name: "The St. Briss Shipyard",
+      tasks: [T3.quest("sb_crab_hand", "Deal with Crab-Hand Gyro, who has been raiding the St. Briss Shipyard (Master Carvel).", "sb_carvel"), T3.ship(), T3.logPose()]
+    },
+    pirate: {
+      lure: "Briss is the last port before the mountain \u2014 and the St. Briss Shipyard is in trouble",
+      summary: "Briss is the last port before Reverse Mountain. Crab-Hand Gyro has been raiding its famous shipyard.",
+      contact: hc("briss_kingdom", "pirate", "outside the Briss bar"),
+      meet: ["Crab-Hand Gyro raids the shipyard every week. Master Carvel would give anything to be rid of him.", "Deal with Gyro, get a ship that can take the Grand Line and a Log Pose \u2014 and you're ready."],
+      wait: "Gyro, a ship, a Log Pose.",
+      done: ["Gyro beaten, a ship from Carvel, and a poster with your face. Welcome to piracy.", "Reverse Mountain is northwest of here. Ride the current \u2014 and don't look back."],
+      reward: { bounty: 9e6 }
+    },
+    marine: {
+      lure: "the St. Briss Shipyard is being raided by pirates",
+      summary: "Crab-Hand Gyro is raiding the St. Briss Shipyard. Lieutenant Albrecht wants him stopped before you go.",
+      contact: hc("briss_kingdom", "marine", "at the Briss Marine post"),
+      tasks: [T3.quest("sb_crab_hand", "Deal with Crab-Hand Gyro, who has been raiding the St. Briss Shipyard (Master Carvel).", "sb_carvel")],
+      meet: ["Headquarters wants you in the Grand Line \u2014 G-8, at Navarone. But Gyro first: he raids the shipyard every week.", "Master Carvel will help you find him."],
+      wait: "Gyro. Master Carvel knows where.",
+      done: ["Gyro in irons. Carvel gave you a ship, I hear \u2014 the Navy will add its own. Report to G-8.", "Reverse Mountain is northwest of here."],
+      reward: navyShip
+    },
+    hunter: {
+      lure: "Crab-Hand Gyro \u2014 sixteen million \u2014 is raiding the St. Briss Shipyard",
+      summary: "Crab-Hand Gyro: sixteen million berries.",
+      contact: hc("briss_kingdom", "hunter", "outside the Briss inn"),
+      meet: ["Gyro. Sixteen million. Master Carvel at the shipyard wants him gone.", "Then a ship and a Log Pose. The Grand Line is next door."],
+      wait: "Gyro, a ship, a Log Pose.",
+      done: ["Sixteen million! The Grand Line is next.", "Reverse Mountain is northwest of here."]
+    }
+  });
+  chapter("sb_centaurea", { part: 1, island: "centaurea", role: "last" }, {
+    all: { name: "Mad Maxi", tasks: [T3.defeat("mq_sb_maxi", 'Beat Captain "Mad" Maxi at the Centaurea pier.'), T3.ship(), T3.logPose()] },
+    pirate: {
+      lure: "Centaurea is the last port before the mountain \u2014 though a rival crew is there already",
+      summary: "Captain Mad Maxi is in Centaurea, and he sinks anyone who might beat him up the mountain.",
+      contact: hc("centaurea", "pirate", "outside the Centaurea bar"),
+      meet: ["Mad Maxi's in port. He burns rival ships at anchor.", "Beat him. And get a real ship and a Log Pose."],
+      wait: "Maxi, a ship, a Log Pose.",
+      done: ["Maxi's beaten, and you've a poster. Welcome to piracy.", "Reverse Mountain is northwest. Don't look back."],
+      reward: { bounty: 9e6 }
+    },
+    marine: {
+      lure: "a pirate who burns rival ships at anchor is in port at Centaurea",
+      summary: "Captain Mad Maxi burns ships at anchor. Arrest him.",
+      contact: hc("centaurea", "marine", "at the Centaurea Marine post"),
+      tasks: [T3.defeat("mq_sb_maxi", 'Arrest Captain "Mad" Maxi at the Centaurea pier.')],
+      meet: ["Mad Maxi. In port. Arrest him.", "Then take the cutter and report to G-8, beyond the mountain."],
+      wait: "Maxi is at the pier.",
+      done: ["Maxi in irons. The cutter is yours. Report to G-8.", "Reverse Mountain is northwest."],
+      reward: navyShip
+    },
+    hunter: {
+      lure: "Captain Mad Maxi is worth seven million and sitting in Centaurea",
+      summary: "Captain Mad Maxi: seven million berries.",
+      contact: hc("centaurea", "hunter", "outside the Centaurea inn"),
+      meet: ["Maxi. Seven million. At the pier.", "Then a ship, and a Log Pose."],
+      wait: "Maxi, a ship, a Log Pose.",
+      done: ["Seven million. The Grand Line is next.", "Reverse Mountain is northwest."]
+    }
+  });
+  rival("mq_sb_maxi", "centaurea", "centaurea_town", 'Captain "Mad" Maxi', "Captain of the Bonfire Pirates", 7e6, { hair: "mohawk", hairColor: "#ff6f00", top: "#bf360c", bottom: "#212121", goggles: true }, { style: "brawler", weapon: void 0, alert: "Everything burns!" });
+  var GATES2 = { east_blue: "southwest of Loguetown", north_blue: "southeast, where the Red Line meets the Grand Line", west_blue: "northeast, where the Red Line meets the Grand Line", south_blue: "northwest, where the Red Line meets the Grand Line" };
+  for (const sea of ["east_blue", "north_blue", "west_blue", "south_blue"]) {
+    const ride = T3.check(
+      "ride",
+      `Sail to Reverse Mountain (${GATES2[sea]}) and ride the current up and over into the Grand Line.`,
+      (c, g) => !!c.flags.enteredGrandLine && g.world === g.surface && isGrandLine(regionAt(g.player.x, g.player.y)),
+      { where: (g) => {
+        const m = g.surface.reverseMountain?.mouths?.[sea];
+        return m ? { x: m.x, y: m.y, place: "Reverse Mountain" } : null;
+      } }
+    );
+    chapter(`rm_${sea}`, { part: 1, kind: "solo", place: "Reverse Mountain", gate: "reverse_mountain", sea }, {
+      all: {
+        name: "Reverse Mountain",
+        lure: "where the sea runs uphill",
+        summary: "Where the Red Line meets the Grand Line, the currents of all four Blues run UP a mountain, meet at the summit and pour down into the Grand Line. Once you're in, there's no way back.",
+        tasks: [ride]
+      }
+    });
+  }
+  var ROADS = {
+    east_blue: [["eb_syrup", "eb_orange"], ["eb_baratie"], ["eb_logue"]],
+    north_blue: [["nb_lvneel", "nb_rakesh"], ["nb_swallow", "nb_notice"], ["nb_deul"]],
+    west_blue: [["wb_kano", "wb_ilisia"], ["wb_toroa", "wb_esperia"], ["wb_lascamp", "wb_soja"]],
+    south_blue: [["sb_karate", "sb_tumi"], ["sb_kutsukku", "sb_samba"], ["sb_briss", "sb_centaurea"]]
+  };
+  PLANS[1] = (c, path2, from) => {
+    const home2 = from?.kind === "start" ? from : CHAPTERS.get(PROLOGUES.get(c.main?.home) || "") || null;
+    const sea = home2?.sea || seaOf2(home2?.island) || "east_blue";
+    const homeIsl = home2?.island;
+    const out = [];
+    if (home2) out.push(home2.id);
+    for (const opts of ROADS[sea]) {
+      const pick5 = opts.find((id) => CHAPTERS.get(id).island !== homeIsl) || opts[0];
+      out.push(pick5);
+    }
+    out.push(`rm_${sea}`);
+    return out;
+  };
+  var seaOf2 = (islandId) => ISLAND_BY_ID[islandId]?.sea;
+
+  // src/content/main/grandLine.js
+  var beaten = (id) => (c) => (c.bosses || []).includes(id) || !!c.defeated?.[id];
+  chapter("gl_twin_cape", { part: 2, island: "twin_cape", opensStory: true, noLog: false }, {
+    all: {
+      name: "The Whale Who Waits",
+      contact: { npc: "p1_crocus", where: "at the Twin Cape lighthouse" },
+      pitch: [
+        "You came down the mountain alive. Hmph. Most don't. I'm Crocus, keeper of this lighthouse \u2014 and of the whale at the foot of it.",
+        "What brings you to the Grand Line? Answer honestly. The sea knows when you lie."
+      ],
+      tasks: [T3.quest("p1_laboon_promise", "Hear the story of Laboon, the whale who waits, and make him a promise (Crocus).", "p1_crocus")],
+      wait: "Laboon is waiting. He's always waiting.",
+      done: [
+        "Laboon hasn't rammed the Red Line since you left. A promise is a powerful thing.",
+        "Listen well. Every island here has its own magnetism, and the Log Pose follows it. From this cape, seven roads lead into the Grand Line. Your needle will choose one of them.",
+        (ctx) => `${onward(ctx.char, "There \u2014 the log has set. It points to")} Wherever it takes you, your story is there. Don't sail past it: without its log, the Grand Line will only turn you round.`
+      ],
+      after: "Keep your promise to Laboon. He'll wait for you. He's good at that."
+    },
+    pirate: {
+      summary: "At the foot of Reverse Mountain an old man keeps a lighthouse, and a whale the size of an island rams the Red Line, waiting for a crew that never came back.",
+      meet: ["A pirate. Of course. Fifty years ago another pirate crew came down that mountain with a baby whale. They told him to wait. He's still waiting.", "Talk to me about Laboon, and I'll tell you how the Grand Line works. You'll need both."],
+      accept: "I'm a pirate. I'm going to the end of the Grand Line."
+    },
+    marine: {
+      summary: "At the foot of Reverse Mountain, the lighthouse keeper Crocus has seen every crew \u2014 and every Marine \u2014 come down the torrent.",
+      meet: ["A Marine. G-8 is north of here, on Navarone \u2014 they'll want you. But first, since you're here, listen to an old man about his whale.", "Laboon has been waiting fifty years for a pirate crew. Maybe a Marine can give him something to hope for."],
+      accept: "I'm a Marine, reporting to the Grand Line."
+    },
+    hunter: {
+      summary: "At the foot of Reverse Mountain, the lighthouse keeper Crocus has watched every crew come down the torrent \u2014 and every hunter chasing them.",
+      meet: ["A bounty hunter. The Grand Line's posters are bigger than the ones back home. So are the pirates. Most hunters I see come down that mountain never go up anything again.", "Hear me out about Laboon first. Then I'll tell you how to survive."],
+      accept: "I hunt pirates. I'm here for the big posters."
+    }
+  });
+  chapter("gl_cactus", { part: 2, island: "cactus_island" }, {
+    pirate: {
+      name: "Welcome to Whisky Peak",
+      lure: "a town of cheering people who welcome every pirate crew \u2014 suspiciously warmly",
+      summary: "Whisky Peak welcomes every pirate crew with a party. The mayor, Igaram, is very friendly. A little too friendly.",
+      contact: { npc: "p1_igaram", where: "at the Whisky Peak Saloon" },
+      noReport: true,
+      meet: ["Welcome, welcome, brave pirates! Whisky Peak loves pirates! Songs, sake, a party in your honour \u2014 ahem \u2014 ma-ma-maa~!", "Please, rest here tonight. We insist. We REALLY insist."],
+      tasks: [T3.quest("p1_whisky_peak", `Enjoy Whisky Peak's "welcome" \u2014 and survive the night (Mayor Igaram).`, "p1_igaram")],
+      wait: "Ma-ma-maa~! Enjoy the party!"
+    },
+    hunter: {
+      name: "The Town of Bounty Hunters",
+      lure: 'a town of "bounty hunters" who welcome pirates with parties \u2014 and knives',
+      summary: "Whisky Peak is a town of bounty hunters pretending to be friends to pirates. Real hunters have a word for that kind of work.",
+      contact: { name: "Old Deacon", title: "Retired Bounty Hunter", look: { hair: "long", hairColor: "#bdbdbd", top: "#4e342e", bottom: "#3e2723", hat: "cowboy", hatColor: "#3e2723" }, at: { town: "whisky_peak", plaza: true, ox: 4 }, where: "in the Whisky Peak square" },
+      meet: ["You're a real hunter? Then keep your voice down. This whole town is a front \u2014 Baroque Works. They drug pirate crews at parties and sell them to the Marines.", "Gives honest hunters a bad name. Go to the party at the saloon. Stay sober. See what they're really up to."],
+      tasks: [T3.quest("p1_whisky_peak", "Go to Whisky Peak's party \u2014 stay sober and find out who's really behind the town (Mayor Igaram).", "p1_igaram")],
+      wait: "The saloon. Watch your drink.",
+      done: ["Baroque Works, pretending to be hunters \u2014 and you took them apart. Honest hunters owe you.", (ctx) => onward(ctx.char, "The Baroque trail leads to")]
+    }
+  });
+  chapter("gl_kenzan", { part: 2, island: "kenzan_island" }, {
+    pirate: {
+      name: "The Whirlpool Lord",
+      lure: "the swordsmiths of Kenzan Island are being eaten by their own sea",
+      summary: "Kenzan Island's whirlpool has a lord \u2014 a Sea King that drags boats down. Old Tenaga, a retired swordsmith, can't get his supplies in.",
+      contact: { npc: "p1_tenaga", where: "at his house in Tehna Gehna" },
+      meet: ["A pirate ship made it through the whirlpool? Then you're strong, or lucky, or both.", "The Whirlpool Lord has sunk every supply boat for a month. Kill it, and I'll forge you something worth carrying into the Grand Line."],
+      tasks: [T3.quest("p1_kenzan_whirlpool", "Hunt the Whirlpool Lord (Old Tenaga).", "p1_tenaga")],
+      wait: "The whirlpool is west of the village.",
+      done: ["The Whirlpool Lord, gone! Boats are coming in already.", (ctx) => onward(ctx.char, "Your log has set for")]
+    }
+  });
+  chapter("gl_foolshout", { part: 2, island: "foolshout_island" }, {
+    pirate: {
+      name: "The Sun Pirates' Flag",
+      lure: "a mother on Foolshout Island is waiting for a flag that was lost at sea",
+      summary: "On Foolshout Island, a mother waits for word of her daughter \u2014 a girl who was rescued by the Sun Pirates, Fish-Men who sailed under a flag like a burn.",
+      contact: { npc: "p1_koala_mother", where: "at her home in Foolshout Village" },
+      meet: ["My daughter was a slave, once. Fish-Man pirates brought her home \u2014 the Sun Pirates. They left their flag on the anchorage when they sailed.", "It blew into the sea in a storm. Would you find it? It's all I have of the people who saved her."],
+      tasks: [T3.quest("p1_foolshout_sun", "Find the Sun Pirates' flag at the old anchorage (Koala's mother).", "p1_koala_mother")],
+      wait: "The old anchorage, on the south shore.",
+      done: ["Their flag. Thank you. A pirate brought my daughter home once. Now a pirate brings me this.", (ctx) => onward(ctx.char, "Your log has set for")]
+    }
+  });
+  chapter("gl_ruluka", { part: 2, island: "ruluka_island" }, {
+    pirate: {
+      name: "The Rainbow Mist",
+      lure: "an old man on Ruluka Island has spent his life studying a mist that eats ships",
+      summary: "The Rainbow Mist swallows ships and spits them out decades later. Henzo, the old scientist of Ruluka, has studied it all his life \u2014 and a pirate called Wetton wants to use it.",
+      contact: { npc: "p1_henzo", where: "at his workshop in Ruluka" },
+      meet: ["The Rainbow Mist is not a legend. It's a door. And Wetton the pirate wants to sell tickets through it.", "Stop him, and I'll share what I know about the sea beyond the mist."],
+      tasks: [T3.quest("p1_ruluka_rainbow", "Stop the pirate Wetton from exploiting the Rainbow Mist (Henzo).", "p1_henzo")],
+      wait: "Wetton's camp is on the far shore.",
+      done: ["Wetton is finished, and Ruluka is free. Fifty years of research \u2014 and a pirate saves it.", (ctx) => onward(ctx.char, "Your log has set for")]
+    }
+  });
+  chapter("gl_vira", { part: 2, island: "vira" }, {
+    pirate: {
+      name: "Noland's Departure",
+      lure: "the archives of Vira hold a page of Noland the Liar's log",
+      summary: "Noland the explorer stopped at Vira on his way to the city of gold. Looters are digging up the ruins where his log was hidden.",
+      contact: { npc: "p1_vira_archivist", where: "at the Vira Harbour Archives" },
+      meet: ["Noland the Liar passed through Vira four hundred years ago. We think he hid a page of his log in the ruins.", "Looters are digging there now. Stop them before they burn what they can't sell."],
+      tasks: [T3.quest("p1_vira_logbook", "Stop the looters in the ruins of Vira (Archivist Soleil).", "p1_vira_archivist")],
+      wait: "The ruins, north of town.",
+      done: ["Noland's page \u2014 safe! Show it to anyone who calls him a liar.", (ctx) => onward(ctx.char, "Your log has set for")]
+    }
+  });
+  chapter("gl_navarone", { part: 2, island: "navarone" }, {
+    marine: {
+      name: "G-8",
+      lure: "G-8, the Navy fortress at the foot of Reverse Mountain, is waiting for your report",
+      summary: "G-8, the Navy's fortress on Navarone, watches every crew that comes down Reverse Mountain. Commodore Jonathan runs it \u2014 and he has orders for you.",
+      contact: { npc: "p1_jonathan", where: "at G-8 Headquarters, Navarone" },
+      meet: ["Ah \u2014 the recruit from the Blues. Welcome to G-8. The rookies coming down that mountain get stranger every year, and we're the first thing they meet.", "You've orders from Headquarters. You'll follow the log along one of the routes and help the branches along the way. But first, a Marine of G-8 keeps his eyes open: patrol the base and report back. There are always pirates hiding on Navarone."],
+      tasks: [T3.defeat("mq_gl_g8_stowaway", "Catch the pirate stowaway hiding on Navarone.")],
+      wait: "The stowaway is somewhere on the island. Check the docks.",
+      done: ["Ha! A stowaway, caught by a recruit on her first day at G-8. Good.", (ctx) => `Here are your orders. ${onward(ctx.char, "Follow your log to")} And Marine \u2014 the Grand Line doesn't care about rank. Stay alive.`],
+      after: "Remember what you learned at G-8. Eyes open, always."
+    }
+  });
+  target({
+    id: "mq_gl_g8_stowaway",
+    island: "navarone",
+    name: '"Rat-Tail" Pomm',
+    title: "Pirate Stowaway",
+    faction: "pirate",
+    boss: true,
+    hpMul: 0.8,
+    level: 22,
+    bounty: 12e6,
+    at: { town: "g8_base", dock: true, ox: 3 },
+    look: { hair: "spiky", hairColor: "#795548", top: "#5d4037", bottom: "#3e2723", hat: "bandana", hatColor: "#795548" },
+    style: "brawler",
+    skill: 0.35,
+    alert: "Nobody finds Pomm! ...Except you, apparently."
+  });
+  chapter("gl_kyuka", { part: 2, island: "kyuka_island" }, {
+    hunter: {
+      name: "The Resort Robber",
+      lure: "the resort on Kyuka Island has a pirate problem \u2014 and rich guests who pay to be rid of it",
+      summary: "Kyuka Island is where the Grand Line's rich go to relax. A pirate called Glutton Gaspard has been robbing the guests, and the hotel is offering a fortune.",
+      contact: { npc: "p1_kyuka_manager", where: "at the Hotel Kyuka" },
+      meet: ["You're a bounty hunter? Oh, thank goodness. Glutton Gaspard \u2014 thirty-eight million \u2014 robs our guests every week and eats everything in the kitchens.", "The guests have added to his bounty. Please, bring him in. He lounges by the resort pier between raids, bold as brass."],
+      tasks: [T3.defeat("mq_gl_gaspard", "Hunt down Glutton Gaspard (\u0E3F38,000,000) by the Kyuka resort pier.")],
+      wait: "Gaspard is down by the resort pier.",
+      done: ["Gaspard, in chains! Our guests will be so relieved \u2014 and generous.", (ctx) => onward(ctx.char, "The next fat poster I've heard of is on")]
+    }
+  });
+  target({
+    id: "mq_gl_gaspard",
+    island: "kyuka_island",
+    name: "Glutton Gaspard",
+    title: "Captain of the Buffet Pirates",
+    faction: "pirate",
+    boss: true,
+    hpMul: 1,
+    level: 24,
+    bounty: 38e6,
+    at: { town: "kyuka_resort", dock: true, ox: -3 },
+    look: { hair: "curly", hairColor: "#ff7043", top: "#fdd835", bottom: "#5d4037", bulk: 1.6 },
+    style: "brawler",
+    skill: 0.35,
+    alert: "You look delicious!"
+  });
+  chapter("gl_little_garden", { part: 2, island: "little_garden" }, {
+    all: {
+      name: "The Hundred-Year Duel",
+      contact: { npc: "p1_dorry", where: "at his camp in the jungle" },
+      tasks: [T3.quest("p1_little_garden", "Help the giants of Little Garden \u2014 and find out who's been interfering with their duel (Dorry).", "p1_dorry")],
+      wait: "Gegyagyagya! Go on, little one. The jungle is waiting."
+    },
+    pirate: {
+      lure: "two giants have been duelling there for a hundred years",
+      summary: "On Little Garden, a prehistoric jungle, two giants have fought a duel for a hundred years. Someone has started cheating.",
+      meet: ["Gegyagyagya! A little pirate! I am Dorry of the Giant Warrior Pirates. Brogy and I have fought for a hundred years, and neither of us remembers why.", "But someone is meddling in our duel. Baroque Works, the little people call them. Find them for me."],
+      done: ["Baroque Works, beaten, and the duel is honest again! You'll make a fine warrior of Elbaf someday, little one.", (ctx) => onward(ctx.char, "Your log has set for")]
+    },
+    marine: {
+      lure: "Baroque Works agents are operating on Little Garden",
+      summary: "Baroque Works \u2014 a secret criminal organisation \u2014 is operating on Little Garden, where two giants have duelled for a hundred years.",
+      meet: ["Gegyagyagya! A Marine, here? The Navy never comes to Little Garden.", "Well, you've come at a good time. Someone is meddling in our duel. Baroque Works, they call themselves. Arrest them all!"],
+      done: ["Baroque Works, in chains! Our duel is honest again. The Navy is good for something after all!", (ctx) => onward(ctx.char, "Your orders now point to")]
+    }
+  });
+  chapter("gl_drum", { part: 2, island: "drum_island" }, {
+    all: {
+      name: "Hiriluk's Cherry Blossoms",
+      contact: { npc: "p1_dalton", where: "at his house in Bighorn" },
+      tasks: [T3.quest("p1_drum_kingdom", "Help Drum Island stand up to King Wapol's return (Dalton, Bighorn).", "p1_dalton")],
+      wait: "The castle is at the top of the Drum Rockies. Dress warmly."
+    },
+    pirate: {
+      lure: "a snowbound kingdom with no king and one doctor, who lives on a mountaintop",
+      summary: "Drum Island's king ran away when pirates came. Now he's back \u2014 and the people want him gone for good.",
+      meet: ["Pirates? Here? The last pirates who came here were Blackbeard's, and our king ran away from them.", "Now Wapol is back to take his throne. The people won't have him \u2014 but we can't fight him alone. Help us."],
+      done: ["Wapol is gone for good. Drum is free. The doctors on the mountain want to thank you.", (ctx) => onward(ctx.char, "Your log has set for")]
+    },
+    marine: {
+      lure: "the deposed king of Drum is trying to take his throne back by force",
+      summary: "King Wapol abandoned his people when pirates came. Now he's back with an army of thugs.",
+      meet: ["A Marine! Wapol is back, and he's not asking permission to be king again.", "The World Government gave him his crown. Maybe the Navy can take it away."],
+      done: ["Wapol, beaten. The people will choose their own leader now. Thank the Navy for us.", (ctx) => onward(ctx.char, "Your orders now point to")]
+    },
+    hunter: {
+      lure: "King Wapol has a bounty on his head now that he's turned pirate",
+      summary: "King Wapol turned pirate when he lost his throne. Now there's a price on his tin head.",
+      meet: ["A hunter. Wapol and his men have prices on their heads now that they're pirates.", "Help us, and the reward is yours."],
+      done: ["Wapol, beaten, and his poster paid. Drum is free.", (ctx) => onward(ctx.char, "The next big poster is on")]
+    }
+  });
+  chapter("gl_alabasta", { part: 2, island: "alabasta" }, {
+    all: {
+      name: "Operation Utopia",
+      contact: { npc: "p1_vivi", where: "in Nanohana" },
+      noReport: true,
+      tasks: [T3.quest("p1_alabasta", "Stop Baroque Works from destroying the Kingdom of Alabasta (Princess Vivi).", "p1_vivi", void 0, { autoStart: true })],
+      wait: "Please \u2014 Alabasta is running out of time."
+    },
+    pirate: {
+      lure: "a desert kingdom on the edge of civil war, and a princess who needs help",
+      summary: "Alabasta is on the edge of civil war. Rain hasn't fallen in the capital for three years \u2014 except at Rainbase, where Sir Crocodile, a Warlord of the Sea, lives in his casino.",
+      meet: ["You came. I'm Vivi, princess of Alabasta. My country is tearing itself apart \u2014 the rebels think my father stole the rain.", "It's Baroque Works. It's Crocodile. Please \u2014 help me stop him before the rebellion reaches the capital."]
+    },
+    marine: {
+      lure: "a Warlord of the Sea is suspected of plotting to take a kingdom",
+      summary: "A Warlord of the Sea, Sir Crocodile, is suspected of plotting to take Alabasta. Captain Smoker is already in Nanohana. So is the princess.",
+      meet: ["A Marine? Good. Captain Smoker doesn't believe me either \u2014 not yet.", "Crocodile is Mr. 0, the head of Baroque Works. He's drying up my country to steal it. Please help me prove it."]
+    },
+    hunter: {
+      lure: "Baroque Works' officers have fat posters \u2014 and they're all in Alabasta",
+      summary: "Every Baroque Works officer has a poster. Every one of them is in Alabasta.",
+      meet: ["You hunt pirates? Then hunt these. Baroque Works \u2014 Mr. 1, Mr. 2, all of them. And Crocodile.", "The Navy made him a Warlord. His true bounty would be enormous. Help me, and I'll see you're paid."]
+    }
+  });
+  chapter("gl_jaya", { part: 2, island: "jaya" }, {
+    all: {
+      name: "The Hyena of Mock Town",
+      contact: { npc: "p1_cricket", where: "at his house on the far side of Jaya" },
+      tasks: [T3.quest("p1_mock_town", "Take on Bellamy the Hyena in Mock Town.", "p1_bellamy", void 0, { alt: beaten("p1_bellamy") })],
+      wait: "Bellamy drinks in Mock Town. Everybody knows where."
+    },
+    pirate: {
+      lure: "Mock Town, where pirates laugh at dreamers \u2014 and one old man still dreams of a city of gold",
+      summary: "In Mock Town, pirates laugh at anyone who still dreams. Old Montblanc Cricket dives for a city of gold every day. Bellamy the Hyena laughs loudest.",
+      meet: ["You came to see the famous fool of Jaya? Hah. I dive for the city of gold my ancestor, Noland, saw. They call him a liar. They call me a fool.", "Bellamy the Hyena runs Mock Town. He'll laugh at your dream too. Don't let him."],
+      done: ["You beat Bellamy?! Hahaha! The city of gold \u2014 the sky \u2014 maybe it's all real after all.", (ctx) => onward(ctx.char, "Your log has set for")]
+    },
+    hunter: {
+      lure: "Bellamy the Hyena \u2014 fifty-five million \u2014 drinks in Mock Town",
+      summary: "Bellamy the Hyena: fifty-five million berries.",
+      meet: ["A hunter? Bellamy's fifty-five million, and he never stops laughing. Take that smile off his face.", "He's in Mock Town. Everybody knows."],
+      done: ["Bellamy, beaten! Hahaha! He won't laugh at anyone for a while.", (ctx) => onward(ctx.char, "Your next lead points to")]
+    }
+  });
+  chapter("gl_long_ring", { part: 2, island: "long_ring_long_land" }, {
+    all: {
+      name: "The Davy Back Fight",
+      contact: { name: "Tonjit", title: "Nomad of Long Ring Long Land", look: { hair: "long", hairColor: "#eceff1", top: "#8d6e63", bottom: "#5d4037", hat: "straw", hatColor: "#d7ccc8", scale: 1.3 }, at: { town: "foxy_camp", plaza: true, ox: -5 }, where: "at the Foxy camp" },
+      tasks: [T3.quest("p1_davy_back_fight", "Beat the Foxy Pirates at the Davy Back Fight.", "p1_foxy", void 0, { alt: beaten("p1_foxy") })],
+      wait: "Foxy's games are rigged. Win anyway."
+    },
+    pirate: {
+      lure: "an island of long things, and a pirate who steals crews with a game",
+      summary: "Foxy the Silver Fox steals crewmates in the Davy Back Fight \u2014 a pirate game where the loser loses their people.",
+      meet: ["I was up my stilts for ten years, waiting for the tide. When I came down, Foxy had taken half my village's young people in his games.", "He'll challenge you to a Davy Back Fight. Don't lose your crew to him."],
+      done: ["You beat Foxy at his own game! Shelly and I thank you.", (ctx) => onward(ctx.char, "Your log has set for")]
+    },
+    hunter: {
+      lure: "Foxy the Silver Fox is worth twenty-four million, and he loves games",
+      summary: "Foxy the Silver Fox: twenty-four million berries, and a sore loser.",
+      meet: ["A hunter? Foxy's poster is twenty-four million. He'll challenge you to a game \u2014 they always do.", "Win, and take his poster to the court."],
+      done: ["Foxy, beaten! The Silver Fox won't steal any more crews.", (ctx) => onward(ctx.char, "Your next lead points to")]
+    }
+  });
+  chapter("gl_water7", { part: 2, island: "water_7" }, {
+    pirate: {
+      name: "The City of Water",
+      lure: "the greatest shipwrights in the world build ships in a city on the water",
+      summary: "Water 7 is the city of shipwrights, home of Galley-La. Something is wrong: someone tried to kill the mayor, Iceburg.",
+      contact: { npc: "p2_paulie", where: "at Galley-La Dock 1" },
+      meet: ["A pirate at Galley-La? We fix pirate ships too. For a price.", "But not today. Someone broke into the Mayor's mansion last night. Iceburg says it's nothing. I don't believe him."],
+      tasks: [T3.quest("p2_cp9_conspiracy", "Find out who is trying to kill Mayor Iceburg (Paulie, Galley-La Dock 1).", "p2_paulie")],
+      wait: "Keep your eyes on the masked ones.",
+      done: ["CP9. The World Government's own assassins, working at Galley-La for five years. I'll never trust anyone again. Except you.", (ctx) => onward(ctx.char, "Your log has set for")]
+    }
+  });
+  chapter("gl_spa", { part: 2, island: "spa_island" }, {
+    pirate: {
+      name: "The Silver Fox on Holiday",
+      lure: "a spa island where the guests are being robbed by a vacationing pirate",
+      summary: "Spa Island is a resort of hot springs. Foxy the Silver Fox is on holiday \u2014 and robbing the other guests.",
+      contact: { npc: "p2_spa_manager", where: "at the Spa Island Hot Springs" },
+      meet: [`A pirate \u2014 please, not another. Foxy the Silver Fox is here "on holiday", and he steals the guests' belongings.`, "Get rid of him, and you can soak for free for the rest of your life."],
+      tasks: [T3.quest("p2_spa_foxy", "Get rid of Foxy the Silver Fox (Doran, Spa Island Hot Springs).", "p2_spa_manager", void 0, { alt: beaten("p2_foxy") })],
+      wait: "Foxy is by the big pool.",
+      done: ["Peace at last. Soak, please \u2014 you've earned it.", (ctx) => onward(ctx.char, "Your log has set for")]
+    }
+  });
+  chapter("gl_thriller", { part: 2, island: "thriller_bark", kind: "solo" }, {
+    all: {
+      name: "The Shadow Thief of Thriller Bark",
+      tasks: [T3.quest("p2_thriller_bark", "Survive Thriller Bark, the ghost ship in the Florian Triangle, and free the people whose shadows were stolen.", void 0)]
+    },
+    pirate: {
+      lure: "a ghost ship the size of an island drifts in the Florian Triangle",
+      summary: "In the Florian Triangle, where ships vanish in the mist, drifts Thriller Bark \u2014 a ship the size of an island, and the lair of Gecko Moria, a Warlord who steals shadows."
+    },
+    marine: {
+      lure: "ships are vanishing in the Florian Triangle, and a Warlord's ghost ship is to blame",
+      summary: "Ships are vanishing in the Florian Triangle. Headquarters suspects Gecko Moria \u2014 a Warlord of the Sea \u2014 of abusing his privileges."
+    }
+  });
+  chapter("gl_sabaody", { part: 2, island: "sabaody" }, {
+    pirate: {
+      name: "The Sabaody Archipelago",
+      lure: "every pirate road in Paradise ends at Sabaody, where ships are coated to sail under the Red Line",
+      summary: "Every road in Paradise ends here: the Sabaody Archipelago, a forest of mangroves in the shadow of the Red Line. To reach the New World, ships are coated and sail UNDER it \u2014 ten thousand metres down, by way of Fish-Man Island.",
+      contact: { npc: "p2_hatchan", where: "at Takoyaki Hachi, Grove 41" },
+      meet: ["Nyuu~! A pirate crew made it all the way through Paradise! Welcome to Sabaody! Have some takoyaki!", "You'll want your ship coated for Fish-Man Island. But be careful \u2014 there are slavers here, and the World Nobles do as they please. Nyuu... a friend of mine is in trouble. Could you help?"],
+      tasks: [
+        T3.quest("p2_sabaody_auction", "Help Hatchan \u2014 a friend of his has been taken to the Human Auctioning House.", "p2_hatchan"),
+        T3.check("coated", "Get your ship coated for the voyage under the Red Line (the Coating Mechanic at Grove 50).", (c) => !!c.flags.p2_shipCoated, { npc: "p2_coater" })
+      ],
+      wait: "Nyuu~! The coating takes a while. The auction house is in Grove 1.",
+      done: ["You did it! Nyuu~! Everyone is safe, and your ship is coated.", "Fish-Man Island is ten thousand metres down, under the Red Line. After that \u2014 the New World. Nyuu... be careful out there."],
+      reward: { bounty: 3e7 }
+    },
+    marine: {
+      name: "The Sabaody Archipelago",
+      lure: "the Navy is gathering at Sabaody, next door to Headquarters",
+      summary: "The Sabaody Archipelago, next door to Marine Headquarters, is full of rookie pirates \u2014 and slavers, and World Nobles who do as they please.",
+      contact: { name: "Commodore Brannew", title: "Marine Headquarters Staff", look: LOOK.officer({ hair: "short", hairColor: "#212121", glasses: true }), faction: "marine", at: { town: "sabaody_grove41", plaza: true, ox: 6 }, where: "in Grove 41", level: 40, style: "rokushiki" },
+      meet: ["So you're the officer G-8 keeps writing about. Headquarters has summoned you \u2014 but first, Sabaody. A slave auction is being held in Grove 1 today.", "A World Noble will be there. Our orders are to keep the peace \u2014 whatever happens. Go and see what the Fish-Man at the takoyaki stall in Grove 41 is so upset about."],
+      tasks: [T3.quest("p2_sabaody_auction", "Keep the peace at Sabaody \u2014 see what Hatchan at the takoyaki stall is upset about.", "p2_hatchan")],
+      wait: "Keep the peace. Whatever happens.",
+      done: ["You kept the peace, and people went home alive. Not every Marine can say that about Sabaody.", (ctx) => `Headquarters is expecting you. ${onward(ctx.char, "Report to")}`]
+    }
+  });
+  chapter("gl_marineford", { part: 2, island: "marineford" }, {
+    marine: {
+      name: "The Summit War of Marineford",
+      lure: "Fleet Admiral Sengoku has summoned you to Marine Headquarters",
+      summary: "Marineford, Marine Headquarters. Fleet Admiral Sengoku has summoned every officer in Paradise. A war is coming \u2014 the greatest the sea has seen in twenty years.",
+      contact: { npc: "p2_sengoku", where: "at Marine Headquarters" },
+      meet: ["So you are the one from the Blues. I have read your reports. Good work.", "Whitebeard's allies are coming for the prisoner. Every Marine in Paradise stands in the plaza today. Stand with us \u2014 and survive. That is an order."],
+      tasks: [T3.quest("p2_summit_war", "Stand with the Navy in the Summit War of Marineford (Fleet Admiral Sengoku).", "p2_sengoku")],
+      wait: "To the plaza. Hold the line.",
+      done: [
+        "You survived. Many did not. The world changed today, and you were there.",
+        "Headquarters is moving to the New World. You're going with it. Your papers are good for the Bondola \u2014 it will carry your ship over the Red Line at the Red Port. Report to Fleet Admiral Sakazuki at New Marineford."
+      ],
+      reward: { flag: "bondolaPass", merit: 400 },
+      onDone: (g) => {
+        g.state.char.flags.bondolaPass = true;
+      }
+    }
+  });
+  chapter("gl_enies", { part: 2, island: "enies_lobby" }, {
+    hunter: {
+      name: "The Judicial Island",
+      lure: "every hunter's road in Paradise ends at Enies Lobby, where the court pays for the greatest bounties",
+      summary: "Enies Lobby, the World Government's judicial island, where the greatest criminals are sentenced \u2014 and the greatest bounties paid. Today, one of them has broken loose.",
+      contact: { name: "Clerk Pomeroy", title: "Bounty Court of Enies Lobby", look: { hair: "short", hairColor: "#eceff1", top: "#212121", bottom: "#212121", glasses: true, coat: "#37474f" }, at: { town: "enies_main", plaza: true, ox: -5 }, where: "in the main plaza of Enies Lobby" },
+      meet: ["You have come to claim bounties at the court? Your record is... impressive. But you arrive on a bad day.", 'Captain "Lockjaw" Grimm \u2014 one hundred and twenty million \u2014 broke his chains on the way to the courthouse. He is loose on the island. Bring him down, and the court will pay the full bounty \u2014 and grant you a permit that few hunters ever hold.'],
+      tasks: [T3.defeat("mq_gl_grimm", 'Bring down "Lockjaw" Grimm (\u0E3F120,000,000), loose on Enies Lobby.')],
+      wait: "Grimm is still loose. The guards won't go near him.",
+      done: [
+        "One hundred and twenty million berries. The court has not paid a bounty that size to a hunter in years.",
+        "And this \u2014 a World Government travel permit. It will get your ship onto the Bondola at the Red Port, over the Red Line and into the New World. The greatest posters are there. So are the monsters."
+      ],
+      reward: (g) => ({ items: count(g.state.char, "wg_permit") ? [] : [["wg_permit", 1]], berries: 6e4 })
+    }
+  });
+  target({
+    id: "mq_gl_grimm",
+    island: "enies_lobby",
+    name: 'Captain "Lockjaw" Grimm',
+    title: "Escaped Prisoner",
+    faction: "pirate",
+    boss: true,
+    hpMul: 1.2,
+    level: 38,
+    bounty: 12e7,
+    at: { town: "enies_main", dock: true, ox: 3 },
+    look: { hair: "buzz", hairColor: "#212121", top: "#616161", bottom: "#424242", bulk: 1.5, scarEye: true },
+    style: "brawler",
+    skill: 0.45,
+    alert: "No cell holds Lockjaw Grimm!"
+  });
+  var GL_ROADS = {
+    pirate: [
+      { id: "cactus", chain: ["gl_cactus", "gl_little_garden", "gl_drum", "gl_alabasta", "gl_sabaody"] },
+      { id: "kenzan", chain: ["gl_kenzan", "gl_little_garden", "gl_jaya", "gl_water7", "gl_sabaody"] },
+      { id: "foolshout", chain: ["gl_foolshout", "gl_drum", "gl_spa", "gl_thriller", "gl_sabaody"] },
+      { id: "ruluka", chain: ["gl_ruluka", "gl_jaya", "gl_long_ring", "gl_water7", "gl_sabaody"] },
+      { id: "vira", chain: ["gl_vira", "gl_drum", "gl_alabasta", "gl_thriller", "gl_sabaody"] }
+    ],
+    marine: [
+      { id: "g8_south", chain: ["gl_navarone", "gl_drum", "gl_alabasta", "gl_sabaody", "gl_marineford"] },
+      { id: "g8_north", chain: ["gl_navarone", "gl_little_garden", "gl_thriller", "gl_sabaody", "gl_marineford"] }
+    ],
+    hunter: [
+      { id: "kyuka", chain: ["gl_kyuka", "gl_jaya", "gl_long_ring", "gl_enies"] },
+      { id: "whisky", chain: ["gl_cactus", "gl_drum", "gl_alabasta", "gl_enies"] }
+    ]
+  };
+  PLANS[2] = (c, path2) => {
+    const roads = GL_ROADS[path2] || GL_ROADS.pirate;
+    const keep = c.main?.route && roads.find((r) => r.id === c.main.route);
+    const road = keep || new RNG(`${c.runSeed}:road:${path2}`).pick(roads);
+    if (c.main) c.main.route = road.id;
+    else c.mainRoute = road.id;
+    const done6 = new Set((c.main?.done || []).map((q2) => q2.split(":")[1]));
+    return ["gl_twin_cape", ...road.chain].filter((id) => CHAPTERS.has(id) && !(done6.has(id) && id !== "gl_twin_cape"));
+  };
+
+  // src/content/main/newWorld.js
+  var beaten2 = (id) => (c) => (c.bosses || []).includes(id) || !!c.defeated?.[id];
+  var inNewWorld = (g) => g.world === g.surface && regionAt(g.player.x, g.player.y) === REGION.NEW_WORLD;
+  var redPort = (g) => {
+    if (!g.player || g.world !== g.surface || regionAt(g.player.x, g.player.y) === REGION.NEW_WORLD) return null;
+    const b = MARY_GEOISE.portParadise?.bondola;
+    return b ? { x: b.x, y: b.y, place: "the Red Port" } : null;
+  };
+  var BONDOLA = "Cross the Red Line: take the Bondola at the Red Port, east of Marineford, then sail to";
+  chapter("nw_fishman", { part: 3, kind: "solo", place: "Fish-Man Island" }, {
+    pirate: {
+      name: "Ten Thousand Metres Down",
+      lure: "the only way into the New World for a pirate is under the Red Line",
+      summary: "The New World lies on the far side of the Red Line. Pirates can't use the Bondola \u2014 so they sail under it, ten thousand metres down, to Fish-Man Island.",
+      tasks: [
+        T3.check("dive", "Take your coated ship to the dive point east of Sabaody and sink to Fish-Man Island, ten thousand metres down.", (c, g) => g.world?.id === "fishman_island" || !!c.quests.p2_coating?.done || inNewWorld(g)),
+        T3.quest("nw_fmi_coup", "Help King Neptune save Fish-Man Island from the New Fish-Man Pirates (Ryugu Palace).", "nw_neptune", void 0, { alt: (c, g) => inNewWorld(g) }),
+        T3.check("rise", "Rise to the New World (the current at the far end of Fish-Man Island).", (c, g) => inNewWorld(g))
+      ]
+    }
+  });
+  chapter("nw_punk", { part: 3, island: "punk_hazard", kind: "solo" }, {
+    pirate: {
+      name: "The Poisoned Island",
+      lure: "a distress call is coming from Punk Hazard \u2014 an island half on fire and half frozen",
+      summary: "Punk Hazard, half fire and half ice, was closed by the World Government after an accident. Someone there is calling for help.",
+      tasks: [T3.quest("nw_punk_hazard", "Answer the distress call from Punk Hazard, the poisoned island.", void 0)]
+    }
+  });
+  chapter("nw_dressrosa", { part: 3, island: "dressrosa" }, {
+    pirate: {
+      name: "The Kingdom of Love and Toys",
+      lure: "Dressrosa, the kingdom of passion \u2014 and of toys that remember being people",
+      summary: "Dressrosa is ruled by Donquixote Doflamingo, Warlord of the Sea. The toys in its streets were people once. The tiny Tontatta know the truth.",
+      contact: { npc: "nw_wicca", where: "at the Acacia market" },
+      noReport: true,
+      meet: ["Shh! You can see me?! Then you must be a hero! The Tontatta need heroes.", "Doflamingo turned our friends into toys, and everyone forgot them. We have a plan \u2014 Operation SOP. Will you help?"],
+      tasks: [
+        T3.quest("nw_sop", "Carry out Operation SOP with the Tontatta (Wicca).", "nw_wicca"),
+        T3.quest("nw_birdcage", "Bring down Donquixote Doflamingo and his Birdcage.", void 0)
+      ]
+    }
+  });
+  chapter("nw_zou", { part: 3, island: "zou", kind: "solo" }, {
+    pirate: {
+      name: "The Land on the Elephant's Back",
+      lure: "an island on the back of a thousand-year-old elephant, where the Minks live",
+      summary: "Zou is a country on the back of an elephant that has walked the sea for a thousand years. Something terrible has happened to the Minks who live there.",
+      tasks: [T3.quest("nw_zou_jack", "Find out what happened to the Minks of Zou.", void 0)]
+    }
+  });
+  chapter("nw_wano", { part: 3, island: "wano", kind: "solo" }, {
+    pirate: {
+      name: "The Land of Wano",
+      lure: "the closed country of Wano, where the samurai wait for their dawn",
+      summary: "Wano, the closed country of samurai, has lived under Kaido of the Beasts for twenty years. The Nine Red Scabbards are waiting for their dawn.",
+      tasks: [
+        T3.quest("wano_dawn", "Find the retainers of the Kozuki clan in Wano.", "kinemon_wano"),
+        T3.quest("raid_onigashima", "Join the raid on Onigashima and end Kaido's rule.", "kinemon_wano")
+      ]
+    }
+  });
+  chapter("nw_laugh_tale", { part: 3, island: "lodestar", kind: "solo", noLog: true }, {
+    pirate: {
+      name: "The Road to Laugh Tale",
+      lure: "Lodestar, the last island a Log Pose can find \u2014 beyond it, only the Road Poneglyphs point the way",
+      summary: "Lodestar is the last island the Log Pose can find. Beyond it lies Laugh Tale, where Gol D. Roger left everything \u2014 and only the four Road Poneglyphs can point the way.",
+      tasks: [T3.quest("laugh_tale_voyage", "Gather the four Road Poneglyph rubbings, decipher them, and sail to Laugh Tale.", void 0)]
+    }
+  });
+  chapter("nw_m_hq", { part: 3, island: "new_marineford" }, {
+    marine: {
+      name: "Justice in the New World",
+      lure: "Fleet Admiral Sakazuki has moved Headquarters to the New World",
+      summary: "Marine Headquarters has moved to the New World. Fleet Admiral Sakazuki \u2014 Akainu \u2014 believes in Absolute Justice, and he has orders for you.",
+      arrive: `${BONDOLA} New Marineford.`,
+      arriveWhere: redPort,
+      contact: { npc: "nw_sakazuki", where: "at Marine Headquarters, New Marineford" },
+      noReport: true,
+      meet: ["You survived Marineford. Good. Headquarters does not need survivors, it needs Marines who finish things.", "Caesar Clown is making weapons on Punk Hazard. Doflamingo, a Warlord, sells them. G-5 is the nearest base. Bring them both down \u2014 that is Absolute Justice."],
+      tasks: [T3.quest("nw_new_justice", "Carry out Fleet Admiral Sakazuki's orders: G-5, Caesar Clown, Doflamingo.", "nw_sakazuki")]
+    }
+  });
+  chapter("nw_m_koby", { part: 3, island: "hachinosu" }, {
+    marine: {
+      name: "The Hero of Rocky Port",
+      lure: "a Marine hero has been captured and taken to the pirate island of Hachinosu",
+      summary: "Captain Koby \u2014 the hero of Rocky Port \u2014 has been captured by the Blackbeard Pirates and taken to Hachinosu, their island fortress.",
+      contact: { npc: "koby_hachinosu", where: "in the Hachinosu Prison Block" },
+      noReport: true,
+      meet: ["You came?! A Marine, here? I \u2014 I can't believe it. I'm Koby. They caught me, but I'm not beaten.", "Keep Pizarro busy, and I'll get us both out. Together!"],
+      tasks: [T3.quest("koby_escape", "Break Captain Koby out of the Hachinosu prison.", "koby_hachinosu")]
+    }
+  });
+  chapter("nw_h_raijin", { part: 3, island: "raijin_island", kind: "solo" }, {
+    hunter: {
+      name: "The Mad Monk",
+      lure: "Urouge the Mad Monk \u2014 one hundred and eight million \u2014 meditates on the Thunder Plain of Raijin Island",
+      summary: "The New World's posters start at a hundred million. The first worth your time: Urouge, the Mad Monk of the Worst Generation, on Raijin Island.",
+      arrive: `${BONDOLA} Raijin Island.`,
+      arriveWhere: redPort,
+      tasks: [T3.quest("nw_urouge", "Take on Urouge, the Mad Monk (\u0E3F108,000,000), on the Thunder Plain.", "nw_urouge", void 0, { alt: beaten2("nw_urouge") })]
+    }
+  });
+  chapter("nw_h_sphinx", { part: 3, island: "sphinx" }, {
+    hunter: {
+      name: "Whitebeard's Homeland",
+      lure: "Edward Weevil \u2014 four hundred and eighty million \u2014 is plundering Whitebeard's homeland",
+      summary: `Edward Weevil claims to be Whitebeard's son, and he is plundering Sphinx, Whitebeard's homeland, for the "inheritance". His poster is enormous.`,
+      contact: { npc: "nw_marco", where: "at his clinic in Sphinx" },
+      noReport: true,
+      meet: ["A bounty hunter. Yoi. Weevil and his mother are tearing this island apart looking for money that doesn't exist.", "I'm a doctor now. But I won't stop you."],
+      tasks: [T3.quest("nw_sphinx", "Stop Edward Weevil from plundering Sphinx (Marco).", "nw_marco")]
+    }
+  });
+  chapter("nw_h_winner", { part: 3, island: "winner_island", kind: "solo" }, {
+    hunter: {
+      name: "The Winner Island Ambush",
+      lure: "Jesus Burgess of the Blackbeard Pirates ambushed a crew at Winner Island",
+      summary: 'Jesus Burgess, "the Champion" of the Blackbeard Pirates, ambushed the Heart Pirates at Winner Island. One survivor is still hiding by his boat.',
+      tasks: [T3.quest("winner_ambush", "Deal with Jesus Burgess at Winner Island (the Heart Pirates crewman at his boat).", "heart_pirate_winner")]
+    }
+  });
+  chapter("nw_teach", { part: 3, island: "hachinosu", kind: "solo" }, {
+    all: {
+      name: "The Man Who Would Be King",
+      tasks: [T3.quest("blackbeard_showdown", "Face Marshall D. Teach \u2014 Blackbeard \u2014 in his fortress on Hachinosu.", "teach_hachinosu")]
+    },
+    marine: {
+      lure: "Blackbeard himself sits in his fortress on Hachinosu",
+      summary: "Marshall D. Teach, Blackbeard, an Emperor of the Sea, sits in his fortress on Hachinosu. For a Marine, there is no greater enemy."
+    },
+    hunter: {
+      lure: "the greatest bounty in the world is sitting in a fortress on Hachinosu",
+      summary: "Marshall D. Teach \u2014 Blackbeard \u2014 Emperor of the Sea. The largest bounty the world has ever posted is his."
+    }
+  });
+  PLANS[3] = (c, path2, from, g) => {
+    const inNW = g && g.player && g.world === g.surface && regionAt(g.player.x, g.player.y) === REGION.NEW_WORLD;
+    const done6 = new Set((c.main?.done || []).map((q2) => q2.split(":")[1]));
+    let chain2;
+    if (path2 === "marine") chain2 = ["nw_m_hq", "nw_m_koby", "nw_teach"];
+    else if (path2 === "hunter") chain2 = ["nw_h_raijin", "nw_h_sphinx", "nw_h_winner", "nw_teach"];
+    else chain2 = [...inNW ? [] : ["nw_fishman"], "nw_punk", "nw_dressrosa", "nw_zou", "nw_wano", "nw_laugh_tale"];
+    return chain2.filter((id) => CHAPTERS.has(id) && !done6.has(id));
+  };
+
+  // src/content/main/paths.js
+  var PATHS = {
+    pirate: { id: "pirate", name: "Pirate", color: "#b3261e", tagline: "A flag of your own, a crew to share it, and the whole sea for a road." },
+    marine: { id: "marine", name: "Marine", color: "#1565c0", tagline: "Justice \u2014 and the long climb from Seaman Recruit through the ranks of the Navy." },
+    hunter: { id: "hunter", name: "Bounty Hunter", color: "#6d4c41", tagline: "Every pirate has a price. Your name is your fortune." }
+  };
+  var PART_NAMES = { 1: "The Blues", 2: "The Grand Line", 3: "The New World" };
+
+  // src/content/mainStory.js
+  var qidOf = (chId, path2) => `mq:${chId}:${path2}`;
+  var parse = (qid) => {
+    const [, ch, path2] = String(qid).split(":");
+    return { ch: CHAPTERS.get(ch), path: path2 };
+  };
+  var isMain = (qid) => String(qid).startsWith("mq:");
+  var islName = (id) => ISLAND_BY_ID[id]?.name || "";
+  var text = (t, ctx) => typeof t === "function" ? t(ctx) : t;
+  var CONTACTS = /* @__PURE__ */ new Map();
+  var TALKS = /* @__PURE__ */ new Map();
+  var HUNTS = /* @__PURE__ */ new Map();
+  var contactIdOf = (ch, path2) => {
+    const ct = ch.v[path2]?.contact;
+    if (!ct) return null;
+    return ct.npc || (ct.key ? `mq_${ct.key}` : `mq_${ch.id}_${path2}`);
+  };
+  var contactOf = (ch, path2) => {
+    const ct = ch.v[path2]?.contact;
+    if (!ct) return null;
+    if (ct.npc) {
+      const d = npcDef(ct.npc);
+      return { ...ct, name: ct.name || d?.name || ct.npc, title: ct.title || d?.title };
+    }
+    return ct;
+  };
+  var shortName = (n) => String(n || "").replace(/^"[^"]*"\s*/, "");
+  function chapterReward(part5, k, path2) {
+    const b = part5 === 1 ? 3e3 + 1800 * k : part5 === 2 ? 4e4 + 14e3 * k : 4e5 + 9e4 * k;
+    const r = { berries: Math.round(b * (path2 === "hunter" ? 1.4 : path2 === "marine" ? 0.8 : 1) / 100) * 100, points: part5 };
+    if (path2 === "marine") {
+      r.merit = part5 === 1 ? 60 + 45 * k : part5 === 2 ? 260 + 110 * k : 900 + 220 * k;
+      r.reputation = part5 * 2 + 1;
+    }
+    if (path2 === "hunter") r.reputation = part5 * 2 + 2;
+    if (path2 === "pirate") r.reputation = 1;
+    return r;
+  }
+  function prepTask(t, qid) {
+    const st = { ...t };
+    if (t.goal?.type === "talk") {
+      st.goal = { type: "flag", flag: `mq_t_${qid}_${t.id}` };
+      const list = TALKS.get(t.goal.npc) || [];
+      list.push({ qid, stage: t.id, lines: t.lines || [], flag: st.goal.flag, choice: t.choice });
+      TALKS.set(t.goal.npc, list);
+      st.npc = t.goal.npc;
+    }
+    if (t.goal?.type === "quest" && t.autoStart) {
+      const prev = st.onStart;
+      st.onStart = (ctx, g) => {
+        prev?.(ctx, g);
+        if (!g.quests.state(t.goal.quest) && !(t.goal.alt && t.goal.alt(g.state.char, g))) g.quests.start(t.goal.quest);
+      };
+    }
+    if (t.goal?.type === "defeat" && TARGETS.some((d) => d.id === t.goal.npc)) {
+      const list = HUNTS.get(t.goal.npc) || [];
+      list.push({ qid, stage: t.id });
+      HUNTS.set(t.goal.npc, list);
+      const prev = t.onStart;
+      st.onStart = (ctx, g) => {
+        prev?.(ctx, g);
+        spawnNow(g, t.goal.npc);
+      };
+      st.npc = st.npc || t.goal.npc;
+    }
+    return st;
+  }
+  function buildQuest(ch, path2) {
+    const v = ch.v[path2];
+    const qid = qidOf(ch.id, path2);
+    const ct = contactOf(ch, path2);
+    const cid = contactIdOf(ch, path2);
+    const place = ch.place || islName(ch.island);
+    const stages = [];
+    if (ch.kind !== "start" && ch.island && !v.noArrive) stages.push({ id: "arrive", desc: v.arrive || `Sail to ${place}.`, goal: { type: "reach", island: ch.island }, where: v.arriveWhere });
+    const who = () => shortName(contactOf(ch, path2)?.name);
+    if (ch.kind !== "start" && ct) stages.push({ id: "meet", get desc() {
+      return v.find || `Find ${who()}${ct.where ? " " + ct.where : ""}.`;
+    }, goal: { type: "flag", flag: `mq_met_${ch.id}_${path2}` }, npc: cid });
+    for (const t of v.tasks || []) stages.push(prepTask(t, qid));
+    if (ct && (v.tasks || []).length && !v.noReport) stages.push({ id: "report", get desc() {
+      return v.report || `Report back to ${who()}${ct.where ? " " + ct.where : ""}.`;
+    }, goal: { type: "flag", flag: `mq_done_${ch.id}_${path2}` }, npc: cid });
+    if (!stages.length) throw new Error(`chapter ${ch.id} (${path2}) has nothing to do`);
+    return {
+      id: qid,
+      kind: "main",
+      part: ch.part,
+      partName: PART_NAMES[ch.part],
+      name: v.name,
+      summary: v.summary,
+      island: ch.island,
+      islandName: place,
+      path: path2,
+      chapterId: ch.id,
+      stages,
+      rewards: (ctx, g) => {
+        const m = g.state.char.main;
+        const k = m ? m.at : 0;
+        const base2 = chapterReward(ch.part, k, path2);
+        const extra = typeof v.reward === "function" ? v.reward(g) : v.reward || {};
+        const r = { ...base2, ...extra };
+        if (extra.berries) r.berries = base2.berries + extra.berries;
+        if (extra.merit) r.merit = (base2.merit || 0) + extra.merit;
+        if (extra.reputation) r.reputation = (base2.reputation || 0) + extra.reputation;
+        if (path2 !== "marine") delete r.merit;
+        return r;
+      },
+      onComplete: (ctx, g) => {
+        const extra = typeof v.reward === "function" ? v.reward(g) : v.reward || {};
+        if (extra.ship) giveShip(g, extra.ship, extra.shipName);
+        v.onDone?.(g, ctx);
+      }
+    };
+  }
+  function giveShip(g, type, name) {
+    const isl = g.currentIsland;
+    const dock = isl?.docks?.[0];
+    const p = g.player;
+    const pos = dock ? dock.moor : { x: p.x, y: p.y + 6 };
+    const s = g.giveShip(type, pos.x, pos.y, name);
+    s?.unstick?.(g.world);
+    g.ui.toast("A NEW SHIP!", `${name || type} is moored ${dock ? "at the pier" : "nearby"}.`, "#ffe082");
+    return s;
+  }
+  function contactNpc(id, ch, path2) {
+    const ct = ch.v[path2].contact;
+    return {
+      id,
+      name: ct.name,
+      title: ct.title,
+      island: ch.island,
+      at: ct.at || { plaza: true },
+      look: ct.look,
+      race: ct.race,
+      level: ct.level ?? 10,
+      faction: ct.faction || "civilian",
+      style: ct.style,
+      weapon: ct.weapon,
+      when: ct.when,
+      ai: ct.ai,
+      story: true,
+      dialogue: (ctx) => storyTree(ctx, id, null)
+    };
+  }
+  var QUESTS = [];
+  var NPCS = [];
+  for (const ch of CHAPTERS.values()) {
+    for (const path2 of PATHS3) {
+      const v = ch.v[path2];
+      if (!v) continue;
+      QUESTS.push(buildQuest(ch, path2));
+      const id = contactIdOf(ch, path2);
+      if (!id) continue;
+      const list = CONTACTS.get(id) || [];
+      list.push({ ch, path: path2 });
+      CONTACTS.set(id, list);
+      if (!v.contact.npc && !NPCS.some((n) => n.id === id)) NPCS.push(contactNpc(id, ch, path2));
+    }
+  }
+  for (const d of TARGETS) {
+    const uses = HUNTS.get(d.id) || [];
+    const prev = d.when;
+    NPCS.push({ ...d, when: (c, g) => (!prev || prev(c, g)) && uses.some((u) => g.quests.stageId(u.qid) === u.stage) });
+  }
+  function main(g) {
+    return g.state?.char?.main || null;
+  }
+  function current(g) {
+    const m = main(g);
+    if (!m || m.finished) return null;
+    const ch = CHAPTERS.get(m.chain[m.at]);
+    if (!ch) return null;
+    const qid = qidOf(ch.id, m.path);
+    return { ch, path: m.path, qid, s: g.state.char.quests[qid] || null };
+  }
+  var stageOf3 = (g, qid) => g.quests.stageId(qid);
+  function roadFits(c, path2) {
+    if (path2 === "marine") return c.main?.sworn ? c.faction === "marine" : c.faction !== "pirate" && !c.crewName && !(c.bounty > 0) && !c.flags.deserter;
+    if (path2 === "hunter") return c.faction !== "marine" && c.faction !== "pirate" && !c.crewName;
+    return c.faction !== "marine";
+  }
+  function roadFor(c) {
+    if (c.faction === "marine") return "marine";
+    if (c.faction === "pirate" || c.crewName || c.bounty > 0) return "pirate";
+    return "hunter";
+  }
+  function roadClosed(c, path2) {
+    if (path2 === "marine") {
+      if (c.flags.deserter) return "The Navy doesn't take deserters back.";
+      if (c.crewName) return `You fly the flag of the ${c.crewName} \u2014 the Navy doesn't recruit pirate captains.`;
+      if (c.bounty > 0) return `There's a ${formatBerries(c.bounty)} bounty on your head.`;
+    }
+    if (path2 === "hunter") {
+      if (c.faction === "marine") return "You already serve the Navy.";
+      if (c.crewName) return `You're a pirate captain yourself now \u2014 the ${c.crewName}.`;
+    }
+    if (path2 === "pirate" && c.faction === "marine") return "You wear the Navy's cap. Resign first, if the sea calls you another way.";
+    return null;
+  }
+  function installMainStory(game) {
+    const S3 = {
+      game,
+      pending: 0,
+      // seconds until the next chapter opens
+      t: 0,
+      driftMsg: 0
+    };
+    game.story = S3;
+    const C3 = () => game.state?.char;
+    S3.begin = (chId, path2) => {
+      const c = C3();
+      const ch = CHAPTERS.get(chId);
+      if (!c || !ch || c.main) return false;
+      const part5 = ch.part;
+      c.main = { path: path2, part: part5, chain: PLANS[part5](c, path2, ch, game), at: 0, done: [], skipped: [], route: null, sworn: false, began: game.env.day, home: ch.kind === "start" ? ch.island : null };
+      if (ch.kind !== "start" && c.main.chain[0] !== ch.id) c.main.chain.unshift(ch.id);
+      c.main.route = c.main.route || c.mainRoute || null;
+      c.mainIntro = null;
+      game.ui.banner(PATHS[path2].name.toUpperCase(), `Part ${part5} \xB7 ${PART_NAMES[part5]}`, PATHS[path2].tagline, 5);
+      game.log(`You take up the road of the ${PATHS[path2].name}.`, PATHS[path2].color);
+      openChapter();
+      persist(game);
+      return true;
+    };
+    function openChapter() {
+      const c = C3(), m = c?.main;
+      if (!m || m.finished) return;
+      const chId = m.chain[m.at];
+      const qid = qidOf(chId, m.path);
+      if (!questDef(qid)) {
+        console.warn("main story: no chapter", qid);
+        m.at++;
+        if (m.at < m.chain.length) openChapter();
+        else nextPart();
+        return;
+      }
+      if (c.quests[qid]?.done) {
+        advance(qid, true);
+        return;
+      }
+      if (!c.quests[qid]) game.quests.start(qid);
+      const s = c.quests[qid];
+      if (s) s.ch = m.at + 1;
+      pointTheWay();
+    }
+    function pointTheWay() {
+      const cur = current(game);
+      const c = C3();
+      if (!cur || !c.logPose || cur.ch.kind === "start" || !cur.ch.island || cur.ch.noLog) return;
+      const isl = ISLAND_BY_ID[cur.ch.island];
+      if (!isl || !["east_blue", "north_blue", "west_blue", "south_blue", "paradise", "new_world"].includes(isl.sea)) return;
+      const st = stageOf3(game, cur.qid);
+      if (st !== "arrive") return;
+      const lp = c.logPose;
+      if (lp.target === isl.id || lp.eternal && count(c, lp.eternal)) return;
+      lp.target = isl.id;
+      lp.last = game.currentIsland?.id || lp.last;
+      lp.progress = 0;
+      lp.setting = null;
+      if (count(c, "log_pose") || count(c, "new_world_log_pose")) {
+        game.ui.toast("LOG SET", `The needle swings toward ${c.discovered.includes(isl.id) ? isl.name : "an island you haven't seen yet"}.`, "#81d4fa");
+        game.audio?.sfx("reveal");
+      }
+    }
+    function advance(qid, silent = false) {
+      const c = C3(), m = c?.main;
+      if (!m || m.finished) return;
+      const chId = m.chain[m.at];
+      if (qidOf(chId, m.path) !== qid) return;
+      if (!m.done.includes(qid)) m.done.push(qid);
+      m.at++;
+      if (m.at >= m.chain.length) {
+        nextPart(silent);
+        return;
+      }
+      S3.pending = silent ? 0.01 : 2.4;
+    }
+    function nextPart(silent = false) {
+      const c = C3(), m = c.main;
+      const done6 = m.part;
+      if (!silent) game.ui.banner(`PART ${done6} COMPLETE`, PART_NAMES[done6], done6 === 1 ? "The Blues are behind you. There is no going back." : done6 === 2 ? "Paradise is behind you. The New World waits beyond the Red Line." : "Your name will be told for a hundred years.", 6);
+      if (!PLANS[done6 + 1]) {
+        m.finished = true;
+        persist(game);
+        return;
+      }
+      m.part = done6 + 1;
+      m.chain = PLANS[m.part](c, m.path, null, game);
+      m.at = 0;
+      S3.pending = silent ? 0.01 : 5;
+      persist(game);
+    }
+    function leaveBehind(why) {
+      const cur = current(game);
+      const c = C3(), m = c.main;
+      if (cur) {
+        if (cur.s && !cur.s.done) {
+          delete c.quests[cur.qid];
+          m.skipped.push(cur.qid);
+        }
+        game.log(`${questDef(cur.qid)?.name || "A chapter"} is left behind: ${why}`, "#b0bec5");
+      }
+    }
+    S3.jumpTo = (part5, why) => {
+      const c = C3(), m = c?.main;
+      if (!m || m.finished || m.part >= part5 || !PLANS[part5]) return;
+      leaveBehind(why);
+      m.part = part5;
+      m.chain = PLANS[part5](c, m.path, null, game);
+      m.at = 0;
+      game.ui.banner(`PART ${part5}`, PART_NAMES[part5], why, 6);
+      S3.pending = 3;
+      persist(game);
+    };
+    function switchRoad(to, why) {
+      const c = C3(), m = c.main;
+      const cur = current(game);
+      if (!m || m.path === to) return;
+      const from = m.path;
+      let stage2 = null;
+      if (cur?.s && !cur.s.done) {
+        stage2 = stageOf3(game, cur.qid);
+        delete c.quests[cur.qid];
+      }
+      m.path = to;
+      m.sworn = to === "marine" && c.faction === "marine";
+      const plan = PLANS[m.part](c, to, null, game);
+      const doneCh = new Set(m.done.map((q2) => parse(q2).ch?.id));
+      if (cur && cur.ch.v[to] && (cur.ch.kind !== "start" || PROLOGUES.get(cur.ch.island) === cur.ch.id)) {
+        m.chain = [...m.chain.slice(0, m.at), cur.ch.id, ...plan.filter((id) => id !== cur.ch.id && !doneCh.has(id) && CHAPTERS.get(id)?.kind !== "start")];
+      } else {
+        m.chain = [...m.chain.slice(0, m.at), ...plan.filter((id) => !doneCh.has(id) && CHAPTERS.get(id)?.kind !== "start")];
+      }
+      game.ui.banner("A NEW ROAD", `${PATHS[from].name} \u2192 ${PATHS[to].name}`, why, 6);
+      game.log(`Your story takes a new turn: you are on the road of the ${PATHS[to].name} now.`, PATHS[to].color);
+      openChapter();
+      const nq = current(game);
+      if (nq && stage2 === "arrive" && game.quests.stageId(nq.qid) !== "arrive") {
+      }
+      persist(game);
+    }
+    function checkRoad() {
+      const c = C3(), m = c?.main;
+      if (!m || m.finished) return;
+      if (m.path === "marine" && !m.sworn && c.faction === "marine") m.sworn = true;
+      if (roadFits(c, m.path)) return;
+      const to = roadFor(c);
+      const why = m.path === "marine" ? c.flags.deserter ? "You turned on the Navy. There's only one road left for a deserter." : "You handed in your cap. What you hunt now is your own business." : to === "marine" ? "You swore the Navy's oath." : c.crewName ? `You raised the flag of the ${c.crewName}.` : "With a price on your head, the world calls you a pirate now.";
+      switchRoad(to, why);
+    }
+    game.on("marineRankChanged", () => checkRoad());
+    game.on("crewFounded", () => checkRoad());
+    game.on("questDone", (qid) => {
+      if (isMain(qid)) advance(qid);
+    });
+    game.on("characterStart", ({ char, isNew, spawn } = {}) => {
+      S3.pending = 0;
+      const c = char || C3();
+      if (!c) return;
+      if (!c.main && !c.mainIntro) c.mainIntro = introFor(game, c, spawn);
+      if (c.main && !c.main.finished) S3.pending = 1.5;
+    });
+    game.on("tick", (dt) => tick7(dt));
+    function tick7(dt) {
+      const c = C3();
+      if (!c) return;
+      if (S3.pending > 0) {
+        S3.pending -= dt;
+        if (S3.pending <= 0) {
+          S3.pending = 0;
+          if (!game.dialogue?.active) openChapter();
+          else S3.pending = 0.5;
+        }
+      }
+      if ((S3.t -= dt) > 0) return;
+      S3.t = 0.5;
+      const m = c.main;
+      if (!m || m.finished) return;
+      checkRoad();
+      const p = game.player;
+      if (p && game.world === game.surface) {
+        const reg3 = regionAt(p.x, p.y);
+        if (m.part === 1 && isGrandLine(reg3) && c.flags.enteredGrandLine) {
+          const cur2 = current(game);
+          if (!cur2 || cur2.ch.part === 1) {
+            if (cur2 && cur2.ch.gate === "reverse_mountain") {
+            } else S3.jumpTo(2, "You crossed Reverse Mountain before your business in the Blues was done. The Blues are behind you now.");
+          }
+        }
+        if (m.part === 2 && reg3 === REGION.NEW_WORLD) S3.jumpTo(3, "You reached the New World before your story in Paradise was done.");
+      }
+      const cur = current(game);
+      if (cur && !cur.s && !S3.pending) openChapter();
+      else if (cur?.s?.done && !S3.pending) advance(cur.qid, true);
+      if (cur) pointTheWay();
+    }
+    S3.limit = () => {
+      const cur = current(game);
+      if (!cur || cur.ch.part !== 2 || !cur.ch.island || cur.ch.free) return null;
+      const isl = ISLAND_BY_ID[cur.ch.island];
+      if (!isl || isl.sea !== "paradise") return null;
+      return { isl, x: isl.x + 700 };
+    };
+    game.storyCurrent = (x, y, out, who) => {
+      const p = game.player;
+      if (!p || game.world !== game.surface || who !== p.ship && who !== p) return;
+      const L2 = S3.limit();
+      if (!L2) return;
+      const dx = game.world.dx(L2.x, x);
+      if (dx <= 0) return;
+      const reg3 = regionAt(x, y);
+      if (reg3 !== REGION.PARADISE) return;
+      const f = Math.min(10, 4 + dx / 50);
+      const back = Math.atan2(L2.isl.y - y, game.world.dx(x, L2.isl.x));
+      out.x += Math.cos(back) * f;
+      out.y += Math.sin(back) * f;
+      out.steer = Math.max(out.steer || 0, 0.5);
+      if (game.time > S3.driftMsg) {
+        S3.driftMsg = game.time + 25;
+        game.ui.banner("LOST WITHOUT A LOG", L2.isl.name, `Your Log Pose is locked on ${L2.isl.name} \u2014 and without its log the Grand Line's currents turn you round. Your story continues there.`, 5);
+      }
+    };
+    game.storyLogHold = (isl) => {
+      const cur = current(game);
+      if (!cur || !cur.s || cur.s.done || cur.ch.part < 2 || !cur.ch.island || cur.ch.noLog) return false;
+      if (cur.ch.island === isl.id) return true;
+      return stageOf3(game, cur.qid) === "arrive";
+    };
+    game.storyMarker = (a) => {
+      const c = C3();
+      if (!c || !a.npcId) return null;
+      const m = c.main;
+      const roles = CONTACTS.get(a.npcId);
+      if (roles) {
+        if (!m) {
+          if (roles.some(({ ch }) => ch.kind === "start")) return "M!";
+          if (roles.some(({ ch }) => ch.opensStory)) return "M!";
+        } else {
+          for (const { ch, path: path2 } of roles) {
+            if (path2 !== m.path) continue;
+            const qid = qidOf(ch.id, path2);
+            if (!game.quests.isActive(qid)) continue;
+            const st = stageOf3(game, qid);
+            if (st === "meet" || st === "arrive") return "M!";
+            if (st === "report") return "M?";
+          }
+        }
+      }
+      const talks = TALKS.get(a.npcId);
+      if (talks) {
+        for (const t of talks) if (stageOf3(game, t.qid) === t.stage) return "M!";
+      }
+      const cur = current(game);
+      if (cur?.s && !cur.s.done) {
+        const d = questDef(cur.qid), st = d?.stages[cur.s.stage];
+        if (st?.goal?.type === "quest" && st.npc === a.npcId && !game.quests.state(st.goal.quest)) return "M!";
+      }
+      return null;
+    };
+    game.storyPins = () => {
+      const c = C3();
+      const out = [];
+      if (!c) return out;
+      const disc2 = new Set(c.discovered || []);
+      if (!c.main) {
+        for (const [islId, chId] of PROLOGUES) {
+          if (!disc2.has(islId)) continue;
+          const ch = CHAPTERS.get(chId);
+          for (const path2 of PATHS3) {
+            const v = ch.v[path2];
+            const id = contactIdOf(ch, path2);
+            const pos = id && approxPos(game, npcDef(id) || { island: ch.island, at: v.contact.at });
+            if (pos) out.push({ ...pos, label: `${PATHS[path2].name}: ${shortName(contactOf(ch, path2).name)}`, color: PATHS[path2].color, main: true });
+          }
+        }
+      }
+      for (const d of allNpcDefs()) {
+        if (!d.marker || !d.island || !disc2.has(d.island) || d.story) continue;
+        let mk3 = null;
+        try {
+          mk3 = d.marker(c, game);
+        } catch (e) {
+          mk3 = null;
+        }
+        if (mk3 !== "!") continue;
+        if (d.when && !safe(() => d.when(c, game))) continue;
+        const pos = approxPos(game, d);
+        if (pos) out.push({ ...pos, label: shortName(d.name), color: "#ffd54f", side: true });
+      }
+      return out;
+    };
+    game.dialogue.decorators.push((tree, npc, ctx) => decorate(tree, npc, ctx));
+    S3.current = () => current(game);
+    S3.qidOf = qidOf;
+    return S3;
+  }
+  var safe = (f) => {
+    try {
+      return f();
+    } catch (e) {
+      return false;
+    }
+  };
+  function approxPos(game, def) {
+    const isl = game.surface.islands.find((i) => i.id === def.island);
+    if (!isl) return null;
+    const at5 = (typeof def.at === "function" ? null : def.at) || {};
+    if (at5.spot && isl.spots?.[at5.spot]) return { x: isl.spots[at5.spot].x, y: isl.spots[at5.spot].y };
+    const town = at5.town && isl.towns.find((t) => t.id === at5.town) || (!at5.dx ? isl.towns[0] : null);
+    if (town) {
+      const key2 = at5.building || at5.door;
+      const b = key2 && town.buildings.find((x) => x.name === key2 || x.role === key2 || x.npc === def.id);
+      if (b) return { x: b.x + (b.w || 0) / 2, y: b.y + (b.h || 0) / 2 };
+      return { x: town.plaza.x, y: town.plaza.y };
+    }
+    if (at5.dx !== void 0) return { x: isl.x + at5.dx * isl.def.w / 2, y: isl.y + at5.dy * isl.def.h / 2 };
+    return { x: isl.x, y: isl.y };
+  }
+  function introFor(game, c, spawn) {
+    const home2 = spawn?.island?.id || null;
+    const chId = home2 && PROLOGUES.get(home2);
+    if (chId) {
+      const ch = CHAPTERS.get(chId);
+      const who = PATHS3.map((p2) => `${shortName(contactOf(ch, p2).name)} (${PATHS[p2].name.toLowerCase()})`);
+      return `Three people on ${islName(home2)} could set you on your road: ${who[0]}, ${who[1]} and ${who[2]}. Look for the orange !`;
+    }
+    const p = game.player;
+    let best = null, bd = Infinity;
+    for (const [islId] of PROLOGUES) {
+      const isl = game.surface.islands.find((i) => i.id === islId);
+      if (!isl || !p) continue;
+      const d = game.surface.distance(p.x, p.y, isl.x, isl.y);
+      if (d < bd) {
+        bd = d;
+        best = isl;
+      }
+    }
+    if (c.flags?.enteredGrandLine) return "Visit Crocus at the Twin Cape lighthouse to take up the main story.";
+    return best ? `Sail to ${best.name}: people there could set you on your road \u2014 as a pirate, a Marine or a bounty hunter.` : "Find your road: talk to the people with an orange ! over their heads.";
+  }
+  function chain(prefix, lines, speaker, last) {
+    const nodes = {};
+    const L2 = lines.length ? lines : [""];
+    L2.forEach((t, i) => {
+      const node = { text: t, speaker };
+      if (i < L2.length - 1) node.next = prefix + (i + 1);
+      else Object.assign(node, last || {});
+      nodes[prefix + i] = node;
+    });
+    return nodes;
+  }
+  var say = (t, ctx) => {
+    const s = text(t, ctx);
+    return s && !/^["(*]/.test(s) ? `"${s}"` : s;
+  };
+  function meetDone(g, ch, path2, x) {
+    const qid = qidOf(ch.id, path2);
+    if (stageOf3(g, qid) === "arrive") g.quests.next(qid);
+    if (stageOf3(g, qid) === "meet") {
+      x.setFlag(`mq_met_${ch.id}_${path2}`);
+      g.quests.next(qid);
+    }
+  }
+  function storyNodes(ctx, npcId) {
+    const g = ctx.game, c = ctx.char, m = c.main;
+    const roles = CONTACTS.get(npcId) || [];
+    const nodes = {};
+    const S3 = g.story;
+    const live = m && roles.find(({ ch, path: path2 }) => path2 === m.path && g.quests.isActive(qidOf(ch.id, path2)));
+    if (live) {
+      const { ch, path: path2 } = live;
+      const v = ch.v[path2];
+      const qid = qidOf(ch.id, path2);
+      const st = stageOf3(g, qid);
+      const d = questDef(qid);
+      if (st === "meet" || st === "arrive") {
+        const tasks = (v.tasks || []).length > 0;
+        Object.assign(nodes, chain("mq_m", (v.meet || ["So you're the one."]).map((t) => () => say(t, ctx)), void 0, {
+          onEnter: (x) => meetDone(g, ch, path2, x),
+          choices: [{ text: tasks ? "Leave it to me." : "Thank you.", end: true }]
+        }));
+        return { kind: "meet", nodes, start: "mq_m0" };
+      }
+      if (st === "report") {
+        Object.assign(nodes, chain("mq_r", (v.done || ["Well done."]).map((t) => () => say(t, ctx)), void 0, {
+          onEnter: (x) => {
+            if (!g.quests.isActive(qid)) return;
+            v.onReport?.(g, x);
+            x.setFlag(`mq_done_${ch.id}_${path2}`);
+            g.quests.complete(qid);
+          },
+          choices: [{ text: "Farewell.", end: true }]
+        }));
+        return { kind: "report", nodes, start: "mq_r0" };
+      }
+      const obj = () => d?.stages[g.quests.state(qid)?.stage]?.desc || "";
+      nodes.mq_w = { text: () => say(v.wait || "Well? The sea won't wait for you.", ctx), choices: [
+        { text: "What was it you needed again?", next: "mq_w2" },
+        ...extraChoices(v.contact, "mq_w"),
+        { text: "I'm on it.", end: true }
+      ] };
+      nodes.mq_w2 = { text: () => `(${obj()})`, next: "mq_w" };
+      return { kind: "wait", nodes, start: "mq_w", label: d?.name };
+    }
+    const offers = !m ? roles.filter(({ ch }) => ch.kind === "start" || ch.opensStory) : [];
+    if (offers.length) {
+      const { ch, path: path2 } = offers[0];
+      const v = ch.v[path2];
+      const mine = new Set(offers.map((o) => o.path));
+      const others = ch.kind === "start" ? PATHS3.filter((p) => !mine.has(p) && ch.v[p]?.contact).map((p) => `${shortName(contactOf(ch, p).name)}${ch.v[p].contact.where ? " " + ch.v[p].contact.where : ""} (${PATHS[p].name.toLowerCase()})`) : [];
+      const pitchEnd = `mq_p${Math.max(0, (v.pitch || []).length - 1)}`;
+      Object.assign(nodes, chain("mq_p", (v.pitch || ["Looking for a road to walk?"]).map((t) => () => say(t, ctx)), void 0, {
+        choices: [
+          ...offers.map((o) => ({ text: o.ch.v[o.path].accept || `I'll take the road of the ${PATHS[o.path].name}.`, if: () => !roadClosed(c, o.path), next: "mq_ok_" + o.path })),
+          ...offers.map((o) => ({ text: () => `(The road of the ${PATHS[o.path].name} is closed to you: ${roadClosed(c, o.path)})`, if: () => !!roadClosed(c, o.path), next: pitchEnd })),
+          { text: "Are there other roads?", if: () => others.length > 0, next: "mq_o" },
+          ...extraChoices(v.contact, "mq_p0"),
+          { text: "Not yet.", end: true }
+        ]
+      }));
+      nodes.mq_o = { text: `(You could also find ${others.join(" or ")}. You can only walk one road \u2014 choose one, and the others close.)`, next: pitchEnd };
+      for (const o of offers) {
+        const ov = o.ch.v[o.path];
+        nodes["mq_ok_" + o.path] = { text: "", onEnter: () => S3.begin(o.ch.id, o.path), redirect: "mq_s_" + o.path + "0" };
+        Object.assign(nodes, chain("mq_s_" + o.path, (ov.meet?.length ? ov.meet : ["Then let's begin."]).map((t) => () => say(t, ctx)), void 0, {
+          onEnter: (x) => {
+            if (o.ch.kind !== "start") meetDone(g, o.ch, o.path, x);
+          },
+          choices: [{ text: "Leave it to me.", end: true }]
+        }));
+      }
+      return { kind: "offer", nodes, start: "mq_p0" };
+    }
+    for (const t of TALKS.get(npcId) || []) {
+      if (stageOf3(g, t.qid) !== t.stage) continue;
+      Object.assign(nodes, chain("mq_t", t.lines.map((l) => () => say(l, ctx)), void 0, {
+        onEnter: (x) => {
+          x.setFlag(t.flag);
+          if (stageOf3(g, t.qid) === t.stage) g.quests.next(t.qid);
+        },
+        choices: [{ text: "Thank you.", end: true }]
+      }));
+      return { kind: "talk", nodes, start: "mq_t0", label: t.choice };
+    }
+    if (roles.length) {
+      const r = m && roles.find(({ path: path2 }) => path2 === m.path) || roles[0];
+      const v = r.ch.v[r.path];
+      const qid = qidOf(r.ch.id, r.path);
+      const line2 = g.quests.isDone(qid) ? v.after : m && m.path !== r.path ? v.other || otherRoad(r.path, m.path) : v.idle;
+      nodes.mq_i = { text: () => say(line2 || v.idle || "Mm? Can I help you?", ctx), choices: [...extraChoices(v.contact, "mq_i"), { text: "Goodbye.", end: true }] };
+      return { kind: "idle", nodes, start: "mq_i" };
+    }
+    return null;
+  }
+  function extraChoices(ct, back) {
+    return (ct?.choices || []).map((ch) => ({ ...ch, next: ch.next || (ch.end ? void 0 : back) }));
+  }
+  function otherRoad(mine, theirs) {
+    if (mine === "marine") return theirs === "pirate" ? `"A pirate. Hmph. Mind your manners in my town \u2014 I'll be watching you."` : '"Hunting pirates for money, are you? Just remember who the law is around here."';
+    if (mine === "pirate") return theirs === "marine" ? '"Look at you in that Navy cap. Well \u2014 every sea needs someone to chase us."' : `"A bounty hunter. Heh. Just don't go looking for my old poster."`;
+    return theirs === "marine" ? `"A Marine. Don't worry \u2014 I only hunt the ones with a price on their heads."` : '"A pirate, eh? Keep your poster low and your head lower. Nothing personal."';
+  }
+  function storyTree(ctx, npcId) {
+    const r = storyNodes(ctx, npcId);
+    if (!r) return { start: "a", nodes: { a: { text: '"..."' } } };
+    return { start: r.start, nodes: r.nodes };
+  }
+  function decorate(tree, npc, ctx) {
+    const id = npc?.npcId;
+    if (!id || !tree?.nodes || npc.def?.story) return tree;
+    if (!CONTACTS.has(id) && !TALKS.has(id)) return tree;
+    const r = storyNodes(ctx, id);
+    if (!r || r.kind === "idle") return tree;
+    const home2 = tree.start || "start";
+    const nodes = { ...tree.nodes, ...r.nodes };
+    if (r.kind === "wait") {
+      const s0 = nodes[home2];
+      if (s0) nodes[home2] = { ...s0, choices: [{ text: `(${r.label || "The story"}) What was it you needed again?`, next: "mq_w2" }, ...s0.choices || []] };
+      nodes.mq_w2 = { ...nodes.mq_w2, next: home2 };
+      return { ...tree, nodes };
+    }
+    for (const k of Object.keys(r.nodes)) {
+      const n = nodes[k];
+      if (n.choices?.length === 1 && n.choices[0].end) n.choices = [{ text: "About something else...", next: home2 }, n.choices[0]];
+    }
+    return { ...tree, nodes, start: r.start };
+  }
+  var mainStory_default = {
+    id: "main",
+    npcs: NPCS,
+    quests: QUESTS,
+    install: (game) => installMainStory(game)
+  };
+
   // src/content/index.js
-  var PACKS = [eastBlue_default, northBlue_default, westBlue_default, southBlue_default, paradise1_default, paradise2_default, newWorld_default, newWorld2_default, redLine_default];
+  var PACKS = [eastBlue_default, northBlue_default, westBlue_default, southBlue_default, paradise1_default, paradise2_default, newWorld_default, newWorld2_default, redLine_default, mainStory_default];
   for (const p of PACKS) {
     if (p.abilities) registerAbilities(p.abilities, "npc");
     if (p.items) Object.assign(ITEMS, p.items);
@@ -112348,8 +117579,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       if (!this.ctx) return;
       const now2 = this.ctx.currentTime;
       this.fadeSong(prev ? 1.6 : 0.2);
-      const T3 = SONGS[theme];
-      this.restUntil = now2 + (!T3 ? 0 : T3.rest[0] === 0 ? 0.05 : prev ? 2.5 : 0.8);
+      const T4 = SONGS[theme];
+      this.restUntil = now2 + (!T4 ? 0 : T4.rest[0] === 0 ? 0.05 : prev ? 2.5 : 0.8);
       this.song = null;
     }
     fadeSong(sec) {
@@ -112390,12 +117621,12 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     }
     schedule() {
       if (!this.ctx || !this.theme || this.ctx.state !== "running") return;
-      const T3 = SONGS[this.theme];
-      if (!T3) return;
+      const T4 = SONGS[this.theme];
+      if (!T4) return;
       const now2 = this.ctx.currentTime;
       if (!this.song) {
         if (now2 < (this.restUntil || 0)) return;
-        this.song = compose(T3);
+        this.song = compose(T4);
         const bus = this.ctx.createGain();
         bus.gain.setValueAtTime(1e-4, now2);
         bus.gain.linearRampToValueAtTime(2.2, now2 + 1.2);
@@ -112410,7 +117641,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         if (this.bar >= S3.bars) {
           this.song = null;
           this.fadeSong(4);
-          this.restUntil = now2 + T3.rest[0] + Math.random() * (T3.rest[1] - T3.rest[0]);
+          this.restUntil = now2 + T4.rest[0] + Math.random() * (T4.rest[1] - T4.rest[0]);
           return;
         }
         this.playBar(S3, this.bar, this.songT);
@@ -112419,23 +117650,23 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       }
     }
     playBar(S3, bar2, t0) {
-      const T3 = S3.T, e = S3.eighth, n = S3.perBar;
+      const T4 = S3.T, e = S3.eighth, n = S3.perBar;
       const chord = S3.chords[bar2 % S3.chords.length];
       const bus = this.songBus;
       if (!bus) return;
       const last = bar2 >= S3.bars - 2;
-      if (T3.pad) {
+      if (T4.pad) {
         const notes = chord.map((d) => S3.midi(d, -1));
-        for (const m of notes) this.inst("pad", t0, S3.barDur * 1.05, m, T3.padVol ?? 0.018, bus);
+        for (const m of notes) this.inst("pad", t0, S3.barDur * 1.05, m, T4.padVol ?? 0.018, bus);
       }
-      if (T3.bass) this.inst(T3.bass, t0, e * n * 0.9, S3.midi(chord[0], -2), 0.09, bus);
-      if (T3.arp) {
+      if (T4.bass) this.inst(T4.bass, t0, e * n * 0.9, S3.midi(chord[0], -2), 0.09, bus);
+      if (T4.arp) {
         const pat = S3.arpPat;
         for (let i = 0; i < n; i++) {
           const k = pat[i % pat.length];
-          if (k === null || i > 0 && Math.random() > T3.arpDensity) continue;
+          if (k === null || i > 0 && Math.random() > T4.arpDensity) continue;
           const d = k < 3 ? chord[k] : chord[k - 3] + 7;
-          this.inst(T3.arp, t0 + i * e * (T3.feel === "lilt" && i % 3 === 2 ? 1.04 : 1), e * 3, S3.midi(d, T3.arpOct ?? -1), (i === 0 ? 0.085 : 0.06) * (T3.arpVol ?? 1), bus);
+          this.inst(T4.arp, t0 + i * e * (T4.feel === "lilt" && i % 3 === 2 ? 1.04 : 1), e * 3, S3.midi(d, T4.arpOct ?? -1), (i === 0 ? 0.085 : 0.06) * (T4.arpVol ?? 1), bus);
         }
       }
       const ph = S3.phrases[Math.floor(bar2 / 2) % S3.phrases.length];
@@ -112447,16 +117678,16 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
           const start3 = pos - half2 * n;
           pos += len;
           if (start3 < 0 || start3 >= n || note.len < 0) continue;
-          const d = note.deg + (T3.follow ? chord[0] : 0);
-          this.inst(T3.lead, t0 + start3 * e, len * e * (T3.legato ?? 0.95), S3.midi(d, 0), T3.leadVol ?? 0.07, bus);
+          const d = note.deg + (T4.follow ? chord[0] : 0);
+          this.inst(T4.lead, t0 + start3 * e, len * e * (T4.legato ?? 0.95), S3.midi(d, 0), T4.leadVol ?? 0.07, bus);
         }
       }
-      if (bar2 === S3.bars - 1) for (const d of S3.chords[0]) this.inst(T3.arp || "piano", t0 + e * 2, e * n * 2, S3.midi(d, 0), 0.05, bus);
-      if (T3.drums) {
+      if (bar2 === S3.bars - 1) for (const d of S3.chords[0]) this.inst(T4.arp || "piano", t0 + e * 2, e * n * 2, S3.midi(d, 0), 0.05, bus);
+      if (T4.drums) {
         for (let i = 0; i < n; i++) {
-          if (T3.drums.kick[i % T3.drums.kick.length]) this.drum(t0 + i * e, "kick");
-          if (T3.drums.snare[i % T3.drums.snare.length]) this.drum(t0 + i * e, "snare");
-          if (T3.drums.hat && i % 2 === 1) this.drum(t0 + i * e, "hat");
+          if (T4.drums.kick[i % T4.drums.kick.length]) this.drum(t0 + i * e, "kick");
+          if (T4.drums.snare[i % T4.drums.snare.length]) this.drum(t0 + i * e, "snare");
+          if (T4.drums.hat && i % 2 === 1) this.drum(t0 + i * e, "hat");
         }
       }
     }
@@ -112638,8 +117869,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
   function pick4(a) {
     return a[Math.floor(Math.random() * a.length)];
   }
-  function motif(T3) {
-    const rh = pick4(RHYTHMS[T3.feel]);
+  function motif(T4) {
+    const rh = pick4(RHYTHMS[T4.feel]);
     const notes = [];
     let deg = pick4([0, 2, 4, 4, 2]);
     rh.forEach((len, i) => {
@@ -112660,24 +117891,24 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
   function vary(m) {
     return m.map((n, i) => i >= m.length - 2 && n.len > 0 ? { ...n, deg: n.deg + pick4([-1, 1, 2, 0]) } : n);
   }
-  function compose(T3) {
-    const mode = MODES[T3.mode];
-    const perBar = T3.feel === "lilt" ? 6 : 8;
-    const eighth = T3.feel === "lilt" ? 60 / (T3.bpm * 3) : 60 / (T3.bpm * 2);
-    const prog = pick4(T3.prog);
+  function compose(T4) {
+    const mode = MODES[T4.mode];
+    const perBar = T4.feel === "lilt" ? 6 : 8;
+    const eighth = T4.feel === "lilt" ? 60 / (T4.bpm * 3) : 60 / (T4.bpm * 2);
+    const prog = pick4(T4.prog);
     const chords = prog.map((r) => [r, r + 2, r + 4]);
-    const key2 = T3.key + pick4([0, 0, 0, 2, -2, 5]);
+    const key2 = T4.key + pick4([0, 0, 0, 2, -2, 5]);
     const midi = (d, oct) => {
       const n = mode.length, o = Math.floor(d / n), i = (d % n + n) % n;
       return key2 + 12 + mode[i] + 12 * (o + oct);
     };
-    const A = motif(T3), B4 = motif(T3), C3 = motif(T3);
+    const A = motif(T4), B4 = motif(T4), C3 = motif(T4);
     const rest = null;
-    const form = [A, vary(A), B4, A, Math.random() < T3.melody ? C3 : rest, vary(B4), A, rest];
-    const phrases = form.map((m) => m && Math.random() < T3.melody + 0.2 ? m : null);
+    const form = [A, vary(A), B4, A, Math.random() < T4.melody ? C3 : rest, vary(B4), A, rest];
+    const phrases = form.map((m) => m && Math.random() < T4.melody + 0.2 ? m : null);
     phrases[0] = A;
-    const bars = 2 * Math.round((T3.bars[0] + Math.random() * (T3.bars[1] - T3.bars[0])) / 2);
-    return { T: T3, chords, midi, perBar, eighth, barDur: eighth * perBar, bars, phrases, arpPat: pick4(ARPS[T3.feel]) };
+    const bars = 2 * Math.round((T4.bars[0] + Math.random() * (T4.bars[1] - T4.bars[0])) / 2);
+    return { T: T4, chords, midi, perBar, eighth, barDur: eighth * perBar, bars, phrases, arpPat: pick4(ARPS[T4.feel]) };
   }
 
   // src/game/wanted.js
@@ -112777,58 +118008,58 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
   var CREW = { dinghy: 1, sloop: 2, caravel: 2, brigantine: 3, carrack: 5, war_galleon: 8, man_o_war: 10, great_galleon: 12, marine_battleship: 10 };
   var SMALL_STATIONS = [[0.82, 0], [0.36, 0.26], [0.64, -0.3], [0.36, -0.26], [0.72, 0.28]];
   function installTraffic(game) {
-    const T3 = game.traffic = { t: 3, ships: [] };
-    T3.spawn = (force) => game.player ? spawnShip(game, T3, game.player, regionAt(game.player.x, game.player.y), force) : null;
+    const T4 = game.traffic = { t: 3, ships: [] };
+    T4.spawn = (force) => game.player ? spawnShip(game, T4, game.player, regionAt(game.player.x, game.player.y), force) : null;
     const reset = () => {
-      for (const s of T3.ships) {
+      for (const s of T4.ships) {
         for (const a of s.traffic?.crew || []) a.alive = false;
         s.alive = false;
       }
-      T3.ships = [];
+      T4.ships = [];
     };
-    game.on("tick", (dt) => tick5(game, T3, dt));
+    game.on("tick", (dt) => tick5(game, T4, dt));
     game.on("characterStart", () => {
-      T3.ships = [];
+      T4.ships = [];
     });
     game.on("enterZone", reset);
     game.on("leaveZone", () => {
-      T3.ships = [];
+      T4.ships = [];
     });
-    T3.startRaid = (s) => startRaid(game, T3, s);
-    T3.spawn = (o) => spawnShip(game, T3, game.player, regionAt(game.player.x, game.player.y), o);
+    T4.startRaid = (s) => startRaid(game, T4, s);
+    T4.spawn = (o) => spawnShip(game, T4, game.player, regionAt(game.player.x, game.player.y), o);
     const prevSea = game.seaInteraction;
     game.seaInteraction = (p, s) => {
       const other = prevSea ? prevSea(p, s) : null;
       if (other) return other;
       const w = game.world;
-      for (const o of T3.ships) {
+      for (const o of T4.ships) {
         if (o.sunk || !o.alive || o.owner === "player") continue;
         const gap = hullGap(o, w.dx(o.x, s.x), s.y - o.y) - s.def.beam * 0.5;
         const rvx = Math.cos(s.heading) * s.speed - Math.cos(o.heading) * o.speed, rvy = Math.sin(s.heading) * s.speed - Math.sin(o.heading) * o.speed;
-        if (gap < 3.5 && Math.hypot(rvx, rvy) < 3.5) return { label: `Board and raid the ${o.name}`, key: "E", run: () => boardFromHelm(game, T3, p, s, o) };
+        if (gap < 3.5 && Math.hypot(rvx, rvy) < 3.5) return { label: `Board and raid the ${o.name}`, key: "E", run: () => boardFromHelm(game, T4, p, s, o) };
       }
       return null;
     };
     const prevFoot = game.footInteraction;
     game.footInteraction = (p) => {
       const other = prevFoot ? prevFoot(p) : null;
-      const mine = footInteraction(game, T3, p);
+      const mine = footInteraction(game, T4, p);
       if (!mine) return other;
       if (!other) return mine;
       return mine.d <= other.d ? mine : other;
     };
   }
-  function tick5(game, T3, dt) {
+  function tick5(game, T4, dt) {
     const p = game.player, w = game.world;
     if (!p || !w || w !== game.surface) return;
-    for (const s of T3.ships) crewFor(game, T3, s, p);
+    for (const s of T4.ships) crewFor(game, T4, s, p);
     const dk3 = p.deck?.ship;
-    if (dk3 && dk3.traffic && !dk3.traffic.raided && dk3.owner !== "player") startRaid(game, T3, dk3);
-    for (const s of T3.ships) if (s.traffic?.raided && !s.traffic.cleared) checkCleared(game, s);
-    T3.t -= dt;
-    if (T3.t > 0) return;
-    T3.t = 4;
-    T3.ships = T3.ships.filter((s) => {
+    if (dk3 && dk3.traffic && !dk3.traffic.raided && dk3.owner !== "player") startRaid(game, T4, dk3);
+    for (const s of T4.ships) if (s.traffic?.raided && !s.traffic.cleared) checkCleared(game, s);
+    T4.t -= dt;
+    if (T4.t > 0) return;
+    T4.t = 4;
+    T4.ships = T4.ships.filter((s) => {
       const keep = s.alive && !s.sunk && s.owner !== "player" && (s.traffic?.raided ? w.distance(s.x, s.y, p.x, p.y) < 400 : w.distance(s.x, s.y, p.x, p.y) < 300);
       if (!keep && s.owner !== "player") {
         for (const a of s.traffic?.crew || []) a.alive = false;
@@ -112837,10 +118068,10 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       return keep;
     });
     const reg3 = regionAt(p.x, p.y);
-    if (isCalmBelt(reg3) || game.sea?.rmState) return;
+    if (isCalmBelt(reg3) || game.sea?.rmState || nearRM(w.wx(p.x), p.y)) return;
     const nearCoast = w.sd && w.sd(p.x, p.y) < 30;
     const want = p.mode === "sail" ? 3 : nearCoast ? 2 : 0;
-    if (T3.ships.filter((s) => !s.traffic?.raided).length < want) spawnShip(game, T3, p, reg3);
+    if (T4.ships.filter((s) => !s.traffic?.raided).length < want) spawnShip(game, T4, p, reg3);
   }
   function pickKind(rng4, reg3, game) {
     const nw = reg3 === REGION.NEW_WORLD, gl = isGrandLine(reg3);
@@ -112862,16 +118093,16 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       game.log(`The ${s.name} crowds on sail and runs for it!`, "#b0bec5");
     }
   }
-  function spawnShip(game, T3, p, reg3, force = null) {
+  function spawnShip(game, T4, p, reg3, force = null) {
     const w = game.world;
-    const rng4 = new RNG((Math.floor(game.time * 997) ^ T3.ships.length * 7919) >>> 0);
+    const rng4 = new RNG((Math.floor(game.time * 997) ^ T4.ships.length * 7919) >>> 0);
     for (let tries = 0; tries < 18; tries++) {
       const a = rng4.range(0, TAU), r = rng4.range(150, 210);
       const x = force ? force.x : w.wx(p.x + Math.cos(a) * r), y = force ? force.y : p.y + Math.sin(a) * r;
       const kind = force?.kind || pickKind(rng4, reg3, game);
       const gl = isGrandLine(reg3), nw = reg3 === REGION.NEW_WORLD;
       const type = force?.type || (kind === "fishing" ? rng4.pick(["dinghy", "sloop"]) : kind === "marine" ? nw ? rng4.pick(["marine_warship", "marine_battleship", "marine_battleship"]) : gl ? rng4.pick(["brigantine", "marine_warship", "marine_battleship"]) : rng4.pick(["sloop", "brigantine", "brigantine", "marine_warship"]) : kind === "merchant" ? rng4.pick(gl ? ["caravel", "brigantine", "galleon", "carrack", "carrack"] : ["sloop", "caravel", "caravel", "carrack"]) : rng4.pick(nw ? ["galleon", "war_galleon", "man_o_war", "man_o_war", "great_galleon"] : gl ? ["caravel", "brigantine", "frigate", "war_galleon"] : ["sloop", "caravel", "sloop", "caravel", "war_galleon"]));
-      if (!force && (!w.sailable(x, y) || w.sd(x, y) > -8 - SHIPS[type].length * 0.5)) continue;
+      if (!force && (!w.sailable(x, y) || w.sd(x, y) > -8 - SHIPS[type].length * 0.5 || w.type(x, y) === T.RAPIDS || nearRM(w.wx(x), y))) continue;
       const pass = a + Math.PI + rng4.range(-0.5, 0.5);
       const dest = force?.dest || { x: w.wx(p.x + Math.cos(pass) * r), y: p.y + Math.sin(pass) * r };
       const heading = force?.heading ?? Math.atan2(dest.y - y, w.dx(x, dest.x));
@@ -112902,7 +118133,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       s.onDamage = (sh, n, att) => {
         if (att?.isPlayer || att === game.player || att?.ownerShip?.owner === "player") underFire(game, sh);
       };
-      T3.ships.push(s);
+      T4.ships.push(s);
       return s;
     }
     return null;
@@ -112925,15 +118156,15 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       s.rowing = 0;
       return;
     }
-    const target = p.mode === "sail" && p.ship && !p.ship.sunk ? p.ship : null;
+    const target2 = p.mode === "sail" && p.ship && !p.ship.sunk ? p.ship : null;
     const d = w.distance(s.x, s.y, p.x, p.y);
     let want;
-    if (target && d < 55 && hostile2(s, game) && (s.def.cannons || 0) > 0) {
+    if (target2 && d < 55 && hostile2(s, game) && (s.def.cannons || 0) > 0) {
       s.sail = 1;
-      const toT = Math.atan2(target.y - s.y, w.dx(s.x, target.x));
+      const toT = Math.atan2(target2.y - s.y, w.dx(s.x, target2.x));
       want = d > 13 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
       const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
-      if (d < 17 && side < 0.6 && s.cannonCd <= 0) s.fireBroadside(game, target.x, target.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
+      if (d < 17 && side < 0.6 && s.cannonCd <= 0) s.fireBroadside(game, target2.x, target2.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
       if (!tr.warned) {
         tr.warned = true;
         game.log(tr.kind === "marine" ? `The ${s.name} runs up its colours \u2014 Marines, closing on you!` : `The ${s.name} is coming about to attack!`, tr.kind === "marine" ? "#64b5f6" : "#ff8a80");
@@ -112979,7 +118210,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     }
     if (tr.escape) {
       if (now2 > tr.escape.until) tr.escape = null;
-      else if (!(target && d < 55 && hostile2(s, game))) want = tr.escape.a;
+      else if (!(target2 && d < 55 && hostile2(s, game))) want = tr.escape.a;
     }
     const L2 = s.def.length;
     const open = (ang, dist) => {
@@ -112998,14 +118229,14 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       if (o === s || o.sunk) continue;
       const dd = w.distance(o.x, o.y, s.x, s.y);
       const room = (L2 + o.def.length) * 0.55 + 5;
-      if (dd < room && !(target === o && hostile2(s, game))) {
+      if (dd < room && !(target2 === o && hostile2(s, game))) {
         const away = Math.atan2(s.y - o.y, w.dx(o.x, s.x));
         want = s.heading + clamp2(angleDiff(s.heading, away), -1.2, 1.2) * (1 - dd / room);
       }
     }
     s.heading += clamp2(angleDiff(s.heading, want), -1, 1) * s.def.turn * 0.55 * dt;
   }
-  function crewFor(game, T3, s, p) {
+  function crewFor(game, T4, s, p) {
     const tr = s.traffic;
     if (!tr || s.sunk) return;
     const d = game.world.distance(s.x, s.y, p.x, p.y);
@@ -113041,7 +118272,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       tr.crew.push(a);
     }
   }
-  function startRaid(game, T3, s) {
+  function startRaid(game, T4, s) {
     const tr = s.traffic;
     if (!tr || tr.raided) return;
     if (!tr.crew) spawnCrew(game, s);
@@ -113078,7 +118309,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       tr.prevTheme = game.audio.theme;
       game.audio.music("battle");
     }
-    for (const o of T3.ships) if (o !== s && o.traffic?.kind === "marine" && game.world.distance(o.x, o.y, s.x, s.y) < 80) o.provoked = true;
+    for (const o of T4.ships) if (o !== s && o.traffic?.kind === "marine" && game.world.distance(o.x, o.y, s.x, s.y) < 80) o.provoked = true;
   }
   function checkCleared(game, s) {
     const tr = s.traffic;
@@ -113089,7 +118320,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     game.ui.toast("THE SHIP IS YOURS", `${s.name}: plunder the hold (the hatch amidships), or take the helm to sail her away.`, "#ffd54f");
     game.log(`The crew of the ${s.name} is beaten!`, "#ffe082");
   }
-  function boardFromHelm(game, T3, p, mine, s) {
+  function boardFromHelm(game, T4, p, mine, s) {
     mine.captain = null;
     mine.sail = 0;
     mine.rowing = 0;
@@ -113101,7 +118332,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     const n = nearestDeck(game, { x: mine.x, y: mine.y }, s);
     placeOnDeck(game, p, s, n ? n.t : 0.5, n ? n.v * 0.5 : 0);
     game.fx.burst(p.x, p.y, 8, { color: ["#d7ccc8", "#bcaaa4"], speed: 2, life: 0.4, kind: "dust", size: 0.14 });
-    startRaid(game, T3, s);
+    startRaid(game, T4, s);
   }
   function plunder(game, s) {
     const tr = s.traffic;
@@ -113121,7 +118352,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       crime(game, 3e5, "plundered a ship's hold", { rep: 3, quiet: true });
     }
   }
-  function claim2(game, T3, s) {
+  function claim2(game, T4, s) {
     const c = game.state?.char, p = game.player, tr = s.traffic;
     const lvl = tr.level || 5;
     if (tr.kind === "marine") crime(game, 3e6 * (1 + lvl / 40), `stole the ${s.name}`, { rep: 6 });
@@ -113140,7 +118371,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     s.uid = `s${Date.now().toString(36)}x`;
     s.hull = Math.max(s.hull, Math.round(s.maxHull * 0.5));
     if (tr.kind === "marine") s.name = `Stolen ${s.name.replace(/^Marine /, "")}`;
-    T3.ships = T3.ships.filter((x) => x !== s);
+    T4.ships = T4.ships.filter((x) => x !== s);
     if (p.deck) {
       p.deck.ship.aboard?.delete(p);
       p.deck = null;
@@ -113150,7 +118381,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     game.audio?.sfx("reveal");
     persist(game);
   }
-  function footInteraction(game, T3, p) {
+  function footInteraction(game, T4, p) {
     const w = game.world;
     if (p.mode !== "foot" || p.state !== "idle") return null;
     const s = p.deck?.ship;
@@ -113169,17 +118400,17 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       const dh = deckDist(game, p, s, hatchSpot(s));
       if (!tr.plundered && dh < 1.3) return { d: dh, label: `Plunder the hold of the ${s.name}`, run: () => plunder(game, s) };
       const d = deckDist(game, p, s, helmSpot(s));
-      if (d < 1.4) return { d, label: `Take the helm \u2014 steal the ${s.name}`, run: () => claim2(game, T3, s) };
+      if (d < 1.4) return { d, label: `Take the helm \u2014 steal the ${s.name}`, run: () => claim2(game, T4, s) };
       return null;
     }
     if (p.inWater && !(p.fruit && !p.gills) && !(p.depth > 0.6)) {
-      for (const o of T3.ships) {
+      for (const o of T4.ships) {
         if (o.sunk || !o.alive || o.owner === "player") continue;
         if (!game.deckAt(p.x, p.y, -1.3) || game.deckAt(p.x, p.y, -1.3).ship !== o) continue;
         return { d: 0.5, x: o.x, y: o.y, label: o.traffic?.raided ? `Climb aboard the ${o.name}` : `Climb aboard and raid the ${o.name}`, run: () => {
           const n = nearestDeck(game, p, o);
           placeOnDeck(game, p, o, n ? n.t : 0.5, n ? n.v * 0.6 : 0);
-          startRaid(game, T3, o);
+          startRaid(game, T4, o);
         } };
       }
     }
@@ -114076,13 +119307,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     world.name = z.name;
     world.zoneDef = z;
     world.objects = new ObjectIndex(world);
-    const d = world.data;
-    for (let i = 0, n = z.w * z.h; i < n; i++) {
-      d[i * 4] = z.fill;
-      d[i * 4 + 1] = 0;
-      d[i * 4 + 2] = 0;
-      d[i * 4 + 3] = Math.imul(i, 2654435761) >>> 25 & 127;
-    }
+    world.fillAll(z.fill, 0, 0);
     const noise = new Noise(z.id);
     const rng4 = new RNG(z.id + ":zone");
     for (const def of z.islands) {
@@ -114104,6 +119329,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       placeObject(world, { kind: "portal", x: pb2.x, y: pb2.y, block: false, to: { x: pa.x, y: pa.y + 1.5 }, interact: `Climb the stairs to ${A.name}`, use: "portal", up: true });
     }
     computeDistanceField(world);
+    compactDistance(world);
     world.map = buildMapImage(world);
     return world;
   }
@@ -114217,17 +119443,17 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       game.renderer.terrain.updateFog(game.surface.fog);
       game.env.zoneKind = null;
       const S3 = game.surface;
-      let target = null;
+      let target2 = null;
       const tgt = exit?.surface || z?.exits?.find((e) => e.to === "surface")?.surface;
       if (tgt?.island) {
         const isl = S3.islands.find((i) => i.id === tgt.island);
-        if (isl) target = tgt.spot && isl.spots[tgt.spot] ? isl.spots[tgt.spot] : tgt.dock && isl.docks[0] ? isl.docks[0].moor : { x: isl.x, y: isl.y };
-      } else if (tgt && tgt.x !== void 0) target = { x: tgt.x, y: tgt.y };
-      if (!target || forced) target = game.state.char.rest || game.state.char.spawn;
+        if (isl) target2 = tgt.spot && isl.spots[tgt.spot] ? isl.spots[tgt.spot] : tgt.dock && isl.docks[0] ? isl.docks[0].moor : { x: isl.x, y: isl.y };
+      } else if (tgt && tgt.x !== void 0) target2 = { x: tgt.x, y: tgt.y };
+      if (!target2 || forced) target2 = game.state.char.rest || game.state.char.spawn;
       if (carried) {
         carried.zoneId = "surface";
-        carried.x = target.x;
-        carried.y = target.y;
+        carried.x = target2.x;
+        carried.y = target2.y;
         carried.speed = 0;
         if (!carried.fits(S3, carried.x, carried.y, carried.heading)) carried.unstick(S3);
         p.x = carried.x;
@@ -114235,7 +119461,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       } else {
         p.mode = "foot";
         p.onShip = false;
-        const s = findShore(S3, target.x, target.y, 10) || target;
+        const s = findShore(S3, target2.x, target2.y, 10) || target2;
         p.x = s.x;
         p.y = s.y;
         if (!S3.walkable(p.x, p.y - 0.1)) {
@@ -114447,413 +119673,107 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     }, 1400);
   }
 
-  // src/game/factions.js
-  var spiritReq = (c, what) => hakiKnown(c) ? what : "Your spirit has not yet awakened the strength the Navy expects of an officer this senior.";
-  var MARINE_RANKS = [
-    { name: "Seaman Recruit", merit: 0, rep: 25 },
-    { name: "Seaman Apprentice", merit: 40, rep: 25 },
-    { name: "Seaman First Class", merit: 100, rep: 28 },
-    { name: "Petty Officer", merit: 200, rep: 30 },
-    { name: "Chief Petty Officer", merit: 350, rep: 33 },
-    { name: "Master Chief Petty Officer", merit: 550, rep: 36 },
-    { name: "Warrant Officer", merit: 800, rep: 40 },
-    { name: "Ensign", merit: 1100, rep: 43, perk: "Command of a Marine sloop." },
-    { name: "Lieutenant Junior Grade", merit: 1500, rep: 46 },
-    { name: "Lieutenant", merit: 2e3, rep: 50, perk: "A Marine seaman under your command on land, and Rokushiki instruction at any Marine base." },
-    { name: "Lieutenant Commander", merit: 2700, rep: 53 },
-    { name: "Commander", merit: 3500, rep: 56 },
-    { name: "Captain", merit: 4500, rep: 60, perk: "A Marine brig with an escort ship, two Marines at your side, and Bondola passage across the Red Line.", req: (c) => c.flags.enteredGrandLine ? null : "Serve in the Grand Line first." },
-    { name: "Commodore", merit: 6e3, rep: 64, perk: "The coat of Justice and a second escort ship.", req: (c) => c.haki.armament > 0 ? null : spiritReq(c, "Awaken Armament Haki.") },
-    { name: "Rear Admiral", merit: 8e3, rep: 68 },
-    { name: "Vice Admiral", merit: 11e3, rep: 74, perk: "A Marine battleship, a fleet of three escorts and a squad of three Marines.", req: (c) => c.haki.armament >= 30 && c.haki.observation > 0 ? null : spiritReq(c, "Armament Haki 30 and Observation Haki.") },
-    { name: "Admiral", merit: 16e3, rep: 82, perk: "The fleets of the Navy answer to you.", req: (c) => (c.bosses || []).length >= 25 ? null : "Defeat 25 great foes." },
-    { name: "Fleet Admiral", merit: 25e3, rep: 90, perk: "Supreme command of every Marine in the world." }
-  ];
-  var rankIndex = (name) => MARINE_RANKS.findIndex((r) => r.name === name);
-  var CRIMINALS2 = /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "rival"]);
-  function installFactions(game) {
-    game.marines = {
-      rank: () => game.state?.char?.marineRank || null,
-      rankIndex: () => rankIndex(game.state?.char?.marineRank),
-      isMarine: () => game.state?.char?.faction === "marine"
-    };
-    game.on("marineEnlist", (where) => enlist(game, where));
-    game.on("marineOffice", (building, island) => office(game, building, island));
-    game.on("bountyBoard", (building, island) => bountyOffice(game, building, island));
-    game.on("knockout", (a, att) => onKnockout(game, a, att));
-    game.on("shipSunk", (s) => {
-      const c = game.state?.char;
-      if (!c || c.faction !== "marine" || s.faction !== "pirate" || !s.lastHitBy?.isPlayer) return;
-      const merit = 6 + Math.round((s.level || 5) / 2);
-      c.merit = (c.merit || 0) + merit;
-      game.log(`Pirate ship sunk: +${merit} merit (${Math.floor(c.merit)})`, "#90caf9");
+  // src/ui/questsPanel.js
+  var add4 = (el, ...kids) => {
+    for (const k of kids) if (k) el.appendChild(k);
+    return el;
+  };
+  function stageRows(game, id) {
+    const q2 = game.quests, s = q2.state(id), d = questDef(id);
+    const rows = h("ol.q-steps");
+    d.stages.forEach((st, i) => {
+      if (st.hidden && i !== s.stage) return;
+      const done6 = s.done || i < s.stage, cur = !s.done && i === s.stage;
+      const pr = cur ? q2.progress(id) : null;
+      rows.appendChild(h("li" + (done6 ? ".done" : cur ? ".cur" : ""), done6 ? uiImg("check", 14) : h("i.dot"), h("span", st.desc, pr ? h("b.qt-n", ` ${pr.n}/${pr.of}`) : null)));
     });
-    game.on("enterRegion", (reg3) => {
-      const c = game.state?.char;
-      if (c && isGrandLine(reg3)) c.flags.enteredGrandLine = true;
-    });
-    installFleet(game);
+    return rows;
   }
-  function fleetSize(c) {
-    const i = rankIndex(c.marineRank);
-    return i >= rankIndex("Vice Admiral") ? 3 : i >= rankIndex("Commodore") ? 2 : i >= rankIndex("Captain") ? 1 : 0;
+  function whereLine(game, id) {
+    const m = game.quests.marker(id);
+    if (!m || !Number.isFinite(m.x)) return null;
+    const w = game.world, p = game.player;
+    if (m.zone ? m.zone !== w.id : w !== game.surface) return null;
+    const d = w.distance(p.x, p.y, m.x, m.y);
+    return h("div.q-where", uiImg("map", 14), d < 12 ? " You are here" : ` ${m.place || m.label} \u2014 ${d >= 1e3 ? (d / 1e3).toFixed(1) + " km" : Math.round(d) + " m"} away`);
   }
-  function squadSize(c) {
-    const i = rankIndex(c.marineRank);
-    return i >= rankIndex("Vice Admiral") ? 3 : i >= rankIndex("Captain") ? 2 : i >= rankIndex("Lieutenant") ? 1 : 0;
-  }
-  function installFleet(game) {
-    let t = 0;
-    const clear3 = () => {
-      for (const s of game.ships) if (s.escortOf) s.alive = false;
-      for (const a of game.actors) if (a.marineSquad) a.alive = false;
-    };
-    game.on("characterStart", clear3);
-    game.on("enterZone", clear3);
-    game.on("leaveZone", clear3);
-    game.on("marineRankChanged", (r) => {
-      if (!r) clear3();
-    });
-    game.on("tick", (dt) => {
-      if ((t -= dt) > 0) return;
-      t = 1;
-      const c = game.state?.char, p = game.player;
-      if (!c || !p) return;
-      const marine2 = c.faction === "marine";
-      const escorts = game.ships.filter((s) => s.escortOf && !s.sunk && s.alive !== false);
-      const wantShips = marine2 && p.mode === "sail" && p.ship && game.world === game.surface ? fleetSize(c) : 0;
-      for (let i = escorts.length - 1; i >= wantShips; i--) if (escorts[i] && game.world.distance(escorts[i].x, escorts[i].y, p.x, p.y) > 30) escorts[i].alive = false;
-      for (let i = escorts.length; i < wantShips; i++) spawnEscort(game, i);
-      const squad2 = game.actors.filter((a) => a.marineSquad && a.alive);
-      const wantSquad = marine2 && p.mode === "foot" ? squadSize(c) : 0;
-      for (let i = squad2.length - 1; i >= wantSquad; i--) squad2[i].alive = false;
-      for (let i = squad2.length; i < wantSquad; i++) spawnSoldier(game, i);
-      for (const a of squad2) {
-        if (a.state === "knocked" && !p.inCombat) {
-          a.state = "idle";
-          a.hp = Math.round(a.d.maxHp * 0.4);
+  function openQuests(game, first = "main") {
+    const ui = game.ui, c = game.state.char;
+    const body = h("div.quests");
+    const entry = ui.openPanel(body, { wide: true, id: "quests" });
+    if (!entry) return;
+    let tab = first;
+    const render2 = () => {
+      clear(body);
+      const q2 = game.quests;
+      const side = q2.side();
+      const tabs = h("div.tabs", ...[["main", "Main story"], ["side", `Side quests${side.length ? ` (${side.length})` : ""}`], ["done", "Completed"]].map(([k, t2]) => h("button" + (tab === k ? ".on" : ""), { on: { click: () => {
+        tab = k;
+        render2();
+      } } }, t2)));
+      add4(body, h("h2", "Quests"), tabs);
+      if (tab === "main") {
+        const main2 = q2.main();
+        const path2 = PATHS[c.main?.path];
+        add4(body, h("div.q-pathline", path2 ? h("span.q-path", { style: { background: path2.color } }, path2.name) : null, h("span.muted", path2 ? path2.tagline : "Your story hasn't begun yet.")));
+        if (main2) {
+          const d = main2.def;
+          add4(body, h(
+            "div.card.q-main",
+            h("div.q-kicker", d.part ? `Part ${d.part} \xB7 ${d.partName || ""}${main2.s.ch ? ` \xB7 Chapter ${main2.s.ch}` : ""}` : "Main story"),
+            h("h3", d.name),
+            d.summary ? h("p", d.summary) : null,
+            stageRows(game, main2.id),
+            whereLine(game, main2.id),
+            h("p.muted.q-note", "The main story can't be abandoned \u2014 the sea keeps its promises.")
+          ));
+        } else if (c.mainIntro) {
+          add4(body, h("div.card.q-main", h("div.q-kicker", "Prologue"), h("h3", "Find your calling"), h("p", c.mainIntro)));
+        } else {
+          add4(body, h("p.muted", "No chapter under way."));
         }
-        if (game.world.distance(a.x, a.y, p.x, p.y) > 40) a.alive = false;
-      }
-    });
-  }
-  function spawnEscort(game, slot2) {
-    const c = game.state.char, p = game.player, lead = p.ship;
-    const big = rankIndex(c.marineRank) >= rankIndex("Vice Admiral");
-    const type = big ? "marine_warship" : "brigantine";
-    const spread = Math.max(1, (lead.def.length + SHIPS[type].length) / 14);
-    const pos = formationPoint(game, lead, slot2, 1.6 * spread);
-    if (!game.world.sailable(pos.x, pos.y)) return;
-    const s = game.addShip({ type, x: pos.x, y: pos.y, heading: lead.heading, owner: "marine", faction: "marine", name: big ? "Marine Warship" : "Marine Escort" });
-    if (!s.fits(game.world, s.x, s.y, s.heading)) {
-      s.alive = false;
-      return;
-    }
-    s.formSpread = spread;
-    s.escortOf = "player";
-    s.escortSlot = slot2;
-    s.level = 10 + rankIndex(c.marineRank) * 3;
-    s.label = `${s.name} (your fleet)`;
-    s.ai = escortAI;
-  }
-  function formationPoint(game, lead, slot2, spread = 1) {
-    const back = -(9 + Math.floor(slot2 / 2) * 7) * spread, side = (slot2 % 2 ? 1 : -1) * 6 * spread * (slot2 === 2 ? 0 : 1);
-    const hx = Math.cos(lead.heading), hy = Math.sin(lead.heading);
-    return { x: game.world.wx(lead.x + hx * back - hy * side), y: lead.y + hy * back + hx * side };
-  }
-  function escortAI(s, dt, game) {
-    const p = game.player, lead = p.ship;
-    const c = game.state?.char;
-    if (!c || c.faction !== "marine" || !lead || lead.sunk || p.mode !== "sail") {
-      s.sail = 0;
-      return;
-    }
-    const w = game.world;
-    let foe = null, fd = 22;
-    for (const o of game.ships) {
-      if (o === s || o.sunk || o.faction !== "pirate") continue;
-      const d2 = w.distance(s.x, s.y, o.x, o.y);
-      if (d2 < fd) {
-        fd = d2;
-        foe = o;
-      }
-    }
-    if (foe) {
-      s.sail = 1;
-      const toT = Math.atan2(foe.y - s.y, w.dx(s.x, foe.x));
-      const want2 = fd > 12 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
-      s.heading += clamp2(angleDiff(s.heading, want2), -1, 1) * s.def.turn * dt;
-      const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
-      const toLead = Math.atan2(lead.y - s.y, w.dx(s.x, lead.x));
-      const clear3 = Math.abs(angleDiff(toT, toLead)) > 0.5 || w.distance(s.x, s.y, lead.x, lead.y) > fd + 3;
-      if (fd < 16 && side < 0.6 && clear3 && s.cannonCd <= 0) s.fireBroadside(game, foe.x, foe.y, { name: s.name, faction: "player", isShip: true, escort: true, power: () => (s.level || 10) * 10 });
-      return;
-    }
-    const pt = formationPoint(game, lead, s.escortSlot || 0, s.formSpread || 1);
-    const d = w.distance(s.x, s.y, pt.x, pt.y);
-    if (d > 60 * (s.formSpread || 1)) {
-      const q2 = formationPoint(game, lead, s.escortSlot || 0, 1.6 * (s.formSpread || 1));
-      if (s.fits(w, q2.x, q2.y, lead.heading)) {
-        s.x = q2.x;
-        s.y = q2.y;
-        s.heading = lead.heading;
-        s.speed = lead.speed;
-      }
-      return;
-    }
-    const toP = Math.atan2(pt.y - s.y, w.dx(s.x, pt.x));
-    const want = d > 3 ? toP : lead.heading;
-    s.heading += clamp2(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
-    s.sail = d > 8 ? 1 : d > 3 ? Math.max(0.3, lead.sailSet) : lead.sailSet;
-    s.rowing = d > 10 && game.isCalmAt(s.x, s.y) ? 1 : 0;
-  }
-  function spawnSoldier(game, i) {
-    const c = game.state.char, p = game.player;
-    const lvl = Math.max(6, Math.round(6 + rankIndex(c.marineRank) * 2.5));
-    const pos = game.spawner.findFree(p.x - 1.5 + i, p.y + 1.2, 3) || { x: p.x, y: p.y + 1 };
-    const names = ["Seaman Coby", "Seaman Helmeppo", "Seaman Rokkaku", "Petty Officer Jango", "Seaman Fullbody", "Seaman Tashigi"];
-    const a = makeEnemy("marine", lvl, pos.x, pos.y, { name: i === 0 && rankIndex(c.marineRank) >= rankIndex("Captain") ? "Your aide" : "Marine Seaman" });
-    a.name = names[(i + (c.runSeed || 0)) % names.length].replace("Seaman ", "Marine ");
-    a.game = game;
-    a.faction = "player";
-    a.marineSquad = true;
-    a.aggroPlayer = false;
-    a.provoked = false;
-    a.lethal = false;
-    a.showName = true;
-    a.nameColor = "#90caf9";
-    a.controller = new AIController({ kind: "follower", skill: 0.4, moves: a.techniques || [] });
-    game.addActor(a);
-    game.fx.burst(a.x, a.y - 0.6, 8, { color: ["#90caf9", "#ffffff"], speed: 2, g: 0, life: 0.4, kind: "smoke" });
-  }
-  function enlist(game, where) {
-    const c = game.state.char;
-    if (c.faction === "marine") {
-      game.log("You are already a Marine.", "#b0bec5");
-      return;
-    }
-    if (c.bounty > 0 || c.flags.deserter) {
-      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Recruiting Officer", text: `"${c.flags.deserter ? "A deserter wants back in? Guards!" : `Enlist? With a ${formatBerries(c.bounty)} bounty on your head? Get out before I arrest you.`}"` } } });
-      return;
-    }
-    if (c.crewName) {
-      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Recruiting Officer", text: `"You fly a Jolly Roger \u2014 the flag of the ${c.crewName}. The Navy doesn't recruit pirate captains."` } } });
-      return;
-    }
-    if ((c.reputation || 0) < ENLIST_REP) {
-      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Recruiting Officer", text: `"The Marines only take people of good standing. Right now folk around here would call you '${repTier(c.reputation || 0).name}'. Help people \u2014 finish their troubles, stand up to pirates \u2014 and come back when your name means something. (Reputation ${Math.round(c.reputation || 0)} / ${ENLIST_REP})"` } } });
-      return;
-    }
-    game.dialogue.open(null, { start: "a", nodes: {
-      a: {
-        speaker: "Recruiting Officer",
-        text: `"You want to join the Marines? The pay is modest and the work is dangerous. You'll swear to uphold Absolute Justice and hunt pirates wherever they sail. Once you sign, there's no going back to piracy \u2014 not without a price on your head."`,
-        choices: [{ text: "I swear it. Sign me up.", next: "b" }, { text: "Not yet.", end: true }]
-      },
-      b: {
-        speaker: "Recruiting Officer",
-        text: `"Welcome to the Marines, Seaman Recruit ${c.name}! Here's your cap. Report to any Marine base for missions and pay. Capture pirates \u2014 the more notorious, the better."`,
-        onEnter: () => {
-          c.faction = "marine";
-          c.marineRank = MARINE_RANKS[0].name;
-          c.merit = 0;
-          c.marinePayDay = game.env.day;
-          c.enlistedAt = where;
-          addItem(game, "marine_cap", 1, { silent: true });
-          if (!c.equipped.hat) equip(game, "marine_cap");
-          game.ui.toast("ENLISTED", "Seaman Recruit of the Marines", "#64b5f6");
-          game.emit("marineRankChanged", c.marineRank);
-          persist(game);
+        const told = (c.main?.done || []).map((id) => questDef(id)).filter(Boolean).reverse();
+        if (told.length) {
+          add4(body, h("h3", "The story so far"), h("div.list.compact", ...told.map((d) => h("div.row-item", uiImg("check", 18), h("div.grow", h("b", d.name), h("div.sub", `Part ${d.part} \xB7 ${d.partName || ""}${d.islandName ? ` \u2014 ${d.islandName}` : ""}`))))));
         }
+      } else if (tab === "side") {
+        if (!side.length) add4(body, h("p.muted", "No side quests. People all over the Blue Planet need a hand \u2014 look for the ! over their heads."));
+        const tracked = new Set(q2.tracked().map((x) => x.id));
+        for (const { id, s, def } of side) {
+          const isl = def.island && game.surface.islands.find((i) => i.id === def.island);
+          add4(body, h(
+            "div.card.q-side" + (tracked.has(id) ? ".tracked" : ""),
+            h(
+              "div.q-top",
+              h("h4", uiImg("quest", 18), " ", def.name, h("span.tag", def.kind || "side")),
+              h(
+                "div.q-btns",
+                h("button.btn.small" + (tracked.has(id) ? ".gold" : ""), { on: { click: () => {
+                  q2.track(id, !tracked.has(id));
+                  render2();
+                } } }, tracked.has(id) ? "Tracked" : "Track"),
+                h("button.btn.small.red", { on: { click: async () => {
+                  if (!await ui.ask({ title: `Abandon "${def.name}"?`, text: "You can take it up again from whoever gave it to you \u2014 from the start.", ok: "Abandon", danger: true })) return;
+                  q2.abandon(id);
+                  render2();
+                } } }, "Abandon")
+              )
+            ),
+            def.summary ? h("p", def.summary) : null,
+            stageRows(game, id),
+            isl ? h("div.muted", "Location: " + isl.name) : null
+          ));
+        }
+      } else {
+        const done6 = Object.entries(c.quests).filter(([, s]) => s.done).map(([id, s]) => ({ d: questDef(id), s })).filter((x) => x.d).sort((a, b) => (b.s.doneAt || 0) - (a.s.doneAt || 0));
+        if (!done6.length) add4(body, h("p.muted", "Nothing finished yet."));
+        else add4(body, h("div.list.compact", ...done6.map(({ d }) => h("div.row-item", uiImg("check", 18), h("div.grow", h("b", d.name), h("div.sub", d.kind === "main" ? `Main story, part ${d.part}` : d.kind || "side"))))));
       }
-    } });
-  }
-  function nextRank(c) {
-    const i = rankIndex(c.marineRank);
-    return i >= 0 && i < MARINE_RANKS.length - 1 ? MARINE_RANKS[i + 1] : null;
-  }
-  function promote(game) {
-    const c = game.state.char;
-    const n = nextRank(c);
-    if (!n || c.merit < n.merit) return null;
-    const why = n.req ? n.req(c) : null;
-    if (why) return why;
-    if ((c.reputation || 0) < (n.rep || 0)) return `Headquarters wants officers the people trust. Reputation ${Math.round(c.reputation || 0)} / ${n.rep}.`;
-    c.marineRank = n.name;
-    game.ui.toast("PROMOTED!", n.name, "#64b5f6");
-    game.log(`Promoted to ${n.name}.${n.perk ? " " + n.perk : ""}`, "#90caf9");
-    const i = rankIndex(n.name);
-    const dock = game.currentIsland?.docks?.[0];
-    const pos = dock ? dock.moor : { x: game.player.x, y: game.player.y + 5 };
-    if (n.name === "Ensign") game.giveShip("sloop", pos.x, pos.y, "Marine Cutter");
-    if (n.name === "Captain") game.giveShip("brigantine", pos.x, pos.y, "Marine Brig");
-    if (n.name === "Rear Admiral") game.giveShip("marine_warship", pos.x, pos.y, "Marine Warship");
-    if (n.name === "Vice Admiral") game.giveShip("marine_battleship", pos.x, pos.y, "Marine Battleship");
-    if (n.name === "Commodore") {
-      addItem(game, "marine_coat", 1);
-      equip(game, "marine_coat");
-    }
-    if (n.name === "Captain" || n.name === "Vice Admiral") addItem(game, "marine_medal", 1);
-    if (i >= rankIndex("Captain")) c.flags.bondolaPass = true;
-    game.progression.breakthrough(1, `Promotion to ${n.name}`);
-    game.emit("marineRankChanged", n.name);
-    game.progression.checkDream();
-    persist(game);
-    return null;
-  }
-  function missionTarget(game) {
-    const c = game.state.char;
-    const here = REGION_INFO[regionAt(game.player.x, game.player.y)]?.id;
-    const cands = allNpcDefs().filter((d) => d.bounty && (d.boss || d.named) && d.faction !== "marine" && !c.bosses.includes(d.id) && !c.defeated[d.id]).map((d) => {
-      const isl = game.surface.islands.find((i) => i.id === d.island);
-      return { d, isl, sea: isl?.def?.sea };
-    }).filter((x) => x.isl && (x.sea === here || here === "calm_belt" && x.sea === "paradise"));
-    cands.sort((a, b) => a.d.bounty - b.d.bounty);
-    return cands[0] || null;
-  }
-  function office(game, building, island) {
-    const c = game.state.char;
-    if (c.faction !== "marine") {
-      game.dialogue.open(null, { start: "a", nodes: { a: {
-        speaker: building?.name || "Marine Base",
-        text: c.bounty > 0 ? `"Halt! This is a Marine base \u2014 and you're on our wanted list!"` : '"This is a Marine base. Here to enlist? Or to report a pirate sighting?"',
-        choices: [
-          { text: "I want to enlist.", if: () => !c.bounty, do: () => {
-            game.dialogue.close();
-            enlist(game, island?.name);
-          } },
-          { text: "Turn in bounties.", if: () => (c.claims || []).length > 0 && !c.bounty, do: () => {
-            game.dialogue.close();
-            bountyOffice(game, building, island);
-          } },
-          { text: "Leave.", end: true }
-        ]
-      } } });
-      return;
-    }
-    const n = nextRank(c);
-    const days = Math.max(0, game.env.day - (c.marinePayDay || game.env.day));
-    const idx = rankIndex(c.marineRank);
-    const pay2 = days * (300 + idx * 450);
-    const target = missionTarget(game);
-    const mission = c.marineMission;
-    game.dialogue.open(null, { start: "a", nodes: {
-      a: {
-        speaker: building?.name || "Marine Base",
-        text: () => `"${c.marineRank} ${c.name}! Merit: ${Math.floor(c.merit)}${n ? ` / ${n.merit} for ${n.name}` : ""}."${mission ? ` Current orders: capture ${mission.name}.` : ""}`,
-        choices: [
-          { text: `Collect pay (${formatBerries(pay2)})`, if: () => pay2 > 0, do: () => {
-            earn(game, pay2, "Marine salary");
-            c.marinePayDay = game.env.day;
-          }, next: "a" },
-          { text: n ? `Request promotion to ${n.name}` : "Request promotion", if: () => !!n && c.merit >= n.merit, do: () => {
-            const why = promote(game);
-            if (why) game.log(`Promotion denied: ${why}`, "#ff8a80");
-          }, next: "a" },
-          { text: () => `Orders: capture ${target?.d.name} (${formatBerries(target?.d.bounty || 0)}) on ${target?.isl.name}`, if: () => !!target && !mission, do: () => {
-            c.marineMission = { id: target.d.id, name: target.d.name, island: target.isl.name, merit: meritFor(target.d) };
-            game.log(`New orders: capture ${target.d.name} at ${target.isl.name}.`, "#90caf9");
-          }, next: "a" },
-          { text: "Rokushiki training", if: () => idx >= rankIndex("Lieutenant"), do: () => {
-            game.dialogue.close();
-            openTrainer(game, "marine_instructor", "Marine Instructor");
-          } },
-          { text: "Resign from the Marines", do: () => {
-          }, next: "resign" },
-          { text: "Dismissed.", end: true }
-        ]
-      },
-      resign: { speaker: building?.name || "Marine Base", text: `"Resign? You may hand in your cap. You'll lose your rank \u2014 but at least you won't be hunted."`, choices: [
-        { text: "Hand in the cap.", do: () => {
-          c.faction = "civilian";
-          c.flags.formerMarine = c.marineRank;
-          c.marineRank = null;
-          c.marineMission = null;
-          game.log("You resign from the Marines.", "#b0bec5");
-          persist(game);
-        }, end: true },
-        { text: "Never mind.", next: "a" }
-      ] }
-    } });
-  }
-  function meritFor(d) {
-    const b = d.bounty || d.bountyValue || 0;
-    return Math.round(Math.max(20, Math.sqrt(b / 1e3)) * (d.boss ? 1.2 : 0.8));
-  }
-  function onKnockout(game, a, att) {
-    const c = game.state?.char;
-    const p = game.player;
-    const byCrew = att && !att.isPlayer && (att.crewId || att.summonedBy?.isPlayer);
-    if (byCrew) {
-      if (a.faction === "marine" || a.faction === "cp") return;
-      att = p;
-    }
-    if (!c || !att || !att.isPlayer || a.isPlayer || a.faction === "player") return;
-    if (c.faction === "marine" && (a.faction === "marine" || a.faction === "cp") && !a.spar) {
-      c.flags.deserter = true;
-      c.flags.formerMarine = c.marineRank;
-      c.faction = "pirate";
-      c.marineRank = null;
-      c.marineMission = null;
-      game.ui.toast("DESERTER!", "You struck down a fellow Marine. The Navy will hunt you.", "#ff5252");
-      game.progression.addBounty(Math.max(3e7, (a.bountyValue || 0) + 2e7), "Marine deserter");
-      return;
-    }
-    if (!CRIMINALS2.has(a.faction)) return;
-    const tf2 = threatFactor(a.power(), p.power());
-    const bounty = a.bountyValue || a.def?.bounty || 0;
-    if (c.faction === "marine") {
-      let merit = 0;
-      if (a.boss || a.named) merit = meritFor({ bounty, boss: a.boss });
-      else if (tf2 > 0.2) merit = 1 + Math.round(tf2 * 3);
-      if (c.marineMission && a.npcId === c.marineMission.id) {
-        merit += c.marineMission.merit;
-        game.ui.toast("ORDERS COMPLETE", `${a.name} captured`, "#64b5f6");
-        c.marineMission = null;
-      }
-      if (merit > 0) {
-        c.merit = (c.merit || 0) + merit;
-        game.log(`+${merit} merit (${Math.floor(c.merit)})`, "#90caf9");
-        const n = nextRank(c);
-        if (n && c.merit >= n.merit) game.hint("promote", "You have enough merit for a promotion. Report to any Marine base.");
-      }
-    } else if (c.faction !== "pirate" && bounty > 0 && (a.boss || a.named)) {
-      c.claims = c.claims || [];
-      c.claims.push({ name: a.name, amount: bounty });
-      game.log(`${a.name} is worth ${formatBerries(bounty)} to the Marines. Turn them in at a Marine base or bounty office.`, "#ffe082");
-    }
-  }
-  function bountyOffice(game, building, island) {
-    const c = game.state.char;
-    const body = h("div");
-    game.ui.openPanel(body, { wide: true });
-    body.append(h("h2", building?.name || "Bounty Office"));
-    const claims = c.claims || [];
-    if (claims.length && c.faction !== "pirate" && !c.bounty) {
-      const total = claims.reduce((s, x) => s + x.amount, 0);
-      const payout = Math.round(total * (c.faction === "marine" ? 0.1 : 0.3));
-      body.append(
-        h("p", `Bounties to claim: ${claims.map((x) => `${x.name} (${formatBerries(x.amount)})`).join(", ")}`),
-        h("button.btn.gold", { on: { click: (e) => {
-          earn(game, payout, "bounties");
-          c.claims = [];
-          e.target.disabled = true;
-          e.target.textContent = "Paid!";
-          persist(game);
-        } } }, `Collect ${formatBerries(payout)}${c.faction === "marine" ? " (Marines only receive a commendation bonus)" : ""}`)
-      );
-    }
-    if (c.bounty > 0) body.append(h("h3", "Your poster"), wantedPoster(c));
-    const wanted2 = allNpcDefs().filter((d) => d.bounty && d.infamy && !c.bosses.includes(d.id) && !c.defeated[d.id]).sort((a, b) => b.bounty - a.bounty).slice(0, 12);
-    body.append(h("h3", "Most Wanted"));
-    const list = h("div.list");
-    for (const d of wanted2) {
-      const isl = game.surface.islands.find((i) => i.id === d.island);
-      const known = c.discovered.includes(d.island);
-      list.appendChild(h("div.row-item", uiImg("bounty", 30), h("div.grow", h("b", d.name), h("div.sub", `${d.title || ""}${known && isl ? " \xB7 last seen: " + isl.name : ""}`)), h("span.price", formatBerries(d.bounty))));
-    }
-    body.appendChild(list);
-    if (c.faction === "pirate") body.append(h("p.muted", "The clerk eyes you nervously and keeps one hand near the Den Den Mushi."));
+    };
+    render2();
+    const t = setInterval(() => {
+      if (!document.body.contains(body)) clearInterval(t);
+    }, 2e3);
   }
 
   // src/game/legends.js
@@ -114878,9 +119798,9 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       const readable = canRead();
       const seen = c.flags.poneglyphsSeen = c.flags.poneglyphsSeen || [];
       if (!seen.includes(id)) seen.push(id);
-      let text;
+      let text2;
       if (!readable) {
-        text = `(A perfect cube of indestructible stone, covered in an ancient script.${o.road ? " It is red." : ""} You can't read a single word. An archaeologist could \u2014 though the World Government executes anyone who tries.)`;
+        text2 = `(A perfect cube of indestructible stone, covered in an ancient script.${o.road ? " It is red." : ""} You can't read a single word. An archaeologist could \u2014 though the World Government executes anyone who tries.)`;
       } else {
         const read2 = c.flags.poneglyphsReadIds = c.flags.poneglyphsReadIds || [];
         const first = !read2.includes(id);
@@ -114891,14 +119811,14 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
           game.emit("poneglyphRead", id);
           game.progression.checkDream();
         }
-        text = `${o.road ? ROAD_TEXT : LORE2[id] || DEFAULT_TEXT}${first ? ` (+1 Willpower \xB7 Poneglyphs read: ${read2.length})` : ""}`;
+        text2 = `${o.road ? ROAD_TEXT : LORE2[id] || DEFAULT_TEXT}${first ? ` (+1 Willpower \xB7 Poneglyphs read: ${read2.length})` : ""}`;
       }
       if (o.road && o.giveRubbing && !c.flags["rubbing_" + id]) {
         c.flags["rubbing_" + id] = true;
         addItem(game, "poneglyph_rubbing", 1);
-        text += " You press paper against the stone and take a rubbing.";
+        text2 += " You press paper against the stone and take a rubbing.";
       }
-      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: o.name || (o.road ? "Road Poneglyph" : "Poneglyph"), text } } });
+      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: o.name || (o.road ? "Road Poneglyph" : "Poneglyph"), text: text2 } } });
       persist(game);
     });
     game.interactions.onObject("bell", (o) => {
@@ -114995,7 +119915,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         const here = o.port === "paradise" ? MG.portParadise : MG.portNewWorld;
         const other = o.port === "paradise" ? MG.portNewWorld : MG.portParadise;
         game.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Bondola Operator", text: '"Destination?"', choices: [
-          { text: "Up to Mary Geoise, the Holy Land.", do: () => go(o.port === "paradise" ? W - chart(16) : chart(16), EQ + 3, ["MARY GEOISE", "The Holy Land", "Keep your eyes down. The Celestial Dragons do not like to be looked at."]), end: true },
+          { text: "Up to Mary Geoise, the Holy Land.", do: () => go(o.port === "paradise" ? W - csize(16) : csize(16), EQ + 3, ["MARY GEOISE", "The Holy Land", "Keep your eyes down. The Celestial Dragons do not like to be looked at."]), end: true },
           { text: "Carry my ship over the Red Line.", do: () => {
             if (!moveShipTo(other)) {
               game.log("You have no ship in this harbour.", "#ff8a80");
@@ -115298,9 +120218,9 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       else if (e.pointerType === "mouse") setOn(false);
     }, true);
     setOn(coarse);
-    const set = (el, text) => {
+    const set = (el, text2) => {
       const b = el.firstChild;
-      if (b.textContent !== text) b.textContent = text;
+      if (b.textContent !== text2) b.textContent = text2;
     };
     return {
       get on() {
@@ -115542,6 +120462,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       skills: () => openSkills(game),
       journal: () => openJournal(game),
       crew: () => openCrew(game),
+      quests: () => openQuests(game),
       menu: () => ui.openMenu(),
       help: () => ui.openPanel(helpContent(game.state?.char), { wide: true, id: "help" }),
       map: () => game.openMap(),
@@ -115557,9 +120478,13 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       { key: "K", when: playing, fn: () => ui.sideAction("skills") },
       { key: "J", when: playing, fn: () => ui.sideAction("journal") },
       { key: "H", when: playing, fn: () => ui.sideAction("help") },
-      { key: "U", when: playing, fn: () => ui.sideAction("crew") }
+      { key: "U", when: playing, fn: () => ui.sideAction("crew") },
+      { key: "L", when: playing, fn: () => ui.sideAction("quests") }
     );
     game.on("saved", () => ui.savedNote());
+    for (const ev of ["questStarted", "questStage", "questDone", "questAbandoned"]) game.on(ev, () => {
+      ui.qtT = 0;
+    });
     game.on("playerLanded", (tgt, info) => {
       if (view3d?.active) ui.hitMarker(info);
     });

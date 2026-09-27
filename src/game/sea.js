@@ -2,6 +2,7 @@
 // in the Calm Belt, ship encounters and flotsam.
 import { regionAt, REGION, REGION_INFO, isGrandLine, isCalmBelt, isBlue, RM_X, EQ } from '../world/constants.js';
 import { REVERSE_MOUNTAIN } from '../world/worldgen.js';
+import { T } from '../world/tiles.js';
 import { Actor } from './actor.js';
 import { AIController } from './ai.js';
 import { makeLook } from '../data/races.js';
@@ -105,6 +106,8 @@ class SeaSystem {
     if (!count(c, 'log_pose') && !count(c, 'new_world_log_pose')) return;
     const isl = g.currentIsland;
     if (!isl || !isl.def?.logNext?.length || isl.def.logSpins || p.mode !== 'foot' || g.world !== g.surface) return;
+    // (the main story is steering: the needle stays on the island it continues on)
+    if (g.storyLogHold?.(isl)) return;
     const lp = c.logPose;
     if (lp.eternal && count(c, lp.eternal)) {
       if (lp.target !== isl.id) return; // an Eternal Pose keeps pointing at its island
@@ -139,12 +142,13 @@ class SeaSystem {
     const s = p.mode === 'sail' ? p.ship : null;
     this.reverseMountain(dt, p, s);
     // Sea Kings in the Calm Belt
-    if (isCalmBelt(reg) && (s || p.inWater)) {
+    // (not up Reverse Mountain's canals, where they cross the Calm Belt's latitudes in the rock)
+    if (isCalmBelt(reg) && (s || p.inWater) && !this.rmState && g.world.type(p.x, p.y) !== T.RAPIDS) {
       this.kingT -= dt * (s?.def?.seastone || s?.upgrades?.includes('seastone_keel') ? 0.15 : 1);
       if (this.kingT <= 0) { this.kingT = 22 + Math.random() * 20; this.spawnSeaKing(p, reg); }
     } else this.kingT = Math.max(this.kingT, 6);
-    // ship encounters (not in sight of land)
-    if (s && !g.currentIsland) {
+    // ship encounters (not in sight of land, nor riding Reverse Mountain)
+    if (s && !g.currentIsland && !this.rmState) {
       this.encT -= dt;
       if (this.encT <= 0) {
         this.encT = (isGrandLine(reg) ? 80 : 120) + Math.random() * 80;
@@ -174,33 +178,48 @@ class SeaSystem {
     if (isCalmBelt(reg) && p.inWater && Math.random() < dt * 0.1) g.hint('calm_swim', 'Swimming in the Calm Belt is suicide. Only Silvers Rayleigh ever did it.');
   }
 
+  /**
+   * Riding Reverse Mountain: into a gate, up the mountain on the current, the
+   * summit where the four seas meet, and the plunge down into Paradise.
+   * (Swimmers get carried up too — see actor.js.)
+   */
   reverseMountain(dt, p, s) {
     const g = this.game, c = this.char;
-    if (!s) return;
-    const M = REVERSE_MOUNTAIN;
-    const dx = g.world.dx(M.x, s.x), dy = s.y - M.y;
-    const inside = Math.abs(dx) < M.rx * Math.sqrt(Math.max(0, 1 - (dy / M.ry) ** 2));
-    if (inside && !this.rmState) {
-      this.rmState = { t: 0 };
-      g.ui.banner('REVERSE MOUNTAIN', 'The gateway to the Grand Line', 'The current is dragging you UP the mountain! Keep to the middle of the canal!', 5);
+    const who = s || (p.inWater ? p : null);
+    if (!who) { if (this.rmState && p.mode === 'foot' && !p.inWater) this.rmState = null; return; }
+    const cur = g.currentAt(who.x, who.y);
+    const k = cur.canal;
+    if (k && !this.rmState) {
+      this.rmState = { t: 0, from: k.exit ? null : k.id, top: false };
+      g.ui.banner('REVERSE MOUNTAIN', 'The gateway to the Grand Line', k.exit ? 'Down the torrent into the Grand Line!' : 'The sea is running UP the mountain — and it has you! Keep to the middle of the canal!', 5);
       g.audio?.music('battle');
-      if (!s.def.grandLine) g.log('Your little boat creaks in the current... The Grand Line will not be kind to it.', '#ff8a80');
+      if (s && !s.def.grandLine) g.log('Your little boat creaks in the current... The Grand Line will not be kind to it.', '#ff8a80');
+      if (!s) g.log('The current tears you off your feet and sweeps you up the canal!', '#ff8a80');
     }
-    if (this.rmState) {
-      this.rmState.t += dt;
-      if (dx > M.rx - 5 && Math.abs(dy) < 20) {
-        this.rmState = null;
-        if (!c.flags.enteredGrandLine) {
-          c.flags.enteredGrandLine = true;
-          g.ui.toast('WELCOME TO THE GRAND LINE', 'You rode the current over Reverse Mountain!', '#ffd54f');
-          g.progression.breakthrough(2, 'Crossed Reverse Mountain');
-          g.hint('logpose', 'In the Grand Line your compass is useless. Carry a Log Pose, stay on an island until the log sets, and follow the needle to the next island.');
-          g.emit('questEvent', 'entered_grand_line');
-          persist(g);
-        }
-        g.audio?.music('grandline');
-      } else if (!inside && this.rmState.t > 3) this.rmState = null;
+    const st = this.rmState;
+    if (!st) return;
+    st.t += dt;
+    // the summit: the four seas crash together
+    if (k && !st.top && (k.exit || cur.level > 150)) {
+      st.top = true;
+      g.ui.banner('THE SUMMIT', 'Where the four seas meet', 'Every current in the world crashes together up here... and there\'s only one way down.', 4);
+      g.fx.shake?.(0.35);
+      g.audio?.sfx('splash_big');
     }
+    // out at the bottom of the torrent: the Grand Line
+    if (!k && st.top) {
+      this.rmState = null;
+      c.flags.enteredGrandLine = true; // (the region change may have said so already)
+      if (!c.flags.rodeReverseMountain) {
+        c.flags.rodeReverseMountain = true;
+        g.ui.toast('WELCOME TO THE GRAND LINE', 'You rode the current over Reverse Mountain!', '#ffd54f');
+        g.progression.breakthrough(2, 'Crossed Reverse Mountain');
+        g.hint('logpose', 'In the Grand Line your compass is useless. Carry a Log Pose, stay on an island until the log sets, and follow the needle to the next island.');
+      }
+      g.emit('questEvent', 'entered_grand_line');
+      persist(g);
+      g.audio?.music('grandline');
+    } else if (!k && st.t > 4 && !st.top) this.rmState = null; // (swept back out to sea at a gate)
   }
 
   spawnSeaKing(p, reg) {

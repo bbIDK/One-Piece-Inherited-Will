@@ -8,7 +8,8 @@
 import * as THREE from 'three';
 import { interiorRect, heightsOf } from '../world/interiors.js';
 import { helmPoint } from './ships3d.js';
-import { shipBob } from '../world/hull.js';
+import { shipBob, pitchRise } from '../world/hull.js';
+import { waterLevel } from './height.js';
 
 const TAU = Math.PI * 2;
 
@@ -181,13 +182,14 @@ export class CameraRig {
     let eyeH = 1.72 * scale;
     let gx = 0, gz = 0; // eye position relative to the player (origin)
     // the ground under your feet, smoothed so bumps and steps don't jolt the view
-    const g0 = p.deck ? p.deck.h + shipBob(p.deck.ship, game.env?.time || 0) : ground(p.x, p.y) - (p.wading || 0);
+    const g0 = p.deck ? p.deck.h + shipBob(p.deck.ship, game.env?.time || 0) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) : ground(p.x, p.y) - (p.wading || 0);
     // (dropping off an upper deck: the fall itself carries you down)
     if (this.smoothG === undefined || Math.abs(g0 - this.smoothG) > 2.5 || p.mode !== this.lastMode || (p.deck && g0 < this.smoothG - 0.6 && p.z > 0.3)) this.smoothG = g0;
     this.smoothG += (g0 - this.smoothG) * Math.min(1, dt * 14);
     this.lastMode = p.mode;
     let gh = p.flying && p.alt != null ? p.alt : this.smoothG + (p.z || 0);
     let rollSea = 0;
+    if (!sailing) this.seaPitch = 0;
     if (sailing) {
       // standing at the helm on the stern deck (your own rigging turns
       // see-through), rising and rolling gently with the ship
@@ -195,12 +197,14 @@ export class CameraRig {
       const hp = helmPoint(s.def);
       gx = Math.cos(s.heading) * hp.x; gz = Math.sin(s.heading) * hp.x;
       const t = (game.env?.time || 0) + (s.seed || 0);
-      gh = 0.05 + hp.floor + Math.sin(t * 1.3) * 0.07;
+      gh = (s.lvl || 0) + 0.05 + hp.floor + Math.sin(t * 1.3) * 0.07 + pitchRise(s, hp.x);
       eyeH = hp.eye - hp.floor + 0.15;
       rollSea = Math.sin(t * 0.9) * 0.03 * Math.cos(this.yaw - s.heading);
+      // (feel the climb up Reverse Mountain: the view tips with the deck)
+      this.seaPitch = (s.pitch || 0) * Math.cos(this.yaw - s.heading);
     } else if (p.inWater) {
       // the head just out of the water — or under it, diving (never through the sea floor)
-      gh = -(p.depth || 0) - 0.2; eyeH = 0.55;
+      gh = waterLevel(game.world, p.x, p.y) - (p.depth || 0) - 0.2; eyeH = 0.55;
       const floor = game.seaDepth ? -game.seaDepth(p.x, p.y) : -99;
       if (gh + eyeH < floor + 0.3) gh = floor + 0.3 - eyeH;
     }
@@ -274,7 +278,7 @@ export class CameraRig {
       cam.rotation.set(this.pitch * 0.8 - 0.12 + this.shake.y, yaw3 + this.shake.x, 0);
     } else {
       cam.position.set(gx + Math.cos(this.yaw + Math.PI / 2) * bobX, gh + eyeH + bobY, gz + Math.sin(this.yaw + Math.PI / 2) * bobX);
-      cam.rotation.set(this.pitch + this.shake.y, yaw3 + this.shake.x, this.roll + rollSea);
+      cam.rotation.set(this.pitch + this.shake.y + (sailing ? this.seaPitch || 0 : 0), yaw3 + this.shake.x, this.roll + rollSea);
     }
     const sprint = !sailing && p.intent?.sprint && moving;
     // a quick widening of the view during dodges and dashes

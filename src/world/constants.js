@@ -14,28 +14,37 @@
 // Reverse Mountain sits in the middle (x = W / 2) and Mary Geoise on the seam
 // (x = 0 ≡ W), so the Red Line shows in the centre and at both edges.
 
-// The world was charted on a 4096 × 2048 grid. For the 3D view it is built
-// WORLD_SCALE times bigger (islands, seas, distances), 1 tile = 1 metre.
+// The world was charted on a 4096 × 2048 grid. For the 3D view the chart is
+// laid out POS_SCALE times bigger (1 tile = 1 metre): the seas are wide, the
+// islands far apart — out of sight of each other, as they are in the story.
+// The islands themselves grow SIZE_SCALE times (less: an island is a place
+// you walk across, the sea between them is a voyage).
 // Island data and the few hand-placed points stay in chart units and go
-// through chart() (or the island loader) when used.
-export const WORLD_SCALE = 1.5;
-/** A distance or coordinate from the chart, in world tiles. */
-export const chart = (v) => Math.round(v * WORLD_SCALE);
+// through chart() (places and distances between them) or csize() (the size
+// of a thing) when used; the island loader does this for island data.
+export const POS_SCALE = 6;
+export const SIZE_SCALE = 2.25;
+/** @deprecated the old single scale (sizes); use csize()/chart(). */
+export const WORLD_SCALE = SIZE_SCALE;
+/** A position or distance on the chart, in world tiles. */
+export const chart = (v) => Math.round(v * POS_SCALE);
+/** The size of something drawn on the chart (an island, a massif), in world tiles. */
+export const csize = (v) => Math.round(v * SIZE_SCALE);
 
-export const W = chart(4096); // 6144
-export const H = chart(2048); // 3072
+export const W = chart(4096); // 24576
+export const H = chart(2048); // 12288
 export const EQ = chart(1024); // equator (Grand Line centre row)
 export const GL_HALF = chart(200); // half height of the Grand Line
-export const CB = chart(72); // width of each Calm Belt
+export const CB = chart(100); // width of each Calm Belt (a long, windless crossing)
 export const RL_HALF = chart(46); // half width of the Red Line
 export const RM_X = chart(2048); // Reverse Mountain meridian
 export const MG_X = 0; // Mary Geoise meridian (the wrap seam)
 export const POLAR = chart(26); // pack-ice rows at each pole
 
-export const GL_TOP = EQ - GL_HALF; // 824
-export const GL_BOTTOM = EQ + GL_HALF; // 1224
-export const CB_TOP = GL_TOP - CB; // 752
-export const CB_BOTTOM = GL_BOTTOM + CB; // 1296
+export const GL_TOP = EQ - GL_HALF;
+export const GL_BOTTOM = EQ + GL_HALF;
+export const CB_TOP = GL_TOP - CB;
+export const CB_BOTTOM = GL_BOTTOM + CB;
 
 export const REGION = {
   EAST_BLUE: 1,
@@ -84,11 +93,15 @@ export function dxWrap(a, b) {
 }
 export const distWrap = (ax, ay, bx, by) => Math.hypot(dxWrap(ax, bx), by - ay);
 
+// Reverse Mountain's massif (see reverseMountain.js: rx, ry) counts as the Red Line
+const RMX = 900, RMY = 2150;
 /** Analytic region of a world position (ignores the Red Line's ragged coast). */
 export function regionAt(x, y) {
   x = wrapX(x);
   if (y < POLAR || y >= H - POLAR) return REGION.POLAR;
   if (Math.abs(x - RM_X) < RL_HALF || x < RL_HALF || x >= W - RL_HALF) return REGION.RED_LINE;
+  const ey = (y - EQ) / RMY;
+  if (Math.abs(ey) < 1 && Math.abs(x - RM_X) < RMX * Math.sqrt(1 - ey * ey)) return REGION.RED_LINE;
   const east = x > RM_X; // right half of the map
   if (y >= GL_TOP && y < GL_BOTTOM) return east ? REGION.PARADISE : REGION.NEW_WORLD;
   if (y >= CB_TOP && y < GL_TOP) return REGION.CALM_NORTH;

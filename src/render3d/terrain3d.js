@@ -80,14 +80,10 @@ export class TerrainManager {
     this.cw = Math.ceil(world.width / CHUNK);
     this.ch = Math.ceil(world.height / CHUNK);
     // which chunks contain (or touch) land: everything else is open sea
+    // (a terrain chunk is one of the world's tile blocks)
     const has = new Uint8Array(this.cw * this.ch);
-    const W = world.width, H = world.height, d = world.data;
-    for (let y = 0; y < H; y++) {
-      const row = y * W;
-      const cy = Math.floor(y / CHUNK) * this.cw;
-      for (let x = 0; x < W; x++) {
-        if (d[(row + x) << 2] >= 16) has[cy + Math.floor(x / CHUNK)] = 1;
-      }
+    for (let cy = 0; cy < this.ch; cy++) {
+      for (let cx = 0; cx < this.cw; cx++) if (world.blockHasLand(cx, cy)) has[cy * this.cw + cx] = 1;
     }
     // shallow sea floor around land is visible too
     this.hasLand = new Uint8Array(has.length);
@@ -254,7 +250,7 @@ export class TerrainManager {
       for (let i = -1; i <= 0; i++) {
         const t = w.type(cx + i, cy + j);
         if (IS_LIQUID[t] || OVERLAY[t]) continue;
-        const v = (w.data[(w.idx(cx + i, cy + j) << 2) + 3] || 0) / 255;
+        const v = w.variant(cx + i, cy + j) / 255;
         const mix = 0.18 + v * 0.3 * hash(cx + i, cy + j);
         r += COL[t * 3] * (1 - mix) + ACC[t * 3] * mix;
         gg += COL[t * 3 + 1] * (1 - mix) + ACC[t * 3 + 1] * mix;

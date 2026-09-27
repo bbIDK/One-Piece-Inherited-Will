@@ -61,6 +61,8 @@ export class ObjectIndex {
     obj._chunk = k;
     this.byId.set(obj.id, obj);
     this.count++;
+    // (a landmark seen from far off: the 3D view keeps a list of these)
+    if (obj.far) (this.world.farObjects ||= []).push(obj);
     const fl = floorOf(obj);
     if (fl) this.world.addFloor({ x0: obj.x - fl.hw, x1: obj.x + fl.hw, y0: obj.y + fl.oy - fl.hd, y1: obj.y + fl.oy + fl.hd, h: fl.h, o: obj });
     const c = obj.block && COLLIDE[obj.kind];
@@ -166,6 +168,7 @@ export class ObjectIndex {
       const i = list.indexOf(obj);
       if (i >= 0) list.splice(i, 1);
     }
+    if (obj.far && this.world.farObjects) this.world.farObjects = this.world.farObjects.filter((o) => o !== obj);
     this.byId.delete(obj.id);
     this.count--;
     if (obj.enterable) { this.removeInterior(obj); this.stamp(obj, 0); }
@@ -180,7 +183,7 @@ export class ObjectIndex {
     for (let y = fp.y0; y < fp.y1; y++) {
       for (let x = fp.x0; x < fp.x1; x++) {
         if (y < 0 || y >= w.height) continue;
-        w.blocked[w.idx(x, y)] = v;
+        w.setBlocked(x, y, v);
       }
     }
   }
