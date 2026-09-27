@@ -450,14 +450,20 @@ const PAVING = /* glsl */`
     vec2 cob = paveCourse(p + vec2(0.13, 0.0), vec2(0.34, 0.27), 0.1);
     vec2 mar = paveCourse(p, vec2(1.6, 1.6), 0.0);
     vec2 s = (flag * kind.x + cob * kind.y + mar * kind.z) / max(tot, 0.001);
-    float gap = mix(0.035, 0.018, kind.z / max(tot, 0.001));
+    float polish = kind.z / max(tot, 0.001); // (marble is kept: no weeds in it)
+    // damp, little-trodden patches: the joints open up and grass takes them,
+    // and here and there a stone is gone and a tuft of grass fills the hole
+    float wild = smoothstep(0.5, 0.75, broad + (grain - 0.5) * 0.35) * (1.0 - polish * 0.85);
+    float gap = mix(0.035, 0.018, polish) * (1.0 + wild * 1.6);
     float joint = 1.0 - smoothstep(gap * 0.4, gap + fw * 0.5, s.y);
     // each stone a little lighter or darker (marble barely), a hint of wear in the middle
-    float shade = 0.9 + (s.x - 0.5) * mix(0.22, 0.08, kind.z / max(tot, 0.001)) + smoothstep(0.02, 0.2, s.y) * 0.05;
+    float shade = 0.9 + (s.x - 0.5) * mix(0.22, 0.08, polish) + smoothstep(0.02, 0.2, s.y) * 0.05;
     vec3 stone = base * shade;
+    vec3 grass = vec3(0.3, 0.45, 0.19) * (0.85 + grain * 0.3);
+    float gone = step(s.x, 0.16 * wild) * smoothstep(0.0, 0.06, s.y);
+    stone = mix(stone, grass, gone);
     // the joints: dark, and green with moss and grass where the ground is damp
-    float green = smoothstep(0.52, 0.72, broad + (grain - 0.5) * 0.3) * (1.0 - kind.z / max(tot, 0.001) * 0.8);
-    vec3 grout = mix(base * 0.55, vec3(0.32, 0.46, 0.2), green * 0.85);
+    vec3 grout = mix(base * 0.55, grass, min(1.0, wild * 1.3) * 0.9);
     vec3 paved = mix(stone, grout, joint);
     return mix(base, paved, fade * min(1.0, tot * 1.2));
   }
@@ -495,7 +501,7 @@ function terrainMaterial() {
           }
         }`);
   };
-  m.customProgramCacheKey = () => 'terrain-detail-paved';
+  m.customProgramCacheKey = () => 'terrain-detail-paved-2';
   return m;
 }
 

@@ -4910,14 +4910,20 @@ uniform float uWind;
     vec2 cob = paveCourse(p + vec2(0.13, 0.0), vec2(0.34, 0.27), 0.1);
     vec2 mar = paveCourse(p, vec2(1.6, 1.6), 0.0);
     vec2 s = (flag * kind.x + cob * kind.y + mar * kind.z) / max(tot, 0.001);
-    float gap = mix(0.035, 0.018, kind.z / max(tot, 0.001));
+    float polish = kind.z / max(tot, 0.001); // (marble is kept: no weeds in it)
+    // damp, little-trodden patches: the joints open up and grass takes them,
+    // and here and there a stone is gone and a tuft of grass fills the hole
+    float wild = smoothstep(0.5, 0.75, broad + (grain - 0.5) * 0.35) * (1.0 - polish * 0.85);
+    float gap = mix(0.035, 0.018, polish) * (1.0 + wild * 1.6);
     float joint = 1.0 - smoothstep(gap * 0.4, gap + fw * 0.5, s.y);
     // each stone a little lighter or darker (marble barely), a hint of wear in the middle
-    float shade = 0.9 + (s.x - 0.5) * mix(0.22, 0.08, kind.z / max(tot, 0.001)) + smoothstep(0.02, 0.2, s.y) * 0.05;
+    float shade = 0.9 + (s.x - 0.5) * mix(0.22, 0.08, polish) + smoothstep(0.02, 0.2, s.y) * 0.05;
     vec3 stone = base * shade;
+    vec3 grass = vec3(0.3, 0.45, 0.19) * (0.85 + grain * 0.3);
+    float gone = step(s.x, 0.16 * wild) * smoothstep(0.0, 0.06, s.y);
+    stone = mix(stone, grass, gone);
     // the joints: dark, and green with moss and grass where the ground is damp
-    float green = smoothstep(0.52, 0.72, broad + (grain - 0.5) * 0.3) * (1.0 - kind.z / max(tot, 0.001) * 0.8);
-    vec3 grout = mix(base * 0.55, vec3(0.32, 0.46, 0.2), green * 0.85);
+    vec3 grout = mix(base * 0.55, grass, min(1.0, wild * 1.3) * 0.9);
     vec3 paved = mix(stone, grout, joint);
     return mix(base, paved, fade * min(1.0, tot * 1.2));
   }
@@ -4956,7 +4962,7 @@ varying float vTerrainY;
             float c = causticNet(vTerrainXZ * 0.9 + vec2(uCTime * 0.05, uCTime * 0.03), uCTime * 1.2) * 0.7 + causticNet(vTerrainXZ * 1.45 - vec2(uCTime * 0.03, -uCTime * 0.05) + 3.1, uCTime * 1.6) * 0.45;
             diffuseColor.rgb += vec3(0.5, 0.85, 0.8) * c * 0.16 * exp(-dd * 0.08) * smoothstep(0.1, 0.8, vTerrainUp);
           }
-        }`)},t.customProgramCacheKey=()=>"terrain-detail-paved",t}function Bw(t,e,a,o,n,i,s=0){let r=t.length/2,l=new ks(e,a,o),h=l.attributes.position.array,d=l.attributes.normal.array,c=l.index.array,u=h.length/3,f=new Float32Array(r*h.length),p=new Float32Array(r*d.length),m=new Uint32Array(r*c.length);for(let g=0;g<r;g++){let w=t[g*2]+.5+s,k=t[g*2+1]+.5+s;for(let _=0;_<u;_++)f[(g*u+_)*3]=h[_*3]+w,f[(g*u+_)*3+1]=h[_*3+1]+n,f[(g*u+_)*3+2]=h[_*3+2]+k,p[(g*u+_)*3]=d[_*3],p[(g*u+_)*3+1]=d[_*3+1],p[(g*u+_)*3+2]=d[_*3+2];for(let _=0;_<c.length;_++)m[g*c.length+_]=c[_]+g*u}l.dispose();let y=new Xe;y.setAttribute("position",new vt(f,3)),y.setAttribute("normal",new vt(p,3)),y.setIndex(new vt(m,1)),y.computeBoundingSphere();let b=new Fe(y,i);return b.receiveShadow=!0,b}function Bq(t){let e=0;for(let m of t)e+=m[0].length/2;if(!e)return null;let a=new ks(1,1,1),o=a.attributes.position.array,n=a.attributes.normal.array,i=a.index.array,s=o.length/3,r=new Float32Array(e*s*3),l=new Float32Array(e*s*3),h=new Float32Array(e*s*3),d=new Uint32Array(e*i.length),c=new ke,u=0;for(let[m,y,b,g,w,k,_=0]of t){c.set(k);for(let x=0;x<m.length;x+=2,u++){let v=m[x]+.5+_,A=m[x+1]+.5+_;for(let E=0;E<s;E++){let M=(u*s+E)*3;r[M]=o[E*3]*y+v,r[M+1]=o[E*3+1]*b+w,r[M+2]=o[E*3+2]*g+A,l[M]=n[E*3],l[M+1]=n[E*3+1],l[M+2]=n[E*3+2],h[M]=c.r,h[M+1]=c.g,h[M+2]=c.b}for(let E=0;E<i.length;E++)d[u*i.length+E]=i[E]+u*s}}a.dispose();let f=new Xe;f.setAttribute("position",new vt(r,3)),f.setAttribute("normal",new vt(l,3)),f.setAttribute("color",new vt(h,3)),f.setAttribute("tint",new vt(new Float32Array(e*s),1)),f.setAttribute("glow",new vt(new Float32Array(e*s*4),4)),f.setIndex(new vt(d,1)),f.computeBoundingSphere();let p=new Fe(f,rn());return p.receiveShadow=!0,p}var UE=`
+        }`)},t.customProgramCacheKey=()=>"terrain-detail-paved-2",t}function Bw(t,e,a,o,n,i,s=0){let r=t.length/2,l=new ks(e,a,o),h=l.attributes.position.array,d=l.attributes.normal.array,c=l.index.array,u=h.length/3,f=new Float32Array(r*h.length),p=new Float32Array(r*d.length),m=new Uint32Array(r*c.length);for(let g=0;g<r;g++){let w=t[g*2]+.5+s,k=t[g*2+1]+.5+s;for(let _=0;_<u;_++)f[(g*u+_)*3]=h[_*3]+w,f[(g*u+_)*3+1]=h[_*3+1]+n,f[(g*u+_)*3+2]=h[_*3+2]+k,p[(g*u+_)*3]=d[_*3],p[(g*u+_)*3+1]=d[_*3+1],p[(g*u+_)*3+2]=d[_*3+2];for(let _=0;_<c.length;_++)m[g*c.length+_]=c[_]+g*u}l.dispose();let y=new Xe;y.setAttribute("position",new vt(f,3)),y.setAttribute("normal",new vt(p,3)),y.setIndex(new vt(m,1)),y.computeBoundingSphere();let b=new Fe(y,i);return b.receiveShadow=!0,b}function Bq(t){let e=0;for(let m of t)e+=m[0].length/2;if(!e)return null;let a=new ks(1,1,1),o=a.attributes.position.array,n=a.attributes.normal.array,i=a.index.array,s=o.length/3,r=new Float32Array(e*s*3),l=new Float32Array(e*s*3),h=new Float32Array(e*s*3),d=new Uint32Array(e*i.length),c=new ke,u=0;for(let[m,y,b,g,w,k,_=0]of t){c.set(k);for(let x=0;x<m.length;x+=2,u++){let v=m[x]+.5+_,A=m[x+1]+.5+_;for(let E=0;E<s;E++){let M=(u*s+E)*3;r[M]=o[E*3]*y+v,r[M+1]=o[E*3+1]*b+w,r[M+2]=o[E*3+2]*g+A,l[M]=n[E*3],l[M+1]=n[E*3+1],l[M+2]=n[E*3+2],h[M]=c.r,h[M+1]=c.g,h[M+2]=c.b}for(let E=0;E<i.length;E++)d[u*i.length+E]=i[E]+u*s}}a.dispose();let f=new Xe;f.setAttribute("position",new vt(r,3)),f.setAttribute("normal",new vt(l,3)),f.setAttribute("color",new vt(h,3)),f.setAttribute("tint",new vt(new Float32Array(e*s),1)),f.setAttribute("glow",new vt(new Float32Array(e*s*4),4)),f.setIndex(new vt(d,1)),f.computeBoundingSphere();let p=new Fe(f,rn());return p.receiveShadow=!0,p}var UE=`
   float sHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float sNoise(vec2 p) {
     vec2 i = floor(p), f = fract(p);
