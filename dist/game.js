@@ -34466,7 +34466,16 @@ void main() {
     for (const p of pads) {
       const dx = world.dx(p.cx, cx), dy = cy - p.cy;
       const along = dx * p.vx + dy * p.vy;
-      if (along > -0.01) continue;
+      if (along > -0.01) {
+        if (p.pierLen && along < p.pierLen) {
+          const side = Math.abs(dy * p.vx - dx * p.vy) - p.pierHalf;
+          if (side < 4) {
+            const cap = DOCK_Y - 0.45 + Math.max(0, side) * 0.8;
+            if (h2 > cap) h2 = cap;
+          }
+        }
+        continue;
+      }
       const across = Math.abs(dy * p.vx - dx * p.vy);
       const d = Math.hypot(Math.max(0, -p.depth - along), Math.max(0, across - p.halfW));
       const R3 = Math.min(p.r, 3 + Math.abs(h2 - DOCK_Y) * 0.8);
@@ -67559,8 +67568,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (!this.padIndex) {
         this.padIndex = /* @__PURE__ */ new Map();
         for (const p of this.dockPads) {
-          for (let y = Math.floor((p.y0 - p.r) / 32); y <= Math.floor((p.y1 + 1 + p.r) / 32); y++) {
-            for (let x = Math.floor((p.x0 - p.r) / 32); x <= Math.floor((p.x1 + 1 + p.r) / 32); x++) {
+          let X0 = p.x0 - p.r, X1 = p.x1 + 1 + p.r, Y0 = p.y0 - p.r, Y1 = p.y1 + 1 + p.r;
+          if (p.pierLen) {
+            const ex = p.cx + p.vx * p.pierLen, ey = p.cy + p.vy * p.pierLen, wd = p.pierHalf + 4;
+            X0 = Math.min(X0, ex - wd);
+            X1 = Math.max(X1, ex + wd);
+            Y0 = Math.min(Y0, ey - wd);
+            Y1 = Math.max(Y1, ey + wd);
+          }
+          for (let y = Math.floor(Y0 / 32); y <= Math.floor(Y1 / 32); y++) {
+            for (let x = Math.floor(X0 / 32); x <= Math.floor(X1 / 32); x++) {
               const k = y * 65536 + cell(x);
               let l = this.padIndex.get(k);
               if (!l) this.padIndex.set(k, l = []);
@@ -68969,7 +68986,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       let placed = false;
       for (let b = -hb; b <= hb; b++) {
         const { x, y } = at5(a, b);
-        if (!world.isLiquid(x, y) || world.isOverlay(x, y)) continue;
+        if (world.isOverlay(x, y)) continue;
+        if (!world.isLiquid(x, y)) {
+          const t = world.type(x, y);
+          if (world.isBlocked(x, y) || t === T.WALL || t === T.CLIFF || t === T.MOUNTAIN || world.elev(x, y) > 40) continue;
+        }
         world.setTile(x, y, T.PLANK, 0);
         world.markDock(x, y, { vx, vy, a, b, hb, head, last: a === L2 - 1, half: half2 });
         placed = true;
@@ -68996,6 +69017,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       depth: Q2,
       halfW: qh + 0.5,
       r: 7,
+      pierLen: L2 + 1,
+      pierHalf: headHalf + 0.5,
       x0: Math.min(at5(-Q2, -qh).x, at5(-1, qh).x),
       x1: Math.max(at5(-Q2, -qh).x, at5(-1, qh).x),
       y0: Math.min(at5(-Q2, -qh).y, at5(-1, qh).y),
@@ -69010,7 +69033,29 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     const end = at5(lastA, 0);
     const side = headHalf + 3;
-    const moor = { x: world.wx(end.x + 0.5 - vx + px2 * side), y: end.y + 0.5 - vy + py2 * side };
+    const berth = (sg, out = 0) => ({ x: world.wx(end.x + 0.5 - vx + px2 * side * sg + vx * out), y: end.y + 0.5 - vy + py2 * side * sg + vy * out });
+    const clearance = (m) => {
+      const mx = Math.floor(m.x), my = Math.floor(m.y);
+      if (!world.isLiquid(mx, my) || world.isOverlay(mx, my)) return 0;
+      for (let r = 1; r <= 8; r++) {
+        for (let k = -r; k <= r; k++) {
+          for (const [ax, ay] of [[mx + k, my - r], [mx + k, my + r], [mx - r, my + k], [mx + r, my + k]]) {
+            if (!world.isLiquid(ax, ay) || world.isOverlay(ax, ay)) return r;
+          }
+        }
+      }
+      return 9;
+    };
+    let moor = berth(1), room = clearance(moor);
+    for (const [sg, out] of [[-1, 0], [1, 2], [-1, 2], [0, 5], [1, 4], [-1, 4], [0, 8], [0, 11]]) {
+      if (room >= 5) break;
+      const m = sg ? berth(sg, out) : { x: world.wx(end.x + 0.5 + vx * out), y: end.y + 0.5 + vy * out };
+      const c = clearance(m);
+      if (c > room) {
+        room = c;
+        moor = m;
+      }
+    }
     const land = at5(-Q2 - 2, 0);
     const tip = at5(lastA, headHalf);
     placeObject(world, { kind: "mooring", x: tip.x + 0.5, y: tip.y + 0.5, block: false });

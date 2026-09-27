@@ -434,7 +434,12 @@ function buildDock(world, from, dir, len, rec, dd) {
     let placed = false;
     for (let b = -hb; b <= hb; b++) {
       const { x, y } = at(a, b);
-      if (!world.isLiquid(x, y) || world.isOverlay(x, y)) continue;
+      if (world.isOverlay(x, y)) continue;
+      // (a sandbar in the way is decked over too, rather than leaving a hole in the pier)
+      if (!world.isLiquid(x, y)) {
+        const t = world.type(x, y);
+        if (world.isBlocked(x, y) || t === T.WALL || t === T.CLIFF || t === T.MOUNTAIN || world.elev(x, y) > 40) continue;
+      }
       world.setTile(x, y, T.PLANK, 0);
       world.markDock(x, y, { vx, vy, a, b, hb, head, last: a === L - 1, half });
       placed = true;
@@ -458,7 +463,7 @@ function buildDock(world, from, dir, len, rec, dd) {
   }
   world.dockPads.push({
     // the middle of its front edge (tile corners), which way the sea lies, its size, and how far the ground ramps
-    cx: best.x + 0.5 - vx * 0.5, cy: best.y + 0.5 - vy * 0.5, vx, vy, depth: Q, halfW: qh + 0.5, r: 7,
+    cx: best.x + 0.5 - vx * 0.5, cy: best.y + 0.5 - vy * 0.5, vx, vy, depth: Q, halfW: qh + 0.5, r: 7, pierLen: L + 1, pierHalf: headHalf + 0.5,
     x0: Math.min(at(-Q, -qh).x, at(-1, qh).x), x1: Math.max(at(-Q, -qh).x, at(-1, qh).x),
     y0: Math.min(at(-Q, -qh).y, at(-1, qh).y), y1: Math.max(at(-Q, -qh).y, at(-1, qh).y),
   });
@@ -472,7 +477,29 @@ function buildDock(world, from, dir, len, rec, dd) {
   }
   const end = at(lastA, 0);
   const side = headHalf + 3;
-  const moor = { x: world.wx(end.x + 0.5 - vx + px * side), y: end.y + 0.5 - vy + py * side };
+  // ships berth beside the head, on whichever side has the deeper water
+  // (open water: well away from any shore, or a ship would sit on the bottom)
+  const berth = (sg, out = 0) => ({ x: world.wx(end.x + 0.5 - vx + px * side * sg + vx * out), y: end.y + 0.5 - vy + py * side * sg + vy * out });
+  // (how far to the nearest land or pier, up to 8 tiles: the coast's distance field isn't made yet)
+  const clearance = (m) => {
+    const mx = Math.floor(m.x), my = Math.floor(m.y);
+    if (!world.isLiquid(mx, my) || world.isOverlay(mx, my)) return 0;
+    for (let r = 1; r <= 8; r++) {
+      for (let k = -r; k <= r; k++) {
+        for (const [ax, ay] of [[mx + k, my - r], [mx + k, my + r], [mx - r, my + k], [mx + r, my + k]]) {
+          if (!world.isLiquid(ax, ay) || world.isOverlay(ax, ay)) return r;
+        }
+      }
+    }
+    return 9;
+  };
+  let moor = berth(1), room = clearance(moor);
+  for (const [sg, out] of [[-1, 0], [1, 2], [-1, 2], [0, 5], [1, 4], [-1, 4], [0, 8], [0, 11]]) {
+    if (room >= 5) break;
+    const m = sg ? berth(sg, out) : { x: world.wx(end.x + 0.5 + vx * out), y: end.y + 0.5 + vy * out };
+    const c = clearance(m);
+    if (c > room) { room = c; moor = m; }
+  }
   const land = at(-Q - 2, 0);
   const tip = at(lastA, headHalf);
   placeObject(world, { kind: 'mooring', x: tip.x + 0.5, y: tip.y + 0.5, block: false });

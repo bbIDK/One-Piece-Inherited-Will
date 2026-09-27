@@ -81,8 +81,14 @@ export class World {
     if (!this.padIndex) {
       this.padIndex = new Map();
       for (const p of this.dockPads) {
-        for (let y = Math.floor((p.y0 - p.r) / 32); y <= Math.floor((p.y1 + 1 + p.r) / 32); y++) {
-          for (let x = Math.floor((p.x0 - p.r) / 32); x <= Math.floor((p.x1 + 1 + p.r) / 32); x++) {
+        // the quay and its ramps, and the pier running out from it (the ground beside it is cut down)
+        let X0 = p.x0 - p.r, X1 = p.x1 + 1 + p.r, Y0 = p.y0 - p.r, Y1 = p.y1 + 1 + p.r;
+        if (p.pierLen) {
+          const ex = p.cx + p.vx * p.pierLen, ey = p.cy + p.vy * p.pierLen, wd = p.pierHalf + 4;
+          X0 = Math.min(X0, ex - wd); X1 = Math.max(X1, ex + wd); Y0 = Math.min(Y0, ey - wd); Y1 = Math.max(Y1, ey + wd);
+        }
+        for (let y = Math.floor(Y0 / 32); y <= Math.floor(Y1 / 32); y++) {
+          for (let x = Math.floor(X0 / 32); x <= Math.floor(X1 / 32); x++) {
             const k = y * 65536 + cell(x);
             let l = this.padIndex.get(k);
             if (!l) this.padIndex.set(k, (l = []));

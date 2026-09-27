@@ -107,7 +107,19 @@ function quayRamp(world, cx, cy, h, pads) {
   for (const p of pads) {
     const dx = world.dx(p.cx, cx), dy = cy - p.cy;
     const along = dx * p.vx + dy * p.vy; // + out to sea
-    if (along > -0.01) continue;
+    if (along > -0.01) {
+      // alongside the pier out over the water: no bank of sand standing
+      // higher than the deck (it would bulge up through it) — the ground is
+      // cut down beside it and rises gently back to the beach
+      if (p.pierLen && along < p.pierLen) {
+        const side = Math.abs(dy * p.vx - dx * p.vy) - p.pierHalf;
+        if (side < 4) {
+          const cap = DOCK_Y - 0.45 + Math.max(0, side) * 0.8;
+          if (h > cap) h = cap;
+        }
+      }
+      continue;
+    }
     const across = Math.abs(dy * p.vx - dx * p.vy);
     const d = Math.hypot(Math.max(0, -p.depth - along), Math.max(0, across - p.halfW));
     // (the further the ground has to come down (or up) to the quay, the longer the ramp)
