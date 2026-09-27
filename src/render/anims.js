@@ -570,7 +570,8 @@ function activityPose(P, act, t) {
  *   dive: underwater breaststroke (both arms sweep, a frog kick), tipping with the dive
  *   float: hanging in the water, slow sculling
  *   fish: a Fish-Man's dolphin kick, arms along the sides, fast and smooth
- *   struggle: a Devil Fruit user going under, arms flailing
+ *   struggle: a Devil Fruit user thrashing to keep their head up
+ *   sink: a Devil Fruit user whose strength has gone, limp and going down
  */
 function swimPose(P, kind, t, dir) {
   P.wF = null; P.wB = null; P.b = [0, 0]; P.l = 0;
@@ -621,6 +622,16 @@ function swimPose(P, kind, t, dir) {
       P.hand = 'palm'; P.handB = 'palm'; P.eF = 0.4; P.eB = 0.4;
       P.fF = [0.12 * Math.sin(w * 0.8), -0.12 * Math.max(0, Math.cos(w * 0.8))]; P.fB = [-0.12 * Math.sin(w * 0.8), -0.12 * Math.max(0, -Math.cos(w * 0.8))];
       P.ht = -0.28; P.r = -0.08; P.face = 'hurt';
+      break;
+    }
+    case 'sink': {
+      // a Devil Fruit user with no strength left: limp, going down feet first,
+      // the arms trailing up above the head in the water, head lolling
+      const w = t * 1.2, s = Math.sin(w);
+      P.hF = [0.12 + 0.04 * s, -0.36 + 0.05 * Math.cos(w)]; P.hB = [0.06 - 0.04 * s, -0.32 - 0.05 * Math.cos(w)];
+      P.hand = 'relaxed'; P.handB = 'relaxed'; P.eF = 0.3; P.eB = 0.3;
+      P.fF = [0.05 + 0.02 * s, -0.06]; P.fB = [-0.04 - 0.02 * s, -0.1];
+      P.ht = -0.22 + 0.04 * s; P.r = -0.12; P.face = 'hurt';
       break;
     }
     default: { // tread

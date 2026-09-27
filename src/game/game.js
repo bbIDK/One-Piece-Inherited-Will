@@ -292,7 +292,7 @@ export class Game {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, r.canvas.width, r.canvas.height);
     const proj = v.proj;
-    try { this.fx.draw(g, proj); } catch (e) { /* effects that don't project yet */ }
+    try { this.fx.draw(g, proj); } catch (e) { if (!this._fxWarned) { this._fxWarned = true; console.warn('fx.draw', e?.stack || e); } }
     g.setTransform(1, 0, 0, 1, 0, 0);
     this.drawWeather(g, r);
     try { this.fx.drawScreen(g, proj); } catch (e) { /* ignore */ }

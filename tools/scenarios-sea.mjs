@@ -35,6 +35,86 @@ export const scenarios = {
       }
     },
   },
+  // Drowning: a swimmer holds their breath at depth until it runs out (losing
+  // health, not sinking), swims up and gasps; worn out at the surface they only
+  // slow down. A Devil Fruit user thrashes at the surface until their stamina
+  // is gone, then sinks and drowns.
+  drown: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => {
+        window.OP.quickStart('human');
+        const g = window.OP.game, w = g.world;
+        g.env.clock = 11; g.env.storm = 0; g.env.fog = 0;
+        g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings();
+        const isl = w.islands.find((i) => i.id === 'dawn_island');
+        let spot = null;
+        for (let k = 0; k < 720 && !spot; k++) {
+          const a = k / 720 * Math.PI * 2;
+          for (let r = isl.radius; r < isl.radius * 2.5 && !spot; r += 2) {
+            const x = isl.x + Math.cos(a) * r, y = isl.y + Math.sin(a) * r;
+            if (w.type(x, y) === 0 && g.seaDepth(x, y) > 14) spot = { x, y };
+          }
+        }
+        window.spot = spot;
+        window.OP.teleport(spot.x, spot.y);
+        const st = document.createElement('style');
+        st.textContent = '.look-hint,.hint{display:none!important}';
+        document.head.appendChild(st);
+      });
+      await step(page, 0.5);
+      const rec = () => page.evaluate(() => { const p = window.OP.game.player; return { t: +window.OP.game.time.toFixed(1), depth: +p.depth.toFixed(2), o2: +(p.oxygen ?? -1).toFixed(1), hp: Math.round(p.hp), st: Math.round(p.stamina), under: p.under, sink: !!p.sinking, state: p.state }; });
+      const log = [];
+      // dive for 5 s, then hang there
+      await page.evaluate(() => window.OP.key('C', true));
+      await step(page, 5);
+      await page.evaluate(() => window.OP.key('C', false));
+      log.push(['dived', await rec()]);
+      for (let i = 0; i < 14; i++) { await step(page, 2); log.push(['hold', await rec()]); if ((await rec()).o2 <= 0) break; }
+      await step(page, 3);
+      log.push(['breathless 3s', await rec()]);
+      await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = 0.6; v.rig.pitch = -0.1; v.rig.tp.dist = 3.4; });
+      await frames(page, 3);
+      await snap('breathless');
+      await page.evaluate(() => window.OP.key('Space', true));
+      for (let i = 0; i < 8; i++) { await step(page, 1); const r = await rec(); log.push(['rise', r]); if (!r.under) break; }
+      await page.evaluate(() => window.OP.key('Space', false));
+      await step(page, 1.5);
+      log.push(['surfaced', await rec()]);
+      // worn out at the surface: swim on with no stamina (it should only slow you)
+      await page.evaluate(() => { const p = window.OP.game.player; p.stamina = 0; p.hp = p.d.maxHp; window.OP.key('W', true); });
+      const x0 = await page.evaluate(() => window.OP.game.player.x);
+      await step(page, 4);
+      const x1 = await page.evaluate(() => window.OP.game.player.x);
+      await page.evaluate(() => window.OP.key('W', false));
+      log.push(['tired swim 4s', { ...(await rec()), moved: +Math.abs(x1 - x0).toFixed(2) }]);
+      // a Devil Fruit user
+      await page.evaluate(() => {
+        const g = window.OP.game, p = g.player;
+        p.leaveWater(g); p.buffs = []; p.recalc();
+        g.state.char.fruit = 'gomu'; p.fruit = 'gomu';
+        p.hp = p.d.maxHp; p.stamina = p.d.maxStamina; p.oxygen = p.maxOxygen;
+        window.OP.teleport(window.spot.x + 3, window.spot.y);
+        p.forcedWater = 0;
+      });
+      await step(page, 1);
+      log.push(['df in', await rec()]);
+      await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = 0.6; v.rig.pitch = -0.2; v.rig.tp.dist = 3.6; });
+      await frames(page, 3);
+      await snap('df-thrash');
+      for (let i = 0; i < 12; i++) { await step(page, 1); const r = await rec(); log.push(['df', r]); if (r.sink) break; }
+      await step(page, 2.5);
+      log.push(['df sinking', await rec()]);
+      await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = 0.6; v.rig.pitch = 0.05; v.rig.tp.dist = 3.6; });
+      await frames(page, 3);
+      await snap('df-sink');
+      for (let i = 0; i < 30; i++) { await step(page, 1); const r = await rec(); log.push(['df', r]); if (r.state !== 'idle') break; }
+      await step(page, 1);
+      log.push(['df end', await rec()]);
+      for (const [k, v] of log) console.log(k.padEnd(14), JSON.stringify(v));
+    },
+  },
   // Wading in the shallows, leaping out of the sea (rings on the water), and a
   // charged jump on the beach — third person, from the side.
   waterjump: {

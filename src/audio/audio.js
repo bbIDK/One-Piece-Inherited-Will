@@ -74,7 +74,7 @@ export class Audio {
     if (!this.ctx || this.ctx.state !== 'running') { if (this.ctx) this.ctx.resume(); return; }
     const t = this.ctx.currentTime;
     // rate-limit spammy sounds
-    const lim = { punch: 0.04, slash_hit: 0.04, block: 0.05, whoosh: 0.05, splash: 0.2, thunder_small: 0.15, coin: 0.05 }[name] ?? 0.02;
+    const lim = { punch: 0.04, slash_hit: 0.04, block: 0.05, whoosh: 0.05, splash: 0.2, splash_big: 0.3, wade: 0.2, choke: 0.5, gasp: 1, thunder_small: 0.15, coin: 0.05 }[name] ?? 0.02;
     if (this.last[name] && t - this.last[name] < lim) return;
     this.last[name] = t;
     const r = () => 0.9 + Math.random() * 0.2;
@@ -91,6 +91,16 @@ export class Audio {
       case 'getup': [392, 523, 659].forEach((f, i) => this.tone(t + i * 0.08, 0.25, { freq: f, type: 'square', gain: 0.1 })); break;
       case 'death': [330, 311, 294, 220].forEach((f, i) => this.tone(t + i * 0.25, 0.5, { freq: f, type: 'triangle', gain: 0.18 })); break;
       case 'splash': this.noise(t, 0.4, { freq: 700, q: 0.5, gain: 0.3, type: 'lowpass', sweep: 200 }); break;
+      case 'splash_big': this.noise(t, 0.75, { freq: 950, q: 0.4, gain: 0.45, type: 'lowpass', sweep: 140 }); this.tone(t, 0.3, { freq: 90, to: 42, gain: 0.3 }); this.noise(t + 0.05, 0.4, { freq: 2600, q: 0.6, gain: 0.1, sweep: 900 }); break;
+      case 'splash_out': this.noise(t, 0.35, { freq: 1300, q: 0.5, gain: 0.26, sweep: 420 }); this.tone(t + 0.04, 0.12, { freq: 300, to: 620, gain: 0.08 }); break;
+      case 'wade': this.noise(t, 0.2, { freq: 1400 * r(), q: 0.8, gain: 0.06, sweep: 600 }); break;
+      case 'jump': this.noise(t, 0.12, { freq: 1100 * r(), q: 0.7, gain: 0.08, sweep: 2400 }); break;
+      case 'jump_big': this.tone(t, 0.18, { freq: 120, to: 60, gain: 0.25 }); this.noise(t, 0.32, { freq: 900, q: 0.6, gain: 0.15, sweep: 3200 }); break;
+      case 'land_heavy': this.noise(t, 0.18, { freq: 260, gain: 0.45, type: 'lowpass' }); this.tone(t, 0.16, { freq: 110, to: 48, gain: 0.35 }); break;
+      // breaking the surface out of breath: a long gulp of air
+      case 'gasp': this.noise(t, 0.5, { freq: 800, q: 0.9, gain: 0.2, attack: 0.1, sweep: 2300 }); this.noise(t + 0.55, 0.3, { freq: 600, q: 0.7, gain: 0.08, attack: 0.05, sweep: 300 }); break;
+      // out of air under water: the last bubbles gurgling out
+      case 'choke': for (let i = 0; i < 5; i++) this.tone(t + i * 0.07 * r(), 0.08, { freq: 170 + Math.random() * 140, to: 420 + Math.random() * 200, gain: 0.13 }); this.noise(t, 0.35, { freq: 380, gain: 0.12, type: 'lowpass' }); break;
       case 'cannon': this.tone(t, 0.5, { freq: 90, to: 35, type: 'sine', gain: 0.8 }); this.noise(t, 0.6, { freq: 400, gain: 0.6, type: 'lowpass', sweep: 80 }); break;
       case 'explosion': this.tone(t, 0.7, { freq: 70, to: 30, type: 'sine', gain: 0.8 }); this.noise(t, 0.9, { freq: 800, gain: 0.7, type: 'lowpass', sweep: 60 }); break;
       case 'crash': this.noise(t, 0.5, { freq: 300, gain: 0.6, type: 'lowpass' }); this.tone(t, 0.3, { freq: 100, to: 50, gain: 0.4 }); break;

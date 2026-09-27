@@ -134,7 +134,7 @@ export class Actor extends Entity {
   leaveWater(game, out = false) {
     const df = !!this.fruit && !this.gills;
     this.inWater = false;
-    this.depth = 0; this.under = false; this.drownT = 0;
+    this.depth = 0; this.under = false; this.drownT = 0; this.sinking = false; this.lowAir = false;
     if (df && this.state === 'idle') {
       this.addBuff({ id: 'drenched', name: 'Drenched', dur: 16, mods: { speedMul: 0.7, damage: 0.75 } });
       if (this.isPlayer) game.log(out ? 'Drenched in seawater — your body feels heavy and weak.' : 'Hauled out of the sea, dripping and weak.', '#81d4fa');
@@ -656,7 +656,10 @@ export class Actor extends Entity {
     if (!knocked) {
       const i = this.intent;
       let sp = this.d.speed * (w.speedAt(this.x, this.y - 0.1) || 1);
-      if (this.inWater) sp *= this.fruit && !this.gills ? 0.12 : 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1);
+      if (this.inWater) {
+        if (this.fruit && !this.gills) sp *= this.sinking ? 0.03 : 0.2;
+        else sp *= 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1) * (!this.gills && this.stamina <= 0.5 ? 0.45 : 1);
+      }
       else if (this.wading) sp *= 1 - 0.42 * clamp(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);
       if (this.charging) sp *= 1 - 0.75 * this.charging;
       if (i.sprint && this.stamina > 1 && (!this.inWater || this.gills)) { sp *= this.inWater ? 1.35 : 1.55; if (!this.inWater) this.stamina -= 9 * dt; }
@@ -705,7 +708,13 @@ export class Actor extends Entity {
   /** Standing on a ship's deck? (Stepping off it over the rail drops you to the water.) */
   updateDeck(game) {
     const was = this.deck;
-    const dk = game.deckAt && game.ships.length ? game.deckAt(this.x, this.y, was ? 0 : 0.1) : null;
+    let dk = game.deckAt && game.ships.length ? game.deckAt(this.x, this.y, was ? 0 : 0.1) : null;
+    // a hull running over a swimmer doesn't scoop them up onto its deck: it
+    // passes overhead of a diver, and shoves someone at the surface aside
+    if (dk && !was && this.inWater) {
+      if (!this.under) this.shoveFromHull(game, dk.ship);
+      dk = null;
+    }
     if (dk && was && dk.ship === was.ship) {
       // off the edge of an upper deck: drop to the one below (stairs are gentler than this)
       const drop = was.h - dk.h;
@@ -725,6 +734,22 @@ export class Actor extends Entity {
       (dk.ship.aboard || (dk.ship.aboard = new Set())).add(this);
     }
     this.deck = dk;
+  }
+
+  /** Pushed out sideways from under a ship's hull, with a splash. */
+  shoveFromHull(game, ship) {
+    const w = game.world;
+    const hx = Math.cos(ship.heading), hy = Math.sin(ship.heading);
+    const dx = w.dx(ship.x, this.x), dy = this.y - ship.y;
+    const side = dx * -hy + dy * hx >= 0 ? 1 : -1;
+    const nx = -hy * side, ny = hx * side;
+    for (let k = 0; k < 48; k++) {
+      this.x = w.wx(this.x + nx * 0.25); this.y += ny * 0.25;
+      if (!game.deckAt(this.x, this.y, 0.35)) break;
+    }
+    this.kb.x += nx * 2.5; this.kb.y += ny * 2.5;
+    game.fx.ripple?.(this.x, this.y, 0.9);
+    if (this.isPlayer) game.audio?.sfx('splash');
   }
 
   updateWater(dt, game) {
@@ -752,6 +777,8 @@ export class Actor extends Entity {
       }
       this.depth = this.plunge || 0;
       this.plunge = 0;
+      this.sinking = false;
+      if (df && this.isPlayer) game.log("A Devil Fruit user can't swim! Get out before your strength gives out!", '#ff8a80');
       if (this.fruit) { this.armament = this.armament && this.hakiUnlocked(); this.buffs = this.buffs.filter((b) => !b.source || !getAbility(b.source)?.source?.startsWith('fruit')); this.recalc(); }
     }
     // swimming at the surface leaves a ring now and then
@@ -762,41 +789,68 @@ export class Actor extends Entity {
     if (!this.inWater && was) this.leaveWater(game, true);
     if (this.inWater) {
       if (t === T.LAVA) { this.takeDamage(this.d.maxHp * 0.25 * dt, null, { element: 'fire' }, game); }
-      // up and down: dive (intent.mz < 0), rise (> 0); air floats you up, a Devil Fruit user sinks
+      // up and down: dive (intent.mz < 0) and rise (> 0). Left alone you drift
+      // slowly up — barely at all once your lungs are empty, so swim for it.
       const floor = game.seaDepth ? game.seaDepth(this.x, this.y) : 3;
       const bottom = Math.max(0, floor - 0.45);
       const iz = this.intent.mz || 0;
-      // out of stamina and still swimming: you go under, and the sea starts to take you
-      // (stop and tread water to get your breath back)
-      const spent = !df && !this.gills && this.stamina <= 0.5 && (this.moving || iz);
-      let vz;
-      if (df) vz = 0.9;
-      else if (spent) vz = 0.8;
-      else if (iz) vz = -iz * (this.gills ? 3.4 : 1.7);
-      else vz = this.depth > 0.05 && !this.gills ? -0.5 : 0;
-      this.depth = clamp(this.depth + vz * dt, 0, bottom);
-      if (spent) {
-        this.hp -= this.d.maxHp * 0.05 * dt;
-        if (this.isPlayer && !this.spentHint) { this.spentHint = true; game.log('Exhausted! Stop swimming and tread water to get your strength back.', '#ff8a80'); }
-        if (this.hp <= 0) { this.hp = 0; this.drowned = true; this.knockOut(game, null); }
-      } else if (this.stamina > this.d.maxStamina * 0.5) this.spentHint = false;
-      this.under = this.depth > 0.35;
-      // breath
       const maxO2 = this.maxOxygen;
       if (this.oxygen == null || this.oxygen > maxO2) this.oxygen = maxO2;
+      const breathless = !this.gills && this.oxygen <= 0;
+      // A Devil Fruit user can't swim: they thrash to keep their head up while
+      // their strength lasts, then the sea takes it and down they go.
+      if (df && !this.sinking && this.stamina <= 0.5) {
+        this.sinking = true;
+        if (this.isPlayer) game.log('Your strength is gone... the sea is dragging you down!', '#ff8a80');
+      }
+      // (a swimmer who's worn out just slows to a paddle: tread water to rest)
+      const tired = !df && !this.gills && this.stamina <= 0.5;
+      let vz;
+      if (df) vz = this.sinking ? 1.15 : this.depth > 0.02 ? -0.6 : 0;
+      else if (iz) vz = -iz * (this.gills ? 3.4 : tired ? 0.9 : 1.7);
+      else vz = this.depth > 0.05 && !this.gills ? -(breathless ? 0.12 : 0.35) : 0;
+      this.depth = clamp(this.depth + vz * dt, 0, bottom);
+      if (tired && (this.moving || iz)) {
+        if (this.isPlayer && !this.spentHint) { this.spentHint = true; game.log('Exhausted! Stop and tread water at the surface to get your strength back.', '#ff8a80'); }
+      } else if (this.stamina > this.d.maxStamina * 0.5) this.spentHint = false;
+      if (df && !this.sinking) this.stamina = Math.max(0, this.stamina - 14 * dt);
+      this.under = this.depth > 0.35;
+      // breath: held under water (the sea takes a Devil Fruit user's faster),
+      // and back in a few gulps at the surface
       if (!this.gills) {
-        if (this.under) this.oxygen = Math.max(0, this.oxygen - dt * (df ? 2.6 : 1));
-        else this.oxygen = Math.min(maxO2, this.oxygen + dt * 9);
+        if (this.under) {
+          this.oxygen = Math.max(0, this.oxygen - dt * (df ? 2.2 : 1) * (this.moving || iz ? 1.2 : 1));
+          if (this.oxygen < maxO2 * 0.3) this.lowAir = true;
+        } else {
+          if (this.lowAir) {
+            // breaking the surface after too long down there: a big gasp
+            this.lowAir = false;
+            game.fx.burst(this.x, this.y, 8, { color: ['#e1f5fe', '#b3e5fc'], speed: 1.6, vz: 2.2, g: 9, life: 0.45, size: 0.09 });
+            game.fx.ripple?.(this.x, this.y, 0.7);
+            if (this.isPlayer) game.audio?.sfx('gasp');
+          }
+          this.oxygen = Math.min(maxO2, this.oxygen + dt * 9);
+        }
       }
-      if (df) {
-        this.stamina = Math.max(0, this.stamina - 30 * dt);
+      // out of air: your lungs burn, and you lose health (faster the longer it
+      // goes on) until you reach the surface
+      if (breathless && this.under) {
         this.drownT += dt;
-      } else this.drownT = Math.max(0, this.drownT - dt);
-      // out of air: drowning (faster for a Devil Fruit user)
-      if (!this.gills && this.oxygen <= 0) {
-        this.hp -= this.d.maxHp * (df ? 0.16 : 0.08) * dt;
+        const rate = (df ? 0.12 : 0.06) + Math.min(0.12, this.drownT * 0.012);
+        this.hp -= this.d.maxHp * rate * dt;
+        this.chokeT = (this.chokeT ?? 0) - dt;
+        if (this.chokeT <= 0) {
+          this.chokeT = 1.2;
+          // the last of your air, bubbling out
+          for (let i = 0; i < 7; i++) game.fx.particle({ x: this.x + (Math.random() - 0.5) * 0.25, y: this.y, z: 0.25, vx: (Math.random() - 0.5) * 0.4, vy: 0, vz: 1.4 + Math.random(), g: -0.8, life: 0.9, size: 0.06 + Math.random() * 0.06, color: '#e1f5fe', kind: 'bubble', under: this.depth });
+          if (this.isPlayer) { game.audio?.sfx('choke'); game.fx.shake(0.06); }
+        }
+        if (this.isPlayer && !this.drownHint) {
+          this.drownHint = true;
+          game.log(df ? "Out of air — and a Devil Fruit user can't swim..." : 'Out of air! Swim for the surface (hold Space)!', '#ff8a80');
+        }
         if (this.hp <= 0) { this.hp = 0; this.drowned = true; this.knockOut(game, null); }
-      }
+      } else { this.drownT = 0; this.drownHint = false; }
       if (this.under && Math.random() < dt * (this.gills ? 1.5 : 4)) game.fx.particle({ x: this.x + (Math.random() - 0.5) * 0.3, y: this.y, z: 0.2, vx: 0, vy: 0, vz: 1.2, g: -0.6, life: 0.7, size: 0.07, color: '#e1f5fe', kind: 'bubble', under: this.depth });
     } else {
       this.drownT = 0;
@@ -835,7 +889,7 @@ export class Actor extends Entity {
     const busy = this.act3d && !act && !combat && !this.moving && this.state === 'idle' ? this.act3d : null;
     // how you're swimming: treading water, front crawl, diving (breaststroke), a Fish-Man's dolphin kick, sinking
     const swim = !this.inWater ? null
-      : this.fruit && !this.gills ? 'struggle'
+      : this.fruit && !this.gills ? (this.sinking ? 'sink' : 'struggle')
         : this.gills && (this.moving || this.under) ? 'fish'
           : this.under ? (this.moving || this.intent.mz ? 'dive' : 'float')
             : this.moving ? 'crawl' : 'tread';

@@ -195,7 +195,7 @@ export class LivesSystem {
     p.buffs = [];
     p.recalc();
     p.iframes = 3;
-    p.drowned = false;
+    p.drowned = false; p.sinking = false; p.lowAir = false; p.oxygen = p.maxOxygen;
     p.getUpCharges = c.getUpCharges = 1 + (p.attrs.wil >= 40 ? 1 : 0);
     c.flags.dLuckUsed = false;
     g.env.clock += 10;

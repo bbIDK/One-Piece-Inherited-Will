@@ -9,7 +9,7 @@ import { TAU } from '../core/math.js';
 import { drawShapeLayer, hasLayer } from '../render/fxshapes.js';
 import { starPath } from '../render/character.js';
 import * as CFX from '../render/combatfx.js';
-import { drawShapes3d, drawParticles3d, textPlace3d, drawFirstPerson } from '../render/fx3d.js';
+import { drawShapes3d, drawParticles3d, textPlace3d, drawFirstPerson, drawScreen3d } from '../render/fx3d.js';
 
 const NUMERIC = /^[+-]?\d[\d,.]*$/;
 const glowCache = new Map();
@@ -555,6 +555,7 @@ export class FX {
   /** Screen-space post effects (impact frames, flashes, slow-mo vignette, focus lines). */
   drawScreen(g, r) {
     const W = r.canvas.width, H = r.canvas.height;
+    if (r.is3d) { try { drawScreen3d(this, g, r); } catch (e) { /* ignore */ } g.setTransform(1, 0, 0, 1, 0, 0); }
     const fp = this.focusT > 0 ? (r.is3d ? r.project(this.focusX, this.focusY, 0.9) : r.toScreen(this.game.world, this.focusX, this.focusY - 0.8)) : null;
     if (fp && fp[0] > -9000) {
       const [fx, fy] = fp;

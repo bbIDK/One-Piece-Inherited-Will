@@ -650,6 +650,42 @@ function dashLines(fx, g, r, p) {
   g.globalAlpha = 1;
 }
 
+/**
+ * Running out of breath under water: the view closes in, dark and throbbing
+ * with your heartbeat, darker still once your lungs are empty (both views).
+ */
+function breath(fx, g, r, p) {
+  const o2max = p.maxOxygen;
+  if (!(p.inWater && p.under && !p.gills && Number.isFinite(o2max) && p.oxygen != null)) return;
+  const f = p.oxygen / o2max;
+  const out = p.oxygen <= 0;
+  const k = out ? 0.6 + Math.min(0.35, 0.08 + (p.drownT || 0) * 0.05) : f < 0.3 ? (0.3 - f) / 0.3 * 0.5 : 0;
+  if (k <= 0.01) return;
+  const W = r.cw * r.dpr, H = r.ch * r.dpr;
+  const beat = Math.pow(Math.abs(Math.sin(fx.time * (2.4 + k * 2.2))), 10);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1;
+  const inner = Math.min(W, H) * Math.max(0.06, 0.5 - k * 0.44), outer = Math.hypot(W, H) * 0.55;
+  const gr = g.createRadialGradient(W / 2, H / 2, inner, W / 2, H / 2, outer);
+  gr.addColorStop(0, 'rgba(1,6,16,0)');
+  gr.addColorStop(0.55, `rgba(1,6,16,${Math.min(0.9, k * 0.8 * (0.85 + 0.3 * beat))})`);
+  gr.addColorStop(1, `rgba(1,6,16,${Math.min(0.98, k * 1.3 * (0.85 + 0.3 * beat))})`);
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  if (out) {
+    // your heartbeat, pounding red at the edges
+    const rg = g.createRadialGradient(W / 2, H / 2, inner * 0.8, W / 2, H / 2, outer);
+    rg.addColorStop(0, 'rgba(150,0,10,0)'); rg.addColorStop(1, `rgba(150,0,10,${0.1 + 0.3 * beat})`);
+    g.fillStyle = rg; g.fillRect(0, 0, W, H);
+  }
+}
+
+/** Screen-space extras for the player in either view. */
+export function drawScreen3d(fx, g, r) {
+  const p = fx.game.player;
+  if (!p || p.mode === 'sail') return;
+  breath(fx, g, r, p);
+}
+
 /** Screen-space extras that only make sense from behind the player's eyes. */
 export function drawFirstPerson(fx, g, r) {
   const p = fx.game.player;
