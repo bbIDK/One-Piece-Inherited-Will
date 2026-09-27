@@ -56,6 +56,7 @@ export class FX {
     this.game = game;
     this.parts = [];
     this.texts = [];
+    this.ripples = []; // new rings on the water, picked up by the 3D view
     this.shapes = []; // rings, smears, beams, bolts, telegraphs, zones, afterimages...
     this.trauma = 0;
     this.hitstop = 0;
@@ -238,6 +239,8 @@ export class FX {
     return s;
   }
   ring(x, y, r0, r1, color, life = 0.4, width = 0.15, o = {}) { return this.add('ring', { x, y, r0, r1, color, life, width, ...o }); }
+  /** A ring spreading on the water's surface at (x, y) (drawn by the 3D view: render3d/ripples3d.js). */
+  ripple(x, y, size = 1, strength = 1) { this.ripples.push({ x, y, size, strength }); if (this.ripples.length > 40) this.ripples.shift(); }
   slash(x, y, angle, radius, arc, color = '#fff', life = 0.18, width = 0.25) { return this.add('slash', { x, y, angle, radius, arc, color, life, width }); }
   beam(x, y, angle, length, width, color, life = 0.25, core = '#fff', o = {}) { return this.add('beam', { x, y, angle, length, width, color, core, life, ...o }); }
   bolt(x0, y0, x1, y1, color = '#fff176', life = 0.2, width = 0.08, o = {}) { return this.add('bolt', { x: x0, y: y0, x0, y0, x1, y1, color, life, width, ...o }); }

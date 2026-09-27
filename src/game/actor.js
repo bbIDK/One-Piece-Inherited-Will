@@ -350,42 +350,106 @@ export class Actor extends Entity {
     return R;
   }
 
-  /**
-   * Jump (Space): a real hop with height `z` (metres) and vertical speed `vz`.
-   * Races change the take-off: Skypieans and Longlegs spring higher, giants
-   * and Buccaneers are heavier.
-   */
-  tryJump(game) {
+  /** Take-off speeds for this body: { v (a plain jump), charge (× for a full charge), leap (out of the water) }. */
+  jumpStats() {
+    const R = RACES[this.race] || RACES.human;
+    return { v: (R.jump || 7.6) * (this.jumpMul || 1), charge: R.charge || 1.45, leap: R.leap || 1 };
+  }
+
+  /** Can you jump right now: on your feet, or at the surface of the water (not a Devil Fruit user). */
+  canJump() {
     if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root || this.blocking) return false;
-    if ((this.z || 0) > 0.02 || this.inWater || this.onShip) return false;
+    if (this.onShip || this.stamina < 2) return false;
     if (this.action && !this.action.def.m1Chain && this.action.t < this.action.total * 0.7) return false;
-    if (this.stamina < 2) return false;
-    const r = this.race;
-    const v = (r === 'skypiean' || r === 'longleg' ? 8.4 : r === 'mink' || r === 'lunarian' ? 7.6 : r === 'giant' || r === 'buccaneer' ? 6.1 : 6.8) * (this.jumpMul || 1);
+    if (this.inWater) return !this.under && (this.depth || 0) < 0.15 && !(this.fruit && !this.gills) && this.state === 'idle';
+    return !((this.z || 0) > 0.02);
+  }
+
+  /**
+   * Jump: charge 0 is a hop, 1 a full crouch-and-spring (see the player
+   * controller: hold Space to charge). Races change the take-off (see
+   * data/races.js: Longlegs, Minks and Skypieans spring higher and charge
+   * higher, Buccaneers are heavy but explosive). From the surface of the sea
+   * you leap clean out of the water, leaving a ring on it.
+   */
+  tryJump(game, charge = 0) {
+    if (!this.canJump()) return false;
+    const J = this.jumpStats();
+    const k = clamp(charge, 0, 1);
+    let v = J.v * (1 + (J.charge - 1) * k);
+    const fromWater = this.inWater;
+    if (fromWater) {
+      // up from treading water (the body starts where it floats, so the leap is continuous)
+      v *= 1.3 * J.leap;
+      const s = this.look?.scale || 1;
+      this.leaveWater(game, true);
+      this.leapT = 0.5;
+      this.z = -1.3 * s;
+      game.fx.ripple?.(this.x, this.y, 1 + k * 0.6);
+      game.fx.burst(this.x, this.y, 12 + Math.round(k * 8), { color: ['#e1f5fe', '#b3e5fc', '#ffffff'], speed: 2.4, z: 0.1, vz: 5 + k * 2, g: 11, life: 0.7, size: 0.1 });
+      game.audio?.sfx('splash_out');
+    } else {
+      this.z = 0.001;
+      game.fx.burst(this.x, this.y, 6 + Math.round(k * 8), { color: ['#d7ccc8', '#efebe9'], speed: 1.8 + k * 1.6, z: 0.05, vz: 0.5, g: 1.2, life: 0.4 + k * 0.2, kind: 'dust', size: 0.16 + k * 0.08, grow: 0.35 });
+      game.audio?.sfx(k > 0.5 ? 'jump_big' : 'jump');
+    }
     this.vz = v;
-    this.z = 0.001;
     this.airT = 0;
-    this.stamina = Math.max(0, this.stamina - 3);
+    this.jumpK = k;
+    this.stamina = Math.max(0, this.stamina - 3 - 7 * k);
     if (this.action?.def.m1Chain) this.action = null;
-    game.fx.burst(this.x, this.y, 6, { color: ['#d7ccc8', '#efebe9'], speed: 1.8, z: 0.05, vz: 0.5, g: 1.2, life: 0.4, kind: 'dust', size: 0.16, grow: 0.35 });
-    game.audio?.sfx('dodge');
-    if (this.isPlayer) game.emit('playerJump');
+    if (this.isPlayer) game.emit('playerJump', k);
     return true;
   }
 
-  /** Gravity for jumps, launches and falls; lands with a puff of dust. */
+  /** How deep the water under you is (m); 0 on land or on a deck. */
+  waterUnder(game) {
+    if (this.deck || (this.dash && this.dash.ignoreWater)) return 0;
+    const t = game.world.type(this.x, this.y - 0.1);
+    if (IS_LIQUID[t] !== 1 || OVERLAY[t]) return 0;
+    if (t === T.LAVA) return 0;
+    return game.seaDepth ? game.seaDepth(this.x, this.y) : 3;
+  }
+
+  /** Deep enough to swim in (about chest-deep; a little less to stand up again, so shorelines don't flicker). */
+  swimDepth(was) { return 1.75 * (this.look?.scale || 1) * (was ? 0.5 : 0.62); }
+
+  /**
+   * Gravity for jumps, launches and falls. A fall ends on the ground (a puff
+   * of dust), on the bottom of the shallows, or — in deep water — where a
+   * swimmer floats, so going in is one smooth plunge (with a splash and a
+   * ring on the water as the feet meet it).
+   */
   updateVertical(dt, game) {
+    if (this.leapT > 0) this.leapT -= dt;
     if (!(this.z > 0) && !this.vz) return;
     this.airT = (this.airT || 0) + dt;
     this.vz -= 22 * dt;
+    const z0 = this.z;
     this.z += this.vz * dt;
-    if (this.z <= 0) {
+    if (this.vz > 0) return; // (still rising: out of the water too)
+    const wd = this.waterUnder(game);
+    if (wd > 0 && z0 > 0 && this.z <= 0) {
+      const impact = -this.vz;
+      game.fx.ripple?.(this.x, this.y, Math.min(2.4, 0.8 + impact * 0.1));
+      game.fx.burst(this.x, this.y, Math.min(22, 6 + impact * 1.2), { color: ['#e1f5fe', '#81d4fa', '#ffffff'], speed: 1.6 + impact * 0.22, z: 0.05, vz: 2 + impact * 0.35, g: 11, life: 0.6, size: 0.11 });
+      game.audio?.sfx(impact > 9 ? 'splash_big' : 'splash');
+      this.splashedAt = game.time || 0;
+    }
+    const s = this.look?.scale || 1;
+    const deep = wd > this.swimDepth(false);
+    const floor = wd <= 0 ? 0 : deep ? -Math.min(wd - 0.1, 1.3 * s) : -wd;
+    if (this.z <= floor) {
       const impact = -this.vz;
       this.z = 0;
       this.vz = 0;
       this.airT = 0;
-      if (impact > 3) {
-        game.fx.burst(this.x, this.y, Math.min(14, 4 + impact), { color: ['#d7ccc8', '#bcaaa4', '#efebe9'], speed: 1.5 + impact * 0.25, z: 0.05, vz: 0.6, g: 1.2, life: 0.45, kind: 'dust', size: 0.18, grow: 0.4 });
+      this.leapT = 0;
+      // a hard dive takes you under for a moment
+      if (deep) this.plunge = clamp((impact - 7) * 0.12, 0, Math.max(0, wd - 0.5));
+      else if (impact > 3) {
+        game.fx.burst(this.x, this.y, Math.min(14, 4 + impact), { color: wd > 0 ? ['#e1f5fe', '#b3e5fc'] : ['#d7ccc8', '#bcaaa4', '#efebe9'], speed: 1.5 + impact * 0.25, z: 0.05, vz: 0.6, g: 1.2, life: 0.45, kind: wd > 0 ? undefined : 'dust', size: 0.18, grow: 0.4 });
+        if (impact > 9 && !wd) game.audio?.sfx('land_heavy');
         if (this.isPlayer) game.emit('playerLand', impact);
       }
     }
@@ -457,8 +521,8 @@ export class Actor extends Entity {
     this.updateMovement(dt, game, false);
     this.updateVertical(dt, game);
     this.updateDeck(game);
-    // (in the air over water you haven't splashed down yet)
-    if (!(this.z > 0.25)) this.updateWater(dt, game);
+    // (in the air — over water too, or leaping out of it — you haven't splashed down yet)
+    if (!this.vz && !(this.z > 0.02)) this.updateWater(dt, game);
 
     const sp = Math.hypot(this.vx, this.vy);
     this.moving = sp > 0.4;
@@ -593,6 +657,8 @@ export class Actor extends Entity {
       const i = this.intent;
       let sp = this.d.speed * (w.speedAt(this.x, this.y - 0.1) || 1);
       if (this.inWater) sp *= this.fruit && !this.gills ? 0.12 : 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1);
+      else if (this.wading) sp *= 1 - 0.42 * clamp(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);
+      if (this.charging) sp *= 1 - 0.75 * this.charging;
       if (i.sprint && this.stamina > 1 && (!this.inWater || this.gills)) { sp *= this.inWater ? 1.35 : 1.55; if (!this.inWater) this.stamina -= 9 * dt; }
       if (this.inWater && !this.gills && (i.mx || i.my || i.mz)) this.stamina = Math.max(0, this.stamina - (this.under ? 4 : 3.5) * dt);
       if (this.blocking) sp *= 0.4;
@@ -665,13 +731,33 @@ export class Actor extends Entity {
     const w = game.world;
     const t = w.type(this.x, this.y - 0.1);
     const was = this.inWater;
-    this.inWater = IS_LIQUID[t] === 1 && !OVERLAY[t] && !(this.dash && this.dash.ignoreWater) && !this.deck;
+    const liquid = IS_LIQUID[t] === 1 && !OVERLAY[t] && !(this.dash && this.dash.ignoreWater) && !this.deck;
+    // shallow water is waded, feet on the bottom; you swim once it's about chest-deep
+    // (lava is always "in"). Leaping out of the sea, you're out of it until you come down.
+    const wd = liquid ? (t === T.LAVA ? 99 : game.seaDepth ? game.seaDepth(this.x, this.y) : 99) : 0;
+    this.inWater = liquid && !(this.leapT > 0) && (t === T.LAVA || this.forcedWater > 0 || wd > this.swimDepth(was));
+    this.wading = liquid && !this.inWater && !(this.leapT > 0) && !(this.z > 0.02) ? wd : 0;
+    if (this.wading && this.moving) {
+      // rings spread round your legs as you wade
+      this.wadeT = (this.wadeT || 0) - dt;
+      if (this.wadeT <= 0) { this.wadeT = 0.32; game.fx.ripple?.(this.x, this.y, 0.55, 0.7); if (this.isPlayer) game.audio?.sfx('wade'); }
+    }
     const df = !!this.fruit && !this.gills; // the sea takes a Devil Fruit user's strength
     if (this.inWater && !was) {
-      game.fx.burst(this.x, this.y, 10, { color: ['#e1f5fe', '#81d4fa'], speed: 3, vz: 3, g: 9, life: 0.5, size: 0.12 });
-      game.audio?.sfx('splash');
-      this.depth = 0;
+      // (a jump or fall into it has already splashed as the feet met the water)
+      if (!(game.time - (this.splashedAt ?? -9) < 0.6)) {
+        game.fx.burst(this.x, this.y, 10, { color: ['#e1f5fe', '#81d4fa'], speed: 3, vz: 3, g: 9, life: 0.5, size: 0.12 });
+        game.fx.ripple?.(this.x, this.y, 1);
+        game.audio?.sfx('splash');
+      }
+      this.depth = this.plunge || 0;
+      this.plunge = 0;
       if (this.fruit) { this.armament = this.armament && this.hakiUnlocked(); this.buffs = this.buffs.filter((b) => !b.source || !getAbility(b.source)?.source?.startsWith('fruit')); this.recalc(); }
+    }
+    // swimming at the surface leaves a ring now and then
+    if (this.inWater && this.moving && !this.under) {
+      this.swimRingT = (this.swimRingT || 0) - dt;
+      if (this.swimRingT <= 0) { this.swimRingT = 0.45; game.fx.ripple?.(this.x, this.y, 0.8, 0.8); }
     }
     if (!this.inWater && was) this.leaveWater(game, true);
     if (this.inWater) {
@@ -753,7 +839,9 @@ export class Actor extends Entity {
         : this.gills && (this.moving || this.under) ? 'fish'
           : this.under ? (this.moving || this.intent.mz ? 'dive' : 'float')
             : this.moving ? 'crawl' : 'tread';
-    const mode = act || `${this.state}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${swim || ''}${busy ? busy.pose : ''}`;
+    // in the air from a jump (not a knock-back launch): up with the knees, then reaching for the ground
+    const air = !swim && !act && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? (this.vz > 0 ? 'up' : 'down') : null;
+    const mode = act || `${this.state}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${swim || ''}${busy ? busy.pose : ''}${this.charging > 0 ? 'k' : ''}${air || ''}`;
     if (mode !== this._mode) {
       this._blendFrom = this._lastP || null;
       this._blendT = 0;
@@ -776,6 +864,8 @@ export class Actor extends Entity {
       knockT: this.knockT,
       activity: busy ? busy.pose : null, prop: busy ? busy.prop : null, seatH: busy ? busy.h : 0,
     };
+    if (this.charging > 0 && !act && !swim) pose.charge = this.charging;
+    if (air) pose.air = { up: air === 'up', k: this.jumpK || 0 };
     if (this.blocking) { pose.block = this.blockTime; pose.armedBlock = pose.armed; }
     if (dodging && !act) {
       const d = this.dash;

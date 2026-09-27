@@ -5,6 +5,7 @@ import { PROF, prof, profFrame, profReset } from './core/prof.js';
 import { Renderer3D } from './render3d/index.js';
 import './render3d/pickups3d.js';
 import './render3d/groundcover.js';
+import './render3d/ripples3d.js';
 import './render3d/seabed.js';
 import './render3d/sealife3d.js';
 import './render3d/lamplight.js';
@@ -139,7 +140,7 @@ async function start() {
       if (view3d.rig.freeMouse) view3d.rig.releaseLock();
       else if (!view3d.rig.locked && !view3d.rig.lockFailed) view3d.rig.requestLock();
     }
-    ui.toast(settings.view === 'first' ? 'FIRST PERSON' : 'THIRD PERSON', input.touch?.on ? 'Tap View to switch' : settings.view === 'third' ? (settings.shiftLock ? 'Shift lock is on (tap Shift to free the mouse) · V switches views' : 'Hold the right mouse button to turn the camera · tap Shift for shift lock · V switches views') : 'Press V to switch views', '#ffe082');
+    ui.toast(settings.view === 'first' ? 'FIRST PERSON' : 'THIRD PERSON', input.touch?.on ? 'Tap View to switch' : settings.view === 'third' ? (settings.shiftLock ? 'Shift lock is on (tap Ctrl to free the mouse) · V switches views' : 'Hold the right mouse button to turn the camera · tap Ctrl for shift lock · V switches views') : 'Press V to switch views', '#ffe082', 'view');
   };
   // start looking down the longest clear line of sight (not at a wall)
   const openYaw = (p) => {
@@ -217,6 +218,9 @@ async function start() {
   // menus: the sidebar buttons and their keyboard shortcuts do the same thing
   // (press again, or Esc, to close; pressing another switches menus)
   const playing = () => !!game.player && !ui.screenEl;
+  // until when to capture the mouse again, once the view is back (after a menu,
+  // a conversation or the title screen closes: see the frame loop)
+  let relockUntil = 0;
   ui.actions = {
     inventory: () => openInventory(game),
     character: () => openCharacter(game),
@@ -272,7 +276,7 @@ async function start() {
   const openCreation = () => {
     creationScreen(ui, loadLegacy(), {
       onBack: showTitle,
-      onDone: (birth, choices) => { ui.hideScreen(); startNewCharacter(game, birth, choices); audio.music('sea'); },
+      onDone: (birth, choices) => { ui.hideScreen(); startNewCharacter(game, birth, choices); audio.music('sea'); relockUntil = performance.now() + 2500; },
     });
   };
   const useSlot = (s) => { setSlot(s); game.saveSlot = s; };
@@ -287,6 +291,7 @@ async function start() {
         const saved = loadChar();
         if (!saved) { showTitle(); return; }
         ui.hideScreen(); resumeCharacter(game, saved); audio.music('sea');
+        relockUntil = performance.now() + 2500;
       },
       onNew: async (s) => {
         useSlot(s);
@@ -355,8 +360,14 @@ async function start() {
       const t0 = performance.now();
       game.update(dt);
       prof('sim', t0);
-      // menus and dialogue need the mouse back
-      if (view3d?.rig.locked && ui.blocksInput()) view3d.rig.releaseLock();
+      // menus and dialogue need the mouse back; closing them (a click or a key:
+      // the browser allows a capture then) takes it again where the view wants it
+      const blocked = ui.blocksInput();
+      if (view3d?.rig.locked && blocked) view3d.rig.releaseLock();
+      if (blocked) relockUntil = performance.now() + 2500;
+      else if (relockUntil && view3d?.rig.wantsLock && !view3d.rig.locked && !ui.mapOpen) {
+        if (performance.now() < relockUntil) { view3d.rig.requestLock(); relockUntil = 0; } else relockUntil = 0;
+      }
       // the world chart has its own canvas
       view3d.canvas.style.display = ui.mapOpen ? 'none' : 'block';
       renderer.glCanvas.style.display = ui.mapOpen ? 'block' : 'none';

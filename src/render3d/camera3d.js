@@ -19,11 +19,11 @@ export class CameraRig {
     this.camera = new THREE.PerspectiveCamera(75, 1, 0.08, 2600);
     this.camera.rotation.order = 'YXZ';
     this.mode = 'first'; // 'first' | 'third'
-    this.shiftLock = false; // third person: Roblox-style shift lock (tap Shift)
+    this.shiftLock = false; // third person: Roblox-style shift lock (tap Ctrl)
     this.yaw = 0; // world facing angle (same convention as actor.facing: atan2(dy, dx), y = south)
     this.pitch = 0;
     this.locked = false;
-    this.lockFailed = false;
+    this.lockFails = 0; // pointer lock requests refused in a row (see lockFailed)
     this.sensitivity = 0.0024;
     this.invertY = false;
     this.baseFov = 75; // settings: 60–95
@@ -59,10 +59,12 @@ export class CameraRig {
         if (e.button === 2) this.drag = { t: performance.now(), moved: 0 };
         return;
       }
-      // first person / shift lock: the first click captures the mouse (and is not an attack)
-      if (this.locked || this.lockFailed) return;
-      e.stopPropagation();
-      e.preventDefault();
+      // first person / shift lock: the first click captures the mouse (and is not an
+      // attack). A refusal (browsers refuse for a moment after you let the mouse go)
+      // just means trying again on the next click; only a page that never allows it
+      // falls back to turning at the screen edges (and clicks attack there).
+      if (this.locked) return;
+      if (!this.lockFailed) { e.stopPropagation(); e.preventDefault(); }
       this.requestLock();
     });
     document.addEventListener('mouseup', (e) => {
@@ -75,15 +77,25 @@ export class CameraRig {
     }, { passive: true });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === this.canvas;
+      if (this.locked) this.lockFails = 0;
       this.onLockChange?.(this.locked);
     });
-    document.addEventListener('pointerlockerror', () => {
-      this.lockFailed = true;
-      this.locked = false;
-      this.onLockChange?.(false);
-      this.game.ui?.hint?.('Mouse look is limited in this window: move the cursor to the screen edges (or use the arrow keys) to turn. Opening the game in its own tab gives full mouse look.', 10);
-    });
+    document.addEventListener('pointerlockerror', () => this.lockRefused());
   }
+
+  lockRefused() {
+    // (one refusal can arrive twice: as the error event and as the request's promise)
+    const now = performance.now();
+    if (now - (this.refusedAt || -1e9) < 250) return;
+    this.refusedAt = now;
+    this.lockFails++;
+    this.locked = false;
+    this.onLockChange?.(false);
+    if (this.lockFails === 3) this.game.ui?.hint?.('Mouse look is limited in this window: move the cursor to the screen edges (or use the arrow keys) to turn. Opening the game in its own tab gives full mouse look.', 10);
+  }
+
+  /** The page won't let the mouse be captured (several refusals in a row): edge turning instead. */
+  get lockFailed() { return this.lockFails >= 3; }
 
   get active() { return !!this.game.view3d?.active; }
 
@@ -106,13 +118,17 @@ export class CameraRig {
   }
 
   requestLock() {
+    if (this.locked) return;
     try {
       const r = this.canvas.requestPointerLock?.({ unadjustedMovement: false });
-      if (r && typeof r.catch === 'function') r.catch(() => { this.lockFailed = true; this.onLockChange?.(false); });
+      if (r && typeof r.catch === 'function') r.catch(() => this.lockRefused());
     } catch {
-      this.lockFailed = true;
+      this.lockRefused();
     }
   }
+
+  /** Does the view want the mouse captured now (first person, or third person with shift lock)? */
+  get wantsLock() { return this.active && !this.freeMouse && !this.game.input?.touch?.on; }
 
   releaseLock() {
     if (document.pointerLockElement === this.canvas) document.exitPointerLock?.();
@@ -165,7 +181,7 @@ export class CameraRig {
     let eyeH = 1.72 * scale;
     let gx = 0, gz = 0; // eye position relative to the player (origin)
     // the ground under your feet, smoothed so bumps and steps don't jolt the view
-    const g0 = p.deck ? p.deck.h + shipBob(p.deck.ship, game.env?.time || 0) : ground(p.x, p.y);
+    const g0 = p.deck ? p.deck.h + shipBob(p.deck.ship, game.env?.time || 0) : ground(p.x, p.y) - (p.wading || 0);
     // (dropping off an upper deck: the fall itself carries you down)
     if (this.smoothG === undefined || Math.abs(g0 - this.smoothG) > 2.5 || p.mode !== this.lastMode || (p.deck && g0 < this.smoothG - 0.6 && p.z > 0.3)) this.smoothG = g0;
     this.smoothG += (g0 - this.smoothG) * Math.min(1, dt * 14);
@@ -206,6 +222,9 @@ export class CameraRig {
     const side = !sailing ? ((p.vx || 0) * -Math.sin(this.yaw) + (p.vy || 0) * Math.cos(this.yaw)) : 0;
     let roll = this.bobOn ? -side * 0.006 : 0;
     if (p.state === 'knocked') { eyeH = 0.45; roll = 0.35; }
+    // crouching to spring for a charged jump
+    this.crouch = (this.crouch || 0) + ((p.charging || 0) - (this.crouch || 0)) * Math.min(1, dt * 12);
+    eyeH -= this.crouch * 0.34 * scale;
     this.roll += (roll - this.roll) * Math.min(1, dt * 5);
     // screen shake from the effects system
     const tr = game.fx?.trauma || 0;

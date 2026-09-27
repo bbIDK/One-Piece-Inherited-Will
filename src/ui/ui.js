@@ -217,10 +217,23 @@ export class UI {
     this.bannerTimer = setTimeout(() => this.bannerEl.classList.remove('show'), dur * 1000);
   }
 
-  toast(text, sub = '', color) {
+  /**
+   * A big message across the middle of the screen. With a key, it replaces
+   * the last one of that kind still showing (switching views quickly shows
+   * only the latest); any other messages still up move out of its way.
+   */
+  toast(text, sub = '', color, key = null) {
+    this.toasts = (this.toasts || []).filter((t) => t.el.isConnected);
+    if (key) for (const t of this.toasts) if (t.key === key) t.el.remove();
+    this.toasts = this.toasts.filter((t) => t.el.isConnected);
+    for (const t of this.toasts) {
+      t.up = (t.up || 0) + 1;
+      t.el.style.marginTop = `${-t.up * 76}px`;
+    }
     const el = h('div.toast', text, sub ? h('small', sub) : null);
     if (color) el.style.color = color;
     this.root.appendChild(el);
+    this.toasts.push({ el, key });
     setTimeout(() => el.remove(), 2700);
   }
 
@@ -379,7 +392,7 @@ export class UI {
     if (this.cache.lookHint !== hintKey) {
       this.cache.lookHint = hintKey;
       clear(E.lookHint);
-      if (hintKey === 'free') E.lookHint.append('Hold right mouse to turn the camera', h('small', 'Tap Shift for shift lock · V switches view'));
+      if (hintKey === 'free') E.lookHint.append('Hold right mouse to turn the camera', h('small', 'Tap Ctrl for shift lock · V switches view'));
       else E.lookHint.append('Click to look around', h('small', 'Esc frees the mouse · V switches view'));
     }
     this.root.classList.toggle('v3', !!v3);

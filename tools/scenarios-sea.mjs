@@ -3,6 +3,108 @@ const waitReady = (page, timeout = 240000) => page.waitForFunction(() => window.
 const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
 export const scenarios = {
+  // the third-person breaststroke at the surface, from the side, at a few moments of the stroke
+  swim3p: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => {
+        window.OP.quickStart('human');
+        const g = window.OP.game, w = g.world;
+        g.env.clock = 11; g.env.storm = 0; g.env.fog = 0;
+        g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings();
+        const isl = w.islands.find((i) => i.id === 'dawn_island');
+        let spot = null;
+        for (let k = 0; k < 4000 && !spot; k++) {
+          const a = Math.random() * Math.PI * 2, r = isl.radius * (1 + Math.random() * 0.5);
+          const x = isl.x + Math.cos(a) * r, y = isl.y + Math.sin(a) * r;
+          if (w.type(x, y) === 0 && g.seaDepth(x, y) > 3 && g.seaDepth(x, y) < 8) spot = { x, y };
+        }
+        window.OP.teleport(spot.x, spot.y);
+        const st = document.createElement('style');
+        st.textContent = '.look-hint{display:none!important}';
+        document.head.appendChild(st);
+      });
+      await step(page, 0.5);
+      for (let i = 0; i < 4; i++) {
+        await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = 0; v.rig.pitch = -0.38; v.rig.tp.dist = 3.2; window.OP.key('A', true); });
+        await step(page, 0.45 + i * 0.12);
+        await page.evaluate(() => window.OP.key('A', false));
+        await frames(page, 2);
+        await snap('stroke-' + i);
+      }
+    },
+  },
+  // Wading in the shallows, leaping out of the sea (rings on the water), and a
+  // charged jump on the beach — third person, from the side.
+  waterjump: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      const line = await page.evaluate(() => {
+        window.OP.quickStart('human');
+        const g = window.OP.game, w = g.world;
+        g.env.clock = 11; g.env.storm = 0; g.env.fog = 0;
+        g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings();
+        const isl = w.islands.find((i) => i.id === 'dawn_island');
+        for (let k = 0; k < 720; k++) {
+          const a = k / 720 * Math.PI * 2, dx = Math.cos(a), dy = Math.sin(a);
+          for (let r = isl.radius * 0.3; r < isl.radius * 2; r += 0.5) {
+            const x = isl.x + dx * r, y = isl.y + dy * r;
+            if (w.type(x, y) !== 0 || g.seaDepth(x, y) > 0.3) continue;
+            let deep = -1, wade = -1;
+            for (let s2 = 0; s2 < 30; s2 += 0.25) {
+              const d = g.seaDepth(x + dx * s2, y + dy * s2);
+              if (wade < 0 && d > 0.55) wade = s2;
+              if (d > 2.2) { deep = s2; break; }
+            }
+            if (deep > 0 && wade > 0) return { x, y, dx, dy, wade, deep };
+            break;
+          }
+        }
+        return null;
+      });
+      console.log('shore', JSON.stringify(line));
+      if (!line) throw new Error('no shore found');
+      const side = (d, yawOff = Math.PI / 2) => page.evaluate(({ line, d, yawOff }) => {
+        const g = window.OP.game, p = g.player, w = g.world;
+        p.x = w.wx(line.x + line.dx * d); p.y = line.y + line.dy * d;
+        p.facing = Math.atan2(line.dy, line.dx);
+        const v = g.view3d; v.rig.yaw = ((Math.atan2(line.dy, line.dx) + yawOff) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2); v.rig.pitch = -0.08; v.rig.tp.dist = 5;
+      }, { line, d, yawOff });
+      await side(line.wade + 0.5);
+      await page.evaluate(() => { window.OP.key('W', true); });
+      await step(page, 0.6);
+      await page.evaluate(() => { window.OP.key('W', false); });
+      await side(line.wade + 0.7);
+      await step(page, 0.1); await frames(page, 3);
+      console.log('wading', JSON.stringify(await page.evaluate(() => { const p = window.OP.game.player; return { wading: +(p.wading || 0).toFixed(2), inWater: p.inWater }; })));
+      await snap('wading');
+      await side(line.deep + 1);
+      await step(page, 0.6);
+      await page.evaluate(() => window.OP.game.player.tryJump(window.OP.game, 0.6));
+      await step(page, 0.28); await frames(page, 3);
+      console.log('leap', JSON.stringify(await page.evaluate(() => { const p = window.OP.game.player; return { z: +(p.z || 0).toFixed(2), inWater: p.inWater, rings: window.OP.game.view3d.scene.getObjectByName('ripples')?.count }; })));
+      await snap('leap');
+      await step(page, 0.8); await frames(page, 3);
+      await snap('splashdown');
+      // a charged jump in the village square
+      await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island'), t = isl.towns[0];
+        window.OP.teleport(t.plaza.x + 2.5, t.plaza.y + 3);
+        const v = g.view3d; g.player.facing = 0; v.rig.yaw = Math.PI / 2; v.rig.pitch = -0.05; v.rig.tp.dist = 5.5;
+      });
+      await step(page, 0.3);
+      await page.evaluate(() => { window.OP.key('Space', true); });
+      await step(page, 0.95); await frames(page, 3);
+      console.log('charging', JSON.stringify(await page.evaluate(() => ({ charging: +(window.OP.game.player.charging || 0).toFixed(2) }))));
+      await snap('charge');
+      await page.evaluate(() => { window.OP.key('Space', false); });
+      await step(page, 0.3); await frames(page, 3);
+      console.log('jumped', JSON.stringify(await page.evaluate(() => ({ z: +(window.OP.game.player.z || 0).toFixed(2) }))));
+      await snap('charged-jump');
+    },
+  },
   sea: {
     async run(page, snap) {
       await page.evaluate(() => localStorage.clear());

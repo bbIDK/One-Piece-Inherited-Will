@@ -56,7 +56,8 @@ function heightOf(look) {
 const env0 = () => ({ time: 0, daylight: 1, ambient: [1, 1, 1], clock: 12, storm: 0, fog: 0 });
 
 /**
- * A live, slowly turning preview inside `container` (drag to turn it).
+ * A live preview inside `container`: it stands still, a little turned toward
+ * you, and turns when you drag it.
  * Returns { setLook(look), dispose() }.
  */
 export function createPreview(container, look, { game } = {}) {
@@ -97,7 +98,6 @@ export function createPreview(container, look, { game } = {}) {
     camera.position.set(0, cy + h * 0.06 * (1 - zoom) + h * 0.01 * zoom, dist);
     camera.lookAt(0, cy, 0);
     camera.updateProjectionMatrix();
-    if (!drag) turn += dt * 0.45;
     if (actor && view) {
       actor.facing = Math.PI / 2 + turn;
       try { view.update(actor, env, ctx, { camYaw3: 0, redraw: true }); } catch (e) { /* keep the last frame */ }
@@ -107,14 +107,15 @@ export function createPreview(container, look, { game } = {}) {
     raf = requestAnimationFrame(frame);
   };
 
-  const down = (e) => { drag = { x: e.clientX, turn }; try { canvas.setPointerCapture(e.pointerId); } catch { /* ignore */ } };
+  const down = (e) => { drag = { x: e.clientX, turn }; canvas.style.cursor = 'grabbing'; try { canvas.setPointerCapture(e.pointerId); } catch { /* ignore */ } };
   const move = (e) => { if (drag) turn = drag.turn - (e.clientX - drag.x) * 0.012; };
-  const up = () => { drag = null; };
+  const up = () => { drag = null; canvas.style.cursor = 'grab'; };
   canvas.addEventListener('pointerdown', down);
   canvas.addEventListener('pointermove', move);
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointercancel', up);
   canvas.style.touchAction = 'none';
+  canvas.style.cursor = 'grab';
 
   setLook(look);
   raf = requestAnimationFrame(frame);

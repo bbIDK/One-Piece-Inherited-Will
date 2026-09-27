@@ -566,7 +566,7 @@ function activityPose(P, act, t) {
  * Swimming. The horizontal strokes turn the whole body face-down (P.r), so an
  * arm "overhead" in the body's frame reaches forward through the water.
  *   tread: upright, sculling hands, egg-beater legs (a rest at the surface)
- *   crawl: front crawl along the surface, alternating overhead strokes, flutter kick
+ *   crawl: along the surface: a breaststroke, head up (as in first person)
  *   dive: underwater breaststroke (both arms sweep, a frog kick), tipping with the dive
  *   float: hanging in the water, slow sculling
  *   fish: a Fish-Man's dolphin kick, arms along the sides, fast and smooth
@@ -576,13 +576,17 @@ function swimPose(P, kind, t, dir) {
   P.wF = null; P.wB = null; P.b = [0, 0]; P.l = 0;
   switch (kind) {
     case 'crawl': {
-      const w = t * 4.2;
-      const arm = (a) => [0.1 + 0.2 * Math.sin(a), -0.1 - 0.5 * Math.cos(a)];
-      P.hF = arm(w); P.hB = arm(w + Math.PI);
-      P.eF = 0.6; P.eB = 0.6; P.hand = 'flat'; P.handB = 'flat';
-      const k = Math.sin(w * 2.5) * 0.07;
-      P.fF = [0.02 + k, 0]; P.fB = [0.02 - k, 0];
-      P.r = 1.38; P.ht = -0.25;
+      // (the stroke along the surface is a breaststroke, in step with the
+      // first-person arms: reach forward together, sweep wide and back, tuck
+      // in under the chin; the frog kick drives as the arms recover. The head
+      // stays up, looking where you're going.)
+      const w = t * 3.6, s = Math.sin(w), c = Math.cos(w);
+      P.hF = [0.2 + 0.14 * c, -0.44 + 0.34 * Math.max(0, s)]; P.hB = P.hF.slice();
+      P.eF = 0.55; P.eB = 0.55; P.hand = s < -0.2 ? 'relaxed' : 'flat'; P.handB = P.hand;
+      P.spread = 0.04 + 0.24 * Math.max(0, s);
+      const kick = Math.max(0, -s);
+      P.fF = [0.07 * kick, -0.2 * kick]; P.fB = [0.07 * kick, -0.2 * kick];
+      P.r = 1.12 + 0.05 * s; P.ht = 0.42;
       break;
     }
     case 'dive': {
@@ -651,6 +655,32 @@ export function restPose(pose) {
     P.z = (P.z || 0) + k * 0.32;
     P.b = [P.b[0], P.b[1] + (1 - k) * 0.08];
     P.hF = [0.28, -0.02]; P.hB = [0.16, 0.04];
+  }
+  if (pose.charge) {
+    // crouched to spring: hips down, weight forward, arms swung back (a tremble at full charge)
+    const k = pose.charge, tr = k > 0.95 ? Math.sin(t * 70) * 0.006 : 0;
+    P.b = [0.02 * k + tr, 0.04 + 0.19 * k];
+    P.l = 0.1 + 0.24 * k;
+    P.fF = [0.15, 0]; P.fB = [-0.13, 0];
+    P.hF = [0.08 - 0.26 * k, 0.3 + 0.06 * k]; P.hB = [0.02 - 0.28 * k, 0.32 + 0.05 * k];
+    P.eF = 1; P.eB = 1;
+    P.ht = 0.1 * k;
+    if (k > 0.5) P.face = 'fierce';
+  }
+  if (pose.air) {
+    // in the air: knees drawn up and arms high on the way up, legs reaching for the ground on the way down
+    const k = pose.air.k || 0;
+    if (pose.air.up) {
+      P.fF = [0.16, -0.22 - 0.1 * k]; P.fB = [-0.02, -0.3 - 0.12 * k];
+      P.hF = [0.16, -0.24 - 0.08 * k]; P.hB = [0.0, -0.2 - 0.06 * k];
+      P.l = 0.06;
+    } else {
+      P.fF = [0.12, -0.06]; P.fB = [-0.1, -0.12];
+      P.hF = [0.28, 0.02]; P.hB = [-0.24, 0.06];
+      P.l = 0.1;
+    }
+    P.b = [0, 0.02];
+    P.eF = 1; P.eB = 1;
   }
   if (pose.swimming) swimPose(P, pose.swim || 'tread', t, pose.swimDir || 0);
   if (pose.block !== undefined) {

@@ -10,7 +10,13 @@ lives, death is permanent, and your will passes on to the next generation.
 
 **To play:**
 
-- Open **`dist/onepiece.html`** in a modern browser (Chrome, Edge or
+- Play online at **<https://bbidk.github.io/One-piece-game/>** (GitHub Pages,
+  served straight from this branch, so every push updates it). To switch it
+  on, once: the repository's Settings → Pages → Build and deployment → Source
+  "Deploy from a branch" → branch `claude/one-piece-roguelike-game-9l776l`,
+  folder `/ (root)` → Save. (The `.nojekyll` file makes Pages serve the
+  files as they are.)
+- Or open **`dist/onepiece.html`** in a modern browser (Chrome, Edge or
   Firefox with WebGL2). It is one self-contained file.
 - Or run `npm install && npm run build && npm run serve` and open
   <http://localhost:8080>.

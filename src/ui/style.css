@@ -205,7 +205,7 @@ input.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radiu
 .wm-label.quest { color: #b8860b; font-size: 18px; }
 .wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }
 .wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }
-.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; }
+.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }
 .toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }
 @keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
 .fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }

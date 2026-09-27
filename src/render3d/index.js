@@ -620,7 +620,8 @@ export class Renderer3D {
         const flat = (a.moving || a.under || a.gills) && !(a.fruit && !a.gills);
         gh = -(a.depth || 0) - (flat ? 0.95 : 1.3) * (a.look?.scale || 1);
         gh = Math.max(gh, this.terrain.terrainAt(a.x, a.y));
-      } else gh = this.ground(a.x, a.y);
+      } else if (a.wading) gh = this.ground(a.x, a.y) - a.wading; // (feet on the bottom of the shallows)
+      else gh = this.ground(a.x, a.y);
       v.root.position.set(dx, gh + (a.z || 0), dy);
       v.update(a, env, this.ctx, { camYaw3, redraw: i < 18 || (this.frame + i) % 3 === 0 });
       i++;

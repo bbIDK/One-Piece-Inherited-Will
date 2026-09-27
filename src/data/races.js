@@ -13,6 +13,8 @@ export const RARITY = {
   legendary: { label: 'Legendary', color: '#fdcb6e' },
 };
 
+// jump: take-off speed (m/s); charge: how much faster a fully charged jump
+// springs; leap: how hard you spring out of the water.
 export const RACES = {
   human: {
     name: 'Human', rarity: 'common', weight: 52,
@@ -23,6 +25,7 @@ export const RACES = {
     traits: ['Adaptable: trainers teach you 15% cheaper', 'Stubborn Will: +1 Willpower'],
     spawnSeas: ['east_blue', 'north_blue', 'west_blue', 'south_blue'],
     swim: 1, hpMul: 1,
+    jump: 7.6, charge: 1.45, leap: 1,
   },
   fishman: {
     name: 'Fish-Man', rarity: 'uncommon', weight: 13,
@@ -30,9 +33,10 @@ export const RACES = {
     origin: 'Born near Arlong Park in the Conomi Islands (East Blue).',
     stats: { str: 4, agi: 0, end: 2, vit: 1, wil: 0 },
     lives: 3,
-    traits: ['Gills: breathe underwater — never drown (unless a Devil Fruit user)', 'Swims 3× faster, no stamina drain', 'Fish-Man Karate affinity: learns it 30% faster'],
+    traits: ['Gills: breathe underwater — never drown (unless a Devil Fruit user)', 'Swims 3× faster, no stamina drain', 'Fish-Man Karate affinity: learns it 30% faster', 'Dolphin leap: springs far out of the water'],
     spawnSeas: ['east_blue'], spawnTowns: ['arlong_park', 'cocoyasi'],
     swim: 3, hpMul: 1.1, gills: true,
+    jump: 7.4, charge: 1.4, leap: 1.35,
   },
   mink: {
     name: 'Mink', rarity: 'uncommon', weight: 12,
@@ -40,9 +44,10 @@ export const RACES = {
     origin: 'Born among wandering Mink traders who settled in the wilds of the South Blue.',
     stats: { str: 1, agi: 4, end: 1, vit: 0, wil: 0 },
     lives: 3,
-    traits: ['Electro: basic attacks can shock (innate)', 'Keen senses: +10% dodge window', 'Sulong: awakened under the full moon (hidden)'],
+    traits: ['Electro: basic attacks can shock (innate)', 'Keen senses: +10% dodge window', 'Sulong: awakened under the full moon (hidden)', 'Springy: jumps high, and a charged leap goes higher still'],
     spawnSeas: ['south_blue'], spawnTowns: ['torino_village', 'karate_dojo_town'],
     swim: 1, hpMul: 1, electro: true,
+    jump: 8.6, charge: 1.65, leap: 1,
   },
   skypiean: {
     name: 'Skypiean', rarity: 'uncommon', weight: 10,
@@ -53,6 +58,7 @@ export const RACES = {
     traits: ['Mantra: once their sixth sense awakens, it grows twice as fast', 'Light-footed: dodge travels 30% further', 'Dial-savvy: dials are 25% stronger'],
     spawnSeas: ['north_blue'], spawnTowns: ['lvneel_town'],
     swim: 0.9, hpMul: 0.95,
+    jump: 8.6, charge: 1.5, leap: 1,
   },
   longarm: {
     name: 'Longarm Tribe', rarity: 'rare', weight: 5,
@@ -63,6 +69,7 @@ export const RACES = {
     traits: ['Long reach: +45% melee range', 'Double-jointed: punches hit twice as fast at max reach'],
     spawnSeas: ['north_blue'], spawnTowns: ['notice_town'],
     swim: 1, hpMul: 1, reach: 1.45,
+    jump: 7.6, charge: 1.45, leap: 1,
   },
   longleg: {
     name: 'Longleg Tribe', rarity: 'rare', weight: 5,
@@ -73,6 +80,7 @@ export const RACES = {
     traits: ['Long stride: +18% move speed', 'Whip legs: kicks deal +30% damage'],
     spawnSeas: ['west_blue'], spawnTowns: ['asshina_town'],
     swim: 1, hpMul: 1, stride: 1.18,
+    jump: 9.2, charge: 1.6, leap: 1,
   },
   buccaneer: {
     name: 'Buccaneer', rarity: 'epic', weight: 2.2,
@@ -83,6 +91,7 @@ export const RACES = {
     traits: ['Huge frame: +35% HP', 'Unshakable: cannot be staggered by light attacks', 'Slow: -8% move speed'],
     spawnSeas: ['south_blue'], spawnTowns: ['sorbet_town'],
     swim: 0.9, hpMul: 1.35, scale: 1.3,
+    jump: 6.6, charge: 1.55, leap: 1,
   },
   three_eye: {
     name: 'Three-Eye Tribe', rarity: 'legendary', weight: 0.8,
@@ -93,6 +102,7 @@ export const RACES = {
     traits: ['Third Eye: Observation Haki from birth', 'Voice of All Things: can read Poneglyphs without an archaeologist'],
     spawnSeas: ['west_blue'], spawnTowns: ['ohara_camp'],
     swim: 1, hpMul: 1,
+    jump: 7.4, charge: 1.4, leap: 1,
   },
   lunarian: {
     name: 'Lunarian', rarity: 'legendary', weight: 0.5,
@@ -103,6 +113,7 @@ export const RACES = {
     traits: ['Ignition: attacks can burn; flame on your back halves damage taken while lit', 'Tremendous vitality: +1 life', 'Wings: dodge becomes a short flight'],
     spawnSeas: ['east_blue', 'north_blue', 'west_blue', 'south_blue'], spawnIslet: true,
     swim: 1, hpMul: 1.15,
+    jump: 8.2, charge: 1.55, leap: 1,
   },
 };
 

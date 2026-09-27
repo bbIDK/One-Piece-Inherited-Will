@@ -39,7 +39,7 @@ export class PlayerController {
       my = Math.sin(yaw) * fwd + Math.cos(yaw) * right;
     }
     p.intent.mx = mx; p.intent.my = my;
-    // swimming: Space rises, C (or Ctrl) dives — and swimming forward follows the view up or down
+    // swimming: Space rises, C dives — and swimming forward follows the view up or down
     p.intent.mz = 0;
     if (p.inWater) {
       if (inp.isDown('Space')) p.intent.mz = 1;
@@ -83,16 +83,23 @@ export class PlayerController {
     const freeMouse = !!v3?.rig.freeMouse;
     if (freeMouse ? inp.mouse.released[2] && v3.rig.takeRightClick() : inp.mousePressed(2)) buf.heavy = 0.25;
     if (tapDodge && !(v3 && v3.rig.mode === 'third')) buf.dodge = 0.16;
-    // in third person a tap of Shift toggles shift lock
-    if (tapDodge && v3 && v3.rig.mode === 'third' && !inp.touch?.on) {
+    // in third person Ctrl toggles shift lock (Shift is for running)
+    if (inp.wasPressed('Control') && v3 && v3.rig.mode === 'third' && !inp.touch?.on) {
       v3.rig.setShiftLock(!v3.rig.shiftLock);
       game.applySettings?.(true);
-      game.ui.toast(v3.rig.shiftLock ? 'SHIFT LOCK ON' : 'SHIFT LOCK OFF', v3.rig.shiftLock ? 'Your character faces where you look. Tap Shift to free the mouse.' : 'Hold the right mouse button to turn the camera. Tap Shift to lock it.', '#ffe082');
+      game.ui.toast(v3.rig.shiftLock ? 'SHIFT LOCK ON' : 'SHIFT LOCK OFF', v3.rig.shiftLock ? 'Your character faces where you look. Tap Ctrl to free the mouse.' : 'Hold the right mouse button to turn the camera. Tap Ctrl to lock it.', '#ffe082', 'shiftlock');
     }
     if (inp.wasPressed('Q')) buf.dodge = 0.16; // Q dashes
-    if (inp.wasPressed('Space')) buf.jump = 0.14;
+    // jumping: a tap hops; holding Space crouches and charges a higher spring (how
+    // high, and how much more a charge gives, depends on your race). A press in the
+    // air still jumps if you land within a moment.
+    if (inp.wasPressed('Space')) { if (p.canJump()) this.jumpHold = { t: 0 }; else buf.jump = 0.14; }
     if (buf.dodge > 0 && p.tryDodge(game, mx, my)) { buf.dodge = 0; buf.m1 = 0; }
-    if (buf.jump > 0 && p.tryJump(game)) buf.jump = 0;
+    if (this.jumpHold) {
+      if (!p.canJump()) { this.jumpHold = null; p.charging = 0; }
+      else if (inp.isDown('Space')) { this.jumpHold.t += dt; p.charging = clamp((this.jumpHold.t - 0.16) / 0.75, 0, 1); }
+      else { p.tryJump(game, p.charging); this.jumpHold = null; p.charging = 0; buf.jump = 0; }
+    } else if (buf.jump > 0 && p.tryJump(game, 0)) buf.jump = 0;
     if (buf.heavy > 0) {
       const prev = p.facing;
       p.facing = aimM;
