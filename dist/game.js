@@ -33800,7 +33800,7 @@ void main() {
     shipwright: [7, 20]
   };
   var NOT_ENTERABLE = /* @__PURE__ */ new Set(["palace", "hall", "lighthouse"]);
-  var HUTS = /* @__PURE__ */ new Set(["tribal", "mink", "ruins"]);
+  var HUTS = /* @__PURE__ */ new Set(["tribal", "ruins"]);
   function isEnterable(b) {
     if (!b || b.kind !== "building" || b.noEnter) return false;
     const role = b.role || "house";
@@ -52498,7 +52498,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     spooky: { wall: "plaster", trim: "#2c2c3a", base: "#4a4a5a", win: "gothic", door: "plank", crooked: true },
     future: { wall: "smooth", trim: "#48c9b0", base: "#d0ece7", win: "round", door: "panel", strips: true },
     tribal: { wall: "hut", base: "#8d6e63", win: "none", door: "hide" },
-    mink: { wall: "hut", base: "#8d6e63", win: "round", door: "plank" },
+    mink: { wall: "log", base: "#8d6e63", win: "round", door: "plank" },
     giant: { wall: "timber", beam: "#4e342e", base: "#7f7a72", win: "cross", door: "plank", scale: 2.1 },
     ruins: { wall: "stone", base: "#8d8a82", win: "hole", door: "hole" }
   };
@@ -53272,12 +53272,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(cyl(rx, rx * 1.03, h2 + 2, 12, true), { at: [0, -2, 0], color: wallCol, outline: 0.04 });
     for (let y = 0.5; y < h2 - 0.2; y += 0.6) k.add(cyl(rx + 0.03, rx + 0.03, 0.08, 12, true), { at: [0, y, 0], color: shade2(wallCol, -0.25) });
     const rr = rx + 0.7, rh = rx * 1.15 + 0.8;
-    const roof = cone(rr, rh, 14, false, 3);
-    const P4 = roof.attributes.position;
-    for (let i = 0; i < P4.count; i++) if (Math.abs(P4.getY(i)) < 1e-4 && i % 2) P4.setY(i, -0.18);
-    roof.computeVertexNormals();
-    const tmp2 = new Color(), rc = C(roofCol), dark = shade2(roofCol, -0.25);
-    k.add(roof, { at: [0, h2 - 0.15, 0], color: (p) => tmp2.copy(Math.floor((p.y - h2) / 0.45) % 2 ? rc : dark), outline: 0.05 });
+    const dark = shade2(roofCol, -0.18);
+    let y0 = h2 - 0.15, R3 = rr, Hh = rh;
+    for (let i = 0; i < 3; i++) {
+      const roof = cone(R3, Hh, 14, false, 1);
+      const P4 = roof.attributes.position;
+      for (let j = 0; j < P4.count; j++) if (Math.abs(P4.getY(j)) < 1e-4 && j % 2) P4.setY(j, -0.16);
+      roof.computeVertexNormals();
+      k.add(roof, { at: [0, y0, 0], color: i % 2 ? dark : roofCol, outline: i ? 0.03 : 0.05 });
+      const up = Hh * 0.32;
+      y0 += up;
+      R3 *= 0.7;
+      Hh = R3 * (rh / rr);
+    }
     k.add(cyl(0.05, 0.1, 0.7, 5), { at: [0, h2 - 0.15 + rh - 0.1, 0], color: "#6d4c33" });
     k.restore();
     const dw = 0.95, dh = Math.min(1.9, h2 - 0.3);
@@ -68095,7 +68102,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     future: { ground: T.STEEL, road: T.MARBLE, plaza: T.MARBLE, walls: ["#ecf0f1", "#d0ece7", "#fdedec"], roofs: ["#48c9b0", "#f1948a", "#85c1e9"], roof: "dome", rowStep: 9, lamps: true },
     tribal: { ground: null, road: T.DIRT, plaza: T.DIRT, walls: ["#a1887f", "#8d6e63", "#bcaaa4"], roofs: ["#d4ac0d", "#b7950b", "#c9a227"], roof: "hut", rowStep: 8, lamps: false },
     chinese: { ground: T.STONE, road: T.COBBLE, plaza: T.STONE, walls: ["#f6ddcc", "#fdebd0", "#e8daef"], roofs: ["#b03a2e", "#1e8449", "#b9770e"], roof: "pagoda", rowStep: 8, lamps: true, lantern: true },
-    mink: { ground: null, road: T.DIRT, plaza: T.DIRT, walls: ["#a0785a", "#8d6e63"], roofs: ["#4e7d3a", "#6b8e23", "#556b2f"], roof: "hut", rowStep: 8, lamps: true },
+    mink: { ground: null, road: T.DIRT, plaza: T.DIRT, walls: ["#a0785a", "#8d6e63", "#b08563"], roofs: ["#4e7d3a", "#6b8e23", "#556b2f"], roof: "gable", rowStep: 8, lamps: true },
     giant: { ground: null, road: T.DIRT, plaza: T.STONE, walls: ["#8d6e63", "#795548"], roofs: ["#5d4037", "#3e2723"], roof: "gable", rowStep: 14, lamps: false, big: true },
     ruins: { ground: null, road: T.GRAVEL, plaza: T.STONE, walls: ["#9e9e9e", "#bdbdbd", "#a1887f"], roofs: ["#757575"], roof: "ruin", rowStep: 8, lamps: false }
   };

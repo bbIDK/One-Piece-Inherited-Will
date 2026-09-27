@@ -86,7 +86,7 @@ const STYLE = {
   spooky: { wall: 'plaster', trim: '#2c2c3a', base: '#4a4a5a', win: 'gothic', door: 'plank', crooked: true },
   future: { wall: 'smooth', trim: '#48c9b0', base: '#d0ece7', win: 'round', door: 'panel', strips: true },
   tribal: { wall: 'hut', base: '#8d6e63', win: 'none', door: 'hide' },
-  mink: { wall: 'hut', base: '#8d6e63', win: 'round', door: 'plank' },
+  mink: { wall: 'log', base: '#8d6e63', win: 'round', door: 'plank' },
   giant: { wall: 'timber', beam: '#4e342e', base: '#7f7a72', win: 'cross', door: 'plank', scale: 2.1 },
   ruins: { wall: 'stone', base: '#8d8a82', win: 'hole', door: 'hole' },
 };
@@ -926,12 +926,20 @@ function hut(k, b, S, fw, fd, H, wallCol, roofCol) {
   // wall bands
   for (let y = 0.5; y < h - 0.2; y += 0.6) k.add(cyl(rx + 0.03, rx + 0.03, 0.08, 12, true), { at: [0, y, 0], color: shade(wallCol, -0.25) });
   const rr = rx + 0.7, rh = rx * 1.15 + 0.8;
-  const roof = cone(rr, rh, 14, false, 3);
-  const P = roof.attributes.position;
-  for (let i = 0; i < P.count; i++) if (Math.abs(P.getY(i)) < 1e-4 && i % 2) P.setY(i, -0.18);
-  roof.computeVertexNormals();
-  const tmp = new THREE.Color(), rc = C(roofCol), dark = shade(roofCol, -0.25);
-  k.add(roof, { at: [0, h - 0.15, 0], color: (p) => tmp.copy(Math.floor((p.y - h) / 0.45) % 2 ? rc : dark), outline: 0.05 });
+  // thatch in three stepped tiers, each one shade, with a ragged straw fringe
+  // (each tier has the same slope and starts a little way up the one below,
+  // so its rim stands just proud of it and the tips stay hidden)
+  const dark = shade(roofCol, -0.18);
+  let y0 = h - 0.15, R = rr, Hh = rh;
+  for (let i = 0; i < 3; i++) {
+    const roof = cone(R, Hh, 14, false, 1);
+    const P = roof.attributes.position;
+    for (let j = 0; j < P.count; j++) if (Math.abs(P.getY(j)) < 1e-4 && j % 2) P.setY(j, -0.16);
+    roof.computeVertexNormals();
+    k.add(roof, { at: [0, y0, 0], color: i % 2 ? dark : roofCol, outline: i ? 0.03 : 0.05 });
+    const up = Hh * 0.32;
+    y0 += up; R *= 0.7; Hh = R * (rh / rr);
+  }
   k.add(cyl(0.05, 0.1, 0.7, 5), { at: [0, h - 0.15 + rh - 0.1, 0], color: '#6d4c33' });
   k.restore();
   // doorway facing the street

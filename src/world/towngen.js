@@ -28,7 +28,7 @@ export const TOWN_STYLES = {
   future: { ground: T.STEEL, road: T.MARBLE, plaza: T.MARBLE, walls: ['#ecf0f1', '#d0ece7', '#fdedec'], roofs: ['#48c9b0', '#f1948a', '#85c1e9'], roof: 'dome', rowStep: 9, lamps: true },
   tribal: { ground: null, road: T.DIRT, plaza: T.DIRT, walls: ['#a1887f', '#8d6e63', '#bcaaa4'], roofs: ['#d4ac0d', '#b7950b', '#c9a227'], roof: 'hut', rowStep: 8, lamps: false },
   chinese: { ground: T.STONE, road: T.COBBLE, plaza: T.STONE, walls: ['#f6ddcc', '#fdebd0', '#e8daef'], roofs: ['#b03a2e', '#1e8449', '#b9770e'], roof: 'pagoda', rowStep: 8, lamps: true, lantern: true },
-  mink: { ground: null, road: T.DIRT, plaza: T.DIRT, walls: ['#a0785a', '#8d6e63'], roofs: ['#4e7d3a', '#6b8e23', '#556b2f'], roof: 'hut', rowStep: 8, lamps: true },
+  mink: { ground: null, road: T.DIRT, plaza: T.DIRT, walls: ['#a0785a', '#8d6e63', '#b08563'], roofs: ['#4e7d3a', '#6b8e23', '#556b2f'], roof: 'gable', rowStep: 8, lamps: true },
   giant: { ground: null, road: T.DIRT, plaza: T.STONE, walls: ['#8d6e63', '#795548'], roofs: ['#5d4037', '#3e2723'], roof: 'gable', rowStep: 14, lamps: false, big: true },
   ruins: { ground: null, road: T.GRAVEL, plaza: T.STONE, walls: ['#9e9e9e', '#bdbdbd', '#a1887f'], roofs: ['#757575'], roof: 'ruin', rowStep: 8, lamps: false },
 };

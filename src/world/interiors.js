@@ -35,7 +35,7 @@ export const HOURS = {
   tavern: [0, 24], bar: [0, 24], inn: [0, 24], doctor: [0, 24], marine_base: [0, 24], church: [6, 22], dojo: [6, 21], trainer: [6, 21], shipwright: [7, 20],
 };
 const NOT_ENTERABLE = new Set(['palace', 'hall', 'lighthouse']);
-const HUTS = new Set(['tribal', 'mink', 'ruins']);
+const HUTS = new Set(['tribal', 'ruins']);
 
 /** Can you walk into this building? */
 export function isEnterable(b) {
