@@ -39,3 +39,9 @@ console.log(`\nlandmarks floating (> 0.5 m) or sunk (> 1.2 m) at an edge, with t
 for (const m of marks.slice(0, args.all ? 999 : 40)) console.log(`  ${pad(m.island, 20)}${pad(m.kind, 11)}${pad(m.name.slice(0, 44), 46)}float ${pad(m.float, 5)} sink ${pad(m.sink, 5)} trees ${m.trees} water ${m.water}`);
 console.log(`\nthings standing in one another (${res.overlaps.length}):`);
 for (const o of res.overlaps.slice(0, args.all ? 999 : 40)) console.log(`  ${pad(o.island, 20)}${pad(String(o.a).slice(0, 34), 36)}in ${pad(String(o.b).slice(0, 34), 36)}at ${o.x},${o.y}${o.by ? ' by ' + o.by + ' m' : ''}`);
+const cut = res.piers.filter((p) => !p.ok);
+console.log(`\npiers you can't walk to from their town's square (${cut.length} of ${res.piers.length}):`);
+for (const p of cut) console.log(`  ${pad(p.island, 20)}${pad(p.town, 24)}${pad(String(p.dock).slice(0, 26), 28)}stuck ${p.near} m short at ${p.at}\n      ${p.why.join('\n      ')}`);
+const round = res.piers.filter((p) => p.ok && p.detour > 1.6 && p.steps > 40);
+console.log(`\npiers only reached the long way round (${round.length}):`);
+for (const p of round) console.log(`  ${pad(p.island, 20)}${pad(p.town, 24)}${pad(String(p.dock).slice(0, 26), 28)}${p.steps} steps for ${p.crow} (x${p.detour})`);

@@ -42,7 +42,65 @@ export async function run() {
       }
     }
   }
-  return { towns, marks, overlaps };
+  // can you walk from each town's square down to its pier? (the player's own
+  // rules: no solid tile, walkable ground or the pier's deck, no prop in the way)
+  const piers = [];
+  for (const isl of world.islands) {
+    if (!isl.def || !isl.docks?.length) continue;
+    for (const dk of isl.docks) {
+      const town = isl.towns.slice().sort((a, b) => Math.hypot(a.x - dk.land.x, a.y - dk.land.y) - Math.hypot(b.x - dk.land.x, b.y - dk.land.y))[0];
+      if (!town) continue;
+      const res = walkTo(world, town.plaza.x + 0.5, town.plaza.y + 2.5, dk.end.x + 0.5, dk.end.y + 0.5);
+      // (a walk much longer than the way as the crow flies: the direct way is cut off)
+      const crow = Math.abs(world.dx(town.plaza.x, dk.end.x)) + Math.abs(dk.end.y - town.plaza.y - 2.5);
+      piers.push({ island: isl.id, town: town.id, dock: dk.name, crow: Math.round(crow), detour: res.ok ? +(res.steps / Math.max(1, crow)).toFixed(2) : null, ...res });
+    }
+    // and every town can be reached from the island's first harbour
+    const dk = isl.docks[0];
+    for (const town of isl.towns) {
+      const res = walkTo(world, dk.land.x, dk.land.y, town.plaza.x + 0.5, town.plaza.y + 2.5);
+      if (!res.ok) piers.push({ island: isl.id, town: town.id, dock: 'from ' + dk.name, ...res });
+    }
+  }
+  return { towns, marks, overlaps, piers };
+}
+
+/** A walk over the tiles (a body of radius 0.3) from (sx, sy) to within 1.5 m of (tx, ty): { ok, steps, near, why }. */
+function walkTo(world, sx, sy, tx, ty) {
+  const r = 0.3;
+  const free = (x, y) => {
+    for (const [dx, dy] of [[0, 0], [-r, 0], [r, 0], [0, -r], [0, r]]) {
+      const t = world.type(x + dx, y + dy);
+      if (world.solid(x + dx, y + dy) || (!WALKABLE[t] && !OVERLAY[t])) return false;
+    }
+    return !world.hitsProp(x, y, r * 0.9);
+  };
+  const seen = new Map(), q = [[Math.floor(sx), Math.floor(sy)]];
+  const key = (x, y) => y * 100000 + x;
+  seen.set(key(q[0][0], q[0][1]), 0);
+  let best = { d: Infinity, x: 0, y: 0 };
+  for (let h = 0; h < q.length && q.length < 1500000; h++) {
+    const [x, y] = q[h];
+    const d = Math.hypot(x + 0.5 - tx, y + 0.5 - ty);
+    if (d < best.d) best = { d, x, y };
+    if (d < 1.5) return { ok: true, steps: seen.get(key(x, y)) };
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy, k = key(nx, ny);
+      if (seen.has(k) || !free(nx + 0.5, ny + 0.5)) continue;
+      if (Math.hypot(nx - sx, ny - sy) > 700) continue;
+      seen.set(k, seen.get(key(x, y)) + 1);
+      q.push([nx, ny]);
+    }
+  }
+  // what stands in the way just past the nearest point reached, toward the pier
+  const why = [];
+  const ang = Math.atan2(ty - best.y, tx - best.x);
+  for (let s = 1; s <= 3; s++) {
+    const x = best.x + 0.5 + Math.cos(ang) * s, y = best.y + 0.5 + Math.sin(ang) * s, t = world.type(x, y);
+    const props = world.objects.near(x, y, 1).filter((o) => world.hitsProp(x, y, 0.3)).map((o) => o.kind);
+    why.push(`${Math.floor(x)},${Math.floor(y)}: tile ${Object.keys(T).find((k) => T[k] === t)}${world.solid(x, y) ? ' SOLID' : ''}${props.length ? ' props ' + [...new Set(props)].join('/') : ''}`);
+  }
+  return { ok: false, near: +best.d.toFixed(1), at: [best.x, best.y], why };
 }
 
 function townStats(world, isl, t) {

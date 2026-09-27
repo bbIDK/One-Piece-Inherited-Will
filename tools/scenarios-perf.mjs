@@ -1,10 +1,23 @@
 // Frame-time profile in a few busy places: a town by day and at night, a
-// harbour, at sea on a big ship among others, and down on a reef. For each:
-// frames per second (in the headless SwiftShader renderer, so compare runs
-// with each other rather than with a real GPU), where the JS time goes
-// (window.OP.prof), and what the renderer drew.
+// harbour, a big walled town, at sea on a big ship among others, and down on
+// a reef. For each: frames per second (in the headless SwiftShader renderer,
+// so compare runs with each other rather than with a real GPU), where the JS
+// time goes (window.OP.prof), and what the renderer drew.
 const waitReady = (page, timeout = 240000) => page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout, polling: 250 });
 const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
+
+/** Frames until the view has nothing left to stream in (terrain, models, far towns), at most max. */
+const settle = (page, max = 1500) => page.evaluate((max) => new Promise((r) => {
+  const v = window.OP.game.view3d;
+  let k = 0, calm = 0;
+  const f = () => {
+    const busy = v.terrain.missing || (v.propQueue && v.propQueue.length) || (v.farQueue && v.farQueue.length) || v.buildingsFar?.busy;
+    calm = busy ? 0 : calm + 1;
+    if (++k >= max || calm >= 8) return r(k);
+    requestAnimationFrame(f);
+  };
+  requestAnimationFrame(f);
+}), max);
 
 async function measure(page, label, n = 60) {
   await frames(page, 45); // let the streaming settle
@@ -183,6 +196,18 @@ export const scenarios = {
         out.harbour = await measure(page, 'harbour');
         if (args.snap) await snap('harbour');
       }
+      // Lvneel, a big walled town (a few hundred houses), from its main square
+      if (want('bigtown')) {
+        await page.evaluate(() => {
+          const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'lvneel');
+          const t = isl.towns.find((q) => q.id === 'lvneel_town') || isl.towns[0];
+          window.OP.teleport(t.plaza.x + 2.5, t.plaza.y + 3.5);
+          g.view3d.rig.yaw = -Math.PI / 2 + 0.3; g.view3d.rig.pitch = -0.06;
+        });
+        await settle(page);
+        out.bigtown = await measure(page, 'big town (Lvneel)');
+        if (args.snap) await snap('bigtown');
+      }
       // at sea at the helm of a war galleon, other ships about
       if (want('sea')) {
         await page.evaluate(() => {
@@ -235,6 +260,79 @@ export const scenarios = {
         if (args.snap) await snap('reef');
       }
       console.log('summary', JSON.stringify(Object.fromEntries(Object.entries(out).map(([k, v]) => [k, { fps: v.fps, calls: v.calls, tris: v.tris }]))));
+    },
+  },
+  // How far the view reaches (Settings → Render distance): Lvneel, a big
+  // walled town, from its main square, from 130 m and 250 m off on foot, from
+  // the air, and from a ship out at sea. At each spot everything is let
+  // stream in first (and how many frames that took is shown), then the frame
+  // rate, draw calls and triangles are measured and a shot taken.
+  //   --rd=<chunks> the render distance (default: the game's own)
+  //   --spots=square,edge,far,air,sea   --n=<frames measured>   --settle=<max frames>
+  //   --clean (no HUD in the shots)   --night (at 21:30 instead of 11:00)
+  viewdist: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(([rd, clean]) => {
+        const OP = window.OP, g = OP.game;
+        OP.quickStart('human');
+        g.settings.view = 'first';
+        if (rd) g.settings.renderDist = rd;
+        g.applySettings();
+        document.querySelector('.look-hint')?.remove();
+        if (clean) document.getElementById('ui').style.visibility = 'hidden';
+        // the spots: out from the square across the land (to the south if it can), then out to sea
+        const w = g.world, isl = w.islands.find((i) => i.id === 'lvneel');
+        const t = isl.towns.find((q) => q.id === 'lvneel_town') || isl.towns[0];
+        const P = t.plaza;
+        const land = (x, y) => w.sd(x, y) > 2 && !w.isBlocked(x, y);
+        let best = null;
+        for (const a of [Math.PI / 2, Math.PI / 2 - 0.4, Math.PI / 2 + 0.4, 0, Math.PI, -Math.PI / 2]) {
+          const at = (d) => ({ x: w.wx(P.x + Math.cos(a) * d), y: P.y + Math.sin(a) * d });
+          let far = 0;
+          for (let d = 100; d < 600; d += 2) { const q = at(d); if (land(q.x, q.y)) far = d; else if (w.sd(q.x, q.y) < -14) break; }
+          if (!best || far > best.far) best = { a, far, at };
+          if (far >= 250) break;
+        }
+        const near = (d) => { for (let e = d; e > 20; e -= 2) { const q = best.at(e); if (land(q.x, q.y)) return q; } return best.at(d); };
+        let sea = null;
+        for (let d = best.far + 20; d < 1200 && !sea; d += 4) { const q = best.at(d); if (w.sd(q.x, q.y) < -16 && d > 420) sea = q; }
+        window.__vd = { P, edge: near(130), far: near(Math.min(250, best.far)), sea };
+      }, [args.rd ? Number(args.rd) : 0, !!args.clean]);
+      const only = args.spots ? String(args.spots).split(',') : null;
+      const want = (k) => !only || only.includes(k);
+      const n = Number(args.n || 40), max = Number(args.settle || 1500);
+      const out = {};
+      const at = async (key, label, setup) => {
+        if (!want(key)) return;
+        await page.evaluate(setup);
+        await page.evaluate((night) => { const e = window.OP.game.env; e.clock = night ? 21.5 : 11; e.storm = 0; e.fog = 0; e.rain = 0; e.snow = 0; }, !!args.night);
+        const k = await settle(page, max);
+        const info = await page.evaluate(() => {
+          const v = window.OP.game.view3d, g = window.OP.game;
+          let models = 0;
+          for (const [o, m] of v.built) if (m && o.kind === 'building') models++;
+          return { dist: +g.world.distance(g.player.x, g.player.y, window.__vd.P.x, window.__vd.P.y).toFixed(0), reach: v.terrain.extent, fog: [Math.round(v.sky.fog.near), Math.round(v.sky.fog.far)], chunks: v.terrain.live.size, models, stats: v.viewStats?.() || null };
+        });
+        console.log(`-- ${label}: settled in ${k} frames · ${info.dist} m from the square · land drawn to ${info.reach} m · fog ${info.fog[0]}–${info.fog[1]} m · ${info.chunks} terrain chunks · ${info.models} building models${info.stats ? ' · ' + JSON.stringify(info.stats) : ''}`);
+        out[key] = await measure(page, label, n);
+        if (args.snap) await snap(key);
+      };
+      // (turn to face the square from q)
+      const look = 'g.view3d.rig.yaw = Math.atan2(window.__vd.P.y - q.y, g.world.dx(q.x, window.__vd.P.x));';
+      await at('square', 'the square', new Function(`const g = window.OP.game, P = window.__vd.P; window.OP.teleport(P.x + 2.5, P.y + 3.5); g.view3d.rig.yaw = -Math.PI / 2 + 0.3; g.view3d.rig.pitch = -0.02;`));
+      await at('edge', '130 m off', new Function(`const g = window.OP.game, q = window.__vd.edge; window.OP.teleport(q.x, q.y); ${look} g.view3d.rig.pitch = 0.02;`));
+      await at('far', '250 m off', new Function(`const g = window.OP.game, q = window.__vd.far; window.OP.teleport(q.x, q.y); ${look} g.view3d.rig.pitch = 0.02;`));
+      await at('air', 'from the air', new Function(`const q = window.__vd.far, g = window.OP.game, p = g.player; window.OP.teleport(q.x, q.y); g.creative.set(true, true); if (!p.flying) g.creative.fly(); p.alt = Math.max(0, g.view3d.ground(q.x, q.y)) + 40; ${look} g.view3d.rig.pitch = -0.14;`));
+      await at('sea', 'at sea', new Function(`
+        const g = window.OP.game, p = g.player, q = window.__vd.sea;
+        if (p.flying) g.creative.land(); g.creative.set(false, true);
+        const P = window.__vd.P, h = Math.atan2(P.y - q.y, g.world.dx(q.x, P.x));
+        const s = g.giveShip('war_galleon', q.x, q.y, 'View Galleon', { heading: h + 0.5 });
+        window.OP.teleport(s.x, s.y); p.deck = null; p.mode = 'sail'; p.ship = s; p.onShip = true; s.captain = p; s.sail = 0;
+        g.view3d.rig.yaw = h; g.view3d.rig.pitch = 0.02;`));
+      console.log('summary', JSON.stringify(Object.fromEntries(Object.entries(out).map(([k, v]) => [k, { fps: v.fps, ms: v.frameMs, calls: v.calls, tris: v.tris }]))));
     },
   },
 };

@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import { uiIcon } from '../render/icons.js';
 import { vcMat, bindCtx, STATE } from './props/mats.js';
-import { Mesher, box, cyl, cone, lathe, slab, C, shade, hash } from './props/kit.js';
+import { Mesher, box, cyl, cone, lathe, slab, quad, C, shade, mix, hash } from './props/kit.js';
 import { CLIMATE } from '../world/tiles.js';
 import { doorOf, doorLocalX, windowSlots } from '../world/interiors.js';
 import { bw, bangle } from '../world/bframe.js';
@@ -1155,6 +1155,218 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex 
   if (winter && (b.style !== 'snow')) {
     // snow drifts along the walls
     for (const sx of [-1, 1]) if (ex(sx, 1) && clearOfDoor(sx * (fw / 2 - 0.2) - 0.7, sx * (fw / 2 - 0.2) + 0.7)) k.add(new THREE.SphereGeometry(0.5, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), { at: [sx * (fw / 2 - 0.2), -0.1, 0.1], scale: [1.4, 0.6, 1], color: '#ffffff' });
+  }
+}
+
+// ---------------------------------------------------------------- from afar
+// Past the distance where it has its full model, a building is drawn as a
+// few blocks merged with its neighbours' (see farbuildings.js): foundation
+// and walls, the windows (lit at night like the model's) and door, the roof
+// and chimney, awnings and verandas — the shape and colours that still read
+// from a hundred metres off, at a hundredth of the triangles. Everything sits
+// a few centimetres inside the full model, so the two never show through
+// each other while they swap.
+
+const IN = 0.05; // how far inside the model's walls the block's are
+
+/** A flat polygon (3 or 4 corners, anticlockwise seen from the front). */
+function poly(...p) {
+  const pos = [];
+  for (let i = 1; i + 1 < p.length; i++) pos.push(...p[0], ...p[i], ...p[i + 1]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+/**
+ * A pitched roof over the rectangle ±hw × ±hd (centred on z = -hd) whose
+ * slopes pass over the tops of the walls at height y: the eaves `ov` past the
+ * walls front and back and oxL / oxR past the ends, rising `rise` to a ridge
+ * along x that ends `rw` from the middle (rw < hw: hipped; otherwise the
+ * gable ends are filled in `wallCol`). Seen from below, it's dark.
+ */
+function farRoof(k, hw, hd, y, rise, ov, oxL, oxR, rw, roofCol, wallCol) {
+  const drop = ov * rise / hd; // (the slope carries on down past the wall to the eave)
+  const xl = -hw - oxL, xr = hw + oxR, ez = hd + ov, ey = y - drop, ry = y + rise;
+  const sides = { color: roofCol, double: true, backShade: 0.55 };
+  k.save(); k.translate(0, 0, -hd);
+  if (rw >= hw) {
+    for (const s of [-1, 1]) {
+      const x = s * (hw - IN), a = [x, y, s * (hd - IN)], c = [x, y, -s * (hd - IN)];
+      k.add(poly(a, c, [x, ry, 0]), { color: wallCol, double: true, backShade: 0.8 });
+    }
+    k.add(poly([xl, ey, ez], [xr, ey, ez], [xr, ry, 0], [xl, ry, 0]), sides);
+    k.add(poly([xr, ey, -ez], [xl, ey, -ez], [xl, ry, 0], [xr, ry, 0]), sides);
+  } else {
+    k.add(poly([xl, ey, ez], [xr, ey, ez], [rw, ry, 0], [-rw, ry, 0]), sides);
+    k.add(poly([xr, ey, -ez], [xl, ey, -ez], [-rw, ry, 0], [rw, ry, 0]), sides);
+    k.add(poly([xr, ey, ez], [xr, ey, -ez], [rw, ry, 0]), sides);
+    k.add(poly([xl, ey, -ez], [xl, ey, ez], [-rw, ry, 0]), sides);
+  }
+  k.restore();
+}
+
+/** A low dome (eave ring radius r, height r·sy) standing at (cx, y, cz). */
+function farDome(k, cx, cz, y, r, sy, col, onion = false) {
+  const pts = [];
+  for (let i = 0; i <= 4; i++) {
+    const t = i / 4;
+    pts.push(onion ? [Math.max(0.01, r * Math.sin((1 - t) * Math.PI * 0.85 + 0.25) * 1.08 * (1 - t * 0.2)), t * r * sy * 1.25] : [Math.max(0.01, Math.cos(t * Math.PI / 2) * r), Math.sin(t * Math.PI / 2) * r * sy]);
+  }
+  k.add(lathe(pts, 10), { at: [cx, y, cz], color: col });
+}
+
+/** One window (or door) seen from afar, centred at (x, y): its frame and the glass, on a wall facing +z at z. */
+function farPane(k, x, y, z, w, h, frame, glass, glow) {
+  if (frame) k.add(quad(w + 0.18, h + 0.18), { at: [x, y - h / 2 - 0.09, z], color: frame });
+  k.add(quad(w, h), { at: [x, y - h / 2, z + 0.012], color: glass, glow });
+}
+
+// the glass (and its glow when lit) by window kind
+const PANES = { shoji: ['#f3ead3', '#ffb84d'], lattice: ['#f6ddcc', '#ffab66'], gothic: ['#2a3a2a', '#b6ff8a'], hole: ['#2a2622', null] };
+
+/**
+ * Append building b's far block to k, in the building's own frame (front
+ * wall at z = 0 facing +z; see bframe.js), exactly where its model stands.
+ */
+export function farBuilding(k, b, ctx) {
+  const S = STYLE[b.style] || STYLE.village;
+  const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+  const g = S.scale || 1;
+  const role = b.role || 'house';
+  const big = role === 'marine_base' || role === 'palace' || role === 'hall' || role === 'church';
+  const rt = b.roofType || 'gable';
+  const wallCol = C(b.wall || '#d8c29d'), roofCol = C(b.roof || '#9c4a2a');
+  const storeys = Math.max(1, Math.min(5, (b.hgt || 2) - 1));
+  const storeyH = 2.75 * g;
+  const enter = !!b.enterable && S.wall !== 'hut' && rt !== 'hut' && rt !== 'ruin' && S.wall !== 'stone';
+  let plinth = 0.35;
+  if (enter && ctx?.ground) {
+    const mid = bw(b, 0, -fd / 2);
+    const rise = ctx.ground(mid.x, mid.y) - ctx.ground(b.x, b.y);
+    if (Number.isFinite(rise)) plinth = Math.max(0.35, Math.min(3, rise));
+  }
+  const H = plinth + 3.0 * g + (storeys - 1) * storeyH;
+  const Hc = plinth + (storeys > 1 ? storeyH : 3.0 * g);
+  const hd = fd / 2;
+  const winter = S.snow || (ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER);
+  const att = b.attach || {};
+  const oL = att.left ? 0 : 0.3 * g, oR = att.right ? 0 : 0.3 * g;
+  const V = variant(b, S, storeys, fw, fd, role);
+  const x0 = -fw / 2 + IN, x1 = fw / 2 - IN, z0 = -fd + IN, z1 = -IN;
+
+  // round huts: a wall and a cone of thatch
+  if (S.wall === 'hut' || rt === 'hut') {
+    const rx = fw / 2, rz = fd / 2;
+    const h = Math.max(2.4, Math.min(H * 0.7, 2.6 + (b.hgt || 2) * 0.5));
+    k.save(); k.translate(0, 0, -rz); k.scale(1, 1, rz / rx);
+    k.add(cyl(rx - IN, rx * 1.03 - IN, h + 2, 8, true), { at: [0, -2, 0], color: wallCol });
+    k.add(cone(rx + 0.7 - IN, rx * 1.15 + 0.8, 8, false), { at: [0, h - 0.15, 0], color: roofCol });
+    k.restore();
+    return;
+  }
+
+  // the foundation, sunk as far as the ground falls away under the building
+  let sink = 2;
+  const terr = ctx?.terrain || ctx?.ground;
+  if (terr) {
+    const base = terr(b.x, b.y);
+    let lo = base;
+    for (const u of [-0.5, 0, 0.5]) for (const v of [0, -0.5, -1]) { const q = bw(b, u * fw, v * fd); lo = Math.min(lo, terr(q.x, q.y)); }
+    if (Number.isFinite(lo)) sink = Math.min(16, Math.max(2, base - lo + 0.4));
+  }
+  B(k, x0, -sink, z0, x1, plinth, z1, V.baseCol || S.base);
+
+  // walls (or the broken ones of a ruin)
+  const ruined = rt === 'ruin' || S.wall === 'stone';
+  if (ruined) {
+    ruinWalls(k, b, fw, fd, H, wallCol);
+    return;
+  }
+  if (V.groundCol && H > Hc + 0.01) {
+    B(k, x0, plinth - 0.05, z0, x1, Hc, z1, V.groundCol);
+    B(k, x0, Hc, z0, x1, H, z1, wallCol);
+  } else B(k, x0, plinth - 0.05, z0, x1, H, z1, wallCol);
+
+  // the windows, lit in the same pattern as the model's
+  const winW = 0.85 * g, winH = 1.05 * g;
+  const frame = S.wall === 'post' ? '#3e2723' : S.wall === 'brick' || S.wall === 'adobe' ? shade(wallCol, 0.35) : shade(wallCol, -0.45);
+  const [glass, glowCol] = PANES[S.win] || [S.win === 'round' && b.style === 'sky' ? '#bde3ff' : '#2d4150', WARM];
+  const hh = S.win === 'tall' ? winH * 1.2 : winH;
+  const shutter = S.shutters && (S.win === 'cross' || S.win === 'tall') ? ['#2e6b8a', '#4f7d3a', '#8a3b2e', '#6d4c33'][(b.v || 0) % 4] : null;
+  const pane = (x, y, z, on) => {
+    farPane(k, x, y, z, winW, hh, S.win === 'hole' ? null : frame, glass, on ? glowCol : null);
+    if (shutter) for (const s of [-1, 1]) k.add(quad(winW * 0.45, hh), { at: [x + s * (winW / 2 + 0.1 + winW * 0.225), y - hh / 2, z + 0.006], color: shutter });
+  };
+  let wi = 0;
+  for (let f = 0; f < storeys; f++) {
+    const y = plinth + f * storeyH + 1.55 * g;
+    const W = windowSlots(b, f);
+    W.front.forEach((x) => {
+      if (f === 1 && V.balcony && Math.abs(x - V.balcony.x) < V.balcony.w / 2 + 0.3) return; // (the balcony door is there)
+      pane(x, y, -IN + 0.02, lit(b, wi++));
+    });
+    for (const sx of [-1, 1]) {
+      for (const z of W[sx < 0 ? 'left' : 'right']) {
+        k.save(); k.translate(sx * (fw / 2 - IN), 0, z); k.rotateY(sx * Math.PI / 2);
+        pane(0, y, 0.02, lit(b, wi++));
+        k.restore();
+      }
+    }
+  }
+  // the door
+  const dx = Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b)));
+  const dw = (big && fw >= 5 ? 1.7 : 1.05) * g, dh = (big ? 2.5 : 2.15) * g;
+  const yb = enter ? plinth : 0.1;
+  const dz = -IN + 0.02;
+  if (S.door === 'noren') {
+    farPane(k, dx, yb + dh / 2, dz, dw, dh, '#3e2723', '#2b2420', null);
+    k.add(quad(dw, 0.75), { at: [dx, yb + dh - 0.75, dz + 0.02], color: ['#1f3a68', '#7b1f1f', '#2e5e3a', '#4a2e6b'][(b.v || 0) % 4] });
+  } else farPane(k, dx, yb + dh / 2, dz, dw, dh, S.door === 'hole' || S.door === 'hide' ? null : S.wall === 'post' ? '#3e2723' : shade(wallCol, -0.4), S.door === 'hole' ? '#231f1b' : S.door === 'hide' ? '#a1784f' : doorWood(b, S), null);
+  // a shop's striped awning, a Wano veranda, a Marine base's band
+  const dd = { dw, dh, top: yb + dh };
+  if (awningOf(b, S, fw, H, dd)) {
+    const c = ['#e74c3c', '#3498db', '#27ae60', '#f39c12', '#9b59b6', '#16a085'][(b.v || 0) % 6];
+    k.add(box(Math.min(fw - 0.6, dw + 2.4), 0.06, 1.0), { at: [dx, dd.top + 0.52, 0.42], rot: [0.42, 0, 0], color: mix(c, '#ffffff', 0.4) });
+  }
+  if (S.engawa) B(k, x0, -0.5, 0, x1, 0.4, 0.88, '#8d6e4a');
+  if (b.role === 'marine_base' || (b.style === 'marine' && fw >= 6)) B(k, x0 - 0.01, H - 1.15, -0.2, x1 + 0.01, H - 0.35, 0.05, '#f5f6fa');
+  if (S.wall === 'column') B(k, x0, H - 0.5, 0.05, x1, H - 0.12, 0.4, '#b03a2e');
+
+  // the roof
+  if (rt === 'flat') {
+    const pc = b.style === 'marine' ? C('#f5f6fa') : shade(wallCol, -0.06);
+    B(k, x0 - 0.07, H - 0.05, z0 - 0.07, x1 + 0.07, H + 0.43, z1 + 0.07, (p, n) => (n.y > 0.5 ? roofCol : pc));
+    if (b.style === 'desert' && fw >= 4 && fd >= 3) {
+      const r = Math.min(fw, fd) * 0.32;
+      B(k, -r - 0.05, H + 0.15, -hd - r - 0.05, r + 0.05, H + 0.52, -hd + r + 0.05, shade(wallCol, 0.05));
+      farDome(k, 0, -hd, H + 0.52, r - 0.05, 0.95, shade(wallCol, 0.18));
+    }
+  } else if (rt === 'dome' || rt === 'shell') {
+    B(k, -fw / 2 - 0.1, H - 0.05, -fd - 0.1, fw / 2 + 0.1, H + 0.13, 0.1, shade(wallCol, -0.12));
+    const r = Math.min(fw, fd) / 2 * 0.98 - IN;
+    farDome(k, 0, -hd, H + 0.15, r, rt === 'shell' ? 0.8 : 0.9, roofCol, rt !== 'shell' && b.style === 'candy');
+    if (fw > fd * 1.4) B(k, x0, H + 0.1, z0, x1, H + 0.18, z1, roofCol);
+  } else if (rt === 'pagoda') {
+    // a hipped skirt roof over each storey, and the top roof
+    const rw = Math.max(0.05, fw / 2 - hd * 0.85);
+    for (let f = 1; f < storeys; f++) farRoof(k, fw / 2, hd, plinth + f * storeyH - 0.25, 0.55, 0.5, 0.5, 0.5, rw, roofCol, wallCol);
+    farRoof(k, fw / 2, hd, H - 0.1, Math.min(2.8, Math.max(1.3, fd * 0.5)), 0.7, 0.7, 0.7, rw, roofCol, wallCol);
+  } else {
+    // a gable, its eaves carrying on past the ends (not where a neighbour's roof does)
+    const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S.crooked ? 0.62 : 0.45) * V.pitch));
+    farRoof(k, fw / 2, hd, H, rise - 0.02, 0.36 * g, oL, oR, fw, winter ? C('#f4f9ff') : roofCol, wallCol);
+    if ((b.style === 'village' || b.style === 'snow' || b.style === 'town' || b.style === 'giant' || b.style === 'port' || b.style === 'city') && fw >= 4 && V.chimney) {
+      const cxh = V.chimney * (fw / 2 - 0.9 * g), czh = -hd - hd * 0.35;
+      const yTop = H + rise * (1 - 0.35) + 0.9 * g;
+      B(k, cxh - 0.26 * g, H, czh - 0.26 * g, cxh + 0.26 * g, yTop + 0.14, czh + 0.26 * g, '#8d6e63');
+    }
+    if (b.style === 'noble' && big) {
+      // the little bell tower
+      B(k, -0.66, H + rise - 0.2, -hd - 0.66, 0.66, H + rise + 1.58, -hd + 0.66, wallCol);
+      k.add(cone(1.0, 1.45, 4), { at: [0, H + rise + 1.58, -hd], rot: [0, Math.PI / 4, 0], color: roofCol });
+    }
   }
 }
 

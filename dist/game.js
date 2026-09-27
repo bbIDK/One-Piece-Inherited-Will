@@ -34929,6 +34929,11 @@ void main() {
     else s.lerp(WHITE, k);
     return s.convertSRGBToLinear();
   }
+  function mix(a, b, t) {
+    const x = C(a).clone().convertLinearToSRGB();
+    const y = C(b).clone().convertLinearToSRGB();
+    return x.lerp(y, t).convertSRGBToLinear();
+  }
   function hash2(a, b = 0, c = 0) {
     let h2 = Math.imul(a * 1e3 | 0, 374761393) ^ Math.imul(b * 1e3 | 0, 668265263) ^ Math.imul(c * 1e3 | 0, 1274126177);
     h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
@@ -35007,6 +35012,11 @@ void main() {
     g.setAttribute("position", new Float32BufferAttribute(pos, 3));
     g.setIndex(idx);
     g.computeVertexNormals();
+    return g;
+  }
+  function quad(w, h2, ws = 1, hs = 1) {
+    const g = new PlaneGeometry(w, h2, ws, hs);
+    g.translate(0, h2 / 2, 0);
     return g;
   }
   function slab(points, depth, bevel = 0) {
@@ -35537,7 +35547,6 @@ void main() {
 
   // src/render3d/terrain3d.js
   var NEAR_R = 6;
-  var FAR_R = 15;
   var BUILD_BUDGET_MS = 4;
   var COL = new Float32Array(256 * 3);
   var ACC = new Float32Array(256 * 3);
@@ -35572,31 +35581,40 @@ void main() {
       this.live = /* @__PURE__ */ new Map();
       this.queue = [];
       this.nearR = NEAR_R;
-      this.farR = FAR_R;
+      this.reachFoot = 12;
+      this.reachSea = 18;
+      this.sailing = false;
+      this.farR = this.reachFoot;
       this.floorR = 0;
     }
-    /** Fast graphics draws less terrain detail and a nearer horizon. */
+    /** Fast graphics draws less terrain detail nearby. */
     setDetail(q2) {
       this.quality = q2;
       this.nearR = q2 === "low" ? 4 : NEAR_R;
-      this.farR = this.reach(false);
     }
-    /** How far (in chunks) the land is drawn: further out at sea, where islands are the view. */
+    /** How far (in chunks) the land is drawn on foot and at sea: the render distance. */
+    setReach(foot, sea) {
+      this.reachFoot = foot;
+      this.reachSea = sea;
+      this.farR = this.reach(this.sailing);
+    }
     reach(sailing) {
-      const low = this.quality === "low";
-      return sailing ? low ? 15 : 22 : low ? 11 : 17;
+      return sailing ? this.reachSea : this.reachFoot;
     }
     /** Draw the open-sea floor this many chunks around (0: none — nobody's in the water). */
     setSeaFloor(r) {
       this.floorR = r;
     }
     setSailing(on) {
-      const r = this.reach(!!on);
-      if (r !== this.farR) this.farR = r;
+      this.sailing = !!on;
+      this.farR = this.reach(this.sailing);
     }
-    /** Distance (m) out to which every direction has terrain: where the fog must close in. */
+    /**
+     * Distance (m) out to which every direction has terrain, from anywhere in
+     * the camera's chunk (see wanted): where the fog must close in.
+     */
     get extent() {
-      return (this.farR - 1) * CHUNK;
+      return this.farR * CHUNK;
     }
     setWorld(world) {
       for (const c of this.live.values()) this.disposeChunk(c);
@@ -35629,6 +35647,10 @@ void main() {
     groundAt(x, y) {
       return this.hf ? this.hf.ground(x, y) : 0;
     }
+    /** Where a small prop of foot radius r stands (see HeightField.rest). */
+    restAt(x, y, r) {
+      return this.hf ? this.hf.rest(x, y, r) : 0;
+    }
     terrainAt(x, y) {
       return this.hf ? this.hf.terrain(x, y) : 0;
     }
@@ -35652,17 +35674,24 @@ void main() {
         c.mesh.position.set(rx, 0, c.y0 - oy);
       }
     }
-    /** The chunks to show around chunk (ccx, ccy), with their detail level. */
+    /**
+     * The chunks to show around chunk (ccx, ccy), with their detail level:
+     * every chunk with any part within farR chunks of any part of the camera's
+     * own, so the land reaches the render distance in every direction wherever
+     * in its chunk the camera stands.
+     */
     wanted(ccx, ccy) {
       const w = this.world;
       const want = /* @__PURE__ */ new Map();
       const NR = this.nearR, FR = this.farR;
-      for (let j = -FR; j <= FR; j++) {
+      for (let j = -FR - 1; j <= FR + 1; j++) {
         const cy = ccy + j;
         if (cy < 0 || cy >= this.ch) continue;
-        for (let i = -FR; i <= FR; i++) {
+        const gy = Math.max(0, Math.abs(j) - 1);
+        for (let i = -FR - 1; i <= FR + 1; i++) {
+          const gx = Math.max(0, Math.abs(i) - 1);
+          if (gx * gx + gy * gy > FR * FR) continue;
           const d2 = i * i + j * j;
-          if (d2 > FR * FR) continue;
           let cx = ccx + i;
           if (w.wrap) cx = (cx % this.cw + this.cw) % this.cw;
           else if (cx < 0 || cx >= this.cw) continue;
@@ -35759,7 +35788,7 @@ void main() {
       mesh.matrixAutoUpdate = true;
       const root2 = new Group();
       root2.add(mesh);
-      if (lod === 1) this.addDecksAndWalls(root2, x0, y0);
+      this.addDecksAndWalls(root2, x0, y0, lod === 1);
       this.group.add(root2);
       return { mesh: root2, lod, x0, y0, minH };
     }
@@ -35799,24 +35828,44 @@ void main() {
       out[k + 1] = Math.max(0, gg + jit);
       out[k + 2] = Math.max(0, b + jit * 0.5);
     }
-    /** Wooden decks over water, and wall blocks, for one full-detail chunk. */
-    addDecksAndWalls(root2, x0, y0) {
+    /**
+     * Wooden decks over water, and wall blocks, for one chunk: with all their
+     * detail (full), or as plain blocks in one mesh for a far chunk.
+     */
+    addDecksAndWalls(root2, x0, y0, full = true) {
       const w = this.world;
-      const decks2 = [], piers = [], walls = [], posts = [];
+      const decks2 = [], piers = [], walls = [], posts = [], piles = [], quayed = [];
       let quays = 0;
       for (let j = 0; j < CHUNK; j++) {
         for (let i = 0; i < CHUNK; i++) {
           const t = w.type(x0 + i, y0 + j);
+          const third = (x0 + i) % 3 === 0 && (y0 + j) % 3 === 0;
           if (OVERLAY[t]) {
             if (w.docks.size && w.isDock(x0 + i, y0 + j)) {
               piers.push(i, j);
+              if (third) piles.push(i, j);
               continue;
             }
             decks2.push(i, j);
-            if ((x0 + i) % 3 === 0 && (y0 + j) % 3 === 0) posts.push(i, j);
+            if (third) posts.push(i, j);
           } else if (t === T.WALL) walls.push(i, j);
-          else if (w.quays.size && w.isQuay(x0 + i, y0 + j)) quays++;
+          else if (w.quays.size && w.isQuay(x0 + i, y0 + j)) {
+            quays++;
+            quayed.push(i, j);
+          }
         }
+      }
+      if (!full) {
+        const m = farBoxes([
+          [decks2, 1, 0.22, 1, DECK_Y - 0.11, 10119740],
+          [piers, 1, 0.26, 1, DOCK_Y - 0.13, 10119740],
+          [posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, 6111280, 0.15],
+          [piles, 0.3, DOCK_Y + 2.74, 0.3, (DOCK_Y - 3.26) / 2, 6111280],
+          [quayed, 1, DOCK_Y + 1.5, 1, (DOCK_Y - 1.5) / 2, 10722448],
+          [walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, 9076592]
+        ]);
+        if (m) root2.add(m);
+        return;
       }
       if (decks2.length) root2.add(boxes(decks2, 1, 0.22, 1, DECK_Y - 0.11, this.deckMat));
       if (piers.length) root2.add(boxes(piers, 1, 0.26, 1, DOCK_Y - 0.13, this.deckMat));
@@ -35950,6 +35999,49 @@ void main() {
     geo2.setIndex(new BufferAttribute(idx, 1));
     geo2.computeBoundingSphere();
     const m = new Mesh(geo2, mat);
+    m.receiveShadow = true;
+    return m;
+  }
+  function farBoxes(groups9) {
+    let n = 0;
+    for (const g of groups9) n += g[0].length / 2;
+    if (!n) return null;
+    const base2 = new BoxGeometry(1, 1, 1);
+    const bp = base2.attributes.position.array, bn = base2.attributes.normal.array, bi = base2.index.array;
+    const vc = bp.length / 3;
+    const pos = new Float32Array(n * vc * 3), nor = new Float32Array(n * vc * 3), col = new Float32Array(n * vc * 3);
+    const idx = new Uint32Array(n * bi.length);
+    const c = new Color();
+    let k = 0;
+    for (const [list, sx, sy, sz, cy, color, inset = 0] of groups9) {
+      c.set(color);
+      for (let q2 = 0; q2 < list.length; q2 += 2, k++) {
+        const ox = list[q2] + 0.5 + inset, oz = list[q2 + 1] + 0.5 + inset;
+        for (let v = 0; v < vc; v++) {
+          const o = (k * vc + v) * 3;
+          pos[o] = bp[v * 3] * sx + ox;
+          pos[o + 1] = bp[v * 3 + 1] * sy + cy;
+          pos[o + 2] = bp[v * 3 + 2] * sz + oz;
+          nor[o] = bn[v * 3];
+          nor[o + 1] = bn[v * 3 + 1];
+          nor[o + 2] = bn[v * 3 + 2];
+          col[o] = c.r;
+          col[o + 1] = c.g;
+          col[o + 2] = c.b;
+        }
+        for (let q22 = 0; q22 < bi.length; q22++) idx[k * bi.length + q22] = bi[q22] + k * vc;
+      }
+    }
+    base2.dispose();
+    const geo2 = new BufferGeometry();
+    geo2.setAttribute("position", new BufferAttribute(pos, 3));
+    geo2.setAttribute("normal", new BufferAttribute(nor, 3));
+    geo2.setAttribute("color", new BufferAttribute(col, 3));
+    geo2.setAttribute("tint", new BufferAttribute(new Float32Array(n * vc), 1));
+    geo2.setAttribute("glow", new BufferAttribute(new Float32Array(n * vc * 4), 4));
+    geo2.setIndex(new BufferAttribute(idx, 1));
+    geo2.computeBoundingSphere();
+    const m = new Mesh(geo2, vcMat());
     m.receiveShadow = true;
     return m;
   }
@@ -36626,13 +36718,13 @@ void main() {
       this.hemi.color.setRGB(amb[0] * 0.8, amb[1] * 0.85, amb[2] * 0.95);
       this.hemi.groundColor.setRGB(amb[0] * 0.45, amb[1] * 0.4, amb[2] * 0.35);
       this.hemi.intensity = 1 + (zone === 3 ? -0.3 : 0);
-      let far = sailing ? 900 : 620;
+      let far = this.maxFar || (sailing ? 900 : 620);
       far *= (1 - env.fog * 0.72) * (1 - env.storm * 0.4);
       if (zone === 2) far = 170;
       if (zone === 3) far = 95;
       far = Math.max(60, Math.min(far, this.maxFar || far));
       this.fog.far = far;
-      this.fog.near = far * 0.55;
+      this.fog.near = far * 0.6;
       this.fog.color.copy(this.horizon);
       let dens = 11e-4 + env.storm * 45e-4 + env.fog * 0.013 + (env.snow ? 25e-4 : 0) + night * 4e-4;
       if (sailing) dens *= 0.8;
@@ -39144,10 +39236,6 @@ void main() {
       for (let i = this.hitboxes.length - 1; i >= 0; i--) {
         const h2 = this.hitboxes[i];
         h2.t += dt;
-        if (!h2.doorChecked && h2.owner?.isPlayer) {
-          h2.doorChecked = true;
-          game.buildings?.strike(h2);
-        }
         if (h2.follow && h2.owner && h2.owner.alive) {
           h2.x = h2.owner.x + (h2.offX || 0);
           h2.y = h2.owner.y + (h2.offY || 0);
@@ -40193,7 +40281,7 @@ void main() {
     if (c.stamina && actor.stamina < c.stamina * 0.5) return false;
     if (c.haki && actor.haki < c.haki) return false;
     if (def.source?.startsWith("fruit") && (actor.inWater || actor.seastoned)) return false;
-    if (def.weapon && !actor.hasWeapon(def.weapon)) return false;
+    if (def.weapon && !actor.hasWeapon(def.weapon, def.style)) return false;
     if (def.requiresBuff && !actor.hasBuff(def.requiresBuff)) return false;
     return true;
   }
@@ -41167,12 +41255,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return v;
   }
   var css = (r, g, b, a = 1) => a >= 1 ? `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})` : `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${Math.max(0, a).toFixed(3)})`;
-  function mix(c1, c2, t) {
+  function mix2(c1, c2, t) {
     const A = rgba(c1), B4 = rgba(c2);
     return css(A[0] + (B4[0] - A[0]) * t, A[1] + (B4[1] - A[1]) * t, A[2] + (B4[2] - A[2]) * t, A[3]);
   }
-  var dk = (c, t = 0.3) => mix(c, "#1c0f1c", t);
-  var lt = (c, t = 0.4) => mix(c, "#fffaea", t);
+  var dk = (c, t = 0.3) => mix2(c, "#1c0f1c", t);
+  var lt = (c, t = 0.4) => mix2(c, "#fffaea", t);
   var fade = (c, a) => {
     const A = rgba(c);
     return css(A[0], A[1], A[2], a);
@@ -43604,7 +43692,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   D.fruit = (I, o = {}) => {
     const id = o.fruit || "", f = FRUITS[id] || {};
     let col = o.color || f.color || "#8e5bd1";
-    if (lum(col) > 0.84) col = mix(col, "#9fb2c6", 0.24);
+    if (lum(col) > 0.84) col = mix2(col, "#9fb2c6", 0.24);
     const shape = o.shape || FRUIT_SHAPE[id] || FRUIT_SHAPES[hash4(id || "x") % FRUIT_SHAPES.length];
     const rr = I.small ? 7.6 : 6.6;
     const stem = (x, y, leaf = 17) => {
@@ -45267,8 +45355,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function badgeTone(c) {
     const L2 = lum(c);
-    if (L2 > 0.55) return mix(c, "#241a2a", Math.min(0.6, (L2 - 0.42) / (L2 - 0.08)));
-    if (L2 < 0.16) return mix(c, "#8a7fa0", 0.3);
+    if (L2 > 0.55) return mix2(c, "#241a2a", Math.min(0.6, (L2 - 0.42) / (L2 - 0.08)));
+    if (L2 < 0.16) return mix2(c, "#8a7fa0", 0.3);
     return c;
   }
   var WIN3 = 27;
@@ -49968,7 +50056,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   var OLW = 0.07;
   var dk2 = (col, amt) => col && col[0] === "#" ? shade(col, amt) : col;
-  var mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+  var mix22 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
   function capsulePath(g, x0, y0, r0, x1, y1, r1) {
     const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy);
     if (d < Math.abs(r0 - r1) + 1e-4) {
@@ -50571,7 +50659,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const tips = smoothPts(e.pts.map((p) => p[1]));
         const bases = smoothPts(e.pts.map((p) => p[0]));
         const n = tips.length;
-        const inner = bases.map((b, i) => mix2(b, tips[i], Math.pow(i / (n - 1), 0.75) * 0.9));
+        const inner = bases.map((b, i) => mix22(b, tips[i], Math.pow(i / (n - 1), 0.75) * 0.9));
         const gr = g.createLinearGradient(tips[0][0], tips[0][1], tips[n - 1][0], tips[n - 1][1]);
         gr.addColorStop(0, rgba2("#ffffff", 0.92));
         gr.addColorStop(0.18, rgba2(col, 0.75));
@@ -51199,12 +51287,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         drawLimb(g, [arm.s, arm.j], [rs[0], rs[1]], upperCol, dk2(upperCol, -0.18), sd);
       }
       if (armLen > 1.2) {
-        const j2 = mix2(arm.j, arm.e, 0.5);
+        const j2 = mix22(arm.j, arm.e, 0.5);
         circ(g, arm.j[0], arm.j[1], rs[1] * 1.12, upperCol, OUTLINE3, 0.03);
         circ(g, j2[0], j2[1], rs[2] * 1.12, foreC, OUTLINE3, 0.03);
       }
       if (!look.sleeve && !look.noSleeves) {
-        const m = mix2(arm.s, arm.j, 0.42);
+        const m = mix22(arm.s, arm.j, 0.42);
         const tc = dk2(top, dim);
         drawLimb(g, [arm.s, m], [w * 1.3, w * 1.14], tc, dk2(tc, -0.2), sd);
       }
@@ -51212,7 +51300,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.strokeStyle = "rgba(179,136,255,0.6)";
         g.lineWidth = 0.016;
         g.lineCap = "round";
-        const a0 = mix2(arm.j, arm.e, 0.2), a1 = mix2(arm.j, arm.e, 0.8);
+        const a0 = mix22(arm.j, arm.e, 0.2), a1 = mix22(arm.j, arm.e, 0.8);
         g.beginPath();
         g.moveTo(a0[0], a0[1] - w * 0.35);
         g.lineTo(a1[0], a1[1] - w * 0.3);
@@ -51290,7 +51378,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         drawLimb(g, [L2.h, L2.k], [rs[0], rs[1]], col, dk2(col, -0.2), sd);
       } else {
         drawLimb(g, [L2.h, L2.k, L2.e], rs, col, dk2(col, -0.2), sd);
-        const c0 = mix2(L2.k, L2.e, 0.7), c1 = mix2(L2.k, L2.e, 0.9);
+        const c0 = mix22(L2.k, L2.e, 0.7), c1 = mix22(L2.k, L2.e, 0.9);
         drawLimb(g, [c0, c1], [rs[2] * 1.14, rs[2] * 1.1], dk2(col, -0.25), null, null);
       }
       drawFoot(g, L2, side, which, look, pose.armLegs ? hakiCol : dk2(shoeCol, dim * 1.5), false, L2.scale);
@@ -53917,27 +54005,610 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       for (const sx of [-1, 1]) if (ex(sx, 1) && clearOfDoor(sx * (fw / 2 - 0.2) - 0.7, sx * (fw / 2 - 0.2) + 0.7)) k.add(new SphereGeometry(0.5, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), { at: [sx * (fw / 2 - 0.2), -0.1, 0.1], scale: [1.4, 0.6, 1], color: "#ffffff" });
     }
   }
+  var IN = 0.05;
+  function poly2(...p) {
+    const pos = [];
+    for (let i = 1; i + 1 < p.length; i++) pos.push(...p[0], ...p[i], ...p[i + 1]);
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    g.computeVertexNormals();
+    return g;
+  }
+  function farRoof(k, hw, hd, y, rise, ov, oxL, oxR, rw, roofCol, wallCol) {
+    const drop = ov * rise / hd;
+    const xl = -hw - oxL, xr = hw + oxR, ez = hd + ov, ey = y - drop, ry = y + rise;
+    const sides2 = { color: roofCol, double: true, backShade: 0.55 };
+    k.save();
+    k.translate(0, 0, -hd);
+    if (rw >= hw) {
+      for (const s of [-1, 1]) {
+        const x = s * (hw - IN), a = [x, y, s * (hd - IN)], c = [x, y, -s * (hd - IN)];
+        k.add(poly2(a, c, [x, ry, 0]), { color: wallCol, double: true, backShade: 0.8 });
+      }
+      k.add(poly2([xl, ey, ez], [xr, ey, ez], [xr, ry, 0], [xl, ry, 0]), sides2);
+      k.add(poly2([xr, ey, -ez], [xl, ey, -ez], [xl, ry, 0], [xr, ry, 0]), sides2);
+    } else {
+      k.add(poly2([xl, ey, ez], [xr, ey, ez], [rw, ry, 0], [-rw, ry, 0]), sides2);
+      k.add(poly2([xr, ey, -ez], [xl, ey, -ez], [-rw, ry, 0], [rw, ry, 0]), sides2);
+      k.add(poly2([xr, ey, ez], [xr, ey, -ez], [rw, ry, 0]), sides2);
+      k.add(poly2([xl, ey, -ez], [xl, ey, ez], [-rw, ry, 0]), sides2);
+    }
+    k.restore();
+  }
+  function farDome(k, cx, cz, y, r, sy, col, onion = false) {
+    const pts = [];
+    for (let i = 0; i <= 4; i++) {
+      const t = i / 4;
+      pts.push(onion ? [Math.max(0.01, r * Math.sin((1 - t) * Math.PI * 0.85 + 0.25) * 1.08 * (1 - t * 0.2)), t * r * sy * 1.25] : [Math.max(0.01, Math.cos(t * Math.PI / 2) * r), Math.sin(t * Math.PI / 2) * r * sy]);
+    }
+    k.add(lathe(pts, 10), { at: [cx, y, cz], color: col });
+  }
+  function farPane(k, x, y, z, w, h2, frame2, glass, glow3) {
+    if (frame2) k.add(quad(w + 0.18, h2 + 0.18), { at: [x, y - h2 / 2 - 0.09, z], color: frame2 });
+    k.add(quad(w, h2), { at: [x, y - h2 / 2, z + 0.012], color: glass, glow: glow3 });
+  }
+  var PANES = { shoji: ["#f3ead3", "#ffb84d"], lattice: ["#f6ddcc", "#ffab66"], gothic: ["#2a3a2a", "#b6ff8a"], hole: ["#2a2622", null] };
+  function farBuilding(k, b, ctx) {
+    const S3 = STYLE[b.style] || STYLE.village;
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+    const g = S3.scale || 1;
+    const role = b.role || "house";
+    const big = role === "marine_base" || role === "palace" || role === "hall" || role === "church";
+    const rt = b.roofType || "gable";
+    const wallCol = C(b.wall || "#d8c29d"), roofCol = C(b.roof || "#9c4a2a");
+    const storeys = Math.max(1, Math.min(5, (b.hgt || 2) - 1));
+    const storeyH = 2.75 * g;
+    const enter = !!b.enterable && S3.wall !== "hut" && rt !== "hut" && rt !== "ruin" && S3.wall !== "stone";
+    let plinth = 0.35;
+    if (enter && ctx?.ground) {
+      const mid = bw(b, 0, -fd / 2);
+      const rise = ctx.ground(mid.x, mid.y) - ctx.ground(b.x, b.y);
+      if (Number.isFinite(rise)) plinth = Math.max(0.35, Math.min(3, rise));
+    }
+    const H2 = plinth + 3 * g + (storeys - 1) * storeyH;
+    const Hc = plinth + (storeys > 1 ? storeyH : 3 * g);
+    const hd = fd / 2;
+    const winter = S3.snow || ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER;
+    const att = b.attach || {};
+    const oL = att.left ? 0 : 0.3 * g, oR = att.right ? 0 : 0.3 * g;
+    const V3 = variant(b, S3, storeys, fw, fd, role);
+    const x0 = -fw / 2 + IN, x1 = fw / 2 - IN, z0 = -fd + IN, z1 = -IN;
+    if (S3.wall === "hut" || rt === "hut") {
+      const rx = fw / 2, rz = fd / 2;
+      const h2 = Math.max(2.4, Math.min(H2 * 0.7, 2.6 + (b.hgt || 2) * 0.5));
+      k.save();
+      k.translate(0, 0, -rz);
+      k.scale(1, 1, rz / rx);
+      k.add(cyl(rx - IN, rx * 1.03 - IN, h2 + 2, 8, true), { at: [0, -2, 0], color: wallCol });
+      k.add(cone(rx + 0.7 - IN, rx * 1.15 + 0.8, 8, false), { at: [0, h2 - 0.15, 0], color: roofCol });
+      k.restore();
+      return;
+    }
+    let sink = 2;
+    const terr = ctx?.terrain || ctx?.ground;
+    if (terr) {
+      const base2 = terr(b.x, b.y);
+      let lo = base2;
+      for (const u of [-0.5, 0, 0.5]) for (const v of [0, -0.5, -1]) {
+        const q2 = bw(b, u * fw, v * fd);
+        lo = Math.min(lo, terr(q2.x, q2.y));
+      }
+      if (Number.isFinite(lo)) sink = Math.min(16, Math.max(2, base2 - lo + 0.4));
+    }
+    B2(k, x0, -sink, z0, x1, plinth, z1, V3.baseCol || S3.base);
+    const ruined = rt === "ruin" || S3.wall === "stone";
+    if (ruined) {
+      ruinWalls(k, b, fw, fd, H2, wallCol);
+      return;
+    }
+    if (V3.groundCol && H2 > Hc + 0.01) {
+      B2(k, x0, plinth - 0.05, z0, x1, Hc, z1, V3.groundCol);
+      B2(k, x0, Hc, z0, x1, H2, z1, wallCol);
+    } else B2(k, x0, plinth - 0.05, z0, x1, H2, z1, wallCol);
+    const winW = 0.85 * g, winH = 1.05 * g;
+    const frame2 = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" || S3.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
+    const [glass, glowCol] = PANES[S3.win] || [S3.win === "round" && b.style === "sky" ? "#bde3ff" : "#2d4150", WARM];
+    const hh = S3.win === "tall" ? winH * 1.2 : winH;
+    const shutter = S3.shutters && (S3.win === "cross" || S3.win === "tall") ? ["#2e6b8a", "#4f7d3a", "#8a3b2e", "#6d4c33"][(b.v || 0) % 4] : null;
+    const pane = (x, y, z, on) => {
+      farPane(k, x, y, z, winW, hh, S3.win === "hole" ? null : frame2, glass, on ? glowCol : null);
+      if (shutter) for (const s of [-1, 1]) k.add(quad(winW * 0.45, hh), { at: [x + s * (winW / 2 + 0.1 + winW * 0.225), y - hh / 2, z + 6e-3], color: shutter });
+    };
+    let wi = 0;
+    for (let f = 0; f < storeys; f++) {
+      const y = plinth + f * storeyH + 1.55 * g;
+      const W3 = windowSlots(b, f);
+      W3.front.forEach((x) => {
+        if (f === 1 && V3.balcony && Math.abs(x - V3.balcony.x) < V3.balcony.w / 2 + 0.3) return;
+        pane(x, y, -IN + 0.02, lit(b, wi++));
+      });
+      for (const sx of [-1, 1]) {
+        for (const z of W3[sx < 0 ? "left" : "right"]) {
+          k.save();
+          k.translate(sx * (fw / 2 - IN), 0, z);
+          k.rotateY(sx * Math.PI / 2);
+          pane(0, y, 0.02, lit(b, wi++));
+          k.restore();
+        }
+      }
+    }
+    const dx = Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b)));
+    const dw = (big && fw >= 5 ? 1.7 : 1.05) * g, dh = (big ? 2.5 : 2.15) * g;
+    const yb = enter ? plinth : 0.1;
+    const dz = -IN + 0.02;
+    if (S3.door === "noren") {
+      farPane(k, dx, yb + dh / 2, dz, dw, dh, "#3e2723", "#2b2420", null);
+      k.add(quad(dw, 0.75), { at: [dx, yb + dh - 0.75, dz + 0.02], color: ["#1f3a68", "#7b1f1f", "#2e5e3a", "#4a2e6b"][(b.v || 0) % 4] });
+    } else farPane(k, dx, yb + dh / 2, dz, dw, dh, S3.door === "hole" || S3.door === "hide" ? null : S3.wall === "post" ? "#3e2723" : shade2(wallCol, -0.4), S3.door === "hole" ? "#231f1b" : S3.door === "hide" ? "#a1784f" : doorWood(b, S3), null);
+    const dd = { dw, dh, top: yb + dh };
+    if (awningOf(b, S3, fw, H2, dd)) {
+      const c = ["#e74c3c", "#3498db", "#27ae60", "#f39c12", "#9b59b6", "#16a085"][(b.v || 0) % 6];
+      k.add(box(Math.min(fw - 0.6, dw + 2.4), 0.06, 1), { at: [dx, dd.top + 0.52, 0.42], rot: [0.42, 0, 0], color: mix(c, "#ffffff", 0.4) });
+    }
+    if (S3.engawa) B2(k, x0, -0.5, 0, x1, 0.4, 0.88, "#8d6e4a");
+    if (b.role === "marine_base" || b.style === "marine" && fw >= 6) B2(k, x0 - 0.01, H2 - 1.15, -0.2, x1 + 0.01, H2 - 0.35, 0.05, "#f5f6fa");
+    if (S3.wall === "column") B2(k, x0, H2 - 0.5, 0.05, x1, H2 - 0.12, 0.4, "#b03a2e");
+    if (rt === "flat") {
+      const pc = b.style === "marine" ? C("#f5f6fa") : shade2(wallCol, -0.06);
+      B2(k, x0 - 0.07, H2 - 0.05, z0 - 0.07, x1 + 0.07, H2 + 0.43, z1 + 0.07, (p, n) => n.y > 0.5 ? roofCol : pc);
+      if (b.style === "desert" && fw >= 4 && fd >= 3) {
+        const r = Math.min(fw, fd) * 0.32;
+        B2(k, -r - 0.05, H2 + 0.15, -hd - r - 0.05, r + 0.05, H2 + 0.52, -hd + r + 0.05, shade2(wallCol, 0.05));
+        farDome(k, 0, -hd, H2 + 0.52, r - 0.05, 0.95, shade2(wallCol, 0.18));
+      }
+    } else if (rt === "dome" || rt === "shell") {
+      B2(k, -fw / 2 - 0.1, H2 - 0.05, -fd - 0.1, fw / 2 + 0.1, H2 + 0.13, 0.1, shade2(wallCol, -0.12));
+      const r = Math.min(fw, fd) / 2 * 0.98 - IN;
+      farDome(k, 0, -hd, H2 + 0.15, r, rt === "shell" ? 0.8 : 0.9, roofCol, rt !== "shell" && b.style === "candy");
+      if (fw > fd * 1.4) B2(k, x0, H2 + 0.1, z0, x1, H2 + 0.18, z1, roofCol);
+    } else if (rt === "pagoda") {
+      const rw = Math.max(0.05, fw / 2 - hd * 0.85);
+      for (let f = 1; f < storeys; f++) farRoof(k, fw / 2, hd, plinth + f * storeyH - 0.25, 0.55, 0.5, 0.5, 0.5, rw, roofCol, wallCol);
+      farRoof(k, fw / 2, hd, H2 - 0.1, Math.min(2.8, Math.max(1.3, fd * 0.5)), 0.7, 0.7, 0.7, rw, roofCol, wallCol);
+    } else {
+      const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S3.crooked ? 0.62 : 0.45) * V3.pitch));
+      farRoof(k, fw / 2, hd, H2, rise - 0.02, 0.36 * g, oL, oR, fw, winter ? C("#f4f9ff") : roofCol, wallCol);
+      if ((b.style === "village" || b.style === "snow" || b.style === "town" || b.style === "giant" || b.style === "port" || b.style === "city") && fw >= 4 && V3.chimney) {
+        const cxh = V3.chimney * (fw / 2 - 0.9 * g), czh = -hd - hd * 0.35;
+        const yTop = H2 + rise * (1 - 0.35) + 0.9 * g;
+        B2(k, cxh - 0.26 * g, H2, czh - 0.26 * g, cxh + 0.26 * g, yTop + 0.14, czh + 0.26 * g, "#8d6e63");
+      }
+      if (b.style === "noble" && big) {
+        B2(k, -0.66, H2 + rise - 0.2, -hd - 0.66, 0.66, H2 + rise + 1.58, -hd + 0.66, wallCol);
+        k.add(cone(1, 1.45, 4), { at: [0, H2 + rise + 1.58, -hd], rot: [0, Math.PI / 4, 0], color: roofCol });
+      }
+    }
+  }
+
+  // src/render3d/farbuildings.js
+  var CELL2 = 32;
+  var FarBuildings = class {
+    constructor(parent, ctx) {
+      this.parent = parent;
+      this.ctx = ctx;
+      this.cells = /* @__PURE__ */ new Map();
+      this.cellOf = /* @__PURE__ */ new Map();
+      this.hidden = /* @__PURE__ */ new Set();
+      this.seen = /* @__PURE__ */ new Map();
+      this.stamp = 0;
+      this.origin = { x: 0, y: 0 };
+    }
+    /** A full look over the render distance begins: add() what's in range, then end(). */
+    begin() {
+      this.stamp++;
+    }
+    /** Draw building b as a block (inRange: close enough to be taken on; once taken, it stays till end() misses it). */
+    add(b, inRange) {
+      if (this.cellOf.has(b)) {
+        this.seen.set(b, this.stamp);
+        return;
+      }
+      if (!inRange) return;
+      const w = this.ctx.world;
+      const cx = Math.floor(w.wx(b.x) / CELL2), cy = Math.floor(b.y / CELL2);
+      const key2 = cy * 1e5 + cx;
+      let c = this.cells.get(key2);
+      if (!c) this.cells.set(key2, c = { key: key2, x0: cx * CELL2, y0: cy * CELL2, members: /* @__PURE__ */ new Set(), mesh: null, ranges: null, orig: null, dirty: true });
+      c.members.add(b);
+      c.dirty = true;
+      this.cellOf.set(b, c);
+      this.seen.set(b, this.stamp);
+    }
+    /** The look is over: whatever it didn't find any more is out of range. */
+    end() {
+      for (const [b, s] of this.seen) if (s !== this.stamp) this.remove(b);
+    }
+    remove(b) {
+      const c = this.cellOf.get(b);
+      this.seen.delete(b);
+      if (!c) return;
+      this.cellOf.delete(b);
+      c.members.delete(b);
+      c.dirty = true;
+      if (!c.members.size) {
+        this.dispose(c);
+        this.cells.delete(c.key);
+      }
+    }
+    /** Show building b's block, or fold it away while its model stands there. */
+    show(b, on) {
+      if (on === !this.hidden.has(b)) return;
+      if (on) this.hidden.delete(b);
+      else this.hidden.add(b);
+      const c = this.cellOf.get(b);
+      if (c?.ranges?.has(b)) this.fold(c, b, !on);
+    }
+    /** Is b's block on screen (or is there none to wait for: it's out of range)? */
+    drawn(b) {
+      const c = this.cellOf.get(b);
+      return !c || !!c.ranges?.has(b) && !this.hidden.has(b);
+    }
+    /** Anything still to (re)build? */
+    get busy() {
+      for (const c of this.cells.values()) if (c.dirty) return true;
+      return false;
+    }
+    /** Rebuild the cells whose buildings changed, nearest first, until `end` (performance.now()). */
+    update(ox, oy, end) {
+      let todo = null;
+      const w = this.ctx.world;
+      for (const c of this.cells.values()) {
+        if (!c.dirty) continue;
+        const dx = w.dx(ox, c.x0 + CELL2 / 2), dy = c.y0 + CELL2 / 2 - oy;
+        (todo || (todo = [])).push([c, dx * dx + dy * dy]);
+      }
+      if (!todo) return;
+      todo.sort((a, b) => a[1] - b[1]);
+      for (const [c] of todo) {
+        this.build(c);
+        if (performance.now() > end) break;
+      }
+    }
+    build(c) {
+      const t0 = performance.now();
+      const w = this.ctx.world;
+      const k = new Mesher();
+      const ranges = /* @__PURE__ */ new Map();
+      KIT.noOutline = true;
+      try {
+        for (const b of c.members) {
+          const v0 = k.vertexCount;
+          k.save();
+          k.translate(w.dx(c.x0, b.x), this.ctx.ground(b.x, b.y), b.y - c.y0);
+          k.rotateY(bangle(b));
+          try {
+            farBuilding(k, b, this.ctx);
+          } catch (e) {
+            console.warn("far building failed", b.style, e);
+          }
+          k.restore();
+          ranges.set(b, [v0, k.vertexCount]);
+        }
+      } finally {
+        KIT.noOutline = false;
+      }
+      this.dispose(c);
+      c.dirty = false;
+      c.ranges = ranges;
+      if (k.vertexCount) {
+        const geo2 = k.build(false);
+        c.orig = geo2.attributes.position.array.slice();
+        const m = new Mesh(geo2, vcMat());
+        m.name = "far-buildings";
+        m.castShadow = false;
+        m.receiveShadow = false;
+        m.position.set(w.dx(this.origin.x, c.x0), 0, c.y0 - this.origin.y);
+        c.mesh = m;
+        for (const b of c.members) if (this.hidden.has(b)) this.fold(c, b, true);
+        this.parent.add(m);
+      }
+      prof("b.farcell", t0);
+    }
+    /** Pull b's block into a point (on) or put it back. */
+    fold(c, b, on) {
+      const r = c.ranges.get(b);
+      if (!r || !c.mesh || r[1] <= r[0]) return;
+      const P4 = c.mesh.geometry.attributes.position, a = P4.array, o = c.orig;
+      const [v0, v1] = r;
+      if (on) for (let i = v0 * 3; i < v1 * 3; i += 3) {
+        a[i] = o[v0 * 3];
+        a[i + 1] = o[v0 * 3 + 1];
+        a[i + 2] = o[v0 * 3 + 2];
+      }
+      else a.set(o.subarray(v0 * 3, v1 * 3), v0 * 3);
+      P4.addUpdateRange(v0 * 3, (v1 - v0) * 3);
+      P4.needsUpdate = true;
+    }
+    /** Placed relative to the props' origin (see Renderer3D.rebase). */
+    place(origin) {
+      this.origin = { x: origin.x, y: origin.y };
+      const w = this.ctx.world;
+      if (!w) return;
+      for (const c of this.cells.values()) c.mesh?.position.set(w.dx(origin.x, c.x0), 0, c.y0 - origin.y);
+    }
+    dispose(c) {
+      if (!c.mesh) return;
+      this.parent.remove(c.mesh);
+      c.mesh.geometry.dispose();
+      c.mesh = null;
+      c.orig = null;
+    }
+    clear() {
+      for (const c of this.cells.values()) this.dispose(c);
+      this.cells.clear();
+      this.cellOf.clear();
+      this.hidden.clear();
+      this.seen.clear();
+    }
+    /** Debug: cells, blocks in them, and how many are folded away for their models. */
+    stats() {
+      let meshes = 0;
+      for (const c of this.cells.values()) if (c.mesh) meshes++;
+      return { cells: this.cells.size, meshes, blocks: this.cellOf.size, folded: this.hidden.size };
+    }
+  };
+
+  // src/world/objects.js
+  var CHUNK2 = 32;
+  var COLLIDE = {
+    // street furniture
+    lamp: 0.16,
+    lantern: 0.2,
+    sign: 0.15,
+    flagpole: 0.15,
+    mooring: 0.2,
+    barrel: 0.34,
+    crate: 0.42,
+    haystack: 0.6,
+    chest: 0.4,
+    bench: [0.8, 0.3],
+    stall: [1.25, 0.75],
+    fence: [0.9, 0.12],
+    tent: [1.2, 1],
+    campfire: 0.45,
+    well: 0.95,
+    fountain: 1.3,
+    // nature
+    tree: 0.3,
+    rock: 0.5,
+    mushroom: 0.25,
+    crystal: 0.4,
+    // landmarks (sized like their models; gates and arches you walk through)
+    statue: 0.7,
+    pillar: 0.45,
+    totem: 0.35,
+    dummy: 0.28,
+    cannon: 0.55,
+    anchor: 0.5,
+    grave: 0.3,
+    bell: 0.6,
+    ruins: 0.8,
+    poneglyph: [0.8, 0.35],
+    boat: [1.4, 0.6],
+    shipwreck: [2.5, 1.2],
+    lighthouse: 1.6,
+    tower: 2,
+    windmill: 1.5,
+    wheel: 1,
+    elevator: 1.5,
+    gate: 0,
+    torii: 0,
+    arch: 0,
+    bones: 0,
+    skull: 0,
+    bubble: 0,
+    platform: 0
+    // a raised floor you walk onto (see floorOf)
+  };
+  function floorOf(o) {
+    if (o.kind !== "platform") return null;
+    const n = o.name || "";
+    const s = o.s || 1;
+    if (/ring/i.test(n)) return { hw: 2.3 * s, hd: 2.3 * s, oy: 0, h: 0.88 * s };
+    if (/stage|carnival/i.test(n)) return { hw: 2.4 * s, hd: 1.7 * s, oy: 0, h: 1.02 * s };
+    return { hw: 1.8 * s, hd: 1.4 * s, oy: -0.2 * s, h: 2.4 * s };
+  }
+  var ROUND = /* @__PURE__ */ new Set(["barrel", "roundtable", "dummy", "plant"]);
+  var nextObjectId = 1;
+  var ObjectIndex = class {
+    constructor(world) {
+      this.world = world;
+      this.cw = Math.ceil(world.width / CHUNK2);
+      this.ch = Math.ceil(world.height / CHUNK2);
+      this.chunks = /* @__PURE__ */ new Map();
+      this.byId = /* @__PURE__ */ new Map();
+      this.count = 0;
+    }
+    key(cx, cy) {
+      return cy * this.cw + cx;
+    }
+    add(obj) {
+      var _a2;
+      obj.id = obj.id || nextObjectId++;
+      obj.x = this.world.wx(obj.x);
+      const cx = Math.floor(obj.x / CHUNK2), cy = Math.floor(obj.y / CHUNK2);
+      const k = this.key(cx, cy);
+      let list = this.chunks.get(k);
+      if (!list) this.chunks.set(k, list = []);
+      list.push(obj);
+      obj._chunk = k;
+      this.byId.set(obj.id, obj);
+      this.count++;
+      if (obj.far) ((_a2 = this.world).farObjects || (_a2.farObjects = [])).push(obj);
+      const fl2 = floorOf(obj);
+      if (fl2) this.world.addFloor({ x0: obj.x - fl2.hw, x1: obj.x + fl2.hw, y0: obj.y + fl2.oy - fl2.hd, y1: obj.y + fl2.oy + fl2.hd, h: fl2.h, o: obj });
+      const c = obj.block && COLLIDE[obj.kind];
+      if (obj.block && isEnterable(obj)) {
+        obj.enterable = true;
+        obj.pirate = isPirateHouse(obj);
+        this.stamp(obj, 2);
+        this.addInterior(obj);
+      } else if (c !== void 0 && obj.block && (fl2 || (obj.fw || 1) <= 2 && (obj.fd || 1) <= 2)) {
+        obj.soft = true;
+        if (c) this.addCollider(obj, c);
+      } else if (obj.block) this.stamp(obj, 1);
+      if (obj.kind === "building" && obj.style === "chinese") this.addColumns(obj);
+      return obj;
+    }
+    /** The red columns along a Chinese front stand out from the wall: they're solid (see buildings3d 'column'). */
+    addColumns(b) {
+      const fw = Math.max(2, b.fw || 3);
+      const n = Math.max(2, Math.round(fw / 1.6));
+      const d = b.enterable ? doorOf(b) : null;
+      b.colCols = [];
+      for (let i = 0; i <= n; i++) {
+        const x = -fw / 2 + i * fw / n;
+        if (d && x > d.x - d.dw / 2 - 0.33 && x < d.x + d.dw / 2 + 0.33) continue;
+        b.colCols.push(this.world.addCol({ ...bw(b, x, 0.25), r: 0.2, o: b }));
+      }
+    }
+    addCollider(obj, c) {
+      const s = obj.s || 1;
+      const col = Array.isArray(c) ? { x: obj.x, y: obj.y, hw: c[0] * s, hd: c[1] * s, o: obj } : { x: obj.x, y: obj.y, r: c * s, o: obj };
+      obj.col = this.world.addCol(col);
+    }
+    removeCollider(obj) {
+      if (!obj.col) return;
+      this.world.removeCol(obj.col);
+      obj.col = null;
+    }
+    /** Walls (with a doorway) and the ground floor of an enterable building (furniture: see addFurniture). */
+    addInterior(b) {
+      const w = this.world;
+      const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), T4 = WALL_T;
+      const d = doorOf(b);
+      const cols = [];
+      const rect = (x0, x1, z0, z1) => {
+        const r = bbox(b, x0, x1, z0, z1);
+        return { x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2, hw: (r.x1 - r.x0) / 2, hd: (r.y1 - r.y0) / 2 };
+      };
+      const box2 = (x0, x1, z0, z1, extra) => {
+        if (x1 - x0 < 0.01 || z1 - z0 < 0.01) return null;
+        const col = w.addCol({ ...rect(x0, x1, z0, z1), o: b, ...extra });
+        cols.push(col);
+        return col;
+      };
+      const wall = { wall: true };
+      box2(-fw / 2, d.x - d.dw / 2, -T4, 0, wall);
+      box2(d.x + d.dw / 2, fw / 2, -T4, 0, wall);
+      box2(-fw / 2, fw / 2, -fd, -fd + T4, wall);
+      box2(-fw / 2, -fw / 2 + T4, -fd, 0, wall);
+      box2(fw / 2 - T4, fw / 2, -fd, 0, wall);
+      b.cols = cols;
+      b.doorBox = { ...rect(d.x - d.dw / 2, d.x + d.dw / 2, -T4, 0), o: b, wall: true, door: true };
+      b.doorCol = w.addCol({ ...b.doorBox });
+      b.floor = { ...bbox(b, -fw / 2, fw / 2, -fd, -2e-3), h: PLINTH, o: b, interior: true };
+      w.addFloor(b.floor);
+      b.stepsFloor = { ...bbox(b, d.x - d.dw / 2 - 0.2, d.x + d.dw / 2 + 0.2, 2e-3, 1.3), h: 0, o: b, steps: d.x };
+      w.addFloor(b.stepsFloor);
+    }
+    /** The furniture collides too (laid out lazily: when someone comes near or the island fills with people). */
+    addFurniture(b) {
+      if (b.furnished || !b.enterable) return;
+      b.furnished = true;
+      const w = this.world, L2 = layoutOf(b);
+      for (const it of L2.items) {
+        if (it.ghost || !it.rect) continue;
+        const r = it.rect, sh = 0.03;
+        if (ROUND.has(it.k)) b.cols.push(w.addCol({ ...bw(b, it.x, it.z), r: Math.min(r.x1 - r.x0, r.z1 - r.z0) / 2 - sh, o: b }));
+        else {
+          const q2 = bbox(b, r.x0 + sh, r.x1 - sh, r.z0 + sh, r.z1 - sh);
+          b.cols.push(w.addCol({ x: (q2.x0 + q2.x1) / 2, y: (q2.y0 + q2.y1) / 2, hw: (q2.x1 - q2.x0) / 2, hd: (q2.y1 - q2.y0) / 2, o: b }));
+        }
+      }
+    }
+    removeInterior(b) {
+      const w = this.world;
+      for (const c of b.cols || []) w.removeCol(c);
+      if (b.doorCol) w.removeCol(b.doorCol);
+      if (b.floor) w.removeFloor(b.floor);
+      b.cols = null;
+      b.doorCol = null;
+      b.floor = null;
+      b.furnished = false;
+    }
+    remove(obj) {
+      const list = this.chunks.get(obj._chunk);
+      if (list) {
+        const i = list.indexOf(obj);
+        if (i >= 0) list.splice(i, 1);
+      }
+      if (obj.far && this.world.farObjects) this.world.farObjects = this.world.farObjects.filter((o) => o !== obj);
+      this.byId.delete(obj.id);
+      this.count--;
+      if (obj.enterable) {
+        this.removeInterior(obj);
+        this.stamp(obj, 0);
+      } else if (obj.soft) this.removeCollider(obj);
+      else if (obj.block) this.stamp(obj, 0);
+    }
+    /** Mark or clear the tiles covered by an object's footprint. */
+    stamp(obj, v) {
+      const w = this.world;
+      const fp = footprint(obj);
+      for (let y = fp.y0; y < fp.y1; y++) {
+        for (let x = fp.x0; x < fp.x1; x++) {
+          if (y < 0 || y >= w.height) continue;
+          w.setBlocked(x, y, v);
+        }
+      }
+    }
+    /** Objects whose chunk intersects the rect [x0,x1]x[y0,y1] (x may wrap). */
+    query(x0, y0, x1, y1, out = []) {
+      const pad = 2;
+      const cx0 = Math.floor(x0 / CHUNK2) - pad, cx1 = Math.floor(x1 / CHUNK2) + pad;
+      const cy0 = Math.max(0, Math.floor(y0 / CHUNK2) - pad), cy1 = Math.min(this.ch - 1, Math.floor(y1 / CHUNK2) + pad);
+      for (let cy = cy0; cy <= cy1; cy++) {
+        for (let cx = cx0; cx <= cx1; cx++) {
+          const wcx = this.world.wrap ? (cx % this.cw + this.cw) % this.cw : cx;
+          if (wcx < 0 || wcx >= this.cw) continue;
+          const list = this.chunks.get(this.key(wcx, cy));
+          if (list) for (const o of list) out.push(o);
+        }
+      }
+      return out;
+    }
+    near(x, y, r, filter) {
+      const out = [];
+      for (const o of this.query(x - r, y - r, x + r, y + r)) {
+        if (this.world.dist2(x, y, o.x, o.y) <= r * r && (!filter || filter(o))) out.push(o);
+      }
+      return out;
+    }
+  };
+  function footprint(o) {
+    if (o.rot) {
+      const r = bfoot(o);
+      const x02 = Math.floor(r.x0 + 1e-3), y02 = Math.floor(r.y0 + 1e-3);
+      return { x0: x02, y0: y02, x1: x02 + Math.round(r.x1 - r.x0), y1: y02 + Math.round(r.y1 - r.y0) };
+    }
+    const w = o.fw || 1, d = o.fd || 1;
+    const x0 = Math.floor(o.x - w / 2 + 1e-3), y0 = Math.floor(o.y - d + 1e-3);
+    return { x0, y0, x1: x0 + w, y1: y0 + d };
+  }
 
   // src/render3d/props/instancer.js
-  var CELL2 = 32;
+  var CELL3 = 32;
+  var SUPER = 128;
   var cells = /* @__PURE__ */ new Map();
+  var supers = /* @__PURE__ */ new Map();
   var _m = new Matrix4();
-  var _t = new Matrix4();
   var _q = new Quaternion();
   var _p = new Vector3();
   var _s = new Vector3();
   var _e = new Euler();
   var WHITE2 = new Color(1, 1, 1);
+  var VIEW = { x: 0, y: 0, world: null };
   var Batch = class {
-    constructor(cell, key2, part5) {
-      this.cell = cell;
+    constructor(home2, key2, part5) {
+      this.home = home2;
       this.key = key2;
       this.geo = part5.geo;
       this.farGeo = part5.far || part5.geo.userData.far || null;
       this.tinted = !!part5.tinted;
       this.material = part5.material || vcMat({ sway: part5.sway, side: part5.side, inst: this.tinted ? "c" : "i" });
-      this.castShadow = part5.castShadow !== false;
-      this.receiveShadow = part5.receiveShadow !== false;
+      this.castShadow = !home2.isSuper && part5.castShadow !== false;
+      this.receiveShadow = !home2.isSuper && part5.receiveShadow !== false;
       this.count = 0;
       this.refs = [];
       this.minY = Infinity;
@@ -53949,14 +54620,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.alloc(8);
     }
     alloc(cap) {
-      const old = this.mesh;
-      const m = new InstancedMesh(this.cell.far && this.farGeo ? this.farGeo : this.geo, this.material, cap);
+      const old = this.mesh, S3 = this.home.size;
+      const m = new InstancedMesh(this.home.far && this.farGeo ? this.farGeo : this.geo, this.material, cap);
       m.instanceMatrix.setUsage(DynamicDrawUsage);
       if (this.tinted) m.instanceColor = new InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
       m.count = this.count;
       m.castShadow = this.castShadow;
       m.receiveShadow = this.receiveShadow;
-      m.boundingSphere = new Sphere(new Vector3(CELL2 / 2, 0, CELL2 / 2), CELL2);
+      m.boundingSphere = new Sphere(new Vector3(S3 / 2, 0, S3 / 2), S3);
       m.name = "inst:" + this.key;
       if (old) {
         m.instanceMatrix.array.set(old.instanceMatrix.array.subarray(0, this.count * 16));
@@ -53970,8 +54641,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
         old.dispose();
       } else {
-        m.position.set(this.cell.px, 0, this.cell.pz);
-        this.cell.parent?.add(m);
+        m.position.set(this.home.px, 0, this.home.pz);
+        this.home.parent?.add(m);
       }
       this.mesh = m;
       this.cap = cap;
@@ -53986,7 +54657,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return slot2;
     }
     write(slot2, matrix, color, y) {
-      const m = this.mesh;
+      const m = this.mesh, S3 = this.home.size;
       m.setMatrixAt(slot2, matrix);
       m.instanceMatrix.needsUpdate = true;
       if (this.tinted) {
@@ -53997,8 +54668,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.minY = Math.min(this.minY, y);
         this.maxY = Math.max(this.maxY, y);
         const half2 = (this.maxY - this.minY + this.h) / 2;
-        m.boundingSphere.center.set(CELL2 / 2, this.minY + half2, CELL2 / 2);
-        m.boundingSphere.radius = Math.hypot(CELL2 / 2, CELL2 / 2, half2) + this.r;
+        m.boundingSphere.center.set(S3 / 2, this.minY + half2, S3 / 2);
+        m.boundingSphere.radius = Math.hypot(S3 / 2, S3 / 2, half2) + this.r;
       }
     }
     remove(slot2) {
@@ -54020,25 +54691,60 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!this.count) {
         m.parent?.remove(m);
         m.dispose();
-        this.cell.batches.delete(this.key);
-        if (!this.cell.batches.size) cells.delete(this.cell.key);
+        this.home.batches.delete(this.key);
+        gc(this.home);
       }
     }
   };
+  function gc(h2) {
+    if (h2.batches.size) return;
+    if (h2.isSuper) {
+      if (!h2.members.size) supers.delete(h2.key);
+      return;
+    }
+    if (h2.markers.size) return;
+    if (h2.sup) {
+      h2.sup.members.delete(h2);
+      gc(h2.sup);
+      h2.sup = null;
+    }
+    cells.delete(h2.key);
+  }
+  function viewDist(x0, y0, size) {
+    const w = VIEW.world;
+    if (!w) return 0;
+    const dx = w.dx(VIEW.x, x0), dy = y0 - VIEW.y;
+    const nx = Math.max(dx, Math.min(0, dx + size)), ny = Math.max(dy, Math.min(0, dy + size));
+    return Math.hypot(nx, ny);
+  }
   function cellFor(o, ctx, parent) {
-    const cx = Math.floor(o.x / CELL2), cy = Math.floor(o.y / CELL2);
-    const key2 = `${ctx?.world?.id || ""}:${cx},${cy}`;
+    const cx = Math.floor(o.x / CELL3), cy = Math.floor(o.y / CELL3);
+    const wid = ctx?.world?.id || "";
+    const key2 = `${wid}:${cx},${cy}`;
     let c = cells.get(key2);
     if (!c) {
-      c = { key: key2, x0: cx * CELL2, y0: cy * CELL2, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent, markers: /* @__PURE__ */ new Set(), rep: null, far: false };
+      c = { key: key2, wid, x0: cx * CELL3, y0: cy * CELL3, size: CELL3, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent, markers: /* @__PURE__ */ new Set(), rep: null, far: false, merged: false, sup: null };
+      const d = VIEW.world === ctx?.world ? viewDist(c.x0, c.y0, CELL3) : 0;
+      c.far = d > LOD2.far;
+      if (d > LOD2.merge) join(c);
       cells.set(key2, c);
     }
     if (!c.parent && parent) c.parent = parent;
     return c;
   }
-  function partMatrix(u, part5, out) {
+  function join(c) {
+    const sx = Math.floor(c.x0 / SUPER), sy = Math.floor(c.y0 / SUPER);
+    const key2 = `${c.wid}:${sx},${sy}`;
+    let s = supers.get(key2);
+    if (!s) supers.set(key2, s = { key: key2, x0: sx * SUPER, y0: sy * SUPER, size: SUPER, px: c.px + (sx * SUPER - c.x0), pz: c.pz + (sy * SUPER - c.y0), batches: /* @__PURE__ */ new Map(), parent: c.parent, members: /* @__PURE__ */ new Set(), far: true, isSuper: true });
+    if (!s.parent && c.parent) s.parent = c.parent;
+    s.members.add(c);
+    c.sup = s;
+    c.merged = true;
+  }
+  function partMatrix(u, part5, home2, out) {
     const o = u.o;
-    _p.set(o.x - u.cell.x0, u.y, o.y - u.cell.y0);
+    _p.set(o.x - home2.x0, u.y, o.y - home2.y0);
     _e.set(0, u.yaw, 0);
     _q.setFromEuler(_e);
     _s.setScalar(u.scale);
@@ -54047,18 +54753,43 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return out;
   }
   function claim(u, part5) {
-    let b = u.cell.batches.get(part5.key);
+    const cell = u.cell, home2 = cell.merged ? cell.sup : cell;
+    if (cell.merged && part5.nearOnly) {
+      part5.ref = null;
+      return;
+    }
+    let b = home2.batches.get(part5.key);
     if (!b) {
-      b = new Batch(u.cell, part5.key, part5);
-      u.cell.batches.set(part5.key, b);
+      b = new Batch(home2, part5.key, part5);
+      home2.batches.set(part5.key, b);
     }
     part5.ref = { slot: -1, batch: b };
-    b.push(part5.ref, partMatrix(u, part5, _m), part5.color, u.y);
+    b.push(part5.ref, partMatrix(u, part5, home2, _m), part5.color, u.y);
   }
   function release(part5) {
     if (!part5.ref) return;
     part5.ref.batch.remove(part5.ref.slot);
     part5.ref = null;
+  }
+  function setMerged(cell, on) {
+    for (const mk3 of cell.markers) for (const p of mk3.userData.parts) release(p);
+    const old = cell.sup;
+    if (on) join(cell);
+    else {
+      cell.merged = false;
+      cell.sup = null;
+      cell.far = true;
+    }
+    for (const mk3 of cell.markers) {
+      const u = mk3.userData;
+      if (u.live) {
+        for (const p of u.parts) if (!p.hidden) claim(u, p);
+      }
+    }
+    if (!on && old) {
+      old.members.delete(cell);
+      gc(old);
+    }
   }
   var dynMarkers = /* @__PURE__ */ new Set();
   var dynList = [];
@@ -54088,14 +54819,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (cell) {
       cell.markers.delete(mk3);
       if (cell.rep === mk3) cell.rep = cell.markers.values().next().value || null;
+      gc(cell);
     }
     if (u.dyn) {
       dynMarkers.delete(mk3);
       dynDirty = true;
     }
   }
-  var LOD2 = { far: 62 };
+  var LOD2 = { far: 62, merge: 124 };
   function frame(env, ctx) {
+    const v3 = ctx?.game?.view3d;
+    if (v3 && ctx.world) {
+      VIEW.x = v3.ox;
+      VIEW.y = v3.oy;
+      VIEW.world = ctx.world;
+    }
+    let moves = 0;
     for (const cell of cells.values()) {
       const mk3 = cell.rep;
       if (!mk3) continue;
@@ -54106,10 +54845,25 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         cell.pz = pz2;
         for (const b of cell.batches.values()) b.mesh.position.set(px2, 0, pz2);
       }
+      const s = cell.sup;
+      if (s) {
+        const sx = px2 + (s.x0 - cell.x0), sz = pz2 + (s.y0 - cell.y0);
+        if (Math.abs(sx - s.px) > 1e-3 || Math.abs(sz - s.pz) > 1e-3) {
+          s.px = sx;
+          s.pz = sz;
+          for (const b of s.batches.values()) b.mesh.position.set(sx, 0, sz);
+        }
+      }
       const gp = mk3.parent ? mk3.parent.position : null;
       const cx = (gp ? gp.x : 0) + px2, cz = (gp ? gp.z : 0) + pz2;
-      const nx = Math.max(cx, Math.min(0, cx + CELL2)), nz = Math.max(cz, Math.min(0, cz + CELL2));
+      const nx = Math.max(cx, Math.min(0, cx + CELL3)), nz = Math.max(cz, Math.min(0, cz + CELL3));
       const d = Math.hypot(nx, nz);
+      const merged = cell.merged ? d > LOD2.merge - 6 : d > LOD2.merge + 6;
+      if (merged !== cell.merged && moves < 6) {
+        setMerged(cell, merged);
+        moves++;
+      }
+      if (cell.merged) continue;
       const far = cell.far ? d > LOD2.far - 4 : d > LOD2.far + 4;
       if (far !== cell.far) {
         cell.far = far;
@@ -54159,6 +54913,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     mk3.addEventListener("added", onAdded);
     mk3.addEventListener("removed", onRemoved);
     return mk3;
+  }
+  function instancerStats() {
+    let batches = 0, instances = 0, merged = 0, farBatches = 0;
+    for (const c of cells.values()) {
+      if (c.merged) merged++;
+      for (const b of c.batches.values()) {
+        batches++;
+        instances += b.count;
+      }
+    }
+    for (const s of supers.values()) for (const b of s.batches.values()) {
+      farBatches++;
+      instances += b.count;
+    }
+    return { cells: cells.size, merged, supers: supers.size, batches, farBatches, instances };
   }
 
   // src/render3d/props/vegetation.js
@@ -54775,7 +55544,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const yaw = hash2(o.x, o.y) * Math.PI * 2;
     if (fr && model2.crown) {
       const pts = fruitPoints(sub, v, fr, model2);
-      const fps = pts.map((q2, i) => ({ key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q2), sway: model2.sway, hidden: false, receiveShadow: false, castShadow: false }));
+      const fps = pts.map((q2, i) => ({ key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q2), sway: model2.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }));
       parts.push(...fps);
       dyn = (oo, env, c, u) => {
         if (u.camHidden) return;
@@ -58583,6 +59352,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("clima_3", "weather_science", "staff_jab", 9, { weapon: "staff", range: 1.9, kb: 3.5, recover: 0.3 })
       ],
       heavy: { id: "clima_heavy", name: "Heat Egg", anim: "raise", weapon: "staff", windup: 0.35, recover: 0.3, cd: 2, cost: { stamina: 12 }, steps: [{ proj: { speed: 10, range: 10, radius: 0.35, damage: 15, sprite: "orb", color: "#ff8a65", element: "fire", explode: { range: 1.5, damage: 10, element: "fire" } } }] },
+      // (a plain staff swung by someone who never learned the science throws no Heat Egg)
+      plainHeavy: { id: "clima_plain_heavy", name: "Staff Sweep", anim: "heavy", weapon: "staff", windup: 0.32, recover: 0.35, cd: 1.4, cost: { stamina: 12 }, steps: [{ hit: { shape: "arc", range: 2, arc: 2, offset: 0.2, damage: 16, knockback: 5, stun: 0.45, heavy: true, guardBreak: true } }] },
       techniques: [
         {
           id: "clima_thunderbolt",
@@ -58663,11 +59434,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   };
   var STYLE_IDS = Object.keys(STYLES2);
+  var WEAPON_STYLE = { sword: "ittoryu", gun: "sniper", staff: "weather_science", axe: "elbaf" };
   for (const [sid, s] of Object.entries(STYLES2)) {
-    const list = [...s.m1, s.heavy, ...s.techniques].map((a) => ({ ...a, style: sid, source: "style:" + sid, weapon: a.weapon ?? s.weapon ?? void 0 }));
+    const list = [...s.m1, s.heavy, ...s.plainHeavy ? [s.plainHeavy] : [], ...s.techniques].map((a) => ({ ...a, style: sid, source: "style:" + sid, weapon: a.weapon ?? s.weapon ?? void 0 }));
     registerAbilities(list, "style:" + sid);
     s.m1Ids = s.m1.map((a) => a.id);
     s.heavyId = s.heavy.id;
+    s.plainHeavyId = s.plainHeavy?.id;
   }
 
   // src/core/rng.js
@@ -59199,9 +59972,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     styleMastery(s) {
       return this.masteries[s || this.style] || 0;
     }
-    hasWeapon(kind) {
+    /** Holding that kind of weapon — and, for swords, as many as `style` (by default your own) needs? */
+    hasWeapon(kind, style = this.style) {
       if (!this.weapon) return false;
-      if (kind === "sword") return this.weapon.kind === "sword" && (this.weapon.count || 1) >= (STYLES2[this.style]?.swords || 1);
+      if (kind === "sword") return this.weapon.kind === "sword" && (this.weapon.count || 1) >= (STYLES2[style]?.swords || 1);
       return this.weapon.kind === kind;
     }
     weaponMul() {
@@ -59383,6 +60157,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const style = STYLES2[this.style] || STYLES2.brawler;
       let def = getAbility(style.heavyId);
       if (style.weapon && !this.hasWeapon(style.weapon)) def = getAbility(STYLES2.brawler.heavyId);
+      else if (style.plainHeavyId && this.masteries[this.style] === void 0) def = getAbility(style.plainHeavyId);
       const a = this.action;
       if (a && a.def.m1Chain && a.step >= (a.def.steps || []).length && a.t > (a.def.windup ?? 0.07) + 0.04 && this.state === "idle" && this.hitstun <= 0 && canUse(this, def)) {
         this.action = null;
@@ -59415,7 +60190,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (this.isPlayer) {
           if ((this.cooldowns[def.id] || 0) > 0) game.ui?.flashSlot(id);
           else if (def.source?.startsWith("fruit") && this.inWater) game.log("Your Devil Fruit power is useless in the sea!", "#ff8a80");
-          else if (def.weapon && !this.hasWeapon(def.weapon)) game.log(`${def.name} needs ${def.weapon === "sword" ? `${STYLES2[this.style]?.swords || 1} sword(s)` : "a " + def.weapon}.`, "#ff8a80");
+          else if (def.weapon && !this.hasWeapon(def.weapon, def.style)) game.log(`${def.name} needs ${def.weapon === "sword" ? `${STYLES2[def.style || this.style]?.swords || 1} sword(s)` : "a " + def.weapon}.`, "#ff8a80");
           else game.log("Not enough " + (def.cost?.haki && this.haki < def.cost.haki ? this.hakiUnlocked() ? "Haki." : "strength of will." : "stamina."), "#ff8a80");
         }
         return false;
@@ -62601,7 +63376,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var _d = V();
   var _u = V();
   var _p3 = V();
-  var _t2 = V();
+  var _t = V();
   var _qa = Q();
   var _qb = Q();
   var _qc = Q();
@@ -62734,17 +63509,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           T4.applyQuaternion(this.qLean).add(S3);
         }
         const e = k === 0 ? P4.eF ?? 1 : P4.eB ?? 1;
-        _t2.subVectors(T4, S3);
-        const lxy = Math.hypot(_t2.x, _t2.y) || 1;
+        _t.subVectors(T4, S3);
+        const lxy = Math.hypot(_t.x, _t.y) || 1;
         const sg = e < 0 ? -1 : 1;
-        this._pole.set(_t2.y / lxy * sg, -_t2.x / lxy * sg, side * 0.42);
+        this._pole.set(_t.y / lxy * sg, -_t.x / lxy * sg, side * 0.42);
         ik2(S3, T4, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P4.stretch || !!reach, J, E);
         const U3 = k === 0 ? B3.uarmR : B3.uarmL, F4 = k === 0 ? B3.farmR : B3.farmL, Hd = k === 0 ? B3.handR : B3.handL;
         this.pos[U3].copy(S3);
-        aimNegY(this.quat[U3], _t2.subVectors(J, S3), this._pole);
+        aimNegY(this.quat[U3], _t.subVectors(J, S3), this._pole);
         this.len[U3] = clamp4(S3.distanceTo(J) / d.A1, 0.5, 8);
         this.pos[F4].copy(J);
-        aimNegY(this.quat[F4], _t2.subVectors(E, J), this._pole);
+        aimNegY(this.quat[F4], _t.subVectors(E, J), this._pole);
         this.len[F4] = clamp4(J.distanceTo(E) / d.A2, 0.5, 8);
         _u.subVectors(E, J).normalize();
         const shape = o.shape ? o.shape[k] : "fist";
@@ -62793,16 +63568,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           fx *= Math.cos(walk);
         }
         T4.set(hip.x + fx, d.hA + Math.max(0, -f[1] * d.kL), fz);
-        _t2.subVectors(T4, Hj);
-        const lxy = Math.hypot(_t2.x, _t2.y) || 1;
-        this._pole.set(-_t2.y / lxy, _t2.x / lxy, side * 0.12);
+        _t.subVectors(T4, Hj);
+        const lxy = Math.hypot(_t.x, _t.y) || 1;
+        this._pole.set(-_t.y / lxy, _t.x / lxy, side * 0.12);
         const Kn = this.K[k], Ft = this.F[k];
         const Hs = this.pos[k === 0 ? B3.thighR : B3.thighL].copy(Hj);
         ik2(Hs, T4, d.T1, d.T2, this._pole, 1, false, Kn, Ft);
         const Th = k === 0 ? B3.thighR : B3.thighL, Sh = k === 0 ? B3.shinR : B3.shinL, Fo = k === 0 ? B3.footR : B3.footL;
-        aimNegY(this.quat[Th], _t2.subVectors(Kn, Hs), this._pole);
+        aimNegY(this.quat[Th], _t.subVectors(Kn, Hs), this._pole);
         this.pos[Sh].copy(Kn);
-        aimNegY(this.quat[Sh], _t2.subVectors(Ft, Kn), this._pole);
+        aimNegY(this.quat[Sh], _t.subVectors(Ft, Kn), this._pole);
         this.len[Th] = 1;
         this.len[Sh] = 1;
         _u.subVectors(Ft, Kn).normalize();
@@ -63011,7 +63786,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     finger: { a: [0.04, 1.5, 1.56, 1.6], b: [0.05, 1.72, 1.76, 1.7], sp: 0, th: 0.9 }
   };
   var _t1 = new Vector3();
-  var _t22 = new Vector3();
+  var _t2 = new Vector3();
   var DOWN = new Vector3(0, -1, 0);
   var CharacterModel = class {
     /**
@@ -63100,8 +63875,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const E = this.rig.E[k];
       if (!first && dt > 0) {
         _t1.subVectors(E, F4.prev).divideScalar(Math.max(dt, 1e-3));
-        _t22.set(-1, 0, 0).applyQuaternion(this.rig.quat[k === 0 ? B3.handR : B3.handL]);
-        const drag = Math.max(-0.45, Math.min(0.45, -_t1.dot(_t22) * 0.09));
+        _t2.set(-1, 0, 0).applyQuaternion(this.rig.quat[k === 0 ? B3.handR : B3.handL]);
+        const drag = Math.max(-0.45, Math.min(0.45, -_t1.dot(_t2) * 0.09));
         F4.lag += (drag - F4.lag) * Math.min(1, dt * 9);
       }
       F4.prev.copy(E);
@@ -63121,13 +63896,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       F4.th += (G3.th + Math.sin(t * 0.9 + k) * 0.04 * loose - F4.th) * ease;
       const c = Math.max(0, Math.min(1, F4.th));
       _t1.set(-0.22, -0.72, th * 0.66).normalize();
-      _t22.set(-0.9, -0.3, -th * 0.32).normalize();
-      _t1.lerp(_t22, c).normalize();
+      _t2.set(-0.9, -0.3, -th * 0.32).normalize();
+      _t1.lerp(_t2, c).normalize();
       const tb = bones2[B3["tb" + H2]], tc = bones2[B3["tc" + H2]];
       tb.quaternion.setFromUnitVectors(DOWN, _t1);
-      _t22.set(-1, 0, 0).multiplyScalar(0.25 + c * 0.9).add(_t1).normalize();
+      _t2.set(-1, 0, 0).multiplyScalar(0.25 + c * 0.9).add(_t1).normalize();
       _q22.copy(tb.quaternion).invert();
-      tc.quaternion.setFromUnitVectors(DOWN, _t22).premultiply(_q22);
+      tc.quaternion.setFromUnitVectors(DOWN, _t2).premultiply(_q22);
     }
     /** Switch detail level (0 near, 2 mid, 1 far): same skeleton, another shared geometry. */
     setLod(lod) {
@@ -64088,7 +64863,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/render3d/chars/viewmodel.js
   var clamp5 = (v, a, b) => v < a ? a : v > b ? b : v;
   var xy = (h2, fb) => !h2 ? fb : Array.isArray(h2) ? h2 : [Math.cos(h2.a) * h2.r, Math.sin(h2.a) * h2.r];
-  var mix22 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+  var mix23 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
   var HIDE = [B3.hips, B3.chest, B3.head, B3.sheath, B3.hilts, B3.tail];
   var LEGS = [B3.thighR, B3.shinR, B3.footR, B3.thighL, B3.shinL, B3.footL];
   var _v7 = new Vector3();
@@ -64210,8 +64985,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const relB = [0.02 + q2 * (0.1 + sw2 * 0.18), 0.42 - q2 * (0.08 + Math.max(0, sw2) * 0.13)];
         PP = {
           ...P4,
-          hF: mix22(relF, xy(P4.hF, [0.05, 0.4]), k),
-          hB: mix22(relB, xy(P4.hB, [-0.03, 0.4]), k),
+          hF: mix23(relF, xy(P4.hF, [0.05, 0.4]), k),
+          hB: mix23(relB, xy(P4.hB, [-0.03, 0.4]), k),
           eF: 1,
           eB: 1,
           hand: k > 0.5 ? P4.hand : "relaxed",
@@ -64224,7 +64999,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         o.spread = (o.spread || 0) + 0.05 * q2 + 0.03 * k;
       }
       if (reach > 0) {
-        PP = { ...PP, hF: mix22(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: p.reachT > 0.22 ? "palm" : "grab" };
+        PP = { ...PP, hF: mix23(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: p.reachT > 0.22 ? "palm" : "grab" };
       }
       if (A) {
         const lift = (h2) => h2 ? [h2[0], h2[1] - 0.17 * clamp5(h2[0] / 0.43, 0, 1)] : h2;
@@ -64651,7 +65426,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var RES_STEPS = [1, 0.88, 0.77, 0.67, 0.58];
   var ACTOR_RANGE = 75;
   var PROP_BUDGET_MS = 4;
-  var SHIP_RANGE = 520;
+  var CHUNK_M = 32;
+  var SEA_MUL = 1.5;
+  var SEA_MAX = 32;
+  var NEAR_SCAN = 140;
+  var FAR_STEP = 24;
+  var REBASE = 600;
+  var MODEL_IN = 100;
+  var MODEL_OUT = 116;
   var _ray1 = new Vector3();
   var _ray2 = new Vector3();
   var CAM_CLEAR = { tree: 1, bush: 1, rock: 1, mushroom: 1, crystal: 1, cactus: 1, haystack: 1, tent: 1, stall: 1, statue: 1, totem: 1 };
@@ -64731,6 +65513,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.forest = new SpriteForest(this.props);
       this.built = /* @__PURE__ */ new Map();
       this.animProps = /* @__PURE__ */ new Map();
+      this.retiring = /* @__PURE__ */ new Map();
       this.ents = new Group();
       this.scene.add(this.ents);
       this.actorViews = /* @__PURE__ */ new Map();
@@ -64739,6 +65522,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.active = false;
       this.world = null;
       this.propOrigin = null;
+      this.scan = null;
       this.propT = 0;
       this.frame = 0;
       this.lastT = performance.now();
@@ -64746,6 +65530,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.oy = 0;
       this.quality = "high";
       this.resScale = 1;
+      this.viewChunks = 12;
       this.ctx = {
         THREE: three_module_exports,
         scene: this.scene,
@@ -64753,6 +65538,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         ground: (x, y) => this.ground(x, y),
         terrain: (x, y) => this.terrain.terrainAt(x, y)
       };
+      this.buildingsFar = new FarBuildings(this.props, this.ctx);
       Object.defineProperty(this.ctx, "camera", { get: () => this.rig.camera });
       Object.defineProperty(this.ctx, "world", { get: () => this.world });
       Object.defineProperty(this.ctx, "yaw", { get: () => this.rig.yaw });
@@ -64791,6 +65577,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
       };
       this.setQuality(this.quality);
+      this.terrain.setReach(this.viewChunks, this.seaChunks());
       this.parallelCompile = !!this.renderer.extensions.has("KHR_parallel_shader_compile");
       window.addEventListener("resize", () => this.resize());
     }
@@ -64821,6 +65608,40 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
       }
       this.resize();
+    }
+    /**
+     * The render distance, in 32 m chunks (Settings → Render distance): the
+     * land, towns, trees, props and ships are all drawn out to it, and the fog
+     * closes in completely there, so nothing is seen to pop in or out.
+     */
+    setRenderDistance(n) {
+      n = Math.max(2, Math.round(n) || 12);
+      if (n === this.viewChunks) return;
+      this.viewChunks = n;
+      this.terrain.setReach(n, this.seaChunks());
+      this.propsDirty = true;
+    }
+    /** Debug (the perf scenarios): what's drawn and what's still to build. */
+    viewStats() {
+      let models = 0;
+      for (const [o, v] of this.built) if (v && o.kind === "building") models++;
+      return {
+        chunks: this.terrain.live.size,
+        built: this.built.size,
+        models,
+        queued: (this.propQueue?.length || 0) + (this.farQueue?.length || 0),
+        far: this.buildingsFar.stats(),
+        inst: instancerStats()
+      };
+    }
+    /** The render distance at sea, in chunks: half as far again. */
+    seaChunks() {
+      return Math.min(SEA_MAX, Math.max(this.viewChunks, Math.round(this.viewChunks * SEA_MUL)));
+    }
+    /** How far out (m) the world is drawn: on foot, or at sea (not past the short fixed fogs of the sea bed and the prison). */
+    viewDist(sailing) {
+      const d = (sailing ? this.seaChunks() : this.viewChunks) * CHUNK_M, zone = this.world?.zone;
+      return zone === 2 ? Math.min(d, 192) : zone === 3 ? Math.min(d, 128) : d;
     }
     /**
      * Automatic resolution: once a second, look at how the frames went. When
@@ -64920,7 +65741,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       this.built.clear();
       this.animProps.clear();
+      this.retiring.clear();
+      this.buildingsFar.clear();
       this.propQueue = null;
+      this.farQueue = null;
+      this.scan = null;
       for (const v of this.actorViews.values()) {
         this.detach(v.root || v.mesh);
         v.dispose?.();
@@ -65109,7 +65934,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.terrain.update(ox, oy);
       this.sky.sun.target.position.set(0, gh, 0);
       this.sky.sun.position.y += gh;
-      this.updateProps(game, ox, oy, env, false, 190);
+      this.updateProps(game, ox, oy, env, true);
       this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
       this.forest.aim(camYaw3);
       this.tickProps(env, 1 / 60);
@@ -65247,114 +66072,196 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (want) this.vm.update(game.player, env, this.ctx);
       }
     }
-    /** Static world objects near the player: 3D models where registered, sprites otherwise. */
-    updateProps(game, ox, oy, env, sailing, radius) {
+    /**
+     * Static world objects out to the render distance: 3D models where
+     * registered, sprites otherwise. The ring round the player is looked over
+     * every few steps; the whole of it only every FAR_STEP metres (and when the
+     * render distance changes), since that means going through thousands.
+     */
+    updateProps(game, ox, oy, env, sailing) {
       const w = this.world;
       if (!w.objects) return;
+      const O = this.propOrigin;
+      if (!O || Math.abs(w.dx(O.x, ox)) > REBASE || Math.abs(oy - O.y) > REBASE) this.rebase(ox, oy);
       this.propT -= 1 / 60;
-      const moved = this.propOrigin ? Math.hypot(w.dx(this.propOrigin.x, ox), oy - this.propOrigin.y) : Infinity;
-      if (!(moved < 7 && this.propT > 0 && this.propOrigin?.day === env.day && !this.propsDirty)) this.scanProps(ox, oy, env, sailing, radius);
-      this.buildQueued();
+      const D3 = this.viewDist(sailing), S3 = this.scan;
+      const full = !S3 || S3.D !== D3 || Math.hypot(w.dx(S3.fx, ox), oy - S3.fy) >= FAR_STEP;
+      if (full || !(Math.hypot(w.dx(S3.x, ox), oy - S3.y) < 7 && this.propT > 0 && S3.day === env.day && !this.propsDirty)) {
+        const t0 = performance.now();
+        this.scanProps(ox, oy, env, D3, full);
+        prof(full ? "b.scan-far" : "b.scan", t0);
+      }
+      this.buildQueued(ox, oy);
     }
-    /** Which objects are in range: models to keep or queue, sprites for the rest. */
-    scanProps(ox, oy, env, sailing, radius) {
+    /**
+     * Place everything built afresh from a new origin at (ox, oy). Props sit
+     * relative to this origin (so the thousands of them needn't be moved as the
+     * player walks: the whole group is), and it only moves on when the player
+     * has gone a long way from it.
+     */
+    rebase(ox, oy) {
       const w = this.world;
+      this.propOrigin = { x: ox, y: oy };
+      for (const [o, v] of this.built) if (v) v.position.set(w.dx(ox, o.x), v.position.y, o.y - oy);
+      this.buildingsFar.place(this.propOrigin);
+      this.propsDirty = true;
+    }
+    /**
+     * Which objects are in range: models to keep or queue, sprites for the
+     * rest. `full` goes out to the render distance D (and FAR_STEP beyond, so
+     * nothing inside it is missing before the next full look); otherwise only
+     * the ring near the player is looked over.
+     */
+    scanProps(ox, oy, env, D3, full) {
+      const w = this.world, O = this.propOrigin, bf = this.buildingsFar;
       this.propT = 0.6;
       this.propsDirty = false;
-      this.propOrigin = { x: ox, y: oy, day: env.day };
-      const R3 = radius || (sailing ? 150 : 95);
-      const RK = R3 + 20;
-      const objs = w.objects.query(ox - RK, oy - RK, ox + RK, oy + RK);
+      const R3 = D3 + FAR_STEP + 8;
+      const RK = R3 + 16;
+      const RN = Math.min(R3, NEAR_SCAN);
+      const r = full ? RK : RN;
+      if (full) this.scan = { x: ox, y: oy, day: env.day, D: D3, fx: ox, fy: oy };
+      else Object.assign(this.scan, { x: ox, y: oy, day: env.day });
+      const objs = w.objects.query(ox - r, oy - r, ox + r, oy + r);
       const items9 = [];
-      const keep = /* @__PURE__ */ new Set();
-      const queue = [];
-      for (const o of w.farObjects || []) {
-        if (o.hidden || !PROP_BUILDERS.has(o.kind)) continue;
-        const dx = w.dx(ox, o.x), dy = o.y - oy;
-        const d2 = dx * dx + dy * dy;
-        if (d2 > o.far * o.far) continue;
-        const v = this.built.get(o);
-        if (v === void 0) {
-          queue.push([o, Math.min(d2, 23 * 23)]);
-          continue;
-        }
-        if (v) {
-          keep.add(o);
-          v.position.set(dx, v.userData.noGround ? 0 : this.ground(o.x, o.y), dy);
+      const keep = full ? /* @__PURE__ */ new Set() : null;
+      const near = [], far = full ? [] : null;
+      if (full) {
+        bf.begin();
+        for (const o of w.farObjects || []) {
+          if (o.hidden || !PROP_BUILDERS.has(o.kind)) continue;
+          const dx = w.dx(ox, o.x), dy = o.y - oy;
+          const d2 = dx * dx + dy * dy, lim = Math.min(o.far, R3 + 80);
+          if (d2 > lim * lim) continue;
+          if (this.built.get(o) === void 0) near.push([o, Math.min(d2, 23 * 23)]);
+          else keep.add(o);
         }
       }
+      const sprites = Math.min(80, RN);
       for (const o of objs) {
-        if (o.far) continue;
+        if (o.far || o.hidden) continue;
         const dx = w.dx(ox, o.x), dy = o.y - oy;
         const d2 = dx * dx + dy * dy;
-        if (d2 > RK * RK) continue;
-        if (o.hidden) continue;
+        if (d2 > r * r) continue;
         if (PROP_BUILDERS.has(o.kind)) {
           const v = this.built.get(o);
+          if (o.kind === "building") {
+            if (full) bf.add(o, d2 <= R3 * R3);
+            if (v === void 0) {
+              if (d2 <= MODEL_IN * MODEL_IN) near.push([o, d2]);
+              continue;
+            }
+            if (v && d2 > MODEL_OUT * MODEL_OUT) {
+              this.retire(o, v);
+              continue;
+            }
+            if (v && this.retiring.has(o)) {
+              this.retiring.delete(o);
+              if (v.parent) bf.show(o, false);
+            }
+            keep?.add(o);
+            continue;
+          }
           if (v === void 0) {
-            if (d2 <= R3 * R3) queue.push([o, d2]);
+            if (d2 <= R3 * R3) (d2 <= RN * RN || !far ? near : far).push([o, d2]);
             continue;
           }
-          if (v) {
-            keep.add(o);
-            v.position.set(dx, v.userData.noGround ? 0 : this.ground(o.x, o.y), dy);
-            continue;
-          }
+          keep?.add(o);
+          if (v) continue;
         }
-        if (d2 > R3 * R3 || d2 > 80 * 80 && o.kind !== "tree") continue;
+        if (d2 > sprites * sprites && (o.kind !== "tree" || d2 > RN * RN)) continue;
         const s = propSprite(o, w.id, env.day);
-        if (s) items9.push({ o, sprite: s, rx: dx, rz: dy, h: this.terrain.terrainAt(o.x, o.y) });
+        if (s) items9.push({ o, sprite: s, rx: w.dx(O.x, o.x), rz: o.y - O.y, h: this.terrain.terrainAt(o.x, o.y) });
       }
-      for (const [o, v] of this.built) {
-        if (keep.has(o)) continue;
-        if (v) {
-          this.detach(v);
-          disposeTree(v);
-        }
-        this.built.delete(o);
-        this.animProps.delete(o);
+      if (full) {
+        for (const [o, v] of this.built) if (!keep.has(o) && !this.retiring.has(o)) this.dropProp(o, v);
+        bf.end();
       }
-      queue.sort((a, b) => b[1] - a[1]);
-      this.propQueue = queue;
+      near.sort((a, b) => b[1] - a[1]);
+      this.propQueue = near;
+      if (far) {
+        far.sort((a, b) => b[1] - a[1]);
+        this.farQueue = far;
+      }
       const t0 = performance.now();
       this.forest.rebuild(items9);
       prof("b.forest", t0);
     }
     /**
+     * The height a prop stands at: a building on the ground at its front door
+     * (its foundation reaches down to hide any slope); anything smaller on the
+     * lowest ground round its foot, sunk a little into a slope rather than
+     * floating off its low side.
+     */
+    propY(o) {
+      if (o.kind === "building") return this.ground(o.x, o.y);
+      const c = COLLIDE[o.kind];
+      const r = (Array.isArray(c) ? Math.hypot(c[0], c[1]) : c || 0) * (o.s || 1);
+      return this.terrain.restAt(o.x, o.y, r);
+    }
+    /** A building's model goes (it's out of range now), once its far block has been drawn in its place. */
+    retire(o, v) {
+      if (this.retiring.has(o)) return;
+      this.buildingsFar.add(o, true);
+      this.buildingsFar.show(o, true);
+      this.retiring.set(o, v);
+    }
+    /** Take a built prop out of the scene and forget it. */
+    dropProp(o, v) {
+      if (v) {
+        this.detach(v);
+        disposeTree(v);
+      }
+      this.built.delete(o);
+      this.animProps.delete(o);
+      this.retiring.delete(o);
+      if (o.kind === "building") this.buildingsFar.show(o, true);
+    }
+    /**
      * Build the queued models, nearest first, a few milliseconds' worth a frame:
      * a harbour town coming over the horizon is dozens of buildings, and built
      * all at once they'd freeze the game for a moment. Anything close by is
-     * built straight away.
+     * built straight away. The towns' far blocks come first: they're quick, and
+     * they stand in for each building until its model is up.
      */
-    buildQueued() {
-      const q2 = this.propQueue;
-      if (!q2 || !q2.length) return;
-      const w = this.world, O = this.propOrigin;
-      const t0 = performance.now();
-      while (q2.length) {
-        const [o, d2] = q2[q2.length - 1];
-        if (d2 > 24 * 24 && performance.now() - t0 > PROP_BUDGET_MS) break;
-        q2.pop();
-        if (this.built.has(o) || o.hidden) continue;
-        const builder = PROP_BUILDERS.get(o.kind);
-        const t1 = performance.now();
-        let v;
-        try {
-          v = builder(o, this.ctx) || null;
-        } catch (e) {
-          v = null;
-          console.warn("3D builder failed for", o.kind, e);
+    buildQueued(ox, oy) {
+      const t0 = performance.now(), end = t0 + PROP_BUDGET_MS;
+      this.buildingsFar.update(ox, oy, end);
+      for (const [o, v] of this.retiring) if (this.buildingsFar.drawn(o)) this.dropProp(o, v);
+      prof("b.far", t0);
+      for (const q2 of [this.propQueue, this.farQueue]) {
+        while (q2 && q2.length) {
+          const [o, d2] = q2[q2.length - 1];
+          if (d2 > 24 * 24 && performance.now() > end) return;
+          q2.pop();
+          this.buildProp(o);
         }
-        prof("b." + o.kind, t1);
-        this.built.set(o, v);
-        if (!v) {
-          this.propsDirty = true;
-          continue;
-        }
-        this.attach(v, this.props);
-        if (v.userData.update) this.animProps.set(o, v);
-        v.position.set(w.dx(O.x, o.x), v.userData.noGround ? 0 : this.ground(o.x, o.y), o.y - O.y);
       }
+    }
+    buildProp(o) {
+      if (this.built.has(o) || o.hidden) return;
+      const w = this.world, O = this.propOrigin;
+      const builder = PROP_BUILDERS.get(o.kind);
+      const t1 = performance.now();
+      let v;
+      try {
+        v = builder(o, this.ctx) || null;
+      } catch (e) {
+        v = null;
+        console.warn("3D builder failed for", o.kind, e);
+      }
+      prof("b." + o.kind, t1);
+      this.built.set(o, v);
+      if (!v) {
+        this.propsDirty = true;
+        return;
+      }
+      v.position.set(w.dx(O.x, o.x), v.userData.noGround ? 0 : this.propY(o), o.y - O.y);
+      if (o.kind === "building") v.addEventListener("added", () => {
+        if (!this.retiring.has(o)) this.buildingsFar.show(o, false);
+      });
+      this.attach(v, this.props);
+      if (v.userData.update) this.animProps.set(o, v);
     }
     /**
      * Put a newly built object into the scene once its shaders are ready. The
@@ -65371,14 +66278,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         return;
       }
       const u = obj.userData;
-      const join = () => {
+      const join2 = () => {
         if (u.pendingAdd !== parent) return;
         u.pendingAdd = null;
         parent.add(obj);
       };
       u.pendingAdd = parent;
       if (this.parallelCompile) {
-        this.compileAsync(obj).then(join);
+        this.compileAsync(obj).then(join2);
         return;
       }
       const n = this.renderer.info.programs.length;
@@ -65386,8 +66293,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.renderer.compile(obj, this.rig.camera, this.scene);
       } catch (e) {
       }
-      if (this.renderer.info.programs.length === n) join();
-      else setTimeout(join, 150);
+      if (this.renderer.info.programs.length === n) join2();
+      else setTimeout(join2, 150);
     }
     /**
      * Shader warm-up, a moment after the view starts (behind the title screen).
@@ -65513,10 +66420,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.actorViews.delete(a);
       }
       const seenS = /* @__PURE__ */ new Set();
+      const SR = this.viewDist(!p || p.mode === "sail") + 30;
       for (const s of game.ships) {
         const dx = w.dx(ox, s.x), dy = s.y - oy;
         const d2 = dx * dx + dy * dy;
-        if (!s.alive || d2 > SHIP_RANGE * SHIP_RANGE && (d2 > (SHIP_RANGE + 40) ** 2 || !this.shipViews.has(s))) continue;
+        if (!s.alive || d2 > SR * SR && (d2 > (SR + 40) ** 2 || !this.shipViews.has(s))) continue;
         seenS.add(s);
         let v = this.shipViews.get(s);
         if (v && v.stale?.()) {
@@ -65866,7 +66774,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
 
   // src/render3d/groundcover.js
-  var CELL3 = 16;
+  var CELL4 = 16;
   var NEAR = 22;
   var KINDS = ["grass", "flower", "fern", "pebble", "shell", "rock"];
   var REACH = { grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
@@ -66075,7 +66983,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function buildCell(world, terrain, cx, cy) {
     const out = {};
     for (const k of KINDS) out[k] = [];
-    const x0 = cx * CELL3, y0 = cy * CELL3;
+    const x0 = cx * CELL4, y0 = cy * CELL4;
     const col = new Color();
     const put2 = (k, x, y, rot, s, c) => {
       let h2 = terrain(x, y);
@@ -66083,10 +66991,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       else if (!(h2 > 0.05)) return;
       out[k].push(x, y, h2, rot, s, c.r, c.g, c.b);
     };
-    for (let j = 0; j < CELL3; j++) {
+    for (let j = 0; j < CELL4; j++) {
       const y = y0 + j;
       if (y < 1 || y >= world.height - 1) continue;
-      for (let i = 0; i < CELL3; i++) {
+      for (let i = 0; i < CELL4; i++) {
         const x = world.wx(x0 + i);
         const t = world.type(x, y);
         const r1 = hash6(x, y, 1), r2 = hash6(x, y, 2), r3 = hash6(x, y, 3);
@@ -66200,7 +67108,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const low = v.quality === "low";
       const R3 = low ? 36 : 64;
       const ox = v.ox, oy = v.oy;
-      const ccx = Math.floor(w.wx(ox) / CELL3), ccy = Math.floor(oy / CELL3);
+      const ccx = Math.floor(w.wx(ox) / CELL4), ccy = Math.floor(oy / CELL4);
       const key2 = `${ccx},${ccy},${low ? 1 : 0}`;
       this.t -= dt;
       if (key2 !== this.key) {
@@ -66210,14 +67118,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const wt = this.want;
       if (wt && this.t <= 0) {
         const t0 = performance.now();
-        const cr = Math.ceil(wt.R / CELL3) + 1;
+        const cr = Math.ceil(wt.R / CELL4) + 1;
         let nearReady = true, allReady = true;
         for (const [i, j] of ring2(cr)) {
           const k = this.cellKey(w, wt.ccx + i, wt.ccy + j);
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > FILL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR / CELL3)) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR / CELL4)) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -66236,16 +67144,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** The cache key of cell (cx, cy) (wrapped around the world on X), or -1 off the map. */
     cellKey(w, cx, cy) {
-      if (cy < 0 || cy * CELL3 >= w.height) return -1;
-      const n = Math.ceil(w.width / CELL3);
+      if (cy < 0 || cy * CELL4 >= w.height) return -1;
+      const n = Math.ceil(w.width / CELL4);
       if (w.wrap) cx = (cx % n + n) % n;
       else if (cx < 0 || cx >= n) return -1;
       return cy * 1e5 + cx;
     }
     /** Lay out the instances around the centre of cell (ccx, ccy). */
     place(w, ccx, ccy, R3, low) {
-      const cr = Math.ceil(R3 / CELL3) + 1;
-      const ox = (ccx + 0.5) * CELL3, oy = (ccy + 0.5) * CELL3;
+      const cr = Math.ceil(R3 / CELL4) + 1;
+      const ox = (ccx + 0.5) * CELL4, oy = (ccy + 0.5) * CELL4;
       this.origin = { x: ox, y: oy };
       for (const k of KINDS) this.sets[k].reset();
       const keep = /* @__PURE__ */ new Set();
@@ -66432,7 +67340,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
 
   // src/render3d/seabed.js
   var TAU18 = Math.PI * 2;
-  var CELL4 = 16;
+  var CELL5 = 16;
   var KINDS2 = ["branch", "brain", "table", "fan", "tube", "anemone", "kelp", "seagrass", "boulder", "star", "clam"];
   var MAX3 = { branch: 1400, brain: 1e3, table: 420, fan: 800, tube: 600, anemone: 700, kelp: 1500, seagrass: 5e3, boulder: 1100, star: 500, clam: 60 };
   var SWAY3 = { fan: 0.5, anemone: 0.7, kelp: 1, seagrass: 0.9 };
@@ -66724,9 +67632,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function buildCell2(world, terrain, cx, cy) {
     const out = {};
     for (const k of KINDS2) out[k] = [];
-    const x0 = cx * CELL4, y0 = cy * CELL4;
+    const x0 = cx * CELL5, y0 = cy * CELL5;
     const col = new Color();
-    const warm = warmth(world, x0 + CELL4 / 2, y0 + CELL4 / 2);
+    const warm = warmth(world, x0 + CELL5 / 2, y0 + CELL5 / 2);
     const reefy = warm > 0.55, cold = warm < 0.35;
     const put2 = (k, x, y, rot, s, sy, c, sink = 0.04) => {
       const h2 = terrain(x, y);
@@ -66736,10 +67644,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       col.setRGB(c[0] * k, c[1] * k, c[2] * k, SRGB2);
       return [col.r, col.g, col.b];
     };
-    for (let j = 0; j < CELL4; j++) {
+    for (let j = 0; j < CELL5; j++) {
       const y = y0 + j;
       if (y < 1 || y >= world.height - 1) continue;
-      for (let i = 0; i < CELL4; i++) {
+      for (let i = 0; i < CELL5; i++) {
         const x = world.wx(x0 + i);
         const t = world.type(x, y);
         if (t !== T.SEA && t !== T.REEF) continue;
@@ -66842,7 +67750,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const show = camH < 40;
       this.group.visible = show;
       if (!show) return;
-      const ccx = Math.floor(w.wx(v.ox) / CELL4), ccy = Math.floor(v.oy / CELL4);
+      const ccx = Math.floor(w.wx(v.ox) / CELL5), ccy = Math.floor(v.oy / CELL5);
       const key2 = `${ccx},${ccy},${R3}`;
       this.t -= dt;
       if (key2 !== this.key) {
@@ -66852,14 +67760,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const wt = this.want;
       if (wt && this.t <= 0) {
         const t0 = performance.now();
-        const cr = Math.ceil(wt.R / CELL4) + 1;
+        const cr = Math.ceil(wt.R / CELL5) + 1;
         let nearReady = true, allReady = true;
         for (const [i, j] of ring3(cr)) {
           const k = this.cellKey(w, wt.ccx + i, wt.ccy + j);
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > CELL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR2 / CELL4) + 1) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR2 / CELL5) + 1) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell2(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -66878,16 +67786,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** The cache key of cell (cx, cy) (wrapped around the world on X), or -1 off the map. */
     cellKey(w, cx, cy) {
-      if (cy < 0 || cy * CELL4 >= w.height) return -1;
-      const n = Math.ceil(w.width / CELL4);
+      if (cy < 0 || cy * CELL5 >= w.height) return -1;
+      const n = Math.ceil(w.width / CELL5);
       if (w.wrap) cx = (cx % n + n) % n;
       else if (cx < 0 || cx >= n) return -1;
       return cy * 1e5 + cx;
     }
     /** Lay out the floor around the centre of cell (ccx, ccy). */
     place(w, ccx, ccy, R3) {
-      const cr = Math.ceil(R3 / CELL4) + 1;
-      const ox = (ccx + 0.5) * CELL4, oy = (ccy + 0.5) * CELL4;
+      const cr = Math.ceil(R3 / CELL5) + 1;
+      const ox = (ccx + 0.5) * CELL5, oy = (ccy + 0.5) * CELL5;
       this.origin = { x: ox, y: oy };
       for (const k of KINDS2) this.sets[k].reset();
       const keep = /* @__PURE__ */ new Set();
@@ -68070,9 +68978,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var Precipitation = class {
     constructor(scene) {
       this.shelter = new Shelter();
-      const quad = [-1, 0, 0, 1, 0, 0, 1, 1, 0, -1, 1, 0];
+      const quad2 = [-1, 0, 0, 1, 0, 0, 1, 1, 0, -1, 1, 0];
       const sq = [-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0];
-      this.rain = fallMesh(RAIN, RAIN_VS, RAIN_FS, quad, this.shelter, { uLen: { value: 0.55 }, uWidth: { value: 0.011 } });
+      this.rain = fallMesh(RAIN, RAIN_VS, RAIN_FS, quad2, this.shelter, { uLen: { value: 0.55 }, uWidth: { value: 0.011 } });
       this.snow = fallMesh(SNOW, SNOW_VS, SNOW_FS, sq, this.shelter, { uSize: { value: 0.05 } });
       scene.add(this.rain, this.snow);
       this.splash = new Splashes(scene);
@@ -68923,245 +69831,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
   };
 
-  // src/world/objects.js
-  var CHUNK2 = 32;
-  var COLLIDE = {
-    // street furniture
-    lamp: 0.16,
-    lantern: 0.2,
-    sign: 0.15,
-    flagpole: 0.15,
-    mooring: 0.2,
-    barrel: 0.34,
-    crate: 0.42,
-    haystack: 0.6,
-    chest: 0.4,
-    bench: [0.8, 0.3],
-    stall: [1.25, 0.75],
-    fence: [0.9, 0.12],
-    tent: [1.2, 1],
-    campfire: 0.45,
-    well: 0.95,
-    fountain: 1.3,
-    // nature
-    tree: 0.3,
-    rock: 0.5,
-    mushroom: 0.25,
-    crystal: 0.4,
-    // landmarks (sized like their models; gates and arches you walk through)
-    statue: 0.7,
-    pillar: 0.45,
-    totem: 0.35,
-    dummy: 0.28,
-    cannon: 0.55,
-    anchor: 0.5,
-    grave: 0.3,
-    bell: 0.6,
-    ruins: 0.8,
-    poneglyph: [0.8, 0.35],
-    boat: [1.4, 0.6],
-    shipwreck: [2.5, 1.2],
-    lighthouse: 1.6,
-    tower: 2,
-    windmill: 1.5,
-    wheel: 1,
-    elevator: 1.5,
-    gate: 0,
-    torii: 0,
-    arch: 0,
-    bones: 0,
-    skull: 0,
-    bubble: 0,
-    platform: 0
-    // a raised floor you walk onto (see floorOf)
-  };
-  function floorOf(o) {
-    if (o.kind !== "platform") return null;
-    const n = o.name || "";
-    const s = o.s || 1;
-    if (/ring/i.test(n)) return { hw: 2.3 * s, hd: 2.3 * s, oy: 0, h: 0.88 * s };
-    if (/stage|carnival/i.test(n)) return { hw: 2.4 * s, hd: 1.7 * s, oy: 0, h: 1.02 * s };
-    return { hw: 1.8 * s, hd: 1.4 * s, oy: -0.2 * s, h: 2.4 * s };
-  }
-  var ROUND = /* @__PURE__ */ new Set(["barrel", "roundtable", "dummy", "plant"]);
-  var nextObjectId = 1;
-  var ObjectIndex = class {
-    constructor(world) {
-      this.world = world;
-      this.cw = Math.ceil(world.width / CHUNK2);
-      this.ch = Math.ceil(world.height / CHUNK2);
-      this.chunks = /* @__PURE__ */ new Map();
-      this.byId = /* @__PURE__ */ new Map();
-      this.count = 0;
-    }
-    key(cx, cy) {
-      return cy * this.cw + cx;
-    }
-    add(obj) {
-      var _a2;
-      obj.id = obj.id || nextObjectId++;
-      obj.x = this.world.wx(obj.x);
-      const cx = Math.floor(obj.x / CHUNK2), cy = Math.floor(obj.y / CHUNK2);
-      const k = this.key(cx, cy);
-      let list = this.chunks.get(k);
-      if (!list) this.chunks.set(k, list = []);
-      list.push(obj);
-      obj._chunk = k;
-      this.byId.set(obj.id, obj);
-      this.count++;
-      if (obj.far) ((_a2 = this.world).farObjects || (_a2.farObjects = [])).push(obj);
-      const fl2 = floorOf(obj);
-      if (fl2) this.world.addFloor({ x0: obj.x - fl2.hw, x1: obj.x + fl2.hw, y0: obj.y + fl2.oy - fl2.hd, y1: obj.y + fl2.oy + fl2.hd, h: fl2.h, o: obj });
-      const c = obj.block && COLLIDE[obj.kind];
-      if (obj.block && isEnterable(obj)) {
-        obj.enterable = true;
-        obj.pirate = isPirateHouse(obj);
-        this.stamp(obj, 2);
-        this.addInterior(obj);
-      } else if (c !== void 0 && obj.block && (fl2 || (obj.fw || 1) <= 2 && (obj.fd || 1) <= 2)) {
-        obj.soft = true;
-        if (c) this.addCollider(obj, c);
-      } else if (obj.block) this.stamp(obj, 1);
-      if (obj.kind === "building" && obj.style === "chinese") this.addColumns(obj);
-      return obj;
-    }
-    /** The red columns along a Chinese front stand out from the wall: they're solid (see buildings3d 'column'). */
-    addColumns(b) {
-      const fw = Math.max(2, b.fw || 3);
-      const n = Math.max(2, Math.round(fw / 1.6));
-      const d = b.enterable ? doorOf(b) : null;
-      b.colCols = [];
-      for (let i = 0; i <= n; i++) {
-        const x = -fw / 2 + i * fw / n;
-        if (d && x > d.x - d.dw / 2 - 0.33 && x < d.x + d.dw / 2 + 0.33) continue;
-        b.colCols.push(this.world.addCol({ ...bw(b, x, 0.25), r: 0.2, o: b }));
-      }
-    }
-    addCollider(obj, c) {
-      const s = obj.s || 1;
-      const col = Array.isArray(c) ? { x: obj.x, y: obj.y, hw: c[0] * s, hd: c[1] * s, o: obj } : { x: obj.x, y: obj.y, r: c * s, o: obj };
-      obj.col = this.world.addCol(col);
-    }
-    removeCollider(obj) {
-      if (!obj.col) return;
-      this.world.removeCol(obj.col);
-      obj.col = null;
-    }
-    /** Walls (with a doorway) and the ground floor of an enterable building (furniture: see addFurniture). */
-    addInterior(b) {
-      const w = this.world;
-      const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), T4 = WALL_T;
-      const d = doorOf(b);
-      const cols = [];
-      const rect = (x0, x1, z0, z1) => {
-        const r = bbox(b, x0, x1, z0, z1);
-        return { x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2, hw: (r.x1 - r.x0) / 2, hd: (r.y1 - r.y0) / 2 };
-      };
-      const box2 = (x0, x1, z0, z1, extra) => {
-        if (x1 - x0 < 0.01 || z1 - z0 < 0.01) return null;
-        const col = w.addCol({ ...rect(x0, x1, z0, z1), o: b, ...extra });
-        cols.push(col);
-        return col;
-      };
-      const wall = { wall: true };
-      box2(-fw / 2, d.x - d.dw / 2, -T4, 0, wall);
-      box2(d.x + d.dw / 2, fw / 2, -T4, 0, wall);
-      box2(-fw / 2, fw / 2, -fd, -fd + T4, wall);
-      box2(-fw / 2, -fw / 2 + T4, -fd, 0, wall);
-      box2(fw / 2 - T4, fw / 2, -fd, 0, wall);
-      b.cols = cols;
-      b.doorBox = { ...rect(d.x - d.dw / 2, d.x + d.dw / 2, -T4, 0), o: b, wall: true, door: true };
-      b.doorCol = w.addCol({ ...b.doorBox });
-      b.floor = { ...bbox(b, -fw / 2, fw / 2, -fd, -2e-3), h: PLINTH, o: b, interior: true };
-      w.addFloor(b.floor);
-      b.stepsFloor = { ...bbox(b, d.x - d.dw / 2 - 0.2, d.x + d.dw / 2 + 0.2, 2e-3, 1.3), h: 0, o: b, steps: d.x };
-      w.addFloor(b.stepsFloor);
-    }
-    /** The furniture collides too (laid out lazily: when someone comes near or the island fills with people). */
-    addFurniture(b) {
-      if (b.furnished || !b.enterable) return;
-      b.furnished = true;
-      const w = this.world, L2 = layoutOf(b);
-      for (const it of L2.items) {
-        if (it.ghost || !it.rect) continue;
-        const r = it.rect, sh = 0.03;
-        if (ROUND.has(it.k)) b.cols.push(w.addCol({ ...bw(b, it.x, it.z), r: Math.min(r.x1 - r.x0, r.z1 - r.z0) / 2 - sh, o: b }));
-        else {
-          const q2 = bbox(b, r.x0 + sh, r.x1 - sh, r.z0 + sh, r.z1 - sh);
-          b.cols.push(w.addCol({ x: (q2.x0 + q2.x1) / 2, y: (q2.y0 + q2.y1) / 2, hw: (q2.x1 - q2.x0) / 2, hd: (q2.y1 - q2.y0) / 2, o: b }));
-        }
-      }
-    }
-    removeInterior(b) {
-      const w = this.world;
-      for (const c of b.cols || []) w.removeCol(c);
-      if (b.doorCol) w.removeCol(b.doorCol);
-      if (b.floor) w.removeFloor(b.floor);
-      b.cols = null;
-      b.doorCol = null;
-      b.floor = null;
-      b.furnished = false;
-    }
-    remove(obj) {
-      const list = this.chunks.get(obj._chunk);
-      if (list) {
-        const i = list.indexOf(obj);
-        if (i >= 0) list.splice(i, 1);
-      }
-      if (obj.far && this.world.farObjects) this.world.farObjects = this.world.farObjects.filter((o) => o !== obj);
-      this.byId.delete(obj.id);
-      this.count--;
-      if (obj.enterable) {
-        this.removeInterior(obj);
-        this.stamp(obj, 0);
-      } else if (obj.soft) this.removeCollider(obj);
-      else if (obj.block) this.stamp(obj, 0);
-    }
-    /** Mark or clear the tiles covered by an object's footprint. */
-    stamp(obj, v) {
-      const w = this.world;
-      const fp = footprint(obj);
-      for (let y = fp.y0; y < fp.y1; y++) {
-        for (let x = fp.x0; x < fp.x1; x++) {
-          if (y < 0 || y >= w.height) continue;
-          w.setBlocked(x, y, v);
-        }
-      }
-    }
-    /** Objects whose chunk intersects the rect [x0,x1]x[y0,y1] (x may wrap). */
-    query(x0, y0, x1, y1, out = []) {
-      const pad = 2;
-      const cx0 = Math.floor(x0 / CHUNK2) - pad, cx1 = Math.floor(x1 / CHUNK2) + pad;
-      const cy0 = Math.max(0, Math.floor(y0 / CHUNK2) - pad), cy1 = Math.min(this.ch - 1, Math.floor(y1 / CHUNK2) + pad);
-      for (let cy = cy0; cy <= cy1; cy++) {
-        for (let cx = cx0; cx <= cx1; cx++) {
-          const wcx = this.world.wrap ? (cx % this.cw + this.cw) % this.cw : cx;
-          if (wcx < 0 || wcx >= this.cw) continue;
-          const list = this.chunks.get(this.key(wcx, cy));
-          if (list) for (const o of list) out.push(o);
-        }
-      }
-      return out;
-    }
-    near(x, y, r, filter) {
-      const out = [];
-      for (const o of this.query(x - r, y - r, x + r, y + r)) {
-        if (this.world.dist2(x, y, o.x, o.y) <= r * r && (!filter || filter(o))) out.push(o);
-      }
-      return out;
-    }
-  };
-  function footprint(o) {
-    if (o.rot) {
-      const r = bfoot(o);
-      const x02 = Math.floor(r.x0 + 1e-3), y02 = Math.floor(r.y0 + 1e-3);
-      return { x0: x02, y0: y02, x1: x02 + Math.round(r.x1 - r.x0), y1: y02 + Math.round(r.y1 - r.y0) };
-    }
-    const w = o.fw || 1, d = o.fd || 1;
-    const x0 = Math.floor(o.x - w / 2 + 1e-3), y0 = Math.floor(o.y - d + 1e-3);
-    return { x0, y0, x1: x0 + w, y1: y0 + d };
-  }
-
   // src/core/noise.js
   var F2 = 0.5 * (Math.sqrt(3) - 1);
   var G2 = (3 - Math.sqrt(3)) / 6;
@@ -69985,6 +70654,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         rec.docks.push(dock);
       }
     }
+    for (const t of rec.towns.slice(1)) {
+      const a = rec.towns[0].plaza, b = t.plaza;
+      if (!walkable(world, rec.landBox, a.x, a.y + 2, b.x, b.y + 2)) connectRoad(world, a.x, a.y, b.x, b.y, t.roadTile || T.DIRT);
+    }
     rec.clearings = [];
     for (const lm of def.landmarks || []) {
       const c = P4(lm);
@@ -70023,6 +70696,28 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     populateVegetation(world, rng4, x0, y0, LW2, LH, L2, li, treeKinds, density, def);
     delete def._clearings;
     return rec;
+  }
+  function walkable(world, box2, ax, ay, bx, by) {
+    const W3 = box2.x1 - box2.x0 + 1, H2 = box2.y1 - box2.y0 + 1;
+    const seen = new Uint8Array(W3 * H2), q2 = [];
+    const ok = (x, y) => x >= box2.x0 && y >= box2.y0 && x <= box2.x1 && y <= box2.y1 && WALKABLE[world.type(x, y)] && !world.solid(x, y);
+    const sx = Math.floor(ax), sy = Math.floor(ay), tx = Math.floor(bx), ty = Math.floor(by);
+    if (!ok(sx, sy)) return true;
+    q2.push(sx, sy);
+    seen[(sy - box2.y0) * W3 + sx - box2.x0] = 1;
+    for (let h2 = 0; h2 < q2.length; h2 += 2) {
+      const x = q2[h2], y = q2[h2 + 1];
+      if (Math.abs(x - tx) <= 1 && Math.abs(y - ty) <= 1) return true;
+      for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + ddx, ny = y + ddy;
+        if (!ok(nx, ny)) continue;
+        const k = (ny - box2.y0) * W3 + nx - box2.x0;
+        if (seen[k]) continue;
+        seen[k] = 1;
+        q2.push(nx, ny);
+      }
+    }
+    return false;
   }
   var SHORE_KINDS = /* @__PURE__ */ new Set(["boat", "shipwreck", "anchor", "bubble", "mooring", "buoy", "rapids", "geyser"]);
   function settleLandmark(world, rec, o, ground) {
@@ -70379,7 +71074,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const t = s / steps;
       const x = ax + dx * t, y = ay + dy * t;
       for (let j = -1; j <= 0; j++) for (let i = -1; i <= 0; i++) {
-        const cur = world.type(x + i, y + j);
+        let cur = world.type(x + i, y + j);
+        if (cur === T.MOUNTAIN || cur === T.CLIFF) {
+          world.setType(x + i, y + j, tile);
+          cur = tile;
+        }
+        if (cur === T.WALL) {
+          for (let gy = -1; gy <= 1; gy++) for (let gx = -1; gx <= 1; gx++) if (world.type(x + i + gx, y + j + gy) === T.WALL) world.setType(x + i + gx, y + j + gy, tile);
+          continue;
+        }
         if (IS_LIQUID[cur] || OVERLAY[cur] || !WALKABLE[cur]) continue;
         if (cur === T.COBBLE || cur === T.STONE || cur === T.MARBLE || cur === T.PLANK || cur === T.FARM) continue;
         if (world.isBlocked(x + i, y + j)) continue;
@@ -80589,6 +81292,49 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/game/ai.js
+  var TURN_LONG = 7;
+  var TURN_IDLE = 2.5;
+  function turnsAllowed(game, p) {
+    if (game.world !== game.surface) return 2;
+    const r = regionAt(p.x, p.y);
+    return isBlue(r) ? 1 : r === REGION.NEW_WORLD ? 3 : 2;
+  }
+  function takeTurn(game, a, t, hit = false) {
+    if (!t.isPlayer || a.boss) return true;
+    const T4 = game.turns || (game.turns = /* @__PURE__ */ new Map());
+    const Q2 = game.turnQueue || (game.turnQueue = /* @__PURE__ */ new Map());
+    const now2 = game.time || 0, w = game.world;
+    const out = (h2, far) => !h2.alive || h2.state === "knocked" || h2.controller?.target !== t || w.distance(h2.x, h2.y, t.x, t.y) > far;
+    for (const [h2, u] of T4) {
+      if (out(h2, 9)) {
+        T4.delete(h2);
+        continue;
+      }
+      if (h2.action || w.distance(h2.x, h2.y, t.x, t.y) < (h2.controller?.meleeRange?.(h2) || 1.3) + 1.2) u.close = now2;
+    }
+    if (T4.has(a)) return true;
+    for (const [h2] of Q2) if (out(h2, 14)) Q2.delete(h2);
+    if (!Q2.has(a)) Q2.set(a, now2);
+    if (!hit) {
+      for (const [h2, s0] of Q2) if (s0 < Q2.get(a) && h2 !== a) return false;
+    }
+    if (T4.size >= turnsAllowed(game, t)) {
+      let old = null, score = -Infinity;
+      for (const [h2, u] of T4) {
+        const s0 = Math.max(now2 - u.since - TURN_LONG, now2 - u.close - TURN_IDLE);
+        if (s0 > score) {
+          score = s0;
+          old = h2;
+        }
+      }
+      if (!old || !hit && score < 0) return false;
+      T4.delete(old);
+      Q2.set(old, now2);
+    }
+    Q2.delete(a);
+    T4.set(a, { since: now2, close: now2 });
+    return true;
+  }
   var PATHS_PER_FRAME = 2;
   var pathFrame = -1;
   var pathsLeft = 0;
@@ -80636,7 +81382,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.aggression = o.aggression ?? 0.7;
       this.ranged = !!o.ranged;
       this.prefRange = o.prefRange ?? (this.ranged ? 7 : 1.2);
-      this.fleeAt = o.fleeAt ?? (o.kind === "hostile" ? 0.15 : 0);
       this.state = "idle";
       this.target = null;
       this.think = Math.random() * 0.5;
@@ -80661,6 +81406,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         if (!this.target || Math.random() < 0.5) this.target = att;
         this.state = "chase";
+        if (att.isPlayer && this.target === att) takeTurn(game, a, att, true);
         this.sawAt(att, game, a);
         for (const b of game.actorsNear(a.x, a.y, 10)) {
           if (b !== a && b.faction === a.faction && b.controller instanceof _AIController && !b.controller.target && b.state === "idle") {
@@ -80679,6 +81425,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (b === a || b.state !== "idle" || b.onShip) continue;
         const isFoe = hostile(a, b) || b.isPlayer && a.provoked || a.faction === "player" && b.provoked;
         if (!isFoe) continue;
+        if (b.isPlayer && a.calm && !a.provoked) continue;
         let d = game.world.dist2(a.x, a.y, b.x, b.y);
         const stealth = b.buffs?.find((x) => x.mods?.stealth);
         if (stealth) d *= 1 + stealth.mods.stealth * 6;
@@ -80778,13 +81525,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const dx = w.dx(a.x, t.x), dy = t.y - a.y;
       const dist = Math.hypot(dx, dy);
       const ang = Math.atan2(dy, dx);
-      if (this.fleeAt && a.hp / a.d.maxHp < this.fleeAt && !a.boss) {
-        a.intent.mx = -dx / (dist || 1);
-        a.intent.my = -dy / (dist || 1);
-        a.intent.sprint = true;
-        a.facing = ang + Math.PI;
-        return;
-      }
       const up = game.deckRoute?.(a, t.x, t.y);
       if (up) {
         this.moveToward(a, up.x, up.y, game, true);
@@ -80810,6 +81550,31 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         return;
       }
       a.facing = a.action ? a.facing : ang;
+      if (!a.action && !takeTurn(game, a, t)) {
+        this.comboLeft = 0;
+        const ring4 = 3.4 + a.id % 5 * 0.25;
+        let mx2 = 0, my2 = 0;
+        if (dist > ring4 + 1.2) {
+          mx2 = dx / dist;
+          my2 = dy / dist;
+          a.intent.sprint = dist > 7 && a.stamina > a.d.maxStamina * 0.5;
+        } else if (dist < ring4 - 0.6) {
+          mx2 = -dx / dist;
+          my2 = -dy / dist;
+        }
+        if (dist < ring4 + 2) {
+          mx2 += -dy / dist * this.strafeDir * 0.55;
+          my2 += dx / dist * this.strafeDir * 0.55;
+        }
+        if (Math.random() < 0.01) this.strafeDir *= -1;
+        const l2 = Math.hypot(mx2, my2);
+        if (l2 > 0) {
+          a.intent.mx = mx2 / l2 * 0.6;
+          a.intent.my = my2 / l2 * 0.6;
+        }
+        this.avoidStuck(a, dt, game);
+        return;
+      }
       if (!a.action && this.think <= 0) {
         this.think = (0.35 + (1 - this.aggression) * 0.8) * (0.7 + Math.random() * 0.6);
         const usable = this.moves.map(getAbility).filter((m) => m && canUse(a, m) && this.inRangeFor(m, dist));
@@ -82204,7 +82969,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/ui/style.css
-  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #b8860b; font-size: 18px; }\n.wm-label.quest.main { color: #d35400; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: -1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.quest small { color: #ffd54f; }\n.compass .pin.ship small { color: #e3f2fd; }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n";
+  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.held { border-color: var(--gold); box-shadow: 0 0 10px rgba(241,196,15,.55), 0 3px 8px rgba(0,0,0,.45); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #b8860b; font-size: 18px; }\n.wm-label.quest.main { color: #d35400; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: -1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.quest small { color: #ffd54f; }\n.compass .pin.ship small { color: #e3f2fd; }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n";
 
   // src/ui/icon.js
   var img = (canvas2, px2, cls = "") => h("img.icon" + cls, { src: iconURL(canvas2), width: px2, height: px2, draggable: false, alt: "" });
@@ -82534,8 +83299,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const legacy = read(key(s, "legacy"));
     return { slot: s, char, legacy: legacy ? { ...defaultLegacy(), ...legacy } : null, empty: !char && !legacy };
   }
-  var loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, view: "first", sensitivity: 0.5, invertY: false, quality: "high", autoRes: true, fov: 0.5, bob: true, ...read(KEY_SETTINGS) || {} });
+  var loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, view: "first", sensitivity: 0.5, invertY: false, quality: "high", autoRes: true, fov: 0.5, bob: true, renderDist: null, ...read(KEY_SETTINGS) || {} });
   var saveSettings = (s) => write(KEY_SETTINGS, s);
+  var RENDER_DIST = { min: 4, max: 24, high: 12, low: 8 };
+  function renderChunks(s) {
+    const n = Number(s?.renderDist) || (s?.quality === "low" ? RENDER_DIST.low : RENDER_DIST.high);
+    return Math.max(RENDER_DIST.min, Math.min(RENDER_DIST.max, Math.round(n)));
+  }
 
   // src/game/lineage.js
   var TRAITS = {
@@ -82729,7 +83499,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const a = new Actor({ name: char.name, look: equippedLook(char), race: char.race, attrs: effectiveAttrs(char) });
     a.char = char;
     a.game = game;
-    a.style = char.style;
+    a.style = fightingStyle(char);
     a.masteries = char.masteries;
     a.techniques = char.techniques;
     a.hotbar = char.hotbar;
@@ -82800,13 +83570,22 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const power = same.reduce((s, w) => s + (w.power || 1), 0) / same.length;
     return { kind, power, count: same.length, ids: char.equipped.weapons.slice() };
   }
+  function fightingStyle(char) {
+    const style = STYLES2[char.style] ? char.style : "brawler";
+    const st = STYLES2[style], w = weaponFromChar(char);
+    if (!w) return st.weapon ? "brawler" : style;
+    const suits = (s) => STYLES2[s]?.weapon === w.kind && w.count >= (STYLES2[s].swords || 1);
+    if (suits(style)) return style;
+    const learned = Object.keys(char.masteries || {}).filter(suits).sort((a, b) => char.masteries[b] - char.masteries[a]);
+    return learned[0] || WEAPON_STYLE[w.kind] || (st.weapon ? "brawler" : style);
+  }
   function refreshPlayer(game) {
     const p = game.player, c = p.char;
     const hpFrac = p.hp / p.d.maxHp;
     p.attrs = effectiveAttrs(c);
     p.look = equippedLook(c);
     p.weapon = weaponFromChar(c);
-    p.style = c.style;
+    p.style = fightingStyle(c);
     p.fruit = c.fruit;
     p.fruitMastery = c.fruitMastery;
     p.hakiSkill = c.haki;
@@ -82822,7 +83601,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (!c) return;
     c.masteries = p.masteries;
     c.fruitMastery = p.fruitMastery;
-    c.style = p.style;
     c.hotbar = p.hotbar;
     c.techniques = p.techniques;
     c.world.day = game.env.day;
@@ -83106,6 +83884,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return true;
     }
     if (d.type === "fruit") return eatFruit(game, id);
+    if (d.type === "weapon") {
+      equip(game, id);
+      return true;
+    }
     if (d.type === "pose" && d.target) {
       const tgt = game.surface.islands.find((i) => i.id === d.target);
       c.logPose.target = d.target;
@@ -83152,6 +83934,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/data/shops.js
   var STOCK = {
     general: ["meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "antidote", "sake", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
+    // (in the four Blues, where everyone's journey starts, the general store keeps a rack of old swords)
+    general_blue: ["meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "antidote", "sake", "wooden_sword", "rusty_katana", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
     tavern: ["meat", "rice_ball", "fish_stew", "sake", "tangerine", "mango"],
     weapons_blue: ["wooden_sword", "rusty_katana", "cutlass", "slingshot", "flintlock", "bo_staff", "woodsman_axe", "padded_vest", "leather_jerkin", "leather_bracers", "iron_ring"],
     weapons_grand: ["cutlass", "fine_katana", "marine_saber", "flintlock", "marine_rifle", "bo_staff", "woodsman_axe", "shigure", "leather_jerkin", "chain_shirt", "hand_wraps", "iron_ring"],
@@ -83183,7 +83967,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (n.includes("navigator") || n.includes("log")) return grand ? STOCK.navigator_grand : STOCK.navigator;
         if (n.includes("outfit") || n.includes("boutique")) return STOCK.outfitter;
         if (island?.def?.climate === "sky") return STOCK.skypiea;
-        return STOCK.general;
+        return grand || sea === "red_line" || sea === "sky" || sea === "undersea" ? STOCK.general : STOCK.general_blue;
       default:
         return STOCK.general;
     }
@@ -84076,7 +84860,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         k("Mouse wheel", "camera distance (third person)"),
         k("H", "this help")
       ),
-      h("p.muted", "The buttons on the right of the screen open the same menus. Open the Inventory or Skills menu and drag techniques and food straight onto your hotbar at the bottom of the screen; drag hotbar slots to rearrange them, right-click one to clear it."),
+      h("p.muted", "The buttons on the right of the screen open the same menus. Open the Inventory or Skills menu and drag techniques, food and weapons straight onto your hotbar at the bottom of the screen (a weapon's key takes it in hand, or puts it away); drag hotbar slots to rearrange them, right-click one to clear it."),
       h("p", h("b", "On a phone or tablet: "), "your left thumb moves (push the stick all the way to run; at sea it steers and sets the sails) and your right thumb drags to look around. The round buttons jump, attack, heavy attack, dodge and block; tap Use or the prompt to talk and interact, and tap a hotbar slot to use a technique. The strip at the top opens the menus, the world map and the camera view. Play with the phone held sideways."),
       h("h3", "Reputation"),
       h("p", "People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation. Crimes \u2014 robbing shops and houses, picking pockets, attacking townsfolk, Marines or merchant ships \u2014 put a bounty on your head instead, and bounties grow the way they do in One Piece: a few hundred thousand berries for a petty thief in the East Blue, millions on the Grand Line, far more in the New World. Anyone with a bounty is a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks \u2014 all the way to commanding fleets. A Marine who breaks the law loses standing, and is thrown out when nobody trusts them any more."),
@@ -84299,8 +85083,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       ranged: def.ranged,
       leash: def.leash ?? (def.boss ? 18 : 16),
       phases: def.phases,
-      barks: def.barks,
-      fleeAt: def.boss || def.named ? 0 : def.fleeAt
+      barks: def.barks
     });
     if (kind === "guard" || kind === "idle") {
       a.stationary = true;
@@ -84329,7 +85112,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       // every grunt looks different
       hpMul: (A.hpMul || 1) * (over.hpMul || 1),
       skill: over.skill ?? A.skill,
-      fleeAt: 0.15,
       ...over
     }, x, y);
   }
@@ -84655,7 +85437,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const B4 = g.buildings;
       const rng4 = new RNG((b.id || 1) * 13 + g.env.day * 7 + Math.floor(g.env.clock));
       g.audio?.sfx("knock");
-      const kick = { text: b.pirate ? "Kick the door in." : "Kick the door in. (a crime)", do: () => {
+      const kick = { text: b.pirate ? "Kick down the door." : "Kick down the door. (a crime)", do: () => {
         g.dialogue.close();
         B4 ? B4.breakDoor(b) : robHouse(g, b);
       }, end: true };
@@ -84713,16 +85495,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (first) g.fx.burst(o.x, o.y - 0.5, 20, { color: ["#ffd54f", "#fff59d"], speed: 4, vz: 4, g: 8, life: 0.8, kind: "star" });
     }
     dummy(o) {
-      const g = this.game, c = g.state.char, p = g.player;
+      const g = this.game, c = g.state.char;
       if (c.flags.dummyDay === g.env.day) {
         g.log("Your arms are too tired for more practice today.", "#b0bec5");
         return;
       }
       c.flags.dummyDay = g.env.day;
-      const m = c.masteries[p.style] || 0;
+      const style = g.progression.styleInUse();
+      const m = c.masteries[style] || 0;
       g.env.clock += 1;
       if (m < 10) {
-        g.progression.addStyleMastery(p.style, 2);
+        g.progression.addStyleMastery(style, 2);
         g.log("You practise your forms on the dummy for an hour. (Dummies only teach the very basics \u2014 mastery up to 10.)", "#90caf9");
       } else g.log("The dummy has nothing left to teach you. Find a real opponent \u2014 or a master.", "#b0bec5");
     }
@@ -85310,7 +86093,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.addHaki(getAbility(def.id)?.hakiType || "armament", gain * 0.5);
         this.train("wil", frac2 * tf2 * 20);
       } else {
-        this.addStyleMastery(p.style, gain);
+        const style = p.masteries[p.style] !== void 0 ? p.style : def.style;
+        if (p.masteries[style] !== void 0) this.addStyleMastery(style, gain);
         const kind = weaponKindOf(p, def);
         this.addWeaponMastery(kind, gain * 1.2);
         this.train(kind === "gun" ? "agi" : "str", frac2 * tf2 * 40);
@@ -85371,6 +86155,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const c = this.char;
       if (!c) return 0;
       return Math.min(1, (c.train?.[key2] || 0) / (14 + c.attrs[key2] * 3.5));
+    }
+    /** The style practice goes to: the one you fight with — or, with a weapon whose style you never learned, the one you picked. */
+    styleInUse() {
+      const p = this.game.player;
+      return p.masteries[p.style] !== void 0 ? p.style : this.char?.style || "brawler";
     }
     addStyleMastery(style, amt) {
       const p = this.game.player;
@@ -85523,7 +86312,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (a.boss && !c.bosses.includes(a.npcId || a.name)) {
         c.bosses.push(a.npcId || a.name);
         this.breakthrough(a.breakthrough ?? 3, `Defeated ${a.name}`);
-        this.addStyleMastery(p.style, 4);
+        this.addStyleMastery(this.styleInUse(), 4);
         if (c.fruit) this.addFruitMastery(4);
         g.emit("bossDefeated", a);
         this.checkDream();
@@ -85997,6 +86786,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var berriesLine = (c) => h("div.berries", uiImg("berries", 20), ` ${formatBerries(c.berries)}`);
   var HOTBAR = HOTBAR_SIZE;
   var USABLE = /* @__PURE__ */ new Set(["food", "medicine"]);
+  var ON_HOTBAR = /* @__PURE__ */ new Set([...USABLE, "weapon"]);
   var title = (s) => s[0].toUpperCase() + s.slice(1);
   function ensureHotbar(c) {
     c.hotbar = c.hotbar || [];
@@ -86018,8 +86808,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       else if (payload.startsWith("item:") || payload.startsWith("inv:")) {
         const iid = payload.slice(payload.indexOf(":") + 1);
         const d = ITEMS[iid];
-        if (!d || !USABLE.has(d.type)) {
-          game.log("Only food and medicine can go on the hotbar.", "#ff8a80");
+        if (!d || !ON_HOTBAR.has(d.type)) {
+          game.log("Only food, medicine and weapons can go on the hotbar.", "#ff8a80");
           return;
         }
         id = "item:" + iid;
@@ -86032,7 +86822,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function hotbarNote(game, what) {
     const pick5 = game.ui.hotbarPick;
-    return h("p.hb-note" + (pick5 ? ".picking" : ""), pick5 ? `Now click a slot on your hotbar (keys ${HOTBAR_KEYS.join(" ")}) to put ${what || "it"} there.` : "Drag techniques and food straight onto your hotbar at the bottom of the screen (keys 1-9 and 0) \u2014 or click one, then click a slot. Drag slots to rearrange them; right-click one to clear it.");
+    return h("p.hb-note" + (pick5 ? ".picking" : ""), pick5 ? `Now click a slot on your hotbar (keys ${HOTBAR_KEYS.join(" ")}) to put ${what || "it"} there.` : "Drag techniques, food and weapons straight onto your hotbar at the bottom of the screen (keys 1-9 and 0) \u2014 or click one, then click a slot. Drag slots to rearrange them; right-click one to clear it.");
   }
   function pickForHotbar(game, payload, rerender) {
     const ui = game.ui;
@@ -86209,7 +86999,7 @@ Click for details \xB7 right-click to take off` : `${label} \u2014 empty`,
       }
       if (!items9.length) grid2.appendChild(h("p.muted", { style: { gridColumn: "1 / -1" } }, st.cat === "all" ? "Your bag is empty." : "Nothing here."));
       if (onBar.size) grid2.appendChild(h("p.muted.inv-onbar", { style: { gridColumn: "1 / -1" } }, `${onBar.size === 1 ? "One item is" : onBar.size + " items are"} on your hotbar \u2014 drag a slot back here to put it away.`));
-      if (onBar.has(st.selected)) st.selected = null;
+      if (onBar.has(st.selected) && !isEquipped(c, st.selected)) st.selected = null;
       const sd = ITEMS[st.selected];
       let details;
       if (sd && count(c, st.selected)) {
@@ -86220,13 +87010,11 @@ Click for details \xB7 right-click to take off` : `${label} \u2014 empty`,
           equip(game, id);
           render2();
         } } }, worn ? "Take off" : "Equip"));
-        if (USABLE.has(sd.type)) {
-          acts.push(h("button.btn.green", { on: { click: () => {
-            useItem(game, id);
-            render2();
-          } } }, sd.type === "food" ? "Eat" : "Use"));
-          acts.push(h("button.btn" + (game.ui.hotbarPick === "item:" + id ? ".gold" : ""), { on: { click: () => pickForHotbar(game, "item:" + id, render2) } }, game.ui.hotbarPick === "item:" + id ? "Now click a hotbar slot\u2026" : "Put on hotbar"));
-        }
+        if (USABLE.has(sd.type)) acts.push(h("button.btn.green", { on: { click: () => {
+          useItem(game, id);
+          render2();
+        } } }, sd.type === "food" ? "Eat" : "Use"));
+        if (ON_HOTBAR.has(sd.type)) acts.push(h("button.btn" + (game.ui.hotbarPick === "item:" + id ? ".gold" : ""), { on: { click: () => pickForHotbar(game, "item:" + id, render2) } }, game.ui.hotbarPick === "item:" + id ? "Now click a hotbar slot\u2026" : "Put on hotbar"));
         if (sd.type === "pose") acts.push(h("button.btn", { on: { click: () => {
           useItem(game, id);
           render2();
@@ -86248,7 +87036,7 @@ Click for details \xB7 right-click to take off` : `${label} \u2014 empty`,
           h("div.det-actions", acts)
         );
       } else {
-        details = h("div.inv-details.empty", h("p.muted", "Select an item to see it. Drag gear onto the equipment slots, and food onto the hotbar. Double-click to equip or eat."));
+        details = h("div.inv-details.empty", h("p.muted", "Select an item to see it. Drag gear onto the equipment slots, and food or weapons onto the hotbar. Double-click to equip or eat."));
       }
       const right = h("div.inv-right", tabs, grid2, details);
       game.ui.onHotbarChange = render2;
@@ -86438,7 +87226,12 @@ Trains by: ${TRAINS_BY[k]}` },
         `${STYLES2[s].name} (${Math.floor(c.masteries[s])})`
       ));
       const cur = STYLES2[c.style];
-      const needW = cur?.weapon && !p.hasWeapon(cur.weapon);
+      const needW = cur?.weapon && !p.hasWeapon(cur.weapon, c.style);
+      const using = p.style !== c.style ? STYLES2[p.style] : null;
+      const w = p.weapon;
+      const held = !w ? "" : w.kind === "sword" ? w.count > 1 ? `${w.count} swords` : "a sword" : w.kind === "axe" ? "an axe" : `a ${w.kind}`;
+      const usingName = using && `${using.name}${c.masteries[p.style] === void 0 ? "'s basic moves" : ""}`;
+      const styleNote = needW ? `${cur.name} needs ${cur.weapon === "sword" ? cur.swords + " sword(s)" : "a " + cur.weapon} equipped \u2014 until then you fight ${using && p.style !== "brawler" ? "with " + usingName : "bare-handed"}.` : using ? `With ${held} in hand you fight with ${usingName} \u2014 take it off to fight with ${cur.name} again.` : null;
       const techs = c.techniques.map(getAbility).filter((d) => d && (!needsHaki(d) || hakiKnown(c)));
       const byGroup = {};
       for (const d of techs) {
@@ -86474,7 +87267,7 @@ Trains by: ${TRAINS_BY[k]}` },
         h("h2", "Skills"),
         h("h3", "Fighting style"),
         h("div.tabs", styleBtns),
-        needW ? h("p", { style: { color: "#b71c1c" } }, `${cur.name} needs ${cur.weapon === "sword" ? cur.swords + " sword(s)" : "a " + cur.weapon} equipped \u2014 until then you fight bare-handed.`) : null,
+        styleNote ? h("p", { style: needW ? { color: "#b71c1c" } : null }, styleNote) : null,
         h("p.muted", cur?.desc || ""),
         hotbarNote(game, getAbility(game.ui.hotbarPick?.slice(6))?.name),
         h("h3", "Techniques"),
@@ -86619,6 +87412,14 @@ Trains by: ${TRAINS_BY[k]}` },
         game.applySettings();
       } } }));
     };
+    const steps = (label, min, max, get, set) => {
+      const nm = h("span.nm", label());
+      return h("div.stat-row", nm, h("input", { type: "range", min, max, step: 1, value: get(), style: { flex: 1 }, on: { input: (e) => {
+        set(Number(e.target.value));
+        nm.textContent = label();
+        game.applySettings();
+      } } }));
+    };
     const check = (label, key2) => h("label.check-row", h("input", { type: "checkbox", checked: !!s[key2], on: { change: (e) => {
       s[key2] = e.target.checked;
       game.applySettings();
@@ -86641,6 +87442,13 @@ Trains by: ${TRAINS_BY[k]}` },
         slider(() => `Field of view ${Math.round(60 + (s.fov ?? 0.5) * 35)}\xB0`, "fov"),
         check("View bobbing while walking", "bob"),
         choice("Graphics", "quality", [["high", "High (shadows)"], ["low", "Fast"]]),
+        steps(() => {
+          const n = renderChunks(s);
+          return `Render distance ${n} chunks (${n * 32} m)`;
+        }, RENDER_DIST.min, RENDER_DIST.max, () => renderChunks(s), (n) => {
+          s.renderDist = n;
+        }),
+        h("p.muted", "How far out the world is drawn before the haze closes in. Further looks grander but costs frame rate. At sea you see half as far again."),
         check("Lower the resolution a little when the game is slow", "autoRes"),
         h("h3", "Sound & feel"),
         slider("Sound effects", "volume"),
@@ -87568,10 +88376,11 @@ Trains by: ${TRAINS_BY[k]}` },
           if (def) s2.ico.appendChild(isItem ? itemImg(id.slice(5), 34) : skillImg(def, 34));
           s2.nm.textContent = def ? def.name : "";
           s2.el.classList.toggle("empty", !def);
+          const use = def?.type === "weapon" ? "take it in hand (again to put it away)" : "use";
           s2.el.title = def ? `${def.name}
 ${def.desc || ""}
 
-Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 open Skills (K) or Inventory (Tab) and drag techniques or food here";
+Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u2014 open Skills (K) or Inventory (Tab) and drag techniques, food or weapons here";
         }
         if (isItem) {
           const n = (ch.inventory || []).filter((x) => x.id === id.slice(5)).reduce((a, x) => a + (x.qty || 1), 0);
@@ -87581,7 +88390,10 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
             this.cache[k] = null;
             continue;
           }
-          if (s2.qty.textContent !== String(n)) s2.qty.textContent = String(n);
+          const weapon = def.type === "weapon";
+          const qty = weapon && n === 1 ? "" : String(n);
+          if (s2.qty.textContent !== qty) s2.qty.textContent = qty;
+          s2.el.classList.toggle("held", weapon && (ch.equipped?.weapons || []).includes(id.slice(5)));
           s2.el.classList.toggle("none-left", n <= 0);
           s2.cd.style.transform = "scaleY(0)";
           if (s2.cdt.textContent) s2.cdt.textContent = "";
@@ -87591,6 +88403,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
           s2.qty.textContent = "";
           s2.el.classList.remove("none-left");
         }
+        s2.el.classList.remove("held");
         const cd = def ? p.cooldowns[def.id] || 0 : 0;
         const frac2 = def && def.cd ? clamp2(cd / (def.cd * (p.cdMul ?? 1)), 0, 1) : 0;
         s2.cd.style.transform = `scaleY(${frac2})`;
@@ -88795,7 +89608,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       });
       opp.masteries = { [sp.style]: Math.min(100, L2 * 1.3) };
       opp.techniques = [...(STYLES2[sp.style]?.techniques || []).slice(0, 3).map((x) => x.id)];
-      opp.controller = new AIController({ kind: "hostile", skill: Math.min(0.85, 0.3 + L2 / 100), aggroRange: 20, moves: opp.techniques, leash: 0, fleeAt: 0 });
+      opp.controller = new AIController({ kind: "hostile", skill: Math.min(0.85, 0.3 + L2 / 100), aggroRange: 20, moves: opp.techniques, leash: 0 });
       opp.controller.target = p;
       opp.provoked = true;
       opp.spar = tid;
@@ -88824,7 +89637,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       setTimeout(() => {
         opp.alive = false;
       }, 1500);
-      const style = p.style;
+      const style = g.progression.styleInUse();
       if (won) {
         const m = Math.max(2, Math.min(12, 6 * ratio));
         g.progression.addStyleMastery(style, m);
@@ -89118,7 +89931,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
           B4.room = room;
           if (room) {
             game.emit("enteredBuilding", room);
-            game.hint?.("interiors", "You can walk into buildings. Talk to the keeper at the counter to trade or rent a room; homes are locked \u2014 knock, or kick the door in (a crime, unless it's a pirates' den).");
+            game.hint?.("interiors", "You can walk into buildings. Talk to the keeper at the counter to trade or rent a room; homes are locked \u2014 knock (E), and if nobody lets you in you can choose to kick the door down (a crime, unless it's a pirates' den).");
           } else if (prev) game.emit("leftBuilding", prev);
         }
       },
@@ -89171,35 +89984,13 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
           }
         }
       },
-      /** A player's swing landing on a shut door (doors can be beaten down). */
-      strike(h2) {
-        const p = game.player, w = game.world;
-        if (!p || h2.owner !== p) return;
-        for (const b of B4.near) {
-          if (b.doorOpen || !b.doorLocked) continue;
-          const d = B4.doorPts(b);
-          const reach = (h2.range || 1.2) + 0.8;
-          const face = bw(b, d.lx, 0.2);
-          if (w.distance(h2.x, h2.y, face.x, face.y) > reach || w.distance(p.x, p.y, d.mid.x, d.mid.y) > 2.6) continue;
-          if (bl(b, p.x, p.y, w).lz < -WALL_T && !B4.inside(p, b)) continue;
-          b.doorHp = (b.doorHp ?? (b.pirate ? 5 : 3)) - (h2.heavy || (h2.damage || 0) > 20 ? 2 : 1);
-          b.doorShake = 0.35;
-          game.fx.burst(face.x, face.y, 6, { color: ["#8d6e4a", "#5a3a22", "#c8a27a"], speed: 3, vz: 2, g: 9, life: 0.5, kind: "shard", size: 0.1 });
-          game.fx.shake(0.15);
-          game.audio?.sfx("knock");
-          if (b.doorHp <= 0) B4.breakDoor(b);
-          else if (b.doorHp === 1) game.fx.text(d.mid.x, d.mid.y - 1.6, "CRACK!", "#ffcc80", 0.34, { life: 0.8 });
-          return;
-        }
-      },
-      /** Kick the door in. */
+      /** Kick the door in (chosen after knocking: see npcs.js knock). */
       breakDoor(b) {
         const c = game.state?.char;
         if (!c) return;
         const d = B4.doorPts(b);
         c.world.doors = c.world.doors || {};
         c.world.doors[B4.key(b)] = game.env.day;
-        b.doorHp = void 0;
         b.doorOpen = true;
         if (b.doorCol) {
           game.world.removeCol(b.doorCol);
@@ -89461,7 +90252,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       const a = makeEnemy(rng4.pick(["pirate", "pirate", "pirate_gunner", "brute"]), Math.max(3, Math.round(lvl * (0.8 + rng4.next() * 0.4))), p.x, p.y, {});
       a.game = game;
       settle(a, b, rng4.range(0, Math.PI * 2));
-      a.aggroPlayer = true;
+      a.calm = true;
       a.controller.aggroRange = 5;
       a.controller.leash = 7;
       game.addActor(a);
@@ -96502,7 +97293,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     }
   };
   var stock2 = {
-    wb_ohara_stores: ["rice_ball", "fish_stew", "bandage", "antidote", "sake", "den_den_mushi"],
+    wb_ohara_stores: ["rice_ball", "fish_stew", "bandage", "antidote", "sake", "wooden_sword", "rusty_katana", "den_den_mushi"],
     wb_kano_market: ["wb_kano_buns", "meat", "rice_ball", "fish_stew", "bandage", "antidote", "sake", "den_den_mushi"],
     wb_toroa_cellar: ["wb_toroa_red", "sake", "meat", "fish_stew", "rice_ball"],
     wb_las_camp_tailor: ["wb_gangster_hat", "wb_pinstripe_coat", "captain_hat", "tricorne", "cowboy_hat", "captain_coat"]
@@ -97303,8 +98094,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     sb_liberation_armband: { name: "South Army Armband", icon: "\u{1F397}", type: "hat", look: { hat: "bandana", hatColor: "#b71c1c" }, bonus: { wil: 1, agi: 1 }, price: 0, unique: true, desc: "Given by the Revolutionary Army's South Army to those who fought for Centaurea." }
   };
   var stock3 = {
-    sb_karate_gear: ["headband", "bandage", "meat", "rice_ball", "bo_staff"],
-    sb_mink_trade: ["sb_torino_salve", "meat", "fish_stew", "bandana", "goggles", "den_den_mushi"],
+    sb_karate_gear: ["headband", "bandage", "meat", "rice_ball", "wooden_sword", "rusty_katana", "bo_staff"],
+    sb_mink_trade: ["sb_torino_salve", "meat", "fish_stew", "wooden_sword", "rusty_katana", "bandana", "goggles", "den_den_mushi"],
     sb_torino_medicine: ["sb_torino_salve", "bandage", "antidote"],
     sb_sherbet: ["sb_strawberry_sherbet", "sb_conney_pizza", "rice_ball"],
     sb_fish: ["fish_stew", "meat", "rice_ball"],
@@ -113840,8 +114631,12 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
   }
   var T3 = {
     weapon: (desc = "Get yourself a weapon \u2014 buy one, win one or find one.") => ({ id: "weapon", desc, goal: { type: "weapon" } }),
-    /** Found a pirate crew and raise its Jolly Roger (Crew menu). */
-    flag: (desc = "Raise your own Jolly Roger: found your crew in the Crew menu (U).") => ({ id: "flag", desc, goal: { type: "faction", faction: "pirate" } }),
+    /**
+     * Found a pirate crew and raise its Jolly Roger (Crew menu). (The crew
+     * itself, not the "pirate" the world calls anyone with a bounty: a price on
+     * your head isn't a crew.)
+     */
+    flag: (desc = "Raise your own Jolly Roger: found your crew in the Crew menu (U).") => ({ id: "flag", desc, goal: { type: "check", fn: (c) => !!c.crewName } }),
     crew: (n = 1, desc = `Recruit ${n > 1 ? n + " crewmates" : "a crewmate"} \u2014 people who'd follow you anywhere.`) => ({ id: "crew" + n, desc, goal: { type: "crew", n } }),
     ship: (desc = "Get a ship that can survive the Grand Line (a Sloop or bigger).") => ({ id: "ship", desc, goal: { type: "ship", grandLine: true } }),
     logPose: (desc = "Get a Log Pose \u2014 no one survives the Grand Line without one.") => ({ id: "pose", desc, goal: { type: "item", item: "log_pose" } }),
@@ -118514,7 +119309,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       const key2 = arch[i % arch.length];
       const A = typeof key2 === "string" ? ARCHETYPES[key2] : key2;
       const lvl = Math.max(3, Math.round(tr.level * (tr.kind === "merchant" || tr.kind === "fishing" ? 0.6 : 1)));
-      const a = makeNPC({ ...A, level: lvl, hostile: false, ai: "idle", seed: Math.floor(Math.random() * 1e9), name: i === 0 && tr.kind === "marine" ? "Marine Lieutenant" : A.name, fleeAt: 0.15 }, s.x, s.y);
+      const a = makeNPC({ ...A, level: lvl, hostile: false, ai: "idle", seed: Math.floor(Math.random() * 1e9), name: i === 0 && tr.kind === "marine" ? "Marine Lieutenant" : A.name }, s.x, s.y);
       a.crewOf = s;
       a.showName = false;
       a.faceHome = void 0;
@@ -120632,6 +121427,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         view3d.rig.bobOn = settings.bob !== false;
         view3d.rig.shiftLock = !!settings.shiftLock;
         if (view3d.quality !== settings.quality) view3d.setQuality(settings.quality || "high");
+        view3d.setRenderDistance(renderChunks(settings));
         applyView();
       }
       if (save) saveSettings(settings);

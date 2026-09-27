@@ -227,6 +227,11 @@ export function generateIsland(world, def, noise, rng) {
     const dock = buildDock(world, { x: cx, y: cy }, def.dockDir, 6, rec, {});
     if (dock) { dock.name = def.name; rec.docks.push(dock); }
   }
+  // every town can be walked to from the first: a road to any that can't
+  for (const t of rec.towns.slice(1)) {
+    const a = rec.towns[0].plaza, b = t.plaza;
+    if (!walkable(world, rec.landBox, a.x, a.y + 2, b.x, b.y + 2)) connectRoad(world, a.x, a.y, b.x, b.y, t.roadTile || T.DIRT);
+  }
 
   // landmarks & props -------------------------------------------------------
   rec.clearings = [];
@@ -257,6 +262,29 @@ export function generateIsland(world, def, noise, rng) {
   delete def._clearings;
 
   return rec;
+}
+
+/** Can you walk from (ax, ay) to (bx, by) without leaving box (the island's land)? */
+function walkable(world, box, ax, ay, bx, by) {
+  const W = box.x1 - box.x0 + 1, H = box.y1 - box.y0 + 1;
+  const seen = new Uint8Array(W * H), q = [];
+  const ok = (x, y) => x >= box.x0 && y >= box.y0 && x <= box.x1 && y <= box.y1 && WALKABLE[world.type(x, y)] && !world.solid(x, y);
+  const sx = Math.floor(ax), sy = Math.floor(ay), tx = Math.floor(bx), ty = Math.floor(by);
+  if (!ok(sx, sy)) return true; // (nowhere sensible to start from: leave it be)
+  q.push(sx, sy); seen[(sy - box.y0) * W + sx - box.x0] = 1;
+  for (let h = 0; h < q.length; h += 2) {
+    const x = q[h], y = q[h + 1];
+    if (Math.abs(x - tx) <= 1 && Math.abs(y - ty) <= 1) return true;
+    for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + ddx, ny = y + ddy;
+      if (!ok(nx, ny)) continue;
+      const k = (ny - box.y0) * W + nx - box.x0;
+      if (seen[k]) continue;
+      seen[k] = 1;
+      q.push(nx, ny);
+    }
+  }
+  return false;
 }
 
 // things that belong in or by the water: left where the data puts them
@@ -622,6 +650,11 @@ function buildDock(world, from, dir, len, rec, dd) {
   return { x: end.x, y: end.y, dirX: vx, dirY: vy, moor, land: { x: land.x + 0.5, y: land.y + 0.5 }, end: { x: end.x, y: end.y }, half, headHalf, len: lastA + 1 };
 }
 
+/**
+ * A road from (ax, ay) to (bx, by), two tiles wide. It opens a gate where it
+ * meets a town's wall, and cuts a pass where it meets cliff or mountainside
+ * (a town up on a hill can be ringed by its own cliffs).
+ */
 export function connectRoad(world, ax, ay, bx, by, tile) {
   const dx = world.dx(ax, bx), dy = by - ay;
   const steps = Math.ceil(Math.hypot(dx, dy) * 2);
@@ -629,7 +662,14 @@ export function connectRoad(world, ax, ay, bx, by, tile) {
     const t = s / steps;
     const x = ax + dx * t, y = ay + dy * t;
     for (let j = -1; j <= 0; j++) for (let i = -1; i <= 0; i++) {
-      const cur = world.type(x + i, y + j);
+      let cur = world.type(x + i, y + j);
+      if (cur === T.MOUNTAIN || cur === T.CLIFF) { world.setType(x + i, y + j, tile); cur = tile; }
+      if (cur === T.WALL) {
+        // (through a town's wall: a gate, three tiles wide — the harbour road
+        // is laid after the town, and its wall used to cut it off)
+        for (let gy = -1; gy <= 1; gy++) for (let gx = -1; gx <= 1; gx++) if (world.type(x + i + gx, y + j + gy) === T.WALL) world.setType(x + i + gx, y + j + gy, tile);
+        continue;
+      }
       if (IS_LIQUID[cur] || OVERLAY[cur] || !WALKABLE[cur]) continue;
       if (cur === T.COBBLE || cur === T.STONE || cur === T.MARBLE || cur === T.PLANK || cur === T.FARM) continue;
       if (world.isBlocked(x + i, y + j)) continue;

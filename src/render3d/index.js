@@ -19,17 +19,31 @@ import { ShipView } from './ships3d.js';
 import { shipBob, pitchRise } from '../world/hull.js';
 import { Ship } from '../game/ship.js';
 import { buildBuilding, setNightWindows } from './buildings3d.js';
+import { FarBuildings } from './farbuildings.js';
+import { COLLIDE } from '../world/objects.js';
 import { PROP_BUILDERS, VIEWS, FRAME_HOOKS, registerPropBuilder } from './registry.js';
 import { setPartVisible } from './props/instancer.js';
-import './props3d.js';
+import { instancerStats } from './props3d.js';
 import './chars3d.js';
 
 registerPropBuilder('building', (o, ctx) => buildBuilding(o, ctx));
 
 const RES_STEPS = [1, 0.88, 0.77, 0.67, 0.58]; // automatic resolution: shares of the full pixel ratio
+// (people are only moved within ~70 m of the player, and are a few pixels
+// tall beyond: they aren't drawn out to the render distance)
 const ACTOR_RANGE = 75;
 const PROP_BUDGET_MS = 4; // building props per frame (beyond the nearest)
-const SHIP_RANGE = 520;
+// The render distance (Settings) counts in 32 m chunks, like the terrain's.
+// At sea you see half as far again (islands are the view there), up to 32
+// chunks: the sea's own depth map reaches about a kilometre.
+const CHUNK_M = 32;
+const SEA_MUL = 1.5, SEA_MAX = 32;
+const NEAR_SCAN = 140; // m: the ring of props rescanned every few steps (the rest, every FAR_STEP)
+const FAR_STEP = 24; // m walked between full rescans out to the render distance
+const REBASE = 600; // m from the props' origin before everything is placed afresh round the player
+// buildings get their full model within MODEL_IN (m), and give it up again
+// beyond MODEL_OUT; farther out they're drawn as simple blocks (farbuildings.js)
+const MODEL_IN = 100, MODEL_OUT = 116;
 
 const _ray1 = new THREE.Vector3(), _ray2 = new THREE.Vector3();
 
@@ -107,6 +121,7 @@ export class Renderer3D {
     this.forest = new SpriteForest(this.props);
     this.built = new Map();
     this.animProps = new Map(); // built props with a per-frame userData.update
+    this.retiring = new Map(); // building models waiting for their far block to be drawn before they go
     this.ents = new THREE.Group();
     this.scene.add(this.ents);
     this.actorViews = new Map();
@@ -114,18 +129,21 @@ export class Renderer3D {
     this.projViews = new Map();
     this.active = false;
     this.world = null;
-    this.propOrigin = null;
+    this.propOrigin = null; // where the props are placed from (moved on only now and then: see rebase)
+    this.scan = null; // where and when the props were last looked over (see updateProps)
     this.propT = 0;
     this.frame = 0;
     this.lastT = performance.now();
     this.ox = 0; this.oy = 0;
     this.quality = 'high';
     this.resScale = 1; // automatic resolution (see adapt)
+    this.viewChunks = 12; // the render distance (set from the settings: see setRenderDistance)
     this.ctx = {
       THREE, scene: this.scene, game,
       ground: (x, y) => this.ground(x, y),
       terrain: (x, y) => this.terrain.terrainAt(x, y),
     };
+    this.buildingsFar = new FarBuildings(this.props, this.ctx);
     Object.defineProperty(this.ctx, 'camera', { get: () => this.rig.camera });
     Object.defineProperty(this.ctx, 'world', { get: () => this.world });
     Object.defineProperty(this.ctx, 'yaw', { get: () => this.rig.yaw });
@@ -151,6 +169,7 @@ export class Renderer3D {
       get pitch() { return self.rig.pitch; },
     };
     this.setQuality(this.quality);
+    this.terrain.setReach(this.viewChunks, this.seaChunks());
     this.parallelCompile = !!this.renderer.extensions.has('KHR_parallel_shader_compile');
     window.addEventListener('resize', () => this.resize());
   }
@@ -177,6 +196,38 @@ export class Renderer3D {
       try { this.post = new Post(this.renderer, this.scene, this.rig.camera, { lite: want === 'lite' }); } catch (e) { console.warn('post-processing unavailable', e); this.post = null; }
     }
     this.resize();
+  }
+
+  /**
+   * The render distance, in 32 m chunks (Settings → Render distance): the
+   * land, towns, trees, props and ships are all drawn out to it, and the fog
+   * closes in completely there, so nothing is seen to pop in or out.
+   */
+  setRenderDistance(n) {
+    n = Math.max(2, Math.round(n) || 12);
+    if (n === this.viewChunks) return;
+    this.viewChunks = n;
+    this.terrain.setReach(n, this.seaChunks());
+    this.propsDirty = true;
+  }
+
+  /** Debug (the perf scenarios): what's drawn and what's still to build. */
+  viewStats() {
+    let models = 0;
+    for (const [o, v] of this.built) if (v && o.kind === 'building') models++;
+    return {
+      chunks: this.terrain.live.size, built: this.built.size, models, queued: (this.propQueue?.length || 0) + (this.farQueue?.length || 0),
+      far: this.buildingsFar.stats(), inst: instancerStats(),
+    };
+  }
+
+  /** The render distance at sea, in chunks: half as far again. */
+  seaChunks() { return Math.min(SEA_MAX, Math.max(this.viewChunks, Math.round(this.viewChunks * SEA_MUL))); }
+
+  /** How far out (m) the world is drawn: on foot, or at sea (not past the short fixed fogs of the sea bed and the prison). */
+  viewDist(sailing) {
+    const d = (sailing ? this.seaChunks() : this.viewChunks) * CHUNK_M, zone = this.world?.zone;
+    return zone === 2 ? Math.min(d, 192) : zone === 3 ? Math.min(d, 128) : d;
   }
 
   /**
@@ -255,7 +306,11 @@ export class Renderer3D {
     for (const v of this.built.values()) if (v) { this.detach(v); disposeTree(v); }
     this.built.clear();
     this.animProps.clear();
+    this.retiring.clear();
+    this.buildingsFar.clear();
     this.propQueue = null;
+    this.farQueue = null;
+    this.scan = null;
     for (const v of this.actorViews.values()) { this.detach(v.root || v.mesh); v.dispose?.(); }
     this.actorViews.clear();
     for (const v of this.shipViews.values()) { this.detach(v.root); v.dispose?.(); }
@@ -436,7 +491,7 @@ export class Renderer3D {
     this.terrain.update(ox, oy);
     this.sky.sun.target.position.set(0, gh, 0);
     this.sky.sun.position.y += gh;
-    this.updateProps(game, ox, oy, env, false, 190);
+    this.updateProps(game, ox, oy, env, true);
     this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
     this.forest.aim(camYaw3);
     this.tickProps(env, 1 / 60);
@@ -558,99 +613,184 @@ export class Renderer3D {
     }
   }
 
-  /** Static world objects near the player: 3D models where registered, sprites otherwise. */
-  updateProps(game, ox, oy, env, sailing, radius) {
+  /**
+   * Static world objects out to the render distance: 3D models where
+   * registered, sprites otherwise. The ring round the player is looked over
+   * every few steps; the whole of it only every FAR_STEP metres (and when the
+   * render distance changes), since that means going through thousands.
+   */
+  updateProps(game, ox, oy, env, sailing) {
     const w = this.world;
     if (!w.objects) return;
+    const O = this.propOrigin;
+    if (!O || Math.abs(w.dx(O.x, ox)) > REBASE || Math.abs(oy - O.y) > REBASE) this.rebase(ox, oy);
     this.propT -= 1 / 60;
-    const moved = this.propOrigin ? Math.hypot(w.dx(this.propOrigin.x, ox), oy - this.propOrigin.y) : Infinity;
-    if (!(moved < 7 && this.propT > 0 && this.propOrigin?.day === env.day && !this.propsDirty)) this.scanProps(ox, oy, env, sailing, radius);
-    this.buildQueued();
+    const D = this.viewDist(sailing), S = this.scan;
+    const full = !S || S.D !== D || Math.hypot(w.dx(S.fx, ox), oy - S.fy) >= FAR_STEP;
+    if (full || !(Math.hypot(w.dx(S.x, ox), oy - S.y) < 7 && this.propT > 0 && S.day === env.day && !this.propsDirty)) {
+      const t0 = performance.now();
+      this.scanProps(ox, oy, env, D, full);
+      prof(full ? 'b.scan-far' : 'b.scan', t0);
+    }
+    this.buildQueued(ox, oy);
   }
 
-  /** Which objects are in range: models to keep or queue, sprites for the rest. */
-  scanProps(ox, oy, env, sailing, radius) {
+  /**
+   * Place everything built afresh from a new origin at (ox, oy). Props sit
+   * relative to this origin (so the thousands of them needn't be moved as the
+   * player walks: the whole group is), and it only moves on when the player
+   * has gone a long way from it.
+   */
+  rebase(ox, oy) {
     const w = this.world;
+    this.propOrigin = { x: ox, y: oy };
+    for (const [o, v] of this.built) if (v) v.position.set(w.dx(ox, o.x), v.position.y, o.y - oy);
+    this.buildingsFar.place(this.propOrigin);
+    this.propsDirty = true; // (and the sprites with them, at once)
+  }
+
+  /**
+   * Which objects are in range: models to keep or queue, sprites for the
+   * rest. `full` goes out to the render distance D (and FAR_STEP beyond, so
+   * nothing inside it is missing before the next full look); otherwise only
+   * the ring near the player is looked over.
+   */
+  scanProps(ox, oy, env, D, full) {
+    const w = this.world, O = this.propOrigin, bf = this.buildingsFar;
     this.propT = 0.6;
     this.propsDirty = false;
-    this.propOrigin = { x: ox, y: oy, day: env.day };
-    const R = radius || (sailing ? 150 : 95);
-    const RK = R + 20; // (what's built stays a little further out, so walking back and forth doesn't rebuild it)
-    const objs = w.objects.query(ox - RK, oy - RK, ox + RK, oy + RK);
+    const R = D + FAR_STEP + 8;
+    const RK = R + 16; // (what's built stays a little further out, so walking back and forth doesn't rebuild it)
+    const RN = Math.min(R, NEAR_SCAN);
+    const r = full ? RK : RN;
+    if (full) this.scan = { x: ox, y: oy, day: env.day, D, fx: ox, fy: oy };
+    else Object.assign(this.scan, { x: ox, y: oy, day: env.day });
+    const objs = w.objects.query(ox - r, oy - r, ox + r, oy + r);
     const items = [];
-    const keep = new Set();
-    const queue = [];
-    // landmarks seen from far off (a whale the size of a hill): in view from much further
-    for (const o of w.farObjects || []) {
-      if (o.hidden || !PROP_BUILDERS.has(o.kind)) continue;
-      const dx = w.dx(ox, o.x), dy = o.y - oy;
-      const d2 = dx * dx + dy * dy;
-      if (d2 > o.far * o.far) continue;
-      const v = this.built.get(o);
-      if (v === undefined) { queue.push([o, Math.min(d2, 23 * 23)]); continue; }
-      if (v) { keep.add(o); v.position.set(dx, v.userData.noGround ? 0 : this.ground(o.x, o.y), dy); }
+    const keep = full ? new Set() : null;
+    const near = [], far = full ? [] : null;
+    if (full) {
+      bf.begin();
+      // landmarks seen from far off (a whale the size of a hill): in view from much further
+      for (const o of w.farObjects || []) {
+        if (o.hidden || !PROP_BUILDERS.has(o.kind)) continue;
+        const dx = w.dx(ox, o.x), dy = o.y - oy;
+        const d2 = dx * dx + dy * dy, lim = Math.min(o.far, R + 80);
+        if (d2 > lim * lim) continue;
+        if (this.built.get(o) === undefined) near.push([o, Math.min(d2, 23 * 23)]);
+        else keep.add(o);
+      }
     }
+    const sprites = Math.min(80, RN);
     for (const o of objs) {
-      if (o.far) continue;
+      if (o.far || o.hidden) continue;
       const dx = w.dx(ox, o.x), dy = o.y - oy;
       const d2 = dx * dx + dy * dy;
-      if (d2 > RK * RK) continue;
-      if (o.hidden) continue;
+      if (d2 > r * r) continue;
       if (PROP_BUILDERS.has(o.kind)) {
         const v = this.built.get(o);
-        if (v === undefined) { if (d2 <= R * R) queue.push([o, d2]); continue; } // built in the next frames (see buildQueued)
-        if (v) {
-          keep.add(o);
-          v.position.set(dx, v.userData.noGround ? 0 : this.ground(o.x, o.y), dy);
+        if (o.kind === 'building') {
+          // a block in its cell's far mesh out to the render distance; the
+          // full model only near (built in the next frames: see buildQueued)
+          if (full) bf.add(o, d2 <= R * R);
+          if (v === undefined) { if (d2 <= MODEL_IN * MODEL_IN) near.push([o, d2]); continue; }
+          if (v && d2 > MODEL_OUT * MODEL_OUT) { this.retire(o, v); continue; }
+          if (v && this.retiring.has(o)) { this.retiring.delete(o); if (v.parent) bf.show(o, false); }
+          keep?.add(o);
           continue;
         }
+        if (v === undefined) {
+          if (d2 <= R * R) (d2 <= RN * RN || !far ? near : far).push([o, d2]);
+          continue;
+        }
+        keep?.add(o);
+        if (v) continue;
       }
       // sprites only nearby (they're flat; far away the fog hides them)
-      if (d2 > R * R || (d2 > 80 * 80 && o.kind !== 'tree')) continue;
+      if (d2 > sprites * sprites && (o.kind !== 'tree' || d2 > RN * RN)) continue;
       const s = propSprite(o, w.id, env.day);
-      if (s) items.push({ o, sprite: s, rx: dx, rz: dy, h: this.terrain.terrainAt(o.x, o.y) });
+      if (s) items.push({ o, sprite: s, rx: w.dx(O.x, o.x), rz: o.y - O.y, h: this.terrain.terrainAt(o.x, o.y) });
     }
-    for (const [o, v] of this.built) {
-      if (keep.has(o)) continue;
-      if (v) { this.detach(v); disposeTree(v); }
-      this.built.delete(o);
-      this.animProps.delete(o);
+    if (full) {
+      for (const [o, v] of this.built) if (!keep.has(o) && !this.retiring.has(o)) this.dropProp(o, v);
+      bf.end();
     }
     // farthest first, so the nearest pops off the end
-    queue.sort((a, b) => b[1] - a[1]);
-    this.propQueue = queue;
+    near.sort((a, b) => b[1] - a[1]);
+    this.propQueue = near;
+    if (far) { far.sort((a, b) => b[1] - a[1]); this.farQueue = far; }
     const t0 = performance.now();
     this.forest.rebuild(items);
     prof('b.forest', t0);
   }
 
   /**
+   * The height a prop stands at: a building on the ground at its front door
+   * (its foundation reaches down to hide any slope); anything smaller on the
+   * lowest ground round its foot, sunk a little into a slope rather than
+   * floating off its low side.
+   */
+  propY(o) {
+    if (o.kind === 'building') return this.ground(o.x, o.y);
+    const c = COLLIDE[o.kind];
+    const r = (Array.isArray(c) ? Math.hypot(c[0], c[1]) : c || 0) * (o.s || 1);
+    return this.terrain.restAt(o.x, o.y, r);
+  }
+
+  /** A building's model goes (it's out of range now), once its far block has been drawn in its place. */
+  retire(o, v) {
+    if (this.retiring.has(o)) return;
+    this.buildingsFar.add(o, true);
+    this.buildingsFar.show(o, true);
+    this.retiring.set(o, v);
+  }
+
+  /** Take a built prop out of the scene and forget it. */
+  dropProp(o, v) {
+    if (v) { this.detach(v); disposeTree(v); }
+    this.built.delete(o);
+    this.animProps.delete(o);
+    this.retiring.delete(o);
+    if (o.kind === 'building') this.buildingsFar.show(o, true);
+  }
+
+  /**
    * Build the queued models, nearest first, a few milliseconds' worth a frame:
    * a harbour town coming over the horizon is dozens of buildings, and built
    * all at once they'd freeze the game for a moment. Anything close by is
-   * built straight away.
+   * built straight away. The towns' far blocks come first: they're quick, and
+   * they stand in for each building until its model is up.
    */
-  buildQueued() {
-    const q = this.propQueue;
-    if (!q || !q.length) return;
-    const w = this.world, O = this.propOrigin;
-    const t0 = performance.now();
-    while (q.length) {
-      const [o, d2] = q[q.length - 1];
-      if (d2 > 24 * 24 && performance.now() - t0 > PROP_BUDGET_MS) break;
-      q.pop();
-      if (this.built.has(o) || o.hidden) continue;
-      const builder = PROP_BUILDERS.get(o.kind);
-      const t1 = performance.now();
-      let v;
-      try { v = builder(o, this.ctx) || null; } catch (e) { v = null; console.warn('3D builder failed for', o.kind, e); }
-      prof('b.' + o.kind, t1);
-      this.built.set(o, v);
-      if (!v) { this.propsDirty = true; continue; } // (drawn as a sprite from the next pass)
-      this.attach(v, this.props);
-      if (v.userData.update) this.animProps.set(o, v);
-      v.position.set(w.dx(O.x, o.x), v.userData.noGround ? 0 : this.ground(o.x, o.y), o.y - O.y);
+  buildQueued(ox, oy) {
+    const t0 = performance.now(), end = t0 + PROP_BUDGET_MS;
+    this.buildingsFar.update(ox, oy, end);
+    for (const [o, v] of this.retiring) if (this.buildingsFar.drawn(o)) this.dropProp(o, v);
+    prof('b.far', t0);
+    for (const q of [this.propQueue, this.farQueue]) {
+      while (q && q.length) {
+        const [o, d2] = q[q.length - 1];
+        if (d2 > 24 * 24 && performance.now() > end) return;
+        q.pop();
+        this.buildProp(o);
+      }
     }
+  }
+
+  buildProp(o) {
+    if (this.built.has(o) || o.hidden) return;
+    const w = this.world, O = this.propOrigin;
+    const builder = PROP_BUILDERS.get(o.kind);
+    const t1 = performance.now();
+    let v;
+    try { v = builder(o, this.ctx) || null; } catch (e) { v = null; console.warn('3D builder failed for', o.kind, e); }
+    prof('b.' + o.kind, t1);
+    this.built.set(o, v);
+    if (!v) { this.propsDirty = true; return; } // (drawn as a sprite from the next pass)
+    v.position.set(w.dx(O.x, o.x), v.userData.noGround ? 0 : this.propY(o), o.y - O.y);
+    // (a building's far block gives way once its model is in the scene)
+    if (o.kind === 'building') v.addEventListener('added', () => { if (!this.retiring.has(o)) this.buildingsFar.show(o, false); });
+    this.attach(v, this.props);
+    if (v.userData.update) this.animProps.set(o, v);
   }
 
   /**
@@ -807,12 +947,13 @@ export class Renderer3D {
       this.detach(v.root); v.dispose?.();
       this.actorViews.delete(a);
     }
-    // ships
+    // ships, out to the render distance (they're big: a hull's end comes into view before its middle)
     const seenS = new Set();
+    const SR = this.viewDist(!p || p.mode === 'sail') + 30;
     for (const s of game.ships) {
       const dx = w.dx(ox, s.x), dy = s.y - oy;
       const d2 = dx * dx + dy * dy;
-      if (!s.alive || (d2 > SHIP_RANGE * SHIP_RANGE && (d2 > (SHIP_RANGE + 40) ** 2 || !this.shipViews.has(s)))) continue;
+      if (!s.alive || (d2 > SR * SR && (d2 > (SR + 40) ** 2 || !this.shipViews.has(s)))) continue;
       seenS.add(s);
       let v = this.shipViews.get(s);
       if (v && v.stale?.()) { this.detach(v.root); v.dispose?.(); v = null; }

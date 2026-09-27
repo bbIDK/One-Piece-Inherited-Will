@@ -110,9 +110,10 @@ export class Actor extends Entity {
     return this.state !== 'knocked' && !this.inWater && !this.status.freeze;
   }
   styleMastery(s) { return this.masteries[s || this.style] || 0; }
-  hasWeapon(kind) {
+  /** Holding that kind of weapon — and, for swords, as many as `style` (by default your own) needs? */
+  hasWeapon(kind, style = this.style) {
     if (!this.weapon) return false;
-    if (kind === 'sword') return this.weapon.kind === 'sword' && (this.weapon.count || 1) >= (STYLES[this.style]?.swords || 1);
+    if (kind === 'sword') return this.weapon.kind === 'sword' && (this.weapon.count || 1) >= (STYLES[style]?.swords || 1);
     return this.weapon.kind === kind;
   }
   weaponMul() { return this.weapon ? (this.weapon.power || 1) : 1; }
@@ -290,6 +291,8 @@ export class Actor extends Entity {
     const style = STYLES[this.style] || STYLES.brawler;
     let def = getAbility(style.heavyId);
     if (style.weapon && !this.hasWeapon(style.weapon)) def = getAbility(STYLES.brawler.heavyId);
+    // (a weapon's plain moves, its style never learned: no signature heavy)
+    else if (style.plainHeavyId && this.masteries[this.style] === undefined) def = getAbility(style.plainHeavyId);
     // a heavy may cancel the recovery of a basic swing once that swing has landed
     const a = this.action;
     if (a && a.def.m1Chain && a.step >= (a.def.steps || []).length && a.t > (a.def.windup ?? 0.07) + 0.04 && this.state === 'idle' && this.hitstun <= 0 && canUse(this, def)) {
@@ -316,7 +319,7 @@ export class Actor extends Entity {
       if (this.isPlayer) {
         if ((this.cooldowns[def.id] || 0) > 0) game.ui?.flashSlot(id);
         else if (def.source?.startsWith('fruit') && this.inWater) game.log('Your Devil Fruit power is useless in the sea!', '#ff8a80');
-        else if (def.weapon && !this.hasWeapon(def.weapon)) game.log(`${def.name} needs ${def.weapon === 'sword' ? `${STYLES[this.style]?.swords || 1} sword(s)` : 'a ' + def.weapon}.`, '#ff8a80');
+        else if (def.weapon && !this.hasWeapon(def.weapon, def.style)) game.log(`${def.name} needs ${def.weapon === 'sword' ? `${STYLES[def.style || this.style]?.swords || 1} sword(s)` : 'a ' + def.weapon}.`, '#ff8a80');
         else game.log('Not enough ' + ((def.cost?.haki && this.haki < def.cost.haki) ? (this.hakiUnlocked() ? 'Haki.' : 'strength of will.') : 'stamina.'), '#ff8a80');
       }
       return false;

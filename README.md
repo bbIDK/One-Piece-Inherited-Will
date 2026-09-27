@@ -57,7 +57,7 @@ smooth on weaker graphics chips.
 | Shift | hold to sprint, tap to dodge (i-frames) | Coup de Burst (some ships) |
 | Left / right click | combo / heavy attack | broadside toward where you aim |
 | F | block — tap just before a hit to **parry** | |
-| 1–6 | hotbar: techniques and food | |
+| 1–9, 0 | hotbar: techniques, food and weapons | |
 | R / T / G | Haki, once it has awakened | |
 | E | talk, enter, board, pick fruit, examine | dive, knock-up, go ashore |
 | Q | eat | |
@@ -66,8 +66,9 @@ smooth on weaker graphics chips.
 | H / Esc | help / pause menu | |
 
 The same menus are on the **sidebar** under the minimap. Press a menu's key
-again (or Esc) to close it. Drag techniques and food onto the hotbar, and drag
-hotbar slots to rearrange them.
+again (or Esc) to close it. Drag techniques, food and weapons onto the hotbar (a
+weapon's key takes it in hand, or puts it away), and drag hotbar slots to
+rearrange them.
 
 ## What's in it
 
@@ -224,7 +225,9 @@ hotbar slots to rearrange them.
     Admiral commands a fleet of three.
   - Desertion costs you.
 - **Equipment**: head, body armour, up to three swords and two accessory
-  slots (rings, earrings, sashes, charms…). Armour reduces damage.
+  slots (rings, earrings, sashes, charms…). Armour reduces damage. A weapon
+  in hand is what you fight with: without a style for it you swing it with
+  its plainest moves.
 - **Foraging**: pick coconuts, bananas, mangoes, apples and cherries from
   trees. They grow back in two days.
 - **Bounties**: wanted posters, a most-wanted board and bounty hunting.

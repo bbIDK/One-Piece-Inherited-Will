@@ -21,7 +21,7 @@ import { UI } from './ui/ui.js';
 import './data/styles.js';
 import './data/fruits.js';
 import './data/haki.js';
-import { loadChar, loadLegacy, loadSettings, saveSettings, clearChar, saveLegacy, setSlot, slotInfo, clearSlot, defaultLegacy, SLOT_COUNT } from './game/save.js';
+import { loadChar, loadLegacy, loadSettings, saveSettings, clearChar, saveLegacy, setSlot, slotInfo, clearSlot, defaultLegacy, SLOT_COUNT, renderChunks } from './game/save.js';
 import { titleScreen, creationScreen, hallScreen, helpContent, legacyShopScreen } from './ui/screens.js';
 import { installSession, startNewCharacter, resumeCharacter } from './game/session.js';
 import { LivesSystem } from './game/lives.js';
@@ -170,6 +170,7 @@ async function start() {
       view3d.rig.bobOn = settings.bob !== false;
       view3d.rig.shiftLock = !!settings.shiftLock;
       if (view3d.quality !== settings.quality) view3d.setQuality(settings.quality || 'high');
+      view3d.setRenderDistance(renderChunks(settings));
       applyView();
     }
     if (save) saveSettings(settings);

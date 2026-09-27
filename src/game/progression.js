@@ -72,7 +72,11 @@ export class Progression {
       this.addHaki(getAbility(def.id)?.hakiType || 'armament', gain * 0.5);
       this.train('wil', frac * tf * 20);
     } else {
-      this.addStyleMastery(p.style, gain);
+      // practice goes to the style you fight with; the plain moves of a weapon
+      // whose style you never learned train only the weapon (and a technique
+      // still trains its own style)
+      const style = p.masteries[p.style] !== undefined ? p.style : def.style;
+      if (p.masteries[style] !== undefined) this.addStyleMastery(style, gain);
       const kind = weaponKindOf(p, def);
       this.addWeaponMastery(kind, gain * 1.2);
       this.train(kind === 'gun' ? 'agi' : 'str', frac * tf * 40);
@@ -140,6 +144,12 @@ export class Progression {
     const c = this.char;
     if (!c) return 0;
     return Math.min(1, (c.train?.[key] || 0) / (14 + c.attrs[key] * 3.5));
+  }
+
+  /** The style practice goes to: the one you fight with — or, with a weapon whose style you never learned, the one you picked. */
+  styleInUse() {
+    const p = this.game.player;
+    return p.masteries[p.style] !== undefined ? p.style : this.char?.style || 'brawler';
   }
 
   addStyleMastery(style, amt) {
@@ -304,7 +314,7 @@ export class Progression {
     if (a.boss && !c.bosses.includes(a.npcId || a.name)) {
       c.bosses.push(a.npcId || a.name);
       this.breakthrough(a.breakthrough ?? 3, `Defeated ${a.name}`);
-      this.addStyleMastery(p.style, 4);
+      this.addStyleMastery(this.styleInUse(), 4);
       if (c.fruit) this.addFruitMastery(4);
       g.emit('bossDefeated', a);
       this.checkDream();

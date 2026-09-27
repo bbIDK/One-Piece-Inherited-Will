@@ -72,7 +72,8 @@ export function canUse(actor, def) {
   if (c.stamina && actor.stamina < c.stamina * 0.5) return false;
   if (c.haki && actor.haki < c.haki) return false;
   if (def.source?.startsWith('fruit') && (actor.inWater || actor.seastoned)) return false;
-  if (def.weapon && !actor.hasWeapon(def.weapon)) return false;
+  // (a style's technique needs that style's weapon: Santoryu moves want three swords, whatever you fight with)
+  if (def.weapon && !actor.hasWeapon(def.weapon, def.style)) return false;
   if (def.requiresBuff && !actor.hasBuff(def.requiresBuff)) return false;
   return true;
 }

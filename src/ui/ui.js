@@ -546,19 +546,25 @@ export class UI {
         if (def) s.ico.appendChild(isItem ? itemImg(id.slice(5), 34) : skillImg(def, 34));
         s.nm.textContent = def ? def.name : '';
         s.el.classList.toggle('empty', !def);
-        s.el.title = def ? `${def.name}\n${def.desc || ''}\n\nClick or press ${HOTBAR_KEYS[i]} to use · drag to rearrange` : 'Empty — open Skills (K) or Inventory (Tab) and drag techniques or food here';
+        const use = def?.type === 'weapon' ? 'take it in hand (again to put it away)' : 'use';
+        s.el.title = def ? `${def.name}\n${def.desc || ''}\n\nClick or press ${HOTBAR_KEYS[i]} to ${use} · drag to rearrange` : 'Empty — open Skills (K) or Inventory (Tab) and drag techniques, food or weapons here';
       }
       if (isItem) {
         const n = (ch.inventory || []).filter((x) => x.id === id.slice(5)).reduce((a, x) => a + (x.qty || 1), 0);
         // the last one's gone: the slot empties (the item lived in it)
         if (n <= 0) { p.hotbar[i] = null; if (ch.hotbar) ch.hotbar[i] = null; this.cache[k] = null; continue; }
-        if (s.qty.textContent !== String(n)) s.qty.textContent = String(n);
+        // (a weapon: lit up while it's in your hands)
+        const weapon = def.type === 'weapon';
+        const qty = weapon && n === 1 ? '' : String(n);
+        if (s.qty.textContent !== qty) s.qty.textContent = qty;
+        s.el.classList.toggle('held', weapon && (ch.equipped?.weapons || []).includes(id.slice(5)));
         s.el.classList.toggle('none-left', n <= 0);
         s.cd.style.transform = 'scaleY(0)';
         if (s.cdt.textContent) s.cdt.textContent = '';
         continue;
       }
       if (s.qty.textContent) { s.qty.textContent = ''; s.el.classList.remove('none-left'); }
+      s.el.classList.remove('held');
       const cd = def ? p.cooldowns[def.id] || 0 : 0;
       const frac = def && def.cd ? clamp(cd / (def.cd * (p.cdMul ?? 1)), 0, 1) : 0;
       s.cd.style.transform = `scaleY(${frac})`;

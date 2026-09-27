@@ -247,8 +247,8 @@ const items = {
 };
 
 const stock = {
-  sb_karate_gear: ['headband', 'bandage', 'meat', 'rice_ball', 'bo_staff'],
-  sb_mink_trade: ['sb_torino_salve', 'meat', 'fish_stew', 'bandana', 'goggles', 'den_den_mushi'],
+  sb_karate_gear: ['headband', 'bandage', 'meat', 'rice_ball', 'wooden_sword', 'rusty_katana', 'bo_staff'],
+  sb_mink_trade: ['sb_torino_salve', 'meat', 'fish_stew', 'wooden_sword', 'rusty_katana', 'bandana', 'goggles', 'den_den_mushi'],
   sb_torino_medicine: ['sb_torino_salve', 'bandage', 'antidote'],
   sb_sherbet: ['sb_strawberry_sherbet', 'sb_conney_pizza', 'rice_ball'],
   sb_fish: ['fish_stew', 'meat', 'rice_ball'],

@@ -274,7 +274,7 @@ function spawnCrew(game, s) {
     const key = arch[i % arch.length];
     const A = typeof key === 'string' ? ARCHETYPES[key] : key;
     const lvl = Math.max(3, Math.round(tr.level * (tr.kind === 'merchant' || tr.kind === 'fishing' ? 0.6 : 1)));
-    const a = makeNPC({ ...A, level: lvl, hostile: false, ai: 'idle', seed: Math.floor(Math.random() * 1e9), name: i === 0 && tr.kind === 'marine' ? 'Marine Lieutenant' : A.name, fleeAt: 0.15 }, s.x, s.y);
+    const a = makeNPC({ ...A, level: lvl, hostile: false, ai: 'idle', seed: Math.floor(Math.random() * 1e9), name: i === 0 && tr.kind === 'marine' ? 'Marine Lieutenant' : A.name }, s.x, s.y);
     a.crewOf = s;
     a.showName = false;
     a.faceHome = undefined;

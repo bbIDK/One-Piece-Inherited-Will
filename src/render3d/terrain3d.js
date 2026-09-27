@@ -1,15 +1,16 @@
 // Streams terrain chunks around the camera: a coloured height mesh per 32x32
 // tile chunk (full detail nearby, coarse far away so islands show on the
-// horizon), plus wooden decks over the water and vertical wall blocks.
+// horizon) out to the render distance, plus wooden decks over the water and
+// vertical wall blocks.
 import * as THREE from 'three';
 import { T, IS_LIQUID, OVERLAY, PALETTE } from '../world/tiles.js';
 import { CHUNK, DECK_Y, DOCK_Y, WALL_H, HeightField } from './height.js';
 import { toonGradient } from './materials.js';
 import { FOG } from './fog.js';
 import { dockDetails } from './props/docks.js';
+import { vcMat } from './props/mats.js';
 
 const NEAR_R = 6; // chunks of full detail around the camera
-const FAR_R = 15; // coarse chunks out to here (islands on the horizon)
 const BUILD_BUDGET_MS = 4; // per frame
 
 // tile colours as linear-ish floats
@@ -43,33 +44,40 @@ export class TerrainManager {
     this.live = new Map(); // key → { mesh: Object3D, lod, x0, y0 }
     this.queue = [];
     this.nearR = NEAR_R;
-    this.farR = FAR_R;
+    this.reachFoot = 12; this.reachSea = 18; // (the render distance: see setReach)
+    this.sailing = false;
+    this.farR = this.reachFoot;
     this.floorR = 0;
   }
 
-  /** Fast graphics draws less terrain detail and a nearer horizon. */
+  /** Fast graphics draws less terrain detail nearby. */
   setDetail(q) {
     this.quality = q;
     this.nearR = q === 'low' ? 4 : NEAR_R;
-    this.farR = this.reach(false);
   }
 
-  /** How far (in chunks) the land is drawn: further out at sea, where islands are the view. */
-  reach(sailing) {
-    const low = this.quality === 'low';
-    return sailing ? (low ? 15 : 22) : (low ? 11 : 17);
+  /** How far (in chunks) the land is drawn on foot and at sea: the render distance. */
+  setReach(foot, sea) {
+    this.reachFoot = foot;
+    this.reachSea = sea;
+    this.farR = this.reach(this.sailing);
   }
+
+  reach(sailing) { return sailing ? this.reachSea : this.reachFoot; }
 
   /** Draw the open-sea floor this many chunks around (0: none — nobody's in the water). */
   setSeaFloor(r) { this.floorR = r; }
 
   setSailing(on) {
-    const r = this.reach(!!on);
-    if (r !== this.farR) this.farR = r;
+    this.sailing = !!on;
+    this.farR = this.reach(this.sailing);
   }
 
-  /** Distance (m) out to which every direction has terrain: where the fog must close in. */
-  get extent() { return (this.farR - 1) * CHUNK; }
+  /**
+   * Distance (m) out to which every direction has terrain, from anywhere in
+   * the camera's chunk (see wanted): where the fog must close in.
+   */
+  get extent() { return this.farR * CHUNK; }
 
   setWorld(world) {
     for (const c of this.live.values()) this.disposeChunk(c);
@@ -102,6 +110,8 @@ export class TerrainManager {
   }
 
   groundAt(x, y) { return this.hf ? this.hf.ground(x, y) : 0; }
+  /** Where a small prop of foot radius r stands (see HeightField.rest). */
+  restAt(x, y, r) { return this.hf ? this.hf.rest(x, y, r) : 0; }
   terrainAt(x, y) { return this.hf ? this.hf.terrain(x, y) : 0; }
 
   /** Stream chunks around (ox, oy) and place them relative to that origin. */
@@ -129,17 +139,24 @@ export class TerrainManager {
     }
   }
 
-  /** The chunks to show around chunk (ccx, ccy), with their detail level. */
+  /**
+   * The chunks to show around chunk (ccx, ccy), with their detail level:
+   * every chunk with any part within farR chunks of any part of the camera's
+   * own, so the land reaches the render distance in every direction wherever
+   * in its chunk the camera stands.
+   */
   wanted(ccx, ccy) {
     const w = this.world;
     const want = new Map();
     const NR = this.nearR, FR = this.farR;
-    for (let j = -FR; j <= FR; j++) {
+    for (let j = -FR - 1; j <= FR + 1; j++) {
       const cy = ccy + j;
       if (cy < 0 || cy >= this.ch) continue;
-      for (let i = -FR; i <= FR; i++) {
+      const gy = Math.max(0, Math.abs(j) - 1);
+      for (let i = -FR - 1; i <= FR + 1; i++) {
+        const gx = Math.max(0, Math.abs(i) - 1);
+        if (gx * gx + gy * gy > FR * FR) continue;
         const d2 = i * i + j * j;
-        if (d2 > FR * FR) continue;
         let cx = ccx + i;
         if (w.wrap) cx = ((cx % this.cw) + this.cw) % this.cw;
         else if (cx < 0 || cx >= this.cw) continue;
@@ -238,7 +255,7 @@ export class TerrainManager {
     mesh.matrixAutoUpdate = true;
     const root = new THREE.Group();
     root.add(mesh);
-    if (lod === 1) this.addDecksAndWalls(root, x0, y0);
+    this.addDecksAndWalls(root, x0, y0, lod === 1);
     this.group.add(root);
     return { mesh: root, lod, x0, y0, minH };
   }
@@ -275,22 +292,35 @@ export class TerrainManager {
     out[k] = Math.max(0, r + jit); out[k + 1] = Math.max(0, gg + jit); out[k + 2] = Math.max(0, b + jit * 0.5);
   }
 
-  /** Wooden decks over water, and wall blocks, for one full-detail chunk. */
-  addDecksAndWalls(root, x0, y0) {
+  /**
+   * Wooden decks over water, and wall blocks, for one chunk: with all their
+   * detail (full), or as plain blocks in one mesh for a far chunk.
+   */
+  addDecksAndWalls(root, x0, y0, full = true) {
     const w = this.world;
-    const decks = [], piers = [], walls = [], posts = [];
+    const decks = [], piers = [], walls = [], posts = [], piles = [], quayed = [];
     let quays = 0;
     for (let j = 0; j < CHUNK; j++) {
       for (let i = 0; i < CHUNK; i++) {
         const t = w.type(x0 + i, y0 + j);
+        const third = ((x0 + i) % 3 === 0) && ((y0 + j) % 3 === 0);
         if (OVERLAY[t]) {
           // harbour piers stand tall on their own pilings (see props/docks.js); bridges on short posts
-          if (w.docks.size && w.isDock(x0 + i, y0 + j)) { piers.push(i, j); continue; }
+          if (w.docks.size && w.isDock(x0 + i, y0 + j)) { piers.push(i, j); if (third) piles.push(i, j); continue; }
           decks.push(i, j);
-          if (((x0 + i) % 3 === 0) && ((y0 + j) % 3 === 0)) posts.push(i, j);
+          if (third) posts.push(i, j);
         } else if (t === T.WALL) walls.push(i, j);
-        else if (w.quays.size && w.isQuay(x0 + i, y0 + j)) quays++;
+        else if (w.quays.size && w.isQuay(x0 + i, y0 + j)) { quays++; quayed.push(i, j); }
       }
+    }
+    if (!full) {
+      const m = farBoxes([
+        [decks, 1, 0.22, 1, DECK_Y - 0.11, 0x9a6a3c], [piers, 1, 0.26, 1, DOCK_Y - 0.13, 0x9a6a3c],
+        [posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, 0x5d4030, 0.15], [piles, 0.3, DOCK_Y + 2.74, 0.3, (DOCK_Y - 3.26) / 2, 0x5d4030],
+        [quayed, 1, DOCK_Y + 1.5, 1, (DOCK_Y - 1.5) / 2, 0xa39c90], [walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, 0x8a7f70],
+      ]);
+      if (m) root.add(m);
+      return;
     }
     if (decks.length) root.add(boxes(decks, 1, 0.22, 1, DECK_Y - 0.11, this.deckMat));
     if (piers.length) root.add(boxes(piers, 1, 0.26, 1, DOCK_Y - 0.13, this.deckMat));
@@ -428,6 +458,49 @@ function boxes(list, sx, sy, sz, cy, mat, inset = 0) {
   geo.setIndex(new THREE.BufferAttribute(idx, 1));
   geo.computeBoundingSphere();
   const m = new THREE.Mesh(geo, mat);
+  m.receiveShadow = true;
+  return m;
+}
+
+/**
+ * The decks, piers, posts, quays and walls of a far chunk as plain blocks in
+ * ONE vertex-coloured mesh (their planks, pilings and crenellations would be
+ * a pixel at that distance). groups: [[list, sx, sy, sz, cy, colour, inset]].
+ */
+function farBoxes(groups) {
+  let n = 0;
+  for (const g of groups) n += g[0].length / 2;
+  if (!n) return null;
+  const base = new THREE.BoxGeometry(1, 1, 1);
+  const bp = base.attributes.position.array, bn = base.attributes.normal.array, bi = base.index.array;
+  const vc = bp.length / 3;
+  const pos = new Float32Array(n * vc * 3), nor = new Float32Array(n * vc * 3), col = new Float32Array(n * vc * 3);
+  const idx = new Uint32Array(n * bi.length);
+  const c = new THREE.Color();
+  let k = 0;
+  for (const [list, sx, sy, sz, cy, color, inset = 0] of groups) {
+    c.set(color);
+    for (let q = 0; q < list.length; q += 2, k++) {
+      const ox = list[q] + 0.5 + inset, oz = list[q + 1] + 0.5 + inset;
+      for (let v = 0; v < vc; v++) {
+        const o = (k * vc + v) * 3;
+        pos[o] = bp[v * 3] * sx + ox; pos[o + 1] = bp[v * 3 + 1] * sy + cy; pos[o + 2] = bp[v * 3 + 2] * sz + oz;
+        nor[o] = bn[v * 3]; nor[o + 1] = bn[v * 3 + 1]; nor[o + 2] = bn[v * 3 + 2];
+        col[o] = c.r; col[o + 1] = c.g; col[o + 2] = c.b;
+      }
+      for (let q2 = 0; q2 < bi.length; q2++) idx[k * bi.length + q2] = bi[q2] + k * vc;
+    }
+  }
+  base.dispose();
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.setAttribute('tint', new THREE.BufferAttribute(new Float32Array(n * vc), 1));
+  geo.setAttribute('glow', new THREE.BufferAttribute(new Float32Array(n * vc * 4), 4));
+  geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  geo.computeBoundingSphere();
+  const m = new THREE.Mesh(geo, vcMat());
   m.receiveShadow = true;
   return m;
 }

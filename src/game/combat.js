@@ -49,7 +49,6 @@ export class Combat {
     for (let i = this.hitboxes.length - 1; i >= 0; i--) {
       const h = this.hitboxes[i];
       h.t += dt;
-      if (!h.doorChecked && h.owner?.isPlayer) { h.doorChecked = true; game.buildings?.strike(h); }
       if (h.follow && h.owner && h.owner.alive) {
         h.x = h.owner.x + (h.offX || 0); h.y = h.owner.y + (h.offY || 0);
         if (h.followAngle) h.angle = h.owner.facing;
