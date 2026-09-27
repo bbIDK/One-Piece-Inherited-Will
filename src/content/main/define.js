@@ -66,8 +66,12 @@ export function target(def) {
 // (quest stages; ids must be unique within a chapter)
 export const T = {
   weapon: (desc = 'Get yourself a weapon — buy one, win one or find one.') => ({ id: 'weapon', desc, goal: { type: 'weapon' } }),
-  /** Found a pirate crew and raise its Jolly Roger (Crew menu). */
-  flag: (desc = 'Raise your own Jolly Roger: found your crew in the Crew menu (U).') => ({ id: 'flag', desc, goal: { type: 'faction', faction: 'pirate' } }),
+  /**
+   * Found a pirate crew and raise its Jolly Roger (Crew menu). (The crew
+   * itself, not the "pirate" the world calls anyone with a bounty: a price on
+   * your head isn't a crew.)
+   */
+  flag: (desc = 'Raise your own Jolly Roger: found your crew in the Crew menu (U).') => ({ id: 'flag', desc, goal: { type: 'check', fn: (c) => !!c.crewName } }),
   crew: (n = 1, desc = `Recruit ${n > 1 ? n + ' crewmates' : 'a crewmate'} — people who'd follow you anywhere.`) => ({ id: 'crew' + n, desc, goal: { type: 'crew', n } }),
   ship: (desc = 'Get a ship that can survive the Grand Line (a Sloop or bigger).') => ({ id: 'ship', desc, goal: { type: 'ship', grandLine: true } }),
   logPose: (desc = 'Get a Log Pose — no one survives the Grand Line without one.') => ({ id: 'pose', desc, goal: { type: 'item', item: 'log_pose' } }),

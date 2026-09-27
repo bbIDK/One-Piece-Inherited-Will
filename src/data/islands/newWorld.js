@@ -260,7 +260,7 @@ export const NEW_WORLD = [
         { role: 'doctor', name: "Mansherry's Healing Room", npc: 'nw_mansherry' },
         { role: 'shop', name: 'Tontatta Farm Stall', shop: 'nw_tontatta_stall' },
       ],
-      houses: 4,
+      houses: 10,
     }],
     landmarks: [
       { kind: 'shipwreck', dx: -0.62, dy: -0.3, name: 'Crashed Marine warship', lore: 'A Marine warship lies in the jungle a long way from the water, its hull wrapped in vines. Tiny footprints run all over the deck. Something very small, very strong, and very organised has been taking it apart for parts.' },

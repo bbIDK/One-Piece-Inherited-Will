@@ -1,12 +1,13 @@
 // Enterable buildings at runtime. Doors swing open for whoever walks up —
-// unless they're locked: people's homes (knock, or kick the door in) and
-// shops outside their opening hours. Keepers stand behind their counters,
-// residents are at home (more of them at night), drinkers sit in the
-// taverns, and one house in a dozen is a pirates' hideout. NPCs find the
-// door instead of walking into walls.
+// unless they're locked: people's homes (knock — and if nobody lets you in,
+// you may choose to kick the door in) and shops outside their opening
+// hours. Keepers stand behind their counters, residents are at home (more of
+// them at night), drinkers sit in the taverns, and one house in a dozen is a
+// pirates' hideout. NPCs find the door instead of walking into walls.
 //
 // Breaking a door down is a crime (a bounty — or, for a Marine, lost standing)
 // unless the house belongs to pirates: nobody reports a burglary on them.
+// Blows never break a door: kicking it in is always a choice.
 import { layoutOf, doorOf, HOURS, KEEPER, WALL_T, roomOf, interiorRect } from '../world/interiors.js';
 import { bw, bl } from '../world/bframe.js';
 import { crime, raiseAlarm, seaOf } from './reputation.js';
@@ -82,7 +83,7 @@ export function installBuildings(game) {
         B.room = room;
         if (room) {
           game.emit('enteredBuilding', room);
-          game.hint?.('interiors', 'You can walk into buildings. Talk to the keeper at the counter to trade or rent a room; homes are locked — knock, or kick the door in (a crime, unless it\'s a pirates\' den).');
+          game.hint?.('interiors', 'You can walk into buildings. Talk to the keeper at the counter to trade or rent a room; homes are locked — knock (E), and if nobody lets you in you can choose to kick the door down (a crime, unless it\'s a pirates\' den).');
         } else if (prev) game.emit('leftBuilding', prev);
       }
     },
@@ -133,36 +134,13 @@ export function installBuildings(game) {
       }
     },
 
-    /** A player's swing landing on a shut door (doors can be beaten down). */
-    strike(h) {
-      const p = game.player, w = game.world;
-      if (!p || h.owner !== p) return;
-      for (const b of B.near) {
-        if (b.doorOpen || !b.doorLocked) continue;
-        const d = B.doorPts(b);
-        const reach = (h.range || 1.2) + 0.8;
-        const face = bw(b, d.lx, 0.2);
-        if (w.distance(h.x, h.y, face.x, face.y) > reach || w.distance(p.x, p.y, d.mid.x, d.mid.y) > 2.6) continue;
-        if (bl(b, p.x, p.y, w).lz < -WALL_T && !B.inside(p, b)) continue;
-        b.doorHp = (b.doorHp ?? (b.pirate ? 5 : 3)) - (h.heavy || (h.damage || 0) > 20 ? 2 : 1);
-        b.doorShake = 0.35;
-        game.fx.burst(face.x, face.y, 6, { color: ['#8d6e4a', '#5a3a22', '#c8a27a'], speed: 3, vz: 2, g: 9, life: 0.5, kind: 'shard', size: 0.1 });
-        game.fx.shake(0.15);
-        game.audio?.sfx('knock');
-        if (b.doorHp <= 0) B.breakDoor(b);
-        else if (b.doorHp === 1) game.fx.text(d.mid.x, d.mid.y - 1.6, 'CRACK!', '#ffcc80', 0.34, { life: 0.8 });
-        return;
-      }
-    },
-
-    /** Kick the door in. */
+    /** Kick the door in (chosen after knocking: see npcs.js knock). */
     breakDoor(b) {
       const c = game.state?.char;
       if (!c) return;
       const d = B.doorPts(b);
       c.world.doors = c.world.doors || {};
       c.world.doors[B.key(b)] = game.env.day;
-      b.doorHp = undefined;
       b.doorOpen = true;
       if (b.doorCol) { game.world.removeCol(b.doorCol); b.doorCol = null; }
       game.fx.burst(d.mid.x, d.mid.y, 22, { color: ['#8d6e4a', '#5a3a22', '#c8a27a', '#3e2723'], speed: 5, vz: 3.5, g: 9, life: 0.8, kind: 'shard', size: 0.14 });
@@ -400,7 +378,9 @@ function hideout(game, b, L, rng, list, lvl) {
     const a = makeEnemy(rng.pick(['pirate', 'pirate', 'pirate_gunner', 'brute']), Math.max(3, Math.round(lvl * (0.8 + rng.next() * 0.4))), p.x, p.y, {});
     a.game = game;
     settle(a, b, rng.range(0, Math.PI * 2));
-    a.aggroPlayer = true;
+    // (pirates at home don't come looking for a fight: they fight whoever
+    // breaks in, or lays a hand on one of them — see breakDoor, ai.js onHurt)
+    a.calm = true;
     a.controller.aggroRange = 5;
     a.controller.leash = 7;
     game.addActor(a);

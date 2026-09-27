@@ -144,6 +144,8 @@ export function useItem(game, id) {
     return true;
   }
   if (d.type === 'fruit') return eatFruit(game, id);
+  // a weapon on the hotbar: take it in hand (or put it away again)
+  if (d.type === 'weapon') { equip(game, id); return true; }
   if (d.type === 'pose' && d.target) {
     // Eternal Pose: always points to one island, no matter where you are
     const tgt = game.surface.islands.find((i) => i.id === d.target);

@@ -21,10 +21,13 @@ import { repTier, stealFromShop, bannedFromShop } from '../game/reputation.js';
 import { itemImg, skillImg, uiImg } from './icon.js';
 import { openJollyRoger } from './crewPanel.js';
 import { HOTBAR_SIZE, HOTBAR_KEYS } from '../game/hotbar.js';
+import { RENDER_DIST, renderChunks } from '../game/save.js';
 
 const berriesLine = (c) => h('div.berries', uiImg('berries', 20), ` ${formatBerries(c.berries)}`);
 const HOTBAR = HOTBAR_SIZE;
 const USABLE = new Set(['food', 'medicine']);
+// what can sit on the hotbar: food and medicine (eaten), weapons (taken in hand)
+const ON_HOTBAR = new Set([...USABLE, 'weapon']);
 const title = (s) => s[0].toUpperCase() + s.slice(1);
 
 // ============================================================== hotbar editor
@@ -63,7 +66,7 @@ export function assignHotbar(game, slot, payload) {
     else if (payload.startsWith('item:') || payload.startsWith('inv:')) {
       const iid = payload.slice(payload.indexOf(':') + 1);
       const d = ITEMS[iid];
-      if (!d || !USABLE.has(d.type)) { game.log('Only food and medicine can go on the hotbar.', '#ff8a80'); return; }
+      if (!d || !ON_HOTBAR.has(d.type)) { game.log('Only food, medicine and weapons can go on the hotbar.', '#ff8a80'); return; }
       id = 'item:' + iid;
     } else return;
     for (let k = 0; k < HOTBAR; k++) if (hb[k] === id) hb[k] = null;
@@ -82,7 +85,7 @@ function hotbarNote(game, what) {
   const pick = game.ui.hotbarPick;
   return h('p.hb-note' + (pick ? '.picking' : ''), pick
     ? `Now click a slot on your hotbar (keys ${HOTBAR_KEYS.join(' ')}) to put ${what || 'it'} there.`
-    : 'Drag techniques and food straight onto your hotbar at the bottom of the screen (keys 1-9 and 0) — or click one, then click a slot. Drag slots to rearrange them; right-click one to clear it.');
+    : 'Drag techniques, food and weapons straight onto your hotbar at the bottom of the screen (keys 1-9 and 0) — or click one, then click a slot. Drag slots to rearrange them; right-click one to clear it.');
 }
 
 /** Pick something to put on the hotbar with a click (the next hotbar slot clicked takes it). */
@@ -216,14 +219,15 @@ export function openInventory(game) {
           dblclick: () => { quickUse(x.id); },
         },
       }, itemImg(x.id, 40), x.qty > 1 ? h('span.qty', String(x.qty)) : null, worn ? h('span.worn-tag', 'E') : null, x.heirloom ? h('span.heir') : null);
-      dragSource(tile, 'inv:' + x.id); // onto an equipment slot, or (food) onto the hotbar
+      dragSource(tile, 'inv:' + x.id); // onto an equipment slot, or (food, weapons) onto the hotbar
       grid.appendChild(tile);
     }
     if (!items.length) grid.appendChild(h('p.muted', { style: { gridColumn: '1 / -1' } }, st.cat === 'all' ? 'Your bag is empty.' : 'Nothing here.'));
     if (onBar.size) grid.appendChild(h('p.muted.inv-onbar', { style: { gridColumn: '1 / -1' } }, `${onBar.size === 1 ? 'One item is' : onBar.size + ' items are'} on your hotbar — drag a slot back here to put it away.`));
 
     // ----------------------------------------------------------- details
-    if (onBar.has(st.selected)) st.selected = null;
+    // (a weapon in hand still shows from its equipment slot)
+    if (onBar.has(st.selected) && !isEquipped(c, st.selected)) st.selected = null;
     const sd = ITEMS[st.selected];
     let details;
     if (sd && count(c, st.selected)) {
@@ -231,10 +235,8 @@ export function openInventory(game) {
       const worn = isEquipped(c, id);
       const acts = [];
       if (slotKind(sd)) acts.push(h('button.btn' + (worn ? '.red' : '.gold'), { on: { click: () => { equip(game, id); render(); } } }, worn ? 'Take off' : 'Equip'));
-      if (USABLE.has(sd.type)) {
-        acts.push(h('button.btn.green', { on: { click: () => { useItem(game, id); render(); } } }, sd.type === 'food' ? 'Eat' : 'Use'));
-        acts.push(h('button.btn' + (game.ui.hotbarPick === 'item:' + id ? '.gold' : ''), { on: { click: () => pickForHotbar(game, 'item:' + id, render) } }, game.ui.hotbarPick === 'item:' + id ? 'Now click a hotbar slot…' : 'Put on hotbar'));
-      }
+      if (USABLE.has(sd.type)) acts.push(h('button.btn.green', { on: { click: () => { useItem(game, id); render(); } } }, sd.type === 'food' ? 'Eat' : 'Use'));
+      if (ON_HOTBAR.has(sd.type)) acts.push(h('button.btn' + (game.ui.hotbarPick === 'item:' + id ? '.gold' : ''), { on: { click: () => pickForHotbar(game, 'item:' + id, render) } }, game.ui.hotbarPick === 'item:' + id ? 'Now click a hotbar slot…' : 'Put on hotbar'));
       if (sd.type === 'pose') acts.push(h('button.btn', { on: { click: () => { useItem(game, id); render(); } } }, c.logPose?.eternal === id ? 'Following' : 'Follow the needle'));
       if (sd.type === 'dial') acts.push(h('button.btn', { disabled: c.techniques.includes(sd.ability), on: { click: () => { useItem(game, id); render(); } } }, c.techniques.includes(sd.ability) ? 'Learned' : 'Learn to use'));
       if (sd.type === 'fruit') {
@@ -248,7 +250,7 @@ export function openInventory(game) {
         sd.type === 'fruit' ? fruitInfo(sd) : h('p', sd.desc || ''),
         h('div.det-actions', acts));
     } else {
-      details = h('div.inv-details.empty', h('p.muted', 'Select an item to see it. Drag gear onto the equipment slots, and food onto the hotbar. Double-click to equip or eat.'));
+      details = h('div.inv-details.empty', h('p.muted', 'Select an item to see it. Drag gear onto the equipment slots, and food or weapons onto the hotbar. Double-click to equip or eat.'));
     }
     const right = h('div.inv-right', tabs, grid, details);
     game.ui.onHotbarChange = render;
@@ -386,7 +388,14 @@ export function openSkills(game) {
     const styleBtns = styles.map((s) => h('button' + (c.style === s ? '.on' : ''), { on: { click: () => { c.style = s; refreshPlayer(game); render(); } }, title: STYLES[s].desc },
       `${STYLES[s].name} (${Math.floor(c.masteries[s])})`));
     const cur = STYLES[c.style];
-    const needW = cur?.weapon && !p.hasWeapon(cur.weapon);
+    const needW = cur?.weapon && !p.hasWeapon(cur.weapon, c.style);
+    // what you really fight with (the weapon in your hands decides: see lineage.js fightingStyle)
+    const using = p.style !== c.style ? STYLES[p.style] : null;
+    const w = p.weapon;
+    const held = !w ? '' : w.kind === 'sword' ? (w.count > 1 ? `${w.count} swords` : 'a sword') : w.kind === 'axe' ? 'an axe' : `a ${w.kind}`;
+    const usingName = using && `${using.name}${c.masteries[p.style] === undefined ? '\'s basic moves' : ''}`;
+    const styleNote = needW ? `${cur.name} needs ${cur.weapon === 'sword' ? cur.swords + ' sword(s)' : 'a ' + cur.weapon} equipped — until then you fight ${using && p.style !== 'brawler' ? 'with ' + usingName : 'bare-handed'}.`
+      : using ? `With ${held} in hand you fight with ${usingName} — take it off to fight with ${cur.name} again.` : null;
     const techs = c.techniques.map(getAbility).filter((d) => d && (!needsHaki(d) || hakiKnown(c)));
     const byGroup = {};
     for (const d of techs) {
@@ -410,7 +419,7 @@ export function openSkills(game) {
     add(body, 
       h('h2', 'Skills'),
       h('h3', 'Fighting style'), h('div.tabs', styleBtns),
-      needW ? h('p', { style: { color: '#b71c1c' } }, `${cur.name} needs ${cur.weapon === 'sword' ? cur.swords + ' sword(s)' : 'a ' + cur.weapon} equipped — until then you fight bare-handed.`) : null,
+      styleNote ? h('p', { style: needW ? { color: '#b71c1c' } : null }, styleNote) : null,
       h('p.muted', cur?.desc || ''),
       hotbarNote(game, getAbility(game.ui.hotbarPick?.slice(6))?.name),
       h('h3', 'Techniques'), techs.length ? h('div', lists) : h('p', 'You know no techniques yet. Find a trainer — or a Devil Fruit.'),
@@ -515,6 +524,11 @@ export function openSettings(game) {
     const nm = h('span.nm', typeof label === 'function' ? label() : label);
     return h('div.stat-row', nm, h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: s[key] ?? 0.5, style: { flex: 1 }, on: { input: (e) => { s[key] = Number(e.target.value); if (typeof label === 'function') nm.textContent = label(); game.applySettings(); } } }));
   };
+  // a slider in whole steps from min to max (its label is re-read as it moves)
+  const steps = (label, min, max, get, set) => {
+    const nm = h('span.nm', label());
+    return h('div.stat-row', nm, h('input', { type: 'range', min, max, step: 1, value: get(), style: { flex: 1 }, on: { input: (e) => { set(Number(e.target.value)); nm.textContent = label(); game.applySettings(); } } }));
+  };
   const check = (label, key) => h('label.check-row', h('input', { type: 'checkbox', checked: !!s[key], on: { change: (e) => { s[key] = e.target.checked; game.applySettings(); } } }), label);
   const choice = (label, key, opts) => h('div.set-row', h('span.nm', label), h('div.tabs', { style: { margin: 0 } }, opts.map(([v, name]) => h('button' + (s[key] === v ? '.on' : ''), { on: { click: () => { s[key] = v; if (key === 'quality') s.qualityPicked = true; game.applySettings(); render(); } } }, name))));
   const render = () => {
@@ -527,6 +541,8 @@ export function openSettings(game) {
       slider(() => `Field of view ${Math.round(60 + (s.fov ?? 0.5) * 35)}°`, 'fov'),
       check('View bobbing while walking', 'bob'),
       choice('Graphics', 'quality', [['high', 'High (shadows)'], ['low', 'Fast']]),
+      steps(() => { const n = renderChunks(s); return `Render distance ${n} chunks (${n * 32} m)`; }, RENDER_DIST.min, RENDER_DIST.max, () => renderChunks(s), (n) => { s.renderDist = n; }),
+      h('p.muted', 'How far out the world is drawn before the haze closes in. Further looks grander but costs frame rate. At sea you see half as far again.'),
       check('Lower the resolution a little when the game is slow', 'autoRes'),
       h('h3', 'Sound & feel'),
       slider('Sound effects', 'volume'), slider('Music', 'music'), slider('Screen shake', 'shake'),

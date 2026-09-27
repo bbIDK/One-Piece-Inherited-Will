@@ -253,7 +253,7 @@ export class Services {
     });
     opp.masteries = { [sp.style]: Math.min(100, L * 1.3) };
     opp.techniques = [...(STYLES[sp.style]?.techniques || []).slice(0, 3).map((x) => x.id)];
-    opp.controller = new AIController({ kind: 'hostile', skill: Math.min(0.85, 0.3 + L / 100), aggroRange: 20, moves: opp.techniques, leash: 0, fleeAt: 0 });
+    opp.controller = new AIController({ kind: 'hostile', skill: Math.min(0.85, 0.3 + L / 100), aggroRange: 20, moves: opp.techniques, leash: 0 });
     opp.controller.target = p;
     opp.provoked = true;
     opp.spar = tid;
@@ -280,7 +280,7 @@ export class Services {
     const power = opp.power(), mine = p.power();
     const ratio = power / Math.max(1, mine);
     setTimeout(() => { opp.alive = false; }, 1500);
-    const style = p.style;
+    const style = g.progression.styleInUse();
     if (won) {
       const m = Math.max(2, Math.min(12, 6 * ratio));
       g.progression.addStyleMastery(style, m);

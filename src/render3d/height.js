@@ -289,6 +289,29 @@ export class HeightField {
   }
 
   /**
+   * Where a small prop of footprint radius r stands at (x, y): on the land,
+   * the lowest ground round its foot, so on a slope or a bump it sinks a
+   * little into the high side rather than floating off the low one (its
+   * base is hidden in the ground either way); on a pier, a deck or a wall
+   * top, that surface.
+   */
+  rest(x, y, r) {
+    const w = this.world, t = w.type(x, y);
+    const g = this.ground(x, y);
+    if (!(r > 0.2) || OVERLAY[t] || IS_LIQUID[t] || t === T.WALL || (w.quays.size && w.isQuay(x, y)) || w.floorRec?.(x, y)) return g;
+    let lo = g;
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
+      const tt = w.type(px, py);
+      if (OVERLAY[tt] || IS_LIQUID[tt] || tt === T.WALL || w.floorRec?.(px, py)) continue;
+      lo = Math.min(lo, this.terrain(px, py));
+    }
+    // (never more than a little way down: the world keeps landmarks off cliff
+    // edges, and a prop sunk deeper would lose its feet)
+    return Math.max(lo, g - 0.5);
+  }
+
+  /**
    * The ground floor of an enterable building (absolute): a step up from the
    * street in front, and always over the ground inside the walls.
    */

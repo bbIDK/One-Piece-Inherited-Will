@@ -1124,7 +1124,7 @@ const trainers = {
 };
 
 const stock = {
-  wb_ohara_stores: ['rice_ball', 'fish_stew', 'bandage', 'antidote', 'sake', 'den_den_mushi'],
+  wb_ohara_stores: ['rice_ball', 'fish_stew', 'bandage', 'antidote', 'sake', 'wooden_sword', 'rusty_katana', 'den_den_mushi'],
   wb_kano_market: ['wb_kano_buns', 'meat', 'rice_ball', 'fish_stew', 'bandage', 'antidote', 'sake', 'den_den_mushi'],
   wb_toroa_cellar: ['wb_toroa_red', 'sake', 'meat', 'fish_stew', 'rice_ball'],
   wb_las_camp_tailor: ['wb_gangster_hat', 'wb_pinstripe_coat', 'captain_hat', 'tricorne', 'cowboy_hat', 'captain_coat'],

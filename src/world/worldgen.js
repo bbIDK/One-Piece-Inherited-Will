@@ -317,7 +317,7 @@ export const MARY_GEOISE_DEF = {
       { role: 'hall', name: 'Reverie Assembly Hall' },
       { role: 'house', name: "Celestial Dragons' Mansion" },
       { role: 'church', name: 'Chapel of the First Twenty' },
-    ], houses: 3 }],
+    ], houses: 8 }],
 };
 
 function buildMaryGeoise(world, rng) {

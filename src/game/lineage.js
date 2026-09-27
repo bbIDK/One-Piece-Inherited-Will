@@ -6,7 +6,7 @@
 import { RNG } from '../core/rng.js';
 import { RACES, rollRace, makeLook } from '../data/races.js';
 import { ITEMS } from '../data/items.js';
-import { STYLES } from '../data/styles.js';
+import { STYLES, WEAPON_STYLE } from '../data/styles.js';
 import { FRUITS, unlockedFruitTechniques } from '../data/fruits.js';
 import { DREAMS, LEGENDS } from '../data/dreams.js';
 import { Actor } from './actor.js';
@@ -199,7 +199,7 @@ export function buildPlayer(game, char) {
   const a = new Actor({ name: char.name, look: equippedLook(char), race: char.race, attrs: effectiveAttrs(char) });
   a.char = char;
   a.game = game;
-  a.style = char.style;
+  a.style = fightingStyle(char);
   a.masteries = char.masteries;
   a.techniques = char.techniques;
   a.hotbar = char.hotbar;
@@ -276,6 +276,25 @@ export function weaponFromChar(char) {
   return { kind, power, count: same.length, ids: char.equipped.weapons.slice() };
 }
 
+/**
+ * The style the character fights with right now (the live player's `style`;
+ * `char.style` is the one picked in Skills). The picked style, as long as it
+ * suits what's in their hands. A style that doesn't use the weapon they hold,
+ * or needs more swords than they carry, gives way to a style they've learned
+ * for that weapon — or else to its plainest one (a brawler who picks up a
+ * cutlass swings the cutlass). A weapon style with nothing in hand falls back
+ * on bare fists.
+ */
+export function fightingStyle(char) {
+  const style = STYLES[char.style] ? char.style : 'brawler';
+  const st = STYLES[style], w = weaponFromChar(char);
+  if (!w) return st.weapon ? 'brawler' : style;
+  const suits = (s) => STYLES[s]?.weapon === w.kind && w.count >= (STYLES[s].swords || 1);
+  if (suits(style)) return style;
+  const learned = Object.keys(char.masteries || {}).filter(suits).sort((a, b) => char.masteries[b] - char.masteries[a]);
+  return learned[0] || WEAPON_STYLE[w.kind] || (st.weapon ? 'brawler' : style);
+}
+
 /** Re-sync the live player after equipment / attribute changes. */
 export function refreshPlayer(game) {
   const p = game.player, c = p.char;
@@ -283,7 +302,7 @@ export function refreshPlayer(game) {
   p.attrs = effectiveAttrs(c);
   p.look = equippedLook(c);
   p.weapon = weaponFromChar(c);
-  p.style = c.style;
+  p.style = fightingStyle(c);
   p.fruit = c.fruit;
   p.fruitMastery = c.fruitMastery;
   p.hakiSkill = c.haki;
@@ -301,7 +320,7 @@ export function snapshot(game) {
   if (!c) return;
   c.masteries = p.masteries;
   c.fruitMastery = p.fruitMastery;
-  c.style = p.style;
+  // (the style stays the one picked in Skills: the live one is what they're fighting with)
   c.hotbar = p.hotbar;
   c.techniques = p.techniques;
   c.world.day = game.env.day;

@@ -63,5 +63,17 @@ export function slotInfo(s) {
   return { slot: s, char, legacy: legacy ? { ...defaultLegacy(), ...legacy } : null, empty: !char && !legacy };
 }
 
-export const loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, view: 'first', sensitivity: 0.5, invertY: false, quality: 'high', autoRes: true, fov: 0.5, bob: true, ...(read(KEY_SETTINGS) || {}) });
+// (renderDist: null until the player picks one; the graphics preset's default till then)
+export const loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, view: 'first', sensitivity: 0.5, invertY: false, quality: 'high', autoRes: true, fov: 0.5, bob: true, renderDist: null, ...(read(KEY_SETTINGS) || {}) });
 export const saveSettings = (s) => write(KEY_SETTINGS, s);
+
+/**
+ * The render distance, in 32 m chunks like Minecraft's: how far out the world
+ * is drawn on foot (the fog closes in there). At sea you see half as far
+ * again, since the islands are the view there (see Renderer3D.viewDist).
+ */
+export const RENDER_DIST = { min: 4, max: 24, high: 12, low: 8 };
+export function renderChunks(s) {
+  const n = Number(s?.renderDist) || (s?.quality === 'low' ? RENDER_DIST.low : RENDER_DIST.high);
+  return Math.max(RENDER_DIST.min, Math.min(RENDER_DIST.max, Math.round(n)));
+}

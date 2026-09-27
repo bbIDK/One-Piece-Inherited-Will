@@ -31,7 +31,11 @@ function outShare(clock) {
   if (clock >= 21 && clock < 23) return 0.35;
   return 0.15;
 }
-const crowdOf = (town) => Math.round(4 + (town.w * town.h) / 90);
+// How many people are out at the busiest hour: a few for every house in town
+// (most are indoors at any one time), and even a big town's streets top out
+// at a busy few dozen. (By its houses, not its size: a castle on a big lawn
+// isn't a crowd.)
+export const crowdOf = (town) => Math.min(44, Math.round(3 + (town.buildings?.length || 0) * 0.35));
 
 export function installTownLife(game) {
   const T = game.townLife = {
@@ -59,9 +63,10 @@ function spotsOf(game, town, isl) {
     const d = isEnterable(b) ? doorOf(b) : { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b))), dw: 1.05 };
     const role = b.role || 'house';
     const face = bfacing(b); // (standing with your back to the wall, looking out)
-    // along the front wall, clear of the door
-    for (let x = -fw / 2 + 0.45; x <= fw / 2 - 0.45; x += 0.55) {
-      if (Math.abs(x - d.x) < d.dw / 2 + 0.55) continue;
+    // along the front wall, clear of the door and its steps, a good step apart
+    // (people lean on a wall in ones and twos, not shoulder to shoulder)
+    for (let x = -fw / 2 + 0.6; x <= fw / 2 - 0.6; x += 1.7) {
+      if (Math.abs(x - d.x) < d.dw / 2 + 0.85) continue;
       const p = { ...bw(b, x, 0.36), face, b };
       if (!clear(p.x, p.y)) continue;
       S.wall.push(p);
@@ -103,7 +108,7 @@ function spotsOf(game, town, isl) {
       S.stall.push({ x, y, face: Math.atan2(Math.cos(yaw), Math.sin(yaw)), o });
     }
   }
-  for (const p of town.streetSpots || []) if (clear(p.x, p.y, 0.4)) S.street.push({ x: p.x, y: p.y });
+  for (const p of town.streetSpots || []) if (clear(p.x, p.y, 0.4)) S.street.push({ x: p.x, y: p.y, ax: p.ax, across: p.across });
   for (const ry of town.rows || []) {
     for (let x = town.x0 + 2; x < town.x1 - 1; x += 3) if (clear(x + 0.5, ry + 1.1, 0.4)) S.street.push({ x: x + 0.5, y: ry + 1.1 });
   }
@@ -164,9 +169,9 @@ function populate(game, town, isl, rng, list, ctx) {
   }
   const n = Math.round(crowdOf(town) * outShare(clock));
   for (let i = 0; i < n; i++) {
-    const at = S.street.length ? rng.pick(S.street) : town.plaza;
+    const at = S.street.length ? acrossOf(game.world, rng.pick(S.street), rng) : town.plaza;
     if (!at) break;
-    const a = spawnFolk(game, town, isl, rng, list, { x: at.x + rng.range(-1, 1), y: at.y + rng.range(-0.4, 0.4) });
+    const a = spawnFolk(game, town, isl, rng, list, { x: at.x, y: at.y });
     const act = pick(game, a);
     if (act) start(game, a, act, true);
     if (ctx?.onTownsfolk) ctx.onTownsfolk(a, town);
@@ -204,6 +209,28 @@ function routines(game) {
       if (clock >= 19 || clock < 6) for (const a of list) if (a.alive && a.town === town && a.activity?.kind === 'vend') { const door = nearest(game, S.door, a); if (door) { start(game, a, { kind: 'goHome', to: door, t: 90 }); a.homeB = door.b; } }
     }
   }
+}
+
+/** Somewhere across a street spot's width rather than on the street's middle line. */
+function acrossOf(w, s, rng) {
+  if (!s.across) return s;
+  const [c0, c1] = s.across;
+  const c = c0 + 0.5 + rng.next() * Math.max(0, c1 - c0 - 1);
+  const p = s.ax ? { x: s.x + rng.range(-1, 1), y: c } : { x: c, y: s.y + rng.range(-1, 1) };
+  return w.walkable(p.x, p.y) && !w.isBlocked(p.x, p.y) && !w.hitsProp(p.x, p.y, 0.4) ? p : s;
+}
+
+/**
+ * Where to stroll next: a short walk down the street, not the far end of
+ * town (the way round the houses is only worked out so far, and people
+ * spread out instead of all heading for the same places), and somewhere
+ * across the street rather than down its middle, so passers-by don't walk
+ * in single file.
+ */
+function streetStop(game, a, S) {
+  const w = game.world;
+  const near = S.street.filter((s) => { const d = w.distance(s.x, s.y, a.x, a.y); return d > 5 && d < 28; });
+  return acrossOf(w, a.rng.pick(near.length ? near : S.street), a.rng);
 }
 
 function nearest(game, pts, a) {
@@ -249,7 +276,7 @@ function pick(game, a) {
   if (kind === 'sit') return { kind, spot: r.pick(seats), t: r.range(20, 70) };
   if (kind === 'sweep') return { kind, spot: r.pick(fronts), t: r.range(20, 45) };
   if (!S.street.length) return null;
-  return { kind: 'stroll', to: r.pick(S.street), t: r.range(25, 60), legs: 2 + Math.floor(r.next() * 3) };
+  return { kind: 'stroll', to: streetStop(game, a, S), t: r.range(25, 60), legs: 2 + Math.floor(r.next() * 3) };
 }
 
 /** Begin an activity: walk there (or appear there, when the town first fills). */
@@ -339,7 +366,7 @@ function think(game, a, ai, dt) {
     if (act.pauseT <= 0) {
       if (--act.legs <= 0 || act.t <= 0) { stop(a); return; }
       const S = spotsOf(game, a.town, a.isl);
-      act.dest = a.rng.pick(S.street); act.phase = 'go'; act.goT = 0;
+      act.dest = streetStop(game, a, S); act.phase = 'go'; act.goT = 0;
     }
     return;
   }

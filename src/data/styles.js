@@ -245,6 +245,8 @@ export const STYLES = {
       m1('clima_3', 'weather_science', 'staff_jab', 9, { weapon: 'staff', range: 1.9, kb: 3.5, recover: 0.3 }),
     ],
     heavy: { id: 'clima_heavy', name: 'Heat Egg', anim: 'raise', weapon: 'staff', windup: 0.35, recover: 0.3, cd: 2, cost: { stamina: 12 }, steps: [{ proj: { speed: 10, range: 10, radius: 0.35, damage: 15, sprite: 'orb', color: '#ff8a65', element: 'fire', explode: { range: 1.5, damage: 10, element: 'fire' } } }] },
+    // (a plain staff swung by someone who never learned the science throws no Heat Egg)
+    plainHeavy: { id: 'clima_plain_heavy', name: 'Staff Sweep', anim: 'heavy', weapon: 'staff', windup: 0.32, recover: 0.35, cd: 1.4, cost: { stamina: 12 }, steps: [{ hit: { shape: 'arc', range: 2.0, arc: 2.0, offset: 0.2, damage: 16, knockback: 5, stun: 0.45, heavy: true, guardBreak: true } }] },
     techniques: [
       { id: 'clima_thunderbolt', name: 'Thunderbolt Tempo', icon: '⚡', anim: 'raise', weapon: 'staff', windup: 0.55, recover: 0.3, cd: 8, cost: { stamina: 22 }, desc: 'Build a thundercloud over your foe — and strike.', say: 'Thunderbolt Tempo!',
         steps: [{ zone: { range: 1.6, duration: 0.6, interval: 0.6, damage: 34, element: 'lightning', status: { shock: 1.2 }, color: '#fff176', atTarget: true, kind: 'thunder' } }], learn: { mastery: 0, price: 12000 } },
@@ -287,12 +289,20 @@ export const STYLES = {
 
 export const STYLE_IDS = Object.keys(STYLES);
 
+/**
+ * The plainest style for each kind of weapon: whoever holds one their own
+ * style doesn't use fights with its basic moves (see lineage.js
+ * fightingStyle) — a brawler who picks up a cutlass swings the cutlass.
+ */
+export const WEAPON_STYLE = { sword: 'ittoryu', gun: 'sniper', staff: 'weather_science', axe: 'elbaf' };
+
 // register everything as abilities
 for (const [sid, s] of Object.entries(STYLES)) {
-  const list = [...s.m1, s.heavy, ...s.techniques].map((a) => ({ ...a, style: sid, source: 'style:' + sid, weapon: a.weapon ?? s.weapon ?? undefined }));
+  const list = [...s.m1, s.heavy, ...(s.plainHeavy ? [s.plainHeavy] : []), ...s.techniques].map((a) => ({ ...a, style: sid, source: 'style:' + sid, weapon: a.weapon ?? s.weapon ?? undefined }));
   registerAbilities(list, 'style:' + sid);
   s.m1Ids = s.m1.map((a) => a.id);
   s.heavyId = s.heavy.id;
+  s.plainHeavyId = s.plainHeavy?.id;
 }
 
 export function styleTechniques(styleId) {

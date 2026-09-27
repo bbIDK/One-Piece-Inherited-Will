@@ -754,11 +754,18 @@ const stageGeo = () => model('platform-stage', (k) => {
   for (let i = 0; i < 4; i++) k.add(box(1.2, 0.14, 0.34), { at: [0, i * 0.24 - 0.1, 1.8 + (3 - i) * 0.3], color: '#6d4c33' });
 });
 
-reg('platform', (o) => {
+reg('platform', (o, ctx) => {
+  // (its deck is the ground for anyone standing on it — the height model says
+  // so — but the platform itself stands on the terrain underneath, or it would
+  // float a deck's height up in the air)
   const root = group('platform');
+  const body = new THREE.Group();
+  root.add(body);
   const n = o.name || '';
-  add(root, /ring/i.test(n) ? ringGeo() : /stage|carnival/i.test(n) ? stageGeo() : scaffoldGeo());
-  if (o.s && o.s !== 1) root.scale.setScalar(o.s);
+  add(body, /ring/i.test(n) ? ringGeo() : /stage|carnival/i.test(n) ? stageGeo() : scaffoldGeo());
+  if (o.s && o.s !== 1) body.scale.setScalar(o.s);
+  body.position.y = ctx.terrain(o.x, o.y);
+  root.userData.noGround = true;
   return root;
 });
 
@@ -959,14 +966,16 @@ function laboonBody() {
   for (let i = 0; i < NU; i++) {
     for (let j = 0; j < NV; j++) {
       const a = ring[i] + j, b = ring[i] + ((j + 1) % NV), c = ring[i + 1] + j, d = ring[i + 1] + ((j + 1) % NV);
-      idx.push(a, b, c, b, d, c);
+      // (wound to face outward: turned inside out, the lit skin faced into
+      // him and his ink outline drew over him — a black silhouette)
+      idx.push(a, c, b, b, c, d);
     }
   }
   // caps: the flat forehead and the tail tip
   const front = pos.length / 3; pos.push(LB.X0 - 3.2, lbCurve(0, LB_Y), 0);
-  for (let j = 0; j < NV; j++) idx.push(front, ring[0] + ((j + 1) % NV), ring[0] + j);
+  for (let j = 0; j < NV; j++) idx.push(front, ring[0] + j, ring[0] + ((j + 1) % NV));
   const back = pos.length / 3; pos.push(lbX(1) + 1.5, lbCurve(1, LB_Y), 0);
-  for (let j = 0; j < NV; j++) idx.push(back, ring[NU] + j, ring[NU] + ((j + 1) % NV));
+  for (let j = 0; j < NV; j++) idx.push(back, ring[NU] + ((j + 1) % NV), ring[NU] + j);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setIndex(idx);

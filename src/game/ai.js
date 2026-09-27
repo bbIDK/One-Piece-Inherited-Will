@@ -1,5 +1,6 @@
 // NPC brains.
-//   hostile  – fights anything it is hostile to; returns home when leashed
+//   hostile  – fights anything it is hostile to, to the end (nobody runs off
+//              when nearly beaten); returns home when leashed
 //   guard    – stands still until provoked or an enemy comes close
 //   wander   – ambles around home (civilians); flees from fights
 //   follower – crew companions: follow the player and fight beside them
@@ -9,6 +10,52 @@ import { placeOnDeck, freeDeckSpot, crewStation } from './decks.js';
 import { clearLine, findPath } from './path.js';
 import { getAbility, canUse } from './abilities.js';
 import { hostile } from './entity.js';
+import { regionAt, REGION, isBlue } from '../world/constants.js';
+
+// Taking turns. Only so many foes go for the player at once (one in the four
+// Blues, where everyone starts; two in Paradise; three in the New World; a
+// boss always may). The rest hold back a few steps off, circling and waiting
+// for their turn: a mob that all swings at once isn't a fight a new pirate
+// can win, and it isn't how a brawl looks either. A long turn passes to
+// someone who's waiting, and whoever the player hits gets theirs next.
+const TURN_LONG = 7; // s: a turn this long can be handed on
+const TURN_IDLE = 2.5; // s: …and one spent not getting to grips with them (stuck behind something), sooner
+function turnsAllowed(game, p) {
+  if (game.world !== game.surface) return 2;
+  const r = regionAt(p.x, p.y);
+  return isBlue(r) ? 1 : r === REGION.NEW_WORLD ? 3 : 2;
+}
+/** May `a` attack the player `t` now? (claims a turn if one's free; `hit`: the player just struck them) */
+function takeTurn(game, a, t, hit = false) {
+  if (!t.isPlayer || a.boss) return true;
+  const T = game.turns || (game.turns = new Map()); // holder → { since, close: last time at grips }
+  const Q = game.turnQueue || (game.turnQueue = new Map()); // waiting → since when
+  const now = game.time || 0, w = game.world;
+  const out = (h, far) => !h.alive || h.state === 'knocked' || h.controller?.target !== t || w.distance(h.x, h.y, t.x, t.y) > far;
+  for (const [h, u] of T) {
+    if (out(h, 9)) { T.delete(h); continue; }
+    if (h.action || w.distance(h.x, h.y, t.x, t.y) < (h.controller?.meleeRange?.(h) || 1.3) + 1.2) u.close = now;
+  }
+  if (T.has(a)) return true;
+  for (const [h] of Q) if (out(h, 14)) Q.delete(h);
+  if (!Q.has(a)) Q.set(a, now);
+  // (turns go in the order people started waiting — or at once to someone the player has just hit)
+  if (!hit) for (const [h, s0] of Q) if (s0 < Q.get(a) && h !== a) return false;
+  if (T.size >= turnsAllowed(game, t)) {
+    // hand on a long turn, or one going nowhere (stuck behind something)
+    let old = null, score = -Infinity;
+    for (const [h, u] of T) {
+      const s0 = Math.max(now - u.since - TURN_LONG, now - u.close - TURN_IDLE);
+      if (s0 > score) { score = s0; old = h; }
+    }
+    if (!old || (!hit && score < 0)) return false;
+    T.delete(old);
+    Q.set(old, now); // (to the back of the queue)
+  }
+  Q.delete(a);
+  T.set(a, { since: now, close: now });
+  return true;
+}
 
 // Path searches are the expensive part of walking about: a few a frame at
 // most (anyone else heads straight on for a frame and asks again).
@@ -64,7 +111,6 @@ export class AIController {
     this.aggression = o.aggression ?? 0.7;
     this.ranged = !!o.ranged;
     this.prefRange = o.prefRange ?? (this.ranged ? 7 : 1.2);
-    this.fleeAt = o.fleeAt ?? (o.kind === 'hostile' ? 0.15 : 0);
     this.state = 'idle';
     this.target = null;
     this.think = Math.random() * 0.5;
@@ -87,6 +133,7 @@ export class AIController {
       if (this.kind === 'wander' || this.kind === 'civilian' || this.kind === 'townsfolk') { this.state = 'flee'; this.fleeFrom = att; this.fleeT = 4; return; }
       if (!this.target || Math.random() < 0.5) this.target = att;
       this.state = 'chase';
+      if (att.isPlayer && this.target === att) takeTurn(game, a, att, true);
       this.sawAt(att, game, a);
       // alert allies
       for (const b of game.actorsNear(a.x, a.y, 10)) {
@@ -105,6 +152,8 @@ export class AIController {
       if (b === a || b.state !== 'idle' || b.onShip) continue;
       const isFoe = hostile(a, b) || (b.isPlayer && a.provoked) || (a.faction === 'player' && b.provoked);
       if (!isFoe) continue;
+      // (some keep to themselves until the player starts it: pirates at home in a village, say)
+      if (b.isPlayer && a.calm && !a.provoked) continue;
       let d = game.world.dist2(a.x, a.y, b.x, b.y);
       const stealth = b.buffs?.find((x) => x.mods?.stealth);
       if (stealth) d *= 1 + stealth.mods.stealth * 6;
@@ -203,13 +252,6 @@ export class AIController {
     const dist = Math.hypot(dx, dy);
     const ang = Math.atan2(dy, dx);
 
-    // flee when nearly beaten (grunts only)
-    if (this.fleeAt && a.hp / a.d.maxHp < this.fleeAt && !a.boss) {
-      a.intent.mx = -dx / (dist || 1); a.intent.my = -dy / (dist || 1); a.intent.sprint = true;
-      a.facing = ang + Math.PI;
-      return;
-    }
-
     // on another deck of a big ship: make for the stairs before anything else
     const up = game.deckRoute?.(a, t.x, t.y);
     if (up) { this.moveToward(a, up.x, up.y, game, true); a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4; return; }
@@ -225,6 +267,20 @@ export class AIController {
     if (this.blockT > 0) { this.blockT -= dt; a.facing = ang; if (this.blockT <= 0) a.setBlock(false); return; }
 
     a.facing = a.action ? a.facing : ang;
+    // not our turn yet: hold back a few steps off and circle, facing them
+    if (!a.action && !takeTurn(game, a, t)) {
+      this.comboLeft = 0;
+      const ring = 3.4 + (a.id % 5) * 0.25;
+      let mx = 0, my = 0;
+      if (dist > ring + 1.2) { mx = dx / dist; my = dy / dist; a.intent.sprint = dist > 7 && a.stamina > a.d.maxStamina * 0.5; }
+      else if (dist < ring - 0.6) { mx = -dx / dist; my = -dy / dist; }
+      if (dist < ring + 2) { mx += (-dy / dist) * this.strafeDir * 0.55; my += (dx / dist) * this.strafeDir * 0.55; }
+      if (Math.random() < 0.01) this.strafeDir *= -1;
+      const l = Math.hypot(mx, my);
+      if (l > 0) { a.intent.mx = mx / l * 0.6; a.intent.my = my / l * 0.6; }
+      this.avoidStuck(a, dt, game);
+      return;
+    }
     // choose a technique
     if (!a.action && this.think <= 0) {
       this.think = (0.35 + (1 - this.aggression) * 0.8) * (0.7 + Math.random() * 0.6);

@@ -94,7 +94,7 @@ export function makeNPC(def, x, y, extra = {}) {
   const kind = def.ai || (def.hostile ? 'hostile' : def.dialogue ? 'guard' : 'wander');
   a.controller = new AIController({
     kind, home: { x, y }, skill: def.skill ?? (def.boss ? 0.55 : 0.25), moves: def.moves || [], aggroRange: def.aggroRange ?? (def.boss ? 12 : 8),
-    ranged: def.ranged, leash: def.leash ?? (def.boss ? 18 : 16), phases: def.phases, barks: def.barks, fleeAt: def.boss || def.named ? 0 : def.fleeAt,
+    ranged: def.ranged, leash: def.leash ?? (def.boss ? 18 : 16), phases: def.phases, barks: def.barks,
   });
   if (kind === 'guard' || kind === 'idle') { a.stationary = true; a.faceHome = Math.PI / 2; }
   if (def.hostile) a.aggroPlayer = true;
@@ -110,7 +110,7 @@ export function makeEnemy(arch, level, x, y, over = {}) {
   return makeNPC({
     ...A, level, hostile: true, name: over.name || A.name, look: { ...(A.look || {}), ...(over.look || {}) }, moves: over.moves || A.moves, id: over.id,
     seed: over.seed ?? Math.floor(Math.random() * 1e9), // every grunt looks different
-    hpMul: (A.hpMul || 1) * (over.hpMul || 1), skill: over.skill ?? A.skill, fleeAt: 0.15, ...over,
+    hpMul: (A.hpMul || 1) * (over.hpMul || 1), skill: over.skill ?? A.skill, ...over,
   }, x, y);
 }
 
@@ -383,7 +383,8 @@ export class Interactions {
     const B = g.buildings;
     const rng = new RNG((b.id || 1) * 13 + g.env.day * 7 + Math.floor(g.env.clock));
     g.audio?.sfx('knock');
-    const kick = { text: b.pirate ? 'Kick the door in.' : 'Kick the door in. (a crime)', do: () => { g.dialogue.close(); B ? B.breakDoor(b) : robHouse(g, b); }, end: true };
+    // kicking the door down is only ever this choice, made after knocking (blows never break a door)
+    const kick = { text: b.pirate ? 'Kick down the door.' : 'Kick down the door. (a crime)', do: () => { g.dialogue.close(); B ? B.breakDoor(b) : robHouse(g, b); }, end: true };
     const leave = { text: 'Leave them be.', end: true };
     if (b.pirate) {
       const line = rng.pick(['"Who\'s there?! Scram before we gut ya!"', '"Password?" ...You don\'t know it. "Then get lost!"', '(Laughter and clinking mugs behind the door. It stops.) "...Who\'s knockin\'?"', '"If yer a Marine, we ain\'t here!"']);
@@ -429,12 +430,13 @@ export class Interactions {
   }
 
   dummy(o) {
-    const g = this.game, c = g.state.char, p = g.player;
+    const g = this.game, c = g.state.char;
     if (c.flags.dummyDay === g.env.day) { g.log('Your arms are too tired for more practice today.', '#b0bec5'); return; }
     c.flags.dummyDay = g.env.day;
-    const m = c.masteries[p.style] || 0;
+    const style = g.progression.styleInUse();
+    const m = c.masteries[style] || 0;
     g.env.clock += 1;
-    if (m < 10) { g.progression.addStyleMastery(p.style, 2); g.log('You practise your forms on the dummy for an hour. (Dummies only teach the very basics — mastery up to 10.)', '#90caf9'); }
+    if (m < 10) { g.progression.addStyleMastery(style, 2); g.log('You practise your forms on the dummy for an hour. (Dummies only teach the very basics — mastery up to 10.)', '#90caf9'); }
     else g.log('The dummy has nothing left to teach you. Find a real opponent — or a master.', '#b0bec5');
   }
 

@@ -191,15 +191,17 @@ export class Sky {
     this.hemi.groundColor.setRGB(amb[0] * 0.45, amb[1] * 0.4, amb[2] * 0.35);
     this.hemi.intensity = 1.0 + (zone === 3 ? -0.3 : 0);
     // Fog (see fog.js): a thin sea haze on a clear day that thickens in storms,
-    // snow and fog banks; it always closes in completely at the render
-    // distance (maxFar, set from the terrain's reach) so nothing pops.
-    let far = sailing ? 900 : 620;
+    // snow and fog banks. On a clear day it closes in over the last 40% of the
+    // render distance (maxFar, set from the terrain's reach, which is the
+    // Settings one), complete right at its edge, so nothing is seen to pop in
+    // or out; thick weather draws it in nearer still.
+    let far = this.maxFar || (sailing ? 900 : 620);
     far *= (1 - env.fog * 0.72) * (1 - env.storm * 0.4);
     if (zone === 2) far = 170;
     if (zone === 3) far = 95;
     far = Math.max(60, Math.min(far, this.maxFar || far));
     this.fog.far = far;
-    this.fog.near = far * 0.55;
+    this.fog.near = far * 0.6;
     this.fog.color.copy(this.horizon);
     let dens = 0.0011 + env.storm * 0.0045 + env.fog * 0.013 + (env.snow ? 0.0025 : 0) + night * 0.0004;
     if (sailing) dens *= 0.8;

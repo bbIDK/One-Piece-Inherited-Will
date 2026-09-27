@@ -42,8 +42,15 @@ const DIRS = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, SQ2], [1, -1,
  */
 export function findPath(w, sx, sy, tx, ty, r = 0.3, maxNodes = 2600) {
   const ox = Math.floor(sx) - R, oy = Math.floor(sy) - R;
-  const gx = Math.floor(sx + w.dx(sx, tx)) - ox, gy = Math.floor(ty) - oy;
-  if (gx < 0 || gy < 0 || gx >= N || gy >= N) return null;
+  let gx = Math.floor(sx + w.dx(sx, tx)) - ox, gy = Math.floor(ty) - oy;
+  // further than the search reaches (across a big town): a way to the edge of
+  // it in that direction — the rest is worked out from there — rather than
+  // no way at all (and walking straight at the houses in between)
+  const far = gx < 0 || gy < 0 || gx >= N || gy >= N;
+  if (far) {
+    const dx = gx - R, dy = gy - R, m = Math.max(Math.abs(dx), Math.abs(dy));
+    gx = R + Math.round((dx / m) * (R - 1)); gy = R + Math.round((dy / m) * (R - 1));
+  }
   STATE.fill(0); OK.fill(0);
   const inside = w.interiorAt ? w.interiorAt(sx, sy) : null;
   const ok = (i, j) => {
@@ -107,7 +114,7 @@ export function findPath(w, sx, sy, tx, ty, r = 0.3, maxNodes = 2600) {
   cells.reverse();
   const pts = cells.map((k) => ({ x: w.wx(ox + (k % N) + 0.5), y: oy + ((k / N) | 0) + 0.5 }));
   // the real goal as the last point, when it's where the path ends up
-  if (best % N === gx && ((best / N) | 0) === gy && standable(w, tx, ty, r)) pts[pts.length - 1] = { x: tx, y: ty };
+  if (!far && best % N === gx && ((best / N) | 0) === gy && standable(w, tx, ty, r)) pts[pts.length - 1] = { x: tx, y: ty };
   // pull it taut: skip ahead to the farthest point in a clear straight line
   const out = [];
   let cx = sx, cy = sy, i = 0;

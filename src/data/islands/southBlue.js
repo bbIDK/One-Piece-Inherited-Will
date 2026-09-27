@@ -270,17 +270,17 @@ export const SOUTH_BLUE = [
       {
         id: 'kutsukku_north', name: 'North Town', dx: -0.02, dy: -0.52, w: 40, h: 28, style: 'city', dockDir: 'n', plaza: 'well',
         buildings: [{ role: 'bar', name: 'The Masked Tavern', npc: 'sb_killer' }],
-        houses: 4,
+        houses: 14,
       },
       {
         id: 'kutsukku_east', name: 'East Town', dx: 0.58, dy: -0.1, w: 38, h: 28, style: 'city', dockDir: 'e', plaza: 'well',
         buildings: [{ role: 'bar', name: 'The Furnace', npc: 'sb_heat' }],
-        houses: 4,
+        houses: 14,
       },
       {
         id: 'kutsukku_west', name: 'West Town', dx: -0.58, dy: -0.02, w: 38, h: 28, style: 'city', dockDir: 'w', plaza: 'well',
         buildings: [{ role: 'bar', name: 'Trident Pier Tavern', npc: 'sb_wire' }],
-        houses: 4,
+        houses: 14,
       },
     ],
     docks: [
@@ -399,7 +399,7 @@ export const SOUTH_BLUE = [
           { role: 'hall', name: 'Village Meeting Hall', npc: 'sb_granny_nougat' },
           { role: 'shop', name: 'Village Store' },
         ],
-        houses: 6,
+        houses: 12,
       },
       {
         id: 'sorbet_church', name: "Kuma's Church", dx: 0.5, dy: 0.5, w: 32, h: 24, style: 'village', dockDir: 'se', plaza: 'well',

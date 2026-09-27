@@ -624,7 +624,8 @@ function buildTree(o, ctx, sub) {
   const yaw = hash(o.x, o.y) * Math.PI * 2;
   if (fr && model.crown) {
     const pts = fruitPoints(sub, v, fr, model);
-    const fps = pts.map((q, i) => ({ key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false }));
+    // (the fruit isn't drawn far off: see instancer.js)
+    const fps = pts.map((q, i) => ({ key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }));
     parts.push(...fps);
     dyn = (oo, env, c, u) => { if (u.camHidden) return; for (let i = 0; i < fps.length; i++) setPartVisible(u, fps[i], !fruitPicked(c.world?.id, oo, i, env.day)); };
     // where each fruit is, for aiming at it (see game/forage.js)

@@ -12,7 +12,8 @@ import '../src/data/haki.js';
 import '../src/content/bossMoves.js';
 import { TRAINERS } from '../src/data/trainers.js';
 import { ITEMS } from '../src/data/items.js';
-import { STOCK } from '../src/data/shops.js';
+import { STOCK, stockFor } from '../src/data/shops.js';
+import { PROLOGUES } from '../src/content/main/define.js';
 import { ARCHETYPES } from '../src/game/npcs.js';
 import { RACES } from '../src/data/races.js';
 import { CREW_ROLES } from '../src/game/crew.js';
@@ -105,6 +106,13 @@ export async function run(opts = {}) {
         }
       }
       if (!r.docks.length && !def.noDock && !def.zone) Wn(`island "${def.id}": no dock could be built (ships can't moor)`);
+    }
+    // every home island sells a sword (the pirate road's first job is "get a weapon")
+    for (const id of PROLOGUES.keys()) {
+      const r = recs.get(id);
+      if (!r) continue;
+      const sells = r.towns.some((t) => t.buildings.some((b) => ['shop', 'market', 'weapons', 'bank'].includes(b.role) && stockFor(b, r).some((it) => ITEMS[it]?.kind === 'sword')));
+      if (!sells) E(`home island "${id}": no shop sells a sword`);
     }
   }
 
