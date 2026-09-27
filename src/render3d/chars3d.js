@@ -38,7 +38,7 @@ class ActorView {
     this.root = new THREE.Group();
     this.yaw = new THREE.Group();
     this.root.add(this.yaw);
-    this.model = new CharacterModel(this.look, this.wpn);
+    this.model = new CharacterModel(this.look, this.wpn, { fingers: !!a.isPlayer });
     this.yaw.add(this.model.group);
     this.o = {};
     this.label = null; this.marker = null; this.aura = null; this.glows = []; this.ice = null; this.stars = null;

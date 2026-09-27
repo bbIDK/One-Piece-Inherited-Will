@@ -76,6 +76,8 @@ export function rigOptions(a, pose, P, o = {}) {
   if (pose.activity === 'lean') o.spread = -0.17;
   o.seatH = pose.activity === 'sit' || pose.activity === 'fish' ? pose.seatH || 0 : null;
   o.prop = pose.prop || null;
+  // out of a fight, hands hang loose rather than clenched (articulated hands)
+  o.relaxHands = !A && !pose.combat && !pose.armed && pose.block === undefined && pose.dodge === undefined && pose.state !== 'hurt';
   return o;
 }
 

@@ -8,6 +8,10 @@
 //   hand*         origin at the wrist, fingers along -Y, back of the hand +X
 //   foot*         origin at the ankle, toes along +X
 //   fist/palm/finger*   hand shapes, children of hand* (hidden by scale 0)
+//   k1..k4*, j1..j4*, tb*, tc*   articulated fingers (the first-person hands):
+//                 knuckle and middle joint of index…little finger, thumb base
+//                 and tip; each segment hangs along -Y from its joint, and
+//                 bends toward the palm (-X) about its Z axis
 //   coatTail, wing*, tail, hairTail, sheath, hilts, backWpn: attachments
 export const BONES = [
   'hips', 'chest', 'head',
@@ -15,12 +19,17 @@ export const BONES = [
   'uarmL', 'farmL', 'handL', 'fistL', 'palmL', 'fingerL',
   'thighR', 'shinR', 'footR', 'thighL', 'shinL', 'footL',
   'coatTail', 'tail', 'wingR', 'wingL', 'hairTail', 'sheath', 'hilts', 'backWpn',
+  ...['R', 'L'].flatMap((H) => ['k1', 'k2', 'k3', 'k4', 'j1', 'j2', 'j3', 'j4', 'tb', 'tc'].map((n) => n + H)),
 ];
 export const B = Object.fromEntries(BONES.map((n, i) => [n, i]));
 export const PARENT = {
   fistR: 'handR', palmR: 'handR', fingerR: 'handR', fistL: 'handL', palmL: 'handL', fingerL: 'handL',
   coatTail: 'chest', wingR: 'chest', wingL: 'chest', backWpn: 'chest', tail: 'hips', sheath: 'hips', hilts: 'hips', hairTail: 'head',
 };
+for (const H of ['R', 'L']) {
+  for (let i = 1; i <= 4; i++) { PARENT['k' + i + H] = 'hand' + H; PARENT['j' + i + H] = 'k' + i + H; }
+  PARENT['tb' + H] = 'hand' + H; PARENT['tc' + H] = 'tb' + H;
+}
 
 /**
  * Body dimensions (metres at scale 1) from a look's proportions. The 2D rig

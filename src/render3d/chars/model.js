@@ -16,18 +16,32 @@ const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _v = new THREE.
 const AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0), AZ = new THREE.Vector3(0, 0, 1);
 const LIMBS = [B.uarmR, B.farmR, B.uarmL, B.farmL, B.thighR, B.shinR, B.thighL, B.shinL];
 const SHAPES = ['fist', 'palm', 'finger'];
+// Articulated hands (the first-person view): per hand shape, how far each
+// finger bends at the knuckle (a) and the middle joint (b), index…little, in
+// radians; how far the fingers fan out (sp) and the thumb closes across (th).
+const GRIPS = {
+  fist: { a: [1.5, 1.56, 1.6, 1.62], b: [1.72, 1.76, 1.76, 1.7], sp: 0, th: 1 },
+  grip: { a: [1.3, 1.38, 1.46, 1.52], b: [1.45, 1.52, 1.56, 1.56], sp: 0, th: 0.85 },
+  grab: { a: [0.72, 0.82, 0.9, 0.98], b: [0.95, 1.05, 1.12, 1.15], sp: 0.25, th: 0.65 },
+  relaxed: { a: [0.3, 0.4, 0.5, 0.62], b: [0.4, 0.5, 0.6, 0.72], sp: 0.35, th: 0.3 },
+  palm: { a: [0.06, 0.08, 0.1, 0.14], b: [0.08, 0.1, 0.13, 0.17], sp: 1, th: 0 },
+  flat: { a: [0.04, 0.04, 0.05, 0.06], b: [0.05, 0.05, 0.06, 0.08], sp: 0, th: 0.2 },
+  claw: { a: [0.35, 0.3, 0.3, 0.36], b: [1.1, 1.15, 1.15, 1.1], sp: 0.9, th: 0.35 },
+  finger: { a: [0.04, 1.5, 1.56, 1.6], b: [0.05, 1.72, 1.76, 1.7], sp: 0, th: 0.9 },
+};
+const _t1 = new THREE.Vector3(), _t2 = new THREE.Vector3(), DOWN = new THREE.Vector3(0, -1, 0);
 
 export class CharacterModel {
   /**
    * look: the (effective) look; wpn: { kind, count, gun } or null.
-   * opts: { viewmodel, outline (material), fog }
+   * opts: { viewmodel, outline (material), fog, fingers (articulated hands up close) }
    */
   constructor(look, wpn, opts = {}) {
     this.look = look;
     this.wpn = wpn;
     this.opts = opts;
     this.lod = opts.lod ?? 0;
-    this.body = getBody(look, wpn, this.lod);
+    this.body = getBody(look, wpn, this.lod, !!opts.fingers);
     this.d = this.body.dims;
     this.rig = new Rig(this.d);
     this.group = new THREE.Group();
@@ -50,6 +64,7 @@ export class CharacterModel {
     this.bones[B.tail].position.set(-0.13 * d.Bk, -0.06, 0);
     this.bones[B.wingR].position.set(-0.11 * d.Bk, d.chestLen * 0.8, 0.05);
     this.bones[B.wingL].position.set(-0.11 * d.Bk, d.chestLen * 0.8, -0.05);
+    this.restFingers();
     // face decal on the head
     this.face = new THREE.Mesh(faceGeo(look, this.lod === 0 ? 'near' : 'far'), undefined);
     this.face.position.set(d.hx, d.hc, 0);
@@ -72,15 +87,81 @@ export class CharacterModel {
     this.visibleParts = null;
   }
 
+  /** Put the finger joints where this body's hands have them (articulated hands only). */
+  restFingers() {
+    const F = this.body.fingers;
+    this.fing = null;
+    if (!F) return;
+    this.fing = [0, 1].map(() => ({ a: [0.3, 0.4, 0.5, 0.6], b: [0.4, 0.5, 0.6, 0.7], sp: 0.35, th: 0.3, lag: 0, prev: new THREE.Vector3(), t: -1 }));
+    for (const H of ['R', 'L']) {
+      const r = F[H];
+      for (let i = 0; i < 4; i++) {
+        this.bones[B['k' + (i + 1) + H]].position.set(...r.knuckle[i]);
+        this.bones[B['j' + (i + 1) + H]].position.set(0, -r.lp[i], 0);
+      }
+      this.bones[B['tb' + H]].position.set(...r.thumb);
+      this.bones[B['tc' + H]].position.set(0, -r.lt, 0);
+    }
+  }
+
+  /**
+   * Bend the fingers of an articulated hand toward its shape — easing there
+   * rather than snapping (fists close fast, hands open slower) — with a little
+   * life on top: each finger drifting on its own, and loose fingers lagging
+   * as the hand swings.
+   */
+  poseFingers(k, shape, t) {
+    const F = this.fing[k], G = GRIPS[shape] || GRIPS.relaxed;
+    const H = k === 0 ? 'R' : 'L', r = this.body.fingers[H], th = r.th, bones = this.bones;
+    const first = F.t < 0;
+    const dt = first ? 1 : Math.min(0.1, Math.max(0, t - F.t));
+    F.t = t;
+    // how the hand is moving: toward the palm pushes loose fingers back, away curls them
+    const E = this.rig.E[k];
+    if (!first && dt > 0) {
+      _t1.subVectors(E, F.prev).divideScalar(Math.max(dt, 1e-3));
+      _t2.set(-1, 0, 0).applyQuaternion(this.rig.quat[k === 0 ? B.handR : B.handL]);
+      const drag = Math.max(-0.45, Math.min(0.45, -_t1.dot(_t2) * 0.09));
+      F.lag += (drag - F.lag) * Math.min(1, dt * 9);
+    }
+    F.prev.copy(E);
+    const closing = G.a[1] > F.a[1];
+    const ease = Math.min(1, dt * (closing ? 16 : 9));
+    const loose = 1 - Math.min(1, G.a[1] / 1.3); // open hands move more than fists
+    for (let i = 0; i < 4; i++) {
+      const n = Math.sin(t * 1.3 + i * 1.9 + k * 2.3) * 0.6 + Math.sin(t * 0.71 + i * 2.7 + k) * 0.4;
+      const life = n * (0.03 + 0.07 * loose) + F.lag * loose * (0.75 + i * 0.12);
+      F.a[i] += (G.a[i] + life - F.a[i]) * ease;
+      F.b[i] += (G.b[i] + life * 1.25 - F.b[i]) * ease;
+      const splay = -th * (1.5 - i) * 0.075 * F.sp;
+      bones[B['k' + (i + 1) + H]].quaternion.setFromAxisAngle(AX, splay).multiply(_q.setFromAxisAngle(AZ, -Math.max(-0.25, F.a[i])));
+      bones[B['j' + (i + 1) + H]].quaternion.setFromAxisAngle(AZ, -Math.max(-0.1, F.b[i]));
+    }
+    F.sp += (G.sp - F.sp) * ease;
+    F.th += (G.th + Math.sin(t * 0.9 + k) * 0.04 * loose - F.th) * ease;
+    // the thumb swings from out beside the index finger to across the curled fingers
+    const c = Math.max(0, Math.min(1, F.th));
+    _t1.set(-0.22, -0.72, th * 0.66).normalize();
+    _t2.set(-0.9, -0.3, -th * 0.32).normalize();
+    _t1.lerp(_t2, c).normalize();
+    const tb = bones[B['tb' + H]], tc = bones[B['tc' + H]];
+    tb.quaternion.setFromUnitVectors(DOWN, _t1);
+    // the tip bends in toward the palm
+    _t2.set(-1, 0, 0).multiplyScalar(0.25 + c * 0.9).add(_t1).normalize();
+    _q2.copy(tb.quaternion).invert();
+    tc.quaternion.setFromUnitVectors(DOWN, _t2).premultiply(_q2);
+  }
+
   /** Switch detail level (near / far): same skeleton, another shared geometry. */
   setLod(lod) {
     if (lod === this.lod) return;
-    const nb = getBody(this.look, this.wpn, lod);
+    const nb = getBody(this.look, this.wpn, lod, !!this.opts.fingers);
     releaseBody(this.body);
     this.body = nb;
     this.lod = lod;
     this.mesh.geometry = nb.geo;
     this.outline.geometry = nb.geo;
+    this.restFingers();
     this.face.geometry = faceGeo(this.look, lod === 0 ? 'near' : 'far');
   }
 
@@ -116,7 +197,13 @@ export class CharacterModel {
       let s = this.shape[k];
       if (armed && (k === 0 || (o.wpn.kind === 'sword' && (o.wpn.count || 1) >= 2))) s = 'fist';
       if ((k === 0 && o.blade) || (k === 1 && o.bladeB)) s = 'fist';
-      if (s === 'claw' || s === 'flat') s = 'palm';
+      if (this.fing) {
+        // (the articulated hand is posed once the rig has placed the hand, below)
+        if (s === 'fist') s = armed || (k === 0 && o.prop) ? 'grip' : o.relaxHands ? 'relaxed' : 'fist';
+        this.shape[k] = s;
+        continue;
+      }
+      if (s === 'claw' || s === 'flat' || s === 'relaxed' || s === 'grab') s = s === 'grab' ? 'fist' : 'palm';
       const H = k === 0 ? 'R' : 'L';
       for (const sh of SHAPES) this.showBone(B[sh + H], sh === s);
     }
@@ -127,6 +214,7 @@ export class CharacterModel {
     }
     for (const i of LIMBS) bones[i].scale.set(1, rig.len[i], 1);
     if (this.visibleParts) for (const [i, on] of this.visibleParts) this.showBone(i, on);
+    if (this.fing) for (let k = 0; k < 2; k++) this.poseFingers(k, this.shape[k], t);
 
     // attachments: the coat tail hangs and streams back, hair hangs, tail sways, wings flap
     const lean = (P.l || 0) + (o.leanAdd || 0);

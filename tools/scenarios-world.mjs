@@ -61,6 +61,90 @@ export const scenarios = {
       await snap('reach');
     },
   },
+  // First-person fingers: every grip up close (guard pose), then the hands in motion.
+  fingers: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.env.clock = 11; g.settings.view = 'first'; g.applySettings(); g.view3d.rig.pitch = -0.05; document.querySelector('.look-hint')?.remove(); });
+      for (let i = 0; i < 12; i++) await step(page, 0.1);
+      // a jab brings the hands up into a guard; then force each grip on both hands
+      await page.evaluate(() => { const g = window.OP.game; g.player.tryM1(g); });
+      await step(page, 0.9); await frames(page, 2);
+      await page.evaluate(() => {
+        const vm = window.OP.game.view3d.vm;
+        window.__shape = null;
+        const wrap = () => {
+          const m = vm.model;
+          if (!m || m.__wrapped) return;
+          const orig = m.pose.bind(m);
+          m.pose = (P, o) => orig(window.__shape ? { ...P, hand: window.__shape, handB: window.__shape } : P, o);
+          m.__wrapped = true;
+        };
+        wrap();
+        vm.root.position.set(0, 0.07, 0.1); // (a little closer, for the close-up)
+      });
+      for (const sh of String(args.shapes || 'fist,relaxed,palm,flat,claw,grab,finger').split(',')) {
+        await page.evaluate((sh) => { window.__shape = sh; const g = window.OP.game; g.combatT = 5; }, sh);
+        for (let i = 0; i < 6; i++) { await step(page, 0.08); await frames(page, 1); }
+        await snap('grip-' + sh);
+      }
+      // fingers in motion: sprinting (relaxed hands), a few frames apart
+      await page.evaluate(() => { window.__shape = null; window.OP.game.view3d.vm.root.position.set(0, 0, 0); const g = window.OP.game; g.player._lastActT = -99; g.combatT = 0; });
+      await step(page, 2.5);
+      await page.evaluate(() => { window.OP.key('W', true); window.OP.key('Shift', true); });
+      for (let i = 0; i < 8; i++) { await step(page, 0.1); await frames(page, 1); }
+      for (let j = 0; j < 3; j++) { await step(page, 0.12); await frames(page, 1); await snap('sprint-' + j); }
+      await page.evaluate(() => { window.OP.key('W', false); window.OP.key('Shift', false); });
+      await step(page, 1);
+      // reach out and take hold
+      await page.evaluate(() => { window.OP.game.player.reachT = 0.45; });
+      await step(page, 0.14); await frames(page, 1); await snap('reach-open');
+      await step(page, 0.16); await frames(page, 1); await snap('reach-grab');
+      // finger angles over time (they should drift a little even at rest)
+      const trace = await page.evaluate(async () => {
+        const m = window.OP.game.view3d.vm.model, out = [];
+        for (let i = 0; i < 5; i++) { window.OP.step(0.25); await new Promise((r) => requestAnimationFrame(() => r())); out.push(m.fing[0].a.map((x) => +x.toFixed(3)).join(' ')); }
+        return out;
+      });
+      console.log('index..little knuckle bends over 1s:\n' + trace.join('\n'));
+    },
+  },
+  // Your own hands in third person, close up: loose at rest, swinging on a run, fists to fight.
+  hands3p: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.env.clock = 11; g.settings.view = 'third'; g.applySettings(); document.querySelector('.look-hint')?.remove(); });
+      for (let i = 0; i < 10; i++) await step(page, 0.1);
+      // somewhere open, then the camera low and close, in front and to the right
+      await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player;
+        for (let r = 4; r < 40; r += 1) for (let k = 0; k < 24; k++) {
+          const a = k / 24 * Math.PI * 2, x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r;
+          let ok = true;
+          for (let dx = -3; dx <= 3 && ok; dx++) for (let dy = -3; dy <= 3 && ok; dy++) if (!w.walkable(x + dx, y + dy) || w.isBlocked(x + dx, y + dy) || w.hitsProp(x + dx, y + dy, 0.5)) ok = false;
+          if (ok) { window.OP.teleport(x, y); return; }
+        }
+      });
+      const cam = (yawOff) => page.evaluate((yo) => { const g = window.OP.game, r = g.view3d.rig; r.tp.dist = 2.1; r.tp.height = 0.05; r.yaw = (((g.player.facing || 0) + yo) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2); r.pitch = -0.12; }, yawOff);
+      await cam(Math.PI * 0.8);
+      for (let i = 0; i < 6; i++) { await step(page, 0.1); await frames(page, 1); }
+      await snap('idle');
+      await page.evaluate(() => window.OP.key('W', true));
+      for (let i = 0; i < 5; i++) { await step(page, 0.1); await frames(page, 1); }
+      await cam(Math.PI * 0.8);
+      await step(page, 0.05); await frames(page, 1);
+      await snap('run');
+      await page.evaluate(() => window.OP.key('W', false));
+      await step(page, 0.5);
+      await page.evaluate(() => { const g = window.OP.game; g.player.tryM1(g); });
+      await step(page, 0.6);
+      await cam(Math.PI * 0.8);
+      await step(page, 0.05); await frames(page, 1);
+      await snap('guard');
+    },
+  },
   // everyday poses in a row, facing the camera
   poses: {
     async run(page, snap, args) {

@@ -127,7 +127,9 @@ class Viewmodel {
         hF = [0.3 + 0.04 * Math.cos(ph), 0.1 + 0.03 * s]; hB = [0.3 + 0.04 * Math.cos(ph + 0.5), 0.1 + 0.03 * Math.sin(ph + 0.5)];
         spread = 0.14 + 0.07 * s;
       }
-      PP = { ...P, r: 0, hF, hB, eF: 1, eB: 1, hand: df ? 'palm' : 'flat', handB: df ? 'palm' : 'flat' };
+      // fingers together for the pull, loosening on the way back (clutching at the water, sinking)
+      const grip = df ? 'claw' : stroking && s < -0.2 ? 'relaxed' : 'flat';
+      PP = { ...P, r: 0, hF, hB, eF: 1, eB: 1, hand: grip, handB: grip };
       o.spread = spread;
     } else if (!busy) {
       const w = pose.walk || 0, sw = pose.moving ? Math.sin(w) : 0;
@@ -139,12 +141,13 @@ class Viewmodel {
         ...P,
         hF: mix2(relF, xy(P.hF, [0.05, 0.4]), k), hB: mix2(relB, xy(P.hB, [-0.03, 0.4]), k),
         eF: 1, eB: 1,
-        hand: k > 0.5 ? P.hand : q > 0.3 ? 'palm' : 'fist', handB: k > 0.5 ? P.handB : q > 0.3 ? 'palm' : 'fist',
+        hand: k > 0.5 ? P.hand : 'relaxed', handB: k > 0.5 ? P.handB : 'relaxed',
       };
       if (k > 0.5) { PP.hF = [PP.hF[0], PP.hF[1] + 0.04 * k]; PP.hB = [PP.hB[0], PP.hB[1] + 0.04 * k]; }
       o.spread = (o.spread || 0) + 0.05 * q + 0.03 * k;
     }
-    if (reach > 0) { PP = { ...PP, hF: mix2(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: 'palm' }; }
+    // reaching out to use something: the hand opens on the way out and takes hold coming back
+    if (reach > 0) { PP = { ...PP, hF: mix2(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: p.reachT > 0.22 ? 'palm' : 'grab' }; }
     // attacks aim at the crosshair: an extending hand rises toward eye level
     // (the shoulders sit well below the eye) and swings in toward the centre
     if (A) {

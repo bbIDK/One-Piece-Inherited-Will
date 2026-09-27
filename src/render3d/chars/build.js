@@ -632,13 +632,15 @@ export function geoKey(look, wpn, lod = 0) {
 }
 
 /** Build a character's geometry (not cached; see getBody). */
-export function buildBody(look, wpn, lod = 0) {
+export function buildBody(look, wpn, lod = 0, articulated = false) {
   const was = HEAD;
   HEAD = headOf(look);
-  try { return buildBody0(look, wpn, lod); } finally { HEAD = was; }
+  try { return buildBody0(look, wpn, lod, articulated); } finally { HEAD = was; }
 }
-function buildBody0(look, wpn, lod) {
-  const q = DETAIL[lod] || DETAIL[0];
+function buildBody0(look, wpn, lod, articulated) {
+  let q = DETAIL[lod] || DETAIL[0];
+  // (your own character, close up: the articulated hands of the first-person view)
+  if (articulated && lod === 0) q = { ...q, hands: 2 };
   const d = dims(look);
   const pal = palette(look);
   const b = new Builder();
@@ -705,7 +707,8 @@ function buildBody0(look, wpn, lod) {
   }
 
   // ---- hands
-  for (const [s, Hd, part] of [[1, 'R', 1], [-1, 'L', 2]]) hands(b, Hd, s, pal.hand, Bk, part, q, outfit.fem ? 0.9 : 1.12);
+  const fingers = {};
+  for (const [s, Hd, part] of [[1, 'R', 1], [-1, 'L', 2]]) fingers[Hd] = hands(b, Hd, s, pal.hand, Bk, part, q, outfit.fem ? 0.9 : 1.12);
 
   if (look.drums) {
     for (let k = 0; k < 6; k++) {
@@ -754,7 +757,7 @@ function buildBody0(look, wpn, lod) {
   }
 
   const geo = b.build();
-  return { geo, dims: d, style, meta, hatKind: kind, bubble: kind === 'bubble', lod };
+  return { geo, dims: d, style, meta, hatKind: kind, bubble: kind === 'bubble', lod, fingers: fingers.R ? fingers : null };
 }
 
 function minkEars(b, HM, look, pal, hb, q) {
@@ -780,8 +783,9 @@ function minkEars(b, HM, look, pal, hb, q) {
 
 /**
  * Hand shapes on child bones of hand R/L: fist, open palm, and the pointing
- * index finger (shown together with the fist). The viewmodel level (q.hands
- * 2) gets knuckles and separate fingers; the far level only a fist.
+ * index finger (shown together with the fist); the far level only a fist.
+ * The viewmodel level (q.hands 2) gets an articulated hand instead, and
+ * returns where its joints sit (for model.js to pose).
  */
 function hands(b, H, s, col, Bk, part, q, kMul = 1) {
   const k = (0.95 + (Bk - 1) * 0.6) * kMul;
@@ -790,29 +794,25 @@ function hands(b, H, s, col, Bk, part, q, kMul = 1) {
   const S = (x, y, z) => [x * k, y * k, z * k];
   const dark = shade(col, -0.08);
   if (q.hands === 2) {
-    // viewmodel: back of the hand, four curled fingers (knuckle row), the thumb across
-    b.add(Prim.rbox(0.42, 10, 8), M(0, -0.036 * k, 0, 0, 0, 0, S(0.027, 0.04, 0.041)), col, fist, part);
+    // viewmodel: an articulated hand — the back of the hand on the wrist bone,
+    // two segments per finger on knuckle and middle-joint bones, and a thumb
+    // (posed every frame by model.js: fists close, open hands relax and flex)
+    const hand = B['hand' + H];
+    b.add(Prim.rbox(0.4, 10, 8), M(-0.002 * k, -0.043 * k, 0, 0, 0, 0, S(0.019, 0.047, 0.043)), col, hand, part);
+    const rest = { k, th, knuckle: [], lp: [], thumb: [-0.012 * k, -0.018 * k, th * 0.03 * k], lt: 0.032 * k };
     for (let f = 0; f < 4; f++) {
-      const z = (f - 1.5) * 0.0205 * k;
-      const len = [0.95, 1, 0.97, 0.85][f];
-      b.add(tcap(0.0115 * k, 0.0105 * k, 0.034 * k * len, 8, 2), mul(M(0.012 * k, -0.074 * k, z), M(0, 0, 0, 0, 0, -Math.PI / 2 - 0.35)), f % 2 ? col : dark, fist, part);
+      // index (by the thumb) … little finger
+      const len = [0.93, 1, 0.95, 0.77][f];
+      const kn = [0, -0.083 * k * (f === 3 ? 0.95 : 1), th * (1.5 - f) * 0.0205 * k];
+      const lp = 0.036 * k * len, ld = 0.034 * k * len;
+      rest.knuckle.push(kn); rest.lp.push(lp);
+      const c = f % 2 ? col : dark;
+      b.add(tcap(0.0113 * k, 0.0105 * k, lp, 8, 2), M(), c, B['k' + (f + 1) + H], part);
+      b.add(tcap(0.0104 * k, 0.0089 * k, ld, 8, 2), M(), c, B['j' + (f + 1) + H], part);
     }
-    b.add(tcap(0.012 * k, 0.011 * k, 0.045 * k, 8, 2), mul(M(-0.02 * k, -0.045 * k, th * 0.032 * k), M(0, 0, 0, th * 1.2, 0, -0.9)), col, fist, part);
-    // knuckles along the back of the fist
-    for (let f = 0; f < 4; f++) {
-      const z = (f - 1.5) * 0.0205 * k;
-      b.add(Prim.sphere(8, 6), M(-0.006 * k, -0.078 * k, z, 0, 0, 0, S(0.012, 0.011, 0.0105)), shade(col, 0.05), fist, part);
-    }
-    // open palm: plate, four fingers, thumb out
-    b.add(Prim.rbox(0.4, 10, 8), M(0, -0.045 * k, 0, 0, 0, 0, S(0.017, 0.048, 0.044)), col, palm, part);
-    for (let f = 0; f < 4; f++) {
-      const z = (f - 1.5) * 0.021 * k;
-      const len = [0.8, 1, 0.95, 0.72][f];
-      b.add(tcap(0.0105 * k, 0.0095 * k, 0.068 * k * len, 8, 2), mul(M(0, -0.086 * k, z), M(0, 0, 0, (f - 1.5) * 0.06, 0, 0)), f % 2 ? col : dark, palm, part);
-    }
-    b.add(tcap(0.012 * k, 0.01 * k, 0.05 * k, 8, 2), mul(M(-0.006, -0.03 * k, th * 0.04 * k), M(0, 0, 0, th * 0.75, 0, 0)), col, palm, part);
-    b.add(tcap(0.0105 * k, 0.0095 * k, 0.07 * k, 8, 2), M(0.008 * k, -0.07 * k, -th * 0.03 * k), col, finger, part);
-    return;
+    b.add(tcap(0.0135 * k, 0.012 * k, rest.lt, 8, 2), M(), col, B['tb' + H], part);
+    b.add(tcap(0.0118 * k, 0.0098 * k, 0.027 * k, 8, 2), M(), dark, B['tc' + H], part);
+    return rest;
   }
   // fist: a rounded block of knuckles with the thumb wrapped over the front
   b.add(Prim.rbox(0.42, ...q.rboxS), M(0, -0.045 * k, 0, 0, 0, 0, S(0.033, 0.046, 0.043)), col, fist, part);
@@ -828,11 +828,11 @@ function hands(b, H, s, col, Bk, part, q, kMul = 1) {
 // ------------------------------------------------------------------ cache
 const BODIES = new Map();
 /** A shared built body for a look (ref-counted; call releaseBody when done). */
-export function getBody(look, wpn, lod = 0) {
-  const key = geoKey(look, wpn, lod);
+export function getBody(look, wpn, lod = 0, fingers = false) {
+  const key = geoKey(look, wpn, lod) + (fingers && lod === 0 ? '|fingers' : '');
   let e = BODIES.get(key);
   if (!e) {
-    e = { key, ...buildBody(look, wpn, lod), refs: 0 };
+    e = { key, ...buildBody(look, wpn, lod, fingers), refs: 0 };
     e.geo.userData.shared = true;
     BODIES.set(key, e);
   }

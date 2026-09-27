@@ -57577,7 +57577,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     "hairTail",
     "sheath",
     "hilts",
-    "backWpn"
+    "backWpn",
+    ...["R", "L"].flatMap((H2) => ["k1", "k2", "k3", "k4", "j1", "j2", "j3", "j4", "tb", "tc"].map((n) => n + H2))
   ];
   var B3 = Object.fromEntries(BONES.map((n, i) => [n, i]));
   var PARENT = {
@@ -57596,6 +57597,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     hilts: "hips",
     hairTail: "head"
   };
+  for (const H2 of ["R", "L"]) {
+    for (let i = 1; i <= 4; i++) {
+      PARENT["k" + i + H2] = "hand" + H2;
+      PARENT["j" + i + H2] = "k" + i + H2;
+    }
+    PARENT["tb" + H2] = "hand" + H2;
+    PARENT["tc" + H2] = "tb" + H2;
+  }
   function dims(look) {
     const fem = !!look.fem;
     const Lg = (look.legs || 1) * (fem ? 1.03 : 1), Am = (look.arms || 1) * (fem ? 0.97 : 1), Bk = look.bulk || 1;
@@ -59670,17 +59679,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       headKey(headParams(L2))
     ].join("|");
   }
-  function buildBody(look, wpn, lod = 0) {
+  function buildBody(look, wpn, lod = 0, articulated = false) {
     const was = HEAD;
     HEAD = headOf(look);
     try {
-      return buildBody0(look, wpn, lod);
+      return buildBody0(look, wpn, lod, articulated);
     } finally {
       HEAD = was;
     }
   }
-  function buildBody0(look, wpn, lod) {
-    const q2 = DETAIL[lod] || DETAIL[0];
+  function buildBody0(look, wpn, lod, articulated) {
+    let q2 = DETAIL[lod] || DETAIL[0];
+    if (articulated && lod === 0) q2 = { ...q2, hands: 2 };
     const d = dims(look);
     const pal = palette2(look);
     const b = new Builder();
@@ -59752,7 +59762,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       hh.bone = hb;
       HATS2[kind](hh, look.hatColor, look, meta.top);
     }
-    for (const [s, Hd, part5] of [[1, "R", 1], [-1, "L", 2]]) hands(b, Hd, s, pal.hand, Bk, part5, q2, outfit.fem ? 0.9 : 1.12);
+    const fingers = {};
+    for (const [s, Hd, part5] of [[1, "R", 1], [-1, "L", 2]]) fingers[Hd] = hands(b, Hd, s, pal.hand, Bk, part5, q2, outfit.fem ? 0.9 : 1.12);
     if (look.drums) {
       for (let k = 0; k < 6; k++) {
         const a = Math.PI * 0.55 + k / 5 * Math.PI * 0.9;
@@ -59796,7 +59807,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (wpn.kind === "axe") add4(Prim.box(), M(a[0] - 0.02, a[1] + 0.1, a[2] + 0.05, 0.9, 0, 0, [0.015, 0.12, 0.16]), "#cfd8dc", B3.backWpn);
     }
     const geo2 = b.build();
-    return { geo: geo2, dims: d, style, meta, hatKind: kind, bubble: kind === "bubble", lod };
+    return { geo: geo2, dims: d, style, meta, hatKind: kind, bubble: kind === "bubble", lod, fingers: fingers.R ? fingers : null };
   }
   function minkEars2(b, HM, look, pal, hb, q2) {
     const fur = pal.fur, inner = look.kind === "Panda" ? "#2b2b2b" : mixHex(fur, "#f48fb1", 0.55);
@@ -59825,26 +59836,22 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const S3 = (x, y, z) => [x * k, y * k, z * k];
     const dark = shade(col, -0.08);
     if (q2.hands === 2) {
-      b.add(Prim.rbox(0.42, 10, 8), M(0, -0.036 * k, 0, 0, 0, 0, S3(0.027, 0.04, 0.041)), col, fist, part5);
+      const hand = B3["hand" + H2];
+      b.add(Prim.rbox(0.4, 10, 8), M(-2e-3 * k, -0.043 * k, 0, 0, 0, 0, S3(0.019, 0.047, 0.043)), col, hand, part5);
+      const rest = { k, th, knuckle: [], lp: [], thumb: [-0.012 * k, -0.018 * k, th * 0.03 * k], lt: 0.032 * k };
       for (let f = 0; f < 4; f++) {
-        const z = (f - 1.5) * 0.0205 * k;
-        const len = [0.95, 1, 0.97, 0.85][f];
-        b.add(tcap(0.0115 * k, 0.0105 * k, 0.034 * k * len, 8, 2), mul(M(0.012 * k, -0.074 * k, z), M(0, 0, 0, 0, 0, -Math.PI / 2 - 0.35)), f % 2 ? col : dark, fist, part5);
+        const len = [0.93, 1, 0.95, 0.77][f];
+        const kn = [0, -0.083 * k * (f === 3 ? 0.95 : 1), th * (1.5 - f) * 0.0205 * k];
+        const lp = 0.036 * k * len, ld = 0.034 * k * len;
+        rest.knuckle.push(kn);
+        rest.lp.push(lp);
+        const c = f % 2 ? col : dark;
+        b.add(tcap(0.0113 * k, 0.0105 * k, lp, 8, 2), M(), c, B3["k" + (f + 1) + H2], part5);
+        b.add(tcap(0.0104 * k, 89e-4 * k, ld, 8, 2), M(), c, B3["j" + (f + 1) + H2], part5);
       }
-      b.add(tcap(0.012 * k, 0.011 * k, 0.045 * k, 8, 2), mul(M(-0.02 * k, -0.045 * k, th * 0.032 * k), M(0, 0, 0, th * 1.2, 0, -0.9)), col, fist, part5);
-      for (let f = 0; f < 4; f++) {
-        const z = (f - 1.5) * 0.0205 * k;
-        b.add(Prim.sphere(8, 6), M(-6e-3 * k, -0.078 * k, z, 0, 0, 0, S3(0.012, 0.011, 0.0105)), shade(col, 0.05), fist, part5);
-      }
-      b.add(Prim.rbox(0.4, 10, 8), M(0, -0.045 * k, 0, 0, 0, 0, S3(0.017, 0.048, 0.044)), col, palm, part5);
-      for (let f = 0; f < 4; f++) {
-        const z = (f - 1.5) * 0.021 * k;
-        const len = [0.8, 1, 0.95, 0.72][f];
-        b.add(tcap(0.0105 * k, 95e-4 * k, 0.068 * k * len, 8, 2), mul(M(0, -0.086 * k, z), M(0, 0, 0, (f - 1.5) * 0.06, 0, 0)), f % 2 ? col : dark, palm, part5);
-      }
-      b.add(tcap(0.012 * k, 0.01 * k, 0.05 * k, 8, 2), mul(M(-6e-3, -0.03 * k, th * 0.04 * k), M(0, 0, 0, th * 0.75, 0, 0)), col, palm, part5);
-      b.add(tcap(0.0105 * k, 95e-4 * k, 0.07 * k, 8, 2), M(8e-3 * k, -0.07 * k, -th * 0.03 * k), col, finger, part5);
-      return;
+      b.add(tcap(0.0135 * k, 0.012 * k, rest.lt, 8, 2), M(), col, B3["tb" + H2], part5);
+      b.add(tcap(0.0118 * k, 98e-4 * k, 0.027 * k, 8, 2), M(), dark, B3["tc" + H2], part5);
+      return rest;
     }
     b.add(Prim.rbox(0.42, ...q2.rboxS), M(0, -0.045 * k, 0, 0, 0, 0, S3(0.033, 0.046, 0.043)), col, fist, part5);
     b.add(Prim.sphere(q2.sph[0], q2.sph[1]), M(-0.012 * k, -0.055 * k, th * 0.036 * k, 0, 0, 0, S3(0.016, 0.03, 0.016)), dark, fist, part5);
@@ -59854,11 +59861,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     b.add(tcap(0.011 * k, 9e-3 * k, 0.05 * k, 5, 1), mul(M(-4e-3, -0.03 * k, th * 0.04 * k), M(0, 0, 0, th * 0.7, 0, 0)), col, palm, part5);
   }
   var BODIES = /* @__PURE__ */ new Map();
-  function getBody(look, wpn, lod = 0) {
-    const key2 = geoKey(look, wpn, lod);
+  function getBody(look, wpn, lod = 0, fingers = false) {
+    const key2 = geoKey(look, wpn, lod) + (fingers && lod === 0 ? "|fingers" : "");
     let e = BODIES.get(key2);
     if (!e) {
-      e = { key: key2, ...buildBody(look, wpn, lod), refs: 0 };
+      e = { key: key2, ...buildBody(look, wpn, lod, fingers), refs: 0 };
       e.geo.userData.shared = true;
       BODIES.set(key2, e);
     }
@@ -60282,17 +60289,30 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var AZ = new Vector3(0, 0, 1);
   var LIMBS = [B3.uarmR, B3.farmR, B3.uarmL, B3.farmL, B3.thighR, B3.shinR, B3.thighL, B3.shinL];
   var SHAPES = ["fist", "palm", "finger"];
+  var GRIPS = {
+    fist: { a: [1.5, 1.56, 1.6, 1.62], b: [1.72, 1.76, 1.76, 1.7], sp: 0, th: 1 },
+    grip: { a: [1.3, 1.38, 1.46, 1.52], b: [1.45, 1.52, 1.56, 1.56], sp: 0, th: 0.85 },
+    grab: { a: [0.72, 0.82, 0.9, 0.98], b: [0.95, 1.05, 1.12, 1.15], sp: 0.25, th: 0.65 },
+    relaxed: { a: [0.3, 0.4, 0.5, 0.62], b: [0.4, 0.5, 0.6, 0.72], sp: 0.35, th: 0.3 },
+    palm: { a: [0.06, 0.08, 0.1, 0.14], b: [0.08, 0.1, 0.13, 0.17], sp: 1, th: 0 },
+    flat: { a: [0.04, 0.04, 0.05, 0.06], b: [0.05, 0.05, 0.06, 0.08], sp: 0, th: 0.2 },
+    claw: { a: [0.35, 0.3, 0.3, 0.36], b: [1.1, 1.15, 1.15, 1.1], sp: 0.9, th: 0.35 },
+    finger: { a: [0.04, 1.5, 1.56, 1.6], b: [0.05, 1.72, 1.76, 1.7], sp: 0, th: 0.9 }
+  };
+  var _t1 = new Vector3();
+  var _t22 = new Vector3();
+  var DOWN = new Vector3(0, -1, 0);
   var CharacterModel = class {
     /**
      * look: the (effective) look; wpn: { kind, count, gun } or null.
-     * opts: { viewmodel, outline (material), fog }
+     * opts: { viewmodel, outline (material), fog, fingers (articulated hands up close) }
      */
     constructor(look, wpn, opts = {}) {
       this.look = look;
       this.wpn = wpn;
       this.opts = opts;
       this.lod = opts.lod ?? 0;
-      this.body = getBody(look, wpn, this.lod);
+      this.body = getBody(look, wpn, this.lod, !!opts.fingers);
       this.d = this.body.dims;
       this.rig = new Rig(this.d);
       this.group = new Group();
@@ -60318,6 +60338,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.bones[B3.tail].position.set(-0.13 * d.Bk, -0.06, 0);
       this.bones[B3.wingR].position.set(-0.11 * d.Bk, d.chestLen * 0.8, 0.05);
       this.bones[B3.wingL].position.set(-0.11 * d.Bk, d.chestLen * 0.8, -0.05);
+      this.restFingers();
       this.face = new Mesh(faceGeo(look, this.lod === 0 ? "near" : "far"), void 0);
       this.face.position.set(d.hx, d.hc, 0);
       this.face.scale.setScalar(d.headR);
@@ -60337,15 +60358,76 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.t = 0;
       this.visibleParts = null;
     }
+    /** Put the finger joints where this body's hands have them (articulated hands only). */
+    restFingers() {
+      const F4 = this.body.fingers;
+      this.fing = null;
+      if (!F4) return;
+      this.fing = [0, 1].map(() => ({ a: [0.3, 0.4, 0.5, 0.6], b: [0.4, 0.5, 0.6, 0.7], sp: 0.35, th: 0.3, lag: 0, prev: new Vector3(), t: -1 }));
+      for (const H2 of ["R", "L"]) {
+        const r = F4[H2];
+        for (let i = 0; i < 4; i++) {
+          this.bones[B3["k" + (i + 1) + H2]].position.set(...r.knuckle[i]);
+          this.bones[B3["j" + (i + 1) + H2]].position.set(0, -r.lp[i], 0);
+        }
+        this.bones[B3["tb" + H2]].position.set(...r.thumb);
+        this.bones[B3["tc" + H2]].position.set(0, -r.lt, 0);
+      }
+    }
+    /**
+     * Bend the fingers of an articulated hand toward its shape — easing there
+     * rather than snapping (fists close fast, hands open slower) — with a little
+     * life on top: each finger drifting on its own, and loose fingers lagging
+     * as the hand swings.
+     */
+    poseFingers(k, shape, t) {
+      const F4 = this.fing[k], G3 = GRIPS[shape] || GRIPS.relaxed;
+      const H2 = k === 0 ? "R" : "L", r = this.body.fingers[H2], th = r.th, bones2 = this.bones;
+      const first = F4.t < 0;
+      const dt = first ? 1 : Math.min(0.1, Math.max(0, t - F4.t));
+      F4.t = t;
+      const E = this.rig.E[k];
+      if (!first && dt > 0) {
+        _t1.subVectors(E, F4.prev).divideScalar(Math.max(dt, 1e-3));
+        _t22.set(-1, 0, 0).applyQuaternion(this.rig.quat[k === 0 ? B3.handR : B3.handL]);
+        const drag = Math.max(-0.45, Math.min(0.45, -_t1.dot(_t22) * 0.09));
+        F4.lag += (drag - F4.lag) * Math.min(1, dt * 9);
+      }
+      F4.prev.copy(E);
+      const closing = G3.a[1] > F4.a[1];
+      const ease = Math.min(1, dt * (closing ? 16 : 9));
+      const loose = 1 - Math.min(1, G3.a[1] / 1.3);
+      for (let i = 0; i < 4; i++) {
+        const n = Math.sin(t * 1.3 + i * 1.9 + k * 2.3) * 0.6 + Math.sin(t * 0.71 + i * 2.7 + k) * 0.4;
+        const life2 = n * (0.03 + 0.07 * loose) + F4.lag * loose * (0.75 + i * 0.12);
+        F4.a[i] += (G3.a[i] + life2 - F4.a[i]) * ease;
+        F4.b[i] += (G3.b[i] + life2 * 1.25 - F4.b[i]) * ease;
+        const splay = -th * (1.5 - i) * 0.075 * F4.sp;
+        bones2[B3["k" + (i + 1) + H2]].quaternion.setFromAxisAngle(AX, splay).multiply(_q3.setFromAxisAngle(AZ, -Math.max(-0.25, F4.a[i])));
+        bones2[B3["j" + (i + 1) + H2]].quaternion.setFromAxisAngle(AZ, -Math.max(-0.1, F4.b[i]));
+      }
+      F4.sp += (G3.sp - F4.sp) * ease;
+      F4.th += (G3.th + Math.sin(t * 0.9 + k) * 0.04 * loose - F4.th) * ease;
+      const c = Math.max(0, Math.min(1, F4.th));
+      _t1.set(-0.22, -0.72, th * 0.66).normalize();
+      _t22.set(-0.9, -0.3, -th * 0.32).normalize();
+      _t1.lerp(_t22, c).normalize();
+      const tb = bones2[B3["tb" + H2]], tc = bones2[B3["tc" + H2]];
+      tb.quaternion.setFromUnitVectors(DOWN, _t1);
+      _t22.set(-1, 0, 0).multiplyScalar(0.25 + c * 0.9).add(_t1).normalize();
+      _q22.copy(tb.quaternion).invert();
+      tc.quaternion.setFromUnitVectors(DOWN, _t22).premultiply(_q22);
+    }
     /** Switch detail level (near / far): same skeleton, another shared geometry. */
     setLod(lod) {
       if (lod === this.lod) return;
-      const nb = getBody(this.look, this.wpn, lod);
+      const nb = getBody(this.look, this.wpn, lod, !!this.opts.fingers);
       releaseBody(this.body);
       this.body = nb;
       this.lod = lod;
       this.mesh.geometry = nb.geo;
       this.outline.geometry = nb.geo;
+      this.restFingers();
       this.face.geometry = faceGeo(this.look, lod === 0 ? "near" : "far");
     }
     /** Swap the face texture for this frame's expression. */
@@ -60379,7 +60461,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         let s = this.shape[k];
         if (armed && (k === 0 || o.wpn.kind === "sword" && (o.wpn.count || 1) >= 2)) s = "fist";
         if (k === 0 && o.blade || k === 1 && o.bladeB) s = "fist";
-        if (s === "claw" || s === "flat") s = "palm";
+        if (this.fing) {
+          if (s === "fist") s = armed || k === 0 && o.prop ? "grip" : o.relaxHands ? "relaxed" : "fist";
+          this.shape[k] = s;
+          continue;
+        }
+        if (s === "claw" || s === "flat" || s === "relaxed" || s === "grab") s = s === "grab" ? "fist" : "palm";
         const H2 = k === 0 ? "R" : "L";
         for (const sh of SHAPES) this.showBone(B3[sh + H2], sh === s);
       }
@@ -60389,6 +60476,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       for (const i of LIMBS) bones2[i].scale.set(1, rig.len[i], 1);
       if (this.visibleParts) for (const [i, on] of this.visibleParts) this.showBone(i, on);
+      if (this.fing) for (let k = 0; k < 2; k++) this.poseFingers(k, this.shape[k], t);
       const lean = (P4.l || 0) + (o.leanAdd || 0);
       const flow = o.flow || 0;
       bones2[B3.coatTail].quaternion.setFromAxisAngle(AZ, lean * 0.85 - flow - 0.04 + Math.sin(t * 2.1) * 0.02);
@@ -61194,6 +61282,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (pose.activity === "lean") o.spread = -0.17;
     o.seatH = pose.activity === "sit" || pose.activity === "fish" ? pose.seatH || 0 : null;
     o.prop = pose.prop || null;
+    o.relaxHands = !A && !pose.combat && !pose.armed && pose.block === void 0 && pose.dodge === void 0 && pose.state !== "hurt";
     return o;
   }
 
@@ -61312,7 +61401,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           hB = [0.3 + 0.04 * Math.cos(ph + 0.5), 0.1 + 0.03 * Math.sin(ph + 0.5)];
           spread = 0.14 + 0.07 * s;
         }
-        PP = { ...P4, r: 0, hF, hB, eF: 1, eB: 1, hand: df ? "palm" : "flat", handB: df ? "palm" : "flat" };
+        const grip = df ? "claw" : stroking && s < -0.2 ? "relaxed" : "flat";
+        PP = { ...P4, r: 0, hF, hB, eF: 1, eB: 1, hand: grip, handB: grip };
         o.spread = spread;
       } else if (!busy) {
         const w = pose.walk || 0, sw2 = pose.moving ? Math.sin(w) : 0;
@@ -61325,8 +61415,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           hB: mix22(relB, xy(P4.hB, [-0.03, 0.4]), k),
           eF: 1,
           eB: 1,
-          hand: k > 0.5 ? P4.hand : q2 > 0.3 ? "palm" : "fist",
-          handB: k > 0.5 ? P4.handB : q2 > 0.3 ? "palm" : "fist"
+          hand: k > 0.5 ? P4.hand : "relaxed",
+          handB: k > 0.5 ? P4.handB : "relaxed"
         };
         if (k > 0.5) {
           PP.hF = [PP.hF[0], PP.hF[1] + 0.04 * k];
@@ -61335,7 +61425,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         o.spread = (o.spread || 0) + 0.05 * q2 + 0.03 * k;
       }
       if (reach > 0) {
-        PP = { ...PP, hF: mix22(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: "palm" };
+        PP = { ...PP, hF: mix22(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: p.reachT > 0.22 ? "palm" : "grab" };
       }
       if (A) {
         const lift = (h2) => h2 ? [h2[0], h2[1] - 0.17 * clamp5(h2[0] / 0.43, 0, 1)] : h2;
@@ -61471,7 +61561,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.root = new Group();
       this.yaw = new Group();
       this.root.add(this.yaw);
-      this.model = new CharacterModel(this.look, this.wpn);
+      this.model = new CharacterModel(this.look, this.wpn, { fingers: !!a.isPlayer });
       this.yaw.add(this.model.group);
       this.o = {};
       this.label = null;
