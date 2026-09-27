@@ -115,6 +115,7 @@ export class Rig {
 
     // arms
     const tiltA = o.tilt || 0;
+    const broom = o.prop === 'broom';
     for (let k = 0; k < 2; k++) {
       const side = k === 0 ? 1 : -1;
       const h = k === 0 ? hF : hB;
@@ -123,7 +124,10 @@ export class Rig {
       const T = this._T;
       const reach = k === 0 ? o.reachR : o.reachL;
       if (reach) T.copy(reach);
-      else {
+      else if (k === 1 && broom) {
+        // the other hand up the broom's handle
+        T.copy(this.E[0]).addScaledVector(this.blade[0], -0.42);
+      } else {
         const hx = h[0], hy = h[1];
         const fwdK = clamp(hx / 0.43, 0, 1);
         const restK = clamp(1 - hx / 0.2, 0, 1) * clamp(hy / 0.3, 0, 1);
@@ -168,6 +172,18 @@ export class Rig {
         this.blade[k].copy(_u);
         this.plane[k].copy(this._pole).cross(_u).normalize();
         this.bladeOn[k] = false;
+      }
+      if (k === 0 && broom) {
+        // a broom reaches from the hand down to the ground in front, however
+        // long the arms (the pose's angle is right for ordinary arms: long
+        // ones hold it lower and would drive it into the ground), its head
+        // swept in toward the middle
+        const L = 1.08, drop = clamp(E.y - 0.03, 0.2, L * 0.97);
+        const dz = (0 - E.z) * 0.6;
+        const hx = Math.sqrt(Math.max(0.01, L * L - drop * drop - dz * dz));
+        this.blade[0].set(hx, -drop, dz).normalize();
+        this.plane[0].set(0, 0, 1).addScaledVector(this.blade[0], -this.blade[0].z).normalize();
+        this.bladeOn[0] = true;
       }
     }
 

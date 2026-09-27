@@ -34799,6 +34799,26 @@ void main() {
       return h2 + f.h;
     }
     /**
+     * Where a small prop of footprint radius r stands at (x, y): on the land,
+     * the lowest ground round its foot, so on a slope or a bump it sinks a
+     * little into the high side rather than floating off the low one (its
+     * base is hidden in the ground either way); on a pier, a deck or a wall
+     * top, that surface.
+     */
+    rest(x, y, r) {
+      const w = this.world, t = w.type(x, y);
+      const g = this.ground(x, y);
+      if (!(r > 0.2) || OVERLAY[t] || IS_LIQUID[t] || t === T.WALL || w.quays.size && w.isQuay(x, y) || w.floorRec?.(x, y)) return g;
+      let lo = g;
+      for (let k = 0; k < 8; k++) {
+        const a = k / 8 * Math.PI * 2, px2 = x + Math.cos(a) * r, py2 = y + Math.sin(a) * r;
+        const tt = w.type(px2, py2);
+        if (OVERLAY[tt] || IS_LIQUID[tt] || tt === T.WALL || w.floorRec?.(px2, py2)) continue;
+        lo = Math.min(lo, this.terrain(px2, py2));
+      }
+      return Math.max(lo, g - 0.5);
+    }
+    /**
      * The ground floor of an enterable building (absolute): a step up from the
      * street in front, and always over the ground inside the walls.
      */
@@ -55938,11 +55958,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(box(4.6, 2.6, 0.08), { at: [0, 1, -1.55], color: "#5d1a1a" });
     for (let i = 0; i < 4; i++) k.add(box(1.2, 0.14, 0.34), { at: [0, i * 0.24 - 0.1, 1.8 + (3 - i) * 0.3], color: "#6d4c33" });
   });
-  reg2("platform", (o) => {
+  reg2("platform", (o, ctx) => {
     const root2 = group("platform");
+    const body = new Group();
+    root2.add(body);
     const n = o.name || "";
-    add(root2, /ring/i.test(n) ? ringGeo() : /stage|carnival/i.test(n) ? stageGeo() : scaffoldGeo());
-    if (o.s && o.s !== 1) root2.scale.setScalar(o.s);
+    add(body, /ring/i.test(n) ? ringGeo() : /stage|carnival/i.test(n) ? stageGeo() : scaffoldGeo());
+    if (o.s && o.s !== 1) body.scale.setScalar(o.s);
+    body.position.y = ctx.terrain(o.x, o.y);
+    root2.userData.noGround = true;
     return root2;
   });
   var bellGeo = (big) => model("bell:" + big, (k) => {
@@ -56130,15 +56154,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (let i = 0; i < NU; i++) {
       for (let j = 0; j < NV; j++) {
         const a = ring4[i] + j, b = ring4[i] + (j + 1) % NV, c = ring4[i + 1] + j, d = ring4[i + 1] + (j + 1) % NV;
-        idx.push(a, b, c, b, d, c);
+        idx.push(a, c, b, b, c, d);
       }
     }
     const front = pos.length / 3;
     pos.push(LB.X0 - 3.2, lbCurve(0, LB_Y), 0);
-    for (let j = 0; j < NV; j++) idx.push(front, ring4[0] + (j + 1) % NV, ring4[0] + j);
+    for (let j = 0; j < NV; j++) idx.push(front, ring4[0] + j, ring4[0] + (j + 1) % NV);
     const back = pos.length / 3;
     pos.push(lbX(1) + 1.5, lbCurve(1, LB_Y), 0);
-    for (let j = 0; j < NV; j++) idx.push(back, ring4[NU] + j, ring4[NU] + (j + 1) % NV);
+    for (let j = 0; j < NV; j++) idx.push(back, ring4[NU] + (j + 1) % NV, ring4[NU] + j);
     const g = new BufferGeometry();
     g.setAttribute("position", new Float32BufferAttribute(pos, 3));
     g.setIndex(idx);
@@ -62689,6 +62713,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.quat[B3.head].copy(this.qHead);
       this.headC.set(d.hx || 0, d.hc, 0).applyQuaternion(this.qHead).add(this.neck);
       const tiltA = o.tilt || 0;
+      const broom = o.prop === "broom";
       for (let k = 0; k < 2; k++) {
         const side = k === 0 ? 1 : -1;
         const h2 = k === 0 ? hF : hB;
@@ -62697,7 +62722,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const T4 = this._T;
         const reach = k === 0 ? o.reachR : o.reachL;
         if (reach) T4.copy(reach);
-        else {
+        else if (k === 1 && broom) {
+          T4.copy(this.E[0]).addScaledVector(this.blade[0], -0.42);
+        } else {
           const hx = h2[0], hy = h2[1];
           const fwdK = clamp4(hx / 0.43, 0, 1);
           const restK = clamp4(1 - hx / 0.2, 0, 1) * clamp4(hy / 0.3, 0, 1);
@@ -62744,6 +62771,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           this.blade[k].copy(_u);
           this.plane[k].copy(this._pole).cross(_u).normalize();
           this.bladeOn[k] = false;
+        }
+        if (k === 0 && broom) {
+          const L2 = 1.08, drop = clamp4(E.y - 0.03, 0.2, L2 * 0.97);
+          const dz = (0 - E.z) * 0.6;
+          const hx = Math.sqrt(Math.max(0.01, L2 * L2 - drop * drop - dz * dz));
+          this.blade[0].set(hx, -drop, dz).normalize();
+          this.plane[0].set(0, 0, 1).addScaledVector(this.blade[0], -this.blade[0].z).normalize();
+          this.bladeOn[0] = true;
         }
       }
       const walk = o.walkRel;
@@ -69260,9 +69295,36 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var YARD = -3;
   var NOPE = -4;
   function generateTown(world, town, rng4, noise) {
+    let w = Math.max(10, Math.round(town.w)), h2 = Math.max(8, Math.round(town.h));
+    if (town.houses != null) ({ w, h: h2 } = fitTown(world, town, rng4, noise, w, h2));
+    return layTown(world, { ...town, w, h: h2 }, rng4, noise, false);
+  }
+  function fitTown(world, town, rng4, noise, w, h2) {
+    const S3 = TOWN_STYLES[town.style] || TOWN_STYLES.village;
+    const big = !!S3.big, terraced = TERRACED.has(town.style) && !big;
+    let need = 0;
+    for (const spec of town.buildings || []) {
+      const [dw, dd] = ROLE_SIZES[spec.role] || [6, 5];
+      need += ((spec.w ?? dw) + (big ? 4 : 1)) * ((spec.d ?? dd) + (big ? 5 : 2));
+    }
+    need += town.houses * (big ? 12 * 13 : terraced ? 5.5 * 7 : 9 * 8);
+    if (town.plaza !== false) need += (2 * (town.plazaR ?? 4) + 3) ** 2;
+    const k = Math.min(1, Math.sqrt(need / 0.6 / (w * h2)));
+    let fw = Math.max(Math.min(w, 22), Math.round(w * k)), fh = Math.max(Math.min(h2, 16), Math.round(h2 * k));
+    for (let i = 0; i < 12 && (fw < w || fh < h2); i++) {
+      const dice = new RNG(1);
+      dice.s = rng4.s;
+      const plan = layTown(world, { ...town, w: fw, h: fh }, dice, noise, true);
+      if (!plan.missing && plan.houses >= Math.floor(plan.wanted * 0.9)) break;
+      fw = Math.min(w, Math.round(fw * 1.1) + 1);
+      fh = Math.min(h2, Math.round(fh * 1.1) + 1);
+    }
+    return { w: fw, h: fh };
+  }
+  function layTown(world, town, rng4, noise, dry) {
     const S3 = TOWN_STYLES[town.style] || TOWN_STYLES.village;
     const cx = town.x, cy = town.y;
-    const w = Math.max(10, Math.round(town.w)), h2 = Math.max(8, Math.round(town.h));
+    const w = town.w, h2 = town.h;
     const x0 = Math.round(cx - w / 2), y0 = Math.round(cy - h2 / 2);
     const x1 = x0 + w, y1 = y0 + h2;
     const roadTile = town.road ?? S3.road;
@@ -69276,12 +69338,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const t = world.type(x, y);
       return !IS_LIQUID[t] && WALKABLE[t] && !OVERLAY[t];
     };
-    if (groundTile != null) {
+    const bare = groundTile != null && !dry ? new Int16Array(w * h2).fill(-1) : null;
+    if (bare) {
       for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
         if (!okLand(x, y)) continue;
         const ex = (x - cx) / (w / 2), ey = (y - cy) / (h2 / 2);
         const v = 1.08 - Math.max(Math.abs(ex), Math.abs(ey)) + noise.noise2(x * 0.2, y * 0.2) * 0.08;
-        if (v > 0) world.setType(x, y, groundTile);
+        if (v > 0) {
+          bare[(y - y0) * w + (x - x0)] = world.type(x, y);
+          world.setType(x, y, groundTile);
+        }
       }
     }
     const M2 = 3, GX = x0 - M2, GY = y0 - M2, GW = w + 2 * M2, GH = h2 + 2 * M2;
@@ -69305,7 +69371,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (!okLand(x, y)) continue;
         const o = occAt(x, y);
         if (o === SQUARE) continue;
-        world.setType(x, y, tile);
+        if (!dry) world.setType(x, y, tile);
         setOcc(x, y, kind);
       }
     };
@@ -69337,7 +69403,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (let y = sq.y0; y <= sq.y1; y++) for (let x = sq.x0; x <= sq.x1; x++) {
         const cut3 = (x === sq.x0 || x === sq.x1) && (y === sq.y0 || y === sq.y1);
         if (cut3 || !okLand(x, y)) continue;
-        world.setType(x, y, plazaTile);
+        if (!dry) world.setType(x, y, plazaTile);
         setOcc(x, y, SQUARE);
       }
     }
@@ -69391,14 +69457,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (let x = x0 - 1; x <= x1; x++) for (const y of [y0 - 1, y1]) {
         if (gate(x, y) || gate(x, y + (y < y0 ? 1 : -1))) continue;
         if (okLand(x, y)) {
-          world.setType(x, y, T.WALL);
+          if (!dry) world.setType(x, y, T.WALL);
           setOcc(x, y, NOPE);
         }
       }
       for (let y = y0 - 1; y <= y1; y++) for (const x of [x0 - 1, x1]) {
         if (gate(x, y) || gate(x + (x < x0 ? 1 : -1), y)) continue;
         if (okLand(x, y)) {
-          world.setType(x, y, T.WALL);
+          if (!dry) world.setType(x, y, T.WALL);
           setOcc(x, y, NOPE);
         }
       }
@@ -69458,6 +69524,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const colors = { wall: spec.wall || rng4.pick(S3.walls), roof: spec.roof || rng4.pick(S3.roofs) };
       const role = spec.role;
       const tall = S3.tall ? rng4.int(3, 5) : terraced ? rng4.pick([3, 3, 3, 4]) : rng4.chance(0.35) ? 3 : 2;
+      if (dry) {
+        const b2 = { x: q2.x, y: q2.y, rot: run.rot, fw, fd, role, name: spec.name };
+        b2.door = bw(b2, doorX, 0.5);
+        buildings.push(b2);
+        const id2 = buildings.length;
+        for (let y = q2.fy0; y < q2.fy1; y++) for (let x = q2.fx0; x < q2.fx1; x++) setOcc(x, y, id2);
+        return b2;
+      }
       const b = placeObject(world, {
         kind: "building",
         style: spec.style || town.style || "village",
@@ -69499,6 +69573,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return b;
     };
     const specials = (town.buildings || []).slice();
+    let missing = 0;
     for (const spec of specials) {
       const [dw, dd] = ROLE_SIZES[spec.role] || [6, 5];
       const fw = spec.w ?? (big ? dw + 3 : dw), want = spec.d ?? (big ? dd + 3 : dd);
@@ -69511,11 +69586,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
       }
       cands.sort((p, q2) => p.d - q2.d);
+      let ok = false;
       for (const c of cands) {
         const fd = depthFor(c.run, c.s, fw, sb, want, 0);
         if (fd < Math.min(want, Math.max(4, want - 2))) continue;
-        if (place(c.run, c.s, fw, fd, sb, spec)) break;
+        if (place(c.run, c.s, fw, fd, sb, spec)) {
+          ok = true;
+          break;
+        }
       }
+      if (!ok) missing++;
     }
     let houses = 0;
     const order = runs.map((run) => ({ run, d: run.rank * 30 + distToSquare(...(() => {
@@ -69548,6 +69628,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         } else s += fromStart ? 1 : -1;
       }
     }
+    if (dry) return { missing, houses, wanted: houseCount };
     for (const b of buildings) {
       const fw = b.fw, fd = b.fd;
       b.attach = {};
@@ -69622,6 +69703,34 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (clearAt(px2, py2, 1.1)) placeObject(world, { kind: "bench", x: px2, y: py2, block: true });
       }
     }
+    if (bare) {
+      const PAVE = 4, dist = new Uint8Array(w * h2).fill(255), q2 = [];
+      for (let j = 0; j < h2; j++) for (let i = 0; i < w; i++) {
+        const o = occAt(x0 + i, y0 + j);
+        if (o > 0 || o === STREET || o === SQUARE || o === YARD) {
+          dist[j * w + i] = 0;
+          q2.push(j * w + i);
+        }
+      }
+      for (let k = 0; k < q2.length; k++) {
+        const c = q2[k], i = c % w, j = c / w | 0, d = dist[c] + 1;
+        if (d > PAVE) continue;
+        for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+          const ii = i + di, jj = j + dj;
+          if (ii < 0 || jj < 0 || ii >= w || jj >= h2) continue;
+          const n = jj * w + ii;
+          if (dist[n] > d) {
+            dist[n] = d;
+            q2.push(n);
+          }
+        }
+      }
+      for (let j = 0; j < h2; j++) for (let i = 0; i < w; i++) {
+        const k = j * w + i;
+        if (dist[k] <= PAVE || bare[k] < 0 || world.type(x0 + i, y0 + j) !== groundTile) continue;
+        world.setType(x0 + i, y0 + j, bare[k]);
+      }
+    }
     const npcSpots = [];
     for (const b of buildings) npcSpots.push({ ...bw(b, (b.doorX || 0) + (b.fw >= 5 ? 1.6 : 1.25), 1.3), building: b });
     const streetSpots = [];
@@ -69630,8 +69739,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const len = ax ? st.x1 - st.x0 + 1 : st.y1 - st.y0 + 1;
       for (let i = 1; i < len - 1; i += 3) {
         const x = ax ? st.x0 + i + 0.5 : (st.x0 + st.x1 + 1) / 2, y = ax ? (st.y0 + st.y1 + 1) / 2 : st.y0 + i + 0.5;
+        const across2 = ax ? [st.y0, st.y1 + 1] : [st.x0, st.x1 + 1];
         if (okLand(x, y)) {
-          streetSpots.push({ x, y });
+          streetSpots.push({ x, y, ax, across: across2 });
           if (i % 6 === 1) npcSpots.push({ x, y });
         }
       }
@@ -69875,11 +69985,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         rec.docks.push(dock);
       }
     }
+    rec.clearings = [];
     for (const lm of def.landmarks || []) {
       const c = P4(lm);
       const o = { ...lm, x: c.x, y: c.y, kind: lm.kind || lm.type };
       delete o.dx;
       delete o.dy;
+      settleLandmark(world, rec, o, ground);
       if (o.block === void 0) o.block = true;
       if (o.kind === "building" && o.role && !o.door) o.door = bw(o, 0, 0.5);
       if (o.lore && !o.interact) {
@@ -69899,17 +70011,82 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       placeObject(world, o);
       rec.landmarks.push(o);
-      if (lm.spot) rec.spots[lm.spot] = { x: c.x, y: c.y + 1.2 };
+      if (lm.spot) rec.spots[lm.spot] = { x: o.x, y: o.y + 1.2 };
     }
     for (const s of def.spots || []) {
       const c = P4(s);
       rec.spots[s.id] = { x: c.x, y: c.y, ...s, dx: void 0, dy: void 0 };
     }
+    def._clearings = rec.clearings;
     const treeKinds = def.treeKind ? [def.treeKind] : def.trees || preset.trees;
     const density = def.treeDensity ?? preset.density;
     populateVegetation(world, rng4, x0, y0, LW2, LH, L2, li, treeKinds, density, def);
+    delete def._clearings;
     return rec;
   }
+  var SHORE_KINDS = /* @__PURE__ */ new Set(["boat", "shipwreck", "anchor", "bubble", "mooring", "buoy", "rapids", "geyser"]);
+  function settleLandmark(world, rec, o, ground) {
+    const s = o.s || 1, c = COLLIDE[o.kind];
+    const r = o.kind === "building" ? Math.hypot(o.fw || 4, o.fd || 4) / 2 + 0.5 : Array.isArray(c) ? Math.hypot(c[0], c[1]) * s + 0.4 : typeof c === "number" && c > 0 ? c * s + 0.4 : Math.max(1, Math.max(o.fw || 1, o.fd || 1) / 2 + 0.4);
+    const shore = SHORE_KINDS.has(o.kind) || o.water;
+    const tiles = (x, y, R4, fn) => {
+      for (let ty = Math.floor(y - R4); ty <= Math.floor(y + R4); ty++) {
+        for (let tx = Math.floor(x - R4); tx <= Math.floor(x + R4); tx++) {
+          const nx = Math.max(tx, Math.min(x, tx + 1)), ny = Math.max(ty, Math.min(y, ty + 1));
+          if ((nx - x) ** 2 + (ny - y) ** 2 <= R4 * R4 && fn(tx, ty)) return true;
+        }
+      }
+      return false;
+    };
+    const wet = (x, y) => tiles(x, y, r, (tx, ty) => !shore && world.isLiquid(tx, ty) || world.isBlocked(tx, ty));
+    const LIFT2 = { [T.MOUNTAIN]: 7, [T.CLIFF]: 4, [T.SNOWROCK]: 9, [T.RED_ROCK]: 40 };
+    const steep = (x, y) => {
+      let lo = Infinity, hi = -Infinity;
+      tiles(x, y, r + 1.2, (tx, ty) => {
+        const t = world.type(tx, ty);
+        if (IS_LIQUID[t] || OVERLAY[t]) return false;
+        const h2 = world.elev(tx, ty) * 0.075 + (LIFT2[t] || 0);
+        if (h2 < lo) lo = h2;
+        if (h2 > hi) hi = h2;
+        return false;
+      });
+      return hi - lo > 2.5;
+    };
+    const bad = (x, y) => wet(x, y) || !o.cliff && steep(x, y);
+    if (bad(o.x, o.y)) {
+      const toward = Math.atan2(rec.y - o.y, world.dx(o.x, rec.x));
+      let best = null;
+      for (let d = 1; d <= 24 && !best; d += 1) {
+        for (let k = 0; k < 16 && !best; k++) {
+          const a = toward + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (Math.PI / 8);
+          const x = o.x + Math.cos(a) * d, y = o.y + Math.sin(a) * d;
+          if (!bad(x, y) && (shore || !world.isLiquid(x, y))) best = { x, y };
+        }
+      }
+      if (best) {
+        o.x = world.wx(best.x);
+        o.y = best.y;
+        if (o.kind === "building" && o.role) o.door = bw(o, 0, 0.5);
+      }
+    }
+    const e0 = world.elev(Math.floor(o.x), Math.floor(o.y));
+    const R3 = r + 2.5;
+    for (let y = Math.floor(o.y - R3); y <= Math.ceil(o.y + R3); y++) {
+      for (let x = Math.floor(o.x - R3); x <= Math.ceil(o.x + R3); x++) {
+        const t = world.type(x, y);
+        if (IS_LIQUID[t] || OVERLAY[t] || MANMADE[t] || world.isBlocked(x, y)) continue;
+        if (!WALKABLE[t] && !RAISED_GROUND.has(t) && t !== T.MOUNTAIN && t !== T.CLIFF) continue;
+        const d = Math.hypot(x + 0.5 - o.x, y + 0.5 - o.y);
+        if (d > R3) continue;
+        const k = d <= r ? 1 : 1 - (d - r) / (R3 - r);
+        const e = world.elev(x, y);
+        if (d <= r && RAISED_GROUND.has(t)) world.setTile(x, y, ground, Math.round(e0));
+        else world.setElev(x, y, Math.round(e + (e0 - e) * k));
+      }
+    }
+    rec.clearings.push({ x: o.x, y: o.y, r: r + 1.2 });
+  }
+  var RAISED_GROUND = new Set([T.ROCK, T.FOREST, T.JUNGLE].filter((t) => t !== void 0));
   function coarseField(fn, x0, y0, w, h2) {
     const GW = (w >> 1) + 2, GH = (h2 >> 1) + 2;
     const g = new Float32Array(GW * GH).fill(NaN);
@@ -70244,6 +70421,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (world.elev(x, y) > 200) continue;
         if (world.isBlocked(x, y) || world.hitsProp(x + 0.5, y + 0.5, 1.1)) continue;
         if (world.floors.size && nearFloor(world, x + 0.5, y + 0.8, 3)) continue;
+        if (def._clearings?.some((c) => Math.hypot(x + 0.5 - c.x, y + 0.5 - c.y) < c.r)) continue;
         if (world.hitsProp(x + 0.5, y + 1, 1.2) || world.isBlocked(x - 1, y) || world.isBlocked(x, y - 1) || world.isBlocked(x + 1, y) || world.isBlocked(x, y + 1)) {
           if (rng4.next() < 0.7) continue;
         }
@@ -70573,7 +70751,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         { role: "house", name: "Celestial Dragons' Mansion" },
         { role: "church", name: "Chapel of the First Twenty" }
       ],
-      houses: 3
+      houses: 8
     }]
   };
   function buildMaryGeoise(world, rng4) {
@@ -71406,7 +71584,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           { role: "shop", name: "Rag-and-Bone Shop" },
           { role: "library", name: "Old Newspaper Shack" }
         ],
-        houses: 6
+        houses: 10
       }],
       landmarks: [
         { kind: "ruins", dx: 0.35, dy: -0.3, name: "The shack by the garbage heap", spot: "kings_heap" },
@@ -71941,7 +72119,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           { role: "shop", name: "Kuen Trading Post", shop: "nb_kuen_post" },
           { role: "house", name: "Village Elder's House", npc: "nb_grom" }
         ],
-        houses: 5
+        houses: 10
       }],
       landmarks: [
         { kind: "campfire", dx: -0.2, dy: -0.06, name: "Cold ashes by a shallow cave", spot: "kuen_cave" },
@@ -72013,7 +72191,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         dockDir: "s",
         plaza: "fountain",
         buildings: [{ role: "hall", name: "Barrels' Mansion", npc: "nb_barrels", w: 10, d: 6, hgt: 4, wall: "#795548", roof: "#3e2723" }],
-        houses: 14
+        houses: 18
       }],
       landmarks: [
         { kind: "chest", dx: 0.52, dy: 0.2, name: "The Barrels Pirates' treasure chests", spot: "treasure_chests", key: "nb_barrels_chest1", tier: 3, item: "jewels" },
@@ -73240,7 +73418,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           dockDir: "n",
           plaza: "well",
           buildings: [{ role: "bar", name: "The Masked Tavern", npc: "sb_killer" }],
-          houses: 4
+          houses: 14
         },
         {
           id: "kutsukku_east",
@@ -73253,7 +73431,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           dockDir: "e",
           plaza: "well",
           buildings: [{ role: "bar", name: "The Furnace", npc: "sb_heat" }],
-          houses: 4
+          houses: 14
         },
         {
           id: "kutsukku_west",
@@ -73266,7 +73444,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           dockDir: "w",
           plaza: "well",
           buildings: [{ role: "bar", name: "Trident Pier Tavern", npc: "sb_wire" }],
-          houses: 4
+          houses: 14
         }
       ],
       docks: [
@@ -73431,7 +73609,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             { role: "hall", name: "Village Meeting Hall", npc: "sb_granny_nougat" },
             { role: "shop", name: "Village Store" }
           ],
-          houses: 6
+          houses: 12
         },
         {
           id: "sorbet_church",
@@ -73836,7 +74014,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           { role: "inn", name: "Rainbow Inn" },
           { role: "shop", name: "Ruluka General Store (taxed)" }
         ],
-        houses: 4
+        houses: 16
       }],
       landmarks: [{ kind: "tower", dx: 0.55, dy: -0.45, name: "The Rainbow Tower", spot: "rainbow_tower" }],
       spots: [{ id: "rainbow_mist", dx: 52, dy: 0 }],
@@ -73882,7 +74060,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           { role: "inn", name: "Whirlpool Inn" },
           { role: "house", name: "Old Tenaga's House", npc: "p1_tenaga" }
         ],
-        houses: 4
+        houses: 16
       }],
       spots: [{ id: "whirlpool", dx: 0, dy: -62 }],
       logNext: ["drum_island"],
@@ -73968,7 +74146,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           { role: "bounty", name: "Bounty Hunters' Exchange" },
           { role: "hall", name: "Officer Agent Fan Club Office" }
         ],
-        houses: 8
+        houses: 28
       }],
       landmarks: [
         { kind: "grave", dx: 0.36, dy: -0.28, name: "Grave of Mr. Sacrifice", lore: '"Here lies Mr. Sacrifice." The Sapoten Graveyard: so many tombstones on the rock spires that from the sea the mountains look like giant cacti.' },
@@ -74051,7 +74229,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           { role: "inn", name: "Old Sunny Inn" },
           { role: "shop", name: "Vira Market" }
         ],
-        houses: 5
+        houses: 18
       }],
       landmarks: [{ kind: "ruins", dx: 0.45, dy: -0.3, name: "The burnt royal palace", spot: "old_palace", lore: "The palace of Vira's last king, burnt in the coup two years ago. Revolutionary slogans are painted over the royal crest." }, { kind: "ruins", dx: 0.55, dy: -0.2 }],
       logNext: ["drum_island"],
@@ -74134,7 +74312,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             { role: "inn", name: "Bighorn Lodge" },
             { role: "shop", name: "Bighorn Provisions" }
           ],
-          houses: 5
+          houses: 12
         },
         {
           id: "drum_castle",
@@ -74164,7 +74342,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           dockDir: "se",
           plaza: "well",
           buildings: [{ role: "tavern", name: "Skater's Rest" }, { role: "house", name: "Dr. Lapin's Surgery", npc: "p1_dr_lapin" }],
-          houses: 3
+          houses: 6
         }
       ],
       landmarks: [
@@ -74262,7 +74440,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             { role: "shipwright", name: "Nanohana Docks" },
             { role: "shop", name: "Desert Navigator", shop: "navigator_grand" }
           ],
-          houses: 10
+          houses: 36
         },
         {
           id: "katorea",
@@ -74279,7 +74457,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             { role: "inn", name: "Oasis Rest" },
             { role: "shop", name: "Katorea Water Market" }
           ],
-          houses: 5
+          houses: 14
         },
         {
           id: "alubarna",
@@ -74302,7 +74480,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             { role: "inn", name: "Palace Guest House" },
             { role: "doctor", name: "Palace Infirmary" }
           ],
-          houses: 12
+          houses: 44
         },
         {
           id: "rainbase",
@@ -74321,7 +74499,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             { role: "bank", name: "Coin Banditts Exchange" },
             { role: "shop", name: "Rainbase General Store" }
           ],
-          houses: 8
+          houses: 30
         },
         {
           id: "yuba",
@@ -74334,7 +74512,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           dockDir: "w",
           plaza: false,
           buildings: [{ role: "house", name: "Toto's Well", npc: "p1_toto" }, { role: "inn", name: "Half-Buried Inn" }],
-          houses: 3
+          houses: 6
         }
       ],
       landmarks: [
@@ -74400,7 +74578,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           { role: "shop", name: "Mock Town Black Market", shop: "black_market" },
           { role: "bounty", name: "Mock Town Bounty Board" }
         ],
-        houses: 6
+        houses: 26
       }],
       landmarks: [
         { kind: "building", role: "house", name: "Montblanc Cricket's House", npc: "p1_cricket", style: "noble", roofType: "gable", fw: 8, fd: 4, hgt: 4, wall: "#fdfefe", roof: "#d4ac0d", dx: 0.62, dy: -0.52 },
@@ -74587,7 +74765,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           h: 66,
           style: "city",
           plaza: "fountain",
-          houses: 10,
+          houses: 70,
           buildings: [
             { role: "hall", name: "Blue Station", npc: "p2_bushon", w: 7, d: 4, wall: "#e3f2fd", roof: "#1565c0" },
             { role: "bar", name: "Blueno's Bar", npc: "p2_blueno" },
@@ -75755,7 +75933,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           { role: "doctor", name: "Mansherry's Healing Room", npc: "nw_mansherry" },
           { role: "shop", name: "Tontatta Farm Stall", shop: "nw_tontatta_stall" }
         ],
-        houses: 4
+        houses: 10
       }],
       landmarks: [
         { kind: "shipwreck", dx: -0.62, dy: -0.3, name: "Crashed Marine warship", lore: "A Marine warship lies in the jungle a long way from the water, its hull wrapped in vines. Tiny footprints run all over the deck. Something very small, very strong, and very organised has been taking it apart for parts." },
@@ -76138,7 +76316,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           h: 26,
           style: "wano",
           plaza: "well",
-          houses: 4,
+          houses: 18,
           buildings: [
             { role: "restaurant", name: "Tsuru's Tea House" },
             { role: "shop", name: "Leftovers Market" },
@@ -76154,7 +76332,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           h: 22,
           style: "wano",
           plaza: "well",
-          houses: 3,
+          houses: 8,
           buildings: [
             { role: "weapons", name: "Hitetsu's Forge", npc: "hitetsu_wano", shop: "amigasa_forge" },
             { role: "shop", name: "Tama's Kibi Dango Stand", npc: "tama_wano", shop: "amigasa_food" }
@@ -80303,8 +80481,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var DIRS = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, SQ2], [1, -1, SQ2], [-1, 1, SQ2], [-1, -1, SQ2]];
   function findPath(w, sx, sy, tx, ty, r = 0.3, maxNodes = 2600) {
     const ox = Math.floor(sx) - R, oy = Math.floor(sy) - R;
-    const gx = Math.floor(sx + w.dx(sx, tx)) - ox, gy = Math.floor(ty) - oy;
-    if (gx < 0 || gy < 0 || gx >= N3 || gy >= N3) return null;
+    let gx = Math.floor(sx + w.dx(sx, tx)) - ox, gy = Math.floor(ty) - oy;
+    const far = gx < 0 || gy < 0 || gx >= N3 || gy >= N3;
+    if (far) {
+      const dx = gx - R, dy = gy - R, m = Math.max(Math.abs(dx), Math.abs(dy));
+      gx = R + Math.round(dx / m * (R - 1));
+      gy = R + Math.round(dy / m * (R - 1));
+    }
     STATE2.fill(0);
     OK.fill(0);
     const inside2 = w.interiorAt ? w.interiorAt(sx, sy) : null;
@@ -80391,7 +80574,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (let k = best; k !== -1 && k !== sk; k = FROM[k]) cells2.push(k);
     cells2.reverse();
     const pts = cells2.map((k) => ({ x: w.wx(ox + k % N3 + 0.5), y: oy + (k / N3 | 0) + 0.5 }));
-    if (best % N3 === gx && (best / N3 | 0) === gy && standable(w, tx, ty, r)) pts[pts.length - 1] = { x: tx, y: ty };
+    if (!far && best % N3 === gx && (best / N3 | 0) === gy && standable(w, tx, ty, r)) pts[pts.length - 1] = { x: tx, y: ty };
     const out = [];
     let cx = sx, cy = sy, i = 0;
     while (i < pts.length) {
@@ -89321,7 +89504,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     if (clock >= 21 && clock < 23) return 0.35;
     return 0.15;
   }
-  var crowdOf = (town) => Math.round(4 + town.w * town.h / 90);
+  var crowdOf = (town) => Math.min(44, Math.round(3 + (town.buildings?.length || 0) * 0.35));
   function installTownLife(game) {
     const T4 = game.townLife = {
       t: 0,
@@ -89345,8 +89528,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       const d = isEnterable(b) ? doorOf(b) : { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b))), dw: 1.05 };
       const role = b.role || "house";
       const face = bfacing(b);
-      for (let x = -fw / 2 + 0.45; x <= fw / 2 - 0.45; x += 0.55) {
-        if (Math.abs(x - d.x) < d.dw / 2 + 0.55) continue;
+      for (let x = -fw / 2 + 0.6; x <= fw / 2 - 0.6; x += 1.7) {
+        if (Math.abs(x - d.x) < d.dw / 2 + 0.85) continue;
         const p = { ...bw(b, x, 0.36), face, b };
         if (!clear3(p.x, p.y)) continue;
         S3.wall.push(p);
@@ -89385,7 +89568,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         S3.stall.push({ x, y, face: Math.atan2(Math.cos(yaw), Math.sin(yaw)), o });
       }
     }
-    for (const p of town.streetSpots || []) if (clear3(p.x, p.y, 0.4)) S3.street.push({ x: p.x, y: p.y });
+    for (const p of town.streetSpots || []) if (clear3(p.x, p.y, 0.4)) S3.street.push({ x: p.x, y: p.y, ax: p.ax, across: p.across });
     for (const ry of town.rows || []) {
       for (let x = town.x0 + 2; x < town.x1 - 1; x += 3) if (clear3(x + 0.5, ry + 1.1, 0.4)) S3.street.push({ x: x + 0.5, y: ry + 1.1 });
     }
@@ -89451,9 +89634,9 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     }
     const n = Math.round(crowdOf(town) * outShare(clock));
     for (let i = 0; i < n; i++) {
-      const at5 = S3.street.length ? rng4.pick(S3.street) : town.plaza;
+      const at5 = S3.street.length ? acrossOf(game.world, rng4.pick(S3.street), rng4) : town.plaza;
       if (!at5) break;
-      const a = spawnFolk(game, town, isl, rng4, list, { x: at5.x + rng4.range(-1, 1), y: at5.y + rng4.range(-0.4, 0.4) });
+      const a = spawnFolk(game, town, isl, rng4, list, { x: at5.x, y: at5.y });
       const act2 = pick2(game, a);
       if (act2) start(game, a, act2, true);
       if (ctx?.onTownsfolk) ctx.onTownsfolk(a, town);
@@ -89499,6 +89682,21 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         }
       }
     }
+  }
+  function acrossOf(w, s, rng4) {
+    if (!s.across) return s;
+    const [c0, c1] = s.across;
+    const c = c0 + 0.5 + rng4.next() * Math.max(0, c1 - c0 - 1);
+    const p = s.ax ? { x: s.x + rng4.range(-1, 1), y: c } : { x: c, y: s.y + rng4.range(-1, 1) };
+    return w.walkable(p.x, p.y) && !w.isBlocked(p.x, p.y) && !w.hitsProp(p.x, p.y, 0.4) ? p : s;
+  }
+  function streetStop(game, a, S3) {
+    const w = game.world;
+    const near = S3.street.filter((s) => {
+      const d = w.distance(s.x, s.y, a.x, a.y);
+      return d > 5 && d < 28;
+    });
+    return acrossOf(w, a.rng.pick(near.length ? near : S3.street), a.rng);
   }
   function nearest(game, pts, a) {
     let best = null, bd = Infinity;
@@ -89547,7 +89745,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     if (kind === "sit") return { kind, spot: r.pick(seats), t: r.range(20, 70) };
     if (kind === "sweep") return { kind, spot: r.pick(fronts), t: r.range(20, 45) };
     if (!S3.street.length) return null;
-    return { kind: "stroll", to: r.pick(S3.street), t: r.range(25, 60), legs: 2 + Math.floor(r.next() * 3) };
+    return { kind: "stroll", to: streetStop(game, a, S3), t: r.range(25, 60), legs: 2 + Math.floor(r.next() * 3) };
   }
   function start(game, a, act2, now2 = false) {
     stop(a);
@@ -89657,7 +89855,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
           return;
         }
         const S3 = spotsOf(game, a.town, a.isl);
-        act2.dest = a.rng.pick(S3.street);
+        act2.dest = streetStop(game, a, S3);
         act2.phase = "go";
         act2.goT = 0;
       }

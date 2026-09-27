@@ -81,7 +81,7 @@ export const PARADISE_1 = [
         { role: 'inn', name: 'Rainbow Inn' },
         { role: 'shop', name: 'Ruluka General Store (taxed)' },
       ],
-      houses: 4,
+      houses: 16,
     }],
     landmarks: [{ kind: 'tower', dx: 0.55, dy: -0.45, name: 'The Rainbow Tower', spot: 'rainbow_tower' }],
     spots: [{ id: 'rainbow_mist', dx: 52, dy: 0 }],
@@ -107,7 +107,7 @@ export const PARADISE_1 = [
         { role: 'inn', name: 'Whirlpool Inn' },
         { role: 'house', name: "Old Tenaga's House", npc: 'p1_tenaga' },
       ],
-      houses: 4,
+      houses: 16,
     }],
     spots: [{ id: 'whirlpool', dx: 0, dy: -62 }],
     logNext: ['drum_island'], logTime: 1,
@@ -156,7 +156,7 @@ export const PARADISE_1 = [
         { role: 'bounty', name: 'Bounty Hunters\' Exchange' },
         { role: 'hall', name: 'Officer Agent Fan Club Office' },
       ],
-      houses: 8,
+      houses: 28,
     }],
     landmarks: [
       { kind: 'grave', dx: 0.36, dy: -0.28, name: 'Grave of Mr. Sacrifice', lore: '"Here lies Mr. Sacrifice." The Sapoten Graveyard: so many tombstones on the rock spires that from the sea the mountains look like giant cacti.' },
@@ -203,7 +203,7 @@ export const PARADISE_1 = [
         { role: 'inn', name: 'Old Sunny Inn' },
         { role: 'shop', name: 'Vira Market' },
       ],
-      houses: 5,
+      houses: 18,
     }],
     landmarks: [{ kind: 'ruins', dx: 0.45, dy: -0.3, name: 'The burnt royal palace', spot: 'old_palace', lore: 'The palace of Vira\'s last king, burnt in the coup two years ago. Revolutionary slogans are painted over the royal crest.' }, { kind: 'ruins', dx: 0.55, dy: -0.2 }],
     logNext: ['drum_island'], logTime: 1,
@@ -257,7 +257,7 @@ export const PARADISE_1 = [
           { role: 'inn', name: 'Bighorn Lodge' },
           { role: 'shop', name: 'Bighorn Provisions' },
         ],
-        houses: 5,
+        houses: 12,
       },
       {
         id: 'drum_castle', name: 'Drum Castle', dx: 0.12, dy: -0.2, w: 34, h: 24, style: 'snow', walls: true, dockDir: 'n', plaza: 'flagpole',
@@ -270,7 +270,7 @@ export const PARADISE_1 = [
       {
         id: 'gyasta', name: 'Gyasta', dx: 0.45, dy: 0.32, w: 28, h: 18, style: 'snow', dockDir: 'se', plaza: 'well',
         buildings: [{ role: 'tavern', name: 'Skater\'s Rest' }, { role: 'house', name: "Dr. Lapin's Surgery", npc: 'p1_dr_lapin' }],
-        houses: 3,
+        houses: 6,
       },
     ],
     landmarks: [
@@ -337,7 +337,7 @@ export const PARADISE_1 = [
           { role: 'shipwright', name: 'Nanohana Docks' },
           { role: 'shop', name: 'Desert Navigator', shop: 'navigator_grand' },
         ],
-        houses: 10,
+        houses: 36,
       },
       {
         id: 'katorea', name: 'Katorea', dx: 0.7, dy: 0.28, w: 38, h: 26, style: 'desert', dockDir: 'e', plaza: 'well',
@@ -346,7 +346,7 @@ export const PARADISE_1 = [
           { role: 'inn', name: 'Oasis Rest' },
           { role: 'shop', name: 'Katorea Water Market' },
         ],
-        houses: 5,
+        houses: 14,
       },
       {
         id: 'alubarna', name: 'Alubarna', dx: 0.45, dy: -0.44, w: 66, h: 44, style: 'desert', walls: true, dockDir: 'n', plaza: 'fountain', plazaR: 6,
@@ -359,7 +359,7 @@ export const PARADISE_1 = [
           { role: 'inn', name: 'Palace Guest House' },
           { role: 'doctor', name: 'Palace Infirmary' },
         ],
-        houses: 12,
+        houses: 44,
       },
       {
         id: 'rainbase', name: 'Rainbase', dx: -0.55, dy: -0.5, w: 56, h: 38, style: 'desert', dockDir: 'n', plaza: 'fountain',
@@ -370,12 +370,12 @@ export const PARADISE_1 = [
           { role: 'bank', name: 'Coin Banditts Exchange' },
           { role: 'shop', name: 'Rainbase General Store' },
         ],
-        houses: 8,
+        houses: 30,
       },
       {
         id: 'yuba', name: 'Yuba', dx: -0.46, dy: 0.1, w: 32, h: 22, style: 'tribal', dockDir: 'w', plaza: false,
         buildings: [{ role: 'house', name: "Toto's Well", npc: 'p1_toto' }, { role: 'inn', name: 'Half-Buried Inn' }],
-        houses: 3,
+        houses: 6,
       },
     ],
     landmarks: [
@@ -421,7 +421,7 @@ export const PARADISE_1 = [
         { role: 'shop', name: 'Mock Town Black Market', shop: 'black_market' },
         { role: 'bounty', name: 'Mock Town Bounty Board' },
       ],
-      houses: 6,
+      houses: 26,
     }],
     landmarks: [
       { kind: 'building', role: 'house', name: "Montblanc Cricket's House", npc: 'p1_cricket', style: 'noble', roofType: 'gable', fw: 8, fd: 4, hgt: 4, wall: '#fdfefe', roof: '#d4ac0d', dx: 0.62, dy: -0.52 },

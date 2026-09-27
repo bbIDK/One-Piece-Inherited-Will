@@ -10,6 +10,7 @@
 import { T, IS_LIQUID, WALKABLE, OVERLAY } from './tiles.js';
 import { placeObject } from './islandgen.js';
 import { bw } from './bframe.js';
+import { RNG } from '../core/rng.js';
 
 export const TOWN_STYLES = {
   village: { ground: null, road: T.DIRT, plaza: T.DIRT, walls: ['#caa77a', '#b8915f', '#d8c29d', '#c49a6c'], roofs: ['#9c4a2a', '#7d5a3a', '#b5452f', '#6d7a4a'], roof: 'gable', rowStep: 8, lamps: false, fences: true },
@@ -51,9 +52,51 @@ const APART_SETBACK = { village: 1, snow: 1, tribal: 2, mink: 1, giant: 2, wano:
 const FREE = 0, STREET = -1, SQUARE = -2, YARD = -3, NOPE = -4;
 
 export function generateTown(world, town, rng, noise) {
+  let w = Math.max(10, Math.round(town.w)), h = Math.max(8, Math.round(town.h));
+  if (town.houses != null) ({ w, h } = fitTown(world, town, rng, noise, w, h));
+  return layTown(world, { ...town, w, h }, rng, noise, false);
+}
+
+/**
+ * The ground a town with a set number of houses needs. The island data was
+ * written on a smaller chart and the islands have grown since, so a town
+ * sized by its outline alone would be a big paved square with a few houses
+ * in the middle of it. Instead its outline shrinks (keeping its shape) to
+ * about what its buildings and streets take up, and the town is laid out on
+ * paper — the same dice, nothing built — growing a step at a time until
+ * every named building and nearly every house has a lot.
+ */
+function fitTown(world, town, rng, noise, w, h) {
+  const S = TOWN_STYLES[town.style] || TOWN_STYLES.village;
+  const big = !!S.big, terraced = TERRACED.has(town.style) && !big;
+  let need = 0;
+  for (const spec of town.buildings || []) {
+    const [dw, dd] = ROLE_SIZES[spec.role] || [6, 5];
+    need += ((spec.w ?? dw) + (big ? 4 : 1)) * ((spec.d ?? dd) + (big ? 5 : 2));
+  }
+  need += town.houses * (big ? 12 * 13 : terraced ? 5.5 * 7 : 9 * 8);
+  if (town.plaza !== false) need += (2 * (town.plazaR ?? 4) + 3) ** 2;
+  const k = Math.min(1, Math.sqrt(need / 0.6 / (w * h)));
+  let fw = Math.max(Math.min(w, 22), Math.round(w * k)), fh = Math.max(Math.min(h, 16), Math.round(h * k));
+  for (let i = 0; i < 12 && (fw < w || fh < h); i++) {
+    const dice = new RNG(1);
+    dice.s = rng.s;
+    const plan = layTown(world, { ...town, w: fw, h: fh }, dice, noise, true);
+    if (!plan.missing && plan.houses >= Math.floor(plan.wanted * 0.9)) break;
+    fw = Math.min(w, Math.round(fw * 1.1) + 1);
+    fh = Math.min(h, Math.round(fh * 1.1) + 1);
+  }
+  return { w: fw, h: fh };
+}
+
+/**
+ * Lay a town out and build it. `dry`: only work out where everything would
+ * go (nothing is written to the world) and report how much of it fitted.
+ */
+function layTown(world, town, rng, noise, dry) {
   const S = TOWN_STYLES[town.style] || TOWN_STYLES.village;
   const cx = town.x, cy = town.y;
-  const w = Math.max(10, Math.round(town.w)), h = Math.max(8, Math.round(town.h));
+  const w = town.w, h = town.h;
   const x0 = Math.round(cx - w / 2), y0 = Math.round(cy - h / 2);
   const x1 = x0 + w, y1 = y0 + h;
   const roadTile = town.road ?? S.road;
@@ -69,13 +112,14 @@ export function generateTown(world, town, rng, noise) {
     return !IS_LIQUID[t] && WALKABLE[t] && !OVERLAY[t];
   };
 
-  // ground
-  if (groundTile != null) {
+  // ground (and what was there before: paving far from anything built goes back to it, see below)
+  const bare = groundTile != null && !dry ? new Int16Array(w * h).fill(-1) : null;
+  if (bare) {
     for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
       if (!okLand(x, y)) continue;
       const ex = (x - cx) / (w / 2), ey = (y - cy) / (h / 2);
       const v = 1.08 - Math.max(Math.abs(ex), Math.abs(ey)) + noise.noise2(x * 0.2, y * 0.2) * 0.08;
-      if (v > 0) world.setType(x, y, groundTile);
+      if (v > 0) { bare[(y - y0) * w + (x - x0)] = world.type(x, y); world.setType(x, y, groundTile); }
     }
   }
 
@@ -94,7 +138,7 @@ export function generateTown(world, town, rng, noise) {
       if (!okLand(x, y)) continue;
       const o = occAt(x, y);
       if (o === SQUARE) continue;
-      world.setType(x, y, tile);
+      if (!dry) world.setType(x, y, tile);
       setOcc(x, y, kind);
     }
   };
@@ -129,7 +173,7 @@ export function generateTown(world, town, rng, noise) {
       // (the corners cut off, so it isn't a hard box)
       const cut = (x === sq.x0 || x === sq.x1) && (y === sq.y0 || y === sq.y1);
       if (cut || !okLand(x, y)) continue;
-      world.setType(x, y, plazaTile);
+      if (!dry) world.setType(x, y, plazaTile);
       setOcc(x, y, SQUARE);
     }
   }
@@ -186,11 +230,11 @@ export function generateTown(world, town, rng, noise) {
     const gate = (x, y) => occAt(x, y) === STREET || occAt(x, y) === SQUARE;
     for (let x = x0 - 1; x <= x1; x++) for (const y of [y0 - 1, y1]) {
       if (gate(x, y) || gate(x, y + (y < y0 ? 1 : -1))) continue;
-      if (okLand(x, y)) { world.setType(x, y, T.WALL); setOcc(x, y, NOPE); }
+      if (okLand(x, y)) { if (!dry) world.setType(x, y, T.WALL); setOcc(x, y, NOPE); }
     }
     for (let y = y0 - 1; y <= y1; y++) for (const x of [x0 - 1, x1]) {
       if (gate(x, y) || gate(x + (x < x0 ? 1 : -1), y)) continue;
-      if (okLand(x, y)) { world.setType(x, y, T.WALL); setOcc(x, y, NOPE); }
+      if (okLand(x, y)) { if (!dry) world.setType(x, y, T.WALL); setOcc(x, y, NOPE); }
     }
   }
 
@@ -255,6 +299,15 @@ export function generateTown(world, town, rng, noise) {
     const colors = { wall: spec.wall || rng.pick(S.walls), roof: spec.roof || rng.pick(S.roofs) };
     const role = spec.role;
     const tall = S.tall ? rng.int(3, 5) : terraced ? rng.pick([3, 3, 3, 4]) : rng.chance(0.35) ? 3 : 2;
+    if (dry) {
+      // (on paper: the lot is taken, nothing is built)
+      const b = { x: q.x, y: q.y, rot: run.rot, fw, fd, role, name: spec.name };
+      b.door = bw(b, doorX, 0.5);
+      buildings.push(b);
+      const id = buildings.length;
+      for (let y = q.fy0; y < q.fy1; y++) for (let x = q.fx0; x < q.fx1; x++) setOcc(x, y, id);
+      return b;
+    }
     const b = placeObject(world, {
       kind: 'building',
       style: spec.style || town.style || 'village',
@@ -298,6 +351,7 @@ export function generateTown(world, town, rng, noise) {
 
   // special buildings first, as close to the square as they'll go
   const specials = (town.buildings || []).slice();
+  let missing = 0;
   for (const spec of specials) {
     const [dw, dd] = ROLE_SIZES[spec.role] || [6, 5];
     const fw = spec.w ?? (big ? dw + 3 : dw), want = spec.d ?? (big ? dd + 3 : dd);
@@ -310,11 +364,13 @@ export function generateTown(world, town, rng, noise) {
       }
     }
     cands.sort((p, q) => p.d - q.d);
+    let ok = false;
     for (const c of cands) {
       const fd = depthFor(c.run, c.s, fw, sb, want, 0);
       if (fd < Math.min(want, Math.max(4, want - 2))) continue;
-      if (place(c.run, c.s, fw, fd, sb, spec)) break;
+      if (place(c.run, c.s, fw, fd, sb, spec)) { ok = true; break; }
     }
+    if (!ok) missing++;
   }
 
   // houses: along each frontage, from the square outwards, until the town is full
@@ -350,6 +406,8 @@ export function generateTown(world, town, rng, noise) {
       } else s += fromStart ? 1 : -1;
     }
   }
+
+  if (dry) return { missing, houses, wanted: houseCount };
 
   // which sides of each building stand against a neighbour (no windows or eaves there)
   for (const b of buildings) {
@@ -432,6 +490,32 @@ export function generateTown(world, town, rng, noise) {
     }
   }
 
+  // ---- paving only where the town is: ground more than a few steps from any
+  // house, yard, street or square goes back to what it was (a hamlet stands
+  // in its fields, not in the middle of a paved square)
+  if (bare) {
+    const PAVE = 4, dist = new Uint8Array(w * h).fill(255), q = [];
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const o = occAt(x0 + i, y0 + j);
+      if (o > 0 || o === STREET || o === SQUARE || o === YARD) { dist[j * w + i] = 0; q.push(j * w + i); }
+    }
+    for (let k = 0; k < q.length; k++) {
+      const c = q[k], i = c % w, j = (c / w) | 0, d = dist[c] + 1;
+      if (d > PAVE) continue;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        const ii = i + di, jj = j + dj;
+        if (ii < 0 || jj < 0 || ii >= w || jj >= h) continue;
+        const n = jj * w + ii;
+        if (dist[n] > d) { dist[n] = d; q.push(n); }
+      }
+    }
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const k = j * w + i;
+      if (dist[k] <= PAVE || bare[k] < 0 || world.type(x0 + i, y0 + j) !== groundTile) continue;
+      world.setType(x0 + i, y0 + j, bare[k]);
+    }
+  }
+
   // NPC standing spots: beside the doors, along the streets
   const npcSpots = [];
   for (const b of buildings) npcSpots.push({ ...bw(b, (b.doorX || 0) + (b.fw >= 5 ? 1.6 : 1.25), 1.3), building: b });
@@ -441,7 +525,9 @@ export function generateTown(world, town, rng, noise) {
     const len = ax ? st.x1 - st.x0 + 1 : st.y1 - st.y0 + 1;
     for (let i = 1; i < len - 1; i += 3) {
       const x = ax ? st.x0 + i + 0.5 : (st.x0 + st.x1 + 1) / 2, y = ax ? (st.y0 + st.y1 + 1) / 2 : st.y0 + i + 0.5;
-      if (okLand(x, y)) { streetSpots.push({ x, y }); if (i % 6 === 1) npcSpots.push({ x, y }); }
+      // (with the street's width across, so people don't all walk down its middle)
+      const across = ax ? [st.y0, st.y1 + 1] : [st.x0, st.x1 + 1];
+      if (okLand(x, y)) { streetSpots.push({ x, y, ax, across }); if (i % 6 === 1) npcSpots.push({ x, y }); }
     }
   }
 

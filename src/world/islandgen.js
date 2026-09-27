@@ -8,6 +8,7 @@ import { T, CLIMATE, IS_LIQUID, OVERLAY, WALKABLE, MANMADE } from './tiles.js';
 import { clamp, lerp } from '../core/math.js';
 import { generateTown } from './towngen.js';
 import { bw } from './bframe.js';
+import { COLLIDE } from './objects.js';
 
 export const CLIMATES = {
   temperate: { ground: T.GRASS, beach: T.SAND, clim: CLIMATE.TEMPERATE, trees: ['oak', 'oak', 'pine', 'bush'], density: 0.05 },
@@ -228,10 +229,12 @@ export function generateIsland(world, def, noise, rng) {
   }
 
   // landmarks & props -------------------------------------------------------
+  rec.clearings = [];
   for (const lm of def.landmarks || []) {
     const c = P(lm);
     const o = { ...lm, x: c.x, y: c.y, kind: lm.kind || lm.type };
     delete o.dx; delete o.dy;
+    settleLandmark(world, rec, o, ground);
     if (o.block === undefined) o.block = true;
     if (o.kind === 'building' && o.role && !o.door) o.door = bw(o, 0, 0.5);
     if (o.lore && !o.interact) { o.interact = o.loreLabel || `Examine ${o.name || 'it'}`; o.use = 'lore'; o.interactRange = o.interactRange || 2.2; }
@@ -239,7 +242,7 @@ export function generateIsland(world, def, noise, rng) {
     if (o.kind === 'bell' && !o.interact) { o.interact = 'Ring the bell'; o.use = 'bell'; o.interactRange = 2.4; }
     placeObject(world, o);
     rec.landmarks.push(o);
-    if (lm.spot) rec.spots[lm.spot] = { x: c.x, y: c.y + 1.2 };
+    if (lm.spot) rec.spots[lm.spot] = { x: o.x, y: o.y + 1.2 };
   }
   for (const s of def.spots || []) {
     const c = P(s);
@@ -247,12 +250,93 @@ export function generateIsland(world, def, noise, rng) {
   }
 
   // vegetation ----------------------------------------------------------------
+  def._clearings = rec.clearings;
   const treeKinds = def.treeKind ? [def.treeKind] : def.trees || preset.trees;
   const density = def.treeDensity ?? preset.density;
   populateVegetation(world, rng, x0, y0, LW, LH, L, li, treeKinds, density, def);
+  delete def._clearings;
 
   return rec;
 }
+
+// things that belong in or by the water: left where the data puts them
+const SHORE_KINDS = new Set(['boat', 'shipwreck', 'anchor', 'bubble', 'mooring', 'buoy', 'rapids', 'geyser']);
+
+/**
+ * Give a landmark firm, level ground: off the water if it landed there (an
+ * island's coast is noise, so "on the shore" in the data can be a metre out
+ * to sea), the ground under it levelled with a gentle rim (so it neither
+ * floats over a dip nor sinks into a rise), and a clearing round it that no
+ * tree grows in.
+ */
+function settleLandmark(world, rec, o, ground) {
+  const s = o.s || 1, c = COLLIDE[o.kind];
+  const r = o.kind === 'building' ? Math.hypot(o.fw || 4, o.fd || 4) / 2 + 0.5
+    : Array.isArray(c) ? Math.hypot(c[0], c[1]) * s + 0.4 : typeof c === 'number' && c > 0 ? c * s + 0.4 : Math.max(1, Math.max(o.fw || 1, o.fd || 1) / 2 + 0.4);
+  const shore = SHORE_KINDS.has(o.kind) || o.water;
+  /** Every tile the foot (radius R) touches. */
+  const tiles = (x, y, R, fn) => {
+    for (let ty = Math.floor(y - R); ty <= Math.floor(y + R); ty++) {
+      for (let tx = Math.floor(x - R); tx <= Math.floor(x + R); tx++) {
+        const nx = Math.max(tx, Math.min(x, tx + 1)), ny = Math.max(ty, Math.min(y, ty + 1));
+        if ((nx - x) ** 2 + (ny - y) ** 2 <= R * R && fn(tx, ty)) return true;
+      }
+    }
+    return false;
+  };
+  // (in the water, or standing in a house — the towns are built first)
+  const wet = (x, y) => tiles(x, y, r, (tx, ty) => (!shore && world.isLiquid(tx, ty)) || world.isBlocked(tx, ty));
+  // (astride a cliff or the foot of a mountain — rock and cliff stand metres
+  // taller than the ground beside them, and the ground's mesh blends a tile
+  // either side)
+  const LIFT = { [T.MOUNTAIN]: 7, [T.CLIFF]: 4, [T.SNOWROCK]: 9, [T.RED_ROCK]: 40 };
+  const steep = (x, y) => {
+    let lo = Infinity, hi = -Infinity;
+    tiles(x, y, r + 1.2, (tx, ty) => {
+      const t = world.type(tx, ty);
+      if (IS_LIQUID[t] || OVERLAY[t]) return false;
+      const h = world.elev(tx, ty) * 0.075 + (LIFT[t] || 0);
+      if (h < lo) lo = h;
+      if (h > hi) hi = h;
+      return false;
+    });
+    return hi - lo > 2.5;
+  };
+  const bad = (x, y) => wet(x, y) || (!o.cliff && steep(x, y));
+  if (bad(o.x, o.y)) {
+    // step inland (toward the middle of the island first) to the nearest clear, dry, even ground
+    const toward = Math.atan2(rec.y - o.y, world.dx(o.x, rec.x));
+    let best = null;
+    for (let d = 1; d <= 24 && !best; d += 1) {
+      for (let k = 0; k < 16 && !best; k++) {
+        const a = toward + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (Math.PI / 8);
+        const x = o.x + Math.cos(a) * d, y = o.y + Math.sin(a) * d;
+        if (!bad(x, y) && (shore || !world.isLiquid(x, y))) best = { x, y };
+      }
+    }
+    if (best) { o.x = world.wx(best.x); o.y = best.y; if (o.kind === 'building' && o.role) o.door = bw(o, 0, 0.5); }
+  }
+  // level: the elevation at its middle, blended out over a couple of metres
+  const e0 = world.elev(Math.floor(o.x), Math.floor(o.y));
+  const R = r + 2.5;
+  for (let y = Math.floor(o.y - R); y <= Math.ceil(o.y + R); y++) {
+    for (let x = Math.floor(o.x - R); x <= Math.ceil(o.x + R); x++) {
+      const t = world.type(x, y);
+      // (the water, piers, streets and squares, and anything built, stay as they are)
+      if (IS_LIQUID[t] || OVERLAY[t] || MANMADE[t] || world.isBlocked(x, y)) continue;
+      if (!WALKABLE[t] && !RAISED_GROUND.has(t) && t !== T.MOUNTAIN && t !== T.CLIFF) continue;
+      const d = Math.hypot(x + 0.5 - o.x, y + 0.5 - o.y);
+      if (d > R) continue;
+      const k = d <= r ? 1 : 1 - (d - r) / (R - r);
+      const e = world.elev(x, y);
+      // (rocks and woods stand a little taller than their elevation: plain ground under the landmark itself)
+      if (d <= r && RAISED_GROUND.has(t)) world.setTile(x, y, ground, Math.round(e0));
+      else world.setElev(x, y, Math.round(e + (e0 - e) * k));
+    }
+  }
+  rec.clearings.push({ x: o.x, y: o.y, r: r + 1.2 });
+}
+const RAISED_GROUND = new Set([T.ROCK, T.FOREST, T.JUNGLE].filter((t) => t !== undefined));
 
 // ---------------------------------------------------------------------------
 
@@ -588,8 +672,9 @@ function populateVegetation(world, rng, x0, y0, LW, LH, L, li, kinds, density, d
       if (rng.next() > p) continue;
       if (world.elev(x, y) > 200) continue;
       if (world.isBlocked(x, y) || world.hitsProp(x + 0.5, y + 0.5, 1.1)) continue;
-      // (nothing grows through a ring or a stage, or crowds round one)
+      // (nothing grows through a ring or a stage, or crowds round one — or any other landmark)
       if (world.floors.size && nearFloor(world, x + 0.5, y + 0.8, 3)) continue;
+      if (def._clearings?.some((c) => Math.hypot(x + 0.5 - c.x, y + 0.5 - c.y) < c.r)) continue;
       // spacing: skip if a neighbour already has a tree
       if (world.hitsProp(x + 0.5, y + 1, 1.2) || world.isBlocked(x - 1, y) || world.isBlocked(x, y - 1) || world.isBlocked(x + 1, y) || world.isBlocked(x, y + 1)) {
         if (rng.next() < 0.7) continue;

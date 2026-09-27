@@ -56,7 +56,7 @@ page.on('pageerror', (e) => { console.log(`[pageerror] ${e.stack || e.message}`)
 let shotIndex = 0;
 const snap = async (label) => {
   const file = join(outDir, `${name}${args.tag ? '-' + args.tag : ''}-${String(++shotIndex).padStart(2, '0')}-${label}.png`);
-  await page.screenshot({ path: file });
+  await page.screenshot({ path: file, timeout: 180000 });
   console.log(`shot → ${file}`);
   return file;
 };

@@ -95,7 +95,7 @@ export const NEW_WORLD_2 = [
         ],
       },
       {
-        id: 'ebisu_town', name: 'Ebisu Town', dx: -0.36, dy: 0.64, w: 38, h: 26, style: 'wano', plaza: 'well', houses: 4,
+        id: 'ebisu_town', name: 'Ebisu Town', dx: -0.36, dy: 0.64, w: 38, h: 26, style: 'wano', plaza: 'well', houses: 18,
         buildings: [
           { role: 'restaurant', name: "Tsuru's Tea House" },
           { role: 'shop', name: 'Leftovers Market' },
@@ -103,7 +103,7 @@ export const NEW_WORLD_2 = [
         ],
       },
       {
-        id: 'amigasa_village', name: 'Amigasa Village', dx: -0.66, dy: 0.33, w: 30, h: 22, style: 'wano', plaza: 'well', houses: 3,
+        id: 'amigasa_village', name: 'Amigasa Village', dx: -0.66, dy: 0.33, w: 30, h: 22, style: 'wano', plaza: 'well', houses: 8,
         buildings: [
           { role: 'weapons', name: "Hitetsu's Forge", npc: 'hitetsu_wano', shop: 'amigasa_forge' },
           { role: 'shop', name: "Tama's Kibi Dango Stand", npc: 'tama_wano', shop: 'amigasa_food' },

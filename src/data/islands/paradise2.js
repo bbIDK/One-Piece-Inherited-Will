@@ -96,7 +96,7 @@ export const PARADISE_2 = [
         ],
       },
       {
-        id: 'w7_downtown', name: 'Water 7 Downtown', dx: 0.05, dy: 0, w: 90, h: 66, style: 'city', plaza: 'fountain', houses: 10,
+        id: 'w7_downtown', name: 'Water 7 Downtown', dx: 0.05, dy: 0, w: 90, h: 66, style: 'city', plaza: 'fountain', houses: 70,
         buildings: [
           { role: 'hall', name: 'Blue Station', npc: 'p2_bushon', w: 7, d: 4, wall: '#e3f2fd', roof: '#1565c0' },
           { role: 'bar', name: "Blueno's Bar", npc: 'p2_blueno' },

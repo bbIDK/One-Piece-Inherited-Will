@@ -36,7 +36,7 @@ export const NORTH_BLUE = [
         { role: 'shop', name: 'Rag-and-Bone Shop' },
         { role: 'library', name: 'Old Newspaper Shack' },
       ],
-      houses: 6,
+      houses: 10,
     }],
     landmarks: [
       { kind: 'ruins', dx: 0.35, dy: -0.3, name: 'The shack by the garbage heap', spot: 'kings_heap' },
@@ -415,7 +415,7 @@ export const NORTH_BLUE = [
         { role: 'shop', name: 'Kuen Trading Post', shop: 'nb_kuen_post' },
         { role: 'house', name: "Village Elder's House", npc: 'nb_grom' },
       ],
-      houses: 5,
+      houses: 10,
     }],
     landmarks: [
       { kind: 'campfire', dx: -0.2, dy: -0.06, name: 'Cold ashes by a shallow cave', spot: 'kuen_cave' },
@@ -459,7 +459,7 @@ export const NORTH_BLUE = [
     towns: [{
       id: 'minion_ghost_town', name: 'Minion Ghost Town', dx: 0.15, dy: -0.02, w: 48, h: 32, style: 'ruins', dockDir: 's', plaza: 'fountain',
       buildings: [{ role: 'hall', name: "Barrels' Mansion", npc: 'nb_barrels', w: 10, d: 6, hgt: 4, wall: '#795548', roof: '#3e2723' }],
-      houses: 14,
+      houses: 18,
     }],
     landmarks: [
       { kind: 'chest', dx: 0.52, dy: 0.2, name: "The Barrels Pirates' treasure chests", spot: 'treasure_chests', key: 'nb_barrels_chest1', tier: 3, item: 'jewels' },
