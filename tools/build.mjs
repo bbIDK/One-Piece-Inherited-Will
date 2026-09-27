@@ -44,8 +44,10 @@ function writeArtifactPage(code) {
     '<link rel="preconnect" href="https://fonts.googleapis.com">',
     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
     fonts,
-    '<style>html, body { margin: 0; height: 100%; background: #0b1622; color: #f5e6c4; overflow: hidden; } #boot { position: fixed; inset: 0; display: grid; place-items: center; color: #f5e6c4; font: 700 20px \'Nunito\', system-ui, sans-serif; }</style>',
-    '<div id="boot">Loading the Blue Planet…</div>',
+    '<style>html, body { margin: 0; height: 100%; background: #0b1622; color: #f5e6c4; overflow: hidden; }</style>',
+    // the loading screen, as in index.html
+    (html.match(/<style id="boot-css">[\s\S]*?<\/style>/) || [''])[0],
+    (html.match(/<div id="boot">[\s\S]*?<!--\/boot-->/) || ['<div id="boot">Loading the Blue Planet…</div>'])[0],
     `<script>${code.replace(/<\/script/gi, '<\\/script')}</script>`,
   ].join('\n');
   writeFileSync(join(root, 'dist/artifact.html'), out);

@@ -10,11 +10,30 @@
   <link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Bangers&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <style>
     html, body { margin: 0; height: 100%; background: #0b1622; overflow: hidden; }
-    #boot { position: fixed; inset: 0; display: grid; place-items: center; color: #f5e6c4; font: 700 20px 'Nunito', sans-serif; }
+  </style>
+  <style id="boot-css">
+    #boot { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; color: #f5e6c4; font-family: 'Nunito', system-ui, sans-serif; background: radial-gradient(ellipse at 50% 22%, #2b6a96 0%, #143a5c 38%, #081a2c 78%, #050d17 100%); overflow: hidden; transition: opacity .8s ease; }
+    #boot.done { opacity: 0; pointer-events: none; }
+    #boot.hidden { display: none; }
+    #boot .sea { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: linear-gradient(#0f3452, #07182a); }
+    #boot .sea i { position: absolute; left: -160px; right: -160px; height: 26px; background: radial-gradient(ellipse 40px 9px at 40px 0, rgba(190,225,245,.22) 60%, transparent 62%) 0 0 / 80px 26px repeat-x; animation: bootwave 7s linear infinite; }
+    #boot .sea i:nth-child(1) { top: -9px; }
+    #boot .sea i:nth-child(2) { top: 14%; opacity: .6; animation-duration: 11s; animation-direction: reverse; }
+    #boot .sea i:nth-child(3) { top: 38%; opacity: .35; animation-duration: 16s; }
+    #boot .box { position: relative; text-align: center; width: min(540px, 88vw); margin-bottom: 8vh; }
+    #boot .wheel { width: 70px; height: 70px; margin: 0 auto 16px; animation: bootspin 7s linear infinite; filter: drop-shadow(0 3px 4px rgba(0,0,0,.45)); }
+    #boot h1 { margin: 0; font: 400 clamp(46px, 9vw, 92px)/1 'Pirata One', Georgia, serif; color: #f7e7c1; text-shadow: 0 4px 0 #3b2412, 0 0 26px rgba(0,0,0,.55); letter-spacing: 1px; }
+    #boot .sub { margin: 6px 0 28px; font: 400 clamp(16px, 2.7vw, 25px) 'Bangers', Impact, sans-serif; letter-spacing: 5px; color: #f1c40f; text-shadow: 0 2px 0 #5a2d06; }
+    #boot .bar { height: 12px; border-radius: 7px; background: rgba(4,12,22,.6); border: 1px solid rgba(241,196,15,.5); overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,.6); }
+    #boot .bar i { display: block; height: 100%; width: 3%; border-radius: 6px; background: linear-gradient(90deg, #b03a2e, #e67e22 60%, #f1c40f); transition: width .4s ease; }
+    #boot .msg { margin-top: 11px; font-weight: 800; font-size: 15px; letter-spacing: .3px; min-height: 1.3em; }
+    #boot .tip { margin: 22px auto 0; max-width: 460px; font-size: 13.5px; line-height: 1.45; opacity: .7; min-height: 2.9em; }
+    @keyframes bootspin { to { transform: rotate(360deg); } }
+    @keyframes bootwave { to { transform: translateX(-80px); } }
   </style>
 </head>
 <body>
-  <div id="boot">Loading the Blue Planet…</div>
+  <div id="boot"><div class="sea"><i></i><i></i><i></i></div><div class="box"><svg class="wheel" viewBox="-50 -50 100 100" aria-hidden="true"><g fill="none" stroke="#c8913f" stroke-width="7" stroke-linecap="round"><circle r="30"/><path d="M0-44V44M-44 0H44M-31-31L31 31M31-31L-31 31"/></g><g fill="#c8913f"><circle r="10"/><circle cy="-44" r="6"/><circle cy="44" r="6"/><circle cx="-44" r="6"/><circle cx="44" r="6"/><circle cx="-31" cy="-31" r="6"/><circle cx="31" cy="31" r="6"/><circle cx="31" cy="-31" r="6"/><circle cx="-31" cy="31" r="6"/></g><circle r="4" fill="#5a3413"/></svg><h1>Inherited Will</h1><div class="sub">A ONE PIECE ROGUELIKE</div><div class="bar"><i></i></div><div class="msg">Loading the Blue Planet…</div><div class="tip"></div></div></div><!--/boot-->
   <script src="dist/game.js"></script>
 </body>
 </html>

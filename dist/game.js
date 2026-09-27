@@ -64297,7 +64297,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      * Title-screen flyover: a camera slowly circling high over (cx, cy) with no
      * player, in the same world, sky and sea as the game.
      */
-    renderAttract(game, cx, cy, t) {
+    renderAttract(game, cx, cy, t, islandR = 80) {
       const w = game.world;
       if (w !== this.world) this.setWorld(w);
       const now2 = performance.now();
@@ -64305,18 +64305,38 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.frame++;
       if (this.frame === 4) this.warmUp();
       const env = game.env;
-      const a = t * 0.035;
-      const R3 = this.attractR || 120;
+      const A = this.attractPath && this.attractPath.cx === cx && this.attractPath.cy === cy ? this.attractPath : null;
+      if (!A) {
+        const R4 = Math.max(95, islandR * 1.3);
+        let top = 0;
+        for (let k = 0; k < 72; k++) {
+          const q2 = k / 72 * Math.PI * 2;
+          for (const f of [0.55, 0.8, 1]) top = Math.max(top, this.ground(w.wx(cx + Math.cos(q2) * R4 * f), cy + Math.sin(q2) * R4 * f));
+        }
+        this.attractPath = { cx, cy, R: R4, H: Math.max(0, top) + 26, gc: Math.max(0, this.ground(cx, cy)) };
+        return this.renderAttract(game, cx, cy, t, islandR);
+      }
+      const a = t * 0.028;
+      const R3 = A.R * (1 + 0.06 * Math.sin(t * 0.05));
       const ox = w.wx(cx + Math.cos(a) * R3), oy = cy + Math.sin(a) * R3;
       this.ox = ox;
       this.oy = oy;
-      const yaw = a + Math.PI - 0.35;
+      const la = a + 0.55;
+      const lx = cx + Math.cos(la) * R3 * 0.22, ly = cy + Math.sin(la) * R3 * 0.22;
+      const ldx = w.dx(ox, lx), ldy = ly - oy;
+      const yaw = Math.atan2(ldy, ldx);
       this.rig.yaw = (yaw % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
       const camYaw3 = -(yaw + Math.PI / 2);
       const cam = this.rig.camera;
       const gh = Math.max(0, this.ground(ox, oy));
-      cam.position.set(0, gh + 30, 0);
-      cam.rotation.set(-0.2, camYaw3, 0);
+      const camH = A.H + Math.sin(t * 0.07) * 2.5;
+      cam.position.set(0, camH, 0);
+      const dist = Math.hypot(ldx, ldy);
+      const pitch = Math.atan2(A.gc + 4 - camH, dist);
+      cam.rotation.set(0, 0, 0);
+      cam.rotation.order = "YXZ";
+      cam.rotation.y = camYaw3;
+      cam.rotation.x = Math.max(-0.42, Math.min(-0.08, pitch));
       if (Math.abs(cam.fov - 70) > 0.01) {
         cam.fov = 70;
         cam.updateProjectionMatrix();
@@ -114590,6 +114610,52 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
   root.style.cssText = "position:fixed;inset:0;overflow:hidden;background:#0b1622";
   document.body.appendChild(root);
   var boot = document.getElementById("boot");
+  var TIPS = [
+    "Hold Space to charge a jump \u2014 Minks and Long-Legs spring highest of all.",
+    "A Devil Fruit user can't swim. Fall in and thrash back to shore before your strength gives out.",
+    "Rest at an inn and that is where you wake if you fall.",
+    "Homes are locked: knock, or kick the door in \u2014 a crime, unless it is a pirates' den.",
+    "Drag techniques and food straight onto your hotbar from the Inventory or Skills menu.",
+    "Tap Ctrl in third person for shift lock; V switches between first and third person.",
+    "Out of air under water? Swim for the surface \u2014 your lungs will not wait.",
+    "Enemies hunt you by sight. Break the line of sight and they will lose you.",
+    "Every life that ends passes its Will on to the next generation."
+  ];
+  var bootEl = (q2) => boot?.querySelector(q2);
+  var tipI = Math.floor(Math.random() * TIPS.length);
+  var tipT = -1e9;
+  function setBoot(p, msg) {
+    if (!boot) return;
+    const bar2 = bootEl(".bar i"), m = bootEl(".msg"), tip = bootEl(".tip");
+    if (!bar2 || !m) {
+      if (msg) boot.textContent = msg;
+      return;
+    }
+    if (p != null) bar2.style.width = Math.round(Math.max(3, Math.min(1, p) * 100)) + "%";
+    if (msg) m.textContent = msg;
+    if (tip && performance.now() - tipT > 4500) {
+      tipT = performance.now();
+      tip.textContent = "Tip: " + TIPS[tipI++ % TIPS.length];
+    }
+  }
+  function showBoot(msg) {
+    if (!boot) return;
+    boot.classList.remove("hidden", "done");
+    setBoot(0.05, msg);
+  }
+  function hideBoot(now2 = false) {
+    if (!boot || boot.classList.contains("hidden")) return;
+    setBoot(1);
+    if (now2) {
+      boot.classList.add("hidden");
+      return;
+    }
+    boot.classList.add("done");
+    setTimeout(() => {
+      if (boot.classList.contains("done")) boot.classList.add("hidden");
+    }, 850);
+  }
+  var nextFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   var debug = { ready: false };
   window.OP = debug;
   async function start2() {
@@ -114597,7 +114663,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     try {
       renderer = new Renderer(root);
     } catch (e) {
-      boot.textContent = e.message;
+      setBoot(null, e.message);
       throw e;
     }
     const input = new Input(root);
@@ -114608,12 +114674,11 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     const world = await generateWorld({
       seed: "blue-planet",
       islands: ALL_ISLANDS,
-      onProgress: (p, msg) => {
-        boot.textContent = `${msg}\u2026 ${Math.round(p * 100)}%`;
-      }
+      onProgress: (p, msg) => setBoot(p * 0.72, `${msg}\u2026`)
     });
     debug.genMs = Math.round(performance.now() - genT0);
-    boot.style.display = "none";
+    setBoot(0.76, "Building the 3D world\u2026");
+    await nextFrame();
     const game = new Game({ renderer, input, ui, audio, world });
     game.settings = settings;
     const phone = !!window.matchMedia?.("(hover: none) and (pointer: coarse)")?.matches;
@@ -114628,8 +114693,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       renderer.view3d = view3d;
     } catch (e) {
       console.error("3D view unavailable", e);
-      boot.style.display = "grid";
-      boot.textContent = "This game needs 3D graphics (WebGL 2). Please open it in a recent Chrome, Edge, Firefox or Safari, with hardware acceleration turned on.";
+      showBoot("This game needs 3D graphics (WebGL 2). Please open it in a recent Chrome, Edge, Firefox or Safari, with hardware acceleration turned on.");
       return;
     }
     const applyView = () => {
@@ -114736,6 +114800,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     };
     installSession(game, { onReturnToTitle: toTitle });
     const playing = () => !!game.player && !ui.screenEl;
+    let sail = null;
+    let bootFrames = 0;
     let relockUntil = 0;
     ui.actions = {
       inventory: () => openInventory(game),
@@ -114800,6 +114866,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       creationScreen(ui, loadLegacy(), {
         onBack: showTitle,
         onDone: (birth, choices) => {
+          showBoot("Setting sail\u2026");
+          sail = { t0: performance.now(), frames: 0 };
           ui.hideScreen();
           startNewCharacter(game, birth, choices);
           audio.music("sea");
@@ -114823,6 +114891,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
             showTitle();
             return;
           }
+          showBoot("Setting sail\u2026");
+          sail = { t0: performance.now(), frames: 0 };
           ui.hideScreen();
           resumeCharacter(game, saved);
           audio.music("sea");
@@ -114907,6 +114977,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       },
       quickStart(race = "human", opts = {}) {
         const birth = { race, traits: opts.traits || ["lucky"], seed: opts.seed || 12345 };
+        hideBoot(true);
+        sail = null;
         ui.hideScreen();
         if (opts.slot) useSlot(opts.slot);
         startNewCharacter(game, birth, { name: opts.name || "Test Pirate", look: null });
@@ -114945,6 +115017,15 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         if (ui.mapOpen) game.renderMap();
         else game.render();
         prof("render", t1);
+        if (sail) {
+          sail.frames++;
+          const waited = performance.now() - sail.t0;
+          setBoot(0.3 + 0.7 * Math.min(1, waited / 2500), view3d?.terrain.missing ? "Charting the waters around you\u2026" : "Setting sail\u2026");
+          if (sail.frames > 6 && !view3d?.terrain.missing || waited > 6e3) {
+            hideBoot();
+            sail = null;
+          }
+        }
         profFrame();
         if (!ui.mapOpen) view3d?.adapt(frameMs, performance.now() - t0);
       } else {
@@ -114953,13 +115034,22 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         if (!attract.failed) {
           try {
             if (!view3d.active) view3d.setActive(true);
-            view3d.renderAttract(game, attract.x, attract.y, attract.t);
+            view3d.renderAttract(game, attract.x, attract.y, attract.t, dawn?.radius);
+            if (bootFrames >= 0) {
+              bootFrames++;
+              setBoot(0.8 + 0.2 * Math.min(1, bootFrames / 30), view3d.terrain.missing ? "Raising the islands\u2026" : "Warming up the seas\u2026");
+              if (bootFrames > 12 && !view3d.terrain.missing || bootFrames > 240) {
+                hideBoot();
+                bootFrames = -1;
+              }
+            }
             const g = renderer.ctx;
             g.setTransform(1, 0, 0, 1, 0, 0);
             g.clearRect(0, 0, renderer.canvas.width, renderer.canvas.height);
           } catch (e) {
             console.error("3D title view failed", e);
             attract.failed = true;
+            hideBoot();
           }
         }
         ui.update(dt);

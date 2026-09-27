@@ -9,6 +9,24 @@ const state = (page) => page.evaluate(() => {
 });
 
 export const scenarios = {
+  // The loading screen while the world is made, then the title with its
+  // backdrop (the loading screen gone only once the island is drawn), twice
+  // a few seconds apart to see the camera glide.
+  boot: {
+    async run(page, snap) {
+      await page.waitForSelector('#boot .bar i', { timeout: 30000 });
+      await page.waitForTimeout(1200);
+      console.log('boot', await page.evaluate(() => ({ msg: document.querySelector('#boot .msg')?.textContent, w: document.querySelector('#boot .bar i')?.style.width })));
+      await snap('loading');
+      await waitReady(page);
+      const t0 = Date.now();
+      await page.waitForFunction(() => document.getElementById('boot').classList.contains('hidden'), null, { timeout: 180000, polling: 250 });
+      console.log('title after', Date.now() - t0, 'ms');
+      await snap('title-a');
+      await page.waitForTimeout(6000);
+      await snap('title-b');
+    },
+  },
   menus: {
     async run(page, snap) {
       await page.evaluate(() => localStorage.clear());

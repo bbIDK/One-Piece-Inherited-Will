@@ -311,7 +311,7 @@ export class Renderer3D {
    * Title-screen flyover: a camera slowly circling high over (cx, cy) with no
    * player, in the same world, sky and sea as the game.
    */
-  renderAttract(game, cx, cy, t) {
+  renderAttract(game, cx, cy, t, islandR = 80) {
     const w = game.world;
     if (w !== this.world) this.setWorld(w);
     const now = performance.now();
@@ -319,18 +319,41 @@ export class Renderer3D {
     this.frame++;
     if (this.frame === 4) this.warmUp();
     const env = game.env;
-    const a = t * 0.035;
-    const R = this.attractR || 120;
+    // A slow orbit out over the water, at one height clear of every hill on
+    // the way round (no bobbing up and down with the ground below), always
+    // looking in across the island a little ahead of where it's going.
+    const A = this.attractPath && this.attractPath.cx === cx && this.attractPath.cy === cy ? this.attractPath : null;
+    if (!A) {
+      const R = Math.max(95, islandR * 1.3);
+      let top = 0;
+      for (let k = 0; k < 72; k++) {
+        const q = (k / 72) * Math.PI * 2;
+        for (const f of [0.55, 0.8, 1]) top = Math.max(top, this.ground(w.wx(cx + Math.cos(q) * R * f), cy + Math.sin(q) * R * f));
+      }
+      this.attractPath = { cx, cy, R, H: Math.max(0, top) + 26, gc: Math.max(0, this.ground(cx, cy)) };
+      return this.renderAttract(game, cx, cy, t, islandR);
+    }
+    const a = t * 0.028;
+    const R = A.R * (1 + 0.06 * Math.sin(t * 0.05));
     const ox = w.wx(cx + Math.cos(a) * R), oy = cy + Math.sin(a) * R;
     this.ox = ox; this.oy = oy;
-    // look across the island, past its centre
-    const yaw = a + Math.PI - 0.35;
+    // where it looks: past the island's centre, a little ahead along the orbit
+    const la = a + 0.55;
+    const lx = cx + Math.cos(la) * R * 0.22, ly = cy + Math.sin(la) * R * 0.22;
+    const ldx = w.dx(ox, lx), ldy = ly - oy;
+    const yaw = Math.atan2(ldy, ldx);
     this.rig.yaw = ((yaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
     const camYaw3 = -(yaw + Math.PI / 2);
     const cam = this.rig.camera;
     const gh = Math.max(0, this.ground(ox, oy));
-    cam.position.set(0, gh + 30, 0);
-    cam.rotation.set(-0.2, camYaw3, 0);
+    const camH = A.H + Math.sin(t * 0.07) * 2.5;
+    cam.position.set(0, camH, 0);
+    const dist = Math.hypot(ldx, ldy);
+    const pitch = Math.atan2(A.gc + 4 - camH, dist);
+    cam.rotation.set(0, 0, 0);
+    cam.rotation.order = 'YXZ';
+    cam.rotation.y = camYaw3;
+    cam.rotation.x = Math.max(-0.42, Math.min(-0.08, pitch));
     if (Math.abs(cam.fov - 70) > 0.01) { cam.fov = 70; cam.updateProjectionMatrix(); }
     cam.updateMatrixWorld();
     this.terrain.setSailing(true);

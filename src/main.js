@@ -68,6 +68,44 @@ root.style.cssText = 'position:fixed;inset:0;overflow:hidden;background:#0b1622'
 document.body.appendChild(root);
 const boot = document.getElementById('boot');
 
+// The loading screen: a progress bar and what's being done, a tip, and it
+// stays up until the world behind the title has really been drawn (and again,
+// briefly, while the seas around your pirate load).
+const TIPS = [
+  'Hold Space to charge a jump — Minks and Long-Legs spring highest of all.',
+  "A Devil Fruit user can't swim. Fall in and thrash back to shore before your strength gives out.",
+  'Rest at an inn and that is where you wake if you fall.',
+  'Homes are locked: knock, or kick the door in — a crime, unless it is a pirates\' den.',
+  'Drag techniques and food straight onto your hotbar from the Inventory or Skills menu.',
+  'Tap Ctrl in third person for shift lock; V switches between first and third person.',
+  'Out of air under water? Swim for the surface — your lungs will not wait.',
+  'Enemies hunt you by sight. Break the line of sight and they will lose you.',
+  'Every life that ends passes its Will on to the next generation.',
+];
+const bootEl = (q) => boot?.querySelector(q);
+let tipI = Math.floor(Math.random() * TIPS.length), tipT = -1e9;
+function setBoot(p, msg) {
+  if (!boot) return;
+  const bar = bootEl('.bar i'), m = bootEl('.msg'), tip = bootEl('.tip');
+  if (!bar || !m) { if (msg) boot.textContent = msg; return; }
+  if (p != null) bar.style.width = Math.round(Math.max(3, Math.min(1, p) * 100)) + '%';
+  if (msg) m.textContent = msg;
+  if (tip && performance.now() - tipT > 4500) { tipT = performance.now(); tip.textContent = 'Tip: ' + TIPS[tipI++ % TIPS.length]; }
+}
+function showBoot(msg) {
+  if (!boot) return;
+  boot.classList.remove('hidden', 'done');
+  setBoot(0.05, msg);
+}
+function hideBoot(now = false) {
+  if (!boot || boot.classList.contains('hidden')) return;
+  setBoot(1);
+  if (now) { boot.classList.add('hidden'); return; }
+  boot.classList.add('done');
+  setTimeout(() => { if (boot.classList.contains('done')) boot.classList.add('hidden'); }, 850);
+}
+const nextFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+
 const debug = { ready: false };
 window.OP = debug;
 
@@ -76,7 +114,7 @@ async function start() {
   try {
     renderer = new Renderer(root);
   } catch (e) {
-    boot.textContent = e.message;
+    setBoot(null, e.message);
     throw e;
   }
   const input = new Input(root);
@@ -87,10 +125,11 @@ async function start() {
   const world = await generateWorld({
     seed: 'blue-planet',
     islands: ALL_ISLANDS,
-    onProgress: (p, msg) => { boot.textContent = `${msg}… ${Math.round(p * 100)}%`; },
+    onProgress: (p, msg) => setBoot(p * 0.72, `${msg}…`),
   });
   debug.genMs = Math.round(performance.now() - genT0);
-  boot.style.display = 'none';
+  setBoot(0.76, 'Building the 3D world…');
+  await nextFrame();
   const game = new Game({ renderer, input, ui, audio, world });
   game.settings = settings;
   // phones and tablets start on the fast graphics setting unless the player picked one
@@ -109,8 +148,7 @@ async function start() {
     renderer.view3d = view3d;
   } catch (e) {
     console.error('3D view unavailable', e);
-    boot.style.display = 'grid';
-    boot.textContent = 'This game needs 3D graphics (WebGL 2). Please open it in a recent Chrome, Edge, Firefox or Safari, with hardware acceleration turned on.';
+    showBoot('This game needs 3D graphics (WebGL 2). Please open it in a recent Chrome, Edge, Firefox or Safari, with hardware acceleration turned on.');
     return;
   }
   const applyView = () => {
@@ -223,6 +261,8 @@ async function start() {
   const playing = () => !!game.player && !ui.screenEl;
   // until when to capture the mouse again, once the view is back (after a menu,
   // a conversation or the title screen closes: see the frame loop)
+  let sail = null; // entering the world: the loading screen stays up until it's drawn
+  let bootFrames = 0; // frames of the title backdrop drawn so far
   let relockUntil = 0;
   ui.actions = {
     inventory: () => openInventory(game),
@@ -279,7 +319,7 @@ async function start() {
   const openCreation = () => {
     creationScreen(ui, loadLegacy(), {
       onBack: showTitle,
-      onDone: (birth, choices) => { ui.hideScreen(); startNewCharacter(game, birth, choices); audio.music('sea'); relockUntil = performance.now() + 2500; },
+      onDone: (birth, choices) => { showBoot('Setting sail…'); sail = { t0: performance.now(), frames: 0 }; ui.hideScreen(); startNewCharacter(game, birth, choices); audio.music('sea'); relockUntil = performance.now() + 2500; },
     });
   };
   const useSlot = (s) => { setSlot(s); game.saveSlot = s; };
@@ -293,6 +333,7 @@ async function start() {
         useSlot(s);
         const saved = loadChar();
         if (!saved) { showTitle(); return; }
+        showBoot('Setting sail…'); sail = { t0: performance.now(), frames: 0 };
         ui.hideScreen(); resumeCharacter(game, saved); audio.music('sea');
         relockUntil = performance.now() + 2500;
       },
@@ -341,6 +382,7 @@ async function start() {
     step(seconds, dt = 1 / 30) { for (let t = 0; t < seconds; t += dt) { game.update(dt); } game.render(); },
     quickStart(race = 'human', opts = {}) {
       const birth = { race, traits: opts.traits || ['lucky'], seed: opts.seed || 12345 };
+      hideBoot(true); sail = null;
       ui.hideScreen();
       if (opts.slot) useSlot(opts.slot);
       startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', look: null });
@@ -378,6 +420,12 @@ async function start() {
       if (ui.mapOpen) game.renderMap();
       else game.render();
       prof('render', t1);
+      if (sail) {
+        sail.frames++;
+        const waited = performance.now() - sail.t0;
+        setBoot(0.3 + 0.7 * Math.min(1, waited / 2500), view3d?.terrain.missing ? 'Charting the waters around you…' : 'Setting sail…');
+        if ((sail.frames > 6 && !view3d?.terrain.missing) || waited > 6000) { hideBoot(); sail = null; }
+      }
       profFrame();
       if (!ui.mapOpen) view3d?.adapt(frameMs, performance.now() - t0);
     } else {
@@ -387,13 +435,19 @@ async function start() {
       if (!attract.failed) {
         try {
           if (!view3d.active) view3d.setActive(true);
-          view3d.renderAttract(game, attract.x, attract.y, attract.t);
+          view3d.renderAttract(game, attract.x, attract.y, attract.t, dawn?.radius);
+          if (bootFrames >= 0) {
+            bootFrames++;
+            setBoot(0.8 + 0.2 * Math.min(1, bootFrames / 30), view3d.terrain.missing ? 'Raising the islands…' : 'Warming up the seas…');
+            if ((bootFrames > 12 && !view3d.terrain.missing) || bootFrames > 240) { hideBoot(); bootFrames = -1; }
+          }
           const g = renderer.ctx;
           g.setTransform(1, 0, 0, 1, 0, 0);
           g.clearRect(0, 0, renderer.canvas.width, renderer.canvas.height);
         } catch (e) {
           console.error('3D title view failed', e);
           attract.failed = true;
+          hideBoot();
         }
       }
       ui.update(dt);
