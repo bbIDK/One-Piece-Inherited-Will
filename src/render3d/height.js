@@ -230,7 +230,10 @@ export class HeightField {
     if (IS_LIQUID[t]) return Math.max(h, SEA_Y);
     const f = w.floorRec ? w.floorRec(x, y) : null;
     if (!f) return h;
-    return f.interior ? this.floorY(f.o) : h + f.h;
+    if (f.interior) return this.floorY(f.o);
+    // (a ring or stage is level, standing on the ground at its middle like its model)
+    if (f.o) return f.top ?? (f.top = this.terrain(f.o.x, f.o.y) + f.h);
+    return h + f.h;
   }
 
   /**

@@ -246,6 +246,16 @@ export function generateIsland(world, def, noise, rng) {
 
 // ---------------------------------------------------------------------------
 
+/** A raised floor (ring, stage) at or within r of (x, y)? */
+function nearFloor(world, x, y, r) {
+  if (world.floorRec(x, y)) return true;
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    if (world.floorRec(x + Math.cos(a) * r, y + Math.sin(a) * r)) return true;
+  }
+  return false;
+}
+
 function keepLargestComponent(L, LW, LH) {
   const comp = new Int32Array(LW * LH).fill(-1);
   let best = -1, bestSize = 0, id = 0;
@@ -498,6 +508,8 @@ function populateVegetation(world, rng, x0, y0, LW, LH, L, li, kinds, density, d
       const x = x0 + i, y = y0 + j;
       const t = world.type(x, y);
       if (world.isBlocked(x, y) || IS_LIQUID[t] || !WALKABLE[t] || world.hitsProp(x + 0.5, y + 0.5, 1.1)) continue;
+      // (nothing grows through a ring or a stage, or crowds round one)
+      if (world.floors.size && nearFloor(world, x + 0.5, y + 0.8, 3)) continue;
       let p = density;
       let kindList = kinds;
       if (forestTypes.has(t)) {

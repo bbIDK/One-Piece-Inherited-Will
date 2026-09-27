@@ -30,7 +30,7 @@ export class LivesSystem {
     this.k = { t: 0, max: p.drowned ? 2.5 : 6, mash: 0, need: 9 + Math.floor((c.stats.knockdowns || 0) / 3), killer: att, drowned: p.drowned, cause: describe(att, p) };
     g.audio?.sfx('knocked');
     g.fx.impactFrame(0.1);
-    g.hint('knocked', "You've been knocked down! Mash SPACE to get back up before an enemy finishes you. Your second winds refill when you rest at an inn.");
+    if (!att?.spar) g.hint('knocked', "You've been knocked down! Mash SPACE to get back up before an enemy finishes you. Your second winds refill when you rest at an inn.");
   }
 
   info() {

@@ -177,7 +177,7 @@ export const SOUTH_BLUE = [
       ],
     }],
     landmarks: [
-      { kind: 'platform', dx: 0.4, dy: 0.28, fw: 3, fd: 2, name: 'Tournament Ring', spot: 'karate_ring' },
+      { kind: 'platform', dx: 0.4, dy: 0.28, fw: 3, fd: 2, s: 1.7, name: 'Tournament Ring', spot: 'karate_ring' },
       { kind: 'dummy', dx: 0.24, dy: -0.1 },
       { kind: 'dummy', dx: 0.31, dy: -0.13 },
       { kind: 'dummy', dx: 0.38, dy: -0.09 },

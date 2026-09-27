@@ -13,6 +13,7 @@ import './bossMoves.js';
 import { spawnNow, findActor, aggro, despawn } from './helpers.js';
 import { makeEnemy } from '../game/npcs.js';
 import { bw } from '../world/bframe.js';
+import { persist } from '../game/lineage.js';
 
 // ------------------------------------------------------------------ helpers
 const stageOf = (g, id) => g.quests?.stageId(id) ?? null;
@@ -66,6 +67,80 @@ function bossStage(questId, npcId, islandId, spotId, extra) {
     fightAt(g, npcId, islandId, spotId);
     extra?.(ctx, g);
   };
+}
+
+// ------------------------------------------------ the Karate Island Open
+// Each round's opponent waits in his corner of the Tournament Ring. Step up
+// into the ring and the bell rings. Knock him down and he leaves the ring and
+// the next one climbs in; get knocked down yourself (or stay out of the ring
+// for a count of five) and the bout is lost: no life is lost in the ring, but
+// your run in the Open is over — enter again with the Grandmaster.
+const OPEN = 'sb_karate_open';
+const ROUNDS = {
+  r1: ['sb_foxy', 'ROUND ONE', "A young boxer with a fox's grin bounces on his toes in the ring. The crowd is already booing him."],
+  r2: ['sb_yaguara', 'ROUND TWO', 'Yaguara the Mink bows in his corner, fists crackling with Electro. "Garchu!"'],
+  final: ['sb_jerry', 'THE FINAL', 'Jerry, the boxing champion, ducks under the ropes — and keeps ducking. He is very, very tall.'],
+};
+const ringOf = (g) => islandRec(g, 'karate_island')?.landmarks?.find((l) => l.spot === 'karate_ring') || null;
+const onRing = (g, a, ring) => { const f = g.world.floorRec?.(a.x, a.y); return !!f && !!ring && f.o === ring; };
+
+/** Put this round's opponent in his corner of the ring, waiting for you. */
+function ringWait(g, stage, announce = true) {
+  const R = ROUNDS[stage];
+  const ring = ringOf(g);
+  if (!R || !ring || !populated(g, 'karate_island') || g.quests.stageId(OPEN) !== stage) return null;
+  const s = ring.s || 1;
+  const corner = { x: ring.x, y: ring.y - 1.5 * s };
+  const a = findActor(g, R[0]) || spawnNow(g, R[0], corner);
+  if (!a) return null;
+  a.x = corner.x; a.y = corner.y; a.vx = a.vy = 0; a.kb.x = a.kb.y = 0;
+  a.hp = a.d.maxHp; a.state = 'idle';
+  a.provoked = false; a.aggroPlayer = false; a.stationary = true;
+  a.faceHome = Math.PI / 2; a.facing = Math.PI / 2; // facing the steps
+  a.spar = 'karate_open'; // a bout: nobody finishes anybody off
+  if (a.controller) { a.controller.kind = 'idle'; a.controller.target = null; a.controller.state = 'idle'; a.controller.home = { ...corner }; }
+  if (g.bossTarget === a) g.bossTarget = null;
+  g.karateBout = { npc: R[0], stage, a, started: false, out: 0, readyAt: g.time + 1.2 };
+  if (announce) g.ui.banner(R[1], 'Karate Island Open', R[2] + ' Step into the ring when you are ready.', 5);
+  return a;
+}
+
+/** The bell: the bout begins. */
+function ringBell(g) {
+  const B = g.karateBout, a = B.a;
+  B.started = true;
+  g.ui.banner(ROUNDS[B.stage][1], 'Karate Island Open', 'Ding ding ding — FIGHT!', 2.5);
+  g.audio?.sfx('fanfare');
+  aggro(g, a);
+  a.spar = 'karate_open';
+  if (a.controller) { a.controller.leash = 0; a.controller.pursuit = 0; a.controller.patience = 999; }
+}
+
+/** Lost the bout (knocked down, or counted out): out of the Open. */
+function loseBout(g, why) {
+  const B = g.karateBout;
+  if (!B) return;
+  g.karateBout = null;
+  const p = g.player, c = g.state?.char;
+  if (p && p.state === 'knocked') {
+    // no life is lost in the ring
+    g.lives.k = null;
+    p.state = 'idle'; p.hitstun = 0; p.iframes = 2;
+    p.hp = Math.max(p.hp, Math.round(p.d.maxHp * 0.35));
+  }
+  const a = B.a;
+  if (a?.alive) {
+    a.provoked = false; a.aggroPlayer = false;
+    if (a.controller) { a.controller.kind = 'idle'; a.controller.target = null; a.controller.state = 'idle'; }
+    g.fx.text(a.x, a.y - 2.2, a.npcId === 'sb_foxy' ? 'Fe-fe-fe! Foxy wins!' : 'Better luck next year!', '#fff', 0.34, { life: 2 });
+    setTimeout(() => { a.alive = false; }, 2200);
+  }
+  if (g.bossTarget === a) g.bossTarget = null;
+  if (c?.quests?.[OPEN] && !c.quests[OPEN].done) delete c.quests[OPEN];
+  g.ui.banner('DEFEAT', 'Karate Island Open', `${why} Your run in the Open is over — enter again with Grandmaster Ippon at the Grand Karate Dojo.`, 6);
+  g.log('Out of the Karate Island Open. Talk to Grandmaster Ippon to enter again.', '#ff8a80');
+  g.emit('questReset', OPEN);
+  persist(g);
 }
 
 /** Replace a building / landmark by rubble (runtime only; re-applied on every visit). */
@@ -396,7 +471,7 @@ const npcs = [
             return '"Garchu! I am Yaguara. Human karate has no Electro — but it has patience. That is what I came to learn."' + mink;
           },
           choices: [
-            { text: 'To the ring!', if: () => active(ctx, 'sb_karate_open', 'r2'), do: (c) => fightAt(c.game, 'sb_yaguara', 'karate_island', 'karate_ring', 2), end: true },
+            { text: 'To the ring!', if: () => active(ctx, 'sb_karate_open', 'r2'), do: (c) => ringWait(c.game, 'r2'), end: true },
             { text: 'Garchu!', end: true },
           ],
         },
@@ -418,7 +493,7 @@ const npcs = [
             ? '"So you\'re the rookie everyone\'s talking about. I\'m Jerry — boxing champion of Karate Island. The final is ours. Try to stay standing past the first round."'
             : '"Autograph? The name\'s Jerry. Boxing champion. Some fellows in suits keep asking me to join something called \'Cipher Pol\'. Ha! Maybe after I retire undefeated."'),
           choices: [
-            { text: 'Let\'s settle it in the ring.', if: () => active(ctx, 'sb_karate_open', 'final'), do: (c) => fightAt(c.game, 'sb_jerry', 'karate_island', 'karate_ring', 2), end: true },
+            { text: 'Let\'s settle it in the ring.', if: () => active(ctx, 'sb_karate_open', 'final'), do: (c) => ringWait(c.game, 'final'), end: true },
             { text: 'Good luck, champ.', end: true },
           ],
         },
@@ -1407,15 +1482,12 @@ const quests = [
     id: 'sb_karate_open', name: 'The Karate Island Open', island: 'karate_island', kind: 'story',
     summary: 'Fighters from all over the South Blue gather on Karate Island to be humbled.',
     stages: [
-      { id: 'r1', desc: 'Round one: beat Foxy, the fox-grinned boxer, in the Tournament Ring east of Dojo Town.', goal: { type: 'defeat', npc: 'sb_foxy' },
-        onStart: (ctx, g) => { if (fightAt(g, 'sb_foxy', 'karate_island', 'karate_ring', 2)) g.ui.banner('ROUND ONE', 'Karate Island Open', 'A young boxer with a fox\'s grin bounces into the ring. The crowd is already booing him.', 4); } },
-      { id: 'r2', desc: 'Round two: beat Yaguara, the Mink karateka (talk to him if he isn\'t in the ring).', goal: { type: 'defeat', npc: 'sb_yaguara' },
-        onStart: (ctx, g) => { if (fightAt(g, 'sb_yaguara', 'karate_island', 'karate_ring', 2)) g.ui.banner('ROUND TWO', 'Karate Island Open', 'Yaguara the Mink bows, fists crackling with Electro. "Garchu!"', 4); } },
-      { id: 'final', desc: 'The final: beat Jerry, the boxing champion (talk to him at the Boxing Gym if he isn\'t in the ring).', goal: { type: 'defeat', npc: 'sb_jerry' },
-        onStart: (ctx, g) => {
-          if (g.state?.char?.bosses?.includes('sb_jerry')) { setTimeout(() => g.quests.next('sb_karate_open'), 0); return; }
-          if (fightAt(g, 'sb_jerry', 'karate_island', 'karate_ring', 2)) g.ui.banner('The Final', 'Karate Island Open', 'Jerry, the boxing champion, ducks under the ropes — and keeps ducking. He is very, very tall.', 4);
-        } },
+      { id: 'r1', desc: 'Round one: Foxy, the fox-grinned boxer, waits in the Tournament Ring east of Dojo Town. Step into the ring and knock him down — get knocked down and you are out of the Open.', goal: { type: 'defeat', npc: 'sb_foxy' },
+        onStart: (ctx, g) => { ringWait(g, 'r1'); } },
+      { id: 'r2', desc: 'Round two: Yaguara, the Mink karateka, climbs into the ring. Knock him down.', goal: { type: 'defeat', npc: 'sb_yaguara' },
+        onStart: (ctx, g) => { setTimeout(() => ringWait(g, 'r2'), 2600); } },
+      { id: 'final', desc: 'The final: Jerry, the boxing champion, climbs into the ring. Knock him down.', goal: { type: 'defeat', npc: 'sb_jerry' },
+        onStart: (ctx, g) => { setTimeout(() => ringWait(g, 'final'), 2600); } },
       { id: 'report', desc: 'Return to Grandmaster Ippon at the Grand Karate Dojo.' },
     ],
     rewards: { berries: 8000, points: 2, items: [['sb_champion_headband', 1]], mastery: { brawler: 5 } },
@@ -1602,6 +1674,45 @@ const quests = [
 function install(game) {
   // Foxy's foul: the steel fox-trap in his glove (canon: his licence was revoked
   // for bringing a weapon into the ring).
+  game.on('knockout', (a) => {
+    const B = game.karateBout;
+    if (!B || !B.started) return;
+    if (a === B.a) {
+      // he's down: off he goes, and the next one climbs in (the quest moves on)
+      B.started = false;
+      game.karateBout = null;
+      if (game.bossTarget === a) game.bossTarget = null;
+      setTimeout(() => { if (a.state === 'knocked') a.alive = false; }, 2400);
+      if (B.stage !== 'final') game.ui.banner('K.O.!', 'Karate Island Open', 'The crowd roars! Stay in the ring — your next opponent is on his way.', 3);
+    } else if (a.isPlayer) loseBout(game, 'Knocked down — the bout is lost.');
+  });
+  game.on('tick', (dt) => {
+    const B = game.karateBout, p = game.player;
+    if (!B || !p || !game.state?.char) return;
+    if (!B.a.alive || game.quests.stageId(OPEN) !== B.stage) { if (!B.started) game.karateBout = null; return; }
+    const ring = ringOf(game);
+    if (!B.started) {
+      // (waiting in his corner, facing the steps)
+      B.a.facing = Math.PI / 2;
+      if (p.state === 'idle' && game.time > B.readyAt && onRing(game, p, ring)) ringBell(game);
+      return;
+    }
+    // out of the ring mid-bout: a count of five and it's lost
+    if (p.state === 'idle' && !onRing(game, p, ring)) {
+      const was = Math.floor(B.out);
+      B.out += dt;
+      if (Math.floor(B.out) !== was && B.out < 5) game.fx.text(p.x, p.y - 2.2, String(Math.floor(B.out)) + '...', '#ffeb3b', 0.4, { life: 0.9 });
+      if (B.out >= 5) loseBout(game, 'Counted out of the ring.');
+    } else B.out = 0;
+  });
+  // arriving on the island mid-Open: this round's opponent is in the ring
+  game.spawner.addBuilder(({ island, game: g }) => {
+    if (island.id !== 'karate_island') return;
+    const st = g.quests.stageId(OPEN);
+    if (ROUNDS[st]) setTimeout(() => ringWait(g, st, false), 600);
+  });
+  game.on('characterStart', () => { game.karateBout = null; });
+
   game.on('knockout', (a) => {
     if (!game.state?.char || a?.npcId !== 'sb_foxy') return;
     game.ui.banner('FOUL!', 'Karate Island Open', 'The referee pulls a steel fox-trap out of Foxy\'s glove. His boxing licence is revoked — for life.', 5);

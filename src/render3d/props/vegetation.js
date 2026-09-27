@@ -626,7 +626,7 @@ function buildTree(o, ctx, sub) {
     const pts = fruitPoints(sub, v, fr, model);
     const fps = pts.map((q, i) => ({ key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false }));
     parts.push(...fps);
-    dyn = (oo, env, c, u) => { for (let i = 0; i < fps.length; i++) setPartVisible(u, fps[i], !fruitPicked(c.world?.id, oo, i, env.day)); };
+    dyn = (oo, env, c, u) => { if (u.camHidden) return; for (let i = 0; i < fps.length; i++) setPartVisible(u, fps[i], !fruitPicked(c.world?.id, oo, i, env.day)); };
     // where each fruit is, for aiming at it (see game/forage.js)
     o._fruitPts = pts.map((q) => q.p);
     o._fruitN = pts.length;

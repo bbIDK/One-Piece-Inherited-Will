@@ -34576,7 +34576,9 @@ void main() {
       if (IS_LIQUID[t]) return Math.max(h2, SEA_Y);
       const f = w.floorRec ? w.floorRec(x, y) : null;
       if (!f) return h2;
-      return f.interior ? this.floorY(f.o) : h2 + f.h;
+      if (f.interior) return this.floorY(f.o);
+      if (f.o) return f.top ?? (f.top = this.terrain(f.o.x, f.o.y) + f.h);
+      return h2 + f.h;
     }
     /**
      * The ground floor of an enterable building (absolute): a step up from the
@@ -54302,6 +54304,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const fps = pts.map((q2, i) => ({ key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q2), sway: model2.sway, hidden: false, receiveShadow: false, castShadow: false }));
       parts.push(...fps);
       dyn = (oo, env, c, u) => {
+        if (u.camHidden) return;
         for (let i = 0; i < fps.length; i++) setPartVisible(u, fps[i], !fruitPicked(c.world?.id, oo, i, env.day));
       };
       o._fruitPts = pts.map((q2) => q2.p);
@@ -55447,6 +55450,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const root2 = group("platform");
     const n = o.name || "";
     add(root2, /ring/i.test(n) ? ringGeo() : /stage|carnival/i.test(n) ? stageGeo() : scaffoldGeo());
+    if (o.s && o.s !== 1) root2.scale.setScalar(o.s);
     return root2;
   });
   var bellGeo = (big) => model("bell:" + big, (k) => {
@@ -64012,6 +64016,54 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var SHIP_RANGE = 520;
   var _ray1 = new Vector3();
   var _ray2 = new Vector3();
+  var CAM_CLEAR = { tree: 1, bush: 1, rock: 1, mushroom: 1, crystal: 1, cactus: 1, haystack: 1, tent: 1, stall: 1, statue: 1, totem: 1 };
+  var _box2 = new Box3();
+  function propExtent(v) {
+    const u = v.userData;
+    if (u.camExt !== void 0) return u.camExt;
+    let r = 0, top = 0;
+    if (u.parts) {
+      const sc = u.scale || 1;
+      for (const p of u.parts) {
+        const g = p.geo;
+        if (!g) continue;
+        const bb = g.boundingBox || (g.computeBoundingBox(), g.boundingBox);
+        const ls = p.local ? p.local.getMaxScaleOnAxis() : 1;
+        const lx = p.local ? Math.hypot(p.local.elements[12], p.local.elements[14]) : 0;
+        r = Math.max(r, (Math.max(-bb.min.x, bb.max.x, -bb.min.z, bb.max.z) * ls + lx) * sc);
+        top = Math.max(top, (bb.max.y * ls + (p.local ? p.local.elements[13] : 0)) * sc);
+      }
+      u.camExt = r > 0 ? { r, top, get y() {
+        return u.y || 0;
+      } } : null;
+    } else {
+      _box2.setFromObject(v);
+      if (_box2.isEmpty()) return u.camExt = null;
+      const px2 = v.position.x, pz2 = v.position.z;
+      r = Math.max(px2 - _box2.min.x, _box2.max.x - px2, pz2 - _box2.min.z, _box2.max.z - pz2);
+      const base2 = v.position.y;
+      top = _box2.max.y - base2;
+      u.camExt = { r, top, get y() {
+        return v.position.y;
+      } };
+    }
+    return u.camExt;
+  }
+  function showProp(v, on) {
+    const u = v.userData;
+    if (u.parts) {
+      u.camHidden = !on;
+      for (const p of u.parts) {
+        if (!on && !p.hidden) {
+          setPartVisible(u, p, false);
+          p.camHid = true;
+        } else if (on && p.camHid) {
+          p.camHid = false;
+          setPartVisible(u, p, true);
+        }
+      }
+    } else v.visible = on;
+  }
   var _ndc = new Vector2();
   var _caster = new Raycaster();
   var _clearSea = new Color(0.06, 0.34, 0.42);
@@ -64325,10 +64377,42 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
       this.proj.cam.zoom = f / 7;
       if (this.post) this.post.setImpact(game.fx && game.fx.impact > 0 ? 1 : 0, game.fx?.impactColor);
+      this.clearCameraProps();
       prof("r.misc", t0);
       t0 = performance.now();
       this.draw(cam);
       prof("r.draw", t0);
+    }
+    /**
+     * Third person: a tree, bush or rock the camera has swung into is hidden
+     * while it's there — seen from inside, its outline shell would black out
+     * the whole screen.
+     */
+    clearCameraProps() {
+      const hidden = this.camHidden || (this.camHidden = /* @__PURE__ */ new Map());
+      const want = /* @__PURE__ */ new Set();
+      const w = this.world;
+      if (this.rig.mode === "third" && w?.objects) {
+        const cp = this.rig.camera.getWorldPosition(_ray1);
+        const cx = w.wx((this.ox || 0) + cp.x), cy = (this.oy || 0) + cp.z, ch = cp.y;
+        for (const o of w.objects.near(cx, cy, 8)) {
+          if (!CAM_CLEAR[o.kind]) continue;
+          const v = this.built.get(o);
+          if (!v) continue;
+          const e = propExtent(v);
+          if (!e) continue;
+          const dx = w.dx(o.x, cx), dy = cy - o.y;
+          if (dx * dx + dy * dy < (e.r + 0.4) ** 2 && ch > e.y - 0.6 && ch < e.y + e.top + 0.4) want.add(v);
+        }
+      }
+      for (const v of hidden.keys()) if (!want.has(v)) {
+        showProp(v, true);
+        hidden.delete(v);
+      }
+      for (const v of want) if (!hidden.has(v)) {
+        showProp(v, false);
+        hidden.set(v, true);
+      }
     }
     /**
      * Title-screen flyover: a camera slowly circling high over (cx, cy) with no
@@ -68685,6 +68769,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     populateVegetation(world, rng4, x0, y0, LW2, LH, L2, li, treeKinds, density, def);
     return rec;
   }
+  function nearFloor(world, x, y, r) {
+    if (world.floorRec(x, y)) return true;
+    for (let k = 0; k < 8; k++) {
+      const a = k / 8 * Math.PI * 2;
+      if (world.floorRec(x + Math.cos(a) * r, y + Math.sin(a) * r)) return true;
+    }
+    return false;
+  }
   function keepLargestComponent(L2, LW2, LH) {
     const comp = new Int32Array(LW2 * LH).fill(-1);
     let best = -1, bestSize = 0, id = 0;
@@ -68944,6 +69036,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const x = x0 + i, y = y0 + j;
         const t = world.type(x, y);
         if (world.isBlocked(x, y) || IS_LIQUID[t] || !WALKABLE[t] || world.hitsProp(x + 0.5, y + 0.5, 1.1)) continue;
+        if (world.floors.size && nearFloor(world, x + 0.5, y + 0.8, 3)) continue;
         let p = density;
         let kindList = kinds;
         if (forestTypes.has(t)) {
@@ -71658,7 +71751,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         ]
       }],
       landmarks: [
-        { kind: "platform", dx: 0.4, dy: 0.28, fw: 3, fd: 2, name: "Tournament Ring", spot: "karate_ring" },
+        { kind: "platform", dx: 0.4, dy: 0.28, fw: 3, fd: 2, s: 1.7, name: "Tournament Ring", spot: "karate_ring" },
         { kind: "dummy", dx: 0.24, dy: -0.1 },
         { kind: "dummy", dx: 0.31, dy: -0.13 },
         { kind: "dummy", dx: 0.38, dy: -0.09 },
@@ -86107,7 +86200,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       this.k = { t: 0, max: p.drowned ? 2.5 : 6, mash: 0, need: 9 + Math.floor((c.stats.knockdowns || 0) / 3), killer: att, drowned: p.drowned, cause: describe(att, p) };
       g.audio?.sfx("knocked");
       g.fx.impactFrame(0.1);
-      g.hint("knocked", "You've been knocked down! Mash SPACE to get back up before an enemy finishes you. Your second winds refill when you rest at an inn.");
+      if (!att?.spar) g.hint("knocked", "You've been knocked down! Mash SPACE to get back up before an enemy finishes you. Your second winds refill when you rest at an inn.");
     }
     info() {
       const k = this.k, c = this.game.player.char;
@@ -94938,6 +95031,94 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       extra?.(ctx, g);
     };
   }
+  var OPEN = "sb_karate_open";
+  var ROUNDS = {
+    r1: ["sb_foxy", "ROUND ONE", "A young boxer with a fox's grin bounces on his toes in the ring. The crowd is already booing him."],
+    r2: ["sb_yaguara", "ROUND TWO", 'Yaguara the Mink bows in his corner, fists crackling with Electro. "Garchu!"'],
+    final: ["sb_jerry", "THE FINAL", "Jerry, the boxing champion, ducks under the ropes \u2014 and keeps ducking. He is very, very tall."]
+  };
+  var ringOf = (g) => islandRec(g, "karate_island")?.landmarks?.find((l) => l.spot === "karate_ring") || null;
+  var onRing = (g, a, ring4) => {
+    const f = g.world.floorRec?.(a.x, a.y);
+    return !!f && !!ring4 && f.o === ring4;
+  };
+  function ringWait(g, stage2, announce = true) {
+    const R3 = ROUNDS[stage2];
+    const ring4 = ringOf(g);
+    if (!R3 || !ring4 || !populated(g, "karate_island") || g.quests.stageId(OPEN) !== stage2) return null;
+    const s = ring4.s || 1;
+    const corner = { x: ring4.x, y: ring4.y - 1.5 * s };
+    const a = findActor(g, R3[0]) || spawnNow(g, R3[0], corner);
+    if (!a) return null;
+    a.x = corner.x;
+    a.y = corner.y;
+    a.vx = a.vy = 0;
+    a.kb.x = a.kb.y = 0;
+    a.hp = a.d.maxHp;
+    a.state = "idle";
+    a.provoked = false;
+    a.aggroPlayer = false;
+    a.stationary = true;
+    a.faceHome = Math.PI / 2;
+    a.facing = Math.PI / 2;
+    a.spar = "karate_open";
+    if (a.controller) {
+      a.controller.kind = "idle";
+      a.controller.target = null;
+      a.controller.state = "idle";
+      a.controller.home = { ...corner };
+    }
+    if (g.bossTarget === a) g.bossTarget = null;
+    g.karateBout = { npc: R3[0], stage: stage2, a, started: false, out: 0, readyAt: g.time + 1.2 };
+    if (announce) g.ui.banner(R3[1], "Karate Island Open", R3[2] + " Step into the ring when you are ready.", 5);
+    return a;
+  }
+  function ringBell(g) {
+    const B4 = g.karateBout, a = B4.a;
+    B4.started = true;
+    g.ui.banner(ROUNDS[B4.stage][1], "Karate Island Open", "Ding ding ding \u2014 FIGHT!", 2.5);
+    g.audio?.sfx("fanfare");
+    aggro(g, a);
+    a.spar = "karate_open";
+    if (a.controller) {
+      a.controller.leash = 0;
+      a.controller.pursuit = 0;
+      a.controller.patience = 999;
+    }
+  }
+  function loseBout(g, why) {
+    const B4 = g.karateBout;
+    if (!B4) return;
+    g.karateBout = null;
+    const p = g.player, c = g.state?.char;
+    if (p && p.state === "knocked") {
+      g.lives.k = null;
+      p.state = "idle";
+      p.hitstun = 0;
+      p.iframes = 2;
+      p.hp = Math.max(p.hp, Math.round(p.d.maxHp * 0.35));
+    }
+    const a = B4.a;
+    if (a?.alive) {
+      a.provoked = false;
+      a.aggroPlayer = false;
+      if (a.controller) {
+        a.controller.kind = "idle";
+        a.controller.target = null;
+        a.controller.state = "idle";
+      }
+      g.fx.text(a.x, a.y - 2.2, a.npcId === "sb_foxy" ? "Fe-fe-fe! Foxy wins!" : "Better luck next year!", "#fff", 0.34, { life: 2 });
+      setTimeout(() => {
+        a.alive = false;
+      }, 2200);
+    }
+    if (g.bossTarget === a) g.bossTarget = null;
+    if (c?.quests?.[OPEN] && !c.quests[OPEN].done) delete c.quests[OPEN];
+    g.ui.banner("DEFEAT", "Karate Island Open", `${why} Your run in the Open is over \u2014 enter again with Grandmaster Ippon at the Grand Karate Dojo.`, 6);
+    g.log("Out of the Karate Island Open. Talk to Grandmaster Ippon to enter again.", "#ff8a80");
+    g.emit("questReset", OPEN);
+    persist(g);
+  }
   function ruin(g, islandId, match, pieces) {
     const isl = islandRec(g, islandId);
     const W3 = g.surface;
@@ -95523,7 +95704,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
               return '"Garchu! I am Yaguara. Human karate has no Electro \u2014 but it has patience. That is what I came to learn."' + mink;
             },
             choices: [
-              { text: "To the ring!", if: () => active3(ctx, "sb_karate_open", "r2"), do: (c) => fightAt(c.game, "sb_yaguara", "karate_island", "karate_ring", 2), end: true },
+              { text: "To the ring!", if: () => active3(ctx, "sb_karate_open", "r2"), do: (c) => ringWait(c.game, "r2"), end: true },
               { text: "Garchu!", end: true }
             ]
           }
@@ -95557,7 +95738,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
           a: {
             text: () => active3(ctx, "sb_karate_open", "final") ? `"So you're the rookie everyone's talking about. I'm Jerry \u2014 boxing champion of Karate Island. The final is ours. Try to stay standing past the first round."` : `"Autograph? The name's Jerry. Boxing champion. Some fellows in suits keep asking me to join something called 'Cipher Pol'. Ha! Maybe after I retire undefeated."`,
             choices: [
-              { text: "Let's settle it in the ring.", if: () => active3(ctx, "sb_karate_open", "final"), do: (c) => fightAt(c.game, "sb_jerry", "karate_island", "karate_ring", 2), end: true },
+              { text: "Let's settle it in the ring.", if: () => active3(ctx, "sb_karate_open", "final"), do: (c) => ringWait(c.game, "final"), end: true },
               { text: "Good luck, champ.", end: true }
             ]
           }
@@ -97100,30 +97281,26 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       stages: [
         {
           id: "r1",
-          desc: "Round one: beat Foxy, the fox-grinned boxer, in the Tournament Ring east of Dojo Town.",
+          desc: "Round one: Foxy, the fox-grinned boxer, waits in the Tournament Ring east of Dojo Town. Step into the ring and knock him down \u2014 get knocked down and you are out of the Open.",
           goal: { type: "defeat", npc: "sb_foxy" },
           onStart: (ctx, g) => {
-            if (fightAt(g, "sb_foxy", "karate_island", "karate_ring", 2)) g.ui.banner("ROUND ONE", "Karate Island Open", "A young boxer with a fox's grin bounces into the ring. The crowd is already booing him.", 4);
+            ringWait(g, "r1");
           }
         },
         {
           id: "r2",
-          desc: "Round two: beat Yaguara, the Mink karateka (talk to him if he isn't in the ring).",
+          desc: "Round two: Yaguara, the Mink karateka, climbs into the ring. Knock him down.",
           goal: { type: "defeat", npc: "sb_yaguara" },
           onStart: (ctx, g) => {
-            if (fightAt(g, "sb_yaguara", "karate_island", "karate_ring", 2)) g.ui.banner("ROUND TWO", "Karate Island Open", 'Yaguara the Mink bows, fists crackling with Electro. "Garchu!"', 4);
+            setTimeout(() => ringWait(g, "r2"), 2600);
           }
         },
         {
           id: "final",
-          desc: "The final: beat Jerry, the boxing champion (talk to him at the Boxing Gym if he isn't in the ring).",
+          desc: "The final: Jerry, the boxing champion, climbs into the ring. Knock him down.",
           goal: { type: "defeat", npc: "sb_jerry" },
           onStart: (ctx, g) => {
-            if (g.state?.char?.bosses?.includes("sb_jerry")) {
-              setTimeout(() => g.quests.next("sb_karate_open"), 0);
-              return;
-            }
-            if (fightAt(g, "sb_jerry", "karate_island", "karate_ring", 2)) g.ui.banner("The Final", "Karate Island Open", "Jerry, the boxing champion, ducks under the ropes \u2014 and keeps ducking. He is very, very tall.", 4);
+            setTimeout(() => ringWait(g, "final"), 2600);
           }
         },
         { id: "report", desc: "Return to Grandmaster Ippon at the Grand Karate Dojo." }
@@ -97467,6 +97644,47 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     }
   ];
   function install4(game) {
+    game.on("knockout", (a) => {
+      const B4 = game.karateBout;
+      if (!B4 || !B4.started) return;
+      if (a === B4.a) {
+        B4.started = false;
+        game.karateBout = null;
+        if (game.bossTarget === a) game.bossTarget = null;
+        setTimeout(() => {
+          if (a.state === "knocked") a.alive = false;
+        }, 2400);
+        if (B4.stage !== "final") game.ui.banner("K.O.!", "Karate Island Open", "The crowd roars! Stay in the ring \u2014 your next opponent is on his way.", 3);
+      } else if (a.isPlayer) loseBout(game, "Knocked down \u2014 the bout is lost.");
+    });
+    game.on("tick", (dt) => {
+      const B4 = game.karateBout, p = game.player;
+      if (!B4 || !p || !game.state?.char) return;
+      if (!B4.a.alive || game.quests.stageId(OPEN) !== B4.stage) {
+        if (!B4.started) game.karateBout = null;
+        return;
+      }
+      const ring4 = ringOf(game);
+      if (!B4.started) {
+        B4.a.facing = Math.PI / 2;
+        if (p.state === "idle" && game.time > B4.readyAt && onRing(game, p, ring4)) ringBell(game);
+        return;
+      }
+      if (p.state === "idle" && !onRing(game, p, ring4)) {
+        const was = Math.floor(B4.out);
+        B4.out += dt;
+        if (Math.floor(B4.out) !== was && B4.out < 5) game.fx.text(p.x, p.y - 2.2, String(Math.floor(B4.out)) + "...", "#ffeb3b", 0.4, { life: 0.9 });
+        if (B4.out >= 5) loseBout(game, "Counted out of the ring.");
+      } else B4.out = 0;
+    });
+    game.spawner.addBuilder(({ island, game: g }) => {
+      if (island.id !== "karate_island") return;
+      const st = g.quests.stageId(OPEN);
+      if (ROUNDS[st]) setTimeout(() => ringWait(g, st, false), 600);
+    });
+    game.on("characterStart", () => {
+      game.karateBout = null;
+    });
     game.on("knockout", (a) => {
       if (!game.state?.char || a?.npcId !== "sb_foxy") return;
       game.ui.banner("FOUL!", "Karate Island Open", "The referee pulls a steel fox-trap out of Foxy's glove. His boxing licence is revoked \u2014 for life.", 5);

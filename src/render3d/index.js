@@ -19,6 +19,7 @@ import { shipBob } from '../world/hull.js';
 import { Ship } from '../game/ship.js';
 import { buildBuilding, setNightWindows } from './buildings3d.js';
 import { PROP_BUILDERS, VIEWS, FRAME_HOOKS, registerPropBuilder } from './registry.js';
+import { setPartVisible } from './props/instancer.js';
 import './props3d.js';
 import './chars3d.js';
 
@@ -30,6 +31,49 @@ const PROP_BUDGET_MS = 4; // building props per frame (beyond the nearest)
 const SHIP_RANGE = 520;
 
 const _ray1 = new THREE.Vector3(), _ray2 = new THREE.Vector3();
+
+// props the third-person camera may end up inside (see clearCameraProps)
+const CAM_CLEAR = { tree: 1, bush: 1, rock: 1, mushroom: 1, crystal: 1, cactus: 1, haystack: 1, tent: 1, stall: 1, statue: 1, totem: 1 };
+const _box = new THREE.Box3();
+/** A prop's rough extent: radius round its foot, height, and where its foot is. */
+function propExtent(v) {
+  const u = v.userData;
+  if (u.camExt !== undefined) return u.camExt;
+  let r = 0, top = 0;
+  if (u.parts) {
+    const sc = u.scale || 1;
+    for (const p of u.parts) {
+      const g = p.geo;
+      if (!g) continue;
+      const bb = g.boundingBox || (g.computeBoundingBox(), g.boundingBox);
+      const ls = p.local ? p.local.getMaxScaleOnAxis() : 1;
+      const lx = p.local ? Math.hypot(p.local.elements[12], p.local.elements[14]) : 0;
+      r = Math.max(r, (Math.max(-bb.min.x, bb.max.x, -bb.min.z, bb.max.z) * ls + lx) * sc);
+      top = Math.max(top, (bb.max.y * ls + (p.local ? p.local.elements[13] : 0)) * sc);
+    }
+    u.camExt = r > 0 ? { r, top, get y() { return u.y || 0; } } : null;
+  } else {
+    _box.setFromObject(v);
+    if (_box.isEmpty()) return (u.camExt = null);
+    const px = v.position.x, pz = v.position.z;
+    r = Math.max(px - _box.min.x, _box.max.x - px, pz - _box.min.z, _box.max.z - pz);
+    const base = v.position.y;
+    top = _box.max.y - base;
+    u.camExt = { r, top, get y() { return v.position.y; } };
+  }
+  return u.camExt;
+}
+/** Hide or show a built prop (every part of an instanced one). */
+function showProp(v, on) {
+  const u = v.userData;
+  if (u.parts) {
+    u.camHidden = !on;
+    for (const p of u.parts) {
+      if (!on && !p.hidden) { setPartVisible(u, p, false); p.camHid = true; }
+      else if (on && p.camHid) { p.camHid = false; setPartVisible(u, p, true); }
+    }
+  } else v.visible = on;
+}
 const _ndc = new THREE.Vector2(), _caster = new THREE.Raycaster();
 const _clearSea = new THREE.Color(0.06, 0.34, 0.42);
 
@@ -302,9 +346,36 @@ export class Renderer3D {
     const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
     this.proj.cam.zoom = f / 7;
     if (this.post) this.post.setImpact(game.fx && game.fx.impact > 0 ? 1 : 0, game.fx?.impactColor);
+    this.clearCameraProps();
     prof('r.misc', t0); t0 = performance.now();
     this.draw(cam);
     prof('r.draw', t0);
+  }
+
+  /**
+   * Third person: a tree, bush or rock the camera has swung into is hidden
+   * while it's there — seen from inside, its outline shell would black out
+   * the whole screen.
+   */
+  clearCameraProps() {
+    const hidden = this.camHidden || (this.camHidden = new Map());
+    const want = new Set();
+    const w = this.world;
+    if (this.rig.mode === 'third' && w?.objects) {
+      const cp = this.rig.camera.getWorldPosition(_ray1);
+      const cx = w.wx((this.ox || 0) + cp.x), cy = (this.oy || 0) + cp.z, ch = cp.y;
+      for (const o of w.objects.near(cx, cy, 8)) {
+        if (!CAM_CLEAR[o.kind]) continue;
+        const v = this.built.get(o);
+        if (!v) continue;
+        const e = propExtent(v);
+        if (!e) continue;
+        const dx = w.dx(o.x, cx), dy = cy - o.y;
+        if (dx * dx + dy * dy < (e.r + 0.4) ** 2 && ch > e.y - 0.6 && ch < e.y + e.top + 0.4) want.add(v);
+      }
+    }
+    for (const v of hidden.keys()) if (!want.has(v)) { showProp(v, true); hidden.delete(v); }
+    for (const v of want) if (!hidden.has(v)) { showProp(v, false); hidden.set(v, true); }
   }
 
   /**

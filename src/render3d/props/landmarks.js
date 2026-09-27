@@ -720,6 +720,7 @@ reg('platform', (o) => {
   const root = group('platform');
   const n = o.name || '';
   add(root, /ring/i.test(n) ? ringGeo() : /stage|carnival/i.test(n) ? stageGeo() : scaffoldGeo());
+  if (o.s && o.s !== 1) root.scale.setScalar(o.s);
   return root;
 });
 
