@@ -186,7 +186,7 @@ export class CameraRig {
     if (this.smoothG === undefined || Math.abs(g0 - this.smoothG) > 2.5 || p.mode !== this.lastMode || (p.deck && g0 < this.smoothG - 0.6 && p.z > 0.3)) this.smoothG = g0;
     this.smoothG += (g0 - this.smoothG) * Math.min(1, dt * 14);
     this.lastMode = p.mode;
-    let gh = this.smoothG + (p.z || 0);
+    let gh = p.flying && p.alt != null ? p.alt : this.smoothG + (p.z || 0);
     let rollSea = 0;
     if (sailing) {
       // standing at the helm on the stern deck (your own rigging turns

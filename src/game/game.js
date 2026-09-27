@@ -182,7 +182,7 @@ export class Game {
     if (this.world.fogDirty && Math.floor(this.time * 2) !== this.lastFogPush) {
       this.lastFogPush = Math.floor(this.time * 2);
       this.world.fogDirty = false;
-      this.renderer.terrain.updateFog(this.world.fog);
+      this.renderer.terrain.updateFog(this.creative?.on && this.world === this.surface ? this.creative.fullFog() || this.world.fog : this.world.fog);
     }
     prof('s.map', t0);
     this.input.endFrame();

@@ -42,6 +42,14 @@ export class PlayerController {
     p.intent.mx = mx; p.intent.my = my;
     // swimming: Space rises, C dives — and swimming forward follows the view up or down
     p.intent.mz = 0;
+    // creative mode: double-tap Space to take off or land; flying, Space rises and C sinks
+    const cr = game.creative;
+    if (cr?.on && inp.wasPressed('Space')) {
+      const now = game.time || 0;
+      if (now - (this.spaceT ?? -9) < 0.3) { cr.fly(); this.spaceT = -9; this.jumpHold = null; p.charging = 0; }
+      else this.spaceT = now;
+    }
+    if (p.flying) p.intent.mz = inp.isDown('Space') ? 1 : inp.isDown('C') ? -1 : 0;
     if (p.inWater) {
       if (inp.isDown('Space')) p.intent.mz = 1;
       else if (inp.isDown('C')) p.intent.mz = -1;
@@ -94,7 +102,8 @@ export class PlayerController {
     // jumping: a tap hops; holding Space crouches and charges a higher spring (how
     // high, and how much more a charge gives, depends on your race). A press in the
     // air still jumps if you land within a moment.
-    if (inp.wasPressed('Space')) { if (p.canJump()) this.jumpHold = { t: 0 }; else buf.jump = 0.14; }
+    if (inp.wasPressed('Space') && !p.flying) { if (p.canJump()) this.jumpHold = { t: 0 }; else buf.jump = 0.14; }
+    if (inp.wasPressed('Slash') || inp.wasPressed('NumpadDivide') || inp.wasPressed('Backquote')) game.creative?.openConsole();
     if (buf.dodge > 0 && p.tryDodge(game, mx, my)) { buf.dodge = 0; buf.m1 = 0; }
     if (this.jumpHold) {
       if (!p.canJump()) { this.jumpHold = null; p.charging = 0; }

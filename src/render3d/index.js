@@ -703,6 +703,7 @@ export class Renderer3D {
       }
       let gh;
       if (a.deck) gh = a.deck.h + shipBob(a.deck.ship, env.time);
+      else if (a.flying) gh = Math.max(0, this.ground(a.x, a.y));
       else if (a.seaCreature) gh = Math.max(-(a.depth || 0), this.terrain.terrainAt(a.x, a.y) + 0.35);
       else if (a.inWater) {
         // afloat with the head out, stretched out along the surface when swimming,

@@ -421,6 +421,7 @@ export class Actor extends Entity {
    * ring on the water as the feet meet it).
    */
   updateVertical(dt, game) {
+    if (this.flying) return;
     if (this.leapT > 0) this.leapT -= dt;
     if (!(this.z > 0) && !this.vz) return;
     this.airT = (this.airT || 0) + dt;
@@ -453,6 +454,30 @@ export class Actor extends Entity {
         if (this.isPlayer) game.emit('playerLand', impact);
       }
     }
+  }
+
+  /**
+   * Flying (creative mode): WASD along where you look, Space up, C down,
+   * Shift fast; nothing is solid. The height is kept above the sea, not
+   * above the ground, so the view glides level over hills and valleys.
+   */
+  updateFlight(dt, game) {
+    const w = game.world, i = this.intent;
+    const fast = (i.sprint ? 3.2 : 1) * (game.creative?.speed || 1);
+    const sp = 13 * fast;
+    const k = Math.min(1, dt * 7);
+    this.vx += (i.mx * sp - this.vx) * k; this.vy += (i.my * sp - this.vy) * k;
+    this.x = w.wx(this.x + this.vx * dt);
+    this.y = clamp(this.y + this.vy * dt, 1, w.height - 1);
+    const gh = game.view3d ? Math.max(0, game.view3d.ground(this.x, this.y)) : 0;
+    if (this.alt == null) this.alt = gh + (this.z || 0);
+    this.alt = Math.min(this.alt + (i.mz || 0) * 8 * fast * dt, gh + 400);
+    if (this.alt < gh) this.alt = gh;
+    this.z = this.alt - gh;
+    this.vz = 0;
+    this.inWater = false; this.under = false; this.depth = 0; this.wading = 0;
+    // settling onto dry ground lands you (over the sea you hover)
+    if (this.z <= 0.01 && (i.mz || 0) < 0 && !w.isLiquid(this.x, this.y)) { this.flying = false; this.alt = null; }
   }
 
   setBlock(on) {
@@ -517,6 +542,13 @@ export class Actor extends Entity {
         this.combo.queued = false;
         this.tryM1(game);
       }
+    }
+    if (this.flying) {
+      // creative-mode flight: straight through anything, at a steady height
+      this.updateFlight(dt, game);
+      const fs = Math.hypot(this.vx, this.vy);
+      this.moving = fs > 0.4; this.speed = fs;
+      return;
     }
     this.updateMovement(dt, game, false);
     this.updateVertical(dt, game);

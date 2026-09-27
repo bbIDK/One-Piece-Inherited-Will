@@ -39,7 +39,9 @@ export function installMap(game) {
     cam.y = Math.max(0, Math.min(H, wy - (sy - r.ch / 2) / cam.zoom));
   };
   const startDrag = (x, y) => { drag = { x, y, cx: cam.x, cy: cam.y }; wrap.style.cursor = 'grabbing'; };
+  let press = null;
   wrap.addEventListener('pointerdown', (e) => {
+    press = ptrs.size ? null : { x: e.clientX, y: e.clientY };
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
     try { wrap.setPointerCapture(e.pointerId); } catch { /* not supported */ }
     if (ptrs.size === 1) startDrag(e.clientX, e.clientY);
@@ -63,6 +65,17 @@ export function installMap(game) {
     }
   });
   const up = (e) => {
+    // creative mode: a click (not a drag) on the chart takes you there
+    if (press && e.type === 'pointerup' && game.creative?.on && Math.hypot(e.clientX - press.x, e.clientY - press.y) < 6 && game.world === game.surface) {
+      const r = game.renderer;
+      const wx = cam.x + (e.clientX - r.cw / 2) / cam.zoom, wy = cam.y + (e.clientY - r.ch / 2) / cam.zoom;
+      press = null;
+      ptrs.clear(); drag = null; pinch = null;
+      game.closeMap();
+      game.creative.teleport(((wx % W) + W) % W, Math.max(2, Math.min(H - 2, wy)));
+      return;
+    }
+    press = null;
     ptrs.delete(e.pointerId);
     if (ptrs.size < 2) pinch = null;
     if (!ptrs.size) { drag = null; wrap.style.cursor = 'grab'; } else if (ptrs.size === 1 && !drag) { const [a] = [...ptrs.values()]; startDrag(a.x, a.y); }
@@ -76,6 +89,7 @@ export function installMap(game) {
 
   game.openMap = () => {
     if (ui.mapOpen) return;
+    help.textContent = game.creative?.on ? 'Click anywhere to travel there · drag to pan · wheel to zoom · M or Esc to close' : 'Drag to pan · wheel to zoom · M or Esc to close';
     ui.mapOpen = true;
     game.paused = true;
     const p = game.player;

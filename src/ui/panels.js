@@ -494,6 +494,13 @@ export function openMenu(game, { onQuit, onRetire, onSave }) {
           ui.fade(false);
         }, 450);
       }),
+      btn('map', game.creative?.on ? 'Creative mode: on — turn off' : 'Creative mode (fly, commands)', async () => {
+        const C = game.creative;
+        if (!C) return;
+        if (!C.on && !(await ui.ask({ title: 'Creative mode?', text: "Fly anywhere (double-tap Space; Space rises, C sinks, Shift goes fast), take no harm, see the whole chart and click it to travel, and type commands with / (help lists them). Turn it off here any time.", ok: 'Turn it on' }))) return;
+        ui.closePanel();
+        C.set(!C.on);
+      }, game.creative?.on ? '.gold' : ''),
       fullscreenOK() ? btn('fullscreen', fullscreenOn() ? 'Leave full screen' : 'Full screen', () => { ui.closePanel(); toggleFullscreen(); }) : null,
       (c.legends || []).length ? btn('journal', 'Retire as a legend', async () => {
         if (!(await ui.ask({ title: 'Retire?', text: `${c.name} hangs up their hat and becomes a legend. This life ends here and its Inherited Will passes to the next generation.`, ok: 'Retire', danger: true }))) return;
