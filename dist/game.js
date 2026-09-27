@@ -38528,14 +38528,14 @@ void main() {
       const bobY = Math.sin(this.bob) * this.bobAmp;
       const bobX = Math.cos(this.bob * 0.5) * this.bobAmp * 0.6;
       const side = !sailing ? (p.vx || 0) * -Math.sin(this.yaw) + (p.vy || 0) * Math.cos(this.yaw) : 0;
-      let roll = this.bobOn ? -side * 6e-3 : 0;
+      let roll2 = this.bobOn ? -side * 6e-3 : 0;
       if (p.state === "knocked") {
         eyeH = 0.45;
-        roll = 0.35;
+        roll2 = 0.35;
       }
       this.crouch = (this.crouch || 0) + ((p.charging || 0) - (this.crouch || 0)) * Math.min(1, dt * 12);
       eyeH -= this.crouch * 0.34 * scale;
-      this.roll += (roll - this.roll) * Math.min(1, dt * 5);
+      this.roll += (roll2 - this.roll) * Math.min(1, dt * 5);
       const tr = game.fx?.trauma || 0;
       const sh = tr * tr * 0.06;
       this.shake.set((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
@@ -50596,10 +50596,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       g.translate(0, -z * s);
       g.scale(flip ? -s : s, s);
-      const roll = (P4.r || 0) + (pose.roll || 0);
-      if (roll) {
+      const roll2 = (P4.r || 0) + (pose.roll || 0);
+      if (roll2) {
         g.translate(0, -0.72);
-        g.rotate(roll);
+        g.rotate(roll2);
         g.translate(0, 0.72);
       }
     }
@@ -62557,9 +62557,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         hw.group.position.addScaledVector(_v5, -0.12);
       }
       const g = this.group;
-      const roll = (P4.r || 0) + (o.roll || 0);
+      const roll2 = (P4.r || 0) + (o.roll || 0);
       const pivot = d.hip0 * 0.92;
-      g.quaternion.setFromAxisAngle(AZ, -roll);
+      g.quaternion.setFromAxisAngle(AZ, -roll2);
       g.position.set(0, pivot, 0).applyQuaternion(g.quaternion).negate().add(_v5.set(0, pivot, 0));
       g.position.y += o.lift || 0;
       if (o.sideRoll) {
@@ -65281,7 +65281,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (const k of KINDS) out[k] = [];
     const x0 = cx * CELL2, y0 = cy * CELL2;
     const col = new Color();
-    const put = (k, x, y, rot, s, c) => {
+    const put2 = (k, x, y, rot, s, c) => {
       let h2 = terrain(x, y);
       if (k === "rock") h2 = Math.max(h2, -0.35);
       else if (!(h2 > 0.05)) return;
@@ -65297,7 +65297,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (IS_LIQUID[t]) {
           if (t === T.SEA && r1 < 0.022) {
             const sd = world.sd ? world.sd(x, y) : -1;
-            if (sd > -2.5) put("rock", x + r2, y + r3, r1 * 60, 0.7 + r2 * 1.3, col.setRGB(0.62, 0.6, 0.56));
+            if (sd > -2.5) put2("rock", x + r2, y + r3, r1 * 60, 0.7 + r2 * 1.3, col.setRGB(0.62, 0.6, 0.56));
           }
           continue;
         }
@@ -65310,40 +65310,40 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           for (let q2 = 0; q2 < n; q2++) {
             const a = hash6(x, y, 10 + q2), b = hash6(x, y, 20 + q2);
             if (a < 0.12) continue;
-            put("grass", x + a, y + b, a * 40, 0.7 + b * 0.7, grassTint(clim, col, hash6(x, y, 30 + q2)));
+            put2("grass", x + a, y + b, a * 40, 0.7 + b * 0.7, grassTint(clim, col, hash6(x, y, 30 + q2)));
           }
           const patch2 = vnoise2(x / 7, y / 7, 5);
           const fp = t === T.FLOWERS ? 0.55 : t === T.SAKURA ? 0.25 : t === T.GRASS ? 0.015 + Math.max(0, patch2 - 0.62) * 1.1 : 0.02;
           if (r1 < fp) {
             const pick5 = hash6(Math.floor(x / 7), Math.floor(y / 7), 6) * FLOWERS.length + (r2 < 0.3 ? 2 : 0);
             const f = clim === CLIMATE.SAKURA ? FLOWERS[2 + Math.floor(r2 * 2)] : FLOWERS[Math.floor(pick5) % FLOWERS.length];
-            put("flower", x + r3, y + r2, r1 * 50, 0.8 + r3 * 0.6, col.setRGB(f[0], f[1], f[2]));
+            put2("flower", x + r3, y + r2, r1 * 50, 0.8 + r3 * 0.6, col.setRGB(f[0], f[1], f[2]));
           }
           if ((t === T.FOREST || t === T.JUNGLE || t === T.MANGROVE) && r3 < (t === T.JUNGLE ? 0.35 : 0.22)) {
-            put("fern", x + r1, y + r2, r3 * 60, 0.75 + r1 * 0.7, grassTint(clim, col, r2).multiplyScalar(0.85));
+            put2("fern", x + r1, y + r2, r3 * 60, 0.75 + r1 * 0.7, grassTint(clim, col, r2).multiplyScalar(0.85));
           }
-          if (r2 > 0.985) put("pebble", x + r1, y + r3, r2 * 50, 0.8 + r1, col.setRGB(0.7, 0.68, 0.64));
+          if (r2 > 0.985) put2("pebble", x + r1, y + r3, r2 * 50, 0.8 + r1, col.setRGB(0.7, 0.68, 0.64));
         } else if (t === T.SAND) {
           const sd = world.sd ? world.sd(x, y) : 3;
-          if (r1 < 0.05 && sd < 3) put("shell", x + r2, y + r3, r1 * 80, 0.8 + r2 * 0.6, col.setRGB(1, 0.86 + r3 * 0.1, 0.78));
-          else if (r1 > 0.965) put("pebble", x + r2, y + r3, r1 * 40, 0.7 + r2, col.setRGB(0.78, 0.74, 0.66));
-          if (r2 < 0.04 && sd > 3 && !winter) put("grass", x + r3, y + r1, r2 * 50, 0.6 + r3 * 0.4, col.setRGB(0.66, 0.7, 0.36));
+          if (r1 < 0.05 && sd < 3) put2("shell", x + r2, y + r3, r1 * 80, 0.8 + r2 * 0.6, col.setRGB(1, 0.86 + r3 * 0.1, 0.78));
+          else if (r1 > 0.965) put2("pebble", x + r2, y + r3, r1 * 40, 0.7 + r2, col.setRGB(0.78, 0.74, 0.66));
+          if (r2 < 0.04 && sd > 3 && !winter) put2("grass", x + r3, y + r1, r2 * 50, 0.6 + r3 * 0.4, col.setRGB(0.66, 0.7, 0.36));
         } else if (t === T.DIRT || t === T.MUD || t === T.GRAVEL) {
-          if (r1 < (t === T.GRAVEL ? 0.4 : 0.1)) put("pebble", x + r2, y + r3, r1 * 30, 0.6 + r2 * 0.8, col.setRGB(0.66, 0.62, 0.56));
-          if (r3 < 0.2 && t !== T.GRAVEL && !winter) put("grass", x + r1, y + r2, r3 * 40, 0.55 + r1 * 0.4, grassTint(clim, col, r1).multiplyScalar(0.9));
+          if (r1 < (t === T.GRAVEL ? 0.4 : 0.1)) put2("pebble", x + r2, y + r3, r1 * 30, 0.6 + r2 * 0.8, col.setRGB(0.66, 0.62, 0.56));
+          if (r3 < 0.2 && t !== T.GRAVEL && !winter) put2("grass", x + r1, y + r2, r3 * 40, 0.55 + r1 * 0.4, grassTint(clim, col, r1).multiplyScalar(0.9));
         } else if (t === T.ROCK || t === T.MOUNTAIN || t === T.CLIFF || t === T.ASH || t === T.SNOWROCK) {
-          if (r1 < 0.3) put("pebble", x + r2, y + r3, r1 * 30, 0.7 + r2 * 1.2, t === T.ASH ? col.setRGB(0.34, 0.32, 0.3) : col.setRGB(0.6, 0.58, 0.55));
-          if (r2 < 0.045) put("rock", x + r3, y + r1, r2 * 70, 0.6 + r3 * 1.1, col.setRGB(0.66, 0.63, 0.6));
-          if (r3 < 0.08 && !winter && t !== T.ASH) put("grass", x + r1, y + r2, r3 * 40, 0.5 + r1 * 0.3, grassTint(clim, col, r2).multiplyScalar(0.85));
+          if (r1 < 0.3) put2("pebble", x + r2, y + r3, r1 * 30, 0.7 + r2 * 1.2, t === T.ASH ? col.setRGB(0.34, 0.32, 0.3) : col.setRGB(0.6, 0.58, 0.55));
+          if (r2 < 0.045) put2("rock", x + r3, y + r1, r2 * 70, 0.6 + r3 * 1.1, col.setRGB(0.66, 0.63, 0.6));
+          if (r3 < 0.08 && !winter && t !== T.ASH) put2("grass", x + r1, y + r2, r3 * 40, 0.5 + r1 * 0.3, grassTint(clim, col, r2).multiplyScalar(0.85));
         } else if (t === T.DESERT) {
-          if (r1 < 0.05) put("pebble", x + r2, y + r3, r1 * 30, 0.7 + r2, col.setRGB(0.82, 0.72, 0.56));
-          if (r2 < 0.012) put("rock", x + r3, y + r1, r2 * 50, 0.5 + r3, col.setRGB(0.84, 0.7, 0.52));
+          if (r1 < 0.05) put2("pebble", x + r2, y + r3, r1 * 30, 0.7 + r2, col.setRGB(0.82, 0.72, 0.56));
+          if (r2 < 0.012) put2("rock", x + r3, y + r1, r2 * 50, 0.5 + r3, col.setRGB(0.84, 0.7, 0.52));
         } else if (t === T.SNOW) {
-          if (r1 < 0.03) put("pebble", x + r2, y + r3, r1 * 30, 0.8 + r2, col.setRGB(0.6, 0.6, 0.64));
+          if (r1 < 0.03) put2("pebble", x + r2, y + r3, r1 * 30, 0.8 + r2, col.setRGB(0.6, 0.6, 0.64));
         } else if (t === T.CORAL) {
-          if (r1 < 0.2) put("fern", x + r2, y + r3, r1 * 60, 0.6 + r2 * 0.5, col.setRGB(1, 0.45 + r3 * 0.3, 0.55));
+          if (r1 < 0.2) put2("fern", x + r2, y + r3, r1 * 60, 0.6 + r2 * 0.5, col.setRGB(1, 0.45 + r3 * 0.3, 0.55));
         } else if (t === T.CANDY) {
-          if (r1 < 0.12) put("flower", x + r2, y + r3, r1 * 50, 1 + r2, col.setRGB(1, 0.5 + r3 * 0.5, 0.7 + r2 * 0.3));
+          if (r1 < 0.12) put2("flower", x + r2, y + r3, r1 * 50, 1 + r2, col.setRGB(1, 0.5 + r3 * 0.5, 0.7 + r2 * 0.3));
         }
       }
     }
@@ -65932,7 +65932,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const col = new Color();
     const warm = warmth(world, x0 + CELL3 / 2, y0 + CELL3 / 2);
     const reefy = warm > 0.55, cold = warm < 0.35;
-    const put = (k, x, y, rot, s, sy, c, sink = 0.04) => {
+    const put2 = (k, x, y, rot, s, sy, c, sink = 0.04) => {
       const h2 = terrain(x, y);
       out[k].push(x, y, h2 - sink, rot, s, sy, c[0], c[1], c[2]);
     };
@@ -65957,7 +65957,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           for (let q2 = 0; q2 < n; q2++) {
             const a = hash7(x, y, 110 + q2), b = hash7(x, y, 120 + q2);
             if (a < 0.25) continue;
-            put("seagrass", x + a, y + b, a * 40, 0.8 + b * 0.7, 1 + depth * 0.05, rgb([0.36 + b * 0.1, 0.56 + a * 0.08, 0.26]));
+            put2("seagrass", x + a, y + b, a * 40, 0.8 + b * 0.7, 1 + depth * 0.05, rgb([0.36 + b * 0.1, 0.56 + a * 0.08, 0.26]));
           }
         }
         const reefK = reefTile ? 1.2 : reefy && depth > 0.8 && depth < 20 ? smooth4(0.36, 0.62, patch2) * (1 - smooth4(14, 20, depth)) * 1.4 : 0;
@@ -65966,23 +65966,23 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             const a = hash7(x, y, 130 + q2), b = hash7(x, y, 140 + q2), c = hash7(x, y, 150 + q2);
             if (a > reefK * 0.5) continue;
             const px2 = x + b, py2 = y + hash7(x, y, 180 + q2), rot = a * 70;
-            if (c < 0.36) put("branch", px2, py2, rot, 0.75 + b * 0.8, 1, rgb(pick(CORAL, hash7(x >> 2, y >> 2, 160 + q2))));
-            else if (c < 0.56) put("brain", px2, py2, rot, 0.5 + b * 0.9, 1, rgb(pick(BRAIN, b)), 0.06);
-            else if (c < 0.64) put("table", px2, py2, rot, 0.6 + b * 0.8, 1, rgb(pick(CORAL, hash7(x >> 3, y >> 3, 170))));
-            else if (c < 0.78) put("fan", px2, py2, rot, 0.6 + b * 0.7, 1, rgb(pick(FANS, a * 3)));
-            else if (c < 0.88) put("tube", px2, py2, rot, 0.6 + b * 0.8, 1, rgb(pick(TUBES, b * 2)));
-            else put("anemone", px2, py2, rot, 0.8 + b * 0.8, 1, rgb(pick(ANEMONES, a * 2)));
+            if (c < 0.36) put2("branch", px2, py2, rot, 0.75 + b * 0.8, 1, rgb(pick(CORAL, hash7(x >> 2, y >> 2, 160 + q2))));
+            else if (c < 0.56) put2("brain", px2, py2, rot, 0.5 + b * 0.9, 1, rgb(pick(BRAIN, b)), 0.06);
+            else if (c < 0.64) put2("table", px2, py2, rot, 0.6 + b * 0.8, 1, rgb(pick(CORAL, hash7(x >> 3, y >> 3, 170))));
+            else if (c < 0.78) put2("fan", px2, py2, rot, 0.6 + b * 0.7, 1, rgb(pick(FANS, a * 3)));
+            else if (c < 0.88) put2("tube", px2, py2, rot, 0.6 + b * 0.8, 1, rgb(pick(TUBES, b * 2)));
+            else put2("anemone", px2, py2, rot, 0.8 + b * 0.8, 1, rgb(pick(ANEMONES, a * 2)));
           }
         }
         if (!reefy && depth > 2.4 && depth < 26 && patch22 > (cold ? 0.4 : 0.55) && r3 < (cold ? 0.6 : 0.34)) {
           const h2 = Math.min(depth * 0.82, 3 + r1 * 7.5);
-          put("kelp", x + r2, y + r4, r1 * 60, 0.9 + r2 * 0.6, h2, rgb([0.44 + r4 * 0.1, 0.46 + r2 * 0.08, 0.18]));
-          if (r4 < 0.4) put("kelp", x + r4, y + r2, r2 * 60, 0.8 + r1 * 0.5, h2 * 0.7, rgb([0.4, 0.48, 0.2]));
+          put2("kelp", x + r2, y + r4, r1 * 60, 0.9 + r2 * 0.6, h2, rgb([0.44 + r4 * 0.1, 0.46 + r2 * 0.08, 0.18]));
+          if (r4 < 0.4) put2("kelp", x + r4, y + r2, r2 * 60, 0.8 + r1 * 0.5, h2 * 0.7, rgb([0.4, 0.48, 0.2]));
         }
-        if (depth > 1.2 && r4 < (depth > 16 ? 0.03 : 0.012)) put("boulder", x + r1, y + r3, r4 * 90, 0.7 + r2 * 2.2, 1, rgb(depth > 20 ? [0.36, 0.4, 0.44] : [0.5, 0.52, 0.46]), 0.12);
-        if (depth > 22 && r2 < 6e-3) put("tube", x + r3, y + r1, r2 * 90, 1 + r4, 1, rgb([0.5, 0.4, 0.6], 0.8));
-        if (depth > 0.6 && depth < 12 && r2 > 0.992) put("star", x + r1, y + r4, r2 * 90, 0.8 + r3 * 0.8, 1, rgb(pick(STARS, r3)), 0);
-        if (clamAt(world, x, y, depth)) put("clam", x + 0.5, y + 0.5, r1 * TAU18, 1.3 + r2 * 0.5, 1, rgb([0.86, 0.82, 0.72]), 0.05);
+        if (depth > 1.2 && r4 < (depth > 16 ? 0.03 : 0.012)) put2("boulder", x + r1, y + r3, r4 * 90, 0.7 + r2 * 2.2, 1, rgb(depth > 20 ? [0.36, 0.4, 0.44] : [0.5, 0.52, 0.46]), 0.12);
+        if (depth > 22 && r2 < 6e-3) put2("tube", x + r3, y + r1, r2 * 90, 1 + r4, 1, rgb([0.5, 0.4, 0.6], 0.8));
+        if (depth > 0.6 && depth < 12 && r2 > 0.992) put2("star", x + r1, y + r4, r2 * 90, 0.8 + r3 * 0.8, 1, rgb(pick(STARS, r3)), 0);
+        if (clamAt(world, x, y, depth)) put2("clam", x + 0.5, y + 0.5, r1 * TAU18, 1.3 + r2 * 0.5, 1, rgb([0.86, 0.82, 0.72]), 0.05);
       }
     }
     return out;
@@ -79508,12 +79508,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       const ta = t.action;
       if (ta && dist < 4 && !a.action && ta.t < (ta.def.windup ?? 0.1) + 0.05 && this.think <= 0.35) {
-        const roll = Math.random();
-        if (roll < this.skill * 0.55) {
+        const roll2 = Math.random();
+        if (roll2 < this.skill * 0.55) {
           a.facing = ang;
           a.setBlock(true);
           this.blockT = 0.5;
-        } else if (roll < this.skill * 0.85) {
+        } else if (roll2 < this.skill * 0.85) {
           a.tryDodge(game, -dy, dx * this.strafeDir);
         }
         this.think = 0.5;
@@ -86799,24 +86799,23 @@ Trains by: ${TRAINS_BY[k]}` },
     chest(o) {
       const g = this.game, c = g.state.char;
       const key2 = "chest_" + (o.key || `${Math.round(o.x)}_${Math.round(o.y)}`);
-      if (c.world.chests[key2]) {
+      if (c.world.chests[key2] && !c.world.containers?.[key2]) {
         o.opened = true;
+        g.log("Empty. You took it all.", "#b0bec5");
         return;
       }
-      c.world.chests[key2] = true;
-      o.opened = true;
-      const rng4 = new RNG(key2 + c.runSeed);
       const luck = c.traits.includes("lucky") ? 1.5 : 1;
-      const tier = o.tier || 1;
-      const berries = Math.round(rng4.range(300, 1200) * tier * luck);
-      earn(g, berries, "treasure");
-      if (o.item && !(o.item.startsWith("fruit_") && g.fruitTaken?.(o.item.slice(6)))) {
-        addItem(g, o.item, 1);
-        if (o.item.startsWith("fruit_")) g.state.char.world.fruitsTaken = [.../* @__PURE__ */ new Set([...g.state.char.world.fruitsTaken || [], o.item.slice(6)])];
-      } else if (rng4.chance(0.35 * luck)) addItem(g, rng4.pick(tier > 2 ? ["jewels", "gold_coins", "golden_statue", "rumble_ball"] : ["gold_coins", "meat", "bandage", "jewels"]), 1);
-      g.fx.burst(o.x, o.y - 0.5, 20, { color: ["#ffd54f", "#fff59d"], speed: 4, vz: 4, g: 8, life: 0.8, kind: "star" });
-      g.audio?.sfx("treasure");
-      persist(g);
+      const first = !c.world.containers?.[key2];
+      g.containers.open(key2, "treasure", {
+        title: o.tier > 2 ? "A treasure chest" : "A chest",
+        sub: "The lid creaks open\u2026",
+        o: { tier: o.tier || 1, luck, item: o.item },
+        onEmpty: () => {
+          c.world.chests[key2] = true;
+          o.opened = true;
+        }
+      });
+      if (first) g.fx.burst(o.x, o.y - 0.5, 20, { color: ["#ffd54f", "#fff59d"], speed: 4, vz: 4, g: 8, life: 0.8, kind: "star" });
     }
     dummy(o) {
       const g = this.game, c = g.state.char, p = g.player;
@@ -87121,8 +87120,8 @@ Trains by: ${TRAINS_BY[k]}` },
             if (!a.alive || a.state === "dead" || a.onShip) continue;
             const q2 = bl(b, a.x, a.y, w);
             const dx = Math.abs(q2.lx - d.lx), dy = Math.abs(q2.lz + WALL_T / 2);
-            if (dx < d.dw / 2 + a.r + 0.05 && dy < WALL_T / 2 + a.r + 0.05) blocking = true;
-            const allowed = a.isPlayer ? !locked || B4.inside(a, b) : !locked || a.homeB === b;
+            if (b.doorOpen && dx < d.dw / 2 + a.r && dy < WALL_T / 2 + a.r - 0.08) blocking = true;
+            const allowed = a.isPlayer ? !locked || B4.inside(a, b) : !locked || a.homeB === b && a.moving;
             if (allowed && a.state !== "knocked" && (dx < 1.2 && dy < 1.5)) want = true;
           }
         }
@@ -87228,23 +87227,19 @@ Trains by: ${TRAINS_BY[k]}` },
       lootHideout(b) {
         const c = game.state.char;
         const key2 = "hideout_" + B4.key(b);
-        if (c.world.chests[key2]) {
-          game.log("The hoard is empty \u2014 you took it all.", "#b0bec5");
-          return;
-        }
         const guards = game.actors.filter((a) => a.homeB === b && a.alive && a.state === "idle");
         if (guards.length) {
           game.log("Not with the crew still standing!", "#ff8a80");
           return;
         }
-        c.world.chests[key2] = true;
-        const rng4 = new RNG(key2 + c.runSeed);
         const lvl = SEA_LEVEL[seaOf(game)] || 5;
-        earn(game, Math.round(rng4.range(900, 2600) * (1 + lvl / 6)), "from the pirates' hoard");
-        addItem(game, rng4.pick(["jewels", "gold_coins", "gold_coins", "jewels", "golden_statue"]), 1);
-        if (rng4.chance(0.3)) addItem(game, rng4.pick(["rum", "sake", "meat", "bandage"]), 1);
-        game.audio?.sfx("treasure");
-        persist(game);
+        if (c.world.chests[key2] && !c.world.containers?.[key2]) {
+          game.log("The hoard is empty \u2014 you took it all.", "#b0bec5");
+          return;
+        }
+        game.containers.open(key2, "hoard", { title: "The pirates' hoard", sub: "A sea chest crammed with their plunder.", o: { tier: 1 + lvl / 6 }, onEmpty: () => {
+          c.world.chests[key2] = true;
+        } });
       },
       /** Where an NPC heading for (tx, ty) should steer to get through a door (or null). */
       route(a, tx, ty) {
@@ -87285,13 +87280,15 @@ Trains by: ${TRAINS_BY[k]}` },
           }
           if (inB !== b) continue;
           const L2 = layoutOf(b);
+          let li = 0;
           for (const u of L2.use) {
+            const idx = u.kind === "loot" ? li++ : -1;
             const { x: ux, y: uy } = bw(b, u.x, u.z);
             const dist = w.distance(p.x, p.y, ux, uy);
             if (dist > 1.25) continue;
             if (u.kind === "loot") {
-              const label = b.pirate ? "Take the pirates' hoard" : `${u.label} (a crime)`;
-              out.push({ d: dist, x: ux, y: uy, label, run: () => b.pirate ? B4.lootHideout(b) : B4.robInside(b) });
+              const label = b.pirate ? "Open the pirates' hoard" : `${u.label} (a crime)`;
+              out.push({ d: dist, x: ux, y: uy, label, run: () => b.pirate ? B4.lootHideout(b) : B4.search(b, idx, u.label) });
             } else if (u.kind === "service") {
               const keeper2 = game.actors.find((a) => a.homeB === b && (a.keeper || a.npcId) && a.alive && a.state === "idle");
               if (keeper2) continue;
@@ -87302,16 +87299,32 @@ Trains by: ${TRAINS_BY[k]}` },
           }
         }
       },
-      /** Rob a house from the inside (anyone home sees you). */
-      robInside(b) {
-        const watchers = game.actors.filter((a) => a.homeB === b && a.alive && a.state === "idle" && !a.keeper);
-        robHouse(game, b);
-        if (watchers.length) {
-          for (const a of watchers) game.fx.text(a.x, a.y - 2.1, "THIEF!!", "#ff5252", 0.4, { life: 1.4 });
-          const d = B4.doorPts(b);
-          raiseAlarm(game, d.mid.x, d.mid.y, "Thief");
-          crime(game, 4e5, "caught robbing a home", { rep: 5 });
-        }
+      /**
+       * Search a chest or drawers in somebody's home: look at what's inside, take
+       * what you like. The first thing you take is the theft (anyone home sees
+       * it; if not, you may still be spotted).
+       */
+      search(b, idx, label) {
+        const key2 = `home_${B4.key(b)}_${idx}`;
+        const what = /drawer/i.test(label || "") ? "drawers" : /chest/i.test(label || "") ? "chest" : /cupboard/i.test(label || "") ? "cupboard" : "chest";
+        game.containers.open(key2, "home", {
+          title: `Searching the ${what}`,
+          sub: "Someone lives here. Anything you take is stolen.",
+          onTake: () => {
+            const c = game.state.char, p = game.player;
+            const watchers = game.actors.filter((a) => a.homeB === b && a.alive && a.state === "idle" && !a.keeper);
+            c.stats.thefts = (c.stats.thefts || 0) + 1;
+            const d = B4.doorPts(b);
+            if (watchers.length) {
+              for (const a of watchers) game.fx.text(a.x, a.y - 2.1, "THIEF!!", "#ff5252", 0.4, { life: 1.4 });
+              raiseAlarm(game, d.mid.x, d.mid.y, "Thief");
+              crime(game, 3e5, "caught robbing a home", { rep: 5 });
+            } else {
+              crime(game, 12e4, "stole from a home", { rep: 3 });
+              if (Math.random() > 0.3 + p.attrs.agi * 6e-3) raiseAlarm(game, p.x, p.y, "Burglar");
+            }
+          }
+        });
       }
     };
     game.buildings = B4;
@@ -89022,10 +89035,10 @@ Trains by: ${TRAINS_BY[k]}` },
       if (!g.world.sailable(x, y)) return;
       const gl = isGrandLine(reg3);
       const nw = reg3 === REGION.NEW_WORLD;
-      const roll = rng4.next();
+      const roll2 = rng4.next();
       let kind;
-      if ((g.wanted?.tier() ?? 0) >= 2 && roll < 0.35) kind = "marine";
-      else if (roll < 0.7) kind = "pirate";
+      if ((g.wanted?.tier() ?? 0) >= 2 && roll2 < 0.35) kind = "marine";
+      else if (roll2 < 0.7) kind = "pirate";
       else kind = "merchant";
       const lvl = nw ? rng4.int(45, 70) : gl ? rng4.int(22, 40) : isBlue(reg3) && reg3 !== REGION.EAST_BLUE ? rng4.int(10, 18) : rng4.int(5, 12);
       const type = nw ? rng4.pick(["frigate", "galleon", "war_galleon", "man_o_war"]) : gl ? rng4.pick(["brigantine", "caravel", "frigate", "war_galleon"]) : rng4.pick(["sloop", "caravel", "sloop"]);
@@ -112696,20 +112709,20 @@ Trains by: ${TRAINS_BY[k]}` },
   }
 
   // src/ui/loot.js
-  function openLoot(game, a, { take }) {
+  function openLoot(game, a, { take, title: title2, sub, empty: empty2 }) {
     const ui = game.ui;
     const body = h("div.loot");
     const entry = ui.openPanel(body, { id: "loot" });
     const render2 = () => {
       clear(body);
       const pk = a.pocket || { berries: 0, items: [] };
-      add2(body, h("h2", `Searching ${a.name}`), h("p.muted", a.faction === "beast" ? "Good eating, at least." : "Out cold. You go through their pockets\u2026"));
+      add2(body, h("h2", title2 || `Searching ${a.name}`), h("p.muted", sub ?? (a.faction === "beast" ? "Good eating, at least." : "Out cold. You go through their pockets\u2026")));
       const list = h("div.list");
       if (pk.berries) {
         list.appendChild(h(
           "div.row-item",
           uiImg("berries", 30, ".ico"),
-          h("div.grow", h("b", "Berries"), h("div.sub", "A purse of coins")),
+          h("div.grow", h("b", "Berries"), h("div.sub", title2 ? "A handful of coins" : "A purse of coins")),
           h("span.price", formatBerries(pk.berries)),
           h("button.btn.gold", { on: { click: () => {
             take("berries");
@@ -112732,7 +112745,7 @@ Trains by: ${TRAINS_BY[k]}` },
         ));
       }
       const any = pk.berries || pk.items.length;
-      if (!any) list.appendChild(h("p", "Nothing left worth taking."));
+      if (!any) list.appendChild(h("p", empty2 || "Nothing left worth taking."));
       add2(body, list);
       if (any) add2(body, h("div.row-end", h("button.btn.gold", { on: { click: () => {
         take("all");
@@ -112869,6 +112882,127 @@ Trains by: ${TRAINS_BY[k]}` },
         if (a.fadeAlpha <= 0) a.alive = false;
       }
     }
+  }
+
+  // src/game/containers.js
+  var SEA_TIER2 = { east_blue: 1, north_blue: 1.2, west_blue: 1.2, south_blue: 1.2, polar: 1.3, paradise: 2.2, calm_belt: 2.2, sky: 2.4, undersea: 2.8, red_line: 3.2, new_world: 4 };
+  var RESTOCK_DAYS = 10;
+  var HOME = [
+    ["apple", 10],
+    ["banana", 8],
+    ["mango", 6],
+    ["tangerine", 5],
+    ["cherry", 5],
+    ["coconut", 3],
+    ["rice_ball", 8],
+    ["fresh_fish", 5],
+    ["meat", 5],
+    ["sake", 5],
+    ["bandage", 6],
+    ["antidote", 1.5],
+    ["bandana", 1.6],
+    ["headband", 1.4],
+    ["shell_bracelet", 1],
+    ["lucky_charm", 0.8],
+    ["iron_ring", 0.6],
+    ["wooden_sword", 1.4],
+    ["slingshot", 1],
+    ["rusty_katana", 0.7],
+    ["gold_coins", 0.5]
+  ];
+  var HOARD_EXTRA = [["sake", 3], ["meat", 3], ["bandage", 3], ["cutlass", 1], ["flintlock", 0.8], ["rusty_katana", 1.2]];
+  function weighted(rng4, table) {
+    let sum = 0;
+    for (const [id, w] of table) if (ITEMS[id]) sum += w;
+    let r = rng4.next() * sum;
+    for (const [id, w] of table) {
+      if (!ITEMS[id]) continue;
+      if ((r -= w) <= 0) return id;
+    }
+    return table[0][0];
+  }
+  function put(items9, id, qty = 1) {
+    const have = items9.find((x) => x.id === id);
+    if (have) have.qty += qty;
+    else items9.push({ id, qty });
+  }
+  function roll(kind, rng4, tier, o = {}) {
+    const items9 = [];
+    let berries = 0;
+    if (kind === "home") {
+      if (rng4.chance(0.55)) berries = Math.round(rng4.range(12, 90) * tier);
+      const n = rng4.chance(0.15) ? 0 : rng4.int(1, 3);
+      for (let i = 0; i < n; i++) put(items9, weighted(rng4, HOME));
+    } else if (kind === "hoard") {
+      berries = Math.round(rng4.range(700, 2e3) * tier);
+      put(items9, rng4.pick(["gold_coins", "gold_coins", "jewels"]));
+      if (rng4.chance(0.35)) put(items9, rng4.pick(["jewels", "gold_coins", "golden_statue"]));
+      for (let i = rng4.int(1, 2); i > 0; i--) put(items9, weighted(rng4, HOARD_EXTRA));
+    } else {
+      berries = Math.round(rng4.range(300, 1200) * (o.tier || 1) * (o.luck || 1));
+      if (o.item) put(items9, o.item);
+      else if (rng4.chance(0.35 * (o.luck || 1))) put(items9, rng4.pick((o.tier || 1) > 2 ? ["jewels", "gold_coins", "golden_statue", "rumble_ball"] : ["gold_coins", "meat", "bandage", "jewels"]));
+    }
+    return { berries, items: items9 };
+  }
+  function installContainers(game) {
+    const store = () => {
+      const c = game.state.char;
+      return c.world.containers = c.world.containers || {};
+    };
+    const tierHere = () => SEA_TIER2[game.reputation?.sea?.()] || 1;
+    function contents(key2, kind, o = {}) {
+      const c = game.state.char, S3 = store();
+      const period = kind === "home" ? Math.floor(game.env.day / RESTOCK_DAYS) : 0;
+      let e = S3[key2];
+      if (!e || kind === "home" && e.p !== period) {
+        const rng4 = new RNG(`${key2}:${period}:${c.runSeed}`);
+        e = { ...roll(kind, rng4, o.tier ?? tierHere(), o), p: period };
+        S3[key2] = e;
+      }
+      return e;
+    }
+    const isEmpty = (e) => !e || !e.berries && !e.items.length;
+    function open(key2, kind, { title: title2, sub, o, onTake, onEmpty } = {}) {
+      const e = contents(key2, kind, o);
+      let first = true;
+      const pocket = { get berries() {
+        return e.berries;
+      }, get items() {
+        return e.items;
+      } };
+      game.audio?.sfx("door");
+      return openLoot(game, { name: title2 || "Chest", pocket }, {
+        title: title2,
+        sub: sub || (isEmpty(e) ? "" : "You lift the lid and look inside\u2026"),
+        empty: kind === "home" ? "Nothing left worth taking. (People restock their homes in time.)" : "Empty. You took it all.",
+        take(which) {
+          if (first) {
+            first = false;
+            if (onTake && onTake() === false) return;
+          }
+          if ((which === "berries" || which === "all") && e.berries) {
+            earn(game, e.berries, kind === "home" ? "stolen" : kind === "hoard" ? "from the pirates' hoard" : "treasure");
+            e.berries = 0;
+          }
+          const list = which === "all" ? e.items.slice() : e.items.filter((x) => x.id === which);
+          for (const it of list) {
+            if (it.id.startsWith("fruit_") && game.fruitTaken?.(it.id.slice(6))) {
+              game.log("The fruit in here has rotted away...", "#b0bec5");
+              e.items = e.items.filter((x) => x !== it);
+              continue;
+            }
+            addItem(game, it.id, it.qty);
+            if (it.id.startsWith("fruit_")) game.state.char.world.fruitsTaken = [.../* @__PURE__ */ new Set([...game.state.char.world.fruitsTaken || [], it.id.slice(6)])];
+            e.items = e.items.filter((x) => x !== it);
+          }
+          game.audio?.sfx(kind === "home" ? "coin" : "treasure");
+          if (isEmpty(e)) onEmpty?.();
+          persist(game);
+        }
+      });
+    }
+    game.containers = { open, contents, isEmpty: (key2, kind, o) => isEmpty(contents(key2, kind, o)) };
   }
 
   // src/data/zones/index.js
@@ -114609,6 +114743,7 @@ Trains by: ${TRAINS_BY[k]}` },
     installTraffic(game);
     installWanted(game);
     installLoot(game);
+    installContainers(game);
     installZones(game);
     new Crew(game);
     installFactions(game);

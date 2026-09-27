@@ -51,6 +51,7 @@ import { deckToWorld, shipDims } from './world/hull.js';
 import { installTraffic } from './game/traffic.js';
 import { installWanted } from './game/wanted.js';
 import { installLoot } from './game/loot.js';
+import { installContainers } from './game/containers.js';
 import { installZones } from './game/zones.js';
 import { Crew } from './game/crew.js';
 import { openCrew } from './ui/crewPanel.js';
@@ -187,6 +188,7 @@ async function start() {
   installTraffic(game);
   installWanted(game);
   installLoot(game);
+  installContainers(game);
   installZones(game);
   new Crew(game);
   installFactions(game);

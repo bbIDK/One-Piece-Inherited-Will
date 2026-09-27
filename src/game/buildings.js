@@ -9,7 +9,7 @@
 // unless the house belongs to pirates: nobody reports a burglary on them.
 import { layoutOf, doorOf, HOURS, KEEPER, WALL_T, roomOf, interiorRect } from '../world/interiors.js';
 import { bw, bl } from '../world/bframe.js';
-import { crime, raiseAlarm, robHouse, seaOf } from './reputation.js';
+import { crime, raiseAlarm, seaOf } from './reputation.js';
 import { makeLook } from '../data/races.js';
 import { makeEnemy } from './npcs.js';
 import { civilianOutfit, randomName, townRaces } from './spawner.js';
@@ -99,8 +99,11 @@ export function installBuildings(game) {
           if (!a.alive || a.state === 'dead' || a.onShip) continue;
           const q = bl(b, a.x, a.y, w);
           const dx = Math.abs(q.lx - d.lx), dy = Math.abs(q.lz + WALL_T / 2);
-          if (dx < d.dw / 2 + a.r + 0.05 && dy < WALL_T / 2 + a.r + 0.05) blocking = true; // someone in the doorway
-          const allowed = a.isPlayer ? !locked || B.inside(a, b) : !locked || a.homeB === b;
+          // someone standing in the open doorway: don't shut it on them (just
+          // leaning on a shut door doesn't count — that's how locks get opened)
+          if (b.doorOpen && dx < d.dw / 2 + a.r && dy < WALL_T / 2 + a.r - 0.08) blocking = true;
+          // a locked door opens only for whoever lives there, and only as they come and go
+          const allowed = a.isPlayer ? !locked || B.inside(a, b) : !locked || (a.homeB === b && a.moving);
           if (allowed && a.state !== 'knocked' && (dx < 1.2 && dy < 1.5)) want = true;
         }
       }
@@ -191,17 +194,12 @@ export function installBuildings(game) {
     lootHideout(b) {
       const c = game.state.char;
       const key = 'hideout_' + B.key(b);
-      if (c.world.chests[key]) { game.log('The hoard is empty — you took it all.', '#b0bec5'); return; }
       const guards = game.actors.filter((a) => a.homeB === b && a.alive && a.state === 'idle');
       if (guards.length) { game.log('Not with the crew still standing!', '#ff8a80'); return; }
-      c.world.chests[key] = true;
-      const rng = new RNG(key + c.runSeed);
       const lvl = SEA_LEVEL[seaOf(game)] || 5;
-      earn(game, Math.round(rng.range(900, 2600) * (1 + lvl / 6)), "from the pirates' hoard");
-      addItem(game, rng.pick(['jewels', 'gold_coins', 'gold_coins', 'jewels', 'golden_statue']), 1);
-      if (rng.chance(0.3)) addItem(game, rng.pick(['rum', 'sake', 'meat', 'bandage']), 1);
-      game.audio?.sfx('treasure');
-      persist(game);
+      // (hoards emptied before chests could be looked into stay empty)
+      if (c.world.chests[key] && !c.world.containers?.[key]) { game.log('The hoard is empty — you took it all.', '#b0bec5'); return; }
+      game.containers.open(key, 'hoard', { title: "The pirates' hoard", sub: 'A sea chest crammed with their plunder.', o: { tier: 1 + lvl / 6 }, onEmpty: () => { c.world.chests[key] = true; } });
     },
 
     /** Where an NPC heading for (tx, ty) should steer to get through a door (or null). */
@@ -246,13 +244,15 @@ export function installBuildings(game) {
         if (inB !== b) continue;
         // things to use inside
         const L = layoutOf(b);
+        let li = 0;
         for (const u of L.use) {
+          const idx = u.kind === 'loot' ? li++ : -1;
           const { x: ux, y: uy } = bw(b, u.x, u.z);
           const dist = w.distance(p.x, p.y, ux, uy);
           if (dist > 1.25) continue;
           if (u.kind === 'loot') {
-            const label = b.pirate ? "Take the pirates' hoard" : `${u.label} (a crime)`;
-            out.push({ d: dist, x: ux, y: uy, label, run: () => (b.pirate ? B.lootHideout(b) : B.robInside(b)) });
+            const label = b.pirate ? "Open the pirates' hoard" : `${u.label} (a crime)`;
+            out.push({ d: dist, x: ux, y: uy, label, run: () => (b.pirate ? B.lootHideout(b) : B.search(b, idx, u.label)) });
           } else if (u.kind === 'service') {
             const keeper = game.actors.find((a) => a.homeB === b && (a.keeper || a.npcId) && a.alive && a.state === 'idle');
             if (keeper) continue; // talk to them instead
@@ -264,16 +264,32 @@ export function installBuildings(game) {
       }
     },
 
-    /** Rob a house from the inside (anyone home sees you). */
-    robInside(b) {
-      const watchers = game.actors.filter((a) => a.homeB === b && a.alive && a.state === 'idle' && !a.keeper);
-      robHouse(game, b);
-      if (watchers.length) {
-        for (const a of watchers) game.fx.text(a.x, a.y - 2.1, 'THIEF!!', '#ff5252', 0.4, { life: 1.4 });
-        const d = B.doorPts(b);
-        raiseAlarm(game, d.mid.x, d.mid.y, 'Thief');
-        crime(game, 400000, 'caught robbing a home', { rep: 5 });
-      }
+    /**
+     * Search a chest or drawers in somebody's home: look at what's inside, take
+     * what you like. The first thing you take is the theft (anyone home sees
+     * it; if not, you may still be spotted).
+     */
+    search(b, idx, label) {
+      const key = `home_${B.key(b)}_${idx}`;
+      const what = /drawer/i.test(label || '') ? 'drawers' : /chest/i.test(label || '') ? 'chest' : /cupboard/i.test(label || '') ? 'cupboard' : 'chest';
+      game.containers.open(key, 'home', {
+        title: `Searching the ${what}`,
+        sub: 'Someone lives here. Anything you take is stolen.',
+        onTake: () => {
+          const c = game.state.char, p = game.player;
+          const watchers = game.actors.filter((a) => a.homeB === b && a.alive && a.state === 'idle' && !a.keeper);
+          c.stats.thefts = (c.stats.thefts || 0) + 1;
+          const d = B.doorPts(b);
+          if (watchers.length) {
+            for (const a of watchers) game.fx.text(a.x, a.y - 2.1, 'THIEF!!', '#ff5252', 0.4, { life: 1.4 });
+            raiseAlarm(game, d.mid.x, d.mid.y, 'Thief');
+            crime(game, 300000, 'caught robbing a home', { rep: 5 });
+          } else {
+            crime(game, 120000, 'stole from a home', { rep: 3 });
+            if (Math.random() > 0.3 + p.attrs.agi * 0.006) raiseAlarm(game, p.x, p.y, 'Burglar');
+          }
+        },
+      });
     },
   };
   game.buildings = B;

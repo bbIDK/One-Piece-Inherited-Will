@@ -397,22 +397,16 @@ export class Interactions {
   chest(o) {
     const g = this.game, c = g.state.char;
     const key = 'chest_' + (o.key || `${Math.round(o.x)}_${Math.round(o.y)}`);
-    if (c.world.chests[key]) { o.opened = true; return; }
-    c.world.chests[key] = true;
-    o.opened = true;
-    const rng = new RNG(key + c.runSeed);
+    // (chests opened before you could look inside them stay empty)
+    if (c.world.chests[key] && !c.world.containers?.[key]) { o.opened = true; g.log('Empty. You took it all.', '#b0bec5'); return; }
     const luck = c.traits.includes('lucky') ? 1.5 : 1;
-    const tier = o.tier || 1;
-    const berries = Math.round(rng.range(300, 1200) * tier * luck);
-    earn(g, berries, 'treasure');
-    if (o.item && !(o.item.startsWith('fruit_') && g.fruitTaken?.(o.item.slice(6)))) {
-      addItem(g, o.item, 1);
-      if (o.item.startsWith('fruit_')) g.state.char.world.fruitsTaken = [...new Set([...(g.state.char.world.fruitsTaken || []), o.item.slice(6)])];
-    }
-    else if (rng.chance(0.35 * luck)) addItem(g, rng.pick(tier > 2 ? ['jewels', 'gold_coins', 'golden_statue', 'rumble_ball'] : ['gold_coins', 'meat', 'bandage', 'jewels']), 1);
-    g.fx.burst(o.x, o.y - 0.5, 20, { color: ['#ffd54f', '#fff59d'], speed: 4, vz: 4, g: 8, life: 0.8, kind: 'star' });
-    g.audio?.sfx('treasure');
-    persist(g);
+    const first = !c.world.containers?.[key];
+    g.containers.open(key, 'treasure', {
+      title: o.tier > 2 ? 'A treasure chest' : 'A chest', sub: 'The lid creaks open…',
+      o: { tier: o.tier || 1, luck, item: o.item },
+      onEmpty: () => { c.world.chests[key] = true; o.opened = true; },
+    });
+    if (first) g.fx.burst(o.x, o.y - 0.5, 20, { color: ['#ffd54f', '#fff59d'], speed: 4, vz: 4, g: 8, life: 0.8, kind: 'star' });
   }
 
   dummy(o) {
