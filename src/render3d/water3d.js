@@ -8,6 +8,41 @@
 // acid.
 import * as THREE from 'three';
 
+// The wind swells, shared by both shaders (the vertices move with them; the
+// pixels shade with them, so the level-of-detail rings of the disc never show
+// as seams). Three trains of waves, each gathered into groups that come and
+// go across the sea, their crests gently bent, so from high up they don't
+// line up into a repeating grid.
+const SWELL = /* glsl */`
+  float sHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float sNoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(sHash(i), sHash(i + vec2(1, 0)), u.x), mix(sHash(i + vec2(0, 1)), sHash(i + vec2(1, 1)), u.x), u.y);
+  }
+  // two octaves, rotated against each other (no grid-aligned blobs)
+  float sFbm(vec2 p) {
+    float a = sNoise(p);
+    p = mat2(0.8, -0.6, 0.6, 0.8) * p * 2.03 + 17.3;
+    return a * 0.64 + sNoise(p) * 0.36;
+  }
+  float swells(vec2 p, float t, out vec2 slope) {
+    const vec2 D1 = vec2(0.96, 0.28), D2 = vec2(-0.37, 0.93), D3 = vec2(0.75, -0.66);
+    const float K1 = 0.2856, K2 = 0.4833, K3 = 0.7854;       // 22 m, 13 m, 8 m
+    const float W1 = 1.673, W2 = 2.177, W3 = 2.774;         // deep-water speeds
+    // bent crests
+    vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0;
+    // wave groups
+    float g1 = 0.35 + 0.9 * sFbm(p * 0.011 + vec2(t * 0.02, 0.0));
+    float g2 = 0.3 + 0.9 * sFbm(p * 0.017 + 31.0 - vec2(0.0, t * 0.025));
+    float g3 = 0.3 + 0.9 * sFbm(p * 0.026 + 57.0);
+    float a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1;
+    float h = sin(a1) * g1 + sin(a2) * 0.6 * g2 + sin(a3) * 0.35 * g3;
+    slope = (D1 * K1 * cos(a1) * g1 + D2 * K2 * cos(a2) * 0.6 * g2 + D3 * K3 * cos(a3) * 0.35 * g3) / 1.95;
+    return h / 1.95;
+  }
+`;
+
 const VERT = /* glsl */`
   uniform vec2 uOrigin;
   uniform sampler2D uMap;
@@ -19,16 +54,7 @@ const VERT = /* glsl */`
   varying vec3 vSwell;   // slope x, slope z, height (-1..1)
   #include <fog_pars_vertex>
 
-  // three wind swells (world-anchored); returns height, writes the slope
-  float swells(vec2 p, float t, out vec2 slope) {
-    const vec2 D1 = vec2(0.96, 0.28), D2 = vec2(-0.37, 0.93), D3 = vec2(0.75, -0.66);
-    const float K1 = 0.2856, K2 = 0.4833, K3 = 0.7854;       // 22 m, 13 m, 8 m
-    const float W1 = 1.673, W2 = 2.177, W3 = 2.774;         // deep-water speeds
-    float a1 = K1 * dot(D1, p) - W1 * t, a2 = K2 * dot(D2, p) - W2 * t + 1.7, a3 = K3 * dot(D3, p) - W3 * t + 4.1;
-    float h = sin(a1) * 1.0 + sin(a2) * 0.6 + sin(a3) * 0.35;
-    slope = (D1 * K1 * cos(a1) * 1.0 + D2 * K2 * cos(a2) * 0.6 + D3 * K3 * cos(a3) * 0.35) / 1.95;
-    return h / 1.95;
-  }
+  ${SWELL}
 
   void main() {
     vec4 wp = modelMatrix * vec4(position, 1.0);
@@ -72,6 +98,8 @@ const FRAG = /* glsl */`
   varying vec3 vSwell;
   #include <fog_pars_fragment>
 
+  uniform float uAmp;
+  ${SWELL}
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   vec2 hash2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
   float noise(vec2 p) {
@@ -126,13 +154,28 @@ const FRAG = /* glsl */`
     float depth = clamp(-sd, 0.0, 30.0);
     bool water = kind < 2.5 || kind == 5.0 || kind == 7.0;
 
-    // the surface normal: swells plus small ripples
+    // the surface normal: swells plus small ripples (the swell worked out
+    // again for this pixel, the same as the vertices had it)
     float t = uTime * (1.0 + uStorm * 0.8);
     vec2 p = vWorld.xz;
+    vec3 sw = vSwell;
+    if (uDetail > 0.5) {
+      float liquidF = kind < 2.5 || kind == 5.0 || kind == 7.0 ? 1.0 : kind == 3.0 ? 0.5 : 0.15;
+      float A = uAmp * mix(0.35, 1.0, smoothstep(0.5, -7.0, sd)) * (1.0 - smoothstep(70.0, 190.0, length(vView.xz))) * liquidF;
+      vec2 sl;
+      float sh = swells(p, uTime, sl);
+      sw = vec3(sl * A, sh * step(0.001, A));
+    }
+    // how much of the crests to show: the three swells add up to a regular
+    // lattice of peaks, which reads as a pattern stamped over the sea once a
+    // wide stretch of it is seen from high up — so from up there the light
+    // through the crests and the whitecaps keep to the water near the eye
+    float crestReach = mix(190.0, 85.0, smoothstep(20.0, 60.0, vView.y));
+    float crestFade = 1.0 - smoothstep(crestReach * 0.35, crestReach, length(vView));
     float e = 0.3;
     float r0 = ripples(p, t);
     vec2 rip = vec2(ripples(p + vec2(e, 0.0), t) - r0, ripples(p + vec2(0.0, e), t) - r0) / e * (0.09 + uStorm * 0.22);
-    vec3 n = normalize(vec3(-vSwell.x - rip.x, 1.0, -vSwell.y - rip.y));
+    vec3 n = normalize(vec3(-sw.x - rip.x, 1.0, -sw.y - rip.y));
     vec3 v = normalize(vView);
     float ndv = max(dot(n, v), 0.0);
     float fres = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);
@@ -144,9 +187,12 @@ const FRAG = /* glsl */`
     vec3 col = mix(deep, mid, exp(-depth * 0.07));
     col = mix(col, shallow, exp(-depth * 0.32));
     col = mix(col, lagoon, exp(-depth * 1.1) * 0.7);
-    // light through the tops of the swells
-    col += shallow * clamp(vSwell.z, 0.0, 1.0) * 0.28;
+    // light through the tops of the swells (patchy, like real water)
+    col += shallow * clamp(sw.z, 0.0, 1.0) * 0.2 * (0.5 + sFbm(p * 0.045)) * crestFade;
+    // see-through in the shallows; the open sea is opaque (its floor is only
+    // built while someone is down in it, and far off the colour says it all)
     float alpha = mix(0.96, 0.5, exp(-depth * 0.35));
+    alpha = mix(alpha, 1.0, max(smoothstep(8.0, 16.0, depth), smoothstep(160.0, 320.0, length(vView))));
 
     // other liquids
     if (kind == 3.0) { col = mix(vec3(0.86, 0.91, 0.97), vec3(1.0), noise(p * 0.15 + t * 0.05)); alpha = 1.0; fres *= 0.3; }
@@ -186,7 +232,12 @@ const FRAG = /* glsl */`
       float line = smoothstep(0.84, 0.9, wave) * (1.0 - smoothstep(0.93, 0.99, wave));
       line *= step(0.36, noise(p * 0.8 + vec2(t * 0.15, 0.0)));
       float edge = smoothstep(-1.0, -0.15, sd + (noise(p * 1.4 + t * 0.4) - 0.5) * 0.6);
-      float caps = smoothstep(0.55, 0.8, vSwell.z) * step(0.62 - uStorm * 0.3, noise(p * 0.32 + t * 0.2)) * (0.15 + uStorm * 0.85);
+      // whitecaps: rare and ragged in a calm, everywhere in a storm
+      float capN = sFbm(p * 0.21 + vec2(t * 0.12, -t * 0.07)) * 0.7 + sFbm(p * 0.047 - t * 0.02) * 0.3;
+      float caps = smoothstep(0.6, 0.85, sw.z) * smoothstep(0.7 - uStorm * 0.35, 0.8 - uStorm * 0.35, capN) * (0.06 + uStorm * 0.94);
+      // further off, a storm's whitecaps are scattered where the noise says
+      float capsFar = smoothstep(0.72, 0.84, sFbm(p * 0.09 + vec2(t * 0.05, 0.0)) * 0.6 + sFbm(p * 0.023 - t * 0.01) * 0.4) * uStorm * 0.8;
+      caps = mix(capsFar, caps, crestFade);
       foam = clamp(max(edge, line * band * 0.9) + caps, 0.0, 1.0);
     } else if (kind == 7.0) {
       foam = smoothstep(-0.6, -0.1, sd) * 0.6;

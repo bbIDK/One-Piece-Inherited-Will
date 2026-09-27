@@ -35,6 +35,39 @@ export const scenarios = {
       }
     },
   },
+  // The open sea from high up, with parts of it switched off in turn, to
+  // find what makes a pattern (node tools/shot.mjs seapattern)
+  seapattern: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => {
+        window.OP.quickStart('human');
+        const g = window.OP.game, w = g.world, p = g.player;
+        const isl = w.islands.find((i) => i.id === 'dawn_island');
+        window.OP.teleport(isl.x + isl.radius * 1.6, isl.y + isl.radius * 0.6);
+        window.OP.step(1);
+        g.creative.set(true, true); g.creative.fly(); p.alt = 70;
+        g.env.clock = 11; g.env.storm = 0; g.env.stormTarget = 0;
+        g.settings.view = 'first'; g.applySettings();
+        const st = document.createElement('style'); st.textContent = '.look-hint,.hint,.banner,.hud-player,.sidebar,.hotbar,.minimap-wrap,.log,.toast{display:none!important}'; document.head.appendChild(st);
+        g.view3d.rig.yaw = Math.PI; g.view3d.rig.pitch = -0.75;
+        window.OP.step(1.5);
+      });
+      await frames(page, 4);
+      await snap('base');
+      await page.evaluate(() => { window.OP.game.view3d.terrain.group.visible = false; });
+      await frames(page, 4);
+      await snap('no-seafloor');
+      await page.evaluate(() => { const v = window.OP.game.view3d; v.terrain.group.visible = true; v.water.mesh.visible = false; });
+      await frames(page, 4);
+      await snap('no-water');
+      // higher up, looking further
+      await page.evaluate(() => { const g = window.OP.game; g.view3d.water.mesh.visible = true; g.player.alt = 220; g.view3d.rig.pitch = -0.6; window.OP.step(0.5); });
+      await frames(page, 4);
+      await snap('high');
+    },
+  },
   // Drowning: a swimmer holds their breath at depth until it runs out (losing
   // health, not sinking), swims up and gasps; worn out at the surface they only
   // slow down. A Devil Fruit user thrashes at the surface until their stamina
