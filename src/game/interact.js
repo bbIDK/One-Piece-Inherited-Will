@@ -4,6 +4,7 @@ import { angleDiff } from '../core/math.js';
 import { placeOnDeck, helmSpot } from './decks.js';
 import { shipDims } from '../world/hull.js';
 import { bfront } from '../world/bframe.js';
+import { canSee } from './ai.js';
 
 export function findInteraction(game, p) {
   const w = game.world;
@@ -42,7 +43,8 @@ export function findInteraction(game, p) {
     const d = w.distance(p.x, p.y, a.x, a.y);
     if (ray) {
       const hit = v3a.rayHitsActor(ray, a);
-      if (!hit) continue;
+      // (not through a wall or a shut door)
+      if (!hit || !canSee(game, p, a)) continue;
       cands.push({ d: hit.miss * 0.4 + d * 0.05, aimed: true, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit('talk', a) });
     } else cands.push({ d, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit('talk', a) });
   }

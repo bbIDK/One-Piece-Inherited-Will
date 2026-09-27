@@ -52898,7 +52898,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const ex = (sx, d) => (sx < 0 ? AL : AR) ? 0 : d;
     const V3 = variant(b, S3, storeys, fw, fd, role);
     if (S3.wall === "hut" || rt === "hut") return finish(b, hut(k, b, S3, fw, fd, H2, wallCol, roofCol), null, H2 + fd);
-    B2(k, -fw / 2 - ex(-1, 0.08), -2, -fd - 0.08, fw / 2 + ex(1, 0.08), plinth, 0.08, V3.baseCol || baseCol, { outline: 0.03 });
+    let sink = 2;
+    const terr = ctx?.terrain || ctx?.ground;
+    if (terr) {
+      const base2 = terr(b.x, b.y);
+      let lo = base2;
+      for (const u of [-0.5, -0.25, 0, 0.25, 0.5]) for (const v of [0, -0.33, -0.66, -1]) {
+        const q2 = bw(b, u * fw, v * fd);
+        lo = Math.min(lo, terr(q2.x, q2.y));
+      }
+      if (Number.isFinite(lo)) sink = Math.min(16, Math.max(2, base2 - lo + 0.4));
+    }
+    B2(k, -fw / 2 - ex(-1, 0.08), -sink, -fd - 0.08, fw / 2 + ex(1, 0.08), plinth, 0.08, V3.baseCol || baseCol, { outline: 0.03 });
     const ruined = rt === "ruin" || S3.wall === "stone";
     if (ruined) {
       ruinWalls(k, b, fw, fd, H2, wallCol);
@@ -52991,7 +53002,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
     styleExtras(k, b, S3, fw, fd, H2, door, dd, wallCol, roofCol, winter, ex);
-    const grp = finish(b, k, { door, dd, H: H2, S: S3 }, top);
+    const grp = finish(b, k, { door, dd, H: H2, S: S3, rt, storeys, storeyH, plinth }, top);
     if (enter) walkIn(grp, b, S3, { fw, fd, y0: plinth, ceil: Hc - plinth, panes });
     return grp;
   }
@@ -53045,7 +53056,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (info && icon && role !== "marine_base") {
       let sx = info.door.x + info.dd.dw / 2 + 0.75;
       if (sx > b.fw / 2 - 0.5) sx = info.door.x - info.dd.dw / 2 - 0.75;
-      const sy = Math.min(info.H - 0.6, info.dd.top + 0.55);
+      const sy = Math.min(info.H - 0.6, info.dd.top - 0.05);
       const sign3 = new Mesh(new PlaneGeometry(0.78, 0.78), signMaterial(icon));
       sign3.position.set(sx, sy, 0.62);
       sign3.rotation.y = Math.PI / 2 * 0;
@@ -53062,8 +53073,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const h2 = marine2 ? 0.6 : 0.5;
       const w = Math.min(b.fw - 0.6, h2 * nb.aspect);
       const board2 = new Mesh(new PlaneGeometry(w, w / nb.aspect), nb.mat);
-      board2.position.set(0, Math.min(info.H - 0.45, info.dd.top + 0.75 + (marine2 ? 0.4 : 0)), 0.1);
-      if (board2.position.y < info.dd.top + 0.4) board2.position.y = info.dd.top + 0.4;
+      const bh = w / nb.aspect, S3 = info.S || {};
+      let y = info.dd.top + 0.2 + bh / 2 + (marine2 ? 0.4 : 0);
+      const aw = S3.wall ? awningOf(b, S3, b.fw, info.H, info.dd) : null;
+      if (aw) y = Math.max(y, aw.top + bh / 2 + 0.08);
+      if (info.rt === "pagoda" && info.storeys >= 2) y = info.plinth + info.storeyH + 0.3 + bh / 2 + 0.1;
+      y = Math.min(y, info.H - (info.rt === "pagoda" ? 0.4 : 0.3) - bh / 2);
+      board2.position.set(0, y, S3.wall === "column" ? 0.46 : 0.1);
       grp.add(board2);
     }
     grp.userData.height = top;
@@ -53405,10 +53421,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.restore();
     }
   }
+  function awningOf(b, S3, fw, H2, dd) {
+    const role = b.role || "house";
+    if (!["shop", "market", "restaurant", "cafe", "weapons", "bar", "tavern", "inn"].includes(role) || S3.door === "noren" || fw < 3.5) return null;
+    if (S3.lanterns || H2 - dd.top < 1.3) return null;
+    return { top: dd.top + 0.8 };
+  }
   function styleExtras(k, b, S3, fw, fd, H2, door, dd, wallCol, roofCol, winter, ex = (sx, d) => d) {
     const role = b.role || "house";
     const clearOfDoor = (x0, x1) => x1 < door.x - dd.dw / 2 - 0.25 || x0 > door.x + dd.dw / 2 + 0.25;
-    if (["shop", "market", "restaurant", "cafe", "weapons", "bar", "tavern", "inn"].includes(role) && S3.door !== "noren" && fw >= 3.5) {
+    if (awningOf(b, S3, fw, H2, dd)) {
       const cols = ["#e74c3c", "#3498db", "#27ae60", "#f39c12", "#9b59b6", "#16a085"];
       const c = cols[(b.v || 0) % cols.length];
       const aw = Math.min(fw - 0.6, dd.dw + 2.4), ay = dd.top + 0.55;
@@ -78971,468 +78993,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return best;
   }
 
-  // src/game/interact.js
-  function findInteraction(game, p) {
-    const w = game.world;
-    if (p.state !== "idle") return null;
-    if (p.mode === "sail") {
-      const s = p.ship;
-      if (!s) return null;
-      const special = game.seaInteraction ? game.seaInteraction(p, s) : null;
-      if (special) return special;
-      const spot = findShore(w, s.x, s.y, s.def.length * 0.5 + 2.5);
-      if (spot && Math.abs(s.speed) < 4.5) {
-        const isl = w.islandAt(spot.x, spot.y) || w.nearestIsland(spot.x, spot.y, 40);
-        return { label: `Go ashore${isl && isl.name ? " \u2014 " + isl.name : ""}`, key: "E", run: () => disembark(game, p, spot) };
-      }
-      if (Math.abs(s.speed) < 1.6 && !s.def.open) return { label: "Leave the helm (walk the deck)", key: "E", run: () => leaveHelm(game, p, s) };
-      return null;
-    }
-    const cands = [];
-    for (const s of game.ships) {
-      if (s.sunk || s.owner !== "player" || p.deck?.ship === s) continue;
-      const d = w.distance(p.x, p.y, s.x, s.y);
-      const sinking = p.inWater && p.fruit && !p.gills;
-      if (d < s.def.length * 0.55 + (sinking ? 6 : 1.6)) cands.push({ d: d - 1, x: s.x, y: s.y, label: sinking ? `Grab the line from the ${s.name}` : `Board the ${s.name}`, run: () => board(game, p, s) });
-    }
-    const v3a = game.view3d?.active && game.view3d.rayHitsActor ? game.view3d : null;
-    const ray = v3a ? v3a.pointerRay(game) : null;
-    for (const a of game.actorsNear(p.x, p.y, ray ? 3.4 : 2.4)) {
-      if (a === p || a.state !== "idle" || !a.talk) continue;
-      if (a.provoked && a.hostileNow) continue;
-      const d = w.distance(p.x, p.y, a.x, a.y);
-      if (ray) {
-        const hit = v3a.rayHitsActor(ray, a);
-        if (!hit) continue;
-        cands.push({ d: hit.miss * 0.4 + d * 0.05, aimed: true, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit("talk", a) });
-      } else cands.push({ d, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit("talk", a) });
-    }
-    for (const a of game.actorsNear(p.x, p.y, 2.2)) {
-      if (a === p || a.state !== "knocked" || !a.canCarry) continue;
-      cands.push({ d: w.distance(p.x, p.y, a.x, a.y) + 0.5, x: a.x, y: a.y, label: a.carryLabel || `Carry ${a.name}`, run: () => game.emit("carry", a) });
-    }
-    if (game.buildings) game.buildings.candidates(p, cands);
-    if (w.objects) {
-      for (const o of w.objects.near(p.x, p.y, 3.2)) {
-        if (o.enterable) continue;
-        if (o.kind === "building" && o.role && o.role !== "house" && o.door) {
-          const f = bfront(o);
-          const d = w.distance(p.x, p.y, o.door.x + f.x * 0.3, o.door.y + f.y * 0.3);
-          if (d < 1.6) cands.push({ d, x: o.door.x, y: o.door.y, label: o.name ? `Enter ${o.name}` : "Enter", run: () => game.emit("enterBuilding", o) });
-        } else if (o.kind === "building" && o.role === "house" && o.door) {
-          const f = bfront(o);
-          const d = w.distance(p.x, p.y, o.door.x + f.x * 0.3, o.door.y + f.y * 0.3);
-          if (d < 1.2) cands.push({ d: d + 0.5, x: o.door.x, y: o.door.y, label: "Knock on the door", run: () => game.emit("knockDoor", o) });
-        } else if (o.kind === "chest" && !o.opened) {
-          const d = w.distance(p.x, p.y, o.x, o.y);
-          if (d < 1.6) cands.push({ d, x: o.x, y: o.y, label: "Open the chest", run: () => game.emit("openChest", o) });
-        } else if (o.interact) {
-          const d = w.distance(p.x, p.y, o.x, o.y);
-          if (d < (o.interactRange || 1.8)) cands.push({ d, x: o.x, y: o.y, label: o.interact, run: () => game.emit("useObject", o) });
-        } else if (o.kind === "dummy") {
-          const d = w.distance(p.x, p.y, o.x, o.y);
-          if (d < 1.8) cands.push({ d: d + 0.3, x: o.x, y: o.y, label: "Train (strike the dummy)", run: () => game.emit("trainDummy", o) });
-        }
-      }
-    }
-    for (const it of game.groundItems || []) {
-      const d = w.distance(p.x, p.y, it.x, it.y);
-      if (d < 1.4) cands.push({ d: d - 0.2, x: it.x, y: it.y, label: `Pick up ${it.label}`, run: () => game.emit("pickup", it) });
-    }
-    if (game.footInteraction) {
-      const x = game.footInteraction(p);
-      if (x) cands.push(x);
-    }
-    if (!cands.length) return null;
-    const v3 = game.view3d?.active ? game.view3d : null;
-    if (v3 && cands.length > 1) {
-      for (const c of cands) {
-        if (c.x === void 0 || c.aimed) continue;
-        c.d += Math.abs(angleDiff(v3.rig.yaw, Math.atan2(c.y - p.y, w.dx(p.x, c.x)))) * 0.9;
-      }
-    }
-    cands.sort((a, b) => a.d - b.d);
-    return cands[0];
-  }
-  function findShore(w, x, y, r) {
-    let best = null, bd = Infinity;
-    for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) {
-      for (let dx = -Math.ceil(r); dx <= Math.ceil(r); dx++) {
-        const d = Math.hypot(dx, dy);
-        if (d > r || d >= bd) continue;
-        const tx = x + dx, ty = y + dy;
-        const t = w.type(tx, ty);
-        if (!WALKABLE[t] || w.isBlocked(tx, ty) || w.hitsProp(tx, ty, 0.4)) continue;
-        if (!WALKABLE[w.type(tx, ty - 0.4)] || w.isBlocked(tx, ty - 0.4)) continue;
-        bd = d;
-        best = { x: Math.floor(tx) + 0.5, y: Math.floor(ty) + 0.8 };
-      }
-    }
-    return best;
-  }
-  function disembark(game, p, spot) {
-    const s = p.ship;
-    if (s) {
-      s.captain = null;
-      s.sail = 0;
-      s.rowing = 0;
-      s.anchored = true;
-      s.passengers = s.passengers.filter((x) => x !== p);
-    }
-    p.mode = "foot";
-    p.onShip = false;
-    p.x = spot.x;
-    p.y = spot.y;
-    p.vx = p.vy = 0;
-    game.emit("disembark", s, spot);
-    game.audio?.sfx("step");
-  }
-  function leaveHelm(game, p, s) {
-    s.captain = null;
-    s.sail = 0;
-    s.rowing = 0;
-    s.anchored = true;
-    s.passengers = s.passengers.filter((x) => x !== p);
-    p.mode = "foot";
-    p.onShip = false;
-    const hs = helmSpot(s);
-    if (shipDims(s.def).big) placeOnDeck(game, p, s, hs.t, 0.9);
-    else placeOnDeck(game, p, s, hs.t + 0.05, 0);
-    game.emit("disembark", s, null);
-    game.hint?.("deck", "Walk your deck freely \u2014 jump over the rail for a swim, and press E at the wheel to take the helm again.");
-  }
-  function board(game, p, s) {
-    if (p.inWater) p.leaveWater?.(game);
-    if (p.deck) {
-      p.deck.ship.aboard?.delete(p);
-      p.deck = null;
-    }
-    p.mode = "sail";
-    p.ship = s;
-    p.onShip = true;
-    p.inWater = false;
-    s.captain = p;
-    p.x = s.x;
-    p.y = s.y;
-    p.setBlock(false);
-    p.action = null;
-    game.emit("board", s);
-    game.hint("sailing", "Sailing: W raises the sails, S lowers them, A/D steer. Hold SPACE to row (works without wind). Left-click fires a broadside toward the mouse. E near land to go ashore.");
-    game.audio?.sfx("board");
-  }
-
-  // src/game/playerController.js
-  var PlayerController = class {
-    constructor(game) {
-      this.game = game;
-      this.aimT = 0;
-      this.interaction = null;
-    }
-    update(p, dt, game) {
-      const inp = game.input;
-      if (game.ui && game.ui.blocksInput()) {
-        p.intent.mx = 0;
-        p.intent.my = 0;
-        p.intent.sprint = false;
-        p.setBlock(false);
-        return;
-      }
-      if (p.mode === "sail") return this.sail(p, dt, game);
-      const v3 = game.view3d?.active ? game.view3d : null;
-      let mx = 0, my = 0;
-      if (inp.isDown("W") || !v3 && inp.isDown("ArrowUp")) my -= 1;
-      if (inp.isDown("S") || !v3 && inp.isDown("ArrowDown")) my += 1;
-      if (inp.isDown("A") || !v3 && inp.isDown("ArrowLeft")) mx -= 1;
-      if (inp.isDown("D") || !v3 && inp.isDown("ArrowRight")) mx += 1;
-      let l = Math.hypot(mx, my);
-      if (l > 0) {
-        mx /= l;
-        my /= l;
-      }
-      const tc = inp.touch?.on && (inp.touch.mx || inp.touch.my) ? inp.touch : null;
-      if (tc && !l) {
-        mx = tc.mx;
-        my = tc.my;
-        l = Math.min(1, Math.hypot(mx, my));
-      }
-      const fwdIn = -my;
-      if (v3 && l > 0) {
-        const yaw = v3.rig.yaw, fwd2 = -my, right = mx;
-        mx = Math.cos(yaw) * fwd2 - Math.sin(yaw) * right;
-        my = Math.sin(yaw) * fwd2 + Math.cos(yaw) * right;
-      }
-      p.intent.mx = mx;
-      p.intent.my = my;
-      p.intent.mz = 0;
-      const cr = game.creative;
-      if (cr?.on && inp.wasPressed("Space")) {
-        const now2 = game.time || 0;
-        if (now2 - (this.spaceT ?? -9) < 0.3) {
-          cr.fly();
-          this.spaceT = -9;
-          this.jumpHold = null;
-          p.charging = 0;
-        } else this.spaceT = now2;
-      }
-      if (p.flying) p.intent.mz = inp.isDown("Space") ? 1 : inp.isDown("C") ? -1 : 0;
-      if (p.inWater) {
-        if (inp.isDown("Space")) p.intent.mz = 1;
-        else if (inp.isDown("C")) p.intent.mz = -1;
-        else if (v3 && fwdIn > 0.3) {
-          const pitch = v3.rig.pitch;
-          if (pitch < -0.28 || pitch > 0.2 && p.depth > 0.05) p.intent.mz = Math.max(-1, Math.min(1, pitch * 1.5)) * fwdIn;
-        }
-        if (!p.gills && p.under && !this.o2Hint) {
-          this.o2Hint = true;
-          game.hint?.("diving", "Under water you hold your breath \u2014 watch the bubbles under your stamina and come up for air (Space). Look down and swim, or hold C, to dive.");
-        }
-      }
-      if (inp.wasPressed("Shift")) this.shiftT = 0;
-      if (inp.isDown("Shift")) this.shiftT = (this.shiftT ?? 0) + dt;
-      const tapDodge = inp.wasReleased("Shift") && (this.shiftT ?? 1) < 0.22;
-      p.intent.sprint = (inp.isDown("Shift") && this.shiftT > 0.16 || !!tc?.run) && l > 0;
-      if (v3 && (v3.rig.mode === "first" || v3.rig.shiftLock)) this.aimT = Math.max(this.aimT, 0.25);
-      let [wx, wy] = game.renderer.toWorld(game.world, inp.mouse.x, inp.mouse.y);
-      if (inp.touch?.on && !v3) [wx, wy] = this.touchAim(p, game);
-      const aim = Math.atan2(wy - (p.y - 0.5), game.world.dx(p.x, wx));
-      const melee = p.style !== "sniper";
-      const aimM = melee ? this.assist(p, game, aim) : aim;
-      this.aimT = Math.max(0, this.aimT - dt);
-      const fighting = inp.mouseDown(0) || inp.mouseDown(2) && !v3?.rig.freeMouse || inp.isDown("F");
-      if (fighting) this.aimT = 0.7;
-      if (p.action && p.action.def.track !== false && p.action.t < (p.action.def.windup ?? 0.1)) p.facing = p.action.def.m1Chain || p.action.def.source?.startsWith("style") ? aimM : aim;
-      else if (!p.action) {
-        if (this.aimT > 0) p.facing = aim;
-        else if (l > 0) p.facing = Math.atan2(my, mx);
-      }
-      this.mouseWorld = { x: wx, y: wy };
-      const buf = this.buf || (this.buf = { m1: 0, heavy: 0, dodge: 0, jump: 0 });
-      buf.m1 = Math.max(0, buf.m1 - dt);
-      buf.heavy = Math.max(0, buf.heavy - dt);
-      buf.dodge = Math.max(0, buf.dodge - dt);
-      buf.jump = Math.max(0, (buf.jump || 0) - dt);
-      if (inp.mousePressed(0)) buf.m1 = 0.22;
-      const freeMouse = !!v3?.rig.freeMouse;
-      if (freeMouse ? inp.mouse.released[2] && v3.rig.takeRightClick() : inp.mousePressed(2)) buf.heavy = 0.25;
-      if (tapDodge && !(v3 && v3.rig.mode === "third")) buf.dodge = 0.16;
-      if (inp.wasPressed("Control") && v3 && v3.rig.mode === "third" && !inp.touch?.on) {
-        v3.rig.setShiftLock(!v3.rig.shiftLock);
-        game.applySettings?.(true);
-        game.ui.toast(v3.rig.shiftLock ? "SHIFT LOCK ON" : "SHIFT LOCK OFF", v3.rig.shiftLock ? "Your character faces where you look. Tap Ctrl to free the mouse." : "Hold the right mouse button to turn the camera. Tap Ctrl to lock it.", "#ffe082", "shiftlock");
-      }
-      if (inp.wasPressed("Q")) buf.dodge = 0.16;
-      if (inp.wasPressed("Space") && !p.flying) {
-        if (p.canJump()) this.jumpHold = { t: 0 };
-        else buf.jump = 0.14;
-      }
-      if (inp.wasPressed("Slash") || inp.wasPressed("NumpadDivide") || inp.wasPressed("Backquote")) game.creative?.openConsole();
-      if (buf.dodge > 0 && p.tryDodge(game, mx, my)) {
-        buf.dodge = 0;
-        buf.m1 = 0;
-      }
-      if (this.jumpHold) {
-        if (!p.canJump()) {
-          this.jumpHold = null;
-          p.charging = 0;
-        } else if (inp.isDown("Space")) {
-          this.jumpHold.t += dt;
-          p.charging = clamp2((this.jumpHold.t - 0.16) / 0.75, 0, 1);
-        } else {
-          p.tryJump(game, p.charging);
-          this.jumpHold = null;
-          p.charging = 0;
-          buf.jump = 0;
-        }
-      } else if (buf.jump > 0 && p.tryJump(game, 0)) buf.jump = 0;
-      if (buf.heavy > 0) {
-        const prev = p.facing;
-        p.facing = aimM;
-        if (p.tryHeavy(game)) {
-          buf.heavy = 0;
-          buf.m1 = 0;
-        } else if (p.action) p.facing = prev;
-      }
-      if (buf.m1 > 0 || inp.mouseDown(0) && !p.action) {
-        if (!p.action) {
-          p.facing = aimM;
-          if (p.tryM1(game)) buf.m1 = 0;
-        } else {
-          p.tryM1(game);
-          if (p.combo.queued) buf.m1 = 0;
-        }
-      }
-      p.setBlock(inp.isDown("F"));
-      for (let i = 0; i < HOTBAR_SIZE; i++) {
-        if (inp.wasPressed(HOTBAR_KEYS[i])) {
-          const id = p.hotbar[i];
-          if (id) {
-            p.facing = aim;
-            const target = this.aimTarget(p, game, wx, wy);
-            p.tryTechnique(id, game, target || { x: wx, y: wy });
-          }
-        }
-      }
-      if (inp.wasPressed("R")) this.toggleHaki(p, game, "armament");
-      if (inp.wasPressed("T")) this.toggleHaki(p, game, "observation");
-      if (inp.wasPressed("G")) {
-        if (p.hakiLevel("conqueror")) {
-          p.facing = aim;
-          p.tryTechnique("haki_conqueror", game);
-        }
-      }
-      this.interaction = findInteraction(game, p);
-      if (inp.wasPressed("E") && this.interaction) {
-        inp.consume("E");
-        p.reachT = 0.45;
-        this.interaction.run();
-      }
-    }
-    /** A dodge requested from outside the keyboard (the touch pad's Dodge button). */
-    requestDodge() {
-      if (this.buf) this.buf.dodge = 0.16;
-      else this.buf = { m1: 0, heavy: 0, dodge: 0.16, jump: 0 };
-    }
-    /** Soft melee aim assist: face a foe that is close and roughly where you aim. */
-    assist(p, game, aim) {
-      const reach = 2.4 * (p.reach || 1);
-      let best = null, bestScore = Infinity;
-      for (const a of game.actorsNear(p.x, p.y, reach + 0.6)) {
-        if (a === p || a.state !== "idle" || !game.combat.canHit(p, a, {})) continue;
-        const dx = game.world.dx(p.x, a.x), dy = a.y - p.y;
-        const d = Math.hypot(dx, dy);
-        if (d > reach + 0.6) continue;
-        const off = Math.abs(angleDiff(aim, Math.atan2(dy, dx)));
-        if (off > 0.62) continue;
-        const score = d + off * 2.5;
-        if (score < bestScore) {
-          bestScore = score;
-          best = Math.atan2(dy, dx);
-        }
-      }
-      return best === null ? aim : best;
-    }
-    /** Touch aim for the top-down view: the closest foe in front, else straight ahead. */
-    touchAim(p, game) {
-      let best = null, bs = Infinity;
-      for (const a of game.actorsNear(p.x, p.y, 9)) {
-        if (a === p || a.state !== "idle" || !game.combat.canHit(p, a, {})) continue;
-        if (!(a.aggroPlayer || a.provoked || a.controller?.target === p || a === game.bossTarget)) continue;
-        const dx = game.world.dx(p.x, a.x), dy = a.y - p.y;
-        const d = Math.hypot(dx, dy);
-        const off = Math.abs(angleDiff(p.facing, Math.atan2(dy, dx)));
-        const score = d + off * 3;
-        if (score < bs) {
-          bs = score;
-          best = a;
-        }
-      }
-      if (best) return [best.x, best.y - 0.5];
-      return [p.x + Math.cos(p.facing) * 4, p.y - 0.5 + Math.sin(p.facing) * 4];
-    }
-    aimTarget(p, game, wx, wy) {
-      let best = null, bd = 3.5 * 3.5;
-      for (const a of game.actorsNear(wx, wy, 3.5)) {
-        if (a === p || a.state !== "idle" || !game.combat.canHit(p, a, {})) continue;
-        const d = game.world.dist2(wx, wy, a.x, a.y);
-        if (d < bd) {
-          bd = d;
-          best = a;
-        }
-      }
-      return best;
-    }
-    toggleHaki(p, game, type) {
-      if (!p.hakiLevel(type)) return;
-      if (type === "armament") {
-        p.armament = !p.armament;
-        if (p.armament) {
-          p.observation = false;
-          game.fx.burst(p.x, p.y - 0.8, 10, { color: "#212121", speed: 3, g: 0, life: 0.35, kind: "line" });
-          game.audio?.sfx("haki");
-        }
-      } else {
-        p.observation = !p.observation;
-        if (p.observation) {
-          p.armament = false;
-          game.fx.ring(p.x, p.y, 0.5, 8, "#ce93d8", 0.6, 0.08);
-          game.audio?.sfx("haki_obs");
-        }
-      }
-    }
-    sail(p, dt, game) {
-      const inp = game.input;
-      const s = p.ship;
-      if (!s || s.sunk) return;
-      s.captain = p;
-      let turn = 0;
-      if (inp.isDown("A") || inp.isDown("ArrowLeft")) turn -= 1;
-      if (inp.isDown("D") || inp.isDown("ArrowRight")) turn += 1;
-      const tc = inp.touch?.on ? inp.touch : null;
-      if (tc && !turn && Math.abs(tc.mx) > 0.2) turn = clamp2(tc.mx * 1.3, -1, 1);
-      const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp2(Math.abs(s.speed) / 3, 0, 1));
-      s.heading += turn * steer * dt;
-      if (inp.isDown("W") || inp.isDown("ArrowUp") || tc && tc.my < -0.45) {
-        s.sail = Math.min(1, s.sail + dt * 0.9);
-        s.anchored = false;
-      }
-      if (inp.isDown("S") || inp.isDown("ArrowDown") || tc && tc.my > 0.45) s.sail = Math.max(0, s.sail - dt * 1.2);
-      s.rowing = inp.isDown("Space") ? 1 : 0;
-      if (s.rowing) s.anchored = false;
-      let [wx, wy] = game.renderer.toWorld(game.world, inp.mouse.x, inp.mouse.y);
-      if (tc && !game.view3d?.active) [wx, wy] = this.touchShipAim(s, game);
-      this.mouseWorld = { x: wx, y: wy };
-      if (inp.mousePressed(0)) {
-        if (!s.fireBroadside(game, wx, wy, p) && !s.def.cannons) game.log("This boat has no cannons.", "#b0bec5");
-      }
-      if (inp.wasPressed("Shift") && s.def.coupDeBurst) {
-        if (s.burstCd <= 0) {
-          s.burstCd = 30;
-          s.coupT = 1.2;
-          game.fx.burst(s.x, s.y, 30, { color: ["#e1f5fe", "#ffffff"], speed: 6, g: 5, life: 0.8, kind: "smoke", size: 0.4 });
-          game.fx.shake(0.5);
-          game.fx.text(s.x, s.y - 2, "COUP DE BURST!", "#ffeb3b", 0.6);
-          game.audio?.sfx("explosion");
-        }
-      }
-      p.x = s.x;
-      p.y = s.y;
-      p.facing = s.heading;
-      this.interaction = findInteraction(game, p);
-      if (inp.wasPressed("E") && this.interaction) {
-        inp.consume("E");
-        p.reachT = 0.45;
-        this.interaction.run();
-      }
-      for (let i = 0; i < HOTBAR_SIZE; i++) {
-        if (inp.wasPressed(HOTBAR_KEYS[i])) {
-          const id = p.hotbar[i];
-          if (id) {
-            p.facing = Math.atan2(wy - p.y, game.world.dx(p.x, wx));
-            p.tryTechnique(id, game, { x: wx, y: wy });
-          }
-        }
-      }
-    }
-    /** Touch aim at sea in the top-down view: the nearest other ship, else off the starboard side. */
-    touchShipAim(s, game) {
-      let best = null, bd = 34 * 34;
-      for (const o of game.ships) {
-        if (o === s || o.sunk || o.owner === "player") continue;
-        const d = game.world.dist2(s.x, s.y, o.x, o.y);
-        if (d < bd) {
-          bd = d;
-          best = o;
-        }
-      }
-      if (best) return [best.x, best.y];
-      const a = s.heading + Math.PI / 2;
-      return [s.x + Math.cos(a) * 10, s.y + Math.sin(a) * 10];
-    }
-    whileKnocked(p, dt, game) {
-      game.emit("playerKnockedTick", dt);
-    }
-  };
-
   // src/game/path.js
   function standable(w, x, y, r = 0.3, inside2 = null) {
     if (!w.walkable(x, y) || w.solid(x, y)) return false;
@@ -80082,6 +79642,468 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.moveToward(a, p.x - Math.cos(p.facing) * 1.2, p.y - Math.sin(p.facing) * 1.2 + 0.3, game);
         a.intent.sprint = d > 5;
       }
+    }
+  };
+
+  // src/game/interact.js
+  function findInteraction(game, p) {
+    const w = game.world;
+    if (p.state !== "idle") return null;
+    if (p.mode === "sail") {
+      const s = p.ship;
+      if (!s) return null;
+      const special = game.seaInteraction ? game.seaInteraction(p, s) : null;
+      if (special) return special;
+      const spot = findShore(w, s.x, s.y, s.def.length * 0.5 + 2.5);
+      if (spot && Math.abs(s.speed) < 4.5) {
+        const isl = w.islandAt(spot.x, spot.y) || w.nearestIsland(spot.x, spot.y, 40);
+        return { label: `Go ashore${isl && isl.name ? " \u2014 " + isl.name : ""}`, key: "E", run: () => disembark(game, p, spot) };
+      }
+      if (Math.abs(s.speed) < 1.6 && !s.def.open) return { label: "Leave the helm (walk the deck)", key: "E", run: () => leaveHelm(game, p, s) };
+      return null;
+    }
+    const cands = [];
+    for (const s of game.ships) {
+      if (s.sunk || s.owner !== "player" || p.deck?.ship === s) continue;
+      const d = w.distance(p.x, p.y, s.x, s.y);
+      const sinking = p.inWater && p.fruit && !p.gills;
+      if (d < s.def.length * 0.55 + (sinking ? 6 : 1.6)) cands.push({ d: d - 1, x: s.x, y: s.y, label: sinking ? `Grab the line from the ${s.name}` : `Board the ${s.name}`, run: () => board(game, p, s) });
+    }
+    const v3a = game.view3d?.active && game.view3d.rayHitsActor ? game.view3d : null;
+    const ray = v3a ? v3a.pointerRay(game) : null;
+    for (const a of game.actorsNear(p.x, p.y, ray ? 3.4 : 2.4)) {
+      if (a === p || a.state !== "idle" || !a.talk) continue;
+      if (a.provoked && a.hostileNow) continue;
+      const d = w.distance(p.x, p.y, a.x, a.y);
+      if (ray) {
+        const hit = v3a.rayHitsActor(ray, a);
+        if (!hit || !canSee(game, p, a)) continue;
+        cands.push({ d: hit.miss * 0.4 + d * 0.05, aimed: true, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit("talk", a) });
+      } else cands.push({ d, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit("talk", a) });
+    }
+    for (const a of game.actorsNear(p.x, p.y, 2.2)) {
+      if (a === p || a.state !== "knocked" || !a.canCarry) continue;
+      cands.push({ d: w.distance(p.x, p.y, a.x, a.y) + 0.5, x: a.x, y: a.y, label: a.carryLabel || `Carry ${a.name}`, run: () => game.emit("carry", a) });
+    }
+    if (game.buildings) game.buildings.candidates(p, cands);
+    if (w.objects) {
+      for (const o of w.objects.near(p.x, p.y, 3.2)) {
+        if (o.enterable) continue;
+        if (o.kind === "building" && o.role && o.role !== "house" && o.door) {
+          const f = bfront(o);
+          const d = w.distance(p.x, p.y, o.door.x + f.x * 0.3, o.door.y + f.y * 0.3);
+          if (d < 1.6) cands.push({ d, x: o.door.x, y: o.door.y, label: o.name ? `Enter ${o.name}` : "Enter", run: () => game.emit("enterBuilding", o) });
+        } else if (o.kind === "building" && o.role === "house" && o.door) {
+          const f = bfront(o);
+          const d = w.distance(p.x, p.y, o.door.x + f.x * 0.3, o.door.y + f.y * 0.3);
+          if (d < 1.2) cands.push({ d: d + 0.5, x: o.door.x, y: o.door.y, label: "Knock on the door", run: () => game.emit("knockDoor", o) });
+        } else if (o.kind === "chest" && !o.opened) {
+          const d = w.distance(p.x, p.y, o.x, o.y);
+          if (d < 1.6) cands.push({ d, x: o.x, y: o.y, label: "Open the chest", run: () => game.emit("openChest", o) });
+        } else if (o.interact) {
+          const d = w.distance(p.x, p.y, o.x, o.y);
+          if (d < (o.interactRange || 1.8)) cands.push({ d, x: o.x, y: o.y, label: o.interact, run: () => game.emit("useObject", o) });
+        } else if (o.kind === "dummy") {
+          const d = w.distance(p.x, p.y, o.x, o.y);
+          if (d < 1.8) cands.push({ d: d + 0.3, x: o.x, y: o.y, label: "Train (strike the dummy)", run: () => game.emit("trainDummy", o) });
+        }
+      }
+    }
+    for (const it of game.groundItems || []) {
+      const d = w.distance(p.x, p.y, it.x, it.y);
+      if (d < 1.4) cands.push({ d: d - 0.2, x: it.x, y: it.y, label: `Pick up ${it.label}`, run: () => game.emit("pickup", it) });
+    }
+    if (game.footInteraction) {
+      const x = game.footInteraction(p);
+      if (x) cands.push(x);
+    }
+    if (!cands.length) return null;
+    const v3 = game.view3d?.active ? game.view3d : null;
+    if (v3 && cands.length > 1) {
+      for (const c of cands) {
+        if (c.x === void 0 || c.aimed) continue;
+        c.d += Math.abs(angleDiff(v3.rig.yaw, Math.atan2(c.y - p.y, w.dx(p.x, c.x)))) * 0.9;
+      }
+    }
+    cands.sort((a, b) => a.d - b.d);
+    return cands[0];
+  }
+  function findShore(w, x, y, r) {
+    let best = null, bd = Infinity;
+    for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) {
+      for (let dx = -Math.ceil(r); dx <= Math.ceil(r); dx++) {
+        const d = Math.hypot(dx, dy);
+        if (d > r || d >= bd) continue;
+        const tx = x + dx, ty = y + dy;
+        const t = w.type(tx, ty);
+        if (!WALKABLE[t] || w.isBlocked(tx, ty) || w.hitsProp(tx, ty, 0.4)) continue;
+        if (!WALKABLE[w.type(tx, ty - 0.4)] || w.isBlocked(tx, ty - 0.4)) continue;
+        bd = d;
+        best = { x: Math.floor(tx) + 0.5, y: Math.floor(ty) + 0.8 };
+      }
+    }
+    return best;
+  }
+  function disembark(game, p, spot) {
+    const s = p.ship;
+    if (s) {
+      s.captain = null;
+      s.sail = 0;
+      s.rowing = 0;
+      s.anchored = true;
+      s.passengers = s.passengers.filter((x) => x !== p);
+    }
+    p.mode = "foot";
+    p.onShip = false;
+    p.x = spot.x;
+    p.y = spot.y;
+    p.vx = p.vy = 0;
+    game.emit("disembark", s, spot);
+    game.audio?.sfx("step");
+  }
+  function leaveHelm(game, p, s) {
+    s.captain = null;
+    s.sail = 0;
+    s.rowing = 0;
+    s.anchored = true;
+    s.passengers = s.passengers.filter((x) => x !== p);
+    p.mode = "foot";
+    p.onShip = false;
+    const hs = helmSpot(s);
+    if (shipDims(s.def).big) placeOnDeck(game, p, s, hs.t, 0.9);
+    else placeOnDeck(game, p, s, hs.t + 0.05, 0);
+    game.emit("disembark", s, null);
+    game.hint?.("deck", "Walk your deck freely \u2014 jump over the rail for a swim, and press E at the wheel to take the helm again.");
+  }
+  function board(game, p, s) {
+    if (p.inWater) p.leaveWater?.(game);
+    if (p.deck) {
+      p.deck.ship.aboard?.delete(p);
+      p.deck = null;
+    }
+    p.mode = "sail";
+    p.ship = s;
+    p.onShip = true;
+    p.inWater = false;
+    s.captain = p;
+    p.x = s.x;
+    p.y = s.y;
+    p.setBlock(false);
+    p.action = null;
+    game.emit("board", s);
+    game.hint("sailing", "Sailing: W raises the sails, S lowers them, A/D steer. Hold SPACE to row (works without wind). Left-click fires a broadside toward the mouse. E near land to go ashore.");
+    game.audio?.sfx("board");
+  }
+
+  // src/game/playerController.js
+  var PlayerController = class {
+    constructor(game) {
+      this.game = game;
+      this.aimT = 0;
+      this.interaction = null;
+    }
+    update(p, dt, game) {
+      const inp = game.input;
+      if (game.ui && game.ui.blocksInput()) {
+        p.intent.mx = 0;
+        p.intent.my = 0;
+        p.intent.sprint = false;
+        p.setBlock(false);
+        return;
+      }
+      if (p.mode === "sail") return this.sail(p, dt, game);
+      const v3 = game.view3d?.active ? game.view3d : null;
+      let mx = 0, my = 0;
+      if (inp.isDown("W") || !v3 && inp.isDown("ArrowUp")) my -= 1;
+      if (inp.isDown("S") || !v3 && inp.isDown("ArrowDown")) my += 1;
+      if (inp.isDown("A") || !v3 && inp.isDown("ArrowLeft")) mx -= 1;
+      if (inp.isDown("D") || !v3 && inp.isDown("ArrowRight")) mx += 1;
+      let l = Math.hypot(mx, my);
+      if (l > 0) {
+        mx /= l;
+        my /= l;
+      }
+      const tc = inp.touch?.on && (inp.touch.mx || inp.touch.my) ? inp.touch : null;
+      if (tc && !l) {
+        mx = tc.mx;
+        my = tc.my;
+        l = Math.min(1, Math.hypot(mx, my));
+      }
+      const fwdIn = -my;
+      if (v3 && l > 0) {
+        const yaw = v3.rig.yaw, fwd2 = -my, right = mx;
+        mx = Math.cos(yaw) * fwd2 - Math.sin(yaw) * right;
+        my = Math.sin(yaw) * fwd2 + Math.cos(yaw) * right;
+      }
+      p.intent.mx = mx;
+      p.intent.my = my;
+      p.intent.mz = 0;
+      const cr = game.creative;
+      if (cr?.on && inp.wasPressed("Space")) {
+        const now2 = game.time || 0;
+        if (now2 - (this.spaceT ?? -9) < 0.3) {
+          cr.fly();
+          this.spaceT = -9;
+          this.jumpHold = null;
+          p.charging = 0;
+        } else this.spaceT = now2;
+      }
+      if (p.flying) p.intent.mz = inp.isDown("Space") ? 1 : inp.isDown("C") ? -1 : 0;
+      if (p.inWater) {
+        if (inp.isDown("Space")) p.intent.mz = 1;
+        else if (inp.isDown("C")) p.intent.mz = -1;
+        else if (v3 && fwdIn > 0.3) {
+          const pitch = v3.rig.pitch;
+          if (pitch < -0.28 || pitch > 0.2 && p.depth > 0.05) p.intent.mz = Math.max(-1, Math.min(1, pitch * 1.5)) * fwdIn;
+        }
+        if (!p.gills && p.under && !this.o2Hint) {
+          this.o2Hint = true;
+          game.hint?.("diving", "Under water you hold your breath \u2014 watch the bubbles under your stamina and come up for air (Space). Look down and swim, or hold C, to dive.");
+        }
+      }
+      if (inp.wasPressed("Shift")) this.shiftT = 0;
+      if (inp.isDown("Shift")) this.shiftT = (this.shiftT ?? 0) + dt;
+      const tapDodge = inp.wasReleased("Shift") && (this.shiftT ?? 1) < 0.22;
+      p.intent.sprint = (inp.isDown("Shift") && this.shiftT > 0.16 || !!tc?.run) && l > 0;
+      if (v3 && (v3.rig.mode === "first" || v3.rig.shiftLock)) this.aimT = Math.max(this.aimT, 0.25);
+      let [wx, wy] = game.renderer.toWorld(game.world, inp.mouse.x, inp.mouse.y);
+      if (inp.touch?.on && !v3) [wx, wy] = this.touchAim(p, game);
+      const aim = Math.atan2(wy - (p.y - 0.5), game.world.dx(p.x, wx));
+      const melee = p.style !== "sniper";
+      const aimM = melee ? this.assist(p, game, aim) : aim;
+      this.aimT = Math.max(0, this.aimT - dt);
+      const fighting = inp.mouseDown(0) || inp.mouseDown(2) && !v3?.rig.freeMouse || inp.isDown("F");
+      if (fighting) this.aimT = 0.7;
+      if (p.action && p.action.def.track !== false && p.action.t < (p.action.def.windup ?? 0.1)) p.facing = p.action.def.m1Chain || p.action.def.source?.startsWith("style") ? aimM : aim;
+      else if (!p.action) {
+        if (this.aimT > 0) p.facing = aim;
+        else if (l > 0) p.facing = Math.atan2(my, mx);
+      }
+      this.mouseWorld = { x: wx, y: wy };
+      const buf = this.buf || (this.buf = { m1: 0, heavy: 0, dodge: 0, jump: 0 });
+      buf.m1 = Math.max(0, buf.m1 - dt);
+      buf.heavy = Math.max(0, buf.heavy - dt);
+      buf.dodge = Math.max(0, buf.dodge - dt);
+      buf.jump = Math.max(0, (buf.jump || 0) - dt);
+      if (inp.mousePressed(0)) buf.m1 = 0.22;
+      const freeMouse = !!v3?.rig.freeMouse;
+      if (freeMouse ? inp.mouse.released[2] && v3.rig.takeRightClick() : inp.mousePressed(2)) buf.heavy = 0.25;
+      if (tapDodge && !(v3 && v3.rig.mode === "third")) buf.dodge = 0.16;
+      if (inp.wasPressed("Control") && v3 && v3.rig.mode === "third" && !inp.touch?.on) {
+        v3.rig.setShiftLock(!v3.rig.shiftLock);
+        game.applySettings?.(true);
+        game.ui.toast(v3.rig.shiftLock ? "SHIFT LOCK ON" : "SHIFT LOCK OFF", v3.rig.shiftLock ? "Your character faces where you look. Tap Ctrl to free the mouse." : "Hold the right mouse button to turn the camera. Tap Ctrl to lock it.", "#ffe082", "shiftlock");
+      }
+      if (inp.wasPressed("Q")) buf.dodge = 0.16;
+      if (inp.wasPressed("Space") && !p.flying) {
+        if (p.canJump()) this.jumpHold = { t: 0 };
+        else buf.jump = 0.14;
+      }
+      if (inp.wasPressed("Slash") || inp.wasPressed("NumpadDivide") || inp.wasPressed("Backquote")) game.creative?.openConsole();
+      if (buf.dodge > 0 && p.tryDodge(game, mx, my)) {
+        buf.dodge = 0;
+        buf.m1 = 0;
+      }
+      if (this.jumpHold) {
+        if (!p.canJump()) {
+          this.jumpHold = null;
+          p.charging = 0;
+        } else if (inp.isDown("Space")) {
+          this.jumpHold.t += dt;
+          p.charging = clamp2((this.jumpHold.t - 0.16) / 0.75, 0, 1);
+        } else {
+          p.tryJump(game, p.charging);
+          this.jumpHold = null;
+          p.charging = 0;
+          buf.jump = 0;
+        }
+      } else if (buf.jump > 0 && p.tryJump(game, 0)) buf.jump = 0;
+      if (buf.heavy > 0) {
+        const prev = p.facing;
+        p.facing = aimM;
+        if (p.tryHeavy(game)) {
+          buf.heavy = 0;
+          buf.m1 = 0;
+        } else if (p.action) p.facing = prev;
+      }
+      if (buf.m1 > 0 || inp.mouseDown(0) && !p.action) {
+        if (!p.action) {
+          p.facing = aimM;
+          if (p.tryM1(game)) buf.m1 = 0;
+        } else {
+          p.tryM1(game);
+          if (p.combo.queued) buf.m1 = 0;
+        }
+      }
+      p.setBlock(inp.isDown("F"));
+      for (let i = 0; i < HOTBAR_SIZE; i++) {
+        if (inp.wasPressed(HOTBAR_KEYS[i])) {
+          const id = p.hotbar[i];
+          if (id) {
+            p.facing = aim;
+            const target = this.aimTarget(p, game, wx, wy);
+            p.tryTechnique(id, game, target || { x: wx, y: wy });
+          }
+        }
+      }
+      if (inp.wasPressed("R")) this.toggleHaki(p, game, "armament");
+      if (inp.wasPressed("T")) this.toggleHaki(p, game, "observation");
+      if (inp.wasPressed("G")) {
+        if (p.hakiLevel("conqueror")) {
+          p.facing = aim;
+          p.tryTechnique("haki_conqueror", game);
+        }
+      }
+      this.interaction = findInteraction(game, p);
+      if (inp.wasPressed("E") && this.interaction) {
+        inp.consume("E");
+        p.reachT = 0.45;
+        this.interaction.run();
+      }
+    }
+    /** A dodge requested from outside the keyboard (the touch pad's Dodge button). */
+    requestDodge() {
+      if (this.buf) this.buf.dodge = 0.16;
+      else this.buf = { m1: 0, heavy: 0, dodge: 0.16, jump: 0 };
+    }
+    /** Soft melee aim assist: face a foe that is close and roughly where you aim. */
+    assist(p, game, aim) {
+      const reach = 2.4 * (p.reach || 1);
+      let best = null, bestScore = Infinity;
+      for (const a of game.actorsNear(p.x, p.y, reach + 0.6)) {
+        if (a === p || a.state !== "idle" || !game.combat.canHit(p, a, {})) continue;
+        const dx = game.world.dx(p.x, a.x), dy = a.y - p.y;
+        const d = Math.hypot(dx, dy);
+        if (d > reach + 0.6) continue;
+        const off = Math.abs(angleDiff(aim, Math.atan2(dy, dx)));
+        if (off > 0.62) continue;
+        const score = d + off * 2.5;
+        if (score < bestScore) {
+          bestScore = score;
+          best = Math.atan2(dy, dx);
+        }
+      }
+      return best === null ? aim : best;
+    }
+    /** Touch aim for the top-down view: the closest foe in front, else straight ahead. */
+    touchAim(p, game) {
+      let best = null, bs = Infinity;
+      for (const a of game.actorsNear(p.x, p.y, 9)) {
+        if (a === p || a.state !== "idle" || !game.combat.canHit(p, a, {})) continue;
+        if (!(a.aggroPlayer || a.provoked || a.controller?.target === p || a === game.bossTarget)) continue;
+        const dx = game.world.dx(p.x, a.x), dy = a.y - p.y;
+        const d = Math.hypot(dx, dy);
+        const off = Math.abs(angleDiff(p.facing, Math.atan2(dy, dx)));
+        const score = d + off * 3;
+        if (score < bs) {
+          bs = score;
+          best = a;
+        }
+      }
+      if (best) return [best.x, best.y - 0.5];
+      return [p.x + Math.cos(p.facing) * 4, p.y - 0.5 + Math.sin(p.facing) * 4];
+    }
+    aimTarget(p, game, wx, wy) {
+      let best = null, bd = 3.5 * 3.5;
+      for (const a of game.actorsNear(wx, wy, 3.5)) {
+        if (a === p || a.state !== "idle" || !game.combat.canHit(p, a, {})) continue;
+        const d = game.world.dist2(wx, wy, a.x, a.y);
+        if (d < bd) {
+          bd = d;
+          best = a;
+        }
+      }
+      return best;
+    }
+    toggleHaki(p, game, type) {
+      if (!p.hakiLevel(type)) return;
+      if (type === "armament") {
+        p.armament = !p.armament;
+        if (p.armament) {
+          p.observation = false;
+          game.fx.burst(p.x, p.y - 0.8, 10, { color: "#212121", speed: 3, g: 0, life: 0.35, kind: "line" });
+          game.audio?.sfx("haki");
+        }
+      } else {
+        p.observation = !p.observation;
+        if (p.observation) {
+          p.armament = false;
+          game.fx.ring(p.x, p.y, 0.5, 8, "#ce93d8", 0.6, 0.08);
+          game.audio?.sfx("haki_obs");
+        }
+      }
+    }
+    sail(p, dt, game) {
+      const inp = game.input;
+      const s = p.ship;
+      if (!s || s.sunk) return;
+      s.captain = p;
+      let turn = 0;
+      if (inp.isDown("A") || inp.isDown("ArrowLeft")) turn -= 1;
+      if (inp.isDown("D") || inp.isDown("ArrowRight")) turn += 1;
+      const tc = inp.touch?.on ? inp.touch : null;
+      if (tc && !turn && Math.abs(tc.mx) > 0.2) turn = clamp2(tc.mx * 1.3, -1, 1);
+      const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp2(Math.abs(s.speed) / 3, 0, 1));
+      s.heading += turn * steer * dt;
+      if (inp.isDown("W") || inp.isDown("ArrowUp") || tc && tc.my < -0.45) {
+        s.sail = Math.min(1, s.sail + dt * 0.9);
+        s.anchored = false;
+      }
+      if (inp.isDown("S") || inp.isDown("ArrowDown") || tc && tc.my > 0.45) s.sail = Math.max(0, s.sail - dt * 1.2);
+      s.rowing = inp.isDown("Space") ? 1 : 0;
+      if (s.rowing) s.anchored = false;
+      let [wx, wy] = game.renderer.toWorld(game.world, inp.mouse.x, inp.mouse.y);
+      if (tc && !game.view3d?.active) [wx, wy] = this.touchShipAim(s, game);
+      this.mouseWorld = { x: wx, y: wy };
+      if (inp.mousePressed(0)) {
+        if (!s.fireBroadside(game, wx, wy, p) && !s.def.cannons) game.log("This boat has no cannons.", "#b0bec5");
+      }
+      if (inp.wasPressed("Shift") && s.def.coupDeBurst) {
+        if (s.burstCd <= 0) {
+          s.burstCd = 30;
+          s.coupT = 1.2;
+          game.fx.burst(s.x, s.y, 30, { color: ["#e1f5fe", "#ffffff"], speed: 6, g: 5, life: 0.8, kind: "smoke", size: 0.4 });
+          game.fx.shake(0.5);
+          game.fx.text(s.x, s.y - 2, "COUP DE BURST!", "#ffeb3b", 0.6);
+          game.audio?.sfx("explosion");
+        }
+      }
+      p.x = s.x;
+      p.y = s.y;
+      p.facing = s.heading;
+      this.interaction = findInteraction(game, p);
+      if (inp.wasPressed("E") && this.interaction) {
+        inp.consume("E");
+        p.reachT = 0.45;
+        this.interaction.run();
+      }
+      for (let i = 0; i < HOTBAR_SIZE; i++) {
+        if (inp.wasPressed(HOTBAR_KEYS[i])) {
+          const id = p.hotbar[i];
+          if (id) {
+            p.facing = Math.atan2(wy - p.y, game.world.dx(p.x, wx));
+            p.tryTechnique(id, game, { x: wx, y: wy });
+          }
+        }
+      }
+    }
+    /** Touch aim at sea in the top-down view: the nearest other ship, else off the starboard side. */
+    touchShipAim(s, game) {
+      let best = null, bd = 34 * 34;
+      for (const o of game.ships) {
+        if (o === s || o.sunk || o.owner === "player") continue;
+        const d = game.world.dist2(s.x, s.y, o.x, o.y);
+        if (d < bd) {
+          bd = d;
+          best = o;
+        }
+      }
+      if (best) return [best.x, best.y];
+      const a = s.heading + Math.PI / 2;
+      return [s.x + Math.cos(a) * 10, s.y + Math.sin(a) * 10];
+    }
+    whileKnocked(p, dt, game) {
+      game.emit("playerKnockedTick", dt);
     }
   };
 

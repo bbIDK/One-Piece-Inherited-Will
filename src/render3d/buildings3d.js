@@ -489,8 +489,18 @@ function buildBuilding0(b, ctx) {
   // round huts are their own thing
   if (S.wall === 'hut' || rt === 'hut') return finish(b, hut(k, b, S, fw, fd, H, wallCol, roofCol), null, H + fd);
 
-  // foundation (sunk into the ground to hide slopes)
-  B(k, -fw / 2 - ex(-1, 0.08), -2.0, -fd - 0.08, fw / 2 + ex(1, 0.08), plinth, 0.08, V.baseCol || baseCol, { outline: 0.03 });
+  // foundation (sunk into the ground to hide slopes — as far down as the
+  // ground under the building falls away, so no corner floats over a slope
+  // or a canal bank)
+  let sink = 2;
+  const terr = ctx?.terrain || ctx?.ground;
+  if (terr) {
+    const base = terr(b.x, b.y);
+    let lo = base;
+    for (const u of [-0.5, -0.25, 0, 0.25, 0.5]) for (const v of [0, -0.33, -0.66, -1]) { const q = bw(b, u * fw, v * fd); lo = Math.min(lo, terr(q.x, q.y)); }
+    if (Number.isFinite(lo)) sink = Math.min(16, Math.max(2, base - lo + 0.4));
+  }
+  B(k, -fw / 2 - ex(-1, 0.08), -sink, -fd - 0.08, fw / 2 + ex(1, 0.08), plinth, 0.08, V.baseCol || baseCol, { outline: 0.03 });
 
   // walls
   const ruined = rt === 'ruin' || S.wall === 'stone';
@@ -595,7 +605,7 @@ function buildBuilding0(b, ctx) {
   // extras by style and role
   styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex);
 
-  const grp = finish(b, k, { door, dd, H, S }, top);
+  const grp = finish(b, k, { door, dd, H, S, rt, storeys, storeyH, plinth }, top);
   if (enter) walkIn(grp, b, S, { fw, fd, y0: plinth, ceil: Hc - plinth, panes });
   return grp;
 }
@@ -652,7 +662,8 @@ function finish(b, k, info, top) {
     // hanging shop sign on a bracket beside the door
     let sx = info.door.x + info.dd.dw / 2 + 0.75;
     if (sx > b.fw / 2 - 0.5) sx = info.door.x - info.dd.dw / 2 - 0.75; // (the other side of the door, if it'd hang off the corner)
-    const sy = Math.min(info.H - 0.6, info.dd.top + 0.55);
+    // (level with the top of the door, below the name board)
+    const sy = Math.min(info.H - 0.6, info.dd.top - 0.05);
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.78), signMaterial(icon));
     sign.position.set(sx, sy, 0.62);
     sign.rotation.y = Math.PI / 2 * 0; // faces the street
@@ -669,8 +680,16 @@ function finish(b, k, info, top) {
     const h = marine ? 0.6 : 0.5;
     const w = Math.min(b.fw - 0.6, h * nb.aspect);
     const board = new THREE.Mesh(new THREE.PlaneGeometry(w, w / nb.aspect), nb.mat);
-    board.position.set(0, Math.min(info.H - 0.45, info.dd.top + 0.75 + (marine ? 0.4 : 0)), 0.1);
-    if (board.position.y < info.dd.top + 0.4) board.position.y = info.dd.top + 0.4;
+    // where it can be read: just over the door; over the awning if there is
+    // one; above the first eave of a pagoda (an eave would cut straight
+    // through it); and in front of a row of Chinese columns
+    const bh = w / nb.aspect, S = info.S || {};
+    let y = info.dd.top + 0.2 + bh / 2 + (marine ? 0.4 : 0);
+    const aw = S.wall ? awningOf(b, S, b.fw, info.H, info.dd) : null;
+    if (aw) y = Math.max(y, aw.top + bh / 2 + 0.08);
+    if (info.rt === 'pagoda' && info.storeys >= 2) y = info.plinth + info.storeyH + 0.3 + bh / 2 + 0.1;
+    y = Math.min(y, info.H - (info.rt === 'pagoda' ? 0.4 : 0.3) - bh / 2);
+    board.position.set(0, y, S.wall === 'column' ? 0.46 : 0.1);
     grp.add(board);
   }
   grp.userData.height = top;
@@ -1050,11 +1069,23 @@ function dormers(k, b, S, fw, hd, H, rise, ov, n, roofCol, wallCol, snowy, litOn
   }
 }
 
+/**
+ * Does this shop get a striped awning over its door? (Not on Chinese fronts,
+ * which have their lanterns, nor where there's no room for it and the name
+ * board above the door.) Its top at the wall, or null.
+ */
+function awningOf(b, S, fw, H, dd) {
+  const role = b.role || 'house';
+  if (!['shop', 'market', 'restaurant', 'cafe', 'weapons', 'bar', 'tavern', 'inn'].includes(role) || S.door === 'noren' || fw < 3.5) return null;
+  if (S.lanterns || H - dd.top < 1.3) return null;
+  return { top: dd.top + 0.8 };
+}
+
 function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex = (sx, d) => d) {
   const role = b.role || 'house';
   const clearOfDoor = (x0, x1) => x1 < door.x - dd.dw / 2 - 0.25 || x0 > door.x + dd.dw / 2 + 0.25;
   // shop awnings (striped cloth) over the door
-  if (['shop', 'market', 'restaurant', 'cafe', 'weapons', 'bar', 'tavern', 'inn'].includes(role) && S.door !== 'noren' && fw >= 3.5) {
+  if (awningOf(b, S, fw, H, dd)) {
     const cols = ['#e74c3c', '#3498db', '#27ae60', '#f39c12', '#9b59b6', '#16a085'];
     const c = cols[(b.v || 0) % cols.length];
     const aw = Math.min(fw - 0.6, dd.dw + 2.4), ay = dd.top + 0.55;
