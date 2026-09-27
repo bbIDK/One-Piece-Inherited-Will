@@ -313,7 +313,9 @@ export class Game {
     // (not indoors, not under the sea, not below decks)
     const pl = this.player;
     const sheltered = !!(pl && (this.world.interiorAt?.(pl.x, pl.y) || this.view3d?.isUnder));
-    if (env.rain > 0.05 && !zk && !sheltered) {
+    // (in 3D the rain and snow fall through the world instead — render3d/precip3d.js)
+    const flat = !this.view3d;
+    if (env.rain > 0.05 && !zk && !sheltered && flat) {
       g.strokeStyle = `rgba(200,220,255,${0.25 + env.rain * 0.35})`;
       g.lineWidth = 1.2 * r.dpr;
       g.beginPath();
@@ -326,7 +328,7 @@ export class Game {
       }
       g.stroke();
     }
-    if (env.snow > 0.05 && zk !== 2 && zk !== 1 && !sheltered) {
+    if (env.snow > 0.05 && zk !== 2 && zk !== 1 && !sheltered && flat) {
       g.fillStyle = 'rgba(255,255,255,0.85)';
       const n = Math.floor(env.snow * 200);
       const t = env.time;
@@ -336,13 +338,13 @@ export class Game {
         g.beginPath(); g.arc(x, y, (1.2 + (i % 3)) * r.dpr, 0, TAU); g.fill();
       }
     }
-    if (env.fog > 0.05) {
+    if (env.fog > 0.05 && flat) {
       const grd = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.15, W / 2, H / 2, Math.max(W, H) * 0.7);
       grd.addColorStop(0, `rgba(210,215,225,${env.fog * 0.15})`);
       grd.addColorStop(1, `rgba(200,205,215,${env.fog * 0.85})`);
       g.fillStyle = grd; g.fillRect(0, 0, W, H);
     }
-    if (env.lightning > 0.5) { g.fillStyle = `rgba(255,255,255,${(env.lightning - 0.5) * 0.5})`; g.fillRect(0, 0, W, H); }
+    if (env.lightning > 0.5) { g.fillStyle = `rgba(255,255,255,${(env.lightning - 0.5) * (flat ? 0.5 : 0.22)})`; g.fillRect(0, 0, W, H); }
     // low-health vignette
     const p = this.player;
     if (p && p.d && p.hp / p.d.maxHp < 0.3 && p.state === 'idle') {

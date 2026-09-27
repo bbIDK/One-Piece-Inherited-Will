@@ -63924,6 +63924,402 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     lights.update(ctx, env, dt || 1 / 60);
   });
 
+  // src/render3d/precip3d.js
+  var RAIN = { n: 9e3, box: 34, tall: 20, below: 6, fall: 11, near: 2.6 };
+  var SNOW = { n: 7e3, box: 30, tall: 16, below: 5, fall: 1.25, near: 0.9 };
+  var MAX_SPLASH = 320;
+  var SH = 64;
+  var NONE = -1e4;
+  var Shelter = class {
+    constructor() {
+      this.data = new Float32Array(SH * SH * 4);
+      this.tex = new DataTexture(this.data, SH, SH, RGBAFormat, FloatType);
+      this.tex.magFilter = NearestFilter;
+      this.tex.minFilter = NearestFilter;
+      this.tex.needsUpdate = true;
+      this.x0 = null;
+      this.y0 = null;
+      this.world = null;
+    }
+    /** Re-centre on (wx, wy) — in 8 m steps — when needed. */
+    update(ctx, wx, wy) {
+      const w = ctx.world;
+      const x0 = Math.round(wx / 8) * 8 - SH / 2, y0 = Math.round(wy / 8) * 8 - SH / 2;
+      if (x0 === this.x0 && y0 === this.y0 && w === this.world) return;
+      this.x0 = x0;
+      this.y0 = y0;
+      this.world = w;
+      const d = this.data;
+      for (let j = 0; j < SH; j++) {
+        for (let i = 0; i < SH; i++) {
+          const k = (j * SH + i) * 4;
+          d[k] = ctx.ground(w.wx(x0 + i + 0.5), y0 + j + 0.5);
+          d[k + 1] = NONE;
+        }
+      }
+      const hf = ctx.game?.view3d?.terrain?.hf;
+      if (w.objects) {
+        for (const b of w.objects.query(x0 - 12, y0 - 12, x0 + SH + 12, y0 + SH + 12)) {
+          if (!b.fw || !b.fd || !(b.hgt || b.enterable)) continue;
+          const floor = b.enterable && hf ? hf.floorY(b) : ctx.ground(b.x, b.y);
+          const top = floor + heightsOf(b).H + 0.4;
+          const bx = w.dx(x0, b.x);
+          const i0 = Math.max(0, Math.floor(bx - b.fw / 2 - 0.45)), i1 = Math.min(SH - 1, Math.floor(bx + b.fw / 2 + 0.45));
+          const j0 = Math.max(0, Math.floor(b.y - b.fd - y0 - 0.45)), j1 = Math.min(SH - 1, Math.floor(b.y - y0 + 0.45));
+          for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+            const k = (j * SH + i) * 4 + 1;
+            if (top > d[k]) d[k] = top;
+          }
+        }
+      }
+      this.tex.needsUpdate = true;
+    }
+    /** Ground height at a world point, or null under cover (or off the map). */
+    open(w, x, y) {
+      const i = Math.floor(w.dx(this.x0, x)), j = Math.floor(y - this.y0);
+      if (i < 0 || j < 0 || i >= SH || j >= SH) return null;
+      const k = (j * SH + i) * 4;
+      return this.data[k + 1] > NONE ? null : this.data[k];
+    }
+  };
+  var COMMON = (
+    /* glsl */
+    `
+  attribute vec4 aSeed;
+  uniform float uTime, uBox, uTall, uBelow, uFall;
+  uniform vec2 uWind, uOrig, uShelterO;
+  uniform sampler2D uShelter;
+  varying float vA;
+  varying vec2 vC;
+  // a drop's place: fixed in the world (wrapped into the box around the camera), falling
+  vec3 dropAt(float fall, vec2 sway) {
+    vec2 rel = mod(aSeed.xy * uBox + uWind * uTime + sway - uOrig - cameraPosition.xz + uBox * 0.5, uBox) - uBox * 0.5;
+    float base = cameraPosition.y - uBelow;
+    float y = base + mod(aSeed.z * uTall - fall * uTime - base, uTall);
+    return vec3(cameraPosition.x + rel.x, y, cameraPosition.z + rel.y);
+  }
+  // under a roof, or down in the ground?
+  bool sheltered(vec3 p) {
+    vec2 uv = (p.xz - uShelterO) / ${SH.toFixed(1)};
+    if (uv.x <= 0.0 || uv.y <= 0.0 || uv.x >= 1.0 || uv.y >= 1.0) return false;
+    vec4 s = texture2D(uShelter, uv);
+    return p.y < s.r || p.y < s.g;
+  }
+  uniform float uNear;
+  float boxFade(vec3 p) {
+    float r = length(p.xz - cameraPosition.xz);
+    return (1.0 - smoothstep(uBox * 0.3, uBox * 0.5, r)) * smoothstep(uNear * 0.35, uNear, length(p - cameraPosition));
+  }
+`
+  );
+  var RAIN_VS = (
+    /* glsl */
+    `
+  ${COMMON}
+  uniform float uLen, uWidth;
+  void main() {
+    float k = 0.85 + 0.3 * aSeed.w;
+    float fall = uFall * k;
+    vec3 p = dropAt(fall, vec2(0.0));
+    vC = position.xy;
+    vA = boxFade(p);
+    if (sheltered(p)) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
+    // a streak along the way it's falling, turned to face the camera
+    vec3 v = normalize(vec3(uWind.x, -fall, uWind.y));
+    vec3 toCam = cameraPosition - p;
+    float dist = length(toCam);
+    vec3 side = normalize(cross(v, toCam / dist));
+    float w = max(uWidth, dist * 0.0012);
+    vec3 q = p - v * (position.y * uLen * k) + side * (position.x * w);
+    gl_Position = projectionMatrix * viewMatrix * vec4(q, 1.0);
+  }
+`
+  );
+  var RAIN_FS = (
+    /* glsl */
+    `
+  uniform vec3 uColor;
+  uniform float uAlpha;
+  varying float vA;
+  varying vec2 vC;
+  void main() {
+    float a = uAlpha * vA * (1.0 - abs(vC.x)) * (1.0 - vC.y * 0.75);
+    if (a < 0.004) discard;
+    gl_FragColor = vec4(uColor, a);
+  }
+`
+  );
+  var SNOW_VS = (
+    /* glsl */
+    `
+  ${COMMON}
+  uniform float uSize;
+  void main() {
+    float k = 0.7 + 0.6 * aSeed.w;
+    // flakes tumble and sway as they come down
+    vec2 sway = vec2(sin(uTime * (0.55 + aSeed.w * 0.5) + aSeed.x * 40.0), cos(uTime * (0.45 + aSeed.z * 0.4) + aSeed.y * 37.0)) * 0.5;
+    vec3 p = dropAt(uFall * k, sway);
+    vC = position.xy;
+    vA = boxFade(p);
+    if (sheltered(p)) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
+    vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+    vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+    float dist = length(cameraPosition - p);
+    float s = max(uSize * (0.55 + 0.9 * aSeed.w), dist * 0.0016);
+    vec3 q = p + (right * position.x + up * position.y) * s;
+    gl_Position = projectionMatrix * viewMatrix * vec4(q, 1.0);
+  }
+`
+  );
+  var SNOW_FS = (
+    /* glsl */
+    `
+  uniform vec3 uColor;
+  uniform float uAlpha;
+  varying float vA;
+  varying vec2 vC;
+  void main() {
+    float a = uAlpha * vA * smoothstep(1.0, 0.3, length(vC));
+    if (a < 0.004) discard;
+    gl_FragColor = vec4(uColor, a);
+  }
+`
+  );
+  function fallMesh(spec, vs, fs, corners, shelter, extra) {
+    const g = new InstancedBufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(corners, 3));
+    g.setIndex([0, 1, 2, 0, 2, 3]);
+    const seeds = new Float32Array(spec.n * 4);
+    for (let i = 0; i < seeds.length; i++) seeds[i] = Math.random();
+    g.setAttribute("aSeed", new InstancedBufferAttribute(seeds, 4));
+    g.instanceCount = 0;
+    const uniforms = {
+      uTime: { value: 0 },
+      uBox: { value: spec.box },
+      uTall: { value: spec.tall },
+      uBelow: { value: spec.below },
+      uFall: { value: spec.fall },
+      uWind: { value: new Vector2() },
+      uOrig: { value: new Vector2() },
+      uShelterO: { value: new Vector2(-1e5, -1e5) },
+      uShelter: { value: shelter.tex },
+      uColor: { value: new Color(1, 1, 1) },
+      uAlpha: { value: 0 },
+      uNear: { value: spec.near },
+      ...extra
+    };
+    const m = new ShaderMaterial({ uniforms, vertexShader: vs, fragmentShader: fs, transparent: true, depthWrite: false, side: DoubleSide });
+    const mesh = new Mesh(g, m);
+    mesh.frustumCulled = false;
+    mesh.renderOrder = 3;
+    mesh.visible = false;
+    return mesh;
+  }
+  function splashTexture(ring4) {
+    const S3 = 64, c = document.createElement("canvas");
+    c.width = c.height = S3;
+    const g = c.getContext("2d");
+    if (ring4) {
+      g.strokeStyle = "rgba(255,255,255,0.9)";
+      g.lineWidth = 3;
+      g.beginPath();
+      g.arc(S3 / 2, S3 / 2, S3 / 2 - 4, 0, Math.PI * 2);
+      g.stroke();
+    } else {
+      g.fillStyle = "rgba(255,255,255,0.9)";
+      for (let i = 0; i < 9; i++) {
+        const a = i / 9 * Math.PI * 2, r = S3 * (0.2 + i % 3 * 0.07);
+        g.beginPath();
+        g.arc(S3 / 2 + Math.cos(a) * r, S3 / 2 + Math.sin(a) * r, 2.6 - i % 3 * 0.5, 0, Math.PI * 2);
+        g.fill();
+      }
+      const grd = g.createRadialGradient(S3 / 2, S3 / 2, 0, S3 / 2, S3 / 2, S3 * 0.22);
+      grd.addColorStop(0, "rgba(255,255,255,0.7)");
+      grd.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = grd;
+      g.fillRect(0, 0, S3, S3);
+    }
+    const t = new CanvasTexture(c);
+    t.colorSpace = SRGBColorSpace;
+    return t;
+  }
+  var Splashes = class {
+    constructor(scene) {
+      const geo2 = new PlaneGeometry(1, 1);
+      geo2.rotateX(-Math.PI / 2);
+      const mk3 = (ring4) => {
+        const m = new InstancedMesh(geo2, new MeshBasicMaterial({ map: splashTexture(ring4), transparent: true, depthWrite: false, blending: AdditiveBlending, fog: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), MAX_SPLASH);
+        m.instanceColor = new InstancedBufferAttribute(new Float32Array(MAX_SPLASH * 3), 3);
+        m.frustumCulled = false;
+        m.count = 0;
+        m.renderOrder = 2;
+        scene.add(m);
+        return m;
+      };
+      this.ground = mk3(false);
+      this.water = mk3(true);
+      this.list = [];
+      this.acc = 0;
+      this.m4 = new Matrix4();
+      this.q = new Quaternion();
+      this.p = new Vector3();
+      this.s = new Vector3();
+      this.c = new Color();
+    }
+    update(ctx, shelter, rain, bright, wx, wy, dt, time) {
+      const w = ctx.world;
+      this.acc += rain * 420 * dt;
+      while (this.acc >= 1 && this.list.length < MAX_SPLASH) {
+        this.acc -= 1;
+        const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * 15;
+        const x = w.wx(wx + Math.cos(a) * r), y = wy + Math.sin(a) * r;
+        const h2 = shelter.open(w, x, y);
+        if (h2 === null) continue;
+        const water = w.isLiquid(x, y) && !w.isOverlay(x, y);
+        this.list.push({ x, y, h: h2, t: time, water, life: water ? 0.55 : 0.22 });
+      }
+      if (this.acc > 1) this.acc = 1;
+      this.list = this.list.filter((s) => time - s.t < s.life);
+      const v = ctx.game.view3d;
+      let ng = 0, nw = 0;
+      for (const s of this.list) {
+        const k = (time - s.t) / s.life;
+        const size = s.water ? 0.08 + k * 0.5 : 0.12 + k * 0.22;
+        const m = s.water ? this.water : this.ground;
+        const n = s.water ? nw++ : ng++;
+        this.p.set(w.dx(v.ox, s.x), s.h + 0.03, s.y - v.oy);
+        this.s.set(size, 1, size);
+        this.m4.compose(this.p, this.q, this.s);
+        m.setMatrixAt(n, this.m4);
+        const f = (1 - k) * (1 - k) * bright * (s.water ? 0.5 : 0.6);
+        this.c.setRGB(f, f, f);
+        m.setColorAt(n, this.c);
+      }
+      for (const [m, n] of [[this.ground, ng], [this.water, nw]]) {
+        m.count = n;
+        m.instanceMatrix.needsUpdate = true;
+        if (m.instanceColor) m.instanceColor.needsUpdate = true;
+      }
+    }
+    clear() {
+      this.list.length = 0;
+      this.ground.count = 0;
+      this.water.count = 0;
+    }
+  };
+  var Lightning = class {
+    constructor(scene) {
+      this.mat = new MeshBasicMaterial({ color: 14674175, transparent: true, blending: AdditiveBlending, depthWrite: false, fog: false, side: DoubleSide });
+      this.mesh = null;
+      this.scene = scene;
+      this.last = 0;
+    }
+    /** A jagged fork from the clouds to the sea, far off, as a ribbon of quads facing the camera. */
+    strike(cam, ox, oy, yaw) {
+      this.clear();
+      const a = yaw + (Math.random() - 0.5) * 1.8, dist = 160 + Math.random() * 220;
+      const bx = cam.position.x + Math.cos(a) * dist, bz = cam.position.z + Math.sin(a) * dist;
+      const pos = [];
+      const toCam = new Vector3();
+      const seg = (x0, y0, z0, x1, y1, z1, wd) => {
+        toCam.set(cam.position.x - (x0 + x1) / 2, cam.position.y - (y0 + y1) / 2, cam.position.z - (z0 + z1) / 2).normalize();
+        const d = new Vector3(x1 - x0, y1 - y0, z1 - z0).normalize();
+        const s = new Vector3().crossVectors(d, toCam).normalize().multiplyScalar(wd);
+        pos.push(x0 - s.x, y0 - s.y, z0 - s.z, x0 + s.x, y0 + s.y, z0 + s.z, x1 + s.x, y1 + s.y, z1 + s.z);
+        pos.push(x0 - s.x, y0 - s.y, z0 - s.z, x1 + s.x, y1 + s.y, z1 + s.z, x1 - s.x, y1 - s.y, z1 - s.z);
+      };
+      const bolt2 = (x, y, z, len, wd, depth) => {
+        const steps = Math.max(3, Math.round(len / 9));
+        const dx = (Math.random() - 0.5) * 0.5, dz = (Math.random() - 0.5) * 0.5;
+        for (let i = 0; i < steps && y > 0; i++) {
+          const l = len / steps;
+          const nx = x + (dx + (Math.random() - 0.5) * 0.9) * l, ny = y - l * (0.8 + Math.random() * 0.4), nz = z + (dz + (Math.random() - 0.5) * 0.9) * l;
+          seg(x, y, z, nx, Math.max(0, ny), nz, wd);
+          if (depth < 2 && Math.random() < 0.28) bolt2(nx, ny, nz, len * 0.35, wd * 0.55, depth + 1);
+          x = nx;
+          y = ny;
+          z = nz;
+        }
+      };
+      bolt2(bx, 130 + Math.random() * 40, bz, 150, 0.9, 0);
+      const g = new BufferGeometry();
+      g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+      this.mesh = new Mesh(g, this.mat);
+      this.mesh.frustumCulled = false;
+      this.mesh.renderOrder = 4;
+      this.scene.add(this.mesh);
+    }
+    update(env, ctx) {
+      const l = env.lightning || 0;
+      if (l > 0.9 && this.last <= 0.9 && ctx.world?.zone === 0) this.strike(ctx.camera, 0, 0, ctx.game?.view3d?.rig?.yaw ?? 0);
+      this.last = l;
+      if (this.mesh) {
+        this.mat.opacity = l > 0.35 ? (0.55 + 0.45 * Math.random()) * Math.min(1, (l - 0.35) * 2.2) : 0;
+        if (l <= 0.35) this.clear();
+      }
+    }
+    clear() {
+      if (!this.mesh) return;
+      this.mesh.geometry.dispose();
+      this.mesh.removeFromParent();
+      this.mesh = null;
+    }
+  };
+  var Precipitation = class {
+    constructor(scene) {
+      this.shelter = new Shelter();
+      const quad = [-1, 0, 0, 1, 0, 0, 1, 1, 0, -1, 1, 0];
+      const sq = [-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0];
+      this.rain = fallMesh(RAIN, RAIN_VS, RAIN_FS, quad, this.shelter, { uLen: { value: 0.55 }, uWidth: { value: 0.011 } });
+      this.snow = fallMesh(SNOW, SNOW_VS, SNOW_FS, sq, this.shelter, { uSize: { value: 0.05 } });
+      scene.add(this.rain, this.snow);
+      this.splash = new Splashes(scene);
+      this.bolt = new Lightning(scene);
+    }
+    update(env, ctx, dt) {
+      const game = ctx.game, v = game?.view3d, w = ctx.world;
+      if (!v || !w) return;
+      this.bolt.update(env, ctx);
+      const zone = w.zone;
+      const under = !!v.isUnder;
+      const rain = !zone && !under ? env.rain || 0 : 0;
+      const snow2 = zone !== 1 && zone !== 2 && !under ? env.snow || 0 : 0;
+      this.rain.visible = rain > 0.03;
+      this.snow.visible = snow2 > 0.03;
+      if (!this.rain.visible) this.splash.clear();
+      if (!this.rain.visible && !this.snow.visible) return;
+      const cam = ctx.camera;
+      const wx = v.ox + cam.position.x, wy = v.oy + cam.position.z;
+      this.shelter.update(ctx, w.wx(wx), wy);
+      const so = (this._so || (this._so = new Vector2())).set(w.dx(v.ox, this.shelter.x0), this.shelter.y0 - v.oy);
+      const amb = env.ambient || [1, 1, 1];
+      const bright = Math.min(1.4, (amb[0] + amb[1] + amb[2]) / 3);
+      const set = (mesh, spec, k, wind, col, alpha2) => {
+        const u = mesh.material.uniforms;
+        u.uTime.value = env.time;
+        u.uOrig.value.set((v.ox % spec.box + spec.box) % spec.box, (v.oy % spec.box + spec.box) % spec.box);
+        u.uShelterO.value.copy(so);
+        u.uWind.value.set((env.windX || 0) * wind, (env.windY || 0) * wind);
+        u.uColor.value.setRGB(col[0] * bright, col[1] * bright, col[2] * bright);
+        u.uAlpha.value = alpha2;
+        mesh.geometry.instanceCount = Math.floor(spec.n * Math.min(1, k));
+      };
+      if (this.rain.visible) {
+        set(this.rain, RAIN, 0.25 + rain * 0.75, 3.2 + (env.storm || 0) * 3, [0.78, 0.84, 0.95], 0.24 + rain * 0.22);
+        this.splash.update(ctx, this.shelter, rain, bright, wx, wy, dt, env.time);
+      }
+      if (this.snow.visible) set(this.snow, SNOW, 0.2 + snow2 * 0.8, 1.1 + (env.storm || 0) * 2.2, [1, 1, 1], 0.9);
+    }
+  };
+  var precip = null;
+  registerFrameHook((env, ctx, dt) => {
+    if (!precip) {
+      precip = new Precipitation(ctx.scene);
+      if (ctx.game?.view3d) ctx.game.view3d.precip = precip;
+    }
+    precip.update(env, ctx, dt || 1 / 60);
+  });
+
   // src/ui/preview3d.js
   var shared = null;
   function sharedRenderer() {
@@ -76825,7 +77221,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       const pl = this.player;
       const sheltered = !!(pl && (this.world.interiorAt?.(pl.x, pl.y) || this.view3d?.isUnder));
-      if (env.rain > 0.05 && !zk && !sheltered) {
+      const flat = !this.view3d;
+      if (env.rain > 0.05 && !zk && !sheltered && flat) {
         g.strokeStyle = `rgba(200,220,255,${0.25 + env.rain * 0.35})`;
         g.lineWidth = 1.2 * r.dpr;
         g.beginPath();
@@ -76839,7 +77236,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         g.stroke();
       }
-      if (env.snow > 0.05 && zk !== 2 && zk !== 1 && !sheltered) {
+      if (env.snow > 0.05 && zk !== 2 && zk !== 1 && !sheltered && flat) {
         g.fillStyle = "rgba(255,255,255,0.85)";
         const n = Math.floor(env.snow * 200);
         const t = env.time;
@@ -76851,7 +77248,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.fill();
         }
       }
-      if (env.fog > 0.05) {
+      if (env.fog > 0.05 && flat) {
         const grd = g.createRadialGradient(W3 / 2, H2 / 2, Math.min(W3, H2) * 0.15, W3 / 2, H2 / 2, Math.max(W3, H2) * 0.7);
         grd.addColorStop(0, `rgba(210,215,225,${env.fog * 0.15})`);
         grd.addColorStop(1, `rgba(200,205,215,${env.fog * 0.85})`);
@@ -76859,7 +77256,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillRect(0, 0, W3, H2);
       }
       if (env.lightning > 0.5) {
-        g.fillStyle = `rgba(255,255,255,${(env.lightning - 0.5) * 0.5})`;
+        g.fillStyle = `rgba(255,255,255,${(env.lightning - 0.5) * (flat ? 0.5 : 0.22)})`;
         g.fillRect(0, 0, W3, H2);
       }
       const p = this.player;

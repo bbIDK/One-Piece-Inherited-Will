@@ -1,6 +1,7 @@
 // World checks: collisions and placements.
 const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
+const window_step = async (page, dt) => { await page.evaluate((dt) => window.OP.step(dt), dt); await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r()))); };
 export const scenarios = {
   // third person: free mouse, then shift lock (crosshair, over the shoulder)
   camctl: {
@@ -143,6 +144,235 @@ export const scenarios = {
       await cam(Math.PI * 0.8);
       await step(page, 0.05); await frames(page, 1);
       await snap('guard');
+    },
+  },
+  // Rain and snow in the world: falling past houses, stopped by roofs, splashing, ringing the sea.
+  weather: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); document.querySelector('.look-hint')?.remove(); });
+      const storm = (k, clock) => page.evaluate(([k, clock]) => { const e = window.OP.game.env; e.stormTarget = k; e.storm = k; e.weatherTimer = 1e9; e.clock = clock; e.fog = 0; }, [k, clock]);
+      await storm(0.85, 11);
+      // stand in a street with houses around (on a warm island, where it rains rather than snows)
+      await page.evaluate(() => {
+        const g = window.OP.game, w = g.world;
+        const isl = w.islands.find((i) => i.id === 'dawn_island');
+        const hs = w.objects.near(isl.x, isl.y, isl.radius * 1.2, (o) => o.enterable && o.hgt && o.role === 'house');
+        const b = hs[0];
+        if (b) { window.OP.teleport(b.x + 0.5, b.y + 3.2); g.player.facing = -Math.PI / 2; }
+        g.view3d.rig.yaw = (Math.PI * 1.5 + 0.35) % (Math.PI * 2); g.view3d.rig.pitch = -0.02;
+        window.__house = b ? { x: b.x, y: b.y, fd: b.fd } : null;
+      });
+      for (let i = 0; i < 12; i++) { await window_step(page, 0.1); }
+      await snap('rain-street');
+      await page.evaluate(() => { const g = window.OP.game; g.settings.view = 'first'; g.applySettings(); g.view3d.rig.pitch = -0.35; });
+      for (let i = 0; i < 4; i++) await window_step(page, 0.1);
+      await snap('rain-ground');
+      // from inside a house, looking out of the door
+      const inside = await page.evaluate(() => {
+        const g = window.OP.game, b = window.__house;
+        if (!b) return false;
+        window.OP.teleport(b.x + 0.3, b.y - 1.1);
+        g.view3d.rig.yaw = Math.PI / 2; g.view3d.rig.pitch = -0.1;
+        return !!g.world.interiorAt(g.player.x, g.player.y);
+      });
+      console.log('inside', inside);
+      for (let i = 0; i < 6; i++) await window_step(page, 0.1);
+      await snap('rain-from-inside');
+      // at night
+      await page.evaluate(() => { const g = window.OP.game, b = window.__house; g.settings.view = 'third'; g.applySettings(); window.OP.teleport(b.x + 0.5, b.y + 3.2); g.view3d.rig.yaw = (Math.PI * 1.5 + 0.35) % (Math.PI * 2); g.view3d.rig.pitch = -0.05; });
+      await storm(0.85, 21.5);
+      for (let i = 0; i < 8; i++) await window_step(page, 0.1);
+      await snap('rain-night');
+      // the sea: rings on the water
+      await storm(0.85, 12);
+      const sea = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player;
+        for (let r = 6; r < 80; r++) for (let k = 0; k < 32; k++) {
+          const a = k / 32 * Math.PI * 2, x = Math.floor(p.x + Math.cos(a) * r) + 0.5, y = Math.floor(p.y + Math.sin(a) * r) + 0.5;
+          if (w.sd(x, y) > 0.5 && w.sd(x, y) < 1.5 && w.walkable(x, y) && !w.isBlocked(x, y)) {
+            // on the shore, looking out to sea
+            let bx = 0, by = 0;
+            for (let t = 0; t < 16; t++) { const aa = t / 16 * Math.PI * 2; if (w.isLiquid(x + Math.cos(aa) * 6, y + Math.sin(aa) * 6)) { bx += Math.cos(aa); by += Math.sin(aa); } }
+            if (!bx && !by) continue;
+            window.OP.teleport(x, y);
+            g.settings.view = 'first'; g.applySettings();
+            g.view3d.rig.yaw = (Math.atan2(by, bx) + Math.PI * 2) % (Math.PI * 2); g.view3d.rig.pitch = -0.3;
+            return true;
+          }
+        }
+        return false;
+      });
+      console.log('shore', sea);
+      for (let i = 0; i < 8; i++) await window_step(page, 0.1);
+      await snap('rain-sea');
+      // lightning
+      await page.evaluate(() => { const g = window.OP.game; g.view3d.rig.pitch = 0.05; g.env.lightning = 1; });
+      await window_step(page, 0.05);
+      await snap('lightning');
+      // snow on a cold island
+      const cold = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world;
+        const isl = w.islands.find((i) => w.climate(i.x, i.y) === 3 && w.walkable(i.x, i.y));
+        if (!isl) return null;
+        // an open spot near its town
+        let spot = null;
+        for (let r = 4; r < 60 && !spot; r++) for (let k = 0; k < 24 && !spot; k++) {
+          const a = k / 24 * Math.PI * 2, x = isl.x + Math.cos(a) * r, y = isl.y + Math.sin(a) * r;
+          let ok = true;
+          for (let dx = -4; dx <= 4 && ok; dx++) for (let dy = -4; dy <= 4 && ok; dy++) if (!w.walkable(x + dx, y + dy) || w.isBlocked(x + dx, y + dy) || w.hitsProp(x + dx, y + dy, 0.6)) ok = false;
+          if (ok) spot = [x, y];
+        }
+        window.OP.teleport(...(spot || [isl.x, isl.y]));
+        g.settings.view = 'first'; g.applySettings();
+        g.view3d.rig.pitch = 0.02;
+        return isl.name || isl.id;
+      });
+      console.log('cold island', cold);
+      await storm(0.5, 11);
+      for (let i = 0; i < 14; i++) await window_step(page, 0.1);
+      await snap('snow');
+      const st = await page.evaluate(() => { const e = window.OP.game.env, pr = window.OP.game.view3d.precip; return { rain: +e.rain.toFixed(2), snow: +e.snow.toFixed(2), rainOn: pr.rain.visible, snowOn: pr.snow.visible, drops: pr.rain.geometry.instanceCount, flakes: pr.snow.geometry.instanceCount }; });
+      console.log(JSON.stringify(st));
+    },
+  },
+  raindbg: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'first'; g.applySettings(); document.querySelector('.look-hint')?.remove(); });
+      await page.evaluate(() => { const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island'); window.OP.teleport(isl.x, isl.y); const e = g.env; e.stormTarget = 0.85; e.storm = 0.85; e.weatherTimer = 1e9; e.clock = 11; g.view3d.rig.pitch = 0; });
+      for (let i = 0; i < 8; i++) await window_step(page, 0.1);
+      await snap('normal');
+      await page.evaluate(() => { const m = window.OP.game.view3d.precip.rain.material; window.__rainVS = m.vertexShader; window.__rainFS = m.fragmentShader; });
+      const info = await page.evaluate(() => { const pr = window.OP.game.view3d.precip, u = pr.rain.material.uniforms; u.uAlpha.value = 1; return { vis: pr.rain.visible, n: pr.rain.geometry.instanceCount, so: [u.uShelterO.value.x, u.uShelterO.value.y], orig: [u.uOrig.value.x, u.uOrig.value.y], col: u.uColor.value.toArray(), cam: window.OP.game.view3d.rig.camera.position.toArray(), sh: pr.shelter.data.slice((32 * 64 + 32) * 4, (32 * 64 + 32) * 4 + 4) }; });
+      console.log(JSON.stringify(info));
+      await page.evaluate(() => { const pr = window.OP.game.view3d.precip; pr._dbg = true; const u = pr.rain.material.uniforms; const orig = pr.update.bind(pr); pr.update = (e, c, d) => { orig(e, c, d); u.uAlpha.value = 1; u.uColor.value.setRGB(1, 0, 0); u.uWidth.value = 0.04; }; });
+      for (let i = 0; i < 2; i++) await window_step(page, 0.1);
+      await snap('red');
+      await page.evaluate(() => { const pr = window.OP.game.view3d.precip; const u = pr.rain.material.uniforms; const orig = pr.update; pr.update = (e, c, d) => { orig(e, c, d); u.uShelterO.value.set(-1e5, -1e5); u.uWidth.value = 0.3; }; pr.rain.material.depthTest = false; pr.rain.material.transparent = false; });
+      for (let i = 0; i < 2; i++) await window_step(page, 0.1);
+      await snap('red-noshelter');
+      const dbg = await page.evaluate(() => {
+        const g = window.OP.game, v = g.view3d, pr = v.precip, r = v.renderer;
+        let inScene = false; v.scene.traverse((o) => { if (o === pr.rain) inScene = true; });
+        const prog = r.info.programs.map((p) => p.name).filter((n) => /Shader/i.test(n));
+        return { inScene, parent: pr.rain.parent && pr.rain.parent.type, programs: r.info.programs.length, prog, calls: r.info.render.calls, geoIC: pr.rain.geometry.instanceCount, max: pr.rain.geometry._maxInstanceCount, attrs: Object.keys(pr.rain.geometry.attributes) };
+      });
+      console.log(JSON.stringify(dbg));
+      const tri = await page.evaluate(async () => {
+        const g = window.OP.game, v = g.view3d, pr = v.precip, r = v.renderer;
+        const out = {};
+        for (const on of [false, true]) {
+          const orig = pr.update;
+          pr.update = (e, c, d) => { orig(e, c, d); pr.rain.visible = on; };
+          window.OP.step(0.05);
+          await new Promise((res) => requestAnimationFrame(() => res()));
+          out[on ? 'on' : 'off'] = { tri: r.info.render.triangles, calls: r.info.render.calls };
+          pr.update = orig;
+        }
+        const gl = r.getContext();
+        out.err = gl.getError();
+        const prog = r.properties.get(pr.rain.material);
+        out.hasProgram = !!(prog && prog.currentProgram);
+        out.diag = prog && prog.currentProgram && prog.currentProgram.diagnostics ? JSON.stringify(prog.currentProgram.diagnostics).slice(0, 400) : null;
+        return out;
+      });
+      console.log(JSON.stringify(tri));
+      const cpu = await page.evaluate(() => {
+        const g = window.OP.game, v = g.view3d, pr = v.precip, cam = v.rig.camera, T = v.ctx.THREE;
+        const u = pr.rain.material.uniforms, seeds = pr.rain.geometry.attributes.aSeed.array;
+        const mod = (a, b) => a - b * Math.floor(a / b);
+        cam.updateMatrixWorld();
+        const cp = new T.Vector3().setFromMatrixPosition(cam.matrixWorld);
+        let onScreen = 0, behind = 0, off = 0;
+        const samples = [];
+        for (let i = 0; i < 400; i++) {
+          const sx = seeds[i * 4], sy = seeds[i * 4 + 1], sz = seeds[i * 4 + 2], sw = seeds[i * 4 + 3];
+          const k = 0.85 + 0.3 * sw, fall = u.uFall.value * k, B = u.uBox.value, t = u.uTime.value;
+          const rx = mod(sx * B + u.uWind.value.x * t - u.uOrig.value.x - cp.x + B / 2, B) - B / 2;
+          const rz = mod(sy * B + u.uWind.value.y * t - u.uOrig.value.y - cp.z + B / 2, B) - B / 2;
+          const base = cp.y - u.uBelow.value;
+          const y = base + mod(sz * u.uTall.value - fall * t - base, u.uTall.value);
+          const p = new T.Vector3(cp.x + rx, y, cp.z + rz).project(cam);
+          if (p.z > 1) behind++; else if (Math.abs(p.x) <= 1 && Math.abs(p.y) <= 1) onScreen++; else off++;
+          if (i < 3) samples.push([+(cp.x + rx).toFixed(2), +y.toFixed(2), +(cp.z + rz).toFixed(2), +p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(3)]);
+        }
+        return { onScreen, behind, off, samples, t: u.uTime.value, cp: cp.toArray(), near: cam.near, far: cam.far };
+      });
+      console.log(JSON.stringify(cpu));
+      // a fixed quad in front of the camera, through the same material
+      await page.evaluate(() => {
+        const pr = window.OP.game.view3d.precip, m = pr.rain.material;
+        m.vertexShader = m.vertexShader.replace('gl_Position = projectionMatrix * viewMatrix * vec4(q, 1.0);', 'vA = 1.0; gl_Position = projectionMatrix * viewMatrix * vec4(q, 1.0); if (aSeed.x < 0.01) { vec3 f = vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]); gl_Position = projectionMatrix * viewMatrix * vec4(cameraPosition - f * 3.0 + vec3(position.x * 0.3, position.y * 0.6, 0.0), 1.0); }');
+        m.needsUpdate = true;
+      });
+      for (let i = 0; i < 2; i++) await window_step(page, 0.1);
+      await snap('fixed-quad');
+      await page.evaluate(() => {
+        const pr = window.OP.game.view3d.precip, m = pr.rain.material;
+        m.vertexShader = 'attribute vec4 aSeed; void main() { gl_Position = vec4(position.x * 0.2, position.y * 0.2, 0.0, 1.0); }';
+        m.fragmentShader = 'void main() { gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); }';
+        m.needsUpdate = true;
+      });
+      for (let i = 0; i < 2; i++) await window_step(page, 0.1);
+      await snap('ndc-quad');
+      // real vertex shader, solid fragment
+      await page.evaluate(() => {
+        const pr = window.OP.game.view3d.precip, m = pr.rain.material;
+        m.vertexShader = window.__rainVS; m.fragmentShader = 'void main() { gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); }'; m.needsUpdate = true;
+      });
+      for (let i = 0; i < 2; i++) await window_step(page, 0.1);
+      await snap('real-vs');
+      // NDC vertex, real fragment
+      await page.evaluate(() => {
+        const pr = window.OP.game.view3d.precip, m = pr.rain.material;
+        m.vertexShader = 'attribute vec4 aSeed; varying float vA; varying vec2 vC; void main() { vA = 1.0; vC = position.xy; gl_Position = vec4(position.x * 0.2, position.y * 0.2, 0.0, 1.0); }';
+        m.fragmentShader = window.__rainFS; m.needsUpdate = true;
+      });
+      for (let i = 0; i < 2; i++) await window_step(page, 0.1);
+      await snap('real-fs');
+      const glu = await page.evaluate(async () => {
+        const v = window.OP.game.view3d, pr = v.precip, r = v.renderer, gl = r.getContext();
+        const m = pr.rain.material;
+        m.vertexShader = window.__rainVS; m.fragmentShader = window.__rainFS; m.needsUpdate = true;
+        window.OP.step(0.05);
+        await new Promise((res) => requestAnimationFrame(() => res()));
+        const prog = r.properties.get(m).currentProgram;
+        const P = prog.program;
+        const out = {};
+        for (const n of ['uTime', 'uBox', 'uTall', 'uBelow', 'uFall', 'uWind', 'uOrig', 'uShelterO', 'uLen', 'uWidth', 'cameraPosition']) {
+          const loc = gl.getUniformLocation(P, n);
+          const val = loc ? gl.getUniform(P, loc) : null;
+          out[n] = !loc ? 'no-loc' : typeof val === 'number' ? [+val.toFixed(3)] : Array.from(val).map((x) => +x.toFixed(3));
+        }
+        out.js = { uTime: m.uniforms.uTime.value, uOrig: m.uniforms.uOrig.value.toArray(), keys: Object.keys(m.uniforms) };
+        out.list = (r.properties.get(m).uniformsList || []).map((u) => u.id);
+        return out;
+      });
+      console.log(JSON.stringify(glu));
+      const tests = {
+        A: 'attribute vec4 aSeed; void main() { gl_Position = projectionMatrix * vec4(position.x * 0.3, position.y * 0.6, -3.0, 1.0); }',
+        B: 'attribute vec4 aSeed; void main() { gl_Position = projectionMatrix * (viewMatrix * vec4(cameraPosition, 1.0) + vec4(position.x * 0.3, position.y * 0.6, -3.0, 0.0)); }',
+        C: 'attribute vec4 aSeed; void main() { gl_Position = projectionMatrix * vec4(position.x * 0.3 + aSeed.x, position.y * 0.6 + aSeed.y, -3.0, 1.0); }',
+        D: '__COMMON__ void main() { vec3 p = dropAt(uFall, vec2(0.0)); gl_Position = projectionMatrix * viewMatrix * vec4(p + vec3(position.x * 0.1, position.y * 0.3, 0.0), 1.0); }',
+        E: '__COMMON__ void main() { vec3 p = dropAt(uFall, vec2(0.0)); if (sheltered(p)) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; } gl_Position = projectionMatrix * viewMatrix * vec4(p + vec3(position.x * 0.1, position.y * 0.3, 0.0), 1.0); }',
+        H: '__COMMON__ void main() { vec3 p = cameraPosition + vec3(aSeed.x * 10.0 - 5.0, aSeed.y * 4.0 - 2.0, 6.0); gl_Position = projectionMatrix * viewMatrix * vec4(p + vec3(position.x * 0.1, position.y * 0.3, 0.0), 1.0); }',
+        I: '__COMMON__ void main() { vec2 rel = mod(aSeed.xy * uBox + uWind * uTime - uOrig - cameraPosition.xz + uBox * 0.5, uBox) - uBox * 0.5; vec3 p = vec3(cameraPosition.x + rel.x, cameraPosition.y + aSeed.z * 2.0 - 1.0, cameraPosition.z + rel.y); gl_Position = projectionMatrix * viewMatrix * vec4(p + vec3(position.x * 0.1, position.y * 0.3, 0.0), 1.0); }',
+        J: '__COMMON__ void main() { float base = cameraPosition.y - uBelow; float y = base + mod(aSeed.z * uTall - uFall * uTime - base, uTall); vec3 p = cameraPosition + vec3(aSeed.x * 10.0 - 5.0, y - cameraPosition.y, 6.0); gl_Position = projectionMatrix * viewMatrix * vec4(p + vec3(position.x * 0.1, position.y * 0.3, 0.0), 1.0); }',
+        G: '__COMMON__ void main() { float ok = (uBox > 30.0 && uBox < 40.0 ? 1.0 : 0.0) + (uTall > 15.0 && uTall < 25.0 ? 2.0 : 0.0) + (uFall > 5.0 && uFall < 15.0 ? 4.0 : 0.0) + (uTime > 0.5 ? 8.0 : 0.0) + (abs(uOrig.x) < 100.0 ? 16.0 : 0.0) + (cameraPosition.y > 0.1 ? 32.0 : 0.0); gl_Position = projectionMatrix * vec4(position.x * 0.02 + (ok / 64.0 - 0.5) * 2.0, position.y * 0.6, -3.0, 1.0); }',
+        F: '__COMMON__ uniform float uLen, uWidth; void main() { vec3 p = dropAt(uFall, vec2(0.0)); vec3 v = normalize(vec3(uWind.x, -uFall, uWind.y)); vec3 toCam = cameraPosition - p; float dist = length(toCam); vec3 side = normalize(cross(v, toCam / dist)); vec3 q = p - v * (position.y * uLen) + side * (position.x * 0.05); gl_Position = projectionMatrix * viewMatrix * vec4(q, 1.0); }',
+      };
+      const common = await page.evaluate(() => { const vs = window.__rainVS; return vs.slice(0, vs.indexOf('uniform float uLen')); });
+      for (const k of Object.keys(tests)) tests[k] = tests[k].replace('__COMMON__', common);
+      for (const [k, vs] of Object.entries(tests)) {
+        await page.evaluate((vs) => { const m = window.OP.game.view3d.precip.rain.material; m.vertexShader = vs; m.fragmentShader = 'void main() { gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); }'; m.needsUpdate = true; }, vs);
+        for (let i = 0; i < 2; i++) await window_step(page, 0.1);
+        await snap('test-' + k);
+      }
+      const st = await page.evaluate(() => { const pr = window.OP.game.view3d.precip; return { vis: pr.rain.visible, ic: pr.rain.geometry.instanceCount, layers: pr.rain.layers.mask, camLayers: window.OP.game.view3d.rig.camera.layers.mask }; });
+      console.log(JSON.stringify(st));
     },
   },
   // everyday poses in a row, facing the camera
