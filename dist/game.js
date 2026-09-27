@@ -64583,8 +64583,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       };
       u.pendingAdd = parent;
       if (this.parallelCompile) {
-        this.renderer.compileAsync(obj, this.rig.camera, this.scene).catch(() => {
-        }).then(join);
+        this.compileAsync(obj).then(join);
         return;
       }
       const n = this.renderer.info.programs.length;
@@ -64614,10 +64613,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       try {
         if (this.parallelCompile) {
-          this.renderer.compileAsync(this.scene, this.rig.camera).catch(() => {
-          });
-          this.renderer.compileAsync(zoo, this.rig.camera, this.scene).catch(() => {
-          });
+          this.compileAsync(this.scene, null);
+          this.compileAsync(zoo);
         } else {
           this.renderer.compile(this.scene, this.rig.camera);
           this.renderer.compile(zoo, this.rig.camera, this.scene);
@@ -64625,6 +64622,38 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       } catch (e) {
         console.warn("shader warm-up failed", e);
       }
+    }
+    /**
+     * Compile an object's shaders without blocking (KHR_parallel_shader_compile)
+     * and resolve once they're ready. (three's own compileAsync never settles if
+     * one of the materials is disposed while it waits — an actor's view swapped
+     * for a nearer/farther one, say — and whatever was waiting on it would never
+     * be added to the scene: people you could talk to but not see. This one
+     * shrugs that off, and gives up waiting after a couple of seconds.)
+     */
+    compileAsync(obj, target = this.scene) {
+      let mats;
+      try {
+        mats = this.renderer.compile(obj, this.rig.camera, target || obj);
+      } catch (e) {
+        return Promise.resolve();
+      }
+      const props = this.renderer.properties, t0 = performance.now();
+      return new Promise((resolve) => {
+        const check = () => {
+          try {
+            for (const m of mats) {
+              const prog = props.get(m).currentProgram;
+              if (!prog || prog.isReady()) mats.delete(m);
+            }
+          } catch (e) {
+            mats.clear();
+          }
+          if (!mats.size || performance.now() - t0 > 2500) resolve();
+          else setTimeout(check, 16);
+        };
+        check();
+      });
     }
     /** Take an object back out of the scene (or out of the queue for it). */
     detach(obj) {
@@ -114785,7 +114814,7 @@ Trains by: ${TRAINS_BY[k]}` },
         return game.player;
       },
       prof: { PROF, reset: profReset },
-      debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => {
+      debug: { npcDef, allNpcDefs, VIEWS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => {
         const sp = which === "hatch" ? hatchSpot(s) : helmSpot(s);
         return deckToWorld(s, sp.t, sp.v);
       }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld },

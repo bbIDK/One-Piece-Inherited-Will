@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Renderer } from './render/renderer.js';
 import { PROF, prof, profFrame, profReset } from './core/prof.js';
 import { Renderer3D } from './render3d/index.js';
+import { VIEWS } from './render3d/registry.js';
 import './render3d/pickups3d.js';
 import './render3d/groundcover.js';
 import './render3d/ripples3d.js';
@@ -27,7 +28,7 @@ import { Progression } from './game/progression.js';
 import { Dialogue } from './game/dialogue.js';
 import { Quests } from './game/quests.js';
 import { Services } from './game/services.js';
-import { Interactions, npcBuilder, npcDef, makeNPC } from './game/npcs.js';
+import { Interactions, npcBuilder, npcDef, makeNPC, allNpcDefs } from './game/npcs.js';
 import { installMap } from './ui/mapUI.js';
 import { openInventory, openCharacter, openSkills, openJournal, openMenu, openSettings } from './ui/panels.js';
 import { persist, endLineage } from './game/lineage.js';
@@ -344,7 +345,7 @@ async function start() {
       return game.player;
     },
     prof: { PROF, reset: profReset },
-    debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld },
+    debug: { npcDef, allNpcDefs, VIEWS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld },
     ready: true,
   });
 
