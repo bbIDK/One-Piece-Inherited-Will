@@ -376,6 +376,8 @@ export class Actor extends Entity {
     if (!this.canJump()) return false;
     const J = this.jumpStats();
     const k = clamp(charge, 0, 1);
+    // swimming against a ship's side: haul yourself up it and over the rail
+    if (this.isPlayer && this.inWater && game.climbAboard?.(this, k)) { this.stamina = Math.max(0, this.stamina - 6); return true; }
     let v = J.v * (1 + (J.charge - 1) * k);
     const fromWater = this.inWater;
     if (fromWater) {

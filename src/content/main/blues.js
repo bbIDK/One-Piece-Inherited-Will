@@ -22,7 +22,7 @@ function rival(id, island, town, name, title, bounty, look, extra = {}) {
 }
 
 // ================================================================= EAST BLUE
-chapter('eb_syrup', { part: 1, island: 'gecko_islands', role: 'ship' }, {
+chapter('eb_syrup', { part: 1, island: 'gecko_islands', place: 'Syrup Village (Gecko Islands)', role: 'ship' }, {
   pirate: {
     name: 'The Going Merry', lure: 'they say a rich girl up at the mansion has a ship nobody sails',
     summary: 'Merry, the butler of the Kaya estate, built a caravel with a ram\'s head and a big heart. It could be yours — if Syrup Village survives the week.',
@@ -64,7 +64,7 @@ chapter('eb_syrup', { part: 1, island: 'gecko_islands', role: 'ship' }, {
   },
 });
 
-chapter('eb_orange', { part: 1, island: 'organ_islands', role: 'ship' }, {
+chapter('eb_orange', { part: 1, island: 'organ_islands', place: 'Orange Town (Organ Islands)', role: 'ship' }, {
   pirate: {
     name: 'The Flashy Clown', lure: 'Buggy the Clown has taken the whole town hostage — and left a ship at the pier',
     summary: 'Buggy the Clown has turned Orange Town into his circus. His ship sits at the pier. Hocker thinks you should take both.',
@@ -97,7 +97,7 @@ chapter('eb_orange', { part: 1, island: 'organ_islands', role: 'ship' }, {
   },
 });
 
-chapter('eb_baratie', { part: 1, island: 'baratie', role: 'crew' }, {
+chapter('eb_baratie', { part: 1, island: 'baratie', place: 'the Baratie', role: 'crew' }, {
   pirate: {
     name: 'The Sea Restaurant', lure: 'there\'s a floating restaurant out there with a cook worth stealing',
     summary: 'The Baratie is a restaurant at sea, run by "Red Leg" Zeff and a kitchen full of fighting cooks. Every crew needs a cook.',
@@ -131,7 +131,7 @@ chapter('eb_baratie', { part: 1, island: 'baratie', role: 'crew' }, {
   },
 });
 
-chapter('eb_logue', { part: 1, island: 'polestar_islands', role: 'last' }, {
+chapter('eb_logue', { part: 1, island: 'polestar_islands', place: 'Loguetown (Polestar Islands)', role: 'last' }, {
   pirate: {
     name: 'The Town of the Beginning and the End', lure: 'every crew that means it stops at Loguetown before the mountain',
     summary: 'Loguetown: Gol D. Roger was born here, and executed here. Every rookie bound for the Grand Line stops to look at the platform — and the Marines know it.',

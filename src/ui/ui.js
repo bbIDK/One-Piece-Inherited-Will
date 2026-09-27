@@ -666,12 +666,16 @@ export class UI {
     };
     const main = q.main();
     const side = q.tracked();
-    const key = JSON.stringify([main && [main.id, main.s.stage, q.progress(main.id), where(main.id)], side.map((x) => [x.id, x.s.stage, q.progress(x.id), where(x.id)]), c.mainIntro || null]);
+    const key = JSON.stringify([main && [main.id, main.s.stage, q.progress(main.id), where(main.id)], side.map((x) => [x.id, x.s.stage, q.progress(x.id), where(x.id)]), c.mainIntro || null, (c.stats?.playTime || 0) > 600 && !game.currentIsland]);
     if (key === this.cache.track) return;
     this.cache.track = key;
     clear(E.track);
     if (main) E.track.appendChild(h('div.qt-main', ...card(main, true)));
-    else if (c.mainIntro) E.track.appendChild(h('div.qt-main', h('div.qt-head', uiImg('quest', 14), 'MAIN STORY'), h('div.qt-title', 'Find your calling'), h('div.qt-obj', c.mainIntro)));
+    else if (c.mainIntro) {
+      // (after a while away from home, just a reminder)
+      const brief = (c.stats?.playTime || 0) > 600 && !game.currentIsland;
+      E.track.appendChild(h('div.qt-main', h('div.qt-head', uiImg('quest', 14), 'MAIN STORY'), h('div.qt-title', 'Find your calling'), h('div.qt-obj', brief ? 'Look for the orange ! — or see Quests (L).' : c.mainIntro)));
+    }
     for (const x of side) E.track.appendChild(h('div.qt-side', ...card(x, false)));
     E.track.classList.toggle('hidden', !E.track.childNodes.length);
   }

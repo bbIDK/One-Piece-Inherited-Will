@@ -33,6 +33,9 @@ function home(island, sea, o) {
   const P = o.pirate, M = o.marine, H = o.hunter;
   const vname = V.name.replace(/^"[^"]*"\s*/, '');
   const bounty = formatBerries(V.bounty);
+  const she = !!V.look?.fem;
+  const he = she ? 'she' : 'he', He = she ? 'She' : 'He', him = she ? 'her' : 'him';
+  const kind = V.faction === 'pirate' || !V.faction ? 'pirate' : V.faction === 'rival' ? 'swordsman' : 'crook';
   chapter(`home_${island}`, { part: 1, island, kind: 'start', sea, town: o.town }, {
     pirate: {
       name: P.chapter || 'A Blade and a Flag',
@@ -61,8 +64,8 @@ function home(island, sea, o) {
       pitch: M.pitch,
       accept: 'I want to join the Marines.',
       meet: [
-        M.first || `Words are cheap. Show me what you're made of. There's a pirate called ${V.name} — ${bounty} on his head — who has been ${V.crime}.`,
-        `Bring ${vname} in ${V.where}. Knock him down, and I'll see to the cuffs. Do that, and I'll swear you in myself.`,
+        M.first || `Words are cheap. Show me what you're made of. There's a ${kind} called ${V.name} — ${bounty} on ${she ? 'her' : 'his'} head — who has been ${V.crime}.`,
+        `Bring ${vname} in ${V.where}. Knock ${him} down, and I'll see to the cuffs. Do that, and I'll swear you in myself.`,
       ],
       tasks: [T.defeat(vid, `Bring in ${V.name} ${V.where}.`)],
       wait: M.wait || `${vname} is still out there ${V.where}. The people of ${o.townName} are waiting, recruit.`,
@@ -71,7 +74,7 @@ function home(island, sea, o) {
         'Raise your right hand. Do you swear to uphold Justice and protect the people of the seas, wherever the Navy sends you? ...Good. Welcome to the Marines, Seaman Recruit.',
         (ctx) => `Here's your cap, and a Navy-issue Log Pose. ${onward(ctx.char, 'Your first orders: report to')}`,
       ],
-      onReport: (g) => enlistNow(g, o.townName),
+      onReport: (g) => { const c = g.state.char; c.claims = (c.claims || []).filter((x) => x.name !== V.name); enlistNow(g, o.townName); },
       onDone: (g) => enlistNow(g, o.townName), // (however the chapter ends: enlistNow does nothing twice)
       after: M.after || ((ctx) => `Stand up straight, ${ctx.char.marineRank || 'Seaman'}! You carry the Navy's name now.`),
       idle: M.idle || 'Carry on, citizen. The Navy keeps watch.',
@@ -84,13 +87,13 @@ function home(island, sea, o) {
       pitch: H.pitch,
       accept: 'I\'ll hunt pirates for a living.',
       meet: [
-        H.first || `Everyone starts with a small one. Here: ${V.name}, ${bounty}. He's been ${V.crime}.`,
-        `Last seen ${V.where}. Knock him down — dead men can't stand trial, so keep it clean — and I'll handle the paperwork with the Marines.`,
+        H.first || `Everyone starts with a small one. Here: ${V.name}, ${bounty}. ${He}'s been ${V.crime}.`,
+        `Last seen ${V.where}. Knock ${him} down — the dead can't stand trial, so keep it clean — and I'll handle the paperwork with the Marines.`,
       ],
       tasks: [T.defeat(vid, `Hunt down ${V.name} (${bounty}) ${V.where}.`)],
       wait: H.wait || `${vname} is still out there ${V.where}. Money doesn't walk up to you, partner.`,
       done: [
-        H.done || `Ha! Look at him. The Marines will be delighted — and so will I. Here's your cut, and the poster to frame.`,
+        H.done || `Ha! Look at ${him}. The Marines will be delighted — and so will I. Here's your cut, and the poster to frame.`,
         (ctx) => `And here — a Log Pose, for the road. ${onward(ctx.char, 'Word is the big money is at')}`,
       ],
       // (the broker takes him to the Marines: the claim is theirs now)

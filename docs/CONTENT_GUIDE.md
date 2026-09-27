@@ -412,6 +412,20 @@ Use `"quotes"` for speech and `(parentheses)` for narration.
 - `event`: `{ event }`, which completes on
   `game.emit('questEvent', name)`.
 - `reachXY`: `{ x, y, r }`.
+- `quest`: `{ quest }` (another quest done), optionally `alt(c, game)` for
+  "or this, if that quest can't be had any more".
+- `weapon`, `ship` (`{ grandLine, cannons }`), `crew` (`{ n }`), `faction`
+  (`{ faction }`: `pirate` counts a founded crew), `bounty` (`{ n }`).
+- `counter`: `{ event, n, label }`, which counts `questEvent`s ("pick fruit
+  3/10"), shown on the tracker.
+- `check`: `{ fn(char, game) }`, for anything that can be read off the
+  character or the world, polled twice a second.
+- `days`: `{ n }` days since the stage began.
+
+A stage can also carry `npc` (the person the tracker and map point at) and
+`where(game)` → `{ x, y, place }` (anywhere else to point at). A `defeat`
+stage whose foes you've already beaten, and who will never appear again,
+completes by itself.
 
 **Advancing stages.** A stage with no goal is advanced by dialogue. The usual
 last stage is `report`: "talk to the quest giver", whose dialogue calls
@@ -423,6 +437,44 @@ warns about quests that nothing starts.
 
 **Rewards.** `points` are breakthrough attribute points; 1–3 for story
 quests. `liberate` adds a town to the "liberation" dream counter.
+
+**Kinds.** `kind: 'main'` is the main story (below): one at a time, and it
+can't be abandoned. Any other quest can be abandoned from the Quests menu
+and taken up again from its giver.
+
+### The main story
+
+The main story's chapters are data in `src/content/main/`; `mainStory.js`
+turns them into quests (`mq:<chapter>:<road>`) and people. A chapter is one
+island, told three ways:
+
+```js
+chapter('gl_drum', { part: 2, island: 'drum_island' }, {
+  all: { name: 'Hiriluk\'s Cherry Blossoms', contact: { npc: 'p1_dalton', where: 'at his house in Bighorn' },
+         tasks: [T.quest('p1_drum_kingdom', 'Help Drum Island stand up to King Wapol\'s return.', 'p1_dalton')] },
+  pirate: { lure: 'a snowbound kingdom with no king…', summary: '…', meet: ['…', '…'], done: ['…', (ctx) => onward(ctx.char)] },
+  marine: { … },
+});
+```
+
+- `kind`: `'start'` (the prologue on a home island, begun by taking a road),
+  `'stop'` (sail there, find the contact, do the tasks, report back) or
+  `'solo'` (no contact).
+- `contact`: a new person (`{ name, title, look, at, … }`) or one already in
+  the world (`{ npc: 'kaya' }`). The story adds itself to their
+  conversation.
+- `tasks`: ordinary stages; `T.weapon()`, `T.flag()`, `T.crew(n)`,
+  `T.ship()`, `T.logPose()`, `T.quest(id, desc, giver, stageId, { alt, autoStart })`,
+  `T.defeat(npc, desc)`, `T.talk(npc, desc, lines)`, `T.check(id, desc, fn)`…
+- `target({...})` defines someone to hunt, who only appears while a chapter
+  needs them.
+- `lure` is how the previous contact describes this stop; `onward(char)`
+  writes "I've set the needle for <next stop> — <its lure>".
+- `PLANS[part](char, road, from, game)` decides which chapters a character
+  goes through (Part 1 from their home; Part 2 from the road the Log Pose
+  picks at Twin Cape; Part 3 per road).
+
+`node tools/storycheck.mjs` checks every chapter, road, contact and target.
 
 ## 10. `install(game)` hooks
 

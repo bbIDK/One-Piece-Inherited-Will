@@ -1,5 +1,5 @@
 // Helpers for content packs.
-import { makeNPC, npcDef, makeEnemy } from '../game/npcs.js';
+import { makeNPC, npcDef, makeEnemy, placeFor } from '../game/npcs.js';
 import { makeSeaKing } from '../game/sea.js';
 
 /** Spawn a registered NPC right now if its island is loaded. */
@@ -15,7 +15,10 @@ export function spawnNow(game, id, pos) {
   const at = typeof def.at === 'function' ? def.at(game.state?.char, game) : def.at;
   if (!p && isl) {
     const s = at?.spot && isl.spots[at.spot];
-    p = s ? game.spawner.findFree(s.x, s.y, 4) : game.spawner.findFree(game.player.x + 4, game.player.y, 6);
+    // (where they belong — a spot, a town's pier, a doorway, the square — else by you)
+    p = s ? game.spawner.findFree(s.x, s.y, 4)
+      : at && (at.town || at.dock || at.door || at.building || at.plaza || at.dx !== undefined) ? placeFor(game, isl, def)
+        : game.spawner.findFree(game.player.x + 4, game.player.y, 6);
   }
   if (!p) p = { x: game.player.x + 4, y: game.player.y };
   const a = makeNPC(def, p.x, p.y);

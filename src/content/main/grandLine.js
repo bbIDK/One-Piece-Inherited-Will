@@ -48,7 +48,7 @@ chapter('gl_twin_cape', { part: 2, island: 'twin_cape', opensStory: true, noLog:
 });
 
 // ================================================================= THE SEVEN ROADS (first islands)
-chapter('gl_cactus', { part: 2, island: 'cactus_island' }, {
+chapter('gl_cactus', { part: 2, island: 'cactus_island', place: 'Whisky Peak (Cactus Island)' }, {
   pirate: {
     name: 'Welcome to Whisky Peak', lure: 'a town of cheering people who welcome every pirate crew — suspiciously warmly',
     summary: 'Whisky Peak welcomes every pirate crew with a party. The mayor, Igaram, is very friendly. A little too friendly.',
@@ -68,7 +68,7 @@ chapter('gl_cactus', { part: 2, island: 'cactus_island' }, {
   },
 });
 
-chapter('gl_kenzan', { part: 2, island: 'kenzan_island' }, {
+chapter('gl_kenzan', { part: 2, island: 'kenzan_island', place: 'Tehna Gehna (Kenzan Island)' }, {
   pirate: {
     name: 'The Whirlpool Lord', lure: 'the swordsmiths of Kenzan Island are being eaten by their own sea',
     summary: 'Kenzan Island\'s whirlpool has a lord — a Sea King that drags boats down. Old Tenaga, a retired swordsmith, can\'t get his supplies in.',
@@ -116,7 +116,7 @@ chapter('gl_vira', { part: 2, island: 'vira' }, {
   },
 });
 
-chapter('gl_navarone', { part: 2, island: 'navarone' }, {
+chapter('gl_navarone', { part: 2, island: 'navarone', place: 'G-8 (Navarone)' }, {
   marine: {
     name: 'G-8', lure: 'G-8, the Navy fortress at the foot of Reverse Mountain, is waiting for your report',
     summary: 'G-8, the Navy\'s fortress on Navarone, watches every crew that comes down Reverse Mountain. Commodore Jonathan runs it — and he has orders for you.',
@@ -218,7 +218,7 @@ chapter('gl_alabasta', { part: 2, island: 'alabasta' }, {
   },
 });
 
-chapter('gl_jaya', { part: 2, island: 'jaya' }, {
+chapter('gl_jaya', { part: 2, island: 'jaya', place: 'Mock Town (Jaya)' }, {
   all: {
     name: 'The Hyena of Mock Town',
     contact: { npc: 'p1_cricket', where: 'at his house on the far side of Jaya' },
@@ -354,7 +354,7 @@ chapter('gl_enies', { part: 2, island: 'enies_lobby' }, {
       'One hundred and twenty million berries. The court has not paid a bounty that size to a hunter in years.',
       'And this — a World Government travel permit. It will get your ship onto the Bondola at the Red Port, over the Red Line and into the New World. The greatest posters are there. So are the monsters.',
     ],
-    reward: (g) => ({ items: count(g.state.char, 'wg_permit') ? [] : [['wg_permit', 1]], berries: 60000 }),
+    reward: (g) => ({ items: count(g.state.char, 'court_permit') ? [] : [['court_permit', 1]], berries: 60000, flag: 'bondolaPass' }),
   },
 });
 target({ id: 'mq_gl_grimm', island: 'enies_lobby', name: 'Captain "Lockjaw" Grimm', title: 'Escaped Prisoner', faction: 'pirate', boss: true, hpMul: 1.2, level: 38, bounty: 120000000,

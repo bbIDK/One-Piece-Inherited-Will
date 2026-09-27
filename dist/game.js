@@ -51838,6 +51838,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.speed *= -0.25;
         if (!this.fits(w, this.x, this.y, this.heading)) this.unstick(w);
       }
+      if (game.ships.length > 1) this.separate(game, dt);
       for (const p of this.passengers) {
         p.x = this.x;
         p.y = this.y + 0.01;
@@ -51875,6 +51876,31 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       return null;
     }
+    /** Push away from any ship whose hull ours is inside. */
+    separate(game, dt) {
+      const w = game.world;
+      let pts = null;
+      for (const o of game.ships) {
+        if (o === this || o.sunk || o.alive === false) continue;
+        const reach = (this.def.length + o.def.length) * 0.5 + 1;
+        const dx = w.dx(o.x, this.x), dy = this.y - o.y;
+        if (dx * dx + dy * dy > reach * reach) continue;
+        pts = pts || this.hullPoints(this.x, this.y, this.heading);
+        let inside2 = 0;
+        for (const [px2, py2] of pts) if (hullGap(o, w.dx(o.x, px2), py2 - o.y) < 0.15) inside2++;
+        if (!inside2) continue;
+        const d = Math.hypot(dx, dy);
+        const ux = d > 0.05 ? dx / d : -Math.sin(o.heading), uy = d > 0.05 ? dy / d : Math.cos(o.heading);
+        const k = (this.anchored && !o.anchored ? 0.3 : 1) * Math.min(4, 1 + inside2 * 0.35);
+        const nx = w.wx(this.x + ux * k * dt), ny = this.y + uy * k * dt;
+        if (this.fits(w, nx, ny, this.heading)) {
+          this.x = nx;
+          this.y = ny;
+        }
+        this.speed *= Math.pow(0.5, dt);
+        pts = null;
+      }
+    }
     unstick(w, far = false) {
       const big = this.def.length >= BIG_SHIP;
       const R3 = big ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big ? 1.5 : 0.5;
@@ -51884,7 +51910,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           const da = big ? Math.min(0.5, 2.2 / r) : 0.5;
           for (let a = 0; a < TAU; a += da) {
             const x = w.wx(this.x + Math.cos(a) * r), y = this.y + Math.sin(a) * r;
-            if (this.fits(w, x, y, h2)) {
+            if (this.fits(w, x, y, h2) && !(this.game && this.shipIn(this.game, x, y, h2))) {
               this.x = x;
               this.y = y;
               this.heading = h2;
@@ -59424,6 +59450,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!this.canJump()) return false;
       const J = this.jumpStats();
       const k = clamp2(charge, 0, 1);
+      if (this.isPlayer && this.inWater && game.climbAboard?.(this, k)) {
+        this.stamina = Math.max(0, this.stamina - 6);
+        return true;
+      }
       let v = J.v * (1 + (J.charge - 1) * k);
       const fromWater = this.inWater;
       if (fromWater) {
@@ -84179,6 +84209,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (!s) return null;
     return { ...bw(b, s.x, s.z), building: b, inside: true, guest };
   }
+  function placeFor(game, island, def) {
+    return placeNPC(game, island, def, Math, game.spawner);
+  }
   function placeNPC(game, island, def, rng4, spawner) {
     const pl = (typeof def.at === "function" ? def.at(game.state?.char, game) : def.at) || {};
     if (pl.spot && island.spots[pl.spot]) {
@@ -84207,7 +84240,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           return inside(b, pl.guest) || clear2(spawner, q2.x, q2.y, rng4, { building: b });
         }
       }
-      if (pl.plaza || !pl.building && !pl.dx && !pl.door) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5 + (pl.oy || 0), 3, rng4);
+      if (pl.plaza || !pl.building && !pl.dx && !pl.door || pl.town && !pl.dx) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5 + (pl.oy || 0), 3, rng4);
     }
     for (const town of island.towns) {
       const b = town.buildings.find((x) => x.npc === def.id);
@@ -87488,12 +87521,15 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       };
       const main2 = q2.main();
       const side = q2.tracked();
-      const key2 = JSON.stringify([main2 && [main2.id, main2.s.stage, q2.progress(main2.id), where(main2.id)], side.map((x) => [x.id, x.s.stage, q2.progress(x.id), where(x.id)]), c.mainIntro || null]);
+      const key2 = JSON.stringify([main2 && [main2.id, main2.s.stage, q2.progress(main2.id), where(main2.id)], side.map((x) => [x.id, x.s.stage, q2.progress(x.id), where(x.id)]), c.mainIntro || null, (c.stats?.playTime || 0) > 600 && !game.currentIsland]);
       if (key2 === this.cache.track) return;
       this.cache.track = key2;
       clear(E.track);
       if (main2) E.track.appendChild(h("div.qt-main", ...card(main2, true)));
-      else if (c.mainIntro) E.track.appendChild(h("div.qt-main", h("div.qt-head", uiImg("quest", 14), "MAIN STORY"), h("div.qt-title", "Find your calling"), h("div.qt-obj", c.mainIntro)));
+      else if (c.mainIntro) {
+        const brief = (c.stats?.playTime || 0) > 600 && !game.currentIsland;
+        E.track.appendChild(h("div.qt-main", h("div.qt-head", uiImg("quest", 14), "MAIN STORY"), h("div.qt-title", "Find your calling"), h("div.qt-obj", brief ? "Look for the orange ! \u2014 or see Quests (L)." : c.mainIntro)));
+      }
       for (const x of side) E.track.appendChild(h("div.qt-side", ...card(x, false)));
       E.track.classList.toggle("hidden", !E.track.childNodes.length);
     }
@@ -91145,7 +91181,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     const at5 = typeof def.at === "function" ? def.at(game.state?.char, game) : def.at;
     if (!p && isl) {
       const s = at5?.spot && isl.spots[at5.spot];
-      p = s ? game.spawner.findFree(s.x, s.y, 4) : game.spawner.findFree(game.player.x + 4, game.player.y, 6);
+      p = s ? game.spawner.findFree(s.x, s.y, 4) : at5 && (at5.town || at5.dock || at5.door || at5.building || at5.plaza || at5.dx !== void 0) ? placeFor(game, isl, def) : game.spawner.findFree(game.player.x + 4, game.player.y, 6);
     }
     if (!p) p = { x: game.player.x + 4, y: game.player.y };
     const a = makeNPC(def, p.x, p.y);
@@ -114093,6 +114129,9 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     const P4 = o.pirate, M2 = o.marine, H2 = o.hunter;
     const vname = V3.name.replace(/^"[^"]*"\s*/, "");
     const bounty = formatBerries(V3.bounty);
+    const she = !!V3.look?.fem;
+    const he = she ? "she" : "he", He = she ? "She" : "He", him = she ? "her" : "him";
+    const kind = V3.faction === "pirate" || !V3.faction ? "pirate" : V3.faction === "rival" ? "swordsman" : "crook";
     chapter(`home_${island}`, { part: 1, island, kind: "start", sea, town: o.town }, {
       pirate: {
         name: P4.chapter || "A Blade and a Flag",
@@ -114121,8 +114160,8 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         pitch: M2.pitch,
         accept: "I want to join the Marines.",
         meet: [
-          M2.first || `Words are cheap. Show me what you're made of. There's a pirate called ${V3.name} \u2014 ${bounty} on his head \u2014 who has been ${V3.crime}.`,
-          `Bring ${vname} in ${V3.where}. Knock him down, and I'll see to the cuffs. Do that, and I'll swear you in myself.`
+          M2.first || `Words are cheap. Show me what you're made of. There's a ${kind} called ${V3.name} \u2014 ${bounty} on ${she ? "her" : "his"} head \u2014 who has been ${V3.crime}.`,
+          `Bring ${vname} in ${V3.where}. Knock ${him} down, and I'll see to the cuffs. Do that, and I'll swear you in myself.`
         ],
         tasks: [T3.defeat(vid, `Bring in ${V3.name} ${V3.where}.`)],
         wait: M2.wait || `${vname} is still out there ${V3.where}. The people of ${o.townName} are waiting, recruit.`,
@@ -114131,7 +114170,11 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
           "Raise your right hand. Do you swear to uphold Justice and protect the people of the seas, wherever the Navy sends you? ...Good. Welcome to the Marines, Seaman Recruit.",
           (ctx) => `Here's your cap, and a Navy-issue Log Pose. ${onward(ctx.char, "Your first orders: report to")}`
         ],
-        onReport: (g) => enlistNow(g, o.townName),
+        onReport: (g) => {
+          const c = g.state.char;
+          c.claims = (c.claims || []).filter((x) => x.name !== V3.name);
+          enlistNow(g, o.townName);
+        },
         onDone: (g) => enlistNow(g, o.townName),
         // (however the chapter ends: enlistNow does nothing twice)
         after: M2.after || ((ctx) => `Stand up straight, ${ctx.char.marineRank || "Seaman"}! You carry the Navy's name now.`),
@@ -114145,13 +114188,13 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         pitch: H2.pitch,
         accept: "I'll hunt pirates for a living.",
         meet: [
-          H2.first || `Everyone starts with a small one. Here: ${V3.name}, ${bounty}. He's been ${V3.crime}.`,
-          `Last seen ${V3.where}. Knock him down \u2014 dead men can't stand trial, so keep it clean \u2014 and I'll handle the paperwork with the Marines.`
+          H2.first || `Everyone starts with a small one. Here: ${V3.name}, ${bounty}. ${He}'s been ${V3.crime}.`,
+          `Last seen ${V3.where}. Knock ${him} down \u2014 the dead can't stand trial, so keep it clean \u2014 and I'll handle the paperwork with the Marines.`
         ],
         tasks: [T3.defeat(vid, `Hunt down ${V3.name} (${bounty}) ${V3.where}.`)],
         wait: H2.wait || `${vname} is still out there ${V3.where}. Money doesn't walk up to you, partner.`,
         done: [
-          H2.done || `Ha! Look at him. The Marines will be delighted \u2014 and so will I. Here's your cut, and the poster to frame.`,
+          H2.done || `Ha! Look at ${him}. The Marines will be delighted \u2014 and so will I. Here's your cut, and the poster to frame.`,
           (ctx) => `And here \u2014 a Log Pose, for the road. ${onward(ctx.char, "Word is the big money is at")}`
         ],
         // (the broker takes him to the Marines: the claim is theirs now)
@@ -115314,7 +115357,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
   function rival(id, island, town, name, title2, bounty, look, extra = {}) {
     return target({ id, island, name, title: title2, faction: "pirate", boss: true, hpMul: 0.7, level: 9, bounty, at: { town, dock: true, ox: -2 }, look, style: "ittoryu", weapon: "sword", skill: 0.3, breakthrough: 2, ...extra });
   }
-  chapter("eb_syrup", { part: 1, island: "gecko_islands", role: "ship" }, {
+  chapter("eb_syrup", { part: 1, island: "gecko_islands", place: "Syrup Village (Gecko Islands)", role: "ship" }, {
     pirate: {
       name: "The Going Merry",
       lure: "they say a rich girl up at the mansion has a ship nobody sails",
@@ -115358,7 +115401,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       after: "I framed Kuro's poster. First one I ever sold twice."
     }
   });
-  chapter("eb_orange", { part: 1, island: "organ_islands", role: "ship" }, {
+  chapter("eb_orange", { part: 1, island: "organ_islands", place: "Orange Town (Organ Islands)", role: "ship" }, {
     pirate: {
       name: "The Flashy Clown",
       lure: "Buggy the Clown has taken the whole town hostage \u2014 and left a ship at the pier",
@@ -115393,7 +115436,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       reward: shipGift("Big Top")
     }
   });
-  chapter("eb_baratie", { part: 1, island: "baratie", role: "crew" }, {
+  chapter("eb_baratie", { part: 1, island: "baratie", place: "the Baratie", role: "crew" }, {
     pirate: {
       name: "The Sea Restaurant",
       lure: "there's a floating restaurant out there with a cook worth stealing",
@@ -115429,7 +115472,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       done: ["SEVENTEEN MILLION! Aniki would be proud. Here's your share!", (ctx) => onward(ctx.char, "We heard the next good hunting is at")]
     }
   });
-  chapter("eb_logue", { part: 1, island: "polestar_islands", role: "last" }, {
+  chapter("eb_logue", { part: 1, island: "polestar_islands", place: "Loguetown (Polestar Islands)", role: "last" }, {
     pirate: {
       name: "The Town of the Beginning and the End",
       lure: "every crew that means it stops at Loguetown before the mountain",
@@ -116059,7 +116102,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       accept: "I hunt pirates. I'm here for the big posters."
     }
   });
-  chapter("gl_cactus", { part: 2, island: "cactus_island" }, {
+  chapter("gl_cactus", { part: 2, island: "cactus_island", place: "Whisky Peak (Cactus Island)" }, {
     pirate: {
       name: "Welcome to Whisky Peak",
       lure: "a town of cheering people who welcome every pirate crew \u2014 suspiciously warmly",
@@ -116081,7 +116124,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       done: ["Baroque Works, pretending to be hunters \u2014 and you took them apart. Honest hunters owe you.", (ctx) => onward(ctx.char, "The Baroque trail leads to")]
     }
   });
-  chapter("gl_kenzan", { part: 2, island: "kenzan_island" }, {
+  chapter("gl_kenzan", { part: 2, island: "kenzan_island", place: "Tehna Gehna (Kenzan Island)" }, {
     pirate: {
       name: "The Whirlpool Lord",
       lure: "the swordsmiths of Kenzan Island are being eaten by their own sea",
@@ -116129,7 +116172,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       done: ["Noland's page \u2014 safe! Show it to anyone who calls him a liar.", (ctx) => onward(ctx.char, "Your log has set for")]
     }
   });
-  chapter("gl_navarone", { part: 2, island: "navarone" }, {
+  chapter("gl_navarone", { part: 2, island: "navarone", place: "G-8 (Navarone)" }, {
     marine: {
       name: "G-8",
       lure: "G-8, the Navy fortress at the foot of Reverse Mountain, is waiting for your report",
@@ -116256,7 +116299,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       meet: ["You hunt pirates? Then hunt these. Baroque Works \u2014 Mr. 1, Mr. 2, all of them. And Crocodile.", "The Navy made him a Warlord. His true bounty would be enormous. Help me, and I'll see you're paid."]
     }
   });
-  chapter("gl_jaya", { part: 2, island: "jaya" }, {
+  chapter("gl_jaya", { part: 2, island: "jaya", place: "Mock Town (Jaya)" }, {
     all: {
       name: "The Hyena of Mock Town",
       contact: { npc: "p1_cricket", where: "at his house on the far side of Jaya" },
@@ -116392,7 +116435,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         "One hundred and twenty million berries. The court has not paid a bounty that size to a hunter in years.",
         "And this \u2014 a World Government travel permit. It will get your ship onto the Bondola at the Red Port, over the Red Line and into the New World. The greatest posters are there. So are the monsters."
       ],
-      reward: (g) => ({ items: count(g.state.char, "wg_permit") ? [] : [["wg_permit", 1]], berries: 6e4 })
+      reward: (g) => ({ items: count(g.state.char, "court_permit") ? [] : [["court_permit", 1]], berries: 6e4, flag: "bondolaPass" })
     }
   });
   target({
@@ -117178,7 +117221,10 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         return { kind: "meet", nodes, start: "mq_m0" };
       }
       if (st === "report") {
-        Object.assign(nodes, chain("mq_r", (v.done || ["Well done."]).map((t) => () => say(t, ctx)), void 0, {
+        Object.assign(nodes, chain("mq_r", (v.done || ["Well done."]).map((t) => {
+          const line2 = say(t, ctx);
+          return () => line2;
+        }), void 0, {
           onEnter: (x) => {
             if (!g.quests.isActive(qid)) return;
             v.onReport?.(g, x);
@@ -117277,7 +117323,9 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     }
     for (const k of Object.keys(r.nodes)) {
       const n = nodes[k];
-      if (n.choices?.length === 1 && n.choices[0].end) n.choices = [{ text: "About something else...", next: home2 }, n.choices[0]];
+      if (!n.choices?.length || !n.choices.some((ch) => ch.end) || n.choices.some((ch) => ch.next === home2)) continue;
+      const i = n.choices.findIndex((ch) => ch.end);
+      n.choices = [...n.choices.slice(0, i), { text: "About something else...", next: home2 }, ...n.choices.slice(i)];
     }
     return { ...tree, nodes, start: r.start };
   }
@@ -117285,6 +117333,9 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     id: "main",
     npcs: NPCS,
     quests: QUESTS,
+    items: {
+      court_permit: { name: "Court Travel Permit", icon: "\u{1F4DC}", type: "key", price: 0, desc: "Sealed by the Bounty Court of Enies Lobby: the bearer and their ship may ride the Bondola over the Red Line." }
+    },
     install: (game) => installMainStory(game)
   };
 
@@ -118027,17 +118078,11 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     });
     T4.startRaid = (s) => startRaid(game, T4, s);
     T4.spawn = (o) => spawnShip(game, T4, game.player, regionAt(game.player.x, game.player.y), o);
+    game.climbAboard = (p, k) => climbAboard(game, T4, p, k);
     const prevSea = game.seaInteraction;
     game.seaInteraction = (p, s) => {
       const other = prevSea ? prevSea(p, s) : null;
       if (other) return other;
-      const w = game.world;
-      for (const o of T4.ships) {
-        if (o.sunk || !o.alive || o.owner === "player") continue;
-        const gap = hullGap(o, w.dx(o.x, s.x), s.y - o.y) - s.def.beam * 0.5;
-        const rvx = Math.cos(s.heading) * s.speed - Math.cos(o.heading) * o.speed, rvy = Math.sin(s.heading) * s.speed - Math.sin(o.heading) * o.speed;
-        if (gap < 3.5 && Math.hypot(rvx, rvy) < 3.5) return { label: `Board and raid the ${o.name}`, key: "E", run: () => boardFromHelm(game, T4, p, s, o) };
-      }
       return null;
     };
     const prevFoot = game.footInteraction;
@@ -118054,7 +118099,10 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     if (!p || !w || w !== game.surface) return;
     for (const s of T4.ships) crewFor(game, T4, s, p);
     const dk3 = p.deck?.ship;
-    if (dk3 && dk3.traffic && !dk3.traffic.raided && dk3.owner !== "player") startRaid(game, T4, dk3);
+    if (dk3 && dk3.traffic && !dk3.traffic.raided && dk3.owner !== "player") {
+      if (friendlyBoarding(game, dk3)) welcomeAboard(game, dk3);
+      else startRaid(game, T4, dk3);
+    }
     for (const s of T4.ships) if (s.traffic?.raided && !s.traffic.cleared) checkCleared(game, s);
     T4.t -= dt;
     if (T4.t > 0) return;
@@ -118154,6 +118202,18 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       s.sail = 0;
       s.anchored = true;
       s.rowing = 0;
+      return;
+    }
+    if (!tr.crippled && (tr.kind === "pirate" || tr.kind === "marine") && s.hull < s.maxHull * 0.35) {
+      tr.crippled = true;
+      game.log(`The ${s.name}'s rigging is in tatters \u2014 she's dead in the water. Come alongside and board her!`, "#ffe082");
+    }
+    if (tr.crippled) {
+      s.sail = 0;
+      s.rowing = 0;
+      s.anchored = true;
+      const target3 = p.mode === "sail" && p.ship && !p.ship.sunk ? p.ship : null;
+      if (target3 && hostile2(s, game) && (s.def.cannons || 0) > 0 && s.cannonCd <= 0 && w.distance(s.x, s.y, target3.x, target3.y) < 17) s.fireBroadside(game, target3.x, target3.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
       return;
     }
     const target2 = p.mode === "sail" && p.ship && !p.ship.sunk ? p.ship : null;
@@ -118296,6 +118356,13 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         a.controller.leash = 40;
       }
     }
+    const helm = tr.crew[0];
+    if (helm?.alive) {
+      helm.showName = true;
+      helm.name = tr.kind === "marine" ? helm.name : tr.kind === "pirate" ? "Pirate Helmsman" : tr.kind === "fishing" ? "Skipper" : "Ship's Master";
+      const line2 = tr.kind === "marine" ? "Boarders! I have the deck \u2014 stand fast, men!" : tr.kind === "pirate" ? "Somebody take the wheel! This one's MINE!" : tr.kind === "fishing" ? "Get off my boat!" : "Boarders! Leave the wheel \u2014 I'll handle this myself!";
+      game.fx.text(helm.x, helm.y - 2.2, line2, "#ffffff", 0.34, { life: 2.4 });
+    }
     const lvl = tr.level || 5;
     if (!tr.crimeDone) {
       tr.crimeDone = true;
@@ -118304,7 +118371,7 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       else if (tr.kind === "fishing") crime(game, 25e4, "raided a fishing boat", { rep: 8 });
     }
     const who = tr.kind === "marine" ? "the Marines" : tr.kind === "pirate" ? "the pirates" : "the crew";
-    game.ui.banner("RAID!", s.name, `Beat ${who} \u2014 then the hold and the helm are yours.`, 3);
+    game.ui.banner("BOARDED!", s.name, `The helmsman is coming for you. Beat ${who} \u2014 then the hold and the helm are yours.`, 3);
     if (game.audio && game.audio.theme !== "battle") {
       tr.prevTheme = game.audio.theme;
       game.audio.music("battle");
@@ -118320,19 +118387,33 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
     game.ui.toast("THE SHIP IS YOURS", `${s.name}: plunder the hold (the hatch amidships), or take the helm to sail her away.`, "#ffd54f");
     game.log(`The crew of the ${s.name} is beaten!`, "#ffe082");
   }
-  function boardFromHelm(game, T4, p, mine, s) {
-    mine.captain = null;
-    mine.sail = 0;
-    mine.rowing = 0;
-    mine.anchored = true;
-    mine.passengers = mine.passengers.filter((x) => x !== p);
-    p.mode = "foot";
-    p.onShip = false;
-    p.ship = mine;
-    const n = nearestDeck(game, { x: mine.x, y: mine.y }, s);
-    placeOnDeck(game, p, s, n ? n.t : 0.5, n ? n.v * 0.5 : 0);
-    game.fx.burst(p.x, p.y, 8, { color: ["#d7ccc8", "#bcaaa4"], speed: 2, life: 0.4, kind: "dust", size: 0.14 });
-    startRaid(game, T4, s);
+  function friendlyBoarding(game, s) {
+    const c = game.state?.char;
+    return !!c && c.faction === "marine" && s.traffic?.kind === "marine" && !s.provoked;
+  }
+  function welcomeAboard(game, s) {
+    const tr = s.traffic, c = game.state.char;
+    if (tr.welcomed) return;
+    tr.welcomed = true;
+    const helm = (tr.crew || [])[0];
+    const line2 = `${c.marineRank || "Officer"} on deck! Welcome aboard the ${s.name}!`;
+    if (helm?.alive) game.fx.text(helm.x, helm.y - 2.2, line2, "#90caf9", 0.34, { life: 2.6 });
+    game.log(`The crew of the ${s.name} salute as you come aboard.`, "#90caf9");
+  }
+  function climbAboard(game, T4, p, k) {
+    if (!p.inWater || p.under || p.fruit && !p.gills) return false;
+    const dk3 = game.deckAt(p.x, p.y, -1.3);
+    const s = dk3?.ship;
+    if (!s || s.sunk || s.alive === false) return false;
+    const n = nearestDeck(game, p, s);
+    const splash2 = { x: p.x, y: p.y };
+    p.leaveWater?.(game, true);
+    placeOnDeck(game, p, s, n ? n.t : 0.5, n ? n.v * 0.6 : 0);
+    game.fx.ripple?.(splash2.x, splash2.y, 1 + k * 0.5);
+    game.fx.burst(splash2.x, splash2.y, 12, { color: ["#e1f5fe", "#b3e5fc", "#ffffff"], speed: 2.2, z: 0.1, vz: 4, g: 11, life: 0.6, size: 0.1 });
+    game.audio?.sfx("splash_out");
+    game.log(s.owner === "player" ? `You climb back aboard the ${s.name}.` : `You haul yourself up the side of the ${s.name} and over the rail!`, s.owner === "player" ? "#b0bec5" : "#ffe082");
+    return true;
   }
   function plunder(game, s) {
     const tr = s.traffic;
@@ -118402,17 +118483,6 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
       const d = deckDist(game, p, s, helmSpot(s));
       if (d < 1.4) return { d, label: `Take the helm \u2014 steal the ${s.name}`, run: () => claim2(game, T4, s) };
       return null;
-    }
-    if (p.inWater && !(p.fruit && !p.gills) && !(p.depth > 0.6)) {
-      for (const o of T4.ships) {
-        if (o.sunk || !o.alive || o.owner === "player") continue;
-        if (!game.deckAt(p.x, p.y, -1.3) || game.deckAt(p.x, p.y, -1.3).ship !== o) continue;
-        return { d: 0.5, x: o.x, y: o.y, label: o.traffic?.raided ? `Climb aboard the ${o.name}` : `Climb aboard and raid the ${o.name}`, run: () => {
-          const n = nearestDeck(game, p, o);
-          placeOnDeck(game, p, o, n ? n.t : 0.5, n ? n.v * 0.6 : 0);
-          startRaid(game, T4, o);
-        } };
-      }
     }
     return null;
   }

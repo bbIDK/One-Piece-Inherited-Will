@@ -157,6 +157,9 @@ export class Ship extends Entity {
       // nudge out of the wall
       if (!this.fits(w, this.x, this.y, this.heading)) this.unstick(w);
     }
+    // hulls that overlap (launched on top of each other, shoved together by a
+    // current, a collision at speed) ease apart instead of sticking
+    if (game.ships.length > 1) this.separate(game, dt);
     // (the wake is drawn on the water by the 3D view: see render3d/ships3d.js WakeTrail)
     // carry the crew
     for (const p of this.passengers) { p.x = this.x; p.y = this.y + 0.01; }
@@ -193,6 +196,31 @@ export class Ship extends Entity {
     return null;
   }
 
+  /** Push away from any ship whose hull ours is inside. */
+  separate(game, dt) {
+    const w = game.world;
+    let pts = null;
+    for (const o of game.ships) {
+      if (o === this || o.sunk || o.alive === false) continue;
+      const reach = (this.def.length + o.def.length) * 0.5 + 1;
+      const dx = w.dx(o.x, this.x), dy = this.y - o.y;
+      if (dx * dx + dy * dy > reach * reach) continue;
+      pts = pts || this.hullPoints(this.x, this.y, this.heading);
+      let inside = 0;
+      for (const [px, py] of pts) if (hullGap(o, w.dx(o.x, px), py - o.y) < 0.15) inside++;
+      if (!inside) continue;
+      // (straight apart; two ships lying exactly on top of each other part sideways)
+      const d = Math.hypot(dx, dy);
+      const ux = d > 0.05 ? dx / d : -Math.sin(o.heading), uy = d > 0.05 ? dy / d : Math.cos(o.heading);
+      // (an anchored or raided ship is the rock; the moving one gives way)
+      const k = (this.anchored && !o.anchored ? 0.3 : 1) * Math.min(4, 1 + inside * 0.35);
+      const nx = w.wx(this.x + ux * k * dt), ny = this.y + uy * k * dt;
+      if (this.fits(w, nx, ny, this.heading)) { this.x = nx; this.y = ny; }
+      this.speed *= Math.pow(0.5, dt);
+      pts = null;
+    }
+  }
+
   unstick(w, far = false) {
     const big = this.def.length >= BIG_SHIP;
     const R = big ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big ? 1.5 : 0.5;
@@ -202,7 +230,7 @@ export class Ship extends Entity {
         const da = big ? Math.min(0.5, 2.2 / r) : 0.5;
         for (let a = 0; a < TAU; a += da) {
           const x = w.wx(this.x + Math.cos(a) * r), y = this.y + Math.sin(a) * r;
-          if (this.fits(w, x, y, h)) { this.x = x; this.y = y; this.heading = h; return true; }
+          if (this.fits(w, x, y, h) && !(this.game && this.shipIn(this.game, x, y, h))) { this.x = x; this.y = y; this.heading = h; return true; }
         }
       }
       if (!far) break;

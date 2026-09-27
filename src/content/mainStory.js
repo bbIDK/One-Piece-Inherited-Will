@@ -613,7 +613,8 @@ function storyNodes(ctx, npcId) {
       return { kind: 'meet', nodes, start: 'mq_m0' };
     }
     if (st === 'report') {
-      Object.assign(nodes, chain('mq_r', (v.done || ['Well done.']).map((t) => () => say(t, ctx)), undefined, {
+      // (written now, before the chapter closes: "your next stop is…" must mean the next one)
+      Object.assign(nodes, chain('mq_r', (v.done || ['Well done.']).map((t) => { const line = say(t, ctx); return () => line; }), undefined, {
         onEnter: (x) => {
           if (!g.quests.isActive(qid)) return;
           v.onReport?.(g, x);
@@ -714,10 +715,12 @@ function decorate(tree, npc, ctx) {
     nodes.mq_w2 = { ...nodes.mq_w2, next: home };
     return { ...tree, nodes };
   }
-  // the story comes first; then their usual talk
+  // the story comes first; then their usual talk (whatever else they're here for: a shop, a doctor, a story)
   for (const k of Object.keys(r.nodes)) {
     const n = nodes[k];
-    if (n.choices?.length === 1 && n.choices[0].end) n.choices = [{ text: 'About something else...', next: home }, n.choices[0]];
+    if (!n.choices?.length || !n.choices.some((ch) => ch.end) || n.choices.some((ch) => ch.next === home)) continue;
+    const i = n.choices.findIndex((ch) => ch.end);
+    n.choices = [...n.choices.slice(0, i), { text: 'About something else...', next: home }, ...n.choices.slice(i)];
   }
   return { ...tree, nodes, start: r.start };
 }
@@ -726,6 +729,9 @@ export default {
   id: 'main',
   npcs: NPCS,
   quests: QUESTS,
+  items: {
+    court_permit: { name: 'Court Travel Permit', icon: '📜', type: 'key', price: 0, desc: 'Sealed by the Bounty Court of Enies Lobby: the bearer and their ship may ride the Bondola over the Red Line.' },
+  },
   install: (game) => installMainStory(game),
 };
 

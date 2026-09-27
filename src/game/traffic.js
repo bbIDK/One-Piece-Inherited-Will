@@ -17,7 +17,7 @@ import { regionAt, REGION, isGrandLine, isCalmBelt } from '../world/constants.js
 import { TAU, clamp, angleDiff } from '../core/math.js';
 import { RNG } from '../core/rng.js';
 import { placeOnDeck, helmSpot, hatchSpot, deckDist, nearestDeck, freeDeckSpot } from './decks.js';
-import { shipDims, hullGap } from '../world/hull.js';
+import { shipDims } from '../world/hull.js';
 import { SHIPS } from '../data/ships.js';
 import { wantedTier } from './wanted.js';
 import { T as TT } from '../world/tiles.js';
@@ -44,20 +44,14 @@ export function installTraffic(game) {
   T.startRaid = (s) => startRaid(game, T, s);
   T.spawn = (o) => spawnShip(game, T, game.player, regionAt(game.player.x, game.player.y), o);
 
-  // at the helm: board a ship alongside, or leave the wheel and walk your deck
+  // Boarding is done by hand: heave to alongside, leave the helm, and jump
+  // across onto her deck — or swim to her and climb the side (jump against
+  // the hull). Landing on a deck is what starts a raid (see tick).
+  game.climbAboard = (p, k) => climbAboard(game, T, p, k);
   const prevSea = game.seaInteraction;
   game.seaInteraction = (p, s) => {
     const other = prevSea ? prevSea(p, s) : null;
     if (other) return other;
-    const w = game.world;
-    for (const o of T.ships) {
-      if (o.sunk || !o.alive || o.owner === 'player') continue;
-      // (the gap between the hulls, however long either ship is)
-      const gap = hullGap(o, w.dx(o.x, s.x), s.y - o.y) - s.def.beam * 0.5;
-      // alongside, and near enough the same speed to jump across
-      const rvx = Math.cos(s.heading) * s.speed - Math.cos(o.heading) * o.speed, rvy = Math.sin(s.heading) * s.speed - Math.sin(o.heading) * o.speed;
-      if (gap < 3.5 && Math.hypot(rvx, rvy) < 3.5) return { label: `Board and raid the ${o.name}`, key: 'E', run: () => boardFromHelm(game, T, p, s, o) };
-    }
     return null;
   };
   // on foot / swimming: climb aboard, take the helm, plunder the hold
@@ -79,7 +73,10 @@ function tick(game, T, dt) {
   for (const s of T.ships) crewFor(game, T, s, p);
   // raids: landing on a ship's deck starts one; beating the crew ends it
   const dk = p.deck?.ship;
-  if (dk && dk.traffic && !dk.traffic.raided && dk.owner !== 'player') startRaid(game, T, dk);
+  if (dk && dk.traffic && !dk.traffic.raided && dk.owner !== 'player') {
+    if (friendlyBoarding(game, dk)) welcomeAboard(game, dk);
+    else startRaid(game, T, dk);
+  }
   for (const s of T.ships) if (s.traffic?.raided && !s.traffic.cleared) checkCleared(game, s);
   T.t -= dt;
   if (T.t > 0) return;
@@ -177,6 +174,17 @@ function hostile(s, game) {
 function trafficAI(s, dt, game) {
   const tr = s.traffic, w = game.world, p = game.player;
   if (tr.raided || tr.surrender) { s.sail = 0; s.anchored = true; s.rowing = 0; return; }
+  // shot to pieces: her rigging's gone and she lies dead in the water — still firing, but you can board her
+  if (!tr.crippled && (tr.kind === 'pirate' || tr.kind === 'marine') && s.hull < s.maxHull * 0.35) {
+    tr.crippled = true;
+    game.log(`The ${s.name}'s rigging is in tatters — she's dead in the water. Come alongside and board her!`, '#ffe082');
+  }
+  if (tr.crippled) {
+    s.sail = 0; s.rowing = 0; s.anchored = true;
+    const target = p.mode === 'sail' && p.ship && !p.ship.sunk ? p.ship : null;
+    if (target && hostile(s, game) && (s.def.cannons || 0) > 0 && s.cannonCd <= 0 && w.distance(s.x, s.y, target.x, target.y) < 17) s.fireBroadside(game, target.x, target.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
+    return;
+  }
   const target = p.mode === 'sail' && p.ship && !p.ship.sunk ? p.ship : null;
   const d = w.distance(s.x, s.y, p.x, p.y);
   let want;
@@ -299,6 +307,14 @@ function startRaid(game, T, s) {
     a.provoked = true; a.aggroPlayer = true; a.stationary = false;
     if (a.controller) { a.controller.kind = 'hostile'; a.controller.target = p; a.controller.state = 'chase'; a.controller.home = null; a.controller.aggroRange = 14; a.controller.leash = 40; }
   }
+  // whoever has the helm leaves the wheel and comes down to deal with you
+  const helm = tr.crew[0];
+  if (helm?.alive) {
+    helm.showName = true;
+    helm.name = tr.kind === 'marine' ? helm.name : tr.kind === 'pirate' ? 'Pirate Helmsman' : tr.kind === 'fishing' ? 'Skipper' : 'Ship\'s Master';
+    const line = tr.kind === 'marine' ? 'Boarders! I have the deck — stand fast, men!' : tr.kind === 'pirate' ? 'Somebody take the wheel! This one\'s MINE!' : tr.kind === 'fishing' ? 'Get off my boat!' : 'Boarders! Leave the wheel — I\'ll handle this myself!';
+    game.fx.text(helm.x, helm.y - 2.2, line, '#ffffff', 0.34, { life: 2.4 });
+  }
   const lvl = tr.level || 5;
   if (!tr.crimeDone) {
     tr.crimeDone = true;
@@ -307,7 +323,7 @@ function startRaid(game, T, s) {
     else if (tr.kind === 'fishing') crime(game, 250000, 'raided a fishing boat', { rep: 8 });
   }
   const who = tr.kind === 'marine' ? 'the Marines' : tr.kind === 'pirate' ? 'the pirates' : 'the crew';
-  game.ui.banner('RAID!', s.name, `Beat ${who} — then the hold and the helm are yours.`, 3);
+  game.ui.banner('BOARDED!', s.name, `The helmsman is coming for you. Beat ${who} — then the hold and the helm are yours.`, 3);
   if (game.audio && game.audio.theme !== 'battle') { tr.prevTheme = game.audio.theme; game.audio.music('battle'); }
   // any Marine ship in sight joins in
   for (const o of T.ships) if (o !== s && o.traffic?.kind === 'marine' && game.world.distance(o.x, o.y, s.x, s.y) < 80) o.provoked = true;
@@ -323,16 +339,37 @@ function checkCleared(game, s) {
   game.log(`The crew of the ${s.name} is beaten!`, '#ffe082');
 }
 
-function boardFromHelm(game, T, p, mine, s) {
-  // leave the wheel...
-  mine.captain = null; mine.sail = 0; mine.rowing = 0; mine.anchored = true;
-  mine.passengers = mine.passengers.filter((x) => x !== p);
-  p.mode = 'foot'; p.onShip = false; p.ship = mine;
-  // ...and over the rail onto her deck
-  const n = nearestDeck(game, { x: mine.x, y: mine.y }, s);
-  placeOnDeck(game, p, s, n ? n.t : 0.5, n ? n.v * 0.5 : 0);
-  game.fx.burst(p.x, p.y, 8, { color: ['#d7ccc8', '#bcaaa4'], speed: 2, life: 0.4, kind: 'dust', size: 0.14 });
-  startRaid(game, T, s);
+/** A Marine coming aboard a Navy ship is among friends. */
+function friendlyBoarding(game, s) {
+  const c = game.state?.char;
+  return !!c && c.faction === 'marine' && s.traffic?.kind === 'marine' && !s.provoked;
+}
+
+function welcomeAboard(game, s) {
+  const tr = s.traffic, c = game.state.char;
+  if (tr.welcomed) return;
+  tr.welcomed = true;
+  const helm = (tr.crew || [])[0];
+  const line = `${c.marineRank || 'Officer'} on deck! Welcome aboard the ${s.name}!`;
+  if (helm?.alive) game.fx.text(helm.x, helm.y - 2.2, line, '#90caf9', 0.34, { life: 2.6 });
+  game.log(`The crew of the ${s.name} salute as you come aboard.`, '#90caf9');
+}
+
+/** Swimming against a hull and jumping: you haul yourself up her side and onto the deck. */
+function climbAboard(game, T, p, k) {
+  if (!p.inWater || p.under || (p.fruit && !p.gills)) return false;
+  const dk = game.deckAt(p.x, p.y, -1.3);
+  const s = dk?.ship;
+  if (!s || s.sunk || s.alive === false) return false;
+  const n = nearestDeck(game, p, s);
+  const splash = { x: p.x, y: p.y };
+  p.leaveWater?.(game, true);
+  placeOnDeck(game, p, s, n ? n.t : 0.5, n ? n.v * 0.6 : 0);
+  game.fx.ripple?.(splash.x, splash.y, 1 + k * 0.5);
+  game.fx.burst(splash.x, splash.y, 12, { color: ['#e1f5fe', '#b3e5fc', '#ffffff'], speed: 2.2, z: 0.1, vz: 4, g: 11, life: 0.6, size: 0.1 });
+  game.audio?.sfx('splash_out');
+  game.log(s.owner === 'player' ? `You climb back aboard the ${s.name}.` : `You haul yourself up the side of the ${s.name} and over the rail!`, s.owner === 'player' ? '#b0bec5' : '#ffe082');
+  return true;
 }
 
 /** Plunder what's in the hold. */
@@ -400,17 +437,6 @@ function footInteraction(game, T, p) {
     if (d < 1.4) return { d, label: `Take the helm — steal the ${s.name}`, run: () => claim(game, T, s) };
     return null;
   }
-  // in the water beside a hull: climb aboard (a Devil Fruit user can't)
-  if (p.inWater && !(p.fruit && !p.gills) && !(p.depth > 0.6)) {
-    for (const o of T.ships) {
-      if (o.sunk || !o.alive || o.owner === 'player') continue;
-      if (!game.deckAt(p.x, p.y, -1.3) || game.deckAt(p.x, p.y, -1.3).ship !== o) continue;
-      return { d: 0.5, x: o.x, y: o.y, label: o.traffic?.raided ? `Climb aboard the ${o.name}` : `Climb aboard and raid the ${o.name}`, run: () => {
-        const n = nearestDeck(game, p, o);
-        placeOnDeck(game, p, o, n ? n.t : 0.5, n ? n.v * 0.6 : 0);
-        startRaid(game, T, o);
-      } };
-    }
-  }
+  // (in the water beside a hull there's no prompt: jump against her side to climb aboard)
   return null;
 }

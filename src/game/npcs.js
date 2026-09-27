@@ -177,6 +177,11 @@ function inside(b, guest = false) {
   return { ...bw(b, s.x, s.z), building: b, inside: true, guest };
 }
 
+/** Where a registered NPC stands on their island (the same rules as when the island fills up). */
+export function placeFor(game, island, def) {
+  return placeNPC(game, island, def, Math, game.spawner);
+}
+
 function placeNPC(game, island, def, rng, spawner) {
   const pl = (typeof def.at === 'function' ? def.at(game.state?.char, game) : def.at) || {};
   if (pl.spot && island.spots[pl.spot]) {
@@ -201,7 +206,8 @@ function placeNPC(game, island, def, rng, spawner) {
       const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
       if (b) { const q = bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4); return inside(b, pl.guest) || clear(spawner, q.x, q.y, rng, { building: b }); }
     }
-    if (pl.plaza || (!pl.building && !pl.dx && !pl.door)) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5 + (pl.oy || 0), 3, rng);
+    // (the square — also for someone whose building didn't fit in this town)
+    if (pl.plaza || (!pl.building && !pl.dx && !pl.door) || (pl.town && !pl.dx)) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5 + (pl.oy || 0), 3, rng);
   }
   // any building that names this NPC
   for (const town of island.towns) {

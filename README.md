@@ -61,7 +61,7 @@ smooth on weaker graphics chips.
 | R / T / G | Haki, once it has awakened | |
 | E | talk, enter, board, pick fruit, examine | dive, knock-up, go ashore |
 | Q | eat | |
-| Tab/I, C, K, J, U | inventory, character, skills, journal, crew | |
+| Tab/I, C, K, J, U, L | inventory, character, skills, journal, crew, quests | |
 | M | world map | |
 | H / Esc | help / pause menu | |
 
@@ -82,6 +82,40 @@ hotbar slots to rearrange them.
   - Mary Geoise and the Red Ports sit on the far side.
 - Islands, towns, landmarks and people are generated from canon data, from
   Foosha Village to Laugh Tale.
+
+**The main story.**
+
+- Every island the Blues' young set out from has three people who can start
+  your story, each marked with an orange **!**: an old sea dog (the
+  **Pirate** road), the officer at the island's Marine post (the **Marine**
+  road) and a bounty broker (the **Bounty Hunter** road). You can walk only
+  one. The first job is simple: a blade and a Jolly Roger, or the local
+  troublemaker brought in.
+- **Part 1, The Blues.** Whoever sets you on your road hands you a Log Pose set
+  for your first stop. Three stops in your Blue get you ready for the Grand
+  Line: a ship that can take it, a crew or a rank, and the last port before
+  the mountain. Part 1 ends when you ride **Reverse Mountain**.
+- **Part 2, The Grand Line.** At Twin Cape, Crocus explains the seven roads.
+  Your Log Pose picks one, and every road is its own adventure:
+  - five pirate roads end at the Sabaody Archipelago;
+  - two Navy roads run from G-8 to Marineford;
+  - two hunter roads end at Enies Lobby, where the court pays the greatest
+    bounties.
+  You can't sail on past the island your story is on. Without its log, the
+  Grand Line's currents turn you round.
+- **Part 3, The New World**: Fish-Man Island and on to Laugh Tale for pirates,
+  New Marineford and Blackbeard's fortress for the Navy and the hunters.
+- **How it works:**
+  - One chapter at a time, and the main story can't be abandoned. Side
+    quests can be.
+  - Return to whoever gave you a chapter for pay that grows as the story goes
+    on.
+  - If your road changes, the story follows you: a Marine who deserts turns
+    pirate, a hunter who raises a flag becomes a captain.
+- **Quests menu (L)** lists the chapter under way and the story so far, plus
+  side quests you can track or give up. An on-screen **tracker** on the right
+  shows the next step and how far away it is. The **world map** marks the
+  story's next stop and the quest givers on the islands you know.
 
 **Lineage (roguelike).**
 
@@ -144,8 +178,15 @@ hotbar slots to rearrange them.
   weather that changes its mind, and rogue waves.
 - **Log Pose** navigation: stay on an island until the log sets, and use
   Eternal Poses.
-- The **Calm Belt** is full of Sea Kings. **Reverse Mountain** carries you
-  into the Grand Line.
+- The **Calm Belt** is full of Sea Kings.
+- **Reverse Mountain**:
+  - the currents of all four Blues run through stone gates in the Red Line,
+    along gorges and **up** the mountain;
+  - they meet in a pool on the snowy summit, then pour down into the Grand
+    Line past Laboon, the whale who waits;
+  - the current does the sailing and only runs one way, so steer for the
+    middle of the canal.
+- The world is big: you can't see the next island from the last one.
 - Marine patrols, pirate ships, merchants and flotsam.
 - A News Coo delivers the morning paper.
 
@@ -197,7 +238,8 @@ hotbar slots to rearrange them.
 
 ## The world, sea by sea
 
-There are 111 charted islands, 549 named NPCs and 118 quests, plus three
+There are 111 charted islands, 683 named NPCs and 118 side quests, and a main
+story of 85 chapters told 206 ways across the three roads, plus three
 zones and Mary Geoise. Every arc is told from the point of view of *your*
 pirate, Marine or wanderer. The Straw Hats appear as cameos and never as the
 player.
@@ -272,6 +314,10 @@ node tools/validate.mjs [--fast] [--pack=<id>]
 node tools/shot.mjs <scenario>   # headless Chromium play-tests with screenshots (boot, create, play, zones, systems, quest, resume, look, menus, marines, dreveal, fight…)
 node tools/shot.mjs perf         # frame cost in a town (day and night), a harbour, at sea and on a reef
 node tools/shot.mjs hitch --w=320 --h=180 [--cpu]   # per-frame JS time running through a town and sailing past an island: the worst frames, shaders compiled on the way
+node tools/storycheck.mjs        # the main story: every chapter, road, contact and target resolves
+node tools/shot.mjs story [--path=pirate|marine|hunter]   # plays the story's start, then fast-forwards through all three parts
+node tools/shot.mjs storydrift | storyswitch               # the Grand Line's currents; the story following a change of road
+node tools/shot.mjs rmride       # rides Reverse Mountain from the East Blue gate to the Grand Line
 ```
 
 In the page, `window.OP.prof` is a frame profiler: set `OP.prof.PROF.on = true`
@@ -297,6 +343,10 @@ frame separately.
   per sea.
 - `src/content/`: NPCs, bosses, quests and events per sea. See
   [docs/CONTENT_GUIDE.md](docs/CONTENT_GUIDE.md) for how to write content.
+- `src/content/mainStory.js` and `src/content/main/`: the main story. The
+  chapters are data (`homes.js`, `blues.js`, `grandLine.js`, `newWorld.js`,
+  built with `define.js`), and `mainStory.js` turns them into quests and
+  people.
 
 ## Disclaimer
 
