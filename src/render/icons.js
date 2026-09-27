@@ -1422,6 +1422,11 @@ D.fish = (I, o = {}) => {
     part(I, 'M22 20 C26 13 34 12 38 16 C34 19 28 21 22 20 Z', dk(col, 0.1), { sd: 0.8, hd: 0.6, ol: I.ol * 0.8 });
     fl(I, circle(12.5, 30, 2.3), '#ffffff'); fl(I, circle(12.8, 30, 1.25), OUT);
     ln(I, 'M17.5 25 C19.5 29 19.5 34 17.5 38', dk(col, 0.4), 1.2);
+    if (o.trunk) {
+      // the Elephant Honmaguro: a floppy ear and a trunk curling down from the snout
+      part(I, 'M18 24 C14 18 22 14 27 19 C27 24 23 28 18 24 Z', '#8c8f98', { sd: 1, hd: 0.8, ol: I.ol * 0.8 });
+      tube(I, 'M6 33 C2 38 3 45 8 46', '#8c8f98', 3.4);
+    }
   });
 };
 
@@ -2115,6 +2120,7 @@ D.crate = (I, o = {}) => {
 /** id → [drawer, opts] for notable items. */
 const ITEM_MAP = {
   meat: ['meat'], rice_ball: ['riceBall'], fish_stew: ['bowl', { top: 'fish' }], tangerine: ['orange'],
+  elephant_tuna: ['fish', { color: '#35557a', trunk: true }], fighting_fish_horn: ['horn', { color: '#f1e6cc' }],
   sea_king_steak: ['steak'], baratie_course: ['plate'], sake: ['sake'], cola: ['barrel', { label: 'cola', hoop: '#c23b2e' }],
   p2_cola_barrel: ['barrel', { label: 'cola', hoop: '#c23b2e' }],
   bandage: ['bandage'], antidote: ['vial'], rumble_ball: ['pill'], tension_hormone: ['syringe'],

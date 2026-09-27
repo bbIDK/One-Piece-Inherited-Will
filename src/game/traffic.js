@@ -299,7 +299,7 @@ function plunder(game, s) {
   tr.plundered = true;
   const rng = new RNG(Math.floor(s.x * 31 + s.y * 7) >>> 0);
   earn(game, s.loot || 1000, `the hold of the ${s.name}`);
-  const goods = tr.kind === 'fishing' ? ['fresh_fish', 'fresh_fish', 'fresh_fish', 'tuna']
+  const goods = tr.kind === 'fishing' ? ['fresh_fish', 'fresh_fish', 'fresh_fish', 'elephant_tuna']
     : tr.kind === 'marine' ? ['bandage', 'bandage', 'meat', 'rumble_ball', 'seastone']
       : tr.kind === 'pirate' ? ['gold_coins', 'jewels', 'sake', 'meat']
         : ['gold_coins', 'sake', 'meat', 'fish_stew', 'cola', 'jewels'];

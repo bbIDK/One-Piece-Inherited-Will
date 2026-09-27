@@ -35,6 +35,7 @@ import { installBuildings } from './game/buildings.js';
 import { installTownLife } from './game/townlife.js';
 import { installSeaLife } from './game/sealife.js';
 import { clamAt } from './world/seabed.js';
+import { regionAt } from './world/constants.js';
 import { layoutOf } from './world/interiors.js';
 import { installForaging } from './game/forage.js';
 import { fruitOf, fruitPicked } from './world/fruitTrees.js';
@@ -332,7 +333,7 @@ async function start() {
       startNewCharacter(game, birth, { name: opts.name || 'Test Pirate', look: null });
       return game.player;
     },
-    debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); } },
+    debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); } },
     ready: true,
   });
 

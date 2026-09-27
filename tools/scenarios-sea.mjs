@@ -228,7 +228,7 @@ export const scenarios = {
     },
   },
 
-  // sea life: fish schools around a reef, catching one by hand, a shark, a giant clam
+  // sea life: fish schools around a reef, catching one by hand, a Sea Cow or Fighting Fish, a giant clam
   sealife: {
     async run(page, snap, args) {
       await page.evaluate(() => localStorage.clear());
@@ -267,7 +267,7 @@ export const scenarios = {
       console.log('at clam', JSON.stringify(it), 'prompt', lbl);
       await snap('clam');
       await page.evaluate(() => window.OP.key('E', true)); await step(page, 0.05); await page.evaluate(() => window.OP.key('E', false)); await step(page, 0.1);
-      const inv = () => page.evaluate(() => Object.fromEntries(window.OP.game.state.char.inventory.filter((i) => /fish|tuna|pearl|shark/.test(i.id)).map((i) => [i.id, i.qty])));
+      const inv = () => page.evaluate(() => Object.fromEntries(window.OP.game.state.char.inventory.filter((i) => /fish|tuna|pearl|horn/.test(i.id)).map((i) => [i.id, i.qty])));
       console.log('after clam', JSON.stringify(await inv()));
       // up a little and look at the fish
       const near = await page.evaluate(() => {
@@ -304,7 +304,7 @@ export const scenarios = {
         });
         await step(page, 0.3);
         const inv2 = await inv();
-        caught = inv2.fresh_fish || inv2.tuna || 0;
+        caught = inv2.fresh_fish || inv2.elephant_tuna || 0;
       }
       console.log('after grabbing', JSON.stringify(await inv()));
       // a shark comes calling
@@ -623,6 +623,123 @@ export const scenarios = {
         for (let i = 0; i < 6; i++) { await step(page, 0.1); await frames(page, 1); }
         console.log('ashore', JSON.stringify(await page.evaluate(() => { const t = window.OP.game.view3d.terrain; let open = 0; for (const c of t.live.values()) { const cx = Math.floor(c.x0 / 32), cy = Math.floor(c.y0 / 32); if (t.hasLand[cy * t.cw + cx] === 0) open++; } return { open, floorR: t.floorR, inWater: window.OP.game.player.inWater }; })));
       }
+    },
+  },
+  // every kind of One Piece sea life, one at a time in front of the camera, then the two hunters
+  oplife: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings(); g.env.clock = 12; g.env.storm = 0; g.env.fog = 0; document.querySelector('.look-hint')?.remove(); });
+      // open water 14-30 m deep, in the Grand Line (Paradise) if we can find it
+      const spot = await page.evaluate((where) => {
+        const g = window.OP.game, w = g.world, R = window.OP.debug.regionAt;
+        const want = where === 'blue' ? [1] : [5];
+        const isls = w.islands.filter((i) => want.includes(R(i.x, i.y)));
+        for (let k = 0; k < 60000; k++) {
+          const isl = isls[k % isls.length];
+          const a = Math.random() * Math.PI * 2, r = isl.radius + 10 + Math.random() * 40;
+          const x = Math.floor(isl.x + Math.cos(a) * r) + 0.5, y = Math.floor(isl.y + Math.sin(a) * r) + 0.5;
+          if (!w.isLiquid(x, y) || w.isOverlay(x, y)) continue;
+          const d = g.seaDepth(x, y);
+          if (d > 14 && d < 30 && want.includes(R(x, y))) return { x, y, d: +d.toFixed(1), region: R(x, y), isl: isl.id };
+        }
+        return null;
+      }, args.where || 'grand');
+      console.log('spot', JSON.stringify(spot));
+      await page.evaluate((s) => window.OP.teleport(s.x, s.y), spot);
+      for (let i = 0; i < 4; i++) { await step(page, 0.1); await frames(page, 1); }
+      await page.evaluate(() => { const g = window.OP.game, p = g.player; p.depth = 4; p.under = true; p.oxygen = 999; g.seaLife.schools.length = 0; g.seaLife.spawnT = 1e9; g.seaLife.sharkT = 1e9; });
+      for (let i = 0; i < 8; i++) { await step(page, 0.1); await frames(page, 1); }
+      const kinds = String(args.kinds || 'reef,sardine,flying,elephant,seaking_fry,seacat,yagara').split(',');
+      for (const kind of kinds) {
+        const info = await page.evaluate((kind) => {
+          const g = window.OP.game, p = g.player, S = g.seaLife, v = g.view3d;
+          S.schools.length = 0;
+          const yaw = v.rig.yaw;
+          const big = ['elephant', 'seaking_fry', 'seacat', 'yagara'].includes(kind);
+          const d = big ? 4.2 : 2.4;
+          if (g.settings.view !== 'first') { g.settings.view = 'first'; g.applySettings(); }
+          // side on to the camera, a little below eye level
+          const s = S.spawn(kind, p.x + Math.cos(yaw) * d, p.y + Math.sin(yaw) * d, p.depth + 0.4, yaw + Math.PI / 2);
+          s.turnT = 1e9;
+          v.rig.pitch = -0.08;
+          return { kind, n: s.fish.length, size: +s.fish[0].size.toFixed(2) };
+        }, kind);
+        for (let i = 0; i < 3; i++) { await step(page, 0.05); await frames(page, 1); }
+        console.log('school', JSON.stringify(info));
+        await snap(kind);
+      }
+      // flying fish from the surface: they leap clear and glide
+      await page.evaluate(() => {
+        const g = window.OP.game, p = g.player, S = g.seaLife, v = g.view3d;
+        S.schools.length = 0; p.depth = 0; p.under = false;
+        g.settings.view = 'third'; g.applySettings();
+        const yaw = v.rig.yaw;
+        const s = S.spawn('flying', p.x + Math.cos(yaw) * 7, p.y + Math.sin(yaw) * 7, 0.8, yaw + Math.PI / 2);
+        s.turnT = 1e9;
+        v.rig.pitch = -0.12;
+      });
+      let leaps = 0;
+      for (let i = 0; i < 40; i++) {
+        await step(page, 0.1);
+        const n = await page.evaluate(() => { const S = window.OP.game.seaLife, P = {}; let n = 0; for (const s of S.schools) for (const f of s.fish) { S.fishPos(s, f, P); if (P.leap > 0.2 && P.leap < 0.8) n++; } return n; });
+        if (n >= 1) { leaps = n; break; }
+      }
+      await frames(page, 2);
+      console.log('leaping', leaps);
+      await snap('flying-leap');
+      // the hunters: a Sea Cow and a Fighting Fish
+      await page.evaluate(() => { const p = window.OP.game.player; p.depth = 4; p.under = true; });
+      for (const kind of ['seacow', 'fightfish']) {
+        const info = await page.evaluate((kind) => {
+          const g = window.OP.game, p = g.player, S = g.seaLife, v = g.view3d;
+          S.schools.length = 0;
+          for (const a of g.actors) if (a.shark) a.alive = false;
+          const yaw = v.rig.yaw;
+          const k = S.shark(p.x + Math.cos(yaw) * 6, p.y + Math.sin(yaw) * 6, 12, kind);
+          k.depth = p.depth + 0.3; k.facing = yaw + Math.PI / 2;
+          k.controller.mode = 'circle'; k.controller.t = 99;
+          v.rig.pitch = -0.05;
+          return { name: k.name, race: k.look.race, hp: Math.round(k.hp) };
+        }, kind);
+        for (let i = 0; i < 3; i++) { await step(page, 0.05); await frames(page, 1); }
+        console.log('hunter', JSON.stringify(info));
+        await snap(kind);
+      }
+      // a hurt Sea Cow bolts; beating a Fighting Fish drops its horn
+      const flee = await page.evaluate(() => {
+        const g = window.OP.game, p = g.player, S = g.seaLife;
+        for (const a of g.actors) if (a.shark) a.alive = false;
+        const k = S.shark(p.x + 5, p.y, 12, 'seacow');
+        k.hp = k.d.maxHp * 0.3;
+        return k.id;
+      });
+      await step(page, 0.3);
+      const fled = await page.evaluate((id) => { const g = window.OP.game, k = g.actors.find((a) => a.id === id); return k ? k.controller.mode : 'gone'; }, flee);
+      const loot = await page.evaluate(() => {
+        const g = window.OP.game, p = g.player, S = g.seaLife;
+        const k = S.shark(p.x + 5, p.y, 12, 'fightfish');
+        k.onKO(k, p, g);
+        return Object.fromEntries(g.state.char.inventory.filter((i) => /fish|tuna|horn/.test(i.id)).map((i) => [i.id, i.qty]));
+      });
+      console.log('seacow mode', fled, 'loot', JSON.stringify(loot));
+      // what turns up on its own around here
+      const census = await page.evaluate(() => {
+        const g = window.OP.game, S = g.seaLife, p = g.player;
+        for (const a of g.actors) if (a.shark) a.alive = false;
+        return p.x;
+      });
+      await page.evaluate(() => { const g = window.OP.game, S = g.seaLife; S.spawnT = 0; S.schools.length = 0; });
+      const seen = {};
+      for (let i = 0; i < 30; i++) {
+        await step(page, 1.6);
+        const ks = await page.evaluate(() => { const S = window.OP.game.seaLife; const out = S.schools.map((s) => s.kind); S.schools.length = 0; return out; });
+        for (const k of ks) seen[k] = (seen[k] || 0) + 1;
+      }
+      console.log('census', JSON.stringify(seen), census ? '' : '');
+      const perf = await page.evaluate(() => { const v = window.OP.game.view3d, i = v.renderer.info; return { calls: i.render.calls, tris: i.render.triangles }; });
+      console.log('perf', JSON.stringify(perf));
     },
   },
   wake: {

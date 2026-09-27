@@ -39466,6 +39466,7 @@ void main() {
     tangerine: { name: "Bell-m\xE8re's Tangerine", icon: "\u{1F34A}", type: "food", heal: 35, stamina: 60, price: 60, desc: "From the groves of Cocoyasi Village." },
     fresh_fish: { name: "Fresh Fish", icon: "\u{1F41F}", type: "food", heal: 45, stamina: 35, price: 40, desc: "Caught with your bare hands. Better cooked, but it will do." },
     tuna: { name: "Bluefin Tuna", icon: "\u{1F41F}", type: "food", heal: 160, stamina: 90, price: 420, desc: "A fat, fast fish from the open sea. A cook would weep with joy." },
+    elephant_tuna: { name: "Elephant Honmaguro", icon: "\u{1F41F}", type: "food", heal: 320, stamina: 170, price: 1400, desc: "A giant tuna with an elephant's trunk and ears \u2014 the finest eating in the sea. Sanji would kill for one." },
     sea_king_steak: { name: "Sea King Steak", icon: "\u{1F969}", type: "food", heal: 400, stamina: 200, price: 2500, desc: "Enough meat to feed a crew for a week." },
     baratie_course: { name: "Baratie Full Course", icon: "\u{1F37D}", type: "food", heal: 300, stamina: 150, price: 1200, buff: { id: "well_fed", name: "Well Fed", dur: 180, mods: { damage: 1.1 } }, desc: `Cooked by "Red Leg" Zeff's kitchen. Leaves you Well Fed.` },
     sake: { name: "Sake", icon: "\u{1F376}", type: "food", heal: 10, stamina: 80, price: 120, buff: { id: "tipsy", name: "Tipsy", dur: 60, mods: { damage: 1.08, defMul: 1.1 } }, desc: "Dutch courage." },
@@ -39562,6 +39563,7 @@ void main() {
     gold_coins: { name: "Gold Doubloons", icon: "\u{1FA99}", type: "treasure", price: 1200, desc: "Sell them." },
     jewels: { name: "Jewels", icon: "\u{1F48E}", type: "treasure", price: 6e3 },
     shark_fin: { name: "Shark Fin", icon: "\u{1F988}", type: "material", price: 1500, desc: "Prized by cooks across the Grand Line." },
+    fighting_fish_horn: { name: "Fighting Fish Horn", icon: "\u{1F9B4}", type: "material", price: 2200, desc: "As long as a sword and nearly as sharp. Smiths and shipwrights pay well for them." },
     shandora_gold: { name: "Shandora Gold", icon: "\u{1F514}", type: "treasure", price: 8e4, desc: "Gold from the lost city of Shandora." },
     golden_statue: { name: "Golden Statue", icon: "\u{1F5FF}", type: "treasure", price: 25e3 },
     pearl: { name: "Mermaid Pearl", icon: "\u26AA", type: "treasure", price: 15e3 }
@@ -41278,6 +41280,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       fl(I, circle(12.5, 30, 2.3), "#ffffff");
       fl(I, circle(12.8, 30, 1.25), OUT2);
       ln(I, "M17.5 25 C19.5 29 19.5 34 17.5 38", dk(col, 0.4), 1.2);
+      if (o.trunk) {
+        part(I, "M18 24 C14 18 22 14 27 19 C27 24 23 28 18 24 Z", "#8c8f98", { sd: 1, hd: 0.8, ol: I.ol * 0.8 });
+        tube2(I, "M6 33 C2 38 3 45 8 46", "#8c8f98", 3.4);
+      }
     });
   };
   D.jar = (I, o = {}) => {
@@ -42098,6 +42104,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     rice_ball: ["riceBall"],
     fish_stew: ["bowl", { top: "fish" }],
     tangerine: ["orange"],
+    elephant_tuna: ["fish", { color: "#35557a", trunk: true }],
+    fighting_fish_horn: ["horn", { color: "#f1e6cc" }],
     sea_king_steak: ["steak"],
     baratie_course: ["plate"],
     sake: ["sake"],
@@ -61187,74 +61195,36 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     parent.add(m);
     return m;
   }
-  var SharkView = class {
+  var SeaBeastView = class {
     constructor(a) {
       this.a = a;
-      const col = a.bodyColor || "#6f8796";
-      const back = toon(col), belly = toon(mixHex(col, "#ffffff", 0.82)), dark = toon(mixHex(col, "#000000", 0.4));
-      const black = toon("#0d0d10"), white = toon("#f4f1ea"), mouth = toon("#6b2430");
       this.root = new Group();
       this.yaw = new Group();
       this.root.add(this.yaw);
       this.body = new Group();
       this.yaw.add(this.body);
-      const L2 = 1.25;
-      part4(SPH2, back, [L2, 0.34, 0.36], [0, 0, 0], this.body, 0.04);
-      part4(SPH2, belly, [L2 * 0.92, 0.22, 0.3], [0.05, -0.13, 0], this.body, 0);
-      part4(SPH2, back, [0.55, 0.22, 0.26], [L2 * 0.78, -0.02, 0], this.body, 0.035);
-      part4(SPH2, belly, [0.45, 0.12, 0.2], [L2 * 0.8, -0.1, 0], this.body, 0);
-      for (const s of [-1, 1]) {
-        part4(SPH2, black, [0.045, 0.045, 0.03], [L2 * 0.93, 0.05, s * 0.19], this.body, 0);
-        for (let i = 0; i < 4; i++) part4(SPH2, dark, [0.012, 0.11, 0.02], [L2 * 0.52 - i * 0.07, -0.02, s * 0.31], this.body, 0);
-      }
-      this.jaw = new Group();
-      this.jaw.position.set(L2 * 0.62, -0.14, 0);
-      this.body.add(this.jaw);
-      part4(SPH2, belly, [0.42, 0.07, 0.2], [0.28, -0.03, 0], this.jaw, 0.02);
-      part4(SPH2, mouth, [0.36, 0.05, 0.16], [0.28, 0.02, 0], this.jaw, 0);
-      for (let i = 0; i < 6; i++) for (const s of [-1, 1]) {
-        part4(CONE2, white, [0.018, 0.06, 0.018], [0.52 - i * 0.07, 0.02, s * (0.11 - i * 8e-3)], this.jaw, 0);
-        const up = part4(CONE2, white, [0.018, 0.06, 0.018], [L2 * 0.62 + 0.5 - i * 0.07, -0.1, s * (0.12 - i * 8e-3)], this.body, 0);
-        up.rotation.x = Math.PI;
-      }
-      const dorsal = new Mesh(finGeo([0.25, 0.28], [-0.35, 0.26], [-0.28, 0.95], 0.035), back);
-      addOutline(dorsal, 0.03);
-      this.body.add(dorsal);
-      const d2 = new Mesh(finGeo([-0.75, 0.2], [-0.95, 0.18], [-0.95, 0.38], 0.02), back);
-      this.body.add(d2);
+      this.gape = 0;
+      this.tailAxis = "y";
+      this.labelY = 1.6;
       this.pecs = [];
-      for (const s of [-1, 1]) {
-        const hinge = new Group();
-        hinge.position.set(0.3, -0.18, s * 0.26);
-        const f = new Mesh(finGeo([0.2, 0], [-0.2, 0], [-0.45, -0.55], 0.025), back);
-        f.rotation.x = s * 1.1;
-        addOutline(f, 0.025);
-        hinge.add(f);
-        this.body.add(hinge);
-        this.pecs.push(hinge);
-      }
-      this.tail = new Group();
-      this.tail.position.set(-L2 * 0.85, 0.02, 0);
-      this.body.add(this.tail);
-      part4(SPH2, back, [0.5, 0.14, 0.13], [-0.35, 0, 0], this.tail, 0.03);
-      const fin3 = new Mesh(finGeo([-0.7, 0.05], [-0.95, -0.02], [-1.15, 0.72], 0.025), back);
-      addOutline(fin3, 0.03);
-      this.tail.add(fin3);
-      const lower = new Mesh(finGeo([-0.72, 0], [-0.9, 0], [-1.05, -0.45], 0.02), back);
-      this.tail.add(lower);
+    }
+    finish(a) {
       this.body.scale.setScalar(a.look?.scale || 1);
       this.label = new Label();
       this.root.add(this.label.sprite);
-      this.gape = 0;
     }
     update(a, env, ctx) {
       const t = env.time + (a.seed || 0);
       this.yaw.rotation.y = -(a.facing || 0);
       const moving = Math.hypot(a.vx || 0, a.vy || 0);
-      const beat4 = 3 + moving * 1.4;
-      this.tail.rotation.y = Math.sin(t * beat4) * 0.42;
-      this.body.rotation.y = -Math.sin(t * beat4 - 0.8) * 0.06;
-      for (let i = 0; i < this.pecs.length; i++) this.pecs[i].rotation.z = Math.sin(t * 0.9 + i) * 0.08;
+      const beat4 = (this.tailAxis === "z" ? 1.8 : 3) + moving * 1.2;
+      if (this.tailAxis === "z") this.tail.rotation.z = Math.sin(t * beat4) * 0.35;
+      else {
+        this.tail.rotation.y = Math.sin(t * beat4) * 0.42;
+        this.body.rotation.y = -Math.sin(t * beat4 - 0.8) * 0.06;
+      }
+      for (let i = 0; i < this.pecs.length; i++) this.pecs[i].rotation.z = Math.sin(t * 1.4 + i) * 0.18;
+      this.extra?.(t, a);
       const act2 = a.action;
       let want = 0.05;
       if (act2) {
@@ -61262,7 +61232,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         want = act2.t < w ? 0.55 * Math.min(1, act2.t / w) : Math.max(0, 0.55 - (act2.t - w) * 5);
       }
       this.gape += (want - this.gape) * Math.min(1, 0.3 + (act2 ? 0.5 : 0));
-      this.jaw.rotation.z = -this.gape;
+      if (this.jaw) this.jaw.rotation.z = -this.gape;
       this.body.rotation.z = Math.max(-0.35, Math.min(0.35, ((a._lastDepth ?? a.depth) - a.depth) * 6));
       a._lastDepth = a.depth;
       const knocked = a.state === "knocked" || a.state === "dead";
@@ -61271,7 +61241,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.body.position.y = knocked ? -Math.min(2.5, kt * 0.8) : 0;
       const showBar = a.damageShown > 0 && a.state === "idle";
       this.label.set(a.showName && a.state === "idle" ? a.name : null, a.nameColor || "#fff", showBar ? Math.max(0, a.hp / a.d.maxHp) : null, "#ef5350");
-      this.label.sprite.position.set(0, 1.5, 0);
+      this.label.sprite.position.set(0, this.labelY * (a.look?.scale || 1), 0);
       const cam = ctx.camera;
       const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
       const k = Math.min(2.4, Math.max(0.5, dist / 8));
@@ -61280,6 +61250,124 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     dispose() {
       this.label.dispose();
       this.root.removeFromParent();
+    }
+  };
+  var SeaCowView = class extends SeaBeastView {
+    constructor(a) {
+      super(a);
+      const col = a.bodyColor || "#8e7ca8";
+      const hide = toon(col), belly = toon(mixHex(col, "#fff4fb", 0.72)), dark = toon(mixHex(col, "#1a1026", 0.45));
+      const muzzle3 = toon("#f4b3c2"), nostril = toon("#6b2a3a"), horn = toon("#f3ead2"), gold = toon("#f1c40f");
+      const white = toon("#ffffff"), black = toon("#141018");
+      const B4 = this.body;
+      this.tailAxis = "z";
+      this.labelY = 2;
+      part4(SPH2, hide, [1.35, 0.62, 0.66], [0, 0, 0], B4, 0.05);
+      part4(SPH2, belly, [1.2, 0.36, 0.52], [0.05, -0.3, 0], B4, 0);
+      for (const [x, z, r] of [[0.3, 0.5, 0.2], [-0.4, -0.52, 0.24], [-0.1, 0.55, 0.14], [0.55, -0.45, 0.16]]) part4(SPH2, dark, [r, r * 0.7, 0.05], [x, 0.22, z], B4, 0);
+      const H2 = new Group();
+      H2.position.set(1.25, 0.15, 0);
+      B4.add(H2);
+      part4(SPH2, hide, [0.62, 0.55, 0.58], [0, 0, 0], H2, 0.045);
+      part4(SPH2, muzzle3, [0.36, 0.3, 0.44], [0.48, -0.16, 0], H2, 0.035);
+      for (const s of [-1, 1]) {
+        part4(SPH2, nostril, [0.06, 0.08, 0.05], [0.82, -0.09, s * 0.14], H2, 0);
+        part4(SPH2, white, [0.14, 0.16, 0.08], [0.3, 0.22, s * 0.46], H2, 0.025);
+        part4(SPH2, black, [0.06, 0.08, 0.04], [0.36, 0.2, s * 0.52], H2, 0);
+        const ear = part4(SPH2, hide, [0.24, 0.07, 0.13], [-0.08, 0.3, s * 0.62], H2, 0.03);
+        ear.rotation.set(s * 0.6, 0, -0.4);
+        const h1 = part4(CONE2, horn, [0.09, 0.42, 0.09], [-0.12, 0.45, s * 0.35], H2, 0.025);
+        h1.rotation.set(s * 0.7, 0, -0.2);
+      }
+      const ring4 = new Mesh(new TorusGeometry(0.1, 0.022, 6, 14), gold);
+      ring4.position.set(0.86, -0.2, 0);
+      ring4.rotation.y = Math.PI / 2;
+      H2.add(ring4);
+      this.jaw = new Group();
+      this.jaw.position.set(0.3, -0.34, 0);
+      H2.add(this.jaw);
+      part4(SPH2, muzzle3, [0.3, 0.09, 0.34], [0.2, -0.02, 0], this.jaw, 0.02);
+      part4(SPH2, nostril, [0.24, 0.05, 0.26], [0.2, 0.04, 0], this.jaw, 0);
+      for (const s of [-1, 1]) {
+        const hinge = new Group();
+        hinge.position.set(0.55, -0.32, s * 0.55);
+        const f = part4(SPH2, dark, [0.42, 0.06, 0.2], [-0.18, -0.05, s * 0.2], hinge, 0.025);
+        f.rotation.y = s * 0.5;
+        B4.add(hinge);
+        this.pecs.push(hinge);
+      }
+      this.tail = new Group();
+      this.tail.position.set(-1.2, 0.05, 0);
+      B4.add(this.tail);
+      part4(SPH2, hide, [0.7, 0.3, 0.3], [-0.45, 0, 0], this.tail, 0.04);
+      for (const s of [-1, 1]) {
+        const fl2 = part4(SPH2, dark, [0.36, 0.06, 0.34], [-1.05, 0, s * 0.3], this.tail, 0.03);
+        fl2.rotation.y = s * 0.55;
+      }
+      this.head = H2;
+      this.extra = (t) => {
+        H2.rotation.z = Math.sin(t * 0.9) * 0.05;
+        ring4.rotation.z = Math.sin(t * 2.3) * 0.3;
+      };
+      this.finish(a);
+    }
+  };
+  var FightingFishView = class extends SeaBeastView {
+    constructor(a) {
+      super(a);
+      const col = a.bodyColor || "#324a7a";
+      const back = toon(col), belly = toon(mixHex(col, "#f2ead8", 0.8)), stripe = toon(mixHex(col, "#000000", 0.35));
+      const fin3 = toon("#d84315"), finD = toon("#8e2a0c"), ivory = toon("#f1e6cc"), white = toon("#ffffff"), black = toon("#141018"), mouth = toon("#6b2430");
+      const B4 = this.body;
+      this.labelY = 1.7;
+      const L2 = 1.45;
+      part4(SPH2, back, [L2, 0.46, 0.4], [0, 0, 0], B4, 0.045);
+      part4(SPH2, belly, [L2 * 0.9, 0.3, 0.33], [0.05, -0.17, 0], B4, 0);
+      for (let i = 0; i < 4; i++) part4(SPH2, stripe, [0.05, 0.36, 0.41], [0.55 - i * 0.38, 0.05, 0], B4, 0);
+      const horn = part4(CONE2, ivory, [0.09, 1.35, 0.09], [L2 * 0.72, 0.3, 0], B4, 0.025);
+      horn.rotation.z = -Math.PI / 2 + 0.12;
+      part4(new TorusGeometry(1, 0.35, 5, 10), ivory, [0.1, 0.1, 0.1], [L2 * 0.72, 0.3, 0], B4, 0).rotation.y = Math.PI / 2;
+      for (const s of [-1, 1]) {
+        part4(SPH2, white, [0.1, 0.1, 0.06], [L2 * 0.7, 0.12, s * 0.3], B4, 0.02);
+        part4(SPH2, black, [0.045, 0.06, 0.04], [L2 * 0.74, 0.11, s * 0.34], B4, 0);
+        const brow = part4(SPH2, stripe, [0.16, 0.04, 0.05], [L2 * 0.7, 0.24, s * 0.3], B4, 0);
+        brow.rotation.x = s * 0.2;
+        brow.rotation.z = -0.35;
+      }
+      this.jaw = new Group();
+      this.jaw.position.set(L2 * 0.6, -0.18, 0);
+      B4.add(this.jaw);
+      part4(SPH2, belly, [0.5, 0.1, 0.24], [0.32, -0.02, 0], this.jaw, 0.02);
+      part4(SPH2, mouth, [0.42, 0.06, 0.2], [0.3, 0.03, 0], this.jaw, 0);
+      for (let i = 0; i < 5; i++) for (const s of [-1, 1]) {
+        part4(CONE2, white, [0.022, 0.08, 0.022], [0.62 - i * 0.09, 0.04, s * (0.15 - i * 0.012)], this.jaw, 0);
+        const up = part4(CONE2, white, [0.022, 0.08, 0.022], [L2 * 0.6 + 0.6 - i * 0.09, -0.12, s * (0.16 - i * 0.012)], B4, 0);
+        up.rotation.x = Math.PI;
+      }
+      const sail = new Mesh(finGeo([0.75, 0.38], [-0.9, 0.34], [-0.1, 1.05], 0.03), fin3);
+      addOutline(sail, 0.025);
+      B4.add(sail);
+      for (let i = 0; i < 6; i++) part4(CONE2, finD, [0.018, 0.55, 0.018], [0.6 - i * 0.28, 0.4, 0], B4, 0).rotation.z = 0.25;
+      for (const s of [-1, 1]) {
+        const hinge = new Group();
+        hinge.position.set(0.35, -0.22, s * 0.3);
+        const f = new Mesh(finGeo([0.2, 0], [-0.25, 0], [-0.55, -0.6], 0.025), fin3);
+        f.rotation.x = s * 1.1;
+        addOutline(f, 0.02);
+        hinge.add(f);
+        B4.add(hinge);
+        this.pecs.push(hinge);
+      }
+      this.tail = new Group();
+      this.tail.position.set(-L2 * 0.85, 0.02, 0);
+      B4.add(this.tail);
+      part4(SPH2, back, [0.5, 0.17, 0.15], [-0.35, 0, 0], this.tail, 0.03);
+      for (const [b0, b1, tip] of [[[-0.7, 0.05], [-0.95, -0.02], [-1.3, 0.75]], [[-0.72, 0], [-0.9, 0], [-1.25, -0.65]]]) {
+        const f = new Mesh(finGeo(b0, b1, tip, 0.025), fin3);
+        addOutline(f, 0.025);
+        this.tail.add(f);
+      }
+      this.finish(a);
     }
   };
 
@@ -62021,7 +62109,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   registerActorView((a, ctx) => {
     try {
       if (a.look && a.look.race === "seaking") return new SeaKingView(a);
-      if (a.look && a.look.race === "beast_shark") return new SharkView(a);
+      if (a.look && a.look.race === "beast_seacow") return new SeaCowView(a);
+      if (a.look && a.look.race === "beast_fightfish") return new FightingFishView(a);
       if (a.draw !== baseDraw) return null;
       return new ActorView(a, ctx);
     } catch (e) {
@@ -63649,8 +63738,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/render3d/sealife3d.js
   var TAU18 = Math.PI * 2;
   var MAX_FISH = 260;
-  function fishGeo() {
-    const secs = [[0.5, 0, 0], [0.3, 0.15, 0.065], [0.02, 0.18, 0.075], [-0.28, 0.07, 0.035]];
+  function sphereInto(pos, eye, cx, cy, cz, r, tag, seg = 6) {
+    const g = new SphereGeometry(r, seg, Math.max(3, seg - 2)).toNonIndexed();
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      pos.push(p.getX(i) + cx, p.getY(i) + cy, p.getZ(i) + cz);
+      eye.push(tag);
+    }
+  }
+  function fishGeo(kind = "fish") {
+    const secs = kind === "flying" ? [[0.5, 0, 0], [0.3, 0.12, 0.07], [0, 0.13, 0.075], [-0.3, 0.06, 0.035]] : [[0.5, 0, 0], [0.3, 0.15, 0.065], [0.02, 0.18, 0.075], [-0.28, 0.07, 0.035]];
     const n = 6;
     const ring4 = (x, h2, w) => {
       const r = [];
@@ -63660,28 +63757,45 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       return r;
     };
-    const pos = [];
+    const pos = [], eye = [];
+    const tri = (...v) => {
+      pos.push(...v);
+      eye.push(0, 0, 0);
+    };
     const rings2 = secs.map(([x, h2, w]) => ring4(x, h2, w));
     for (let s = 0; s < rings2.length - 1; s++) {
       const A = rings2[s], B4 = rings2[s + 1];
       for (let i = 0; i < n; i++) {
         const j = (i + 1) % n;
-        pos.push(...A[i], ...B4[i], ...B4[j], ...A[i], ...B4[j], ...A[j]);
+        tri(...A[i], ...B4[i], ...B4[j]);
+        tri(...A[i], ...B4[j], ...A[j]);
       }
     }
-    pos.push(-0.28, 0, 0, -0.52, 0.2, 0, -0.43, 0, 0);
-    pos.push(-0.28, 0, 0, -0.43, 0, 0, -0.52, -0.2, 0);
-    pos.push(0.12, 0.16, 0, -0.14, 0.14, 0, -0.1, 0.3, 0);
-    pos.push(0.05, -0.15, 0, -0.1, -0.13, 0, -0.08, -0.24, 0);
+    const tx = secs[3][0];
+    tri(tx, 0, 0, tx - 0.24, 0.22, 0, tx - 0.15, 0, 0);
+    tri(tx, 0, 0, tx - 0.15, 0, 0, tx - 0.24, -0.22, 0);
+    tri(0.12, 0.14, 0, -0.14, 0.13, 0, -0.1, 0.3, 0);
+    tri(0.05, -0.14, 0, -0.1, -0.12, 0, -0.08, -0.24, 0);
+    if (kind === "flying") {
+      for (const s of [-1, 1]) {
+        tri(0.2, 0.02, s * 0.06, -0.2, 0.02, s * 0.06, -0.05, 0.05, s * 0.62);
+        tri(-0.05, 0.05, s * 0.62, -0.2, 0.02, s * 0.06, -0.3, 0.04, s * 0.4);
+      }
+    }
+    for (const s of [-1, 1]) {
+      sphereInto(pos, eye, 0.31, 0.045, s * 0.055, 0.05, 1);
+      sphereInto(pos, eye, 0.335, 0.05, s * 0.088, 0.026, 2, 5);
+    }
     const g = new BufferGeometry();
     g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    g.setAttribute("aEye", new Float32BufferAttribute(eye, 1));
     g.computeVertexNormals();
     const c = new Float32Array(pos.length);
     for (let i = 0; i < pos.length; i += 3) {
       const x = pos[i], y = pos[i + 1], z = pos[i + 2];
-      const fin3 = Math.abs(z) < 1e-6 && (x < -0.29 || Math.abs(y) > 0.13);
+      const fin3 = Math.abs(z) < 1e-6 && (x < tx - 0.01 || Math.abs(y) > 0.13);
       let k = fin3 ? 0.8 : y < -0.04 ? 1.35 : y > 0.07 ? 0.62 : 1;
-      if (!fin3 && x > 0.26 && x < 0.34 && y > 0.02 && y < 0.1) k = 0.15;
+      if (kind === "flying" && Math.abs(z) > 0.1) k = 1.25;
       c[i] = k;
       c[i + 1] = k;
       c[i + 2] = k;
@@ -63694,99 +63808,185 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const m = new MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient(), side: DoubleSide });
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uTime = uTime3;
-      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uTime;").replace("#include <begin_vertex>", `#include <begin_vertex>
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uTime;\nattribute float aEye;\nvarying float vEye;").replace("#include <begin_vertex>", `#include <begin_vertex>
+      vEye = aEye;
       {
         // the tail beats side to side, the body following through
         float ph = uTime * 11.0 + instanceMatrix[3][0] * 3.7 + instanceMatrix[3][2] * 2.3;
         float b = max(0.0, 0.25 - transformed.x);
         transformed.z += sin(ph - transformed.x * 3.0) * b * b * 0.9;
-      }`).replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * 0.14;");
+      }`);
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vEye;").replace("#include <color_fragment>", "#include <color_fragment>\nif (vEye > 1.5) diffuseColor.rgb = vec3(0.04, 0.03, 0.05); else if (vEye > 0.5) diffuseColor.rgb = vec3(1.0);").replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * 0.14;");
     };
-    m.customProgramCacheKey = () => "fish1";
+    m.customProgramCacheKey = () => "fish2";
     return m;
   }
-  function turtleView(col) {
-    const root2 = new Group();
-    const shell = toon(col), skin = toon("#a8b77a"), dark = toon("#2d3a22"), belly = toon("#d9cf9a");
-    const S3 = new SphereGeometry(1, 14, 10);
-    const add4 = (m, s, p, o = 0.03) => {
-      const x = new Mesh(S3, m);
-      x.scale.set(...s);
-      x.position.set(...p);
-      if (o) addOutline(x, o);
-      root2.add(x);
-      return x;
-    };
-    add4(shell, [0.62, 0.24, 0.5], [0, 0.06, 0]);
-    add4(belly, [0.58, 0.1, 0.46], [0, -0.06, 0], 0);
-    for (const [x, z] of [[0.2, 0], [-0.12, 0], [0.04, 0.22], [0.04, -0.22], [-0.3, 0.14], [-0.3, -0.14]]) add4(dark, [0.12, 0.04, 0.1], [x, 0.26, z], 0);
-    const head = add4(skin, [0.17, 0.13, 0.13], [0.72, 0.04, 0]);
-    add4(dark, [0.03, 0.03, 0.03], [0.83, 0.09, 0.08], 0);
-    add4(dark, [0.03, 0.03, 0.03], [0.83, 0.09, -0.08], 0);
-    const flips = [];
-    for (const [x, z, L2, front] of [[0.32, 0.46, 0.55, 1], [0.32, -0.46, 0.55, 1], [-0.45, 0.32, 0.26, 0], [-0.45, -0.32, 0.26, 0]]) {
-      const hinge = new Group();
-      hinge.position.set(x, 0, z * 0.9);
-      const f = new Mesh(S3, skin);
-      f.scale.set(L2 * 0.42, 0.04, L2);
-      f.position.set(-L2 * 0.25, 0, Math.sign(z) * L2 * 0.75);
-      f.rotation.y = Math.sign(z) * (front ? 0.5 : 0.3);
-      addOutline(f, 0.025);
-      hinge.add(f);
-      root2.add(hinge);
-      flips.push({ hinge, front, side: Math.sign(z) });
-    }
-    return {
-      root: root2,
-      update(t) {
-        for (const f of flips) f.hinge.rotation.x = f.side * (f.front ? Math.sin(t * 1.6) * 0.55 : Math.sin(t * 1.6 + 1.5) * 0.25);
-        head.position.y = 0.04 + Math.sin(t * 0.8) * 0.02;
-      }
-    };
+  var SPH3 = new SphereGeometry(1, 14, 10);
+  var CON = new ConeGeometry(1, 1, 7);
+  CON.translate(0, 0.5, 0);
+  function piece2(root2, geo2, mat, s, p, o = 0.03, r = null) {
+    const x = new Mesh(geo2, mat);
+    x.scale.set(...s);
+    x.position.set(...p);
+    if (r) x.rotation.set(...r);
+    if (o) addOutline(x, o);
+    root2.add(x);
+    return x;
   }
-  function mantaView() {
+  function cartoonEyes(root2, x, y, z, r, iris = "#141018") {
+    const white = toon("#ffffff"), dark = toon(iris);
+    for (const s of [-1, 1]) {
+      piece2(root2, SPH3, white, [r * 0.8, r, r * 0.55], [x, y, s * z], 0.015);
+      piece2(root2, SPH3, dark, [r * 0.42, r * 0.55, r * 0.3], [x + r * 0.25, y, s * (z + r * 0.35)], 0);
+    }
+  }
+  function elephantView(col) {
     const root2 = new Group();
-    const top = toon("#2f3844"), under = toon("#e8ecef");
-    const S3 = new SphereGeometry(1, 14, 8);
-    const body = new Mesh(S3, top);
-    body.scale.set(0.55, 0.12, 0.45);
-    addOutline(body, 0.02);
-    root2.add(body);
-    const b2 = new Mesh(S3, under);
-    b2.scale.set(0.5, 0.08, 0.4);
-    b2.position.y = -0.05;
-    root2.add(b2);
-    const wingGeo = new BufferGeometry();
-    wingGeo.setAttribute("position", new Float32BufferAttribute([0.45, 0, 0, -0.35, 0, 0, -0.05, 0, 1.25, 0.45, 0, 0, -0.05, 0, 1.25, -0.35, 0, 0], 3));
-    wingGeo.computeVertexNormals();
-    const wings = [];
-    for (const s of [1, -1]) {
+    const back = toon(col), belly = toon("#dfe7ee"), grey = toon("#8c8f98"), greyD = toon("#6c6f78"), yellow = toon("#f2c230"), ivory = toon("#f3ead2");
+    piece2(root2, SPH3, back, [0.55, 0.2, 0.17], [0, 0.02, 0], 0.025);
+    piece2(root2, SPH3, belly, [0.5, 0.13, 0.14], [0.02, -0.07, 0], 0);
+    for (let i = 0; i < 5; i++) {
+      piece2(root2, CON, yellow, [0.018, 0.06, 0.012], [-0.22 - i * 0.055, 0.16 - i * 0.01, 0], 0);
+      piece2(root2, CON, yellow, [0.018, 0.06, 0.012], [-0.22 - i * 0.055, -0.13 + i * 0.01, 0], 0, [Math.PI, 0, 0]);
+    }
+    cartoonEyes(root2, 0.4, 0.06, 0.1, 0.04);
+    const ears = [];
+    for (const s of [-1, 1]) {
       const hinge = new Group();
-      hinge.position.set(0, 0, s * 0.35);
-      const w = new Mesh(wingGeo, new MeshToonMaterial({ color: "#2f3844", gradientMap: toonGradient(), side: DoubleSide }));
-      w.scale.z = s;
-      hinge.add(w);
+      hinge.position.set(0.3, 0.05, s * 0.14);
+      piece2(hinge, SPH3, grey, [0.11, 0.13, 0.02], [-0.06, 0, s * 0.06], 0.015, [0, s * 0.5, 0]);
       root2.add(hinge);
-      wings.push({ hinge, s });
+      ears.push({ hinge, s });
+      piece2(root2, CON, ivory, [0.014, 0.08, 0.014], [0.5, -0.05, s * 0.045], 0, [0, 0, -2.2]);
     }
-    for (const s of [1, -1]) {
-      const f = new Mesh(S3, top);
-      f.scale.set(0.16, 0.04, 0.05);
-      f.position.set(0.58, 0, s * 0.18);
-      root2.add(f);
-    }
-    const tail2 = new Mesh(new CylinderGeometry(0.012, 0.02, 1.1, 5), top);
-    tail2.rotation.z = Math.PI / 2;
-    tail2.position.set(-1.05, 0, 0);
+    const trunk2 = [];
+    for (let i = 0; i < 5; i++) trunk2.push(piece2(root2, SPH3, i % 2 ? greyD : grey, [0.045 - i * 5e-3, 0.045 - i * 5e-3, 0.045 - i * 5e-3], [0.55, 0, 0], 0.01));
+    const tail2 = new Group();
+    tail2.position.set(-0.5, 0.02, 0);
     root2.add(tail2);
+    piece2(tail2, SPH3, back, [0.12, 0.05, 0.04], [-0.06, 0, 0], 0.015);
+    piece2(tail2, CON, back, [0.03, 0.26, 0.02], [-0.12, 0, 0], 0.015, [0, 0, 0.6]);
+    piece2(tail2, CON, back, [0.03, 0.26, 0.02], [-0.12, 0, 0], 0.015, [0, 0, Math.PI - 0.6]);
     return {
       root: root2,
       update(t) {
-        for (const w of wings) w.hinge.rotation.x = w.s * Math.sin(t * 1.1) * 0.45;
-        root2.children[0].position.y = Math.sin(t * 1.1 + 1) * 0.03;
+        tail2.rotation.y = Math.sin(t * 5) * 0.4;
+        for (const e of ears) e.hinge.rotation.x = e.s * (0.2 + Math.sin(t * 2.2) * 0.25);
+        for (let i = 0; i < trunk2.length; i++) {
+          const a = -0.6 - i * 0.35 + Math.sin(t * 1.7 - i * 0.6) * 0.25;
+          const prev = i ? trunk2[i - 1].position : { x: 0.55, y: -0.01 };
+          trunk2[i].position.set(prev.x + Math.cos(a) * 0.055, prev.y + Math.sin(a) * 0.055, Math.sin(t * 1.3 + i) * 0.01 * i);
+        }
       }
     };
   }
+  function serpentView(col) {
+    const root2 = new Group();
+    const body = toon(col), belly = toon("#f3e7c9"), horn = toon("#f3ead2"), red = toon("#d32f2f");
+    const head = new Group();
+    root2.add(head);
+    piece2(head, SPH3, body, [0.2, 0.12, 0.13], [0, 0, 0], 0.02);
+    piece2(head, SPH3, belly, [0.16, 0.06, 0.1], [0.04, -0.06, 0], 0);
+    for (const s of [-1, 1]) {
+      piece2(head, CON, horn, [0.025, 0.16, 0.025], [-0.08, 0.08, s * 0.07], 0.01, [s * 0.5, 0, 0.9]);
+      piece2(head, SPH3, toon("#ffffff"), [0.035, 0.035, 0.025], [0.1, 0.05, s * 0.09], 0.01);
+      piece2(head, SPH3, red, [0.016, 0.028, 0.012], [0.115, 0.05, s * 0.105], 0);
+    }
+    const segs = [];
+    for (let i = 0; i < 8; i++) {
+      const r = 0.1 * (1 - i * 0.085);
+      const g = new Group();
+      root2.add(g);
+      piece2(g, SPH3, body, [r * 1.25, r, r], [0, 0, 0], 0.015);
+      if (i % 2 === 0 && i < 7) piece2(g, CON, i % 4 ? body : red, [r * 0.3, r * 1.1, r * 0.12], [0, r * 0.7, 0], 0);
+      segs.push(g);
+    }
+    return {
+      root: root2,
+      update(t) {
+        head.position.set(0.02, Math.sin(t * 1.3) * 0.02, Math.sin(t * 3) * 0.05);
+        for (let i = 0; i < segs.length; i++) segs[i].position.set(-0.17 - i * 0.16, Math.sin(t * 1.3 - i * 0.4) * 0.02, Math.sin(t * 3 - (i + 1) * 0.75) * 0.08 * (0.6 + i * 0.12));
+      }
+    };
+  }
+  function seaCatView(col) {
+    const root2 = new Group();
+    const fur = toon(col), stripe = toon("#a8602a"), cream = toon("#f6e3c4"), pink = toon("#f29aa9"), dark = toon("#2a1d14");
+    piece2(root2, SPH3, fur, [0.55, 0.26, 0.28], [0, 0, 0], 0.025);
+    piece2(root2, SPH3, cream, [0.45, 0.14, 0.22], [0.05, -0.13, 0], 0);
+    for (let i = 0; i < 4; i++) piece2(root2, SPH3, stripe, [0.035, 0.2, 0.29], [0.25 - i * 0.16, 0.06, 0], 0);
+    const head = new Group();
+    head.position.set(0.6, 0.12, 0);
+    root2.add(head);
+    piece2(head, SPH3, fur, [0.25, 0.23, 0.26], [0, 0, 0], 0.025);
+    piece2(head, SPH3, cream, [0.13, 0.1, 0.16], [0.17, -0.07, 0], 0.015);
+    piece2(head, SPH3, pink, [0.035, 0.028, 0.04], [0.29, -0.02, 0], 0);
+    for (const s of [-1, 1]) {
+      piece2(head, CON, fur, [0.09, 0.16, 0.05], [-0.02, 0.17, s * 0.13], 0.015, [s * -0.25, 0, 0]);
+      piece2(head, CON, pink, [0.05, 0.1, 0.02], [0, 0.18, s * 0.13], 0, [s * -0.25, 0, 0]);
+      piece2(head, SPH3, toon("#d9f06a"), [0.05, 0.06, 0.03], [0.17, 0.07, s * 0.12], 0.012);
+      piece2(head, SPH3, dark, [0.014, 0.05, 0.02], [0.195, 0.07, s * 0.135], 0);
+      for (const k of [-1, 0, 1]) piece2(head, SPH3, toon("#ffffff"), [0.12, 4e-3, 4e-3], [0.22, -0.05 + k * 0.02, s * 0.14], 0, [0, s * 0.35, k * 0.12]);
+    }
+    const paws = [];
+    for (const s of [-1, 1]) {
+      const h2 = new Group();
+      h2.position.set(0.35, -0.12, s * 0.2);
+      piece2(h2, SPH3, fur, [0.07, 0.16, 0.07], [0.04, -0.1, 0], 0.015);
+      piece2(h2, SPH3, cream, [0.075, 0.05, 0.075], [0.06, -0.24, 0], 0);
+      root2.add(h2);
+      paws.push({ h: h2, s });
+    }
+    const tail2 = new Group();
+    tail2.position.set(-0.52, 0.02, 0);
+    root2.add(tail2);
+    piece2(tail2, SPH3, fur, [0.22, 0.12, 0.12], [-0.12, 0, 0], 0.02);
+    piece2(tail2, SPH3, stripe, [0.1, 0.03, 0.26], [-0.34, 0, 0], 0.02);
+    return {
+      root: root2,
+      update(t) {
+        for (const p of paws) p.h.rotation.z = Math.sin(t * 2.4 + (p.s > 0 ? 0 : Math.PI)) * 0.7;
+        tail2.rotation.z = Math.sin(t * 1.6) * 0.3;
+        head.rotation.z = Math.sin(t * 0.8) * 0.06;
+      }
+    };
+  }
+  function yagaraView(col) {
+    const root2 = new Group();
+    const skin = toon(col), belly = toon("#fbe3d6"), horn = toon("#f3ead2"), fin3 = toon("#e0795f"), dark = toon("#3a1f1a");
+    const saddle = toon("#6d4c33"), cloth = toon("#c0392b");
+    piece2(root2, SPH3, skin, [0.3, 0.3, 0.26], [0, 0, 0], 0.025);
+    piece2(root2, SPH3, belly, [0.22, 0.24, 0.2], [0.06, -0.06, 0], 0);
+    const head = new Group();
+    head.position.set(0.3, 0.26, 0);
+    root2.add(head);
+    piece2(head, SPH3, skin, [0.27, 0.24, 0.25], [0, 0, 0], 0.025);
+    piece2(head, SPH3, belly, [0.16, 0.12, 0.18], [0.16, -0.09, 0], 0.015);
+    piece2(head, SPH3, dark, [0.1, 0.02, 0.13], [0.24, -0.1, 0], 0);
+    cartoonEyes(head, 0.14, 0.07, 0.15, 0.08, "#2a1d14");
+    for (const s of [-1, 1]) piece2(head, CON, horn, [0.035, 0.14, 0.035], [-0.05, 0.18, s * 0.14], 0.012, [s * 0.5, 0, -0.3]);
+    piece2(root2, SPH3, cloth, [0.2, 0.03, 0.27], [-0.02, 0.26, 0], 0.012);
+    piece2(root2, SPH3, saddle, [0.14, 0.06, 0.18], [-0.02, 0.3, 0], 0.012);
+    const tail2 = [];
+    for (let i = 0; i < 6; i++) tail2.push(piece2(root2, SPH3, i % 2 ? skin : fin3, [0.09 - i * 0.012, 0.09 - i * 0.012, 0.09 - i * 0.012], [0, 0, 0], 0.012));
+    const fins = [];
+    for (const s of [-1, 1]) fins.push(piece2(root2, SPH3, fin3, [0.1, 0.03, 0.07], [0.05, 0.02, s * 0.27], 0.012));
+    piece2(root2, CON, fin3, [0.1, 0.18, 0.02], [-0.12, 0.26, 0], 0.012, [0, 0, 0.5]);
+    return {
+      root: root2,
+      update(t) {
+        root2.children[0].position.y = Math.sin(t * 1.4) * 0.02;
+        head.rotation.z = Math.sin(t * 1.1) * 0.08;
+        for (let i = 0; i < tail2.length; i++) {
+          const a = -Math.PI / 2 - i * 0.75 + Math.sin(t * 1.5) * 0.15;
+          const prev = i ? tail2[i - 1].position : { x: -0.2, y: -0.2 };
+          tail2[i].position.set(prev.x + Math.cos(a) * 0.1, prev.y + Math.sin(a) * 0.1, 0);
+        }
+        for (let i = 0; i < fins.length; i++) fins[i].rotation.x = (i ? 1 : -1) * Math.sin(t * 6) * 0.4;
+      }
+    };
+  }
+  var VIEWS2 = { elephant: elephantView, serpent: serpentView, seacat: seaCatView, yagara: yagaraView };
   function snow() {
     const N4 = 900, B4 = 26;
     const base2 = new Float32Array(N4 * 3), pos = new Float32Array(N4 * 3);
@@ -63885,12 +64085,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.group = new Group();
       this.group.name = "sealife";
       scene.add(this.group);
-      this.fish = new InstancedMesh(fishGeo(), fishMaterial(), MAX_FISH);
-      this.fish.instanceMatrix.setUsage(DynamicDrawUsage);
-      this.fish.instanceColor = new InstancedBufferAttribute(new Float32Array(MAX_FISH * 3), 3);
-      this.fish.frustumCulled = false;
-      this.fish.count = 0;
-      this.group.add(this.fish);
+      const mat = fishMaterial();
+      this.shoals = {};
+      for (const kind of ["fish", "flying"]) {
+        const m = new InstancedMesh(fishGeo(kind), mat, MAX_FISH);
+        m.instanceMatrix.setUsage(DynamicDrawUsage);
+        m.instanceColor = new InstancedBufferAttribute(new Float32Array(MAX_FISH * 3), 3);
+        m.frustumCulled = false;
+        m.count = 0;
+        this.group.add(m);
+        this.shoals[kind] = m;
+      }
       this.critters = /* @__PURE__ */ new Map();
       this.snow = snow();
       this.snow.pts.visible = false;
@@ -63911,38 +64116,45 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (!w || !v) return;
       uTime3.value = env.time;
       const ox = v.ox, oy = v.oy;
-      let n = 0;
+      const count2 = { fish: 0, flying: 0 };
       const seen = /* @__PURE__ */ new Set();
       if (S3) {
         for (const s of S3.schools) {
-          if (s.def.critter) {
+          if (VIEWS2[s.def.shape]) {
             seen.add(s);
-            this.critter(s, w, ox, oy, env, S3);
+            this.animals(s, w, ox, oy, env, S3);
             continue;
           }
+          const kind = s.def.shape === "flying" ? "flying" : "fish", mesh = this.shoals[kind];
+          const deep = s.def.shape === "reef" ? 1.55 : 1;
           for (const f of s.fish) {
-            if (!f.alive || n >= MAX_FISH) continue;
+            if (!f.alive || count2[kind] >= MAX_FISH) continue;
             S3.fishPos(s, f, this.P);
             const dx = w.dx(ox, this.P.x), dz = this.P.y - oy;
             if (dx * dx + dz * dz > 60 * 60) continue;
             this.p.set(dx, -this.P.z, dz);
-            const yaw = -(s.hd + Math.sin(env.time * 0.9 + f.ph) * 0.35 * Math.sign(f.w));
-            this.e.set(0, yaw, Math.sin(env.time * 0.6 + f.ph) * 0.12);
+            const leap = this.P.leap || 0;
+            const yaw = -(s.hd + (leap ? 0 : Math.sin(env.time * 0.9 + f.ph) * 0.35 * Math.sign(f.w)));
+            const pitch = leap ? leap < 0.4 ? 0.6 : -0.25 : Math.sin(env.time * 0.6 + f.ph) * 0.12;
+            this.e.set(0, yaw, pitch);
             this.q.setFromEuler(this.e);
-            this.s.setScalar(f.size * (s.def.size > 0.6 ? 1 : 1));
+            this.s.set(f.size, f.size * deep, f.size);
             this.m4.compose(this.p, this.q, this.s);
-            this.fish.setMatrixAt(n, this.m4);
+            mesh.setMatrixAt(count2[kind], this.m4);
             this.col.set(f.col);
-            this.fish.setColorAt(n, this.col);
-            n++;
+            mesh.setColorAt(count2[kind], this.col);
+            count2[kind]++;
           }
         }
       }
-      this.fish.count = n;
-      this.fish.instanceMatrix.needsUpdate = true;
-      if (this.fish.instanceColor) this.fish.instanceColor.needsUpdate = true;
-      for (const [s, view] of this.critters) if (!seen.has(s)) {
-        view.root.removeFromParent();
+      for (const kind in this.shoals) {
+        const m = this.shoals[kind];
+        m.count = count2[kind];
+        m.instanceMatrix.needsUpdate = true;
+        if (m.instanceColor) m.instanceColor.needsUpdate = true;
+      }
+      for (const [s, views2] of this.critters) if (!seen.has(s)) {
+        for (const v2 of views2) v2.root.removeFromParent();
         this.critters.delete(s);
       }
       const under = !!v.isUnder;
@@ -63961,19 +64173,27 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.rays.group.position.set(cam.position.x, 0, cam.position.z);
       }
     }
-    critter(s, w, ox, oy, env, S3) {
-      let view = this.critters.get(s);
-      if (!view) {
-        view = s.kind === "manta" ? mantaView() : turtleView(s.def.colors[0]);
-        view.root.scale.setScalar(s.def.size);
-        this.group.add(view.root);
-        this.critters.set(s, view);
+    /** The bigger animals: a model each (a trunked tuna, a baby Sea King, a Sea Cat, a Yagara Bull). */
+    animals(s, w, ox, oy, env, S3) {
+      let views2 = this.critters.get(s);
+      if (!views2) {
+        views2 = s.fish.map((f) => {
+          const v = VIEWS2[s.def.shape](f.col || s.def.colors[0]);
+          v.root.scale.setScalar(f.size || s.def.size);
+          this.group.add(v.root);
+          return v;
+        });
+        this.critters.set(s, views2);
       }
-      const f = s.fish[0];
-      S3.fishPos(s, f, this.P);
-      view.root.position.set(w.dx(ox, this.P.x), -this.P.z, this.P.y - oy);
-      view.root.rotation.set(0, -s.hd, 0);
-      view.update(env.time + (s.seed || 0));
+      s.fish.forEach((f, i) => {
+        const v = views2[i];
+        v.root.visible = f.alive;
+        if (!f.alive) return;
+        S3.fishPos(s, f, this.P);
+        v.root.position.set(w.dx(ox, this.P.x), -this.P.z, this.P.y - oy);
+        v.root.rotation.set(0, -(s.hd + (s.fish.length > 1 ? Math.sin(env.time * 0.7 + f.ph) * 0.25 : 0)), 0);
+        v.update(env.time + (s.seed || 0) + i * 1.7);
+      });
     }
   };
   var life = null;
@@ -79810,7 +80030,7 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       h("h3", "Sailing"),
       h("p", "W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings \u2014 the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle."),
       h("h3", "The sea"),
-      h("p", "Swim anywhere \u2014 but swimming tires you. Run out of stamina while you keep swimming and you start to go under and drown; stop and tread water to get your breath back. Dive with C (or look down and swim) to explore the reefs, kelp forests and the dark deep water in the middle of the ocean; bubbles under your stamina show how long you can hold your breath. Grab fish with an attack as they swim past, prise giant clams open for pearls, and watch out for sharks past the reef. Fish-Men swim fast and breathe water. Devil Fruit users cannot swim at all: the sea drags them down, and they come out of it weak \u2014 keep a crewmate close to haul you out, or grab a line thrown from your ship."),
+      h("p", "Swim anywhere \u2014 but swimming tires you. Run out of stamina while you keep swimming and you start to go under and drown; stop and tread water to get your breath back. Dive with C (or look down and swim) to explore the reefs, kelp forests and the dark deep water in the middle of the ocean; bubbles under your stamina show how long you can hold your breath. Grab fish with an attack as they swim past, prise giant clams open for pearls, and watch out past the reef: Sea Cows hunt swimmers in the Blues, and horned Fighting Fish in the Grand Line. Fish-Men swim fast and breathe water. Devil Fruit users cannot swim at all: the sea drags them down, and they come out of it weak \u2014 keep a crewmate close to haul you out, or grab a line thrown from your ship."),
       h("h3", "Ships, raids and being wanted"),
       h("p", "Other ships sail the seas: merchantmen and fishing boats, Marine patrols, and pirates who will come about to attack you. Fire on a merchant and she may heave to; come alongside (or swim up to her hull) and press E to board and raid her. Beat the crew on her deck, plunder the hold at the hatch, then take her wheel to steal her \u2014 she joins your fleet. At your own wheel, E leaves the helm so you can walk your deck (jump over the rail for a swim). Raiding or stealing from anyone but pirates is piracy, and your bounty grows. A small bounty goes unnoticed, but once your poster is worth something the Marines know your face on sight \u2014 a hood hides it, until you fight or steal in it."),
       h("h3", "Crossing the Red Line"),
@@ -85097,19 +85317,22 @@ Trains by: ${TRAINS_BY[k]}` },
 
   // src/game/sealife.js
   var FISH = {
-    sardine: { name: "sardines", n: [16, 26], size: 0.17, speed: 2.3, spread: 1.7, colors: ["#c9d6df", "#b7c7d3"], item: "fresh_fish", warm: [0.25, 1], depth: [1.2, 30], catch: 0.8, w: 3 },
-    herring: { name: "herring", n: [16, 26], size: 0.2, speed: 2.3, spread: 1.8, colors: ["#aab9c4", "#9fb0bd"], item: "fresh_fish", warm: [0, 0.5], depth: [1.5, 40], catch: 0.8, w: 3 },
-    reef: { name: "reef fish", n: [6, 11], size: 0.2, speed: 1.3, spread: 1.4, colors: ["#ffd23f", "#3fa7ff", "#ff8a3d", "#b37bff", "#ff5d8f", "#4fe0c0"], item: "fresh_fish", warm: [0.55, 1], depth: [0.8, 16], catch: 0.75, reef: true, w: 4 },
-    snapper: { name: "snapper", n: [4, 7], size: 0.36, speed: 1.6, spread: 1.4, colors: ["#e2574c", "#f08a5d"], item: "fresh_fish", warm: [0.4, 1], depth: [3, 30], catch: 0.6, low: true, w: 2 },
-    cod: { name: "cod", n: [4, 7], size: 0.46, speed: 1.3, spread: 1.4, colors: ["#8d9270", "#a09a78"], item: "fresh_fish", warm: [0, 0.55], depth: [4, 60], catch: 0.6, low: true, w: 2 },
-    tuna: { name: "tuna", n: [3, 6], size: 0.75, speed: 3.2, spread: 2.2, colors: ["#3f5f86", "#35557a"], item: "tuna", warm: [0.3, 1], depth: [6, 60], catch: 0.35, w: 1.2 },
-    turtle: { name: "a sea turtle", n: [1, 1], size: 1, speed: 0.8, spread: 0, colors: ["#6f8a4a"], warm: [0.5, 1], depth: [2, 18], critter: true, w: 0.5 },
-    manta: { name: "a manta ray", n: [1, 1], size: 1.7, speed: 1.1, spread: 0, colors: ["#3a4452"], warm: [0.6, 1], depth: [6, 40], critter: true, w: 0.35 }
+    reef: { name: "reef fish", n: [6, 11], size: 0.22, speed: 1.3, spread: 1.4, colors: ["#ffd23f", "#3fa7ff", "#ff8a3d", "#b37bff", "#ff5d8f", "#4fe0c0"], item: "fresh_fish", warm: [0.55, 1], depth: [0.8, 16], catch: 0.75, reef: true, w: 4, shape: "reef" },
+    sardine: { name: "sardines", n: [16, 26], size: 0.17, speed: 2.3, spread: 1.7, colors: ["#c9d6df", "#b7c7d3", "#aab9c4"], item: "fresh_fish", warm: [0, 1], depth: [1.2, 40], catch: 0.8, w: 3, shape: "fish" },
+    flying: { name: "flying fish", n: [8, 14], size: 0.34, speed: 3.2, spread: 2.2, colors: ["#3f7fc0", "#5a9fd8"], item: "fresh_fish", warm: [0.3, 1], depth: [1, 30], catch: 0.6, w: 2.5, shape: "flying", leap: true },
+    elephant: { name: "Elephant Honmaguro", n: [1, 3], size: 1.9, speed: 2.4, spread: 3.2, colors: ["#35557a", "#2f4d78"], item: "elephant_tuna", warm: [0.15, 1], depth: [6, 70], catch: 0.25, w: 1, shape: "elephant" },
+    seaking_fry: { name: "baby Sea Kings", n: [2, 4], size: 1.5, speed: 1.7, spread: 2.6, colors: ["#2e7d32", "#6a1b9a", "#c62828", "#00838f", "#ef6c00"], warm: [0, 1], depth: [8, 80], w: 1.4, shape: "serpent", grandLine: true, wild: true },
+    seacat: { name: "a Sea Cat", n: [1, 1], size: 1.7, speed: 0.9, spread: 0, colors: ["#e8a45c"], warm: [0.6, 1], depth: [2, 26], critter: true, w: 0.5, shape: "seacat" },
+    yagara: { name: "a Yagara Bull", n: [1, 1], size: 1.2, speed: 1, spread: 0, colors: ["#f2a38a"], warm: [0.3, 0.95], depth: [1.5, 18], critter: true, w: 0.5, shape: "yagara" }
   };
   var MAX_SCHOOLS = 7;
   var P3 = { x: 0, y: 0, z: 0 };
   function installSeaLife(game) {
-    const S3 = game.seaLife = { schools: [], t: 0, spawnT: 1, sharkT: 30, lastAct: null, fishPos: (s, f, out) => fishPos(s, f, S3.t, out), shark: (x, y, lvl = 10) => game.addActor(makeShark(game, x, y, lvl)) };
+    const S3 = game.seaLife = { schools: [], t: 0, spawnT: 1, sharkT: 30, lastAct: null, fishPos: (s, f, out) => fishPos(s, f, S3.t, out), shark: (x, y, lvl = 10, kind = null) => game.addActor(makeShark(game, x, y, lvl, kind)), spawn: (kind, x, y, z, hd = 0) => {
+      const s = makeSchool(kind, x, y, z, hd);
+      S3.schools.push(s);
+      return s;
+    } };
     game.on("tick", (dt) => tick3(game, S3, dt));
     game.on("characterStart", () => {
       S3.schools.length = 0;
@@ -85130,12 +85353,25 @@ Trains by: ${TRAINS_BY[k]}` },
   function fishPos(s, f, t, out) {
     const a = f.ph + t * f.w;
     const k = s.scare > 0 ? 0.55 : 1;
-    const lx = f.lead + Math.cos(a) * f.r * k, ly = Math.sin(a * 1.3) * f.r * 0.7 * k, lz = Math.sin(a * 0.7 + f.ph) * f.r * 0.35 * k;
+    let lx = f.lead + Math.cos(a) * f.r * k;
+    const ly = Math.sin(a * 1.3) * f.r * 0.7 * k, lz = Math.sin(a * 0.7 + f.ph) * f.r * 0.35 * k;
+    out.leap = 0;
+    if (s.def.leap && s.z < 2.5) {
+      const L2 = leapOf(f, t);
+      if (L2 > 0) {
+        out.leap = L2;
+        lx += Math.sin(L2 * Math.PI * 0.5) * 3.5;
+      }
+    }
     const ch = Math.cos(s.hd), sh = Math.sin(s.hd);
     out.x = s.x + lx * ch - ly * sh;
     out.y = s.y + lx * sh + ly * ch;
-    out.z = Math.max(0.3, s.z + lz);
+    out.z = out.leap > 0 ? s.z * (1 - Math.min(1, out.leap * 4)) - Math.sin(out.leap * Math.PI) * 1.3 : Math.max(0.3, s.z + lz);
     return out;
+  }
+  function leapOf(f, t) {
+    const period = 7 + f.ph % 1 * 5, q2 = (t + f.ph * 11) % period / period;
+    return q2 < 0.16 ? q2 / 0.16 : 0;
   }
   function tick3(game, S3, dt) {
     const p = game.player, w = game.world;
@@ -85187,7 +85423,8 @@ Trains by: ${TRAINS_BY[k]}` },
       const depth = game.seaDepth(x, y);
       if (depth < 1.6) continue;
       const warm = warmth(w, x, y);
-      const fits = Object.entries(FISH).filter(([, d]) => warm >= d.warm[0] && warm <= d.warm[1] && depth >= d.depth[0] + 0.5 && (!d.reef || depth < 18) && (!d.critter || critters < 2));
+      const grand = isGrandLine(regionAt(x, y)) || isCalmBelt(regionAt(x, y));
+      const fits = Object.entries(FISH).filter(([, d]) => warm >= d.warm[0] && warm <= d.warm[1] && depth >= d.depth[0] + 0.5 && (!d.reef || depth < 18) && (!d.critter || critters < 2) && (!d.grandLine || grand));
       if (!fits.length) continue;
       let tot = 0;
       for (const [, d] of fits) tot += d.w;
@@ -85200,25 +85437,29 @@ Trains by: ${TRAINS_BY[k]}` },
         }
       }
       const def = FISH[kind];
-      const n = def.n[0] + Math.floor(Math.random() * (def.n[1] - def.n[0] + 1));
-      const hd = Math.random() * TAU;
       const z = clamp(def.low ? depth - 1 : def.depth[0] + Math.random() * Math.min(depth - def.depth[0], 8), 0.5, Math.max(0.5, depth - 0.6));
-      const col = def.colors[Math.floor(Math.random() * def.colors.length)];
-      const fish = [];
-      for (let i = 0; i < n; i++) {
-        fish.push({
-          lead: (Math.random() - 0.5) * 2 * def.spread,
-          r: 0.15 + Math.random() * def.spread * 0.6,
-          ph: Math.random() * TAU,
-          w: (0.25 + Math.random() * 0.35) * (Math.random() < 0.5 ? -1 : 1),
-          size: def.size * (0.8 + Math.random() * 0.4),
-          col: def.reef ? def.colors[Math.floor(Math.random() * def.colors.length)] : col,
-          alive: true
-        });
-      }
-      S3.schools.push({ kind, def, x, y, z, hd, want: hd, wantZ: z, scare: 0, turnT: 2, alive: true, fish, seed: Math.random() * 100 });
+      S3.schools.push(makeSchool(kind, x, y, z, Math.random() * TAU));
       return;
     }
+  }
+  function makeSchool(kind, x, y, z, hd) {
+    const def = FISH[kind];
+    const n = def.n[0] + Math.floor(Math.random() * (def.n[1] - def.n[0] + 1));
+    const col = def.colors[Math.floor(Math.random() * def.colors.length)];
+    const fish = [];
+    for (let i = 0; i < n; i++) {
+      fish.push({
+        lead: (Math.random() - 0.5) * 2 * def.spread,
+        r: 0.15 + Math.random() * def.spread * 0.6,
+        ph: Math.random() * TAU,
+        w: (0.25 + Math.random() * 0.35) * (Math.random() < 0.5 ? -1 : 1),
+        size: def.size * (0.8 + Math.random() * 0.4),
+        col: def.reef || def.shape === "serpent" ? def.colors[Math.floor(Math.random() * def.colors.length)] : col,
+        alive: true
+      });
+    }
+    const z2 = def.leap ? Math.min(z, 1.1) : z;
+    return { kind, def, x, y, z: z2, hd, want: hd, wantZ: z2, scare: 0, turnT: 2, alive: true, fish, seed: Math.random() * 100 };
   }
   function updateSchool(game, s, dt, p) {
     const w = game.world, def = s.def;
@@ -85236,10 +85477,10 @@ Trains by: ${TRAINS_BY[k]}` },
     }
     const dx = w.dx(p.x, s.x), dy = s.y - p.y, dz = s.z - (p.depth || 0);
     const pd = Math.hypot(dx, dy, dz);
-    const wary = def.critter ? 2.5 : s.scare > 0 ? 7 : p.intent?.sprint || p.action ? 4 : 2.2;
+    const wary = def.critter || def.wild ? 3 : s.scare > 0 ? 7 : p.intent?.sprint || p.action ? 4 : 2.2;
     if (p.inWater && pd < wary) {
       s.want = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.3;
-      if (!def.critter) s.scare = Math.max(s.scare, 1.2);
+      if (!def.critter && !def.wild) s.scare = Math.max(s.scare, 1.2);
     }
     s.scare = Math.max(0, s.scare - dt);
     s.hd += clamp(angleDiff(s.hd, s.want), -1.2, 1.2) * dt * (s.scare > 0 ? 4 : 1.1);
@@ -85253,6 +85494,7 @@ Trains by: ${TRAINS_BY[k]}` },
     const zmax = Math.max(0.5, floor - (def.low ? 0.45 : def.critter ? 0.8 : 0.9));
     const zmin = Math.min(zmax, Math.max(0.5, def.depth[0] * 0.6));
     if (def.low) s.wantZ = zmax;
+    if (def.leap) s.wantZ = Math.min(s.wantZ, 1.3);
     s.wantZ = clamp(s.wantZ, zmin, Math.min(def.depth[1], zmax));
     s.z += clamp(s.wantZ - s.z, -1, 1) * dt * 0.7;
     s.z = clamp(s.z, 0.35, zmax);
@@ -85265,7 +85507,7 @@ Trains by: ${TRAINS_BY[k]}` },
     const hz = (p.depth || 0) + 0.35;
     let best = null, bd = 1e9;
     for (const s2 of S3.schools) {
-      if (s2.def.critter) continue;
+      if (s2.def.critter || !s2.def.item) continue;
       for (const f2 of s2.fish) {
         if (!f2.alive) continue;
         fishPos(s2, f2, S3.t, P3);
@@ -85287,13 +85529,13 @@ Trains by: ${TRAINS_BY[k]}` },
     if (Math.random() < chance) {
       f.alive = false;
       addItem(game, s.def.item, 1);
-      game.log(s.def.item === "tuna" ? "You wrestle a big bluefin tuna out of the shoal!" : `You snatch one of the ${s.def.name} out of the water.`, "#81d4fa");
+      game.log(s.def.item === "elephant_tuna" ? "You wrestle an Elephant Honmaguro out of the sea \u2014 trunk, ears and all!" : `You snatch one of the ${s.def.name} out of the water.`, "#81d4fa");
       game.fx.burst(best.x, best.y, 10, { color: ["#e1f5fe", "#b3e5fc"], speed: 2, vz: 2, g: -1, life: 0.6, size: 0.08, kind: "bubble" });
       game.audio?.sfx("splash");
       game.progression?.train?.("agi", 0.4);
       if (!S3.caughtHint) {
         S3.caughtHint = true;
-        game.hint?.("fishing", "Fish you catch go in your bag \u2014 eat them for health and stamina, or sell them. Tuna out in the deep blue are worth much more.");
+        game.hint?.("fishing", "Fish you catch go in your bag \u2014 eat them for health and stamina, or sell them. An Elephant Honmaguro from the deep blue is worth a fortune to a cook.");
       }
     } else if (!S3.missLog || game.time - S3.missLog > 6) {
       S3.missLog = game.time;
@@ -85339,6 +85581,36 @@ Trains by: ${TRAINS_BY[k]}` },
     }
     game.fx.burst(cl.x, cl.y, 14, { color: ["#e1f5fe", "#b3e5fc"], speed: 2, vz: 2.5, g: -1, life: 0.8, size: 0.08, kind: "bubble" });
   }
+  var HUNTERS = {
+    seacow: {
+      name: "Sea Cow",
+      big: "Great Sea Cow",
+      title: "Greedy glutton of the Blues",
+      race: "beast_seacow",
+      color: "#8e7ca8",
+      hpMul: 1.8,
+      bite: 12,
+      r: 1.05,
+      scale: 1.25,
+      flees: true,
+      arrive: "Something huge surfaces with a snort... a Sea Cow!",
+      hint: "Sea Cows hunt swimmers in the Blues. Hit it hard enough and it will bolt \u2014 or get out of the water."
+    },
+    fightfish: {
+      name: "Fighting Fish",
+      big: "Giant Fighting Fish",
+      title: "Horned terror of the Grand Line",
+      race: "beast_fightfish",
+      color: "#324a7a",
+      hpMul: 1.4,
+      bite: 16,
+      r: 0.9,
+      scale: 1.2,
+      horn: true,
+      arrive: "A horn slices through the water toward you... a Fighting Fish!",
+      hint: "Fighting Fish charge swimmers horn-first in the Grand Line. Dodge the charge, then strike \u2014 or get out of the water."
+    }
+  };
   function sharks(game, S3, dt, p) {
     const w = game.world;
     const reg3 = regionAt(p.x, p.y);
@@ -85350,55 +85622,64 @@ Trains by: ${TRAINS_BY[k]}` },
     S3.sharkT -= dt;
     if (S3.sharkT > 0) return;
     S3.sharkT = 45 + Math.random() * 50;
-    if (warmth(w, p.x, p.y) < 0.3 || Math.random() > 0.55) return;
+    if (Math.random() > 0.55) return;
     const count2 = game.actors.filter((a) => a.alive && a.shark).length;
     if (count2 >= 2) return;
+    const kind = isGrandLine(reg3) ? "fightfish" : "seacow";
     for (let tries = 0; tries < 8; tries++) {
       const a = Math.random() * TAU;
       const x = w.wx(p.x + Math.cos(a) * 22), y = p.y + Math.sin(a) * 22;
       if (!w.isLiquid(x, y) || w.isOverlay(x, y) || game.seaDepth(x, y) < 3) continue;
       const lvl = reg3 === REGION.NEW_WORLD ? 55 : isGrandLine(reg3) ? 30 : reg3 === REGION.EAST_BLUE ? 7 : 14;
-      const k = game.addActor(makeShark(game, x, y, lvl));
-      game.log("A fin cuts through the water nearby... a shark!", "#ff8a80");
+      const k = game.addActor(makeShark(game, x, y, lvl, kind));
+      game.log(HUNTERS[kind].arrive, "#ff8a80");
       game.audio?.sfx("reveal");
-      game.hint?.("shark", "Sharks hunt swimmers out past the reef. Fight back \u2014 or get out of the water.");
+      game.hint?.("shark", HUNTERS[kind].hint);
       return k;
     }
   }
-  function makeShark(game, x, y, level) {
+  function makeShark(game, x, y, level, kind = null) {
+    kind = kind || (isGrandLine(regionAt(x, y)) ? "fightfish" : "seacow");
+    const H2 = HUNTERS[kind];
     const k = new Actor({
       x,
       y,
-      name: level > 40 ? "Great Shark" : "Shark",
-      title: "Hunter of the open sea",
+      name: level > 40 ? H2.big : H2.name,
+      title: H2.title,
       faction: "beast",
-      look: { race: "beast_shark", scale: level > 40 ? 1.5 : 1 },
+      look: { race: H2.race, scale: (level > 40 ? 1.5 : 1) * H2.scale },
       attrs: { str: Math.round(level * 0.8), agi: Math.round(level * 0.7), end: Math.round(level * 0.6), vit: Math.round(level * 0.7), wil: 5 },
-      hpMul: 1.3
+      hpMul: H2.hpMul
     });
     k.game = game;
-    k.r = 0.8;
+    k.r = H2.r;
     k.shark = true;
+    k.hunter = kind;
     k.seaCreature = true;
     k.swimmer = true;
     k.depth = 0.7;
-    k.bodyColor = level > 40 ? "#5b6770" : "#6f8796";
-    k.kbResist = 0.3;
+    k.bodyColor = H2.color;
+    k.kbResist = 0.35;
     k.passable = (w, px2, py2) => w.isLiquid(px2, py2) && !w.isOverlay(px2, py2) && game.seaDepth(px2, py2) > 1.4;
     k.canOccupy = function(w, px2, py2) {
       return this.passable(w, px2, py2);
     };
     k.updateWater = () => {
     };
-    k.controller = new SharkBrain();
+    k.controller = new SharkBrain(H2);
     k.showName = true;
     k.aggroPlayer = true;
     k.onKO = (a, att, g) => {
       g.fx.burst(a.x, a.y, 20, { color: ["#e1f5fe", "#81d4fa"], speed: 4, vz: 4, g: 8, life: 0.8, size: 0.14 });
       if (att?.isPlayer) {
-        addItem(g, "shark_fin", 1);
-        addItem(g, "fresh_fish", 2);
-        g.log("You beat the shark! Its fin is worth a fortune to a cook.", "#ffe082");
+        if (kind === "fightfish") {
+          addItem(g, "fighting_fish_horn", 1);
+          addItem(g, "fresh_fish", 3);
+          g.log("You beat the Fighting Fish! Its horn is worth a small fortune to a smith.", "#ffe082");
+        } else {
+          addItem(g, "fresh_fish", 2);
+          g.log("The Sea Cow goes belly-up, coughing up its lunch.", "#ffe082");
+        }
       }
       setTimeout(() => {
         a.alive = false;
@@ -85407,7 +85688,8 @@ Trains by: ${TRAINS_BY[k]}` },
     return k;
   }
   var SharkBrain = class {
-    constructor() {
+    constructor(H2 = HUNTERS.seacow) {
+      this.H = H2;
       this.mode = "circle";
       this.t = 4 + Math.random() * 3;
       this.ang = Math.random() * TAU;
@@ -85424,9 +85706,25 @@ Trains by: ${TRAINS_BY[k]}` },
         return;
       }
       if (k.state !== "idle") return;
+      if (this.H.flees && this.mode !== "flee" && k.hp < k.d.maxHp * 0.35) {
+        this.mode = "flee";
+        this.t = 8;
+        game.fx.text(k.x, k.y - 1.6, "MOOOOO!!", "#ffcc80", 0.45, { life: 1.4 });
+        game.log(`The ${k.name} bellows in terror and flees!`, "#ffe082");
+        if (d < 30) addItem(game, "fresh_fish", 1);
+      }
       const prey = p.inWater && p.mode !== "sail" && p.state !== "dead";
       let tx, ty, tz = 0.7, speed2 = 0.6;
-      if (!prey || this.bored > 30) {
+      if (this.mode === "flee") {
+        tx = k.x - dx;
+        ty = k.y - dy;
+        speed2 = 1.4;
+        this.t -= dt;
+        if (this.t <= 0 || d > 45) {
+          k.alive = false;
+          return;
+        }
+      } else if (!prey || this.bored > 30) {
         this.bored += dt;
         this.ang += dt * 0.25;
         tx = p.x + Math.cos(this.ang) * (14 + this.bored);
@@ -85447,10 +85745,10 @@ Trains by: ${TRAINS_BY[k]}` },
         tx = p.x;
         ty = p.y;
         tz = (p.depth || 0) + 0.35;
-        speed2 = 1.3;
+        speed2 = this.H.horn ? 1.55 : 1.3;
         this.t -= dt;
         const dz = Math.abs(k.depth - tz);
-        if (d < 1.9 && dz < 1.2 && !k.action && this.biteT <= 0) {
+        if (d < (this.H.horn ? 2.6 : 1.9) && dz < 1.2 && !k.action && this.biteT <= 0) {
           this.biteT = 0.3;
           k.action = { def: { anim: "heavy", steps: [], windup: 0.3, recover: 0.5 }, t: 0, step: 0, total: 0.8, mult: 1, angle: k.facing };
         }
@@ -85463,9 +85761,10 @@ Trains by: ${TRAINS_BY[k]}` },
       if (this.biteT > 0) {
         this.biteT -= dt;
         if (this.biteT <= 0 && k.alive && k.state === "idle") {
-          const mx = k.x + Math.cos(k.facing) * 1.2, my = k.y + Math.sin(k.facing) * 1.2;
-          const dmg = 14 * (1 + k.attrs.str / 12);
-          game.combat.hitbox({ owner: k, x: mx, y: my, shape: "circle", range: 1.3, damage: dmg, knockback: 5, stun: 0.35, duration: 0.1 });
+          const reach = this.H.horn ? 1.9 : 1.3;
+          const mx = k.x + Math.cos(k.facing) * reach, my = k.y + Math.sin(k.facing) * reach;
+          const dmg = this.H.bite * (1 + k.attrs.str / 12);
+          game.combat.hitbox({ owner: k, x: mx, y: my, shape: "circle", range: 1.3, damage: dmg, knockback: this.H.horn ? 7 : 5, stun: 0.35, duration: 0.1 });
           game.fx.burst(mx, my, 12, { color: ["#e1f5fe", "#ffffff"], speed: 3, vz: 2, g: 4, life: 0.5, size: 0.1 });
           game.audio?.sfx("punch");
           this.mode = "circle";
@@ -85474,8 +85773,6 @@ Trains by: ${TRAINS_BY[k]}` },
       }
       const ex = w.dx(k.x, tx), ey = ty - k.y, el = Math.hypot(ex, ey);
       if (el > 0.3) {
-        k.intent.mx = ex / el * speed2;
-        k.intent.my = ey / el * speed2;
         const want = Math.atan2(ey, ex);
         k.facing += clamp(angleDiff(k.facing, want), -1, 1) * Math.min(1, dt * 5);
         k.intent.mx = Math.cos(k.facing) * speed2;
@@ -109737,7 +110034,7 @@ Trains by: ${TRAINS_BY[k]}` },
     tr.plundered = true;
     const rng4 = new RNG(Math.floor(s.x * 31 + s.y * 7) >>> 0);
     earn(game, s.loot || 1e3, `the hold of the ${s.name}`);
-    const goods = tr.kind === "fishing" ? ["fresh_fish", "fresh_fish", "fresh_fish", "tuna"] : tr.kind === "marine" ? ["bandage", "bandage", "meat", "rumble_ball", "seastone"] : tr.kind === "pirate" ? ["gold_coins", "jewels", "sake", "meat"] : ["gold_coins", "sake", "meat", "fish_stew", "cola", "jewels"];
+    const goods = tr.kind === "fishing" ? ["fresh_fish", "fresh_fish", "fresh_fish", "elephant_tuna"] : tr.kind === "marine" ? ["bandage", "bandage", "meat", "rumble_ball", "seastone"] : tr.kind === "pirate" ? ["gold_coins", "jewels", "sake", "meat"] : ["gold_coins", "sake", "meat", "fish_stew", "cola", "jewels"];
     const n = tr.kind === "fishing" ? rng4.int(3, 6) : rng4.int(2, 4);
     for (let i = 0; i < n; i++) {
       const id = rng4.pick(goods);
@@ -111924,7 +112221,7 @@ Trains by: ${TRAINS_BY[k]}` },
         startNewCharacter(game, birth, { name: opts.name || "Test Pirate", look: null });
         return game.player;
       },
-      debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => {
+      debug: { npcDef, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => {
         const sp = which === "hatch" ? hatchSpot(s) : helmSpot(s);
         return deckToWorld(s, sp.t, sp.v);
       } },
