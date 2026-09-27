@@ -11,7 +11,7 @@
 import { T, IS_LIQUID, OVERLAY } from '../world/tiles.js';
 import { RM_X, RL_HALF, chart } from '../world/constants.js';
 import { PLINTH } from '../world/interiors.js';
-import { bw, bfoot } from '../world/bframe.js';
+import { bw, bl, bfoot } from '../world/bframe.js';
 
 export const SEA_Y = 0;
 export const DECK_Y = 0.55; // top of bridges (and sea-train tracks)
@@ -243,6 +243,7 @@ export class HeightField {
     const f = w.floorRec ? w.floorRec(x, y) : null;
     if (!f) return h;
     if (f.interior) return this.floorY(f.o);
+    if (f.steps !== undefined) return Math.max(h, this.stepTop(f.o, x, y, h));
     // (a ring or stage is level, standing on the ground at its middle like its model)
     if (f.o) return f.top ?? (f.top = this.terrain(f.o.x, f.o.y) + f.h);
     return h + f.h;
@@ -252,6 +253,20 @@ export class HeightField {
    * The ground floor of an enterable building (absolute): a step up from the
    * street in front, and always over the ground inside the walls.
    */
+  /**
+   * The top of the step you're on in front of a walk-in door (built like
+   * buildings3d doorAt: n steps 0.32 m deep, each a rise lower), or h.
+   */
+  stepTop(b, x, y, h) {
+    const front = this.terrain(b.x, b.y);
+    const y0 = this.floorY(b) - front;
+    const n = Math.max(1, Math.round(y0 / 0.2));
+    const { lz } = bl(b, x, y, this.world);
+    const i = Math.floor(lz / 0.32);
+    if (i < 0 || i >= n) return h;
+    return front + y0 - (i + 1) * y0 / (n + 1);
+  }
+
   floorY(b) {
     if (b._floorY !== undefined && b._floorW === this.world) return b._floorY;
     const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);

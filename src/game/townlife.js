@@ -67,10 +67,11 @@ function spotsOf(game, town, isl) {
       S.wall.push(p);
       if (role !== 'house') S.shopfront.push({ ...p, ...bw(b, x, 0.75) });
     }
-    // a doorstep to sit on (homes)
-    if (role === 'house') {
-      const p = { ...bw(b, d.x + d.dw / 2 + 0.1, 0.42), face, h: SEAT_H.step, stand: bw(b, d.x + d.dw / 2 + 0.1, 1.0), b };
-      if (clear(p.stand.x, p.stand.y)) S.seat.push(p);
+    // a doorstep to sit on (homes): the end of the low step, beside the door
+    // rather than in it (walk-in homes have a flight of steps instead)
+    if (role === 'house' && !isEnterable(b)) {
+      const p = { ...bw(b, d.x + d.dw / 2 + 0.34, 0.3), face, h: SEAT_H.step, stand: bw(b, d.x + d.dw / 2 + 0.34, 0.95), b };
+      if (clear(p.stand.x, p.stand.y) && clear(p.x, p.y, 0.2)) S.seat.push(p);
     }
     const out = { ...bw(b, d.x, 0.95), b };
     if (clear(out.x, out.y)) {
@@ -294,6 +295,15 @@ function stop(a) {
 
 function think(game, a, ai, dt) {
   const w = game.world, p = game.player;
+  // (standing inside something solid — a pillar, a cart — step out to clear ground)
+  if ((a.unstickT = (a.unstickT ?? Math.random() * 1.5) - dt) <= 0) {
+    a.unstickT = 1.5;
+    const seated = a.act3d && (a.act3d.pose === 'sit' || a.act3d.pose === 'vend');
+    if (!seated && !w.interiorAt(a.x, a.y) && w.hitsProp(a.x, a.y, a.r * 0.5)) {
+      const q = game.spawner.findFree(a.x, a.y, 2.5);
+      if (q) { a.x = q.x; a.y = q.y; a.vx = a.vy = 0; }
+    }
+  }
   // a fight nearby: drop everything and get out of the way
   if (ai.state === 'flee' || (p && p.inCombat && w.distance(a.x, a.y, p.x, p.y) < 7)) {
     if (a.activity) stop(a);

@@ -75,7 +75,21 @@ export class ObjectIndex {
       obj.soft = true;
       if (c) this.addCollider(obj, c);
     } else if (obj.block) this.stamp(obj, 1);
+    if (obj.kind === 'building' && obj.style === 'chinese') this.addColumns(obj);
     return obj;
+  }
+
+  /** The red columns along a Chinese front stand out from the wall: they're solid (see buildings3d 'column'). */
+  addColumns(b) {
+    const fw = Math.max(2, b.fw || 3);
+    const n = Math.max(2, Math.round(fw / 1.6));
+    const d = b.enterable ? doorOf(b) : null;
+    b.colCols = [];
+    for (let i = 0; i <= n; i++) {
+      const x = -fw / 2 + i * fw / n;
+      if (d && x > d.x - d.dw / 2 - 0.33 && x < d.x + d.dw / 2 + 0.33) continue; // (none in the doorway)
+      b.colCols.push(this.world.addCol({ ...bw(b, x, 0.25), r: 0.2, o: b }));
+    }
   }
 
   addCollider(obj, c) {
@@ -117,6 +131,9 @@ export class ObjectIndex {
     // the ground floor (its height is worked out by the 3D view from the ground under it)
     b.floor = { ...bbox(b, -fw / 2, fw / 2, -fd, -0.002), h: PLINTH, o: b, interior: true };
     w.addFloor(b.floor);
+    // the steps up to the door: you walk up them (their heights: see render3d/height.js)
+    b.stepsFloor = { ...bbox(b, d.x - d.dw / 2 - 0.2, d.x + d.dw / 2 + 0.2, 0.002, 1.3), h: 0, o: b, steps: d.x };
+    w.addFloor(b.stepsFloor);
   }
 
   /** The furniture collides too (laid out lazily: when someone comes near or the island fills with people). */

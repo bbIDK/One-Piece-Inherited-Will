@@ -8,6 +8,7 @@
 // labels, quest markers, auras, glows, ice and stars float around them.
 // Sea Kings get their own serpent model.
 import * as THREE from 'three';
+import { angleDiff } from '../core/math.js';
 import { registerActorView, registerViewmodel } from './registry.js';
 import { Actor } from '../game/actor.js';
 import { CharacterModel } from './chars/model.js';
@@ -110,7 +111,12 @@ class ActorView {
       // NPCs glance at you when you're close and they aren't busy
       o.lookYaw = this.lookAt(a, dist, pose, cam, s);
       m.pose(PP, o);
-      this.yaw.rotation.y = -((a.facing || 0) + (P.sp || 0) * TAU);
+      // turning: eased, so people swing round rather than snap (quickly for
+      // you and anyone mid-technique, more gently for folk walking about)
+      const want = a.facing || 0;
+      if (this.visF === undefined || dtv >= 1 || knocked) this.visF = want;
+      else this.visF += angleDiff(this.visF, want) * (1 - Math.exp(-dtv * (a.isPlayer ? 24 : a.action ? 20 : 10)));
+      this.yaw.rotation.y = -(this.visF + (P.sp || 0) * TAU);
       // face
       m.setExpression(expression(look, pose, P, pose.time || 0));
       this.effects(a, pose, P, o, env, ctx, camYaw3, dist, s);

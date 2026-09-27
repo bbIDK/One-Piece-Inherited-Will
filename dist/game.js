@@ -34586,6 +34586,7 @@ void main() {
       const f = w.floorRec ? w.floorRec(x, y) : null;
       if (!f) return h2;
       if (f.interior) return this.floorY(f.o);
+      if (f.steps !== void 0) return Math.max(h2, this.stepTop(f.o, x, y, h2));
       if (f.o) return f.top ?? (f.top = this.terrain(f.o.x, f.o.y) + f.h);
       return h2 + f.h;
     }
@@ -34593,6 +34594,19 @@ void main() {
      * The ground floor of an enterable building (absolute): a step up from the
      * street in front, and always over the ground inside the walls.
      */
+    /**
+     * The top of the step you're on in front of a walk-in door (built like
+     * buildings3d doorAt: n steps 0.32 m deep, each a rise lower), or h.
+     */
+    stepTop(b, x, y, h2) {
+      const front = this.terrain(b.x, b.y);
+      const y0 = this.floorY(b) - front;
+      const n = Math.max(1, Math.round(y0 / 0.2));
+      const { lz } = bl(b, x, y, this.world);
+      const i = Math.floor(lz / 0.32);
+      if (i < 0 || i >= n) return h2;
+      return front + y0 - (i + 1) * y0 / (n + 1);
+    }
     floorY(b) {
       if (b._floorY !== void 0 && b._floorW === this.world) return b._floorY;
       const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
@@ -63808,7 +63822,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         o.lookYaw = this.lookAt(a, dist, pose, cam, s);
         m.pose(PP, o);
-        this.yaw.rotation.y = -((a.facing || 0) + (P4.sp || 0) * TAU17);
+        const want = a.facing || 0;
+        if (this.visF === void 0 || dtv >= 1 || knocked) this.visF = want;
+        else this.visF += angleDiff(this.visF, want) * (1 - Math.exp(-dtv * (a.isPlayer ? 24 : a.action ? 20 : 10)));
+        this.yaw.rotation.y = -(this.visF + (P4.sp || 0) * TAU17);
         m.setExpression(expression2(look, pose, P4, pose.time || 0));
         this.effects(a, pose, P4, o, env, ctx, camYaw3, dist, s);
         this.lastT = env.time;
@@ -67898,7 +67915,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         obj.soft = true;
         if (c) this.addCollider(obj, c);
       } else if (obj.block) this.stamp(obj, 1);
+      if (obj.kind === "building" && obj.style === "chinese") this.addColumns(obj);
       return obj;
+    }
+    /** The red columns along a Chinese front stand out from the wall: they're solid (see buildings3d 'column'). */
+    addColumns(b) {
+      const fw = Math.max(2, b.fw || 3);
+      const n = Math.max(2, Math.round(fw / 1.6));
+      const d = b.enterable ? doorOf(b) : null;
+      b.colCols = [];
+      for (let i = 0; i <= n; i++) {
+        const x = -fw / 2 + i * fw / n;
+        if (d && x > d.x - d.dw / 2 - 0.33 && x < d.x + d.dw / 2 + 0.33) continue;
+        b.colCols.push(this.world.addCol({ ...bw(b, x, 0.25), r: 0.2, o: b }));
+      }
     }
     addCollider(obj, c) {
       const s = obj.s || 1;
@@ -67937,6 +67967,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       b.doorCol = w.addCol({ ...b.doorBox });
       b.floor = { ...bbox(b, -fw / 2, fw / 2, -fd, -2e-3), h: PLINTH, o: b, interior: true };
       w.addFloor(b.floor);
+      b.stepsFloor = { ...bbox(b, d.x - d.dw / 2 - 0.2, d.x + d.dw / 2 + 0.2, 2e-3, 1.3), h: 0, o: b, steps: d.x };
+      w.addFloor(b.stepsFloor);
     }
     /** The furniture collides too (laid out lazily: when someone comes near or the island fills with people). */
     addFurniture(b) {
@@ -87722,9 +87754,9 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
         S3.wall.push(p);
         if (role !== "house") S3.shopfront.push({ ...p, ...bw(b, x, 0.75) });
       }
-      if (role === "house") {
-        const p = { ...bw(b, d.x + d.dw / 2 + 0.1, 0.42), face, h: SEAT_H.step, stand: bw(b, d.x + d.dw / 2 + 0.1, 1), b };
-        if (clear3(p.stand.x, p.stand.y)) S3.seat.push(p);
+      if (role === "house" && !isEnterable(b)) {
+        const p = { ...bw(b, d.x + d.dw / 2 + 0.34, 0.3), face, h: SEAT_H.step, stand: bw(b, d.x + d.dw / 2 + 0.34, 0.95), b };
+        if (clear3(p.stand.x, p.stand.y) && clear3(p.x, p.y, 0.2)) S3.seat.push(p);
       }
       const out = { ...bw(b, d.x, 0.95), b };
       if (clear3(out.x, out.y)) {
@@ -87972,6 +88004,18 @@ Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 
   }
   function think(game, a, ai, dt) {
     const w = game.world, p = game.player;
+    if ((a.unstickT = (a.unstickT ?? Math.random() * 1.5) - dt) <= 0) {
+      a.unstickT = 1.5;
+      const seated = a.act3d && (a.act3d.pose === "sit" || a.act3d.pose === "vend");
+      if (!seated && !w.interiorAt(a.x, a.y) && w.hitsProp(a.x, a.y, a.r * 0.5)) {
+        const q2 = game.spawner.findFree(a.x, a.y, 2.5);
+        if (q2) {
+          a.x = q2.x;
+          a.y = q2.y;
+          a.vx = a.vy = 0;
+        }
+      }
+    }
     if (ai.state === "flee" || p && p.inCombat && w.distance(a.x, a.y, p.x, p.y) < 7) {
       if (a.activity) stop(a);
       return ai.wander(a, dt, game);
