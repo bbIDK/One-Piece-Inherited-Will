@@ -23,10 +23,16 @@ import { wantedTier } from './wanted.js';
 
 const SAILOR = { name: 'Sailor', faction: 'civilian', style: 'brawler', look: { top: '#eceff1', bottom: '#37474f', hat: 'bandana', hatColor: '#1565c0' }, skill: 0.1, barks: ['Repel boarders!', 'Get off our ship!'] };
 const FISHER = { name: 'Fisherman', faction: 'civilian', style: 'brawler', look: { top: '#8d6e63', bottom: '#455a64', hat: 'cap', hatColor: '#6d8f5e' }, skill: 0.05, barks: ['Not the catch!', 'Help!'] };
-const CREW = { dinghy: 1, sloop: 2, caravel: 3, brigantine: 4, carrack: 6, war_galleon: 8, man_o_war: 10, great_galleon: 12, marine_battleship: 10 };
+// (as many as have room to stand on deck)
+const CREW = { dinghy: 1, sloop: 2, caravel: 2, brigantine: 3, carrack: 5, war_galleon: 8, man_o_war: 10, great_galleon: 12, marine_battleship: 10 };
+// where the hands stand on a small ship's deck (t along from the stern, v
+// across in beams): clear of the mast, the hatch, the barrels and the crate
+const SMALL_STATIONS = [[0.82, 0], [0.36, 0.26], [0.64, -0.3], [0.36, -0.26], [0.72, 0.28]];
 
 export function installTraffic(game) {
   const T = game.traffic = { t: 3, ships: [] };
+  // (a ship on demand — tests, and creative mode — force: { kind, type, x, y, heading, dest, level })
+  T.spawn = (force) => (game.player ? spawnShip(game, T, game.player, regionAt(game.player.x, game.player.y), force) : null);
   const reset = () => { for (const s of T.ships) { for (const a of s.traffic?.crew || []) a.alive = false; s.alive = false; } T.ships = []; };
   game.on('tick', (dt) => tick(game, T, dt));
   game.on('characterStart', () => { T.ships = []; });
@@ -187,6 +193,34 @@ function trafficAI(s, dt, game) {
     else want = Math.atan2(tr.dest.y - s.y, w.dx(s.x, tr.dest.x));
     if (w.distance(s.x, s.y, tr.dest.x, tr.dest.y) < 25) { tr.dest = { x: w.wx(s.x + Math.cos(s.heading) * 300), y: s.y + Math.sin(s.heading) * 300 }; }
   }
+  // stuck against the coast (or another hull) for a few seconds: come about
+  // and make for the openest water; still stuck, she's eased clear (or, far
+  // from you, quietly sails off the map)
+  const now = game.time || 0;
+  if (!tr.lastPos) tr.lastPos = { x: s.x, y: s.y, t: now };
+  if (now - tr.lastPos.t > 3) {
+    const moved = w.distance(s.x, s.y, tr.lastPos.x, tr.lastPos.y);
+    tr.stuck = moved < 2.5 && s.sail > 0.3 ? (tr.stuck || 0) + 1 : 0;
+    tr.lastPos = { x: s.x, y: s.y, t: now };
+    if (tr.stuck >= 1) {
+      let bestA = s.heading + Math.PI, bestSd = Infinity;
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2, r = s.def.length + 18;
+        const x = w.wx(s.x + Math.cos(a) * r), y = s.y + Math.sin(a) * r;
+        const sd = w.sailable(x, y) ? w.sd(x, y) : 99;
+        if (sd < bestSd) { bestSd = sd; bestA = a; }
+      }
+      tr.escape = { a: bestA, until: now + 9 };
+      tr.dest = { x: w.wx(s.x + Math.cos(bestA) * 300), y: s.y + Math.sin(bestA) * 300 };
+      s.speed = Math.min(s.speed, 1);
+    }
+    if (tr.stuck >= 3) {
+      if (w.distance(s.x, s.y, p.x, p.y) > 70) { for (const a of tr.crew || []) a.alive = false; s.alive = false; return; }
+      s.unstick(w, true);
+      tr.stuck = 0;
+    }
+  }
+  if (tr.escape) { if (now > tr.escape.until) tr.escape = null; else if (!(target && d < 55 && hostile(s, game))) want = tr.escape.a; }
   // round the coast: look ahead, and turn toward the open side
   const L = s.def.length;
   const open = (ang, dist) => { const x = w.wx(s.x + Math.cos(ang) * dist), y = s.y + Math.sin(ang) * dist; return w.sailable(x, y) && w.sd(x, y) < -2.5; };
@@ -236,9 +270,10 @@ function spawnCrew(game, s) {
     a.faceHome = undefined;
     a.stationary = true;
     game.addActor(a);
-    // spread along the deck: the helmsman aft, the rest forward of him
-    let t = i === 0 ? Math.min(0.46, (d.helmX + d.L / 2) / d.L + 0.08) : 0.3 + (i / Math.max(1, n)) * 0.5;
-    let v = i === 0 ? 0 : ((i % 2) ? 1 : -1) * s.def.beam * 0.18;
+    // the helmsman aft, the rest at their stations (clear of the deck's cargo)
+    const st = SMALL_STATIONS[(i - 1) % SMALL_STATIONS.length];
+    let t = i === 0 ? Math.min(0.46, (d.helmX + d.L / 2) / d.L + 0.08) : st[0];
+    let v = i === 0 ? 0 : st[1] * s.def.beam;
     if (d.big) ({ t, v } = i === 0 ? helmSpot(s) : freeDeckSpot(s, 0.34 + (i / Math.max(1, n)) * 0.46, ((i % 2) ? 1 : -1) * s.def.beam * (0.12 + (i % 3) * 0.08)));
     placeOnDeck(game, a, s, t, v);
     a.facing = s.heading + (i === 0 ? 0 : (i % 2 ? 1 : -1) * 1.2);
