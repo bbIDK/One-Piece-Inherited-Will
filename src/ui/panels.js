@@ -21,9 +21,10 @@ import { WEAPON_KINDS } from '../game/progression.js';
 import { repTier, stealFromShop, bannedFromShop } from '../game/reputation.js';
 import { itemImg, skillImg, uiImg } from './icon.js';
 import { openJollyRoger } from './crewPanel.js';
+import { HOTBAR_SIZE, HOTBAR_KEYS } from '../game/hotbar.js';
 
 const berriesLine = (c) => h('div.berries', uiImg('berries', 20), ` ${formatBerries(c.berries)}`);
-const HOTBAR = 6;
+const HOTBAR = HOTBAR_SIZE;
 const USABLE = new Set(['food', 'medicine']);
 const title = (s) => s[0].toUpperCase() + s.slice(1);
 
@@ -73,39 +74,24 @@ export function assignHotbar(game, slot, payload) {
   game.audio?.sfx('equip');
 }
 
-function hotbarStrip(game, sel, rerender) {
-  const c = game.state.char;
-  const hb = ensureHotbar(c);
-  const slots = [];
-  for (let i = 0; i < HOTBAR; i++) {
-    const e = hotbarEntry(hb[i], c);
-    const slot = h('div.hb-slot' + (e ? '' : '.empty') + (sel.slot === i ? '.sel' : ''), {
-      draggable: !!e,
-      title: e ? `${e.name}${e.def.desc ? '\n' + e.def.desc : ''}\n\nDrag to move · right-click to clear` : 'Empty — drag a technique or food here',
-      on: {
-        dragstart: (ev) => { ev.dataTransfer.setData('text/plain', 'slot:' + i); ev.dataTransfer.effectAllowed = 'move'; slot.classList.add('dragging'); },
-        dragend: () => slot.classList.remove('dragging'),
-        dragover: (ev) => { ev.preventDefault(); slot.classList.add('over'); },
-        dragleave: () => slot.classList.remove('over'),
-        drop: (ev) => { ev.preventDefault(); assignHotbar(game, i, ev.dataTransfer.getData('text/plain')); sel.pick = null; sel.slot = null; rerender(); },
-        click: () => {
-          if (sel.pick) { assignHotbar(game, i, sel.pick); sel.pick = null; sel.slot = null; }
-          else if (sel.slot !== null && sel.slot !== i) { assignHotbar(game, i, 'slot:' + sel.slot); sel.slot = null; }
-          else sel.slot = sel.slot === i ? null : i;
-          rerender();
-        },
-        contextmenu: (ev) => { ev.preventDefault(); hb[i] = null; refreshPlayer(game); rerender(); },
-      },
-    },
-    h('span.k', String(i + 1)),
-    e ? e.img(34) : null,
-    e ? h('span.nm', e.name) : null,
-    e && e.kind === 'item' ? h('span.qty', String(e.qty)) : null,
-    e ? h('button.x', { title: 'Clear', on: { click: (ev) => { ev.stopPropagation(); hb[i] = null; refreshPlayer(game); rerender(); } } }, '×') : null);
-    slots.push(slot);
-  }
-  const hint = sel.pick ? 'Now click a slot to put it there.' : sel.slot !== null ? `Slot ${sel.slot + 1} selected — click a technique or food to fill it, or another slot to swap.` : 'Drag techniques and food onto the hotbar, drag slots to rearrange them. Right-click a slot to clear it.';
-  return h('div.hotbar-edit', h('div.hb-row', slots), h('div.hb-hint', hint));
+/**
+ * (The hotbar itself is the one at the bottom of the screen: while this menu
+ * is open it takes drops, and clicking a slot puts whatever you've picked
+ * there.) A line saying so, or what to do with the thing you've picked.
+ */
+function hotbarNote(game, what) {
+  const pick = game.ui.hotbarPick;
+  return h('p.hb-note' + (pick ? '.picking' : ''), pick
+    ? `Now click a slot on your hotbar (keys ${HOTBAR_KEYS.join(' ')}) to put ${what || 'it'} there.`
+    : 'Drag techniques and food straight onto your hotbar at the bottom of the screen (keys 1-9 and 0) — or click one, then click a slot. Drag slots to rearrange them; right-click one to clear it.');
+}
+
+/** Pick something to put on the hotbar with a click (the next hotbar slot clicked takes it). */
+function pickForHotbar(game, payload, rerender) {
+  const ui = game.ui;
+  ui.hotbarPick = ui.hotbarPick === payload ? null : payload;
+  ui.onHotbarChange = rerender;
+  rerender();
 }
 
 /** Make an element a drag source for the hotbar / equipment. */
@@ -143,7 +129,7 @@ export function openInventory(game) {
   const body = h('div.inv');
   const entry = ui.openPanel(body, { wide: true, id: 'inventory' });
   if (!entry) return;
-  const st = { cat: 'all', selected: null, hb: { pick: null, slot: null } };
+  const st = { cat: 'all', selected: null };
   const render = () => {
     clear(body);
     const eq = c.equipped;
@@ -248,7 +234,7 @@ export function openInventory(game) {
       if (slotKind(sd)) acts.push(h('button.btn' + (worn ? '.red' : '.gold'), { on: { click: () => { equip(game, id); render(); } } }, worn ? 'Take off' : 'Equip'));
       if (USABLE.has(sd.type)) {
         acts.push(h('button.btn.green', { on: { click: () => { useItem(game, id); render(); } } }, sd.type === 'food' ? 'Eat' : 'Use'));
-        acts.push(h('button.btn', { on: { click: () => { st.hb.pick = 'item:' + id; st.hb.slot = null; render(); } } }, 'Put on hotbar'));
+        acts.push(h('button.btn' + (game.ui.hotbarPick === 'item:' + id ? '.gold' : ''), { on: { click: () => pickForHotbar(game, 'item:' + id, render) } }, game.ui.hotbarPick === 'item:' + id ? 'Now click a hotbar slot…' : 'Put on hotbar'));
       }
       if (sd.type === 'pose') acts.push(h('button.btn', { on: { click: () => { useItem(game, id); render(); } } }, c.logPose?.eternal === id ? 'Following' : 'Follow the needle'));
       if (sd.type === 'dial') acts.push(h('button.btn', { disabled: c.techniques.includes(sd.ability), on: { click: () => { useItem(game, id); render(); } } }, c.techniques.includes(sd.ability) ? 'Learned' : 'Learn to use'));
@@ -266,7 +252,8 @@ export function openInventory(game) {
       details = h('div.inv-details.empty', h('p.muted', 'Select an item to see it. Drag gear onto the equipment slots, and food onto the hotbar. Double-click to equip or eat.'));
     }
     const right = h('div.inv-right', tabs, grid, details);
-    add(body, h('div.panel-top', h('h2', 'Inventory'), berriesLine(c)), h('div.inv-cols', left, right), h('h4.grp', 'Hotbar'), hotbarStrip(game, st.hb, render));
+    game.ui.onHotbarChange = render;
+    add(body, h('div.panel-top', h('h2', 'Inventory'), berriesLine(c)), h('div.inv-cols', left, right), hotbarNote(game, ITEMS[game.ui.hotbarPick?.slice(5)]?.name));
   };
   const quickUse = (id) => {
     const d = ITEMS[id];
@@ -393,9 +380,9 @@ export function openSkills(game) {
   const body = h('div.skills');
   const entry = ui.openPanel(body, { wide: true, id: 'skills' });
   if (!entry) return;
-  const sel = { pick: null, slot: null };
   const render = () => {
     clear(body);
+    game.ui.onHotbarChange = render;
     const styles = Object.keys(c.masteries).filter((s) => STYLES[s]);
     const styleBtns = styles.map((s) => h('button' + (c.style === s ? '.on' : ''), { on: { click: () => { c.style = s; refreshPlayer(game); render(); } }, title: STYLES[s].desc },
       `${STYLES[s].name} (${Math.floor(c.masteries[s])})`));
@@ -412,17 +399,13 @@ export function openSkills(game) {
       h('h4.grp', g),
       h('div.tech-grid', ds.map((d) => {
         const onBar = c.hotbar.includes(d.id);
-        const card = h('div.tech' + (sel.pick === 'skill:' + d.id ? '.sel' : '') + (onBar ? '.onbar' : ''), {
-          title: 'Drag onto the hotbar, or click and then click a slot',
-          on: { click: () => {
-            if (sel.slot !== null) { assignHotbar(game, sel.slot, 'skill:' + d.id); sel.slot = null; sel.pick = null; }
-            else sel.pick = sel.pick === 'skill:' + d.id ? null : 'skill:' + d.id;
-            render();
-          } },
+        const card = h('div.tech' + (game.ui.hotbarPick === 'skill:' + d.id ? '.sel' : '') + (onBar ? '.onbar' : ''), {
+          title: 'Drag onto your hotbar, or click and then click a slot on it',
+          on: { click: () => pickForHotbar(game, 'skill:' + d.id, render) },
         }, skillImg(d, 40),
         h('div.grow', h('b', d.name), h('div.sub', d.desc || ''),
           h('div.sub.meta', [d.cd ? `cooldown ${d.cd}s` : null, d.cost?.stamina ? `${d.cost.stamina} stamina` : null, d.cost?.haki && hakiKnown(c) ? `${d.cost.haki} spirit` : null, d.weapon ? `needs ${d.weapon}` : null].filter(Boolean).join(' · '))),
-        onBar ? h('span.tag', `slot ${c.hotbar.indexOf(d.id) + 1}`) : null);
+        onBar ? h('span.tag', `key ${HOTBAR_KEYS[c.hotbar.indexOf(d.id)]}`) : null);
         return dragSource(card, 'skill:' + d.id);
       }))));
     add(body, 
@@ -430,7 +413,7 @@ export function openSkills(game) {
       h('h3', 'Fighting style'), h('div.tabs', styleBtns),
       needW ? h('p', { style: { color: '#b71c1c' } }, `${cur.name} needs ${cur.weapon === 'sword' ? cur.swords + ' sword(s)' : 'a ' + cur.weapon} equipped — until then you fight bare-handed.`) : null,
       h('p.muted', cur?.desc || ''),
-      h('h3', 'Hotbar'), hotbarStrip(game, sel, render),
+      hotbarNote(game, getAbility(game.ui.hotbarPick?.slice(6))?.name),
       h('h3', 'Techniques'), techs.length ? h('div', lists) : h('p', 'You know no techniques yet. Find a trainer — or a Devil Fruit.'),
       hakiKnown(c) ? h('p.muted', `Haki: ${[c.haki.armament && 'R toggles Armament', c.haki.observation && 'T toggles Observation', c.haki.conqueror && "G releases Conqueror's"].filter(Boolean).join(', ')}. Active Haki drains your spirit bar.`) : null,
     );

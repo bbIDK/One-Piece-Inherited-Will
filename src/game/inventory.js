@@ -1,4 +1,5 @@
 // Inventory helpers operating on the character record.
+import { addToHotbar } from './hotbar.js';
 import { ITEMS } from '../data/items.js';
 import { FRUITS } from '../data/fruits.js';
 import { refreshPlayer, persist } from './lineage.js';
@@ -176,8 +177,7 @@ export function eatFruit(game, itemId) {
   c.fruitsEaten = 1;
   const first = f.techniques[0];
   if (first && !c.techniques.includes(first.id)) c.techniques.push(first.id);
-  const slot = c.hotbar.findIndex((h, i) => !h && i < 6);
-  if (first) { if (slot >= 0) c.hotbar[slot] = first.id; else if (c.hotbar.length < 6) c.hotbar.push(first.id); }
+  if (first) addToHotbar(c, first.id);
   refreshPlayer(game);
   game.ui.toast(f.name.toUpperCase(), `${f.en} — ${f.type}. It tastes horrible.`, '#ffab91');
   game.fx.ring(p.x, p.y, 0.3, 4, f.color, 0.8, 0.25);

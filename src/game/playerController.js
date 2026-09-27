@@ -1,5 +1,6 @@
 // Turns keyboard/mouse input into player actions, on foot, swimming or at
 // the helm of a ship.
+import { HOTBAR_SIZE, HOTBAR_KEYS } from './hotbar.js';
 import { clamp, angleDiff } from '../core/math.js';
 import { findInteraction } from './interact.js';
 
@@ -110,8 +111,8 @@ export class PlayerController {
       else { p.tryM1(game); if (p.combo.queued) buf.m1 = 0; }
     }
     p.setBlock(inp.isDown('F'));
-    for (let i = 0; i < 6; i++) {
-      if (inp.wasPressed(String(i + 1))) {
+    for (let i = 0; i < HOTBAR_SIZE; i++) {
+      if (inp.wasPressed(HOTBAR_KEYS[i])) {
         const id = p.hotbar[i];
         if (id) { p.facing = aim; const target = this.aimTarget(p, game, wx, wy); p.tryTechnique(id, game, target || { x: wx, y: wy }); }
       }
@@ -230,8 +231,8 @@ export class PlayerController {
       this.interaction.run();
     }
     // hotbar still usable for ranged techniques from the deck
-    for (let i = 0; i < 6; i++) {
-      if (inp.wasPressed(String(i + 1))) {
+    for (let i = 0; i < HOTBAR_SIZE; i++) {
+      if (inp.wasPressed(HOTBAR_KEYS[i])) {
         const id = p.hotbar[i];
         if (id) { p.facing = Math.atan2(wy - p.y, game.world.dx(p.x, wx)); p.tryTechnique(id, game, { x: wx, y: wy }); }
       }

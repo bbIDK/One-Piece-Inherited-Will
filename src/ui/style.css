@@ -242,6 +242,13 @@ img.icon { vertical-align: middle; image-rendering: auto; }
 
 /* ---------- hotbar editor (in menus) ---------- */
 .hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }
+/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */
+#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }
+#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }
+#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }
+#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }
+.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }
+.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }
 .hb-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }
 .hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }
@@ -395,6 +402,7 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
   .slots { grid-template-columns: 1fr; }
   .roll-cols { grid-template-columns: 1fr; }
 }
+@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }
 @media (max-height: 640px) {
   .sidebar { top: 170px; gap: 3px; }
   .log { max-height: 130px; }

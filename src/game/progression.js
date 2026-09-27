@@ -13,6 +13,7 @@
 //    strong enough, Observation in those who have learned to read attacks —
 //    at a random moment of a hard fight, like in the stories.
 //  * Legends: great feats the world remembers.
+import { addToHotbar } from './hotbar.js';
 import { threatFactor, ATTR_CAP, ATTRS } from './stats.js';
 import { unlockedFruitTechniques, FRUITS } from '../data/fruits.js';
 import { getAbility, weaponKindOf } from './abilities.js';
@@ -173,8 +174,7 @@ export class Progression {
       if (needsHaki(d) && !hakiKnown(c)) continue; // it reveals itself once Haki awakens
       g.ui.toast('NEW TECHNIQUE', d.name, '#ffab91');
       g.log(`Your mastery of the ${FRUITS[c.fruit].name} reveals a new technique: ${d.name}. Put it on your hotbar from the Skills tab.`, '#ffab91');
-      const empty = c.hotbar.findIndex((x) => !x);
-      if (empty >= 0 && empty < 6) c.hotbar[empty] = id; else if (c.hotbar.length < 6) c.hotbar.push(id);
+      addToHotbar(c, id);
     }
   }
 

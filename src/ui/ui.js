@@ -7,6 +7,8 @@ import { ITEMS } from '../data/items.js';
 import { REGION_INFO, regionAt } from '../world/constants.js';
 import { itemImg, skillImg, uiImg } from './icon.js';
 import { Compass } from './compass.js';
+import { assignHotbar } from './panels.js';
+import { HOTBAR_SIZE, HOTBAR_KEYS } from '../game/hotbar.js';
 
 // the menu buttons on the right of the screen (below the minimap)
 const SIDEBAR = [
@@ -63,14 +65,16 @@ export class UI {
     E.bounty = h('div.hud-bounty');
     E.buffs = h('div.buffs');
     this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.st.el, E.o2, E.hk.el, E.lives, E.bounty, E.buffs));
-    // hotbar: click a slot to use it, drag slots to rearrange
+    // hotbar: ten slots (1-9, 0). Click a slot to use it; drag slots to
+    // rearrange them. With the Inventory or Skills open it's where you drop
+    // techniques and food (or click a slot to put what you picked there).
     E.hotbar = h('div.hotbar');
     E.slots = [];
-    for (let i = 0; i < 6; i++) {
-      const s = { el: h('div.slot.interactive'), ico: h('span.ico'), k: h('span.k', String(i + 1)), nm: h('span.nm'), qty: h('span.qty'), cd: h('div.cd'), cdt: h('div.cdt') };
+    for (let i = 0; i < HOTBAR_SIZE; i++) {
+      const s = { el: h('div.slot.interactive'), ico: h('span.ico'), k: h('span.k', HOTBAR_KEYS[i]), nm: h('span.nm'), qty: h('span.qty'), cd: h('div.cd'), cdt: h('div.cdt') };
       s.el.append(s.ico, s.k, s.nm, s.qty, s.cd, s.cdt);
       s.el.draggable = true;
-      s.el.addEventListener('dragstart', (ev) => { if (!this.game?.player?.hotbar?.[i]) { ev.preventDefault(); return; } ev.dataTransfer.setData('text/plain', 'slot:' + i); });
+      s.el.addEventListener('dragstart', (ev) => { if (!this.game?.player?.hotbar?.[i]) { ev.preventDefault(); return; } ev.dataTransfer.setData('text/plain', 'slot:' + i); ev.dataTransfer.effectAllowed = 'move'; });
       s.el.addEventListener('dragover', (ev) => { ev.preventDefault(); s.el.classList.add('over'); });
       s.el.addEventListener('dragleave', () => s.el.classList.remove('over'));
       s.el.addEventListener('drop', (ev) => {
@@ -78,8 +82,18 @@ export class UI {
         s.el.classList.remove('over');
         const data = ev.dataTransfer.getData('text/plain');
         if (data.startsWith('slot:')) this.swapSlots(+data.slice(5), i);
+        else if (data) this.putOnHotbar(i, data);
       });
-      s.el.addEventListener('click', () => this.useSlot(i));
+      s.el.addEventListener('click', () => {
+        if (this.hotbarPick) this.putOnHotbar(i, this.hotbarPick);
+        else if (!this.stack.length) this.useSlot(i);
+      });
+      s.el.addEventListener('contextmenu', (ev) => {
+        // (right-click clears a slot while you're arranging it)
+        if (!this.root.classList.contains('hb-edit')) return;
+        ev.preventDefault();
+        this.clearSlot(i);
+      });
       E.slots.push(s);
       E.hotbar.appendChild(s.el);
     }
@@ -180,6 +194,29 @@ export class UI {
     p.hotbar = hb;
     this.cache['slot' + a] = this.cache['slot' + b] = null;
     this.game.audio?.sfx('equip');
+    this.onHotbarChange?.();
+  }
+
+  /** Put a technique or item (a drag payload) in hotbar slot i. */
+  putOnHotbar(i, payload) {
+    const g = this.game;
+    if (!g?.player) return;
+    assignHotbar(g, i, payload);
+    this.hotbarPick = null;
+    for (let k = 0; k < HOTBAR_SIZE; k++) this.cache['slot' + k] = null;
+    this.onHotbarChange?.();
+  }
+
+  clearSlot(i) {
+    const p = this.game?.player;
+    if (!p) return;
+    const hb = p.char.hotbar;
+    if (!hb[i]) return;
+    hb[i] = null;
+    p.hotbar = hb;
+    this.cache['slot' + i] = null;
+    this.game.audio?.sfx('equip');
+    this.onHotbarChange?.();
   }
 
   useSlot(i) {
@@ -330,6 +367,10 @@ export class UI {
   markSidebar() {
     const top = this.stack[this.stack.length - 1];
     for (const [id, el] of Object.entries(this.el.sideBtns)) el.classList.toggle('on', !!top && top.id === id);
+    // the hotbar takes drops while the Inventory or Skills is open
+    const edit = !!top && (top.id === 'inventory' || top.id === 'skills');
+    this.root.classList.toggle('hb-edit', edit);
+    if (!edit) { this.hotbarPick = null; this.onHotbarChange = null; }
   }
 
   /**
@@ -473,7 +514,7 @@ export class UI {
       for (const s of Object.keys(p.status)) E.buffs.appendChild(h('span.buff', { style: { borderColor: '#ff8a80' } }, s));
     }
     // hotbar
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < HOTBAR_SIZE; i++) {
       const s = E.slots[i];
       const id = p.hotbar[i];
       const isItem = typeof id === 'string' && id.startsWith('item:');
@@ -486,7 +527,7 @@ export class UI {
         if (def) s.ico.appendChild(isItem ? itemImg(id.slice(5), 34) : skillImg(def, 34));
         s.nm.textContent = def ? def.name : '';
         s.el.classList.toggle('empty', !def);
-        s.el.title = def ? `${def.name}\n${def.desc || ''}\n\nClick or press ${i + 1} to use · drag to rearrange` : 'Empty — drag techniques or food here from Skills (K) or Inventory (Tab)';
+        s.el.title = def ? `${def.name}\n${def.desc || ''}\n\nClick or press ${HOTBAR_KEYS[i]} to use · drag to rearrange` : 'Empty — open Skills (K) or Inventory (Tab) and drag techniques or food here';
       }
       if (isItem) {
         const n = (ch.inventory || []).filter((x) => x.id === id.slice(5)).reduce((a, x) => a + (x.qty || 1), 0);

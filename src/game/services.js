@@ -1,4 +1,5 @@
 // Town services: inns, doctors, shipwrights, shops, trainers, sparring.
+import { addToHotbar } from './hotbar.js';
 import { TRAINERS } from '../data/trainers.js';
 import { STYLES } from '../data/styles.js';
 import { SHIPS, SHIP_UPGRADES } from '../data/ships.js';
@@ -182,8 +183,7 @@ export class Services {
     if (!pay(g, this.techPrice(id))) return false;
     c.techniques.push(id);
     const d = getAbility(id);
-    const empty = c.hotbar.findIndex((x) => !x);
-    if (empty >= 0) c.hotbar[empty] = id; else if (c.hotbar.length < 6) c.hotbar.push(id);
+    addToHotbar(c, id);
     refreshPlayer(g);
     g.ui.toast('TECHNIQUE LEARNED', d.name, '#90caf9');
     persist(g);

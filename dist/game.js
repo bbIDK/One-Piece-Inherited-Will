@@ -78581,6 +78581,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return out;
   }
 
+  // src/game/hotbar.js
+  var HOTBAR_SIZE = 10;
+  var HOTBAR_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+  function freeSlot(hb) {
+    for (let i = 0; i < HOTBAR_SIZE; i++) if (!hb[i]) return i;
+    return -1;
+  }
+  function addToHotbar(c, id) {
+    c.hotbar = c.hotbar || [];
+    if (c.hotbar.includes(id)) return;
+    const i = freeSlot(c.hotbar);
+    if (i >= 0) c.hotbar[i] = id;
+  }
+
   // src/game/decks.js
   function installDecks(game) {
     game.on("board", (s) => {
@@ -79001,8 +79015,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
       }
       p.setBlock(inp.isDown("F"));
-      for (let i = 0; i < 6; i++) {
-        if (inp.wasPressed(String(i + 1))) {
+      for (let i = 0; i < HOTBAR_SIZE; i++) {
+        if (inp.wasPressed(HOTBAR_KEYS[i])) {
           const id = p.hotbar[i];
           if (id) {
             p.facing = aim;
@@ -79142,8 +79156,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         p.reachT = 0.45;
         this.interaction.run();
       }
-      for (let i = 0; i < 6; i++) {
-        if (inp.wasPressed(String(i + 1))) {
+      for (let i = 0; i < HOTBAR_SIZE; i++) {
+        if (inp.wasPressed(HOTBAR_KEYS[i])) {
           const id = p.hotbar[i];
           if (id) {
             p.facing = Math.atan2(wy - p.y, game.world.dx(p.x, wx));
@@ -80453,7 +80467,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/ui/style.css
-  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #b8860b; font-size: 18px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: -1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.quest small { color: #ffd54f; }\n.compass .pin.ship small { color: #e3f2fd; }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n";
+  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #b8860b; font-size: 18px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: -1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.quest small { color: #ffd54f; }\n.compass .pin.ship small { color: #e3f2fd; }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n";
 
   // src/ui/icon.js
   var img = (canvas2, px2, cls = "") => h("img.icon" + cls, { src: iconURL(canvas2), width: px2, height: px2, draggable: false, alt: "" });
@@ -80545,730 +80559,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
   };
-
-  // src/ui/ui.js
-  var SIDEBAR = [
-    { id: "inventory", label: "Inventory", key: "Tab" },
-    { id: "character", label: "Character", key: "C" },
-    { id: "skills", label: "Skills", key: "K" },
-    { id: "journal", label: "Journal", key: "J" },
-    { id: "crew", label: "Crew", key: "U" },
-    { id: "menu", label: "Menu", key: "Esc" },
-    // on phones: no keyboard, so the map and the camera get buttons too
-    { id: "map", label: "Map", key: "M", touch: true },
-    { id: "view", label: "View", key: "V", touch: true }
-  ];
-  var HAKI_TOGGLES = [
-    { type: "armament", key: "R", name: "Armament Haki", icon: { id: "toggle_armament", name: "Armament", hakiType: "armament", source: "haki:armament" } },
-    { type: "observation", key: "T", name: "Observation Haki", icon: { id: "toggle_observation", name: "Observation", hakiType: "observation", source: "haki:observation" } },
-    { type: "conqueror", key: "G", name: "Conqueror's Haki", icon: { id: "haki_conqueror", name: "Conqueror's", hakiType: "conqueror", source: "haki:conqueror" } }
-  ];
-  var UI2 = class {
-    constructor(container) {
-      const style = document.createElement("style");
-      style.textContent = style_default;
-      document.head.appendChild(style);
-      this.root = h("div#ui");
-      container.appendChild(this.root);
-      this.game = null;
-      this.stack = [];
-      this.dialogueEl = null;
-      this.screenEl = null;
-      this.cache = {};
-      this.actions = {};
-      this.buildHud();
-      this.hudVisible = false;
-      this.setHudVisible(false);
-      this.mmT = 0;
-      this.keyHandlers = [];
-    }
-    // --- HUD -----------------------------------------------------------------
-    buildHud() {
-      const R3 = this.root;
-      this.hud = h("div.hud");
-      this.el = {};
-      const E = this.el;
-      E.name = h("div.hud-name");
-      E.sub = h("div.hud-sub");
-      E.hp = bar("hp");
-      E.st = bar("st");
-      E.hk = bar("hk");
-      E.o2 = h("div.o2.hidden", { title: "Breath" });
-      E.o2b = [];
-      for (let i = 0; i < 10; i++) {
-        const b = h("i");
-        E.o2b.push(b);
-        E.o2.appendChild(b);
-      }
-      E.lives = h("div.lives");
-      E.bounty = h("div.hud-bounty");
-      E.buffs = h("div.buffs");
-      this.hud.appendChild(h("div.hud-player", E.name, E.sub, E.hp.el, E.st.el, E.o2, E.hk.el, E.lives, E.bounty, E.buffs));
-      E.hotbar = h("div.hotbar");
-      E.slots = [];
-      for (let i = 0; i < 6; i++) {
-        const s = { el: h("div.slot.interactive"), ico: h("span.ico"), k: h("span.k", String(i + 1)), nm: h("span.nm"), qty: h("span.qty"), cd: h("div.cd"), cdt: h("div.cdt") };
-        s.el.append(s.ico, s.k, s.nm, s.qty, s.cd, s.cdt);
-        s.el.draggable = true;
-        s.el.addEventListener("dragstart", (ev) => {
-          if (!this.game?.player?.hotbar?.[i]) {
-            ev.preventDefault();
-            return;
-          }
-          ev.dataTransfer.setData("text/plain", "slot:" + i);
-        });
-        s.el.addEventListener("dragover", (ev) => {
-          ev.preventDefault();
-          s.el.classList.add("over");
-        });
-        s.el.addEventListener("dragleave", () => s.el.classList.remove("over"));
-        s.el.addEventListener("drop", (ev) => {
-          ev.preventDefault();
-          s.el.classList.remove("over");
-          const data = ev.dataTransfer.getData("text/plain");
-          if (data.startsWith("slot:")) this.swapSlots(+data.slice(5), i);
-        });
-        s.el.addEventListener("click", () => this.useSlot(i));
-        E.slots.push(s);
-        E.hotbar.appendChild(s.el);
-      }
-      E.toggles = {};
-      for (const t of HAKI_TOGGLES) {
-        const el = h("div.slot.toggle.hidden.interactive", h("span.ico", skillImg(t.icon, 28)), h("span.k", t.key));
-        el.addEventListener("click", () => {
-          const inp = this.game?.input;
-          if (inp && !this.blocksInput()) {
-            inp.simKey(t.key, true);
-            inp.simKey(t.key, false);
-          }
-        });
-        E.toggles[t.type] = el;
-        E.hotbar.appendChild(el);
-      }
-      this.hud.appendChild(E.hotbar);
-      E.prompt = h("div.prompt.hidden.interactive", { on: { click: () => {
-        const inp = this.game?.input;
-        if (inp && !this.blocksInput()) {
-          inp.simKey("E", true);
-          inp.simKey("E", false);
-        }
-      } } });
-      this.hud.appendChild(E.prompt);
-      E.log = h("div.log");
-      this.hud.appendChild(E.log);
-      E.mm = h("canvas.minimap", { width: 190, height: 190 });
-      E.mm.addEventListener("click", () => this.sideAction("map"));
-      E.loc = h("div.loc-name");
-      E.locSub = h("div.loc-sub");
-      E.clock = h("div.clock");
-      E.saved = h("div.saved-note");
-      E.logpose = h("div.logpose.hidden", h("i"), h("span"));
-      E.mmArrow = h("div.mm-arrow.hidden");
-      E.mmArrow.innerHTML = '<svg viewBox="-8 -9 16 18" width="16" height="18"><path d="M0 -7.5 L6 7 L0 3.5 L-6 7 Z" fill="#fff" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/></svg>';
-      E.mmNorth = h("div.mm-north.hidden", "N");
-      this.hud.appendChild(h("div.minimap-wrap", h("div.mm-box", E.mm, E.mmArrow, E.mmNorth), E.logpose, E.loc, E.locSub, E.clock, E.saved));
-      this.compass = new Compass(this.hud);
-      E.combat = h("div.combat-tag.off");
-      E.combat.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14"><g stroke="#fff3e0" stroke-width="1.8" stroke-linecap="round" fill="none"><path d="M3 3 L12.5 12.5"/><path d="M13 3 L3.5 12.5"/><path d="M10 14 L14 10"/><path d="M2 10 L6 14"/></g></svg><span>In combat</span>';
-      this.hud.appendChild(E.combat);
-      E.boss = h("div.bossbar.hidden", h("h3"), bar("boss").el);
-      this.hud.appendChild(E.boss);
-      E.ship = h("div.shiphud.hidden");
-      this.hud.appendChild(E.ship);
-      E.knocked = h("div.knocked-overlay.hidden", h("div", h("h1", "KNOCKED DOWN"), h("p.kt", ""), h("div.timer", h("i"))));
-      this.hud.appendChild(E.knocked);
-      E.crosshair = h("div.crosshair.hidden", h("i"), h("b"));
-      E.hitMark = h("span.hitmark");
-      E.hitMark.innerHTML = '<svg viewBox="-20 -20 40 40" width="40" height="40"><path d="M-13 -13 L-6.5 -6.5 M13 -13 L6.5 -6.5 M-13 13 L-6.5 6.5 M13 13 L6.5 6.5" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
-      E.crosshair.appendChild(E.hitMark);
-      this.hud.appendChild(E.crosshair);
-      E.lookHint = h("div.look-hint.hidden", "Click to look around", h("small", "Esc frees the mouse \xB7 V switches view"));
-      this.hud.appendChild(E.lookHint);
-      R3.appendChild(this.hud);
-      this.bannerEl = h("div.banner", h("h2"), h("h1"), h("p"));
-      R3.appendChild(this.bannerEl);
-      this.hintEl = h("div.hint.hidden");
-      R3.appendChild(this.hintEl);
-      this.fadeEl = h("div.fade-black");
-      R3.appendChild(this.fadeEl);
-      this.panelLayer = h("div");
-      R3.appendChild(this.panelLayer);
-      E.side = h("div.sidebar.hidden");
-      E.sideBtns = {};
-      for (const b of SIDEBAR) {
-        const el = h(
-          "button.side-btn" + (b.touch ? ".t-only" : ""),
-          { title: `${b.label} (${b.key})`, on: { click: (ev) => {
-            ev.currentTarget.blur();
-            this.sideAction(b.id);
-          } } },
-          uiImg(b.id, 22),
-          h("span.lbl", b.label),
-          h("span.key", b.key)
-        );
-        E.sideBtns[b.id] = el;
-        E.side.appendChild(el);
-      }
-      R3.appendChild(E.side);
-      this.screenLayer = h("div");
-      R3.appendChild(this.screenLayer);
-      this.modalLayer = h("div");
-      R3.appendChild(this.modalLayer);
-    }
-    setHudVisible(v) {
-      this.hudVisible = v;
-      this.hud.classList.toggle("hidden", !v);
-      this.el.side.classList.toggle("hidden", !v);
-    }
-    /** Sidebar / shortcut: open a menu, or close it if it is already open. */
-    sideAction(id) {
-      const g = this.game;
-      if (!g?.player || this.screenEl) return;
-      if (this.dialogueEl) return;
-      if (this.mapOpen) {
-        this.closeMap?.();
-        if (id === "map") return;
-      }
-      const top = this.stack[this.stack.length - 1];
-      if (top && top.id === id) {
-        this.closeAll();
-        return;
-      }
-      this.closeAll();
-      this.actions[id]?.();
-    }
-    swapSlots(a, b) {
-      const p = this.game?.player;
-      if (!p || a === b) return;
-      const hb = p.char.hotbar;
-      [hb[a], hb[b]] = [hb[b] ?? null, hb[a] ?? null];
-      p.hotbar = hb;
-      this.cache["slot" + a] = this.cache["slot" + b] = null;
-      this.game.audio?.sfx("equip");
-    }
-    useSlot(i) {
-      const g = this.game, p = g?.player;
-      if (!p || this.blocksInput()) return;
-      const id = p.hotbar[i];
-      if (!id) return;
-      const pc = p.controller, mw = pc?.mouseWorld;
-      const aim = mw ? Math.atan2(mw.y - (p.y - 0.5), g.world.dx(p.x, mw.x)) : p.facing;
-      const target = mw && pc.aimTarget ? pc.aimTarget(p, g, mw.x, mw.y) : null;
-      if (p.mode !== "sail") p.facing = aim;
-      p.tryTechnique(id, g, target || (mw ? { x: mw.x, y: mw.y } : { x: p.x + Math.cos(aim) * 4, y: p.y + Math.sin(aim) * 4 }));
-    }
-    blocksInput() {
-      return this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen;
-    }
-    log(text, color = "#fff") {
-      const d = h("div", { style: { color } }, text);
-      this.el.log.appendChild(d);
-      while (this.el.log.children.length > 7) this.el.log.removeChild(this.el.log.firstChild);
-    }
-    hint(text, dur = 9) {
-      if (this.game?.settings && this.game.settings.showHints === false) return;
-      clear(this.hintEl);
-      this.hintEl.append(uiImg("journal", 18), h("span", text));
-      this.hintEl.classList.remove("hidden");
-      this.hintEl.style.opacity = "1";
-      clearTimeout(this.hintTimer);
-      this.hintTimer = setTimeout(() => {
-        this.hintEl.style.opacity = "0";
-        setTimeout(() => this.hintEl.classList.add("hidden"), 500);
-      }, dur * 1e3);
-    }
-    banner(title2, sub = "", text = "", dur = 4) {
-      const [s, t, p] = this.bannerEl.children;
-      s.textContent = sub;
-      t.textContent = title2;
-      p.textContent = text;
-      this.bannerEl.classList.add("show");
-      clearTimeout(this.bannerTimer);
-      this.bannerTimer = setTimeout(() => this.bannerEl.classList.remove("show"), dur * 1e3);
-    }
-    /**
-     * A big message across the middle of the screen. With a key, it replaces
-     * the last one of that kind still showing (switching views quickly shows
-     * only the latest); any other messages still up move out of its way.
-     */
-    toast(text, sub = "", color, key2 = null) {
-      this.toasts = (this.toasts || []).filter((t) => t.el.isConnected);
-      if (key2) {
-        for (const t of this.toasts) if (t.key === key2) t.el.remove();
-      }
-      this.toasts = this.toasts.filter((t) => t.el.isConnected);
-      for (const t of this.toasts) {
-        t.up = (t.up || 0) + 1;
-        t.el.style.marginTop = `${-t.up * 76}px`;
-      }
-      const el = h("div.toast", text, sub ? h("small", sub) : null);
-      if (color) el.style.color = color;
-      this.root.appendChild(el);
-      this.toasts.push({ el, key: key2 });
-      setTimeout(() => el.remove(), 2700);
-    }
-    /** The little "Saved" note under the clock. */
-    savedNote() {
-      const el = this.el.saved;
-      el.textContent = "Game saved";
-      el.classList.remove("show");
-      void el.offsetWidth;
-      el.classList.add("show");
-    }
-    fade(on) {
-      this.fadeEl.classList.toggle("on", on);
-    }
-    onPlayerHurt() {
-      this.hurtT = 0.3;
-    }
-    /** Flash the crosshair's hit marker (first person). */
-    hitMarker({ crit, blocked } = {}) {
-      const el = this.el.hitMark;
-      el.className = "hitmark" + (crit ? " crit" : blocked ? " blocked" : "");
-      void el.offsetWidth;
-      el.classList.add("show");
-    }
-    flashSlot(id) {
-      const p = this.game?.player;
-      if (!p) return;
-      const i = p.hotbar.indexOf(id);
-      if (i < 0) return;
-      const el = this.el.slots[i].el;
-      el.classList.remove("flash");
-      void el.offsetWidth;
-      el.classList.add("flash");
-    }
-    set(el, key2, val, prop = "textContent") {
-      if (this.cache[key2] === val) return;
-      this.cache[key2] = val;
-      el[prop] = val;
-    }
-    update(dt) {
-      const g = this.game;
-      if (!g) return;
-      const inp = g.input;
-      if (this.screenEl) return;
-      if (inp.wasPressed("Escape")) {
-        inp.consume("Escape");
-        if (this.mapOpen) {
-          this.closeMap?.();
-          return;
-        }
-        if (this.dialogueEl) {
-          this.onDialogueEscape?.();
-          return;
-        }
-        if (this.stack.length) {
-          this.closePanel();
-          return;
-        }
-        this.openMenu?.();
-        return;
-      }
-      if (this.dialogueEl) {
-        this.dialogueKeys?.(inp);
-        return;
-      }
-      for (const kh of this.keyHandlers) {
-        if (inp.wasPressed(kh.key)) {
-          if (kh.when && !kh.when()) continue;
-          inp.consume(kh.key);
-          kh.fn();
-          return;
-        }
-      }
-    }
-    // --- panels -----------------------------------------------------------------
-    openPanel(content, { wide = false, onClose, id } = {}) {
-      if (id) {
-        const ex = this.stack.find((s) => s.id === id);
-        if (ex) {
-          this.closePanel(ex);
-          return null;
-        }
-      }
-      const close = h("button.close", { title: "Close (Esc)", on: { click: () => this.closePanel(entry) } }, "\xD7");
-      const panel = h("div.panel" + (wide ? ".wide" : ""), close, content);
-      const bg = h("div.panel-bg" + (this.hudVisible ? ".side-pad" : ""), panel);
-      bg.addEventListener("mousedown", (e) => {
-        if (e.target === bg) this.closePanel(entry);
-      });
-      const entry = { el: bg, onClose, id, panel };
-      this.stack.push(entry);
-      this.panelLayer.appendChild(bg);
-      if (this.game) this.game.paused = true;
-      this.markSidebar();
-      return entry;
-    }
-    closePanel(entry) {
-      const e = entry || this.stack[this.stack.length - 1];
-      if (!e) return;
-      this.stack = this.stack.filter((x) => x !== e);
-      e.el.remove();
-      if (e.onClose) e.onClose();
-      if (this.game && !this.stack.length && !this.dialogueEl && !this.mapOpen) this.game.paused = false;
-      this.markSidebar();
-    }
-    closeAll() {
-      while (this.stack.length) this.closePanel();
-    }
-    markSidebar() {
-      const top = this.stack[this.stack.length - 1];
-      for (const [id, el] of Object.entries(this.el.sideBtns)) el.classList.toggle("on", !!top && top.id === id);
-    }
-    /**
-     * In-game replacement for confirm()/prompt() (native dialogs are blocked in
-     * some embeds). Resolves to true / the typed text, or null when cancelled.
-     */
-    ask({ title: title2 = "", text = "", input, ok = "OK", cancel = "Cancel", danger = false } = {}) {
-      return new Promise((resolve) => {
-        let done6 = false;
-        const wasPaused = this.game ? this.game.paused : false;
-        const field = input !== void 0 ? h("input.ask-input#ask-input", { value: input, maxLength: 24, spellcheck: false }) : null;
-        const finish2 = (v) => {
-          if (done6) return;
-          done6 = true;
-          bg.remove();
-          if (this.game && !wasPaused && !this.stack.length && !this.dialogueEl && !this.mapOpen) this.game.paused = false;
-          resolve(v);
-        };
-        const okBtn = h("button.btn" + (danger ? ".red" : ".gold"), { on: { click: () => finish2(field ? field.value.trim() || null : true) } }, ok);
-        const panel = h(
-          "div.panel.ask",
-          title2 ? h("h2", title2) : null,
-          text ? h("p", text) : null,
-          field,
-          h("div.ask-row", okBtn, h("button.btn", { on: { click: () => finish2(null) } }, cancel))
-        );
-        const bg = h("div.panel-bg", panel);
-        bg.addEventListener("mousedown", (e) => {
-          if (e.target === bg) finish2(null);
-        });
-        panel.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            okBtn.click();
-          } else if (e.key === "Escape") {
-            e.preventDefault();
-            finish2(null);
-          }
-          e.stopPropagation();
-        });
-        this.modalLayer.appendChild(bg);
-        if (this.game) this.game.paused = true;
-        setTimeout(() => (field || okBtn).focus(), 0);
-      });
-    }
-    showScreen(el) {
-      this.hideScreen();
-      this.screenEl = el;
-      this.screenLayer.appendChild(el);
-      this.el.side.classList.add("hidden");
-    }
-    hideScreen() {
-      if (this.screenEl) this.screenEl.remove();
-      this.screenEl = null;
-      this.el.side.classList.toggle("hidden", !this.hudVisible);
-    }
-    // --- per-frame HUD ------------------------------------------------------------
-    render(game) {
-      if (!this.hudVisible) return;
-      const p = game.player;
-      if (!p) return;
-      const E = this.el;
-      const ch = p.char || {};
-      E.side.classList.toggle("hidden", !!this.mapOpen || !!this.screenEl);
-      const v3 = game.view3d?.active ? game.view3d : null;
-      const free = !!v3 && !this.blocksInput();
-      const aimed = !!v3 && (v3.rig.mode === "first" || v3.rig.shiftLock);
-      E.crosshair.classList.toggle("hidden", !free || !aimed || p.mode === "sail" && !v3.rig.locked);
-      E.lookHint.classList.toggle("hidden", !free || v3.rig.locked || v3.rig.lockFailed || !!game.input.touch?.on || v3.rig.freeMouse && (this.cache.tpHintT = (this.cache.tpHintT ?? 8) - 1 / 60) < 0);
-      const hintKey = !v3 ? "" : v3.rig.freeMouse ? "free" : "lock";
-      if (this.cache.lookHint !== hintKey) {
-        this.cache.lookHint = hintKey;
-        clear(E.lookHint);
-        if (hintKey === "free") E.lookHint.append("Hold right mouse to turn the camera", h("small", "Tap Ctrl for shift lock \xB7 V switches view"));
-        else E.lookHint.append("Click to look around", h("small", "Esc frees the mouse \xB7 V switches view"));
-      }
-      this.root.classList.toggle("v3", !!v3);
-      this.compass.update(game, v3 ? v3.rig.yaw : 0, !!v3 && !this.mapOpen);
-      const fighting = !!p.inCombat && p.state === "idle" && !this.mapOpen && E.boss.classList.contains("hidden");
-      if (fighting !== this.cache.combat) {
-        this.cache.combat = fighting;
-        E.combat.classList.toggle("off", !fighting);
-      }
-      const up = v3 ? v3.rig.yaw : null;
-      if (up !== null) E.mm.style.transform = `rotate(${(-Math.PI / 2 - up).toFixed(4)}rad)`;
-      else if (this.cache.mmRot) E.mm.style.transform = "";
-      this.cache.mmRot = up !== null;
-      E.mmArrow.classList.toggle("hidden", up === null);
-      E.mmNorth.classList.toggle("hidden", up === null);
-      if (up !== null) {
-        const heading = p.mode === "sail" && p.ship ? p.ship.heading : p.facing;
-        E.mmArrow.style.transform = `rotate(${(heading - up).toFixed(4)}rad)`;
-        const phi = -Math.PI / 2 - up;
-        E.mmNorth.style.left = 50 + Math.sin(phi) * 44 + "%";
-        E.mmNorth.style.top = 50 - Math.cos(phi) * 44 + "%";
-      }
-      this.set(E.name, "name", ch.name || p.name);
-      const title2 = ch.title || (ch.faction === "marine" ? `Marine ${ch.marineRank || "Recruit"}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === "pirate" ? "Pirate" : "Wanderer");
-      this.set(E.sub, "sub", `${raceLabel(p.look)} \xB7 ${title2} \xB7 Doriki ${p.power().toLocaleString()}`);
-      E.hp.set(p.hp / p.d.maxHp, `${Math.ceil(p.hp)} / ${p.d.maxHp}`);
-      E.st.set(p.stamina / p.d.maxStamina, `${Math.ceil(p.stamina)}`);
-      const o2max = p.maxOxygen, o2 = p.oxygen;
-      const showO2 = !p.gills && o2 != null && Number.isFinite(o2max) && o2 < o2max - 0.05;
-      if (showO2 !== this.cache.o2on) {
-        E.o2.classList.toggle("hidden", !showO2);
-        this.cache.o2on = showO2;
-      }
-      if (showO2) {
-        const f = o2 / o2max * 10;
-        const key3 = Math.ceil(f * 2) + (f < 2.5 ? "L" : "");
-        if (key3 !== this.cache.o2k) {
-          this.cache.o2k = key3;
-          for (let i = 0; i < 10; i++) E.o2b[i].className = i < Math.floor(f) ? "" : i < f ? "half" : "pop";
-          E.o2.classList.toggle("low", f < 2.5);
-        }
-      }
-      const hakiOn2 = p.hakiUnlocked();
-      E.hk.el.classList.toggle("hidden", !hakiOn2);
-      if (hakiOn2) E.hk.set(p.haki / p.d.maxHaki, `${Math.ceil(p.haki)}`);
-      const lives = ch.lives ?? 3, maxLives = ch.maxLives ?? 3;
-      const key2 = lives + "/" + maxLives;
-      if (this.cache.lives !== key2) {
-        const prev = this.cache.livesN;
-        this.cache.lives = key2;
-        this.cache.livesN = lives;
-        clear(E.lives);
-        for (let i = 0; i < maxLives; i++) {
-          const v = h("div.vivre" + (i >= lives ? ".burnt" : ""), { title: "Vivre Card \u2014 a life" });
-          if (prev !== void 0 && i === lives && prev > lives) v.classList.add("burning");
-          E.lives.appendChild(v);
-        }
-      }
-      const W3 = game.wanted;
-      const tier = W3 ? W3.tier() : 0;
-      const heat = !W3 || tier < 2 ? "" : W3.spotted > 0 ? "spotted" : W3.watched > 0 ? "watched" : W3.hooded() ? "hooded" : "wanted";
-      const bk = `${ch.faction}|${ch.bounty || 0}|${ch.berries || 0}|${heat}`;
-      if (this.cache.bountyKey !== bk) {
-        this.cache.bountyKey = bk;
-        clear(E.bounty);
-        if (ch.faction !== "marine" && ch.bounty) E.bounty.append(h("span.bty", uiImg("bounty", 16), ` ${formatBerries(ch.bounty)}`));
-        E.bounty.append(h("small", uiImg("berries", 14), ` ${formatBerries(ch.berries || 0)}`));
-        const TAG = { wanted: ["WANTED", "Marines who get a good look at you will know your face"], hooded: ["HOODED", "Your hood hides your face (it slips if you fight or steal)"], watched: ["WATCHED", "A Marine is looking at you\u2026"], spotted: ["SPOTTED", "The Marines know who you are!"] };
-        if (heat) E.bounty.append(h("span.heat." + heat, { title: TAG[heat][1] }, TAG[heat][0]));
-      }
-      const buffKey = p.buffs.map((b) => b.name + Math.ceil(b.t)).join(",") + Object.keys(p.status).join(",");
-      if (this.cache.buffs !== buffKey) {
-        this.cache.buffs = buffKey;
-        clear(E.buffs);
-        for (const b of p.buffs) if (b.name) E.buffs.appendChild(h("span.buff", `${b.name} ${Math.ceil(b.t)}s`));
-        for (const s2 of Object.keys(p.status)) E.buffs.appendChild(h("span.buff", { style: { borderColor: "#ff8a80" } }, s2));
-      }
-      for (let i = 0; i < 6; i++) {
-        const s2 = E.slots[i];
-        const id = p.hotbar[i];
-        const isItem = typeof id === "string" && id.startsWith("item:");
-        const def = !id ? null : isItem ? ITEMS[id.slice(5)] : getAbility(id);
-        const k = "slot" + i;
-        const v = def ? id : "";
-        if (this.cache[k] !== v) {
-          this.cache[k] = v;
-          clear(s2.ico);
-          if (def) s2.ico.appendChild(isItem ? itemImg(id.slice(5), 34) : skillImg(def, 34));
-          s2.nm.textContent = def ? def.name : "";
-          s2.el.classList.toggle("empty", !def);
-          s2.el.title = def ? `${def.name}
-${def.desc || ""}
-
-Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag techniques or food here from Skills (K) or Inventory (Tab)";
-        }
-        if (isItem) {
-          const n = (ch.inventory || []).filter((x) => x.id === id.slice(5)).reduce((a, x) => a + (x.qty || 1), 0);
-          if (n <= 0) {
-            p.hotbar[i] = null;
-            if (ch.hotbar) ch.hotbar[i] = null;
-            this.cache[k] = null;
-            continue;
-          }
-          if (s2.qty.textContent !== String(n)) s2.qty.textContent = String(n);
-          s2.el.classList.toggle("none-left", n <= 0);
-          s2.cd.style.transform = "scaleY(0)";
-          if (s2.cdt.textContent) s2.cdt.textContent = "";
-          continue;
-        }
-        if (s2.qty.textContent) {
-          s2.qty.textContent = "";
-          s2.el.classList.remove("none-left");
-        }
-        const cd = def ? p.cooldowns[def.id] || 0 : 0;
-        const frac2 = def && def.cd ? clamp2(cd / (def.cd * (p.cdMul ?? 1)), 0, 1) : 0;
-        s2.cd.style.transform = `scaleY(${frac2})`;
-        const txt = cd > 0.05 ? cd >= 10 ? Math.ceil(cd) : cd.toFixed(1) : "";
-        if (s2.cdt.textContent !== String(txt)) s2.cdt.textContent = txt;
-      }
-      for (const t of HAKI_TOGGLES) {
-        const el = E.toggles[t.type];
-        const lvl = p.hakiLevel(t.type);
-        el.classList.toggle("hidden", !lvl);
-        if (!lvl) continue;
-        el.classList.toggle("on", t.type === "armament" ? p.armament : t.type === "observation" ? p.observation : !!p.conquerorInfused);
-        el.title = `${t.name} \u2014 level ${Math.floor(lvl)} (${t.key})`;
-      }
-      const inter = p.controller?.interaction;
-      const pk = inter ? inter.label : "";
-      if (this.cache.prompt !== pk) {
-        this.cache.prompt = pk;
-        E.prompt.classList.toggle("hidden", !inter || this.blocksInput());
-        clear(E.prompt);
-        if (inter) E.prompt.append(h("kbd", "E"), inter.label);
-      }
-      const isl = game.currentIsland;
-      const locName = game.world.zone !== 0 ? game.world.name : isl && isl.name ? isl.name : "Open Sea";
-      this.set(E.loc, "loc", locName);
-      const reg3 = game.world.zone === 0 ? REGION_INFO[regionAt(p.x, p.y)]?.name || "" : game.world.subtitle || "";
-      this.set(E.locSub, "locSub", reg3);
-      const env = game.env;
-      const wx = env.storm > 0.6 ? "Storm" : env.storm > 0.25 ? "Squall" : env.snow ? "Snow" : env.fog > 0.3 ? "Fog" : env.daylight < 0.35 ? env.fullMoon ? "Full moon" : "Night" : "Clear";
-      this.set(E.clock, "clock", `Day ${env.day} \xB7 ${env.clockString()} \xB7 ${wx}`);
-      this.mmT -= 1 / 60;
-      if (this.mmT <= 0) {
-        this.mmT = 0.2;
-        this.drawMinimap(game);
-      }
-      const lp = game.logPoseInfo ? game.logPoseInfo() : null;
-      E.logpose.classList.toggle("hidden", !lp);
-      if (lp) {
-        const needle2 = E.logpose.children[0];
-        needle2.style.transform = `rotate(${v3 ? lp.angle - v3.rig.yaw : lp.angle + Math.PI / 2}rad)`;
-        this.set(E.logpose.children[1], "lpt", lp.label);
-      }
-      const boss = game.bossTarget;
-      E.boss.classList.toggle("hidden", !boss || boss.state !== "idle");
-      if (boss) {
-        const h3 = E.boss.children[0];
-        const bk2 = boss.name + (boss.title || "");
-        if (this.cache.boss !== bk2) {
-          this.cache.boss = bk2;
-          clear(h3);
-          h3.append(h("small", boss.title || ""), boss.name);
-        }
-        const bb = E.boss.children[1];
-        bb.firstChild.style.width = 100 * clamp2(boss.hp / boss.d.maxHp, 0, 1) + "%";
-        bb.children[1].style.width = 100 * clamp2(boss.hp / boss.d.maxHp, 0, 1) + "%";
-      }
-      const s = p.mode === "sail" ? p.ship : null;
-      E.ship.classList.toggle("hidden", !s);
-      if (s) {
-        const html = `<div class="row"><b>${s.name}</b><span>${s.def.name}</span></div>
-        <div class="bar hull"><i style="width:${100 * s.hull / s.maxHull}%"></i><span>Hull ${Math.ceil(s.hull)}/${s.maxHull}</span></div>
-        <div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>
-        <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span><span>Wind <span class="wind" style="transform:rotate(${env.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? "none (Calm Belt!)" : Math.round(env.windStrength * 100) + "%"}</span></div>
-        <div class="row"><span>Cannons ${s.def.cannons || 0}</span><span>${s.cannonCd > 0 ? "reloading\u2026" : s.def.cannons ? "ready" : ""}</span></div>`;
-        if (this.cache.shipHtml !== html) {
-          this.cache.shipHtml = html;
-          E.ship.innerHTML = html;
-        }
-      }
-      const kn = p.state === "knocked";
-      E.knocked.classList.toggle("hidden", !kn);
-      if (kn && game.knockInfo) {
-        const ki = game.knockInfo();
-        this.set(E.knocked.querySelector(".kt"), "kt", ki.text);
-        E.knocked.querySelector(".timer i").style.width = 100 * ki.frac + "%";
-      }
-    }
-    drawMinimap(game) {
-      const c = this.el.mm;
-      const g = c.getContext("2d");
-      const w = game.world;
-      const p = game.player;
-      const W3 = c.width, H2 = c.height;
-      const scale = p.mode === "sail" ? 2.2 : 1;
-      if (!this.mmImg) this.mmImg = g.createImageData(W3, H2);
-      const img2 = this.mmImg.data;
-      const map = w.map;
-      for (let j = 0; j < H2; j++) {
-        for (let i = 0; i < W3; i++) {
-          const tx = p.x + (i - W3 / 2) * scale, ty = p.y + (j - H2 / 2) * scale;
-          const o = (j * W3 + i) * 4;
-          if (ty < 0 || ty >= w.height || !w.wrap && (tx < 0 || tx >= w.width)) {
-            img2[o] = 30;
-            img2[o + 1] = 40;
-            img2[o + 2] = 50;
-            img2[o + 3] = 255;
-            continue;
-          }
-          const mx = Math.floor(w.wx(tx) / 2) % map.w, my = Math.floor(ty / 2);
-          const k = (my * map.w + mx) * 4;
-          const explored = w.isExplored(tx, ty);
-          const f = explored ? 1 : 0.35;
-          img2[o] = map.data[k] * f;
-          img2[o + 1] = map.data[k + 1] * f;
-          img2[o + 2] = map.data[k + 2] * f;
-          img2[o + 3] = 255;
-        }
-      }
-      g.putImageData(this.mmImg, 0, 0);
-      g.save();
-      g.globalCompositeOperation = "destination-in";
-      g.beginPath();
-      g.arc(W3 / 2, H2 / 2, W3 / 2, 0, Math.PI * 2);
-      g.fill();
-      g.restore();
-      for (const s of game.ships) {
-        if (s.sunk) continue;
-        const dx = w.dx(p.x, s.x) / scale + W3 / 2, dy = (s.y - p.y) / scale + H2 / 2;
-        if (Math.hypot(dx - W3 / 2, dy - H2 / 2) > W3 / 2 - 4) continue;
-        g.fillStyle = s.owner === "player" ? "#ffeb3b" : s.faction === "marine" ? "#64b5f6" : "#ef5350";
-        g.beginPath();
-        g.ellipse(dx, dy, Math.max(3, s.def.length / scale / 2), Math.max(3, s.def.beam / scale / 2), s.heading || 0, 0, Math.PI * 2);
-        g.fill();
-      }
-      for (const a of game.actors) {
-        if (a === p || a.state !== "idle" || a.hidden) continue;
-        const hostileNow = a.controller?.target === p || p.observation && a.faction !== "civilian";
-        if (!hostileNow && !a.questMarker) continue;
-        const dx = w.dx(p.x, a.x) / scale + W3 / 2, dy = (a.y - p.y) / scale + H2 / 2;
-        if (Math.hypot(dx - W3 / 2, dy - H2 / 2) > W3 / 2 - 3) continue;
-        g.fillStyle = a.questMarker ? "#ffd54f" : "#ff5252";
-        g.fillRect(dx - 1.5, dy - 1.5, 3, 3);
-      }
-      if (game.view3d?.active) return;
-      g.save();
-      g.translate(W3 / 2, H2 / 2);
-      g.rotate(p.mode === "sail" && p.ship ? p.ship.heading : p.facing);
-      g.fillStyle = "#fff";
-      g.strokeStyle = "#000";
-      g.lineWidth = 1.5;
-      g.beginPath();
-      g.moveTo(7, 0);
-      g.lineTo(-5, -5);
-      g.lineTo(-2, 0);
-      g.lineTo(-5, 5);
-      g.closePath();
-      g.fill();
-      g.stroke();
-      g.restore();
-    }
-  };
-  function bar(cls) {
-    const i = h("i"), b = h("b"), span2 = h("span");
-    const el = h("div.bar." + cls, b, i, span2);
-    let last = -1;
-    return {
-      el,
-      set(frac2, text) {
-        frac2 = clamp2(frac2, 0, 1);
-        if (Math.abs(frac2 - last) > 2e-3) {
-          i.style.width = frac2 * 100 + "%";
-          b.style.width = frac2 * 100 + "%";
-          last = frac2;
-        }
-        if (span2.textContent !== text) span2.textContent = text;
-      }
-    };
-  }
 
   // src/data/haki.js
   var HAKI = {
@@ -81374,71 +80664,6 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
   ];
   registerAbilities(HAKI_ABILITIES.map((a) => ({ ...a, source: "haki:" + a.hakiType })), "haki");
 
-  // src/game/save.js
-  var PREFIX = "op-inherited-will";
-  var LEGACY_CHAR = `${PREFIX}:char:v1`;
-  var LEGACY_LEGACY = `${PREFIX}:legacy:v1`;
-  var KEY_SETTINGS = `${PREFIX}:settings:v1`;
-  var KEY_LAST = `${PREFIX}:lastSlot`;
-  var SLOT_COUNT = 3;
-  var slot = 1;
-  var key = (s, what) => `${PREFIX}:slot${s}:${what}:v1`;
-  function read(k) {
-    try {
-      const s = localStorage.getItem(k);
-      return s ? JSON.parse(s) : null;
-    } catch {
-      return null;
-    }
-  }
-  function write(k, v) {
-    try {
-      localStorage.setItem(k, JSON.stringify(v));
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  function remove(k) {
-    try {
-      localStorage.removeItem(k);
-    } catch {
-    }
-  }
-  (function migrate() {
-    const oldChar = read(LEGACY_CHAR), oldLegacy = read(LEGACY_LEGACY);
-    if (!oldChar && !oldLegacy) return;
-    if (!read(key(1, "char")) && !read(key(1, "legacy"))) {
-      if (oldChar) write(key(1, "char"), oldChar);
-      if (oldLegacy) write(key(1, "legacy"), oldLegacy);
-    }
-    remove(LEGACY_CHAR);
-    remove(LEGACY_LEGACY);
-  })();
-  function defaultLegacy() {
-    return { version: 1, generation: 1, will: 0, totalWill: 0, perks: {}, heirloom: null, hall: [], charted: [], reincarnatedFruits: [], unlocks: {} };
-  }
-  function setSlot(n) {
-    slot = Math.max(1, Math.min(SLOT_COUNT, n | 0));
-    write(KEY_LAST, slot);
-  }
-  var loadLegacy = (s = slot) => ({ ...defaultLegacy(), ...read(key(s, "legacy")) || {} });
-  var saveLegacy = (l, s = slot) => write(key(s, "legacy"), l);
-  var loadChar = (s = slot) => read(key(s, "char"));
-  var saveChar = (c, s = slot) => write(key(s, "char"), c);
-  var clearChar = (s = slot) => remove(key(s, "char"));
-  function clearSlot(s) {
-    remove(key(s, "char"));
-    remove(key(s, "legacy"));
-  }
-  function slotInfo(s) {
-    const char = read(key(s, "char"));
-    const legacy = read(key(s, "legacy"));
-    return { slot: s, char, legacy: legacy ? { ...defaultLegacy(), ...legacy } : null, empty: !char && !legacy };
-  }
-  var loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, view: "first", sensitivity: 0.5, invertY: false, quality: "high", autoRes: true, fov: 0.5, bob: true, ...read(KEY_SETTINGS) || {} });
-  var saveSettings = (s) => write(KEY_SETTINGS, s);
-
   // src/data/dreams.js
   var LEGENDS = {
     king: {
@@ -81509,6 +80734,71 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
     }
   };
   var LEGEND_IDS = Object.keys(LEGENDS);
+
+  // src/game/save.js
+  var PREFIX = "op-inherited-will";
+  var LEGACY_CHAR = `${PREFIX}:char:v1`;
+  var LEGACY_LEGACY = `${PREFIX}:legacy:v1`;
+  var KEY_SETTINGS = `${PREFIX}:settings:v1`;
+  var KEY_LAST = `${PREFIX}:lastSlot`;
+  var SLOT_COUNT = 3;
+  var slot = 1;
+  var key = (s, what) => `${PREFIX}:slot${s}:${what}:v1`;
+  function read(k) {
+    try {
+      const s = localStorage.getItem(k);
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
+    }
+  }
+  function write(k, v) {
+    try {
+      localStorage.setItem(k, JSON.stringify(v));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function remove(k) {
+    try {
+      localStorage.removeItem(k);
+    } catch {
+    }
+  }
+  (function migrate() {
+    const oldChar = read(LEGACY_CHAR), oldLegacy = read(LEGACY_LEGACY);
+    if (!oldChar && !oldLegacy) return;
+    if (!read(key(1, "char")) && !read(key(1, "legacy"))) {
+      if (oldChar) write(key(1, "char"), oldChar);
+      if (oldLegacy) write(key(1, "legacy"), oldLegacy);
+    }
+    remove(LEGACY_CHAR);
+    remove(LEGACY_LEGACY);
+  })();
+  function defaultLegacy() {
+    return { version: 1, generation: 1, will: 0, totalWill: 0, perks: {}, heirloom: null, hall: [], charted: [], reincarnatedFruits: [], unlocks: {} };
+  }
+  function setSlot(n) {
+    slot = Math.max(1, Math.min(SLOT_COUNT, n | 0));
+    write(KEY_LAST, slot);
+  }
+  var loadLegacy = (s = slot) => ({ ...defaultLegacy(), ...read(key(s, "legacy")) || {} });
+  var saveLegacy = (l, s = slot) => write(key(s, "legacy"), l);
+  var loadChar = (s = slot) => read(key(s, "char"));
+  var saveChar = (c, s = slot) => write(key(s, "char"), c);
+  var clearChar = (s = slot) => remove(key(s, "char"));
+  function clearSlot(s) {
+    remove(key(s, "char"));
+    remove(key(s, "legacy"));
+  }
+  function slotInfo(s) {
+    const char = read(key(s, "char"));
+    const legacy = read(key(s, "legacy"));
+    return { slot: s, char, legacy: legacy ? { ...defaultLegacy(), ...legacy } : null, empty: !char && !legacy };
+  }
+  var loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, view: "first", sensitivity: 0.5, invertY: false, quality: "high", autoRes: true, fov: 0.5, bob: true, ...read(KEY_SETTINGS) || {} });
+  var saveSettings = (s) => write(KEY_SETTINGS, s);
 
   // src/game/lineage.js
   var TRAITS = {
@@ -81894,6 +81184,487 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
     saveLegacy(legacy);
     return will;
   }
+
+  // src/game/inventory.js
+  function count(char, id) {
+    return (char.inventory || []).filter((i) => i.id === id).reduce((s, i) => s + (i.qty || 1), 0);
+  }
+  function addItem(game, id, qty = 1, opts = {}) {
+    const char = game.state.char;
+    const d = ITEMS[id];
+    if (!d) return false;
+    const stackable = !["weapon", "hat", "coat", "fruit", "accessory"].includes(d.type) || d.stack;
+    const ex = stackable && char.inventory.find((i) => i.id === id);
+    if (ex) ex.qty = (ex.qty || 1) + qty;
+    else if (stackable) char.inventory.push({ id, qty });
+    else for (let k = 0; k < qty; k++) char.inventory.push({ id, qty: 1, ...opts });
+    if (!opts.silent) game.log(`Obtained ${d.name}${qty > 1 ? " \xD7" + qty : ""}.`, "#ffe082");
+    game.emit("itemGained", id, qty);
+    return true;
+  }
+  function removeItem(game, id, qty = 1) {
+    const char = game.state.char;
+    let left = qty;
+    for (let i = char.inventory.length - 1; i >= 0 && left > 0; i--) {
+      const it = char.inventory[i];
+      if (it.id !== id) continue;
+      const take = Math.min(left, it.qty || 1);
+      it.qty = (it.qty || 1) - take;
+      left -= take;
+      if (it.qty <= 0) char.inventory.splice(i, 1);
+    }
+    const eq = char.equipped;
+    if (!count(char, id)) {
+      if (eq.hat === id) eq.hat = null;
+      if (eq.coat === id) eq.coat = null;
+      eq.weapons = (eq.weapons || []).filter((w) => w !== id);
+      eq.accessories = (eq.accessories || []).filter((w) => w !== id);
+      const hb = char.hotbar || [];
+      for (let k = 0; k < hb.length; k++) if (hb[k] === "item:" + id) hb[k] = null;
+      refreshPlayer(game);
+    }
+    return left === 0;
+  }
+  function pay(game, amount) {
+    const c = game.state.char;
+    if (c.berries < amount) return false;
+    c.berries -= amount;
+    return true;
+  }
+  function earn(game, amount, why) {
+    const c = game.state.char;
+    c.berries += Math.round(amount);
+    if (why !== false) game.log(`+\u0E3F${Math.round(amount).toLocaleString()}${why ? " \u2014 " + why : ""}`, "#ffd54f");
+  }
+  var ACC_SLOTS = 2;
+  function isEquipped(c, id) {
+    const eq = c.equipped || {};
+    return eq.hat === id || eq.coat === id || (eq.weapons || []).includes(id) || (eq.accessories || []).includes(id);
+  }
+  function equip(game, id, { slot: slot2 } = {}) {
+    const c = game.state.char;
+    const d = ITEMS[id];
+    if (!d || !count(c, id)) return;
+    const eq = c.equipped;
+    if (d.type === "hat") eq.hat = eq.hat === id ? null : id;
+    else if (d.type === "coat") eq.coat = eq.coat === id ? null : id;
+    else if (d.type === "accessory") {
+      const acc = (eq.accessories || []).filter(Boolean);
+      const worn = acc.filter((x) => x === id).length;
+      if (slot2 !== void 0) {
+        if (worn >= count(c, id)) acc.splice(acc.indexOf(id), 1);
+        if (slot2 < acc.length) acc[slot2] = id;
+        else acc.push(id);
+      } else if (worn && worn >= count(c, id)) acc.splice(acc.indexOf(id), 1);
+      else if (acc.length < ACC_SLOTS) acc.push(id);
+      else {
+        acc.shift();
+        acc.push(id);
+      }
+      eq.accessories = acc.slice(0, ACC_SLOTS);
+    } else if (d.type === "weapon") {
+      const ws = eq.weapons || [];
+      if (ws.includes(id) && ws.filter((w) => w === id).length >= count(c, id)) eq.weapons = ws.filter((w) => w !== id);
+      else if (d.kind === "sword" && ws.length && ITEMS[ws[0]]?.kind === "sword" && ws.length < 3) eq.weapons = [...ws, id];
+      else eq.weapons = [id];
+      if (id === "sandai_kitetsu" && !c.flags.kitetsuTested) {
+        c.flags.kitetsuTested = true;
+        game.log("You toss the cursed Kitetsu into the air and hold out your arm\u2026 it spins down and misses you by a hair. The blade accepts you.", "#ef9a9a");
+      }
+    } else return;
+    refreshPlayer(game);
+    game.audio?.sfx("equip");
+  }
+  function unequipSlot(game, slot2) {
+    const eq = game.state.char.equipped;
+    if (slot2 === "head") eq.hat = null;
+    else if (slot2 === "body") eq.coat = null;
+    else if (slot2.startsWith("weapon")) {
+      const i = +slot2.slice(6);
+      eq.weapons = (eq.weapons || []).filter((_, k) => k !== i);
+    } else if (slot2.startsWith("acc")) {
+      const i = +slot2.slice(3);
+      eq.accessories = (eq.accessories || []).filter((_, k) => k !== i);
+    }
+    refreshPlayer(game);
+    game.audio?.sfx("equip");
+  }
+  function slotKind(d) {
+    if (!d) return null;
+    return d.type === "hat" ? "head" : d.type === "coat" ? "body" : d.type === "weapon" ? "weapon" : d.type === "accessory" ? "acc" : null;
+  }
+  function useItem(game, id) {
+    const c = game.state.char;
+    const p = game.player;
+    const d = ITEMS[id];
+    if (!d || !count(c, id)) return false;
+    if (d.type === "food" || d.type === "medicine") {
+      if (p.state !== "idle") return false;
+      let heal = d.heal || 0;
+      if (d.type === "food") {
+        if (c.traits.includes("iron_stomach")) heal *= 1.3;
+        if (c.flags?.allBlue) heal *= 1.25;
+        heal *= game.crewMods?.foodMul || 1;
+      }
+      if (d.costsLife) {
+        if (c.lives <= 1) {
+          game.log(`Ivankov refuses: "You don't have the years to spare, candy-boy!"`, "#ff8a80");
+          return false;
+        }
+        c.lives -= 1;
+        game.log("Tension Hormones! Your body screams back to full strength \u2014 and your lifespan shortens.", "#ff8a80");
+      }
+      p.hp = Math.min(p.d.maxHp, p.hp + heal);
+      p.stamina = Math.min(p.d.maxStamina, p.stamina + (d.stamina || 0));
+      for (const s of d.cure || []) delete p.status[s];
+      if (d.buff) p.addBuff({ ...d.buff });
+      game.fx.text(p.x, p.y - 1.6, `+${Math.round(heal)}`, "#69f0ae", 0.45);
+      game.audio?.sfx("eat");
+      removeItem(game, id, 1);
+      return true;
+    }
+    if (d.type === "fruit") return eatFruit(game, id);
+    if (d.type === "pose" && d.target) {
+      const tgt = game.surface.islands.find((i) => i.id === d.target);
+      c.logPose.target = d.target;
+      c.logPose.eternal = id;
+      game.ui.toast("ETERNAL POSE", `The needle points to ${tgt?.name || d.target}.`, "#81d4fa");
+      return true;
+    }
+    if (d.type === "dial" && d.ability) {
+      const learned = c.techniques.includes(d.ability);
+      if (!learned) {
+        c.techniques.push(d.ability);
+        game.log(`You can now use the ${d.name} as a technique \u2014 assign it in Skills (K).`, "#80deea");
+      }
+      return true;
+    }
+    return false;
+  }
+  function eatFruit(game, itemId) {
+    const c = game.state.char;
+    const p = game.player;
+    const fid = ITEMS[itemId].fruit;
+    const f = FRUITS[fid];
+    if (c.fruit) {
+      game.log(`You already carry the power of the ${FRUITS[c.fruit]?.name}. A second Devil Fruit would tear your body apart \u2014 better to keep it, sell it, or give it to someone worthy.`, "#ff8a80");
+      return false;
+    }
+    removeItem(game, itemId, 1);
+    c.fruit = fid;
+    c.fruitMastery = 0;
+    c.fruitsEaten = 1;
+    const first = f.techniques[0];
+    if (first && !c.techniques.includes(first.id)) c.techniques.push(first.id);
+    if (first) addToHotbar(c, first.id);
+    refreshPlayer(game);
+    game.ui.toast(f.name.toUpperCase(), `${f.en} \u2014 ${f.type}. It tastes horrible.`, "#ffab91");
+    game.fx.ring(p.x, p.y, 0.3, 4, f.color, 0.8, 0.25);
+    game.fx.burst(p.x, p.y - 0.8, 30, { color: [f.color, "#ffffff"], speed: 5, g: 0, life: 0.8, kind: "star" });
+    game.log(`You ate the ${f.name}! You can never swim again. Fruit techniques unlock as your mastery grows (fight worthy foes, train).`, "#ffab91");
+    game.emit("fruitEaten", fid);
+    persist(game);
+    return true;
+  }
+
+  // src/data/shops.js
+  var STOCK = {
+    general: ["meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "antidote", "sake", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
+    tavern: ["meat", "rice_ball", "fish_stew", "sake", "tangerine", "mango"],
+    weapons_blue: ["wooden_sword", "rusty_katana", "cutlass", "slingshot", "flintlock", "bo_staff", "woodsman_axe", "padded_vest", "leather_jerkin", "leather_bracers", "iron_ring"],
+    weapons_grand: ["cutlass", "fine_katana", "marine_saber", "flintlock", "marine_rifle", "bo_staff", "woodsman_axe", "shigure", "leather_jerkin", "chain_shirt", "hand_wraps", "iron_ring"],
+    weapons_new: ["fine_katana", "marine_saber", "marine_rifle", "shigure", "seastone_cuffs", "chain_shirt", "samurai_armor", "hand_wraps", "sea_prism_charm"],
+    outfitter: ["bandana", "traveller_hood", "black_hood", "tricorne", "captain_hat", "cowboy_hat", "pink_hat", "goggles", "headband", "captain_coat", "red_cloak", "haramaki", "red_sash", "gold_earrings", "shell_bracelet", "lucky_charm"],
+    navigator: ["log_pose", "den_den_mushi"],
+    navigator_grand: ["log_pose", "new_world_log_pose", "den_den_mushi"],
+    skypiea: ["impact_dial", "flame_dial", "breath_dial", "flash_dial", "rice_ball", "fish_stew"],
+    fishman: ["fish_stew", "sea_king_steak", "pearl", "pearl_necklace", "bandage", "antidote"],
+    loguetown_swords: ["wooden_sword", "rusty_katana", "cutlass", "fine_katana", "yubashiri"],
+    black_market: ["rumble_ball", "seastone", "seastone_cuffs", "cola", "jewels", "black_hood"]
+  };
+  var SEA_PRICE = { east_blue: 1, north_blue: 1.1, west_blue: 1.1, south_blue: 1.1, paradise: 1.6, calm_belt: 2, red_line: 3, new_world: 2.4, sky: 1.8, undersea: 2 };
+  function stockFor(building, island) {
+    const sea = island?.def?.sea || "east_blue";
+    const grand = sea === "paradise" || sea === "new_world" || sea === "calm_belt";
+    if (building.shop) return STOCK[building.shop] || building.shop;
+    const n = (building.name || "").toLowerCase();
+    switch (building.role) {
+      case "tavern":
+      case "bar":
+      case "restaurant":
+      case "cafe":
+        return STOCK.tavern;
+      case "weapons":
+        return n.includes("ipponmatsu") ? STOCK.loguetown_swords : sea === "new_world" ? STOCK.weapons_new : grand ? STOCK.weapons_grand : STOCK.weapons_blue;
+      case "market":
+      case "shop":
+        if (n.includes("navigator") || n.includes("log")) return grand ? STOCK.navigator_grand : STOCK.navigator;
+        if (n.includes("outfit") || n.includes("boutique")) return STOCK.outfitter;
+        if (island?.def?.climate === "sky") return STOCK.skypiea;
+        return STOCK.general;
+      default:
+        return STOCK.general;
+    }
+  }
+  function priceOf(id, island, char) {
+    const d = ITEMS[id];
+    if (!d) return 0;
+    const sea = island?.def?.sea || "east_blue";
+    let p = (d.price || 0) * (SEA_PRICE[sea] || 1);
+    if (char?.traits?.includes("silver_tongue")) p *= 0.9;
+    if (char?.liberated?.includes(island?.name)) p *= 0.75;
+    return Math.max(1, Math.round(p / 5) * 5);
+  }
+
+  // src/data/trainers.js
+  var TRAINERS = {
+    // ---------------------------------------------------------- East Blue
+    koshiro: {
+      name: "Koshiro",
+      where: "Isshin Dojo, Shimotsuki Village",
+      styles: { ittoryu: 1500, nitoryu: 8e3 },
+      teaches: ["itto_iai", "itto_pound", "itto_whirl", "nito_taka", "nito_nigiri"],
+      train: { str: 25, agi: 25 },
+      spar: { level: 14, style: "ittoryu", weapon: "sword", name: "Koshiro" },
+      lines: ["A sword is not a tool for killing. It is a promise.", "Again. Your feet are lying to your blade."]
+    },
+    zeff: {
+      name: '"Red Leg" Zeff',
+      where: "the Baratie",
+      styles: { black_leg: 3e3 },
+      teaches: ["bleg_party", "bleg_antimanner", "bleg_concasse"],
+      train: { agi: 30, end: 28 },
+      spar: { level: 18, style: "black_leg", name: "Zeff" },
+      lines: ["A cook's hands are his life. Fight with your legs.", "Kicks are ten times stronger than punches, brat."]
+    },
+    dadan: {
+      name: "Curly Dadan",
+      where: "the Dadan Family hideout, Mt. Colubo",
+      styles: {},
+      teaches: ["brawl_tackle", "brawl_headbutt"],
+      train: { str: 18, end: 20, vit: 20 },
+      spar: { level: 9, style: "brawler", name: "Dogra & Magra" },
+      lines: ["Hunt your own dinner or starve, brat!", "The mountain doesn't care who your father is."]
+    },
+    usopp: {
+      name: "Usopp",
+      where: "Syrup Village",
+      styles: { sniper: 800 },
+      teaches: ["snipe_explode", "snipe_tabasco"],
+      train: { agi: 18, wil: 16 },
+      spar: { level: 8, style: "sniper", weapon: "gun", name: "Captain Usopp" },
+      lines: ["Hissatsu... Lead Star!", "A sniper never misses! ...Mostly."]
+    },
+    dojo_generic: {
+      name: "Dojo Master",
+      where: "a town dojo",
+      styles: {},
+      teaches: ["brawl_tackle", "brawl_knee", "brawl_headbutt"],
+      train: { str: 20, end: 20, vit: 20 },
+      spar: { level: 9, style: "brawler", name: "Senior Student" },
+      lines: ["Hit the post a thousand times. Then a thousand more."]
+    },
+    gunsmith: {
+      name: "Gunsmith",
+      where: "the range",
+      styles: { sniper: 2500 },
+      teaches: ["snipe_explode", "snipe_tabasco", "snipe_firebird"],
+      train: { agi: 22, wil: 18 },
+      spar: { level: 10, style: "sniper", weapon: "gun", name: "Range Master" },
+      lines: ["Breathe out. Squeeze, don't pull."]
+    },
+    marine_instructor: {
+      name: "Marine Instructor",
+      where: "a Marine base",
+      styles: { rokushiki: 2e4 },
+      teaches: ["roku_soru", "roku_geppo", "roku_tekkai", "roku_rankyaku"],
+      train: { str: 30, end: 30, vit: 30 },
+      spar: { level: 16, style: "rokushiki", name: "Drill Sergeant" },
+      marineOnly: true,
+      lines: ["Justice needs strong legs. Soru! Again!"]
+    },
+    // ---------------------------------------------------------- other Blues
+    chinjao_master: {
+      name: "Chinjao Family Elder",
+      where: "Kano Country (West Blue)",
+      styles: { hasshoken: 12e3 },
+      teaches: ["hassho_bushin", "hassho_drill"],
+      train: { str: 35, end: 30 },
+      spar: { level: 22, style: "hasshoken", name: "Hasshoken Disciple" },
+      lines: ["The Hasshoken vibrates through armour. Your guard is meaningless."]
+    },
+    karate_master: {
+      name: "Karate Island Grandmaster",
+      where: "Karate Island (South Blue)",
+      styles: {},
+      teaches: ["brawl_tackle", "brawl_knee", "brawl_headbutt"],
+      train: { str: 35, agi: 30, end: 35 },
+      spar: { level: 20, style: "brawler", name: "Black Belt" },
+      lines: ["Boxing, karate, it is all the same: the one who gets up wins."]
+    },
+    torino_elder: {
+      name: "Torino Elder",
+      where: "Torino Kingdom (South Blue)",
+      styles: { electro: 0 },
+      teaches: ["elec_garchu"],
+      train: { agi: 30, vit: 30 },
+      spar: { level: 15, style: "electro", name: "Mink Hunter" },
+      lines: ["The giant birds of Torino fear only lightning."]
+    },
+    // --------------------------------------------------------- Grand Line
+    bon_clay: {
+      name: "Bon Clay (Mr. 2)",
+      where: "Nanohana, Alabasta",
+      styles: { okama_kenpo: 15e3 },
+      teaches: ["okama_pirouette", "okama_swan_dash"],
+      train: { agi: 40, end: 35 },
+      spar: { level: 26, style: "okama_kenpo", name: "Bon Clay" },
+      lines: ["The way of the okama is the way of friendship!", "Un, deux, trois!"]
+    },
+    ivankov: {
+      name: "Emporio Ivankov",
+      where: "Momoiro Island, Kamabakka Kingdom",
+      styles: { okama_kenpo: 2e4 },
+      teaches: ["okama_hell_wink", "bleg_diable", "bleg_skywalk"],
+      train: { vit: 55, end: 50 },
+      spar: { level: 45, style: "okama_kenpo", name: "Newkama Warrior" },
+      lines: ["Hee-haw! You want to become a man? Or a woman? Or stronger?!", "Hell Memories training! 100 recipes a day!"]
+    },
+    skypiea_priest: {
+      name: "Priest of Upper Yard",
+      where: "Skypiea",
+      styles: {},
+      teaches: [],
+      train: { wil: 45 },
+      haki: { observation: 40 },
+      spar: { level: 30, style: "brawler", name: "Priest Satori" },
+      lines: ["This is Mantra. We hear the voices of all living things."]
+    },
+    weatheria_scholar: {
+      name: "Weatheria Scholar",
+      where: "Weatheria",
+      styles: { weather_science: 3e4 },
+      teaches: ["clima_thunderbolt", "clima_cyclone", "clima_mirage", "clima_zeus"],
+      train: { wil: 45 },
+      spar: { level: 28, style: "weather_science", weapon: "staff", name: "Weather Scientist" },
+      lines: ["Weather is science, not magic. Although the difference is small."]
+    },
+    franky: {
+      name: "Franky",
+      where: "Franky House, Water 7",
+      styles: {},
+      teaches: [],
+      train: { str: 45, end: 45 },
+      spar: { level: 32, style: "brawler", name: "Franky Family Brawler" },
+      shipwright: true,
+      lines: ["SUUUPER! You want a ship that can sail to the end of the world? Bring me Adam wood!"]
+    },
+    galley_la: {
+      name: "Galley-La Foreman",
+      where: "Water 7",
+      styles: {},
+      teaches: [],
+      train: { str: 40, end: 40 },
+      spar: { level: 30, style: "brawler", name: "Shipwright" },
+      shipwright: true,
+      lines: ["A ship is a living thing. Treat her right."]
+    },
+    rayleigh: {
+      name: "Silvers Rayleigh",
+      where: "Shakky's Rip-off Bar, Sabaody",
+      styles: {},
+      teaches: ["haki_emission", "haki_futuresight", "haki_infusion"],
+      train: { wil: 70, str: 60 },
+      haki: { armament: 65, observation: 65, conqueror: 60 },
+      spar: { level: 60, style: "ittoryu", weapon: "sword", name: "Silvers Rayleigh", haki: true },
+      lines: ["Haki is the power of doubt-free conviction.", "Take it easy. Nobody learns this in a day."]
+    },
+    kuja: {
+      name: "Kuja Warrior Marguerite",
+      where: "Amazon Lily",
+      styles: {},
+      teaches: [],
+      train: { agi: 55, wil: 55 },
+      haki: { armament: 40, observation: 45 },
+      spar: { level: 38, style: "sniper", weapon: "gun", name: "Kuja Archer", haki: true },
+      lines: ["Every Kuja warrior uses Haki. How do people from outside even survive?"]
+    },
+    mihawk: {
+      name: "Dracule Mihawk",
+      where: "Kuraigana Island",
+      styles: { santoryu: 0 },
+      teaches: ["santo_onigiri", "santo_108", "santo_sanzen"],
+      train: { str: 75, agi: 70 },
+      haki: { armament: 60 },
+      spar: { level: 70, style: "ittoryu", weapon: "sword", name: "Humandrill", haki: true },
+      requires: { mastery: { ittoryu: 30 } },
+      lines: ["Humiliating yourself to learn from your enemy... for your dream. That is true strength."]
+    },
+    jinbe: {
+      name: "Jinbe",
+      where: "Fish-Man Island",
+      styles: { fishman_karate: 25e3 },
+      teaches: ["fmk_uchimizu", "fmk_arabesque", "fmk_5000", "fmk_vagabond"],
+      train: { str: 60, end: 60 },
+      spar: { level: 55, style: "fishman_karate", name: "Fish-Man Karate Master" },
+      lines: ["Fish-Man Karate controls the water inside all things."]
+    },
+    hyogoro: {
+      name: "Hyogoro the Flower",
+      where: "Udon, Wano Country",
+      styles: {},
+      teaches: ["haki_ryuo"],
+      train: { str: 70, wil: 70 },
+      haki: { armament: 80 },
+      spar: { level: 72, style: "brawler", name: "Udon Prisoner", haki: true },
+      lines: ['Ryuo is not "coating". Let your Haki flow \u2014 let it destroy from within.']
+    },
+    kozuki_samurai: {
+      name: "Kozuki Retainer",
+      where: "Flower Capital, Wano",
+      styles: { nitoryu: 2e4, ittoryu: 5e3 },
+      teaches: ["nito_taka", "nito_nigiri", "santo_asura"],
+      train: { str: 75, agi: 75 },
+      spar: { level: 70, style: "nitoryu", weapon: "sword", name: "Samurai", haki: true },
+      lines: ["Oden-sama's two-sword style could cut even the Emperor's scales."]
+    },
+    elbaf_warrior: {
+      name: "Giant Warrior",
+      where: "Elbaf (or Little Garden)",
+      styles: { elbaf: 3e4 },
+      teaches: ["elbaf_hakoku"],
+      train: { str: 80, vit: 80, end: 70 },
+      spar: { level: 60, style: "elbaf", weapon: "axe", name: "Giant Warrior" },
+      lines: ["GEGYAGYAGYA! Show us the pride of a warrior!"]
+    },
+    zou_minks: {
+      name: "Nekomamushi / Inuarashi's Guard",
+      where: "Zou",
+      styles: { electro: 0 },
+      teaches: ["elec_garchu", "elec_sulong"],
+      train: { agi: 75, str: 65 },
+      spar: { level: 58, style: "electro", name: "Musketeer", haki: true },
+      lines: ["Garchu! Every Mink is a warrior."]
+    },
+    revolutionary: {
+      name: "Revolutionary Officer",
+      where: "Baltigo / Momoiro Island",
+      styles: { ryusoken: 4e4 },
+      teaches: ["ryu_claw", "ryu_hiken"],
+      train: { str: 65, agi: 60 },
+      spar: { level: 52, style: "ryusoken", name: "Revolutionary Soldier", haki: true },
+      lines: ["Freedom is not given. It is taken back."]
+    },
+    cp_defector: {
+      name: "Ex-CP9 Agent",
+      where: "Water 7 back alleys",
+      styles: { rokushiki: 6e4 },
+      teaches: ["roku_soru", "roku_geppo", "roku_tekkai", "roku_rankyaku", "roku_kamie", "roku_rokuogan"],
+      train: { str: 55, agi: 60 },
+      spar: { level: 50, style: "rokushiki", name: "Former Agent" },
+      lines: ["Doriki is just a number. Six powers, one body."]
+    }
+  };
 
   // src/ui/screens.js
   var HEIGHT_NOTE = {
@@ -82508,7 +82279,7 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
         k("Left click", "attack combo (ship: cannons)"),
         k("Right click", "heavy attack"),
         k("F", "block \u2014 tap just before a hit to PARRY"),
-        k("1-6", "hotbar (techniques & items)"),
+        k("1-9, 0", "hotbar (techniques & items)"),
         haki ? k("R / T", "Armament / Observation Haki (once awakened)") : null,
         haki && char.haki?.conqueror ? k("G", "Conqueror's Haki") : null,
         k("E", "interact / talk / pick fruit / board / search a knocked-out foe"),
@@ -82523,7 +82294,7 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
         k("Mouse wheel", "camera distance (third person)"),
         k("H", "this help")
       ),
-      h("p.muted", "The buttons on the right of the screen open the same menus. Drag techniques and items onto the hotbar from the Inventory or Skills menu, and drag hotbar slots to rearrange them."),
+      h("p.muted", "The buttons on the right of the screen open the same menus. Open the Inventory or Skills menu and drag techniques and food straight onto your hotbar at the bottom of the screen; drag hotbar slots to rearrange them, right-click one to clear it."),
       h("p", h("b", "On a phone or tablet: "), "your left thumb moves (push the stick all the way to run; at sea it steers and sets the sails) and your right thumb drags to look around. The round buttons jump, attack, heavy attack, dodge and block; tap Use or the prompt to talk and interact, and tap a hotbar slot to use a technique. The strip at the top opens the menus, the world map and the camera view. Play with the phone held sideways."),
       h("h3", "Reputation"),
       h("p", "People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation. Crimes \u2014 robbing shops and houses, picking pockets, attacking townsfolk, Marines or merchant ships \u2014 put a bounty on your head instead, and bounties grow the way they do in One Piece: a few hundred thousand berries for a petty thief in the East Blue, millions on the Grand Line, far more in the New World. Anyone with a bounty is a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks \u2014 all the way to commanding fleets. A Marine who breaks the law loses standing, and is thrown out when nobody trusts them any more."),
@@ -82560,639 +82331,6 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
   function randomCharName() {
     const r = new RNG(Math.floor(Math.random() * 1e9));
     return `${r.pick(FIRST2)} ${r.pick(LAST)}`;
-  }
-
-  // src/game/session.js
-  var shipCounter = 0;
-  function dockNear(w, x, y) {
-    for (const isl of w.islands || []) {
-      if (Math.abs(w.dx(isl.x, x)) > 400 || Math.abs(isl.y - y) > 400) continue;
-      for (const dk3 of isl.docks || []) if (dk3.moor && w.distance(dk3.moor.x, dk3.moor.y, x, y) < 6) return dk3;
-    }
-    return null;
-  }
-  function installSession(game, { onReturnToTitle }) {
-    const ALIAS4 = { rowboat: "dinghy", boat: "dinghy", brig: "brigantine", sunny: "adam_brig", thousand_sunny: "adam_brig", merry: "caravel", going_merry: "caravel", warship: "marine_warship" };
-    game.giveShip = (type, x, y, name, extra = {}) => {
-      type = ALIAS4[type] || type;
-      const s = game.addShip({ type, x, y, heading: extra.heading ?? Math.PI / 2, owner: "player", faction: "player", name: name || void 0, jr: game.state?.char?.jr, upgrades: extra.upgrades || [], hull: extra.hull, coated: extra.coated });
-      s.uid = extra.uid || `s${Date.now().toString(36)}${shipCounter++}`;
-      if (s.def.big && extra.heading === void 0) {
-        const dock = dockNear(game.world, x, y);
-        if (!(dock && s.berth(game.world, dock)) && !s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
-      } else if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, !!s.def.big);
-      return s;
-    };
-    game.on("lifeLost", ({ cause, lives }) => {
-      setTimeout(() => {
-        game.paused = true;
-        lifeLostScreen(game.ui, {
-          cause,
-          lives,
-          onContinue: () => {
-            game.ui.hideScreen();
-            game.paused = false;
-            game.lives.respawn();
-          }
-        });
-      }, 1400);
-    });
-    game.on("lineageEnded", ({ cause, will }) => {
-      setTimeout(() => {
-        game.paused = true;
-        const legacy = game.state.legacy;
-        lineageEndScreen(game.ui, {
-          char: game.state.char,
-          cause,
-          will,
-          legacy,
-          onNext: () => {
-            saveLegacy(legacy);
-            legacyShopScreen(game.ui, legacy, {
-              save: () => saveLegacy(legacy),
-              onDone: () => {
-                game.ui.hideScreen();
-                onReturnToTitle(true, "create");
-              }
-            });
-          }
-        });
-      }, 1800);
-    });
-    let t = 0;
-    game.on("tick", (dt) => {
-      t += dt;
-      if (game.state?.char) game.state.char.stats.playTime = (game.state.char.stats.playTime || 0) + dt;
-      if (t > 45) {
-        t = 0;
-        persist(game);
-      }
-    });
-    const saveOnLeave = () => {
-      if (game.player && game.player.state !== "knocked") persist(game);
-    };
-    window.addEventListener("beforeunload", saveOnLeave);
-    window.addEventListener("pagehide", saveOnLeave);
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) saveOnLeave();
-    });
-    let soon = null;
-    const saveSoon = () => {
-      clearTimeout(soon);
-      soon = setTimeout(() => {
-        if (game.player && game.player.state !== "knocked") persist(game);
-      }, 1200);
-    };
-    for (const ev of ["questDone", "discovered", "bossDefeated", "newDay", "crewJoined", "hakiAwakened", "legend", "fruitEaten", "shipBought", "rankUp"]) game.on(ev, saveSoon);
-  }
-  function resetGame(game) {
-    game.actors = [];
-    game.ships = [];
-    game.areaZones = [];
-    game.combat.hitboxes.length = 0;
-    game.combat.projectiles.length = 0;
-    game.fx.parts.length = 0;
-    game.fx.shapes.length = 0;
-    game.fx.texts.length = 0;
-    game.spawner.populated.clear();
-    game.bossTarget = null;
-    game.currentIsland = null;
-    game.lastIslandName = null;
-    game.lastRegion = void 0;
-    game.hintsShown = /* @__PURE__ */ new Set();
-    game.groundItems = [];
-    if (game.world !== game.surface) game.setWorld(game.surface);
-  }
-  function startNewCharacter(game, birth, choices) {
-    const legacy = loadLegacy();
-    const char = createCharacter(legacy, birth, choices);
-    legacy.heirloom = null;
-    saveLegacy(legacy);
-    const world = game.surface;
-    const spawn = resolveSpawn(world, char);
-    char.spawn = { x: spawn.x, y: spawn.y, name: spawn.name, sea: spawn.sea };
-    char.rest = { ...char.spawn };
-    char.birthplace = spawn.name;
-    resetGame(game);
-    world.fog.fill(0);
-    game.state = { char, legacy };
-    const p = buildPlayer(game, char);
-    p.x = spawn.x;
-    p.y = spawn.y;
-    p.mode = "foot";
-    game.setPlayer(p);
-    game.env.day = 1;
-    game.env.clock = 8.5;
-    for (const id of char.discovered) revealIsland(game, id);
-    const isl = spawn.island;
-    const shipType = legacy.perks?.ship ? "sloop" : "dinghy";
-    let placed = false;
-    if (isl) {
-      const dock = isl.docks[0];
-      if (dock) {
-        game.giveShip(shipType, dock.moor.x, dock.moor.y, shipType === "dinghy" ? "Little Rowboat" : "Sea Sparrow");
-        placed = true;
-      }
-    }
-    if (!placed) {
-      const s = game.giveShip(shipType, spawn.x, spawn.y + 4, "Driftwood Raft");
-      s.unstick(world);
-    }
-    if (isl && isl.id && !char.discovered.includes(isl.id) && isl.name) char.discovered.push(isl.id);
-    char.getUpCharges = 1;
-    game.snapCamera();
-    game.ui.setHudVisible(true);
-    const seaName = REGION_INFO[SEA_IDS[spawn.sea]]?.name || "";
-    setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : "An Uncharted Islet", seaName, `${char.name} begins their journey. The sea is yours to choose.`, 5), 400);
-    setTimeout(() => {
-      if (game.state?.char === char) game.hint("menus", "Your menus are on the right: Inventory, Character, Skills, Journal and Crew (or Tab, C, K, J, U). Esc pauses and saves. Talk to people, pick fruit from the trees, find a boat \u2014 where you go is up to you.");
-    }, 6500);
-    game.emit("characterStart", { char, isNew: true, spawn });
-    persist(game);
-    return p;
-  }
-  function resumeCharacter(game, char) {
-    upgradeChar(char);
-    const legacy = loadLegacy();
-    resetGame(game);
-    const world = game.surface;
-    game.state = { char, legacy };
-    if (char.fogSurface) decodeFog(char.fogSurface, world.fog);
-    else world.fog.fill(0);
-    game.renderer.terrain.updateFog(world.fog);
-    const p = buildPlayer(game, char);
-    const pos = char.pos || char.rest || char.spawn;
-    p.x = pos.x;
-    p.y = pos.y;
-    p.mode = "foot";
-    game.setPlayer(p);
-    game.env.day = char.world?.day || 1;
-    game.env.clock = char.world?.clock ?? 8.5;
-    game.hintsShown = new Set(char.hintsShown || []);
-    let active5 = null;
-    for (const sd of char.ships || []) {
-      if (sd.zone && sd.zone !== "surface") continue;
-      const s = game.giveShip(sd.type, sd.x, sd.y, sd.name, sd);
-      s.hull = sd.hull ?? s.maxHull;
-      if (sd.uid === char.activeShip) active5 = s;
-    }
-    if (pos.zone && pos.zone !== "surface" && game.enterZoneById) {
-      game.enterZoneById(pos.zone, pos, true);
-    } else if (pos.mode === "sail" && active5) {
-      board(game, p, active5);
-    } else if (!game.world.walkable(p.x, p.y - 0.1) && !game.world.swimmable(p.x, p.y - 0.1)) {
-      const r = char.rest || char.spawn;
-      p.x = r.x;
-      p.y = r.y;
-    }
-    refreshPlayer(game);
-    p.hp = p.d.maxHp;
-    game.snapCamera();
-    game.ui.setHudVisible(true);
-    const reg3 = REGION_INFO[regionAt(p.x, p.y)]?.name || "";
-    setTimeout(() => game.ui.banner(char.name, `Generation ${char.generation} \xB7 ${RACES[char.race]?.name}`, `${reg3} \u2014 Day ${game.env.day}`, 4), 300);
-    game.emit("characterStart", { char, isNew: false });
-    return p;
-  }
-  function revealIsland(game, id) {
-    const isl = game.surface.islands.find((i) => i.id === id);
-    if (isl) game.surface.reveal(isl.x, isl.y, isl.radius + 12);
-  }
-
-  // src/game/lives.js
-  var LivesSystem = class {
-    constructor(game) {
-      this.game = game;
-      this.k = null;
-      game.on("knockout", (a, att) => {
-        if (a.isPlayer) this.onKnocked(att);
-      });
-      game.on("playerKnockedTick", (dt) => this.tick(dt));
-      game.knockInfo = () => this.info();
-    }
-    onKnocked(att) {
-      const g = this.game, p = g.player, c = p.char;
-      c.stats.knockdowns = (c.stats.knockdowns || 0) + 1;
-      const threat = att && att.power ? att.power() / Math.max(1, p.power()) : 0;
-      if (c.traits.includes("conqueror") && !c.haki.conqueror && !p.drowned && (threat > 0.65 || att?.boss)) {
-        this.awaken();
-        return;
-      }
-      this.k = { t: 0, max: p.drowned ? 2.5 : 6, mash: 0, need: 9 + Math.floor((c.stats.knockdowns || 0) / 3), killer: att, drowned: p.drowned, cause: describe(att, p) };
-      g.audio?.sfx("knocked");
-      g.fx.impactFrame(0.1);
-      g.hint("knocked", "You've been knocked down! Mash SPACE to get back up before an enemy finishes you. Your second winds refill when you rest at an inn.");
-    }
-    info() {
-      const k = this.k, c = this.game.player.char;
-      if (!k) return { text: "", frac: 0 };
-      if (k.drowned) return { text: this.game.player?.fruit ? "The sea drags you down... a Devil Fruit user cannot swim." : "Your lungs burn... the sea closes over you.", frac: 1 - k.t / k.max };
-      const charges = c.getUpCharges || 0;
-      const txt = charges > 0 ? `Mash SPACE to get up! (${k.mash}/${k.need}) \xB7 Second winds left: ${charges}` : "No strength left to stand...";
-      return { text: txt, frac: 1 - k.t / k.max };
-    }
-    tick(dt) {
-      const k = this.k;
-      if (!k) return;
-      const g = this.game, p = g.player, c = p.char;
-      k.t += dt;
-      if (!k.drowned && (c.getUpCharges || 0) > 0 && g.input.wasPressed("Space")) {
-        k.mash++;
-        g.fx.shake(0.1);
-        if (k.mash >= k.need) {
-          this.getUp();
-          return;
-        }
-      }
-      if (!k.drowned && k.t > 2.2) {
-        const finisher = g.actorsNear(p.x, p.y, 1.8).find((a) => a !== p && a.state === "idle" && engaged(a, p) && a.lethal !== false && !a.def?.duel && !a.spar && !(a.faction === "marine" && c.bounty > 0));
-        if (finisher && k.t > 3.5) {
-          this.resolve(finisher);
-          return;
-        }
-      }
-      if (k.t >= k.max) this.resolve(null);
-    }
-    getUp() {
-      const g = this.game, p = g.player, c = p.char;
-      c.getUpCharges = Math.max(0, (c.getUpCharges || 0) - 1);
-      this.k = null;
-      p.state = "idle";
-      p.hp = Math.round(p.d.maxHp * (0.25 + p.attrs.wil * 4e-3));
-      p.stamina = p.d.maxStamina * 0.6;
-      p.iframes = 1.4;
-      p.hitstun = 0;
-      g.fx.text(p.x, p.y - 2, "I'M NOT DONE YET!", "#ffeb3b", 0.55, { life: 1.6 });
-      g.fx.ring(p.x, p.y, 0.3, 3, "#ffeb3b", 0.5, 0.2);
-      g.fx.shake(0.4);
-      g.audio?.sfx("getup");
-      c.stats.deathsAvoided = (c.stats.deathsAvoided || 0) + 1;
-      g.emit("playerGotUp");
-    }
-    awaken() {
-      const g = this.game, p = g.player, c = p.char;
-      c.haki.conqueror = 5;
-      p.hakiSkill = c.haki;
-      p.state = "idle";
-      p.hp = p.d.maxHp;
-      p.haki = p.d.maxHaki;
-      p.iframes = 2;
-      this.k = null;
-      g.ui.toast("CONQUEROR'S HAKI", "Your will overwhelms everything around you!", "#ff5252");
-      g.fx.impactFrame(0.25);
-      g.fx.flash = 0.4;
-      conquerorBurst(p, g, { range: 12, damage: 20 }, 1);
-      g.log("King's Disposition awakened: press G to release Conqueror's Haki.", "#ff8a80");
-      g.emit("conquerorAwakened");
-      persist(g);
-    }
-    resolve(finisher) {
-      const g = this.game, p = g.player, c = p.char;
-      const k = this.k;
-      this.k = null;
-      if (k.drowned) return this.loseLife(g.player?.fruit ? "Drowned \u2014 the sea swallowed a Devil Fruit user." : "Drowned.");
-      const threats = g.actorsNear(p.x, p.y, 10).filter((a) => a !== p && a.state === "idle" && engaged(a, p));
-      const marine2 = threats.find((a) => a.faction === "marine");
-      if (marine2 && c.bounty > 0) return this.capture(marine2);
-      const killer = finisher || threats.find((a) => a.lethal !== false && !a.def?.duel && !a.spar);
-      if (killer) {
-        if (c.traits.includes("will_of_d") && !c.flags.dLuckUsed) {
-          c.flags.dLuckUsed = true;
-          g.fx.text(p.x, p.y - 2, "...Shishishi.", "#ffffff", 0.5, { life: 2 });
-          g.log("As the blow falls you grin \u2014 and somehow it misses. Fate is not done with the Will of D. (once per life)", "#ffe082");
-          this.k = null;
-          p.state = "idle";
-          p.hp = Math.round(p.d.maxHp * 0.2);
-          p.iframes = 2;
-          return;
-        }
-        g.fx.impactFrame(0.15);
-        return this.loseLife(`Finished off by ${killer.name}${killer.title ? ", " + killer.title : ""}.`);
-      }
-      const duelist = k.killer && (k.killer.def?.duel || k.killer.spar);
-      if (duelist) {
-        g.log(`You lost the bout against ${k.killer.name}. Nothing hurt but your pride.`, "#b0bec5");
-      } else if (threats.length) {
-        const lost = Math.floor(c.berries * 0.35);
-        c.berries -= lost;
-        g.log(`You wake up with a splitting headache. Someone took ${formatBerries(lost)} from your purse.`, "#ff8a80");
-      } else {
-        g.log("You come to after a while. Nobody finished the job.", "#b0bec5");
-      }
-      p.state = "idle";
-      p.hp = Math.round(p.d.maxHp * 0.2);
-      p.iframes = 1.5;
-    }
-    capture(marine2) {
-      const g = this.game, p = g.player, c = p.char;
-      if (g.world.id === "impel_down" && c.flags.imprisoned) {
-        g.ui.fade(true);
-        setTimeout(() => {
-          p.state = "idle";
-          p.hp = Math.round(p.d.maxHp * 0.5);
-          p.iframes = 2;
-          this.placeAtRest();
-          g.ui.fade(false);
-        }, 900);
-        return;
-      }
-      if (c.bounty >= 3e7 && g.sendToImpelDown && g.world === g.surface) {
-        c.bounty = roundBounty(c.bounty * 1.1);
-        g.ui.fade(true);
-        setTimeout(() => {
-          p.state = "idle";
-          p.hp = Math.round(p.d.maxHp * 0.6);
-          p.iframes = 2;
-          g.sendToImpelDown(marine2);
-          g.ui.fade(false);
-        }, 900);
-        return;
-      }
-      const lost = Math.floor(c.berries * 0.5);
-      c.berries -= lost;
-      c.bounty = roundBounty(c.bounty * 1.1);
-      g.ui.fade(true);
-      setTimeout(() => {
-        p.state = "idle";
-        p.hp = Math.round(p.d.maxHp * 0.5);
-        g.env.clock += 20;
-        this.placeAtRest();
-        g.ui.fade(false);
-        g.ui.banner("Captured!", "MARINE BRIG", `${marine2.name} arrested you. You escaped two days later \u2014 minus ${formatBerries(lost)}. Your bounty went up.`, 6);
-        persist(g);
-      }, 900);
-    }
-    loseLife(cause) {
-      const g = this.game, p = g.player, c = p.char;
-      c.lives -= 1;
-      c.getUpCharges = 0;
-      p.state = "knocked";
-      snapshot(g);
-      g.audio?.sfx("death");
-      if (c.lives <= 0) {
-        const will = endLineage(g, cause);
-        g.emit("lineageEnded", { cause, will });
-        return;
-      }
-      persist(g);
-      g.emit("lifeLost", { cause, lives: c.lives });
-    }
-    respawn() {
-      const g = this.game, p = g.player, c = p.char;
-      const lost = Math.floor(c.berries * 0.25);
-      c.berries -= lost;
-      p.state = "idle";
-      p.hp = p.d.maxHp;
-      p.stamina = p.d.maxStamina;
-      p.status = {};
-      p.buffs = [];
-      p.recalc();
-      p.iframes = 3;
-      p.drowned = false;
-      p.sinking = false;
-      p.lowAir = false;
-      p.oxygen = p.maxOxygen;
-      p.getUpCharges = c.getUpCharges = 1 + (p.attrs.wil >= 40 ? 1 : 0);
-      c.flags.dLuckUsed = false;
-      g.env.clock += 10;
-      this.placeAtRest();
-      if (lost) g.log(`You recovered, but ${formatBerries(lost)} went on doctors and debts.`, "#b0bec5");
-      persist(g);
-    }
-    placeAtRest() {
-      const g = this.game, p = g.player, c = p.char;
-      if (g.world.id === "impel_down" && c.flags.imprisoned) {
-        const isl = g.world.islands.find((i) => i.id === "id_level1");
-        const cell = isl?.spots?.cell || { x: isl?.x ?? p.x, y: isl?.y ?? p.y };
-        p.mode = "foot";
-        p.onShip = false;
-        p.x = cell.x;
-        p.y = cell.y;
-        for (const a of g.actorsNear(p.x, p.y, 16)) if (a.controller?.target === p) {
-          a.controller.target = null;
-          a.controller.state = "return";
-        }
-        g.snapCamera();
-        g.log("You wake up back in your cell on Level 1. The guards laugh through the bars.", "#ff8a80");
-        return;
-      }
-      if (g.world !== g.surface) g.leaveZone?.(true);
-      const r = c.rest || c.spawn;
-      if (p.onShip && p.ship) {
-        p.ship.captain = null;
-        p.onShip = false;
-      }
-      p.mode = "foot";
-      p.x = r.x;
-      p.y = r.y;
-      const ships = g.ships.filter((s) => s.owner === "player" && !s.sunk);
-      if (!ships.length) {
-        const isl = g.world.nearestIsland(r.x, r.y, 200);
-        const dock = isl && isl.docks[0];
-        if (dock) {
-          g.giveShip?.("dinghy", dock.moor.x, dock.moor.y, "Borrowed Rowboat");
-          g.log("A kind fisherman lends you his rowboat.", "#b0bec5");
-        }
-      }
-      for (const a of g.actorsNear(p.x, p.y, 12)) if (a.controller?.target === p) {
-        a.controller.target = null;
-        a.controller.state = "return";
-      }
-      g.snapCamera();
-    }
-  };
-  function engaged(a, p) {
-    return hostile(a, p) && (a.aggroPlayer || a.provoked || a.controller?.target === p || a.summonedBy);
-  }
-  function describe(att, p) {
-    if (!att) return p.inWater ? "Lost at sea." : "Collapsed.";
-    return `${att.name}${att.title ? ", " + att.title : ""}`;
-  }
-
-  // src/game/inventory.js
-  function count(char, id) {
-    return (char.inventory || []).filter((i) => i.id === id).reduce((s, i) => s + (i.qty || 1), 0);
-  }
-  function addItem(game, id, qty = 1, opts = {}) {
-    const char = game.state.char;
-    const d = ITEMS[id];
-    if (!d) return false;
-    const stackable = !["weapon", "hat", "coat", "fruit", "accessory"].includes(d.type) || d.stack;
-    const ex = stackable && char.inventory.find((i) => i.id === id);
-    if (ex) ex.qty = (ex.qty || 1) + qty;
-    else if (stackable) char.inventory.push({ id, qty });
-    else for (let k = 0; k < qty; k++) char.inventory.push({ id, qty: 1, ...opts });
-    if (!opts.silent) game.log(`Obtained ${d.name}${qty > 1 ? " \xD7" + qty : ""}.`, "#ffe082");
-    game.emit("itemGained", id, qty);
-    return true;
-  }
-  function removeItem(game, id, qty = 1) {
-    const char = game.state.char;
-    let left = qty;
-    for (let i = char.inventory.length - 1; i >= 0 && left > 0; i--) {
-      const it = char.inventory[i];
-      if (it.id !== id) continue;
-      const take = Math.min(left, it.qty || 1);
-      it.qty = (it.qty || 1) - take;
-      left -= take;
-      if (it.qty <= 0) char.inventory.splice(i, 1);
-    }
-    const eq = char.equipped;
-    if (!count(char, id)) {
-      if (eq.hat === id) eq.hat = null;
-      if (eq.coat === id) eq.coat = null;
-      eq.weapons = (eq.weapons || []).filter((w) => w !== id);
-      eq.accessories = (eq.accessories || []).filter((w) => w !== id);
-      const hb = char.hotbar || [];
-      for (let k = 0; k < hb.length; k++) if (hb[k] === "item:" + id) hb[k] = null;
-      refreshPlayer(game);
-    }
-    return left === 0;
-  }
-  function pay(game, amount) {
-    const c = game.state.char;
-    if (c.berries < amount) return false;
-    c.berries -= amount;
-    return true;
-  }
-  function earn(game, amount, why) {
-    const c = game.state.char;
-    c.berries += Math.round(amount);
-    if (why !== false) game.log(`+\u0E3F${Math.round(amount).toLocaleString()}${why ? " \u2014 " + why : ""}`, "#ffd54f");
-  }
-  var ACC_SLOTS = 2;
-  function isEquipped(c, id) {
-    const eq = c.equipped || {};
-    return eq.hat === id || eq.coat === id || (eq.weapons || []).includes(id) || (eq.accessories || []).includes(id);
-  }
-  function equip(game, id, { slot: slot2 } = {}) {
-    const c = game.state.char;
-    const d = ITEMS[id];
-    if (!d || !count(c, id)) return;
-    const eq = c.equipped;
-    if (d.type === "hat") eq.hat = eq.hat === id ? null : id;
-    else if (d.type === "coat") eq.coat = eq.coat === id ? null : id;
-    else if (d.type === "accessory") {
-      const acc = (eq.accessories || []).filter(Boolean);
-      const worn = acc.filter((x) => x === id).length;
-      if (slot2 !== void 0) {
-        if (worn >= count(c, id)) acc.splice(acc.indexOf(id), 1);
-        if (slot2 < acc.length) acc[slot2] = id;
-        else acc.push(id);
-      } else if (worn && worn >= count(c, id)) acc.splice(acc.indexOf(id), 1);
-      else if (acc.length < ACC_SLOTS) acc.push(id);
-      else {
-        acc.shift();
-        acc.push(id);
-      }
-      eq.accessories = acc.slice(0, ACC_SLOTS);
-    } else if (d.type === "weapon") {
-      const ws = eq.weapons || [];
-      if (ws.includes(id) && ws.filter((w) => w === id).length >= count(c, id)) eq.weapons = ws.filter((w) => w !== id);
-      else if (d.kind === "sword" && ws.length && ITEMS[ws[0]]?.kind === "sword" && ws.length < 3) eq.weapons = [...ws, id];
-      else eq.weapons = [id];
-      if (id === "sandai_kitetsu" && !c.flags.kitetsuTested) {
-        c.flags.kitetsuTested = true;
-        game.log("You toss the cursed Kitetsu into the air and hold out your arm\u2026 it spins down and misses you by a hair. The blade accepts you.", "#ef9a9a");
-      }
-    } else return;
-    refreshPlayer(game);
-    game.audio?.sfx("equip");
-  }
-  function unequipSlot(game, slot2) {
-    const eq = game.state.char.equipped;
-    if (slot2 === "head") eq.hat = null;
-    else if (slot2 === "body") eq.coat = null;
-    else if (slot2.startsWith("weapon")) {
-      const i = +slot2.slice(6);
-      eq.weapons = (eq.weapons || []).filter((_, k) => k !== i);
-    } else if (slot2.startsWith("acc")) {
-      const i = +slot2.slice(3);
-      eq.accessories = (eq.accessories || []).filter((_, k) => k !== i);
-    }
-    refreshPlayer(game);
-    game.audio?.sfx("equip");
-  }
-  function slotKind(d) {
-    if (!d) return null;
-    return d.type === "hat" ? "head" : d.type === "coat" ? "body" : d.type === "weapon" ? "weapon" : d.type === "accessory" ? "acc" : null;
-  }
-  function useItem(game, id) {
-    const c = game.state.char;
-    const p = game.player;
-    const d = ITEMS[id];
-    if (!d || !count(c, id)) return false;
-    if (d.type === "food" || d.type === "medicine") {
-      if (p.state !== "idle") return false;
-      let heal = d.heal || 0;
-      if (d.type === "food") {
-        if (c.traits.includes("iron_stomach")) heal *= 1.3;
-        if (c.flags?.allBlue) heal *= 1.25;
-        heal *= game.crewMods?.foodMul || 1;
-      }
-      if (d.costsLife) {
-        if (c.lives <= 1) {
-          game.log(`Ivankov refuses: "You don't have the years to spare, candy-boy!"`, "#ff8a80");
-          return false;
-        }
-        c.lives -= 1;
-        game.log("Tension Hormones! Your body screams back to full strength \u2014 and your lifespan shortens.", "#ff8a80");
-      }
-      p.hp = Math.min(p.d.maxHp, p.hp + heal);
-      p.stamina = Math.min(p.d.maxStamina, p.stamina + (d.stamina || 0));
-      for (const s of d.cure || []) delete p.status[s];
-      if (d.buff) p.addBuff({ ...d.buff });
-      game.fx.text(p.x, p.y - 1.6, `+${Math.round(heal)}`, "#69f0ae", 0.45);
-      game.audio?.sfx("eat");
-      removeItem(game, id, 1);
-      return true;
-    }
-    if (d.type === "fruit") return eatFruit(game, id);
-    if (d.type === "pose" && d.target) {
-      const tgt = game.surface.islands.find((i) => i.id === d.target);
-      c.logPose.target = d.target;
-      c.logPose.eternal = id;
-      game.ui.toast("ETERNAL POSE", `The needle points to ${tgt?.name || d.target}.`, "#81d4fa");
-      return true;
-    }
-    if (d.type === "dial" && d.ability) {
-      const learned = c.techniques.includes(d.ability);
-      if (!learned) {
-        c.techniques.push(d.ability);
-        game.log(`You can now use the ${d.name} as a technique \u2014 assign it in Skills (K).`, "#80deea");
-      }
-      return true;
-    }
-    return false;
-  }
-  function eatFruit(game, itemId) {
-    const c = game.state.char;
-    const p = game.player;
-    const fid = ITEMS[itemId].fruit;
-    const f = FRUITS[fid];
-    if (c.fruit) {
-      game.log(`You already carry the power of the ${FRUITS[c.fruit]?.name}. A second Devil Fruit would tear your body apart \u2014 better to keep it, sell it, or give it to someone worthy.`, "#ff8a80");
-      return false;
-    }
-    removeItem(game, itemId, 1);
-    c.fruit = fid;
-    c.fruitMastery = 0;
-    c.fruitsEaten = 1;
-    const first = f.techniques[0];
-    if (first && !c.techniques.includes(first.id)) c.techniques.push(first.id);
-    const slot2 = c.hotbar.findIndex((h2, i) => !h2 && i < 6);
-    if (first) {
-      if (slot2 >= 0) c.hotbar[slot2] = first.id;
-      else if (c.hotbar.length < 6) c.hotbar.push(first.id);
-    }
-    refreshPlayer(game);
-    game.ui.toast(f.name.toUpperCase(), `${f.en} \u2014 ${f.type}. It tastes horrible.`, "#ffab91");
-    game.fx.ring(p.x, p.y, 0.3, 4, f.color, 0.8, 0.25);
-    game.fx.burst(p.x, p.y - 0.8, 30, { color: [f.color, "#ffffff"], speed: 5, g: 0, life: 0.8, kind: "star" });
-    game.log(`You ate the ${f.name}! You can never swim again. Fruit techniques unlock as your mastery grows (fight worthy foes, train).`, "#ffab91");
-    game.emit("fruitEaten", fid);
-    persist(game);
-    return true;
   }
 
   // src/game/quests.js
@@ -83702,9 +82840,7 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
         if (needsHaki(d) && !hakiKnown(c)) continue;
         g.ui.toast("NEW TECHNIQUE", d.name, "#ffab91");
         g.log(`Your mastery of the ${FRUITS[c.fruit].name} reveals a new technique: ${d.name}. Put it on your hotbar from the Skills tab.`, "#ffab91");
-        const empty2 = c.hotbar.findIndex((x) => !x);
-        if (empty2 >= 0 && empty2 < 6) c.hotbar[empty2] = id;
-        else if (c.hotbar.length < 6) c.hotbar.push(id);
+        addToHotbar(c, id);
       }
     }
     // ---------------------------------------------------------------- haki
@@ -83859,2384 +82995,6 @@ Click or press ${i + 1} to use \xB7 drag to rearrange` : "Empty \u2014 drag tech
       }
     }
   };
-
-  // src/game/dialogue.js
-  var Dialogue = class {
-    constructor(game) {
-      this.game = game;
-      this.active = null;
-      this.trees = {};
-      game.ui.dialogueKeys = (inp) => this.keys(inp);
-      game.ui.onDialogueEscape = () => this.close();
-    }
-    register(id, tree) {
-      this.trees[id] = tree;
-    }
-    ctx(npc) {
-      const g = this.game;
-      const char = g.state.char;
-      const self2 = this;
-      return {
-        game: g,
-        npc,
-        char,
-        player: g.player,
-        flag: (k) => char.flags[k],
-        setFlag: (k, v = true) => {
-          char.flags[k] = v;
-        },
-        has: (id, n = 1) => count(char, id) >= n,
-        give: (id, n = 1) => addItem(g, id, n),
-        take: (id, n = 1) => removeItem(g, id, n),
-        pay: (n) => {
-          const ok = pay(g, n);
-          if (!ok) g.log("Not enough berries.", "#ff8a80");
-          return ok;
-        },
-        earn: (n, why) => earn(g, n, why),
-        berries: () => char.berries,
-        quest: (id) => g.quests?.state(id),
-        startQuest: (id) => g.quests?.start(id),
-        stage: (id, st) => g.quests?.setStage(id, st),
-        complete: (id) => g.quests?.complete(id),
-        log: (t, c) => g.log(t, c),
-        open: (kind, arg) => {
-          self2.close();
-          g.emit("openService", kind, arg, npc);
-        },
-        goto: (node) => self2.show(node),
-        save: () => persist(g),
-        emit: (...a) => g.emit(...a),
-        progression: g.progression
-      };
-    }
-    open(npc, treeOrId, start3) {
-      let tree = typeof treeOrId === "string" ? this.trees[treeOrId] : treeOrId;
-      if (!tree) return;
-      const ctx = this.ctx(npc);
-      if (typeof tree === "function") tree = tree(ctx);
-      if (!tree) return;
-      if (npc?.def?.recruit && this.game.crew) tree = this.game.crew.decorate(tree, npc);
-      this.active = { npc, tree, ctx, node: null, typing: 0, full: "" };
-      this.game.paused = true;
-      if (npc && this.game.player) {
-        const p = this.game.player;
-        npc.facing = Math.atan2(p.y - npc.y, this.game.world.dx(npc.x, p.x));
-        p.facing = npc.facing + Math.PI;
-      }
-      this.show(start3 || tree.start || "start");
-    }
-    show(id) {
-      const a = this.active;
-      if (!a) return;
-      if (id === null || id === void 0 || id === "end") {
-        this.close();
-        return;
-      }
-      const node = a.tree.nodes[id];
-      if (!node) {
-        this.close();
-        return;
-      }
-      a.node = node;
-      a.nodeId = id;
-      if (node.onEnter) node.onEnter(a.ctx);
-      if (!this.active) return;
-      if (node.redirect) {
-        const r = typeof node.redirect === "function" ? node.redirect(a.ctx) : node.redirect;
-        if (r) {
-          this.show(r);
-          return;
-        }
-      }
-      const text = typeof node.text === "function" ? node.text(a.ctx) : node.text || "";
-      a.full = text;
-      a.typing = 0;
-      const choices = (node.choices || []).filter((c) => !c.if || c.if(a.ctx)).map((c) => ({ ...c, label: typeof c.text === "function" ? c.text(a.ctx) : c.text }));
-      a.choices = choices;
-      this.render();
-    }
-    render() {
-      const a = this.active;
-      const ui = this.game.ui;
-      if (ui.dialogueEl) ui.dialogueEl.remove();
-      const speaker = a.node.speaker ?? (a.npc ? a.npc.name : "");
-      const title2 = a.node.speaker ? "" : a.npc?.title || "";
-      const textEl = h("div.text");
-      const choicesEl = h("div.choices");
-      const el = h("div.dialogue", speaker ? h("div.who", speaker, title2 ? h("small", title2) : null) : null, textEl, choicesEl, h("div.cont", a.choices.length ? "" : "SPACE / click to continue"));
-      el.addEventListener("mousedown", (e) => {
-        if (e.target.tagName !== "BUTTON") this.advance();
-      });
-      ui.dialogueEl = el;
-      ui.root.appendChild(el);
-      a.textEl = textEl;
-      a.choicesEl = choicesEl;
-      this.typeTick();
-    }
-    typeTick() {
-      const a = this.active;
-      if (!a) return;
-      a.typing = Math.min(a.full.length, a.typing + 3);
-      a.textEl.textContent = a.full.slice(0, a.typing);
-      if (a.typing < a.full.length) {
-        a.raf = requestAnimationFrame(() => this.typeTick());
-        return;
-      }
-      this.showChoices();
-    }
-    showChoices() {
-      const a = this.active;
-      clear(a.choicesEl);
-      a.choices.forEach((c, i) => {
-        a.choicesEl.appendChild(h("button", { on: { click: () => this.choose(i) } }, h("span.n", `${i + 1}.`), c.label));
-      });
-    }
-    advance() {
-      const a = this.active;
-      if (!a) return;
-      if (a.typing < a.full.length) {
-        cancelAnimationFrame(a.raf);
-        a.typing = a.full.length;
-        a.textEl.textContent = a.full;
-        this.showChoices();
-        return;
-      }
-      if (a.choices.length) return;
-      const n = a.node.next;
-      const next = typeof n === "function" ? n(a.ctx) : n;
-      if (next) this.show(next);
-      else this.close();
-    }
-    choose(i) {
-      const a = this.active;
-      if (!a) return;
-      const c = a.choices[i];
-      if (!c) return;
-      let next = c.next;
-      if (c.do) {
-        const r = c.do(a.ctx);
-        if (typeof r === "string") next = r;
-      }
-      if (!this.active) return;
-      if (typeof next === "function") next = next(a.ctx);
-      if (c.end || !next) {
-        this.close();
-        return;
-      }
-      this.show(next);
-    }
-    keys(inp) {
-      const a = this.active;
-      if (!a) return;
-      if (inp.wasPressed("Space") || inp.wasPressed("Enter") || inp.wasPressed("E")) {
-        inp.consume("Space");
-        inp.consume("E");
-        this.advance();
-        return;
-      }
-      for (let i = 0; i < 9; i++) if (inp.wasPressed(String(i + 1))) {
-        this.choose(i);
-        return;
-      }
-    }
-    close() {
-      const a = this.active;
-      const ui = this.game.ui;
-      if (a) cancelAnimationFrame(a.raf);
-      this.active = null;
-      if (ui.dialogueEl) {
-        ui.dialogueEl.remove();
-        ui.dialogueEl = null;
-      }
-      if (!ui.stack.length && !ui.screenEl && !ui.mapOpen) this.game.paused = false;
-      if (a?.tree?.onClose) a.tree.onClose(a.ctx);
-    }
-  };
-
-  // src/data/trainers.js
-  var TRAINERS = {
-    // ---------------------------------------------------------- East Blue
-    koshiro: {
-      name: "Koshiro",
-      where: "Isshin Dojo, Shimotsuki Village",
-      styles: { ittoryu: 1500, nitoryu: 8e3 },
-      teaches: ["itto_iai", "itto_pound", "itto_whirl", "nito_taka", "nito_nigiri"],
-      train: { str: 25, agi: 25 },
-      spar: { level: 14, style: "ittoryu", weapon: "sword", name: "Koshiro" },
-      lines: ["A sword is not a tool for killing. It is a promise.", "Again. Your feet are lying to your blade."]
-    },
-    zeff: {
-      name: '"Red Leg" Zeff',
-      where: "the Baratie",
-      styles: { black_leg: 3e3 },
-      teaches: ["bleg_party", "bleg_antimanner", "bleg_concasse"],
-      train: { agi: 30, end: 28 },
-      spar: { level: 18, style: "black_leg", name: "Zeff" },
-      lines: ["A cook's hands are his life. Fight with your legs.", "Kicks are ten times stronger than punches, brat."]
-    },
-    dadan: {
-      name: "Curly Dadan",
-      where: "the Dadan Family hideout, Mt. Colubo",
-      styles: {},
-      teaches: ["brawl_tackle", "brawl_headbutt"],
-      train: { str: 18, end: 20, vit: 20 },
-      spar: { level: 9, style: "brawler", name: "Dogra & Magra" },
-      lines: ["Hunt your own dinner or starve, brat!", "The mountain doesn't care who your father is."]
-    },
-    usopp: {
-      name: "Usopp",
-      where: "Syrup Village",
-      styles: { sniper: 800 },
-      teaches: ["snipe_explode", "snipe_tabasco"],
-      train: { agi: 18, wil: 16 },
-      spar: { level: 8, style: "sniper", weapon: "gun", name: "Captain Usopp" },
-      lines: ["Hissatsu... Lead Star!", "A sniper never misses! ...Mostly."]
-    },
-    dojo_generic: {
-      name: "Dojo Master",
-      where: "a town dojo",
-      styles: {},
-      teaches: ["brawl_tackle", "brawl_knee", "brawl_headbutt"],
-      train: { str: 20, end: 20, vit: 20 },
-      spar: { level: 9, style: "brawler", name: "Senior Student" },
-      lines: ["Hit the post a thousand times. Then a thousand more."]
-    },
-    gunsmith: {
-      name: "Gunsmith",
-      where: "the range",
-      styles: { sniper: 2500 },
-      teaches: ["snipe_explode", "snipe_tabasco", "snipe_firebird"],
-      train: { agi: 22, wil: 18 },
-      spar: { level: 10, style: "sniper", weapon: "gun", name: "Range Master" },
-      lines: ["Breathe out. Squeeze, don't pull."]
-    },
-    marine_instructor: {
-      name: "Marine Instructor",
-      where: "a Marine base",
-      styles: { rokushiki: 2e4 },
-      teaches: ["roku_soru", "roku_geppo", "roku_tekkai", "roku_rankyaku"],
-      train: { str: 30, end: 30, vit: 30 },
-      spar: { level: 16, style: "rokushiki", name: "Drill Sergeant" },
-      marineOnly: true,
-      lines: ["Justice needs strong legs. Soru! Again!"]
-    },
-    // ---------------------------------------------------------- other Blues
-    chinjao_master: {
-      name: "Chinjao Family Elder",
-      where: "Kano Country (West Blue)",
-      styles: { hasshoken: 12e3 },
-      teaches: ["hassho_bushin", "hassho_drill"],
-      train: { str: 35, end: 30 },
-      spar: { level: 22, style: "hasshoken", name: "Hasshoken Disciple" },
-      lines: ["The Hasshoken vibrates through armour. Your guard is meaningless."]
-    },
-    karate_master: {
-      name: "Karate Island Grandmaster",
-      where: "Karate Island (South Blue)",
-      styles: {},
-      teaches: ["brawl_tackle", "brawl_knee", "brawl_headbutt"],
-      train: { str: 35, agi: 30, end: 35 },
-      spar: { level: 20, style: "brawler", name: "Black Belt" },
-      lines: ["Boxing, karate, it is all the same: the one who gets up wins."]
-    },
-    torino_elder: {
-      name: "Torino Elder",
-      where: "Torino Kingdom (South Blue)",
-      styles: { electro: 0 },
-      teaches: ["elec_garchu"],
-      train: { agi: 30, vit: 30 },
-      spar: { level: 15, style: "electro", name: "Mink Hunter" },
-      lines: ["The giant birds of Torino fear only lightning."]
-    },
-    // --------------------------------------------------------- Grand Line
-    bon_clay: {
-      name: "Bon Clay (Mr. 2)",
-      where: "Nanohana, Alabasta",
-      styles: { okama_kenpo: 15e3 },
-      teaches: ["okama_pirouette", "okama_swan_dash"],
-      train: { agi: 40, end: 35 },
-      spar: { level: 26, style: "okama_kenpo", name: "Bon Clay" },
-      lines: ["The way of the okama is the way of friendship!", "Un, deux, trois!"]
-    },
-    ivankov: {
-      name: "Emporio Ivankov",
-      where: "Momoiro Island, Kamabakka Kingdom",
-      styles: { okama_kenpo: 2e4 },
-      teaches: ["okama_hell_wink", "bleg_diable", "bleg_skywalk"],
-      train: { vit: 55, end: 50 },
-      spar: { level: 45, style: "okama_kenpo", name: "Newkama Warrior" },
-      lines: ["Hee-haw! You want to become a man? Or a woman? Or stronger?!", "Hell Memories training! 100 recipes a day!"]
-    },
-    skypiea_priest: {
-      name: "Priest of Upper Yard",
-      where: "Skypiea",
-      styles: {},
-      teaches: [],
-      train: { wil: 45 },
-      haki: { observation: 40 },
-      spar: { level: 30, style: "brawler", name: "Priest Satori" },
-      lines: ["This is Mantra. We hear the voices of all living things."]
-    },
-    weatheria_scholar: {
-      name: "Weatheria Scholar",
-      where: "Weatheria",
-      styles: { weather_science: 3e4 },
-      teaches: ["clima_thunderbolt", "clima_cyclone", "clima_mirage", "clima_zeus"],
-      train: { wil: 45 },
-      spar: { level: 28, style: "weather_science", weapon: "staff", name: "Weather Scientist" },
-      lines: ["Weather is science, not magic. Although the difference is small."]
-    },
-    franky: {
-      name: "Franky",
-      where: "Franky House, Water 7",
-      styles: {},
-      teaches: [],
-      train: { str: 45, end: 45 },
-      spar: { level: 32, style: "brawler", name: "Franky Family Brawler" },
-      shipwright: true,
-      lines: ["SUUUPER! You want a ship that can sail to the end of the world? Bring me Adam wood!"]
-    },
-    galley_la: {
-      name: "Galley-La Foreman",
-      where: "Water 7",
-      styles: {},
-      teaches: [],
-      train: { str: 40, end: 40 },
-      spar: { level: 30, style: "brawler", name: "Shipwright" },
-      shipwright: true,
-      lines: ["A ship is a living thing. Treat her right."]
-    },
-    rayleigh: {
-      name: "Silvers Rayleigh",
-      where: "Shakky's Rip-off Bar, Sabaody",
-      styles: {},
-      teaches: ["haki_emission", "haki_futuresight", "haki_infusion"],
-      train: { wil: 70, str: 60 },
-      haki: { armament: 65, observation: 65, conqueror: 60 },
-      spar: { level: 60, style: "ittoryu", weapon: "sword", name: "Silvers Rayleigh", haki: true },
-      lines: ["Haki is the power of doubt-free conviction.", "Take it easy. Nobody learns this in a day."]
-    },
-    kuja: {
-      name: "Kuja Warrior Marguerite",
-      where: "Amazon Lily",
-      styles: {},
-      teaches: [],
-      train: { agi: 55, wil: 55 },
-      haki: { armament: 40, observation: 45 },
-      spar: { level: 38, style: "sniper", weapon: "gun", name: "Kuja Archer", haki: true },
-      lines: ["Every Kuja warrior uses Haki. How do people from outside even survive?"]
-    },
-    mihawk: {
-      name: "Dracule Mihawk",
-      where: "Kuraigana Island",
-      styles: { santoryu: 0 },
-      teaches: ["santo_onigiri", "santo_108", "santo_sanzen"],
-      train: { str: 75, agi: 70 },
-      haki: { armament: 60 },
-      spar: { level: 70, style: "ittoryu", weapon: "sword", name: "Humandrill", haki: true },
-      requires: { mastery: { ittoryu: 30 } },
-      lines: ["Humiliating yourself to learn from your enemy... for your dream. That is true strength."]
-    },
-    jinbe: {
-      name: "Jinbe",
-      where: "Fish-Man Island",
-      styles: { fishman_karate: 25e3 },
-      teaches: ["fmk_uchimizu", "fmk_arabesque", "fmk_5000", "fmk_vagabond"],
-      train: { str: 60, end: 60 },
-      spar: { level: 55, style: "fishman_karate", name: "Fish-Man Karate Master" },
-      lines: ["Fish-Man Karate controls the water inside all things."]
-    },
-    hyogoro: {
-      name: "Hyogoro the Flower",
-      where: "Udon, Wano Country",
-      styles: {},
-      teaches: ["haki_ryuo"],
-      train: { str: 70, wil: 70 },
-      haki: { armament: 80 },
-      spar: { level: 72, style: "brawler", name: "Udon Prisoner", haki: true },
-      lines: ['Ryuo is not "coating". Let your Haki flow \u2014 let it destroy from within.']
-    },
-    kozuki_samurai: {
-      name: "Kozuki Retainer",
-      where: "Flower Capital, Wano",
-      styles: { nitoryu: 2e4, ittoryu: 5e3 },
-      teaches: ["nito_taka", "nito_nigiri", "santo_asura"],
-      train: { str: 75, agi: 75 },
-      spar: { level: 70, style: "nitoryu", weapon: "sword", name: "Samurai", haki: true },
-      lines: ["Oden-sama's two-sword style could cut even the Emperor's scales."]
-    },
-    elbaf_warrior: {
-      name: "Giant Warrior",
-      where: "Elbaf (or Little Garden)",
-      styles: { elbaf: 3e4 },
-      teaches: ["elbaf_hakoku"],
-      train: { str: 80, vit: 80, end: 70 },
-      spar: { level: 60, style: "elbaf", weapon: "axe", name: "Giant Warrior" },
-      lines: ["GEGYAGYAGYA! Show us the pride of a warrior!"]
-    },
-    zou_minks: {
-      name: "Nekomamushi / Inuarashi's Guard",
-      where: "Zou",
-      styles: { electro: 0 },
-      teaches: ["elec_garchu", "elec_sulong"],
-      train: { agi: 75, str: 65 },
-      spar: { level: 58, style: "electro", name: "Musketeer", haki: true },
-      lines: ["Garchu! Every Mink is a warrior."]
-    },
-    revolutionary: {
-      name: "Revolutionary Officer",
-      where: "Baltigo / Momoiro Island",
-      styles: { ryusoken: 4e4 },
-      teaches: ["ryu_claw", "ryu_hiken"],
-      train: { str: 65, agi: 60 },
-      spar: { level: 52, style: "ryusoken", name: "Revolutionary Soldier", haki: true },
-      lines: ["Freedom is not given. It is taken back."]
-    },
-    cp_defector: {
-      name: "Ex-CP9 Agent",
-      where: "Water 7 back alleys",
-      styles: { rokushiki: 6e4 },
-      teaches: ["roku_soru", "roku_geppo", "roku_tekkai", "roku_rankyaku", "roku_kamie", "roku_rokuogan"],
-      train: { str: 55, agi: 60 },
-      spar: { level: 50, style: "rokushiki", name: "Former Agent" },
-      lines: ["Doriki is just a number. Six powers, one body."]
-    }
-  };
-
-  // src/game/services.js
-  var Services = class {
-    constructor(game) {
-      this.game = game;
-      game.services = this;
-      game.on("knockout", (a, att) => this.onKnockout(a, att));
-    }
-    get char() {
-      return this.game.state.char;
-    }
-    seaMul(island) {
-      const sea = island?.def?.sea || "east_blue";
-      return { east_blue: 1, north_blue: 1.2, west_blue: 1.2, south_blue: 1.2, paradise: 3, calm_belt: 4, new_world: 6, red_line: 5 }[sea] || 1;
-    }
-    // ------------------------------------------------------------- inn
-    innPrice(island) {
-      return Math.round(60 * this.seaMul(island));
-    }
-    rest(island, town) {
-      const g = this.game, c = this.char, p = g.player;
-      const price = this.innPrice(island);
-      if (!pay(g, price)) return false;
-      c.rest = { x: p.x, y: p.y, name: `${town?.name || island?.name || "an inn"}`, islandId: island?.id };
-      p.hp = p.d.maxHp;
-      p.stamina = p.d.maxStamina;
-      p.haki = p.hakiUnlocked() ? p.d.maxHaki : 0;
-      p.status = {};
-      c.getUpCharges = 1 + (p.attrs.wil >= 40 ? 1 : 0) + (p.attrs.wil >= 80 ? 1 : 0);
-      c.flags.dLuckUsed = false;
-      c.trainedToday = 0;
-      const env = g.env;
-      if (env.clock > 6) {
-        env.day += 1;
-      }
-      env.clock = 7;
-      g.ui.fade(true);
-      setTimeout(() => g.ui.fade(false), 700);
-      g.log(`You rest at ${c.rest.name}. This is now where you will wake if you fall. (Second winds restored: ${c.getUpCharges})`, "#a5d6a7");
-      g.emit("rested", island);
-      persist(g);
-      return true;
-    }
-    // ---------------------------------------------------------- doctor
-    healPrice(island) {
-      const p = this.game.player;
-      return Math.round((p.d.maxHp - p.hp) * 0.6 * this.seaMul(island) + 20);
-    }
-    heal(island) {
-      const g = this.game, p = g.player;
-      if (!pay(g, this.healPrice(island))) return false;
-      p.hp = p.d.maxHp;
-      p.status = {};
-      g.log("The doctor patches you up.", "#a5d6a7");
-      return true;
-    }
-    lifePrice(doc) {
-      return doc.lifePrice ?? 4e5;
-    }
-    restoreLife(doc) {
-      const g = this.game, c = this.char;
-      if (c.lives >= c.maxLives) {
-        g.log("Your vivre cards are all whole.", "#b0bec5");
-        return false;
-      }
-      const key2 = "lifeRestored_" + doc.id;
-      if (c.flags[key2]) {
-        g.log(`${doc.name} has already done all they can for you.`, "#b0bec5");
-        return false;
-      }
-      if (!pay(g, this.lifePrice(doc))) return false;
-      c.flags[key2] = true;
-      c.lives += 1;
-      g.ui.toast("A VIVRE CARD MENDS", `${doc.name} brought you back from the brink.`, "#a5d6a7");
-      persist(g);
-      return true;
-    }
-    // -------------------------------------------------------- shipwright
-    shipsFor(island) {
-      const sea = island?.def?.sea || "east_blue", id = island?.id || "";
-      const list = ["dinghy", "sloop", "caravel"];
-      if (sea !== "east_blue") list.push("brigantine");
-      if (sea !== "east_blue" || id === "loguetown") list.push("carrack");
-      if (sea === "paradise" || sea === "new_world") list.push("frigate", "galleon", "war_galleon");
-      if (sea === "new_world" || id === "water_7") list.push("man_o_war");
-      if (sea === "new_world") list.push("great_galleon");
-      return list.sort((a, b) => SHIPS[a].price - SHIPS[b].price);
-    }
-    shipPrice(type, island) {
-      return Math.round(SHIPS[type].price * (1 + (this.seaMul(island) - 1) * 0.3));
-    }
-    buyShip(type, island, dock, name) {
-      const g = this.game;
-      if (!pay(g, this.shipPrice(type, island))) return null;
-      const spot = dock?.moor || this.nearWater();
-      const s = g.giveShip(type, spot.x, spot.y, name || SHIPS[type].name);
-      g.ui.toast("NEW SHIP", `${s.name} (${SHIPS[type].name})`, "#ffe082");
-      g.log(`Your new ${SHIPS[type].name} is moored at the dock. Board it with E.`, "#ffe082");
-      persist(g);
-      return s;
-    }
-    nearWater() {
-      const p = this.game.player;
-      for (let r = 2; r < 30; r += 2) for (let a = 0; a < 6.28; a += 0.4) {
-        const x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r;
-        if (this.game.world.sailable(x, y)) return { x, y };
-      }
-      return { x: p.x, y: p.y + 5 };
-    }
-    repairPrice(ship, island) {
-      return Math.round((ship.maxHull - ship.hull) * 8 * this.seaMul(island));
-    }
-    repair(ship, island) {
-      const g = this.game;
-      if (!pay(g, this.repairPrice(ship, island))) return false;
-      ship.hull = ship.maxHull;
-      g.log(`${ship.name} is as good as new.`, "#a5d6a7");
-      return true;
-    }
-    upgradePrice(id, island) {
-      return Math.round(SHIP_UPGRADES[id].price * (1 + (this.seaMul(island) - 1) * 0.2));
-    }
-    upgrade(ship, id, island) {
-      const g = this.game;
-      if (ship.upgrades.includes(id) && id !== "coating") return false;
-      if (!pay(g, this.upgradePrice(id, island))) return false;
-      if (id === "coating") ship.coated = true;
-      else {
-        ship.upgrades.push(id);
-        const frac2 = ship.hull / ship.maxHull;
-        ship.applyDef();
-        ship.hull = ship.maxHull * frac2;
-      }
-      g.log(`${SHIP_UPGRADES[id].name} fitted to the ${ship.name}.`, "#a5d6a7");
-      persist(g);
-      return true;
-    }
-    // ---------------------------------------------------------- trainers
-    trainer(id) {
-      return TRAINERS[id];
-    }
-    canLearnStyle(tid, style) {
-      const t = TRAINERS[tid], c = this.char;
-      if (c.masteries[style] !== void 0) return { ok: false, why: "Already learned" };
-      if (t.marineOnly && c.faction !== "marine") return { ok: false, why: "Marines only" };
-      for (const [s, m] of Object.entries(t.requires?.mastery || {})) if ((c.masteries[s] || 0) < m) return { ok: false, why: `Needs ${STYLES2[s].name} mastery ${m}` };
-      const st = STYLES2[style];
-      if (st.weapon === "sword" && st.swords > 1) {
-        const swords = (c.inventory || []).filter((i) => i.id && /sword|katana|cutlass|saber|kitetsu|yubashiri|shigure|wado|shusui|enma|yoru/.test(i.id)).length;
-        if (swords < st.swords) return { ok: true, warn: `You will need ${st.swords} swords to use it.` };
-      }
-      return { ok: true };
-    }
-    stylePrice(tid, style) {
-      const base2 = TRAINERS[tid].styles[style];
-      return Math.round(base2 * (this.char.race === "human" ? 0.85 : 1) * (this.char.race === "fishman" && style === "fishman_karate" ? 0.5 : 1));
-    }
-    learnStyle(tid, style) {
-      const g = this.game, c = this.char;
-      const chk = this.canLearnStyle(tid, style);
-      if (!chk.ok) {
-        g.log(chk.why, "#ff8a80");
-        return false;
-      }
-      if (!pay(g, this.stylePrice(tid, style))) return false;
-      c.masteries[style] = 0;
-      g.player.masteries = c.masteries;
-      g.ui.toast("NEW STYLE", STYLES2[style].name, "#90caf9");
-      g.log(`You can switch to ${STYLES2[style].name} in the Skills menu (K).`, "#90caf9");
-      persist(g);
-      return true;
-    }
-    techInfo(id) {
-      const d = getAbility(id);
-      if (!d) return null;
-      const style = d.style;
-      const learn = d.learn || { mastery: 0, price: 0 };
-      return { d, style, learn };
-    }
-    canLearnTech(id) {
-      const c = this.char;
-      const info = this.techInfo(id);
-      if (!info) return { ok: false, why: "?" };
-      if (c.techniques.includes(id)) return { ok: false, why: "Known" };
-      const { d, learn } = info;
-      if (d.hakiType) {
-        if (!c.haki[d.hakiType]) return { ok: false, why: `Needs ${d.hakiType} Haki` };
-        if ((c.haki[d.hakiType] || 0) < (learn.level || 0)) return { ok: false, why: `Needs ${d.hakiType} Haki level ${learn.level}` };
-        return { ok: true };
-      }
-      if (d.style && c.masteries[d.style] === void 0) return { ok: false, why: `Learn ${STYLES2[d.style]?.name} first` };
-      if ((c.masteries[d.style] || 0) < (learn.mastery || 0)) return { ok: false, why: `Needs ${STYLES2[d.style]?.name} mastery ${learn.mastery}` };
-      if (learn.special === "full_moon" && !(this.game.env.fullMoon && this.game.env.isNight)) return { ok: false, why: "Only under a full moon" };
-      return { ok: true };
-    }
-    techPrice(id) {
-      const i = this.techInfo(id);
-      return Math.round((i?.learn?.price ?? 1e3) * (this.char.race === "human" ? 0.85 : 1));
-    }
-    learnTech(id) {
-      const g = this.game, c = this.char;
-      const chk = this.canLearnTech(id);
-      if (!chk.ok) {
-        g.log(chk.why, "#ff8a80");
-        return false;
-      }
-      if (!pay(g, this.techPrice(id))) return false;
-      c.techniques.push(id);
-      const d = getAbility(id);
-      const empty2 = c.hotbar.findIndex((x) => !x);
-      if (empty2 >= 0) c.hotbar[empty2] = id;
-      else if (c.hotbar.length < 6) c.hotbar.push(id);
-      refreshPlayer(g);
-      g.ui.toast("TECHNIQUE LEARNED", d.name, "#90caf9");
-      persist(g);
-      return true;
-    }
-    trainPrice(attr) {
-      return Math.round(120 + (this.char.attrs[attr] || 5) * 90);
-    }
-    trainsLeft() {
-      return Math.max(0, 3 - (this.char.trainDay === this.game.env.day ? this.char.trainCount || 0 : 0));
-    }
-    train(tid, attr) {
-      const g = this.game, c = this.char, t = TRAINERS[tid];
-      const cap = t.train[attr] || 0;
-      if ((c.attrs[attr] || 0) >= cap) {
-        g.log(`${t.name} has nothing more to teach you about ${attr.toUpperCase()}. Seek a greater master.`, "#ff8a80");
-        return false;
-      }
-      if (this.trainsLeft() <= 0) {
-        g.log("You are exhausted. Rest and train again tomorrow.", "#ff8a80");
-        return false;
-      }
-      if (!pay(g, this.trainPrice(attr))) return false;
-      if (c.trainDay !== g.env.day) {
-        c.trainDay = g.env.day;
-        c.trainCount = 0;
-      }
-      c.trainCount++;
-      g.progression.raiseAttr(attr, 1);
-      g.env.clock += 2;
-      g.fx.burst(g.player.x, g.player.y - 0.8, 12, { color: "#fff59d", speed: 3, g: 2, life: 0.5, kind: "star" });
-      persist(g);
-      return true;
-    }
-    hakiTrainPrice(type) {
-      return Math.round((2e3 + (this.char.haki[type] || 0) * 1500) * (type === "conqueror" ? 2 : 1));
-    }
-    hakiTrain(tid, type) {
-      const g = this.game, c = this.char, t = TRAINERS[tid];
-      const cap = t.haki?.[type] || 0;
-      if (type === "conqueror" && !c.haki.conqueror) {
-        g.log(`${t.name}: "Conqueror's Haki cannot be taught. Either it lives in you or it doesn't."`, "#ff8a80");
-        return false;
-      }
-      if (!c.haki[type]) {
-        const need = type === "armament" ? 18 : 14;
-        if (c.attrs.wil < need) {
-          g.log(`${t.name}: "Your will isn't ready. Come back when your Willpower is ${need}."`, "#ff8a80");
-          return false;
-        }
-        if (!pay(g, this.hakiTrainPrice(type) * 3)) return false;
-        g.progression.awakenHaki(type, 5, `Trained by ${t.name}`);
-        return true;
-      }
-      if (c.haki[type] >= cap) {
-        g.log(`${t.name} can take your ${type} Haki no further.`, "#ff8a80");
-        return false;
-      }
-      if (this.trainsLeft() <= 0) {
-        g.log("You are exhausted. Rest and train again tomorrow.", "#ff8a80");
-        return false;
-      }
-      if (!pay(g, this.hakiTrainPrice(type))) return false;
-      if (c.trainDay !== g.env.day) {
-        c.trainDay = g.env.day;
-        c.trainCount = 0;
-      }
-      c.trainCount++;
-      g.progression.addHaki(type, 5, cap);
-      g.env.clock += 3;
-      persist(g);
-      return true;
-    }
-    // ------------------------------------------------------------ sparring
-    canSpar(tid) {
-      const c = this.char;
-      const rec = c.trained[tid] || {};
-      if (rec.sparDay === this.game.env.day) return { ok: false, why: "Already sparred today" };
-      if (this.game.sparring) return { ok: false, why: "Already in a spar" };
-      return { ok: true };
-    }
-    startSpar(tid) {
-      const g = this.game, c = this.char, p = g.player, t = TRAINERS[tid];
-      const chk = this.canSpar(tid);
-      if (!chk.ok) {
-        g.log(chk.why, "#ff8a80");
-        return;
-      }
-      c.trained[tid] = { ...c.trained[tid] || {}, sparDay: g.env.day };
-      const sp = t.spar;
-      const L2 = sp.level;
-      const spot = findShore(g.world, p.x + 3, p.y, 5) || { x: p.x + 2, y: p.y };
-      const opp = new Actor({
-        x: spot.x,
-        y: spot.y,
-        name: sp.name,
-        title: `Sparring partner (${t.name})`,
-        look: makeLook(sp.race || "human", L2 * 97 + tid.length, { top: "#eceff1", bottom: "#37474f", hat: sp.weapon === "sword" ? "headband" : null, hatColor: "#c62828", swords: sp.weapon === "sword" ? 1 : 0, weapon: sp.weapon }),
-        faction: "rival",
-        attrs: { str: L2, agi: L2, end: L2, vit: L2, wil: L2 },
-        style: sp.style,
-        lethal: false,
-        weapon: sp.weapon ? { kind: sp.weapon, power: 1.2, count: STYLES2[sp.style]?.swords || 1 } : null,
-        hakiSkill: sp.haki ? { armament: Math.min(80, L2), observation: Math.min(80, L2) } : {}
-      });
-      opp.masteries = { [sp.style]: Math.min(100, L2 * 1.3) };
-      opp.techniques = [...(STYLES2[sp.style]?.techniques || []).slice(0, 3).map((x) => x.id)];
-      opp.controller = new AIController({ kind: "hostile", skill: Math.min(0.85, 0.3 + L2 / 100), aggroRange: 20, moves: opp.techniques, leash: 0, fleeAt: 0 });
-      opp.controller.target = p;
-      opp.provoked = true;
-      opp.spar = tid;
-      opp.showName = true;
-      opp.armament = !!sp.haki && p.hakiUnlocked();
-      opp.game = g;
-      g.addActor(opp);
-      g.sparring = { opp, tid, start: g.time };
-      g.bossTarget = opp;
-      g.ui.banner("SPAR!", t.name, "A duel with no killing. Knock them down to win.", 3);
-      g.audio?.sfx("fanfare");
-    }
-    onKnockout(a) {
-      const g = this.game, s = g.sparring;
-      if (!s) return;
-      if (a === s.opp) this.endSpar(true);
-      else if (a.isPlayer) this.endSpar(false);
-    }
-    endSpar(won) {
-      const g = this.game, s = g.sparring, c = this.char, p = g.player, t = TRAINERS[s.tid];
-      g.sparring = null;
-      g.bossTarget = null;
-      const opp = s.opp;
-      const power = opp.power(), mine = p.power();
-      const ratio = power / Math.max(1, mine);
-      setTimeout(() => {
-        opp.alive = false;
-      }, 1500);
-      const style = p.style;
-      if (won) {
-        const m = Math.max(2, Math.min(12, 6 * ratio));
-        g.progression.addStyleMastery(style, m);
-        if (c.fruit) g.progression.addFruitMastery(m * 0.5);
-        const keys = Object.keys(t.train).filter((k) => (c.attrs[k] || 0) < t.train[k]);
-        if (keys.length) g.progression.raiseAttr(keys[Math.floor(Math.random() * keys.length)], 1);
-        if (ratio > 0.9) g.progression.breakthrough(1, `Beat ${opp.name} in a spar`);
-        if (t.haki) {
-          for (const k of Object.keys(t.haki)) if (c.haki[k]) g.progression.addHaki(k, 2, t.haki[k]);
-        }
-        g.ui.banner("Victory!", t.name, `"${t.lines?.[1] || "Well fought."}"`, 4);
-      } else {
-        g.lives.k = null;
-        p.state = "idle";
-        p.hp = Math.round(p.d.maxHp * 0.35);
-        p.iframes = 1.5;
-        g.progression.addStyleMastery(style, 1.5 * Math.min(2, ratio));
-        g.ui.banner("Defeat", t.name, `"Get up. That's the lesson." (A spar costs no lives.)`, 4);
-      }
-      persist(g);
-    }
-  };
-
-  // src/data/shops.js
-  var STOCK = {
-    general: ["meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "antidote", "sake", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
-    tavern: ["meat", "rice_ball", "fish_stew", "sake", "tangerine", "mango"],
-    weapons_blue: ["wooden_sword", "rusty_katana", "cutlass", "slingshot", "flintlock", "bo_staff", "woodsman_axe", "padded_vest", "leather_jerkin", "leather_bracers", "iron_ring"],
-    weapons_grand: ["cutlass", "fine_katana", "marine_saber", "flintlock", "marine_rifle", "bo_staff", "woodsman_axe", "shigure", "leather_jerkin", "chain_shirt", "hand_wraps", "iron_ring"],
-    weapons_new: ["fine_katana", "marine_saber", "marine_rifle", "shigure", "seastone_cuffs", "chain_shirt", "samurai_armor", "hand_wraps", "sea_prism_charm"],
-    outfitter: ["bandana", "traveller_hood", "black_hood", "tricorne", "captain_hat", "cowboy_hat", "pink_hat", "goggles", "headband", "captain_coat", "red_cloak", "haramaki", "red_sash", "gold_earrings", "shell_bracelet", "lucky_charm"],
-    navigator: ["log_pose", "den_den_mushi"],
-    navigator_grand: ["log_pose", "new_world_log_pose", "den_den_mushi"],
-    skypiea: ["impact_dial", "flame_dial", "breath_dial", "flash_dial", "rice_ball", "fish_stew"],
-    fishman: ["fish_stew", "sea_king_steak", "pearl", "pearl_necklace", "bandage", "antidote"],
-    loguetown_swords: ["wooden_sword", "rusty_katana", "cutlass", "fine_katana", "yubashiri"],
-    black_market: ["rumble_ball", "seastone", "seastone_cuffs", "cola", "jewels", "black_hood"]
-  };
-  var SEA_PRICE = { east_blue: 1, north_blue: 1.1, west_blue: 1.1, south_blue: 1.1, paradise: 1.6, calm_belt: 2, red_line: 3, new_world: 2.4, sky: 1.8, undersea: 2 };
-  function stockFor(building, island) {
-    const sea = island?.def?.sea || "east_blue";
-    const grand = sea === "paradise" || sea === "new_world" || sea === "calm_belt";
-    if (building.shop) return STOCK[building.shop] || building.shop;
-    const n = (building.name || "").toLowerCase();
-    switch (building.role) {
-      case "tavern":
-      case "bar":
-      case "restaurant":
-      case "cafe":
-        return STOCK.tavern;
-      case "weapons":
-        return n.includes("ipponmatsu") ? STOCK.loguetown_swords : sea === "new_world" ? STOCK.weapons_new : grand ? STOCK.weapons_grand : STOCK.weapons_blue;
-      case "market":
-      case "shop":
-        if (n.includes("navigator") || n.includes("log")) return grand ? STOCK.navigator_grand : STOCK.navigator;
-        if (n.includes("outfit") || n.includes("boutique")) return STOCK.outfitter;
-        if (island?.def?.climate === "sky") return STOCK.skypiea;
-        return STOCK.general;
-      default:
-        return STOCK.general;
-    }
-  }
-  function priceOf(id, island, char) {
-    const d = ITEMS[id];
-    if (!d) return 0;
-    const sea = island?.def?.sea || "east_blue";
-    let p = (d.price || 0) * (SEA_PRICE[sea] || 1);
-    if (char?.traits?.includes("silver_tongue")) p *= 0.9;
-    if (char?.liberated?.includes(island?.name)) p *= 0.75;
-    return Math.max(1, Math.round(p / 5) * 5);
-  }
-
-  // src/game/crew.js
-  var CREW_ROLES = {
-    fighter: { name: "Combatant", icon: "skills", desc: "Fights beside you on land." },
-    swordsman: { name: "Swordsman", icon: "sword", desc: "Fights beside you on land with a blade." },
-    navigator: { name: "Navigator", icon: "log_pose", desc: "Log Pose sets twice as fast, storms are announced early, +10% sailing speed." },
-    cook: { name: "Cook", icon: "food", desc: "Food heals 50% more; stamina regenerates at sea." },
-    doctor: { name: "Doctor", icon: "doctor", desc: "Patches you up after every battle (heals 30% when combat ends)." },
-    shipwright: { name: "Shipwright", icon: "shipwright", desc: "Repairs your ship slowly while sailing." },
-    sniper: { name: "Sniper", icon: "gun", desc: "Cannons deal 30% more damage." },
-    musician: { name: "Musician", icon: "bar", desc: "Stamina regenerates 25% faster." },
-    archaeologist: { name: "Archaeologist", icon: "library", desc: "Can read Poneglyphs." },
-    helmsman: { name: "Helmsman", icon: "ship", desc: "Your ship turns 25% faster." }
-  };
-  var MAX_FOLLOWERS = 2;
-  function computeMods(members) {
-    const has2 = (r) => members.some((m) => m.role === r);
-    return {
-      speedMul: has2("navigator") ? 1.1 : 1,
-      logMul: has2("navigator") ? 2 : 1,
-      foodMul: has2("cook") ? 1.5 : 1,
-      seaStamina: has2("cook"),
-      doctor: has2("doctor"),
-      repair: has2("shipwright") ? 0.6 : 0,
-      cannonMul: has2("sniper") ? 1.3 : 1,
-      staminaMul: has2("musician") ? 1.25 : 1,
-      poneglyphs: has2("archaeologist"),
-      turnMul: has2("helmsman") ? 1.25 : 1
-    };
-  }
-  var Crew = class {
-    constructor(game) {
-      this.game = game;
-      game.crew = this;
-      game.crewMods = computeMods([]);
-      this.followers = /* @__PURE__ */ new Map();
-      this.t = 0;
-      this.wasFighting = false;
-      game.on("characterStart", () => {
-        this.followers.clear();
-        this.refresh();
-      });
-      game.on("tick", (dt) => this.tick(dt));
-      game.on("enterZone", () => this.followers.clear());
-      game.on("leaveZone", () => this.followers.clear());
-      game.on("bossDefeated", () => {
-        for (const m of this.members()) m.level = Math.min((m.baseLevel || m.level) + 40, (m.level || 5) + 1.5);
-      });
-    }
-    get char() {
-      return this.game.state?.char;
-    }
-    members() {
-      return this.char?.crew || [];
-    }
-    has(id) {
-      return this.members().some((m) => m.id === id);
-    }
-    count() {
-      return this.members().length;
-    }
-    hasRole(role) {
-      return this.members().some((m) => m.role === role);
-    }
-    refresh() {
-      this.game.crewMods = computeMods(this.members());
-    }
-    canRecruit(def) {
-      const c = this.char;
-      if (!c || !def.recruit || this.has(def.id)) return false;
-      if (def.boss && !c.bosses.includes(def.id) && def.recruit.afterDefeat) return false;
-      try {
-        if (def.recruit.requires && !def.recruit.requires(c, this.game)) return false;
-      } catch {
-        return false;
-      }
-      return true;
-    }
-    /** Add the "Join my crew" choice to an NPC's dialogue tree. */
-    decorate(tree, npc) {
-      const def = npc?.def;
-      if (!def?.recruit || !tree?.nodes) return tree;
-      const startId = tree.start || "start";
-      const start3 = tree.nodes[startId];
-      if (!start3) return tree;
-      const r = def.recruit;
-      const role = CREW_ROLES[r.role] || CREW_ROLES.fighter;
-      const cost = r.cost || 0;
-      const nodes = { ...tree.nodes };
-      const choice = {
-        text: `"Join my crew!"${cost ? ` (${formatBerries(cost)})` : ""}`,
-        if: () => this.canRecruit(def),
-        next: "__recruit"
-      };
-      nodes[startId] = { ...start3, choices: [choice, ...start3.choices || []] };
-      if (!start3.choices || !start3.choices.length) nodes[startId].choices.push({ text: "Goodbye.", end: true });
-      nodes.__recruit = {
-        text: r.pitch || `"You want me as your ${role.name.toLowerCase()}? ...Alright. I'm in!"`,
-        choices: [
-          { text: `Welcome aboard! (${role.name}: ${role.desc})`, do: () => {
-            if (cost && !pay(this.game, cost)) {
-              this.game.log("Not enough berries.", "#ff8a80");
-              return;
-            }
-            this.recruit(def, npc);
-          }, end: true },
-          { text: "On second thought...", end: true }
-        ]
-      };
-      return { ...tree, nodes };
-    }
-    recruit(def, actor) {
-      const c = this.char, g = this.game;
-      if (!c || this.has(def.id)) return;
-      const m = {
-        id: def.id,
-        name: def.name,
-        title: def.title,
-        role: def.recruit.role,
-        fighter: def.recruit.fighter ?? (def.recruit.role === "fighter" || def.recruit.role === "swordsman"),
-        level: def.level ?? 6,
-        baseLevel: def.level ?? 6,
-        joined: g.env.day,
-        follow: true
-      };
-      const fighters = this.members().filter((x) => x.fighter && x.follow).length;
-      if (m.fighter && fighters >= MAX_FOLLOWERS) m.follow = false;
-      c.crew.push(m);
-      this.refresh();
-      const role = CREW_ROLES[m.role];
-      g.ui.toast("NEW NAKAMA!", `${m.name} joins your crew as ${role?.name || m.role}.`, "#ffd54f");
-      g.log(`${m.name} joined the crew. ${role?.desc || ""} (Crew: U)`, "#ffe082");
-      g.audio?.sfx("breakthrough");
-      if (actor && actor.alive) {
-        if (m.fighter && m.follow) this.adopt(actor, m);
-        else {
-          actor.alive = false;
-          g.fx.burst(actor.x, actor.y - 0.6, 10, { color: ["#ffe082"], speed: 3, g: 0, life: 0.4, kind: "star" });
-        }
-      }
-      g.emit("crewJoined", def.id);
-      persist(g);
-    }
-    dismiss(id) {
-      const c = this.char;
-      const i = c.crew.findIndex((m2) => m2.id === id);
-      if (i < 0) return;
-      const [m] = c.crew.splice(i, 1);
-      const a = this.followers.get(id);
-      if (a) a.alive = false;
-      this.followers.delete(id);
-      c.flags["leftCrew_" + id] = true;
-      this.refresh();
-      this.game.log(`${m.name} leaves the crew. "Take care of yourself, captain."`, "#b0bec5");
-      persist(this.game);
-    }
-    setFollow(id, on) {
-      const m = this.members().find((x) => x.id === id);
-      if (!m) return false;
-      if (on && this.members().filter((x) => x.fighter && x.follow && x !== m).length >= MAX_FOLLOWERS) return false;
-      m.follow = !!on;
-      if (!on) {
-        const a = this.followers.get(id);
-        if (a) a.alive = false;
-        this.followers.delete(id);
-      }
-      return true;
-    }
-    adopt(a, m) {
-      const g = this.game;
-      a.faction = "player";
-      a.crewId = m.id;
-      a.persistent = true;
-      a.aggroPlayer = false;
-      a.provoked = false;
-      a.boss = false;
-      a.talk = a.def?.dialogue ? { def: a.def } : null;
-      a.nameColor = "#ffe082";
-      a.showName = true;
-      a.controller = new AIController({ kind: "follower", skill: 0.45, moves: a.def?.moves || [], ranged: a.def?.ranged });
-      a.stationary = false;
-      for (const list of g.spawner.populated.values()) {
-        const k = list.indexOf(a);
-        if (k >= 0) list.splice(k, 1);
-      }
-      this.followers.set(m.id, a);
-    }
-    spawnFollower(m) {
-      const g = this.game, p = g.player;
-      const def = npcDef(m.id);
-      if (!def) return null;
-      const a = makeNPC({ ...def, hostile: false, boss: false, level: Math.round(m.level || def.level || 6), when: void 0 }, p.x - 1, p.y + 0.8);
-      a.game = g;
-      g.addActor(a);
-      this.adopt(a, m);
-      return a;
-    }
-    tick(dt) {
-      const g = this.game, p = g.player, c = this.char;
-      if (!c || !p) return;
-      this.t -= dt;
-      if (this.t <= 0) {
-        this.t = 0.5;
-        for (const m of this.members()) {
-          if (!m.fighter || !m.follow) continue;
-          let a = this.followers.get(m.id);
-          if (a && !a.alive) {
-            this.followers.delete(m.id);
-            a = null;
-          }
-          if (!a && p.mode === "foot" && p.state === "idle") a = this.spawnFollower(m);
-          if (a && a.state === "knocked" && !p.inCombat) {
-            a.state = "idle";
-            a.hp = Math.round(a.d.maxHp * 0.3);
-            g.fx.text(a.x, a.y - 2, "Still standing!", "#ffe082", 0.35);
-          }
-        }
-      }
-      const mods = g.crewMods;
-      const fighting = !!p.inCombat;
-      if (this.wasFighting && !fighting && mods.doctor && p.state === "idle" && p.hp < p.d.maxHp) {
-        const heal = Math.round(p.d.maxHp * 0.3);
-        p.hp = Math.min(p.d.maxHp, p.hp + heal);
-        g.fx.text(p.x, p.y - 1.6, `+${heal}`, "#69f0ae", 0.45);
-        const doc = this.members().find((m) => m.role === "doctor");
-        g.log(`${doc?.name || "Your doctor"} patches you up.`, "#a5d6a7");
-      }
-      this.wasFighting = fighting;
-      if (p.mode === "sail" && p.ship && !p.ship.sunk) {
-        if (mods.repair && p.ship.hull < p.ship.maxHull) p.ship.hull = Math.min(p.ship.maxHull, p.ship.hull + mods.repair * dt);
-        if (mods.seaStamina) p.stamina = Math.min(p.d.maxStamina, p.stamina + 4 * dt);
-      }
-    }
-  };
-
-  // src/ui/crewPanel.js
-  var JR_OPTS = {
-    skull: [["classic", "Classic"], ["grin", "Grinning"], ["eyepatch", "Scarred"]],
-    bones: [["cross", "Crossbones"], ["swords", "Crossed swords"], ["anchor", "Anchor"]],
-    accessory: [["none", "None"], ["strawhat", "Straw hat"], ["bandana", "Bandana"], ["tricorne", "Tricorne"], ["horns", "Horns"], ["crown", "Crown"], ["flames", "Flames"], ["halo", "Halo"]],
-    color: [["#f5f6fa", "White"], ["#efe2c4", "Bone"], ["#e53935", "Red"], ["#f1c40f", "Gold"], ["#64b5f6", "Sky"]]
-  };
-  function flagCanvas(jr, w = 180, hgt = 130, marine2 = false) {
-    const cv = h("canvas.flag", { width: w * 2, height: hgt * 2, style: { width: w + "px", height: hgt + "px" } });
-    const g = cv.getContext("2d");
-    g.fillStyle = marine2 ? "#f5f6fa" : "#111";
-    g.fillRect(0, 0, w * 2, hgt * 2);
-    g.setTransform(hgt * 1.7, 0, 0, hgt * 1.7, w, hgt * 1.08);
-    if (marine2) drawMarineEmblem(g, 1);
-    else drawJollyRoger(g, jr || {}, 1, "#111");
-    return cv;
-  }
-  function designer(state, onChange) {
-    const row = (label, key2) => h(
-      "div.opt-row",
-      h("div.opt-label", label),
-      h("div.swatches", JR_OPTS[key2].map(([v, name]) => key2 === "color" ? h("button" + (state.jr[key2] === v ? ".on" : ""), { title: name, style: { background: v }, on: { click: () => {
-        state.jr[key2] = v;
-        onChange();
-      } } }) : h("button.chip" + (state.jr[key2] === v ? ".on" : ""), { on: { click: () => {
-        state.jr[key2] = v;
-        onChange();
-      } } }, name)))
-    );
-    return h(
-      "div.jr-designer",
-      flagCanvas(state.jr, 220, 150),
-      h("div", row("Skull", "skull"), row("Behind it", "bones"), row("On its head", "accessory"), row("Colour", "color"))
-    );
-  }
-  function hoist(game) {
-    const c = game.state.char;
-    for (const s of game.ships) if (s.owner === "player") s.jr = c.jr;
-  }
-  function openCrew(game) {
-    const body = h("div.crew");
-    const entry = game.ui.openPanel(body, { wide: true, id: "crew" });
-    if (!entry) return;
-    const c = game.state.char;
-    const found = { name: "", jr: { skull: "classic", bones: "cross", accessory: "none", color: "#f5f6fa" } };
-    const render2 = () => {
-      clear(body);
-      if (c.faction === "marine") {
-        add2(body, h("div.crew-head", flagCanvas(null, 120, 86, true), h(
-          "div",
-          h("h2", `${c.marineRank} ${c.name}`),
-          h("p", "You sail under the flag of the World Government. Marines cannot found a pirate crew \u2014 resign first if the sea calls you another way."),
-          fleetInfo(game)
-        )));
-      } else if (!c.crewName) {
-        if (!found.name) found.name = `${c.name.split(" ")[0]} Pirates`;
-        const input = h("input.name", { value: found.name, maxLength: 28, spellcheck: false, on: { input: (e) => {
-          found.name = e.target.value;
-        } } });
-        add2(
-          body,
-          h("h2", "Crew"),
-          h(
-            "div.card.found",
-            h("h3", "Found a pirate crew"),
-            h("p", "Every great pirate started with a name and a flag. Choose your crew's name and design your Jolly Roger \u2014 it will fly from the sails of every ship you own."),
-            h("p.muted", "Raising a Jolly Roger makes you a pirate in the eyes of the world. The Marines won't take a pirate captain, and a pirate with a bounty is hunted."),
-            h("div.opt-row", h("div.opt-label", "Crew name"), input),
-            designer(found, render2),
-            h(
-              "div",
-              { style: { display: "flex", justifyContent: "flex-end", marginTop: "10px" } },
-              h("button.btn.red.big", { on: { click: async () => {
-                const name = (found.name || "").trim().slice(0, 28);
-                if (!name) return;
-                if (!await game.ui.ask({ title: `Raise the flag of the ${name}?`, text: "From now on you sail as a pirate captain.", ok: "Raise the flag" })) return;
-                c.crewName = name;
-                c.jr = { ...found.jr, name };
-                if (c.faction === "civilian") c.faction = "pirate";
-                hoist(game);
-                game.ui.toast("A NEW PIRATE CREW", `The ${name} set sail!`, "#ffd54f");
-                game.log(`You founded the ${name}. Your Jolly Roger flies from your ship.`, "#ffe082");
-                game.emit("crewFounded", name);
-                persist(game);
-                render2();
-              } } }, "Raise the flag")
-            )
-          )
-        );
-      } else {
-        add2(body, h("div.crew-head", flagCanvas(c.jr, 120, 86), h(
-          "div",
-          h("h2", `The ${c.crewName}`),
-          h("p.muted", `Captain ${c.name} \xB7 ${game.crew.count() + 1} aboard`),
-          h("button.btn", { on: { click: () => openJollyRoger(game) } }, uiImg("jolly_roger", 18), "Redesign the Jolly Roger")
-        )));
-      }
-      roster(game, body, render2);
-    };
-    render2();
-  }
-  function fleetInfo(game) {
-    const c = game.state.char;
-    const ships = game.ships.filter((s) => s.owner === "player" && !s.sunk);
-    const escorts = game.ships.filter((s) => s.escortOf && !s.sunk);
-    return h(
-      "div",
-      h("p", `Ships under your command: ${ships.map((s) => s.name).join(", ") || "none"}${escorts.length ? ` \xB7 escorts: ${escorts.length}` : ""}`),
-      h("p.muted", c.marineRank && /Captain|Commodore|Admiral/.test(c.marineRank) ? "Your escort ships sail with you and Marines under your command fight at your side." : "From the rank of Captain, escort ships sail with you; officers command Marines who fight beside them.")
-    );
-  }
-  function roster(game, body, rerender) {
-    const crew = game.crew.members();
-    add2(body, h("h3", "Nakama"));
-    add2(body, h("p.muted", 'Companions you recruit in the world. Look for "Join my crew!" when you talk to people \u2014 a navigator, a cook, a doctor\u2026 Up to two fighters follow you on land; everyone else stays with the ship and helps from there.'));
-    if (!crew.length) add2(body, h("p", "Your crew is just you, for now. Every great pirate started alone."));
-    const list = h("div.list");
-    for (const m of crew) {
-      const role = CREW_ROLES[m.role] || CREW_ROLES.fighter;
-      const actions = [];
-      if (m.fighter) {
-        actions.push(h("button.btn" + (m.follow ? ".green" : ""), {
-          on: { click: () => {
-            if (!game.crew.setFollow(m.id, !m.follow)) game.log("Only two companions can follow you on land at once.", "#ff8a80");
-            rerender();
-          } }
-        }, m.follow ? "Following" : "Stays aboard"));
-      }
-      actions.push(h("button.btn.red", { on: { click: async () => {
-        if (await game.ui.ask({ title: "Part ways?", text: `${m.name} will leave the crew and will not come back.`, ok: "Part ways", danger: true })) {
-          game.crew.dismiss(m.id);
-          rerender();
-        }
-      } } }, "Part ways"));
-      list.appendChild(h(
-        "div.row-item",
-        uiImg(role.icon || "crew", 28),
-        h("div.grow", h("b", `${m.name}`), h("div.sub", `${role.name}${m.title ? " \xB7 " + m.title : ""} \xB7 Lv ${Math.round(m.level || 1)} \xB7 joined day ${m.joined || 1}`), h("div.sub", role.desc)),
-        ...actions
-      ));
-    }
-    body.appendChild(list);
-    const mods = game.crewMods;
-    const perks = [];
-    if (mods.speedMul > 1) perks.push("+10% sailing speed");
-    if (mods.logMul > 1) perks.push("Log Pose sets twice as fast");
-    if (mods.foodMul > 1) perks.push("+50% healing from food");
-    if (mods.doctor) perks.push("Healed after every battle");
-    if (mods.repair) perks.push("Ship repairs itself at sea");
-    if (mods.cannonMul > 1) perks.push("+30% cannon damage");
-    if (mods.staminaMul > 1) perks.push("+25% stamina regeneration");
-    if (mods.poneglyphs) perks.push("Can read Poneglyphs");
-    if (mods.turnMul > 1) perks.push("Ship turns 25% faster");
-    if (perks.length) add2(body, h("h3", "Crew bonuses"), h("p", perks.join(" \xB7 ")));
-  }
-  function openJollyRoger(game) {
-    const c = game.state.char;
-    const body = h("div.jolly");
-    const entry = game.ui.openPanel(body, { wide: false, id: "jolly" });
-    if (!entry) return;
-    if (c.faction === "marine") {
-      add2(body, h("h2", "Colours"), flagCanvas(null, 220, 150, true), h("p", "As a Marine you sail under the gull of the World Government."));
-      return;
-    }
-    if (!c.crewName) {
-      add2(
-        body,
-        h("h2", "Jolly Roger"),
-        flagCanvas({ skull: "classic", bones: "cross", accessory: "none", color: "#333" }, 220, 150),
-        h("p", "You have no crew \u2014 and no flag \u2014 yet. Found a pirate crew from the Crew menu (U) to design your Jolly Roger. It will fly from the sails of your ships."),
-        h("button.btn.gold", { on: { click: () => {
-          game.ui.closePanel(entry);
-          openCrew(game);
-        } } }, uiImg("crew", 18), "Open the Crew menu")
-      );
-      return;
-    }
-    const state = { jr: { skull: "classic", bones: "cross", accessory: "none", color: "#f5f6fa", ...c.jr } };
-    const render2 = () => {
-      clear(body);
-      add2(
-        body,
-        h("h2", `Flag of the ${c.crewName}`),
-        designer(state, render2),
-        h(
-          "div",
-          { style: { display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "10px" } },
-          h("button.btn", { on: { click: () => game.ui.closePanel(entry) } }, "Cancel"),
-          h("button.btn.gold", { on: { click: () => {
-            c.jr = { ...state.jr, name: c.crewName };
-            hoist(game);
-            persist(game);
-            game.ui.closePanel(entry);
-            game.log("Your new Jolly Roger is hoisted.", "#ffe082");
-          } } }, "Hoist it")
-        )
-      );
-    };
-    render2();
-  }
-
-  // src/ui/panels.js
-  var berriesLine = (c) => h("div.berries", uiImg("berries", 20), ` ${formatBerries(c.berries)}`);
-  var HOTBAR = 6;
-  var USABLE = /* @__PURE__ */ new Set(["food", "medicine"]);
-  var title = (s) => s[0].toUpperCase() + s.slice(1);
-  function hotbarEntry(id, c) {
-    if (!id) return null;
-    if (id.startsWith("item:")) {
-      const iid = id.slice(5), d2 = ITEMS[iid];
-      if (!d2) return null;
-      return { kind: "item", id: iid, def: d2, name: d2.name, qty: count(c, iid), img: (px2) => itemImg(iid, px2) };
-    }
-    const d = getAbility(id);
-    if (!d) return null;
-    return { kind: "skill", id, def: d, name: d.name, img: (px2) => skillImg(d, px2) };
-  }
-  function ensureHotbar(c) {
-    c.hotbar = c.hotbar || [];
-    for (let i = 0; i < HOTBAR; i++) if (c.hotbar[i] === void 0) c.hotbar[i] = null;
-    c.hotbar.length = HOTBAR;
-    return c.hotbar;
-  }
-  function assignHotbar(game, slot2, payload) {
-    const c = game.state.char;
-    const hb = ensureHotbar(c);
-    if (!payload) return;
-    if (payload.startsWith("slot:")) {
-      const j = +payload.slice(5);
-      if (j === slot2 || j < 0 || j >= HOTBAR) return;
-      [hb[slot2], hb[j]] = [hb[j], hb[slot2]];
-    } else {
-      let id = payload;
-      if (payload.startsWith("skill:")) id = payload.slice(6);
-      else if (payload.startsWith("item:") || payload.startsWith("inv:")) {
-        const iid = payload.slice(payload.indexOf(":") + 1);
-        const d = ITEMS[iid];
-        if (!d || !USABLE.has(d.type)) {
-          game.log("Only food and medicine can go on the hotbar.", "#ff8a80");
-          return;
-        }
-        id = "item:" + iid;
-      } else return;
-      for (let k = 0; k < HOTBAR; k++) if (hb[k] === id) hb[k] = null;
-      hb[slot2] = id;
-    }
-    refreshPlayer(game);
-    game.audio?.sfx("equip");
-  }
-  function hotbarStrip(game, sel, rerender) {
-    const c = game.state.char;
-    const hb = ensureHotbar(c);
-    const slots = [];
-    for (let i = 0; i < HOTBAR; i++) {
-      const e = hotbarEntry(hb[i], c);
-      const slot2 = h(
-        "div.hb-slot" + (e ? "" : ".empty") + (sel.slot === i ? ".sel" : ""),
-        {
-          draggable: !!e,
-          title: e ? `${e.name}${e.def.desc ? "\n" + e.def.desc : ""}
-
-Drag to move \xB7 right-click to clear` : "Empty \u2014 drag a technique or food here",
-          on: {
-            dragstart: (ev) => {
-              ev.dataTransfer.setData("text/plain", "slot:" + i);
-              ev.dataTransfer.effectAllowed = "move";
-              slot2.classList.add("dragging");
-            },
-            dragend: () => slot2.classList.remove("dragging"),
-            dragover: (ev) => {
-              ev.preventDefault();
-              slot2.classList.add("over");
-            },
-            dragleave: () => slot2.classList.remove("over"),
-            drop: (ev) => {
-              ev.preventDefault();
-              assignHotbar(game, i, ev.dataTransfer.getData("text/plain"));
-              sel.pick = null;
-              sel.slot = null;
-              rerender();
-            },
-            click: () => {
-              if (sel.pick) {
-                assignHotbar(game, i, sel.pick);
-                sel.pick = null;
-                sel.slot = null;
-              } else if (sel.slot !== null && sel.slot !== i) {
-                assignHotbar(game, i, "slot:" + sel.slot);
-                sel.slot = null;
-              } else sel.slot = sel.slot === i ? null : i;
-              rerender();
-            },
-            contextmenu: (ev) => {
-              ev.preventDefault();
-              hb[i] = null;
-              refreshPlayer(game);
-              rerender();
-            }
-          }
-        },
-        h("span.k", String(i + 1)),
-        e ? e.img(34) : null,
-        e ? h("span.nm", e.name) : null,
-        e && e.kind === "item" ? h("span.qty", String(e.qty)) : null,
-        e ? h("button.x", { title: "Clear", on: { click: (ev) => {
-          ev.stopPropagation();
-          hb[i] = null;
-          refreshPlayer(game);
-          rerender();
-        } } }, "\xD7") : null
-      );
-      slots.push(slot2);
-    }
-    const hint = sel.pick ? "Now click a slot to put it there." : sel.slot !== null ? `Slot ${sel.slot + 1} selected \u2014 click a technique or food to fill it, or another slot to swap.` : "Drag techniques and food onto the hotbar, drag slots to rearrange them. Right-click a slot to clear it.";
-    return h("div.hotbar-edit", h("div.hb-row", slots), h("div.hb-hint", hint));
-  }
-  function dragSource(el, payload) {
-    el.draggable = true;
-    el.addEventListener("dragstart", (ev) => {
-      ev.dataTransfer.setData("text/plain", payload);
-      ev.dataTransfer.effectAllowed = "copyMove";
-    });
-    return el;
-  }
-  var CATS = [
-    { id: "all", name: "All", icon: "inventory", types: null },
-    { id: "gear", name: "Gear", icon: "sword", types: ["weapon", "hat", "coat", "accessory"] },
-    { id: "food", name: "Food & Medicine", icon: "food", types: ["food", "medicine"] },
-    { id: "fruit", name: "Devil Fruits", icon: "fruit", types: ["fruit"] },
-    { id: "other", name: "Other", icon: "key", types: ["key", "dial", "pose", "treasure", "material"] }
-  ];
-  var TYPE_ORDER = ["weapon", "hat", "coat", "accessory", "food", "medicine", "fruit", "dial", "pose", "key", "treasure", "material"];
-  var TYPE_NAME = { weapon: "Weapon", hat: "Headgear", coat: "Body", accessory: "Accessory", food: "Food", medicine: "Medicine", fruit: "Devil Fruit", dial: "Dial", pose: "Eternal Pose", key: "Key item", treasure: "Treasure", material: "Material" };
-  function statLine(d) {
-    const parts = [];
-    if (d.type === "weapon") parts.push(`${title(d.kind || "weapon")} \xB7 power \xD7${d.power}${d.grade ? " \xB7 " + d.grade : ""}`);
-    if (d.armor) parts.push(`Defence +${Math.round(d.armor * 100)}%`);
-    if (d.bonus) parts.push(Object.entries(d.bonus).map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${ATTRS[k]?.short || k.toUpperCase()}`).join("  "));
-    if (d.heal) parts.push(d.heal > 9999 ? "Full health" : `+${d.heal} health`);
-    if (d.stamina) parts.push(`+${d.stamina} stamina`);
-    if (d.buff) parts.push(`${d.buff.name} for ${d.buff.dur}s`);
-    return parts.join(" \xB7 ");
-  }
-  function openInventory(game) {
-    const ui = game.ui;
-    const c = game.state.char;
-    const body = h("div.inv");
-    const entry = ui.openPanel(body, { wide: true, id: "inventory" });
-    if (!entry) return;
-    const st = { cat: "all", selected: null, hb: { pick: null, slot: null } };
-    const render2 = () => {
-      clear(body);
-      const eq = c.equipped;
-      eq.accessories = eq.accessories || [];
-      const slotBox = (key2, label, id, accepts, iconName, disabled) => {
-        const d = ITEMS[id];
-        const box2 = h("div.eq-slot" + (d ? ".filled" : "") + (disabled ? ".disabled" : "") + (st.selected === id && d ? ".sel" : ""), {
-          title: d ? `${d.name}
-${statLine(d)}
-
-Click for details \xB7 right-click to take off` : `${label} \u2014 empty`,
-          on: {
-            click: () => {
-              if (d) {
-                st.selected = id;
-                render2();
-              }
-            },
-            contextmenu: (ev) => {
-              ev.preventDefault();
-              if (d) {
-                unequipSlot(game, key2);
-                render2();
-              }
-            },
-            dragover: (ev) => {
-              ev.preventDefault();
-              box2.classList.add("over");
-            },
-            dragleave: () => box2.classList.remove("over"),
-            drop: (ev) => {
-              ev.preventDefault();
-              const data = ev.dataTransfer.getData("text/plain");
-              if (!data.startsWith("inv:")) return;
-              const iid = data.slice(4), dd2 = ITEMS[iid];
-              if (slotKind(dd2) !== accepts) {
-                game.log(`That doesn't go in the ${label.toLowerCase()} slot.`, "#ff8a80");
-                render2();
-                return;
-              }
-              if (!isEquipped(c, iid) || accepts === "acc") equip(game, iid, accepts === "acc" ? { slot: +key2.slice(3) } : {});
-              st.selected = iid;
-              render2();
-            }
-          }
-        }, d ? itemImg(id, 40) : uiImg(iconName, 34, ".ghost"), h("span.lbl", d ? d.name : label));
-        if (d) dragSource(box2, "eq:" + key2);
-        return box2;
-      };
-      const ws = eq.weapons || [];
-      const swords = ITEMS[ws[0]]?.kind === "sword";
-      const doll = h(
-        "div.doll",
-        h(
-          "div.doll-col",
-          slotBox("weapon0", "Weapon", ws[0], "weapon", "weapon_slot"),
-          slotBox("weapon1", "2nd sword", ws[1], "weapon", "weapon_slot", !swords),
-          slotBox("weapon2", "3rd sword", ws[2], "weapon", "weapon_slot", !swords)
-        ),
-        h("div.doll-mid", portrait(equippedLook(c), 104, 130)),
-        h(
-          "div.doll-col",
-          slotBox("head", "Head", eq.hat, "head", "head_slot"),
-          slotBox("body", "Body", eq.coat, "body", "body_slot"),
-          ...Array.from({ length: ACC_SLOTS }, (_, i) => slotBox("acc" + i, `Accessory ${i + 1}`, eq.accessories[i], "acc", "accessory_slot"))
-        )
-      );
-      const p = game.player, dd = p.d;
-      const summary = h(
-        "div.eq-summary",
-        h("div", h("b", "Health "), dd.maxHp),
-        h("div", h("b", "Defence "), `${Math.round(dd.def * 100)}%`, armorOf(c) ? h("span.muted", ` (armour ${Math.round(armorOf(c) * 100)}%)`) : null),
-        h("div", h("b", "Damage "), `\xD7${dd.dmg.toFixed(2)}`),
-        h("div", h("b", "Speed "), dd.speed.toFixed(1))
-      );
-      const fruitNote = c.fruit ? h("div.fruit-note", itemImg("fruit_" + c.fruit, 26), h("div", h("b", FRUITS[c.fruit].name), h("div.sub", `Eaten \xB7 mastery ${Math.floor(c.fruitMastery)} \xB7 you can never swim again`))) : null;
-      const left = h("div.inv-left", doll, summary, fruitNote);
-      const tabs = h("div.tabs.icon-tabs", CATS.map((k) => h("button" + (st.cat === k.id ? ".on" : ""), { on: { click: () => {
-        st.cat = k.id;
-        render2();
-      } } }, uiImg(k.icon, 16), k.name)));
-      const cat = CATS.find((k) => k.id === st.cat);
-      const seen = /* @__PURE__ */ new Map();
-      const onBar = new Set((c.hotbar || []).filter((x) => typeof x === "string" && x.startsWith("item:")).map((x) => x.slice(5)));
-      for (const it of c.inventory) {
-        const d = ITEMS[it.id];
-        if (!d || cat.types && !cat.types.includes(d.type)) continue;
-        if (onBar.has(it.id)) continue;
-        const ex = seen.get(it.id);
-        if (ex) {
-          ex.qty += it.qty || 1;
-          if (it.heirloom) ex.heirloom = it;
-        } else seen.set(it.id, { id: it.id, d, qty: it.qty || 1, heirloom: it.heirloom ? it : null });
-      }
-      const items9 = [...seen.values()].sort((a, b) => TYPE_ORDER.indexOf(a.d.type) - TYPE_ORDER.indexOf(b.d.type) || a.d.name.localeCompare(b.d.name));
-      const grid2 = h("div.inv-grid", {
-        on: {
-          dragover: (ev) => ev.preventDefault(),
-          drop: (ev) => {
-            ev.preventDefault();
-            const data = ev.dataTransfer.getData("text/plain");
-            if (data.startsWith("eq:")) {
-              unequipSlot(game, data.slice(3));
-              render2();
-            } else if (data.startsWith("slot:")) {
-              const i = +data.slice(5), hb = ensureHotbar(c);
-              if (typeof hb[i] === "string" && hb[i].startsWith("item:")) {
-                hb[i] = null;
-                refreshPlayer(game);
-                game.audio?.sfx("equip");
-                render2();
-              }
-            }
-          }
-        }
-      });
-      for (const x of items9) {
-        const worn = isEquipped(c, x.id);
-        const tile = h("div.inv-tile" + (st.selected === x.id ? ".sel" : "") + (worn ? ".worn" : ""), {
-          title: `${x.d.name}${statLine(x.d) ? "\n" + statLine(x.d) : ""}`,
-          on: {
-            click: () => {
-              st.selected = x.id;
-              render2();
-            },
-            dblclick: () => {
-              quickUse(x.id);
-            }
-          }
-        }, itemImg(x.id, 40), x.qty > 1 ? h("span.qty", String(x.qty)) : null, worn ? h("span.worn-tag", "E") : null, x.heirloom ? h("span.heir") : null);
-        dragSource(tile, "inv:" + x.id);
-        grid2.appendChild(tile);
-      }
-      if (!items9.length) grid2.appendChild(h("p.muted", { style: { gridColumn: "1 / -1" } }, st.cat === "all" ? "Your bag is empty." : "Nothing here."));
-      if (onBar.size) grid2.appendChild(h("p.muted.inv-onbar", { style: { gridColumn: "1 / -1" } }, `${onBar.size === 1 ? "One item is" : onBar.size + " items are"} on your hotbar \u2014 drag a slot back here to put it away.`));
-      if (onBar.has(st.selected)) st.selected = null;
-      const sd = ITEMS[st.selected];
-      let details;
-      if (sd && count(c, st.selected)) {
-        const id = st.selected;
-        const worn = isEquipped(c, id);
-        const acts = [];
-        if (slotKind(sd)) acts.push(h("button.btn" + (worn ? ".red" : ".gold"), { on: { click: () => {
-          equip(game, id);
-          render2();
-        } } }, worn ? "Take off" : "Equip"));
-        if (USABLE.has(sd.type)) {
-          acts.push(h("button.btn.green", { on: { click: () => {
-            useItem(game, id);
-            render2();
-          } } }, sd.type === "food" ? "Eat" : "Use"));
-          acts.push(h("button.btn", { on: { click: () => {
-            st.hb.pick = "item:" + id;
-            st.hb.slot = null;
-            render2();
-          } } }, "Put on hotbar"));
-        }
-        if (sd.type === "pose") acts.push(h("button.btn", { on: { click: () => {
-          useItem(game, id);
-          render2();
-        } } }, c.logPose?.eternal === id ? "Following" : "Follow the needle"));
-        if (sd.type === "dial") acts.push(h("button.btn", { disabled: c.techniques.includes(sd.ability), on: { click: () => {
-          useItem(game, id);
-          render2();
-        } } }, c.techniques.includes(sd.ability) ? "Learned" : "Learn to use"));
-        if (sd.type === "fruit") {
-          if (c.fruit) acts.push(h("span.muted", "You have already eaten a Devil Fruit \u2014 a body can only hold one. Keep it, sell it, or give it away."));
-          else acts.push(h("button.btn.red", { on: { click: () => confirmEat(game, id, () => render2()) } }, "Eat\u2026"));
-        }
-        const heir = c.inventory.find((i) => i.id === id && i.heirloom);
-        details = h(
-          "div.inv-details",
-          h("div.det-head", itemImg(id, 56), h("div", h("h4", sd.name), h("div.sub", `${TYPE_NAME[sd.type] || sd.type}${count(c, id) > 1 ? " \xB7 \xD7" + count(c, id) : ""}${worn ? " \xB7 equipped" : ""}`), heir ? h("div.sub", `Heirloom of ${heir.from}`) : null)),
-          statLine(sd) ? h("div.det-stats", statLine(sd)) : null,
-          sd.type === "fruit" ? fruitInfo(sd) : h("p", sd.desc || ""),
-          h("div.det-actions", acts)
-        );
-      } else {
-        details = h("div.inv-details.empty", h("p.muted", "Select an item to see it. Drag gear onto the equipment slots, and food onto the hotbar. Double-click to equip or eat."));
-      }
-      const right = h("div.inv-right", tabs, grid2, details);
-      add2(body, h("div.panel-top", h("h2", "Inventory"), berriesLine(c)), h("div.inv-cols", left, right), h("h4.grp", "Hotbar"), hotbarStrip(game, st.hb, render2));
-    };
-    const quickUse = (id) => {
-      const d = ITEMS[id];
-      if (slotKind(d)) equip(game, id);
-      else if (USABLE.has(d.type)) useItem(game, id);
-      else if (d.type === "fruit" && !c.fruit) {
-        confirmEat(game, id, () => render2());
-        return;
-      }
-      st.selected = id;
-      render2();
-    };
-    render2();
-  }
-  function fruitInfo(d) {
-    const f = FRUITS[d.fruit];
-    if (!f) return h("p", d.desc || "");
-    return h(
-      "div",
-      h("p", h("b", `${f.en} \xB7 ${f.type}`), " ", h("span.tag", { style: { background: FRUIT_RARITY[f.rarity]?.color, color: "#222" } }, FRUIT_RARITY[f.rarity]?.label)),
-      h("p", f.desc)
-    );
-  }
-  function confirmEat(game, itemId, done6) {
-    const c = game.state.char;
-    const d = ITEMS[itemId];
-    const f = FRUITS[d.fruit];
-    if (c.fruit) {
-      game.log("A body can only hold one Devil Fruit.", "#ff8a80");
-      return;
-    }
-    const body = h(
-      "div",
-      { style: { textAlign: "center" } },
-      itemImg(itemId, 72),
-      h("h2", f.name),
-      fruitInfo(d),
-      h("p", "Techniques: " + f.techniques.map((t) => `${t.name} (mastery ${t.mastery})`).join(", ")),
-      h("p", { style: { color: "#b71c1c", fontWeight: 800 } }, "You will never swim again \u2014 the sea becomes your grave if you fall in. And a body can only ever hold ONE Devil Fruit."),
-      h(
-        "div",
-        { style: { display: "flex", gap: "10px", justifyContent: "center" } },
-        h("button.btn.red", { on: { click: () => {
-          game.ui.closePanel();
-          useItem(game, itemId);
-          done6();
-        } } }, "Eat it"),
-        h("button.btn", { on: { click: () => game.ui.closePanel() } }, "Not yet")
-      )
-    );
-    game.ui.openPanel(body);
-  }
-  function openCharacter(game) {
-    const ui = game.ui;
-    const c = game.state.char;
-    const p = game.player;
-    const body = h("div.charsheet");
-    const entry = ui.openPanel(body, { wide: true, id: "character" });
-    if (!entry) return;
-    const render2 = () => {
-      clear(body);
-      const race = RACES[c.race];
-      const legacy = game.state.legacy;
-      const tier = repTier(c.reputation || 0);
-      const rep = c.reputation || 0;
-      const role = c.faction === "marine" ? `Marine ${c.marineRank || "Recruit"}` : c.crewName ? `Captain of the ${c.crewName}` : c.faction === "pirate" ? "Pirate" : "Wanderer";
-      const hasD = c.traits.includes("will_of_d");
-      const header = h(
-        "div.char-head",
-        portrait(equippedLook(c), 110, 130),
-        h(
-          "div.char-id",
-          h("h2", c.name),
-          h("div", `${raceLabel(c.look)} \xB7 ${role} \xB7 generation ${c.generation}`),
-          c.bounty ? h("div.bounty-line", uiImg("bounty", 18), ` Bounty ${formatBerries(c.bounty)}`) : null,
-          h(
-            "div.rep",
-            h("span.lbl", uiImg("reputation", 18), " Reputation"),
-            h("div.rep-bar", h("i", { style: { left: "0", width: clamp2(rep, 0, 100) + "%", background: tier.color } })),
-            h("span.rep-name", { style: { color: tier.color } }, `${tier.name} (${Math.round(rep)})`)
-          ),
-          h(
-            "div.char-btns",
-            h("button.btn", { on: { click: () => openJollyRogerFromMenu(game) } }, uiImg("jolly_roger", 18), "Jolly Roger"),
-            h("button.btn", { on: { click: () => ui.openPanel(h("div", { style: { display: "grid", placeItems: "center" } }, wantedPoster(c))) } }, uiImg("bounty", 18), "Wanted poster")
-          )
-        ),
-        h(
-          "div.will-box",
-          h("h4", uiImg("reputation", 18), " Inherited Will"),
-          h("div", h("b", `${legacy?.will || 0}`), " banked by your lineage"),
-          h("div", h("b", `+${computeWill(c)}`), " if your journey ended today"),
-          h("div.sub", "Earned from islands charted, great foes defeated, days survived, your bounty and the legends you write. Spend it on your bloodline between generations."),
-          h("div.d-line" + (hasD ? ".has" : ""), hasD ? h("span", h("b", "D."), " You carry the Will of D.") : h("span", `No "D." in your name. (${Math.round(dChance(legacy || {}) * 100)}% of births carry it.)`))
-        )
-      );
-      const prog = game.progression;
-      const attrRows = ATTR_KEYS.map((k) => h(
-        "div.stat-row",
-        { title: `${ATTRS[k].desc}
-Trains by: ${TRAINS_BY[k]}` },
-        h("span.nm", ATTRS[k].name),
-        h("span.val", c.attrs[k]),
-        h("div.meter.dual", h("i", { style: { width: 100 * c.attrs[k] / ATTR_CAP + "%" } }), h("u", { style: { width: 100 * (prog?.trainProgress(k) || 0) + "%" } }))
-      ));
-      const dd = p.d;
-      const derived = h("div.derived", `Health ${dd.maxHp} \xB7 Stamina ${dd.maxStamina}${hakiKnown(c) ? " \xB7 Spirit " + dd.maxHaki : ""} \xB7 Speed ${dd.speed.toFixed(1)} \xB7 Damage \xD7${dd.dmg.toFixed(2)} \xB7 Defence ${Math.round(dd.def * 100)}% \xB7 Doriki ${p.power().toLocaleString()}`);
-      const wm = c.weaponMastery || {};
-      const wmRows = Object.entries(WEAPON_KINDS).map(([k, name]) => h(
-        "div.stat-row",
-        { title: `+${((wm[k] || 0) * 0.6).toFixed(0)}% damage with ${name.toLowerCase()}` },
-        h("span.nm", name),
-        h("span.val", Math.floor(wm[k] || 0)),
-        h("div.meter", h("i", { style: { width: (wm[k] || 0) + "%", background: "linear-gradient(90deg,#6d4c33,#d4a373)" } }))
-      ));
-      const masteryRows = Object.entries(c.masteries).filter(([s]) => STYLES2[s]).map(([s, m]) => h(
-        "div.stat-row",
-        h("span.nm", STYLES2[s]?.name || s),
-        h("span.val", Math.floor(m)),
-        h("div.meter", h("i", { style: { width: m + "%", background: "linear-gradient(90deg,#1565c0,#90caf9)" } }))
-      ));
-      const hakiRows = hakiKnown(c) ? Object.entries(HAKI).filter(([k]) => c.haki[k]).map(([k, hk]) => h(
-        "div.stat-row",
-        { title: hk.desc },
-        h("span.nm", hk.name.replace(" Haki", "")),
-        h("span.val", Math.floor(c.haki[k])),
-        h("div.meter", h("i", { style: { width: (c.haki[k] || 0) + "%", background: "linear-gradient(90deg,#4a148c,#ce93d8)" } }))
-      )) : [];
-      const traits = c.traits.filter((t) => TRAITS[t] && (!TRAITS[t].hidden || t === "conqueror" && c.haki.conqueror));
-      const left = h(
-        "div",
-        h("h3", "Attributes"),
-        h("p.muted", "Attributes grow by themselves as you train and fight worthy opponents. The thin bar shows how close each one is to rising."),
-        ...attrRows,
-        derived,
-        h("h3", "Weapon mastery"),
-        h("p.muted", "Every kind of weapon grows stronger the more you fight with it."),
-        ...wmRows
-      );
-      const right = h(
-        "div",
-        h("h3", "Fighting styles"),
-        ...masteryRows,
-        c.fruit ? h("div", h("h3", "Devil Fruit"), h("div.stat-row", h("span.nm", FRUITS[c.fruit].name), h("span.val", Math.floor(c.fruitMastery)), h("div.meter", h("i", { style: { width: c.fruitMastery + "%", background: "linear-gradient(90deg,#bf360c,#ffab91)" } })))) : null,
-        hakiRows.length ? h("div", h("h3", "Haki"), ...hakiRows) : null,
-        h("h3", "Traits"),
-        ...race.traits.map((t) => h("div.li", t)),
-        ...traits.map((t) => h("div.li", h("b", TRAITS[t].name + ": "), TRAITS[t].desc)),
-        h("p.muted", { style: { marginTop: "10px" } }, `Lives ${c.lives}/${c.maxLives} \xB7 Second winds ${c.getUpCharges || 0} \xB7 ${(c.discovered || []).length} islands charted \xB7 ${(c.bosses || []).length} great foes \xB7 day ${game.env.day}`)
-      );
-      add2(body, header, h("div.grid2", left, right));
-    };
-    render2();
-  }
-  var TRAINS_BY = {
-    str: "landing blows on worthy opponents, masters, breakthroughs",
-    agi: "dodging and parrying attacks, fighting with guns, masters",
-    end: "blocking hits, masters",
-    vit: "taking punishment and surviving, masters",
-    wil: "getting back up, facing stronger foes, Devil Fruit use, masters"
-  };
-  function openJollyRogerFromMenu(game) {
-    openJollyRoger(game);
-  }
-  function openSkills(game) {
-    const ui = game.ui;
-    const c = game.state.char;
-    const p = game.player;
-    const body = h("div.skills");
-    const entry = ui.openPanel(body, { wide: true, id: "skills" });
-    if (!entry) return;
-    const sel = { pick: null, slot: null };
-    const render2 = () => {
-      clear(body);
-      const styles = Object.keys(c.masteries).filter((s) => STYLES2[s]);
-      const styleBtns = styles.map((s) => h(
-        "button" + (c.style === s ? ".on" : ""),
-        { on: { click: () => {
-          c.style = s;
-          refreshPlayer(game);
-          render2();
-        } }, title: STYLES2[s].desc },
-        `${STYLES2[s].name} (${Math.floor(c.masteries[s])})`
-      ));
-      const cur = STYLES2[c.style];
-      const needW = cur?.weapon && !p.hasWeapon(cur.weapon);
-      const techs = c.techniques.map(getAbility).filter((d) => d && (!needsHaki(d) || hakiKnown(c)));
-      const byGroup = {};
-      for (const d of techs) {
-        const src = d.source || "";
-        const g = src.startsWith("fruit") ? "Devil Fruit" : src.startsWith("haki") ? "Haki" : src.startsWith("style:") ? STYLES2[src.slice(6)]?.name || "Style" : d.style ? STYLES2[d.style]?.name || "Style" : "Other";
-        (byGroup[g] = byGroup[g] || []).push(d);
-      }
-      const lists = Object.entries(byGroup).map(([g, ds]) => h(
-        "div",
-        h("h4.grp", g),
-        h("div.tech-grid", ds.map((d) => {
-          const onBar = c.hotbar.includes(d.id);
-          const card = h(
-            "div.tech" + (sel.pick === "skill:" + d.id ? ".sel" : "") + (onBar ? ".onbar" : ""),
-            {
-              title: "Drag onto the hotbar, or click and then click a slot",
-              on: { click: () => {
-                if (sel.slot !== null) {
-                  assignHotbar(game, sel.slot, "skill:" + d.id);
-                  sel.slot = null;
-                  sel.pick = null;
-                } else sel.pick = sel.pick === "skill:" + d.id ? null : "skill:" + d.id;
-                render2();
-              } }
-            },
-            skillImg(d, 40),
-            h(
-              "div.grow",
-              h("b", d.name),
-              h("div.sub", d.desc || ""),
-              h("div.sub.meta", [d.cd ? `cooldown ${d.cd}s` : null, d.cost?.stamina ? `${d.cost.stamina} stamina` : null, d.cost?.haki && hakiKnown(c) ? `${d.cost.haki} spirit` : null, d.weapon ? `needs ${d.weapon}` : null].filter(Boolean).join(" \xB7 "))
-            ),
-            onBar ? h("span.tag", `slot ${c.hotbar.indexOf(d.id) + 1}`) : null
-          );
-          return dragSource(card, "skill:" + d.id);
-        }))
-      ));
-      add2(
-        body,
-        h("h2", "Skills"),
-        h("h3", "Fighting style"),
-        h("div.tabs", styleBtns),
-        needW ? h("p", { style: { color: "#b71c1c" } }, `${cur.name} needs ${cur.weapon === "sword" ? cur.swords + " sword(s)" : "a " + cur.weapon} equipped \u2014 until then you fight bare-handed.`) : null,
-        h("p.muted", cur?.desc || ""),
-        h("h3", "Hotbar"),
-        hotbarStrip(game, sel, render2),
-        h("h3", "Techniques"),
-        techs.length ? h("div", lists) : h("p", "You know no techniques yet. Find a trainer \u2014 or a Devil Fruit."),
-        hakiKnown(c) ? h("p.muted", `Haki: ${[c.haki.armament && "R toggles Armament", c.haki.observation && "T toggles Observation", c.haki.conqueror && "G releases Conqueror's"].filter(Boolean).join(", ")}. Active Haki drains your spirit bar.`) : null
-      );
-    };
-    render2();
-  }
-  function openJournal(game) {
-    const ui = game.ui;
-    const c = game.state.char;
-    const body = h("div.journal");
-    const entry = ui.openPanel(body, { wide: true, id: "journal" });
-    if (!entry) return;
-    let tab = "quests";
-    const render2 = () => {
-      clear(body);
-      const tabs = h("div.tabs", ["quests", "legends"].map((k) => h("button" + (tab === k ? ".on" : ""), { on: { click: () => {
-        tab = k;
-        render2();
-      } } }, k === "quests" ? "Quests" : "Legends")));
-      add2(body, h("h2", "Journal"), tabs);
-      if (tab === "quests") {
-        const q2 = game.quests;
-        const active5 = q2.active();
-        const done6 = Object.entries(c.quests).filter(([, s]) => s.done).map(([id]) => questDef(id)).filter(Boolean);
-        add2(
-          body,
-          h("h3", "Active"),
-          active5.length ? h("div.list", ...active5.map(({ s, def }) => h(
-            "div.card",
-            h("h4", uiImg("quest", 18), " ", def.name, h("span.tag", def.kind || "story")),
-            h("div", def.summary || ""),
-            h("div.objective", def.stages[s.stage]?.desc || ""),
-            def.island ? h("div.muted", "Location: " + (game.surface.islands.find((i) => i.id === def.island)?.name || def.island)) : null
-          ))) : h("p", "No active quests. Talk to people \u2014 every island has a story."),
-          h("h3", "Completed"),
-          done6.length ? h("div.list.compact", ...done6.map((d) => h("div.row-item", uiImg("check", 18), h("div.grow", h("b", d.name))))) : h("p.muted", "None yet.")
-        );
-      } else {
-        add2(body, h("p.muted", "Nobody chooses your destiny. But the sea remembers those who do the impossible \u2014 every legend you write adds to your Inherited Will."));
-        const list = h("div.list");
-        for (const id of LEGEND_IDS) {
-          const L2 = LEGENDS[id];
-          const got = (c.legends || []).includes(id);
-          let pr = null;
-          try {
-            pr = L2.progress ? L2.progress(c) : null;
-          } catch {
-            pr = null;
-          }
-          list.appendChild(h(
-            "div.row-item" + (got ? ".legend-done" : ""),
-            uiImg(got ? "check" : "journal", 22),
-            h(
-              "div.grow",
-              h("b", L2.name),
-              h("div.sub", L2.desc),
-              pr && !got ? h("div.stat-row", h("div.meter", h("i", { style: { width: Math.min(100, 100 * pr[0] / pr[1]) + "%" } })), h("span.sub", `${pr[0].toLocaleString()} / ${pr[1].toLocaleString()} ${pr[2]}`)) : null
-            ),
-            h("span.price", got ? "Achieved" : `+${L2.will} Will`)
-          ));
-        }
-        body.appendChild(list);
-      }
-    };
-    render2();
-  }
-  function openMenu(game, { onQuit, onRetire, onSave }) {
-    const ui = game.ui;
-    const c = game.state.char;
-    const saved = h("p.muted.save-note", c.lastSaved ? `Last saved ${new Date(c.lastSaved).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Not saved yet");
-    const btn = (icon, text, fn, cls = "") => h("button.btn.menu-btn" + cls, { on: { click: fn } }, uiImg(icon, 20), text);
-    const body = h(
-      "div.pause",
-      h("h2", "Paused"),
-      h(
-        "div.menu-list",
-        btn("check", "Resume", () => ui.closePanel(), ".gold"),
-        btn("save", "Save game", () => {
-          if (onSave()) saved.textContent = `Saved just now (lineage ${game.saveSlot || 1})`;
-        }),
-        btn("help", "How to Play", () => {
-          ui.closePanel();
-          ui.openPanel(helpContent(c), { wide: true, id: "help" });
-        }),
-        btn("settings", "Settings", () => {
-          ui.closePanel();
-          openSettings(game);
-        }),
-        btn("inn", "Get unstuck: back to your bed", async () => {
-          const p = game.player, r = c.rest || c.spawn;
-          if (p.inCombat) {
-            saved.textContent = "Not in the middle of a fight \u2014 get clear of it first.";
-            return;
-          }
-          if (p.state !== "idle") return;
-          if (!await ui.ask({ title: "Back to your bed?", text: `Stuck somewhere? You'll wake up back at ${r?.name || "where you last rested"}. Your ship stays where you left it.`, ok: "Go back" })) return;
-          ui.closePanel();
-          ui.fade(true);
-          setTimeout(() => {
-            p.leaveWater?.(game);
-            p.deck?.ship.aboard?.delete(p);
-            p.deck = null;
-            p.z = 0;
-            p.vz = 0;
-            p.vx = p.vy = 0;
-            p.kb.x = p.kb.y = 0;
-            p.dash = null;
-            p.action = null;
-            game.lives.placeAtRest();
-            game.log(`You find your way back to ${r?.name || "your bed"}.`, "#b0bec5");
-            ui.fade(false);
-          }, 450);
-        }),
-        fullscreenOK() ? btn("fullscreen", fullscreenOn() ? "Leave full screen" : "Full screen", () => {
-          ui.closePanel();
-          toggleFullscreen();
-        }) : null,
-        (c.legends || []).length ? btn("journal", "Retire as a legend", async () => {
-          if (!await ui.ask({ title: "Retire?", text: `${c.name} hangs up their hat and becomes a legend. This life ends here and its Inherited Will passes to the next generation.`, ok: "Retire", danger: true })) return;
-          ui.closePanel();
-          onRetire();
-        }) : null,
-        btn("close", "Save & quit to title", () => {
-          ui.closePanel();
-          onQuit();
-        }, ".red")
-      ),
-      saved,
-      h("p.muted", "The game also saves by itself every minute, at every milestone, and when you close the page. Death is written immediately.")
-    );
-    ui.openPanel(body, { id: "menu" });
-  }
-  var fullscreenOK = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
-  var fullscreenOn = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
-  function toggleFullscreen() {
-    try {
-      if (fullscreenOn()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
-      else {
-        const el = document.documentElement;
-        const r = (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: "hide" });
-        if (r && r.catch) r.catch(() => {
-        });
-      }
-    } catch {
-    }
-  }
-  function openSettings(game) {
-    const s = game.settings;
-    const body = h("div");
-    const slider = (label, key2) => {
-      const nm = h("span.nm", typeof label === "function" ? label() : label);
-      return h("div.stat-row", nm, h("input", { type: "range", min: 0, max: 1, step: 0.05, value: s[key2] ?? 0.5, style: { flex: 1 }, on: { input: (e) => {
-        s[key2] = Number(e.target.value);
-        if (typeof label === "function") nm.textContent = label();
-        game.applySettings();
-      } } }));
-    };
-    const check = (label, key2) => h("label.check-row", h("input", { type: "checkbox", checked: !!s[key2], on: { change: (e) => {
-      s[key2] = e.target.checked;
-      game.applySettings();
-    } } }), label);
-    const choice = (label, key2, opts) => h("div.set-row", h("span.nm", label), h("div.tabs", { style: { margin: 0 } }, opts.map(([v, name]) => h("button" + (s[key2] === v ? ".on" : ""), { on: { click: () => {
-      s[key2] = v;
-      if (key2 === "quality") s.qualityPicked = true;
-      game.applySettings();
-      render2();
-    } } }, name))));
-    const render2 = () => {
-      clear(body);
-      add2(
-        body,
-        h("h2", "Settings"),
-        h("h3", "View"),
-        choice("Camera", "view", [["first", "First person"], ["third", "Third person"]]),
-        slider(game.input.touch?.on ? "Look sensitivity" : "Mouse sensitivity", "sensitivity"),
-        check("Invert mouse look", "invertY"),
-        slider(() => `Field of view ${Math.round(60 + (s.fov ?? 0.5) * 35)}\xB0`, "fov"),
-        check("View bobbing while walking", "bob"),
-        choice("Graphics", "quality", [["high", "High (shadows)"], ["low", "Fast"]]),
-        check("Lower the resolution a little when the game is slow", "autoRes"),
-        h("h3", "Sound & feel"),
-        slider("Sound effects", "volume"),
-        slider("Music", "music"),
-        slider("Screen shake", "shake"),
-        check("Show tutorial hints", "showHints"),
-        h("p.muted", "Press V in game to switch between first and third person. Settings are saved in this browser.")
-      );
-    };
-    render2();
-    game.ui.openPanel(body, { onClose: () => game.applySettings(true), id: "settings" });
-  }
-  function openShop(game, building, island) {
-    const ui = game.ui;
-    const c = game.state.char;
-    if (bannedFromShop(game, building)) {
-      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: building.name || "Shopkeeper", text: '"YOU! Thief! Get out of my shop before I call the Marines again!"' } } });
-      return null;
-    }
-    const body = h("div");
-    const stock8 = stockFor(building, island);
-    let tab = "buy";
-    const entry = ui.openPanel(body, { wide: true, id: "shop" });
-    const render2 = () => {
-      clear(body);
-      add2(body, h("h2", building.name || "Shop"), h(
-        "div.shop-top",
-        h("div.tabs", h("button" + (tab === "buy" ? ".on" : ""), { on: { click: () => {
-          tab = "buy";
-          render2();
-        } } }, "Buy"), h("button" + (tab === "sell" ? ".on" : ""), { on: { click: () => {
-          tab = "sell";
-          render2();
-        } } }, "Sell")),
-        berriesLine(c)
-      ));
-      const list = h("div.list");
-      if (tab === "buy") {
-        for (const id of stock8) {
-          const d = ITEMS[id];
-          if (!d) continue;
-          const price = priceOf(id, island, c);
-          const owned = count(c, id);
-          list.appendChild(h(
-            "div.row-item",
-            { title: d.desc || "" },
-            itemImg(id, 34, ".ico"),
-            h("div.grow", h("b", d.name), owned ? h("span.tag", `owned ${owned}`) : null, h("div.sub", statLine(d) || d.desc || d.grade || "")),
-            h("span.price", formatBerries(price)),
-            h("button.btn.gold", { disabled: c.berries < price, on: { click: () => {
-              if (pay(game, price)) {
-                addItem(game, id, 1);
-                game.audio?.sfx("coin");
-                render2();
-              }
-            } } }, "Buy"),
-            !d.unique ? h("button.btn.steal", { title: "Try to pocket it while nobody is looking. Theft puts a bounty on your head \u2014 and if you are caught, the guards come running.", on: { click: () => {
-              const r = stealFromShop(game, id, building, price);
-              if (r === "caught") ui.closePanel(entry);
-              else render2();
-            } } }, "Steal") : null
-          ));
-        }
-      } else {
-        const seen = /* @__PURE__ */ new Set();
-        for (const it of c.inventory) {
-          if (seen.has(it.id)) continue;
-          seen.add(it.id);
-          const d = ITEMS[it.id];
-          const sp = sellPrice(it.id);
-          if (!d || !sp || it.heirloom) continue;
-          const worn = isEquipped(c, it.id) && count(c, it.id) <= 1;
-          list.appendChild(h(
-            "div.row-item",
-            itemImg(it.id, 34, ".ico"),
-            h("div.grow", h("b", d.name), h("span.tag", "\xD7" + count(c, it.id)), d.type === "fruit" ? h("div.sub", "Devil Fruits fetch a fortune \u2014 the black market always pays.") : null),
-            h("span.price", formatBerries(sp)),
-            h("button.btn", { disabled: worn, on: { click: async () => {
-              if (d.type === "fruit" && !await ui.ask({ title: `Sell the ${d.name}?`, text: `The ${d.name} will be gone for good. (${formatBerries(sp)})`, ok: "Sell" })) return;
-              removeItem(game, it.id, 1);
-              earn(game, sp, false);
-              game.audio?.sfx("coin");
-              render2();
-            } } }, worn ? "Equipped" : "Sell")
-          ));
-        }
-        if (!list.children.length) list.appendChild(h("p", "Nothing the shopkeeper wants."));
-      }
-      body.appendChild(list);
-    };
-    render2();
-    return entry;
-  }
-  function openInn(game, building, island, town) {
-    const S3 = game.services;
-    const price = S3.innPrice(island);
-    game.ui.openPanel(h(
-      "div",
-      h("h2", building.name || "Inn"),
-      h("p", "A warm bed, a hot meal and a roof over your head. Resting here also makes this town the place you wake up if you fall in battle, and restores your second winds."),
-      h("p", h("b", "Price: "), formatBerries(price)),
-      h("button.btn.gold", { on: { click: () => {
-        if (S3.rest(island, town)) game.ui.closePanel();
-      } } }, "Rest until morning")
-    ), { id: "inn" });
-  }
-  function openDoctor(game, building, island, doc) {
-    const S3 = game.services;
-    const c = game.state.char;
-    const p = game.player;
-    const body = h("div");
-    const entry = game.ui.openPanel(body, { id: "doctor" });
-    const render2 = () => {
-      clear(body);
-      add2(
-        body,
-        h("h2", doc?.name || building.name || "Clinic"),
-        h("p", doc?.line || "Let's have a look at you."),
-        h("p", `Health ${Math.ceil(p.hp)}/${p.d.maxHp}${Object.keys(p.status).length ? " \xB7 " + Object.keys(p.status).join(", ") : ""}`),
-        h("button.btn.green", { disabled: p.hp >= p.d.maxHp && !Object.keys(p.status).length, on: { click: () => {
-          S3.heal(island);
-          render2();
-        } } }, `Treat wounds \u2014 ${formatBerries(S3.healPrice(island))}`)
-      );
-      if (doc?.restoresLife) {
-        const done6 = c.flags["lifeRestored_" + doc.id];
-        add2(
-          body,
-          h("h3", "Mend a vivre card"),
-          h("p", `${doc.name} is one of the few doctors in the world who can pull someone back from the edge. (Restores one lost life, once.)`),
-          h("button.btn.gold", { disabled: done6 || c.lives >= c.maxLives, on: { click: () => {
-            S3.restoreLife(doc);
-            render2();
-          } } }, done6 ? "Already treated" : c.lives >= c.maxLives ? "No lives lost" : `Treatment \u2014 ${formatBerries(S3.lifePrice(doc))}`)
-        );
-      }
-    };
-    render2();
-    return entry;
-  }
-  function openShipyard(game, building, island, dock) {
-    const S3 = game.services;
-    const c = game.state.char;
-    const body = h("div");
-    game.ui.openPanel(body, { wide: true, id: "shipyard" });
-    const myShips = () => game.ships.filter((s) => s.owner === "player" && !s.sunk);
-    const render2 = () => {
-      clear(body);
-      add2(body, h("h2", building.name || "Shipyard"), berriesLine(c));
-      add2(body, h("h3", "Buy a ship"));
-      const list = h("div.list");
-      for (const type of S3.shipsFor(island)) {
-        const d = SHIPS[type];
-        const price = S3.shipPrice(type, island);
-        list.appendChild(h(
-          "div.row-item",
-          uiImg("ship", 30),
-          h("div.grow", h("b", d.name), h("div.sub", `${d.desc} \xB7 hull ${d.hull} \xB7 speed ${d.speed} \xB7 cannons ${d.cannons}${d.grandLine ? "" : " \xB7 NOT fit for the Grand Line"}`)),
-          h("span.price", formatBerries(price)),
-          h("button.btn.gold", { disabled: c.berries < price, on: { click: async () => {
-            const n = await game.ui.ask({ title: `Buy a ${d.name}`, text: `Name your new ship (${formatBerries(price)}).`, input: d.name, ok: "Buy" });
-            if (n === null) return;
-            S3.buyShip(type, island, dock, (n || d.name).slice(0, 24));
-            game.emit("shipBought", type);
-            render2();
-          } } }, "Buy")
-        ));
-      }
-      body.appendChild(list);
-      const ships = myShips();
-      if (ships.length) {
-        add2(body, h("h3", "Your ships"));
-        for (const s of ships) {
-          const near = game.world.distance(s.x, s.y, game.player.x, game.player.y) < 60;
-          const rp = S3.repairPrice(s, island);
-          const card = h("div.card", h("h4", `${s.name} \u2014 ${s.def.name}`), h("div", `Hull ${Math.ceil(s.hull)}/${s.maxHull} \xB7 upgrades: ${s.upgrades.map((u) => SHIP_UPGRADES[u]?.name).join(", ") || "none"}${s.coated ? " \xB7 coated" : ""}`));
-          if (!near) card.appendChild(h("p.muted", "Bring this ship to the harbour to work on it."));
-          else {
-            card.appendChild(h("button.btn.green", { disabled: s.hull >= s.maxHull || c.berries < rp, on: { click: () => {
-              S3.repair(s, island);
-              render2();
-            } } }, `Repair \u2014 ${formatBerries(rp)}`));
-            const ups = h("div.list", { style: { marginTop: "6px" } });
-            for (const [id, u] of Object.entries(SHIP_UPGRADES)) {
-              if (id === "coating" && !(building.coating || /sabaody/i.test(island?.id || "") || /coat/i.test(building.name || ""))) continue;
-              if (id === "seastone_keel" && !(building.seastone || island?.def?.sea === "paradise" || island?.def?.sea === "new_world")) continue;
-              const has2 = s.upgrades.includes(id) || id === "coating" && s.coated;
-              const up = S3.upgradePrice(id, island);
-              ups.appendChild(h(
-                "div.row-item",
-                h("div.grow", h("b", u.name), h("div.sub", u.desc)),
-                h("span.price", formatBerries(up)),
-                h("button.btn", { disabled: has2 || c.berries < up, on: { click: () => {
-                  S3.upgrade(s, id, island);
-                  render2();
-                } } }, has2 ? "Fitted" : "Fit")
-              ));
-            }
-            card.appendChild(ups);
-            card.appendChild(h("button.btn", { style: { marginTop: "6px" }, on: { click: async () => {
-              const n = await game.ui.ask({ title: "Rename your ship", input: s.name, ok: "Rename" });
-              if (n) {
-                s.name = n.slice(0, 24);
-                persist(game);
-                render2();
-              }
-            } } }, "Rename"));
-          }
-          body.appendChild(card);
-        }
-      }
-      if (building.adam && c.inventory.some((i) => i.id === "adam_wood")) {
-        add2(
-          body,
-          h("h3", "A dream ship"),
-          h("p", "You have Adam wood. The shipwrights' eyes light up."),
-          h("button.btn.red", { on: { click: () => {
-            removeItem(game, "adam_wood", 1);
-            const s = game.giveShip("adam_brig", dock?.moor?.x ?? game.player.x, dock?.moor?.y ?? game.player.y + 4, "Thousand Dreams");
-            game.ui.toast("A LEGENDARY SHIP", `${s.name} \u2014 an Adam-wood brig with Coup de Burst!`, "#ffd54f");
-            persist(game);
-            render2();
-          } } }, "Build an Adam-wood brig")
-        );
-      }
-    };
-    render2();
-  }
-  function openTrainer(game, tid, npcName) {
-    const S3 = game.services;
-    const t = TRAINERS[tid];
-    const c = game.state.char;
-    const body = h("div");
-    game.ui.openPanel(body, { wide: true, id: "trainer" });
-    let tab = "styles";
-    const render2 = () => {
-      clear(body);
-      const tabs = ["styles", "techniques", "training"];
-      const hakiTypes = Object.keys(t.haki || {}).filter((k) => c.haki[k]);
-      if (hakiTypes.length) tabs.push("haki");
-      tabs.push("spar");
-      add2(
-        body,
-        h("h2", npcName || t.name),
-        h("p", h("i", `"${t.lines?.[0] || "Let's see what you've got."}"`)),
-        h(
-          "div.shop-top",
-          h("div.tabs", ...tabs.map((k) => h("button" + (tab === k ? ".on" : ""), { on: { click: () => {
-            tab = k;
-            render2();
-          } } }, title(k)))),
-          berriesLine(c)
-        )
-      );
-      const list = h("div.list");
-      if (tab === "styles") {
-        const styles = Object.keys(t.styles || {});
-        if (!styles.length) list.appendChild(h("p", `${t.name} doesn't teach a fighting style \u2014 but can train your body.`));
-        for (const s of styles) {
-          const st = STYLES2[s];
-          const chk = S3.canLearnStyle(tid, s);
-          const price = S3.stylePrice(tid, s);
-          list.appendChild(h(
-            "div.row-item",
-            uiImg("skills", 30),
-            h("div.grow", h("b", st.name), h("div.sub", st.desc), chk.warn ? h("div.sub", { style: { color: "#b71c1c" } }, chk.warn) : null),
-            h("span.price", price ? formatBerries(price) : "free"),
-            h("button.btn.gold", { disabled: !chk.ok || c.berries < price, on: { click: () => {
-              S3.learnStyle(tid, s);
-              render2();
-            } } }, chk.ok ? "Learn" : chk.why)
-          ));
-        }
-      } else if (tab === "techniques") {
-        for (const id of t.teaches || []) {
-          const d = getAbility(id);
-          if (!d || needsHaki(d) && !hakiKnown(c)) continue;
-          const chk = S3.canLearnTech(id);
-          const price = S3.techPrice(id);
-          list.appendChild(h(
-            "div.row-item",
-            skillImg(d, 34, ".ico"),
-            h("div.grow", h("b", d.name), h("span.tag", STYLES2[d.style]?.name || (d.hakiType ? title(d.hakiType) + " Haki" : "")), h("div.sub", d.desc || ""), h("div.sub", `Requires: ${d.learn?.mastery ? STYLES2[d.style]?.name + " mastery " + d.learn.mastery : d.learn?.level ? title(d.hakiType) + " Haki " + d.learn.level : "\u2014"}`)),
-            h("span.price", formatBerries(price)),
-            h("button.btn.gold", { disabled: !chk.ok || c.berries < price, on: { click: () => {
-              S3.learnTech(id);
-              render2();
-            } } }, chk.ok ? "Learn" : chk.why)
-          ));
-        }
-        if (!list.children.length) list.appendChild(h("p", "No techniques to teach you yet."));
-      } else if (tab === "training") {
-        list.appendChild(h("p.muted", `A master pushes your body further than fighting alone. Training sessions left today: ${S3.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
-        for (const [k, cap] of Object.entries(t.train || {})) {
-          const price = S3.trainPrice(k);
-          const maxed = c.attrs[k] >= cap;
-          list.appendChild(h(
-            "div.row-item",
-            uiImg("trainer", 30),
-            h("div.grow", h("b", ATTRS[k].name), h("div.sub", `${c.attrs[k]} / ${cap} with this master \xB7 ${ATTRS[k].desc}`)),
-            h("span.price", formatBerries(price)),
-            h("button.btn.gold", { disabled: maxed || S3.trainsLeft() <= 0 || c.berries < price, on: { click: () => {
-              S3.train(tid, k);
-              render2();
-            } } }, maxed ? "Mastered" : "Train")
-          ));
-        }
-      } else if (tab === "haki") {
-        for (const k of hakiTypes) {
-          const cap = t.haki[k];
-          const lvl = c.haki[k] || 0;
-          const price = S3.hakiTrainPrice(k);
-          list.appendChild(h(
-            "div.row-item",
-            uiImg("haki", 30),
-            h("div.grow", h("b", HAKI[k].name), h("div.sub", HAKI[k].desc), h("div.sub", `Level ${Math.floor(lvl)} / ${cap} with this master`)),
-            h("span.price", formatBerries(price)),
-            h("button.btn.gold", { disabled: c.berries < price || lvl >= cap, on: { click: () => {
-              S3.hakiTrain(tid, k);
-              render2();
-            } } }, "Train")
-          ));
-        }
-      } else if (tab === "spar") {
-        const chk = S3.canSpar(tid);
-        list.appendChild(h("p", `A real duel against ${t.spar.name} (level ${t.spar.level}). Nobody dies in a spar. Win to gain mastery and possibly a breakthrough \u2014 beating someone stronger than you is how warriors grow. Once per day.`));
-        list.appendChild(h("button.btn.red", { disabled: !chk.ok, on: { click: () => {
-          game.ui.closePanel();
-          S3.startSpar(tid);
-        } } }, chk.ok ? "Begin the spar" : chk.why));
-      }
-      body.appendChild(list);
-    };
-    render2();
-  }
 
   // src/game/rumors.js
   var SEA_TIPS = {
@@ -86856,6 +83614,3212 @@ Trains by: ${TRAINS_BY[k]}` },
         return "The door is locked.";
     }
   }
+
+  // src/game/crew.js
+  var CREW_ROLES = {
+    fighter: { name: "Combatant", icon: "skills", desc: "Fights beside you on land." },
+    swordsman: { name: "Swordsman", icon: "sword", desc: "Fights beside you on land with a blade." },
+    navigator: { name: "Navigator", icon: "log_pose", desc: "Log Pose sets twice as fast, storms are announced early, +10% sailing speed." },
+    cook: { name: "Cook", icon: "food", desc: "Food heals 50% more; stamina regenerates at sea." },
+    doctor: { name: "Doctor", icon: "doctor", desc: "Patches you up after every battle (heals 30% when combat ends)." },
+    shipwright: { name: "Shipwright", icon: "shipwright", desc: "Repairs your ship slowly while sailing." },
+    sniper: { name: "Sniper", icon: "gun", desc: "Cannons deal 30% more damage." },
+    musician: { name: "Musician", icon: "bar", desc: "Stamina regenerates 25% faster." },
+    archaeologist: { name: "Archaeologist", icon: "library", desc: "Can read Poneglyphs." },
+    helmsman: { name: "Helmsman", icon: "ship", desc: "Your ship turns 25% faster." }
+  };
+  var MAX_FOLLOWERS = 2;
+  function computeMods(members) {
+    const has2 = (r) => members.some((m) => m.role === r);
+    return {
+      speedMul: has2("navigator") ? 1.1 : 1,
+      logMul: has2("navigator") ? 2 : 1,
+      foodMul: has2("cook") ? 1.5 : 1,
+      seaStamina: has2("cook"),
+      doctor: has2("doctor"),
+      repair: has2("shipwright") ? 0.6 : 0,
+      cannonMul: has2("sniper") ? 1.3 : 1,
+      staminaMul: has2("musician") ? 1.25 : 1,
+      poneglyphs: has2("archaeologist"),
+      turnMul: has2("helmsman") ? 1.25 : 1
+    };
+  }
+  var Crew = class {
+    constructor(game) {
+      this.game = game;
+      game.crew = this;
+      game.crewMods = computeMods([]);
+      this.followers = /* @__PURE__ */ new Map();
+      this.t = 0;
+      this.wasFighting = false;
+      game.on("characterStart", () => {
+        this.followers.clear();
+        this.refresh();
+      });
+      game.on("tick", (dt) => this.tick(dt));
+      game.on("enterZone", () => this.followers.clear());
+      game.on("leaveZone", () => this.followers.clear());
+      game.on("bossDefeated", () => {
+        for (const m of this.members()) m.level = Math.min((m.baseLevel || m.level) + 40, (m.level || 5) + 1.5);
+      });
+    }
+    get char() {
+      return this.game.state?.char;
+    }
+    members() {
+      return this.char?.crew || [];
+    }
+    has(id) {
+      return this.members().some((m) => m.id === id);
+    }
+    count() {
+      return this.members().length;
+    }
+    hasRole(role) {
+      return this.members().some((m) => m.role === role);
+    }
+    refresh() {
+      this.game.crewMods = computeMods(this.members());
+    }
+    canRecruit(def) {
+      const c = this.char;
+      if (!c || !def.recruit || this.has(def.id)) return false;
+      if (def.boss && !c.bosses.includes(def.id) && def.recruit.afterDefeat) return false;
+      try {
+        if (def.recruit.requires && !def.recruit.requires(c, this.game)) return false;
+      } catch {
+        return false;
+      }
+      return true;
+    }
+    /** Add the "Join my crew" choice to an NPC's dialogue tree. */
+    decorate(tree, npc) {
+      const def = npc?.def;
+      if (!def?.recruit || !tree?.nodes) return tree;
+      const startId = tree.start || "start";
+      const start3 = tree.nodes[startId];
+      if (!start3) return tree;
+      const r = def.recruit;
+      const role = CREW_ROLES[r.role] || CREW_ROLES.fighter;
+      const cost = r.cost || 0;
+      const nodes = { ...tree.nodes };
+      const choice = {
+        text: `"Join my crew!"${cost ? ` (${formatBerries(cost)})` : ""}`,
+        if: () => this.canRecruit(def),
+        next: "__recruit"
+      };
+      nodes[startId] = { ...start3, choices: [choice, ...start3.choices || []] };
+      if (!start3.choices || !start3.choices.length) nodes[startId].choices.push({ text: "Goodbye.", end: true });
+      nodes.__recruit = {
+        text: r.pitch || `"You want me as your ${role.name.toLowerCase()}? ...Alright. I'm in!"`,
+        choices: [
+          { text: `Welcome aboard! (${role.name}: ${role.desc})`, do: () => {
+            if (cost && !pay(this.game, cost)) {
+              this.game.log("Not enough berries.", "#ff8a80");
+              return;
+            }
+            this.recruit(def, npc);
+          }, end: true },
+          { text: "On second thought...", end: true }
+        ]
+      };
+      return { ...tree, nodes };
+    }
+    recruit(def, actor) {
+      const c = this.char, g = this.game;
+      if (!c || this.has(def.id)) return;
+      const m = {
+        id: def.id,
+        name: def.name,
+        title: def.title,
+        role: def.recruit.role,
+        fighter: def.recruit.fighter ?? (def.recruit.role === "fighter" || def.recruit.role === "swordsman"),
+        level: def.level ?? 6,
+        baseLevel: def.level ?? 6,
+        joined: g.env.day,
+        follow: true
+      };
+      const fighters = this.members().filter((x) => x.fighter && x.follow).length;
+      if (m.fighter && fighters >= MAX_FOLLOWERS) m.follow = false;
+      c.crew.push(m);
+      this.refresh();
+      const role = CREW_ROLES[m.role];
+      g.ui.toast("NEW NAKAMA!", `${m.name} joins your crew as ${role?.name || m.role}.`, "#ffd54f");
+      g.log(`${m.name} joined the crew. ${role?.desc || ""} (Crew: U)`, "#ffe082");
+      g.audio?.sfx("breakthrough");
+      if (actor && actor.alive) {
+        if (m.fighter && m.follow) this.adopt(actor, m);
+        else {
+          actor.alive = false;
+          g.fx.burst(actor.x, actor.y - 0.6, 10, { color: ["#ffe082"], speed: 3, g: 0, life: 0.4, kind: "star" });
+        }
+      }
+      g.emit("crewJoined", def.id);
+      persist(g);
+    }
+    dismiss(id) {
+      const c = this.char;
+      const i = c.crew.findIndex((m2) => m2.id === id);
+      if (i < 0) return;
+      const [m] = c.crew.splice(i, 1);
+      const a = this.followers.get(id);
+      if (a) a.alive = false;
+      this.followers.delete(id);
+      c.flags["leftCrew_" + id] = true;
+      this.refresh();
+      this.game.log(`${m.name} leaves the crew. "Take care of yourself, captain."`, "#b0bec5");
+      persist(this.game);
+    }
+    setFollow(id, on) {
+      const m = this.members().find((x) => x.id === id);
+      if (!m) return false;
+      if (on && this.members().filter((x) => x.fighter && x.follow && x !== m).length >= MAX_FOLLOWERS) return false;
+      m.follow = !!on;
+      if (!on) {
+        const a = this.followers.get(id);
+        if (a) a.alive = false;
+        this.followers.delete(id);
+      }
+      return true;
+    }
+    adopt(a, m) {
+      const g = this.game;
+      a.faction = "player";
+      a.crewId = m.id;
+      a.persistent = true;
+      a.aggroPlayer = false;
+      a.provoked = false;
+      a.boss = false;
+      a.talk = a.def?.dialogue ? { def: a.def } : null;
+      a.nameColor = "#ffe082";
+      a.showName = true;
+      a.controller = new AIController({ kind: "follower", skill: 0.45, moves: a.def?.moves || [], ranged: a.def?.ranged });
+      a.stationary = false;
+      for (const list of g.spawner.populated.values()) {
+        const k = list.indexOf(a);
+        if (k >= 0) list.splice(k, 1);
+      }
+      this.followers.set(m.id, a);
+    }
+    spawnFollower(m) {
+      const g = this.game, p = g.player;
+      const def = npcDef(m.id);
+      if (!def) return null;
+      const a = makeNPC({ ...def, hostile: false, boss: false, level: Math.round(m.level || def.level || 6), when: void 0 }, p.x - 1, p.y + 0.8);
+      a.game = g;
+      g.addActor(a);
+      this.adopt(a, m);
+      return a;
+    }
+    tick(dt) {
+      const g = this.game, p = g.player, c = this.char;
+      if (!c || !p) return;
+      this.t -= dt;
+      if (this.t <= 0) {
+        this.t = 0.5;
+        for (const m of this.members()) {
+          if (!m.fighter || !m.follow) continue;
+          let a = this.followers.get(m.id);
+          if (a && !a.alive) {
+            this.followers.delete(m.id);
+            a = null;
+          }
+          if (!a && p.mode === "foot" && p.state === "idle") a = this.spawnFollower(m);
+          if (a && a.state === "knocked" && !p.inCombat) {
+            a.state = "idle";
+            a.hp = Math.round(a.d.maxHp * 0.3);
+            g.fx.text(a.x, a.y - 2, "Still standing!", "#ffe082", 0.35);
+          }
+        }
+      }
+      const mods = g.crewMods;
+      const fighting = !!p.inCombat;
+      if (this.wasFighting && !fighting && mods.doctor && p.state === "idle" && p.hp < p.d.maxHp) {
+        const heal = Math.round(p.d.maxHp * 0.3);
+        p.hp = Math.min(p.d.maxHp, p.hp + heal);
+        g.fx.text(p.x, p.y - 1.6, `+${heal}`, "#69f0ae", 0.45);
+        const doc = this.members().find((m) => m.role === "doctor");
+        g.log(`${doc?.name || "Your doctor"} patches you up.`, "#a5d6a7");
+      }
+      this.wasFighting = fighting;
+      if (p.mode === "sail" && p.ship && !p.ship.sunk) {
+        if (mods.repair && p.ship.hull < p.ship.maxHull) p.ship.hull = Math.min(p.ship.maxHull, p.ship.hull + mods.repair * dt);
+        if (mods.seaStamina) p.stamina = Math.min(p.d.maxStamina, p.stamina + 4 * dt);
+      }
+    }
+  };
+
+  // src/ui/crewPanel.js
+  var JR_OPTS = {
+    skull: [["classic", "Classic"], ["grin", "Grinning"], ["eyepatch", "Scarred"]],
+    bones: [["cross", "Crossbones"], ["swords", "Crossed swords"], ["anchor", "Anchor"]],
+    accessory: [["none", "None"], ["strawhat", "Straw hat"], ["bandana", "Bandana"], ["tricorne", "Tricorne"], ["horns", "Horns"], ["crown", "Crown"], ["flames", "Flames"], ["halo", "Halo"]],
+    color: [["#f5f6fa", "White"], ["#efe2c4", "Bone"], ["#e53935", "Red"], ["#f1c40f", "Gold"], ["#64b5f6", "Sky"]]
+  };
+  function flagCanvas(jr, w = 180, hgt = 130, marine2 = false) {
+    const cv = h("canvas.flag", { width: w * 2, height: hgt * 2, style: { width: w + "px", height: hgt + "px" } });
+    const g = cv.getContext("2d");
+    g.fillStyle = marine2 ? "#f5f6fa" : "#111";
+    g.fillRect(0, 0, w * 2, hgt * 2);
+    g.setTransform(hgt * 1.7, 0, 0, hgt * 1.7, w, hgt * 1.08);
+    if (marine2) drawMarineEmblem(g, 1);
+    else drawJollyRoger(g, jr || {}, 1, "#111");
+    return cv;
+  }
+  function designer(state, onChange) {
+    const row = (label, key2) => h(
+      "div.opt-row",
+      h("div.opt-label", label),
+      h("div.swatches", JR_OPTS[key2].map(([v, name]) => key2 === "color" ? h("button" + (state.jr[key2] === v ? ".on" : ""), { title: name, style: { background: v }, on: { click: () => {
+        state.jr[key2] = v;
+        onChange();
+      } } }) : h("button.chip" + (state.jr[key2] === v ? ".on" : ""), { on: { click: () => {
+        state.jr[key2] = v;
+        onChange();
+      } } }, name)))
+    );
+    return h(
+      "div.jr-designer",
+      flagCanvas(state.jr, 220, 150),
+      h("div", row("Skull", "skull"), row("Behind it", "bones"), row("On its head", "accessory"), row("Colour", "color"))
+    );
+  }
+  function hoist(game) {
+    const c = game.state.char;
+    for (const s of game.ships) if (s.owner === "player") s.jr = c.jr;
+  }
+  function openCrew(game) {
+    const body = h("div.crew");
+    const entry = game.ui.openPanel(body, { wide: true, id: "crew" });
+    if (!entry) return;
+    const c = game.state.char;
+    const found = { name: "", jr: { skull: "classic", bones: "cross", accessory: "none", color: "#f5f6fa" } };
+    const render2 = () => {
+      clear(body);
+      if (c.faction === "marine") {
+        add2(body, h("div.crew-head", flagCanvas(null, 120, 86, true), h(
+          "div",
+          h("h2", `${c.marineRank} ${c.name}`),
+          h("p", "You sail under the flag of the World Government. Marines cannot found a pirate crew \u2014 resign first if the sea calls you another way."),
+          fleetInfo(game)
+        )));
+      } else if (!c.crewName) {
+        if (!found.name) found.name = `${c.name.split(" ")[0]} Pirates`;
+        const input = h("input.name", { value: found.name, maxLength: 28, spellcheck: false, on: { input: (e) => {
+          found.name = e.target.value;
+        } } });
+        add2(
+          body,
+          h("h2", "Crew"),
+          h(
+            "div.card.found",
+            h("h3", "Found a pirate crew"),
+            h("p", "Every great pirate started with a name and a flag. Choose your crew's name and design your Jolly Roger \u2014 it will fly from the sails of every ship you own."),
+            h("p.muted", "Raising a Jolly Roger makes you a pirate in the eyes of the world. The Marines won't take a pirate captain, and a pirate with a bounty is hunted."),
+            h("div.opt-row", h("div.opt-label", "Crew name"), input),
+            designer(found, render2),
+            h(
+              "div",
+              { style: { display: "flex", justifyContent: "flex-end", marginTop: "10px" } },
+              h("button.btn.red.big", { on: { click: async () => {
+                const name = (found.name || "").trim().slice(0, 28);
+                if (!name) return;
+                if (!await game.ui.ask({ title: `Raise the flag of the ${name}?`, text: "From now on you sail as a pirate captain.", ok: "Raise the flag" })) return;
+                c.crewName = name;
+                c.jr = { ...found.jr, name };
+                if (c.faction === "civilian") c.faction = "pirate";
+                hoist(game);
+                game.ui.toast("A NEW PIRATE CREW", `The ${name} set sail!`, "#ffd54f");
+                game.log(`You founded the ${name}. Your Jolly Roger flies from your ship.`, "#ffe082");
+                game.emit("crewFounded", name);
+                persist(game);
+                render2();
+              } } }, "Raise the flag")
+            )
+          )
+        );
+      } else {
+        add2(body, h("div.crew-head", flagCanvas(c.jr, 120, 86), h(
+          "div",
+          h("h2", `The ${c.crewName}`),
+          h("p.muted", `Captain ${c.name} \xB7 ${game.crew.count() + 1} aboard`),
+          h("button.btn", { on: { click: () => openJollyRoger(game) } }, uiImg("jolly_roger", 18), "Redesign the Jolly Roger")
+        )));
+      }
+      roster(game, body, render2);
+    };
+    render2();
+  }
+  function fleetInfo(game) {
+    const c = game.state.char;
+    const ships = game.ships.filter((s) => s.owner === "player" && !s.sunk);
+    const escorts = game.ships.filter((s) => s.escortOf && !s.sunk);
+    return h(
+      "div",
+      h("p", `Ships under your command: ${ships.map((s) => s.name).join(", ") || "none"}${escorts.length ? ` \xB7 escorts: ${escorts.length}` : ""}`),
+      h("p.muted", c.marineRank && /Captain|Commodore|Admiral/.test(c.marineRank) ? "Your escort ships sail with you and Marines under your command fight at your side." : "From the rank of Captain, escort ships sail with you; officers command Marines who fight beside them.")
+    );
+  }
+  function roster(game, body, rerender) {
+    const crew = game.crew.members();
+    add2(body, h("h3", "Nakama"));
+    add2(body, h("p.muted", 'Companions you recruit in the world. Look for "Join my crew!" when you talk to people \u2014 a navigator, a cook, a doctor\u2026 Up to two fighters follow you on land; everyone else stays with the ship and helps from there.'));
+    if (!crew.length) add2(body, h("p", "Your crew is just you, for now. Every great pirate started alone."));
+    const list = h("div.list");
+    for (const m of crew) {
+      const role = CREW_ROLES[m.role] || CREW_ROLES.fighter;
+      const actions = [];
+      if (m.fighter) {
+        actions.push(h("button.btn" + (m.follow ? ".green" : ""), {
+          on: { click: () => {
+            if (!game.crew.setFollow(m.id, !m.follow)) game.log("Only two companions can follow you on land at once.", "#ff8a80");
+            rerender();
+          } }
+        }, m.follow ? "Following" : "Stays aboard"));
+      }
+      actions.push(h("button.btn.red", { on: { click: async () => {
+        if (await game.ui.ask({ title: "Part ways?", text: `${m.name} will leave the crew and will not come back.`, ok: "Part ways", danger: true })) {
+          game.crew.dismiss(m.id);
+          rerender();
+        }
+      } } }, "Part ways"));
+      list.appendChild(h(
+        "div.row-item",
+        uiImg(role.icon || "crew", 28),
+        h("div.grow", h("b", `${m.name}`), h("div.sub", `${role.name}${m.title ? " \xB7 " + m.title : ""} \xB7 Lv ${Math.round(m.level || 1)} \xB7 joined day ${m.joined || 1}`), h("div.sub", role.desc)),
+        ...actions
+      ));
+    }
+    body.appendChild(list);
+    const mods = game.crewMods;
+    const perks = [];
+    if (mods.speedMul > 1) perks.push("+10% sailing speed");
+    if (mods.logMul > 1) perks.push("Log Pose sets twice as fast");
+    if (mods.foodMul > 1) perks.push("+50% healing from food");
+    if (mods.doctor) perks.push("Healed after every battle");
+    if (mods.repair) perks.push("Ship repairs itself at sea");
+    if (mods.cannonMul > 1) perks.push("+30% cannon damage");
+    if (mods.staminaMul > 1) perks.push("+25% stamina regeneration");
+    if (mods.poneglyphs) perks.push("Can read Poneglyphs");
+    if (mods.turnMul > 1) perks.push("Ship turns 25% faster");
+    if (perks.length) add2(body, h("h3", "Crew bonuses"), h("p", perks.join(" \xB7 ")));
+  }
+  function openJollyRoger(game) {
+    const c = game.state.char;
+    const body = h("div.jolly");
+    const entry = game.ui.openPanel(body, { wide: false, id: "jolly" });
+    if (!entry) return;
+    if (c.faction === "marine") {
+      add2(body, h("h2", "Colours"), flagCanvas(null, 220, 150, true), h("p", "As a Marine you sail under the gull of the World Government."));
+      return;
+    }
+    if (!c.crewName) {
+      add2(
+        body,
+        h("h2", "Jolly Roger"),
+        flagCanvas({ skull: "classic", bones: "cross", accessory: "none", color: "#333" }, 220, 150),
+        h("p", "You have no crew \u2014 and no flag \u2014 yet. Found a pirate crew from the Crew menu (U) to design your Jolly Roger. It will fly from the sails of your ships."),
+        h("button.btn.gold", { on: { click: () => {
+          game.ui.closePanel(entry);
+          openCrew(game);
+        } } }, uiImg("crew", 18), "Open the Crew menu")
+      );
+      return;
+    }
+    const state = { jr: { skull: "classic", bones: "cross", accessory: "none", color: "#f5f6fa", ...c.jr } };
+    const render2 = () => {
+      clear(body);
+      add2(
+        body,
+        h("h2", `Flag of the ${c.crewName}`),
+        designer(state, render2),
+        h(
+          "div",
+          { style: { display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "10px" } },
+          h("button.btn", { on: { click: () => game.ui.closePanel(entry) } }, "Cancel"),
+          h("button.btn.gold", { on: { click: () => {
+            c.jr = { ...state.jr, name: c.crewName };
+            hoist(game);
+            persist(game);
+            game.ui.closePanel(entry);
+            game.log("Your new Jolly Roger is hoisted.", "#ffe082");
+          } } }, "Hoist it")
+        )
+      );
+    };
+    render2();
+  }
+
+  // src/ui/panels.js
+  var berriesLine = (c) => h("div.berries", uiImg("berries", 20), ` ${formatBerries(c.berries)}`);
+  var HOTBAR = HOTBAR_SIZE;
+  var USABLE = /* @__PURE__ */ new Set(["food", "medicine"]);
+  var title = (s) => s[0].toUpperCase() + s.slice(1);
+  function ensureHotbar(c) {
+    c.hotbar = c.hotbar || [];
+    for (let i = 0; i < HOTBAR; i++) if (c.hotbar[i] === void 0) c.hotbar[i] = null;
+    c.hotbar.length = HOTBAR;
+    return c.hotbar;
+  }
+  function assignHotbar(game, slot2, payload) {
+    const c = game.state.char;
+    const hb = ensureHotbar(c);
+    if (!payload) return;
+    if (payload.startsWith("slot:")) {
+      const j = +payload.slice(5);
+      if (j === slot2 || j < 0 || j >= HOTBAR) return;
+      [hb[slot2], hb[j]] = [hb[j], hb[slot2]];
+    } else {
+      let id = payload;
+      if (payload.startsWith("skill:")) id = payload.slice(6);
+      else if (payload.startsWith("item:") || payload.startsWith("inv:")) {
+        const iid = payload.slice(payload.indexOf(":") + 1);
+        const d = ITEMS[iid];
+        if (!d || !USABLE.has(d.type)) {
+          game.log("Only food and medicine can go on the hotbar.", "#ff8a80");
+          return;
+        }
+        id = "item:" + iid;
+      } else return;
+      for (let k = 0; k < HOTBAR; k++) if (hb[k] === id) hb[k] = null;
+      hb[slot2] = id;
+    }
+    refreshPlayer(game);
+    game.audio?.sfx("equip");
+  }
+  function hotbarNote(game, what) {
+    const pick5 = game.ui.hotbarPick;
+    return h("p.hb-note" + (pick5 ? ".picking" : ""), pick5 ? `Now click a slot on your hotbar (keys ${HOTBAR_KEYS.join(" ")}) to put ${what || "it"} there.` : "Drag techniques and food straight onto your hotbar at the bottom of the screen (keys 1-9 and 0) \u2014 or click one, then click a slot. Drag slots to rearrange them; right-click one to clear it.");
+  }
+  function pickForHotbar(game, payload, rerender) {
+    const ui = game.ui;
+    ui.hotbarPick = ui.hotbarPick === payload ? null : payload;
+    ui.onHotbarChange = rerender;
+    rerender();
+  }
+  function dragSource(el, payload) {
+    el.draggable = true;
+    el.addEventListener("dragstart", (ev) => {
+      ev.dataTransfer.setData("text/plain", payload);
+      ev.dataTransfer.effectAllowed = "copyMove";
+    });
+    return el;
+  }
+  var CATS = [
+    { id: "all", name: "All", icon: "inventory", types: null },
+    { id: "gear", name: "Gear", icon: "sword", types: ["weapon", "hat", "coat", "accessory"] },
+    { id: "food", name: "Food & Medicine", icon: "food", types: ["food", "medicine"] },
+    { id: "fruit", name: "Devil Fruits", icon: "fruit", types: ["fruit"] },
+    { id: "other", name: "Other", icon: "key", types: ["key", "dial", "pose", "treasure", "material"] }
+  ];
+  var TYPE_ORDER = ["weapon", "hat", "coat", "accessory", "food", "medicine", "fruit", "dial", "pose", "key", "treasure", "material"];
+  var TYPE_NAME = { weapon: "Weapon", hat: "Headgear", coat: "Body", accessory: "Accessory", food: "Food", medicine: "Medicine", fruit: "Devil Fruit", dial: "Dial", pose: "Eternal Pose", key: "Key item", treasure: "Treasure", material: "Material" };
+  function statLine(d) {
+    const parts = [];
+    if (d.type === "weapon") parts.push(`${title(d.kind || "weapon")} \xB7 power \xD7${d.power}${d.grade ? " \xB7 " + d.grade : ""}`);
+    if (d.armor) parts.push(`Defence +${Math.round(d.armor * 100)}%`);
+    if (d.bonus) parts.push(Object.entries(d.bonus).map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${ATTRS[k]?.short || k.toUpperCase()}`).join("  "));
+    if (d.heal) parts.push(d.heal > 9999 ? "Full health" : `+${d.heal} health`);
+    if (d.stamina) parts.push(`+${d.stamina} stamina`);
+    if (d.buff) parts.push(`${d.buff.name} for ${d.buff.dur}s`);
+    return parts.join(" \xB7 ");
+  }
+  function openInventory(game) {
+    const ui = game.ui;
+    const c = game.state.char;
+    const body = h("div.inv");
+    const entry = ui.openPanel(body, { wide: true, id: "inventory" });
+    if (!entry) return;
+    const st = { cat: "all", selected: null };
+    const render2 = () => {
+      clear(body);
+      const eq = c.equipped;
+      eq.accessories = eq.accessories || [];
+      const slotBox = (key2, label, id, accepts, iconName, disabled) => {
+        const d = ITEMS[id];
+        const box2 = h("div.eq-slot" + (d ? ".filled" : "") + (disabled ? ".disabled" : "") + (st.selected === id && d ? ".sel" : ""), {
+          title: d ? `${d.name}
+${statLine(d)}
+
+Click for details \xB7 right-click to take off` : `${label} \u2014 empty`,
+          on: {
+            click: () => {
+              if (d) {
+                st.selected = id;
+                render2();
+              }
+            },
+            contextmenu: (ev) => {
+              ev.preventDefault();
+              if (d) {
+                unequipSlot(game, key2);
+                render2();
+              }
+            },
+            dragover: (ev) => {
+              ev.preventDefault();
+              box2.classList.add("over");
+            },
+            dragleave: () => box2.classList.remove("over"),
+            drop: (ev) => {
+              ev.preventDefault();
+              const data = ev.dataTransfer.getData("text/plain");
+              if (!data.startsWith("inv:")) return;
+              const iid = data.slice(4), dd2 = ITEMS[iid];
+              if (slotKind(dd2) !== accepts) {
+                game.log(`That doesn't go in the ${label.toLowerCase()} slot.`, "#ff8a80");
+                render2();
+                return;
+              }
+              if (!isEquipped(c, iid) || accepts === "acc") equip(game, iid, accepts === "acc" ? { slot: +key2.slice(3) } : {});
+              st.selected = iid;
+              render2();
+            }
+          }
+        }, d ? itemImg(id, 40) : uiImg(iconName, 34, ".ghost"), h("span.lbl", d ? d.name : label));
+        if (d) dragSource(box2, "eq:" + key2);
+        return box2;
+      };
+      const ws = eq.weapons || [];
+      const swords = ITEMS[ws[0]]?.kind === "sword";
+      const doll = h(
+        "div.doll",
+        h(
+          "div.doll-col",
+          slotBox("weapon0", "Weapon", ws[0], "weapon", "weapon_slot"),
+          slotBox("weapon1", "2nd sword", ws[1], "weapon", "weapon_slot", !swords),
+          slotBox("weapon2", "3rd sword", ws[2], "weapon", "weapon_slot", !swords)
+        ),
+        h("div.doll-mid", portrait(equippedLook(c), 104, 130)),
+        h(
+          "div.doll-col",
+          slotBox("head", "Head", eq.hat, "head", "head_slot"),
+          slotBox("body", "Body", eq.coat, "body", "body_slot"),
+          ...Array.from({ length: ACC_SLOTS }, (_, i) => slotBox("acc" + i, `Accessory ${i + 1}`, eq.accessories[i], "acc", "accessory_slot"))
+        )
+      );
+      const p = game.player, dd = p.d;
+      const summary = h(
+        "div.eq-summary",
+        h("div", h("b", "Health "), dd.maxHp),
+        h("div", h("b", "Defence "), `${Math.round(dd.def * 100)}%`, armorOf(c) ? h("span.muted", ` (armour ${Math.round(armorOf(c) * 100)}%)`) : null),
+        h("div", h("b", "Damage "), `\xD7${dd.dmg.toFixed(2)}`),
+        h("div", h("b", "Speed "), dd.speed.toFixed(1))
+      );
+      const fruitNote = c.fruit ? h("div.fruit-note", itemImg("fruit_" + c.fruit, 26), h("div", h("b", FRUITS[c.fruit].name), h("div.sub", `Eaten \xB7 mastery ${Math.floor(c.fruitMastery)} \xB7 you can never swim again`))) : null;
+      const left = h("div.inv-left", doll, summary, fruitNote);
+      const tabs = h("div.tabs.icon-tabs", CATS.map((k) => h("button" + (st.cat === k.id ? ".on" : ""), { on: { click: () => {
+        st.cat = k.id;
+        render2();
+      } } }, uiImg(k.icon, 16), k.name)));
+      const cat = CATS.find((k) => k.id === st.cat);
+      const seen = /* @__PURE__ */ new Map();
+      const onBar = new Set((c.hotbar || []).filter((x) => typeof x === "string" && x.startsWith("item:")).map((x) => x.slice(5)));
+      for (const it of c.inventory) {
+        const d = ITEMS[it.id];
+        if (!d || cat.types && !cat.types.includes(d.type)) continue;
+        if (onBar.has(it.id)) continue;
+        const ex = seen.get(it.id);
+        if (ex) {
+          ex.qty += it.qty || 1;
+          if (it.heirloom) ex.heirloom = it;
+        } else seen.set(it.id, { id: it.id, d, qty: it.qty || 1, heirloom: it.heirloom ? it : null });
+      }
+      const items9 = [...seen.values()].sort((a, b) => TYPE_ORDER.indexOf(a.d.type) - TYPE_ORDER.indexOf(b.d.type) || a.d.name.localeCompare(b.d.name));
+      const grid2 = h("div.inv-grid", {
+        on: {
+          dragover: (ev) => ev.preventDefault(),
+          drop: (ev) => {
+            ev.preventDefault();
+            const data = ev.dataTransfer.getData("text/plain");
+            if (data.startsWith("eq:")) {
+              unequipSlot(game, data.slice(3));
+              render2();
+            } else if (data.startsWith("slot:")) {
+              const i = +data.slice(5), hb = ensureHotbar(c);
+              if (typeof hb[i] === "string" && hb[i].startsWith("item:")) {
+                hb[i] = null;
+                refreshPlayer(game);
+                game.audio?.sfx("equip");
+                render2();
+              }
+            }
+          }
+        }
+      });
+      for (const x of items9) {
+        const worn = isEquipped(c, x.id);
+        const tile = h("div.inv-tile" + (st.selected === x.id ? ".sel" : "") + (worn ? ".worn" : ""), {
+          title: `${x.d.name}${statLine(x.d) ? "\n" + statLine(x.d) : ""}`,
+          on: {
+            click: () => {
+              st.selected = x.id;
+              render2();
+            },
+            dblclick: () => {
+              quickUse(x.id);
+            }
+          }
+        }, itemImg(x.id, 40), x.qty > 1 ? h("span.qty", String(x.qty)) : null, worn ? h("span.worn-tag", "E") : null, x.heirloom ? h("span.heir") : null);
+        dragSource(tile, "inv:" + x.id);
+        grid2.appendChild(tile);
+      }
+      if (!items9.length) grid2.appendChild(h("p.muted", { style: { gridColumn: "1 / -1" } }, st.cat === "all" ? "Your bag is empty." : "Nothing here."));
+      if (onBar.size) grid2.appendChild(h("p.muted.inv-onbar", { style: { gridColumn: "1 / -1" } }, `${onBar.size === 1 ? "One item is" : onBar.size + " items are"} on your hotbar \u2014 drag a slot back here to put it away.`));
+      if (onBar.has(st.selected)) st.selected = null;
+      const sd = ITEMS[st.selected];
+      let details;
+      if (sd && count(c, st.selected)) {
+        const id = st.selected;
+        const worn = isEquipped(c, id);
+        const acts = [];
+        if (slotKind(sd)) acts.push(h("button.btn" + (worn ? ".red" : ".gold"), { on: { click: () => {
+          equip(game, id);
+          render2();
+        } } }, worn ? "Take off" : "Equip"));
+        if (USABLE.has(sd.type)) {
+          acts.push(h("button.btn.green", { on: { click: () => {
+            useItem(game, id);
+            render2();
+          } } }, sd.type === "food" ? "Eat" : "Use"));
+          acts.push(h("button.btn" + (game.ui.hotbarPick === "item:" + id ? ".gold" : ""), { on: { click: () => pickForHotbar(game, "item:" + id, render2) } }, game.ui.hotbarPick === "item:" + id ? "Now click a hotbar slot\u2026" : "Put on hotbar"));
+        }
+        if (sd.type === "pose") acts.push(h("button.btn", { on: { click: () => {
+          useItem(game, id);
+          render2();
+        } } }, c.logPose?.eternal === id ? "Following" : "Follow the needle"));
+        if (sd.type === "dial") acts.push(h("button.btn", { disabled: c.techniques.includes(sd.ability), on: { click: () => {
+          useItem(game, id);
+          render2();
+        } } }, c.techniques.includes(sd.ability) ? "Learned" : "Learn to use"));
+        if (sd.type === "fruit") {
+          if (c.fruit) acts.push(h("span.muted", "You have already eaten a Devil Fruit \u2014 a body can only hold one. Keep it, sell it, or give it away."));
+          else acts.push(h("button.btn.red", { on: { click: () => confirmEat(game, id, () => render2()) } }, "Eat\u2026"));
+        }
+        const heir = c.inventory.find((i) => i.id === id && i.heirloom);
+        details = h(
+          "div.inv-details",
+          h("div.det-head", itemImg(id, 56), h("div", h("h4", sd.name), h("div.sub", `${TYPE_NAME[sd.type] || sd.type}${count(c, id) > 1 ? " \xB7 \xD7" + count(c, id) : ""}${worn ? " \xB7 equipped" : ""}`), heir ? h("div.sub", `Heirloom of ${heir.from}`) : null)),
+          statLine(sd) ? h("div.det-stats", statLine(sd)) : null,
+          sd.type === "fruit" ? fruitInfo(sd) : h("p", sd.desc || ""),
+          h("div.det-actions", acts)
+        );
+      } else {
+        details = h("div.inv-details.empty", h("p.muted", "Select an item to see it. Drag gear onto the equipment slots, and food onto the hotbar. Double-click to equip or eat."));
+      }
+      const right = h("div.inv-right", tabs, grid2, details);
+      game.ui.onHotbarChange = render2;
+      add2(body, h("div.panel-top", h("h2", "Inventory"), berriesLine(c)), h("div.inv-cols", left, right), hotbarNote(game, ITEMS[game.ui.hotbarPick?.slice(5)]?.name));
+    };
+    const quickUse = (id) => {
+      const d = ITEMS[id];
+      if (slotKind(d)) equip(game, id);
+      else if (USABLE.has(d.type)) useItem(game, id);
+      else if (d.type === "fruit" && !c.fruit) {
+        confirmEat(game, id, () => render2());
+        return;
+      }
+      st.selected = id;
+      render2();
+    };
+    render2();
+  }
+  function fruitInfo(d) {
+    const f = FRUITS[d.fruit];
+    if (!f) return h("p", d.desc || "");
+    return h(
+      "div",
+      h("p", h("b", `${f.en} \xB7 ${f.type}`), " ", h("span.tag", { style: { background: FRUIT_RARITY[f.rarity]?.color, color: "#222" } }, FRUIT_RARITY[f.rarity]?.label)),
+      h("p", f.desc)
+    );
+  }
+  function confirmEat(game, itemId, done6) {
+    const c = game.state.char;
+    const d = ITEMS[itemId];
+    const f = FRUITS[d.fruit];
+    if (c.fruit) {
+      game.log("A body can only hold one Devil Fruit.", "#ff8a80");
+      return;
+    }
+    const body = h(
+      "div",
+      { style: { textAlign: "center" } },
+      itemImg(itemId, 72),
+      h("h2", f.name),
+      fruitInfo(d),
+      h("p", "Techniques: " + f.techniques.map((t) => `${t.name} (mastery ${t.mastery})`).join(", ")),
+      h("p", { style: { color: "#b71c1c", fontWeight: 800 } }, "You will never swim again \u2014 the sea becomes your grave if you fall in. And a body can only ever hold ONE Devil Fruit."),
+      h(
+        "div",
+        { style: { display: "flex", gap: "10px", justifyContent: "center" } },
+        h("button.btn.red", { on: { click: () => {
+          game.ui.closePanel();
+          useItem(game, itemId);
+          done6();
+        } } }, "Eat it"),
+        h("button.btn", { on: { click: () => game.ui.closePanel() } }, "Not yet")
+      )
+    );
+    game.ui.openPanel(body);
+  }
+  function openCharacter(game) {
+    const ui = game.ui;
+    const c = game.state.char;
+    const p = game.player;
+    const body = h("div.charsheet");
+    const entry = ui.openPanel(body, { wide: true, id: "character" });
+    if (!entry) return;
+    const render2 = () => {
+      clear(body);
+      const race = RACES[c.race];
+      const legacy = game.state.legacy;
+      const tier = repTier(c.reputation || 0);
+      const rep = c.reputation || 0;
+      const role = c.faction === "marine" ? `Marine ${c.marineRank || "Recruit"}` : c.crewName ? `Captain of the ${c.crewName}` : c.faction === "pirate" ? "Pirate" : "Wanderer";
+      const hasD = c.traits.includes("will_of_d");
+      const header = h(
+        "div.char-head",
+        portrait(equippedLook(c), 110, 130),
+        h(
+          "div.char-id",
+          h("h2", c.name),
+          h("div", `${raceLabel(c.look)} \xB7 ${role} \xB7 generation ${c.generation}`),
+          c.bounty ? h("div.bounty-line", uiImg("bounty", 18), ` Bounty ${formatBerries(c.bounty)}`) : null,
+          h(
+            "div.rep",
+            h("span.lbl", uiImg("reputation", 18), " Reputation"),
+            h("div.rep-bar", h("i", { style: { left: "0", width: clamp2(rep, 0, 100) + "%", background: tier.color } })),
+            h("span.rep-name", { style: { color: tier.color } }, `${tier.name} (${Math.round(rep)})`)
+          ),
+          h(
+            "div.char-btns",
+            h("button.btn", { on: { click: () => openJollyRogerFromMenu(game) } }, uiImg("jolly_roger", 18), "Jolly Roger"),
+            h("button.btn", { on: { click: () => ui.openPanel(h("div", { style: { display: "grid", placeItems: "center" } }, wantedPoster(c))) } }, uiImg("bounty", 18), "Wanted poster")
+          )
+        ),
+        h(
+          "div.will-box",
+          h("h4", uiImg("reputation", 18), " Inherited Will"),
+          h("div", h("b", `${legacy?.will || 0}`), " banked by your lineage"),
+          h("div", h("b", `+${computeWill(c)}`), " if your journey ended today"),
+          h("div.sub", "Earned from islands charted, great foes defeated, days survived, your bounty and the legends you write. Spend it on your bloodline between generations."),
+          h("div.d-line" + (hasD ? ".has" : ""), hasD ? h("span", h("b", "D."), " You carry the Will of D.") : h("span", `No "D." in your name. (${Math.round(dChance(legacy || {}) * 100)}% of births carry it.)`))
+        )
+      );
+      const prog = game.progression;
+      const attrRows = ATTR_KEYS.map((k) => h(
+        "div.stat-row",
+        { title: `${ATTRS[k].desc}
+Trains by: ${TRAINS_BY[k]}` },
+        h("span.nm", ATTRS[k].name),
+        h("span.val", c.attrs[k]),
+        h("div.meter.dual", h("i", { style: { width: 100 * c.attrs[k] / ATTR_CAP + "%" } }), h("u", { style: { width: 100 * (prog?.trainProgress(k) || 0) + "%" } }))
+      ));
+      const dd = p.d;
+      const derived = h("div.derived", `Health ${dd.maxHp} \xB7 Stamina ${dd.maxStamina}${hakiKnown(c) ? " \xB7 Spirit " + dd.maxHaki : ""} \xB7 Speed ${dd.speed.toFixed(1)} \xB7 Damage \xD7${dd.dmg.toFixed(2)} \xB7 Defence ${Math.round(dd.def * 100)}% \xB7 Doriki ${p.power().toLocaleString()}`);
+      const wm = c.weaponMastery || {};
+      const wmRows = Object.entries(WEAPON_KINDS).map(([k, name]) => h(
+        "div.stat-row",
+        { title: `+${((wm[k] || 0) * 0.6).toFixed(0)}% damage with ${name.toLowerCase()}` },
+        h("span.nm", name),
+        h("span.val", Math.floor(wm[k] || 0)),
+        h("div.meter", h("i", { style: { width: (wm[k] || 0) + "%", background: "linear-gradient(90deg,#6d4c33,#d4a373)" } }))
+      ));
+      const masteryRows = Object.entries(c.masteries).filter(([s]) => STYLES2[s]).map(([s, m]) => h(
+        "div.stat-row",
+        h("span.nm", STYLES2[s]?.name || s),
+        h("span.val", Math.floor(m)),
+        h("div.meter", h("i", { style: { width: m + "%", background: "linear-gradient(90deg,#1565c0,#90caf9)" } }))
+      ));
+      const hakiRows = hakiKnown(c) ? Object.entries(HAKI).filter(([k]) => c.haki[k]).map(([k, hk]) => h(
+        "div.stat-row",
+        { title: hk.desc },
+        h("span.nm", hk.name.replace(" Haki", "")),
+        h("span.val", Math.floor(c.haki[k])),
+        h("div.meter", h("i", { style: { width: (c.haki[k] || 0) + "%", background: "linear-gradient(90deg,#4a148c,#ce93d8)" } }))
+      )) : [];
+      const traits = c.traits.filter((t) => TRAITS[t] && (!TRAITS[t].hidden || t === "conqueror" && c.haki.conqueror));
+      const left = h(
+        "div",
+        h("h3", "Attributes"),
+        h("p.muted", "Attributes grow by themselves as you train and fight worthy opponents. The thin bar shows how close each one is to rising."),
+        ...attrRows,
+        derived,
+        h("h3", "Weapon mastery"),
+        h("p.muted", "Every kind of weapon grows stronger the more you fight with it."),
+        ...wmRows
+      );
+      const right = h(
+        "div",
+        h("h3", "Fighting styles"),
+        ...masteryRows,
+        c.fruit ? h("div", h("h3", "Devil Fruit"), h("div.stat-row", h("span.nm", FRUITS[c.fruit].name), h("span.val", Math.floor(c.fruitMastery)), h("div.meter", h("i", { style: { width: c.fruitMastery + "%", background: "linear-gradient(90deg,#bf360c,#ffab91)" } })))) : null,
+        hakiRows.length ? h("div", h("h3", "Haki"), ...hakiRows) : null,
+        h("h3", "Traits"),
+        ...race.traits.map((t) => h("div.li", t)),
+        ...traits.map((t) => h("div.li", h("b", TRAITS[t].name + ": "), TRAITS[t].desc)),
+        h("p.muted", { style: { marginTop: "10px" } }, `Lives ${c.lives}/${c.maxLives} \xB7 Second winds ${c.getUpCharges || 0} \xB7 ${(c.discovered || []).length} islands charted \xB7 ${(c.bosses || []).length} great foes \xB7 day ${game.env.day}`)
+      );
+      add2(body, header, h("div.grid2", left, right));
+    };
+    render2();
+  }
+  var TRAINS_BY = {
+    str: "landing blows on worthy opponents, masters, breakthroughs",
+    agi: "dodging and parrying attacks, fighting with guns, masters",
+    end: "blocking hits, masters",
+    vit: "taking punishment and surviving, masters",
+    wil: "getting back up, facing stronger foes, Devil Fruit use, masters"
+  };
+  function openJollyRogerFromMenu(game) {
+    openJollyRoger(game);
+  }
+  function openSkills(game) {
+    const ui = game.ui;
+    const c = game.state.char;
+    const p = game.player;
+    const body = h("div.skills");
+    const entry = ui.openPanel(body, { wide: true, id: "skills" });
+    if (!entry) return;
+    const render2 = () => {
+      clear(body);
+      game.ui.onHotbarChange = render2;
+      const styles = Object.keys(c.masteries).filter((s) => STYLES2[s]);
+      const styleBtns = styles.map((s) => h(
+        "button" + (c.style === s ? ".on" : ""),
+        { on: { click: () => {
+          c.style = s;
+          refreshPlayer(game);
+          render2();
+        } }, title: STYLES2[s].desc },
+        `${STYLES2[s].name} (${Math.floor(c.masteries[s])})`
+      ));
+      const cur = STYLES2[c.style];
+      const needW = cur?.weapon && !p.hasWeapon(cur.weapon);
+      const techs = c.techniques.map(getAbility).filter((d) => d && (!needsHaki(d) || hakiKnown(c)));
+      const byGroup = {};
+      for (const d of techs) {
+        const src = d.source || "";
+        const g = src.startsWith("fruit") ? "Devil Fruit" : src.startsWith("haki") ? "Haki" : src.startsWith("style:") ? STYLES2[src.slice(6)]?.name || "Style" : d.style ? STYLES2[d.style]?.name || "Style" : "Other";
+        (byGroup[g] = byGroup[g] || []).push(d);
+      }
+      const lists = Object.entries(byGroup).map(([g, ds]) => h(
+        "div",
+        h("h4.grp", g),
+        h("div.tech-grid", ds.map((d) => {
+          const onBar = c.hotbar.includes(d.id);
+          const card = h(
+            "div.tech" + (game.ui.hotbarPick === "skill:" + d.id ? ".sel" : "") + (onBar ? ".onbar" : ""),
+            {
+              title: "Drag onto your hotbar, or click and then click a slot on it",
+              on: { click: () => pickForHotbar(game, "skill:" + d.id, render2) }
+            },
+            skillImg(d, 40),
+            h(
+              "div.grow",
+              h("b", d.name),
+              h("div.sub", d.desc || ""),
+              h("div.sub.meta", [d.cd ? `cooldown ${d.cd}s` : null, d.cost?.stamina ? `${d.cost.stamina} stamina` : null, d.cost?.haki && hakiKnown(c) ? `${d.cost.haki} spirit` : null, d.weapon ? `needs ${d.weapon}` : null].filter(Boolean).join(" \xB7 "))
+            ),
+            onBar ? h("span.tag", `key ${HOTBAR_KEYS[c.hotbar.indexOf(d.id)]}`) : null
+          );
+          return dragSource(card, "skill:" + d.id);
+        }))
+      ));
+      add2(
+        body,
+        h("h2", "Skills"),
+        h("h3", "Fighting style"),
+        h("div.tabs", styleBtns),
+        needW ? h("p", { style: { color: "#b71c1c" } }, `${cur.name} needs ${cur.weapon === "sword" ? cur.swords + " sword(s)" : "a " + cur.weapon} equipped \u2014 until then you fight bare-handed.`) : null,
+        h("p.muted", cur?.desc || ""),
+        hotbarNote(game, getAbility(game.ui.hotbarPick?.slice(6))?.name),
+        h("h3", "Techniques"),
+        techs.length ? h("div", lists) : h("p", "You know no techniques yet. Find a trainer \u2014 or a Devil Fruit."),
+        hakiKnown(c) ? h("p.muted", `Haki: ${[c.haki.armament && "R toggles Armament", c.haki.observation && "T toggles Observation", c.haki.conqueror && "G releases Conqueror's"].filter(Boolean).join(", ")}. Active Haki drains your spirit bar.`) : null
+      );
+    };
+    render2();
+  }
+  function openJournal(game) {
+    const ui = game.ui;
+    const c = game.state.char;
+    const body = h("div.journal");
+    const entry = ui.openPanel(body, { wide: true, id: "journal" });
+    if (!entry) return;
+    let tab = "quests";
+    const render2 = () => {
+      clear(body);
+      const tabs = h("div.tabs", ["quests", "legends"].map((k) => h("button" + (tab === k ? ".on" : ""), { on: { click: () => {
+        tab = k;
+        render2();
+      } } }, k === "quests" ? "Quests" : "Legends")));
+      add2(body, h("h2", "Journal"), tabs);
+      if (tab === "quests") {
+        const q2 = game.quests;
+        const active5 = q2.active();
+        const done6 = Object.entries(c.quests).filter(([, s]) => s.done).map(([id]) => questDef(id)).filter(Boolean);
+        add2(
+          body,
+          h("h3", "Active"),
+          active5.length ? h("div.list", ...active5.map(({ s, def }) => h(
+            "div.card",
+            h("h4", uiImg("quest", 18), " ", def.name, h("span.tag", def.kind || "story")),
+            h("div", def.summary || ""),
+            h("div.objective", def.stages[s.stage]?.desc || ""),
+            def.island ? h("div.muted", "Location: " + (game.surface.islands.find((i) => i.id === def.island)?.name || def.island)) : null
+          ))) : h("p", "No active quests. Talk to people \u2014 every island has a story."),
+          h("h3", "Completed"),
+          done6.length ? h("div.list.compact", ...done6.map((d) => h("div.row-item", uiImg("check", 18), h("div.grow", h("b", d.name))))) : h("p.muted", "None yet.")
+        );
+      } else {
+        add2(body, h("p.muted", "Nobody chooses your destiny. But the sea remembers those who do the impossible \u2014 every legend you write adds to your Inherited Will."));
+        const list = h("div.list");
+        for (const id of LEGEND_IDS) {
+          const L2 = LEGENDS[id];
+          const got = (c.legends || []).includes(id);
+          let pr = null;
+          try {
+            pr = L2.progress ? L2.progress(c) : null;
+          } catch {
+            pr = null;
+          }
+          list.appendChild(h(
+            "div.row-item" + (got ? ".legend-done" : ""),
+            uiImg(got ? "check" : "journal", 22),
+            h(
+              "div.grow",
+              h("b", L2.name),
+              h("div.sub", L2.desc),
+              pr && !got ? h("div.stat-row", h("div.meter", h("i", { style: { width: Math.min(100, 100 * pr[0] / pr[1]) + "%" } })), h("span.sub", `${pr[0].toLocaleString()} / ${pr[1].toLocaleString()} ${pr[2]}`)) : null
+            ),
+            h("span.price", got ? "Achieved" : `+${L2.will} Will`)
+          ));
+        }
+        body.appendChild(list);
+      }
+    };
+    render2();
+  }
+  function openMenu(game, { onQuit, onRetire, onSave }) {
+    const ui = game.ui;
+    const c = game.state.char;
+    const saved = h("p.muted.save-note", c.lastSaved ? `Last saved ${new Date(c.lastSaved).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Not saved yet");
+    const btn = (icon, text, fn, cls = "") => h("button.btn.menu-btn" + cls, { on: { click: fn } }, uiImg(icon, 20), text);
+    const body = h(
+      "div.pause",
+      h("h2", "Paused"),
+      h(
+        "div.menu-list",
+        btn("check", "Resume", () => ui.closePanel(), ".gold"),
+        btn("save", "Save game", () => {
+          if (onSave()) saved.textContent = `Saved just now (lineage ${game.saveSlot || 1})`;
+        }),
+        btn("help", "How to Play", () => {
+          ui.closePanel();
+          ui.openPanel(helpContent(c), { wide: true, id: "help" });
+        }),
+        btn("settings", "Settings", () => {
+          ui.closePanel();
+          openSettings(game);
+        }),
+        btn("inn", "Get unstuck: back to your bed", async () => {
+          const p = game.player, r = c.rest || c.spawn;
+          if (p.inCombat) {
+            saved.textContent = "Not in the middle of a fight \u2014 get clear of it first.";
+            return;
+          }
+          if (p.state !== "idle") return;
+          if (!await ui.ask({ title: "Back to your bed?", text: `Stuck somewhere? You'll wake up back at ${r?.name || "where you last rested"}. Your ship stays where you left it.`, ok: "Go back" })) return;
+          ui.closePanel();
+          ui.fade(true);
+          setTimeout(() => {
+            p.leaveWater?.(game);
+            p.deck?.ship.aboard?.delete(p);
+            p.deck = null;
+            p.z = 0;
+            p.vz = 0;
+            p.vx = p.vy = 0;
+            p.kb.x = p.kb.y = 0;
+            p.dash = null;
+            p.action = null;
+            game.lives.placeAtRest();
+            game.log(`You find your way back to ${r?.name || "your bed"}.`, "#b0bec5");
+            ui.fade(false);
+          }, 450);
+        }),
+        fullscreenOK() ? btn("fullscreen", fullscreenOn() ? "Leave full screen" : "Full screen", () => {
+          ui.closePanel();
+          toggleFullscreen();
+        }) : null,
+        (c.legends || []).length ? btn("journal", "Retire as a legend", async () => {
+          if (!await ui.ask({ title: "Retire?", text: `${c.name} hangs up their hat and becomes a legend. This life ends here and its Inherited Will passes to the next generation.`, ok: "Retire", danger: true })) return;
+          ui.closePanel();
+          onRetire();
+        }) : null,
+        btn("close", "Save & quit to title", () => {
+          ui.closePanel();
+          onQuit();
+        }, ".red")
+      ),
+      saved,
+      h("p.muted", "The game also saves by itself every minute, at every milestone, and when you close the page. Death is written immediately.")
+    );
+    ui.openPanel(body, { id: "menu" });
+  }
+  var fullscreenOK = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  var fullscreenOn = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  function toggleFullscreen() {
+    try {
+      if (fullscreenOn()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+      else {
+        const el = document.documentElement;
+        const r = (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el, { navigationUI: "hide" });
+        if (r && r.catch) r.catch(() => {
+        });
+      }
+    } catch {
+    }
+  }
+  function openSettings(game) {
+    const s = game.settings;
+    const body = h("div");
+    const slider = (label, key2) => {
+      const nm = h("span.nm", typeof label === "function" ? label() : label);
+      return h("div.stat-row", nm, h("input", { type: "range", min: 0, max: 1, step: 0.05, value: s[key2] ?? 0.5, style: { flex: 1 }, on: { input: (e) => {
+        s[key2] = Number(e.target.value);
+        if (typeof label === "function") nm.textContent = label();
+        game.applySettings();
+      } } }));
+    };
+    const check = (label, key2) => h("label.check-row", h("input", { type: "checkbox", checked: !!s[key2], on: { change: (e) => {
+      s[key2] = e.target.checked;
+      game.applySettings();
+    } } }), label);
+    const choice = (label, key2, opts) => h("div.set-row", h("span.nm", label), h("div.tabs", { style: { margin: 0 } }, opts.map(([v, name]) => h("button" + (s[key2] === v ? ".on" : ""), { on: { click: () => {
+      s[key2] = v;
+      if (key2 === "quality") s.qualityPicked = true;
+      game.applySettings();
+      render2();
+    } } }, name))));
+    const render2 = () => {
+      clear(body);
+      add2(
+        body,
+        h("h2", "Settings"),
+        h("h3", "View"),
+        choice("Camera", "view", [["first", "First person"], ["third", "Third person"]]),
+        slider(game.input.touch?.on ? "Look sensitivity" : "Mouse sensitivity", "sensitivity"),
+        check("Invert mouse look", "invertY"),
+        slider(() => `Field of view ${Math.round(60 + (s.fov ?? 0.5) * 35)}\xB0`, "fov"),
+        check("View bobbing while walking", "bob"),
+        choice("Graphics", "quality", [["high", "High (shadows)"], ["low", "Fast"]]),
+        check("Lower the resolution a little when the game is slow", "autoRes"),
+        h("h3", "Sound & feel"),
+        slider("Sound effects", "volume"),
+        slider("Music", "music"),
+        slider("Screen shake", "shake"),
+        check("Show tutorial hints", "showHints"),
+        h("p.muted", "Press V in game to switch between first and third person. Settings are saved in this browser.")
+      );
+    };
+    render2();
+    game.ui.openPanel(body, { onClose: () => game.applySettings(true), id: "settings" });
+  }
+  function openShop(game, building, island) {
+    const ui = game.ui;
+    const c = game.state.char;
+    if (bannedFromShop(game, building)) {
+      game.dialogue.open(null, { start: "a", nodes: { a: { speaker: building.name || "Shopkeeper", text: '"YOU! Thief! Get out of my shop before I call the Marines again!"' } } });
+      return null;
+    }
+    const body = h("div");
+    const stock8 = stockFor(building, island);
+    let tab = "buy";
+    const entry = ui.openPanel(body, { wide: true, id: "shop" });
+    const render2 = () => {
+      clear(body);
+      add2(body, h("h2", building.name || "Shop"), h(
+        "div.shop-top",
+        h("div.tabs", h("button" + (tab === "buy" ? ".on" : ""), { on: { click: () => {
+          tab = "buy";
+          render2();
+        } } }, "Buy"), h("button" + (tab === "sell" ? ".on" : ""), { on: { click: () => {
+          tab = "sell";
+          render2();
+        } } }, "Sell")),
+        berriesLine(c)
+      ));
+      const list = h("div.list");
+      if (tab === "buy") {
+        for (const id of stock8) {
+          const d = ITEMS[id];
+          if (!d) continue;
+          const price = priceOf(id, island, c);
+          const owned = count(c, id);
+          list.appendChild(h(
+            "div.row-item",
+            { title: d.desc || "" },
+            itemImg(id, 34, ".ico"),
+            h("div.grow", h("b", d.name), owned ? h("span.tag", `owned ${owned}`) : null, h("div.sub", statLine(d) || d.desc || d.grade || "")),
+            h("span.price", formatBerries(price)),
+            h("button.btn.gold", { disabled: c.berries < price, on: { click: () => {
+              if (pay(game, price)) {
+                addItem(game, id, 1);
+                game.audio?.sfx("coin");
+                render2();
+              }
+            } } }, "Buy"),
+            !d.unique ? h("button.btn.steal", { title: "Try to pocket it while nobody is looking. Theft puts a bounty on your head \u2014 and if you are caught, the guards come running.", on: { click: () => {
+              const r = stealFromShop(game, id, building, price);
+              if (r === "caught") ui.closePanel(entry);
+              else render2();
+            } } }, "Steal") : null
+          ));
+        }
+      } else {
+        const seen = /* @__PURE__ */ new Set();
+        for (const it of c.inventory) {
+          if (seen.has(it.id)) continue;
+          seen.add(it.id);
+          const d = ITEMS[it.id];
+          const sp = sellPrice(it.id);
+          if (!d || !sp || it.heirloom) continue;
+          const worn = isEquipped(c, it.id) && count(c, it.id) <= 1;
+          list.appendChild(h(
+            "div.row-item",
+            itemImg(it.id, 34, ".ico"),
+            h("div.grow", h("b", d.name), h("span.tag", "\xD7" + count(c, it.id)), d.type === "fruit" ? h("div.sub", "Devil Fruits fetch a fortune \u2014 the black market always pays.") : null),
+            h("span.price", formatBerries(sp)),
+            h("button.btn", { disabled: worn, on: { click: async () => {
+              if (d.type === "fruit" && !await ui.ask({ title: `Sell the ${d.name}?`, text: `The ${d.name} will be gone for good. (${formatBerries(sp)})`, ok: "Sell" })) return;
+              removeItem(game, it.id, 1);
+              earn(game, sp, false);
+              game.audio?.sfx("coin");
+              render2();
+            } } }, worn ? "Equipped" : "Sell")
+          ));
+        }
+        if (!list.children.length) list.appendChild(h("p", "Nothing the shopkeeper wants."));
+      }
+      body.appendChild(list);
+    };
+    render2();
+    return entry;
+  }
+  function openInn(game, building, island, town) {
+    const S3 = game.services;
+    const price = S3.innPrice(island);
+    game.ui.openPanel(h(
+      "div",
+      h("h2", building.name || "Inn"),
+      h("p", "A warm bed, a hot meal and a roof over your head. Resting here also makes this town the place you wake up if you fall in battle, and restores your second winds."),
+      h("p", h("b", "Price: "), formatBerries(price)),
+      h("button.btn.gold", { on: { click: () => {
+        if (S3.rest(island, town)) game.ui.closePanel();
+      } } }, "Rest until morning")
+    ), { id: "inn" });
+  }
+  function openDoctor(game, building, island, doc) {
+    const S3 = game.services;
+    const c = game.state.char;
+    const p = game.player;
+    const body = h("div");
+    const entry = game.ui.openPanel(body, { id: "doctor" });
+    const render2 = () => {
+      clear(body);
+      add2(
+        body,
+        h("h2", doc?.name || building.name || "Clinic"),
+        h("p", doc?.line || "Let's have a look at you."),
+        h("p", `Health ${Math.ceil(p.hp)}/${p.d.maxHp}${Object.keys(p.status).length ? " \xB7 " + Object.keys(p.status).join(", ") : ""}`),
+        h("button.btn.green", { disabled: p.hp >= p.d.maxHp && !Object.keys(p.status).length, on: { click: () => {
+          S3.heal(island);
+          render2();
+        } } }, `Treat wounds \u2014 ${formatBerries(S3.healPrice(island))}`)
+      );
+      if (doc?.restoresLife) {
+        const done6 = c.flags["lifeRestored_" + doc.id];
+        add2(
+          body,
+          h("h3", "Mend a vivre card"),
+          h("p", `${doc.name} is one of the few doctors in the world who can pull someone back from the edge. (Restores one lost life, once.)`),
+          h("button.btn.gold", { disabled: done6 || c.lives >= c.maxLives, on: { click: () => {
+            S3.restoreLife(doc);
+            render2();
+          } } }, done6 ? "Already treated" : c.lives >= c.maxLives ? "No lives lost" : `Treatment \u2014 ${formatBerries(S3.lifePrice(doc))}`)
+        );
+      }
+    };
+    render2();
+    return entry;
+  }
+  function openShipyard(game, building, island, dock) {
+    const S3 = game.services;
+    const c = game.state.char;
+    const body = h("div");
+    game.ui.openPanel(body, { wide: true, id: "shipyard" });
+    const myShips = () => game.ships.filter((s) => s.owner === "player" && !s.sunk);
+    const render2 = () => {
+      clear(body);
+      add2(body, h("h2", building.name || "Shipyard"), berriesLine(c));
+      add2(body, h("h3", "Buy a ship"));
+      const list = h("div.list");
+      for (const type of S3.shipsFor(island)) {
+        const d = SHIPS[type];
+        const price = S3.shipPrice(type, island);
+        list.appendChild(h(
+          "div.row-item",
+          uiImg("ship", 30),
+          h("div.grow", h("b", d.name), h("div.sub", `${d.desc} \xB7 hull ${d.hull} \xB7 speed ${d.speed} \xB7 cannons ${d.cannons}${d.grandLine ? "" : " \xB7 NOT fit for the Grand Line"}`)),
+          h("span.price", formatBerries(price)),
+          h("button.btn.gold", { disabled: c.berries < price, on: { click: async () => {
+            const n = await game.ui.ask({ title: `Buy a ${d.name}`, text: `Name your new ship (${formatBerries(price)}).`, input: d.name, ok: "Buy" });
+            if (n === null) return;
+            S3.buyShip(type, island, dock, (n || d.name).slice(0, 24));
+            game.emit("shipBought", type);
+            render2();
+          } } }, "Buy")
+        ));
+      }
+      body.appendChild(list);
+      const ships = myShips();
+      if (ships.length) {
+        add2(body, h("h3", "Your ships"));
+        for (const s of ships) {
+          const near = game.world.distance(s.x, s.y, game.player.x, game.player.y) < 60;
+          const rp = S3.repairPrice(s, island);
+          const card = h("div.card", h("h4", `${s.name} \u2014 ${s.def.name}`), h("div", `Hull ${Math.ceil(s.hull)}/${s.maxHull} \xB7 upgrades: ${s.upgrades.map((u) => SHIP_UPGRADES[u]?.name).join(", ") || "none"}${s.coated ? " \xB7 coated" : ""}`));
+          if (!near) card.appendChild(h("p.muted", "Bring this ship to the harbour to work on it."));
+          else {
+            card.appendChild(h("button.btn.green", { disabled: s.hull >= s.maxHull || c.berries < rp, on: { click: () => {
+              S3.repair(s, island);
+              render2();
+            } } }, `Repair \u2014 ${formatBerries(rp)}`));
+            const ups = h("div.list", { style: { marginTop: "6px" } });
+            for (const [id, u] of Object.entries(SHIP_UPGRADES)) {
+              if (id === "coating" && !(building.coating || /sabaody/i.test(island?.id || "") || /coat/i.test(building.name || ""))) continue;
+              if (id === "seastone_keel" && !(building.seastone || island?.def?.sea === "paradise" || island?.def?.sea === "new_world")) continue;
+              const has2 = s.upgrades.includes(id) || id === "coating" && s.coated;
+              const up = S3.upgradePrice(id, island);
+              ups.appendChild(h(
+                "div.row-item",
+                h("div.grow", h("b", u.name), h("div.sub", u.desc)),
+                h("span.price", formatBerries(up)),
+                h("button.btn", { disabled: has2 || c.berries < up, on: { click: () => {
+                  S3.upgrade(s, id, island);
+                  render2();
+                } } }, has2 ? "Fitted" : "Fit")
+              ));
+            }
+            card.appendChild(ups);
+            card.appendChild(h("button.btn", { style: { marginTop: "6px" }, on: { click: async () => {
+              const n = await game.ui.ask({ title: "Rename your ship", input: s.name, ok: "Rename" });
+              if (n) {
+                s.name = n.slice(0, 24);
+                persist(game);
+                render2();
+              }
+            } } }, "Rename"));
+          }
+          body.appendChild(card);
+        }
+      }
+      if (building.adam && c.inventory.some((i) => i.id === "adam_wood")) {
+        add2(
+          body,
+          h("h3", "A dream ship"),
+          h("p", "You have Adam wood. The shipwrights' eyes light up."),
+          h("button.btn.red", { on: { click: () => {
+            removeItem(game, "adam_wood", 1);
+            const s = game.giveShip("adam_brig", dock?.moor?.x ?? game.player.x, dock?.moor?.y ?? game.player.y + 4, "Thousand Dreams");
+            game.ui.toast("A LEGENDARY SHIP", `${s.name} \u2014 an Adam-wood brig with Coup de Burst!`, "#ffd54f");
+            persist(game);
+            render2();
+          } } }, "Build an Adam-wood brig")
+        );
+      }
+    };
+    render2();
+  }
+  function openTrainer(game, tid, npcName) {
+    const S3 = game.services;
+    const t = TRAINERS[tid];
+    const c = game.state.char;
+    const body = h("div");
+    game.ui.openPanel(body, { wide: true, id: "trainer" });
+    let tab = "styles";
+    const render2 = () => {
+      clear(body);
+      const tabs = ["styles", "techniques", "training"];
+      const hakiTypes = Object.keys(t.haki || {}).filter((k) => c.haki[k]);
+      if (hakiTypes.length) tabs.push("haki");
+      tabs.push("spar");
+      add2(
+        body,
+        h("h2", npcName || t.name),
+        h("p", h("i", `"${t.lines?.[0] || "Let's see what you've got."}"`)),
+        h(
+          "div.shop-top",
+          h("div.tabs", ...tabs.map((k) => h("button" + (tab === k ? ".on" : ""), { on: { click: () => {
+            tab = k;
+            render2();
+          } } }, title(k)))),
+          berriesLine(c)
+        )
+      );
+      const list = h("div.list");
+      if (tab === "styles") {
+        const styles = Object.keys(t.styles || {});
+        if (!styles.length) list.appendChild(h("p", `${t.name} doesn't teach a fighting style \u2014 but can train your body.`));
+        for (const s of styles) {
+          const st = STYLES2[s];
+          const chk = S3.canLearnStyle(tid, s);
+          const price = S3.stylePrice(tid, s);
+          list.appendChild(h(
+            "div.row-item",
+            uiImg("skills", 30),
+            h("div.grow", h("b", st.name), h("div.sub", st.desc), chk.warn ? h("div.sub", { style: { color: "#b71c1c" } }, chk.warn) : null),
+            h("span.price", price ? formatBerries(price) : "free"),
+            h("button.btn.gold", { disabled: !chk.ok || c.berries < price, on: { click: () => {
+              S3.learnStyle(tid, s);
+              render2();
+            } } }, chk.ok ? "Learn" : chk.why)
+          ));
+        }
+      } else if (tab === "techniques") {
+        for (const id of t.teaches || []) {
+          const d = getAbility(id);
+          if (!d || needsHaki(d) && !hakiKnown(c)) continue;
+          const chk = S3.canLearnTech(id);
+          const price = S3.techPrice(id);
+          list.appendChild(h(
+            "div.row-item",
+            skillImg(d, 34, ".ico"),
+            h("div.grow", h("b", d.name), h("span.tag", STYLES2[d.style]?.name || (d.hakiType ? title(d.hakiType) + " Haki" : "")), h("div.sub", d.desc || ""), h("div.sub", `Requires: ${d.learn?.mastery ? STYLES2[d.style]?.name + " mastery " + d.learn.mastery : d.learn?.level ? title(d.hakiType) + " Haki " + d.learn.level : "\u2014"}`)),
+            h("span.price", formatBerries(price)),
+            h("button.btn.gold", { disabled: !chk.ok || c.berries < price, on: { click: () => {
+              S3.learnTech(id);
+              render2();
+            } } }, chk.ok ? "Learn" : chk.why)
+          ));
+        }
+        if (!list.children.length) list.appendChild(h("p", "No techniques to teach you yet."));
+      } else if (tab === "training") {
+        list.appendChild(h("p.muted", `A master pushes your body further than fighting alone. Training sessions left today: ${S3.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
+        for (const [k, cap] of Object.entries(t.train || {})) {
+          const price = S3.trainPrice(k);
+          const maxed = c.attrs[k] >= cap;
+          list.appendChild(h(
+            "div.row-item",
+            uiImg("trainer", 30),
+            h("div.grow", h("b", ATTRS[k].name), h("div.sub", `${c.attrs[k]} / ${cap} with this master \xB7 ${ATTRS[k].desc}`)),
+            h("span.price", formatBerries(price)),
+            h("button.btn.gold", { disabled: maxed || S3.trainsLeft() <= 0 || c.berries < price, on: { click: () => {
+              S3.train(tid, k);
+              render2();
+            } } }, maxed ? "Mastered" : "Train")
+          ));
+        }
+      } else if (tab === "haki") {
+        for (const k of hakiTypes) {
+          const cap = t.haki[k];
+          const lvl = c.haki[k] || 0;
+          const price = S3.hakiTrainPrice(k);
+          list.appendChild(h(
+            "div.row-item",
+            uiImg("haki", 30),
+            h("div.grow", h("b", HAKI[k].name), h("div.sub", HAKI[k].desc), h("div.sub", `Level ${Math.floor(lvl)} / ${cap} with this master`)),
+            h("span.price", formatBerries(price)),
+            h("button.btn.gold", { disabled: c.berries < price || lvl >= cap, on: { click: () => {
+              S3.hakiTrain(tid, k);
+              render2();
+            } } }, "Train")
+          ));
+        }
+      } else if (tab === "spar") {
+        const chk = S3.canSpar(tid);
+        list.appendChild(h("p", `A real duel against ${t.spar.name} (level ${t.spar.level}). Nobody dies in a spar. Win to gain mastery and possibly a breakthrough \u2014 beating someone stronger than you is how warriors grow. Once per day.`));
+        list.appendChild(h("button.btn.red", { disabled: !chk.ok, on: { click: () => {
+          game.ui.closePanel();
+          S3.startSpar(tid);
+        } } }, chk.ok ? "Begin the spar" : chk.why));
+      }
+      body.appendChild(list);
+    };
+    render2();
+  }
+
+  // src/ui/ui.js
+  var SIDEBAR = [
+    { id: "inventory", label: "Inventory", key: "Tab" },
+    { id: "character", label: "Character", key: "C" },
+    { id: "skills", label: "Skills", key: "K" },
+    { id: "journal", label: "Journal", key: "J" },
+    { id: "crew", label: "Crew", key: "U" },
+    { id: "menu", label: "Menu", key: "Esc" },
+    // on phones: no keyboard, so the map and the camera get buttons too
+    { id: "map", label: "Map", key: "M", touch: true },
+    { id: "view", label: "View", key: "V", touch: true }
+  ];
+  var HAKI_TOGGLES = [
+    { type: "armament", key: "R", name: "Armament Haki", icon: { id: "toggle_armament", name: "Armament", hakiType: "armament", source: "haki:armament" } },
+    { type: "observation", key: "T", name: "Observation Haki", icon: { id: "toggle_observation", name: "Observation", hakiType: "observation", source: "haki:observation" } },
+    { type: "conqueror", key: "G", name: "Conqueror's Haki", icon: { id: "haki_conqueror", name: "Conqueror's", hakiType: "conqueror", source: "haki:conqueror" } }
+  ];
+  var UI2 = class {
+    constructor(container) {
+      const style = document.createElement("style");
+      style.textContent = style_default;
+      document.head.appendChild(style);
+      this.root = h("div#ui");
+      container.appendChild(this.root);
+      this.game = null;
+      this.stack = [];
+      this.dialogueEl = null;
+      this.screenEl = null;
+      this.cache = {};
+      this.actions = {};
+      this.buildHud();
+      this.hudVisible = false;
+      this.setHudVisible(false);
+      this.mmT = 0;
+      this.keyHandlers = [];
+    }
+    // --- HUD -----------------------------------------------------------------
+    buildHud() {
+      const R3 = this.root;
+      this.hud = h("div.hud");
+      this.el = {};
+      const E = this.el;
+      E.name = h("div.hud-name");
+      E.sub = h("div.hud-sub");
+      E.hp = bar("hp");
+      E.st = bar("st");
+      E.hk = bar("hk");
+      E.o2 = h("div.o2.hidden", { title: "Breath" });
+      E.o2b = [];
+      for (let i = 0; i < 10; i++) {
+        const b = h("i");
+        E.o2b.push(b);
+        E.o2.appendChild(b);
+      }
+      E.lives = h("div.lives");
+      E.bounty = h("div.hud-bounty");
+      E.buffs = h("div.buffs");
+      this.hud.appendChild(h("div.hud-player", E.name, E.sub, E.hp.el, E.st.el, E.o2, E.hk.el, E.lives, E.bounty, E.buffs));
+      E.hotbar = h("div.hotbar");
+      E.slots = [];
+      for (let i = 0; i < HOTBAR_SIZE; i++) {
+        const s = { el: h("div.slot.interactive"), ico: h("span.ico"), k: h("span.k", HOTBAR_KEYS[i]), nm: h("span.nm"), qty: h("span.qty"), cd: h("div.cd"), cdt: h("div.cdt") };
+        s.el.append(s.ico, s.k, s.nm, s.qty, s.cd, s.cdt);
+        s.el.draggable = true;
+        s.el.addEventListener("dragstart", (ev) => {
+          if (!this.game?.player?.hotbar?.[i]) {
+            ev.preventDefault();
+            return;
+          }
+          ev.dataTransfer.setData("text/plain", "slot:" + i);
+          ev.dataTransfer.effectAllowed = "move";
+        });
+        s.el.addEventListener("dragover", (ev) => {
+          ev.preventDefault();
+          s.el.classList.add("over");
+        });
+        s.el.addEventListener("dragleave", () => s.el.classList.remove("over"));
+        s.el.addEventListener("drop", (ev) => {
+          ev.preventDefault();
+          s.el.classList.remove("over");
+          const data = ev.dataTransfer.getData("text/plain");
+          if (data.startsWith("slot:")) this.swapSlots(+data.slice(5), i);
+          else if (data) this.putOnHotbar(i, data);
+        });
+        s.el.addEventListener("click", () => {
+          if (this.hotbarPick) this.putOnHotbar(i, this.hotbarPick);
+          else if (!this.stack.length) this.useSlot(i);
+        });
+        s.el.addEventListener("contextmenu", (ev) => {
+          if (!this.root.classList.contains("hb-edit")) return;
+          ev.preventDefault();
+          this.clearSlot(i);
+        });
+        E.slots.push(s);
+        E.hotbar.appendChild(s.el);
+      }
+      E.toggles = {};
+      for (const t of HAKI_TOGGLES) {
+        const el = h("div.slot.toggle.hidden.interactive", h("span.ico", skillImg(t.icon, 28)), h("span.k", t.key));
+        el.addEventListener("click", () => {
+          const inp = this.game?.input;
+          if (inp && !this.blocksInput()) {
+            inp.simKey(t.key, true);
+            inp.simKey(t.key, false);
+          }
+        });
+        E.toggles[t.type] = el;
+        E.hotbar.appendChild(el);
+      }
+      this.hud.appendChild(E.hotbar);
+      E.prompt = h("div.prompt.hidden.interactive", { on: { click: () => {
+        const inp = this.game?.input;
+        if (inp && !this.blocksInput()) {
+          inp.simKey("E", true);
+          inp.simKey("E", false);
+        }
+      } } });
+      this.hud.appendChild(E.prompt);
+      E.log = h("div.log");
+      this.hud.appendChild(E.log);
+      E.mm = h("canvas.minimap", { width: 190, height: 190 });
+      E.mm.addEventListener("click", () => this.sideAction("map"));
+      E.loc = h("div.loc-name");
+      E.locSub = h("div.loc-sub");
+      E.clock = h("div.clock");
+      E.saved = h("div.saved-note");
+      E.logpose = h("div.logpose.hidden", h("i"), h("span"));
+      E.mmArrow = h("div.mm-arrow.hidden");
+      E.mmArrow.innerHTML = '<svg viewBox="-8 -9 16 18" width="16" height="18"><path d="M0 -7.5 L6 7 L0 3.5 L-6 7 Z" fill="#fff" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+      E.mmNorth = h("div.mm-north.hidden", "N");
+      this.hud.appendChild(h("div.minimap-wrap", h("div.mm-box", E.mm, E.mmArrow, E.mmNorth), E.logpose, E.loc, E.locSub, E.clock, E.saved));
+      this.compass = new Compass(this.hud);
+      E.combat = h("div.combat-tag.off");
+      E.combat.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14"><g stroke="#fff3e0" stroke-width="1.8" stroke-linecap="round" fill="none"><path d="M3 3 L12.5 12.5"/><path d="M13 3 L3.5 12.5"/><path d="M10 14 L14 10"/><path d="M2 10 L6 14"/></g></svg><span>In combat</span>';
+      this.hud.appendChild(E.combat);
+      E.boss = h("div.bossbar.hidden", h("h3"), bar("boss").el);
+      this.hud.appendChild(E.boss);
+      E.ship = h("div.shiphud.hidden");
+      this.hud.appendChild(E.ship);
+      E.knocked = h("div.knocked-overlay.hidden", h("div", h("h1", "KNOCKED DOWN"), h("p.kt", ""), h("div.timer", h("i"))));
+      this.hud.appendChild(E.knocked);
+      E.crosshair = h("div.crosshair.hidden", h("i"), h("b"));
+      E.hitMark = h("span.hitmark");
+      E.hitMark.innerHTML = '<svg viewBox="-20 -20 40 40" width="40" height="40"><path d="M-13 -13 L-6.5 -6.5 M13 -13 L6.5 -6.5 M-13 13 L-6.5 6.5 M13 13 L6.5 6.5" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
+      E.crosshair.appendChild(E.hitMark);
+      this.hud.appendChild(E.crosshair);
+      E.lookHint = h("div.look-hint.hidden", "Click to look around", h("small", "Esc frees the mouse \xB7 V switches view"));
+      this.hud.appendChild(E.lookHint);
+      R3.appendChild(this.hud);
+      this.bannerEl = h("div.banner", h("h2"), h("h1"), h("p"));
+      R3.appendChild(this.bannerEl);
+      this.hintEl = h("div.hint.hidden");
+      R3.appendChild(this.hintEl);
+      this.fadeEl = h("div.fade-black");
+      R3.appendChild(this.fadeEl);
+      this.panelLayer = h("div");
+      R3.appendChild(this.panelLayer);
+      E.side = h("div.sidebar.hidden");
+      E.sideBtns = {};
+      for (const b of SIDEBAR) {
+        const el = h(
+          "button.side-btn" + (b.touch ? ".t-only" : ""),
+          { title: `${b.label} (${b.key})`, on: { click: (ev) => {
+            ev.currentTarget.blur();
+            this.sideAction(b.id);
+          } } },
+          uiImg(b.id, 22),
+          h("span.lbl", b.label),
+          h("span.key", b.key)
+        );
+        E.sideBtns[b.id] = el;
+        E.side.appendChild(el);
+      }
+      R3.appendChild(E.side);
+      this.screenLayer = h("div");
+      R3.appendChild(this.screenLayer);
+      this.modalLayer = h("div");
+      R3.appendChild(this.modalLayer);
+    }
+    setHudVisible(v) {
+      this.hudVisible = v;
+      this.hud.classList.toggle("hidden", !v);
+      this.el.side.classList.toggle("hidden", !v);
+    }
+    /** Sidebar / shortcut: open a menu, or close it if it is already open. */
+    sideAction(id) {
+      const g = this.game;
+      if (!g?.player || this.screenEl) return;
+      if (this.dialogueEl) return;
+      if (this.mapOpen) {
+        this.closeMap?.();
+        if (id === "map") return;
+      }
+      const top = this.stack[this.stack.length - 1];
+      if (top && top.id === id) {
+        this.closeAll();
+        return;
+      }
+      this.closeAll();
+      this.actions[id]?.();
+    }
+    swapSlots(a, b) {
+      const p = this.game?.player;
+      if (!p || a === b) return;
+      const hb = p.char.hotbar;
+      [hb[a], hb[b]] = [hb[b] ?? null, hb[a] ?? null];
+      p.hotbar = hb;
+      this.cache["slot" + a] = this.cache["slot" + b] = null;
+      this.game.audio?.sfx("equip");
+      this.onHotbarChange?.();
+    }
+    /** Put a technique or item (a drag payload) in hotbar slot i. */
+    putOnHotbar(i, payload) {
+      const g = this.game;
+      if (!g?.player) return;
+      assignHotbar(g, i, payload);
+      this.hotbarPick = null;
+      for (let k = 0; k < HOTBAR_SIZE; k++) this.cache["slot" + k] = null;
+      this.onHotbarChange?.();
+    }
+    clearSlot(i) {
+      const p = this.game?.player;
+      if (!p) return;
+      const hb = p.char.hotbar;
+      if (!hb[i]) return;
+      hb[i] = null;
+      p.hotbar = hb;
+      this.cache["slot" + i] = null;
+      this.game.audio?.sfx("equip");
+      this.onHotbarChange?.();
+    }
+    useSlot(i) {
+      const g = this.game, p = g?.player;
+      if (!p || this.blocksInput()) return;
+      const id = p.hotbar[i];
+      if (!id) return;
+      const pc = p.controller, mw = pc?.mouseWorld;
+      const aim = mw ? Math.atan2(mw.y - (p.y - 0.5), g.world.dx(p.x, mw.x)) : p.facing;
+      const target = mw && pc.aimTarget ? pc.aimTarget(p, g, mw.x, mw.y) : null;
+      if (p.mode !== "sail") p.facing = aim;
+      p.tryTechnique(id, g, target || (mw ? { x: mw.x, y: mw.y } : { x: p.x + Math.cos(aim) * 4, y: p.y + Math.sin(aim) * 4 }));
+    }
+    blocksInput() {
+      return this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen;
+    }
+    log(text, color = "#fff") {
+      const d = h("div", { style: { color } }, text);
+      this.el.log.appendChild(d);
+      while (this.el.log.children.length > 7) this.el.log.removeChild(this.el.log.firstChild);
+    }
+    hint(text, dur = 9) {
+      if (this.game?.settings && this.game.settings.showHints === false) return;
+      clear(this.hintEl);
+      this.hintEl.append(uiImg("journal", 18), h("span", text));
+      this.hintEl.classList.remove("hidden");
+      this.hintEl.style.opacity = "1";
+      clearTimeout(this.hintTimer);
+      this.hintTimer = setTimeout(() => {
+        this.hintEl.style.opacity = "0";
+        setTimeout(() => this.hintEl.classList.add("hidden"), 500);
+      }, dur * 1e3);
+    }
+    banner(title2, sub = "", text = "", dur = 4) {
+      const [s, t, p] = this.bannerEl.children;
+      s.textContent = sub;
+      t.textContent = title2;
+      p.textContent = text;
+      this.bannerEl.classList.add("show");
+      clearTimeout(this.bannerTimer);
+      this.bannerTimer = setTimeout(() => this.bannerEl.classList.remove("show"), dur * 1e3);
+    }
+    /**
+     * A big message across the middle of the screen. With a key, it replaces
+     * the last one of that kind still showing (switching views quickly shows
+     * only the latest); any other messages still up move out of its way.
+     */
+    toast(text, sub = "", color, key2 = null) {
+      this.toasts = (this.toasts || []).filter((t) => t.el.isConnected);
+      if (key2) {
+        for (const t of this.toasts) if (t.key === key2) t.el.remove();
+      }
+      this.toasts = this.toasts.filter((t) => t.el.isConnected);
+      for (const t of this.toasts) {
+        t.up = (t.up || 0) + 1;
+        t.el.style.marginTop = `${-t.up * 76}px`;
+      }
+      const el = h("div.toast", text, sub ? h("small", sub) : null);
+      if (color) el.style.color = color;
+      this.root.appendChild(el);
+      this.toasts.push({ el, key: key2 });
+      setTimeout(() => el.remove(), 2700);
+    }
+    /** The little "Saved" note under the clock. */
+    savedNote() {
+      const el = this.el.saved;
+      el.textContent = "Game saved";
+      el.classList.remove("show");
+      void el.offsetWidth;
+      el.classList.add("show");
+    }
+    fade(on) {
+      this.fadeEl.classList.toggle("on", on);
+    }
+    onPlayerHurt() {
+      this.hurtT = 0.3;
+    }
+    /** Flash the crosshair's hit marker (first person). */
+    hitMarker({ crit, blocked } = {}) {
+      const el = this.el.hitMark;
+      el.className = "hitmark" + (crit ? " crit" : blocked ? " blocked" : "");
+      void el.offsetWidth;
+      el.classList.add("show");
+    }
+    flashSlot(id) {
+      const p = this.game?.player;
+      if (!p) return;
+      const i = p.hotbar.indexOf(id);
+      if (i < 0) return;
+      const el = this.el.slots[i].el;
+      el.classList.remove("flash");
+      void el.offsetWidth;
+      el.classList.add("flash");
+    }
+    set(el, key2, val, prop = "textContent") {
+      if (this.cache[key2] === val) return;
+      this.cache[key2] = val;
+      el[prop] = val;
+    }
+    update(dt) {
+      const g = this.game;
+      if (!g) return;
+      const inp = g.input;
+      if (this.screenEl) return;
+      if (inp.wasPressed("Escape")) {
+        inp.consume("Escape");
+        if (this.mapOpen) {
+          this.closeMap?.();
+          return;
+        }
+        if (this.dialogueEl) {
+          this.onDialogueEscape?.();
+          return;
+        }
+        if (this.stack.length) {
+          this.closePanel();
+          return;
+        }
+        this.openMenu?.();
+        return;
+      }
+      if (this.dialogueEl) {
+        this.dialogueKeys?.(inp);
+        return;
+      }
+      for (const kh of this.keyHandlers) {
+        if (inp.wasPressed(kh.key)) {
+          if (kh.when && !kh.when()) continue;
+          inp.consume(kh.key);
+          kh.fn();
+          return;
+        }
+      }
+    }
+    // --- panels -----------------------------------------------------------------
+    openPanel(content, { wide = false, onClose, id } = {}) {
+      if (id) {
+        const ex = this.stack.find((s) => s.id === id);
+        if (ex) {
+          this.closePanel(ex);
+          return null;
+        }
+      }
+      const close = h("button.close", { title: "Close (Esc)", on: { click: () => this.closePanel(entry) } }, "\xD7");
+      const panel = h("div.panel" + (wide ? ".wide" : ""), close, content);
+      const bg = h("div.panel-bg" + (this.hudVisible ? ".side-pad" : ""), panel);
+      bg.addEventListener("mousedown", (e) => {
+        if (e.target === bg) this.closePanel(entry);
+      });
+      const entry = { el: bg, onClose, id, panel };
+      this.stack.push(entry);
+      this.panelLayer.appendChild(bg);
+      if (this.game) this.game.paused = true;
+      this.markSidebar();
+      return entry;
+    }
+    closePanel(entry) {
+      const e = entry || this.stack[this.stack.length - 1];
+      if (!e) return;
+      this.stack = this.stack.filter((x) => x !== e);
+      e.el.remove();
+      if (e.onClose) e.onClose();
+      if (this.game && !this.stack.length && !this.dialogueEl && !this.mapOpen) this.game.paused = false;
+      this.markSidebar();
+    }
+    closeAll() {
+      while (this.stack.length) this.closePanel();
+    }
+    markSidebar() {
+      const top = this.stack[this.stack.length - 1];
+      for (const [id, el] of Object.entries(this.el.sideBtns)) el.classList.toggle("on", !!top && top.id === id);
+      const edit = !!top && (top.id === "inventory" || top.id === "skills");
+      this.root.classList.toggle("hb-edit", edit);
+      if (!edit) {
+        this.hotbarPick = null;
+        this.onHotbarChange = null;
+      }
+    }
+    /**
+     * In-game replacement for confirm()/prompt() (native dialogs are blocked in
+     * some embeds). Resolves to true / the typed text, or null when cancelled.
+     */
+    ask({ title: title2 = "", text = "", input, ok = "OK", cancel = "Cancel", danger = false } = {}) {
+      return new Promise((resolve) => {
+        let done6 = false;
+        const wasPaused = this.game ? this.game.paused : false;
+        const field = input !== void 0 ? h("input.ask-input#ask-input", { value: input, maxLength: 24, spellcheck: false }) : null;
+        const finish2 = (v) => {
+          if (done6) return;
+          done6 = true;
+          bg.remove();
+          if (this.game && !wasPaused && !this.stack.length && !this.dialogueEl && !this.mapOpen) this.game.paused = false;
+          resolve(v);
+        };
+        const okBtn = h("button.btn" + (danger ? ".red" : ".gold"), { on: { click: () => finish2(field ? field.value.trim() || null : true) } }, ok);
+        const panel = h(
+          "div.panel.ask",
+          title2 ? h("h2", title2) : null,
+          text ? h("p", text) : null,
+          field,
+          h("div.ask-row", okBtn, h("button.btn", { on: { click: () => finish2(null) } }, cancel))
+        );
+        const bg = h("div.panel-bg", panel);
+        bg.addEventListener("mousedown", (e) => {
+          if (e.target === bg) finish2(null);
+        });
+        panel.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            okBtn.click();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            finish2(null);
+          }
+          e.stopPropagation();
+        });
+        this.modalLayer.appendChild(bg);
+        if (this.game) this.game.paused = true;
+        setTimeout(() => (field || okBtn).focus(), 0);
+      });
+    }
+    showScreen(el) {
+      this.hideScreen();
+      this.screenEl = el;
+      this.screenLayer.appendChild(el);
+      this.el.side.classList.add("hidden");
+    }
+    hideScreen() {
+      if (this.screenEl) this.screenEl.remove();
+      this.screenEl = null;
+      this.el.side.classList.toggle("hidden", !this.hudVisible);
+    }
+    // --- per-frame HUD ------------------------------------------------------------
+    render(game) {
+      if (!this.hudVisible) return;
+      const p = game.player;
+      if (!p) return;
+      const E = this.el;
+      const ch = p.char || {};
+      E.side.classList.toggle("hidden", !!this.mapOpen || !!this.screenEl);
+      const v3 = game.view3d?.active ? game.view3d : null;
+      const free = !!v3 && !this.blocksInput();
+      const aimed = !!v3 && (v3.rig.mode === "first" || v3.rig.shiftLock);
+      E.crosshair.classList.toggle("hidden", !free || !aimed || p.mode === "sail" && !v3.rig.locked);
+      E.lookHint.classList.toggle("hidden", !free || v3.rig.locked || v3.rig.lockFailed || !!game.input.touch?.on || v3.rig.freeMouse && (this.cache.tpHintT = (this.cache.tpHintT ?? 8) - 1 / 60) < 0);
+      const hintKey = !v3 ? "" : v3.rig.freeMouse ? "free" : "lock";
+      if (this.cache.lookHint !== hintKey) {
+        this.cache.lookHint = hintKey;
+        clear(E.lookHint);
+        if (hintKey === "free") E.lookHint.append("Hold right mouse to turn the camera", h("small", "Tap Ctrl for shift lock \xB7 V switches view"));
+        else E.lookHint.append("Click to look around", h("small", "Esc frees the mouse \xB7 V switches view"));
+      }
+      this.root.classList.toggle("v3", !!v3);
+      this.compass.update(game, v3 ? v3.rig.yaw : 0, !!v3 && !this.mapOpen);
+      const fighting = !!p.inCombat && p.state === "idle" && !this.mapOpen && E.boss.classList.contains("hidden");
+      if (fighting !== this.cache.combat) {
+        this.cache.combat = fighting;
+        E.combat.classList.toggle("off", !fighting);
+      }
+      const up = v3 ? v3.rig.yaw : null;
+      if (up !== null) E.mm.style.transform = `rotate(${(-Math.PI / 2 - up).toFixed(4)}rad)`;
+      else if (this.cache.mmRot) E.mm.style.transform = "";
+      this.cache.mmRot = up !== null;
+      E.mmArrow.classList.toggle("hidden", up === null);
+      E.mmNorth.classList.toggle("hidden", up === null);
+      if (up !== null) {
+        const heading = p.mode === "sail" && p.ship ? p.ship.heading : p.facing;
+        E.mmArrow.style.transform = `rotate(${(heading - up).toFixed(4)}rad)`;
+        const phi = -Math.PI / 2 - up;
+        E.mmNorth.style.left = 50 + Math.sin(phi) * 44 + "%";
+        E.mmNorth.style.top = 50 - Math.cos(phi) * 44 + "%";
+      }
+      this.set(E.name, "name", ch.name || p.name);
+      const title2 = ch.title || (ch.faction === "marine" ? `Marine ${ch.marineRank || "Recruit"}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === "pirate" ? "Pirate" : "Wanderer");
+      this.set(E.sub, "sub", `${raceLabel(p.look)} \xB7 ${title2} \xB7 Doriki ${p.power().toLocaleString()}`);
+      E.hp.set(p.hp / p.d.maxHp, `${Math.ceil(p.hp)} / ${p.d.maxHp}`);
+      E.st.set(p.stamina / p.d.maxStamina, `${Math.ceil(p.stamina)}`);
+      const o2max = p.maxOxygen, o2 = p.oxygen;
+      const showO2 = !p.gills && o2 != null && Number.isFinite(o2max) && o2 < o2max - 0.05;
+      if (showO2 !== this.cache.o2on) {
+        E.o2.classList.toggle("hidden", !showO2);
+        this.cache.o2on = showO2;
+      }
+      if (showO2) {
+        const f = o2 / o2max * 10;
+        const key3 = Math.ceil(f * 2) + (f < 2.5 ? "L" : "");
+        if (key3 !== this.cache.o2k) {
+          this.cache.o2k = key3;
+          for (let i = 0; i < 10; i++) E.o2b[i].className = i < Math.floor(f) ? "" : i < f ? "half" : "pop";
+          E.o2.classList.toggle("low", f < 2.5);
+        }
+      }
+      const hakiOn2 = p.hakiUnlocked();
+      E.hk.el.classList.toggle("hidden", !hakiOn2);
+      if (hakiOn2) E.hk.set(p.haki / p.d.maxHaki, `${Math.ceil(p.haki)}`);
+      const lives = ch.lives ?? 3, maxLives = ch.maxLives ?? 3;
+      const key2 = lives + "/" + maxLives;
+      if (this.cache.lives !== key2) {
+        const prev = this.cache.livesN;
+        this.cache.lives = key2;
+        this.cache.livesN = lives;
+        clear(E.lives);
+        for (let i = 0; i < maxLives; i++) {
+          const v = h("div.vivre" + (i >= lives ? ".burnt" : ""), { title: "Vivre Card \u2014 a life" });
+          if (prev !== void 0 && i === lives && prev > lives) v.classList.add("burning");
+          E.lives.appendChild(v);
+        }
+      }
+      const W3 = game.wanted;
+      const tier = W3 ? W3.tier() : 0;
+      const heat = !W3 || tier < 2 ? "" : W3.spotted > 0 ? "spotted" : W3.watched > 0 ? "watched" : W3.hooded() ? "hooded" : "wanted";
+      const bk = `${ch.faction}|${ch.bounty || 0}|${ch.berries || 0}|${heat}`;
+      if (this.cache.bountyKey !== bk) {
+        this.cache.bountyKey = bk;
+        clear(E.bounty);
+        if (ch.faction !== "marine" && ch.bounty) E.bounty.append(h("span.bty", uiImg("bounty", 16), ` ${formatBerries(ch.bounty)}`));
+        E.bounty.append(h("small", uiImg("berries", 14), ` ${formatBerries(ch.berries || 0)}`));
+        const TAG = { wanted: ["WANTED", "Marines who get a good look at you will know your face"], hooded: ["HOODED", "Your hood hides your face (it slips if you fight or steal)"], watched: ["WATCHED", "A Marine is looking at you\u2026"], spotted: ["SPOTTED", "The Marines know who you are!"] };
+        if (heat) E.bounty.append(h("span.heat." + heat, { title: TAG[heat][1] }, TAG[heat][0]));
+      }
+      const buffKey = p.buffs.map((b) => b.name + Math.ceil(b.t)).join(",") + Object.keys(p.status).join(",");
+      if (this.cache.buffs !== buffKey) {
+        this.cache.buffs = buffKey;
+        clear(E.buffs);
+        for (const b of p.buffs) if (b.name) E.buffs.appendChild(h("span.buff", `${b.name} ${Math.ceil(b.t)}s`));
+        for (const s2 of Object.keys(p.status)) E.buffs.appendChild(h("span.buff", { style: { borderColor: "#ff8a80" } }, s2));
+      }
+      for (let i = 0; i < HOTBAR_SIZE; i++) {
+        const s2 = E.slots[i];
+        const id = p.hotbar[i];
+        const isItem = typeof id === "string" && id.startsWith("item:");
+        const def = !id ? null : isItem ? ITEMS[id.slice(5)] : getAbility(id);
+        const k = "slot" + i;
+        const v = def ? id : "";
+        if (this.cache[k] !== v) {
+          this.cache[k] = v;
+          clear(s2.ico);
+          if (def) s2.ico.appendChild(isItem ? itemImg(id.slice(5), 34) : skillImg(def, 34));
+          s2.nm.textContent = def ? def.name : "";
+          s2.el.classList.toggle("empty", !def);
+          s2.el.title = def ? `${def.name}
+${def.desc || ""}
+
+Click or press ${HOTBAR_KEYS[i]} to use \xB7 drag to rearrange` : "Empty \u2014 open Skills (K) or Inventory (Tab) and drag techniques or food here";
+        }
+        if (isItem) {
+          const n = (ch.inventory || []).filter((x) => x.id === id.slice(5)).reduce((a, x) => a + (x.qty || 1), 0);
+          if (n <= 0) {
+            p.hotbar[i] = null;
+            if (ch.hotbar) ch.hotbar[i] = null;
+            this.cache[k] = null;
+            continue;
+          }
+          if (s2.qty.textContent !== String(n)) s2.qty.textContent = String(n);
+          s2.el.classList.toggle("none-left", n <= 0);
+          s2.cd.style.transform = "scaleY(0)";
+          if (s2.cdt.textContent) s2.cdt.textContent = "";
+          continue;
+        }
+        if (s2.qty.textContent) {
+          s2.qty.textContent = "";
+          s2.el.classList.remove("none-left");
+        }
+        const cd = def ? p.cooldowns[def.id] || 0 : 0;
+        const frac2 = def && def.cd ? clamp2(cd / (def.cd * (p.cdMul ?? 1)), 0, 1) : 0;
+        s2.cd.style.transform = `scaleY(${frac2})`;
+        const txt = cd > 0.05 ? cd >= 10 ? Math.ceil(cd) : cd.toFixed(1) : "";
+        if (s2.cdt.textContent !== String(txt)) s2.cdt.textContent = txt;
+      }
+      for (const t of HAKI_TOGGLES) {
+        const el = E.toggles[t.type];
+        const lvl = p.hakiLevel(t.type);
+        el.classList.toggle("hidden", !lvl);
+        if (!lvl) continue;
+        el.classList.toggle("on", t.type === "armament" ? p.armament : t.type === "observation" ? p.observation : !!p.conquerorInfused);
+        el.title = `${t.name} \u2014 level ${Math.floor(lvl)} (${t.key})`;
+      }
+      const inter = p.controller?.interaction;
+      const pk = inter ? inter.label : "";
+      if (this.cache.prompt !== pk) {
+        this.cache.prompt = pk;
+        E.prompt.classList.toggle("hidden", !inter || this.blocksInput());
+        clear(E.prompt);
+        if (inter) E.prompt.append(h("kbd", "E"), inter.label);
+      }
+      const isl = game.currentIsland;
+      const locName = game.world.zone !== 0 ? game.world.name : isl && isl.name ? isl.name : "Open Sea";
+      this.set(E.loc, "loc", locName);
+      const reg3 = game.world.zone === 0 ? REGION_INFO[regionAt(p.x, p.y)]?.name || "" : game.world.subtitle || "";
+      this.set(E.locSub, "locSub", reg3);
+      const env = game.env;
+      const wx = env.storm > 0.6 ? "Storm" : env.storm > 0.25 ? "Squall" : env.snow ? "Snow" : env.fog > 0.3 ? "Fog" : env.daylight < 0.35 ? env.fullMoon ? "Full moon" : "Night" : "Clear";
+      this.set(E.clock, "clock", `Day ${env.day} \xB7 ${env.clockString()} \xB7 ${wx}`);
+      this.mmT -= 1 / 60;
+      if (this.mmT <= 0) {
+        this.mmT = 0.2;
+        this.drawMinimap(game);
+      }
+      const lp = game.logPoseInfo ? game.logPoseInfo() : null;
+      E.logpose.classList.toggle("hidden", !lp);
+      if (lp) {
+        const needle2 = E.logpose.children[0];
+        needle2.style.transform = `rotate(${v3 ? lp.angle - v3.rig.yaw : lp.angle + Math.PI / 2}rad)`;
+        this.set(E.logpose.children[1], "lpt", lp.label);
+      }
+      const boss = game.bossTarget;
+      E.boss.classList.toggle("hidden", !boss || boss.state !== "idle");
+      if (boss) {
+        const h3 = E.boss.children[0];
+        const bk2 = boss.name + (boss.title || "");
+        if (this.cache.boss !== bk2) {
+          this.cache.boss = bk2;
+          clear(h3);
+          h3.append(h("small", boss.title || ""), boss.name);
+        }
+        const bb = E.boss.children[1];
+        bb.firstChild.style.width = 100 * clamp2(boss.hp / boss.d.maxHp, 0, 1) + "%";
+        bb.children[1].style.width = 100 * clamp2(boss.hp / boss.d.maxHp, 0, 1) + "%";
+      }
+      const s = p.mode === "sail" ? p.ship : null;
+      E.ship.classList.toggle("hidden", !s);
+      if (s) {
+        const html = `<div class="row"><b>${s.name}</b><span>${s.def.name}</span></div>
+        <div class="bar hull"><i style="width:${100 * s.hull / s.maxHull}%"></i><span>Hull ${Math.ceil(s.hull)}/${s.maxHull}</span></div>
+        <div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>
+        <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span><span>Wind <span class="wind" style="transform:rotate(${env.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? "none (Calm Belt!)" : Math.round(env.windStrength * 100) + "%"}</span></div>
+        <div class="row"><span>Cannons ${s.def.cannons || 0}</span><span>${s.cannonCd > 0 ? "reloading\u2026" : s.def.cannons ? "ready" : ""}</span></div>`;
+        if (this.cache.shipHtml !== html) {
+          this.cache.shipHtml = html;
+          E.ship.innerHTML = html;
+        }
+      }
+      const kn = p.state === "knocked";
+      E.knocked.classList.toggle("hidden", !kn);
+      if (kn && game.knockInfo) {
+        const ki = game.knockInfo();
+        this.set(E.knocked.querySelector(".kt"), "kt", ki.text);
+        E.knocked.querySelector(".timer i").style.width = 100 * ki.frac + "%";
+      }
+    }
+    drawMinimap(game) {
+      const c = this.el.mm;
+      const g = c.getContext("2d");
+      const w = game.world;
+      const p = game.player;
+      const W3 = c.width, H2 = c.height;
+      const scale = p.mode === "sail" ? 2.2 : 1;
+      if (!this.mmImg) this.mmImg = g.createImageData(W3, H2);
+      const img2 = this.mmImg.data;
+      const map = w.map;
+      for (let j = 0; j < H2; j++) {
+        for (let i = 0; i < W3; i++) {
+          const tx = p.x + (i - W3 / 2) * scale, ty = p.y + (j - H2 / 2) * scale;
+          const o = (j * W3 + i) * 4;
+          if (ty < 0 || ty >= w.height || !w.wrap && (tx < 0 || tx >= w.width)) {
+            img2[o] = 30;
+            img2[o + 1] = 40;
+            img2[o + 2] = 50;
+            img2[o + 3] = 255;
+            continue;
+          }
+          const mx = Math.floor(w.wx(tx) / 2) % map.w, my = Math.floor(ty / 2);
+          const k = (my * map.w + mx) * 4;
+          const explored = w.isExplored(tx, ty);
+          const f = explored ? 1 : 0.35;
+          img2[o] = map.data[k] * f;
+          img2[o + 1] = map.data[k + 1] * f;
+          img2[o + 2] = map.data[k + 2] * f;
+          img2[o + 3] = 255;
+        }
+      }
+      g.putImageData(this.mmImg, 0, 0);
+      g.save();
+      g.globalCompositeOperation = "destination-in";
+      g.beginPath();
+      g.arc(W3 / 2, H2 / 2, W3 / 2, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+      for (const s of game.ships) {
+        if (s.sunk) continue;
+        const dx = w.dx(p.x, s.x) / scale + W3 / 2, dy = (s.y - p.y) / scale + H2 / 2;
+        if (Math.hypot(dx - W3 / 2, dy - H2 / 2) > W3 / 2 - 4) continue;
+        g.fillStyle = s.owner === "player" ? "#ffeb3b" : s.faction === "marine" ? "#64b5f6" : "#ef5350";
+        g.beginPath();
+        g.ellipse(dx, dy, Math.max(3, s.def.length / scale / 2), Math.max(3, s.def.beam / scale / 2), s.heading || 0, 0, Math.PI * 2);
+        g.fill();
+      }
+      for (const a of game.actors) {
+        if (a === p || a.state !== "idle" || a.hidden) continue;
+        const hostileNow = a.controller?.target === p || p.observation && a.faction !== "civilian";
+        if (!hostileNow && !a.questMarker) continue;
+        const dx = w.dx(p.x, a.x) / scale + W3 / 2, dy = (a.y - p.y) / scale + H2 / 2;
+        if (Math.hypot(dx - W3 / 2, dy - H2 / 2) > W3 / 2 - 3) continue;
+        g.fillStyle = a.questMarker ? "#ffd54f" : "#ff5252";
+        g.fillRect(dx - 1.5, dy - 1.5, 3, 3);
+      }
+      if (game.view3d?.active) return;
+      g.save();
+      g.translate(W3 / 2, H2 / 2);
+      g.rotate(p.mode === "sail" && p.ship ? p.ship.heading : p.facing);
+      g.fillStyle = "#fff";
+      g.strokeStyle = "#000";
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.moveTo(7, 0);
+      g.lineTo(-5, -5);
+      g.lineTo(-2, 0);
+      g.lineTo(-5, 5);
+      g.closePath();
+      g.fill();
+      g.stroke();
+      g.restore();
+    }
+  };
+  function bar(cls) {
+    const i = h("i"), b = h("b"), span2 = h("span");
+    const el = h("div.bar." + cls, b, i, span2);
+    let last = -1;
+    return {
+      el,
+      set(frac2, text) {
+        frac2 = clamp2(frac2, 0, 1);
+        if (Math.abs(frac2 - last) > 2e-3) {
+          i.style.width = frac2 * 100 + "%";
+          b.style.width = frac2 * 100 + "%";
+          last = frac2;
+        }
+        if (span2.textContent !== text) span2.textContent = text;
+      }
+    };
+  }
+
+  // src/game/session.js
+  var shipCounter = 0;
+  function dockNear(w, x, y) {
+    for (const isl of w.islands || []) {
+      if (Math.abs(w.dx(isl.x, x)) > 400 || Math.abs(isl.y - y) > 400) continue;
+      for (const dk3 of isl.docks || []) if (dk3.moor && w.distance(dk3.moor.x, dk3.moor.y, x, y) < 6) return dk3;
+    }
+    return null;
+  }
+  function installSession(game, { onReturnToTitle }) {
+    const ALIAS4 = { rowboat: "dinghy", boat: "dinghy", brig: "brigantine", sunny: "adam_brig", thousand_sunny: "adam_brig", merry: "caravel", going_merry: "caravel", warship: "marine_warship" };
+    game.giveShip = (type, x, y, name, extra = {}) => {
+      type = ALIAS4[type] || type;
+      const s = game.addShip({ type, x, y, heading: extra.heading ?? Math.PI / 2, owner: "player", faction: "player", name: name || void 0, jr: game.state?.char?.jr, upgrades: extra.upgrades || [], hull: extra.hull, coated: extra.coated });
+      s.uid = extra.uid || `s${Date.now().toString(36)}${shipCounter++}`;
+      if (s.def.big && extra.heading === void 0) {
+        const dock = dockNear(game.world, x, y);
+        if (!(dock && s.berth(game.world, dock)) && !s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
+      } else if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, !!s.def.big);
+      return s;
+    };
+    game.on("lifeLost", ({ cause, lives }) => {
+      setTimeout(() => {
+        game.paused = true;
+        lifeLostScreen(game.ui, {
+          cause,
+          lives,
+          onContinue: () => {
+            game.ui.hideScreen();
+            game.paused = false;
+            game.lives.respawn();
+          }
+        });
+      }, 1400);
+    });
+    game.on("lineageEnded", ({ cause, will }) => {
+      setTimeout(() => {
+        game.paused = true;
+        const legacy = game.state.legacy;
+        lineageEndScreen(game.ui, {
+          char: game.state.char,
+          cause,
+          will,
+          legacy,
+          onNext: () => {
+            saveLegacy(legacy);
+            legacyShopScreen(game.ui, legacy, {
+              save: () => saveLegacy(legacy),
+              onDone: () => {
+                game.ui.hideScreen();
+                onReturnToTitle(true, "create");
+              }
+            });
+          }
+        });
+      }, 1800);
+    });
+    let t = 0;
+    game.on("tick", (dt) => {
+      t += dt;
+      if (game.state?.char) game.state.char.stats.playTime = (game.state.char.stats.playTime || 0) + dt;
+      if (t > 45) {
+        t = 0;
+        persist(game);
+      }
+    });
+    const saveOnLeave = () => {
+      if (game.player && game.player.state !== "knocked") persist(game);
+    };
+    window.addEventListener("beforeunload", saveOnLeave);
+    window.addEventListener("pagehide", saveOnLeave);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) saveOnLeave();
+    });
+    let soon = null;
+    const saveSoon = () => {
+      clearTimeout(soon);
+      soon = setTimeout(() => {
+        if (game.player && game.player.state !== "knocked") persist(game);
+      }, 1200);
+    };
+    for (const ev of ["questDone", "discovered", "bossDefeated", "newDay", "crewJoined", "hakiAwakened", "legend", "fruitEaten", "shipBought", "rankUp"]) game.on(ev, saveSoon);
+  }
+  function resetGame(game) {
+    game.actors = [];
+    game.ships = [];
+    game.areaZones = [];
+    game.combat.hitboxes.length = 0;
+    game.combat.projectiles.length = 0;
+    game.fx.parts.length = 0;
+    game.fx.shapes.length = 0;
+    game.fx.texts.length = 0;
+    game.spawner.populated.clear();
+    game.bossTarget = null;
+    game.currentIsland = null;
+    game.lastIslandName = null;
+    game.lastRegion = void 0;
+    game.hintsShown = /* @__PURE__ */ new Set();
+    game.groundItems = [];
+    if (game.world !== game.surface) game.setWorld(game.surface);
+  }
+  function startNewCharacter(game, birth, choices) {
+    const legacy = loadLegacy();
+    const char = createCharacter(legacy, birth, choices);
+    legacy.heirloom = null;
+    saveLegacy(legacy);
+    const world = game.surface;
+    const spawn = resolveSpawn(world, char);
+    char.spawn = { x: spawn.x, y: spawn.y, name: spawn.name, sea: spawn.sea };
+    char.rest = { ...char.spawn };
+    char.birthplace = spawn.name;
+    resetGame(game);
+    world.fog.fill(0);
+    game.state = { char, legacy };
+    const p = buildPlayer(game, char);
+    p.x = spawn.x;
+    p.y = spawn.y;
+    p.mode = "foot";
+    game.setPlayer(p);
+    game.env.day = 1;
+    game.env.clock = 8.5;
+    for (const id of char.discovered) revealIsland(game, id);
+    const isl = spawn.island;
+    const shipType = legacy.perks?.ship ? "sloop" : "dinghy";
+    let placed = false;
+    if (isl) {
+      const dock = isl.docks[0];
+      if (dock) {
+        game.giveShip(shipType, dock.moor.x, dock.moor.y, shipType === "dinghy" ? "Little Rowboat" : "Sea Sparrow");
+        placed = true;
+      }
+    }
+    if (!placed) {
+      const s = game.giveShip(shipType, spawn.x, spawn.y + 4, "Driftwood Raft");
+      s.unstick(world);
+    }
+    if (isl && isl.id && !char.discovered.includes(isl.id) && isl.name) char.discovered.push(isl.id);
+    char.getUpCharges = 1;
+    game.snapCamera();
+    game.ui.setHudVisible(true);
+    const seaName = REGION_INFO[SEA_IDS[spawn.sea]]?.name || "";
+    setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : "An Uncharted Islet", seaName, `${char.name} begins their journey. The sea is yours to choose.`, 5), 400);
+    setTimeout(() => {
+      if (game.state?.char === char) game.hint("menus", "Your menus are on the right: Inventory, Character, Skills, Journal and Crew (or Tab, C, K, J, U). Esc pauses and saves. Talk to people, pick fruit from the trees, find a boat \u2014 where you go is up to you.");
+    }, 6500);
+    game.emit("characterStart", { char, isNew: true, spawn });
+    persist(game);
+    return p;
+  }
+  function resumeCharacter(game, char) {
+    upgradeChar(char);
+    const legacy = loadLegacy();
+    resetGame(game);
+    const world = game.surface;
+    game.state = { char, legacy };
+    if (char.fogSurface) decodeFog(char.fogSurface, world.fog);
+    else world.fog.fill(0);
+    game.renderer.terrain.updateFog(world.fog);
+    const p = buildPlayer(game, char);
+    const pos = char.pos || char.rest || char.spawn;
+    p.x = pos.x;
+    p.y = pos.y;
+    p.mode = "foot";
+    game.setPlayer(p);
+    game.env.day = char.world?.day || 1;
+    game.env.clock = char.world?.clock ?? 8.5;
+    game.hintsShown = new Set(char.hintsShown || []);
+    let active5 = null;
+    for (const sd of char.ships || []) {
+      if (sd.zone && sd.zone !== "surface") continue;
+      const s = game.giveShip(sd.type, sd.x, sd.y, sd.name, sd);
+      s.hull = sd.hull ?? s.maxHull;
+      if (sd.uid === char.activeShip) active5 = s;
+    }
+    if (pos.zone && pos.zone !== "surface" && game.enterZoneById) {
+      game.enterZoneById(pos.zone, pos, true);
+    } else if (pos.mode === "sail" && active5) {
+      board(game, p, active5);
+    } else if (!game.world.walkable(p.x, p.y - 0.1) && !game.world.swimmable(p.x, p.y - 0.1)) {
+      const r = char.rest || char.spawn;
+      p.x = r.x;
+      p.y = r.y;
+    }
+    refreshPlayer(game);
+    p.hp = p.d.maxHp;
+    game.snapCamera();
+    game.ui.setHudVisible(true);
+    const reg3 = REGION_INFO[regionAt(p.x, p.y)]?.name || "";
+    setTimeout(() => game.ui.banner(char.name, `Generation ${char.generation} \xB7 ${RACES[char.race]?.name}`, `${reg3} \u2014 Day ${game.env.day}`, 4), 300);
+    game.emit("characterStart", { char, isNew: false });
+    return p;
+  }
+  function revealIsland(game, id) {
+    const isl = game.surface.islands.find((i) => i.id === id);
+    if (isl) game.surface.reveal(isl.x, isl.y, isl.radius + 12);
+  }
+
+  // src/game/lives.js
+  var LivesSystem = class {
+    constructor(game) {
+      this.game = game;
+      this.k = null;
+      game.on("knockout", (a, att) => {
+        if (a.isPlayer) this.onKnocked(att);
+      });
+      game.on("playerKnockedTick", (dt) => this.tick(dt));
+      game.knockInfo = () => this.info();
+    }
+    onKnocked(att) {
+      const g = this.game, p = g.player, c = p.char;
+      c.stats.knockdowns = (c.stats.knockdowns || 0) + 1;
+      const threat = att && att.power ? att.power() / Math.max(1, p.power()) : 0;
+      if (c.traits.includes("conqueror") && !c.haki.conqueror && !p.drowned && (threat > 0.65 || att?.boss)) {
+        this.awaken();
+        return;
+      }
+      this.k = { t: 0, max: p.drowned ? 2.5 : 6, mash: 0, need: 9 + Math.floor((c.stats.knockdowns || 0) / 3), killer: att, drowned: p.drowned, cause: describe(att, p) };
+      g.audio?.sfx("knocked");
+      g.fx.impactFrame(0.1);
+      g.hint("knocked", "You've been knocked down! Mash SPACE to get back up before an enemy finishes you. Your second winds refill when you rest at an inn.");
+    }
+    info() {
+      const k = this.k, c = this.game.player.char;
+      if (!k) return { text: "", frac: 0 };
+      if (k.drowned) return { text: this.game.player?.fruit ? "The sea drags you down... a Devil Fruit user cannot swim." : "Your lungs burn... the sea closes over you.", frac: 1 - k.t / k.max };
+      const charges = c.getUpCharges || 0;
+      const txt = charges > 0 ? `Mash SPACE to get up! (${k.mash}/${k.need}) \xB7 Second winds left: ${charges}` : "No strength left to stand...";
+      return { text: txt, frac: 1 - k.t / k.max };
+    }
+    tick(dt) {
+      const k = this.k;
+      if (!k) return;
+      const g = this.game, p = g.player, c = p.char;
+      k.t += dt;
+      if (!k.drowned && (c.getUpCharges || 0) > 0 && g.input.wasPressed("Space")) {
+        k.mash++;
+        g.fx.shake(0.1);
+        if (k.mash >= k.need) {
+          this.getUp();
+          return;
+        }
+      }
+      if (!k.drowned && k.t > 2.2) {
+        const finisher = g.actorsNear(p.x, p.y, 1.8).find((a) => a !== p && a.state === "idle" && engaged(a, p) && a.lethal !== false && !a.def?.duel && !a.spar && !(a.faction === "marine" && c.bounty > 0));
+        if (finisher && k.t > 3.5) {
+          this.resolve(finisher);
+          return;
+        }
+      }
+      if (k.t >= k.max) this.resolve(null);
+    }
+    getUp() {
+      const g = this.game, p = g.player, c = p.char;
+      c.getUpCharges = Math.max(0, (c.getUpCharges || 0) - 1);
+      this.k = null;
+      p.state = "idle";
+      p.hp = Math.round(p.d.maxHp * (0.25 + p.attrs.wil * 4e-3));
+      p.stamina = p.d.maxStamina * 0.6;
+      p.iframes = 1.4;
+      p.hitstun = 0;
+      g.fx.text(p.x, p.y - 2, "I'M NOT DONE YET!", "#ffeb3b", 0.55, { life: 1.6 });
+      g.fx.ring(p.x, p.y, 0.3, 3, "#ffeb3b", 0.5, 0.2);
+      g.fx.shake(0.4);
+      g.audio?.sfx("getup");
+      c.stats.deathsAvoided = (c.stats.deathsAvoided || 0) + 1;
+      g.emit("playerGotUp");
+    }
+    awaken() {
+      const g = this.game, p = g.player, c = p.char;
+      c.haki.conqueror = 5;
+      p.hakiSkill = c.haki;
+      p.state = "idle";
+      p.hp = p.d.maxHp;
+      p.haki = p.d.maxHaki;
+      p.iframes = 2;
+      this.k = null;
+      g.ui.toast("CONQUEROR'S HAKI", "Your will overwhelms everything around you!", "#ff5252");
+      g.fx.impactFrame(0.25);
+      g.fx.flash = 0.4;
+      conquerorBurst(p, g, { range: 12, damage: 20 }, 1);
+      g.log("King's Disposition awakened: press G to release Conqueror's Haki.", "#ff8a80");
+      g.emit("conquerorAwakened");
+      persist(g);
+    }
+    resolve(finisher) {
+      const g = this.game, p = g.player, c = p.char;
+      const k = this.k;
+      this.k = null;
+      if (k.drowned) return this.loseLife(g.player?.fruit ? "Drowned \u2014 the sea swallowed a Devil Fruit user." : "Drowned.");
+      const threats = g.actorsNear(p.x, p.y, 10).filter((a) => a !== p && a.state === "idle" && engaged(a, p));
+      const marine2 = threats.find((a) => a.faction === "marine");
+      if (marine2 && c.bounty > 0) return this.capture(marine2);
+      const killer = finisher || threats.find((a) => a.lethal !== false && !a.def?.duel && !a.spar);
+      if (killer) {
+        if (c.traits.includes("will_of_d") && !c.flags.dLuckUsed) {
+          c.flags.dLuckUsed = true;
+          g.fx.text(p.x, p.y - 2, "...Shishishi.", "#ffffff", 0.5, { life: 2 });
+          g.log("As the blow falls you grin \u2014 and somehow it misses. Fate is not done with the Will of D. (once per life)", "#ffe082");
+          this.k = null;
+          p.state = "idle";
+          p.hp = Math.round(p.d.maxHp * 0.2);
+          p.iframes = 2;
+          return;
+        }
+        g.fx.impactFrame(0.15);
+        return this.loseLife(`Finished off by ${killer.name}${killer.title ? ", " + killer.title : ""}.`);
+      }
+      const duelist = k.killer && (k.killer.def?.duel || k.killer.spar);
+      if (duelist) {
+        g.log(`You lost the bout against ${k.killer.name}. Nothing hurt but your pride.`, "#b0bec5");
+      } else if (threats.length) {
+        const lost = Math.floor(c.berries * 0.35);
+        c.berries -= lost;
+        g.log(`You wake up with a splitting headache. Someone took ${formatBerries(lost)} from your purse.`, "#ff8a80");
+      } else {
+        g.log("You come to after a while. Nobody finished the job.", "#b0bec5");
+      }
+      p.state = "idle";
+      p.hp = Math.round(p.d.maxHp * 0.2);
+      p.iframes = 1.5;
+    }
+    capture(marine2) {
+      const g = this.game, p = g.player, c = p.char;
+      if (g.world.id === "impel_down" && c.flags.imprisoned) {
+        g.ui.fade(true);
+        setTimeout(() => {
+          p.state = "idle";
+          p.hp = Math.round(p.d.maxHp * 0.5);
+          p.iframes = 2;
+          this.placeAtRest();
+          g.ui.fade(false);
+        }, 900);
+        return;
+      }
+      if (c.bounty >= 3e7 && g.sendToImpelDown && g.world === g.surface) {
+        c.bounty = roundBounty(c.bounty * 1.1);
+        g.ui.fade(true);
+        setTimeout(() => {
+          p.state = "idle";
+          p.hp = Math.round(p.d.maxHp * 0.6);
+          p.iframes = 2;
+          g.sendToImpelDown(marine2);
+          g.ui.fade(false);
+        }, 900);
+        return;
+      }
+      const lost = Math.floor(c.berries * 0.5);
+      c.berries -= lost;
+      c.bounty = roundBounty(c.bounty * 1.1);
+      g.ui.fade(true);
+      setTimeout(() => {
+        p.state = "idle";
+        p.hp = Math.round(p.d.maxHp * 0.5);
+        g.env.clock += 20;
+        this.placeAtRest();
+        g.ui.fade(false);
+        g.ui.banner("Captured!", "MARINE BRIG", `${marine2.name} arrested you. You escaped two days later \u2014 minus ${formatBerries(lost)}. Your bounty went up.`, 6);
+        persist(g);
+      }, 900);
+    }
+    loseLife(cause) {
+      const g = this.game, p = g.player, c = p.char;
+      c.lives -= 1;
+      c.getUpCharges = 0;
+      p.state = "knocked";
+      snapshot(g);
+      g.audio?.sfx("death");
+      if (c.lives <= 0) {
+        const will = endLineage(g, cause);
+        g.emit("lineageEnded", { cause, will });
+        return;
+      }
+      persist(g);
+      g.emit("lifeLost", { cause, lives: c.lives });
+    }
+    respawn() {
+      const g = this.game, p = g.player, c = p.char;
+      const lost = Math.floor(c.berries * 0.25);
+      c.berries -= lost;
+      p.state = "idle";
+      p.hp = p.d.maxHp;
+      p.stamina = p.d.maxStamina;
+      p.status = {};
+      p.buffs = [];
+      p.recalc();
+      p.iframes = 3;
+      p.drowned = false;
+      p.sinking = false;
+      p.lowAir = false;
+      p.oxygen = p.maxOxygen;
+      p.getUpCharges = c.getUpCharges = 1 + (p.attrs.wil >= 40 ? 1 : 0);
+      c.flags.dLuckUsed = false;
+      g.env.clock += 10;
+      this.placeAtRest();
+      if (lost) g.log(`You recovered, but ${formatBerries(lost)} went on doctors and debts.`, "#b0bec5");
+      persist(g);
+    }
+    placeAtRest() {
+      const g = this.game, p = g.player, c = p.char;
+      if (g.world.id === "impel_down" && c.flags.imprisoned) {
+        const isl = g.world.islands.find((i) => i.id === "id_level1");
+        const cell = isl?.spots?.cell || { x: isl?.x ?? p.x, y: isl?.y ?? p.y };
+        p.mode = "foot";
+        p.onShip = false;
+        p.x = cell.x;
+        p.y = cell.y;
+        for (const a of g.actorsNear(p.x, p.y, 16)) if (a.controller?.target === p) {
+          a.controller.target = null;
+          a.controller.state = "return";
+        }
+        g.snapCamera();
+        g.log("You wake up back in your cell on Level 1. The guards laugh through the bars.", "#ff8a80");
+        return;
+      }
+      if (g.world !== g.surface) g.leaveZone?.(true);
+      const r = c.rest || c.spawn;
+      if (p.onShip && p.ship) {
+        p.ship.captain = null;
+        p.onShip = false;
+      }
+      p.mode = "foot";
+      p.x = r.x;
+      p.y = r.y;
+      const ships = g.ships.filter((s) => s.owner === "player" && !s.sunk);
+      if (!ships.length) {
+        const isl = g.world.nearestIsland(r.x, r.y, 200);
+        const dock = isl && isl.docks[0];
+        if (dock) {
+          g.giveShip?.("dinghy", dock.moor.x, dock.moor.y, "Borrowed Rowboat");
+          g.log("A kind fisherman lends you his rowboat.", "#b0bec5");
+        }
+      }
+      for (const a of g.actorsNear(p.x, p.y, 12)) if (a.controller?.target === p) {
+        a.controller.target = null;
+        a.controller.state = "return";
+      }
+      g.snapCamera();
+    }
+  };
+  function engaged(a, p) {
+    return hostile(a, p) && (a.aggroPlayer || a.provoked || a.controller?.target === p || a.summonedBy);
+  }
+  function describe(att, p) {
+    if (!att) return p.inWater ? "Lost at sea." : "Collapsed.";
+    return `${att.name}${att.title ? ", " + att.title : ""}`;
+  }
+
+  // src/game/dialogue.js
+  var Dialogue = class {
+    constructor(game) {
+      this.game = game;
+      this.active = null;
+      this.trees = {};
+      game.ui.dialogueKeys = (inp) => this.keys(inp);
+      game.ui.onDialogueEscape = () => this.close();
+    }
+    register(id, tree) {
+      this.trees[id] = tree;
+    }
+    ctx(npc) {
+      const g = this.game;
+      const char = g.state.char;
+      const self2 = this;
+      return {
+        game: g,
+        npc,
+        char,
+        player: g.player,
+        flag: (k) => char.flags[k],
+        setFlag: (k, v = true) => {
+          char.flags[k] = v;
+        },
+        has: (id, n = 1) => count(char, id) >= n,
+        give: (id, n = 1) => addItem(g, id, n),
+        take: (id, n = 1) => removeItem(g, id, n),
+        pay: (n) => {
+          const ok = pay(g, n);
+          if (!ok) g.log("Not enough berries.", "#ff8a80");
+          return ok;
+        },
+        earn: (n, why) => earn(g, n, why),
+        berries: () => char.berries,
+        quest: (id) => g.quests?.state(id),
+        startQuest: (id) => g.quests?.start(id),
+        stage: (id, st) => g.quests?.setStage(id, st),
+        complete: (id) => g.quests?.complete(id),
+        log: (t, c) => g.log(t, c),
+        open: (kind, arg) => {
+          self2.close();
+          g.emit("openService", kind, arg, npc);
+        },
+        goto: (node) => self2.show(node),
+        save: () => persist(g),
+        emit: (...a) => g.emit(...a),
+        progression: g.progression
+      };
+    }
+    open(npc, treeOrId, start3) {
+      let tree = typeof treeOrId === "string" ? this.trees[treeOrId] : treeOrId;
+      if (!tree) return;
+      const ctx = this.ctx(npc);
+      if (typeof tree === "function") tree = tree(ctx);
+      if (!tree) return;
+      if (npc?.def?.recruit && this.game.crew) tree = this.game.crew.decorate(tree, npc);
+      this.active = { npc, tree, ctx, node: null, typing: 0, full: "" };
+      this.game.paused = true;
+      if (npc && this.game.player) {
+        const p = this.game.player;
+        npc.facing = Math.atan2(p.y - npc.y, this.game.world.dx(npc.x, p.x));
+        p.facing = npc.facing + Math.PI;
+      }
+      this.show(start3 || tree.start || "start");
+    }
+    show(id) {
+      const a = this.active;
+      if (!a) return;
+      if (id === null || id === void 0 || id === "end") {
+        this.close();
+        return;
+      }
+      const node = a.tree.nodes[id];
+      if (!node) {
+        this.close();
+        return;
+      }
+      a.node = node;
+      a.nodeId = id;
+      if (node.onEnter) node.onEnter(a.ctx);
+      if (!this.active) return;
+      if (node.redirect) {
+        const r = typeof node.redirect === "function" ? node.redirect(a.ctx) : node.redirect;
+        if (r) {
+          this.show(r);
+          return;
+        }
+      }
+      const text = typeof node.text === "function" ? node.text(a.ctx) : node.text || "";
+      a.full = text;
+      a.typing = 0;
+      const choices = (node.choices || []).filter((c) => !c.if || c.if(a.ctx)).map((c) => ({ ...c, label: typeof c.text === "function" ? c.text(a.ctx) : c.text }));
+      a.choices = choices;
+      this.render();
+    }
+    render() {
+      const a = this.active;
+      const ui = this.game.ui;
+      if (ui.dialogueEl) ui.dialogueEl.remove();
+      const speaker = a.node.speaker ?? (a.npc ? a.npc.name : "");
+      const title2 = a.node.speaker ? "" : a.npc?.title || "";
+      const textEl = h("div.text");
+      const choicesEl = h("div.choices");
+      const el = h("div.dialogue", speaker ? h("div.who", speaker, title2 ? h("small", title2) : null) : null, textEl, choicesEl, h("div.cont", a.choices.length ? "" : "SPACE / click to continue"));
+      el.addEventListener("mousedown", (e) => {
+        if (e.target.tagName !== "BUTTON") this.advance();
+      });
+      ui.dialogueEl = el;
+      ui.root.appendChild(el);
+      a.textEl = textEl;
+      a.choicesEl = choicesEl;
+      this.typeTick();
+    }
+    typeTick() {
+      const a = this.active;
+      if (!a) return;
+      a.typing = Math.min(a.full.length, a.typing + 3);
+      a.textEl.textContent = a.full.slice(0, a.typing);
+      if (a.typing < a.full.length) {
+        a.raf = requestAnimationFrame(() => this.typeTick());
+        return;
+      }
+      this.showChoices();
+    }
+    showChoices() {
+      const a = this.active;
+      clear(a.choicesEl);
+      a.choices.forEach((c, i) => {
+        a.choicesEl.appendChild(h("button", { on: { click: () => this.choose(i) } }, h("span.n", `${i + 1}.`), c.label));
+      });
+    }
+    advance() {
+      const a = this.active;
+      if (!a) return;
+      if (a.typing < a.full.length) {
+        cancelAnimationFrame(a.raf);
+        a.typing = a.full.length;
+        a.textEl.textContent = a.full;
+        this.showChoices();
+        return;
+      }
+      if (a.choices.length) return;
+      const n = a.node.next;
+      const next = typeof n === "function" ? n(a.ctx) : n;
+      if (next) this.show(next);
+      else this.close();
+    }
+    choose(i) {
+      const a = this.active;
+      if (!a) return;
+      const c = a.choices[i];
+      if (!c) return;
+      let next = c.next;
+      if (c.do) {
+        const r = c.do(a.ctx);
+        if (typeof r === "string") next = r;
+      }
+      if (!this.active) return;
+      if (typeof next === "function") next = next(a.ctx);
+      if (c.end || !next) {
+        this.close();
+        return;
+      }
+      this.show(next);
+    }
+    keys(inp) {
+      const a = this.active;
+      if (!a) return;
+      if (inp.wasPressed("Space") || inp.wasPressed("Enter") || inp.wasPressed("E")) {
+        inp.consume("Space");
+        inp.consume("E");
+        this.advance();
+        return;
+      }
+      for (let i = 0; i < 9; i++) if (inp.wasPressed(String(i + 1))) {
+        this.choose(i);
+        return;
+      }
+    }
+    close() {
+      const a = this.active;
+      const ui = this.game.ui;
+      if (a) cancelAnimationFrame(a.raf);
+      this.active = null;
+      if (ui.dialogueEl) {
+        ui.dialogueEl.remove();
+        ui.dialogueEl = null;
+      }
+      if (!ui.stack.length && !ui.screenEl && !ui.mapOpen) this.game.paused = false;
+      if (a?.tree?.onClose) a.tree.onClose(a.ctx);
+    }
+  };
+
+  // src/game/services.js
+  var Services = class {
+    constructor(game) {
+      this.game = game;
+      game.services = this;
+      game.on("knockout", (a, att) => this.onKnockout(a, att));
+    }
+    get char() {
+      return this.game.state.char;
+    }
+    seaMul(island) {
+      const sea = island?.def?.sea || "east_blue";
+      return { east_blue: 1, north_blue: 1.2, west_blue: 1.2, south_blue: 1.2, paradise: 3, calm_belt: 4, new_world: 6, red_line: 5 }[sea] || 1;
+    }
+    // ------------------------------------------------------------- inn
+    innPrice(island) {
+      return Math.round(60 * this.seaMul(island));
+    }
+    rest(island, town) {
+      const g = this.game, c = this.char, p = g.player;
+      const price = this.innPrice(island);
+      if (!pay(g, price)) return false;
+      c.rest = { x: p.x, y: p.y, name: `${town?.name || island?.name || "an inn"}`, islandId: island?.id };
+      p.hp = p.d.maxHp;
+      p.stamina = p.d.maxStamina;
+      p.haki = p.hakiUnlocked() ? p.d.maxHaki : 0;
+      p.status = {};
+      c.getUpCharges = 1 + (p.attrs.wil >= 40 ? 1 : 0) + (p.attrs.wil >= 80 ? 1 : 0);
+      c.flags.dLuckUsed = false;
+      c.trainedToday = 0;
+      const env = g.env;
+      if (env.clock > 6) {
+        env.day += 1;
+      }
+      env.clock = 7;
+      g.ui.fade(true);
+      setTimeout(() => g.ui.fade(false), 700);
+      g.log(`You rest at ${c.rest.name}. This is now where you will wake if you fall. (Second winds restored: ${c.getUpCharges})`, "#a5d6a7");
+      g.emit("rested", island);
+      persist(g);
+      return true;
+    }
+    // ---------------------------------------------------------- doctor
+    healPrice(island) {
+      const p = this.game.player;
+      return Math.round((p.d.maxHp - p.hp) * 0.6 * this.seaMul(island) + 20);
+    }
+    heal(island) {
+      const g = this.game, p = g.player;
+      if (!pay(g, this.healPrice(island))) return false;
+      p.hp = p.d.maxHp;
+      p.status = {};
+      g.log("The doctor patches you up.", "#a5d6a7");
+      return true;
+    }
+    lifePrice(doc) {
+      return doc.lifePrice ?? 4e5;
+    }
+    restoreLife(doc) {
+      const g = this.game, c = this.char;
+      if (c.lives >= c.maxLives) {
+        g.log("Your vivre cards are all whole.", "#b0bec5");
+        return false;
+      }
+      const key2 = "lifeRestored_" + doc.id;
+      if (c.flags[key2]) {
+        g.log(`${doc.name} has already done all they can for you.`, "#b0bec5");
+        return false;
+      }
+      if (!pay(g, this.lifePrice(doc))) return false;
+      c.flags[key2] = true;
+      c.lives += 1;
+      g.ui.toast("A VIVRE CARD MENDS", `${doc.name} brought you back from the brink.`, "#a5d6a7");
+      persist(g);
+      return true;
+    }
+    // -------------------------------------------------------- shipwright
+    shipsFor(island) {
+      const sea = island?.def?.sea || "east_blue", id = island?.id || "";
+      const list = ["dinghy", "sloop", "caravel"];
+      if (sea !== "east_blue") list.push("brigantine");
+      if (sea !== "east_blue" || id === "loguetown") list.push("carrack");
+      if (sea === "paradise" || sea === "new_world") list.push("frigate", "galleon", "war_galleon");
+      if (sea === "new_world" || id === "water_7") list.push("man_o_war");
+      if (sea === "new_world") list.push("great_galleon");
+      return list.sort((a, b) => SHIPS[a].price - SHIPS[b].price);
+    }
+    shipPrice(type, island) {
+      return Math.round(SHIPS[type].price * (1 + (this.seaMul(island) - 1) * 0.3));
+    }
+    buyShip(type, island, dock, name) {
+      const g = this.game;
+      if (!pay(g, this.shipPrice(type, island))) return null;
+      const spot = dock?.moor || this.nearWater();
+      const s = g.giveShip(type, spot.x, spot.y, name || SHIPS[type].name);
+      g.ui.toast("NEW SHIP", `${s.name} (${SHIPS[type].name})`, "#ffe082");
+      g.log(`Your new ${SHIPS[type].name} is moored at the dock. Board it with E.`, "#ffe082");
+      persist(g);
+      return s;
+    }
+    nearWater() {
+      const p = this.game.player;
+      for (let r = 2; r < 30; r += 2) for (let a = 0; a < 6.28; a += 0.4) {
+        const x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r;
+        if (this.game.world.sailable(x, y)) return { x, y };
+      }
+      return { x: p.x, y: p.y + 5 };
+    }
+    repairPrice(ship, island) {
+      return Math.round((ship.maxHull - ship.hull) * 8 * this.seaMul(island));
+    }
+    repair(ship, island) {
+      const g = this.game;
+      if (!pay(g, this.repairPrice(ship, island))) return false;
+      ship.hull = ship.maxHull;
+      g.log(`${ship.name} is as good as new.`, "#a5d6a7");
+      return true;
+    }
+    upgradePrice(id, island) {
+      return Math.round(SHIP_UPGRADES[id].price * (1 + (this.seaMul(island) - 1) * 0.2));
+    }
+    upgrade(ship, id, island) {
+      const g = this.game;
+      if (ship.upgrades.includes(id) && id !== "coating") return false;
+      if (!pay(g, this.upgradePrice(id, island))) return false;
+      if (id === "coating") ship.coated = true;
+      else {
+        ship.upgrades.push(id);
+        const frac2 = ship.hull / ship.maxHull;
+        ship.applyDef();
+        ship.hull = ship.maxHull * frac2;
+      }
+      g.log(`${SHIP_UPGRADES[id].name} fitted to the ${ship.name}.`, "#a5d6a7");
+      persist(g);
+      return true;
+    }
+    // ---------------------------------------------------------- trainers
+    trainer(id) {
+      return TRAINERS[id];
+    }
+    canLearnStyle(tid, style) {
+      const t = TRAINERS[tid], c = this.char;
+      if (c.masteries[style] !== void 0) return { ok: false, why: "Already learned" };
+      if (t.marineOnly && c.faction !== "marine") return { ok: false, why: "Marines only" };
+      for (const [s, m] of Object.entries(t.requires?.mastery || {})) if ((c.masteries[s] || 0) < m) return { ok: false, why: `Needs ${STYLES2[s].name} mastery ${m}` };
+      const st = STYLES2[style];
+      if (st.weapon === "sword" && st.swords > 1) {
+        const swords = (c.inventory || []).filter((i) => i.id && /sword|katana|cutlass|saber|kitetsu|yubashiri|shigure|wado|shusui|enma|yoru/.test(i.id)).length;
+        if (swords < st.swords) return { ok: true, warn: `You will need ${st.swords} swords to use it.` };
+      }
+      return { ok: true };
+    }
+    stylePrice(tid, style) {
+      const base2 = TRAINERS[tid].styles[style];
+      return Math.round(base2 * (this.char.race === "human" ? 0.85 : 1) * (this.char.race === "fishman" && style === "fishman_karate" ? 0.5 : 1));
+    }
+    learnStyle(tid, style) {
+      const g = this.game, c = this.char;
+      const chk = this.canLearnStyle(tid, style);
+      if (!chk.ok) {
+        g.log(chk.why, "#ff8a80");
+        return false;
+      }
+      if (!pay(g, this.stylePrice(tid, style))) return false;
+      c.masteries[style] = 0;
+      g.player.masteries = c.masteries;
+      g.ui.toast("NEW STYLE", STYLES2[style].name, "#90caf9");
+      g.log(`You can switch to ${STYLES2[style].name} in the Skills menu (K).`, "#90caf9");
+      persist(g);
+      return true;
+    }
+    techInfo(id) {
+      const d = getAbility(id);
+      if (!d) return null;
+      const style = d.style;
+      const learn = d.learn || { mastery: 0, price: 0 };
+      return { d, style, learn };
+    }
+    canLearnTech(id) {
+      const c = this.char;
+      const info = this.techInfo(id);
+      if (!info) return { ok: false, why: "?" };
+      if (c.techniques.includes(id)) return { ok: false, why: "Known" };
+      const { d, learn } = info;
+      if (d.hakiType) {
+        if (!c.haki[d.hakiType]) return { ok: false, why: `Needs ${d.hakiType} Haki` };
+        if ((c.haki[d.hakiType] || 0) < (learn.level || 0)) return { ok: false, why: `Needs ${d.hakiType} Haki level ${learn.level}` };
+        return { ok: true };
+      }
+      if (d.style && c.masteries[d.style] === void 0) return { ok: false, why: `Learn ${STYLES2[d.style]?.name} first` };
+      if ((c.masteries[d.style] || 0) < (learn.mastery || 0)) return { ok: false, why: `Needs ${STYLES2[d.style]?.name} mastery ${learn.mastery}` };
+      if (learn.special === "full_moon" && !(this.game.env.fullMoon && this.game.env.isNight)) return { ok: false, why: "Only under a full moon" };
+      return { ok: true };
+    }
+    techPrice(id) {
+      const i = this.techInfo(id);
+      return Math.round((i?.learn?.price ?? 1e3) * (this.char.race === "human" ? 0.85 : 1));
+    }
+    learnTech(id) {
+      const g = this.game, c = this.char;
+      const chk = this.canLearnTech(id);
+      if (!chk.ok) {
+        g.log(chk.why, "#ff8a80");
+        return false;
+      }
+      if (!pay(g, this.techPrice(id))) return false;
+      c.techniques.push(id);
+      const d = getAbility(id);
+      addToHotbar(c, id);
+      refreshPlayer(g);
+      g.ui.toast("TECHNIQUE LEARNED", d.name, "#90caf9");
+      persist(g);
+      return true;
+    }
+    trainPrice(attr) {
+      return Math.round(120 + (this.char.attrs[attr] || 5) * 90);
+    }
+    trainsLeft() {
+      return Math.max(0, 3 - (this.char.trainDay === this.game.env.day ? this.char.trainCount || 0 : 0));
+    }
+    train(tid, attr) {
+      const g = this.game, c = this.char, t = TRAINERS[tid];
+      const cap = t.train[attr] || 0;
+      if ((c.attrs[attr] || 0) >= cap) {
+        g.log(`${t.name} has nothing more to teach you about ${attr.toUpperCase()}. Seek a greater master.`, "#ff8a80");
+        return false;
+      }
+      if (this.trainsLeft() <= 0) {
+        g.log("You are exhausted. Rest and train again tomorrow.", "#ff8a80");
+        return false;
+      }
+      if (!pay(g, this.trainPrice(attr))) return false;
+      if (c.trainDay !== g.env.day) {
+        c.trainDay = g.env.day;
+        c.trainCount = 0;
+      }
+      c.trainCount++;
+      g.progression.raiseAttr(attr, 1);
+      g.env.clock += 2;
+      g.fx.burst(g.player.x, g.player.y - 0.8, 12, { color: "#fff59d", speed: 3, g: 2, life: 0.5, kind: "star" });
+      persist(g);
+      return true;
+    }
+    hakiTrainPrice(type) {
+      return Math.round((2e3 + (this.char.haki[type] || 0) * 1500) * (type === "conqueror" ? 2 : 1));
+    }
+    hakiTrain(tid, type) {
+      const g = this.game, c = this.char, t = TRAINERS[tid];
+      const cap = t.haki?.[type] || 0;
+      if (type === "conqueror" && !c.haki.conqueror) {
+        g.log(`${t.name}: "Conqueror's Haki cannot be taught. Either it lives in you or it doesn't."`, "#ff8a80");
+        return false;
+      }
+      if (!c.haki[type]) {
+        const need = type === "armament" ? 18 : 14;
+        if (c.attrs.wil < need) {
+          g.log(`${t.name}: "Your will isn't ready. Come back when your Willpower is ${need}."`, "#ff8a80");
+          return false;
+        }
+        if (!pay(g, this.hakiTrainPrice(type) * 3)) return false;
+        g.progression.awakenHaki(type, 5, `Trained by ${t.name}`);
+        return true;
+      }
+      if (c.haki[type] >= cap) {
+        g.log(`${t.name} can take your ${type} Haki no further.`, "#ff8a80");
+        return false;
+      }
+      if (this.trainsLeft() <= 0) {
+        g.log("You are exhausted. Rest and train again tomorrow.", "#ff8a80");
+        return false;
+      }
+      if (!pay(g, this.hakiTrainPrice(type))) return false;
+      if (c.trainDay !== g.env.day) {
+        c.trainDay = g.env.day;
+        c.trainCount = 0;
+      }
+      c.trainCount++;
+      g.progression.addHaki(type, 5, cap);
+      g.env.clock += 3;
+      persist(g);
+      return true;
+    }
+    // ------------------------------------------------------------ sparring
+    canSpar(tid) {
+      const c = this.char;
+      const rec = c.trained[tid] || {};
+      if (rec.sparDay === this.game.env.day) return { ok: false, why: "Already sparred today" };
+      if (this.game.sparring) return { ok: false, why: "Already in a spar" };
+      return { ok: true };
+    }
+    startSpar(tid) {
+      const g = this.game, c = this.char, p = g.player, t = TRAINERS[tid];
+      const chk = this.canSpar(tid);
+      if (!chk.ok) {
+        g.log(chk.why, "#ff8a80");
+        return;
+      }
+      c.trained[tid] = { ...c.trained[tid] || {}, sparDay: g.env.day };
+      const sp = t.spar;
+      const L2 = sp.level;
+      const spot = findShore(g.world, p.x + 3, p.y, 5) || { x: p.x + 2, y: p.y };
+      const opp = new Actor({
+        x: spot.x,
+        y: spot.y,
+        name: sp.name,
+        title: `Sparring partner (${t.name})`,
+        look: makeLook(sp.race || "human", L2 * 97 + tid.length, { top: "#eceff1", bottom: "#37474f", hat: sp.weapon === "sword" ? "headband" : null, hatColor: "#c62828", swords: sp.weapon === "sword" ? 1 : 0, weapon: sp.weapon }),
+        faction: "rival",
+        attrs: { str: L2, agi: L2, end: L2, vit: L2, wil: L2 },
+        style: sp.style,
+        lethal: false,
+        weapon: sp.weapon ? { kind: sp.weapon, power: 1.2, count: STYLES2[sp.style]?.swords || 1 } : null,
+        hakiSkill: sp.haki ? { armament: Math.min(80, L2), observation: Math.min(80, L2) } : {}
+      });
+      opp.masteries = { [sp.style]: Math.min(100, L2 * 1.3) };
+      opp.techniques = [...(STYLES2[sp.style]?.techniques || []).slice(0, 3).map((x) => x.id)];
+      opp.controller = new AIController({ kind: "hostile", skill: Math.min(0.85, 0.3 + L2 / 100), aggroRange: 20, moves: opp.techniques, leash: 0, fleeAt: 0 });
+      opp.controller.target = p;
+      opp.provoked = true;
+      opp.spar = tid;
+      opp.showName = true;
+      opp.armament = !!sp.haki && p.hakiUnlocked();
+      opp.game = g;
+      g.addActor(opp);
+      g.sparring = { opp, tid, start: g.time };
+      g.bossTarget = opp;
+      g.ui.banner("SPAR!", t.name, "A duel with no killing. Knock them down to win.", 3);
+      g.audio?.sfx("fanfare");
+    }
+    onKnockout(a) {
+      const g = this.game, s = g.sparring;
+      if (!s) return;
+      if (a === s.opp) this.endSpar(true);
+      else if (a.isPlayer) this.endSpar(false);
+    }
+    endSpar(won) {
+      const g = this.game, s = g.sparring, c = this.char, p = g.player, t = TRAINERS[s.tid];
+      g.sparring = null;
+      g.bossTarget = null;
+      const opp = s.opp;
+      const power = opp.power(), mine = p.power();
+      const ratio = power / Math.max(1, mine);
+      setTimeout(() => {
+        opp.alive = false;
+      }, 1500);
+      const style = p.style;
+      if (won) {
+        const m = Math.max(2, Math.min(12, 6 * ratio));
+        g.progression.addStyleMastery(style, m);
+        if (c.fruit) g.progression.addFruitMastery(m * 0.5);
+        const keys = Object.keys(t.train).filter((k) => (c.attrs[k] || 0) < t.train[k]);
+        if (keys.length) g.progression.raiseAttr(keys[Math.floor(Math.random() * keys.length)], 1);
+        if (ratio > 0.9) g.progression.breakthrough(1, `Beat ${opp.name} in a spar`);
+        if (t.haki) {
+          for (const k of Object.keys(t.haki)) if (c.haki[k]) g.progression.addHaki(k, 2, t.haki[k]);
+        }
+        g.ui.banner("Victory!", t.name, `"${t.lines?.[1] || "Well fought."}"`, 4);
+      } else {
+        g.lives.k = null;
+        p.state = "idle";
+        p.hp = Math.round(p.d.maxHp * 0.35);
+        p.iframes = 1.5;
+        g.progression.addStyleMastery(style, 1.5 * Math.min(2, ratio));
+        g.ui.banner("Defeat", t.name, `"Get up. That's the lesson." (A spar costs no lives.)`, 4);
+      }
+      persist(g);
+    }
+  };
 
   // src/ui/mapUI.js
   var SEA_LABELS = [
