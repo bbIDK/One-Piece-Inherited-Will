@@ -33709,23 +33709,39 @@ void main() {
     const storeyH = 2.75 * g;
     return { g, storeys, storeyH, ceil: storeys > 1 ? storeyH : 3 * g, H: 3 * g + (storeys - 1) * storeyH };
   }
+  var hasShutters = (b) => b.style === "village" || b.style === "town";
+  function windowSlots(b, floor = 0) {
+    const kind = winKind(b);
+    const none = { front: [], left: [], right: [], w: 0, reach: 0 };
+    if (kind === "none" || kind === "hole") return none;
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
+    const d = doorOf(b);
+    const winW = 0.85 * g;
+    const reach = winW / 2 + (hasShutters(b) && (kind === "cross" || kind === "tall") ? 0.1 + winW * 0.45 : 0.14);
+    const pitch = 2 * reach + 0.3 * g;
+    const spread = (len) => {
+      const usable = len - 2 * (0.3 + reach);
+      if (usable < 0) return [];
+      const n = Math.floor(usable / pitch) + 1;
+      return n === 1 ? [0] : Array.from({ length: n }, (_, i) => -usable / 2 + i * usable / (n - 1));
+    };
+    let front = spread(fw);
+    if (floor === 0) front = front.filter((x) => Math.abs(x - d.x) >= d.dw / 2 + 0.2 + reach);
+    const zs = fd < 3 ? [] : fd >= 6.5 ? [-fd * 0.3, -fd * 0.7] : [-fd / 2];
+    const at5 = b.attach || {};
+    return { front, left: at5.left ? [] : zs, right: at5.right ? [] : zs, w: winW, reach };
+  }
   function groundWindows(b) {
     const kind = winKind(b);
     if (kind === "none" || kind === "hole") return [];
-    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
-    const d = doorOf(b);
+    const g = styleScale(b);
     const winW = 0.85 * g, winH = 1.05 * g;
     const h2 = kind === "tall" ? winH * 1.2 : winH;
-    const cols = Math.max(1, Math.floor(fw / (1.7 * g)));
     const y = 1.55 * g;
+    const W3 = windowSlots(b, 0);
     const out = [];
-    for (let i = 0; i < cols + 1; i++) {
-      const x = -fw / 2 + (i + 0.5) * (fw / (cols + 1));
-      if (Math.abs(x - d.x) < d.dw / 2 + winW / 2 + 0.35) continue;
-      if (Math.abs(x) > fw / 2 - winW / 2 - 0.2) continue;
-      out.push({ face: "front", u: x, y, w: winW, h: h2, kind, i: out.length });
-    }
-    if (fd >= 3) for (const face of ["left", "right"]) out.push({ face, u: -fd / 2, y, w: winW, h: h2, kind, i: out.length });
+    for (const x of W3.front) out.push({ face: "front", u: x, y, w: winW, h: h2, kind, i: out.length });
+    for (const face of ["left", "right"]) for (const z of W3[face]) out.push({ face, u: z, y, w: winW, h: h2, kind, i: out.length });
     return out;
   }
   function interiorRect(b) {
@@ -46485,13 +46501,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     B2(k, dw / 2, yb, z0, dw / 2 + t, yb + dh + t, z1, color, { outline: 0.015 });
     B2(k, -dw / 2 - t, yb + dh, z0, dw / 2 + t, yb + dh + t, z1, color, { outline: 0.015 });
   }
+  var DOOR_PAINT = ["#5a3a22", "#2e5e4e", "#1f4e79", "#7b2d26", "#6d4c33", "#3d5a3a", "#4a3b5c", "#8a5a2b"];
   function doorWood(b, S3) {
-    return S3.door === "panel" && (b.style === "marine" || b.role === "marine_base") ? "#1b4f72" : b.style === "noble" ? "#6d3b1f" : "#5a3a22";
+    if (S3.door === "panel" && (b.style === "marine" || b.role === "marine_base")) return "#1b4f72";
+    if ((b.role || "house") === "house" && ["village", "town", "port", "city", "noble", "snow", "spooky"].includes(b.style)) return DOOR_PAINT[Math.floor(hash2(b.x, b.y, 5.3) * DOOR_PAINT.length)];
+    return b.style === "noble" ? "#6d3b1f" : "#5a3a22";
   }
-  function gableRoof(k, S3, b, hw, hd, y, rise, ov, roofCol, wallCol, snowy, g) {
+  function gableRoof(k, S3, b, hw, hd, y, rise, ov, roofCol, wallCol, snowy, g, ex = () => 0.3) {
     const alpha2 = Math.atan2(rise, hd);
-    const ovS = 0.3 * g;
-    const L2 = hw * 2 + ovS * 2;
+    const oL = ex(-1, 0.3 * g), oR = ex(1, 0.3 * g);
+    const L2 = hw * 2 + oL + oR, xc = (oR - oL) / 2;
     const slopeLen = (hd + ov) / Math.cos(alpha2);
     const th = 0.16 * g;
     const zc = -hd;
@@ -46502,6 +46521,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.restore();
     if (S3.wall === "timber") {
       for (const sx of [-1, 1]) {
+        if (!ex(sx, 1)) continue;
         k.save();
         k.translate(sx * (hw + 0.01), y, zc);
         B2(k, -0.03, 0, -hd, 0.03, 0.12, hd, S3.beam);
@@ -46514,21 +46534,26 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.translate(0, y + rise, zc);
       k.rotateX(side * alpha2);
       if (side < 0) k.rotateY(Math.PI);
-      k.add(box(L2, th, slopeLen), { at: [0, 0, slopeLen / 2], color: roofCol, outline: 0.05 });
+      const xs = side < 0 ? -xc : xc;
+      k.add(box(L2, th, slopeLen), { at: [xs, 0, slopeLen / 2], color: roofCol, outline: 0.05 });
       if (!snowy) {
         const rows = Math.max(3, Math.round(slopeLen / (0.42 * g)));
         for (let i = 1; i < rows; i++) {
           const z = i / rows * slopeLen;
-          k.add(box(L2, 0.05 * g, 0.07 * g), { at: [0, th, z], color: shade2(roofCol, -0.22) });
+          k.add(box(L2, 0.05 * g, 0.07 * g), { at: [xs, th, z], color: shade2(roofCol, -0.22) });
         }
       } else {
-        k.add(box(L2 - 0.1, 0.18 * g, slopeLen - 0.05), { at: [0, th, slopeLen / 2 + 0.02], color: "#f4f9ff" });
-        k.add(cyl(0.13 * g, 0.13 * g, L2 - 0.1, 7), { at: [(L2 - 0.1) / 2, th + 0.06, slopeLen], rot: [0, 0, Math.PI / 2], color: "#ffffff" });
+        k.add(box(L2 - 0.1, 0.18 * g, slopeLen - 0.05), { at: [xs, th, slopeLen / 2 + 0.02], color: "#f4f9ff" });
+        k.add(cyl(0.13 * g, 0.13 * g, L2 - 0.1, 7), { at: [xs + (L2 - 0.1) / 2, th + 0.06, slopeLen], rot: [0, 0, Math.PI / 2], color: "#ffffff" });
       }
-      for (const sx of [-1, 1]) k.add(box(0.1 * g, th + 0.08, slopeLen), { at: [sx * (L2 / 2 + 0.03), -0.04, slopeLen / 2], color: shade2(roofCol, -0.4) });
+      for (const sx of [-1, 1]) {
+        const world = side < 0 ? -sx : sx;
+        if (!ex(world, 1)) continue;
+        k.add(box(0.1 * g, th + 0.08, slopeLen), { at: [xs + sx * (L2 / 2 + 0.03), -0.04, slopeLen / 2], color: shade2(roofCol, -0.4) });
+      }
       k.restore();
     }
-    k.add(box(L2 + 0.1, 0.16 * g, 0.26 * g), { at: [0, y + rise + th * 0.5, zc], color: snowy ? "#ffffff" : shade2(roofCol, -0.3), outline: 0.02 });
+    k.add(box(L2 + (oL ? 0.05 : 0) + (oR ? 0.05 : 0), 0.16 * g, 0.26 * g), { at: [xc + ((oR ? 0.05 : 0) - (oL ? 0.05 : 0)) / 2, y + rise + th * 0.5, zc], color: snowy ? "#ffffff" : shade2(roofCol, -0.3), outline: 0.02 });
     return rise + th;
   }
   function curvedRoof(k, cx, cz, y, W3, D3, rise, ov, roofCol, opts = {}) {
@@ -46664,8 +46689,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const hd = fd / 2;
     const winter = S3.snow || ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER;
     const door = { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b))) };
+    const att = b.attach || {};
+    const AL = !!att.left, AR = !!att.right;
+    const ex = (sx, d) => (sx < 0 ? AL : AR) ? 0 : d;
+    const V3 = variant(b, S3, storeys, fw, fd, role);
     if (S3.wall === "hut" || rt === "hut") return finish(b, hut(k, b, S3, fw, fd, H2, wallCol, roofCol), null, H2 + fd);
-    B2(k, -fw / 2 - 0.08, -2, -fd - 0.08, fw / 2 + 0.08, plinth, 0.08, baseCol, { outline: 0.03 });
+    B2(k, -fw / 2 - ex(-1, 0.08), -2, -fd - 0.08, fw / 2 + ex(1, 0.08), plinth, 0.08, V3.baseCol || baseCol, { outline: 0.03 });
     const ruined = rt === "ruin" || S3.wall === "stone";
     if (ruined) {
       ruinWalls(k, b, fw, fd, H2, wallCol);
@@ -46674,41 +46703,48 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.save();
       if (lean) k.rotateZ(lean * ((b.v || 0) % 2 ? 1 : -1));
       let holes = null;
+      const groundCol = V3.groundCol || wallCol;
       if (enter) {
-        const ops = hollowWalls(k, b, { fw, fd, y0: plinth, top: Hc, wallCol });
+        const ops = hollowWalls(k, b, { fw, fd, y0: plinth, top: Hc, wallCol: groundCol });
         if (H2 > Hc + 0.01) B2(k, -fw / 2, Hc, -fd, fw / 2, H2, 0, wallCol, { outline: 0.045 });
         holes = holesOf(ops, doorOf(b), plinth);
+      } else if (V3.groundCol && H2 > Hc + 0.01) {
+        B2(k, -fw / 2, plinth - 0.05, -fd, fw / 2, Hc, 0, groundCol, { outline: 0.045 });
+        B2(k, -fw / 2, Hc, -fd, fw / 2, H2, 0, wallCol, { outline: 0.045 });
       } else B2(k, -fw / 2, plinth - 0.05, -fd, fw / 2, H2, 0, wallCol, { outline: 0.045 });
-      wallDetail(k, b, S3, fw, fd, H2, plinth, storeys, storeyH, wallCol, g, holes);
+      wallDetail(k, b, S3, fw, fd, H2, plinth, storeys, storeyH, wallCol, g, holes, ex);
+      if (V3.jetty) jetty(k, S3, fw, plinth, storeys, storeyH, H2, Hc, V3.jetty, wallCol, ex);
       k.restore();
     }
     const dd = doorAt(k, b, S3, door.x, g, wallCol, big && fw >= 5, enter ? plinth : null);
     const panes = enter ? new Mesher() : null;
     const winW = 0.85 * g, winH = 1.05 * g;
-    const cols = Math.max(1, Math.floor(fw / (1.7 * g)));
     let wi = 0;
     for (let f = 0; f < storeys; f++) {
       const y = plinth + f * storeyH + 1.55 * g;
       const pane = f === 0 ? panes : null;
-      for (let i = 0; i < cols + 1; i++) {
-        const x = -fw / 2 + (i + 0.5) * (fw / (cols + 1));
-        if (f === 0 && Math.abs(x - door.x) < dd.dw / 2 + winW / 2 + 0.35) continue;
-        if (Math.abs(x) > fw / 2 - winW / 2 - 0.2) continue;
-        windowAt(k, b, S3, x, y, winW, winH, 0, lit(b, wi++), wallCol, S3.flowers && f === 0 && (i + (b.v || 0)) % 2 === 0, pane);
-      }
-      if (fd >= 3) {
-        for (const sx of [-1, 1]) {
+      const W3 = windowSlots(b, f);
+      const jz = f > 0 && V3.jetty ? V3.jetty : 0;
+      W3.front.forEach((x, i) => {
+        if (f > 0 && V3.balcony && Math.abs(x - V3.balcony.x) < V3.balcony.w / 2 + 0.3 && f === 1) return;
+        const flowers = (S3.flowers || V3.flowers) && (i + f + (b.v || 0)) % 2 === 0;
+        windowAt(k, b, S3, x, y, winW, winH, jz, lit(b, wi++), wallCol, flowers, pane);
+      });
+      for (const sx of [-1, 1]) {
+        for (const z of W3[sx < 0 ? "left" : "right"]) {
           k.save();
-          k.translate(sx * fw / 2, 0, -fd / 2);
+          k.translate(sx * fw / 2, 0, z);
           k.rotateY(sx * Math.PI / 2);
           windowAt(k, b, S3, 0, y, winW, winH, 0, lit(b, wi++), wallCol, false, pane);
           k.restore();
         }
       }
     }
+    if (V3.balcony) balcony(k, b, S3, V3.balcony, plinth + storeyH, wallCol, lit(b, wi++));
+    if (V3.canopy && !(V3.balcony && Math.abs(V3.balcony.x - door.x) < (V3.balcony.w + dd.dw + 0.9) / 2)) canopy2(k, door, dd, V3.canopy, roofCol);
     let top = H2;
     if (!ruined) {
-      if (rt === "flat") top += flatRoof(k, b, S3, fw, fd, H2, wallCol, roofCol);
+      if (rt === "flat") top += flatRoof(k, b, S3, fw, fd, H2, wallCol, roofCol, ex);
       else if (rt === "dome" || rt === "shell") {
         B2(k, -fw / 2 - 0.15, H2 - 0.05, -fd - 0.15, fw / 2 + 0.15, H2 + 0.18, 0.15, shade2(wallCol, -0.12), { outline: 0.03 });
         const r = Math.min(fw, fd) / 2 * 0.98;
@@ -46733,10 +46769,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       } else if (rt === "pagoda") {
         top += pagodaRoofs(k, b, S3, fw, fd, H2, storeys, storeyH, plinth, wallCol, roofCol);
       } else {
-        const rise = Math.min(3.4 * g, Math.max(1.2, fd * (S3.crooked ? 0.62 : 0.45)));
-        top += gableRoof(k, S3, b, fw / 2, hd, H2, rise, 0.4 * g, roofCol, wallCol, winter, g);
-        if ((b.style === "village" || b.style === "snow" || b.style === "town" || b.style === "giant") && fw >= 4) {
-          const cxh = fw / 2 - 0.9 * g, czh = -hd - hd * 0.35;
+        const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S3.crooked ? 0.62 : 0.45) * V3.pitch));
+        top += gableRoof(k, S3, b, fw / 2, hd, H2, rise, 0.4 * g, roofCol, wallCol, winter, g, ex);
+        if (V3.dormers) dormers(k, b, S3, fw, hd, H2, rise, 0.4 * g, V3.dormers, roofCol, wallCol, winter, lit(b, 30));
+        if ((b.style === "village" || b.style === "snow" || b.style === "town" || b.style === "giant" || b.style === "port" || b.style === "city") && fw >= 4 && V3.chimney) {
+          const cxh = V3.chimney * (fw / 2 - 0.9 * g), czh = -hd - hd * 0.35;
           const yTop = H2 + rise * (1 - 0.35) + 0.9 * g;
           B2(k, cxh - 0.28 * g, H2, czh - 0.28 * g, cxh + 0.28 * g, yTop, czh + 0.28 * g, "#8d6e63", { outline: 0.03 });
           B2(k, cxh - 0.36 * g, yTop, czh - 0.36 * g, cxh + 0.36 * g, yTop + 0.16, czh + 0.36 * g, "#5d4037");
@@ -46749,7 +46786,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       }
     }
-    styleExtras(k, b, S3, fw, fd, H2, door, dd, wallCol, roofCol, winter);
+    styleExtras(k, b, S3, fw, fd, H2, door, dd, wallCol, roofCol, winter, ex);
     const grp = finish(b, k, { door, dd, H: H2, S: S3 }, top);
     if (enter) walkIn(grp, b, S3, { fw, fd, y0: plinth, ceil: Hc - plinth, panes });
     return grp;
@@ -46798,7 +46835,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const role = b.role || "house";
     const icon = ROLE_ICON[role];
     if (info && icon && role !== "marine_base") {
-      const sx = info.door.x + info.dd.dw / 2 + 0.75;
+      let sx = info.door.x + info.dd.dw / 2 + 0.75;
+      if (sx > b.fw / 2 - 0.5) sx = info.door.x - info.dd.dw / 2 - 0.75;
       const sy = Math.min(info.H - 0.6, info.dd.top + 0.55);
       const sign3 = new Mesh(new PlaneGeometry(0.78, 0.78), signMaterial(icon));
       sign3.position.set(sx, sy, 0.62);
@@ -46823,7 +46861,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     grp.userData.height = top;
     return grp;
   }
-  function wallDetail(k, b, S3, fw, fd, H2, plinth, storeys, storeyH, wallCol, g, holes = null) {
+  function wallDetail(k, b, S3, fw, fd, H2, plinth, storeys, storeyH, wallCol, g, holes = null, ex = (sx, d) => d) {
+    const free = (sx) => ex(sx, 1) > 0;
+    const xl = (d) => -fw / 2 - ex(-1, d), xr = (d) => fw / 2 + ex(1, d);
     const beam = S3.beam || shade2(wallCol, -0.5);
     const HF = holes?.front || [], HS = { [-1]: holes?.left || [], [1]: holes?.right || [] };
     const segs = (a0, a1, y0, y1, list) => {
@@ -46853,11 +46893,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const crossesSide = (sx, z, y0, y1, pad = 0.12) => HS[sx].some((o) => z > o.a0 - pad && z < o.a1 + pad && y1 > o.y0 && y0 < o.y1);
     switch (S3.wall) {
       case "timber": {
-        for (const sx of [-1, 1]) for (const sz of [0, -fd]) B2(k, sx * fw / 2 - 0.12, plinth, sz - 0.12, sx * fw / 2 + 0.12, H2, sz + 0.12, beam);
+        for (const sx of [-1, 1]) for (const sz of [0, -fd]) {
+          const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * ex(sx, 0.12);
+          B2(k, Math.min(inner, outer), plinth, sz - 0.12, Math.max(inner, outer), H2, sz + 0.12, beam);
+        }
         for (let f = 0; f <= storeys; f++) {
           const y = f === storeys ? H2 - 0.2 : plinth + f * storeyH;
-          FB(-fw / 2 - 0.02, y, -0.02, fw / 2 + 0.02, y + 0.2, 0.07, beam);
-          for (const sx of [-1, 1]) SB2(sx, sx * fw / 2 - 0.07, y, -fd, sx * fw / 2 + 0.02 * sx, y + 0.2, 0, beam);
+          FB(xl(0.02), y, -0.02, xr(0.02), y + 0.2, 0.07, beam);
+          for (const sx of [-1, 1]) if (free(sx)) SB2(sx, sx * fw / 2 - 0.07, y, -fd, sx * fw / 2 + 0.02 * sx, y + 0.2, 0, beam);
         }
         if (fw >= 4) {
           for (const sx of [-1, 1]) {
@@ -46875,8 +46918,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         for (let i = 0; i < n; i++) {
           const y = plinth + i * 0.34 + 0.17;
           const c = i % 2 ? shade2(wallCol, -0.1) : wallCol;
-          for (const [p, q2] of segs(-fw / 2 - 0.25, fw / 2 + 0.25, y - 0.16, y + 0.16, HF)) k.add(cyl(0.16, 0.16, q2 - p, 6, true), { at: [q2, y, 0.02], rot: [0, 0, Math.PI / 2], color: c });
+          for (const [p, q2] of segs(xl(0.25), xr(0.25), y - 0.16, y + 0.16, HF)) k.add(cyl(0.16, 0.16, q2 - p, 6, true), { at: [q2, y, 0.02], rot: [0, 0, Math.PI / 2], color: c });
           for (const sx of [-1, 1]) {
+            if (!free(sx)) continue;
             for (const [p, q2] of segs(-fd - 0.25, 0.25, y - 0.16, y + 0.16, HS[sx])) k.add(cyl(0.16, 0.16, q2 - p, 6, true), { at: [sx * (fw / 2 + 0.02), y, q2], rot: [-Math.PI / 2, 0, 0], color: c });
           }
         }
@@ -46885,25 +46929,29 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       case "brick": {
         const mortar = shade2(wallCol, -0.25);
         for (let y = plinth + 0.42; y < H2 - 0.1; y += 0.42) {
-          FB(-fw / 2 - 0.01, y, -0.01, fw / 2 + 0.01, y + 0.025, 0.012, mortar);
-          for (const sx of [-1, 1]) SB2(sx, sx * (fw / 2 + 6e-3) - 6e-3, y, -fd, sx * (fw / 2 + 6e-3) + 6e-3, y + 0.025, 0, mortar);
+          FB(xl(0.01), y, -0.01, xr(0.01), y + 0.025, 0.012, mortar);
+          for (const sx of [-1, 1]) if (free(sx)) SB2(sx, sx * (fw / 2 + 6e-3) - 6e-3, y, -fd, sx * (fw / 2 + 6e-3) + 6e-3, y + 0.025, 0, mortar);
         }
-        for (let f = 1; f < storeys; f++) FB(-fw / 2 - 0.06, plinth + f * storeyH - 0.2, -0.06, fw / 2 + 0.06, plinth + f * storeyH, 0.1, S3.trim || shade2(wallCol, 0.3));
-        for (const sx of [-1, 1]) B2(k, sx * fw / 2 - 0.16, plinth, -0.06, sx * fw / 2 + 0.16, H2, 0.08, shade2(wallCol, -0.12));
+        for (let f = 1; f < storeys; f++) FB(xl(0.06), plinth + f * storeyH - 0.2, -0.06, xr(0.06), plinth + f * storeyH, 0.1, S3.trim || shade2(wallCol, 0.3));
+        for (const sx of [-1, 1]) {
+          const inner = sx * fw / 2 - sx * 0.16, outer = sx * fw / 2 + sx * ex(sx, 0.16);
+          B2(k, Math.min(inner, outer), plinth, -0.06, Math.max(inner, outer), H2, 0.08, shade2(wallCol, -0.12));
+        }
         break;
       }
       case "plaster": {
         const qc = S3.trim || shade2(wallCol, -0.2);
         if (S3.quoins || b.style === "marine" || b.style === "noble") {
           for (const sx of [-1, 1]) {
+            if (!free(sx)) continue;
             for (let y = plinth, i = 0; y < H2 - 0.3; y += 0.45, i++) {
               const w = i % 2 ? 0.35 : 0.55;
               B2(k, sx * fw / 2 - (sx > 0 ? w : 0.05), y, -0.05, sx * fw / 2 + (sx > 0 ? 0.05 : w), y + 0.38, 0.05, shade2(wallCol, -0.14));
             }
           }
         }
-        for (let f = 1; f < storeys; f++) FB(-fw / 2 - 0.05, plinth + f * storeyH - 0.15, -0.05, fw / 2 + 0.05, plinth + f * storeyH, 0.08, qc);
-        if (S3.band) FB(-fw / 2 - 0.04, H2 - 0.7, -0.04, fw / 2 + 0.04, H2 - 0.2, 0.08, qc);
+        for (let f = 1; f < storeys; f++) FB(xl(0.05), plinth + f * storeyH - 0.15, -0.05, xr(0.05), plinth + f * storeyH, 0.08, qc);
+        if (S3.band) FB(xl(0.04), H2 - 0.7, -0.04, xr(0.04), H2 - 0.2, 0.08, qc);
         break;
       }
       case "post": {
@@ -46914,14 +46962,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           B2(k, x - 0.08, plinth, -0.02, x + 0.08, H2, 0.08, S3.beam);
         }
         for (const sx of [-1, 1]) for (let i = 0; i <= 2; i++) {
-          if (crossesSide(sx, -i * fd / 2, plinth, H2, 0.1)) continue;
+          if (!free(sx) || crossesSide(sx, -i * fd / 2, plinth, H2, 0.1)) continue;
           B2(k, sx * fw / 2 - 0.08, plinth, -i * fd / 2 - 0.08, sx * fw / 2 + 0.08, H2, -i * fd / 2 + 0.08, S3.beam);
         }
         for (let f = 0; f < storeys; f++) {
           const y = plinth + f * storeyH + storeyH * 0.45;
-          FB(-fw / 2 - 0.02, y, -0.02, fw / 2 + 0.02, y + 0.14, 0.1, S3.beam);
+          FB(xl(0.02), y, -0.02, xr(0.02), y + 0.14, 0.1, S3.beam);
         }
-        B2(k, -fw / 2 - 0.02, H2 - 0.25, -0.02, fw / 2 + 0.02, H2, 0.1, S3.beam);
+        B2(k, xl(0.02), H2 - 0.25, -0.02, xr(0.02), H2, 0.1, S3.beam);
         break;
       }
       case "column": {
@@ -46931,22 +46979,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           if (holes && crosses(x, plinth, plinth + 1.9, 0.3) && HF[0] && x > HF[0].a0 - 0.3 && x < HF[0].a1 + 0.3) continue;
           k.add(cyl(0.14, 0.16, H2 - plinth, 8), { at: [x, plinth, 0.25], color: "#b03a2e", outline: 0.02 });
         }
-        B2(k, -fw / 2 - 0.1, H2 - 0.45, 0.05, fw / 2 + 0.1, H2 - 0.1, 0.42, "#b03a2e");
-        B2(k, -fw / 2 - 0.1, H2 - 0.55, 0.1, fw / 2 + 0.1, H2 - 0.45, 0.4, "#d4ac0d");
+        B2(k, xl(0.1), H2 - 0.45, 0.05, xr(0.1), H2 - 0.1, 0.42, "#b03a2e");
+        B2(k, xl(0.1), H2 - 0.55, 0.1, xr(0.1), H2 - 0.45, 0.4, "#d4ac0d");
         break;
       }
       case "adobe": {
         if (S3.vigas) for (let x = -fw / 2 + 0.5; x < fw / 2 - 0.3; x += 0.9) k.add(cyl(0.08, 0.08, 0.45, 5), { at: [x, H2 - 0.45, -0.02], rot: [Math.PI / 2, 0, 0], color: "#6d4c33" });
-        FB(-fw / 2 - 0.05, plinth, -0.05, fw / 2 + 0.05, plinth + 0.25, 0.06, shade2(wallCol, -0.1));
+        FB(xl(0.05), plinth, -0.05, xr(0.05), plinth + 0.25, 0.06, shade2(wallCol, -0.1));
         break;
       }
       case "smooth": {
-        if (S3.strips) for (let f = 0; f < storeys; f++) FB(-fw / 2 - 0.02, plinth + f * storeyH + 0.4, -0.02, fw / 2 + 0.02, plinth + f * storeyH + 0.5, 0.05, S3.trim, { glow: "#4ff5e0" });
+        if (S3.strips) for (let f = 0; f < storeys; f++) FB(xl(0.02), plinth + f * storeyH + 0.4, -0.02, xr(0.02), plinth + f * storeyH + 0.5, 0.05, S3.trim, { glow: "#4ff5e0" });
         break;
       }
     }
     if (S3.cornice) {
-      B2(k, -fw / 2 - 0.18, H2 - 0.3, -fd - 0.18, fw / 2 + 0.18, H2 - 0.1, 0.18, S3.trim || shade2(wallCol, 0.25), { outline: 0.02 });
+      B2(k, xl(0.18), H2 - 0.3, -fd - 0.18, xr(0.18), H2 - 0.1, 0.18, S3.trim || shade2(wallCol, 0.25), { outline: 0.02 });
     }
   }
   function holesOf(ops, d, y0) {
@@ -46980,16 +47028,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.add(g, { at: [(R3(i + 20) - 0.5) * fw, 0.1, -R3(i + 30) * fd], flat: true, color: shade2(stone, -0.1), outline: 0.02 });
     }
   }
-  function flatRoof(k, b, S3, fw, fd, H2, wallCol, roofCol) {
+  function flatRoof(k, b, S3, fw, fd, H2, wallCol, roofCol, ex = (sx, d) => d) {
     const hd = fd / 2;
-    B2(k, -fw / 2 - 0.12, H2 - 0.05, -fd - 0.12, fw / 2 + 0.12, H2 + 0.15, 0.12, roofCol, { outline: 0.03 });
+    const xl = -fw / 2 - ex(-1, 0.12), xr = fw / 2 + ex(1, 0.12);
+    B2(k, xl, H2 - 0.05, -fd - 0.12, xr, H2 + 0.15, 0.12, roofCol, { outline: 0.03 });
     const pc = b.style === "marine" ? "#f5f6fa" : shade2(wallCol, -0.06);
     const ph = 0.45;
-    B2(k, -fw / 2 - 0.12, H2 + 0.15, -0.1, fw / 2 + 0.12, H2 + ph, 0.12, pc);
-    B2(k, -fw / 2 - 0.12, H2 + 0.15, -fd - 0.12, fw / 2 + 0.12, H2 + ph, -fd + 0.1, pc);
-    for (const sx of [-1, 1]) B2(k, sx * fw / 2 - 0.12, H2 + 0.15, -fd, sx * fw / 2 + 0.12, H2 + ph, 0, pc);
+    B2(k, xl, H2 + 0.15, -0.1, xr, H2 + ph, 0.12, pc);
+    B2(k, xl, H2 + 0.15, -fd - 0.12, xr, H2 + ph, -fd + 0.1, pc);
+    for (const sx of [-1, 1]) if (ex(sx, 1)) B2(k, sx * fw / 2 - 0.12, H2 + 0.15, -fd, sx * fw / 2 + 0.12, H2 + ph, 0, pc);
     if (b.style === "desert") {
-      for (let x = -fw / 2 + 0.3; x < fw / 2; x += 0.8) k.add(new SphereGeometry(0.16, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2), { at: [x, H2 + ph, 0.01], color: pc });
+      for (let x = -fw / 2 + 0.3; x < fw / 2 - 0.15; x += 0.8) k.add(new SphereGeometry(0.16, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2), { at: [x, H2 + ph, 0.01], color: pc });
       if (fw >= 4 && fd >= 3) {
         const r = Math.min(fw, fd) * 0.32;
         B2(k, -r - 0.1, H2 + 0.15, -hd - r - 0.1, r + 0.1, H2 + 0.55, -hd + r + 0.1, shade2(wallCol, 0.05));
@@ -47063,8 +47112,87 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(new SphereGeometry(0.16, 6, 4), { at: [dw / 2 + 0.5, 1.7, 0.35], color: b.style === "mink" ? "#ffcc80" : "#e67e22", glow: "#ffb74d", flicker: 0.3 });
     return k;
   }
-  function styleExtras(k, b, S3, fw, fd, H2, door, dd, wallCol, roofCol, winter) {
+  function variant(b, S3, storeys, fw, fd, role) {
+    const R3 = (i) => hash2(b.x, b.y, i + 0.71);
+    const house = role === "house";
+    const V3 = { pitch: 0.82 + R3(1) * 0.4, chimney: R3(2) < 0.8 ? R3(3) < 0.5 ? -1 : 1 : 0 };
+    if (house && storeys >= 2 && (S3.wall === "timber" || S3.wall === "log") && R3(4) < 0.55) V3.jetty = 0.32;
+    if (house && storeys >= 2 && ["plaster", "brick", "adobe", "smooth"].includes(S3.wall) && fw >= 4.5 && R3(5) < 0.45) {
+      const w = Math.min(fw - 1.4, 1.5 + R3(6) * 1.2);
+      V3.balcony = { x: (R3(7) - 0.5) * Math.max(0, fw - w - 1.4), w, d: 0.72 };
+    }
+    if (house && R3(8) < 0.55 && S3.door !== "noren" && S3.door !== "arch" && S3.wall !== "hut") V3.canopy = { d: 0.62 + R3(9) * 0.25, kind: R3(10) < 0.5 ? "gable" : "lean" };
+    if (fw >= 5 && fd >= 4 && R3(11) < 0.4) V3.dormers = fw >= 7.5 ? 2 : 1;
+    if (R3(12) < 0.3) V3.flowers = true;
+    if (storeys >= 2 && (S3.wall === "timber" || S3.wall === "plaster") && R3(13) < 0.35) V3.groundCol = R3(14) < 0.5 ? "#b3aa9c" : "#a0634a";
+    return V3;
+  }
+  function jetty(k, S3, fw, plinth, storeys, storeyH, H2, Hc, j, wallCol, ex) {
+    const beam = S3.beam || shade2(wallCol, -0.5);
+    B2(k, -fw / 2, Hc, 0, fw / 2, H2, j, wallCol, { outline: 0.04 });
+    B2(k, -fw / 2 - ex(-1, 0.03), Hc - 0.2, -0.02, fw / 2 + ex(1, 0.03), Hc + 0.04, j + 0.07, beam);
+    for (let x = -fw / 2 + 0.35; x < fw / 2 - 0.2; x += 1.15) k.add(box(0.1, 0.5, 0.1), { at: [x, Hc - 0.62, 0.06], rot: [0.55, 0, 0], color: beam });
+    for (const sx of [-1, 1]) {
+      const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * ex(sx, 0.02);
+      B2(k, Math.min(inner, outer), Hc, j - 0.1, Math.max(inner, outer), H2, j + 0.04, beam);
+    }
+    for (let f = 1; f <= storeys; f++) {
+      const y = f === storeys ? H2 - 0.2 : plinth + f * storeyH;
+      if (y <= Hc + 0.05) continue;
+      B2(k, -fw / 2, y, j - 0.02, fw / 2, y + 0.18, j + 0.05, beam);
+    }
+  }
+  function balcony(k, b, S3, V3, y, wallCol, litOn) {
+    const { x, w, d } = V3;
+    const rail2 = S3.wall === "adobe" ? "#6d4c33" : S3.wall === "brick" ? "#2d3436" : shade2(wallCol, -0.55);
+    B2(k, x - w / 2, y - 0.12, 0, x + w / 2, y + 0.03, d, shade2(wallCol, -0.18), { outline: 0.02 });
+    for (const sx of [-1, 1]) k.add(box(0.09, 0.5, 0.09), { at: [x + sx * (w / 2 - 0.18), y - 0.6, 0.05], rot: [0.6, 0, 0], color: shade2(wallCol, -0.3) });
+    const rh = 0.9;
+    B2(k, x - w / 2, y + rh - 0.05, d - 0.07, x + w / 2, y + rh, d, rail2);
+    for (const sx of [-1, 1]) B2(k, x + sx * w / 2 - (sx > 0 ? 0.05 : 0), y + rh - 0.05, 0.02, x + sx * w / 2 + (sx > 0 ? 0 : 0.05), y + rh, d, rail2);
+    for (let px2 = x - w / 2 + 0.06; px2 <= x + w / 2 - 0.02; px2 += 0.16) B2(k, px2 - 0.015, y + 0.03, d - 0.05, px2 + 0.015, y + rh - 0.05, d - 0.02, rail2);
+    for (const sx of [-1, 1]) for (let pz2 = 0.12; pz2 < d - 0.05; pz2 += 0.16) B2(k, x + sx * (w / 2 - 0.025) - 0.015, y + 0.03, pz2 - 0.015, x + sx * (w / 2 - 0.025) + 0.015, y + rh - 0.05, pz2 + 0.015, rail2);
+    const ww = Math.min(1.1, w - 0.5), wh = 1.95;
+    const frame2 = S3.wall === "brick" || S3.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
+    B2(k, x - ww / 2 - 0.08, y + 0.03, -0.02, x + ww / 2 + 0.08, y + wh + 0.08, 0.05, frame2);
+    B2(k, x - ww / 2, y + 0.06, 0, x + ww / 2, y + wh, 0.06, "#2d4150", { glow: litOn ? WARM : null });
+    B2(k, x - 0.02, y + 0.06, 0.05, x + 0.02, y + wh, 0.08, frame2);
+  }
+  function canopy2(k, door, dd, C3, roofCol) {
+    const w = dd.dw + 0.75, y = dd.top + 0.22, d = C3.d;
+    const col = shade2(roofCol, 0.04), wood = "#5a3a22";
+    if (C3.kind === "lean") {
+      k.save();
+      k.translate(door.x, y, 0);
+      k.rotateX(0.3);
+      k.add(box(w, 0.07, d), { at: [0, 0, d / 2], color: col, outline: 0.02 });
+      k.restore();
+    } else {
+      k.save();
+      k.translate(door.x, y, d / 2);
+      k.add(slab([[-w / 2, 0], [w / 2, 0], [0, 0.34]], d), { color: col, outline: 0.02 });
+      k.restore();
+      B2(k, door.x - w / 2, y - 0.05, 0, door.x + w / 2, y, d, wood);
+    }
+    for (const sx of [-1, 1]) k.add(box(0.07, 0.42, 0.07), { at: [door.x + sx * (w / 2 - 0.12), y - 0.46, 0.04], rot: [0.75, 0, 0], color: wood });
+  }
+  function dormers(k, b, S3, fw, hd, H2, rise, ov, n, roofCol, wallCol, snowy, litOn) {
+    const t = 0.3;
+    const zf = -hd * t, yb = H2 + rise * t - 0.12, dw = 1, dh = 0.92, dep = Math.min(1.35, hd * 0.9), rr = 0.4;
+    if (rise * (1 - t) < dh + rr - 0.12 + 0.15) return;
+    for (let i = 0; i < n; i++) {
+      const x = n === 1 ? 0 : (i ? 1 : -1) * fw * 0.24;
+      B2(k, x - dw / 2, yb, zf - dep, x + dw / 2, yb + dh, zf, wallCol, { outline: 0.03 });
+      windowAt(k, b, { ...S3, shutters: false }, x, yb + dh * 0.54, 0.52, 0.55, zf, litOn && i === 0, wallCol, false);
+      k.save();
+      k.translate(x, yb + dh, zf - dep / 2 + 0.12);
+      k.add(slab([[-dw / 2 - 0.14, 0], [dw / 2 + 0.14, 0], [0, rr]], dep + 0.25), { color: snowy ? "#f4f9ff" : roofCol, outline: 0.03 });
+      k.restore();
+    }
+  }
+  function styleExtras(k, b, S3, fw, fd, H2, door, dd, wallCol, roofCol, winter, ex = (sx, d) => d) {
     const role = b.role || "house";
+    const clearOfDoor = (x0, x1) => x1 < door.x - dd.dw / 2 - 0.25 || x0 > door.x + dd.dw / 2 + 0.25;
     if (["shop", "market", "restaurant", "cafe", "weapons", "bar", "tavern", "inn"].includes(role) && S3.door !== "noren" && fw >= 3.5) {
       const cols = ["#e74c3c", "#3498db", "#27ae60", "#f39c12", "#9b59b6", "#16a085"];
       const c = cols[(b.v || 0) % cols.length];
@@ -47077,7 +47205,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       for (let i = 0; i < n; i++) k.add(new CircleGeometry(aw / n / 2, 8, Math.PI, Math.PI), { at: [door.x - aw / 2 + (i + 0.5) * aw / n, ay - 0.4, 0.92], rot: [-0.42, 0, 0], color: i % 2 ? "#ffffff" : c, double: true, backShade: 0.85 });
     }
     if (S3.engawa) {
-      B2(k, -fw / 2 - 0.1, -0.5, 0, fw / 2 + 0.1, 0.42, 0.9, "#8d6e4a", { outline: 0.02 });
+      B2(k, -fw / 2 - ex(-1, 0.1), -0.5, 0, fw / 2 + ex(1, 0.1), 0.42, 0.9, "#8d6e4a", { outline: 0.02 });
       for (let x = -fw / 2 + 0.2; x < fw / 2; x += 0.3) B2(k, x, 0.42, 0.02, x + 0.02, 0.425, 0.88, "#6d4c33");
       if (Math.abs(door.x) < fw) B2(k, door.x - 0.6, -0.3, 0.85, door.x + 0.6, 0.22, 1.3, "#9a948a");
     }
@@ -47091,7 +47219,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         B2(k, x - 0.13, dd.top - 0.08, 0.33, x + 0.13, dd.top - 0.04, 0.57, "#2d3436");
       }
     }
-    if (S3.portico && fw >= 5) {
+    if (S3.portico && fw >= 6 && role !== "house" && Math.abs(door.x) + (dd.dw + 1.8) / 2 + 0.5 < fw / 2) {
       const px2 = door.x, pw = dd.dw + 1.8;
       for (const sx of [-1, 1]) {
         k.add(cyl(0.17, 0.2, dd.top + 0.9, 10), { at: [px2 + sx * pw / 2, 0.3, 1.1], color: "#fdfefe", outline: 0.02 });
@@ -47106,15 +47234,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.restore();
     }
     if (b.role === "marine_base" || b.style === "marine" && fw >= 6) {
-      B2(k, -fw / 2 - 0.05, H2 - 1.15, 0, fw / 2 + 0.05, H2 - 0.35, 0.12, "#f5f6fa", { outline: 0.02 });
-      B2(k, -fw / 2 - 0.06, H2 - 1.2, 0, fw / 2 + 0.06, H2 - 1.1, 0.13, "#1b4f72");
-      B2(k, -fw / 2 - 0.06, H2 - 0.4, 0, fw / 2 + 0.06, H2 - 0.3, 0.13, "#1b4f72");
+      B2(k, -fw / 2 - ex(-1, 0.05), H2 - 1.15, 0, fw / 2 + ex(1, 0.05), H2 - 0.35, 0.12, "#f5f6fa", { outline: 0.02 });
+      B2(k, -fw / 2 - ex(-1, 0.06), H2 - 1.2, 0, fw / 2 + ex(1, 0.06), H2 - 1.1, 0.13, "#1b4f72");
+      B2(k, -fw / 2 - ex(-1, 0.06), H2 - 0.4, 0, fw / 2 + ex(1, 0.06), H2 - 0.3, 0.13, "#1b4f72");
     }
     if (b.style === "spooky") {
-      B2(k, -fw / 2 + 0.3, 1.4, 0.06, -fw / 2 + 1.4, 1.52, 0.1, "#5d4037", { rot: [0, 0, 0.3] });
+      if (clearOfDoor(-fw / 2 + 0.3, -fw / 2 + 1.4)) B2(k, -fw / 2 + 0.3, 1.4, 0.06, -fw / 2 + 1.4, 1.52, 0.1, "#5d4037", { rot: [0, 0, 0.3] });
     }
     if (b.style === "port" && role === "house" && fw >= 4) {
-      B2(k, fw / 2 - 1.1, 0, 0.1, fw / 2 - 0.3, 0.8, 0.9, "#b08850", { outline: 0.02 });
+      const sx = door.x > 0 ? -1 : 1;
+      const x0 = sx > 0 ? fw / 2 - 1.1 : -fw / 2 + 0.3, x1 = x0 + 0.8;
+      if (clearOfDoor(x0, x1)) B2(k, x0, 0, 0.1, x1, 0.8, 0.9, "#b08850", { outline: 0.02 });
     }
     if (b.pirate) {
       const x = door.x, y = dd.top + 0.14;
@@ -47125,7 +47255,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       for (const sx of [-1, 1]) B2(k, x + sx * 0.045 - 0.025, y + 0.32, 0.115, x + sx * 0.045 + 0.025, y + 0.37, 0.12, "#141414");
     }
     if (winter && b.style !== "snow") {
-      for (const sx of [-1, 1]) k.add(new SphereGeometry(0.5, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), { at: [sx * (fw / 2 - 0.2), -0.1, 0.1], scale: [1.4, 0.6, 1], color: "#ffffff" });
+      for (const sx of [-1, 1]) if (ex(sx, 1) && clearOfDoor(sx * (fw / 2 - 0.2) - 0.7, sx * (fw / 2 - 0.2) + 0.7)) k.add(new SphereGeometry(0.5, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), { at: [sx * (fw / 2 - 0.2), -0.1, 0.1], scale: [1.4, 0.6, 1], color: "#ffffff" });
     }
   }
 
@@ -47486,10 +47616,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // taller crown
     1: { trunkH: 2.8, c: [0, 4, 0], blobs: [[0, 4.1, 0, 1.1], [0.72, 3.6, 0.35, 0.86, 0.92], [-0.7, 3.65, -0.2, 0.9, 0.88], [0.05, 3.55, -0.78, 0.8, 0.86], [0, 4.85, 0.05, 0.78, 1.04]] }
   };
-  function broadleaf(sub, variant) {
-    return cached(`tree:broad:${sub}:${variant}`, () => {
+  function broadleaf(sub, variant2) {
+    return cached(`tree:broad:${sub}:${variant2}`, () => {
       const k = new Mesher();
-      const S3 = BROAD[variant];
+      const S3 = BROAD[variant2];
       const tc = TRUNK[sub] || TRUNK.oak;
       const H2 = S3.trunkH;
       k.add(cyl(0.2, 0.36, 0.45, 7, true), { color: trunkColor(tc, 3), outline: 0.03 });
@@ -47506,8 +47636,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     });
   }
   var WIDE = { trunkH: 1.5, c: [0.25, 3.05, 0], squash: 0.78, blobs: [[0.25, 3.2, 0, 1.2], [1.3, 2.95, 0.4, 0.92, 0.94], [-0.8, 3, -0.3, 0.95, 0.9], [0.45, 2.9, -1.05, 0.86, 0.88], [0.05, 2.95, 1.05, 0.9, 0.96], [0.4, 3.75, 0.1, 0.7, 1.05]] };
-  function blossomTree(sub, variant) {
-    return cached(`tree:wide:${sub}:${variant}`, () => {
+  function blossomTree(sub, variant2) {
+    return cached(`tree:wide:${sub}:${variant2}`, () => {
       const k = new Mesher();
       const tc = TRUNK[sub];
       const tcol = trunkColor(tc, 2.5);
@@ -47517,7 +47647,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       limb(k, [0.3, 1.5, 0.05], [1.2, 2.4, 0.3], 0.1, 0.05, 5, { color: tc });
       limb(k, [0.2, 2.1, 0], [-0.7, 2.7, -0.3], 0.08, 0.04, 5, { color: tc });
       crown(k, WIDE.blobs, WIDE.c, { squash: WIDE.squash, outline: 0.045 });
-      const R3 = rng2(7 + variant);
+      const R3 = rng2(7 + variant2);
       for (let i = 0; i < 12; i++) {
         const a = R3() * Math.PI * 2, e = (R3() - 0.3) * 0.9;
         const p = crownPoint(WIDE.blobs, WIDE.c, [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], 0.97, WIDE.squash);
@@ -47527,20 +47657,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     });
   }
   var JUNGLE = { c: [0, 5, 0], squash: 0.62, blobs: [[0, 5.2, 0, 1.6], [1.45, 4.85, 0.3, 1.2, 0.92], [-1.35, 4.9, -0.4, 1.25, 0.9], [0.2, 4.8, -1.4, 1.1, 0.86], [-0.2, 4.85, 1.35, 1.15, 0.95]] };
-  function jungleTree(variant) {
-    return cached(`tree:jungle:${variant}`, () => {
+  function jungleTree(variant2) {
+    return cached(`tree:jungle:${variant2}`, () => {
       const k = new Mesher();
       const tc = TRUNK.jungle;
       const tcol = trunkColor(tc, 4);
       k.add(cyl(0.2, 0.3, 4.6, 7, true), { color: tcol, outline: 0.035 });
       for (let i = 0; i < 4; i++) {
         k.save();
-        k.rotateY(i * Math.PI / 2 + 0.4 + variant * 0.3);
+        k.rotateY(i * Math.PI / 2 + 0.4 + variant2 * 0.3);
         k.add(slab([[0.1, 0], [0.9, 0], [0.1, 1.3]], 0.12), { rot: [0, Math.PI / 2, 0], color: shade2(tc, -0.15), outline: 0.02 });
         k.restore();
       }
       crown(k, JUNGLE.blobs, JUNGLE.c, { squash: JUNGLE.squash, outline: 0.05 });
-      const R3 = rng2(3 + variant);
+      const R3 = rng2(3 + variant2);
       for (let i = 0; i < 4; i++) {
         const a = i * 1.6 + R3(), rr = 0.9 + R3() * 0.6;
         const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
@@ -47551,15 +47681,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return { geo: k.build(), sway: true, crown: JUNGLE };
     });
   }
-  function pineTree(snow2, variant) {
-    return cached(`tree:pine:${snow2 ? 1 : 0}:${variant}`, () => {
+  function pineTree(snow2, variant2) {
+    return cached(`tree:pine:${snow2 ? 1 : 0}:${variant2}`, () => {
       const k = new Mesher();
       k.add(cyl(0.1, 0.2, 1.8, 6, true), { color: trunkColor("#5d4030", 2), outline: 0.03 });
-      const tiers = variant ? 5 : 4;
+      const tiers = variant2 ? 5 : 4;
       const tmp2 = new Color();
       for (let i = 0; i < tiers; i++) {
-        const y = 0.9 + i * (variant ? 0.95 : 1.1);
-        const r = (variant ? 1.45 : 1.6) - i * (variant ? 0.24 : 0.3);
+        const y = 0.9 + i * (variant2 ? 0.95 : 1.1);
+        const r = (variant2 ? 1.45 : 1.6) - i * (variant2 ? 0.24 : 0.3);
         const h2 = 1.9 - i * 0.16;
         const g = cone(r, h2, 12, false, 1);
         const P4 = g.attributes.position;
@@ -47592,10 +47722,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return { geo: k.build(), sway: true };
     });
   }
-  function palmTree(variant) {
-    return cached(`tree:palm:${variant}`, () => {
+  function palmTree(variant2) {
+    return cached(`tree:palm:${variant2}`, () => {
       const k = new Mesher();
-      const lean = variant ? 1 : 0.55, H2 = variant ? 5.1 : 4.6, segs = 7;
+      const lean = variant2 ? 1 : 0.55, H2 = variant2 ? 5.1 : 4.6, segs = 7;
       const pt = (t) => [lean * t * t, H2 * t];
       for (let i = 0; i < segs; i++) {
         const t0 = i / segs, t1 = (i + 1) / segs;
@@ -47609,7 +47739,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.add(new DodecahedronGeometry(0.24, 0), { at: [top[0], top[1] + 0.02, 0], color: "#5d7a2e" });
       const n = 8;
       for (let i = 0; i < n; i++) {
-        const a = i / n * Math.PI * 2 + variant * 0.3 + hash2(i, variant) * 0.3;
+        const a = i / n * Math.PI * 2 + variant2 * 0.3 + hash2(i, variant2) * 0.3;
         const L2 = 2 + hash2(i, 5) * 0.5;
         const pts = [];
         for (let s = 0; s <= 5; s++) {
@@ -47625,11 +47755,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return { geo: k.build(), sway: true, crown: { palm: true, top: [top[0], top[1], 0] } };
     });
   }
-  function deadTree(sub, variant) {
-    return cached(`tree:dead:${sub}:${variant}`, () => {
+  function deadTree(sub, variant2) {
+    return cached(`tree:dead:${sub}:${variant2}`, () => {
       const k = new Mesher();
       const col = sub === "spooky" ? "#3b2f3f" : "#6b5a4a";
-      const R3 = rng2(11 + variant * 7 + (sub === "spooky" ? 3 : 0));
+      const R3 = rng2(11 + variant2 * 7 + (sub === "spooky" ? 3 : 0));
       const snowCol = C("#f4f9ff"), wood = C(col);
       const color = sub === "deadsnow" ? (p, n) => n.y > 0.35 ? snowCol : wood : col;
       k.add(cyl(0.16, 0.3, 0.4, 6, true), { color: shade2(col, -0.2), outline: 0.03 });
@@ -47646,8 +47776,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return { geo: k.build(), sway: sub === "spooky", crown: crownInfo };
     });
   }
-  function cactus(variant) {
-    return cached(`tree:cactus:${variant}`, () => {
+  function cactus(variant2) {
+    return cached(`tree:cactus:${variant2}`, () => {
       const k = new Mesher();
       const col = "#3f8f3f";
       const o = { color: col, flat: true, outline: 0.03, tint: 1 };
@@ -47660,8 +47790,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         k.add(new SphereGeometry(0.17, 8, 3, 0, Math.PI * 2, 0, Math.PI / 2), { ...o, at: [s * (0.2 + len), y0 + up, 0] });
       };
       arm(-1, 1.1, 0.42, 0.85);
-      if (variant & 1) arm(1, 1.5, 0.36, 0.7);
-      if (variant & 2) {
+      if (variant2 & 1) arm(1, 1.5, 0.36, 0.7);
+      if (variant2 & 2) {
         for (let i = 0; i < 5; i++) {
           const a = i / 5 * Math.PI * 2;
           k.add(new SphereGeometry(0.08, 5, 3), { at: [Math.cos(a) * 0.09, 2.78, Math.sin(a) * 0.09], color: "#ff6b9a" });
@@ -47720,10 +47850,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return { geo: k.build(), sway: false };
     });
   }
-  function bamboo(variant) {
-    return cached(`tree:bamboo:${variant}`, () => {
+  function bamboo(variant2) {
+    return cached(`tree:bamboo:${variant2}`, () => {
       const k = new Mesher();
-      const R3 = rng2(5 + variant);
+      const R3 = rng2(5 + variant2);
       const n = 4;
       for (let i = 0; i < n; i++) {
         const a = i / n * Math.PI * 2 + R3();
@@ -47745,24 +47875,24 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return { geo: k.build(), sway: true };
     });
   }
-  function coral(variant) {
-    return cached(`tree:coral:${variant}`, () => {
+  function coral(variant2) {
+    return cached(`tree:coral:${variant2}`, () => {
       const k = new Mesher();
-      const R3 = rng2(21 + variant);
+      const R3 = rng2(21 + variant2);
       const tips = [];
       branches(k, R3, new Vector3(0, 0, 0), new Vector3(0, 1, 0), 0.75, 0.13, 3, { color: "#ffffff", tint: 1, outline: 0.02, spread: 0.7, shrink: 0.78, lift: 0.3, seg: 5 }, tips);
       for (const t of tips) k.add(new IcosahedronGeometry(0.075, 0), { at: t.toArray(), color: "#ffffff", tint: 1 });
       return { geo: k.build(), sway: false };
     });
   }
-  function kelp(variant) {
-    return cached(`tree:kelp:${variant}`, () => {
+  function kelp(variant2) {
+    return cached(`tree:kelp:${variant2}`, () => {
       const k = new Mesher();
       for (let i = -1; i <= 1; i++) {
         const pts = [];
         for (let s = 0; s <= 9; s++) {
           const y = s * 0.34;
-          pts.push([i * 0.25 + Math.sin(y * 3 + i + variant) * 0.15, y, Math.cos(y * 2 + i) * 0.1, 0.1 + Math.sin(s / 9 * Math.PI) * 0.06]);
+          pts.push([i * 0.25 + Math.sin(y * 3 + i + variant2) * 0.15, y, Math.cos(y * 2 + i) * 0.1, 0.1 + Math.sin(s / 9 * Math.PI) * 0.06]);
         }
         k.add(ribbon(pts, { side: [1, 0, 0.3] }), { color: "#ffffff", tint: 1, double: true });
       }
@@ -60218,10 +60348,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     return g;
   }
-  function swordGeo(variant = "main", haki = false) {
-    return geo(`sword:${variant}:${haki}`, (b) => {
-      const hilt = variant === "second" ? "#1b2631" : variant === "mouth" ? "#fafafa" : "#2d2a32";
-      const guard2 = variant === "mouth" ? "#b71c1c" : "#d4ac0d";
+  function swordGeo(variant2 = "main", haki = false) {
+    return geo(`sword:${variant2}:${haki}`, (b) => {
+      const hilt = variant2 === "second" ? "#1b2631" : variant2 === "mouth" ? "#fafafa" : "#2d2a32";
+      const guard2 = variant2 === "mouth" ? "#b71c1c" : "#d4ac0d";
       b.add(Prim.cyl(7), between([-0.13, 0, 0], [0.1, 0, 0], 0.017), hilt);
       for (let i = 0; i < 3; i++) b.add(Prim.torus(0.3, 3, 7), M(-0.08 + i * 0.06, 0, 0, 0, Math.PI / 2, 0, 0.019), "#b8a07a");
       b.add(Prim.cyl(10), between([0.1, 0, 0], [0.114, 0, 0], 0.045), guard2);
@@ -60606,8 +60736,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.held[k] = null;
       }
       if (!want) return;
-      const [kind, variant, gun, haki] = want.split(":");
-      const opts = kind === "energy" ? { color: variant } : { variant, gun, haki: haki === "1", ...this.opts.weaponOpts || {} };
+      const [kind, variant2, gun, haki] = want.split(":");
+      const opts = kind === "energy" ? { color: variant2 } : { variant: variant2, gun, haki: haki === "1", ...this.opts.weaponOpts || {} };
       const hw = new HeldWeapon(kind, opts);
       this.held[k] = hw;
       (k === 2 ? this.bones[B3.head] : this.group).add(hw.group);
@@ -65178,28 +65308,35 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
   var RAISED = new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK, T.ROCK, T.FOREST, T.JUNGLE].filter((t) => t !== void 0));
   var ROLE_SIZES = {
-    tavern: [6, 4],
-    inn: [5, 4],
-    shop: [4, 3],
-    weapons: [4, 3],
-    dojo: [7, 5],
-    doctor: [4, 3],
-    shipwright: [7, 4],
-    marine_base: [9, 6],
-    bounty: [4, 3],
-    house: [4, 3],
-    hall: [8, 5],
-    palace: [12, 8],
-    church: [5, 5],
-    bank: [5, 4],
-    cafe: [5, 3],
-    library: [6, 4],
-    lighthouse: [3, 3],
-    trainer: [5, 4],
-    bar: [5, 4],
-    market: [5, 3],
-    restaurant: [6, 4]
+    tavern: [7, 6],
+    inn: [7, 6],
+    shop: [6, 5],
+    weapons: [6, 5],
+    dojo: [9, 7],
+    doctor: [6, 5],
+    shipwright: [9, 6],
+    marine_base: [11, 8],
+    bounty: [6, 5],
+    house: [6, 5],
+    hall: [10, 7],
+    palace: [14, 9],
+    church: [7, 8],
+    bank: [7, 6],
+    cafe: [6, 5],
+    library: [8, 6],
+    lighthouse: [4, 4],
+    trainer: [7, 6],
+    bar: [7, 6],
+    market: [7, 5],
+    restaurant: [7, 6]
   };
+  var TERRACED = /* @__PURE__ */ new Set(["town", "port", "city", "noble", "marine", "spooky", "desert"]);
+  var APART_SETBACK = { village: 1, snow: 1, tribal: 2, mink: 1, giant: 2, wano: 1, chinese: 0, sky: 1, candy: 1, fishman: 1, future: 1, ruins: 1 };
+  var FREE = 0;
+  var STREET = -1;
+  var SQUARE = -2;
+  var YARD = -3;
+  var NOPE = -4;
   function generateTown(world, town, rng4, noise) {
     const S3 = TOWN_STYLES[town.style] || TOWN_STYLES.village;
     const cx = town.x, cy = town.y;
@@ -65210,6 +65347,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const groundTile = town.ground === void 0 ? S3.ground : town.ground;
     const plazaTile = town.plazaTile ?? S3.plaza;
     const big = !!S3.big;
+    const terraced = TERRACED.has(town.style) && !big;
+    const setback = terraced ? 0 : APART_SETBACK[town.style] ?? 1;
+    const laneTile = terraced ? roadTile : S3.ground === null ? T.DIRT : roadTile;
     const okLand = (x, y) => {
       const t = world.type(x, y);
       return !IS_LIQUID[t] && WALKABLE[t] && !OVERLAY[t];
@@ -65222,141 +65362,358 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (v > 0) world.setType(x, y, groundTile);
       }
     }
-    const rowStep = town.rowStep ?? S3.rowStep;
-    const rows = [];
-    for (let ry = y0 + rowStep - 1; ry < y1 - 1; ry += rowStep) rows.push(ry);
-    if (!rows.length) rows.push(Math.round(cy));
-    const mainX = Math.round(cx);
-    for (const ry of rows) {
-      for (let x = x0; x < x1; x++) for (let k = 0; k < 2; k++) if (okLand(x, ry + k)) world.setType(x, ry + k, roadTile);
-    }
-    for (let y = y0; y < y1; y++) for (let k = -1; k <= 0; k++) if (okLand(mainX + k, y)) world.setType(mainX + k, y, roadTile);
-    const plazaR = town.plazaR ?? (w > 40 ? 5 : 3.5);
-    const plazaRow = rows.reduce((a, b) => Math.abs(b - cy) < Math.abs(a - cy) ? b : a, rows[0]);
-    const plaza = { x: mainX, y: plazaRow + 1 };
-    if (town.plaza !== false) {
-      for (let y = Math.floor(plaza.y - plazaR); y <= plaza.y + plazaR; y++) for (let x = Math.floor(plaza.x - plazaR); x <= plaza.x + plazaR; x++) {
-        if ((x + 0.5 - plaza.x) ** 2 + (y + 0.5 - plaza.y) ** 2 <= plazaR * plazaR && okLand(x, y)) world.setType(x, y, plazaTile);
+    const M2 = 3, GX = x0 - M2, GY = y0 - M2, GW = w + 2 * M2, GH = h2 + 2 * M2;
+    const occ = new Int16Array(GW * GH);
+    const gi = (x, y) => {
+      const i = Math.floor(x) - GX, j = Math.floor(y) - GY;
+      return i < 0 || j < 0 || i >= GW || j >= GH ? -1 : j * GW + i;
+    };
+    const occAt = (x, y) => {
+      const k = gi(x, y);
+      return k < 0 ? NOPE : occ[k];
+    };
+    const setOcc = (x, y, v) => {
+      const k = gi(x, y);
+      if (k >= 0) occ[k] = v;
+    };
+    for (let y = GY; y < GY + GH; y++) for (let x = GX; x < GX + GW; x++) if (!okLand(x, y) || world.isBlocked(x, y)) setOcc(x, y, NOPE);
+    const streets = [];
+    const paint = (r, tile, kind) => {
+      for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) {
+        if (!okLand(x, y)) continue;
+        const o = occAt(x, y);
+        if (o === SQUARE) continue;
+        world.setType(x, y, tile);
+        setOcc(x, y, kind);
       }
-      const feature = town.plaza || (S3.flags ? "flagpole" : town.style === "desert" ? "well" : w > 30 ? "fountain" : "well");
-      placeObject(world, { kind: feature, x: plaza.x, y: plaza.y + 0.8, block: true, fw: feature === "platform" ? 3 : 1, fd: feature === "platform" ? 2 : 1, town: town.id });
+    };
+    const horiz = town.mainDir ? town.mainDir === "h" : w >= h2;
+    const A0 = horiz ? x0 : y0, A1 = horiz ? x1 : y1, C0 = horiz ? y0 : x0, C1 = horiz ? y1 : x1, CC = horiz ? cy : cx, AC = horiz ? cx : cy;
+    const rect = (a0, a1, c0, c1) => horiz ? { x0: a0, x1: a1, y0: c0, y1: c1 } : { x0: c0, x1: c1, y0: a0, y1: a1 };
+    const mw = w * h2 > 1500 || S3.tall ? 3 : 2;
+    let off = 0, a = A0;
+    const mainSegs = [];
+    while (a < A1) {
+      const len = rng4.int(9, 16);
+      const b = Math.min(A1 - 1, a + len);
+      const c = Math.round(CC - mw / 2) + off;
+      const r = rect(a, b, c, c + mw - 1);
+      r.dir = horiz ? "h" : "v";
+      r.rank = 0;
+      mainSegs.push(r);
+      a = b + 1 - mw;
+      if (b >= A1 - 1) break;
+      if (rng4.chance(0.55)) off = Math.max(-2, Math.min(2, off + rng4.sign()));
+    }
+    const plazaR = town.plazaR ?? (w > 40 ? 5 : 3.5);
+    const seg0 = mainSegs.reduce((p, q2) => Math.abs((q2[horiz ? "x0" : "y0"] + q2[horiz ? "x1" : "y1"]) / 2 - AC) < Math.abs((p[horiz ? "x0" : "y0"] + p[horiz ? "x1" : "y1"]) / 2 - AC) ? q2 : p, mainSegs[0]);
+    const mainC = horiz ? (seg0.y0 + seg0.y1 + 1) / 2 : (seg0.x0 + seg0.x1 + 1) / 2;
+    const plaza = horiz ? { x: Math.round(cx), y: Math.round(mainC) } : { x: Math.round(mainC), y: Math.round(cy) };
+    const pa = Math.round(plazaR + 1.5), pc = Math.round(plazaR + 0.5);
+    const sq = horiz ? { x0: plaza.x - pa, x1: plaza.x + pa - 1, y0: plaza.y - pc, y1: plaza.y + pc - 1 } : { x0: plaza.x - pc, x1: plaza.x + pc - 1, y0: plaza.y - pa, y1: plaza.y + pa - 1 };
+    if (town.plaza !== false) {
+      for (let y = sq.y0; y <= sq.y1; y++) for (let x = sq.x0; x <= sq.x1; x++) {
+        const cut3 = (x === sq.x0 || x === sq.x1) && (y === sq.y0 || y === sq.y1);
+        if (cut3 || !okLand(x, y)) continue;
+        world.setType(x, y, plazaTile);
+        setOcc(x, y, SQUARE);
+      }
+    }
+    for (const r of mainSegs) paint(r, roadTile, STREET);
+    streets.push(...mainSegs);
+    const houseCount = town.houses ?? Math.round(w * h2 / (big ? 150 : 46));
+    const planned = houseCount + (town.buildings || []).length;
+    const sideAt = [];
+    for (let s = A0 + rng4.int(5, 9); planned >= 7 && s < A1 - 4; s += rng4.int(10, 15)) {
+      if (town.plaza !== false && Math.abs(s - (horiz ? plaza.x : plaza.y)) < pa + 2) continue;
+      sideAt.push(s);
+    }
+    if (!sideAt.length && A1 - A0 > 16 && planned >= 7) sideAt.push(Math.round(AC + (A1 - A0) * 0.28));
+    const mainAt = (s) => mainSegs.find((r) => horiz ? s >= r.x0 && s <= r.x1 : s >= r.y0 && s <= r.y1) || seg0;
+    for (const s of sideAt) {
+      const m = mainAt(s);
+      const mc0 = horiz ? m.y0 : m.x0, mc1 = horiz ? m.y1 : m.x1;
+      const both2 = rng4.chance(0.6), up = both2 || rng4.chance(0.5);
+      for (const dirn of [-1, 1]) {
+        if (!both2 && dirn < 0 !== up) continue;
+        let c = dirn < 0 ? mc0 - 1 : mc1 + 1, sa = s;
+        const end = dirn < 0 ? C0 : C1 - 1;
+        const jogAt = rng4.chance(0.5) ? Math.round((c + end) / 2) : null;
+        const pieces = jogAt === null ? [[c, end]] : [[c, jogAt], [jogAt, end]];
+        pieces.forEach(([p0, p1], k) => {
+          if (k === 1) sa += rng4.sign();
+          const r = rect(sa, sa + 1, Math.min(p0, p1), Math.max(p0, p1));
+          r.dir = horiz ? "v" : "h";
+          r.rank = 1;
+          paint(r, laneTile, STREET);
+          streets.push(r);
+        });
+      }
+    }
+    const across = C1 - C0;
+    if (across >= 28 && sideAt.length >= 2 && planned >= 20) {
+      const s0 = sideAt[0], s1 = sideAt[sideAt.length - 1];
+      for (const dirn of [-1, 1]) {
+        const d = rng4.int(11, 14);
+        const c = Math.round(CC + dirn * d);
+        if (c <= C0 + 3 || c >= C1 - 4) continue;
+        const r = rect(s0, s1 + 1, c, c + 1);
+        r.dir = horiz ? "h" : "v";
+        r.rank = 2;
+        paint(r, laneTile, STREET);
+        streets.push(r);
+      }
     }
     if (town.walls) {
+      const gate = (x, y) => occAt(x, y) === STREET || occAt(x, y) === SQUARE;
       for (let x = x0 - 1; x <= x1; x++) for (const y of [y0 - 1, y1]) {
-        if (Math.abs(x - mainX) <= 1) continue;
-        if (okLand(x, y)) world.setType(x, y, T.WALL);
+        if (gate(x, y) || gate(x, y + (y < y0 ? 1 : -1))) continue;
+        if (okLand(x, y)) {
+          world.setType(x, y, T.WALL);
+          setOcc(x, y, NOPE);
+        }
       }
       for (let y = y0 - 1; y <= y1; y++) for (const x of [x0 - 1, x1]) {
-        if (rows.some((r) => y === r || y === r + 1)) continue;
-        if (okLand(x, y)) world.setType(x, y, T.WALL);
-      }
-    }
-    const lots = [];
-    for (const ry of rows) {
-      const maxD = Math.max(2, Math.min(big ? 9 : 5, rowStep - 3));
-      let x = x0 + 1;
-      while (x < x1 - 3) {
-        lots.push({ x, ry, maxD });
-        x += 1;
-      }
-    }
-    const buildings = [];
-    const specials = (town.buildings || []).slice();
-    const occupied = (fx0, fy0, fw, fd) => {
-      for (let y = fy0 - 1; y < fy0 + fd; y++) for (let x = fx0 - 1; x < fx0 + fw + 1; x++) {
-        if (y < fy0 && (x < fx0 || x >= fx0 + fw)) continue;
-        const t = world.type(x, y);
-        if (y >= fy0 && (!okLand(x, y) || world.isBlocked(x, y))) return true;
-        if (y >= fy0 && (t === roadTile || t === plazaTile) && t !== groundTile) return true;
-        if (world.isBlocked(x, y)) return true;
-      }
-      if (fx0 <= mainX && fx0 + fw >= mainX - 1) return true;
-      return false;
-    };
-    const tryPlace = (spec) => {
-      const [dw, dd] = ROLE_SIZES[spec.role] || [rng4.int(3, 5), rng4.int(2, 3)];
-      const fw = spec.w ?? (big ? dw + 3 : dw);
-      const cands = spec.role !== "house" ? lots.slice().sort((a, b) => Math.hypot(a.x - plaza.x, a.ry - plaza.y) - Math.hypot(b.x - plaza.x, b.ry - plaza.y)) : rng4.shuffle(lots.slice());
-      for (const lot of cands) {
-        const fd = Math.min(spec.d ?? (big ? dd + 3 : dd), lot.maxD + (spec.d ? 2 : 0));
-        const fx0 = lot.x, fy0 = lot.ry - fd;
-        if (fx0 + fw > x1 - 1) continue;
-        if (occupied(fx0, fy0, fw, fd)) continue;
-        const colors = {
-          wall: spec.wall || rng4.pick(S3.walls),
-          roof: spec.roof || rng4.pick(S3.roofs)
-        };
-        const b = placeObject(world, {
-          kind: "building",
-          style: spec.style || town.style || "village",
-          roofType: spec.roofType || S3.roof,
-          x: fx0 + fw / 2,
-          y: lot.ry,
-          fw,
-          fd,
-          hgt: spec.hgt ?? (S3.tall ? rng4.int(3, 4) : big ? 5 : spec.role === "house" ? 2 : 3),
-          ...colors,
-          role: spec.role,
-          name: spec.name,
-          sign: spec.sign,
-          npc: spec.npc,
-          trainer: spec.trainer,
-          shop: spec.shop,
-          door: { x: fx0 + fw / 2, y: lot.ry + 0.5 },
-          town: town.id,
-          island: town.islandId,
-          v: rng4.int(0, 7),
-          block: true
-        });
-        buildings.push(b);
-        const e0 = world.elev(fx0 + Math.floor(fw / 2), lot.ry);
-        for (let y = fy0 - 1; y < lot.ry; y++) {
-          for (let x = fx0 - 1; x <= fx0 + fw; x++) {
-            if (!okLand(x, y) && !(x >= fx0 && x < fx0 + fw && y >= fy0)) continue;
-            const t = world.type(x, y);
-            world.setTile(x, y, RAISED.has(t) ? groundTile ?? T.GRASS : t, e0);
-          }
+        if (gate(x, y) || gate(x + (x < x0 ? 1 : -1), y)) continue;
+        if (okLand(x, y)) {
+          world.setType(x, y, T.WALL);
+          setOcc(x, y, NOPE);
         }
-        return b;
       }
-      return null;
+    }
+    const runs = [];
+    const addRuns = (r, rank) => {
+      if (r.dir === "h" || r.dir === "sq") {
+        runs.push({ rot: 0, line: r.y0, s0: r.x0, s1: r.x1 + 1, rank });
+        runs.push({ rot: 2, line: r.y1 + 1, s0: r.x0, s1: r.x1 + 1, rank });
+      }
+      if (r.dir === "v" || r.dir === "sq") {
+        runs.push({ rot: 1, line: r.x0, s0: r.y0, s1: r.y1 + 1, rank });
+        runs.push({ rot: 3, line: r.x1 + 1, s0: r.y0, s1: r.y1 + 1, rank });
+      }
     };
-    for (const spec of specials) tryPlace(spec);
-    const houseCount = town.houses ?? Math.round(w * h2 / (big ? 160 : 55));
-    for (let i = 0; i < houseCount; i++) tryPlace({ role: "house" });
+    if (town.plaza !== false) addRuns({ ...sq, dir: "sq" }, -1);
+    for (const r of streets) addRuns(r, r.rank);
+    const distToSquare = (x, y) => Math.hypot(x - plaza.x, y - plaza.y);
+    const lotOf = (run, s, fw, fd, sb) => {
+      const L2 = run.line;
+      switch (run.rot) {
+        case 0:
+          return { x: s + fw / 2, y: L2 - sb, fx0: s, fx1: s + fw, fy0: L2 - sb - fd, fy1: L2 - sb };
+        case 2:
+          return { x: s + fw / 2, y: L2 + sb, fx0: s, fx1: s + fw, fy0: L2 + sb, fy1: L2 + sb + fd };
+        case 1:
+          return { x: L2 - sb, y: s + fw / 2, fx0: L2 - sb - fd, fx1: L2 - sb, fy0: s, fy1: s + fw };
+        default:
+          return { x: L2 + sb, y: s + fw / 2, fx0: L2 + sb, fx1: L2 + sb + fd, fy0: s, fy1: s + fw };
+      }
+    };
+    const lotFree = (q2) => {
+      for (let y = q2.fy0; y < q2.fy1; y++) for (let x = q2.fx0; x < q2.fx1; x++) if (occAt(x, y) !== FREE) return false;
+      return true;
+    };
+    const depthFor = (run, s, fw, sb, want, keep) => {
+      let d = 0;
+      for (; d < want + keep; d++) {
+        const q2 = lotOf(run, s, fw, d + 1, sb);
+        const row = run.rot === 0 ? [q2.fx0, q2.fx1, q2.fy0, q2.fy0 + 1] : run.rot === 2 ? [q2.fx0, q2.fx1, q2.fy1 - 1, q2.fy1] : run.rot === 1 ? [q2.fx0, q2.fx0 + 1, q2.fy0, q2.fy1] : [q2.fx1 - 1, q2.fx1, q2.fy0, q2.fy1];
+        let ok = true;
+        for (let y = row[2]; y < row[3] && ok; y++) for (let x = row[0]; x < row[1] && ok; x++) if (occAt(x, y) !== FREE) ok = false;
+        if (!ok) break;
+      }
+      return Math.min(want, d - (d >= want + keep ? 0 : keep));
+    };
+    const frontFree = (run, s, fw, sb) => {
+      if (!sb) return true;
+      const q2 = lotOf(run, s, fw, sb, 0);
+      return lotFree(q2);
+    };
+    const buildings = [];
+    const place = (run, s, fw, fd, sb, spec) => {
+      const q2 = lotOf(run, s, fw, fd, sb);
+      if (!lotFree(q2) || !frontFree(run, s, fw, sb)) return null;
+      const doorX = fw >= 6 && spec.role === "house" ? rng4.pick([-1, 1]) * rng4.range(0.6, fw / 2 - 1.3) : 0;
+      const colors = { wall: spec.wall || rng4.pick(S3.walls), roof: spec.roof || rng4.pick(S3.roofs) };
+      const role = spec.role;
+      const tall = S3.tall ? rng4.int(3, 5) : terraced ? rng4.pick([3, 3, 3, 4]) : rng4.chance(0.35) ? 3 : 2;
+      const b = placeObject(world, {
+        kind: "building",
+        style: spec.style || town.style || "village",
+        roofType: spec.roofType || S3.roof,
+        x: q2.x,
+        y: q2.y,
+        rot: run.rot,
+        fw,
+        fd,
+        hgt: spec.hgt ?? (big ? 5 : role === "house" ? tall : Math.max(3, tall)),
+        ...colors,
+        role,
+        name: spec.name,
+        sign: spec.sign,
+        npc: spec.npc,
+        trainer: spec.trainer,
+        shop: spec.shop,
+        doorX,
+        town: town.id,
+        island: town.islandId,
+        v: rng4.int(0, 7),
+        block: true
+      });
+      if (!b) return null;
+      b.door = bw(b, doorX, 0.5);
+      buildings.push(b);
+      const id = buildings.length;
+      for (let y = q2.fy0; y < q2.fy1; y++) for (let x = q2.fx0; x < q2.fx1; x++) setOcc(x, y, id);
+      const f = bw(b, 0, 0.5);
+      const e0 = world.elev(Math.floor(f.x), Math.floor(f.y));
+      for (let y = q2.fy0 - 1; y <= q2.fy1; y++) {
+        for (let x = q2.fx0 - 1; x <= q2.fx1; x++) {
+          const inLot = x >= q2.fx0 && x < q2.fx1 && y >= q2.fy0 && y < q2.fy1;
+          if (!inLot && (!okLand(x, y) || occAt(x, y) === STREET || occAt(x, y) === SQUARE || occAt(x, y) > 0)) continue;
+          const t = world.type(x, y);
+          world.setTile(x, y, RAISED.has(t) ? groundTile ?? T.GRASS : t, e0);
+        }
+      }
+      return b;
+    };
+    const specials = (town.buildings || []).slice();
+    for (const spec of specials) {
+      const [dw, dd] = ROLE_SIZES[spec.role] || [6, 5];
+      const fw = spec.w ?? (big ? dw + 3 : dw), want = spec.d ?? (big ? dd + 3 : dd);
+      const sb = spec.role === "palace" || spec.role === "marine_base" ? Math.max(1, setback) : setback;
+      const cands = [];
+      for (const run of runs) {
+        for (let s = run.s0; s + fw <= run.s1; s++) {
+          const q2 = lotOf(run, s, fw, 1, sb);
+          cands.push({ run, s, d: distToSquare(q2.x, q2.y) + (run.rank > 0 ? 3 * run.rank : 0) });
+        }
+      }
+      cands.sort((p, q2) => p.d - q2.d);
+      for (const c of cands) {
+        const fd = depthFor(c.run, c.s, fw, sb, want, 0);
+        if (fd < Math.min(want, Math.max(4, want - 2))) continue;
+        if (place(c.run, c.s, fw, fd, sb, spec)) break;
+      }
+    }
+    let houses = 0;
+    const order = runs.map((run) => ({ run, d: run.rank * 30 + distToSquare(...(() => {
+      const m = lotOf(run, (run.s0 + run.s1) / 2, 0, 1, 0);
+      return [m.x, m.y];
+    })()) }));
+    order.sort((p, q2) => p.d - q2.d);
+    const widths = big ? [8, 11] : terraced ? [4, 7] : [5, 7];
+    const depths = big ? [8, 10] : terraced ? [5, 7] : [4, 6];
+    for (const { run } of order) {
+      if (houses >= houseCount) break;
+      const mid = lotOf(run, run.s0, 0, 1, 0), end = lotOf(run, run.s1, 0, 1, 0);
+      const fromStart = distToSquare(mid.x, mid.y) <= distToSquare(end.x, end.y);
+      let s = fromStart ? run.s0 : run.s1;
+      let prevGap = 0;
+      while (houses < houseCount) {
+        const fw = rng4.int(widths[0], widths[1]);
+        const at5 = fromStart ? s : s - fw;
+        if (fromStart ? at5 + fw > run.s1 : at5 < run.s0) break;
+        const sb = setback && rng4.chance(0.3) ? setback + 1 : setback;
+        const want = rng4.int(depths[0], depths[1]);
+        const fd = depthFor(run, at5, fw, sb, want, terraced ? 1 : 2);
+        let b = null;
+        if (fd >= (big ? 6 : 4)) b = place(run, at5, fw, fd, sb, { role: "house" });
+        if (b) {
+          houses++;
+          const gap = terraced ? rng4.chance(0.12) && prevGap === 0 ? 1 : 0 : rng4.int(2, 4);
+          prevGap = gap;
+          s = fromStart ? at5 + fw + gap : at5 - gap;
+        } else s += fromStart ? 1 : -1;
+      }
+    }
+    for (const b of buildings) {
+      const fw = b.fw, fd = b.fd;
+      b.attach = {};
+      for (const side of [-1, 1]) {
+        let n = 0;
+        for (let z = -0.5; z > -fd; z -= 1) {
+          const p = bw(b, side * (fw / 2 + 0.5), z);
+          const o = occAt(p.x, p.y);
+          if (o > 0 && buildings[o - 1] !== b) n++;
+        }
+        if (n >= Math.min(2, fd - 1)) b.attach[side < 0 ? "left" : "right"] = true;
+      }
+    }
+    if (town.plaza !== false) {
+      const feature = town.plaza || (S3.flags ? "flagpole" : town.style === "desert" ? "well" : w > 30 ? "fountain" : "well");
+      placeObject(world, { kind: feature, x: plaza.x, y: plaza.y + (horiz ? 0 : 0.5), block: true, fw: feature === "platform" ? 3 : 1, fd: feature === "platform" ? 2 : 1, town: town.id });
+    }
+    const clearAt = (x, y, r) => okLand(x, y) && !world.isBlocked(x, y) && !world.hitsProp(x, y, r);
+    const nearDoor = (x, y, r) => buildings.some((b) => Math.hypot(world.dx(b.door.x, x), b.door.y - y) < r);
     if (S3.lamps) {
-      for (const ry of rows) for (let x = x0 + 2; x < x1 - 1; x += 7) {
-        if (okLand(x, ry + 2) && !world.isBlocked(x, ry + 2) && !world.hitsProp(x + 0.5, ry + 3, 0.9) && Math.abs(x - mainX) > 2) {
-          placeObject(world, { kind: S3.lantern ? "lantern" : "lamp", x: x + 0.5, y: ry + 3, block: true, light: true });
+      for (const st of streets) {
+        const len = st.dir === "h" ? st.x1 - st.x0 + 1 : st.y1 - st.y0 + 1;
+        const step = st.rank === 0 ? 7 : 9;
+        for (let i = 2 + rng4.int(0, 2); i < len - 1; i += step) {
+          const side = (i / step | 0) % 2 ? 1 : -1;
+          const x = st.dir === "h" ? st.x0 + i + 0.5 : side < 0 ? st.x0 - 0.35 : st.x1 + 1.35;
+          const y = st.dir === "h" ? side < 0 ? st.y0 - 0.35 : st.y1 + 1.35 : st.y0 + i + 0.5;
+          if (!okLand(x, y) || nearDoor(x, y, 1.6) || world.hitsProp(x, y, 0.9)) continue;
+          if (occAt(x, y) > 0) {
+            const ix = st.dir === "h" ? x : side < 0 ? st.x0 + 0.35 : st.x1 + 0.65;
+            const iy = st.dir === "h" ? side < 0 ? st.y0 + 0.35 : st.y1 + 0.65 : y;
+            if (!nearDoor(ix, iy, 1.6) && clearAt(ix, iy, 0.9)) placeObject(world, { kind: S3.lantern ? "lantern" : "lamp", x: ix, y: iy, block: true, light: true });
+            continue;
+          }
+          if (clearAt(x, y, 0.9)) placeObject(world, { kind: S3.lantern ? "lantern" : "lamp", x, y, block: true, light: true });
         }
       }
     }
     const propKinds = town.style === "village" || town.style === "tribal" ? ["barrel", "crate", "haystack"] : ["barrel", "crate", "barrel"];
     for (const b of buildings) {
-      if (rng4.next() < 0.4) {
-        const px2 = b.x + (b.fw / 2 + 0.6) * (rng4.next() < 0.5 ? -1 : 1), py2 = b.y - 0.2;
-        if (okLand(px2, py2 - 0.5) && !world.isBlocked(px2, py2 - 0.5) && !world.hitsProp(px2, py2, 0.9)) placeObject(world, { kind: rng4.pick(propKinds), x: px2, y: py2, block: true, v: rng4.int(0, 3) });
+      const n = b.role !== "house" ? 2 : rng4.chance(0.3) ? 1 : 0;
+      for (let k = 0; k < n; k++) {
+        const side = k ? -1 : rng4.sign();
+        const p = bw(b, side * (b.fw / 2 - 0.55), 0.55);
+        if (nearDoor(p.x, p.y, 1.3) || !clearAt(p.x, p.y, 0.7)) continue;
+        placeObject(world, { kind: rng4.pick(propKinds), x: p.x, y: p.y, block: true, v: rng4.int(0, 3) });
       }
     }
-    if (S3.fences) {
+    if (!terraced) {
       for (const b of buildings) {
-        if (b.role !== "house" || rng4.next() < 0.5) continue;
-        const gy = b.y - b.fd - 1;
-        for (let x = Math.floor(b.x - b.fw / 2); x < b.x + b.fw / 2; x++) {
-          if (okLand(x, gy) && !world.isBlocked(x, gy)) world.setType(x, gy, T.FARM);
+        if (b.role !== "house") continue;
+        const back = [];
+        for (let z = -b.fd - 1; z >= -b.fd - 2; z--) for (let x = -b.fw / 2 + 0.5; x < b.fw / 2; x += 1) back.push(bw(b, x, z));
+        if (S3.fences && rng4.chance(0.55)) {
+          for (const p of back) if (occAt(p.x, p.y) === FREE && okLand(p.x, p.y)) {
+            world.setType(p.x, p.y, T.FARM);
+            setOcc(p.x, p.y, YARD);
+          }
+        }
+        if (rng4.chance(0.45)) {
+          const p = bw(b, rng4.pick([-1, 1]) * (b.fw / 2 + 1.2), -b.fd * 0.6);
+          if (occAt(p.x, p.y) === FREE && clearAt(p.x, p.y, 1.4)) placeObject(world, { kind: "tree", x: p.x, y: p.y, v: rng4.int(0, 5), s: rng4.range(0.8, 1.1), block: true });
         }
       }
     }
-    if (town.stalls !== false && (town.style === "town" || town.style === "port" || town.style === "desert" || town.style === "city" || town.style === "wano" || town.style === "chinese")) {
-      for (let k = 0; k < 4; k++) {
-        const a = k / 4 * Math.PI * 2 + 0.4;
-        const px2 = plaza.x + Math.cos(a) * (plazaR + 1.5), py2 = plaza.y + Math.sin(a) * (plazaR + 1.2);
-        if (okLand(px2, py2 - 0.5) && !world.isBlocked(px2, py2 - 0.5) && !world.hitsProp(px2, py2, 1.6)) placeObject(world, { kind: "stall", x: px2, y: py2, block: true, v: rng4.int(0, 5) });
+    if (town.stalls !== false && town.plaza !== false && (town.style === "town" || town.style === "port" || town.style === "desert" || town.style === "city" || town.style === "wano" || town.style === "chinese" || town.style === "village")) {
+      const spots = [[sq.x0 + 1.4, sq.y0 + 1.2], [sq.x1 - 0.4, sq.y0 + 1.2], [sq.x0 + 1.4, sq.y1 - 0.2], [sq.x1 - 0.4, sq.y1 - 0.2]];
+      for (const [px2, py2] of rng4.shuffle(spots).slice(0, town.style === "village" ? 2 : 4)) {
+        if (clearAt(px2, py2 - 0.5, 1.5) && !nearDoor(px2, py2, 2.2)) placeObject(world, { kind: "stall", x: px2, y: py2, block: true, v: rng4.int(0, 5) });
+      }
+      for (const [px2, py2] of [[plaza.x - 2.6, plaza.y + 2.2], [plaza.x + 2.6, plaza.y - 2.2]]) {
+        if (clearAt(px2, py2, 1.1)) placeObject(world, { kind: "bench", x: px2, y: py2, block: true });
       }
     }
     const npcSpots = [];
     for (const b of buildings) npcSpots.push({ ...bw(b, (b.doorX || 0) + (b.fw >= 5 ? 1.6 : 1.25), 1.3), building: b });
-    for (const ry of rows) for (let x = x0 + 3; x < x1 - 2; x += 5) if (okLand(x, ry + 1)) npcSpots.push({ x: x + 0.5, y: ry + 1.5 });
+    const streetSpots = [];
+    for (const st of streets) {
+      const ax = st.dir === "h";
+      const len = ax ? st.x1 - st.x0 + 1 : st.y1 - st.y0 + 1;
+      for (let i = 1; i < len - 1; i += 3) {
+        const x = ax ? st.x0 + i + 0.5 : (st.x0 + st.x1 + 1) / 2, y = ax ? (st.y0 + st.y1 + 1) / 2 : st.y0 + i + 0.5;
+        if (okLand(x, y)) {
+          streetSpots.push({ x, y });
+          if (i % 6 === 1) npcSpots.push({ x, y });
+        }
+      }
+    }
     return {
       id: town.id,
       name: town.name,
@@ -65372,9 +65729,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       buildings,
       plaza,
       npcSpots,
+      streetSpots,
+      streets,
       roadTile,
-      rows,
-      mainX,
+      rows: [],
+      mainX: plaza.x,
       def: town
     };
   }
@@ -84420,6 +84779,7 @@ Trains by: ${TRAINS_BY[k]}` },
         S3.stall.push({ x, y, face: Math.atan2(Math.cos(yaw), Math.sin(yaw)), o });
       }
     }
+    for (const p of town.streetSpots || []) if (clear3(p.x, p.y, 0.4)) S3.street.push({ x: p.x, y: p.y });
     for (const ry of town.rows || []) {
       for (let x = town.x0 + 2; x < town.x1 - 1; x += 3) if (clear3(x + 0.5, ry + 1.1, 0.4)) S3.street.push({ x: x + 0.5, y: ry + 1.1 });
     }
@@ -111262,6 +111622,7 @@ Trains by: ${TRAINS_BY[k]}` },
     const ui = new UI2(document.body);
     const settings = loadSettings();
     const audio = new Audio2(settings);
+    const genT0 = performance.now();
     const world = await generateWorld({
       seed: "blue-planet",
       islands: ALL_ISLANDS,
@@ -111269,6 +111630,7 @@ Trains by: ${TRAINS_BY[k]}` },
         boot.textContent = `${msg}\u2026 ${Math.round(p * 100)}%`;
       }
     });
+    debug.genMs = Math.round(performance.now() - genT0);
     boot.style.display = "none";
     const game = new Game({ renderer, input, ui, audio, world });
     game.settings = settings;

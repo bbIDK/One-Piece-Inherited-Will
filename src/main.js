@@ -77,11 +77,13 @@ async function start() {
   const ui = new UI(document.body);
   const settings = loadSettings();
   const audio = new Audio(settings);
+  const genT0 = performance.now();
   const world = await generateWorld({
     seed: 'blue-planet',
     islands: ALL_ISLANDS,
     onProgress: (p, msg) => { boot.textContent = `${msg}… ${Math.round(p * 100)}%`; },
   });
+  debug.genMs = Math.round(performance.now() - genT0);
   boot.style.display = 'none';
   const game = new Game({ renderer, input, ui, audio, world });
   game.settings = settings;

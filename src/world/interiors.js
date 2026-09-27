@@ -73,23 +73,49 @@ export function heightsOf(b) {
  * Ground-floor windows: { face: 'front' | 'left' | 'right', u, y, w, h, kind, i }.
  * `u` runs along the wall (x on the front, z on the sides); `y` is the centre over the floor.
  */
+/** Styles whose windows have shutters beside them (they need room on the wall). */
+export const hasShutters = (b) => b.style === 'village' || b.style === 'town';
+
+/**
+ * Where the windows go on one floor: centres along the front (x) and along
+ * each side wall (z), spaced so frames and shutters never overlap each other,
+ * the door or the corners — and none on a side that stands against a
+ * neighbour. Shared by the 3D model and the walk-in ground floor.
+ */
+export function windowSlots(b, floor = 0) {
+  const kind = winKind(b);
+  const none = { front: [], left: [], right: [], w: 0, reach: 0 };
+  if (kind === 'none' || kind === 'hole') return none;
+  const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
+  const d = doorOf(b);
+  const winW = 0.85 * g;
+  const reach = winW / 2 + (hasShutters(b) && (kind === 'cross' || kind === 'tall') ? 0.1 + winW * 0.45 : 0.14);
+  const pitch = 2 * reach + 0.3 * g;
+  const spread = (len) => {
+    const usable = len - 2 * (0.3 + reach);
+    if (usable < 0) return [];
+    const n = Math.floor(usable / pitch) + 1;
+    return n === 1 ? [0] : Array.from({ length: n }, (_, i) => -usable / 2 + i * usable / (n - 1));
+  };
+  let front = spread(fw);
+  if (floor === 0) front = front.filter((x) => Math.abs(x - d.x) >= d.dw / 2 + 0.2 + reach);
+  // on the gable ends: one window a floor, two on deep houses
+  const zs = fd < 3 ? [] : fd >= 6.5 ? [-fd * 0.3, -fd * 0.7] : [-fd / 2];
+  const at = b.attach || {};
+  return { front, left: at.left ? [] : zs, right: at.right ? [] : zs, w: winW, reach };
+}
+
 export function groundWindows(b) {
   const kind = winKind(b);
   if (kind === 'none' || kind === 'hole') return [];
-  const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
-  const d = doorOf(b);
+  const g = styleScale(b);
   const winW = 0.85 * g, winH = 1.05 * g;
   const h = kind === 'tall' ? winH * 1.2 : winH;
-  const cols = Math.max(1, Math.floor(fw / (1.7 * g)));
   const y = 1.55 * g;
+  const W = windowSlots(b, 0);
   const out = [];
-  for (let i = 0; i < cols + 1; i++) {
-    const x = -fw / 2 + (i + 0.5) * (fw / (cols + 1));
-    if (Math.abs(x - d.x) < d.dw / 2 + winW / 2 + 0.35) continue;
-    if (Math.abs(x) > fw / 2 - winW / 2 - 0.2) continue;
-    out.push({ face: 'front', u: x, y, w: winW, h, kind, i: out.length });
-  }
-  if (fd >= 3) for (const face of ['left', 'right']) out.push({ face, u: -fd / 2, y, w: winW, h, kind, i: out.length });
+  for (const x of W.front) out.push({ face: 'front', u: x, y, w: winW, h, kind, i: out.length });
+  for (const face of ['left', 'right']) for (const z of W[face]) out.push({ face, u: z, y, w: winW, h, kind, i: out.length });
   return out;
 }
 

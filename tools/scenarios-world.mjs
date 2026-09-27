@@ -375,6 +375,125 @@ export const scenarios = {
       console.log(JSON.stringify(st));
     },
   },
+  // Town layouts: a tile diagram (streets, squares, buildings with their fronts marked), then aerial and street views.
+  townview: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); document.querySelector('.look-hint')?.remove(); g.env.clock = 11; g.env.stormTarget = 0; g.env.storm = 0; g.env.weatherTimer = 1e9; });
+      const towns = String(args.towns || 'foosha,goa').split(',');
+      for (const id of towns) {
+        const info = await page.evaluate((id) => {
+          const g = window.OP.game, w = g.world;
+          let town = null;
+          for (const i of w.islands) for (const t of i.towns || []) if (t.id === id || t.style === id) { town = town || t; }
+          if (!town) return null;
+          window.__town = town;
+          // the diagram
+          const M = 6, k = 7, W = (town.w + M * 2) * k, H = (town.h + M * 2) * k;
+          const c = document.createElement('canvas'); c.width = W; c.height = H; c.id = 'townmap';
+          c.style.cssText = 'position:fixed;left:0;top:0;z-index:99999;background:#222;max-width:100vw;max-height:100vh';
+          const cx = c.getContext('2d');
+          const X0 = town.x0 - M, Y0 = town.y0 - M;
+          const pal = { road: '#9e8f7a', grass: '#5f8f4e', water: '#3a6ea5', farm: '#8a6d3b', other: '#6f7f5f' };
+          for (let y = Y0; y < Y0 + town.h + M * 2; y++) for (let x = X0; x < X0 + town.w + M * 2; x++) {
+            const t = w.type(x, y);
+            let col = pal.other;
+            if (w.isLiquid(x, y)) col = pal.water;
+            else if (t === town.roadTile) col = pal.road;
+            else if (t === w.type(town.plaza.x, town.plaza.y) ) col = '#c9b89a';
+            cx.fillStyle = col; cx.fillRect((x - X0) * k, (y - Y0) * k, k, k);
+          }
+          const D = window.OP.debug;
+          for (const b of town.buildings) {
+            const r = [D.bw(b, -b.fw / 2, -b.fd), D.bw(b, b.fw / 2, 0)];
+            const bx0 = Math.min(r[0].x, r[1].x), bx1 = Math.max(r[0].x, r[1].x), by0 = Math.min(r[0].y, r[1].y), by1 = Math.max(r[0].y, r[1].y);
+            cx.fillStyle = b.role === 'house' ? (b.hgt >= 3 ? '#d98c5f' : '#e8c9a0') : '#e05050';
+            cx.fillRect((bx0 - X0) * k + 1, (by0 - Y0) * k + 1, (bx1 - bx0) * k - 2, (by1 - by0) * k - 2);
+            // the front edge and the door
+            const f0 = D.bw(b, -b.fw / 2, 0), f1 = D.bw(b, b.fw / 2, 0);
+            cx.strokeStyle = '#222'; cx.lineWidth = 2; cx.beginPath(); cx.moveTo((f0.x - X0) * k, (f0.y - Y0) * k); cx.lineTo((f1.x - X0) * k, (f1.y - Y0) * k); cx.stroke();
+            const d = D.bw(b, b.doorX || 0, 0);
+            cx.fillStyle = '#1565c0'; cx.fillRect((d.x - X0) * k - 3, (d.y - Y0) * k - 3, 6, 6);
+          }
+          for (const o of w.objects.near(town.x, town.y, Math.max(town.w, town.h))) {
+            if (o.kind === 'building') continue;
+            cx.fillStyle = o.kind === 'lamp' || o.kind === 'lantern' ? '#ffd54f' : o.kind === 'tree' ? '#2e7d32' : '#fff';
+            cx.beginPath(); cx.arc((o.x - X0) * k, (o.y - Y0) * k, 2.5, 0, Math.PI * 2); cx.fill();
+          }
+          document.body.appendChild(c);
+          const rots = [0, 0, 0, 0]; for (const b of town.buildings) rots[b.rot || 0]++;
+          return { name: town.name, style: town.style, w: town.w, h: town.h, buildings: town.buildings.length, rots, attached: town.buildings.filter((b) => b.attach && (b.attach.left || b.attach.right)).length, streets: (town.streets || []).length, storeys: town.buildings.map((b) => b.hgt).join('') };
+        }, id);
+        console.log('town', JSON.stringify(info));
+        if (!info) continue;
+        await snap(id + '-map');
+        await page.evaluate(() => document.getElementById('townmap')?.remove());
+        // aerial
+        await page.evaluate(() => {
+          const g = window.OP.game, t = window.__town;
+          window.OP.teleport(t.plaza.x + 0.5, t.plaza.y + 3.5);
+          const r = g.view3d.rig; r.tp.dist = 26; r.tp.height = 22; r.yaw = Math.PI * 0.5 - 0.5; r.pitch = -0.2;
+        });
+        for (let i = 0; i < 16; i++) await window_step(page, 0.1);
+        await snap(id + '-aerial');
+        // street level
+        for (const [k, yaw] of [['east', 0.15], ['north', -Math.PI / 2 + 0.2]]) {
+          await page.evaluate((yaw) => { const g = window.OP.game, r = g.view3d.rig; g.settings.view = 'first'; g.applySettings(); r.yaw = (yaw + Math.PI * 2) % (Math.PI * 2); r.pitch = 0.02; }, yaw);
+          for (let i = 0; i < 6; i++) await window_step(page, 0.1);
+          await snap(id + '-street-' + k);
+        }
+        await page.evaluate(() => { const g = window.OP.game, r = g.view3d.rig; g.settings.view = 'third'; g.applySettings(); r.tp.dist = 4.2; r.tp.height = 1.4; });
+      }
+    },
+  },
+  // Quality check of terraces: close-ups of the seams between attached houses (front and roofline).
+  seams: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); document.querySelector('.look-hint')?.remove(); g.env.clock = 11; g.env.stormTarget = 0; g.env.storm = 0; g.env.weatherTimer = 1e9; });
+      const styles = String(args.styles || 'noble,town,city,port').split(',');
+      for (const st of styles) {
+        const pairs = await page.evaluate((st) => {
+          const g = window.OP.game, w = g.world, D = window.OP.debug;
+          let town = null;
+          for (const i of w.islands) for (const t of i.towns || []) if (!town && t.style === st && t.buildings.length > 12) town = t;
+          if (!town) return [];
+          window.__seamTown = town;
+          // attached pairs: a building with a right-hand neighbour
+          const out = [];
+          for (const b of town.buildings) {
+            if (!b.attach?.right) continue;
+            const p = D.bw(b, b.fw / 2, 0);
+            out.push({ x: p.x, y: p.y, rot: b.rot || 0, hgt: b.hgt, name: town.name });
+            if (out.length >= 3) break;
+          }
+          return out;
+        }, st);
+        console.log(st, JSON.stringify(pairs));
+        let i = 0;
+        for (const q of pairs) {
+          i++;
+          await page.evaluate((q) => {
+            const g = window.OP.game, f = [[0, 1], [1, 0], [0, -1], [-1, 0]][q.rot];
+            // (the building's local +x in the world: along the facade)
+            const a = [[1, 0], [0, -1], [-1, 0], [0, 1]][q.rot];
+            // stand in the street a little out from the fronts and along one of them, looking back at the seam
+            const px = q.x + f[0] * 1.6 - a[0] * 3.2, py = q.y + f[1] * 1.6 - a[1] * 3.2;
+            window.OP.teleport(px, py);
+            g.settings.view = 'first'; g.applySettings();
+            const r = g.view3d.rig; r.yaw = (Math.atan2(q.y - py, q.x - px) + Math.PI * 2) % (Math.PI * 2); r.pitch = 0.3;
+          }, q);
+          for (let k = 0; k < 6; k++) await window_step(page, 0.1);
+          await snap(`${st}-${i}-front`);
+          await page.evaluate(() => { const r = window.OP.game.view3d.rig; r.pitch = 0.75; });
+          for (let k = 0; k < 2; k++) await window_step(page, 0.1);
+          await snap(`${st}-${i}-roof`);
+        }
+      }
+    },
+  },
   // everyday poses in a row, facing the camera
   poses: {
     async run(page, snap, args) {

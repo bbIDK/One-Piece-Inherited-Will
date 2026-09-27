@@ -1,6 +1,12 @@
-// Procedural towns: streets, a plaza, rows of houses (doors face the street
-// below them), named special buildings (taverns, shops, dojos, shipwrights…)
-// and street props. Returns a record used for NPC placement and interaction.
+// Procedural towns, laid out the way people build them. A main street runs
+// through, bending here and there; side streets and lanes branch off it; a
+// square sits in the middle with the important buildings round it (taverns,
+// shops, dojos, shipwrights…). Houses front onto the streets from both sides
+// — shoulder to shoulder in terraces in towns and cities, each its own width,
+// height and colour, or standing apart in their gardens in villages — most
+// thickly round the square and thinning out towards the edge of town, with
+// yards and trees behind, lamps and benches along the way and market stalls
+// on the square. Returns a record used for NPC placement and interaction.
 import { T, IS_LIQUID, WALKABLE, OVERLAY } from './tiles.js';
 import { placeObject } from './islandgen.js';
 import { bw } from './bframe.js';
@@ -30,11 +36,19 @@ export const TOWN_STYLES = {
 // tile types the height model lifts above their elevation (see render3d/height.js)
 const RAISED = new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK, T.ROCK, T.FOREST, T.JUNGLE].filter((t) => t !== undefined));
 
+// special buildings: [width, depth] (a little more is fine, less is not)
 const ROLE_SIZES = {
-  tavern: [6, 4], inn: [5, 4], shop: [4, 3], weapons: [4, 3], dojo: [7, 5], doctor: [4, 3], shipwright: [7, 4],
-  marine_base: [9, 6], bounty: [4, 3], house: [4, 3], hall: [8, 5], palace: [12, 8], church: [5, 5], bank: [5, 4],
-  cafe: [5, 3], library: [6, 4], lighthouse: [3, 3], trainer: [5, 4], bar: [5, 4], market: [5, 3], restaurant: [6, 4],
+  tavern: [7, 6], inn: [7, 6], shop: [6, 5], weapons: [6, 5], dojo: [9, 7], doctor: [6, 5], shipwright: [9, 6],
+  marine_base: [11, 8], bounty: [6, 5], house: [6, 5], hall: [10, 7], palace: [14, 9], church: [7, 8], bank: [7, 6],
+  cafe: [6, 5], library: [8, 6], lighthouse: [4, 4], trainer: [7, 6], bar: [7, 6], market: [7, 5], restaurant: [7, 6],
 };
+// how a style builds: shoulder to shoulder or apart; set back from the street or on it
+// (styles whose roofs overhang all round — pagodas, domes, shells, huts — stand apart)
+const TERRACED = new Set(['town', 'port', 'city', 'noble', 'marine', 'spooky', 'desert']);
+const APART_SETBACK = { village: 1, snow: 1, tribal: 2, mink: 1, giant: 2, wano: 1, chinese: 0, sky: 1, candy: 1, fishman: 1, future: 1, ruins: 1 };
+
+// occupancy of the town grid
+const FREE = 0, STREET = -1, SQUARE = -2, YARD = -3, NOPE = -4;
 
 export function generateTown(world, town, rng, noise) {
   const S = TOWN_STYLES[town.style] || TOWN_STYLES.village;
@@ -46,6 +60,9 @@ export function generateTown(world, town, rng, noise) {
   const groundTile = town.ground === undefined ? S.ground : town.ground;
   const plazaTile = town.plazaTile ?? S.plaza;
   const big = !!S.big;
+  const terraced = TERRACED.has(town.style) && !big;
+  const setback = terraced ? 0 : APART_SETBACK[town.style] ?? 1;
+  const laneTile = terraced ? roadTile : (S.ground === null ? T.DIRT : roadTile);
 
   const okLand = (x, y) => {
     const t = world.type(x, y);
@@ -62,163 +79,374 @@ export function generateTown(world, town, rng, noise) {
     }
   }
 
-  // streets: horizontal rows + one main vertical street through the plaza
-  const rowStep = town.rowStep ?? S.rowStep;
-  const rows = [];
-  for (let ry = y0 + rowStep - 1; ry < y1 - 1; ry += rowStep) rows.push(ry);
-  if (!rows.length) rows.push(Math.round(cy));
-  const mainX = Math.round(cx);
-  for (const ry of rows) {
-    for (let x = x0; x < x1; x++) for (let k = 0; k < 2; k++) if (okLand(x, ry + k)) world.setType(x, ry + k, roadTile);
-  }
-  for (let y = y0; y < y1; y++) for (let k = -1; k <= 0; k++) if (okLand(mainX + k, y)) world.setType(mainX + k, y, roadTile);
+  // ---- the town grid (with a margin): what each tile is used for
+  const M = 3, GX = x0 - M, GY = y0 - M, GW = w + 2 * M, GH = h + 2 * M;
+  const occ = new Int16Array(GW * GH);
+  const gi = (x, y) => { const i = Math.floor(x) - GX, j = Math.floor(y) - GY; return i < 0 || j < 0 || i >= GW || j >= GH ? -1 : j * GW + i; };
+  const occAt = (x, y) => { const k = gi(x, y); return k < 0 ? NOPE : occ[k]; };
+  const setOcc = (x, y, v) => { const k = gi(x, y); if (k >= 0) occ[k] = v; };
+  for (let y = GY; y < GY + GH; y++) for (let x = GX; x < GX + GW; x++) if (!okLand(x, y) || world.isBlocked(x, y)) setOcc(x, y, NOPE);
 
-  // plaza
-  const plazaR = town.plazaR ?? (w > 40 ? 5 : 3.5);
-  const plazaRow = rows.reduce((a, b) => (Math.abs(b - cy) < Math.abs(a - cy) ? b : a), rows[0]);
-  const plaza = { x: mainX, y: plazaRow + 1 };
-  if (town.plaza !== false) {
-    for (let y = Math.floor(plaza.y - plazaR); y <= plaza.y + plazaR; y++) for (let x = Math.floor(plaza.x - plazaR); x <= plaza.x + plazaR; x++) {
-      if ((x + 0.5 - plaza.x) ** 2 + (y + 0.5 - plaza.y) ** 2 <= plazaR * plazaR && okLand(x, y)) world.setType(x, y, plazaTile);
+  // ---- streets: rectangles of tiles { x0, x1, y0, y1 } (inclusive), 'h' or 'v', and how important
+  const streets = [];
+  const paint = (r, tile, kind) => {
+    for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) {
+      if (!okLand(x, y)) continue;
+      const o = occAt(x, y);
+      if (o === SQUARE) continue;
+      world.setType(x, y, tile);
+      setOcc(x, y, kind);
     }
-    const feature = town.plaza || (S.flags ? 'flagpole' : town.style === 'desert' ? 'well' : w > 30 ? 'fountain' : 'well');
-    placeObject(world, { kind: feature, x: plaza.x, y: plaza.y + 0.8, block: true, fw: feature === 'platform' ? 3 : 1, fd: feature === 'platform' ? 2 : 1, town: town.id });
+  };
+  const horiz = town.mainDir ? town.mainDir === 'h' : w >= h;
+  // (streets are made in "along/across" terms and turned for a north-south main street)
+  const A0 = horiz ? x0 : y0, A1 = horiz ? x1 : y1, C0 = horiz ? y0 : x0, C1 = horiz ? y1 : x1, CC = horiz ? cy : cx, AC = horiz ? cx : cy;
+  const rect = (a0, a1, c0, c1) => (horiz ? { x0: a0, x1: a1, y0: c0, y1: c1 } : { x0: c0, x1: c1, y0: a0, y1: a1 });
+  const mw = w * h > 1500 || S.tall ? 3 : 2;
+  // the main street: straight for a stretch, then a jog of a tile or two, and on
+  let off = 0, a = A0;
+  const mainSegs = [];
+  while (a < A1) {
+    const len = rng.int(9, 16);
+    const b = Math.min(A1 - 1, a + len);
+    const c = Math.round(CC - mw / 2) + off;
+    const r = rect(a, b, c, c + mw - 1);
+    r.dir = horiz ? 'h' : 'v'; r.rank = 0;
+    mainSegs.push(r);
+    a = b + 1 - mw; // (overlap the next piece so a jog stays joined up)
+    if (b >= A1 - 1) break;
+    if (rng.chance(0.55)) off = Math.max(-2, Math.min(2, off + rng.sign()));
+  }
+  // the square, on the main street near the middle
+  const plazaR = town.plazaR ?? (w > 40 ? 5 : 3.5);
+  const seg0 = mainSegs.reduce((p, q) => (Math.abs((q[horiz ? 'x0' : 'y0'] + q[horiz ? 'x1' : 'y1']) / 2 - AC) < Math.abs((p[horiz ? 'x0' : 'y0'] + p[horiz ? 'x1' : 'y1']) / 2 - AC) ? q : p), mainSegs[0]);
+  const mainC = horiz ? (seg0.y0 + seg0.y1 + 1) / 2 : (seg0.x0 + seg0.x1 + 1) / 2;
+  const plaza = horiz ? { x: Math.round(cx), y: Math.round(mainC) } : { x: Math.round(mainC), y: Math.round(cy) };
+  const pa = Math.round(plazaR + 1.5), pc = Math.round(plazaR + 0.5);
+  const sq = horiz ? { x0: plaza.x - pa, x1: plaza.x + pa - 1, y0: plaza.y - pc, y1: plaza.y + pc - 1 } : { x0: plaza.x - pc, x1: plaza.x + pc - 1, y0: plaza.y - pa, y1: plaza.y + pa - 1 };
+  if (town.plaza !== false) {
+    for (let y = sq.y0; y <= sq.y1; y++) for (let x = sq.x0; x <= sq.x1; x++) {
+      // (the corners cut off, so it isn't a hard box)
+      const cut = (x === sq.x0 || x === sq.x1) && (y === sq.y0 || y === sq.y1);
+      if (cut || !okLand(x, y)) continue;
+      world.setType(x, y, plazaTile);
+      setOcc(x, y, SQUARE);
+    }
+  }
+  for (const r of mainSegs) paint(r, roadTile, STREET);
+  streets.push(...mainSegs);
+  // how much town there'll be (a hamlet of three houses doesn't need a grid of streets)
+  const houseCount = town.houses ?? Math.round((w * h) / (big ? 150 : 46));
+  const planned = houseCount + (town.buildings || []).length;
+  // side streets off the main street (crossroads and T-junctions), some with a jog
+  const sideAt = [];
+  for (let s = A0 + rng.int(5, 9); planned >= 7 && s < A1 - 4; s += rng.int(10, 15)) {
+    if (town.plaza !== false && Math.abs(s - (horiz ? plaza.x : plaza.y)) < pa + 2) continue;
+    sideAt.push(s);
+  }
+  if (!sideAt.length && A1 - A0 > 16 && planned >= 7) sideAt.push(Math.round(AC + (A1 - A0) * 0.28));
+  const mainAt = (s) => mainSegs.find((r) => (horiz ? s >= r.x0 && s <= r.x1 : s >= r.y0 && s <= r.y1)) || seg0;
+  for (const s of sideAt) {
+    const m = mainAt(s);
+    const mc0 = horiz ? m.y0 : m.x0, mc1 = horiz ? m.y1 : m.x1;
+    const both = rng.chance(0.6), up = both || rng.chance(0.5);
+    for (const dirn of [-1, 1]) {
+      if (!both && (dirn < 0) !== up) continue;
+      let c = dirn < 0 ? mc0 - 1 : mc1 + 1, sa = s;
+      const end = dirn < 0 ? C0 : C1 - 1;
+      const jogAt = rng.chance(0.5) ? Math.round((c + end) / 2) : null;
+      // a piece from c to the jog (or the end), then the rest shifted a tile
+      const pieces = jogAt === null ? [[c, end]] : [[c, jogAt], [jogAt, end]];
+      pieces.forEach(([p0, p1], k) => {
+        if (k === 1) sa += rng.sign();
+        const r = rect(sa, sa + 1, Math.min(p0, p1), Math.max(p0, p1));
+        r.dir = horiz ? 'v' : 'h'; r.rank = 1;
+        paint(r, laneTile, STREET);
+        streets.push(r);
+      });
+    }
+  }
+  // back lanes parallel to the main street in bigger towns (joining the side streets into blocks)
+  const across = C1 - C0;
+  if (across >= 28 && sideAt.length >= 2 && planned >= 20) {
+    const s0 = sideAt[0], s1 = sideAt[sideAt.length - 1];
+    for (const dirn of [-1, 1]) {
+      const d = rng.int(11, 14);
+      const c = Math.round(CC + dirn * d);
+      if (c <= C0 + 3 || c >= C1 - 4) continue;
+      const r = rect(s0, s1 + 1, c, c + 1);
+      r.dir = horiz ? 'h' : 'v'; r.rank = 2;
+      paint(r, laneTile, STREET);
+      streets.push(r);
+    }
   }
 
-  // walls around the town
+  // walls around the town (with gates where the streets leave it)
   if (town.walls) {
+    const gate = (x, y) => occAt(x, y) === STREET || occAt(x, y) === SQUARE;
     for (let x = x0 - 1; x <= x1; x++) for (const y of [y0 - 1, y1]) {
-      if (Math.abs(x - mainX) <= 1) continue;
-      if (okLand(x, y)) world.setType(x, y, T.WALL);
+      if (gate(x, y) || gate(x, y + (y < y0 ? 1 : -1))) continue;
+      if (okLand(x, y)) { world.setType(x, y, T.WALL); setOcc(x, y, NOPE); }
     }
     for (let y = y0 - 1; y <= y1; y++) for (const x of [x0 - 1, x1]) {
-      if (rows.some((r) => y === r || y === r + 1)) continue;
-      if (okLand(x, y)) world.setType(x, y, T.WALL);
+      if (gate(x, y) || gate(x + (x < x0 ? 1 : -1), y)) continue;
+      if (okLand(x, y)) { world.setType(x, y, T.WALL); setOcc(x, y, NOPE); }
     }
   }
 
-  // candidate lots on the north side of each street
-  const lots = [];
-  for (const ry of rows) {
-    const maxD = Math.max(2, Math.min(big ? 9 : 5, rowStep - 3));
-    let x = x0 + 1;
-    while (x < x1 - 3) {
-      lots.push({ x, ry, maxD });
-      x += 1;
+  // ---- frontages: the edges of the streets and the square that buildings can face.
+  // rot: 0 faces +y (a building on the north side of an east-west street), 2 faces -y,
+  // 1 faces +x (the west side of a north-south street), 3 faces -x.
+  const runs = [];
+  const addRuns = (r, rank) => {
+    if (r.dir === 'h' || r.dir === 'sq') {
+      runs.push({ rot: 0, line: r.y0, s0: r.x0, s1: r.x1 + 1, rank });
+      runs.push({ rot: 2, line: r.y1 + 1, s0: r.x0, s1: r.x1 + 1, rank });
     }
-  }
+    if (r.dir === 'v' || r.dir === 'sq') {
+      runs.push({ rot: 1, line: r.x0, s0: r.y0, s1: r.y1 + 1, rank });
+      runs.push({ rot: 3, line: r.x1 + 1, s0: r.y0, s1: r.y1 + 1, rank });
+    }
+  };
+  if (town.plaza !== false) addRuns({ ...sq, dir: 'sq' }, -1);
+  for (const r of streets) addRuns(r, r.rank);
+  const distToSquare = (x, y) => Math.hypot(x - plaza.x, y - plaza.y);
+
+  /** The building record for a lot: `s` along the run, width fw, depth fd, set back sb. */
+  const lotOf = (run, s, fw, fd, sb) => {
+    const L = run.line;
+    switch (run.rot) {
+      case 0: return { x: s + fw / 2, y: L - sb, fx0: s, fx1: s + fw, fy0: L - sb - fd, fy1: L - sb };
+      case 2: return { x: s + fw / 2, y: L + sb, fx0: s, fx1: s + fw, fy0: L + sb, fy1: L + sb + fd };
+      case 1: return { x: L - sb, y: s + fw / 2, fx0: L - sb - fd, fx1: L - sb, fy0: s, fy1: s + fw };
+      default: return { x: L + sb, y: s + fw / 2, fx0: L + sb, fx1: L + sb + fd, fy0: s, fy1: s + fw };
+    }
+  };
+  const lotFree = (q) => {
+    for (let y = q.fy0; y < q.fy1; y++) for (let x = q.fx0; x < q.fx1; x++) if (occAt(x, y) !== FREE) return false;
+    return true;
+  };
+  /** How deep a lot can go before it runs into something (up to `want`, leaving `keep` tiles behind). */
+  const depthFor = (run, s, fw, sb, want, keep) => {
+    let d = 0;
+    for (; d < want + keep; d++) {
+      const q = lotOf(run, s, fw, d + 1, sb);
+      // the new back row of tiles
+      const row = run.rot === 0 ? [q.fx0, q.fx1, q.fy0, q.fy0 + 1] : run.rot === 2 ? [q.fx0, q.fx1, q.fy1 - 1, q.fy1] : run.rot === 1 ? [q.fx0, q.fx0 + 1, q.fy0, q.fy1] : [q.fx1 - 1, q.fx1, q.fy0, q.fy1];
+      let ok = true;
+      for (let y = row[2]; y < row[3] && ok; y++) for (let x = row[0]; x < row[1] && ok; x++) if (occAt(x, y) !== FREE) ok = false;
+      if (!ok) break;
+    }
+    return Math.min(want, d - (d >= want + keep ? 0 : keep));
+  };
+  // the setback strip in front must be open ground too (not someone else's house)
+  const frontFree = (run, s, fw, sb) => {
+    if (!sb) return true;
+    const q = lotOf(run, s, fw, sb, 0);
+    return lotFree(q);
+  };
+
   const buildings = [];
-  const specials = (town.buildings || []).slice();
-  const occupied = (fx0, fy0, fw, fd) => {
-    for (let y = fy0 - 1; y < fy0 + fd; y++) for (let x = fx0 - 1; x < fx0 + fw + 1; x++) {
-      if (y < fy0 && (x < fx0 || x >= fx0 + fw)) continue;
-      const t = world.type(x, y);
-      if (y >= fy0 && (!okLand(x, y) || world.isBlocked(x, y))) return true;
-      if (y >= fy0 && (t === roadTile || t === plazaTile) && t !== groundTile) return true;
-      if (world.isBlocked(x, y)) return true;
-    }
-    // keep off the main street
-    if (fx0 <= mainX && fx0 + fw >= mainX - 1) return true;
-    return false;
-  };
-
-  const tryPlace = (spec) => {
-    const [dw, dd] = ROLE_SIZES[spec.role] || [rng.int(3, 5), rng.int(2, 3)];
-    const fw = spec.w ?? (big ? dw + 3 : dw);
-    // sort lots by distance to plaza for specials, random for houses
-    const cands = spec.role !== 'house' ? lots.slice().sort((a, b) => Math.hypot(a.x - plaza.x, a.ry - plaza.y) - Math.hypot(b.x - plaza.x, b.ry - plaza.y)) : rng.shuffle(lots.slice());
-    for (const lot of cands) {
-      const fd = Math.min(spec.d ?? (big ? dd + 3 : dd), lot.maxD + (spec.d ? 2 : 0));
-      const fx0 = lot.x, fy0 = lot.ry - fd;
-      if (fx0 + fw > x1 - 1) continue;
-      if (occupied(fx0, fy0, fw, fd)) continue;
-      const colors = {
-        wall: spec.wall || rng.pick(S.walls),
-        roof: spec.roof || rng.pick(S.roofs),
-      };
-      const b = placeObject(world, {
-        kind: 'building',
-        style: spec.style || town.style || 'village',
-        roofType: spec.roofType || S.roof,
-        x: fx0 + fw / 2,
-        y: lot.ry,
-        fw, fd,
-        hgt: spec.hgt ?? (S.tall ? rng.int(3, 4) : big ? 5 : spec.role === 'house' ? 2 : 3),
-        ...colors,
-        role: spec.role,
-        name: spec.name,
-        sign: spec.sign,
-        npc: spec.npc,
-        trainer: spec.trainer,
-        shop: spec.shop,
-        door: { x: fx0 + fw / 2, y: lot.ry + 0.5 },
-        town: town.id,
-        island: town.islandId,
-        v: rng.int(0, 7),
-        block: true,
-      });
-      buildings.push(b);
-      // level the lot (and a tile round it) with the street in front, so the
-      // ground floor is one step up from the street and flat inside
-      const e0 = world.elev(fx0 + Math.floor(fw / 2), lot.ry);
-      for (let y = fy0 - 1; y < lot.ry; y++) {
-        for (let x = fx0 - 1; x <= fx0 + fw; x++) {
-          if (!okLand(x, y) && !(x >= fx0 && x < fx0 + fw && y >= fy0)) continue;
-          // rock, forest and the like stand taller than their elevation: plain ground instead
-          const t = world.type(x, y);
-          world.setTile(x, y, RAISED.has(t) ? (groundTile ?? T.GRASS) : t, e0);
-        }
+  const place = (run, s, fw, fd, sb, spec) => {
+    const q = lotOf(run, s, fw, fd, sb);
+    if (!lotFree(q) || !frontFree(run, s, fw, sb)) return null;
+    // the door: in the middle of small fronts, off to one side on wide ones
+    const doorX = fw >= 6 && spec.role === 'house' ? rng.pick([-1, 1]) * rng.range(0.6, fw / 2 - 1.3) : 0;
+    const colors = { wall: spec.wall || rng.pick(S.walls), roof: spec.roof || rng.pick(S.roofs) };
+    const role = spec.role;
+    const tall = S.tall ? rng.int(3, 5) : terraced ? rng.pick([3, 3, 3, 4]) : rng.chance(0.35) ? 3 : 2;
+    const b = placeObject(world, {
+      kind: 'building',
+      style: spec.style || town.style || 'village',
+      roofType: spec.roofType || S.roof,
+      x: q.x, y: q.y, rot: run.rot,
+      fw, fd,
+      hgt: spec.hgt ?? (big ? 5 : role === 'house' ? tall : Math.max(3, tall)),
+      ...colors,
+      role,
+      name: spec.name,
+      sign: spec.sign,
+      npc: spec.npc,
+      trainer: spec.trainer,
+      shop: spec.shop,
+      doorX,
+      town: town.id,
+      island: town.islandId,
+      v: rng.int(0, 7),
+      block: true,
+    });
+    if (!b) return null;
+    b.door = bw(b, doorX, 0.5);
+    buildings.push(b);
+    const id = buildings.length;
+    for (let y = q.fy0; y < q.fy1; y++) for (let x = q.fx0; x < q.fx1; x++) setOcc(x, y, id);
+    // level the lot (and a tile round it) with the street in front, so the
+    // ground floor is one step up from the street and flat inside
+    const f = bw(b, 0, 0.5);
+    const e0 = world.elev(Math.floor(f.x), Math.floor(f.y));
+    for (let y = q.fy0 - 1; y <= q.fy1; y++) {
+      for (let x = q.fx0 - 1; x <= q.fx1; x++) {
+        const inLot = x >= q.fx0 && x < q.fx1 && y >= q.fy0 && y < q.fy1;
+        if (!inLot && (!okLand(x, y) || occAt(x, y) === STREET || occAt(x, y) === SQUARE || occAt(x, y) > 0)) continue;
+        // rock, forest and the like stand taller than their elevation: plain ground instead
+        const t = world.type(x, y);
+        world.setTile(x, y, RAISED.has(t) ? (groundTile ?? T.GRASS) : t, e0);
       }
-      return b;
     }
-    return null;
+    return b;
   };
 
-  for (const spec of specials) tryPlace(spec);
-  const houseCount = town.houses ?? Math.round((w * h) / (big ? 160 : 55));
-  for (let i = 0; i < houseCount; i++) tryPlace({ role: 'house' });
+  // special buildings first, as close to the square as they'll go
+  const specials = (town.buildings || []).slice();
+  for (const spec of specials) {
+    const [dw, dd] = ROLE_SIZES[spec.role] || [6, 5];
+    const fw = spec.w ?? (big ? dw + 3 : dw), want = spec.d ?? (big ? dd + 3 : dd);
+    const sb = spec.role === 'palace' || spec.role === 'marine_base' ? Math.max(1, setback) : setback;
+    const cands = [];
+    for (const run of runs) {
+      for (let s = run.s0; s + fw <= run.s1; s++) {
+        const q = lotOf(run, s, fw, 1, sb);
+        cands.push({ run, s, d: distToSquare(q.x, q.y) + (run.rank > 0 ? 3 * run.rank : 0) });
+      }
+    }
+    cands.sort((p, q) => p.d - q.d);
+    for (const c of cands) {
+      const fd = depthFor(c.run, c.s, fw, sb, want, 0);
+      if (fd < Math.min(want, Math.max(4, want - 2))) continue;
+      if (place(c.run, c.s, fw, fd, sb, spec)) break;
+    }
+  }
 
-  // props along streets
+  // houses: along each frontage, from the square outwards, until the town is full
+  let houses = 0;
+  // (fill order: the square, then the main street out from the middle, the side streets, the lanes)
+  const order = runs.map((run) => ({ run, d: run.rank * 30 + distToSquare(...(() => { const m = lotOf(run, (run.s0 + run.s1) / 2, 0, 1, 0); return [m.x, m.y]; })()) }));
+  order.sort((p, q) => p.d - q.d);
+  const widths = big ? [8, 11] : terraced ? [4, 7] : [5, 7];
+  const depths = big ? [8, 10] : terraced ? [5, 7] : [4, 6];
+  for (const { run } of order) {
+    if (houses >= houseCount) break;
+    // start from the end nearer the square
+    const mid = lotOf(run, run.s0, 0, 1, 0), end = lotOf(run, run.s1, 0, 1, 0);
+    const fromStart = distToSquare(mid.x, mid.y) <= distToSquare(end.x, end.y);
+    let s = fromStart ? run.s0 : run.s1;
+    let prevGap = 0;
+    while (houses < houseCount) {
+      const fw = rng.int(widths[0], widths[1]);
+      const at = fromStart ? s : s - fw;
+      if (fromStart ? at + fw > run.s1 : at < run.s0) break;
+      const sb = setback && rng.chance(0.3) ? setback + 1 : setback;
+      const want = rng.int(depths[0], depths[1]);
+      const fd = depthFor(run, at, fw, sb, want, terraced ? 1 : 2);
+      let b = null;
+      if (fd >= (big ? 6 : 4)) b = place(run, at, fw, fd, sb, { role: 'house' });
+      if (b) {
+        houses++;
+        // terraces: the next house shoulder to shoulder (now and then an alley between);
+        // villages: a garden's width apart
+        const gap = terraced ? (rng.chance(0.12) && prevGap === 0 ? 1 : 0) : rng.int(2, 4);
+        prevGap = gap;
+        s = fromStart ? at + fw + gap : at - gap;
+      } else s += fromStart ? 1 : -1;
+    }
+  }
+
+  // which sides of each building stand against a neighbour (no windows or eaves there)
+  for (const b of buildings) {
+    const fw = b.fw, fd = b.fd;
+    b.attach = {};
+    for (const side of [-1, 1]) {
+      let n = 0;
+      for (let z = -0.5; z > -fd; z -= 1) {
+        const p = bw(b, side * (fw / 2 + 0.5), z);
+        const o = occAt(p.x, p.y);
+        if (o > 0 && buildings[o - 1] !== b) n++;
+      }
+      if (n >= Math.min(2, fd - 1)) b.attach[side < 0 ? 'left' : 'right'] = true;
+    }
+  }
+
+  // ---- the square: its feature in the middle, stalls round it
+  if (town.plaza !== false) {
+    const feature = town.plaza || (S.flags ? 'flagpole' : town.style === 'desert' ? 'well' : w > 30 ? 'fountain' : 'well');
+    placeObject(world, { kind: feature, x: plaza.x, y: plaza.y + (horiz ? 0 : 0.5), block: true, fw: feature === 'platform' ? 3 : 1, fd: feature === 'platform' ? 2 : 1, town: town.id });
+  }
+
+  // ---- street furniture
+  const clearAt = (x, y, r) => okLand(x, y) && !world.isBlocked(x, y) && !world.hitsProp(x, y, r);
+  const nearDoor = (x, y, r) => buildings.some((b) => Math.hypot(world.dx(b.door.x, x), b.door.y - y) < r);
   if (S.lamps) {
-    for (const ry of rows) for (let x = x0 + 2; x < x1 - 1; x += 7) {
-      if (okLand(x, ry + 2) && !world.isBlocked(x, ry + 2) && !world.hitsProp(x + 0.5, ry + 3, 0.9) && Math.abs(x - mainX) > 2) {
-        placeObject(world, { kind: S.lantern ? 'lantern' : 'lamp', x: x + 0.5, y: ry + 3, block: true, light: true });
+    // along the edges of the streets, alternating sides, never in front of a door
+    for (const st of streets) {
+      const len = st.dir === 'h' ? st.x1 - st.x0 + 1 : st.y1 - st.y0 + 1;
+      const step = st.rank === 0 ? 7 : 9;
+      for (let i = 2 + rng.int(0, 2); i < len - 1; i += step) {
+        const side = (i / step | 0) % 2 ? 1 : -1;
+        const x = st.dir === 'h' ? st.x0 + i + 0.5 : side < 0 ? st.x0 - 0.35 : st.x1 + 1.35;
+        const y = st.dir === 'h' ? (side < 0 ? st.y0 - 0.35 : st.y1 + 1.35) : st.y0 + i + 0.5;
+        if (!okLand(x, y) || nearDoor(x, y, 1.6) || world.hitsProp(x, y, 0.9)) continue;
+        if (occAt(x, y) > 0) {
+          // on the pavement in front of a house wall: step it out onto the street edge
+          const ix = st.dir === 'h' ? x : side < 0 ? st.x0 + 0.35 : st.x1 + 0.65;
+          const iy = st.dir === 'h' ? (side < 0 ? st.y0 + 0.35 : st.y1 + 0.65) : y;
+          if (!nearDoor(ix, iy, 1.6) && clearAt(ix, iy, 0.9)) placeObject(world, { kind: S.lantern ? 'lantern' : 'lamp', x: ix, y: iy, block: true, light: true });
+          continue;
+        }
+        if (clearAt(x, y, 0.9)) placeObject(world, { kind: S.lantern ? 'lantern' : 'lamp', x, y, block: true, light: true });
       }
     }
   }
   const propKinds = town.style === 'village' || town.style === 'tribal' ? ['barrel', 'crate', 'haystack'] : ['barrel', 'crate', 'barrel'];
   for (const b of buildings) {
-    if (rng.next() < 0.4) {
-      const px = b.x + (b.fw / 2 + 0.6) * (rng.next() < 0.5 ? -1 : 1), py = b.y - 0.2;
-      if (okLand(px, py - 0.5) && !world.isBlocked(px, py - 0.5) && !world.hitsProp(px, py, 0.9)) placeObject(world, { kind: rng.pick(propKinds), x: px, y: py, block: true, v: rng.int(0, 3) });
+    // barrels and crates at the corner of the front (more at shops and taverns)
+    const n = b.role !== 'house' ? 2 : rng.chance(0.3) ? 1 : 0;
+    for (let k = 0; k < n; k++) {
+      const side = k ? -1 : rng.sign();
+      const p = bw(b, side * (b.fw / 2 - 0.55), 0.55);
+      if (nearDoor(p.x, p.y, 1.3) || !clearAt(p.x, p.y, 0.7)) continue;
+      placeObject(world, { kind: rng.pick(propKinds), x: p.x, y: p.y, block: true, v: rng.int(0, 3) });
     }
   }
-  if (S.fences) {
-    // small fenced gardens behind village houses
+  if (!terraced) {
+    // village gardens: a vegetable plot or a fruit tree behind the house, a fence along the front
     for (const b of buildings) {
-      if (b.role !== 'house' || rng.next() < 0.5) continue;
-      const gy = b.y - b.fd - 1;
-      for (let x = Math.floor(b.x - b.fw / 2); x < b.x + b.fw / 2; x++) {
-        if (okLand(x, gy) && !world.isBlocked(x, gy)) world.setType(x, gy, T.FARM);
+      if (b.role !== 'house') continue;
+      const back = [];
+      for (let z = -b.fd - 1; z >= -b.fd - 2; z--) for (let x = -b.fw / 2 + 0.5; x < b.fw / 2; x += 1) back.push(bw(b, x, z));
+      if (S.fences && rng.chance(0.55)) for (const p of back) if (occAt(p.x, p.y) === FREE && okLand(p.x, p.y)) { world.setType(p.x, p.y, T.FARM); setOcc(p.x, p.y, YARD); }
+      if (rng.chance(0.45)) {
+        const p = bw(b, rng.pick([-1, 1]) * (b.fw / 2 + 1.2), -b.fd * 0.6);
+        if (occAt(p.x, p.y) === FREE && clearAt(p.x, p.y, 1.4)) placeObject(world, { kind: 'tree', x: p.x, y: p.y, v: rng.int(0, 5), s: rng.range(0.8, 1.1), block: true });
       }
     }
   }
-  if (town.stalls !== false && (town.style === 'town' || town.style === 'port' || town.style === 'desert' || town.style === 'city' || town.style === 'wano' || town.style === 'chinese')) {
-    for (let k = 0; k < 4; k++) {
-      const a = (k / 4) * Math.PI * 2 + 0.4;
-      const px = plaza.x + Math.cos(a) * (plazaR + 1.5), py = plaza.y + Math.sin(a) * (plazaR + 1.2);
-      if (okLand(px, py - 0.5) && !world.isBlocked(px, py - 0.5) && !world.hitsProp(px, py, 1.6)) placeObject(world, { kind: 'stall', x: px, y: py, block: true, v: rng.int(0, 5) });
+  if (town.stalls !== false && town.plaza !== false && (town.style === 'town' || town.style === 'port' || town.style === 'desert' || town.style === 'city' || town.style === 'wano' || town.style === 'chinese' || town.style === 'village')) {
+    // market stalls round the square's edge, facing in
+    const spots = [[sq.x0 + 1.4, sq.y0 + 1.2], [sq.x1 - 0.4, sq.y0 + 1.2], [sq.x0 + 1.4, sq.y1 - 0.2], [sq.x1 - 0.4, sq.y1 - 0.2]];
+    for (const [px, py] of rng.shuffle(spots).slice(0, town.style === 'village' ? 2 : 4)) {
+      if (clearAt(px, py - 0.5, 1.5) && !nearDoor(px, py, 2.2)) placeObject(world, { kind: 'stall', x: px, y: py, block: true, v: rng.int(0, 5) });
+    }
+    // benches on the square
+    for (const [px, py] of [[plaza.x - 2.6, plaza.y + 2.2], [plaza.x + 2.6, plaza.y - 2.2]]) {
+      if (clearAt(px, py, 1.1)) placeObject(world, { kind: 'bench', x: px, y: py, block: true });
     }
   }
 
-  // NPC standing spots: in front of doors and along the streets
+  // NPC standing spots: beside the doors, along the streets
   const npcSpots = [];
-  // (beside the door, not in it)
   for (const b of buildings) npcSpots.push({ ...bw(b, (b.doorX || 0) + (b.fw >= 5 ? 1.6 : 1.25), 1.3), building: b });
-  for (const ry of rows) for (let x = x0 + 3; x < x1 - 2; x += 5) if (okLand(x, ry + 1)) npcSpots.push({ x: x + 0.5, y: ry + 1.5 });
+  const streetSpots = [];
+  for (const st of streets) {
+    const ax = st.dir === 'h';
+    const len = ax ? st.x1 - st.x0 + 1 : st.y1 - st.y0 + 1;
+    for (let i = 1; i < len - 1; i += 3) {
+      const x = ax ? st.x0 + i + 0.5 : (st.x0 + st.x1 + 1) / 2, y = ax ? (st.y0 + st.y1 + 1) / 2 : st.y0 + i + 0.5;
+      if (okLand(x, y)) { streetSpots.push({ x, y }); if (i % 6 === 1) npcSpots.push({ x, y }); }
+    }
+  }
 
   return {
     id: town.id, name: town.name, x: plaza.x, y: plaza.y + 2, w, h, x0, y0, x1, y1,
-    style: town.style, buildings, plaza, npcSpots, roadTile, rows, mainX, def: town,
+    style: town.style, buildings, plaza, npcSpots, streetSpots, streets, roadTile, rows: [], mainX: plaza.x, def: town,
   };
 }

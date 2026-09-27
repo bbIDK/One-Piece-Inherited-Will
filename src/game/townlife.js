@@ -102,6 +102,7 @@ function spotsOf(game, town, isl) {
       S.stall.push({ x, y, face: Math.atan2(Math.cos(yaw), Math.sin(yaw)), o });
     }
   }
+  for (const p of town.streetSpots || []) if (clear(p.x, p.y, 0.4)) S.street.push({ x: p.x, y: p.y });
   for (const ry of town.rows || []) {
     for (let x = town.x0 + 2; x < town.x1 - 1; x += 3) if (clear(x + 0.5, ry + 1.1, 0.4)) S.street.push({ x: x + 0.5, y: ry + 1.1 });
   }
