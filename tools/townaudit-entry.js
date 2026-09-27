@@ -225,3 +225,38 @@ export async function barriers() {
   }
   return kinds;
 }
+
+/**
+ * Ground you can't walk on that doesn't look it: rock, cliff and mountain
+ * tiles (not walkable) drawn so gently that a walkable neighbour is less than
+ * `step` metres below or above them. In and round each town, and island-wide.
+ */
+export async function rockAudit(step = 0.5) {
+  const world = await generateWorld({ seed: 'blue-planet', islands: ALL_ISLANDS });
+  const hf = new HeightField(world);
+  const names = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
+  const res = { towns: [], islandWide: 0, byType: {} };
+  const flat = (x, y) => {
+    const t = world.type(x, y);
+    if (WALKABLE[t] || t === T.WALL || world.isLiquid(x, y)) return false;
+    const h = hf.terrain(x + 0.5, y + 0.5);
+    for (const [i, j] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (!world.walkable(x + i, y + j)) continue;
+      if (Math.abs(hf.terrain(x + i + 0.5, y + j + 0.5) - h) < step) return true;
+    }
+    return false;
+  };
+  for (const isl of world.islands) {
+    if (!isl.def || !isl.landBox) continue;
+    const { x0, y0, x1, y1 } = isl.landBox;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (flat(x, y)) { res.islandWide++; const n = names[world.type(x, y)]; res.byType[n] = (res.byType[n] || 0) + 1; }
+    for (const t of isl.towns) {
+      const M = 10, at = [];
+      let n = 0;
+      for (let y = t.y - M; y < t.y + t.h + M; y++) for (let x = t.x - M; x < t.x + t.w + M; x++) if (flat(x, y)) { n++; if (at.length < 4) at.push(`${x},${y} ${names[world.type(x, y)]}`); }
+      if (n) res.towns.push({ island: isl.id, town: t.id, n, at });
+    }
+  }
+  res.towns.sort((a, b) => b.n - a.n);
+  return res;
+}

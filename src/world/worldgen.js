@@ -13,6 +13,7 @@ import { RNG, hash2 } from '../core/rng.js';
 import { hexToRgb, clamp } from '../core/math.js';
 import { generateIsland, carvePath, placeObject } from './islandgen.js';
 import { generateTown } from './towngen.js';
+import { cornerHeight } from '../render3d/height.js';
 
 /** Reverse Mountain (see reverseMountain.js): the massif, its canals and the summit pool. */
 export const REVERSE_MOUNTAIN = RM;
@@ -70,11 +71,78 @@ export async function generateWorld({ seed = 'blue-planet', islands = [], onProg
   onProgress(0.8, 'Measuring the coasts');
   await computeDistanceField(world, yieldFrame);
   compactDistance(world);
+  openGentleRock(world);
 
   onProgress(0.92, 'Drawing the chart');
   world.map = buildMapImage(world);
   onProgress(1, 'Ready');
   return world;
+}
+
+/**
+ * Mountain, cliff and snow-rock tiles drawn so gently that a walkable
+ * neighbour is within half a metre of them look like ground you could walk
+ * on: an invisible wall. They become walkable rock; each change lowers the
+ * ground round it a little, so their neighbours are looked at again.
+ */
+function openGentleRock(world) {
+  const hard = new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK]);
+  const W1 = world.width + 1, heights = new Map();
+  const key = (x, y) => y * W1 + world.wx(x);
+  const corner = (x, y) => { const k = key(x, y); let h = heights.get(k); if (h === undefined) heights.set(k, (h = cornerHeight(world, x, y))); return h; };
+  // (a tile's centre as drawn: the mesh splits each quad along this diagonal, see HeightField.terrain)
+  const centre = (x, y) => (corner(x, y) + corner(x + 1, y + 1)) / 2;
+  const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const gentle = (x, y) => {
+    if (!hard.has(world.type(x, y))) return false;
+    let h = null;
+    for (const [i, j] of N4) {
+      if (!world.walkable(x + i, y + j)) continue;
+      h ??= centre(x, y);
+      if (Math.abs(centre(x + i, y + j) - h) < 0.5) return true;
+    }
+    return false;
+  };
+  // (the islands' written blocks, read straight from the tile store: only rock is looked at)
+  const isHard = new Uint8Array(256);
+  for (const t of hard) isHard[t] = 1;
+  const BSH = Math.log2(BS), blocks = new Set();
+  let todo = [];
+  for (const isl of world.islands) {
+    if (!isl.landBox) continue;
+    const { x0, y0, x1, y1 } = isl.landBox;
+    for (let by = Math.max(0, y0 >> BSH); by <= Math.min(world.bh - 1, y1 >> BSH); by++) {
+      for (let i = x0 >> BSH; i <= x1 >> BSH; i++) {
+        const bx = ((i % world.bw) + world.bw) % world.bw, b = by * world.bw + bx;
+        if (blocks.has(b)) continue;
+        blocks.add(b);
+        const d = world.bd[b], u = world.ut[b];
+        if (!d && (u === MIXED || !isHard[u])) continue;
+        for (let k = 0; k < BS * BS; k++) {
+          if (d && !isHard[d[k << 2]]) continue;
+          const x = bx * BS + (k & (BS - 1)), y = by * BS + (k >> BSH);
+          if (gentle(x, y)) todo.push(x, y);
+        }
+      }
+    }
+  }
+  for (let pass = 0; pass < 8 && todo.length; pass++) {
+    for (let k = 0; k < todo.length; k += 2) {
+      const x = todo[k], y = todo[k + 1];
+      world.setType(x, y, world.type(x, y) === T.SNOWROCK ? T.SNOW : T.ROCK);
+      for (const [i, j] of [[0, 0], [1, 0], [0, 1], [1, 1]]) heights.delete(key(x + i, y + j));
+    }
+    const seen = new Set(), next = [];
+    for (let k = 0; k < todo.length; k += 2) {
+      for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) {
+        const x = todo[k] + i, y = todo[k + 1] + j, s = key(x, y);
+        if (seen.has(s)) continue;
+        seen.add(s);
+        if (gentle(x, y)) next.push(x, y);
+      }
+    }
+    todo = next;
+  }
 }
 
 // ---------------------------------------------------------------------------

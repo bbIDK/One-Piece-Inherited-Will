@@ -71295,10 +71295,73 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     onProgress(0.8, "Measuring the coasts");
     await computeDistanceField(world, yieldFrame);
     compactDistance(world);
+    openGentleRock(world);
     onProgress(0.92, "Drawing the chart");
     world.map = buildMapImage(world);
     onProgress(1, "Ready");
     return world;
+  }
+  function openGentleRock(world) {
+    const hard = /* @__PURE__ */ new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK]);
+    const W1 = world.width + 1, heights = /* @__PURE__ */ new Map();
+    const key2 = (x, y) => y * W1 + world.wx(x);
+    const corner = (x, y) => {
+      const k = key2(x, y);
+      let h2 = heights.get(k);
+      if (h2 === void 0) heights.set(k, h2 = cornerHeight(world, x, y));
+      return h2;
+    };
+    const centre = (x, y) => (corner(x, y) + corner(x + 1, y + 1)) / 2;
+    const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const gentle = (x, y) => {
+      if (!hard.has(world.type(x, y))) return false;
+      let h2 = null;
+      for (const [i, j] of N4) {
+        if (!world.walkable(x + i, y + j)) continue;
+        h2 ?? (h2 = centre(x, y));
+        if (Math.abs(centre(x + i, y + j) - h2) < 0.5) return true;
+      }
+      return false;
+    };
+    const isHard = new Uint8Array(256);
+    for (const t of hard) isHard[t] = 1;
+    const BSH2 = Math.log2(BS), blocks = /* @__PURE__ */ new Set();
+    let todo = [];
+    for (const isl of world.islands) {
+      if (!isl.landBox) continue;
+      const { x0, y0, x1, y1 } = isl.landBox;
+      for (let by = Math.max(0, y0 >> BSH2); by <= Math.min(world.bh - 1, y1 >> BSH2); by++) {
+        for (let i = x0 >> BSH2; i <= x1 >> BSH2; i++) {
+          const bx = (i % world.bw + world.bw) % world.bw, b = by * world.bw + bx;
+          if (blocks.has(b)) continue;
+          blocks.add(b);
+          const d = world.bd[b], u = world.ut[b];
+          if (!d && (u === MIXED || !isHard[u])) continue;
+          for (let k = 0; k < BS * BS; k++) {
+            if (d && !isHard[d[k << 2]]) continue;
+            const x = bx * BS + (k & BS - 1), y = by * BS + (k >> BSH2);
+            if (gentle(x, y)) todo.push(x, y);
+          }
+        }
+      }
+    }
+    for (let pass = 0; pass < 8 && todo.length; pass++) {
+      for (let k = 0; k < todo.length; k += 2) {
+        const x = todo[k], y = todo[k + 1];
+        world.setType(x, y, world.type(x, y) === T.SNOWROCK ? T.SNOW : T.ROCK);
+        for (const [i, j] of [[0, 0], [1, 0], [0, 1], [1, 1]]) heights.delete(key2(x + i, y + j));
+      }
+      const seen = /* @__PURE__ */ new Set(), next = [];
+      for (let k = 0; k < todo.length; k += 2) {
+        for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) {
+          const x = todo[k] + i, y = todo[k + 1] + j, s = key2(x, y);
+          if (seen.has(s)) continue;
+          seen.add(s);
+          if (gentle(x, y)) next.push(x, y);
+        }
+      }
+      todo = next;
+    }
   }
   var POLE_EDGE = chart(20);
   var EDGE_PAD = 34;

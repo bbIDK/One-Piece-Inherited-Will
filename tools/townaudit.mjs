@@ -23,6 +23,13 @@ await build({
 const origErr = console.error;
 console.error = (...a) => { if (typeof a[0] === 'string' && a[0].startsWith('island ')) return; origErr(...a); };
 const mod = await import(pathToFileURL(out).href);
+if (args.rock) {
+  const r = await mod.rockAudit(Number(args.step || 0.5));
+  console.log(`unwalkable ground that looks walkable: ${r.islandWide} tiles island-wide`, JSON.stringify(r.byType));
+  for (const t of r.towns.slice(0, 40)) console.log(`  ${t.island.padEnd(22)}${t.town.padEnd(28)}${String(t.n).padEnd(6)}${t.at.join(' | ')}`);
+  console.log(`${r.towns.length} towns with some`);
+  process.exit(0);
+}
 if (args.barriers) {
   const kinds = await mod.barriers();
   const rows = Object.entries(kinds).sort((a, b) => b[1].town - a[1].town || b[1].n - a[1].n);
