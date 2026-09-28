@@ -86333,7 +86333,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       h("h3", "The sea"),
       h("p", "Swim anywhere \u2014 but swimming tires you. Run out of stamina while you keep swimming and you start to go under and drown; stop and tread water to get your breath back. Dive with C (or look down and swim) to explore the reefs, kelp forests and the dark deep water in the middle of the ocean; bubbles under your stamina show how long you can hold your breath. Grab fish with an attack as they swim past, prise giant clams open for pearls, and watch out past the reef: Sea Cows hunt swimmers in the Blues, and horned Fighting Fish in the Grand Line. Fish-Men swim fast and breathe water. Devil Fruit users cannot swim at all: the sea drags them down, and they come out of it weak \u2014 keep a crewmate close to haul you out, or grab a line thrown from your ship."),
       h("h3", "Ships, raids and being wanted"),
-      h("p", "Other ships sail the seas: merchantmen and fishing boats, Marine patrols, and pirates who will come about to attack you \u2014 though they leave an unknown newcomer in the Blues alone. Stop, and a ship that's after you comes alongside and heaves to. Fire on a merchant and she may heave to. To board and raid a ship, leave your helm and jump across onto her deck, or swim to her hull and press Space to climb her side. Beat the crew on her deck, plunder the hold at the hatch, then take her wheel to steal her \u2014 she joins your fleet. At your own wheel, E leaves the helm so you can walk your deck (jump over the rail for a swim; Space at her side climbs back aboard). Ships come in every size, from rowboats to One Piece-scale carracks, war galleons, men-o'-war and Yonko flagships: the big ones have a main deck, a quarterdeck and forecastle (and a poop deck on the largest) with stairs up to each, two tiers of guns, and room for your whole crew, who stand their stations on deck while you steer. Grand Line shipyards build them. Raiding or stealing from anyone but pirates is piracy, and your bounty grows. A small bounty goes unnoticed, but once your poster is worth something the Marines know your face on sight \u2014 a hood hides it, until you fight or steal in it."),
+      h("p", "Other ships sail the seas: merchantmen and fishing boats, Marine patrols (who come after you once you're wanted), and pirates, who keep to their own business \u2014 unless you fire on them or board them. Stop, and a ship that's after you comes alongside and heaves to. Fire on a merchant and she may heave to. To board and raid a ship, leave your helm and jump across onto her deck, or swim to her hull and press Space to climb her side. Beat the crew on her deck, plunder the hold at the hatch, then take her wheel to steal her \u2014 she joins your fleet. At your own wheel, E leaves the helm so you can walk your deck (jump over the rail for a swim; Space at her side climbs back aboard). Ships come in every size, from rowboats to One Piece-scale carracks, war galleons, men-o'-war and Yonko flagships: the big ones have a main deck, a quarterdeck and forecastle (and a poop deck on the largest) with stairs up to each, two tiers of guns, and room for your whole crew, who stand their stations on deck while you steer. Grand Line shipyards build them. Raiding or stealing from anyone but pirates is piracy, and your bounty grows. A small bounty goes unnoticed, but once your poster is worth something the Marines know your face on sight \u2014 a hood hides it, until you fight or steal in it."),
       h("h3", "Crossing the Red Line"),
       h("p", "Paradise ends at the Red Line. Pirates cross the way the Straw Hats did: have your ship coated at the Sabaody Archipelago, then dive 10,000 metres to Fish-Man Island and rise into the New World. The Red Ports and their Bondola lifts to Mary Geoise are for the World Government \u2014 and those it permits."),
       h("h3", "Crew and the One Piece"),
@@ -93353,17 +93353,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   function pirateName(rng4) {
     return `${rng4.pick(["Black", "Crimson", "Howling", "Iron", "Salty", "Grinning", "Rotten", "Screaming", "Golden"])} ${rng4.pick(["Shark", "Maiden", "Gull", "Kraken", "Widow", "Barracuda", "Skull", "Jackal", "Tide"])}`;
   }
-  function sparesNewcomer(game) {
-    const c = game.state?.char, p = game.player;
-    if (!c || !p || (c.bounty || 0) > 0) return false;
-    if (isBlue(regionAt(p.x, p.y))) return true;
-    const a = p.attrs || {};
-    return ((a.str || 0) + (a.agi || 0) + (a.end || 0) + (a.vit || 0) + (a.wil || 0)) / 5 < 12;
-  }
   function hostile2(s, game) {
     const tr = s.traffic;
     if (s.provoked || tr.raided) return tr.kind !== "merchant" && tr.kind !== "fishing";
-    if (tr.kind === "pirate") return !sparesNewcomer(game);
     if (tr.kind === "marine") return wantedTier(game) >= 2;
     return false;
   }
@@ -93411,13 +93403,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
     if (d < 17 && side < 0.6 && s.cannonCd <= 0 && s.fireBroadside(game, target2.x, target2.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 }) && s.heaveTo) s.cannonCd = Math.max(s.cannonCd, 6.5);
   }
-  function warningShot(game, s, target2) {
-    const x = game.world.wx(target2.x + Math.cos(target2.heading) * (target2.def.length * 0.5 + 5)), y = target2.y + Math.sin(target2.heading) * (target2.def.length * 0.5 + 5);
-    game.fx.burst(x, y, 16, { color: ["#e1f5fe", "#81d4fa", "#ffffff"], speed: 3.5, vz: 6, g: 10, life: 0.8, size: 0.18 });
-    game.fx.ripple?.(x, y, 1.6);
-    game.audio?.sfx("cannon", { x, y });
-    game.log(`The ${s.name} fires a shot across your bow \u2014 then sheers off. Not worth their powder, a boat like yours\u2026 yet.`, "#ffab91");
-  }
   function trafficAI(s, dt, game) {
     const tr = s.traffic, w = game.world, p = game.player;
     if (tr.raided || tr.surrender) {
@@ -93459,9 +93444,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     } else {
       s.speedCap = null;
       s.heaveTo = false;
-      if (tr.kind === "pirate" && !tr.warnShot && target2 && d < 24 && (s.def.cannons || 0) > 0) {
-        tr.warnShot = true;
-        warningShot(game, s, target2);
+      if (tr.kind === "pirate" && !tr.passed && target2 && d < 40) {
+        tr.passed = true;
+        game.log(`The ${s.name} sails past under her Jolly Roger, her crew jeering from the rail \u2014 they've better prey today.`, "#b0bec5");
       }
       s.sail = tr.running ? 1 : tr.kind === "fishing" ? 0.45 : tr.kind === "merchant" ? 0.7 : 0.8;
       if (tr.running && d < 60) want = Math.atan2(s.y - p.y, w.dx(p.x, s.x));
@@ -93956,7 +93941,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const lvl = nw ? rng4.int(45, 70) : gl ? rng4.int(22, 40) : isBlue(reg3) && reg3 !== REGION.EAST_BLUE ? rng4.int(10, 18) : rng4.int(5, 12);
       const type = nw ? rng4.pick(["frigate", "galleon", "war_galleon", "man_o_war"]) : gl ? rng4.pick(["brigantine", "caravel", "frigate", "war_galleon"]) : rng4.pick(["sloop", "caravel", "sloop"]);
       const faction = kind === "marine" ? "marine" : kind === "pirate" ? "pirate" : "civilian";
-      const spared = kind === "pirate" && sparesNewcomer(g);
+      const spared = kind === "pirate";
       const ship = g.addShip({
         type: kind === "marine" ? nw ? "marine_battleship" : gl ? rng4.pick(["marine_warship", "marine_battleship"]) : "brigantine" : type,
         x,
@@ -93979,8 +93964,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       ship.hull = ship.maxHull = Math.round(ship.maxHull * (0.5 + lvl / 40));
       ship.loot = Math.round((kind === "merchant" ? 3e3 : 1500) * (1 + lvl / 10));
       ship.expire = 180;
-      if (spared) g.log("A pirate ship crosses your bow in the distance \u2014 and pays a little boat no mind.", "#b0bec5");
-      else if (kind === "pirate") g.log(`A pirate ship flying an unfamiliar Jolly Roger is closing in!`, "#ff8a80");
+      if (spared) g.log("A pirate ship flying an unfamiliar Jolly Roger crosses your bow in the distance \u2014 and sails on.", "#b0bec5");
       else if (kind === "marine") g.log("A Marine patrol ship has spotted you! (You have a bounty.)", "#64b5f6");
       else g.log("A merchant ship sails by.", "#b0bec5");
     }
@@ -94055,7 +94039,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       s.alive = false;
       return;
     }
-    const hostileToPlayer = s.faction === "pirate" && (s.provoked || !sparesNewcomer(game)) || s.faction === "marine" && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked);
+    const hostileToPlayer = s.faction === "pirate" && s.provoked || s.faction === "marine" && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked);
     if (!hostileToPlayer) return merchantAI(s, dt, game);
     if (!target2 && s.heaveTo && d < 30) {
       s.sail = 0;

@@ -14,7 +14,7 @@ import { RNG } from '../core/rng.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
 import { drawShip } from '../render/ship.js';
 import { hullGap } from '../world/hull.js';
-import { sparesNewcomer, engage, playerShip, fireOn } from './traffic.js';
+import { engage, playerShip, fireOn } from './traffic.js';
 
 export function installSea(game) {
   const sea = new SeaSystem(game);
@@ -256,8 +256,8 @@ class SeaSystem {
     const lvl = nw ? rng.int(45, 70) : gl ? rng.int(22, 40) : isBlue(reg) && reg !== REGION.EAST_BLUE ? rng.int(10, 18) : rng.int(5, 12);
     const type = nw ? rng.pick(['frigate', 'galleon', 'war_galleon', 'man_o_war']) : gl ? rng.pick(['brigantine', 'caravel', 'frigate', 'war_galleon']) : rng.pick(['sloop', 'caravel', 'sloop']);
     const faction = kind === 'marine' ? 'marine' : kind === 'pirate' ? 'pirate' : 'civilian';
-    // (pirates don't bother a newcomer: she crosses your bow at a distance rather than bearing down on you)
-    const spared = kind === 'pirate' && sparesNewcomer(g);
+    // (pirates keep to their own business: she crosses your bow at a distance rather than bearing down on you)
+    const spared = kind === 'pirate';
     const ship = g.addShip({
       type: kind === 'marine' ? (nw ? 'marine_battleship' : gl ? rng.pick(['marine_warship', 'marine_battleship']) : 'brigantine') : type, x, y, heading: a + Math.PI + (spared ? 0.9 : 0), owner: kind, faction,
       name: kind === 'marine' ? 'Marine Patrol' : kind === 'pirate' ? pirateShipName(rng) : 'Merchant Ship',
@@ -272,8 +272,7 @@ class SeaSystem {
     ship.hull = ship.maxHull = Math.round(ship.maxHull * (0.5 + lvl / 40));
     ship.loot = Math.round((kind === 'merchant' ? 3000 : 1500) * (1 + lvl / 10));
     ship.expire = 180;
-    if (spared) g.log('A pirate ship crosses your bow in the distance — and pays a little boat no mind.', '#b0bec5');
-    else if (kind === 'pirate') g.log(`A pirate ship flying an unfamiliar Jolly Roger is closing in!`, '#ff8a80');
+    if (spared) g.log('A pirate ship flying an unfamiliar Jolly Roger crosses your bow in the distance — and sails on.', '#b0bec5');
     else if (kind === 'marine') g.log('A Marine patrol ship has spotted you! (You have a bounty.)', '#64b5f6');
     else g.log('A merchant ship sails by.', '#b0bec5');
   }
@@ -339,8 +338,8 @@ function warshipAI(s, dt, game) {
   const target = playerShip(p);
   const d = game.world.distance(s.x, s.y, p.x, p.y);
   if (s.expire <= 0 && d > 40) { s.alive = false; return; }
-  // (pirates leave a newcomer be unless they're fired on: see traffic.js)
-  const hostileToPlayer = (s.faction === 'pirate' && (s.provoked || !sparesNewcomer(game))) || (s.faction === 'marine' && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked));
+  // (pirates leave you be unless they're fired on or boarded: see traffic.js)
+  const hostileToPlayer = (s.faction === 'pirate' && s.provoked) || (s.faction === 'marine' && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked));
   if (!hostileToPlayer) return merchantAI(s, dt, game);
   // (hove to alongside, she waits for you while you're close — swimming over to board her, say)
   if (!target && s.heaveTo && d < 30) { s.sail = 0; s.speedCap = 0; s.anchored = true; return; }

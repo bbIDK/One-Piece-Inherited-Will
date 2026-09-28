@@ -162,23 +162,13 @@ function pirateName(rng) {
 }
 
 /**
- * A newcomer the sea's rogues leave be: no bounty on your head, and still in
- * the Blues — or anywhere, while you're scarcely stronger than the day you
- * set out. (Fire on a ship, or raid her, and it's another matter.)
+ * Does this ship mean to fight the player's ship? Pirates keep to their own
+ * business at sea — fire on one, or board her, and it's another matter;
+ * Marines come after you once your face is known.
  */
-export function sparesNewcomer(game) {
-  const c = game.state?.char, p = game.player;
-  if (!c || !p || (c.bounty || 0) > 0) return false;
-  if (isBlue(regionAt(p.x, p.y))) return true;
-  const a = p.attrs || {};
-  return ((a.str || 0) + (a.agi || 0) + (a.end || 0) + (a.vit || 0) + (a.wil || 0)) / 5 < 12;
-}
-
-/** Does this ship mean to fight the player's ship? */
 function hostile(s, game) {
   const tr = s.traffic;
   if (s.provoked || tr.raided) return tr.kind !== 'merchant' && tr.kind !== 'fishing';
-  if (tr.kind === 'pirate') return !sparesNewcomer(game);
   if (tr.kind === 'marine') return wantedTier(game) >= 2;
   return false;
 }
@@ -236,15 +226,6 @@ export function fireOn(game, s, target, d) {
   if (d < 17 && side < 0.6 && s.cannonCd <= 0 && s.fireBroadside(game, target.x, target.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 }) && s.heaveTo) s.cannonCd = Math.max(s.cannonCd, 6.5);
 }
 
-/** A pirate who won't bother with small fry: a shot across your bow, and she sails on. */
-function warningShot(game, s, target) {
-  const x = game.world.wx(target.x + Math.cos(target.heading) * (target.def.length * 0.5 + 5)), y = target.y + Math.sin(target.heading) * (target.def.length * 0.5 + 5);
-  game.fx.burst(x, y, 16, { color: ['#e1f5fe', '#81d4fa', '#ffffff'], speed: 3.5, vz: 6, g: 10, life: 0.8, size: 0.18 });
-  game.fx.ripple?.(x, y, 1.6);
-  game.audio?.sfx('cannon', { x, y });
-  game.log(`The ${s.name} fires a shot across your bow — then sheers off. Not worth their powder, a boat like yours… yet.`, '#ffab91');
-}
-
 /** Sail on past (round the coasts, clear of other ships) — or fight. */
 function trafficAI(s, dt, game) {
   const tr = s.traffic, w = game.world, p = game.player;
@@ -276,8 +257,8 @@ function trafficAI(s, dt, game) {
     if (!tr.warned) { tr.warned = true; game.log(tr.kind === 'marine' ? `The ${s.name} runs up its colours — Marines, closing on you!` : `The ${s.name} is coming about to attack!`, tr.kind === 'marine' ? '#64b5f6' : '#ff8a80'); }
   } else {
     s.speedCap = null; s.heaveTo = false;
-    // (a pirate who lets a newcomer be may still let them know she's there)
-    if (tr.kind === 'pirate' && !tr.warnShot && target && d < 24 && (s.def.cannons || 0) > 0) { tr.warnShot = true; warningShot(game, s, target); }
+    // (a pirate sailing by lets you know she's there, and no more)
+    if (tr.kind === 'pirate' && !tr.passed && target && d < 40) { tr.passed = true; game.log(`The ${s.name} sails past under her Jolly Roger, her crew jeering from the rail — they've better prey today.`, '#b0bec5'); }
     s.sail = tr.running ? 1 : tr.kind === 'fishing' ? 0.45 : tr.kind === 'merchant' ? 0.7 : 0.8;
     // a merchant that's been shot at runs for it
     if (tr.running && d < 60) want = Math.atan2(s.y - p.y, w.dx(p.x, s.x));

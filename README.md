@@ -201,10 +201,11 @@ rearrange them.
   - the current does the sailing and only runs one way, so steer for the
     middle of the canal.
 - The world is big: you can't see the next island from the last one.
-- Marine patrols, pirate ships, merchants and flotsam. Pirates leave an
-  unknown newcomer in the Blues alone. Once you have a bounty they give chase
-  (in the Blues, not much faster than a small boat), and when you stop they
-  heave to alongside, so you can board them.
+- Marine patrols, pirate ships, merchants and flotsam. Pirates keep to
+  their own business at sea: they fight only when you fire on them or board
+  them. Marines give chase once you're wanted (in the Blues, not much faster
+  than a small boat), and a ship that's after you heaves to alongside when
+  you stop, so you can board her.
 - A News Coo delivers the morning paper.
 
 **Zones.**
