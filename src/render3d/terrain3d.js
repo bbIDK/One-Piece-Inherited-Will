@@ -337,11 +337,14 @@ export class TerrainManager {
         else if (w.quays.size && w.isQuay(x0 + i, y0 + j)) { quays++; quayed.push(i, j); }
       }
     }
+    // (each wall block stands on the ground beside it: see HeightField.wallSpan)
+    const spans = walls.length ? new Float32Array(walls.length) : null;
+    for (let q = 0; q < walls.length; q += 2) { const s = this.hf.wallSpan(x0 + walls[q], y0 + walls[q + 1]); spans[q] = s[0]; spans[q + 1] = s[1]; }
     if (!full) {
       const m = farBoxes([
         [decks, 1, 0.22, 1, DECK_Y - 0.11, 0x9a6a3c], [piers, 1, 0.26, 1, DOCK_Y - 0.13, 0x9a6a3c],
         [posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, 0x5d4030, 0.15], [piles, 0.3, DOCK_Y + 2.74, 0.3, (DOCK_Y - 3.26) / 2, 0x5d4030],
-        [quayed, 1, DOCK_Y + 1.5, 1, (DOCK_Y - 1.5) / 2, 0xa39c90], [walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, 0x8a7f70],
+        [quayed, 1, DOCK_Y + 1.5, 1, (DOCK_Y - 1.5) / 2, 0xa39c90], [walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, 0x8a7f70, 0, spans],
       ]);
       if (m) root.add(m);
       return;
@@ -350,7 +353,7 @@ export class TerrainManager {
     if (piers.length) root.add(boxes(piers, 1, 0.26, 1, DOCK_Y - 0.13, this.deckMat));
     if (posts.length) root.add(boxes(posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, this.postMat, 0.15));
     if (walls.length) {
-      const m = boxes(walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, this.wallMat);
+      const m = boxes(walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, this.wallMat, 0, spans);
       m.castShadow = true;
       root.add(m);
     }
@@ -507,7 +510,7 @@ function terrainMaterial() {
 }
 
 /** One merged mesh of axis-aligned boxes at tile coordinates (list of i, j pairs). */
-function boxes(list, sx, sy, sz, cy, mat, inset = 0) {
+function boxes(list, sx, sy, sz, cy, mat, inset = 0, spans = null) {
   const n = list.length / 2;
   const base = new THREE.BoxGeometry(sx, sy, sz);
   const bp = base.attributes.position.array, bn = base.attributes.normal.array, bi = base.index.array;
@@ -516,9 +519,11 @@ function boxes(list, sx, sy, sz, cy, mat, inset = 0) {
   const idx = new Uint32Array(n * bi.length);
   for (let k = 0; k < n; k++) {
     const ox = list[k * 2] + 0.5 + inset, oz = list[k * 2 + 1] + 0.5 + inset;
+    // (spans: each box's own [bottom, top] instead of cy ± sy/2)
+    const ky = spans ? (spans[k * 2 + 1] - spans[k * 2]) / sy : 1, kc = spans ? (spans[k * 2] + spans[k * 2 + 1]) / 2 : cy;
     for (let v = 0; v < vc; v++) {
       pos[(k * vc + v) * 3] = bp[v * 3] + ox;
-      pos[(k * vc + v) * 3 + 1] = bp[v * 3 + 1] + cy;
+      pos[(k * vc + v) * 3 + 1] = bp[v * 3 + 1] * ky + kc;
       pos[(k * vc + v) * 3 + 2] = bp[v * 3 + 2] + oz;
       nor[(k * vc + v) * 3] = bn[v * 3]; nor[(k * vc + v) * 3 + 1] = bn[v * 3 + 1]; nor[(k * vc + v) * 3 + 2] = bn[v * 3 + 2];
     }
@@ -538,7 +543,8 @@ function boxes(list, sx, sy, sz, cy, mat, inset = 0) {
 /**
  * The decks, piers, posts, quays and walls of a far chunk as plain blocks in
  * ONE vertex-coloured mesh (their planks, pilings and crenellations would be
- * a pixel at that distance). groups: [[list, sx, sy, sz, cy, colour, inset]].
+ * a pixel at that distance). groups: [[list, sx, sy, sz, cy, colour, inset, spans]]
+ * (spans: each block's own [bottom, top], see boxes).
  */
 function farBoxes(groups) {
   let n = 0;
@@ -551,13 +557,14 @@ function farBoxes(groups) {
   const idx = new Uint32Array(n * bi.length);
   const c = new THREE.Color();
   let k = 0;
-  for (const [list, sx, sy, sz, cy, color, inset = 0] of groups) {
+  for (const [list, sx, sy, sz, cy, color, inset = 0, spans = null] of groups) {
     c.set(color);
     for (let q = 0; q < list.length; q += 2, k++) {
       const ox = list[q] + 0.5 + inset, oz = list[q + 1] + 0.5 + inset;
+      const ky = spans ? spans[q + 1] - spans[q] : sy, kc = spans ? (spans[q] + spans[q + 1]) / 2 : cy;
       for (let v = 0; v < vc; v++) {
         const o = (k * vc + v) * 3;
-        pos[o] = bp[v * 3] * sx + ox; pos[o + 1] = bp[v * 3 + 1] * sy + cy; pos[o + 2] = bp[v * 3 + 2] * sz + oz;
+        pos[o] = bp[v * 3] * sx + ox; pos[o + 1] = bp[v * 3 + 1] * ky + kc; pos[o + 2] = bp[v * 3 + 2] * sz + oz;
         nor[o] = bn[v * 3]; nor[o + 1] = bn[v * 3 + 1]; nor[o + 2] = bn[v * 3 + 2];
         col[o] = c.r; col[o + 1] = c.g; col[o + 2] = c.b;
       }

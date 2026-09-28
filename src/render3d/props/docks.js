@@ -47,11 +47,12 @@ export function dockDetails(world, x0, y0, size = CHUNK, hf = null) {
       } else if (t === T.WALL) {
         any = true;
         const cx = i + 0.5, cz = j + 0.5;
-        const wtop = 0.4 + WALL_H;
+        // (on the block as it stands on the ground: see HeightField.wallSpan)
+        const [wbase, wtop] = hf ? hf.wallSpan(x0 + i, y0 + j) : [0.4, 0.4 + WALL_H];
         k.add(box(1.02, 0.18, 1.02), { at: [cx, wtop - 0.18, cz], color: '#6f675c' });
         // merlons on alternate tiles, on the outer faces
         if (((x0 + i) + (y0 + j)) % 2 === 0) k.add(box(0.5, 0.55, 0.5), { at: [cx, wtop, cz], color: '#8a7f70', outline: 0.02 });
-        if (!wall(i, j + 1) && !deck(i, j + 1)) k.add(box(1.0, 0.1, 0.06), { at: [cx, 0.9, j + 1.02], color: '#6f675c' });
+        if (!wall(i, j + 1) && !deck(i, j + 1)) k.add(box(1.0, 0.1, 0.06), { at: [cx, wbase + 0.85, j + 1.02], color: '#6f675c' });
       }
     }
   }

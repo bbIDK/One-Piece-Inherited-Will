@@ -21,6 +21,17 @@ export function hash2i(x, y, seed = 0) {
 /** Hash of 2D coords + seed → float in [0, 1). */
 export const hash2 = (x, y, seed = 0) => hash2i(x, y, seed) / 4294967296;
 
+/**
+ * Deterministic hash of up to three numbers (to the millimetre) → [0, 1): how
+ * a prop's model varies (its turn, its tint), the same for the world (its
+ * collider) as for the 3D view (its model).
+ */
+export function hash01(a, b = 0, c = 0) {
+  let h = Math.imul((a * 1000) | 0, 374761393) ^ Math.imul((b * 1000) | 0, 668265263) ^ Math.imul((c * 1000) | 0, 1274126177);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
 export class RNG {
   constructor(seed = 1) {
     this.s = (typeof seed === 'string' ? hashString(seed) : seed >>> 0) || 0x9e3779b9;

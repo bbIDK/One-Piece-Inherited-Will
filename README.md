@@ -88,6 +88,13 @@ rearrange them.
   - Mary Geoise and the Red Ports sit on the far side.
 - Islands, towns, landmarks and people are generated from canon data, from
   Foosha Village to Laugh Tale.
+- What stops you is what you see. Town walls stand on the ground they're
+  built on. A market stall, a beached boat or a ruined wall collides along
+  its length, turned the way it's drawn. A tree's trunk is as thick as its
+  kind: a lollipop's stick, a bamboo clump, a jungle giant's roots. A
+  boulder on a hillside lies along the slope. A house on an upper town over
+  a lower quay stands on a tall stone base rather than sunk into the hill.
+  Every town is walked in every direction to check (`barrierhunt`, below).
 
 **The main story.**
 
@@ -405,6 +412,7 @@ node tools/shot.mjs hitch --w=320 --h=180 [--cpu]   # per-frame JS time running 
 node tools/storycheck.mjs        # the main story: every chapter, road, contact and target resolves
 node tools/townaudit.mjs [--all] # every town (built-on share, empty paving, crowd), landmark (floating, sunk, in water, trees through it), overlap, and the walk from each town to its pier
 node tools/townaudit.mjs --barriers | --rock      # what blocks whole tiles; unwalkable rock drawn gently enough to look walkable
+node tools/shot.mjs barrierhunt [--islands=a,b,c] [--snap] --w=320 --h=180   # invisible barriers: walk out from all over each town every way and flag each stop with nothing drawn in front of it (and what stopped you)
 node tools/shot.mjs townwatch [--island=lvneel]   # a town's people over a minute (stuck, inside things, on steps, bunched up), street and air shots
 node tools/shot.mjs towntour --islands=a,b,c      # each town photographed from the air
 node tools/shot.mjs viewdist [--rd=<chunks>]      # the render distance: a big town from its square, 130 m and 250 m off, the air and the sea

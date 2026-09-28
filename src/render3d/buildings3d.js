@@ -13,7 +13,7 @@ import { uiIcon } from '../render/icons.js';
 import { vcMat, bindCtx, STATE } from './props/mats.js';
 import { Mesher, box, cyl, cone, lathe, slab, quad, C, shade, mix, hash } from './props/kit.js';
 import { CLIMATE } from '../world/tiles.js';
-import { doorOf, doorLocalX, windowSlots } from '../world/interiors.js';
+import { doorOf, doorLocalX, windowSlots, STEPS_MAX } from '../world/interiors.js';
 import { bw, bangle } from '../world/bframe.js';
 import { hollowWalls, rectFrame, shapeFrame, doorLeaf, animateDoor, roomSteps, requestRoom, cancelRoom } from './interiors3d.js';
 
@@ -189,6 +189,9 @@ function windowAt(k, b, S, x, y, w, h, faceZ, litOn, wallCol, flowers, pane = nu
   k.restore();
 }
 
+// how high a walk-in house's floor may stand over the street at its door (on its stone base)
+const MAX_RISE = 16;
+
 /**
  * The front door (with frame, step and style details). For a building you
  * can enter (`y0` = its floor height) only the frame, the steps up and the
@@ -204,8 +207,8 @@ function doorAt(k, b, S, x, g, wallCol, big, y0 = null) {
   k.save();
   k.translate(x, 0, 0);
   if (open) {
-    // steps up to the threshold
-    const n = Math.max(1, Math.round(y0 / 0.2));
+    // steps up to the threshold (higher than that, its door opens onto the drop: see height.js stepTop)
+    const n = y0 <= STEPS_MAX + 0.01 ? Math.max(1, Math.round(y0 / 0.2)) : 0;
     for (let i = 0; i < n; i++) {
       const top = y0 - (i + 1) * y0 / (n + 1);
       B(k, -dw / 2 - 0.2 - i * 0.05, -0.3, i * 0.32 - 0.02, dw / 2 + 0.2 + i * 0.05, top, (i + 1) * 0.32, '#9a948a', { outline: 0.02 });
@@ -471,9 +474,13 @@ function buildBuilding0(b, ctx) {
   const enter = !!b.enterable && S.wall !== 'hut' && rt !== 'hut' && rt !== 'ruin' && S.wall !== 'stone';
   let plinth = 0.35;
   if (enter && ctx?.ground) {
+    // (its floor where you walk, however high over the street at its door: a
+    // house on an upper town over a lower quay stands on a tall stone base —
+    // held lower, its storeys sank into the hill and its walls, still solid,
+    // were buried out of sight)
     const mid = bw(b, 0, -fd / 2);
     const rise = ctx.ground(mid.x, mid.y) - ctx.ground(b.x, b.y);
-    if (Number.isFinite(rise)) plinth = Math.max(0.35, Math.min(3, rise));
+    if (Number.isFinite(rise)) plinth = Math.max(0.35, Math.min(MAX_RISE, rise));
   }
   const H = plinth + 3.0 * g + (storeys - 1) * storeyH;
   const Hc = plinth + (storeys > 1 ? storeyH : 3.0 * g); // the ground floor's ceiling
@@ -521,7 +528,7 @@ function buildBuilding0(b, ctx) {
       B(k, -fw / 2, plinth - 0.05, -fd, fw / 2, Hc, 0, groundCol, { outline: 0.045 });
       B(k, -fw / 2, Hc, -fd, fw / 2, H, 0, wallCol, { outline: 0.045 });
     } else B(k, -fw / 2, plinth - 0.05, -fd, fw / 2, H, 0, wallCol, { outline: 0.045 });
-    wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, holes, ex);
+    wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, holes, ex, sink);
     if (V.jetty) jetty(k, S, fw, plinth, storeys, storeyH, H, Hc, V.jetty, wallCol, ex);
     k.restore();
   }
@@ -702,7 +709,7 @@ function finish(b, k, info, top) {
  * the doorway and the windows, and posts that would cross an opening are left
  * out. holes = { front: [{ a0, a1, y0, y1 }], left: [...], right: [...] } (a along the wall).
  */
-function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, holes = null, ex = (sx, d) => d) {
+function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, holes = null, ex = (sx, d) => d, sink = 0) {
   // (on a side against a neighbour, trims stop at the corner and side-wall detail is left off)
   const free = (sx) => ex(sx, 1) > 0;
   const xl = (d) => -fw / 2 - ex(-1, d), xr = (d) => fw / 2 + ex(1, d);
@@ -821,7 +828,9 @@ function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, ho
       for (let i = 0; i <= n; i++) {
         const x = -fw / 2 + i * fw / n;
         if (holes && crosses(x, plinth, plinth + 1.9, 0.3) && HF[0] && x > HF[0].a0 - 0.3 && x < HF[0].a1 + 0.3) continue; // not in the doorway
-        k.add(cyl(0.14, 0.16, H - plinth, 8), { at: [x, plinth, 0.25], color: '#b03a2e', outline: 0.02 });
+        // (down into the ground like the foundation: on a slope a column
+        // stopping at the floor would hang over a gap you still bump into)
+        k.add(cyl(0.14, 0.16, H + sink, 8), { at: [x, -sink, 0.25], color: '#b03a2e', outline: 0.02 });
       }
       B(k, xl(0.1), H - 0.45, 0.05, xr(0.1), H - 0.1, 0.42, '#b03a2e');
       B(k, xl(0.1), H - 0.55, 0.1, xr(0.1), H - 0.45, 0.4, '#d4ac0d');
@@ -1245,7 +1254,7 @@ export function farBuilding(k, b, ctx) {
   if (enter && ctx?.ground) {
     const mid = bw(b, 0, -fd / 2);
     const rise = ctx.ground(mid.x, mid.y) - ctx.ground(b.x, b.y);
-    if (Number.isFinite(rise)) plinth = Math.max(0.35, Math.min(3, rise));
+    if (Number.isFinite(rise)) plinth = Math.max(0.35, Math.min(MAX_RISE, rise));
   }
   const H = plinth + 3.0 * g + (storeys - 1) * storeyH;
   const Hc = plinth + (storeys > 1 ? storeyH : 3.0 * g);

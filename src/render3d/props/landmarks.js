@@ -837,8 +837,13 @@ const statueGeo = () => model('statue', (k) => {
 reg('statue', (o, ctx) => simple(o, ctx, 'statue', statueGeo(), { yaw: 0 }));
 
 // ------------------------------------------------------------ shipwreck
+// (a wreck, and a beached ship, are the size of the brigantine these models
+// were made round — 6.8 m — not a full-size One Piece brigantine: see
+// world/objects.js COLLIDE, where they're solid)
+const SMALL_SHIP = 6.8;
+const smallHull = (def) => { const g = hullGeometry(def).clone(); const f = SMALL_SHIP / def.length; g.scale(f, f, f); return g; };
 const wreckGeo = () => model('shipwreck', (k) => {
-  const g = hullGeometry(SHIPS.brigantine);
+  const g = smallHull(SHIPS.brigantine);
   k.save(); k.translate(0, 0.35, 0); k.rotateZ(-0.12); k.rotateX(0.42);
   k.add(g, { attrs: true, colorMul: 0.72 });
   // a snapped mast with a torn sail, broken ribs
@@ -850,20 +855,20 @@ const wreckGeo = () => model('shipwreck', (k) => {
   for (let i = 0; i < 6; i++) k.add(box(1.2 + R(), 0.08, 0.22), { at: [(R() - 0.5) * 7, 0.03, 2 + R() * 2], rot: [0, R() * 3, 0], color: '#6d4c33' });
 });
 reg('shipwreck', (o, ctx) => {
-  const m = simple(o, ctx, 'shipwreck', wreckGeo(), { yaw: hash(o.x, o.y) * Math.PI * 2 });
+  const m = simple(o, ctx, 'shipwreck', wreckGeo(), { yaw: o.yaw ?? hash(o.x, o.y) * Math.PI * 2 });
   return m;
 });
 
 // ------------------------------------------------------------ boats
 const boatGeo = (big) => model('boat:' + big, (k) => {
-  const g = hullGeometry(big ? SHIPS.brigantine : SHIPS.dinghy);
+  const g = big ? smallHull(SHIPS.brigantine) : hullGeometry(SHIPS.dinghy);
   k.save(); k.translate(0, big ? 0.2 : 0.42, 0); k.rotateX(big ? 0.05 : 0.18);
   k.add(g, { attrs: true });
   k.restore();
 });
 reg('boat', (o, ctx) => {
   const big = /flagship|perfume/i.test(o.name || '') ? 1 : 0;
-  return simple(o, ctx, 'boat:' + big, boatGeo(big), { yaw: hash(o.x, o.y) * Math.PI * 2 });
+  return simple(o, ctx, 'boat:' + big, boatGeo(big), { yaw: o.yaw ?? hash(o.x, o.y) * Math.PI * 2 });
 });
 
 // ------------------------------------------------------------ tower

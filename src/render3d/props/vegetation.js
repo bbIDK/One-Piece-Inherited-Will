@@ -375,7 +375,8 @@ function bamboo(variant) {
     const R = rng(5 + variant);
     const n = 4;
     for (let i = 0; i < n; i++) {
-      const a = i / n * Math.PI * 2 + R();
+      // (spread round the clump: no gap wide enough to look like a way through)
+      const a = i / n * Math.PI * 2 + (R() - 0.5) * 0.6;
       const x = Math.cos(a) * 0.28, z = Math.sin(a) * 0.28;
       const h = 3.4 + R() * 1.4;
       const segs = 5;
@@ -666,7 +667,32 @@ registerPropBuilder('rock', (o, ctx) => {
   else if (clim === 'sand') col = C('#c2a27a').clone();
   col.multiplyScalar(0.92 + hash(o.x, o.y, 3) * 0.16);
   const part = { key: `r:${shape}:${cap}`, geo: rockModel(shape, cap), tinted: true, color: col };
-  return instanced(o, ctx, [part], { yaw: hash(o.x, o.y) * Math.PI * 2, scale: o.s || 1 });
+  return instanced(o, ctx, [part], { yaw: hash(o.x, o.y) * Math.PI * 2, scale: o.s || 1, ...rockBed(o, ctx) });
 });
+
+const _up = new THREE.Vector3(0, 1, 0), _n = new THREE.Vector3();
+/**
+ * A boulder on a hillside lies along the slope, bedded into it: standing
+ * level, it would hang off the low side and be buried on the high side,
+ * where you'd still walk into it with nothing there to see. (On a pier, a
+ * deck or a quay it stands as it is.)
+ */
+function rockBed(o, ctx) {
+  if (!ctx?.terrain || !ctx.ground) return {};
+  const g = ctx.ground(o.x, o.y), R = 0.62 * (o.s || 1);
+  if (Math.abs(g - ctx.terrain(o.x, o.y)) > 0.05) return {};
+  const hx0 = ctx.terrain(o.x - R, o.y), hx1 = ctx.terrain(o.x + R, o.y);
+  const hy0 = ctx.terrain(o.x, o.y - R), hy1 = ctx.terrain(o.x, o.y + R);
+  const gx = (hx1 - hx0) / (2 * R), gy = (hy1 - hy0) / (2 * R);
+  if (Math.hypot(gx, gy) < 0.08) return {};
+  // (bedded down to the lowest ground round it, below that plane: a hollow)
+  let sink = 0;
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2, dx = Math.cos(a) * R, dy = Math.sin(a) * R;
+    sink = Math.min(sink, ctx.terrain(o.x + dx, o.y + dy) - (g + gx * dx + gy * dy));
+  }
+  const tilt = new THREE.Quaternion().setFromUnitVectors(_up, _n.set(-gx, 1, -gy).normalize());
+  return { tilt, y: g + Math.max(sink, -0.3 * (o.s || 1)) - 0.04 * (o.s || 1) };
+}
 
 export { treeModel, bushModel, rockModel, box };

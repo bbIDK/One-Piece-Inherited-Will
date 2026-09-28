@@ -22,6 +22,7 @@ import { CLIMATES } from '../src/world/islandgen.js';
 import { regionAt, REGION_INFO, W, H, RL_HALF, RM_X, POLAR, EQ } from '../src/world/constants.js';
 import { REVERSE_MOUNTAIN, MARY_GEOISE_DEF } from '../src/world/worldgen.js';
 import { checkAllShips } from './shiplayout.mjs';
+import { bfoot } from '../src/world/bframe.js';
 
 const SEAS = new Set(['east_blue', 'north_blue', 'west_blue', 'south_blue', 'paradise', 'new_world', 'calm_belt', 'sky', 'undersea', 'zone']);
 const GOALS = new Set(['defeat', 'reach', 'item', 'flag', 'event', 'reachXY', 'days', 'quest', 'weapon', 'ship', 'crew', 'faction', 'bounty', 'counter', 'check']);
@@ -122,6 +123,19 @@ export async function run(opts = {}) {
         else if (!info) Wn(`${where} stands on the quay (no room on the pier)`);
       }
     }
+    // what blocks whole tiles sits on the tile grid (world/objects.js align):
+    // off it, its blocked tiles and its model disagree — a strip of invisible
+    // wall along one side, and its other side's wall over open ground
+    let offGrid = 0, eg = null;
+    for (const list of world.objects.chunks.values()) {
+      for (const o of list) {
+        if (!o.block || o.soft) continue;
+        let fx, fy;
+        if (o.rot) { const r = bfoot(o); fx = r.x0; fy = r.y0; } else { fx = o.x - (o.fw || 1) / 2; fy = o.y - (o.fd || 1); }
+        if (Math.abs(fx - Math.round(fx)) > 0.01 || Math.abs(fy - Math.round(fy)) > 0.01) { offGrid++; eg ||= `${o.kind} "${o.name || o.role || ''}" at ${o.x.toFixed(2)},${o.y.toFixed(2)}`; }
+      }
+    }
+    if (offGrid) E(`${offGrid} blocking object(s) stand off the tile grid, e.g. ${eg}`);
     // every home island sells a sword (the pirate road's first job is "get a weapon")
     for (const id of PROLOGUES.keys()) {
       const r = recs.get(id);

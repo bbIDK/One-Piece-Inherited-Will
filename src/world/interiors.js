@@ -14,6 +14,7 @@ import { bw, bl, bbox } from './bframe.js';
 
 export const WALL_T = 0.22; // wall thickness (m)
 export const PLINTH = 0.35; // the ground floor over the street in front
+export const STEPS_MAX = 3; // the highest a flight of steps up to a front door goes (higher, the door opens onto the drop)
 
 const WIN = {
   village: 'cross', town: 'cross', port: 'cross', city: 'tall', desert: 'arch', snow: 'cross', wano: 'shoji', chinese: 'lattice', sky: 'round', candy: 'round',

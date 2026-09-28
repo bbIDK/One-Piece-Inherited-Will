@@ -482,7 +482,7 @@ function layTown(world, town, rng, noise, dry) {
     // market stalls round the square's edge, facing in
     const spots = [[sq.x0 + 1.4, sq.y0 + 1.2], [sq.x1 - 0.4, sq.y0 + 1.2], [sq.x0 + 1.4, sq.y1 - 0.2], [sq.x1 - 0.4, sq.y1 - 0.2]];
     for (const [px, py] of rng.shuffle(spots).slice(0, town.style === 'village' ? 2 : 4)) {
-      if (clearAt(px, py - 0.5, 1.5) && !nearDoor(px, py, 2.2)) placeObject(world, { kind: 'stall', x: px, y: py, block: true, v: rng.int(0, 5) });
+      if (clearAt(px, py - 0.5, 1.5) && !nearDoor(px, py, 2.2)) placeObject(world, { kind: 'stall', x: px, y: py, block: true, v: rng.int(0, 5), yaw: Math.atan2(world.dx(px, plaza.x), plaza.y - py) });
     }
     // benches on the square
     for (const [px, py] of [[plaza.x - 2.6, plaza.y + 2.2], [plaza.x + 2.6, plaza.y - 2.2]]) {

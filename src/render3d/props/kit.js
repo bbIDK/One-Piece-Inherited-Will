@@ -14,6 +14,7 @@
 //            normals radiating from the crown so they shade like one mass)
 //   double   also add the back faces (thin leaves, sails, flags)
 import * as THREE from 'three';
+import { hash01 } from '../../core/rng.js';
 
 const _v = new THREE.Vector3();
 const _n = new THREE.Vector3();
@@ -54,12 +55,8 @@ export function mix(a, b, t) {
   return x.lerp(y, t).convertSRGBToLinear();
 }
 
-/** Deterministic hash → [0, 1). */
-export function hash(a, b = 0, c = 0) {
-  let h = Math.imul((a * 1000) | 0, 374761393) ^ Math.imul((b * 1000) | 0, 668265263) ^ Math.imul((c * 1000) | 0, 1274126177);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
+/** Deterministic hash → [0, 1) (the world's own: see core/rng.js hash01). */
+export const hash = hash01;
 
 /** A tiny seeded random generator. */
 export function rng(seed) {

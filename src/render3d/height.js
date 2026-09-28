@@ -11,7 +11,7 @@
 import { T, IS_LIQUID, OVERLAY } from '../world/tiles.js';
 import { RM_X, RL_HALF, chart } from '../world/constants.js';
 import { RM, canalAt, coneAt, nearRM } from '../world/reverseMountain.js';
-import { PLINTH } from '../world/interiors.js';
+import { PLINTH, STEPS_MAX } from '../world/interiors.js';
 import { bw, bl, bfoot } from '../world/bframe.js';
 
 export const SEA_Y = 0;
@@ -329,6 +329,8 @@ export class HeightField {
   stepTop(b, x, y, h) {
     const front = this.terrain(b.x, b.y);
     const y0 = this.floorY(b) - front;
+    // (a door higher than a flight of steps goes opens onto the drop: none drawn, none to walk on)
+    if (y0 > STEPS_MAX + 0.01) return h;
     const n = Math.max(1, Math.round(y0 / 0.2));
     const { lz } = bl(b, x, y, this.world);
     const i = Math.floor(lz / 0.32);
@@ -347,6 +349,31 @@ export class HeightField {
     b._floorW = this.world;
     b._floorY = Math.max(front + PLINTH, top + 0.08);
     return b._floorY;
+  }
+
+  /**
+   * A wall tile's block, [base, top] (m): standing on the ground beside it
+   * (from just under the lowest of it to WALL_H over the highest — stepped
+   * up a slope), wherever the town is. (Towns stand on raised ground: a wall
+   * at a fixed height would be buried in it, and block the way unseen.)
+   */
+  wallSpan(x, y) {
+    const w = this.world;
+    let lo = Infinity, hi = -Infinity;
+    for (let r = 1; r <= 3 && lo === Infinity; r++) {
+      for (let j = -r; j <= r; j++) {
+        for (let i = -r; i <= r; i++) {
+          if (Math.max(Math.abs(i), Math.abs(j)) !== r) continue;
+          const t = w.type(x + i, y + j);
+          if (t === T.WALL || IS_LIQUID[t] || OVERLAY[t]) continue;
+          const h = this.terrain(x + i + 0.5, y + j + 0.5);
+          if (h < lo) lo = h;
+          if (h > hi) hi = h;
+        }
+      }
+    }
+    if (lo === Infinity) return [0.4, 0.4 + WALL_H]; // (walls in the sea: on the sea bed's flat)
+    return [lo - 0.35, hi + WALL_H];
   }
 
   /** Invalidate after the tile map changed in a rectangle (tiles). */

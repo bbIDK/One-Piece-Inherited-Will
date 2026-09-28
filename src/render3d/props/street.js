@@ -338,8 +338,8 @@ reg('cannon', (o, ctx) => simple(o, ctx, 'cannon', cannon(), { yaw: jitterYaw(o,
 reg('mushroom', (o, ctx) => simple(o, ctx, 'mushroom', mushroom(), { randomYaw: true, color: tint(o, ['#e53935', '#8e44ad', '#e67e22', '#d81b60']), scale: (o.s || 1) * (0.9 + hash(o.x, o.y) * 0.5) }));
 reg('crystal', (o, ctx) => simple(o, ctx, 'crystal', crystal(), { randomYaw: true }));
 reg('pillar', (o, ctx) => { const broken = hash(o.x, o.y, 9) < 0.35 ? 1 : 0; return simple(o, ctx, 'pillar:' + broken, pillar(broken), { yaw: 0, color: '#ffffff' }); });
-reg('ruins', (o, ctx) => { const v = Math.floor(hash(o.x, o.y, 2) * 3); return simple(o, ctx, 'ruins:' + v, ruins(v), { randomYaw: true, color: ['#ffffff', '#e8e0d8', '#d8cfc6'][v] }); });
-reg('tent', (o, ctx) => simple(o, ctx, 'tent', tent(), { yaw: jitterYaw(o, 0.5), color: tint(o, ['#e8d5b5', '#c0392b', '#2e86c1']) }));
+reg('ruins', (o, ctx) => { const v = Math.floor(hash(o.x, o.y, 2) * 3); return simple(o, ctx, 'ruins:' + v, ruins(v), { yaw: o.yaw ?? hash(o.x, o.y) * Math.PI * 2, color: ['#ffffff', '#e8e0d8', '#d8cfc6'][v] }); });
+reg('tent', (o, ctx) => simple(o, ctx, 'tent', tent(), { yaw: o.yaw ?? jitterYaw(o, 0.5), color: tint(o, ['#e8d5b5', '#c0392b', '#2e86c1']) }));
 reg('totem', (o, ctx) => simple(o, ctx, 'totem', totem(), { yaw: 0 }));
 reg('dummy', (o, ctx) => simple(o, ctx, 'dummy', dummy(), { yaw: jitterYaw(o, 0.6) }));
 reg('well', (o, ctx) => simple(o, ctx, 'well', well(), { yaw: 0 }));
@@ -347,11 +347,11 @@ reg('lamp', (o, ctx) => simple(o, ctx, 'lamp', lamp(), { yaw: 0 }));
 reg('lantern', (o, ctx) => simple(o, ctx, 'lantern', lantern(), { yaw: hash(o.x, o.y) < 0.5 ? 0 : Math.PI }));
 reg('skull', (o, ctx) => simple(o, ctx, 'skull', skull(), { yaw: jitterYaw(o, 0.6) }));
 
-// market stalls turn to face the town plaza
+// market stalls turn to face the town plaza (as placed: see towngen; its collider turns with it)
 reg('stall', (o, ctx) => {
-  let yaw = 0;
+  let yaw = o.yaw ?? 0;
   const w = ctx?.world;
-  if (w?.islands) {
+  if (o.yaw === undefined && w?.islands) {
     let best = 1e9;
     for (const isl of w.islands) {
       for (const t of isl.towns || []) {

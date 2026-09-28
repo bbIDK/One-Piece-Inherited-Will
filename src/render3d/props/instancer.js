@@ -180,12 +180,13 @@ function join(c) {
   c.merged = true;
 }
 
-/** The object's transform inside its cell (or far square): base point, yaw, scale, then the part's own matrix. */
+/** The object's transform inside its cell (or far square): base point, yaw (and tilt), scale, then the part's own matrix. */
 function partMatrix(u, part, home, out) {
   const o = u.o;
   _p.set(o.x - home.x0, u.y, o.y - home.y0);
   _e.set(0, u.yaw, 0);
   _q.setFromEuler(_e);
+  if (u.tilt) _q.premultiply(u.tilt);
   _s.setScalar(u.scale);
   out.compose(_p, _q, _s);
   if (part.local) out.multiply(part.local);
@@ -416,7 +417,7 @@ export function setPartVisible(u, part, on) {
 /**
  * A marker for an instanced prop.
  * parts: [{ key, geo, color?: THREE.Color (instance tint), tinted?, sway?, castShadow?, local?: Matrix4, hidden?, nearOnly? (not drawn far off) }]
- * opts: { yaw, scale, dyn(o, env, ctx, u) }
+ * opts: { yaw, scale, tilt?: Quaternion (leaning it over, after the yaw), y? (its base, if not the ground at its middle), dyn(o, env, ctx, u) }
  */
 export function instanced(o, ctx, parts, opts = {}) {
   bindCtx(ctx);
@@ -433,7 +434,8 @@ export function instanced(o, ctx, parts, opts = {}) {
   u.parts = parts;
   u.yaw = opts.yaw || 0;
   u.scale = opts.scale || 1;
-  u.y = ctx?.ground ? ctx.ground(o.x, o.y) : 0;
+  u.tilt = opts.tilt || null;
+  u.y = opts.y ?? (ctx?.ground ? ctx.ground(o.x, o.y) : 0);
   u.dyn = opts.dyn || null;
   u.live = false;
   mk.addEventListener('added', onAdded);
