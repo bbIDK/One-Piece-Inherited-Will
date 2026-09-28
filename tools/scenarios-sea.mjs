@@ -952,20 +952,20 @@ export const scenarios = {
   },
   // Riding Reverse Mountain: in at the East Blue gate, up the gorge and the
   // climb, over the summit pool and down the torrent past Laboon
-  // (node tools/shot.mjs rmride [--canal=east_blue])
+  // (node tools/shot.mjs rmride [--canal=east_blue] [--ship=sloop|great_galleon|…])
   rmride: {
     async run(page, snap, args) {
       await page.evaluate(() => localStorage.clear());
       await waitReady(page);
       await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = 11; g.env.storm = 0; g.env.stormTarget = 0; g.env.fog = 0; document.querySelector('.look-hint')?.remove(); });
-      const start = await page.evaluate((id) => {
+      const start = await page.evaluate(([id, type]) => {
         const g = window.OP.game, M = g.world.reverseMountain, m = M.mouths[id];
         const a = Math.atan2(m.gate.y - m.y, m.gate.x - m.x);
         const p = g.player;
-        const sh = g.giveShip('sloop', m.x, m.y, 'Merry Test', { heading: a });
+        const sh = g.giveShip(type, m.x, m.y, 'Merry Test', { heading: a });
         const hs = window.OP.debug.deckSpot(sh, 'helm'); p.x = hs.x; p.y = hs.y;
         return { m, a };
-      }, args.canal || 'east_blue');
+      }, [args.canal || 'east_blue', args.ship || 'sloop']);
       for (let i = 0; i < 3; i++) await step(page, 0.1);
       await page.evaluate(() => { const it = window.OP.game.player.controller.interaction; it?.run(); });
       await page.evaluate(() => window.OP.key('W', true));

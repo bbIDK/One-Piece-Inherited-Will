@@ -18,8 +18,8 @@ export const RM = {
   rx: 900, // the massif's reach across the Red Line (the coast bulges out this far)…
   ry: 2150, // …and along it
   top: 160, // water level of the summit pool, metres above the sea
-  poolR: 36,
-  halfW: 11, // half the width of a canal
+  poolR: 56, // (room for the greatest ships to turn out into the torrent)
+  halfW: 17, // half the width of a canal (a great galleon rides it with room either side)
   climb: 740, // the last stretch of each canal, where it climbs the mountain
   drop: 620, // the torrent down to Paradise
   cone: { rx: 760, ry: 1250, h: 110 }, // the mountain standing on the Red Line

@@ -165,7 +165,7 @@ class CanalWater {
     this.group.add(pool);
     // the stone gates (landmarks seen from far off: they belong with the canals, not the nearby props)
     for (const gt of world.rmGates || []) {
-      const arch = rmArch(gt.a);
+      const arch = rmArch(gt.a, RM.halfW);
       arch.position.set(gt.x - RM.x, gt.level, gt.y - RM.y);
       this.group.add(arch);
     }

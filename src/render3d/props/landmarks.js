@@ -598,12 +598,19 @@ const rmArchGeo = () => model('rm_arch', (k) => {
   k.add(box(2.6, 0.5, 0.2), { at: [0, 24 + Ro - 1.4, 2.95], color: '#3d6f8f' });
   k.add(box(2.6, 0.5, 0.2), { at: [0, 24 + Ro - 2.4, 2.95], color: '#3d6f8f' });
 });
-/** A gate over a Reverse Mountain canal, `a` the way the current runs (the canal water draws these: see rmCanals3d.js). */
-export function rmArch(a) {
+/**
+ * A gate over a Reverse Mountain canal, `a` the way the current runs (the
+ * canal water draws these: see rmCanals3d.js). Built for a canal 11 m either
+ * side of its middle; stood as wide as the canal is, and tall enough for the
+ * greatest ships' mastheads to pass under the arch.
+ */
+export function rmArch(a, halfW = 11) {
   const root = group('rm_arch');
   add(root, rmArchGeo());
   // (across the canal: its local z runs with the current)
   root.rotation.y = Math.PI / 2 - (a || 0);
+  const w = (halfW + 4.2) / 15.2;
+  root.scale.set(w, 2.9, w);
   return root;
 }
 

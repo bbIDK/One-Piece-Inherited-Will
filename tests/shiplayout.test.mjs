@@ -22,9 +22,12 @@ test('ships come in sizes that make sense: the rowboat small, then sloop < carav
   assert.ok(SHIPS.caravel.length >= 25 && SHIPS.caravel.beam >= 8);
   // (the Thousand Sunny's bigger than the Merry; the Navy's warship a frigate's match)
   assert.ok(SHIPS.adam_brig.length > SHIPS.caravel.length && SHIPS.marine_warship.length > SHIPS.frigate.length);
-  assert.equal(shipClassLine(SHIPS.sloop), 'Small ship · 20 m · 1 mast');
+  assert.equal(shipClassLine(SHIPS.sloop), 'Small ship · 24 m · 1 mast');
   assert.equal(shipClassLine(SHIPS.caravel), 'Ship · 28 m · 2 masts');
-  assert.equal(shipClassLine(SHIPS.great_galleon), 'Great ship · 62 m · 4 masts');
+  assert.equal(shipClassLine(SHIPS.great_galleon), 'Great ship · 90 m · 4 masts');
+  // every ship but the rowboat at least twice as long as she first was (One Piece's scale)
+  const was = { sloop: 11.5, caravel: 12.5, brigantine: 14.5, frigate: 17, galleon: 20, adam_brig: 16, marine_warship: 20, carrack: 21, war_galleon: 24, man_o_war: 32, great_galleon: 44, marine_battleship: 38 };
+  for (const [type, L] of Object.entries(was)) assert.ok(SHIPS[type].length >= 2 * L, `${type}: ${SHIPS[type].length} m against ${L} m`);
 });
 
 test('the big ships\' decks, rooms and hold are sized for people: headroom, a rail at the waist, a deck a jump from a pier can reach', () => {

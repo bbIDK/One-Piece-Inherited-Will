@@ -192,8 +192,12 @@ rearrange them.
   waves.
 - Boarding is done by hand: jump onto a deck from a pier or from your own
   deck, or swim to a ship and climb her side. Every deck can be walked.
-- Every ship with a sail is built to live on, Sea of Thieves style, from an
-  11 m sloop to a 44 m Yonko flagship:
+- Ships are on One Piece's scale: every one but the rowboat is at least
+  twice the size it first was, from a 24 m sloop and the 28 m Going Merry
+  class to a 90 m great galleon (a Yonko flagship) and a 78 m Marine
+  battleship. Reverse Mountain's canals, its summit pool and its stone gates
+  are built wide and tall enough for the greatest of them.
+- Every ship with a sail is built to live on, Sea of Thieves style:
   - stairs up to the quarterdeck and the wheel (just the one);
   - a door under it into the captain's cabin (chart table, bunk, sea chest);
   - the crew's forecastle on the bigger hulls;

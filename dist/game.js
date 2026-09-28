@@ -33704,9 +33704,10 @@ void main() {
     // …and along it
     top: 160,
     // water level of the summit pool, metres above the sea
-    poolR: 36,
-    halfW: 11,
-    // half the width of a canal
+    poolR: 56,
+    // (room for the greatest ships to turn out into the torrent)
+    halfW: 17,
+    // half the width of a canal (a great galleon rides it with room either side)
     climb: 740,
     // the last stretch of each canal, where it climbs the mountain
     drop: 620,
@@ -48641,8 +48642,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     sloop: {
       name: "Sloop",
       desc: "A nimble single-masted boat. Enough to reach Loguetown in style.",
-      length: 20,
-      beam: 6.4,
+      length: 24,
+      beam: 7.6,
       hull: 150,
       speed: 9.5,
       turn: 2,
@@ -48718,8 +48719,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     galleon: {
       name: "Galleon",
       desc: "A floating fortress. Slow to turn, impossible to sink.",
-      length: 40,
-      beam: 12.2,
+      length: 42,
+      beam: 12.8,
       hull: 850,
       speed: 11.2,
       turn: 0.9,
@@ -48760,8 +48761,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     marine_warship: {
       name: "Marine Warship",
       desc: "A seastone-bottomed battleship. Sea Kings mistake it for a rock.",
-      length: 38,
-      beam: 11.6,
+      length: 42,
+      beam: 12.8,
       hull: 800,
       speed: 12,
       turn: 1,
@@ -48783,8 +48784,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     carrack: {
       name: "Carrack",
       desc: "A deep-bellied three-master with high castles fore and aft: the workhorse of the Grand Line trade routes, with room for a real crew and a hold you could get lost in.",
-      length: 42,
-      beam: 12.6,
+      length: 44,
+      beam: 13.2,
       hull: 1400,
       speed: 11.6,
       turn: 0.95,
@@ -48803,8 +48804,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     war_galleon: {
       name: "War Galleon",
       desc: "Two gun decks, a towering stern castle and a deck big enough for a party: the kind of ship a Supernova crosses the Grand Line in.",
-      length: 46,
-      beam: 13.6,
+      length: 50,
+      beam: 14.8,
       hull: 2600,
       speed: 12.2,
       turn: 0.8,
@@ -48823,8 +48824,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     man_o_war: {
       name: "Man-o'-War",
       desc: "A three-decked giant bristling with guns, her poop deck higher than most ships' mastheads. Fleets scatter when she shows her colours.",
-      length: 52,
-      beam: 15,
+      length: 66,
+      beam: 18.6,
       hull: 4200,
       speed: 12.6,
       turn: 0.64,
@@ -48843,8 +48844,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     great_galleon: {
       name: "Great Galleon",
       desc: "A Yonko's flagship: a white whale of a four-master with a whale's head for a bow. A whole pirate fleet could live aboard.",
-      length: 62,
-      beam: 17,
+      length: 90,
+      beam: 24.4,
       hull: 7e3,
       speed: 12.8,
       turn: 0.5,
@@ -48863,8 +48864,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     marine_battleship: {
       name: "Marine Battleship",
       desc: "A Vice Admiral's flagship: a great grey-and-white warship with a seagull at the bow, MARINE across her sails and a seastone keel.",
-      length: 56,
-      beam: 15.6,
+      length: 78,
+      beam: 21.4,
       hull: 6e3,
       speed: 13,
       turn: 0.55,
@@ -48917,7 +48918,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return d;
   }
   function shipClassLine(d) {
-    const size = d.length < 5 ? "Boat" : d.length < 24 ? "Small ship" : d.length < 38 ? "Ship" : d.length < 50 ? "Big ship" : "Great ship";
+    const size = d.length < 5 ? "Boat" : d.length < 26 ? "Small ship" : d.length < 40 ? "Ship" : d.length < 56 ? "Big ship" : "Great ship";
     const rig = d.masts ? `${d.masts} mast${d.masts > 1 ? "s" : ""}` : "oars";
     return `${size} \xB7 ${d.length} m \xB7 ${rig}`;
   }
@@ -58312,10 +58313,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(box(2.6, 0.5, 0.2), { at: [0, 24 + Ro - 1.4, 2.95], color: "#3d6f8f" });
     k.add(box(2.6, 0.5, 0.2), { at: [0, 24 + Ro - 2.4, 2.95], color: "#3d6f8f" });
   });
-  function rmArch(a) {
+  function rmArch(a, halfW = 11) {
     const root2 = group("rm_arch");
     add(root2, rmArchGeo());
     root2.rotation.y = Math.PI / 2 - (a || 0);
+    const w = (halfW + 4.2) / 15.2;
+    root2.scale.set(w, 2.9, w);
     return root2;
   }
   reg2("gate", (o) => {
@@ -71927,7 +71930,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       pool.renderOrder = 1;
       this.group.add(pool);
       for (const gt of world.rmGates || []) {
-        const arch = rmArch(gt.a);
+        const arch = rmArch(gt.a, RM.halfW);
         arch.position.set(gt.x - RM.x, gt.level, gt.y - RM.y);
         this.group.add(arch);
       }
