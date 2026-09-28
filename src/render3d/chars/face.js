@@ -14,7 +14,17 @@ import { charGradient, celShading } from './mats.js';
 export const FACE_S = 96;            // canvas px per head radius
 export const FACE_TOP = 0.5;         // head-unit y (up) at the top edge of the canvas
 export const FACE_BOTTOM = -1.25;    // … and at the bottom edge (below the chin)
-export const FACE_ANCHOR = 0.05;     // head-unit y of the painting's y = 0 (eyes at 0.17 → -0.12)
+export const FACE_ANCHOR = 0.05;     // head-unit y of the painting's y = 0 (eyes at EYE_Y → -0.06)
+/**
+ * The painting's y of the eyes' centres: in their sockets under the brow,
+ * level with the root of the nose, so in profile the eye sits above the nose
+ * and its tip comes out well below the lower lid (as on a real head).
+ */
+export const EYE_Y = 0.11;
+// (the brows, scars, shades and patches round the eyes were laid out for eyes
+// at 0.17 and go with them)
+const EYE_LIFT = EYE_Y - 0.17;
+const eyeScale = (look) => (look.fem ? 1.14 : 1.1); // (big, clear eyes: the anime look)
 export const FACE_W = 192, FACE_H = Math.round((FACE_TOP - FACE_BOTTOM) * FACE_S);
 
 const TAU = Math.PI * 2;
@@ -122,7 +132,7 @@ const SCAR = {
 const PANDA = 'M0.14 0.02 C0.2 -0.2 0.58 -0.22 0.68 0.12 C0.76 0.4 0.62 0.58 0.44 0.52 C0.24 0.46 0.1 0.26 0.14 0.02 Z M-0.14 0.02 C-0.2 -0.2 -0.58 -0.22 -0.68 0.12 C-0.76 0.4 -0.62 0.58 -0.44 0.52 C-0.24 0.46 -0.1 0.26 -0.14 0.02 Z';
 const THIRD = 'M0 -0.28 Q0.11 -0.12 0 0.04 Q-0.11 -0.12 0 -0.28 Z';
 const GILLS = 'M0.74 0.44 Q0.68 0.52 0.72 0.6 M0.68 0.54 Q0.62 0.62 0.66 0.7 M-0.74 0.44 Q-0.68 0.52 -0.72 0.6 M-0.68 0.54 Q-0.62 0.62 -0.66 0.7';
-const NOSE_HINT = 'M0.03 0.35 Q0.08 0.42 0.02 0.45';
+const NOSE_HINT = 'M0.03 0.39 Q0.08 0.46 0.02 0.49';
 const NOSE_ANIMAL = 'M-0.11 0.35 Q0 0.3 0.11 0.35 Q0.07 0.45 0 0.47 Q-0.07 0.45 -0.11 0.35 Z';
 const SHADES = {
   lens: 'M0.14 0.02 L0.64 0.0 Q0.66 0.28 0.46 0.34 Q0.2 0.36 0.14 0.02 Z M-0.14 0.02 L-0.64 0.0 Q-0.66 0.28 -0.46 0.34 Q-0.2 0.36 -0.14 0.02 Z',
@@ -227,15 +237,14 @@ function drawEyes(g, look, X) {
   const iris = white ? '#ff1744' : hex(look.eyeColor, '#2d2226');
   const lt = mixHex(iris, '#ffffff', white ? 0.55 : 0.24);
   const pupil = white ? '#ff8a80' : mixHex(iris, '#000000', 0.7);
-  const ey = 0.17;
+  const ey = EYE_Y;
   const closed = X.eyes === 'blink' || X.eyes === 'hurt' || X.eyes === 'ko';
   const fierce = X.eyes === 'fierce';
   // expressions reshape the style: fierce narrows and angles the eyes
   const st = fierce ? { ...base, tilt: base.tilt - 0.18, drop: Math.min(0.5, base.drop + 0.16), iris: base.iris * 0.85, h: base.h * 0.9 } : base;
   const key = id + (fierce ? 'F' : '');
   const E = eyeWhite(st, key);
-  // (big, clear eyes: the anime look)
-  const ES = look.fem ? 1.14 : 1.1;
+  const ES = eyeScale(look);
   for (let n = 0; n < 2; n++) {
     const x = n ? 0.39 : -0.39;
     g.save();
@@ -298,6 +307,7 @@ function drawEyes(g, look, X) {
       g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x - 0.015, ey + 0.03, 0.016, 0, TAU); g.fill();
     }
   }
+  g.save(); g.translate(0, EYE_LIFT);
   if (look.scarEye) {
     g.lineWidth = 0.06; g.strokeStyle = '#9b3a36'; g.stroke(pp(SCAR.F));
     g.lineWidth = 0.03; g.stroke(pp(SCAR.Fx));
@@ -306,11 +316,20 @@ function drawEyes(g, look, X) {
     g.lineWidth = 0.035; g.strokeStyle = '#8a3a34'; g.stroke(pp(SCAR.C));
     g.lineWidth = 0.022; g.stroke(pp(SCAR.Cx));
   }
+  g.restore();
+}
+
+/** How far a look's painted eyes reach (head units, y up): the top of the lid, the iris's middle and the lower lid. */
+export function eyeSpan(look) {
+  const st = EYE_STYLES[eyeShapeOf(look)] || EYE_STYLES.bold, ES = eyeScale(look);
+  const top = (-0.26 + st.drop * 0.52) * st.h - 0.02, bot = 0.26 * st.h;
+  return { top: FACE_ANCHOR - (EYE_Y + top * ES), iris: FACE_ANCHOR - (EYE_Y + (0.05 + st.drop * 0.08) * ES), bottom: FACE_ANCHOR - (EYE_Y + bot * ES) };
 }
 function drawMouth(g, look, X) {
   const kind = X.mouth;
-  g.save(); g.translate(0, 0.06);
-  if (look.muzzle) { g.save(); g.translate(0, 0.05); }
+  // (under the nose, a lip's height below its tip)
+  g.save(); g.translate(0, 0.095);
+  if (look.muzzle) { g.save(); g.translate(0, 0.015); }
   if (typeof MOUTHS[kind] === 'string') {
     g.lineWidth = look.fem ? 0.058 : 0.05; g.strokeStyle = look.fem && (kind === 'smile' || kind === 'flat') ? '#b8405a' : MOUTH_COL; g.lineCap = 'round'; g.stroke(pp(MOUTHS[kind]));
   } else {
@@ -337,7 +356,7 @@ export function paintFace(g, look, X) {
   const white = !!look.furWhite;
   const skin = skinTones(white ? '#fafafa' : hex(look.fur && look.furFace ? look.fur : look.skin, '#f1c9a0'));
   const brow = white ? '#b0a6a2' : browCol(look.nika ? '#ffffff' : look.hairColor);
-  if (look.kind === 'Panda') { g.fillStyle = '#2b2b2b'; g.fill(pp(PANDA)); }
+  if (look.kind === 'Panda') { g.save(); g.translate(0, EYE_LIFT); g.fillStyle = '#2b2b2b'; g.fill(pp(PANDA)); g.restore(); }
   if (look.muzzle) {
     g.fillStyle = skin.muzzle; g.beginPath(); g.ellipse(0, 0.56, 0.36, 0.27, 0, 0, TAU); g.fill();
     g.fillStyle = '#2d2226'; g.fill(pp(NOSE_ANIMAL));
@@ -354,6 +373,7 @@ export function paintFace(g, look, X) {
   if (!look.muzzle && look.race !== 'mink') { g.lineWidth = 0.032; g.strokeStyle = skin.line; g.globalAlpha = 0.75; g.stroke(pp(NOSE_HINT)); g.globalAlpha = 1; }
   drawMouth(g, look, X);
   const BR = look.fem ? BROWS_F : BROWS_M;
+  g.save(); g.translate(0, EYE_LIFT);
   g.lineWidth = look.fem ? 0.062 : 0.1; g.strokeStyle = brow; g.stroke(pp(BR[X.brow] || BR.neutral));
   if (look.thirdEye) {
     g.fillStyle = '#ffffff'; g.fill(pp(THIRD)); g.lineWidth = 0.025; g.strokeStyle = INK; g.stroke(pp(THIRD));
@@ -367,6 +387,7 @@ export function paintFace(g, look, X) {
     g.fillStyle = 'rgba(255,255,255,0.55)'; g.fill(pp(SHADES.glint));
     g.lineWidth = 0.06; g.strokeStyle = '#15121a'; g.stroke(pp(SHADES.bridge));
   }
+  g.restore();
 }
 
 // ------------------------------------------------------------------ texture cache

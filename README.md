@@ -269,10 +269,11 @@ rearrange them.
     pirates and Marines each roll one that suits their work.
   - Heads are built to read as real heads from every side. In profile the
     brow, nose, lips and chin stand out and the eye is a wedge set back
-    from the nose, the jaw turns up at its angle under the ear, and the
-    skull ends at the nape above a neck as thick as a real one, rising to
-    meet it (not a ball on a stick). A high sun lights the whole face; it
-    doesn't leave a dark band across the cheeks.
+    from the nose. The eye sits above the nose: level with its bridge, with
+    the tip coming out below the lower lid. The jaw turns up at its angle
+    under the ear, and the skull ends at the nape above a neck as thick as
+    a real one, rising to meet it (not a ball on a stick). A high sun lights
+    the whole face; it doesn't leave a dark band across the cheeks.
   - Pecs, abs, deltoids, biceps and calves are modelled and inked, and the
     faces are lit in 3D. Long hair and coat tails swing as you move. Skirts
     and dresses hang from panels round the waist that swing out to clear the

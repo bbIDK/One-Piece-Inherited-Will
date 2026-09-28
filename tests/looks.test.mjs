@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import { makeLook } from '../src/data/races.js';
 import { FRAMES_M, FRAMES_F, FRAME } from '../src/render3d/chars/bones.js';
 import { useItem } from '../src/game/inventory.js';
-import { headSDF, headShapeFor, FACE_SHAPES, CHINS } from '../src/render3d/chars/build.js';
+import { headSDF, headShapeFor, FACE_SHAPES, CHINS, NOSES } from '../src/render3d/chars/build.js';
+import { eyeSpan, EYES_M, EYES_F } from '../src/render3d/chars/face.js';
 
 test('people roll a frame that suits their build and work, with muscle to match', () => {
   const seen = { m: new Set(), f: new Set() };
@@ -66,7 +67,7 @@ test('heads read as real heads in profile: brow, nose, chin, a jaw clear of the 
         const f = headSDF(L), who = `${fem ? 'F' : 'M'} ${faceShape}/${chin}`;
         // how far forward the face comes at a height (down the middle)
         const front = (y) => { let x = 1.6; while (x > 0 && f(x, y, 0) > 0) x -= 0.005; return x; };
-        const brow = front(0.2), nose = front(-0.36), mouth = front(-0.63);
+        const brow = front(0.25), nose = front(-0.4), mouth = front(-0.665);
         // (the chin's point: lower on a long face)
         let chinX = 0;
         for (let y = -0.85; y > -1.25; y -= 0.02) chinX = Math.max(chinX, front(y));
@@ -77,6 +78,23 @@ test('heads read as real heads in profile: brow, nose, chin, a jaw clear of the 
         for (const [x, y] of [[-0.45, -0.7], [-0.7, -0.62], [-0.3, -0.62], [0, -1.0]]) assert.ok(f(x, y, 0) > 0, `${who}: (${x}, ${y}) is under the head`);
         // …while the back of the skull, the cheek and the jaw are head
         for (const [x, y, z] of [[-0.9, 0, 0], [0.6, -0.3, 0.5], [0.3, -0.85, 0.3]]) assert.ok(f(x, y, z) < 0, `${who}: (${x}, ${y}, ${z}) is head`);
+      }
+    }
+  }
+  // in profile the eye sits above the nose: the nose's root between the
+  // eyes, a little above their middle, its tip well below the lower lid
+  for (const fem of [false, true]) {
+    for (const noseShape of NOSES.filter((n) => n !== 'long' && n !== 'red')) {
+      for (const eyeShape of fem ? EYES_F : EYES_M) {
+        const L = { fem, noseShape, eyeShape, seed: 3 };
+        const f = headSDF(L), e = eyeSpan(L), who = `${fem ? 'F' : 'M'} ${noseShape} nose, ${eyeShape} eyes`;
+        const front = (y) => { let x = 1.6; while (x > 0 && f(x, y, 0) > 0) x -= 0.005; return x; };
+        // (the tip: where the nose comes furthest forward)
+        let tipY = 0, tipX = 0;
+        for (let y = -0.1; y > -0.6; y -= 0.01) { const x = front(y); if (x > tipX) { tipX = x; tipY = y; } }
+        assert.ok(tipY < e.bottom - 0.015, `${who}: the nose's tip (${tipY.toFixed(2)}) comes out below the eye (${e.bottom.toFixed(2)})`);
+        assert.ok(e.iris - tipY > 0.2, `${who}: the eye (${e.iris.toFixed(2)}) sits well above the nose's tip (${tipY.toFixed(2)})`);
+        assert.ok(e.top < 0.25, `${who}: the eye (${e.top.toFixed(2)}) is under the brow`);
       }
     }
   }

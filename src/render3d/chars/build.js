@@ -57,10 +57,10 @@ export const FACE_SHAPES = ['oval', 'round', 'square', 'long', 'heart'];
 export const CHINS = ['pointed', 'round', 'strong'];
 export const NOSES = ['small', 'normal', 'big', 'button', 'hooked', 'long', 'red'];
 const NOSE_DIM = {
-  small: { len: 0.1, h: 0.95, r0: 0.028, tip: 0.045, wing: 0.034 },
+  small: { len: 0.1, h: 1.0, r0: 0.028, tip: 0.045, wing: 0.034 },
   normal: { len: 0.14, h: 1, r0: 0.034, tip: 0.055, wing: 0.042 },
   big: { len: 0.2, h: 1.08, r0: 0.044, tip: 0.075, wing: 0.056 },
-  button: { len: 0.1, h: 0.86, r0: 0.02, tip: 0.07, wing: 0.036 },
+  button: { len: 0.1, h: 0.92, r0: 0.02, tip: 0.07, wing: 0.036 },
   hooked: { len: 0.2, h: 1.1, r0: 0.05, tip: 0.05, wing: 0.042, hook: 0.035 },
 };
 /** The head-shape parameters of a look (explicit choices, else from build and seed). */
@@ -123,10 +123,11 @@ function sdfHead(x, y, z, k, outer = false) {
   d = smin(d, capsule(x, y, az, -0.24, -0.2, k.jw + 0.08, -0.14, k.jy, k.jw, k.jr * 0.8), 0.2);
   d = smin(d, capsule(x, y, az, -0.14, k.jy, k.jw, k.cx - 0.12, k.cy + 0.1, k.cz, k.jr), 0.24);
   d = smin(d, ellipsoid(x - k.cx, y - k.cy - 0.02, z, k.cr, k.cr * 0.92, k.cr + k.cz * 0.7), 0.18);
-  // the mouth (upper jaw) sits forward of the face, the lips on it
-  d = smin(d, ellipsoid(x - 0.64, y + 0.6, z, 0.24, 0.19, 0.32), 0.2);
-  d = smin(d, ellipsoid(x - 0.86, y + 0.55, z, 0.07, 0.055, 0.2), 0.06);
-  d = smin(d, ellipsoid(x - 0.84, y + 0.71, z, 0.065, 0.05, 0.17), 0.06);
+  // the mouth (upper jaw) sits forward of the face, the lips on it (a lip's
+  // height under the nose)
+  d = smin(d, ellipsoid(x - 0.64, y + 0.635, z, 0.24, 0.19, 0.32), 0.2);
+  d = smin(d, ellipsoid(x - 0.86, y + 0.585, z, 0.07, 0.055, 0.2), 0.06);
+  d = smin(d, ellipsoid(x - 0.84, y + 0.745, z, 0.065, 0.05, 0.17), 0.06);
   // cheekbones (under the eyes: the face is rounded across the eyes, not a
   // flat plate — in profile the eye is a wedge set back from the nose)
   d = smin(d, ellipsoid(x - 0.6, y + 0.27, az - 0.52, 0.22, 0.13, 0.22), 0.05 + 0.12 * k.cheek);
@@ -134,17 +135,19 @@ function sdfHead(x, y, z, k, outer = false) {
   d = smax(d, -ellipsoid(x - 0.72, y + 0.52, az - 0.52, 0.2, 0.14, 0.16), (k.fem ? 0.2 : 0.12) + 0.08 * k.cheek);
   // flatter temples
   d = smax(d, az - 0.87, 0.3);
-  // eye sockets, under the brow
-  d = smax(d, -ellipsoid(x - 0.96, y + 0.04, az - 0.34, 0.13, 0.12, 0.19), 0.08);
+  // eye sockets, under the brow (the painted eyes sit in them: face.js EYE_Y)
+  d = smax(d, -ellipsoid(x - 0.96, y - 0.01, az - 0.34, 0.13, 0.12, 0.19), 0.08);
   // brow ridge (heavier on men), shading the eyes
-  d = smin(d, capsule(x, y, az, 0.9, 0.2, 0.0, 0.78, 0.18, 0.52, 0.04 + 0.05 * k.brow * (k.fem ? 0.6 : 1)), 0.08 + 0.04 * k.brow);
-  // the nose: bridge, tip and nostril wings
+  d = smin(d, capsule(x, y, az, 0.9, 0.25, 0.0, 0.78, 0.23, 0.52, 0.04 + 0.05 * k.brow * (k.fem ? 0.6 : 1)), 0.08 + 0.04 * k.brow);
+  // the nose: bridge, tip and nostril wings — its root between the eyes, a
+  // little above their middle, and its tip well below them: in profile the
+  // eye sits above the nose, as on a real head
   const n = k.nose;
   if (n) {
     // (a sharp anime bridge: narrow, running straight down from between the brows)
-    const tx = 0.92 + n.len * 1.45, ty = -0.36 * n.h;
-    let nd = capsule(x, y, z * 1.25, 0.92, 0.05, 0, tx, ty + 0.02, 0, n.r0 * 1.1);
-    if (n.hook) nd = smin(nd, sphere(x - 0.92 - n.len * 0.55, y + 0.15, z, n.r0 + n.hook), 0.05);
+    const tx = 0.92 + n.len * 1.45, ty = -0.4 * n.h;
+    let nd = capsule(x, y, z * 1.25, 0.92, 0.0, 0, tx, ty + 0.02, 0, n.r0 * 1.1);
+    if (n.hook) nd = smin(nd, sphere(x - 0.92 - n.len * 0.55, y + 0.19, z, n.r0 + n.hook), 0.05);
     nd = smin(nd, sphere(x - tx + 0.01, y - ty, z, n.tip), 0.05);
     nd = smin(nd, sphere(x - tx + 0.07, y - ty + 0.03, az - 0.07, n.wing), 0.04);
     d = smin(d, nd, 0.06);
@@ -899,8 +902,8 @@ function buildBody0(look, wpn, lod, articulated) {
     b.add(Prim.sphere(q.sph[0], q.sph[1]), HM(M(t[0], t[1], t[2], 0, 0, 0, 0.09)), pal.skin, hb);
   }
   const hp = HEAD.hp;
-  if (hp.nose === 'long') b.add(Prim.frustum(0.75, 6), HM(between([0.88, -0.2, 0], [1.95, -0.16, 0], 0.075)), pal.face, hb);
-  else if (hp.nose === 'red') b.add(Prim.sphere(q.sph[0] + 2, q.sph[1] + 2), HM(M(1.0, -0.3, 0, 0, 0, 0, 0.17)), '#e53935', hb);
+  if (hp.nose === 'long') b.add(Prim.frustum(0.75, 6), HM(between([0.88, -0.24, 0], [1.95, -0.2, 0], 0.075)), pal.face, hb);
+  else if (hp.nose === 'red') b.add(Prim.sphere(q.sph[0] + 2, q.sph[1] + 2), HM(M(1.0, -0.34, 0, 0, 0, 0, 0.17)), '#e53935', hb);
   if (look.kind === 'Saw Shark') {
     b.add(rb(0.3), HM(M(1.5, -0.3, 0, 0, 0, 0.05, [0.6, 0.06, 0.1])), '#9fb0bf', hb);
     for (let i = 0; i < 5; i++) for (const s of [-1, 1]) b.add(Prim.cone(3), HM(M(1.1 + i * 0.18, -0.3, s * 0.1, s * Math.PI / 2, 0, 0, [0.04, 0.08, 0.03])), '#f4f1ea', hb);

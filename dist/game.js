@@ -65200,6 +65200,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var FACE_TOP = 0.5;
   var FACE_BOTTOM = -1.25;
   var FACE_ANCHOR = 0.05;
+  var EYE_Y = 0.11;
+  var EYE_LIFT = EYE_Y - 0.17;
+  var eyeScale = (look) => look.fem ? 1.14 : 1.1;
   var FACE_W = 192;
   var FACE_H = Math.round((FACE_TOP - FACE_BOTTOM) * FACE_S2);
   var TAU14 = Math.PI * 2;
@@ -65323,7 +65326,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var PANDA2 = "M0.14 0.02 C0.2 -0.2 0.58 -0.22 0.68 0.12 C0.76 0.4 0.62 0.58 0.44 0.52 C0.24 0.46 0.1 0.26 0.14 0.02 Z M-0.14 0.02 C-0.2 -0.2 -0.58 -0.22 -0.68 0.12 C-0.76 0.4 -0.62 0.58 -0.44 0.52 C-0.24 0.46 -0.1 0.26 -0.14 0.02 Z";
   var THIRD2 = "M0 -0.28 Q0.11 -0.12 0 0.04 Q-0.11 -0.12 0 -0.28 Z";
   var GILLS2 = "M0.74 0.44 Q0.68 0.52 0.72 0.6 M0.68 0.54 Q0.62 0.62 0.66 0.7 M-0.74 0.44 Q-0.68 0.52 -0.72 0.6 M-0.68 0.54 Q-0.62 0.62 -0.66 0.7";
-  var NOSE_HINT = "M0.03 0.35 Q0.08 0.42 0.02 0.45";
+  var NOSE_HINT = "M0.03 0.39 Q0.08 0.46 0.02 0.49";
   var NOSE_ANIMAL2 = "M-0.11 0.35 Q0 0.3 0.11 0.35 Q0.07 0.45 0 0.47 Q-0.07 0.45 -0.11 0.35 Z";
   var SHADES2 = {
     lens: "M0.14 0.02 L0.64 0.0 Q0.66 0.28 0.46 0.34 Q0.2 0.36 0.14 0.02 Z M-0.14 0.02 L-0.64 0.0 Q-0.66 0.28 -0.46 0.34 Q-0.2 0.36 -0.14 0.02 Z",
@@ -65410,13 +65413,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const iris = white ? "#ff1744" : hex2(look.eyeColor, "#2d2226");
     const lt2 = mixHex(iris, "#ffffff", white ? 0.55 : 0.24);
     const pupil = white ? "#ff8a80" : mixHex(iris, "#000000", 0.7);
-    const ey = 0.17;
+    const ey = EYE_Y;
     const closed = X2.eyes === "blink" || X2.eyes === "hurt" || X2.eyes === "ko";
     const fierce = X2.eyes === "fierce";
     const st = fierce ? { ...base2, tilt: base2.tilt - 0.18, drop: Math.min(0.5, base2.drop + 0.16), iris: base2.iris * 0.85, h: base2.h * 0.9 } : base2;
     const key2 = id + (fierce ? "F" : "");
     const E = eyeWhite(st, key2);
-    const ES = look.fem ? 1.14 : 1.1;
+    const ES = eyeScale(look);
     for (let n = 0; n < 2; n++) {
       const x = n ? 0.39 : -0.39;
       g.save();
@@ -65526,6 +65529,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fill();
       }
     }
+    g.save();
+    g.translate(0, EYE_LIFT);
     if (look.scarEye) {
       g.lineWidth = 0.06;
       g.strokeStyle = "#9b3a36";
@@ -65540,14 +65545,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.lineWidth = 0.022;
       g.stroke(pp2(SCAR2.Cx));
     }
+    g.restore();
   }
   function drawMouth2(g, look, X2) {
     const kind = X2.mouth;
     g.save();
-    g.translate(0, 0.06);
+    g.translate(0, 0.095);
     if (look.muzzle) {
       g.save();
-      g.translate(0, 0.05);
+      g.translate(0, 0.015);
     }
     if (typeof MOUTHS2[kind] === "string") {
       g.lineWidth = look.fem ? 0.058 : 0.05;
@@ -65592,8 +65598,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const skin = skinTones(white ? "#fafafa" : hex2(look.fur && look.furFace ? look.fur : look.skin, "#f1c9a0"));
     const brow = white ? "#b0a6a2" : browCol(look.nika ? "#ffffff" : look.hairColor);
     if (look.kind === "Panda") {
+      g.save();
+      g.translate(0, EYE_LIFT);
       g.fillStyle = "#2b2b2b";
       g.fill(pp2(PANDA2));
+      g.restore();
     }
     if (look.muzzle) {
       g.fillStyle = skin.muzzle;
@@ -65631,6 +65640,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     drawMouth2(g, look, X2);
     const BR = look.fem ? BROWS_F : BROWS_M;
+    g.save();
+    g.translate(0, EYE_LIFT);
     g.lineWidth = look.fem ? 0.062 : 0.1;
     g.strokeStyle = brow;
     g.stroke(pp2(BR[X2.brow] || BR.neutral));
@@ -65665,6 +65676,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.strokeStyle = "#15121a";
       g.stroke(pp2(SHADES2.bridge));
     }
+    g.restore();
   }
   var CACHE = /* @__PURE__ */ new Map();
   var MAX = 150;
@@ -65737,10 +65749,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var CHINS = ["pointed", "round", "strong"];
   var NOSES2 = ["small", "normal", "big", "button", "hooked", "long", "red"];
   var NOSE_DIM = {
-    small: { len: 0.1, h: 0.95, r0: 0.028, tip: 0.045, wing: 0.034 },
+    small: { len: 0.1, h: 1, r0: 0.028, tip: 0.045, wing: 0.034 },
     normal: { len: 0.14, h: 1, r0: 0.034, tip: 0.055, wing: 0.042 },
     big: { len: 0.2, h: 1.08, r0: 0.044, tip: 0.075, wing: 0.056 },
-    button: { len: 0.1, h: 0.86, r0: 0.02, tip: 0.07, wing: 0.036 },
+    button: { len: 0.1, h: 0.92, r0: 0.02, tip: 0.07, wing: 0.036 },
     hooked: { len: 0.2, h: 1.1, r0: 0.05, tip: 0.05, wing: 0.042, hook: 0.035 }
   };
   function headParams(look) {
@@ -65789,19 +65801,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     d = smin(d, capsule(x, y, az, -0.24, -0.2, k.jw + 0.08, -0.14, k.jy, k.jw, k.jr * 0.8), 0.2);
     d = smin(d, capsule(x, y, az, -0.14, k.jy, k.jw, k.cx - 0.12, k.cy + 0.1, k.cz, k.jr), 0.24);
     d = smin(d, ellipsoid(x - k.cx, y - k.cy - 0.02, z, k.cr, k.cr * 0.92, k.cr + k.cz * 0.7), 0.18);
-    d = smin(d, ellipsoid(x - 0.64, y + 0.6, z, 0.24, 0.19, 0.32), 0.2);
-    d = smin(d, ellipsoid(x - 0.86, y + 0.55, z, 0.07, 0.055, 0.2), 0.06);
-    d = smin(d, ellipsoid(x - 0.84, y + 0.71, z, 0.065, 0.05, 0.17), 0.06);
+    d = smin(d, ellipsoid(x - 0.64, y + 0.635, z, 0.24, 0.19, 0.32), 0.2);
+    d = smin(d, ellipsoid(x - 0.86, y + 0.585, z, 0.07, 0.055, 0.2), 0.06);
+    d = smin(d, ellipsoid(x - 0.84, y + 0.745, z, 0.065, 0.05, 0.17), 0.06);
     d = smin(d, ellipsoid(x - 0.6, y + 0.27, az - 0.52, 0.22, 0.13, 0.22), 0.05 + 0.12 * k.cheek);
     d = smax(d, -ellipsoid(x - 0.72, y + 0.52, az - 0.52, 0.2, 0.14, 0.16), (k.fem ? 0.2 : 0.12) + 0.08 * k.cheek);
     d = smax(d, az - 0.87, 0.3);
-    d = smax(d, -ellipsoid(x - 0.96, y + 0.04, az - 0.34, 0.13, 0.12, 0.19), 0.08);
-    d = smin(d, capsule(x, y, az, 0.9, 0.2, 0, 0.78, 0.18, 0.52, 0.04 + 0.05 * k.brow * (k.fem ? 0.6 : 1)), 0.08 + 0.04 * k.brow);
+    d = smax(d, -ellipsoid(x - 0.96, y - 0.01, az - 0.34, 0.13, 0.12, 0.19), 0.08);
+    d = smin(d, capsule(x, y, az, 0.9, 0.25, 0, 0.78, 0.23, 0.52, 0.04 + 0.05 * k.brow * (k.fem ? 0.6 : 1)), 0.08 + 0.04 * k.brow);
     const n = k.nose;
     if (n) {
-      const tx = 0.92 + n.len * 1.45, ty = -0.36 * n.h;
-      let nd = capsule(x, y, z * 1.25, 0.92, 0.05, 0, tx, ty + 0.02, 0, n.r0 * 1.1);
-      if (n.hook) nd = smin(nd, sphere(x - 0.92 - n.len * 0.55, y + 0.15, z, n.r0 + n.hook), 0.05);
+      const tx = 0.92 + n.len * 1.45, ty = -0.4 * n.h;
+      let nd = capsule(x, y, z * 1.25, 0.92, 0, 0, tx, ty + 0.02, 0, n.r0 * 1.1);
+      if (n.hook) nd = smin(nd, sphere(x - 0.92 - n.len * 0.55, y + 0.19, z, n.r0 + n.hook), 0.05);
       nd = smin(nd, sphere(x - tx + 0.01, y - ty, z, n.tip), 0.05);
       nd = smin(nd, sphere(x - tx + 0.07, y - ty + 0.03, az - 0.07, n.wing), 0.04);
       d = smin(d, nd, 0.06);
@@ -66618,8 +66630,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       b.add(Prim.sphere(q2.sph[0], q2.sph[1]), HM(M(t[0], t[1], t[2], 0, 0, 0, 0.09)), pal.skin, hb);
     }
     const hp = HEAD.hp;
-    if (hp.nose === "long") b.add(Prim.frustum(0.75, 6), HM(between([0.88, -0.2, 0], [1.95, -0.16, 0], 0.075)), pal.face, hb);
-    else if (hp.nose === "red") b.add(Prim.sphere(q2.sph[0] + 2, q2.sph[1] + 2), HM(M(1, -0.3, 0, 0, 0, 0, 0.17)), "#e53935", hb);
+    if (hp.nose === "long") b.add(Prim.frustum(0.75, 6), HM(between([0.88, -0.24, 0], [1.95, -0.2, 0], 0.075)), pal.face, hb);
+    else if (hp.nose === "red") b.add(Prim.sphere(q2.sph[0] + 2, q2.sph[1] + 2), HM(M(1, -0.34, 0, 0, 0, 0, 0.17)), "#e53935", hb);
     if (look.kind === "Saw Shark") {
       b.add(rb(0.3), HM(M(1.5, -0.3, 0, 0, 0, 0.05, [0.6, 0.06, 0.1])), "#9fb0bf", hb);
       for (let i = 0; i < 5; i++) for (const s of [-1, 1]) b.add(Prim.cone(3), HM(M(1.1 + i * 0.18, -0.3, s * 0.1, s * Math.PI / 2, 0, 0, [0.04, 0.08, 0.03])), "#f4f1ea", hb);
