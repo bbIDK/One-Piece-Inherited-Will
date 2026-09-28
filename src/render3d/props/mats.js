@@ -53,7 +53,45 @@ const SWAY = /* glsl */`
 }
 `;
 
+// A faded prop (see fadeMat) is drawn through a screen-door: each pixel is
+// kept or left out against a 4 × 4 Bayer threshold, and its outline shell
+// (glow.a = -1, see kit.js) is left out altogether.
+const FADE_FRAG = /* glsl */`
+varying float vShell;
+uniform float uFade;
+float bayer2( vec2 a ) { a = mod( floor( a ), 2.0 ); return fract( 0.5 * a.x + 0.75 * a.y ); }
+void main() {
+	if ( vShell > 0.5 || bayer2( gl_FragCoord.xy * 0.5 ) * 0.25 + bayer2( gl_FragCoord.xy ) >= uFade ) discard;
+`;
+
 const matCache = new Map();
+
+/** The shared toon material, or (fade) a see-through copy of it with a uniform of its own. */
+function toonMat(opts, fade) {
+  const m = new THREE.MeshToonMaterial({
+    vertexColors: true, gradientMap: toonGradient(), side: opts.side || THREE.FrontSide,
+    transparent: !!opts.transparent, opacity: opts.opacity ?? 1, depthWrite: opts.depthWrite !== false,
+  });
+  const sway = !!opts.sway;
+  const uFade = fade ? { value: 1 } : null;
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = U.time;
+    sh.uniforms.uNight = U.night;
+    sh.uniforms.uWind = U.wind;
+    sh.vertexShader = 'attribute float tint;\nattribute vec4 glow;\nvarying vec3 vGlow;\nuniform float uTime;\nuniform float uNight;\nuniform float uWind;\n' + (fade ? 'varying float vShell;\n' : '') + sh.vertexShader
+      .replace('#include <color_vertex>', COLOR_VERTEX + (fade ? '\tvShell = 1.0 - step( -0.5, glow.a );\n' : ''))
+      .replace('#include <begin_vertex>', sway ? SWAY : '#include <begin_vertex>');
+    sh.fragmentShader = 'varying vec3 vGlow;\n' + sh.fragmentShader
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance += vGlow;');
+    if (fade) {
+      sh.uniforms.uFade = uFade;
+      sh.fragmentShader = sh.fragmentShader.replace('void main() {', FADE_FRAG);
+    }
+  };
+  m.customProgramCacheKey = () => 'opvc' + (sway ? '-sway' : '') + (fade ? '-fade' : '');
+  if (fade) m.userData.fade = uFade;
+  return m;
+}
 
 /**
  * The shared vertex-coloured toon material.
@@ -67,23 +105,23 @@ export function vcMat(opts = {}) {
   const key = `${opts.sway ? 's' : ''}|${opts.side || 0}|${opts.transparent ? opts.opacity ?? 0.5 : 1}|${opts.depthWrite === false ? 0 : 1}|${opts.inst || ''}`;
   let m = matCache.get(key);
   if (m) return m;
-  m = new THREE.MeshToonMaterial({
-    vertexColors: true, gradientMap: toonGradient(), side: opts.side || THREE.FrontSide,
-    transparent: !!opts.transparent, opacity: opts.opacity ?? 1, depthWrite: opts.depthWrite !== false,
-  });
-  const sway = !!opts.sway;
-  m.onBeforeCompile = (sh) => {
-    sh.uniforms.uTime = U.time;
-    sh.uniforms.uNight = U.night;
-    sh.uniforms.uWind = U.wind;
-    sh.vertexShader = 'attribute float tint;\nattribute vec4 glow;\nvarying vec3 vGlow;\nuniform float uTime;\nuniform float uNight;\nuniform float uWind;\n' + sh.vertexShader
-      .replace('#include <color_vertex>', COLOR_VERTEX)
-      .replace('#include <begin_vertex>', sway ? SWAY : '#include <begin_vertex>');
-    sh.fragmentShader = 'varying vec3 vGlow;\n' + sh.fragmentShader
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance += vGlow;');
-  };
-  m.customProgramCacheKey = () => 'opvc' + (sway ? '-sway' : '');
+  m = toonMat(opts, false);
   matCache.set(key, m);
+  return m;
+}
+
+/**
+ * A see-through copy of vcMat (same opts) for one faded prop: only a share
+ * (userData.fade.value, 0..1) of its pixels is drawn, in a fixed dither, and
+ * its outline shell not at all — seen from inside, the shell would black out
+ * the view. It's drawn after everything solid and writes no depth (the ink
+ * outlines of post.js follow depth: a dither in it would ink every pixel of
+ * it); its shadow is cast as usual. A new material each call: keep spares.
+ */
+export function fadeMat(opts = {}) {
+  const m = toonMat({ ...opts, transparent: true, depthWrite: false }, true);
+  // (both sides in the one pass, as when it's solid)
+  m.forceSinglePass = true;
   return m;
 }
 

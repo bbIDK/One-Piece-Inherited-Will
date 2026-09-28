@@ -22,7 +22,7 @@ import { buildBuilding, setNightWindows } from './buildings3d.js';
 import { FarBuildings } from './farbuildings.js';
 import { COLLIDE } from '../world/objects.js';
 import { PROP_BUILDERS, VIEWS, FRAME_HOOKS, registerPropBuilder } from './registry.js';
-import { setPartVisible } from './props/instancer.js';
+import { fadeProp, fadeWarmUp } from './props/instancer.js';
 import { instancerStats } from './props3d.js';
 import './chars3d.js';
 
@@ -47,47 +47,83 @@ const MODEL_IN = 100, MODEL_OUT = 116;
 
 const _ray1 = new THREE.Vector3(), _ray2 = new THREE.Vector3();
 
-// props the third-person camera may end up inside (see clearCameraProps)
-const CAM_CLEAR = { tree: 1, bush: 1, rock: 1, mushroom: 1, crystal: 1, cactus: 1, haystack: 1, tent: 1, stall: 1, statue: 1, totem: 1 };
-const _box = new THREE.Box3();
-/** A prop's rough extent: radius round its foot, height, and where its foot is. */
-function propExtent(v) {
-  const u = v.userData;
-  if (u.camExt !== undefined) return u.camExt;
-  let r = 0, top = 0;
-  if (u.parts) {
-    const sc = u.scale || 1;
-    for (const p of u.parts) {
-      const g = p.geo;
-      if (!g) continue;
-      const bb = g.boundingBox || (g.computeBoundingBox(), g.boundingBox);
-      const ls = p.local ? p.local.getMaxScaleOnAxis() : 1;
-      const lx = p.local ? Math.hypot(p.local.elements[12], p.local.elements[14]) : 0;
-      r = Math.max(r, (Math.max(-bb.min.x, bb.max.x, -bb.min.z, bb.max.z) * ls + lx) * sc);
-      top = Math.max(top, (bb.max.y * ls + (p.local ? p.local.elements[13] : 0)) * sc);
-    }
-    u.camExt = r > 0 ? { r, top, get y() { return u.y || 0; } } : null;
-  } else {
-    _box.setFromObject(v);
-    if (_box.isEmpty()) return (u.camExt = null);
-    const px = v.position.x, pz = v.position.z;
-    r = Math.max(px - _box.min.x, _box.max.x - px, pz - _box.min.z, _box.max.z - pz);
-    const base = v.position.y;
-    top = _box.max.y - base;
-    u.camExt = { r, top, get y() { return v.position.y; } };
+// Props the third-person camera fades to see-through (see fadeCameraProps):
+// when it's inside one, or one stands close in front of it, between it and you.
+const CAM_FADE = { tree: 1, bush: 1, rock: 1, mushroom: 1, crystal: 1, cactus: 1, haystack: 1, tent: 1, stall: 1, statue: 1, totem: 1 };
+const FADE_TO = 0.3; // the share of a faded prop still drawn
+const FADE_TIME = 0.25; // s to fade out (and as long to come back)
+const FADE_HOLD = 0.2; // s it stays faded after the camera has left it (no flicker at the edge)
+const FADE_IN = 0.3; // m: the camera this near a prop's shape counts as inside it (its near plane would cut into it)
+const FADE_NEAR = 5; // m from the camera: props farther along the view of you aren't faded
+const PROF_BIN = 0.2; // m: the bands of height a prop's shape is measured in
+
+/**
+ * The rough shape of a model for the camera: how far it reaches out from its
+ * axis in each band of height (model space, through the part's own matrix),
+ * outline shell and all — that's what darkens the view from inside. Measured
+ * along the triangles' edges: a cone's slant counts, not just its rim.
+ */
+function geoProfile(geo, local) {
+  const P = geo.attributes.position, ix = geo.index, n = P.count, e = local ? local.elements : null;
+  const xs = new Float32Array(n), ys = new Float32Array(n), zs = new Float32Array(n);
+  let y0 = Infinity, y1 = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const x = P.getX(i), y = P.getY(i), z = P.getZ(i);
+    if (e) {
+      xs[i] = e[0] * x + e[4] * y + e[8] * z + e[12];
+      ys[i] = e[1] * x + e[5] * y + e[9] * z + e[13];
+      zs[i] = e[2] * x + e[6] * y + e[10] * z + e[14];
+    } else { xs[i] = x; ys[i] = y; zs[i] = z; }
+    y0 = Math.min(y0, ys[i]); y1 = Math.max(y1, ys[i]);
   }
-  return u.camExt;
-}
-/** Hide or show a built prop (every part of an instanced one). */
-function showProp(v, on) {
-  const u = v.userData;
-  if (u.parts) {
-    u.camHidden = !on;
-    for (const p of u.parts) {
-      if (!on && !p.hidden) { setPartVisible(u, p, false); p.camHid = true; }
-      else if (on && p.camHid) { p.camHid = false; setPartVisible(u, p, true); }
+  if (!n) return null;
+  const i0 = Math.floor(y0 / PROF_BIN), r = new Float32Array(Math.floor(y1 / PROF_BIN) - i0 + 1);
+  const edge = (a, b) => {
+    const k = Math.max(1, Math.ceil(Math.abs(ys[b] - ys[a]) / PROF_BIN));
+    for (let j = 0; j <= k; j++) {
+      const t = j / k, q = Math.floor((ys[a] + (ys[b] - ys[a]) * t) / PROF_BIN) - i0;
+      const d = Math.hypot(xs[a] + (xs[b] - xs[a]) * t, zs[a] + (zs[b] - zs[a]) * t);
+      if (d > r[q]) r[q] = d;
     }
-  } else v.visible = on;
+  };
+  const m = ix ? ix.count : n;
+  for (let t = 0; t + 2 < m; t += 3) {
+    const a = ix ? ix.getX(t) : t, b = ix ? ix.getX(t + 1) : t + 1, c = ix ? ix.getX(t + 2) : t + 2;
+    edge(a, b); edge(b, c); edge(c, a);
+  }
+  return { i0, r };
+}
+
+/** An instanced prop's shape (see geoProfile), all its parts together: model space, from its foot (u.y), times u.scale. */
+function camProfile(u) {
+  if (u.camProf !== undefined) return u.camProf;
+  const ps = [];
+  for (const p of u.parts) {
+    if (!p.geo) continue;
+    let g = p.local ? null : p.geo.userData.camProf;
+    if (!g) { g = geoProfile(p.geo, p.local); if (!p.local) p.geo.userData.camProf = g; }
+    if (g) ps.push(g);
+  }
+  if (!ps.length) return (u.camProf = null);
+  let i0 = Infinity, i1 = -Infinity;
+  for (const g of ps) { i0 = Math.min(i0, g.i0); i1 = Math.max(i1, g.i0 + g.r.length - 1); }
+  const r = new Float32Array(i1 - i0 + 1);
+  for (const g of ps) for (let k = 0; k < g.r.length; k++) r[g.i0 - i0 + k] = Math.max(r[g.i0 - i0 + k], g.r[k]);
+  // (each band as wide as the wider of its neighbours: the edges were only sampled)
+  const wide = new Float32Array(r.length);
+  let rmax = 0;
+  for (let k = 0; k < r.length; k++) { wide[k] = Math.max(r[k], r[k - 1] || 0, r[k + 1] || 0); rmax = Math.max(rmax, wide[k]); }
+  return (u.camProf = { i0, r: wide, rmax });
+}
+
+/** Is a point d metres from a prop's axis, h high, inside its shape grown by m metres? */
+function inProfile(pr, u, d, h, m) {
+  const s = u.scale || 1;
+  if (d >= pr.rmax * s + m) return false;
+  const y = (h - u.y) / s, g = m / s;
+  const lo = Math.max(0, Math.floor((y - g) / PROF_BIN) - pr.i0), hi = Math.min(pr.r.length - 1, Math.floor((y + g) / PROF_BIN) - pr.i0);
+  for (let k = lo; k <= hi; k++) if (d < pr.r[k] * s + m) return true;
+  return false;
 }
 const _ndc = new THREE.Vector2(), _caster = new THREE.Raycaster();
 const _clearSea = new THREE.Color(0.06, 0.34, 0.42);
@@ -120,6 +156,8 @@ export class Renderer3D {
     this.scene.add(this.props);
     this.forest = new SpriteForest(this.props);
     this.built = new Map();
+    this.camGrid = new Map(); // built props the camera may fade, by 4 m cell (see fadeCameraProps)
+    this.camFades = new Map(); // view → { f: share drawn, hold } while it's faded
     this.animProps = new Map(); // built props with a per-frame userData.update
     this.retiring = new Map(); // building models waiting for their far block to be drawn before they go
     this.ents = new THREE.Group();
@@ -306,6 +344,8 @@ export class Renderer3D {
     this.forest.clear();
     for (const v of this.built.values()) if (v) { this.detach(v); disposeTree(v); }
     this.built.clear();
+    this.camGrid.clear();
+    this.camFades.clear();
     this.animProps.clear();
     this.retiring.clear();
     this.buildingsFar.clear();
@@ -406,36 +446,72 @@ export class Renderer3D {
     const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
     this.proj.cam.zoom = f / 7;
     if (this.post) this.post.setImpact(game.fx && game.fx.impact > 0 ? 1 : 0, game.fx?.impactColor);
-    this.clearCameraProps();
+    this.fadeCameraProps(dt);
     prof('r.misc', t0); t0 = performance.now();
     this.draw(cam);
     prof('r.draw', t0);
   }
 
   /**
-   * Third person: a tree, bush or rock the camera has swung into is hidden
-   * while it's there — seen from inside, its outline shell would black out
-   * the whole screen.
+   * Third person: a tree, bush or rock... the camera has swung into (seen from
+   * inside, its outline shell would black out the whole screen), or that
+   * stands close in front of it, between it and you, fades to see-through
+   * over a moment (see fadeProp), and back again once the camera has left it.
+   * (The camera itself keeps out of trunks and stones: see CameraRig.)
    */
-  clearCameraProps() {
-    const hidden = this.camHidden || (this.camHidden = new Map());
-    const want = new Set();
-    const w = this.world;
-    if (this.rig.mode === 'third' && w?.objects) {
-      const cp = this.rig.camera.getWorldPosition(_ray1);
-      const cx = w.wx((this.ox || 0) + cp.x), cy = (this.oy || 0) + cp.z, ch = cp.y;
-      for (const o of w.objects.near(cx, cy, 8)) {
-        if (!CAM_CLEAR[o.kind]) continue;
-        const v = this.built.get(o);
-        if (!v) continue;
-        const e = propExtent(v);
-        if (!e) continue;
-        const dx = w.dx(o.x, cx), dy = cy - o.y;
-        if (dx * dx + dy * dy < (e.r + 0.4) ** 2 && ch > e.y - 0.6 && ch < e.y + e.top + 0.4) want.add(v);
+  fadeCameraProps(dt) {
+    const fades = this.camFades, w = this.world, p = this.game.player;
+    const want = this.fadeWant || (this.fadeWant = new Set());
+    want.clear();
+    if (this.rig.mode === 'third' && w && p && this.camGrid.size) {
+      // (all relative to the player, at the origin)
+      const c = this.rig.camera.getWorldPosition(_ray1);
+      // what's looked at: your chest and your head (not from out at sea, at the helm)
+      const sc = p.look?.scale || 1, foot = this.rig.footY ?? c.y - 3;
+      const aims = p.mode === 'sail' ? [] : [foot + 1.0 * sc, foot + 1.55 * sc];
+      const R = 3.5; // (the widest crowns, from their trunks)
+      const x0 = Math.min(0, c.x) - R, x1 = Math.max(0, c.x) + R, z0 = Math.min(0, c.z) - R, z1 = Math.max(0, c.z) + R;
+      for (let gy = Math.floor((this.oy + z0) / 4); gy <= Math.floor((this.oy + z1) / 4); gy++) {
+        for (let gx = Math.floor((this.ox + x0) / 4); gx <= Math.floor((this.ox + x1) / 4); gx++) {
+          for (const o of this.camGrid.get(w.colKey(gx, gy)) || []) {
+            const v = this.built.get(o), u = v?.userData;
+            if (!u?.parts || !u.live || want.has(v)) continue;
+            const pr = camProfile(u);
+            if (!pr) continue;
+            const px = w.dx(this.ox, o.x), pz = o.y - this.oy;
+            // the camera in it (or all but)
+            if (inProfile(pr, u, Math.hypot(c.x - px, c.z - pz), c.y, FADE_IN)) { want.add(v); continue; }
+            // in the way of your chest or head, within a few metres of the camera
+            const reach = pr.rmax * (u.scale || 1);
+            for (const ah of aims) {
+              const ex = -c.x, ey = ah - c.y, ez = -c.z, L = Math.hypot(ex, ey, ez);
+              const end = Math.min(L - 0.4, FADE_NEAR);
+              // (close enough to the line at all?)
+              const t = Math.max(0, Math.min(end / L, -((c.x - px) * ex + (c.z - pz) * ez) / Math.max(1e-6, ex * ex + ez * ez)));
+              if (Math.hypot(c.x + ex * t - px, c.z + ez * t - pz) > reach + 0.6) continue;
+              let hit = false;
+              for (let s = 0.2; s <= end && !hit; s += 0.25) {
+                const k = s / L;
+                hit = inProfile(pr, u, Math.hypot(c.x + ex * k - px, c.z + ez * k - pz), c.y + ey * k, 0.05);
+              }
+              if (hit) { want.add(v); break; }
+            }
+          }
+        }
       }
     }
-    for (const v of hidden.keys()) if (!want.has(v)) { showProp(v, true); hidden.delete(v); }
-    for (const v of want) if (!hidden.has(v)) { showProp(v, false); hidden.set(v, true); }
+    for (const v of want) {
+      let r = fades.get(v);
+      if (!r) fades.set(v, (r = { f: 1, hold: 0 }));
+      r.hold = FADE_HOLD;
+    }
+    const step = (1 - FADE_TO) / FADE_TIME * dt;
+    for (const [v, r] of fades) {
+      const to = want.has(v) || (r.hold -= dt) > 0 ? FADE_TO : 1;
+      r.f = r.f > to ? Math.max(to, r.f - step) : Math.min(to, r.f + step);
+      // (back in its batch once it's whole again; forgotten if it's left the scene)
+      if (!fadeProp(v, r.f) || r.f >= 1) fades.delete(v);
+    }
   }
 
   /**
@@ -751,7 +827,11 @@ export class Renderer3D {
 
   /** Take a built prop out of the scene and forget it. */
   dropProp(o, v) {
-    if (v) { this.detach(v); disposeTree(v); }
+    if (v) { this.detach(v); disposeTree(v); this.camFades.delete(v); }
+    if (v && CAM_FADE[o.kind]) {
+      const list = this.camGrid.get(this.gridKey(o.x, o.y)), i = list ? list.indexOf(o) : -1;
+      if (i >= 0) list.splice(i, 1);
+    }
     this.built.delete(o);
     this.animProps.delete(o);
     this.retiring.delete(o);
@@ -796,7 +876,15 @@ export class Renderer3D {
     if (o.kind === 'building') v.addEventListener('added', () => { if (!this.retiring.has(o)) this.buildingsFar.show(o, false); });
     this.attach(v, this.props);
     if (v.userData.update) this.animProps.set(o, v);
+    if (CAM_FADE[o.kind]) {
+      const k = this.gridKey(o.x, o.y);
+      if (!this.camGrid.has(k)) this.camGrid.set(k, []);
+      this.camGrid.get(k).push(o);
+    }
   }
+
+  /** The 4 m cell a point is filed under in camGrid. */
+  gridKey(x, y) { return this.world.colKey(Math.floor(this.world.wx(x) / 4), Math.floor(y / 4)); }
 
   /**
    * Put a newly built object into the scene once its shaders are ready. The
@@ -835,7 +923,8 @@ export class Renderer3D {
    * frame stalls, on some machines for a good part of a second. So everything
    * already in the scene is compiled now (the ground cover, sea bed, rain,
    * lamps..., much of it unseen until you walk into a forest or dive or it
-   * rains), and a few ships built out of sight for it, then let go.
+   * rains), and a few ships built out of sight for it, then let go — and a
+   * prop faded as the third-person camera would (see fadeCameraProps).
    */
   warmUp() {
     const zoo = new THREE.Group();
@@ -845,6 +934,8 @@ export class Renderer3D {
         zoo.add(((VIEWS.ship ? VIEWS.ship(s, this.ctx) : null) || new ShipView(s)).root);
       } catch (e) { /* (only a warm-up) */ }
     }
+    const faded = fadeWarmUp();
+    zoo.add(faded);
     // (the ships' materials aren't disposed: that would drop the compiled shaders again)
     try {
       if (this.parallelCompile) {
@@ -855,6 +946,7 @@ export class Renderer3D {
         this.renderer.compile(zoo, this.rig.camera, this.scene);
       }
     } catch (e) { console.warn('shader warm-up failed', e); }
+    faded.userData.spare();
   }
 
   /**
