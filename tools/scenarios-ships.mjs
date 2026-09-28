@@ -371,6 +371,58 @@ export const scenarios = {
       }
     },
   },
+  // Onto a big ship from the pier she's berthed at: from the planks of the
+  // pier head alongside her waist, a run and a jump across to her side, up
+  // over her rail and down on her main deck.
+  //   node tools/shot.mjs pierboard [--types=caravel,great_galleon] [--island=dawn_island] [--charge=0..1]
+  pierboard: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings(); g.env.clock = 10.5; g.env.storm = g.env.stormTarget = 0; g.env.weatherTimer = 1e9; g.env.fog = 0; g.env.rain = 0; document.querySelector('.look-hint')?.remove(); });
+      for (const type of String(args.types || 'caravel,great_galleon').split(',')) {
+        const info = await page.evaluate(({ type, island }) => {
+          const g = window.OP.game, w = g.world, p = g.player, isl = w.islands.find((i) => i.id === island), dock = isl.docks[0];
+          if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
+          for (const o of g.ships) if (o.name === 'Pier Test') o.alive = false;
+          g.ships = g.ships.filter((o) => o.alive !== false);
+          const s = g.giveShip(type, dock.moor.x, dock.moor.y, 'Pier Test');
+          s.anchored = true; s.speed = 0; s.sail = 0;
+          window.__ship = s;
+          // where the pier head lies along her, and on which side
+          const d = window.OP.debug.dims(s), c = Math.cos(s.heading), sn = Math.sin(s.heading);
+          const ex = w.dx(s.x, dock.end.x + 0.5), ey = dock.end.y + 0.5 - s.y, u = ex * c + ey * sn, side = Math.sign(-ex * sn + ey * c) || 1;
+          const t = (u + d.L / 2) / d.L;
+          // from her side there, out across the water to the planks
+          const edge = window.OP.debug.deckToWorld(s, t, side * (d.B / 2));
+          const ox = -sn * side, oy = c * side;
+          let k = 0;
+          while (k < 8 && !w.isDock(edge.x + ox * k, edge.y + oy * k)) k += 0.1;
+          // (a stride or two back from the edge of the planks)
+          window.OP.teleport(edge.x + ox * (k + 1.2), edge.y + oy * (k + 1.2));
+          g.view3d.rig.yaw = Math.atan2(-oy, -ox); g.view3d.rig.pitch = 0.1;
+          return { type, t: +t.toFixed(3), alongside: d.fore && t > d.tf ? 'forecastle' : d.stairs.find((x) => x.la === 'quarter')?.tb < t ? 'waist' : 'quarterdeck', gap: +(k).toFixed(1), rail: +(d.deckY + d.bulH).toFixed(2), onPier: w.isDock(p.x, p.y) };
+        }, { type, island: args.island || 'dawn_island' });
+        for (let i = 0; i < 4; i++) { await step(page, 0.05); await frames(page, 1); }
+        await snap(`${type}-pier`);
+        // a stride and a jump (a plain one: tap Space; --charge=0..1 to hold it)
+        await page.evaluate(() => window.OP.key('W', true));
+        for (let i = 0; i < 2; i++) await step(page, 0.05);
+        const jumped = await page.evaluate((k) => { const g = window.OP.game; return g.player.tryJump(g, k); }, +(args.charge || 0));
+        let aboard = null;
+        for (let i = 0; i < 30 && !aboard; i++) {
+          await step(page, 0.1);
+          aboard = await page.evaluate(() => { const p = window.OP.game.player; return p.deck?.ship === window.__ship && !p.climb ? { lvl: typeof p.deck.lvl === 'string' ? p.deck.lvl : 'stair', h: +p.deck.h.toFixed(2) } : null; });
+        }
+        await page.evaluate(() => window.OP.key('W', false));
+        await step(page, 0.3);
+        const end = await page.evaluate(() => { const p = window.OP.game.player; return { deck: p.deck ? (typeof p.deck.lvl === 'string' ? p.deck.lvl : 'stair') : null, water: !!p.inWater }; });
+        console.log('pierboard', JSON.stringify({ ...info, jumped, aboard, end }));
+        await frames(page, 2);
+        await snap(`${type}-aboard`);
+      }
+    },
+  },
   // a broadside: the balls arc out of the ports and splash down (--types=frigate,sloop)
   broadside: {
     async run(page, snap, args) {
