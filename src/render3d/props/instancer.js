@@ -14,8 +14,12 @@
 // picks each cell's detail level by its distance, and re-checks dynamic parts
 // (fruit) a slice at a time. Instance matrices are relative to the cell (or
 // square) corner, so they never change while the player walks.
+//
+// A prop can be faded (see fadeProp: the third-person camera inside a tree's
+// crown, say): while it is, its parts leave their batches for meshes of one
+// instance each, drawn see-through (fadeMat).
 import * as THREE from 'three';
-import { vcMat, bindCtx } from './mats.js';
+import { vcMat, fadeMat, bindCtx } from './mats.js';
 import { registerFrameHook } from '../registry.js';
 
 export const CELL = 32;
@@ -192,6 +196,7 @@ function claim(u, part) {
   const cell = u.cell, home = cell.merged ? cell.sup : cell;
   // (fruit and such small parts aren't drawn that far off)
   if (cell.merged && part.nearOnly) { part.ref = null; return; }
+  if (u.faded && !part.material) { part.apart = apart(u, part, home); return; }
   let b = home.batches.get(part.key);
   if (!b) {
     b = new Batch(home, part.key, part);
@@ -202,9 +207,95 @@ function claim(u, part) {
 }
 
 function release(part) {
+  if (part.apart) {
+    const m = part.apart.mesh;
+    m.removeFromParent();
+    spareFade(m.material);
+    m.dispose();
+    part.apart = null;
+  }
   if (!part.ref) return;
   part.ref.batch.remove(part.ref.slot);
   part.ref = null;
+}
+
+// ------------------------------------------------------------- faded props
+const faded = new Set(); // markers drawn apart and see-through (see fadeProp)
+const spares = new Map(); // fade materials not in use, by variant
+
+function fadeMatFor(part) {
+  const key = `${part.sway ? 's' : ''}|${part.side || 0}|${part.tinted ? 'c' : 'i'}`;
+  const m = spares.get(key)?.pop() || fadeMat({ sway: part.sway, side: part.side, inst: part.tinted ? 'c' : 'i' });
+  m.userData.spareKey = key;
+  return m;
+}
+
+// (kept rather than disposed: its shader stays compiled for the next prop)
+function spareFade(m) {
+  const key = m.userData.spareKey;
+  if (!spares.has(key)) spares.set(key, []);
+  spares.get(key).push(m);
+}
+
+/** One part of a faded prop, drawn by itself: an instanced mesh of one, placed as in its batch. */
+function apart(u, part, home) {
+  const m = new THREE.InstancedMesh(part.geo, fadeMatFor(part), 1);
+  m.setMatrixAt(0, partMatrix(u, part, home, _m));
+  if (part.tinted) {
+    m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(3), 3);
+    m.setColorAt(0, part.color || WHITE);
+  }
+  m.castShadow = part.castShadow !== false;
+  m.receiveShadow = part.receiveShadow !== false;
+  // (after the solid world and the other see-through things: it writes no depth)
+  m.renderOrder = 5;
+  m.computeBoundingSphere();
+  m.name = 'faded:' + part.key;
+  m.material.userData.fade.value = u.fade;
+  m.position.set(home.px, 0, home.pz);
+  home.parent?.add(m);
+  return { mesh: m, home };
+}
+
+/**
+ * Stand-ins for a faded prop in each of its shaders, to be compiled ahead of
+ * the first one (see Renderer3D.warmUp); spare() hands their materials on to
+ * the props that fade later, shaders compiled.
+ */
+export function fadeWarmUp() {
+  const geo = new THREE.BoxGeometry(0.1, 0.1, 0.1), n = geo.attributes.position.count;
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+  geo.setAttribute('tint', new THREE.Float32BufferAttribute(new Float32Array(n), 1));
+  geo.setAttribute('glow', new THREE.Float32BufferAttribute(new Float32Array(n * 4), 4));
+  const root = new THREE.Group();
+  for (const sway of [false, true]) {
+    for (const tinted of [false, true]) {
+      const m = new THREE.InstancedMesh(geo, fadeMatFor({ sway, tinted }), 1);
+      if (tinted) m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(3).fill(1), 3);
+      root.add(m);
+    }
+  }
+  root.userData.spare = () => { for (const m of root.children) { spareFade(m.material); m.dispose(); } geo.dispose(); };
+  return root;
+}
+
+/**
+ * Fade an instanced prop: f is the share of it still drawn (1 = as usual,
+ * back in its batches). False once the prop isn't in the scene any more.
+ */
+export function fadeProp(mk, f) {
+  const u = mk.userData;
+  if (!u.parts) return false;
+  const on = f < 1 && u.live;
+  u.fade = f;
+  if (on !== !!u.faded) {
+    for (const p of u.parts) release(p);
+    u.faded = on;
+    if (on) faded.add(mk); else faded.delete(mk);
+    if (u.live) for (const p of u.parts) if (!p.hidden) claim(u, p);
+  }
+  if (on) for (const p of u.parts) if (p.apart) p.apart.mesh.material.userData.fade.value = f;
+  return u.live;
 }
 
 /** Move a cell's props into its far square's batches (on), or back into its own. */
@@ -247,6 +338,7 @@ function onRemoved(e) {
   const u = mk.userData;
   for (const p of u.parts) release(p);
   u.live = false;
+  if (u.faded) { u.faded = false; faded.delete(mk); }
   const cell = u.cell;
   if (cell) {
     cell.markers.delete(mk);
@@ -295,6 +387,10 @@ function frame(env, ctx) {
       cell.far = far;
       for (const b of cell.batches.values()) if (b.farGeo) b.mesh.geometry = far ? b.farGeo : b.geo;
     }
+  }
+  // (a faded prop's own meshes go where its cell's do)
+  for (const mk of faded) {
+    for (const p of mk.userData.parts) if (p.apart) p.apart.mesh.position.set(p.apart.home.px, 0, p.apart.home.pz);
   }
   if (dynDirty) { dynList = [...dynMarkers]; dynDirty = false; dynAt = 0; }
   const n = dynList.length;

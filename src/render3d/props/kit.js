@@ -8,7 +8,8 @@
 //   flicker  0..1 how much that glow flickers (fires, lanterns)
 //   flat     faceted normals (rocks, crystals, planks)
 //   outline  thickness in metres of an anime outline: an inverted hull baked
-//            into the same geometry (no extra draw call)
+//            into the same geometry (no extra draw call; its vertices have
+//            glow.a = -1, so a see-through prop can leave it out: see fadeMat)
 //   normals  fn(p, n) → Vector3: override the lighting normal (canopies use
 //            normals radiating from the crown so they shade like one mass)
 //   double   also add the back faces (thin leaves, sails, flags)
@@ -293,7 +294,8 @@ export class Mesher {
       this.nor.push(-nx, -ny, -nz);
       this.col.push(oc.r, oc.g, oc.b);
       this.tnt.push(0);
-      this.glw.push(0, 0, 0, 0);
+      // (no glow: the -1 only marks the shell)
+      this.glw.push(0, 0, 0, -1);
     }
     for (let i = 0; i < tris.length; i += 3) this.idx.push(tris[i] + b2, tris[i + 2] + b2, tris[i + 1] + b2);
   }
