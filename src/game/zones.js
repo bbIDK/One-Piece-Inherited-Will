@@ -25,6 +25,9 @@ export function installZones(game) {
   };
   game.zoneWorld = zoneWorld;
   game.inZone = () => (game.world !== game.surface ? game.world.id : null);
+  // (the ships waiting on the surface while you're away: saved with the rest, see lineage.js)
+  game.stashedShips = () => stash || [];
+  game.on('characterStart', () => { if (game.world === game.surface) stash = null; });
 
   const spotIn = (world, islandId, spotId) => {
     const isl = world.islands.find((i) => i.id === islandId);

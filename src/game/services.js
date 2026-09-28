@@ -72,6 +72,7 @@ export class Services {
   }
 
   // -------------------------------------------------------- shipwright
+  /** What a yard builds: the small ships everywhere, the big ones in the Grand Line. */
   shipsFor(island) {
     const sea = island?.def?.sea || 'east_blue', id = island?.id || '';
     const list = ['dinghy', 'sloop', 'caravel'];
@@ -84,24 +85,7 @@ export class Services {
     return list.sort((a, b) => SHIPS[a].price - SHIPS[b].price);
   }
   shipPrice(type, island) { return Math.round(SHIPS[type].price * (1 + (this.seaMul(island) - 1) * 0.3)); }
-  buyShip(type, island, dock, name) {
-    const g = this.game;
-    if (!pay(g, this.shipPrice(type, island))) return null;
-    const spot = dock?.moor || this.nearWater();
-    const s = g.giveShip(type, spot.x, spot.y, name || SHIPS[type].name);
-    g.ui.toast('NEW SHIP', `${s.name} (${SHIPS[type].name})`, '#ffe082');
-    g.log(`Your new ${SHIPS[type].name} is moored at the dock: step aboard from the pier, and press E at her wheel to take the helm.`, '#ffe082');
-    persist(g);
-    return s;
-  }
-  nearWater() {
-    const p = this.game.player;
-    for (let r = 2; r < 30; r += 2) for (let a = 0; a < 6.28; a += 0.4) {
-      const x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r;
-      if (this.game.world.sailable(x, y)) return { x, y };
-    }
-    return { x: p.x, y: p.y + 5 };
-  }
+  // (ships are bought from the shipwright on the pier, who launches them there: see shipwrights.js)
   repairPrice(ship, island) { return Math.round((ship.maxHull - ship.hull) * 8 * this.seaMul(island)); }
   repair(ship, island) {
     const g = this.game;

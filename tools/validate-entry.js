@@ -107,6 +107,20 @@ export async function run(opts = {}) {
       }
       if (!r.docks.length && !def.noDock && !def.zone) Wn(`island "${def.id}": no dock could be built (ships can't moor)`);
     }
+    // the shipwright on every surface pier (game/shipwrights.js) stands on the
+    // pier head's shoulder: on the planks (or the quay), clear of the water and
+    // the props, and off the walkway
+    for (const r of world.islands) {
+      for (const dk of r.docks || []) {
+        const st = dk.stand, where = `island "${r.id}": the ${dk.name || '?'} pier's shipwright`;
+        if (!st) { E(`${where} has nowhere to stand`); continue; }
+        if (world.isLiquid(st.x, st.y) || !world.walkable(st.x, st.y) || world.isBlocked(st.x, st.y) || world.hitsProp(st.x, st.y, 0.45)) { E(`${where} stands in the water or in something (${st.x},${st.y})`); continue; }
+        const info = world.dockAt(st.x, st.y);
+        if (!info && !world.isQuay(st.x, st.y)) E(`${where} isn't on the pier or its quay (${st.x},${st.y})`);
+        else if (info && Math.abs(info.b) <= info.half) Wn(`${where} stands at the side of the walkway (no pier head to stand on)`);
+        else if (!info) Wn(`${where} stands on the quay (no room on the pier)`);
+      }
+    }
     // every home island sells a sword (the pirate road's first job is "get a weapon")
     for (const id of PROLOGUES.keys()) {
       const r = recs.get(id);

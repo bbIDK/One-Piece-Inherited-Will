@@ -103,3 +103,10 @@ export function shipStats(type, upgrades = []) {
   d.maxHull = Math.round(base.hull * (mods.hullMul || 1));
   return d;
 }
+
+/** "Small ship · 11.5 m · 1 mast": what kind of vessel a class is. */
+export function shipClassLine(d) {
+  const size = d.length < 5 ? 'Boat' : d.length < 14 ? 'Small ship' : d.length < 22 ? 'Ship' : d.length < 30 ? 'Big ship' : 'Great ship';
+  const rig = d.masts ? `${d.masts} mast${d.masts > 1 ? 's' : ''}` : 'oars';
+  return `${size} · ${d.length} m · ${rig}`;
+}

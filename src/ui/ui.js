@@ -589,7 +589,8 @@ export class UI {
       inter = { label: `${free ? verb[0].toUpperCase() + verb.slice(1) : 'Hold to ' + verb} the ${it.name}` };
       pKey = free ? 'Right-click' : 'RMB';
     }
-    const pk = inter ? pKey + inter.label : '';
+    // (hidden while a conversation or a menu is open: it comes back when they close)
+    const pk = inter ? pKey + inter.label + (this.blocksInput() ? '|blocked' : '') : '';
     if (this.cache.prompt !== pk) {
       this.cache.prompt = pk;
       E.prompt.classList.toggle('hidden', !inter || this.blocksInput());
