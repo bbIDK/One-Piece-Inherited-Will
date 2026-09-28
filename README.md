@@ -55,14 +55,14 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 |---|---|---|
 | Mouse | look around | look around |
 | V | first person / third person | |
-| WASD | move where you look | W/S sails, A/D steer |
-| Space | jump | row (works without wind) |
+| WASD | move where you look | W/S sails, A/D steer (at a rowboat's oars: W/S row, A/D turn) |
+| Space | jump; at a pier, a bank or a ship's side, climb up | row (works without wind) |
 | Shift | hold to sprint, tap to dodge (i-frames) | Coup de Burst (some ships) |
 | Left / right click | combo / heavy attack | broadside toward where you aim |
 | F | block — tap just before a hit to **parry** | |
 | 1–9, 0 | hotbar: techniques, food and weapons | |
 | R / T / G | Haki, once it has awakened | |
-| E | talk, enter, board, pick fruit, examine | dive, knock-up, go ashore |
+| E | talk, enter, take the helm or the oars, pick fruit, examine | dive, knock-up, go ashore, leave the helm |
 | Q | eat | |
 | Tab/I, C, K, J, U, L | inventory, character, skills, journal, crew, quests | |
 | M | world map | |
@@ -185,8 +185,11 @@ rearrange them.
 
 **The sea.**
 
-- Ships range from a rowboat to an Adam-wood brig. There is wind, Grand Line
-  weather that changes its mind, and rogue waves.
+- Ships range from a rowboat (you row her: no mast, no sail) to an Adam-wood
+  brig. There is wind, Grand Line weather that changes its mind, and rogue
+  waves.
+- Boarding is done by hand: jump onto a deck from a pier or from your own
+  deck, or swim to a ship and climb her side. Every deck can be walked.
 - **Log Pose** navigation: stay on an island until the log sets, and use
   Eternal Poses.
 - The **Calm Belt** is full of Sea Kings.
@@ -198,7 +201,10 @@ rearrange them.
   - the current does the sailing and only runs one way, so steer for the
     middle of the canal.
 - The world is big: you can't see the next island from the last one.
-- Marine patrols, pirate ships, merchants and flotsam.
+- Marine patrols, pirate ships, merchants and flotsam. Pirates leave an
+  unknown newcomer in the Blues alone. Once you have a bounty they give chase
+  (in the Blues, not much faster than a small boat), and when you stop they
+  heave to alongside, so you can board them.
 - A News Coo delivers the morning paper.
 
 **Zones.**

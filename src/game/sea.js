@@ -14,6 +14,7 @@ import { RNG } from '../core/rng.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
 import { drawShip } from '../render/ship.js';
 import { hullGap } from '../world/hull.js';
+import { sparesNewcomer, engage, playerShip, fireOn } from './traffic.js';
 
 export function installSea(game) {
   const sea = new SeaSystem(game);
@@ -255,8 +256,10 @@ class SeaSystem {
     const lvl = nw ? rng.int(45, 70) : gl ? rng.int(22, 40) : isBlue(reg) && reg !== REGION.EAST_BLUE ? rng.int(10, 18) : rng.int(5, 12);
     const type = nw ? rng.pick(['frigate', 'galleon', 'war_galleon', 'man_o_war']) : gl ? rng.pick(['brigantine', 'caravel', 'frigate', 'war_galleon']) : rng.pick(['sloop', 'caravel', 'sloop']);
     const faction = kind === 'marine' ? 'marine' : kind === 'pirate' ? 'pirate' : 'civilian';
+    // (pirates don't bother a newcomer: she crosses your bow at a distance rather than bearing down on you)
+    const spared = kind === 'pirate' && sparesNewcomer(g);
     const ship = g.addShip({
-      type: kind === 'marine' ? (nw ? 'marine_battleship' : gl ? rng.pick(['marine_warship', 'marine_battleship']) : 'brigantine') : type, x, y, heading: a + Math.PI, owner: kind, faction,
+      type: kind === 'marine' ? (nw ? 'marine_battleship' : gl ? rng.pick(['marine_warship', 'marine_battleship']) : 'brigantine') : type, x, y, heading: a + Math.PI + (spared ? 0.9 : 0), owner: kind, faction,
       name: kind === 'marine' ? 'Marine Patrol' : kind === 'pirate' ? pirateShipName(rng) : 'Merchant Ship',
       jr: kind === 'pirate' ? { skull: rng.pick(['classic', 'grin', 'eyepatch']), bones: rng.pick(['cross', 'swords']), accessory: rng.pick(['bandana', 'horns', 'tricorne', 'none', 'flames']), color: '#f5f6fa' } : null,
     });
@@ -269,7 +272,8 @@ class SeaSystem {
     ship.hull = ship.maxHull = Math.round(ship.maxHull * (0.5 + lvl / 40));
     ship.loot = Math.round((kind === 'merchant' ? 3000 : 1500) * (1 + lvl / 10));
     ship.expire = 180;
-    if (kind === 'pirate') g.log(`A pirate ship flying an unfamiliar Jolly Roger is closing in!`, '#ff8a80');
+    if (spared) g.log('A pirate ship crosses your bow in the distance — and pays a little boat no mind.', '#b0bec5');
+    else if (kind === 'pirate') g.log(`A pirate ship flying an unfamiliar Jolly Roger is closing in!`, '#ff8a80');
     else if (kind === 'marine') g.log('A Marine patrol ship has spotted you! (You have a bounty.)', '#64b5f6');
     else g.log('A merchant ship sails by.', '#b0bec5');
   }
@@ -332,23 +336,24 @@ function drawBarrel(g, env) {
 function warshipAI(s, dt, game) {
   const p = game.player;
   s.expire -= dt;
-  const target = p.mode === 'sail' && p.ship ? p.ship : null;
+  const target = playerShip(p);
   const d = game.world.distance(s.x, s.y, p.x, p.y);
   if (s.expire <= 0 && d > 40) { s.alive = false; return; }
-  const hostileToPlayer = s.faction === 'pirate' || (s.faction === 'marine' && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked));
+  // (pirates leave a newcomer be unless they're fired on: see traffic.js)
+  const hostileToPlayer = (s.faction === 'pirate' && (s.provoked || !sparesNewcomer(game))) || (s.faction === 'marine' && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked));
   if (!hostileToPlayer) return merchantAI(s, dt, game);
-  s.sail = 1;
-  if (!target && d > 50) return;
-  // circle to present a broadside at ~9 tiles
-  const toT = Math.atan2(p.y - s.y, game.world.dx(s.x, p.x));
-  const want = d > 12 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
+  // (hove to alongside, she waits for you while you're close — swimming over to board her, say)
+  if (!target && s.heaveTo && d < 30) { s.sail = 0; s.speedCap = 0; s.anchored = true; return; }
+  if (!target || d > 50) { s.sail = 1; s.speedCap = null; s.heaveTo = false; return; }
+  // chase, run abreast with a broadside on you, or heave to alongside once you've stopped
+  const want = engage(s, game, target);
   s.heading += clamp(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
-  const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
-  if (d < 16 && side < 0.6 && s.cannonCd <= 0) s.fireBroadside(game, p.x, p.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
+  fireOn(game, s, target, d);
 }
 
 function merchantAI(s, dt, game) {
   s.expire -= dt;
+  s.speedCap = null; s.heaveTo = false; s.anchored = false;
   s.sail = 0.8;
   const d = game.world.distance(s.x, s.y, game.player.x, game.player.y);
   if (s.expire <= 0 && d > 40) s.alive = false;
@@ -413,7 +418,7 @@ class SeaKingBrain {
         if (tgtShip && game.world.distance(tgtShip.x, tgtShip.y, tx, ty) < 4) tgtShip.damage(dmg, k);
         game.fx.burst(tx, ty, 30, { color: ['#e1f5fe', '#81d4fa', '#ffffff'], speed: 6, vz: 7, g: 12, life: 0.9, size: 0.22 });
         game.fx.shake(0.6);
-        game.audio?.sfx('crash');
+        game.audio?.sfx('crash', { x: tx, y: ty });
       }, 900);
     }
   }

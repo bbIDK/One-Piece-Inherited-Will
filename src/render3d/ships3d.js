@@ -196,7 +196,7 @@ export function hullGeometry(def) {
 
   // ---- the helm (a wheel on a post; the rowboat just has oars)
   if (!d.open) {
-    const wx = d.helmX + 1.1, fy = floorAt(d, (wx + d.L / 2) / d.L);
+    const wx = d.wheelU + 0.1, fy = floorAt(d, (wx + d.L / 2) / d.L);
     k.add(box(0.14, 0.82, 0.14), { at: [wx, fy, 0], color: P.wood, outline: 0.015 });
     k.save(); k.translate(wx - 0.1, fy + 0.92, 0); k.rotateY(Math.PI / 2);
     k.add(torus(0.4, 0.03, 5, 18), { color: '#7b5230' });
@@ -206,6 +206,30 @@ export function hullGeometry(def) {
     }
     k.add(cyl(0.07, 0.07, 0.08, 8), { at: [0, 0, -0.04], rot: [Math.PI / 2, 0, 0], color: '#d4ac0d' });
     k.restore();
+  } else if (d.row) {
+    // a rowboat: the rower's thwart amidships, a bench in the stern and a
+    // thwart in the bow, knees under the seats, and a rowlock on each gunwale
+    // (the oars themselves swing in them: see ShipView)
+    const r = d.row, seatY = d.deckY + r.seatH;
+    const thwart = (t, w) => {
+      const hb = hbAt(t, d.B) * 0.97 - 0.06;
+      k.add(box(w, 0.05, hb * 2), { at: [xAt(d, t), seatY - 0.05, 0], color: shade(P.deck, 0.06), outline: 0.01 });
+      for (const s of [-1, 1]) k.add(box(w * 0.7, r.seatH - 0.05, 0.05), { at: [xAt(d, t), d.deckY, s * (hb - 0.06)], color: P.wood });
+    };
+    thwart(r.seatT, 0.26);
+    thwart(0.8, 0.2);
+    // the stern bench, round the transom
+    k.add(box(0.36, 0.05, hbAt(0.1, d.B) * 1.8), { at: [xAt(d, 0.1), seatY - 0.08, 0], color: shade(P.deck, 0.06), outline: 0.01 });
+    k.add(box(0.05, r.seatH - 0.08, hbAt(0.1, d.B) * 1.5), { at: [xAt(d, 0.1) + 0.14, d.deckY, 0], color: P.wood });
+    for (const s of [-1, 1]) {
+      // the rowlock: a pad on the gunwale and the crutch the loom turns in
+      k.add(box(0.14, 0.04, 0.08), { at: [r.lockU, r.lockH - 0.08, s * r.lockV], color: shade(P.hull, -0.3) });
+      k.add(cyl(0.012, 0.012, 0.08, 4), { at: [r.lockU, r.lockH - 0.05, s * r.lockV], color: '#6b6b6b' });
+      k.add(torus(0.035, 0.009, 4, 8, Math.PI), { at: [r.lockU, r.lockH + 0.035, s * r.lockV], rot: [0, 0, Math.PI], color: '#6b6b6b' });
+    }
+    // a coil of line and the painter at the bow, a bailer in the bilge
+    k.add(torus(0.1, 0.03, 4, 10), { at: [xAt(d, 0.88), d.deckY + 0.03, 0.08], rot: [Math.PI / 2, 0, 0], color: '#c8b89a' });
+    k.add(cyl(0.07, 0.06, 0.1, 7), { at: [xAt(d, 0.3), d.deckY, -0.18], color: '#7d6a55' });
   } else {
     // thwarts and resting oars
     for (const t of [0.35, 0.65]) k.add(box(0.26, 0.05, hbAt(t, d.B) * 1.85), { at: [xAt(d, t), d.deckY + 0.26, 0], color: P.wood, outline: 0.01 });
@@ -477,7 +501,27 @@ function triGeometry(a, b, c, n = 5) {
   return g;
 }
 
+/**
+ * An oar (shared per rowboat type): built along +z from the grip, through
+ * the rowlock at the origin, out to the blade — square to the stroke (its
+ * flat faces fore and aft) until it's turned about the loom to feather.
+ */
+function oarGeometry(d) {
+  const r = d.row, key = `oar|${r.inboard}|${r.outboard}`;
+  let g = rigCache.get(key);
+  if (g) return g;
+  const k = new Mesher();
+  k.add(cyl(0.02, 0.024, r.inboard + r.outboard - 0.42, 6), { at: [0, 0, -r.inboard], rot: [Math.PI / 2, 0, 0], color: '#b58a55', outline: 0.008 });
+  k.add(cyl(0.028, 0.028, 0.16, 6), { at: [0, 0, -r.inboard], rot: [Math.PI / 2, 0, 0], color: '#6d4c33' }); // the grip
+  k.add(box(0.02, 0.15, 0.46), { at: [0, -0.075, r.outboard - 0.23], color: '#c9a06a', outline: 0.008 }); // the blade
+  k.add(cyl(0.03, 0.03, 0.05, 6), { at: [0, 0, -0.025], rot: [Math.PI / 2, 0, 0], color: '#4e4e4e' }); // the collar at the rowlock
+  g = k.build(true);
+  rigCache.set(key, g);
+  return g;
+}
+
 // ---------------------------------------------------------------- the view
+const REST_OAR = { a: -1.15, b: 0.12, f: 1 }; // (trailing aft alongside, blades out of the water)
 const SOLID = () => vcMat();
 const GHOST = () => vcMat({ transparent: true, opacity: 0.15, depthWrite: false });
 
@@ -623,10 +667,11 @@ export class ShipView {
     hull.castShadow = true; hull.receiveShadow = true;
     root.add(hull);
     this.hull = hull;
-    // masts
+    // masts (a rowboat has none)
     const plan = d.big ? bigMastPlan(d) : mastPlan(def, d);
     this.rig = new THREE.Mesh(d.big ? bigRigGeometry(def, d, plan) : mastGeometry(def, d, plan), SOLID());
     this.rig.castShadow = true;
+    this.rig.visible = plan.length > 0;
     root.add(this.rig);
     // yards + sails per mast (they brace to the wind around the mast)
     const kind = this.flagKind();
@@ -636,6 +681,7 @@ export class ShipView {
     this.ownMats = [];
     const own = (m) => { this.ownMats.push(m); return m; };
     this.ghostables = [];
+    const boxes = [];
     const yardK = new Mesher();
     for (const m of plan) {
       const grp = new THREE.Group();
@@ -644,6 +690,12 @@ export class ShipView {
       this.braces.push(grp);
       const yk = new Mesher();
       for (const sp of (d.big ? bigSailPlan(def, d, m) : sailPlan(def, d, m))) {
+        // (the room each sail takes, bellied out — from its mast, turning with
+        // the yards as they brace round: a third-person camera keeps out of it;
+        // a gaff sail is there furled or set)
+        if (sp.type === 'square') boxes.push({ m: m.x, u0: -0.4, u1: 1.1, h0: sp.y0, h1: sp.y1 + 0.2, v: sp.w * 0.5 + 0.1, braced: true });
+        else if (sp.type === 'gaff') boxes.push({ m: m.x, u0: -sp.len - 0.2, u1: 0.4, h0: sp.y0, h1: sp.y1, v: 0.6, braced: true, always: true });
+        else if (sp.type === 'jib') boxes.push({ m: m.x, u0: 0, u1: sp.tipX - m.x, h0: Math.min(sp.tipY, sp.y1 - 1), h1: sp.y1, v: 0.6 });
         if (sp.type === 'square') {
           const sw = sp.w, sh = sp.y1 - sp.y0, yr = sp.yardR || 0.05;
           yk.add(cyl(yr * 0.7, yr, sw * 1.08, 6), { at: [0.1 + (d.big ? m.r * 1.2 + yr : 0), sp.y1 + 0.04, -sw * 0.54], rot: [Math.PI / 2, 0, 0], color: '#5d4037' });
@@ -685,6 +737,7 @@ export class ShipView {
       this.ghostables.push(ym);
     }
     void yardK;
+    s.sailBoxes = boxes;
     // rigging lines
     this.lines = d.big ? this.lineSet(bigRigging(d, plan)) : this.rigging(def, d, plan);
     root.add(this.lines);
@@ -708,8 +761,21 @@ export class ShipView {
         this.paddles.push(pm);
       }
     }
+    // a rowboat's oars, swinging in their rowlocks with each stroke
+    if (d.row) {
+      this.oars = [];
+      const r = d.row, og = oarGeometry(d);
+      for (const side of [-1, 1]) {
+        const m = new THREE.Mesh(og, SOLID());
+        m.castShadow = true;
+        m.position.set(r.lockU, r.lockH, side * r.lockV);
+        m.rotation.order = 'YXZ';
+        root.add(m);
+        this.oars.push({ mesh: m, side });
+      }
+    }
     // the masthead flag
-    if (kind !== 'none') {
+    if (kind !== 'none' && plan.length) {
       const fs = d.big ? d.L / 11 : 1;
       const fg = new THREE.PlaneGeometry(1.1 * fs, 0.75 * fs, 5, 1);
       fg.translate(0.55 * fs, 0, 0);
@@ -827,10 +893,18 @@ export class ShipView {
     if (r.parent && this.wake.mesh.parent !== r.parent) r.parent.add(this.wake.mesh);
     const v3 = ctx?.game?.view3d;
     if (v3 && ctx.world) this.wake.update(s, env.time, v3.ox, v3.oy, ctx.world);
-    // from the helm of your own ship the rig is see-through, so you can steer
-    // (sailing puts the camera at the helm in either view mode)
-    const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === 'sail';
+    // from the helm of your own ship in first person the rig is see-through,
+    // so you can steer (in third person you see her whole, from outside)
+    const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === 'sail' && ctx.mode !== 'third';
     if (own !== this.ghost) this.setGhost(own);
+    // the oars, as the rower has them (see game/ship.js updateOars)
+    if (this.oars) {
+      const st = s.oars;
+      for (const o of this.oars) {
+        const q = st ? st[o.side > 0 ? 1 : 0] : REST_OAR;
+        o.mesh.rotation.set(q.b, o.side > 0 ? q.a : Math.PI - q.a, q.f * Math.PI / 2);
+      }
+    }
     const t = env.time + (s.seed || 0);
     const sinking = s.sunk ? Math.min(1, s.sinkT / 4) : 0;
     r.position.set(rx, (s.lvl || 0) + 0.05 + Math.sin(t * 1.3) * 0.07 - sinking * 3, rz);
@@ -840,6 +914,7 @@ export class ShipView {
     const relA = (windAngle || 0) - s.heading;
     const brace = Math.max(-0.5, Math.min(0.5, Math.sin(relA) * 0.45));
     for (const b of this.braces) b.rotation.y = -brace;
+    s.brace = brace;
     const rel = Math.cos(relA);
     const set = s.sailSet ?? 0.5;
     const billow = (0.15 + set * 0.45) * (0.6 + 0.4 * Math.max(0, rel));

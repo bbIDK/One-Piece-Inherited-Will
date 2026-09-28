@@ -37070,7 +37070,17 @@ void main() {
       g.lineTo(L2 * 0.45, 0.3);
       g.fill();
     }
-    const masts = def.masts || 1;
+    const masts = def.masts ?? 1;
+    if (def.oarsOnly) {
+      g.strokeStyle = "#b08850";
+      g.lineWidth = 0.06;
+      for (const sy of [-1, 1]) {
+        g.beginPath();
+        g.moveTo(-0.1, sy * B4 * 0.3);
+        g.lineTo(-0.9, sy * (B4 * 0.5 + 0.35));
+        g.stroke();
+      }
+    }
     const wind = st.windAngle ?? 0;
     const rel2 = wind - st.heading;
     const set = st.sailSet ?? 0;
@@ -37117,7 +37127,7 @@ void main() {
       g.fill();
     }
     const marineFlag = def.sail === "marine" || st.marine;
-    if (!st.noFlag || marineFlag) {
+    if ((!st.noFlag || marineFlag) && masts > 0) {
       const mx = masts === 1 ? 0.05 * L2 : L2 * 0.28 - (masts > 1 ? L2 * 0.56 / (masts - 1) : 0) * Math.min(1, masts - 1) * 0.5;
       g.save();
       g.translate(mx, 0);
@@ -37183,10 +37193,10 @@ void main() {
     const hq = castle ? 0.85 + (L2 - 5.5) * 0.1 : 0;
     const hf = fore ? 0.5 : 0;
     const tq = castle ? 0.27 : 0, tf2 = fore ? 0.83 : 1;
-    const masts = def.masts || 1;
-    const mastH = 1.2 + L2 * 0.75;
-    const helmX = -L2 * 0.42;
-    return {
+    const masts = def.masts ?? 1;
+    const mastH = masts ? 1.2 + L2 * 0.75 : 0;
+    let helmX = -L2 * 0.42;
+    const d = {
       L: L2,
       B: B4,
       D: D3,
@@ -37213,6 +37223,78 @@ void main() {
       walk: 0.94,
       stairs: [],
       solids: []
+    };
+    d.mastU = masts ? Array.from({ length: masts }, (_, m) => masts === 1 ? 0.05 * L2 : L2 * (0.28 - m * (0.56 / Math.max(1, masts - 1)))) : [];
+    d.mastR = 0.05 + L2 * 0.011;
+    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.16 }));
+    if (!open) {
+      const aft = masts > 1 ? d.mastU[masts - 1] : Infinity;
+      d.wheelU = Math.min(helmX + 1, aft - d.mastR - 0.35);
+      d.helmX = helmX = Math.max(-L2 / 2 + 0.3, Math.min(helmX, d.wheelU - 1));
+      d.solids.push({ u: d.wheelU + 0.1, v: 0, r: 0.2 });
+    }
+    if (def.oarsOnly) {
+      const seatT = 0.44, lockT = seatT + 0.4 / L2;
+      d.row = {
+        seatT,
+        seatU: xAt(d, seatT),
+        seatH: 0.3,
+        // (the top of the thwart, over the floor)
+        lockT,
+        lockU: xAt(d, lockT),
+        lockV: hbAt(lockT, B4) * 0.965,
+        lockH: topAt(d, lockT) + 0.04,
+        inboard: 0.56,
+        outboard: 1.5
+      };
+      d.helmX = helmX = d.row.seatU;
+    }
+    return d;
+  }
+  var OAR = { catchA: 0.6, finishA: -0.3, dipB: 0.52, liftB: 0.2 };
+  var ease = (k) => k * k * (3 - 2 * k);
+  function oarStroke(ph, pull = 1) {
+    const { catchA: ca, finishA: fa, dipB, liftB } = OAR;
+    let a, b, f;
+    if (ph < 0.08) {
+      const k = ease(ph / 0.08);
+      a = ca;
+      b = liftB + (dipB - liftB) * k;
+      f = 0;
+    } else if (ph < 0.52) {
+      a = ca + (fa - ca) * ease((ph - 0.08) / 0.44);
+      b = dipB;
+      f = 0;
+    } else if (ph < 0.6) {
+      const k = ease((ph - 0.52) / 0.08);
+      a = fa;
+      b = dipB + (liftB - dipB) * k;
+      f = k;
+    } else {
+      const k = (ph - 0.6) / 0.4;
+      a = fa + (ca - fa) * ease(k);
+      b = liftB + Math.sin(k * Math.PI) * 0.05;
+      f = k < 0.8 ? 1 : 1 - ease((k - 0.8) / 0.2);
+    }
+    if (pull < 0) a = ca + fa - a;
+    return { a, b, f };
+  }
+  function rowLean(ship) {
+    const o = ship.oars;
+    if (!o) return 0;
+    const k = clamp01((OAR.catchA - (o[0].a + o[1].a) / 2) / (OAR.catchA - OAR.finishA));
+    return -0.08 + 0.44 * k;
+  }
+  var oarDrive = (ph) => ph < 0.08 || ph > 0.52 ? 0 : Math.sin((ph - 0.08) / 0.44 * Math.PI);
+  function oarPoints(d, side, a, b) {
+    const r = d.row, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+    const ox = sa * cb, oy = -sb, oz = side * ca * cb;
+    const px2 = r.lockU, py2 = r.lockH, pz2 = side * r.lockV;
+    return {
+      lock: [px2, py2, pz2],
+      dir: [ox, oy, oz],
+      grip: [px2 - ox * r.inboard, py2 - oy * r.inboard, pz2 - oz * r.inboard],
+      tip: [px2 + ox * r.outboard, py2 + oy * r.outboard, pz2 + oz * r.outboard]
     };
   }
   function bigDims(def) {
@@ -37306,6 +37388,7 @@ void main() {
   }
   function helmPoint(def) {
     const d = shipDims(def);
+    if (d.row) return { x: d.helmX, floor: d.deckY, eye: d.deckY + d.row.seatH + 0.8, seated: true };
     return { x: d.helmX, floor: d.helmFloor, eye: d.helmFloor + (d.open ? 1.45 : 1.7) };
   }
   function hbAt(t, B4) {
@@ -37367,12 +37450,21 @@ void main() {
     const hb = hbAt(t, d.B) * d.walk - margin;
     if (hb <= 0 || Math.abs(v) > hb) return null;
     const out = { t, u, v, h: floorAt(d, t, v), edge: hb - Math.abs(v) };
-    if (d.big) {
-      out.lvl = levelAt(d, t, v);
+    if (d.big) out.lvl = levelAt(d, t, v);
+    if (d.solids.length) {
       const depth = solidAt(d, u, v, Math.max(0, margin));
       if (depth > 0) out.solid = depth;
     }
     return out;
+  }
+  function hullPoint(ship, dx, dy, pad = 0) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = -dx * s + dy * c;
+    const t = (u + d.L / 2) / d.L, tc = clamp01(t);
+    if (Math.abs(t - tc) * d.L > pad) return null;
+    if (Math.abs(v) > hbAt(tc, d.B) + pad) return null;
+    return { t: tc, u, v, top: topAt(d, tc), floor: floorAt(d, tc, v) };
   }
   function deckToWorld(ship, t, v) {
     const d = shipDims(ship.def);
@@ -37387,9 +37479,11 @@ void main() {
     const t = (u + d.L / 2) / d.L;
     if (t < 0 || t > 1 || h2 < -d.D) return false;
     if (d.mastU && v < d.mastR + 0.2 && h2 < d.mastH && d.mastU.some((m) => Math.abs(u - m) < d.mastR + 0.2)) return true;
-    if (h2 > topAt(d, t)) return false;
     const hb = hbAt(t, d.B);
     if (v > hb) return false;
+    const rail2 = d.big ? 1 : 0.8, at5 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
+    if (d.castle && at5(d.tq) && h2 < d.yq + rail2 || d.poop && at5(d.tp) && h2 < d.yp + rail2 || d.fore && at5(d.tf) && h2 < d.yf + rail2) return true;
+    if (h2 > topAt(d, t)) return false;
     if (v > hb * d.walk - 0.05 || h2 < d.deckY - 0.1) return true;
     if (d.poop && t < d.tp) return h2 < d.yp - 0.1;
     if (d.castle && t < d.tq) return h2 < d.yq - 0.1;
@@ -38200,7 +38294,7 @@ void main() {
       for (let z = -w + 0.15; z < w; z += 0.26) k.add(cyl(0.03, 0.035, 0.62, 5, true), { at: [xf2 - 0.04, d.yf, z], color: shade2(P4.bulwark, 0.1) });
     }
     if (!d.open) {
-      const wx = d.helmX + 1.1, fy = floorAt(d, (wx + d.L / 2) / d.L);
+      const wx = d.wheelU + 0.1, fy = floorAt(d, (wx + d.L / 2) / d.L);
       k.add(box(0.14, 0.82, 0.14), { at: [wx, fy, 0], color: P4.wood, outline: 0.015 });
       k.save();
       k.translate(wx - 0.1, fy + 0.92, 0);
@@ -38212,6 +38306,24 @@ void main() {
       }
       k.add(cyl(0.07, 0.07, 0.08, 8), { at: [0, 0, -0.04], rot: [Math.PI / 2, 0, 0], color: "#d4ac0d" });
       k.restore();
+    } else if (d.row) {
+      const r = d.row, seatY = d.deckY + r.seatH;
+      const thwart = (t, w) => {
+        const hb = hbAt(t, d.B) * 0.97 - 0.06;
+        k.add(box(w, 0.05, hb * 2), { at: [xAt(d, t), seatY - 0.05, 0], color: shade2(P4.deck, 0.06), outline: 0.01 });
+        for (const s of [-1, 1]) k.add(box(w * 0.7, r.seatH - 0.05, 0.05), { at: [xAt(d, t), d.deckY, s * (hb - 0.06)], color: P4.wood });
+      };
+      thwart(r.seatT, 0.26);
+      thwart(0.8, 0.2);
+      k.add(box(0.36, 0.05, hbAt(0.1, d.B) * 1.8), { at: [xAt(d, 0.1), seatY - 0.08, 0], color: shade2(P4.deck, 0.06), outline: 0.01 });
+      k.add(box(0.05, r.seatH - 0.08, hbAt(0.1, d.B) * 1.5), { at: [xAt(d, 0.1) + 0.14, d.deckY, 0], color: P4.wood });
+      for (const s of [-1, 1]) {
+        k.add(box(0.14, 0.04, 0.08), { at: [r.lockU, r.lockH - 0.08, s * r.lockV], color: shade2(P4.hull, -0.3) });
+        k.add(cyl(0.012, 0.012, 0.08, 4), { at: [r.lockU, r.lockH - 0.05, s * r.lockV], color: "#6b6b6b" });
+        k.add(torus(0.035, 9e-3, 4, 8, Math.PI), { at: [r.lockU, r.lockH + 0.035, s * r.lockV], rot: [0, 0, Math.PI], color: "#6b6b6b" });
+      }
+      k.add(torus(0.1, 0.03, 4, 10), { at: [xAt(d, 0.88), d.deckY + 0.03, 0.08], rot: [Math.PI / 2, 0, 0], color: "#c8b89a" });
+      k.add(cyl(0.07, 0.06, 0.1, 7), { at: [xAt(d, 0.3), d.deckY, -0.18], color: "#7d6a55" });
     } else {
       for (const t of [0.35, 0.65]) k.add(box(0.26, 0.05, hbAt(t, d.B) * 1.85), { at: [xAt(d, t), d.deckY + 0.26, 0], color: P4.wood, outline: 0.01 });
       for (const s of [-1, 1]) {
@@ -38475,6 +38587,20 @@ void main() {
     g.computeVertexNormals();
     return g;
   }
+  function oarGeometry(d) {
+    const r = d.row, key2 = `oar|${r.inboard}|${r.outboard}`;
+    let g = rigCache.get(key2);
+    if (g) return g;
+    const k = new Mesher();
+    k.add(cyl(0.02, 0.024, r.inboard + r.outboard - 0.42, 6), { at: [0, 0, -r.inboard], rot: [Math.PI / 2, 0, 0], color: "#b58a55", outline: 8e-3 });
+    k.add(cyl(0.028, 0.028, 0.16, 6), { at: [0, 0, -r.inboard], rot: [Math.PI / 2, 0, 0], color: "#6d4c33" });
+    k.add(box(0.02, 0.15, 0.46), { at: [0, -0.075, r.outboard - 0.23], color: "#c9a06a", outline: 8e-3 });
+    k.add(cyl(0.03, 0.03, 0.05, 6), { at: [0, 0, -0.025], rot: [Math.PI / 2, 0, 0], color: "#4e4e4e" });
+    g = k.build(true);
+    rigCache.set(key2, g);
+    return g;
+  }
+  var REST_OAR = { a: -1.15, b: 0.12, f: 1 };
   var SOLID = () => vcMat();
   var GHOST = () => vcMat({ transparent: true, opacity: 0.15, depthWrite: false });
   var WAKE_N = 36;
@@ -38641,6 +38767,7 @@ void main() {
       const plan = d.big ? bigMastPlan(d) : mastPlan(def, d);
       this.rig = new Mesh(d.big ? bigRigGeometry(def, d, plan) : mastGeometry(def, d, plan), SOLID());
       this.rig.castShadow = true;
+      this.rig.visible = plan.length > 0;
       root2.add(this.rig);
       const kind = this.flagKind();
       const sailCol = kind === "marine" || def.sail === "marine" ? "#f5f6fa" : s.sailColor || "#efe6cf";
@@ -38652,6 +38779,7 @@ void main() {
         return m;
       };
       this.ghostables = [];
+      const boxes2 = [];
       const yardK = new Mesher();
       for (const m of plan) {
         const grp = new Group();
@@ -38660,6 +38788,9 @@ void main() {
         this.braces.push(grp);
         const yk = new Mesher();
         for (const sp of d.big ? bigSailPlan(def, d, m) : sailPlan(def, d, m)) {
+          if (sp.type === "square") boxes2.push({ m: m.x, u0: -0.4, u1: 1.1, h0: sp.y0, h1: sp.y1 + 0.2, v: sp.w * 0.5 + 0.1, braced: true });
+          else if (sp.type === "gaff") boxes2.push({ m: m.x, u0: -sp.len - 0.2, u1: 0.4, h0: sp.y0, h1: sp.y1, v: 0.6, braced: true, always: true });
+          else if (sp.type === "jib") boxes2.push({ m: m.x, u0: 0, u1: sp.tipX - m.x, h0: Math.min(sp.tipY, sp.y1 - 1), h1: sp.y1, v: 0.6 });
           if (sp.type === "square") {
             const sw2 = sp.w, sh = sp.y1 - sp.y0, yr = sp.yardR || 0.05;
             yk.add(cyl(yr * 0.7, yr, sw2 * 1.08, 6), { at: [0.1 + (d.big ? m.r * 1.2 + yr : 0), sp.y1 + 0.04, -sw2 * 0.54], rot: [Math.PI / 2, 0, 0], color: "#5d4037" });
@@ -38699,6 +38830,7 @@ void main() {
         grp.add(ym);
         this.ghostables.push(ym);
       }
+      s.sailBoxes = boxes2;
       this.lines = d.big ? this.lineSet(bigRigging(d, plan)) : this.rigging(def, d, plan);
       root2.add(this.lines);
       if (def.paddle) {
@@ -38720,7 +38852,19 @@ void main() {
           this.paddles.push(pm);
         }
       }
-      if (kind !== "none") {
+      if (d.row) {
+        this.oars = [];
+        const r = d.row, og = oarGeometry(d);
+        for (const side of [-1, 1]) {
+          const m = new Mesh(og, SOLID());
+          m.castShadow = true;
+          m.position.set(r.lockU, r.lockH, side * r.lockV);
+          m.rotation.order = "YXZ";
+          root2.add(m);
+          this.oars.push({ mesh: m, side });
+        }
+      }
+      if (kind !== "none" && plan.length) {
         const fs = d.big ? d.L / 11 : 1;
         const fg = new PlaneGeometry(1.1 * fs, 0.75 * fs, 5, 1);
         fg.translate(0.55 * fs, 0, 0);
@@ -38839,8 +38983,15 @@ void main() {
       if (r.parent && this.wake.mesh.parent !== r.parent) r.parent.add(this.wake.mesh);
       const v3 = ctx?.game?.view3d;
       if (v3 && ctx.world) this.wake.update(s, env.time, v3.ox, v3.oy, ctx.world);
-      const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === "sail";
+      const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === "sail" && ctx.mode !== "third";
       if (own !== this.ghost) this.setGhost(own);
+      if (this.oars) {
+        const st = s.oars;
+        for (const o of this.oars) {
+          const q2 = st ? st[o.side > 0 ? 1 : 0] : REST_OAR;
+          o.mesh.rotation.set(q2.b, o.side > 0 ? q2.a : Math.PI - q2.a, q2.f * Math.PI / 2);
+        }
+      }
       const t = env.time + (s.seed || 0);
       const sinking = s.sunk ? Math.min(1, s.sinkT / 4) : 0;
       r.position.set(rx, (s.lvl || 0) + 0.05 + Math.sin(t * 1.3) * 0.07 - sinking * 3, rz);
@@ -38848,6 +38999,7 @@ void main() {
       const relA = (windAngle || 0) - s.heading;
       const brace = Math.max(-0.5, Math.min(0.5, Math.sin(relA) * 0.45));
       for (const b of this.braces) b.rotation.y = -brace;
+      s.brace = brace;
       const rel2 = Math.cos(relA);
       const set = s.sailSet ?? 0.5;
       const billow = (0.15 + set * 0.45) * (0.6 + 0.4 * Math.max(0, rel2));
@@ -39075,23 +39227,28 @@ void main() {
       const cam = this.camera;
       const sailing = p.mode === "sail" && p.ship;
       const scale = p.look?.scale || 1;
+      const time = game.env?.time || 0;
       let eyeH = 1.72 * scale;
       let gx = 0, gz = 0;
-      const g0 = p.deck ? p.deck.h + shipBob(p.deck.ship, game.env?.time || 0) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) : ground(p.x, p.y) - (p.wading || 0);
-      if (this.smoothG === void 0 || Math.abs(g0 - this.smoothG) > 2.5 || p.mode !== this.lastMode || p.deck && g0 < this.smoothG - 0.6 && p.z > 0.3) this.smoothG = g0;
-      this.smoothG += (g0 - this.smoothG) * Math.min(1, dt * 14);
-      this.lastMode = p.mode;
-      let gh = p.flying && p.alt != null ? p.alt : this.smoothG + (p.z || 0);
-      let rollSea = 0;
+      let gh = p.flying && p.alt != null ? p.alt : p.deck ? p.deck.h + shipBob(p.deck.ship, time) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) + (p.z || 0) : ground(p.x, p.y) - (p.wading || 0) + (p.z || 0);
+      let rollSea = 0, hp = null, shipX = 0, shipZ = 0;
       if (!sailing) this.seaPitch = 0;
       if (sailing) {
         const s = p.ship;
-        const hp = helmPoint(s.def);
-        gx = Math.cos(s.heading) * hp.x;
-        gz = Math.sin(s.heading) * hp.x;
-        const t = (game.env?.time || 0) + (s.seed || 0);
+        hp = helmPoint(s.def);
+        shipX = game.world ? game.world.dx(p.x, s.x) : 0;
+        shipZ = s.y - p.y;
+        gx = shipX + Math.cos(s.heading) * hp.x;
+        gz = shipZ + Math.sin(s.heading) * hp.x;
+        const t = time + (s.seed || 0);
         gh = (s.lvl || 0) + 0.05 + hp.floor + Math.sin(t * 1.3) * 0.07 + pitchRise(s, hp.x);
-        eyeH = hp.eye - hp.floor + 0.15;
+        eyeH = hp.eye - hp.floor + (hp.seated ? 0 : 0.15);
+        if (hp.seated && s.oars) {
+          const lean = rowLean(s);
+          gx += Math.cos(s.heading) * Math.sin(lean) * 0.7;
+          gz += Math.sin(s.heading) * Math.sin(lean) * 0.7;
+          eyeH -= (1 - Math.cos(lean)) * 0.7;
+        }
         rollSea = Math.sin(t * 0.9) * 0.03 * Math.cos(this.yaw - s.heading);
         this.seaPitch = (s.pitch || 0) * Math.cos(this.yaw - s.heading);
       } else if (p.inWater) {
@@ -39100,6 +39257,15 @@ void main() {
         const floor = game.seaDepth ? -game.seaDepth(p.x, p.y) : -99;
         if (gh + eyeH < floor + 0.3) gh = floor + 0.3 - eyeH;
       }
+      if (p.state === "knocked") eyeH = 0.45;
+      const eye = gh + eyeH;
+      const air = !sailing && !p.inWater && ((p.z || 0) > 0.05 || !!p.vz || !!p.climb);
+      if (this.eyeLast === void 0 || Math.abs(eye - this.eyeLast) > 4 || p.mode !== this.lastMode || sailing) this.eyeOff = 0;
+      else if (!air || Math.abs(eye - this.eyeLast) > Math.abs(p.vz || 0) * dt * 2 + 0.15) this.eyeOff -= eye - this.eyeLast;
+      this.eyeLast = eye;
+      this.lastMode = p.mode;
+      this.eyeOff *= Math.exp(-dt * 14);
+      gh += this.eyeOff;
       if (!sailing && this.lastZ > 0.3 && !(p.z > 0)) this.dip = Math.min(0.22, 0.05 + this.lastZ * 0.12);
       this.lastZ = p.z || 0;
       this.dip = (this.dip || 0) * Math.max(0, 1 - dt * 7);
@@ -39113,10 +39279,7 @@ void main() {
       const bobX = Math.cos(this.bob * 0.5) * this.bobAmp * 0.6;
       const side = !sailing ? (p.vx || 0) * -Math.sin(this.yaw) + (p.vy || 0) * Math.cos(this.yaw) : 0;
       let roll2 = this.bobOn ? -side * 6e-3 : 0;
-      if (p.state === "knocked") {
-        eyeH = 0.45;
-        roll2 = 0.35;
-      }
+      if (p.state === "knocked") roll2 = 0.35;
       this.crouch = (this.crouch || 0) + ((p.charging || 0) - (this.crouch || 0)) * Math.min(1, dt * 12);
       eyeH -= this.crouch * 0.34 * scale;
       this.roll += (roll2 - this.roll) * Math.min(1, dt * 5);
@@ -39124,34 +39287,89 @@ void main() {
       const sh = tr * tr * 0.06;
       this.shake.set((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
       const yaw3 = -(this.yaw + Math.PI / 2);
-      if (this.mode === "third" && !sailing) {
-        const d = this.tp.dist;
+      if (this.mode === "third") {
+        let ox = 0, oz = 0, oy = gh + eyeH * 0.9, d = this.tp.dist, own = null;
+        if (sailing) {
+          const s = p.ship, dd = shipDims(s.def);
+          own = s;
+          const u = dd.big ? -dd.L * 0.1 : hp.x * 0.4;
+          ox = shipX + Math.cos(s.heading) * u;
+          oz = shipZ + Math.sin(s.heading) * u;
+          oy = (s.lvl || 0) + 0.05 + Math.sin((time + (s.seed || 0)) * 1.3) * 0.07 + (dd.big ? dd.deckY + 2.5 : hp.floor + 1.1);
+          d *= (dd.big ? dd.L * 0.95 + 6 : 2.6 + dd.L * 0.8) / 4.2;
+        }
         const cp = Math.cos(this.pitch), spch = Math.sin(this.pitch);
         const fx = Math.cos(this.yaw), fz = Math.sin(this.yaw);
-        let cx = -fx * d * cp, cz = -fz * d * cp, cy = gh + eyeH * 0.9 + this.tp.height - spch * d * 0.6;
-        this.shoulder = (this.shoulder || 0) + ((this.shiftLock ? 0.7 : 0) - (this.shoulder || 0)) * Math.min(1, dt * 8);
+        let cx = ox - fx * d * cp, cz = oz - fz * d * cp, cy = oy + this.tp.height * Math.max(1, d / 8) - spch * d * 0.6;
+        this.shoulder = (this.shoulder || 0) + ((this.shiftLock && !sailing ? 0.7 : 0) - (this.shoulder || 0)) * Math.min(1, dt * 8);
         cx += -fz * this.shoulder;
         cz += fx * this.shoulder;
         const w = game.world;
-        const room = w?.interiorAt?.(p.x, p.y);
+        const room = !sailing && w?.interiorAt?.(p.x, p.y);
+        this.tilt = 0;
         if (room) {
           const r = interiorRect(room);
           cx = Math.max(r.x0 + 0.25, Math.min(r.x1 - 0.25, p.x + cx)) - p.x;
           cz = Math.max(r.y0 + 0.25, Math.min(r.y1 - 0.25, p.y + cz)) - p.y;
           cy = Math.min(cy, ground(p.x, p.y) + heightsOf(room).ceil - 0.3);
         } else if (w) {
-          const ey = gh + eyeH * 0.9, ships = game.ships?.length && game.shipSolidAt;
-          for (let i = 1; i <= 8; i++) {
-            const t = i / 8;
-            const bx = p.x + cx * t, bz = p.y + cz * t;
-            if (w.isBlocked(bx, bz) || ships && game.shipSolidAt(bx, bz, ey + (cy - ey) * t)) {
-              const k = Math.max(0.12, t - 0.16);
-              cx *= k;
-              cz *= k;
-              if (ships) cy = ey + (cy - ey) * k;
-              break;
+          const ships = game.ships?.length && game.shipSolidAt;
+          const px2 = p.x + ox, pz2 = p.y + oz;
+          let ux = cx - ox, uz = cz - oz, uy = cy - oy, k = 1, lift = 0;
+          const len = Math.hypot(ux, uz) || 1;
+          let kMin = own ? 0.12 : Math.min(0.12, 0.2 / len);
+          if (own && game.inShip) {
+            let out = 1;
+            while (out < 3 && game.inShip(own, px2 + ux * out, pz2 + uz * out, oy + uy * out, true)) out += 0.1;
+            if (out > 1) {
+              ux *= out;
+              uz *= out;
+              uy *= out;
+              cx = ox + ux;
+              cz = oz + uz;
+              cy = oy + uy;
+            }
+            for (let i = 16; i >= 1; i--) {
+              const t = i / 16;
+              if (game.inShip(own, px2 + ux * t, pz2 + uz * t, oy + uy * t, true)) {
+                kMin = Math.min(1, t + 0.1);
+                break;
+              }
             }
           }
+          const n = Math.min(48, Math.max(16, Math.ceil(len / 0.25)));
+          const hitAt = (up) => {
+            for (let i = 1; i <= n; i++) {
+              const t = i / n, bx = px2 + ux * t, bz = pz2 + uz * t;
+              if (w.isBlocked(bx, bz) || ships && !own && game.shipSolidAt(bx, bz, oy + (uy + up) * t, true)) return t;
+            }
+            return 0;
+          };
+          let hit = hitAt(0);
+          if (!own && ships) {
+            let want = 0;
+            if (hit && hit * len < 2) {
+              for (const up of [0.6, 1.2, 1.8]) if (!hitAt(up)) {
+                want = up;
+                break;
+              }
+            }
+            this.camLift = (this.camLift || 0) + (want - (this.camLift || 0)) * Math.min(1, dt * 6);
+            if (this.camLift > 0.01) {
+              lift = this.camLift;
+              uy += lift;
+              cy = oy + uy;
+              hit = hitAt(0);
+            }
+          } else this.camLift = 0;
+          if (hit) k = Math.max(kMin, hit - 0.3 / len);
+          if (own && ships) while (k > kMin && game.shipSolidAt(px2 + ux * k, pz2 + uz * k, oy + uy * k, true, own)) k = Math.max(kMin, k - 1 / 16);
+          if (k < 1) {
+            cx = ox + ux * k;
+            cz = oz + uz * k;
+            if (ships) cy = oy + uy * k;
+          }
+          this.tilt = Math.atan2(lift, len) * 0.6;
         }
         if (p.inWater && p.under) {
           const floor = game.seaDepth ? -game.seaDepth(p.x + cx, p.y + cz) : -99;
@@ -39161,7 +39379,7 @@ void main() {
           if (cy < under) cy = under;
         }
         cam.position.set(cx, cy, cz);
-        cam.rotation.set(this.pitch * 0.8 - 0.12 + this.shake.y, yaw3 + this.shake.x, 0);
+        cam.rotation.set(this.pitch * 0.8 - 0.12 - this.tilt + this.shake.y, yaw3 + this.shake.x, 0);
       } else {
         cam.position.set(gx + Math.cos(this.yaw + Math.PI / 2) * bobX, gh + eyeH + bobY, gz + Math.sin(this.yaw + Math.PI / 2) * bobX);
         cam.rotation.set(this.pitch + this.shake.y + (sailing ? this.seaPitch || 0 : 0), yaw3 + this.shake.x, this.roll + rollSea);
@@ -47223,14 +47441,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var SHIPS = {
     dinghy: {
       name: "Rowboat",
-      desc: "A tiny boat with oars and a scrap of sail. Fine for the Blues \u2014 suicide in the Grand Line.",
+      desc: "A little open boat with no sail: you row her with a pair of oars, wind or no wind. Fine for the Blues \u2014 suicide in the Grand Line.",
       length: 2.8,
       beam: 1.2,
       hull: 60,
       speed: 7,
-      turn: 2.6,
-      masts: 1,
-      sail: "small",
+      turn: 2.2,
+      masts: 0,
+      sail: null,
+      oarsOnly: true,
       cannons: 0,
       crew: 1,
       cargo: 4,
@@ -51892,6 +52111,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
 
   // src/game/ship.js
   var SMALL_HULL = [[0.47, 0], [-0.46, 0], [0.2, 0.42], [0.2, -0.42], [-0.25, 0.42], [-0.25, -0.42]];
+  var STROKE_T = 1.15;
+  var OAR_READY = { a: 0.15, b: 0.22, f: 1 };
+  var OAR_REST = { a: -1.15, b: 0.12, f: 1 };
   var SEA_PACE = 2;
   var Ship = class extends Entity {
     constructor(o) {
@@ -51918,6 +52140,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.sinkT = 0;
       this.seed = Math.random() * 10;
       this.rowing = 0;
+      this.rowL = 0;
+      this.rowR = 0;
+      this.rowPh = 0;
+      this.drive = 0;
+      this.oars = this.def.oarsOnly ? [{ ...OAR_REST }, { ...OAR_REST }] : null;
+      this.speedCap = null;
       this.burstCd = 0;
       this.ai = o.ai || null;
       this.cannonsOverride = o.cannons;
@@ -51978,12 +52206,28 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const env = game.env;
       const calm = game.isCalmAt(this.x, this.y);
       const windA = env.windAngle, windS = calm ? 0 : env.windStrength;
-      this.sailSet += (this.sail - this.sailSet) * Math.min(1, dt * 1.5);
-      const rel2 = Math.cos(angleDiff(this.heading, windA));
-      const windFactor = (0.35 + 0.65 * clamp2((rel2 + 0.4) / 1.4, 0, 1)) * windS;
-      let target2 = this.def.speed * SEA_PACE * this.sailSet * windFactor * (this.owner === "player" ? game.crewMods?.speedMul || 1 : 1);
-      const rowSpeed = this.def.paddle ? 0.6 : this.def.oars || this.type === "dinghy" ? 0.42 : 0.12;
-      if (this.rowing) target2 = Math.max(target2, this.def.speed * rowSpeed * this.rowing);
+      const oared = this.def.oarsOnly;
+      let target2;
+      if (oared) {
+        this.sail = this.captain ? 0 : this.sail;
+        this.sailSet = 0;
+        if (!this.captain) {
+          const k = this.sail > 0.05 && this.ai ? 1 : 0;
+          this.rowL = k;
+          this.rowR = k;
+        }
+        this.updateOars(dt);
+        const pull = this.captain ? (this.rowL + this.rowR) / 2 : this.rowL ? this.sail : 0;
+        target2 = this.def.speed * pull * (pull < 0 ? 0.55 : 1) * (0.78 + 0.44 * this.drive);
+      } else {
+        this.sailSet += (this.sail - this.sailSet) * Math.min(1, dt * 1.5);
+        const rel2 = Math.cos(angleDiff(this.heading, windA));
+        const windFactor = (0.35 + 0.65 * clamp2((rel2 + 0.4) / 1.4, 0, 1)) * windS;
+        target2 = this.def.speed * SEA_PACE * this.sailSet * windFactor * (this.owner === "player" ? game.crewMods?.speedMul || 1 : 1);
+        const rowSpeed = this.def.paddle ? 0.6 : this.def.oars ? 0.42 : 0.12;
+        if (this.rowing) target2 = Math.max(target2, this.def.speed * rowSpeed * this.rowing);
+      }
+      if (this.speedCap != null && target2 > this.speedCap) target2 = this.speedCap;
       if (this.coupT > 0) {
         this.coupT -= dt;
         target2 = this.def.speed * 5;
@@ -51994,7 +52238,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       const cur = game.currentAt(this.x, this.y, this);
       if (cur.canal) target2 *= 0.35;
-      this.speed += (target2 - this.speed) * Math.min(1, dt * (target2 > this.speed ? 0.7 : 1.2));
+      this.speed += (target2 - this.speed) * Math.min(1, dt * (oared ? 1.6 : target2 > this.speed ? 0.7 : 1.2));
       this.lvl = cur.level;
       const along = cur.canal ? Math.cos(angleDiff(this.heading, Math.atan2(cur.y, cur.x))) : 0;
       const pitchT = Math.atan(cur.slope) * along;
@@ -52031,6 +52275,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         p.x = this.x;
         p.y = this.y + 0.01;
       }
+      if (this.captain) {
+        this.captain.x = this.x;
+        this.captain.y = this.y;
+      }
       if (this.aboard && this.aboard.size) {
         const dh = this.heading - h0, c = Math.cos(dh), sn = Math.sin(dh);
         for (const a of this.aboard) {
@@ -52046,9 +52294,26 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
     /**
-     * Find the nearest clear water (a big ship searches further, and swings
-     * round to lie along the coast if she must; `far`: a fresh berth, not a nudge).
+     * A rowboat's oars, stroke by stroke: the blades dip in at the catch, sweep
+     * aft through the drive, lift out and swing forward again feathered flat.
+     * An oar that isn't pulling is held ready, blade clear of the water; with
+     * nobody at them they trail alongside. The rower's hands keep hold of the
+     * grips (see render3d/chars/pose.js stationReach).
      */
+    updateOars(dt) {
+      const stroking = this.rowL || this.rowR;
+      this.rowPh = stroking ? (this.rowPh + dt / STROKE_T) % 1 : 0;
+      const manned = !!this.captain || !!(this.rower && this.rower.alive && this.rower.deck?.ship === this && this.rower.state === "idle");
+      for (let i = 0; i < 2; i++) {
+        const pull = i ? this.rowR : this.rowL, o = this.oars[i];
+        const want = pull ? oarStroke(this.rowPh, pull) : manned ? OAR_READY : OAR_REST;
+        const k = Math.min(1, dt * (pull ? 14 : 4));
+        o.a += (want.a - o.a) * k;
+        o.b += (want.b - o.b) * k;
+        o.f += (want.f - o.f) * k;
+      }
+      this.drive = stroking ? oarDrive(this.rowPh) : 0;
+    }
     /** Another ship's hull where this one's would be at (x, y, h), if any. */
     shipIn(game, x, y, h2) {
       const w = game.world;
@@ -52089,7 +52354,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         pts = null;
       }
     }
+    /**
+     * Find the nearest clear water (a big ship searches further, and swings
+     * round to lie along the coast if she must; `far`: a fresh berth, not a nudge).
+     */
     unstick(w, far = false) {
+      if (!far && this.fits(w, this.x, this.y, this.heading) && !(this.game && this.shipIn(this.game, this.x, this.y, this.heading))) return true;
       const big = this.def.length >= BIG_SHIP;
       const R3 = big ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big ? 1.5 : 0.5;
       const hs = big ? [this.heading, this.heading + Math.PI / 2, this.heading - Math.PI / 2, this.heading + Math.PI] : [this.heading];
@@ -52113,7 +52383,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     /** A big ship moors alongside a pier head, bow out to sea (as near as she'll fit). */
     berth(w, dock) {
       const L2 = this.def.length, B4 = this.def.beam;
-      const dx = dock.dirX || 0, dy = dock.dirY || 1, hd = Math.atan2(dy, dx);
+      const dx = dock.dirX ?? 0, dy = dock.dirY ?? 1, hd = Math.atan2(dy, dx);
       const end = dock.end || dock;
       for (let k = 0; k < 10; k++) {
         for (const sg of [1, -1]) {
@@ -52129,10 +52399,35 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       return false;
     }
+    /**
+     * A small ship ties up alongside a pier head, bow out to sea, her side a
+     * short step from its edge (so you can step or jump down onto her deck).
+     */
+    moorAlongside(w, dock) {
+      const L2 = this.def.length, B4 = this.def.beam;
+      const dx = dock.dirX ?? 0, dy = dock.dirY ?? 1, hd = Math.atan2(dy, dx);
+      const end = dock.end || dock, edge = (dock.headHalf ?? 1) + 0.5;
+      for (const gap of [0.3, 0.6, 1]) {
+        for (let k = 0; k < 6; k++) {
+          for (const sg of [1, -1]) {
+            const along = 0.3 - L2 / 2 - k * 1.2, off = sg * (edge + gap + B4 / 2);
+            const x = w.wx(end.x + 0.5 + dx * along - dy * off), y = end.y + 0.5 + dy * along + dx * off;
+            if (this.fits(w, x, y, hd) && !(this.game && this.shipIn(this.game, x, y, hd))) {
+              this.x = x;
+              this.y = y;
+              this.heading = hd;
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
     damage(n, attacker, info = {}) {
       if (this.sunk || n <= 0) return;
       this.hull -= n;
       this.lastHitBy = attacker;
+      if (attacker && this.owner !== "player" && (attacker.isPlayer || attacker.ownerShip?.owner === "player")) this.provoked = true;
       if (this.game) {
         this.game.fx.text(this.x, this.y - 1, String(Math.round(n)), "#ffcc80", 0.45);
         this.game.fx.burst(this.x, this.y - 0.5, 8, { color: ["#8d6e63", "#bcaaa4", "#ffab40"], speed: 4, g: 7, life: 0.5 });
@@ -59981,7 +60276,178 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return look.kind ? `${r.name} (${look.kind})` : r.name;
   }
 
+  // src/game/decks.js
+  function installDecks(game) {
+    game.on("board", (s) => {
+      const r = game.view3d?.rig;
+      if (r && s) {
+        r.yaw = (s.heading % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+        r.pitch = s.def.oarsOnly ? -0.35 : -0.04;
+      }
+    });
+    game.deckAt = (x, y, margin = 0.2) => {
+      const w = game.world;
+      for (const s of game.ships) {
+        if (s.sunk) continue;
+        const r = s.def.length * 0.56;
+        const dx = w.dx(s.x, x), dy = y - s.y;
+        if (dx * dx + dy * dy > r * r) continue;
+        const d = deckPoint(s, dx, dy, margin);
+        if (d) {
+          d.ship = s;
+          return d;
+        }
+      }
+      return null;
+    };
+    game.hullAt = (x, y, pad = 0) => {
+      const w = game.world, time = game.env?.time || 0;
+      for (const s of game.ships) {
+        if (s.sunk || s.alive === false) continue;
+        const r = s.def.length * 0.56 + pad;
+        const dx = w.dx(s.x, x), dy = y - s.y;
+        if (dx * dx + dy * dy > r * r) continue;
+        const h2 = hullPoint(s, dx, dy, pad);
+        if (!h2) continue;
+        const lift = shipBob(s, time) + pitchRise(s, h2.u);
+        h2.ship = s;
+        h2.rail = h2.top + lift;
+        h2.deckH = h2.floor + lift;
+        return h2;
+      }
+      return null;
+    };
+    game.deckRoute = (a, x, y) => deckRoute(game, a, x, y);
+    game.inShip = (s, x, y, h2, sails = false) => {
+      if (s.sunk) return false;
+      const r = s.def.length * 0.56 + (sails ? s.def.length * 0.3 : 0);
+      const dx = game.world.dx(s.x, x), dy = y - s.y;
+      if (dx * dx + dy * dy > r * r) return false;
+      const hh = h2 - shipBob(s, game.env?.time || 0);
+      if (hullSolid(s, dx, dy, hh)) return true;
+      if (sails && s.sailBoxes) {
+        const c = Math.cos(s.heading), sn = Math.sin(s.heading), u = dx * c + dy * sn, v = -dx * sn + dy * c;
+        const bc = Math.cos(s.brace || 0), bs = Math.sin(s.brace || 0), set = (s.sailSet || 0) > 0.05;
+        for (const b of s.sailBoxes) {
+          if (!set && !b.always || hh < b.h0 || hh > b.h1) continue;
+          const x2 = b.braced ? (u - b.m) * bc + v * bs : u - b.m, z = b.braced ? -(u - b.m) * bs + v * bc : v;
+          if (x2 > b.u0 && x2 < b.u1 && Math.abs(z) < b.v) return true;
+        }
+      }
+      return false;
+    };
+    game.shipSolidAt = (x, y, h2, sails = false, except = null) => game.ships.some((s) => s !== except && game.inShip(s, x, y, h2, sails));
+  }
+  function placeOnDeck(game, a, ship, t, v = 0) {
+    const p = deckToWorld(ship, t, v);
+    a.x = game.world.wx(p.x);
+    a.y = p.y;
+    a.z = 0;
+    a.vz = 0;
+    a.vx = 0;
+    a.vy = 0;
+    a.inWater = false;
+    a.depth = 0;
+    a.under = false;
+    if (a.deck && a.deck.ship !== ship) a.deck.ship.aboard?.delete(a);
+    a.deck = game.deckAt(a.x, a.y, 0) || { ship, t, v, h: p.h, edge: 0.3 };
+    a.deck.ship = ship;
+    (ship.aboard || (ship.aboard = /* @__PURE__ */ new Set())).add(a);
+    a.facing = ship.heading;
+  }
+  function helmSpot(ship) {
+    const d = shipDims(ship.def);
+    const hp = helmPoint(ship.def);
+    if (d.big) return { t: (hp.x - 0.15 + d.L / 2) / d.L, v: 0 };
+    if (d.row) return { t: d.row.seatT, v: 0 };
+    if (d.wheelU !== void 0) return { t: (d.wheelU - 0.45 + d.L / 2) / d.L, v: 0 };
+    return { t: Math.min(0.5, (hp.x + d.L / 2) / d.L + 0.06), v: 0 };
+  }
+  function hatchSpot(ship) {
+    const d = shipDims(ship.def);
+    return { t: d.big ? d.hatchT : d.open ? 0.5 : 0.55, v: 0 };
+  }
+  function freeDeckSpot(ship, t, v, lvl = "main") {
+    const d = shipDims(ship.def);
+    if (!d.big) return { t, v };
+    for (let k = 0; k < 40; k++) {
+      const tt = t + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.01;
+      const p = deckToWorld(ship, tt, v);
+      const dp = deckPoint(ship, p.x - ship.x, p.y - ship.y, 0.4);
+      if (dp && !dp.solid && dp.lvl === lvl) return { t: tt, v };
+    }
+    return { t: 0.5, v: d.B * 0.25 };
+  }
+  function crewStation(ship, i) {
+    const d = shipDims(ship.def), B4 = d.B;
+    const S3 = [
+      ["fore", 0.93, 0],
+      ["main", d.capstanT + 0.06, B4 * 0.22],
+      ["quarter", d.tq - 0.03, -B4 * 0.25],
+      ["main", 0.62, -B4 * 0.28],
+      ["main", 0.75, B4 * 0.26],
+      ["fore", d.tf + 0.05, -B4 * 0.2],
+      ["main", d.hatchT, -B4 * 0.3],
+      ["quarter", d.tq - 0.06, B4 * 0.28]
+    ];
+    const [lvl, t, v] = S3[i % S3.length];
+    return { ...freeDeckSpot(ship, t, v, lvl), lvl };
+  }
+  function deckRoute(game, a, tx, ty) {
+    const dk3 = a.deck;
+    if (!dk3 || dk3.lvl === void 0) return null;
+    const s = dk3.ship, d = shipDims(s.def), w = game.world;
+    const to = deckPoint(s, w.dx(s.x, tx), ty - s.y, 0);
+    if (!to) return null;
+    const lvl = (p) => typeof p.lvl === "string" ? p.lvl : null;
+    const here = lvl(dk3), there = lvl(to);
+    if (!there || here === there) return null;
+    const end = (st, top) => {
+      const tt = top ? st.ha > st.hb ? st.ta - 0.5 / d.L : st.tb + 0.5 / d.L : st.ha > st.hb ? st.tb + 0.5 / d.L : st.ta - 0.5 / d.L;
+      return deckToWorld(s, tt, (st.va + st.vb) / 2);
+    };
+    const upper = (st) => st.ha > st.hb ? st.la : st.lb, lower = (st) => st.ha > st.hb ? st.lb : st.la;
+    const path2 = { main: { quarter: "quarter", poop: "quarter", fore: "fore" }, quarter: { main: "main", fore: "main", poop: "poop" }, poop: { quarter: "quarter", main: "quarter", fore: "quarter" }, fore: { main: "main", quarter: "main", poop: "main" } };
+    if (!here) {
+      const st = dk3.lvl, up = upper(st), lo = lower(st);
+      return end(st, there === up || there !== lo && path2[up]?.[there] !== lo);
+    }
+    const next = path2[here]?.[there];
+    if (!next) return null;
+    let best = null, bd = Infinity;
+    for (const st of d.stairs) {
+      if (!(upper(st) === here && lower(st) === next || lower(st) === here && upper(st) === next)) continue;
+      const p = end(st, lower(st) !== here);
+      const dd = w.distance(a.x, a.y, p.x, p.y) + w.distance(p.x, p.y, tx, ty) * 0.5;
+      if (dd < bd) {
+        bd = dd;
+        best = { st, p };
+      }
+    }
+    if (!best) return null;
+    if (w.distance(a.x, a.y, best.p.x, best.p.y) < 0.6) return end(best.st, lower(best.st) === here);
+    return best.p;
+  }
+  function boardingSpot(game, ship, x, y) {
+    const d = shipDims(ship.def), w = game.world;
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading), dx = w.dx(ship.x, x), dy = y - ship.y;
+    const u = dx * c + dy * s, v = -dx * s + dy * c;
+    const t = Math.max(0.1, Math.min(0.9, (u + d.L / 2) / d.L));
+    const room = Math.max(0, hbAt(t, d.B) * d.walk - 0.32), vv = Math.max(-room, Math.min(room, v));
+    if (!d.big) return { t, v: vv };
+    const lv = levelAt(d, t, vv);
+    return freeDeckSpot(ship, t, vv, typeof lv === "string" ? lv : "main");
+  }
+  function deckDist(game, a, ship, spot) {
+    const p = deckToWorld(ship, spot.t, spot.v);
+    return game.world.distance(a.x, a.y, p.x, p.y);
+  }
+
   // src/game/actor.js
+  var smooth01 = (a, b, x) => {
+    const t = clamp2((x - a) / (b - a), 0, 1);
+    return t * t * (3 - 2 * t);
+  };
   var STATUS_DEFAULTS = {
     burn: { dps: 0.035, color: "#ff7043" },
     poison: { dps: 0.03, color: "#8e24aa" },
@@ -60125,6 +60591,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.drownT = 0;
       this.sinking = false;
       this.lowAir = false;
+      this.plungeV = 0;
       if (df && this.state === "idle") {
         this.addBuff({ id: "drenched", name: "Drenched", dur: 16, mods: { speedMul: 0.7, damage: 0.75 } });
         if (this.isPlayer) game.log(out ? "Drenched in seawater \u2014 your body feels heavy and weak." : "Hauled out of the sea, dripping and weak.", "#81d4fa");
@@ -60193,6 +60660,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     knockOut(game, att) {
       if (this.state === "knocked" || this.state === "dead") return;
+      if (this.climb) this.endClimb(game, true);
       this.state = "knocked";
       this.knockT = 0;
       this.action = null;
@@ -60230,13 +60698,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     // --- actions ---------------------------------------------------------------
     busy() {
-      return !!this.action || this.hitstun > 0 || this.state !== "idle" || this.status.freeze || this.status.despair;
+      return !!this.action || this.hitstun > 0 || this.state !== "idle" || this.status.freeze || this.status.despair || !!this.climb;
     }
     canAct() {
       return !this.busy() && !this.blocking;
     }
     tryM1(game) {
-      if (this.state !== "idle" || this.hitstun > 0 || this.status.freeze || this.status.despair) return false;
+      if (this.state !== "idle" || this.hitstun > 0 || this.status.freeze || this.status.despair || this.climb) return false;
       if (this.action) {
         const a = this.action;
         if (a.def.m1Chain && a.t > a.total * this.atkSpeed() * 0.3) this.combo.queued = true;
@@ -60318,7 +60786,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return true;
     }
     tryDodge(game, dx, dy) {
-      if (this.state !== "idle" || this.hitstun > 0 || this.status.freeze || this.status.root || this.dodgeCd > 0) return false;
+      if (this.state !== "idle" || this.hitstun > 0 || this.status.freeze || this.status.root || this.dodgeCd > 0 || this.climb) return false;
       if (this.action && this.action.t < this.action.total * 0.5 && !this.action.def.m1Chain) return false;
       const cost = 16;
       if (this.stamina < cost * 0.6) return false;
@@ -60351,7 +60819,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     /** Can you jump right now: on your feet, or at the surface of the water (not a Devil Fruit user). */
     canJump() {
       if (this.state !== "idle" || this.hitstun > 0 || this.status.freeze || this.status.root || this.blocking) return false;
-      if (this.onShip || this.stamina < 2) return false;
+      if (this.onShip || this.climb || this.stamina < 2) return false;
       if (this.action && !this.action.def.m1Chain && this.action.t < this.action.total * 0.7) return false;
       if (this.inWater) return !this.under && (this.depth || 0) < 0.15 && !(this.fruit && !this.gills) && this.state === "idle";
       return !((this.z || 0) > 0.02);
@@ -60367,25 +60835,30 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!this.canJump()) return false;
       const J = this.jumpStats();
       const k = clamp2(charge, 0, 1);
-      if (this.isPlayer && this.inWater && game.climbAboard?.(this, k)) {
+      if ((this.inWater || this.wading) && (this.isPlayer && game.climbAboard?.(this, k) || this.climbOut(game))) {
         this.stamina = Math.max(0, this.stamina - 6);
         return true;
       }
       let v = J.v * (1 + (J.charge - 1) * k);
       const fromWater = this.inWater;
+      if (this.wading && !fromWater) {
+        this.z = -this.wading;
+        this.wading = 0;
+      }
       if (fromWater) {
         v *= 1.3 * J.leap;
         const s = this.look?.scale || 1;
+        const z = -(this.depth || 0) - (this.moving ? 0.95 : 1.3) * s;
         this.leaveWater(game, true);
         this.leapT = 0.5;
-        this.z = -1.3 * s;
+        this.z = z;
         game.fx.ripple?.(this.x, this.y, 1 + k * 0.6);
         game.fx.burst(this.x, this.y, 12 + Math.round(k * 8), { color: ["#e1f5fe", "#b3e5fc", "#ffffff"], speed: 2.4, z: 0.1, vz: 5 + k * 2, g: 11, life: 0.7, size: 0.1 });
-        game.audio?.sfx("splash_out");
+        game.audio?.sfx("splash_out", this);
       } else {
-        this.z = 1e-3;
+        this.z = Math.min(0, this.z || 0) + 1e-3;
         game.fx.burst(this.x, this.y, 6 + Math.round(k * 8), { color: ["#d7ccc8", "#efebe9"], speed: 1.8 + k * 1.6, z: 0.05, vz: 0.5, g: 1.2, life: 0.4 + k * 0.2, kind: "dust", size: 0.16 + k * 0.08, grow: 0.35 });
-        game.audio?.sfx(k > 0.5 ? "jump_big" : "jump");
+        game.audio?.sfx(k > 0.5 ? "jump_big" : "jump", this);
       }
       this.vz = v;
       this.airT = 0;
@@ -60398,7 +60871,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     /** How deep the water under you is (m); 0 on land or on a deck. */
     waterUnder(game) {
       if (this.deck || this.dash && this.dash.ignoreWater) return 0;
-      const t = game.world.type(this.x, this.y - 0.1);
+      const t = game.world.type(this.x, this.y);
       if (IS_LIQUID[t] !== 1 || OVERLAY[t]) return 0;
       if (t === T.LAVA) return 0;
       return game.seaDepth ? game.seaDepth(this.x, this.y) : 3;
@@ -60410,39 +60883,48 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     /**
      * Gravity for jumps, launches and falls. A fall ends on the ground (a puff
      * of dust), on the bottom of the shallows, or — in deep water — where a
-     * swimmer floats, so going in is one smooth plunge (with a splash and a
-     * ring on the water as the feet meet it).
+     * swimmer floats: once the feet are in, the sea slows the fall and holds
+     * you up, and what's left of it carries you under for a moment before you
+     * bob back up (see updateWater), so going in is one smooth plunge (with a
+     * splash and a ring on the water as the feet meet it).
      */
     updateVertical(dt, game) {
       if (this.flying) return;
       if (this.leapT > 0) this.leapT -= dt;
       if (!(this.z > 0) && !this.vz) return;
       this.airT = (this.airT || 0) + dt;
-      this.vz -= 22 * dt;
+      const s = this.look?.scale || 1;
+      const wd = this.waterUnder(game);
+      const deep = wd > this.swimDepth(false);
       const z0 = this.z;
+      let grav = 22;
+      if (deep && z0 < 0 && this.vz < 0) {
+        const sub = clamp2(-z0 / (1.3 * s), 0, 1);
+        grav *= 1 - sub * 0.8;
+        this.vz -= this.vz * Math.min(1, dt * 9 * sub);
+      }
+      this.vz -= grav * dt;
       this.z += this.vz * dt;
       if (this.vz > 0) return;
-      const wd = this.waterUnder(game);
       if (wd > 0 && z0 > 0 && this.z <= 0) {
         const impact = -this.vz;
         game.fx.ripple?.(this.x, this.y, Math.min(2.4, 0.8 + impact * 0.1));
         game.fx.burst(this.x, this.y, Math.min(22, 6 + impact * 1.2), { color: ["#e1f5fe", "#81d4fa", "#ffffff"], speed: 1.6 + impact * 0.22, z: 0.05, vz: 2 + impact * 0.35, g: 11, life: 0.6, size: 0.11 });
-        game.audio?.sfx(impact > 9 ? "splash_big" : "splash");
+        game.audio?.sfx(impact > 9 ? "splash_big" : "splash", this);
         this.splashedAt = game.time || 0;
       }
-      const s = this.look?.scale || 1;
-      const deep = wd > this.swimDepth(false);
-      const floor = wd <= 0 ? 0 : deep ? -Math.min(wd - 0.1, 1.3 * s) : -wd;
+      const floor = wd <= 0 ? 0 : deep ? -Math.min(wd - 0.1, (this.moving ? 0.95 : 1.3) * s) : -wd;
       if (this.z <= floor) {
         const impact = -this.vz;
         this.z = 0;
         this.vz = 0;
         this.airT = 0;
         this.leapT = 0;
-        if (deep) this.plunge = clamp2((impact - 7) * 0.12, 0, Math.max(0, wd - 0.5));
+        this.lastLanded = game.time || 0;
+        if (deep) this.plungeV = Math.min(impact, Math.max(0, wd - 1.5) * 4);
         else if (impact > 3) {
           game.fx.burst(this.x, this.y, Math.min(14, 4 + impact), { color: wd > 0 ? ["#e1f5fe", "#b3e5fc"] : ["#d7ccc8", "#bcaaa4", "#efebe9"], speed: 1.5 + impact * 0.25, z: 0.05, vz: 0.6, g: 1.2, life: 0.45, kind: wd > 0 ? void 0 : "dust", size: 0.18, grow: 0.4 });
-          if (impact > 9 && !wd) game.audio?.sfx("land_heavy");
+          if (impact > 9 && !wd) game.audio?.sfx("land_heavy", this);
           if (this.isPlayer) game.emit("playerLand", impact);
         }
       }
@@ -60478,7 +60960,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     setBlock(on) {
       if (on && !this.blocking) {
-        if (this.state !== "idle" || this.action || this.hitstun > 0 || this.status.freeze) return;
+        if (this.state !== "idle" || this.action || this.hitstun > 0 || this.status.freeze || this.climb) return;
         this.blocking = true;
         this.blockTime = 0;
       } else if (!on) this.blocking = false;
@@ -60491,11 +60973,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.knockT += dt;
         this.updateVertical(dt, game);
         this.updateMovement(dt, game, true);
+        this.followGround(game);
         if (this.controller && this.controller.whileKnocked) this.controller.whileKnocked(this, dt, game);
         return;
       }
       if (this.state === "dead") return;
-      if (this.onShip) {
+      if (this.onShip || this.climb) {
         if (this.controller) this.controller.update(this, dt, game);
         this.iframes = Math.max(0, this.iframes - dt);
         this.hitstun = Math.max(0, this.hitstun - dt);
@@ -60507,11 +60990,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.updateBuffs(dt, game);
         this.updateResources(dt, game);
         if (this.action) updateAbility(this, dt, game);
-        this.inWater = false;
         this.moving = false;
+        if (this.climb) {
+          this.updateClimb(dt, game);
+          return;
+        }
+        this.inWater = false;
         return;
       }
       if (this.controller) this.controller.update(this, dt, game);
+      if (this.climb || this.onShip) return;
       this.iframes = Math.max(0, this.iframes - dt);
       this.hitstun = Math.max(0, this.hitstun - dt);
       this.flashT = Math.max(0, this.flashT - dt);
@@ -60542,7 +61030,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         return;
       }
       this.updateMovement(dt, game, false);
+      this.followGround(game);
+      const L2 = this.ledge;
+      const toward = L2 && this.intent.mx * L2.dx + this.intent.my * L2.dy > 0.4;
+      if (toward && ((this.z || 0) > 0.05 || this.vz) && this.climbOnto(game, L2)) return;
+      if (toward && !L2.ship) {
+        this.pushT = (this.pushT || 0) + dt;
+        if (this.pushT > 0.3 && this.climbOnto(game, L2)) {
+          this.pushT = 0;
+          return;
+        }
+      } else this.pushT = 0;
       this.updateVertical(dt, game);
+      if (this.climb) return;
       this.updateDeck(game);
       if (!this.vz && !(this.z > 0.02)) this.updateWater(dt, game);
       const sp = Math.hypot(this.vx, this.vy);
@@ -60659,19 +61159,69 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     canOccupy(w, x, y) {
       const r = this.r, e = r * 0.85;
       const g = this.game;
-      if (g && g.deckAt && g.ships.length) {
-        if (this.deck) {
-          const dk3 = g.deckAt(x, y, r * 0.7);
-          if (dk3 && dk3.ship === this.deck.ship) {
-            if (dk3.solid && !((g.deckAt(this.x, this.y, r * 0.7)?.solid || 0) >= dk3.solid - 1e-4)) return false;
-            return this.deckStep(dk3);
-          }
-          if (!(this.z > 0.3)) return false;
-        } else if (g.deckAt(x, y, -0.15)) return false;
+      if (g && g.deckAt && g.ships.length && this.deck) {
+        const dk3 = g.deckAt(x, y, r * 0.7);
+        if (dk3 && dk3.ship === this.deck.ship) {
+          if (dk3.solid && !((g.deckAt(this.x, this.y, r * 0.7)?.solid || 0) >= dk3.solid - 1e-4)) return false;
+          return this.deckStep(dk3);
+        }
+        if (!(this.z > 0.3)) return false;
+      }
+      if (g && g.world === w) {
+        const L2 = this.ledgeAt(g, x, y);
+        if (L2) {
+          this.blocked = L2;
+          return false;
+        }
       }
       if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
       if (!this.passable(w, x - r, y) || !this.passable(w, x + r, y) || !this.passable(w, x, y - r) || !this.passable(w, x, y + r)) return false;
       return !w.hitsProp(x, y, r * 0.9);
+    }
+    /** Where feet rest at (x, y) off a deck: the ground, a pier or a quay — over the sea, its surface. */
+    groundAt(game, x, y) {
+      return game.view3d ? game.view3d.ground(x, y) : 0;
+    }
+    /** How high your feet are (m above the sea): on a deck, afloat, wading, standing or in the air. */
+    feetH(game) {
+      if (this.deck) return this.deck.h + shipBob(this.deck.ship, game.env?.time || 0) + (this.z || 0);
+      const g = this.groundAt(game, this.x, this.y);
+      if (this.inWater) return g - (this.depth || 0) - (this.moving ? 0.95 : 1.3) * (this.look?.scale || 1);
+      return g - (this.wading || 0) + (this.z || 0);
+    }
+    /**
+     * A ledge in the way at (x, y) — too high to step onto from where your feet
+     * are — or null: a ship's side from outside her (unless you come over the
+     * rail from above), or, out of the sea or off a deck, a pier, a quay or a
+     * bank (slopes, stairs and steps on land are walked). { top (m), dx, dy
+     * (the way you were going), ship? }.
+     */
+    ledgeAt(g, x, y) {
+      const w = g.world;
+      const air = (this.z || 0) > 0.05 || !!this.vz;
+      let feet2 = null;
+      if (g.ships.length && g.hullAt) {
+        const hk = g.hullAt(x, y, 0.15);
+        if (hk && hk.ship !== this.deck?.ship && g.hullAt(this.x, this.y, 0.15)?.ship !== hk.ship) {
+          feet2 = this.feetH(g);
+          const top2 = hk.rail;
+          if (this.inWater || !this.isPlayer || feet2 < top2 - 0.1) return this.blockedBy(x, y, top2, hk);
+        }
+      }
+      const t = w.type(x, y);
+      const high = !IS_LIQUID[t] || OVERLAY[t];
+      if (!high) return null;
+      const here = w.type(this.x, this.y);
+      const wet = IS_LIQUID[here] && !OVERLAY[here];
+      if (!wet && !this.deck && !(OVERLAY[t] && !OVERLAY[here]) && !(w.quays.size && w.isQuay(x, y) && !w.isQuay(this.x, this.y))) return null;
+      const top = this.groundAt(g, x, y);
+      if (this.inWater) return top > this.groundAt(g, this.x, this.y) + 0.35 ? this.blockedBy(x, y, top) : null;
+      if (feet2 === null) feet2 = this.feetH(g);
+      return top > feet2 + (air ? 0.12 : wet || this.deck ? 0.5 : 0.6) ? this.blockedBy(x, y, top) : null;
+    }
+    blockedBy(x, y, top, hk = null) {
+      const l = Math.hypot(this.game.world.dx(this.x, x), y - this.y) || 1;
+      return { x, y, top, dx: this.game.world.dx(this.x, x) / l, dy: (y - this.y) / l, ship: hk ? hk.ship : null };
     }
     /**
      * Can you step to this spot on your own deck? On the big ships the upper
@@ -60681,6 +61231,221 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     deckStep(dk3) {
       if (dk3.lvl === void 0) return true;
       return dk3.h <= this.deck.h + Math.max(0, this.z || 0) + 0.55;
+    }
+    /**
+     * z counts from the ground under you, so when that falls away — off the
+     * edge of a pier, a quay or a stage, or knocked off one — your height above
+     * it grows and you fall, instead of dropping to the water in one frame. In
+     * the air, rising ground (a jump up onto a pier) takes height off z the
+     * same way. (A big move at once — a door, a teleport — is not a fall.)
+     */
+    followGround(game) {
+      if (this.deck || this.inWater || this.flying || !game.view3d) {
+        this.lastG = null;
+        return;
+      }
+      const g = this.groundAt(game, this.x, this.y), last = this.lastG;
+      const moved = last == null ? 0 : Math.abs(game.world.dx(this.lastGX, this.x)) + Math.abs(this.y - this.lastGY);
+      this.lastG = g;
+      this.lastGX = this.x;
+      this.lastGY = this.y;
+      if (last == null || moved > 2) return;
+      const drop = last - g, air = (this.z || 0) > 0.02 || !!this.vz;
+      if (air) this.z = (this.z || 0) + drop;
+      else if (drop > 0.3) {
+        this.z = drop;
+        this.vz = -0.01;
+        this.airT = 0;
+      }
+      if (this.z < 0 && !this.overWater(game)) {
+        this.z = 0;
+        if (this.vz < 0) this.vz = 0;
+      }
+    }
+    /** Over the open water (not a pier, a bridge or dry land)? */
+    overWater(game) {
+      const t = game.world.type(this.x, this.y);
+      return IS_LIQUID[t] === 1 && !OVERLAY[t];
+    }
+    /** Room to stand at (x, y) on dry ground or a pier (where a climb ends). */
+    standsAt(game, x, y) {
+      const w = game.world, r = this.r * 0.9;
+      for (const [ox, oy] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]]) {
+        const t = w.type(x + ox, y + oy);
+        if (!WALKABLE[t] || w.solid(x + ox, y + oy)) return false;
+      }
+      return !w.hitsProp(x, y, r) && !game.hullAt?.(x, y, 0.1);
+    }
+    /**
+     * Haul yourself up onto a ledge you ran into (see ledgeAt): a pier, a quay
+     * or a bank out of the water, or — from a jump — a ship's rail. Only if it's
+     * within reach (from the water you kick up to a pier; on your feet, about
+     * chest high) and there's room to stand on top. True if the climb began.
+     */
+    climbOnto(game, L2) {
+      if (this.climb || this.state !== "idle" || this.hitstun > 0 || this.status.freeze || this.status.root) return false;
+      if (this.inWater && (this.fruit && !this.gills || this.under)) return false;
+      const s = this.look?.scale || 1;
+      const air = (this.z || 0) > 0.05 || !!this.vz;
+      const from = this.inWater ? this.groundAt(game, this.x, this.y) : this.feetH(game);
+      if (L2.top - from > (this.inWater ? 2.1 : air ? 1.35 : 1.25) * s) return false;
+      if (L2.ship) {
+        const spot = boardingSpot(game, L2.ship, L2.x, L2.y);
+        this.startClimb(game, { ship: L2.ship, t: spot.t, v: spot.v });
+        return true;
+      }
+      for (const d of [0.4, 0.6, 0.85]) {
+        const x = game.world.wx(L2.x + L2.dx * d), y = L2.y + L2.dy * d;
+        const top = this.groundAt(game, x, y);
+        if (Math.abs(top - L2.top) > 0.45 || !this.standsAt(game, x, y)) continue;
+        this.startClimb(game, { x, y, h: top });
+        return true;
+      }
+      return false;
+    }
+    /**
+     * Out of the water onto a pier, a quay or a bank in front of you (Space at
+     * the edge; pushing on against it does it too, see update).
+     */
+    climbOut(game) {
+      if (!this.inWater) return false;
+      let dx = this.intent.mx, dy = this.intent.my;
+      if (Math.hypot(dx, dy) < 0.2) {
+        dx = Math.cos(this.facing);
+        dy = Math.sin(this.facing);
+      }
+      const l = Math.hypot(dx, dy) || 1, a0 = Math.atan2(dy / l, dx / l), w = game.world;
+      for (const da of [0, 0.5, -0.5, 1, -1]) {
+        const ux = Math.cos(a0 + da), uy = Math.sin(a0 + da);
+        for (let d = 0.25; d <= 1.1; d += 0.15) {
+          const x = w.wx(this.x + ux * d), y = this.y + uy * d;
+          const L2 = this.ledgeAt(game, x, y);
+          if (L2 && !L2.ship) {
+            L2.dx = ux;
+            L2.dy = uy;
+            if (this.climbOnto(game, L2)) return true;
+            break;
+          }
+          if (!w.isLiquid(x, y) || w.isOverlay(x, y)) break;
+        }
+      }
+      return false;
+    }
+    /** Start hauling yourself up to `to`: a spot to stand on ({ x, y, h }), or a deck spot ({ ship, t, v }). */
+    startClimb(game, to) {
+      const w = game.world, s = this.look?.scale || 1;
+      const wet = this.inWater;
+      const h0 = wet ? this.groundAt(game, this.x, this.y) - (this.depth || 0) - (this.moving ? 0.95 : 1.3) * s : this.feetH(game);
+      if (wet) {
+        this.leaveWater(game, true);
+        game.fx.ripple?.(this.x, this.y, 1);
+        game.fx.burst(this.x, this.y, 10, { color: ["#e1f5fe", "#b3e5fc", "#ffffff"], speed: 2, z: 0.1, vz: 3.5, g: 11, life: 0.6, size: 0.1 });
+        if (this.isPlayer) game.audio?.sfx("splash_out");
+      }
+      if (this.deck) {
+        this.deck.ship.aboard?.delete(this);
+        this.deck = null;
+      }
+      const c = { t: 0, h0, to, x0: this.x, y0: this.y };
+      let tx, ty, th;
+      if (to.ship) {
+        const sh = to.ship, p = deckToWorld(sh, to.t, to.v);
+        tx = p.x;
+        ty = p.y;
+        th = p.h + shipBob(sh, game.env?.time || 0);
+        const cs = Math.cos(sh.heading), sn = Math.sin(sh.heading), dx = w.dx(sh.x, this.x), dy = this.y - sh.y;
+        c.u0 = dx * cs + dy * sn;
+        c.v0 = -dx * sn + dy * cs;
+      } else {
+        tx = to.x;
+        ty = to.y;
+        th = to.h;
+      }
+      c.T = 0.32 + 0.2 * clamp2(th - h0, 0, 3);
+      this.climb = c;
+      this.vx = 0;
+      this.vy = 0;
+      this.vz = 0;
+      this.kb.x = 0;
+      this.kb.y = 0;
+      this.dash = null;
+      this.blocking = false;
+      this.wading = 0;
+      this.charging = 0;
+      this.ledge = null;
+      this.pushT = 0;
+      this.lastG = null;
+      if (this.action?.def.m1Chain) this.action = null;
+      this.facing = Math.atan2(ty - this.y, w.dx(this.x, tx));
+      this.z = h0 - this.groundAt(game, this.x, this.y);
+      if (this.isPlayer) game.emit("playerClimb", to);
+    }
+    /** Up the side, over the top and onto your feet (the start and the end ride along on a ship). */
+    updateClimb(dt, game) {
+      const c = this.climb, w = game.world, to = c.to;
+      if (to.ship && (to.ship.sunk || to.ship.alive === false)) {
+        this.endClimb(game, true);
+        return;
+      }
+      c.t += dt;
+      const k = Math.min(1, c.t / c.T);
+      let x0 = c.x0, y0 = c.y0, x1, y1, h1;
+      if (to.ship) {
+        const sh = to.ship, p = deckToWorld(sh, to.t, to.v), cs = Math.cos(sh.heading), sn = Math.sin(sh.heading);
+        x1 = p.x;
+        y1 = p.y;
+        h1 = p.h + shipBob(sh, game.env?.time || 0);
+        x0 = sh.x + c.u0 * cs - c.v0 * sn;
+        y0 = sh.y + c.u0 * sn + c.v0 * cs;
+      } else {
+        x1 = to.x;
+        y1 = to.y;
+        h1 = to.h;
+      }
+      const up = smooth01(0, 0.65, k), over = smooth01(0.35, 1, k);
+      const h2 = c.h0 + (h1 - c.h0) * up + Math.sin(Math.PI * k) * 0.14;
+      this.x = w.wx(x0 + w.dx(x0, x1) * over);
+      this.y = y0 + (y1 - y0) * over;
+      this.z = h2 - this.groundAt(game, this.x, this.y);
+      this.airT = 0.1;
+      if (k >= 1) this.endClimb(game);
+    }
+    /** On your feet at the top — or, knocked off it, falling back from where you were. */
+    endClimb(game, fall = false) {
+      const c = this.climb;
+      this.climb = null;
+      if (!c) return;
+      const f = this.facing;
+      if (fall) {
+        this.vz = -0.01;
+        this.lastG = null;
+        return;
+      }
+      if (c.to.ship) placeOnDeck(game, this, c.to.ship, c.to.t, c.to.v);
+      else {
+        this.x = game.world.wx(c.to.x);
+        this.y = c.to.y;
+        this.z = 0;
+        this.vz = 0;
+        this.lastG = null;
+      }
+      this.facing = f;
+      this.airT = 0;
+      this.lastLanded = game.time || 0;
+    }
+    /** Airborne just inside a ship's bulwark (over her side, not yet over the deck): come down on the deck there. */
+    insideRail(game) {
+      if (!((this.z || 0) > 0.02 || this.vz)) return null;
+      const hk = game.hullAt(this.x, this.y, 0);
+      if (!hk || this.feetH(game) < hk.deckH - 0.05) return null;
+      const sh = hk.ship, d = shipDims(sh.def);
+      const t = clamp2(hk.t, 0.05, 0.95), room = Math.max(0, hbAt(t, d.B) * d.walk - 0.22);
+      const p = deckToWorld(sh, t, clamp2(hk.v, -room, room));
+      const dk3 = game.deckAt(p.x, p.y, 0);
+      if (!dk3 || dk3.ship !== sh || dk3.solid) return null;
+      this.x = game.world.wx(p.x);
+      this.y = p.y;
+      return dk3;
     }
     updateMovement(dt, game, knocked) {
       const w = game.world;
@@ -60705,7 +61470,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (this.status.chill) sp *= 0.6;
         if (this.zoneSlow) sp *= this.zoneSlow;
         const tx = i.mx * sp, ty = i.my * sp;
-        const k = Math.min(1, dt * 16);
+        const k = Math.min(1, dt * (this.inWater ? 4 : 16));
         this.vx += (tx - this.vx) * k;
         this.vy += (ty - this.vy) * k;
         vx = this.vx;
@@ -60744,16 +61509,23 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 0.2));
       const sx = dx / n, sy = dy / n;
       let hit = false;
+      this.ledge = null;
+      const can = (x, y) => {
+        this.blocked = null;
+        const ok = this.canOccupy(w, x, y);
+        if (!ok && this.blocked && !this.ledge) this.ledge = this.blocked;
+        return ok;
+      };
       for (let s = 0; s < n; s++) {
         if (sx) {
-          if (this.canOccupy(w, this.x + sx, this.y)) this.x += sx;
+          if (can(this.x + sx, this.y)) this.x += sx;
           else {
             hit = true;
             this.kb.x *= -0.3;
           }
         }
         if (sy) {
-          if (this.canOccupy(w, this.x, this.y + sy)) this.y += sy;
+          if (can(this.x, this.y + sy)) this.y += sy;
           else {
             hit = true;
             this.kb.y *= -0.3;
@@ -60765,7 +61537,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (this.y > w.height - 1) this.y = w.height - 1;
       return hit;
     }
-    /** Standing on a ship's deck? (Stepping off it over the rail drops you to the water.) */
+    /**
+     * Standing on a ship's deck? Jumping over her rail you fly on (into the sea,
+     * onto a pier, across to another deck); coming down over a deck, you land
+     * on it. Heights carry over exactly: z counts from the deck aboard, from the
+     * ground (or the sea's surface) off it.
+     */
     updateDeck(game) {
       const was = this.deck;
       let dk3 = game.deckAt && game.ships.length ? game.deckAt(this.x, this.y, was ? 0 : 0.1) : null;
@@ -60773,6 +61550,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (!this.under) this.shoveFromHull(game, dk3.ship);
         dk3 = null;
       }
+      if (!dk3 && !was && !this.inWater && game.hullAt && game.ships.length) dk3 = this.insideRail(game);
       if (dk3 && was && dk3.ship === was.ship) {
         const drop = was.h - dk3.h;
         if (drop > 0.35) {
@@ -60782,15 +61560,24 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.deck = dk3;
         return;
       }
+      const time = game.env?.time || 0;
       if (was) {
         was.ship.aboard?.delete(this);
         if (!dk3) {
-          this.z = (this.z || 0) + was.h;
-          this.vz = Math.min(this.vz || 0, 0.5);
+          const g = this.groundAt(game, this.x, this.y);
+          this.z = was.h + shipBob(was.ship, time) + (this.z || 0) - g;
+          if (this.z < 0 && !this.overWater(game)) this.z = 0;
+          if (!this.vz && this.z > 0) this.vz = -0.01;
+          this.lastG = g;
+          this.lastGX = this.x;
+          this.lastGY = this.y;
         }
       }
       if (dk3) {
-        this.z = Math.max(0, (this.z || 0) + (was ? was.h : 0) - dk3.h);
+        const abs = was ? was.h + shipBob(was.ship, time) + (this.z || 0) : this.groundAt(game, this.x, this.y) - (this.wading || 0) + (this.z || 0);
+        this.z = Math.max(0, abs - dk3.h - shipBob(dk3.ship, time));
+        this.wading = 0;
+        if (!this.vz && this.z > 0) this.vz = -0.01;
         (dk3.ship.aboard || (dk3.ship.aboard = /* @__PURE__ */ new Set())).add(this);
       }
       this.deck = dk3;
@@ -60814,7 +61601,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     updateWater(dt, game) {
       const w = game.world;
-      const t = w.type(this.x, this.y - 0.1);
+      const t = w.type(this.x, this.y);
       const was = this.inWater;
       const liquid = IS_LIQUID[t] === 1 && !OVERLAY[t] && !(this.dash && this.dash.ignoreWater) && !this.deck;
       const wd = liquid ? t === T.LAVA ? 99 : game.seaDepth ? game.seaDepth(this.x, this.y) : 99 : 0;
@@ -60833,10 +61620,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (!(game.time - (this.splashedAt ?? -9) < 0.6)) {
           game.fx.burst(this.x, this.y, 10, { color: ["#e1f5fe", "#81d4fa"], speed: 3, vz: 3, g: 9, life: 0.5, size: 0.12 });
           game.fx.ripple?.(this.x, this.y, 1);
-          game.audio?.sfx("splash");
+          game.audio?.sfx("splash", this);
         }
-        this.depth = this.plunge || 0;
-        this.plunge = 0;
+        this.depth = 0;
         this.sinking = false;
         if (df && this.isPlayer) game.log("A Devil Fruit user can't swim! Get out before your strength gives out!", "#ff8a80");
         if (this.fruit) {
@@ -60872,7 +61658,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (df) vz = this.sinking ? 1.15 : this.depth > 0.02 ? -0.6 : 0;
         else if (iz) vz = -iz * (this.gills ? 3.4 : tired ? 0.9 : 1.7);
         else vz = this.depth > 0.05 && !this.gills ? -(breathless ? 0.12 : 0.35) : 0;
+        if (this.plungeV) {
+          this.plungeV -= (this.plungeV * 6 + 3.2) * dt;
+          if (this.plungeV < -0.55) this.plungeV = -0.55;
+          if (this.plungeV < 0 && (this.depth <= 0.02 || iz || this.gills)) this.plungeV = 0;
+          vz = (iz || df ? vz : 0) + this.plungeV;
+        }
         this.depth = clamp2(this.depth + vz * dt, 0, bottom);
+        if (this.depth >= bottom && this.plungeV > 0) this.plungeV = 0;
         if (tired && (this.moving || iz)) {
           if (this.isPlayer && !this.spentHint) {
             this.spentHint = true;
@@ -60956,12 +61749,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       const busy = this.act3d && !act2 && !combat && !this.moving && this.state === "idle" ? this.act3d : null;
       const swim = !this.inWater ? null : this.fruit && !this.gills ? this.sinking ? "sink" : "struggle" : this.gills && (this.moving || this.under) ? "fish" : this.under ? this.moving || this.intent.mz ? "dive" : "float" : this.moving ? "crawl" : "tread";
-      const air = !swim && !act2 && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? this.vz > 0 ? "up" : "down" : null;
-      const mode = act2 || `${this.state}${this.blocking ? "b" : ""}${dodging ? "d" : ""}${hurt ? "h" : ""}${this.moving ? "m" : ""}${combat ? "c" : ""}${this.intent.sprint ? "s" : ""}${swim || ""}${busy ? busy.pose : ""}${this.charging > 0 ? "k" : ""}${air || ""}`;
+      const air = this.climb ? "up" : !swim && !act2 && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? this.vz > 0 ? "up" : "down" : null;
+      const st = !act2 ? this.station() : null;
+      const mode = act2 || `${this.state}${this.blocking ? "b" : ""}${dodging ? "d" : ""}${hurt ? "h" : ""}${this.moving ? "m" : ""}${combat ? "c" : ""}${this.intent.sprint ? "s" : ""}${swim || ""}${busy ? busy.pose : ""}${this.charging > 0 ? "k" : ""}${air || ""}${st ? st.kind : ""}`;
       if (mode !== this._mode) {
         this._blendFrom = this._lastP || null;
         this._blendT = 0;
-        const slow = busy || swim || this._mode && /(lean|sit|sweep|vend|fish|drunk|chat|tread|crawl|dive|float|struggle)$/.test(this._mode);
+        const slow = busy || swim || st || this._mode && /(lean|sit|sweep|vend|fish|drunk|chat|tread|crawl|dive|float|struggle|row|helm)$/.test(this._mode);
         this._blendDur = act2 ? Math.min(0.06, (act2.def.windup ?? 0.1) * 0.45) : hurt ? 0.05 : slow ? 0.45 : 0.12;
         this._mode = mode;
       }
@@ -60991,7 +61785,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         knockT: this.knockT,
         activity: busy ? busy.pose : null,
         prop: busy ? busy.prop : null,
-        seatH: busy ? busy.h : 0
+        seatH: busy ? busy.h : 0,
+        station: st
       };
       if (this.charging > 0 && !act2 && !swim) pose.charge = this.charging;
       if (air) pose.air = { up: air === "up", k: this.jumpK || 0 };
@@ -61021,6 +61816,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       Object.assign(pose, actorVisuals(this, act2, anim));
       return pose;
+    }
+    /**
+     * Where you're working a ship: at a rowboat's oars ({ kind: 'row', ship }) —
+     * you at the oars, or her hand rowing her — or at the wheel ({ kind: 'helm',
+     * ship }); else null.
+     */
+    station() {
+      const s = this.mode === "sail" ? this.ship : this.crewOf;
+      if (!s || s.sunk) return null;
+      if (this.mode === "sail") return { kind: s.def.oarsOnly ? "row" : "helm", ship: s };
+      if (s.rower === this && s.oars && this.deck?.ship === s && this.state === "idle" && !this.moving && !this.provoked) return { kind: "row", ship: s };
+      return null;
     }
     draw(g, env) {
       const buffLook = this.buffs.find((b) => b.look);
@@ -64118,19 +64925,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       F4.prev.copy(E);
       const closing = G3.a[1] > F4.a[1];
-      const ease = Math.min(1, dt * (closing ? 16 : 9));
+      const ease2 = Math.min(1, dt * (closing ? 16 : 9));
       const loose = 1 - Math.min(1, G3.a[1] / 1.3);
       for (let i = 0; i < 4; i++) {
         const n = Math.sin(t * 1.3 + i * 1.9 + k * 2.3) * 0.6 + Math.sin(t * 0.71 + i * 2.7 + k) * 0.4;
         const life2 = n * (0.03 + 0.07 * loose) + F4.lag * loose * (0.75 + i * 0.12);
-        F4.a[i] += (G3.a[i] + life2 - F4.a[i]) * ease;
-        F4.b[i] += (G3.b[i] + life2 * 1.25 - F4.b[i]) * ease;
+        F4.a[i] += (G3.a[i] + life2 - F4.a[i]) * ease2;
+        F4.b[i] += (G3.b[i] + life2 * 1.25 - F4.b[i]) * ease2;
         const splay = -th * (1.5 - i) * 0.075 * F4.sp;
         bones2[B3["k" + (i + 1) + H2]].quaternion.setFromAxisAngle(AX, splay).multiply(_q3.setFromAxisAngle(AZ, -Math.max(-0.25, F4.a[i])));
         bones2[B3["j" + (i + 1) + H2]].quaternion.setFromAxisAngle(AZ, -Math.max(-0.1, F4.b[i]));
       }
-      F4.sp += (G3.sp - F4.sp) * ease;
-      F4.th += (G3.th + Math.sin(t * 0.9 + k) * 0.04 * loose - F4.th) * ease;
+      F4.sp += (G3.sp - F4.sp) * ease2;
+      F4.th += (G3.th + Math.sin(t * 0.9 + k) * 0.04 * loose - F4.th) * ease2;
       const c = Math.max(0, Math.min(1, F4.th));
       _t1.set(-0.22, -0.72, th * 0.66).normalize();
       _t2.set(-0.9, -0.3, -th * 0.32).normalize();
@@ -65048,12 +65855,74 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       pose.dodgeSide = (-d.vx * Math.sin(a.facing) + d.vy * Math.cos(a.facing)) / dl;
     }
     let P4 = pose.anim ? samplePose(pose.anim, pose.anim.t, pose) : restPose(pose, look);
+    if (pose.station && !pose.anim) stationPose(P4, pose.station);
     if (pose.blend && pose.blend.P) P4 = blendPose(pose.blend.P, P4, pose.blend.k);
     pose.P = P4;
     a._lastP = P4;
     a._lastPose = pose;
     a._lastLook = look;
     return { pose, P: P4 };
+  }
+  function stationPose(P4, st) {
+    P4.wF = null;
+    P4.wB = null;
+    P4.hand = "fist";
+    P4.handB = "fist";
+    P4.eF = 1;
+    P4.eB = 1;
+    if (st.kind === "row") {
+      const lean = rowLean(st.ship);
+      P4.l = lean;
+      P4.b = [-0.03, 0];
+      P4.fF = [0.3, 0];
+      P4.fB = [0.27, 0];
+      P4.ht = 0.06 - lean * 0.55;
+      P4.hF = [0.3 + lean * 0.3, 0.26];
+      P4.hB = [0.3 + lean * 0.3, 0.26];
+    } else {
+      P4.l = 0.04;
+      P4.b = [0, 0.01];
+      P4.fF = [0.1, 0];
+      P4.fB = [-0.12, 0];
+      P4.hF = [0.3, 0.14];
+      P4.hB = [0.3, 0.14];
+    }
+  }
+  function stationSpot(st) {
+    const d = shipDims(st.ship.def);
+    if (d.row) return { u: d.row.seatU, floor: d.deckY, row: true };
+    const w = wheelOf(d);
+    const u = w.u - 0.42, floor = floorAt(d, (u + d.L / 2) / d.L);
+    if (Math.abs(floor - w.floor) > 0.1) return { u: d.helmX, floor: d.helmFloor, row: false };
+    return { u, floor, row: false };
+  }
+  function wheelOf(d) {
+    if (d.big) return { u: d.wheelU, floor: d.yq, hub: d.yq + 0.92, r: 0.5 };
+    const u = d.wheelU, floor = floorAt(d, (u + 0.1 + d.L / 2) / d.L);
+    return { u, floor, hub: floor + 0.92, r: 0.4 };
+  }
+  var _g = new Vector3();
+  function stationReach(st, spot, d, s, rel2, lean, hipY, out) {
+    const sh = shipDims(st.ship.def);
+    for (let k = 0; k < 2; k++) {
+      const side = k === 0 ? 1 : -1, T4 = out[k];
+      if (spot.row) {
+        const o = st.ship.oars[k === 0 ? 1 : 0];
+        const q2 = oarPoints(sh, side, o.a, o.b);
+        const back = sh.row.inboard - 0.07;
+        T4.set(q2.lock[0] - q2.dir[0] * back - spot.u, q2.lock[1] - q2.dir[1] * back - spot.floor, q2.lock[2] - q2.dir[2] * back);
+      } else {
+        const w = wheelOf(sh);
+        T4.set(w.u - 0.02 - spot.u, w.hub - spot.floor + w.r * 0.55, side * w.r * 0.7);
+      }
+      const c = Math.cos(rel2), sn = Math.sin(rel2), x = T4.x, z = T4.z;
+      T4.set((x * c + z * sn) / s, T4.y / s, (-x * sn + z * c) / s);
+      _g.set(d.shY * Math.sin(lean), hipY + d.shY * Math.cos(lean), side * d.shW);
+      const L2 = (d.A1 + d.A2) * 0.97;
+      const dist = T4.distanceTo(_g);
+      if (dist > L2) T4.sub(_g).multiplyScalar(L2 / dist).add(_g);
+    }
+    return out;
   }
   var LYING2 = { b: [0, 0], l: 0, r: 0, z: 0, sp: 0, ht: -0.2, hF: [0.03, 0.3], hB: [0.03, 0.3], eF: 0.35, eB: 0.35, fF: [0.07, 0], fB: [-0.03, 0], wF: null, wB: null, m: 0.15, hand: "palm", handB: "palm", face: null };
   function rigOptions(a, pose, P4, o = {}) {
@@ -65092,8 +65961,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (pose.dodge !== void 0 && pose.dodgeSide !== void 0 && Math.abs(pose.dodgeDir) <= 0.35) o.sideRoll = Math.sign(pose.dodgeSide) * 0.38 * Math.sin(pose.dodge * Math.PI);
     if (pose.activity === "lean") o.spread = -0.17;
     o.seatH = pose.activity === "sit" || pose.activity === "fish" ? pose.seatH || 0 : null;
+    if (pose.station && pose.station.kind === "row" && !A) {
+      o.seatH = shipDims(pose.station.ship.def).row.seatH;
+      o.walkRel = null;
+    }
     o.prop = pose.prop || null;
-    o.relaxHands = !A && !pose.combat && !pose.armed && pose.block === void 0 && pose.dodge === void 0 && pose.state !== "hurt";
+    o.relaxHands = !A && !pose.combat && !pose.armed && pose.block === void 0 && pose.dodge === void 0 && pose.state !== "hurt" && !pose.station;
     return o;
   }
 
@@ -65105,6 +65978,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var LEGS = [B3.thighR, B3.shinR, B3.footR, B3.thighL, B3.shinL, B3.footL];
   var _v7 = new Vector3();
   var _v23 = new Vector3();
+  var _q4 = new Quaternion();
+  var _up = new Vector3(0, 1, 0);
+  var _one2 = new Vector3(1, 1, 1);
+  var _mA = new Matrix4();
+  var _mB = new Matrix4();
   function createViewmodel(ctx) {
     return new Viewmodel(ctx);
   }
@@ -65180,6 +66058,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const { pose, P: P4 } = actorPose(p, env, look);
       const o = rigOptions(p, pose, P4, this.o);
       o.wpn = wpn;
+      if (pose.station && pose.station.kind === "row" && !pose.anim) {
+        this.rowing(p, pose.station, P4, o, m, env);
+        return;
+      }
+      o.sitK = 0;
+      o.reachL = null;
       o.walkRel = null;
       o.lookYaw = 0;
       o.twistK = 0.8;
@@ -65282,6 +66166,45 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         fx.uLegFx.value.set(1, 1);
       } else fx.uLegFx.value.set(0, 0);
       this.effects(p, pose, A, env);
+    }
+    /**
+     * At a rowboat's oars: your arms on the grips, pushing them out through the
+     * drive and drawing them back on the recovery. The arms sit in the boat
+     * (on the thwart, facing her bow), not in front of the view: look round and
+     * they stay on the oars where they are; look down and you see them row.
+     */
+    rowing(p, st, P4, o, m, env) {
+      const s = st.ship, spot = stationSpot(st), row = shipDims(s.def).row;
+      o.sitK = 1;
+      o.sitY = row.seatH;
+      o.lift = 0;
+      o.roll = 0;
+      o.squash = 1;
+      o.lookYaw = 0;
+      o.walkRel = null;
+      o.leanAdd = 0;
+      o.twistK = 0.8;
+      const R3 = this._grips || (this._grips = [new Vector3(), new Vector3()]);
+      stationReach(st, spot, m.d, 1, 0, P4.l || 0, row.seatH + 0.07, R3);
+      o.reachR = R3[0];
+      o.reachL = R3[1];
+      m.pose(P4, o);
+      this.fixup();
+      for (const i of LEGS) m.showBone(i, false);
+      this.lastT = env.time;
+      const cam = this.ctx.camera, h2 = s.heading, w = this.ctx.world;
+      const dx = w ? w.dx(p.x, s.x) : s.x - p.x, dy = s.y - p.y;
+      _v7.set(dx + Math.cos(h2) * spot.u, shipBob(s, env.time) + spot.floor + pitchRise(s, spot.u), dy + Math.sin(h2) * spot.u);
+      _q4.setFromAxisAngle(_up, -h2);
+      _mA.compose(_v7, _q4, _one2);
+      _mB.copy(cam.matrixWorld).invert().multiply(_mA);
+      _mB.decompose(this.body.position, this.body.quaternion, this.body.scale);
+      this.body.updateMatrix();
+      const fx = m.fx;
+      fx.uHaki.value.set(p.armament ? 1 : 0, p.armament ? 1 : 0, 0, 0);
+      fx.uFlash.value = p.flashT > 0 ? Math.min(0.5, p.flashT / 0.12 * 0.6) : 0;
+      fx.uLegFx.value.set(0, 0);
+      for (const g of this.glows) g.sprite.visible = false;
     }
     /** The Gum-Gum fist projectile in flight, in body space. */
     stretch(p, ctx) {
@@ -65403,9 +66326,25 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     update(a, env, ctx, { camYaw3, redraw }) {
       const m = this.model;
-      this.root.visible = !(a.isPlayer && a.mode === "sail");
+      const helm = a.isPlayer && a.mode === "sail" && a.ship && !a.ship.sunk ? a.station() : null;
+      this.root.visible = !(a.isPlayer && a.mode === "sail" && !helm);
+      if (helm) this.placeAtStation(a, helm, env, ctx);
+      const wet = !helm && (a.inWater || a.wading > 0);
+      const dty = Math.min(0.1, Math.max(0, env.time - (this.yT ?? env.time)));
+      this.yT = env.time;
+      if (wet) {
+        const y = this.root.position.y;
+        if (!this.wetY || Math.abs(y - this.smY) > 1.2) this.smY = y;
+        else this.smY += (y - this.smY) * Math.min(1, dty * 9);
+        this.root.position.y = this.smY;
+      }
+      this.wetY = wet;
       const cam = ctx.camera;
       const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
+      if (a.isPlayer && !helm && cam && ctx.mode === "third" && dist < 3) {
+        const r = this.root.position;
+        if (cam.position.distanceTo(_v8.set(r.x, r.y + 1.55 * (this.look.scale || 1), r.z)) < 0.45) this.root.visible = false;
+      }
       this.frame++;
       const every = dist < 22 ? 1 : dist < 45 ? 2 : 3;
       const full = redraw !== false && (this.frame % every === 0 || this.lastT < 0);
@@ -65423,7 +66362,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         o.sitK = this.sitK > 0.01 ? this.sitK : 0;
         o.sitY = (this.sitH || 0) / s;
         o.reachR = null;
-        if (a.fruit === "gomu") o.reachR = this.stretchTarget(a, ctx, s);
+        o.reachL = null;
+        if (pose.station) {
+          const st = pose.station, R3 = this._grips || (this._grips = [new Vector3(), new Vector3()]);
+          const hipY = m.d.hip0 + ((o.sitY ?? m.d.hA) + 0.07 - m.d.hip0) * o.sitK;
+          stationReach(st, stationSpot(st), m.d, s, (this.visF ?? a.facing) - st.ship.heading, P4.l || 0, hipY, R3);
+          o.reachR = R3[0];
+          o.reachL = R3[1];
+        } else if (a.fruit === "gomu") o.reachR = this.stretchTarget(a, ctx, s);
         const knocked = pose.state === "knocked" || pose.state === "dead";
         let PP = P4;
         if (knocked) {
@@ -65451,6 +66397,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const lod = a.isPlayer ? 0 : lodFor(dist, m.lod);
       if (lod !== m.lod) m.setLod(lod);
       m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
+    }
+    /** At the helm or the oars of your ship: stand (or sit) where the work is, riding up and down with her. */
+    placeAtStation(a, st, env, ctx) {
+      const s = st.ship, spot = stationSpot(st), w = ctx.world, h2 = s.heading;
+      const dx = w ? w.dx(a.x, s.x) : s.x - a.x, dy = s.y - a.y;
+      this.root.position.set(dx + Math.cos(h2) * spot.u, shipBob(s, env.time) + spot.floor + pitchRise(s, spot.u), dy + Math.sin(h2) * spot.u);
     }
     /** Head yaw toward the camera for nearby idle NPCs. */
     lookAt(a, dist, pose, cam, s) {
@@ -65657,6 +66609,23 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
   });
   registerViewmodel((ctx) => createViewmodel(ctx));
+  var rowArms = null;
+  registerFrameHook((env, ctx) => {
+    const p = ctx.game?.player;
+    const rowing = !!p && ctx.mode === "first" && p.mode === "sail" && !!p.ship?.def.oarsOnly && !p.ship.sunk && p.state !== "knocked";
+    if (!rowing) {
+      if (rowArms) rowArms.root.visible = false;
+      return;
+    }
+    if (!rowArms) {
+      rowArms = createViewmodel(ctx);
+      const cam = ctx.camera;
+      if (!cam.parent) ctx.scene.add(cam);
+      cam.add(rowArms.root);
+    }
+    rowArms.root.visible = true;
+    rowArms.update(p, env, ctx);
+  }, "rowing arms");
 
   // src/render3d/index.js
   registerPropBuilder("building", (o, ctx) => buildBuilding(o, ctx));
@@ -81329,147 +82298,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (i >= 0) c.hotbar[i] = id;
   }
 
-  // src/game/decks.js
-  function installDecks(game) {
-    game.on("board", (s) => {
-      const r = game.view3d?.rig;
-      if (r && s) {
-        r.yaw = (s.heading % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-        r.pitch = -0.04;
-      }
-    });
-    game.deckAt = (x, y, margin = 0.2) => {
-      const w = game.world;
-      for (const s of game.ships) {
-        if (s.sunk) continue;
-        const r = s.def.length * 0.56;
-        const dx = w.dx(s.x, x), dy = y - s.y;
-        if (dx * dx + dy * dy > r * r) continue;
-        const d = deckPoint(s, dx, dy, margin);
-        if (d) {
-          d.ship = s;
-          return d;
-        }
-      }
-      return null;
-    };
-    game.deckRoute = (a, x, y) => deckRoute(game, a, x, y);
-    game.shipSolidAt = (x, y, h2) => {
-      const w = game.world;
-      for (const s of game.ships) {
-        if (s.sunk) continue;
-        const r = s.def.length * 0.56;
-        const dx = w.dx(s.x, x), dy = y - s.y;
-        if (dx * dx + dy * dy > r * r) continue;
-        if (hullSolid(s, dx, dy, h2 - shipBob(s, game.env?.time || 0))) return true;
-      }
-      return false;
-    };
-  }
-  function placeOnDeck(game, a, ship, t, v = 0) {
-    const p = deckToWorld(ship, t, v);
-    a.x = game.world.wx(p.x);
-    a.y = p.y;
-    a.z = 0;
-    a.vz = 0;
-    a.vx = 0;
-    a.vy = 0;
-    a.inWater = false;
-    a.depth = 0;
-    a.under = false;
-    if (a.deck && a.deck.ship !== ship) a.deck.ship.aboard?.delete(a);
-    a.deck = game.deckAt(a.x, a.y, 0) || { ship, t, v, h: p.h, edge: 0.3 };
-    a.deck.ship = ship;
-    (ship.aboard || (ship.aboard = /* @__PURE__ */ new Set())).add(a);
-    a.facing = ship.heading;
-  }
-  function helmSpot(ship) {
-    const d = shipDims(ship.def);
-    const hp = helmPoint(ship.def);
-    if (d.big) return { t: (hp.x - 0.15 + d.L / 2) / d.L, v: 0 };
-    return { t: Math.min(0.5, (hp.x + d.L / 2) / d.L + 0.06), v: 0 };
-  }
-  function hatchSpot(ship) {
-    const d = shipDims(ship.def);
-    return { t: d.big ? d.hatchT : d.open ? 0.5 : 0.55, v: 0 };
-  }
-  function freeDeckSpot(ship, t, v, lvl = "main") {
-    const d = shipDims(ship.def);
-    if (!d.big) return { t, v };
-    for (let k = 0; k < 40; k++) {
-      const tt = t + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.01;
-      const p = deckToWorld(ship, tt, v);
-      const dp = deckPoint(ship, p.x - ship.x, p.y - ship.y, 0.4);
-      if (dp && !dp.solid && dp.lvl === lvl) return { t: tt, v };
-    }
-    return { t: 0.5, v: d.B * 0.25 };
-  }
-  function crewStation(ship, i) {
-    const d = shipDims(ship.def), B4 = d.B;
-    const S3 = [
-      ["fore", 0.93, 0],
-      ["main", d.capstanT + 0.06, B4 * 0.22],
-      ["quarter", d.tq - 0.03, -B4 * 0.25],
-      ["main", 0.62, -B4 * 0.28],
-      ["main", 0.75, B4 * 0.26],
-      ["fore", d.tf + 0.05, -B4 * 0.2],
-      ["main", d.hatchT, -B4 * 0.3],
-      ["quarter", d.tq - 0.06, B4 * 0.28]
-    ];
-    const [lvl, t, v] = S3[i % S3.length];
-    return { ...freeDeckSpot(ship, t, v, lvl), lvl };
-  }
-  function deckRoute(game, a, tx, ty) {
-    const dk3 = a.deck;
-    if (!dk3 || dk3.lvl === void 0) return null;
-    const s = dk3.ship, d = shipDims(s.def), w = game.world;
-    const to = deckPoint(s, w.dx(s.x, tx), ty - s.y, 0);
-    if (!to) return null;
-    const lvl = (p) => typeof p.lvl === "string" ? p.lvl : null;
-    const here = lvl(dk3), there = lvl(to);
-    if (!there || here === there) return null;
-    const end = (st, top) => {
-      const tt = top ? st.ha > st.hb ? st.ta - 0.5 / d.L : st.tb + 0.5 / d.L : st.ha > st.hb ? st.tb + 0.5 / d.L : st.ta - 0.5 / d.L;
-      return deckToWorld(s, tt, (st.va + st.vb) / 2);
-    };
-    const upper = (st) => st.ha > st.hb ? st.la : st.lb, lower = (st) => st.ha > st.hb ? st.lb : st.la;
-    const path2 = { main: { quarter: "quarter", poop: "quarter", fore: "fore" }, quarter: { main: "main", fore: "main", poop: "poop" }, poop: { quarter: "quarter", main: "quarter", fore: "quarter" }, fore: { main: "main", quarter: "main", poop: "main" } };
-    if (!here) {
-      const st = dk3.lvl, up = upper(st), lo = lower(st);
-      return end(st, there === up || there !== lo && path2[up]?.[there] !== lo);
-    }
-    const next = path2[here]?.[there];
-    if (!next) return null;
-    let best = null, bd = Infinity;
-    for (const st of d.stairs) {
-      if (!(upper(st) === here && lower(st) === next || lower(st) === here && upper(st) === next)) continue;
-      const p = end(st, lower(st) !== here);
-      const dd = w.distance(a.x, a.y, p.x, p.y) + w.distance(p.x, p.y, tx, ty) * 0.5;
-      if (dd < bd) {
-        bd = dd;
-        best = { st, p };
-      }
-    }
-    if (!best) return null;
-    if (w.distance(a.x, a.y, best.p.x, best.p.y) < 0.6) return end(best.st, lower(best.st) === here);
-    return best.p;
-  }
-  function deckDist(game, a, ship, spot) {
-    const p = deckToWorld(ship, spot.t, spot.v);
-    return game.world.distance(a.x, a.y, p.x, p.y);
-  }
-  function nearestDeck(game, a, ship) {
-    let best = null;
-    for (let t = 0.12; t <= 0.9; t += 0.04) {
-      for (const v of [-0.35, 0, 0.35]) {
-        const p = deckToWorld(ship, t, v * ship.def.beam * 0.5);
-        const dd = game.world.distance(a.x, a.y, p.x, p.y);
-        if (!best || dd < best.d) best = { t, v: v * ship.def.beam * 0.5, d: dd };
-      }
-    }
-    return best;
-  }
-
   // src/game/path.js
   function standable(w, x, y, r = 0.3, inside2 = null) {
     if (!w.walkable(x, y) || w.solid(x, y)) return false;
@@ -82203,15 +83031,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const isl = w.islandAt(spot.x, spot.y) || w.nearestIsland(spot.x, spot.y, 40);
         return { label: `Go ashore${isl && isl.name ? " \u2014 " + isl.name : ""}`, key: "E", run: () => disembark(game, p, spot) };
       }
-      if (Math.abs(s.speed) < 1.6 && !s.def.open) return { label: "Leave the helm (walk the deck)", key: "E", run: () => leaveHelm(game, p, s) };
+      if (Math.abs(s.speed) < 1.6) return { label: s.def.oarsOnly ? "Leave the oars (stand up)" : "Leave the helm (walk the deck)", key: "E", run: () => leaveHelm(game, p, s) };
       return null;
     }
     const cands = [];
-    for (const s of game.ships) {
-      if (s.sunk || s.owner !== "player" || p.deck?.ship === s) continue;
-      const d = w.distance(p.x, p.y, s.x, s.y);
-      const sinking = p.inWater && p.fruit && !p.gills;
-      if (d < s.def.length * 0.55 + (sinking ? 6 : 1.6)) cands.push({ d: d - 1, x: s.x, y: s.y, label: sinking ? `Grab the line from the ${s.name}` : `Board the ${s.name}`, run: () => board(game, p, s) });
+    if (p.inWater && p.fruit && !p.gills && !p.climb) {
+      for (const s of game.ships) {
+        if (s.sunk || s.owner !== "player") continue;
+        const d = w.distance(p.x, p.y, s.x, s.y);
+        if (d < s.def.length * 0.55 + 6) cands.push({ d: d - 1, x: s.x, y: s.y, label: `Grab the line from the ${s.name}`, run: () => hauledAboard(game, p, s) });
+      }
     }
     const v3a = game.view3d?.active && game.view3d.rayHitsActor ? game.view3d : null;
     const ray = v3a ? v3a.pointerRay(game) : null;
@@ -82313,11 +83142,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     s.passengers = s.passengers.filter((x) => x !== p);
     p.mode = "foot";
     p.onShip = false;
-    const hs = helmSpot(s);
-    if (shipDims(s.def).big) placeOnDeck(game, p, s, hs.t, 0.9);
-    else placeOnDeck(game, p, s, hs.t + 0.05, 0);
+    const hs = helmSpot(s), d = shipDims(s.def);
+    if (d.big) {
+      const sp = freeDeckSpot(s, (d.wheelU + d.L / 2) / d.L, 1.12, "quarter");
+      placeOnDeck(game, p, s, sp.t, sp.v);
+    } else if (s.def.oarsOnly) placeOnDeck(game, p, s, hs.t - 0.12, 0);
+    else placeOnDeck(game, p, s, hs.t, 0);
     game.emit("disembark", s, null);
-    game.hint?.("deck", "Walk your deck freely \u2014 jump over the rail for a swim, and press E at the wheel to take the helm again.");
+    game.hint?.("deck", s.def.oarsOnly ? "Stand in your boat, or jump over the side for a swim (Space at her side climbs back in). Press E at the seat to take the oars again." : "Walk your deck freely \u2014 jump over the rail for a swim (Space at her side climbs back aboard), and press E at the wheel to take the helm again.");
+  }
+  function hauledAboard(game, p, s) {
+    const spot = boardingSpot(game, s, p.x, p.y);
+    p.startClimb(game, { ship: s, t: spot.t, v: spot.v });
+    game.log(`Your crew haul you up the side of the ${s.name} on a line, dripping and weak.`, "#81d4fa");
   }
   function board(game, p, s) {
     if (p.inWater) p.leaveWater?.(game);
@@ -82335,7 +83172,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     p.setBlock(false);
     p.action = null;
     game.emit("board", s);
-    game.hint("sailing", "Sailing: W raises the sails, S lowers them, A/D steer. Hold SPACE to row (works without wind). Left-click fires a broadside toward the mouse. E near land to go ashore.");
+    if (s.def.oarsOnly) game.hint("rowing", "Rowing: W pulls on the oars, S backs water, A/D pull one oar to turn her. No sail and no wind \u2014 just your arms (and the currents). E near land to go ashore; E away from it to stand up in her.");
+    else game.hint("sailing", "Sailing: W raises the sails, S lowers them, A/D steer. Hold SPACE to row (works without wind). Left-click fires a broadside toward the mouse. E near land to go ashore.");
     game.audio?.sfx("board");
   }
 
@@ -82587,15 +83425,27 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (inp.isDown("D") || inp.isDown("ArrowRight")) turn += 1;
       const tc = inp.touch?.on ? inp.touch : null;
       if (tc && !turn && Math.abs(tc.mx) > 0.2) turn = clamp2(tc.mx * 1.3, -1, 1);
-      const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp2(Math.abs(s.speed) / 3, 0, 1));
-      s.heading += turn * steer * dt;
-      if (inp.isDown("W") || inp.isDown("ArrowUp") || tc && tc.my < -0.45) {
-        s.sail = Math.min(1, s.sail + dt * 0.9);
-        s.anchored = false;
+      const ahead = inp.isDown("W") || inp.isDown("ArrowUp") || tc && tc.my < -0.45 || s.def.oarsOnly && inp.isDown("Space");
+      const back = inp.isDown("S") || inp.isDown("ArrowDown") || tc && tc.my > 0.45;
+      if (s.def.oarsOnly) {
+        const fwd2 = (ahead ? 1 : 0) - (back ? 1 : 0);
+        s.rowL = fwd2 || (turn > 0.2 ? 1 : 0);
+        s.rowR = fwd2 || (turn < -0.2 ? 1 : 0);
+        if (s.rowL || s.rowR) s.anchored = false;
+        s.heading += turn * s.def.turn * (game.crewMods?.turnMul || 1) * (fwd2 ? 0.45 : 0.6) * (0.55 + 0.45 * s.drive) * dt;
+        s.sail = 0;
+        s.rowing = 0;
+      } else {
+        const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp2(Math.abs(s.speed) / 3, 0, 1));
+        s.heading += turn * steer * dt;
+        if (ahead) {
+          s.sail = Math.min(1, s.sail + dt * 0.9);
+          s.anchored = false;
+        }
+        if (back) s.sail = Math.max(0, s.sail - dt * 1.2);
+        s.rowing = inp.isDown("Space") ? 1 : 0;
+        if (s.rowing) s.anchored = false;
       }
-      if (inp.isDown("S") || inp.isDown("ArrowDown") || tc && tc.my > 0.45) s.sail = Math.max(0, s.sail - dt * 1.2);
-      s.rowing = inp.isDown("Space") ? 1 : 0;
-      if (s.rowing) s.anchored = false;
       let [wx, wy] = game.renderer.toWorld(game.world, inp.mouse.x, inp.mouse.y);
       if (tc && !game.view3d?.active) [wx, wy] = this.touchShipAim(s, game);
       this.mouseWorld = { x: wx, y: wy };
@@ -85152,7 +86002,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         k("Mouse", "look around (click the game to capture the mouse, Esc frees it)"),
         k("V", "first person / third person"),
         k("WASD", "move where you look / steer ship"),
-        k("Space", "jump (ship: row)"),
+        k("Space", "jump; at a pier, a bank or a ship's side, climb up (ship: row)"),
         k("Shift", "hold to sprint (ship: Coup de Burst); tap in first person to dodge"),
         k("Ctrl", "third person: shift lock (the character faces where you look)"),
         k("Q", "dash / dodge"),
@@ -85163,7 +86013,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         k("1-9, 0", "hotbar (techniques & items)"),
         haki ? k("R / T", "Armament / Observation Haki (once awakened)") : null,
         haki && char.haki?.conqueror ? k("G", "Conqueror's Haki") : null,
-        k("E", "interact / talk / pick fruit / board / search a knocked-out foe"),
+        k("E", "interact / talk / pick fruit / take the helm or the oars / search a knocked-out foe"),
         k("C / Space (swimming)", "dive / swim up \u2014 or look down and swim"),
         k("Tab / I", "inventory & equipment"),
         k("C", "character"),
@@ -85180,11 +86030,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       h("h3", "Reputation"),
       h("p", "People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation. Crimes \u2014 robbing shops and houses, picking pockets, attacking townsfolk, Marines or merchant ships \u2014 put a bounty on your head instead, and bounties grow the way they do in One Piece: a few hundred thousand berries for a petty thief in the East Blue, millions on the Grand Line, far more in the New World. Anyone with a bounty is a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks \u2014 all the way to commanding fleets. A Marine who breaks the law loses standing, and is thrown out when nobody trusts them any more."),
       h("h3", "Sailing"),
-      h("p", "W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings \u2014 the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle."),
+      h("p", "A rowboat has no mast or sail: sit at her oars (E at the seat), and W pulls, S backs water and A/D pull one oar to turn her \u2014 no wind needed, though the currents still carry you. Anything bigger sails: W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings \u2014 the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle."),
       h("h3", "The sea"),
       h("p", "Swim anywhere \u2014 but swimming tires you. Run out of stamina while you keep swimming and you start to go under and drown; stop and tread water to get your breath back. Dive with C (or look down and swim) to explore the reefs, kelp forests and the dark deep water in the middle of the ocean; bubbles under your stamina show how long you can hold your breath. Grab fish with an attack as they swim past, prise giant clams open for pearls, and watch out past the reef: Sea Cows hunt swimmers in the Blues, and horned Fighting Fish in the Grand Line. Fish-Men swim fast and breathe water. Devil Fruit users cannot swim at all: the sea drags them down, and they come out of it weak \u2014 keep a crewmate close to haul you out, or grab a line thrown from your ship."),
       h("h3", "Ships, raids and being wanted"),
-      h("p", "Other ships sail the seas: merchantmen and fishing boats, Marine patrols, and pirates who will come about to attack you. Fire on a merchant and she may heave to; come alongside (or swim up to her hull) and press E to board and raid her. Beat the crew on her deck, plunder the hold at the hatch, then take her wheel to steal her \u2014 she joins your fleet. At your own wheel, E leaves the helm so you can walk your deck (jump over the rail for a swim). Ships come in every size, from rowboats to One Piece-scale carracks, war galleons, men-o'-war and Yonko flagships: the big ones have a main deck, a quarterdeck and forecastle (and a poop deck on the largest) with stairs up to each, two tiers of guns, and room for your whole crew, who stand their stations on deck while you steer. Grand Line shipyards build them. Raiding or stealing from anyone but pirates is piracy, and your bounty grows. A small bounty goes unnoticed, but once your poster is worth something the Marines know your face on sight \u2014 a hood hides it, until you fight or steal in it."),
+      h("p", "Other ships sail the seas: merchantmen and fishing boats, Marine patrols, and pirates who will come about to attack you \u2014 though they leave an unknown newcomer in the Blues alone. Stop, and a ship that's after you comes alongside and heaves to. Fire on a merchant and she may heave to. To board and raid a ship, leave your helm and jump across onto her deck, or swim to her hull and press Space to climb her side. Beat the crew on her deck, plunder the hold at the hatch, then take her wheel to steal her \u2014 she joins your fleet. At your own wheel, E leaves the helm so you can walk your deck (jump over the rail for a swim; Space at her side climbs back aboard). Ships come in every size, from rowboats to One Piece-scale carracks, war galleons, men-o'-war and Yonko flagships: the big ones have a main deck, a quarterdeck and forecastle (and a poop deck on the largest) with stairs up to each, two tiers of guns, and room for your whole crew, who stand their stations on deck while you steer. Grand Line shipyards build them. Raiding or stealing from anyone but pirates is piracy, and your bounty grows. A small bounty goes unnoticed, but once your poster is worth something the Marines know your face on sight \u2014 a hood hides it, until you fight or steal in it."),
       h("h3", "Crossing the Red Line"),
       h("p", "Paradise ends at the Red Line. Pirates cross the way the Straw Hats did: have your ship coated at the Sabaody Archipelago, then dive 10,000 metres to Fish-Man Island and rise into the New World. The Red Ports and their Bondola lifts to Mary Geoise are for the World Government \u2014 and those it permits."),
       h("h3", "Crew and the One Piece"),
@@ -88784,11 +89634,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const s = p.mode === "sail" ? p.ship : null;
       E.ship.classList.toggle("hidden", !s);
       if (s) {
+        const oars = s.def.oarsOnly ? s.rowL < 0 || s.rowR < 0 ? "backing water" : s.rowL && s.rowR ? "pulling ahead" : s.rowL || s.rowR ? "pulling one oar" : "shipped" : null;
         const html = `<div class="row"><b>${s.name}</b><span>${s.def.name}</span></div>
         <div class="bar hull"><i style="width:${100 * s.hull / s.maxHull}%"></i><span>Hull ${Math.ceil(s.hull)}/${s.maxHull}</span></div>
-        <div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>
-        <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span><span>Wind <span class="wind" style="transform:rotate(${env.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? "none (Calm Belt!)" : Math.round(env.windStrength * 100) + "%"}</span></div>
-        <div class="row"><span>Cannons ${s.def.cannons || 0}</span><span>${s.cannonCd > 0 ? "reloading\u2026" : s.def.cannons ? "ready" : ""}</span></div>`;
+        ${oars ? `<div class="row"><span>Oars: ${oars}</span><span>W/S row, A/D turn</span></div>` : `<div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>`}
+        <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span>${oars ? "" : `<span>Wind <span class="wind" style="transform:rotate(${env.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? "none (Calm Belt!)" : Math.round(env.windStrength * 100) + "%"}</span>`}</div>
+        ${s.def.cannons ? `<div class="row"><span>Cannons ${s.def.cannons}</span><span>${s.cannonCd > 0 ? "reloading\u2026" : "ready"}</span></div>` : ""}`;
         if (this.cache.shipHtml !== html) {
           this.cache.shipHtml = html;
           E.ship.innerHTML = html;
@@ -88977,9 +89828,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       type = ALIAS4[type] || type;
       const s = game.addShip({ type, x, y, heading: extra.heading ?? Math.PI / 2, owner: "player", faction: "player", name: name || void 0, jr: game.state?.char?.jr, upgrades: extra.upgrades || [], hull: extra.hull, coated: extra.coated });
       s.uid = extra.uid || `s${Date.now().toString(36)}${shipCounter++}`;
+      const dock = extra.heading === void 0 ? dockNear(game.world, x, y) : null;
       if (s.def.big && extra.heading === void 0) {
-        const dock = dockNear(game.world, x, y);
         if (!(dock && s.berth(game.world, dock)) && !s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
+      } else if (dock && s.moorAlongside(game.world, dock)) {
       } else if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, !!s.def.big);
       return s;
     };
@@ -89703,7 +90555,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const spot = dock?.moor || this.nearWater();
       const s = g.giveShip(type, spot.x, spot.y, name || SHIPS[type].name);
       g.ui.toast("NEW SHIP", `${s.name} (${SHIPS[type].name})`, "#ffe082");
-      g.log(`Your new ${SHIPS[type].name} is moored at the dock. Board it with E.`, "#ffe082");
+      g.log(`Your new ${SHIPS[type].name} is moored at the dock: step aboard from the pier, and press E at her wheel to take the helm.`, "#ffe082");
       persist(g);
       return s;
     }
@@ -91968,6 +92820,597 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     }
   ]);
 
+  // src/game/wanted.js
+  function wantedTier(game) {
+    const c = game.state?.char;
+    const b = c?.bounty || 0;
+    if (!b || c.faction === "marine") return 0;
+    const k = bountySea(game);
+    if (b < 25e5 * k) return 1;
+    if (b < 3e7 * k) return 2;
+    return 3;
+  }
+  function hooded(game) {
+    const c = game.state?.char, p = game.player;
+    const hat = c?.equipped?.hat;
+    return !!(hat && ITEMS[hat]?.hood) && !(p?.hoodBlownT > 0);
+  }
+  function installWanted(game) {
+    const W3 = game.wanted = { t: 0, spotted: 0, watched: 0, tier: () => wantedTier(game), hooded: () => hooded(game) };
+    game.on("tick", (dt) => tick4(game, W3, dt));
+    const blow = () => {
+      const p = game.player;
+      if (!p || !hooded(game)) return;
+      p.hoodBlownT = 40;
+      game.log("Your hood slips in the struggle \u2014 they've seen your face!", "#ffab91");
+    };
+    game.on("playerLanded", (tgt) => {
+      if (tgt && (tgt.faction === "marine" || tgt.faction === "civilian" || tgt.faction === "guard")) blow();
+    });
+    game.on("crime", blow);
+  }
+  function tick4(game, W3, dt) {
+    const p = game.player;
+    if (!p) return;
+    if (p.hoodBlownT > 0) p.hoodBlownT = Math.max(0, p.hoodBlownT - dt);
+    const tier = wantedTier(game);
+    const hood = hooded(game);
+    p.disguised = hood;
+    W3.spotted = Math.max(0, W3.spotted - dt);
+    W3.t -= dt;
+    if (W3.t > 0) return;
+    const step = 0.25;
+    W3.t = step;
+    let watched = 0;
+    const R3 = tier >= 3 ? 16 : 10;
+    const range = hood ? tier >= 3 ? 4 : 2.5 : R3;
+    const aboard = p.mode === "sail" || p.onShip;
+    for (const a of game.actorsNear(p.x, p.y, R3 + 2)) {
+      if (a === p || a.faction !== "marine" || !a.controller || a.state !== "idle" || a.controller.kind === "follower") continue;
+      if (a.provoked) continue;
+      const d = game.world.distance(a.x, a.y, p.x, p.y);
+      const inView = tier >= 2 && !aboard && d < range && (!game.world.interiorAt || sameSpace(game, a, p));
+      if (!inView) {
+        a.suspect = Math.max(0, (a.suspect || 0) - step * 0.4);
+        continue;
+      }
+      const rate = (tier >= 3 ? 1.1 : 0.6) * (1 - d / range * 0.6) * (hood ? 0.4 : 1);
+      const before = a.suspect || 0;
+      a.suspect = before + rate * step;
+      if (a.suspect > 0.2) watched++;
+      if (before < 0.3 && a.suspect >= 0.3) game.fx.text(a.x, a.y - 2.2, "?", "#fff59d", 0.55, { life: 1.2 });
+      if (a.suspect >= 1) recognise(game, a, p);
+    }
+    W3.watched = watched;
+  }
+  function sameSpace(game, a, b) {
+    const w = game.world;
+    return (w.interiorAt(a.x, a.y) || null) === (w.interiorAt(b.x, b.y) || null);
+  }
+  function recognise(game, a, p) {
+    const c = game.state.char;
+    game.fx.text(a.x, a.y - 2.2, "!", "#ff5252", 0.7, { life: 1.2 });
+    const line2 = [`It's ${c.name}! ${formatBerries(c.bounty)} bounty! Seize them!`, `That face \u2014 it's on the wanted posters!`, "A pirate! Sound the alarm!"][Math.floor(Math.random() * 3)];
+    game.fx.text(a.x, a.y - 2.7, line2, "#fff", 0.32, { life: 2 });
+    game.wanted.spotted = 20;
+    const call = (m) => {
+      m.provoked = true;
+      m.aggroPlayer = true;
+      m.suspect = 1;
+      if (m.controller) {
+        if (m.controller.kind === "townsfolk" || m.controller.kind === "wander" || m.controller.kind === "idle") m.controller.kind = "hostile";
+        m.controller.target = p;
+        m.controller.state = "chase";
+      }
+    };
+    call(a);
+    for (const m of game.actorsNear(a.x, a.y, 14)) if (m !== a && m.faction === "marine" && m.state === "idle" && m.controller && !m.provoked && m.controller.kind !== "follower") call(m);
+    if (!game.wanted.hintShown) {
+      game.wanted.hintShown = true;
+      game.hint?.("wanted", "Marines recognise wanted pirates on sight. A hood hides your face \u2014 but it slips if you fight or steal in it.");
+    }
+  }
+
+  // src/game/traffic.js
+  var SAILOR = { name: "Sailor", faction: "civilian", style: "brawler", look: { top: "#eceff1", bottom: "#37474f", hat: "bandana", hatColor: "#1565c0" }, skill: 0.1, barks: ["Repel boarders!", "Get off our ship!"] };
+  var FISHER = { name: "Fisherman", faction: "civilian", style: "brawler", look: { top: "#8d6e63", bottom: "#455a64", hat: "cap", hatColor: "#6d8f5e" }, skill: 0.05, barks: ["Not the catch!", "Help!"] };
+  var CREW = { dinghy: 1, sloop: 2, caravel: 2, brigantine: 3, carrack: 5, war_galleon: 8, man_o_war: 10, great_galleon: 12, marine_battleship: 10 };
+  var SMALL_STATIONS = [[0.82, 0], [0.36, 0.26], [0.64, -0.3], [0.36, -0.26], [0.72, 0.28]];
+  function installTraffic(game) {
+    const T4 = game.traffic = { t: 3, ships: [] };
+    T4.spawn = (force) => game.player ? spawnShip(game, T4, game.player, regionAt(game.player.x, game.player.y), force) : null;
+    const reset = () => {
+      for (const s of T4.ships) {
+        for (const a of s.traffic?.crew || []) a.alive = false;
+        s.alive = false;
+      }
+      T4.ships = [];
+    };
+    game.on("tick", (dt) => tick5(game, T4, dt));
+    game.on("characterStart", () => {
+      T4.ships = [];
+    });
+    game.on("enterZone", reset);
+    game.on("leaveZone", () => {
+      T4.ships = [];
+    });
+    T4.startRaid = (s) => startRaid(game, T4, s);
+    T4.spawn = (o) => spawnShip(game, T4, game.player, regionAt(game.player.x, game.player.y), o);
+    game.climbAboard = (p, k) => climbAboard(game, T4, p, k);
+    const prevSea = game.seaInteraction;
+    game.seaInteraction = (p, s) => {
+      const other = prevSea ? prevSea(p, s) : null;
+      if (other) return other;
+      return null;
+    };
+    const prevFoot = game.footInteraction;
+    game.footInteraction = (p) => {
+      const other = prevFoot ? prevFoot(p) : null;
+      const mine = footInteraction(game, T4, p);
+      if (!mine) return other;
+      if (!other) return mine;
+      return mine.d <= other.d ? mine : other;
+    };
+  }
+  function tick5(game, T4, dt) {
+    const p = game.player, w = game.world;
+    if (!p || !w || w !== game.surface) return;
+    for (const s of T4.ships) crewFor(game, T4, s, p);
+    const dk3 = p.deck?.ship;
+    if (dk3 && dk3.traffic && !dk3.traffic.raided && dk3.owner !== "player") {
+      if (friendlyBoarding(game, dk3)) welcomeAboard(game, dk3);
+      else startRaid(game, T4, dk3);
+    }
+    for (const s of T4.ships) if (s.traffic?.raided && !s.traffic.cleared) checkCleared(game, s);
+    T4.t -= dt;
+    if (T4.t > 0) return;
+    T4.t = 4;
+    T4.ships = T4.ships.filter((s) => {
+      const keep = s.alive && !s.sunk && s.owner !== "player" && (s.traffic?.raided ? w.distance(s.x, s.y, p.x, p.y) < 400 : w.distance(s.x, s.y, p.x, p.y) < 300);
+      if (!keep && s.owner !== "player") {
+        for (const a of s.traffic?.crew || []) a.alive = false;
+        if (!s.sunk) s.alive = false;
+      }
+      return keep;
+    });
+    const reg3 = regionAt(p.x, p.y);
+    if (isCalmBelt(reg3) || game.sea?.rmState || nearRM(w.wx(p.x), p.y)) return;
+    const nearCoast = w.sd && w.sd(p.x, p.y) < 30;
+    const want = p.mode === "sail" ? 3 : nearCoast ? 2 : 0;
+    if (T4.ships.filter((s) => !s.traffic?.raided).length < want) spawnShip(game, T4, p, reg3);
+  }
+  function pickKind(rng4, reg3, game) {
+    const nw = reg3 === REGION.NEW_WORLD, gl = isGrandLine(reg3);
+    const r = rng4.next();
+    const marine2 = wantedTier(game) >= 2 ? 0.34 : 0.22;
+    if (nw) return r < 0.42 ? "pirate" : r < 0.42 + marine2 ? "marine" : "merchant";
+    if (gl) return r < 0.32 ? "pirate" : r < 0.32 + marine2 ? "marine" : r < 0.86 ? "merchant" : "fishing";
+    return r < 0.14 ? "pirate" : r < 0.14 + marine2 ? "marine" : r < 0.66 ? "merchant" : "fishing";
+  }
+  function underFire(game, s) {
+    const tr = s.traffic;
+    if (!tr || tr.raided || tr.surrender || tr.running || tr.kind !== "merchant" && tr.kind !== "fishing") return;
+    if (Math.random() < 0.7) {
+      tr.surrender = true;
+      game.fx.text(s.x, s.y - 3, "We surrender! Don't shoot!", "#fff", 0.36, { life: 2.2 });
+      game.log(`The ${s.name} strikes her sails and heaves to \u2014 come alongside and board her.`, "#ffe082");
+    } else {
+      tr.running = true;
+      game.log(`The ${s.name} crowds on sail and runs for it!`, "#b0bec5");
+    }
+  }
+  function spawnShip(game, T4, p, reg3, force = null) {
+    const w = game.world;
+    const rng4 = new RNG((Math.floor(game.time * 997) ^ T4.ships.length * 7919) >>> 0);
+    for (let tries = 0; tries < 18; tries++) {
+      const a = rng4.range(0, TAU), r = rng4.range(150, 210);
+      const x = force ? force.x : w.wx(p.x + Math.cos(a) * r), y = force ? force.y : p.y + Math.sin(a) * r;
+      const kind = force?.kind || pickKind(rng4, reg3, game);
+      const gl = isGrandLine(reg3), nw = reg3 === REGION.NEW_WORLD;
+      const type = force?.type || (kind === "fishing" ? rng4.pick(["dinghy", "sloop"]) : kind === "marine" ? nw ? rng4.pick(["marine_warship", "marine_battleship", "marine_battleship"]) : gl ? rng4.pick(["brigantine", "marine_warship", "marine_battleship"]) : rng4.pick(["sloop", "brigantine", "brigantine", "marine_warship"]) : kind === "merchant" ? rng4.pick(gl ? ["caravel", "brigantine", "galleon", "carrack", "carrack"] : ["sloop", "caravel", "caravel", "carrack"]) : rng4.pick(nw ? ["galleon", "war_galleon", "man_o_war", "man_o_war", "great_galleon"] : gl ? ["caravel", "brigantine", "frigate", "war_galleon"] : ["sloop", "caravel", "sloop", "caravel", "war_galleon"]));
+      if (!force && (!w.sailable(x, y) || w.sd(x, y) > -8 - SHIPS[type].length * 0.5 || w.type(x, y) === T.RAPIDS || nearRM(w.wx(x), y))) continue;
+      const pass = a + Math.PI + rng4.range(-0.5, 0.5);
+      const dest = force?.dest || { x: w.wx(p.x + Math.cos(pass) * r), y: p.y + Math.sin(pass) * r };
+      const heading = force?.heading ?? Math.atan2(dest.y - y, w.dx(x, dest.x));
+      const faction = kind === "marine" ? "marine" : kind === "pirate" ? "pirate" : "civilian";
+      const s = game.addShip({
+        type,
+        x,
+        y,
+        heading,
+        owner: kind,
+        faction,
+        name: kind === "marine" ? type === "marine_battleship" ? "Marine Battleship" : rng4.pick(["Marine Patrol", "Marine Cutter", "Marine Escort"]) : kind === "pirate" ? pirateName(rng4) : kind === "fishing" ? rng4.pick(["Fishing Boat", "Trawler", "Little Catch"]) : rng4.pick(["Merchant Ship", "Trading Brig", "Cargo Ship", "Supply Ship"]),
+        jr: kind === "pirate" ? { skull: rng4.pick(["classic", "grin", "eyepatch"]), bones: rng4.pick(["cross", "swords"]), accessory: rng4.pick(["bandana", "horns", "tricorne", "none", "flames"]), color: "#f5f6fa" } : null
+      });
+      if (!s.fits(w, x, y, heading)) {
+        s.alive = false;
+        if (force) return null;
+        continue;
+      }
+      const lvl = force?.level || (nw ? rng4.int(45, 70) : gl ? rng4.int(20, 40) : reg3 === REGION.EAST_BLUE ? rng4.int(4, 10) : rng4.int(8, 18));
+      s.level = lvl;
+      s.traffic = { kind, dest, level: lvl, crew: null, raided: false, cleared: false, plundered: false };
+      s.ai = trafficAI;
+      s.hull = s.maxHull = Math.round(s.maxHull * (0.5 + lvl / 40));
+      s.loot = Math.round((kind === "merchant" ? 3500 : kind === "marine" ? 2500 : kind === "fishing" ? 400 : 2e3) * (1 + lvl / 10) * Math.max(1, s.def.length / 10));
+      if (kind === "merchant" || kind === "fishing") s.cannonsOverride = 0;
+      s.expire = Infinity;
+      s.onDamage = (sh, n, att) => {
+        if (att?.isPlayer || att === game.player || att?.ownerShip?.owner === "player") underFire(game, sh);
+      };
+      T4.ships.push(s);
+      return s;
+    }
+    return null;
+  }
+  function pirateName(rng4) {
+    return `${rng4.pick(["Black", "Crimson", "Howling", "Iron", "Salty", "Grinning", "Rotten", "Screaming", "Golden"])} ${rng4.pick(["Shark", "Maiden", "Gull", "Kraken", "Widow", "Barracuda", "Skull", "Jackal", "Tide"])}`;
+  }
+  function sparesNewcomer(game) {
+    const c = game.state?.char, p = game.player;
+    if (!c || !p || (c.bounty || 0) > 0) return false;
+    if (isBlue(regionAt(p.x, p.y))) return true;
+    const a = p.attrs || {};
+    return ((a.str || 0) + (a.agi || 0) + (a.end || 0) + (a.vit || 0) + (a.wil || 0)) / 5 < 12;
+  }
+  function hostile2(s, game) {
+    const tr = s.traffic;
+    if (s.provoked || tr.raided) return tr.kind !== "merchant" && tr.kind !== "fishing";
+    if (tr.kind === "pirate") return !sparesNewcomer(game);
+    if (tr.kind === "marine") return wantedTier(game) >= 2;
+    return false;
+  }
+  function engage(s, game, target2) {
+    const w = game.world;
+    const d = w.distance(s.x, s.y, target2.x, target2.y);
+    const th = target2.heading, nx = -Math.sin(th), ny = Math.cos(th);
+    const rx = w.dx(target2.x, s.x), ry = s.y - target2.y;
+    const side = rx * nx + ry * ny >= 0 ? 1 : -1;
+    const abeam = Math.abs(rx * nx + ry * ny), ahead = rx * Math.cos(th) + ry * Math.sin(th);
+    s.anchored = false;
+    s.sail = 1;
+    if (Math.abs(target2.speed) < 1.5 && d < 45) {
+      const off = (s.def.beam + target2.def.beam) / 2 + 2.4;
+      const ax = w.wx(target2.x + nx * off * side), ay = target2.y + ny * off * side;
+      const da = w.distance(s.x, s.y, ax, ay);
+      if (da > 2.5) {
+        s.heaveTo = false;
+        s.speedCap = 1.2 + da * 0.6;
+        return Math.atan2(ay - s.y, w.dx(s.x, ax));
+      }
+      s.heaveTo = true;
+      s.sail = 0;
+      s.speedCap = 0;
+      s.anchored = true;
+      return th;
+    }
+    s.heaveTo = false;
+    const blues = isBlue(regionAt(target2.x, target2.y));
+    const pace = Math.abs(target2.speed);
+    if (d > 13) {
+      s.speedCap = blues ? 8.5 : Math.max(10, pace * 1.2 + 2);
+      return Math.atan2(target2.y - s.y, w.dx(s.x, target2.x));
+    }
+    const lane = (s.def.beam + target2.def.beam) / 2 + 7;
+    s.speedCap = Math.min(blues ? 8.5 : 99, pace + clamp2(-ahead * 0.3, -1.5, 2) + 0.3);
+    return th - side * clamp2((abeam - lane) * 0.1, -0.6, 0.6);
+  }
+  function playerShip(p) {
+    const s = p.mode === "sail" ? p.ship : p.deck?.ship?.owner === "player" ? p.deck.ship : null;
+    return s && !s.sunk ? s : null;
+  }
+  function fireOn(game, s, target2, d) {
+    const toT = Math.atan2(target2.y - s.y, game.world.dx(s.x, target2.x));
+    const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
+    if (d < 17 && side < 0.6 && s.cannonCd <= 0 && s.fireBroadside(game, target2.x, target2.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 }) && s.heaveTo) s.cannonCd = Math.max(s.cannonCd, 6.5);
+  }
+  function warningShot(game, s, target2) {
+    const x = game.world.wx(target2.x + Math.cos(target2.heading) * (target2.def.length * 0.5 + 5)), y = target2.y + Math.sin(target2.heading) * (target2.def.length * 0.5 + 5);
+    game.fx.burst(x, y, 16, { color: ["#e1f5fe", "#81d4fa", "#ffffff"], speed: 3.5, vz: 6, g: 10, life: 0.8, size: 0.18 });
+    game.fx.ripple?.(x, y, 1.6);
+    game.audio?.sfx("cannon", { x, y });
+    game.log(`The ${s.name} fires a shot across your bow \u2014 then sheers off. Not worth their powder, a boat like yours\u2026 yet.`, "#ffab91");
+  }
+  function trafficAI(s, dt, game) {
+    const tr = s.traffic, w = game.world, p = game.player;
+    if (tr.raided || tr.surrender) {
+      s.sail = 0;
+      s.anchored = true;
+      s.rowing = 0;
+      return;
+    }
+    if (!tr.crippled && (tr.kind === "pirate" || tr.kind === "marine") && s.hull < s.maxHull * 0.35) {
+      tr.crippled = true;
+      game.log(`The ${s.name}'s rigging is in tatters \u2014 she's dead in the water. Come alongside and board her!`, "#ffe082");
+    }
+    if (tr.crippled) {
+      s.sail = 0;
+      s.rowing = 0;
+      s.anchored = true;
+      s.speedCap = 0;
+      const target3 = playerShip(p);
+      if (target3 && hostile2(s, game) && (s.def.cannons || 0) > 0 && s.cannonCd <= 0 && w.distance(s.x, s.y, target3.x, target3.y) < 17) s.fireBroadside(game, target3.x, target3.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
+      return;
+    }
+    const target2 = playerShip(p);
+    const d = w.distance(s.x, s.y, p.x, p.y);
+    let want;
+    const fighting = target2 && d < 55 && hostile2(s, game) && (s.def.cannons || 0) > 0;
+    if (s.heaveTo && !fighting && hostile2(s, game) && d < 30) {
+      s.sail = 0;
+      s.speedCap = 0;
+      s.anchored = true;
+      return;
+    }
+    if (fighting) {
+      want = engage(s, game, target2);
+      fireOn(game, s, target2, d);
+      if (!tr.warned) {
+        tr.warned = true;
+        game.log(tr.kind === "marine" ? `The ${s.name} runs up its colours \u2014 Marines, closing on you!` : `The ${s.name} is coming about to attack!`, tr.kind === "marine" ? "#64b5f6" : "#ff8a80");
+      }
+    } else {
+      s.speedCap = null;
+      s.heaveTo = false;
+      if (tr.kind === "pirate" && !tr.warnShot && target2 && d < 24 && (s.def.cannons || 0) > 0) {
+        tr.warnShot = true;
+        warningShot(game, s, target2);
+      }
+      s.sail = tr.running ? 1 : tr.kind === "fishing" ? 0.45 : tr.kind === "merchant" ? 0.7 : 0.8;
+      if (tr.running && d < 60) want = Math.atan2(s.y - p.y, w.dx(p.x, s.x));
+      else want = Math.atan2(tr.dest.y - s.y, w.dx(s.x, tr.dest.x));
+      if (w.distance(s.x, s.y, tr.dest.x, tr.dest.y) < 25) {
+        tr.dest = { x: w.wx(s.x + Math.cos(s.heading) * 300), y: s.y + Math.sin(s.heading) * 300 };
+      }
+    }
+    const now2 = game.time || 0;
+    if (!tr.lastPos) tr.lastPos = { x: s.x, y: s.y, t: now2 };
+    if (now2 - tr.lastPos.t > 3) {
+      const moved = w.distance(s.x, s.y, tr.lastPos.x, tr.lastPos.y);
+      tr.stuck = moved < 2.5 && s.sail > 0.3 ? (tr.stuck || 0) + 1 : 0;
+      tr.lastPos = { x: s.x, y: s.y, t: now2 };
+      if (tr.stuck >= 1) {
+        let bestA = s.heading + Math.PI, bestSd = Infinity;
+        for (let k = 0; k < 16; k++) {
+          const a = k / 16 * Math.PI * 2, r = s.def.length + 18;
+          const x = w.wx(s.x + Math.cos(a) * r), y = s.y + Math.sin(a) * r;
+          const sd = w.sailable(x, y) ? w.sd(x, y) : 99;
+          if (sd < bestSd) {
+            bestSd = sd;
+            bestA = a;
+          }
+        }
+        tr.escape = { a: bestA, until: now2 + 9 };
+        tr.dest = { x: w.wx(s.x + Math.cos(bestA) * 300), y: s.y + Math.sin(bestA) * 300 };
+        s.speed = Math.min(s.speed, 1);
+      }
+      if (tr.stuck >= 3) {
+        if (w.distance(s.x, s.y, p.x, p.y) > 70) {
+          for (const a of tr.crew || []) a.alive = false;
+          s.alive = false;
+          return;
+        }
+        s.unstick(w, true);
+        tr.stuck = 0;
+      }
+    }
+    if (tr.escape) {
+      if (now2 > tr.escape.until) tr.escape = null;
+      else if (!fighting) want = tr.escape.a;
+    }
+    const L2 = s.def.length;
+    const open = (ang, dist) => {
+      const x = w.wx(s.x + Math.cos(ang) * dist), y = s.y + Math.sin(ang) * dist;
+      return w.sailable(x, y) && w.sd(x, y) < -2.5;
+    };
+    if (!s.heaveTo && (!open(want, L2 + 14) || !open(s.heading, L2 + 10))) {
+      for (const off of [0.45, -0.45, 0.9, -0.9, 1.4, -1.4, 2.1, -2.1, 3]) {
+        if (open(s.heading + off, L2 + 14) && open(s.heading + off, L2 + 6)) {
+          want = s.heading + off;
+          break;
+        }
+      }
+    }
+    for (const o of game.ships) {
+      if (o === s || o.sunk) continue;
+      const dd = w.distance(o.x, o.y, s.x, s.y);
+      const room = (L2 + o.def.length) * 0.55 + 5;
+      if (dd < room && !(target2 === o && hostile2(s, game))) {
+        const away = Math.atan2(s.y - o.y, w.dx(o.x, s.x));
+        want = s.heading + clamp2(angleDiff(s.heading, away), -1.2, 1.2) * (1 - dd / room);
+      }
+    }
+    s.heading += clamp2(angleDiff(s.heading, want), -1, 1) * s.def.turn * 0.55 * dt;
+  }
+  function crewFor(game, T4, s, p) {
+    const tr = s.traffic;
+    if (!tr || s.sunk) return;
+    const d = game.world.distance(s.x, s.y, p.x, p.y);
+    if (!tr.crew && d < 75) spawnCrew(game, s);
+    else if (tr.crew && d > 115 && !tr.raided) {
+      for (const a of tr.crew) a.alive = false;
+      tr.crew = null;
+    }
+  }
+  function spawnCrew(game, s) {
+    const tr = s.traffic;
+    const n = CREW[s.type] ?? 5;
+    const arch = tr.kind === "marine" ? ["marine", "marine_rifle", "marine", "marine_officer", "marine"] : tr.kind === "pirate" ? ["pirate", "pirate_gunner", "brute", "pirate", "pirate"] : tr.kind === "fishing" ? [FISHER] : [SAILOR];
+    const d = shipDims(s.def);
+    tr.crew = [];
+    for (let i = 0; i < n; i++) {
+      const key2 = arch[i % arch.length];
+      const A = typeof key2 === "string" ? ARCHETYPES[key2] : key2;
+      const lvl = Math.max(3, Math.round(tr.level * (tr.kind === "merchant" || tr.kind === "fishing" ? 0.6 : 1)));
+      const a = makeNPC({ ...A, level: lvl, hostile: false, ai: "idle", seed: Math.floor(Math.random() * 1e9), name: i === 0 && tr.kind === "marine" ? "Marine Lieutenant" : A.name }, s.x, s.y);
+      a.crewOf = s;
+      a.showName = false;
+      a.faceHome = void 0;
+      a.stationary = true;
+      game.addActor(a);
+      const st = SMALL_STATIONS[(i - 1) % SMALL_STATIONS.length];
+      let t = i === 0 ? helmSpot(s).t : st[0];
+      let v = i === 0 ? 0 : st[1] * s.def.beam;
+      if (d.big) ({ t, v } = i === 0 ? helmSpot(s) : freeDeckSpot(s, 0.34 + i / Math.max(1, n) * 0.46, (i % 2 ? 1 : -1) * s.def.beam * (0.12 + i % 3 * 0.08)));
+      placeOnDeck(game, a, s, t, v);
+      a.facing = s.heading + (i === 0 ? 0 : (i % 2 ? 1 : -1) * 1.2);
+      if (i === 0 && s.def.oarsOnly) s.rower = a;
+      if (a.controller) a.controller.home = null;
+      tr.crew.push(a);
+    }
+  }
+  function startRaid(game, T4, s) {
+    const tr = s.traffic;
+    if (!tr || tr.raided) return;
+    if (!tr.crew) spawnCrew(game, s);
+    tr.raided = true;
+    s.sail = 0;
+    s.anchored = true;
+    s.showBar = true;
+    s.label = s.name;
+    const p = game.player;
+    for (const a of tr.crew) {
+      if (!a.alive || a.state !== "idle") continue;
+      a.provoked = true;
+      a.aggroPlayer = true;
+      a.stationary = false;
+      if (a.controller) {
+        a.controller.kind = "hostile";
+        a.controller.target = p;
+        a.controller.state = "chase";
+        a.controller.home = null;
+        a.controller.aggroRange = 14;
+        a.controller.leash = 40;
+      }
+    }
+    const helm = tr.crew[0];
+    if (helm?.alive) {
+      helm.showName = true;
+      helm.name = tr.kind === "marine" ? helm.name : tr.kind === "pirate" ? "Pirate Helmsman" : tr.kind === "fishing" ? "Skipper" : "Ship's Master";
+      const line2 = tr.kind === "marine" ? "Boarders! I have the deck \u2014 stand fast, men!" : tr.kind === "pirate" ? "Somebody take the wheel! This one's MINE!" : tr.kind === "fishing" ? "Get off my boat!" : "Boarders! Leave the wheel \u2014 I'll handle this myself!";
+      game.fx.text(helm.x, helm.y - 2.2, line2, "#ffffff", 0.34, { life: 2.4 });
+    }
+    const lvl = tr.level || 5;
+    if (!tr.crimeDone) {
+      tr.crimeDone = true;
+      if (tr.kind === "marine") crime(game, 15e5 * (1 + lvl / 40), "raided a Marine ship", { rep: 4 });
+      else if (tr.kind === "merchant") crime(game, 7e5, `raided the ${s.name}`, { rep: 8 });
+      else if (tr.kind === "fishing") crime(game, 25e4, "raided a fishing boat", { rep: 8 });
+    }
+    const who = tr.kind === "marine" ? "the Marines" : tr.kind === "pirate" ? "the pirates" : "the crew";
+    game.ui.banner("BOARDED!", s.name, `The helmsman is coming for you. Beat ${who} \u2014 then the hold and the helm are yours.`, 3);
+    if (game.audio && game.audio.theme !== "battle") {
+      tr.prevTheme = game.audio.theme;
+      game.audio.music("battle");
+    }
+    for (const o of T4.ships) if (o !== s && o.traffic?.kind === "marine" && game.world.distance(o.x, o.y, s.x, s.y) < 80) o.provoked = true;
+  }
+  function checkCleared(game, s) {
+    const tr = s.traffic;
+    const standing = (tr.crew || []).filter((a) => a.alive && a.state === "idle" && a.deck?.ship === s);
+    if (standing.length) return;
+    tr.cleared = true;
+    if (game.audio?.theme === "battle") game.audio.music(tr.prevTheme || "sea");
+    game.ui.toast("THE SHIP IS YOURS", `${s.name}: plunder the hold (the hatch amidships), or take the helm to sail her away.`, "#ffd54f");
+    game.log(`The crew of the ${s.name} is beaten!`, "#ffe082");
+  }
+  function friendlyBoarding(game, s) {
+    const c = game.state?.char;
+    return !!c && c.faction === "marine" && s.traffic?.kind === "marine" && !s.provoked;
+  }
+  function welcomeAboard(game, s) {
+    const tr = s.traffic, c = game.state.char;
+    if (tr.welcomed) return;
+    tr.welcomed = true;
+    const helm = (tr.crew || [])[0];
+    const line2 = `${c.marineRank || "Officer"} on deck! Welcome aboard the ${s.name}!`;
+    if (helm?.alive) game.fx.text(helm.x, helm.y - 2.2, line2, "#90caf9", 0.34, { life: 2.6 });
+    game.log(`The crew of the ${s.name} salute as you come aboard.`, "#90caf9");
+  }
+  function climbAboard(game, T4, p, k) {
+    if (!(p.inWater || p.wading) || p.under || p.climb || p.fruit && !p.gills) return false;
+    const hk = game.hullAt(p.x, p.y, 1.1);
+    const s = hk?.ship;
+    if (!s || s.sunk || s.alive === false) return false;
+    const spot = boardingSpot(game, s, p.x, p.y);
+    game.fx.ripple?.(p.x, p.y, 1 + k * 0.5);
+    p.startClimb(game, { ship: s, t: spot.t, v: spot.v });
+    game.log(s.owner === "player" ? `You climb back aboard the ${s.name}.` : `You haul yourself up the side of the ${s.name} and over the rail!`, s.owner === "player" ? "#b0bec5" : "#ffe082");
+    return true;
+  }
+  function plunder(game, s) {
+    const tr = s.traffic;
+    tr.plundered = true;
+    const rng4 = new RNG(Math.floor(s.x * 31 + s.y * 7) >>> 0);
+    earn(game, s.loot || 1e3, `the hold of the ${s.name}`);
+    const goods = tr.kind === "fishing" ? ["fresh_fish", "fresh_fish", "fresh_fish", "elephant_tuna"] : tr.kind === "marine" ? ["bandage", "bandage", "meat", "rumble_ball", "seastone"] : tr.kind === "pirate" ? ["gold_coins", "jewels", "sake", "meat"] : ["gold_coins", "sake", "meat", "fish_stew", "cola", "jewels"];
+    const n = tr.kind === "fishing" ? rng4.int(3, 6) : rng4.int(2, 4);
+    for (let i = 0; i < n; i++) {
+      const id = rng4.pick(goods);
+      if (id === "seastone" && !rng4.chance(0.15)) continue;
+      addItem(game, id, 1);
+    }
+    game.audio?.sfx("coin");
+    if (tr.kind !== "pirate" && !tr.plunderCrime) {
+      tr.plunderCrime = true;
+      crime(game, 3e5, "plundered a ship's hold", { rep: 3, quiet: true });
+    }
+  }
+  function claim2(game, T4, s) {
+    const c = game.state?.char, p = game.player, tr = s.traffic;
+    const lvl = tr.level || 5;
+    if (tr.kind === "marine") crime(game, 3e6 * (1 + lvl / 40), `stole the ${s.name}`, { rep: 6 });
+    else if (tr.kind !== "pirate") crime(game, 12e5, `stole the ${s.name}`, { rep: 8 });
+    for (const a of tr.crew || []) a.alive = false;
+    s.owner = "player";
+    s.faction = "player";
+    s.ai = null;
+    s.traffic = null;
+    s.provoked = false;
+    s.showBar = false;
+    s.label = null;
+    s.expire = void 0;
+    s.cannonsOverride = void 0;
+    s.jr = c?.jr || null;
+    s.uid = `s${Date.now().toString(36)}x`;
+    s.hull = Math.max(s.hull, Math.round(s.maxHull * 0.5));
+    if (tr.kind === "marine") s.name = `Stolen ${s.name.replace(/^Marine /, "")}`;
+    T4.ships = T4.ships.filter((x) => x !== s);
+    if (p.deck) {
+      p.deck.ship.aboard?.delete(p);
+      p.deck = null;
+    }
+    board(game, p, s);
+    game.ui.toast("SHIP TAKEN", `The ${s.name} sails under your command now.`, "#ffd54f");
+    game.audio?.sfx("reveal");
+    persist(game);
+  }
+  function footInteraction(game, T4, p) {
+    const w = game.world;
+    if (p.mode !== "foot" || p.state !== "idle") return null;
+    const s = p.deck?.ship;
+    if (s) {
+      if (s.owner === "player") {
+        const d2 = deckDist(game, p, s, helmSpot(s));
+        if (d2 < (s.def.oarsOnly ? 0.9 : 1.4)) return { d: d2, label: s.def.oarsOnly ? `Take the oars of the ${s.name}` : `Take the helm of the ${s.name}`, run: () => {
+          p.deck.ship.aboard?.delete(p);
+          p.deck = null;
+          board(game, p, s);
+        } };
+        return null;
+      }
+      const tr = s.traffic;
+      if (!tr || !tr.cleared) return null;
+      const dh = deckDist(game, p, s, hatchSpot(s));
+      if (!tr.plundered && dh < 1.3) return { d: dh, label: `Plunder the hold of the ${s.name}`, run: () => plunder(game, s) };
+      const d = deckDist(game, p, s, helmSpot(s));
+      if (d < (s.def.oarsOnly ? 0.9 : 1.4)) return { d, label: `${s.def.oarsOnly ? "Take the oars" : "Take the helm"} \u2014 steal the ${s.name}`, run: () => claim2(game, T4, s) };
+      return null;
+    }
+    return null;
+  }
+
   // src/game/sea.js
   function installSea(game) {
     const sea = new SeaSystem(game);
@@ -92207,11 +93650,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const lvl = nw ? rng4.int(45, 70) : gl ? rng4.int(22, 40) : isBlue(reg3) && reg3 !== REGION.EAST_BLUE ? rng4.int(10, 18) : rng4.int(5, 12);
       const type = nw ? rng4.pick(["frigate", "galleon", "war_galleon", "man_o_war"]) : gl ? rng4.pick(["brigantine", "caravel", "frigate", "war_galleon"]) : rng4.pick(["sloop", "caravel", "sloop"]);
       const faction = kind === "marine" ? "marine" : kind === "pirate" ? "pirate" : "civilian";
+      const spared = kind === "pirate" && sparesNewcomer(g);
       const ship = g.addShip({
         type: kind === "marine" ? nw ? "marine_battleship" : gl ? rng4.pick(["marine_warship", "marine_battleship"]) : "brigantine" : type,
         x,
         y,
-        heading: a + Math.PI,
+        heading: a + Math.PI + (spared ? 0.9 : 0),
         owner: kind,
         faction,
         name: kind === "marine" ? "Marine Patrol" : kind === "pirate" ? pirateShipName(rng4) : "Merchant Ship",
@@ -92229,7 +93673,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       ship.hull = ship.maxHull = Math.round(ship.maxHull * (0.5 + lvl / 40));
       ship.loot = Math.round((kind === "merchant" ? 3e3 : 1500) * (1 + lvl / 10));
       ship.expire = 180;
-      if (kind === "pirate") g.log(`A pirate ship flying an unfamiliar Jolly Roger is closing in!`, "#ff8a80");
+      if (spared) g.log("A pirate ship crosses your bow in the distance \u2014 and pays a little boat no mind.", "#b0bec5");
+      else if (kind === "pirate") g.log(`A pirate ship flying an unfamiliar Jolly Roger is closing in!`, "#ff8a80");
       else if (kind === "marine") g.log("A Marine patrol ship has spotted you! (You have a bounty.)", "#64b5f6");
       else g.log("A merchant ship sails by.", "#b0bec5");
     }
@@ -92298,24 +93743,35 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   function warshipAI(s, dt, game) {
     const p = game.player;
     s.expire -= dt;
-    const target2 = p.mode === "sail" && p.ship ? p.ship : null;
+    const target2 = playerShip(p);
     const d = game.world.distance(s.x, s.y, p.x, p.y);
     if (s.expire <= 0 && d > 40) {
       s.alive = false;
       return;
     }
-    const hostileToPlayer = s.faction === "pirate" || s.faction === "marine" && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked);
+    const hostileToPlayer = s.faction === "pirate" && (s.provoked || !sparesNewcomer(game)) || s.faction === "marine" && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked);
     if (!hostileToPlayer) return merchantAI(s, dt, game);
-    s.sail = 1;
-    if (!target2 && d > 50) return;
-    const toT = Math.atan2(p.y - s.y, game.world.dx(s.x, p.x));
-    const want = d > 12 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
+    if (!target2 && s.heaveTo && d < 30) {
+      s.sail = 0;
+      s.speedCap = 0;
+      s.anchored = true;
+      return;
+    }
+    if (!target2 || d > 50) {
+      s.sail = 1;
+      s.speedCap = null;
+      s.heaveTo = false;
+      return;
+    }
+    const want = engage(s, game, target2);
     s.heading += clamp2(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
-    const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
-    if (d < 16 && side < 0.6 && s.cannonCd <= 0) s.fireBroadside(game, p.x, p.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
+    fireOn(game, s, target2, d);
   }
   function merchantAI(s, dt, game) {
     s.expire -= dt;
+    s.speedCap = null;
+    s.heaveTo = false;
+    s.anchored = false;
     s.sail = 0.8;
     const d = game.world.distance(s.x, s.y, game.player.x, game.player.y);
     if (s.expire <= 0 && d > 40) s.alive = false;
@@ -92403,7 +93859,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           if (tgtShip && game.world.distance(tgtShip.x, tgtShip.y, tx, ty) < 4) tgtShip.damage(dmg, k);
           game.fx.burst(tx, ty, 30, { color: ["#e1f5fe", "#81d4fa", "#ffffff"], speed: 6, vz: 7, g: 12, life: 0.9, size: 0.22 });
           game.fx.shake(0.6);
-          game.audio?.sfx("crash");
+          game.audio?.sfx("crash", { x: tx, y: ty });
         }, 900);
       }
     }
@@ -119508,531 +120964,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     phrases[0] = A;
     const bars = 2 * Math.round((T4.bars[0] + Math.random() * (T4.bars[1] - T4.bars[0])) / 2);
     return { T: T4, chords, midi, perBar, eighth, barDur: eighth * perBar, bars, phrases, arpPat: pick4(ARPS[T4.feel]) };
-  }
-
-  // src/game/wanted.js
-  function wantedTier(game) {
-    const c = game.state?.char;
-    const b = c?.bounty || 0;
-    if (!b || c.faction === "marine") return 0;
-    const k = bountySea(game);
-    if (b < 25e5 * k) return 1;
-    if (b < 3e7 * k) return 2;
-    return 3;
-  }
-  function hooded(game) {
-    const c = game.state?.char, p = game.player;
-    const hat = c?.equipped?.hat;
-    return !!(hat && ITEMS[hat]?.hood) && !(p?.hoodBlownT > 0);
-  }
-  function installWanted(game) {
-    const W3 = game.wanted = { t: 0, spotted: 0, watched: 0, tier: () => wantedTier(game), hooded: () => hooded(game) };
-    game.on("tick", (dt) => tick4(game, W3, dt));
-    const blow = () => {
-      const p = game.player;
-      if (!p || !hooded(game)) return;
-      p.hoodBlownT = 40;
-      game.log("Your hood slips in the struggle \u2014 they've seen your face!", "#ffab91");
-    };
-    game.on("playerLanded", (tgt) => {
-      if (tgt && (tgt.faction === "marine" || tgt.faction === "civilian" || tgt.faction === "guard")) blow();
-    });
-    game.on("crime", blow);
-  }
-  function tick4(game, W3, dt) {
-    const p = game.player;
-    if (!p) return;
-    if (p.hoodBlownT > 0) p.hoodBlownT = Math.max(0, p.hoodBlownT - dt);
-    const tier = wantedTier(game);
-    const hood = hooded(game);
-    p.disguised = hood;
-    W3.spotted = Math.max(0, W3.spotted - dt);
-    W3.t -= dt;
-    if (W3.t > 0) return;
-    const step = 0.25;
-    W3.t = step;
-    let watched = 0;
-    const R3 = tier >= 3 ? 16 : 10;
-    const range = hood ? tier >= 3 ? 4 : 2.5 : R3;
-    const aboard = p.mode === "sail" || p.onShip;
-    for (const a of game.actorsNear(p.x, p.y, R3 + 2)) {
-      if (a === p || a.faction !== "marine" || !a.controller || a.state !== "idle" || a.controller.kind === "follower") continue;
-      if (a.provoked) continue;
-      const d = game.world.distance(a.x, a.y, p.x, p.y);
-      const inView = tier >= 2 && !aboard && d < range && (!game.world.interiorAt || sameSpace(game, a, p));
-      if (!inView) {
-        a.suspect = Math.max(0, (a.suspect || 0) - step * 0.4);
-        continue;
-      }
-      const rate = (tier >= 3 ? 1.1 : 0.6) * (1 - d / range * 0.6) * (hood ? 0.4 : 1);
-      const before = a.suspect || 0;
-      a.suspect = before + rate * step;
-      if (a.suspect > 0.2) watched++;
-      if (before < 0.3 && a.suspect >= 0.3) game.fx.text(a.x, a.y - 2.2, "?", "#fff59d", 0.55, { life: 1.2 });
-      if (a.suspect >= 1) recognise(game, a, p);
-    }
-    W3.watched = watched;
-  }
-  function sameSpace(game, a, b) {
-    const w = game.world;
-    return (w.interiorAt(a.x, a.y) || null) === (w.interiorAt(b.x, b.y) || null);
-  }
-  function recognise(game, a, p) {
-    const c = game.state.char;
-    game.fx.text(a.x, a.y - 2.2, "!", "#ff5252", 0.7, { life: 1.2 });
-    const line2 = [`It's ${c.name}! ${formatBerries(c.bounty)} bounty! Seize them!`, `That face \u2014 it's on the wanted posters!`, "A pirate! Sound the alarm!"][Math.floor(Math.random() * 3)];
-    game.fx.text(a.x, a.y - 2.7, line2, "#fff", 0.32, { life: 2 });
-    game.wanted.spotted = 20;
-    const call = (m) => {
-      m.provoked = true;
-      m.aggroPlayer = true;
-      m.suspect = 1;
-      if (m.controller) {
-        if (m.controller.kind === "townsfolk" || m.controller.kind === "wander" || m.controller.kind === "idle") m.controller.kind = "hostile";
-        m.controller.target = p;
-        m.controller.state = "chase";
-      }
-    };
-    call(a);
-    for (const m of game.actorsNear(a.x, a.y, 14)) if (m !== a && m.faction === "marine" && m.state === "idle" && m.controller && !m.provoked && m.controller.kind !== "follower") call(m);
-    if (!game.wanted.hintShown) {
-      game.wanted.hintShown = true;
-      game.hint?.("wanted", "Marines recognise wanted pirates on sight. A hood hides your face \u2014 but it slips if you fight or steal in it.");
-    }
-  }
-
-  // src/game/traffic.js
-  var SAILOR = { name: "Sailor", faction: "civilian", style: "brawler", look: { top: "#eceff1", bottom: "#37474f", hat: "bandana", hatColor: "#1565c0" }, skill: 0.1, barks: ["Repel boarders!", "Get off our ship!"] };
-  var FISHER = { name: "Fisherman", faction: "civilian", style: "brawler", look: { top: "#8d6e63", bottom: "#455a64", hat: "cap", hatColor: "#6d8f5e" }, skill: 0.05, barks: ["Not the catch!", "Help!"] };
-  var CREW = { dinghy: 1, sloop: 2, caravel: 2, brigantine: 3, carrack: 5, war_galleon: 8, man_o_war: 10, great_galleon: 12, marine_battleship: 10 };
-  var SMALL_STATIONS = [[0.82, 0], [0.36, 0.26], [0.64, -0.3], [0.36, -0.26], [0.72, 0.28]];
-  function installTraffic(game) {
-    const T4 = game.traffic = { t: 3, ships: [] };
-    T4.spawn = (force) => game.player ? spawnShip(game, T4, game.player, regionAt(game.player.x, game.player.y), force) : null;
-    const reset = () => {
-      for (const s of T4.ships) {
-        for (const a of s.traffic?.crew || []) a.alive = false;
-        s.alive = false;
-      }
-      T4.ships = [];
-    };
-    game.on("tick", (dt) => tick5(game, T4, dt));
-    game.on("characterStart", () => {
-      T4.ships = [];
-    });
-    game.on("enterZone", reset);
-    game.on("leaveZone", () => {
-      T4.ships = [];
-    });
-    T4.startRaid = (s) => startRaid(game, T4, s);
-    T4.spawn = (o) => spawnShip(game, T4, game.player, regionAt(game.player.x, game.player.y), o);
-    game.climbAboard = (p, k) => climbAboard(game, T4, p, k);
-    const prevSea = game.seaInteraction;
-    game.seaInteraction = (p, s) => {
-      const other = prevSea ? prevSea(p, s) : null;
-      if (other) return other;
-      return null;
-    };
-    const prevFoot = game.footInteraction;
-    game.footInteraction = (p) => {
-      const other = prevFoot ? prevFoot(p) : null;
-      const mine = footInteraction(game, T4, p);
-      if (!mine) return other;
-      if (!other) return mine;
-      return mine.d <= other.d ? mine : other;
-    };
-  }
-  function tick5(game, T4, dt) {
-    const p = game.player, w = game.world;
-    if (!p || !w || w !== game.surface) return;
-    for (const s of T4.ships) crewFor(game, T4, s, p);
-    const dk3 = p.deck?.ship;
-    if (dk3 && dk3.traffic && !dk3.traffic.raided && dk3.owner !== "player") {
-      if (friendlyBoarding(game, dk3)) welcomeAboard(game, dk3);
-      else startRaid(game, T4, dk3);
-    }
-    for (const s of T4.ships) if (s.traffic?.raided && !s.traffic.cleared) checkCleared(game, s);
-    T4.t -= dt;
-    if (T4.t > 0) return;
-    T4.t = 4;
-    T4.ships = T4.ships.filter((s) => {
-      const keep = s.alive && !s.sunk && s.owner !== "player" && (s.traffic?.raided ? w.distance(s.x, s.y, p.x, p.y) < 400 : w.distance(s.x, s.y, p.x, p.y) < 300);
-      if (!keep && s.owner !== "player") {
-        for (const a of s.traffic?.crew || []) a.alive = false;
-        if (!s.sunk) s.alive = false;
-      }
-      return keep;
-    });
-    const reg3 = regionAt(p.x, p.y);
-    if (isCalmBelt(reg3) || game.sea?.rmState || nearRM(w.wx(p.x), p.y)) return;
-    const nearCoast = w.sd && w.sd(p.x, p.y) < 30;
-    const want = p.mode === "sail" ? 3 : nearCoast ? 2 : 0;
-    if (T4.ships.filter((s) => !s.traffic?.raided).length < want) spawnShip(game, T4, p, reg3);
-  }
-  function pickKind(rng4, reg3, game) {
-    const nw = reg3 === REGION.NEW_WORLD, gl = isGrandLine(reg3);
-    const r = rng4.next();
-    const marine2 = wantedTier(game) >= 2 ? 0.34 : 0.22;
-    if (nw) return r < 0.42 ? "pirate" : r < 0.42 + marine2 ? "marine" : "merchant";
-    if (gl) return r < 0.32 ? "pirate" : r < 0.32 + marine2 ? "marine" : r < 0.86 ? "merchant" : "fishing";
-    return r < 0.14 ? "pirate" : r < 0.14 + marine2 ? "marine" : r < 0.66 ? "merchant" : "fishing";
-  }
-  function underFire(game, s) {
-    const tr = s.traffic;
-    if (!tr || tr.raided || tr.surrender || tr.running || tr.kind !== "merchant" && tr.kind !== "fishing") return;
-    if (Math.random() < 0.7) {
-      tr.surrender = true;
-      game.fx.text(s.x, s.y - 3, "We surrender! Don't shoot!", "#fff", 0.36, { life: 2.2 });
-      game.log(`The ${s.name} strikes her sails and heaves to \u2014 come alongside and board her.`, "#ffe082");
-    } else {
-      tr.running = true;
-      game.log(`The ${s.name} crowds on sail and runs for it!`, "#b0bec5");
-    }
-  }
-  function spawnShip(game, T4, p, reg3, force = null) {
-    const w = game.world;
-    const rng4 = new RNG((Math.floor(game.time * 997) ^ T4.ships.length * 7919) >>> 0);
-    for (let tries = 0; tries < 18; tries++) {
-      const a = rng4.range(0, TAU), r = rng4.range(150, 210);
-      const x = force ? force.x : w.wx(p.x + Math.cos(a) * r), y = force ? force.y : p.y + Math.sin(a) * r;
-      const kind = force?.kind || pickKind(rng4, reg3, game);
-      const gl = isGrandLine(reg3), nw = reg3 === REGION.NEW_WORLD;
-      const type = force?.type || (kind === "fishing" ? rng4.pick(["dinghy", "sloop"]) : kind === "marine" ? nw ? rng4.pick(["marine_warship", "marine_battleship", "marine_battleship"]) : gl ? rng4.pick(["brigantine", "marine_warship", "marine_battleship"]) : rng4.pick(["sloop", "brigantine", "brigantine", "marine_warship"]) : kind === "merchant" ? rng4.pick(gl ? ["caravel", "brigantine", "galleon", "carrack", "carrack"] : ["sloop", "caravel", "caravel", "carrack"]) : rng4.pick(nw ? ["galleon", "war_galleon", "man_o_war", "man_o_war", "great_galleon"] : gl ? ["caravel", "brigantine", "frigate", "war_galleon"] : ["sloop", "caravel", "sloop", "caravel", "war_galleon"]));
-      if (!force && (!w.sailable(x, y) || w.sd(x, y) > -8 - SHIPS[type].length * 0.5 || w.type(x, y) === T.RAPIDS || nearRM(w.wx(x), y))) continue;
-      const pass = a + Math.PI + rng4.range(-0.5, 0.5);
-      const dest = force?.dest || { x: w.wx(p.x + Math.cos(pass) * r), y: p.y + Math.sin(pass) * r };
-      const heading = force?.heading ?? Math.atan2(dest.y - y, w.dx(x, dest.x));
-      const faction = kind === "marine" ? "marine" : kind === "pirate" ? "pirate" : "civilian";
-      const s = game.addShip({
-        type,
-        x,
-        y,
-        heading,
-        owner: kind,
-        faction,
-        name: kind === "marine" ? type === "marine_battleship" ? "Marine Battleship" : rng4.pick(["Marine Patrol", "Marine Cutter", "Marine Escort"]) : kind === "pirate" ? pirateName(rng4) : kind === "fishing" ? rng4.pick(["Fishing Boat", "Trawler", "Little Catch"]) : rng4.pick(["Merchant Ship", "Trading Brig", "Cargo Ship", "Supply Ship"]),
-        jr: kind === "pirate" ? { skull: rng4.pick(["classic", "grin", "eyepatch"]), bones: rng4.pick(["cross", "swords"]), accessory: rng4.pick(["bandana", "horns", "tricorne", "none", "flames"]), color: "#f5f6fa" } : null
-      });
-      if (!s.fits(w, x, y, heading)) {
-        s.alive = false;
-        if (force) return null;
-        continue;
-      }
-      const lvl = force?.level || (nw ? rng4.int(45, 70) : gl ? rng4.int(20, 40) : reg3 === REGION.EAST_BLUE ? rng4.int(4, 10) : rng4.int(8, 18));
-      s.level = lvl;
-      s.traffic = { kind, dest, level: lvl, crew: null, raided: false, cleared: false, plundered: false };
-      s.ai = trafficAI;
-      s.hull = s.maxHull = Math.round(s.maxHull * (0.5 + lvl / 40));
-      s.loot = Math.round((kind === "merchant" ? 3500 : kind === "marine" ? 2500 : kind === "fishing" ? 400 : 2e3) * (1 + lvl / 10) * Math.max(1, s.def.length / 10));
-      if (kind === "merchant" || kind === "fishing") s.cannonsOverride = 0;
-      s.expire = Infinity;
-      s.onDamage = (sh, n, att) => {
-        if (att?.isPlayer || att === game.player || att?.ownerShip?.owner === "player") underFire(game, sh);
-      };
-      T4.ships.push(s);
-      return s;
-    }
-    return null;
-  }
-  function pirateName(rng4) {
-    return `${rng4.pick(["Black", "Crimson", "Howling", "Iron", "Salty", "Grinning", "Rotten", "Screaming", "Golden"])} ${rng4.pick(["Shark", "Maiden", "Gull", "Kraken", "Widow", "Barracuda", "Skull", "Jackal", "Tide"])}`;
-  }
-  function hostile2(s, game) {
-    const tr = s.traffic;
-    if (s.provoked || tr.raided) return tr.kind !== "merchant" && tr.kind !== "fishing";
-    if (tr.kind === "pirate") return true;
-    if (tr.kind === "marine") return wantedTier(game) >= 2;
-    return false;
-  }
-  function trafficAI(s, dt, game) {
-    const tr = s.traffic, w = game.world, p = game.player;
-    if (tr.raided || tr.surrender) {
-      s.sail = 0;
-      s.anchored = true;
-      s.rowing = 0;
-      return;
-    }
-    if (!tr.crippled && (tr.kind === "pirate" || tr.kind === "marine") && s.hull < s.maxHull * 0.35) {
-      tr.crippled = true;
-      game.log(`The ${s.name}'s rigging is in tatters \u2014 she's dead in the water. Come alongside and board her!`, "#ffe082");
-    }
-    if (tr.crippled) {
-      s.sail = 0;
-      s.rowing = 0;
-      s.anchored = true;
-      const target3 = p.mode === "sail" && p.ship && !p.ship.sunk ? p.ship : null;
-      if (target3 && hostile2(s, game) && (s.def.cannons || 0) > 0 && s.cannonCd <= 0 && w.distance(s.x, s.y, target3.x, target3.y) < 17) s.fireBroadside(game, target3.x, target3.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
-      return;
-    }
-    const target2 = p.mode === "sail" && p.ship && !p.ship.sunk ? p.ship : null;
-    const d = w.distance(s.x, s.y, p.x, p.y);
-    let want;
-    if (target2 && d < 55 && hostile2(s, game) && (s.def.cannons || 0) > 0) {
-      s.sail = 1;
-      const toT = Math.atan2(target2.y - s.y, w.dx(s.x, target2.x));
-      want = d > 13 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
-      const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
-      if (d < 17 && side < 0.6 && s.cannonCd <= 0) s.fireBroadside(game, target2.x, target2.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
-      if (!tr.warned) {
-        tr.warned = true;
-        game.log(tr.kind === "marine" ? `The ${s.name} runs up its colours \u2014 Marines, closing on you!` : `The ${s.name} is coming about to attack!`, tr.kind === "marine" ? "#64b5f6" : "#ff8a80");
-      }
-    } else {
-      s.sail = tr.running ? 1 : tr.kind === "fishing" ? 0.45 : tr.kind === "merchant" ? 0.7 : 0.8;
-      if (tr.running && d < 60) want = Math.atan2(s.y - p.y, w.dx(p.x, s.x));
-      else want = Math.atan2(tr.dest.y - s.y, w.dx(s.x, tr.dest.x));
-      if (w.distance(s.x, s.y, tr.dest.x, tr.dest.y) < 25) {
-        tr.dest = { x: w.wx(s.x + Math.cos(s.heading) * 300), y: s.y + Math.sin(s.heading) * 300 };
-      }
-    }
-    const now2 = game.time || 0;
-    if (!tr.lastPos) tr.lastPos = { x: s.x, y: s.y, t: now2 };
-    if (now2 - tr.lastPos.t > 3) {
-      const moved = w.distance(s.x, s.y, tr.lastPos.x, tr.lastPos.y);
-      tr.stuck = moved < 2.5 && s.sail > 0.3 ? (tr.stuck || 0) + 1 : 0;
-      tr.lastPos = { x: s.x, y: s.y, t: now2 };
-      if (tr.stuck >= 1) {
-        let bestA = s.heading + Math.PI, bestSd = Infinity;
-        for (let k = 0; k < 16; k++) {
-          const a = k / 16 * Math.PI * 2, r = s.def.length + 18;
-          const x = w.wx(s.x + Math.cos(a) * r), y = s.y + Math.sin(a) * r;
-          const sd = w.sailable(x, y) ? w.sd(x, y) : 99;
-          if (sd < bestSd) {
-            bestSd = sd;
-            bestA = a;
-          }
-        }
-        tr.escape = { a: bestA, until: now2 + 9 };
-        tr.dest = { x: w.wx(s.x + Math.cos(bestA) * 300), y: s.y + Math.sin(bestA) * 300 };
-        s.speed = Math.min(s.speed, 1);
-      }
-      if (tr.stuck >= 3) {
-        if (w.distance(s.x, s.y, p.x, p.y) > 70) {
-          for (const a of tr.crew || []) a.alive = false;
-          s.alive = false;
-          return;
-        }
-        s.unstick(w, true);
-        tr.stuck = 0;
-      }
-    }
-    if (tr.escape) {
-      if (now2 > tr.escape.until) tr.escape = null;
-      else if (!(target2 && d < 55 && hostile2(s, game))) want = tr.escape.a;
-    }
-    const L2 = s.def.length;
-    const open = (ang, dist) => {
-      const x = w.wx(s.x + Math.cos(ang) * dist), y = s.y + Math.sin(ang) * dist;
-      return w.sailable(x, y) && w.sd(x, y) < -2.5;
-    };
-    if (!open(want, L2 + 14) || !open(s.heading, L2 + 10)) {
-      for (const off of [0.45, -0.45, 0.9, -0.9, 1.4, -1.4, 2.1, -2.1, 3]) {
-        if (open(s.heading + off, L2 + 14) && open(s.heading + off, L2 + 6)) {
-          want = s.heading + off;
-          break;
-        }
-      }
-    }
-    for (const o of game.ships) {
-      if (o === s || o.sunk) continue;
-      const dd = w.distance(o.x, o.y, s.x, s.y);
-      const room = (L2 + o.def.length) * 0.55 + 5;
-      if (dd < room && !(target2 === o && hostile2(s, game))) {
-        const away = Math.atan2(s.y - o.y, w.dx(o.x, s.x));
-        want = s.heading + clamp2(angleDiff(s.heading, away), -1.2, 1.2) * (1 - dd / room);
-      }
-    }
-    s.heading += clamp2(angleDiff(s.heading, want), -1, 1) * s.def.turn * 0.55 * dt;
-  }
-  function crewFor(game, T4, s, p) {
-    const tr = s.traffic;
-    if (!tr || s.sunk) return;
-    const d = game.world.distance(s.x, s.y, p.x, p.y);
-    if (!tr.crew && d < 75) spawnCrew(game, s);
-    else if (tr.crew && d > 115 && !tr.raided) {
-      for (const a of tr.crew) a.alive = false;
-      tr.crew = null;
-    }
-  }
-  function spawnCrew(game, s) {
-    const tr = s.traffic;
-    const n = CREW[s.type] ?? 5;
-    const arch = tr.kind === "marine" ? ["marine", "marine_rifle", "marine", "marine_officer", "marine"] : tr.kind === "pirate" ? ["pirate", "pirate_gunner", "brute", "pirate", "pirate"] : tr.kind === "fishing" ? [FISHER] : [SAILOR];
-    const d = shipDims(s.def);
-    tr.crew = [];
-    for (let i = 0; i < n; i++) {
-      const key2 = arch[i % arch.length];
-      const A = typeof key2 === "string" ? ARCHETYPES[key2] : key2;
-      const lvl = Math.max(3, Math.round(tr.level * (tr.kind === "merchant" || tr.kind === "fishing" ? 0.6 : 1)));
-      const a = makeNPC({ ...A, level: lvl, hostile: false, ai: "idle", seed: Math.floor(Math.random() * 1e9), name: i === 0 && tr.kind === "marine" ? "Marine Lieutenant" : A.name }, s.x, s.y);
-      a.crewOf = s;
-      a.showName = false;
-      a.faceHome = void 0;
-      a.stationary = true;
-      game.addActor(a);
-      const st = SMALL_STATIONS[(i - 1) % SMALL_STATIONS.length];
-      let t = i === 0 ? Math.min(0.46, (d.helmX + d.L / 2) / d.L + 0.08) : st[0];
-      let v = i === 0 ? 0 : st[1] * s.def.beam;
-      if (d.big) ({ t, v } = i === 0 ? helmSpot(s) : freeDeckSpot(s, 0.34 + i / Math.max(1, n) * 0.46, (i % 2 ? 1 : -1) * s.def.beam * (0.12 + i % 3 * 0.08)));
-      placeOnDeck(game, a, s, t, v);
-      a.facing = s.heading + (i === 0 ? 0 : (i % 2 ? 1 : -1) * 1.2);
-      if (a.controller) a.controller.home = null;
-      tr.crew.push(a);
-    }
-  }
-  function startRaid(game, T4, s) {
-    const tr = s.traffic;
-    if (!tr || tr.raided) return;
-    if (!tr.crew) spawnCrew(game, s);
-    tr.raided = true;
-    s.sail = 0;
-    s.anchored = true;
-    s.showBar = true;
-    s.label = s.name;
-    const p = game.player;
-    for (const a of tr.crew) {
-      if (!a.alive || a.state !== "idle") continue;
-      a.provoked = true;
-      a.aggroPlayer = true;
-      a.stationary = false;
-      if (a.controller) {
-        a.controller.kind = "hostile";
-        a.controller.target = p;
-        a.controller.state = "chase";
-        a.controller.home = null;
-        a.controller.aggroRange = 14;
-        a.controller.leash = 40;
-      }
-    }
-    const helm = tr.crew[0];
-    if (helm?.alive) {
-      helm.showName = true;
-      helm.name = tr.kind === "marine" ? helm.name : tr.kind === "pirate" ? "Pirate Helmsman" : tr.kind === "fishing" ? "Skipper" : "Ship's Master";
-      const line2 = tr.kind === "marine" ? "Boarders! I have the deck \u2014 stand fast, men!" : tr.kind === "pirate" ? "Somebody take the wheel! This one's MINE!" : tr.kind === "fishing" ? "Get off my boat!" : "Boarders! Leave the wheel \u2014 I'll handle this myself!";
-      game.fx.text(helm.x, helm.y - 2.2, line2, "#ffffff", 0.34, { life: 2.4 });
-    }
-    const lvl = tr.level || 5;
-    if (!tr.crimeDone) {
-      tr.crimeDone = true;
-      if (tr.kind === "marine") crime(game, 15e5 * (1 + lvl / 40), "raided a Marine ship", { rep: 4 });
-      else if (tr.kind === "merchant") crime(game, 7e5, `raided the ${s.name}`, { rep: 8 });
-      else if (tr.kind === "fishing") crime(game, 25e4, "raided a fishing boat", { rep: 8 });
-    }
-    const who = tr.kind === "marine" ? "the Marines" : tr.kind === "pirate" ? "the pirates" : "the crew";
-    game.ui.banner("BOARDED!", s.name, `The helmsman is coming for you. Beat ${who} \u2014 then the hold and the helm are yours.`, 3);
-    if (game.audio && game.audio.theme !== "battle") {
-      tr.prevTheme = game.audio.theme;
-      game.audio.music("battle");
-    }
-    for (const o of T4.ships) if (o !== s && o.traffic?.kind === "marine" && game.world.distance(o.x, o.y, s.x, s.y) < 80) o.provoked = true;
-  }
-  function checkCleared(game, s) {
-    const tr = s.traffic;
-    const standing = (tr.crew || []).filter((a) => a.alive && a.state === "idle" && a.deck?.ship === s);
-    if (standing.length) return;
-    tr.cleared = true;
-    if (game.audio?.theme === "battle") game.audio.music(tr.prevTheme || "sea");
-    game.ui.toast("THE SHIP IS YOURS", `${s.name}: plunder the hold (the hatch amidships), or take the helm to sail her away.`, "#ffd54f");
-    game.log(`The crew of the ${s.name} is beaten!`, "#ffe082");
-  }
-  function friendlyBoarding(game, s) {
-    const c = game.state?.char;
-    return !!c && c.faction === "marine" && s.traffic?.kind === "marine" && !s.provoked;
-  }
-  function welcomeAboard(game, s) {
-    const tr = s.traffic, c = game.state.char;
-    if (tr.welcomed) return;
-    tr.welcomed = true;
-    const helm = (tr.crew || [])[0];
-    const line2 = `${c.marineRank || "Officer"} on deck! Welcome aboard the ${s.name}!`;
-    if (helm?.alive) game.fx.text(helm.x, helm.y - 2.2, line2, "#90caf9", 0.34, { life: 2.6 });
-    game.log(`The crew of the ${s.name} salute as you come aboard.`, "#90caf9");
-  }
-  function climbAboard(game, T4, p, k) {
-    if (!p.inWater || p.under || p.fruit && !p.gills) return false;
-    const dk3 = game.deckAt(p.x, p.y, -1.3);
-    const s = dk3?.ship;
-    if (!s || s.sunk || s.alive === false) return false;
-    const n = nearestDeck(game, p, s);
-    const splash2 = { x: p.x, y: p.y };
-    p.leaveWater?.(game, true);
-    placeOnDeck(game, p, s, n ? n.t : 0.5, n ? n.v * 0.6 : 0);
-    game.fx.ripple?.(splash2.x, splash2.y, 1 + k * 0.5);
-    game.fx.burst(splash2.x, splash2.y, 12, { color: ["#e1f5fe", "#b3e5fc", "#ffffff"], speed: 2.2, z: 0.1, vz: 4, g: 11, life: 0.6, size: 0.1 });
-    game.audio?.sfx("splash_out");
-    game.log(s.owner === "player" ? `You climb back aboard the ${s.name}.` : `You haul yourself up the side of the ${s.name} and over the rail!`, s.owner === "player" ? "#b0bec5" : "#ffe082");
-    return true;
-  }
-  function plunder(game, s) {
-    const tr = s.traffic;
-    tr.plundered = true;
-    const rng4 = new RNG(Math.floor(s.x * 31 + s.y * 7) >>> 0);
-    earn(game, s.loot || 1e3, `the hold of the ${s.name}`);
-    const goods = tr.kind === "fishing" ? ["fresh_fish", "fresh_fish", "fresh_fish", "elephant_tuna"] : tr.kind === "marine" ? ["bandage", "bandage", "meat", "rumble_ball", "seastone"] : tr.kind === "pirate" ? ["gold_coins", "jewels", "sake", "meat"] : ["gold_coins", "sake", "meat", "fish_stew", "cola", "jewels"];
-    const n = tr.kind === "fishing" ? rng4.int(3, 6) : rng4.int(2, 4);
-    for (let i = 0; i < n; i++) {
-      const id = rng4.pick(goods);
-      if (id === "seastone" && !rng4.chance(0.15)) continue;
-      addItem(game, id, 1);
-    }
-    game.audio?.sfx("coin");
-    if (tr.kind !== "pirate" && !tr.plunderCrime) {
-      tr.plunderCrime = true;
-      crime(game, 3e5, "plundered a ship's hold", { rep: 3, quiet: true });
-    }
-  }
-  function claim2(game, T4, s) {
-    const c = game.state?.char, p = game.player, tr = s.traffic;
-    const lvl = tr.level || 5;
-    if (tr.kind === "marine") crime(game, 3e6 * (1 + lvl / 40), `stole the ${s.name}`, { rep: 6 });
-    else if (tr.kind !== "pirate") crime(game, 12e5, `stole the ${s.name}`, { rep: 8 });
-    for (const a of tr.crew || []) a.alive = false;
-    s.owner = "player";
-    s.faction = "player";
-    s.ai = null;
-    s.traffic = null;
-    s.provoked = false;
-    s.showBar = false;
-    s.label = null;
-    s.expire = void 0;
-    s.cannonsOverride = void 0;
-    s.jr = c?.jr || null;
-    s.uid = `s${Date.now().toString(36)}x`;
-    s.hull = Math.max(s.hull, Math.round(s.maxHull * 0.5));
-    if (tr.kind === "marine") s.name = `Stolen ${s.name.replace(/^Marine /, "")}`;
-    T4.ships = T4.ships.filter((x) => x !== s);
-    if (p.deck) {
-      p.deck.ship.aboard?.delete(p);
-      p.deck = null;
-    }
-    board(game, p, s);
-    game.ui.toast("SHIP TAKEN", `The ${s.name} sails under your command now.`, "#ffd54f");
-    game.audio?.sfx("reveal");
-    persist(game);
-  }
-  function footInteraction(game, T4, p) {
-    const w = game.world;
-    if (p.mode !== "foot" || p.state !== "idle") return null;
-    const s = p.deck?.ship;
-    if (s) {
-      if (s.owner === "player") {
-        const d2 = deckDist(game, p, s, helmSpot(s));
-        if (d2 < 1.4) return { d: d2, label: `Take the helm of the ${s.name}`, run: () => {
-          p.deck.ship.aboard?.delete(p);
-          p.deck = null;
-          board(game, p, s);
-        } };
-        return null;
-      }
-      const tr = s.traffic;
-      if (!tr || !tr.cleared) return null;
-      const dh = deckDist(game, p, s, hatchSpot(s));
-      if (!tr.plundered && dh < 1.3) return { d: dh, label: `Plunder the hold of the ${s.name}`, run: () => plunder(game, s) };
-      const d = deckDist(game, p, s, helmSpot(s));
-      if (d < 1.4) return { d, label: `Take the helm \u2014 steal the ${s.name}`, run: () => claim2(game, T4, s) };
-      return null;
-    }
-    return null;
   }
 
   // src/ui/loot.js

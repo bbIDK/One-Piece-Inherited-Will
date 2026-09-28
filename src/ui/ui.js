@@ -628,11 +628,13 @@ export class UI {
     const s = p.mode === 'sail' ? p.ship : null;
     E.ship.classList.toggle('hidden', !s);
     if (s) {
+      // (a rowboat: no sails and no wind to speak of, just how you're pulling)
+      const oars = s.def.oarsOnly ? (s.rowL < 0 || s.rowR < 0 ? 'backing water' : s.rowL && s.rowR ? 'pulling ahead' : s.rowL || s.rowR ? 'pulling one oar' : 'shipped') : null;
       const html = `<div class="row"><b>${s.name}</b><span>${s.def.name}</span></div>
         <div class="bar hull"><i style="width:${100 * s.hull / s.maxHull}%"></i><span>Hull ${Math.ceil(s.hull)}/${s.maxHull}</span></div>
-        <div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>
-        <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span><span>Wind <span class="wind" style="transform:rotate(${env.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? 'none (Calm Belt!)' : Math.round(env.windStrength * 100) + '%'}</span></div>
-        <div class="row"><span>Cannons ${s.def.cannons || 0}</span><span>${s.cannonCd > 0 ? 'reloading…' : s.def.cannons ? 'ready' : ''}</span></div>`;
+        ${oars ? `<div class="row"><span>Oars: ${oars}</span><span>W/S row, A/D turn</span></div>` : `<div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>`}
+        <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span>${oars ? '' : `<span>Wind <span class="wind" style="transform:rotate(${env.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? 'none (Calm Belt!)' : Math.round(env.windStrength * 100) + '%'}</span>`}</div>
+        ${s.def.cannons ? `<div class="row"><span>Cannons ${s.def.cannons}</span><span>${s.cannonCd > 0 ? 'reloading…' : 'ready'}</span></div>` : ''}`;
       if (this.cache.shipHtml !== html) { this.cache.shipHtml = html; E.ship.innerHTML = html; }
     }
     // knocked

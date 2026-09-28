@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { interiorRect, heightsOf } from '../world/interiors.js';
 import { helmPoint } from './ships3d.js';
-import { shipBob, pitchRise } from '../world/hull.js';
+import { shipBob, pitchRise, shipDims, rowLean } from '../world/hull.js';
 import { waterLevel } from './height.js';
 
 const TAU = Math.PI * 2;
@@ -179,26 +179,32 @@ export class CameraRig {
     const cam = this.camera;
     const sailing = p.mode === 'sail' && p.ship;
     const scale = p.look?.scale || 1;
+    const time = game.env?.time || 0;
     let eyeH = 1.72 * scale;
     let gx = 0, gz = 0; // eye position relative to the player (origin)
-    // the ground under your feet, smoothed so bumps and steps don't jolt the view
-    const g0 = p.deck ? p.deck.h + shipBob(p.deck.ship, game.env?.time || 0) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) : ground(p.x, p.y) - (p.wading || 0);
-    // (dropping off an upper deck: the fall itself carries you down)
-    if (this.smoothG === undefined || Math.abs(g0 - this.smoothG) > 2.5 || p.mode !== this.lastMode || (p.deck && g0 < this.smoothG - 0.6 && p.z > 0.3)) this.smoothG = g0;
-    this.smoothG += (g0 - this.smoothG) * Math.min(1, dt * 14);
-    this.lastMode = p.mode;
-    let gh = p.flying && p.alt != null ? p.alt : this.smoothG + (p.z || 0);
-    let rollSea = 0;
+    // where your feet are: on a deck, on the ground (or the bottom of the shallows), in the air
+    let gh = p.flying && p.alt != null ? p.alt
+      : p.deck ? p.deck.h + shipBob(p.deck.ship, time) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) + (p.z || 0)
+        : ground(p.x, p.y) - (p.wading || 0) + (p.z || 0);
+    let rollSea = 0, hp = null, shipX = 0, shipZ = 0;
     if (!sailing) this.seaPitch = 0;
     if (sailing) {
-      // standing at the helm on the stern deck (your own rigging turns
-      // see-through), rising and rolling gently with the ship
+      // standing at the helm (or sitting at a rowboat's oars), rising and
+      // rolling gently with the ship (in first person your own rigging turns see-through)
       const s = p.ship;
-      const hp = helmPoint(s.def);
-      gx = Math.cos(s.heading) * hp.x; gz = Math.sin(s.heading) * hp.x;
-      const t = (game.env?.time || 0) + (s.seed || 0);
+      hp = helmPoint(s.def);
+      // (from her middle: where you are while you've her helm)
+      shipX = game.world ? game.world.dx(p.x, s.x) : 0; shipZ = s.y - p.y;
+      gx = shipX + Math.cos(s.heading) * hp.x; gz = shipZ + Math.sin(s.heading) * hp.x;
+      const t = time + (s.seed || 0);
       gh = (s.lvl || 0) + 0.05 + hp.floor + Math.sin(t * 1.3) * 0.07 + pitchRise(s, hp.x);
-      eyeH = hp.eye - hp.floor + 0.15;
+      eyeH = hp.eye - hp.floor + (hp.seated ? 0 : 0.15);
+      if (hp.seated && s.oars) {
+        // (the rower's head goes with the stroke: forward and down into the drive, back on the recovery)
+        const lean = rowLean(s);
+        gx += Math.cos(s.heading) * Math.sin(lean) * 0.7; gz += Math.sin(s.heading) * Math.sin(lean) * 0.7;
+        eyeH -= (1 - Math.cos(lean)) * 0.7;
+      }
       rollSea = Math.sin(t * 0.9) * 0.03 * Math.cos(this.yaw - s.heading);
       // (feel the climb up Reverse Mountain: the view tips with the deck)
       this.seaPitch = (s.pitch || 0) * Math.cos(this.yaw - s.heading);
@@ -208,6 +214,19 @@ export class CameraRig {
       const floor = game.seaDepth ? -game.seaDepth(p.x, p.y) : -99;
       if (gh + eyeH < floor + 0.3) gh = floor + 0.3 - eyeH;
     }
+    if (p.state === 'knocked') eyeH = 0.45;
+    // The view glides between heights: over steps and bumps, wading out into a
+    // swim and back, climbing out onto a pier or aboard a deck, getting knocked
+    // down. Jumps, falls and climbs are followed as they happen (they're smooth
+    // already) — only a sudden change mid-air (a state switch) is eased.
+    const eye = gh + eyeH;
+    const air = !sailing && !p.inWater && ((p.z || 0) > 0.05 || !!p.vz || !!p.climb);
+    if (this.eyeLast === undefined || Math.abs(eye - this.eyeLast) > 4 || p.mode !== this.lastMode || sailing) this.eyeOff = 0;
+    else if (!air || Math.abs(eye - this.eyeLast) > Math.abs(p.vz || 0) * dt * 2 + 0.15) this.eyeOff -= eye - this.eyeLast;
+    this.eyeLast = eye;
+    this.lastMode = p.mode;
+    this.eyeOff *= Math.exp(-dt * 14);
+    gh += this.eyeOff;
     // a small dip when you land from a jump or a fall
     if (!sailing && this.lastZ > 0.3 && !(p.z > 0)) this.dip = Math.min(0.22, 0.05 + this.lastZ * 0.12);
     this.lastZ = p.z || 0;
@@ -225,7 +244,7 @@ export class CameraRig {
     // lateral speed relative to the view: lean a little into it
     const side = !sailing ? ((p.vx || 0) * -Math.sin(this.yaw) + (p.vy || 0) * Math.cos(this.yaw)) : 0;
     let roll = this.bobOn ? -side * 0.006 : 0;
-    if (p.state === 'knocked') { eyeH = 0.45; roll = 0.35; }
+    if (p.state === 'knocked') roll = 0.35;
     // crouching to spring for a charged jump
     this.crouch = (this.crouch || 0) + ((p.charging || 0) - (this.crouch || 0)) * Math.min(1, dt * 12);
     eyeH -= this.crouch * 0.34 * scale;
@@ -236,16 +255,29 @@ export class CameraRig {
     this.shake.set((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
 
     const yaw3 = -(this.yaw + Math.PI / 2);
-    if (this.mode === 'third' && !sailing) {
-      const d = this.tp.dist;
+    if (this.mode === 'third') {
+      // what the camera circles, and how far out: you — or, at the helm or the
+      // oars, your ship, from further out the bigger she is (the mouse wheel
+      // still pulls it in and out)
+      let ox = 0, oz = 0, oy = gh + eyeH * 0.9, d = this.tp.dist, own = null;
+      if (sailing) {
+        const s = p.ship, dd = shipDims(s.def);
+        own = s;
+        const u = dd.big ? -dd.L * 0.1 : hp.x * 0.4;
+        ox = shipX + Math.cos(s.heading) * u; oz = shipZ + Math.sin(s.heading) * u;
+        oy = (s.lvl || 0) + 0.05 + Math.sin((time + (s.seed || 0)) * 1.3) * 0.07 + (dd.big ? dd.deckY + 2.5 : hp.floor + 1.1);
+        d *= (dd.big ? dd.L * 0.95 + 6 : 2.6 + dd.L * 0.8) / 4.2;
+      }
       const cp = Math.cos(this.pitch), spch = Math.sin(this.pitch);
       const fx = Math.cos(this.yaw), fz = Math.sin(this.yaw);
-      let cx = -fx * d * cp, cz = -fz * d * cp, cy = gh + eyeH * 0.9 + this.tp.height - spch * d * 0.6;
+      // (from further out, a little higher up too: you look down on her deck)
+      let cx = ox - fx * d * cp, cz = oz - fz * d * cp, cy = oy + this.tp.height * Math.max(1, d / 8) - spch * d * 0.6;
       // shift lock looks over the right shoulder
-      this.shoulder = (this.shoulder || 0) + ((this.shiftLock ? 0.7 : 0) - (this.shoulder || 0)) * Math.min(1, dt * 8);
+      this.shoulder = (this.shoulder || 0) + ((this.shiftLock && !sailing ? 0.7 : 0) - (this.shoulder || 0)) * Math.min(1, dt * 8);
       cx += -fz * this.shoulder; cz += fx * this.shoulder;
       const w = game.world;
-      const room = w?.interiorAt?.(p.x, p.y);
+      const room = !sailing && w?.interiorAt?.(p.x, p.y);
+      this.tilt = 0;
       if (room) {
         // indoors: keep the camera inside the room, under the ceiling
         const r = interiorRect(room);
@@ -253,17 +285,54 @@ export class CameraRig {
         cz = Math.max(r.y0 + 0.25, Math.min(r.y1 - 0.25, p.y + cz)) - p.y;
         cy = Math.min(cy, ground(p.x, p.y) + heightsOf(room).ceil - 0.3);
       } else if (w) {
-        // outdoors: pull in rather than end up inside a building (or a ship's cabins and hull)
-        const ey = gh + eyeH * 0.9, ships = game.ships?.length && game.shipSolidAt;
-        for (let i = 1; i <= 8; i++) {
-          const t = i / 8;
-          const bx = p.x + cx * t, bz = p.y + cz * t;
-          if (w.isBlocked(bx, bz) || (ships && game.shipSolidAt(bx, bz, ey + (cy - ey) * t))) {
-            const k = Math.max(0.12, t - 0.16); cx *= k; cz *= k;
-            if (ships) cy = ey + (cy - ey) * k;
-            break;
+        // outdoors: pull in rather than end up inside a building, or a ship's
+        // cabins, hull, masts or sails. Circling your own ship from out at sea,
+        // the land pulls the camera in (never in among her own sails and
+        // rigging), and other ships just pass between — unless the camera
+        // would end up inside one: then it comes in to her near side.
+        const ships = game.ships?.length && game.shipSolidAt;
+        const px = p.x + ox, pz = p.y + oz;
+        let ux = cx - ox, uz = cz - oz, uy = cy - oy, k = 1, lift = 0;
+        const len = Math.hypot(ux, uz) || 1;
+        let kMin = own ? 0.12 : Math.min(0.12, 0.2 / len);
+        if (own && game.inShip) {
+          // (wheeled in close, it stands off far enough to be clear of her)
+          let out = 1;
+          while (out < 3 && game.inShip(own, px + ux * out, pz + uz * out, oy + uy * out, true)) out += 0.1;
+          if (out > 1) { ux *= out; uz *= out; uy *= out; cx = ox + ux; cz = oz + uz; cy = oy + uy; }
+          for (let i = 16; i >= 1; i--) {
+            const t = i / 16;
+            if (game.inShip(own, px + ux * t, pz + uz * t, oy + uy * t, true)) { kMin = Math.min(1, t + 0.1); break; }
           }
         }
+        // the first thing in the way out to the camera (looked for every
+        // quarter metre or so), with the camera raised `up`
+        const n = Math.min(48, Math.max(16, Math.ceil(len / 0.25)));
+        const hitAt = (up) => {
+          for (let i = 1; i <= n; i++) {
+            const t = i / n, bx = px + ux * t, bz = pz + uz * t;
+            if (w.isBlocked(bx, bz) || (ships && !own && game.shipSolidAt(bx, bz, oy + (uy + up) * t, true))) return t;
+          }
+          return 0;
+        };
+        let hit = hitAt(0);
+        if (!own && ships) {
+          // (on a deck with a rail or a low cabin behind you, the camera rises
+          // to look over it; a wall too high for that, it comes right in behind
+          // your head — see chars3d.js: then you're not drawn over the view)
+          let want = 0;
+          if (hit && hit * len < 2) for (const up of [0.6, 1.2, 1.8]) if (!hitAt(up)) { want = up; break; }
+          this.camLift = (this.camLift || 0) + (want - (this.camLift || 0)) * Math.min(1, dt * 6);
+          if (this.camLift > 0.01) { lift = this.camLift; uy += lift; cy = oy + uy; hit = hitAt(0); }
+        } else this.camLift = 0;
+        if (hit) k = Math.max(kMin, hit - 0.3 / len);
+        if (own && ships) while (k > kMin && game.shipSolidAt(px + ux * k, pz + uz * k, oy + uy * k, true, own)) k = Math.max(kMin, k - 1 / 16);
+        if (k < 1) {
+          cx = ox + ux * k; cz = oz + uz * k;
+          if (ships) cy = oy + uy * k;
+        }
+        // (and looks down a little more, to keep you in view)
+        this.tilt = Math.atan2(lift, len) * 0.6;
       }
       if (p.inWater && p.under) {
         // follow a diver down: under the surface, over the sea floor
@@ -275,7 +344,7 @@ export class CameraRig {
         if (cy < under) cy = under;
       }
       cam.position.set(cx, cy, cz);
-      cam.rotation.set(this.pitch * 0.8 - 0.12 + this.shake.y, yaw3 + this.shake.x, 0);
+      cam.rotation.set(this.pitch * 0.8 - 0.12 - this.tilt + this.shake.y, yaw3 + this.shake.x, 0);
     } else {
       cam.position.set(gx + Math.cos(this.yaw + Math.PI / 2) * bobX, gh + eyeH + bobY, gz + Math.sin(this.yaw + Math.PI / 2) * bobX);
       cam.rotation.set(this.pitch + this.shake.y + (sailing ? this.seaPitch || 0 : 0), yaw3 + this.shake.x, this.roll + rollSea);

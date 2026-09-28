@@ -13,10 +13,10 @@ import { crime } from './reputation.js';
 import { earn, addItem } from './inventory.js';
 import { persist } from './lineage.js';
 import { board } from './interact.js';
-import { regionAt, REGION, isGrandLine, isCalmBelt } from '../world/constants.js';
+import { regionAt, REGION, isGrandLine, isCalmBelt, isBlue } from '../world/constants.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
 import { RNG } from '../core/rng.js';
-import { placeOnDeck, helmSpot, hatchSpot, deckDist, nearestDeck, freeDeckSpot } from './decks.js';
+import { placeOnDeck, helmSpot, hatchSpot, deckDist, freeDeckSpot, boardingSpot } from './decks.js';
 import { shipDims } from '../world/hull.js';
 import { SHIPS } from '../data/ships.js';
 import { wantedTier } from './wanted.js';
@@ -161,13 +161,88 @@ function pirateName(rng) {
   return `${rng.pick(['Black', 'Crimson', 'Howling', 'Iron', 'Salty', 'Grinning', 'Rotten', 'Screaming', 'Golden'])} ${rng.pick(['Shark', 'Maiden', 'Gull', 'Kraken', 'Widow', 'Barracuda', 'Skull', 'Jackal', 'Tide'])}`;
 }
 
+/**
+ * A newcomer the sea's rogues leave be: no bounty on your head, and still in
+ * the Blues — or anywhere, while you're scarcely stronger than the day you
+ * set out. (Fire on a ship, or raid her, and it's another matter.)
+ */
+export function sparesNewcomer(game) {
+  const c = game.state?.char, p = game.player;
+  if (!c || !p || (c.bounty || 0) > 0) return false;
+  if (isBlue(regionAt(p.x, p.y))) return true;
+  const a = p.attrs || {};
+  return ((a.str || 0) + (a.agi || 0) + (a.end || 0) + (a.vit || 0) + (a.wil || 0)) / 5 < 12;
+}
+
 /** Does this ship mean to fight the player's ship? */
 function hostile(s, game) {
   const tr = s.traffic;
   if (s.provoked || tr.raided) return tr.kind !== 'merchant' && tr.kind !== 'fishing';
-  if (tr.kind === 'pirate') return true;
+  if (tr.kind === 'pirate') return !sparesNewcomer(game);
   if (tr.kind === 'marine') return wantedTier(game) >= 2;
   return false;
+}
+
+/**
+ * A fighting ship after yours. While you sail she gives chase — in the Blues
+ * no faster than a small boat can hope to get away from — and once she's up
+ * with you she runs abreast at your pace, her broadside on you. Once you've
+ * stopped, she comes alongside and heaves to there, close enough to jump or
+ * climb aboard (her guns still speak). Sets her sail and speed limit and
+ * returns the heading she wants.
+ */
+export function engage(s, game, target) {
+  const w = game.world;
+  const d = w.distance(s.x, s.y, target.x, target.y);
+  const th = target.heading, nx = -Math.sin(th), ny = Math.cos(th);
+  const rx = w.dx(target.x, s.x), ry = s.y - target.y;
+  const side = rx * nx + ry * ny >= 0 ? 1 : -1;
+  const abeam = Math.abs(rx * nx + ry * ny), ahead = rx * Math.cos(th) + ry * Math.sin(th);
+  s.anchored = false;
+  s.sail = 1;
+  if (Math.abs(target.speed) < 1.5 && d < 45) {
+    // she's stopped: alongside her, on whichever side we're coming up, and heave to
+    const off = (s.def.beam + target.def.beam) / 2 + 2.4;
+    const ax = w.wx(target.x + nx * off * side), ay = target.y + ny * off * side;
+    const da = w.distance(s.x, s.y, ax, ay);
+    if (da > 2.5) { s.heaveTo = false; s.speedCap = 1.2 + da * 0.6; return Math.atan2(ay - s.y, w.dx(s.x, ax)); }
+    s.heaveTo = true; s.sail = 0; s.speedCap = 0; s.anchored = true;
+    return th;
+  }
+  s.heaveTo = false;
+  const blues = isBlue(regionAt(target.x, target.y));
+  const pace = Math.abs(target.speed);
+  if (d > 13) {
+    // (in chase: never much faster than her, and in the Blues hardly faster than a rowboat)
+    s.speedCap = blues ? 8.5 : Math.max(10, pace * 1.2 + 2);
+    return Math.atan2(target.y - s.y, w.dx(s.x, target.x));
+  }
+  // up with her: abreast at a gun's range, keeping her pace (a little faster to draw level)
+  const lane = (s.def.beam + target.def.beam) / 2 + 7;
+  s.speedCap = Math.min(blues ? 8.5 : 99, pace + clamp(-ahead * 0.3, -1.5, 2) + 0.3);
+  return th - side * clamp((abeam - lane) * 0.1, -0.6, 0.6);
+}
+
+/** Your ship, while you're at her helm or on her deck (or null). */
+export function playerShip(p) {
+  const s = p.mode === 'sail' ? p.ship : p.deck?.ship?.owner === 'player' ? p.deck.ship : null;
+  return s && !s.sunk ? s : null;
+}
+
+/** A broadside when her guns bear (lying hove to alongside, only now and then: you're meant to be able to board her). */
+export function fireOn(game, s, target, d) {
+  const toT = Math.atan2(target.y - s.y, game.world.dx(s.x, target.x));
+  const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
+  if (d < 17 && side < 0.6 && s.cannonCd <= 0 && s.fireBroadside(game, target.x, target.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 }) && s.heaveTo) s.cannonCd = Math.max(s.cannonCd, 6.5);
+}
+
+/** A pirate who won't bother with small fry: a shot across your bow, and she sails on. */
+function warningShot(game, s, target) {
+  const x = game.world.wx(target.x + Math.cos(target.heading) * (target.def.length * 0.5 + 5)), y = target.y + Math.sin(target.heading) * (target.def.length * 0.5 + 5);
+  game.fx.burst(x, y, 16, { color: ['#e1f5fe', '#81d4fa', '#ffffff'], speed: 3.5, vz: 6, g: 10, life: 0.8, size: 0.18 });
+  game.fx.ripple?.(x, y, 1.6);
+  game.audio?.sfx('cannon', { x, y });
+  game.log(`The ${s.name} fires a shot across your bow — then sheers off. Not worth their powder, a boat like yours… yet.`, '#ffab91');
 }
 
 /** Sail on past (round the coasts, clear of other ships) — or fight. */
@@ -180,23 +255,29 @@ function trafficAI(s, dt, game) {
     game.log(`The ${s.name}'s rigging is in tatters — she's dead in the water. Come alongside and board her!`, '#ffe082');
   }
   if (tr.crippled) {
-    s.sail = 0; s.rowing = 0; s.anchored = true;
-    const target = p.mode === 'sail' && p.ship && !p.ship.sunk ? p.ship : null;
+    s.sail = 0; s.rowing = 0; s.anchored = true; s.speedCap = 0;
+    const target = playerShip(p);
     if (target && hostile(s, game) && (s.def.cannons || 0) > 0 && s.cannonCd <= 0 && w.distance(s.x, s.y, target.x, target.y) < 17) s.fireBroadside(game, target.x, target.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
     return;
   }
-  const target = p.mode === 'sail' && p.ship && !p.ship.sunk ? p.ship : null;
+  const target = playerShip(p);
   const d = w.distance(s.x, s.y, p.x, p.y);
   let want;
-  if (target && d < 55 && hostile(s, game) && (s.def.cannons || 0) > 0) {
-    // bring a broadside to bear at a cannon's range
-    s.sail = 1;
-    const toT = Math.atan2(target.y - s.y, w.dx(s.x, target.x));
-    want = d > 13 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
-    const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
-    if (d < 17 && side < 0.6 && s.cannonCd <= 0) s.fireBroadside(game, target.x, target.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
+  const fighting = target && d < 55 && hostile(s, game) && (s.def.cannons || 0) > 0;
+  if (s.heaveTo && !fighting && hostile(s, game) && d < 30) {
+    // hove to alongside, she waits for you (swimming over to board her, say)
+    s.sail = 0; s.speedCap = 0; s.anchored = true;
+    return;
+  }
+  if (fighting) {
+    // give chase, run abreast with her broadside on you, or heave to alongside once you've stopped
+    want = engage(s, game, target);
+    fireOn(game, s, target, d);
     if (!tr.warned) { tr.warned = true; game.log(tr.kind === 'marine' ? `The ${s.name} runs up its colours — Marines, closing on you!` : `The ${s.name} is coming about to attack!`, tr.kind === 'marine' ? '#64b5f6' : '#ff8a80'); }
   } else {
+    s.speedCap = null; s.heaveTo = false;
+    // (a pirate who lets a newcomer be may still let them know she's there)
+    if (tr.kind === 'pirate' && !tr.warnShot && target && d < 24 && (s.def.cannons || 0) > 0) { tr.warnShot = true; warningShot(game, s, target); }
     s.sail = tr.running ? 1 : tr.kind === 'fishing' ? 0.45 : tr.kind === 'merchant' ? 0.7 : 0.8;
     // a merchant that's been shot at runs for it
     if (tr.running && d < 60) want = Math.atan2(s.y - p.y, w.dx(p.x, s.x));
@@ -230,11 +311,11 @@ function trafficAI(s, dt, game) {
       tr.stuck = 0;
     }
   }
-  if (tr.escape) { if (now > tr.escape.until) tr.escape = null; else if (!(target && d < 55 && hostile(s, game))) want = tr.escape.a; }
-  // round the coast: look ahead, and turn toward the open side
+  if (tr.escape) { if (now > tr.escape.until) tr.escape = null; else if (!fighting) want = tr.escape.a; }
+  // round the coast: look ahead, and turn toward the open side (lying hove to, she just lies there)
   const L = s.def.length;
   const open = (ang, dist) => { const x = w.wx(s.x + Math.cos(ang) * dist), y = s.y + Math.sin(ang) * dist; return w.sailable(x, y) && w.sd(x, y) < -2.5; };
-  if (!open(want, L + 14) || !open(s.heading, L + 10)) {
+  if (!s.heaveTo && (!open(want, L + 14) || !open(s.heading, L + 10))) {
     for (const off of [0.45, -0.45, 0.9, -0.9, 1.4, -1.4, 2.1, -2.1, 3]) {
       if (open(s.heading + off, L + 14) && open(s.heading + off, L + 6)) { want = s.heading + off; break; }
     }
@@ -282,11 +363,13 @@ function spawnCrew(game, s) {
     game.addActor(a);
     // the helmsman aft, the rest at their stations (clear of the deck's cargo)
     const st = SMALL_STATIONS[(i - 1) % SMALL_STATIONS.length];
-    let t = i === 0 ? Math.min(0.46, (d.helmX + d.L / 2) / d.L + 0.08) : st[0];
+    let t = i === 0 ? helmSpot(s).t : st[0];
     let v = i === 0 ? 0 : st[1] * s.def.beam;
     if (d.big) ({ t, v } = i === 0 ? helmSpot(s) : freeDeckSpot(s, 0.34 + (i / Math.max(1, n)) * 0.46, ((i % 2) ? 1 : -1) * s.def.beam * (0.12 + (i % 3) * 0.08)));
     placeOnDeck(game, a, s, t, v);
     a.facing = s.heading + (i === 0 ? 0 : (i % 2 ? 1 : -1) * 1.2);
+    // (a rowboat's hand sits at her oars and rows her)
+    if (i === 0 && s.def.oarsOnly) s.rower = a;
     if (a.controller) a.controller.home = null;
     tr.crew.push(a);
   }
@@ -355,19 +438,18 @@ function welcomeAboard(game, s) {
   game.log(`The crew of the ${s.name} salute as you come aboard.`, '#90caf9');
 }
 
-/** Swimming against a hull and jumping: you haul yourself up her side and onto the deck. */
+/**
+ * Swimming (or wading) against a hull and jumping: you haul yourself up her
+ * side and over the rail onto the deck there — any ship, however tall.
+ */
 function climbAboard(game, T, p, k) {
-  if (!p.inWater || p.under || (p.fruit && !p.gills)) return false;
-  const dk = game.deckAt(p.x, p.y, -1.3);
-  const s = dk?.ship;
+  if (!(p.inWater || p.wading) || p.under || p.climb || (p.fruit && !p.gills)) return false;
+  const hk = game.hullAt(p.x, p.y, 1.1);
+  const s = hk?.ship;
   if (!s || s.sunk || s.alive === false) return false;
-  const n = nearestDeck(game, p, s);
-  const splash = { x: p.x, y: p.y };
-  p.leaveWater?.(game, true);
-  placeOnDeck(game, p, s, n ? n.t : 0.5, n ? n.v * 0.6 : 0);
-  game.fx.ripple?.(splash.x, splash.y, 1 + k * 0.5);
-  game.fx.burst(splash.x, splash.y, 12, { color: ['#e1f5fe', '#b3e5fc', '#ffffff'], speed: 2.2, z: 0.1, vz: 4, g: 11, life: 0.6, size: 0.1 });
-  game.audio?.sfx('splash_out');
+  const spot = boardingSpot(game, s, p.x, p.y);
+  game.fx.ripple?.(p.x, p.y, 1 + k * 0.5);
+  p.startClimb(game, { ship: s, t: spot.t, v: spot.v });
   game.log(s.owner === 'player' ? `You climb back aboard the ${s.name}.` : `You haul yourself up the side of the ${s.name} and over the rail!`, s.owner === 'player' ? '#b0bec5' : '#ffe082');
   return true;
 }
@@ -426,7 +508,7 @@ function footInteraction(game, T, p) {
   if (s) {
     if (s.owner === 'player') {
       const d = deckDist(game, p, s, helmSpot(s));
-      if (d < 1.4) return { d, label: `Take the helm of the ${s.name}`, run: () => { p.deck.ship.aboard?.delete(p); p.deck = null; board(game, p, s); } };
+      if (d < (s.def.oarsOnly ? 0.9 : 1.4)) return { d, label: s.def.oarsOnly ? `Take the oars of the ${s.name}` : `Take the helm of the ${s.name}`, run: () => { p.deck.ship.aboard?.delete(p); p.deck = null; board(game, p, s); } };
       return null;
     }
     const tr = s.traffic;
@@ -434,7 +516,7 @@ function footInteraction(game, T, p) {
     const dh = deckDist(game, p, s, hatchSpot(s));
     if (!tr.plundered && dh < 1.3) return { d: dh, label: `Plunder the hold of the ${s.name}`, run: () => plunder(game, s) };
     const d = deckDist(game, p, s, helmSpot(s));
-    if (d < 1.4) return { d, label: `Take the helm — steal the ${s.name}`, run: () => claim(game, T, s) };
+    if (d < (s.def.oarsOnly ? 0.9 : 1.4)) return { d, label: `${s.def.oarsOnly ? 'Take the oars' : 'Take the helm'} — steal the ${s.name}`, run: () => claim(game, T, s) };
     return null;
   }
   // (in the water beside a hull there's no prompt: jump against her side to climb aboard)

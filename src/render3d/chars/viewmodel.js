@@ -16,8 +16,9 @@ import { CharacterModel } from './model.js';
 import { B } from './bones.js';
 import { bodyMaterial, outlineMaterial, glowMaterial, charGradient } from './mats.js';
 import { Glow } from './fx.js';
-import { actorPose, rigOptions, currentLook, weaponOf } from './pose.js';
+import { actorPose, rigOptions, currentLook, weaponOf, stationSpot, stationReach } from './pose.js';
 import { FRUITS } from '../../data/fruits.js';
+import { shipDims, shipBob, pitchRise } from '../../world/hull.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const xy = (h, fb) => (!h ? fb : Array.isArray(h) ? h : [Math.cos(h.a) * h.r, Math.sin(h.a) * h.r]);
@@ -25,6 +26,7 @@ const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
 const HIDE = [B.hips, B.chest, B.head, B.sheath, B.hilts, B.tail];
 const LEGS = [B.thighR, B.shinR, B.footR, B.thighL, B.shinL, B.footL];
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3();
+const _q = new THREE.Quaternion(), _up = new THREE.Vector3(0, 1, 0), _one = new THREE.Vector3(1, 1, 1), _mA = new THREE.Matrix4(), _mB = new THREE.Matrix4();
 
 export function createViewmodel(ctx) { return new Viewmodel(ctx); }
 
@@ -93,6 +95,8 @@ class Viewmodel {
     const { pose, P } = actorPose(p, env, look);
     const o = rigOptions(p, pose, P, this.o);
     o.wpn = wpn;
+    if (pose.station && pose.station.kind === 'row' && !pose.anim) { this.rowing(p, pose.station, P, o, m, env); return; }
+    o.sitK = 0; o.reachL = null;
     o.walkRel = null;
     o.lookYaw = 0;
     o.twistK = 0.8;
@@ -194,6 +198,39 @@ class Viewmodel {
     fx.uFlash.value = p.flashT > 0 ? Math.min(0.5, p.flashT / 0.12 * 0.6) : 0;
     if (pose.legFx) { fx.uLegFxCol.value.set(pose.legFx); fx.uLegFx.value.set(1, 1); } else fx.uLegFx.value.set(0, 0);
     this.effects(p, pose, A, env);
+  }
+
+  /**
+   * At a rowboat's oars: your arms on the grips, pushing them out through the
+   * drive and drawing them back on the recovery. The arms sit in the boat
+   * (on the thwart, facing her bow), not in front of the view: look round and
+   * they stay on the oars where they are; look down and you see them row.
+   */
+  rowing(p, st, P, o, m, env) {
+    const s = st.ship, spot = stationSpot(st), row = shipDims(s.def).row;
+    o.sitK = 1; o.sitY = row.seatH; o.lift = 0; o.roll = 0; o.squash = 1; o.lookYaw = 0; o.walkRel = null; o.leanAdd = 0; o.twistK = 0.8;
+    const R = this._grips || (this._grips = [new THREE.Vector3(), new THREE.Vector3()]);
+    stationReach(st, spot, m.d, 1, 0, P.l || 0, row.seatH + 0.07, R);
+    o.reachR = R[0]; o.reachL = R[1];
+    m.pose(P, o);
+    this.fixup();
+    for (const i of LEGS) m.showBone(i, false);
+    this.lastT = env.time;
+    // the body's frame in the boat (the floor under the thwart, facing the
+    // bow), seen from the camera (the view's origin is the ship's middle)
+    const cam = this.ctx.camera, h = s.heading, w = this.ctx.world;
+    const dx = w ? w.dx(p.x, s.x) : s.x - p.x, dy = s.y - p.y;
+    _v.set(dx + Math.cos(h) * spot.u, shipBob(s, env.time) + spot.floor + pitchRise(s, spot.u), dy + Math.sin(h) * spot.u);
+    _q.setFromAxisAngle(_up, -h);
+    _mA.compose(_v, _q, _one);
+    _mB.copy(cam.matrixWorld).invert().multiply(_mA);
+    _mB.decompose(this.body.position, this.body.quaternion, this.body.scale);
+    this.body.updateMatrix();
+    const fx = m.fx;
+    fx.uHaki.value.set(p.armament ? 1 : 0, p.armament ? 1 : 0, 0, 0);
+    fx.uFlash.value = p.flashT > 0 ? Math.min(0.5, p.flashT / 0.12 * 0.6) : 0;
+    fx.uLegFx.value.set(0, 0);
+    for (const g of this.glows) g.sprite.visible = false;
   }
 
   /** The Gum-Gum fist projectile in flight, in body space. */

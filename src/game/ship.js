@@ -7,10 +7,16 @@ import { drawCharacter } from '../render/character.js';
 import { SAILABLE } from '../world/tiles.js';
 import { angleDiff, clamp, TAU } from '../core/math.js';
 import { drawProjectile } from '../render/projectiles.js';
-import { hbAt, hullGap, BIG_SHIP } from '../world/hull.js';
+import { hbAt, hullGap, BIG_SHIP, oarStroke, oarDrive } from '../world/hull.js';
 
 // where the hull meets the water, as fractions of the length and beam (the small ships)
 const SMALL_HULL = [[0.47, 0], [-0.46, 0], [0.2, 0.42], [0.2, -0.42], [-0.25, 0.42], [-0.25, -0.42]];
+
+// a rowboat's oars: seconds a stroke, held ready (blades just clear of the
+// water), and at rest (trailing aft alongside, nobody at them)
+const STROKE_T = 1.15;
+const OAR_READY = { a: 0.15, b: 0.22, f: 1 };
+const OAR_REST = { a: -1.15, b: 0.12, f: 1 };
 
 /**
  * Sailing speed multiplier: the seas are wide (islands kilometres apart, see
@@ -44,6 +50,11 @@ export class Ship extends Entity {
     this.sinkT = 0;
     this.seed = Math.random() * 10;
     this.rowing = 0;
+    // a rowboat's oars: which way each is pulling (1 ahead, -1 backing, 0 held),
+    // where the stroke is, and how each lies now (see updateOars)
+    this.rowL = 0; this.rowR = 0; this.rowPh = 0; this.drive = 0;
+    this.oars = this.def.oarsOnly ? [{ ...OAR_REST }, { ...OAR_REST }] : null;
+    this.speedCap = null; // (a pursuer holding back to your pace: see traffic.js)
     this.burstCd = 0;
     this.ai = o.ai || null;
     this.cannonsOverride = o.cannons;
@@ -106,14 +117,29 @@ export class Ship extends Entity {
     const env = game.env;
     const calm = game.isCalmAt(this.x, this.y);
     const windA = env.windAngle, windS = calm ? 0 : env.windStrength;
-    this.sailSet += (this.sail - this.sailSet) * Math.min(1, dt * 1.5);
-    const rel = Math.cos(angleDiff(this.heading, windA));
-    const windFactor = (0.35 + 0.65 * clamp((rel + 0.4) / 1.4, 0, 1)) * windS;
-    // (the seas were widened with the world, so sails carry a little further)
-    let target = this.def.speed * SEA_PACE * this.sailSet * windFactor * (this.owner === 'player' ? game.crewMods?.speedMul || 1 : 1);
-    // rowing / paddles work without wind
-    const rowSpeed = this.def.paddle ? 0.6 : this.def.oars || this.type === 'dinghy' ? 0.42 : 0.12;
-    if (this.rowing) target = Math.max(target, this.def.speed * rowSpeed * this.rowing);
+    const oared = this.def.oarsOnly;
+    let target;
+    if (oared) {
+      // a rowboat has no sail: the oars drive her, wind or no wind (someone
+      // sailing her by the AI's "sail" rows at that pace)
+      this.sail = this.captain ? 0 : this.sail;
+      this.sailSet = 0;
+      if (!this.captain) { const k = this.sail > 0.05 && this.ai ? 1 : 0; this.rowL = k; this.rowR = k; }
+      this.updateOars(dt);
+      const pull = this.captain ? (this.rowL + this.rowR) / 2 : (this.rowL ? this.sail : 0);
+      // (each stroke surges her on and she slows between; backing water is slower)
+      target = this.def.speed * pull * (pull < 0 ? 0.55 : 1) * (0.78 + 0.44 * this.drive);
+    } else {
+      this.sailSet += (this.sail - this.sailSet) * Math.min(1, dt * 1.5);
+      const rel = Math.cos(angleDiff(this.heading, windA));
+      const windFactor = (0.35 + 0.65 * clamp((rel + 0.4) / 1.4, 0, 1)) * windS;
+      // (the seas were widened with the world, so sails carry a little further)
+      target = this.def.speed * SEA_PACE * this.sailSet * windFactor * (this.owner === 'player' ? game.crewMods?.speedMul || 1 : 1);
+      // rowing / paddles work without wind
+      const rowSpeed = this.def.paddle ? 0.6 : this.def.oars ? 0.42 : 0.12;
+      if (this.rowing) target = Math.max(target, this.def.speed * rowSpeed * this.rowing);
+    }
+    if (this.speedCap != null && target > this.speedCap) target = this.speedCap;
     if (this.coupT > 0) { this.coupT -= dt; target = this.def.speed * 5; }
     // storms slow you and batter the hull
     if (env.storm > 0.3 && !game.isCalmAt(this.x, this.y)) {
@@ -123,7 +149,8 @@ export class Ship extends Entity {
     const cur = game.currentAt(this.x, this.y, this);
     // riding Reverse Mountain the current does the sailing: the sails can only help a little
     if (cur.canal) target *= 0.35;
-    this.speed += (target - this.speed) * Math.min(1, dt * (target > this.speed ? 0.7 : 1.2));
+    // (a light boat under oars answers each stroke; a ship under sail gathers way slowly)
+    this.speed += (target - this.speed) * Math.min(1, dt * (oared ? 1.6 : target > this.speed ? 0.7 : 1.2));
     // the water's height under the keel (up the mountain's canals) and the slope she's riding
     this.lvl = cur.level;
     const along = cur.canal ? Math.cos(angleDiff(this.heading, Math.atan2(cur.y, cur.x))) : 0;
@@ -161,8 +188,9 @@ export class Ship extends Entity {
     // current, a collision at speed) ease apart instead of sticking
     if (game.ships.length > 1) this.separate(game, dt);
     // (the wake is drawn on the water by the 3D view: see render3d/ships3d.js WakeTrail)
-    // carry the crew
+    // carry the crew (and whoever's at the helm, so the view rides with her exactly)
     for (const p of this.passengers) { p.x = this.x; p.y = this.y + 0.01; }
+    if (this.captain) { this.captain.x = this.x; this.captain.y = this.y; }
     // and everyone standing on the deck, turning with the ship
     if (this.aboard && this.aboard.size) {
       const dh = this.heading - h0, c = Math.cos(dh), sn = Math.sin(dh);
@@ -176,9 +204,26 @@ export class Ship extends Entity {
   }
 
   /**
-   * Find the nearest clear water (a big ship searches further, and swings
-   * round to lie along the coast if she must; `far`: a fresh berth, not a nudge).
+   * A rowboat's oars, stroke by stroke: the blades dip in at the catch, sweep
+   * aft through the drive, lift out and swing forward again feathered flat.
+   * An oar that isn't pulling is held ready, blade clear of the water; with
+   * nobody at them they trail alongside. The rower's hands keep hold of the
+   * grips (see render3d/chars/pose.js stationReach).
    */
+  updateOars(dt) {
+    const stroking = this.rowL || this.rowR;
+    // (a fresh start begins at the catch)
+    this.rowPh = stroking ? (this.rowPh + dt / STROKE_T) % 1 : 0;
+    const manned = !!this.captain || !!(this.rower && this.rower.alive && this.rower.deck?.ship === this && this.rower.state === 'idle');
+    for (let i = 0; i < 2; i++) {
+      const pull = i ? this.rowR : this.rowL, o = this.oars[i];
+      const want = pull ? oarStroke(this.rowPh, pull) : manned ? OAR_READY : OAR_REST;
+      const k = Math.min(1, dt * (pull ? 14 : 4));
+      o.a += (want.a - o.a) * k; o.b += (want.b - o.b) * k; o.f += (want.f - o.f) * k;
+    }
+    this.drive = stroking ? oarDrive(this.rowPh) : 0;
+  }
+
   /** Another ship's hull where this one's would be at (x, y, h), if any. */
   shipIn(game, x, y, h) {
     const w = game.world;
@@ -221,7 +266,13 @@ export class Ship extends Entity {
     }
   }
 
+  /**
+   * Find the nearest clear water (a big ship searches further, and swings
+   * round to lie along the coast if she must; `far`: a fresh berth, not a nudge).
+   */
   unstick(w, far = false) {
+    // (already clear where she lies — a boat just moored alongside a pier: leave her be)
+    if (!far && this.fits(w, this.x, this.y, this.heading) && !(this.game && this.shipIn(this.game, this.x, this.y, this.heading))) return true;
     const big = this.def.length >= BIG_SHIP;
     const R = big ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big ? 1.5 : 0.5;
     const hs = big ? [this.heading, this.heading + Math.PI / 2, this.heading - Math.PI / 2, this.heading + Math.PI] : [this.heading];
@@ -241,7 +292,7 @@ export class Ship extends Entity {
   /** A big ship moors alongside a pier head, bow out to sea (as near as she'll fit). */
   berth(w, dock) {
     const L = this.def.length, B = this.def.beam;
-    const dx = dock.dirX || 0, dy = dock.dirY || 1, hd = Math.atan2(dy, dx);
+    const dx = dock.dirX ?? 0, dy = dock.dirY ?? 1, hd = Math.atan2(dy, dx);
     const end = dock.end || dock;
     for (let k = 0; k < 10; k++) {
       for (const sg of [1, -1]) {
@@ -254,10 +305,32 @@ export class Ship extends Entity {
     return false;
   }
 
+  /**
+   * A small ship ties up alongside a pier head, bow out to sea, her side a
+   * short step from its edge (so you can step or jump down onto her deck).
+   */
+  moorAlongside(w, dock) {
+    const L = this.def.length, B = this.def.beam;
+    const dx = dock.dirX ?? 0, dy = dock.dirY ?? 1, hd = Math.atan2(dy, dx);
+    const end = dock.end || dock, edge = (dock.headHalf ?? 1) + 0.5;
+    for (const gap of [0.3, 0.6, 1]) {
+      for (let k = 0; k < 6; k++) {
+        for (const sg of [1, -1]) {
+          const along = 0.3 - L / 2 - k * 1.2, off = sg * (edge + gap + B / 2);
+          const x = w.wx(end.x + 0.5 + dx * along - dy * off), y = end.y + 0.5 + dy * along + dx * off;
+          if (this.fits(w, x, y, hd) && !(this.game && this.shipIn(this.game, x, y, hd))) { this.x = x; this.y = y; this.heading = hd; return true; }
+        }
+      }
+    }
+    return false;
+  }
+
   damage(n, attacker, info = {}) {
     if (this.sunk || n <= 0) return;
     this.hull -= n;
     this.lastHitBy = attacker;
+    // (fire on a ship and she'll fire back, newcomer or not)
+    if (attacker && this.owner !== 'player' && (attacker.isPlayer || attacker.ownerShip?.owner === 'player')) this.provoked = true;
     if (this.game) {
       this.game.fx.text(this.x, this.y - 1, String(Math.round(n)), '#ffcc80', 0.45);
       this.game.fx.burst(this.x, this.y - 0.5, 8, { color: ['#8d6e63', '#bcaaa4', '#ffab40'], speed: 4, g: 7, life: 0.5 });

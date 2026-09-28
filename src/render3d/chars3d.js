@@ -9,7 +9,7 @@
 // Sea Kings get their own serpent model.
 import * as THREE from 'three';
 import { angleDiff } from '../core/math.js';
-import { registerActorView, registerViewmodel } from './registry.js';
+import { registerActorView, registerViewmodel, registerFrameHook } from './registry.js';
 import { Actor } from '../game/actor.js';
 import { CharacterModel } from './chars/model.js';
 import { expression } from './chars/face.js';
@@ -19,7 +19,8 @@ import { SeaKingView } from './chars/seaking.js';
 import { SeaCowView, FightingFishView } from './chars/seacreature.js';
 import { Trail } from './chars/trail.js';
 import { createViewmodel } from './chars/viewmodel.js';
-import { currentLook, weaponOf, actorPose, rigOptions, LYING } from './chars/pose.js';
+import { currentLook, weaponOf, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
+import { shipBob, pitchRise } from '../world/hull.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -72,10 +73,31 @@ class ActorView {
 
   update(a, env, ctx, { camYaw3, redraw }) {
     const m = this.model;
-    // at the helm the camera rides the ship; the body isn't drawn on the water below it
-    this.root.visible = !(a.isPlayer && a.mode === 'sail');
+    // at the helm (or the oars) you're drawn where the work is — standing to
+    // the wheel, or rowing — riding with your ship
+    const helm = a.isPlayer && a.mode === 'sail' && a.ship && !a.ship.sunk ? a.station() : null;
+    this.root.visible = !(a.isPlayer && a.mode === 'sail' && !helm);
+    if (helm) this.placeAtStation(a, helm, env, ctx);
+    // in the water the body settles to a new height over a moment — treading
+    // water or swimming along, afloat or wading on the bottom — not in a jump
+    const wet = !helm && (a.inWater || a.wading > 0);
+    const dty = Math.min(0.1, Math.max(0, env.time - (this.yT ?? env.time)));
+    this.yT = env.time;
+    if (wet) {
+      const y = this.root.position.y;
+      if (!this.wetY || Math.abs(y - this.smY) > 1.2) this.smY = y;
+      else this.smY += (y - this.smY) * Math.min(1, dty * 9);
+      this.root.position.y = this.smY;
+    }
+    this.wetY = wet;
     const cam = ctx.camera;
     const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
+    // (the third-person camera pressed right up behind your head — your back
+    // to a cabin wall on deck, say: you're not drawn over the view)
+    if (a.isPlayer && !helm && cam && ctx.mode === 'third' && dist < 3) {
+      const r = this.root.position;
+      if (cam.position.distanceTo(_v.set(r.x, r.y + 1.55 * (this.look.scale || 1), r.z)) < 0.45) this.root.visible = false;
+    }
     this.frame++;
     // far characters animate at a lower rate (their position still updates every frame)
     const every = dist < 22 ? 1 : dist < 45 ? 2 : 3;
@@ -94,9 +116,15 @@ class ActorView {
       if (o.seatH !== null) this.sitH = o.seatH;
       o.sitK = this.sitK > 0.01 ? this.sitK : 0;
       o.sitY = (this.sitH || 0) / s;
-      // rubber punch in flight: the arm stretches out to the fist
-      o.reachR = null;
-      if (a.fruit === 'gomu') o.reachR = this.stretchTarget(a, ctx, s);
+      // the hands on the oar grips (or the wheel's rim) — or a rubber punch in
+      // flight: the arm stretches out to the fist
+      o.reachR = null; o.reachL = null;
+      if (pose.station) {
+        const st = pose.station, R = this._grips || (this._grips = [new THREE.Vector3(), new THREE.Vector3()]);
+        const hipY = m.d.hip0 + ((o.sitY ?? m.d.hA) + 0.07 - m.d.hip0) * o.sitK;
+        stationReach(st, stationSpot(st), m.d, s, (this.visF ?? a.facing) - st.ship.heading, P.l || 0, hipY, R);
+        o.reachR = R[0]; o.reachL = R[1];
+      } else if (a.fruit === 'gomu') o.reachR = this.stretchTarget(a, ctx, s);
       const knocked = pose.state === 'knocked' || pose.state === 'dead';
       let PP = P;
       if (knocked) {
@@ -128,6 +156,14 @@ class ActorView {
     if (lod !== m.lod) m.setLod(lod);
     // (far off, the ink pass's outlines are enough, when it's on)
     m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
+  }
+
+  /** At the helm or the oars of your ship: stand (or sit) where the work is, riding up and down with her. */
+  placeAtStation(a, st, env, ctx) {
+    const s = st.ship, spot = stationSpot(st), w = ctx.world, h = s.heading;
+    // (the ship's middle relative to you: nothing, at her helm)
+    const dx = w ? w.dx(a.x, s.x) : s.x - a.x, dy = s.y - a.y;
+    this.root.position.set(dx + Math.cos(h) * spot.u, shipBob(s, env.time) + spot.floor + pitchRise(s, spot.u), dy + Math.sin(h) * spot.u);
   }
 
   /** Head yaw toward the camera for nearby idle NPCs. */
@@ -317,5 +353,22 @@ registerActorView((a, ctx, opts) => {
   }
 });
 registerViewmodel((ctx) => createViewmodel(ctx));
+
+// First person at a rowboat's oars: your own arms on the grips, rowing (the
+// everyday first-person arms are put away at sea; these sit in the boat)
+let rowArms = null;
+registerFrameHook((env, ctx) => {
+  const p = ctx.game?.player;
+  const rowing = !!p && ctx.mode === 'first' && p.mode === 'sail' && !!p.ship?.def.oarsOnly && !p.ship.sunk && p.state !== 'knocked';
+  if (!rowing) { if (rowArms) rowArms.root.visible = false; return; }
+  if (!rowArms) {
+    rowArms = createViewmodel(ctx);
+    const cam = ctx.camera;
+    if (!cam.parent) ctx.scene.add(cam);
+    cam.add(rowArms.root);
+  }
+  rowArms.root.visible = true;
+  rowArms.update(p, env, ctx);
+}, 'rowing arms');
 
 export { ActorView };

@@ -210,12 +210,25 @@ export class PlayerController {
     // touch stick: left/right steers, up raises the sails, down lowers them
     const tc = inp.touch?.on ? inp.touch : null;
     if (tc && !turn && Math.abs(tc.mx) > 0.2) turn = clamp(tc.mx * 1.3, -1, 1);
-    const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp(Math.abs(s.speed) / 3, 0, 1));
-    s.heading += turn * steer * dt;
-    if (inp.isDown('W') || inp.isDown('ArrowUp') || (tc && tc.my < -0.45)) { s.sail = Math.min(1, s.sail + dt * 0.9); s.anchored = false; }
-    if (inp.isDown('S') || inp.isDown('ArrowDown') || (tc && tc.my > 0.45)) s.sail = Math.max(0, s.sail - dt * 1.2);
-    s.rowing = inp.isDown('Space') ? 1 : 0;
-    if (s.rowing) s.anchored = false;
+    const ahead = inp.isDown('W') || inp.isDown('ArrowUp') || (tc && tc.my < -0.45) || (s.def.oarsOnly && inp.isDown('Space'));
+    const back = inp.isDown('S') || inp.isDown('ArrowDown') || (tc && tc.my > 0.45);
+    if (s.def.oarsOnly) {
+      // at the oars: W pulls ahead, S backs water, A/D pull one oar to swing
+      // her round (with both going, the pull on the outside oar turns her)
+      const fwd = (ahead ? 1 : 0) - (back ? 1 : 0);
+      s.rowL = fwd || (turn > 0.2 ? 1 : 0);
+      s.rowR = fwd || (turn < -0.2 ? 1 : 0);
+      if (s.rowL || s.rowR) s.anchored = false;
+      s.heading += turn * s.def.turn * (game.crewMods?.turnMul || 1) * (fwd ? 0.45 : 0.6) * (0.55 + 0.45 * s.drive) * dt;
+      s.sail = 0; s.rowing = 0;
+    } else {
+      const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp(Math.abs(s.speed) / 3, 0, 1));
+      s.heading += turn * steer * dt;
+      if (ahead) { s.sail = Math.min(1, s.sail + dt * 0.9); s.anchored = false; }
+      if (back) s.sail = Math.max(0, s.sail - dt * 1.2);
+      s.rowing = inp.isDown('Space') ? 1 : 0;
+      if (s.rowing) s.anchored = false;
+    }
     let [wx, wy] = game.renderer.toWorld(game.world, inp.mouse.x, inp.mouse.y);
     if (tc && !game.view3d?.active) [wx, wy] = this.touchShipAim(s, game);
     this.mouseWorld = { x: wx, y: wy };

@@ -24,10 +24,12 @@ export function installSession(game, { onReturnToTitle }) {
     type = ALIAS[type] || type;
     const s = game.addShip({ type, x, y, heading: extra.heading ?? Math.PI / 2, owner: 'player', faction: 'player', name: name || undefined, jr: game.state?.char?.jr, upgrades: extra.upgrades || [], hull: extra.hull, coated: extra.coated });
     s.uid = extra.uid || `s${Date.now().toString(36)}${shipCounter++}`;
+    const dock = extra.heading === undefined ? dockNear(game.world, x, y) : null;
     if (s.def.big && extra.heading === undefined) {
       // a big ship lies alongside the pier head, bow out to sea (or out in the roads if she won't fit)
-      const dock = dockNear(game.world, x, y);
       if (!(dock && s.berth(game.world, dock)) && !s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
+    } else if (dock && s.moorAlongside(game.world, dock)) {
+      // (a small one ties up right alongside it: step down off the pier onto her deck)
     } else if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, !!s.def.big);
     return s;
   };
