@@ -63534,7 +63534,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
 
   // src/render3d/chars/mats.js
-  var BODY_KEY = "op-char-body-3";
+  var BODY_KEY = "op-char-body-4";
   var INK2 = 2364943;
   var GRAD = null;
   function charGradient() {
@@ -63555,19 +63555,23 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       uHakiCol: { value: new Color(1512733) },
       uLegFx: { value: new Vector2() },
       uLegFxCol: { value: new Color(1, 0.36, 0) },
-      uFreeze: { value: 0 }
+      uFreeze: { value: 0 },
+      // your own body seen from your eyes (first person): nothing above the neck, and no arms while the view's own are up
+      uClipY: { value: 1e6 },
+      uHideArms: { value: 0 }
     };
     const m = new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), fog: opts.fog ?? true });
     m.userData.u = u;
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, FOG, u);
-      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute float aPart;\nvarying float vPart;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvPart = aPart;");
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute float aPart;\nvarying float vPart;\nvarying float vObjY;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvPart = aPart;").replace("#include <skinning_vertex>", "#include <skinning_vertex>\nvObjY = transformed.y;");
       sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
-varying float vPart;
+varying float vPart; varying float vObjY;
 uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec3 uHakiCol;
-uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze;`).replace("#include <color_fragment>", `#include <color_fragment>
+uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms;`).replace("#include <color_fragment>", `#include <color_fragment>
 float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);
 float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart);
+if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5) discard;
 float hakiK = pR * uHaki.x + pL * uHaki.y + lR * uHaki.z + lL * uHaki.w;
 float legK = lR * uLegFx.x + lL * uLegFx.y;
 diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);
@@ -67327,8 +67331,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.effects(a, pose, P4, o, env, ctx, camYaw3, dist, s);
         this.lastT = env.time;
       }
+      const fp = a.isPlayer && ctx.mode === "first";
       if (a.isPlayer) {
-        const held = holdItem(m, a.held && !a.inWater && !helm && !a.action ? a.held : null);
+        const held = holdItem(m, a.held && !a.inWater && !helm && !a.action && !fp ? a.held : null);
         if (held) {
           const e = a.eating && a.eating.id === a.held ? a.eating : null;
           heldSize(m, e ? 1 - 0.55 * Math.min(1, e.t / e.dur) : 1);
@@ -67338,6 +67343,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const lod = a.isPlayer ? 0 : lodFor(dist, m.lod);
       if (lod !== m.lod) m.setLod(lod);
       m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
+      if (a.isPlayer) this.ownBody(fp, a);
+    }
+    /**
+     * First person: your own body under your eyes — look down and there are
+     * your chest, your legs and your feet — but not your head (you're looking
+     * out of it), and not your arms while the view's own arms are up (a guard,
+     * a weapon, the food you're holding, the oars). Its shadow stays whole.
+     */
+    ownBody(fp, a) {
+      const m = this.model, u = m.fx, pose = a._lastPose || {};
+      const busy = !!pose.anim || !!pose.combat || !!pose.armed || pose.block !== void 0 || !!pose.station || !!a.held || !!pose.launch || a.inWater;
+      u.uClipY.value = fp ? m.rig.neck.y + 0.03 : 1e6;
+      u.uHideArms.value = fp && busy ? 1 : 0;
+      m.face.visible = !fp;
+      if (m.bubble) m.bubble.visible = !fp;
+      if (fp) m.outline.visible = false;
+      for (const h2 of m.held) if (h2) h2.group.visible = !fp;
+      m.group.position.x = fp ? -0.12 : 0;
     }
     /** At the helm or the oars of your ship: stand (or sit) where the work is, riding up and down with her. */
     placeAtStation(a, st, env, ctx) {
@@ -68521,7 +68544,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const near = [];
       for (const a of game.actors) {
         if (!a.alive || a.hidden) continue;
-        if (a === p && this.rig.mode === "first") continue;
         if (a.onShip && a !== p) continue;
         const dx = w.dx(ox, a.x), dy = a.y - oy;
         const d2 = dx * dx + dy * dy;

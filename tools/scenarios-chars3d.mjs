@@ -471,6 +471,28 @@ export const scenarios = {
       }
     },
   },
+  // your own body in first person: looking down standing, walking, in a guard; and third person as usual
+  fpbody: {
+    async run(page, snap) {
+      await boot(page);
+      await page.evaluate(() => { const p = window.OP.game.player; window.OP.teleport(p.x + 5, p.y); window.__C3.view(0, -1.15, 'first'); });
+      await settle(page, 6);
+      await snap('down-standing');
+      await page.evaluate(() => window.__C3.view(0, -0.55, 'first'));
+      await settle(page, 3);
+      await snap('down-half');
+      await page.evaluate(() => { window.__C3.view(0, -1.0, 'first'); window.OP.key('W', true); });
+      for (let i = 0; i < 6; i++) { await step(page, 0.06); await frames(page, 1); }
+      await snap('down-walking');
+      await page.evaluate(() => window.OP.key('W', false));
+      await page.evaluate(() => { const g = window.OP.game; g.player.combatT = 5; window.__C3.view(0, -0.9, 'first'); g.player.setBlock(true); });
+      await settle(page, 4);
+      await snap('down-block');
+      await page.evaluate(() => { const g = window.OP.game; g.player.setBlock(false); window.__C3.view(Math.PI * 0.9, 0.05, 'third', 2.6); g.view3d.rig.setShiftLock?.(false); if (g.player.controller) g.player.controller.aimT = 0; g.player.facing = -0.3; });
+      await settle(page, 5);
+      await snap('third');
+    },
+  },
   c3atk: { async run(page, snap) { await boot(page); await attacks(page, snap); } },
   c3vm: { async run(page, snap) { await boot(page); await viewmodel(page, snap); } },
   c3crowd: { async run(page, snap) { await boot(page); await crowd(page, snap); await seaKing(page, snap); } },

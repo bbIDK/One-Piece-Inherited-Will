@@ -32,7 +32,9 @@ The game plays in **first person** by default: the world is 3D (three.js),
 with terrain, sea, sky, towns and ships built from the same map the
 simulation uses. Click the game to capture the mouse and look around (Esc
 frees it). **V** switches between first and third person (the mouse wheel
-sets the third-person distance). Settings has mouse sensitivity, invert-Y,
+sets the third-person distance). In first person your own body is there:
+look down and you see your chest, your legs and your feet walking, and your
+shadow is whole. Settings has mouse sensitivity, invert-Y,
 field of view, view bobbing, a fast graphics mode, a **render distance**
 (in 32 m chunks, like Minecraft's: 4 to 24, 12 by default; at sea you see
 half as far again, and a haze closes in at the edge), and (on by default) a

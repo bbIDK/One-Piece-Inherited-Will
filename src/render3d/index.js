@@ -899,7 +899,7 @@ export class Renderer3D {
     const near = [];
     for (const a of game.actors) {
       if (!a.alive || a.hidden) continue;
-      if (a === p && this.rig.mode === 'first') continue;
+      // (in first person too: your own body is drawn — below the neck — see chars3d ownBody)
       if (a.onShip && a !== p) continue;
       const dx = w.dx(ox, a.x), dy = a.y - oy;
       const d2 = dx * dx + dy * dy;

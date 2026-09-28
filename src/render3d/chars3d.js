@@ -151,9 +151,10 @@ class ActorView {
       this.effects(a, pose, P, o, env, ctx, camYaw3, dist, s);
       this.lastT = env.time;
     }
-    // your food in your hand (going down as you eat it)
+    // your food in your hand (going down as you eat it; in first person, the view's own hand has it)
+    const fp = a.isPlayer && ctx.mode === 'first';
     if (a.isPlayer) {
-      const held = holdItem(m, a.held && !a.inWater && !helm && !a.action ? a.held : null);
+      const held = holdItem(m, a.held && !a.inWater && !helm && !a.action && !fp ? a.held : null);
       if (held) { const e = a.eating && a.eating.id === a.held ? a.eating : null; heldSize(m, e ? 1 - 0.55 * Math.min(1, e.t / e.dur) : 1); }
     }
     this.labels(a, env, dist, s);
@@ -162,6 +163,26 @@ class ActorView {
     if (lod !== m.lod) m.setLod(lod);
     // (far off, the ink pass's outlines are enough, when it's on)
     m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
+    if (a.isPlayer) this.ownBody(fp, a);
+  }
+
+  /**
+   * First person: your own body under your eyes — look down and there are
+   * your chest, your legs and your feet — but not your head (you're looking
+   * out of it), and not your arms while the view's own arms are up (a guard,
+   * a weapon, the food you're holding, the oars). Its shadow stays whole.
+   */
+  ownBody(fp, a) {
+    const m = this.model, u = m.fx, pose = a._lastPose || {};
+    const busy = !!pose.anim || !!pose.combat || !!pose.armed || pose.block !== undefined || !!pose.station || !!a.held || !!pose.launch || a.inWater;
+    u.uClipY.value = fp ? m.rig.neck.y + 0.03 : 1e6;
+    u.uHideArms.value = fp && busy ? 1 : 0;
+    m.face.visible = !fp;
+    if (m.bubble) m.bubble.visible = !fp;
+    if (fp) m.outline.visible = false;
+    for (const h of m.held) if (h) h.group.visible = !fp;
+    // (a step back, so the eye isn't inside the collar)
+    m.group.position.x = fp ? -0.12 : 0;
   }
 
   /** At the helm or the oars of your ship: stand (or sit) where the work is, riding up and down with her. */

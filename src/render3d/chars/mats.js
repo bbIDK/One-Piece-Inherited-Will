@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { FOG } from '../fog.js';
 
-const BODY_KEY = 'op-char-body-3';
+const BODY_KEY = 'op-char-body-4';
 const INK = 0x24160f;
 
 let GRAD = null;
@@ -31,22 +31,26 @@ export function bodyMaterial(opts = {}) {
     uHaki: { value: new THREE.Vector4() }, uHakiCol: { value: new THREE.Color(0x17151d) },
     uLegFx: { value: new THREE.Vector2() }, uLegFxCol: { value: new THREE.Color(1.0, 0.36, 0.0) },
     uFreeze: { value: 0 },
+    // your own body seen from your eyes (first person): nothing above the neck, and no arms while the view's own are up
+    uClipY: { value: 1e6 }, uHideArms: { value: 0 },
   };
   const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), fog: opts.fog ?? true });
   m.userData.u = u;
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, FOG, u);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aPart;\nvarying float vPart;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPart = aPart;');
+      .replace('#include <common>', '#include <common>\nattribute float aPart;\nvarying float vPart;\nvarying float vObjY;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPart = aPart;')
+      .replace('#include <skinning_vertex>', '#include <skinning_vertex>\nvObjY = transformed.y;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-varying float vPart;
+varying float vPart; varying float vObjY;
 uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec3 uHakiCol;
-uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze;`)
+uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms;`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);
 float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart);
+if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5) discard;
 float hakiK = pR * uHaki.x + pL * uHaki.y + lR * uHaki.z + lL * uHaki.w;
 float legK = lR * uLegFx.x + lL * uLegFx.y;
 diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);
