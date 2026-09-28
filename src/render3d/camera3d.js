@@ -13,6 +13,20 @@ import { waterLevel } from './height.js';
 
 const TAU = Math.PI * 2;
 
+// The solid core of a prop the third-person camera won't pass through: its
+// collider (world/objects.js COLLIDE: a tree's trunk, not the crown round it)
+// — or a circle this wide, where the model reaches well past that (a boulder,
+// a statue's plinth) — up to this height: [height, radius?] in metres, times
+// its scale (trees' heights by species). Crowns, bushes and the like it may
+// go into: those fade instead (see Renderer3D.fadeCameraProps).
+const CAM_SOLID = {
+  tree: [5.3], rock: [0.85, 0.75], statue: [4.3, 1], stall: [2.3], tent: [1.7], crystal: [2.3, 0.5], totem: [3.4], haystack: [1, 0.68],
+  pillar: [2.9], well: [2.6], fountain: [2], ruins: [1.8], lighthouse: [11], windmill: [7.5],
+};
+const TREE_H = { pine: 5.8, snowpine: 5.8, jungle: 6.2, palm: 5, bamboo: 4.5, cactus: 2.8, dead: 3.5, deadsnow: 3.5, spooky: 4.7, lollipop: 3.8, candycane: 2.4, coral: 2.3, kelp: 3.1, sakura: 4.2, blossom: 4.2 };
+const CAM_R = 0.3; // m the camera keeps clear of a core (its near plane, and a little)
+const ARM_MIN = 1.1; // m: a prop never pulls the camera in closer to you than this (it fades instead)
+
 export class CameraRig {
   constructor(canvas, game) {
     this.canvas = canvas;
@@ -154,6 +168,66 @@ export class CameraRig {
   forward() { return [Math.cos(this.yaw), Math.sin(this.yaw)]; }
 
   /**
+   * How far out along the arm — from (x0, z0) at height y0, by (ux, uz, uy):
+   * 0..1 — the camera gets before it's within CAM_R of a prop's solid core
+   * (see CAM_SOLID); 1 when nothing's in the way. Each core is an upright
+   * cylinder (or box) on its collider, met exactly rather than stepped along.
+   */
+  propHit(w, ground, x0, z0, y0, ux, uz, uy) {
+    if (!w.colliders?.size) return 1;
+    const a = ux * ux + uz * uz;
+    if (a < 1e-6) return 1;
+    let best = 1;
+    const M = 3; // (the biggest cores reach this far from their cell)
+    for (let gy = Math.floor((Math.min(z0, z0 + uz) - M) / 4); gy <= Math.floor((Math.max(z0, z0 + uz) + M) / 4); gy++) {
+      for (let gx = Math.floor((Math.min(x0, x0 + ux) - M) / 4); gx <= Math.floor((Math.max(x0, x0 + ux) + M) / 4); gx++) {
+        const list = w.colliders.get(w.colKey(gx, gy));
+        if (!list) continue;
+        for (const c of list) {
+          const o = c.o;
+          const S = o && CAM_SOLID[o.kind];
+          if (!S) continue;
+          const qx = w.dx(x0, c.x), qz = c.y - z0;
+          // where the arm goes in and out of it, seen from above
+          let t0, t1;
+          if (c.r !== undefined) {
+            const q2 = qx * qx + qz * qz;
+            let R = Math.max(c.r, (S[1] || 0) * (o.s || 1)) + CAM_R;
+            // (you're within the wider circle: its collider, then; right up
+            // against that where you stand, there's nothing to keep clear of)
+            if (q2 <= R * R) R = c.r + CAM_R;
+            const b = qx * ux + qz * uz, cc = q2 - R * R;
+            if (cc <= 0) continue;
+            const disc = b * b - a * cc;
+            if (disc <= 0) continue;
+            const sq = Math.sqrt(disc);
+            t0 = (b - sq) / a; t1 = (b + sq) / a;
+          } else {
+            // (a box: between its sides in x, and in z)
+            const hx = c.hw + CAM_R, hz = c.hd + CAM_R;
+            if (Math.abs(qx) < hx && Math.abs(qz) < hz) continue;
+            if ((Math.abs(ux) < 1e-9 && Math.abs(qx) >= hx) || (Math.abs(uz) < 1e-9 && Math.abs(qz) >= hz)) continue;
+            const xa = Math.abs(ux) < 1e-9 ? -Infinity : (qx - hx) / ux, xb = Math.abs(ux) < 1e-9 ? Infinity : (qx + hx) / ux;
+            const za = Math.abs(uz) < 1e-9 ? -Infinity : (qz - hz) / uz, zb = Math.abs(uz) < 1e-9 ? Infinity : (qz + hz) / uz;
+            t0 = Math.max(Math.min(xa, xb), Math.min(za, zb));
+            t1 = Math.min(Math.max(xa, xb), Math.max(za, zb));
+          }
+          if (t1 <= 0 || t0 >= best || t0 >= t1) continue;
+          // …and over its height (from a little below its foot)
+          const h = (o.kind === 'tree' && TREE_H[o.sub]) || S[0];
+          const base = ground(o.x, o.y) - 0.3, top = base + 0.3 + h * (o.s || 1) + CAM_R;
+          if (Math.abs(uy) > 1e-6) {
+            const ta = (base - y0) / uy, tb = (top - y0) / uy;
+            t0 = Math.max(t0, Math.min(ta, tb)); t1 = Math.min(t1, Math.max(ta, tb));
+          } else if (y0 < base || y0 > top) continue;
+          if (t0 < t1 && t1 > 0 && t0 < best) best = Math.max(0, t0);
+        }
+      }
+    }
+    return best;
+  }
+
+  /**
    * Place the camera for this frame. `ground(x, y)` gives ground heights in
    * world tile coordinates; `p` is the player actor (at the origin).
    */
@@ -278,6 +352,11 @@ export class CameraRig {
       const w = game.world;
       const room = !sailing && w?.interiorAt?.(p.x, p.y);
       this.tilt = 0;
+      // (the arm's reach eases back out after something pulled it in: not
+      // across a jump to somewhere else, though, or at the helm or indoors)
+      const moved = w && this.armAt ? Math.hypot(w.dx(this.armAt.x, p.x), p.y - this.armAt.y) : 0;
+      if (sailing || room || !w || moved > 3) this.arm = undefined;
+      this.armAt = { x: p.x, y: p.y };
       if (room) {
         // indoors: keep the camera inside the room, under the ceiling
         const r = interiorRect(room);
@@ -327,9 +406,21 @@ export class CameraRig {
         } else this.camLift = 0;
         if (hit) k = Math.max(kMin, hit - 0.3 / len);
         if (own && ships) while (k > kMin && game.shipSolidAt(px + ux * k, pz + uz * k, oy + uy * k, true, own)) k = Math.max(kMin, k - 1 / 16);
+        if (!own) {
+          // on foot, it comes in front of a tree's trunk, a rock, a statue...
+          // in the way too — though never right up to you: that close, the
+          // prop fades instead. It comes in quickly (at once for a wall) and
+          // eases back out once clear.
+          const wall = k;
+          const kp = this.propHit(w, ground, px, pz, oy, ux, uz, uy);
+          if (kp < k) k = Math.max(kp, Math.min(wall, ARM_MIN / len));
+          const a = this.arm ?? k;
+          this.arm = k >= a ? a + (k - a) * Math.min(1, dt * 3) : Math.min(wall, a + (k - a) * Math.min(1, dt * 25));
+          k = this.arm;
+        }
         if (k < 1) {
-          cx = ox + ux * k; cz = oz + uz * k;
-          if (ships) cy = oy + uy * k;
+          // (along the arm, height and all, so you stay where you were in the view)
+          cx = ox + ux * k; cz = oz + uz * k; cy = oy + uy * k;
         }
         // (and looks down a little more, to keep you in view)
         this.tilt = Math.atan2(lift, len) * 0.6;
