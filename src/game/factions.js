@@ -21,6 +21,7 @@ import { ENLIST_REP, repTier } from './reputation.js';
 import { makeEnemy } from './npcs.js';
 import { AIController } from './ai.js';
 import { angleDiff, clamp } from '../core/math.js';
+import { orderShip } from './fleet.js';
 
 // `rep`: the reputation the Navy expects before it trusts you with the rank.
 const spiritReq = (c, what) => (hakiKnown(c) ? what : 'Your spirit has not yet awakened the strength the Navy expects of an officer this senior.');
@@ -250,12 +251,9 @@ function promote(game) {
   game.ui.toast('PROMOTED!', n.name, '#64b5f6');
   game.log(`Promoted to ${n.name}.${n.perk ? ' ' + n.perk : ''}`, '#90caf9');
   const i = rankIndex(n.name);
-  const dock = game.currentIsland?.docks?.[0];
-  const pos = dock ? dock.moor : { x: game.player.x, y: game.player.y + 5 };
-  if (n.name === 'Ensign') game.giveShip('sloop', pos.x, pos.y, 'Marine Cutter');
-  if (n.name === 'Captain') game.giveShip('brigantine', pos.x, pos.y, 'Marine Brig');
-  if (n.name === 'Rear Admiral') game.giveShip('marine_warship', pos.x, pos.y, 'Marine Warship');
-  if (n.name === 'Vice Admiral') game.giveShip('marine_battleship', pos.x, pos.y, 'Marine Battleship');
+  // (the Navy's ship waits in the yards: any harbour's shipwright brings her round, see fleet.js)
+  const SHIP = { Ensign: ['sloop', 'Marine Cutter'], Captain: ['brigantine', 'Marine Brig'], 'Rear Admiral': ['marine_warship', 'Marine Warship'], 'Vice Admiral': ['marine_battleship', 'Marine Battleship'] }[n.name];
+  if (SHIP) orderShip(game, SHIP[0], SHIP[1], 'the Navy');
   if (n.name === 'Commodore') { addItem(game, 'marine_coat', 1); equip(game, 'marine_coat'); }
   if (n.name === 'Captain' || n.name === 'Vice Admiral') addItem(game, 'marine_medal', 1);
   if (i >= rankIndex('Captain')) c.flags.bondolaPass = true;

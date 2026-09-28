@@ -538,7 +538,7 @@ export const scenarios = {
     },
   },
 
-  // ships at sea: traffic with crews on deck, a raid, plundering and stealing a ship, walking your own deck
+  // ships at sea: traffic with crews on deck, a raid, plundering (her helm stays hers: ships are bought, not stolen), walking the deck
   raid: {
     async run(page, snap, args) {
       await page.evaluate(() => localStorage.clear());
@@ -605,7 +605,7 @@ export const scenarios = {
       for (let i = 0; i < 6; i++) await step(page, 0.1);
       const st2 = await page.evaluate(() => { const g = window.OP.game, o = g.traffic.ships[0]; return { cleared: o.traffic.cleared }; });
       console.log('after the fight', JSON.stringify(st2));
-      // walk to the hatch and plunder, then to the helm and steal her
+      // walk to the hatch and plunder, then to the helm (no taking her: new ships come from a shipwright)
       const go = async (what) => page.evaluate((what) => {
         const g = window.OP.game, p = g.player, o = g.traffic.ships[0] || g.ships.find((s) => s.name && s.owner !== 'player' && !s.sunk);
         return what;
@@ -630,19 +630,11 @@ export const scenarios = {
       await page.evaluate(() => { const g = window.OP.game, p = g.player, o = g.traffic.ships[0]; const hs = window.OP.debug.deckSpot(o, 'helm'); p.x = hs.x; p.y = hs.y; });
       for (let i = 0; i < 3; i++) await step(page, 0.1);
       const pr3 = await page.evaluate(() => window.OP.game.player.controller.interaction?.label || null);
-      console.log('at the helm:', pr3);
-      await page.evaluate(() => { window.OP.key('E', true); }); await step(page, 0.05); await page.evaluate(() => { window.OP.key('E', false); }); await step(page, 0.3);
-      const st3 = await page.evaluate(() => { const g = window.OP.game, p = g.player; return { mode: p.mode, ship: p.ship?.name, owner: p.ship?.owner, bounty: g.state.char.bounty, berries: g.state.char.berries, fleet: g.ships.filter((s) => s.owner === 'player').map((s) => s.name) }; });
-      console.log('stolen', JSON.stringify(st3));
-      await step(page, 0.2); await frames(page, 3);
-      await snap('stolen');
-      // leave the helm and walk the deck, jump off, climb back
-      const pr4 = await page.evaluate(() => window.OP.game.player.controller.interaction?.label || null);
-      console.log('helm prompt:', pr4);
-      await page.evaluate(() => { window.OP.key('E', true); }); await step(page, 0.05); await page.evaluate(() => { window.OP.key('E', false); }); await step(page, 0.3);
-      const st4 = await page.evaluate(() => { const p = window.OP.game.player; return { mode: p.mode, deck: p.deck?.ship?.name, water: p.inWater }; });
-      console.log('left the helm', JSON.stringify(st4));
-      await page.evaluate(() => { const v = window.OP.game.view3d; v.rig.yaw = window.OP.game.player.ship.heading + 0.6; v.rig.pitch = -0.2; window.OP.key('W', true); });
+      console.log('at the helm (expect no prompt: she can\'t be stolen):', pr3);
+      const st3 = await page.evaluate(() => { const g = window.OP.game, p = g.player; return { mode: p.mode, deck: p.deck?.ship?.name, bounty: g.state.char.bounty, berries: g.state.char.berries, fleet: g.state.char.fleet.map((f) => f.name) }; });
+      console.log('after the raid', JSON.stringify(st3));
+      // walk her deck (the rail holds)
+      await page.evaluate(() => { const g = window.OP.game, o = g.traffic.ships[0], v = g.view3d; v.rig.yaw = o.heading + 0.6; v.rig.pitch = -0.2; window.OP.key('W', true); });
       for (let i = 0; i < 8; i++) { await step(page, 0.1); await frames(page, 1); }
       await page.evaluate(() => window.OP.key('W', false));
       const st5 = await page.evaluate(() => { const p = window.OP.game.player; return { deck: p.deck?.ship?.name, water: p.inWater }; });
