@@ -19,11 +19,11 @@ const DEG = Math.PI / 180;
 
 // detail per level: [near, far, viewmodel]
 const DETAIL = {
-  0: { head: [20, 16], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1, cloth: 1 },
-  1: { head: [8, 6], cap: [10, 4], cone: 3, sph: [5, 3], blob: [6, 4], limb: [5, 1], lathe: 7, rbox: [5, 4], rboxS: [4, 3], hat: 9, hatS: [7, 4], fringe: 0, hands: 0, cloth: 0 },
+  0: { head: [20, 16], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1, cloth: 1, lock: [5, 4] },
+  1: { head: [8, 6], cap: [10, 4], cone: 3, sph: [5, 3], blob: [6, 4], limb: [5, 1], lathe: 7, rbox: [5, 4], rboxS: [4, 3], hat: 9, hatS: [7, 4], fringe: 0, hands: 0, cloth: 0, lock: [3, 2] },
   // (2: across the street, between near and far)
-  2: { head: [14, 10], cap: [12, 5], cone: 4, sph: [6, 4], blob: [8, 5], limb: [7, 2], lathe: 10, rbox: [6, 5], rboxS: [5, 4], hat: 13, hatS: [9, 5], fringe: 1, hands: 0, cloth: 0, body: 1 },
-  [-1]: { head: [14, 10], cap: [16, 6], cone: 5, sph: [8, 6], blob: [10, 7], limb: [10, 3], lathe: 14, rbox: [10, 8], rboxS: [8, 6], hat: 16, hatS: [12, 8], fringe: 1, hands: 2, cloth: 1 },
+  2: { head: [14, 10], cap: [12, 5], cone: 4, sph: [6, 4], blob: [8, 5], limb: [7, 2], lathe: 10, rbox: [6, 5], rboxS: [5, 4], hat: 13, hatS: [9, 5], fringe: 1, hands: 0, cloth: 0, body: 1, lock: [4, 3] },
+  [-1]: { head: [14, 10], cap: [16, 6], cone: 5, sph: [8, 6], blob: [10, 7], limb: [10, 3], lathe: 14, rbox: [10, 8], rboxS: [8, 6], hat: 16, hatS: [12, 8], fringe: 1, hands: 2, cloth: 1, lock: [5, 4] },
 };
 
 // ------------------------------------------------------------------ head shape
@@ -324,8 +324,10 @@ const META = {
   short: { top: 1.16, hatK: 1 }, spiky: { top: 1.55, hatK: 1.04 }, long: { top: 1.18, hatK: 1 }, ponytail: { top: 1.16, hatK: 1 },
   buzz: { top: 1.08, hatK: 0.98 }, curly: { top: 1.38, hatK: 1.1 }, afro: { top: 2.1, hatK: 1.42, lift: 0.5 }, topknot: { top: 1.5, hatK: 1 },
   mohawk: { top: 2.0, hatK: 1 }, bald: { top: 1.02, hatK: 0.96 }, bun: { top: 1.55, hatK: 1 }, pompadour: { top: 1.7, hatK: 1.04 }, nika: { top: 1.8, hatK: 1.06 },
+  messy: { top: 1.3, hatK: 1.06 }, sidefringe: { top: 1.18, hatK: 1 }, slick: { top: 1.14, hatK: 1 }, bob: { top: 1.18, hatK: 1.02 }, wavy: { top: 1.2, hatK: 1.02 },
+  twintails: { top: 1.16, hatK: 1 }, braid: { top: 1.16, hatK: 1 },
 };
-const ALIAS = { straight: 'long', braid: 'ponytail', bob: 'short', crew: 'buzz', shaved: 'buzz', dreads: 'curly', wavy: 'curly', twintails: 'ponytail', odango: 'bun', quiff: 'pompadour' };
+const ALIAS = { straight: 'long', crew: 'buzz', shaved: 'buzz', dreads: 'curly', odango: 'bun', quiff: 'pompadour', shaggy: 'messy', swept: 'sidefringe', slicked: 'slick', plait: 'braid' };
 export function styleId(s, look) {
   if (look && look.nika) return 'nika';
   if (s && META[s]) return s;
@@ -362,50 +364,189 @@ function fringe(h, n, spread, len, w, rs = 1.06, th0 = 42, skew = 0.25) {
   }
 }
 
+// ---- locks: hair drawn the anime way, in clumps
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const len3 = (v) => Math.hypot(v[0], v[1], v[2]);
+/**
+ * One lock: a flattened tube from its root a (in the scalp) bending through c
+ * to a point at b, w wide at the root and `flat` of that thick across the head
+ * (it lies against the head, not edge-on); it keeps its width a while, then
+ * tapers to the point.
+ */
+function lockGeo(a, c, b, w, flat, U, V, c2 = null) {
+  const n0 = norm(a);
+  return grid((u, v) => {
+    const t = v, s = 1 - t;
+    // (a quadratic curve through c, or with c2 a cubic one: an S for waves)
+    const p = c2
+      ? [0, 1, 2].map((k) => s * s * s * a[k] + 3 * s * s * t * c[k] + 3 * s * t * t * c2[k] + t * t * t * b[k])
+      : [0, 1, 2].map((k) => s * s * a[k] + 2 * s * t * c[k] + t * t * b[k]);
+    const d = norm(c2
+      ? [0, 1, 2].map((k) => 3 * s * s * (c[k] - a[k]) + 6 * s * t * (c2[k] - c[k]) + 3 * t * t * (b[k] - c2[k]))
+      : [0, 1, 2].map((k) => 2 * s * (c[k] - a[k]) + 2 * t * (b[k] - c[k])));
+    let side = cross(n0, d);
+    if (len3(side) < 1e-3) side = cross([0, 1, 0], d);
+    if (len3(side) < 1e-3) side = cross([1, 0, 0], d);
+    side = norm(side);
+    const nrm = cross(d, side); // (so the faces point outward: see grid)
+    const r = w * Math.pow(s, 0.9) * (1 + 0.35 * Math.sin(Math.PI * Math.min(1, t * 1.8)));
+    const ang = u * TAU, cu = Math.cos(ang) * r, su = Math.sin(ang) * r * flat;
+    return [p[0] + side[0] * cu + nrm[0] * su, p[1] + side[1] * cu + nrm[1] * su, p[2] + side[2] * cu + nrm[2] * su];
+  }, U, V);
+}
+/** A lock from a to b, arching `bulge` of its length away from the head (or through an explicit bend point c). */
+function lock(h, a, b, w, { bulge = 0.2, flat = 0.5, c = null, c2 = null, anchor = a[1] < b[1] ? a : b } = {}) {
+  const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
+  // (under a hat the hair is pressed flat: it shows below the band, never through the crown)
+  if (h.hatted && !c) bulge *= 0.3;
+  const cc = c || add3(m, norm(m), bulge * len3([b[0] - a[0], b[1] - a[1], b[2] - a[2]]));
+  h.add(lockGeo(a, cc, b, w, flat, h.q.lock[0], h.q.lock[1] + (c2 ? 2 : 0), c2), M(), h.col, h.bone, 0, anchor);
+}
+/** A lock lying over the head: from (th, ph) on the scalp to (th2, ph2) just above the surface (or to a point). */
+function flow(h, th, ph, th2, ph2, w, { rs = 1.02, k2 = 1.1, bulge = 0.22, flat = 0.5 } = {}) {
+  const a = surf(th, ph, rs);
+  lock(h, a, Array.isArray(th2) ? th2 : surf(th2, ph2, h.hatted ? Math.min(k2, 1.06) : k2), w, { bulge, flat });
+}
+/** A lock standing out of the scalp at (th, ph), bent upward by `up` (spiky hair). */
+function outLock(h, th, ph, len, w, up = 0.25, flat = 0.7) {
+  const a = surf(th, ph, 1.0);
+  const n = norm(add3(norm(a), [0, 1, 0], up));
+  const b = add3(a, n, len);
+  // (the tip swept a little back and down, like hair that's been combed)
+  lock(h, a, add3(b, [-0.12, -0.06, 0], len), w, { bulge: 0.12, flat, anchor: a });
+}
+/** Bangs: n locks across the forehead from the crown's front, their tips at th2 (a line, or ragged). */
+function bangs(h, n, spread, th2, w, { th = 24, sweep = 0, ragged = 0, part = 0, k2 = 1.1 } = {}) {
+  if (!h.q.fringe) n = Math.max(3, Math.round(n * 0.6));
+  for (let i = 0; i < n; i++) {
+    const u = n === 1 ? 0 : i / (n - 1) - 0.5;
+    const ph = u * spread;
+    const jag = ragged ? ((i * 7919) % 5 - 2) * ragged : 0;
+    flow(h, th, part + ph * 0.55, th2 + jag - Math.abs(u) * 6, ph + sweep + u * 10, w, { k2, bulge: 0.16 });
+  }
+}
+
 const HAIR = {
   bald() {},
   buzz(h) { h.cap(1.035, 62, 94, 112); },
   short(h) {
-    h.cap(1.08, 60, 98, 126, napeZig(3, 12));
-    fringe(h, 5, 100, 36, 0.24);
-    outSpike(h, 12, 170, 0.32, 0.16, 0.6);
-    outSpike(h, 20, 205, 0.26, 0.14, 0.5);
-    for (const s of [-1, 1]) spike(h, surf(78, s * 84, 1.05), surf(112, s * 86, 1.04), 0.12, 0.06, 3);
+    // tidy anime short hair: chunky bangs to the brow, locks over the ears, a tapered nape
+    h.cap(1.09, 58, 96, 122, napeZig(4, 10));
+    bangs(h, 6, 112, 72, 0.29, { sweep: 6, ragged: 2, k2: 1.13 });
+    for (const sd of [-1, 1]) { flow(h, 36, sd * 64, 92, sd * 80, 0.27, { k2: 1.14, bulge: 0.28 }); flow(h, 46, sd * 104, 104, sd * 110, 0.25, { k2: 1.13, bulge: 0.28 }); }
+    for (const ph of [132, 156, 180, 204, 228]) flow(h, 22, ph, 114, ph + (ph - 180) * 0.25, 0.28, { k2: 1.12, bulge: 0.3 });
+    outLock(h, 12, 192, 0.32, 0.16, 0.7);
   },
   spiky(h, k = 1, n = 1) {
     h.cap(1.08, 58, 95, 118, napeZig(4, 10));
-    const S = [[14, 180, 0.7, 0.34, 0.7], [18, 130, 0.62, 0.32, 0.5], [18, 230, 0.62, 0.32, 0.5], [34, 88, 0.6, 0.3, 0.45], [34, 272, 0.6, 0.3, 0.45],
-      [44, 158, 0.62, 0.3, 0.2], [44, 202, 0.62, 0.3, 0.2], [66, 180, 0.55, 0.28, -0.1], [72, 125, 0.48, 0.26, -0.1], [72, 235, 0.48, 0.26, -0.1],
-      [36, 32, 0.5, 0.26, 0.55], [36, 328, 0.5, 0.26, 0.55], [8, 60, 0.55, 0.28, 0.8]];
-    for (const [th, ph, L, w, up] of S) outSpike(h, th, ph, L * k, w * (0.9 + 0.1 * k), up);
-    if (n > 1) for (const [th, ph] of [[26, 0], [54, 100], [54, 260], [28, 200], [58, 145], [58, 215]]) outSpike(h, th, ph, 0.55 * k, 0.26, 0.6);
-    fringe(h, 4, 90, 38, 0.26, 1.06, 40, 0.5);
+    const S = [[14, 180, 0.7, 0.3, 0.7], [18, 130, 0.62, 0.28, 0.5], [18, 230, 0.62, 0.28, 0.5], [34, 88, 0.6, 0.27, 0.45], [34, 272, 0.6, 0.27, 0.45],
+      [44, 158, 0.62, 0.27, 0.2], [44, 202, 0.62, 0.27, 0.2], [66, 180, 0.55, 0.25, -0.1], [72, 125, 0.48, 0.23, -0.1], [72, 235, 0.48, 0.23, -0.1],
+      [36, 32, 0.5, 0.24, 0.55], [36, 328, 0.5, 0.24, 0.55], [8, 60, 0.55, 0.26, 0.8]];
+    for (const [th, ph, L, w, up] of S) outLock(h, th, ph, L * k, w * (0.9 + 0.1 * k), up);
+    if (n > 1) for (const [th, ph] of [[26, 0], [54, 100], [54, 260], [28, 200], [58, 145], [58, 215]]) outLock(h, th, ph, 0.55 * k, 0.24, 0.6);
+    bangs(h, 5, 96, 70, 0.22, { sweep: 10, ragged: 4 });
   },
-  nika(h) { HAIR.spiky(h, 1.35, 2); },
+  messy(h) {
+    // Luffy-style: shaggy, every lock its own way, bangs in uneven lengths
+    h.cap(1.08, 58, 96, 120, napeZig(5, 12));
+    bangs(h, 6, 118, 74, 0.29, { ragged: 5, sweep: -4, k2: 1.14 });
+    const P = [[20, 150, 108, 140], [16, 185, 112, 190], [20, 220, 106, 232], [34, 115, 86, 128], [34, 245, 86, 236], [30, 80, 70, 92], [30, 280, 70, 268]];
+    for (const [th, ph, th2, ph2] of P) flow(h, th, ph, th2, ph2, 0.29, { k2: 1.28, bulge: 0.34 });
+    for (const sd of [-1, 1]) { flow(h, 44, sd * 70, 96, sd * 76, 0.27, { k2: 1.24, bulge: 0.3 }); flow(h, 56, sd * 100, 112, sd * 98, 0.25, { k2: 1.2, bulge: 0.3 }); }
+    outLock(h, 10, 200, 0.34, 0.16, 0.5);
+    outLock(h, 22, 240, 0.28, 0.15, 0.2);
+  },
+  sidefringe(h) {
+    // Sanji-style: a long fringe swept over one eye, short at the back
+    h.cap(1.07, 58, 97, 120, napeZig(4, 8));
+    for (let i = 0; i < 5; i++) flow(h, 20 + i * 3, -30 + i * 16, 86 + i * 5, 16 + i * 10, 0.26 - i * 0.012, { k2: 1.1, bulge: 0.2 });
+    flow(h, 30, -52, 70, -62, 0.2);
+    for (const sd of [-1, 1]) flow(h, 44, sd * 78, 96, sd * 86, 0.21);
+    for (const ph of [140, 165, 195, 220]) flow(h, 30, ph, 112, ph, 0.23);
+  },
+  slick(h) {
+    // slicked straight back from the brow
+    h.cap(1.06, 60, 96, 118, napeZig(3, 8));
+    for (const ph of [-40, -20, 0, 20, 40]) flow(h, 58, ph, 104, 180 - ph * 1.4, 0.25, { k2: 1.1, bulge: 0.3 });
+    for (const sd of [-1, 1]) flow(h, 70, sd * 70, 108, sd * 140, 0.22, { bulge: 0.18 });
+    for (const ph of [150, 180, 210]) flow(h, 70, ph, 122, ph, 0.2, { k2: 1.06 });
+  },
+  bob(h) {
+    // a chin-length bob with a straight fringe
+    h.cap(1.08, 58, 100, 122);
+    bangs(h, 7, 120, 76, 0.22);
+    for (const [ph, y] of [[62, -0.95], [86, -1.05], [112, -1.0], [140, -0.9], [165, -0.85]]) {
+      for (const sd of [-1, 1]) {
+        const a = surf(38, sd * ph, 1.02), dir = norm([Math.cos(ph * DEG), 0, Math.sin(ph * DEG) * sd]);
+        lock(h, a, [dir[0] * 1.2, y, dir[2] * 1.2], 0.3, { bulge: 0.22, flat: 0.55 });
+      }
+    }
+    flow(h, 30, 180, [-1.25, -0.8, 0], null, 0.3, { bulge: 0.22 });
+  },
   long(h) {
+    // straight and long: a fringe, curtains down past the shoulders, a sheet down the back
     h.cap(1.08, 58, 102, 118);
-    fringe(h, 5, 104, 40, 0.24);
-    for (const s of [-1, 1]) {
-      const a = surf(64, s * 74, 1.07);
-      spike(h, a, [a[0] - 0.05, -1.45, a[2] * 0.96 + s * 0.12], 0.3, 0.12, 5);
+    bangs(h, 6, 104, 76, 0.23, { sweep: 4 });
+    for (const sd of [-1, 1]) {
+      for (const [th, ph, x, z] of [[46, 62, 0.35, 0.92], [58, 86, 0.1, 1.02], [52, 112, -0.25, 1.0]]) lock(h, surf(th, sd * ph, 1.03), [x, -1.75 - (ph > 100 ? 0.25 : 0), sd * z], 0.3, { bulge: 0.2, flat: 0.5 });
     }
     h.withBone(B.hairTail, () => {
-      blob(h, [-0.6, -0.72, 0], [0.42, 1.22, 0.94], [0, 0, -0.06]);
-      spike(h, [-0.6, -1.5, 0], [-0.52, -2.3, 0], 0.74, 0.32, 6);
+      for (const [ph, z] of [[132, 0.62], [152, 0.34], [180, 0], [208, -0.34], [228, -0.62]]) lock(h, surf(40, ph, 1.03), [-0.72, -2.35 + Math.abs(z) * 0.3, z * 1.1], 0.38, { bulge: 0.22, flat: 0.45 });
+    });
+  },
+  wavy(h) {
+    // Nami-style: long, full, falling in waves
+    h.cap(1.09, 58, 102, 118);
+    bangs(h, 5, 100, 74, 0.25, { sweep: 12, part: -10 });
+    const wave = (a, b, sd, w) => {
+      // an S: out over the ear, in, and out again at the ends
+      const at = (k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+      const c1 = at(0.33), c2 = at(0.7);
+      const o1 = norm([c1[0], 0, c1[2]]), o2 = norm([c2[0], 0, c2[2]]);
+      lock(h, a, b, w, { c: add3(c1, o1, 0.45), c2: add3(c2, o2, -0.2), flat: 0.5 });
+    };
+    for (const sd of [-1, 1]) for (const [th, ph, x, z] of [[48, 64, 0.3, 1.0], [58, 90, 0.05, 1.12], [52, 116, -0.3, 1.05]]) wave(surf(th, sd * ph, 1.03), [x, -2.0, sd * z], sd, 0.3);
+    h.withBone(B.hairTail, () => {
+      for (const [ph, z] of [[136, 0.6], [158, 0.3], [180, 0], [202, -0.3], [224, -0.6]]) wave(surf(40, ph, 1.03), [-0.78, -2.5 + Math.abs(z) * 0.3, z * 1.2], Math.sign(z) || 1, 0.36);
     });
   },
   ponytail(h) {
     h.cap(1.07, 58, 98, 116);
-    fringe(h, 4, 90, 36, 0.24);
+    bangs(h, 5, 96, 70, 0.23, { sweep: 6 });
+    for (const sd of [-1, 1]) flow(h, 52, sd * 76, 100, sd * 84, 0.2);
     const tie = surf(52, 180, 1.1);
     const s = h.q.sph;
     h.addC(Prim.sphere(s[0], s[1]), M(tie[0], tie[1], tie[2], 0, 0, 0, [0.17, 0.17, 0.2]), '#c8372d', h.bone);
+    // the tail: locks gathered at the tie, flaring out and hanging down the back
     h.withBone(B.hairTail, () => {
-      blob(h, [tie[0] - 0.2, tie[1] - 0.08, 0], [0.3, 0.26, 0.26], [0, 0, 0.7]);
-      blob(h, [tie[0] - 0.36, tie[1] - 0.55, 0], [0.26, 0.42, 0.24], [0, 0, 0.15]);
-      spike(h, [tie[0] - 0.4, tie[1] - 0.85, 0], [tie[0] - 0.3, tie[1] - 1.6, 0], 0.24, 0.2, 5);
+      for (const [dz, dy, w] of [[0, 0, 0.34], [0.22, 0.06, 0.26], [-0.22, 0.06, 0.26], [0.1, -0.1, 0.24]]) {
+        lock(h, [tie[0] - 0.05, tie[1] + dy * 0.3, dz * 0.3], [tie[0] - 0.55, tie[1] - 1.75 + dy, dz * 1.6], w, { c: [tie[0] - 0.75, tie[1] - 0.35, dz], flat: 0.6 });
+      }
     });
   },
+  twintails(h) {
+    h.cap(1.07, 58, 98, 118);
+    bangs(h, 6, 110, 74, 0.22);
+    const s = h.q.sph;
+    h.withBone(B.hairTail, () => {
+      for (const sd of [-1, 1]) {
+        const tie = surf(40, sd * 118, 1.08);
+        h.addC(Prim.sphere(s[0], s[1]), M(tie[0], tie[1], tie[2], 0, 0, 0, 0.14), '#e84393', h.bone);
+        for (const [dx, w] of [[0, 0.3], [0.15, 0.24], [-0.15, 0.24]]) lock(h, tie, [tie[0] - 0.35 + dx, tie[1] - 2.0, tie[2] + sd * 0.7], w, { c: [tie[0] - 0.2 + dx, tie[1] + 0.1, tie[2] + sd * 0.75], flat: 0.6 });
+      }
+    });
+  },
+  braid(h) {
+    h.cap(1.07, 58, 98, 118);
+    bangs(h, 5, 100, 72, 0.22, { sweep: 8 });
+    const tie = surf(96, 180, 1.05);
+    h.withBone(B.hairTail, () => {
+      // a plait: overlapping beads down the back, a tuft at the end
+      for (let i = 0; i < 6; i++) blob(h, [tie[0] - 0.08 - i * 0.03, tie[1] - i * 0.3, (i % 2 ? 0.07 : -0.07)], [0.2, 0.2, 0.2], [0, 0, 0.3], h.q.sph);
+      lock(h, [tie[0] - 0.26, tie[1] - 1.75, 0], [tie[0] - 0.3, tie[1] - 2.3, 0], 0.18, { flat: 0.8 });
+    });
+  },
+  nika(h) { HAIR.spiky(h, 1.35, 2); },
   curly(h) {
     h.cap(1.1, 56, 100, 118);
     const P = [[10, 0], [26, 60], [26, 180], [26, 300], [46, 0], [46, 90], [46, 150], [46, 210], [46, 270], [68, 120], [68, 180], [68, 240], [86, 160], [86, 200]];
@@ -668,7 +809,7 @@ function buildBody0(look, wpn, lod, articulated) {
   const hairCol = lin(pal.hair);
   const stubble = lin(mixHex(pal.face, pal.hair, 0.3));
   const h = {
-    q, col: hairCol, bone: hb,
+    q, col: hairCol, bone: hb, hatted: !!cover && style !== 'afro',
     add(g, m, col, bone, part, anchor) {
       // drop hair poking through a covering hat (anything anchored above the band)
       if (cover && anchor && anchor[1] > 0.5 && style !== 'afro') return;

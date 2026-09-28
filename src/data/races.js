@@ -129,7 +129,7 @@ const HUMAN_SKIN = ['#f9dcc4', '#f1c9a0', '#e0ac7e', '#c68642', '#a0643a', '#7a4
 const HAIR = ['#1e1e1e', '#3b2a1a', '#6b4423', '#c69c6d', '#f2d16b', '#e67e22', '#c0392b', '#2ecc71', '#2980b9', '#e84393', '#dfe6e9', '#8e44ad', '#16a085'];
 const TOPS = ['#d63031', '#0984e3', '#00b894', '#fdcb6e', '#e17055', '#6c5ce7', '#2d3436', '#dfe6e9', '#e84393', '#00cec9', '#b2bec3', '#a0522d'];
 const BOTTOMS = ['#2d3436', '#1e3799', '#3b3b98', '#6d4c41', '#636e72', '#0a3d62', '#b8860b', '#2f3542'];
-const HAIRSTYLES = ['short', 'spiky', 'long', 'ponytail', 'buzz', 'curly', 'afro', 'topknot', 'mohawk', 'bald'];
+const HAIRSTYLES = ['short', 'short', 'spiky', 'messy', 'sidefringe', 'slick', 'long', 'ponytail', 'buzz', 'curly', 'afro', 'topknot', 'mohawk', 'bald', 'pompadour'];
 
 export const FISHMAN_KINDS = [
   { id: 'shark', name: 'Saw Shark', skin: '#7fa7c9' },
@@ -234,7 +234,7 @@ export function dress(look, rng, role = 'civilian', over = {}) {
   if (look.topStyle === 'jacket' && !over.tie && rng.chance(0.5)) look.tie = rng.pick(['#212121', '#c62828', '#1e3a8a']);
   if (look.topStyle === 'coat' && !over.coat) look.coat = rng.pick(['#5d4037', '#37474f', '#6d4c41', '#1b5e20', '#4a148c', '#263238']);
   if (fem) {
-    if (!over.hair && rng.chance(0.75)) look.hair = rng.pick(['long', 'long', 'ponytail', 'bun', 'short', 'curly']);
+    if (!over.hair && rng.chance(0.75)) look.hair = rng.pick(['long', 'long', 'wavy', 'ponytail', 'bun', 'bob', 'twintails', 'braid', 'short', 'curly', 'sidefringe']);
     if (!over.eyeShape) look.eyeShape = rng.pick(['soft', 'round', 'round', 'sharp']);
     look.bust = +(0.8 + rng.next() * 0.45).toFixed(2);
   } else if (over.muscle === undefined) {

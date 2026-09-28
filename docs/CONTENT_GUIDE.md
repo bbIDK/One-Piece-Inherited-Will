@@ -321,8 +321,10 @@ Registry ids are global, so prefix anything that might collide.
   - `hat`: `straw`, `bandana`, `tricorne`, `captain`, `cowboy`, `marine`,
     `pinkhat`, `goggles`, `headband`, `horns`, `beanie`, `crown`, `halo`
     (Skypieans get wings automatically).
-  - `hair`: `short`, `long`, `spiky`, `curly`, `bald`, `buzz`, `ponytail`,
-    `afro`, `bun`, `mohawk`, `pompadour`.
+  - `hair`: `short`, `messy` (Luffy-style), `spiky`, `sidefringe` (swept
+    over one eye), `slick` (slicked back), `pompadour`, `long`, `wavy`,
+    `bob`, `ponytail`, `twintails`, `braid`, `bun`, `topknot`, `curly`,
+    `afro`, `mohawk`, `buzz`, `bald`.
 - **Fight-only villains** need no dialogue, just `hostile: true`.
 - **Crew recruits.** `recruit` adds a "Join my crew" choice to their dialogue
   automatically. The roles are `fighter`, `swordsman`, `navigator`, `cook`,

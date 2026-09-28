@@ -283,7 +283,7 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
         );
       } else if (tab === 'hair') {
         add(optsEl,
-          row('Style', opts('hair', ['short', 'spiky', 'long', 'ponytail', 'buzz', 'curly', 'afro', 'topknot', 'mohawk', 'bald'], ['Short', 'Spiky', 'Long', 'Ponytail', 'Buzz', 'Curly', 'Afro', 'Topknot', 'Mohawk', 'Bald'])),
+          row('Style', opts('hair', ['short', 'messy', 'spiky', 'sidefringe', 'slick', 'pompadour', 'long', 'wavy', 'bob', 'ponytail', 'twintails', 'braid', 'bun', 'buzz', 'curly', 'afro', 'topknot', 'mohawk', 'bald'], ['Short', 'Messy', 'Spiky', 'Swept fringe', 'Slicked back', 'Pompadour', 'Long', 'Wavy', 'Bob', 'Ponytail', 'Twin tails', 'Braid', 'Bun', 'Buzz', 'Curly', 'Afro', 'Topknot', 'Mohawk', 'Bald'])),
           race !== 'mink' ? row('Colour', swatch('hairColor', ['#1e1e1e', '#3b2a1a', '#6b4423', '#c69c6d', '#f2d16b', '#e67e22', '#c0392b', '#e84393', '#8e44ad', '#2980b9', '#2ecc71', '#dfe6e9'])) : h('p.muted', 'Minks grow fur of their kind.'),
         );
       } else if (tab === 'body') {

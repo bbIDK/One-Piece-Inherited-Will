@@ -381,6 +381,30 @@ export const scenarios = {
     },
   },
   c3hair: { async run(page, snap) { await boot(page); await hairLineup(page, snap); await hatLineup(page, snap); } },
+  // close-ups of hairstyles, four at a time, from the front, three-quarter and back:
+  //   --styles=short,long,...  --fem=1 (women's heads)  --hat=straw
+  c3hairclose: {
+    async run(page, snap, args) {
+      await boot(page);
+      const styles = String(args.styles || HAIRS.join(',')).split(',');
+      for (let g0 = 0; g0 < styles.length; g0 += 4) {
+        const group = styles.slice(g0, g0 + 4);
+        await page.evaluate(([group, cols, fem, hat]) => {
+          const C = window.__C3; C.clear();
+          group.forEach((h, i) => C.spawn({ name: h, id: 'hc' + h + i, showName: false, look: { hair: h, hairColor: cols[i % cols.length], hat: hat || null, fem, skin: '#f1c9a0', top: ['#d63031', '#0984e3', '#00b894', '#fdcb6e'][i % 4] } }, 1.45, (i - (group.length - 1) / 2) * 0.62, Math.PI));
+          C.view(0, -0.02);
+        }, [group, COLS, !!args.fem, args.hat || null]);
+        await settle(page, 6);
+        await snap(`${group.join('-')}-front`);
+        await page.evaluate(() => { for (const a of window.__C3.npcs) a.facing = Math.PI * 0.72; });
+        await settle(page, 3);
+        await snap(`${group.join('-')}-side`);
+        await page.evaluate(() => { for (const a of window.__C3.npcs) a.facing = 0; });
+        await settle(page, 3);
+        await snap(`${group.join('-')}-back`);
+      }
+    },
+  },
   c3atk: { async run(page, snap) { await boot(page); await attacks(page, snap); } },
   c3vm: { async run(page, snap) { await boot(page); await viewmodel(page, snap); } },
   c3crowd: { async run(page, snap) { await boot(page); await crowd(page, snap); await seaKing(page, snap); } },
