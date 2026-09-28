@@ -40,6 +40,29 @@ async function airView(page, { island, town, back = 1.1, height = 0.55, pitch = 
   }, { island, town, back, height, pitch });
 }
 
+/**
+ * Draw everything in view before a shot: the software renderer the tests use
+ * manages a frame or two a second, so the land, towns and props (streamed a
+ * few milliseconds' worth a frame) would still be arriving. Returns the
+ * frames it took.
+ */
+async function settleWorld(page, max = 12) {
+  return page.evaluate((max) => {
+    const g = window.OP.game, v = g.view3d;
+    if (!v) return null;
+    v.terrain.budget = 1e9; v.propBudget = 1e9;
+    let n = 0;
+    for (; n < max; n++) {
+      g.render();
+      let dirty = 0;
+      for (const c of v.buildingsFar.cells.values()) if (c.dirty) dirty++;
+      if (!v.terrain.missing && !v.propQueue?.length && !v.farQueue?.length && !dirty) break;
+    }
+    v.terrain.budget = 4; v.propBudget = undefined;
+    return n + 1;
+  }, max);
+}
+
 export const scenarios = {
   townwatch: {
     async run(page, snap, args) {
@@ -97,10 +120,12 @@ export const scenarios = {
       // street level, then the air
       await page.evaluate(() => { const rig = window.OP.game.view3d?.rig; if (rig) { rig.yaw = -Math.PI / 2; rig.pitch = -0.08; } });
       await step(page, 0.4);
+      await settleWorld(page);
       await snap(`${island}-street`);
       const air = await airView(page, { island, town });
       console.log('air', JSON.stringify(air));
       await step(page, 1.5);
+      await settleWorld(page);
       await snap(`${island}-air`);
     },
   },
@@ -115,7 +140,9 @@ export const scenarios = {
         const air = await airView(page, { island, town, back: Number(args.back || 1.1), height: Number(args.height || 0.55) });
         console.log(island, JSON.stringify(air));
         if (air.err) continue;
-        await step(page, 2.5);
+        await step(page, 1);
+        await settleWorld(page);
+        await step(page, 0.5);
         await snap(`${island}${town ? '-' + town : ''}`);
       }
     },

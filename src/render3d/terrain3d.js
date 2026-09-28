@@ -49,6 +49,7 @@ export class TerrainManager {
     this.sailing = false;
     this.farR = this.reachFoot;
     this.floorR = 0;
+    this.budget = BUILD_BUDGET_MS; // (screenshot scenarios raise it to have the land at once)
   }
 
   /** Fast graphics draws less terrain detail nearby. */
@@ -218,7 +219,7 @@ export class TerrainManager {
     const t0 = performance.now();
     let n = 0;
     for (const [k, wnt, stage] of todo) {
-      if (performance.now() - t0 > BUILD_BUDGET_MS) break;
+      if (performance.now() - t0 > this.budget) break;
       const old = this.live.get(k);
       const lod = stage === 0 && wnt.lod < COARSE && wnt.d2 > 2 ? COARSE : wnt.lod;
       const c = this.buildChunk(wnt.cx, wnt.cy, lod);

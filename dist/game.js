@@ -35587,6 +35587,7 @@ void main() {
       this.sailing = false;
       this.farR = this.reachFoot;
       this.floorR = 0;
+      this.budget = BUILD_BUDGET_MS;
     }
     /** Fast graphics draws less terrain detail nearby. */
     setDetail(q2) {
@@ -35748,7 +35749,7 @@ void main() {
       const t0 = performance.now();
       let n = 0;
       for (const [k, wnt, stage2] of todo) {
-        if (performance.now() - t0 > BUILD_BUDGET_MS) break;
+        if (performance.now() - t0 > this.budget) break;
         const old = this.live.get(k);
         const lod = stage2 === 0 && wnt.lod < COARSE && wnt.d2 > 2 ? COARSE : wnt.lod;
         const c = this.buildChunk(wnt.cx, wnt.cy, lod);
@@ -66458,7 +66459,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      * they stand in for each building until its model is up.
      */
     buildQueued(ox, oy) {
-      const t0 = performance.now(), end = t0 + PROP_BUDGET_MS;
+      const t0 = performance.now(), end = t0 + (this.propBudget ?? PROP_BUDGET_MS);
       this.buildingsFar.update(ox, oy, end);
       for (const [o, v] of this.retiring) if (this.buildingsFar.drawn(o)) this.dropProp(o, v);
       prof("b.far", t0);

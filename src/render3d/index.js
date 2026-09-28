@@ -763,7 +763,7 @@ export class Renderer3D {
    * they stand in for each building until its model is up.
    */
   buildQueued(ox, oy) {
-    const t0 = performance.now(), end = t0 + PROP_BUDGET_MS;
+    const t0 = performance.now(), end = t0 + (this.propBudget ?? PROP_BUDGET_MS);
     this.buildingsFar.update(ox, oy, end);
     for (const [o, v] of this.retiring) if (this.buildingsFar.drawn(o)) this.dropProp(o, v);
     prof('b.far', t0);
