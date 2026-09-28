@@ -81,7 +81,7 @@ function probe({ cx, cy, half, stepT, rect, dbg }) {
     // (and down a steep slope, what stands out of it below your feet: looking
     // down at it — the ground itself you walk on)
     for (const h of [0.3, 0.9, 1.5]) {
-      for (const pitch of [0.35, 0.7]) {
+      for (const pitch of [0.35, 0.7, 1.05]) {
         for (let da = -1.2; da <= 1.201; da += 0.2) {
           O.set(w.dx(v.ox, x), gh + h, y - v.oy);
           D.set(Math.cos(a0 + da) * Math.cos(pitch), -Math.sin(pitch), Math.sin(a0 + da) * Math.cos(pitch));
