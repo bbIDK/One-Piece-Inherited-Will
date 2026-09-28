@@ -329,9 +329,12 @@ node tools/shot.mjs perf         # frame cost in a town (day and night), a harbo
 node tools/shot.mjs hitch --w=320 --h=180 [--cpu]   # per-frame JS time running through a town and sailing past an island: the worst frames, shaders compiled on the way
 node tools/storycheck.mjs        # the main story: every chapter, road, contact and target resolves
 node tools/townaudit.mjs [--all] # every town (built-on share, empty paving, crowd), landmark (floating, sunk, in water, trees through it), overlap, and the walk from each town to its pier
+node tools/townaudit.mjs --barriers | --rock      # what blocks whole tiles; unwalkable rock drawn gently enough to look walkable
 node tools/shot.mjs townwatch [--island=lvneel]   # a town's people over a minute (stuck, inside things, on steps, bunched up), street and air shots
 node tools/shot.mjs towntour --islands=a,b,c      # each town photographed from the air
 node tools/shot.mjs viewdist [--rd=<chunks>]      # the render distance: a big town from its square, 130 m and 250 m off, the air and the sea
+node tools/shot.mjs c3hairclose [--styles=a,b] [--fem=1] [--hat=straw]   # hairstyles close up: front, side and back, four at a time
+node tools/shot.mjs probeshots --js=<file>        # several camera views in one run (the file returns [{ x, y, yaw, pitch }])
 node tools/shot.mjs story [--path=pirate|marine|hunter]   # plays the story's start, then fast-forwards through all three parts
 node tools/shot.mjs storydrift | storyswitch               # the Grand Line's currents; the story following a change of road
 node tools/shot.mjs rmride       # rides Reverse Mountain from the East Blue gate to the Grand Line
