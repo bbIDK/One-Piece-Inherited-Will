@@ -20,8 +20,11 @@ export function findInteraction(game, p) {
       const isl = w.islandAt(spot.x, spot.y) || w.nearestIsland(spot.x, spot.y, 40);
       return { label: `Go ashore${isl && isl.name ? ' — ' + isl.name : ''}`, key: 'E', run: () => disembark(game, p, spot) };
     }
-    // hove to: leave the wheel (or ship the oars) and walk your own deck
-    if (Math.abs(s.speed) < 1.6) return { label: s.def.oarsOnly ? 'Leave the oars (stand up)' : 'Leave the helm (walk the deck)', key: 'E', run: () => leaveHelm(game, p, s) };
+    // leave the wheel and walk your own deck — under sail she sails on, holding
+    // her course (Sea of Thieves style); a rowboat's oars you ship when she's
+    // all but stopped
+    if (!s.def.oarsOnly) return { label: s.sailSet > 0.05 || Math.abs(s.speed) > 1.6 ? 'Leave the helm (she sails on)' : 'Leave the helm (walk the deck)', key: 'E', run: () => leaveHelm(game, p, s) };
+    if (Math.abs(s.speed) < 1.6) return { label: 'Leave the oars (stand up)', key: 'E', run: () => leaveHelm(game, p, s) };
     return null;
   }
   // on foot / swimming (boarding is by hand: jump onto a deck from a pier or
@@ -124,9 +127,15 @@ export function disembark(game, p, spot) {
   game.audio?.sfx('step');
 }
 
-/** Let go of the wheel (or ship the oars) and stand on the deck beside it (the ship heaves to). */
+/**
+ * Let go of the wheel (or ship the oars) and stand on the deck beside it. A
+ * ship under sail keeps them set and sails on, straight ahead, till you take
+ * the wheel again; a rowboat with nobody at the oars drifts to a stop.
+ */
 export function leaveHelm(game, p, s) {
-  s.captain = null; s.sail = 0; s.rowing = 0; s.anchored = true;
+  const sailing = !s.def.oarsOnly && s.sail > 0.02;
+  s.captain = null; s.rowing = 0; s.rowPow = 0; s.rowL = 0; s.rowR = 0;
+  if (!sailing) { s.sail = 0; s.anchored = true; }
   s.passengers = s.passengers.filter((x) => x !== p);
   p.mode = 'foot';
   p.onShip = false;
@@ -141,7 +150,7 @@ export function leaveHelm(game, p, s) {
   game.emit('disembark', s, null);
   game.hint?.('deck', s.def.oarsOnly
     ? 'Stand in your boat, or jump over the side for a swim (Space at her side climbs back in). Press E at the seat to take the oars again.'
-    : 'Walk your deck freely — jump over the rail for a swim (Space at her side climbs back aboard), and press E at the wheel to take the helm again.');
+    : 'Walk your deck freely — she keeps the sails you set and sails on straight ahead. Jump over the rail for a swim (Space at her side climbs back aboard), and press E at the wheel to take the helm again: steer, or lower the sails (S) to stop.');
 }
 
 /** A Devil Fruit user in the sea, hauled up onto the deck on a line thrown from it. */

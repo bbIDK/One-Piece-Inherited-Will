@@ -264,11 +264,16 @@ export class PlayerController {
     const ahead = inp.isDown('W') || inp.isDown('ArrowUp') || (tc && tc.my < -0.45) || (s.def.oarsOnly && inp.isDown('Space'));
     const back = inp.isDown('S') || inp.isDown('ArrowDown') || (tc && tc.my > 0.45);
     if (s.def.oarsOnly) {
-      // at the oars: W pulls ahead, S backs water, A/D pull one oar to swing
-      // her round (with both going, the pull on the outside oar turns her)
-      const fwd = (ahead ? 1 : 0) - (back ? 1 : 0);
-      s.rowL = fwd || (turn > 0.2 ? 1 : 0);
-      s.rowR = fwd || (turn < -0.2 ? 1 : 0);
+      // at the oars you set a pace, as you set sails: W (or Space) quickens
+      // it, S eases it off to a stop — and, pressed again from a stop, backs
+      // water — and she keeps rowing at it with your hands off the keys.
+      // A/D pull one oar harder to swing her round.
+      if (inp.wasPressed('S') || inp.wasPressed('ArrowDown')) this.backOk = (s.rowPow || 0) <= 0.001;
+      if (ahead) s.rowPow = Math.min(1, (s.rowPow || 0) + dt * 1.1);
+      else if (back) s.rowPow = Math.max(this.backOk ? -0.6 : 0, (s.rowPow || 0) - dt * 1.4);
+      const fwd = Math.abs(s.rowPow || 0) < 0.04 ? 0 : s.rowPow;
+      s.rowL = fwd || (turn > 0.2 ? 0.8 : 0);
+      s.rowR = fwd || (turn < -0.2 ? 0.8 : 0);
       if (s.rowL || s.rowR) s.anchored = false;
       s.heading += turn * s.def.turn * (game.crewMods?.turnMul || 1) * (fwd ? 0.45 : 0.6) * (0.55 + 0.45 * s.drive) * dt;
       s.sail = 0; s.rowing = 0;

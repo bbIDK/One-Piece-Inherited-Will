@@ -50,6 +50,7 @@ export class Ship extends Entity {
     this.sinkT = 0;
     this.seed = Math.random() * 10;
     this.rowing = 0;
+    this.rowPow = 0; // (a rowboat's pace at the oars, −0.6 backing water … 1 full: it holds till you change it)
     // a rowboat's oars: which way each is pulling (1 ahead, -1 backing, 0 held),
     // where the stroke is, and how each lies now (see updateOars)
     this.rowL = 0; this.rowR = 0; this.rowPh = 0; this.drive = 0;
@@ -215,8 +216,9 @@ export class Ship extends Entity {
    */
   updateOars(dt) {
     const stroking = this.rowL || this.rowR;
-    // (a fresh start begins at the catch)
-    this.rowPh = stroking ? (this.rowPh + dt / STROKE_T) % 1 : 0;
+    // (a fresh start begins at the catch; an easy pace is a slower stroke)
+    const tempo = 0.55 + 0.45 * Math.min(1, Math.max(Math.abs(this.rowL), Math.abs(this.rowR)));
+    this.rowPh = stroking ? (this.rowPh + dt / STROKE_T * tempo) % 1 : 0;
     const manned = !!this.captain || !!(this.rower && this.rower.alive && this.rower.deck?.ship === this && this.rower.state === 'idle');
     for (let i = 0; i < 2; i++) {
       const pull = i ? this.rowR : this.rowL, o = this.oars[i];

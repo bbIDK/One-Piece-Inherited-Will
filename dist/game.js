@@ -53346,6 +53346,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.sinkT = 0;
       this.seed = Math.random() * 10;
       this.rowing = 0;
+      this.rowPow = 0;
       this.rowL = 0;
       this.rowR = 0;
       this.rowPh = 0;
@@ -53511,7 +53512,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
      */
     updateOars(dt) {
       const stroking = this.rowL || this.rowR;
-      this.rowPh = stroking ? (this.rowPh + dt / STROKE_T) % 1 : 0;
+      const tempo = 0.55 + 0.45 * Math.min(1, Math.max(Math.abs(this.rowL), Math.abs(this.rowR)));
+      this.rowPh = stroking ? (this.rowPh + dt / STROKE_T * tempo) % 1 : 0;
       const manned = !!this.captain || !!(this.rower && this.rower.alive && this.rower.deck?.ship === this && this.rower.state === "idle");
       for (let i = 0; i < 2; i++) {
         const pull = i ? this.rowR : this.rowL, o = this.oars[i];
@@ -85782,7 +85784,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const isl = w.islandAt(spot.x, spot.y) || w.nearestIsland(spot.x, spot.y, 40);
         return { label: `Go ashore${isl && isl.name ? " \u2014 " + isl.name : ""}`, key: "E", run: () => disembark(game, p, spot) };
       }
-      if (Math.abs(s.speed) < 1.6) return { label: s.def.oarsOnly ? "Leave the oars (stand up)" : "Leave the helm (walk the deck)", key: "E", run: () => leaveHelm(game, p, s) };
+      if (!s.def.oarsOnly) return { label: s.sailSet > 0.05 || Math.abs(s.speed) > 1.6 ? "Leave the helm (she sails on)" : "Leave the helm (walk the deck)", key: "E", run: () => leaveHelm(game, p, s) };
+      if (Math.abs(s.speed) < 1.6) return { label: "Leave the oars (stand up)", key: "E", run: () => leaveHelm(game, p, s) };
       return null;
     }
     const cands = [];
@@ -85886,10 +85889,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     game.audio?.sfx("step");
   }
   function leaveHelm(game, p, s) {
+    const sailing = !s.def.oarsOnly && s.sail > 0.02;
     s.captain = null;
-    s.sail = 0;
     s.rowing = 0;
-    s.anchored = true;
+    s.rowPow = 0;
+    s.rowL = 0;
+    s.rowR = 0;
+    if (!sailing) {
+      s.sail = 0;
+      s.anchored = true;
+    }
     s.passengers = s.passengers.filter((x) => x !== p);
     p.mode = "foot";
     p.onShip = false;
@@ -85900,7 +85909,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     } else if (s.def.oarsOnly) placeOnDeck(game, p, s, hs.t - 0.12, 0);
     else placeOnDeck(game, p, s, hs.t, 0);
     game.emit("disembark", s, null);
-    game.hint?.("deck", s.def.oarsOnly ? "Stand in your boat, or jump over the side for a swim (Space at her side climbs back in). Press E at the seat to take the oars again." : "Walk your deck freely \u2014 jump over the rail for a swim (Space at her side climbs back aboard), and press E at the wheel to take the helm again.");
+    game.hint?.("deck", s.def.oarsOnly ? "Stand in your boat, or jump over the side for a swim (Space at her side climbs back in). Press E at the seat to take the oars again." : "Walk your deck freely \u2014 she keeps the sails you set and sails on straight ahead. Jump over the rail for a swim (Space at her side climbs back aboard), and press E at the wheel to take the helm again: steer, or lower the sails (S) to stop.");
   }
   function hauledAboard(game, p, s) {
     const spot = boardingSpot(game, s, p.x, p.y);
@@ -87121,9 +87130,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const ahead = inp.isDown("W") || inp.isDown("ArrowUp") || tc && tc.my < -0.45 || s.def.oarsOnly && inp.isDown("Space");
       const back = inp.isDown("S") || inp.isDown("ArrowDown") || tc && tc.my > 0.45;
       if (s.def.oarsOnly) {
-        const fwd2 = (ahead ? 1 : 0) - (back ? 1 : 0);
-        s.rowL = fwd2 || (turn > 0.2 ? 1 : 0);
-        s.rowR = fwd2 || (turn < -0.2 ? 1 : 0);
+        if (inp.wasPressed("S") || inp.wasPressed("ArrowDown")) this.backOk = (s.rowPow || 0) <= 1e-3;
+        if (ahead) s.rowPow = Math.min(1, (s.rowPow || 0) + dt * 1.1);
+        else if (back) s.rowPow = Math.max(this.backOk ? -0.6 : 0, (s.rowPow || 0) - dt * 1.4);
+        const fwd2 = Math.abs(s.rowPow || 0) < 0.04 ? 0 : s.rowPow;
+        s.rowL = fwd2 || (turn > 0.2 ? 0.8 : 0);
+        s.rowR = fwd2 || (turn < -0.2 ? 0.8 : 0);
         if (s.rowL || s.rowR) s.anchored = false;
         s.heading += turn * s.def.turn * (game.crewMods?.turnMul || 1) * (fwd2 ? 0.45 : 0.6) * (0.55 + 0.45 * s.drive) * dt;
         s.sail = 0;
@@ -88970,11 +88982,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       h("h3", "Reputation"),
       h("p", "People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation. Crimes \u2014 robbing shops and houses, picking pockets, attacking townsfolk, Marines or merchant ships \u2014 put a bounty on your head instead, and bounties grow the way they do in One Piece: a few hundred thousand berries for a petty thief in the East Blue, millions on the Grand Line, far more in the New World. Anyone with a bounty is a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks \u2014 all the way to commanding fleets. A Marine who breaks the law loses standing, and is thrown out when nobody trusts them any more."),
       h("h3", "Sailing"),
-      h("p", "A rowboat has no mast or sail: sit at her oars (E at the seat), and W pulls, S backs water and A/D pull one oar to turn her \u2014 no wind needed, though the currents still carry you. Anything bigger sails: W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings \u2014 the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle."),
+      h("p", "A rowboat has no mast or sail: sit at her oars (E at the seat) and set a pace: W quickens it and she keeps rowing at it, S eases it off to a stop (and, pressed again, backs water), and A/D pull one oar to turn her \u2014 no wind needed, though the currents still carry you. Anything bigger sails: W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings \u2014 the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle."),
       h("h3", "The sea"),
       h("p", "Swim anywhere \u2014 but swimming tires you. Run out of stamina while you keep swimming and you start to go under and drown; stop and tread water to get your breath back. Dive with C (or look down and swim) to explore the reefs, kelp forests and the dark deep water in the middle of the ocean; bubbles under your stamina show how long you can hold your breath. Grab fish with an attack as they swim past, prise giant clams open for pearls, and watch out past the reef: Sea Cows hunt swimmers in the Blues, and horned Fighting Fish in the Grand Line. Fish-Men swim fast and breathe water. Devil Fruit users cannot swim at all: the sea drags them down, and they come out of it weak \u2014 keep a crewmate close to haul you out, or grab a line thrown from your ship."),
       h("h3", "Ships, raids and being wanted"),
-      h("p", "Other ships sail the seas: merchantmen and fishing boats, Marine patrols (who come after you once you're wanted), and pirates, who keep to their own business \u2014 unless you fire on them or board them. Stop, and a ship that's after you comes alongside and heaves to. Fire on a merchant and she may heave to. To board and raid a ship, leave your helm and jump across onto her deck, or swim to her hull and press Space to climb her side. Beat the crew on her deck, go down the hatch amidships and plunder the treasure chest in her hold (her cannonballs come across to your ship too), and take what's in it (a raided ship isn't yours to sail away: new ships come from the shipwrights). At your own wheel, E leaves the helm so you can walk your deck (jump over the rail for a swim; Space at her side climbs back aboard). Ships come in every size, from your first rowboat to sloops, caravels, galleons and One Piece-scale men-o'-war and Yonko flagships \u2014 and every one with a sail is a ship you can live on: walk her decks, climb the stairs to the quarterdeck, go in through the door under it to the captain's cabin (a table with the chart, a bunk, the sea chest), into the crew's forecastle on the bigger ones, and down the hatch amidships to the hold, where the cargo and the treasure chest are (on the big ships, a gun deck with cannons at every port). Her guns fire cannonballs, one a gun, and they run out: the count is by your wheel, and a shipwright restocks you. Your crew stand their stations on deck while you steer. Your own ships can't break. Every pier has a shipwright: talk to them (E) to bring any ship you own round to that pier, or to buy a new one. Raiding or stealing from anyone but pirates is piracy, and your bounty grows. A small bounty goes unnoticed, but once your poster is worth something the Marines know your face on sight \u2014 a hood hides it, until you fight or steal in it."),
+      h("p", "Other ships sail the seas: merchantmen and fishing boats, Marine patrols (who come after you once you're wanted), and pirates, who keep to their own business \u2014 unless you fire on them or board them. Stop, and a ship that's after you comes alongside and heaves to. Fire on a merchant and she may heave to. To board and raid a ship, leave your helm and jump across onto her deck, or swim to her hull and press Space to climb her side. Beat the crew on her deck, go down the hatch amidships and plunder the treasure chest in her hold (her cannonballs come across to your ship too), and take what's in it (a raided ship isn't yours to sail away: new ships come from the shipwrights). At your own wheel, E leaves the helm so you can walk your deck \u2014 under sail she sails on, holding her course, till you take the wheel again to steer or lower the sails (jump over the rail for a swim; Space at her side climbs back aboard). Ships come in every size, from your first rowboat to sloops, caravels, galleons and One Piece-scale men-o'-war and Yonko flagships \u2014 and every one with a sail is a ship you can live on: walk her decks, climb the stairs to the quarterdeck, go in through the door under it to the captain's cabin (a table with the chart, a bunk, the sea chest), into the crew's forecastle on the bigger ones, and down the hatch amidships to the hold, where the cargo and the treasure chest are (on the big ships, a gun deck with cannons at every port). Her guns fire cannonballs, one a gun, and they run out: the count is by your wheel, and a shipwright restocks you. Your crew stand their stations on deck while you steer. Your own ships can't break. Every pier has a shipwright: talk to them (E) to bring any ship you own round to that pier, or to buy a new one. Raiding or stealing from anyone but pirates is piracy, and your bounty grows. A small bounty goes unnoticed, but once your poster is worth something the Marines know your face on sight \u2014 a hood hides it, until you fight or steal in it."),
       h("h3", "Crossing the Red Line"),
       h("p", "Paradise ends at the Red Line. Pirates cross the way the Straw Hats did: have your ship coated at the Sabaody Archipelago, then dive 10,000 metres to Fish-Man Island and rise into the New World. The Red Ports and their Bondola lifts to Mary Geoise are for the World Government \u2014 and those it permits."),
       h("h3", "Crew and the One Piece"),
@@ -92719,7 +92731,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         const hull = s.unbreakable ? "Hull sound \xB7 can't break" : `Hull ${Math.ceil(s.hull)}/${s.maxHull}`;
         const html = `<div class="row"><b>${s.name}</b><span>${s.def.name}</span></div>
         <div class="bar hull"><i style="width:${s.unbreakable ? 100 : 100 * s.hull / s.maxHull}%"></i><span>${hull}</span></div>
-        ${oars ? `<div class="row"><span>Oars: ${oars}</span><span>W/S row, A/D turn</span></div>` : `<div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>`}
+        ${oars ? `<div class="bar sail"><i style="width:${100 * Math.abs(s.rowPow || 0)}%"></i><span>${(s.rowPow || 0) < -0.03 ? "Backing water" : (s.rowPow || 0) > 0.03 ? `Oars ${Math.round(s.rowPow * 100)}%` : "Oars shipped"} \xB7 W/S pace</span></div>` : `<div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>`}
         <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span>${oars ? "" : `<span>Wind <span class="wind" style="transform:rotate(${env.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? "none (Calm Belt!)" : Math.round(env.windStrength * 100) + "%"}</span>`}</div>
         ${s.def.cannons ? `<div class="row"><span>Cannonballs ${s.shot}/${s.shotCap}</span><span>${s.shot <= 0 ? "none left!" : s.cannonCd > 0 ? "reloading\u2026" : "ready"}</span></div>` : ""}`;
         if (this.cache.shipHtml !== html) {
