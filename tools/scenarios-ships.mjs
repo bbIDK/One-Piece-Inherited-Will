@@ -164,8 +164,10 @@ export const scenarios = {
       for (const type of types) {
         const info = await page.evaluate(({ s, type }) => {
           const g = window.OP.game;
-          for (const o of g.ships) if (o.name === 'Test Ship') o.alive = false;
-          g.ships = g.ships.filter((o) => o.alive !== false);
+          // (nobody else about: a passing ship given her berth would lie across her)
+          for (const o of g.ships) o.alive = false;
+          g.ships = [];
+          if (g.traffic) { g.traffic.ships = []; g.traffic.t = 1e9; }
           const ship = g.giveShip(type, s.x, s.y, 'Test Ship', { heading: 0.4 });
           ship.anchored = true; ship.speed = 0; ship.sail = 0; ship.sailSet = 0;
           window.__ship = ship;
