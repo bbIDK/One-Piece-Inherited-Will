@@ -89,7 +89,7 @@ function headKind(hp) {
   if (hp.fem) { k.jw *= 0.9; k.jr *= 0.88; k.cw *= 0.96; }
   k.jw *= 0.86 + hp.jaw * 0.28;
   // the chin: pointed, round or strong (square-cut, forward)
-  const C = { pointed: { cx: 0.6, cz: 0.02, cr: 0.15 }, round: { cx: 0.6, cz: 0.1, cr: 0.19 }, strong: { cx: 0.65, cz: 0.2, cr: 0.21 } }[hp.chin];
+  const C = { pointed: { cx: 0.7, cz: 0.02, cr: 0.15 }, round: { cx: 0.69, cz: 0.1, cr: 0.19 }, strong: { cx: 0.72, cz: 0.2, cr: 0.21 } }[hp.chin];
   Object.assign(k, C);
   k.cheek = hp.cheek;
   k.brow = hp.brow;
@@ -102,22 +102,36 @@ function headKind(hp) {
 // carries on behind the neck, a brow ridge over recessed eye sockets, a
 // nose (bridge, tip, nostrils), cheekbones, the mouth set a little forward,
 // the jaw rising from its corner toward the ear and running down to the chin.
-function sdfHead(x, y, z, k) {
+function sdfHead(x, y, z, k, outer = false) {
   const az = Math.abs(z);
   // cranium (narrower side to side than front to back)
   let d = ellipsoid(x + 0.06, y - 0.07, z, 1.0, 0.99, 0.9);
   // the face mass under the cheekbones
   d = smin(d, ellipsoid(x - 0.2, y + 0.3, z, 0.64, 0.6, k.cw), 0.3);
+  // the skull ends at the nape: under it, from the nape forward to the
+  // throat, is the neck — not a round bowl of head the neck is stuck into;
+  // and behind the jaw, under the ear, the neck rises to the skull, so the
+  // jaw's angle stands clear of it (see the jaw below)
+  // (hair is laid over the skull as it was, uncut: at the nape it lies over
+  // the top of the neck, as hair does, rather than tucking in under the skull)
+  if (!outer) {
+    d = smax(d, -(0.443 * x + 0.896 * y + 0.776), 0.2);
+    const qx = x + 0.22, qy = y + 0.46, o = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0);
+    d = smax(d, -o, 0.14);
+  }
   // jaw: the ramus up toward the ear, the jawline down to the chin, the chin
   d = smin(d, capsule(x, y, az, -0.24, -0.2, k.jw + 0.08, -0.14, k.jy, k.jw, k.jr * 0.8), 0.2);
   d = smin(d, capsule(x, y, az, -0.14, k.jy, k.jw, k.cx - 0.12, k.cy + 0.1, k.cz, k.jr), 0.24);
   d = smin(d, ellipsoid(x - k.cx, y - k.cy - 0.02, z, k.cr, k.cr * 0.92, k.cr + k.cz * 0.7), 0.18);
-  // the mouth (upper jaw) sits forward of the face
-  d = smin(d, ellipsoid(x - 0.58, y + 0.6, z, 0.24, 0.19, 0.32), 0.2);
-  // cheekbones
-  d = smin(d, ellipsoid(x - 0.66, y + 0.12, az - 0.5, 0.22, 0.13, 0.22), 0.05 + 0.12 * k.cheek);
+  // the mouth (upper jaw) sits forward of the face, the lips on it
+  d = smin(d, ellipsoid(x - 0.64, y + 0.6, z, 0.24, 0.19, 0.32), 0.2);
+  d = smin(d, ellipsoid(x - 0.86, y + 0.55, z, 0.07, 0.055, 0.2), 0.06);
+  d = smin(d, ellipsoid(x - 0.84, y + 0.71, z, 0.065, 0.05, 0.17), 0.06);
+  // cheekbones (under the eyes: the face is rounded across the eyes, not a
+  // flat plate — in profile the eye is a wedge set back from the nose)
+  d = smin(d, ellipsoid(x - 0.6, y + 0.27, az - 0.52, 0.22, 0.13, 0.22), 0.05 + 0.12 * k.cheek);
   // the cheek plane falls in below the cheekbone toward the jaw (less on women and round faces)
-  d = smax(d, -ellipsoid(x - 0.74, y + 0.42, az - 0.52, 0.2, 0.14, 0.16), (k.fem ? 0.2 : 0.12) + 0.08 * k.cheek);
+  d = smax(d, -ellipsoid(x - 0.72, y + 0.52, az - 0.52, 0.2, 0.14, 0.16), (k.fem ? 0.2 : 0.12) + 0.08 * k.cheek);
   // flatter temples
   d = smax(d, az - 0.87, 0.3);
   // eye sockets, under the brow
@@ -128,7 +142,7 @@ function sdfHead(x, y, z, k) {
   const n = k.nose;
   if (n) {
     // (a sharp anime bridge: narrow, running straight down from between the brows)
-    const tx = 0.92 + n.len * 1.15, ty = -0.36 * n.h;
+    const tx = 0.92 + n.len * 1.45, ty = -0.36 * n.h;
     let nd = capsule(x, y, z * 1.25, 0.92, 0.05, 0, tx, ty + 0.02, 0, n.r0 * 1.1);
     if (n.hook) nd = smin(nd, sphere(x - 0.92 - n.len * 0.55, y + 0.15, z, n.r0 + n.hook), 0.05);
     nd = smin(nd, sphere(x - tx + 0.01, y - ty, z, n.tip), 0.05);
@@ -139,15 +153,17 @@ function sdfHead(x, y, z, k) {
 }
 
 let HEAD = null;      // { hp, key, k } of the build being made (set around buildBody)
-const HEAD_R = new Map(); // head key → Map(direction → distance)
-/** Distance from the head centre to the outermost surface along a unit direction. */
-function headRay(dx, dy, dz) {
+const HEAD_R = new Map(); // head key (+ '|o', the hair's shell) → Map(direction → distance)
+/** Distance from the head centre to the outermost surface along a unit direction (outer: the hair's shell). */
+function headRay(dx, dy, dz, outer = false) {
   const H = HEAD || headOf({});
-  let cache = H.cache;
+  const ck = outer ? 'cacheO' : 'cache';
+  let cache = H[ck];
   if (!cache) {
-    cache = HEAD_R.get(H.key);
-    if (!cache) { if (HEAD_R.size > 400) HEAD_R.clear(); cache = new Map(); HEAD_R.set(H.key, cache); }
-    H.cache = cache;
+    const key = H.key + (outer ? '|o' : '');
+    cache = HEAD_R.get(key);
+    if (!cache) { if (HEAD_R.size > 400) HEAD_R.clear(); cache = new Map(); HEAD_R.set(key, cache); }
+    H[ck] = cache;
   }
   const key = (Math.round(dx * 1e4) + 10001) * 4.0004e8 + (Math.round(dy * 1e4) + 10001) * 20002 + (Math.round(dz * 1e4) + 10001);
   let t = cache.get(key);
@@ -156,14 +172,14 @@ function headRay(dx, dy, dz) {
   // march in from outside (the first crossing is the visible surface), then bisect
   let out = 1.7, cur = 1.7;
   for (let i = 0; i < 80; i++) {
-    const d = sdfHead(dx * cur, dy * cur, dz * cur, k);
+    const d = sdfHead(dx * cur, dy * cur, dz * cur, k, outer);
     if (d < 0) break;
     out = cur;
     cur -= Math.max(d * 0.9, 0.006);
     if (cur < 0.1) { cur = 0.1; break; }
   }
   let lo = cur, hi = out;
-  for (let i = 0; i < 9; i++) { const m = (lo + hi) / 2; if (sdfHead(dx * m, dy * m, dz * m, k) < 0) lo = m; else hi = m; }
+  for (let i = 0; i < 9; i++) { const m = (lo + hi) / 2; if (sdfHead(dx * m, dy * m, dz * m, k, outer) < 0) lo = m; else hi = m; }
   t = (lo + hi) / 2;
   cache.set(key, t);
   return t;
@@ -172,15 +188,23 @@ function headOf(look) {
   const hp = headParams(look);
   return { hp, key: headKey(hp), k: headKind(hp) };
 }
-/** Direction → point on the head surface (head units). */
-export function headShape(x, y, z) {
+/** The head's signed distance field for a look (head units; outer: the hair's shell; for tools and tests). */
+export function headSDF(look = {}, outer = false) { const H = headOf(look); return (x, y, z) => sdfHead(x, y, z, H.k, outer); }
+/** headShape for a given look's head (for tools and tests). */
+export function headShapeFor(look = {}, outer = false) { const H = headOf(look); return (x, y, z) => { const was = HEAD; HEAD = H; try { return headShape(x, y, z, outer); } finally { HEAD = was; } }; }
+/** Direction → point on the head surface (head units; outer: on the hair's shell, the skull uncut at the nape). */
+export function headShape(x, y, z, outer = false) {
   const l = Math.hypot(x, y, z) || 1;
-  const t = headRay(x / l, y / l, z / l);
+  const t = headRay(x / l, y / l, z / l, outer);
   return [x / l * t, y / l * t, z / l * t];
 }
 const dirOf = (thD, phD) => { const t = thD * DEG, p = phD * DEG; return [Math.sin(t) * Math.cos(p), Math.cos(t), Math.sin(t) * Math.sin(p)]; };
-/** A point on the head surface at polar angle th (0 = top) and azimuth ph (0 = front, 90 = right), scaled by k. */
-export function surf(thD, phD, k = 1) { const d = dirOf(thD, phD); const p = headShape(d[0], d[1], d[2]); return [p[0] * k, p[1] * k, p[2] * k]; }
+/**
+ * A point on the head at polar angle th (0 = top) and azimuth ph (0 = front,
+ * 90 = right), scaled by k — on the hair's shell (everything laid on the
+ * head: hair, hats, ears; the same as the head but at the nape).
+ */
+export function surf(thD, phD, k = 1) { const d = dirOf(thD, phD); const p = headShape(d[0], d[1], d[2], true); return [p[0] * k, p[1] * k, p[2] * k]; }
 
 /**
  * Anime face shading. The grid's normals are smoothed a little (the cel ramp
@@ -211,11 +235,23 @@ function faceNormals(g, U, V) {
   for (let i = 0; i < n; i++) {
     const px = P.getX(i), py = P.getY(i), pz = P.getZ(i);
     const l = Math.hypot(px, py, pz) || 1;
-    const dx = px / l, dy = py / l, dz = pz / l;
+    let dx = px / l, dy = py / l, dz = pz / l;
     // how much of the sculpted shape shows: most over the brow, nose and cheekbones
     const feat = Math.max(0, 1 - Math.abs(py + 0.12) / 0.55) * Math.max(0, 1 - Math.abs(pz) / 0.75) * Math.max(0, Math.min(1, dx * 2));
-    const wg = 0.62 + 0.33 * feat;
     const f = Math.max(0, Math.min(1, (dx + 0.1) / 0.7));
+    // below the eyes the face is shaded as one smooth front (as seen from a
+    // point low behind it, not the head's centre), the way anime faces are
+    // lit: a high sun lights the cheeks, mouth and chin as it does the brow —
+    // no dark band across the face at the cheekbones like a mask, no blotches
+    // from every hollow — and a light from the side splits it cleanly down
+    // the nose; the underside of the jaw stays in shadow
+    const down = Math.max(0, Math.min(1, (a[i * 3 + 1] + 0.8) / 0.3));
+    const low = f * Math.max(0, Math.min(1, (0.1 - py) / 0.45)) * down;
+    if (low > 0) {
+      const qx = px + 0.35, qy = py + 0.85, ql = Math.hypot(qx, qy, pz) || 1;
+      dx += (qx / ql - dx) * low; dy += (qy / ql - dy) * low; dz += (pz / ql - dz) * low;
+    }
+    const wg = (0.62 + 0.33 * feat) * (1 - 0.55 * low);
     const nx = a[i * 3] * wg + dx * (1 - wg) + f * 0.08, ny = a[i * 3 + 1] * wg + dy * (1 - wg) + f * 0.02, nz = a[i * 3 + 2] * wg + dz * (1 - wg);
     const m = Math.hypot(nx, ny, nz) || 1;
     N.setXYZ(i, nx / m, ny / m, nz / m);
@@ -315,7 +351,7 @@ function capGeo(rs, thF, thS, thB, zig = null, U = 16, V = 6) {
     let th = thS + (thF - thS) * Math.pow(Math.max(0, c), 1.4) + (thB - thS) * Math.pow(Math.max(0, -c), 1.4);
     if (zig && v >= 1) th += zig(ph);
     const t = v * th * DEG;
-    const p = headShape(Math.sin(t) * Math.cos(ph), Math.cos(t), Math.sin(t) * Math.sin(ph));
+    const p = headShape(Math.sin(t) * Math.cos(ph), Math.cos(t), Math.sin(t) * Math.sin(ph), true);
     return [p[0] * rs, p[1] * rs, p[2] * rs];
   }, U, V);
 }
@@ -433,7 +469,7 @@ function bangs(h, n, spread, th2, w, { th = 24, sweep = 0, ragged = 0, part = 0,
 
 const HAIR = {
   bald() {},
-  buzz(h) { h.cap(1.035, 62, 94, 112); },
+  buzz(h) { h.cap(1.05, 62, 94, 112); },
   crop(h) {
     // Zoro-style: a short, thick crop standing up in tufts, the brow left clear
     h.cap(1.07, 58, 94, 114, napeZig(5, 8));
@@ -483,7 +519,7 @@ const HAIR = {
   },
   slick(h) {
     // slicked straight back from the brow
-    h.cap(1.06, 60, 96, 118, napeZig(3, 8));
+    h.cap(1.065, 60, 96, 118, napeZig(3, 8));
     for (const ph of [-40, -20, 0, 20, 40]) flow(h, 58, ph, 104, 180 - ph * 1.4, 0.25, { k2: 1.1, bulge: 0.3 });
     for (const sd of [-1, 1]) flow(h, 70, sd * 70, 108, sd * 140, 0.22, { bulge: 0.18 });
     for (const ph of [150, 180, 210]) flow(h, 70, ph, 122, ph, 0.2, { k2: 1.06 });
@@ -581,13 +617,13 @@ const HAIR = {
     for (const s of [-1, 1]) blob(h, [-0.36, 0.56, s * 1.3], 0.38, [0, 0, 0], h.q.sph);
   },
   topknot(h) {
-    h.cap(1.035, 60, 95, 112);
+    h.cap(1.05, 60, 95, 112);
     h.addC(Prim.torus(0.35, 4, 8), mul(M(0, 1.04, 0, 0, 0, 0.35), M(0, 0, 0, Math.PI / 2, 0, 0, 0.14)), '#f4f1ea', h.bone);
     spike(h, [0.04, 1.0, 0], [-0.62, 1.28, 0], 0.16, 0.13, 5);
     blob(h, [-0.58, 1.26, 0], [0.12, 0.1, 0.12], [0, 0, 0], h.q.sph);
   },
   mohawk(h) {
-    h.cap(1.02, 62, 94, 118, null, 'stubble');
+    h.cap(1.045, 62, 94, 118, null, 'stubble');
     const fins = [[18, 0, 0.75], [4, 0, 0.9], [14, 180, 0.95], [34, 180, 0.9], [56, 180, 0.75], [78, 180, 0.5]];
     for (const [th, ph, L] of fins) {
       const a = surf(th, ph, 1.0);

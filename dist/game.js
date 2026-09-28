@@ -63546,8 +63546,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       F: F4,
       hc: headR * 0.84,
       // head centre above the neck top
-      hx: headR * 0.15,
-      // … and in front of it (the neck meets the skull behind the jaw)
+      hx: headR * 0.28,
+      // … and in front of it (the neck meets the skull at the nape, behind the jaw)
       hipW: (fem ? 0.094 : 0.085) * Bk * (0.6 + 0.4 * F4.hp),
       // hip joints either side of the pelvis
       // the outside of the hips (the tops of the thighs): where a scabbard or a holster hangs
@@ -64612,9 +64612,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         add5(torus2(q2), mul(M((f - bk) / 2, 0, 0), ringAt(neckS * sh.cl, (f + bk) / 2 + 2e-3, W4 + 2e-3, 0.012)), shade(col, -0.18), B3.chest);
       }
     }
-    const nk = (o.fem ? 0.04 : 0.05 * (1 + (d.Bk - 1) * 0.5) * (1 + o.muscle * 0.14)) * d.F.neck;
+    const nk = (o.fem ? 0.046 : 0.058 * (1 + (d.Bk - 1) * 0.5) * (1 + o.muscle * 0.14)) * d.F.neck;
     const neckTop = d.chestLen + d.neck;
-    add5(neckGeo(nk, d.chestLen - 0.05, neckTop + 0.035, o, cloth), M(), skin, B3.chest, 0, { blend: (x, y) => {
+    add5(neckGeo(nk, d.chestLen - 0.05, neckTop + 0.05, o, cloth), M(), skin, B3.chest, 0, { blend: (x, y) => {
       const w = 0.8 * sstep(d.chestLen + d.neck * 0.05, neckTop, y);
       return w > 2e-3 ? [B3.head, w] : null;
     } });
@@ -64829,11 +64829,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const a = -Math.PI + u * TAU13, j = Math.round(v * VV);
       if (j < C3) {
         const t = j / C3 * Math.PI / 2, r2 = nk * 0.98 * Math.sin(t);
-        return [Math.cos(a) * r2 * 0.95, y1 + nk * 0.5 * Math.cos(t), Math.sin(a) * r2];
+        return [Math.cos(a) * r2 * 1.05, y1 + nk * 0.5 * Math.cos(t), Math.sin(a) * r2 * 1.28];
       }
       const h2 = 1 - (j - C3) / V3;
       const y = y0 + (y1 - y0) * h2;
       let r = nk * (1.1 - 0.12 * sstep(0, 0.5, h2));
+      const kx = 0.95 + 0.1 * sstep(0.45, 1, h2), kz = 1 + 0.28 * sstep(0.5, 1, h2);
       if (cloth) {
         const ang = 0.4 + (1.75 - 0.4) * h2;
         const da = Math.abs(Math.abs(a) - ang) / 0.3;
@@ -64843,7 +64844,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           if (dx < 1 && Math.abs(dh) < 1) r += (1 - dx * dx) * (1 - dh * dh) * nk * 0.16;
         }
       }
-      return [Math.cos(a) * r * 0.95, y, Math.sin(a) * r];
+      return [Math.cos(a) * r * kx, y, Math.sin(a) * r * kz];
     }, U3, VV);
     const n = g.attributes.normal, W4 = U3 + 1;
     for (let j = 0; j <= VV; j++) {
@@ -65615,7 +65616,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       k.cw *= 0.96;
     }
     k.jw *= 0.86 + hp.jaw * 0.28;
-    const C3 = { pointed: { cx: 0.6, cz: 0.02, cr: 0.15 }, round: { cx: 0.6, cz: 0.1, cr: 0.19 }, strong: { cx: 0.65, cz: 0.2, cr: 0.21 } }[hp.chin];
+    const C3 = { pointed: { cx: 0.7, cz: 0.02, cr: 0.15 }, round: { cx: 0.69, cz: 0.1, cr: 0.19 }, strong: { cx: 0.72, cz: 0.2, cr: 0.21 } }[hp.chin];
     Object.assign(k, C3);
     k.cheek = hp.cheek;
     k.brow = hp.brow;
@@ -65623,22 +65624,29 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     k.fem = hp.fem;
     return k;
   }
-  function sdfHead(x, y, z, k) {
+  function sdfHead(x, y, z, k, outer = false) {
     const az = Math.abs(z);
     let d = ellipsoid(x + 0.06, y - 0.07, z, 1, 0.99, 0.9);
     d = smin(d, ellipsoid(x - 0.2, y + 0.3, z, 0.64, 0.6, k.cw), 0.3);
+    if (!outer) {
+      d = smax(d, -(0.443 * x + 0.896 * y + 0.776), 0.2);
+      const qx = x + 0.22, qy = y + 0.46, o = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0);
+      d = smax(d, -o, 0.14);
+    }
     d = smin(d, capsule(x, y, az, -0.24, -0.2, k.jw + 0.08, -0.14, k.jy, k.jw, k.jr * 0.8), 0.2);
     d = smin(d, capsule(x, y, az, -0.14, k.jy, k.jw, k.cx - 0.12, k.cy + 0.1, k.cz, k.jr), 0.24);
     d = smin(d, ellipsoid(x - k.cx, y - k.cy - 0.02, z, k.cr, k.cr * 0.92, k.cr + k.cz * 0.7), 0.18);
-    d = smin(d, ellipsoid(x - 0.58, y + 0.6, z, 0.24, 0.19, 0.32), 0.2);
-    d = smin(d, ellipsoid(x - 0.66, y + 0.12, az - 0.5, 0.22, 0.13, 0.22), 0.05 + 0.12 * k.cheek);
-    d = smax(d, -ellipsoid(x - 0.74, y + 0.42, az - 0.52, 0.2, 0.14, 0.16), (k.fem ? 0.2 : 0.12) + 0.08 * k.cheek);
+    d = smin(d, ellipsoid(x - 0.64, y + 0.6, z, 0.24, 0.19, 0.32), 0.2);
+    d = smin(d, ellipsoid(x - 0.86, y + 0.55, z, 0.07, 0.055, 0.2), 0.06);
+    d = smin(d, ellipsoid(x - 0.84, y + 0.71, z, 0.065, 0.05, 0.17), 0.06);
+    d = smin(d, ellipsoid(x - 0.6, y + 0.27, az - 0.52, 0.22, 0.13, 0.22), 0.05 + 0.12 * k.cheek);
+    d = smax(d, -ellipsoid(x - 0.72, y + 0.52, az - 0.52, 0.2, 0.14, 0.16), (k.fem ? 0.2 : 0.12) + 0.08 * k.cheek);
     d = smax(d, az - 0.87, 0.3);
     d = smax(d, -ellipsoid(x - 0.96, y + 0.04, az - 0.34, 0.13, 0.12, 0.19), 0.08);
     d = smin(d, capsule(x, y, az, 0.9, 0.2, 0, 0.78, 0.18, 0.52, 0.04 + 0.05 * k.brow * (k.fem ? 0.6 : 1)), 0.08 + 0.04 * k.brow);
     const n = k.nose;
     if (n) {
-      const tx = 0.92 + n.len * 1.15, ty = -0.36 * n.h;
+      const tx = 0.92 + n.len * 1.45, ty = -0.36 * n.h;
       let nd = capsule(x, y, z * 1.25, 0.92, 0.05, 0, tx, ty + 0.02, 0, n.r0 * 1.1);
       if (n.hook) nd = smin(nd, sphere(x - 0.92 - n.len * 0.55, y + 0.15, z, n.r0 + n.hook), 0.05);
       nd = smin(nd, sphere(x - tx + 0.01, y - ty, z, n.tip), 0.05);
@@ -65649,17 +65657,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   var HEAD = null;
   var HEAD_R = /* @__PURE__ */ new Map();
-  function headRay(dx, dy, dz) {
+  function headRay(dx, dy, dz, outer = false) {
     const H3 = HEAD || headOf({});
-    let cache4 = H3.cache;
+    const ck = outer ? "cacheO" : "cache";
+    let cache4 = H3[ck];
     if (!cache4) {
-      cache4 = HEAD_R.get(H3.key);
+      const key3 = H3.key + (outer ? "|o" : "");
+      cache4 = HEAD_R.get(key3);
       if (!cache4) {
         if (HEAD_R.size > 400) HEAD_R.clear();
         cache4 = /* @__PURE__ */ new Map();
-        HEAD_R.set(H3.key, cache4);
+        HEAD_R.set(key3, cache4);
       }
-      H3.cache = cache4;
+      H3[ck] = cache4;
     }
     const key2 = (Math.round(dx * 1e4) + 10001) * 40004e4 + (Math.round(dy * 1e4) + 10001) * 20002 + (Math.round(dz * 1e4) + 10001);
     let t = cache4.get(key2);
@@ -65667,7 +65677,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const k = H3.k;
     let out = 1.7, cur = 1.7;
     for (let i = 0; i < 80; i++) {
-      const d = sdfHead(dx * cur, dy * cur, dz * cur, k);
+      const d = sdfHead(dx * cur, dy * cur, dz * cur, k, outer);
       if (d < 0) break;
       out = cur;
       cur -= Math.max(d * 0.9, 6e-3);
@@ -65679,7 +65689,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     let lo = cur, hi = out;
     for (let i = 0; i < 9; i++) {
       const m = (lo + hi) / 2;
-      if (sdfHead(dx * m, dy * m, dz * m, k) < 0) lo = m;
+      if (sdfHead(dx * m, dy * m, dz * m, k, outer) < 0) lo = m;
       else hi = m;
     }
     t = (lo + hi) / 2;
@@ -65690,9 +65700,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const hp = headParams(look);
     return { hp, key: headKey(hp), k: headKind(hp) };
   }
-  function headShape(x, y, z) {
+  function headShape(x, y, z, outer = false) {
     const l = Math.hypot(x, y, z) || 1;
-    const t = headRay(x / l, y / l, z / l);
+    const t = headRay(x / l, y / l, z / l, outer);
     return [x / l * t, y / l * t, z / l * t];
   }
   var dirOf = (thD, phD) => {
@@ -65701,7 +65711,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
   function surf(thD, phD, k = 1) {
     const d = dirOf(thD, phD);
-    const p = headShape(d[0], d[1], d[2]);
+    const p = headShape(d[0], d[1], d[2], true);
     return [p[0] * k, p[1] * k, p[2] * k];
   }
   function faceNormals(g, U3, V3) {
@@ -65731,10 +65741,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (let i = 0; i < n; i++) {
       const px2 = P4.getX(i), py2 = P4.getY(i), pz2 = P4.getZ(i);
       const l = Math.hypot(px2, py2, pz2) || 1;
-      const dx = px2 / l, dy = py2 / l, dz = pz2 / l;
+      let dx = px2 / l, dy = py2 / l, dz = pz2 / l;
       const feat = Math.max(0, 1 - Math.abs(py2 + 0.12) / 0.55) * Math.max(0, 1 - Math.abs(pz2) / 0.75) * Math.max(0, Math.min(1, dx * 2));
-      const wg = 0.62 + 0.33 * feat;
       const f = Math.max(0, Math.min(1, (dx + 0.1) / 0.7));
+      const down = Math.max(0, Math.min(1, (a[i * 3 + 1] + 0.8) / 0.3));
+      const low = f * Math.max(0, Math.min(1, (0.1 - py2) / 0.45)) * down;
+      if (low > 0) {
+        const qx = px2 + 0.35, qy = py2 + 0.85, ql = Math.hypot(qx, qy, pz2) || 1;
+        dx += (qx / ql - dx) * low;
+        dy += (qy / ql - dy) * low;
+        dz += (pz2 / ql - dz) * low;
+      }
+      const wg = (0.62 + 0.33 * feat) * (1 - 0.55 * low);
       const nx = a[i * 3] * wg + dx * (1 - wg) + f * 0.08, ny = a[i * 3 + 1] * wg + dy * (1 - wg) + f * 0.02, nz = a[i * 3 + 2] * wg + dz * (1 - wg);
       const m = Math.hypot(nx, ny, nz) || 1;
       N4.setXYZ(i, nx / m, ny / m, nz / m);
@@ -65826,7 +65844,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       let th = thS + (thF - thS) * Math.pow(Math.max(0, c), 1.4) + (thB - thS) * Math.pow(Math.max(0, -c), 1.4);
       if (zig && v >= 1) th += zig(ph);
       const t = v * th * DEG2;
-      const p = headShape(Math.sin(t) * Math.cos(ph), Math.cos(t), Math.sin(t) * Math.sin(ph));
+      const p = headShape(Math.sin(t) * Math.cos(ph), Math.cos(t), Math.sin(t) * Math.sin(ph), true);
       return [p[0] * rs, p[1] * rs, p[2] * rs];
     }, U3, V3);
   }
@@ -65934,7 +65952,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     bald() {
     },
     buzz(h2) {
-      h2.cap(1.035, 62, 94, 112);
+      h2.cap(1.05, 62, 94, 112);
     },
     crop(h2) {
       h2.cap(1.07, 58, 94, 114, napeZig(5, 8));
@@ -66019,7 +66037,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (const ph of [140, 165, 195, 220]) flow(h2, 30, ph, 112, ph, 0.23);
     },
     slick(h2) {
-      h2.cap(1.06, 60, 96, 118, napeZig(3, 8));
+      h2.cap(1.065, 60, 96, 118, napeZig(3, 8));
       for (const ph of [-40, -20, 0, 20, 40]) flow(h2, 58, ph, 104, 180 - ph * 1.4, 0.25, { k2: 1.1, bulge: 0.3 });
       for (const sd of [-1, 1]) flow(h2, 70, sd * 70, 108, sd * 140, 0.22, { bulge: 0.18 });
       for (const ph of [150, 180, 210]) flow(h2, 70, ph, 122, ph, 0.2, { k2: 1.06 });
@@ -66116,13 +66134,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (const s of [-1, 1]) blob3(h2, [-0.36, 0.56, s * 1.3], 0.38, [0, 0, 0], h2.q.sph);
     },
     topknot(h2) {
-      h2.cap(1.035, 60, 95, 112);
+      h2.cap(1.05, 60, 95, 112);
       h2.addC(Prim.torus(0.35, 4, 8), mul(M(0, 1.04, 0, 0, 0, 0.35), M(0, 0, 0, Math.PI / 2, 0, 0, 0.14)), "#f4f1ea", h2.bone);
       spike(h2, [0.04, 1, 0], [-0.62, 1.28, 0], 0.16, 0.13, 5);
       blob3(h2, [-0.58, 1.26, 0], [0.12, 0.1, 0.12], [0, 0, 0], h2.q.sph);
     },
     mohawk(h2) {
-      h2.cap(1.02, 62, 94, 118, null, "stubble");
+      h2.cap(1.045, 62, 94, 118, null, "stubble");
       const fins = [[18, 0, 0.75], [4, 0, 0.9], [14, 180, 0.95], [34, 180, 0.9], [56, 180, 0.75], [78, 180, 0.5]];
       for (const [th, ph, L2] of fins) {
         const a = surf(th, ph, 1);

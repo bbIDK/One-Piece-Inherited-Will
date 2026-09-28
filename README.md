@@ -260,6 +260,12 @@ rearrange them.
     curvy or petite for women). A frame sets height, leg length, shoulders,
     arms, waist and belly, and the muscle it usually carries. Townsfolk,
     pirates and Marines each roll one that suits their work.
+  - Heads are built to read as real heads from every side. In profile the
+    brow, nose, lips and chin stand out and the eye is a wedge set back
+    from the nose, the jaw turns up at its angle under the ear, and the
+    skull ends at the nape above a neck as thick as a real one, rising to
+    meet it (not a ball on a stick). A high sun lights the whole face; it
+    doesn't leave a dark band across the cheeks.
   - Pecs, abs, deltoids, biceps and calves are modelled and inked, and the
     faces are lit in 3D. Long hair and coat tails swing as you move. Skirts
     and dresses hang from panels round the waist that swing out to clear the
@@ -406,6 +412,8 @@ node tools/shot.mjs c3hairclose [--styles=a,b] [--fem=1] [--hat=straw]   # hairs
 node tools/shot.mjs c3crew [--only=crew,town,faces] [--side]   # the Straw Hats lined up like the World Seeker key art, random townsfolk, face close-ups
 node tools/shot.mjs c3body [--only=men,women]   # frames and muscles, front, side and back
 node tools/shot.mjs c3ears                      # ears and profiles, side-on and three-quarter
+node tools/shot.mjs c3profile [--only=man,woman,…] [--views=side,34,front]   # heads held still up close in town: profiles and three-quarters
+node tools/heads3d-sheet.mjs [--only=…|--hairs=…|--fhairs=…|--races=…] [--views=front,34,side,back] [--light=noon] [--lod=2|1]   # heads from every side on a stage, in seconds (no game boot)
 node tools/shot.mjs c3tops [--fem=0|1] [--tops=a,b]   # every top style on a man and a woman, front and three-quarter
 node tools/shot.mjs fpbody                      # first person: looking down standing, walking, sprinting, in a heavy blow's lunge
 node tools/shot.mjs fphelm                      # first person at a caravel's helm (ahead, down at the wheel, back) and a rowboat's oars

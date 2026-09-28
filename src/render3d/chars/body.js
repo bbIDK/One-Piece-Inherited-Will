@@ -508,10 +508,11 @@ export function buildFigure(add0, look, d, pal, q) {
       add(torus(q), mul(M((f - bk) / 2, 0, 0), ringAt(neckS * sh.cl, (f + bk) / 2 + 0.002, W + 0.002, 0.012)), shade(col, -0.18), B.chest);
     }
   }
-  // the neck, its top turning with the head
-  const nk = (o.fem ? 0.04 : 0.05 * (1 + (d.Bk - 1) * 0.5) * (1 + o.muscle * 0.14)) * d.F.neck;
+  // the neck, its top turning with the head (as thick as a real neck is to a
+  // head, and rising into it right up to the nape — see build.js sdfHead)
+  const nk = (o.fem ? 0.046 : 0.058 * (1 + (d.Bk - 1) * 0.5) * (1 + o.muscle * 0.14)) * d.F.neck;
   const neckTop = d.chestLen + d.neck;
-  add(neckGeo(nk, d.chestLen - 0.05, neckTop + 0.035, o, cloth), M(), skin, B.chest, 0, { blend: (x, y) => { const w = 0.8 * sstep(d.chestLen + d.neck * 0.05, neckTop, y); return w > 0.002 ? [B.head, w] : null; } });
+  add(neckGeo(nk, d.chestLen - 0.05, neckTop + 0.05, o, cloth), M(), skin, B.chest, 0, { blend: (x, y) => { const w = 0.8 * sstep(d.chestLen + d.neck * 0.05, neckTop, y); return w > 0.002 ? [B.head, w] : null; } });
 
   // ---- tops worn over the body
   const edge = (a) => (s) => a(s), rest = (a) => (s) => TAU - a(s);
@@ -770,11 +771,15 @@ function neckGeo(nk, y0, y1, o, cloth) {
     if (j < C) {
       // the dome: from its crown (j = 0) down to the top of the neck
       const t = (j / C) * Math.PI / 2, r = nk * 0.98 * Math.sin(t);
-      return [Math.cos(a) * r * 0.95, y1 + nk * 0.5 * Math.cos(t), Math.sin(a) * r];
+      return [Math.cos(a) * r * 1.05, y1 + nk * 0.5 * Math.cos(t), Math.sin(a) * r * 1.28];
     }
     const h = 1 - (j - C) / V; // h: 0 at the base, 1 at the top
     const y = y0 + (y1 - y0) * h;
     let r = nk * (1.1 - 0.12 * sstep(0, 0.5, h));
+    // (deeper at the top, where it runs from the throat back to the nape, and
+    // wider, out to the skull behind the ears: the jaw's angles don't jut out
+    // beside it)
+    const kx = 0.95 + 0.1 * sstep(0.45, 1, h), kz = 1 + 0.28 * sstep(0.5, 1, h);
     if (cloth) {
       // tendons: behind the ears at the top, meeting at the front at the base
       const ang = 0.4 + (1.75 - 0.4) * h;
@@ -785,7 +790,7 @@ function neckGeo(nk, y0, y1, o, cloth) {
         if (dx < 1 && Math.abs(dh) < 1) r += (1 - dx * dx) * (1 - dh * dh) * nk * 0.16;
       }
     }
-    return [Math.cos(a) * r * 0.95, y, Math.sin(a) * r];
+    return [Math.cos(a) * r * kx, y, Math.sin(a) * r * kz];
   }, U, VV);
   // weld the seam at the back
   const n = g.attributes.normal, W = U + 1;

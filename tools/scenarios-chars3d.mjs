@@ -836,6 +836,40 @@ export const scenarios = {
       await page.evaluate(() => { window.OP.hold = false; });
     },
   },
+  // side profiles up close, at eye level, the head held still: bald and
+  // short-haired men and women of several frames (--only=name,name; --views=side,34,front)
+  c3profile: {
+    async run(page, snap, args) {
+      await boot(page);
+      await page.evaluate(() => { const u = document.getElementById('ui'); if (u) u.style.display = 'none'; window.__C3.goSunny(); });
+      const LOOKS = {
+        man: { fem: false, frame: 'average', hair: 'bald', skin: '#f1c9a0', topStyle: 'tee', top: '#3b6ea5', eyeShape: 'sharp' },
+        zoro: { fem: false, frame: 'athletic', hair: 'crop', hairColor: '#3fae4a', skin: '#e8b98f', topStyle: 'kimono', openShirt: true, top: '#2f6b3a', eyeShape: 'sharp', frown: true, mouth: 'flat', muscle: 0.9 },
+        luffy: { fem: false, frame: 'lean', hair: 'messy', hairColor: '#141414', skin: '#f3c9a0', topStyle: 'vest', top: '#d12b2b', eyeShape: 'bold', scarCheek: true, grin: true, muscle: 0.75 },
+        brawny: { fem: false, frame: 'brawny', hair: 'buzz', hairColor: '#3b2a1a', skin: '#c68a5e', topStyle: 'tank', top: '#555555', eyeShape: 'sharp', muscle: 1.1 },
+        woman: { fem: true, frame: 'average', hair: 'bob', hairColor: '#3b2a1a', skin: '#f6d5b8', topStyle: 'tee', top: '#c0392b', eyeShape: 'soft' },
+        nami: { fem: true, frame: 'curvy', hair: 'wavy', hairColor: '#e8742a', skin: '#f6cfae', topStyle: 'bikini', top: '#3c9a52', eyeShape: 'bright' },
+      };
+      const names = String(args.only || Object.keys(LOOKS).join(',')).split(',');
+      const views = String(args.views || 'side,34').split(',');
+      const F = { side: Math.PI / 2, 34: Math.PI * 0.75, front: Math.PI };
+      for (const name of names) {
+        for (const view of views) {
+          await page.evaluate(([look, f]) => {
+            const C = window.__C3; C.clear();
+            C.spawn({ name: 'P', id: 'profile', showName: false, look: { race: 'human', seed: 5, idle: 'rest', bottomStyle: 'trousers', bottom: '#2b2b33', ...look } }, 0.95, 0, f);
+            C.view(0, 0.02);
+          }, [LOOKS[name], F[view]]);
+          // (they'd turn their head to the camera: held still, facing ahead)
+          await step(page, 0.05);
+          await page.waitForFunction(() => window.OP.game.view3d.actorViews.has(window.__C3.npcs[0]));
+          await page.evaluate(() => { const v = window.OP.game.view3d.actorViews.get(window.__C3.npcs[0]); v.lookAt = () => 0; v.headYaw = 0; });
+          await settle(page, 4);
+          await snap(`${name}-${view}`);
+        }
+      }
+    },
+  },
   // every top style on a man and a woman, four at a time, front and
   // three-quarter (--fem=0|1 for one of them, --tops=a,b for some)
   c3tops: {
