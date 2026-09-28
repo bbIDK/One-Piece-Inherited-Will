@@ -499,6 +499,67 @@ export const scenarios = {
       }
     },
   },
+  // weapons worn on the body, drawn from the hotbar and put away again: the real
+  // hotbar keys, snapped part way through the draw
+  //   --wpns=fine_katana,flintlock,bo_staff,wado_ichimonji+shusui+sandai_kitetsu  --modes=third,first
+  //   --at=0.15,0.3,0.45,0.6  (seconds into the draw)
+  c3draw: {
+    async run(page, snap, args) {
+      await boot(page);
+      await page.evaluate((m) => { const p = window.OP.game.player; window.OP.teleport(p.x + m, p.y); }, Number(args.move ?? 5));
+      await page.evaluate(() => { const u = document.getElementById('ui'); if (u && !window.__keepHud) u.style.display = 'none'; });
+      const sets = String(args.wpns || 'fine_katana,flintlock,bo_staff,wado_ichimonji+shusui+sandai_kitetsu').split(',');
+      const at = String(args.at || '0.15,0.3,0.45,0.6').split(',').map(Number);
+      const press = (k) => page.evaluate((k) => { window.OP.key(k, true); window.OP.step(1 / 30); window.OP.key(k, false); }, k);
+      for (const set of sets) {
+        const ids = set.split('+');
+        for (const mode of String(args.modes || 'third,first').split(',')) {
+          await page.evaluate(([ids, mode]) => {
+            const g = window.OP.game, p = g.player, c = g.state.char;
+            window.OP.hold = false;
+            c.equipped.weapons = []; p.weapon = null; p.drawn = false; p.held = null;
+            ids.forEach((id, i) => { window.OP.debug.addItem(g, id, 1, { silent: true }); p.hotbar[i] = 'item:' + id; });
+            window.__C3.view(0, -0.05, mode, 2.4);
+            g.view3d.rig.setShiftLock?.(false);
+          }, [ids, mode]);
+          // put them on (each key the first time: on and drawn), then back in the sheath
+          for (let i = 0; i < ids.length; i++) await press(String(i + 1));
+          await settle(page, 2);
+          await press('1');
+          await settle(page, 3);
+          const place = () => page.evaluate((mode) => {
+            const g = window.OP.game, p = g.player, r = g.view3d.rig;
+            window.OP.hold = true;
+            if (r.mode === 'third') {
+              const v = g.view3d.actorViews.get(p);
+              r.yaw = (v && v.visF !== undefined ? v.visF : p.facing) + Math.PI * 0.72;
+              r.pitch = 0.05;
+              for (let i = 0; i < 3; i++) window.OP.step(0.05);
+            } else { r.pitch = -0.2; window.OP.step(0.05); }
+          }, mode);
+          await place();
+          await snap(`${set}-${mode}-worn`);
+          // draw: snapped along the way, then held ready
+          await press('1');
+          let t = 1 / 30;
+          for (const s of at) {
+            if (s > t) await page.evaluate((d) => window.OP.step(d), s - t);
+            t = Math.max(t, s);
+            await snap(`${set}-${mode}-draw${s}`);
+          }
+          await page.evaluate(() => window.OP.step(0.6));
+          await snap(`${set}-${mode}-ready`);
+          // and away again
+          await press('1');
+          await page.evaluate(() => window.OP.step(0.25));
+          await snap(`${set}-${mode}-sheathe0.25`);
+          await page.evaluate(() => window.OP.step(0.6));
+          await snap(`${set}-${mode}-away`);
+          await page.evaluate(() => { window.OP.hold = false; });
+        }
+      }
+    },
+  },
   // the Straw Hats lined up like the World Seeker key art (for comparing the look 1:1), and face close-ups
   //   --only=crew,faces
   c3crew: {
@@ -508,13 +569,13 @@ export const scenarios = {
       // (no HUD over the comparison)
       await page.evaluate(() => { const u = document.getElementById('ui'); if (u) u.style.display = 'none'; });
       const CREW = [
-        ['Sanji', { idle: 'rest', fem: false, eyeShape: 'bold', hair: 'sidefringe', hairColor: '#f2d16b', skin: '#f6d5b8', topStyle: 'jacket', top: '#1c1c22', top2: '#f5f5f5', tie: '#1c1c22', bottomStyle: 'slim', bottom: '#1c1c22', shoeStyle: 'shoes', shoes: '#111111', muscle: 0.4 }, 3.8, -1.55],
-        ['Zoro', { idle: 'cross', fem: false, eyeShape: 'sharp', frown: true, mouth: 'flat', openShirt: true, hair: 'crop', hairColor: '#3fae4a', skin: '#e8b98f', topStyle: 'kimono', top: '#2f6b3a', waist: 'sash', waistCol: '#8e1c2a', bottomStyle: 'hakama', bottom: '#27432b', shoeStyle: 'boots', muscle: 0.9 }, 3.5, -0.8],
-        ['Luffy', { idle: 'cross', fem: false, eyeShape: 'bold', hat: 'straw', hair: 'messy', hairColor: '#141414', skin: '#f3c9a0', topStyle: 'vest', top: '#d12b2b', bottomStyle: 'shorts', bottom: '#2f5fd0', waist: 'sash', waistCol: '#f2c21b', shoeStyle: 'sandals', muscle: 0.75, scarCheek: true, grin: true }, 2.9, 0],
-        ['Robin', { idle: 'cross', fem: true, eyeShape: 'cool', hair: 'long', hairColor: '#171320', skin: '#dcae8a', topStyle: 'crop', top: '#3b3570', bottomStyle: 'longskirt', bottom: '#d1545a', shoeStyle: 'sandals' }, 3.5, 0.8],
-        ['Nami', { idle: 'hips', fem: true, eyeShape: 'bright', hair: 'wavy', hairColor: '#e8742a', skin: '#f6cfae', topStyle: 'bikini', top: '#3c9a52', bottomStyle: 'slim', bottom: '#2b4d8a', shoeStyle: 'sandals' }, 3.4, 1.55],
-        ['Franky', { idle: 'hips', fem: false, eyeShape: 'sharp', hair: 'pompadour', hairColor: '#35a0e8', skin: '#e2a67a', topStyle: 'open', top: '#c9362f', bottomStyle: 'shorts', bottom: '#2a5bb8', muscle: 1.2, bulk: 1.35 }, 4.4, 0.3],
-        ['Usopp', { idle: 'hips', fem: false, eyeShape: 'bold', noseShape: 'long', nose: 'long', hair: 'curly', hairColor: '#1b1b1b', skin: '#a8714c', hat: 'bandana', hatColor: '#ef6c00', topStyle: 'bare', bottomStyle: 'baggy', bottom: '#e8c75b', waist: 'belt', shoeStyle: 'boots', muscle: 0.45 }, 4.1, 2.25],
+        ['Sanji', { idle: 'rest', fem: false, frame: 'slim', eyeShape: 'bold', hair: 'sidefringe', hairColor: '#f2d16b', skin: '#f6d5b8', topStyle: 'jacket', top: '#1c1c22', top2: '#f5f5f5', tie: '#1c1c22', bottomStyle: 'slim', bottom: '#1c1c22', shoeStyle: 'shoes', shoes: '#111111', muscle: 0.4 }, 3.8, -1.55],
+        ['Zoro', { idle: 'cross', fem: false, frame: 'athletic', eyeShape: 'sharp', frown: true, mouth: 'flat', openShirt: true, hair: 'crop', hairColor: '#3fae4a', skin: '#e8b98f', topStyle: 'kimono', top: '#2f6b3a', waist: 'sash', waistCol: '#8e1c2a', bottomStyle: 'hakama', bottom: '#27432b', shoeStyle: 'boots', muscle: 0.9 }, 3.5, -0.8],
+        ['Luffy', { idle: 'cross', fem: false, frame: 'lean', eyeShape: 'bold', hat: 'straw', hair: 'messy', hairColor: '#141414', skin: '#f3c9a0', topStyle: 'vest', top: '#d12b2b', bottomStyle: 'shorts', bottom: '#2f5fd0', waist: 'sash', waistCol: '#f2c21b', shoeStyle: 'sandals', muscle: 0.75, scarCheek: true, grin: true }, 2.9, 0],
+        ['Robin', { idle: 'cross', fem: true, frame: 'slim', eyeShape: 'cool', hair: 'long', hairColor: '#171320', skin: '#dcae8a', topStyle: 'crop', top: '#3b3570', bottomStyle: 'longskirt', bottom: '#d1545a', shoeStyle: 'sandals' }, 3.5, 0.8],
+        ['Nami', { idle: 'hips', fem: true, frame: 'curvy', eyeShape: 'bright', hair: 'wavy', hairColor: '#e8742a', skin: '#f6cfae', topStyle: 'bikini', top: '#3c9a52', bottomStyle: 'slim', bottom: '#2b4d8a', shoeStyle: 'sandals' }, 3.4, 1.55],
+        ['Franky', { idle: 'hips', fem: false, frame: 'brawny', eyeShape: 'sharp', hair: 'pompadour', hairColor: '#35a0e8', skin: '#e2a67a', topStyle: 'open', top: '#c9362f', bottomStyle: 'shorts', bottom: '#2a5bb8', muscle: 1.2, bulk: 1.35 }, 4.4, 0.3],
+        ['Usopp', { idle: 'hips', fem: false, frame: 'lanky', eyeShape: 'bold', noseShape: 'long', nose: 'long', hair: 'curly', hairColor: '#1b1b1b', skin: '#a8714c', hat: 'bandana', hatColor: '#ef6c00', topStyle: 'bare', bottomStyle: 'baggy', bottom: '#e8c75b', waist: 'belt', shoeStyle: 'boots', muscle: 0.45 }, 4.1, 2.25],
       ];
       if (only.includes('crew')) {
         await page.evaluate((crew) => {
@@ -537,7 +598,7 @@ export const scenarios = {
         await snap('town');
       }
       if (only.includes('faces')) {
-        for (const i of [2, 4, 1]) {
+        for (const i of String(args.faces || '2,4,1').split(',').map(Number)) {
           await page.evaluate(([crew, i]) => {
             const C = window.__C3; C.clear();
             const [name, look] = crew[i];
@@ -550,6 +611,36 @@ export const scenarios = {
           await page.evaluate(() => { const a = window.__C3.npcs[0]; a.facing = Math.PI * 0.78; });
           await settle(page, 3);
           await snap(`face34-${CREW[i][0]}`);
+          // (--side: in profile too — the ear, the nose's bridge, the jaw's line)
+          if (args.side) {
+            await page.evaluate(() => { const a = window.__C3.npcs[0]; a.facing = Math.PI * 0.5; });
+            await settle(page, 3);
+            await snap(`faceside-${CREW[i][0]}`);
+          }
+        }
+      }
+    },
+  },
+  // ears and profiles: bald and short-haired heads side-on, three-quarter back and front
+  // (their look-at switched off, so they don't turn to the camera)
+  c3ears: {
+    async run(page, snap) {
+      await boot(page);
+      await page.evaluate(() => { const u = document.getElementById('ui'); if (u) u.style.display = 'none'; window.__C3.goSunny(); });
+      const LOOKS = [['bald', { hair: 'bald' }], ['crop', { hair: 'crop', hairColor: '#3fae4a' }], ['buzz', { hair: 'buzz', hairColor: '#3b2a1a' }]];
+      const still = () => page.evaluate(() => { const a = window.__C3.npcs[0], v = window.OP.game.view3d.actorViews.get(a); if (v) { v.lookAt = () => 0; v.headYaw = 0; } });
+      for (const [name, look] of LOOKS) {
+        for (const [view, f] of [['side', Math.PI / 2], ['back34', Math.PI * 0.22], ['front34', Math.PI * 0.72]]) {
+          await page.evaluate(([name, look, f]) => {
+            const C = window.__C3; C.clear();
+            C.spawn({ name, id: 'ear-' + name, showName: false, look: { race: 'human', fem: false, frame: 'average', seed: 5, skin: '#f1c9a0', topStyle: 'tee', top: '#3b6ea5', ...look } }, 1.05, 0, f);
+            C.view(0, 0.05);
+          }, [name, look, f]);
+          await still();
+          await settle(page, 4);
+          await still();
+          await settle(page, 2);
+          await snap(`${name}-${view}`);
         }
       }
     },

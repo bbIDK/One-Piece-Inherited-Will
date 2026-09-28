@@ -117,7 +117,13 @@ class Viewmodel {
     // bottom corners when you sprint, and reach out when you use something.
     const busy = !!A || pose.block !== undefined || pose.dodge !== undefined || pose.getUp !== undefined || !!pose.launch || pose.state === 'hurt';
     const wantReady = busy || pose.combat || pose.armed ? 1 : 0;
-    this.ready = (this.ready ?? 0) + (wantReady - (this.ready ?? 0)) * Math.min(1, dtv * (wantReady ? 12 : 2.5));
+    // (a weapon drawn from the hotbar comes up into view a little slower than a guard)
+    const rise = pose.drawn && !busy && !pose.combat ? 6 : 12;
+    this.ready = (this.ready ?? 0) + (wantReady - (this.ready ?? 0)) * Math.min(1, dtv * (wantReady ? rise : 2.5));
+    // put away, it stays in hand until the hands are down out of sight
+    if (pose.armed && wpn) this.fpArmed = true;
+    else if (!wpn || this.ready < 0.3) this.fpArmed = false;
+    o.armed = !!this.fpArmed;
     // (a blow starts from the guard, not from the hands down at your sides)
     if (A) this.ready = 1;
     if (p.reachT > 0) p.reachT = Math.max(0, p.reachT - dtv);

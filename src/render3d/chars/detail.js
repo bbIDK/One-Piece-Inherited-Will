@@ -60,8 +60,11 @@ function painter(g, name) {
   };
 }
 /** A smooth stroke through points (canvas px), tapered at both ends by drawing it twice. */
+// (bold enough to survive the texture's mipmaps at a street's distance)
+const LW = 1.35;
 function stroke(g, pts, width, shade, alpha = 1) {
   if (pts.length < 2) return;
+  width *= LW;
   const path = () => {
     g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
     for (let i = 1; i < pts.length - 1; i++) {
@@ -82,7 +85,7 @@ const lcurve = (P, fn, n = 12) => Array.from({ length: n + 1 }, (_, i) => { cons
 /** The male torso's lines; `k` 0 (lean: a hint of pecs and abs) … 1 (muscular: every plate). */
 function maleTorso(g, name, k) {
   const P = painter(g, name);
-  const ink = 118, soft = 150;
+  const ink = 104, soft = 140;
   const w = 3.2 + k * 1.6;
   for (const sd of [-1, 1]) {
     // under each pec: from beside the sternum, dipping, up into the armpit
@@ -148,7 +151,7 @@ function clothTorso(g, name) {
 function armLines(g) {
   // limbs: +X = the back of the arm (the elbow's point), lateral = 270° (mirrored for the left arm), front = 180°
   const U = painter(g, 'uarm'), F = painter(g, 'farm');
-  const ink = 128, soft = 158;
+  const ink = 112, soft = 146;
   // deltoid: a V from the front and the back to its insertion on the outside of the arm
   stroke(g, lcurve(U, (t) => [150 + t * 115, 0.1 + t * 0.34]), 3, ink, 0.8);
   stroke(g, lcurve(U, (t) => [30 - t * 115, 0.12 + t * 0.32]), 3, ink, 0.7);
@@ -166,7 +169,7 @@ function armLines(g) {
 function legLines(g) {
   // legs: +X = the front (the knee), lateral = 90° (mirrored for the left leg)
   const T = painter(g, 'thigh'), S = painter(g, 'shin');
-  const ink = 130, soft = 160;
+  const ink = 114, soft = 148;
   // quads: the line down the front of the thigh, the teardrop above the knee inside
   stroke(g, lcurve(T, (t) => [300 + t * 20, 0.25 + t * 0.55]), 2.2, soft, 0.5);
   stroke(g, lcurve(T, (t) => [285 + Math.sin(t * Math.PI) * 25, 0.72 + t * 0.24], 8), 2.4, ink, 0.6);

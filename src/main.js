@@ -316,7 +316,7 @@ async function start() {
     const d = ITEMS[id], p = game.player;
     if (d && (d.type === 'food' || d.type === 'medicine' || d.type === 'fruit') && !input.touch?.on && p) {
       if (p.held === id) p.controller?.putAway?.(p);
-      else { p.held = id; p.eating = null; }
+      else { p.held = id; p.eating = null; p.drawn = false; } // (a drawn weapon goes back in its sheath)
       audio.sfx('equip');
       return true;
     }

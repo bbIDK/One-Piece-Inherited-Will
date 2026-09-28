@@ -64,6 +64,8 @@ export const Prim = {
   /** cone, apex at +0.5, base radius 1 at -0.5 */
   cone: (r = 6) => prim(`k${r}`, () => new THREE.ConeGeometry(1, 1, r, 1)),
   torus: (t = 0.3, r = 6, s = 12) => prim(`t${t}.${r}.${s}`, () => new THREE.TorusGeometry(1, t, r, s)),
+  /** an ear (see earGeo): the right one, unit half-height */
+  ear: (hi = true) => prim(`ear${hi ? 1 : 0}`, () => earGeo(hi)),
   /** a flat box (hard edges; for tiny details only) */
   box: () => prim('box', () => new THREE.BoxGeometry(2, 2, 2)),
   /** a rounded box of half-size 1 (smooth normals so outlines stay closed) */
@@ -80,6 +82,44 @@ export const Prim = {
     return g;
   }),
 };
+
+// ------------------------------------------------------------ ears
+// An ear as a shell: its D-shaped outline (full and round behind, flatter
+// in front where it joins the cheek, narrowing to the lobe) with, across it,
+// the profile of the rim curling over (the helix), the groove inside it, the
+// ridge (antihelix) and the bowl (concha) in the middle. +X forward, +Y up,
+// +Z out from the head; unit half-height.
+const EAR_PROF = [[0, 0], [0.85, 0], [1, 0.12], [0.97, 0.3], [0.84, 0.34], [0.74, 0.22], [0.6, 0.27], [0.4, 0.14], [0, 0.08]];
+const EAR_PROF_LO = [[0, 0], [1, 0.12], [0.9, 0.32], [0.62, 0.24], [0, 0.08]];
+export const EAR_CEN = [0.08, -0.12];
+function earOutline(a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  let x = c * (c > 0 ? 0.42 : 0.62), y = s * (s > 0 ? 1 : 0.92);
+  if (s < 0) x *= 1 - 0.35 * -s * (c < 0 ? 0.6 : 1); // (the lobe)
+  x -= 0.12 * Math.max(0, s); // (the top sweeps back)
+  return [x, y];
+}
+function earGeo(hi) {
+  const prof = hi ? EAR_PROF : EAR_PROF_LO, U = hi ? 14 : 8, V = prof.length - 1, T = 1.0;
+  const g = grid((u, v) => {
+    const [r, z] = prof[Math.round(v * V)];
+    const [x, y] = earOutline(u * Math.PI * 2);
+    return [EAR_CEN[0] + (x - EAR_CEN[0]) * r, EAR_CEN[1] + (y - EAR_CEN[1]) * r, z * T];
+  }, U, V);
+  // (smooth across the seam, and at the two centres where a whole row meets in a point)
+  const n = g.attributes.normal, W = U + 1, a = new THREE.Vector3(), b = new THREE.Vector3();
+  for (let j = 0; j <= V; j++) {
+    a.fromBufferAttribute(n, j * W); b.fromBufferAttribute(n, j * W + U); a.add(b).normalize();
+    n.setXYZ(j * W, a.x, a.y, a.z); n.setXYZ(j * W + U, a.x, a.y, a.z);
+  }
+  for (const j of [0, V]) {
+    a.set(0, 0, 0);
+    for (let i = 0; i <= U; i++) a.add(b.fromBufferAttribute(n, j * W + i));
+    a.normalize();
+    for (let i = 0; i <= U; i++) n.setXYZ(j * W + i, a.x, a.y, a.z);
+  }
+  return g;
+}
 
 // ------------------------------------------------------------ parametric
 /**

@@ -49157,7 +49157,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function restPose(pose) {
     const t = pose.time || 0;
     const stance = pose.stanceP || GUARD;
-    const base2 = pose.block !== void 0 ? GUARD : pose.combat ? stance : STAND;
+    const base2 = pose.block !== void 0 ? GUARD : pose.combat || pose.drawn ? stance : STAND;
     const P4 = { ...base2 };
     P4.b = [base2.b[0], base2.b[1] + Math.sin(t * 2.2) * 0.012];
     if (pose.combat && !pose.moving) {
@@ -61087,6 +61087,29 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var LIGHT = ["#f5f5f5", "#fff8e1", "#e3f2fd", "#fce4ec", "#e8f5e9"];
   var STERN = { pirate: 0.55, bandit: 0.6, marine: 0.45, officer: 0.6, agent: 0.7, swordsman: 0.6 };
   var FEM_ROLES = { civilian: 0.5, pirate: 0.3, bandit: 0.2, marine: 0.25, officer: 0.2, agent: 0.3, swordsman: 0.25, wano: 0.5, desert: 0.5, snow: 0.5, sky: 0.5, fishman: 0.3 };
+  var FRAME_ROLL = {
+    m: {
+      civilian: W2("average:5 lean:2 slim:2 heavy:2 stocky:2 lanky:1 athletic:1"),
+      pirate: W2("average:3 lean:2 athletic:2 brawny:2 heavy:2 stocky:2 lanky:1"),
+      bandit: W2("average:2 lean:2 brawny:2 heavy:2 stocky:2 lanky:1"),
+      marine: W2("average:3 athletic:4 lean:2 brawny:1 stocky:1"),
+      officer: W2("average:3 athletic:3 brawny:1 heavy:1 slim:1"),
+      agent: W2("athletic:3 slim:2 lean:2 average:2"),
+      swordsman: W2("lean:3 athletic:3 average:2 slim:1 lanky:1"),
+      wano: W2("average:3 lean:2 athletic:2 stocky:1 heavy:1 brawny:1"),
+      desert: W2("average:3 lean:3 slim:2 heavy:1 lanky:1"),
+      snow: W2("average:3 heavy:2 stocky:2 brawny:1 lean:1"),
+      sky: W2("average:3 slim:2 lean:2 lanky:1"),
+      fishman: W2("athletic:3 brawny:3 average:2 heavy:1 stocky:1")
+    },
+    f: {
+      civilian: W2("average:4 slim:2 curvy:2 petite:2 heavy:1"),
+      fighter: W2("average:3 athletic:3 slim:2 curvy:2 petite:1"),
+      other: W2("average:4 slim:2 curvy:2 petite:1 heavy:1 athletic:1")
+    }
+  };
+  var FIGHTERS = /* @__PURE__ */ new Set(["pirate", "bandit", "marine", "officer", "agent", "swordsman"]);
+  var FRAME_MUS = { average: 0.55, lean: 0.75, athletic: 1, slim: 0.45, brawny: 1.2, heavy: 0.3, lanky: 0.28, stocky: 0.8 };
   function dress(look, rng4, role = "civilian", over = {}) {
     if (role === "beast") {
       Object.assign(look, { fem: false, topStyle: "bare", bottomStyle: "slim", waist: "none", shoeStyle: "bare", muscle: 0.8 });
@@ -61105,12 +61128,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (!over.waistCol && (look.waist === "sash" || look.waist === "obi")) look.waistCol = rng4.pick(SASH);
     if (look.topStyle === "jacket" && !over.tie && rng4.chance(0.5)) look.tie = rng4.pick(["#212121", "#c62828", "#1e3a8a"]);
     if (look.topStyle === "coat" && !over.coat) look.coat = rng4.pick(["#5d4037", "#37474f", "#6d4c41", "#1b5e20", "#4a148c", "#263238"]);
+    if (over.frame === void 0 && !((over.bulk ?? look.bulk ?? 1) > 1.1)) {
+      let set2 = fem ? FRAME_ROLL.f[role === "civilian" ? "civilian" : FIGHTERS.has(role) ? "fighter" : "other"] : FRAME_ROLL.m[role] || FRAME_ROLL.m.civilian;
+      if (look.legs > 1.2) set2 = set2.filter(([k]) => k !== "lanky" && k !== "stocky" && k !== "petite");
+      look.frame = rng4.weighted(set2);
+    }
     if (fem) {
       if (!over.hair && rng4.chance(0.75)) look.hair = rng4.pick(["long", "long", "wavy", "ponytail", "bun", "bob", "twintails", "braid", "short", "curly", "sidefringe"]);
       if (!over.eyeShape) look.eyeShape = rng4.pick(["soft", "round", "round", "sharp"]);
       look.bust = +(0.8 + rng4.next() * 0.45).toFixed(2);
     } else if (over.muscle === void 0) {
-      look.muscle = +(0.25 + rng4.next() * 0.75).toFixed(2);
+      const m = (FRAME_MUS[look.frame] ?? 0.55) + (rng4.next() - 0.5) * 0.4;
+      look.muscle = +Math.min(1.2, Math.max(0.15, m)).toFixed(2);
     }
     if (over.frown === void 0 && rng4.chance(STERN[role] ?? 0.15)) look.frown = true;
     return look;
@@ -61380,6 +61409,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.gills = !!R4.gills;
       this.style = o.style || "brawler";
       this.weapon = o.weapon || null;
+      this.drawn = false;
       this.fruit = o.fruit || null;
       this.fruitMastery = o.fruitMastery || 0;
       this.masteries = o.masteries || {};
@@ -62669,6 +62699,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const ai = this.controller;
       const npcFight = !this.isPlayer && ai && ai.target && ai.state === "chase";
       const combat = now2 - (this._lastActT ?? -99) < 2.5 || this.blocking || this.hitstun > 0 || (this.isPlayer ? !!this.inCombat : !!npcFight);
+      const drawn = !!this.drawn && !!wpn && !!STANCE_ARMED[stance];
       const hurt = this.state === "idle" && this.hitstun > 0.2 && !act2;
       const dodging = !!(this.dash && this.dash.dodge);
       let anim = null;
@@ -62681,7 +62712,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const swim = !this.inWater ? null : this.fruit && !this.gills ? this.sinking ? "sink" : "struggle" : this.gills && (this.moving || this.under) ? "fish" : this.under ? this.moving || this.intent.mz ? "dive" : "float" : this.moving ? "crawl" : "tread";
       const air = this.climb ? "up" : !swim && !act2 && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? this.vz > 0 ? "up" : "down" : null;
       const st = !act2 ? this.station() : null;
-      const mode = act2 || `${this.state}${this.blocking ? "b" : ""}${dodging ? "d" : ""}${hurt ? "h" : ""}${this.moving ? "m" : ""}${combat ? "c" : ""}${this.intent.sprint ? "s" : ""}${swim || ""}${busy ? busy.pose : ""}${this.charging > 0 ? "k" : ""}${air || ""}${st ? st.kind : ""}`;
+      const mode = act2 || `${this.state}${drawn ? "w" : ""}${this.blocking ? "b" : ""}${dodging ? "d" : ""}${hurt ? "h" : ""}${this.moving ? "m" : ""}${combat ? "c" : ""}${this.intent.sprint ? "s" : ""}${swim || ""}${busy ? busy.pose : ""}${this.charging > 0 ? "k" : ""}${air || ""}${st ? st.kind : ""}`;
       if (mode !== this._mode) {
         this._blendFrom = this._lastP || null;
         this._blendT = 0;
@@ -62710,7 +62741,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         combat,
         sprint: !!(this.intent.sprint && this.moving),
         weapon: wpn,
-        armed: !!wpn && (combat && !!STANCE_ARMED[stance] || !!(anim && anim.weapon)),
+        armed: !!wpn && (drawn || combat && !!STANCE_ARMED[stance] || !!(anim && anim.weapon)),
+        drawn,
         armament: this.armament,
         knockT: this.knockT,
         activity: busy ? busy.pose : null,
@@ -62946,6 +62978,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   var FRAMES_M = ["average", "lean", "athletic", "slim", "brawny", "heavy", "lanky", "stocky"];
   var FRAMES_F = ["average", "slim", "curvy", "athletic", "petite", "heavy"];
+  var FRAME_NAMES = { average: "Average", lean: "Lean", athletic: "Athletic", slim: "Slim", brawny: "Brawny", heavy: "Heavy", lanky: "Lanky", stocky: "Stocky", curvy: "Curvy", petite: "Petite" };
   function frameId(look) {
     const set = look.fem ? FRAMES_F : FRAMES_M;
     return set.includes(look.frame) ? look.frame : "average";
@@ -62984,6 +63017,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       // … and in front of it (the neck meets the skull behind the jaw)
       hipW: (fem ? 0.094 : 0.085) * Bk * (0.6 + 0.4 * F4.hp),
       // hip joints either side of the pelvis
+      // the outside of the hips (the tops of the thighs): where a scabbard or a holster hangs
+      hipOut: (fem ? 0.094 : 0.085) * Bk * (0.6 + 0.4 * F4.hp) + (fem ? 0.09 : 0.088) * F4.th * Bk,
       shY: chestLen - 0.07,
       // shoulder joints below the top of the chest
       shW: (fem ? 0.155 * Bk + 4e-3 : 0.194 * Bk + 6e-3) * F4.sh,
@@ -63096,6 +63131,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     /** cone, apex at +0.5, base radius 1 at -0.5 */
     cone: (r = 6) => prim(`k${r}`, () => new ConeGeometry(1, 1, r, 1)),
     torus: (t = 0.3, r = 6, s = 12) => prim(`t${t}.${r}.${s}`, () => new TorusGeometry(1, t, r, s)),
+    /** an ear (see earGeo): the right one, unit half-height */
+    ear: (hi = true) => prim(`ear${hi ? 1 : 0}`, () => earGeo(hi)),
     /** a flat box (hard edges; for tiny details only) */
     box: () => prim("box", () => new BoxGeometry(2, 2, 2)),
     /** a rounded box of half-size 1 (smooth normals so outlines stay closed) */
@@ -63112,6 +63149,39 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return g;
     })
   };
+  var EAR_PROF = [[0, 0], [0.85, 0], [1, 0.12], [0.97, 0.3], [0.84, 0.34], [0.74, 0.22], [0.6, 0.27], [0.4, 0.14], [0, 0.08]];
+  var EAR_PROF_LO = [[0, 0], [1, 0.12], [0.9, 0.32], [0.62, 0.24], [0, 0.08]];
+  var EAR_CEN = [0.08, -0.12];
+  function earOutline(a) {
+    const c = Math.cos(a), s = Math.sin(a);
+    let x = c * (c > 0 ? 0.42 : 0.62), y = s * (s > 0 ? 1 : 0.92);
+    if (s < 0) x *= 1 - 0.35 * -s * (c < 0 ? 0.6 : 1);
+    x -= 0.12 * Math.max(0, s);
+    return [x, y];
+  }
+  function earGeo(hi) {
+    const prof2 = hi ? EAR_PROF : EAR_PROF_LO, U3 = hi ? 14 : 8, V3 = prof2.length - 1, T4 = 1;
+    const g = grid((u, v) => {
+      const [r, z] = prof2[Math.round(v * V3)];
+      const [x, y] = earOutline(u * Math.PI * 2);
+      return [EAR_CEN[0] + (x - EAR_CEN[0]) * r, EAR_CEN[1] + (y - EAR_CEN[1]) * r, z * T4];
+    }, U3, V3);
+    const n = g.attributes.normal, W4 = U3 + 1, a = new Vector3(), b = new Vector3();
+    for (let j = 0; j <= V3; j++) {
+      a.fromBufferAttribute(n, j * W4);
+      b.fromBufferAttribute(n, j * W4 + U3);
+      a.add(b).normalize();
+      n.setXYZ(j * W4, a.x, a.y, a.z);
+      n.setXYZ(j * W4 + U3, a.x, a.y, a.z);
+    }
+    for (const j of [0, V3]) {
+      a.set(0, 0, 0);
+      for (let i = 0; i <= U3; i++) a.add(b.fromBufferAttribute(n, j * W4 + i));
+      a.normalize();
+      for (let i = 0; i <= U3; i++) n.setXYZ(j * W4 + i, a.x, a.y, a.z);
+    }
+    return g;
+  }
   function grid(fn, U3, V3, uv = false) {
     const pos = [], uvs = [], idx = [];
     for (let j = 0; j <= V3; j++) {
@@ -63345,8 +63415,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g
     };
   }
+  var LW2 = 1.35;
   function stroke(g, pts, width, shade4, alpha2 = 1) {
     if (pts.length < 2) return;
+    width *= LW2;
     const path2 = () => {
       g.beginPath();
       g.moveTo(pts[0][0], pts[0][1]);
@@ -63380,7 +63452,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   function maleTorso(g, name, k) {
     const P4 = painter(g, name);
-    const ink2 = 118, soft = 150;
+    const ink2 = 104, soft = 140;
     const w = 3.2 + k * 1.6;
     for (const sd of [-1, 1]) {
       stroke(g, curve(P4, (t) => [sd * (0.07 + t * 0.8), 0.615 + 0.05 * Math.pow(Math.abs(t - 0.38) / 0.62, 2) + t * 0.08]), w, ink2, 0.55 + 0.45 * k);
@@ -63440,7 +63512,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function armLines(g) {
     const U3 = painter(g, "uarm"), F4 = painter(g, "farm");
-    const ink2 = 128, soft = 158;
+    const ink2 = 112, soft = 146;
     stroke(g, lcurve(U3, (t) => [150 + t * 115, 0.1 + t * 0.34]), 3, ink2, 0.8);
     stroke(g, lcurve(U3, (t) => [30 - t * 115, 0.12 + t * 0.32]), 3, ink2, 0.7);
     stroke(g, lcurve(U3, (t) => [140 + t * 6, 0.45 + t * 0.4]), 2.4, soft, 0.6);
@@ -63452,7 +63524,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function legLines(g) {
     const T4 = painter(g, "thigh"), S3 = painter(g, "shin");
-    const ink2 = 130, soft = 160;
+    const ink2 = 114, soft = 148;
     stroke(g, lcurve(T4, (t) => [300 + t * 20, 0.25 + t * 0.55]), 2.2, soft, 0.5);
     stroke(g, lcurve(T4, (t) => [285 + Math.sin(t * Math.PI) * 25, 0.72 + t * 0.24], 8), 2.4, ink2, 0.6);
     stroke(g, lcurve(T4, (t) => [40 + t * 25, 0.2 + t * 0.55]), 2, soft, 0.4);
@@ -65741,9 +65813,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     };
     (HAIR2[style] || HAIR2.short)(h2);
     if (look.ears) minkEars2(b, HM, look, pal, hb, q2);
-    else for (const s of [-1, 1]) {
-      const e = surf(98, s * 95, 0.97);
-      add5(Prim.sphere(q2.sph[0], q2.sph[1]), HM(M(e[0] - 0.02, e[1], e[2], 0, 0, s * 0.12, [0.19, 0.28, 0.13])), pal.face, hb);
+    else {
+      const face = lin(pal.face), bowl = lin(shade(pal.face, -0.16));
+      const col = (x, y, z) => z > 0.02 && ((x - EAR_CEN[0]) / 0.3) ** 2 + ((y - EAR_CEN[1]) / 0.55) ** 2 < 1 ? bowl : face;
+      for (const s of [-1, 1]) {
+        const e = surf(98, s * 95, 0.985);
+        add5(Prim.ear(q2.head[0] >= 14), HM(mul(M(e[0] - 0.03, e[1] + 0.01, e[2], 0, s * 0.34, 0.2), M(0, 0, 0, 0, 0, 0, [0.3, 0.3, 0.3 * s]))), col, hb);
+      }
     }
     if (look.fin && look.kind !== "Octopus") {
       const a = surf(18, 180, 0.9);
@@ -65799,7 +65875,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (wpn && wpn.kind === "sword") {
       const cols = ["#ecf0f1", "#2c3e50", "#c0392b"];
       for (let k = 0; k < Math.min(3, wpn.count || 1); k++) {
-        const z = -(0.165 * Bk + 0.02 + k * 0.035);
+        const z = -(d.hipOut + 0.012 + k * 0.035);
         const a = [0.1 - k * 0.03, 0.02 + k * 0.01, z], e = [-0.62 - k * 0.04, -0.4 + k * 0.03, z - 0.1];
         add5(Prim.cyl(5), between(a, e, 0.019), cols[k], B3.sheath);
         const dir = norm([a[0] - e[0], a[1] - e[1], a[2] - e[2]]);
@@ -65807,8 +65883,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         add5(Prim.cyl(5), between(add3(a, dir, 0.012), add3(a, dir, 0.23), 0.017), k === 2 ? "#fafafa" : "#2d2a32", B3.hilts);
       }
     } else if (wpn && wpn.kind === "gun") {
-      add5(Prim.box(), M(0.02, -0.06, 0.17 * Bk, 0, 0, 0.3, [0.05, 0.08, 0.02]), "#6d4c41", B3.sheath);
-      add5(Prim.box(), M(0.05, 0.03, 0.17 * Bk, 0, 0, 0.9, [0.02, 0.05, 0.018]), "#8d5b33", B3.hilts);
+      const z = d.hipOut + 0.03;
+      add5(Prim.rbox(), M(0.02, -0.075, z, 0, 0, 0.3, [0.05, 0.1, 0.024]), "#5d3a22", B3.sheath);
+      add5(Prim.box(), M(0.035, 0.02, z - 4e-3, 0, 0, 0.3, [0.012, 0.04, 0.02]), "#3e2716", B3.sheath);
+      add5(Prim.rbox(), M(0.06, 0.035, z, 0, 0, 1, [0.022, 0.058, 0.02]), "#8d5b33", B3.hilts);
+      add5(Prim.sphere(6, 4), M(0.1, 0.055, z, 0, 0, 0, [0.028, 0.026, 0.024]), "#6d4c41", B3.hilts);
     } else if (wpn && (wpn.kind === "axe" || wpn.kind === "staff")) {
       const a = [-0.16 * Bk, d.chestLen - 0.02, 0.22], e = [-0.17 * Bk, 0.05, -0.28];
       add5(Prim.cyl(5), between(a, e, 0.018, 0.018, 0.5), wpn.kind === "axe" ? "#6d4c41" : "#4fc3f7", B3.backWpn);
@@ -66364,6 +66443,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var _t1 = new Vector3();
   var _t2 = new Vector3();
   var DOWN = new Vector3(0, -1, 0);
+  var _dr = Array.from({ length: 8 }, () => new Vector3());
+  var smooth4 = (x) => x * x * (3 - 2 * x);
   var _d1 = new Vector3();
   var _d2 = new Vector3();
   var _d3 = new Vector3();
@@ -66583,6 +66664,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.shape[0] = P4.hand || "fist";
       this.shape[1] = P4.handB || "fist";
       o.shape = this.shape;
+      o.drawBlade = null;
+      o.drawHold2 = true;
+      if (o.draw && o.wpn) this.drawPath(P4, o);
       rig.solve(P4, o);
       const armed = !!o.armed && !!o.wpn;
       for (let k = 0; k < 2; k++) {
@@ -66621,8 +66705,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.showBone(B3.hilts, !(armed && w && (w.kind === "sword" || w.kind === "gun")));
       this.showBone(B3.backWpn, !(armed && w && (w.kind === "axe" || w.kind === "staff")));
       const want0 = o.blade ? "energy:" + o.blade : armed ? `${w.kind}:main:${w.gun || ""}:${o.armament ? 1 : 0}` : o.prop ? `prop:${o.prop}` : "";
-      const want1 = o.bladeB ? "energy:" + o.bladeB : armed && w.kind === "sword" && (w.count || 1) >= 2 ? `sword:second::${o.armament ? 1 : 0}` : "";
-      const want2 = armed && w.kind === "sword" && (w.count || 1) >= 3 ? `sword:mouth::${o.armament ? 1 : 0}` : "";
+      const want1 = o.bladeB ? "energy:" + o.bladeB : armed && o.drawHold2 && w.kind === "sword" && (w.count || 1) >= 2 ? `sword:second::${o.armament ? 1 : 0}` : "";
+      const want2 = armed && o.drawHold2 && w.kind === "sword" && (w.count || 1) >= 3 ? `sword:mouth::${o.armament ? 1 : 0}` : "";
       this.setHeld(0, want0, o);
       this.setHeld(1, want1, o);
       this.setHeld(2, want2, o);
@@ -66632,7 +66716,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         _v5.subVectors(rig.E[k], rig.J[k]).normalize();
         _v22.copy(rig.E[k]).addScaledVector(_v5, 0.045);
         if (hw.kind === "energy") hw.group.scale.setScalar(o.bladeLen || 1);
-        hw.place(_v22, rig.blade[k], rig.plane[k]);
+        hw.place(_v22, k === 0 && o.drawBlade ? o.drawBlade : rig.blade[k], rig.plane[k]);
       }
       if (this.held[2]) {
         const hw = this.held[2];
@@ -66664,6 +66748,49 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       if (o.squash && o.squash !== 1) g.scale.set(1 / Math.sqrt(o.squash), o.squash, 1 / Math.sqrt(o.squash));
       else g.scale.set(1, 1, 1);
+    }
+    /**
+     * Drawing a weapon: the right hand goes to its grip — a sword's hilt at the
+     * left hip, a pistol's butt at the right, a staff's end over the right
+     * shoulder — takes hold, draws it out along its sheath and brings it up
+     * into the stance; putting it away runs the same the other way.
+     */
+    drawPath(P4, o) {
+      const D3 = o.draw, rig = this.rig, d = this.d, w = o.wpn;
+      rig.solve(P4, { ...o, reachR: null, draw: null });
+      const stanceHand = _dr[0].copy(rig.E[0]), stanceBlade = _dr[1].copy(rig.blade[0]);
+      const S3 = rig.S[0];
+      const G3 = _dr[2], out = _dr[3];
+      let len;
+      if (w.kind === "sword") {
+        const z = -(d.hipOut + 0.012);
+        const ax = 0.1, ay = 0.02, ex = -0.62, ey = -0.4;
+        out.set(ax - ex, ay - ey, 0.1).normalize();
+        G3.set(ax, ay, z).addScaledVector(out, 0.1).applyQuaternion(rig.qPelvis).add(rig.hip);
+        out.applyQuaternion(rig.qPelvis);
+        len = 0.72;
+      } else if (w.kind === "gun") {
+        G3.set(0.07, 0.04, d.hipOut + 0.03).applyQuaternion(rig.qPelvis).add(rig.hip);
+        out.set(0.25, 1, 0.1).normalize().applyQuaternion(rig.qPelvis);
+        len = 0.2;
+      } else {
+        const a = _dr[4].set(-0.16 * d.Bk, d.chestLen - 0.02, 0.22), e = _dr[5].set(-0.17 * d.Bk, 0.05, -0.28);
+        out.subVectors(a, e).normalize().applyQuaternion(rig.qChest);
+        G3.copy(a).applyQuaternion(rig.qChest).add(rig.hip);
+        len = 0.55;
+      }
+      const k = D3.out ? D3.k : 1 - D3.k;
+      const rest = _dr[4].set(S3.x + 0.04, S3.y - (d.A1 + d.A2) * 0.9, S3.z + 0.03 * (S3.z > 0 ? 1 : -1));
+      const T4 = _dr[5];
+      if (k < 0.42) T4.lerpVectors(rest, G3, smooth4(k / 0.42));
+      else if (k < 0.78) T4.copy(G3).addScaledVector(out, smooth4((k - 0.42) / 0.36) * len);
+      else T4.copy(G3).addScaledVector(out, len).lerp(stanceHand, smooth4((k - 0.78) / 0.22));
+      o.reachR = T4;
+      if (k >= 0.42) {
+        const b = _dr[6].copy(out).negate();
+        o.drawBlade = k < 0.78 ? b : b.lerp(stanceBlade, smooth4((k - 0.78) / 0.22)).normalize();
+      }
+      o.drawHold2 = k > 0.86;
     }
     setHeld(k, want, o) {
       if (this.heldKey[k] === want) return;
@@ -67873,7 +68000,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const dtv = Math.min(0.05, Math.max(1e-3, env.time - (this.lastT ?? env.time) || 0.016));
       const busy = !!A || pose.block !== void 0 || pose.dodge !== void 0 || pose.getUp !== void 0 || !!pose.launch || pose.state === "hurt";
       const wantReady = busy || pose.combat || pose.armed ? 1 : 0;
-      this.ready = (this.ready ?? 0) + (wantReady - (this.ready ?? 0)) * Math.min(1, dtv * (wantReady ? 12 : 2.5));
+      const rise = pose.drawn && !busy && !pose.combat ? 6 : 12;
+      this.ready = (this.ready ?? 0) + (wantReady - (this.ready ?? 0)) * Math.min(1, dtv * (wantReady ? rise : 2.5));
+      if (pose.armed && wpn) this.fpArmed = true;
+      else if (!wpn || this.ready < 0.3) this.fpArmed = false;
+      o.armed = !!this.fpArmed;
       if (A) this.ready = 1;
       if (p.reachT > 0) p.reachT = Math.max(0, p.reachT - dtv);
       const reach = p.reachT > 0 ? Math.sin((1 - p.reachT / 0.45) * Math.PI) : 0;
@@ -68197,6 +68328,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const { pose, P: P4 } = actorPose(a, env, look);
         const o = rigOptions(a, pose, P4, this.o);
         o.wpn = this.wpn;
+        this.drawing(pose, o, this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT));
         const dtv = this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT);
         this.sitK = (this.sitK || 0) + ((o.seatH !== null ? 1 : 0) - (this.sitK || 0)) * Math.min(1, dtv * 6);
         if (o.seatH !== null) this.sitH = o.seatH;
@@ -68262,7 +68394,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      */
     ownBody(fp, a) {
       const m = this.model, u = m.fx, pose = a._lastPose || {};
-      const busy = !!pose.anim || !!pose.combat || !!pose.armed || pose.block !== void 0 || !!pose.station || !!a.held || !!pose.launch || a.inWater;
+      const busy = !!pose.anim || !!pose.combat || !!pose.armed || !!this.draw || pose.block !== void 0 || !!pose.station || !!a.held || !!pose.launch || a.inWater;
       u.uClipY.value = fp ? m.rig.neck.y - m.d.neck * 0.5 : 1e6;
       u.uHideHead.value = fp ? 1 : 0;
       u.uHideArms.value = fp && busy ? 1 : 0;
@@ -68271,6 +68403,41 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (fp) m.outline.visible = false;
       for (const h2 of m.held) if (h2) h2.group.visible = !fp;
       m.group.position.x = fp ? -0.12 : 0;
+    }
+    /**
+     * A weapon coming out of its sheath (the holster, or off the back) — or
+     * going back — over about half a second, whenever it's taken in hand or a
+     * fight starts or ends; an attack draws it at once. (The motion itself:
+     * CharacterModel.drawPath.)
+     */
+    drawing(pose, o, dt) {
+      const want = !!o.armed && !!this.wpn;
+      if (this.armedVis === void 0 || dt >= 1) {
+        this.armedVis = want;
+        this.draw = null;
+      }
+      let D3 = this.draw;
+      if (D3 && D3.out !== want) {
+        D3.out = want;
+        D3.k = 1 - D3.k;
+      } else if (!D3 && want !== this.armedVis) {
+        if (pose.anim) this.armedVis = want;
+        else D3 = this.draw = { k: 0, out: want };
+      }
+      if (D3) {
+        if (pose.anim && D3.out) {
+          this.armedVis = true;
+          this.draw = D3 = null;
+        } else {
+          D3.k = Math.min(1, D3.k + dt / (D3.out ? 0.6 : 0.5));
+          if (D3.k >= 1) {
+            this.armedVis = D3.out;
+            this.draw = D3 = null;
+          }
+        }
+      }
+      o.draw = D3;
+      o.armed = D3 ? D3.out ? D3.k > 0.42 : D3.k < 0.58 : this.armedVis;
     }
     /** At the helm or the oars of your ship: stand (or sit) where the work is, riding up and down with her. */
     placeAtStation(a, st, env, ctx) {
@@ -70472,7 +70639,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     h2 ^= h2 >>> 16;
     return (h2 >>> 0) / 4294967296;
   }
-  var smooth4 = (a, b, x) => {
+  var smooth5 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
@@ -70488,7 +70655,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (world.zone !== 0) w = world.zone === 2 ? 0.9 : 0.5;
     else {
       const lat = Math.abs(y - EQ) / (H / 2);
-      w = 1 - smooth4(0.2, 0.72, lat);
+      w = 1 - smooth5(0.2, 0.72, lat);
       const isl = world.nearestIsland ? world.nearestIsland(x, y, 260) : null;
       if (isl) {
         const c = world.climate(isl.x, isl.y);
@@ -70537,7 +70704,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     };
   }
-  var smooth5 = (a, b, x) => {
+  var smooth6 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
@@ -70836,7 +71003,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             put2("seagrass", x + a, y + b, a * 40, 0.8 + b * 0.7, 1 + depth * 0.05, rgb([0.36 + b * 0.1, 0.56 + a * 0.08, 0.26]));
           }
         }
-        const reefK = reefTile ? 1.2 : reefy && depth > 0.8 && depth < 20 ? smooth5(0.36, 0.62, patch2) * (1 - smooth5(14, 20, depth)) * 1.4 : 0;
+        const reefK = reefTile ? 1.2 : reefy && depth > 0.8 && depth < 20 ? smooth6(0.36, 0.62, patch2) * (1 - smooth6(14, 20, depth)) * 1.4 : 0;
         if (reefK > 0) {
           for (let q2 = 0; q2 < 3; q2++) {
             const a = hash7(x, y, 130 + q2), b = hash7(x, y, 140 + q2), c = hash7(x, y, 150 + q2);
@@ -73670,15 +73837,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     y0 = Math.max(1, Math.floor(y0 - m));
     x1 = Math.ceil(x1 + m);
     y1 = Math.min(world.height - 2, Math.ceil(y1 + m));
-    const LW2 = x1 - x0, LH = y1 - y0;
-    if (LW2 <= 0 || LH <= 0) return null;
-    const L2 = new Uint8Array(LW2 * LH);
-    const li = (i, j) => j * LW2 + i;
+    const LW3 = x1 - x0, LH = y1 - y0;
+    if (LW3 <= 0 || LH <= 0) return null;
+    const L2 = new Uint8Array(LW3 * LH);
+    const li = (i, j) => j * LW3 + i;
     const seedOff = def.id.length * 131.7 % 1e3;
     const shapeNoise = (px2, py2) => noise.fbm(px2 * nf + seedOff, py2 * nf - seedOff, 4) + noise.noise2(px2 * nf * 4.1, py2 * nf * 4.1) * 0.25;
-    const shape = nf * 4.1 < 0.12 ? coarseField(shapeNoise, x0 + 0.5, y0 + 0.5, LW2, LH) : shapeNoise;
+    const shape = nf * 4.1 < 0.12 ? coarseField(shapeNoise, x0 + 0.5, y0 + 0.5, LW3, LH) : shapeNoise;
     for (let j = 0; j < LH; j++) {
-      for (let i = 0; i < LW2; i++) {
+      for (let i = 0; i < LW3; i++) {
         const px2 = x0 + i + 0.5, py2 = y0 + j + 0.5;
         let v = -1;
         for (const b of blobs) {
@@ -73690,29 +73857,29 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
     if (def.ring) {
-      for (let j = 0; j < LH; j++) for (let i = 0; i < LW2; i++) {
+      for (let j = 0; j < LH; j++) for (let i = 0; i < LW3; i++) {
         const px2 = x0 + i + 0.5, py2 = y0 + j + 0.5;
         const ex = (px2 - cx) / (hw * def.ring), ey = (py2 - cy) / (hh * def.ring);
         if (ex * ex + ey * ey < 1 + noise.noise2(px2 * 0.1, py2 * 0.1) * 0.15) L2[li(i, j)] = 0;
       }
     }
-    if (def.keepLargest !== false && !def.archipelago) keepLargestComponent(L2, LW2, LH);
-    let lx0 = LW2, ly0 = LH, lx1 = -1, ly1 = -1;
+    if (def.keepLargest !== false && !def.archipelago) keepLargestComponent(L2, LW3, LH);
+    let lx0 = LW3, ly0 = LH, lx1 = -1, ly1 = -1;
     for (let j = 0; j < LH; j++) {
-      const row = j * LW2;
-      for (let i = 0; i < LW2; i++) if (L2[row + i]) {
+      const row = j * LW3;
+      for (let i = 0; i < LW3; i++) if (L2[row + i]) {
         if (i < lx0) lx0 = i;
         if (i > lx1) lx1 = i;
         if (j < ly0) ly0 = j;
         if (j > ly1) ly1 = j;
       }
     }
-    const CD = localCoastDistance(L2, LW2, LH);
+    const CD = localCoastDistance(L2, LW3, LH);
     const beachW = def.beachWidth ?? (ground === T.SNOW ? 1.2 : 2.2);
     let landCount = 0;
-    const lumps = coarseField((x, y) => noise.fbm(x * 0.05 + 11, y * 0.05 - 7, 3), x0, y0, LW2, LH);
+    const lumps = coarseField((x, y) => noise.fbm(x * 0.05 + 11, y * 0.05 - 7, 3), x0, y0, LW3, LH);
     for (let j = 0; j < LH; j++) {
-      for (let i = 0; i < LW2; i++) {
+      for (let i = 0; i < LW3; i++) {
         const k = li(i, j);
         if (!L2[k]) continue;
         landCount++;
@@ -73747,7 +73914,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (i < 0) i += world.width;
         if (i >= world.width) i -= world.width;
         const jj = Math.floor(y) - y0;
-        if (i < 0 || jj < 0 || i >= LW2 || jj >= LH) return false;
+        if (i < 0 || jj < 0 || i >= LW3 || jj >= LH) return false;
         return L2[li(i, jj)] === 1 || world.isOverlay(x, y);
       }
     };
@@ -73871,7 +74038,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     def._clearings = rec.clearings;
     const treeKinds = def.treeKind ? [def.treeKind] : def.trees || preset.trees;
     const density = def.treeDensity ?? preset.density;
-    populateVegetation(world, rng4, x0, y0, LW2, LH, L2, li, treeKinds, density, def);
+    populateVegetation(world, rng4, x0, y0, LW3, LH, L2, li, treeKinds, density, def);
     delete def._clearings;
     return rec;
   }
@@ -73985,8 +74152,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     return false;
   }
-  function keepLargestComponent(L2, LW2, LH) {
-    const comp = new Int32Array(LW2 * LH).fill(-1);
+  function keepLargestComponent(L2, LW3, LH) {
+    const comp = new Int32Array(LW3 * LH).fill(-1);
     let best = -1, bestSize = 0, id = 0;
     const stack = [];
     for (let s = 0; s < L2.length; s++) {
@@ -73997,8 +74164,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       while (stack.length) {
         const k = stack.pop();
         size++;
-        const i = k % LW2, j = k / LW2 | 0;
-        const nb = [i > 0 ? k - 1 : -1, i < LW2 - 1 ? k + 1 : -1, j > 0 ? k - LW2 : -1, j < LH - 1 ? k + LW2 : -1];
+        const i = k % LW3, j = k / LW3 | 0;
+        const nb = [i > 0 ? k - 1 : -1, i < LW3 - 1 ? k + 1 : -1, j > 0 ? k - LW3 : -1, j < LH - 1 ? k + LW3 : -1];
         for (const q2 of nb) if (q2 >= 0 && L2[q2] && comp[q2] < 0) {
           comp[q2] = id;
           stack.push(q2);
@@ -74016,14 +74183,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (L2[k] && comp[k] !== best && sizes[comp[k]] < Math.max(30, bestSize * 0.08)) L2[k] = 0;
     }
   }
-  function localCoastDistance(L2, LW2, LH) {
-    const CD = new Float32Array(LW2 * LH).fill(1e6);
-    const q2 = new Int32Array(LW2 * LH);
+  function localCoastDistance(L2, LW3, LH) {
+    const CD = new Float32Array(LW3 * LH).fill(1e6);
+    const q2 = new Int32Array(LW3 * LH);
     let head = 0, tail2 = 0;
-    for (let j = 0; j < LH; j++) for (let i = 0; i < LW2; i++) {
-      const k = j * LW2 + i;
+    for (let j = 0; j < LH; j++) for (let i = 0; i < LW3; i++) {
+      const k = j * LW3 + i;
       if (!L2[k]) continue;
-      const edge = i === 0 || j === 0 || i === LW2 - 1 || j === LH - 1 || !L2[k - 1] || !L2[k + 1] || !L2[k - LW2] || !L2[k + LW2];
+      const edge = i === 0 || j === 0 || i === LW3 - 1 || j === LH - 1 || !L2[k - 1] || !L2[k + 1] || !L2[k - LW3] || !L2[k + LW3];
       if (edge) {
         CD[k] = 1;
         q2[tail2++] = k;
@@ -74031,23 +74198,23 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     while (head < tail2) {
       const k = q2[head++];
-      const i = k % LW2, j = k / LW2 | 0;
+      const i = k % LW3, j = k / LW3 | 0;
       const nd = CD[k] + 1;
       if (i > 0 && L2[k - 1] && CD[k - 1] > nd) {
         CD[k - 1] = nd;
         q2[tail2++] = k - 1;
       }
-      if (i < LW2 - 1 && L2[k + 1] && CD[k + 1] > nd) {
+      if (i < LW3 - 1 && L2[k + 1] && CD[k + 1] > nd) {
         CD[k + 1] = nd;
         q2[tail2++] = k + 1;
       }
-      if (j > 0 && L2[k - LW2] && CD[k - LW2] > nd) {
-        CD[k - LW2] = nd;
-        q2[tail2++] = k - LW2;
+      if (j > 0 && L2[k - LW3] && CD[k - LW3] > nd) {
+        CD[k - LW3] = nd;
+        q2[tail2++] = k - LW3;
       }
-      if (j < LH - 1 && L2[k + LW2] && CD[k + LW2] > nd) {
-        CD[k + LW2] = nd;
-        q2[tail2++] = k + LW2;
+      if (j < LH - 1 && L2[k + LW3] && CD[k + LW3] > nd) {
+        CD[k + LW3] = nd;
+        q2[tail2++] = k + LW3;
       }
     }
     return CD;
@@ -74293,10 +74460,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (!world.objects) return null;
     return world.objects.add(o);
   }
-  function populateVegetation(world, rng4, x0, y0, LW2, LH, L2, li, kinds, density, def) {
+  function populateVegetation(world, rng4, x0, y0, LW3, LH, L2, li, kinds, density, def) {
     const forestTypes = /* @__PURE__ */ new Set([T.FOREST, T.JUNGLE]);
     for (let j = 0; j < LH; j++) {
-      for (let i = 0; i < LW2; i++) {
+      for (let i = 0; i < LW3; i++) {
         if (!L2[li(i, j)]) continue;
         const x = x0 + i, y = y0 + j;
         const t = world.type(x, y);
@@ -85694,6 +85861,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     p.attrs = effectiveAttrs(c);
     p.look = equippedLook(c);
     p.weapon = weaponFromChar(c);
+    if (!p.weapon) p.drawn = false;
     p.style = fightingStyle(c);
     p.fruit = c.fruit;
     p.fruitMastery = c.fruitMastery;
@@ -85997,7 +86165,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     if (d.type === "fruit") return eatFruit(game, id);
     if (d.type === "weapon") {
-      equip(game, id);
+      if (!(c.equipped.weapons || []).includes(id)) {
+        equip(game, id);
+        if (p.weapon) p.drawn = true;
+      } else {
+        p.drawn = !p.drawn;
+        game.audio?.sfx("equip");
+      }
       return true;
     }
     if (d.type === "pose" && d.target) {
@@ -86198,7 +86372,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             if (!it || !(it.type === "food" || it.type === "medicine" || it.type === "fruit")) this.putAway(p);
           }
           if (id) {
-            p.facing = aim;
+            if (!String(id).startsWith("item:")) p.facing = aim;
             const target2 = this.aimTarget(p, game, wx, wy);
             p.tryTechnique(id, game, target2 || { x: wx, y: wy });
           }
@@ -87963,6 +88137,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const mus = L2.muscle ?? 0.5;
           add2(
             optsEl,
+            // (a frame brings the muscle it usually carries; Muscle can change it after)
+            row("Frame", (() => {
+              const set = L2.fem ? FRAMES_F : FRAMES_M;
+              return chips(frameId(L2), set, set.map((f) => FRAME_NAMES[f]), (v) => {
+                L2.frame = v;
+                L2.muscle = FRAME[v].mus ?? 0.55;
+              });
+            })()),
             row("Build", h("div.build-row", h("span.muted", "Thin"), build2, h("span.muted", "Wide"))),
             row("Muscle", chips(mus < 0.35 ? 0.2 : mus < 0.75 ? 0.55 : 1, [0.2, 0.55, 1], ["Lean", "Toned", "Muscular"], (v) => {
               L2.muscle = v;
@@ -88189,7 +88371,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         k("Mouse wheel", "camera distance (third person)"),
         k("H", "this help")
       ),
-      h("p.muted", "The buttons on the right of the screen open the same menus. Open the Inventory or Skills menu and drag techniques, food and weapons straight onto your hotbar at the bottom of the screen (a weapon's key takes it in hand, or puts it away); drag hotbar slots to rearrange them, right-click one to clear it."),
+      h("p.muted", "The buttons on the right of the screen open the same menus. Open the Inventory or Skills menu and drag techniques, food and weapons straight onto your hotbar at the bottom of the screen (a weapon you wear hangs at your hip or on your back: its key draws it, and again sheathes it); drag hotbar slots to rearrange them, right-click one to clear it."),
       h("p", h("b", "On a phone or tablet: "), "your left thumb moves (push the stick all the way to run; at sea it steers and sets the sails) and your right thumb drags to look around. The round buttons jump, attack, heavy attack, dodge and block; tap Use or the prompt to talk and interact, and tap a hotbar slot to use a technique. The strip at the top opens the menus, the world map and the camera view. Play with the phone held sideways."),
       h("h3", "Reputation"),
       h("p", "People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation. Crimes \u2014 robbing shops and houses, picking pockets, attacking townsfolk, Marines or merchant ships \u2014 put a bounty on your head instead, and bounties grow the way they do in One Piece: a few hundred thousand berries for a petty thief in the East Blue, millions on the Grand Line, far more in the New World. Anyone with a bounty is a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks \u2014 all the way to commanding fleets. A Marine who breaks the law loses standing, and is thrown out when nobody trusts them any more."),
@@ -88354,6 +88536,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     let role = def.role || (def.beast || def.faction === "beast" ? "beast" : ROLE_OF[def.faction]) || "civilian";
     if (role === "marine" && (def.look?.coat || def.boss || def.named)) role = "officer";
     const lookOver = { ...def.look || {}, role };
+    if (def.bulk && lookOver.bulk === void 0) lookOver.bulk = def.bulk;
     if (lookOver.fem === void 0 && def.name && WOMEN.test(def.name)) lookOver.fem = true;
     if (lookOver.fem === void 0 && (def.named || def.boss || def.dialogue)) lookOver.fem = false;
     const look = def.fullLook ? { ...def.fullLook } : makeLook(def.race || "human", def.seed ?? hashSeed(def.id || def.name), lookOver);
@@ -91838,7 +92021,7 @@ Trains by: ${TRAINS_BY[k]}` },
           if (def) s2.ico.appendChild(isItem ? itemImg(id.slice(5), 34) : skillImg(def, 34));
           s2.nm.textContent = def ? def.name : "";
           s2.el.classList.toggle("empty", !def);
-          const use = def?.type === "weapon" ? "take it in hand (again to put it away)" : "use";
+          const use = def?.type === "weapon" ? "draw it (again to sheathe it)" : "use";
           s2.el.title = def ? `${def.name}
 ${def.desc || ""}
 
@@ -91855,7 +92038,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           const weapon = def.type === "weapon";
           const qty = weapon && n === 1 ? "" : String(n);
           if (s2.qty.textContent !== qty) s2.qty.textContent = qty;
-          s2.el.classList.toggle("held", weapon && (ch.equipped?.weapons || []).includes(id.slice(5)) || p.held === id.slice(5));
+          s2.el.classList.toggle("held", weapon && !!p.drawn && (ch.equipped?.weapons || []).includes(id.slice(5)) || p.held === id.slice(5));
           s2.el.classList.toggle("none-left", n <= 0);
           const e = p.eating && p.eating.id === id.slice(5) ? p.eating : null;
           s2.cd.style.transform = `scaleY(${e ? clamp2(e.t / e.dur, 0, 1) : 0})`;
@@ -125400,6 +125583,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         else {
           p.held = id;
           p.eating = null;
+          p.drawn = false;
         }
         audio.sfx("equip");
         return true;

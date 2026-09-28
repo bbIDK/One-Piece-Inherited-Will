@@ -8,7 +8,7 @@
 // -1 (the first-person viewmodel: articulated fingers). Geometry is cached
 // per look signature + level and shared (ref-counted) by every character
 // that looks the same.
-import { Builder, Prim, M, between, mul, grid, lathe, tcap, lin, THREE } from './geom.js';
+import { Builder, Prim, M, between, mul, grid, lathe, tcap, lin, THREE, EAR_CEN } from './geom.js';
 import { B, dims, bindPose, frameId } from './bones.js';
 import { BLANK_UV } from './detail.js';
 import { buildFigure } from './body.js';
@@ -843,7 +843,16 @@ function buildBody0(look, wpn, lod, articulated) {
   };
   (HAIR[style] || HAIR.short)(h);
   if (look.ears) minkEars(b, HM, look, pal, hb, q);
-  else for (const s of [-1, 1]) { const e = surf(98, s * 95, 0.97); add(Prim.sphere(q.sph[0], q.sph[1]), HM(M(e[0] - 0.02, e[1], e[2], 0, 0, s * 0.12, [0.19, 0.28, 0.13])), pal.face, hb); }
+  else {
+    // ears: the rim, the ridge inside it and the shadowed bowl; tilted back a little and standing off the head behind
+    const face = lin(pal.face), bowl = lin(shade(pal.face, -0.16));
+    const col = (x, y, z) => (z > 0.02 && ((x - EAR_CEN[0]) / 0.3) ** 2 + ((y - EAR_CEN[1]) / 0.55) ** 2 < 1 ? bowl : face);
+    for (const s of [-1, 1]) {
+      // (seated on the skin, the rim standing about a tenth of the head's radius off it, more behind)
+      const e = surf(98, s * 95, 0.985);
+      add(Prim.ear(q.head[0] >= 14), HM(mul(M(e[0] - 0.03, e[1] + 0.01, e[2], 0, s * 0.34, 0.2), M(0, 0, 0, 0, 0, 0, [0.3, 0.3, 0.3 * s]))), col, hb);
+    }
+  }
   if (look.fin && look.kind !== 'Octopus') {
     const a = surf(18, 180, 0.9);
     b.add(Prim.cone(4), HM(between(a, [a[0] - 0.55, a[1] + 0.85, 0], 0.08, 0.42)), shade(pal.skin, -0.18), hb);
@@ -904,7 +913,7 @@ function buildBody0(look, wpn, lod, articulated) {
   if (wpn && wpn.kind === 'sword') {
     const cols = ['#ecf0f1', '#2c3e50', '#c0392b'];
     for (let k = 0; k < Math.min(3, wpn.count || 1); k++) {
-      const z = -(0.165 * Bk + 0.02 + k * 0.035);
+      const z = -(d.hipOut + 0.012 + k * 0.035);
       const a = [0.1 - k * 0.03, 0.02 + k * 0.01, z], e = [-0.62 - k * 0.04, -0.4 + k * 0.03, z - 0.1];
       add(Prim.cyl(5), between(a, e, 0.019), cols[k], B.sheath);
       const dir = norm([a[0] - e[0], a[1] - e[1], a[2] - e[2]]);
@@ -912,8 +921,12 @@ function buildBody0(look, wpn, lod, articulated) {
       add(Prim.cyl(5), between(add3(a, dir, 0.012), add3(a, dir, 0.23), 0.017), k === 2 ? '#fafafa' : '#2d2a32', B.hilts);
     }
   } else if (wpn && wpn.kind === 'gun') {
-    add(Prim.box(), M(0.02, -0.06, 0.17 * Bk, 0, 0, 0.3, [0.05, 0.08, 0.02]), '#6d4c41', B.sheath);
-    add(Prim.box(), M(0.05, 0.03, 0.17 * Bk, 0, 0, 0.9, [0.02, 0.05, 0.018]), '#8d5b33', B.hilts);
+    // a leather holster on the right hip, on a loop from the belt, the pistol's butt standing out of it
+    const z = d.hipOut + 0.03;
+    add(Prim.rbox(), M(0.02, -0.075, z, 0, 0, 0.3, [0.05, 0.1, 0.024]), '#5d3a22', B.sheath);
+    add(Prim.box(), M(0.035, 0.02, z - 0.004, 0, 0, 0.3, [0.012, 0.04, 0.02]), '#3e2716', B.sheath);
+    add(Prim.rbox(), M(0.06, 0.035, z, 0, 0, 1.0, [0.022, 0.058, 0.02]), '#8d5b33', B.hilts);
+    add(Prim.sphere(6, 4), M(0.1, 0.055, z, 0, 0, 0, [0.028, 0.026, 0.024]), '#6d4c41', B.hilts);
   } else if (wpn && (wpn.kind === 'axe' || wpn.kind === 'staff')) {
     const a = [-0.16 * Bk, d.chestLen - 0.02, 0.22], e = [-0.17 * Bk, 0.05, -0.28];
     add(Prim.cyl(5), between(a, e, 0.018, 0.018, 0.5), wpn.kind === 'axe' ? '#6d4c41' : '#4fc3f7', B.backWpn);

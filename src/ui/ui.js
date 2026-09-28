@@ -546,18 +546,18 @@ export class UI {
         if (def) s.ico.appendChild(isItem ? itemImg(id.slice(5), 34) : skillImg(def, 34));
         s.nm.textContent = def ? def.name : '';
         s.el.classList.toggle('empty', !def);
-        const use = def?.type === 'weapon' ? 'take it in hand (again to put it away)' : 'use';
+        const use = def?.type === 'weapon' ? 'draw it (again to sheathe it)' : 'use';
         s.el.title = def ? `${def.name}\n${def.desc || ''}\n\nClick or press ${HOTBAR_KEYS[i]} to ${use} · drag to rearrange` : 'Empty — open Skills (K) or Inventory (Tab) and drag techniques, food or weapons here';
       }
       if (isItem) {
         const n = (ch.inventory || []).filter((x) => x.id === id.slice(5)).reduce((a, x) => a + (x.qty || 1), 0);
         // the last one's gone: the slot empties (the item lived in it)
         if (n <= 0) { p.hotbar[i] = null; if (ch.hotbar) ch.hotbar[i] = null; this.cache[k] = null; continue; }
-        // (a weapon: lit up while it's in your hands)
+        // (a weapon: lit up while it's drawn)
         const weapon = def.type === 'weapon';
         const qty = weapon && n === 1 ? '' : String(n);
         if (s.qty.textContent !== qty) s.qty.textContent = qty;
-        s.el.classList.toggle('held', (weapon && (ch.equipped?.weapons || []).includes(id.slice(5))) || p.held === id.slice(5));
+        s.el.classList.toggle('held', (weapon && !!p.drawn && (ch.equipped?.weapons || []).includes(id.slice(5))) || p.held === id.slice(5));
         s.el.classList.toggle('none-left', n <= 0);
         // (eating it: the slot empties as it goes down)
         const e = p.eating && p.eating.id === id.slice(5) ? p.eating : null;

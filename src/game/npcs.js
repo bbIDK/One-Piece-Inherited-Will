@@ -56,6 +56,7 @@ export function makeNPC(def, x, y, extra = {}) {
   let role = def.role || (def.beast || def.faction === 'beast' ? 'beast' : ROLE_OF[def.faction]) || 'civilian';
   if (role === 'marine' && (def.look?.coat || def.boss || def.named)) role = 'officer';
   const lookOver = { ...(def.look || {}), role };
+  if (def.bulk && lookOver.bulk === undefined) lookOver.bulk = def.bulk; // (their own size: no frame rolled on top)
   if (lookOver.fem === undefined && def.name && WOMEN.test(def.name)) lookOver.fem = true;
   if (lookOver.fem === undefined && (def.named || def.boss || def.dialogue)) lookOver.fem = false; // named men stay men
   const look = def.fullLook ? { ...def.fullLook } : makeLook(def.race || 'human', def.seed ?? hashSeed(def.id || def.name), lookOver);

@@ -129,6 +129,7 @@ class ActorView {
       const { pose, P } = actorPose(a, env, look);
       const o = rigOptions(a, pose, P, this.o);
       o.wpn = this.wpn;
+      this.drawing(pose, o, this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT));
       // sit down (and get up) over a moment
       const dtv = this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT);
       this.sitK = (this.sitK || 0) + ((o.seatH !== null ? 1 : 0) - (this.sitK || 0)) * Math.min(1, dtv * 6);
@@ -200,7 +201,7 @@ class ActorView {
    */
   ownBody(fp, a) {
     const m = this.model, u = m.fx, pose = a._lastPose || {};
-    const busy = !!pose.anim || !!pose.combat || !!pose.armed || pose.block !== undefined || !!pose.station || !!a.held || !!pose.launch || a.inWater;
+    const busy = !!pose.anim || !!pose.combat || !!pose.armed || !!this.draw || pose.block !== undefined || !!pose.station || !!a.held || !!pose.launch || a.inWater;
     // (like the first-person view in the big open-world games: from the eyes you
     // see your chest, arms, legs and feet — never your own head, hair or hat,
     // however long the hair or deep the hood; and the neck is cut below the chin)
@@ -213,6 +214,32 @@ class ActorView {
     for (const h of m.held) if (h) h.group.visible = !fp;
     // (a step back, so the eye isn't inside the collar)
     m.group.position.x = fp ? -0.12 : 0;
+  }
+
+  /**
+   * A weapon coming out of its sheath (the holster, or off the back) — or
+   * going back — over about half a second, whenever it's taken in hand or a
+   * fight starts or ends; an attack draws it at once. (The motion itself:
+   * CharacterModel.drawPath.)
+   */
+  drawing(pose, o, dt) {
+    const want = !!o.armed && !!this.wpn;
+    if (this.armedVis === undefined || dt >= 1) { this.armedVis = want; this.draw = null; }
+    let D = this.draw;
+    if (D && D.out !== want) { D.out = want; D.k = 1 - D.k; } // (changed its mind halfway: back the way it came)
+    else if (!D && want !== this.armedVis) {
+      if (pose.anim) this.armedVis = want;
+      else D = this.draw = { k: 0, out: want };
+    }
+    if (D) {
+      if (pose.anim && D.out) { this.armedVis = true; this.draw = D = null; }
+      else {
+        D.k = Math.min(1, D.k + dt / (D.out ? 0.6 : 0.5));
+        if (D.k >= 1) { this.armedVis = D.out; this.draw = D = null; }
+      }
+    }
+    o.draw = D;
+    o.armed = D ? (D.out ? D.k > 0.42 : D.k < 0.58) : this.armedVis;
   }
 
   /** At the helm or the oars of your ship: stand (or sit) where the work is, riding up and down with her. */

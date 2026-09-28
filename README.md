@@ -62,7 +62,7 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | Shift | hold to sprint, tap to dodge (i-frames) | Coup de Burst (some ships) |
 | Left / right click | combo / heavy attack | broadside toward where you aim |
 | F | block — tap just before a hit to **parry** | |
-| 1–9, 0 | hotbar: techniques, food and weapons (food goes in your hand: hold the right mouse button to eat it, in bites; a punch or a dodge puts it away) | |
+| 1–9, 0 | hotbar: techniques, food and weapons (a weapon's key draws it from its sheath into your stance, and again puts it back; food goes in your hand: hold the right mouse button to eat it, in bites; a punch or a dodge puts it away) | |
 | R / T / G | Haki, once it has awakened | |
 | E | talk, enter, take the helm or the oars, pick fruit, examine | dive, knock-up, go ashore, leave the helm |
 | Q | dash | |
@@ -72,7 +72,7 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 
 The same menus are on the **sidebar** under the minimap. Press a menu's key
 again (or Esc) to close it. Drag techniques, food and weapons onto the hotbar (a
-weapon's key takes it in hand, or puts it away), and drag hotbar slots to
+weapon's key draws it, or sheathes it again), and drag hotbar slots to
 rearrange them.
 
 ## What's in it
@@ -250,8 +250,21 @@ rearrange them.
   World Seeker: big dark eyes, bold brows, clumped hair, strong builds. The
   creator sets eyes, an easy-going or stern look, mouth, face, nose, a scar
   (across or under the eye), hairstyle (Luffy's messy mop to Zoro's crop),
-  build, muscle and clothes, an open kimono among them. People standing
+  frame, build, muscle and clothes, an open kimono among them. People standing
   about fold their arms or put their hands on their hips.
+  - **Frames**: lean, athletic, slim, brawny, heavy, lanky, stocky (and
+    curvy or petite for women). A frame sets height, leg length, shoulders,
+    arms, waist and belly, and the muscle it usually carries. Townsfolk,
+    pirates and Marines each roll one that suits their work.
+  - Pecs, abs, deltoids, biceps and calves are modelled and inked, and the
+    faces are lit in 3D. Long hair and coat tails swing as you move, and
+    skirts follow the legs.
+  - **Weapons are worn**: an equipped sword hangs at the left hip, a pistol
+    in its holster, a staff or an axe across the back. Its hotbar key draws
+    it (the hand goes to the hilt and pulls it out along the sheath into
+    your stance) and puts it back again.
+  - In first person you never see your own head, hair or hat, only your
+    arms and body below.
 - **Reputation** (from Villain to Hero of the Seas):
   - Crimes lower it: stealing from shops, breaking into houses, picking
     pockets, beating townsfolk, sinking merchants. At **Outlaw (-25)** the
@@ -372,7 +385,10 @@ node tools/shot.mjs townwatch [--island=lvneel]   # a town's people over a minut
 node tools/shot.mjs towntour --islands=a,b,c      # each town photographed from the air
 node tools/shot.mjs viewdist [--rd=<chunks>]      # the render distance: a big town from its square, 130 m and 250 m off, the air and the sea
 node tools/shot.mjs c3hairclose [--styles=a,b] [--fem=1] [--hat=straw]   # hairstyles close up: front, side and back, four at a time
-node tools/shot.mjs c3crew [--only=crew,town,faces]   # the Straw Hats lined up like the World Seeker key art, random townsfolk, face close-ups
+node tools/shot.mjs c3crew [--only=crew,town,faces] [--side]   # the Straw Hats lined up like the World Seeker key art, random townsfolk, face close-ups
+node tools/shot.mjs c3body [--only=men,women]   # frames and muscles, front, side and back
+node tools/shot.mjs c3ears                      # ears and profiles, side-on and three-quarter
+node tools/shot.mjs c3draw [--wpns=fine_katana,flintlock,bo_staff] [--modes=third,first]   # weapons worn, drawn from the hotbar and sheathed, part way through
 node tools/shot.mjs probeshots --js=<file>        # several camera views in one run (the file returns [{ x, y, yaw, pitch }])
 node tools/shot.mjs story [--path=pirate|marine|hunter]   # plays the story's start, then fast-forwards through all three parts
 node tools/shot.mjs storydrift | storyswitch               # the Grand Line's currents; the story following a change of road

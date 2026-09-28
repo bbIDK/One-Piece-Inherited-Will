@@ -211,6 +211,31 @@ const SASH = ['#f4c430', '#c62828', '#1e88e5', '#2e7d32', '#6a1b9a', '#ef6c00', 
 const LIGHT = ['#f5f5f5', '#fff8e1', '#e3f2fd', '#fce4ec', '#e8f5e9'];
 const STERN = { pirate: 0.55, bandit: 0.6, marine: 0.45, officer: 0.6, agent: 0.7, swordsman: 0.6 };
 const FEM_ROLES = { civilian: 0.5, pirate: 0.3, bandit: 0.2, marine: 0.25, officer: 0.2, agent: 0.3, swordsman: 0.25, wano: 0.5, desert: 0.5, snow: 0.5, sky: 0.5, fishman: 0.3 };
+// Body frames by role (render3d/chars/bones.js FRAME): a dock hand, a Marine
+// and a clerk are built differently. (The frame's muscle tone, as there.)
+const FRAME_ROLL = {
+  m: {
+    civilian: W('average:5 lean:2 slim:2 heavy:2 stocky:2 lanky:1 athletic:1'),
+    pirate: W('average:3 lean:2 athletic:2 brawny:2 heavy:2 stocky:2 lanky:1'),
+    bandit: W('average:2 lean:2 brawny:2 heavy:2 stocky:2 lanky:1'),
+    marine: W('average:3 athletic:4 lean:2 brawny:1 stocky:1'),
+    officer: W('average:3 athletic:3 brawny:1 heavy:1 slim:1'),
+    agent: W('athletic:3 slim:2 lean:2 average:2'),
+    swordsman: W('lean:3 athletic:3 average:2 slim:1 lanky:1'),
+    wano: W('average:3 lean:2 athletic:2 stocky:1 heavy:1 brawny:1'),
+    desert: W('average:3 lean:3 slim:2 heavy:1 lanky:1'),
+    snow: W('average:3 heavy:2 stocky:2 brawny:1 lean:1'),
+    sky: W('average:3 slim:2 lean:2 lanky:1'),
+    fishman: W('athletic:3 brawny:3 average:2 heavy:1 stocky:1'),
+  },
+  f: {
+    civilian: W('average:4 slim:2 curvy:2 petite:2 heavy:1'),
+    fighter: W('average:3 athletic:3 slim:2 curvy:2 petite:1'),
+    other: W('average:4 slim:2 curvy:2 petite:1 heavy:1 athletic:1'),
+  },
+};
+const FIGHTERS = new Set(['pirate', 'bandit', 'marine', 'officer', 'agent', 'swordsman']);
+const FRAME_MUS = { average: 0.55, lean: 0.75, athletic: 1.0, slim: 0.45, brawny: 1.2, heavy: 0.3, lanky: 0.28, stocky: 0.8 };
 
 /**
  * Pick a body type and clothes for `role` into `look` (only where `over`,
@@ -234,12 +259,21 @@ export function dress(look, rng, role = 'civilian', over = {}) {
   if (!over.waistCol && (look.waist === 'sash' || look.waist === 'obi')) look.waistCol = rng.pick(SASH);
   if (look.topStyle === 'jacket' && !over.tie && rng.chance(0.5)) look.tie = rng.pick(['#212121', '#c62828', '#1e3a8a']);
   if (look.topStyle === 'coat' && !over.coat) look.coat = rng.pick(['#5d4037', '#37474f', '#6d4c41', '#1b5e20', '#4a148c', '#263238']);
+  // the frame (the big ones — bulk set by hand — keep their own)
+  if (over.frame === undefined && !((over.bulk ?? look.bulk ?? 1) > 1.1)) {
+    let set = fem ? FRAME_ROLL.f[role === 'civilian' ? 'civilian' : FIGHTERS.has(role) ? 'fighter' : 'other'] : FRAME_ROLL.m[role] || FRAME_ROLL.m.civilian;
+    // (long legs are long enough: no lanky or stocky on top)
+    if (look.legs > 1.2) set = set.filter(([k]) => k !== 'lanky' && k !== 'stocky' && k !== 'petite');
+    look.frame = rng.weighted(set);
+  }
   if (fem) {
     if (!over.hair && rng.chance(0.75)) look.hair = rng.pick(['long', 'long', 'wavy', 'ponytail', 'bun', 'bob', 'twintails', 'braid', 'short', 'curly', 'sidefringe']);
     if (!over.eyeShape) look.eyeShape = rng.pick(['soft', 'round', 'round', 'sharp']);
     look.bust = +(0.8 + rng.next() * 0.45).toFixed(2);
   } else if (over.muscle === undefined) {
-    look.muscle = +(0.25 + rng.next() * 0.75).toFixed(2);
+    // (toned about as the frame is, give or take)
+    const m = (FRAME_MUS[look.frame] ?? 0.55) + (rng.next() - 0.5) * 0.4;
+    look.muscle = +Math.min(1.2, Math.max(0.15, m)).toFixed(2);
   }
   // fighters wear a harder face
   if (over.frown === undefined && rng.chance(STERN[role] ?? 0.15)) look.frown = true;

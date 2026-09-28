@@ -5,6 +5,7 @@ import { RACES, RARITY, makeLook, raceLabel, MINK_KINDS, FISHMAN_KINDS } from '.
 import { outfitOf } from '../render3d/chars/body.js';
 import { EYES_M, EYES_F, EYE_NAMES, eyeShapeOf } from '../render3d/chars/face.js';
 import { headParams, FACE_SHAPES, CHINS, NOSES } from '../render3d/chars/build.js';
+import { FRAME, FRAMES_M, FRAMES_F, FRAME_NAMES, frameId } from '../render3d/chars/bones.js';
 import { LEGENDS } from '../data/dreams.js';
 import { TRAITS, PERKS, perkLevel, perkCost, rollBirth, dChance, nameWithD } from '../game/lineage.js';
 import { ITEMS } from '../data/items.js';
@@ -291,6 +292,11 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
         const build = h('input.build-slider', { type: 'range', min: 0, max: 1, step: 0.05, value: L.build ?? 0.5, on: { input: (e) => { L.build = Number(e.target.value); applyLook(L, race); preview?.setLook(L); } } });
         const mus = L.muscle ?? 0.5;
         add(optsEl,
+          // (a frame brings the muscle it usually carries; Muscle can change it after)
+          row('Frame', (() => {
+            const set = L.fem ? FRAMES_F : FRAMES_M;
+            return chips(frameId(L), set, set.map((f) => FRAME_NAMES[f]), (v) => { L.frame = v; L.muscle = FRAME[v].mus ?? 0.55; });
+          })()),
           row('Build', h('div.build-row', h('span.muted', 'Thin'), build, h('span.muted', 'Wide'))),
           row('Muscle', chips(mus < 0.35 ? 0.2 : mus < 0.75 ? 0.55 : 1, [0.2, 0.55, 1], ['Lean', 'Toned', 'Muscular'], (v) => { L.muscle = v; })),
           L.fem ? row('Figure', chips((L.bust ?? 1) < 0.9 ? 0.8 : (L.bust ?? 1) < 1.15 ? 1 : 1.3, [0.8, 1, 1.3], ['Slim', 'Average', 'Curvy'], (v) => { L.bust = v; })) : null,
@@ -453,7 +459,7 @@ export function helpContent(char) {
       k('C / Space (swimming)', 'dive / swim up — or look down and swim'),
       k('Tab / I', 'inventory & equipment'), k('C', 'character'), k('K', 'skills & hotbar'), k('J', 'journal'),
       k('U', 'crew'), k('M', 'world map'), k('Esc', 'pause menu'), k('Mouse wheel', 'camera distance (third person)'), k('H', 'this help')),
-    h('p.muted', 'The buttons on the right of the screen open the same menus. Open the Inventory or Skills menu and drag techniques, food and weapons straight onto your hotbar at the bottom of the screen (a weapon\'s key takes it in hand, or puts it away); drag hotbar slots to rearrange them, right-click one to clear it.'),
+    h('p.muted', 'The buttons on the right of the screen open the same menus. Open the Inventory or Skills menu and drag techniques, food and weapons straight onto your hotbar at the bottom of the screen (a weapon you wear hangs at your hip or on your back: its key draws it, and again sheathes it); drag hotbar slots to rearrange them, right-click one to clear it.'),
     h('p', h('b', 'On a phone or tablet: '), 'your left thumb moves (push the stick all the way to run; at sea it steers and sets the sails) and your right thumb drags to look around. The round buttons jump, attack, heavy attack, dodge and block; tap Use or the prompt to talk and interact, and tap a hotbar slot to use a technique. The strip at the top opens the menus, the world map and the camera view. Play with the phone held sideways.'),
     h('h3', 'Reputation'),
     h('p', 'People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation. Crimes — robbing shops and houses, picking pockets, attacking townsfolk, Marines or merchant ships — put a bounty on your head instead, and bounties grow the way they do in One Piece: a few hundred thousand berries for a petty thief in the East Blue, millions on the Grand Line, far more in the New World. Anyone with a bounty is a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks — all the way to commanding fleets. A Marine who breaks the law loses standing, and is thrown out when nobody trusts them any more.'),

@@ -144,8 +144,13 @@ export function useItem(game, id) {
     return true;
   }
   if (d.type === 'fruit') return eatFruit(game, id);
-  // a weapon on the hotbar: take it in hand (or put it away again)
-  if (d.type === 'weapon') { equip(game, id); return true; }
+  // a weapon on the hotbar: draw it — putting it on first if you weren't
+  // wearing it — or, drawn, put it back in its sheath (it stays on you)
+  if (d.type === 'weapon') {
+    if (!(c.equipped.weapons || []).includes(id)) { equip(game, id); if (p.weapon) p.drawn = true; }
+    else { p.drawn = !p.drawn; game.audio?.sfx('equip'); }
+    return true;
+  }
   if (d.type === 'pose' && d.target) {
     // Eternal Pose: always points to one island, no matter where you are
     const tgt = game.surface.islands.find((i) => i.id === d.target);

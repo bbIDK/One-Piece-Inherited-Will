@@ -33,6 +33,7 @@ export class Actor extends Entity {
     this.gills = !!R.gills;
     this.style = o.style || 'brawler';
     this.weapon = o.weapon || null; // { kind: 'sword'|'gun'|'staff'|'axe', grade, count }
+    this.drawn = false; // the weapon taken in hand (from the hotbar): held ready out of a fight too
     this.fruit = o.fruit || null;
     this.fruitMastery = o.fruitMastery || 0;
     this.masteries = o.masteries || {};
@@ -1225,6 +1226,7 @@ export class Actor extends Entity {
     const ai = this.controller;
     const npcFight = !this.isPlayer && ai && ai.target && ai.state === 'chase';
     const combat = now - (this._lastActT ?? -99) < 2.5 || this.blocking || this.hitstun > 0 || (this.isPlayer ? !!this.inCombat : !!npcFight);
+    const drawn = !!this.drawn && !!wpn && !!STANCE_ARMED[stance];
     const hurt = this.state === 'idle' && this.hitstun > 0.2 && !act;
     const dodging = !!(this.dash && this.dash.dodge);
     let anim = null;
@@ -1246,7 +1248,7 @@ export class Actor extends Entity {
     const air = this.climb ? 'up' : !swim && !act && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? (this.vz > 0 ? 'up' : 'down') : null;
     // at a ship's station: rowing a rowboat, or at the wheel
     const st = !act ? this.station() : null;
-    const mode = act || `${this.state}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${swim || ''}${busy ? busy.pose : ''}${this.charging > 0 ? 'k' : ''}${air || ''}${st ? st.kind : ''}`;
+    const mode = act || `${this.state}${drawn ? 'w' : ''}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${swim || ''}${busy ? busy.pose : ''}${this.charging > 0 ? 'k' : ''}${air || ''}${st ? st.kind : ''}`;
     if (mode !== this._mode) {
       this._blendFrom = this._lastP || null;
       this._blendT = 0;
@@ -1265,7 +1267,7 @@ export class Actor extends Entity {
       state: this.state === 'knocked' ? 'knocked' : hurt ? 'hurt' : this.state,
       swimming: this.inWater, swim, swimDir: this.intent.mz || 0, alpha: alphaBuff ? alphaBuff.alpha : this.fadeAlpha, aura,
       anim, stanceP: STANCES[stance], combat, sprint: !!(this.intent.sprint && this.moving),
-      weapon: wpn, armed: !!wpn && ((combat && !!STANCE_ARMED[stance]) || !!(anim && anim.weapon)), armament: this.armament,
+      weapon: wpn, armed: !!wpn && (drawn || (combat && !!STANCE_ARMED[stance]) || !!(anim && anim.weapon)), drawn, armament: this.armament,
       knockT: this.knockT,
       activity: busy ? busy.pose : null, prop: busy ? busy.prop : null, seatH: busy ? busy.h : 0, station: st,
     };

@@ -32,6 +32,8 @@ const GRIPS = {
   finger: { a: [0.04, 1.5, 1.56, 1.6], b: [0.05, 1.72, 1.76, 1.7], sp: 0, th: 0.9 },
 };
 const _t1 = new THREE.Vector3(), _t2 = new THREE.Vector3(), DOWN = new THREE.Vector3(0, -1, 0);
+const _dr = Array.from({ length: 8 }, () => new THREE.Vector3());
+const smooth = (x) => x * x * (3 - 2 * x);
 
 // ------------------------------------------------------------------ hair and cloth that swing
 // Long hair and a coat's tail are each a weight on a spring at the end of
@@ -256,6 +258,8 @@ export class CharacterModel {
     // hand shapes
     this.shape[0] = P.hand || 'fist'; this.shape[1] = P.handB || 'fist';
     o.shape = this.shape;
+    o.drawBlade = null; o.drawHold2 = true;
+    if (o.draw && o.wpn) this.drawPath(P, o);
     rig.solve(P, o);
     // hand/weapon grips: armed hands close into fists
     const armed = !!o.armed && !!o.wpn;
@@ -302,8 +306,8 @@ export class CharacterModel {
     this.showBone(B.hilts, !(armed && w && (w.kind === 'sword' || w.kind === 'gun')));
     this.showBone(B.backWpn, !(armed && w && (w.kind === 'axe' || w.kind === 'staff')));
     const want0 = o.blade ? 'energy:' + o.blade : armed ? `${w.kind}:main:${w.gun || ''}:${o.armament ? 1 : 0}` : o.prop ? `prop:${o.prop}` : '';
-    const want1 = o.bladeB ? 'energy:' + o.bladeB : armed && w.kind === 'sword' && (w.count || 1) >= 2 ? `sword:second::${o.armament ? 1 : 0}` : '';
-    const want2 = armed && w.kind === 'sword' && (w.count || 1) >= 3 ? `sword:mouth::${o.armament ? 1 : 0}` : '';
+    const want1 = o.bladeB ? 'energy:' + o.bladeB : armed && o.drawHold2 && w.kind === 'sword' && (w.count || 1) >= 2 ? `sword:second::${o.armament ? 1 : 0}` : '';
+    const want2 = armed && o.drawHold2 && w.kind === 'sword' && (w.count || 1) >= 3 ? `sword:mouth::${o.armament ? 1 : 0}` : '';
     this.setHeld(0, want0, o);
     this.setHeld(1, want1, o);
     this.setHeld(2, want2, o);
@@ -314,7 +318,7 @@ export class CharacterModel {
       _v.subVectors(rig.E[k], rig.J[k]).normalize();
       _v2.copy(rig.E[k]).addScaledVector(_v, 0.045);
       if (hw.kind === 'energy') hw.group.scale.setScalar(o.bladeLen || 1);
-      hw.place(_v2, rig.blade[k], rig.plane[k]);
+      hw.place(_v2, k === 0 && o.drawBlade ? o.drawBlade : rig.blade[k], rig.plane[k]);
     }
     if (this.held[2]) {
       // Santoryu: the third blade in the mouth, held across to the side
@@ -348,6 +352,53 @@ export class CharacterModel {
       g.position.x += 0.1 * k;
     }
     if (o.squash && o.squash !== 1) g.scale.set(1 / Math.sqrt(o.squash), o.squash, 1 / Math.sqrt(o.squash)); else g.scale.set(1, 1, 1);
+  }
+
+  /**
+   * Drawing a weapon: the right hand goes to its grip — a sword's hilt at the
+   * left hip, a pistol's butt at the right, a staff's end over the right
+   * shoulder — takes hold, draws it out along its sheath and brings it up
+   * into the stance; putting it away runs the same the other way.
+   */
+  drawPath(P, o) {
+    const D = o.draw, rig = this.rig, d = this.d, w = o.wpn;
+    // the stance's hand and blade this frame (without the draw), for the end of it
+    rig.solve(P, { ...o, reachR: null, draw: null });
+    const stanceHand = _dr[0].copy(rig.E[0]), stanceBlade = _dr[1].copy(rig.blade[0]);
+    const S = rig.S[0];
+    const G = _dr[2], out = _dr[3];
+    let len;
+    if (w.kind === 'sword') {
+      const z = -(d.hipOut + 0.012);
+      const ax = 0.1, ay = 0.02, ex = -0.62, ey = -0.4;
+      out.set(ax - ex, ay - ey, 0.1).normalize();
+      G.set(ax, ay, z).addScaledVector(out, 0.1).applyQuaternion(rig.qPelvis).add(rig.hip);
+      out.applyQuaternion(rig.qPelvis);
+      len = 0.72;
+    } else if (w.kind === 'gun') {
+      G.set(0.07, 0.04, d.hipOut + 0.03).applyQuaternion(rig.qPelvis).add(rig.hip);
+      out.set(0.25, 1, 0.1).normalize().applyQuaternion(rig.qPelvis);
+      len = 0.2;
+    } else {
+      const a = _dr[4].set(-0.16 * d.Bk, d.chestLen - 0.02, 0.22), e = _dr[5].set(-0.17 * d.Bk, 0.05, -0.28);
+      out.subVectors(a, e).normalize().applyQuaternion(rig.qChest);
+      G.copy(a).applyQuaternion(rig.qChest).add(rig.hip);
+      len = 0.55;
+    }
+    // (putting it away runs the draw backwards)
+    const k = D.out ? D.k : 1 - D.k;
+    const rest = _dr[4].set(S.x + 0.04, S.y - (d.A1 + d.A2) * 0.9, S.z + 0.03 * (S.z > 0 ? 1 : -1));
+    const T = _dr[5];
+    if (k < 0.42) T.lerpVectors(rest, G, smooth(k / 0.42));
+    else if (k < 0.78) T.copy(G).addScaledVector(out, smooth((k - 0.42) / 0.36) * len);
+    else T.copy(G).addScaledVector(out, len).lerp(stanceHand, smooth((k - 0.78) / 0.22));
+    o.reachR = T;
+    // the blade: back down the sheath while it's still in it, then round into the stance
+    if (k >= 0.42) {
+      const b = _dr[6].copy(out).negate();
+      o.drawBlade = k < 0.78 ? b : b.lerp(stanceBlade, smooth((k - 0.78) / 0.22)).normalize();
+    }
+    o.drawHold2 = k > 0.86;
   }
 
   setHeld(k, want, o) {

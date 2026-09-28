@@ -139,7 +139,8 @@ export class PlayerController {
           const it = String(id).startsWith('item:') ? ITEMS[id.slice(5)] : null;
           if (!it || !(it.type === 'food' || it.type === 'medicine' || it.type === 'fruit')) this.putAway(p);
         }
-        if (id) { p.facing = aim; const target = this.aimTarget(p, game, wx, wy); p.tryTechnique(id, game, target || { x: wx, y: wy }); }
+        // (a technique turns you to where you aim; drawing a weapon or taking food doesn't)
+        if (id) { if (!String(id).startsWith('item:')) p.facing = aim; const target = this.aimTarget(p, game, wx, wy); p.tryTechnique(id, game, target || { x: wx, y: wy }); }
       }
     }
     if (inp.wasPressed('R')) this.toggleHaki(p, game, 'armament');

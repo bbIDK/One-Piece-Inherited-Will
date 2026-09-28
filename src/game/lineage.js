@@ -306,6 +306,7 @@ export function refreshPlayer(game) {
   p.attrs = effectiveAttrs(c);
   p.look = equippedLook(c);
   p.weapon = weaponFromChar(c);
+  if (!p.weapon) p.drawn = false;
   p.style = fightingStyle(c);
   p.fruit = c.fruit;
   p.fruitMastery = c.fruitMastery;

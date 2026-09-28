@@ -648,7 +648,8 @@ function swimPose(P, kind, t, dir) {
 export function restPose(pose) {
   const t = pose.time || 0;
   const stance = pose.stanceP || GUARD;
-  const base = pose.block !== undefined ? GUARD : pose.combat ? stance : STAND;
+  // (a weapon taken in hand is held ready in its stance, in a fight or not)
+  const base = pose.block !== undefined ? GUARD : pose.combat || pose.drawn ? stance : STAND;
   const P = { ...base };
   P.b = [base.b[0], base.b[1] + Math.sin(t * 2.2) * 0.012];
   if (pose.combat && !pose.moving) {

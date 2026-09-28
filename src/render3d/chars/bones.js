@@ -87,6 +87,8 @@ export function dims(look) {
     hc: headR * 0.84,               // head centre above the neck top
     hx: headR * 0.15,               // … and in front of it (the neck meets the skull behind the jaw)
     hipW: (fem ? 0.094 : 0.085) * Bk * (0.6 + 0.4 * F.hp), // hip joints either side of the pelvis
+    // the outside of the hips (the tops of the thighs): where a scabbard or a holster hangs
+    hipOut: (fem ? 0.094 : 0.085) * Bk * (0.6 + 0.4 * F.hp) + (fem ? 0.09 : 0.088) * F.th * Bk,
     shY: chestLen - 0.07,           // shoulder joints below the top of the chest
     shW: (fem ? 0.155 * Bk + 0.004 : 0.194 * Bk + 0.006) * F.sh,
     depth: 0.64,                    // torso depth / width
