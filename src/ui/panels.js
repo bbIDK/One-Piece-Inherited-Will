@@ -667,10 +667,14 @@ export function openShipyard(game, building, island, dock) {
       for (const s of ships) {
         const near = game.world.distance(s.x, s.y, game.player.x, game.player.y) < 60;
         const rp = S.repairPrice(s, island);
-        const card = h('div.card', h('h4', `${s.name} — ${s.def.name}`), h('div', `Hull ${Math.ceil(s.hull)}/${s.maxHull} · upgrades: ${s.upgrades.map((u) => SHIP_UPGRADES[u]?.name).join(', ') || 'none'}${s.coated ? ' · coated' : ''}`));
+        const card = h('div.card', h('h4', `${s.name} — ${s.def.name}`), h('div', `Hull ${Math.ceil(s.hull)}/${s.maxHull}${s.shotCap ? ` · cannonballs ${s.shot}/${s.shotCap}` : ''} · upgrades: ${s.upgrades.map((u) => SHIP_UPGRADES[u]?.name).join(', ') || 'none'}${s.coated ? ' · coated' : ''}`));
         if (!near) card.appendChild(h('p.muted', 'Bring this ship to the harbour to work on it.'));
         else {
           card.appendChild(h('button.btn.green', { disabled: s.hull >= s.maxHull || c.berries < rp, on: { click: () => { S.repair(s, island); render(); } } }, `Repair — ${formatBerries(rp)}`));
+          if (s.shotCap) {
+            const sp = S.shotPrice(s, island);
+            card.appendChild(h('button.btn', { style: { marginLeft: '6px' }, disabled: s.shot >= s.shotCap || c.berries < sp, on: { click: () => { S.restock(s, island); render(); } } }, s.shot >= s.shotCap ? 'Cannonballs: full' : `Cannonballs (${s.shotCap - s.shot}) — ${formatBerries(sp)}`));
+          }
           const ups = h('div.list', { style: { marginTop: '6px' } });
           for (const [id, u] of Object.entries(SHIP_UPGRADES)) {
             if (id === 'coating' && !(building.coating || /sabaody/i.test(island?.id || '') || /coat/i.test(building.name || ''))) continue;

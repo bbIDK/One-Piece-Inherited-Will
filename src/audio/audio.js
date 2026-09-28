@@ -260,6 +260,7 @@ export class Audio {
         break;
       case 'doorshut': d = R({ send: 0.12 }); this.noise(t, 0.12, { freq: 220, gain: 0.35, type: 'lowpass', dest: d }); this.tone(t, 0.12, { freq: 95, to: 60, gain: 0.3, dest: d }); break;
       case 'doorbreak': d = R({ send: 0.2, drive: 2 }); this.noise(t, 0.6, { freq: 320, gain: 0.7, type: 'lowpass', dest: d }); this.noise(t, 0.35, { freq: 2600, gain: 0.3, sweep: 700, dest: d }); this.tone(t, 0.3, { freq: 110, to: 45, gain: 0.5, dest: d }); this.crackle(t, 0.4, 12, { freq: 1500, gain: 0.12, dest: d }); break;
+      case 'dry': d = R({ send: 0.08 }); this.noise(t, 0.035, { freq: 3200, q: 3, gain: 0.35, attack: 0.001, dest: d }); this.tone(t, 0.05, { freq: 420, to: 300, type: 'square', gain: 0.06, dest: d }); this.noise(t + 0.09, 0.03, { freq: 2400, q: 3, gain: 0.2, attack: 0.001, dest: d }); break;
       case 'coin': d = R({ send: 0.15 }); this.ring(t, 1568, 0.18, 0.07, d, [1, 2.76]); this.ring(t + 0.07, 2093, 0.3, 0.07, d, [1, 2.76]); break;
       case 'treasure': d = R({ send: 0.3 }); [523, 659, 784, 1046].forEach((f, i) => this.tone(t + i * 0.09, 0.35, { freq: f, type: 'triangle', gain: 0.14, dest: d })); this.ring(t + 0.36, 2093, 0.5, 0.04, d, [1, 2.76, 5.4]); break;
       case 'bell': this.ring(t, 196, 3.2, 0.2, R({ send: 0.5 }), [0.5, 1, 1.2, 1.5, 2, 2.6, 3.0]); break;

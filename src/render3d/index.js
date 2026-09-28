@@ -373,6 +373,9 @@ export class Renderer3D {
     this.sky.update(env, w, sailing);
     this.sky.mesh.position.copy(cam.position);
     this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
+    // (no sea inside the hull you're aboard: from her hold you'd see it across the room)
+    const hs = p.deck?.ship || (sailing ? p.ship : null);
+    this.water.setHull(hs && !hs.sunk ? { x: w.dx(ox, hs.x), z: hs.y - oy, h: hs.heading, L: hs.def.length, B: hs.def.beam } : null);
     this.underwater(env, -cam.position.y);
     prof('r.sky+water', t0); t0 = performance.now();
     // the floor of the open sea (far from any land) is only drawn for a swimmer
@@ -982,7 +985,11 @@ export class Renderer3D {
       if (!m) { m = projectileMesh(pr); this.projViews.set(pr, m); this.ents.add(m); }
       const h = pr.sprite === 'cannonball' ? 1.3 : 1.15;
       // projectiles fly on the 2D "chest line" (y - 0.5): their ground point is y + 0.5
-      m.position.set(w.dx(ox, pr.x), Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y + 0.5)) + h + (pr.z || 0), pr.y + 0.5 - oy);
+      // (a ship's cannonball arcs from her gunport down into the sea at the end of its range)
+      let y3;
+      if (pr.arc) { const f = Math.min(1, (pr.traveled || 0) / (pr.range || 1)); y3 = pr.arc.h0 * (1 - f) + pr.arc.apex * 4 * f * (1 - f) - f * 0.2; }
+      else y3 = Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y + 0.5)) + h + (pr.z || 0);
+      m.position.set(w.dx(ox, pr.x), y3, pr.y + 0.5 - oy);
     }
     for (const [pr, m] of this.projViews) {
       if (seenP.has(pr)) continue;

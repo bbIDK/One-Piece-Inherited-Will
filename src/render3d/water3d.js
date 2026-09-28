@@ -97,6 +97,8 @@ const FRAG = /* glsl */`
   uniform float uStorm;
   uniform float uDetail;
   uniform float uUnder;
+  uniform vec4 uHull;   // the hull you're aboard: its middle (render space x, z), cos and sin of its heading
+  uniform vec3 uHullD;  // its length, its beam, 1 = on
   varying vec3 vWorld;
   varying vec3 vView;
   varying vec3 vSwell;
@@ -132,6 +134,17 @@ const FRAG = /* glsl */`
   }
 
   void main() {
+    // no sea inside the hull you're aboard (down in her hold it would lie
+    // across the room): her waterline's outline, as world/hull.js hbAt has it
+    if (uHullD.z > 0.5) {
+      vec2 q = (cameraPosition.xz - vView.xz) - uHull.xy;
+      float hu = q.x * uHull.z + q.y * uHull.w, hv = -q.x * uHull.w + q.y * uHull.z;
+      float ht = hu / uHullD.x + 0.5;
+      if (ht > 0.005 && ht < 0.995) {
+        float hk = ht > 0.58 ? sqrt(max(0.0, 1.0 - pow((ht - 0.58) / 0.42, 2.2))) : ht < 0.14 ? 0.74 + 0.26 * sin(ht / 0.14 * 1.5707963) : 1.0;
+        if (abs(hv) < hk * uHullD.y * 0.5 * 0.94) discard;
+      }
+    }
     // seen from below (diving): a bright rippling ceiling — the sky shows through
     // a window straight overhead, beyond it the surface mirrors the deep
     if (!gl_FrontFacing) {
@@ -315,6 +328,8 @@ export class Water {
         uDetail: { value: 1 },
         uUnder: { value: 0 },
         uWin: { value: new THREE.Vector2(-1e9, -1e9) },
+        uHull: { value: new THREE.Vector4() },
+        uHullD: { value: new THREE.Vector3() },
       },
     ]);
     // the water writes depth, so the ink outlines see its surface (not the sea floor under it)
@@ -327,6 +342,14 @@ export class Water {
     this.mesh.frustumCulled = false;
     scene.add(this.mesh);
     this.tex = null;
+  }
+
+  /** The hull to keep the sea out of ({ x, z (render space), h (heading), L, B }), or null. */
+  setHull(h) {
+    const u = this.uniforms;
+    if (!h) { u.uHullD.value.z = 0; return; }
+    u.uHull.value.set(h.x, h.z, Math.cos(h.h), Math.sin(h.h));
+    u.uHullD.value.set(h.L, h.B, 1);
   }
 
   /** 'high' shows caustics and sparkles; 'low' skips them. */

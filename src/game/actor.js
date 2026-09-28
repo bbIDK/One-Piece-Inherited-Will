@@ -702,10 +702,11 @@ export class Actor extends Entity {
     // you jump over it); nobody swims or walks through a hull
     const g = this.game;
     if (g && g.deckAt && g.ships.length && this.deck) {
-      const dk = g.deckAt(x, y, r * 0.7);
-      if (dk && dk.ship === this.deck.ship) {
+      const ref = this.deckRef(), sh = this.deck.ship;
+      const dk = g.deckAt(x, y, r * 0.7, ref, sh) || g.deckAt(x, y, r * 0.7);
+      if (dk && dk.ship === sh) {
         // into a mast (or the like) only while already in it and getting out
-        if (dk.solid && !((g.deckAt(this.x, this.y, r * 0.7)?.solid || 0) >= dk.solid - 1e-4)) return false;
+        if (dk.solid && !((g.deckAt(this.x, this.y, r * 0.7, ref, sh)?.solid || 0) >= dk.solid - 1e-4)) return false;
         return this.deckStep(dk);
       }
       if (!(this.z > 0.3)) return false;
@@ -779,6 +780,17 @@ export class Actor extends Entity {
   deckStep(dk) {
     if (dk.lvl === undefined) return true;
     return dk.h <= this.deck.h + Math.max(0, this.z || 0) + 0.55;
+  }
+
+  /**
+   * The height (above her waterline) to find your floor aboard from: in a
+   * room, its floor (a jump doesn't take you up through the deck over it);
+   * on an open deck, your feet.
+   */
+  deckRef() {
+    const dk = this.deck;
+    if (!dk) return null;
+    return dk.room ? dk.h : dk.h + Math.max(0, this.z || 0);
   }
 
   /**
@@ -1019,7 +1031,7 @@ export class Actor extends Entity {
    */
   updateDeck(game) {
     const was = this.deck;
-    let dk = game.deckAt && game.ships.length ? game.deckAt(this.x, this.y, was ? 0 : 0.1) : null;
+    let dk = game.deckAt && game.ships.length ? (was ? game.deckAt(this.x, this.y, 0, this.deckRef(), was.ship) : null) || game.deckAt(this.x, this.y, was ? 0 : 0.1) : null;
     // a hull running over a swimmer doesn't scoop them up onto its deck: it
     // passes overhead of a diver, and shoves someone at the surface aside
     if (dk && !was && this.inWater) {
@@ -1034,6 +1046,11 @@ export class Actor extends Entity {
       if (drop > 0.35) { this.z = (this.z || 0) + drop; this.vz = Math.min(this.vz || 0, 0); }
       else if (drop < -0.35) this.z = Math.max(0, (this.z || 0) + drop);
       this.deck = dk;
+      // (under a deck — in a cabin, the hold — a jump stops at the beams overhead)
+      if (dk.room) {
+        const head = dk.room.ceil - dk.h - 1.72 * (this.look?.scale || 1);
+        if ((this.z || 0) > Math.max(0, head)) { this.z = Math.max(0, head); if (this.vz > 0) this.vz = 0; }
+      }
       return;
     }
     const time = game.env?.time || 0;

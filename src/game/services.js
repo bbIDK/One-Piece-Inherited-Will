@@ -110,6 +110,17 @@ export class Services {
     g.log(`${ship.name} is as good as new.`, '#a5d6a7');
     return true;
   }
+  /** Cannonballs to fill a ship's hold (60 berries apiece in the Blues). */
+  shotPrice(ship, island) { return Math.round(Math.max(0, ship.shotCap - ship.shot) * 60 * this.seaMul(island)); }
+  restock(ship, island) {
+    const g = this.game;
+    if (!(ship.shotCap > ship.shot) || !pay(g, this.shotPrice(ship, island))) return false;
+    ship.shot = ship.shotCap;
+    g.log(`The ${ship.name}'s hold is stocked with cannonballs (${ship.shot}).`, '#a5d6a7');
+    g.audio?.sfx('coin');
+    persist(g);
+    return true;
+  }
   upgradePrice(id, island) { return Math.round(SHIP_UPGRADES[id].price * (1 + (this.seaMul(island) - 1) * 0.2)); }
   upgrade(ship, id, island) {
     const g = this.game;

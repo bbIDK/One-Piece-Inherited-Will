@@ -399,7 +399,7 @@ function checkCleared(game, s) {
   if (standing.length) return;
   tr.cleared = true;
   if (game.audio?.theme === 'battle') game.audio.music(tr.prevTheme || 'sea');
-  game.ui.toast('THE SHIP IS YOURS', `${s.name}: plunder the hold (the hatch amidships), or take the helm to sail her away.`, '#ffd54f');
+  game.ui.toast('THE SHIP IS YOURS', `${s.name}: plunder her hold (down the hatch amidships — the chest at the foot of the ladder), or take the helm to sail her away.`, '#ffd54f');
   game.log(`The crew of the ${s.name} is beaten!`, '#ffe082');
 }
 
@@ -451,6 +451,13 @@ function plunder(game, s) {
     if (id === 'seastone' && !rng.chance(0.15)) continue;
     addItem(game, id, 1);
   }
+  // her powder and shot, carried across to your own ship (as much as she'll hold)
+  const mine = game.ships.find((o) => o.owner === 'player' && !o.sunk && o.shotCap > o.shot && game.world.distance(o.x, o.y, s.x, s.y) < 60);
+  if (mine && s.shot > 0) {
+    const take = Math.min(s.shot, mine.shotCap - mine.shot);
+    mine.shot += take; s.shot -= take;
+    if (take) game.log(`You carry ${take} cannonballs across to the ${mine.name}.`, '#a5d6a7');
+  }
   game.audio?.sfx('coin');
   if (tr.kind !== 'pirate' && !tr.plunderCrime) { tr.plunderCrime = true; crime(game, 300000, 'plundered a ship\'s hold', { rep: 3, quiet: true }); }
 }
@@ -487,17 +494,20 @@ function footInteraction(game, T, p) {
   // on a deck: the helm and the hold
   const s = p.deck?.ship;
   if (s) {
+    // (the wheel's on the quarterdeck: not from the cabin under it, or the hold)
+    const room = p.deck.room?.kind || null;
     if (s.owner === 'player') {
       const d = deckDist(game, p, s, helmSpot(s));
-      if (d < (s.def.oarsOnly ? 0.9 : 1.4)) return { d, label: s.def.oarsOnly ? `Take the oars of the ${s.name}` : `Take the helm of the ${s.name}`, run: () => { p.deck.ship.aboard?.delete(p); p.deck = null; board(game, p, s); } };
+      if (!room && d < (s.def.oarsOnly ? 0.9 : 1.4)) return { d, label: s.def.oarsOnly ? `Take the oars of the ${s.name}` : `Take the helm of the ${s.name}`, run: () => { p.deck.ship.aboard?.delete(p); p.deck = null; board(game, p, s); } };
       return null;
     }
     const tr = s.traffic;
     if (!tr || !tr.cleared) return null;
-    const dh = deckDist(game, p, s, hatchSpot(s));
-    if (!tr.plundered && dh < 1.3) return { d: dh, label: `Plunder the hold of the ${s.name}`, run: () => plunder(game, s) };
+    // the plunder's in the treasure chest down in her hold (a small boat's, under the thwarts)
+    const hs = hatchSpot(s), dh = deckDist(game, p, s, hs);
+    if (!tr.plundered && (hs.room ? room === hs.room : !room) && dh < 1.3) return { d: dh, label: `Plunder the hold of the ${s.name}`, run: () => plunder(game, s) };
     const d = deckDist(game, p, s, helmSpot(s));
-    if (d < (s.def.oarsOnly ? 0.9 : 1.4)) return { d, label: `${s.def.oarsOnly ? 'Take the oars' : 'Take the helm'} — steal the ${s.name}`, run: () => claim(game, T, s) };
+    if (!room && d < (s.def.oarsOnly ? 0.9 : 1.4)) return { d, label: `${s.def.oarsOnly ? 'Take the oars' : 'Take the helm'} — steal the ${s.name}`, run: () => claim(game, T, s) };
     return null;
   }
   // (in the water beside a hull there's no prompt: jump against her side to climb aboard)

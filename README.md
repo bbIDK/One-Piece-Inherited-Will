@@ -190,6 +190,18 @@ rearrange them.
   waves.
 - Boarding is done by hand: jump onto a deck from a pier or from your own
   deck, or swim to a ship and climb her side. Every deck can be walked.
+- Every ship with a sail is built to live on, Sea of Thieves style, from an
+  11 m sloop to a 44 m Yonko flagship:
+  - stairs up to the quarterdeck and the wheel (just the one);
+  - a door under it into the captain's cabin (chart table, bunk, sea chest);
+  - the crew's forecastle on the bigger hulls;
+  - a hatch amidships (a ladder, or a companionway of stairs on the big
+    ships) down to the hold, with cargo, lanterns and the treasure chest
+    (on the big ships it is also the gun deck, with a cannon at every port).
+- Cannons are iron barrels on wheeled carriages. A broadside fires one
+  cannonball from each gun on that side, arcing out of its port. Balls run
+  out: shipwrights restock them, and plundering a hold carries a ship's shot
+  across to yours.
 - **Log Pose** navigation: stay on an island until the log sets, and use
   Eternal Poses.
 - The **Calm Belt** is full of Sea Kings.

@@ -327,7 +327,7 @@ export function snapshot(game) {
   c.world.clock = game.env.clock;
   c.pos = { x: p.x, y: p.y, zone: game.world.id, mode: p.mode };
   c.ships = game.ships.filter((s) => s.owner === 'player' && !s.sunk).map((s) => ({
-    uid: s.uid, type: s.type, name: s.name, upgrades: s.upgrades, hull: s.hull, x: s.x, y: s.y, heading: s.heading, zone: s.zoneId || 'surface', coated: s.coated,
+    uid: s.uid, type: s.type, name: s.name, upgrades: s.upgrades, hull: s.hull, x: s.x, y: s.y, heading: s.heading, zone: s.zoneId || 'surface', coated: s.coated, shot: s.shot,
   }));
   c.activeShip = p.ship && !p.ship.sunk ? p.ship.uid : c.activeShip;
   c.fogSurface = game.surface ? encodeFog(game.surface.fog) : c.fogSurface;

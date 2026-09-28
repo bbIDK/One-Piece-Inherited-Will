@@ -11,15 +11,19 @@ export function installDecks(game) {
     const r = game.view3d?.rig;
     if (r && s) { r.yaw = ((s.heading % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2); r.pitch = s.def.oarsOnly ? -0.35 : -0.04; }
   });
-  /** The deck under a point: { ship, t, v, h, edge } or null (margin: how far in from the rail). */
-  game.deckAt = (x, y, margin = 0.2) => {
+  /**
+   * The deck under a point: { ship, t, v, h, edge } or null (margin: how far
+   * in from the rail). `hRef`: the height of the feet asking (above that ship's
+   * waterline) — down in the hold or in a cabin, the floor there.
+   */
+  game.deckAt = (x, y, margin = 0.2, hRef = null, only = null) => {
     const w = game.world;
     for (const s of game.ships) {
-      if (s.sunk) continue;
+      if (s.sunk || (only && s !== only)) continue;
       const r = s.def.length * 0.56;
       const dx = w.dx(s.x, x), dy = y - s.y;
       if (dx * dx + dy * dy > r * r) continue;
-      const d = deckPoint(s, dx, dy, margin);
+      const d = deckPoint(s, dx, dy, margin, only === s ? hRef : null);
       if (d) { d.ship = s; return d; }
     }
     return null;
@@ -93,9 +97,11 @@ export function helmSpot(ship) {
   return { t: Math.min(0.5, (hp.x + d.L / 2) / d.L + 0.06), v: 0 };
 }
 
-/** The main hatch (the hold) on a ship's deck. */
+/** Where a ship's plunder is: the treasure chest down in her hold (a small boat's, amidships on deck). */
 export function hatchSpot(ship) {
   const d = shipDims(ship.def);
+  const ch = d.big && d.furniture?.find((f) => f.treasure);
+  if (ch) return { t: (ch.u + d.L / 2) / d.L, v: ch.v, room: 'hold' };
   return { t: d.big ? d.hatchT : d.open ? 0.5 : 0.55, v: 0 };
 }
 
@@ -116,8 +122,8 @@ export function freeDeckSpot(ship, t, v, lvl = 'main') {
 export function crewStation(ship, i) {
   const d = shipDims(ship.def), B = d.B;
   const S = [
-    ['fore', 0.93, 0], ['main', d.capstanT + 0.06, B * 0.22], ['quarter', d.tq - 0.03, -B * 0.25], ['main', 0.62, -B * 0.28],
-    ['main', 0.75, B * 0.26], ['fore', d.tf + 0.05, -B * 0.2], ['main', d.hatchT, -B * 0.3], ['quarter', d.tq - 0.06, B * 0.28],
+    [d.fore ? 'fore' : 'main', d.fore ? 0.93 : 0.86, 0], ['main', (d.capstanT ?? d.hatchT) + 0.06, B * 0.22], ['quarter', d.tq - 0.03, -B * 0.25], ['main', 0.62, -B * 0.28],
+    ['main', 0.75, B * 0.26], [d.fore ? 'fore' : 'main', d.fore ? d.tf + 0.05 : 0.8, -B * 0.2], ['main', d.hatchT, -B * 0.3], ['quarter', d.tq - 0.06, B * 0.28],
   ];
   const [lvl, t, v] = S[i % S.length];
   return { ...freeDeckSpot(ship, t, v, lvl), lvl };

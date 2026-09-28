@@ -131,6 +131,152 @@ export const scenarios = {
       console.log('perf', JSON.stringify(perf));
     },
   },
+  // inside the ships: the cabin, the forecastle and the hold, a deck gun up close,
+  // and a walk from the main deck down the companionway into the hold and back
+  //   --types=sloop,caravel,...  --views=side,deck,gun,cabin,captain,forecastle,hold,down  --view=first|third
+  shipinside: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(({ clock, view }) => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = view; g.settings.shiftLock = false; g.applySettings(); g.env.clock = clock; g.env.storm = 0; g.env.fog = 0; g.env.rain = 0; document.querySelector('.look-hint')?.remove(); }, { clock: +(args.clock || 10.5), view: args.view || 'first' });
+      const spot = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island');
+        for (const need of [-40, -32, -26]) {
+          for (let k = 0; k < 30000; k++) {
+            const a = Math.random() * Math.PI * 2, r = isl.radius * (1 + Math.random() * 1.5) + 20 + Math.random() * 60;
+            const x = Math.floor(isl.x + Math.cos(a) * r) + 0.5, y = Math.floor(isl.y + Math.sin(a) * r) + 0.5;
+            if (w.sd(x, y) < need) return { x, y };
+          }
+        }
+        return null;
+      });
+      const types = String(args.types || 'sloop,caravel,brigantine,frigate,galleon,adam_brig,marine_warship,carrack,war_galleon,man_o_war,great_galleon,marine_battleship').split(',');
+      const views = String(args.views || 'side,deck,gun,cabin,hold').split(',');
+      for (const type of types) {
+        const info = await page.evaluate(({ s, type }) => {
+          const g = window.OP.game;
+          for (const o of g.ships) if (o.name === 'Test Ship') o.alive = false;
+          g.ships = g.ships.filter((o) => o.alive !== false);
+          const ship = g.giveShip(type, s.x, s.y, 'Test Ship', { heading: 0.4 });
+          ship.anchored = true; ship.speed = 0; ship.sail = 0; ship.sailSet = 0;
+          window.__ship = ship;
+          const d = window.OP.debug.dims(ship);
+          return { type, L: d.L, B: d.B, rooms: d.rooms.map((r) => r.kind), guns: d.guns.length, low: d.lowGuns.length };
+        }, { s: spot, type });
+        console.log('ship', JSON.stringify(info));
+        const look = async (name, fn, arg) => {
+          const r = await page.evaluate(fn, arg);
+          for (let i = 0; i < 5; i++) { await step(page, 0.05); await frames(page, 1); }
+          if (r) console.log(name, JSON.stringify(r));
+          await snap(`${type}-${name}`);
+        };
+        if (views.includes('side')) await look('side', () => {
+          const g = window.OP.game, p = g.player, s = window.__ship, d = window.OP.debug.dims(s);
+          g.settings.view = 'third'; g.applySettings();
+          const side = s.heading + Math.PI / 2 + 0.35, R = d.L * 0.8 + 8;
+          if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
+          window.OP.teleport(s.x + Math.cos(side) * R, s.y + Math.sin(side) * R);
+          p.z = 0;
+          g.view3d.rig.yaw = side + Math.PI; g.view3d.rig.pitch = 0.16;
+        });
+        await page.evaluate((v) => { const g = window.OP.game; g.settings.view = v; g.applySettings(); }, args.view || 'first');
+        if (views.includes('deck')) await look('deck', () => {
+          const g = window.OP.game, s = window.__ship, d = window.OP.debug.dims(s);
+          window.OP.debug.onDeck(s, Math.min(0.9, d.comp.t1 + 1.6 / d.L), 0.3);
+          g.view3d.rig.yaw = s.heading + Math.PI; g.view3d.rig.pitch = 0.02;
+        });
+        if (views.includes('gun')) await look('gun', () => {
+          const g = window.OP.game, s = window.__ship, d = window.OP.debug.dims(s);
+          const gn = d.guns.find((x) => x.s > 0);
+          if (!gn) return { none: true };
+          window.OP.debug.onDeck(s, gn.t - 1.4 / d.L, 0);
+          g.view3d.rig.yaw = s.heading + 0.9; g.view3d.rig.pitch = -0.35;
+          return null;
+        });
+        if (views.includes('helm')) await look('helm', () => {
+          const g = window.OP.game, s = window.__ship, d = window.OP.debug.dims(s);
+          window.OP.debug.onDeck(s, (d.wheelU + 1.3 + d.L / 2) / d.L, 0.5);
+          window.OP.game.player.deck = window.OP.game.deckAt(window.OP.game.player.x, window.OP.game.player.y, 0, d.yq, s) || window.OP.game.player.deck;
+          window.OP.game.player.deck.ship = s;
+          g.view3d.rig.yaw = s.heading + Math.PI; g.view3d.rig.pitch = -0.3;
+        });
+        for (const kind of ['cabin', 'captain', 'forecastle', 'hold']) {
+          if (!views.includes(kind)) continue;
+          await look(kind, (kind) => {
+            const g = window.OP.game, s = window.__ship;
+            const at = kind === 'hold' ? 0.72 : kind === 'forecastle' ? 0.2 : 0.9;
+            const r = window.OP.debug.inRoom(s, kind, at, kind === 'hold' ? -0.5 : 0.35);
+            g.view3d.rig.yaw = s.heading + (kind === 'forecastle' || kind === 'hold' ? (kind === 'hold' ? Math.PI : 0) : Math.PI); g.view3d.rig.pitch = -0.08;
+            return r;
+          }, kind);
+        }
+        if (views.includes('down')) {
+          // from the main deck, forward of the hatch, walk aft and down into the hold; then turn round and climb out
+          const r0 = await page.evaluate(() => { const g = window.OP.game, s = window.__ship, d = window.OP.debug.dims(s); window.OP.debug.onDeck(s, d.comp.t1 + 1.0 / d.L, 0); g.view3d.rig.yaw = s.heading + Math.PI; g.view3d.rig.pitch = -0.3; window.OP.key('W', true); return { t: +(d.comp.t0).toFixed(3) + '-' + (+d.comp.t1.toFixed(3)), ladder: !!d.comp.ladder }; });
+          for (let i = 0; i < 24; i++) await step(page, 0.1);
+          await page.evaluate(() => window.OP.key('W', false));
+          await step(page, 0.3);
+          const r1 = await page.evaluate(() => { const p = window.OP.game.player; return { h: +(p.deck?.h ?? -9).toFixed(2), z: +(p.z || 0).toFixed(2), lvl: p.deck ? (typeof p.deck.lvl === 'string' ? p.deck.lvl : 'stair') : 'off', t: +(p.deck?.t ?? 0).toFixed(3) }; });
+          await snap(`${type}-down`);
+          await page.evaluate(() => { const g = window.OP.game, s = window.__ship; g.view3d.rig.yaw = s.heading; window.OP.key('W', true); });
+          for (let i = 0; i < 30; i++) await step(page, 0.1);
+          await page.evaluate(() => window.OP.key('W', false));
+          await step(page, 0.3);
+          const r2 = await page.evaluate(() => { const p = window.OP.game.player; return { h: +(p.deck?.h ?? -9).toFixed(2), lvl: p.deck ? (typeof p.deck.lvl === 'string' ? p.deck.lvl : 'stair') : 'off', t: +(p.deck?.t ?? 0).toFixed(3) }; });
+          // and into the cabin through its door
+          const r3a = await page.evaluate(() => { const g = window.OP.game, s = window.__ship, d = window.OP.debug.dims(s); const dr = d.rooms[0].doors[0]; window.OP.debug.onDeck(s, d.tq + 1.2 / d.L, dr.v); g.view3d.rig.yaw = s.heading + Math.PI; window.OP.key('W', true); return null; });
+          for (let i = 0; i < 16; i++) await step(page, 0.1);
+          await page.evaluate(() => window.OP.key('W', false));
+          const r3 = await page.evaluate(() => { const p = window.OP.game.player; return { h: +(p.deck?.h ?? -9).toFixed(2), lvl: p.deck ? (typeof p.deck.lvl === 'string' ? p.deck.lvl : 'stair') : 'off', t: +(p.deck?.t ?? 0).toFixed(3) }; });
+          await snap(`${type}-incabin`);
+          console.log('walk', type, JSON.stringify({ r0, down: r1, up: r2, cabin: r3 }), void r3a);
+        }
+      }
+    },
+  },
+  // a broadside: the balls arc out of the ports and splash down (--types=frigate,sloop)
+  broadside: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings(); g.env.clock = 10.5; g.env.storm = 0; g.env.fog = 0; document.querySelector('.look-hint')?.remove(); });
+      const spot = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island');
+        for (const need of [-40, -32, -26]) for (let k = 0; k < 30000; k++) {
+          const a = Math.random() * Math.PI * 2, r = isl.radius * (1 + Math.random() * 1.5) + 20 + Math.random() * 60;
+          const x = Math.floor(isl.x + Math.cos(a) * r) + 0.5, y = Math.floor(isl.y + Math.sin(a) * r) + 0.5;
+          if (w.sd(x, y) < need) return { x, y };
+        }
+        return null;
+      });
+      for (const type of String(args.types || 'frigate,sloop').split(',')) {
+        await page.evaluate(({ s, type }) => {
+          const g = window.OP.game;
+          for (const o of g.ships) if (o.name === 'Test Ship') o.alive = false;
+          g.ships = g.ships.filter((o) => o.alive !== false);
+          const ship = g.giveShip(type, s.x, s.y, 'Test Ship', { heading: 0.4 });
+          ship.anchored = true;
+          window.__ship = ship;
+          const d = window.OP.debug.dims(ship), p = g.player;
+          // watching from off her bow, her starboard broadside toward the camera's right
+          if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
+          const a = ship.heading + 0.5, R = d.L * 0.9 + 10;
+          window.OP.teleport(ship.x + Math.cos(a) * R, ship.y + Math.sin(a) * R);
+          g.view3d.rig.yaw = a + Math.PI + 0.35; g.view3d.rig.pitch = 0.12;
+        }, { s: spot, type });
+        for (let i = 0; i < 6; i++) { await step(page, 0.05); await frames(page, 1); }
+        const r = await page.evaluate(() => { const g = window.OP.game, s = window.__ship; const side = s.heading + Math.PI / 2; const ok = s.fireBroadside(g, s.x + Math.cos(side) * 12, s.y + Math.sin(side) * 12, g.player); return { ok, shot: s.shot, cap: s.shotCap }; });
+        console.log('fire', type, JSON.stringify(r));
+        await page.evaluate(() => { window.OP.hold = true; });
+        for (let i = 0; i < 4; i++) {
+          await page.evaluate(() => { const g = window.OP.game; for (let k = 0; k < 5; k++) g.update(1 / 30); g.render(); });
+          await snap(`${type}-fire${i}`);
+        }
+        await page.evaluate(() => { window.OP.hold = false; });
+        await step(page, 1.5);
+      }
+    },
+  },
   // a raid on a big pirate ship: the crew come up the stairs after you on the quarterdeck
   bigraid: {
     async run(page, snap, args) {

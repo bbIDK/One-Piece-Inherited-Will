@@ -7,7 +7,7 @@ import { drawCharacter } from '../render/character.js';
 import { SAILABLE } from '../world/tiles.js';
 import { angleDiff, clamp, TAU } from '../core/math.js';
 import { drawProjectile } from '../render/projectiles.js';
-import { hbAt, hullGap, BIG_SHIP, oarStroke, oarDrive } from '../world/hull.js';
+import { hbAt, hullGap, BIG_SHIP, oarStroke, oarDrive, shipDims, deckToWorld } from '../world/hull.js';
 
 // where the hull meets the water, as fractions of the length and beam (the small ships)
 const SMALL_HULL = [[0.47, 0], [-0.46, 0], [0.2, 0.42], [0.2, -0.42], [-0.25, 0.42], [-0.25, -0.42]];
@@ -58,6 +58,8 @@ export class Ship extends Entity {
     this.burstCd = 0;
     this.ai = o.ai || null;
     this.cannonsOverride = o.cannons;
+    // cannonballs in her hold: a broadside takes one a gun (see fireBroadside)
+    this.shot = Math.max(0, Math.min(this.shotCap, o.shot ?? this.shotCap));
     this.sortY = this.y;
     this.r = this.def.beam * 0.5;
     this.coated = !!o.coated;
@@ -74,6 +76,12 @@ export class Ship extends Entity {
     if (mods.oars) d.oars = true;
     this.def = d;
     this.maxHull = Math.round(base.hull * (mods.hullMul || 1));
+  }
+
+  /** How many cannonballs she can carry (none, without guns). */
+  get shotCap() {
+    const n = this.cannonsOverride ?? this.def.cannons ?? 0;
+    return n > 0 ? Math.max(12, n * 8) : 0;
   }
 
   hullPoints(x, y, h) {
@@ -350,29 +358,58 @@ export class Ship extends Entity {
   }
 
   /** Fire a broadside at a world point. */
+  /**
+   * A broadside toward (tx, ty): every gun on that side fires, a cannonball
+   * each, from its own port (a small boat's guns: along her side), and the
+   * balls arc out over the water. None left in the hold, and the guns are silent.
+   */
   fireBroadside(game, tx, ty, owner) {
-    const n = Math.max(1, Math.min(10, Math.ceil((this.cannonsOverride ?? this.def.cannons ?? 0) / 2)));
-    if (!this.def.cannons && this.cannonsOverride === undefined) return false;
+    const cannons = this.cannonsOverride ?? this.def.cannons ?? 0;
+    if (!cannons) return false;
     if (this.cannonCd > 0) return false;
-    this.cannonCd = 2.2 + n * 0.08;
     const toT = Math.atan2(ty - this.y, game.world.dx(this.x, tx));
     const side = angleDiff(this.heading, toT) > 0 ? 1 : -1;
     const baseA = this.heading + side * Math.PI / 2;
     const aim = clamp(angleDiff(baseA, toT), -0.6, 0.6);
+    const d = shipDims(this.def);
+    // the guns on that side (as the 3D ship has them); the rest of her weight of shot is in their size
+    const want = Math.max(1, Math.min(10, Math.ceil(cannons / 2)));
+    let guns = d.big ? [...d.guns, ...(d.lowGuns || [])].filter((g) => g.s === side) : [];
+    if (guns.length > 16) guns = guns.filter((g, i) => i % Math.ceil(guns.length / 16) === 0);
+    let n = guns.length || want;
+    if (this.shot <= 0) { this.outOfShot(game, owner); this.cannonCd = 1.5; return false; }
+    n = Math.min(n, this.shot);
+    this.shot -= n;
+    if (guns.length > n) guns = guns.slice(0, n);
+    const heavy = want / n;
+    this.cannonCd = 2.2 + n * 0.08;
     const L = this.def.length, B = this.def.beam;
+    const mul = owner?.isPlayer ? game.crewMods?.cannonMul || 1 : 1;
     for (let i = 0; i < n; i++) {
-      const along = -L * 0.3 + (n === 1 ? 0.3 * L : (i / (n - 1)) * L * 0.6);
-      const px = this.x + Math.cos(this.heading) * along + Math.cos(baseA) * B * 0.5;
-      const py = this.y + Math.sin(this.heading) * along + Math.sin(baseA) * B * 0.5;
+      let px, py, h0;
+      const g = guns[i];
+      if (g) {
+        const t = g.t, low = d.lowGuns?.includes(g);
+        const m = deckToWorld(this, t, side * (hbAt(t, B) + 0.35));
+        px = m.x; py = m.y;
+        h0 = (low ? d.holdY + 0.42 * Math.max(0.85, d.gunScale || 1) : d.deckY + 0.42) + (this.lvl || 0) + 0.05;
+      } else {
+        const along = -L * 0.3 + (n === 1 ? 0.3 * L : (i / (n - 1)) * L * 0.6);
+        px = this.x + Math.cos(this.heading) * along + Math.cos(baseA) * B * 0.5;
+        py = this.y + Math.sin(this.heading) * along + Math.sin(baseA) * B * 0.5;
+        h0 = (d.deckY || 0.4) + 0.4;
+      }
       const a = baseA + aim + (Math.random() - 0.5) * 0.08;
-      const sp = 17;
+      const sp = 17, range = 16 + Math.random() * 3;
       game.combat.projectile({
-        owner, ownerShip: this, x: game.world.wx(px), y: py + 0.5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, range: 16 + Math.random() * 3,
-        radius: 0.3, damage: 22 * (owner?.isPlayer ? game.crewMods?.cannonMul || 1 : 1), shipDamage: 26 * (owner?.isPlayer ? game.crewMods?.cannonMul || 1 : 1), element: 'explosion', knockback: 6, stun: 0.4, sprite: 'cannonball', hitShips: true, passWalls: true,
+        owner, ownerShip: this, x: game.world.wx(px), y: py + 0.5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, range,
+        radius: 0.3, damage: 22 * mul * heavy, shipDamage: 26 * mul * heavy, element: 'explosion', knockback: 6, stun: 0.4, sprite: 'cannonball', hitShips: true, passWalls: true,
+        // (out of the port and over the water in an arc, down into the sea at the end of its range)
+        arc: { h0, apex: 1.2 + range * 0.05 },
         draw: drawProjectile, delay: i * 0.05,
-        onEnd: (p, g) => {
-          if (g.world.isLiquid(p.x, p.y)) g.fx.burst(p.x, p.y, 10, { color: ['#e1f5fe', '#81d4fa'], speed: 3, vz: 5, g: 10, life: 0.6, size: 0.14 });
-          else g.fx.burst(p.x, p.y, 10, { color: ['#ffab40', '#616161'], speed: 4, g: 6, life: 0.5, kind: 'fire', size: 0.2 });
+        onEnd: (p, gm) => {
+          if (gm.world.isLiquid(p.x, p.y)) gm.fx.burst(p.x, p.y, 10, { color: ['#e1f5fe', '#81d4fa'], speed: 3, vz: 5, g: 10, life: 0.6, size: 0.14 });
+          else gm.fx.burst(p.x, p.y, 10, { color: ['#ffab40', '#616161'], speed: 4, g: 6, life: 0.5, kind: 'fire', size: 0.2 });
         },
       });
       game.fx.burst(px, py, 6, { color: ['#eeeeee', '#9e9e9e'], speed: 2, g: -0.5, life: 0.8, kind: 'smoke', size: 0.3, grow: 0.4, angle: a, spread: 0.6 });
@@ -380,6 +417,16 @@ export class Ship extends Entity {
     game.fx.shake(0.15);
     game.audio?.sfx('cannon', this);
     return true;
+  }
+
+  /** The guns are silent: nothing left to load them with. */
+  outOfShot(game, owner) {
+    if (!(owner?.isPlayer || this.owner === 'player')) return;
+    const now = game.time || 0;
+    if (now - (this._dryT ?? -9) < 3) return;
+    this._dryT = now;
+    game.audio?.sfx('dry', this);
+    game.log(`The ${this.name} is out of cannonballs! A shipwright will sell you more — or take them from a ship's hold.`, '#ff8a80');
   }
 
   draw(g, env) {

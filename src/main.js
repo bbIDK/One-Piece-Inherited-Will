@@ -410,7 +410,18 @@ async function start() {
       return game.player;
     },
     prof: { PROF, reset: profReset },
-    debug: { npcDef, allNpcDefs, VIEWS, builders: PROP_BUILDERS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld },
+    debug: { npcDef, allNpcDefs, VIEWS, builders: PROP_BUILDERS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld,
+      // stand in one of a ship's rooms ('cabin', 'captain', 'forecastle', 'hold'), f of the way along it
+      inRoom: (s, kind, f = 0.5, v = 0) => {
+        const r = shipDims(s.def).rooms.find((x) => x.kind === kind);
+        if (!r) return null;
+        const a = game.player, t = r.t0 + (r.t1 - r.t0) * f;
+        placeOnDeck(game, a, s, t, v);
+        const dk = game.deckAt(a.x, a.y, 0, r.floor, s);
+        if (dk) { a.deck = dk; dk.ship = s; }
+        a.z = 0;
+        return { h: +a.deck.h.toFixed(2), lvl: typeof a.deck.lvl === 'string' ? a.deck.lvl : 'stair', solid: a.deck.solid || 0 };
+      } },
     ready: true,
   });
 

@@ -642,7 +642,7 @@ export class UI {
         <div class="bar hull"><i style="width:${100 * s.hull / s.maxHull}%"></i><span>Hull ${Math.ceil(s.hull)}/${s.maxHull}</span></div>
         ${oars ? `<div class="row"><span>Oars: ${oars}</span><span>W/S row, A/D turn</span></div>` : `<div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>`}
         <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span>${oars ? '' : `<span>Wind <span class="wind" style="transform:rotate(${env.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? 'none (Calm Belt!)' : Math.round(env.windStrength * 100) + '%'}</span>`}</div>
-        ${s.def.cannons ? `<div class="row"><span>Cannons ${s.def.cannons}</span><span>${s.cannonCd > 0 ? 'reloading…' : 'ready'}</span></div>` : ''}`;
+        ${s.def.cannons ? `<div class="row"><span>Cannonballs ${s.shot}/${s.shotCap}</span><span>${s.shot <= 0 ? 'none left!' : s.cannonCd > 0 ? 'reloading…' : 'ready'}</span></div>` : ''}`;
       if (this.cache.shipHtml !== html) { this.cache.shipHtml = html; E.ship.innerHTML = html; }
     }
     // knocked

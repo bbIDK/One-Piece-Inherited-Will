@@ -177,9 +177,15 @@ export class ActorSprite {
   dispose() { this.mesh.geometry.dispose(); this.mat.dispose(); this.tex.dispose(); }
 }
 
-/** A simple glowing projectile. */
+/** A simple glowing projectile — or a cannonball: a round of black iron, catching the light. */
 export function projectileMesh(p) {
-  const col = new THREE.Color(p.color || (p.sprite === 'cannonball' ? '#333333' : '#ffffff'));
+  if (p.sprite === 'cannonball') {
+    const r = p.ownerShip ? 0.13 : Math.max(0.16, Math.min(0.6, (p.radius || 0.3) * 0.8));
+    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), new THREE.MeshToonMaterial({ color: '#2a2a2e', fog: true }));
+    m.castShadow = true;
+    return m;
+  }
+  const col = new THREE.Color(p.color || '#ffffff');
   const r = Math.max(0.12, Math.min(0.8, (p.radius || 0.3) * 0.8));
   const m = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), new THREE.MeshBasicMaterial({ color: col, fog: true }));
   return m;

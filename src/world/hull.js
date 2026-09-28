@@ -13,8 +13,8 @@
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 
-/** Ships this long or longer are the big ones (decks with stairs, walls and fittings). */
-export const BIG_SHIP = 12;
+/** Ships this long or longer are the big ones (decks with stairs, cabins, a hold, walls and fittings). */
+export const BIG_SHIP = 8;
 
 /** Everything the hull, the rig and the camera need to agree on. */
 export function shipDims(def) {
@@ -122,78 +122,299 @@ export function oarPoints(d, side, a, b) {
 function bigDims(def) {
   const L = def.length, B = def.beam;
   const D = B * 0.45;
-  const deckY = 0.55 + B * 0.2;
+  // the smaller ships (a sloop, a caravel, a brigantine) are narrow: one
+  // flight of stairs, up the starboard side, and the cabin door beside it
+  const narrow = B < 4.8;
+  // (the middling ships — a frigate, a galleon — have shorter castles, to
+  // leave a main deck to work, and a higher side, for a gun deck below it)
+  const large = L >= 22, mid = !narrow && !large;
+  const deckY = 0.55 + B * 0.2 + (mid && L >= 16 ? 0.45 : 0);
   const bulH = 1.05;
-  const hq = 2.3, hf = 2.2;
-  const poop = L >= 20, hp = poop ? 2.1 : 0;
-  const tq = 0.3, tf = 0.85, tp = poop ? 0.13 : 0;
+  const fore = L >= 14;
+  const hq = narrow ? 2.15 : 2.3, hf = 2.2;
+  const poop = large, hp = poop ? 2.1 : 0;
+  const tq = narrow ? Math.max(0.24, 2.9 / L) : mid ? 0.26 : 0.3, tf = fore ? (large ? 0.85 : 0.88) : 1, tp = poop ? 0.13 : 0;
   const yq = deckY + hq, yf = deckY + hf, yp = yq + hp;
-  const masts = def.masts || 3;
-  const tHelm = poop ? tp + 0.02 : 0.1;
+  const masts = Math.max(1, Math.min(4, def.masts || 3));
+  const tHelm = poop ? tp + 0.02 : narrow ? 0.08 : 0.1;
   const d = {
-    L, B, D, open: false, big: true, deckY, bulH, castle: true, fore: true, poop, hq, hf, hp, tq, tf, tp, masts,
-    mastH: L + 4, helmX: -L / 2 + tHelm * L, yq, yf, yp, helmFloor: yq, sheer: 0.4, walk: 0.86,
+    L, B, D, open: false, big: true, narrow, deckY, bulH, castle: true, fore, poop, hq, hf, hp, tq, tf, tp, masts,
+    mastH: narrow ? L * 0.95 + 3 : L + 4, helmX: -L / 2 + tHelm * L, yq, yf, yp, helmFloor: yq, sheer: 0.4, walk: 0.86,
   };
+  // the bow's height (the forecastle, or the rail at the stem)
+  d.bowY = fore ? yf : deckY + 0.9;
   // masts: fore, main, mizzen (and a jigger on the four-masters), metres forward of the middle
-  d.mastU = (masts >= 4 ? [0.3, 0.1, -0.12, -0.27] : [0.27, 0.03, -0.24]).map((k) => k * L);
+  d.mastU = ({ 1: [0.06], 2: [0.22, -0.06], 3: large ? [0.27, 0.03, -0.24] : [0.26, 0.02, -0.28], 4: [0.3, 0.1, -0.12, -0.27] })[masts].map((k) => k * L);
   d.mastR = 0.05 + L * 0.011;
-  // the double wheel just forward of the helmsman, and the binnacle ahead of it (where there's room)
+  // the wheel just forward of the helmsman, and the binnacle ahead of it (where there's room)
   d.wheelU = d.helmX + 0.9;
   const bu = d.wheelU + 1.45;
-  d.binnacleU = d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) ? bu : null;
-  // amidships: the main hatch (a grating), the capstan, and the ship's boat on its chocks
-  d.hatchT = masts >= 4 ? 0.47 : 0.45;
-  d.capstanT = masts >= 4 ? 0.54 : 0.385;
-  const bl = Math.min(4.5, L * 0.16), bt = masts >= 4 ? 0.69 : 0.645;
-  d.boat = { u0: (bt - 0.5) * L - bl / 2, u1: (bt - 0.5) * L + bl / 2, w: Math.min(1.9, B * 0.3) };
+  d.binnacleU = !narrow && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
   // stairs along the rails: up to the quarterdeck and the forecastle from the
   // main deck, and from the quarterdeck up to the poop
-  const run = (rise) => rise * 1.3;
+  const W = narrow ? 0.95 : 1.2, sides = narrow ? [1] : [-1, 1];
+  const run = (rise) => rise * (narrow ? 1.1 : mid ? 1.15 : 1.3);
   const edge = (t) => hbAt(t, B) * d.walk - 0.22;
-  const W = 1.2;
   d.stairs = [];
   const flight = (ta, tb, ha, hb, la, lb) => {
     const vo = Math.min(edge(ta), edge(tb)), vi = vo - W;
-    for (const s of [-1, 1]) d.stairs.push({ ta, tb, ha, hb, la, lb, s, va: s > 0 ? vi : -vo, vb: s > 0 ? vo : -vi });
+    for (const s of sides) d.stairs.push({ ta, tb, ha, hb, la, lb, s, va: s > 0 ? vi : -vo, vb: s > 0 ? vo : -vi });
   };
   flight(tq, tq + run(hq) / L, yq, deckY, 'quarter', 'main');
-  flight(tf - run(hf) / L, tf, deckY, yf, 'main', 'fore');
+  if (fore) flight(tf - run(hf) / L, tf, deckY, yf, 'main', 'fore');
   if (poop) flight(tp, tp + run(hp) / L, yp, yq, 'poop', 'quarter');
-  // the gunports: a row through the bulwarks between the stairs (with the guns
-  // on deck behind them) and, on the bigger hulls, a gun deck below
   const qs = d.stairs.find((s) => s.la === 'quarter' && s.lb === 'main'), fs = d.stairs.find((s) => s.lb === 'fore');
-  const rows = [{ y: deckY + 0.42, t0: qs.tb + 0.6 / L, t1: fs.ta - 0.6 / L, lid: 0.42, open: 1.4, deck: true }];
-  if (deckY - 1.25 > 0.45) rows.push({ y: deckY - 0.95, t0: 0.1, t1: 0.86, lid: 0.6, open: 1.05 });
-  const per = Math.max(3, Math.min(16, Math.round((def.cannons || 12) / 2 / rows.length)));
-  for (const r of rows) r.n = r.deck ? Math.max(2, Math.min(per, Math.floor((r.t1 - r.t0) * L / 1.9))) : per;
-  d.gunRows = rows;
-  // the guns on deck, run out through the upper ports — except where one would
-  // leave no room to walk past a mast, the capstan or the boat (that port stays shut)
-  const capU = (d.capstanT - 0.5) * L;
+  const mainT0 = qs.tb, mainT1 = fs ? fs.ta : 0.84;
+  // ---- below: the hold (on the bigger hulls, the gun deck), a storey under the main deck
+  const holdY = deckY - 2.25;
+  d.holdY = holdY;
+  const holdHalf = (t) => skinAt(d, t, holdY + 0.3) - 0.3;
+  let h0 = 0.06, h1 = 0.94;
+  while (h0 < 0.4 && holdHalf(h0) < 0.8) h0 += 0.005;
+  while (h1 > 0.6 && holdHalf(h1) < 0.8) h1 -= 0.005;
+  // the way down to it: on the big ships a companionway, a flight of stairs
+  // through an opening amidships; on the smaller ones a hatch and a ladder
+  // (clear of the masts, as near the middle of the main deck as it'll go)
+  const clearU = (u0, u1, pad) => d.mastU.every((m) => m < u0 - d.mastR - pad || m > u1 + d.mastR + pad);
+  const rise = deckY - holdY;
+  let comp = null;
+  for (const cRun of [...(large ? [rise * 1.15, rise, rise * 0.85] : []), 1.0]) {
+    for (let k = 0; k < 80 && !comp; k++) {
+      const tc = (mainT0 + mainT1) / 2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.006;
+      const t0 = tc - cRun / L / 2, t1 = tc + cRun / L / 2;
+      if (t0 < mainT0 + 0.5 / L || t1 > mainT1 - 0.4 / L || t0 < h0 + 0.3 / L || t1 > h1 - 0.3 / L) continue;
+      if (clearU(xAt(d, t0), xAt(d, t1), cRun > 1 ? 0.7 : 0.45)) comp = { t0, t1, ladder: cRun <= 1 };
+    }
+    if (comp) break;
+  }
+  if (!comp) comp = { t0: (mainT0 + mainT1) / 2 - 0.5 / L, t1: (mainT0 + mainT1) / 2 + 0.5 / L, ladder: true };
+  const cw = comp.ladder ? 0.8 : narrow ? 0.9 : 1.1;
+  // (you go down facing aft: the top of the flight is its forward end)
+  d.comp = { ...comp, w: cw, u0: xAt(d, comp.t0), u1: xAt(d, comp.t1) };
+  d.stairs.push({ ta: comp.t0, tb: comp.t1, ha: holdY, hb: deckY, la: 'hold', lb: 'main', s: 0, va: -cw / 2, vb: cw / 2, down: true, ladder: comp.ladder });
+  d.hatchT = (comp.t0 + comp.t1) / 2;
+  // amidships: the capstan and the ship's boat on its chocks, where there's room
+  const freeT = (want, len, pad) => {
+    for (let k = 0; k < 60; k++) {
+      const tc = want + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.008;
+      const u0 = xAt(d, tc) - len / 2, u1 = u0 + len;
+      if (tc - len / L / 2 < mainT0 + 0.3 / L || tc + len / L / 2 > mainT1 - 0.3 / L) continue;
+      if (!clearU(u0, u1, pad)) continue;
+      if (u1 > d.comp.u0 - pad && u0 < d.comp.u1 + pad) continue;
+      return tc;
+    }
+    return null;
+  };
+  d.capstanT = L >= 14 ? freeT(masts >= 4 ? 0.54 : 0.385, 0.9, 0.7) : null;
+  const bl = Math.min(4.5, L * 0.16), bt = L >= 16 ? freeT(masts >= 4 ? 0.69 : 0.645, bl, 0.6) : null;
+  if (bt !== null && d.capstanT !== null && Math.abs(xAt(d, bt) - xAt(d, d.capstanT)) < bl / 2 + 1.2) d.boat = null;
+  else d.boat = bt !== null ? { u0: (bt - 0.5) * L - bl / 2, u1: (bt - 0.5) * L + bl / 2, w: Math.min(1.9, B * 0.3) } : null;
+  // the guns: on deck, run out through ports in the bulwarks between the
+  // stairs — only where they leave room to walk past a mast, the capstan, the
+  // boat or the hatch — and, on the bigger hulls, a gun deck below
+  const gs = Math.max(0.6, Math.min(1, B / 6.5));
+  d.gunScale = gs;
+  const rows = [{ y: deckY + 0.42, t0: mainT0 + 0.5 / L, t1: mainT1 - 0.5 / L, lid: 0.42, open: 1.4, deck: true }];
+  if (deckY - 1.3 - 0.3 > 0.3) rows.push({ y: deckY - 1.3, t0: Math.max(0.12, h0 + 0.8 / L), t1: Math.min(0.86, h1 - 0.8 / L), lid: 0.6, open: 1.05 });
+  const perSide = Math.ceil((def.cannons || 0) / 2);
+  const capU = d.capstanT !== null ? (d.capstanT - 0.5) * L : null;
   const centre = (u) => {
     let w = 0;
     for (const m of d.mastU) if (Math.abs(u - m) < d.mastR + 1.05) w = Math.max(w, d.mastR + 0.5);
-    if (Math.abs(u - capU) < 1.17) w = Math.max(w, 0.62);
-    if (u > d.boat.u0 - 0.55 && u < d.boat.u1 + 0.55) w = Math.max(w, d.boat.w / 2);
+    if (capU !== null && Math.abs(u - capU) < 1.17) w = Math.max(w, 0.62);
+    if (d.boat && u > d.boat.u0 - 0.55 && u < d.boat.u1 + 0.55) w = Math.max(w, d.boat.w / 2);
+    if (u > d.comp.u0 - 0.6 && u < d.comp.u1 + 0.6) w = Math.max(w, cw / 2 + 0.05);
     return w;
   };
-  d.guns = [];
-  const top = rows[0];
-  for (let i = 0; i < top.n; i++) {
-    const t = top.t0 + (top.t1 - top.t0) * (i + 0.5) / top.n, u = (t - 0.5) * L;
-    const off = hbAt(t, B) * 0.93 - 0.95;
-    const stowed = off - 0.55 - centre(u) < 0.9;
-    for (const s of [-1, 1]) d.guns.push({ t, u, v: s * off, s, stowed });
+  const walkway = large ? 0.9 : mid ? 0.7 : 0.45;
+  const offAt = (t) => hbAt(t, B) * 0.93 - 0.95 * gs;
+  const fitsGun = (t) => {
+    const u = (t - 0.5) * L, reach = 0.5 * gs;
+    // (the carriage's width along the side is clear of anything in the middle, too)
+    return [u - reach, u, u + reach].every((uu) => offAt(t) - 0.55 * gs - centre(uu) >= walkway);
+  };
+  const top = rows[0], want = rows.length > 1 ? Math.ceil(perSide / 2) : perSide;
+  const cand = [];
+  for (let t = top.t0; t <= top.t1 + 1e-9; t += 0.1 / L) if (fitsGun(t)) cand.push(t);
+  const pick = [], gap = (1.4 * gs + 0.35) / L;
+  for (let i = 0; i < want && cand.length; i++) {
+    const aim = want === 1 ? (top.t0 + top.t1) / 2 : top.t0 + (top.t1 - top.t0) * i / (want - 1);
+    let best = null;
+    for (const t of cand) if (pick.every((q) => Math.abs(q - t) >= gap) && (best === null || Math.abs(t - aim) < Math.abs(best - aim))) best = t;
+    if (best !== null) pick.push(best);
   }
-  // what you walk round: masts, the capstan, the boat, the guns
-  d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.5 })); // (the fife rail round each mast)
-  for (const gn of d.guns) if (!gn.stowed) d.solids.push({ u: gn.u, v: gn.v, r: 0.55 });
-  d.solids.push({ u: (d.capstanT - 0.5) * L, v: 0, r: 0.62 });
-  d.solids.push({ u: d.wheelU, v: 0, r: 0.7 });
-  if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35 });
-  d.solids.push({ u: (tf + 0.03 - 0.5) * L, v: 0, r: 0.55 }); // the belfry
-  d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2 });
+  pick.sort((a, b) => a - b);
+  d.guns = [];
+  for (const t of pick) for (const s of [-1, 1]) d.guns.push({ t, u: (t - 0.5) * L, v: s * offAt(t), s });
+  top.ts = pick;
+  top.n = pick.length;
+  for (const r of rows) if (!r.deck) r.n = Math.max(2, Math.min(16, Math.ceil(perSide / 2), Math.floor((r.t1 - r.t0) * L / 1.9)));
+  d.gunRows = rows;
+  // the guns of the gun deck below, each behind its port
+  d.lowGuns = [];
+  const low = rows.find((r) => !r.deck);
+  if (low) {
+    for (let i = 0; i < low.n; i++) {
+      const t = low.t0 + (low.t1 - low.t0) * (i + 0.5) / low.n;
+      if (t > comp.t0 - 0.6 / L && t < comp.t1 + 0.6 / L) continue; // (the foot of the companionway)
+      const off = skinAt(d, t, low.y) - 0.3 - 0.85 * gs;
+      for (const s of [-1, 1]) d.lowGuns.push({ t, u: (t - 0.5) * L, v: s * off, s });
+    }
+  }
+  // ---- rooms: the great cabin under the quarterdeck (and the captain's under
+  // the poop), the forecastle, and the hold. You walk in through their doors
+  // (or down the companionway); what's inside stands in your way.
+  const tS = 0.02 + 0.3 / L;
+  const doorV = narrow ? Math.max(-edge(tq) + 0.75, Math.min(0, qs.va - 0.75)) : 0;
+  d.rooms = [
+    { kind: 'cabin', t0: tS, t1: tq, floor: deckY, ceil: yq - 0.12, doors: [{ t: tq, v: doorV, w: 1.05, face: 1 }] },
+  ];
+  if (poop) d.rooms.push({ kind: 'captain', t0: tS, t1: tp, floor: yq, ceil: yp - 0.12, doors: [{ t: tp, v: 0, w: 1.05, face: 1 }] });
+  if (fore) {
+    let fe = 0.95;
+    while (fe > tf + 0.03 && innerAt(d, fe, deckY + 1) < 0.85) fe -= 0.005;
+    const fdv = narrow ? [Math.max(-edge(tf) + 0.75, Math.min(0, fs.va - 0.75))] : [-0.95, 0.95];
+    d.rooms.push({ kind: 'forecastle', t0: tf, t1: fe, floor: deckY, ceil: yf - 0.12, doors: fdv.map((v) => ({ t: tf, v, w: 1.0, face: -1 })) });
+  }
+  d.rooms.push({ kind: 'hold', t0: h0, t1: h1, floor: holdY, ceil: deckY - 0.12, doors: [] });
+  // the walls across the ship with their doorways (the cabin fronts), and the
+  // rail round the companionway's opening on the main deck (open at its head)
+  d.walls = [];
+  for (const r of d.rooms) {
+    for (const [t, doors] of r.kind === 'forecastle' ? [[r.t0, r.doors]] : r.kind === 'hold' ? [] : [[r.t1, r.doors]]) {
+      const u = xAt(d, t), w = innerAt(d, t, r.floor + 1) + 0.1;
+      let v = -w;
+      for (const dr of [...doors].sort((a, b) => a.v - b.v)) { d.walls.push({ u0: u, v0: v, u1: u, v1: dr.v - dr.w / 2, y0: r.floor, y1: r.ceil + 0.12 }); v = dr.v + dr.w / 2; }
+      d.walls.push({ u0: u, v0: v, u1: u, v1: w, y0: r.floor, y1: r.ceil + 0.12 });
+    }
+  }
+  const cu0 = d.comp.u0, cu1 = d.comp.u1, ch = cw / 2 + 0.05;
+  d.walls.push({ u0: cu0, v0: -ch, u1: cu1, v1: -ch, y0: deckY, y1: deckY + 1 }, { u0: cu0, v0: ch, u1: cu1, v1: ch, y0: deckY, y1: deckY + 1 }, { u0: cu0, v0: -ch, u1: cu0, v1: ch, y0: deckY, y1: deckY + 1 });
+  // what you walk round: masts (on every deck they pass through), and on
+  // each deck the capstan, the boat, the guns, the wheel, the belfry
+  // (on deck, the fife rail round each mast; below, in the hold and the cabins, just the mast)
+  d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.5, rIn: d.mastR + 0.08 }));
+  for (const gn of d.guns) d.solids.push({ u: gn.u, v: gn.v, r: 0.55 * gs, lvl: 'main' });
+  for (const gn of d.lowGuns) d.solids.push({ u: gn.u, v: gn.v, r: 0.5 * gs, lvl: 'hold' });
+  if (capU !== null) d.solids.push({ u: capU, v: 0, r: 0.62, lvl: 'main' });
+  d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: 'quarter' });
+  if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35, lvl: 'quarter' });
+  if (fore) d.solids.push({ u: (tf + 0.03 - 0.5) * L, v: 0, r: 0.55, lvl: 'fore' }); // the belfry
+  if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: 'main' });
+  // (the furniture in the rooms: see furnish)
+  furnish(d);
   return d;
+}
+
+/**
+ * What's in the rooms, where it stands (u, v, footprint) — shared by the 3D
+ * view, which builds it, and the game, which walks round it and opens the
+ * chests. `d.furniture`: { kind, room, u, v, w (along), dp (across), rot }.
+ */
+function furnish(d) {
+  const F = (d.furniture = []);
+  const put = (kind, room, t, v, w, dp, extra = {}) => {
+    const r = d.rooms.find((x) => x.kind === room);
+    F.push({ kind, room, u: xAt(d, t), v, w, dp, floor: r.floor, ...extra });
+  };
+  // the great cabin: a table with a chart and a lantern, chairs, a bunk, the sea chest
+  const c = d.rooms.find((r) => r.kind === 'cabin');
+  const cw = innerAt(d, (c.t0 + c.t1) / 2, c.floor + 1);
+  const clen = (c.t1 - c.t0) * d.L;
+  const tc = c.t0 + (c.t1 - c.t0) * 0.42;
+  const big = clen > 3.4 && cw > 1.6;
+  put('table', 'cabin', tc, 0, big ? 1.4 : 1.0, big ? 0.9 : 0.7);
+  for (const s of [-1, 1]) put('chair', 'cabin', tc, s * ((big ? 0.9 : 0.7) / 2 + 0.3), 0.42, 0.42, { rot: s });
+  put('bunk', 'cabin', c.t0 + 0.9 / d.L + 0.05, cw - 0.55, 1.9, 0.85, { along: true });
+  put('chest', 'cabin', c.t0 + 0.35 / d.L + 0.02, -cw + 0.55, 0.8, 0.5, { loot: 'cabin' });
+  // the captain's cabin under the poop: a desk, a chair, a chest, a bookcase
+  if (d.poop) {
+    const p = d.rooms.find((r) => r.kind === 'captain'), pw = innerAt(d, (p.t0 + p.t1) / 2, p.floor + 1);
+    put('desk', 'captain', p.t0 + (p.t1 - p.t0) * 0.45, 0, 1.2, 0.7);
+    put('chest', 'captain', p.t0 + 0.4 / d.L + 0.02, pw - 0.6, 0.8, 0.5, { loot: 'captain' });
+    put('shelf', 'captain', p.t0 + (p.t1 - p.t0) * 0.5, -pw + 0.3, 1.4, 0.35);
+  }
+  // the forecastle: the crew's hammocks, a stove and a mess table
+  const f = d.rooms.find((r) => r.kind === 'forecastle');
+  if (f) {
+    const fw = innerAt(d, (f.t0 + f.t1) / 2, f.floor + 1), fm = (f.t0 + f.t1) / 2;
+    put('stove', 'forecastle', f.t0 + 0.7 / d.L + 0.02, fw - 0.5, 0.8, 0.7);
+    put('table', 'forecastle', fm, 0, 1.3, 0.75);
+    for (let i = 0; i < 3; i++) put('hammock', 'forecastle', f.t0 + (f.t1 - f.t0) * (0.3 + i * 0.22), -fw * 0.45, 1.6, 0.6, { hang: true });
+  }
+  // the hold: cargo along the sides, the treasure chest at the foot of the companionway
+  const h = d.rooms.find((r) => r.kind === 'hold');
+  const hw = (t) => skinAt(d, t, h.floor + 0.3) - 0.3;
+  const foot = d.comp.t0 - 0.9 / d.L;
+  put('chest', 'hold', foot, -Math.min(0.9, hw(foot) - 0.5), 0.9, 0.55, { loot: 'hold', treasure: true });
+  const gunT = d.lowGuns.map((g) => g.t);
+  const taken = (t, span) => (t > d.comp.t0 - span / d.L && t < d.comp.t1 + span / d.L) || gunT.some((g) => Math.abs(g - t) * d.L < 0.9) || d.mastU.some((m) => Math.abs(xAt(d, t) - m) < d.mastR + 0.9);
+  let n = 0;
+  for (let t = h.t0 + 0.6 / d.L; t < h.t1 - 0.6 / d.L; t += 1.3 / d.L) {
+    if (taken(t, 1.6)) continue;
+    const s = n % 2 ? 1 : -1, w = hw(t);
+    if (w < 1.1) continue;
+    const kind = ['barrel', 'crate', 'barrels', 'sacks', 'crate', 'shot'][n % 6];
+    put(kind, 'hold', t, s * (w - 0.45), 0.8, 0.8);
+    n++;
+  }
+  for (const it of F) {
+    const along = it.along || it.kind === 'hammock';
+    const hu = (along ? it.w : it.dp) / 2, hv = (along ? it.dp : it.w) / 2;
+    // (a hammock slung overhead is walked under; everything else is in the way)
+    if (it.hang) continue;
+    d.solids.push({ u0: it.u - hu, u1: it.u + hu, v0: it.v - hv, v1: it.v + hv, lvl: it.room });
+  }
+}
+
+// ---------------------------------------------------------------- a big hull's skin
+const keelAt = (d, t) => -d.D * (1 - 0.5 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
+
+/** A big hull's cross-section, rail to keel: [fraction of the half-beam, height]. */
+export function hullProfile(d, t) {
+  const top = topAt(d, t), dk = d.deckY, D = d.D;
+  return [
+    [0.875, top], [0.89, top - 0.14], [0.93, dk + 0.95], [0.975, dk - 0.25], [1.0, dk * 0.42],
+    [0.985, 0], [0.9, -D * 0.3], [0.68, -D * 0.64], [0.36, -D * 0.9], [0, keelAt(d, t)],
+  ];
+}
+
+/** Half-width of the outside of a big hull at height y, t along. */
+export function skinAt(d, t, y) {
+  const pr = hullProfile(d, t), hb = hbAt(t, d.B);
+  if (y >= pr[0][1]) return pr[0][0] * hb;
+  for (let i = 0; i < pr.length - 1; i++) {
+    const [w0, y0] = pr[i], [w1, y1] = pr[i + 1];
+    if (y <= y0 && y >= y1) return (w0 + (w1 - w0) * (y0 - y) / Math.max(1e-6, y0 - y1)) * hb;
+  }
+  return 0;
+}
+/** Half-width of the inside of the bulwarks (the deck's edge) at height y. */
+export const innerAt = (d, t, y) => Math.max(0.05, skinAt(d, t, y) - 0.2);
+
+/** How far in from its sides you can walk in a room at t (the hull's lining; the hold narrows to the floor). */
+export function roomHalf(d, r, t) {
+  return r.kind === 'hold' ? skinAt(d, t, r.floor + 0.3) - 0.3 : innerAt(d, t, r.floor + 1) - 0.08;
+}
+
+/** The room you're in at t with your feet at height h (above the waterline), if any. */
+export function roomAt(d, t, h) {
+  if (!d.rooms) return null;
+  for (const r of d.rooms) if (t >= r.t0 && t <= r.t1 && h > r.floor - 0.7 && h < r.ceil - 0.9) return r;
+  return null;
+}
+
+/** How far (u, v) on a floor at height fl is into a wall (cabin fronts, the companionway's rail): 0 when clear. */
+export function wallDepth(d, u, v, fl, margin) {
+  let depth = 0;
+  for (const w of d.walls || []) {
+    if (fl < w.y0 - 0.3 || fl > w.y1 - 1) continue;
+    const ex = w.u1 - w.u0, ey = w.v1 - w.v0, l2 = ex * ex + ey * ey;
+    const k = l2 ? Math.max(0, Math.min(1, ((u - w.u0) * ex + (v - w.v0) * ey) / l2)) : 0;
+    const dd = Math.hypot(u - (w.u0 + ex * k), v - (w.v0 + ey * k));
+    depth = Math.max(depth, margin + 0.08 - dd);
+  }
+  return depth;
 }
 
 /** Where the helmsman stands (a rowboat's rower sits): x along the hull (stern < 0) and the floor height above the waterline. */
@@ -225,33 +446,43 @@ export function stairAt(d, t, v) {
   return null;
 }
 
-/** Floor height at t (and v, for the stairs of the big ships): the poop, quarterdeck, main deck or forecastle. */
-export function floorAt(d, t, v = null) {
+/**
+ * Floor height at t (and v, for the stairs of the big ships): the poop,
+ * quarterdeck, main deck or forecastle — or, with your feet at height h,
+ * the floor of the room you're in (a cabin, the forecastle, the hold).
+ */
+export function floorAt(d, t, v = null, h = null) {
   if (v !== null && d.stairs.length) {
     const s = stairAt(d, t, v);
-    if (s) return s.ha + (s.hb - s.ha) * (t - s.ta) / (s.tb - s.ta);
+    if (s && (!s.down || h === null || h < s.hb - 0.3 || stairHere(s, t, h))) return s.ha + (s.hb - s.ha) * (t - s.ta) / (s.tb - s.ta);
   }
+  if (h !== null) { const r = roomAt(d, t, h); if (r) return r.floor; }
   if (d.poop && t < d.tp) return d.yp;
   if (d.castle && t < d.tq) return d.yq;
   if (d.fore && t > d.tf) return d.yf;
   return d.deckY;
 }
+/** (on the companionway's flight at t: the step there is within reach of feet at h) */
+const stairHere = (s, t, h) => Math.abs(s.ha + (s.hb - s.ha) * (t - s.ta) / (s.tb - s.ta) - h) < 0.7;
 
-/** Which deck (t, v) is on: 'poop', 'quarter', 'main' or 'fore' — or the flight of stairs it's on. */
-export function levelAt(d, t, v) {
+/** Which deck (t, v) is on: 'poop', 'quarter', 'main' or 'fore' — or the flight of stairs it's on, or (feet at h) the room. */
+export function levelAt(d, t, v, h = null) {
   const s = v !== null && d.stairs.length ? stairAt(d, t, v) : null;
-  if (s) return s;
+  if (s && (!s.down || h === null || h < s.hb - 0.3 || stairHere(s, t, h))) return s;
+  if (h !== null) { const r = roomAt(d, t, h); if (r) return r.kind; }
   if (d.poop && t < d.tp) return 'poop';
   if (d.castle && t < d.tq) return 'quarter';
   if (d.fore && t > d.tf) return 'fore';
   return 'main';
 }
 
-/** How far (u, v) is inside something standing on the deck (a mast, the capstan, the boat): 0 when clear. */
-export function solidAt(d, u, v, margin = 0) {
+/** How far (u, v) is inside something standing on the deck (a mast, the capstan, the boat): 0 when clear. `lvl`: only what's on that deck. */
+export function solidAt(d, u, v, margin = 0, lvl = null) {
   let depth = 0;
+  const inside = lvl === 'hold' || lvl === 'cabin' || lvl === 'captain' || lvl === 'forecastle';
   for (const o of d.solids) {
-    if (o.r !== undefined) depth = Math.max(depth, o.r + margin - Math.hypot(u - o.u, v - o.v));
+    if (o.lvl && lvl !== null && o.lvl !== lvl) continue;
+    if (o.r !== undefined) depth = Math.max(depth, (inside && o.rIn !== undefined ? o.rIn : o.r) + margin - Math.hypot(u - o.u, v - o.v));
     else depth = Math.max(depth, Math.min(u - (o.u0 - margin), o.u1 + margin - u, v - (o.v0 - margin), o.v1 + margin - v));
   }
   return depth;
@@ -268,20 +499,34 @@ export const pitchRise = (ship, along) => (ship.pitch ? along * Math.tan(ship.pi
  * (distance in from the rail), lvl (which deck, on the big ships), solid (a
  * mast or the like is in the way) } — or null off the deck. `margin` keeps you
  * that far inside the bulwarks (and clear of whatever stands on the deck).
+ * `hRef`: the height your feet are at (above her waterline) — under the upper
+ * decks, in a cabin or down in the hold, it's that room's floor you stand on
+ * (its walls and what's in it are solid); without it, the deck on top.
  */
-export function deckPoint(ship, dx, dy, margin = 0.2) {
+export function deckPoint(ship, dx, dy, margin = 0.2, hRef = null) {
   const d = shipDims(ship.def);
   const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
   const u = dx * c + dy * s, v = -dx * s + dy * c;
   const t = (u + d.L / 2) / d.L;
   if (t < 0.02 || t > 0.97) return null;
+  const room = hRef !== null && d.big ? roomAt(d, t, hRef) : null;
+  if (room) {
+    const lv = levelAt(d, t, v, hRef);
+    const out = { t, u, v, h: floorAt(d, t, v, hRef), edge: roomHalf(d, room, t) - Math.abs(v), lvl: lv, room };
+    // (the sides of the room, what's in it and the walls round it stand in the way — never "over the side")
+    const depth = Math.max(margin - out.edge, solidAt(d, u, v, Math.max(0, margin), room.kind), wallDepth(d, u, v, room.floor, margin));
+    if (depth > 0) out.solid = depth;
+    return out;
+  }
   const hb = hbAt(t, d.B) * d.walk - margin;
   if (hb <= 0 || Math.abs(v) > hb) return null;
   // the bow narrows to a point: keep off the very tip
-  const out = { t, u, v, h: floorAt(d, t, v), edge: hb - Math.abs(v) };
-  if (d.big) out.lvl = levelAt(d, t, v);
+  const out = { t, u, v, h: floorAt(d, t, v, d.big ? hRef : null), edge: hb - Math.abs(v) };
+  if (d.big) out.lvl = levelAt(d, t, v, hRef);
   if (d.solids.length) {
-    const depth = solidAt(d, u, v, Math.max(0, margin));
+    const lv = typeof out.lvl === 'string' ? out.lvl : null;
+    let depth = solidAt(d, u, v, Math.max(0, margin), d.big ? lv ?? 'stairs' : null);
+    if (d.walls) depth = Math.max(depth, wallDepth(d, u, v, out.h, margin));
     if (depth > 0) out.solid = depth;
   }
   return out;
@@ -325,6 +570,12 @@ export function hullSolid(ship, dx, dy, h) {
   if (d.mastU && v < d.mastR + 0.2 && h < d.mastH && d.mastU.some((m) => Math.abs(u - m) < d.mastR + 0.2)) return true;
   const hb = hbAt(t, d.B);
   if (v > hb) return false;
+  // inside a cabin, the forecastle or the hold (or the companionway down): open air
+  if (d.rooms) {
+    for (const r of d.rooms) if (t > r.t0 + 0.004 && t < r.t1 - 0.004 && h > r.floor - 0.05 && h < r.ceil - 0.02 && v < roomHalf(d, r, t) + 0.05) return false;
+    const cp = d.comp;
+    if (u > cp.u0 && u < cp.u1 && v < cp.w / 2 && h > d.holdY - 0.05 && h < d.deckY + 0.05) return false;
+  }
   // the rails along the fronts of the raised decks (and the forecastle's after edge)
   const rail = d.big ? 1 : 0.8, at = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
   if ((d.castle && at(d.tq) && h < d.yq + rail) || (d.poop && at(d.tp) && h < d.yp + rail) || (d.fore && at(d.tf) && h < d.yf + rail)) return true;

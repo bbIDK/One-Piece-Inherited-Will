@@ -16,7 +16,7 @@ import { drawJollyRoger, drawMarineEmblem } from '../render/ship.js';
 import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
 import { vcMat } from './props/mats.js';
 import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt } from '../world/hull.js';
-import { bigHull, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging } from './bigship.js';
+import { bigHull, bigInterior, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging } from './bigship.js';
 
 export { shipDims, helmPoint };
 
@@ -304,6 +304,17 @@ export function hullGeometry(def) {
   figurehead(k, def, d, P);
   g = k.build(true);
   hullCache.set(key, g);
+  return g;
+}
+
+/** Below decks and inside the cabins of a big ship (shared per ship type), or null. */
+const insideCache = new Map();
+export function interiorGeometry(def) {
+  const d = shipDims(def);
+  if (!d.big) return null;
+  const key = `${def.length}|${def.beam}|${def.color}|${def.cannons}|${def.sail}|${def.masts}`;
+  let g = insideCache.get(key);
+  if (!g) { g = bigInterior(def, d).build(false); insideCache.set(key, g); }
   return g;
 }
 
@@ -667,6 +678,16 @@ export class ShipView {
     hull.castShadow = true; hull.receiveShadow = true;
     root.add(hull);
     this.hull = hull;
+    // below decks and in the cabins (only drawn when the camera's close by)
+    const ig = interiorGeometry(def);
+    if (ig) {
+      this.inside = new THREE.Mesh(ig, SOLID());
+      // (the decks over the rooms keep the sun out: their undersides and the linings cast the shadows)
+      this.inside.receiveShadow = true;
+      this.inside.castShadow = true;
+      this.inside.visible = false;
+      root.add(this.inside);
+    }
     // masts (a rowboat has none)
     const plan = d.big ? bigMastPlan(d) : mastPlan(def, d);
     this.rig = new THREE.Mesh(d.big ? bigRigGeometry(def, d, plan) : mastGeometry(def, d, plan), SOLID());
@@ -744,22 +765,34 @@ export class ShipView {
     // paddle wheels
     if (def.paddle) {
       const pk = new Mesher();
-      const R = 0.72;
-      pk.add(cyl(0.12, 0.12, 0.4, 8), { at: [0, 0, -0.2], rot: [Math.PI / 2, 0, 0], color: '#5d4037' });
+      // (on a big hull the wheels are bigger, and turn half in the water under their housings)
+      const R = d.big ? 0.72 * d.B / 3.2 : 0.72;
+      const k = R / 0.72, pw = 0.4 * k;
+      pk.add(cyl(0.12 * k, 0.12 * k, pw, 8), { at: [0, 0, -pw / 2], rot: [Math.PI / 2, 0, 0], color: '#5d4037' });
       for (let i = 0; i < 8; i++) {
         const a = i / 8 * Math.PI * 2, dx = -Math.sin(a), dy = Math.cos(a);
-        for (const sz of [-1, 1]) pk.add(box(0.05, R, 0.04), { at: [0, 0, sz * 0.17], rot: [0, 0, a], color: '#6d4c33' });
-        pk.add(box(0.06, 0.4, 0.38), { at: [dx * (R - 0.36), dy * (R - 0.36), 0], rot: [0, 0, a], color: '#8d6e4a', outline: 0.01 });
+        for (const sz of [-1, 1]) pk.add(box(0.05 * k, R, 0.04 * k), { at: [0, 0, sz * pw * 0.42], rot: [0, 0, a], color: '#6d4c33' });
+        pk.add(box(0.06 * k, 0.4 * k, pw * 0.95), { at: [dx * (R - 0.36 * k), dy * (R - 0.36 * k), 0], rot: [0, 0, a], color: '#8d6e4a', outline: 0.01 });
       }
-      for (const sz of [-1, 1]) pk.add(torus(R, 0.035, 4, 16), { at: [0, 0, sz * 0.17], color: '#5d4037' });
+      for (const sz of [-1, 1]) pk.add(torus(R, 0.035 * k, 4, 16), { at: [0, 0, sz * pw * 0.42], color: '#5d4037' });
       const geo = pk.build(false);
       this.paddles = [];
+      const pt = 0.34, py = d.big ? R * 0.55 : d.deckY - 0.1;
+      const pz = d.big ? hbAt(pt, d.B) * 0.985 + pw / 2 + 0.12 : hbAt(pt, d.B) + 0.2;
+      const hk = new Mesher();
       for (const s2 of [-1, 1]) {
         const pm = new THREE.Mesh(geo, SOLID());
-        pm.position.set(xAt(d, 0.34), d.deckY - 0.1, s2 * (hbAt(0.34, d.B) + 0.2));
+        pm.position.set(xAt(d, pt), py, s2 * pz);
         root.add(pm);
         this.paddles.push(pm);
+        // the housing over the top of the wheel, against the hull
+        if (d.big) {
+          hk.save(); hk.translate(xAt(d, pt), py, s2 * pz); hk.rotateX(Math.PI / 2);
+          hk.add(new THREE.CylinderGeometry(R + 0.15 * k, R + 0.15 * k, pw + 0.2, 16, 1, true, Math.PI / 2, Math.PI), { color: '#b07d48', double: true, outline: 0.015 });
+          hk.restore();
+        }
       }
+      if (d.big) { const hm = new THREE.Mesh(hk.build(false), SOLID()); hm.castShadow = true; root.add(hm); }
     }
     // a rowboat's oars, swinging in their rowlocks with each stroke
     if (d.row) {
@@ -910,6 +943,14 @@ export class ShipView {
     r.position.set(rx, (s.lvl || 0) + 0.05 + Math.sin(t * 1.3) * 0.07 - sinking * 3, rz);
     // (riding up or down Reverse Mountain, the bow points up or down the slope)
     r.rotation.set(Math.sin(t * 0.9) * 0.035 + sinking * 0.5, -s.heading, Math.sin(t * 1.1) * 0.02 + (s.pitch || 0), 'YXZ');
+    // (her insides only from close by: aboard, or alongside)
+    if (this.inside) {
+      const cam = ctx?.camera;
+      this.inside.visible = !!cam && cam.position.distanceTo(r.position) < this.d.L * 0.6 + 12;
+      // (its shadows — the decks overhead darkening the rooms — only while you're in one)
+      const pl = ctx?.game?.player;
+      this.inside.castShadow = !!(pl?.deck?.room && pl.deck.ship === s);
+    }
     // yards brace round to the wind; sails fill
     const relA = (windAngle || 0) - s.heading;
     const brace = Math.max(-0.5, Math.min(0.5, Math.sin(relA) * 0.45));

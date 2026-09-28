@@ -4,9 +4,12 @@
 // (red lids hinged open, muzzles run out), a stern castle with gallery windows
 // and lanterns, and inside the bulwarks a planked main deck, a quarterdeck over
 // the great cabin (and a poop deck above that on the largest), a forecastle,
-// stairs up to each, carved cabin fronts with doors and lit windows, a double
-// wheel and binnacle, the capstan, the main hatch grating, the ship's boat on
-// its chocks, a belfry and catted anchors. Aloft: three-part masts with tops,
+// stairs up to each, carved cabin fronts with doorways and lit windows, the
+// wheel and binnacle, the capstan, the companionway down to the hold, the
+// ship's boat on its chocks, a belfry and catted anchors. Below (bigInterior):
+// the furnished great cabin (and the captain's), the crew's forecastle, and
+// the hold with its cargo and lanterns — and on the bigger hulls the gun
+// deck's guns behind their ports. Aloft: three-part masts with tops,
 // crosstrees and a crow's nest, three square sails a mast, a spanker, a big
 // jib to a steeved-up bowsprit, and shrouds with ratlines.
 //
@@ -14,7 +17,7 @@
 // waterline is y = 0.
 import * as THREE from 'three';
 import { Mesher, box, cyl, cone, torus, tube, lathe, C, shade } from './props/kit.js';
-import { hbAt, topAt, xAt, floorAt } from '../world/hull.js';
+import { hbAt, topAt, xAt, floorAt, skinAt, innerAt, hullProfile, roomHalf } from '../world/hull.js';
 
 const TAU = Math.PI * 2;
 
@@ -44,29 +47,9 @@ export function bigPalette(def) {
 }
 
 // ---------------------------------------------------------------- the hull's skin
-const keelAt = (d, t) => -d.D * (1 - 0.5 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
-
-/** The hull's cross-section, rail to keel: [fraction of the half-beam, height]. */
-function profile(d, t) {
-  const top = topAt(d, t), dk = d.deckY, D = d.D;
-  return [
-    [0.875, top], [0.89, top - 0.14], [0.93, dk + 0.95], [0.975, dk - 0.25], [1.0, dk * 0.42],
-    [0.985, 0], [0.9, -D * 0.3], [0.68, -D * 0.64], [0.36, -D * 0.9], [0, keelAt(d, t)],
-  ];
-}
-
-/** Half-width of the outside of the hull at height y, t along. */
-export function skinAt(d, t, y) {
-  const pr = profile(d, t), hb = hbAt(t, d.B);
-  if (y >= pr[0][1]) return pr[0][0] * hb;
-  for (let i = 0; i < pr.length - 1; i++) {
-    const [w0, y0] = pr[i], [w1, y1] = pr[i + 1];
-    if (y <= y0 && y >= y1) return (w0 + (w1 - w0) * (y0 - y) / Math.max(1e-6, y0 - y1)) * hb;
-  }
-  return 0;
-}
-/** Half-width of the inside of the bulwarks (the deck's edge) at height y. */
-const innerAt = (d, t, y) => Math.max(0.05, skinAt(d, t, y) - 0.2);
+// (its shape is shared with the game: see world/hull.js hullProfile, skinAt, innerAt)
+const profile = hullProfile;
+export { skinAt };
 
 /** The skin's slope along the length at (t, y): the angle to turn something to lie flat on it. */
 function skinYaw(d, t, y, s) {
@@ -184,21 +167,31 @@ function bulwarks(k, d, P) {
   k.add(box(0.2, ts - ys + 0.04, innerAt(d, 0.01, (ys + ts) / 2) * 2 + 0.1), { at: [xAt(d, 0) + 0.1, ys - 0.02, 0], color: shade(P.upper, -0.12) });
 }
 
-function decks(k, d, P) {
-  const region = (t0, t1, y) => {
-    const M = Math.max(6, Math.round(d.B / 0.3));
-    const R = Math.max(3, Math.round((t1 - t0) * 48));
+/**
+ * Planking between t0 and t1 at height y, from rail to rail — or, with
+ * `vIn`, only outboard of |v| = vIn (the strips alongside an opening).
+ * `down`: the underside (a ceiling seen from below).
+ */
+export function deckGrid(k, d, P, t0, t1, y, vIn = null, down = false, col0 = null) {
+  if (t1 <= t0) return;
+  const R = Math.max(3, Math.round((t1 - t0) * 48));
+  const base = col0 || P.deck;
+  const spans = vIn === null ? [[-1, 1, 0]] : [[-1, -vIn, 1], [vIn, 1, 1]];
+  for (const [a0, a1, strip] of spans) {
+    const M = strip ? Math.max(2, Math.round((d.B / 2 - vIn) / 0.3)) : Math.max(6, Math.round(d.B / 0.3));
     const dp = [], di = [], dc = [];
     for (let i = 0; i <= R; i++) {
       const t = t0 + (t1 - t0) * i / R, x = xAt(d, t);
       const w = innerAt(d, t, y) + 0.04;
-      for (let m = 0; m <= M; m++) dp.push(x, y, -w + 2 * w * m / M);
+      // (z from port to starboard: the strip's ends are its opening edge and the rail)
+      const z0 = strip ? (a0 < 0 ? -w : vIn) : -w, z1 = strip ? (a0 < 0 ? -vIn : w) : w;
+      for (let m = 0; m <= M; m++) dp.push(x, y, z0 + (z1 - z0) * m / M);
     }
     for (let i = 0; i < R; i++) {
       for (let m = 0; m < M; m++) {
         const a = i * (M + 1) + m, b = a + 1, c = a + M + 1, e = c + 1;
-        di.push(a, b, c, b, e, c);
-        const col = (m + (i >> 2)) % 2 ? shade(P.deck, -0.07) : P.deck;
+        if (down) di.push(a, c, b, b, c, e); else di.push(a, b, c, b, e, c);
+        const col = (m + (i >> 2)) % 2 ? shade(base, -0.07) : base;
         dc.push(col, col);
       }
     }
@@ -207,48 +200,109 @@ function decks(k, d, P) {
     g.setIndex(di);
     g.computeVertexNormals();
     k.add(g, { split: true, color: (p, n, i) => dc[Math.floor(i / 3)] });
-  };
-  region(d.tq, d.tf, d.deckY);
-  region(d.poop ? d.tp - 0.004 : 0.012, d.tq + 0.006, d.yq);
-  if (d.poop) region(0.012, d.tp + 0.006, d.yp);
-  region(d.tf - 0.006, 0.975, d.yf);
+  }
+}
+
+function decks(k, d, P) {
+  // the main deck, open where the companionway (or the hatch) goes down
+  const cp = d.comp;
+  deckGrid(k, d, P, d.tq, cp.t0, d.deckY);
+  deckGrid(k, d, P, cp.t0, cp.t1, d.deckY, cp.w / 2);
+  deckGrid(k, d, P, cp.t1, d.tf, d.deckY);
+  deckGrid(k, d, P, d.poop ? d.tp - 0.004 : 0.012, d.tq + 0.006, d.yq);
+  if (d.poop) deckGrid(k, d, P, 0.012, d.tp + 0.006, d.yp);
+  if (d.fore) deckGrid(k, d, P, d.tf - 0.006, 0.975, d.yf);
 }
 
 // ---------------------------------------------------------------- guns
+/**
+ * A naval gun on its truck carriage, standing on the floor at the origin,
+ * its muzzle out along +z (s = 1) or -z (s = -1): a cast barrel with its
+ * reinforcing rings, the muzzle swell and the dark bore, the cascabel knob at
+ * the breech, trunnions on the cheeks, and four little wooden wheels. `gs`
+ * scales it (a sloop's gun is smaller than a man-o'-war's).
+ */
+export function cannon(k, P, s, gs = 1, opts = {}) {
+  const Lb = 1.8 * gs, r = 0.1 * gs + 0.025;
+  const ay = 0.42 * Math.max(0.85, gs);                  // (the bore's height over the floor)
+  const cl = 0.95 * gs, cw = 0.5 * gs + 0.06;           // the carriage's length (in and out) and width
+  const zc = -s * 0.1 * gs;                             // (the carriage sits a little inboard of the trunnions)
+  const wood = opts.wood || P.wood;
+  // cheeks: stepped planks either side, the bed between them, the transoms
+  for (const a of [-1, 1]) {
+    k.add(box(0.09, ay * 0.62, cl), { at: [a * cw / 2, 0.1, zc], color: wood, outline: 0.01 });
+    k.add(box(0.09, ay * 0.3, cl * 0.45), { at: [a * cw / 2, 0.1 + ay * 0.62, zc + s * cl * 0.2], color: wood, outline: 0.01 });
+  }
+  k.add(box(cw, 0.07, cl * 0.92), { at: [0, 0.1, zc], color: shade(wood, -0.18) });
+  // axles and the four trucks (wheels)
+  for (const zf of [0.34, -0.36]) {
+    const z = zc + s * zf * cl;
+    k.add(cyl(0.035, 0.035, cw + 0.2, 6), { at: [-(cw + 0.2) / 2, 0.1, z], rot: [0, 0, -Math.PI / 2], color: P.dark });
+    for (const a of [-1, 1]) k.add(cyl(0.1 * gs + 0.02, 0.1 * gs + 0.02, 0.07, 10), { at: [a * (cw / 2 + 0.05) - 0.035, 0.1 * gs + 0.02, z], rot: [0, 0, -Math.PI / 2], color: shade(wood, -0.3), outline: 0.008 });
+  }
+  // the barrel, breech to muzzle, along +y before it's laid down along ±z
+  const R = (f) => r * f;
+  const prof = [
+    [0.001, -0.02], [R(0.9), -0.015], [R(1.45), 0.02], [R(1.6), 0.09], [R(1.6), 0.2], [R(1.72), 0.22], [R(1.72), 0.27], [R(1.55), 0.29],
+    [R(1.5), Lb * 0.42], [R(1.62), Lb * 0.43], [R(1.62), Lb * 0.46], [R(1.38), Lb * 0.47],
+    [R(1.22), Lb * 0.86], [R(1.42), Lb * 0.91], [R(1.52), Lb * 0.97], [R(1.45), Lb], [R(0.72), Lb], [R(0.72), Lb * 0.9], [0.001, Lb * 0.9],
+  ];
+  const zb = -s * (Lb * 0.36);   // (the breech sits this far inboard of the trunnions)
+  const iron = opts.iron || P.iron;
+  // (the last points of the profile line the bore: dark inside the muzzle)
+  k.add(lathe(prof, 12), { at: [0, ay, zc + zb], rot: [s * Math.PI / 2, 0, 0], color: (p, n, i) => (i % prof.length >= prof.length - 3 ? '#0b0b0b' : iron), outline: 0.012 });
+  // the cascabel: a knob behind the breech
+  k.add(new THREE.SphereGeometry(r * 0.75, 8, 6), { at: [0, ay, zc + zb - s * (r * 0.9)], color: iron });
+  // trunnions resting on the cheeks
+  k.add(cyl(r * 0.55, r * 0.55, cw + 0.08, 8), { at: [-(cw + 0.08) / 2, ay, zc], rot: [0, 0, -Math.PI / 2], color: iron });
+  return { muzzle: zc + zb + s * Lb, ay };
+}
+
+/** A pyramid of cannonballs in a wooden rack (a shot garland). */
+export function shotPile(k, P, r = 0.075) {
+  k.add(box(r * 7.4, 0.08, r * 5.4), { color: P.wood, outline: 0.008 });
+  const ball = new THREE.SphereGeometry(r, 8, 6);
+  let y = 0.08 + r;
+  for (let layer = 0, n = 3; n > 0; layer++, n--) {
+    for (let i = 0; i < n + 1; i++) for (let j = 0; j < n; j++) {
+      k.add(ball, { at: [(i - n / 2) * r * 2, y, (j - (n - 1) / 2) * r * 2], color: P.iron });
+    }
+    y += r * 1.62;
+  }
+}
+
 function gunports(k, d, P) {
-  const r = 0.09 + d.B * 0.004;
-  // the guns on deck: iron barrels on wooden carriages, run out through the upper ports
+  const gs = d.gunScale || 1;
+  // the guns on deck: iron barrels on truck carriages, run out through the upper ports
   for (const g of d.guns) {
-    if (g.stowed) continue;
     const x = xAt(d, g.t), y = d.deckY, s = g.s;
     k.save(); k.translate(x, y, g.v); k.rotateY(skinYaw(d, g.t, y + 0.4, s));
-    k.add(box(0.62, 0.32, 1.0), { at: [0, 0.1, -s * 0.05], color: P.wood, outline: 0.012 });
-    for (const a of [-0.24, 0.24]) for (const b of [-0.36, 0.3]) k.add(cyl(0.12, 0.12, 0.08, 8), { at: [a + Math.sign(a) * 0.04, 0.12, b * s], rot: [0, 0, Math.PI / 2], color: P.dark });
-    k.add(cyl(r, r * 1.35, 1.7, 9), { at: [0, 0.44, -s * 0.55], rot: [s * Math.PI / 2, 0, 0], color: P.iron, outline: 0.012 });
-    k.add(new THREE.SphereGeometry(r * 1.3, 8, 6), { at: [0, 0.44, -s * 0.55], color: P.iron });
+    cannon(k, P, s, gs);
     k.restore();
   }
-  for (const row of d.gunRows) {
-    const n = row.n;
-    for (let i = 0; i < n; i++) {
-      const t = row.t0 + (row.t1 - row.t0) * (i + 0.5) / n;
-      const x = xAt(d, t);
-      // (an upper port with no gun behind it stays shut)
-      const shut = row.deck && d.guns.find((g) => Math.abs(g.t - t) < 1e-6)?.stowed;
-      for (const s of [-1, 1]) {
-        const w = skinAt(d, t, row.y);
-        if (w < 0.3) continue;
-        const yaw = skinYaw(d, t, row.y, s);
-        k.save(); k.translate(x, row.y, s * (w + 0.012)); k.rotateY(yaw);
-        if (shut) { k.add(box(0.66, 0.62, 0.06), { at: [0, -0.31, s * 0.01], color: P.lid, outline: 0.012 }); k.restore(); continue; }
-        k.add(box(0.62, 0.58, 0.05), { at: [0, -0.29, 0], color: P.port });
-        // the lid, hinged open above the port
-        k.add(box(0.66, row.lid, 0.05), { at: [0, 0.3, 0], rot: [s * row.open, 0, 0], color: P.lid, outline: 0.012 });
-        // (the upper row's muzzles are the deck guns' own, run out through the ports)
-        if (!row.deck) k.add(cyl(r * 0.85, r, 0.55, 8), { at: [0, 0, -s * 0.12], rot: [s * Math.PI / 2, 0, 0], color: P.iron, outline: 0.012 });
-        k.restore();
-      }
-    }
+  // a pile of shot by the mainmast (or amidships)
+  {
+    const m = d.mastU.find((u) => u > xAt(d, d.tq) + 1 && u < xAt(d, d.fore ? d.tf : 0.9) - 1);
+    const u = m !== undefined ? m - d.mastR - 0.95 : xAt(d, (d.tq + (d.fore ? d.tf : 0.9)) / 2);
+    const t = (u + d.L / 2) / d.L;
+    if (u > d.comp.u1 + 0.4 || u < d.comp.u0 - 0.9) { k.save(); k.translate(u, d.deckY, 0); shotPile(k, P); k.restore(); }
+  }
+  const port = (t, y, lid, open, s) => {
+    const w = skinAt(d, t, y);
+    if (w < 0.3) return;
+    const yaw = skinYaw(d, t, y, s);
+    k.save(); k.translate(xAt(d, t), y, s * (w + 0.012)); k.rotateY(yaw);
+    k.add(box(0.62, 0.58, 0.05), { at: [0, -0.29, 0], color: P.port });
+    // the lid, hinged open above the port
+    k.add(box(0.66, lid, 0.05), { at: [0, 0.3, 0], rot: [s * open, 0, 0], color: P.lid, outline: 0.012 });
+    k.restore();
+  };
+  const top = d.gunRows[0];
+  for (const t of top.ts || []) for (const s of [-1, 1]) port(t, top.y, top.lid, top.open, s);
+  const low = d.gunRows.find((r) => !r.deck);
+  if (low) {
+    const ts = [...new Set(d.lowGuns.map((g) => g.t))];
+    for (const t of ts) for (const s of [-1, 1]) port(t, low.y, low.lid, low.open, s);
   }
 }
 
@@ -316,27 +370,37 @@ function cabinFront(k, d, P, t, y0, y1, face, doors, stairsHere) {
   // `face`: +1 the front faces forward (the cabin is aft of it), -1 aft (the forecastle)
   const x = xAt(d, t) + face * 0.07;
   const w = innerAt(d, t, (y0 + y1) / 2) + 0.05;
-  const h = y1 - y0;
-  k.add(box(0.14, h, w * 2), { at: [x - face * 0.07, y0, 0], color: P.front, outline: 0.02 });
-  // pilasters and a moulding under the deck above
-  for (const z of [-w + 0.1, w - 0.1]) k.add(box(0.1, h, 0.16), { at: [x, y0, z], color: shade(P.front, -0.25) });
-  k.add(box(0.12, 0.14, w * 2), { at: [x + face * 0.02, y1 - 0.18, 0], color: P.trim });
-  const clearOfStairs = (z, half) => !stairsHere.some((s) => z + half > s.va - 0.1 && z - half < s.vb + 0.1);
-  for (const dz of doors) {
-    if (!clearOfStairs(dz, 0.6)) continue;
-    k.add(box(0.08, 2.05, 1.1), { at: [x + face * 0.02, y0, dz], color: P.dark });
-    k.add(box(0.1, 0.12, 1.3), { at: [x + face * 0.03, y0 + 2.05, dz], color: P.trim });
-    k.add(box(0.06, 0.08, 0.08), { at: [x + face * 0.06, y0 + 1.0, dz + 0.35], color: P.trim });
+  const h = y1 - y0, dh = Math.min(2.05, h - 0.12);
+  // the wall, in pieces round its doorways (you walk in through them)
+  const ds = [...doors].sort((a, b) => a.v - b.v);
+  let z = -w;
+  const piece = (za, zb) => { if (zb - za > 0.02) k.add(box(0.14, h, zb - za), { at: [x - face * 0.07, y0, (za + zb) / 2], color: P.front, outline: 0.02 }); };
+  for (const dr of ds) { piece(z, dr.v - dr.w / 2); z = dr.v + dr.w / 2; }
+  piece(z, w);
+  for (const dr of ds) {
+    // the lintel over the doorway, its frame and a door swung open inside
+    k.add(box(0.14, h - dh, dr.w), { at: [x - face * 0.07, y0 + dh, dr.v], color: P.front });
+    for (const e of [-1, 1]) k.add(box(0.1, dh, 0.08), { at: [x + face * 0.02, y0, dr.v + e * (dr.w / 2 + 0.02)], color: P.trim, outline: 0.008 });
+    k.add(box(0.1, 0.12, dr.w + 0.24), { at: [x + face * 0.03, y0 + dh, dr.v], color: P.trim });
+    // (the door stands open, folded back flat against the inside of the wall, on whichever side has room)
+    const lw = dr.w - 0.1, right = w - (dr.v + dr.w / 2), left = (dr.v - dr.w / 2) + w, sd = right >= left ? 1 : -1;
+    const room = Math.max(right, left) - 0.12;
+    if (room > 0.3) k.add(box(0.05, dh - 0.06, Math.min(lw, room)), { at: [x - face * 0.19, y0 + 0.02, dr.v + sd * (dr.w / 2 + Math.min(lw, room) / 2 + 0.04)], color: shade(P.dark, 0.25), outline: 0.008 });
     // a lantern beside the door
-    k.add(cyl(0.1, 0.12, 0.32, 6), { at: [x + face * 0.14, y0 + 1.75, dz - 0.85], color: '#fff3c4', glow: '#ffcf70', flicker: 0.25, outline: 0.01 });
+    const lz = dr.v + (dr.v > 0 ? -1 : 1) * (dr.w / 2 + 0.3);
+    if (Math.abs(lz) < w - 0.2) k.add(cyl(0.1, 0.12, 0.32, 6), { at: [x + face * 0.14, y0 + 1.75, lz], color: '#fff3c4', glow: '#ffcf70', flicker: 0.25, outline: 0.01 });
   }
+  // pilasters and a moulding under the deck above
+  for (const zz of [-w + 0.1, w - 0.1]) k.add(box(0.1, h, 0.16), { at: [x, y0, zz], color: shade(P.front, -0.25) });
+  k.add(box(0.12, 0.14, w * 2), { at: [x + face * 0.02, y1 - 0.18, 0], color: P.trim });
+  const clearOfStairs = (zz, half) => !stairsHere.some((st) => zz + half > st.va - 0.1 && zz - half < st.vb + 0.1);
   // windows either side of the doors
   if (h > 1.8) {
-    for (let z = -w + 0.75; z <= w - 0.75; z += 1.15) {
-      if (doors.some((dz) => Math.abs(z - dz) < 1.05) || !clearOfStairs(z, 0.4)) continue;
-      k.add(box(0.06, 0.8, 0.62), { at: [x + face * 0.02, y0 + 0.95, z], color: P.glass, glow: '#ffc766' });
-      k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 1.75, z], color: P.trim });
-      k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 0.88, z], color: P.trim });
+    for (let zz = -w + 0.75; zz <= w - 0.75; zz += 1.15) {
+      if (ds.some((dr) => Math.abs(zz - dr.v) < dr.w / 2 + 0.5) || !clearOfStairs(zz, 0.4)) continue;
+      k.add(box(0.06, 0.8, 0.62), { at: [x + face * 0.02, y0 + 0.95, zz], color: P.glass, glow: '#ffc766' });
+      k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 1.75, zz], color: P.trim });
+      k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 0.88, zz], color: P.trim });
     }
   }
 }
@@ -344,25 +408,29 @@ function cabinFront(k, d, P, t, y0, y1, face, doors, stairsHere) {
 function cabinFronts(k, d, P) {
   const on = (lvlA, lvlB) => d.stairs.filter((s) => (s.la === lvlA && s.lb === lvlB) || (s.la === lvlB && s.lb === lvlA));
   const inStair = (list) => (z) => list.some((s) => z > s.va - 0.05 && z < s.vb + 0.05);
+  const room = (kind) => d.rooms.find((r) => r.kind === kind);
   // the great cabin under the quarterdeck
   const q = on('quarter', 'main');
-  cabinFront(k, d, P, d.tq, d.deckY, d.yq, 1, [0], q);
+  cabinFront(k, d, P, d.tq, d.deckY, d.yq, 1, room('cabin').doors, q);
   balustrade(k, d, P, d.tq + 0.004, d.yq, inStair(q));
   // the captain's cabin under the poop
   if (d.poop) {
     const pp = on('poop', 'quarter');
-    cabinFront(k, d, P, d.tp, d.yq, d.yp, 1, [0], pp);
+    cabinFront(k, d, P, d.tp, d.yq, d.yp, 1, room('captain').doors, pp);
     balustrade(k, d, P, d.tp + 0.004, d.yp, inStair(pp));
   }
   // the forecastle, facing aft
-  const f = on('main', 'fore');
-  cabinFront(k, d, P, d.tf, d.deckY, d.yf, -1, [-0.95, 0.95], f);
-  balustrade(k, d, P, d.tf - 0.004, d.yf, inStair(f));
+  if (d.fore) {
+    const f = on('main', 'fore');
+    cabinFront(k, d, P, d.tf, d.deckY, d.yf, -1, room('forecastle').doors, f);
+    balustrade(k, d, P, d.tf - 0.004, d.yf, inStair(f));
+  }
 }
 
 // ---------------------------------------------------------------- stairs
 function stairs(k, d, P) {
   for (const s of d.stairs) {
+    if (s.down) { companionway(k, d, P, s); continue; }
     const rise = Math.abs(s.hb - s.ha);
     const n = Math.max(4, Math.round(rise / 0.22));
     const w = s.vb - s.va, zc = (s.va + s.vb) / 2;
@@ -393,26 +461,85 @@ function stairs(k, d, P) {
   }
 }
 
+/** The way down to the hold: a flight of steps (or a ladder) through a railed opening in the main deck. */
+function companionway(k, d, P, s) {
+  const xa = xAt(d, s.ta), xb = xAt(d, s.tb), w = s.vb - s.va, lo = s.ha, hi = s.hb;
+  const len = Math.hypot(xb - xa, hi - lo), ang = Math.atan2(hi - lo, xb - xa);
+  // the coaming round the opening, and a rail along its sides and after end (its head is open)
+  const cz = w / 2 + 0.06;
+  for (const e of [-1, 1]) k.add(box(xb - xa + 0.12, 0.18, 0.1), { at: [(xa + xb) / 2, d.deckY, e * cz], color: shade(P.deck, -0.3), outline: 0.01 });
+  k.add(box(0.1, 0.18, w + 0.22), { at: [xa - 0.05, d.deckY, 0], color: shade(P.deck, -0.3), outline: 0.01 });
+  const rail = (za, zb, x0, x1) => {
+    k.add(box(Math.max(0.08, x1 - x0), 0.07, Math.max(0.08, zb - za)), { at: [(x0 + x1) / 2, d.deckY + 0.95, (za + zb) / 2], color: P.cap, outline: 0.01 });
+  };
+  for (const e of [-1, 1]) {
+    rail(e * cz - 0.04, e * cz + 0.04, xa - 0.05, xb);
+    for (let i = 0; i <= 3; i++) k.add(cyl(0.035, 0.04, 0.95, 5), { at: [xa + (xb - xa) * i / 3, d.deckY, e * cz], color: P.wood });
+  }
+  rail(-cz, cz, xa - 0.09, xa - 0.01);
+  if (s.ladder) {
+    // a steep ladder: two sloping rails and rungs
+    for (const e of [-1, 1]) {
+      k.save(); k.translate((xa + xb) / 2, (lo + hi) / 2, e * (w / 2 - 0.08)); k.rotateZ(ang);
+      k.add(box(len + 0.1, 0.1, 0.06), { color: P.wood, outline: 0.01 });
+      k.restore();
+    }
+    const n = Math.max(5, Math.round((hi - lo) / 0.3));
+    for (let i = 1; i <= n; i++) {
+      const f = i / (n + 0.4);
+      k.add(box(0.12, 0.05, w - 0.16), { at: [xa + (xb - xa) * f, lo + (hi - lo) * f - 0.03, 0], color: shade(P.deck, -0.12) });
+    }
+    return;
+  }
+  // steps, their risers, and a stringer each side
+  const n = Math.max(6, Math.round((hi - lo) / 0.22));
+  for (let i = 0; i < n; i++) {
+    const f0 = i / n, f1 = (i + 1) / n;
+    const x0 = xa + (xb - xa) * f0, x1 = xa + (xb - xa) * f1, top = lo + (hi - lo) * f1;
+    k.add(box(Math.abs(x1 - x0) + 0.02, 0.06, w - 0.08), { at: [(x0 + x1) / 2, top - 0.06, 0], color: shade(P.deck, -0.05), outline: 0.008 });
+    k.add(box(0.03, (hi - lo) / n, w - 0.1), { at: [x0, top - (hi - lo) / n, 0], color: shade(P.deck, -0.3) });
+  }
+  for (const e of [-1, 1]) {
+    k.save(); k.translate((xa + xb) / 2, (lo + hi) / 2, e * (w / 2 - 0.02)); k.rotateZ(ang);
+    k.add(box(len, 0.26, 0.07), { at: [0, -0.28, 0], color: P.wood, outline: 0.01 });
+    k.add(box(len, 0.06, 0.07), { at: [0, 0.85, 0], color: P.cap, outline: 0.008 });
+    k.restore();
+  }
+}
+
+/**
+ * The ship's wheel on its pedestal, turning fore and aft (the helmsman stands
+ * aft of it): the rim, eight spokes running out through it to turned
+ * handles, the brass hub. `hub`: the axle's height over the deck.
+ */
+export function helmWheel(k, P, x, y, R = 0.56, hub = 0.92) {
+  // the pedestal: a stout post and the barrel the tiller ropes wind round
+  k.add(box(0.26, hub + 0.1, 0.34), { at: [x + 0.2, y, 0], color: P.wood, outline: 0.012 });
+  k.add(cyl(0.15, 0.15, 0.62, 10), { at: [x + 0.2, y + hub - 0.08, -0.31], rot: [Math.PI / 2, 0, 0], color: shade(P.wood, 0.15), outline: 0.01 });
+  k.add(cyl(0.045, 0.045, 0.3, 6), { at: [x + 0.05, y + hub, 0], rot: [0, 0, Math.PI / 2], color: P.dark });
+  k.save(); k.translate(x, y + hub, 0); k.rotateY(Math.PI / 2);
+  k.add(torus(R, 0.045, 6, 28), { color: '#7b5230', outline: 0.012 });
+  for (let i = 0; i < 8; i++) {
+    k.save(); k.rotateZ(i / 8 * TAU);
+    k.add(cyl(0.026, 0.034, R + 0.14, 6), { color: '#7b5230' });
+    k.add(lathe([[0.028, 0], [0.042, 0.04], [0.03, 0.1], [0.046, 0.15], [0.036, 0.19], [0.001, 0.2]], 7), { at: [0, R + 0.1, 0], color: '#8d6038', outline: 0.006 });
+    k.restore();
+  }
+  k.add(cyl(0.12, 0.12, 0.16, 12), { at: [0, 0, -0.08], rot: [Math.PI / 2, 0, 0], color: P.trim, outline: 0.008 });
+  k.restore();
+}
+
 // ---------------------------------------------------------------- on deck
 function fittings(k, d, P) {
   const dk = d.deckY;
-  // the main hatch: a grating in a raised coaming
-  {
-    const x = xAt(d, d.hatchT), s = Math.min(2.2, d.B * 0.3);
-    k.add(box(s, 0.28, s), { at: [x, dk, 0], color: shade(P.deck, -0.3), outline: 0.015 });
-    for (let i = 1; i < 6; i++) {
-      k.add(box(s - 0.2, 0.05, 0.06), { at: [x, dk + 0.28, -s / 2 + i * s / 6], color: P.dark });
-      k.add(box(0.06, 0.05, s - 0.2), { at: [x - s / 2 + i * s / 6, dk + 0.28, 0], color: P.dark });
-    }
-  }
   // the capstan, with its bars shipped
-  {
+  if (d.capstanT !== null) {
     const x = xAt(d, d.capstanT), fl = floorAt(d, d.capstanT);
     k.add(lathe([[0.42, 0], [0.36, 0.15], [0.3, 0.5], [0.34, 0.8], [0.44, 0.92], [0.4, 1.02], [0.01, 1.04]], 12), { at: [x, fl, 0], color: P.wood, outline: 0.02 });
     for (let i = 0; i < 4; i++) k.add(box(1.25, 0.06, 0.07), { at: [x, fl + 0.82, 0], rot: [0, i * Math.PI / 4, 0], color: '#b08850' });
   }
   // the ship's boat on its chocks, upright
-  {
+  if (d.boat) {
     const b = d.boat, len = b.u1 - b.u0, xc = (b.u0 + b.u1) / 2;
     const hullG = new THREE.SphereGeometry(1, 14, 6, 0, TAU, Math.PI / 2, Math.PI / 2);
     k.add(hullG, { at: [xc, dk + 0.95, 0], scale: [len / 2, 0.62, b.w / 2], color: '#f2efe6', double: true, outline: 0.02 });
@@ -421,27 +548,12 @@ function fittings(k, d, P) {
     for (const f of [-0.18, 0.12]) k.add(box(0.2, 0.05, b.w * 0.86), { at: [xc + f * len, dk + 0.72, 0], color: '#b08850' });
     for (const zz of [-0.18, 0.18]) k.add(cyl(0.03, 0.03, len * 0.9, 5), { at: [xc - len * 0.45, dk + 0.8, zz * b.w], rot: [0, 0, -Math.PI / 2], color: '#b08850' });
   }
-  // the helm: a double wheel and a binnacle, on the quarterdeck
-  {
-    const wx = d.wheelU, fy = d.yq;
-    // (low enough that the helmsman looks out over it)
-    const ay = 0.92;
-    for (const z of [-0.42, 0.42]) k.add(box(0.16, ay - 0.05, 0.16), { at: [wx, fy, z], color: P.wood, outline: 0.012 });
-    k.add(cyl(0.06, 0.06, 0.95, 6), { at: [wx, fy + ay, -0.47], rot: [Math.PI / 2, 0, 0], color: P.wood });
-    for (const z of [-0.26, 0.26]) {
-      k.save(); k.translate(wx, fy + ay, z); k.rotateY(Math.PI / 2);
-      k.add(torus(0.55, 0.04, 5, 22), { color: '#7b5230', outline: 0.01 });
-      for (let i = 0; i < 10; i++) {
-        const a = i / 10 * TAU;
-        k.add(box(0.045, 0.72, 0.045), { at: [0, 0, 0], rot: [0, 0, a], color: '#7b5230' });
-      }
-      k.add(cyl(0.1, 0.1, 0.1, 8), { at: [0, 0, -0.05], rot: [Math.PI / 2, 0, 0], color: P.trim });
-      k.restore();
-    }
-    if (d.binnacleU !== null) {
-      k.add(box(0.45, 0.95, 0.45), { at: [d.binnacleU, fy, 0], color: P.wood, outline: 0.012 });
-      k.add(new THREE.SphereGeometry(0.2, 10, 6, 0, TAU, 0, Math.PI / 2), { at: [d.binnacleU, fy + 0.95, 0], color: '#cfe8ef', glow: '#fff1c1' });
-    }
+  // the helm: the wheel (just the one) and the binnacle, on the quarterdeck
+  helmWheel(k, P, d.wheelU, d.yq);
+  if (d.binnacleU !== null) {
+    const fy = d.yq;
+    k.add(box(0.45, 0.95, 0.45), { at: [d.binnacleU, fy, 0], color: P.wood, outline: 0.012 });
+    k.add(new THREE.SphereGeometry(0.2, 10, 6, 0, TAU, 0, Math.PI / 2), { at: [d.binnacleU, fy + 0.95, 0], color: '#cfe8ef', glow: '#fff1c1' });
   }
   // fife rails round each mast
   for (const u of d.mastU) {
@@ -452,7 +564,7 @@ function fittings(k, d, P) {
     }
   }
   // the belfry at the forecastle's after rail, looking down on the main deck
-  {
+  if (d.fore) {
     const x = xAt(d, d.tf + 0.03), y = d.yf;
     for (const z of [-0.45, 0.45]) k.add(box(0.12, 1.5, 0.12), { at: [x, y, z], color: P.wood, outline: 0.01 });
     k.add(cone(0.85, 0.5, 4), { at: [x, y + 1.5, 0], rot: [0, Math.PI / 4, 0], color: P.cap, outline: 0.012 });
@@ -480,9 +592,44 @@ function fittings(k, d, P) {
 // ---------------------------------------------------------------- figureheads
 function bigFigurehead(k, def, d, P) {
   const L = d.L, B = d.B;
-  const stem = [L / 2 - 0.1, d.deckY + d.hf * 0.35];
+  const stem = [L / 2 - 0.1, d.fore ? d.deckY + d.hf * 0.35 : d.deckY + 0.35];
   const fh = def.figurehead;
   const s = B / 7 * (fh === 'seagull' || fh === 'whale' ? 1 : 1.5);
+  if (fh === 'ram' || fh === 'lion') {
+    // the Going Merry's sheep, the Thousand Sunny's sunflower lion: big and
+    // round, up on the stem head where the crew sit on them
+    const tip = [L / 2, topAt(d, 1)];
+    const g = B / 2.3;
+    if (fh === 'ram') {
+      k.add(cyl(0.12 * g, 0.16 * g, 0.6 * g, 8), { at: [tip[0] - 0.12 * g, tip[1] - 0.25 * g, 0], rot: [0, 0, -0.5], color: '#f5f6fa', outline: 0.02 });
+      const hc = [tip[0] + 0.28 * g, tip[1] + 0.42 * g, 0];
+      k.add(new THREE.SphereGeometry(0.36 * g, 14, 10), { at: hc, scale: [1.15, 1, 1], color: '#f7f5ef', outline: 0.03 });
+      k.add(new THREE.SphereGeometry(0.22 * g, 12, 8), { at: [hc[0] + 0.3 * g, hc[1] - 0.1 * g, 0], scale: [1, 0.85, 1.05], color: '#efe8da', outline: 0.02 });
+      for (const z of [-1, 1]) {
+        k.add(new THREE.SphereGeometry(0.06 * g, 8, 6), { at: [hc[0] + 0.22 * g, hc[1] + 0.12 * g, z * 0.2 * g], color: '#1d1d1d' });
+        k.add(new THREE.SphereGeometry(0.035 * g, 6, 4), { at: [hc[0] + 0.47 * g, hc[1] - 0.08 * g, z * 0.07 * g], color: '#5a4a3a' });
+        const pts = [];
+        for (let i = 0; i <= 24; i++) {
+          const a = i / 24 * Math.PI * 2.4 + Math.PI * 0.5, r = 0.24 * g * (1 - i / 24 * 0.72);
+          pts.push(new THREE.Vector3(hc[0] - 0.1 * g + Math.cos(a) * r, hc[1] + 0.05 * g + Math.sin(a) * r, z * (0.3 * g + i / 24 * 0.12 * g)));
+        }
+        k.add(tube(new THREE.CatmullRomCurve3(pts), 24, 0.065 * g, 6), { color: '#c8955a', outline: 0.015 });
+      }
+    } else {
+      const hc = [tip[0] + 0.3 * g, tip[1] + 0.55 * g, 0];
+      k.add(cyl(0.14 * g, 0.2 * g, 0.7 * g, 8), { at: [tip[0] - 0.15 * g, tip[1] - 0.25 * g, 0], rot: [0, 0, -0.45], color: '#e8c26b', outline: 0.02 });
+      for (let i = 0; i < 16; i++) {
+        k.save(); k.translate(hc[0] - 0.08 * g, hc[1], 0); k.rotateX(i / 16 * TAU);
+        k.add(cone(0.17 * g, 0.42 * g, 6), { at: [0, 0.38 * g, 0], color: i % 2 ? '#f39c12' : '#e67e22', outline: 0.015 });
+        k.restore();
+      }
+      k.add(new THREE.SphereGeometry(0.44 * g, 14, 10), { at: hc, scale: [0.75, 1, 1], color: '#fdd663', outline: 0.03 });
+      for (const z of [-1, 1]) k.add(new THREE.SphereGeometry(0.07 * g, 8, 6), { at: [hc[0] + 0.3 * g, hc[1] + 0.12 * g, z * 0.17 * g], color: '#1d1d1d' });
+      k.add(new THREE.SphereGeometry(0.09 * g, 8, 6), { at: [hc[0] + 0.34 * g, hc[1] - 0.05 * g, 0], color: '#8d5524' });
+      k.add(torus(0.12 * g, 0.022 * g, 4, 10, Math.PI), { at: [hc[0] + 0.32 * g, hc[1] - 0.14 * g, 0], rot: [0, Math.PI / 2, Math.PI], color: '#5a3a22' });
+    }
+    return;
+  }
   if (fh === 'whale') {
     // the bow is a great white whale's head: eyes on its sides, a smiling mouth
     const cx = L / 2 - B * 0.42, top = d.yf - 0.06, bot = -1.4;
@@ -575,12 +722,13 @@ function bigFigurehead(k, def, d, P) {
 /** Masts: where they stand, how tall, and where their tops and crosstrees are. */
 export function bigMastPlan(d) {
   const n = d.mastU.length;
-  const ks = n >= 4 ? [0.92, 1.0, 0.86, 0.7] : [0.92, 1.0, 0.8];
+  const ks = n >= 4 ? [0.92, 1.0, 0.86, 0.7] : n === 3 ? [0.92, 1.0, 0.8] : n === 2 ? [1.0, 0.84] : [1.0];
   return d.mastU.map((u, i) => {
     const t = (u + d.L / 2) / d.L, base = floorAt(d, t);
     const H = d.mastH * ks[i];
+    // (a one-master's mast is both her fore and her main; a two-master flies her colours from the foremast)
     return {
-      x: u, m: i, base, h: H, main: i === 1, aft: i === n - 1, fore: i === 0,
+      x: u, m: i, base, h: H, main: n >= 3 ? i === 1 : i === 0, aft: n > 1 && i === n - 1, fore: i === 0,
       h1: base + (H - base) * 0.44, h2: base + (H - base) * 0.76, r: d.mastR * Math.sqrt(ks[i]),
     };
   });
@@ -589,7 +737,7 @@ export function bigMastPlan(d) {
 /** The tip of the bowsprit: steeved up from the stem head. */
 export function bigBowTip(d) {
   const a = 0.3, len = d.L * 0.28;
-  const x0 = d.L / 2 - 0.6, y0 = d.yf + 0.4;
+  const x0 = d.L / 2 - 0.6, y0 = (d.bowY ?? d.yf) + 0.4;
   return { x0, y0, a, len, tip: [x0 + Math.cos(a) * len, y0 + Math.sin(a) * len] };
 }
 
@@ -607,7 +755,7 @@ export function bigSailPlan(def, d, mast) {
   sails.push({ type: 'square', x: mast.x, w: wC * 0.62, y0: mast.h2 + 0.35, y1: mast.h - 0.7, yardR: yr * 0.7 });
   if (mast.fore) {
     const b = bigBowTip(d);
-    sails.push({ type: 'jib', x: mast.x, y1: mast.h2 - 0.4, head: [mast.x + 0.4, mast.h2 - 0.4], tipX: b.tip[0], tipY: b.tip[1] - 0.2, clew: [xAt(d, 0.9), d.yf + 2.6] });
+    sails.push({ type: 'jib', x: mast.x, y1: mast.h2 - 0.4, head: [mast.x + 0.4, mast.h2 - 0.4], tipX: b.tip[0], tipY: b.tip[1] - 0.2, clew: [xAt(d, 0.9), (d.bowY ?? d.yf) + (d.fore ? 2.6 : 1.9)] });
   }
   return sails;
 }
@@ -618,8 +766,9 @@ export function bigMastGeometry(def, d, plan) {
   const wood = '#5d4037', dark = '#3e2723';
   for (const m of plan) {
     const r = m.r;
-    // lower mast (down through the decks), topmast, topgallant
-    k.add(cyl(r * 0.8, r, m.h1 + 0.6 - (m.base - 1), 10), { at: [m.x, m.base - 1, 0], color: wood, outline: 0.02 });
+    // lower mast (down through the decks to the hold's floor), topmast, topgallant
+    const foot = d.holdY !== undefined ? d.holdY : m.base - 1;
+    k.add(cyl(r * 0.8, r, m.h1 + 0.6 - foot, 10), { at: [m.x, foot, 0], color: wood, outline: 0.02 });
     k.add(cyl(r * 0.55, r * 0.7, m.h2 + 0.5 - (m.h1 - 0.8), 8), { at: [m.x + r * 1.1, m.h1 - 0.8, 0], color: wood, outline: 0.018 });
     k.add(cyl(r * 0.28, r * 0.45, m.h - (m.h2 - 0.6), 8), { at: [m.x + r * 1.7, m.h2 - 0.6, 0], color: wood, outline: 0.015 });
     k.add(new THREE.SphereGeometry(r * 0.5, 8, 6), { at: [m.x + r * 1.7, m.h + 0.05, 0], color: '#d4ac0d' });
@@ -698,4 +847,219 @@ export function bigRigging(d, plan) {
   // the bobstay under the bowsprit
   Ln([b.tip[0] - b.len * 0.3, b.tip[1] - b.len * 0.3 * Math.tan(b.a), 0], [d.L / 2 - 0.3, 0.3, 0]);
   return pts;
+}
+
+// ---------------------------------------------------------------- below decks, and in the cabins
+// (a separate mesh: it's only drawn when you're close by — see ShipView)
+const IN = { wall: C('#8a6445'), wall2: C('#7d5a3d'), beam: C('#5b3d26'), floor: C('#a57b52'), dark: C('#3e2a1c'), cloth: C('#c9b99a') };
+
+/** The inside of a room's sides (the hull's lining), from its floor up to the deck over it. */
+function lining(k, d, r, top) {
+  const N = Math.max(4, Math.round((r.t1 - r.t0) * d.L / 0.5));
+  const hold = r.kind === 'hold';
+  const ys = hold ? [r.floor - 0.02, r.floor + 0.55, r.floor + 1.15, r.floor + 1.75, top] : [r.floor - 0.02, r.floor + 0.9, top];
+  for (const s of [1, -1]) {
+    const pos = [], idx = [], cols = [];
+    for (let i = 0; i <= N; i++) {
+      const t = r.t0 + (r.t1 - r.t0) * i / N, x = xAt(d, t);
+      for (const y of ys) pos.push(x, y, s * (hold ? Math.max(0.3, skinAt(d, t, y) - 0.22) : innerAt(d, t, y) + 0.01));
+    }
+    const M = ys.length;
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < M - 1; j++) {
+        const a = i * M + j, b = a + 1, c = a + M, e = c + 1;
+        if (s > 0) idx.push(a, b, c, b, e, c); else idx.push(a, c, b, b, c, e);
+        // (the planks run fore and aft; a wainscot below the cabin windows)
+        const col = hold ? (j % 2 ? IN.wall2 : IN.wall) : j === 0 ? IN.wall2 : IN.wall;
+        cols.push(col, col);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    k.add(g, { split: true, color: (p, n, i) => cols[Math.floor(i / 3)] });
+  }
+}
+
+/** A wall across the ship at t (from y0 to y1), the width of the hull there. */
+function endWall(k, d, t, y0, y1, face, hold = false) {
+  const w = hold ? Math.max(0.4, skinAt(d, t, (y0 + y1) / 2) - 0.2) : innerAt(d, t, (y0 + y1) / 2) + 0.05;
+  k.add(box(0.1, y1 - y0, w * 2), { at: [xAt(d, t) - face * 0.05, y0, 0], color: IN.wall2 });
+}
+
+/** Beams under a deck (ceil: the underside), across the room every metre or so. */
+function beams(k, d, r, ceil, skip = null) {
+  for (let x = xAt(d, r.t0) + 0.5; x < xAt(d, r.t1) - 0.3; x += 1.15) {
+    const t = (x + d.L / 2) / d.L;
+    if (skip && skip(x)) continue;
+    const w = r.kind === 'hold' ? skinAt(d, t, ceil - 0.1) - 0.2 : innerAt(d, t, ceil - 0.1);
+    k.add(box(0.16, 0.14, w * 2), { at: [x, ceil - 0.14, 0], color: IN.beam });
+  }
+}
+
+/** A lantern on an iron bracket on the wall (s: which side), above head height. */
+function lantern(k, x, y, z, s) {
+  k.add(box(0.06, 0.06, 0.26), { at: [x, y + 0.1, z - s * 0.13], color: '#2b1d14' });
+  k.add(cyl(0.012, 0.012, 0.12, 4), { at: [x, y - 0.02, z - s * 0.24], color: '#2b1d14' });
+  k.add(cyl(0.08, 0.09, 0.22, 6), { at: [x, y - 0.26, z - s * 0.24], color: '#fff3c4', glow: '#ffcf70', flicker: 0.25, outline: 0.006 });
+  k.add(cone(0.11, 0.09, 6), { at: [x, y - 0.05, z - s * 0.24], color: '#2b1d14' });
+}
+
+/** One piece of furniture (see hull.js furnish): at (u, floor, v). */
+function furniture(k, d, P, it) {
+  const { u: x, v: z, floor: y, w, dp } = it;
+  const wood = IN.beam, top = C('#8d6038');
+  switch (it.kind) {
+    case 'table': case 'desk': {
+      const h = 0.76;
+      k.add(box(w, 0.06, dp), { at: [x, y + h - 0.06, z], color: top, outline: 0.01 });
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.07, h - 0.06, 0.07), { at: [x + a * (w / 2 - 0.08), y, z + b * (dp / 2 - 0.08)], color: wood });
+      if (it.kind === 'desk') {
+        for (const a of [-1, 1]) k.add(box(w * 0.3, h - 0.12, dp - 0.1), { at: [x + a * w * 0.3, y, z], color: wood, outline: 0.008 });
+        for (let i = 0; i < 4; i++) k.add(box(0.05, 0.22, 0.16), { at: [x - w * 0.3 + i * 0.07, y + h, z - dp * 0.3], color: ['#8e2b20', '#23527c', '#2e6b2e', '#6a4c93'][i] });
+      }
+      if (it.room !== 'forecastle') {
+        // a chart spread out, dividers, and a candle
+        k.add(box(w * 0.55, 0.005, dp * 0.6), { at: [x - w * 0.05, y + h, z], rot: [0, 0.08, 0], color: '#e8dcb5' });
+        k.add(cyl(0.035, 0.035, 0.12, 6), { at: [x + w * 0.33, y + h, z + dp * 0.25], color: '#f5f0e1', glow: '#ffcf70', flicker: 0.4 });
+      } else {
+        for (const a of [-0.3, 0.2]) k.add(cyl(0.05, 0.04, 0.1, 6), { at: [x + a * w, y + h, z], color: '#8d8d8d' });
+      }
+      break;
+    }
+    case 'chair': {
+      const s = it.rot || 1;
+      k.add(box(0.42, 0.05, 0.42), { at: [x, y + 0.44, z], color: top, outline: 0.008 });
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.05, 0.44, 0.05), { at: [x + a * 0.17, y, z + b * 0.17], color: wood });
+      k.add(box(0.42, 0.5, 0.05), { at: [x, y + 0.49, z + s * 0.19], color: wood, outline: 0.008 });
+      break;
+    }
+    case 'bunk': {
+      // (along the side: w along the ship, dp across)
+      k.add(box(w, 0.4, dp), { at: [x, y, z], color: wood, outline: 0.01 });
+      k.add(box(w - 0.1, 0.14, dp - 0.1), { at: [x, y + 0.4, z], color: '#e8e1d0' });
+      k.add(box(w * 0.62, 0.04, dp - 0.06), { at: [x + w * 0.16, y + 0.54, z], color: '#8e3b2a' });
+      k.add(box(0.36, 0.1, dp * 0.6), { at: [x - w / 2 + 0.26, y + 0.54, z], color: '#f7f3ea' });
+      k.add(box(w, 0.5, 0.06), { at: [x, y, z - Math.sign(z || 1) * (dp / 2 - 0.03)], color: wood });
+      break;
+    }
+    case 'chest': {
+      // a sea chest: iron-bound, a domed lid (a treasure chest shows its gold)
+      const c = it.treasure ? C('#7a4a26') : C('#6d4c33');
+      k.add(box(w, dp * 0.9, dp), { at: [x, y, z], color: c, outline: 0.01 });
+      k.add(cyl(dp / 2, dp / 2, w, 10, false, 1), { at: [x - w / 2, y + dp * 0.9, z], rot: [0, 0, -Math.PI / 2], scale: [1, 1, 0.5], color: shade(c, 0.1), outline: 0.01 });
+      for (const a of [-0.32, 0.32]) k.add(box(0.06, dp * 1.2, dp + 0.02), { at: [x + a * w, y, z], color: '#b8860b' });
+      k.add(box(0.1, 0.12, 0.04), { at: [x, y + dp * 0.72, z + Math.sign(-z || 1) * (dp / 2 + 0.01)], color: '#d4ac0d' });
+      if (it.treasure) for (let i = 0; i < 6; i++) k.add(cyl(0.04, 0.04, 0.015, 8), { at: [x - 0.2 + (i % 3) * 0.14, y + dp * 0.9 + 0.02 + Math.floor(i / 3) * 0.02, z + ((i * 7) % 3 - 1) * 0.08], color: '#f4c430', glow: '#6b4f00' });
+      break;
+    }
+    case 'shelf': {
+      k.add(box(0.35, 1.7, w), { at: [x, y, z], color: wood, outline: 0.01 });
+      for (let j = 0; j < 4; j++) {
+        for (let i = 0; i < Math.floor(w / 0.09); i++) k.add(box(0.2, 0.26 + ((i * 5 + j) % 3) * 0.03, 0.06), { at: [x + 0.02, y + 0.12 + j * 0.4, z - w / 2 + 0.08 + i * 0.09], color: ['#8e2b20', '#23527c', '#2e6b2e', '#b08850', '#6a4c93'][(i + j) % 5] });
+      }
+      break;
+    }
+    case 'stove': {
+      k.add(box(w, 0.7, dp), { at: [x, y, z], color: '#2f2f2f', outline: 0.01 });
+      k.add(box(w * 0.5, 0.25, 0.04), { at: [x, y + 0.2, z - Math.sign(z || 1) * (dp / 2 + 0.01)], color: '#ff7a1a', glow: '#ff5a00', flicker: 0.5 });
+      k.add(cyl(0.08, 0.08, 1.6, 8), { at: [x, y + 0.7, z], color: '#2f2f2f' });
+      k.add(cyl(0.2, 0.17, 0.26, 10), { at: [x, y + 0.7, z + Math.sign(-z || 1) * 0.1], color: '#6b6b6b', outline: 0.008 });
+      break;
+    }
+    case 'hammock': {
+      // slung between two hooks under the deck beams, sagging in the middle
+      const hy = y + 1.35, pts = [];
+      for (let i = 0; i <= 8; i++) { const f = i / 8; pts.push(new THREE.Vector3(x - w / 2 + w * f, hy - Math.sin(f * Math.PI) * 0.3, z)); }
+      k.add(tube(new THREE.CatmullRomCurve3(pts), 10, 0.2, 6), { scale: [1, 0.4, 1], at: [0, hy * 0.6, 0], color: IN.cloth, outline: 0.008 });
+      break;
+    }
+    case 'barrel': case 'barrels': {
+      const n = it.kind === 'barrels' ? 3 : 1;
+      for (let i = 0; i < n; i++) {
+        const bx = x + (n > 1 ? (i - 1) * 0.5 : 0), by = y + (i === 1 && n > 1 ? 0 : 0);
+        k.add(lathe([[0.2, 0], [0.26, 0.18], [0.27, 0.36], [0.26, 0.54], [0.2, 0.72], [0.001, 0.72]], 10), { at: [bx, by, z], color: '#8d5b33', outline: 0.01 });
+        for (const hy of [0.1, 0.62]) k.add(torus(0.235, 0.018, 4, 12), { at: [bx, by + hy, z], rot: [Math.PI / 2, 0, 0], color: '#3a3a3a' });
+      }
+      break;
+    }
+    case 'crate': {
+      k.add(box(0.7, 0.62, 0.7), { at: [x, y, z], color: '#b08850', outline: 0.01 });
+      k.add(box(0.5, 0.45, 0.5), { at: [x + 0.06, y + 0.62, z - 0.04], rot: [0, 0.3, 0], color: '#a57b52', outline: 0.01 });
+      break;
+    }
+    case 'sacks': {
+      for (let i = 0; i < 3; i++) k.add(new THREE.SphereGeometry(0.28, 8, 6), { at: [x + (i - 1) * 0.36, y + 0.22, z + (i % 2) * 0.1], scale: [1, 0.8, 0.9], color: '#d8c49a', outline: 0.008 });
+      break;
+    }
+    case 'shot': {
+      k.save(); k.translate(x, y, z); shotPile(k, P); k.restore();
+      break;
+    }
+    default: break;
+  }
+}
+
+export function bigInterior(def, d) {
+  const P = bigPalette(def);
+  const k = new Mesher();
+  const cp = d.comp;
+  for (const r of d.rooms) {
+    const top = r.ceil + 0.1;     // (the deck over the room: its underside)
+    // the floor (the cabin and forecastle floors are the main deck's, running in under the decks above)
+    if (r.kind !== 'hold') deckGrid(k, d, P, r.t0, r.t1, r.floor, null, false, IN.floor);
+    else deckGrid(k, d, P, r.t0, r.t1, r.floor, null, false, shade(IN.floor, -0.1));
+    // the ceiling (open over the companionway)
+    if (r.kind === 'hold') {
+      deckGrid(k, d, P, r.t0, cp.t0, top, null, true, IN.wall);
+      deckGrid(k, d, P, cp.t0, cp.t1, top, cp.w / 2, true, IN.wall);
+      deckGrid(k, d, P, cp.t1, r.t1, top, null, true, IN.wall);
+    } else deckGrid(k, d, P, r.t0, r.t1, top, null, true, IN.wall);
+    lining(k, d, r, top);
+    beams(k, d, r, top, r.kind === 'hold' ? (x) => x > cp.u0 - 0.2 && x < cp.u1 + 0.2 : null);
+    // the ends
+    if (r.kind === 'hold') { endWall(k, d, r.t0, r.floor, top, 1, true); endWall(k, d, r.t1, r.floor, top, -1, true); }
+    else if (r.kind === 'forecastle') endWall(k, d, r.t1, r.floor, top, -1);
+    else {
+      // the stern: panelled, with the gallery windows glowing
+      endWall(k, d, r.t0, r.floor, top, 1);
+      const w = innerAt(d, r.t0, r.floor + 1);
+      const n = Math.max(2, Math.floor((w * 2) / 1.15)), ww = Math.min(0.8, (w * 2) / n - 0.3);
+      if (top - r.floor > 1.9) {
+        for (let i = 0; i < n; i++) {
+          // (the sea and sky beyond the glass: pale by day, lit from within by night)
+          const zz = -w + (i + 0.5) * (w * 2) / n;
+          k.add(box(0.04, 0.9, ww), { at: [xAt(d, r.t0) + 0.01, r.floor + 0.75, zz], color: '#a9d6ee', glow: '#ffd58a' });
+          k.add(box(0.06, 0.05, ww), { at: [xAt(d, r.t0) + 0.02, r.floor + 1.18, zz], color: IN.beam });
+          k.add(box(0.06, 0.9, 0.05), { at: [xAt(d, r.t0) + 0.02, r.floor + 0.75, zz], color: IN.beam });
+          k.add(box(0.12, 0.06, ww + 0.1), { at: [xAt(d, r.t0) + 0.04, r.floor + 0.72, zz], color: IN.beam });
+        }
+      }
+    }
+    // lanterns on the walls, above head height
+    const len = (r.t1 - r.t0) * d.L, nL = Math.max(1, Math.round(len / 3.5));
+    for (let i = 0; i < nL; i++) {
+      const t = r.t0 + (r.t1 - r.t0) * (i + 0.5) / nL, x = xAt(d, t), sd = i % 2 ? 1 : -1;
+      const ly = Math.min(top - 0.2, r.floor + 2.05);
+      const wz = r.kind === 'hold' ? Math.max(0.35, skinAt(d, t, ly) - 0.22) : innerAt(d, t, ly);
+      if (d.furniture.some((f) => f.room === r.kind && Math.abs(f.u - x) < f.w / 2 + 0.3 && Math.sign(f.v) === sd && f.kind === 'shelf')) continue;
+      lantern(k, x, ly, sd * wz, sd);
+    }
+    // a rug in the great cabin
+    if (r.kind === 'cabin' || r.kind === 'captain') {
+      const t = (r.t0 + r.t1) / 2, w = Math.min(1.1, roomHalf(d, r, t) - 0.3);
+      k.add(box(Math.min(2.2, len * 0.55), 0.012, w * 2), { at: [xAt(d, t), r.floor + 0.004, 0], color: '#7b2d26' });
+      k.add(box(Math.min(2.2, len * 0.55) - 0.2, 0.014, w * 2 - 0.2), { at: [xAt(d, t), r.floor + 0.004, 0], color: '#a8452f' });
+    }
+  }
+  // the gun deck's guns, run out through their ports
+  const gs = d.gunScale || 1;
+  for (const g of d.lowGuns || []) {
+    k.save(); k.translate(xAt(d, g.t), d.holdY, g.v); k.rotateY(skinYaw(d, g.t, d.holdY + 1, g.s));
+    cannon(k, P, g.s, gs);
+    k.restore();
+  }
+  for (const it of d.furniture) furniture(k, d, P, it);
+  return k;
 }
