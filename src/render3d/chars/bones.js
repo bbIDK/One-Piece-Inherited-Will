@@ -53,7 +53,7 @@ export function dims(look) {
     hx: headR * 0.15,               // … and in front of it (the neck meets the skull behind the jaw)
     hipW: (fem ? 0.094 : 0.085) * Bk, // hip joints either side of the pelvis
     shY: chestLen - 0.07,           // shoulder joints below the top of the chest
-    shW: fem ? 0.152 * Bk + 0.004 : 0.184 * Bk + 0.006,
+    shW: fem ? 0.155 * Bk + 0.004 : 0.194 * Bk + 0.006,
     depth: 0.64,                    // torso depth / width
     kA: (A1 + A2) / 0.43,           // 2D hand target → metres (2D arm length 0.43)
     kL: (T1 + T2) / 0.49,           // 2D foot target → metres (2D leg length 0.49)

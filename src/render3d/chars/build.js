@@ -322,7 +322,7 @@ const napeZig = (n, amp) => (ph) => { const b = Math.max(0, -Math.cos(ph)); retu
 // hat band are dropped when a hat covers the head; h.q holds the detail.
 const META = {
   short: { top: 1.16, hatK: 1 }, spiky: { top: 1.55, hatK: 1.04 }, long: { top: 1.18, hatK: 1 }, ponytail: { top: 1.16, hatK: 1 },
-  buzz: { top: 1.08, hatK: 0.98 }, curly: { top: 1.38, hatK: 1.1 }, afro: { top: 2.1, hatK: 1.42, lift: 0.5 }, topknot: { top: 1.5, hatK: 1 },
+  buzz: { top: 1.08, hatK: 0.98 }, crop: { top: 1.3, hatK: 1.02 }, curly: { top: 1.38, hatK: 1.1 }, afro: { top: 2.1, hatK: 1.42, lift: 0.5 }, topknot: { top: 1.5, hatK: 1 },
   mohawk: { top: 2.0, hatK: 1 }, bald: { top: 1.02, hatK: 0.96 }, bun: { top: 1.55, hatK: 1 }, pompadour: { top: 1.7, hatK: 1.04 }, nika: { top: 1.8, hatK: 1.06 },
   messy: { top: 1.3, hatK: 1.06 }, sidefringe: { top: 1.18, hatK: 1 }, slick: { top: 1.14, hatK: 1 }, bob: { top: 1.18, hatK: 1.02 }, wavy: { top: 1.2, hatK: 1.02 },
   twintails: { top: 1.16, hatK: 1 }, braid: { top: 1.16, hatK: 1 },
@@ -429,6 +429,18 @@ function bangs(h, n, spread, th2, w, { th = 24, sweep = 0, ragged = 0, part = 0,
 const HAIR = {
   bald() {},
   buzz(h) { h.cap(1.035, 62, 94, 112); },
+  crop(h) {
+    // Zoro-style: a short, thick crop standing up in tufts, the brow left clear
+    h.cap(1.07, 58, 94, 114, napeZig(5, 8));
+    const T = [[6, 0], [20, 30], [20, 150], [20, 270], [22, 90], [22, 210], [22, 330], [38, 0], [38, 60], [38, 120], [38, 180], [38, 240], [38, 300],
+      [54, 30], [54, 90], [54, 150], [54, 210], [54, 270], [54, 330], [70, 125], [70, 180], [70, 235]];
+    for (const [th, ph] of T) {
+      const f = Math.cos(ph * DEG);
+      outLock(h, th, ph, (th < 30 ? 0.15 : 0.2) + 0.07 * Math.max(0, f), 0.22, th < 30 ? 0.1 : 0.45 + 0.35 * Math.max(0, -f));
+    }
+    // the front edge: short tufts standing up over the brow
+    for (const ph of [-36, -12, 12, 36]) outLock(h, 58, ph, 0.22, 0.17, 1.1);
+  },
   short(h) {
     // tidy anime short hair: chunky bangs to the brow, locks over the ears, a tapered nape
     h.cap(1.09, 58, 96, 122, napeZig(4, 10));

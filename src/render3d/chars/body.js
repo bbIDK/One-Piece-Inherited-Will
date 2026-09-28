@@ -57,7 +57,7 @@ export function outfitOf(look) {
   const muscle = look.muscle ?? (fem ? 0.25 : r === 'buccaneer' || r === 'giant' ? 0.95 : r === 'fishman' ? 0.8 : r === 'longarm' || r === 'longleg' ? 0.3 : 0.3 + (seed % 5) * 0.12);
   // a shirt hangs loose unless something is worn at the waist over it
   const tucked = look.tucked ?? (waist !== 'none' || top === 'jacket' || top === 'kimono' || top === 'crop' || top === 'bikini' || top === 'bare');
-  return { fem, top, sleeves, bottom, waist, shoes, muscle: clamp(muscle, 0, 1.2), bust: look.bust ?? 1, tucked, skirt };
+  return { fem, top, sleeves, bottom, waist, shoes, muscle: clamp(muscle, 0, 1.2), bust: look.bust ?? (fem ? 1.18 : 1), tucked, skirt };
 }
 
 /** Extra colours for clothes (the rest come from build.js palette()). */
@@ -71,8 +71,8 @@ export function clothColours(look, pal, o) {
 // ------------------------------------------------------------------ shape tables
 // torso rows [s, half width, front depth, back depth]; s = height / chest length
 const TORSO = {
-  m: [[-0.1, 0.13, 0.088, 0.092], [0.12, 0.126, 0.085, 0.085], [0.32, 0.142, 0.09, 0.09], [0.52, 0.17, 0.097, 0.099], [0.68, 0.194, 0.103, 0.104],
-    [0.8, 0.204, 0.098, 0.1], [0.89, 0.19, 0.086, 0.092], [0.955, 0.128, 0.066, 0.074], [1.0, 0.058, 0.05, 0.054]],
+  m: [[-0.1, 0.13, 0.088, 0.092], [0.12, 0.126, 0.085, 0.085], [0.32, 0.144, 0.091, 0.09], [0.52, 0.176, 0.1, 0.1], [0.68, 0.203, 0.107, 0.106],
+    [0.8, 0.214, 0.102, 0.102], [0.89, 0.2, 0.089, 0.094], [0.955, 0.134, 0.068, 0.076], [1.0, 0.06, 0.051, 0.055]],
   f: [[-0.1, 0.132, 0.082, 0.094], [0.16, 0.107, 0.071, 0.073], [0.36, 0.117, 0.074, 0.077], [0.56, 0.137, 0.079, 0.084], [0.7, 0.145, 0.081, 0.086],
     [0.81, 0.155, 0.073, 0.081], [0.9, 0.139, 0.063, 0.073], [0.96, 0.096, 0.053, 0.061], [1.0, 0.048, 0.043, 0.047]],
 };
@@ -224,12 +224,15 @@ function interp1(tab, t) {
   interpRows(tab, t, _r, 2);
   return _r[1];
 }
+// (the anime-game look is chunkier than life: arms and legs with some meat on them, the muscles showing)
+const LIMB_K = { m: 1.2, f: 1.1 }, BULGE_K = 1.6;
 function limbFn(kind, fem, m, k) {
   const tab = LIMB[kind][fem ? 'f' : 'm'];
   const bul = fem ? [] : BULGE[kind];
+  const lk = LIMB_K[fem ? 'f' : 'm'];
   return (t) => {
-    let r = interp1(tab, t);
-    for (const [c, a, w] of bul) { const x = (t - c) / w; if (x > -1 && x < 1) r += a * m * (1 - x * x) ** 2; }
+    let r = interp1(tab, t) * lk;
+    for (const [c, a, w] of bul) { const x = (t - c) / w; if (x > -1 && x < 1) r += a * BULGE_K * m * (1 - x * x) ** 2; }
     return r * k;
   };
 }
@@ -239,7 +242,7 @@ function limbFn(kind, fem, m, k) {
  * lip so you see the cloth's edge rather than a hole.
  */
 function limbSeg(rf, L, rs, rows, seg) {
-  const { t0 = 0, t1 = 1, off = 0, capTop = false, capBot = false, flare = 0, flareTop = 0, lining = false, bulge = 0 } = seg;
+  const { t0 = 0, t1 = 1, off = 0, capTop = false, capBot = false, flare = 0, flareTop = 0, lining = false, bulge = 0, capK = 1 } = seg;
   const R = (t) => rf(t) + off;
   const yb = -t1 * L, yt = -t0 * L;
   const rb = R(t1) + flare, rt = R(t0) + flareTop;
@@ -252,7 +255,8 @@ function limbSeg(rf, L, rs, rows, seg) {
     const r = R(t) + flare * sstep(0.5, 1, f) + flareTop * sstep(0.5, 1, 1 - f) + bulge * Math.sin(f * Math.PI);
     prof.push([r, -t * L]);
   }
-  if (capTop) for (let k = 1; k <= 3; k++) { const a = (k / 3) * (Math.PI / 2); prof.push([Math.cos(a) * rt + 1e-5, yt + Math.sin(a) * rt]); }
+  // (capK < 1 flattens the top cap: a sleeve's shoulder seam, not a dome over the shoulder)
+  if (capTop) for (let k = 1; k <= 3; k++) { const a = (k / 3) * (Math.PI / 2); prof.push([Math.cos(a) * rt + 1e-5, yt + Math.sin(a) * rt * capK]); }
   else if (lining) prof.push([Math.max(0.004, rt - 0.013), yt - 0.024]);
   return lathe(prof, rs);
 }
@@ -290,7 +294,9 @@ export function buildFigure(add, look, d, pal, q) {
   const neckS = TOP === 'shirt' || TOP === 'jacket' ? 0.955 : TOP === 'tank' || TOP === 'dress' ? 0.84 : 0.93;
 
   // body torso, split into what the top covers and what shows
-  if (TOP === 'bare' || TOP === 'vest' || TOP === 'open' || TOP === 'coat' && !look.top2) {
+  // (a kimono worn open to the sash shows the chest: Zoro's)
+  const openKim = TOP === 'kimono' && !!look.openShirt;
+  if (TOP === 'bare' || TOP === 'vest' || TOP === 'open' || openKim || TOP === 'coat' && !look.top2) {
     addT(TR, skinTorso, skin);
   } else if (TOP === 'crop' || TOP === 'bikini') {
     const lo = TOP === 'crop' ? 0.5 : 0.58, hi = TOP === 'crop' ? 0.86 : 0.78;
@@ -318,7 +324,7 @@ export function buildFigure(add, look, d, pal, q) {
     }
   }
   // the neck
-  const nk = o.fem ? 0.04 : 0.05 * (1 + (d.Bk - 1) * 0.5);
+  const nk = o.fem ? 0.04 : 0.05 * (1 + (d.Bk - 1) * 0.5) * (1 + o.muscle * 0.14);
   add(neckGeo(nk, d.chestLen - 0.05, d.chestLen + d.neck + 0.035, o, cloth), M(), skin, B.chest);
 
   // ---- tops worn over the body
@@ -343,15 +349,16 @@ export function buildFigure(add, look, d, pal, q) {
     const kim = TOP === 'kimono';
     const col = TOP === 'coat' ? look.coat || pal.top : pal.top;
     const rows = cut(TR, -0.1, 0.985);
-    const open = kim ? (s) => 0.02 + sstep(0.28, 0.98, s) * 0.46 : (s) => 0.015 + sstep(0.46, 0.96, s) * 0.62;
-    shell(rows, open, kim ? 0.014 : 0.012, 0.2, col, shade(col, -0.3));
+    const open = openKim ? (s) => 0.06 + sstep(0.05, 0.9, s) * 0.62 : kim ? (s) => 0.02 + sstep(0.28, 0.98, s) * 0.46 : (s) => 0.015 + sstep(0.46, 0.96, s) * 0.62;
+    shell(rows, open, kim ? 0.014 : 0.012, openKim ? 1 : 0.2, col, shade(col, -0.3));
     if (cloth) {
       // lapels / the kimono's collar trim along the opening
-      const trim = kim ? cc.top2 : shade(col, -0.12);
+      const trim = openKim && !look.top2 ? shade(col, -0.2) : kim ? cc.top2 : shade(col, -0.12);
       const up = cut(TR, kim ? 0.28 : 0.46, 0.985);
       const tw = kim ? 0.3 : 0.24;
-      add(band(tpt(0.2, 0.017), up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U / 6)), M(), trim, B.chest);
-      add(band(tpt(0.2, 0.017), up, (s) => TAU - open(s) - tw, (s) => TAU - open(s), Math.max(3, U / 6)), M(), trim, B.chest);
+      const tmS = openKim ? 1 : 0.2;
+      add(band(tpt(tmS, 0.017), up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U / 6)), M(), trim, B.chest);
+      add(band(tpt(tmS, 0.017), up, (s) => TAU - open(s) - tw, (s) => TAU - open(s), Math.max(3, U / 6)), M(), trim, B.chest);
       if (!kim) for (let k = 0; k < 2; k++) {
         const p = torsoPt(sh, 0.3 - k * 0.14, 0, 0.017, 0.2);
         add(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), shade(col, -0.35), B.chest);
@@ -433,23 +440,26 @@ export function buildFigure(add, look, d, pal, q) {
   // ---- arms
   const armCol = pal.sleeve || (TOP === 'coat' ? look.coat || pal.top : TOP === 'jacket' ? pal.top : TOP === 'striped' ? pal.top : pal.top);
   for (const [s, Ub, Fb, part] of [[1, B.uarmR, B.farmR, 1], [-1, B.uarmL, B.farmL, 2]]) {
-    const ua = limbFn('uarm', o.fem, o.muscle, d.Bk), fa = limbFn('farm', o.fem, o.muscle, d.Bk);
     const sl = o.sleeves;
+    // (sleeves hang over the muscles: only a little of them shows through)
+    const mA = sl === 'long' || sl === 'wide' ? o.muscle * 0.35 : o.muscle;
+    const ua = limbFn('uarm', o.fem, mA, d.Bk), fa = limbFn('farm', o.fem, mA, d.Bk);
     if (sl === 'none') {
       add(limbSeg(ua, d.A1, rs, lrows, { capTop: true, capBot: true }), M(), skin, Ub);
       add(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part);
     } else if (sl === 'short') {
-      add(limbSeg(ua, d.A1, rs, lrows, { t1: 0.5, off: 0.012, capTop: true, flare: 0.012, lining: cloth }), M(), armCol, Ub);
+      add(limbSeg(ua, d.A1, rs, lrows, { t1: 0.5, off: 0.008, capTop: true, capK: 0.45, flare: 0.012, lining: cloth }), M(), armCol, Ub);
       add(limbSeg(ua, d.A1, rs, lrows, { t0: 0.42, capBot: true }), M(), skin, Ub);
       add(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part);
     } else if (sl === 'rolled') {
-      add(limbSeg(ua, d.A1, rs, lrows, { off: 0.012, capTop: true, capBot: true }), M(), armCol, Ub);
+      add(limbSeg(ua, d.A1, rs, lrows, { off: 0.01, capTop: true, capK: 0.5, capBot: true }), M(), armCol, Ub);
       if (cloth) add(torus(q), ringAt(-d.A1 * 0.96, ua(0.96) + 0.02, ua(0.96) + 0.02, 0.03), shade(armCol, -0.12), Ub);
       add(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part);
     } else {
       // long and wide sleeves down to the wrist
       const wide = sl === 'wide';
-      add(limbSeg(ua, d.A1, rs, lrows, { off: wide ? 0.02 : 0.012, capTop: true, capBot: true }), M(), armCol, Ub);
+      // (a kimono's sleeve drops from a flat shoulder seam: no ball at the top)
+      add(limbSeg(ua, d.A1, rs, lrows, { t0: wide ? 0.07 : 0, off: wide ? 0.015 : 0.01, capTop: true, capK: 0.5, capBot: true }), M(), armCol, Ub);
       add(limbSeg(fa, d.A2, rs, lrows, { off: wide ? 0.022 : 0.011, capTop: true, flare: wide ? 0.075 : 0.008, lining: cloth, t1: wide ? 1.02 : 0.98 }), M(), armCol, Fb, part);
       if (cloth && !wide) add(torus(q), ringAt(-d.A2 * 0.95, fa(0.95) + 0.018, fa(0.95) + 0.018, 0.022), shade(armCol, -0.15), Fb, part);
       add(limbSeg(fa, d.A2, rs, 2, { t0: 0.8, capBot: true }), M(), skin, Fb, part);

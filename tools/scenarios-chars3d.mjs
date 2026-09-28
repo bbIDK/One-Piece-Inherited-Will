@@ -471,6 +471,57 @@ export const scenarios = {
       }
     },
   },
+  // the Straw Hats lined up like the World Seeker key art (for comparing the look 1:1), and face close-ups
+  //   --only=crew,faces
+  c3crew: {
+    async run(page, snap, args) {
+      await boot(page);
+      const only = String(args.only || 'crew,town,faces').split(',');
+      // (no HUD over the comparison)
+      await page.evaluate(() => { const u = document.getElementById('ui'); if (u) u.style.display = 'none'; });
+      const CREW = [
+        ['Sanji', { fem: false, eyeShape: 'bold', hair: 'sidefringe', hairColor: '#f2d16b', skin: '#f6d5b8', topStyle: 'jacket', top: '#1c1c22', top2: '#f5f5f5', tie: '#1c1c22', bottomStyle: 'slim', bottom: '#1c1c22', shoeStyle: 'shoes', shoes: '#111111', muscle: 0.4 }, 5.6, -2.3],
+        ['Zoro', { fem: false, eyeShape: 'sharp', frown: true, mouth: 'flat', openShirt: true, hair: 'crop', hairColor: '#3fae4a', skin: '#e8b98f', topStyle: 'kimono', top: '#2f6b3a', waist: 'sash', waistCol: '#8e1c2a', bottomStyle: 'hakama', bottom: '#27432b', shoeStyle: 'boots', muscle: 0.9 }, 5.2, -1.2],
+        ['Luffy', { fem: false, eyeShape: 'bold', hat: 'straw', hair: 'messy', hairColor: '#141414', skin: '#f3c9a0', topStyle: 'vest', top: '#d12b2b', bottomStyle: 'shorts', bottom: '#2f5fd0', waist: 'sash', waistCol: '#f2c21b', shoeStyle: 'sandals', muscle: 0.75, scarCheek: true, grin: true }, 4.4, 0],
+        ['Robin', { fem: true, eyeShape: 'cool', hair: 'long', hairColor: '#171320', skin: '#dcae8a', topStyle: 'crop', top: '#3b3570', bottomStyle: 'longskirt', bottom: '#d1545a', shoeStyle: 'sandals' }, 5.2, 1.2],
+        ['Nami', { fem: true, eyeShape: 'bright', hair: 'wavy', hairColor: '#e8742a', skin: '#f6cfae', topStyle: 'bikini', top: '#3c9a52', bottomStyle: 'slim', bottom: '#2b4d8a', shoeStyle: 'sandals' }, 5.0, 2.3],
+        ['Franky', { fem: false, eyeShape: 'sharp', hair: 'pompadour', hairColor: '#35a0e8', skin: '#e2a67a', topStyle: 'open', top: '#c9362f', bottomStyle: 'shorts', bottom: '#2a5bb8', muscle: 1.2, bulk: 1.35 }, 6.6, 0.3],
+        ['Usopp', { fem: false, eyeShape: 'bold', noseShape: 'long', nose: 'long', hair: 'curly', hairColor: '#1b1b1b', skin: '#a8714c', hat: 'bandana', hatColor: '#ef6c00', topStyle: 'bare', bottomStyle: 'baggy', bottom: '#e8c75b', waist: 'belt', shoeStyle: 'boots', muscle: 0.45 }, 6.0, 3.3],
+      ];
+      if (only.includes('crew')) {
+        await page.evaluate((crew) => {
+          const C = window.__C3; C.clear();
+          crew.forEach(([name, look, dx, dy], i) => C.spawn({ name, id: 'crew' + i, showName: false, look: { race: 'human', seed: 3 + i, ...look } }, dx, dy));
+          C.view(0, -0.02);
+        }, CREW);
+        await settle(page, 8);
+        await snap('crew');
+      }
+      if (only.includes('town')) {
+        // random townsfolk, pirates and Marines as the game rolls them
+        await page.evaluate(() => {
+          const C = window.__C3; C.clear();
+          const F = ['civilian', 'pirate', 'civilian', 'marine', 'civilian', 'pirate', 'civilian', 'bandit'];
+          F.forEach((f, i) => C.spawn({ name: 'Townsfolk ' + i, id: 'townsfolk-' + f + i, faction: f, showName: false }, 3.4 + (i % 2) * 0.5, (i - 3.5) * 0.72));
+          C.view(0, -0.03);
+        });
+        await settle(page, 8);
+        await snap('town');
+      }
+      if (only.includes('faces')) {
+        for (const i of [2, 4, 1]) {
+          await page.evaluate(([crew, i]) => {
+            const C = window.__C3; C.clear();
+            const [name, look] = crew[i];
+            C.spawn({ name, id: 'face' + i, showName: false, look: { race: 'human', seed: 3 + i, ...look } }, 0.8, 0);
+            C.view(0, -0.04);
+          }, [CREW, i]);
+          await settle(page, 6);
+          await snap(`face-${CREW[i][0]}`);
+        }
+      }
+    },
+  },
   // your own body in first person: looking down standing, walking, in a guard; and third person as usual
   fpbody: {
     async run(page, snap) {

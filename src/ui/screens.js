@@ -271,6 +271,7 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
             return chips(eyeShapeOf(L), set, set.map((e) => EYE_NAMES[e]), (v) => { L.eyeShape = v; });
           })()),
           row('Eye colour', swatch('eyeColor', ['#222222', '#3b2a1a', '#6d4c41', '#1e3799', '#0984e3', '#00a8a8', '#27ae60', '#6c5ce7', '#8e44ad', '#c0392b', '#e1b12c', '#b2bec3'])),
+          row('Look', chips(L.frown ? 'stern' : 'easy', ['easy', 'stern'], ['Easy-going', 'Stern'], (v) => { L.frown = v === 'stern'; })),
           row('Mouth', chips(L.grin ? 'grin' : L.mouth || 'smile', ['smile', 'flat', 'grin'], ['Smile', 'Calm', 'Big grin'], (v) => { L.grin = v === 'grin'; L.mouth = v === 'grin' ? undefined : v; })),
           row('Face shape', chips(headParams(L).shape, FACE_SHAPES, ['Oval', 'Round', 'Square', 'Long', 'Heart'], (v) => { L.faceShape = v; })),
           row('Jaw', chips(L.jaw ?? 0.5, [0.25, 0.5, 0.75, 1], ['Narrow', 'Medium', 'Wide', 'Very wide'], (v) => { L.jaw = v; })),
@@ -279,11 +280,11 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
           row('Cheekbones', chips(L.cheek ?? 0.5, [0, 0.5, 1], ['Soft', 'Defined', 'High'], (v) => { L.cheek = v; })),
           row('Brow', chips(headParams(L).brow, [0, 0.5, 1], ['Smooth', 'Medium', 'Heavy'], (v) => { L.brow = v; })),
           row('Teeth', chips(L.sharpTeeth ? 'sharp' : 'normal', ['normal', 'sharp'], ['Normal', 'Sharp'], (v) => { L.sharpTeeth = v === 'sharp'; })),
-          row('Scar', chips(L.scarEye ? 'eye' : 'none', ['none', 'eye'], ['None', 'Across the eye'], (v) => { L.scarEye = v === 'eye'; })),
+          row('Scar', chips(L.scarEye ? 'eye' : L.scarCheek ? 'cheek' : 'none', ['none', 'eye', 'cheek'], ['None', 'Across the eye', 'Under the eye'], (v) => { L.scarEye = v === 'eye'; L.scarCheek = v === 'cheek'; })),
         );
       } else if (tab === 'hair') {
         add(optsEl,
-          row('Style', opts('hair', ['short', 'messy', 'spiky', 'sidefringe', 'slick', 'pompadour', 'long', 'wavy', 'bob', 'ponytail', 'twintails', 'braid', 'bun', 'buzz', 'curly', 'afro', 'topknot', 'mohawk', 'bald'], ['Short', 'Messy', 'Spiky', 'Swept fringe', 'Slicked back', 'Pompadour', 'Long', 'Wavy', 'Bob', 'Ponytail', 'Twin tails', 'Braid', 'Bun', 'Buzz', 'Curly', 'Afro', 'Topknot', 'Mohawk', 'Bald'])),
+          row('Style', opts('hair', ['short', 'messy', 'spiky', 'crop', 'sidefringe', 'slick', 'pompadour', 'long', 'wavy', 'bob', 'ponytail', 'twintails', 'braid', 'bun', 'buzz', 'curly', 'afro', 'topknot', 'mohawk', 'bald'], ['Short', 'Messy', 'Spiky', 'Crop', 'Swept fringe', 'Slicked back', 'Pompadour', 'Long', 'Wavy', 'Bob', 'Ponytail', 'Twin tails', 'Braid', 'Bun', 'Buzz', 'Curly', 'Afro', 'Topknot', 'Mohawk', 'Bald'])),
           race !== 'mink' ? row('Colour', swatch('hairColor', ['#1e1e1e', '#3b2a1a', '#6b4423', '#c69c6d', '#f2d16b', '#e67e22', '#c0392b', '#e84393', '#8e44ad', '#2980b9', '#2ecc71', '#dfe6e9'])) : h('p.muted', 'Minks grow fur of their kind.'),
         );
       } else if (tab === 'body') {

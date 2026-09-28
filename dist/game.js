@@ -60782,7 +60782,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var HAIR = ["#1e1e1e", "#3b2a1a", "#6b4423", "#c69c6d", "#f2d16b", "#e67e22", "#c0392b", "#2ecc71", "#2980b9", "#e84393", "#dfe6e9", "#8e44ad", "#16a085"];
   var TOPS = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#b2bec3", "#a0522d"];
   var BOTTOMS = ["#2d3436", "#1e3799", "#3b3b98", "#6d4c41", "#636e72", "#0a3d62", "#b8860b", "#2f3542"];
-  var HAIRSTYLES = ["short", "short", "spiky", "messy", "sidefringe", "slick", "long", "ponytail", "buzz", "curly", "afro", "topknot", "mohawk", "bald", "pompadour"];
+  var HAIRSTYLES = ["short", "short", "spiky", "messy", "crop", "crop", "sidefringe", "slick", "long", "ponytail", "buzz", "curly", "afro", "topknot", "mohawk", "bald", "pompadour"];
   var FISHMAN_KINDS = [
     { id: "shark", name: "Saw Shark", skin: "#7fa7c9" },
     { id: "great_white", name: "Great White Shark", skin: "#9fb4c7" },
@@ -60860,6 +60860,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   var SASH = ["#f4c430", "#c62828", "#1e88e5", "#2e7d32", "#6a1b9a", "#ef6c00", "#fafafa", "#212121"];
   var LIGHT = ["#f5f5f5", "#fff8e1", "#e3f2fd", "#fce4ec", "#e8f5e9"];
+  var STERN = { pirate: 0.55, bandit: 0.6, marine: 0.45, officer: 0.6, agent: 0.7, swordsman: 0.6 };
   var FEM_ROLES = { civilian: 0.5, pirate: 0.3, bandit: 0.2, marine: 0.25, officer: 0.2, agent: 0.3, swordsman: 0.25, wano: 0.5, desert: 0.5, snow: 0.5, sky: 0.5, fishman: 0.3 };
   function dress(look, rng4, role = "civilian", over = {}) {
     if (role === "beast") {
@@ -60886,6 +60887,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     } else if (over.muscle === void 0) {
       look.muscle = +(0.25 + rng4.next() * 0.75).toFixed(2);
     }
+    if (over.frown === void 0 && rng4.chance(STERN[role] ?? 0.15)) look.frown = true;
     return look;
   }
   function makeLook(raceId, seed, overrides = {}) {
@@ -60900,7 +60902,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       top: rng4.pick(TOPS),
       bottom: rng4.pick(BOTTOMS),
       shoes: rng4.pick(["#3b2a1a", "#2d3436", "#8d6e4a", "#c8a878"]),
-      eyeColor: rng4.pick(["#222", "#3b2a1a", "#1e3799", "#27ae60", "#6c5ce7"]),
+      // (most eyes are dark, as in the manga; a few are coloured)
+      eyeColor: rng4.pick(["#222", "#222", "#3b2a1a", "#3b2a1a", "#4a3426", "#2b2f3a", "#1e3799", "#27ae60"]),
       scale: race.scale || 1,
       hat: null,
       openShirt: rng4.chance(0.25)
@@ -62733,7 +62736,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       // hip joints either side of the pelvis
       shY: chestLen - 0.07,
       // shoulder joints below the top of the chest
-      shW: fem ? 0.152 * Bk + 4e-3 : 0.184 * Bk + 6e-3,
+      shW: fem ? 0.155 * Bk + 4e-3 : 0.194 * Bk + 6e-3,
       depth: 0.64,
       // torso depth / width
       kA: (A1 + A2) / 0.43,
@@ -63006,7 +63009,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const r = look.race;
     const muscle = look.muscle ?? (fem ? 0.25 : r === "buccaneer" || r === "giant" ? 0.95 : r === "fishman" ? 0.8 : r === "longarm" || r === "longleg" ? 0.3 : 0.3 + seed % 5 * 0.12);
     const tucked = look.tucked ?? (waist !== "none" || top === "jacket" || top === "kimono" || top === "crop" || top === "bikini" || top === "bare");
-    return { fem, top, sleeves, bottom, waist, shoes, muscle: clamp3(muscle, 0, 1.2), bust: look.bust ?? 1, tucked, skirt };
+    return { fem, top, sleeves, bottom, waist, shoes, muscle: clamp3(muscle, 0, 1.2), bust: look.bust ?? (fem ? 1.18 : 1), tucked, skirt };
   }
   function clothColours(look, pal, o) {
     const seed = look.seed || 0;
@@ -63018,13 +63021,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     m: [
       [-0.1, 0.13, 0.088, 0.092],
       [0.12, 0.126, 0.085, 0.085],
-      [0.32, 0.142, 0.09, 0.09],
-      [0.52, 0.17, 0.097, 0.099],
-      [0.68, 0.194, 0.103, 0.104],
-      [0.8, 0.204, 0.098, 0.1],
-      [0.89, 0.19, 0.086, 0.092],
-      [0.955, 0.128, 0.066, 0.074],
-      [1, 0.058, 0.05, 0.054]
+      [0.32, 0.144, 0.091, 0.09],
+      [0.52, 0.176, 0.1, 0.1],
+      [0.68, 0.203, 0.107, 0.106],
+      [0.8, 0.214, 0.102, 0.102],
+      [0.89, 0.2, 0.089, 0.094],
+      [0.955, 0.134, 0.068, 0.076],
+      [1, 0.06, 0.051, 0.055]
     ],
     f: [
       [-0.1, 0.132, 0.082, 0.094],
@@ -63175,20 +63178,23 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     interpRows(tab, t, _r, 2);
     return _r[1];
   }
+  var LIMB_K = { m: 1.2, f: 1.1 };
+  var BULGE_K = 1.6;
   function limbFn(kind, fem, m, k) {
     const tab = LIMB2[kind][fem ? "f" : "m"];
     const bul = fem ? [] : BULGE[kind];
+    const lk2 = LIMB_K[fem ? "f" : "m"];
     return (t) => {
-      let r = interp1(tab, t);
+      let r = interp1(tab, t) * lk2;
       for (const [c, a, w] of bul) {
         const x = (t - c) / w;
-        if (x > -1 && x < 1) r += a * m * (1 - x * x) ** 2;
+        if (x > -1 && x < 1) r += a * BULGE_K * m * (1 - x * x) ** 2;
       }
       return r * k;
     };
   }
   function limbSeg(rf, L2, rs, rows, seg) {
-    const { t0 = 0, t1 = 1, off = 0, capTop = false, capBot = false, flare = 0, flareTop = 0, lining: lining2 = false, bulge = 0 } = seg;
+    const { t0 = 0, t1 = 1, off = 0, capTop = false, capBot = false, flare = 0, flareTop = 0, lining: lining2 = false, bulge = 0, capK = 1 } = seg;
     const R3 = (t) => rf(t) + off;
     const yb = -t1 * L2, yt = -t0 * L2;
     const rb = R3(t1) + flare, rt = R3(t0) + flareTop;
@@ -63206,7 +63212,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     if (capTop) for (let k = 1; k <= 3; k++) {
       const a = k / 3 * (Math.PI / 2);
-      prof2.push([Math.cos(a) * rt + 1e-5, yt + Math.sin(a) * rt]);
+      prof2.push([Math.cos(a) * rt + 1e-5, yt + Math.sin(a) * rt * capK]);
     }
     else if (lining2) prof2.push([Math.max(4e-3, rt - 0.013), yt - 0.024]);
     return lathe2(prof2, rs);
@@ -63230,7 +63236,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const shirtM = 0.45;
     const addT = (rows, pt, col, a0 = -Math.PI, a1 = Math.PI, inward = false) => add5(band(pt, rows, a0, a1, U3, inward), M(), col, B3.chest);
     const neckS = TOP === "shirt" || TOP === "jacket" ? 0.955 : TOP === "tank" || TOP === "dress" ? 0.84 : 0.93;
-    if (TOP === "bare" || TOP === "vest" || TOP === "open" || TOP === "coat" && !look.top2) {
+    const openKim = TOP === "kimono" && !!look.openShirt;
+    if (TOP === "bare" || TOP === "vest" || TOP === "open" || openKim || TOP === "coat" && !look.top2) {
       addT(TR, skinTorso, skin);
     } else if (TOP === "crop" || TOP === "bikini") {
       const lo = TOP === "crop" ? 0.5 : 0.58, hi = TOP === "crop" ? 0.86 : 0.78;
@@ -63255,7 +63262,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         add5(torus2(q2), mul(M((f - bk) / 2, 0, 0), ringAt(neckS * sh.cl, (f + bk) / 2 + 2e-3, W3 + 2e-3, 0.012)), shade(col, -0.18), B3.chest);
       }
     }
-    const nk = o.fem ? 0.04 : 0.05 * (1 + (d.Bk - 1) * 0.5);
+    const nk = o.fem ? 0.04 : 0.05 * (1 + (d.Bk - 1) * 0.5) * (1 + o.muscle * 0.14);
     add5(neckGeo(nk, d.chestLen - 0.05, d.chestLen + d.neck + 0.035, o, cloth), M(), skin, B3.chest);
     const edge = (a) => (s) => a(s), rest = (a) => (s) => TAU12 - a(s);
     const shell2 = (rows, aFn, off, mS, col, lin2) => {
@@ -63278,14 +63285,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const kim = TOP === "kimono";
       const col = TOP === "coat" ? look.coat || pal.top : pal.top;
       const rows = cut2(TR, -0.1, 0.985);
-      const open = kim ? (s) => 0.02 + sstep(0.28, 0.98, s) * 0.46 : (s) => 0.015 + sstep(0.46, 0.96, s) * 0.62;
-      shell2(rows, open, kim ? 0.014 : 0.012, 0.2, col, shade(col, -0.3));
+      const open = openKim ? (s) => 0.06 + sstep(0.05, 0.9, s) * 0.62 : kim ? (s) => 0.02 + sstep(0.28, 0.98, s) * 0.46 : (s) => 0.015 + sstep(0.46, 0.96, s) * 0.62;
+      shell2(rows, open, kim ? 0.014 : 0.012, openKim ? 1 : 0.2, col, shade(col, -0.3));
       if (cloth) {
-        const trim = kim ? cc.top2 : shade(col, -0.12);
+        const trim = openKim && !look.top2 ? shade(col, -0.2) : kim ? cc.top2 : shade(col, -0.12);
         const up = cut2(TR, kim ? 0.28 : 0.46, 0.985);
         const tw = kim ? 0.3 : 0.24;
-        add5(band(tpt(0.2, 0.017), up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U3 / 6)), M(), trim, B3.chest);
-        add5(band(tpt(0.2, 0.017), up, (s) => TAU12 - open(s) - tw, (s) => TAU12 - open(s), Math.max(3, U3 / 6)), M(), trim, B3.chest);
+        const tmS = openKim ? 1 : 0.2;
+        add5(band(tpt(tmS, 0.017), up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U3 / 6)), M(), trim, B3.chest);
+        add5(band(tpt(tmS, 0.017), up, (s) => TAU12 - open(s) - tw, (s) => TAU12 - open(s), Math.max(3, U3 / 6)), M(), trim, B3.chest);
         if (!kim) for (let k = 0; k < 2; k++) {
           const p = torsoPt(sh, 0.3 - k * 0.14, 0, 0.017, 0.2);
           add5(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), shade(col, -0.35), B3.chest);
@@ -63358,22 +63366,23 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     const armCol = pal.sleeve || (TOP === "coat" ? look.coat || pal.top : TOP === "jacket" ? pal.top : TOP === "striped" ? pal.top : pal.top);
     for (const [s, Ub, Fb, part5] of [[1, B3.uarmR, B3.farmR, 1], [-1, B3.uarmL, B3.farmL, 2]]) {
-      const ua = limbFn("uarm", o.fem, o.muscle, d.Bk), fa = limbFn("farm", o.fem, o.muscle, d.Bk);
       const sl = o.sleeves;
+      const mA = sl === "long" || sl === "wide" ? o.muscle * 0.35 : o.muscle;
+      const ua = limbFn("uarm", o.fem, mA, d.Bk), fa = limbFn("farm", o.fem, mA, d.Bk);
       if (sl === "none") {
         add5(limbSeg(ua, d.A1, rs, lrows, { capTop: true, capBot: true }), M(), skin, Ub);
         add5(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part5);
       } else if (sl === "short") {
-        add5(limbSeg(ua, d.A1, rs, lrows, { t1: 0.5, off: 0.012, capTop: true, flare: 0.012, lining: cloth }), M(), armCol, Ub);
+        add5(limbSeg(ua, d.A1, rs, lrows, { t1: 0.5, off: 8e-3, capTop: true, capK: 0.45, flare: 0.012, lining: cloth }), M(), armCol, Ub);
         add5(limbSeg(ua, d.A1, rs, lrows, { t0: 0.42, capBot: true }), M(), skin, Ub);
         add5(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part5);
       } else if (sl === "rolled") {
-        add5(limbSeg(ua, d.A1, rs, lrows, { off: 0.012, capTop: true, capBot: true }), M(), armCol, Ub);
+        add5(limbSeg(ua, d.A1, rs, lrows, { off: 0.01, capTop: true, capK: 0.5, capBot: true }), M(), armCol, Ub);
         if (cloth) add5(torus2(q2), ringAt(-d.A1 * 0.96, ua(0.96) + 0.02, ua(0.96) + 0.02, 0.03), shade(armCol, -0.12), Ub);
         add5(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part5);
       } else {
         const wide = sl === "wide";
-        add5(limbSeg(ua, d.A1, rs, lrows, { off: wide ? 0.02 : 0.012, capTop: true, capBot: true }), M(), armCol, Ub);
+        add5(limbSeg(ua, d.A1, rs, lrows, { t0: wide ? 0.07 : 0, off: wide ? 0.015 : 0.01, capTop: true, capK: 0.5, capBot: true }), M(), armCol, Ub);
         add5(limbSeg(fa, d.A2, rs, lrows, { off: wide ? 0.022 : 0.011, capTop: true, flare: wide ? 0.075 : 8e-3, lining: cloth, t1: wide ? 1.02 : 0.98 }), M(), armCol, Fb, part5);
         if (cloth && !wide) add5(torus2(q2), ringAt(-d.A2 * 0.95, fa(0.95) + 0.018, fa(0.95) + 0.018, 0.022), shade(armCol, -0.15), Fb, part5);
         add5(limbSeg(fa, d.A2, rs, 2, { t0: 0.8, capBot: true }), M(), skin, Fb, part5);
@@ -63706,12 +63715,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var BROWS_M = {
     fierce: "M0.14 -0.08 Q0.36 -0.17 0.64 -0.27 M-0.14 -0.08 Q-0.36 -0.17 -0.64 -0.27",
     worried: "M0.18 -0.27 Q0.42 -0.27 0.62 -0.14 M-0.18 -0.27 Q-0.42 -0.27 -0.62 -0.14",
-    neutral: "M0.16 -0.16 Q0.4 -0.24 0.64 -0.19 M-0.16 -0.16 Q-0.4 -0.24 -0.64 -0.19"
+    neutral: "M0.16 -0.16 Q0.4 -0.24 0.64 -0.19 M-0.16 -0.16 Q-0.4 -0.24 -0.64 -0.19",
+    stern: "M0.14 -0.11 Q0.38 -0.21 0.64 -0.24 M-0.14 -0.11 Q-0.38 -0.21 -0.64 -0.24"
   };
   var BROWS_F = {
     fierce: "M0.19 -0.14 Q0.4 -0.25 0.6 -0.33 M-0.19 -0.14 Q-0.4 -0.25 -0.6 -0.33",
     worried: "M0.21 -0.33 Q0.42 -0.35 0.58 -0.22 M-0.21 -0.33 Q-0.42 -0.35 -0.58 -0.22",
-    neutral: "M0.21 -0.24 Q0.4 -0.37 0.59 -0.28 M-0.21 -0.24 Q-0.4 -0.37 -0.59 -0.28"
+    neutral: "M0.21 -0.24 Q0.4 -0.37 0.59 -0.28 M-0.21 -0.24 Q-0.4 -0.37 -0.59 -0.28",
+    stern: "M0.19 -0.18 Q0.4 -0.29 0.6 -0.32 M-0.19 -0.18 Q-0.4 -0.29 -0.6 -0.32"
   };
   var MOUTH_COL2 = "#5c1c20";
   var TONGUE2 = "#e0626a";
@@ -63720,8 +63731,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     fierce: "M-0.14 0.66 Q0 0.58 0.14 0.66",
     ko: "M-0.16 0.62 Q-0.08 0.54 0 0.62 Q0.08 0.7 0.16 0.62",
     animal: "M-0.16 0.56 Q-0.08 0.66 0 0.54 Q0.08 0.66 0.16 0.56",
-    smile: "M-0.12 0.61 Q0 0.67 0.12 0.6",
-    flat: "M-0.11 0.62 L0.11 0.62",
+    smile: "M-0.16 0.6 Q0 0.69 0.16 0.59",
+    flat: "M-0.14 0.62 Q0 0.64 0.14 0.61",
     grin: ["M-0.46 0.46 Q0 0.58 0.46 0.46 Q0.36 0.95 0 0.95 Q-0.36 0.95 -0.46 0.46 Z", "M-0.5 0.4 L0.5 0.4 L0.5 0.56 Q0 0.72 -0.5 0.56 Z", [0, 0.93, 0.24, 0.11]],
     shout: ["M-0.25 0.5 Q0 0.45 0.25 0.5 Q0.3 0.92 0 0.94 Q-0.3 0.92 -0.25 0.5 Z", "M-0.3 0.4 L0.3 0.4 L0.3 0.55 Q0 0.6 -0.3 0.55 Z", [0, 0.92, 0.17, 0.1]],
     grimace: ["M-0.3 0.55 Q0 0.5 0.3 0.55 L0.26 0.74 Q0 0.7 -0.26 0.74 Z", "M-0.4 0.4 L0.4 0.4 L0.4 0.9 L-0.4 0.9 Z", null, "M-0.28 0.64 L0.28 0.64 M-0.12 0.54 L-0.12 0.72 M0.06 0.53 L0.06 0.72"]
@@ -63750,10 +63761,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     SHARP2.set(kind, d);
     return d;
   }
-  var SCAR2 = { F: "M-0.52 -0.12 L-0.3 0.5", Fx: "M-0.52 0.02 L-0.38 -0.02 M-0.46 0.24 L-0.32 0.2" };
+  var SCAR2 = {
+    F: "M-0.52 -0.12 L-0.3 0.5",
+    Fx: "M-0.52 0.02 L-0.38 -0.02 M-0.46 0.24 L-0.32 0.2",
+    // a curved cut under the character's left eye, stitched (Luffy's)
+    C: "M0.26 0.44 Q0.4 0.5 0.54 0.42",
+    Cx: "M0.32 0.41 L0.3 0.51 M0.4 0.43 L0.4 0.53 M0.48 0.41 L0.5 0.5"
+  };
   var PANDA2 = "M0.14 0.02 C0.2 -0.2 0.58 -0.22 0.68 0.12 C0.76 0.4 0.62 0.58 0.44 0.52 C0.24 0.46 0.1 0.26 0.14 0.02 Z M-0.14 0.02 C-0.2 -0.2 -0.58 -0.22 -0.68 0.12 C-0.76 0.4 -0.62 0.58 -0.44 0.52 C-0.24 0.46 -0.1 0.26 -0.14 0.02 Z";
   var THIRD2 = "M0 -0.28 Q0.11 -0.12 0 0.04 Q-0.11 -0.12 0 -0.28 Z";
   var GILLS2 = "M0.74 0.44 Q0.68 0.52 0.72 0.6 M0.68 0.54 Q0.62 0.62 0.66 0.7 M-0.74 0.44 Q-0.68 0.52 -0.72 0.6 M-0.68 0.54 Q-0.62 0.62 -0.66 0.7";
+  var NOSE_HINT = "M0.03 0.35 Q0.08 0.42 0.02 0.45";
   var NOSE_ANIMAL2 = "M-0.11 0.35 Q0 0.3 0.11 0.35 Q0.07 0.45 0 0.47 Q-0.07 0.45 -0.11 0.35 Z";
   var SHADES2 = {
     lens: "M0.14 0.02 L0.64 0.0 Q0.66 0.28 0.46 0.34 Q0.2 0.36 0.14 0.02 Z M-0.14 0.02 L-0.64 0.0 Q-0.66 0.28 -0.46 0.34 Q-0.2 0.36 -0.14 0.02 Z",
@@ -63770,7 +63788,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const blink = !fierce && ((t * 0.29 + s - 0.29) % 1 + 1) % 1 < 0.035;
     let mouth = face === "shout" ? "shout" : fierce ? "fierce" : look.grin || look.nika ? "grin" : "neutral";
     if (mouth === "neutral") mouth = look.muzzle || look.race === "mink" ? "animal" : look.mouth || ((look.seed || 0) % 2 ? "smile" : "flat");
-    return { eyes: blink ? "blink" : fierce ? "fierce" : "open", mouth, brow: fierce ? "fierce" : "neutral", small: face === "shout" };
+    return { eyes: blink ? "blink" : fierce ? "fierce" : "open", mouth, brow: fierce ? "fierce" : look.frown ? "stern" : "neutral", small: face === "shout" };
   }
   var EYE_STYLES = {
     // men: smaller irises, a heavy upper line, no lash flicks
@@ -63780,10 +63798,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     beady: { w: 0.84, h: 0.8, tilt: 0, iris: 0.36, lid: 0.07, drop: 0.04, flick: 0, lashes: 0, lower: 0, hl: 0, beady: true },
     tired: { w: 1.02, h: 0.62, tilt: 0.1, iris: 0.82, lid: 0.095, drop: 0.42, flick: 0, lashes: 0, lower: 0.45, hl: 1, bags: true },
     // women: bigger irises, lashes flicking out at the corners
-    bright: { w: 1, h: 1, tilt: 0, iris: 1, lid: 0.065, drop: 0.02, flick: 1, lashes: 2, lower: 1, hl: 2 },
-    soft: { w: 1.02, h: 0.88, tilt: 0.1, iris: 0.96, lid: 0.06, drop: 0.1, flick: 0.8, lashes: 2, lower: 1, hl: 2 },
-    cool: { w: 1.12, h: 0.64, tilt: -0.12, iris: 0.86, lid: 0.07, drop: 0.22, flick: 1.1, lashes: 3, lower: 0.7, hl: 2 },
-    cat: { w: 1.08, h: 0.8, tilt: -0.22, iris: 0.92, lid: 0.07, drop: 0.06, flick: 1.4, lashes: 2, lower: 0.85, hl: 2 },
+    bright: { w: 1.02, h: 0.94, tilt: 0, iris: 1, lid: 0.085, drop: 0.04, flick: 1, lashes: 2, lower: 1, hl: 2 },
+    soft: { w: 1.04, h: 0.86, tilt: 0.1, iris: 0.96, lid: 0.08, drop: 0.1, flick: 0.8, lashes: 2, lower: 1, hl: 2 },
+    cool: { w: 1.12, h: 0.64, tilt: -0.12, iris: 0.86, lid: 0.085, drop: 0.22, flick: 1.1, lashes: 3, lower: 0.7, hl: 2 },
+    cat: { w: 1.08, h: 0.8, tilt: -0.22, iris: 0.92, lid: 0.085, drop: 0.06, flick: 1.4, lashes: 2, lower: 0.85, hl: 2 },
     // Fish-Men
     fish: { w: 1, h: 0.84, tilt: 0, iris: 0.55, lid: 0.07, drop: 0, flick: 0, lashes: 0, lower: 0, hl: 1, round: true }
   };
@@ -63807,7 +63825,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function faceKey(look) {
     const hairCol = look.furWhite ? "#fafafa" : look.nika ? "#ffffff" : look.hairColor;
     const skin = look.furWhite ? "#fafafa" : look.fur && look.furFace ? look.fur : look.skin;
-    return `${eyeShapeOf2(look)}|${look.eyeColor}|${hairCol}|${skin}|${look.fem ? "F" : "M"}|${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.race === "mink" ? 1 : 0}${look.gills ? 1 : 0}${look.grin || look.nika ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.goggles === true ? 1 : 0}|${look.kind === "Panda" ? "P" : ""}|${look.nose || (look.kind === "Saw Shark" ? "saw" : "")}|${look.fem ? "F" : ""}`;
+    return `${eyeShapeOf2(look)}|${look.eyeColor}|${hairCol}|${skin}|${look.fem ? "F" : "M"}|${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.race === "mink" ? 1 : 0}${look.gills ? 1 : 0}${look.grin || look.nika ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.scarCheek ? 1 : 0}${look.goggles === true ? 1 : 0}|${look.kind === "Panda" ? "P" : ""}|${look.nose || (look.kind === "Saw Shark" ? "saw" : "")}|${look.fem ? "F" : ""}`;
   }
   var WHITES = /* @__PURE__ */ new Map();
   function eyeWhite(st, key2) {
@@ -63838,7 +63856,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const base2 = EYE_STYLES[id] || EYE_STYLES.bold;
     const white = !!look.furWhite;
     const iris = white ? "#ff1744" : hex2(look.eyeColor, "#2d2226");
-    const lt2 = mixHex(iris, "#ffffff", white ? 0.55 : 0.38);
+    const lt2 = mixHex(iris, "#ffffff", white ? 0.55 : 0.24);
     const pupil = white ? "#ff8a80" : mixHex(iris, "#000000", 0.7);
     const ey = 0.17;
     const closed = X2.eyes === "blink" || X2.eyes === "hurt" || X2.eyes === "ko";
@@ -63846,10 +63864,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const st = fierce ? { ...base2, tilt: base2.tilt - 0.18, drop: Math.min(0.5, base2.drop + 0.16), iris: base2.iris * 0.85, h: base2.h * 0.9 } : base2;
     const key2 = id + (fierce ? "F" : "");
     const E = eyeWhite(st, key2);
+    const ES = look.fem ? 1.14 : 1.1;
     for (let n = 0; n < 2; n++) {
       const x = n ? 0.39 : -0.39;
       g.save();
       g.translate(x, ey);
+      g.scale(ES, ES);
       if (x < 0) g.scale(-1, 1);
       g.rotate(st.tilt);
       g.lineCap = "round";
@@ -63869,7 +63889,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.fill(E.white);
       g.save();
       g.clip(E.white);
-      const ir = st.iris * (X2.small ? 0.8 : 1);
+      const ir = st.iris * (X2.small ? 0.8 : 1) * 1.18;
       const ix = -0.01, iy = 0.05 + st.drop * 0.08;
       if (st.beady) {
         g.fillStyle = "#16100f";
@@ -63940,11 +63960,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = "#ffffff";
         const cy = ey + 0.02 + st.drop * 0.1 + (fierce ? 0.03 : -0.02);
         g.beginPath();
-        g.arc(x - 0.055, cy, (st.hl > 1 ? 0.052 : 0.04) * (id === "fish" ? 0.8 : 1), 0, TAU13);
+        g.arc(x - 0.06 * ES, ey + (cy - ey) * ES, (st.hl > 1 ? 0.056 : 0.045) * (id === "fish" ? 0.8 : 1), 0, TAU13);
         g.fill();
         if (st.hl > 1) {
           g.beginPath();
-          g.arc(x + 0.05, ey + 0.13, 0.026, 0, TAU13);
+          g.arc(x + 0.055 * ES, ey + 0.14 * ES, 0.028, 0, TAU13);
           g.fill();
         }
       } else if (st.beady) {
@@ -63960,6 +63980,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.stroke(pp2(SCAR2.F));
       g.lineWidth = 0.03;
       g.stroke(pp2(SCAR2.Fx));
+    }
+    if (look.scarCheek) {
+      g.lineWidth = 0.035;
+      g.strokeStyle = "#8a3a34";
+      g.stroke(pp2(SCAR2.C));
+      g.lineWidth = 0.022;
+      g.stroke(pp2(SCAR2.Cx));
     }
   }
   function drawMouth2(g, look, X2) {
@@ -64043,9 +64070,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.fill();
       g.globalAlpha = 1;
     }
+    if (!look.muzzle && look.race !== "mink") {
+      g.lineWidth = 0.032;
+      g.strokeStyle = skin.line;
+      g.globalAlpha = 0.75;
+      g.stroke(pp2(NOSE_HINT));
+      g.globalAlpha = 1;
+    }
     drawMouth2(g, look, X2);
     const BR = look.fem ? BROWS_F : BROWS_M;
-    g.lineWidth = look.fem ? 0.055 : 0.088;
+    g.lineWidth = look.fem ? 0.062 : 0.1;
     g.strokeStyle = brow;
     g.stroke(pp2(BR[X2.brow] || BR.neutral));
     if (look.thirdEye) {
@@ -64405,6 +64439,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     long: { top: 1.18, hatK: 1 },
     ponytail: { top: 1.16, hatK: 1 },
     buzz: { top: 1.08, hatK: 0.98 },
+    crop: { top: 1.3, hatK: 1.02 },
     curly: { top: 1.38, hatK: 1.1 },
     afro: { top: 2.1, hatK: 1.42, lift: 0.5 },
     topknot: { top: 1.5, hatK: 1 },
@@ -64499,6 +64534,38 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     },
     buzz(h2) {
       h2.cap(1.035, 62, 94, 112);
+    },
+    crop(h2) {
+      h2.cap(1.07, 58, 94, 114, napeZig(5, 8));
+      const T4 = [
+        [6, 0],
+        [20, 30],
+        [20, 150],
+        [20, 270],
+        [22, 90],
+        [22, 210],
+        [22, 330],
+        [38, 0],
+        [38, 60],
+        [38, 120],
+        [38, 180],
+        [38, 240],
+        [38, 300],
+        [54, 30],
+        [54, 90],
+        [54, 150],
+        [54, 210],
+        [54, 270],
+        [54, 330],
+        [70, 125],
+        [70, 180],
+        [70, 235]
+      ];
+      for (const [th, ph] of T4) {
+        const f = Math.cos(ph * DEG2);
+        outLock(h2, th, ph, (th < 30 ? 0.15 : 0.2) + 0.07 * Math.max(0, f), 0.22, th < 30 ? 0.1 : 0.45 + 0.35 * Math.max(0, -f));
+      }
+      for (const ph of [-36, -12, 12, 36]) outLock(h2, 58, ph, 0.22, 0.17, 1.1);
     },
     short(h2) {
       h2.cap(1.09, 58, 96, 122, napeZig(4, 10));
@@ -65253,7 +65320,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const hx = h2[0], hy = h2[1];
           const fwdK = clamp4(hx / 0.43, 0, 1);
           const restK = clamp4(1 - hx / 0.2, 0, 1) * clamp4(hy / 0.3, 0, 1);
-          const lat = side * (-d.shW * 0.74 * fwdK + 0.055 * restK + (o.spread || 0));
+          const lat = side * (-d.shW * 0.74 * fwdK + 0.075 * restK + (o.spread || 0));
           T4.set(hx * d.kA, -hy * d.kA, lat);
           if (tiltA) T4.applyAxisAngle(X, tiltA * side);
           T4.applyQuaternion(this.qLean).add(S3);
@@ -86784,6 +86851,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
               });
             })()),
             row("Eye colour", swatch("eyeColor", ["#222222", "#3b2a1a", "#6d4c41", "#1e3799", "#0984e3", "#00a8a8", "#27ae60", "#6c5ce7", "#8e44ad", "#c0392b", "#e1b12c", "#b2bec3"])),
+            row("Look", chips(L2.frown ? "stern" : "easy", ["easy", "stern"], ["Easy-going", "Stern"], (v) => {
+              L2.frown = v === "stern";
+            })),
             row("Mouth", chips(L2.grin ? "grin" : L2.mouth || "smile", ["smile", "flat", "grin"], ["Smile", "Calm", "Big grin"], (v) => {
               L2.grin = v === "grin";
               L2.mouth = v === "grin" ? void 0 : v;
@@ -86810,14 +86880,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             row("Teeth", chips(L2.sharpTeeth ? "sharp" : "normal", ["normal", "sharp"], ["Normal", "Sharp"], (v) => {
               L2.sharpTeeth = v === "sharp";
             })),
-            row("Scar", chips(L2.scarEye ? "eye" : "none", ["none", "eye"], ["None", "Across the eye"], (v) => {
+            row("Scar", chips(L2.scarEye ? "eye" : L2.scarCheek ? "cheek" : "none", ["none", "eye", "cheek"], ["None", "Across the eye", "Under the eye"], (v) => {
               L2.scarEye = v === "eye";
+              L2.scarCheek = v === "cheek";
             }))
           );
         } else if (tab === "hair") {
           add2(
             optsEl,
-            row("Style", opts("hair", ["short", "messy", "spiky", "sidefringe", "slick", "pompadour", "long", "wavy", "bob", "ponytail", "twintails", "braid", "bun", "buzz", "curly", "afro", "topknot", "mohawk", "bald"], ["Short", "Messy", "Spiky", "Swept fringe", "Slicked back", "Pompadour", "Long", "Wavy", "Bob", "Ponytail", "Twin tails", "Braid", "Bun", "Buzz", "Curly", "Afro", "Topknot", "Mohawk", "Bald"])),
+            row("Style", opts("hair", ["short", "messy", "spiky", "crop", "sidefringe", "slick", "pompadour", "long", "wavy", "bob", "ponytail", "twintails", "braid", "bun", "buzz", "curly", "afro", "topknot", "mohawk", "bald"], ["Short", "Messy", "Spiky", "Crop", "Swept fringe", "Slicked back", "Pompadour", "Long", "Wavy", "Bob", "Ponytail", "Twin tails", "Braid", "Bun", "Buzz", "Curly", "Afro", "Topknot", "Mohawk", "Bald"])),
             race !== "mink" ? row("Colour", swatch("hairColor", ["#1e1e1e", "#3b2a1a", "#6b4423", "#c69c6d", "#f2d16b", "#e67e22", "#c0392b", "#e84393", "#8e44ad", "#2980b9", "#2ecc71", "#dfe6e9"])) : h("p.muted", "Minks grow fur of their kind.")
           );
         } else if (tab === "body") {

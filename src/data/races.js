@@ -129,7 +129,7 @@ const HUMAN_SKIN = ['#f9dcc4', '#f1c9a0', '#e0ac7e', '#c68642', '#a0643a', '#7a4
 const HAIR = ['#1e1e1e', '#3b2a1a', '#6b4423', '#c69c6d', '#f2d16b', '#e67e22', '#c0392b', '#2ecc71', '#2980b9', '#e84393', '#dfe6e9', '#8e44ad', '#16a085'];
 const TOPS = ['#d63031', '#0984e3', '#00b894', '#fdcb6e', '#e17055', '#6c5ce7', '#2d3436', '#dfe6e9', '#e84393', '#00cec9', '#b2bec3', '#a0522d'];
 const BOTTOMS = ['#2d3436', '#1e3799', '#3b3b98', '#6d4c41', '#636e72', '#0a3d62', '#b8860b', '#2f3542'];
-const HAIRSTYLES = ['short', 'short', 'spiky', 'messy', 'sidefringe', 'slick', 'long', 'ponytail', 'buzz', 'curly', 'afro', 'topknot', 'mohawk', 'bald', 'pompadour'];
+const HAIRSTYLES = ['short', 'short', 'spiky', 'messy', 'crop', 'crop', 'sidefringe', 'slick', 'long', 'ponytail', 'buzz', 'curly', 'afro', 'topknot', 'mohawk', 'bald', 'pompadour'];
 
 export const FISHMAN_KINDS = [
   { id: 'shark', name: 'Saw Shark', skin: '#7fa7c9' },
@@ -209,6 +209,7 @@ const DRESS = {
 };
 const SASH = ['#f4c430', '#c62828', '#1e88e5', '#2e7d32', '#6a1b9a', '#ef6c00', '#fafafa', '#212121'];
 const LIGHT = ['#f5f5f5', '#fff8e1', '#e3f2fd', '#fce4ec', '#e8f5e9'];
+const STERN = { pirate: 0.55, bandit: 0.6, marine: 0.45, officer: 0.6, agent: 0.7, swordsman: 0.6 };
 const FEM_ROLES = { civilian: 0.5, pirate: 0.3, bandit: 0.2, marine: 0.25, officer: 0.2, agent: 0.3, swordsman: 0.25, wano: 0.5, desert: 0.5, snow: 0.5, sky: 0.5, fishman: 0.3 };
 
 /**
@@ -240,6 +241,8 @@ export function dress(look, rng, role = 'civilian', over = {}) {
   } else if (over.muscle === undefined) {
     look.muscle = +(0.25 + rng.next() * 0.75).toFixed(2);
   }
+  // fighters wear a harder face
+  if (over.frown === undefined && rng.chance(STERN[role] ?? 0.15)) look.frown = true;
   return look;
 }
 
@@ -255,7 +258,8 @@ export function makeLook(raceId, seed, overrides = {}) {
     top: rng.pick(TOPS),
     bottom: rng.pick(BOTTOMS),
     shoes: rng.pick(['#3b2a1a', '#2d3436', '#8d6e4a', '#c8a878']),
-    eyeColor: rng.pick(['#222', '#3b2a1a', '#1e3799', '#27ae60', '#6c5ce7']),
+    // (most eyes are dark, as in the manga; a few are coloured)
+    eyeColor: rng.pick(['#222', '#222', '#3b2a1a', '#3b2a1a', '#4a3426', '#2b2f3a', '#1e3799', '#27ae60']),
     scale: race.scale || 1,
     hat: null,
     openShirt: rng.chance(0.25),

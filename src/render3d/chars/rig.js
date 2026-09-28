@@ -131,7 +131,8 @@ export class Rig {
         const hx = h[0], hy = h[1];
         const fwdK = clamp(hx / 0.43, 0, 1);
         const restK = clamp(1 - hx / 0.2, 0, 1) * clamp(hy / 0.3, 0, 1);
-        const lat = side * (-d.shW * 0.74 * fwdK + 0.055 * restK + (o.spread || 0));
+        // (at rest the arms hang a hand's breadth clear of the hips, not pinned to them)
+        const lat = side * (-d.shW * 0.74 * fwdK + 0.075 * restK + (o.spread || 0));
         T.set(hx * d.kA, -hy * d.kA, lat);
         if (tiltA) T.applyAxisAngle(X, tiltA * side);
         T.applyQuaternion(this.qLean).add(S);

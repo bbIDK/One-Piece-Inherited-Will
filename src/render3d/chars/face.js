@@ -82,16 +82,18 @@ const BROWS_M = {
   fierce: 'M0.14 -0.08 Q0.36 -0.17 0.64 -0.27 M-0.14 -0.08 Q-0.36 -0.17 -0.64 -0.27',
   worried: 'M0.18 -0.27 Q0.42 -0.27 0.62 -0.14 M-0.18 -0.27 Q-0.42 -0.27 -0.62 -0.14',
   neutral: 'M0.16 -0.16 Q0.4 -0.24 0.64 -0.19 M-0.16 -0.16 Q-0.4 -0.24 -0.64 -0.19',
+  stern: 'M0.14 -0.11 Q0.38 -0.21 0.64 -0.24 M-0.14 -0.11 Q-0.38 -0.21 -0.64 -0.24',
 };
 const BROWS_F = {
   fierce: 'M0.19 -0.14 Q0.4 -0.25 0.6 -0.33 M-0.19 -0.14 Q-0.4 -0.25 -0.6 -0.33',
   worried: 'M0.21 -0.33 Q0.42 -0.35 0.58 -0.22 M-0.21 -0.33 Q-0.42 -0.35 -0.58 -0.22',
   neutral: 'M0.21 -0.24 Q0.4 -0.37 0.59 -0.28 M-0.21 -0.24 Q-0.4 -0.37 -0.59 -0.28',
+  stern: 'M0.19 -0.18 Q0.4 -0.29 0.6 -0.32 M-0.19 -0.18 Q-0.4 -0.29 -0.6 -0.32',
 };
 const MOUTH_COL = '#5c1c20', TONGUE = '#e0626a', TEETH = '#ffffff';
 const MOUTHS = {
   fierce: 'M-0.14 0.66 Q0 0.58 0.14 0.66', ko: 'M-0.16 0.62 Q-0.08 0.54 0 0.62 Q0.08 0.7 0.16 0.62',
-  animal: 'M-0.16 0.56 Q-0.08 0.66 0 0.54 Q0.08 0.66 0.16 0.56', smile: 'M-0.12 0.61 Q0 0.67 0.12 0.6', flat: 'M-0.11 0.62 L0.11 0.62',
+  animal: 'M-0.16 0.56 Q-0.08 0.66 0 0.54 Q0.08 0.66 0.16 0.56', smile: 'M-0.16 0.6 Q0 0.69 0.16 0.59', flat: 'M-0.14 0.62 Q0 0.64 0.14 0.61',
   grin: ['M-0.46 0.46 Q0 0.58 0.46 0.46 Q0.36 0.95 0 0.95 Q-0.36 0.95 -0.46 0.46 Z', 'M-0.5 0.4 L0.5 0.4 L0.5 0.56 Q0 0.72 -0.5 0.56 Z', [0, 0.93, 0.24, 0.11]],
   shout: ['M-0.25 0.5 Q0 0.45 0.25 0.5 Q0.3 0.92 0 0.94 Q-0.3 0.92 -0.25 0.5 Z', 'M-0.3 0.4 L0.3 0.4 L0.3 0.55 Q0 0.6 -0.3 0.55 Z', [0, 0.92, 0.17, 0.1]],
   grimace: ['M-0.3 0.55 Q0 0.5 0.3 0.55 L0.26 0.74 Q0 0.7 -0.26 0.74 Z', 'M-0.4 0.4 L0.4 0.4 L0.4 0.9 L-0.4 0.9 Z', null, 'M-0.28 0.64 L0.28 0.64 M-0.12 0.54 L-0.12 0.72 M0.06 0.53 L0.06 0.72'],
@@ -112,7 +114,11 @@ function sharpTeeth(kind) {
   SHARP.set(kind, d);
   return d;
 }
-const SCAR = { F: 'M-0.52 -0.12 L-0.3 0.5', Fx: 'M-0.52 0.02 L-0.38 -0.02 M-0.46 0.24 L-0.32 0.2' };
+const SCAR = {
+  F: 'M-0.52 -0.12 L-0.3 0.5', Fx: 'M-0.52 0.02 L-0.38 -0.02 M-0.46 0.24 L-0.32 0.2',
+  // a curved cut under the character's left eye, stitched (Luffy's)
+  C: 'M0.26 0.44 Q0.4 0.5 0.54 0.42', Cx: 'M0.32 0.41 L0.3 0.51 M0.4 0.43 L0.4 0.53 M0.48 0.41 L0.5 0.5',
+};
 const PANDA = 'M0.14 0.02 C0.2 -0.2 0.58 -0.22 0.68 0.12 C0.76 0.4 0.62 0.58 0.44 0.52 C0.24 0.46 0.1 0.26 0.14 0.02 Z M-0.14 0.02 C-0.2 -0.2 -0.58 -0.22 -0.68 0.12 C-0.76 0.4 -0.62 0.58 -0.44 0.52 C-0.24 0.46 -0.1 0.26 -0.14 0.02 Z';
 const THIRD = 'M0 -0.28 Q0.11 -0.12 0 0.04 Q-0.11 -0.12 0 -0.28 Z';
 const GILLS = 'M0.74 0.44 Q0.68 0.52 0.72 0.6 M0.68 0.54 Q0.62 0.62 0.66 0.7 M-0.74 0.44 Q-0.68 0.52 -0.72 0.6 M-0.68 0.54 Q-0.62 0.62 -0.66 0.7';
@@ -135,7 +141,7 @@ export function expression(look, pose, P, t) {
   const blink = !fierce && ((t * 0.29 + s - 0.29) % 1 + 1) % 1 < 0.035;
   let mouth = face === 'shout' ? 'shout' : fierce ? 'fierce' : look.grin || look.nika ? 'grin' : 'neutral';
   if (mouth === 'neutral') mouth = look.muzzle || look.race === 'mink' ? 'animal' : look.mouth || ((look.seed || 0) % 2 ? 'smile' : 'flat');
-  return { eyes: blink ? 'blink' : fierce ? 'fierce' : 'open', mouth, brow: fierce ? 'fierce' : 'neutral', small: face === 'shout' };
+  return { eyes: blink ? 'blink' : fierce ? 'fierce' : 'open', mouth, brow: fierce ? 'fierce' : look.frown ? 'stern' : 'neutral', small: face === 'shout' };
 }
 // Eye styles, in each eye's own frame (+x toward the temple, y down). w/h
 // scale the eye, tilt turns it (negative lifts the outer corner), iris sizes
@@ -150,10 +156,10 @@ export const EYE_STYLES = {
   beady: { w: 0.84, h: 0.8, tilt: 0, iris: 0.36, lid: 0.07, drop: 0.04, flick: 0, lashes: 0, lower: 0, hl: 0, beady: true },
   tired: { w: 1.02, h: 0.62, tilt: 0.1, iris: 0.82, lid: 0.095, drop: 0.42, flick: 0, lashes: 0, lower: 0.45, hl: 1, bags: true },
   // women: bigger irises, lashes flicking out at the corners
-  bright: { w: 1.0, h: 1.0, tilt: 0, iris: 1.0, lid: 0.065, drop: 0.02, flick: 1, lashes: 2, lower: 1, hl: 2 },
-  soft: { w: 1.02, h: 0.88, tilt: 0.1, iris: 0.96, lid: 0.06, drop: 0.1, flick: 0.8, lashes: 2, lower: 1, hl: 2 },
-  cool: { w: 1.12, h: 0.64, tilt: -0.12, iris: 0.86, lid: 0.07, drop: 0.22, flick: 1.1, lashes: 3, lower: 0.7, hl: 2 },
-  cat: { w: 1.08, h: 0.8, tilt: -0.22, iris: 0.92, lid: 0.07, drop: 0.06, flick: 1.4, lashes: 2, lower: 0.85, hl: 2 },
+  bright: { w: 1.02, h: 0.94, tilt: 0, iris: 1.0, lid: 0.085, drop: 0.04, flick: 1, lashes: 2, lower: 1, hl: 2 },
+  soft: { w: 1.04, h: 0.86, tilt: 0.1, iris: 0.96, lid: 0.08, drop: 0.1, flick: 0.8, lashes: 2, lower: 1, hl: 2 },
+  cool: { w: 1.12, h: 0.64, tilt: -0.12, iris: 0.86, lid: 0.085, drop: 0.22, flick: 1.1, lashes: 3, lower: 0.7, hl: 2 },
+  cat: { w: 1.08, h: 0.8, tilt: -0.22, iris: 0.92, lid: 0.085, drop: 0.06, flick: 1.4, lashes: 2, lower: 0.85, hl: 2 },
   // Fish-Men
   fish: { w: 1.0, h: 0.84, tilt: 0, iris: 0.55, lid: 0.07, drop: 0, flick: 0, lashes: 0, lower: 0, hl: 1, round: true },
 };
@@ -182,7 +188,7 @@ export function faceKey(look) {
   const hairCol = look.furWhite ? '#fafafa' : look.nika ? '#ffffff' : look.hairColor;
   const skin = look.furWhite ? '#fafafa' : (look.fur && look.furFace ? look.fur : look.skin);
   return `${eyeShapeOf(look)}|${look.eyeColor}|${hairCol}|${skin}|${look.fem ? 'F' : 'M'}|${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.race === 'mink' ? 1 : 0}`
-    + `${look.gills ? 1 : 0}${look.grin || look.nika ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.goggles === true ? 1 : 0}`
+    + `${look.gills ? 1 : 0}${look.grin || look.nika ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.scarCheek ? 1 : 0}${look.goggles === true ? 1 : 0}`
     + `|${look.kind === 'Panda' ? 'P' : ''}|${look.nose || (look.kind === 'Saw Shark' ? 'saw' : '')}|${look.fem ? 'F' : ''}`;
 }
 
@@ -219,7 +225,7 @@ function drawEyes(g, look, X) {
   const base = EYE_STYLES[id] || EYE_STYLES.bold;
   const white = !!look.furWhite;
   const iris = white ? '#ff1744' : hex(look.eyeColor, '#2d2226');
-  const lt = mixHex(iris, '#ffffff', white ? 0.55 : 0.38);
+  const lt = mixHex(iris, '#ffffff', white ? 0.55 : 0.24);
   const pupil = white ? '#ff8a80' : mixHex(iris, '#000000', 0.7);
   const ey = 0.17;
   const closed = X.eyes === 'blink' || X.eyes === 'hurt' || X.eyes === 'ko';
@@ -228,10 +234,13 @@ function drawEyes(g, look, X) {
   const st = fierce ? { ...base, tilt: base.tilt - 0.18, drop: Math.min(0.5, base.drop + 0.16), iris: base.iris * 0.85, h: base.h * 0.9 } : base;
   const key = id + (fierce ? 'F' : '');
   const E = eyeWhite(st, key);
+  // (big, clear eyes: the anime look)
+  const ES = look.fem ? 1.14 : 1.1;
   for (let n = 0; n < 2; n++) {
     const x = n ? 0.39 : -0.39;
     g.save();
     g.translate(x, ey);
+    g.scale(ES, ES);
     if (x < 0) g.scale(-1, 1);
     g.rotate(st.tilt);
     g.lineCap = 'round'; g.lineJoin = 'round';
@@ -244,7 +253,8 @@ function drawEyes(g, look, X) {
     g.fillStyle = '#ffffff'; g.fill(E.white);
     g.save();
     g.clip(E.white);
-    const ir = st.iris * (X.small ? 0.8 : 1);
+    // (the iris fills most of the eye, dark, so the eyes read from across a street)
+    const ir = st.iris * (X.small ? 0.8 : 1) * 1.18;
     const ix = -0.01, iy = 0.05 + st.drop * 0.08;
     if (st.beady) {
       g.fillStyle = '#16100f'; g.beginPath(); g.ellipse(0, 0.05, 0.05, 0.065, 0, 0, TAU); g.fill();
@@ -282,8 +292,8 @@ function drawEyes(g, look, X) {
     if (!st.beady && st.hl > 0) {
       g.fillStyle = '#ffffff';
       const cy = ey + 0.02 + st.drop * 0.1 + (fierce ? 0.03 : -0.02);
-      g.beginPath(); g.arc(x - 0.055, cy, (st.hl > 1 ? 0.052 : 0.04) * (id === 'fish' ? 0.8 : 1), 0, TAU); g.fill();
-      if (st.hl > 1) { g.beginPath(); g.arc(x + 0.05, ey + 0.13, 0.026, 0, TAU); g.fill(); }
+      g.beginPath(); g.arc(x - 0.06 * ES, ey + (cy - ey) * ES, (st.hl > 1 ? 0.056 : 0.045) * (id === 'fish' ? 0.8 : 1), 0, TAU); g.fill();
+      if (st.hl > 1) { g.beginPath(); g.arc(x + 0.055 * ES, ey + 0.14 * ES, 0.028, 0, TAU); g.fill(); }
     } else if (st.beady) {
       g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x - 0.015, ey + 0.03, 0.016, 0, TAU); g.fill();
     }
@@ -291,6 +301,10 @@ function drawEyes(g, look, X) {
   if (look.scarEye) {
     g.lineWidth = 0.06; g.strokeStyle = '#9b3a36'; g.stroke(pp(SCAR.F));
     g.lineWidth = 0.03; g.stroke(pp(SCAR.Fx));
+  }
+  if (look.scarCheek) {
+    g.lineWidth = 0.035; g.strokeStyle = '#8a3a34'; g.stroke(pp(SCAR.C));
+    g.lineWidth = 0.022; g.stroke(pp(SCAR.Cx));
   }
 }
 function drawMouth(g, look, X) {
@@ -336,10 +350,11 @@ export function paintFace(g, look, X) {
     g.beginPath(); g.ellipse(-0.66, 0.46, 0.14, 0.07, 0, 0, TAU); g.ellipse(0.66, 0.46, 0.14, 0.07, 0, 0, TAU); g.fill();
     g.globalAlpha = 1;
   }
-  // (the nose itself is sculpted on the head)
+  // (the nose is sculpted on the head; the line down its shadowed side reads it from any distance)
+  if (!look.muzzle && look.race !== 'mink') { g.lineWidth = 0.032; g.strokeStyle = skin.line; g.globalAlpha = 0.75; g.stroke(pp(NOSE_HINT)); g.globalAlpha = 1; }
   drawMouth(g, look, X);
   const BR = look.fem ? BROWS_F : BROWS_M;
-  g.lineWidth = look.fem ? 0.055 : 0.088; g.strokeStyle = brow; g.stroke(pp(BR[X.brow] || BR.neutral));
+  g.lineWidth = look.fem ? 0.062 : 0.1; g.strokeStyle = brow; g.stroke(pp(BR[X.brow] || BR.neutral));
   if (look.thirdEye) {
     g.fillStyle = '#ffffff'; g.fill(pp(THIRD)); g.lineWidth = 0.025; g.strokeStyle = INK; g.stroke(pp(THIRD));
     g.fillStyle = hex(look.eyeColor, '#8e44ad'); g.beginPath(); g.ellipse(0, -0.11, 0.06, 0.1, 0, 0, TAU); g.fill();
