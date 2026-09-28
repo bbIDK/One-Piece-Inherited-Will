@@ -237,7 +237,27 @@ class ActorView {
     if (m.bubble) m.bubble.visible = !fp;
     if (fp) m.outline.visible = false;
     for (const h of m.held) if (h) h.group.visible = !fp;
+    if (fp && a.inWater && !away && ctx.camera) {
+      // In the water the view keeps its own height (the surface, a dive, the
+      // sea floor: camera3d.js), so the body goes to it instead: your head where
+      // the view is, treading water with your chest under you, or stretched
+      // out behind you swimming — never floating out in front of your eyes.
+      this.eyeAt();
+      this.root.position.add(_v2.subVectors(ctx.camera.position, _eyeP));
+      this.root.updateMatrixWorld(true);
+    }
     if (fp) this.eyeOffset(a, pose, ctx, env);
+  }
+
+  /** Where the eyes are on the posed body, in the scene (into _eyeP). */
+  eyeAt() {
+    const m = this.model, d = m.d, hb = m.bones[B.head];
+    this.root.updateMatrixWorld(true);
+    hb.getWorldPosition(_eyeP);
+    hb.getWorldQuaternion(_eyeQ);
+    // (the eyes: at the front of the head, a little above its middle)
+    _v.set(d.hx + d.headR * 0.7, d.hc + d.headR * 0.12, 0).multiplyScalar(this.root.scale.x).applyQuaternion(_eyeQ);
+    return _eyeP.add(_v);
   }
 
   /**
@@ -247,13 +267,7 @@ class ActorView {
    * bowing it to look down at yourself — as your eyes would.
    */
   eyeOffset(a, pose, ctx, env) {
-    const m = this.model, d = m.d, hb = m.bones[B.head];
-    this.root.updateMatrixWorld(true);
-    hb.getWorldPosition(_eyeP);
-    hb.getWorldQuaternion(_eyeQ);
-    // (the eyes: at the front of the head, a little above its middle)
-    _v.set(d.hx + d.headR * 0.7, d.hc + d.headR * 0.12, 0).multiplyScalar(this.root.scale.x).applyQuaternion(_eyeQ);
-    _eyeP.add(_v);
+    this.eyeAt();
     const e = a._eye3 || (a._eye3 = { x: 0, y: 0, z: 0, t: 0, ship: null, u: 0, v: 0, hy: 0 });
     e.x = _eyeP.x - this.root.position.x; e.y = _eyeP.y - this.root.position.y; e.z = _eyeP.z - this.root.position.z;
     e.t = performance.now();

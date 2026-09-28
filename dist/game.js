@@ -69078,7 +69078,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (m.bubble) m.bubble.visible = !fp;
       if (fp) m.outline.visible = false;
       for (const h2 of m.held) if (h2) h2.group.visible = !fp;
+      if (fp && a.inWater && !away && ctx.camera) {
+        this.eyeAt();
+        this.root.position.add(_v24.subVectors(ctx.camera.position, _eyeP));
+        this.root.updateMatrixWorld(true);
+      }
       if (fp) this.eyeOffset(a, pose, ctx, env);
+    }
+    /** Where the eyes are on the posed body, in the scene (into _eyeP). */
+    eyeAt() {
+      const m = this.model, d = m.d, hb = m.bones[B3.head];
+      this.root.updateMatrixWorld(true);
+      hb.getWorldPosition(_eyeP);
+      hb.getWorldQuaternion(_eyeQ);
+      _v8.set(d.hx + d.headR * 0.7, d.hc + d.headR * 0.12, 0).multiplyScalar(this.root.scale.x).applyQuaternion(_eyeQ);
+      return _eyeP.add(_v8);
     }
     /**
      * Where your eyes are on your posed body, from where you stand (scene
@@ -69087,12 +69101,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      * bowing it to look down at yourself — as your eyes would.
      */
     eyeOffset(a, pose, ctx, env) {
-      const m = this.model, d = m.d, hb = m.bones[B3.head];
-      this.root.updateMatrixWorld(true);
-      hb.getWorldPosition(_eyeP);
-      hb.getWorldQuaternion(_eyeQ);
-      _v8.set(d.hx + d.headR * 0.7, d.hc + d.headR * 0.12, 0).multiplyScalar(this.root.scale.x).applyQuaternion(_eyeQ);
-      _eyeP.add(_v8);
+      this.eyeAt();
       const e = a._eye3 || (a._eye3 = { x: 0, y: 0, z: 0, t: 0, ship: null, u: 0, v: 0, hy: 0 });
       e.x = _eyeP.x - this.root.position.x;
       e.y = _eyeP.y - this.root.position.y;
