@@ -63736,6 +63736,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return g;
   }
   function grid(fn, U3, V3, uv = false) {
+    U3 = Math.max(1, Math.round(U3));
+    V3 = Math.max(1, Math.round(V3));
     const pos = [], uvs = [], idx = [];
     for (let j = 0; j <= V3; j++) {
       for (let i = 0; i <= U3; i++) {
@@ -64375,14 +64377,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       n.setXYZ(b, x / l, y / l, z / l);
     }
   }
-  function band(pt, rows, a0, a1, U3, inward = false, uv = null) {
+  function band(pt, rows, a0, a1, U3, inward = false, uv = null, exact = false) {
+    U3 = Math.max(1, Math.round(U3));
     const V3 = rows.length - 1;
     const full = typeof a0 === "number" && typeof a1 === "number" && a1 - a0 >= TAU13 - 1e-6;
-    const g = grid((u, v) => {
-      const h2 = rows[Math.round(v * V3)];
+    const at5 = (i, j) => {
+      const h2 = rows[j];
       const A0 = typeof a0 === "function" ? a0(h2) : a0, A1 = typeof a1 === "function" ? a1(h2) : a1;
-      const uu = inward ? 1 - u : u;
-      const a = warp(A0 + (A1 - A0) * uu);
+      return [h2, A0 + (A1 - A0) * (inward ? 1 - i / U3 : i / U3)];
+    };
+    const g = grid((u, v) => {
+      const [h2, a0v] = at5(Math.round(u * U3), Math.round(v * V3));
+      const a = warp(a0v);
       const p = pt(h2, a);
       if (uv) {
         const t = uv(h2, a);
@@ -64391,6 +64397,25 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return p;
     }, U3, V3, !!uv);
     if (full && !inward) weldGrid(g, U3, V3);
+    if (exact) {
+      const n = g.attributes.normal, W4 = U3 + 1;
+      for (let j = 0; j <= V3; j++) {
+        for (let i = 0; i <= U3; i++) {
+          const [h2, a] = at5(i, j);
+          const p = pt(h2, warp(a)), pa = pt(h2, warp(a + 1e-3)), ph = pt(h2 + 1e-3, warp(a));
+          const tx = pa[0] - p[0], ty = pa[1] - p[1], tz = pa[2] - p[2];
+          const sx = ph[0] - p[0], sy = ph[1] - p[1], sz = ph[2] - p[2];
+          let nx = ty * sz - tz * sy, ny = tz * sx - tx * sz, nz = tx * sy - ty * sx;
+          if (nx * p[0] + nz * p[2] < 0 !== inward) {
+            nx = -nx;
+            ny = -ny;
+            nz = -nz;
+          }
+          const l = Math.hypot(nx, ny, nz) || 1;
+          n.setXYZ(j * W4 + i, nx / l, ny / l, nz / l);
+        }
+      }
+    }
     return g;
   }
   function half(rows) {
@@ -64554,7 +64579,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const neckS = TOP2 === "shirt" || TOP2 === "jacket" ? 0.955 : TOP2 === "tank" || TOP2 === "dress" ? 0.84 : 0.93;
     const openKim = TOP2 === "kimono" && !!look.openShirt;
     if (TOP2 === "bare" || TOP2 === "vest" || TOP2 === "open" || openKim || TOP2 === "coat" && !look.top2) {
-      addT(TR, skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
+      if (o.fem) {
+        const wrap = TOP2 === "bare";
+        const lo = wrap ? 0.54 : 0.58, hi = wrap ? 0.82 : 0.78;
+        const inner = look.inner || (wrap ? "#f1ede2" : look.top2 || mixHex(pal.top, "#ffffff", 0.45));
+        addT(cut2(TR, hi, 1), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
+        addT(cut2(TR, lo, hi), tpt(1, 2e-3), inner);
+        addT(cut2(TR, -0.1, lo), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
+        if (!wrap) straps(add5, sh, hi, inner, q2);
+      } else addT(TR, skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
     } else if (TOP2 === "crop" || TOP2 === "bikini") {
       const lo = TOP2 === "crop" ? 0.5 : 0.58, hi = TOP2 === "crop" ? 0.86 : 0.78;
       addT(cut2(TR, hi, 1), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
@@ -64570,8 +64603,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     } else {
       const col = TOP2 === "jacket" || TOP2 === "coat" ? cc.top2 : pal.top;
+      const inM = TOP2 === "jacket" || TOP2 === "kimono" || TOP2 === "coat" ? 0.2 : shirtM;
       addT(cut2(TR, neckS, 1), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
-      addT(cut2(TR, -0.1, neckS), tpt(shirtM), col, -Math.PI, Math.PI, false, "torsoCloth");
+      addT(cut2(TR, -0.1, neckS), tpt(inM), col, -Math.PI, Math.PI, false, "torsoCloth");
       if (TOP2 === "tank" || TOP2 === "dress") straps(add5, sh, neckS, col, q2);
       if (cloth && TOP2 !== "tank" && TOP2 !== "dress") {
         const f = torsoPt(sh, neckS, 0, 0, shirtM)[0], bk = -torsoPt(sh, neckS, Math.PI, 0, shirtM)[0], W4 = torsoPt(sh, neckS, Math.PI / 2, 0, shirtM)[2];
@@ -64585,9 +64619,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return w > 2e-3 ? [B3.head, w] : null;
     } });
     const edge = (a) => (s) => a(s), rest = (a) => (s) => TAU13 - a(s);
+    const lie = (aFn, s, a) => 0.3 + 0.7 * sstep(0, 0.35, Math.abs(a) - aFn(s));
+    const garment = (aFn, off, mS, dOff = 0) => (s, a) => torsoPt(sh, s, a, off * lie(aFn, s, a) + dOff, mS);
     const shell2 = (rows, aFn, off, mS, col, lin2) => {
-      add5(band(tpt(mS, off), rows, edge(aFn), rest(aFn), U3, false, tuv("torsoCloth")), M(), col, B3.chest);
-      if (cloth) add5(band(tpt(mS, off - 5e-3), half(rows), edge(aFn), rest(aFn), U3 / 2, true), M(), lin2, B3.chest);
+      add5(band(garment(aFn, off, mS), rows, edge(aFn), rest(aFn), U3, false, tuv("torsoCloth")), M(), col, B3.chest);
+      if (cloth) add5(band(garment(aFn, off, mS, -5e-3), rows, edge(aFn), rest(aFn), U3, true), M(), lin2, B3.chest);
     };
     if (TOP2 === "vest") {
       const rows = cut2(TR, 0.1, 0.975);
@@ -64612,8 +64648,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const up = cut2(TR, kim ? 0.28 : 0.46, 0.985);
         const tw = kim ? 0.3 : 0.24;
         const tmS = openKim ? 1 : 0.2;
-        add5(band(tpt(tmS, 0.017), up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U3 / 6)), M(), trim, B3.chest);
-        add5(band(tpt(tmS, 0.017), up, (s) => TAU13 - open(s) - tw, (s) => TAU13 - open(s), Math.max(3, U3 / 6)), M(), trim, B3.chest);
+        const tpK = garment(open, kim ? 0.014 : 0.012, tmS, 5e-3);
+        add5(band(tpK, up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U3 / 6), false, null, true), M(), trim, B3.chest);
+        add5(band(tpK, up, (s) => TAU13 - open(s) - tw, (s) => TAU13 - open(s), Math.max(3, U3 / 6), false, null, true), M(), trim, B3.chest);
         if (!kim) for (let k = 0; k < 2; k++) {
           const p = torsoPt(sh, 0.3 - k * 0.14, 0, 0.017, 0.2);
           add5(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), shade(col, -0.35), B3.chest);
@@ -64635,12 +64672,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     const loose = !o.tucked && (TOP2 === "tee" || TOP2 === "shirt" || TOP2 === "striped" || TOP2 === "tank" || TOP2 === "open");
     if (loose && !o.skirt) {
-      const hem = cloth ? [0.2, 0.08, -0.06, -0.2, -0.34] : [0.2, -0.34];
-      const col = TOP2 === "striped" ? pal.top : pal.top;
-      const off = (s) => 6e-3 + (0.2 - s) * 0.03;
+      const hem = cloth ? [0.075, 0.03, -0.02, -0.07, -0.12] : [0.075, -0.12];
+      const off = (y) => 0.016 + (0.075 - y) * 0.1;
       const a0 = TOP2 === "open" ? 0.3 : -Math.PI, a1 = TOP2 === "open" ? TAU13 - 0.3 : Math.PI;
-      add5(band((s, a) => torsoPt(sh, s, a, off(s), shirtM * 0.5), hem, a0, a1, U3), M(), col, B3.chest);
-      if (cloth) add5(band((s, a) => torsoPt(sh, s, a, off(s) - 6e-3, 0.2), hem.slice(-2), a0, a1, U3, true), M(), cc.lining, B3.chest);
+      add5(band((y, a) => pelvisPt(sh, y, a, off(y)), hem, a0, a1, U3), M(), pal.top, B3.hips);
+      if (cloth) add5(band((y, a) => pelvisPt(sh, y, a, off(y) - 6e-3), hem, a0, a1, U3, true), M(), cc.lining, B3.hips);
     }
     const PR = cloth ? [0.08, 0.05, 0.02, -0.02, -0.06, -0.1, -0.13, -0.155, -0.18, -0.2, -0.215] : [0.08, 0, -0.08, -0.15, -0.215];
     const skirtPelvis = o.skirt || TOP2 === "dress";
@@ -66326,6 +66362,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       L2.waistCol,
       L2.shoeStyle,
       L2.top2,
+      L2.inner,
       L2.sleeves,
       L2.muscle,
       L2.bust,
@@ -67402,9 +67439,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const ku = rp + Math.sin(ang) * L2, kh = Math.cos(ang) * L2;
         let phiB = phi0;
         for (let k = 0; k < n; k++) {
-          if (_sleg[k] === 0) continue;
-          const P4 = _spts[k];
-          const need = panelNeed(P4.x * ca + P4.z * sa - ku, -P4.y - kh, _srad[k], hHem - hK, Math.atan2(P4.z, P4.x), a);
+          if (_sleg[k] !== 1) continue;
+          const P4 = _spts[k], hB = -P4.y - kh;
+          if (hB < 0.04) continue;
+          const need = panelNeed(P4.x * ca + P4.z * sa - ku, hB, _srad[k], hHem - hK, Math.atan2(P4.z, P4.x), a);
           if (need > phiB) phiB = need;
         }
         const pB = Math.min(1.3, phiB), j = SKIRT_N + i;
@@ -69002,6 +69040,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.sitK = (this.sitK || 0) + ((o.seatH !== null ? 1 : 0) - (this.sitK || 0)) * Math.min(1, dtv * 6);
         if (o.seatH !== null) this.sitH = o.seatH;
         o.sitK = this.sitK > 0.01 ? this.sitK : 0;
+        o.dt = dtv;
         o.sitY = (this.sitH || 0) / s;
         o.reachR = null;
         o.reachL = null;
@@ -88885,7 +88924,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           );
         } else {
           const o = outfitOf(L2);
-          const TOPS3 = [["tee", "Tee"], ["shirt", "Shirt"], ["tank", "Tank top"], ["vest", "Open vest"], ["open", "Open shirt"], ["striped", "Sailor stripes"], ["jacket", "Suit jacket"], ["kimono", "Kimono"], ["coat", "Long coat"], ["bare", "Bare-chested"]];
+          const TOPS3 = [["tee", "Tee"], ["shirt", "Shirt"], ["tank", "Tank top"], ["vest", "Open vest"], ["open", "Open shirt"], ["striped", "Sailor stripes"], ["jacket", "Suit jacket"], ["kimono", "Kimono"], ["coat", "Long coat"], ["bare", L2.fem ? "Chest wrap" : "Bare-chested"]];
           if (L2.fem) TOPS3.push(["crop", "Crop top"], ["bikini", "Bikini top"], ["dress", "Dress"]);
           const BOTS = [["trousers", "Trousers"], ["shorts", "Shorts"], ["capri", "Rolled-up"], ["baggy", "Baggy"], ["slim", "Slim"], ["hakama", "Hakama"]];
           if (L2.fem) BOTS.push(["skirt", "Skirt"], ["longskirt", "Long skirt"]);
@@ -88897,12 +88936,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             if (v !== "coat" && L2.coat && !L2.keepCoat) L2.coat = void 0;
           };
           const COLS = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#a0522d", "#ffffff"];
-          const two = ["striped", "jacket", "kimono", "coat"].includes(o.top);
+          const under = L2.fem && (o.top === "vest" || o.top === "open");
+          const two = under || ["striped", "jacket", "kimono", "coat"].includes(o.top);
           add2(
             optsEl,
             row("Top", chips(o.top, TOPS3.map((t) => t[0]), TOPS3.map((t) => t[1]), setTop)),
             o.top !== "bare" ? row(o.top === "coat" ? "Coat colour" : "Colour", o.top === "coat" ? swatch("coat", ["#5d4037", "#37474f", "#1b5e20", "#4a148c", "#b71c1c", "#fafafa", "#212121", "#0d47a1"]) : swatch("top", COLS)) : null,
-            two ? row(o.top === "striped" ? "Stripes" : o.top === "kimono" ? "Collar" : "Shirt under", swatch("top2", ["#f5f5f5", "#fff8e1", "#90caf9", "#212121", "#c62828", "#fce4ec", "#ffd54f"])) : null,
+            two ? row(o.top === "striped" ? "Stripes" : o.top === "kimono" ? "Collar" : under ? "Top under" : "Shirt under", swatch("top2", ["#f5f5f5", "#fff8e1", "#90caf9", "#212121", "#c62828", "#fce4ec", "#ffd54f"])) : null,
             row("Bottoms", chips(o.skirt && !L2.fem ? "trousers" : o.bottom, BOTS.map((t) => t[0]), BOTS.map((t) => t[1]), (v) => {
               L2.bottomStyle = v;
             })),

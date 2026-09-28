@@ -128,6 +128,8 @@ function earGeo(hi) {
  * (the way the head, hair caps and face decal are parametrised).
  */
 export function grid(fn, U, V, uv = false) {
+  // (whole numbers of columns and rows: a fraction throws the indices off)
+  U = Math.max(1, Math.round(U)); V = Math.max(1, Math.round(V));
   const pos = [], uvs = [], idx = [];
   for (let j = 0; j <= V; j++) {
     for (let i = 0; i <= U; i++) {

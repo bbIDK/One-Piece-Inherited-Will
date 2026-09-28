@@ -255,19 +255,44 @@ function weldGrid(g, U, V) {
  * coordinate), angles a0(h) → a1(h) (full circle: -π → π, seam at the back).
  * `pt(h, a)` gives the point; `inward` flips it inside out (linings).
  */
-function band(pt, rows, a0, a1, U, inward = false, uv = null) {
+function band(pt, rows, a0, a1, U, inward = false, uv = null, exact = false) {
+  // (a whole number of columns: a fraction — a narrow strip's U / 6 — throws
+  // the grid's indices off, into slivers joining the wrong rows)
+  U = Math.max(1, Math.round(U));
   const V = rows.length - 1;
   const full = typeof a0 === 'number' && typeof a1 === 'number' && a1 - a0 >= TAU - 1e-6;
-  const g = grid((u, v) => {
-    const h = rows[Math.round(v * V)];
+  const at = (i, j) => {
+    const h = rows[j];
     const A0 = typeof a0 === 'function' ? a0(h) : a0, A1 = typeof a1 === 'function' ? a1(h) : a1;
-    const uu = inward ? 1 - u : u;
-    const a = warp(A0 + (A1 - A0) * uu);
+    return [h, A0 + (A1 - A0) * (inward ? 1 - i / U : i / U)];
+  };
+  const g = grid((u, v) => {
+    const [h, a0v] = at(Math.round(u * U), Math.round(v * V));
+    const a = warp(a0v);
     const p = pt(h, a);
     if (uv) { const t = uv(h, a); p.push(t[0], t[1]); }
     return p;
   }, U, V, !!uv);
   if (full && !inward) weldGrid(g, U, V);
+  if (exact) {
+    // (the surface's own normals, not the facets': a narrow strip running
+    // across the rows — a collar down a V — is facetted row by row, and the
+    // cel shading's hard steps turn that into light and dark stripes)
+    const n = g.attributes.normal, W = U + 1;
+    for (let j = 0; j <= V; j++) {
+      for (let i = 0; i <= U; i++) {
+        const [h, a] = at(i, j);
+        const p = pt(h, warp(a)), pa = pt(h, warp(a + 1e-3)), ph = pt(h + 1e-3, warp(a));
+        const tx = pa[0] - p[0], ty = pa[1] - p[1], tz = pa[2] - p[2];
+        const sx = ph[0] - p[0], sy = ph[1] - p[1], sz = ph[2] - p[2];
+        let nx = ty * sz - tz * sy, ny = tz * sx - tx * sz, nz = tx * sy - ty * sx;
+        // (out from the body's axis — in, for a lining)
+        if ((nx * p[0] + nz * p[2] < 0) !== inward) { nx = -nx; ny = -ny; nz = -nz; }
+        const l = Math.hypot(nx, ny, nz) || 1;
+        n.setXYZ(j * W + i, nx / l, ny / l, nz / l);
+      }
+    }
+  }
   return g;
 }
 /** Every other row (keeping both ends): cheap linings nobody looks at closely. */
@@ -443,7 +468,17 @@ export function buildFigure(add0, look, d, pal, q) {
   // (a kimono worn open to the sash shows the chest: Zoro's)
   const openKim = TOP === 'kimono' && !!look.openShirt;
   if (TOP === 'bare' || TOP === 'vest' || TOP === 'open' || openKim || TOP === 'coat' && !look.top2) {
-    addT(TR, skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
+    if (o.fem) {
+      // (a woman's open shirt, vest, kimono or coat has a bikini top under it,
+      // as Nami's and Robin's do; "bare" is a chest wrap, a sarashi)
+      const wrap = TOP === 'bare';
+      const lo = wrap ? 0.54 : 0.58, hi = wrap ? 0.82 : 0.78;
+      const inner = look.inner || (wrap ? '#f1ede2' : look.top2 || mixHex(pal.top, '#ffffff', 0.45));
+      addT(cut(TR, hi, 1), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
+      addT(cut(TR, lo, hi), tpt(1, 0.002), inner);
+      addT(cut(TR, -0.1, lo), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
+      if (!wrap) straps(add, sh, hi, inner, q);
+    } else addT(TR, skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
   } else if (TOP === 'crop' || TOP === 'bikini') {
     const lo = TOP === 'crop' ? 0.5 : 0.58, hi = TOP === 'crop' ? 0.86 : 0.78;
     addT(cut(TR, hi, 1), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
@@ -460,8 +495,12 @@ export function buildFigure(add0, look, d, pal, q) {
   } else {
     // one covering garment colour (the inner shirt under a jacket or coat)
     const col = TOP === 'jacket' || TOP === 'coat' ? cc.top2 : pal.top;
+    // (under a jacket, a kimono or a coat it's shaped as the outer layer is —
+    // any closer to the muscles and a big chest pushes it out through that
+    // layer and its collar)
+    const inM = TOP === 'jacket' || TOP === 'kimono' || TOP === 'coat' ? 0.2 : shirtM;
     addT(cut(TR, neckS, 1), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
-    addT(cut(TR, -0.1, neckS), tpt(shirtM), col, -Math.PI, Math.PI, false, 'torsoCloth');
+    addT(cut(TR, -0.1, neckS), tpt(inM), col, -Math.PI, Math.PI, false, 'torsoCloth');
     if (TOP === 'tank' || TOP === 'dress') straps(add, sh, neckS, col, q);
     if (cloth && TOP !== 'tank' && TOP !== 'dress') {
       // a ribbed collar at the neckline
@@ -476,9 +515,17 @@ export function buildFigure(add0, look, d, pal, q) {
 
   // ---- tops worn over the body
   const edge = (a) => (s) => a(s), rest = (a) => (s) => TAU - a(s);
+  // An open garment (its opening a(s) either side of the front): along the
+  // opening the cloth lies down onto what's under it — a lapel, not a ledge
+  // with a gap under it showing its lining — and stands off the body as usual
+  // a hand's width round from there. The lining is on the same grid as the
+  // cloth, just inside it: a coarser one cuts out through the cloth wherever
+  // the body curves inward, in dark streaks along the opening.
+  const lie = (aFn, s, a) => 0.3 + 0.7 * sstep(0, 0.35, Math.abs(a) - aFn(s));
+  const garment = (aFn, off, mS, dOff = 0) => (s, a) => torsoPt(sh, s, a, off * lie(aFn, s, a) + dOff, mS);
   const shell = (rows, aFn, off, mS, col, lin2) => {
-    add(band(tpt(mS, off), rows, edge(aFn), rest(aFn), U, false, tuv('torsoCloth')), M(), col, B.chest);
-    if (cloth) add(band(tpt(mS, off - 0.005), half(rows), edge(aFn), rest(aFn), U / 2, true), M(), lin2, B.chest);
+    add(band(garment(aFn, off, mS), rows, edge(aFn), rest(aFn), U, false, tuv('torsoCloth')), M(), col, B.chest);
+    if (cloth) add(band(garment(aFn, off, mS, -0.005), rows, edge(aFn), rest(aFn), U, true), M(), lin2, B.chest);
   };
   if (TOP === 'vest') {
     const rows = cut(TR, 0.1, 0.975);
@@ -504,8 +551,11 @@ export function buildFigure(add0, look, d, pal, q) {
       const up = cut(TR, kim ? 0.28 : 0.46, 0.985);
       const tw = kim ? 0.3 : 0.24;
       const tmS = openKim ? 1 : 0.2;
-      add(band(tpt(tmS, 0.017), up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U / 6)), M(), trim, B.chest);
-      add(band(tpt(tmS, 0.017), up, (s) => TAU - open(s) - tw, (s) => TAU - open(s), Math.max(3, U / 6)), M(), trim, B.chest);
+      // (the collar band lies on the cloth, a little proud of it, following it
+      // down onto the body along the opening)
+      const tpK = garment(open, kim ? 0.014 : 0.012, tmS, 0.005);
+      add(band(tpK, up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U / 6), false, null, true), M(), trim, B.chest);
+      add(band(tpK, up, (s) => TAU - open(s) - tw, (s) => TAU - open(s), Math.max(3, U / 6), false, null, true), M(), trim, B.chest);
       if (!kim) for (let k = 0; k < 2; k++) {
         const p = torsoPt(sh, 0.3 - k * 0.14, 0, 0.017, 0.2);
         add(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), shade(col, -0.35), B.chest);
@@ -530,12 +580,14 @@ export function buildFigure(add0, look, d, pal, q) {
   // shirts hanging loose over the waist
   const loose = !o.tucked && (TOP === 'tee' || TOP === 'shirt' || TOP === 'striped' || TOP === 'tank' || TOP === 'open');
   if (loose && !o.skirt) {
-    const hem = cloth ? [0.2, 0.08, -0.06, -0.2, -0.34] : [0.2, -0.34];
-    const col = TOP === 'striped' ? pal.top : pal.top;
-    const off = (s) => 0.006 + (0.2 - s) * 0.03;
+    // (from the waist it hangs over the hips, clear of them — not in along
+    // the waist, where the trousers would come through it at the sides and
+    // leave a flap hanging between the legs)
+    const hem = cloth ? [0.075, 0.03, -0.02, -0.07, -0.12] : [0.075, -0.12];
+    const off = (y) => 0.016 + (0.075 - y) * 0.1;
     const a0 = TOP === 'open' ? 0.3 : -Math.PI, a1 = TOP === 'open' ? TAU - 0.3 : Math.PI;
-    add(band((s, a) => torsoPt(sh, s, a, off(s), shirtM * 0.5), hem, a0, a1, U), M(), col, B.chest);
-    if (cloth) add(band((s, a) => torsoPt(sh, s, a, off(s) - 0.006, 0.2), hem.slice(-2), a0, a1, U, true), M(), cc.lining, B.chest);
+    add(band((y, a) => pelvisPt(sh, y, a, off(y)), hem, a0, a1, U), M(), pal.top, B.hips);
+    if (cloth) add(band((y, a) => pelvisPt(sh, y, a, off(y) - 0.006), hem, a0, a1, U, true), M(), cc.lining, B.hips);
   }
 
   // ---- pelvis, waist

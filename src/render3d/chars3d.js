@@ -142,6 +142,7 @@ class ActorView {
       this.sitK = (this.sitK || 0) + ((o.seatH !== null ? 1 : 0) - (this.sitK || 0)) * Math.min(1, dtv * 6);
       if (o.seatH !== null) this.sitH = o.seatH;
       o.sitK = this.sitK > 0.01 ? this.sitK : 0;
+      o.dt = dtv; // (a skirt's panels settle back at their own pace, however often this one is drawn)
       o.sitY = (this.sitH || 0) / s;
       // the hands on the oar grips (or the wheel's rim) — or a rubber punch in
       // flight: the arm stretches out to the fist

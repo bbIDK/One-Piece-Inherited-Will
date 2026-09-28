@@ -836,6 +836,35 @@ export const scenarios = {
       await page.evaluate(() => { window.OP.hold = false; });
     },
   },
+  // every top style on a man and a woman, four at a time, front and
+  // three-quarter (--fem=0|1 for one of them, --tops=a,b for some)
+  c3tops: {
+    async run(page, snap, args) {
+      await boot(page);
+      await page.evaluate(() => { const u = document.getElementById('ui'); if (u) u.style.display = 'none'; window.__C3.goSunny(); });
+      const TOPS = args.tops ? String(args.tops).split(',') : ['tee', 'shirt', 'tank', 'vest', 'open', 'jacket', 'kimono', 'kimono-open', 'striped', 'bare', 'crop', 'bikini', 'dress', 'coat'];
+      const sexes = args.fem !== undefined ? [Number(args.fem)] : [0, 1];
+      for (const fem of sexes) {
+        const tops = TOPS.filter((t) => fem || (t !== 'bikini' && t !== 'crop' && t !== 'dress'));
+        for (let i = 0; i < tops.length; i += 4) {
+          const set = tops.slice(i, i + 4);
+          for (const [view, f] of [['front', Math.PI], ['34', Math.PI * 0.78]]) {
+            await page.evaluate(([set, fem, f]) => {
+              const C = window.__C3; C.clear();
+              set.forEach((t, k) => {
+                const open = t === 'kimono-open';
+                C.spawn({ name: t, id: 'top-' + t + fem, showName: false, look: { race: 'human', fem: !!fem, frame: fem ? 'average' : 'athletic', seed: 7 + k, idle: 'rest', hair: fem ? 'long' : 'crop', hairColor: '#3b2a1a', skin: '#e8b98f', topStyle: open ? 'kimono' : t, openShirt: open, top: ['#2f6b3a', '#b23a3a', '#3b5ba5', '#c28a2e'][k], bottomStyle: 'slim', bottom: '#2b2b33', muscle: fem ? 0.2 : 0.8 } }, 2.3, (k - 1.5) * 0.62, f);
+              });
+              C.view(0, -0.02);
+              for (const a of C.npcs) { const v = window.OP.game.view3d.actorViews.get(a); if (v) { v.lookAt = () => 0; v.headYaw = 0; } }
+            }, [set, fem, f]);
+            await settle(page, 5);
+            await snap(`${fem ? 'f' : 'm'}-${set.join('+')}-${view}`);
+          }
+        }
+      }
+    },
+  },
   c3atk: { async run(page, snap) { await boot(page); await attacks(page, snap); } },
   c3vm: { async run(page, snap) { await boot(page); await viewmodel(page, snap); } },
   c3crowd: { async run(page, snap) { await boot(page); await crowd(page, snap); await seaKing(page, snap); } },

@@ -265,6 +265,11 @@ rearrange them.
     and dresses hang from panels round the waist that swing out to clear the
     legs (a long one bends again at the knee), so no knee or shin comes
     through the cloth walking, running or sitting.
+  - Open shirts, vests, kimonos and coats lie down onto the chest along the
+    opening, a kimono's collar running clean down the V. An untucked shirt
+    hangs over the hips. A woman's open top has a bikini top under it, as
+    Nami's and Robin's do (its colour is "Top under" in the creator), and
+    "Chest wrap" is her bare-chested choice.
   - **Weapons are worn**: an equipped sword hangs at the left hip, a pistol
     in its holster, a staff or an axe across the back. Its hotbar key draws
     it (the hand goes to the hilt and pulls it out along the sheath into

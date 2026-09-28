@@ -435,9 +435,14 @@ export class CharacterModel {
       const ku = rp + Math.sin(ang) * L, kh = Math.cos(ang) * L; // (the bend: out from the axis, down from the waist)
       let phiB = phi0;
       for (let k = 0; k < n; k++) {
-        if (_sleg[k] === 0) continue;
-        const P = _spts[k];
-        const need = panelNeed(P.x * ca + P.z * sa - ku, -P.y - kh, _srad[k], hHem - hK, Math.atan2(P.z, P.x), a);
+        // (the shins below the bend: the knee is the upper panel's to clear —
+        // it sits right at the bend, inside the cloth, where no swing of the
+        // lower panel could take it any further in, and it would fling that
+        // out flat)
+        if (_sleg[k] !== 1) continue;
+        const P = _spts[k], hB = -P.y - kh;
+        if (hB < 0.04) continue;
+        const need = panelNeed(P.x * ca + P.z * sa - ku, hB, _srad[k], hHem - hK, Math.atan2(P.z, P.x), a);
         if (need > phiB) phiB = need;
       }
       // (its own angle from the vertical settles back; it turns against the upper panel's)
