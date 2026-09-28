@@ -228,6 +228,7 @@ export function tcap(r0, r1, L, rs = 8, cap = 3) {
 export class Builder {
   constructor(bind = null, blankUV = [0, 0]) {
     this.pos = []; this.nor = []; this.col = []; this.bone = []; this.bone2 = []; this.w2 = []; this.part = []; this.idx = []; this.uv = [];
+    this.x4 = new Map();
     this.bind = bind;
     this.blankUV = blankUV;
   }
@@ -239,12 +240,15 @@ export class Builder {
    * Add geometry `g` transformed by matrix `m`. `color` is a colour string /
    * THREE.Color, or fn(x, y, z) of the primitive's local position → colour.
    * opts: { uv: use g's own uv attribute as detail-texture UVs,
-   *         blend: fn(x, y, z) of the position in the bone's frame → [bone2, weight2] or null }
+   *         blend: fn(x, y, z) of the position in the bone's frame → [bone2, weight2] or null,
+   *         skin: fn(x, y, z) → [bone1, bone2, weight2], or up to four bones
+   *               [b1, b2, b3, b4, w2, w3, w4]: the bones it follows instead
+   *               (still placed from `bone`'s frame) }
    */
   add(g, m, color, bone = 0, part = 0, opts = null) {
     const P = g.attributes.position, N = g.attributes.normal;
     const UV = (opts && opts.uv) || (g.userData && g.userData.detail) ? g.attributes.uv : null;
-    const blend = opts && opts.blend;
+    const blend = opts && opts.blend, skin = opts && opts.skin;
     const base = this.count;
     _nm.getNormalMatrix(m);
     const fn = typeof color === 'function' ? color : null;
@@ -254,14 +258,19 @@ export class Builder {
       _v.fromBufferAttribute(P, i);
       const c = fn ? toColor(fn(_v.x, _v.y, _v.z)) : c0;
       _v.applyMatrix4(m);
-      const bw = blend ? blend(_v.x, _v.y, _v.z) : null;
+      const sk = skin ? skin(_v.x, _v.y, _v.z) : null;
+      const bw = sk ? [sk[1], sk[2]] : blend ? blend(_v.x, _v.y, _v.z) : null;
       if (bm) _v.applyMatrix4(bm);
       _n.fromBufferAttribute(N, i).applyMatrix3(_nm).normalize();
       this.pos.push(_v.x, _v.y, _v.z);
       this.nor.push(_n.x, _n.y, _n.z);
       this.col.push(c.r, c.g, c.b);
-      this.bone.push(bone);
-      if (bw && bw[1] > 1e-3) { this.bone2.push(bw[0]); this.w2.push(Math.min(1, bw[1])); } else { this.bone2.push(0); this.w2.push(0); }
+      this.bone.push(sk ? sk[0] : bone);
+      if (sk && sk.length > 3) {
+        // (four bones: the third and fourth are kept aside, for the few vertices that have them)
+        this.bone2.push(sk[1]); this.w2.push(sk[4]);
+        this.x4.set(base + i, [sk[2], sk[5], sk[3], sk[6]]);
+      } else if (bw && bw[1] > 1e-3) { this.bone2.push(bw[0]); this.w2.push(Math.min(1, bw[1])); } else { this.bone2.push(0); this.w2.push(0); }
       this.part.push(part);
       if (UV) this.uv.push(UV.getX(i), UV.getY(i)); else this.uv.push(this.blankUV[0], this.blankUV[1]);
     }
@@ -294,6 +303,11 @@ export class Builder {
       const w2 = this.w2[i];
       si[i * 4] = this.bone[i]; sw[i * 4] = 1 - w2;
       si[i * 4 + 1] = this.bone2[i]; sw[i * 4 + 1] = w2;
+    }
+    for (const [i, [b3, w3, b4, w4]] of this.x4) {
+      si[i * 4 + 2] = b3; sw[i * 4 + 2] = w3;
+      si[i * 4 + 3] = b4; sw[i * 4 + 3] = w4;
+      sw[i * 4] = Math.max(0, 1 - sw[i * 4 + 1] - w3 - w4);
     }
     g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
     g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));

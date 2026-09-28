@@ -13,6 +13,10 @@
 //                 and tip; each segment hangs along -Y from its joint, and
 //                 bends toward the palm (-X) about its Z axis
 //   coatTail, wing*, tail, hairTail, sheath, hilts, backWpn: attachments
+//   skirt0..skirt5 a skirt's panels, hung round the waist from the front (0)
+//                 toward the right; each swings out about its own
+//                 horizontal axis to clear the legs (model.js skirtPanels);
+//   skirtK0..5    and a long skirt's lower panels, bending from them at the knee
 import * as THREE from 'three';
 
 export const BONES = [
@@ -22,12 +26,16 @@ export const BONES = [
   'thighR', 'shinR', 'footR', 'thighL', 'shinL', 'footL',
   'coatTail', 'tail', 'wingR', 'wingL', 'hairTail', 'sheath', 'hilts', 'backWpn',
   ...['R', 'L'].flatMap((H) => ['k1', 'k2', 'k3', 'k4', 'j1', 'j2', 'j3', 'j4', 'tb', 'tc'].map((n) => n + H)),
+  'skirt0', 'skirt1', 'skirt2', 'skirt3', 'skirt4', 'skirt5',
+  'skirtK0', 'skirtK1', 'skirtK2', 'skirtK3', 'skirtK4', 'skirtK5',
 ];
+export const SKIRT_N = 6;
 export const B = Object.fromEntries(BONES.map((n, i) => [n, i]));
 export const PARENT = {
   fistR: 'handR', palmR: 'handR', fingerR: 'handR', fistL: 'handL', palmL: 'handL', fingerL: 'handL',
   coatTail: 'chest', wingR: 'chest', wingL: 'chest', backWpn: 'chest', tail: 'hips', sheath: 'hips', hilts: 'hips', hairTail: 'head',
 };
+for (let i = 0; i < SKIRT_N; i++) { PARENT['skirt' + i] = 'hips'; PARENT['skirtK' + i] = 'skirt' + i; }
 for (const H of ['R', 'L']) {
   for (let i = 1; i <= 4; i++) { PARENT['k' + i + H] = 'hand' + H; PARENT['j' + i + H] = 'k' + i + H; }
   PARENT['tb' + H] = 'hand' + H; PARENT['tc' + H] = 'tb' + H;
@@ -100,10 +108,31 @@ export function dims(look) {
 
 /** Rest offsets of the attachment bones from their parents (the skeleton is built with these). */
 export function restOffsets(d) {
-  return {
+  const R = {
     hairTail: [d.hx, d.hc, 0], tail: [-0.13 * d.Bk, -0.06, 0],
     wingR: [-0.11 * d.Bk, d.chestLen * 0.8, 0.05], wingL: [-0.11 * d.Bk, d.chestLen * 0.8, -0.05],
   };
+  // the skirt's panels hang from the waist, just inside the hips; a long
+  // skirt's lower panels bend from them at the height of the knee
+  const [Dp, Wp] = skirtWaist(d);
+  const L = skirtShape(d, true), f = L.hK / -L.yb;
+  for (let i = 0; i < SKIRT_N; i++) {
+    const a = (i / SKIRT_N) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+    R['skirt' + i] = [c * Dp, 0, s * Wp];
+    R['skirtK' + i] = [c * (L.Dh - Dp) * f, -L.hK, s * (L.Wh - Wp) * f];
+  }
+  return R;
+}
+/** Where a skirt's panels hang from: the waist's half depth and half width. */
+export function skirtWaist(d) { const Wp = d.hipOut * 0.92; return [Wp * 0.78, Wp]; }
+/**
+ * A skirt's hang: its hem's depth below the waist (yb, negative), the hem's
+ * half depth and half width (however broad the frame, it clears the hips and
+ * thighs), and how far below the waist the knee is (where a long one bends).
+ */
+export function skirtShape(d, long) {
+  const F = d.F, fw = Math.max(1, F.hp * 0.55 + F.th * 0.45);
+  return { yb: long ? -0.88 * d.Lg : -0.34, Wh: (long ? 0.3 : 0.225) * d.Bk * fw, Dh: (long ? 0.3 : 0.2) * d.Bk * fw, hK: 0.07 + d.T1, long };
 }
 
 /**
@@ -137,5 +166,6 @@ export function bindPose(d) {
   child('coatTail', 'chest'); child('backWpn', 'chest'); child('sheath', 'hips'); child('hilts', 'hips');
   child('tail', 'hips', R.tail); child('wingR', 'chest', R.wingR); child('wingL', 'chest', R.wingL);
   child('hairTail', 'head', R.hairTail);
+  for (let i = 0; i < SKIRT_N; i++) { child('skirt' + i, 'hips', R['skirt' + i]); child('skirtK' + i, 'skirt' + i, R['skirtK' + i]); }
   return m;
 }

@@ -3,7 +3,7 @@
 // texture per expression) and held weapons. `pose(P, o)` applies a sampled
 // 2D-rig pose through the 3D rig; the caller turns the model to its facing.
 import * as THREE from 'three';
-import { BONES, B, PARENT, restOffsets } from './bones.js';
+import { BONES, B, PARENT, restOffsets, SKIRT_N, skirtWaist } from './bones.js';
 import { getBody, releaseBody, faceGeo, headLevel } from './build.js';
 import { Rig } from './rig.js';
 import { bodyMaterial, sharedOutline, glowMaterial } from './mats.js';
@@ -34,6 +34,32 @@ const GRIPS = {
 const _t1 = new THREE.Vector3(), _t2 = new THREE.Vector3(), DOWN = new THREE.Vector3(0, -1, 0);
 const _dr = Array.from({ length: 8 }, () => new THREE.Vector3());
 const smooth = (x) => x * x * (3 - 2 * x);
+const TAU = Math.PI * 2;
+// a skirt's panels: the legs (hip joint, knee, ankle), the points down them it
+// must clear (thigh, then shin), and how far each panel reaches round
+const LEG3 = [[B.thighR, B.shinR, B.footR], [B.thighL, B.shinL, B.footL]];
+const SKIRT_T = [0.4, 0.7, 1.0, 0.35, 0.7, 1.0];
+const SKIRT_REACH = Math.PI / SKIRT_N * 2, SKIRT_FADE = 0.35;
+const _sq = new THREE.Quaternion(), _sax = new THREE.Vector3();
+const _spts = Array.from({ length: SKIRT_T.length * 2 }, () => new THREE.Vector3());
+const _srad = new Float32Array(SKIRT_T.length * 2), _sleg = new Uint8Array(SKIRT_T.length * 2);
+/**
+ * How far out from the vertical (radians) a panel hanging from a pivot must
+ * swing for a leg point `u` out from the pivot and `h` below it, `r` thick,
+ * to be inside the cloth — for a panel `len` long, facing `a` (the point at
+ * `psi` round the waist: panels further round it than their neighbours
+ * care less, and not at all beyond).
+ */
+function panelNeed(u, h, r, len, psi, a) {
+  let da = Math.abs(psi - a) % TAU;
+  if (da > Math.PI) da = TAU - da;
+  if (da > SKIRT_REACH + SKIRT_FADE || h < -0.05 || h > len + 0.05) return -1;
+  const fade = da <= SKIRT_REACH ? 1 : 1 - (da - SKIRT_REACH) / SKIRT_FADE;
+  const R = Math.hypot(u, h);
+  // (u·cos φ − h·sin φ ≤ −r: the point at least r inside the panel's line)
+  const phi = R <= r ? 1.75 : Math.acos(Math.max(-1, -r / R)) - Math.atan2(h, u);
+  return phi * fade;
+}
 
 // ------------------------------------------------------------------ hair and cloth that swing
 // Long hair and a coat's tail are each a weight on a spring at the end of
@@ -114,6 +140,7 @@ export class CharacterModel {
     const d = this.d;
     const R = restOffsets(d);
     for (const n of ['hairTail', 'tail', 'wingR', 'wingL']) this.bones[B[n]].position.set(...R[n]);
+    for (let i = 0; i < SKIRT_N; i++) { this.bones[B['skirt' + i]].position.set(...R['skirt' + i]); this.bones[B['skirtK' + i]].position.set(...R['skirtK' + i]); }
     this.restFingers();
     // face decal on the head
     this.face = new THREE.Mesh(faceGeo(look, headLevel(this.lod)), undefined);
@@ -283,6 +310,7 @@ export class CharacterModel {
       bones[i].quaternion.copy(rig.quat[i]);
     }
     for (const i of LIMBS) bones[i].scale.set(1, rig.len[i], 1);
+    if (this.body.skirt) this.skirtPanels(o.dt);
     if (this.visibleParts) for (const [i, on] of this.visibleParts) this.showBone(i, on);
     if (this.fing) for (let k = 0; k < 2; k++) this.poseFingers(k, this.shape[k], t);
 
@@ -352,6 +380,71 @@ export class CharacterModel {
       g.position.x += 0.1 * k;
     }
     if (o.squash && o.squash !== 1) g.scale.set(1 / Math.sqrt(o.squash), o.squash, 1 / Math.sqrt(o.squash)); else g.scale.set(1, 1, 1);
+  }
+
+  /**
+   * A skirt's six panels (bones skirt0..5, hung round the waist from the front
+   * toward the right): each swings out about its own horizontal axis just as
+   * far as it must for the thighs, knees and shins beneath it to stay inside
+   * the cloth — a stride, a knee bent at rest, sitting down — and settles back
+   * more gently than it was pushed, as cloth falls. A long skirt bends again
+   * at the knee (skirtK0..5): the upper panel lies over the thigh, the lower
+   * hangs from the knee, clear of the shin.
+   */
+  skirtPanels(dt) {
+    const S = this.body.skirt, d = this.d, rig = this.rig, bones = this.bones;
+    const th = this.skirtTh || (this.skirtTh = new Float32Array(SKIRT_N * 2));
+    const F = d.F || {}, Bk = d.Bk;
+    // (the legs' reach: the thigh's and shin's radius and a little room for the cloth)
+    const rT = 0.088 * (F.th || 1) * Bk + 0.028, rS = 0.056 * (F.ca || 1) * Bk + 0.024;
+    const [Dp, Wp] = skirtWaist(d);
+    const hHem = -S.yb, hK = S.hK, two = hK > 0;
+    _sq.copy(rig.quat[B.hips]).invert();
+    const H = rig.pos[B.hips];
+    // the leg points it must clear, in the hips' frame (+X forward, +Z right)
+    let n = 0;
+    for (const [hi, ki, fi] of LEG3) {
+      const A = rig.pos[hi], K = rig.pos[ki], Ft = rig.pos[fi];
+      for (let s = 0; s < SKIRT_T.length; s++) {
+        const t = SKIRT_T[s], P = _spts[n];
+        (s < 3 ? P.lerpVectors(A, K, t) : P.lerpVectors(K, Ft, t)).sub(H).applyQuaternion(_sq);
+        _srad[n] = s < 3 ? rT - 0.018 * t : rS - 0.012 * t;
+        _sleg[n] = s < 3 ? (t === 1 ? 2 : 0) : 1; // 0 thigh, 1 shin, 2 knee
+        n++;
+      }
+    }
+    const fall = Math.min(0.2, dt || 0.016) * 2.6;
+    for (let i = 0; i < SKIRT_N; i++) {
+      const a = (i / SKIRT_N) * TAU, ca = Math.cos(a), sa = Math.sin(a);
+      const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S.Dh, sa * S.Wh);
+      const phi0 = Math.atan2(rh - rp, hHem);
+      // the upper panel (or the whole of a short skirt), from the waist
+      let phiA = phi0;
+      for (let k = 0; k < n; k++) {
+        if (two && _sleg[k] === 1) continue;
+        const P = _spts[k];
+        const need = panelNeed(P.x * ca + P.z * sa - rp, -P.y, _srad[k], hHem, Math.atan2(P.z, P.x), a);
+        if (need > phiA) phiA = need;
+      }
+      const tA = Math.min(1.75, phiA) - phi0;
+      th[i] = tA >= th[i] ? tA : Math.max(tA, th[i] - fall);
+      bones[B['skirt' + i]].quaternion.setFromAxisAngle(_sax.set(-sa, 0, ca), th[i]);
+      if (!two) continue;
+      // the lower panel: hangs from where the upper one reaches at the knee, clear of the shin
+      const ang = phi0 + th[i], L = hK / Math.cos(phi0);
+      const ku = rp + Math.sin(ang) * L, kh = Math.cos(ang) * L; // (the bend: out from the axis, down from the waist)
+      let phiB = phi0;
+      for (let k = 0; k < n; k++) {
+        if (_sleg[k] === 0) continue;
+        const P = _spts[k];
+        const need = panelNeed(P.x * ca + P.z * sa - ku, -P.y - kh, _srad[k], hHem - hK, Math.atan2(P.z, P.x), a);
+        if (need > phiB) phiB = need;
+      }
+      // (its own angle from the vertical settles back; it turns against the upper panel's)
+      const pB = Math.min(1.3, phiB), j = SKIRT_N + i;
+      th[j] = pB >= th[j] ? pB : Math.max(pB, th[j] - fall);
+      bones[B['skirtK' + i]].quaternion.setFromAxisAngle(_sax, Math.max(phi0, th[j]) - phi0 - th[i]);
+    }
   }
 
   /**

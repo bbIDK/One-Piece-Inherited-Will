@@ -20,7 +20,7 @@
 // pelvis on the hips bone, limbs hang along -Y from their joints.
 import { Prim, M, mul, grid, lathe, between, lin, THREE } from './geom.js';
 import { atlasUV, torsoUV, BLANK_UV } from './detail.js';
-import { B, frameOf, frameId } from './bones.js';
+import { B, frameOf, frameId, SKIRT_N, skirtShape } from './bones.js';
 import { shade, mixHex } from '../../core/math.js';
 
 const TAU = Math.PI * 2;
@@ -541,6 +541,7 @@ export function buildFigure(add0, look, d, pal, q) {
   // ---- pelvis, waist
   const PR = cloth ? [0.08, 0.05, 0.02, -0.02, -0.06, -0.1, -0.13, -0.155, -0.18, -0.2, -0.215] : [0.08, 0.0, -0.08, -0.15, -0.215];
   const skirtPelvis = o.skirt || TOP === 'dress';
+  let skirtInfo = null;
   const pelvisCol = TOP === 'dress' ? pal.top : pal.bottom;
   add(band((y, a) => pelvisPt(sh, y, a), PR, -Math.PI, Math.PI, U), M(), pelvisCol, B.hips);
   if (o.waist === 'belt') {
@@ -569,12 +570,11 @@ export function buildFigure(add0, look, d, pal, q) {
   // skirts and dresses hang from the waist
   if (skirtPelvis) {
     const long = o.bottom === 'longskirt';
-    const yb = long ? -0.88 * d.Lg : -0.34;
+    const SS = skirtShape(d, long), yb = SS.yb;
     const col = TOP === 'dress' ? pal.top : pal.bottom;
     const rows = cloth ? [0.08, 0.0, -0.1, -0.1 + (yb + 0.1) * 0.25, -0.1 + (yb + 0.1) * 0.5, -0.1 + (yb + 0.1) * 0.75, yb] : [0.08, -0.1, (yb - 0.1) * 0.5, yb];
     // (the hem clears the hips and thighs, however broad the frame)
-    const fw = Math.max(1, sh.F.hp * 0.55 + sh.F.th * 0.45);
-    const Wh = (long ? 0.3 : 0.225) * sh.Bk * fw, Dh = (long ? 0.3 : 0.2) * sh.Bk * fw;
+    const Wh = SS.Wh, Dh = SS.Dh;
     const sp = (y, a, inset = 0) => {
       const k = clamp((0.08 - y) / (0.08 - yb), 0, 1);
       const p = pelvisPt(sh, Math.max(y, -0.06), a, 0.012 - inset);
@@ -582,16 +582,24 @@ export function buildFigure(add0, look, d, pal, q) {
       const hx = Math.cos(a) * (Dh - inset), hz = Math.sin(a) * (Wh - inset);
       return [p[0] + (hx - p[0]) * f, y, p[2] + (hz - p[2]) * f];
     };
-    // (the cloth below the hips goes with the leg it hangs over: a stride carries
-    // the skirt forward rather than the knee coming through it)
-    const skirtW = { blend: (x, y, z) => {
-      const k = clamp((0.08 - y) / (0.08 - yb), 0, 1);
-      if (k < 0.12) { const w = 1 - hipsW(y); return w > 0.002 ? [B.chest, w] : null; }
-      const w = Math.pow((k - 0.12) / 0.88, 1.1) * 0.82 * (0.35 + 0.65 * sstep(0, 0.5, Math.abs(z) / Wh));
-      return w > 0.002 ? [z > 0 ? B.thighR : B.thighL, w] : null;
+    // (from the waist down the cloth hangs from six panels round it, each of
+    // which swings out as far as it must to clear the legs — a stride, a knee
+    // bent at rest, sitting down — rather than a knee coming through it:
+    // model.js skirtPanels; above, it follows the waist as it twists)
+    // (a long one bends at the knee: its lower half hangs from a second ring)
+    const bends = long && -yb > SS.hK + 0.12;
+    const skirtW = { skin: (x, y, z) => {
+      if (y > 0.001) { const w = 1 - hipsW(y); return w > 0.002 ? [B.hips, B.chest, w] : [B.hips, 0, 0]; }
+      let a = Math.atan2(z / Wh, x / Dh);
+      if (a < 0) a += TAU;
+      const f = (a / TAU) * SKIRT_N, i = Math.floor(f) % SKIRT_N, j = (i + 1) % SKIRT_N, w = f - Math.floor(f);
+      if (!bends) return [B['skirt' + i], B['skirt' + j], w];
+      const t = sstep(SS.hK - 0.07, SS.hK + 0.07, -y);
+      return [B['skirt' + i], B['skirt' + j], B['skirtK' + i], B['skirtK' + j], w * (1 - t), (1 - w) * t, w * t];
     } };
     add(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U, false, (y, a) => atlasUV('skirt', (a + Math.PI) / TAU, 1 - clamp((0.08 - y) / (0.08 - yb), 0, 1))), M(), col, B.hips, 0, skirtW);
     if (cloth) add(band((y, a) => sp(y, a, 0.008), rows.slice(-2), -Math.PI, Math.PI, U, true), M(), shade(col, -0.35), B.hips, 0, skirtW);
+    skirtInfo = { yb, Wh, Dh, hK: bends ? SS.hK : 0 };
   }
 
   // ---- arms (skin weights blend across the shoulder into the chest and across the elbow)
@@ -693,7 +701,7 @@ export function buildFigure(add0, look, d, pal, q) {
   // ---- a coat over the shoulders (coat colour), the tail swings from the waist
   if (look.coat && TOP !== 'coat' || TOP === 'coat' && !look.top2 && look.coat) coat(add, sh, look.coat, TR, U, cloth, d, q);
   else if (TOP === 'coat') coatTail(add, sh, look.coat || pal.top, U, cloth, d, 0.03);
-  return o;
+  return skirtInfo ? { ...o, skirtInfo } : o;
 }
 
 /**

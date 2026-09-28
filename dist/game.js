@@ -62935,8 +62935,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     "sheath",
     "hilts",
     "backWpn",
-    ...["R", "L"].flatMap((H3) => ["k1", "k2", "k3", "k4", "j1", "j2", "j3", "j4", "tb", "tc"].map((n) => n + H3))
+    ...["R", "L"].flatMap((H3) => ["k1", "k2", "k3", "k4", "j1", "j2", "j3", "j4", "tb", "tc"].map((n) => n + H3)),
+    "skirt0",
+    "skirt1",
+    "skirt2",
+    "skirt3",
+    "skirt4",
+    "skirt5",
+    "skirtK0",
+    "skirtK1",
+    "skirtK2",
+    "skirtK3",
+    "skirtK4",
+    "skirtK5"
   ];
+  var SKIRT_N = 6;
   var B3 = Object.fromEntries(BONES.map((n, i) => [n, i]));
   var PARENT = {
     fistR: "handR",
@@ -62954,6 +62967,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     hilts: "hips",
     hairTail: "head"
   };
+  for (let i = 0; i < SKIRT_N; i++) {
+    PARENT["skirt" + i] = "hips";
+    PARENT["skirtK" + i] = "skirt" + i;
+  }
   for (const H3 of ["R", "L"]) {
     for (let i = 1; i <= 4; i++) {
       PARENT["k" + i + H3] = "hand" + H3;
@@ -63033,12 +63050,28 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     };
   }
   function restOffsets(d) {
-    return {
+    const R4 = {
       hairTail: [d.hx, d.hc, 0],
       tail: [-0.13 * d.Bk, -0.06, 0],
       wingR: [-0.11 * d.Bk, d.chestLen * 0.8, 0.05],
       wingL: [-0.11 * d.Bk, d.chestLen * 0.8, -0.05]
     };
+    const [Dp, Wp] = skirtWaist(d);
+    const L2 = skirtShape(d, true), f = L2.hK / -L2.yb;
+    for (let i = 0; i < SKIRT_N; i++) {
+      const a = i / SKIRT_N * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+      R4["skirt" + i] = [c * Dp, 0, s * Wp];
+      R4["skirtK" + i] = [c * (L2.Dh - Dp) * f, -L2.hK, s * (L2.Wh - Wp) * f];
+    }
+    return R4;
+  }
+  function skirtWaist(d) {
+    const Wp = d.hipOut * 0.92;
+    return [Wp * 0.78, Wp];
+  }
+  function skirtShape(d, long) {
+    const F4 = d.F, fw = Math.max(1, F4.hp * 0.55 + F4.th * 0.45);
+    return { yb: long ? -0.88 * d.Lg : -0.34, Wh: (long ? 0.3 : 0.225) * d.Bk * fw, Dh: (long ? 0.3 : 0.2) * d.Bk * fw, hK: 0.07 + d.T1, long };
   }
   function bindPose(d) {
     const T4 = (x, y, z) => new Matrix4().makeTranslation(x, y, z);
@@ -63070,6 +63103,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     child("wingR", "chest", R4.wingR);
     child("wingL", "chest", R4.wingL);
     child("hairTail", "head", R4.hairTail);
+    for (let i = 0; i < SKIRT_N; i++) {
+      child("skirt" + i, "hips", R4["skirt" + i]);
+      child("skirtK" + i, "skirt" + i, R4["skirtK" + i]);
+    }
     return m;
   }
 
@@ -63264,6 +63301,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.part = [];
       this.idx = [];
       this.uv = [];
+      this.x4 = /* @__PURE__ */ new Map();
       this.bind = bind;
       this.blankUV = blankUV;
     }
@@ -63278,12 +63316,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
      * Add geometry `g` transformed by matrix `m`. `color` is a colour string /
      * THREE.Color, or fn(x, y, z) of the primitive's local position → colour.
      * opts: { uv: use g's own uv attribute as detail-texture UVs,
-     *         blend: fn(x, y, z) of the position in the bone's frame → [bone2, weight2] or null }
+     *         blend: fn(x, y, z) of the position in the bone's frame → [bone2, weight2] or null,
+     *         skin: fn(x, y, z) → [bone1, bone2, weight2], or up to four bones
+     *               [b1, b2, b3, b4, w2, w3, w4]: the bones it follows instead
+     *               (still placed from `bone`'s frame) }
      */
     add(g, m, color, bone = 0, part5 = 0, opts = null) {
       const P4 = g.attributes.position, N4 = g.attributes.normal;
       const UV = opts && opts.uv || g.userData && g.userData.detail ? g.attributes.uv : null;
-      const blend = opts && opts.blend;
+      const blend = opts && opts.blend, skin = opts && opts.skin;
       const base2 = this.count;
       _nm.getNormalMatrix(m);
       const fn = typeof color === "function" ? color : null;
@@ -63293,14 +63334,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         _v4.fromBufferAttribute(P4, i);
         const c = fn ? toColor(fn(_v4.x, _v4.y, _v4.z)) : c0;
         _v4.applyMatrix4(m);
-        const bw2 = blend ? blend(_v4.x, _v4.y, _v4.z) : null;
+        const sk = skin ? skin(_v4.x, _v4.y, _v4.z) : null;
+        const bw2 = sk ? [sk[1], sk[2]] : blend ? blend(_v4.x, _v4.y, _v4.z) : null;
         if (bm) _v4.applyMatrix4(bm);
         _n2.fromBufferAttribute(N4, i).applyMatrix3(_nm).normalize();
         this.pos.push(_v4.x, _v4.y, _v4.z);
         this.nor.push(_n2.x, _n2.y, _n2.z);
         this.col.push(c.r, c.g, c.b);
-        this.bone.push(bone);
-        if (bw2 && bw2[1] > 1e-3) {
+        this.bone.push(sk ? sk[0] : bone);
+        if (sk && sk.length > 3) {
+          this.bone2.push(sk[1]);
+          this.w2.push(sk[4]);
+          this.x4.set(base2 + i, [sk[2], sk[5], sk[3], sk[6]]);
+        } else if (bw2 && bw2[1] > 1e-3) {
           this.bone2.push(bw2[0]);
           this.w2.push(Math.min(1, bw2[1]));
         } else {
@@ -63341,6 +63387,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         sw2[i * 4] = 1 - w2;
         si[i * 4 + 1] = this.bone2[i];
         sw2[i * 4 + 1] = w2;
+      }
+      for (const [i, [b3, w3, b4, w4]] of this.x4) {
+        si[i * 4 + 2] = b3;
+        sw2[i * 4 + 2] = w3;
+        si[i * 4 + 3] = b4;
+        sw2[i * 4 + 3] = w4;
+        sw2[i * 4] = Math.max(0, 1 - sw2[i * 4 + 1] - w3 - w4);
       }
       g.setAttribute("skinIndex", new Uint16BufferAttribute(si, 4));
       g.setAttribute("skinWeight", new Float32BufferAttribute(sw2, 4));
@@ -64075,6 +64128,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     const PR = cloth ? [0.08, 0.05, 0.02, -0.02, -0.06, -0.1, -0.13, -0.155, -0.18, -0.2, -0.215] : [0.08, 0, -0.08, -0.15, -0.215];
     const skirtPelvis = o.skirt || TOP === "dress";
+    let skirtInfo = null;
     const pelvisCol = TOP === "dress" ? pal.top : pal.bottom;
     add5(band((y, a) => pelvisPt(sh, y, a), PR, -Math.PI, Math.PI, U3), M(), pelvisCol, B3.hips);
     if (o.waist === "belt") {
@@ -64101,11 +64155,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     if (skirtPelvis) {
       const long = o.bottom === "longskirt";
-      const yb = long ? -0.88 * d.Lg : -0.34;
+      const SS = skirtShape(d, long), yb = SS.yb;
       const col = TOP === "dress" ? pal.top : pal.bottom;
       const rows = cloth ? [0.08, 0, -0.1, -0.1 + (yb + 0.1) * 0.25, -0.1 + (yb + 0.1) * 0.5, -0.1 + (yb + 0.1) * 0.75, yb] : [0.08, -0.1, (yb - 0.1) * 0.5, yb];
-      const fw = Math.max(1, sh.F.hp * 0.55 + sh.F.th * 0.45);
-      const Wh = (long ? 0.3 : 0.225) * sh.Bk * fw, Dh = (long ? 0.3 : 0.2) * sh.Bk * fw;
+      const Wh = SS.Wh, Dh = SS.Dh;
       const sp = (y, a, inset = 0) => {
         const k = clamp3((0.08 - y) / (0.08 - yb), 0, 1);
         const p = pelvisPt(sh, Math.max(y, -0.06), a, 0.012 - inset);
@@ -64113,17 +64166,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const hx = Math.cos(a) * (Dh - inset), hz = Math.sin(a) * (Wh - inset);
         return [p[0] + (hx - p[0]) * f, y, p[2] + (hz - p[2]) * f];
       };
-      const skirtW = { blend: (x, y, z) => {
-        const k = clamp3((0.08 - y) / (0.08 - yb), 0, 1);
-        if (k < 0.12) {
+      const bends = long && -yb > SS.hK + 0.12;
+      const skirtW = { skin: (x, y, z) => {
+        if (y > 1e-3) {
           const w2 = 1 - hipsW(y);
-          return w2 > 2e-3 ? [B3.chest, w2] : null;
+          return w2 > 2e-3 ? [B3.hips, B3.chest, w2] : [B3.hips, 0, 0];
         }
-        const w = Math.pow((k - 0.12) / 0.88, 1.1) * 0.82 * (0.35 + 0.65 * sstep(0, 0.5, Math.abs(z) / Wh));
-        return w > 2e-3 ? [z > 0 ? B3.thighR : B3.thighL, w] : null;
+        let a = Math.atan2(z / Wh, x / Dh);
+        if (a < 0) a += TAU13;
+        const f = a / TAU13 * SKIRT_N, i = Math.floor(f) % SKIRT_N, j = (i + 1) % SKIRT_N, w = f - Math.floor(f);
+        if (!bends) return [B3["skirt" + i], B3["skirt" + j], w];
+        const t = sstep(SS.hK - 0.07, SS.hK + 0.07, -y);
+        return [B3["skirt" + i], B3["skirt" + j], B3["skirtK" + i], B3["skirtK" + j], w * (1 - t), (1 - w) * t, w * t];
       } };
       add5(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U3, false, (y, a) => atlasUV("skirt", (a + Math.PI) / TAU13, 1 - clamp3((0.08 - y) / (0.08 - yb), 0, 1))), M(), col, B3.hips, 0, skirtW);
       if (cloth) add5(band((y, a) => sp(y, a, 8e-3), rows.slice(-2), -Math.PI, Math.PI, U3, true), M(), shade(col, -0.35), B3.hips, 0, skirtW);
+      skirtInfo = { yb, Wh, Dh, hK: bends ? SS.hK : 0 };
     }
     const armCol = pal.sleeve || (TOP === "coat" ? look.coat || pal.top : TOP === "jacket" ? pal.top : TOP === "striped" ? pal.top : pal.top);
     const Lk = Math.sqrt(d.Am);
@@ -64211,7 +64269,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     if (look.coat && TOP !== "coat" || TOP === "coat" && !look.top2 && look.coat) coat(add5, sh, look.coat, TR, U3, cloth, d, q2);
     else if (TOP === "coat") coatTail(add5, sh, look.coat || pal.top, U3, cloth, d, 0.03);
-    return o;
+    return skirtInfo ? { ...o, skirtInfo } : o;
   }
   function neckGeo(nk, y0, y1, o, cloth) {
     const U3 = cloth ? 14 : 7, V3 = cloth ? 6 : 2;
@@ -65897,7 +65955,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const geo2 = b.build();
     const inv = bind.map((m) => m.clone().invert());
     const used = new Set(b.bone);
-    return { geo: geo2, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === "bubble", lod, fingers: fingers.R ? fingers : null };
+    return { geo: geo2, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === "bubble", lod, fingers: fingers.R ? fingers : null, skirt: outfit.skirtInfo || null };
   }
   function minkEars2(b, HM, look, pal, hb, q2) {
     const fur = pal.fur, inner = look.kind === "Panda" ? "#2b2b2b" : mixHex(fur, "#f48fb1", 0.55);
@@ -66445,6 +66503,25 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var DOWN = new Vector3(0, -1, 0);
   var _dr = Array.from({ length: 8 }, () => new Vector3());
   var smooth4 = (x) => x * x * (3 - 2 * x);
+  var TAU16 = Math.PI * 2;
+  var LEG3 = [[B3.thighR, B3.shinR, B3.footR], [B3.thighL, B3.shinL, B3.footL]];
+  var SKIRT_T = [0.4, 0.7, 1, 0.35, 0.7, 1];
+  var SKIRT_REACH = Math.PI / SKIRT_N * 2;
+  var SKIRT_FADE = 0.35;
+  var _sq = new Quaternion();
+  var _sax = new Vector3();
+  var _spts = Array.from({ length: SKIRT_T.length * 2 }, () => new Vector3());
+  var _srad = new Float32Array(SKIRT_T.length * 2);
+  var _sleg = new Uint8Array(SKIRT_T.length * 2);
+  function panelNeed(u, h2, r, len, psi, a) {
+    let da = Math.abs(psi - a) % TAU16;
+    if (da > Math.PI) da = TAU16 - da;
+    if (da > SKIRT_REACH + SKIRT_FADE || h2 < -0.05 || h2 > len + 0.05) return -1;
+    const fade2 = da <= SKIRT_REACH ? 1 : 1 - (da - SKIRT_REACH) / SKIRT_FADE;
+    const R4 = Math.hypot(u, h2);
+    const phi = R4 <= r ? 1.75 : Math.acos(Math.max(-1, -r / R4)) - Math.atan2(h2, u);
+    return phi * fade2;
+  }
   var _d1 = new Vector3();
   var _d2 = new Vector3();
   var _d3 = new Vector3();
@@ -66531,6 +66608,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const d = this.d;
       const R4 = restOffsets(d);
       for (const n of ["hairTail", "tail", "wingR", "wingL"]) this.bones[B3[n]].position.set(...R4[n]);
+      for (let i = 0; i < SKIRT_N; i++) {
+        this.bones[B3["skirt" + i]].position.set(...R4["skirt" + i]);
+        this.bones[B3["skirtK" + i]].position.set(...R4["skirtK" + i]);
+      }
       this.restFingers();
       this.face = new Mesh(faceGeo(look, headLevel(this.lod)), void 0);
       this.face.position.set(d.hx, d.hc, 0);
@@ -66687,6 +66768,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         bones2[i].quaternion.copy(rig.quat[i]);
       }
       for (const i of LIMBS) bones2[i].scale.set(1, rig.len[i], 1);
+      if (this.body.skirt) this.skirtPanels(o.dt);
       if (this.visibleParts) for (const [i, on] of this.visibleParts) this.showBone(i, on);
       if (this.fing) for (let k = 0; k < 2; k++) this.poseFingers(k, this.shape[k], t);
       const lean = (P4.l || 0) + (o.leanAdd || 0);
@@ -66748,6 +66830,65 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       if (o.squash && o.squash !== 1) g.scale.set(1 / Math.sqrt(o.squash), o.squash, 1 / Math.sqrt(o.squash));
       else g.scale.set(1, 1, 1);
+    }
+    /**
+     * A skirt's six panels (bones skirt0..5, hung round the waist from the front
+     * toward the right): each swings out about its own horizontal axis just as
+     * far as it must for the thighs, knees and shins beneath it to stay inside
+     * the cloth — a stride, a knee bent at rest, sitting down — and settles back
+     * more gently than it was pushed, as cloth falls. A long skirt bends again
+     * at the knee (skirtK0..5): the upper panel lies over the thigh, the lower
+     * hangs from the knee, clear of the shin.
+     */
+    skirtPanels(dt) {
+      const S3 = this.body.skirt, d = this.d, rig = this.rig, bones2 = this.bones;
+      const th = this.skirtTh || (this.skirtTh = new Float32Array(SKIRT_N * 2));
+      const F4 = d.F || {}, Bk = d.Bk;
+      const rT = 0.088 * (F4.th || 1) * Bk + 0.028, rS = 0.056 * (F4.ca || 1) * Bk + 0.024;
+      const [Dp, Wp] = skirtWaist(d);
+      const hHem = -S3.yb, hK = S3.hK, two = hK > 0;
+      _sq.copy(rig.quat[B3.hips]).invert();
+      const H3 = rig.pos[B3.hips];
+      let n = 0;
+      for (const [hi, ki, fi] of LEG3) {
+        const A = rig.pos[hi], K = rig.pos[ki], Ft = rig.pos[fi];
+        for (let s = 0; s < SKIRT_T.length; s++) {
+          const t = SKIRT_T[s], P4 = _spts[n];
+          (s < 3 ? P4.lerpVectors(A, K, t) : P4.lerpVectors(K, Ft, t)).sub(H3).applyQuaternion(_sq);
+          _srad[n] = s < 3 ? rT - 0.018 * t : rS - 0.012 * t;
+          _sleg[n] = s < 3 ? t === 1 ? 2 : 0 : 1;
+          n++;
+        }
+      }
+      const fall = Math.min(0.2, dt || 0.016) * 2.6;
+      for (let i = 0; i < SKIRT_N; i++) {
+        const a = i / SKIRT_N * TAU16, ca = Math.cos(a), sa = Math.sin(a);
+        const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S3.Dh, sa * S3.Wh);
+        const phi0 = Math.atan2(rh - rp, hHem);
+        let phiA = phi0;
+        for (let k = 0; k < n; k++) {
+          if (two && _sleg[k] === 1) continue;
+          const P4 = _spts[k];
+          const need = panelNeed(P4.x * ca + P4.z * sa - rp, -P4.y, _srad[k], hHem, Math.atan2(P4.z, P4.x), a);
+          if (need > phiA) phiA = need;
+        }
+        const tA = Math.min(1.75, phiA) - phi0;
+        th[i] = tA >= th[i] ? tA : Math.max(tA, th[i] - fall);
+        bones2[B3["skirt" + i]].quaternion.setFromAxisAngle(_sax.set(-sa, 0, ca), th[i]);
+        if (!two) continue;
+        const ang = phi0 + th[i], L2 = hK / Math.cos(phi0);
+        const ku = rp + Math.sin(ang) * L2, kh = Math.cos(ang) * L2;
+        let phiB = phi0;
+        for (let k = 0; k < n; k++) {
+          if (_sleg[k] === 0) continue;
+          const P4 = _spts[k];
+          const need = panelNeed(P4.x * ca + P4.z * sa - ku, -P4.y - kh, _srad[k], hHem - hK, Math.atan2(P4.z, P4.x), a);
+          if (need > phiB) phiB = need;
+        }
+        const pB = Math.min(1.3, phiB), j = SKIRT_N + i;
+        th[j] = pB >= th[j] ? pB : Math.max(pB, th[j] - fall);
+        bones2[B3["skirtK" + i]].quaternion.setFromAxisAngle(_sax, Math.max(phi0, th[j]) - phi0 - th[i]);
+      }
     }
     /**
      * Drawing a weapon: the right hand goes to its grip — a sword's hilt at the
@@ -66825,7 +66966,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
 
   // src/render3d/chars/fx.js
-  var TAU16 = Math.PI * 2;
+  var TAU17 = Math.PI * 2;
   function canvas(w, h2) {
     const c = document.createElement("canvas");
     c.width = w;
@@ -67072,7 +67213,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.translate(32, 32);
     g.beginPath();
     for (let i = 0; i < 10; i++) {
-      const r = i % 2 ? 11 : 26, a = -Math.PI / 2 + i / 10 * TAU16;
+      const r = i % 2 ? 11 : 26, a = -Math.PI / 2 + i / 10 * TAU17;
       g.lineTo(Math.cos(a) * r, Math.sin(a) * r);
     }
     g.closePath();
@@ -67097,7 +67238,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     update(t, r = 0.3) {
       for (let k = 0; k < 3; k++) {
-        const a = t * 5 + k * TAU16 / 3;
+        const a = t * 5 + k * TAU17 / 3;
         this.s[k].position.set(Math.cos(a) * r, Math.sin(a * 2) * 0.04, Math.sin(a) * r);
         this.s[k].scale.setScalar(0.13 * (0.85 + 0.15 * Math.sin(a * 2)));
       }
@@ -67118,7 +67259,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render3d/chars/seaking.js
-  var TAU17 = Math.PI * 2;
+  var TAU18 = Math.PI * 2;
   var SPH = new SphereGeometry(1, 16, 12);
   var CONE = new ConeGeometry(1, 1, 6);
   CONE.translate(0, 0.5, 0);
@@ -68240,7 +68381,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
 
   // src/render3d/chars3d.js
-  var TAU18 = Math.PI * 2;
+  var TAU19 = Math.PI * 2;
   var clamp6 = (v, a, b) => v < a ? a : v > b ? b : v;
   var _v8 = new Vector3();
   var _v24 = new Vector3();
@@ -68366,7 +68507,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const want = a.facing || 0;
         if (this.visF === void 0 || dtv >= 1 || knocked) this.visF = want;
         else this.visF += angleDiff(this.visF, want) * (1 - Math.exp(-dtv * (a.isPlayer ? 24 : a.action ? 20 : 10)));
-        this.yaw.rotation.y = -(this.visF + (P4.sp || 0) * TAU18);
+        this.yaw.rotation.y = -(this.visF + (P4.sp || 0) * TAU19);
         if (dist < 32) m.swing(this.lastT < 0 ? 1 : dtv, this.root);
         m.setExpression(expression2(look, pose, P4, pose.time || 0));
         this.effects(a, pose, P4, o, env, ctx, camYaw3, dist, s);
@@ -68453,7 +68594,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const f = a.facing || 0;
         const dx = cam.position.x - this.root.position.x, dz = cam.position.z - this.root.position.z;
         let d = Math.atan2(dz, dx) - f;
-        d = ((d + Math.PI) % TAU18 + TAU18) % TAU18 - Math.PI;
+        d = ((d + Math.PI) % TAU19 + TAU19) % TAU19 - Math.PI;
         y = clamp6(-d, -1, 1);
         if (Math.abs(d) > 1.9) y = 0;
       }
@@ -70678,7 +70819,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render3d/seabed.js
-  var TAU19 = Math.PI * 2;
+  var TAU20 = Math.PI * 2;
   var CELL5 = 16;
   var KINDS2 = ["branch", "brain", "table", "fan", "tube", "anemone", "kelp", "seagrass", "boulder", "star", "clam"];
   var MAX3 = { branch: 1400, brain: 1e3, table: 420, fan: 800, tube: 600, anemone: 700, kelp: 1500, seagrass: 5e3, boulder: 1100, star: 500, clam: 60 };
@@ -70768,7 +70909,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const parts = [], r = rng3(11);
     const n = 6;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU19 + r() * 0.6;
+      const a = i / n * TAU20 + r() * 0.6;
       const tilt = 0.2 + r() * 0.5, L2 = 0.2 + r() * 0.14;
       const base2 = V2(Math.cos(a) * 0.04, 0, Math.sin(a) * 0.04);
       const mid = V2(base2.x + Math.cos(a) * Math.sin(tilt) * L2, L2 * Math.cos(tilt), base2.z + Math.sin(a) * Math.sin(tilt) * L2);
@@ -70848,7 +70989,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     parts.push(foot);
     const n = 14;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU19;
+      const a = i / n * TAU20;
       const L2 = 0.2 + i % 3 * 0.04, out = 0.45 + i % 2 * 0.25;
       const r0 = 0.08;
       const g = ribbon2([[0, 0.12, r0, 0.022], [0, 0.12 + L2 * 0.6, r0 + L2 * 0.5 * out, 0.016], [0, 0.12 + L2, r0 + L2 * out, 4e-3]]);
@@ -70878,7 +71019,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const parts = [];
     const n = 6;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU19 + i * 0.9;
+      const a = i / n * TAU20 + i * 0.9;
       const h2 = 0.38 + i % 3 * 0.1, lean = 0.08 + i % 2 * 0.06, r0 = 0.03 + i % 2 * 0.03;
       const g = ribbon2([[0, 0, r0, 0.018], [0, h2 * 0.55, r0 + lean * 0.4, 0.016], [0, h2, r0 + lean, 6e-3]]);
       g.rotateY(Math.PI / 2 - a);
@@ -70897,7 +71038,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const pos = [];
     const arms = 5, ro = 0.13, ri = 0.05, hc2 = 0.03;
     for (let i = 0; i < arms * 2; i++) {
-      const a0 = i / (arms * 2) * TAU19, a1 = (i + 1) / (arms * 2) * TAU19;
+      const a0 = i / (arms * 2) * TAU20, a1 = (i + 1) / (arms * 2) * TAU20;
       const r0 = i % 2 ? ri : ro, r1 = i % 2 ? ro : ri;
       pos.push(0, hc2, 0, Math.cos(a1) * r1, 8e-3, Math.sin(a1) * r1, Math.cos(a0) * r0, 8e-3, Math.sin(a0) * r0);
     }
@@ -71025,7 +71166,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (depth > 1.2 && r4 < (depth > 16 ? 0.03 : 0.012)) put2("boulder", x + r1, y + r3, r4 * 90, 0.7 + r2 * 2.2, 1, rgb(depth > 20 ? [0.36, 0.4, 0.44] : [0.5, 0.52, 0.46]), 0.12);
         if (depth > 22 && r2 < 6e-3) put2("tube", x + r3, y + r1, r2 * 90, 1 + r4, 1, rgb([0.5, 0.4, 0.6], 0.8));
         if (depth > 0.6 && depth < 12 && r2 > 0.992) put2("star", x + r1, y + r4, r2 * 90, 0.8 + r3 * 0.8, 1, rgb(pick(STARS, r3)), 0);
-        if (clamAt(world, x, y, depth)) put2("clam", x + 0.5, y + 0.5, r1 * TAU19, 1.3 + r2 * 0.5, 1, rgb([0.86, 0.82, 0.72]), 0.05);
+        if (clamAt(world, x, y, depth)) put2("clam", x + 0.5, y + 0.5, r1 * TAU20, 1.3 + r2 * 0.5, 1, rgb([0.86, 0.82, 0.72]), 0.05);
       }
     }
     return out;
@@ -71372,7 +71513,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }, "rm-canals");
 
   // src/render3d/sealife3d.js
-  var TAU20 = Math.PI * 2;
+  var TAU21 = Math.PI * 2;
   var MAX_FISH = 260;
   function sphereInto(pos, eye, cx, cy, cz, r, tag, seg = 6) {
     const g = new SphereGeometry(r, seg, Math.max(3, seg - 2)).toNonIndexed();
@@ -71388,7 +71529,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const ring4 = (x, h2, w) => {
       const r = [];
       for (let i = 0; i < n; i++) {
-        const a = i / n * TAU20;
+        const a = i / n * TAU21;
         r.push([x, Math.cos(a) * h2, Math.sin(a) * w]);
       }
       return r;
@@ -81293,7 +81434,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render/fxshapes.js
-  var TAU21 = Math.PI * 2;
+  var TAU22 = Math.PI * 2;
   var easeOut = (k) => 1 - (1 - k) ** 3;
   var clamp016 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function hash8(n) {
@@ -81302,12 +81443,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function ellipsePath(g, rx, ry) {
     g.beginPath();
-    g.ellipse(0, 0, Math.max(1e-3, rx), Math.max(1e-3, ry), 0, 0, TAU21);
+    g.ellipse(0, 0, Math.max(1e-3, rx), Math.max(1e-3, ry), 0, 0, TAU22);
   }
   function spiky(g, R4, n, seed, sx = 1) {
     g.beginPath();
     for (let i = 0; i < n * 2; i++) {
-      const a = i / (n * 2) * TAU21;
+      const a = i / (n * 2) * TAU22;
       const rr = i % 2 ? R4 * (0.26 + 0.08 * hash8(seed + i)) : R4 * (0.62 + 0.55 * hash8(seed + i * 3.1));
       const x = Math.cos(a) * rr * sx, y = Math.sin(a) * rr;
       if (i) g.lineTo(x, y);
@@ -81337,16 +81478,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (s.shape === "circle") {
         g.globalAlpha = a * (0.1 + 0.12 * k);
         g.beginPath();
-        g.arc(0, 0, s.r, 0, TAU21);
+        g.arc(0, 0, s.r, 0, TAU22);
         g.fill();
         g.globalAlpha = a * (0.3 + 0.35 * k);
         g.beginPath();
-        g.arc(0, 0, s.r * easeOut(k), 0, TAU21);
+        g.arc(0, 0, s.r * easeOut(k), 0, TAU22);
         g.fill();
         g.globalAlpha = a * (0.55 + 0.4 * pulse * k);
         g.lineWidth = 0.05 + 0.04 * k;
         g.beginPath();
-        g.arc(0, 0, s.r, 0, TAU21);
+        g.arc(0, 0, s.r, 0, TAU22);
         g.stroke();
       } else if (s.shape === "arc") {
         const a0 = s.angle - s.arc / 2, a1 = s.angle + s.arc / 2;
@@ -81404,7 +81545,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const ang = i / n * TAU21 + s.seed + (hash8(s.seed + i) - 0.5) * 0.5;
+          const ang = i / n * TAU22 + s.seed + (hash8(s.seed + i) - 0.5) * 0.5;
           let px2 = 0, py2 = 0;
           g.moveTo(0, 0);
           const len = s.r * (0.6 + 0.5 * hash8(s.seed * 3 + i));
@@ -81435,7 +81576,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     gr.addColorStop(1, rgba2(col, 0));
     g.fillStyle = gr;
     g.beginPath();
-    g.arc(0, 0, Math.max(1e-3, r), 0, TAU21);
+    g.arc(0, 0, Math.max(1e-3, r), 0, TAU22);
     g.fill();
     g.restore();
   }
@@ -81456,7 +81597,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = 0.06;
         g.beginPath();
         for (let i = 0; i < 9; i++) {
-          const a0 = i / 9 * TAU21 + s.seed, a1 = a0 + 0.35;
+          const a0 = i / 9 * TAU22 + s.seed, a1 = a0 + 0.35;
           g.moveTo(Math.cos(a0) * s.r * 0.85, Math.sin(a0) * s.r * 0.51);
           g.lineTo(Math.cos(a1) * s.r * 0.95, Math.sin(a1) * s.r * 0.57);
         }
@@ -81508,7 +81649,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.beginPath();
           const n = 48;
           for (let i = 0; i <= n; i++) {
-            const th = i / n * TAU21;
+            const th = i / n * TAU22;
             const wr = rad * (1 + s.wobble * (1 - k) * Math.sin(th * (s.lobes || 9) + c.t * 40));
             const x = Math.cos(th) * wr, y = Math.sin(th) * wr * ry;
             if (i) g.lineTo(x, y);
@@ -81624,7 +81765,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.globalAlpha = a * fade2 * 0.4;
       g.fillStyle = s.color || "#fff59d";
       g.beginPath();
-      g.arc(0, 0, R4 * 0.55, 0, TAU21);
+      g.arc(0, 0, R4 * 0.55, 0, TAU22);
       g.fill();
       g.globalAlpha = a * fade2 * 0.95;
       starPath(g, 0, 0, R4, 4, 0.12, 0);
@@ -81772,7 +81913,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = fade2 * 0.9;
         g.fillStyle = "#ffffff";
         g.beginPath();
-        g.arc(0, 0, wd * 0.9, 0, TAU21);
+        g.arc(0, 0, wd * 0.9, 0, TAU22);
         g.fill();
         starPath(g, 0, 0, wd * 1.8, 4, 0.12, c.t * 3);
         g.fill();
@@ -81780,7 +81921,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.globalAlpha = fade2 * 0.8;
       g.fillStyle = s.core || "#ffffff";
       g.beginPath();
-      g.arc(L2, 0, wd * 0.55, 0, TAU21);
+      g.arc(L2, 0, wd * 0.55, 0, TAU22);
       g.fill();
     }
   };
@@ -81830,7 +81971,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.globalAlpha = a * fade2 * 0.25;
       g.fillStyle = s.color || "#e0f7fa";
       g.beginPath();
-      g.arc(0, 0, R4 * 0.35, 0, TAU21);
+      g.arc(0, 0, R4 * 0.35, 0, TAU22);
       g.fill();
       g.lineCap = "round";
       g.lineJoin = "miter";
@@ -81841,7 +81982,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU21 + (hash8(s.seed + i) - 0.5) * 0.5;
+          const th = i / n * TAU22 + (hash8(s.seed + i) - 0.5) * 0.5;
           let x = 0, y = 0;
           g.moveTo(0, 0);
           const L2 = R4 * (0.6 + 0.5 * hash8(s.seed + i * 3));
@@ -81851,7 +81992,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             y = Math.sin(th + o) * r;
             g.lineTo(x, y);
           }
-          const th2 = th + TAU21 / n;
+          const th2 = th + TAU22 / n;
           const r2 = L2 * 0.55;
           g.moveTo(Math.cos(th) * r2, Math.sin(th) * r2);
           g.lineTo(Math.cos(th2) * r2 * 0.95, Math.sin(th2) * r2 * 0.95);
@@ -81959,7 +82100,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         for (let i = 1; i < 4; i++) {
           const f = i / 4;
-          g.ellipse(0, -H3 * f * 0.85, R4 * Math.sqrt(1 - f * f), R4 * 0.1 * (1 - f), 0, 0, TAU21);
+          g.ellipse(0, -H3 * f * 0.85, R4 * Math.sqrt(1 - f * f), R4 * 0.1 * (1 - f), 0, 0, TAU22);
         }
         g.stroke();
       }
@@ -81993,7 +82134,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const cx = col * hr * 1.5 * (side ? 0.35 : 1), cy = row * hr * 1.73 + (col & 1 ? hr * 0.86 : 0);
           if (Math.abs(cx) > W4 / 2 - 0.05 || Math.abs(cy) > H3 / 2 - 0.05) continue;
           for (let i = 0; i <= 6; i++) {
-            const th = i / 6 * TAU21;
+            const th = i / 6 * TAU22;
             const x = cx + Math.cos(th) * hr * 0.55 * (side ? 0.35 : 1), y = cy + Math.sin(th) * hr * 0.55;
             if (i) g.lineTo(x, y);
             else g.moveTo(x, y);
@@ -82032,7 +82173,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         for (let j = 0; j <= 16; j++) {
           const u = j / 16;
-          const th = spin + i / arms * TAU21 + u * 3.2;
+          const th = spin + i / arms * TAU22 + u * 3.2;
           const r = R4 * (1 - u * 0.85);
           const x = Math.cos(th) * r, y = Math.sin(th) * r * 0.62;
           if (j) g.lineTo(x, y);
@@ -82068,13 +82209,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const n = 9;
       for (let pass = 0; pass < 2; pass++) {
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU21;
+          const th = i / n * TAU22;
           const x = Math.cos(th) * R4 * 0.75 + Math.sin(c.t * 0.8 + i) * 0.1, y = Math.sin(th) * R4 * 0.28;
           const rr = R4 * (0.38 + 0.12 * hash8(s.seed + i));
           g.globalAlpha = a * (pass ? 0.9 : 0.5);
           g.fillStyle = pass ? s.color || "#37474f" : "#263238";
           g.beginPath();
-          g.arc(x, y + (pass ? -0.05 : 0.08), rr * (pass ? 0.9 : 1.05), 0, TAU21);
+          g.arc(x, y + (pass ? -0.05 : 0.08), rr * (pass ? 0.9 : 1.05), 0, TAU22);
           g.fill();
         }
       }
@@ -82083,7 +82224,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = a * 0.5;
         g.fillStyle = s.glow || "#fff59d";
         g.beginPath();
-        g.arc((hash8(Math.floor(c.t * 8) + s.seed) - 0.5) * R4, 0, R4 * 0.35, 0, TAU21);
+        g.arc((hash8(Math.floor(c.t * 8) + s.seed) - 0.5) * R4, 0, R4 * 0.35, 0, TAU22);
         g.fill();
       }
     }
@@ -82136,9 +82277,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = fade2;
         g.fillStyle = s.petal || "#f48fb1";
         for (let i = 0; i < 5; i++) {
-          const th = i / 5 * TAU21 + p.seed;
+          const th = i / 5 * TAU22 + p.seed;
           g.beginPath();
-          g.ellipse(x + Math.cos(th) * 0.09, y + Math.sin(th) * 0.05, 0.08, 0.04, th, 0, TAU21);
+          g.ellipse(x + Math.cos(th) * 0.09, y + Math.sin(th) * 0.05, 0.08, 0.04, th, 0, TAU22);
           g.fill();
         }
         const ang = p.ang;
@@ -82158,7 +82299,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = 0.025;
         const hr = (s.big ? 0.26 : 0.08) * (1 - clutch * 0.2);
         g.beginPath();
-        g.arc(ex, ey, hr, 0, TAU21);
+        g.arc(ex, ey, hr, 0, TAU22);
         g.fill();
         g.stroke();
         if (!clutch) {
@@ -82212,7 +82353,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.05;
         g.beginPath();
-        g.arc(0, 0, R4, 0, TAU21);
+        g.arc(0, 0, R4, 0, TAU22);
         g.fill();
         g.stroke();
         g.strokeStyle = s.kind === "mochi" ? "#d7ccc8" : "#ffab40";
@@ -82228,14 +82369,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.05;
         g.beginPath();
-        g.ellipse(0, 0, R4 * 1.2, R4 * 0.8, 0, 0, TAU21);
+        g.ellipse(0, 0, R4 * 1.2, R4 * 0.8, 0, 0, TAU22);
         g.fill();
         g.stroke();
       } else {
         g.fillStyle = s.color || "#5d4037";
         g.beginPath();
         for (let i = 0; i < 9; i++) {
-          const th = i / 9 * TAU21;
+          const th = i / 9 * TAU22;
           const rr = R4 * (0.8 + 0.3 * hash8(s.seed + i));
           g.lineTo(Math.cos(th) * rr, Math.sin(th) * rr);
         }
@@ -82245,7 +82386,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = s.glow || "#ff9100";
         g.globalAlpha = 0.6 * a;
         g.beginPath();
-        g.arc(R4 * 0.2, R4 * 0.2, R4 * 0.5, 0, TAU21);
+        g.arc(R4 * 0.2, R4 * 0.2, R4 * 0.5, 0, TAU22);
         g.fill();
       }
     }
@@ -82312,8 +82453,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = "#ff5252";
         g.globalAlpha = a * fade2;
         g.beginPath();
-        g.arc(-R4 * 0.18, -R4 * 0.1, R4 * 0.22, 0, TAU21);
-        g.arc(R4 * 0.18, -R4 * 0.1, R4 * 0.22, 0, TAU21);
+        g.arc(-R4 * 0.18, -R4 * 0.1, R4 * 0.22, 0, TAU22);
+        g.arc(R4 * 0.18, -R4 * 0.1, R4 * 0.22, 0, TAU22);
         g.moveTo(-R4 * 0.38, 0);
         g.lineTo(0, R4 * 0.4);
         g.lineTo(R4 * 0.38, 0);
@@ -82386,7 +82527,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.025;
         g.beginPath();
-        g.arc(x, y, 0.13 * (0.7 + pop * 0.4), 0, TAU21);
+        g.arc(x, y, 0.13 * (0.7 + pop * 0.4), 0, TAU22);
         g.fill();
         g.stroke();
         if (ph > 0.45 && ph < 0.6) {
@@ -82418,7 +82559,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (kind === 0) {
           g.fillStyle = s.skin || "#f1c9a0";
           g.beginPath();
-          g.arc(0, 0, 0.12, 0, TAU21);
+          g.arc(0, 0, 0.12, 0, TAU22);
           g.fill();
           g.stroke();
         } else {
@@ -82502,7 +82643,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.lineWidth = 0.03;
           g.beginPath();
           for (let i = 0; i < 10; i++) {
-            const th = i / 10 * TAU21 + s.seed;
+            const th = i / 10 * TAU22 + s.seed;
             g.moveTo(0, 0);
             g.lineTo(Math.cos(th) * R4 * 0.9, Math.sin(th) * R4 * 0.55);
           }
@@ -82515,9 +82656,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.globalAlpha = 0.24 * a;
           g.fillStyle = col;
           for (let i = 0; i < 6; i++) {
-            const th = i / 6 * TAU21 + c.t * 0.2, rr = R4 * 0.45;
+            const th = i / 6 * TAU22 + c.t * 0.2, rr = R4 * 0.45;
             g.beginPath();
-            g.ellipse(Math.cos(th) * rr * 0.6, Math.sin(th) * rr * 0.35, rr, rr * 0.6, 0, 0, TAU21);
+            g.ellipse(Math.cos(th) * rr * 0.6, Math.sin(th) * rr * 0.35, rr, rr * 0.6, 0, 0, TAU22);
             g.fill();
           }
           g.globalAlpha = 0.35 * a;
@@ -82532,7 +82673,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             g.globalAlpha = 0.9 * a;
             g.beginPath();
             for (let i = 0; i < 7; i++) {
-              const th = i / 7 * TAU21 + s.seed;
+              const th = i / 7 * TAU22 + s.seed;
               const x = Math.cos(th) * R4 * 0.7, y = Math.sin(th) * R4 * 0.45;
               g.moveTo(x, y);
               g.quadraticCurveTo(x * 0.5, y * 0.5 - 0.4 - Math.sin(c.t * 3 + i) * 0.1, 0, -0.1);
@@ -82588,7 +82729,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             s.pts = [];
             const n = Math.max(3, Math.round(R4 * 3));
             for (let i = 0; i < n; i++) {
-              const th = i / n * TAU21 + hash8(s.seed + i);
+              const th = i / n * TAU22 + hash8(s.seed + i);
               const rr = R4 * (0.3 + 0.6 * hash8(s.seed + i * 3));
               s.pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, L: 0.9, ang: th, delay: i * 0.03, seed: i });
             }
@@ -82618,7 +82759,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             g.strokeStyle = s.color;
             g.lineWidth = 0.025;
             g.beginPath();
-            g.arc(x, y - ph * 0.3, 0.06 + ph * 0.12, 0, TAU21);
+            g.arc(x, y - ph * 0.3, 0.06 + ph * 0.12, 0, TAU22);
             g.stroke();
           }
           break;
@@ -82639,7 +82780,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render/fx3d.js
-  var TAU22 = Math.PI * 2;
+  var TAU23 = Math.PI * 2;
   var CULL = -9e3;
   var MAX_SC = 380;
   var MIN_SC = 1;
@@ -82742,7 +82883,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     return runs;
   }
-  function circlePts(x, y, R4, h2, n = 40, a0 = 0, a1 = TAU22, wob) {
+  function circlePts(x, y, R4, h2, n = 40, a0 = 0, a1 = TAU23, wob) {
     const pts = [];
     for (let i = 0; i <= n; i++) {
       const th = a0 + (a1 - a0) * (i / n);
@@ -82877,7 +83018,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const h2 = Math.min(s.z ?? 0.4, 0.12);
     const n = Math.max(16, Math.min(56, Math.round(rad * 10)));
     const wob = s.wobble ? (th) => s.wobble * (1 - k) * Math.sin(th * (s.lobes || 9) + c.t * 40) : null;
-    const runs = ringRuns(r, circlePts(s.x, s.y, rad, h2, n, 0, TAU22, wob));
+    const runs = ringRuns(r, circlePts(s.x, s.y, rad, h2, n, 0, TAU23, wob));
     if (!runs.length) return;
     g.globalCompositeOperation = s.add ? "lighter" : "source-over";
     if (s.fill && runs.length === 1 && runs[0].length > n) fillRuns(g, r, runs, s.fill === true ? s.color : s.fill, alpha2 * 0.22);
@@ -82936,7 +83077,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.globalCompositeOperation = "lighter";
     const nM = s.kind === "cage" ? 16 : 10;
     for (let i = 0; i < nM; i++) {
-      const th = i / nM * TAU22 + (s.kind === "room" ? c.t * 0.15 : 0);
+      const th = i / nM * TAU23 + (s.kind === "room" ? c.t * 0.15 : 0);
       const pts = [];
       for (let j = 0; j <= 10; j++) {
         const ph = j / 10 * (Math.PI / 2);
@@ -83242,7 +83383,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.globalAlpha = 0.8 * k2;
       g.fillStyle = "#fff59d";
       g.beginPath();
-      g.arc(x, y, H3 * 0.03 * (1 + (1 - k2)), 0, TAU22);
+      g.arc(x, y, H3 * 0.03 * (1 + (1 - k2)), 0, TAU23);
       g.fill();
       g.globalAlpha = 0.5 * k2;
       g.strokeStyle = "#ffe082";
@@ -83391,7 +83532,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const R4 = Math.hypot(W4, H3) * 0.55, n = 40;
     g.beginPath();
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU22 + i * 7919 % 17 * 0.013 + fx.time * 0.3;
+      const a = i / n * TAU23 + i * 7919 % 17 * 0.013 + fx.time * 0.3;
       const r0 = R4 * (0.62 + i * 131 % 7 * 0.04), wd = 4e-3 + i * 53 % 5 * 2e-3;
       g.moveTo(cx + Math.cos(a) * R4 * 1.3, cy + Math.sin(a) * R4 * 1.3);
       g.lineTo(cx + Math.cos(a + wd) * r0, cy + Math.sin(a + wd) * r0);
@@ -107890,12 +108031,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   ];
   function drawWhale(g, env, marked) {
     const t = env?.time || 0;
-    const TAU23 = Math.PI * 2;
+    const TAU24 = Math.PI * 2;
     g.save();
     g.translate(0, Math.sin(t * 0.7) * 0.12);
     g.fillStyle = "rgba(255,255,255,0.28)";
     g.beginPath();
-    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU23);
+    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU24);
     g.fill();
     g.fillStyle = "#4e6177";
     g.beginPath();
@@ -107907,7 +108048,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     g.fill();
     g.fillStyle = "#5d7389";
     g.beginPath();
-    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU23);
+    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU24);
     g.fill();
     g.fillStyle = "#d7e1ea";
     g.beginPath();
@@ -107923,16 +108064,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     }
     g.fillStyle = "#fafafa";
     g.beginPath();
-    g.arc(-6.6, -1.8, 0.45, 0, TAU23);
+    g.arc(-6.6, -1.8, 0.45, 0, TAU24);
     g.fill();
     g.fillStyle = "#1a1a1a";
     g.beginPath();
-    g.arc(-6.7, -1.8, 0.24, 0, TAU23);
+    g.arc(-6.7, -1.8, 0.24, 0, TAU24);
     g.fill();
     if (marked) {
       g.fillStyle = "#fafafa";
       g.beginPath();
-      g.arc(-8.2, -3.1, 0.8, 0, TAU23);
+      g.arc(-8.2, -3.1, 0.8, 0, TAU24);
       g.fill();
       g.strokeStyle = "#fafafa";
       g.lineWidth = 0.25;
@@ -107944,8 +108085,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       g.stroke();
       g.fillStyle = "#1a1a1a";
       g.beginPath();
-      g.arc(-8.45, -3.2, 0.16, 0, TAU23);
-      g.arc(-7.95, -3.2, 0.16, 0, TAU23);
+      g.arc(-8.45, -3.2, 0.16, 0, TAU24);
+      g.arc(-7.95, -3.2, 0.16, 0, TAU24);
       g.fill();
     }
     const ph = t % 14;
@@ -107953,7 +108094,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const h2 = Math.sin(ph / 1.6 * Math.PI) * 3.2;
       g.fillStyle = "rgba(225,245,254,0.8)";
       g.beginPath();
-      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU23);
+      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU24);
       g.fill();
     }
     g.font = "bold 0.5px Nunito, sans-serif";

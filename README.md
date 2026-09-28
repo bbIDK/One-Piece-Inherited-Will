@@ -257,8 +257,10 @@ rearrange them.
     arms, waist and belly, and the muscle it usually carries. Townsfolk,
     pirates and Marines each roll one that suits their work.
   - Pecs, abs, deltoids, biceps and calves are modelled and inked, and the
-    faces are lit in 3D. Long hair and coat tails swing as you move, and
-    skirts follow the legs.
+    faces are lit in 3D. Long hair and coat tails swing as you move. Skirts
+    and dresses hang from panels round the waist that swing out to clear the
+    legs (a long one bends again at the knee), so no knee or shin comes
+    through the cloth walking, running or sitting.
   - **Weapons are worn**: an equipped sword hangs at the left hip, a pistol
     in its holster, a staff or an axe across the back. Its hotbar key draws
     it (the hand goes to the hilt and pulls it out along the sheath into
@@ -388,6 +390,7 @@ node tools/shot.mjs c3hairclose [--styles=a,b] [--fem=1] [--hat=straw]   # hairs
 node tools/shot.mjs c3crew [--only=crew,town,faces] [--side]   # the Straw Hats lined up like the World Seeker key art, random townsfolk, face close-ups
 node tools/shot.mjs c3body [--only=men,women]   # frames and muscles, front, side and back
 node tools/shot.mjs c3ears                      # ears and profiles, side-on and three-quarter
+node tools/shot.mjs c3motion [--looks=longskirt,dress,skirt,coat,longarm] [--sit]   # clothes and hair moving: standing, walking, running, stopping (and sat down)
 node tools/shot.mjs c3draw [--wpns=fine_katana,flintlock,bo_staff] [--modes=third,first]   # weapons worn, drawn from the hotbar and sheathed, part way through
 node tools/shot.mjs probeshots --js=<file>        # several camera views in one run (the file returns [{ x, y, yaw, pitch }])
 node tools/shot.mjs story [--path=pirate|marine|hunter]   # plays the story's start, then fast-forwards through all three parts

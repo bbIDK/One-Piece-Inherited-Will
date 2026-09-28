@@ -696,6 +696,7 @@ export const scenarios = {
         coat: { fem: false, frame: 'athletic', hair: 'ponytail', hairColor: '#1b1b1b', skin: '#e8b98f', topStyle: 'shirt', top: '#f5f5f5', coat: '#2c3e70', bottomStyle: 'trousers', bottom: '#2d3436', shoeStyle: 'boots' },
         longarm: { race: 'longarm', arms: 1.8, fem: true, hair: 'wavy', hairColor: '#6c5ce7', skin: '#f1c9a0', topStyle: 'dress', top: '#16a085', shoeStyle: 'sandals' },
         skirt: { fem: true, frame: 'slim', hair: 'twintails', hairColor: '#e84393', skin: '#fbe3cf', topStyle: 'tank', top: '#fdcb6e', bottomStyle: 'skirt', bottom: '#6c5ce7', shoeStyle: 'shoes' },
+        longskirt: { fem: true, frame: 'slim', idle: 'cross', hair: 'long', hairColor: '#171320', skin: '#dcae8a', topStyle: 'crop', top: '#3b3570', bottomStyle: 'longskirt', bottom: '#d1545a', shoeStyle: 'sandals' },
       };
       const walk = async (mx, my, sprint, n) => {
         await page.evaluate(([mx, my, sprint]) => { const a = window.__C3.npcs[0]; a.intent.mx = mx; a.intent.my = my; a.intent.sprint = sprint; }, [mx, my, sprint]);
@@ -706,6 +707,8 @@ export const scenarios = {
       };
       for (const name of String(args.looks || 'dress,coat,longarm').split(',')) {
         await page.evaluate((look) => {
+          // (the game runs only as the scenario steps it: a slow screenshot doesn't let the runner run off)
+          window.OP.hold = true;
           const C = window.__C3; C.clear();
           C.spawn({ name: 'Mover', id: 'mover', showName: false, look: { race: 'human', seed: 21, idle: 'rest', ...look } }, 3.4, -1.2, Math.PI / 2);
           C.view(0, -0.06);
@@ -718,6 +721,12 @@ export const scenarios = {
         await snap(`${name}-run`);
         await walk(0, 0, false, 3);
         await snap(`${name}-stop`);
+        // (--sit: sat down, as on a bench — the knees well forward under a skirt)
+        if (args.sit) {
+          await page.evaluate(() => { const a = window.__C3.npcs[0]; a.act3d = { pose: 'sit', prop: null, h: 0.45 }; });
+          await settle(page, 5);
+          await snap(`${name}-sit`);
+        }
       }
     },
   },

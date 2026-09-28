@@ -938,7 +938,7 @@ function buildBody0(look, wpn, lod, articulated) {
   const geo = b.build();
   const inv = bind.map((m) => m.clone().invert());
   const used = new Set(b.bone);
-  return { geo, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === 'bubble', lod, fingers: fingers.R ? fingers : null };
+  return { geo, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === 'bubble', lod, fingers: fingers.R ? fingers : null, skirt: outfit.skirtInfo || null };
 }
 
 function minkEars(b, HM, look, pal, hb, q) {
