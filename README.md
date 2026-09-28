@@ -406,6 +406,7 @@ node tools/shot.mjs c3hairclose [--styles=a,b] [--fem=1] [--hat=straw]   # hairs
 node tools/shot.mjs c3crew [--only=crew,town,faces] [--side]   # the Straw Hats lined up like the World Seeker key art, random townsfolk, face close-ups
 node tools/shot.mjs c3body [--only=men,women]   # frames and muscles, front, side and back
 node tools/shot.mjs c3ears                      # ears and profiles, side-on and three-quarter
+node tools/shot.mjs c3tops [--fem=0|1] [--tops=a,b]   # every top style on a man and a woman, front and three-quarter
 node tools/shot.mjs fpbody                      # first person: looking down standing, walking, sprinting, in a heavy blow's lunge
 node tools/shot.mjs fphelm                      # first person at a caravel's helm (ahead, down at the wheel, back) and a rowboat's oars
 node tools/shot.mjs c3motion [--looks=longskirt,dress,skirt,coat,longarm] [--sit]   # clothes and hair moving: standing, walking, running, stopping (and sat down)
