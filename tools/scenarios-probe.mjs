@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
 export const scenarios = {
-  // several views in one run: --js=<file> returns [{ x, y, yaw, pitch, clock?, name? }, ...]
+  // several views in one run: --js=<file> returns [{ x, y, yaw, pitch, clock?, alt?, name? }, ...]
   // (world tiles, the camera's yaw and pitch); each is shot after a moment to settle
   probeshots: {
     async run(page, snap, args) {
@@ -20,7 +20,13 @@ export const scenarios = {
         await page.evaluate((v) => {
           const g = window.OP.game, p = g.player, rig = g.view3d?.rig;
           if (v.clock !== undefined) g.env.clock = v.clock;
-          p.x = v.x; p.y = v.y; g.snapCamera?.();
+          p.x = v.x; p.y = v.y;
+          // (alt: hover that many metres above the ground, flying, for a look from above)
+          if (v.alt !== undefined) {
+            const gr = g.view3d?.ground ? g.view3d.ground(v.x, v.y) : 0;
+            p.flying = true; p.alt = gr + v.alt; p.z = v.alt;
+          }
+          g.snapCamera?.();
           if (rig) { rig.yaw = v.yaw; rig.pitch = v.pitch; }
         }, v);
         await step(page, 2.5);
