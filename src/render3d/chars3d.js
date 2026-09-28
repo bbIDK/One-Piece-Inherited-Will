@@ -170,6 +170,8 @@ class ActorView {
       if (this.visF === undefined || dtv >= 1 || knocked) this.visF = want;
       else this.visF += angleDiff(this.visF, want) * (1 - Math.exp(-dtv * (a.isPlayer ? 24 : a.action ? 20 : 10)));
       this.yaw.rotation.y = -(this.visF + (P.sp || 0) * TAU);
+      // long hair and coat tails swing (close enough to see)
+      if (dist < 32) m.swing(this.lastT < 0 ? 1 : dtv, this.root);
       // face
       m.setExpression(expression(look, pose, P, pose.time || 0));
       this.effects(a, pose, P, o, env, ctx, camYaw3, dist, s);

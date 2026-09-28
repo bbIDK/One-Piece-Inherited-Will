@@ -924,7 +924,8 @@ function buildBody0(look, wpn, lod, articulated) {
   for (let i = 0; i < b.bone.length; i++) if (b.bone[i] === B.head || b.bone[i] === B.hairTail) b.part[i] = 5;
   const geo = b.build();
   const inv = bind.map((m) => m.clone().invert());
-  return { geo, dims: d, bind, inv, style, meta, hatKind: kind, bubble: kind === 'bubble', lod, fingers: fingers.R ? fingers : null };
+  const used = new Set(b.bone);
+  return { geo, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === 'bubble', lod, fingers: fingers.R ? fingers : null };
 }
 
 function minkEars(b, HM, look, pal, hb, q) {

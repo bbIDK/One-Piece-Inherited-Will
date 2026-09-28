@@ -55,6 +55,8 @@ export function actorPose(a, env, look) {
 function heldPose(P, a, t) {
   P.hand = 'hold';
   if (a.eating) {
+    // (raised to the mouth, the palm turns to face it)
+    if (a.eating.t > 0.09) P.hand = 'eat';
     const e = a.eating, k = Math.min(1, e.t / 0.18);
     const bite = Math.max(0, Math.sin((e.t / 0.36) * Math.PI * 2)) * 0.03;
     const hF = Array.isArray(P.hF) ? P.hF : [0.05, 0.4];

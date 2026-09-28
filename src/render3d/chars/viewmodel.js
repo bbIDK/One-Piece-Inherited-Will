@@ -177,7 +177,7 @@ class Viewmodel {
       const d = m.d, eyeY = d.hip0 + d.chestLen + d.neck + d.hc * 0.95;
       const use = Math.max(this.ready ?? 0, (this.pump ?? 0) * 0.28, this.holdK * 0.75);
       holdAt = (this._holdAt || (this._holdAt = new THREE.Vector3())).set(cz - 0.06, cy + eyeY + 0.1 - 0.26 * use, cx);
-      PP = { ...PP, hand: 'hold' };
+      PP = { ...PP, hand: k > 0.5 ? 'eat' : 'hold' };
     }
     // reaching out to use something: the hand opens on the way out and takes hold coming back
     if (reach > 0) { PP = { ...PP, hF: mix2(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: p.reachT > 0.22 ? 'palm' : 'grab' }; }

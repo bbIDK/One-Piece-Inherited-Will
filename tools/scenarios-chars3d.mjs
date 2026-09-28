@@ -454,15 +454,43 @@ export const scenarios = {
             if (mode === 'third') g.view3d.rig.setShiftLock?.(false);
           }, [id, mode]);
           await settle(page, 5);
-          await page.evaluate(() => { const g = window.OP.game, p = g.player; if (g.view3d.rig.mode === 'third') { if (p.controller) p.controller.aimT = 0; p.facing = -0.2; } });
+          // (third person: turned to face the camera, a little to one side)
+          const face = () => page.evaluate(() => {
+            const g = window.OP.game, p = g.player, r = g.view3d.rig;
+            if (r.mode !== 'third') return;
+            if (p.controller) p.controller.aimT = 0;
+            // (the camera round in front of the face, a little to one side, snapped there)
+            const v = g.view3d.actorViews.get(p);
+            const f = v && v.visF !== undefined ? v.visF : p.facing;
+            r.yaw = f - 0.35; g.snapCamera?.(); g.render();
+          });
+          await face();
           await settle(page, 2);
+          await face();
           await snap(`${id}-${mode}-held`);
+          if (args.sprint && mode === 'first') {
+            // sprinting with it in hand: the hand stays steady through the stride (two phases of it)
+            await page.evaluate(() => { window.OP.key('W', true); window.OP.key('Shift', true); });
+            for (const [i, n] of [[1, 6], [2, 3]]) {
+              for (let k = 0; k < n; k++) { await step(page, 0.05); await frames(page, 1); }
+              await snap(`${id}-${mode}-sprint${i}`);
+            }
+            await page.evaluate(() => { window.OP.key('W', false); window.OP.key('Shift', false); });
+            await settle(page, 3);
+          }
           for (const t of [0.3, 0.9]) {
             await page.evaluate(([id, t]) => {
               const g = window.OP.game, p = g.player;
+              const r = g.view3d.rig, v = g.view3d.actorViews.get(p);
               window.OP.hold = true;
+              if (r.mode === 'third') {
+                // (the camera round to the front-left of the face; it moves as the game steps, and a
+                // step ends a scripted bite, so the eating is set after)
+                r.yaw = (v && v.visF !== undefined ? v.visF : p.facing) + Math.PI * 0.72;
+                for (let i = 0; i < 3; i++) window.OP.step(0.05);
+              }
               p.eating = { id, t, dur: 1.25, bites: 0 };
-              g.render();
+              g.render(); g.render();
             }, [id, t]);
             await snap(`${id}-${mode}-eat${t}`);
           }
@@ -563,6 +591,42 @@ export const scenarios = {
         await page.evaluate(() => { for (const a of window.__C3.npcs) a.facing = 0; });
         await settle(page, 3);
         await snap(`${set}-back`);
+      }
+    },
+  },
+  // hair and clothes in motion: someone walks, runs and stops across the view (from the side)
+  //   --looks=dress,coat,longarm,skirt
+  c3motion: {
+    async run(page, snap, args) {
+      await boot(page);
+      await page.evaluate(() => { const u = document.getElementById('ui'); if (u) u.style.display = 'none'; });
+      const LOOKS = {
+        dress: { fem: true, frame: 'curvy', hair: 'long', hairColor: '#e8742a', skin: '#f6cfae', topStyle: 'dress', top: '#d1545a', shoeStyle: 'sandals' },
+        coat: { fem: false, frame: 'athletic', hair: 'ponytail', hairColor: '#1b1b1b', skin: '#e8b98f', topStyle: 'shirt', top: '#f5f5f5', coat: '#2c3e70', bottomStyle: 'trousers', bottom: '#2d3436', shoeStyle: 'boots' },
+        longarm: { race: 'longarm', arms: 1.8, fem: true, hair: 'wavy', hairColor: '#6c5ce7', skin: '#f1c9a0', topStyle: 'dress', top: '#16a085', shoeStyle: 'sandals' },
+        skirt: { fem: true, frame: 'slim', hair: 'twintails', hairColor: '#e84393', skin: '#fbe3cf', topStyle: 'tank', top: '#fdcb6e', bottomStyle: 'skirt', bottom: '#6c5ce7', shoeStyle: 'shoes' },
+      };
+      const walk = async (mx, my, sprint, n) => {
+        await page.evaluate(([mx, my, sprint]) => { const a = window.__C3.npcs[0]; a.intent.mx = mx; a.intent.my = my; a.intent.sprint = sprint; }, [mx, my, sprint]);
+        for (let i = 0; i < n; i++) { await step(page, 0.05); await frames(page, 1); }
+        // (the camera follows the mover: the game runs on between the steps too)
+        await page.evaluate(() => { const a = window.__C3.npcs[0], p = window.OP.game.player; window.__C3.view(Math.atan2(a.y - p.y, a.x - p.x), -0.06); });
+        await frames(page, 1);
+      };
+      for (const name of String(args.looks || 'dress,coat,longarm').split(',')) {
+        await page.evaluate((look) => {
+          const C = window.__C3; C.clear();
+          C.spawn({ name: 'Mover', id: 'mover', showName: false, look: { race: 'human', seed: 21, idle: 'rest', ...look } }, 3.4, -1.2, Math.PI / 2);
+          C.view(0, -0.06);
+        }, LOOKS[name]);
+        await settle(page, 4);
+        await snap(`${name}-stand`);
+        await walk(0, 0.45, false, 8);
+        await snap(`${name}-walk`);
+        await walk(0, 1, true, 5);
+        await snap(`${name}-run`);
+        await walk(0, 0, false, 3);
+        await snap(`${name}-stop`);
       }
     },
   },

@@ -571,7 +571,7 @@ export function buildFigure(add0, look, d, pal, q) {
     const long = o.bottom === 'longskirt';
     const yb = long ? -0.88 * d.Lg : -0.34;
     const col = TOP === 'dress' ? pal.top : pal.bottom;
-    const rows = cloth ? [0.08, 0.0, -0.1, (0.0 + yb) * 0.55, yb] : [0.08, -0.1, yb];
+    const rows = cloth ? [0.08, 0.0, -0.1, -0.1 + (yb + 0.1) * 0.25, -0.1 + (yb + 0.1) * 0.5, -0.1 + (yb + 0.1) * 0.75, yb] : [0.08, -0.1, (yb - 0.1) * 0.5, yb];
     // (the hem clears the hips and thighs, however broad the frame)
     const fw = Math.max(1, sh.F.hp * 0.55 + sh.F.th * 0.45);
     const Wh = (long ? 0.3 : 0.225) * sh.Bk * fw, Dh = (long ? 0.3 : 0.2) * sh.Bk * fw;
@@ -582,8 +582,16 @@ export function buildFigure(add0, look, d, pal, q) {
       const hx = Math.cos(a) * (Dh - inset), hz = Math.sin(a) * (Wh - inset);
       return [p[0] + (hx - p[0]) * f, y, p[2] + (hz - p[2]) * f];
     };
-    add(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U, false, (y, a) => atlasUV('skirt', (a + Math.PI) / TAU, 1 - clamp((0.08 - y) / (0.08 - yb), 0, 1))), M(), col, B.hips);
-    if (cloth) add(band((y, a) => sp(y, a, 0.008), rows.slice(-2), -Math.PI, Math.PI, U, true), M(), shade(col, -0.35), B.hips);
+    // (the cloth below the hips goes with the leg it hangs over: a stride carries
+    // the skirt forward rather than the knee coming through it)
+    const skirtW = { blend: (x, y, z) => {
+      const k = clamp((0.08 - y) / (0.08 - yb), 0, 1);
+      if (k < 0.12) { const w = 1 - hipsW(y); return w > 0.002 ? [B.chest, w] : null; }
+      const w = Math.pow((k - 0.12) / 0.88, 1.1) * 0.82 * (0.35 + 0.65 * sstep(0, 0.5, Math.abs(z) / Wh));
+      return w > 0.002 ? [z > 0 ? B.thighR : B.thighL, w] : null;
+    } };
+    add(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U, false, (y, a) => atlasUV('skirt', (a + Math.PI) / TAU, 1 - clamp((0.08 - y) / (0.08 - yb), 0, 1))), M(), col, B.hips, 0, skirtW);
+    if (cloth) add(band((y, a) => sp(y, a, 0.008), rows.slice(-2), -Math.PI, Math.PI, U, true), M(), shade(col, -0.35), B.hips, 0, skirtW);
   }
 
   // ---- arms (skin weights blend across the shoulder into the chest and across the elbow)

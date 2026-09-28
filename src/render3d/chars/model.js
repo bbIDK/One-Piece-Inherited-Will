@@ -24,6 +24,7 @@ const GRIPS = {
   grip: { a: [1.3, 1.38, 1.46, 1.52], b: [1.45, 1.52, 1.56, 1.56], sp: 0, th: 0.85 },
   grab: { a: [0.72, 0.82, 0.9, 0.98], b: [0.95, 1.05, 1.12, 1.15], sp: 0.25, th: 0.65 },
   hold: { a: [0.34, 0.4, 0.46, 0.52], b: [0.5, 0.56, 0.62, 0.68], sp: 0.35, th: 0.25 },
+  eat: { a: [0.5, 0.56, 0.62, 0.68], b: [0.62, 0.68, 0.74, 0.8], sp: 0.2, th: 0.45 },
   relaxed: { a: [0.3, 0.4, 0.5, 0.62], b: [0.4, 0.5, 0.6, 0.72], sp: 0.35, th: 0.3 },
   palm: { a: [0.06, 0.08, 0.1, 0.14], b: [0.08, 0.1, 0.13, 0.17], sp: 1, th: 0 },
   flat: { a: [0.04, 0.04, 0.05, 0.06], b: [0.05, 0.05, 0.06, 0.08], sp: 0, th: 0.2 },
@@ -31,6 +32,53 @@ const GRIPS = {
   finger: { a: [0.04, 1.5, 1.56, 1.6], b: [0.05, 1.72, 1.76, 1.7], sp: 0, th: 0.9 },
 };
 const _t1 = new THREE.Vector3(), _t2 = new THREE.Vector3(), DOWN = new THREE.Vector3(0, -1, 0);
+
+// ------------------------------------------------------------------ hair and cloth that swing
+// Long hair and a coat's tail are each a weight on a spring at the end of
+// their bone, moving in the world: they lag when you set off, swing on when
+// you stop or turn, stream back in the wind of a run and settle hanging when
+// you stand. Swings are kept off the body (hair doesn't swing into the head,
+// a coat tail not forward into the legs).
+const _d1 = new THREE.Vector3(), _d2 = new THREE.Vector3(), _d3 = new THREE.Vector3(), _d4 = new THREE.Vector3(), _dm = new THREE.Matrix4(), _dq = new THREE.Quaternion();
+class Dangle {
+  /** bone; len (metres); rest: the direction it hangs in its parent's frame; o: { K spring, g gravity, drag, damp, fwd/back/side limits (radians) } */
+  constructor(bone, len, rest, o) {
+    this.bone = bone; this.len = len; this.rest = rest.clone().normalize(); this.o = o;
+    this.tip = new THREE.Vector3(); this.vel = new THREE.Vector3(); this.piv = new THREE.Vector3(); this.on = false;
+    this.rp = Math.atan2(this.rest.x, -this.rest.y); this.rr = Math.atan2(this.rest.z, -this.rest.y);
+  }
+  step(dt) {
+    const o = this.o, b = this.bone, pw = b.parent.matrixWorld;
+    const piv = _d1.copy(b.position).applyMatrix4(pw);
+    const sc = _d4.setFromMatrixScale(pw).y;
+    const L = this.len * sc;
+    _dm.extractRotation(pw);
+    const restW = _d2.copy(this.rest).applyMatrix4(_dm).normalize();
+    if (!this.on || dt > 0.3 || piv.distanceToSquared(this.piv) > 2.25) {
+      // first frame, a long gap or a jump (the world's origin moving): hang at rest
+      this.tip.copy(piv).addScaledVector(restW, L); this.vel.set(0, 0, 0); this.piv.copy(piv); this.on = true;
+    } else if (dt > 0) {
+      // the wind of moving: air pushes the tip back against the pivot's motion
+      const pv = _d3.subVectors(piv, this.piv).divideScalar(Math.max(dt, 1e-3));
+      this.piv.copy(piv);
+      const acc = _d4.copy(piv).addScaledVector(restW, L).sub(this.tip).multiplyScalar(o.K);
+      acc.y -= 9.8 * o.g;
+      acc.addScaledVector(pv, -o.drag);
+      this.vel.multiplyScalar(Math.exp(-o.damp * dt)).addScaledVector(acc, dt);
+      this.tip.addScaledVector(this.vel, dt);
+    }
+    // keep its length, and its swing off the body (limits in the parent's frame)
+    const dir = _d3.subVectors(this.tip, piv).normalize();
+    _dq.setFromRotationMatrix(_dm).invert();
+    dir.applyQuaternion(_dq);
+    let pitch = Math.atan2(dir.x, -dir.y), roll = Math.atan2(dir.z, -dir.y);
+    pitch = Math.max(this.rp - o.back, Math.min(this.rp + o.fwd, pitch));
+    roll = Math.max(this.rr - o.side, Math.min(this.rr + o.side, roll));
+    dir.set(Math.tan(Math.max(-1.35, Math.min(1.35, pitch))), -1, Math.tan(Math.max(-1.35, Math.min(1.35, roll)))).normalize();
+    b.quaternion.setFromUnitVectors(this.rest, dir);
+    this.tip.copy(dir).applyMatrix4(_dm).multiplyScalar(L).add(piv);
+  }
+}
 
 export class CharacterModel {
   /**
@@ -164,6 +212,7 @@ export class CharacterModel {
     for (let i = 0; i < nb.inv.length; i++) this.skeleton.boneInverses[i].copy(nb.inv[i]);
     this.restFingers();
     this.face.geometry = faceGeo(this.look, headLevel(lod));
+    this.dangles = null;
   }
 
   /** Swap the face texture for this frame's expression. */
@@ -175,6 +224,22 @@ export class CharacterModel {
     releaseFace(this.faceE);
     this.faceE = e;
     this.face.material = e.mat;
+  }
+
+  /** The swinging parts this body has (long hair, a coat's tail). */
+  makeDangles() {
+    const u = this.body.used || new Set(), d = this.d, out = [];
+    if (u.has(B.hairTail)) out.push(new Dangle(this.bones[B.hairTail], d.headR * 2.2, new THREE.Vector3(-0.35, -1, 0), { K: 70, g: 0.55, drag: 0.32, damp: 5, fwd: 0.12, back: 1.0, side: 0.45 }));
+    if (u.has(B.coatTail)) out.push(new Dangle(this.bones[B.coatTail], 0.62 * d.Lg, new THREE.Vector3(-0.03, -1, 0), { K: 45, g: 0.45, drag: 0.45, damp: 4, fwd: 0.05, back: 1.1, side: 0.3 }));
+    return out;
+  }
+
+  /** Swing the long hair and the coat's tail (after the model and its root are posed for the frame). */
+  swing(dt, root) {
+    const D = this.dangles || (this.dangles = this.makeDangles());
+    if (!D.length) return;
+    root.updateMatrixWorld(true);
+    for (const s of D) s.step(dt);
   }
 
   /** Show or hide a bone's geometry (scale 0 hides; children follow). */
@@ -204,7 +269,7 @@ export class CharacterModel {
         this.shape[k] = s;
         continue;
       }
-      if (s === 'claw' || s === 'flat' || s === 'relaxed' || s === 'grab' || s === 'hold') s = s === 'grab' || s === 'hold' ? 'fist' : 'palm';
+      if (s === 'claw' || s === 'flat' || s === 'relaxed' || s === 'grab' || s === 'hold' || s === 'eat') s = s === 'grab' || s === 'hold' || s === 'eat' ? 'fist' : 'palm';
       const H = k === 0 ? 'R' : 'L';
       for (const sh of SHAPES) this.showBone(B[sh + H], sh === s);
     }
@@ -220,10 +285,12 @@ export class CharacterModel {
     // attachments: the coat tail hangs and streams back, hair hangs, tail sways, wings flap
     const lean = (P.l || 0) + (o.leanAdd || 0);
     const flow = o.flow || 0;
-    bones[B.coatTail].quaternion.setFromAxisAngle(AZ, lean * 0.85 - flow - 0.04 + Math.sin(t * 2.1) * 0.02);
-    _q.copy(rig.qHead).invert();
-    bones[B.hairTail].quaternion.slerpQuaternions(_q2.identity(), _q, 0.75)
-      .multiply(_q.setFromAxisAngle(AZ, -flow * 0.6 + Math.sin(t * 2.4) * 0.03));
+    if (!this.dangles || !this.dangles.length) {
+      bones[B.coatTail].quaternion.setFromAxisAngle(AZ, lean * 0.85 - flow - 0.04 + Math.sin(t * 2.1) * 0.02);
+      _q.copy(rig.qHead).invert();
+      bones[B.hairTail].quaternion.slerpQuaternions(_q2.identity(), _q, 0.75)
+        .multiply(_q.setFromAxisAngle(AZ, -flow * 0.6 + Math.sin(t * 2.4) * 0.03));
+    }
     bones[B.tail].quaternion.setFromAxisAngle(AY, Math.sin(t * 3.2) * 0.35).multiply(_q.setFromAxisAngle(AZ, Math.sin(t * 2.1) * 0.12 - flow * 0.5));
     const lunar = this.look.wings === 'lunar';
     const flap = Math.sin(t * (lunar ? 2.4 : 3.2)) * (lunar ? 0.1 : 0.14) + (o.moving ? 0.12 : 0);

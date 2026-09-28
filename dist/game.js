@@ -35184,7 +35184,7 @@ void main() {
         this.nor.push(-nx, -ny, -nz);
         this.col.push(oc.r, oc.g, oc.b);
         this.tnt.push(0);
-        this.glw.push(0, 0, 0, 0);
+        this.glw.push(0, 0, 0, -1);
       }
       for (let i = 0; i < tris.length; i += 3) this.idx.push(tris[i] + b2, tris[i + 2] + b2, tris[i + 1] + b2);
     }
@@ -35294,12 +35294,19 @@ void main() {
 }
 `
   );
+  var FADE_FRAG = (
+    /* glsl */
+    `
+varying float vShell;
+uniform float uFade;
+float bayer2( vec2 a ) { a = mod( floor( a ), 2.0 ); return fract( 0.5 * a.x + 0.75 * a.y ); }
+void main() {
+	if ( vShell > 0.5 || bayer2( gl_FragCoord.xy * 0.5 ) * 0.25 + bayer2( gl_FragCoord.xy ) >= uFade ) discard;
+`
+  );
   var matCache = /* @__PURE__ */ new Map();
-  function vcMat(opts = {}) {
-    const key2 = `${opts.sway ? "s" : ""}|${opts.side || 0}|${opts.transparent ? opts.opacity ?? 0.5 : 1}|${opts.depthWrite === false ? 0 : 1}|${opts.inst || ""}`;
-    let m = matCache.get(key2);
-    if (m) return m;
-    m = new MeshToonMaterial({
+  function toonMat(opts, fade2) {
+    const m = new MeshToonMaterial({
       vertexColors: true,
       gradientMap: toonGradient(),
       side: opts.side || FrontSide,
@@ -35308,15 +35315,33 @@ void main() {
       depthWrite: opts.depthWrite !== false
     });
     const sway = !!opts.sway;
+    const uFade = fade2 ? { value: 1 } : null;
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uTime = U.time;
       sh.uniforms.uNight = U.night;
       sh.uniforms.uWind = U.wind;
-      sh.vertexShader = "attribute float tint;\nattribute vec4 glow;\nvarying vec3 vGlow;\nuniform float uTime;\nuniform float uNight;\nuniform float uWind;\n" + sh.vertexShader.replace("#include <color_vertex>", COLOR_VERTEX).replace("#include <begin_vertex>", sway ? SWAY : "#include <begin_vertex>");
+      sh.vertexShader = "attribute float tint;\nattribute vec4 glow;\nvarying vec3 vGlow;\nuniform float uTime;\nuniform float uNight;\nuniform float uWind;\n" + (fade2 ? "varying float vShell;\n" : "") + sh.vertexShader.replace("#include <color_vertex>", COLOR_VERTEX + (fade2 ? "	vShell = 1.0 - step( -0.5, glow.a );\n" : "")).replace("#include <begin_vertex>", sway ? SWAY : "#include <begin_vertex>");
       sh.fragmentShader = "varying vec3 vGlow;\n" + sh.fragmentShader.replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n	totalEmissiveRadiance += vGlow;");
+      if (fade2) {
+        sh.uniforms.uFade = uFade;
+        sh.fragmentShader = sh.fragmentShader.replace("void main() {", FADE_FRAG);
+      }
     };
-    m.customProgramCacheKey = () => "opvc" + (sway ? "-sway" : "");
+    m.customProgramCacheKey = () => "opvc" + (sway ? "-sway" : "") + (fade2 ? "-fade" : "");
+    if (fade2) m.userData.fade = uFade;
+    return m;
+  }
+  function vcMat(opts = {}) {
+    const key2 = `${opts.sway ? "s" : ""}|${opts.side || 0}|${opts.transparent ? opts.opacity ?? 0.5 : 1}|${opts.depthWrite === false ? 0 : 1}|${opts.inst || ""}`;
+    let m = matCache.get(key2);
+    if (m) return m;
+    m = toonMat(opts, false);
     matCache.set(key2, m);
+    return m;
+  }
+  function fadeMat(opts = {}) {
+    const m = toonMat({ ...opts, transparent: true, depthWrite: false }, true);
+    m.forceSinglePass = true;
     return m;
   }
   var basicCache = /* @__PURE__ */ new Map();
@@ -39694,6 +39719,25 @@ void main() {
 
   // src/render3d/camera3d.js
   var TAU4 = Math.PI * 2;
+  var CAM_SOLID = {
+    tree: [5.3],
+    rock: [0.85, 0.75],
+    statue: [4.3, 1],
+    stall: [2.3],
+    tent: [1.7],
+    crystal: [2.3, 0.5],
+    totem: [3.4],
+    haystack: [1, 0.68],
+    pillar: [2.9],
+    well: [2.6],
+    fountain: [2],
+    ruins: [1.8],
+    lighthouse: [11],
+    windmill: [7.5]
+  };
+  var TREE_H = { pine: 5.8, snowpine: 5.8, jungle: 6.2, palm: 5, bamboo: 4.5, cactus: 2.8, dead: 3.5, deadsnow: 3.5, spooky: 4.7, lollipop: 3.8, candycane: 2.4, coral: 2.3, kelp: 3.1, sakura: 4.2, blossom: 4.2 };
+  var CAM_R = 0.3;
+  var ARM_MIN = 1.1;
   var CameraRig = class {
     constructor(canvas2, game) {
       this.canvas = canvas2;
@@ -39829,6 +39873,62 @@ void main() {
       return [Math.cos(this.yaw), Math.sin(this.yaw)];
     }
     /**
+     * How far out along the arm — from (x0, z0) at height y0, by (ux, uz, uy):
+     * 0..1 — the camera gets before it's within CAM_R of a prop's solid core
+     * (see CAM_SOLID); 1 when nothing's in the way. Each core is an upright
+     * cylinder (or box) on its collider, met exactly rather than stepped along.
+     */
+    propHit(w, ground, x0, z0, y0, ux, uz, uy) {
+      if (!w.colliders?.size) return 1;
+      const a = ux * ux + uz * uz;
+      if (a < 1e-6) return 1;
+      let best = 1;
+      const M2 = 3;
+      for (let gy = Math.floor((Math.min(z0, z0 + uz) - M2) / 4); gy <= Math.floor((Math.max(z0, z0 + uz) + M2) / 4); gy++) {
+        for (let gx = Math.floor((Math.min(x0, x0 + ux) - M2) / 4); gx <= Math.floor((Math.max(x0, x0 + ux) + M2) / 4); gx++) {
+          const list = w.colliders.get(w.colKey(gx, gy));
+          if (!list) continue;
+          for (const c of list) {
+            const o = c.o;
+            const S3 = o && CAM_SOLID[o.kind];
+            if (!S3) continue;
+            const qx = w.dx(x0, c.x), qz = c.y - z0;
+            let t0, t1;
+            if (c.r !== void 0) {
+              const q2 = qx * qx + qz * qz;
+              let R4 = Math.max(c.r, (S3[1] || 0) * (o.s || 1)) + CAM_R;
+              if (q2 <= R4 * R4) R4 = c.r + CAM_R;
+              const b = qx * ux + qz * uz, cc = q2 - R4 * R4;
+              if (cc <= 0) continue;
+              const disc2 = b * b - a * cc;
+              if (disc2 <= 0) continue;
+              const sq = Math.sqrt(disc2);
+              t0 = (b - sq) / a;
+              t1 = (b + sq) / a;
+            } else {
+              const hx = c.hw + CAM_R, hz = c.hd + CAM_R;
+              if (Math.abs(qx) < hx && Math.abs(qz) < hz) continue;
+              if (Math.abs(ux) < 1e-9 && Math.abs(qx) >= hx || Math.abs(uz) < 1e-9 && Math.abs(qz) >= hz) continue;
+              const xa = Math.abs(ux) < 1e-9 ? -Infinity : (qx - hx) / ux, xb = Math.abs(ux) < 1e-9 ? Infinity : (qx + hx) / ux;
+              const za = Math.abs(uz) < 1e-9 ? -Infinity : (qz - hz) / uz, zb = Math.abs(uz) < 1e-9 ? Infinity : (qz + hz) / uz;
+              t0 = Math.max(Math.min(xa, xb), Math.min(za, zb));
+              t1 = Math.min(Math.max(xa, xb), Math.max(za, zb));
+            }
+            if (t1 <= 0 || t0 >= best || t0 >= t1) continue;
+            const h2 = o.kind === "tree" && TREE_H[o.sub] || S3[0];
+            const base2 = ground(o.x, o.y) - 0.3, top = base2 + 0.3 + h2 * (o.s || 1) + CAM_R;
+            if (Math.abs(uy) > 1e-6) {
+              const ta = (base2 - y0) / uy, tb = (top - y0) / uy;
+              t0 = Math.max(t0, Math.min(ta, tb));
+              t1 = Math.min(t1, Math.max(ta, tb));
+            } else if (y0 < base2 || y0 > top) continue;
+            if (t0 < t1 && t1 > 0 && t0 < best) best = Math.max(0, t0);
+          }
+        }
+      }
+      return best;
+    }
+    /**
      * Place the camera for this frame. `ground(x, y)` gives ground heights in
      * world tile coordinates; `p` is the player actor (at the origin).
      */
@@ -39933,6 +40033,9 @@ void main() {
         const w = game.world;
         const room = !sailing && w?.interiorAt?.(p.x, p.y);
         this.tilt = 0;
+        const moved = w && this.armAt ? Math.hypot(w.dx(this.armAt.x, p.x), p.y - this.armAt.y) : 0;
+        if (sailing || room || !w || moved > 3) this.arm = void 0;
+        this.armAt = { x: p.x, y: p.y };
         if (room) {
           const r = interiorRect(room);
           cx = Math.max(r.x0 + 0.25, Math.min(r.x1 - 0.25, p.x + cx)) - p.x;
@@ -39990,10 +40093,18 @@ void main() {
           } else this.camLift = 0;
           if (hit) k = Math.max(kMin, hit - 0.3 / len);
           if (own && ships) while (k > kMin && game.shipSolidAt(px2 + ux * k, pz2 + uz * k, oy + uy * k, true, own)) k = Math.max(kMin, k - 1 / 16);
+          if (!own) {
+            const wall = k;
+            const kp = this.propHit(w, ground, px2, pz2, oy, ux, uz, uy);
+            if (kp < k) k = Math.max(kp, Math.min(wall, ARM_MIN / len));
+            const a = this.arm ?? k;
+            this.arm = k >= a ? a + (k - a) * Math.min(1, dt * 3) : Math.min(wall, a + (k - a) * Math.min(1, dt * 25));
+            k = this.arm;
+          }
           if (k < 1) {
             cx = ox + ux * k;
             cz = oz + uz * k;
-            if (ships) cy = oy + uy * k;
+            cy = oy + uy * k;
           }
           this.tilt = Math.atan2(lift, len) * 0.6;
         }
@@ -55878,6 +55989,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       part5.ref = null;
       return;
     }
+    if (u.faded && !part5.material) {
+      part5.apart = apart(u, part5, home2);
+      return;
+    }
     let b = home2.batches.get(part5.key);
     if (!b) {
       b = new Batch(home2, part5.key, part5);
@@ -55887,9 +56002,87 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     b.push(part5.ref, partMatrix(u, part5, home2, _m), part5.color, u.y);
   }
   function release(part5) {
+    if (part5.apart) {
+      const m = part5.apart.mesh;
+      m.removeFromParent();
+      spareFade(m.material);
+      m.dispose();
+      part5.apart = null;
+    }
     if (!part5.ref) return;
     part5.ref.batch.remove(part5.ref.slot);
     part5.ref = null;
+  }
+  var faded = /* @__PURE__ */ new Set();
+  var spares = /* @__PURE__ */ new Map();
+  function fadeMatFor(part5) {
+    const key2 = `${part5.sway ? "s" : ""}|${part5.side || 0}|${part5.tinted ? "c" : "i"}`;
+    const m = spares.get(key2)?.pop() || fadeMat({ sway: part5.sway, side: part5.side, inst: part5.tinted ? "c" : "i" });
+    m.userData.spareKey = key2;
+    return m;
+  }
+  function spareFade(m) {
+    const key2 = m.userData.spareKey;
+    if (!spares.has(key2)) spares.set(key2, []);
+    spares.get(key2).push(m);
+  }
+  function apart(u, part5, home2) {
+    const m = new InstancedMesh(part5.geo, fadeMatFor(part5), 1);
+    m.setMatrixAt(0, partMatrix(u, part5, home2, _m));
+    if (part5.tinted) {
+      m.instanceColor = new InstancedBufferAttribute(new Float32Array(3), 3);
+      m.setColorAt(0, part5.color || WHITE2);
+    }
+    m.castShadow = part5.castShadow !== false;
+    m.receiveShadow = part5.receiveShadow !== false;
+    m.renderOrder = 5;
+    m.computeBoundingSphere();
+    m.name = "faded:" + part5.key;
+    m.material.userData.fade.value = u.fade;
+    m.position.set(home2.px, 0, home2.pz);
+    home2.parent?.add(m);
+    return { mesh: m, home: home2 };
+  }
+  function fadeWarmUp() {
+    const geo2 = new BoxGeometry(0.1, 0.1, 0.1), n = geo2.attributes.position.count;
+    geo2.setAttribute("color", new Float32BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+    geo2.setAttribute("tint", new Float32BufferAttribute(new Float32Array(n), 1));
+    geo2.setAttribute("glow", new Float32BufferAttribute(new Float32Array(n * 4), 4));
+    const root2 = new Group();
+    for (const sway of [false, true]) {
+      for (const tinted of [false, true]) {
+        const m = new InstancedMesh(geo2, fadeMatFor({ sway, tinted }), 1);
+        if (tinted) m.instanceColor = new InstancedBufferAttribute(new Float32Array(3).fill(1), 3);
+        root2.add(m);
+      }
+    }
+    root2.userData.spare = () => {
+      for (const m of root2.children) {
+        spareFade(m.material);
+        m.dispose();
+      }
+      geo2.dispose();
+    };
+    return root2;
+  }
+  function fadeProp(mk3, f) {
+    const u = mk3.userData;
+    if (!u.parts) return false;
+    const on = f < 1 && u.live;
+    u.fade = f;
+    if (on !== !!u.faded) {
+      for (const p of u.parts) release(p);
+      u.faded = on;
+      if (on) faded.add(mk3);
+      else faded.delete(mk3);
+      if (u.live) {
+        for (const p of u.parts) if (!p.hidden) claim(u, p);
+      }
+    }
+    if (on) {
+      for (const p of u.parts) if (p.apart) p.apart.mesh.material.userData.fade.value = f;
+    }
+    return u.live;
   }
   function setMerged(cell, on) {
     for (const mk3 of cell.markers) for (const p of mk3.userData.parts) release(p);
@@ -55935,6 +56128,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const u = mk3.userData;
     for (const p of u.parts) release(p);
     u.live = false;
+    if (u.faded) {
+      u.faded = false;
+      faded.delete(mk3);
+    }
     const cell = u.cell;
     if (cell) {
       cell.markers.delete(mk3);
@@ -55989,6 +56186,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         cell.far = far;
         for (const b of cell.batches.values()) if (b.farGeo) b.mesh.geometry = far ? b.farGeo : b.geo;
       }
+    }
+    for (const mk3 of faded) {
+      for (const p of mk3.userData.parts) if (p.apart) p.apart.mesh.position.set(p.apart.home.px, 0, p.apart.home.pz);
     }
     if (dynDirty) {
       dynList = [...dynMarkers];
@@ -56667,7 +56867,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const fps = pts.map((q2, i) => ({ key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q2), sway: model2.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }));
       parts.push(...fps);
       dyn = (oo, env, c, u) => {
-        if (u.camHidden) return;
         for (let i = 0; i < fps.length; i++) setPartVisible(u, fps[i], !fruitPicked(c.world?.id, oo, i, env.day));
       };
       o._fruitPts = pts.map((q2) => q2.p);
@@ -63832,7 +64031,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const long = o.bottom === "longskirt";
       const yb = long ? -0.88 * d.Lg : -0.34;
       const col = TOP === "dress" ? pal.top : pal.bottom;
-      const rows = cloth ? [0.08, 0, -0.1, (0 + yb) * 0.55, yb] : [0.08, -0.1, yb];
+      const rows = cloth ? [0.08, 0, -0.1, -0.1 + (yb + 0.1) * 0.25, -0.1 + (yb + 0.1) * 0.5, -0.1 + (yb + 0.1) * 0.75, yb] : [0.08, -0.1, (yb - 0.1) * 0.5, yb];
       const fw = Math.max(1, sh.F.hp * 0.55 + sh.F.th * 0.45);
       const Wh = (long ? 0.3 : 0.225) * sh.Bk * fw, Dh = (long ? 0.3 : 0.2) * sh.Bk * fw;
       const sp = (y, a, inset = 0) => {
@@ -63842,8 +64041,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const hx = Math.cos(a) * (Dh - inset), hz = Math.sin(a) * (Wh - inset);
         return [p[0] + (hx - p[0]) * f, y, p[2] + (hz - p[2]) * f];
       };
-      add5(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U3, false, (y, a) => atlasUV("skirt", (a + Math.PI) / TAU13, 1 - clamp3((0.08 - y) / (0.08 - yb), 0, 1))), M(), col, B3.hips);
-      if (cloth) add5(band((y, a) => sp(y, a, 8e-3), rows.slice(-2), -Math.PI, Math.PI, U3, true), M(), shade(col, -0.35), B3.hips);
+      const skirtW = { blend: (x, y, z) => {
+        const k = clamp3((0.08 - y) / (0.08 - yb), 0, 1);
+        if (k < 0.12) {
+          const w2 = 1 - hipsW(y);
+          return w2 > 2e-3 ? [B3.chest, w2] : null;
+        }
+        const w = Math.pow((k - 0.12) / 0.88, 1.1) * 0.82 * (0.35 + 0.65 * sstep(0, 0.5, Math.abs(z) / Wh));
+        return w > 2e-3 ? [z > 0 ? B3.thighR : B3.thighL, w] : null;
+      } };
+      add5(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U3, false, (y, a) => atlasUV("skirt", (a + Math.PI) / TAU13, 1 - clamp3((0.08 - y) / (0.08 - yb), 0, 1))), M(), col, B3.hips, 0, skirtW);
+      if (cloth) add5(band((y, a) => sp(y, a, 8e-3), rows.slice(-2), -Math.PI, Math.PI, U3, true), M(), shade(col, -0.35), B3.hips, 0, skirtW);
     }
     const armCol = pal.sleeve || (TOP === "coat" ? look.coat || pal.top : TOP === "jacket" ? pal.top : TOP === "striped" ? pal.top : pal.top);
     const Lk = Math.sqrt(d.Am);
@@ -65609,7 +65817,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (let i = 0; i < b.bone.length; i++) if (b.bone[i] === B3.head || b.bone[i] === B3.hairTail) b.part[i] = 5;
     const geo2 = b.build();
     const inv = bind.map((m) => m.clone().invert());
-    return { geo: geo2, dims: d, bind, inv, style, meta, hatKind: kind, bubble: kind === "bubble", lod, fingers: fingers.R ? fingers : null };
+    const used = new Set(b.bone);
+    return { geo: geo2, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === "bubble", lod, fingers: fingers.R ? fingers : null };
   }
   function minkEars2(b, HM, look, pal, hb, q2) {
     const fur = pal.fur, inner = look.kind === "Panda" ? "#2b2b2b" : mixHex(fur, "#f48fb1", 0.55);
@@ -65863,12 +66072,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             attitude(d, k, side, o.att, hip, _att, _attP);
             T4.lerp(_att, o.attK);
           }
+          if (d.Am > 1.25 && restK > 0.02) {
+            const lk2 = Math.min(1, (d.Am - 1.25) / 0.4) * Math.min(1, restK * 1.6) * 0.85;
+            _att.set(0.3 * d.Am * 0.6, -(d.A1 + d.A2) * 0.6, side * (d.shW * 0.95 + 0.05)).applyQuaternion(this.qLean).add(S3);
+            T4.lerp(_att, lk2);
+          }
         }
         const e = k === 0 ? P4.eF ?? 1 : P4.eB ?? 1;
         _t.subVectors(T4, S3);
         const lxy = Math.hypot(_t.x, _t.y) || 1;
         const sg = e < 0 ? -1 : 1;
         this._pole.set(_t.y / lxy * sg, -_t.x / lxy * sg, side * 0.42);
+        if (reach) this._pole.set(-0.75, -0.65, side * 0.45);
         if (o.att && o.attK > 0 && !reach && !(k === 1 && broom)) this._pole.lerp(_attP, o.attK);
         ik2(S3, T4, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P4.stretch || !!reach, J, E);
         const U3 = k === 0 ? B3.uarmR : B3.uarmL, F4 = k === 0 ? B3.farmR : B3.farmL, Hd = k === 0 ? B3.handR : B3.handL;
@@ -65882,6 +66097,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const shape = o.shape ? o.shape[k] : "fist";
         if (shape === "flat") this._ref.set(0.1, 1, side * 0.35);
         else if (shape === "hold") this._ref.set(0.25, -1, side * 0.35);
+        else if (shape === "eat") this._ref.set(1, 0.25, side * 0.3);
         else this._ref.set(-0.3, 0.6, side * 0.8);
         aimNegY(this.quat[Hd], _u, this._ref);
         if (shape === "palm" || shape === "claw") {
@@ -66138,6 +66354,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     grip: { a: [1.3, 1.38, 1.46, 1.52], b: [1.45, 1.52, 1.56, 1.56], sp: 0, th: 0.85 },
     grab: { a: [0.72, 0.82, 0.9, 0.98], b: [0.95, 1.05, 1.12, 1.15], sp: 0.25, th: 0.65 },
     hold: { a: [0.34, 0.4, 0.46, 0.52], b: [0.5, 0.56, 0.62, 0.68], sp: 0.35, th: 0.25 },
+    eat: { a: [0.5, 0.56, 0.62, 0.68], b: [0.62, 0.68, 0.74, 0.8], sp: 0.2, th: 0.45 },
     relaxed: { a: [0.3, 0.4, 0.5, 0.62], b: [0.4, 0.5, 0.6, 0.72], sp: 0.35, th: 0.3 },
     palm: { a: [0.06, 0.08, 0.1, 0.14], b: [0.08, 0.1, 0.13, 0.17], sp: 1, th: 0 },
     flat: { a: [0.04, 0.04, 0.05, 0.06], b: [0.05, 0.05, 0.06, 0.08], sp: 0, th: 0.2 },
@@ -66147,6 +66364,58 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var _t1 = new Vector3();
   var _t2 = new Vector3();
   var DOWN = new Vector3(0, -1, 0);
+  var _d1 = new Vector3();
+  var _d2 = new Vector3();
+  var _d3 = new Vector3();
+  var _d4 = new Vector3();
+  var _dm = new Matrix4();
+  var _dq = new Quaternion();
+  var Dangle = class {
+    /** bone; len (metres); rest: the direction it hangs in its parent's frame; o: { K spring, g gravity, drag, damp, fwd/back/side limits (radians) } */
+    constructor(bone, len, rest, o) {
+      this.bone = bone;
+      this.len = len;
+      this.rest = rest.clone().normalize();
+      this.o = o;
+      this.tip = new Vector3();
+      this.vel = new Vector3();
+      this.piv = new Vector3();
+      this.on = false;
+      this.rp = Math.atan2(this.rest.x, -this.rest.y);
+      this.rr = Math.atan2(this.rest.z, -this.rest.y);
+    }
+    step(dt) {
+      const o = this.o, b = this.bone, pw = b.parent.matrixWorld;
+      const piv = _d1.copy(b.position).applyMatrix4(pw);
+      const sc = _d4.setFromMatrixScale(pw).y;
+      const L2 = this.len * sc;
+      _dm.extractRotation(pw);
+      const restW = _d2.copy(this.rest).applyMatrix4(_dm).normalize();
+      if (!this.on || dt > 0.3 || piv.distanceToSquared(this.piv) > 2.25) {
+        this.tip.copy(piv).addScaledVector(restW, L2);
+        this.vel.set(0, 0, 0);
+        this.piv.copy(piv);
+        this.on = true;
+      } else if (dt > 0) {
+        const pv = _d3.subVectors(piv, this.piv).divideScalar(Math.max(dt, 1e-3));
+        this.piv.copy(piv);
+        const acc = _d4.copy(piv).addScaledVector(restW, L2).sub(this.tip).multiplyScalar(o.K);
+        acc.y -= 9.8 * o.g;
+        acc.addScaledVector(pv, -o.drag);
+        this.vel.multiplyScalar(Math.exp(-o.damp * dt)).addScaledVector(acc, dt);
+        this.tip.addScaledVector(this.vel, dt);
+      }
+      const dir = _d3.subVectors(this.tip, piv).normalize();
+      _dq.setFromRotationMatrix(_dm).invert();
+      dir.applyQuaternion(_dq);
+      let pitch = Math.atan2(dir.x, -dir.y), roll2 = Math.atan2(dir.z, -dir.y);
+      pitch = Math.max(this.rp - o.back, Math.min(this.rp + o.fwd, pitch));
+      roll2 = Math.max(this.rr - o.side, Math.min(this.rr + o.side, roll2));
+      dir.set(Math.tan(Math.max(-1.35, Math.min(1.35, pitch))), -1, Math.tan(Math.max(-1.35, Math.min(1.35, roll2)))).normalize();
+      b.quaternion.setFromUnitVectors(this.rest, dir);
+      this.tip.copy(dir).applyMatrix4(_dm).multiplyScalar(L2).add(piv);
+    }
+  };
   var CharacterModel = class {
     /**
      * look: the (effective) look; wpn: { kind, count, gun } or null.
@@ -66273,6 +66542,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (let i = 0; i < nb.inv.length; i++) this.skeleton.boneInverses[i].copy(nb.inv[i]);
       this.restFingers();
       this.face.geometry = faceGeo(this.look, headLevel(lod));
+      this.dangles = null;
     }
     /** Swap the face texture for this frame's expression. */
     setExpression(X2) {
@@ -66283,6 +66553,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       releaseFace(this.faceE);
       this.faceE = e;
       this.face.material = e.mat;
+    }
+    /** The swinging parts this body has (long hair, a coat's tail). */
+    makeDangles() {
+      const u = this.body.used || /* @__PURE__ */ new Set(), d = this.d, out = [];
+      if (u.has(B3.hairTail)) out.push(new Dangle(this.bones[B3.hairTail], d.headR * 2.2, new Vector3(-0.35, -1, 0), { K: 70, g: 0.55, drag: 0.32, damp: 5, fwd: 0.12, back: 1, side: 0.45 }));
+      if (u.has(B3.coatTail)) out.push(new Dangle(this.bones[B3.coatTail], 0.62 * d.Lg, new Vector3(-0.03, -1, 0), { K: 45, g: 0.45, drag: 0.45, damp: 4, fwd: 0.05, back: 1.1, side: 0.3 }));
+      return out;
+    }
+    /** Swing the long hair and the coat's tail (after the model and its root are posed for the frame). */
+    swing(dt, root2) {
+      const D3 = this.dangles || (this.dangles = this.makeDangles());
+      if (!D3.length) return;
+      root2.updateMatrixWorld(true);
+      for (const s of D3) s.step(dt);
     }
     /** Show or hide a bone's geometry (scale 0 hides; children follow). */
     showBone(i, on) {
@@ -66310,7 +66594,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           this.shape[k] = s;
           continue;
         }
-        if (s === "claw" || s === "flat" || s === "relaxed" || s === "grab" || s === "hold") s = s === "grab" || s === "hold" ? "fist" : "palm";
+        if (s === "claw" || s === "flat" || s === "relaxed" || s === "grab" || s === "hold" || s === "eat") s = s === "grab" || s === "hold" || s === "eat" ? "fist" : "palm";
         const H3 = k === 0 ? "R" : "L";
         for (const sh of SHAPES) this.showBone(B3[sh + H3], sh === s);
       }
@@ -66323,9 +66607,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (this.fing) for (let k = 0; k < 2; k++) this.poseFingers(k, this.shape[k], t);
       const lean = (P4.l || 0) + (o.leanAdd || 0);
       const flow2 = o.flow || 0;
-      bones2[B3.coatTail].quaternion.setFromAxisAngle(AZ, lean * 0.85 - flow2 - 0.04 + Math.sin(t * 2.1) * 0.02);
-      _q3.copy(rig.qHead).invert();
-      bones2[B3.hairTail].quaternion.slerpQuaternions(_q22.identity(), _q3, 0.75).multiply(_q3.setFromAxisAngle(AZ, -flow2 * 0.6 + Math.sin(t * 2.4) * 0.03));
+      if (!this.dangles || !this.dangles.length) {
+        bones2[B3.coatTail].quaternion.setFromAxisAngle(AZ, lean * 0.85 - flow2 - 0.04 + Math.sin(t * 2.1) * 0.02);
+        _q3.copy(rig.qHead).invert();
+        bones2[B3.hairTail].quaternion.slerpQuaternions(_q22.identity(), _q3, 0.75).multiply(_q3.setFromAxisAngle(AZ, -flow2 * 0.6 + Math.sin(t * 2.4) * 0.03));
+      }
       bones2[B3.tail].quaternion.setFromAxisAngle(AY, Math.sin(t * 3.2) * 0.35).multiply(_q3.setFromAxisAngle(AZ, Math.sin(t * 2.1) * 0.12 - flow2 * 0.5));
       const lunar = this.look.wings === "lunar";
       const flap = Math.sin(t * (lunar ? 2.4 : 3.2)) * (lunar ? 0.1 : 0.14) + (o.moving ? 0.12 : 0);
@@ -67363,6 +67649,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function heldPose(P4, a, t) {
     P4.hand = "hold";
     if (a.eating) {
+      if (a.eating.t > 0.09) P4.hand = "eat";
       const e = a.eating, k = Math.min(1, e.t / 0.18);
       const bite = Math.max(0, Math.sin(e.t / 0.36 * Math.PI * 2)) * 0.03;
       const hF = Array.isArray(P4.hF) ? P4.hF : [0.05, 0.4];
@@ -67647,7 +67934,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const d2 = m.d, eyeY2 = d2.hip0 + d2.chestLen + d2.neck + d2.hc * 0.95;
         const use2 = Math.max(this.ready ?? 0, (this.pump ?? 0) * 0.28, this.holdK * 0.75);
         holdAt = (this._holdAt || (this._holdAt = new Vector3())).set(cz - 0.06, cy + eyeY2 + 0.1 - 0.26 * use2, cx);
-        PP = { ...PP, hand: "hold" };
+        PP = { ...PP, hand: k > 0.5 ? "eat" : "hold" };
       }
       if (reach > 0) {
         PP = { ...PP, hF: mix23(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: p.reachT > 0.22 ? "palm" : "grab" };
@@ -67948,6 +68235,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (this.visF === void 0 || dtv >= 1 || knocked) this.visF = want;
         else this.visF += angleDiff(this.visF, want) * (1 - Math.exp(-dtv * (a.isPlayer ? 24 : a.action ? 20 : 10)));
         this.yaw.rotation.y = -(this.visF + (P4.sp || 0) * TAU18);
+        if (dist < 32) m.swing(this.lastT < 0 ? 1 : dtv, this.root);
         m.setExpression(expression2(look, pose, P4, pose.time || 0));
         this.effects(a, pose, P4, o, env, ctx, camYaw3, dist, s);
         this.lastT = env.time;
@@ -68228,53 +68516,85 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var MODEL_OUT = 116;
   var _ray1 = new Vector3();
   var _ray2 = new Vector3();
-  var CAM_CLEAR = { tree: 1, bush: 1, rock: 1, mushroom: 1, crystal: 1, cactus: 1, haystack: 1, tent: 1, stall: 1, statue: 1, totem: 1 };
-  var _box2 = new Box3();
-  function propExtent(v) {
-    const u = v.userData;
-    if (u.camExt !== void 0) return u.camExt;
-    let r = 0, top = 0;
-    if (u.parts) {
-      const sc = u.scale || 1;
-      for (const p of u.parts) {
-        const g = p.geo;
-        if (!g) continue;
-        const bb = g.boundingBox || (g.computeBoundingBox(), g.boundingBox);
-        const ls = p.local ? p.local.getMaxScaleOnAxis() : 1;
-        const lx = p.local ? Math.hypot(p.local.elements[12], p.local.elements[14]) : 0;
-        r = Math.max(r, (Math.max(-bb.min.x, bb.max.x, -bb.min.z, bb.max.z) * ls + lx) * sc);
-        top = Math.max(top, (bb.max.y * ls + (p.local ? p.local.elements[13] : 0)) * sc);
+  var CAM_FADE = { tree: 1, bush: 1, rock: 1, mushroom: 1, crystal: 1, cactus: 1, haystack: 1, tent: 1, stall: 1, statue: 1, totem: 1 };
+  var FADE_TO = 0.3;
+  var FADE_TIME = 0.25;
+  var FADE_HOLD = 0.2;
+  var FADE_IN = 0.3;
+  var FADE_NEAR = 5;
+  var PROF_BIN = 0.2;
+  function geoProfile(geo2, local2) {
+    const P4 = geo2.attributes.position, ix = geo2.index, n = P4.count, e = local2 ? local2.elements : null;
+    const xs = new Float32Array(n), ys = new Float32Array(n), zs = new Float32Array(n);
+    let y0 = Infinity, y1 = -Infinity;
+    for (let i = 0; i < n; i++) {
+      const x = P4.getX(i), y = P4.getY(i), z = P4.getZ(i);
+      if (e) {
+        xs[i] = e[0] * x + e[4] * y + e[8] * z + e[12];
+        ys[i] = e[1] * x + e[5] * y + e[9] * z + e[13];
+        zs[i] = e[2] * x + e[6] * y + e[10] * z + e[14];
+      } else {
+        xs[i] = x;
+        ys[i] = y;
+        zs[i] = z;
       }
-      u.camExt = r > 0 ? { r, top, get y() {
-        return u.y || 0;
-      } } : null;
-    } else {
-      _box2.setFromObject(v);
-      if (_box2.isEmpty()) return u.camExt = null;
-      const px2 = v.position.x, pz2 = v.position.z;
-      r = Math.max(px2 - _box2.min.x, _box2.max.x - px2, pz2 - _box2.min.z, _box2.max.z - pz2);
-      const base2 = v.position.y;
-      top = _box2.max.y - base2;
-      u.camExt = { r, top, get y() {
-        return v.position.y;
-      } };
+      y0 = Math.min(y0, ys[i]);
+      y1 = Math.max(y1, ys[i]);
     }
-    return u.camExt;
-  }
-  function showProp(v, on) {
-    const u = v.userData;
-    if (u.parts) {
-      u.camHidden = !on;
-      for (const p of u.parts) {
-        if (!on && !p.hidden) {
-          setPartVisible(u, p, false);
-          p.camHid = true;
-        } else if (on && p.camHid) {
-          p.camHid = false;
-          setPartVisible(u, p, true);
-        }
+    if (!n) return null;
+    const i0 = Math.floor(y0 / PROF_BIN), r = new Float32Array(Math.floor(y1 / PROF_BIN) - i0 + 1);
+    const edge = (a, b) => {
+      const k = Math.max(1, Math.ceil(Math.abs(ys[b] - ys[a]) / PROF_BIN));
+      for (let j = 0; j <= k; j++) {
+        const t = j / k, q2 = Math.floor((ys[a] + (ys[b] - ys[a]) * t) / PROF_BIN) - i0;
+        const d = Math.hypot(xs[a] + (xs[b] - xs[a]) * t, zs[a] + (zs[b] - zs[a]) * t);
+        if (d > r[q2]) r[q2] = d;
       }
-    } else v.visible = on;
+    };
+    const m = ix ? ix.count : n;
+    for (let t = 0; t + 2 < m; t += 3) {
+      const a = ix ? ix.getX(t) : t, b = ix ? ix.getX(t + 1) : t + 1, c = ix ? ix.getX(t + 2) : t + 2;
+      edge(a, b);
+      edge(b, c);
+      edge(c, a);
+    }
+    return { i0, r };
+  }
+  function camProfile(u) {
+    if (u.camProf !== void 0) return u.camProf;
+    const ps = [];
+    for (const p of u.parts) {
+      if (!p.geo) continue;
+      let g = p.local ? null : p.geo.userData.camProf;
+      if (!g) {
+        g = geoProfile(p.geo, p.local);
+        if (!p.local) p.geo.userData.camProf = g;
+      }
+      if (g) ps.push(g);
+    }
+    if (!ps.length) return u.camProf = null;
+    let i0 = Infinity, i1 = -Infinity;
+    for (const g of ps) {
+      i0 = Math.min(i0, g.i0);
+      i1 = Math.max(i1, g.i0 + g.r.length - 1);
+    }
+    const r = new Float32Array(i1 - i0 + 1);
+    for (const g of ps) for (let k = 0; k < g.r.length; k++) r[g.i0 - i0 + k] = Math.max(r[g.i0 - i0 + k], g.r[k]);
+    const wide = new Float32Array(r.length);
+    let rmax = 0;
+    for (let k = 0; k < r.length; k++) {
+      wide[k] = Math.max(r[k], r[k - 1] || 0, r[k + 1] || 0);
+      rmax = Math.max(rmax, wide[k]);
+    }
+    return u.camProf = { i0, r: wide, rmax };
+  }
+  function inProfile(pr, u, d, h2, m) {
+    const s = u.scale || 1;
+    if (d >= pr.rmax * s + m) return false;
+    const y = (h2 - u.y) / s, g = m / s;
+    const lo = Math.max(0, Math.floor((y - g) / PROF_BIN) - pr.i0), hi = Math.min(pr.r.length - 1, Math.floor((y + g) / PROF_BIN) - pr.i0);
+    for (let k = lo; k <= hi; k++) if (d < pr.r[k] * s + m) return true;
+    return false;
   }
   var _ndc = new Vector2();
   var _caster = new Raycaster();
@@ -68304,6 +68624,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.scene.add(this.props);
       this.forest = new SpriteForest(this.props);
       this.built = /* @__PURE__ */ new Map();
+      this.camGrid = /* @__PURE__ */ new Map();
+      this.camFades = /* @__PURE__ */ new Map();
       this.animProps = /* @__PURE__ */ new Map();
       this.retiring = /* @__PURE__ */ new Map();
       this.ents = new Group();
@@ -68533,6 +68855,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         disposeTree(v);
       }
       this.built.clear();
+      this.camGrid.clear();
+      this.camFades.clear();
       this.animProps.clear();
       this.retiring.clear();
       this.buildingsFar.clear();
@@ -68635,41 +68959,71 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
       this.proj.cam.zoom = f / 7;
       if (this.post) this.post.setImpact(game.fx && game.fx.impact > 0 ? 1 : 0, game.fx?.impactColor);
-      this.clearCameraProps();
+      this.fadeCameraProps(dt);
       prof("r.misc", t0);
       t0 = performance.now();
       this.draw(cam);
       prof("r.draw", t0);
     }
     /**
-     * Third person: a tree, bush or rock the camera has swung into is hidden
-     * while it's there — seen from inside, its outline shell would black out
-     * the whole screen.
+     * Third person: a tree, bush or rock... the camera has swung into (seen from
+     * inside, its outline shell would black out the whole screen), or that
+     * stands close in front of it, between it and you, fades to see-through
+     * over a moment (see fadeProp), and back again once the camera has left it.
+     * (The camera itself keeps out of trunks and stones: see CameraRig.)
      */
-    clearCameraProps() {
-      const hidden = this.camHidden || (this.camHidden = /* @__PURE__ */ new Map());
-      const want = /* @__PURE__ */ new Set();
-      const w = this.world;
-      if (this.rig.mode === "third" && w?.objects) {
-        const cp = this.rig.camera.getWorldPosition(_ray1);
-        const cx = w.wx((this.ox || 0) + cp.x), cy = (this.oy || 0) + cp.z, ch = cp.y;
-        for (const o of w.objects.near(cx, cy, 8)) {
-          if (!CAM_CLEAR[o.kind]) continue;
-          const v = this.built.get(o);
-          if (!v) continue;
-          const e = propExtent(v);
-          if (!e) continue;
-          const dx = w.dx(o.x, cx), dy = cy - o.y;
-          if (dx * dx + dy * dy < (e.r + 0.4) ** 2 && ch > e.y - 0.6 && ch < e.y + e.top + 0.4) want.add(v);
+    fadeCameraProps(dt) {
+      const fades = this.camFades, w = this.world, p = this.game.player;
+      const want = this.fadeWant || (this.fadeWant = /* @__PURE__ */ new Set());
+      want.clear();
+      if (this.rig.mode === "third" && w && p && this.camGrid.size) {
+        const c = this.rig.camera.getWorldPosition(_ray1);
+        const sc = p.look?.scale || 1, foot = this.rig.footY ?? c.y - 3;
+        const aims = p.mode === "sail" ? [] : [foot + 1 * sc, foot + 1.55 * sc];
+        const R4 = 3.5;
+        const x0 = Math.min(0, c.x) - R4, x1 = Math.max(0, c.x) + R4, z0 = Math.min(0, c.z) - R4, z1 = Math.max(0, c.z) + R4;
+        for (let gy = Math.floor((this.oy + z0) / 4); gy <= Math.floor((this.oy + z1) / 4); gy++) {
+          for (let gx = Math.floor((this.ox + x0) / 4); gx <= Math.floor((this.ox + x1) / 4); gx++) {
+            for (const o of this.camGrid.get(w.colKey(gx, gy)) || []) {
+              const v = this.built.get(o), u = v?.userData;
+              if (!u?.parts || !u.live || want.has(v)) continue;
+              const pr = camProfile(u);
+              if (!pr) continue;
+              const px2 = w.dx(this.ox, o.x), pz2 = o.y - this.oy;
+              if (inProfile(pr, u, Math.hypot(c.x - px2, c.z - pz2), c.y, FADE_IN)) {
+                want.add(v);
+                continue;
+              }
+              const reach = pr.rmax * (u.scale || 1);
+              for (const ah of aims) {
+                const ex = -c.x, ey = ah - c.y, ez = -c.z, L2 = Math.hypot(ex, ey, ez);
+                const end = Math.min(L2 - 0.4, FADE_NEAR);
+                const t = Math.max(0, Math.min(end / L2, -((c.x - px2) * ex + (c.z - pz2) * ez) / Math.max(1e-6, ex * ex + ez * ez)));
+                if (Math.hypot(c.x + ex * t - px2, c.z + ez * t - pz2) > reach + 0.6) continue;
+                let hit = false;
+                for (let s = 0.2; s <= end && !hit; s += 0.25) {
+                  const k = s / L2;
+                  hit = inProfile(pr, u, Math.hypot(c.x + ex * k - px2, c.z + ez * k - pz2), c.y + ey * k, 0.05);
+                }
+                if (hit) {
+                  want.add(v);
+                  break;
+                }
+              }
+            }
+          }
         }
       }
-      for (const v of hidden.keys()) if (!want.has(v)) {
-        showProp(v, true);
-        hidden.delete(v);
+      for (const v of want) {
+        let r = fades.get(v);
+        if (!r) fades.set(v, r = { f: 1, hold: 0 });
+        r.hold = FADE_HOLD;
       }
-      for (const v of want) if (!hidden.has(v)) {
-        showProp(v, false);
-        hidden.set(v, true);
+      const step = (1 - FADE_TO) / FADE_TIME * dt;
+      for (const [v, r] of fades) {
+        const to = want.has(v) || (r.hold -= dt) > 0 ? FADE_TO : 1;
+        r.f = r.f > to ? Math.max(to, r.f - step) : Math.min(to, r.f + step);
+        if (!fadeProp(v, r.f) || r.f >= 1) fades.delete(v);
       }
     }
     /**
@@ -69006,6 +69360,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (v) {
         this.detach(v);
         disposeTree(v);
+        this.camFades.delete(v);
+      }
+      if (v && CAM_FADE[o.kind]) {
+        const list = this.camGrid.get(this.gridKey(o.x, o.y)), i = list ? list.indexOf(o) : -1;
+        if (i >= 0) list.splice(i, 1);
       }
       this.built.delete(o);
       this.animProps.delete(o);
@@ -69058,6 +69417,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       });
       this.attach(v, this.props);
       if (v.userData.update) this.animProps.set(o, v);
+      if (CAM_FADE[o.kind]) {
+        const k = this.gridKey(o.x, o.y);
+        if (!this.camGrid.has(k)) this.camGrid.set(k, []);
+        this.camGrid.get(k).push(o);
+      }
+    }
+    /** The 4 m cell a point is filed under in camGrid. */
+    gridKey(x, y) {
+      return this.world.colKey(Math.floor(this.world.wx(x) / 4), Math.floor(y / 4));
     }
     /**
      * Put a newly built object into the scene once its shaders are ready. The
@@ -69098,7 +69466,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      * frame stalls, on some machines for a good part of a second. So everything
      * already in the scene is compiled now (the ground cover, sea bed, rain,
      * lamps..., much of it unseen until you walk into a forest or dive or it
-     * rains), and a few ships built out of sight for it, then let go.
+     * rains), and a few ships built out of sight for it, then let go — and a
+     * prop faded as the third-person camera would (see fadeCameraProps).
      */
     warmUp() {
       const zoo = new Group();
@@ -69109,6 +69478,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         } catch (e) {
         }
       }
+      const faded2 = fadeWarmUp();
+      zoo.add(faded2);
       try {
         if (this.parallelCompile) {
           this.compileAsync(this.scene, null);
@@ -69120,6 +69491,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       } catch (e) {
         console.warn("shader warm-up failed", e);
       }
+      faded2.userData.spare();
     }
     /**
      * Compile an object's shaders without blocking (KHR_parallel_shader_compile)
@@ -87826,7 +88198,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       h("h3", "The sea"),
       h("p", "Swim anywhere \u2014 but swimming tires you. Run out of stamina while you keep swimming and you start to go under and drown; stop and tread water to get your breath back. Dive with C (or look down and swim) to explore the reefs, kelp forests and the dark deep water in the middle of the ocean; bubbles under your stamina show how long you can hold your breath. Grab fish with an attack as they swim past, prise giant clams open for pearls, and watch out past the reef: Sea Cows hunt swimmers in the Blues, and horned Fighting Fish in the Grand Line. Fish-Men swim fast and breathe water. Devil Fruit users cannot swim at all: the sea drags them down, and they come out of it weak \u2014 keep a crewmate close to haul you out, or grab a line thrown from your ship."),
       h("h3", "Ships, raids and being wanted"),
-      h("p", "Other ships sail the seas: merchantmen and fishing boats, Marine patrols (who come after you once you're wanted), and pirates, who keep to their own business \u2014 unless you fire on them or board them. Stop, and a ship that's after you comes alongside and heaves to. Fire on a merchant and she may heave to. To board and raid a ship, leave your helm and jump across onto her deck, or swim to her hull and press Space to climb her side. Beat the crew on her deck, go down the hatch amidships and plunder the treasure chest in her hold (her cannonballs come across to your ship too), then take her wheel to steal her \u2014 she joins your fleet. At your own wheel, E leaves the helm so you can walk your deck (jump over the rail for a swim; Space at her side climbs back aboard). Ships come in every size, from your first rowboat to sloops, caravels, galleons and One Piece-scale men-o'-war and Yonko flagships \u2014 and every one with a sail is a ship you can live on: walk her decks, climb the stairs to the quarterdeck, go in through the door under it to the captain's cabin (a table with the chart, a bunk, the sea chest), into the crew's forecastle on the bigger ones, and down the hatch amidships to the hold, where the cargo and the treasure chest are (on the big ships, a gun deck with cannons at every port). Her guns fire cannonballs, one a gun, and they run out: the count is by your wheel, and a shipwright restocks you. Your crew stand their stations on deck while you steer. Grand Line shipyards build them. Raiding or stealing from anyone but pirates is piracy, and your bounty grows. A small bounty goes unnoticed, but once your poster is worth something the Marines know your face on sight \u2014 a hood hides it, until you fight or steal in it."),
+      h("p", "Other ships sail the seas: merchantmen and fishing boats, Marine patrols (who come after you once you're wanted), and pirates, who keep to their own business \u2014 unless you fire on them or board them. Stop, and a ship that's after you comes alongside and heaves to. Fire on a merchant and she may heave to. To board and raid a ship, leave your helm and jump across onto her deck, or swim to her hull and press Space to climb her side. Beat the crew on her deck, go down the hatch amidships and plunder the treasure chest in her hold (her cannonballs come across to your ship too), and take what's in it (a raided ship isn't yours to sail away: new ships come from the shipwrights). At your own wheel, E leaves the helm so you can walk your deck (jump over the rail for a swim; Space at her side climbs back aboard). Ships come in every size, from your first rowboat to sloops, caravels, galleons and One Piece-scale men-o'-war and Yonko flagships \u2014 and every one with a sail is a ship you can live on: walk her decks, climb the stairs to the quarterdeck, go in through the door under it to the captain's cabin (a table with the chart, a bunk, the sea chest), into the crew's forecastle on the bigger ones, and down the hatch amidships to the hold, where the cargo and the treasure chest are (on the big ships, a gun deck with cannons at every port). Her guns fire cannonballs, one a gun, and they run out: the count is by your wheel, and a shipwright restocks you. Your crew stand their stations on deck while you steer. Your own ships can't break. Every pier has a shipwright: talk to them (E) to bring any ship you own round to that pier, or to buy a new one. Raiding or stealing from anyone but pirates is piracy, and your bounty grows. A small bounty goes unnoticed, but once your poster is worth something the Marines know your face on sight \u2014 a hood hides it, until you fight or steal in it."),
       h("h3", "Crossing the Red Line"),
       h("p", "Paradise ends at the Red Line. Pirates cross the way the Straw Hats did: have your ship coated at the Sabaody Archipelago, then dive 10,000 metres to Fish-Man Island and rise into the New World. The Red Ports and their Bondola lifts to Mary Geoise are for the World Government \u2014 and those it permits."),
       h("h3", "Crew and the One Piece"),

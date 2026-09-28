@@ -155,6 +155,14 @@ export class Rig {
         if (tiltA) T.applyAxisAngle(X, tiltA * side);
         T.applyQuaternion(this.qLean).add(S);
         if (o.att && o.attK > 0) { attitude(d, k, side, o.att, hip, _att, _attP); T.lerp(_att, o.attK); }
+        // the Longarm tribe's arms hang bent at the second elbow, the forearm
+        // carried forward — not trailing down past the knees through their
+        // clothes and swinging through their legs
+        if (d.Am > 1.25 && restK > 0.02) {
+          const lk = Math.min(1, (d.Am - 1.25) / 0.4) * Math.min(1, restK * 1.6) * 0.85;
+          _att.set(0.3 * d.Am * 0.6, -(d.A1 + d.A2) * 0.6, side * (d.shW * 0.95 + 0.05)).applyQuaternion(this.qLean).add(S);
+          T.lerp(_att, lk);
+        }
       }
       // elbow pole: the 2D bend side in the swing plane, flared outward
       const e = k === 0 ? (P.eF ?? 1) : (P.eB ?? 1);
@@ -162,6 +170,10 @@ export class Rig {
       const lxy = Math.hypot(_t.x, _t.y) || 1;
       const sg = e < 0 ? -1 : 1;
       this._pole.set(_t.y / lxy * sg, -_t.x / lxy * sg, side * 0.42);
+      // (a hand held out to a fixed point — food held up, a rubber arm's fist — keeps its
+      // elbow down and back: with the target near shoulder height the swing-plane pole
+      // would flip over as the body bobs, and the whole arm and the palm with it)
+      if (reach) this._pole.set(-0.75, -0.65, side * 0.45);
       if (o.att && o.attK > 0 && !reach && !(k === 1 && broom)) this._pole.lerp(_attP, o.attK);
       ik(S, T, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P.stretch || !!reach, J, E);
       const U = k === 0 ? B.uarmR : B.uarmL, F = k === 0 ? B.farmR : B.farmL, Hd = k === 0 ? B.handR : B.handL;
@@ -174,7 +186,8 @@ export class Rig {
       const shape = o.shape ? o.shape[k] : 'fist';
       // (a flat hand — swimming — keeps its fingers in line and its back up)
       if (shape === 'flat') this._ref.set(0.1, 1, side * 0.35);
-      else if (shape === 'hold') this._ref.set(0.25, -1, side * 0.35); // (holding food: the palm up under it — or, the hand raised to the mouth, facing it)
+      else if (shape === 'hold') this._ref.set(0.25, -1, side * 0.35); // (holding food: the palm up under it)
+      else if (shape === 'eat') this._ref.set(1, 0.25, side * 0.3); // (eating: the hand at the mouth, its palm toward the face)
       else this._ref.set(-0.3, 0.6, side * 0.8);
       aimNegY(this.quat[Hd], _u, this._ref);
       if (shape === 'palm' || shape === 'claw') {

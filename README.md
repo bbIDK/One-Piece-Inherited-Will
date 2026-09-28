@@ -204,6 +204,17 @@ rearrange them.
   cannonball from each gun on that side, arcing out of its port. Balls run
   out: shipwrights restock them, and plundering a hold carries a ship's shot
   across to yours.
+- **Your ships can't break** (for now): no hull damage and no sinking, from
+  anything. NPC ships still take damage and sink.
+- **A shipwright on every pier.** Press E to talk to them:
+  - **Spawn ship** lists every ship you own and where she is, and brings the
+    one you choose round to this pier, ready to board. Only one copy of each
+    ship is ever afloat.
+  - **Buy ships** is how you get new ones. It shows each ship's size, masts,
+    hull, speed, cannons and shot, crew, hold and price.
+  - **Goodbye** ends the conversation.
+  Stealing a raided ship by taking her wheel is gone (plundering her hold
+  still works). Ships the story gives you join your fleet.
 - **Log Pose** navigation: stay on an island until the log sets, and use
   Eternal Poses.
 - The **Calm Belt** is full of Sea Kings.
