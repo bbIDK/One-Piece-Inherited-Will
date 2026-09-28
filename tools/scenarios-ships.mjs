@@ -370,4 +370,80 @@ export const scenarios = {
       console.log('perf', JSON.stringify(perf));
     },
   },
+
+  // Your ships can't break (SHIPS_UNBREAKABLE): a broadside of cannonballs,
+  // a monstrous blow, a storm and a crash into the rocks leave her hull
+  // whole, while a pirate ship still sinks. No screenshots but the helm.
+  //   node tools/shot.mjs unbreakable [--shot=no]
+  unbreakable: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings(); g.env.clock = 10.5; g.env.storm = 0; g.env.fog = 0; document.querySelector('.look-hint')?.remove(); });
+      await step(page, 0.5);
+      // your caravel out in open water, you at her helm, and a pirate brigantine abeam of her
+      const setup = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player, c = g.state.char;
+        const isl = w.nearestIsland(p.x, p.y, 300);
+        let spot = null;
+        for (let k = 0; k < 40000 && !spot; k++) {
+          const a = Math.random() * Math.PI * 2, r = isl.radius + 40 + Math.random() * 80;
+          const x = Math.floor(isl.x + Math.cos(a) * r) + 0.5, y = Math.floor(isl.y + Math.sin(a) * r) + 0.5;
+          if (w.sd(x, y) < -30) spot = { x: w.wx(x), y };
+        }
+        const mine = g.giveShip('caravel', spot.x, spot.y, 'Test Caravel', { heading: 0 });
+        p.mode = 'sail'; p.ship = mine; p.onShip = true; mine.captain = p; p.x = mine.x; p.y = mine.y;
+        const foe = g.traffic.spawn({ kind: 'pirate', type: 'brigantine', x: w.wx(mine.x), y: mine.y - 11, heading: 0, level: 30 });
+        foe.provoked = true;
+        window.__mine = mine; window.__foe = foe;
+        return { spot, mine: { hull: mine.hull, max: mine.maxHull, unbreakable: mine.unbreakable }, foe: foe && { hull: foe.hull, max: foe.maxHull, unbreakable: foe.unbreakable }, inFleet: !!c.fleet?.some((f) => f.uid === mine.uid) };
+      });
+      console.log('setup', JSON.stringify(setup));
+      // count every blow that lands on her
+      await page.evaluate(() => { const s = window.__mine, dmg = s.damage.bind(s); window.__hits = { n: 0, total: 0 }; s.damage = (n, a, i) => { window.__hits.n++; window.__hits.total += n; return dmg(n, a, i); }; });
+      // the pirate's broadsides, at point-blank range
+      for (let k = 0; k < 8; k++) {
+        await page.evaluate(() => { const g = window.OP.game, s = window.__mine, f = window.__foe; f.cannonCd = 0; f.shot = f.shotCap; f.fireBroadside(g, s.x, s.y, { name: f.name, faction: 'pirate', isShip: true, power: () => 300 }); });
+        await step(page, 1.2);
+      }
+      const fired = await page.evaluate(() => { const s = window.__mine; return { hits: window.__hits, hull: s.hull, max: s.maxHull, sunk: s.sunk, alive: s.alive !== false }; });
+      console.log('after 8 broadsides', JSON.stringify(fired));
+      if (args.shot !== 'no') { await frames(page, 3); await snap('under-fire'); }
+      // a blow to sink a man-o'-war, a storm, and a crash into the rocks
+      const blow = await page.evaluate(() => { const s = window.__mine; s.damage(1e6, window.__foe, {}); return { hull: s.hull, sunk: s.sunk }; });
+      await page.evaluate(() => { window.OP.game.env.storm = 1; });
+      await step(page, 15);
+      const storm = await page.evaluate(() => { const g = window.OP.game, s = window.__mine; g.env.storm = 0; return { hull: s.hull, sunk: s.sunk }; });
+      const crash = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, s = window.__mine, p = g.player;
+        // (heading straight for the nearest coast, flat out)
+        const isl = w.nearestIsland(s.x, s.y, 400);
+        let best = null;
+        for (let a = 0; a < Math.PI * 2; a += 0.05) {
+          for (let r = 4; r < 140; r += 1) {
+            const x = w.wx(s.x + Math.cos(a) * r), y = s.y + Math.sin(a) * r;
+            if (!w.isLiquid(x, y)) { if (!best || r < best.r) best = { a, r }; break; }
+          }
+        }
+        if (!best) return null;
+        // (brought in close, bow on)
+        const r0 = Math.max(0, best.r - s.def.length * 0.5 - 4);
+        s.x = w.wx(s.x + Math.cos(best.a) * r0); s.y += Math.sin(best.a) * r0; s.heading = best.a; s.speed = 14;
+        p.x = s.x; p.y = s.y;
+        window.__hitsBefore = window.__hits.n;
+        return { isl: isl?.name, dist: best.r };
+      });
+      for (let i = 0; i < 12; i++) { await page.evaluate(() => { window.__mine.speed = Math.max(window.__mine.speed, 12); }); await step(page, 0.1); }
+      const afterCrash = await page.evaluate(() => { const s = window.__mine; return { hull: s.hull, sunk: s.sunk, crashed: window.__hits.n > window.__hitsBefore }; });
+      // everyone else's ships still sink
+      const foe = await page.evaluate(() => { const f = window.__foe; f.damage(1e6, window.OP.game.player, {}); return { sunk: f.sunk, hull: f.hull }; });
+      // (and a Navy escort sailing with you is as sound as your own)
+      const escort = await page.evaluate(() => { const g = window.OP.game, s = window.__mine; const e = g.addShip({ type: 'brigantine', x: g.world.wx(s.x + 30), y: s.y + 30, owner: 'marine', faction: 'marine', name: 'Escort Test' }); e.escortOf = 'player'; e.damage(1e6, null, {}); const r = { hull: e.hull, max: e.maxHull, sunk: e.sunk }; e.alive = false; return r; });
+      const hud = await page.evaluate(() => document.querySelector('.shiphud .bar.hull span')?.textContent || null);
+      console.log('unbreakable', JSON.stringify({ blow, storm, crash: afterCrash, foe, escort, hud }));
+      const ok = fired.hull === fired.max && !fired.sunk && fired.hits.n > 0 && !blow.sunk && blow.hull === fired.max && !storm.sunk && storm.hull === fired.max && !afterCrash.sunk && afterCrash.hull === fired.max && foe.sunk && !escort.sunk && escort.hull === escort.max;
+      console.log(ok ? 'UNBREAKABLE: OK' : 'UNBREAKABLE: FAILED');
+      if (!ok) throw new Error('a ship of yours took damage (or a pirate did not)');
+    },
+  },
 };

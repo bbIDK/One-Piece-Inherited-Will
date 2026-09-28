@@ -1,7 +1,7 @@
 // Ships: wind-driven sailing, currents, hull collision against coasts,
-// broadside cannons, damage, sinking.
+// broadside cannons, damage, sinking (not yours, while SHIPS_UNBREAKABLE).
 import { Entity } from './entity.js';
-import { SHIPS, SHIP_UPGRADES } from '../data/ships.js';
+import { SHIPS_UNBREAKABLE, shipStats, shotCapFor } from '../data/ships.js';
 import { drawShip } from '../render/ship.js';
 import { drawCharacter } from '../render/character.js';
 import { SAILABLE } from '../world/tiles.js';
@@ -66,23 +66,16 @@ export class Ship extends Entity {
   }
 
   applyDef() {
-    const base = SHIPS[this.type] || SHIPS.dinghy;
-    const d = { ...base };
-    const mods = {};
-    for (const u of this.upgrades) SHIP_UPGRADES[u]?.apply(mods);
-    d.speed *= mods.speedMul || 1;
-    d.cannons = (d.cannons || 0) + (mods.extraCannons || 0);
-    if (mods.seastone) d.seastone = true;
-    if (mods.oars) d.oars = true;
+    const { maxHull, ...d } = shipStats(this.type, this.upgrades);
     this.def = d;
-    this.maxHull = Math.round(base.hull * (mods.hullMul || 1));
+    this.maxHull = maxHull;
   }
 
   /** How many cannonballs she can carry (none, without guns). */
-  get shotCap() {
-    const n = this.cannonsOverride ?? this.def.cannons ?? 0;
-    return n > 0 ? Math.max(12, n * 8) : 0;
-  }
+  get shotCap() { return shotCapFor(this.cannonsOverride ?? this.def.cannons ?? 0); }
+
+  /** One of yours (or a Navy escort sailing with you): nothing breaks her (see SHIPS_UNBREAKABLE). */
+  get unbreakable() { return SHIPS_UNBREAKABLE && (this.owner === 'player' || this.escortOf === 'player'); }
 
   hullPoints(x, y, h) {
     const L = this.def.length, B = this.def.beam;
@@ -117,6 +110,8 @@ export class Ship extends Entity {
     const w = game.world;
     const x0 = this.x, y0 = this.y, h0 = this.heading;
     this.sortY = this.y;
+    // (a hull of yours is always sound: an old save's damage, or new plating, is made good)
+    if (this.hull < this.maxHull && this.unbreakable) this.hull = this.maxHull;
     if (this.crashT > 0) this.crashT -= dt;
     this.cannonCd = Math.max(0, this.cannonCd - dt);
     this.burstCd = Math.max(0, this.burstCd - dt);
@@ -186,7 +181,7 @@ export class Ship extends Entity {
         game.fx.shake(0.4);
         game.fx.burst(this.x + Math.cos(this.heading) * this.def.length * 0.5, this.y + Math.sin(this.heading) * this.def.length * 0.5, 14, { color: ['#8d6e63', '#e1f5fe'], speed: 4, g: 8, life: 0.6 });
         game.audio?.sfx('crash', this);
-        if (cur.steer) game.log('CRASH! Steer with the current — hit the canal walls and you will sink!', '#ff8a80');
+        if (cur.steer) game.log(this.unbreakable ? 'CRASH! Steer with the current — keep to the middle of the canal!' : 'CRASH! Steer with the current — hit the canal walls and you will sink!', '#ff8a80');
       }
       this.speed *= -0.25;
       // nudge out of the wall
@@ -335,6 +330,11 @@ export class Ship extends Entity {
 
   damage(n, attacker, info = {}) {
     if (this.sunk || n <= 0) return;
+    if (this.unbreakable) {
+      // (the shot bounces off her timbers: a puff of splinters, nothing more)
+      if (this.game && !info.weather && !info.crash) this.game.fx.burst(this.x, this.y - 0.5, 5, { color: ['#8d6e63', '#bcaaa4'], speed: 3, g: 7, life: 0.4 });
+      return;
+    }
     this.hull -= n;
     this.lastHitBy = attacker;
     // (fire on a ship and she'll fire back, newcomer or not)
