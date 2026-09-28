@@ -9,7 +9,7 @@
 // character is actually showing are ever painted.
 import * as THREE from 'three';
 import { mixHex } from '../../core/math.js';
-import { charGradient } from './mats.js';
+import { charGradient, celShading } from './mats.js';
 
 export const FACE_S = 96;            // canvas px per head radius
 export const FACE_TOP = 0.5;         // head-unit y (up) at the top edge of the canvas
@@ -388,6 +388,8 @@ export function faceMaterial(look, X) {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
     const mat = new THREE.MeshToonMaterial({ map: tex, gradientMap: charGradient(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
+    mat.onBeforeCompile = celShading;
+    mat.customProgramCacheKey = () => 'op-char-face-1';
     e = { key, tex, mat, refs: 1, t: ++tick };
     CACHE.set(key, e);
     if (CACHE.size > MAX) evict();

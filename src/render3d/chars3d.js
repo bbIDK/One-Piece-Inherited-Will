@@ -199,7 +199,11 @@ class ActorView {
   ownBody(fp, a) {
     const m = this.model, u = m.fx, pose = a._lastPose || {};
     const busy = !!pose.anim || !!pose.combat || !!pose.armed || pose.block !== undefined || !!pose.station || !!a.held || !!pose.launch || a.inWater;
-    u.uClipY.value = fp ? m.rig.neck.y + 0.03 : 1e6;
+    // (like the first-person view in the big open-world games: from the eyes you
+    // see your chest, arms, legs and feet — never your own head, hair or hat,
+    // however long the hair or deep the hood; and the neck is cut below the chin)
+    u.uClipY.value = fp ? m.rig.neck.y - m.d.neck * 0.5 : 1e6;
+    u.uHideHead.value = fp ? 1 : 0;
     u.uHideArms.value = fp && busy ? 1 : 0;
     m.face.visible = !fp;
     if (m.bubble) m.bubble.visible = !fp;

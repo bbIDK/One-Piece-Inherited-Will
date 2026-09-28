@@ -518,15 +518,70 @@ export const scenarios = {
           }, [CREW, i]);
           await settle(page, 6);
           await snap(`face-${CREW[i][0]}`);
+          // three-quarter: the face's form (nose, cheekbones, jaw) shows in the shading
+          await page.evaluate(() => { const a = window.__C3.npcs[0]; a.facing = Math.PI * 0.78; });
+          await settle(page, 3);
+          await snap(`face34-${CREW[i][0]}`);
         }
       }
     },
   },
-  // your own body in first person: looking down standing, walking, in a guard; and third person as usual
-  fpbody: {
-    async run(page, snap) {
+  // bodies close up: frames and muscles, front, side and back, men and women; --only=men,women  --idle=rest|cross|hips
+  c3body: {
+    async run(page, snap, args) {
       await boot(page);
-      await page.evaluate(() => { const p = window.OP.game.player; window.OP.teleport(p.x + 5, p.y); window.__C3.view(0, -1.15, 'first'); });
+      await page.evaluate(() => { const u = document.getElementById('ui'); if (u) u.style.display = 'none'; });
+      const idle = String(args.idle || 'rest');
+      const SETS = {
+        men: [
+          ['lean', { fem: false, frame: 'lean', muscle: 0.75, hair: 'messy', hairColor: '#141414', skin: '#f3c9a0', topStyle: 'bare', bottomStyle: 'shorts', bottom: '#2f5fd0', waist: 'sash', waistCol: '#f2c21b', shoeStyle: 'sandals' }],
+          ['athletic', { fem: false, frame: 'athletic', muscle: 1.0, hair: 'crop', hairColor: '#3fae4a', skin: '#e8b98f', topStyle: 'bare', bottomStyle: 'trousers', bottom: '#27432b', waist: 'haramaki', waistCol: '#8e1c2a', shoeStyle: 'boots' }],
+          ['brawny', { fem: false, frame: 'brawny', muscle: 1.2, hair: 'pompadour', hairColor: '#35a0e8', skin: '#e2a67a', topStyle: 'bare', bottomStyle: 'shorts', bottom: '#2a5bb8', shoeStyle: 'sandals' }],
+          ['heavy', { fem: false, frame: 'heavy', muscle: 0.3, hair: 'short', hairColor: '#6b4423', skin: '#f1c9a0', topStyle: 'bare', bottomStyle: 'trousers', bottom: '#5d4037', waist: 'belt', shoeStyle: 'boots' }],
+          ['slim', { fem: false, frame: 'slim', muscle: 0.45, hair: 'sidefringe', hairColor: '#f2d16b', skin: '#f6d5b8', topStyle: 'bare', bottomStyle: 'slim', bottom: '#1c1c22', shoeStyle: 'shoes' }],
+        ],
+        women: [
+          ['slim', { fem: true, frame: 'slim', hair: 'long', hairColor: '#171320', skin: '#dcae8a', topStyle: 'bikini', top: '#3b3570', bottomStyle: 'shorts', bottom: '#d1545a', shoeStyle: 'sandals' }],
+          ['curvy', { fem: true, frame: 'curvy', hair: 'wavy', hairColor: '#e8742a', skin: '#f6cfae', topStyle: 'bikini', top: '#3c9a52', bottomStyle: 'slim', bottom: '#2b4d8a', shoeStyle: 'sandals' }],
+          ['athletic', { fem: true, frame: 'athletic', muscle: 0.6, hair: 'ponytail', hairColor: '#c0392b', skin: '#e0ac7e', topStyle: 'crop', top: '#212121', bottomStyle: 'trousers', bottom: '#455a64', shoeStyle: 'boots' }],
+          ['petite', { fem: true, frame: 'petite', hair: 'bob', hairColor: '#e84393', skin: '#fbe3cf', topStyle: 'tank', top: '#fdcb6e', bottomStyle: 'skirt', bottom: '#6c5ce7', shoeStyle: 'shoes' }],
+          ['heavy', { fem: true, frame: 'heavy', hair: 'bun', hairColor: '#8e8e8e', skin: '#c68642', topStyle: 'dress', top: '#8e44ad', shoeStyle: 'sandals' }],
+        ],
+      };
+      for (const set of String(args.only || 'men,women').split(',')) {
+        const list = SETS[set];
+        await page.evaluate(([list, idle]) => {
+          const C = window.__C3; C.clear();
+          list.forEach(([name, look], i) => C.spawn({ name, id: 'body-' + name + i, showName: false, look: { race: 'human', seed: 11 + i, idle, ...look } }, 2.9, (i - (list.length - 1) / 2) * 0.95));
+          C.view(0, -0.07);
+        }, [list, idle]);
+        await settle(page, 8);
+        await snap(`${set}-front`);
+        await page.evaluate(() => { for (const a of window.__C3.npcs) a.facing = Math.PI / 2; });
+        await settle(page, 3);
+        await snap(`${set}-side`);
+        await page.evaluate(() => { for (const a of window.__C3.npcs) a.facing = 0; });
+        await settle(page, 3);
+        await snap(`${set}-back`);
+      }
+    },
+  },
+  // your own body in first person: looking down standing, walking, in a guard; and third person as usual
+  //   --arms=1.8 (a long-armed body) --hair=long --hat=hood --top=coat --coat=#553322
+  fpbody: {
+    async run(page, snap, args) {
+      await boot(page);
+      await page.evaluate((args) => {
+        const p = window.OP.game.player;
+        const over = {};
+        if (args.arms) over.arms = Number(args.arms);
+        if (args.hair) over.hair = args.hair;
+        if (args.hat) over.hat = args.hat;
+        if (args.top) over.topStyle = args.top;
+        if (args.coat) over.coat = args.coat;
+        if (Object.keys(over).length) p.look = { ...p.look, ...over };
+        window.OP.teleport(p.x + 5, p.y); window.__C3.view(0, -1.15, 'first');
+      }, args);
       await settle(page, 6);
       await snap('down-standing');
       await page.evaluate(() => window.__C3.view(0, -0.55, 'first'));

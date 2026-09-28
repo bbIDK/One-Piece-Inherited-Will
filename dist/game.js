@@ -21847,8 +21847,8 @@ void main() {
       this.curves = [];
       this.autoClose = false;
     }
-    add(curve) {
-      this.curves.push(curve);
+    add(curve2) {
+      this.curves.push(curve2);
     }
     closePath() {
       const startPoint = this.curves[0].getPoint(0);
@@ -21873,10 +21873,10 @@ void main() {
       while (i < curveLengths.length) {
         if (curveLengths[i] >= d) {
           const diff = curveLengths[i] - d;
-          const curve = this.curves[i];
-          const segmentLength = curve.getLength();
+          const curve2 = this.curves[i];
+          const segmentLength = curve2.getLength();
           const u = segmentLength === 0 ? 0 : 1 - diff / segmentLength;
-          return curve.getPointAt(u, optionalTarget);
+          return curve2.getPointAt(u, optionalTarget);
         }
         i++;
       }
@@ -21924,9 +21924,9 @@ void main() {
       const points = [];
       let last;
       for (let i = 0, curves = this.curves; i < curves.length; i++) {
-        const curve = curves[i];
-        const resolution = curve.isEllipseCurve ? divisions * 2 : curve.isLineCurve || curve.isLineCurve3 ? 1 : curve.isSplineCurve ? divisions * curve.points.length : divisions;
-        const pts = curve.getPoints(resolution);
+        const curve2 = curves[i];
+        const resolution = curve2.isEllipseCurve ? divisions * 2 : curve2.isLineCurve || curve2.isLineCurve3 ? 1 : curve2.isSplineCurve ? divisions * curve2.points.length : divisions;
+        const pts = curve2.getPoints(resolution);
         for (let j = 0; j < pts.length; j++) {
           const point = pts[j];
           if (last && last.equals(point)) continue;
@@ -21943,8 +21943,8 @@ void main() {
       super.copy(source);
       this.curves = [];
       for (let i = 0, l = source.curves.length; i < l; i++) {
-        const curve = source.curves[i];
-        this.curves.push(curve.clone());
+        const curve2 = source.curves[i];
+        this.curves.push(curve2.clone());
       }
       this.autoClose = source.autoClose;
       return this;
@@ -21954,8 +21954,8 @@ void main() {
       data.autoClose = this.autoClose;
       data.curves = [];
       for (let i = 0, l = this.curves.length; i < l; i++) {
-        const curve = this.curves[i];
-        data.curves.push(curve.toJSON());
+        const curve2 = this.curves[i];
+        data.curves.push(curve2.toJSON());
       }
       return data;
     }
@@ -21964,8 +21964,8 @@ void main() {
       this.autoClose = json.autoClose;
       this.curves = [];
       for (let i = 0, l = json.curves.length; i < l; i++) {
-        const curve = json.curves[i];
-        this.curves.push(new Curves[curve.type]().fromJSON(curve));
+        const curve2 = json.curves[i];
+        this.curves.push(new Curves[curve2.type]().fromJSON(curve2));
       }
       return this;
     }
@@ -21991,36 +21991,36 @@ void main() {
       return this;
     }
     lineTo(x, y) {
-      const curve = new LineCurve(this.currentPoint.clone(), new Vector2(x, y));
-      this.curves.push(curve);
+      const curve2 = new LineCurve(this.currentPoint.clone(), new Vector2(x, y));
+      this.curves.push(curve2);
       this.currentPoint.set(x, y);
       return this;
     }
     quadraticCurveTo(aCPx, aCPy, aX, aY) {
-      const curve = new QuadraticBezierCurve(
+      const curve2 = new QuadraticBezierCurve(
         this.currentPoint.clone(),
         new Vector2(aCPx, aCPy),
         new Vector2(aX, aY)
       );
-      this.curves.push(curve);
+      this.curves.push(curve2);
       this.currentPoint.set(aX, aY);
       return this;
     }
     bezierCurveTo(aCP1x, aCP1y, aCP2x, aCP2y, aX, aY) {
-      const curve = new CubicBezierCurve(
+      const curve2 = new CubicBezierCurve(
         this.currentPoint.clone(),
         new Vector2(aCP1x, aCP1y),
         new Vector2(aCP2x, aCP2y),
         new Vector2(aX, aY)
       );
-      this.curves.push(curve);
+      this.curves.push(curve2);
       this.currentPoint.set(aX, aY);
       return this;
     }
     splineThru(pts) {
       const npts = [this.currentPoint.clone()].concat(pts);
-      const curve = new SplineCurve(npts);
-      this.curves.push(curve);
+      const curve2 = new SplineCurve(npts);
+      this.curves.push(curve2);
       this.currentPoint.copy(pts[pts.length - 1]);
       return this;
     }
@@ -22048,15 +22048,15 @@ void main() {
       return this;
     }
     absellipse(aX, aY, xRadius, yRadius, aStartAngle, aEndAngle, aClockwise, aRotation) {
-      const curve = new EllipseCurve(aX, aY, xRadius, yRadius, aStartAngle, aEndAngle, aClockwise, aRotation);
+      const curve2 = new EllipseCurve(aX, aY, xRadius, yRadius, aStartAngle, aEndAngle, aClockwise, aRotation);
       if (this.curves.length > 0) {
-        const firstPoint = curve.getPoint(0);
+        const firstPoint = curve2.getPoint(0);
         if (!firstPoint.equals(this.currentPoint)) {
           this.lineTo(firstPoint.x, firstPoint.y);
         }
       }
-      this.curves.push(curve);
-      const lastPoint = curve.getPoint(1);
+      this.curves.push(curve2);
+      const lastPoint = curve2.getPoint(1);
       this.currentPoint.copy(lastPoint);
       return this;
     }
@@ -32188,18 +32188,18 @@ void main() {
       this.textures.fog = texture(gl, { width: fogW, height: fogH, internal: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, data: fog, filter: gl.LINEAR });
     }
     /** Upload the explored mask (all of it, or just the rectangle of cells that changed). */
-    updateFog(fog, rect = null) {
+    updateFog(fog, rect2 = null) {
       const gl = this.gl;
       gl.bindTexture(gl.TEXTURE_2D, this.textures.fog);
       gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-      if (!rect) {
+      if (!rect2) {
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, this.fogW, this.fogH, gl.RED, gl.UNSIGNED_BYTE, fog);
         return;
       }
-      const w = rect.x1 - rect.x0 + 1, h2 = rect.y1 - rect.y0 + 1;
+      const w = rect2.x1 - rect2.x0 + 1, h2 = rect2.y1 - rect2.y0 + 1;
       const sub = new Uint8Array(w * h2);
-      for (let y = 0; y < h2; y++) sub.set(fog.subarray((rect.y0 + y) * this.fogW + rect.x0, (rect.y0 + y) * this.fogW + rect.x0 + w), y * w);
-      gl.texSubImage2D(gl.TEXTURE_2D, 0, rect.x0, rect.y0, w, h2, gl.RED, gl.UNSIGNED_BYTE, sub);
+      for (let y = 0; y < h2; y++) sub.set(fog.subarray((rect2.y0 + y) * this.fogW + rect2.x0, (rect2.y0 + y) * this.fogW + rect2.x0 + w), y * w);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, rect2.x0, rect2.y0, w, h2, gl.RED, gl.UNSIGNED_BYTE, sub);
     }
     /** Re-upload a rectangle of tiles after the map changed (x0,y0 inclusive, w,h). */
     updateTiles(worldRGBA, dist, x0, y0, w, h2, fullW) {
@@ -34027,10 +34027,10 @@ void main() {
     const winW = 0.85 * g, winH = 1.05 * g;
     const h2 = kind === "tall" ? winH * 1.2 : winH;
     const y = 1.55 * g;
-    const W3 = windowSlots(b, 0);
+    const W4 = windowSlots(b, 0);
     const out = [];
-    for (const x of W3.front) out.push({ face: "front", u: x, y, w: winW, h: h2, kind, i: out.length });
-    for (const face of ["left", "right"]) for (const z of W3[face]) out.push({ face, u: z, y, w: winW, h: h2, kind, i: out.length });
+    for (const x of W4.front) out.push({ face: "front", u: x, y, w: winW, h: h2, kind, i: out.length });
+    for (const face of ["left", "right"]) for (const z of W4[face]) out.push({ face, u: z, y, w: winW, h: h2, kind, i: out.length });
     return out;
   }
   function interiorRect(b) {
@@ -34063,9 +34063,9 @@ void main() {
   };
   var overlap = (a, b, m = 0) => a.x0 < b.x1 + m && a.x1 > b.x0 - m && a.z0 < b.z1 + m && a.z1 > b.z0 - m;
   var Placer = class {
-    constructor(L2, R3) {
+    constructor(L2, R4) {
       this.L = L2;
-      this.R = R3;
+      this.R = R4;
       this.rects = [];
       this.keep = [];
       this.low = [];
@@ -34240,8 +34240,8 @@ void main() {
     const T4 = WALL_T;
     const door = doorOf(b);
     const L2 = { x0: -fw / 2 + T4, x1: fw / 2 - T4, z0: -fd + T4, z1: -T4, door, items: [], use: [], keeper: null, residents: [], rest: null, room: roomOf(b) };
-    const R3 = rng(hash(b.x, b.y, (b.v || 0) + 1));
-    const P4 = new Placer(L2, R3);
+    const R4 = rng(hash(b.x, b.y, (b.v || 0) + 1));
+    const P4 = new Placer(L2, R4);
     P4.keep.push({ x0: door.x - door.dw / 2 - 0.22, x1: door.x + door.dw / 2 + 0.22, z0: L2.z1 - Math.max(1, door.dw) - 0.06, z1: L2.z1 + 1 });
     for (const w of groundWindows(b)) {
       const hw = w.w / 2 + 0.12;
@@ -34250,7 +34250,7 @@ void main() {
       else P4.low.push({ x0: L2.x1 - 0.7, x1: L2.x1 + 1, z0: w.u - hw, z1: w.u + hw });
     }
     const S3 = (k) => sized(F[k], g);
-    (ROOMS[L2.room] || ROOMS.house)(P4, L2, b, R3, S3, g);
+    (ROOMS[L2.room] || ROOMS.house)(P4, L2, b, R4, S3, g);
     P4.deco({ k: "lamp", w: 0.3, d: 0.3, h: 0.5 }, (L2.x0 + L2.x1) / 2, (L2.z0 + L2.z1) / 2);
     b._layout = L2;
     return L2;
@@ -34312,10 +34312,10 @@ void main() {
     }
     return tb;
   }
-  var sides = (R3) => R3() < 0.5 ? ["start", "end"] : ["end", "start"];
+  var sides = (R4) => R4() < 0.5 ? ["start", "end"] : ["end", "start"];
   var HOMES = {
-    family(P4, L2, b, R3, S3, g, low) {
-      const [end, other] = sides(R3);
+    family(P4, L2, b, R4, S3, g, low) {
+      const [end, other] = sides(R4);
       const bed2 = bedIn(P4, S3, low, end);
       if (bed2 && L2.x1 - L2.x0 > 5) P4.wall(S3(low ? "futon" : "bed"), "back", other);
       if (!low) footChest(P4, L2, S3, bed2, "Search the chest");
@@ -34323,41 +34323,41 @@ void main() {
       hearthIn(P4, L2, b, S3, low, other);
       tableIn(P4, L2, S3, low, "table", (L2.x0 + L2.x1) / 2 + (end === "start" ? 0.8 : -0.8), L2.z0 + (L2.z1 - L2.z0) * 0.55, "chair");
       P4.wall(S3("shelf"), "right", "random") || P4.wall(S3("lowShelf"), "front", "end");
-      if (R3() < 0.6) P4.wall(S3("barrel"), "front", R3() < 0.5 ? "start" : "end");
-      if (R3() < 0.5) P4.wall(S3("plant"), "front", "end");
+      if (R4() < 0.6) P4.wall(S3("barrel"), "front", R4() < 0.5 ? "start" : "end");
+      if (R4() < 0.5) P4.wall(S3("plant"), "front", "end");
     },
     // nets, floats and barrels of salt fish; a sea chest by the bed
-    fisher(P4, L2, b, R3, S3, g, low) {
-      const [end, other] = sides(R3);
+    fisher(P4, L2, b, R4, S3, g, low) {
+      const [end, other] = sides(R4);
       const bed2 = bedIn(P4, S3, low, end);
       footChest(P4, L2, S3, bed2, "Search the sea chest") || stash(P4, L2, S3, "chest", [["right", "random"], ["left", "random"]], "Search the sea chest");
       hearthIn(P4, L2, b, S3, low, other);
       P4.wall(S3("rack"), "left", "random");
       P4.wall(S3("barrel"), "right", "start");
       P4.wall(S3("barrel"), "right", "start");
-      P4.wall(S3("crate"), "front", R3() < 0.5 ? "start" : "end");
+      P4.wall(S3("crate"), "front", R4() < 0.5 ? "start" : "end");
       tableIn(P4, L2, S3, low, "roundTable", (L2.x0 + L2.x1) / 2, L2.z0 + (L2.z1 - L2.z0) * 0.6, "stool");
       stash(P4, L2, S3, low ? "tansu" : "dresser", [["front", "end"], ["left", "end"]], "Search the drawers");
     },
     // a carpenter or smith who works at home: a workbench, timber, tools
-    crafter(P4, L2, b, R3, S3, g, low) {
-      const [end, other] = sides(R3);
+    crafter(P4, L2, b, R4, S3, g, low) {
+      const [end, other] = sides(R4);
       const wb = P4.wall(S3("workbench"), "back", other) || P4.wall(S3("workbench"), "left", "random") || P4.wall(S3("workbench"), "right", "random");
       if (wb) {
         const f = [Math.sin(wb.rot), Math.cos(wb.rot)];
         L2.residents.push({ x: wb.x + f[0] * (wb.d / 2 + 0.3), z: wb.z + f[1] * (wb.d / 2 + 0.3), face: wb.rot + Math.PI });
       }
       P4.wall(S3("rack"), "right", "random") || P4.wall(S3("rack"), "left", "random");
-      P4.wall(S3("lumber"), "front", R3() < 0.5 ? "start" : "end") || P4.wall(S3("crate"), "front", "start");
+      P4.wall(S3("lumber"), "front", R4() < 0.5 ? "start" : "end") || P4.wall(S3("crate"), "front", "start");
       const bed2 = bedIn(P4, S3, low, end);
       footChest(P4, L2, S3, bed2, "Search the tool chest");
       stash(P4, L2, S3, low ? "tansu" : "dresser", [["left", "random"], ["right", "random"], ["front", "end"]], "Search the drawers");
       hearthIn(P4, L2, b, S3, low, "center");
-      if (R3() < 0.7) P4.wall(S3("crate"), "right", "end");
+      if (R4() < 0.7) P4.wall(S3("crate"), "right", "end");
     },
     // books everywhere, a desk under the lamp
-    scholar(P4, L2, b, R3, S3, g, low) {
-      const [end, other] = sides(R3);
+    scholar(P4, L2, b, R4, S3, g, low) {
+      const [end, other] = sides(R4);
       P4.wall(S3("bookcase"), "back", other) || P4.wall(S3("shelf"), "back", other);
       P4.wall(S3("bookcase"), "left", "random") || P4.wall(S3("lowShelf"), "left", "random");
       const desk = P4.wall(S3("desk"), "right", "random") || P4.free(S3("desk"), 0, (L2.z0 + L2.z1) / 2);
@@ -34370,24 +34370,24 @@ void main() {
       const bed2 = bedIn(P4, S3, low, end);
       footChest(P4, L2, S3, bed2, "Search the chest") || stash(P4, L2, S3, "chest", [["front", "end"], ["left", "end"]], "Search the chest");
       hearthIn(P4, L2, b, S3, low, "center");
-      if (R3() < 0.7) P4.wall(S3("plant"), "front", "end");
+      if (R4() < 0.7) P4.wall(S3("plant"), "front", "end");
     },
     // sacks of grain, barrels, baskets of produce
-    farmer(P4, L2, b, R3, S3, g, low) {
-      const [end, other] = sides(R3);
+    farmer(P4, L2, b, R4, S3, g, low) {
+      const [end, other] = sides(R4);
       const bed2 = bedIn(P4, S3, low, end);
       stash(P4, L2, S3, low ? "tansu" : "cupboard", [["right", "random"], ["front", "end"], ["left", "random"]], "Search the cupboard");
       hearthIn(P4, L2, b, S3, low, other);
       P4.wall(S3("sacks"), "left", "start");
       P4.wall(S3("sacks"), "left", "end");
       P4.wall(S3("produce"), "right", "random") || P4.wall(S3("barrel"), "right", "random");
-      P4.wall(S3("barrel"), "front", R3() < 0.5 ? "start" : "end");
+      P4.wall(S3("barrel"), "front", R4() < 0.5 ? "start" : "end");
       tableIn(P4, L2, S3, low, "table", (L2.x0 + L2.x1) / 2, L2.z0 + (L2.z1 - L2.z0) * 0.58, "chair");
       if (!low) footChest(P4, L2, S3, bed2, "Search the chest");
     },
     // an old sea-dog's place: a hammock-bed, a sea chest, a round table and rum
-    sailor(P4, L2, b, R3, S3, g, low) {
-      const [end, other] = sides(R3);
+    sailor(P4, L2, b, R4, S3, g, low) {
+      const [end, other] = sides(R4);
       const bed2 = bedIn(P4, S3, low, end);
       footChest(P4, L2, S3, bed2, "Search the sea chest") || stash(P4, L2, S3, "chest", [["left", "random"]], "Search the sea chest");
       P4.wall(S3("barrel"), "back", other);
@@ -34399,12 +34399,12 @@ void main() {
     }
   };
   var ROOMS = {
-    house(P4, L2, b, R3, S3, g) {
+    house(P4, L2, b, R4, S3, g) {
       const low = lowStyle(b);
       const kinds = ["family", "family", "fisher", "crafter", "scholar", "farmer", "sailor"];
       const kind = b.npc ? "family" : kinds[Math.floor(hash(b.x, b.y, 3.3) * kinds.length) % kinds.length];
       L2.kind = kind;
-      HOMES[kind](P4, L2, b, R3, S3, g, low);
+      HOMES[kind](P4, L2, b, R4, S3, g, low);
       if (!L2.use.some((u) => u.kind === "loot")) {
         const walls = [["left", "random"], ["right", "random"], ["front", "start"], ["front", "end"], ["back", "center"]];
         if (!stash(P4, L2, S3, "chest", walls, "Search the chest")) {
@@ -34413,10 +34413,10 @@ void main() {
         }
       }
       P4.deco({ k: low ? "tatami" : "rug", w: Math.min(2.2 * g, (L2.x1 - L2.x0) * 0.6), d: Math.min(1.5 * g, (L2.z1 - L2.z0) * 0.5), h: 0.02 }, (L2.x0 + L2.x1) / 2, (L2.z0 + L2.z1) / 2 + 0.2);
-      P4.deco({ k: R3() < 0.35 ? "poster" : "picture", w: 0.55, d: 0.04, h: 0.7 }, L2.x0 + (L2.x1 - L2.x0) * (0.3 + R3() * 0.4), L2.z0 + 0.02, 0);
+      P4.deco({ k: R4() < 0.35 ? "poster" : "picture", w: 0.55, d: 0.04, h: 0.7 }, L2.x0 + (L2.x1 - L2.x0) * (0.3 + R4() * 0.4), L2.z0 + 0.02, 0);
       if (!L2.residents.length) L2.residents.push({ x: (L2.x0 + L2.x1) / 2, z: (L2.z0 + L2.z1) / 2 });
     },
-    shop(P4, L2, b, R3, S3, g) {
+    shop(P4, L2, b, R4, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "goods" });
       P4.wall(S3("shelf"), "left", "start") || P4.wall(S3("lowShelf"), "left", "start");
       P4.wall(S3("shelf"), "right", "start") || P4.wall(S3("lowShelf"), "right", "start");
@@ -34425,7 +34425,7 @@ void main() {
       if (L2.z1 - L2.z0 > 3) P4.free(S3("produce"), 0, L2.z1 - 1.4);
       P4.deco({ k: "rug", w: 1.4 * g, d: 0.9 * g, h: 0.02 }, L2.door.x, L2.z1 - 0.7);
     },
-    market(P4, L2, b, R3, S3, g) {
+    market(P4, L2, b, R4, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "goods" });
       P4.wall(S3("produce"), "left", "start");
       P4.wall(S3("produce"), "right", "start");
@@ -34433,26 +34433,26 @@ void main() {
       P4.wall(S3("barrel"), "front", "end");
       P4.wall(S3("crate"), "left", "end");
     },
-    weapons(P4, L2, b, R3, S3, g) {
+    weapons(P4, L2, b, R4, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "wallrack" });
       P4.wall(S3("rack"), "left", "start") || P4.wall(S3("rack"), "left", "end");
       P4.wall(S3("rack"), "right", "start") || P4.wall(S3("armor"), "right", "start");
       P4.wall(S3("armor"), "front", "start");
       P4.wall(S3("barrel"), "front", "end");
     },
-    bank(P4, L2, b, R3, S3, g) {
+    bank(P4, L2, b, R4, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "goods", len: 2.6 });
       P4.wall(S3("safe"), "right", "start");
       P4.wall(S3("bench"), "left", "end") || P4.wall(S3("bench"), "front", "start");
       P4.wall(S3("plant"), "front", "end");
     },
-    bounty(P4, L2, b, R3, S3, g) {
+    bounty(P4, L2, b, R4, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "goods", len: 1.6 });
       P4.deco({ k: "wanted", w: Math.min(1.8, L2.z1 - L2.z0 - 0.4), d: 0.04, h: 1 }, L2.x0 + 0.03, (L2.z0 + L2.z1) / 2 + 0.2, Math.PI / 2);
       P4.wall(S3("filing"), "right", "start");
       P4.wall(S3("bench"), "front", "start");
     },
-    library(P4, L2, b, R3, S3, g) {
+    library(P4, L2, b, R4, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "books", len: 1.6 });
       P4.wall(S3("bookcase"), "left", "start");
       P4.wall(S3("bookcase"), "left", "end");
@@ -34462,7 +34462,7 @@ void main() {
       if (tb) for (const s of [-1, 1]) P4.deco(S3("chair"), tb.x + s * (tb.w / 2 + 0.2), tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
       L2.use.push({ kind: "read", x: L2.x0 + 0.7, z: (L2.z0 + L2.z1) / 2, label: "Browse the shelves" });
     },
-    tavern(P4, L2, b, R3, S3, g) {
+    tavern(P4, L2, b, R4, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "bottles", len: 3 });
       const bar2 = L2.items.find((it) => it.k === "counter");
       if (bar2) for (let x = bar2.rect.x0 + 0.35; x < bar2.rect.x1 - 0.2; x += 0.62) P4.deco(S3("stool"), x, bar2.rect.z1 + 0.3, 0);
@@ -34481,11 +34481,11 @@ void main() {
       P4.deco({ k: "wanted", w: 0.9, d: 0.04, h: 0.8 }, L2.x1 - 0.03, (L2.z0 + L2.z1) / 2, -Math.PI / 2);
       L2.rest = bar2 ? { x: bar2.x, z: bar2.rect.z1 + 0.7 } : { x: 0, z: L2.z1 - 1 };
     },
-    inn(P4, L2, b, R3, S3, g) {
-      ROOMS.tavern(P4, L2, b, R3, S3, g);
+    inn(P4, L2, b, R4, S3, g) {
+      ROOMS.tavern(P4, L2, b, R4, S3, g);
       P4.wall(S3("stairs"), "left", "start") || P4.wall(S3("stairs"), "right", "start");
     },
-    restaurant(P4, L2, b, R3, S3, g) {
+    restaurant(P4, L2, b, R4, S3, g) {
       counterRoom(P4, L2, S3, g, { shelf: "bottles", len: 2.2 });
       for (const px2 of [L2.x0 + 0.8, L2.x1 - 0.8]) {
         const t = P4.free(S3("table"), px2, L2.z1 - 1.1);
@@ -34499,7 +34499,7 @@ void main() {
       }
       P4.wall(S3("plant"), "front", "end");
     },
-    doctor(P4, L2, b, R3, S3, g) {
+    doctor(P4, L2, b, R4, S3, g) {
       const desk = P4.wall(S3("desk"), "back", "start", 0.62 * g);
       if (desk) {
         L2.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
@@ -34515,7 +34515,7 @@ void main() {
       P4.deco({ k: "redcross", w: 0.6, d: 0.03, h: 0.6 }, desk ? desk.x : 0, L2.z0 + 0.02, 0);
       P4.wall(S3("plant"), "front", "end");
     },
-    dojo(P4, L2, b, R3, S3, g) {
+    dojo(P4, L2, b, R4, S3, g) {
       P4.deco({ k: "mats", w: L2.x1 - L2.x0 - 0.4, d: L2.z1 - L2.z0 - 0.3, h: 0.03 }, (L2.x0 + L2.x1) / 2, (L2.z0 + L2.z1) / 2);
       const sh = P4.wall(S3("shrine"), "back", "center");
       L2.keeper = { x: sh ? sh.x : 0, z: (sh ? sh.rect.z1 : L2.z0) + 0.55 };
@@ -34526,7 +34526,7 @@ void main() {
       P4.free(S3("dummy"), L2.x1 - 1, L2.z1 - 1.2);
       L2.use.push({ kind: "service", x: L2.keeper.x, z: L2.keeper.z + 0.9, label: null });
     },
-    church(P4, L2, b, R3, S3, g) {
+    church(P4, L2, b, R4, S3, g) {
       const al = P4.wall(S3("altar"), "back", "center", 0.6 * g);
       if (al) {
         L2.keeper = { x: al.x, z: al.rect.z0 - 0.3 };
@@ -34543,7 +34543,7 @@ void main() {
       P4.wall(S3("plant"), "front", "start");
       P4.wall(S3("plant"), "front", "end");
     },
-    marine(P4, L2, b, R3, S3, g) {
+    marine(P4, L2, b, R4, S3, g) {
       const desk = P4.wall(S3("desk"), "back", "center", 0.62 * g);
       if (desk) {
         L2.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
@@ -34559,7 +34559,7 @@ void main() {
       P4.deco({ k: "wanted", w: 1.2, d: 0.04, h: 0.9 }, L2.x1 - 0.03, (L2.z0 + L2.z1) / 2 - 0.3, -Math.PI / 2);
       L2.residents.push({ x: L2.x0 + 0.8, z: L2.z1 - 1, guard: true });
     },
-    shipwright(P4, L2, b, R3, S3, g) {
+    shipwright(P4, L2, b, R4, S3, g) {
       const wb = P4.wall(S3("workbench"), "back", "start", 0.62 * g);
       if (wb) {
         L2.keeper = { x: wb.x, z: wb.rect.z0 - 0.32 };
@@ -34652,17 +34652,17 @@ void main() {
         if (p.pierLen && along < p.pierLen) {
           const side = Math.abs(dy * p.vx - dx * p.vy) - p.pierHalf;
           if (side < 4) {
-            const cap = DOCK_Y - 0.45 + Math.max(0, side) * 0.8;
-            if (h2 > cap) h2 = cap;
+            const cap2 = DOCK_Y - 0.45 + Math.max(0, side) * 0.8;
+            if (h2 > cap2) h2 = cap2;
           }
         }
         continue;
       }
       const across = Math.abs(dy * p.vx - dx * p.vy);
       const d = Math.hypot(Math.max(0, -p.depth - along), Math.max(0, across - p.halfW));
-      const R3 = Math.min(p.r, 3 + Math.abs(h2 - DOCK_Y) * 0.8);
-      if (d >= R3) continue;
-      const w = d <= 0 ? 1 : (1 - smooth2(0, R3, d)) * smooth2(-0.3, 0.7, h2);
+      const R4 = Math.min(p.r, 3 + Math.abs(h2 - DOCK_Y) * 0.8);
+      if (d >= R4) continue;
+      const w = d <= 0 ? 1 : (1 - smooth2(0, R4, d)) * smooth2(-0.3, 0.7, h2);
       h2 += (DOCK_Y - 0.06 - h2) * w;
     }
     return h2;
@@ -34976,8 +34976,8 @@ void main() {
   function lathe(pts, seg = 10) {
     return new LatheGeometry(pts.map(([r, y]) => new Vector2(Math.max(1e-4, r), y)), seg);
   }
-  function torus(R3, r, rs = 6, ts = 12, arc = Math.PI * 2) {
-    return new TorusGeometry(R3, r, rs, ts, arc);
+  function torus(R4, r, rs = 6, ts = 12, arc = Math.PI * 2) {
+    return new TorusGeometry(R4, r, rs, ts, arc);
   }
   function extrude(shape, depth, bevel = 0, curveSegments = 6) {
     const g = new ExtrudeGeometry(shape, {
@@ -34991,8 +34991,8 @@ void main() {
     g.translate(0, 0, -depth / 2);
     return g;
   }
-  function tube(curve, segs = 8, r = 0.1, radial2 = 6) {
-    return new TubeGeometry(curve, segs, r, radial2, false);
+  function tube(curve2, segs = 8, r = 0.1, radial2 = 6) {
+    return new TubeGeometry(curve2, segs, r, radial2, false);
   }
   function ribbon(pts, { side = null, fold = 0 } = {}) {
     const pos = [], idx = [];
@@ -36207,6 +36207,7 @@ void main() {
   uniform vec2 uSize;       // the window's size in tiles (it repeats)
   uniform vec2 uWin;        // the window's centre
   uniform float uTime;
+  uniform float uRipT;      // the ripples' clock (it runs faster in a storm)
   uniform vec3 uSunDir;
   uniform vec3 uSunCol;
   uniform vec3 uSky;
@@ -36295,7 +36296,7 @@ void main() {
 
     // the surface normal: swells plus small ripples (the swell worked out
     // again for this pixel, the same as the vertices had it)
-    float t = uTime * (1.0 + uStorm * 0.8);
+    float t = uRipT;
     vec2 p = vWorld.xz;
     vec3 sw = vSwell;
     if (uDetail > 0.5) {
@@ -36433,6 +36434,7 @@ void main() {
           uSize: { value: new Vector2(1, 1) },
           uOrigin: { value: new Vector2() },
           uTime: { value: 0 },
+          uRipT: { value: 0 },
           uAmp: { value: 0.14 },
           uSunDir: { value: new Vector3(0.3, 0.8, 0.2) },
           uSunCol: { value: new Color(1, 0.95, 0.85) },
@@ -36604,6 +36606,10 @@ void main() {
       if (this.tex && !this.tex.__uploaded && this.renderer?.properties.get(this.tex).__webglTexture) this.tex.__uploaded = true;
       u.uOrigin.value.set(ox, oy);
       u.uTime.value = env.time;
+      const dt = Math.min(0.25, Math.max(0, env.time - (this.lastT ?? env.time)));
+      this.lastT = env.time;
+      this.ripT = (this.ripT ?? env.time) + dt * (1 + env.storm * 0.8);
+      u.uRipT.value = this.ripT;
       u.uDay.value = env.daylight;
       u.uStorm.value = env.storm;
       const zone = u.uZone.value;
@@ -37370,12 +37376,12 @@ void main() {
     d.wheelU = d.helmX + 0.9;
     const bu = d.wheelU + 1.45;
     d.binnacleU = !narrow && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
-    const W3 = narrow ? 0.95 : 1.2, sides2 = narrow ? [1] : [-1, 1];
+    const W4 = narrow ? 0.95 : 1.2, sides2 = narrow ? [1] : [-1, 1];
     const run = (rise2) => rise2 * (narrow ? 1.1 : mid ? 1.15 : 1.3);
     const edge = (t) => hbAt(t, B4) * d.walk - 0.22;
     d.stairs = [];
     const flight = (ta, tb, ha, hb, la, lb) => {
-      const vo = Math.min(edge(ta), edge(tb)), vi = vo - W3;
+      const vo = Math.min(edge(ta), edge(tb)), vi = vo - W4;
       for (const s of sides2) d.stairs.push({ ta, tb, ha, hb, la, lb, s, va: s > 0 ? vi : -vo, vb: s > 0 ? vo : -vi });
     };
     flight(tq, tq + run(hq) / L2, yq, deckY, "quarter", "main");
@@ -37389,7 +37395,7 @@ void main() {
     let h0 = 0.06, h1 = 0.94;
     while (h0 < 0.4 && holdHalf(h0) < 0.8) h0 += 5e-3;
     while (h1 > 0.6 && holdHalf(h1) < 0.8) h1 -= 5e-3;
-    const clearU = (u0, u1, pad) => d.mastU.every((m) => m < u0 - d.mastR - pad || m > u1 + d.mastR + pad);
+    const clearU = (u0, u1, pad2) => d.mastU.every((m) => m < u0 - d.mastR - pad2 || m > u1 + d.mastR + pad2);
     const rise = deckY - holdY;
     let comp = null;
     for (const cRun of [...large ? [rise * 1.15, rise, rise * 0.85] : [], 1]) {
@@ -37406,13 +37412,13 @@ void main() {
     d.comp = { ...comp, w: cw, u0: xAt(d, comp.t0), u1: xAt(d, comp.t1) };
     d.stairs.push({ ta: comp.t0, tb: comp.t1, ha: holdY, hb: deckY, la: "hold", lb: "main", s: 0, va: -cw / 2, vb: cw / 2, down: true, ladder: comp.ladder });
     d.hatchT = (comp.t0 + comp.t1) / 2;
-    const freeT = (want2, len, pad) => {
+    const freeT = (want2, len, pad2) => {
       for (let k = 0; k < 60; k++) {
         const tc = want2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 8e-3;
         const u0 = xAt(d, tc) - len / 2, u1 = u0 + len;
         if (tc - len / L2 / 2 < mainT0 + 0.3 / L2 || tc + len / L2 / 2 > mainT1 - 0.3 / L2) continue;
-        if (!clearU(u0, u1, pad)) continue;
-        if (u1 > d.comp.u0 - pad && u0 < d.comp.u1 + pad) continue;
+        if (!clearU(u0, u1, pad2)) continue;
+        if (u1 > d.comp.u0 - pad2 && u0 < d.comp.u1 + pad2) continue;
         return tc;
       }
       return null;
@@ -37693,13 +37699,13 @@ void main() {
     }
     return out;
   }
-  function hullPoint(ship, dx, dy, pad = 0) {
+  function hullPoint(ship, dx, dy, pad2 = 0) {
     const d = shipDims(ship.def);
     const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
     const u = dx * c + dy * s, v = -dx * s + dy * c;
     const t = (u + d.L / 2) / d.L, tc = clamp01(t);
-    if (Math.abs(t - tc) * d.L > pad) return null;
-    if (Math.abs(v) > hbAt(tc, d.B) + pad) return null;
+    if (Math.abs(t - tc) * d.L > pad2) return null;
+    if (Math.abs(v) > hbAt(tc, d.B) + pad2) return null;
     return { t: tc, u, v, top: topAt(d, tc), floor: floorAt(d, tc, v) };
   }
   function deckToWorld(ship, t, v) {
@@ -37743,16 +37749,16 @@ void main() {
   // src/render3d/bigship.js
   var TAU3 = Math.PI * 2;
   function bigPalette(def) {
-    const H2 = C(def.color || "#6b4526");
+    const H3 = C(def.color || "#6b4526");
     const marine2 = def.sail === "marine";
-    const white = H2.getHSL({}).l > 0.8;
+    const white = H3.getHSL({}).l > 0.8;
     return {
-      hull: H2,
-      upper: marine2 ? C("#f5f6fa") : white ? C("#f7f3ea") : shade2(H2, 0.06),
-      cap: marine2 ? C("#1b4f72") : white ? C("#7a5a3c") : shade2(H2, -0.5),
+      hull: H3,
+      upper: marine2 ? C("#f5f6fa") : white ? C("#f7f3ea") : shade2(H3, 0.06),
+      cap: marine2 ? C("#1b4f72") : white ? C("#7a5a3c") : shade2(H3, -0.5),
       stripe: C(def.stripe || (marine2 ? "#1b4f72" : "#c8962e")),
-      plank: marine2 ? C("#e9edf1") : H2,
-      plank2: marine2 ? C("#dfe4ea") : shade2(H2, -0.1),
+      plank: marine2 ? C("#e9edf1") : H3,
+      plank2: marine2 ? C("#dfe4ea") : shade2(H3, -0.1),
       bottom: C(def.bottom || (marine2 ? "#5b6770" : "#3a2c22")),
       deck: marine2 ? C("#c9b28f") : C("#b88c5c"),
       front: marine2 ? C("#eef1f4") : white ? C("#efe6d4") : C(def.front || "#8e3b2a"),
@@ -37858,35 +37864,35 @@ void main() {
   function bulwarks(k, d, P4) {
     const N4 = 64;
     for (const s of [1, -1]) {
-      const inner = [], cap = [];
+      const inner = [], cap2 = [];
       for (let i = 0; i <= N4; i++) {
         const t = i / N4, x = xAt(d, t);
         const top = topAt(d, t), fl2 = floorAt(d, t);
         const wt = skinAt(d, t, top), wi = innerAt(d, t, top - 0.12);
         inner.push([[x, top - 0.1, s * wi], [x, fl2 - 0.02, s * innerAt(d, t, fl2)]]);
-        cap.push([[x, top, s * wt], [x, top - 0.1, s * wi]]);
+        cap2.push([[x, top, s * wt], [x, top - 0.1, s * wi]]);
       }
       strip(k, inner, shade2(P4.upper, -0.12), s > 0);
-      strip(k, cap, P4.cap, s > 0);
+      strip(k, cap2, P4.cap, s > 0);
     }
     const ys = floorAt(d, 0.01), ts = topAt(d, 0) - 0.1;
     k.add(box(0.2, ts - ys + 0.04, innerAt(d, 0.01, (ys + ts) / 2) * 2 + 0.1), { at: [xAt(d, 0) + 0.1, ys - 0.02, 0], color: shade2(P4.upper, -0.12) });
   }
   function deckGrid(k, d, P4, t0, t1, y, vIn = null, down = false, col0 = null) {
     if (t1 <= t0) return;
-    const R3 = Math.max(3, Math.round((t1 - t0) * 48));
+    const R4 = Math.max(3, Math.round((t1 - t0) * 48));
     const base2 = col0 || P4.deck;
     const spans = vIn === null ? [[-1, 1, 0]] : [[-1, -vIn, 1], [vIn, 1, 1]];
     for (const [a0, a1, strip2] of spans) {
       const M2 = strip2 ? Math.max(2, Math.round((d.B / 2 - vIn) / 0.3)) : Math.max(6, Math.round(d.B / 0.3));
       const dp = [], di = [], dc = [];
-      for (let i = 0; i <= R3; i++) {
-        const t = t0 + (t1 - t0) * i / R3, x = xAt(d, t);
+      for (let i = 0; i <= R4; i++) {
+        const t = t0 + (t1 - t0) * i / R4, x = xAt(d, t);
         const w = innerAt(d, t, y) + 0.04;
         const z0 = strip2 ? a0 < 0 ? -w : vIn : -w, z1 = strip2 ? a0 < 0 ? -vIn : w : w;
         for (let m = 0; m <= M2; m++) dp.push(x, y, z0 + (z1 - z0) * m / M2);
       }
-      for (let i = 0; i < R3; i++) {
+      for (let i = 0; i < R4; i++) {
         for (let m = 0; m < M2; m++) {
           const a = i * (M2 + 1) + m, b = a + 1, c = a + M2 + 1, e = c + 1;
           if (down) di.push(a, c, b, b, c, e);
@@ -37927,26 +37933,26 @@ void main() {
       k.add(cyl(0.035, 0.035, cw + 0.2, 6), { at: [-(cw + 0.2) / 2, 0.1, z], rot: [0, 0, -Math.PI / 2], color: P4.dark });
       for (const a of [-1, 1]) k.add(cyl(0.1 * gs + 0.02, 0.1 * gs + 0.02, 0.07, 10), { at: [a * (cw / 2 + 0.05) - 0.035, 0.1 * gs + 0.02, z], rot: [0, 0, -Math.PI / 2], color: shade2(wood, -0.3), outline: 8e-3 });
     }
-    const R3 = (f) => r * f;
+    const R4 = (f) => r * f;
     const prof2 = [
       [1e-3, -0.02],
-      [R3(0.9), -0.015],
-      [R3(1.45), 0.02],
-      [R3(1.6), 0.09],
-      [R3(1.6), 0.2],
-      [R3(1.72), 0.22],
-      [R3(1.72), 0.27],
-      [R3(1.55), 0.29],
-      [R3(1.5), Lb * 0.42],
-      [R3(1.62), Lb * 0.43],
-      [R3(1.62), Lb * 0.46],
-      [R3(1.38), Lb * 0.47],
-      [R3(1.22), Lb * 0.86],
-      [R3(1.42), Lb * 0.91],
-      [R3(1.52), Lb * 0.97],
-      [R3(1.45), Lb],
-      [R3(0.72), Lb],
-      [R3(0.72), Lb * 0.9],
+      [R4(0.9), -0.015],
+      [R4(1.45), 0.02],
+      [R4(1.6), 0.09],
+      [R4(1.6), 0.2],
+      [R4(1.72), 0.22],
+      [R4(1.72), 0.27],
+      [R4(1.55), 0.29],
+      [R4(1.5), Lb * 0.42],
+      [R4(1.62), Lb * 0.43],
+      [R4(1.62), Lb * 0.46],
+      [R4(1.38), Lb * 0.47],
+      [R4(1.22), Lb * 0.86],
+      [R4(1.42), Lb * 0.91],
+      [R4(1.52), Lb * 0.97],
+      [R4(1.45), Lb],
+      [R4(0.72), Lb],
+      [R4(0.72), Lb * 0.9],
       [1e-3, Lb * 0.9]
     ];
     const zb = -s * (Lb * 0.36);
@@ -38196,19 +38202,19 @@ void main() {
       k.restore();
     }
   }
-  function helmWheel(k, P4, x, y, R3 = 0.56, hub = 0.92) {
+  function helmWheel(k, P4, x, y, R4 = 0.56, hub = 0.92) {
     k.add(box(0.26, hub + 0.1, 0.34), { at: [x + 0.2, y, 0], color: P4.wood, outline: 0.012 });
     k.add(cyl(0.15, 0.15, 0.62, 10), { at: [x + 0.2, y + hub - 0.08, -0.31], rot: [Math.PI / 2, 0, 0], color: shade2(P4.wood, 0.15), outline: 0.01 });
     k.add(cyl(0.045, 0.045, 0.3, 6), { at: [x + 0.05, y + hub, 0], rot: [0, 0, Math.PI / 2], color: P4.dark });
     k.save();
     k.translate(x, y + hub, 0);
     k.rotateY(Math.PI / 2);
-    k.add(torus(R3, 0.045, 6, 28), { color: "#7b5230", outline: 0.012 });
+    k.add(torus(R4, 0.045, 6, 28), { color: "#7b5230", outline: 0.012 });
     for (let i = 0; i < 8; i++) {
       k.save();
       k.rotateZ(i / 8 * TAU3);
-      k.add(cyl(0.026, 0.034, R3 + 0.14, 6), { color: "#7b5230" });
-      k.add(lathe([[0.028, 0], [0.042, 0.04], [0.03, 0.1], [0.046, 0.15], [0.036, 0.19], [1e-3, 0.2]], 7), { at: [0, R3 + 0.1, 0], color: "#8d6038", outline: 6e-3 });
+      k.add(cyl(0.026, 0.034, R4 + 0.14, 6), { color: "#7b5230" });
+      k.add(lathe([[0.028, 0], [0.042, 0.04], [0.03, 0.1], [0.046, 0.15], [0.036, 0.19], [1e-3, 0.2]], 7), { at: [0, R4 + 0.1, 0], color: "#8d6038", outline: 6e-3 });
       k.restore();
     }
     k.add(cyl(0.12, 0.12, 0.16, 12), { at: [0, 0, -0.08], rot: [Math.PI / 2, 0, 0], color: P4.trim, outline: 8e-3 });
@@ -38397,17 +38403,17 @@ void main() {
     const ks = n >= 4 ? [0.92, 1, 0.86, 0.7] : n === 3 ? [0.92, 1, 0.8] : n === 2 ? [1, 0.84] : [1];
     return d.mastU.map((u, i) => {
       const t = (u + d.L / 2) / d.L, base2 = floorAt(d, t);
-      const H2 = d.mastH * ks[i];
+      const H3 = d.mastH * ks[i];
       return {
         x: u,
         m: i,
         base: base2,
-        h: H2,
+        h: H3,
         main: n >= 3 ? i === 1 : i === 0,
         aft: n > 1 && i === n - 1,
         fore: i === 0,
-        h1: base2 + (H2 - base2) * 0.44,
-        h2: base2 + (H2 - base2) * 0.76,
+        h1: base2 + (H3 - base2) * 0.44,
+        h2: base2 + (H3 - base2) * 0.76,
         r: d.mastR * Math.sqrt(ks[i])
       };
     });
@@ -38452,10 +38458,10 @@ void main() {
       k.add(box(0.14, 0.12, tw * 0.75), { at: [m.x + r * 1.2, m.h2, 0], color: wood, outline: 0.01 });
       k.add(box(tl * 0.6, 0.12, 0.14), { at: [m.x + r * 1.2, m.h2, 0], color: wood, outline: 0.01 });
       if (m.main) {
-        const y = m.h2 + 0.1, R3 = 0.75;
-        k.add(cyl(R3, R3 * 0.85, 1, 12, true), { at: [m.x + r * 1.1, y, 0], color: "#8d6e4a", double: true, outline: 0.02 });
-        k.add(cyl(R3 * 0.85, R3 * 0.85, 0.06, 12), { at: [m.x + r * 1.1, y, 0], color: "#6d4c33" });
-        k.add(torus(R3, 0.05, 4, 14), { at: [m.x + r * 1.1, y + 1, 0], rot: [Math.PI / 2, 0, 0], color: "#5d4037" });
+        const y = m.h2 + 0.1, R4 = 0.75;
+        k.add(cyl(R4, R4 * 0.85, 1, 12, true), { at: [m.x + r * 1.1, y, 0], color: "#8d6e4a", double: true, outline: 0.02 });
+        k.add(cyl(R4 * 0.85, R4 * 0.85, 0.06, 12), { at: [m.x + r * 1.1, y, 0], color: "#6d4c33" });
+        k.add(torus(R4, 0.05, 4, 14), { at: [m.x + r * 1.1, y + 1, 0], rot: [Math.PI / 2, 0, 0], color: "#5d4037" });
       }
       for (let y = m.base + 1.6; y < m.h1 - 1; y += 1.4) k.add(torus(r * 1.05, 0.04, 3, 10), { at: [m.x, y, 0], rot: [Math.PI / 2, 0, 0], color: "#c8b89a" });
     }
@@ -38714,19 +38720,19 @@ void main() {
   // src/render3d/ships3d.js
   var keelAt2 = (d, t) => -d.D * (1 - 0.55 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
   function palette(def) {
-    const H2 = C(def.color || "#8d5b33");
+    const H3 = C(def.color || "#8d5b33");
     const warship = def.sail === "marine";
-    const light = H2.getHSL({}).l > 0.8;
+    const light = H3.getHSL({}).l > 0.8;
     return {
-      hull: H2,
-      cap: warship ? C("#1b4f72") : shade2(H2, -0.45),
-      bulwark: warship ? C("#f5f6fa") : light ? shade2(H2, -0.05) : shade2(H2, 0.12),
-      wale: warship ? C("#1b4f72") : def.figurehead === "ram" ? C("#f2efe6") : def.figurehead === "lion" ? C("#e8c26b") : shade2(H2, -0.55),
-      plank: warship ? C("#e9edf1") : H2,
-      plank2: warship ? C("#dfe4ea") : shade2(H2, -0.08),
-      bottom: def.seastone ? C("#5b6770") : warship ? C("#5b6770") : shade2(H2, -0.3),
-      deck: def.figurehead === "lion" ? C("#6fb34a") : def.seastone && !warship ? C("#cfd8dc") : warship ? C("#c9b28f") : shade2(H2, 0.2),
-      trim: warship ? C("#1b4f72") : def.length >= 8 ? C("#d4ac0d") : shade2(H2, -0.4),
+      hull: H3,
+      cap: warship ? C("#1b4f72") : shade2(H3, -0.45),
+      bulwark: warship ? C("#f5f6fa") : light ? shade2(H3, -0.05) : shade2(H3, 0.12),
+      wale: warship ? C("#1b4f72") : def.figurehead === "ram" ? C("#f2efe6") : def.figurehead === "lion" ? C("#e8c26b") : shade2(H3, -0.55),
+      plank: warship ? C("#e9edf1") : H3,
+      plank2: warship ? C("#dfe4ea") : shade2(H3, -0.08),
+      bottom: def.seastone ? C("#5b6770") : warship ? C("#5b6770") : shade2(H3, -0.3),
+      deck: def.figurehead === "lion" ? C("#6fb34a") : def.seastone && !warship ? C("#cfd8dc") : warship ? C("#c9b28f") : shade2(H3, 0.2),
+      trim: warship ? C("#1b4f72") : def.length >= 8 ? C("#d4ac0d") : shade2(H3, -0.4),
       wood: C("#6d4c33"),
       dark: C("#2b1d14")
     };
@@ -38807,28 +38813,28 @@ void main() {
       k.add(sg, { color: col });
     };
     for (const s of [1, -1]) {
-      const inner = [], cap = [];
+      const inner = [], cap2 = [];
       for (let i = 0; i <= N4; i++) {
         const t = i / N4, x = xAt(d, t), hb = hbAt(t, d.B);
         if (hb < 0.12) continue;
         const top = topAt(d, t);
         const zi = s * Math.max(0.02, 0.965 * hb - inset);
         inner.push([[x, top - 0.02, zi], [x, floorAt(d, t) - 0.01, s * Math.max(0.02, 0.995 * hb - inset)]]);
-        cap.push([[x, top, s * 0.965 * hb], [x, top - 0.02, zi]]);
+        cap2.push([[x, top, s * 0.965 * hb], [x, top - 0.02, zi]]);
       }
       strip2(inner, shade2(P4.bulwark, -0.1), s > 0);
-      strip2(cap, P4.cap, s > 0);
+      strip2(cap2, P4.cap, s > 0);
     }
     const deckRegion = (t0, t1, yFn) => {
       const M2 = Math.max(4, Math.round(d.B / 0.24));
-      const R3 = Math.max(2, Math.round((t1 - t0) * N4));
+      const R4 = Math.max(2, Math.round((t1 - t0) * N4));
       const dp = [], di = [], dc = [];
-      for (let i = 0; i <= R3; i++) {
-        const t = t0 + (t1 - t0) * i / R3, x = xAt(d, t);
+      for (let i = 0; i <= R4; i++) {
+        const t = t0 + (t1 - t0) * i / R4, x = xAt(d, t);
         const w = Math.max(0.01, 0.995 * hbAt(t, d.B) - inset);
         for (let m = 0; m <= M2; m++) dp.push(x, yFn(t), -w + 2 * w * m / M2);
       }
-      for (let i = 0; i < R3; i++) {
+      for (let i = 0; i < R4; i++) {
         for (let m = 0; m < M2; m++) {
           const a = i * (M2 + 1) + m, b = a + 1, c = a + M2 + 1, e = c + 1;
           di.push(a, b, c, b, e, c);
@@ -38959,14 +38965,14 @@ void main() {
       }
     }
     if (def.paddle) {
-      const px2 = xAt(d, 0.34), R3 = 0.75;
+      const px2 = xAt(d, 0.34), R4 = 0.75;
       for (const s of [-1, 1]) {
         const hb = hbAt(0.34, d.B);
         k.save();
         k.translate(px2, d.deckY - 0.1, s * (hb + 0.2));
         k.rotateZ(Math.PI / 2);
         k.rotateX(Math.PI / 2);
-        k.add(new CylinderGeometry(R3 + 0.12, R3 + 0.12, 0.44, 12, 1, true, 0, Math.PI), { color: P4.cap, double: true });
+        k.add(new CylinderGeometry(R4 + 0.12, R4 + 0.12, 0.44, 12, 1, true, 0, Math.PI), { color: P4.cap, double: true });
         k.restore();
       }
     }
@@ -39433,18 +39439,18 @@ void main() {
       root2.add(this.lines);
       if (def.paddle) {
         const pk = new Mesher();
-        const R3 = d.big ? 0.72 * d.B / 3.2 : 0.72;
-        const k = R3 / 0.72, pw = 0.4 * k;
+        const R4 = d.big ? 0.72 * d.B / 3.2 : 0.72;
+        const k = R4 / 0.72, pw = 0.4 * k;
         pk.add(cyl(0.12 * k, 0.12 * k, pw, 8), { at: [0, 0, -pw / 2], rot: [Math.PI / 2, 0, 0], color: "#5d4037" });
         for (let i = 0; i < 8; i++) {
           const a = i / 8 * Math.PI * 2, dx = -Math.sin(a), dy = Math.cos(a);
-          for (const sz of [-1, 1]) pk.add(box(0.05 * k, R3, 0.04 * k), { at: [0, 0, sz * pw * 0.42], rot: [0, 0, a], color: "#6d4c33" });
-          pk.add(box(0.06 * k, 0.4 * k, pw * 0.95), { at: [dx * (R3 - 0.36 * k), dy * (R3 - 0.36 * k), 0], rot: [0, 0, a], color: "#8d6e4a", outline: 0.01 });
+          for (const sz of [-1, 1]) pk.add(box(0.05 * k, R4, 0.04 * k), { at: [0, 0, sz * pw * 0.42], rot: [0, 0, a], color: "#6d4c33" });
+          pk.add(box(0.06 * k, 0.4 * k, pw * 0.95), { at: [dx * (R4 - 0.36 * k), dy * (R4 - 0.36 * k), 0], rot: [0, 0, a], color: "#8d6e4a", outline: 0.01 });
         }
-        for (const sz of [-1, 1]) pk.add(torus(R3, 0.035 * k, 4, 16), { at: [0, 0, sz * pw * 0.42], color: "#5d4037" });
+        for (const sz of [-1, 1]) pk.add(torus(R4, 0.035 * k, 4, 16), { at: [0, 0, sz * pw * 0.42], color: "#5d4037" });
         const geo2 = pk.build(false);
         this.paddles = [];
-        const pt = 0.34, py2 = d.big ? R3 * 0.55 : d.deckY - 0.1;
+        const pt = 0.34, py2 = d.big ? R4 * 0.55 : d.deckY - 0.1;
         const pz2 = d.big ? hbAt(pt, d.B) * 0.985 + pw / 2 + 0.12 : hbAt(pt, d.B) + 0.2;
         const hk = new Mesher();
         for (const s2 of [-1, 1]) {
@@ -39456,7 +39462,7 @@ void main() {
             hk.save();
             hk.translate(xAt(d, pt), py2, s2 * pz2);
             hk.rotateX(Math.PI / 2);
-            hk.add(new CylinderGeometry(R3 + 0.15 * k, R3 + 0.15 * k, pw + 0.2, 16, 1, true, Math.PI / 2, Math.PI), { color: "#b07d48", double: true, outline: 0.015 });
+            hk.add(new CylinderGeometry(R4 + 0.15 * k, R4 + 0.15 * k, pw + 0.2, 16, 1, true, Math.PI / 2, Math.PI), { color: "#b07d48", double: true, outline: 0.015 });
             hk.restore();
           }
         }
@@ -40406,27 +40412,27 @@ void main() {
     }
     return col;
   }
-  function fistShape(g, R3, col, dark) {
+  function fistShape(g, R4, col, dark) {
     g.fillStyle = col;
     g.strokeStyle = OUT;
-    g.lineWidth = 0.05 * Math.max(1, R3 / 0.3);
+    g.lineWidth = 0.05 * Math.max(1, R4 / 0.3);
     g.beginPath();
-    g.roundRect(-R3 * 0.9, -R3 * 0.85, R3 * 1.8, R3 * 1.7, R3 * 0.5);
+    g.roundRect(-R4 * 0.9, -R4 * 0.85, R4 * 1.8, R4 * 1.7, R4 * 0.5);
     g.fill();
     g.stroke();
     g.strokeStyle = dark;
-    g.lineWidth = 0.03 * Math.max(1, R3 / 0.3);
+    g.lineWidth = 0.03 * Math.max(1, R4 / 0.3);
     g.beginPath();
     for (let k = -1; k <= 1; k++) {
-      g.moveTo(R3 * 0.45, k * R3 * 0.5 - R3 * 0.12);
-      g.lineTo(R3 * 0.85, k * R3 * 0.5 - R3 * 0.12);
+      g.moveTo(R4 * 0.45, k * R4 * 0.5 - R4 * 0.12);
+      g.lineTo(R4 * 0.85, k * R4 * 0.5 - R4 * 0.12);
     }
     g.stroke();
     g.fillStyle = col;
     g.strokeStyle = OUT;
-    g.lineWidth = 0.035 * Math.max(1, R3 / 0.3);
+    g.lineWidth = 0.035 * Math.max(1, R4 / 0.3);
     g.beginPath();
-    g.ellipse(R3 * 0.1, R3 * 0.62, R3 * 0.5, R3 * 0.25, 0.2, 0, TAU5);
+    g.ellipse(R4 * 0.1, R4 * 0.62, R4 * 0.5, R4 * 0.25, 0.2, 0, TAU5);
     g.fill();
     g.stroke();
   }
@@ -40496,8 +40502,8 @@ void main() {
       }
       case "fireball": {
         if (s >= 3) {
-          const R3 = 0.55 * s;
-          glowDisc(g, R3 * 1.9, "#ff6d00", 0.35);
+          const R4 = 0.55 * s;
+          glowDisc(g, R4 * 1.9, "#ff6d00", 0.35);
           g.save();
           g.globalCompositeOperation = "lighter";
           for (let k = 0; k < 16; k++) {
@@ -40505,20 +40511,20 @@ void main() {
             const fl2 = 1.18 + 0.2 * Math.sin(t * 11 + k * 1.7);
             g.fillStyle = k % 2 ? "rgba(255,171,0,0.7)" : "rgba(255,61,0,0.65)";
             g.beginPath();
-            g.moveTo(Math.cos(ang - 0.18) * R3 * 0.92, Math.sin(ang - 0.18) * R3 * 0.92);
-            g.lineTo(Math.cos(ang) * R3 * fl2, Math.sin(ang) * R3 * fl2);
-            g.lineTo(Math.cos(ang + 0.18) * R3 * 0.92, Math.sin(ang + 0.18) * R3 * 0.92);
+            g.moveTo(Math.cos(ang - 0.18) * R4 * 0.92, Math.sin(ang - 0.18) * R4 * 0.92);
+            g.lineTo(Math.cos(ang) * R4 * fl2, Math.sin(ang) * R4 * fl2);
+            g.lineTo(Math.cos(ang + 0.18) * R4 * 0.92, Math.sin(ang + 0.18) * R4 * 0.92);
             g.fill();
           }
           g.restore();
-          const gr = g.createRadialGradient(-R3 * 0.25, -R3 * 0.25, R3 * 0.1, 0, 0, R3);
+          const gr = g.createRadialGradient(-R4 * 0.25, -R4 * 0.25, R4 * 0.1, 0, 0, R4);
           gr.addColorStop(0, "#fff8e1");
           gr.addColorStop(0.35, "#ffd54f");
           gr.addColorStop(0.75, "#ff9100");
           gr.addColorStop(1, "#e65100");
           g.fillStyle = gr;
           g.beginPath();
-          g.arc(0, 0, R3, 0, TAU5);
+          g.arc(0, 0, R4, 0, TAU5);
           g.fill();
           break;
         }
@@ -40536,14 +40542,14 @@ void main() {
         g.rotate(a);
         g.globalCompositeOperation = "lighter";
         for (let k = 0; k < 4; k++) {
-          const L2 = (1.3 - k * 0.22) * s, W3 = (0.62 - k * 0.12) * s;
+          const L2 = (1.3 - k * 0.22) * s, W4 = (0.62 - k * 0.12) * s;
           g.fillStyle = ["rgba(255,61,0,0.45)", "rgba(255,109,0,0.6)", "rgba(255,171,0,0.75)", "rgba(255,241,118,0.9)"][k];
           g.beginPath();
-          g.moveTo(W3 * 0.7, 0);
-          g.quadraticCurveTo(W3 * 0.6, -W3, -L2 * 0.4, -W3 * (0.7 + 0.1 * Math.sin(t * 25 + k)));
-          g.quadraticCurveTo(-L2 * 0.7, -W3 * 0.3, -L2, Math.sin(t * 20 + k) * W3 * 0.2);
-          g.quadraticCurveTo(-L2 * 0.7, W3 * 0.3, -L2 * 0.4, W3 * (0.7 + 0.1 * Math.cos(t * 25 + k)));
-          g.quadraticCurveTo(W3 * 0.6, W3, W3 * 0.7, 0);
+          g.moveTo(W4 * 0.7, 0);
+          g.quadraticCurveTo(W4 * 0.6, -W4, -L2 * 0.4, -W4 * (0.7 + 0.1 * Math.sin(t * 25 + k)));
+          g.quadraticCurveTo(-L2 * 0.7, -W4 * 0.3, -L2, Math.sin(t * 20 + k) * W4 * 0.2);
+          g.quadraticCurveTo(-L2 * 0.7, W4 * 0.3, -L2 * 0.4, W4 * (0.7 + 0.1 * Math.cos(t * 25 + k)));
+          g.quadraticCurveTo(W4 * 0.6, W4, W4 * 0.7, 0);
           g.fill();
         }
         g.globalCompositeOperation = "source-over";
@@ -40646,21 +40652,21 @@ void main() {
           g.lineTo(-1.1 * s, k * 0.35 * s);
         }
         g.stroke();
-        const R3 = 0.7 * s;
-        const gr = g.createLinearGradient(0, -R3, 0, R3);
+        const R4 = 0.7 * s;
+        const gr = g.createLinearGradient(0, -R4, 0, R4);
         gr.addColorStop(0, rgbaOf(col, 0));
         gr.addColorStop(0.5, rgbaOf(col, 0.95));
         gr.addColorStop(1, rgbaOf(col, 0));
         g.fillStyle = gr;
         g.beginPath();
-        g.arc(-0.45 * s, 0, R3, -1.15, 1.15);
-        g.arc(-0.62 * s, 0, R3 * 0.9, 1.05, -1.05, true);
+        g.arc(-0.45 * s, 0, R4, -1.15, 1.15);
+        g.arc(-0.62 * s, 0, R4 * 0.9, 1.05, -1.05, true);
         g.closePath();
         g.fill();
         g.strokeStyle = "rgba(255,255,255,0.95)";
         g.lineWidth = 0.045 * s;
         g.beginPath();
-        g.arc(-0.45 * s, 0, R3, -0.9, 0.9);
+        g.arc(-0.45 * s, 0, R4, -0.9, 0.9);
         g.stroke();
         break;
       }
@@ -42929,12 +42935,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     tf(I, { r: 0.42, s: 0.84, y: 3 }, () => {
       tube2(I, "M32 64 L32 6", handle, 5.8);
       const L2 = "M28 12 C22 7 13 6 6 9 C4 16 4 26 6 33 C13 36 22 35 28 30 Z";
-      const R3 = "M36 12 C42 7 51 6 58 9 C60 16 60 26 58 33 C51 36 42 35 36 30 Z";
-      for (const b of [L2, R3]) {
+      const R4 = "M36 12 C42 7 51 6 58 9 C60 16 60 26 58 33 C51 36 42 35 36 30 Z";
+      for (const b of [L2, R4]) {
         part(I, b, head, { sd: 1.8, hd: 1.2 });
       }
       clip(I, L2, () => fl(I, "M6 9 C4 16 4 26 6 33 L2 34 L2 8 Z", "#f4f8fb", { a: 0.95 }));
-      clip(I, R3, () => fl(I, "M58 9 C60 16 60 26 58 33 L63 34 L63 8 Z", dk(head, 0.12)));
+      clip(I, R4, () => fl(I, "M58 9 C60 16 60 26 58 33 L63 34 L63 8 Z", dk(head, 0.12)));
       part(I, rrect(26.5, 8, 11, 26, 2.5), trim, { sd: 1, hd: 0.8 });
       if (!I.small) for (const y of [13, 21, 29]) part(I, circle(32, y, 1.3), dk(trim, 0.3), { sd: 0, hd: 0, ol: 0 });
       part(I, rrect(28.5, 55, 7, 7, 2), trim, { sd: 0.6, hd: 0.4 });
@@ -43100,9 +43106,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   D.bandana = (I, o = {}) => {
     const col = o.color || "#2f5f96";
     part(I, "M11 42 L3 53 L10.5 52 L12 58.5 L18 45 Z", dk(col, 0.12), { sd: 1.2, hd: 0.8 });
-    const cap = "M9 43 C8 26 18 13 32 13 C46 13 56 26 55 43 C44 38.5 20 38.5 9 43 Z";
-    part(I, cap, col, { sd: 3, hd: 2 });
-    if (o.dots !== false && !I.small) clip(I, cap, () => {
+    const cap2 = "M9 43 C8 26 18 13 32 13 C46 13 56 26 55 43 C44 38.5 20 38.5 9 43 Z";
+    part(I, cap2, col, { sd: 3, hd: 2 });
+    if (o.dots !== false && !I.small) clip(I, cap2, () => {
       for (const [x, y] of [[23, 21], [32, 17.5], [41, 21], [18, 30], [27, 27], [37, 27], [46, 30], [24, 35], [40, 35], [32, 33]]) fl(I, circle(x, y, 1.5), "#ffffff", { a: 0.85 });
     });
     part(I, "M8 42 C20 37 44 37 56 42 L55 48 C44 43.5 20 43.5 9 48 Z", dk(col, 0.18), { sd: 1, hd: 0.8 });
@@ -43492,7 +43498,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return poly(pts);
   }
   function taper(pts, w0, w1, pow = 1) {
-    const L2 = [], R3 = [], n = pts.length - 1;
+    const L2 = [], R4 = [], n = pts.length - 1;
     for (let i = 0; i <= n; i++) {
       const [x, y] = pts[i], [ax, ay] = pts[Math.max(0, i - 1)], [bx, by] = pts[Math.min(n, i + 1)];
       let dx = bx - ax, dy = by - ay;
@@ -43501,9 +43507,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       dy /= d;
       const w = (typeof w0 === "function" ? w0(i / n) : w0 + (w1 - w0) * Math.pow(i / n, pow)) / 2;
       L2.push([x - dy * w, y + dx * w]);
-      R3.push([x + dy * w, y - dx * w]);
+      R4.push([x + dy * w, y - dx * w]);
     }
-    return poly(L2.concat(R3.reverse()));
+    return poly(L2.concat(R4.reverse()));
   }
   function needle(I, x, y, r, rot = -0.45) {
     tf(I, { r: rot, ox: x, oy: y }, () => {
@@ -43590,9 +43596,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   D.mushroom = (I, o = {}) => {
     const col = o.color || "#d23a2e";
     part(I, "M25 34 C24 42 21 50 23 56 C25 59 39 59 41 56 C43 50 40 42 39 34 Z", "#f1e7d0", { sd: 2.4, shT: 0.2, hd: 1.4 });
-    const cap = "M7 36 C6 21 17 9 32 9 C47 9 58 21 57 36 C50 40 14 40 7 36 Z";
-    part(I, cap, col, { sd: 3, hd: 2.2 });
-    clip(I, cap, () => {
+    const cap2 = "M7 36 C6 21 17 9 32 9 C47 9 58 21 57 36 C50 40 14 40 7 36 Z";
+    part(I, cap2, col, { sd: 3, hd: 2.2 });
+    clip(I, cap2, () => {
       for (const [x, y, r] of [[20, 20, 4.2], [34, 15, 3.6], [45, 24, 4.4], [27, 30, 3], [13, 31, 2.6], [51, 34, 2.4]]) part(I, ellipse(x, y, r, r * 0.8), "#fbf6ea", { sd: 0.6, shT: 0.15, hd: 0, ol: I.ol * 0.5 });
     });
     part(I, "M9 36 C18 40.5 46 40.5 55 36 C52 42.5 12 42.5 9 36 Z", "#e8d9b8", { sd: 0.8, hd: 0, ol: I.ol * 0.7 });
@@ -44068,9 +44074,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   };
   D.notebook = (I) => {
-    const pad = rrect(12, 10, 36, 47, 2);
-    part(I, pad, "#f7f4ec", { sd: 2.4, shT: 0.15, hd: 1.2 });
-    clip(I, pad, () => {
+    const pad2 = rrect(12, 10, 36, 47, 2);
+    part(I, pad2, "#f7f4ec", { sd: 2.4, shT: 0.15, hd: 1.2 });
+    clip(I, pad2, () => {
       for (let y = 21; y < 56; y += 5) ln(I, `M12 ${y} H48`, "#9cc0e0", 0.9);
       ln(I, "M19 10 V58", "#e07a7a", 0.9);
       if (!I.small) {
@@ -44160,10 +44166,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       part(I, rrect(35, 9, 20, 20, 4), "#c8372d", { sd: 1.6, hd: 1.2 });
       for (const [x, y] of [[40, 14], [45, 19], [50, 24]]) fl(I, circle(x, y, 1.8), "#fbf8f0");
     });
-    const top = [[26, 22], [45, 31], [26, 40], [7, 31]], L2 = [[7, 31], [26, 40], [26, 60], [7, 51]], R3 = [[26, 40], [45, 31], [45, 51], [26, 60]];
-    part(I, union(poly(top), poly(L2), poly(R3)), "#f4f1ea", { sd: 0, hd: 0 });
+    const top = [[26, 22], [45, 31], [26, 40], [7, 31]], L2 = [[7, 31], [26, 40], [26, 60], [7, 51]], R4 = [[26, 40], [45, 31], [45, 51], [26, 60]];
+    part(I, union(poly(top), poly(L2), poly(R4)), "#f4f1ea", { sd: 0, hd: 0 });
     fl(I, poly(L2), "#e2dccf");
-    fl(I, poly(R3), "#c9c0b0");
+    fl(I, poly(R4), "#c9c0b0");
     fl(I, poly(top), "#fbf8f0");
     ln(I, "M7 31 L26 40 L45 31 M26 40 V60", "#a89f8c", 1);
     const face = (A, B4, Dd, u, v, r, col) => {
@@ -44172,7 +44178,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     };
     face(top[3], top[0], top[2], 0.5, 0.5, 3, "#c8372d");
     for (const [u, v] of [[0.28, 0.3], [0.72, 0.7]]) face(L2[0], L2[1], L2[3], u, v, 2, OUT2);
-    for (const [u, v] of [[0.26, 0.25], [0.74, 0.25], [0.5, 0.5], [0.26, 0.75], [0.74, 0.75]]) face(R3[0], R3[1], R3[3], u, v, 1.9, OUT2);
+    for (const [u, v] of [[0.26, 0.25], [0.74, 0.25], [0.5, 0.5], [0.26, 0.75], [0.74, 0.75]]) face(R4[0], R4[1], R4[3], u, v, 1.9, OUT2);
   };
   D.tag = (I, o = {}) => {
     const col = o.color || "#e0b24a";
@@ -45269,10 +45275,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   SK.iceCube = (I, o) => {
     const c = o.c || "#bfefff";
-    const top = [[32, 12], [52, 22], [32, 32], [12, 22]], L2 = [[12, 22], [32, 32], [32, 56], [12, 46]], R3 = [[32, 32], [52, 22], [52, 46], [32, 56]];
-    part(I, union(poly(top), poly(L2), poly(R3)), c, { sd: 0, hd: 0 });
+    const top = [[32, 12], [52, 22], [32, 32], [12, 22]], L2 = [[12, 22], [32, 32], [32, 56], [12, 46]], R4 = [[32, 32], [52, 22], [52, 46], [32, 56]];
+    part(I, union(poly(top), poly(L2), poly(R4)), c, { sd: 0, hd: 0 });
     fl(I, poly(L2), dk(c, 0.08));
-    fl(I, poly(R3), dk(c, 0.2));
+    fl(I, poly(R4), dk(c, 0.2));
     fl(I, poly(top), lt(c, 0.4));
     ln(I, "M12 22 L32 32 L52 22 M32 32 V56", "#ffffff", 1.2, { a: 0.8 });
     fl(I, "M28 36 C26 40 26 46 30 50 C33 46 33 40 31 36 Z", dk(c, 0.35), { a: 0.7 });
@@ -45368,11 +45374,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   SK.heartCube = (I, o) => {
     const c = o.c || "#bfe4ff";
-    const top = [[32, 14], [50, 23], [32, 32], [14, 23]], L2 = [[14, 23], [32, 32], [32, 54], [14, 45]], R3 = [[32, 32], [50, 23], [50, 45], [32, 54]];
-    part(I, union(poly(top), poly(L2), poly(R3)), fade(c, 0.6), { sd: 0, hd: 0 });
+    const top = [[32, 14], [50, 23], [32, 32], [14, 23]], L2 = [[14, 23], [32, 32], [32, 54], [14, 45]], R4 = [[32, 32], [50, 23], [50, 45], [32, 54]];
+    part(I, union(poly(top), poly(L2), poly(R4)), fade(c, 0.6), { sd: 0, hd: 0 });
     part(I, heartP(32, 36, 9), "#e0304a", { sd: 1.4, hd: 1, gloss: [28.5, 32, 1.6, 1, 0.8] });
     fl(I, poly(top), fade("#ffffff", 0.35));
-    fl(I, poly(R3), fade(c, 0.35));
+    fl(I, poly(R4), fade(c, 0.35));
     ln(I, "M14 23 L32 32 L50 23 M32 32 V54", "#ffffff", 1.1, { a: 0.8 });
   };
   SK.glove = (I, o) => {
@@ -48064,6 +48070,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
 
   // src/data/ships.js
+  var SHIPS_UNBREAKABLE = true;
   var SHIPS = {
     dinghy: {
       name: "Rowboat",
@@ -48349,6 +48356,24 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       s.coated = true;
     } }
   };
+  var shotCapFor = (n) => n > 0 ? Math.max(12, n * 8) : 0;
+  function shipStats(type, upgrades = []) {
+    const base2 = SHIPS[type] || SHIPS.dinghy;
+    const d = { ...base2 };
+    const mods = {};
+    for (const u of upgrades || []) SHIP_UPGRADES[u]?.apply(mods);
+    d.speed *= mods.speedMul || 1;
+    d.cannons = (d.cannons || 0) + (mods.extraCannons || 0);
+    if (mods.seastone) d.seastone = true;
+    if (mods.oars) d.oars = true;
+    d.maxHull = Math.round(base2.hull * (mods.hullMul || 1));
+    return d;
+  }
+  function shipClassLine(d) {
+    const size = d.length < 5 ? "Boat" : d.length < 14 ? "Small ship" : d.length < 22 ? "Ship" : d.length < 30 ? "Big ship" : "Great ship";
+    const rig = d.masts ? `${d.masts} mast${d.masts > 1 ? "s" : ""}` : "oars";
+    return `${size} \xB7 ${d.length} m \xB7 ${rig}`;
+  }
 
   // src/render/anims.js
   var TAU8 = Math.PI * 2;
@@ -49662,13 +49687,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     p.addPath(new Path2D(b.s), sx < 0 ? new DOMMatrix([-1, 0, 0, 1, 2 * cx, 0]) : void 0);
     return p;
   }
-  function swayAngle(sw2, H2) {
+  function swayAngle(sw2, H3) {
     const [, , amp, spd, lift] = sw2;
-    let a = amp * Math.sin(H2.t * spd + H2.seed);
-    if (H2.moving) a += amp * 1.6 * Math.sin((H2.walk || 0) * 1) + lift;
+    let a = amp * Math.sin(H3.t * spd + H3.seed);
+    if (H3.moving) a += amp * 1.6 * Math.sin((H3.walk || 0) * 1) + lift;
     return a;
   }
-  function drawParts(g, parts, C3, H2) {
+  function drawParts(g, parts, C3, H3) {
     for (const pt of parts) {
       const p = pt.p || (pt.p = path(pt.d));
       g.save();
@@ -49677,12 +49702,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (pt.at[2]) g.rotate(pt.at[2]);
       }
       if (pt.sway) {
-        const a = H2.swayA ?? swayAngle(pt.sway, H2);
+        const a = H3.swayA ?? swayAngle(pt.sway, H3);
         g.translate(pt.sway[0], pt.sway[1]);
         g.rotate(a);
         g.translate(-pt.sway[0], -pt.sway[1]);
       }
-      const pal = H2.pal;
+      const pal = H3.pal;
       if (pt.tone === "tie" || pt.tone === "cord") {
         g.fillStyle = pt.tone === "tie" ? TIE : "#f4f1ea";
         g.fill(p);
@@ -49690,7 +49715,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.restore();
         continue;
       }
-      const base2 = pt.tone === "shadow" ? pal.shadow : pt.tone === "stubble" ? H2.stubble : pal.base;
+      const base2 = pt.tone === "shadow" ? pal.shadow : pt.tone === "stubble" ? H3.stubble : pal.base;
       const shadow = pt.tone === "shadow" ? pal.deep : pt.tone === "stubble" ? null : pal.shadow;
       if (C3.lod === 0 || (pt.tone === "shadow" || pt.minor) && C3.lod < 2 || pt.tone === "stubble") {
         g.fillStyle = base2;
@@ -49800,7 +49825,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     trimF: "M-1.74 -1.04 Q-1.52 -0.46 0 -0.44 Q1.52 -0.46 1.74 -1.04"
   };
   var HATS = {
-    straw(g, C3, v, H2) {
+    straw(g, C3, v, H3) {
       const s = HAT_STRAW;
       const brim = v === "S" ? s.brimS : s.brimF, crown2 = v === "S" ? s.crownS : s.crownF;
       const bp = part2(g, C3, brim, STRAW, STRAW_D, 0.12);
@@ -49824,8 +49849,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       ink(g, pp(s.bandLine), C3, C3.lw * 0.6);
       ink(g, cp, C3);
     },
-    captain(g, C3, v, H2) {
-      const k = hatPal(H2.hatColor || "#2c2831"), side = v === "S", c = CAPTAIN;
+    captain(g, C3, v, H3) {
+      const k = hatPal(H3.hatColor || "#2c2831"), side = v === "S", c = CAPTAIN;
       part2(g, C3, side ? c.plumeS : v === "B" ? mirrorD(c.plumeF) : c.plumeF, "#c8372d", "#8f231c", 0.1, 0, true);
       part2(g, C3, side ? c.crownS : c.crownF, k.base, k.dk, 0.14);
       const bp = part2(g, C3, side ? c.brimS : c.brimF, k.base, k.dk, 0.1, 0, true);
@@ -49838,8 +49863,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       ink(g, bp, C3);
       if (v === "F") skull2(g, C3);
     },
-    tricorne(g, C3, v, H2) {
-      const k = hatPal(H2.hatColor || "#302b35");
+    tricorne(g, C3, v, H3) {
+      const k = hatPal(H3.hatColor || "#302b35");
       if (v === "S") {
         part2(g, C3, "M-0.72 -0.84 C-0.62 -1.5 0.5 -1.62 0.72 -0.84 Z", k.base, k.dk, 0.14, 0, true);
         const bp2 = part2(g, C3, "M1.28 -0.72 C0.8 -0.76 0.42 -1.2 0.0 -1.26 C-0.52 -1.3 -0.92 -0.9 -1.4 -0.6 C-0.9 -0.5 0.42 -0.48 1.28 -0.72 Z", k.base, k.dk, 0.1);
@@ -49869,8 +49894,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         ink(g, b, C3, C3.lw * 0.6);
       }
     },
-    cowboy(g, C3, v, H2) {
-      const k = hatPal(H2.hatColor || "#9a6a3f"), side = v === "S";
+    cowboy(g, C3, v, H3) {
+      const k = hatPal(H3.hatColor || "#9a6a3f"), side = v === "S";
       const crown2 = side ? "M-0.74 -0.78 C-0.82 -1.36 -0.5 -1.72 0 -1.68 C0.36 -1.66 0.56 -1.58 0.72 -1.42 C0.8 -1.2 0.78 -0.96 0.74 -0.78 Z" : "M-0.8 -0.74 C-0.86 -1.26 -0.7 -1.72 -0.35 -1.72 C-0.15 -1.72 -0.1 -1.58 0 -1.58 C0.1 -1.58 0.15 -1.72 0.35 -1.72 C0.7 -1.72 0.86 -1.26 0.8 -0.74 Z";
       const cp = part2(g, C3, crown2, k.base, k.dk, 0.14);
       g.save();
@@ -49883,7 +49908,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const brim = side ? "M-1.62 -0.94 Q-1.3 -0.66 0 -0.66 Q1.3 -0.66 1.64 -0.88 Q1.36 -0.8 0 -0.84 Q-1.2 -0.82 -1.62 -0.94 Z" : "M-1.8 -1.04 C-1.62 -0.72 -1.1 -0.62 -0.8 -0.7 C-0.4 -0.8 0.4 -0.8 0.8 -0.7 C1.1 -0.62 1.62 -0.72 1.8 -1.04 C1.82 -0.6 1.2 -0.34 0 -0.36 C-1.2 -0.34 -1.82 -0.6 -1.8 -1.04 Z";
       part2(g, C3, brim, k.mid, k.dk, 0.1);
     },
-    marine(g, C3, v, H2) {
+    marine(g, C3, v, H3) {
       const white = "#f6f5f0", shadow = "#c9cfdc", navy2 = "#27466e";
       if (v !== "F") {
         const flap = v === "S" ? "M-0.6 -0.56 L-1.14 -0.5 C-1.2 -0.1 -1.18 0.2 -1.12 0.46 L-0.7 0.42 C-0.66 0.1 -0.62 -0.2 -0.6 -0.56 Z" : "M-1.08 -0.5 L1.08 -0.5 C1.1 -0.14 1.1 0.14 1.04 0.4 Q0.78 0.54 0.52 0.46 Q0.26 0.56 0 0.48 Q-0.26 0.56 -0.52 0.46 Q-0.78 0.54 -1.04 0.4 C-1.1 0.14 -1.1 -0.14 -1.08 -0.5 Z";
@@ -49908,17 +49933,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         part2(g, C3, "M0.7 -0.5 Q1.1 -0.52 1.3 -0.4 Q1.0 -0.34 0.66 -0.4 Z", "#1d1a20", null);
       }
     },
-    pinkhat(g, C3, v, H2) {
-      topHat(g, C3, v, H2.hatColor || "#f190b7", v === "F");
+    pinkhat(g, C3, v, H3) {
+      topHat(g, C3, v, H3.hatColor || "#f190b7", v === "F");
     },
-    tophat(g, C3, v, H2) {
-      topHat(g, C3, v, H2.hatColor || "#2b2631", false);
+    tophat(g, C3, v, H3) {
+      topHat(g, C3, v, H3.hatColor || "#2b2631", false);
     },
-    topHat(g, C3, v, H2) {
-      topHat(g, C3, v, H2.hatColor || "#2b2631", false);
+    topHat(g, C3, v, H3) {
+      topHat(g, C3, v, H3.hatColor || "#2b2631", false);
     },
-    beanie(g, C3, v, H2) {
-      const k = hatPal(H2.hatColor || "#e74c3c");
+    beanie(g, C3, v, H3) {
+      const k = hatPal(H3.hatColor || "#e74c3c");
       const dome2 = v === "S" ? "M-1.12 -0.4 C-1.2 -1.0 -0.72 -1.36 0 -1.34 C0.62 -1.32 1.02 -0.96 1.0 -0.46 Z" : "M-1.12 -0.44 C-1.18 -1.0 -0.75 -1.36 0 -1.36 C0.75 -1.36 1.18 -1.0 1.12 -0.44 Z";
       part2(g, C3, dome2, k.base, k.dk, 0.14);
       const fold = v === "S" ? "M-1.16 -0.62 Q-0.1 -0.76 1.04 -0.64 L1.02 -0.38 Q-0.1 -0.5 -1.14 -0.36 Z" : "M-1.16 -0.62 Q0 -0.74 1.16 -0.62 L1.14 -0.36 Q0 -0.46 -1.14 -0.36 Z";
@@ -49929,14 +49954,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         line(g, C3, "M-0.8 -0.7 L-0.8 -0.36 M-0.4 -0.72 L-0.4 -0.38 M0 -0.74 L0 -0.4 M0.4 -0.72 L0.4 -0.38 M0.8 -0.7 L0.8 -0.36", k.dk);
         g.restore();
       }
-      if ((H2.seed || 0) % 3 !== 0) part2(g, C3, EL(v === "S" ? -0.06 : 0, -1.44, 0.26, 0.24), k.lt2, k.lt, 0.08, 0, true);
+      if ((H3.seed || 0) % 3 !== 0) part2(g, C3, EL(v === "S" ? -0.06 : 0, -1.44, 0.26, 0.24), k.lt2, k.lt, 0.08, 0, true);
     },
-    bandana(g, C3, v, H2) {
-      const k = hatPal(H2.hatColor || "#2f5f96");
+    bandana(g, C3, v, H3) {
+      const k = hatPal(H3.hatColor || "#2f5f96");
       if (v === "S") {
-        tails(g, C3, H2, -1.08, -0.36, k, 1);
+        tails(g, C3, H3, -1.08, -0.36, k, 1);
         const cp2 = part2(g, C3, "M0.98 -0.36 C1.04 -0.92 0.62 -1.24 0.04 -1.26 C-0.62 -1.26 -1.16 -0.9 -1.16 -0.24 Q-0.1 -0.42 0.98 -0.36 Z", k.base, k.dk, 0.14);
-        if (!H2.hatColor && C3.lod) {
+        if (!H3.hatColor && C3.lod) {
           g.save();
           g.clip(cp2);
           g.fillStyle = "rgba(255,255,255,0.85)";
@@ -49948,7 +49973,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         return;
       }
       const cp = part2(g, C3, "M-1.14 -0.26 C-1.2 -0.9 -0.8 -1.28 0 -1.28 C0.8 -1.28 1.2 -0.9 1.14 -0.26 Q0 -0.52 -1.14 -0.26 Z", k.base, k.dk, 0.14);
-      if (!H2.hatColor && C3.lod) {
+      if (!H3.hatColor && C3.lod) {
         g.save();
         g.clip(cp);
         g.fillStyle = "rgba(255,255,255,0.85)";
@@ -49958,26 +49983,26 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       part2(g, C3, "M-1.14 -0.26 Q0 -0.52 1.14 -0.26 L1.16 -0.42 Q0 -0.68 -1.16 -0.42 Z", k.dk, null);
       if (v === "B") {
-        tails(g, C3, H2, 0, -0.36, k, 0);
+        tails(g, C3, H3, 0, -0.36, k, 0);
         part2(g, C3, EL(0, -0.38, 0.17, 0.14), k.dk, null);
       }
     },
-    headband(g, C3, v, H2) {
-      const k = hatPal(H2.hatColor || "#2e2a31"), w = H2.w;
+    headband(g, C3, v, H3) {
+      const k = hatPal(H3.hatColor || "#2e2a31"), w = H3.w;
       if (v === "S") {
-        tails(g, C3, H2, -w + 0.02, -0.52, k, 1);
+        tails(g, C3, H3, -w + 0.02, -0.52, k, 1);
         part2(g, C3, memo("hbS" + w, () => `M1.0 -0.66 Q-0.1 -0.72 ${-w} -0.64 L${-w + 0.02} -0.4 Q-0.1 -0.48 0.98 -0.42 Z`), k.base, k.dk, 0.05);
         part2(g, C3, EL(-w + 0.04, -0.52, 0.14, 0.13), k.lt, k.dk, 0.04, 0, true);
         return;
       }
       part2(g, C3, memo("hbF" + w, () => `M${-w} -0.64 Q0 -0.8 ${w} -0.64 L${w - 0.01} -0.4 Q0 -0.56 ${-w + 0.01} -0.4 Z`), k.base, k.dk, 0.05);
       if (v === "B") {
-        tails(g, C3, H2, 0, -0.5, k, 0);
+        tails(g, C3, H3, 0, -0.5, k, 0);
         part2(g, C3, EL(0, -0.52, 0.15, 0.13), k.lt, k.dk, 0.04, 0, true);
       }
     },
-    goggles(g, C3, v, H2) {
-      const lens = H2.hatColor || "#f0a53a", lk2 = hatPal(lens), frame2 = "#c9a04a", strap = "#6b4a32", w = H2.w;
+    goggles(g, C3, v, H3) {
+      const lens = H3.hatColor || "#f0a53a", lk2 = hatPal(lens), frame2 = "#c9a04a", strap = "#6b4a32", w = H3.w;
       if (v === "S") {
         part2(g, C3, memo("ggS" + w, () => `M0.9 -0.7 Q-0.1 -0.78 ${-w} -0.66 L${-w + 0.02} -0.5 Q-0.1 -0.6 0.9 -0.54 Z`), strap, "#4a3222", 0.04, 0, true);
         part2(g, C3, EL(0.8, -0.62, 0.15, 0.28), frame2, "#9b7a30", 0.05, 0, true);
@@ -49999,10 +50024,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.strokeStyle = frame2;
       g.stroke(pp("M-0.1 -0.68 Q0 -0.74 0.1 -0.68"));
     },
-    horns(g, C3, v, H2) {
-      horns(g, C3, v, H2.hatColor || "#efe4c8");
+    horns(g, C3, v, H3) {
+      horns(g, C3, v, H3.hatColor || "#efe4c8");
     },
-    helm(g, C3, v, H2) {
+    helm(g, C3, v, H3) {
       const metal = "#aab5bd", mdk = "#6f7c86", trim = "#8a6a44";
       horns(g, C3, v, "#efe4c8", true);
       const dome2 = v === "S" ? "M-1.12 -0.38 C-1.18 -1.0 -0.74 -1.36 0 -1.36 C0.7 -1.36 1.08 -1.0 1.02 -0.46 Z" : "M-1.14 -0.4 C-1.18 -1.0 -0.76 -1.38 0 -1.38 C0.76 -1.38 1.18 -1.0 1.14 -0.4 Z";
@@ -50017,9 +50042,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       part2(g, C3, v === "S" ? "M-1.16 -0.56 Q-0.1 -0.68 1.04 -0.6 L1.02 -0.38 Q-0.1 -0.46 -1.14 -0.34 Z" : "M-1.16 -0.58 Q0 -0.7 1.16 -0.58 L1.14 -0.38 Q0 -0.5 -1.14 -0.38 Z", trim, "#5e4630", 0.05, 0, true);
     },
-    crown(g, C3, v, H2) {
-      const k = hatPal(H2.hatColor || "#ffd54f");
-      const by = H2.top + 0.34, w = v === "S" ? 0.56 : 0.62;
+    crown(g, C3, v, H3) {
+      const k = hatPal(H3.hatColor || "#ffd54f");
+      const by = H3.top + 0.34, w = v === "S" ? 0.56 : 0.62;
       part2(g, C3, memo("cr" + by + w, () => `M${-w} ${by} L${-w - 0.1} ${by - 0.62} L${-w * 0.55} ${by - 0.3} L0 ${by - 0.74} L${w * 0.55} ${by - 0.3} L${w + 0.1} ${by - 0.62} L${w} ${by} Q0 ${by + 0.12} ${-w} ${by} Z`), k.base, k.dk, 0.08);
       if (C3.lod) {
         g.fillStyle = "#e53935";
@@ -50028,10 +50053,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.fill(EL(-w * 0.62, by - 0.08, 0.06, 0.06, w * 0.62, by - 0.08, 0.06, 0.06));
       }
     },
-    halo(g, C3, v, H2) {
-      const col = H2.hatColor || "#ffe082", side = v === "S";
+    halo(g, C3, v, H3) {
+      const col = H3.hatColor || "#ffe082", side = v === "S";
       g.save();
-      g.translate(0, H2.top - 0.36 + (H2.haloY ?? Math.sin(H2.t * 2.2) * 0.04));
+      g.translate(0, H3.top - 0.36 + (H3.haloY ?? Math.sin(H3.t * 2.2) * 0.04));
       const e = EL(0, 0, side ? 0.56 : 0.74, side ? 0.13 : 0.2);
       g.lineWidth = 0.22;
       g.strokeStyle = OUTLINE2;
@@ -50046,9 +50071,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       g.restore();
     },
-    bubble(g, C3, v, H2) {
-      const R3 = 1.72 * H2.hatK, cy = -0.2 - (H2.hatK - 1) * 0.6;
-      const b = EL(0, cy, R3, R3);
+    bubble(g, C3, v, H3) {
+      const R4 = 1.72 * H3.hatK, cy = -0.2 - (H3.hatK - 1) * 0.6;
+      const b = EL(0, cy, R4, R4);
       g.fillStyle = "rgba(200,235,255,0.2)";
       g.fill(b);
       g.lineWidth = 0.08;
@@ -50057,45 +50082,45 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (C3.lod) {
         g.lineWidth = 0.1;
         g.strokeStyle = "rgba(255,255,255,0.75)";
-        g.stroke(pp(memo("bb" + R3, () => pb().M(-R3 * 0.72, cy - R3 * 0.34).Q(-R3 * 0.62, cy - R3 * 0.72, -R3 * 0.2, cy - R3 * 0.86).s)));
+        g.stroke(pp(memo("bb" + R4, () => pb().M(-R4 * 0.72, cy - R4 * 0.34).Q(-R4 * 0.62, cy - R4 * 0.72, -R4 * 0.2, cy - R4 * 0.86).s)));
         g.fillStyle = "rgba(255,255,255,0.8)";
-        g.fill(EL(R3 * 0.5, cy - R3 * 0.5, 0.1, 0.07));
+        g.fill(EL(R4 * 0.5, cy - R4 * 0.5, 0.1, 0.07));
       }
     },
-    antlers(g, C3, v, H2) {
+    antlers(g, C3, v, H3) {
       const d = v === "S" ? "M0.1 -0.9 L-0.2 -1.7 M-0.08 -1.36 L-0.5 -1.5 M-0.14 -1.56 L0.1 -1.96" : "M-0.45 -0.9 L-1.0 -1.8 M-0.74 -1.36 L-1.3 -1.34 M-0.92 -1.66 L-0.76 -2.08 M0.45 -0.9 L1.0 -1.8 M0.74 -1.36 L1.3 -1.34 M0.92 -1.66 L0.76 -2.08";
       const p = pp(d);
       g.lineWidth = 0.34;
       g.strokeStyle = OUTLINE2;
       g.stroke(p);
       g.lineWidth = 0.22;
-      g.strokeStyle = H2.hatColor || "#8d6e63";
+      g.strokeStyle = H3.hatColor || "#8d6e63";
       g.stroke(p);
     },
-    cap(g, C3, v, H2) {
-      const k = hatPal(H2.hatColor || "#5d6d7e");
+    cap(g, C3, v, H3) {
+      const k = hatPal(H3.hatColor || "#5d6d7e");
       part2(g, C3, v === "S" ? "M-1.12 -0.5 C-1.16 -1.06 -0.7 -1.32 0 -1.32 C0.66 -1.32 1.02 -1.0 1.0 -0.54 Z" : "M-1.12 -0.54 C-1.16 -1.06 -0.76 -1.34 0 -1.34 C0.76 -1.34 1.16 -1.06 1.12 -0.54 Z", k.base, k.dk, 0.14);
       if (v === "S") part2(g, C3, "M0.8 -0.6 Q1.3 -0.62 1.5 -0.48 Q1.1 -0.4 0.76 -0.46 Z", k.dk, null);
       else if (v === "F") part2(g, C3, "M-0.86 -0.56 Q0 -0.66 0.86 -0.56 Q0.6 -0.3 0 -0.28 Q-0.6 -0.3 -0.86 -0.56 Z", k.dk, null);
     }
   };
   var HAT_BEHIND = {
-    bandana(g, C3, v, H2) {
-      if (v === "F") tails(g, C3, H2, 0.92, -0.42, hatPal(H2.hatColor || "#2f5f96"), 1);
+    bandana(g, C3, v, H3) {
+      if (v === "F") tails(g, C3, H3, 0.92, -0.42, hatPal(H3.hatColor || "#2f5f96"), 1);
     },
-    headband(g, C3, v, H2) {
-      if (v === "F") tails(g, C3, H2, H2.w - 0.1, -0.52, hatPal(H2.hatColor || "#2e2a31"), 1);
+    headband(g, C3, v, H3) {
+      if (v === "F") tails(g, C3, H3, H3.w - 0.1, -0.52, hatPal(H3.hatColor || "#2e2a31"), 1);
     }
   };
   var TAILS = {
     side: ["M0 0 Q0.34 0.1 0.6 0.46 L0.44 0.44 L0.52 0.66 Q0.18 0.3 0 0.12 Z", "M0 0.04 Q0.22 0.3 0.28 0.7 L0.16 0.62 L0.14 0.8 Q0.06 0.4 -0.04 0.14 Z"],
     down: ["M-0.04 0 Q-0.28 0.3 -0.24 0.68 L-0.1 0.6 L-0.04 0.76 Q0.06 0.3 0.06 0 Z", "M0.02 0 Q0.3 0.34 0.28 0.66 L0.14 0.6 L0.1 0.76 Q0.04 0.3 -0.04 0.02 Z"]
   };
-  function tailAngle(H2) {
-    return Math.sin(H2.t * 3.1 + H2.seed) * 0.08 + (H2.moving ? 0.1 * Math.sin((H2.walk || 0) * 2) - 0.12 : 0);
+  function tailAngle(H3) {
+    return Math.sin(H3.t * 3.1 + H3.seed) * 0.08 + (H3.moving ? 0.1 * Math.sin((H3.walk || 0) * 2) - 0.12 : 0);
   }
-  function tails(g, C3, H2, x, y, k, dir) {
-    const f = H2.tailA ?? tailAngle(H2);
+  function tails(g, C3, H3, x, y, k, dir) {
+    const f = H3.tailA ?? tailAngle(H3);
     g.save();
     g.translate(x, y);
     if (dir && C3.view === "S") g.scale(-1, 1);
@@ -50608,17 +50633,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const m = META[style] || META.short;
     return { hatColor: look && look.hatColor, seed: look && look.seed || 0, t: t || 0, top: m.top, w: m.w, hatK: m.hatK, moving: !!(pose && pose.moving), walk: pose && pose.walk, tailA: void 0, haloY: void 0 };
   }
-  function hatLayer(g, C3, kind, v, H2, behind) {
+  function hatLayer(g, C3, kind, v, H3, behind) {
     const fn = behind ? HAT_BEHIND[kind] : HATS[kind];
     if (!fn) return;
-    const k = kind === "crown" || kind === "halo" || kind === "bubble" ? 1 : H2.hatK;
+    const k = kind === "crown" || kind === "halo" || kind === "bubble" ? 1 : H3.hatK;
     if (k !== 1) {
       g.save();
       g.translate(0, -0.2);
       g.scale(k, hatKy(k));
       g.translate(0, 0.2);
     }
-    fn(g, C3, v, H2);
+    fn(g, C3, v, H3);
     if (k !== 1) g.restore();
   }
   function fringeOf(S3) {
@@ -50675,7 +50700,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const S3 = STYLES[style][v];
     const kind = hatKind(look.hat, look);
     const clipY = hatClip(kind);
-    const H2 = {
+    const H3 = {
       pal: null,
       t: t || 0,
       seed: (look.seed || 0) * 0.37,
@@ -50691,14 +50716,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const sp = S3.back.concat(S3.front).find((pt) => pt.sway);
       S3.sw = sp ? sp.sway : null;
     }
-    if (S3.sw) H2.swayA = q(swayAngle(S3.sw, H2), 0.05);
-    if (kind === "bandana" || kind === "headband") H2.tailA = q(tailAngle(H2), 0.08);
+    if (S3.sw) H3.swayA = q(swayAngle(S3.sw, H3), 0.05);
+    if (kind === "bandana" || kind === "headband") H3.tailA = q(tailAngle(H3), 0.08);
     const HT = kind ? hatCtx(look, style, t, pose) : null;
     if (HT) {
-      HT.tailA = H2.tailA;
+      HT.tailA = H3.tailA;
       if (kind === "halo") HT.haloY = q(Math.sin(HT.t * 2.2) * 0.04, 0.04);
     }
-    return { style, S: S3, kind, HT, clip: clipY === null ? null : -0.2 + (clipY + 0.2) * hatKy(HT.hatK), H: H2, X: expression(look, pose, P4, t || 0), ghost: !!pose.ghost };
+    return { style, S: S3, kind, HT, clip: clipY === null ? null : -0.2 + (clipY + 0.2) * hatKy(HT.hatK), H: H3, X: expression(look, pose, P4, t || 0), ghost: !!pose.ghost };
   }
   function lookKey(look) {
     return `${look.race}|${look.skin}|${look.hair}|${look.hairColor}|${look.hat}|${look.hatColor}|${look.eyeColor}|${look.seed}|${look.eyeShape}|${look.ears}|${look.fur}|${look.furFace ? 1 : 0}${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.fin ? 1 : 0}${look.grin ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.gills ? 1 : 0}|${look.kind}|${look.nose}|${look.goggles}`;
@@ -50759,11 +50784,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (st.kind === "crown") y0 = Math.min(y0, m.top - 0.55);
       if (st.kind === "halo") y0 = Math.min(y0, m.top - 0.7);
       if (st.kind === "bubble") {
-        const R3 = 1.72 * k + 0.12;
-        x0 = Math.min(x0, -R3);
-        x1 = Math.max(x1, R3);
-        y0 = Math.min(y0, -0.2 - (k - 1) * 0.6 - R3);
-        y1 = Math.max(y1, -0.2 + R3);
+        const R4 = 1.72 * k + 0.12;
+        x0 = Math.min(x0, -R4);
+        x1 = Math.max(x1, R4);
+        y0 = Math.min(y0, -0.2 - (k - 1) * 0.6 - R4);
+        y1 = Math.max(y1, -0.2 + R4);
       }
       if (st.kind === "marine" && v !== "F") y1 = Math.max(y1, 1.2);
     }
@@ -50771,8 +50796,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function cachedHead(look, v, pose, st, px2, sx, r) {
     const b = Math.ceil(Math.log2(px2) * 12);
-    const X2 = st.X, H2 = st.H;
-    const key2 = `${lookKey(look)}~${v}${sx}~${X2.eyes}${X2.mouth}${X2.brow}${X2.small ? 1 : 0}${st.ghost ? 1 : 0}~${b}~${H2.swayA}~${H2.tailA}~${st.HT ? st.HT.haloY : ""}`;
+    const X2 = st.X, H3 = st.H;
+    const key2 = `${lookKey(look)}~${v}${sx}~${X2.eyes}${X2.mouth}${X2.brow}${X2.small ? 1 : 0}${st.ghost ? 1 : 0}~${b}~${H3.swayA}~${H3.tailA}~${st.HT ? st.HT.haloY : ""}`;
     for (const K2 of CELL_CLASSES) {
       const e2 = K2.lru.get(key2);
       if (e2) {
@@ -50795,8 +50820,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     SEEN.delete(key2);
     const pxb = Math.pow(2, b / 12);
     const [x0, y0, x1, y1] = headBounds(look, st, v);
-    const W3 = Math.ceil((x1 - x0) * pxb) + 2, Ht = Math.ceil((y1 - y0) * pxb) + 2;
-    const K = CELL_CLASSES.find((c) => W3 <= c.cell && Ht <= c.cell);
+    const W4 = Math.ceil((x1 - x0) * pxb) + 2, Ht = Math.ceil((y1 - y0) * pxb) + 2;
+    const K = CELL_CLASSES.find((c) => W4 <= c.cell && Ht <= c.cell);
     const e = K && takeCell(K, key2);
     if (!e) return null;
     const cg = e.pg.g, cs = K.cell;
@@ -50811,11 +50836,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     cg.lineCap = "round";
     renderHead(cg, look, v, pose, st, headCtx(pxb, sx, r, v));
     cg.restore();
-    e.W = W3;
+    e.W = W4;
     e.H = Ht;
     e.x = x0 - 1 / pxb;
     e.y = y0 - 1 / pxb;
-    e.w = W3 / pxb;
+    e.w = W4 / pxb;
     e.h = Ht / pxb;
     return e;
   }
@@ -50837,18 +50862,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.restore();
   }
   function renderHead(g, look, v, pose, st, C3) {
-    const { style, S: S3, kind, HT, clip: clip2, H: H2, X: X2, ghost } = st;
+    const { style, S: S3, kind, HT, clip: clip2, H: H3, X: X2, ghost } = st;
     const white = !!look.furWhite;
     const skinCol = white ? "#fafafa" : hex(look.fur && look.furFace ? look.fur : look.skin, "#f1c9a0");
     const hairCol = white ? "#fafafa" : hex(look.nika ? "#ffffff" : look.hairColor, "#2d2d2d");
     const skinP = skinPal(skinCol);
-    H2.pal = hairPal(hairCol);
-    if (style === "mohawk") H2.stubble = tint(skinCol, H2.pal.shadow, 0.13);
+    H3.pal = hairPal(hairCol);
+    if (style === "mohawk") H3.stubble = tint(skinCol, H3.pal.shadow, 0.13);
     if (kind) hatLayer(g, C3, kind, v, HT, true);
     withClip(g, clip2, () => {
       if (look.fin && look.kind !== "Octopus") fin(g, C3, v, skinP, style);
-      if (style === "nika") drawParts(g, [{ d: new Path2D(nikaFlames(v, H2.t)), off: 0.08 }], C3, H2);
-      drawParts(g, S3.back, C3, H2);
+      if (style === "nika") drawParts(g, [{ d: new Path2D(nikaFlames(v, H3.t)), off: 0.08 }], C3, H3);
+      drawParts(g, S3.back, C3, H3);
     });
     if (!look.ears && v !== "S") {
       part2(g, C3, EAR_F.both, skinP.base, skinP.shadow, 0.06, 0, true);
@@ -50911,12 +50936,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       drawMouth(g, C3, v, look, X2);
     }
     withClip(g, clip2, () => {
-      drawParts(g, S3.front, C3, H2);
+      drawParts(g, S3.front, C3, H3);
       if (look.ears) minkEars(g, C3, v, look, white ? "#fafafa" : hex(look.fur || look.hairColor, skinCol), style);
       if (look.race === "skypiean" && !ghost) antennae(g, C3, v, skinP, style);
     });
     if (v !== "B" && !ghost) {
-      drawBrows(g, C3, v, X2, H2.pal);
+      drawBrows(g, C3, v, X2, H3.pal);
       if (look.thirdEye) thirdEye(g, C3, v, look);
       if (look.nose || look.kind === "Saw Shark") noseF(g, C3, look, skinP, v);
       if (look.goggles === true) eyewear(g, C3, v);
@@ -50943,29 +50968,29 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   // src/render/character.js
   var TAU10 = Math.PI * 2;
   var OUTLINE3 = "rgba(30,20,20,0.85)";
-  function circ(g, x, y, r, fill2, stroke, lw = 0.04) {
+  function circ(g, x, y, r, fill2, stroke2, lw = 0.04) {
     g.beginPath();
     g.arc(x, y, Math.max(1e-3, r), 0, TAU10);
     if (fill2) {
       g.fillStyle = fill2;
       g.fill();
     }
-    if (stroke) {
+    if (stroke2) {
       g.lineWidth = lw;
-      g.strokeStyle = stroke;
+      g.strokeStyle = stroke2;
       g.stroke();
     }
   }
-  function rrect2(g, x, y, w, h2, r, fill2, stroke, lw = 0.04) {
+  function rrect2(g, x, y, w, h2, r, fill2, stroke2, lw = 0.04) {
     g.beginPath();
     g.roundRect(x, y, w, h2, r);
     if (fill2) {
       g.fillStyle = fill2;
       g.fill();
     }
-    if (stroke) {
+    if (stroke2) {
       g.lineWidth = lw;
-      g.strokeStyle = stroke;
+      g.strokeStyle = stroke2;
       g.stroke();
     }
   }
@@ -51032,8 +51057,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.fill();
     g.restore();
   }
-  function torsoPath(g, W3, top, bottom, side) {
-    const ws = W3 / 2, ww = W3 * (side ? 0.44 : 0.4), wh = W3 * (side ? 0.47 : 0.45);
+  function torsoPath(g, W4, top, bottom, side) {
+    const ws = W4 / 2, ww = W4 * (side ? 0.44 : 0.4), wh = W4 * (side ? 0.47 : 0.45);
     const waistY = top + (bottom - top) * 0.6;
     const fx = side ? 0.025 : 0;
     g.beginPath();
@@ -51620,13 +51645,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const pts = smoothPts(e.pts, 2);
         const n = pts.length;
         const r0 = (e.foot ? 0.15 : 0.11) * (look.bulk || 1) * e.scale;
-        const L2 = [], R3 = [];
+        const L2 = [], R4 = [];
         for (let i = 0; i < n; i++) {
           const p = pts[i], q2 = pts[Math.min(n - 1, i + 1)], o = pts[Math.max(0, i - 1)];
           const ang = Math.atan2(q2[1] - o[1], q2[0] - o[0]) + Math.PI / 2;
           const w = r0 * (1 - i / n) * 1.1;
           L2.push([p[0] + Math.cos(ang) * w, p[1] + Math.sin(ang) * w]);
-          R3.push([p[0] - Math.cos(ang) * w, p[1] - Math.sin(ang) * w]);
+          R4.push([p[0] - Math.cos(ang) * w, p[1] - Math.sin(ang) * w]);
         }
         const gr = g.createLinearGradient(pts[0][0], pts[0][1], pts[n - 1][0], pts[n - 1][1]);
         gr.addColorStop(0, rgba2("#ffffff", 0.85));
@@ -51636,7 +51661,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         g.beginPath();
         g.moveTo(L2[0][0], L2[0][1]);
         for (let i = 1; i < n; i++) g.lineTo(L2[i][0], L2[i][1]);
-        for (let i = n - 1; i >= 0; i--) g.lineTo(R3[i][0], R3[i][1]);
+        for (let i = n - 1; i >= 0; i--) g.lineTo(R4[i][0], R4[i][1]);
         g.closePath();
         g.fill();
         const [hx, hy] = pts[0], [tx, ty] = pts[n - 1];
@@ -51829,31 +51854,31 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.save();
     switch (c.kind) {
       case "sun": {
-        const cx = hand[0], cy = Math.min(hand[1], headY) - 0.35 - k * 0.6, R3 = 0.12 + k * 0.62;
+        const cx = hand[0], cy = Math.min(hand[1], headY) - 0.35 - k * 0.6, R4 = 0.12 + k * 0.62;
         g.globalCompositeOperation = "lighter";
         g.globalAlpha = 0.35;
         g.fillStyle = "#ff6d00";
         g.beginPath();
-        g.arc(cx, cy, R3 * 1.6, 0, TAU10);
+        g.arc(cx, cy, R4 * 1.6, 0, TAU10);
         g.fill();
         for (let i = 0; i < 10; i++) {
           const a = i / 10 * TAU10 + t * 1.5, fl2 = 1.25 + 0.25 * Math.sin(t * 13 + i * 2);
           g.globalAlpha = 0.6;
           g.fillStyle = i % 2 ? "#ffab00" : "#ff3d00";
           g.beginPath();
-          g.moveTo(cx + Math.cos(a - 0.25) * R3 * 0.9, cy + Math.sin(a - 0.25) * R3 * 0.9);
-          g.lineTo(cx + Math.cos(a) * R3 * fl2, cy + Math.sin(a) * R3 * fl2);
-          g.lineTo(cx + Math.cos(a + 0.25) * R3 * 0.9, cy + Math.sin(a + 0.25) * R3 * 0.9);
+          g.moveTo(cx + Math.cos(a - 0.25) * R4 * 0.9, cy + Math.sin(a - 0.25) * R4 * 0.9);
+          g.lineTo(cx + Math.cos(a) * R4 * fl2, cy + Math.sin(a) * R4 * fl2);
+          g.lineTo(cx + Math.cos(a + 0.25) * R4 * 0.9, cy + Math.sin(a + 0.25) * R4 * 0.9);
           g.fill();
         }
         g.globalAlpha = 0.95;
         g.fillStyle = "#ff9100";
         g.beginPath();
-        g.arc(cx, cy, R3, 0, TAU10);
+        g.arc(cx, cy, R4, 0, TAU10);
         g.fill();
         g.fillStyle = "#ffe57f";
         g.beginPath();
-        g.arc(cx, cy, R3 * 0.62, 0, TAU10);
+        g.arc(cx, cy, R4 * 0.62, 0, TAU10);
         g.fill();
         break;
       }
@@ -51935,19 +51960,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           g.lineTo(hand[0] + Math.cos(a) * d1, hand[1] + Math.sin(a) * d1);
           g.stroke();
         }
-        const R3 = 0.05 + (c.size || 0.22) * k;
+        const R4 = 0.05 + (c.size || 0.22) * k;
         g.globalAlpha = 0.35 * k;
         g.fillStyle = col;
         g.beginPath();
-        g.arc(hand[0], hand[1], R3 * 1.8, 0, TAU10);
+        g.arc(hand[0], hand[1], R4 * 1.8, 0, TAU10);
         g.fill();
         g.globalAlpha = 0.9 * k;
         g.beginPath();
-        g.arc(hand[0], hand[1], R3, 0, TAU10);
+        g.arc(hand[0], hand[1], R4, 0, TAU10);
         g.fill();
         g.fillStyle = "#ffffff";
         g.beginPath();
-        g.arc(hand[0], hand[1], R3 * 0.5, 0, TAU10);
+        g.arc(hand[0], hand[1], R4 * 0.5, 0, TAU10);
         g.fill();
       }
     }
@@ -52588,8 +52613,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const m = g.getTransform();
     const px2 = Math.hypot(m.a, m.b) || 1;
     const s = (look.scale || 1) * (look.legs > 1 ? 1.3 : 1);
-    const W3 = Math.ceil(4.4 * s * px2), H2 = Math.ceil(4.6 * s * px2);
-    if (W3 * H2 > 4e6) {
+    const W4 = Math.ceil(4.4 * s * px2), H3 = Math.ceil(4.6 * s * px2);
+    if (W4 * H3 > 4e6) {
       drawCharacter(g, look, pose);
       return;
     }
@@ -52603,18 +52628,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       tintCanvas = document.createElement("canvas");
       silCanvas = document.createElement("canvas");
     }
-    if (tintCanvas.width < W3 || tintCanvas.height < H2) {
+    if (tintCanvas.width < W4 || tintCanvas.height < H3) {
       for (const cv of [tintCanvas, silCanvas]) {
-        cv.width = Math.max(W3, cv.width);
-        cv.height = Math.max(H2, cv.height);
+        cv.width = Math.max(W4, cv.width);
+        cv.height = Math.max(H3, cv.height);
       }
     }
     const c = tintCanvas.getContext("2d");
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.globalCompositeOperation = "source-over";
     c.globalAlpha = 1;
-    c.clearRect(0, 0, W3, H2);
-    const ox = Math.round(W3 / 2), oy = Math.round(H2 - 0.8 * s * px2);
+    c.clearRect(0, 0, W4, H3);
+    const ox = Math.round(W4 / 2), oy = Math.round(H3 - 0.8 * s * px2);
     const fx = m.e - Math.floor(m.e), fy = m.f - Math.floor(m.f);
     c.setTransform(px2, 0, 0, px2, ox + fx, oy + fy);
     pose.noShadow = true;
@@ -52625,7 +52650,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     c.globalCompositeOperation = "source-atop";
     c.globalAlpha = k;
     c.fillStyle = color;
-    c.fillRect(0, 0, W3, H2);
+    c.fillRect(0, 0, W4, H3);
     c.globalCompositeOperation = "source-over";
     c.globalAlpha = 1;
     const dx = Math.floor(m.e) - ox, dy = Math.floor(m.f) - oy;
@@ -52636,19 +52661,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       sc.setTransform(1, 0, 0, 1, 0, 0);
       sc.globalCompositeOperation = "source-over";
       sc.globalAlpha = 1;
-      sc.clearRect(0, 0, W3, H2);
-      sc.drawImage(tintCanvas, 0, 0, W3, H2, 0, 0, W3, H2);
+      sc.clearRect(0, 0, W4, H3);
+      sc.drawImage(tintCanvas, 0, 0, W4, H3, 0, 0, W4, H3);
       sc.globalCompositeOperation = "source-in";
       sc.fillStyle = outline;
-      sc.fillRect(0, 0, W3, H2);
+      sc.fillRect(0, 0, W4, H3);
       sc.globalCompositeOperation = "source-over";
       const o = Math.max(1, Math.round(px2 * 0.024));
       const a0 = g.globalAlpha;
       g.globalAlpha = a0 * Math.min(1, (k - 0.35) / 0.35);
-      for (const [ex, ey] of [[o, 0], [-o, 0], [0, o], [0, -o]]) g.drawImage(silCanvas, 0, 0, W3, H2, dx + ex, dy + ey, W3, H2);
+      for (const [ex, ey] of [[o, 0], [-o, 0], [0, o], [0, -o]]) g.drawImage(silCanvas, 0, 0, W4, H3, dx + ex, dy + ey, W4, H3);
       g.globalAlpha = a0;
     }
-    g.drawImage(tintCanvas, 0, 0, W3, H2, dx, dy, W3, H2);
+    g.drawImage(tintCanvas, 0, 0, W4, H3, dx, dy, W4, H3);
     g.restore();
   }
   function drawFlurry(g, look, pose, rig, side, t) {
@@ -52788,21 +52813,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.coated = !!o.coated;
     }
     applyDef() {
-      const base2 = SHIPS[this.type] || SHIPS.dinghy;
-      const d = { ...base2 };
-      const mods = {};
-      for (const u of this.upgrades) SHIP_UPGRADES[u]?.apply(mods);
-      d.speed *= mods.speedMul || 1;
-      d.cannons = (d.cannons || 0) + (mods.extraCannons || 0);
-      if (mods.seastone) d.seastone = true;
-      if (mods.oars) d.oars = true;
+      const { maxHull, ...d } = shipStats(this.type, this.upgrades);
       this.def = d;
-      this.maxHull = Math.round(base2.hull * (mods.hullMul || 1));
+      this.maxHull = maxHull;
     }
     /** How many cannonballs she can carry (none, without guns). */
     get shotCap() {
-      const n = this.cannonsOverride ?? this.def.cannons ?? 0;
-      return n > 0 ? Math.max(12, n * 8) : 0;
+      return shotCapFor(this.cannonsOverride ?? this.def.cannons ?? 0);
+    }
+    /** One of yours (or a Navy escort sailing with you): nothing breaks her (see SHIPS_UNBREAKABLE). */
+    get unbreakable() {
+      return SHIPS_UNBREAKABLE && (this.owner === "player" || this.escortOf === "player");
     }
     hullPoints(x, y, h2) {
       const L2 = this.def.length, B4 = this.def.beam;
@@ -52838,6 +52859,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const w = game.world;
       const x0 = this.x, y0 = this.y, h0 = this.heading;
       this.sortY = this.y;
+      if (this.hull < this.maxHull && this.unbreakable) this.hull = this.maxHull;
       if (this.crashT > 0) this.crashT -= dt;
       this.cannonCd = Math.max(0, this.cannonCd - dt);
       this.burstCd = Math.max(0, this.burstCd - dt);
@@ -52904,7 +52926,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           game.fx.shake(0.4);
           game.fx.burst(this.x + Math.cos(this.heading) * this.def.length * 0.5, this.y + Math.sin(this.heading) * this.def.length * 0.5, 14, { color: ["#8d6e63", "#e1f5fe"], speed: 4, g: 8, life: 0.6 });
           game.audio?.sfx("crash", this);
-          if (cur.steer) game.log("CRASH! Steer with the current \u2014 hit the canal walls and you will sink!", "#ff8a80");
+          if (cur.steer) game.log(this.unbreakable ? "CRASH! Steer with the current \u2014 keep to the middle of the canal!" : "CRASH! Steer with the current \u2014 hit the canal walls and you will sink!", "#ff8a80");
         }
         this.speed *= -0.25;
         if (!this.fits(w, this.x, this.y, this.heading)) this.unstick(w);
@@ -53000,10 +53022,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     unstick(w, far = false) {
       if (!far && this.fits(w, this.x, this.y, this.heading) && !(this.game && this.shipIn(this.game, this.x, this.y, this.heading))) return true;
       const big = this.def.length >= BIG_SHIP;
-      const R3 = big ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big ? 1.5 : 0.5;
+      const R4 = big ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big ? 1.5 : 0.5;
       const hs = big ? [this.heading, this.heading + Math.PI / 2, this.heading - Math.PI / 2, this.heading + Math.PI] : [this.heading];
       for (const h2 of hs) {
-        for (let r = dr; r < R3; r += dr) {
+        for (let r = dr; r < R4; r += dr) {
           const da = big ? Math.min(0.5, 2.2 / r) : 0.5;
           for (let a = 0; a < TAU; a += da) {
             const x = w.wx(this.x + Math.cos(a) * r), y = this.y + Math.sin(a) * r;
@@ -53064,6 +53086,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     damage(n, attacker, info = {}) {
       if (this.sunk || n <= 0) return;
+      if (this.unbreakable) {
+        if (this.game && !info.weather && !info.crash) this.game.fx.burst(this.x, this.y - 0.5, 5, { color: ["#8d6e63", "#bcaaa4"], speed: 3, g: 7, life: 0.4 });
+        return;
+      }
       this.hull -= n;
       this.lastHitBy = attacker;
       if (attacker && this.owner !== "player" && (attacker.isPlayer || attacker.ownerShip?.owner === "player")) this.provoked = true;
@@ -53434,8 +53460,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const k = new Mesher();
     const x0 = -fw / 2 + T4, x1 = fw / 2 - T4, z0 = -fd + T4, z1 = -T4;
     const top = y0 + ceil;
-    const R3 = (i) => hash2(b.x, b.y, i + 0.37);
-    const cloth = P4.cloth[Math.floor(R3(1) * P4.cloth.length)];
+    const R4 = (i) => hash2(b.x, b.y, i + 0.37);
+    const cloth = P4.cloth[Math.floor(R4(1) * P4.cloth.length)];
     B(k, x0, y0 - 0.04, z0, x1, y0 + 0.012, z1, P4.floor);
     B(k, L2.door.x - L2.door.dw / 2, y0 - 0.04, -T4, L2.door.x + L2.door.dw / 2, y0 + 8e-3, 0, P4.floor2);
     floorPattern(k, P4, x0, x1, z0, z1, y0 + 0.012);
@@ -53473,7 +53499,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.translate(it.x, y, it.z);
       k.rotateY(it.rot || 0);
       try {
-        piece(k, it, P4, cloth, R3, top - y0);
+        piece(k, it, P4, cloth, R4, top - y0);
       } catch (e) {
         console.warn("furniture failed", it.k, e);
       }
@@ -53541,7 +53567,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function legs(k, w, d, h2, col, t = 0.06, inset = 0.04) {
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(k, sx * (w / 2 - inset) - t / 2, 0, sz * (d / 2 - inset) - t / 2, sx * (w / 2 - inset) + t / 2, h2, sz * (d / 2 - inset) + t / 2, col);
   }
-  function shelves(k, w, d, h2, n, P4, fill2, R3) {
+  function shelves(k, w, d, h2, n, P4, fill2, R4) {
     const wood = P4.wood;
     B(k, -w / 2, 0, -d / 2, w / 2, h2, -d / 2 + 0.03, shade2(wood, -0.15));
     for (const s of [-1, 1]) B(k, s > 0 ? w / 2 - 0.035 : -w / 2, 0, -d / 2, s > 0 ? w / 2 : -w / 2 + 0.035, h2, d / 2, wood, { outline: 0.01 });
@@ -53551,7 +53577,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (i < n && fill2) fill2(y + 0.035, (h2 - 0.1) / n - 0.05, i);
     }
   }
-  function piece(k, it, P4, cloth, R3, ceilH) {
+  function piece(k, it, P4, cloth, R4, ceilH) {
     const { w, d, h: h2 } = it;
     const wood = P4.wood, woodL = P4.woodL, woodD = P4.woodD;
     switch (it.k) {
@@ -53647,7 +53673,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           let x = -w / 2 + 0.06;
           let i = 0;
           while (x < w / 2 - 0.08) {
-            const r = R3(row * 31 + i * 7 + (it.x * 13 | 0));
+            const r = R4(row * 31 + i * 7 + (it.x * 13 | 0));
             if (kind === "books" || kind === "bookcase") {
               const bw2 = 0.04 + r * 0.05, bh = gap * (0.6 + r * 0.35);
               B(k, x, y, -d / 2 + 0.05, x + bw2, y + bh, d / 2 - 0.04, BOOKS[Math.floor(r * BOOKS.length)]);
@@ -53668,7 +53694,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             i++;
             if (i > 40) break;
           }
-        }, R3);
+        }, R4);
         if (kind === "medcabinet") {
           B(k, -w / 2, h2 * 0.45, d / 2 - 0.01, w / 2, h2, d / 2 + 5e-3, "#d6eaf8", { glow: null });
           B(k, -0.12, h2 + 0.02, d / 2 - 0.02, 0.12, h2 + 0.26, d / 2, "#fafafa");
@@ -53915,7 +53941,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         for (let i = 0; i < n; i++) {
           const pw = it.k === "wanted" ? Math.min(0.36, w / n - 0.06) : w, ph = pw * 1.3;
           const cx = -w / 2 + (i + 0.5) * w / n, cy = 1.1 + (it.k === "wanted" ? i % 2 * 0.08 + 0.05 : 0.15);
-          const tilt = (R3(i + 9) - 0.5) * 0.12;
+          const tilt = (R4(i + 9) - 0.5) * 0.12;
           k.save();
           k.translate(cx, cy, 0.015 + i * 1e-3);
           k.rotateZ(tilt);
@@ -54326,15 +54352,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(box(L2 + (oL ? 0.05 : 0) + (oR ? 0.05 : 0), 0.16 * g, 0.26 * g), { at: [xc + ((oR ? 0.05 : 0) - (oL ? 0.05 : 0)) / 2, y + rise + th * 0.5, zc], color: snowy ? "#ffffff" : shade2(roofCol, -0.3), outline: 0.02 });
     return rise + th;
   }
-  function curvedRoof(k, cx, cz, y, W3, D3, rise, ov, roofCol, opts = {}) {
-    const R3 = 4, M2 = 4;
-    const hw0 = W3 / 2 + ov, hd0 = D3 / 2 + ov;
-    const ridge = Math.max(0.05, W3 / 2 - D3 / 2 * 0.85);
+  function curvedRoof(k, cx, cz, y, W4, D3, rise, ov, roofCol, opts = {}) {
+    const R4 = 4, M2 = 4;
+    const hw0 = W4 / 2 + ov, hd0 = D3 / 2 + ov;
+    const ridge = Math.max(0.05, W4 / 2 - D3 / 2 * 0.85);
     const up = opts.upturn ?? 0.35;
     const C4 = [[-1, 1], [1, 1], [1, -1], [-1, -1]];
     const rings2 = [];
-    for (let i = 0; i <= R3; i++) {
-      const t = i / R3;
+    for (let i = 0; i <= R4; i++) {
+      const t = i / R4;
       const e = Math.pow(t, 0.62);
       const hw = hw0 + (ridge - hw0) * e, hd = hd0 + (0.03 - hd0) * e, yy = y + rise * Math.pow(t, 1.8);
       const lift = i === 0 ? up : i === 1 ? up * 0.3 : 0;
@@ -54352,13 +54378,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const N4 = 4 * M2;
     const pos = [], idx = [];
     rings2.forEach((r) => r.forEach((p) => pos.push(...p)));
-    for (let i = 0; i < R3; i++) {
+    for (let i = 0; i < R4; i++) {
       for (let j = 0; j < N4; j++) {
         const a = i * N4 + j, b2 = i * N4 + (j + 1) % N4, c = a + N4, d = b2 + N4;
         idx.push(a, b2, d, a, d, c);
       }
     }
-    const t0 = R3 * N4;
+    const t0 = R4 * N4;
     for (let j = 1; j < N4 - 1; j++) idx.push(t0, t0 + j, t0 + j + 1);
     const g = new BufferGeometry();
     g.setAttribute("position", new Float32BufferAttribute(pos, 3));
@@ -54379,10 +54405,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     fg.setAttribute("position", new Float32BufferAttribute(fp, 3));
     fg.setIndex(fi);
     k.add(fg.toNonIndexed(), { color: shade2(roofCol, -0.35), flat: true });
-    const top = rings2[R3];
+    const top = rings2[R4];
     const ridgeCol = opts.ridgeCol || shade2(roofCol, -0.4);
     for (let s = 0; s < 4; s++) {
-      for (let i = 0; i < R3; i++) {
+      for (let i = 0; i < R4; i++) {
         const a = rings2[i][s * M2], bb = rings2[i + 1][s * M2];
         const d = new Vector3(bb[0] - a[0], bb[1] - a[1], bb[2] - a[2]);
         const len = d.length();
@@ -54454,7 +54480,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const rise = ctx.ground(mid.x, mid.y) - ctx.ground(b.x, b.y);
       if (Number.isFinite(rise)) plinth = Math.max(0.35, Math.min(3, rise));
     }
-    const H2 = plinth + 3 * g + (storeys - 1) * storeyH;
+    const H3 = plinth + 3 * g + (storeys - 1) * storeyH;
     const Hc = plinth + (storeys > 1 ? storeyH : 3 * g);
     const hd = fd / 2;
     const winter = S3.snow || ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER;
@@ -54463,7 +54489,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const AL = !!att.left, AR = !!att.right;
     const ex = (sx, d) => (sx < 0 ? AL : AR) ? 0 : d;
     const V3 = variant(b, S3, storeys, fw, fd, role);
-    if (S3.wall === "hut" || rt === "hut") return finish(b, hut(k, b, S3, fw, fd, H2, wallCol, roofCol), null, H2 + fd);
+    if (S3.wall === "hut" || rt === "hut") return finish(b, hut(k, b, S3, fw, fd, H3, wallCol, roofCol), null, H3 + fd);
     let sink = 2;
     const terr = ctx?.terrain || ctx?.ground;
     if (terr) {
@@ -54478,7 +54504,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     B2(k, -fw / 2 - ex(-1, 0.08), -sink, -fd - 0.08, fw / 2 + ex(1, 0.08), plinth, 0.08, V3.baseCol || baseCol, { outline: 0.03 });
     const ruined = rt === "ruin" || S3.wall === "stone";
     if (ruined) {
-      ruinWalls(k, b, fw, fd, H2, wallCol);
+      ruinWalls(k, b, fw, fd, H3, wallCol);
     } else {
       const lean = S3.crooked && !enter ? 0.04 : 0;
       k.save();
@@ -54487,14 +54513,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const groundCol = V3.groundCol || wallCol;
       if (enter) {
         const ops = hollowWalls(k, b, { fw, fd, y0: plinth, top: Hc, wallCol: groundCol });
-        if (H2 > Hc + 0.01) B2(k, -fw / 2, Hc, -fd, fw / 2, H2, 0, wallCol, { outline: 0.045 });
+        if (H3 > Hc + 0.01) B2(k, -fw / 2, Hc, -fd, fw / 2, H3, 0, wallCol, { outline: 0.045 });
         holes = holesOf(ops, doorOf(b), plinth);
-      } else if (V3.groundCol && H2 > Hc + 0.01) {
+      } else if (V3.groundCol && H3 > Hc + 0.01) {
         B2(k, -fw / 2, plinth - 0.05, -fd, fw / 2, Hc, 0, groundCol, { outline: 0.045 });
-        B2(k, -fw / 2, Hc, -fd, fw / 2, H2, 0, wallCol, { outline: 0.045 });
-      } else B2(k, -fw / 2, plinth - 0.05, -fd, fw / 2, H2, 0, wallCol, { outline: 0.045 });
-      wallDetail(k, b, S3, fw, fd, H2, plinth, storeys, storeyH, wallCol, g, holes, ex);
-      if (V3.jetty) jetty(k, S3, fw, plinth, storeys, storeyH, H2, Hc, V3.jetty, wallCol, ex);
+        B2(k, -fw / 2, Hc, -fd, fw / 2, H3, 0, wallCol, { outline: 0.045 });
+      } else B2(k, -fw / 2, plinth - 0.05, -fd, fw / 2, H3, 0, wallCol, { outline: 0.045 });
+      wallDetail(k, b, S3, fw, fd, H3, plinth, storeys, storeyH, wallCol, g, holes, ex);
+      if (V3.jetty) jetty(k, S3, fw, plinth, storeys, storeyH, H3, Hc, V3.jetty, wallCol, ex);
       k.restore();
     }
     const dd = doorAt(k, b, S3, door.x, g, wallCol, big && fw >= 5, enter ? plinth : null);
@@ -54504,15 +54530,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (let f = 0; f < storeys; f++) {
       const y = plinth + f * storeyH + 1.55 * g;
       const pane = f === 0 ? panes : null;
-      const W3 = windowSlots(b, f);
+      const W4 = windowSlots(b, f);
       const jz = f > 0 && V3.jetty ? V3.jetty : 0;
-      W3.front.forEach((x, i) => {
+      W4.front.forEach((x, i) => {
         if (f > 0 && V3.balcony && Math.abs(x - V3.balcony.x) < V3.balcony.w / 2 + 0.3 && f === 1) return;
         const flowers = (S3.flowers || V3.flowers) && (i + f + (b.v || 0)) % 2 === 0;
         windowAt(k, b, S3, x, y, winW, winH, jz, lit(b, wi++), wallCol, flowers, pane);
       });
       for (const sx of [-1, 1]) {
-        for (const z of W3[sx < 0 ? "left" : "right"]) {
+        for (const z of W4[sx < 0 ? "left" : "right"]) {
           k.save();
           k.translate(sx * fw / 2, 0, z);
           k.rotateY(sx * Math.PI / 2);
@@ -54523,21 +54549,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     if (V3.balcony) balcony(k, b, S3, V3.balcony, plinth + storeyH, wallCol, lit(b, wi++));
     if (V3.canopy && !(V3.balcony && Math.abs(V3.balcony.x - door.x) < (V3.balcony.w + dd.dw + 0.9) / 2)) canopy2(k, door, dd, V3.canopy, roofCol);
-    let top = H2;
+    let top = H3;
     if (!ruined) {
-      if (rt === "flat") top += flatRoof(k, b, S3, fw, fd, H2, wallCol, roofCol, ex);
+      if (rt === "flat") top += flatRoof(k, b, S3, fw, fd, H3, wallCol, roofCol, ex);
       else if (rt === "dome" || rt === "shell") {
-        B2(k, -fw / 2 - 0.15, H2 - 0.05, -fd - 0.15, fw / 2 + 0.15, H2 + 0.18, 0.15, shade2(wallCol, -0.12), { outline: 0.03 });
+        B2(k, -fw / 2 - 0.15, H3 - 0.05, -fd - 0.15, fw / 2 + 0.15, H3 + 0.18, 0.15, shade2(wallCol, -0.12), { outline: 0.03 });
         const r = Math.min(fw, fd) / 2 * 0.98;
         const kind = rt === "shell" ? "shell" : b.style === "candy" ? "onion" : "dome";
-        top += 0.18 + domeRoof(k, 0, -hd, H2 + 0.15, r, rt === "shell" ? 0.8 : 0.9, roofCol, kind);
+        top += 0.18 + domeRoof(k, 0, -hd, H3 + 0.15, r, rt === "shell" ? 0.8 : 0.9, roofCol, kind);
         if (fw > fd * 1.4) {
-          B2(k, -fw / 2, H2 + 0.1, -fd, fw / 2, H2 + 0.2, 0, roofCol);
+          B2(k, -fw / 2, H3 + 0.1, -fd, fw / 2, H3 + 0.2, 0, roofCol);
         }
         if (S3.icing) {
           for (let i = 0; i < 14; i++) {
             const a = i / 14 * Math.PI * 2;
-            k.add(new IcosahedronGeometry(0.2, 1), { at: [Math.cos(a) * r * 0.98, H2 + 0.2, -hd + Math.sin(a) * r * 0.98], color: "#ffffff" });
+            k.add(new IcosahedronGeometry(0.2, 1), { at: [Math.cos(a) * r * 0.98, H3 + 0.2, -hd + Math.sin(a) * r * 0.98], color: "#ffffff" });
           }
           k.add(new IcosahedronGeometry(0.22, 1), { at: [0, top + 0.1, -hd], color: "#e74c3c", outline: 0.02 });
           k.add(cyl(0.02, 0.02, 0.3, 4), { at: [0, top + 0.25, -hd], rot: [0, 0, 0.4], color: "#4e6b2a" });
@@ -54548,27 +54574,27 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
         if (rt === "shell") k.add(cone(0.18, 0.6, 7), { at: [0, top - 0.05, -hd], color: shade2(roofCol, 0.2), outline: 0.02 });
       } else if (rt === "pagoda") {
-        top += pagodaRoofs(k, b, S3, fw, fd, H2, storeys, storeyH, plinth, wallCol, roofCol);
+        top += pagodaRoofs(k, b, S3, fw, fd, H3, storeys, storeyH, plinth, wallCol, roofCol);
       } else {
         const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S3.crooked ? 0.62 : 0.45) * V3.pitch));
-        top += gableRoof(k, S3, b, fw / 2, hd, H2, rise, 0.4 * g, roofCol, wallCol, winter, g, ex);
-        if (V3.dormers) dormers(k, b, S3, fw, hd, H2, rise, 0.4 * g, V3.dormers, roofCol, wallCol, winter, lit(b, 30));
+        top += gableRoof(k, S3, b, fw / 2, hd, H3, rise, 0.4 * g, roofCol, wallCol, winter, g, ex);
+        if (V3.dormers) dormers(k, b, S3, fw, hd, H3, rise, 0.4 * g, V3.dormers, roofCol, wallCol, winter, lit(b, 30));
         if ((b.style === "village" || b.style === "snow" || b.style === "town" || b.style === "giant" || b.style === "port" || b.style === "city") && fw >= 4 && V3.chimney) {
           const cxh = V3.chimney * (fw / 2 - 0.9 * g), czh = -hd - hd * 0.35;
-          const yTop = H2 + rise * (1 - 0.35) + 0.9 * g;
-          B2(k, cxh - 0.28 * g, H2, czh - 0.28 * g, cxh + 0.28 * g, yTop, czh + 0.28 * g, "#8d6e63", { outline: 0.03 });
+          const yTop = H3 + rise * (1 - 0.35) + 0.9 * g;
+          B2(k, cxh - 0.28 * g, H3, czh - 0.28 * g, cxh + 0.28 * g, yTop, czh + 0.28 * g, "#8d6e63", { outline: 0.03 });
           B2(k, cxh - 0.36 * g, yTop, czh - 0.36 * g, cxh + 0.36 * g, yTop + 0.16, czh + 0.36 * g, "#5d4037");
           if (winter) B2(k, cxh - 0.36 * g, yTop + 0.16, czh - 0.36 * g, cxh + 0.36 * g, yTop + 0.28, czh + 0.36 * g, "#ffffff");
         }
         if (b.style === "noble" && big) {
-          B2(k, -0.7, H2 + rise - 0.2, -hd - 0.7, 0.7, H2 + rise + 1.6, -hd + 0.7, wallCol, { outline: 0.03 });
-          k.add(cone(1.05, 1.5, 4), { at: [0, H2 + rise + 1.6, -hd], rot: [0, Math.PI / 4, 0], color: roofCol, outline: 0.03 });
-          top = H2 + rise + 3.1;
+          B2(k, -0.7, H3 + rise - 0.2, -hd - 0.7, 0.7, H3 + rise + 1.6, -hd + 0.7, wallCol, { outline: 0.03 });
+          k.add(cone(1.05, 1.5, 4), { at: [0, H3 + rise + 1.6, -hd], rot: [0, Math.PI / 4, 0], color: roofCol, outline: 0.03 });
+          top = H3 + rise + 3.1;
         }
       }
     }
-    styleExtras(k, b, S3, fw, fd, H2, door, dd, wallCol, roofCol, winter, ex);
-    const grp = finish(b, k, { door, dd, H: H2, S: S3, rt, storeys, storeyH, plinth }, top);
+    styleExtras(k, b, S3, fw, fd, H3, door, dd, wallCol, roofCol, winter, ex);
+    const grp = finish(b, k, { door, dd, H: H3, S: S3, rt, storeys, storeyH, plinth }, top);
     if (enter) walkIn(grp, b, S3, { fw, fd, y0: plinth, ceil: Hc - plinth, panes });
     return grp;
   }
@@ -54651,7 +54677,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     grp.userData.height = top;
     return grp;
   }
-  function wallDetail(k, b, S3, fw, fd, H2, plinth, storeys, storeyH, wallCol, g, holes = null, ex = (sx, d) => d) {
+  function wallDetail(k, b, S3, fw, fd, H3, plinth, storeys, storeyH, wallCol, g, holes = null, ex = (sx, d) => d) {
     const free = (sx) => ex(sx, 1) > 0;
     const xl = (d) => -fw / 2 - ex(-1, d), xr = (d) => fw / 2 + ex(1, d);
     const beam = S3.beam || shade2(wallCol, -0.5);
@@ -54679,23 +54705,23 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const SB2 = (sx, xa, y0, za, xb, y1, zb, col, o) => {
       for (const [p, q2] of segs(za, zb, y0, y1, HS[sx])) B2(k, xa, y0, p, xb, y1, q2, col, o);
     };
-    const crosses = (x, y0, y1, pad = 0.12) => HF.some((o) => x > o.a0 - pad && x < o.a1 + pad && y1 > o.y0 && y0 < o.y1);
-    const crossesSide = (sx, z, y0, y1, pad = 0.12) => HS[sx].some((o) => z > o.a0 - pad && z < o.a1 + pad && y1 > o.y0 && y0 < o.y1);
+    const crosses = (x, y0, y1, pad2 = 0.12) => HF.some((o) => x > o.a0 - pad2 && x < o.a1 + pad2 && y1 > o.y0 && y0 < o.y1);
+    const crossesSide = (sx, z, y0, y1, pad2 = 0.12) => HS[sx].some((o) => z > o.a0 - pad2 && z < o.a1 + pad2 && y1 > o.y0 && y0 < o.y1);
     switch (S3.wall) {
       case "timber": {
         for (const sx of [-1, 1]) for (const sz of [0, -fd]) {
           const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * ex(sx, 0.12);
-          B2(k, Math.min(inner, outer), plinth, sz - 0.12, Math.max(inner, outer), H2, sz + 0.12, beam);
+          B2(k, Math.min(inner, outer), plinth, sz - 0.12, Math.max(inner, outer), H3, sz + 0.12, beam);
         }
         for (let f = 0; f <= storeys; f++) {
-          const y = f === storeys ? H2 - 0.2 : plinth + f * storeyH;
+          const y = f === storeys ? H3 - 0.2 : plinth + f * storeyH;
           FB(xl(0.02), y, -0.02, xr(0.02), y + 0.2, 0.07, beam);
           for (const sx of [-1, 1]) if (free(sx)) SB2(sx, sx * fw / 2 - 0.07, y, -fd, sx * fw / 2 + 0.02 * sx, y + 0.2, 0, beam);
         }
         if (fw >= 4) {
           for (const sx of [-1, 1]) {
             const x0 = sx * (fw / 2 - 0.1), x1 = sx * (fw / 2 - 1 * g);
-            const y0 = plinth + 0.2, y1 = plinth + Math.min(storeyH, H2 - plinth) - 0.1;
+            const y0 = plinth + 0.2, y1 = plinth + Math.min(storeyH, H3 - plinth) - 0.1;
             if (crosses(x0, y0, y1, 0.05) || crosses(x1, y0, y1, 0.05) || crosses((x0 + x1) / 2, y0, y1, 0.05)) continue;
             const len = Math.hypot(x1 - x0, y1 - y0);
             k.add(box(0.13, len, 0.06), { at: [x0, y0, 0.03], rot: [0, 0, -Math.atan2(x1 - x0, y1 - y0)], color: beam });
@@ -54704,7 +54730,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         break;
       }
       case "log": {
-        const n = Math.floor((H2 - plinth) / 0.34);
+        const n = Math.floor((H3 - plinth) / 0.34);
         for (let i = 0; i < n; i++) {
           const y = plinth + i * 0.34 + 0.17;
           const c = i % 2 ? shade2(wallCol, -0.1) : wallCol;
@@ -54718,14 +54744,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       case "brick": {
         const mortar = shade2(wallCol, -0.25);
-        for (let y = plinth + 0.42; y < H2 - 0.1; y += 0.42) {
+        for (let y = plinth + 0.42; y < H3 - 0.1; y += 0.42) {
           FB(xl(0.01), y, -0.01, xr(0.01), y + 0.025, 0.012, mortar);
           for (const sx of [-1, 1]) if (free(sx)) SB2(sx, sx * (fw / 2 + 6e-3) - 6e-3, y, -fd, sx * (fw / 2 + 6e-3) + 6e-3, y + 0.025, 0, mortar);
         }
         for (let f = 1; f < storeys; f++) FB(xl(0.06), plinth + f * storeyH - 0.2, -0.06, xr(0.06), plinth + f * storeyH, 0.1, S3.trim || shade2(wallCol, 0.3));
         for (const sx of [-1, 1]) {
           const inner = sx * fw / 2 - sx * 0.16, outer = sx * fw / 2 + sx * ex(sx, 0.16);
-          B2(k, Math.min(inner, outer), plinth, -0.06, Math.max(inner, outer), H2, 0.08, shade2(wallCol, -0.12));
+          B2(k, Math.min(inner, outer), plinth, -0.06, Math.max(inner, outer), H3, 0.08, shade2(wallCol, -0.12));
         }
         break;
       }
@@ -54734,32 +54760,32 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (S3.quoins || b.style === "marine" || b.style === "noble") {
           for (const sx of [-1, 1]) {
             if (!free(sx)) continue;
-            for (let y = plinth, i = 0; y < H2 - 0.3; y += 0.45, i++) {
+            for (let y = plinth, i = 0; y < H3 - 0.3; y += 0.45, i++) {
               const w = i % 2 ? 0.35 : 0.55;
               B2(k, sx * fw / 2 - (sx > 0 ? w : 0.05), y, -0.05, sx * fw / 2 + (sx > 0 ? 0.05 : w), y + 0.38, 0.05, shade2(wallCol, -0.14));
             }
           }
         }
         for (let f = 1; f < storeys; f++) FB(xl(0.05), plinth + f * storeyH - 0.15, -0.05, xr(0.05), plinth + f * storeyH, 0.08, qc);
-        if (S3.band) FB(xl(0.04), H2 - 0.7, -0.04, xr(0.04), H2 - 0.2, 0.08, qc);
+        if (S3.band) FB(xl(0.04), H3 - 0.7, -0.04, xr(0.04), H3 - 0.2, 0.08, qc);
         break;
       }
       case "post": {
         const n = Math.max(2, Math.round(fw / 1.3));
         for (let i = 0; i <= n; i++) {
           const x = -fw / 2 + i * fw / n;
-          if (crosses(x, plinth, H2, 0.1)) continue;
-          B2(k, x - 0.08, plinth, -0.02, x + 0.08, H2, 0.08, S3.beam);
+          if (crosses(x, plinth, H3, 0.1)) continue;
+          B2(k, x - 0.08, plinth, -0.02, x + 0.08, H3, 0.08, S3.beam);
         }
         for (const sx of [-1, 1]) for (let i = 0; i <= 2; i++) {
-          if (!free(sx) || crossesSide(sx, -i * fd / 2, plinth, H2, 0.1)) continue;
-          B2(k, sx * fw / 2 - 0.08, plinth, -i * fd / 2 - 0.08, sx * fw / 2 + 0.08, H2, -i * fd / 2 + 0.08, S3.beam);
+          if (!free(sx) || crossesSide(sx, -i * fd / 2, plinth, H3, 0.1)) continue;
+          B2(k, sx * fw / 2 - 0.08, plinth, -i * fd / 2 - 0.08, sx * fw / 2 + 0.08, H3, -i * fd / 2 + 0.08, S3.beam);
         }
         for (let f = 0; f < storeys; f++) {
           const y = plinth + f * storeyH + storeyH * 0.45;
           FB(xl(0.02), y, -0.02, xr(0.02), y + 0.14, 0.1, S3.beam);
         }
-        B2(k, xl(0.02), H2 - 0.25, -0.02, xr(0.02), H2, 0.1, S3.beam);
+        B2(k, xl(0.02), H3 - 0.25, -0.02, xr(0.02), H3, 0.1, S3.beam);
         break;
       }
       case "column": {
@@ -54767,14 +54793,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         for (let i = 0; i <= n; i++) {
           const x = -fw / 2 + i * fw / n;
           if (holes && crosses(x, plinth, plinth + 1.9, 0.3) && HF[0] && x > HF[0].a0 - 0.3 && x < HF[0].a1 + 0.3) continue;
-          k.add(cyl(0.14, 0.16, H2 - plinth, 8), { at: [x, plinth, 0.25], color: "#b03a2e", outline: 0.02 });
+          k.add(cyl(0.14, 0.16, H3 - plinth, 8), { at: [x, plinth, 0.25], color: "#b03a2e", outline: 0.02 });
         }
-        B2(k, xl(0.1), H2 - 0.45, 0.05, xr(0.1), H2 - 0.1, 0.42, "#b03a2e");
-        B2(k, xl(0.1), H2 - 0.55, 0.1, xr(0.1), H2 - 0.45, 0.4, "#d4ac0d");
+        B2(k, xl(0.1), H3 - 0.45, 0.05, xr(0.1), H3 - 0.1, 0.42, "#b03a2e");
+        B2(k, xl(0.1), H3 - 0.55, 0.1, xr(0.1), H3 - 0.45, 0.4, "#d4ac0d");
         break;
       }
       case "adobe": {
-        if (S3.vigas) for (let x = -fw / 2 + 0.5; x < fw / 2 - 0.3; x += 0.9) k.add(cyl(0.08, 0.08, 0.45, 5), { at: [x, H2 - 0.45, -0.02], rot: [Math.PI / 2, 0, 0], color: "#6d4c33" });
+        if (S3.vigas) for (let x = -fw / 2 + 0.5; x < fw / 2 - 0.3; x += 0.9) k.add(cyl(0.08, 0.08, 0.45, 5), { at: [x, H3 - 0.45, -0.02], rot: [Math.PI / 2, 0, 0], color: "#6d4c33" });
         FB(xl(0.05), plinth, -0.05, xr(0.05), plinth + 0.25, 0.06, shade2(wallCol, -0.1));
         break;
       }
@@ -54784,66 +54810,66 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
     if (S3.cornice) {
-      B2(k, xl(0.18), H2 - 0.3, -fd - 0.18, xr(0.18), H2 - 0.1, 0.18, S3.trim || shade2(wallCol, 0.25), { outline: 0.02 });
+      B2(k, xl(0.18), H3 - 0.3, -fd - 0.18, xr(0.18), H3 - 0.1, 0.18, S3.trim || shade2(wallCol, 0.25), { outline: 0.02 });
     }
   }
   function holesOf(ops, d, y0) {
-    const pad = 0.03;
-    const win = (w) => ({ a0: w.u - w.w / 2 - pad, a1: w.u + w.w / 2 + pad, y0: w.y - w.h / 2 - pad, y1: w.y + w.h / 2 + (w.kind === "gothic" ? w.w * 0.18 : 0) + pad });
+    const pad2 = 0.03;
+    const win = (w) => ({ a0: w.u - w.w / 2 - pad2, a1: w.u + w.w / 2 + pad2, y0: w.y - w.h / 2 - pad2, y1: w.y + w.h / 2 + (w.kind === "gothic" ? w.w * 0.18 : 0) + pad2 });
     return {
-      front: [{ a0: d.x - d.dw / 2 - pad, a1: d.x + d.dw / 2 + pad, y0: -10, y1: y0 + d.dh + pad }, ...ops.front.map(win)],
+      front: [{ a0: d.x - d.dw / 2 - pad2, a1: d.x + d.dw / 2 + pad2, y0: -10, y1: y0 + d.dh + pad2 }, ...ops.front.map(win)],
       left: ops.left.map(win),
       right: ops.right.map(win)
     };
   }
-  function ruinWalls(k, b, fw, fd, H2, wallCol) {
+  function ruinWalls(k, b, fw, fd, H3, wallCol) {
     const stone = C(wallCol);
-    const R3 = (i) => hash2(b.x, b.y, i);
+    const R4 = (i) => hash2(b.x, b.y, i);
     const seg = Math.max(2, Math.round(fw / 1.2));
     for (let i = 0; i < seg; i++) {
       const x0 = -fw / 2 + i * fw / seg, x1 = x0 + fw / seg;
-      const h2 = 0.8 + R3(i) * (H2 - 0.8) * 0.9;
+      const h2 = 0.8 + R4(i) * (H3 - 0.8) * 0.9;
       B2(k, x0, -1, -0.45, x1 + 0.01, h2, 0, i % 2 ? shade2(stone, -0.08) : stone, { outline: 0.03 });
     }
     for (const sx of [-1, 1]) {
       const sseg = Math.max(2, Math.round(fd / 1.2));
       for (let i = 0; i < sseg; i++) {
         const z0 = -i * fd / sseg, z1 = z0 - fd / sseg;
-        const h2 = 0.5 + R3(i + sx * 10) * (H2 - 0.5) * 0.8;
+        const h2 = 0.5 + R4(i + sx * 10) * (H3 - 0.5) * 0.8;
         B2(k, sx * fw / 2 - 0.45 * (sx > 0 ? 1 : 0), -1, z1, sx * fw / 2 + 0.45 * (sx > 0 ? 0 : 1), h2, z0, stone, { outline: 0.03 });
       }
     }
     for (let i = 0; i < 6; i++) {
-      const g = new IcosahedronGeometry(0.25 + R3(i + 40) * 0.25, 0);
-      k.add(g, { at: [(R3(i + 20) - 0.5) * fw, 0.1, -R3(i + 30) * fd], flat: true, color: shade2(stone, -0.1), outline: 0.02 });
+      const g = new IcosahedronGeometry(0.25 + R4(i + 40) * 0.25, 0);
+      k.add(g, { at: [(R4(i + 20) - 0.5) * fw, 0.1, -R4(i + 30) * fd], flat: true, color: shade2(stone, -0.1), outline: 0.02 });
     }
   }
-  function flatRoof(k, b, S3, fw, fd, H2, wallCol, roofCol, ex = (sx, d) => d) {
+  function flatRoof(k, b, S3, fw, fd, H3, wallCol, roofCol, ex = (sx, d) => d) {
     const hd = fd / 2;
     const xl = -fw / 2 - ex(-1, 0.12), xr = fw / 2 + ex(1, 0.12);
-    B2(k, xl, H2 - 0.05, -fd - 0.12, xr, H2 + 0.15, 0.12, roofCol, { outline: 0.03 });
+    B2(k, xl, H3 - 0.05, -fd - 0.12, xr, H3 + 0.15, 0.12, roofCol, { outline: 0.03 });
     const pc = b.style === "marine" ? "#f5f6fa" : shade2(wallCol, -0.06);
     const ph = 0.45;
-    B2(k, xl, H2 + 0.15, -0.1, xr, H2 + ph, 0.12, pc);
-    B2(k, xl, H2 + 0.15, -fd - 0.12, xr, H2 + ph, -fd + 0.1, pc);
-    for (const sx of [-1, 1]) if (ex(sx, 1)) B2(k, sx * fw / 2 - 0.12, H2 + 0.15, -fd, sx * fw / 2 + 0.12, H2 + ph, 0, pc);
+    B2(k, xl, H3 + 0.15, -0.1, xr, H3 + ph, 0.12, pc);
+    B2(k, xl, H3 + 0.15, -fd - 0.12, xr, H3 + ph, -fd + 0.1, pc);
+    for (const sx of [-1, 1]) if (ex(sx, 1)) B2(k, sx * fw / 2 - 0.12, H3 + 0.15, -fd, sx * fw / 2 + 0.12, H3 + ph, 0, pc);
     if (b.style === "desert") {
-      for (let x = -fw / 2 + 0.3; x < fw / 2 - 0.15; x += 0.8) k.add(new SphereGeometry(0.16, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2), { at: [x, H2 + ph, 0.01], color: pc });
+      for (let x = -fw / 2 + 0.3; x < fw / 2 - 0.15; x += 0.8) k.add(new SphereGeometry(0.16, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2), { at: [x, H3 + ph, 0.01], color: pc });
       if (fw >= 4 && fd >= 3) {
         const r = Math.min(fw, fd) * 0.32;
-        B2(k, -r - 0.1, H2 + 0.15, -hd - r - 0.1, r + 0.1, H2 + 0.55, -hd + r + 0.1, shade2(wallCol, 0.05));
-        domeRoof(k, 0, -hd, H2 + 0.55, r, 0.95, shade2(wallCol, 0.18), "dome");
-        k.add(cyl(0.02, 0.05, 0.5, 4), { at: [0, H2 + 0.55 + r * 0.95, -hd], color: "#d4ac0d" });
+        B2(k, -r - 0.1, H3 + 0.15, -hd - r - 0.1, r + 0.1, H3 + 0.55, -hd + r + 0.1, shade2(wallCol, 0.05));
+        domeRoof(k, 0, -hd, H3 + 0.55, r, 0.95, shade2(wallCol, 0.18), "dome");
+        k.add(cyl(0.02, 0.05, 0.5, 4), { at: [0, H3 + 0.55 + r * 0.95, -hd], color: "#d4ac0d" });
         return 0.55 + r * 0.95 + 0.5;
       }
     }
     if (b.style === "marine" || b.role === "marine_base") {
       const fx = fw / 2 - 0.6, fz = -fd + 0.6;
-      k.add(cyl(0.04, 0.05, 3, 5), { at: [fx, H2 + 0.15, fz], color: "#b0bec5" });
+      k.add(cyl(0.04, 0.05, 3, 5), { at: [fx, H3 + 0.15, fz], color: "#b0bec5" });
     }
     return ph;
   }
-  function pagodaRoofs(k, b, S3, fw, fd, H2, storeys, storeyH, plinth, wallCol, roofCol) {
+  function pagodaRoofs(k, b, S3, fw, fd, H3, storeys, storeyH, plinth, wallCol, roofCol) {
     const hd = fd / 2;
     const chinese = b.style === "chinese";
     const ridgeCol = chinese ? "#d4ac0d" : shade2(roofCol, -0.35);
@@ -54852,25 +54878,25 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       curvedRoof(k, 0, -hd, y, fw, fd, 0.55, 0.55, roofCol, { upturn: 0.22, th: 0.14, ridgeCol });
     }
     const rise = Math.min(2.8, Math.max(1.3, fd * 0.5));
-    curvedRoof(k, 0, -hd, H2 - 0.1, fw, fd, rise, 0.75, roofCol, { upturn: chinese ? 0.5 : 0.32, ridgeCol, finCol: chinese ? "#d4ac0d" : "#2b2b2b" });
+    curvedRoof(k, 0, -hd, H3 - 0.1, fw, fd, rise, 0.75, roofCol, { upturn: chinese ? 0.5 : 0.32, ridgeCol, finCol: chinese ? "#d4ac0d" : "#2b2b2b" });
     let top = rise;
     if ((b.role === "palace" || b.role === "hall" && fw >= 7) && fw >= 6) {
-      const tw = fw * 0.5, td = fd * 0.55, y0 = H2 - 0.1 + rise * 0.55, th = 2.6;
+      const tw = fw * 0.5, td = fd * 0.55, y0 = H3 - 0.1 + rise * 0.55, th = 2.6;
       B2(k, -tw / 2, y0, -hd - td / 2, tw / 2, y0 + th, -hd + td / 2, wallCol, { outline: 0.04 });
       for (let i = 0; i <= 3; i++) B2(k, -tw / 2 + i * tw / 3 - 0.07, y0, -hd + td / 2 - 0.02, -tw / 2 + i * tw / 3 + 0.07, y0 + th, -hd + td / 2 + 0.06, S3.beam || "#3e2723");
       for (let i = 0; i < 3; i++) windowAt(k, b, { win: "shoji", wall: "post" }, -tw / 3 + i * tw / 3, y0 + th * 0.55, 0.7, 0.8, -hd + td / 2 + 0.05, lit(b, i + 20), wallCol, false);
       const r2 = Math.min(2.2, td * 0.55);
       curvedRoof(k, 0, -hd, y0 + th - 0.1, tw, td, r2, 0.6, roofCol, { upturn: 0.35, ridgeCol });
-      top = y0 + th + r2 - H2;
+      top = y0 + th + r2 - H3;
       if (b.role === "palace") {
         for (const sx of [-1, 1]) k.add(cone(0.14, 0.5, 5), { at: [sx * (tw / 2 - td / 2 * 0.85 + 0.1), y0 + th + r2 - 0.1, -hd], rot: [0, 0, sx * 0.4], color: "#f1c40f", outline: 0.02 });
       }
     }
     return top;
   }
-  function hut(k, b, S3, fw, fd, H2, wallCol, roofCol) {
+  function hut(k, b, S3, fw, fd, H3, wallCol, roofCol) {
     const rx = fw / 2, rz = fd / 2;
-    const h2 = Math.max(2.4, Math.min(H2 * 0.7, 2.6 + (b.hgt || 2) * 0.5));
+    const h2 = Math.max(2.4, Math.min(H3 * 0.7, 2.6 + (b.hgt || 2) * 0.5));
     k.save();
     k.translate(0, 0, -rz);
     k.scale(1, 1, rz / rx);
@@ -54878,17 +54904,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (let y = 0.5; y < h2 - 0.2; y += 0.6) k.add(cyl(rx + 0.03, rx + 0.03, 0.08, 12, true), { at: [0, y, 0], color: shade2(wallCol, -0.25) });
     const rr = rx + 0.7, rh = rx * 1.15 + 0.8;
     const dark = shade2(roofCol, -0.18);
-    let y0 = h2 - 0.15, R3 = rr, Hh = rh;
+    let y0 = h2 - 0.15, R4 = rr, Hh = rh;
     for (let i = 0; i < 3; i++) {
-      const roof = cone(R3, Hh, 14, false, 1);
+      const roof = cone(R4, Hh, 14, false, 1);
       const P4 = roof.attributes.position;
       for (let j = 0; j < P4.count; j++) if (Math.abs(P4.getY(j)) < 1e-4 && j % 2) P4.setY(j, -0.16);
       roof.computeVertexNormals();
       k.add(roof, { at: [0, y0, 0], color: i % 2 ? dark : roofCol, outline: i ? 0.03 : 0.05 });
       const up = Hh * 0.32;
       y0 += up;
-      R3 *= 0.7;
-      Hh = R3 * (rh / rr);
+      R4 *= 0.7;
+      Hh = R4 * (rh / rr);
     }
     k.add(cyl(0.05, 0.1, 0.7, 5), { at: [0, h2 - 0.15 + rh - 0.1, 0], color: "#6d4c33" });
     k.restore();
@@ -54910,31 +54936,31 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return k;
   }
   function variant(b, S3, storeys, fw, fd, role) {
-    const R3 = (i) => hash2(b.x, b.y, i + 0.71);
+    const R4 = (i) => hash2(b.x, b.y, i + 0.71);
     const house = role === "house";
-    const V3 = { pitch: 0.82 + R3(1) * 0.4, chimney: R3(2) < 0.8 ? R3(3) < 0.5 ? -1 : 1 : 0 };
-    if (house && storeys >= 2 && (S3.wall === "timber" || S3.wall === "log") && R3(4) < 0.55) V3.jetty = 0.32;
-    if (house && storeys >= 2 && ["plaster", "brick", "adobe", "smooth"].includes(S3.wall) && fw >= 4.5 && R3(5) < 0.45) {
-      const w = Math.min(fw - 1.4, 1.5 + R3(6) * 1.2);
-      V3.balcony = { x: (R3(7) - 0.5) * Math.max(0, fw - w - 1.4), w, d: 0.72 };
+    const V3 = { pitch: 0.82 + R4(1) * 0.4, chimney: R4(2) < 0.8 ? R4(3) < 0.5 ? -1 : 1 : 0 };
+    if (house && storeys >= 2 && (S3.wall === "timber" || S3.wall === "log") && R4(4) < 0.55) V3.jetty = 0.32;
+    if (house && storeys >= 2 && ["plaster", "brick", "adobe", "smooth"].includes(S3.wall) && fw >= 4.5 && R4(5) < 0.45) {
+      const w = Math.min(fw - 1.4, 1.5 + R4(6) * 1.2);
+      V3.balcony = { x: (R4(7) - 0.5) * Math.max(0, fw - w - 1.4), w, d: 0.72 };
     }
-    if (house && R3(8) < 0.55 && S3.door !== "noren" && S3.door !== "arch" && S3.wall !== "hut") V3.canopy = { d: 0.62 + R3(9) * 0.25, kind: R3(10) < 0.5 ? "gable" : "lean" };
-    if (fw >= 5 && fd >= 4 && R3(11) < 0.4) V3.dormers = fw >= 7.5 ? 2 : 1;
-    if (R3(12) < 0.3) V3.flowers = true;
-    if (storeys >= 2 && (S3.wall === "timber" || S3.wall === "plaster") && R3(13) < 0.35) V3.groundCol = R3(14) < 0.5 ? "#b3aa9c" : "#a0634a";
+    if (house && R4(8) < 0.55 && S3.door !== "noren" && S3.door !== "arch" && S3.wall !== "hut") V3.canopy = { d: 0.62 + R4(9) * 0.25, kind: R4(10) < 0.5 ? "gable" : "lean" };
+    if (fw >= 5 && fd >= 4 && R4(11) < 0.4) V3.dormers = fw >= 7.5 ? 2 : 1;
+    if (R4(12) < 0.3) V3.flowers = true;
+    if (storeys >= 2 && (S3.wall === "timber" || S3.wall === "plaster") && R4(13) < 0.35) V3.groundCol = R4(14) < 0.5 ? "#b3aa9c" : "#a0634a";
     return V3;
   }
-  function jetty(k, S3, fw, plinth, storeys, storeyH, H2, Hc, j, wallCol, ex) {
+  function jetty(k, S3, fw, plinth, storeys, storeyH, H3, Hc, j, wallCol, ex) {
     const beam = S3.beam || shade2(wallCol, -0.5);
-    B2(k, -fw / 2, Hc, 0, fw / 2, H2, j, wallCol, { outline: 0.04 });
+    B2(k, -fw / 2, Hc, 0, fw / 2, H3, j, wallCol, { outline: 0.04 });
     B2(k, -fw / 2 - ex(-1, 0.03), Hc - 0.2, -0.02, fw / 2 + ex(1, 0.03), Hc + 0.04, j + 0.07, beam);
     for (let x = -fw / 2 + 0.35; x < fw / 2 - 0.2; x += 1.15) k.add(box(0.1, 0.5, 0.1), { at: [x, Hc - 0.62, 0.06], rot: [0.55, 0, 0], color: beam });
     for (const sx of [-1, 1]) {
       const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * ex(sx, 0.02);
-      B2(k, Math.min(inner, outer), Hc, j - 0.1, Math.max(inner, outer), H2, j + 0.04, beam);
+      B2(k, Math.min(inner, outer), Hc, j - 0.1, Math.max(inner, outer), H3, j + 0.04, beam);
     }
     for (let f = 1; f <= storeys; f++) {
-      const y = f === storeys ? H2 - 0.2 : plinth + f * storeyH;
+      const y = f === storeys ? H3 - 0.2 : plinth + f * storeyH;
       if (y <= Hc + 0.05) continue;
       B2(k, -fw / 2, y, j - 0.02, fw / 2, y + 0.18, j + 0.05, beam);
     }
@@ -54973,9 +54999,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     for (const sx of [-1, 1]) k.add(box(0.07, 0.42, 0.07), { at: [door.x + sx * (w / 2 - 0.12), y - 0.46, 0.04], rot: [0.75, 0, 0], color: wood });
   }
-  function dormers(k, b, S3, fw, hd, H2, rise, ov, n, roofCol, wallCol, snowy, litOn) {
+  function dormers(k, b, S3, fw, hd, H3, rise, ov, n, roofCol, wallCol, snowy, litOn) {
     const t = 0.3;
-    const zf = -hd * t, yb = H2 + rise * t - 0.12, dw = 1, dh = 0.92, dep = Math.min(1.35, hd * 0.9), rr = 0.4;
+    const zf = -hd * t, yb = H3 + rise * t - 0.12, dw = 1, dh = 0.92, dep = Math.min(1.35, hd * 0.9), rr = 0.4;
     if (rise * (1 - t) < dh + rr - 0.12 + 0.15) return;
     for (let i = 0; i < n; i++) {
       const x = n === 1 ? 0 : (i ? 1 : -1) * fw * 0.24;
@@ -54987,16 +55013,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.restore();
     }
   }
-  function awningOf(b, S3, fw, H2, dd) {
+  function awningOf(b, S3, fw, H3, dd) {
     const role = b.role || "house";
     if (!["shop", "market", "restaurant", "cafe", "weapons", "bar", "tavern", "inn"].includes(role) || S3.door === "noren" || fw < 3.5) return null;
-    if (S3.lanterns || H2 - dd.top < 1.3) return null;
+    if (S3.lanterns || H3 - dd.top < 1.3) return null;
     return { top: dd.top + 0.8 };
   }
-  function styleExtras(k, b, S3, fw, fd, H2, door, dd, wallCol, roofCol, winter, ex = (sx, d) => d) {
+  function styleExtras(k, b, S3, fw, fd, H3, door, dd, wallCol, roofCol, winter, ex = (sx, d) => d) {
     const role = b.role || "house";
     const clearOfDoor = (x0, x1) => x1 < door.x - dd.dw / 2 - 0.25 || x0 > door.x + dd.dw / 2 + 0.25;
-    if (awningOf(b, S3, fw, H2, dd)) {
+    if (awningOf(b, S3, fw, H3, dd)) {
       const cols = ["#e74c3c", "#3498db", "#27ae60", "#f39c12", "#9b59b6", "#16a085"];
       const c = cols[(b.v || 0) % cols.length];
       const aw = Math.min(fw - 0.6, dd.dw + 2.4), ay = dd.top + 0.55;
@@ -55037,9 +55063,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.restore();
     }
     if (b.role === "marine_base" || b.style === "marine" && fw >= 6) {
-      B2(k, -fw / 2 - ex(-1, 0.05), H2 - 1.15, 0, fw / 2 + ex(1, 0.05), H2 - 0.35, 0.12, "#f5f6fa", { outline: 0.02 });
-      B2(k, -fw / 2 - ex(-1, 0.06), H2 - 1.2, 0, fw / 2 + ex(1, 0.06), H2 - 1.1, 0.13, "#1b4f72");
-      B2(k, -fw / 2 - ex(-1, 0.06), H2 - 0.4, 0, fw / 2 + ex(1, 0.06), H2 - 0.3, 0.13, "#1b4f72");
+      B2(k, -fw / 2 - ex(-1, 0.05), H3 - 1.15, 0, fw / 2 + ex(1, 0.05), H3 - 0.35, 0.12, "#f5f6fa", { outline: 0.02 });
+      B2(k, -fw / 2 - ex(-1, 0.06), H3 - 1.2, 0, fw / 2 + ex(1, 0.06), H3 - 1.1, 0.13, "#1b4f72");
+      B2(k, -fw / 2 - ex(-1, 0.06), H3 - 0.4, 0, fw / 2 + ex(1, 0.06), H3 - 0.3, 0.13, "#1b4f72");
     }
     if (b.style === "spooky") {
       if (clearOfDoor(-fw / 2 + 0.3, -fw / 2 + 1.4)) B2(k, -fw / 2 + 0.3, 1.4, 0.06, -fw / 2 + 1.4, 1.52, 0.1, "#5d4037", { rot: [0, 0, 0.3] });
@@ -55121,7 +55147,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const rise = ctx.ground(mid.x, mid.y) - ctx.ground(b.x, b.y);
       if (Number.isFinite(rise)) plinth = Math.max(0.35, Math.min(3, rise));
     }
-    const H2 = plinth + 3 * g + (storeys - 1) * storeyH;
+    const H3 = plinth + 3 * g + (storeys - 1) * storeyH;
     const Hc = plinth + (storeys > 1 ? storeyH : 3 * g);
     const hd = fd / 2;
     const winter = S3.snow || ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER;
@@ -55131,7 +55157,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const x0 = -fw / 2 + IN2, x1 = fw / 2 - IN2, z0 = -fd + IN2, z1 = -IN2;
     if (S3.wall === "hut" || rt === "hut") {
       const rx = fw / 2, rz = fd / 2;
-      const h2 = Math.max(2.4, Math.min(H2 * 0.7, 2.6 + (b.hgt || 2) * 0.5));
+      const h2 = Math.max(2.4, Math.min(H3 * 0.7, 2.6 + (b.hgt || 2) * 0.5));
       k.save();
       k.translate(0, 0, -rz);
       k.scale(1, 1, rz / rx);
@@ -55154,13 +55180,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     B2(k, x0, -sink, z0, x1, plinth, z1, V3.baseCol || S3.base);
     const ruined = rt === "ruin" || S3.wall === "stone";
     if (ruined) {
-      ruinWalls(k, b, fw, fd, H2, wallCol);
+      ruinWalls(k, b, fw, fd, H3, wallCol);
       return;
     }
-    if (V3.groundCol && H2 > Hc + 0.01) {
+    if (V3.groundCol && H3 > Hc + 0.01) {
       B2(k, x0, plinth - 0.05, z0, x1, Hc, z1, V3.groundCol);
-      B2(k, x0, Hc, z0, x1, H2, z1, wallCol);
-    } else B2(k, x0, plinth - 0.05, z0, x1, H2, z1, wallCol);
+      B2(k, x0, Hc, z0, x1, H3, z1, wallCol);
+    } else B2(k, x0, plinth - 0.05, z0, x1, H3, z1, wallCol);
     const winW = 0.85 * g, winH = 1.05 * g;
     const frame2 = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" || S3.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
     const [glass, glowCol] = PANES[S3.win] || [S3.win === "round" && b.style === "sky" ? "#bde3ff" : "#2d4150", WARM];
@@ -55173,13 +55199,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     let wi = 0;
     for (let f = 0; f < storeys; f++) {
       const y = plinth + f * storeyH + 1.55 * g;
-      const W3 = windowSlots(b, f);
-      W3.front.forEach((x) => {
+      const W4 = windowSlots(b, f);
+      W4.front.forEach((x) => {
         if (f === 1 && V3.balcony && Math.abs(x - V3.balcony.x) < V3.balcony.w / 2 + 0.3) return;
         pane(x, y, -IN2 + 0.02, lit(b, wi++));
       });
       for (const sx of [-1, 1]) {
-        for (const z of W3[sx < 0 ? "left" : "right"]) {
+        for (const z of W4[sx < 0 ? "left" : "right"]) {
           k.save();
           k.translate(sx * (fw / 2 - IN2), 0, z);
           k.rotateY(sx * Math.PI / 2);
@@ -55197,41 +55223,41 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.add(quad(dw, 0.75), { at: [dx, yb + dh - 0.75, dz + 0.02], color: ["#1f3a68", "#7b1f1f", "#2e5e3a", "#4a2e6b"][(b.v || 0) % 4] });
     } else farPane(k, dx, yb + dh / 2, dz, dw, dh, S3.door === "hole" || S3.door === "hide" ? null : S3.wall === "post" ? "#3e2723" : shade2(wallCol, -0.4), S3.door === "hole" ? "#231f1b" : S3.door === "hide" ? "#a1784f" : doorWood(b, S3), null);
     const dd = { dw, dh, top: yb + dh };
-    if (awningOf(b, S3, fw, H2, dd)) {
+    if (awningOf(b, S3, fw, H3, dd)) {
       const c = ["#e74c3c", "#3498db", "#27ae60", "#f39c12", "#9b59b6", "#16a085"][(b.v || 0) % 6];
       k.add(box(Math.min(fw - 0.6, dw + 2.4), 0.06, 1), { at: [dx, dd.top + 0.52, 0.42], rot: [0.42, 0, 0], color: mix(c, "#ffffff", 0.4) });
     }
     if (S3.engawa) B2(k, x0, -0.5, 0, x1, 0.4, 0.88, "#8d6e4a");
-    if (b.role === "marine_base" || b.style === "marine" && fw >= 6) B2(k, x0 - 0.01, H2 - 1.15, -0.2, x1 + 0.01, H2 - 0.35, 0.05, "#f5f6fa");
-    if (S3.wall === "column") B2(k, x0, H2 - 0.5, 0.05, x1, H2 - 0.12, 0.4, "#b03a2e");
+    if (b.role === "marine_base" || b.style === "marine" && fw >= 6) B2(k, x0 - 0.01, H3 - 1.15, -0.2, x1 + 0.01, H3 - 0.35, 0.05, "#f5f6fa");
+    if (S3.wall === "column") B2(k, x0, H3 - 0.5, 0.05, x1, H3 - 0.12, 0.4, "#b03a2e");
     if (rt === "flat") {
       const pc = b.style === "marine" ? C("#f5f6fa") : shade2(wallCol, -0.06);
-      B2(k, x0 - 0.07, H2 - 0.05, z0 - 0.07, x1 + 0.07, H2 + 0.43, z1 + 0.07, (p, n) => n.y > 0.5 ? roofCol : pc);
+      B2(k, x0 - 0.07, H3 - 0.05, z0 - 0.07, x1 + 0.07, H3 + 0.43, z1 + 0.07, (p, n) => n.y > 0.5 ? roofCol : pc);
       if (b.style === "desert" && fw >= 4 && fd >= 3) {
         const r = Math.min(fw, fd) * 0.32;
-        B2(k, -r - 0.05, H2 + 0.15, -hd - r - 0.05, r + 0.05, H2 + 0.52, -hd + r + 0.05, shade2(wallCol, 0.05));
-        farDome(k, 0, -hd, H2 + 0.52, r - 0.05, 0.95, shade2(wallCol, 0.18));
+        B2(k, -r - 0.05, H3 + 0.15, -hd - r - 0.05, r + 0.05, H3 + 0.52, -hd + r + 0.05, shade2(wallCol, 0.05));
+        farDome(k, 0, -hd, H3 + 0.52, r - 0.05, 0.95, shade2(wallCol, 0.18));
       }
     } else if (rt === "dome" || rt === "shell") {
-      B2(k, -fw / 2 - 0.1, H2 - 0.05, -fd - 0.1, fw / 2 + 0.1, H2 + 0.13, 0.1, shade2(wallCol, -0.12));
+      B2(k, -fw / 2 - 0.1, H3 - 0.05, -fd - 0.1, fw / 2 + 0.1, H3 + 0.13, 0.1, shade2(wallCol, -0.12));
       const r = Math.min(fw, fd) / 2 * 0.98 - IN2;
-      farDome(k, 0, -hd, H2 + 0.15, r, rt === "shell" ? 0.8 : 0.9, roofCol, rt !== "shell" && b.style === "candy");
-      if (fw > fd * 1.4) B2(k, x0, H2 + 0.1, z0, x1, H2 + 0.18, z1, roofCol);
+      farDome(k, 0, -hd, H3 + 0.15, r, rt === "shell" ? 0.8 : 0.9, roofCol, rt !== "shell" && b.style === "candy");
+      if (fw > fd * 1.4) B2(k, x0, H3 + 0.1, z0, x1, H3 + 0.18, z1, roofCol);
     } else if (rt === "pagoda") {
       const rw = Math.max(0.05, fw / 2 - hd * 0.85);
       for (let f = 1; f < storeys; f++) farRoof(k, fw / 2, hd, plinth + f * storeyH - 0.25, 0.55, 0.5, 0.5, 0.5, rw, roofCol, wallCol);
-      farRoof(k, fw / 2, hd, H2 - 0.1, Math.min(2.8, Math.max(1.3, fd * 0.5)), 0.7, 0.7, 0.7, rw, roofCol, wallCol);
+      farRoof(k, fw / 2, hd, H3 - 0.1, Math.min(2.8, Math.max(1.3, fd * 0.5)), 0.7, 0.7, 0.7, rw, roofCol, wallCol);
     } else {
       const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S3.crooked ? 0.62 : 0.45) * V3.pitch));
-      farRoof(k, fw / 2, hd, H2, rise - 0.02, 0.36 * g, oL, oR, fw, winter ? C("#f4f9ff") : roofCol, wallCol);
+      farRoof(k, fw / 2, hd, H3, rise - 0.02, 0.36 * g, oL, oR, fw, winter ? C("#f4f9ff") : roofCol, wallCol);
       if ((b.style === "village" || b.style === "snow" || b.style === "town" || b.style === "giant" || b.style === "port" || b.style === "city") && fw >= 4 && V3.chimney) {
         const cxh = V3.chimney * (fw / 2 - 0.9 * g), czh = -hd - hd * 0.35;
-        const yTop = H2 + rise * (1 - 0.35) + 0.9 * g;
-        B2(k, cxh - 0.26 * g, H2, czh - 0.26 * g, cxh + 0.26 * g, yTop + 0.14, czh + 0.26 * g, "#8d6e63");
+        const yTop = H3 + rise * (1 - 0.35) + 0.9 * g;
+        B2(k, cxh - 0.26 * g, H3, czh - 0.26 * g, cxh + 0.26 * g, yTop + 0.14, czh + 0.26 * g, "#8d6e63");
       }
       if (b.style === "noble" && big) {
-        B2(k, -0.66, H2 + rise - 0.2, -hd - 0.66, 0.66, H2 + rise + 1.58, -hd + 0.66, wallCol);
-        k.add(cone(1, 1.45, 4), { at: [0, H2 + rise + 1.58, -hd], rot: [0, Math.PI / 4, 0], color: roofCol });
+        B2(k, -0.66, H3 + rise - 0.2, -hd - 0.66, 0.66, H3 + rise + 1.58, -hd + 0.66, wallCol);
+        k.add(cone(1, 1.45, 4), { at: [0, H3 + rise + 1.58, -hd], rot: [0, Math.PI / 4, 0], color: roofCol });
       }
     }
   }
@@ -55565,13 +55591,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), T4 = WALL_T;
       const d = doorOf(b);
       const cols = [];
-      const rect = (x0, x1, z0, z1) => {
+      const rect2 = (x0, x1, z0, z1) => {
         const r = bbox(b, x0, x1, z0, z1);
         return { x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2, hw: (r.x1 - r.x0) / 2, hd: (r.y1 - r.y0) / 2 };
       };
       const box2 = (x0, x1, z0, z1, extra) => {
         if (x1 - x0 < 0.01 || z1 - z0 < 0.01) return null;
-        const col = w.addCol({ ...rect(x0, x1, z0, z1), o: b, ...extra });
+        const col = w.addCol({ ...rect2(x0, x1, z0, z1), o: b, ...extra });
         cols.push(col);
         return col;
       };
@@ -55582,7 +55608,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       box2(-fw / 2, -fw / 2 + T4, -fd, 0, wall);
       box2(fw / 2 - T4, fw / 2, -fd, 0, wall);
       b.cols = cols;
-      b.doorBox = { ...rect(d.x - d.dw / 2, d.x + d.dw / 2, -T4, 0), o: b, wall: true, door: true };
+      b.doorBox = { ...rect2(d.x - d.dw / 2, d.x + d.dw / 2, -T4, 0), o: b, wall: true, door: true };
       b.doorCol = w.addCol({ ...b.doorBox });
       b.floor = { ...bbox(b, -fw / 2, fw / 2, -fd, -2e-3), h: PLINTH, o: b, interior: true };
       w.addFloor(b.floor);
@@ -55646,9 +55672,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     /** Objects whose chunk intersects the rect [x0,x1]x[y0,y1] (x may wrap). */
     query(x0, y0, x1, y1, out = []) {
-      const pad = 2;
-      const cx0 = Math.floor(x0 / CHUNK2) - pad, cx1 = Math.floor(x1 / CHUNK2) + pad;
-      const cy0 = Math.max(0, Math.floor(y0 / CHUNK2) - pad), cy1 = Math.min(this.ch - 1, Math.floor(y1 / CHUNK2) + pad);
+      const pad2 = 2;
+      const cx0 = Math.floor(x0 / CHUNK2) - pad2, cx1 = Math.floor(x1 / CHUNK2) + pad2;
+      const cy0 = Math.max(0, Math.floor(y0 / CHUNK2) - pad2), cy1 = Math.min(this.ch - 1, Math.floor(y1 / CHUNK2) + pad2);
       for (let cy = cy0; cy <= cy1; cy++) {
         for (let cx = cx0; cx <= cx1; cx++) {
           const wcx = this.world.wrap ? (cx % this.cw + this.cw) % this.cw : cx;
@@ -55713,11 +55739,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.mesh = null;
       this.alloc(8);
     }
-    alloc(cap) {
+    alloc(cap2) {
       const old = this.mesh, S3 = this.home.size;
-      const m = new InstancedMesh(this.home.far && this.farGeo ? this.farGeo : this.geo, this.material, cap);
+      const m = new InstancedMesh(this.home.far && this.farGeo ? this.farGeo : this.geo, this.material, cap2);
       m.instanceMatrix.setUsage(DynamicDrawUsage);
-      if (this.tinted) m.instanceColor = new InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
+      if (this.tinted) m.instanceColor = new InstancedBufferAttribute(new Float32Array(cap2 * 3).fill(1), 3);
       m.count = this.count;
       m.castShadow = this.castShadow;
       m.receiveShadow = this.receiveShadow;
@@ -55739,7 +55765,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.home.parent?.add(m);
       }
       this.mesh = m;
-      this.cap = cap;
+      this.cap = cap2;
     }
     push(ref, matrix, color, y) {
       if (this.count >= this.cap) this.alloc(this.cap * 2);
@@ -56115,7 +56141,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(cyl(r1, r0, len, seg, o.open !== false), o);
     k.restore();
   }
-  function branches(k, R3, pos, dir, len, r, depth, o, tips) {
+  function branches(k, R4, pos, dir, len, r, depth, o, tips) {
     const end = pos.clone().addScaledVector(dir, len);
     limb2(k, pos.toArray(), end.toArray(), r, r * 0.66, o.seg || 5, o);
     if (depth <= 0) {
@@ -56123,12 +56149,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return;
     }
     const side = new Vector3().crossVectors(dir, Math.abs(dir.y) > 0.9 ? new Vector3(1, 0, 0) : UP).normalize();
-    side.applyAxisAngle(dir, R3() * Math.PI * 2);
+    side.applyAxisAngle(dir, R4() * Math.PI * 2);
     for (let i = 0; i < 2; i++) {
-      const nd = dir.clone().applyAxisAngle(side, (i ? 1 : -1) * (o.spread || 0.55) * (0.7 + R3() * 0.6));
+      const nd = dir.clone().applyAxisAngle(side, (i ? 1 : -1) * (o.spread || 0.55) * (0.7 + R4() * 0.6));
       nd.y += o.lift || 0.15;
       nd.normalize();
-      branches(k, R3, end, nd, len * (o.shrink || 0.7), r * 0.64, depth - 1, o, tips);
+      branches(k, R4, end, nd, len * (o.shrink || 0.7), r * 0.64, depth - 1, o, tips);
     }
   }
   var trunkColor = (col, h2) => {
@@ -56146,12 +56172,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const k = new Mesher();
       const S3 = BROAD[variant2];
       const tc = TRUNK[sub] || TRUNK.oak;
-      const H2 = S3.trunkH;
+      const H3 = S3.trunkH;
       k.add(cyl(0.2, 0.36, 0.45, 7, true), { color: trunkColor(tc, 3), outline: 0.03 });
-      k.add(cyl(0.12, 0.2, H2, 7, true), { at: [0, 0.35, 0], rot: [0, 0, 0.04], color: trunkColor(tc, 3), outline: 0.03 });
+      k.add(cyl(0.12, 0.2, H3, 7, true), { at: [0, 0.35, 0], rot: [0, 0, 0.04], color: trunkColor(tc, 3), outline: 0.03 });
       for (let i = 0; i < 3; i++) {
         const a = i * 2.1 + 0.4;
-        limb2(k, [0, H2 * 0.8, 0], [Math.cos(a) * 0.75, H2 + 0.45, Math.sin(a) * 0.75], 0.08, 0.04, 5, { color: tc });
+        limb2(k, [0, H3 * 0.8, 0], [Math.cos(a) * 0.75, H3 + 0.45, Math.sin(a) * 0.75], 0.08, 0.04, 5, { color: tc });
       }
       crown(k, S3.blobs, S3.c, { outline: 0.045 });
       if (sub === "cloudtree" || sub === "cottoncandy") {
@@ -56172,11 +56198,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       limb2(k, [0.3, 1.5, 0.05], [1.2, 2.4, 0.3], 0.1, 0.05, 5, { color: tc });
       limb2(k, [0.2, 2.1, 0], [-0.7, 2.7, -0.3], 0.08, 0.04, 5, { color: tc });
       crown(k, WIDE.blobs, WIDE.c, { squash: WIDE.squash, outline: 0.045 });
-      const R3 = rng2(7 + variant2);
+      const R4 = rng2(7 + variant2);
       for (let i = 0; i < 12; i++) {
-        const a = R3() * Math.PI * 2, e = (R3() - 0.3) * 0.9;
+        const a = R4() * Math.PI * 2, e = (R4() - 0.3) * 0.9;
         const p = crownPoint(WIDE.blobs, WIDE.c, [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], 0.97, WIDE.squash);
-        k.add(new TetrahedronGeometry(0.09, 0), { at: p, rot: [R3() * 3, R3() * 3, 0], color: "#ffffff" });
+        k.add(new TetrahedronGeometry(0.09, 0), { at: p, rot: [R4() * 3, R4() * 3, 0], color: "#ffffff" });
       }
       return { geo: k.build(), sway: true, crown: WIDE };
     });
@@ -56195,9 +56221,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         k.restore();
       }
       crown(k, JUNGLE.blobs, JUNGLE.c, { squash: JUNGLE.squash, outline: 0.05 });
-      const R3 = rng2(3 + variant2);
+      const R4 = rng2(3 + variant2);
       for (let i = 0; i < 4; i++) {
-        const a = i * 1.6 + R3(), rr = 0.9 + R3() * 0.6;
+        const a = i * 1.6 + R4(), rr = 0.9 + R4() * 0.6;
         const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
         const pts = [];
         for (let s = 0; s <= 4; s++) pts.push([x + Math.sin(s * 1.3 + i) * 0.08, 4.5 - s * 0.55, z, 0.05]);
@@ -56237,11 +56263,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }, tint: 1, outline: 0.04 });
         if (snow2) {
           const q2 = 0.52;
-          const cap = cone(r * q2 * 1.07, h2 * q2, 12, true);
-          const CP = cap.attributes.position;
+          const cap2 = cone(r * q2 * 1.07, h2 * q2, 12, true);
+          const CP = cap2.attributes.position;
           for (let v = 0; v < CP.count; v++) if (Math.abs(CP.getY(v)) < 1e-4 && v % 2) CP.setY(v, -0.07);
-          cap.computeVertexNormals();
-          k.add(cap, { at: [0, y + h2 * (1 - q2) + 0.02, 0], color: "#f4f9ff" });
+          cap2.computeVertexNormals();
+          k.add(cap2, { at: [0, y + h2 * (1 - q2) + 0.02, 0], color: "#f4f9ff" });
         }
       }
       return { geo: k.build(), sway: true };
@@ -56250,8 +56276,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function palmTree(variant2) {
     return cached(`tree:palm:${variant2}`, () => {
       const k = new Mesher();
-      const lean = variant2 ? 1 : 0.55, H2 = variant2 ? 5.1 : 4.6, segs = 7;
-      const pt = (t) => [lean * t * t, H2 * t];
+      const lean = variant2 ? 1 : 0.55, H3 = variant2 ? 5.1 : 4.6, segs = 7;
+      const pt = (t) => [lean * t * t, H3 * t];
       for (let i = 0; i < segs; i++) {
         const t0 = i / segs, t1 = (i + 1) / segs;
         const a = pt(t0), b = pt(t1);
@@ -56284,12 +56310,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return cached(`tree:dead:${sub}:${variant2}`, () => {
       const k = new Mesher();
       const col = sub === "spooky" ? "#3b2f3f" : "#6b5a4a";
-      const R3 = rng2(11 + variant2 * 7 + (sub === "spooky" ? 3 : 0));
+      const R4 = rng2(11 + variant2 * 7 + (sub === "spooky" ? 3 : 0));
       const snowCol = C("#f4f9ff"), wood = C(col);
       const color = sub === "deadsnow" ? (p, n) => n.y > 0.35 ? snowCol : wood : col;
       k.add(cyl(0.16, 0.3, 0.4, 6, true), { color: shade2(col, -0.2), outline: 0.03 });
-      const dir = new Vector3((R3() - 0.5) * 0.25, 1, (R3() - 0.5) * 0.25).normalize();
-      branches(k, R3, new Vector3(0, 0.3, 0), dir, sub === "spooky" ? 2 : 1.8, 0.2, 3, { color, outline: 0.025, spread: 0.6, shrink: 0.68, lift: 0.2 });
+      const dir = new Vector3((R4() - 0.5) * 0.25, 1, (R4() - 0.5) * 0.25).normalize();
+      branches(k, R4, new Vector3(0, 0.3, 0), dir, sub === "spooky" ? 2 : 1.8, 0.2, 3, { color, outline: 0.025, spread: 0.6, shrink: 0.68, lift: 0.2 });
       let crownInfo = null;
       if (sub === "spooky") {
         const c = [0, 3.7, 0];
@@ -56330,20 +56356,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return cached("tree:lollipop", () => {
       const k = new Mesher();
       k.add(cyl(0.05, 0.06, 2.3, 6, true), { color: "#fdfefe", outline: 0.02 });
-      const R3 = 0.78, th = 0.22, seg = 16;
+      const R4 = 0.78, th = 0.22, seg = 16;
       k.save();
-      k.translate(0, 2.25 + R3, 0);
+      k.translate(0, 2.25 + R4, 0);
       k.rotateX(Math.PI / 2);
-      const side = cyl(R3, R3, th, seg, true);
+      const side = cyl(R4, R4, th, seg, true);
       k.add(side, { at: [0, -th / 2, 0], color: "#ffffff", tint: 1, outline: 0.035 });
       for (const face of [1, -1]) {
         const pos = [];
         for (let i = 0; i < seg; i++) {
           const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
           const tw = 0.9;
-          pos.push(0, face * th / 2, 0, Math.cos(a1 + tw) * R3 * 0.45, face * th / 2, Math.sin(a1 + tw) * R3 * 0.45, Math.cos(a0 + tw) * R3 * 0.45, face * th / 2, Math.sin(a0 + tw) * R3 * 0.45);
-          pos.push(Math.cos(a0 + tw) * R3 * 0.45, face * th / 2, Math.sin(a0 + tw) * R3 * 0.45, Math.cos(a1 + tw) * R3 * 0.45, face * th / 2, Math.sin(a1 + tw) * R3 * 0.45, Math.cos(a1) * R3, face * th / 2, Math.sin(a1) * R3);
-          pos.push(Math.cos(a0 + tw) * R3 * 0.45, face * th / 2, Math.sin(a0 + tw) * R3 * 0.45, Math.cos(a1) * R3, face * th / 2, Math.sin(a1) * R3, Math.cos(a0) * R3, face * th / 2, Math.sin(a0) * R3);
+          pos.push(0, face * th / 2, 0, Math.cos(a1 + tw) * R4 * 0.45, face * th / 2, Math.sin(a1 + tw) * R4 * 0.45, Math.cos(a0 + tw) * R4 * 0.45, face * th / 2, Math.sin(a0 + tw) * R4 * 0.45);
+          pos.push(Math.cos(a0 + tw) * R4 * 0.45, face * th / 2, Math.sin(a0 + tw) * R4 * 0.45, Math.cos(a1 + tw) * R4 * 0.45, face * th / 2, Math.sin(a1 + tw) * R4 * 0.45, Math.cos(a1) * R4, face * th / 2, Math.sin(a1) * R4);
+          pos.push(Math.cos(a0 + tw) * R4 * 0.45, face * th / 2, Math.sin(a0 + tw) * R4 * 0.45, Math.cos(a1) * R4, face * th / 2, Math.sin(a1) * R4, Math.cos(a0) * R4, face * th / 2, Math.sin(a0) * R4);
         }
         const g = new BufferGeometry();
         g.setAttribute("position", new Float32BufferAttribute(pos, 3));
@@ -56378,14 +56404,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function bamboo(variant2) {
     return cached(`tree:bamboo:${variant2}`, () => {
       const k = new Mesher();
-      const R3 = rng2(5 + variant2);
+      const R4 = rng2(5 + variant2);
       const n = 4;
       for (let i = 0; i < n; i++) {
-        const a = i / n * Math.PI * 2 + R3();
+        const a = i / n * Math.PI * 2 + R4();
         const x = Math.cos(a) * 0.28, z = Math.sin(a) * 0.28;
-        const h2 = 3.4 + R3() * 1.4;
+        const h2 = 3.4 + R4() * 1.4;
         const segs = 5;
-        const lean = (R3() - 0.5) * 0.12;
+        const lean = (R4() - 0.5) * 0.12;
         for (let s = 0; s < segs; s++) {
           k.add(cyl(0.062, 0.075, h2 / segs, 5, true), { at: [x + lean * s, s * h2 / segs, z], rot: [0, 0, -lean], color: s % 2 ? "#8bc34a" : "#7cb342", tint: 1 });
         }
@@ -56403,9 +56429,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function coral(variant2) {
     return cached(`tree:coral:${variant2}`, () => {
       const k = new Mesher();
-      const R3 = rng2(21 + variant2);
+      const R4 = rng2(21 + variant2);
       const tips = [];
-      branches(k, R3, new Vector3(0, 0, 0), new Vector3(0, 1, 0), 0.75, 0.13, 3, { color: "#ffffff", tint: 1, outline: 0.02, spread: 0.7, shrink: 0.78, lift: 0.3, seg: 5 }, tips);
+      branches(k, R4, new Vector3(0, 0, 0), new Vector3(0, 1, 0), 0.75, 0.13, 3, { color: "#ffffff", tint: 1, outline: 0.02, spread: 0.7, shrink: 0.78, lift: 0.3, seg: 5 }, tips);
       for (const t of tips) k.add(new IcosahedronGeometry(0.075, 0), { at: t.toArray(), color: "#ffffff", tint: 1 });
       return { geo: k.build(), sway: false };
     });
@@ -56556,10 +56582,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         return { geo: k.build(), tinted: true };
       }
       if (sub === "deadbush") {
-        const R3 = rng2(4);
+        const R4 = rng2(4);
         for (let i = 0; i < 8; i++) {
-          const a = i / 8 * Math.PI * 2 + R3() * 0.5;
-          const tip = [Math.cos(a) * 0.45, 0.45 + R3() * 0.25, Math.sin(a) * 0.45];
+          const a = i / 8 * Math.PI * 2 + R4() * 0.5;
+          const tip = [Math.cos(a) * 0.45, 0.45 + R4() * 0.25, Math.sin(a) * 0.45];
           limb2(k, [0, 0, 0], tip, 0.03, 0.012, 3, { color: "#8d6e4a" });
           limb2(k, [tip[0] * 0.6, tip[1] * 0.6, tip[2] * 0.6], [tip[0] * 0.8 + 0.1, tip[1] * 0.95, tip[2] * 0.8], 0.015, 8e-3, 3, { color: "#8d6e4a" });
         }
@@ -56568,9 +56594,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const blobs = [[0, 0.42, 0, 0.5], [0.4, 0.32, 0.12, 0.38, 0.9], [-0.36, 0.33, -0.1, 0.4, 0.88], [0.05, 0.3, 0.38, 0.36, 0.95], [-0.05, 0.3, -0.36, 0.34, 0.85]];
       crown(k, blobs, [0, 0.25, 0], { outline: 0.03, lo: 0.55 });
       if (var2) {
-        const R3 = rng2(9);
+        const R4 = rng2(9);
         for (let i = 0; i < 7; i++) {
-          const a = R3() * Math.PI * 2, e = R3() * 0.8;
+          const a = R4() * Math.PI * 2, e = R4() * 0.8;
           const p = crownPoint(blobs, [0, 0.25, 0], [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], 0.98);
           k.add(new IcosahedronGeometry(0.06, 0), { at: p, color: i % 2 ? "#f06292" : "#fff176" });
         }
@@ -56579,8 +56605,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     });
   }
   var ROCK_COLORS = ["#8e8a82", "#9a948a", "#7f7a72", "#a39d92"];
-  function rockModel(shape, cap) {
-    return cached(`rock:${shape}:${cap}`, () => {
+  function rockModel(shape, cap2) {
+    return cached(`rock:${shape}:${cap2}`, () => {
       const k = new Mesher();
       const g = new IcosahedronGeometry(0.72, 1);
       const P4 = g.attributes.position;
@@ -56596,13 +56622,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const sx = shape === 1 ? 1.25 : 1, sy = shape === 2 ? 0.85 : 0.62, sz = shape === 1 ? 0.85 : 1;
         P4.setXYZ(i, x * f * sx, Math.max(-0.18, y * f * sy) + 0.12, z * f * sz);
       }
-      const capC = C(cap === "snow" ? "#f4f9ff" : cap === "moss" ? "#6a9a3a" : "#ffffff");
+      const capC = C(cap2 === "snow" ? "#f4f9ff" : cap2 === "moss" ? "#6a9a3a" : "#ffffff");
       const tmp2 = new Color();
       k.add(g, {
         flat: true,
         outline: 0.03,
-        color: (p, n) => cap !== "none" && n.y > 0.72 ? capC : tmp2.setRGB(0.78 + n.y * 0.22, 0.78 + n.y * 0.22, 0.78 + n.y * 0.22),
-        tint: (p, n) => cap !== "none" && n.y > 0.72 ? 0 : 1
+        color: (p, n) => cap2 !== "none" && n.y > 0.72 ? capC : tmp2.setRGB(0.78 + n.y * 0.22, 0.78 + n.y * 0.22, 0.78 + n.y * 0.22),
+        tint: (p, n) => cap2 !== "none" && n.y > 0.72 ? 0 : 1
       });
       if (shape === 0) {
         const s = new IcosahedronGeometry(0.3, 0);
@@ -56672,13 +56698,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   registerPropBuilder("rock", (o, ctx) => {
     const v = o.v || 0;
     const clim = climateAt(ctx, o);
-    const cap = clim === "snow" ? "snow" : clim === "moss" && v % 2 === 0 ? "moss" : "none";
+    const cap2 = clim === "snow" ? "snow" : clim === "moss" && v % 2 === 0 ? "moss" : "none";
     const shape = v % 3;
     let col = C(ROCK_COLORS[v % 4]).clone();
     if (clim === "ash") col = C("#5d5652").clone();
     else if (clim === "sand") col = C("#c2a27a").clone();
     col.multiplyScalar(0.92 + hash2(o.x, o.y, 3) * 0.16);
-    const part5 = { key: `r:${shape}:${cap}`, geo: rockModel(shape, cap), tinted: true, color: col };
+    const part5 = { key: `r:${shape}:${cap2}`, geo: rockModel(shape, cap2), tinted: true, color: col };
     return instanced(o, ctx, [part5], { yaw: hash2(o.x, o.y) * Math.PI * 2, scale: o.s || 1 });
   });
 
@@ -56737,9 +56763,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   var haystack = () => model("haystack", (k) => {
     k.add(lathe([[0.68, 0], [0.7, 0.2], [0.63, 0.48], [0.46, 0.74], [0.22, 0.9], [0.02, 0.94]], 14), { split: true, color: (p, n, i) => Math.floor(i / 30) % 2 ? "#d4ac0d" : "#c49a18", outline: 0.03 });
-    const R3 = rng2(3);
+    const R4 = rng2(3);
     for (let i = 0; i < 9; i++) {
-      const a = R3() * Math.PI * 2;
+      const a = R4() * Math.PI * 2;
       k.add(cone(0.05, 0.4, 3), { at: [Math.cos(a) * 0.35, 0.72, Math.sin(a) * 0.35], rot: [Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9], color: "#e0bf3a" });
     }
     k.add(torus(0.6, 0.035, 4, 16), { at: [0, 0.35, 0], rot: [Math.PI / 2, 0, 0], color: "#8d6e4a" });
@@ -56780,18 +56806,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (let i = 0; i < 3; i++) k.add(new IcosahedronGeometry(0.06, 0), { at: [-0.12 + i * 0.12, 0.1, 0.2], color: ["#e84a7f", "#ffffff", "#ffd54f"][i] });
   });
   var bones = () => model("bones", (k) => {
-    const W3 = "#ecf0f1";
+    const W4 = "#ecf0f1";
     k.save();
     k.translate(-0.1, 0.07, 0);
     k.rotateY(0.6);
     k.rotateZ(Math.PI / 2);
-    k.add(cyl(0.045, 0.05, 0.9, 6), { at: [0, -0.45, 0], color: W3, outline: 0.012 });
-    for (const y of [-0.45, 0.45]) for (const z of [-0.05, 0.05]) k.add(new SphereGeometry(0.075, 6, 4), { at: [0, y, z], color: W3 });
+    k.add(cyl(0.045, 0.05, 0.9, 6), { at: [0, -0.45, 0], color: W4, outline: 0.012 });
+    for (const y of [-0.45, 0.45]) for (const z of [-0.05, 0.05]) k.add(new SphereGeometry(0.075, 6, 4), { at: [0, y, z], color: W4 });
     k.restore();
-    k.add(new SphereGeometry(0.2, 9, 7), { at: [0.35, 0.17, 0.28], scale: [1, 0.9, 1.1], color: W3, outline: 0.015 });
+    k.add(new SphereGeometry(0.2, 9, 7), { at: [0.35, 0.17, 0.28], scale: [1, 0.9, 1.1], color: W4, outline: 0.015 });
     for (const z of [-0.08, 0.08]) k.add(new SphereGeometry(0.055, 5, 4), { at: [0.52, 0.2, 0.28 + z], scale: [0.5, 1, 1], color: "#2d3436" });
-    k.add(box(0.12, 0.08, 0.18), { at: [0.48, 0.02, 0.28], color: W3 });
-    for (let i = 0; i < 3; i++) k.add(torus(0.22, 0.025, 4, 8, Math.PI * 0.8), { at: [-0.45, 0.02, -0.25 + i * 0.12], rot: [0, 0, 0.3], color: W3 });
+    k.add(box(0.12, 0.08, 0.18), { at: [0.48, 0.02, 0.28], color: W4 });
+    for (let i = 0; i < 3; i++) k.add(torus(0.22, 0.025, 4, 8, Math.PI * 0.8), { at: [-0.45, 0.02, -0.25 + i * 0.12], rot: [0, 0, 0.3], color: W4 });
   });
   var anchor = () => model("anchor", (k) => {
     const iron = "#5d6d7e";
@@ -56825,19 +56851,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(lathe([[0.16, 0], [0.13, 0.3], [0.12, 0.7], [0.15, 0.9]], 10), { color: "#efebe9", outline: 0.015 });
     k.add(new SphereGeometry(0.66, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2), { at: [0, 0.86, 0], scale: [1, 0.62, 1], color: "#e53935", tint: 1, outline: 0.03 });
     k.add(new CircleGeometry(0.64, 14), { at: [0, 0.86, 0], rot: [Math.PI / 2, 0, 0], color: "#f5e6d3" });
-    const R3 = rng2(2);
+    const R4 = rng2(2);
     for (let i = 0; i < 7; i++) {
-      const a = R3() * Math.PI * 2, th = 0.35 + R3() * 0.8;
-      k.add(new SphereGeometry(0.08 + R3() * 0.04, 6, 4), { at: [Math.sin(th) * Math.cos(a) * 0.63, 0.86 + Math.cos(th) * 0.41, Math.sin(th) * Math.sin(a) * 0.63], scale: [1, 0.45, 1], color: "#ffffff" });
+      const a = R4() * Math.PI * 2, th = 0.35 + R4() * 0.8;
+      k.add(new SphereGeometry(0.08 + R4() * 0.04, 6, 4), { at: [Math.sin(th) * Math.cos(a) * 0.63, 0.86 + Math.cos(th) * 0.41, Math.sin(th) * Math.sin(a) * 0.63], scale: [1, 0.45, 1], color: "#ffffff" });
     }
   });
   var crystal = () => model("crystal", (k) => {
-    const R3 = rng2(8);
+    const R4 = rng2(8);
     const pts = [[0, 0, 0, 1.8, 0.28], [0.45, 0, 0.15, 1.1, 0.2, 0.35], [-0.35, 0, 0.25, 1.3, 0.22, -0.3], [0.1, 0, -0.4, 0.9, 0.18, 0.25], [-0.2, 0, -0.25, 0.7, 0.15, -0.4]];
     for (const [x, y, z, h2, r, tilt = 0] of pts) {
       k.save();
       k.translate(x, y - 0.15, z);
-      k.rotateY(R3() * 3);
+      k.rotateY(R4() * 3);
       k.rotateZ(tilt);
       k.rotateX(tilt * 0.5);
       k.add(cyl(r, r * 1.05, h2, 6), { flat: true, color: "#80deea", glow: "#4dd0e1", outline: 0.02, outlineColor: "#00363a" });
@@ -56849,11 +56875,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const stone = "#bdc3c7";
     k.add(box(0.95, 0.25, 0.95), { color: "#95a5a6", outline: 0.02 });
     k.add(box(0.8, 0.14, 0.8), { at: [0, 0.25, 0], color: "#a8b3b5" });
-    const H2 = broken ? 1.3 : 2.5;
-    k.add(cyl(0.3, 0.33, H2, 12), { at: [0, 0.38, 0], split: true, color: (p, n, i) => i < 72 ? Math.floor(i / 6) % 2 ? stone : "#d4d9db" : stone, tint: 1, outline: 0.02 });
+    const H3 = broken ? 1.3 : 2.5;
+    k.add(cyl(0.3, 0.33, H3, 12), { at: [0, 0.38, 0], split: true, color: (p, n, i) => i < 72 ? Math.floor(i / 6) % 2 ? stone : "#d4d9db" : stone, tint: 1, outline: 0.02 });
     if (broken) {
-      const R3 = rng2(4);
-      for (let i = 0; i < 4; i++) k.add(new IcosahedronGeometry(0.16, 0), { at: [(R3() - 0.5) * 0.3, 0.38 + H2, (R3() - 0.5) * 0.3], flat: true, color: stone, tint: 1 });
+      const R4 = rng2(4);
+      for (let i = 0; i < 4; i++) k.add(new IcosahedronGeometry(0.16, 0), { at: [(R4() - 0.5) * 0.3, 0.38 + H3, (R4() - 0.5) * 0.3], flat: true, color: stone, tint: 1 });
       k.save();
       k.translate(0.9, 0.3, 0.2);
       k.rotateZ(Math.PI / 2 - 0.1);
@@ -56861,21 +56887,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.add(cyl(0.3, 0.3, 0.9, 12), { at: [0, -0.45, 0], color: stone, tint: 1, outline: 0.02 });
       k.restore();
     } else {
-      k.add(lathe([[0.3, 0], [0.42, 0.14], [0.46, 0.18]], 12), { at: [0, 0.38 + H2, 0], color: stone, tint: 1 });
-      k.add(box(1, 0.2, 1), { at: [0, 0.56 + H2, 0], color: "#95a5a6", outline: 0.02 });
+      k.add(lathe([[0.3, 0], [0.42, 0.14], [0.46, 0.18]], 12), { at: [0, 0.38 + H3, 0], color: stone, tint: 1 });
+      k.add(box(1, 0.2, 1), { at: [0, 0.56 + H3, 0], color: "#95a5a6", outline: 0.02 });
     }
   });
   var ruins = (v) => model("ruins:" + v, (k) => {
-    const R3 = rng2(11 + v * 3);
+    const R4 = rng2(11 + v * 3);
     const stone = "#a1887f", dark = "#8d6e63";
     const segs = 3 + v % 2;
     for (let i = 0; i < segs; i++) {
-      const h2 = 0.5 + R3() * 1.4;
+      const h2 = 0.5 + R4() * 1.4;
       k.add(box(0.6, h2, 0.5), { at: [-0.9 + i * 0.6, -0.2, 0], color: i % 2 ? stone : shade2(stone, -0.06), tint: 1, outline: 0.025 });
-      k.add(box(0.45, 0.12, 0.5), { at: [-0.9 + i * 0.6 + (R3() - 0.5) * 0.1, h2 - 0.2, 0], rot: [0, 0, (R3() - 0.5) * 0.5], color: dark, tint: 1 });
+      k.add(box(0.45, 0.12, 0.5), { at: [-0.9 + i * 0.6 + (R4() - 0.5) * 0.1, h2 - 0.2, 0], rot: [0, 0, (R4() - 0.5) * 0.5], color: dark, tint: 1 });
     }
     for (let i = 0; i < 5; i++) {
-      k.add(new IcosahedronGeometry(0.18 + R3() * 0.2, 0), { at: [(R3() - 0.5) * 2.6, 0.05, 0.4 + R3() * 0.8], rot: [R3() * 3, R3() * 3, 0], flat: true, color: stone, tint: 1, outline: 0.015 });
+      k.add(new IcosahedronGeometry(0.18 + R4() * 0.2, 0), { at: [(R4() - 0.5) * 2.6, 0.05, 0.4 + R4() * 0.8], rot: [R4() * 3, R4() * 3, 0], flat: true, color: stone, tint: 1, outline: 0.015 });
     }
     if (v % 3 === 0) {
       k.save();
@@ -56991,9 +57017,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (const [w, y] of [[0.8, 1.32], [0.62, 1.17]]) k.add(box(w, 0.04, 0.01), { at: [0, y, 0.11], color: "#3b2a1a" });
   });
   var skull3 = () => model("skull", (k) => {
-    const W3 = "#ecf0f1", D3 = "#2d3436";
-    k.add(new SphereGeometry(0.85, 14, 10), { at: [0, 0.8, 0], scale: [1, 0.92, 1.05], color: W3, outline: 0.035 });
-    k.add(box(0.95, 0.42, 0.7), { at: [0, 0.05, 0.28], color: W3, outline: 0.025 });
+    const W4 = "#ecf0f1", D3 = "#2d3436";
+    k.add(new SphereGeometry(0.85, 14, 10), { at: [0, 0.8, 0], scale: [1, 0.92, 1.05], color: W4, outline: 0.035 });
+    k.add(box(0.95, 0.42, 0.7), { at: [0, 0.05, 0.28], color: W4, outline: 0.025 });
     for (const s of [-1, 1]) k.add(new SphereGeometry(0.22, 8, 6), { at: [s * 0.32, 0.9, 0.72], scale: [1, 1.15, 0.45], color: D3 });
     k.add(slab([[-0.1, 0], [0.1, 0], [0, 0.2]], 0.1), { at: [0, 0.52, 0.82], color: D3 });
     for (let i = -3; i <= 3; i++) k.add(box(0.1, 0.16, 0.06), { at: [i * 0.12, 0.26, 0.64], color: "#dfe6e9" });
@@ -57269,10 +57295,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return root2;
   });
   var fireBase = () => model("campfire", (k) => {
-    const R3 = rng2(4);
+    const R4 = rng2(4);
     for (let i = 0; i < 9; i++) {
       const a = i / 9 * Math.PI * 2;
-      k.add(new IcosahedronGeometry(0.14 + R3() * 0.05, 0), { at: [Math.cos(a) * 0.58, 0.05, Math.sin(a) * 0.58], scale: [1, 0.7, 1], flat: true, color: "#8e8a82", outline: 0.012 });
+      k.add(new IcosahedronGeometry(0.14 + R4() * 0.05, 0), { at: [Math.cos(a) * 0.58, 0.05, Math.sin(a) * 0.58], scale: [1, 0.7, 1], flat: true, color: "#8e8a82", outline: 0.012 });
     }
     k.add(new CircleGeometry(0.5, 10), { at: [0, 0.02, 0], rot: [-Math.PI / 2, 0, 0], color: "#2e2622" });
     for (let i = 0; i < 4; i++) {
@@ -57285,7 +57311,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.add(cyl(0.061, 0.061, 0.12, 6), { at: [0, 0.5, 0], color: "#1d1512" });
       k.restore();
     }
-    for (let i = 0; i < 6; i++) k.add(new IcosahedronGeometry(0.05, 0), { at: [(R3() - 0.5) * 0.4, 0.06, (R3() - 0.5) * 0.4], color: "#ff7043", glow: "#ff5722", flicker: 0.6 });
+    for (let i = 0; i < 6; i++) k.add(new IcosahedronGeometry(0.05, 0), { at: [(R4() - 0.5) * 0.4, 0.06, (R4() - 0.5) * 0.4], color: "#ff7043", glow: "#ff5722", flicker: 0.6 });
   });
   var flameGeo = () => model("flame", (k) => {
     const prof2 = (s) => [[1e-3, 0], [0.16 * s, 0.1 * s], [0.2 * s, 0.25 * s], [0.14 * s, 0.5 * s], [0.06 * s, 0.75 * s], [1e-3, 0.95 * s]];
@@ -57349,15 +57375,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var fireGlowMat = null;
   reg2("bubble", (o) => {
     const root2 = group("bubbles");
-    const R3 = rng2(hash2(o.x, o.y) * 1e3 + (o.v || 0));
+    const R4 = rng2(hash2(o.x, o.y) * 1e3 + (o.v || 0));
     const bubbles = [];
-    const n = 2 + Math.floor(R3() * 2);
+    const n = 2 + Math.floor(R4() * 2);
     for (let i = 0; i < n; i++) {
-      const r = 0.35 + R3() * 0.6 + (i === 0 ? 0.3 : 0);
+      const r = 0.35 + R4() * 0.6 + (i === 0 ? 0.3 : 0);
       const m = new Mesh(BUBBLE_GEO, bubbleMaterial());
       m.scale.setScalar(r);
       m.renderOrder = 3;
-      const b = { m, r, x: (R3() - 0.5) * 2.4, y: 1.3 + R3() * 2.4, z: (R3() - 0.5) * 2.4, ph: R3() * 6, sp: 0.4 + R3() * 0.5 };
+      const b = { m, r, x: (R4() - 0.5) * 2.4, y: 1.3 + R4() * 2.4, z: (R4() - 0.5) * 2.4, ph: R4() * 6, sp: 0.4 + R4() * 0.5 };
       root2.add(m);
       bubbles.push(b);
     }
@@ -57371,7 +57397,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return root2;
   });
   var ferrisStatic = () => model("ferris-frame", (k) => {
-    const R3 = 7.4, hy = R3 + 1.4;
+    const R4 = 7.4, hy = R4 + 1.4;
     for (const z of [-1.3, 1.3]) {
       for (const s of [-1, 1]) {
         const a = [s * 3.2, 0, z], b = [0, hy, z * 0.55];
@@ -57390,16 +57416,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(cone(1.2, 0.8, 4), { at: [2.6, 2.3, 1.8], rot: [0, Math.PI / 4, 0], color: "#ffd54f", outline: 0.02 });
   });
   var ferrisWheel = () => model("ferris-wheel", (k) => {
-    const R3 = 7.4;
+    const R4 = 7.4;
     for (const z of [-0.55, 0.55]) {
-      k.add(torus(R3, 0.12, 5, 40), { at: [0, 0, z], color: "#ff8a65", outline: 0.02 });
-      k.add(torus(R3 * 0.55, 0.08, 5, 28), { at: [0, 0, z], color: "#4fc3f7" });
-      for (let i = 0; i < 16; i++) k.add(box(0.07, R3, 0.07), { at: [0, 0, z], rot: [0, 0, i / 16 * Math.PI * 2], color: "#eceff1" });
+      k.add(torus(R4, 0.12, 5, 40), { at: [0, 0, z], color: "#ff8a65", outline: 0.02 });
+      k.add(torus(R4 * 0.55, 0.08, 5, 28), { at: [0, 0, z], color: "#4fc3f7" });
+      for (let i = 0; i < 16; i++) k.add(box(0.07, R4, 0.07), { at: [0, 0, z], rot: [0, 0, i / 16 * Math.PI * 2], color: "#eceff1" });
     }
     for (let i = 0; i < 12; i++) {
       const a = i / 12 * Math.PI * 2;
-      k.add(cyl(0.05, 0.05, 1.1, 4), { at: [Math.cos(a) * R3, Math.sin(a) * R3, -0.55], rot: [Math.PI / 2, 0, 0], color: "#eceff1" });
-      k.add(new SphereGeometry(0.12, 6, 4), { at: [Math.cos(a) * R3, Math.sin(a) * R3, 0.6], color: "#ffeb3b", glow: "#fff176" });
+      k.add(cyl(0.05, 0.05, 1.1, 4), { at: [Math.cos(a) * R4, Math.sin(a) * R4, -0.55], rot: [Math.PI / 2, 0, 0], color: "#eceff1" });
+      k.add(new SphereGeometry(0.12, 6, 4), { at: [Math.cos(a) * R4, Math.sin(a) * R4, 0.6], color: "#ffeb3b", glow: "#fff176" });
     }
     k.add(cyl(0.5, 0.5, 1.3, 12), { at: [0, 0, -0.65], rot: [Math.PI / 2, 0, 0], color: "#90a4ae" });
   });
@@ -57419,14 +57445,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return k.build(false);
   }
   var millWheel = () => model("mill-wheel", (k) => {
-    const R3 = 1.5;
+    const R4 = 1.5;
     for (const z of [-0.3, 0.3]) {
-      k.add(torus(R3, 0.07, 5, 20), { at: [0, 0, z], color: "#6d4c41", outline: 0.015 });
-      for (let i = 0; i < 8; i++) k.add(box(0.08, R3, 0.08), { at: [0, 0, z], rot: [0, 0, i / 8 * Math.PI * 2], color: "#795548" });
+      k.add(torus(R4, 0.07, 5, 20), { at: [0, 0, z], color: "#6d4c41", outline: 0.015 });
+      for (let i = 0; i < 8; i++) k.add(box(0.08, R4, 0.08), { at: [0, 0, z], rot: [0, 0, i / 8 * Math.PI * 2], color: "#795548" });
     }
     for (let i = 0; i < 12; i++) {
       const a = i / 12 * Math.PI * 2;
-      k.add(box(0.06, 0.4, 0.7), { at: [-Math.sin(a) * (R3 - 0.05), Math.cos(a) * (R3 - 0.05), 0], rot: [0, 0, a], color: "#8d6e4a" });
+      k.add(box(0.06, 0.4, 0.7), { at: [-Math.sin(a) * (R4 - 0.05), Math.cos(a) * (R4 - 0.05), 0], rot: [0, 0, a], color: "#8d6e4a" });
     }
     k.add(cyl(0.15, 0.15, 1, 8), { at: [0, 0, -0.5], rot: [Math.PI / 2, 0, 0], color: "#4e342e" });
   });
@@ -57536,8 +57562,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (const x of [-0.34, 0, 0.34]) k.add(new CylinderGeometry(0.31, 0.31, 0.08, 12, 1, false, 0, Math.PI), { at: [x, 0, 0.3], rot: [0, 0, Math.PI / 2], color: band2 });
   });
   var coinsGeo = () => model("coins", (k) => {
-    const R3 = rng2(5);
-    for (let i = 0; i < 14; i++) k.add(new CylinderGeometry(0.06, 0.06, 0.02, 8), { at: [(R3() - 0.5) * 0.7, 0.42 + R3() * 0.12, (R3() - 0.5) * 0.4], rot: [R3(), 0, R3()], color: "#ffd54f", glow: "#ffb300" });
+    const R4 = rng2(5);
+    for (let i = 0; i < 14; i++) k.add(new CylinderGeometry(0.06, 0.06, 0.02, 8), { at: [(R4() - 0.5) * 0.7, 0.42 + R4() * 0.12, (R4() - 0.5) * 0.4], rot: [R4(), 0, R4()], color: "#ffd54f", glow: "#ffb300" });
     k.add(new SphereGeometry(0.3, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), { at: [0, 0.4, 0], scale: [1.3, 0.35, 0.8], color: "#f1c40f" });
   });
   reg2("chest", (o) => {
@@ -57599,19 +57625,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   var gateGeo = (big) => model("gate:" + big, (k) => {
     const stone = big ? "#e8e2d4" : "#607d8b", dark = big ? "#b0a58f" : "#455a64";
-    const W3 = 6.6, H2 = 6.4;
+    const W4 = 6.6, H3 = 6.4;
     for (const s of [-1, 1]) {
-      k.add(box(1.5, H2, 1.8), { at: [s * (W3 / 2 + 0.2), -0.5, 0], color: stone, outline: 0.04 });
-      for (let i = -1; i <= 1; i += 2) k.add(box(0.42, 0.55, 0.42), { at: [s * (W3 / 2 + 0.2) + i * 0.45, H2 - 0.5, 0.55], color: stone });
-      for (let i = -1; i <= 1; i += 2) k.add(box(0.42, 0.55, 0.42), { at: [s * (W3 / 2 + 0.2) + i * 0.45, H2 - 0.5, -0.55], color: stone });
-      for (let y = 0.6; y < H2 - 1; y += 0.55) k.add(box(1.52, 0.04, 1.82), { at: [s * (W3 / 2 + 0.2), y, 0], color: dark });
-      k.add(box(0.25, 0.9, 0.05), { at: [s * (W3 / 2 + 0.2), H2 - 2.4, 0.91], color: "#1d2a30", glow: "#ffcc80" });
+      k.add(box(1.5, H3, 1.8), { at: [s * (W4 / 2 + 0.2), -0.5, 0], color: stone, outline: 0.04 });
+      for (let i = -1; i <= 1; i += 2) k.add(box(0.42, 0.55, 0.42), { at: [s * (W4 / 2 + 0.2) + i * 0.45, H3 - 0.5, 0.55], color: stone });
+      for (let i = -1; i <= 1; i += 2) k.add(box(0.42, 0.55, 0.42), { at: [s * (W4 / 2 + 0.2) + i * 0.45, H3 - 0.5, -0.55], color: stone });
+      for (let y = 0.6; y < H3 - 1; y += 0.55) k.add(box(1.52, 0.04, 1.82), { at: [s * (W4 / 2 + 0.2), y, 0], color: dark });
+      k.add(box(0.25, 0.9, 0.05), { at: [s * (W4 / 2 + 0.2), H3 - 2.4, 0.91], color: "#1d2a30", glow: "#ffcc80" });
     }
-    k.add(box(W3, 1.3, 1.5), { at: [0, H2 - 1.9, 0], color: stone, outline: 0.04 });
-    k.add(box(W3 + 0.4, 0.2, 1.7), { at: [0, H2 - 0.65, 0], color: dark });
-    for (let x = -W3 / 2 + 0.35; x < W3 / 2 - 0.2; x += 0.45) k.add(box(0.1, H2 - 2.1, 0.1), { at: [x, 0, 0.3], color: "#263238" });
-    for (const y of [1.2, 2.8]) k.add(box(W3, 0.1, 0.1), { at: [0, y, 0.3], color: "#263238" });
-    for (let x = -W3 / 2 + 0.35; x < W3 / 2 - 0.2; x += 0.45) k.add(cone(0.08, 0.25, 4), { at: [x, -0.25, 0.3], rot: [Math.PI, 0, 0], color: "#263238" });
+    k.add(box(W4, 1.3, 1.5), { at: [0, H3 - 1.9, 0], color: stone, outline: 0.04 });
+    k.add(box(W4 + 0.4, 0.2, 1.7), { at: [0, H3 - 0.65, 0], color: dark });
+    for (let x = -W4 / 2 + 0.35; x < W4 / 2 - 0.2; x += 0.45) k.add(box(0.1, H3 - 2.1, 0.1), { at: [x, 0, 0.3], color: "#263238" });
+    for (const y of [1.2, 2.8]) k.add(box(W4, 0.1, 0.1), { at: [0, y, 0.3], color: "#263238" });
+    for (let x = -W4 / 2 + 0.35; x < W4 / 2 - 0.2; x += 0.45) k.add(cone(0.08, 0.25, 4), { at: [x, -0.25, 0.3], rot: [Math.PI, 0, 0], color: "#263238" });
   });
   var rmArchGeo = () => model("rm_arch", (k) => {
     const stone = "#9c5b4a", dark = "#6f3d31", light = "#c08a74", moss = "#5d7a3a";
@@ -57691,29 +57717,29 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   var stoneArch = () => model("arch-stone", (k) => {
     const s = new Shape();
-    const R3 = 2.3, r = 1.55, H2 = 2.2;
-    s.moveTo(-R3, 0);
-    s.lineTo(-R3, H2);
-    s.absarc(0, H2, R3, Math.PI, 0, true);
-    s.lineTo(R3, 0);
+    const R4 = 2.3, r = 1.55, H3 = 2.2;
+    s.moveTo(-R4, 0);
+    s.lineTo(-R4, H3);
+    s.absarc(0, H3, R4, Math.PI, 0, true);
+    s.lineTo(R4, 0);
     s.lineTo(r, 0);
-    s.lineTo(r, H2);
-    s.absarc(0, H2, r, 0, Math.PI, false);
+    s.lineTo(r, H3);
+    s.absarc(0, H3, r, 0, Math.PI, false);
     s.lineTo(-r, 0);
     s.closePath();
     k.add(extrude(s, 1.2, 0.06, 10), { at: [0, -0.3, 0], flat: true, color: "#8e7a66", outline: 0.04 });
     const d = new Shape();
     d.moveTo(-r, 0);
     d.lineTo(r, 0);
-    d.lineTo(r, H2);
-    d.absarc(0, H2, r, 0, Math.PI, false);
+    d.lineTo(r, H3);
+    d.absarc(0, H3, r, 0, Math.PI, false);
     d.closePath();
     k.add(new ShapeGeometry(d, 10), { at: [0, -0.3, -0.3], color: "#15100c" });
     const R22 = rng2(3);
-    for (let i = 0; i < 7; i++) k.add(new IcosahedronGeometry(0.3 + R22() * 0.4, 0), { at: [(R22() > 0.5 ? 1 : -1) * (R3 + 0.3 + R22() * 0.6), R22() * 0.5, (R22() - 0.5) * 1.2], flat: true, color: "#7d6b5a", outline: 0.02 });
+    for (let i = 0; i < 7; i++) k.add(new IcosahedronGeometry(0.3 + R22() * 0.4, 0), { at: [(R22() > 0.5 ? 1 : -1) * (R4 + 0.3 + R22() * 0.6), R22() * 0.5, (R22() - 0.5) * 1.2], flat: true, color: "#7d6b5a", outline: 0.02 });
     for (let i = 0; i < 9; i++) {
       const a = i / 8 * Math.PI;
-      k.add(box(0.3, 0.12, 1.25), { at: [Math.cos(a) * (R3 - 0.05), H2 - 0.3 + Math.sin(a) * (R3 - 0.05), 0], rot: [0, 0, a - Math.PI / 2], color: "#a8927c" });
+      k.add(box(0.3, 0.12, 1.25), { at: [Math.cos(a) * (R4 - 0.05), H3 - 0.3 + Math.sin(a) * (R4 - 0.05), 0], rot: [0, 0, a - Math.PI / 2], color: "#a8927c" });
     }
   });
   var mineArch = () => model("arch-mine", (k) => {
@@ -57727,32 +57753,32 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (let z = 0.3; z < 3; z += 0.45) k.add(box(1.2, 0.06, 0.16), { at: [0, -0.02, z], color: "#6d4c33" });
   });
   var heavensGate = () => model("arch-heaven", (k) => {
-    const R3 = rng2(7);
+    const R4 = rng2(7);
     for (const s of [-1, 1]) {
-      for (let i = 0; i < 6; i++) k.add(new IcosahedronGeometry(0.8 + R3() * 0.3, 1), { at: [s * 3.2 + (R3() - 0.5) * 0.4, i * 0.9, (R3() - 0.5) * 0.4], color: "#ffffff", outline: 0.03, outlineColor: "#9fb7cc" });
+      for (let i = 0; i < 6; i++) k.add(new IcosahedronGeometry(0.8 + R4() * 0.3, 1), { at: [s * 3.2 + (R4() - 0.5) * 0.4, i * 0.9, (R4() - 0.5) * 0.4], color: "#ffffff", outline: 0.03, outlineColor: "#9fb7cc" });
     }
     k.add(box(7.8, 1.1, 0.9), { at: [0, 5.1, 0], color: "#f5f6fa", outline: 0.04 });
-    for (let i = 0; i < 9; i++) k.add(new IcosahedronGeometry(0.7 + R3() * 0.3, 1), { at: [-3.6 + i * 0.9, 6.1 + R3() * 0.3, (R3() - 0.5) * 0.3], color: "#ffffff", outline: 0.03, outlineColor: "#9fb7cc" });
-    for (let i = 0; i < 8; i++) k.add(new IcosahedronGeometry(0.6 + R3() * 0.4, 1), { at: [(R3() - 0.5) * 8, 0, 0.6 + R3() * 0.8], color: "#f4f8ff" });
+    for (let i = 0; i < 9; i++) k.add(new IcosahedronGeometry(0.7 + R4() * 0.3, 1), { at: [-3.6 + i * 0.9, 6.1 + R4() * 0.3, (R4() - 0.5) * 0.3], color: "#ffffff", outline: 0.03, outlineColor: "#9fb7cc" });
+    for (let i = 0; i < 8; i++) k.add(new IcosahedronGeometry(0.6 + R4() * 0.4, 1), { at: [(R4() - 0.5) * 8, 0, 0.6 + R4() * 0.8], color: "#f4f8ff" });
   });
   var grandArch = () => model("arch-grand", (k) => {
     const s = new Shape();
-    const R3 = 3.6, r = 2.6, H2 = 3.2;
-    s.moveTo(-R3, 0);
-    s.lineTo(-R3, H2);
-    s.absarc(0, H2, R3, Math.PI, 0, true);
-    s.lineTo(R3, 0);
+    const R4 = 3.6, r = 2.6, H3 = 3.2;
+    s.moveTo(-R4, 0);
+    s.lineTo(-R4, H3);
+    s.absarc(0, H3, R4, Math.PI, 0, true);
+    s.lineTo(R4, 0);
     s.lineTo(r, 0);
-    s.lineTo(r, H2);
-    s.absarc(0, H2, r, 0, Math.PI, false);
+    s.lineTo(r, H3);
+    s.absarc(0, H3, r, 0, Math.PI, false);
     s.lineTo(-r, 0);
     s.closePath();
     k.add(extrude(s, 1.6, 0.08, 12), { at: [0, -0.3, 0], color: "#cfc3a8", outline: 0.05 });
     const t = new Shape();
-    t.moveTo(-R3 - 0.05, H2);
-    t.absarc(0, H2, R3 + 0.05, Math.PI, 0, true);
-    t.lineTo(R3 - 0.25, H2);
-    t.absarc(0, H2, R3 - 0.25, 0, Math.PI, false);
+    t.moveTo(-R4 - 0.05, H3);
+    t.absarc(0, H3, R4 + 0.05, Math.PI, 0, true);
+    t.lineTo(R4 - 0.25, H3);
+    t.absarc(0, H3, R4 - 0.25, 0, Math.PI, false);
     t.closePath();
     k.add(extrude(t, 1.7, 0, 12), { at: [0, -0.3, 0], color: "#d4ac0d" });
   });
@@ -57853,16 +57879,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const stone = red ? "#8e2b22" : "#37474f", light = red ? "#ffcdb4" : "#c8e6f0";
     k.add(box(2.6, 0.35, 2.4), { at: [0, -0.2, 0], color: red ? "#6e5a50" : "#5d6468", outline: 0.025 });
     k.add(box(2.05, 2.05, 2.05), { at: [0, 0.15, 0], color: stone, outline: 0.04, flat: true });
-    const R3 = rng2(red ? 5 : 3);
+    const R4 = rng2(red ? 5 : 3);
     for (const face of [0, 1, 2, 3]) {
       k.save();
       k.rotateY(face * Math.PI / 2);
       for (let r = 0; r < 7; r++) {
         let x = -0.85;
         while (x < 0.8) {
-          const w = 0.08 + R3() * 0.16;
+          const w = 0.08 + R4() * 0.16;
           k.add(box(w, 0.11, 0.02), { at: [x + w / 2, 0.42 + r * 0.25, 1.03], color: light, glow: red ? "#ff8a65" : "#4fc3f7" });
-          x += w + 0.06 + R3() * 0.06;
+          x += w + 0.06 + R4() * 0.06;
         }
       }
       k.restore();
@@ -57899,8 +57925,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(ribbon([[0.2, 3.7, 0, 0.05], [0.9, 3.2, 0.4, 0.5], [1.4, 2.5, 0.2, 0.35], [1.6, 2, 0.5, 0.12]], { side: [0, 0, 1] }), { color: "#ece6d6", double: true });
     for (let i = 0; i < 5; i++) k.add(torus(1.2, 0.07, 4, 8, Math.PI * 0.7), { at: [-2.4 - i * 0.35, 0.6, 0], rot: [Math.PI / 2, Math.PI / 2, 0], color: "#4e342e" });
     k.restore();
-    const R3 = rng2(6);
-    for (let i = 0; i < 6; i++) k.add(box(1.2 + R3(), 0.08, 0.22), { at: [(R3() - 0.5) * 7, 0.03, 2 + R3() * 2], rot: [0, R3() * 3, 0], color: "#6d4c33" });
+    const R4 = rng2(6);
+    for (let i = 0; i < 6; i++) k.add(box(1.2 + R4(), 0.08, 0.22), { at: [(R4() - 0.5) * 7, 0.03, 2 + R4() * 2], rot: [0, R4() * 3, 0], color: "#6d4c33" });
   });
   reg2("shipwreck", (o, ctx) => {
     const m = simple(o, ctx, "shipwreck", wreckGeo(), { yaw: hash2(o.x, o.y) * Math.PI * 2 });
@@ -58001,16 +58027,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const ring4 = [];
     for (let i = 0; i <= NU; i++) {
       const u = i / NU, t = Math.pow(u, 1.25);
-      const H2 = lbCurve(t, LB_H), Wd = lbCurve(t, LB_W), Y2 = lbCurve(t, LB_Y), n = lbCurve(t, LB_N);
+      const H3 = lbCurve(t, LB_H), Wd = lbCurve(t, LB_W), Y2 = lbCurve(t, LB_Y), n = lbCurve(t, LB_N);
       const e = 2 / n;
       const x = lbX(t) - (t < 0.03 ? 0 : 0);
       ring4.push(pos.length / 3);
       for (let j = 0; j < NV; j++) {
         const a = j / NV * Math.PI * 2;
         const c = Math.cos(a), sn = Math.sin(a);
-        const yy = Math.sign(sn) * Math.pow(Math.abs(sn), e) * H2;
+        const yy = Math.sign(sn) * Math.pow(Math.abs(sn), e) * H3;
         const zz = Math.sign(c) * Math.pow(Math.abs(c), e) * Wd;
-        const bulge = t < 0.06 ? (1 - t / 0.06) * (1 - (yy / H2) ** 2 * 0.6) * 2.2 : 0;
+        const bulge = t < 0.06 ? (1 - t / 0.06) * (1 - (yy / H3) ** 2 * 0.6) * 2.2 : 0;
         pos.push(x - bulge, Y2 + yy, zz);
       }
     }
@@ -58039,8 +58065,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       outline: 0.18,
       color: (p) => {
         const t = lbT(p.x);
-        const H2 = lbCurve(Math.max(0, t), LB_H), Y2 = lbCurve(Math.max(0, t), LB_Y);
-        const my = t < 0.52 ? lbMouthY(Math.max(0, t)) : Y2 - H2 * (0.34 + (t - 0.52) * 0.5);
+        const H3 = lbCurve(Math.max(0, t), LB_H), Y2 = lbCurve(Math.max(0, t), LB_Y);
+        const my = t < 0.52 ? lbMouthY(Math.max(0, t)) : Y2 - H3 * (0.34 + (t - 0.52) * 0.5);
         if (p.y < my) {
           const d = my - p.y;
           return t < 0.62 && d * 0.42 % 1 < 0.2 ? pleat : belly;
@@ -58049,15 +58075,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           const h2 = hash2(Math.floor(p.y * 0.55), Math.floor(p.z * 0.55), 7);
           if (h2 > 0.58) return h2 > 0.8 ? scarDark : scar;
         }
-        const up = Math.max(0, (p.y - Y2) / H2);
+        const up = Math.max(0, (p.y - Y2) / H3);
         return tmp2.copy(slate).lerp(slateTop, up * 0.8);
       }
     });
     for (const s of [-1, 1]) {
       const pts = [];
       for (let t = 0; t <= 0.5; t += 0.02) {
-        const W3 = lbCurve(t, LB_W);
-        pts.push(new Vector3(lbX(t) + (t === 0 ? -1.6 : 0), lbMouthY(t), s * (t === 0 ? 0 : W3 * 0.985)));
+        const W4 = lbCurve(t, LB_W);
+        pts.push(new Vector3(lbX(t) + (t === 0 ? -1.6 : 0), lbMouthY(t), s * (t === 0 ? 0 : W4 * 0.985)));
       }
       k.add(new TubeGeometry(new CatmullRomCurve3(pts), 40, 0.55, 5), { color: "#26313d" });
     }
@@ -58244,11 +58270,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       fx.bolt(x, y, x + Math.cos(a) * r * rnd(0.6, 1), y + Math.sin(a) * r * 0.7 * rnd(0.6, 1), col, 0.14, 0.035, { z0: z, z1: z + rnd(-0.35, 0.35), branches: 0, amp: -0.2 });
     }
   }
-  function vibration(fx, x, y, z, R3, col, n = 3) {
-    for (let i = 0; i < n; i++) fx.ring(x, y, 0.05, R3 * (0.6 + i * 0.25), col, 0.28 + i * 0.05, 0.05, { z, flat: 0.85, wobble: 0.18, lobes: 11, delay: i * 0.05, noCore: true, add: true });
+  function vibration(fx, x, y, z, R4, col, n = 3) {
+    for (let i = 0; i < n; i++) fx.ring(x, y, 0.05, R4 * (0.6 + i * 0.25), col, 0.28 + i * 0.05, 0.05, { z, flat: 0.85, wobble: 0.18, lobes: 11, delay: i * 0.05, noCore: true, add: true });
   }
-  function ripple(fx, x, y, R3, col, n = 2) {
-    for (let i = 0; i < n; i++) fx.ring(x, y, 0.1, R3 * (0.8 + i * 0.35), col, 0.45, 0.07, { z: 0.06, flat: 0.55, delay: i * 0.08, add: true });
+  function ripple(fx, x, y, R4, col, n = 2) {
+    for (let i = 0; i < n; i++) fx.ring(x, y, 0.1, R4 * (0.8 + i * 0.35), col, 0.45, 0.07, { z: 0.06, flat: 0.55, delay: i * 0.08, add: true });
   }
   var clipOf = (actor, a) => a.clip || (a.clip = actionClip(a.def, actor));
   var lastLook = (a) => a._lastLook || a.look;
@@ -58522,36 +58548,36 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   }
   function ringFx(fx, actor, a, h2, hb, col, E, st) {
-    const R3 = h2.range || 2;
+    const R4 = h2.range || 2;
     const x = hb.x, y = hb.y + 0.4;
-    fx.ring(x, y, 0.2, R3, col, 0.36, 0.2, { add: !!E.add || col === "#ffffff" });
-    fx.ring(x, y, 0.1, R3 * 0.7, "#ffffff", 0.26, 0.07, { add: true });
+    fx.ring(x, y, 0.2, R4, col, 0.36, 0.2, { add: !!E.add || col === "#ffffff" });
+    fx.ring(x, y, 0.1, R4 * 0.7, "#ffffff", 0.26, 0.07, { add: true });
     if ((h2.duration || 0) > 0.3) {
-      for (let t = 0.12; t < h2.duration; t += 0.14) fx.ring(x, y, 0.2, R3 * 0.9, col, 0.3, 0.1, { delay: t, add: true });
+      for (let t = 0.12; t < h2.duration; t += 0.14) fx.ring(x, y, 0.2, R4 * 0.9, col, 0.3, 0.1, { delay: t, add: true });
     }
-    fx.burst(x, y, Math.round(8 + R3 * 3), { speed: R3 * 3, spread: TAU11, kind: E.kind === "drop" ? "drop" : E.kind, color: E.spark, z: 0.45, vz: 1, g: 3, life: 0.4, size: 0.1 });
+    fx.burst(x, y, Math.round(8 + R4 * 3), { speed: R4 * 3, spread: TAU11, kind: E.kind === "drop" ? "drop" : E.kind, color: E.spark, z: 0.45, vz: 1, g: 3, life: 0.4, size: 0.1 });
     const el = h2.element || "physical";
-    if (el === "lightning") miniBolts(fx, x, y, 0.6, 5, R3 * 0.9, "#fff176");
-    else if (el === "fire" || el === "explosion") flames(fx, x, y, 0.3, 14, ELEM.fire.spark, { speed: R3 * 1.6 });
-    else if (el === "ice") ringSpikes(fx, x, y, R3 * 0.75, Math.round(R3 * 4), "ice");
+    if (el === "lightning") miniBolts(fx, x, y, 0.6, 5, R4 * 0.9, "#fff176");
+    else if (el === "fire" || el === "explosion") flames(fx, x, y, 0.3, 14, ELEM.fire.spark, { speed: R4 * 1.6 });
+    else if (el === "ice") ringSpikes(fx, x, y, R4 * 0.75, Math.round(R4 * 4), "ice");
     else if (el === "quake") {
-      for (let i = 0; i < 3; i++) fx.add("aircrack", { x: x + rnd(-R3, R3) * 0.5, y: y + rnd(-R3, R3) * 0.3, z: rnd(0.6, 1.4), size: R3 * 0.3, life: 0.45, delay: i * 0.05 });
-    } else if (el === "water") ripple(fx, x, y, R3, "#81d4fa", 3);
-    else if (el === "dark") fx.add("vortex", { x, y, r: R3 * 0.7, kind: "dark", life: 0.5, spin: -6 });
-    else if (el === "light") glow2(fx, x, y, 0.8, R3, "#fff9c4", 0.25);
-    if (st && st.vibrate) vibration(fx, x, y, 0.7, R3, st.vibrate, 3);
+      for (let i = 0; i < 3; i++) fx.add("aircrack", { x: x + rnd(-R4, R4) * 0.5, y: y + rnd(-R4, R4) * 0.3, z: rnd(0.6, 1.4), size: R4 * 0.3, life: 0.45, delay: i * 0.05 });
+    } else if (el === "water") ripple(fx, x, y, R4, "#81d4fa", 3);
+    else if (el === "dark") fx.add("vortex", { x, y, r: R4 * 0.7, kind: "dark", life: 0.5, spin: -6 });
+    else if (el === "light") glow2(fx, x, y, 0.8, R4, "#fff9c4", 0.25);
+    if (st && st.vibrate) vibration(fx, x, y, 0.7, R4, st.vibrate, 3);
     if (st && st.sparkle) sparkle2(fx, x, y, 0.8, 6, st.sparkle);
     if (h2.heavy) {
-      fx.crack(x, y, R3 * 0.7);
-      dust(fx, x, y, Math.round(6 + R3 * 2), { speed: R3 * 1.5 });
+      fx.crack(x, y, R4 * 0.7);
+      dust(fx, x, y, Math.round(6 + R4 * 2), { speed: R4 * 1.5 });
     }
   }
-  function ringSpikes(fx, x, y, R3, n, kind, col) {
+  function ringSpikes(fx, x, y, R4, n, kind, col) {
     const pts = [];
     for (let i = 0; i < n; i++) {
       const th = i / n * TAU11 + rnd(-0.2, 0.2);
-      const rr = R3 * rnd(0.55, 1);
-      pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, h: rnd(0.5, 1.1), w: rnd(0.12, 0.2), delay: rr / R3 * 0.12, lean: Math.cos(th) * 0.25 });
+      const rr = R4 * rnd(0.55, 1);
+      pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, h: rnd(0.5, 1.1), w: rnd(0.12, 0.2), delay: rr / R4 * 0.12, lean: Math.cos(th) * 0.25 });
     }
     pts.sort((p, q2) => p.dy - q2.dy);
     fx.add("spikes", { x, y, pts, kind, color: col || (kind === "ice" ? "#b3e5fc" : kind === "sand" ? "#d7b56d" : "#8d6e63"), edge: kind === "ice" ? "#e1f5fe" : "#5d4037", life: 1.1 });
@@ -58570,20 +58596,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const style = beamStyle(h2.element, a.def);
     fx.beam(actor.x, actor.y, ang, range, h2.width || 0.6, col, h2.duration ? Math.max(0.26, h2.duration) : 0.3, s.core || "#ffffff", { style });
     fx.add("flare", { x: actor.x + Math.cos(ang) * 0.5, y: actor.y + Math.sin(ang) * 0.35, z: 0.75, size: 0.6 + (h2.width || 0.6) * 0.3, color: col, life: 0.22 });
-    const W3 = h2.width || 0.6;
-    if (style === "ice") lineSpikes(fx, actor.x, actor.y, ang, range, "ice", null, W3 * 0.5);
-    else if (style === "sand") lineSpikes(fx, actor.x, actor.y, ang, range, "sand", null, W3 * 0.5);
+    const W4 = h2.width || 0.6;
+    if (style === "ice") lineSpikes(fx, actor.x, actor.y, ang, range, "ice", null, W4 * 0.5);
+    else if (style === "sand") lineSpikes(fx, actor.x, actor.y, ang, range, "sand", null, W4 * 0.5);
     else if (style === "quake") {
       for (let i = 1; i <= 4; i++) {
         const d = i / 4.5 * range;
-        fx.add("aircrack", { x: actor.x + Math.cos(ang) * d, y: actor.y + Math.sin(ang) * d, z: rnd(0.5, 1.2), size: W3 * 0.6 + 0.3, life: 0.5, delay: i * 0.04 });
+        fx.add("aircrack", { x: actor.x + Math.cos(ang) * d, y: actor.y + Math.sin(ang) * d, z: rnd(0.5, 1.2), size: W4 * 0.6 + 0.3, life: 0.5, delay: i * 0.04 });
       }
       fx.crack(actor.x + Math.cos(ang) * range * 0.5, actor.y + Math.sin(ang) * range * 0.5, range * 0.35, 2);
     } else if (style === "lightning") {
       for (let i = 0; i < 3; i++) {
         const d = rnd(0.3, 1) * range;
         const px2 = actor.x + Math.cos(ang) * d, py2 = actor.y + Math.sin(ang) * d;
-        miniBolts(fx, px2, py2, 0.7, 1, W3 * 1.5, "#fff176");
+        miniBolts(fx, px2, py2, 0.7, 1, W4 * 1.5, "#fff176");
       }
     } else if (style === "fire") {
       for (let i = 0; i < 6; i++) {
@@ -58593,7 +58619,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     if (h2.heavy) {
       const ex = actor.x + Math.cos(ang) * range, ey = actor.y + Math.sin(ang) * range;
-      glow2(fx, ex, ey, 0.7, W3 * 1.6, col, 0.3);
+      glow2(fx, ex, ey, 0.7, W4 * 1.6, col, 0.3);
     }
   }
   function swingFx(fx, actor, a, h2, hb, ang, range, col, E, st, clip2) {
@@ -58709,13 +58735,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       sparkle2(fx, actor.x, actor.y, 1.2, 4, [col, "#ffffff"]);
     },
     pull(fx, actor, s, a) {
-      const R3 = s.pull.range;
+      const R4 = s.pull.range;
       const col = s.color || "#7e57c2";
       const ang = a.angle;
       fx.add("vortex", { x: actor.x + Math.cos(ang) * 0.6, y: actor.y + Math.sin(ang) * 0.4, r: 1.1, kind: "dark", life: 0.6, spin: -8, arms: 5 });
-      fx.ring(actor.x, actor.y, R3, 0.3, col, 0.5, 0.3);
+      fx.ring(actor.x, actor.y, R4, 0.3, col, 0.5, 0.3);
       for (let i = 0; i < 18; i++) {
-        const th = rnd(0, TAU11), rr = R3 * rnd(0.5, 0.95);
+        const th = rnd(0, TAU11), rr = R4 * rnd(0.5, 0.95);
         fx.particle({ x: actor.x + Math.cos(th) * rr, y: actor.y + Math.sin(th) * rr * 0.7, z: rnd(0.3, 1.2), vx: -Math.cos(th) * rr * 2.2, vy: -Math.sin(th) * rr * 1.6, vz: 0, g: 0, drag: 0.5, life: 0.45, size: 0.12, color: i % 2 ? "#311b92" : "#7e57c2", kind: "spark", add: false });
       }
     },
@@ -58769,9 +58795,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   sig("santo_heavy", {
     hit(fx, actor, s, a, hb) {
-      const h2 = s.hit, ang = hb.angle, R3 = (h2.range || 2.4) * (actor.reach ?? 1);
-      for (const [dir, z] of [[1, 0.9], [-1, 0.45]]) fx.add("crescent", { x: actor.x, y: actor.y, angle: ang, radius: R3 * 0.9, arc: 1.9, width: 0.3, color: "#e8f5e9", dir, life: 0.28, z, tilt: 0.55 });
-      fx.add("flare", { x: actor.x + Math.cos(ang) * R3 * 0.7, y: actor.y + Math.sin(ang) * R3 * 0.5, z: 0.7, size: 0.9, color: "#ff5252", life: 0.22 });
+      const h2 = s.hit, ang = hb.angle, R4 = (h2.range || 2.4) * (actor.reach ?? 1);
+      for (const [dir, z] of [[1, 0.9], [-1, 0.45]]) fx.add("crescent", { x: actor.x, y: actor.y, angle: ang, radius: R4 * 0.9, arc: 1.9, width: 0.3, color: "#e8f5e9", dir, life: 0.28, z, tilt: 0.55 });
+      fx.add("flare", { x: actor.x + Math.cos(ang) * R4 * 0.7, y: actor.y + Math.sin(ang) * R4 * 0.5, z: 0.7, size: 0.9, color: "#ff5252", life: 0.22 });
     }
   });
   sig("santo_sanzen", {
@@ -58930,10 +58956,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   sig("elec_heavy ryu_claw neko_claw kuro_claws", {
     hit(fx, actor, s, a, hb) {
-      const h2 = s.hit, R3 = (h2.range || 1.8) * (actor.reach ?? 1);
+      const h2 = s.hit, R4 = (h2.range || 1.8) * (actor.reach ?? 1);
       const col = a.def.id === "elec_heavy" ? "#fff59d" : a.def.id === "neko_claw" ? "#ffcc80" : "#ffffff";
-      const [px2, py2] = fwd(actor, hb.angle, R3 * 0.65);
-      fx.add("claw", { x: px2, y: py2, z: 0.8, angle: hb.angle, size: 0.9 + R3 * 0.2, color: col, life: 0.4, n: a.def.id === "ryu_claw" ? 4 : 3 });
+      const [px2, py2] = fwd(actor, hb.angle, R4 * 0.65);
+      fx.add("claw", { x: px2, y: py2, z: 0.8, angle: hb.angle, size: 0.9 + R4 * 0.2, color: col, life: 0.4, n: a.def.id === "ryu_claw" ? 4 : 3 });
       if (a.def.id === "elec_heavy") miniBolts(fx, px2, py2, 0.8, 3, 1, "#fff176");
       if (a.def.id === "ryu_claw") fx.crack(px2, py2 + 0.1, 0.8, 1.6);
     }
@@ -58991,11 +59017,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   sig("elbaf_heavy", {
     hit(fx, actor, s, a, hb) {
-      const R3 = s.hit.range || 2.3;
-      fx.add("crescent", { x: actor.x, y: actor.y, angle: a.angle, radius: R3, arc: TAU11 * 0.95, width: 0.42, color: "#ffe082", core: "#fffde7", dir: 1, life: 0.35, z: 0.45, reveal: 0.35 });
-      fx.crack(actor.x, actor.y, R3 * 0.8);
-      dust(fx, actor.x, actor.y, 14, { speed: R3 * 1.8, size: 0.26 });
-      fx.ring(actor.x, actor.y, 0.3, R3 * 1.2, "#ffe082", 0.35, 0.14, { z: 0.05, flat: 0.55, add: true });
+      const R4 = s.hit.range || 2.3;
+      fx.add("crescent", { x: actor.x, y: actor.y, angle: a.angle, radius: R4, arc: TAU11 * 0.95, width: 0.42, color: "#ffe082", core: "#fffde7", dir: 1, life: 0.35, z: 0.45, reveal: 0.35 });
+      fx.crack(actor.x, actor.y, R4 * 0.8);
+      dust(fx, actor.x, actor.y, 14, { speed: R4 * 1.8, size: 0.26 });
+      fx.ring(actor.x, actor.y, 0.3, R4 * 1.2, "#ffe082", 0.35, 0.14, { z: 0.05, flat: 0.55, add: true });
     }
   });
   sig("elbaf_hakoku", {
@@ -59100,14 +59126,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   sig("gura_kaishin gura_tsunami", {
     hit(fx, actor, s, a, hb) {
-      const R3 = s.hit.range || 4.5, big = a.def.id === "gura_tsunami";
+      const R4 = s.hit.range || 4.5, big = a.def.id === "gura_tsunami";
       const n = big ? 9 : 5;
       for (let i = 0; i < n; i++) {
-        const th = i / n * TAU11 + rnd(-0.3, 0.3), rr = R3 * rnd(0.3, 0.8);
+        const th = i / n * TAU11 + rnd(-0.3, 0.3), rr = R4 * rnd(0.3, 0.8);
         fx.add("aircrack", { x: actor.x + Math.cos(th) * rr, y: actor.y + Math.sin(th) * rr * 0.6, z: rnd(0.6, 2), size: rnd(0.8, 1.4) * (big ? 1.5 : 1), life: 0.6, delay: i * 0.03 });
       }
-      for (let i = 0; i < 4; i++) fx.ring(actor.x, actor.y, 0.5, R3 * (0.5 + i * 0.2), "#e0f7fa", 0.55, 0.14, { delay: i * 0.06, add: true, wobble: 0.05 });
-      fx.crack(actor.x, actor.y, R3 * 0.6, 2.5);
+      for (let i = 0; i < 4; i++) fx.ring(actor.x, actor.y, 0.5, R4 * (0.5 + i * 0.2), "#e0f7fa", 0.55, 0.14, { delay: i * 0.06, add: true, wobble: 0.05 });
+      fx.crack(actor.x, actor.y, R4 * 0.6, 2.5);
       if (big) {
         fx.flashScreen(0.1, "rgba(224,247,250,1)");
         fx.focus(actor.x, actor.y, 0.35);
@@ -59136,10 +59162,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   sig("ope_amputate", {
     hit(fx, actor, s, a, hb) {
       DEFAULTS.hit(fx, actor, s, a, hb);
-      const R3 = (s.hit.range || 4) * (actor.reach ?? 1);
-      fx.add("cutline", { x: actor.x - Math.sin(hb.angle) * R3 * 0.6, y: actor.y + Math.cos(hb.angle) * R3 * 0.4, x1: actor.x + Math.sin(hb.angle) * R3 * 0.6 + Math.cos(hb.angle) * R3 * 0.5, y1: actor.y - Math.cos(hb.angle) * R3 * 0.4 + Math.sin(hb.angle) * R3 * 0.5, z: 0.7, color: "#b3e5fc", life: 0.45 });
+      const R4 = (s.hit.range || 4) * (actor.reach ?? 1);
+      fx.add("cutline", { x: actor.x - Math.sin(hb.angle) * R4 * 0.6, y: actor.y + Math.cos(hb.angle) * R4 * 0.4, x1: actor.x + Math.sin(hb.angle) * R4 * 0.6 + Math.cos(hb.angle) * R4 * 0.5, y1: actor.y - Math.cos(hb.angle) * R4 * 0.4 + Math.sin(hb.angle) * R4 * 0.5, z: 0.7, color: "#b3e5fc", life: 0.45 });
       for (let i = 0; i < 3; i++) {
-        const [px2, py2] = fwd(actor, hb.angle + rnd(-0.5, 0.5), rnd(1, R3 * 0.8));
+        const [px2, py2] = fwd(actor, hb.angle + rnd(-0.5, 0.5), rnd(1, R4 * 0.8));
         fx.add("cube", { x: px2, y: py2, z: rnd(0.5, 1.2), size: 0.2, color: "#81d4fa", life: 0.5, delay: 0.05 * i });
       }
     }
@@ -59164,9 +59190,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   } });
   sig("bomu_kick bomu_breeze", {
     hit(fx, actor, s, a, hb) {
-      const R3 = (s.hit.range || 1.8) * (actor.reach ?? 1);
-      const [px2, py2] = fwd(actor, hb.angle, R3 * 0.6);
-      explosionFx(fx, px2, py2 + 0.45, { range: R3 * 0.6, element: "explosion" }, actor, true);
+      const R4 = (s.hit.range || 1.8) * (actor.reach ?? 1);
+      const [px2, py2] = fwd(actor, hb.angle, R4 * 0.6);
+      explosionFx(fx, px2, py2 + 0.45, { range: R4 * 0.6, element: "explosion" }, actor, true);
     }
   });
   sig("hana_mil", {
@@ -59187,8 +59213,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     fx.add("strings", { x: actor.x, y: actor.y, x1: tx, y1: ty, color: "#f8bbd0", n: 5, life: 0.6 });
   } });
   sig("ito_fivecolor", { hit(fx, actor, s, a, hb) {
-    const R3 = (s.hit.range || 3.4) * (actor.reach ?? 1);
-    for (let i = 0; i < 5; i++) fx.add("crescent", { x: actor.x, y: actor.y, angle: hb.angle + (i - 2) * 0.08, radius: R3 * (0.95 - i * 0.05), arc: 1.4, width: 0.05, color: ["#f48fb1", "#ce93d8", "#90caf9", "#a5d6a7", "#fff59d"][i], dir: 1, life: 0.28, delay: i * 0.02, z: 0.5 + i * 0.1 });
+    const R4 = (s.hit.range || 3.4) * (actor.reach ?? 1);
+    for (let i = 0; i < 5; i++) fx.add("crescent", { x: actor.x, y: actor.y, angle: hb.angle + (i - 2) * 0.08, radius: R4 * (0.95 - i * 0.05), arc: 1.4, width: 0.05, color: ["#f48fb1", "#ce93d8", "#90caf9", "#a5d6a7", "#fff59d"][i], dir: 1, life: 0.28, delay: i * 0.02, z: 0.5 + i * 0.1 });
   } });
   sig("ito_overheat", { beam: "string" });
   sig("mochi_zangiri", { beam: "mochi" });
@@ -59266,13 +59292,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   sig("mera_enkai", {
     hit(fx, actor, s, a, hb) {
       DEFAULTS.hit(fx, actor, s, a, hb);
-      const R3 = s.hit.range || 3;
+      const R4 = s.hit.range || 3;
       for (let i = 0; i < 6; i++) {
         const th = i / 6 * TAU11;
-        fx.add("pillar", { x: actor.x + Math.cos(th) * R3 * 0.75, y: actor.y + Math.sin(th) * R3 * 0.5, r: 0.35, h: 3, color: "#ff7043", core: "#ffeb3b", life: 0.6, kind: "fire", delay: i * 0.03 });
+        fx.add("pillar", { x: actor.x + Math.cos(th) * R4 * 0.75, y: actor.y + Math.sin(th) * R4 * 0.5, r: 0.35, h: 3, color: "#ff7043", core: "#ffeb3b", life: 0.6, kind: "fire", delay: i * 0.03 });
       }
       fx.add("pillar", { x: actor.x, y: actor.y, r: 0.8, h: 4.5, color: "#ff5722", core: "#ffeb3b", life: 0.6, kind: "fire" });
-      fx.add("scorch", { x: actor.x, y: actor.y, r: R3 * 0.8, life: 3 });
+      fx.add("scorch", { x: actor.x, y: actor.y, r: R4 * 0.8, life: 3 });
     }
   });
   sig("mera_entei", {
@@ -59291,9 +59317,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   } });
   sig("hie_ageand", {
     hit(fx, actor, s, a, hb) {
-      const R3 = s.hit.range || 5;
-      ringSpikes(fx, actor.x, actor.y, R3 * 0.85, 22, "ice");
-      fx.ring(actor.x, actor.y, 0.3, R3, "#e1f5fe", 0.6, 0.2, { add: true });
+      const R4 = s.hit.range || 5;
+      ringSpikes(fx, actor.x, actor.y, R4 * 0.85, 22, "ice");
+      fx.ring(actor.x, actor.y, 0.3, R4, "#e1f5fe", 0.6, 0.2, { add: true });
       shards(fx, actor.x, actor.y, 0.6, 20);
       fx.flashScreen(0.06, "rgba(225,245,254,1)");
     }
@@ -59513,19 +59539,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   }
   function explosionFx(fx, x, y, e, owner, small) {
-    const R3 = e.range || 1.8;
+    const R4 = e.range || 1.8;
     const el = e.element || "explosion";
     const E = elemOf(el);
     const cols = e.colors || (el === "explosion" ? ["#ffab40", "#ff7043", "#fff176", "#616161"] : E.spark);
     const gy = y + 0.45;
-    glow2(fx, x, gy, 0.5, R3 * 1.1, cols[0], 0.3);
-    fx.add("impact", { x, y: gy, z: 0.5, angle: 0, size: R3 * 0.55, color: cols[0], core: "#ffffff", life: 0.22, spikes: 12, lines: 6 });
-    fx.ring(x, gy, 0.2, R3, e.color || cols[0], 0.35, 0.3, { add: true });
-    fx.burst(x, gy, Math.round(10 + R3 * 5), { color: cols, speed: 3 + R3 * 2, g: 3, z: 0.4, vz: 3, life: 0.6, kind: el === "explosion" || el === "fire" ? "fire" : E.kind, size: 0.22 + R3 * 0.03 });
-    smoke(fx, x, gy, 0.6, Math.round(4 + R3 * 2), ["#616161", "#757575", "#424242"], { speed: R3 * 1.2, size: 0.35 + R3 * 0.05, vz: 1.5 });
-    dust(fx, x, gy, Math.round(4 + R3), { speed: R3 * 1.5 });
-    if (!small) fx.crack(x, gy, R3 * 0.6, 1.5);
-    if (el === "explosion" || el === "fire") fx.add("scorch", { x, y: gy, r: R3 * 0.55, life: 3 });
+    glow2(fx, x, gy, 0.5, R4 * 1.1, cols[0], 0.3);
+    fx.add("impact", { x, y: gy, z: 0.5, angle: 0, size: R4 * 0.55, color: cols[0], core: "#ffffff", life: 0.22, spikes: 12, lines: 6 });
+    fx.ring(x, gy, 0.2, R4, e.color || cols[0], 0.35, 0.3, { add: true });
+    fx.burst(x, gy, Math.round(10 + R4 * 5), { color: cols, speed: 3 + R4 * 2, g: 3, z: 0.4, vz: 3, life: 0.6, kind: el === "explosion" || el === "fire" ? "fire" : E.kind, size: 0.22 + R4 * 0.03 });
+    smoke(fx, x, gy, 0.6, Math.round(4 + R4 * 2), ["#616161", "#757575", "#424242"], { speed: R4 * 1.2, size: 0.35 + R4 * 0.05, vz: 1.5 });
+    dust(fx, x, gy, Math.round(4 + R4), { speed: R4 * 1.5 });
+    if (!small) fx.crack(x, gy, R4 * 0.6, 1.5);
+    if (el === "explosion" || el === "fire") fx.add("scorch", { x, y: gy, r: R4 * 0.55, life: 3 });
     const pl = fx.game.player;
     if (!small && (owner?.isPlayer || pl && fx.game.world && fx.game.world.distance(x, y, pl.x, pl.y) < 12)) fx.shake(0.3);
   }
@@ -59535,16 +59561,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     fx.particle({ x: p.x, y: p.y + 0.5, z: 1, vx: Math.random() - 0.5, vy: Math.random() - 0.5, vz: 0.4, g: 0, life: t.life || 0.35, size: t.size || 0.18, color: col, kind: t.kind || "fire", grow: t.grow ?? -0.2 });
   }
   function conquerorFx(fx, actor, c) {
-    const R3 = c.range;
-    fx.ring(actor.x, actor.y, 0.5, R3, "#1a1a1a", 0.7, 0.45);
-    fx.ring(actor.x, actor.y, 0.3, R3 * 0.8, "#d50000", 0.55, 0.16, { add: true });
-    fx.ring(actor.x, actor.y, 0.2, R3 * 1.1, "#000000", 0.9, 0.08, { wobble: 0.08 });
+    const R4 = c.range;
+    fx.ring(actor.x, actor.y, 0.5, R4, "#1a1a1a", 0.7, 0.45);
+    fx.ring(actor.x, actor.y, 0.3, R4 * 0.8, "#d50000", 0.55, 0.16, { add: true });
+    fx.ring(actor.x, actor.y, 0.2, R4 * 1.1, "#000000", 0.9, 0.08, { wobble: 0.08 });
     for (let k = 0; k < 10; k++) {
       const a = Math.random() * TAU11;
-      fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * R3 * rnd(0.5, 0.8), actor.y + Math.sin(a) * R3 * rnd(0.35, 0.55), k % 2 ? "#d50000" : "#000000", 0.4, 0.09, { z0: 0.9, z1: rnd(0, 1.6), branches: 2 });
+      fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * R4 * rnd(0.5, 0.8), actor.y + Math.sin(a) * R4 * rnd(0.35, 0.55), k % 2 ? "#d50000" : "#000000", 0.4, 0.09, { z0: 0.9, z1: rnd(0, 1.6), branches: 2 });
     }
     fx.add("pillar", { x: actor.x, y: actor.y, r: 0.6, h: 5, color: "#000000", core: "#d50000", kind: "dark", life: 0.5 });
-    dust(fx, actor.x, actor.y, 14, { speed: R3 * 0.8, size: 0.3 });
+    dust(fx, actor.x, actor.y, 14, { speed: R4 * 0.8, size: 0.3 });
     fx.impactFrame(0.12);
     fx.shake(0.7);
     fx.focus(actor.x, actor.y, 0.3);
@@ -60984,14 +61010,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       return null;
     };
-    game.hullAt = (x, y, pad = 0) => {
+    game.hullAt = (x, y, pad2 = 0) => {
       const w = game.world, time = game.env?.time || 0;
       for (const s of game.ships) {
         if (s.sunk || s.alive === false) continue;
-        const r = s.def.length * 0.56 + pad;
+        const r = s.def.length * 0.56 + pad2;
         const dx = w.dx(s.x, x), dy = y - s.y;
         if (dx * dx + dy * dy > r * r) continue;
-        const h2 = hullPoint(s, dx, dy, pad);
+        const h2 = hullPoint(s, dx, dy, pad2);
         if (!h2) continue;
         const lift = shipBob(s, time) + pitchRise(s, h2.u);
         h2.ship = s;
@@ -61147,12 +61173,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.title = o.title || "";
       this.look = o.look || {};
       this.race = o.race || this.look.race || "human";
-      const R3 = RACES[this.race] || RACES.human;
+      const R4 = RACES[this.race] || RACES.human;
       this.attrs = { ...baseAttrs(), ...o.attrs || {} };
-      this.baseMods = { hpMul: (R3.hpMul || 1) * (o.hpMul || 1), stride: R3.stride || 1, speedMul: (o.speedMul || 1) * (this.race === "buccaneer" ? 0.92 : 1) };
-      this.reach = R3.reach || 1;
-      this.canSwimRace = R3.swim || 1;
-      this.gills = !!R3.gills;
+      this.baseMods = { hpMul: (R4.hpMul || 1) * (o.hpMul || 1), stride: R4.stride || 1, speedMul: (o.speedMul || 1) * (this.race === "buccaneer" ? 0.92 : 1) };
+      this.reach = R4.reach || 1;
+      this.canSwimRace = R4.swim || 1;
+      this.gills = !!R4.gills;
       this.style = o.style || "brawler";
       this.weapon = o.weapon || null;
       this.fruit = o.fruit || null;
@@ -61485,7 +61511,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         dy = Math.sin(this.facing);
         len = 1;
       }
-      const R3 = RACES[this.race] || {};
+      const R4 = RACES[this.race] || {};
       const dist = 3.2 * (this.race === "skypiean" ? 1.3 : 1) * (this.race === "lunarian" ? 1.4 : 1) * (this.dashMul || 1);
       const time = 0.22;
       this.dash = { vx: dx / len * dist / time, vy: dy / len * dist / time, t: time, t0: time, dodge: true, ignoreWater: this.race === "lunarian" };
@@ -61495,12 +61521,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       game.fx.burst(this.x, this.y, 7, { angle: Math.atan2(-dy, -dx), spread: 1.6, color: ["#d7ccc8", "#bcaaa4", "#efebe9"], speed: 2.4, z: 0.08, vz: 0.6, g: 1.2, life: 0.5, kind: "dust", size: 0.2, grow: 0.45 });
       game.audio?.sfx("dodge", this);
       if (this.isPlayer) game.emit("playerDodge");
-      return R3;
+      return R4;
     }
     /** Take-off speeds for this body: { v (a plain jump), charge (× for a full charge), leap (out of the water) }. */
     jumpStats() {
-      const R3 = RACES[this.race] || RACES.human;
-      return { v: (R3.jump || 7.6) * (this.jumpMul || 1), charge: R3.charge || 1.45, leap: R3.leap || 1 };
+      const R4 = RACES[this.race] || RACES.human;
+      return { v: (R4.jump || 7.6) * (this.jumpMul || 1), charge: R4.charge || 1.45, leap: R4.leap || 1 };
     }
     /** Can you jump right now: on your feet, or at the surface of the water (not a Devil Fruit user). */
     canJump() {
@@ -62678,7 +62704,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     "sheath",
     "hilts",
     "backWpn",
-    ...["R", "L"].flatMap((H2) => ["k1", "k2", "k3", "k4", "j1", "j2", "j3", "j4", "tb", "tc"].map((n) => n + H2))
+    ...["R", "L"].flatMap((H3) => ["k1", "k2", "k3", "k4", "j1", "j2", "j3", "j4", "tb", "tc"].map((n) => n + H3))
   ];
   var B3 = Object.fromEntries(BONES.map((n, i) => [n, i]));
   var PARENT = {
@@ -62697,23 +62723,47 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     hilts: "hips",
     hairTail: "head"
   };
-  for (const H2 of ["R", "L"]) {
+  for (const H3 of ["R", "L"]) {
     for (let i = 1; i <= 4; i++) {
-      PARENT["k" + i + H2] = "hand" + H2;
-      PARENT["j" + i + H2] = "k" + i + H2;
+      PARENT["k" + i + H3] = "hand" + H3;
+      PARENT["j" + i + H3] = "k" + i + H3;
     }
-    PARENT["tb" + H2] = "hand" + H2;
-    PARENT["tc" + H2] = "tb" + H2;
+    PARENT["tb" + H3] = "hand" + H3;
+    PARENT["tc" + H3] = "tb" + H3;
+  }
+  var F1 = { h: 1, leg: 1, sh: 1, ch: 1, wa: 1, hp: 1, arm: 1, fa: 1, th: 1, ca: 1, neck: 1, head: 1, belly: 0, mus: null };
+  var FRAME = {
+    average: F1,
+    lean: { ...F1, h: 0.97, sh: 0.97, ch: 0.96, wa: 0.88, hp: 0.95, arm: 0.94, fa: 0.96, th: 0.93, ca: 0.96, neck: 0.95, head: 1.04, mus: 0.75 },
+    athletic: { ...F1, h: 1.03, sh: 1.13, ch: 1.12, wa: 0.97, arm: 1.12, fa: 1.1, th: 1.08, ca: 1.05, neck: 1.14, head: 0.98, mus: 1 },
+    slim: { ...F1, h: 1.04, leg: 1.07, sh: 0.97, ch: 0.94, wa: 0.85, hp: 0.93, arm: 0.88, fa: 0.9, th: 0.9, ca: 0.92, neck: 0.94, head: 0.97, mus: 0.45 },
+    brawny: { ...F1, h: 1.2, leg: 0.88, sh: 1.5, ch: 1.42, wa: 1.12, hp: 1.04, arm: 1.55, fa: 1.95, th: 1.18, ca: 1.12, neck: 1.4, head: 0.86, mus: 1.2 },
+    heavy: { ...F1, h: 1.03, leg: 0.93, sh: 1.2, ch: 1.28, wa: 1.5, hp: 1.3, arm: 1.3, fa: 1.2, th: 1.35, ca: 1.25, neck: 1.32, head: 1.03, belly: 1, mus: 0.3 },
+    lanky: { ...F1, h: 1.08, leg: 1.1, sh: 0.9, ch: 0.88, wa: 0.84, hp: 0.9, arm: 0.8, fa: 0.84, th: 0.8, ca: 0.84, neck: 0.88, head: 1, mus: 0.28 },
+    stocky: { ...F1, h: 0.87, leg: 0.84, sh: 1.2, ch: 1.2, wa: 1.14, hp: 1.1, arm: 1.25, fa: 1.28, th: 1.25, ca: 1.2, neck: 1.28, head: 1.08, belly: 0.3, mus: 0.8 },
+    // women
+    curvy: { ...F1, h: 1.01, leg: 1.05, sh: 0.98, wa: 0.84, hp: 1.12, th: 1.05, head: 0.98, mus: 0.2 },
+    petite: { ...F1, h: 0.9, leg: 0.98, sh: 0.92, ch: 0.92, wa: 0.9, hp: 0.94, arm: 0.9, fa: 0.9, th: 0.9, ca: 0.9, neck: 0.92, head: 1.06, mus: 0.15 }
+  };
+  var FRAMES_M = ["average", "lean", "athletic", "slim", "brawny", "heavy", "lanky", "stocky"];
+  var FRAMES_F = ["average", "slim", "curvy", "athletic", "petite", "heavy"];
+  function frameId(look) {
+    const set = look.fem ? FRAMES_F : FRAMES_M;
+    return set.includes(look.frame) ? look.frame : "average";
+  }
+  function frameOf(look) {
+    return FRAME[frameId(look)] || F1;
   }
   function dims(look) {
     const fem = !!look.fem;
-    const Lg = (look.legs || 1) * (fem ? 1.03 : 1), Am = (look.arms || 1) * (fem ? 0.97 : 1), Bk = look.bulk || 1;
+    const F4 = frameOf(look);
+    const Lg = (look.legs || 1) * (fem ? 1.03 : 1) * F4.leg * F4.h, Am = (look.arms || 1) * (fem ? 0.97 : 1) * Math.sqrt(F4.h), Bk = look.bulk || 1;
     const T1 = 0.48 * Lg, T22 = 0.465 * Lg, hA = 0.075;
     const hip0 = (T1 + T22) * 0.985 + hA;
-    const chestLen = (0.52 + (Bk - 1) * 0.1) * (fem ? 0.95 : 1);
-    const headR = 0.13 * (1 + (Bk - 1) * 0.18);
-    const A1 = 0.3 * Am, A2 = 0.27 * Am;
-    const neck = 0.075 + (look.neck || 0) * 0.6;
+    const chestLen = (0.52 + (Bk - 1) * 0.1) * (fem ? 0.95 : 1) * F4.h / Math.sqrt(F4.leg);
+    const headR = 0.13 * (1 + (Bk - 1) * 0.18) * F4.head;
+    const A1 = 0.3 * Am * Math.sqrt(F4.h), A2 = 0.27 * Am * Math.sqrt(F4.h);
+    const neck = (0.075 + (look.neck || 0) * 0.6) * (F4.neck > 1.2 ? 0.85 : 1);
     return {
       Lg,
       Am,
@@ -62728,15 +62778,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       A2,
       neck,
       fem,
+      F: F4,
       hc: headR * 0.84,
       // head centre above the neck top
       hx: headR * 0.15,
       // … and in front of it (the neck meets the skull behind the jaw)
-      hipW: (fem ? 0.094 : 0.085) * Bk,
+      hipW: (fem ? 0.094 : 0.085) * Bk * (0.6 + 0.4 * F4.hp),
       // hip joints either side of the pelvis
       shY: chestLen - 0.07,
       // shoulder joints below the top of the chest
-      shW: fem ? 0.155 * Bk + 4e-3 : 0.194 * Bk + 6e-3,
+      shW: (fem ? 0.155 * Bk + 4e-3 : 0.194 * Bk + 6e-3) * F4.sh,
       depth: 0.64,
       // torso depth / width
       kA: (A1 + A2) / 0.43,
@@ -62746,6 +62797,46 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       kHip: hip0 / (0.42 * Lg + 0.05)
       // 2D hip drop → metres
     };
+  }
+  function restOffsets(d) {
+    return {
+      hairTail: [d.hx, d.hc, 0],
+      tail: [-0.13 * d.Bk, -0.06, 0],
+      wingR: [-0.11 * d.Bk, d.chestLen * 0.8, 0.05],
+      wingL: [-0.11 * d.Bk, d.chestLen * 0.8, -0.05]
+    };
+  }
+  function bindPose(d) {
+    const T4 = (x, y, z) => new Matrix4().makeTranslation(x, y, z);
+    const m = new Array(BONES.length);
+    const y0 = d.hip0;
+    m[B3.hips] = T4(0, y0, 0);
+    m[B3.chest] = T4(0, y0, 0);
+    m[B3.head] = T4(0, y0 + d.chestLen + d.neck, 0);
+    for (const [s, H3] of [[1, "R"], [-1, "L"]]) {
+      const ys = y0 + d.shY, z = s * d.shW;
+      m[B3["uarm" + H3]] = T4(0, ys, z);
+      m[B3["farm" + H3]] = T4(0, ys - d.A1, z);
+      m[B3["hand" + H3]] = T4(0, ys - d.A1 - d.A2, z);
+      for (const n of ["fist", "palm", "finger", "k1", "k2", "k3", "k4", "j1", "j2", "j3", "j4", "tb", "tc"]) m[B3[n + H3]] = m[B3["hand" + H3]].clone();
+      const yh = y0 - 0.07, zl = s * d.hipW;
+      m[B3["thigh" + H3]] = T4(0, yh, zl);
+      m[B3["shin" + H3]] = T4(0, yh - d.T1, zl);
+      m[B3["foot" + H3]] = T4(0, yh - d.T1 - d.T2, zl);
+    }
+    const R4 = restOffsets(d);
+    const child = (n, parent, off = [0, 0, 0]) => {
+      m[B3[n]] = m[B3[parent]].clone().multiply(T4(off[0], off[1], off[2]));
+    };
+    child("coatTail", "chest");
+    child("backWpn", "chest");
+    child("sheath", "hips");
+    child("hilts", "hips");
+    child("tail", "hips", R4.tail);
+    child("wingR", "chest", R4.wingR);
+    child("wingL", "chest", R4.wingL);
+    child("hairTail", "head", R4.hairTail);
+    return m;
   }
 
   // src/render3d/chars/geom.js
@@ -62831,10 +62922,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (uv) uvs.push(p[3] ?? i / U3, p[4] ?? 1 - j / V3);
       }
     }
-    const W3 = U3 + 1;
+    const W4 = U3 + 1;
     for (let j = 0; j < V3; j++) {
       for (let i = 0; i < U3; i++) {
-        const a = j * W3 + i, b = a + 1, c = a + W3, d = c + 1;
+        const a = j * W4 + i, b = a + 1, c = a + W4, d = c + 1;
         idx.push(a, b, c, b, d, c);
       }
     }
@@ -62856,10 +62947,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         pos.push(Math.cos(a) * r, y, Math.sin(a) * r);
       }
     }
-    const W3 = U3 + 1;
+    const W4 = U3 + 1;
     for (let j = 0; j < profile2.length - 1; j++) {
       for (let i = 0; i < U3; i++) {
-        const a = j * W3 + i, b = a + 1, c = a + W3, d = c + 1;
+        const a = j * W4 + i, b = a + 1, c = a + W4, d = c + 1;
         if (!flip) idx.push(a, c, b, b, c, d);
         else idx.push(a, b, c, b, d, c);
       }
@@ -62873,58 +62964,83 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function weldSeam(g, U3, rows) {
     const n = g.attributes.normal;
-    const W3 = U3 + 1;
+    const W4 = U3 + 1;
     for (let j = 0; j < rows; j++) {
-      const a = j * W3, b = j * W3 + U3;
+      const a = j * W4, b = j * W4 + U3;
       _n2.set(n.getX(a) + n.getX(b), n.getY(a) + n.getY(b), n.getZ(a) + n.getZ(b)).normalize();
       n.setXYZ(a, _n2.x, _n2.y, _n2.z);
       n.setXYZ(b, _n2.x, _n2.y, _n2.z);
     }
   }
-  function tcap(r0, r1, L2, rs = 8, cap = 3) {
+  function tcap(r0, r1, L2, rs = 8, cap2 = 3) {
     const prof2 = [];
-    for (let k = 0; k <= cap; k++) {
-      const a = -Math.PI / 2 + k / cap * Math.PI / 2;
+    for (let k = 0; k <= cap2; k++) {
+      const a = -Math.PI / 2 + k / cap2 * Math.PI / 2;
       prof2.push([Math.cos(a) * r1 + 1e-5, -L2 + Math.sin(a) * r1]);
     }
-    for (let k = 0; k <= cap; k++) {
-      const a = k / cap * Math.PI / 2;
+    for (let k = 0; k <= cap2; k++) {
+      const a = k / cap2 * Math.PI / 2;
       prof2.push([Math.cos(a) * r0 + 1e-5, Math.sin(a) * r0]);
     }
     return lathe2(prof2, rs);
   }
   var Builder = class {
-    constructor() {
+    constructor(bind = null, blankUV = [0, 0]) {
       this.pos = [];
       this.nor = [];
       this.col = [];
       this.bone = [];
+      this.bone2 = [];
+      this.w2 = [];
       this.part = [];
       this.idx = [];
+      this.uv = [];
+      this.bind = bind;
+      this.blankUV = blankUV;
     }
     get count() {
       return this.pos.length / 3;
     }
+    /** The rest matrix of a bone (set for bones placed while building, e.g. finger joints). */
+    setBind(bone, m) {
+      if (this.bind) this.bind[bone] = m;
+    }
     /**
      * Add geometry `g` transformed by matrix `m`. `color` is a colour string /
      * THREE.Color, or fn(x, y, z) of the primitive's local position → colour.
+     * opts: { uv: use g's own uv attribute as detail-texture UVs,
+     *         blend: fn(x, y, z) of the position in the bone's frame → [bone2, weight2] or null }
      */
-    add(g, m, color, bone = 0, part5 = 0) {
+    add(g, m, color, bone = 0, part5 = 0, opts = null) {
       const P4 = g.attributes.position, N4 = g.attributes.normal;
+      const UV = opts && opts.uv || g.userData && g.userData.detail ? g.attributes.uv : null;
+      const blend = opts && opts.blend;
       const base2 = this.count;
       _nm.getNormalMatrix(m);
       const fn = typeof color === "function" ? color : null;
       const c0 = fn ? null : color && color.isColor ? color : lin(color);
+      const bm = this.bind && this.bind[bone];
       for (let i = 0; i < P4.count; i++) {
         _v4.fromBufferAttribute(P4, i);
         const c = fn ? toColor(fn(_v4.x, _v4.y, _v4.z)) : c0;
         _v4.applyMatrix4(m);
+        const bw2 = blend ? blend(_v4.x, _v4.y, _v4.z) : null;
+        if (bm) _v4.applyMatrix4(bm);
         _n2.fromBufferAttribute(N4, i).applyMatrix3(_nm).normalize();
         this.pos.push(_v4.x, _v4.y, _v4.z);
         this.nor.push(_n2.x, _n2.y, _n2.z);
         this.col.push(c.r, c.g, c.b);
         this.bone.push(bone);
+        if (bw2 && bw2[1] > 1e-3) {
+          this.bone2.push(bw2[0]);
+          this.w2.push(Math.min(1, bw2[1]));
+        } else {
+          this.bone2.push(0);
+          this.w2.push(0);
+        }
         this.part.push(part5);
+        if (UV) this.uv.push(UV.getX(i), UV.getY(i));
+        else this.uv.push(this.blankUV[0], this.blankUV[1]);
       }
       const flip = m.determinant() < 0;
       if (g.index) {
@@ -62941,17 +63057,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       return this;
     }
-    /** A BufferGeometry ready for a SkinnedMesh (rigid binding). */
+    /** A BufferGeometry ready for a SkinnedMesh (one or two bones per vertex, detail UVs). */
     build() {
       const n = this.count;
       const g = new BufferGeometry();
       g.setAttribute("position", new Float32BufferAttribute(this.pos, 3));
       g.setAttribute("normal", new Float32BufferAttribute(this.nor, 3));
       g.setAttribute("color", new Float32BufferAttribute(this.col, 3));
+      g.setAttribute("uv", new Float32BufferAttribute(this.uv, 2));
       const si = new Uint16Array(n * 4), sw2 = new Float32Array(n * 4);
       for (let i = 0; i < n; i++) {
+        const w2 = this.w2[i];
         si[i * 4] = this.bone[i];
-        sw2[i * 4] = 1;
+        sw2[i * 4] = 1 - w2;
+        si[i * 4 + 1] = this.bone2[i];
+        sw2[i * 4 + 1] = w2;
       }
       g.setAttribute("skinIndex", new Uint16BufferAttribute(si, 4));
       g.setAttribute("skinWeight", new Float32BufferAttribute(sw2, 4));
@@ -62975,8 +63095,220 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return c && c.isColor ? c : lin(c);
   }
 
-  // src/render3d/chars/body.js
+  // src/render3d/chars/detail.js
+  var W3 = 1024;
+  var H2 = 1024;
   var TAU12 = Math.PI * 2;
+  var R = {
+    torsoLean: [0, 0, 512, 256],
+    torsoMusc: [512, 0, 512, 256],
+    torsoFem: [0, 256, 512, 256],
+    torsoCloth: [512, 256, 512, 256],
+    uarm: [0, 512, 256, 256],
+    farm: [256, 512, 256, 256],
+    thigh: [512, 512, 256, 256],
+    shin: [768, 512, 256, 256],
+    sleeve: [0, 768, 256, 256],
+    trouser: [256, 768, 256, 256],
+    trouserShin: [512, 768, 256, 256],
+    skirt: [768, 768, 240, 256],
+    blank: [1012, 1012, 8, 8]
+  };
+  var pad = 3 / W3;
+  function rect(name) {
+    const [x, y, w, h2] = R[name];
+    return [x / W3 + pad, 1 - (y + h2) / H2 + pad, (x + w) / W3 - pad, 1 - y / H2 - pad];
+  }
+  var BLANK_UV = (() => {
+    const [x, y, w, h2] = R.blank;
+    return [(x + w / 2) / W3, 1 - (y + h2 / 2) / H2];
+  })();
+  var RECTS = Object.fromEntries(Object.keys(R).map((k) => [k, rect(k)]));
+  function atlasUV(region, u, v) {
+    const r = RECTS[region];
+    return [r[0] + (r[2] - r[0]) * u, r[1] + (r[3] - r[1]) * v];
+  }
+  var torsoUV = (region, a, s) => atlasUV(region, (a + Math.PI) / TAU12, (s + 0.1) / 1.1);
+  var angOfZ = (zn) => Math.sign(zn) * Math.asin(Math.min(1, Math.pow(Math.abs(zn), 1 / 0.78)));
+  function painter(g, name) {
+    const [x, y, w, h2] = R[name];
+    return {
+      /** Canvas point for a torso front point (zn across -1..1, s up), or the back (back = true). */
+      T(zn, s, back = false) {
+        let a = angOfZ(zn);
+        if (back) a = (a >= 0 ? Math.PI : -Math.PI) - a;
+        return [x + (a + Math.PI) / TAU12 * w, y + (1 - (s + 0.1) / 1.1) * h2];
+      },
+      /** Canvas point for a limb point (angle th in degrees from the limb's +X, t along). */
+      L(th, t) {
+        return [x + (th % 360 + 360) % 360 / 360 * w, y + t * h2];
+      },
+      g
+    };
+  }
+  function stroke(g, pts, width, shade4, alpha2 = 1) {
+    if (pts.length < 2) return;
+    const path2 = () => {
+      g.beginPath();
+      g.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length - 1; i++) {
+        const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+        g.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+      }
+      g.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+    };
+    g.lineCap = "round";
+    g.lineJoin = "round";
+    g.globalAlpha = alpha2 * 0.55;
+    g.strokeStyle = `rgb(${shade4 + 40},${shade4 + 40},${shade4 + 40})`;
+    g.lineWidth = width * 1.9;
+    path2();
+    g.stroke();
+    g.globalAlpha = alpha2;
+    g.strokeStyle = `rgb(${shade4},${shade4},${shade4})`;
+    g.lineWidth = width;
+    path2();
+    g.stroke();
+    g.globalAlpha = 1;
+  }
+  var curve = (P4, fn, n = 14, back = false) => Array.from({ length: n + 1 }, (_, i) => {
+    const [a, b] = fn(i / n);
+    return P4.T(a, b, back);
+  });
+  var lcurve = (P4, fn, n = 12) => Array.from({ length: n + 1 }, (_, i) => {
+    const [a, b] = fn(i / n);
+    return P4.L(a, b);
+  });
+  function maleTorso(g, name, k) {
+    const P4 = painter(g, name);
+    const ink2 = 118, soft = 150;
+    const w = 3.2 + k * 1.6;
+    for (const sd of [-1, 1]) {
+      stroke(g, curve(P4, (t) => [sd * (0.07 + t * 0.8), 0.615 + 0.05 * Math.pow(Math.abs(t - 0.38) / 0.62, 2) + t * 0.08]), w, ink2, 0.55 + 0.45 * k);
+      stroke(g, curve(P4, (t) => [sd * (0.1 + t * 0.62), 0.945 - t * 0.03 + Math.sin(t * Math.PI) * 0.012], 8), 2.4, soft, 0.7);
+      stroke(g, curve(P4, (t) => [sd * (0.78 - t * 0.5), 0.2 - t * 0.28], 10), 2.6 + k, ink2, 0.35 + 0.55 * k);
+      if (k > 0.3) {
+        for (let i = 0; i < 3; i++) stroke(g, curve(P4, (t) => [sd * (0.8 + t * 0.12), 0.47 + i * 0.055 + t * 0.03], 4), 2.4, soft, 0.6 * k);
+        stroke(g, curve(P4, (t) => [sd * (0.42 + t * 0.4), 0.56 - t * 0.2], 8), 2.2, soft, 0.5 * k);
+      }
+    }
+    stroke(g, curve(P4, (t) => [0, 0.66 + t * 0.22], 6), 2.2, soft, 0.5);
+    const rows = [0.505, 0.415, 0.325];
+    stroke(g, curve(P4, (t) => [0, 0.57 - t * 0.43], 10), 2.6 + k, ink2, 0.45 + 0.5 * k);
+    for (let i = 0; i < rows.length; i++) {
+      const s0 = rows[i];
+      for (const sd of [-1, 1]) stroke(g, curve(P4, (t) => [sd * (0.04 + t * 0.34), s0 + Math.sin(t * Math.PI) * 0.012 - t * 0.012], 6), 2.2 + k * 1.3, ink2, (i < 2 ? 0.4 : 0.3) + 0.55 * k);
+    }
+    for (const sd of [-1, 1]) stroke(g, curve(P4, (t) => [sd * (0.39 - t * 0.04), 0.56 - t * 0.4], 8), 2.2 + k, soft, 0.3 + 0.5 * k);
+    g.fillStyle = `rgb(${ink2},${ink2},${ink2})`;
+    g.globalAlpha = 0.85;
+    const [nx, ny] = P4.T(0, 0.19);
+    g.beginPath();
+    g.ellipse(nx, ny, 3.2, 4.4, 0, 0, TAU12);
+    g.fill();
+    g.globalAlpha = 1;
+    stroke(g, curve(P4, (t) => [1e-3, 0.12 + t * 0.72], 10, true), 2.4, soft, 0.6);
+    for (const sd of [-1, 1]) stroke(g, curve(P4, (t) => [sd * (0.16 + Math.sin(t * Math.PI) * 0.2), 0.84 - t * 0.2], 10, true), 2.6, soft, 0.35 + 0.4 * k);
+  }
+  function femaleTorso(g, name) {
+    const P4 = painter(g, name);
+    const soft = 162;
+    for (const sd of [-1, 1]) {
+      stroke(g, curve(P4, (t) => [sd * (0.1 + t * 0.55), 0.955 - t * 0.02 + Math.sin(t * Math.PI) * 0.01], 8), 2.2, soft, 0.65);
+      stroke(g, curve(P4, (t) => [sd * (0.12 + t * 0.52), 0.6 + Math.pow(Math.abs(t - 0.45) / 0.55, 2) * 0.05], 10), 2.4, 150, 0.55);
+      stroke(g, curve(P4, (t) => [sd * (0.7 - t * 0.35), 0.16 - t * 0.2], 8), 2, soft, 0.35);
+    }
+    stroke(g, curve(P4, (t) => [0, 0.5 - t * 0.2], 6), 1.8, 170, 0.4);
+    g.fillStyle = "rgb(150,150,150)";
+    g.globalAlpha = 0.8;
+    const [nx, ny] = P4.T(0, 0.19);
+    g.beginPath();
+    g.ellipse(nx, ny, 2.6, 4.2, 0, 0, TAU12);
+    g.fill();
+    g.globalAlpha = 1;
+    stroke(g, curve(P4, (t) => [1e-3, 0.2 + t * 0.6], 10, true), 2, 175, 0.45);
+  }
+  function clothTorso(g, name) {
+    const P4 = painter(g, name);
+    const c = 168;
+    for (const sd of [-1, 1]) {
+      for (let i = 0; i < 3; i++) stroke(g, curve(P4, (t) => [sd * (0.9 - t * (0.35 + i * 0.1)), 0.78 - i * 0.07 - t * (0.28 + i * 0.05)], 8), 2.2, c, 0.55);
+      stroke(g, curve(P4, (t) => [sd * (0.35 + t * 0.1), 0.12 + t * 0.12], 5), 2, c, 0.5);
+      stroke(g, curve(P4, (t) => [sd * (0.62 - t * 0.12), 0.1 + t * 0.16], 5), 2, c, 0.45);
+      stroke(g, curve(P4, (t) => [sd * 0.985, -0.08 + t * 0.95], 10), 1.8, 185, 0.6);
+      for (let i = 0; i < 2; i++) stroke(g, curve(P4, (t) => [sd * (0.25 + i * 0.25 + t * 0.1), 0.72 - t * 0.35], 6, true), 2, c, 0.4);
+    }
+  }
+  function armLines(g) {
+    const U3 = painter(g, "uarm"), F4 = painter(g, "farm");
+    const ink2 = 128, soft = 158;
+    stroke(g, lcurve(U3, (t) => [150 + t * 115, 0.1 + t * 0.34]), 3, ink2, 0.8);
+    stroke(g, lcurve(U3, (t) => [30 - t * 115, 0.12 + t * 0.32]), 3, ink2, 0.7);
+    stroke(g, lcurve(U3, (t) => [140 + t * 6, 0.45 + t * 0.4]), 2.4, soft, 0.6);
+    stroke(g, lcurve(U3, (t) => [220 - t * 6, 0.45 + t * 0.4]), 2.4, soft, 0.6);
+    stroke(g, lcurve(U3, (t) => [150 + t * 60, 0.94 + Math.sin(t * Math.PI) * 0.02], 6), 2.4, ink2, 0.7);
+    stroke(g, lcurve(U3, (t) => [330 + t * 60, 0.62 + Math.sin(t * Math.PI) * 0.06], 8), 2.2, soft, 0.5);
+    stroke(g, lcurve(F4, (t) => [235 - t * 40, 0.06 + t * 0.62]), 2.4, soft, 0.6);
+    stroke(g, lcurve(F4, (t) => [120 + t * 30, 0.1 + t * 0.55]), 2, soft, 0.45);
+  }
+  function legLines(g) {
+    const T4 = painter(g, "thigh"), S3 = painter(g, "shin");
+    const ink2 = 130, soft = 160;
+    stroke(g, lcurve(T4, (t) => [300 + t * 20, 0.25 + t * 0.55]), 2.2, soft, 0.5);
+    stroke(g, lcurve(T4, (t) => [285 + Math.sin(t * Math.PI) * 25, 0.72 + t * 0.24], 8), 2.4, ink2, 0.6);
+    stroke(g, lcurve(T4, (t) => [40 + t * 25, 0.2 + t * 0.55]), 2, soft, 0.4);
+    stroke(g, lcurve(S3, (t) => [335 + t * 50, 0.1 + Math.sin(t * Math.PI) * 0.07], 10), 2.6, ink2, 0.65);
+    stroke(g, lcurve(S3, (t) => [215 - Math.sin(t * Math.PI) * 30, 0.14 + t * 0.4], 10), 2.6, soft, 0.6);
+    stroke(g, lcurve(S3, (t) => [140 + Math.sin(t * Math.PI) * 25, 0.14 + t * 0.34], 10), 2.4, soft, 0.5);
+    stroke(g, lcurve(S3, (t) => [10 + t * 12, 0.2 + t * 0.65]), 2, 172, 0.45);
+  }
+  function limbCloth(g, name, bend) {
+    const P4 = painter(g, name);
+    const c = 165;
+    for (let i = 0; i < 4; i++) {
+      const th0 = 110 + i * 40;
+      stroke(g, lcurve(P4, (t) => [th0 + t * 30, bend - 0.12 + i * 0.05 + t * 0.06], 6), 2.2, c, 0.55);
+    }
+    for (let i = 0; i < 3; i++) stroke(g, lcurve(P4, (t) => [20 + i * 100 + t * 10, 0.1 + t * 0.4], 6), 1.8, c, 0.35);
+    stroke(g, lcurve(P4, (t) => [90, t], 10), 1.8, 188, 0.6);
+    stroke(g, lcurve(P4, (t) => [270, t], 10), 1.8, 188, 0.6);
+  }
+  function skirtLines(g) {
+    const P4 = painter(g, "skirt");
+    for (let i = 0; i < 16; i++) {
+      const th = i * 22.5 + i % 2 * 6;
+      stroke(g, lcurve(P4, (t) => [th + t * 4, 0.15 + t * 0.85], 6), 2, 172, 0.5);
+    }
+  }
+  var TEX = null;
+  function detailTexture2() {
+    if (TEX) return TEX;
+    const c = document.createElement("canvas");
+    c.width = W3;
+    c.height = H2;
+    const g = c.getContext("2d");
+    g.fillStyle = "#ffffff";
+    g.fillRect(0, 0, W3, H2);
+    maleTorso(g, "torsoLean", 0.15);
+    maleTorso(g, "torsoMusc", 1);
+    femaleTorso(g, "torsoFem");
+    clothTorso(g, "torsoCloth");
+    armLines(g);
+    legLines(g);
+    limbCloth(g, "sleeve", 0.95);
+    limbCloth(g, "trouser", 0.95);
+    limbCloth(g, "trouserShin", 0.12);
+    skirtLines(g);
+    TEX = new CanvasTexture(c);
+    TEX.colorSpace = SRGBColorSpace;
+    TEX.anisotropy = 4;
+    TEX.generateMipmaps = true;
+    TEX.minFilter = LinearMipmapLinearFilter;
+    return TEX;
+  }
+
+  // src/render3d/chars/body.js
+  var TAU13 = Math.PI * 2;
   var clamp3 = (v, a, b) => v < a ? a : v > b ? b : v;
   var sstep = (a, b, x) => {
     const t = clamp3((x - a) / (b - a), 0, 1);
@@ -63009,7 +63341,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const r = look.race;
     const muscle = look.muscle ?? (fem ? 0.25 : r === "buccaneer" || r === "giant" ? 0.95 : r === "fishman" ? 0.8 : r === "longarm" || r === "longleg" ? 0.3 : 0.3 + seed % 5 * 0.12);
     const tucked = look.tucked ?? (waist !== "none" || top === "jacket" || top === "kimono" || top === "crop" || top === "bikini" || top === "bare");
-    return { fem, top, sleeves, bottom, waist, shoes, muscle: clamp3(muscle, 0, 1.2), bust: look.bust ?? (fem ? 1.18 : 1), tucked, skirt };
+    const F4 = frameOf(look);
+    const bustK = { curvy: 1.28, heavy: 1.3, petite: 0.85, athletic: 0.95, slim: 0.95 }[frameId(look)] || 1;
+    return { fem, top, sleeves, bottom, waist, shoes, muscle: clamp3(look.muscle ?? F4.mus ?? muscle, 0, 1.2), bust: (look.bust ?? (fem ? 1.18 : 1)) * bustK, tucked, skirt };
   }
   function clothColours(look, pal, o) {
     const seed = look.seed || 0;
@@ -63051,7 +63385,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     thigh: { m: [[0, 0.084], [0.12, 0.088], [0.36, 0.082], [0.62, 0.071], [0.86, 0.06], [1, 0.057]], f: [[0, 0.09], [0.15, 0.092], [0.4, 0.083], [0.7, 0.066], [0.9, 0.054], [1, 0.05]] },
     shin: { m: [[0, 0.057], [0.12, 0.06], [0.27, 0.064], [0.5, 0.054], [0.75, 0.042], [0.92, 0.037], [1, 0.036]], f: [[0, 0.05], [0.14, 0.052], [0.3, 0.054], [0.55, 0.045], [0.8, 0.034], [1, 0.03]] }
   };
-  var BULGE = { uarm: [[0.1, 7e-3, 0.12], [0.48, 8e-3, 0.2]], farm: [[0.17, 6e-3, 0.2]], thigh: [[0.3, 9e-3, 0.26]], shin: [[0.26, 8e-3, 0.17]] };
   function interpRows(rows, s, out, cols = 4) {
     const n = rows.length;
     if (s <= rows[0][0]) {
@@ -63078,6 +63411,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var supEl = (c, e) => Math.sign(c) * Math.pow(Math.abs(c), e);
   var warp = (a) => a - 0.42 * Math.sin(a);
   function shapeOf(d, o) {
+    const F4 = d.F;
+    const wMul = (s) => {
+      const hip = F4.wa + (F4.hp - F4.wa) * (1 - sstep(-0.1, 0.12, s));
+      const chest = F4.wa + (F4.sh * 0.8 + F4.ch * 0.2 - F4.wa) * sstep(0.3, 0.7, s);
+      return s < 0.12 ? hip : chest;
+    };
+    const dMul = (s) => 1 + (F4.ch - 1) * sstep(0.3, 0.62, s) * (1 - sstep(0.9, 1, s)) + (F4.wa - 1) * 0.5 * (1 - sstep(0.3, 0.6, s));
     return {
       fem: o.fem,
       m: o.muscle,
@@ -63085,81 +63425,131 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       Bk: d.Bk,
       BkD: 1 + (d.Bk - 1) * 0.85,
       cl: d.chestLen,
+      F: F4,
+      belly: F4.belly,
       T: TORSO[o.fem ? "f" : "m"],
-      P: PELVIS[o.fem ? "f" : "m"]
+      P: PELVIS[o.fem ? "f" : "m"],
+      wMul,
+      dMul
     };
   }
-  function frontBump(sh, s, z, mS) {
-    const Bk = sh.Bk, cl = sh.cl;
+  var bell = (x, w) => {
+    const k = x / w;
+    return k > -1 && k < 1 ? (1 - k * k) * (1 - k * k) : 0;
+  };
+  function maleFront(sh, s, zn, mS) {
+    const m = sh.m * mS, az = Math.abs(zn);
     let b = 0;
-    if (s > 0.84) {
-      const zc = Math.abs(z), zEnd = (sh.fem ? 0.14 : 0.17) * Bk;
-      if (zc > 0.015 && zc < zEnd) {
-        const t = (zc - 0.015) / (zEnd - 0.015);
-        const ds = (s - (0.955 - t * 0.05)) * cl / 0.018;
-        if (ds > -1 && ds < 1) b += (1 - ds * ds) * (sh.fem ? 7e-3 : 0.011) * (1 - t * 0.5);
+    const u = (az - 0.07) / 0.8;
+    if (u > -0.12 && u < 1.2) {
+      const lo = 0.615 + 0.05 * Math.pow(Math.abs(u - 0.38) / 0.62, 2) + u * 0.08;
+      const ds = (s - lo) * sh.cl;
+      if (ds > -0.015) {
+        const edge = sstep(-0.015, 0.018 + 6e-3 * (1 - m), ds);
+        const top = 1 - sstep(0.1, 0.19, ds);
+        const side = sstep(-0.12, 0.1, u) * (1 - sstep(0.9, 1.2, u));
+        b += (6e-3 + 0.028 * m) * edge * top * side * (1 - 0.3 * sstep(0.02, 0.14, ds)) * sh.F.ch;
       }
-      const dn = Math.sqrt((z / 0.024) ** 2 + ((s - 0.965) * cl / 0.018) ** 2);
-      if (dn < 1) b -= (1 - dn * dn) * 7e-3;
     }
-    if (sh.fem) {
-      let bust = 0;
-      for (const zc of [-0.06, 0.06]) {
-        const dz = (z - zc * Bk) / (0.066 * Bk), ds = (s - 0.665) * cl / 0.068;
-        const r2 = dz * dz + ds * ds;
-        if (r2 < 1) bust = Math.max(bust, Math.pow(1 - r2, 0.6) * 0.046 * sh.bust);
-      }
-      return b * mS + bust;
+    if (s > 0.86) {
+      const dc = (s - (0.945 - az * 0.04)) * sh.cl / 0.014;
+      if (az < 0.75 && az > 0.08) b += bell(dc, 1) * (4e-3 + 3e-3 * m) * mS;
     }
-    const m = sh.m;
-    const pz2 = Math.abs(z) / (0.19 * Bk);
-    const lobe = Math.max(0, 1 - ((pz2 - 0.4) / 0.52) ** 2);
-    b += sstep(0.55, 0.62, s) * (1 - sstep(0.8, 0.94, s)) * lobe * (0.012 + 0.024 * m);
-    if (s > 0.1 && s < 0.53) {
-      const az = Math.abs(z) / 0.075;
-      if (az < 1) b += Math.sin((s - 0.1) / 0.43 * 3 % 1 * Math.PI) * Math.sin(az * Math.PI) * 8e-3 * m;
+    if (az < 0.46 && s > 0.02 && s < 0.6) {
+      const across = 1 - sstep(0.3, 0.46, az);
+      const upDown = sstep(0.02, 0.12, s) * (1 - sstep(0.52, 0.6, s));
+      let plate = 3e-3 + 9e-3 * m;
+      for (const g of [0.505, 0.415, 0.325]) plate -= bell(s - g, 0.03) * (2e-3 + 6e-3 * m);
+      plate -= bell(az, 0.045) * (2e-3 + 5e-3 * m);
+      b += plate * across * upDown;
     }
-    return b * mS;
+    b -= bell(az, 0.05) * bell(s - 0.19, 0.03) * 6e-3;
+    if (m > 0.4 && az > 0.72 && s > 0.42 && s < 0.66) for (let i = 0; i < 3; i++) b += bell(s - (0.47 + i * 0.055) - (az - 0.8) * 0.3, 0.022) * bell(az - 0.86, 0.12) * (m - 0.4) * 8e-3;
+    const vz = 0.78 - (0.2 - s) / 0.28 * 0.5;
+    if (s < 0.24 && s > -0.1) b -= bell(az - vz, 0.05) * (1e-3 + 4e-3 * m);
+    if (sh.belly) b += sh.belly * 0.11 * bell(s - 0.22, 0.42) * Math.pow(Math.max(0, 1 - zn * zn), 0.8);
+    return b;
   }
-  function backBump(sh, s, z, mS) {
-    const bz = Math.abs(z) / (0.19 * sh.Bk);
-    return sstep(0.55, 0.66, s) * (1 - sstep(0.82, 0.94, s)) * Math.max(0, 1 - ((bz - 0.42) / 0.42) ** 2) * (5e-3 + 8e-3 * sh.m) * mS;
+  function femaleFront(sh, s, zn, mS) {
+    const az = Math.abs(zn);
+    let b = 0;
+    if (s > 0.86 && az < 0.7 && az > 0.08) b += bell((s - (0.955 - az * 0.03)) * sh.cl / 0.012, 1) * 3e-3 * mS;
+    let bust = 0;
+    for (const zc of [-0.42, 0.42]) {
+      const dz = (zn - zc) / 0.4, ds = (s - 0.665) * sh.cl / 0.07;
+      const r2 = dz * dz + (ds < 0 ? ds * ds * 1.6 : ds * ds * 0.8);
+      if (r2 < 1) bust = Math.max(bust, Math.pow(1 - r2, 0.55) * 0.05 * sh.bust);
+    }
+    b += bust;
+    b += (1 - sstep(0.25, 0.4, az)) * sstep(0.08, 0.16, s) * (1 - sstep(0.46, 0.56, s)) * 4e-3 * sh.m * mS;
+    b -= bell(az, 0.05) * bell(s - 0.19, 0.03) * 5e-3;
+    if (sh.belly) b += sh.belly * 0.09 * bell(s - 0.2, 0.4) * Math.pow(Math.max(0, 1 - zn * zn), 0.8);
+    return b;
+  }
+  function backRelief(sh, s, zn, mS) {
+    const m = sh.m * (sh.fem ? 0.35 : 1) * mS, az = Math.abs(zn);
+    let b = 0;
+    b += bell(s - 0.74, 0.12) * bell(az - 0.36, 0.26) * (4e-3 + 8e-3 * m);
+    b -= bell(az, 0.06) * sstep(0.06, 0.2, s) * (1 - sstep(0.82, 0.92, s)) * (3e-3 + 4e-3 * m);
+    b += bell(az - 0.14, 0.1) * bell(s - 0.26, 0.24) * (2e-3 + 7e-3 * m);
+    b += bell(az - 0.78, 0.2) * bell(s - 0.6, 0.18) * (3e-3 + 0.01 * m);
+    if (sh.belly) b += sh.belly * 0.025 * bell(s - 0.3, 0.4);
+    return b;
+  }
+  function sideWidth(sh, s) {
+    const m = sh.fem ? sh.m * 0.3 : sh.m;
+    let w = bell(s - 0.66, 0.2) * (4e-3 + 0.024 * m) * sh.F.sh;
+    w += bell(s - 0.18, 0.16) * (2e-3 + 6e-3 * m);
+    w += bell(s - 0.955, 0.05) * (4e-3 + 0.022 * m) * (sh.F.neck > 1 ? sh.F.neck : 1);
+    if (sh.belly) w += sh.belly * 0.05 * bell(s - 0.2, 0.3);
+    return w;
   }
   function torsoPt(sh, s, a, off = 0, mS = 1) {
     interpRows(sh.T, s, _r);
-    const W3 = _r[1] * sh.Bk + off, Df = _r[2] * sh.BkD + off, Db = _r[3] * sh.BkD + off;
+    const W4 = (_r[1] * sh.wMul(s) + sideWidth(sh, s) * mS) * sh.Bk + off;
+    const dm = sh.dMul(s);
+    const Df = _r[2] * sh.BkD * dm + off, Db = _r[3] * sh.BkD * dm + off;
     const c = Math.cos(a), sn = Math.sin(a);
-    const z = supEl(sn, 0.78) * W3;
+    const zn = supEl(sn, 0.78);
+    const z = zn * W4;
     let x = c >= 0 ? supEl(c, 0.78) * Df : supEl(c, 0.78) * Db;
-    if (c > 0) x += Math.pow(c, 0.7) * frontBump(sh, s, z, mS);
-    else x -= Math.pow(-c, 0.7) * backBump(sh, s, z, mS);
+    if (c > 0) x += Math.pow(c, 0.6) * (sh.fem ? femaleFront(sh, s, zn, mS) : maleFront(sh, s, zn, mS));
+    else x -= Math.pow(-c, 0.6) * backRelief(sh, s, zn, mS);
     return [x, s * sh.cl, z];
   }
   function pelvisPt(sh, y, a, off = 0) {
     interpRows(sh.P, y, _r);
-    const W3 = _r[1] * sh.Bk + off, Df = _r[2] * sh.BkD + off, Db = _r[3] * sh.BkD + off;
+    const hp = sh.F.hp, bl2 = sh.belly ? sh.belly * 0.04 * bell(y - 0.05, 0.12) : 0;
+    const W4 = _r[1] * sh.Bk * hp + off, Df = _r[2] * sh.BkD * (0.5 + 0.5 * hp) + off + bl2, Db = _r[3] * sh.BkD * (0.5 + 0.5 * hp) + off;
     const c = Math.cos(a), sn = Math.sin(a);
-    return [c >= 0 ? supEl(c, 0.8) * Df : supEl(c, 0.8) * Db, y, supEl(sn, 0.8) * W3];
+    const glute = c < 0 ? bell(y + 0.09, 0.09) * bell(sn, 0.9) * (sh.fem ? 0.022 : 0.012 + 8e-3 * sh.m) * Math.pow(-c, 0.8) : 0;
+    return [c >= 0 ? supEl(c, 0.8) * Df : supEl(c, 0.8) * Db - glute, y, supEl(sn, 0.8) * W4];
   }
   function weldGrid(g, U3, V3) {
-    const n = g.attributes.normal, W3 = U3 + 1;
+    const n = g.attributes.normal, W4 = U3 + 1;
     for (let j = 0; j <= V3; j++) {
-      const a = j * W3, b = j * W3 + U3;
+      const a = j * W4, b = j * W4 + U3;
       const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b);
       const l = Math.hypot(x, y, z) || 1;
       n.setXYZ(a, x / l, y / l, z / l);
       n.setXYZ(b, x / l, y / l, z / l);
     }
   }
-  function band(pt, rows, a0, a1, U3, inward = false) {
+  function band(pt, rows, a0, a1, U3, inward = false, uv = null) {
     const V3 = rows.length - 1;
-    const full = typeof a0 === "number" && typeof a1 === "number" && a1 - a0 >= TAU12 - 1e-6;
+    const full = typeof a0 === "number" && typeof a1 === "number" && a1 - a0 >= TAU13 - 1e-6;
     const g = grid((u, v) => {
       const h2 = rows[Math.round(v * V3)];
       const A0 = typeof a0 === "function" ? a0(h2) : a0, A1 = typeof a1 === "function" ? a1(h2) : a1;
       const uu = inward ? 1 - u : u;
-      return pt(h2, warp(A0 + (A1 - A0) * uu));
-    }, U3, V3);
+      const a = warp(A0 + (A1 - A0) * uu);
+      const p = pt(h2, a);
+      if (uv) {
+        const t = uv(h2, a);
+        p.push(t[0], t[1]);
+      }
+      return p;
+    }, U3, V3, !!uv);
     if (full && !inward) weldGrid(g, U3, V3);
     return g;
   }
@@ -63178,95 +63568,185 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     interpRows(tab, t, _r, 2);
     return _r[1];
   }
-  var LIMB_K = { m: 1.2, f: 1.1 };
-  var BULGE_K = 1.6;
-  function limbFn(kind, fem, m, k) {
+  var LIMB_K = { m: 1.12, f: 1.05 };
+  var MUSCLES = {
+    // deltoid (wrapping the shoulder), its front head, biceps, triceps, brachialis
+    uarm: [[0.17, 0.2, "L", 100, 6e-3, 0.016], [0.14, 0.15, "FL", 60, 2e-3, 6e-3], [0.56, 0.3, "F", 65, 3e-3, 0.017], [0.38, 0.32, "B", 75, 3e-3, 0.012], [0.7, 0.2, "L", 50, 1e-3, 4e-3]],
+    // brachioradialis, flexors, extensors
+    farm: [[0.2, 0.3, "FL", 60, 4e-3, 0.013], [0.24, 0.3, "FM", 60, 3e-3, 9e-3], [0.25, 0.3, "BL", 55, 2e-3, 6e-3]],
+    // quads, vastus lateralis, the teardrop above the knee, hamstrings, adductors, the hip's outside
+    thigh: [[0.45, 0.38, "F", 70, 4e-3, 0.014], [0.5, 0.35, "FL", 50, 3e-3, 0.01], [0.8, 0.14, "FM", 45, 3e-3, 0.012], [0.45, 0.35, "B", 70, 4e-3, 8e-3], [0.2, 0.22, "M", 60, 4e-3, 4e-3], [0.08, 0.14, "L", 60, 4e-3, 0]],
+    // the calf's two heads, tibialis, ankle bones
+    shin: [[0.3, 0.2, "BM", 50, 6e-3, 0.016], [0.26, 0.19, "BL", 45, 4e-3, 0.012], [0.3, 0.3, "FL", 40, 2e-3, 4e-3], [0.97, 0.05, "L", 40, 5e-3, 0], [0.955, 0.05, "M", 40, 5e-3, 0]]
+  };
+  var FRAME_K = { uarm: "arm", farm: "fa", thigh: "th", shin: "ca" };
+  var angDiff = (a, b) => {
+    const d = ((a - b) % 360 + 540) % 360 - 180;
+    return Math.abs(d);
+  };
+  function limbFn(kind, o, d, side = 1) {
+    const fem = o.fem, m = o.muscle;
     const tab = LIMB2[kind][fem ? "f" : "m"];
-    const bul = fem ? [] : BULGE[kind];
-    const lk2 = LIMB_K[fem ? "f" : "m"];
-    return (t) => {
-      let r = interp1(tab, t) * lk2;
-      for (const [c, a, w] of bul) {
-        const x = (t - c) / w;
-        if (x > -1 && x < 1) r += a * BULGE_K * m * (1 - x * x) ** 2;
+    const k = LIMB_K[fem ? "f" : "m"] * d.Bk * (d.F[FRAME_K[kind]] || 1);
+    const arm = kind === "uarm" || kind === "farm";
+    const Fr = arm ? 180 : 0, Bk = arm ? 0 : 180, La = arm ? side > 0 ? 270 : 90 : side > 0 ? 90 : 270, Me = (La + 180) % 360;
+    const mid = (a, b) => {
+      let x = (a + b) / 2;
+      if (Math.abs(a - b) > 180) x = (x + 180) % 360;
+      return x;
+    };
+    const DIR = { F: Fr, B: Bk, L: La, M: Me, FL: mid(Fr, La), FM: mid(Fr, Me), BL: mid(Bk, La), BM: mid(Bk, Me) };
+    const mus = MUSCLES[kind].map(([t, wt, dir, wa, a0, a1]) => [t, wt, DIR[dir], wa, (a0 + a1 * m) * (fem ? 0.4 : 1)]);
+    return (t, th) => {
+      let r = interp1(tab, t) * k;
+      if (th === void 0) {
+        for (const [tc, wt, , , a] of mus) r += bell(t - tc, wt) * a * 0.45;
+        return r;
       }
-      return r * k;
+      for (const [tc, wt, dc, wa, a] of mus) {
+        const bt = bell(t - tc, wt);
+        if (bt > 0) r += bt * bell(angDiff(th, dc), wa) * a;
+      }
+      if (kind === "farm") {
+        const c = Math.cos(th * Math.PI / 180);
+        r *= 1 - 0.16 * sstep(0.7, 1, t) * c * c;
+      } else if (kind === "shin") {
+        r -= bell(angDiff(th, Fr), 35) * 4e-3 * (1 - sstep(0.8, 1, t));
+        r *= 1 - 0.22 * sstep(0.62, 0.9, t) * bell(angDiff(th, Bk), 70);
+      }
+      return r;
     };
   }
   function limbSeg(rf, L2, rs, rows, seg) {
-    const { t0 = 0, t1 = 1, off = 0, capTop = false, capBot = false, flare = 0, flareTop = 0, lining: lining2 = false, bulge = 0, capK = 1 } = seg;
-    const R3 = (t) => rf(t) + off;
-    const yb = -t1 * L2, yt = -t0 * L2;
-    const rb = R3(t1) + flare, rt = R3(t0) + flareTop;
-    const prof2 = [];
+    const { t0 = 0, t1 = 1, off = 0, capTop = false, capBot = false, flare = 0, flareTop = 0, lining: lining2 = false, bulge = 0, capK = 1, uv = null, side = 1 } = seg;
+    const U3 = Math.max(6, rs);
+    const R4 = (t, th) => rf(t, th) + off;
+    const P4 = [];
     if (capBot) for (let k = 0; k < 3; k++) {
       const a = -Math.PI / 2 + k / 3 * (Math.PI / 2);
-      prof2.push([Math.cos(a) * rb + 1e-5, yb + Math.sin(a) * rb]);
+      P4.push([t1, Math.cos(a), flare, Math.sin(a), 1]);
     }
-    else if (lining2) prof2.push([Math.max(4e-3, rb - 0.013), yb + 0.024]);
+    else if (lining2) P4.push([t1, 1, flare - 0.013, 0.024 / Math.max(0.02, R4(t1)), 2]);
     for (let i = rows; i >= 0; i--) {
       const f = i / rows;
       const t = t0 + (t1 - t0) * f;
-      const r = R3(t) + flare * sstep(0.5, 1, f) + flareTop * sstep(0.5, 1, 1 - f) + bulge * Math.sin(f * Math.PI);
-      prof2.push([r, -t * L2]);
+      P4.push([t, 1, flare * sstep(0.5, 1, f) + flareTop * sstep(0.5, 1, 1 - f) + bulge * Math.sin(f * Math.PI), 0, 0]);
     }
     if (capTop) for (let k = 1; k <= 3; k++) {
       const a = k / 3 * (Math.PI / 2);
-      prof2.push([Math.cos(a) * rt + 1e-5, yt + Math.sin(a) * rt * capK]);
+      P4.push([t0, Math.cos(a), flareTop, Math.sin(a) * capK, 1]);
     }
-    else if (lining2) prof2.push([Math.max(4e-3, rt - 0.013), yt - 0.024]);
-    return lathe2(prof2, rs);
+    else if (lining2) P4.push([t0, 1, flareTop - 0.013, -0.024 / Math.max(0.02, R4(t0)), 2]);
+    const pos = [], uvs = [], idx = [];
+    const W4 = U3 + 1;
+    for (const [t, rk, ex, dy, cap2] of P4) {
+      const rm = R4(t);
+      for (let i = 0; i <= U3; i++) {
+        const th = i / U3 * 360, a = th * Math.PI / 180;
+        const rt = cap2 === 1 ? R4(t, th) * rk + rm * (1 - rk) : R4(t, th);
+        const r = Math.max(1e-5, (rt + ex) * rk + (cap2 ? 1e-5 : 0));
+        pos.push(Math.cos(a) * r, -t * L2 + dy * rm, Math.sin(a) * r);
+        if (uv) {
+          const u = side < 0 ? 1 - i / U3 : i / U3;
+          const q2 = atlasUV(uv, u, 1 - Math.min(1, Math.max(0, t)));
+          uvs.push(q2[0], q2[1]);
+        } else uvs.push(BLANK_UV[0], BLANK_UV[1]);
+      }
+    }
+    for (let j = 0; j < P4.length - 1; j++) {
+      for (let i = 0; i < U3; i++) {
+        const a = j * W4 + i, b = a + 1, c = a + W4, e = c + 1;
+        idx.push(a, c, b, b, c, e);
+      }
+    }
+    const g = new three_module_exports.BufferGeometry();
+    g.setAttribute("position", new three_module_exports.Float32BufferAttribute(pos, 3));
+    g.setAttribute("uv", new three_module_exports.Float32BufferAttribute(uvs, 2));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    weldGrid(g, U3, P4.length - 1);
+    g.userData.detail = !!uv;
+    return g;
+  }
+  function limbBlend(L2, up, down) {
+    return (x, y) => {
+      if (up) {
+        const dd = -y;
+        if (dd < up[2]) return [up[0], up[1] * (1 - sstep(0, up[2], dd))];
+      }
+      if (down) {
+        const dd = y + L2;
+        if (dd < down[2]) return [down[0], down[1] * (1 - sstep(0, down[2], dd))];
+      }
+      return null;
+    };
   }
   var torus2 = (q2) => Prim.torus(0.2, 3, q2.cloth ? 12 : 7);
   var ringAt = (y, rx, rz, thick = 0.014) => M(0, y, 0, Math.PI / 2, 0, 0, [rx, rz, thick / 0.2]);
-  function buildFigure(add5, look, d, pal, q2) {
+  function buildFigure(add0, look, d, pal, q2) {
     const o = outfitOf(look);
     const cc = clothColours(look, pal, o);
     const sh = shapeOf(d, o);
     const cloth = q2.cloth;
     const bd = q2.body ?? (cloth ? 2 : 0);
-    const U3 = [9, 12, 16][bd];
-    const rs = [7, 9, 12][bd];
-    const lrows = [2, 3, 5][bd];
+    const U3 = [10, 14, 22][bd];
+    const rs = [7, 10, 14][bd];
+    const lrows = [2, 4, 7][bd];
     const skin = pal.skin;
-    const TR = bd === 2 ? [1, 0.975, 0.955, 0.935, 0.915, 0.89, 0.86, 0.81, 0.765, 0.72, 0.68, 0.64, 0.6, 0.565, 0.5, 0.42, 0.33, 0.24, 0.14, 0.03, -0.1] : bd === 1 ? [1, 0.975, 0.935, 0.89, 0.81, 0.72, 0.64, 0.565, 0.42, 0.24, 0.03, -0.1] : [1, 0.93, 0.82, 0.7, 0.58, 0.4, 0.2, -0.1];
+    const hipsW = (y) => 1 - sstep(-0.06, 0.14, y);
+    const onChest = { blend: (x, y) => {
+      const w = hipsW(y);
+      return w > 2e-3 ? [B3.hips, w] : null;
+    } };
+    const onHips = { blend: (x, y) => {
+      const w = 1 - hipsW(y);
+      return w > 2e-3 ? [B3.chest, w] : null;
+    } };
+    const add5 = (g, m, col, bone, part5 = 0, opts) => add0(g, m, col, bone, part5, opts ?? (bone === B3.chest ? onChest : bone === B3.hips ? onHips : null));
+    const TR = bd === 2 ? [1, 0.975, 0.955, 0.935, 0.915, 0.89, 0.86, 0.83, 0.8, 0.765, 0.73, 0.7, 0.67, 0.645, 0.62, 0.6, 0.575, 0.55, 0.52, 0.49, 0.46, 0.43, 0.4, 0.37, 0.34, 0.31, 0.28, 0.24, 0.2, 0.16, 0.12, 0.07, 0.02, -0.04, -0.1] : bd === 1 ? [1, 0.97, 0.93, 0.89, 0.84, 0.78, 0.72, 0.67, 0.62, 0.57, 0.5, 0.42, 0.33, 0.24, 0.14, 0.03, -0.1] : [1, 0.93, 0.82, 0.7, 0.58, 0.4, 0.2, -0.1];
     const tpt = (mS, off = 0) => (s, a) => torsoPt(sh, s, a, off, mS);
     const skinTorso = tpt(1);
     const TOP = o.top;
     const shirtM = 0.45;
-    const addT = (rows, pt, col, a0 = -Math.PI, a1 = Math.PI, inward = false) => add5(band(pt, rows, a0, a1, U3, inward), M(), col, B3.chest);
+    const skinReg = o.fem ? "torsoFem" : o.muscle >= 0.55 ? "torsoMusc" : "torsoLean";
+    const tuv = (reg3) => reg3 ? (s, a) => torsoUV(reg3, a, s) : null;
+    const addT = (rows, pt, col, a0 = -Math.PI, a1 = Math.PI, inward = false, reg3 = null) => add5(band(pt, rows, a0, a1, U3, inward, inward ? null : tuv(reg3)), M(), col, B3.chest);
     const neckS = TOP === "shirt" || TOP === "jacket" ? 0.955 : TOP === "tank" || TOP === "dress" ? 0.84 : 0.93;
     const openKim = TOP === "kimono" && !!look.openShirt;
     if (TOP === "bare" || TOP === "vest" || TOP === "open" || openKim || TOP === "coat" && !look.top2) {
-      addT(TR, skinTorso, skin);
+      addT(TR, skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
     } else if (TOP === "crop" || TOP === "bikini") {
       const lo = TOP === "crop" ? 0.5 : 0.58, hi = TOP === "crop" ? 0.86 : 0.78;
-      addT(cut2(TR, hi, 1), skinTorso, skin);
+      addT(cut2(TR, hi, 1), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
       addT(cut2(TR, lo, hi), tpt(1, 2e-3), pal.top);
-      addT(cut2(TR, -0.1, lo), skinTorso, skin);
+      addT(cut2(TR, -0.1, lo), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
       straps(add5, sh, hi, pal.top, q2);
     } else if (TOP === "striped") {
-      addT(cut2(TR, neckS, 1), skinTorso, skin);
+      addT(cut2(TR, neckS, 1), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
       const n = cloth ? 7 : 4;
       for (let k = 0; k < n; k++) {
         const hi = neckS - (neckS + 0.1) * (k / n), lo = neckS - (neckS + 0.1) * ((k + 1) / n);
-        addT(cut2(TR, lo, hi), tpt(shirtM), k % 2 ? cc.top2 : pal.top);
+        addT(cut2(TR, lo, hi), tpt(shirtM), k % 2 ? cc.top2 : pal.top, -Math.PI, Math.PI, false, "torsoCloth");
       }
     } else {
       const col = TOP === "jacket" || TOP === "coat" ? cc.top2 : pal.top;
-      addT(cut2(TR, neckS, 1), skinTorso, skin);
-      addT(cut2(TR, -0.1, neckS), tpt(shirtM), col);
+      addT(cut2(TR, neckS, 1), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
+      addT(cut2(TR, -0.1, neckS), tpt(shirtM), col, -Math.PI, Math.PI, false, "torsoCloth");
       if (TOP === "tank" || TOP === "dress") straps(add5, sh, neckS, col, q2);
       if (cloth && TOP !== "tank" && TOP !== "dress") {
-        const f = torsoPt(sh, neckS, 0, 0, shirtM)[0], bk = -torsoPt(sh, neckS, Math.PI, 0, shirtM)[0], W3 = torsoPt(sh, neckS, Math.PI / 2, 0, shirtM)[2];
-        add5(torus2(q2), mul(M((f - bk) / 2, 0, 0), ringAt(neckS * sh.cl, (f + bk) / 2 + 2e-3, W3 + 2e-3, 0.012)), shade(col, -0.18), B3.chest);
+        const f = torsoPt(sh, neckS, 0, 0, shirtM)[0], bk = -torsoPt(sh, neckS, Math.PI, 0, shirtM)[0], W4 = torsoPt(sh, neckS, Math.PI / 2, 0, shirtM)[2];
+        add5(torus2(q2), mul(M((f - bk) / 2, 0, 0), ringAt(neckS * sh.cl, (f + bk) / 2 + 2e-3, W4 + 2e-3, 0.012)), shade(col, -0.18), B3.chest);
       }
     }
-    const nk = o.fem ? 0.04 : 0.05 * (1 + (d.Bk - 1) * 0.5) * (1 + o.muscle * 0.14);
-    add5(neckGeo(nk, d.chestLen - 0.05, d.chestLen + d.neck + 0.035, o, cloth), M(), skin, B3.chest);
-    const edge = (a) => (s) => a(s), rest = (a) => (s) => TAU12 - a(s);
+    const nk = (o.fem ? 0.04 : 0.05 * (1 + (d.Bk - 1) * 0.5) * (1 + o.muscle * 0.14)) * d.F.neck;
+    const neckTop = d.chestLen + d.neck;
+    add5(neckGeo(nk, d.chestLen - 0.05, neckTop + 0.035, o, cloth), M(), skin, B3.chest, 0, { blend: (x, y) => {
+      const w = 0.8 * sstep(d.chestLen + d.neck * 0.05, neckTop, y);
+      return w > 2e-3 ? [B3.head, w] : null;
+    } });
+    const edge = (a) => (s) => a(s), rest = (a) => (s) => TAU13 - a(s);
     const shell2 = (rows, aFn, off, mS, col, lin2) => {
-      add5(band(tpt(mS, off), rows, edge(aFn), rest(aFn), U3), M(), col, B3.chest);
+      add5(band(tpt(mS, off), rows, edge(aFn), rest(aFn), U3, false, tuv("torsoCloth")), M(), col, B3.chest);
       if (cloth) add5(band(tpt(mS, off - 5e-3), half(rows), edge(aFn), rest(aFn), U3 / 2, true), M(), lin2, B3.chest);
     };
     if (TOP === "vest") {
@@ -63293,7 +63773,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const tw = kim ? 0.3 : 0.24;
         const tmS = openKim ? 1 : 0.2;
         add5(band(tpt(tmS, 0.017), up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U3 / 6)), M(), trim, B3.chest);
-        add5(band(tpt(tmS, 0.017), up, (s) => TAU12 - open(s) - tw, (s) => TAU12 - open(s), Math.max(3, U3 / 6)), M(), trim, B3.chest);
+        add5(band(tpt(tmS, 0.017), up, (s) => TAU13 - open(s) - tw, (s) => TAU13 - open(s), Math.max(3, U3 / 6)), M(), trim, B3.chest);
         if (!kim) for (let k = 0; k < 2; k++) {
           const p = torsoPt(sh, 0.3 - k * 0.14, 0, 0.017, 0.2);
           add5(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), shade(col, -0.35), B3.chest);
@@ -63306,8 +63786,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (TOP === "jacket") {
         const rows2 = cloth ? [0.075, 0, -0.08, -0.16] : [0.075, -0.16];
         const pp3 = (y, a) => pelvisPt(sh, y, a, 0.022 + (0.075 - y) * 0.12);
-        add5(band(pp3, rows2, 0.22, TAU12 - 0.22, U3), M(), col, B3.hips);
-        if (cloth) add5(band((y, a) => pelvisPt(sh, y, a, 0.017 + (0.075 - y) * 0.12), rows2, 0.22, TAU12 - 0.22, U3, true), M(), shade(col, -0.3), B3.hips);
+        add5(band(pp3, rows2, 0.22, TAU13 - 0.22, U3), M(), col, B3.hips);
+        if (cloth) add5(band((y, a) => pelvisPt(sh, y, a, 0.017 + (0.075 - y) * 0.12), rows2, 0.22, TAU13 - 0.22, U3, true), M(), shade(col, -0.3), B3.hips);
       }
     }
     if (look.vest && TOP !== "vest") {
@@ -63318,7 +63798,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const hem = cloth ? [0.2, 0.08, -0.06, -0.2, -0.34] : [0.2, -0.34];
       const col = TOP === "striped" ? pal.top : pal.top;
       const off = (s) => 6e-3 + (0.2 - s) * 0.03;
-      const a0 = TOP === "open" ? 0.3 : -Math.PI, a1 = TOP === "open" ? TAU12 - 0.3 : Math.PI;
+      const a0 = TOP === "open" ? 0.3 : -Math.PI, a1 = TOP === "open" ? TAU13 - 0.3 : Math.PI;
       add5(band((s, a) => torsoPt(sh, s, a, off(s), shirtM * 0.5), hem, a0, a1, U3), M(), col, B3.chest);
       if (cloth) add5(band((s, a) => torsoPt(sh, s, a, off(s) - 6e-3, 0.2), hem.slice(-2), a0, a1, U3, true), M(), cc.lining, B3.chest);
     }
@@ -63353,7 +63833,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const yb = long ? -0.88 * d.Lg : -0.34;
       const col = TOP === "dress" ? pal.top : pal.bottom;
       const rows = cloth ? [0.08, 0, -0.1, (0 + yb) * 0.55, yb] : [0.08, -0.1, yb];
-      const Wh = (long ? 0.3 : 0.225) * sh.Bk, Dh = (long ? 0.3 : 0.2) * sh.Bk;
+      const fw = Math.max(1, sh.F.hp * 0.55 + sh.F.th * 0.45);
+      const Wh = (long ? 0.3 : 0.225) * sh.Bk * fw, Dh = (long ? 0.3 : 0.2) * sh.Bk * fw;
       const sp = (y, a, inset = 0) => {
         const k = clamp3((0.08 - y) / (0.08 - yb), 0, 1);
         const p = pelvisPt(sh, Math.max(y, -0.06), a, 0.012 - inset);
@@ -63361,63 +63842,73 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const hx = Math.cos(a) * (Dh - inset), hz = Math.sin(a) * (Wh - inset);
         return [p[0] + (hx - p[0]) * f, y, p[2] + (hz - p[2]) * f];
       };
-      add5(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U3), M(), col, B3.hips);
+      add5(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U3, false, (y, a) => atlasUV("skirt", (a + Math.PI) / TAU13, 1 - clamp3((0.08 - y) / (0.08 - yb), 0, 1))), M(), col, B3.hips);
       if (cloth) add5(band((y, a) => sp(y, a, 8e-3), rows.slice(-2), -Math.PI, Math.PI, U3, true), M(), shade(col, -0.35), B3.hips);
     }
     const armCol = pal.sleeve || (TOP === "coat" ? look.coat || pal.top : TOP === "jacket" ? pal.top : TOP === "striped" ? pal.top : pal.top);
+    const Lk = Math.sqrt(d.Am);
     for (const [s, Ub, Fb, part5] of [[1, B3.uarmR, B3.farmR, 1], [-1, B3.uarmL, B3.farmL, 2]]) {
       const sl = o.sleeves;
       const mA = sl === "long" || sl === "wide" ? o.muscle * 0.35 : o.muscle;
-      const ua = limbFn("uarm", o.fem, mA, d.Bk), fa = limbFn("farm", o.fem, mA, d.Bk);
+      const oA = mA === o.muscle ? o : { ...o, muscle: mA };
+      const ua = limbFn("uarm", oA, d, s), fa = limbFn("farm", oA, d, s);
+      const U1 = { blend: limbBlend(d.A1, [B3.chest, 0.3, 0.07 * Lk], [Fb, 0.5, 0.075 * Lk]) };
+      const F12 = { blend: limbBlend(d.A2, [Ub, 0.5, 0.075 * Lk], null) };
+      const skU = o.fem ? null : "uarm", skF = o.fem ? null : "farm";
+      const up = (g, col, m = M()) => add5(g, m, col, Ub, 0, U1), fore = (g, col, m = M()) => add5(g, m, col, Fb, part5, F12);
       if (sl === "none") {
-        add5(limbSeg(ua, d.A1, rs, lrows, { capTop: true, capBot: true }), M(), skin, Ub);
-        add5(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part5);
+        up(limbSeg(ua, d.A1, rs, lrows, { capTop: true, capBot: true, capK: 0.6, uv: skU, side: s }), skin);
+        fore(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true, capK: 0.7, uv: skF, side: s }), skin);
       } else if (sl === "short") {
-        add5(limbSeg(ua, d.A1, rs, lrows, { t1: 0.5, off: 8e-3, capTop: true, capK: 0.45, flare: 0.012, lining: cloth }), M(), armCol, Ub);
-        add5(limbSeg(ua, d.A1, rs, lrows, { t0: 0.42, capBot: true }), M(), skin, Ub);
-        add5(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part5);
+        up(limbSeg(ua, d.A1, rs, lrows, { t1: 0.5, off: 8e-3, capTop: true, capK: 0.45, flare: 0.012, lining: cloth, uv: "sleeve", side: s }), armCol);
+        up(limbSeg(ua, d.A1, rs, lrows, { t0: 0.42, capBot: true, uv: skU, side: s }), skin);
+        fore(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true, capK: 0.7, uv: skF, side: s }), skin);
       } else if (sl === "rolled") {
-        add5(limbSeg(ua, d.A1, rs, lrows, { off: 0.01, capTop: true, capK: 0.5, capBot: true }), M(), armCol, Ub);
-        if (cloth) add5(torus2(q2), ringAt(-d.A1 * 0.96, ua(0.96) + 0.02, ua(0.96) + 0.02, 0.03), shade(armCol, -0.12), Ub);
-        add5(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true }), M(), skin, Fb, part5);
+        up(limbSeg(ua, d.A1, rs, lrows, { off: 0.01, capTop: true, capK: 0.5, capBot: true, uv: "sleeve", side: s }), armCol);
+        if (cloth) up(torus2(q2), shade(armCol, -0.12), ringAt(-d.A1 * 0.96, ua(0.96) + 0.02, ua(0.96) + 0.02, 0.03));
+        fore(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true, capK: 0.7, uv: skF, side: s }), skin);
       } else {
         const wide = sl === "wide";
-        add5(limbSeg(ua, d.A1, rs, lrows, { t0: wide ? 0.07 : 0, off: wide ? 0.015 : 0.01, capTop: true, capK: 0.5, capBot: true }), M(), armCol, Ub);
-        add5(limbSeg(fa, d.A2, rs, lrows, { off: wide ? 0.022 : 0.011, capTop: true, flare: wide ? 0.075 : 8e-3, lining: cloth, t1: wide ? 1.02 : 0.98 }), M(), armCol, Fb, part5);
-        if (cloth && !wide) add5(torus2(q2), ringAt(-d.A2 * 0.95, fa(0.95) + 0.018, fa(0.95) + 0.018, 0.022), shade(armCol, -0.15), Fb, part5);
-        add5(limbSeg(fa, d.A2, rs, 2, { t0: 0.8, capBot: true }), M(), skin, Fb, part5);
+        up(limbSeg(ua, d.A1, rs, lrows, { t0: wide ? 0.07 : 0, off: wide ? 0.015 : 0.01, capTop: true, capK: 0.5, capBot: true, uv: "sleeve", side: s }), armCol);
+        fore(limbSeg(fa, d.A2, rs, lrows, { off: wide ? 0.022 : 0.011, capTop: true, capK: 0.6, flare: wide ? 0.075 : 8e-3, lining: cloth, t1: wide ? 1.02 : 0.98, uv: "sleeve", side: s }), armCol);
+        if (cloth && !wide) fore(torus2(q2), shade(armCol, -0.15), ringAt(-d.A2 * 0.95, fa(0.95) + 0.018, fa(0.95) + 0.018, 0.022));
+        fore(limbSeg(fa, d.A2, rs, 2, { t0: 0.8, capBot: true }), skin);
       }
-      if (d.Am > 1.2) add5(Prim.sphere(q2.sph[0], q2.sph[1]), M(0, -d.A2 * 0.5, 0, 0, 0, 0, fa(0.5) * 1.1), sl === "long" || sl === "wide" ? armCol : skin, Fb, part5);
-      if (cloth && (sl === "none" || sl === "short")) add5(Prim.sphere(q2.sph[0], q2.sph[1]), M(ua(1) * 0.55, -d.A1 * 0.985, 0, 0, 0, 0, [0.022 * d.Bk, 0.026 * d.Bk, 0.024 * d.Bk]), skin, Ub);
+      if (d.Am > 1.2) fore(Prim.sphere(q2.sph[0], q2.sph[1]), sl === "long" || sl === "wide" ? armCol : skin, M(0, -d.A2 * 0.5, 0, 0, 0, 0, fa(0.5) * 1.08));
+      if (cloth && (sl === "none" || sl === "short")) up(Prim.sphere(q2.sph[0], q2.sph[1]), skin, M(ua(1) * 0.55, -d.A1 * 0.985, 0, 0, 0, 0, [0.022 * d.Bk, 0.026 * d.Bk, 0.024 * d.Bk]));
     }
     const bot = o.bottom;
     const bcol = pal.bottom, cuffCol = shade(pal.bottom, -0.22);
-    for (const [T4, S3, Ft, part5] of [[B3.thighR, B3.shinR, B3.footR, 3], [B3.thighL, B3.shinL, B3.footL, 4]]) {
-      const th = limbFn("thigh", o.fem, o.muscle, d.Bk), sn = limbFn("shin", o.fem, o.muscle, d.Bk);
+    for (const [T4, S3, Ft, part5, s] of [[B3.thighR, B3.shinR, B3.footR, 3, 1], [B3.thighL, B3.shinL, B3.footL, 4, -1]]) {
+      const th = limbFn("thigh", o, d, s), sn = limbFn("shin", o, d, s);
+      const T1 = { blend: limbBlend(d.T1, [B3.hips, 0.35, 0.09], [S3, 0.5, 0.09]) };
+      const S1 = { blend: limbBlend(d.T2, [T4, 0.5, 0.09], null) };
+      const skT = o.fem ? null : "thigh", skS = o.fem ? null : "shin";
+      const thigh = (g, col, m = M()) => add5(g, m, col, T4, 0, T1), shin = (g, col, m = M()) => add5(g, m, col, S3, part5, S1);
       const boots = o.shoes === "boots";
       if (skirtPelvis) {
-        add5(limbSeg(th, d.T1, rs, lrows, { capTop: true, capBot: true }), M(), skin, T4);
-        if (!boots) add5(limbSeg(sn, d.T2, rs, lrows, { capTop: true, capBot: true }), M(), skin, S3, part5);
+        thigh(limbSeg(th, d.T1, rs, lrows, { capTop: true, capBot: true, capK: 0.7, uv: skT, side: s }), skin);
+        if (!boots) shin(limbSeg(sn, d.T2, rs, lrows, { capTop: true, capBot: true, capK: 0.7, uv: skS, side: s }), skin);
       } else if (bot === "shorts") {
-        add5(limbSeg(th, d.T1, rs, lrows, { t1: 0.86, off: 0.014, capTop: true, flare: 0.024, lining: cloth }), M(), bcol, T4);
-        if (cloth) add5(torus2(q2), ringAt(-d.T1 * 0.85, th(0.86) + 0.036, th(0.86) + 0.036, 0.03), cuffCol, T4);
-        add5(limbSeg(th, d.T1, rs, lrows, { t0: 0.78, capBot: true }), M(), skin, T4);
-        if (!boots) add5(limbSeg(sn, d.T2, rs, lrows, { capTop: true, capBot: true }), M(), skin, S3, part5);
+        thigh(limbSeg(th, d.T1, rs, lrows, { t1: 0.86, off: 0.014, capTop: true, flare: 0.024, lining: cloth, uv: "trouser", side: s }), bcol);
+        if (cloth) thigh(torus2(q2), cuffCol, ringAt(-d.T1 * 0.85, th(0.86) + 0.036, th(0.86) + 0.036, 0.03));
+        thigh(limbSeg(th, d.T1, rs, lrows, { t0: 0.78, capBot: true, capK: 0.7, uv: skT, side: s }), skin);
+        if (!boots) shin(limbSeg(sn, d.T2, rs, lrows, { capTop: true, capBot: true, capK: 0.7, uv: skS, side: s }), skin);
       } else {
         const baggy = bot === "baggy" || bot === "hakama";
         const offT = bot === "slim" ? 8e-3 : bot === "hakama" ? 0.04 : baggy ? 0.03 : 0.014;
-        add5(limbSeg(th, d.T1, rs, lrows, { off: offT, capTop: true, capBot: true }), M(), bcol, T4);
+        thigh(limbSeg(th, d.T1, rs, lrows, { off: offT, capTop: true, capBot: true, capK: 0.7, uv: "trouser", side: s }), bcol);
         if (bot === "capri") {
-          add5(limbSeg(sn, d.T2, rs, lrows, { t1: 0.55, off: 0.013, capTop: true, flare: 0.02, lining: cloth }), M(), bcol, S3, part5);
-          if (cloth) add5(torus2(q2), ringAt(-d.T2 * 0.54, sn(0.55) + 0.032, sn(0.55) + 0.032, 0.03), cuffCol, S3, part5);
-          if (!boots) add5(limbSeg(sn, d.T2, rs, lrows, { t0: 0.48, capBot: true }), M(), skin, S3, part5);
+          shin(limbSeg(sn, d.T2, rs, lrows, { t1: 0.55, off: 0.013, capTop: true, capK: 0.7, flare: 0.02, lining: cloth, uv: "trouserShin", side: s }), bcol);
+          if (cloth) shin(torus2(q2), cuffCol, ringAt(-d.T2 * 0.54, sn(0.55) + 0.032, sn(0.55) + 0.032, 0.03));
+          if (!boots) shin(limbSeg(sn, d.T2, rs, lrows, { t0: 0.48, capBot: true, uv: skS, side: s }), skin);
         } else if (boots && (baggy || bot === "slim")) {
-          add5(limbSeg(sn, d.T2, rs, lrows, { t1: 0.6, off: bot === "slim" ? 8e-3 : 0.028, capTop: true, bulge: baggy ? 0.012 : 0 }), M(), bcol, S3, part5);
+          shin(limbSeg(sn, d.T2, rs, lrows, { t1: 0.6, off: bot === "slim" ? 8e-3 : 0.028, capTop: true, capK: 0.7, bulge: baggy ? 0.012 : 0, uv: "trouserShin", side: s }), bcol);
         } else {
           const hem = bot === "hakama" ? 0.075 : baggy ? 4e-3 : bot === "slim" ? 4e-3 : 0.026;
           const offS = bot === "hakama" ? 0.04 : baggy ? 0.03 : bot === "slim" ? 8e-3 : 0.014;
-          add5(limbSeg(sn, d.T2, rs, lrows, { off: offS, capTop: true, flare: hem, lining: cloth, t1: bot === "slim" ? 0.97 : 0.99, bulge: baggy ? 0.014 : 0 }), M(), bcol, S3, part5);
-          if (baggy && bot !== "hakama" && cloth) add5(torus2(q2), ringAt(-d.T2 * 0.96, sn(0.96) + 0.034, sn(0.96) + 0.034, 0.024), cuffCol, S3, part5);
+          shin(limbSeg(sn, d.T2, rs, lrows, { off: offS, capTop: true, capK: 0.7, flare: hem, lining: cloth, t1: bot === "slim" ? 0.97 : 0.99, bulge: baggy ? 0.014 : 0, uv: "trouserShin", side: s }), bcol);
+          if (baggy && bot !== "hakama" && cloth) shin(torus2(q2), cuffCol, ringAt(-d.T2 * 0.96, sn(0.96) + 0.034, sn(0.96) + 0.034, 0.024));
         }
       }
       if (boots) {
@@ -63425,16 +63916,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const tuck = bot === "baggy" || bot === "slim" || bot === "hakama";
         if (skirtPelvis || bot === "shorts" || bot === "capri" || tuck) {
           const t0 = 0.42;
-          if (!tuck) add5(limbSeg(sn, d.T2, rs, lrows, { capTop: true, t1: t0 + 0.06 }), M(), skin, S3, part5);
-          add5(limbSeg(sn, d.T2, rs, lrows, { t0, off: tuck ? 0.034 : 0.016, flareTop: 0.01, capBot: true }), M(), bc, S3, part5);
-          if (cloth) add5(torus2(q2), ringAt(-d.T2 * (t0 + 0.02), sn(t0) + (tuck ? 0.044 : 0.027), sn(t0) + (tuck ? 0.044 : 0.027), 0.03), shade(bc, -0.2), S3, part5);
+          if (!tuck) shin(limbSeg(sn, d.T2, rs, lrows, { capTop: true, capK: 0.7, t1: t0 + 0.06, uv: skS, side: s }), skin);
+          shin(limbSeg(sn, d.T2, rs, lrows, { t0, off: tuck ? 0.034 : 0.016, flareTop: 0.01, capBot: true }), bc);
+          if (cloth) shin(torus2(q2), shade(bc, -0.2), ringAt(-d.T2 * (t0 + 0.02), sn(t0) + (tuck ? 0.044 : 0.027), sn(t0) + (tuck ? 0.044 : 0.027), 0.03));
         }
       }
       if (cloth) {
-        const bareKnee = skirtPelvis ? o.bottom !== "longskirt" || true : bot === "shorts";
-        if (bareKnee) add5(Prim.sphere(q2.sph[0], q2.sph[1]), M(sn(0) * 0.62, -0.012, 0, 0, 0, 0, [0.026 * d.Bk, 0.034 * d.Bk, 0.032 * d.Bk]), skin, S3, part5);
+        const bareKnee = skirtPelvis || bot === "shorts";
+        if (bareKnee) shin(Prim.sphere(q2.sph[0], q2.sph[1]), skin, M(sn(0) * 0.62, -0.012, 0, 0, 0, 0, [0.026 * d.Bk, 0.034 * d.Bk, 0.032 * d.Bk]));
         const bareAnkle = (skirtPelvis || bot === "shorts" || bot === "capri") && !boots && o.bottom !== "longskirt";
-        if (bareAnkle) for (const [zz, yy] of [[1, 0.975], [-1, 0.955]]) add5(Prim.sphere(q2.sph[0], q2.sph[1]), M(4e-3, -d.T2 * yy, zz * sn(0.97) * 0.8, 0, 0, 0, 0.017 * d.Bk), skin, S3, part5);
+        if (bareAnkle) for (const [zz, yy] of [[1, 0.975], [-1, 0.955]]) shin(Prim.sphere(q2.sph[0], q2.sph[1]), skin, M(4e-3, -d.T2 * yy, zz * sn(0.97) * 0.8, 0, 0, 0, 0.017 * d.Bk));
       }
       feet(add5, o, pal, d, q2, Ft, part5);
     }
@@ -63445,7 +63936,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function neckGeo(nk, y0, y1, o, cloth) {
     const U3 = cloth ? 14 : 7, V3 = cloth ? 6 : 2;
     const g = grid((u, v) => {
-      const a = -Math.PI + u * TAU12, h2 = 1 - v;
+      const a = -Math.PI + u * TAU13, h2 = 1 - v;
       const y = y0 + (y1 - y0) * h2;
       let r = nk * (1.1 - 0.12 * sstep(0, 0.5, h2));
       if (cloth) {
@@ -63459,9 +63950,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       return [Math.cos(a) * r * 0.95, y, Math.sin(a) * r];
     }, U3, V3);
-    const n = g.attributes.normal, W3 = U3 + 1;
+    const n = g.attributes.normal, W4 = U3 + 1;
     for (let j = 0; j <= V3; j++) {
-      const a = j * W3, b = j * W3 + U3;
+      const a = j * W4, b = j * W4 + U3;
       const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b), l = Math.hypot(x, y, z) || 1;
       n.setXYZ(a, x / l, y / l, z / l);
       n.setXYZ(b, x / l, y / l, z / l);
@@ -63513,19 +64004,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const rows = cut2(TR, -0.1, 0.99);
     const open = (s) => 0.5 + sstep(0.75, 1, s) * 0.3;
     const pt = (k) => (s, a) => torsoPt(sh, s, a, off(s) - k, 0);
-    add5(band(pt(0), rows, open, (s) => TAU12 - open(s), U3), M(), c, B3.chest);
-    if (cloth) add5(band(pt(6e-3), rows, open, (s) => TAU12 - open(s), U3, true), M(), lining2, B3.chest);
+    add5(band(pt(0), rows, open, (s) => TAU13 - open(s), U3), M(), c, B3.chest);
+    if (cloth) add5(band(pt(6e-3), rows, open, (s) => TAU13 - open(s), U3, true), M(), lining2, B3.chest);
     const cr = cloth ? [1.1, 1.04, 0.98] : [1.1, 0.98];
     const col = (s, a) => {
       const p = torsoPt(sh, 0.97, a, 0.03, 0);
       const k = 1 + (s - 0.97) * 1.6;
       return [p[0] * k, s * sh.cl, p[2] * k];
     };
-    add5(band(col, cr, 1.25, TAU12 - 1.25, Math.max(4, U3 / 2)), M(), c, B3.chest);
+    add5(band(col, cr, 1.25, TAU13 - 1.25, Math.max(4, U3 / 2)), M(), c, B3.chest);
     if (cloth) add5(band((s, a) => {
       const p = col(s, a);
       return [p[0] * 0.95, p[1], p[2] * 0.95];
-    }, cr, 1.25, TAU12 - 1.25, Math.max(4, U3 / 2), true), M(), lining2, B3.chest);
+    }, cr, 1.25, TAU13 - 1.25, Math.max(4, U3 / 2), true), M(), lining2, B3.chest);
     coatTail(add5, sh, c, U3, cloth, d, off(-0.1));
   }
   function coatTail(add5, sh, c, U3, cloth, d, off0) {
@@ -63538,23 +64029,33 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return [p[0] * k - 8e-3, y, p[2] * k];
     };
     const openT = 0.62;
-    add5(band(tp(0), tr, openT, TAU12 - openT, U3), M(), c, B3.coatTail);
-    if (cloth) add5(band(tp(6e-3), half(tr), openT, TAU12 - openT, U3 / 2, true), M(), lining2, B3.coatTail);
+    add5(band(tp(0), tr, openT, TAU13 - openT, U3), M(), c, B3.coatTail);
+    if (cloth) add5(band(tp(6e-3), half(tr), openT, TAU13 - openT, U3 / 2, true), M(), lining2, B3.coatTail);
   }
 
   // src/render3d/chars/mats.js
-  var BODY_KEY = "op-char-body-4";
+  var BODY_KEY = "op-char-body-5";
   var INK2 = 2364943;
   var GRAD = null;
   function charGradient() {
     if (GRAD) return GRAD;
-    const data = new Uint8Array([158, 158, 158, 255, 176, 176, 176, 255, 255, 255, 255, 255, 255, 255, 255, 255]);
-    GRAD = new DataTexture(data, 4, 1, RGBAFormat);
+    const v = [128, 132, 138, 150, 255, 255, 255, 255];
+    const data = new Uint8Array(v.flatMap((x) => [x, x, x, 255]));
+    GRAD = new DataTexture(data, v.length, 1, RGBAFormat);
     GRAD.minFilter = NearestFilter;
     GRAD.magFilter = NearestFilter;
     GRAD.generateMipmaps = false;
     GRAD.needsUpdate = true;
     return GRAD;
+  }
+  function celShading(sh) {
+    const chunk = ShaderChunk.lights_toon_pars_fragment;
+    const find = "vec3 irradiance = getGradientIrradiance( geometryNormal, directLight.direction ) * directLight.color;";
+    if (!chunk.includes(find)) return;
+    const toon2 = chunk.replace(find, `vec3 keyL = normalize( mix( directLight.direction, normalize( vec3( -0.62, 0.5, 0.6 ) ), 0.55 ) );
+	vec3 gi = getGradientIrradiance( geometryNormal, keyL );
+	vec3 irradiance = gi * mix( vec3( 0.84, 0.7, 0.74 ), vec3( 1.0 ), smoothstep( 0.62, 0.95, gi.r ) ) * directLight.color;`);
+    sh.fragmentShader = sh.fragmentShader.replace("#include <lights_toon_pars_fragment>", toon2);
   }
   function bodyMaterial(opts = {}) {
     const u = {
@@ -63567,20 +64068,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       uFreeze: { value: 0 },
       // your own body seen from your eyes (first person): nothing above the neck, and no arms while the view's own are up
       uClipY: { value: 1e6 },
-      uHideArms: { value: 0 }
+      uHideArms: { value: 0 },
+      uHideHead: { value: 0 }
     };
-    const m = new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), fog: opts.fog ?? true });
+    const m = new MeshToonMaterial({ vertexColors: true, map: detailTexture2(), gradientMap: charGradient(), fog: opts.fog ?? true });
     m.userData.u = u;
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, FOG, u);
+      celShading(sh);
       sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute float aPart;\nvarying float vPart;\nvarying float vObjY;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvPart = aPart;").replace("#include <skinning_vertex>", "#include <skinning_vertex>\nvObjY = transformed.y;");
       sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
 varying float vPart; varying float vObjY;
 uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec3 uHakiCol;
-uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms;`).replace("#include <color_fragment>", `#include <color_fragment>
+uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead;`).replace("#include <color_fragment>", `#include <color_fragment>
 float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);
-float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart);
-if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5) discard;
+float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart) * step(vPart, 4.5), pHead = step(4.5, vPart);
+if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5 || uHideHead * pHead > 0.5) discard;
 float hakiK = pR * uHaki.x + pL * uHaki.y + lR * uHaki.z + lL * uHaki.w;
 float legK = lR * uLegFx.x + lL * uLegFx.y;
 diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);
@@ -63650,7 +64153,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var FACE_ANCHOR = 0.05;
   var FACE_W = 192;
   var FACE_H = Math.round((FACE_TOP - FACE_BOTTOM) * FACE_S2);
-  var TAU13 = Math.PI * 2;
+  var TAU14 = Math.PI * 2;
   var INK3 = "#2a1a1e";
   function hex2(col, fb) {
     if (typeof col !== "string") return fb;
@@ -63894,25 +64397,25 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (st.beady) {
         g.fillStyle = "#16100f";
         g.beginPath();
-        g.ellipse(0, 0.05, 0.05, 0.065, 0, 0, TAU13);
+        g.ellipse(0, 0.05, 0.05, 0.065, 0, 0, TAU14);
         g.fill();
       } else {
         const rx = 0.125 * ir * Math.min(1.08, st.w), ry = (st.round ? 0.125 : 0.19) * ir;
         g.fillStyle = iris;
         g.beginPath();
-        g.ellipse(ix, iy, rx, ry, 0, 0, TAU13);
+        g.ellipse(ix, iy, rx, ry, 0, 0, TAU14);
         g.fill();
         g.fillStyle = lt2;
         g.beginPath();
-        g.ellipse(ix, iy + ry * 0.52, rx * 0.68, ry * 0.36, 0, 0, TAU13);
+        g.ellipse(ix, iy + ry * 0.52, rx * 0.68, ry * 0.36, 0, 0, TAU14);
         g.fill();
         g.fillStyle = pupil;
         g.beginPath();
-        g.ellipse(ix, iy + 0.012, rx * 0.5, ry * 0.55, 0, 0, TAU13);
+        g.ellipse(ix, iy + 0.012, rx * 0.5, ry * 0.55, 0, 0, TAU14);
         g.fill();
         g.fillStyle = "rgba(40,20,30,0.28)";
         g.beginPath();
-        g.ellipse(0, E.top - 0.02, 0.3, 0.09, 0, 0, TAU13);
+        g.ellipse(0, E.top - 0.02, 0.3, 0.09, 0, 0, TAU14);
         g.fill();
       }
       g.restore();
@@ -63960,17 +64463,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = "#ffffff";
         const cy = ey + 0.02 + st.drop * 0.1 + (fierce ? 0.03 : -0.02);
         g.beginPath();
-        g.arc(x - 0.06 * ES, ey + (cy - ey) * ES, (st.hl > 1 ? 0.056 : 0.045) * (id === "fish" ? 0.8 : 1), 0, TAU13);
+        g.arc(x - 0.06 * ES, ey + (cy - ey) * ES, (st.hl > 1 ? 0.056 : 0.045) * (id === "fish" ? 0.8 : 1), 0, TAU14);
         g.fill();
         if (st.hl > 1) {
           g.beginPath();
-          g.arc(x + 0.055 * ES, ey + 0.14 * ES, 0.028, 0, TAU13);
+          g.arc(x + 0.055 * ES, ey + 0.14 * ES, 0.028, 0, TAU14);
           g.fill();
         }
       } else if (st.beady) {
         g.fillStyle = "#ffffff";
         g.beginPath();
-        g.arc(x - 0.015, ey + 0.03, 0.016, 0, TAU13);
+        g.arc(x - 0.015, ey + 0.03, 0.016, 0, TAU14);
         g.fill();
       }
     }
@@ -64012,7 +64515,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (tongue) {
         g.fillStyle = TONGUE2;
         g.beginPath();
-        g.ellipse(tongue[0], tongue[1], tongue[2], tongue[3], 0, 0, TAU13);
+        g.ellipse(tongue[0], tongue[1], tongue[2], tongue[3], 0, 0, TAU14);
         g.fill();
       }
       g.fillStyle = TEETH2;
@@ -64046,13 +64549,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (look.muzzle) {
       g.fillStyle = skin.muzzle;
       g.beginPath();
-      g.ellipse(0, 0.56, 0.36, 0.27, 0, 0, TAU13);
+      g.ellipse(0, 0.56, 0.36, 0.27, 0, 0, TAU14);
       g.fill();
       g.fillStyle = "#2d2226";
       g.fill(pp2(NOSE_ANIMAL2));
       g.fillStyle = "rgba(255,255,255,0.7)";
       g.beginPath();
-      g.ellipse(-0.04, 0.35, 0.03, 0.02, 0, 0, TAU13);
+      g.ellipse(-0.04, 0.35, 0.03, 0.02, 0, 0, TAU14);
       g.fill();
     }
     if (look.gills) {
@@ -64065,8 +64568,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.fillStyle = skin.blush;
       g.globalAlpha = 0.5;
       g.beginPath();
-      g.ellipse(-0.66, 0.46, 0.14, 0.07, 0, 0, TAU13);
-      g.ellipse(0.66, 0.46, 0.14, 0.07, 0, 0, TAU13);
+      g.ellipse(-0.66, 0.46, 0.14, 0.07, 0, 0, TAU14);
+      g.ellipse(0.66, 0.46, 0.14, 0.07, 0, 0, TAU14);
       g.fill();
       g.globalAlpha = 1;
     }
@@ -64090,15 +64593,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.stroke(pp2(THIRD2));
       g.fillStyle = hex2(look.eyeColor, "#8e44ad");
       g.beginPath();
-      g.ellipse(0, -0.11, 0.06, 0.1, 0, 0, TAU13);
+      g.ellipse(0, -0.11, 0.06, 0.1, 0, 0, TAU14);
       g.fill();
       g.fillStyle = "#1a1020";
       g.beginPath();
-      g.ellipse(0, -0.1, 0.028, 0.05, 0, 0, TAU13);
+      g.ellipse(0, -0.1, 0.028, 0.05, 0, 0, TAU14);
       g.fill();
       g.fillStyle = "#ffffff";
       g.beginPath();
-      g.arc(-0.02, -0.15, 0.025, 0, TAU13);
+      g.arc(-0.02, -0.15, 0.025, 0, TAU14);
       g.fill();
     }
     if (look.goggles === true) {
@@ -64129,6 +64632,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       tex2.colorSpace = SRGBColorSpace;
       tex2.anisotropy = 4;
       const mat = new MeshToonMaterial({ map: tex2, gradientMap: charGradient(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
+      mat.onBeforeCompile = celShading;
+      mat.customProgramCacheKey = () => "op-char-face-1";
       e = { key: key2, tex: tex2, mat, refs: 1, t: ++tick2 };
       CACHE.set(key2, e);
       if (CACHE.size > MAX) evict();
@@ -64152,7 +64657,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render3d/chars/build.js
-  var TAU14 = Math.PI * 2;
+  var TAU15 = Math.PI * 2;
   var DEG2 = Math.PI / 180;
   var DETAIL = {
     0: { head: [20, 16], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1, cloth: 1, lock: [5, 4] },
@@ -64231,14 +64736,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     d = smin(d, capsule(x, y, az, -0.14, k.jy, k.jw, k.cx - 0.12, k.cy + 0.1, k.cz, k.jr), 0.24);
     d = smin(d, ellipsoid(x - k.cx, y - k.cy - 0.02, z, k.cr, k.cr * 0.92, k.cr + k.cz * 0.7), 0.18);
     d = smin(d, ellipsoid(x - 0.58, y + 0.6, z, 0.24, 0.19, 0.32), 0.2);
-    d = smin(d, ellipsoid(x - 0.66, y + 0.12, az - 0.5, 0.2, 0.12, 0.2), 0.05 + 0.12 * k.cheek);
+    d = smin(d, ellipsoid(x - 0.66, y + 0.12, az - 0.5, 0.22, 0.13, 0.22), 0.05 + 0.12 * k.cheek);
+    d = smax(d, -ellipsoid(x - 0.74, y + 0.42, az - 0.52, 0.2, 0.14, 0.16), (k.fem ? 0.2 : 0.12) + 0.08 * k.cheek);
     d = smax(d, az - 0.87, 0.3);
     d = smax(d, -ellipsoid(x - 0.96, y + 0.04, az - 0.34, 0.13, 0.12, 0.19), 0.08);
-    d = smin(d, capsule(x, y, az, 0.88, 0.19, 0, 0.76, 0.17, 0.52, 0.035 + 0.04 * k.brow), 0.08 + 0.04 * k.brow);
+    d = smin(d, capsule(x, y, az, 0.9, 0.2, 0, 0.78, 0.18, 0.52, 0.04 + 0.05 * k.brow * (k.fem ? 0.6 : 1)), 0.08 + 0.04 * k.brow);
     const n = k.nose;
     if (n) {
-      const tx = 0.9 + n.len, ty = -0.36 * n.h;
-      let nd = capsule(x, y, z, 0.9, 0.02, 0, tx, ty + 0.02, 0, n.r0);
+      const tx = 0.92 + n.len * 1.15, ty = -0.36 * n.h;
+      let nd = capsule(x, y, z * 1.25, 0.92, 0.05, 0, tx, ty + 0.02, 0, n.r0 * 1.1);
       if (n.hook) nd = smin(nd, sphere(x - 0.92 - n.len * 0.55, y + 0.15, z, n.r0 + n.hook), 0.05);
       nd = smin(nd, sphere(x - tx + 0.01, y - ty, z, n.tip), 0.05);
       nd = smin(nd, sphere(x - tx + 0.07, y - ty + 0.03, az - 0.07, n.wing), 0.04);
@@ -64249,21 +64755,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var HEAD = null;
   var HEAD_R = /* @__PURE__ */ new Map();
   function headRay(dx, dy, dz) {
-    const H2 = HEAD || headOf({});
-    let cache4 = H2.cache;
+    const H3 = HEAD || headOf({});
+    let cache4 = H3.cache;
     if (!cache4) {
-      cache4 = HEAD_R.get(H2.key);
+      cache4 = HEAD_R.get(H3.key);
       if (!cache4) {
         if (HEAD_R.size > 400) HEAD_R.clear();
         cache4 = /* @__PURE__ */ new Map();
-        HEAD_R.set(H2.key, cache4);
+        HEAD_R.set(H3.key, cache4);
       }
-      H2.cache = cache4;
+      H3.cache = cache4;
     }
     const key2 = (Math.round(dx * 1e4) + 10001) * 40004e4 + (Math.round(dy * 1e4) + 10001) * 20002 + (Math.round(dz * 1e4) + 10001);
     let t = cache4.get(key2);
     if (t !== void 0) return t;
-    const k = H2.k;
+    const k = H3.k;
     let out = 1.7, cur = 1.7;
     for (let i = 0; i < 80; i++) {
       const d = sdfHead(dx * cur, dy * cur, dz * cur, k);
@@ -64305,14 +64811,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function faceNormals(g, U3, V3) {
     const P4 = g.attributes.position, N4 = g.attributes.normal;
-    const W3 = U3 + 1, n = N4.count;
+    const W4 = U3 + 1, n = N4.count;
     let a = Float32Array.from(N4.array), b = new Float32Array(a.length);
-    for (let it = 0; it < 3; it++) {
+    for (let it = 0; it < 2; it++) {
       for (let j = 0; j <= V3; j++) {
         for (let i = 0; i <= U3; i++) {
-          const k = (j * W3 + i) * 3;
+          const k = (j * W4 + i) * 3;
           const il = i === 0 ? U3 - 1 : i - 1, ir = i === U3 ? 1 : i + 1;
-          const nb = [j * W3 + il, j * W3 + ir, Math.max(0, j - 1) * W3 + i, Math.min(V3, j + 1) * W3 + i];
+          const nb = [j * W4 + il, j * W4 + ir, Math.max(0, j - 1) * W4 + i, Math.min(V3, j + 1) * W4 + i];
           let x = a[k] * 2, y = a[k + 1] * 2, z = a[k + 2] * 2;
           for (const q2 of nb) {
             x += a[q2 * 3];
@@ -64331,10 +64837,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const px2 = P4.getX(i), py2 = P4.getY(i), pz2 = P4.getZ(i);
       const l = Math.hypot(px2, py2, pz2) || 1;
       const dx = px2 / l, dy = py2 / l, dz = pz2 / l;
-      const feat = Math.max(0, 1 - Math.abs(py2 + 0.12) / 0.5) * Math.max(0, 1 - Math.abs(pz2) / 0.7) * Math.max(0, Math.min(1, dx * 2));
-      const wg = 0.3 + 0.4 * feat;
+      const feat = Math.max(0, 1 - Math.abs(py2 + 0.12) / 0.55) * Math.max(0, 1 - Math.abs(pz2) / 0.75) * Math.max(0, Math.min(1, dx * 2));
+      const wg = 0.62 + 0.33 * feat;
       const f = Math.max(0, Math.min(1, (dx + 0.1) / 0.7));
-      const nx = a[i * 3] * wg + dx * (1 - wg) + f * 0.2, ny = a[i * 3 + 1] * wg + dy * (1 - wg) + f * 0.05, nz = a[i * 3 + 2] * wg + dz * (1 - wg);
+      const nx = a[i * 3] * wg + dx * (1 - wg) + f * 0.08, ny = a[i * 3 + 1] * wg + dy * (1 - wg) + f * 0.02, nz = a[i * 3 + 2] * wg + dz * (1 - wg);
       const m = Math.hypot(nx, ny, nz) || 1;
       N4.setXYZ(i, nx / m, ny / m, nz / m);
     }
@@ -64348,7 +64854,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var headLevel = (lod) => lod === 0 ? "near" : lod === 2 ? "mid" : "far";
   var phOf = (G3, i) => {
     const u = i / G3.U;
-    return (u + G3.warp * Math.sin((u - 0.5) * TAU14) / TAU14) * TAU14 - Math.PI;
+    return (u + G3.warp * Math.sin((u - 0.5) * TAU15) / TAU15) * TAU15 - Math.PI;
   };
   function headPoint(G3, i, j) {
     const ph = phOf(G3, i), th = G3.rows[j] * DEG2;
@@ -64362,9 +64868,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (!g) {
       const V3 = G3.rows.length - 1;
       g = grid((u, v) => headPoint(G3, Math.round(u * G3.U), Math.round(v * V3)), G3.U, V3);
-      const n = g.attributes.normal, W3 = G3.U + 1;
+      const n = g.attributes.normal, W4 = G3.U + 1;
       for (let j = 0; j <= V3; j++) {
-        const a = j * W3, b = j * W3 + G3.U;
+        const a = j * W4, b = j * W4 + G3.U;
         const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b), l = Math.hypot(x, y, z) || 1;
         n.setXYZ(a, x / l, y / l, z / l);
         n.setXYZ(b, x / l, y / l, z / l);
@@ -64384,14 +64890,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (!g) {
       const G3 = HEAD_GRID[level];
       const head = headGeo(level);
-      const HP = head.attributes.position, HN = head.attributes.normal, W3 = G3.U + 1;
+      const HP = head.attributes.position, HN = head.attributes.normal, W4 = G3.U + 1;
       const cols = [], rws = [];
       for (let i = 0; i <= G3.U; i++) if (Math.abs(phOf(G3, i)) <= 72 * DEG2) cols.push(i);
       for (let j = 0; j < G3.rows.length; j++) if (G3.rows[j] >= 55 && G3.rows[j] <= 172) rws.push(j);
       const pos = [], nor = [], uv = [], idx = [];
       for (const j of rws) {
         for (const i of cols) {
-          const v = j * W3 + i, s = 1.006;
+          const v = j * W4 + i, s = 1.006;
           const x = HP.getX(v) * s, y = HP.getY(v) * s, z = HP.getZ(v) * s;
           pos.push(x, y, z);
           nor.push(HN.getX(v), HN.getY(v), HN.getZ(v));
@@ -64420,7 +64926,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function capGeo(rs, thF, thS, thB, zig = null, U3 = 16, V3 = 6) {
     return grid((u, v) => {
-      const ph = Math.PI + u * TAU14;
+      const ph = Math.PI + u * TAU15;
       const c = Math.cos(ph);
       let th = thS + (thF - thS) * Math.pow(Math.max(0, c), 1.4) + (thB - thS) * Math.pow(Math.max(0, -c), 1.4);
       if (zig && v >= 1) th += zig(ph);
@@ -64500,7 +65006,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       side = norm(side);
       const nrm = cross(d, side);
       const r = w * Math.pow(s, 0.9) * (1 + 0.35 * Math.sin(Math.PI * Math.min(1, t * 1.8)));
-      const ang = u * TAU14, cu = Math.cos(ang) * r, su = Math.sin(ang) * r * flat;
+      const ang = u * TAU15, cu = Math.cos(ang) * r, su = Math.sin(ang) * r * flat;
       return [p[0] + side[0] * cu + nrm[0] * su, p[1] + side[1] * cu + nrm[1] * su, p[2] + side[2] * cu + nrm[2] * su];
     }, U3, V3);
   }
@@ -64707,7 +65213,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       h2.cap(1.08, 58, 100, 118);
       blob3(h2, [-0.36, 0.56, 0], 1.42, [0, 0, 0], [h2.q.blob[0] + 2, h2.q.blob[1] + 2]);
       for (let i = 0; i < 9; i++) {
-        const a = i / 9 * TAU14;
+        const a = i / 9 * TAU15;
         const c = [-0.36 + Math.cos(a) * 1.32 * 0.72, 0.56 + Math.sin(a) * 1.32, Math.sin(a * 2.3) * 0.5];
         if (c[0] > 0.2 && c[1] < 0.1) continue;
         blob3(h2, c, 0.36, [0, 0, 0], h2.q.sph);
@@ -64779,7 +65285,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       h2.addC(Prim.frustum(0.8, h2.q.hat), M(0, 0.86, 0, 0, 0, 0, [1, 0.62, 1]), c, h2.bone);
       dome(h2, 1.16, [0.8, 0.26, 0.8], c);
       for (let i = 0; i < 3; i++) {
-        const a = i / 3 * TAU14 + Math.PI / 3;
+        const a = i / 3 * TAU15 + Math.PI / 3;
         const x = Math.cos(a), z = Math.sin(a);
         h2.addC(Prim.rbox(0.3, h2.q.rboxS[0], h2.q.rboxS[1]), mul(M(x * 1.02, 0.78, z * 1.02, 0, -a, 0), M(0, 0, 0, 0, 0, 0.9, [0.36, 0.06, 1])), c, h2.bone);
         h2.addC(Prim.box(), mul(M(x * 1.14, 0.92, z * 1.14, 0, -a, 0), M(0, 0, 0, 0, 0, 0.9, [0.06, 0.04, 0.9])), GOLD2, h2.bone);
@@ -64865,7 +65371,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const y = top - 0.12;
       h2.add(lathe2([[0.62, y], [0.66, y + 0.3]], h2.q.hat), M(), c, h2.bone);
       for (let i = 0; i < 5; i++) {
-        const a = i / 5 * TAU14;
+        const a = i / 5 * TAU15;
         spike({ ...h2, col: lin(c) }, [Math.cos(a) * 0.64, y + 0.26, Math.sin(a) * 0.64], [Math.cos(a) * 0.7, y + 0.62, Math.sin(a) * 0.7], 0.14, 0.1, 4);
       }
       h2.addC(Prim.sphere(h2.q.sph[0], h2.q.sph[1]), M(0.66, y + 0.14, 0, 0, 0, 0, 0.09), "#e53935", h2.bone);
@@ -64967,6 +65473,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       L2.tie,
       L2.tucked,
       L2.buckle,
+      frameId(L2),
       headKey(headParams(L2))
     ].join("|");
   }
@@ -64984,13 +65491,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (articulated && lod === 0) q2 = { ...q2, hands: 2 };
     const d = dims(look);
     const pal = palette2(look);
-    const b = new Builder();
+    const bind = bindPose(d);
+    const b = new Builder(bind, BLANK_UV);
     const Bk = d.Bk;
-    const add5 = (g, m, col, bone, part5 = 0) => b.add(g, m, col, bone, part5);
+    const add5 = (g, m, col, bone, part5 = 0, opts) => b.add(g, m, col, bone, part5, opts);
     const rb = (k = 0.4, small = true) => Prim.rbox(k, ...small ? q2.rboxS : q2.rbox);
     const outfit = buildFigure(add5, look, d, pal, q2);
-    const R3 = d.headR;
-    const HM = (m) => mul(M(d.hx, d.hc, 0, 0, 0, 0, R3), m || M());
+    const R4 = d.headR;
+    const HM = (m) => mul(M(d.hx, d.hc, 0, 0, 0, 0, R4), m || M());
     const hb = B3.head;
     add5(headGeo(headLevel(lod)), HM(), pal.face, hb);
     const style = styleId2(look.hair, look);
@@ -65006,11 +65514,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       hatted: !!cover3 && style !== "afro",
       add(g, m, col, bone, part5, anchor2) {
         if (cover3 && anchor2 && anchor2[1] > 0.5 && style !== "afro") return;
-        if (bone === B3.hairTail) b.add(g, mul(M(0, 0, 0, 0, 0, 0, R3), m), col, bone, 0);
+        if (bone === B3.hairTail) b.add(g, mul(M(0, 0, 0, 0, 0, 0, R4), m), col, bone, 0);
         else b.add(g, HM(m), col, bone, 0);
       },
       addC(g, m, col, bone) {
-        if (bone === B3.hairTail) b.add(g, mul(M(0, 0, 0, 0, 0, 0, R3), m), col, bone, 0);
+        if (bone === B3.hairTail) b.add(g, mul(M(0, 0, 0, 0, 0, 0, R4), m), col, bone, 0);
         else b.add(g, HM(m), col, bone, 0);
       },
       cap(rs, f, s, bk, zig, tone) {
@@ -65072,11 +65580,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (look.wings === "sky" || look.wings === "lunar") {
       const lunar = look.wings === "lunar";
       const col = lunar ? "#1e1e24" : "#ffffff";
-      for (const [s, W3] of [[1, B3.wingR], [-1, B3.wingL]]) {
+      for (const [s, W4] of [[1, B3.wingR], [-1, B3.wingL]]) {
         for (let i = 0; i < 3; i++) {
           const a = (lunar ? 0.35 : 0.55) - i * 0.42;
           const L2 = (lunar ? 0.62 : 0.34) * (1 - i * 0.12);
-          add5(Prim.sphere(q2.sph[0], q2.sph[1]), mul(M(0, 0, 0, s * (Math.PI / 2 - a), 0, 0), M(0, L2 * 0.5, 0, 0, 0, 0, [0.03, L2 * 0.55, lunar ? 0.11 : 0.085])), i ? shade(col, lunar ? 0.1 : -0.08) : col, W3);
+          add5(Prim.sphere(q2.sph[0], q2.sph[1]), mul(M(0, 0, 0, s * (Math.PI / 2 - a), 0, 0), M(0, L2 * 0.5, 0, 0, 0, 0, [0.03, L2 * 0.55, lunar ? 0.11 : 0.085])), i ? shade(col, lunar ? 0.1 : -0.08) : col, W4);
         }
       }
     }
@@ -65098,8 +65606,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       add5(Prim.cyl(5), between(a, e, 0.018, 0.018, 0.5), wpn.kind === "axe" ? "#6d4c41" : "#4fc3f7", B3.backWpn);
       if (wpn.kind === "axe") add5(Prim.box(), M(a[0] - 0.02, a[1] + 0.1, a[2] + 0.05, 0.9, 0, 0, [0.015, 0.12, 0.16]), "#cfd8dc", B3.backWpn);
     }
+    for (let i = 0; i < b.bone.length; i++) if (b.bone[i] === B3.head || b.bone[i] === B3.hairTail) b.part[i] = 5;
     const geo2 = b.build();
-    return { geo: geo2, dims: d, style, meta, hatKind: kind, bubble: kind === "bubble", lod, fingers: fingers.R ? fingers : null };
+    const inv = bind.map((m) => m.clone().invert());
+    return { geo: geo2, dims: d, bind, inv, style, meta, hatKind: kind, bubble: kind === "bubble", lod, fingers: fingers.R ? fingers : null };
   }
   function minkEars2(b, HM, look, pal, hb, q2) {
     const fur = pal.fur, inner = look.kind === "Panda" ? "#2b2b2b" : mixHex(fur, "#f48fb1", 0.55);
@@ -65121,28 +65631,40 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
   }
-  function hands(b, H2, s, col, Bk, part5, q2, kMul = 1) {
+  function hands(b, H3, s, col, Bk, part5, q2, kMul = 1) {
     const k = (0.95 + (Bk - 1) * 0.6) * kMul;
     const th = -s;
-    const fist = B3["fist" + H2], palm = B3["palm" + H2], finger = B3["finger" + H2];
+    const fist = B3["fist" + H3], palm = B3["palm" + H3], finger = B3["finger" + H3];
     const S3 = (x, y, z) => [x * k, y * k, z * k];
     const dark = shade(col, -0.08);
     if (q2.hands === 2) {
-      const hand = B3["hand" + H2];
+      const hand = B3["hand" + H3];
       b.add(Prim.rbox(0.4, 10, 8), M(-2e-3 * k, -0.043 * k, 0, 0, 0, 0, S3(0.019, 0.047, 0.043)), col, hand, part5);
       const rest = { k, th, knuckle: [], lp: [], thumb: [-0.012 * k, -0.018 * k, th * 0.03 * k], lt: 0.032 * k };
+      const hb0 = b.bind && b.bind[hand];
+      const at5 = (base2, v) => base2.clone().multiply(new three_module_exports.Matrix4().makeTranslation(v[0], v[1], v[2]));
       for (let f = 0; f < 4; f++) {
         const len = [0.93, 1, 0.95, 0.77][f];
         const kn = [0, -0.083 * k * (f === 3 ? 0.95 : 1), th * (1.5 - f) * 0.0205 * k];
         const lp = 0.036 * k * len, ld = 0.034 * k * len;
         rest.knuckle.push(kn);
         rest.lp.push(lp);
+        if (hb0) {
+          const km = at5(hb0, kn);
+          b.setBind(B3["k" + (f + 1) + H3], km);
+          b.setBind(B3["j" + (f + 1) + H3], at5(km, [0, -lp, 0]));
+        }
         const c = f % 2 ? col : dark;
-        b.add(tcap(0.0113 * k, 0.0105 * k, lp, 8, 2), M(), c, B3["k" + (f + 1) + H2], part5);
-        b.add(tcap(0.0104 * k, 89e-4 * k, ld, 8, 2), M(), c, B3["j" + (f + 1) + H2], part5);
+        b.add(tcap(0.0113 * k, 0.0105 * k, lp, 8, 2), M(), c, B3["k" + (f + 1) + H3], part5);
+        b.add(tcap(0.0104 * k, 89e-4 * k, ld, 8, 2), M(), c, B3["j" + (f + 1) + H3], part5);
       }
-      b.add(tcap(0.0135 * k, 0.012 * k, rest.lt, 8, 2), M(), col, B3["tb" + H2], part5);
-      b.add(tcap(0.0118 * k, 98e-4 * k, 0.027 * k, 8, 2), M(), dark, B3["tc" + H2], part5);
+      if (hb0) {
+        const tm = at5(hb0, rest.thumb);
+        b.setBind(B3["tb" + H3], tm);
+        b.setBind(B3["tc" + H3], at5(tm, [0, -rest.lt, 0]));
+      }
+      b.add(tcap(0.0135 * k, 0.012 * k, rest.lt, 8, 2), M(), col, B3["tb" + H3], part5);
+      b.add(tcap(0.0118 * k, 98e-4 * k, 0.027 * k, 8, 2), M(), dark, B3["tc" + H3], part5);
       return rest;
     }
     b.add(Prim.rbox(0.42, ...q2.rboxS), M(0, -0.045 * k, 0, 0, 0, 0, S3(0.033, 0.046, 0.043)), col, fist, part5);
@@ -65434,9 +65956,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const N4 = 6;
     const P4 = [], C3 = [], I = [];
     const sec = (u) => {
-      const x = x0 + u * L2, curve = 0.035 * u * u;
+      const x = x0 + u * L2, curve2 = 0.035 * u * u;
       const ww = w * (1 - 0.3 * u);
-      return [[x, curve + ww * 0.5, 0], [x, curve, t * 0.5], [x, curve - ww * 0.5, 0], [x, curve, -t * 0.5]];
+      return [[x, curve2 + ww * 0.5, 0], [x, curve2, t * 0.5], [x, curve2 - ww * 0.5, 0], [x, curve2, -t * 0.5]];
     };
     for (let i = 0; i <= N4; i++) {
       const s = sec(i / N4);
@@ -65646,7 +66168,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         return b;
       });
       for (const n of BONES) (PARENT[n] ? this.bones[B3[PARENT[n]]] : this.group).add(this.bones[B3[n]]);
-      this.skeleton = new Skeleton(this.bones, this.bones.map(() => new Matrix4()));
+      this.skeleton = new Skeleton(this.bones, this.body.inv.map((m) => m.clone()));
       this.mat = bodyMaterial({ fog: opts.fog ?? true });
       this.mesh = new SkinnedMesh(this.body.geo, this.mat);
       this.mesh.bind(this.skeleton, IDENT);
@@ -65657,10 +66179,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.outline.boundingSphere = this.mesh.boundingSphere;
       this.group.add(this.mesh, this.outline);
       const d = this.d;
-      this.bones[B3.hairTail].position.set(d.hx, d.hc, 0);
-      this.bones[B3.tail].position.set(-0.13 * d.Bk, -0.06, 0);
-      this.bones[B3.wingR].position.set(-0.11 * d.Bk, d.chestLen * 0.8, 0.05);
-      this.bones[B3.wingL].position.set(-0.11 * d.Bk, d.chestLen * 0.8, -0.05);
+      const R4 = restOffsets(d);
+      for (const n of ["hairTail", "tail", "wingR", "wingL"]) this.bones[B3[n]].position.set(...R4[n]);
       this.restFingers();
       this.face = new Mesh(faceGeo(look, headLevel(this.lod)), void 0);
       this.face.position.set(d.hx, d.hc, 0);
@@ -65687,14 +66207,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.fing = null;
       if (!F4) return;
       this.fing = [0, 1].map(() => ({ a: [0.3, 0.4, 0.5, 0.6], b: [0.4, 0.5, 0.6, 0.7], sp: 0.35, th: 0.3, lag: 0, prev: new Vector3(), t: -1 }));
-      for (const H2 of ["R", "L"]) {
-        const r = F4[H2];
+      for (const H3 of ["R", "L"]) {
+        const r = F4[H3];
         for (let i = 0; i < 4; i++) {
-          this.bones[B3["k" + (i + 1) + H2]].position.set(...r.knuckle[i]);
-          this.bones[B3["j" + (i + 1) + H2]].position.set(0, -r.lp[i], 0);
+          this.bones[B3["k" + (i + 1) + H3]].position.set(...r.knuckle[i]);
+          this.bones[B3["j" + (i + 1) + H3]].position.set(0, -r.lp[i], 0);
         }
-        this.bones[B3["tb" + H2]].position.set(...r.thumb);
-        this.bones[B3["tc" + H2]].position.set(0, -r.lt, 0);
+        this.bones[B3["tb" + H3]].position.set(...r.thumb);
+        this.bones[B3["tc" + H3]].position.set(0, -r.lt, 0);
       }
     }
     /**
@@ -65705,7 +66225,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      */
     poseFingers(k, shape, t) {
       const F4 = this.fing[k], G3 = GRIPS[shape] || GRIPS.relaxed;
-      const H2 = k === 0 ? "R" : "L", r = this.body.fingers[H2], th = r.th, bones2 = this.bones;
+      const H3 = k === 0 ? "R" : "L", r = this.body.fingers[H3], th = r.th, bones2 = this.bones;
       const first = F4.t < 0;
       const dt = first ? 1 : Math.min(0.1, Math.max(0, t - F4.t));
       F4.t = t;
@@ -65726,8 +66246,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         F4.a[i] += (G3.a[i] + life2 - F4.a[i]) * ease2;
         F4.b[i] += (G3.b[i] + life2 * 1.25 - F4.b[i]) * ease2;
         const splay = -th * (1.5 - i) * 0.075 * F4.sp;
-        bones2[B3["k" + (i + 1) + H2]].quaternion.setFromAxisAngle(AX, splay).multiply(_q3.setFromAxisAngle(AZ, -Math.max(-0.25, F4.a[i])));
-        bones2[B3["j" + (i + 1) + H2]].quaternion.setFromAxisAngle(AZ, -Math.max(-0.1, F4.b[i]));
+        bones2[B3["k" + (i + 1) + H3]].quaternion.setFromAxisAngle(AX, splay).multiply(_q3.setFromAxisAngle(AZ, -Math.max(-0.25, F4.a[i])));
+        bones2[B3["j" + (i + 1) + H3]].quaternion.setFromAxisAngle(AZ, -Math.max(-0.1, F4.b[i]));
       }
       F4.sp += (G3.sp - F4.sp) * ease2;
       F4.th += (G3.th + Math.sin(t * 0.9 + k) * 0.04 * loose - F4.th) * ease2;
@@ -65735,7 +66255,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       _t1.set(-0.22, -0.72, th * 0.66).normalize();
       _t2.set(-0.9, -0.3, -th * 0.32).normalize();
       _t1.lerp(_t2, c).normalize();
-      const tb = bones2[B3["tb" + H2]], tc = bones2[B3["tc" + H2]];
+      const tb = bones2[B3["tb" + H3]], tc = bones2[B3["tc" + H3]];
       tb.quaternion.setFromUnitVectors(DOWN, _t1);
       _t2.set(-1, 0, 0).multiplyScalar(0.25 + c * 0.9).add(_t1).normalize();
       _q22.copy(tb.quaternion).invert();
@@ -65750,6 +66270,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lod = lod;
       this.mesh.geometry = nb.geo;
       this.outline.geometry = nb.geo;
+      for (let i = 0; i < nb.inv.length; i++) this.skeleton.boneInverses[i].copy(nb.inv[i]);
       this.restFingers();
       this.face.geometry = faceGeo(this.look, headLevel(lod));
     }
@@ -65790,8 +66311,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           continue;
         }
         if (s === "claw" || s === "flat" || s === "relaxed" || s === "grab" || s === "hold") s = s === "grab" || s === "hold" ? "fist" : "palm";
-        const H2 = k === 0 ? "R" : "L";
-        for (const sh of SHAPES) this.showBone(B3[sh + H2], sh === s);
+        const H3 = k === 0 ? "R" : "L";
+        for (const sh of SHAPES) this.showBone(B3[sh + H3], sh === s);
       }
       for (const i of [B3.hips, B3.chest, B3.head, B3.uarmR, B3.farmR, B3.handR, B3.uarmL, B3.farmL, B3.handL, B3.thighR, B3.shinR, B3.footR, B3.thighL, B3.shinL, B3.footL]) {
         bones2[i].position.copy(rig.pos[i]);
@@ -65891,7 +66412,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
 
   // src/render3d/chars/fx.js
-  var TAU15 = Math.PI * 2;
+  var TAU16 = Math.PI * 2;
   function canvas(w, h2) {
     const c = document.createElement("canvas");
     c.width = w;
@@ -66053,12 +66574,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function auraTex(color) {
     let t = AURA.get(color);
     if (t) return t;
-    const W3 = 96, H2 = 128, F4 = 4;
-    const c = canvas(W3, H2 * F4), g = c.getContext("2d");
+    const W4 = 96, H3 = 128, F4 = 4;
+    const c = canvas(W4, H3 * F4), g = c.getContext("2d");
     const { c: col, a } = parseCol(color);
     for (let f = 0; f < F4; f++) {
       g.save();
-      g.translate(0, f * H2);
+      g.translate(0, f * H3);
       for (let layer = 0; layer < 2; layer++) {
         const sc = layer ? 0.8 : 1;
         g.globalAlpha = (layer ? 0.9 : 0.55) * Math.min(1, a + 0.15);
@@ -66068,13 +66589,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.globalAlpha = 0.25;
         }
         g.beginPath();
-        const w = W3 * 0.42 * sc, cx = W3 / 2, base2 = H2 - 4;
+        const w = W4 * 0.42 * sc, cx = W4 / 2, base2 = H3 - 4;
         g.moveTo(cx - w, base2);
         for (let k = 0; k <= 10; k++) {
           const x = cx - w + k / 10 * 2 * w;
           const env = Math.sin(k / 10 * Math.PI);
           const tip = (k % 2 ? 6 : 16 + 8 * Math.sin(f * 1.7 + k * 1.9)) * sc;
-          g.quadraticCurveTo(x - 4, base2 - H2 * (0.5 + 0.3 * env) * sc, x, base2 - H2 * (0.42 + 0.46 * env) * sc - tip);
+          g.quadraticCurveTo(x - 4, base2 - H3 * (0.5 + 0.3 * env) * sc, x, base2 - H3 * (0.42 + 0.46 * env) * sc - tip);
         }
         g.lineTo(cx + w, base2);
         g.closePath();
@@ -66138,7 +66659,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.translate(32, 32);
     g.beginPath();
     for (let i = 0; i < 10; i++) {
-      const r = i % 2 ? 11 : 26, a = -Math.PI / 2 + i / 10 * TAU15;
+      const r = i % 2 ? 11 : 26, a = -Math.PI / 2 + i / 10 * TAU16;
       g.lineTo(Math.cos(a) * r, Math.sin(a) * r);
     }
     g.closePath();
@@ -66163,7 +66684,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     update(t, r = 0.3) {
       for (let k = 0; k < 3; k++) {
-        const a = t * 5 + k * TAU15 / 3;
+        const a = t * 5 + k * TAU16 / 3;
         this.s[k].position.set(Math.cos(a) * r, Math.sin(a * 2) * 0.04, Math.sin(a) * r);
         this.s[k].scale.setScalar(0.13 * (0.85 + 0.15 * Math.sin(a * 2)));
       }
@@ -66184,7 +66705,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render3d/chars/seaking.js
-  var TAU16 = Math.PI * 2;
+  var TAU17 = Math.PI * 2;
   var SPH = new SphereGeometry(1, 16, 12);
   var CONE = new ConeGeometry(1, 1, 6);
   CONE.translate(0, 0.5, 0);
@@ -66396,27 +66917,27 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       part4(SPH2, hide, [1.35, 0.62, 0.66], [0, 0, 0], B4, 0.05);
       part4(SPH2, belly, [1.2, 0.36, 0.52], [0.05, -0.3, 0], B4, 0);
       for (const [x, z, r] of [[0.3, 0.5, 0.2], [-0.4, -0.52, 0.24], [-0.1, 0.55, 0.14], [0.55, -0.45, 0.16]]) part4(SPH2, dark, [r, r * 0.7, 0.05], [x, 0.22, z], B4, 0);
-      const H2 = new Group();
-      H2.position.set(1.25, 0.15, 0);
-      B4.add(H2);
-      part4(SPH2, hide, [0.62, 0.55, 0.58], [0, 0, 0], H2, 0.045);
-      part4(SPH2, muzzle3, [0.36, 0.3, 0.44], [0.48, -0.16, 0], H2, 0.035);
+      const H3 = new Group();
+      H3.position.set(1.25, 0.15, 0);
+      B4.add(H3);
+      part4(SPH2, hide, [0.62, 0.55, 0.58], [0, 0, 0], H3, 0.045);
+      part4(SPH2, muzzle3, [0.36, 0.3, 0.44], [0.48, -0.16, 0], H3, 0.035);
       for (const s of [-1, 1]) {
-        part4(SPH2, nostril, [0.06, 0.08, 0.05], [0.82, -0.09, s * 0.14], H2, 0);
-        part4(SPH2, white, [0.14, 0.16, 0.08], [0.3, 0.22, s * 0.46], H2, 0.025);
-        part4(SPH2, black, [0.06, 0.08, 0.04], [0.36, 0.2, s * 0.52], H2, 0);
-        const ear = part4(SPH2, hide, [0.24, 0.07, 0.13], [-0.08, 0.3, s * 0.62], H2, 0.03);
+        part4(SPH2, nostril, [0.06, 0.08, 0.05], [0.82, -0.09, s * 0.14], H3, 0);
+        part4(SPH2, white, [0.14, 0.16, 0.08], [0.3, 0.22, s * 0.46], H3, 0.025);
+        part4(SPH2, black, [0.06, 0.08, 0.04], [0.36, 0.2, s * 0.52], H3, 0);
+        const ear = part4(SPH2, hide, [0.24, 0.07, 0.13], [-0.08, 0.3, s * 0.62], H3, 0.03);
         ear.rotation.set(s * 0.6, 0, -0.4);
-        const h1 = part4(CONE2, horn, [0.09, 0.42, 0.09], [-0.12, 0.45, s * 0.35], H2, 0.025);
+        const h1 = part4(CONE2, horn, [0.09, 0.42, 0.09], [-0.12, 0.45, s * 0.35], H3, 0.025);
         h1.rotation.set(s * 0.7, 0, -0.2);
       }
       const ring4 = new Mesh(new TorusGeometry(0.1, 0.022, 6, 14), gold);
       ring4.position.set(0.86, -0.2, 0);
       ring4.rotation.y = Math.PI / 2;
-      H2.add(ring4);
+      H3.add(ring4);
       this.jaw = new Group();
       this.jaw.position.set(0.3, -0.34, 0);
-      H2.add(this.jaw);
+      H3.add(this.jaw);
       part4(SPH2, muzzle3, [0.3, 0.09, 0.34], [0.2, -0.02, 0], this.jaw, 0.02);
       part4(SPH2, nostril, [0.24, 0.05, 0.26], [0.2, 0.04, 0], this.jaw, 0);
       for (const s of [-1, 1]) {
@@ -66435,9 +66956,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const fl2 = part4(SPH2, dark, [0.36, 0.06, 0.34], [-1.05, 0, s * 0.3], this.tail, 0.03);
         fl2.rotation.y = s * 0.55;
       }
-      this.head = H2;
+      this.head = H3;
       this.extra = (t) => {
-        H2.rotation.z = Math.sin(t * 0.9) * 0.05;
+        H3.rotation.z = Math.sin(t * 0.9) * 0.05;
         ring4.rotation.z = Math.sin(t * 2.3) * 0.3;
       };
       this.finish(a);
@@ -67206,10 +67727,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       o.walkRel = null;
       o.leanAdd = 0;
       o.twistK = 0.8;
-      const R3 = this._grips || (this._grips = [new Vector3(), new Vector3()]);
-      stationReach(st, spot, m.d, 1, 0, P4.l || 0, row.seatH + 0.07, R3);
-      o.reachR = R3[0];
-      o.reachL = R3[1];
+      const R4 = this._grips || (this._grips = [new Vector3(), new Vector3()]);
+      stationReach(st, spot, m.d, 1, 0, P4.l || 0, row.seatH + 0.07, R4);
+      o.reachR = R4[0];
+      o.reachL = R4[1];
       m.pose(P4, o);
       holdItem(m, null);
       this.fixup();
@@ -67301,7 +67822,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
 
   // src/render3d/chars3d.js
-  var TAU17 = Math.PI * 2;
+  var TAU18 = Math.PI * 2;
   var clamp6 = (v, a, b) => v < a ? a : v > b ? b : v;
   var _v8 = new Vector3();
   var _v24 = new Vector3();
@@ -67397,11 +67918,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         o.reachR = null;
         o.reachL = null;
         if (pose.station) {
-          const st = pose.station, R3 = this._grips || (this._grips = [new Vector3(), new Vector3()]);
+          const st = pose.station, R4 = this._grips || (this._grips = [new Vector3(), new Vector3()]);
           const hipY = m.d.hip0 + ((o.sitY ?? m.d.hA) + 0.07 - m.d.hip0) * o.sitK;
-          stationReach(st, stationSpot(st), m.d, s, (this.visF ?? a.facing) - st.ship.heading, P4.l || 0, hipY, R3);
-          o.reachR = R3[0];
-          o.reachL = R3[1];
+          stationReach(st, stationSpot(st), m.d, s, (this.visF ?? a.facing) - st.ship.heading, P4.l || 0, hipY, R4);
+          o.reachR = R4[0];
+          o.reachL = R4[1];
         } else if (a.fruit === "gomu") o.reachR = this.stretchTarget(a, ctx, s);
         const knocked = pose.state === "knocked" || pose.state === "dead";
         let PP = P4;
@@ -67426,7 +67947,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const want = a.facing || 0;
         if (this.visF === void 0 || dtv >= 1 || knocked) this.visF = want;
         else this.visF += angleDiff(this.visF, want) * (1 - Math.exp(-dtv * (a.isPlayer ? 24 : a.action ? 20 : 10)));
-        this.yaw.rotation.y = -(this.visF + (P4.sp || 0) * TAU17);
+        this.yaw.rotation.y = -(this.visF + (P4.sp || 0) * TAU18);
         m.setExpression(expression2(look, pose, P4, pose.time || 0));
         this.effects(a, pose, P4, o, env, ctx, camYaw3, dist, s);
         this.lastT = env.time;
@@ -67454,7 +67975,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     ownBody(fp, a) {
       const m = this.model, u = m.fx, pose = a._lastPose || {};
       const busy = !!pose.anim || !!pose.combat || !!pose.armed || pose.block !== void 0 || !!pose.station || !!a.held || !!pose.launch || a.inWater;
-      u.uClipY.value = fp ? m.rig.neck.y + 0.03 : 1e6;
+      u.uClipY.value = fp ? m.rig.neck.y - m.d.neck * 0.5 : 1e6;
+      u.uHideHead.value = fp ? 1 : 0;
       u.uHideArms.value = fp && busy ? 1 : 0;
       m.face.visible = !fp;
       if (m.bubble) m.bubble.visible = !fp;
@@ -67476,7 +67998,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const f = a.facing || 0;
         const dx = cam.position.x - this.root.position.x, dz = cam.position.z - this.root.position.z;
         let d = Math.atan2(dz, dx) - f;
-        d = ((d + Math.PI) % TAU17 + TAU17) % TAU17 - Math.PI;
+        d = ((d + Math.PI) % TAU18 + TAU18) % TAU18 - Math.PI;
         y = clamp6(-d, -1, 1);
         if (Math.abs(d) > 1.9) y = 0;
       }
@@ -68164,22 +68686,22 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const env = game.env;
       const A = this.attractPath && this.attractPath.cx === cx && this.attractPath.cy === cy ? this.attractPath : null;
       if (!A) {
-        const R4 = Math.max(95, islandR * 1.3);
+        const R5 = Math.max(95, islandR * 1.3);
         let top = 0;
         for (let k = 0; k < 72; k++) {
           const q2 = k / 72 * Math.PI * 2;
-          for (const f of [0.55, 0.8, 1]) top = Math.max(top, this.ground(w.wx(cx + Math.cos(q2) * R4 * f), cy + Math.sin(q2) * R4 * f));
+          for (const f of [0.55, 0.8, 1]) top = Math.max(top, this.ground(w.wx(cx + Math.cos(q2) * R5 * f), cy + Math.sin(q2) * R5 * f));
         }
-        this.attractPath = { cx, cy, R: R4, H: Math.max(0, top) + 26, gc: Math.max(0, this.ground(cx, cy)) };
+        this.attractPath = { cx, cy, R: R5, H: Math.max(0, top) + 26, gc: Math.max(0, this.ground(cx, cy)) };
         return this.renderAttract(game, cx, cy, t, islandR);
       }
       const a = t * 0.028;
-      const R3 = A.R * (1 + 0.06 * Math.sin(t * 0.05));
-      const ox = w.wx(cx + Math.cos(a) * R3), oy = cy + Math.sin(a) * R3;
+      const R4 = A.R * (1 + 0.06 * Math.sin(t * 0.05));
+      const ox = w.wx(cx + Math.cos(a) * R4), oy = cy + Math.sin(a) * R4;
       this.ox = ox;
       this.oy = oy;
       const la = a + 0.55;
-      const lx = cx + Math.cos(la) * R3 * 0.22, ly = cy + Math.sin(la) * R3 * 0.22;
+      const lx = cx + Math.cos(la) * R4 * 0.22, ly = cy + Math.sin(la) * R4 * 0.22;
       const ldx = w.dx(ox, lx), ldy = ly - oy;
       const yaw = Math.atan2(ldy, ldx);
       this.rig.yaw = (yaw % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
@@ -68389,9 +68911,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const w = this.world, O = this.propOrigin, bf = this.buildingsFar;
       this.propT = 0.6;
       this.propsDirty = false;
-      const R3 = D3 + FAR_STEP + 8;
-      const RK = R3 + 16;
-      const RN = Math.min(R3, NEAR_SCAN);
+      const R4 = D3 + FAR_STEP + 8;
+      const RK = R4 + 16;
+      const RN = Math.min(R4, NEAR_SCAN);
       const r = full ? RK : RN;
       if (full) this.scan = { x: ox, y: oy, day: env.day, D: D3, fx: ox, fy: oy };
       else Object.assign(this.scan, { x: ox, y: oy, day: env.day });
@@ -68404,7 +68926,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         for (const o of w.farObjects || []) {
           if (o.hidden || !PROP_BUILDERS.has(o.kind)) continue;
           const dx = w.dx(ox, o.x), dy = o.y - oy;
-          const d2 = dx * dx + dy * dy, lim = Math.min(o.far, R3 + 80);
+          const d2 = dx * dx + dy * dy, lim = Math.min(o.far, R4 + 80);
           if (d2 > lim * lim) continue;
           if (this.built.get(o) === void 0) near.push([o, Math.min(d2, 23 * 23)]);
           else keep.add(o);
@@ -68419,7 +68941,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (PROP_BUILDERS.has(o.kind)) {
           const v = this.built.get(o);
           if (o.kind === "building") {
-            if (full) bf.add(o, d2 <= R3 * R3);
+            if (full) bf.add(o, d2 <= R4 * R4);
             if (v === void 0) {
               if (d2 <= MODEL_IN * MODEL_IN) near.push([o, d2]);
               continue;
@@ -68436,7 +68958,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             continue;
           }
           if (v === void 0) {
-            if (d2 <= R3 * R3) (d2 <= RN * RN || !far ? near : far).push([o, d2]);
+            if (d2 <= R4 * R4) (d2 <= RN * RN || !far ? near : far).push([o, d2]);
             continue;
           }
           keep?.add(o);
@@ -68944,21 +69466,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      * kind, 4 or just 1 for sparse ones (each wedge in view is a draw call);
      * pad: the model's size (m), for the bounds; setup(mesh): shadows and such.
      */
-    constructor(group3, name, { geo: geo2, farGeo = geo2, mat, capNear, capFar, near, wedges = 8, pad = 1, share = 0.3, setup = null }) {
+    constructor(group3, name, { geo: geo2, farGeo = geo2, mat, capNear, capFar, near, wedges = 8, pad: pad2 = 1, share = 0.3, setup = null }) {
       this.n2 = near * near;
       this.wedgeOf = WEDGE[wedges];
       this.capFar = capFar;
-      this.pad = pad;
+      this.pad = pad2;
       this.meshes = [];
-      const make = (g, cap, nm) => {
-        const m = new InstancedMesh(g, mat, cap);
+      const make = (g, cap2, nm) => {
+        const m = new InstancedMesh(g, mat, cap2);
         m.name = nm;
         m.instanceMatrix.setUsage(DynamicDrawUsage);
-        m.instanceColor = new InstancedBufferAttribute(new Float32Array(cap * 3), 3);
+        m.instanceColor = new InstancedBufferAttribute(new Float32Array(cap2 * 3), 3);
         m.count = 0;
         m.visible = false;
         m.boundingSphere = new Sphere();
-        m.userData.cap = cap;
+        m.userData.cap = cap2;
         m.userData.box = new Float32Array(6);
         if (setup) setup(m);
         group3.add(m);
@@ -69384,14 +69906,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       uTime.value = env.time;
       const low = v.quality === "low";
-      const R3 = low ? 36 : 64;
+      const R4 = low ? 36 : 64;
       const ox = v.ox, oy = v.oy;
       const ccx = Math.floor(w.wx(ox) / CELL4), ccy = Math.floor(oy / CELL4);
       const key2 = `${ccx},${ccy},${low ? 1 : 0}`;
       this.t -= dt;
       if (key2 !== this.key) {
         this.key = key2;
-        this.want = { ccx, ccy, R: R3, low, placed: false };
+        this.want = { ccx, ccy, R: R4, low, placed: false };
       }
       const wt = this.want;
       if (wt && this.t <= 0) {
@@ -69429,8 +69951,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return cy * 1e5 + cx;
     }
     /** Lay out the instances around the centre of cell (ccx, ccy). */
-    place(w, ccx, ccy, R3, low) {
-      const cr = Math.ceil(R3 / CELL4) + 1;
+    place(w, ccx, ccy, R4, low) {
+      const cr = Math.ceil(R4 / CELL4) + 1;
       const ox = (ccx + 0.5) * CELL4, oy = (ccy + 0.5) * CELL4;
       this.origin = { x: ox, y: oy };
       for (const k of KINDS) this.sets[k].reset();
@@ -69444,7 +69966,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         for (const kind of KINDS) {
           const list = cell[kind];
           if (!list.length) continue;
-          const Rk = R3 * REACH[kind], R22 = Rk * Rk;
+          const Rk = R4 * REACH[kind], R22 = Rk * Rk;
           const thin = THIN[kind], thinK = low ? 2.4 : 1.7;
           const set = this.sets[kind];
           const grass = kind === "grass";
@@ -69617,7 +70139,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render3d/seabed.js
-  var TAU18 = Math.PI * 2;
+  var TAU19 = Math.PI * 2;
   var CELL5 = 16;
   var KINDS2 = ["branch", "brain", "table", "fan", "tube", "anemone", "kelp", "seagrass", "boulder", "star", "clam"];
   var MAX3 = { branch: 1400, brain: 1e3, table: 420, fan: 800, tube: 600, anemone: 700, kelp: 1500, seagrass: 5e3, boulder: 1100, star: 500, clam: 60 };
@@ -69707,7 +70229,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const parts = [], r = rng3(11);
     const n = 6;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU18 + r() * 0.6;
+      const a = i / n * TAU19 + r() * 0.6;
       const tilt = 0.2 + r() * 0.5, L2 = 0.2 + r() * 0.14;
       const base2 = V2(Math.cos(a) * 0.04, 0, Math.sin(a) * 0.04);
       const mid = V2(base2.x + Math.cos(a) * Math.sin(tilt) * L2, L2 * Math.cos(tilt), base2.z + Math.sin(a) * Math.sin(tilt) * L2);
@@ -69755,10 +70277,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function fanGeo() {
     const pos = [];
-    const n = 9, R3 = 0.72, y0 = 0.1;
+    const n = 9, R4 = 0.72, y0 = 0.1;
     for (let i = 0; i < n; i++) {
       const a0 = 0.35 + i / n * (Math.PI - 0.7), a1 = 0.35 + (i + 1) / n * (Math.PI - 0.7);
-      const r0 = R3 * (0.86 + 0.14 * Math.sin(i * 1.7)), r1 = R3 * (0.86 + 0.14 * Math.sin((i + 1) * 1.7));
+      const r0 = R4 * (0.86 + 0.14 * Math.sin(i * 1.7)), r1 = R4 * (0.86 + 0.14 * Math.sin((i + 1) * 1.7));
       pos.push(0, y0, 0, Math.cos(a1) * r1, y0 + Math.sin(a1) * r1, 0, Math.cos(a0) * r0, y0 + Math.sin(a0) * r0, 0);
     }
     const g = new BufferGeometry();
@@ -69787,7 +70309,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     parts.push(foot);
     const n = 14;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU18;
+      const a = i / n * TAU19;
       const L2 = 0.2 + i % 3 * 0.04, out = 0.45 + i % 2 * 0.25;
       const r0 = 0.08;
       const g = ribbon2([[0, 0.12, r0, 0.022], [0, 0.12 + L2 * 0.6, r0 + L2 * 0.5 * out, 0.016], [0, 0.12 + L2, r0 + L2 * out, 4e-3]]);
@@ -69817,7 +70339,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const parts = [];
     const n = 6;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU18 + i * 0.9;
+      const a = i / n * TAU19 + i * 0.9;
       const h2 = 0.38 + i % 3 * 0.1, lean = 0.08 + i % 2 * 0.06, r0 = 0.03 + i % 2 * 0.03;
       const g = ribbon2([[0, 0, r0, 0.018], [0, h2 * 0.55, r0 + lean * 0.4, 0.016], [0, h2, r0 + lean, 6e-3]]);
       g.rotateY(Math.PI / 2 - a);
@@ -69836,7 +70358,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const pos = [];
     const arms = 5, ro = 0.13, ri = 0.05, hc2 = 0.03;
     for (let i = 0; i < arms * 2; i++) {
-      const a0 = i / (arms * 2) * TAU18, a1 = (i + 1) / (arms * 2) * TAU18;
+      const a0 = i / (arms * 2) * TAU19, a1 = (i + 1) / (arms * 2) * TAU19;
       const r0 = i % 2 ? ri : ro, r1 = i % 2 ? ro : ri;
       pos.push(0, hc2, 0, Math.cos(a1) * r1, 8e-3, Math.sin(a1) * r1, Math.cos(a0) * r0, 8e-3, Math.sin(a0) * r0);
     }
@@ -69964,7 +70486,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (depth > 1.2 && r4 < (depth > 16 ? 0.03 : 0.012)) put2("boulder", x + r1, y + r3, r4 * 90, 0.7 + r2 * 2.2, 1, rgb(depth > 20 ? [0.36, 0.4, 0.44] : [0.5, 0.52, 0.46]), 0.12);
         if (depth > 22 && r2 < 6e-3) put2("tube", x + r3, y + r1, r2 * 90, 1 + r4, 1, rgb([0.5, 0.4, 0.6], 0.8));
         if (depth > 0.6 && depth < 12 && r2 > 0.992) put2("star", x + r1, y + r4, r2 * 90, 0.8 + r3 * 0.8, 1, rgb(pick(STARS, r3)), 0);
-        if (clamAt(world, x, y, depth)) put2("clam", x + 0.5, y + 0.5, r1 * TAU18, 1.3 + r2 * 0.5, 1, rgb([0.86, 0.82, 0.72]), 0.05);
+        if (clamAt(world, x, y, depth)) put2("clam", x + 0.5, y + 0.5, r1 * TAU19, 1.3 + r2 * 0.5, 1, rgb([0.86, 0.82, 0.72]), 0.05);
       }
     }
     return out;
@@ -70024,16 +70546,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const under = !!v.isUnder;
       const cam = ctx.camera;
       const camH = cam ? cam.position.y : 0;
-      const R3 = low ? 28 : under ? game.player?.gills ? 58 : 46 : 40;
+      const R4 = low ? 28 : under ? game.player?.gills ? 58 : 46 : 40;
       const show = camH < 40;
       this.group.visible = show;
       if (!show) return;
       const ccx = Math.floor(w.wx(v.ox) / CELL5), ccy = Math.floor(v.oy / CELL5);
-      const key2 = `${ccx},${ccy},${R3}`;
+      const key2 = `${ccx},${ccy},${R4}`;
       this.t -= dt;
       if (key2 !== this.key) {
         this.key = key2;
-        this.want = { ccx, ccy, R: R3, placed: false };
+        this.want = { ccx, ccy, R: R4, placed: false };
       }
       const wt = this.want;
       if (wt && this.t <= 0) {
@@ -70071,8 +70593,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return cy * 1e5 + cx;
     }
     /** Lay out the floor around the centre of cell (ccx, ccy). */
-    place(w, ccx, ccy, R3) {
-      const cr = Math.ceil(R3 / CELL5) + 1;
+    place(w, ccx, ccy, R4) {
+      const cr = Math.ceil(R4 / CELL5) + 1;
       const ox = (ccx + 0.5) * CELL5, oy = (ccy + 0.5) * CELL5;
       this.origin = { x: ox, y: oy };
       for (const k of KINDS2) this.sets[k].reset();
@@ -70088,7 +70610,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           if (!list.length) continue;
           const set = this.sets[kind];
           const small = kind === "seagrass" || kind === "star" || kind === "anemone";
-          const R22 = (small ? R3 * 0.7 : R3) ** 2;
+          const R22 = (small ? R4 * 0.7 : R4) ** 2;
           for (let o = 0; o < list.length; o += STRIDE) {
             const x = list[o], y = list[o + 1];
             const dx = w.dx(ox, x), dz = y - oy;
@@ -70232,7 +70754,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (i1 <= i0) continue;
         const n2 = i1 - i0 + 1;
         const pos = new Float32Array(n2 * 2 * 3), uv = new Float32Array(n2 * 2 * 2), slope = new Float32Array(n2 * 2), speed2 = new Float32Array(n2 * 2);
-        const W3 = RM.halfW + 0.9;
+        const W4 = RM.halfW + 0.9;
         for (let k = 0; k < n2; k++) {
           const i = i0 + k;
           const nx = -c.fy[i], ny = c.fx[i];
@@ -70242,9 +70764,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           for (let side = 0; side < 2; side++) {
             const f = side ? 1 : -1;
             const o = k * 2 + side;
-            pos[o * 3] = c.x[i] + nx * W3 * f - RM.x;
+            pos[o * 3] = c.x[i] + nx * W4 * f - RM.x;
             pos[o * 3 + 1] = c.lv[i] + 0.06;
-            pos[o * 3 + 2] = c.y[i] + ny * W3 * f - RM.y;
+            pos[o * 3 + 2] = c.y[i] + ny * W4 * f - RM.y;
             uv[o * 2] = side;
             uv[o * 2 + 1] = c.s[i];
             slope[o] = sl;
@@ -70311,7 +70833,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }, "rm-canals");
 
   // src/render3d/sealife3d.js
-  var TAU19 = Math.PI * 2;
+  var TAU20 = Math.PI * 2;
   var MAX_FISH = 260;
   function sphereInto(pos, eye, cx, cy, cz, r, tag, seg = 6) {
     const g = new SphereGeometry(r, seg, Math.max(3, seg - 2)).toNonIndexed();
@@ -70327,7 +70849,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const ring4 = (x, h2, w) => {
       const r = [];
       for (let i = 0; i < n; i++) {
-        const a = i / n * TAU19;
+        const a = i / n * TAU20;
         r.push([x, Math.cos(a) * h2, Math.sin(a) * w]);
       }
       return r;
@@ -70976,12 +71498,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   attribute vec4 aSeed;
   uniform float uTime, uBox, uTall, uBelow, uFall;
   uniform vec2 uWind, uOrig, uShelterO;
+  uniform vec2 uDrift;   // how far the wind has carried them (wrapped into the box)
   uniform sampler2D uShelter;
   varying float vA;
   varying vec2 vC;
   // a drop's place: fixed in the world (wrapped into the box around the camera), falling
   vec3 dropAt(float fall, vec2 sway) {
-    vec2 rel = mod(aSeed.xy * uBox + uWind * uTime + sway - uOrig - cameraPosition.xz + uBox * 0.5, uBox) - uBox * 0.5;
+    vec2 rel = mod(aSeed.xy * uBox + uDrift + sway - uOrig - cameraPosition.xz + uBox * 0.5, uBox) - uBox * 0.5;
     float base = cameraPosition.y - uBelow;
     float y = base + mod(aSeed.z * uTall - fall * uTime - base, uTall);
     return vec3(cameraPosition.x + rel.x, y, cameraPosition.z + rel.y);
@@ -71088,6 +71611,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       uBelow: { value: spec.below },
       uFall: { value: spec.fall },
       uWind: { value: new Vector2() },
+      uDrift: { value: new Vector2() },
       uOrig: { value: new Vector2() },
       uShelterO: { value: new Vector2(-1e5, -1e5) },
       uShelter: { value: shelter.tex },
@@ -71288,6 +71812,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         u.uOrig.value.set((v.ox % spec.box + spec.box) % spec.box, (v.oy % spec.box + spec.box) % spec.box);
         u.uShelterO.value.copy(so);
         u.uWind.value.set((env.windX || 0) * wind, (env.windY || 0) * wind);
+        const dt2 = Math.min(0.25, Math.max(0, env.time - (mesh.userData.t ?? env.time)));
+        mesh.userData.t = env.time;
+        const d = u.uDrift.value.addScaledVector(u.uWind.value, dt2);
+        d.set(d.x % spec.box, d.y % spec.box);
         u.uColor.value.setRGB(col[0] * bright, col[1] * bright, col[2] * bright);
         u.uAlpha.value = alpha2;
         mesh.geometry.instanceCount = Math.floor(spec.n * Math.min(1, k));
@@ -71462,21 +71990,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (!v) return null;
       scene.add(v.root);
       v.update(actor, env0(), ctx, { camYaw3: 0, redraw: true });
-      const H2 = heightOf(look);
+      const H3 = heightOf(look);
       camera.aspect = w / h2;
       if (framing === "full") {
         const fovY = camera.fov * Math.PI / 180;
-        const dist = H2 * 1.15 / (2 * Math.tan(fovY / 2));
-        camera.position.set(0, H2 * 0.55, dist);
-        camera.lookAt(0, H2 * 0.5, 0);
+        const dist = H3 * 1.15 / (2 * Math.tan(fovY / 2));
+        camera.position.set(0, H3 * 0.55, dist);
+        camera.lookAt(0, H3 * 0.5, 0);
       } else if (framing === "head") {
-        const head = H2 * 0.915, dist = H2 * 0.52;
+        const head = H3 * 0.915, dist = H3 * 0.52;
         camera.position.set(0, head + Math.sin(elev) * dist, Math.cos(elev) * dist);
         camera.lookAt(0, head, 0);
       } else {
-        const head = H2 * 0.86;
-        camera.position.set(0, head, H2 * 0.95);
-        camera.lookAt(0, head - H2 * 0.03, 0);
+        const head = H3 * 0.86;
+        camera.position.set(0, head, H3 * 0.95);
+        camera.lookAt(0, head - H3 * 0.03, 0);
       }
       camera.updateProjectionMatrix();
       const pr = Math.min(window.devicePixelRatio || 1, 2);
@@ -71780,13 +72308,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** 1 for ground (not a deck over water), 0 for water, for tiles x..x+n-1 of row y, into out[off..]. */
     solidRow(y, x, n, out, off) {
-      const W3 = this.width;
+      const W4 = this.width;
       for (let i = 0; i < n; ) {
         let xx = x + i;
         if (this.wrap) {
-          if (xx < 0 || xx >= W3) xx = (xx % W3 + W3) % W3;
-        } else xx = xx < 0 ? 0 : xx >= W3 ? W3 - 1 : xx;
-        const run = this.wrap || x + i >= 0 && x + i < W3 ? Math.min(n - i, BS - (xx & BM)) : 1;
+          if (xx < 0 || xx >= W4) xx = (xx % W4 + W4) % W4;
+        } else xx = xx < 0 ? 0 : xx >= W4 ? W4 - 1 : xx;
+        const run = this.wrap || x + i >= 0 && x + i < W4 ? Math.min(n - i, BS - (xx & BM)) : 1;
         const b = (y >> BSH) * this.bw + (xx >> BSH);
         const d = this.bd[b];
         if (d) {
@@ -71809,16 +72337,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** Store encoded coastline distances for tiles x..x+n-1 of row y from vals[off..]. */
     setDistRow(y, x, n, vals, off) {
-      const W3 = this.width;
+      const W4 = this.width;
       for (let i = 0; i < n; ) {
         let xx = x + i;
         if (this.wrap) {
-          if (xx < 0 || xx >= W3) xx = (xx % W3 + W3) % W3;
-        } else if (xx < 0 || xx >= W3) {
+          if (xx < 0 || xx >= W4) xx = (xx % W4 + W4) % W4;
+        } else if (xx < 0 || xx >= W4) {
           i++;
           continue;
         }
-        const run = Math.min(n - i, BS - (xx & BM), this.wrap ? n : W3 - xx);
+        const run = Math.min(n - i, BS - (xx & BM), this.wrap ? n : W4 - xx);
         const b = (y >> BSH) * this.bw + (xx >> BSH);
         let s = this.bs[b];
         if (!s) {
@@ -72043,13 +72571,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           if (this.fog[k] !== 255) {
             this.fog[k] = 255;
             this.fogDirty = true;
-            const R3 = this.fogRect;
-            if (!R3) this.fogRect = { x0: xx, y0: yy, x1: xx, y1: yy };
+            const R4 = this.fogRect;
+            if (!R4) this.fogRect = { x0: xx, y0: yy, x1: xx, y1: yy };
             else {
-              if (xx < R3.x0) R3.x0 = xx;
-              if (xx > R3.x1) R3.x1 = xx;
-              if (yy < R3.y0) R3.y0 = yy;
-              if (yy > R3.y1) R3.y1 = yy;
+              if (xx < R4.x0) R4.x0 = xx;
+              if (xx > R4.x1) R4.x1 = xx;
+              if (yy < R4.y0) R4.y0 = yy;
+              if (yy > R4.y1) R4.y1 = yy;
             }
           }
         }
@@ -72324,7 +72852,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     };
     const horiz = town.mainDir ? town.mainDir === "h" : w >= h2;
     const A0 = horiz ? x0 : y0, A1 = horiz ? x1 : y1, C0 = horiz ? y0 : x0, C1 = horiz ? y1 : x1, CC = horiz ? cy : cx, AC = horiz ? cx : cy;
-    const rect = (a0, a1, c0, c1) => horiz ? { x0: a0, x1: a1, y0: c0, y1: c1 } : { x0: c0, x1: c1, y0: a0, y1: a1 };
+    const rect2 = (a0, a1, c0, c1) => horiz ? { x0: a0, x1: a1, y0: c0, y1: c1 } : { x0: c0, x1: c1, y0: a0, y1: a1 };
     const mw = w * h2 > 1500 || S3.tall ? 3 : 2;
     let off = 0, a = A0;
     const mainSegs = [];
@@ -72332,7 +72860,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const len = rng4.int(9, 16);
       const b = Math.min(A1 - 1, a + len);
       const c = Math.round(CC - mw / 2) + off;
-      const r = rect(a, b, c, c + mw - 1);
+      const r = rect2(a, b, c, c + mw - 1);
       r.dir = horiz ? "h" : "v";
       r.rank = 0;
       mainSegs.push(r);
@@ -72377,7 +72905,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const pieces = jogAt === null ? [[c, end]] : [[c, jogAt], [jogAt, end]];
         pieces.forEach(([p0, p1], k) => {
           if (k === 1) sa += rng4.sign();
-          const r = rect(sa, sa + 1, Math.min(p0, p1), Math.max(p0, p1));
+          const r = rect2(sa, sa + 1, Math.min(p0, p1), Math.max(p0, p1));
           r.dir = horiz ? "v" : "h";
           r.rank = 1;
           paint(r, laneTile, STREET);
@@ -72392,7 +72920,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const d = rng4.int(11, 14);
         const c = Math.round(CC + dirn * d);
         if (c <= C0 + 3 || c >= C1 - 4) continue;
-        const r = rect(s0, s1 + 1, c, c + 1);
+        const r = rect2(s0, s1 + 1, c, c + 1);
         r.dir = horiz ? "h" : "v";
         r.rank = 2;
         paint(r, laneTile, STREET);
@@ -72976,20 +73504,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return rec;
   }
   function walkable(world, box2, ax, ay, bx, by) {
-    const W3 = box2.x1 - box2.x0 + 1, H2 = box2.y1 - box2.y0 + 1;
-    const seen = new Uint8Array(W3 * H2), q2 = [];
+    const W4 = box2.x1 - box2.x0 + 1, H3 = box2.y1 - box2.y0 + 1;
+    const seen = new Uint8Array(W4 * H3), q2 = [];
     const ok = (x, y) => x >= box2.x0 && y >= box2.y0 && x <= box2.x1 && y <= box2.y1 && WALKABLE[world.type(x, y)] && !world.solid(x, y);
     const sx = Math.floor(ax), sy = Math.floor(ay), tx = Math.floor(bx), ty = Math.floor(by);
     if (!ok(sx, sy)) return true;
     q2.push(sx, sy);
-    seen[(sy - box2.y0) * W3 + sx - box2.x0] = 1;
+    seen[(sy - box2.y0) * W4 + sx - box2.x0] = 1;
     for (let h2 = 0; h2 < q2.length; h2 += 2) {
       const x = q2[h2], y = q2[h2 + 1];
       if (Math.abs(x - tx) <= 1 && Math.abs(y - ty) <= 1) return true;
       for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = x + ddx, ny = y + ddy;
         if (!ok(nx, ny)) continue;
-        const k = (ny - box2.y0) * W3 + nx - box2.x0;
+        const k = (ny - box2.y0) * W4 + nx - box2.x0;
         if (seen[k]) continue;
         seen[k] = 1;
         q2.push(nx, ny);
@@ -73002,11 +73530,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const s = o.s || 1, c = COLLIDE[o.kind];
     const r = o.kind === "building" ? Math.hypot(o.fw || 4, o.fd || 4) / 2 + 0.5 : Array.isArray(c) ? Math.hypot(c[0], c[1]) * s + 0.4 : typeof c === "number" && c > 0 ? c * s + 0.4 : Math.max(1, Math.max(o.fw || 1, o.fd || 1) / 2 + 0.4);
     const shore = SHORE_KINDS.has(o.kind) || o.water;
-    const tiles = (x, y, R4, fn) => {
-      for (let ty = Math.floor(y - R4); ty <= Math.floor(y + R4); ty++) {
-        for (let tx = Math.floor(x - R4); tx <= Math.floor(x + R4); tx++) {
+    const tiles = (x, y, R5, fn) => {
+      for (let ty = Math.floor(y - R5); ty <= Math.floor(y + R5); ty++) {
+        for (let tx = Math.floor(x - R5); tx <= Math.floor(x + R5); tx++) {
           const nx = Math.max(tx, Math.min(x, tx + 1)), ny = Math.max(ty, Math.min(y, ty + 1));
-          if ((nx - x) ** 2 + (ny - y) ** 2 <= R4 * R4 && fn(tx, ty)) return true;
+          if ((nx - x) ** 2 + (ny - y) ** 2 <= R5 * R5 && fn(tx, ty)) return true;
         }
       }
       return false;
@@ -73043,15 +73571,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
     const e0 = world.elev(Math.floor(o.x), Math.floor(o.y));
-    const R3 = r + 2.5;
-    for (let y = Math.floor(o.y - R3); y <= Math.ceil(o.y + R3); y++) {
-      for (let x = Math.floor(o.x - R3); x <= Math.ceil(o.x + R3); x++) {
+    const R4 = r + 2.5;
+    for (let y = Math.floor(o.y - R4); y <= Math.ceil(o.y + R4); y++) {
+      for (let x = Math.floor(o.x - R4); x <= Math.ceil(o.x + R4); x++) {
         const t = world.type(x, y);
         if (IS_LIQUID[t] || OVERLAY[t] || MANMADE[t] || world.isBlocked(x, y)) continue;
         if (!WALKABLE[t] && !RAISED_GROUND.has(t) && t !== T.MOUNTAIN && t !== T.CLIFF) continue;
         const d = Math.hypot(x + 0.5 - o.x, y + 0.5 - o.y);
-        if (d > R3) continue;
-        const k = d <= r ? 1 : 1 - (d - r) / (R3 - r);
+        if (d > R4) continue;
+        const k = d <= r ? 1 : 1 - (d - r) / (R4 - r);
         const e = world.elev(x, y);
         if (d <= r && RAISED_GROUND.has(t)) world.setTile(x, y, ground, Math.round(e0));
         else world.setElev(x, y, Math.round(e + (e0 - e) * k));
@@ -73260,8 +73788,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (!best) return null;
     const { vx, vy } = best;
     const px2 = -vy, py2 = vx;
-    const W3 = Math.max(3, dd.width ?? 5) | 1;
-    const half2 = (W3 - 1) / 2, headHalf = half2 + 2, HEAD2 = 3;
+    const W4 = Math.max(3, dd.width ?? 5) | 1;
+    const half2 = (W4 - 1) / 2, headHalf = half2 + 2, HEAD2 = 3;
     const L2 = Math.max(6, Math.round(len * 1.5));
     const at5 = (a, b) => ({ x: world.wx(best.x + vx * a + px2 * b), y: best.y + vy * a + py2 * b });
     let lastA = 0;
@@ -73343,7 +73871,28 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const land = at5(-Q2 - 2, 0);
     const tip = at5(lastA, headHalf);
     placeObject(world, { kind: "mooring", x: tip.x + 0.5, y: tip.y + 0.5, block: false });
-    return { x: end.x, y: end.y, dirX: vx, dirY: vy, moor, land: { x: land.x + 0.5, y: land.y + 0.5 }, end: { x: end.x, y: end.y }, half: half2, headHalf, len: lastA + 1 };
+    const stand = shipwrightStand(world, at5, { lastA, half: half2, headHalf, qh, vx, vy, px: px2, py: py2 });
+    return { x: end.x, y: end.y, dirX: vx, dirY: vy, moor, land: { x: land.x + 0.5, y: land.y + 0.5 }, end: { x: end.x, y: end.y }, half: half2, headHalf, len: lastA + 1, stand };
+  }
+  function shipwrightStand(world, at5, { lastA, half: half2, headHalf, qh, vx, vy, px: px2, py: py2 }) {
+    let open = true;
+    for (let a = lastA - 2; a <= lastA; a++) for (let b = headHalf + 1; b <= headHalf + 3; b++) {
+      const t = at5(a, b);
+      if (!world.sailable(t.x + 0.5, t.y + 0.5)) open = false;
+    }
+    const far = open ? -1 : 1;
+    const cands = [];
+    if (headHalf > half2) for (const sg of [far, -far]) for (const a of [lastA - 1, lastA - 2]) cands.push([a, sg * (half2 + 1), "pier"]);
+    for (const sg of [far, -far]) for (const a of [lastA - 1, lastA - 2, lastA - 3]) cands.push([a, sg * half2, "pier"]);
+    for (const sg of [far, -far]) cands.push([-2, sg * qh, "quay"]);
+    for (const [a, b, on] of cands) {
+      const t = at5(a, b), x = t.x + 0.5, y = t.y + 0.5;
+      if (on === "pier" ? !world.isDock(x, y) : !world.isQuay(x, y)) continue;
+      if (!world.walkable(x, y) || world.isLiquid(x, y) || world.isBlocked(x, y) || world.hitsProp(x, y, 0.45)) continue;
+      const sb = Math.sign(b);
+      return { x, y, face: Math.atan2(-vy - py2 * sb * 0.6, -vx - px2 * sb * 0.6) };
+    }
+    return null;
   }
   function connectRoad(world, ax, ay, bx, by, tile) {
     const dx = world.dx(ax, bx), dy = by - ay;
@@ -73546,7 +74095,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       pbot[x] = H - POLAR - (noise.fbm(x * 0.02, 91.7, 3) * 10 + 4);
     }
     const MER = [RM_X, 0];
-    const L2 = [new Float32Array(H), new Float32Array(H)], R3 = [new Float32Array(H), new Float32Array(H)];
+    const L2 = [new Float32Array(H), new Float32Array(H)], R4 = [new Float32Array(H), new Float32Array(H)];
     for (let m = 0; m < 2; m++) {
       const mx = MER[m];
       for (let y = 0; y < H; y++) {
@@ -73563,7 +74112,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           }
         }
         L2[m][y] = left;
-        R3[m][y] = right;
+        R4[m][y] = right;
       }
     }
     const polarRow = (y) => y < POLAR + chart(40) || y > H - POLAR - chart(40);
@@ -73572,12 +74121,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       ptop,
       pbot,
       L: L2,
-      R: R3,
+      R: R4,
       /** The tile type alone (cheap: no elevation). */
       type(x, y) {
         for (let m = 0; m < 2; m++) {
           const dx = world.dx(MER[m], x);
-          if (dx < L2[m][y] || dx > R3[m][y]) continue;
+          if (dx < L2[m][y] || dx > R4[m][y]) continue;
           if (polarRow(y)) return T.SNOWROCK;
           if (m === 0 && Math.hypot((x - M2.x) * 1.6, y - M2.y) < chart(70) + noise.noise2(x * 0.05, y * 0.05) * 12) return T.SNOWROCK;
           return T.RED_ROCK;
@@ -73589,7 +74138,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       tile(x, y, out) {
         for (let m = 0; m < 2; m++) {
           const dx = world.dx(MER[m], x);
-          const left = L2[m][y], right = R3[m][y];
+          const left = L2[m][y], right = R4[m][y];
           if (dx < left || dx > right) continue;
           const edge = Math.min(dx - left, right - dx);
           const ridge = noise.ridged(x * 0.03, y * 0.03, 4);
@@ -73627,7 +74176,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         let best = -32;
         for (let m = 0; m < 2; m++) {
           const dx = world.dx(MER[m], x);
-          const left = L2[m][y], right = R3[m][y];
+          const left = L2[m][y], right = R4[m][y];
           if (dx >= left && dx <= right) {
             best = Math.max(best, Math.min(32, dx - left, right - dx));
             continue;
@@ -73646,7 +74195,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const x0 = bx * BS, y0 = by * BS, y1 = Math.min(H, y0 + BS);
         for (let m = 0; m < 2; m++) {
           const a = world.dx(MER[m], x0), b = a + BS - 1;
-          for (let y = y0; y < y1; y++) if (b >= L2[m][y] && a <= R3[m][y]) return true;
+          for (let y = y0; y < y1; y++) if (b >= L2[m][y] && a <= R4[m][y]) return true;
         }
         for (let x = x0; x < x0 + BS; x++) if (ptop[x] > y0 || pbot[x] < y1 - 1) return true;
         return false;
@@ -73660,7 +74209,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         let lo = Infinity, hi = -Infinity;
         for (let y = y0; y < y1; y++) {
           lo = Math.min(lo, L2[m][y]);
-          hi = Math.max(hi, R3[m][y]);
+          hi = Math.max(hi, R4[m][y]);
         }
         const bx0 = Math.floor((MER[m] + lo - EDGE_PAD) / BS), bx1 = Math.floor((MER[m] + hi + EDGE_PAD) / BS);
         for (let bx = bx0; bx <= bx1; bx++) world.ut[by * bw2 + (bx % bw2 + bw2) % bw2] = MIXED;
@@ -73708,12 +74257,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       c.i0 = i0;
       c.i1 = i1;
-      const R3 = M2.halfW;
+      const R4 = M2.halfW;
       for (let i = i0; i <= i1; i++) {
         const cx = c.x[i], cy = c.y[i];
-        for (let j = -R3 - 1; j <= R3 + 1; j++) {
-          for (let k = -R3 - 1; k <= R3 + 1; k++) {
-            if (k * k + j * j > (R3 + 0.5) * (R3 + 0.5)) continue;
+        for (let j = -R4 - 1; j <= R4 + 1; j++) {
+          for (let k = -R4 - 1; k <= R4 + 1; k++) {
+            if (k * k + j * j > (R4 + 0.5) * (R4 + 0.5)) continue;
             const tx = Math.floor(cx + k), ty = Math.floor(cy + j);
             if (world.isLiquid(tx, ty) && world.type(tx, ty) !== T.RAPIDS) continue;
             world.setTile(tx, ty, T.RAPIDS, 0, CLIMATE.TEMPERATE);
@@ -80205,7 +80754,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render/fxshapes.js
-  var TAU20 = Math.PI * 2;
+  var TAU21 = Math.PI * 2;
   var easeOut = (k) => 1 - (1 - k) ** 3;
   var clamp016 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function hash8(n) {
@@ -80214,13 +80763,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function ellipsePath(g, rx, ry) {
     g.beginPath();
-    g.ellipse(0, 0, Math.max(1e-3, rx), Math.max(1e-3, ry), 0, 0, TAU20);
+    g.ellipse(0, 0, Math.max(1e-3, rx), Math.max(1e-3, ry), 0, 0, TAU21);
   }
-  function spiky(g, R3, n, seed, sx = 1) {
+  function spiky(g, R4, n, seed, sx = 1) {
     g.beginPath();
     for (let i = 0; i < n * 2; i++) {
-      const a = i / (n * 2) * TAU20;
-      const rr = i % 2 ? R3 * (0.26 + 0.08 * hash8(seed + i)) : R3 * (0.62 + 0.55 * hash8(seed + i * 3.1));
+      const a = i / (n * 2) * TAU21;
+      const rr = i % 2 ? R4 * (0.26 + 0.08 * hash8(seed + i)) : R4 * (0.62 + 0.55 * hash8(seed + i * 3.1));
       const x = Math.cos(a) * rr * sx, y = Math.sin(a) * rr;
       if (i) g.lineTo(x, y);
       else g.moveTo(x, y);
@@ -80249,16 +80798,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (s.shape === "circle") {
         g.globalAlpha = a * (0.1 + 0.12 * k);
         g.beginPath();
-        g.arc(0, 0, s.r, 0, TAU20);
+        g.arc(0, 0, s.r, 0, TAU21);
         g.fill();
         g.globalAlpha = a * (0.3 + 0.35 * k);
         g.beginPath();
-        g.arc(0, 0, s.r * easeOut(k), 0, TAU20);
+        g.arc(0, 0, s.r * easeOut(k), 0, TAU21);
         g.fill();
         g.globalAlpha = a * (0.55 + 0.4 * pulse * k);
         g.lineWidth = 0.05 + 0.04 * k;
         g.beginPath();
-        g.arc(0, 0, s.r, 0, TAU20);
+        g.arc(0, 0, s.r, 0, TAU21);
         g.stroke();
       } else if (s.shape === "arc") {
         const a0 = s.angle - s.arc / 2, a1 = s.angle + s.arc / 2;
@@ -80316,7 +80865,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const ang = i / n * TAU20 + s.seed + (hash8(s.seed + i) - 0.5) * 0.5;
+          const ang = i / n * TAU21 + s.seed + (hash8(s.seed + i) - 0.5) * 0.5;
           let px2 = 0, py2 = 0;
           g.moveTo(0, 0);
           const len = s.r * (0.6 + 0.5 * hash8(s.seed * 3 + i));
@@ -80347,7 +80896,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     gr.addColorStop(1, rgba2(col, 0));
     g.fillStyle = gr;
     g.beginPath();
-    g.arc(0, 0, Math.max(1e-3, r), 0, TAU20);
+    g.arc(0, 0, Math.max(1e-3, r), 0, TAU21);
     g.fill();
     g.restore();
   }
@@ -80368,7 +80917,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = 0.06;
         g.beginPath();
         for (let i = 0; i < 9; i++) {
-          const a0 = i / 9 * TAU20 + s.seed, a1 = a0 + 0.35;
+          const a0 = i / 9 * TAU21 + s.seed, a1 = a0 + 0.35;
           g.moveTo(Math.cos(a0) * s.r * 0.85, Math.sin(a0) * s.r * 0.51);
           g.lineTo(Math.cos(a1) * s.r * 0.95, Math.sin(a1) * s.r * 0.57);
         }
@@ -80420,7 +80969,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.beginPath();
           const n = 48;
           for (let i = 0; i <= n; i++) {
-            const th = i / n * TAU20;
+            const th = i / n * TAU21;
             const wr = rad * (1 + s.wobble * (1 - k) * Math.sin(th * (s.lobes || 9) + c.t * 40));
             const x = Math.cos(th) * wr, y = Math.sin(th) * wr * ry;
             if (i) g.lineTo(x, y);
@@ -80454,15 +81003,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (Math.abs(head - tail2) < 0.02) return;
     g.translate(0, -(s.z ?? 0.6));
     g.scale(1, s.tilt ?? 0.72);
-    const R3 = s.radius, W3 = s.width || 0.2;
+    const R4 = s.radius, W4 = s.width || 0.2;
     const N4 = 20;
     const outer = [], inner = [];
     for (let i = 0; i <= N4; i++) {
       const u = i / N4;
       const th = tail2 + (head - tail2) * u;
-      const w = W3 * Math.pow(u, 0.7) * (1 - 0.35 * Math.pow(u, 10));
-      outer.push([Math.cos(th) * R3, Math.sin(th) * R3]);
-      inner.push([Math.cos(th) * (R3 - w), Math.sin(th) * (R3 - w)]);
+      const w = W4 * Math.pow(u, 0.7) * (1 - 0.35 * Math.pow(u, 10));
+      outer.push([Math.cos(th) * R4, Math.sin(th) * R4]);
+      inner.push([Math.cos(th) * (R4 - w), Math.sin(th) * (R4 - w)]);
     }
     const fade2 = (1 - Math.pow(k, 2.2)) * a;
     if (s.add !== false) g.globalCompositeOperation = "lighter";
@@ -80483,7 +81032,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (let i = Math.floor(N4 * 0.45); i < N4; i++) {
       const u = i / N4;
       g.globalAlpha = fade2 * u * u;
-      g.lineWidth = Math.max(0.012, W3 * 0.22 * u);
+      g.lineWidth = Math.max(0.012, W4 * 0.22 * u);
       g.beginPath();
       g.moveTo(outer[i][0], outer[i][1]);
       g.lineTo(outer[i + 1][0], outer[i + 1][1]);
@@ -80498,17 +81047,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     air(g, s, k, a) {
       const grow = k < 0.25 ? easeOut(k / 0.25) : 1;
       const fade2 = k < 0.3 ? 1 : 1 - (k - 0.3) / 0.7;
-      const R3 = s.size * (0.45 + 0.75 * grow);
+      const R4 = s.size * (0.45 + 0.75 * grow);
       g.translate(0, -(s.z ?? 0.7));
       g.rotate(s.angle || 0);
       g.globalCompositeOperation = "lighter";
       g.globalAlpha = a * fade2 * 0.9;
       g.fillStyle = s.color || "#ffffff";
-      spiky(g, R3, s.spikes || 9, s.seed, 1.3);
+      spiky(g, R4, s.spikes || 9, s.seed, 1.3);
       g.fill();
       g.globalAlpha = a * fade2;
       g.fillStyle = s.core || "#ffffff";
-      spiky(g, R3 * 0.52, s.spikes || 9, s.seed + 5, 1.2);
+      spiky(g, R4 * 0.52, s.spikes || 9, s.seed + 5, 1.2);
       g.fill();
       g.strokeStyle = s.color || "#ffffff";
       g.lineWidth = 0.035;
@@ -80518,7 +81067,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const n = s.lines ?? 5;
       for (let i = 0; i < n; i++) {
         const th = (hash8(s.seed + i * 17) - 0.5) * 2.2;
-        const r0 = R3 * (0.9 + 0.5 * k), r1 = R3 * (1.5 + 0.9 * hash8(s.seed + i) + k * 0.8);
+        const r0 = R4 * (0.9 + 0.5 * k), r1 = R4 * (1.5 + 0.9 * hash8(s.seed + i) + k * 0.8);
         g.moveTo(Math.cos(th) * r0, Math.sin(th) * r0 * 0.8);
         g.lineTo(Math.cos(th) * r1, Math.sin(th) * r1 * 0.8);
       }
@@ -80529,20 +81078,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     air(g, s, k, a) {
       const grow = k < 0.2 ? easeOut(k / 0.2) : 1;
       const fade2 = 1 - k;
-      const R3 = s.size * (0.4 + 0.6 * grow);
+      const R4 = s.size * (0.4 + 0.6 * grow);
       g.translate(0, -(s.z ?? 0.7));
       g.rotate(s.rot ?? 0.2 + k * 0.6);
       g.globalCompositeOperation = "lighter";
       g.globalAlpha = a * fade2 * 0.4;
       g.fillStyle = s.color || "#fff59d";
       g.beginPath();
-      g.arc(0, 0, R3 * 0.55, 0, TAU20);
+      g.arc(0, 0, R4 * 0.55, 0, TAU21);
       g.fill();
       g.globalAlpha = a * fade2 * 0.95;
-      starPath(g, 0, 0, R3, 4, 0.12, 0);
+      starPath(g, 0, 0, R4, 4, 0.12, 0);
       g.fill();
       g.fillStyle = "#ffffff";
-      starPath(g, 0, 0, R3 * 0.6, 4, 0.14, Math.PI / 4);
+      starPath(g, 0, 0, R4 * 0.6, 4, 0.14, Math.PI / 4);
       g.fill();
     }
   };
@@ -80684,7 +81233,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = fade2 * 0.9;
         g.fillStyle = "#ffffff";
         g.beginPath();
-        g.arc(0, 0, wd * 0.9, 0, TAU20);
+        g.arc(0, 0, wd * 0.9, 0, TAU21);
         g.fill();
         starPath(g, 0, 0, wd * 1.8, 4, 0.12, c.t * 3);
         g.fill();
@@ -80692,7 +81241,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.globalAlpha = fade2 * 0.8;
       g.fillStyle = s.core || "#ffffff";
       g.beginPath();
-      g.arc(L2, 0, wd * 0.55, 0, TAU20);
+      g.arc(L2, 0, wd * 0.55, 0, TAU21);
       g.fill();
     }
   };
@@ -80736,13 +81285,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     air(g, s, k, a) {
       const grow = easeOut(Math.min(1, k / 0.12));
       const fade2 = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
-      const R3 = s.size * grow;
+      const R4 = s.size * grow;
       g.translate(0, -(s.z ?? 0.8));
       g.globalCompositeOperation = "lighter";
       g.globalAlpha = a * fade2 * 0.25;
       g.fillStyle = s.color || "#e0f7fa";
       g.beginPath();
-      g.arc(0, 0, R3 * 0.35, 0, TAU20);
+      g.arc(0, 0, R4 * 0.35, 0, TAU21);
       g.fill();
       g.lineCap = "round";
       g.lineJoin = "miter";
@@ -80753,17 +81302,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU20 + (hash8(s.seed + i) - 0.5) * 0.5;
+          const th = i / n * TAU21 + (hash8(s.seed + i) - 0.5) * 0.5;
           let x = 0, y = 0;
           g.moveTo(0, 0);
-          const L2 = R3 * (0.6 + 0.5 * hash8(s.seed + i * 3));
+          const L2 = R4 * (0.6 + 0.5 * hash8(s.seed + i * 3));
           for (let j = 1; j <= 3; j++) {
             const r = L2 * j / 3, o = (hash8(s.seed + i * 7 + j) - 0.5) * 0.5;
             x = Math.cos(th + o) * r;
             y = Math.sin(th + o) * r;
             g.lineTo(x, y);
           }
-          const th2 = th + TAU20 / n;
+          const th2 = th + TAU21 / n;
           const r2 = L2 * 0.55;
           g.moveTo(Math.cos(th) * r2, Math.sin(th) * r2);
           g.lineTo(Math.cos(th2) * r2 * 0.95, Math.sin(th2) * r2 * 0.95);
@@ -80784,23 +81333,23 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     air(g, s, k, a, c) {
       const grow = easeOut(Math.min(1, k / 0.15));
       const fade2 = Math.min(1, (1 - k) * 3) * a;
-      const H2 = (s.h || 4) * grow, R3 = s.r * (0.6 + 0.4 * grow) * (1 - k * 0.3);
+      const H3 = (s.h || 4) * grow, R4 = s.r * (0.6 + 0.4 * grow) * (1 - k * 0.3);
       g.globalCompositeOperation = s.kind === "dark" ? "source-over" : "lighter";
       const col = s.color;
       for (let layer = 0; layer < 3; layer++) {
-        const w = R3 * [1.4, 1, 0.45][layer];
+        const w = R4 * [1.4, 1, 0.45][layer];
         g.globalAlpha = fade2 * [0.25, 0.6, 0.95][layer];
         g.fillStyle = layer === 2 ? s.core || "#ffffff" : col;
         g.beginPath();
         g.moveTo(-w, 0);
         const segs = 10;
         for (let i = 1; i <= segs; i++) {
-          const y = -H2 * (i / segs);
+          const y = -H3 * (i / segs);
           const wob = s.kind === "fire" ? Math.sin(i * 1.7 - c.t * 18 + layer) * w * 0.25 : s.kind === "lightning" ? (hash8(s.seed + i + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
           g.lineTo(-w * (1 - 0.3 * i / segs) + wob, y);
         }
         for (let i = segs; i >= 1; i--) {
-          const y = -H2 * (i / segs);
+          const y = -H3 * (i / segs);
           const wob = s.kind === "fire" ? Math.sin(i * 1.3 + c.t * 16 + layer) * w * 0.25 : s.kind === "lightning" ? (hash8(s.seed + i * 3 + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
           g.lineTo(w * (1 - 0.3 * i / segs) + wob, y);
         }
@@ -80813,38 +81362,38 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   SHAPES2.dome = {
     ground(g, s, k, a, c) {
       const grow = easeOut(Math.min(1, (s.age || 0) / 0.35));
-      const R3 = s.r * grow;
+      const R4 = s.r * grow;
       g.globalAlpha = 0.12 * a;
       g.fillStyle = s.color;
-      ellipsePath(g, R3, R3 * 0.62);
+      ellipsePath(g, R4, R4 * 0.62);
       g.fill();
       g.globalAlpha = 0.7 * a;
       g.strokeStyle = s.color;
       g.lineWidth = 0.06;
-      ellipsePath(g, R3, R3 * 0.62);
+      ellipsePath(g, R4, R4 * 0.62);
       g.stroke();
       if (s.kind === "room") {
         const ph = c.t * 0.5 % 1;
         g.globalAlpha = 0.35 * a * (1 - ph);
         g.lineWidth = 0.035;
-        ellipsePath(g, R3 * ph, R3 * ph * 0.62);
+        ellipsePath(g, R4 * ph, R4 * ph * 0.62);
         g.stroke();
       }
     },
     air(g, s, k, a, c) {
       const grow = easeOut(Math.min(1, (s.age || 0) / 0.35));
-      const R3 = s.r * grow, H2 = R3 * (s.hk ?? 0.55);
+      const R4 = s.r * grow, H3 = R4 * (s.hk ?? 0.55);
       g.globalAlpha = 0.08 * a;
       g.fillStyle = s.color;
       g.beginPath();
-      g.ellipse(0, 0, R3, H2 + R3 * 0.62, 0, Math.PI, 0);
-      g.ellipse(0, 0, R3, R3 * 0.62, 0, 0, Math.PI);
+      g.ellipse(0, 0, R4, H3 + R4 * 0.62, 0, Math.PI, 0);
+      g.ellipse(0, 0, R4, R4 * 0.62, 0, 0, Math.PI);
       g.fill();
       g.globalAlpha = 0.55 * a;
       g.strokeStyle = s.color;
       g.lineWidth = 0.05;
       g.beginPath();
-      g.ellipse(0, 0, R3, H2 + R3 * 0.62 * 0.4, 0, Math.PI, 0);
+      g.ellipse(0, 0, R4, H3 + R4 * 0.62 * 0.4, 0, Math.PI, 0);
       g.stroke();
       if (s.kind === "cage") {
         g.globalAlpha = 0.7 * a;
@@ -80853,11 +81402,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         for (let i = 0; i < n; i++) {
           const th = i / n * Math.PI;
-          const bx = Math.cos(th) * R3, by = Math.sin(th) * R3 * 0.62;
+          const bx = Math.cos(th) * R4, by = Math.sin(th) * R4 * 0.62;
           g.moveTo(bx, by);
-          g.quadraticCurveTo(bx * 0.55, -H2 * 0.9, 0, -(H2 + R3 * 0.25));
+          g.quadraticCurveTo(bx * 0.55, -H3 * 0.9, 0, -(H3 + R4 * 0.25));
           g.moveTo(-bx, -by * 0.4);
-          g.quadraticCurveTo(-bx * 0.55, -H2 * 0.9, 0, -(H2 + R3 * 0.25));
+          g.quadraticCurveTo(-bx * 0.55, -H3 * 0.9, 0, -(H3 + R4 * 0.25));
         }
         g.stroke();
         g.globalCompositeOperation = "lighter";
@@ -80871,7 +81420,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         for (let i = 1; i < 4; i++) {
           const f = i / 4;
-          g.ellipse(0, -H2 * f * 0.85, R3 * Math.sqrt(1 - f * f), R3 * 0.1 * (1 - f), 0, 0, TAU20);
+          g.ellipse(0, -H3 * f * 0.85, R4 * Math.sqrt(1 - f * f), R4 * 0.1 * (1 - f), 0, 0, TAU21);
         }
         g.stroke();
       }
@@ -80884,13 +81433,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const dx = Math.cos(f), dy = Math.sin(f);
       g.translate(dx * 0.75, dy * 0.45 - 0.9);
       const side = Math.abs(dx) > Math.abs(dy);
-      const W3 = (side ? 0.45 : 1.4) * grow, H2 = 1.5 * grow;
+      const W4 = (side ? 0.45 : 1.4) * grow, H3 = 1.5 * grow;
       const shimmer = 0.5 + 0.5 * Math.sin(c.t * 6);
       g.globalCompositeOperation = "lighter";
       g.globalAlpha = a * (0.16 + 0.08 * shimmer);
       g.fillStyle = s.color || "#b3e5fc";
       g.beginPath();
-      g.roundRect(-W3 / 2, -H2 / 2, W3, H2, 0.12);
+      g.roundRect(-W4 / 2, -H3 / 2, W4, H3, 0.12);
       g.fill();
       g.globalAlpha = a * 0.7;
       g.strokeStyle = s.color || "#b3e5fc";
@@ -80903,9 +81452,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (let row = -4; row <= 4; row++) {
         for (let col = -4; col <= 4; col++) {
           const cx = col * hr * 1.5 * (side ? 0.35 : 1), cy = row * hr * 1.73 + (col & 1 ? hr * 0.86 : 0);
-          if (Math.abs(cx) > W3 / 2 - 0.05 || Math.abs(cy) > H2 / 2 - 0.05) continue;
+          if (Math.abs(cx) > W4 / 2 - 0.05 || Math.abs(cy) > H3 / 2 - 0.05) continue;
           for (let i = 0; i <= 6; i++) {
-            const th = i / 6 * TAU20;
+            const th = i / 6 * TAU21;
             const x = cx + Math.cos(th) * hr * 0.55 * (side ? 0.35 : 1), y = cy + Math.sin(th) * hr * 0.55;
             if (i) g.lineTo(x, y);
             else g.moveTo(x, y);
@@ -80918,21 +81467,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   SHAPES2.vortex = {
     ground(g, s, k, a, c) {
       const grow = easeOut(Math.min(1, (s.age || 0) / 0.3));
-      const R3 = s.r * grow;
+      const R4 = s.r * grow;
       const spin = c.t * (s.spin || 4);
       if (s.kind === "dark") {
         g.globalAlpha = 0.85 * a;
         g.fillStyle = "#05000a";
-        ellipsePath(g, R3 * 0.35, R3 * 0.22);
+        ellipsePath(g, R4 * 0.35, R4 * 0.22);
         g.fill();
         g.globalAlpha = 0.5 * a;
         g.fillStyle = "#1a0033";
-        ellipsePath(g, R3 * 0.7, R3 * 0.43);
+        ellipsePath(g, R4 * 0.7, R4 * 0.43);
         g.fill();
       } else {
         g.globalAlpha = 0.18 * a;
         g.fillStyle = s.color;
-        ellipsePath(g, R3, R3 * 0.62);
+        ellipsePath(g, R4, R4 * 0.62);
         g.fill();
       }
       g.lineCap = "round";
@@ -80944,8 +81493,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         for (let j = 0; j <= 16; j++) {
           const u = j / 16;
-          const th = spin + i / arms * TAU20 + u * 3.2;
-          const r = R3 * (1 - u * 0.85);
+          const th = spin + i / arms * TAU21 + u * 3.2;
+          const r = R4 * (1 - u * 0.85);
           const x = Math.cos(th) * r, y = Math.sin(th) * r * 0.62;
           if (j) g.lineTo(x, y);
           else g.moveTo(x, y);
@@ -80956,12 +81505,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     air(g, s, k, a, c) {
       if (s.kind !== "sand" && s.kind !== "wind" && s.kind !== "smoke" && s.kind !== "water") return;
       const grow = easeOut(Math.min(1, (s.age || 0) / 0.3));
-      const R3 = s.r * grow, H2 = (s.h || s.r * 1.6) * grow;
+      const R4 = s.r * grow, H3 = (s.h || s.r * 1.6) * grow;
       const spin = c.t * (s.spin || 7);
       g.lineCap = "round";
       for (let i = 0; i < 9; i++) {
         const u = i / 8;
-        const y = -H2 * u, r = R3 * (0.25 + 0.75 * u);
+        const y = -H3 * u, r = R4 * (0.25 + 0.75 * u);
         g.globalAlpha = a * (0.25 + 0.3 * u);
         g.strokeStyle = i % 2 ? s.color : s.color2 || "#ffffff";
         g.lineWidth = 0.07 + u * 0.05;
@@ -80975,18 +81524,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   SHAPES2.cloud = {
     air(g, s, k, a, c) {
       const grow = easeOut(Math.min(1, (s.age || 0) / 0.4));
-      const R3 = s.r * grow;
+      const R4 = s.r * grow;
       g.translate(0, -(s.z ?? 5));
       const n = 9;
       for (let pass = 0; pass < 2; pass++) {
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU20;
-          const x = Math.cos(th) * R3 * 0.75 + Math.sin(c.t * 0.8 + i) * 0.1, y = Math.sin(th) * R3 * 0.28;
-          const rr = R3 * (0.38 + 0.12 * hash8(s.seed + i));
+          const th = i / n * TAU21;
+          const x = Math.cos(th) * R4 * 0.75 + Math.sin(c.t * 0.8 + i) * 0.1, y = Math.sin(th) * R4 * 0.28;
+          const rr = R4 * (0.38 + 0.12 * hash8(s.seed + i));
           g.globalAlpha = a * (pass ? 0.9 : 0.5);
           g.fillStyle = pass ? s.color || "#37474f" : "#263238";
           g.beginPath();
-          g.arc(x, y + (pass ? -0.05 : 0.08), rr * (pass ? 0.9 : 1.05), 0, TAU20);
+          g.arc(x, y + (pass ? -0.05 : 0.08), rr * (pass ? 0.9 : 1.05), 0, TAU21);
           g.fill();
         }
       }
@@ -80995,7 +81544,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = a * 0.5;
         g.fillStyle = s.glow || "#fff59d";
         g.beginPath();
-        g.arc((hash8(Math.floor(c.t * 8) + s.seed) - 0.5) * R3, 0, R3 * 0.35, 0, TAU20);
+        g.arc((hash8(Math.floor(c.t * 8) + s.seed) - 0.5) * R4, 0, R4 * 0.35, 0, TAU21);
         g.fill();
       }
     }
@@ -81048,9 +81597,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = fade2;
         g.fillStyle = s.petal || "#f48fb1";
         for (let i = 0; i < 5; i++) {
-          const th = i / 5 * TAU20 + p.seed;
+          const th = i / 5 * TAU21 + p.seed;
           g.beginPath();
-          g.ellipse(x + Math.cos(th) * 0.09, y + Math.sin(th) * 0.05, 0.08, 0.04, th, 0, TAU20);
+          g.ellipse(x + Math.cos(th) * 0.09, y + Math.sin(th) * 0.05, 0.08, 0.04, th, 0, TAU21);
           g.fill();
         }
         const ang = p.ang;
@@ -81070,7 +81619,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = 0.025;
         const hr = (s.big ? 0.26 : 0.08) * (1 - clutch * 0.2);
         g.beginPath();
-        g.arc(ex, ey, hr, 0, TAU20);
+        g.arc(ex, ey, hr, 0, TAU21);
         g.fill();
         g.stroke();
         if (!clutch) {
@@ -81094,28 +81643,28 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const t = Math.min(1, age / fall);
       const zh = (s.h || 9) * (1 - t * t);
       const ox = (s.drift || 1.5) * (1 - t);
-      const R3 = s.size || 1;
+      const R4 = s.size || 1;
       if (t >= 1) {
         const f = 1 - Math.min(1, (age - fall) / 0.35);
         if (f <= 0) return;
         g.globalCompositeOperation = "lighter";
         g.globalAlpha = f * a;
         g.fillStyle = s.glow || "#ff9100";
-        ellipsePath(g, R3 * 1.6, R3);
+        ellipsePath(g, R4 * 1.6, R4);
         g.fill();
         return;
       }
       g.translate(-ox, -zh);
       g.globalAlpha = a;
       g.globalCompositeOperation = "lighter";
-      const gr = g.createLinearGradient(0, 0, ox * 0.8 + 0.8, -R3 * 3);
+      const gr = g.createLinearGradient(0, 0, ox * 0.8 + 0.8, -R4 * 3);
       gr.addColorStop(0, rgba2(s.glow || "#ff9100", 0.9));
       gr.addColorStop(1, rgba2(s.glow || "#ff9100", 0));
       g.fillStyle = gr;
       g.beginPath();
-      g.moveTo(-R3 * 0.8, 0);
-      g.lineTo(ox * 0.8 + 0.8, -R3 * 3.2);
-      g.lineTo(R3 * 0.8, 0);
+      g.moveTo(-R4 * 0.8, 0);
+      g.lineTo(ox * 0.8 + 0.8, -R4 * 3.2);
+      g.lineTo(R4 * 0.8, 0);
       g.closePath();
       g.fill();
       g.globalCompositeOperation = "source-over";
@@ -81124,15 +81673,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.05;
         g.beginPath();
-        g.arc(0, 0, R3, 0, TAU20);
+        g.arc(0, 0, R4, 0, TAU21);
         g.fill();
         g.stroke();
         g.strokeStyle = s.kind === "mochi" ? "#d7ccc8" : "#ffab40";
         g.lineWidth = 0.04;
         g.beginPath();
         for (let i = -1; i <= 1; i++) {
-          g.moveTo(i * R3 * 0.35, -R3 * 0.2);
-          g.lineTo(i * R3 * 0.35, R3 * 0.45);
+          g.moveTo(i * R4 * 0.35, -R4 * 0.2);
+          g.lineTo(i * R4 * 0.35, R4 * 0.45);
         }
         g.stroke();
       } else if (s.kind === "hand") {
@@ -81140,15 +81689,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.05;
         g.beginPath();
-        g.ellipse(0, 0, R3 * 1.2, R3 * 0.8, 0, 0, TAU20);
+        g.ellipse(0, 0, R4 * 1.2, R4 * 0.8, 0, 0, TAU21);
         g.fill();
         g.stroke();
       } else {
         g.fillStyle = s.color || "#5d4037";
         g.beginPath();
         for (let i = 0; i < 9; i++) {
-          const th = i / 9 * TAU20;
-          const rr = R3 * (0.8 + 0.3 * hash8(s.seed + i));
+          const th = i / 9 * TAU21;
+          const rr = R4 * (0.8 + 0.3 * hash8(s.seed + i));
           g.lineTo(Math.cos(th) * rr, Math.sin(th) * rr);
         }
         g.closePath();
@@ -81157,7 +81706,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = s.glow || "#ff9100";
         g.globalAlpha = 0.6 * a;
         g.beginPath();
-        g.arc(R3 * 0.2, R3 * 0.2, R3 * 0.5, 0, TAU20);
+        g.arc(R4 * 0.2, R4 * 0.2, R4 * 0.5, 0, TAU21);
         g.fill();
       }
     }
@@ -81192,14 +81741,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const grow = easeOut(Math.min(1, k / 0.2));
       const fade2 = 1 - k * k;
       g.translate(0, -(s.z ?? 0.8));
-      const R3 = s.size * grow;
+      const R4 = s.size * grow;
       const rot = (s.rot || 0) + c.t * (s.spin ?? 2);
       const v = [];
       for (const [x, y, z] of [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]]) {
         const cx = Math.cos(rot), sx = Math.sin(rot);
         const X2 = x * cx - z * sx, Z2 = x * sx + z * cx;
         const cy = Math.cos(0.5), sy = Math.sin(0.5);
-        v.push([X2 * R3, (y * cy - Z2 * sy) * R3]);
+        v.push([X2 * R4, (y * cy - Z2 * sy) * R4]);
       }
       g.globalCompositeOperation = "lighter";
       g.globalAlpha = a * fade2 * 0.18;
@@ -81224,11 +81773,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = "#ff5252";
         g.globalAlpha = a * fade2;
         g.beginPath();
-        g.arc(-R3 * 0.18, -R3 * 0.1, R3 * 0.22, 0, TAU20);
-        g.arc(R3 * 0.18, -R3 * 0.1, R3 * 0.22, 0, TAU20);
-        g.moveTo(-R3 * 0.38, 0);
-        g.lineTo(0, R3 * 0.4);
-        g.lineTo(R3 * 0.38, 0);
+        g.arc(-R4 * 0.18, -R4 * 0.1, R4 * 0.22, 0, TAU21);
+        g.arc(R4 * 0.18, -R4 * 0.1, R4 * 0.22, 0, TAU21);
+        g.moveTo(-R4 * 0.38, 0);
+        g.lineTo(0, R4 * 0.4);
+        g.lineTo(R4 * 0.38, 0);
         g.fill();
       }
     }
@@ -81298,7 +81847,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.025;
         g.beginPath();
-        g.arc(x, y, 0.13 * (0.7 + pop * 0.4), 0, TAU20);
+        g.arc(x, y, 0.13 * (0.7 + pop * 0.4), 0, TAU21);
         g.fill();
         g.stroke();
         if (ph > 0.45 && ph < 0.6) {
@@ -81315,10 +81864,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   SHAPES2.pieces = {
     air(g, s, k, a, c) {
       const n = 10;
-      const R3 = s.r || 2.4;
+      const R4 = s.r || 2.4;
       for (let i = 0; i < n; i++) {
         const th = c.t * (2.5 + i % 3) + i * 2.39;
-        const r = R3 * (0.35 + 0.65 * hash8(s.seed + i));
+        const r = R4 * (0.35 + 0.65 * hash8(s.seed + i));
         const x = Math.cos(th) * r, y = Math.sin(th) * r * 0.62 - 0.6 - Math.sin(c.t * 7 + i) * 0.25;
         g.globalAlpha = a * Math.min(1, (1 - k) * 4);
         g.save();
@@ -81330,7 +81879,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (kind === 0) {
           g.fillStyle = s.skin || "#f1c9a0";
           g.beginPath();
-          g.arc(0, 0, 0.12, 0, TAU20);
+          g.arc(0, 0, 0.12, 0, TAU21);
           g.fill();
           g.stroke();
         } else {
@@ -81377,19 +81926,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   SHAPES2.zone = {
     ground(g, s, k, a, c) {
       const z = s.zone;
-      const R3 = s.r * easeOut(Math.min(1, (s.age || 0) / 0.3));
+      const R4 = s.r * easeOut(Math.min(1, (s.age || 0) / 0.3));
       const col = s.color || "#ffffff";
       switch (s.kind) {
         case "dark":
-          SHAPES2.vortex.ground(g, { ...s, r: R3, kind: "dark", spin: -3, arms: 6 }, k, a, c);
+          SHAPES2.vortex.ground(g, { ...s, r: R4, kind: "dark", spin: -3, arms: 6 }, k, a, c);
           break;
         case "storm":
-          SHAPES2.vortex.ground(g, { ...s, r: R3, kind: "sand", spin: 5 }, k, a * 0.7, c);
+          SHAPES2.vortex.ground(g, { ...s, r: R4, kind: "sand", spin: 5 }, k, a * 0.7, c);
           break;
         case "gravity": {
           g.globalAlpha = 0.22 * a;
           g.fillStyle = col;
-          ellipsePath(g, R3, R3 * 0.62);
+          ellipsePath(g, R4, R4 * 0.62);
           g.fill();
           g.globalAlpha = 0.6 * a;
           g.strokeStyle = col;
@@ -81399,7 +81948,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             const ph = (c.t * 0.9 + i / 3) % 1;
             g.globalAlpha = 0.5 * a * ph;
             g.lineWidth = 0.04;
-            ellipsePath(g, R3 * (1 - ph), R3 * (1 - ph) * 0.62);
+            ellipsePath(g, R4 * (1 - ph), R4 * (1 - ph) * 0.62);
             g.stroke();
           }
           break;
@@ -81407,16 +81956,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         case "ice": {
           g.globalAlpha = 0.3 * a;
           g.fillStyle = "#e1f5fe";
-          ellipsePath(g, R3, R3 * 0.62);
+          ellipsePath(g, R4, R4 * 0.62);
           g.fill();
           g.globalAlpha = 0.5 * a;
           g.strokeStyle = "#ffffff";
           g.lineWidth = 0.03;
           g.beginPath();
           for (let i = 0; i < 10; i++) {
-            const th = i / 10 * TAU20 + s.seed;
+            const th = i / 10 * TAU21 + s.seed;
             g.moveTo(0, 0);
-            g.lineTo(Math.cos(th) * R3 * 0.9, Math.sin(th) * R3 * 0.55);
+            g.lineTo(Math.cos(th) * R4 * 0.9, Math.sin(th) * R4 * 0.55);
           }
           g.stroke();
           break;
@@ -81427,15 +81976,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.globalAlpha = 0.24 * a;
           g.fillStyle = col;
           for (let i = 0; i < 6; i++) {
-            const th = i / 6 * TAU20 + c.t * 0.2, rr = R3 * 0.45;
+            const th = i / 6 * TAU21 + c.t * 0.2, rr = R4 * 0.45;
             g.beginPath();
-            g.ellipse(Math.cos(th) * rr * 0.6, Math.sin(th) * rr * 0.35, rr, rr * 0.6, 0, 0, TAU20);
+            g.ellipse(Math.cos(th) * rr * 0.6, Math.sin(th) * rr * 0.35, rr, rr * 0.6, 0, 0, TAU21);
             g.fill();
           }
           g.globalAlpha = 0.35 * a;
           g.strokeStyle = col;
           g.lineWidth = 0.04;
-          ellipsePath(g, R3, R3 * 0.62);
+          ellipsePath(g, R4, R4 * 0.62);
           g.stroke();
           if (s.kind === "plant") {
             g.strokeStyle = "#2e7d32";
@@ -81444,8 +81993,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             g.globalAlpha = 0.9 * a;
             g.beginPath();
             for (let i = 0; i < 7; i++) {
-              const th = i / 7 * TAU20 + s.seed;
-              const x = Math.cos(th) * R3 * 0.7, y = Math.sin(th) * R3 * 0.45;
+              const th = i / 7 * TAU21 + s.seed;
+              const x = Math.cos(th) * R4 * 0.7, y = Math.sin(th) * R4 * 0.45;
               g.moveTo(x, y);
               g.quadraticCurveTo(x * 0.5, y * 0.5 - 0.4 - Math.sin(c.t * 3 + i) * 0.1, 0, -0.1);
             }
@@ -81460,52 +82009,52 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         case "cage": {
           g.globalAlpha = 0.16 * a;
           g.fillStyle = col;
-          ellipsePath(g, R3, R3 * 0.62);
+          ellipsePath(g, R4, R4 * 0.62);
           g.fill();
           g.globalAlpha = 0.5 * a;
           g.strokeStyle = col;
           g.lineWidth = 0.05;
-          ellipsePath(g, R3, R3 * 0.62);
+          ellipsePath(g, R4, R4 * 0.62);
           g.stroke();
-          if (s.kind === "cage") SHAPES2.dome.ground(g, { ...s, kind: "cage", r: R3, age: 9 }, k, a, c);
+          if (s.kind === "cage") SHAPES2.dome.ground(g, { ...s, kind: "cage", r: R4, age: 9 }, k, a, c);
           break;
         }
         default: {
           g.globalAlpha = 0.18 * a;
           g.fillStyle = col;
-          ellipsePath(g, R3, R3 * 0.62);
+          ellipsePath(g, R4, R4 * 0.62);
           g.fill();
           g.globalAlpha = 0.5 * a;
           g.strokeStyle = col;
           g.lineWidth = 0.04;
-          ellipsePath(g, R3, R3 * 0.62);
+          ellipsePath(g, R4, R4 * 0.62);
           g.stroke();
         }
       }
     },
     air(g, s, k, a, c) {
-      const R3 = s.r * easeOut(Math.min(1, (s.age || 0) / 0.3));
+      const R4 = s.r * easeOut(Math.min(1, (s.age || 0) / 0.3));
       switch (s.kind) {
         case "thunder":
-          SHAPES2.cloud.air(g, { ...s, r: Math.max(1.4, R3 * 0.9), z: 4.5 + R3 * 0.3, color: "#37474f" }, k, a, c);
+          SHAPES2.cloud.air(g, { ...s, r: Math.max(1.4, R4 * 0.9), z: 4.5 + R4 * 0.3, color: "#37474f" }, k, a, c);
           break;
         case "storm":
-          SHAPES2.vortex.air(g, { ...s, r: R3, kind: "sand", h: R3 * 1.3, color: s.color, color2: "#ffffff" }, k, a * 0.8, c);
+          SHAPES2.vortex.air(g, { ...s, r: R4, kind: "sand", h: R4 * 1.3, color: s.color, color2: "#ffffff" }, k, a * 0.8, c);
           break;
         case "cage":
-          SHAPES2.dome.air(g, { ...s, kind: "cage", r: R3, age: 9, hk: 0.6 }, k, a, c);
+          SHAPES2.dome.air(g, { ...s, kind: "cage", r: R4, age: 9, hk: 0.6 }, k, a, c);
           break;
         case "arms": {
           if (!s.pts) {
             s.pts = [];
-            const n = Math.max(3, Math.round(R3 * 3));
+            const n = Math.max(3, Math.round(R4 * 3));
             for (let i = 0; i < n; i++) {
-              const th = i / n * TAU20 + hash8(s.seed + i);
-              const rr = R3 * (0.3 + 0.6 * hash8(s.seed + i * 3));
+              const th = i / n * TAU21 + hash8(s.seed + i);
+              const rr = R4 * (0.3 + 0.6 * hash8(s.seed + i * 3));
               s.pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, L: 0.9, ang: th, delay: i * 0.03, seed: i });
             }
           }
-          SHAPES2.arms.air(g, { ...s, big: R3 > 2 }, k, a, c);
+          SHAPES2.arms.air(g, { ...s, big: R4 > 2 }, k, a, c);
           break;
         }
         case "gravity": {
@@ -81515,7 +82064,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.lineCap = "round";
           g.beginPath();
           for (let i = 0; i < 8; i++) {
-            const x = (hash8(s.seed + i) - 0.5) * R3 * 1.6, y0 = -3 + (c.t * 3 + hash8(s.seed + i * 3)) % 1 * 3;
+            const x = (hash8(s.seed + i) - 0.5) * R4 * 1.6, y0 = -3 + (c.t * 3 + hash8(s.seed + i * 3)) % 1 * 3;
             g.moveTo(x, y0 - 0.6);
             g.lineTo(x, y0);
           }
@@ -81525,12 +82074,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         case "field": {
           for (let i = 0; i < 5; i++) {
             const ph = (c.t * 0.8 + hash8(s.seed + i)) % 1;
-            const x = (hash8(s.seed + i * 7 + Math.floor(c.t * 0.8 + hash8(s.seed + i))) - 0.5) * R3 * 1.4, y = (hash8(s.seed + i * 11) - 0.5) * R3 * 0.8;
+            const x = (hash8(s.seed + i * 7 + Math.floor(c.t * 0.8 + hash8(s.seed + i))) - 0.5) * R4 * 1.4, y = (hash8(s.seed + i * 11) - 0.5) * R4 * 0.8;
             g.globalAlpha = a * (1 - ph) * 0.7;
             g.strokeStyle = s.color;
             g.lineWidth = 0.025;
             g.beginPath();
-            g.arc(x, y - ph * 0.3, 0.06 + ph * 0.12, 0, TAU20);
+            g.arc(x, y - ph * 0.3, 0.06 + ph * 0.12, 0, TAU21);
             g.stroke();
           }
           break;
@@ -81551,7 +82100,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render/fx3d.js
-  var TAU21 = Math.PI * 2;
+  var TAU22 = Math.PI * 2;
   var CULL = -9e3;
   var MAX_SC = 380;
   var MIN_SC = 1;
@@ -81654,11 +82203,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     return runs;
   }
-  function circlePts(x, y, R3, h2, n = 40, a0 = 0, a1 = TAU21, wob) {
+  function circlePts(x, y, R4, h2, n = 40, a0 = 0, a1 = TAU22, wob) {
     const pts = [];
     for (let i = 0; i <= n; i++) {
       const th = a0 + (a1 - a0) * (i / n);
-      const rr = wob ? R3 * (1 + wob(th)) : R3;
+      const rr = wob ? R4 * (1 + wob(th)) : R4;
       pts.push([x + Math.cos(th) * rr, y + Math.sin(th) * rr, h2]);
     }
     return pts;
@@ -81789,7 +82338,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const h2 = Math.min(s.z ?? 0.4, 0.12);
     const n = Math.max(16, Math.min(56, Math.round(rad * 10)));
     const wob = s.wobble ? (th) => s.wobble * (1 - k) * Math.sin(th * (s.lobes || 9) + c.t * 40) : null;
-    const runs = ringRuns(r, circlePts(s.x, s.y, rad, h2, n, 0, TAU21, wob));
+    const runs = ringRuns(r, circlePts(s.x, s.y, rad, h2, n, 0, TAU22, wob));
     if (!runs.length) return;
     g.globalCompositeOperation = s.add ? "lighter" : "source-over";
     if (s.fill && runs.length === 1 && runs[0].length > n) fillRuns(g, r, runs, s.fill === true ? s.color : s.fill, alpha2 * 0.22);
@@ -81810,7 +82359,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       inner = [[s.x, s.y, h2], ...circlePts(s.x, s.y, s.r * easeOut2(k), h2, 18, a0, a1), [s.x, s.y, h2]];
     } else if (s.shape === "line") {
       const ca = Math.cos(s.angle), sa = Math.sin(s.angle), hw = s.width / 2;
-      const rect = (L2) => {
+      const rect2 = (L2) => {
         const pts = [];
         const n = Math.max(2, Math.ceil(L2 / 1.5));
         for (let i = 0; i <= n; i++) {
@@ -81824,8 +82373,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         pts.push(pts[0]);
         return pts;
       };
-      outline = rect(s.length);
-      inner = rect(s.length * easeOut2(k));
+      outline = rect2(s.length);
+      inner = rect2(s.length * easeOut2(k));
     } else return;
     const R1 = ringRuns(r, outline), R22 = ringRuns(r, inner);
     if (!R1.length) return;
@@ -81835,41 +82384,41 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function dome3d(g, r, s, layer, c) {
     const grow = easeOut2(Math.min(1, (s.age || 0) / 0.35));
-    const R3 = s.r * grow;
-    if (R3 < 0.05) return;
+    const R4 = s.r * grow;
+    if (R4 < 0.05) return;
     const col = s.color || "#ffffff";
     if (layer === "ground") {
-      const runs = ringRuns(r, circlePts(s.x, s.y, R3, 0.04, 48));
+      const runs = ringRuns(r, circlePts(s.x, s.y, R4, 0.04, 48));
       if (runs.length === 1 && runs[0].length > 40) fillRuns(g, r, runs, col, 0.1);
       strokeRuns(g, r, runs, 0.06, col, 0.7);
       return;
     }
-    const H2 = R3 * (s.hk ?? 0.55) * 1.6;
+    const H3 = R4 * (s.hk ?? 0.55) * 1.6;
     g.globalCompositeOperation = "lighter";
     const nM = s.kind === "cage" ? 16 : 10;
     for (let i = 0; i < nM; i++) {
-      const th = i / nM * TAU21 + (s.kind === "room" ? c.t * 0.15 : 0);
+      const th = i / nM * TAU22 + (s.kind === "room" ? c.t * 0.15 : 0);
       const pts = [];
       for (let j = 0; j <= 10; j++) {
         const ph = j / 10 * (Math.PI / 2);
-        pts.push([s.x + Math.cos(th) * Math.cos(ph) * R3, s.y + Math.sin(th) * Math.cos(ph) * R3, Math.sin(ph) * H2]);
+        pts.push([s.x + Math.cos(th) * Math.cos(ph) * R4, s.y + Math.sin(th) * Math.cos(ph) * R4, Math.sin(ph) * H3]);
       }
       strokeRuns(g, r, ringRuns(r, pts), s.kind === "cage" ? 0.03 : 0.025, col, s.kind === "cage" ? 0.75 : 0.35);
     }
     for (const f of [0.35, 0.7]) {
-      const rr = R3 * Math.cos(f * Math.PI / 2), hh = Math.sin(f * Math.PI / 2) * H2;
+      const rr = R4 * Math.cos(f * Math.PI / 2), hh = Math.sin(f * Math.PI / 2) * H3;
       strokeRuns(g, r, ringRuns(r, circlePts(s.x, s.y, rr, hh, 36)), 0.025, col, 0.3);
     }
     g.globalCompositeOperation = "source-over";
   }
   function zone3d(fx, g, r, s, layer, k, c) {
-    const R3 = s.r * easeOut2(Math.min(1, (s.age || 0) / 0.3));
-    if (R3 < 0.05) return;
+    const R4 = s.r * easeOut2(Math.min(1, (s.age || 0) / 0.3));
+    if (R4 < 0.05) return;
     const col = s.color || "#ffffff";
     const zA = s.endT !== void 0 ? Math.max(0, s.endT / 0.35) : 1;
     if (layer === "ground") {
-      const n = Math.max(24, Math.min(64, Math.round(R3 * 8)));
-      const runs = ringRuns(r, circlePts(s.x, s.y, R3, 0.04, n));
+      const n = Math.max(24, Math.min(64, Math.round(R4 * 8)));
+      const runs = ringRuns(r, circlePts(s.x, s.y, R4, 0.04, n));
       if (!runs.length) return;
       const whole = runs.length === 1 && runs[0].length > n;
       const fillCol = s.kind === "dark" ? "#12001c" : s.kind === "ice" ? "#e1f5fe" : col;
@@ -81878,20 +82427,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (s.kind === "gravity" || s.kind === "dark" || s.kind === "storm") {
         for (let i = 0; i < 3; i++) {
           const ph = (c.t * 0.9 + i / 3) % 1;
-          strokeRuns(g, r, ringRuns(r, circlePts(s.x, s.y, R3 * (1 - ph), 0.04, 32)), 0.04, s.kind === "dark" ? "#b388ff" : col, 0.45 * ph * zA);
+          strokeRuns(g, r, ringRuns(r, circlePts(s.x, s.y, R4 * (1 - ph), 0.04, 32)), 0.04, s.kind === "dark" ? "#b388ff" : col, 0.45 * ph * zA);
         }
       }
       return;
     }
     if (s.kind === "cage") {
-      dome3d(g, r, { ...s, r: R3, age: 9, hk: 0.6 }, "air", c);
+      dome3d(g, r, { ...s, r: R4, age: 9, hk: 0.6 }, "air", c);
       return;
     }
     if (s.kind === "thunder") {
-      const B4 = bill(r, s.x, s.y, 4.5 + R3 * 0.3);
+      const B4 = bill(r, s.x, s.y, 4.5 + R4 * 0.3);
       if (!B4) return;
       setBill(g, r, B4);
-      drawShapeLayer(g, { ...s, type: "cloud", r: Math.max(1.4, R3 * 0.9), z: 0, color: "#37474f" }, "air", 0, 1, c);
+      drawShapeLayer(g, { ...s, type: "cloud", r: Math.max(1.4, R4 * 0.9), z: 0, color: "#37474f" }, "air", 0, 1, c);
       return;
     }
     if (s.kind === "storm" || s.kind === "arms" || s.kind === "gravity" || s.kind === "field") {
@@ -82120,7 +82669,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const heavy = (def.steps || []).some((st) => st.hit && st.hit.heavy || st.dash && st.dash.hit && st.dash.hit.heavy);
     const blade2 = clip2.weapon === "sword" || clip2.weapon === "axe" || clip2.weapon === "staff";
     const col = vis.blade || vis.fx && vis.fx.color || (blade2 ? "#e3f2fd" : "#ffffff");
-    const W3 = r.cw * r.dpr, H2 = r.ch * r.dpr;
+    const W4 = r.cw * r.dpr, H3 = r.ch * r.dpr;
     const side = clip2.limb === "hB" || clip2.limb === "fB" || clip2.limb === "wB" ? -1 : 1;
     const fade2 = t > t1 ? 1 - (t - t1) / 0.12 : 1;
     const u = clamp017((t - t0) / (t1 - t0));
@@ -82137,10 +82686,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = 0.45 * k2 * fade2;
         g.strokeStyle = col;
         g.lineCap = "round";
-        g.lineWidth = H2 * 0.012;
+        g.lineWidth = H3 * 0.012;
         g.beginPath();
-        g.moveTo((sx + (ex - sx) * ph * 0.5) * W3, (sy + (ey - sy) * ph * 0.5) * H2);
-        g.lineTo((sx + (ex - sx) * ph) * W3, (sy + (ey - sy) * ph) * H2);
+        g.moveTo((sx + (ex - sx) * ph * 0.5) * W4, (sy + (ey - sy) * ph * 0.5) * H3);
+        g.lineTo((sx + (ex - sx) * ph) * W4, (sy + (ey - sy) * ph) * H3);
         g.stroke();
       }
       g.globalCompositeOperation = "source-over";
@@ -82150,18 +82699,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (kind === "shot") {
       if (t < (def.windup ?? 0.1) || t > (def.windup ?? 0.1) + 0.08) return;
       const k2 = 1 - (t - (def.windup ?? 0.1)) / 0.08;
-      const x = 0.62 * W3, y = 0.8 * H2;
+      const x = 0.62 * W4, y = 0.8 * H3;
       g.globalAlpha = 0.8 * k2;
       g.fillStyle = "#fff59d";
       g.beginPath();
-      g.arc(x, y, H2 * 0.03 * (1 + (1 - k2)), 0, TAU21);
+      g.arc(x, y, H3 * 0.03 * (1 + (1 - k2)), 0, TAU22);
       g.fill();
       g.globalAlpha = 0.5 * k2;
       g.strokeStyle = "#ffe082";
-      g.lineWidth = H2 * 6e-3;
+      g.lineWidth = H3 * 6e-3;
       g.beginPath();
       g.moveTo(x, y);
-      g.lineTo(0.5 * W3, 0.5 * H2);
+      g.lineTo(0.5 * W4, 0.5 * H3);
       g.stroke();
       g.globalCompositeOperation = "source-over";
       g.globalAlpha = 1;
@@ -82170,7 +82719,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const P4 = smearPath(kind, side, clip2.sweep || 1);
     const head = easeOut2(u), tail2 = kind === "straight" ? Math.max(0, head - 0.55) : clamp017((u - 0.2) / 0.8) ** 2;
     if (head - tail2 < 0.02) return;
-    const wMax = H2 * (kind === "straight" ? 0.026 : blade2 ? 0.042 : 0.032) * (heavy ? 1.35 : 1);
+    const wMax = H3 * (kind === "straight" ? 0.026 : blade2 ? 0.042 : 0.032) * (heavy ? 1.35 : 1);
     const N4 = 22;
     const outer = [], inner = [], mid = [];
     for (let i = 0; i <= N4; i++) {
@@ -82178,13 +82727,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const [x, y] = P4(v);
       const [x2, y2] = P4(Math.min(1, v + 0.01));
       const [x0, y0] = P4(Math.max(0, v - 0.01));
-      const dx = (x2 - x0) * W3, dy = (y2 - y0) * H2, l = Math.hypot(dx, dy) || 1;
+      const dx = (x2 - x0) * W4, dy = (y2 - y0) * H3, l = Math.hypot(dx, dy) || 1;
       const nx = -dy / l, ny = dx / l;
       const qq = i / N4;
       const wd = wMax * Math.pow(qq, 0.75) * (1 - 0.35 * Math.pow(qq, 8));
-      outer.push([x * W3 + nx * wd * 0.5, y * H2 + ny * wd * 0.5]);
-      inner.push([x * W3 - nx * wd * 0.5, y * H2 - ny * wd * 0.5]);
-      mid.push([x * W3 + nx * wd * 0.22, y * H2 + ny * wd * 0.22]);
+      outer.push([x * W4 + nx * wd * 0.5, y * H3 + ny * wd * 0.5]);
+      inner.push([x * W4 - nx * wd * 0.5, y * H3 - ny * wd * 0.5]);
+      mid.push([x * W4 + nx * wd * 0.22, y * H3 + ny * wd * 0.22]);
     }
     const a = Math.min(1, 0.8 + (heavy ? 0.15 : 0)) * fade2;
     g.globalCompositeOperation = "source-over";
@@ -82203,7 +82752,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.lineCap = "round";
     g.lineJoin = "round";
     g.strokeStyle = rgba2(col === "#ffffff" ? "#90a4ae" : col, 1);
-    g.lineWidth = Math.max(1, H2 * 25e-4);
+    g.lineWidth = Math.max(1, H3 * 25e-4);
     g.globalAlpha = 0.45 * a;
     g.beginPath();
     for (let i = Math.floor(N4 * 0.3); i <= N4; i++) {
@@ -82222,13 +82771,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.stroke();
     }
     if (kind === "straight" && u < 1) {
-      g.lineWidth = Math.max(1, H2 * 3e-3);
+      g.lineWidth = Math.max(1, H3 * 3e-3);
       g.globalAlpha = 0.5 * a;
       const [hx, hy] = P4(head);
       g.beginPath();
       for (let i = -1; i <= 1; i++) {
-        g.moveTo(hx * W3 + i * H2 * 0.022, hy * H2 + H2 * 0.06);
-        g.lineTo(hx * W3 + i * H2 * 0.034, hy * H2 + H2 * 0.15);
+        g.moveTo(hx * W4 + i * H3 * 0.022, hy * H3 + H3 * 0.06);
+        g.lineTo(hx * W4 + i * H3 * 0.034, hy * H3 + H3 * 0.15);
       }
       g.stroke();
     }
@@ -82236,31 +82785,31 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.globalAlpha = 1;
   }
   function edges(fx, g, r, p) {
-    const W3 = r.cw * r.dpr, H2 = r.ch * r.dpr;
+    const W4 = r.cw * r.dpr, H3 = r.ch * r.dpr;
     const aura = (p.buffs || []).find((b) => b.aura)?.aura || (p.conquerorInfused ? "rgba(20,0,20,0.9)" : null);
     g.setTransform(1, 0, 0, 1, 0, 0);
     if (aura) {
       const pulse = 0.14 + 0.05 * Math.sin(fx.time * 7);
-      const gr = g.createRadialGradient(W3 / 2, H2 / 2, Math.min(W3, H2) * 0.42, W3 / 2, H2 / 2, Math.hypot(W3, H2) * 0.55);
+      const gr = g.createRadialGradient(W4 / 2, H3 / 2, Math.min(W4, H3) * 0.42, W4 / 2, H3 / 2, Math.hypot(W4, H3) * 0.55);
       gr.addColorStop(0, rgba2(aura, 0));
       gr.addColorStop(1, rgba2(aura, pulse * 2.2));
       g.globalAlpha = 1;
       g.fillStyle = gr;
-      g.fillRect(0, 0, W3, H2);
+      g.fillRect(0, 0, W4, H3);
     }
     const hf = p.hitFx;
     const since = hf ? fx.game.env.time - hf.t0 : 9;
     if (hf && since >= 0 && since < 0.35) {
       const from = (hf.ang ?? 0) + Math.PI;
       const rel2 = from - (r.yaw || 0);
-      const cx = W3 / 2 + Math.sin(rel2) * W3 * 0.55, cy = H2 / 2 - Math.cos(rel2) * H2 * 0.55;
+      const cx = W4 / 2 + Math.sin(rel2) * W4 * 0.55, cy = H3 / 2 - Math.cos(rel2) * H3 * 0.55;
       const k = (1 - since / 0.35) * Math.min(1, 0.5 + (hf.w || 0.5));
-      const gr = g.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W3, H2) * 0.6);
+      const gr = g.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W4, H3) * 0.6);
       gr.addColorStop(0, `rgba(255,40,30,${0.42 * k})`);
       gr.addColorStop(1, "rgba(255,40,30,0)");
       g.globalAlpha = 1;
       g.fillStyle = gr;
-      g.fillRect(0, 0, W3, H2);
+      g.fillRect(0, 0, W4, H3);
     }
   }
   function teleWarn(fx, g, r, p) {
@@ -82282,32 +82831,32 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (hit) inside2 = Math.max(inside2, s.max > 0 ? 1 - s.life / s.max : 1);
     }
     if (!inside2) return;
-    const W3 = r.cw * r.dpr, H2 = r.ch * r.dpr;
+    const W4 = r.cw * r.dpr, H3 = r.ch * r.dpr;
     const pulse = 0.5 + 0.5 * Math.sin(fx.time * 22);
     g.setTransform(1, 0, 0, 1, 0, 0);
-    const gr = g.createLinearGradient(0, H2, 0, H2 * 0.62);
+    const gr = g.createLinearGradient(0, H3, 0, H3 * 0.62);
     gr.addColorStop(0, `rgba(255,50,40,${0.28 + 0.2 * inside2 + 0.12 * pulse})`);
     gr.addColorStop(1, "rgba(255,50,40,0)");
     g.globalAlpha = 1;
     g.fillStyle = gr;
-    g.fillRect(0, H2 * 0.62, W3, H2 * 0.38);
+    g.fillRect(0, H3 * 0.62, W4, H3 * 0.38);
   }
   function dashLines(fx, g, r, p) {
     const d = p.dash;
     if (!d || !(d.t > 0)) return;
     const k = Math.min(1, d.t / (d.t0 || 0.2));
-    const W3 = r.cw * r.dpr, H2 = r.ch * r.dpr, cx = W3 / 2, cy = H2 / 2;
+    const W4 = r.cw * r.dpr, H3 = r.ch * r.dpr, cx = W4 / 2, cy = H3 / 2;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalAlpha = 0.55 * k;
     g.fillStyle = "#ffffff";
-    const R3 = Math.hypot(W3, H2) * 0.55, n = 40;
+    const R4 = Math.hypot(W4, H3) * 0.55, n = 40;
     g.beginPath();
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU21 + i * 7919 % 17 * 0.013 + fx.time * 0.3;
-      const r0 = R3 * (0.62 + i * 131 % 7 * 0.04), wd = 4e-3 + i * 53 % 5 * 2e-3;
-      g.moveTo(cx + Math.cos(a) * R3 * 1.3, cy + Math.sin(a) * R3 * 1.3);
+      const a = i / n * TAU22 + i * 7919 % 17 * 0.013 + fx.time * 0.3;
+      const r0 = R4 * (0.62 + i * 131 % 7 * 0.04), wd = 4e-3 + i * 53 % 5 * 2e-3;
+      g.moveTo(cx + Math.cos(a) * R4 * 1.3, cy + Math.sin(a) * R4 * 1.3);
       g.lineTo(cx + Math.cos(a + wd) * r0, cy + Math.sin(a + wd) * r0);
-      g.lineTo(cx + Math.cos(a + wd * 2) * R3 * 1.3, cy + Math.sin(a + wd * 2) * R3 * 1.3);
+      g.lineTo(cx + Math.cos(a + wd * 2) * R4 * 1.3, cy + Math.sin(a + wd * 2) * R4 * 1.3);
     }
     g.fill();
     g.globalAlpha = 1;
@@ -82319,23 +82868,23 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const out = p.oxygen <= 0;
     const k = out ? 0.6 + Math.min(0.35, 0.08 + (p.drownT || 0) * 0.05) : f < 0.3 ? (0.3 - f) / 0.3 * 0.5 : 0;
     if (k <= 0.01) return;
-    const W3 = r.cw * r.dpr, H2 = r.ch * r.dpr;
+    const W4 = r.cw * r.dpr, H3 = r.ch * r.dpr;
     const beat4 = Math.pow(Math.abs(Math.sin(fx.time * (2.4 + k * 2.2))), 10);
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalAlpha = 1;
-    const inner = Math.min(W3, H2) * Math.max(0.06, 0.5 - k * 0.44), outer = Math.hypot(W3, H2) * 0.55;
-    const gr = g.createRadialGradient(W3 / 2, H2 / 2, inner, W3 / 2, H2 / 2, outer);
+    const inner = Math.min(W4, H3) * Math.max(0.06, 0.5 - k * 0.44), outer = Math.hypot(W4, H3) * 0.55;
+    const gr = g.createRadialGradient(W4 / 2, H3 / 2, inner, W4 / 2, H3 / 2, outer);
     gr.addColorStop(0, "rgba(1,6,16,0)");
     gr.addColorStop(0.55, `rgba(1,6,16,${Math.min(0.9, k * 0.8 * (0.85 + 0.3 * beat4))})`);
     gr.addColorStop(1, `rgba(1,6,16,${Math.min(0.98, k * 1.3 * (0.85 + 0.3 * beat4))})`);
     g.fillStyle = gr;
-    g.fillRect(0, 0, W3, H2);
+    g.fillRect(0, 0, W4, H3);
     if (out) {
-      const rg2 = g.createRadialGradient(W3 / 2, H2 / 2, inner * 0.8, W3 / 2, H2 / 2, outer);
+      const rg2 = g.createRadialGradient(W4 / 2, H3 / 2, inner * 0.8, W4 / 2, H3 / 2, outer);
       rg2.addColorStop(0, "rgba(150,0,10,0)");
       rg2.addColorStop(1, `rgba(150,0,10,${0.1 + 0.3 * beat4})`);
       g.fillStyle = rg2;
-      g.fillRect(0, 0, W3, H2);
+      g.fillRect(0, 0, W4, H3);
     }
   }
   function drawScreen3d(fx, g, r) {
@@ -83146,7 +83695,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** Screen-space post effects (impact frames, flashes, slow-mo vignette, focus lines). */
     drawScreen(g, r) {
-      const W3 = r.canvas.width, H2 = r.canvas.height;
+      const W4 = r.canvas.width, H3 = r.canvas.height;
       if (r.is3d) {
         try {
           drawScreen3d(this, g, r);
@@ -83162,17 +83711,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = Math.min(1, k * 1.6) * 0.8;
         g.fillStyle = "#ffffff";
         const cx = fx * r.dpr, cy = fy * r.dpr;
-        const R3 = Math.hypot(W3, H2);
-        const inner = Math.min(W3, H2) * (0.22 + 0.1 * (1 - k));
+        const R4 = Math.hypot(W4, H3);
+        const inner = Math.min(W4, H3) * (0.22 + 0.1 * (1 - k));
         g.beginPath();
         const n = 48;
         for (let i = 0; i < n; i++) {
           const a = i / n * TAU + i * 7919 % 13 * 0.01;
           const wdt = 6e-3 + i * 104729 % 7 * 25e-4;
           const r0 = inner * (0.9 + i * 31 % 5 * 0.08);
-          g.moveTo(cx + Math.cos(a) * R3, cy + Math.sin(a) * R3);
+          g.moveTo(cx + Math.cos(a) * R4, cy + Math.sin(a) * R4);
           g.lineTo(cx + Math.cos(a + wdt) * r0, cy + Math.sin(a + wdt) * r0);
-          g.lineTo(cx + Math.cos(a + wdt * 2) * R3, cy + Math.sin(a + wdt * 2) * R3);
+          g.lineTo(cx + Math.cos(a + wdt * 2) * R4, cy + Math.sin(a + wdt * 2) * R4);
         }
         g.fill();
         g.globalAlpha = 1;
@@ -83180,17 +83729,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (this.slow && this._slowOwned) {
         const k = Math.min(1, this.slow.t / Math.max(0.01, this.slow.max) * 1.5);
         g.setTransform(1, 0, 0, 1, 0, 0);
-        const gr = g.createRadialGradient(W3 / 2, H2 / 2, Math.min(W3, H2) * 0.3, W3 / 2, H2 / 2, Math.max(W3, H2) * 0.7);
+        const gr = g.createRadialGradient(W4 / 2, H3 / 2, Math.min(W4, H3) * 0.3, W4 / 2, H3 / 2, Math.max(W4, H3) * 0.7);
         gr.addColorStop(0, "rgba(0,0,0,0)");
         gr.addColorStop(1, `rgba(10,10,30,${0.45 * k})`);
         g.fillStyle = gr;
-        g.fillRect(0, 0, W3, H2);
+        g.fillRect(0, 0, W4, H3);
       }
       if (this.impact > 0 && !(r.is3d && this.game.view3d?.post)) {
         g.setTransform(1, 0, 0, 1, 0, 0);
         g.globalCompositeOperation = "difference";
         g.fillStyle = this.impactColor || "#ffffff";
-        g.fillRect(0, 0, W3, H2);
+        g.fillRect(0, 0, W4, H3);
         g.globalCompositeOperation = "source-over";
       }
       if (this.flash > 0) {
@@ -83198,7 +83747,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const c = this.flashColor;
         g.fillStyle = c ? c : "#ffffff";
         g.globalAlpha = Math.min(1, this.flash * 2);
-        g.fillRect(0, 0, W3, H2);
+        g.fillRect(0, 0, W4, H3);
         g.globalAlpha = 1;
       }
     }
@@ -83384,8 +83933,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     return true;
   }
-  var R = 36;
-  var N3 = 2 * R + 1;
+  var R2 = 36;
+  var N3 = 2 * R2 + 1;
   var CELLS = N3 * N3;
   var G = new Float32Array(CELLS);
   var F3 = new Float32Array(CELLS);
@@ -83396,13 +83945,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var SQ2 = Math.SQRT2;
   var DIRS = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, SQ2], [1, -1, SQ2], [-1, 1, SQ2], [-1, -1, SQ2]];
   function findPath(w, sx, sy, tx, ty, r = 0.3, maxNodes = 2600) {
-    const ox = Math.floor(sx) - R, oy = Math.floor(sy) - R;
+    const ox = Math.floor(sx) - R2, oy = Math.floor(sy) - R2;
     let gx = Math.floor(sx + w.dx(sx, tx)) - ox, gy = Math.floor(ty) - oy;
     const far = gx < 0 || gy < 0 || gx >= N3 || gy >= N3;
     if (far) {
-      const dx = gx - R, dy = gy - R, m = Math.max(Math.abs(dx), Math.abs(dy));
-      gx = R + Math.round(dx / m * (R - 1));
-      gy = R + Math.round(dy / m * (R - 1));
+      const dx = gx - R2, dy = gy - R2, m = Math.max(Math.abs(dx), Math.abs(dy));
+      gx = R2 + Math.round(dx / m * (R2 - 1));
+      gy = R2 + Math.round(dy / m * (R2 - 1));
     }
     STATE2.fill(0);
     OK.fill(0);
@@ -83446,7 +83995,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       return top;
     };
-    const si = R, sj = R, sk = sj * N3 + si;
+    const si = R2, sj = R2, sk = sj * N3 + si;
     G[sk] = 0;
     F3[sk] = h2(si, sj);
     FROM[sk] = -1;
@@ -84388,6 +84937,110 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return Math.max(RENDER_DIST.min, Math.min(RENDER_DIST.max, Math.round(n)));
   }
 
+  // src/game/fleet.js
+  var uidCounter = 0;
+  var fleetOf = (c) => c.fleet || (c.fleet = []);
+  var record = (s) => ({ uid: s.uid, type: s.type, name: s.name, upgrades: (s.upgrades || []).slice(), coated: !!s.coated, shot: s.shot });
+  function recordShip(c, s) {
+    if (!c || !s?.uid || !SHIPS[s.type]) return null;
+    const f = fleetOf(c);
+    const e = f.find((x) => x.uid === s.uid);
+    if (!e) {
+      const r = record(s);
+      f.push(r);
+      return r;
+    }
+    return Object.assign(e, record(s));
+  }
+  function dropShip(c, uid) {
+    if (!c?.fleet) return;
+    c.fleet = c.fleet.filter((x) => x.uid !== uid);
+    if (c.activeShip === uid) c.activeShip = null;
+  }
+  function upgradeFleet(c) {
+    if (Array.isArray(c.fleet)) return c;
+    c.fleet = [];
+    for (const s of [...c.ships || [], ...c.zoneShips || []]) {
+      if (!s || !SHIPS[s.type]) continue;
+      s.uid = s.uid || `s${Date.now().toString(36)}o${uidCounter++}`;
+      if (!c.fleet.some((x) => x.uid === s.uid)) c.fleet.push(record(s));
+    }
+    return c;
+  }
+  function liveShips(game) {
+    const all = game.stashedShips ? [...game.ships, ...game.stashedShips()] : game.ships;
+    return all.filter((s) => s.owner === "player" && !s.sunk && s.alive !== false);
+  }
+  var liveShip = (game, uid) => liveShips(game).find((s) => s.uid === uid) || null;
+  function ownsShip(game, pred = () => true) {
+    const f = game.state?.char?.fleet;
+    if (f?.length) return f.some((e) => SHIPS[e.type] && pred(shipStats(e.type, e.upgrades)));
+    return (game.ships || []).some((s) => s.owner === "player" && !s.sunk && pred(s.def));
+  }
+  var aboard = (p, s) => !!p && !!s && (p.mode === "sail" && p.ship === s || p.deck?.ship === s);
+  function dockOf(w, s) {
+    let best = null, bd = Infinity;
+    for (const isl of w.islands || []) {
+      const R4 = (isl.radius || 0) + 80;
+      if (!isl.docks?.length || Math.abs(w.dx(isl.x, s.x)) > R4 || Math.abs(isl.y - s.y) > R4) continue;
+      for (const dk3 of isl.docks) {
+        const e = dk3.end || dk3;
+        const d = w.distance(s.x, s.y, e.x + 0.5, e.y + 0.5);
+        if (d < s.def.length * 0.6 + (dk3.headHalf ?? 2) + 6 && d < bd) {
+          bd = d;
+          best = dk3;
+        }
+      }
+    }
+    return best;
+  }
+  function layUp(game, s) {
+    const p = game.player;
+    recordShip(game.state?.char, s);
+    for (const a of s.aboard || []) if (a !== p && a.deck?.ship === s) a.deck = null;
+    s.aboard?.clear?.();
+    s.captain = null;
+    s.passengers = [];
+    s.alive = false;
+    game.ships = game.ships.filter((x) => x !== s);
+  }
+  function launchShip(game, rec, dock) {
+    const c = game.state.char, p = game.player, w = game.world;
+    const old = rec.uid ? liveShip(game, rec.uid) : null;
+    if (old && aboard(p, old)) return { why: "aboard", ship: old };
+    if (old && dockOf(w, old) === dock) return { why: "here", ship: old };
+    const laidUp = [];
+    for (const o of liveShips(game)) {
+      if (o === old || aboard(p, o) || dockOf(w, o) !== dock) continue;
+      layUp(game, o);
+      laidUp.push(o.name);
+    }
+    if (old) layUp(game, old);
+    const e = rec.uid && fleetOf(c).find((x) => x.uid === rec.uid) || rec;
+    const s = game.giveShip(e.type, dock.moor.x, dock.moor.y, e.name, { uid: e.uid, upgrades: (e.upgrades || []).slice(), coated: e.coated, shot: e.shot });
+    if (s.shipIn(game, s.x, s.y, s.heading)) s.unstick(w, true);
+    s.anchored = true;
+    s.speed = 0;
+    if (p.mode !== "sail") p.ship = s;
+    c.activeShip = s.uid;
+    return { ship: s, laidUp };
+  }
+  function orderShip(game, type, name, from) {
+    const c = game.state?.char;
+    if (!c || !SHIPS[type]) return null;
+    const e = { uid: `s${Date.now().toString(36)}n${uidCounter++}`, type, name, upgrades: [], coated: false, from };
+    fleetOf(c).push(e);
+    game.ui?.toast("A SHIP FOR YOU", `${name} (${SHIPS[type].name}): any harbour's shipwright will bring her round`, "#ffe082");
+    game.log?.(`${from ? from[0].toUpperCase() + from.slice(1) + " assigns you" : "You are assigned"} the ${name}, a ${SHIPS[type].name}. The shipwright on any pier can bring her round (Spawn ship).`, "#ffe082");
+    return e;
+  }
+  function installFleet(game) {
+    game.on("shipSunk", (s) => {
+      if (s.owner === "player" && s.uid) dropShip(game.state?.char, s.uid);
+    });
+    game.ownsShip = (pred) => ownsShip(game, pred);
+  }
+
   // src/game/lineage.js
   var TRAITS = {
     will_of_d: { name: "Will of D.", rarity: "legendary", weight: 0, desc: `Your name carries a hidden "D." \u2014 the mark of those who laugh in the face of death. Fate bends around you, and the world's powers will come to fear the name.`, attrs: { wil: 3 } },
@@ -84523,6 +85176,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       inventory,
       equipped,
       ships: [],
+      fleet: [],
+      // every ship you own (see fleet.js); `ships` is where those afloat lie
       crew: [],
       discovered: [],
       logPose: { has: false, target: null, last: null, progress: 0, needles: 1 },
@@ -84621,6 +85276,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     c.legends = c.legends || [];
     if (c.crewName === void 0) c.crewName = c.faction === "pirate" && c.jr ? `${c.name.split(" ")[0]} Pirates` : null;
     if (!c.crewName) c.jr = null;
+    upgradeFleet(c);
     if (c.unspent > 0) {
       const keys = ["str", "agi", "end", "vit", "wil"];
       for (let i = 0; i < c.unspent; i++) {
@@ -84687,7 +85343,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     c.world.day = game.env.day;
     c.world.clock = game.env.clock;
     c.pos = { x: p.x, y: p.y, zone: game.world.id, mode: p.mode };
-    c.ships = game.ships.filter((s) => s.owner === "player" && !s.sunk).map((s) => ({
+    const afloat = liveShips(game);
+    c.ships = afloat.map((s) => ({
       uid: s.uid,
       type: s.type,
       name: s.name,
@@ -84700,6 +85357,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       coated: s.coated,
       shot: s.shot
     }));
+    for (const s of afloat) recordShip(c, s);
     c.activeShip = p.ship && !p.ship.sunk ? p.ship.uid : c.activeShip;
     c.fogSurface = game.surface ? encodeFog(game.surface.fog) : c.fogSurface;
     c.hintsShown = [...game.hintsShown];
@@ -85889,43 +86547,43 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     drawWeather(g, r) {
       const env = this.env;
       g.setTransform(1, 0, 0, 1, 0, 0);
-      const W3 = r.canvas.width, H2 = r.canvas.height;
+      const W4 = r.canvas.width, H3 = r.canvas.height;
       const zk = this.world.zone;
       if (zk === 2) {
         g.fillStyle = "rgba(0,70,130,0.16)";
-        g.fillRect(0, 0, W3, H2);
+        g.fillRect(0, 0, W4, H3);
         g.fillStyle = "rgba(255,255,255,0.05)";
         for (let k = 0; k < 4; k++) {
-          const x = (k * 431 + env.time * 12) % (W3 + 400) - 200;
+          const x = (k * 431 + env.time * 12) % (W4 + 400) - 200;
           g.beginPath();
           g.moveTo(x, 0);
           g.lineTo(x + 120 * r.dpr, 0);
-          g.lineTo(x - 80 * r.dpr, H2);
-          g.lineTo(x - 180 * r.dpr, H2);
+          g.lineTo(x - 80 * r.dpr, H3);
+          g.lineTo(x - 180 * r.dpr, H3);
           g.fill();
         }
         g.strokeStyle = "rgba(220,245,255,0.5)";
         g.lineWidth = 1.2 * r.dpr;
         for (let i = 0; i < 40; i++) {
-          const x = (i * 173.3 + Math.sin(env.time + i) * 20) % W3;
-          const y = H2 - (i * 97.1 + env.time * (30 + i % 5 * 12)) % (H2 + 40);
+          const x = (i * 173.3 + Math.sin(env.time + i) * 20) % W4;
+          const y = H3 - (i * 97.1 + env.time * (30 + i % 5 * 12)) % (H3 + 40);
           g.beginPath();
           g.arc(x, y, (2 + i % 3) * r.dpr, 0, TAU);
           g.stroke();
         }
       } else if (zk === 3) {
-        const grd = g.createRadialGradient(W3 / 2, H2 / 2, Math.min(W3, H2) * 0.2, W3 / 2, H2 / 2, Math.max(W3, H2) * 0.7);
+        const grd = g.createRadialGradient(W4 / 2, H3 / 2, Math.min(W4, H3) * 0.2, W4 / 2, H3 / 2, Math.max(W4, H3) * 0.7);
         grd.addColorStop(0, "rgba(0,0,0,0)");
         grd.addColorStop(1, "rgba(10,0,0,0.75)");
         g.fillStyle = grd;
-        g.fillRect(0, 0, W3, H2);
+        g.fillRect(0, 0, W4, H3);
       } else if (zk === 1) {
-        const grd = g.createLinearGradient(0, 0, 0, H2);
+        const grd = g.createLinearGradient(0, 0, 0, H3);
         grd.addColorStop(0, "rgba(255,255,255,0.18)");
         grd.addColorStop(0.5, "rgba(255,255,255,0)");
         grd.addColorStop(1, "rgba(255,250,235,0.12)");
         g.fillStyle = grd;
-        g.fillRect(0, 0, W3, H2);
+        g.fillRect(0, 0, W4, H3);
       }
       const pl = this.player;
       const sheltered = !!(pl && (this.world.interiorAt?.(pl.x, pl.y) || this.view3d?.isUnder));
@@ -85937,8 +86595,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const n = Math.floor(env.rain * 260);
         const t = env.time;
         for (let i = 0; i < n; i++) {
-          const x = (i * 97.13 + t * 900 * (0.8 + i % 5 * 0.1)) % (W3 + 200) - 100;
-          const y = (i * 57.7 + t * 1400) % (H2 + 100) - 50;
+          const x = (i * 97.13 + t * 900 * (0.8 + i % 5 * 0.1)) % (W4 + 200) - 100;
+          const y = (i * 57.7 + t * 1400) % (H3 + 100) - 50;
           g.moveTo(x, y);
           g.lineTo(x - 8 * r.dpr - env.windX * 6, y + 22 * r.dpr);
         }
@@ -85949,32 +86607,32 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const n = Math.floor(env.snow * 200);
         const t = env.time;
         for (let i = 0; i < n; i++) {
-          const x = (i * 131.7 + t * 40 * (1 + i % 3) + Math.sin(t + i) * 30) % (W3 + 40) - 20;
-          const y = (i * 71.3 + t * 70 * (1 + i % 4 * 0.3)) % (H2 + 40) - 20;
+          const x = (i * 131.7 + t * 40 * (1 + i % 3) + Math.sin(t + i) * 30) % (W4 + 40) - 20;
+          const y = (i * 71.3 + t * 70 * (1 + i % 4 * 0.3)) % (H3 + 40) - 20;
           g.beginPath();
           g.arc(x, y, (1.2 + i % 3) * r.dpr, 0, TAU);
           g.fill();
         }
       }
       if (env.fog > 0.05 && flat) {
-        const grd = g.createRadialGradient(W3 / 2, H2 / 2, Math.min(W3, H2) * 0.15, W3 / 2, H2 / 2, Math.max(W3, H2) * 0.7);
+        const grd = g.createRadialGradient(W4 / 2, H3 / 2, Math.min(W4, H3) * 0.15, W4 / 2, H3 / 2, Math.max(W4, H3) * 0.7);
         grd.addColorStop(0, `rgba(210,215,225,${env.fog * 0.15})`);
         grd.addColorStop(1, `rgba(200,205,215,${env.fog * 0.85})`);
         g.fillStyle = grd;
-        g.fillRect(0, 0, W3, H2);
+        g.fillRect(0, 0, W4, H3);
       }
       if (env.lightning > 0.5) {
         g.fillStyle = `rgba(255,255,255,${(env.lightning - 0.5) * (flat ? 0.5 : 0.22)})`;
-        g.fillRect(0, 0, W3, H2);
+        g.fillRect(0, 0, W4, H3);
       }
       const p = this.player;
       if (p && p.d && p.hp / p.d.maxHp < 0.3 && p.state === "idle") {
         const k = 1 - p.hp / p.d.maxHp / 0.3;
-        const grd = g.createRadialGradient(W3 / 2, H2 / 2, Math.min(W3, H2) * 0.3, W3 / 2, H2 / 2, Math.max(W3, H2) * 0.65);
+        const grd = g.createRadialGradient(W4 / 2, H3 / 2, Math.min(W4, H3) * 0.3, W4 / 2, H3 / 2, Math.max(W4, H3) * 0.65);
         grd.addColorStop(0, "rgba(120,0,0,0)");
         grd.addColorStop(1, `rgba(140,0,0,${0.25 + k * 0.3 + Math.sin(env.time * 6) * 0.05})`);
         g.fillStyle = grd;
-        g.fillRect(0, 0, W3, H2);
+        g.fillRect(0, 0, W4, H3);
       }
     }
     regionName(x, y) {
@@ -86029,7 +86687,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/ui/style.css
-  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.held { border-color: var(--gold); box-shadow: 0 0 10px rgba(241,196,15,.55), 0 3px 8px rgba(0,0,0,.45); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #b8860b; font-size: 18px; }\n.wm-label.quest.main { color: #d35400; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: -1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.quest small { color: #ffd54f; }\n.compass .pin.ship small { color: #e3f2fd; }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n";
+  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.held { border-color: var(--gold); box-shadow: 0 0 10px rgba(241,196,15,.55), 0 3px 8px rgba(0,0,0,.45); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #b8860b; font-size: 18px; }\n.wm-label.quest.main { color: #d35400; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n/* the shipwright's menus: your ships and the ships for sale */\n.sw-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }\n.sw-head h2 { margin: 0; }\n.row-item.cant { opacity: .6; }\n.row-item.here { outline: 2px solid #b8860b; }\n.row-item .sub.warn { color: #b71c1c; opacity: 1; font-weight: 700; }\n.price.short { color: #b71c1c; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: -1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.quest small { color: #ffd54f; }\n.compass .pin.ship small { color: #e3f2fd; }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n";
 
   // src/ui/icon.js
   var img = (canvas2, px2, cls = "") => h("img.icon" + cls, { src: iconURL(canvas2), width: px2, height: px2, draggable: false, alt: "" });
@@ -86947,8 +87605,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           );
         } else {
           const o = outfitOf(L2);
-          const TOPS2 = [["tee", "Tee"], ["shirt", "Shirt"], ["tank", "Tank top"], ["vest", "Open vest"], ["open", "Open shirt"], ["striped", "Sailor stripes"], ["jacket", "Suit jacket"], ["kimono", "Kimono"], ["coat", "Long coat"], ["bare", "Bare-chested"]];
-          if (L2.fem) TOPS2.push(["crop", "Crop top"], ["bikini", "Bikini top"], ["dress", "Dress"]);
+          const TOPS3 = [["tee", "Tee"], ["shirt", "Shirt"], ["tank", "Tank top"], ["vest", "Open vest"], ["open", "Open shirt"], ["striped", "Sailor stripes"], ["jacket", "Suit jacket"], ["kimono", "Kimono"], ["coat", "Long coat"], ["bare", "Bare-chested"]];
+          if (L2.fem) TOPS3.push(["crop", "Crop top"], ["bikini", "Bikini top"], ["dress", "Dress"]);
           const BOTS = [["trousers", "Trousers"], ["shorts", "Shorts"], ["capri", "Rolled-up"], ["baggy", "Baggy"], ["slim", "Slim"], ["hakama", "Hakama"]];
           if (L2.fem) BOTS.push(["skirt", "Skirt"], ["longskirt", "Long skirt"]);
           const setTop = (v) => {
@@ -86962,7 +87620,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const two = ["striped", "jacket", "kimono", "coat"].includes(o.top);
           add2(
             optsEl,
-            row("Top", chips(o.top, TOPS2.map((t) => t[0]), TOPS2.map((t) => t[1]), setTop)),
+            row("Top", chips(o.top, TOPS3.map((t) => t[0]), TOPS3.map((t) => t[1]), setTop)),
             o.top !== "bare" ? row(o.top === "coat" ? "Coat colour" : "Colour", o.top === "coat" ? swatch("coat", ["#5d4037", "#37474f", "#1b5e20", "#4a148c", "#b71c1c", "#fafafa", "#212121", "#0d47a1"]) : swatch("top", COLS)) : null,
             two ? row(o.top === "striped" ? "Stripes" : o.top === "kimono" ? "Collar" : "Shirt under", swatch("top2", ["#f5f5f5", "#fff8e1", "#90caf9", "#212121", "#c62828", "#fce4ec", "#ffd54f"])) : null,
             row("Bottoms", chips(o.skirt && !L2.fem ? "trousers" : o.bottom, BOTS.map((t) => t[0]), BOTS.map((t) => t[1]), (v) => {
@@ -87927,8 +88585,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           return !!c.quests[g.quest]?.done || !!(g.alt && g.alt(c, game));
         case "weapon":
           return hasWeapon(c);
+        // (afloat or laid up in the yards: see fleet.js)
         case "ship":
-          return game.ships.some((sh) => sh.owner === "player" && !sh.sunk && (!g.grandLine || sh.def.grandLine) && (!g.cannons || (sh.def.cannons || 0) >= g.cannons));
+          return ownsShip(game, (d) => (!g.grandLine || d.grandLine) && (!g.cannons || (d.cannons || 0) >= g.cannons));
         case "crew":
           return (game.crew?.count?.() || 0) >= (g.n || 1);
         case "faction":
@@ -88514,12 +89173,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (sure || Math.random() < chance) this.awakenHaki("observation", 3, "For a heartbeat you hear your opponent's next move before it happens.");
       }
     }
-    addHaki(type, amt, cap = 100) {
+    addHaki(type, amt, cap2 = 100) {
       const g = this.game, c = this.char;
       if (!c.haki[type]) return;
       const mul2 = (1 + (g.state.legacy?.perks?.haki || 0) * 0.25) * (c.race === "skypiean" && type === "observation" ? 2 : 1);
       const before = c.haki[type];
-      c.haki[type] = Math.min(cap, before + amt * mul2);
+      c.haki[type] = Math.min(cap2, before + amt * mul2);
       if (Math.floor(c.haki[type] / 10) > Math.floor(before / 10)) g.log(`${type[0].toUpperCase() + type.slice(1)} Haki level ${Math.floor(c.haki[type])}`, "#ce93d8");
     }
     awakenHaki(type, level = 5, how = "") {
@@ -88983,7 +89642,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function fleetInfo(game) {
     const c = game.state.char;
-    const ships = game.ships.filter((s) => s.owner === "player" && !s.sunk);
+    const ships = c.fleet || game.ships.filter((s) => s.owner === "player" && !s.sunk);
     const escorts = game.ships.filter((s) => s.escortOf && !s.sunk);
     return h(
       "div",
@@ -89079,6 +89738,137 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       );
     };
     render2();
+  }
+
+  // src/ui/shipwrightPanel.js
+  var THANKS = ["She's all yours!", "Fair winds!", "Treat her kindly, now.", "Mind the paint!"];
+  function pierName(dock, island) {
+    const n = dock?.name || island?.name || "harbour";
+    return /\b(pier|dock|docks|wharf|quay|harbou?r|port|shipyards?)\b/i.test(n) ? `the ${n}` : `the ${n} pier`;
+  }
+  var distText = (d) => d >= 1e3 ? `${(d / 1e3).toFixed(1)} km` : `${Math.round(d)} m`;
+  var cap = (s) => s[0].toUpperCase() + s.slice(1);
+  function shipStatLine(d) {
+    const hull = d.maxHull ?? d.hull;
+    const guns = d.cannons ? `${d.cannons} cannons \xB7 ${shotCapFor(d.cannons)} shot` : "no guns";
+    return `Hull ${hull} \xB7 speed ${+d.speed.toFixed(1)}${d.oarsOnly ? " (oars)" : ""} \xB7 ${guns} \xB7 crew ${d.crew} \xB7 hold ${d.cargo}`;
+  }
+  function openShipwright(game, { dock, island, npc = null, tab = "spawn" }) {
+    const ui = game.ui, c = game.state.char, S3 = game.services, w = game.world;
+    const body = h("div.shipwright");
+    const entry = ui.openPanel(body, { wide: true, id: "shipwright" });
+    if (!entry) return null;
+    let mode = tab;
+    const say2 = (text2) => {
+      if (npc?.alive) game.fx.text(npc.x, npc.y - 2.2, text2, "#ffffff", 0.34, { life: 2.6 });
+    };
+    const status = (e) => {
+      const s = liveShip(game, e.uid), p = game.player;
+      if (!s) return { text: e.from ? `Waiting in the yards \u2014 from ${e.from}` : "Laid up in the yards", can: true };
+      if (aboard(p, s)) return { text: "You're aboard her", btn: "Aboard" };
+      const dk3 = dockOf(w, s);
+      if (dk3 === dock) return { text: "Moored here, at this pier", btn: "Here", here: true };
+      const far = distText(w.distance(s.x, s.y, dock.end.x + 0.5, dock.end.y + 0.5));
+      const isl = w.islandAt(s.x, s.y) || w.nearestIsland(s.x, s.y, 150);
+      if (dk3) return { text: `Moored at ${pierName(dk3, isl)}${isl?.name && isl.name !== dk3.name ? ", " + isl.name : ""} \xB7 ${far} away`, can: true };
+      return { text: `${isl?.name ? "At anchor off " + isl.name : "Out at sea"} \xB7 ${far} away`, can: true };
+    };
+    const finish2 = (r, head, msg) => {
+      ui.closePanel(entry);
+      const s = r.ship;
+      ui.toast(head, `${s.name} (${s.def.name}) \u2014 at ${pierName(dock, island)}`, "#ffe082");
+      game.log(msg, "#ffe082");
+      if (r.laidUp?.length) game.log(`The ${r.laidUp.join(" and the ")} ${r.laidUp.length > 1 ? "are" : "is"} warped into the yard to make room \u2014 any shipwright can bring ${r.laidUp.length > 1 ? "them" : "her"} round again.`, "#b0bec5");
+      say2(THANKS[Math.floor(Math.random() * THANKS.length)]);
+      persist(game);
+    };
+    const bring = (e) => {
+      const r = launchShip(game, e, dock);
+      if (r.why === "aboard") {
+        say2("You're standing on her! Step onto the pier first.");
+        render2();
+        return;
+      }
+      if (r.why === "here") {
+        say2("She's right here, alongside!");
+        render2();
+        return;
+      }
+      game.audio?.sfx("splash");
+      finish2(r, "SHIP READY", `The ${r.ship.name} is brought round and made fast alongside ${pierName(dock, island)}: step aboard, and press E at her ${r.ship.def.oarsOnly ? "oars" : "wheel"} to take her out.`);
+    };
+    const buy = async (type, price) => {
+      const d = SHIPS[type];
+      const name = await ui.ask({ title: `Buy a ${d.name}`, text: `Name your new ship (${formatBerries(price)}).`, input: d.name, ok: "Buy" });
+      if (name === null || !entry.el.isConnected) return;
+      if (!pay(game, price)) {
+        game.log("Not enough berries.", "#ff8a80");
+        render2();
+        return;
+      }
+      const r = launchShip(game, { type, name: name.slice(0, 24) || d.name }, dock);
+      game.emit("shipBought", type);
+      game.audio?.sfx("coin");
+      finish2(r, "NEW SHIP", `Your new ${d.name}, the ${r.ship.name}, is launched and made fast alongside ${pierName(dock, island)}: step aboard, and press E at her ${d.oarsOnly ? "oars" : "wheel"} to take her out.`);
+    };
+    const yourShips = () => {
+      const list = h("div.list");
+      const fleet = fleetOf(c);
+      for (const e of fleet) {
+        const d = shipStats(e.type, e.upgrades), st = status(e);
+        list.appendChild(h(
+          "div.row-item" + (st.here ? ".here" : ""),
+          uiImg("ship", 34, ".ico"),
+          h("div.grow", h("b", e.name), h("span.tag", d.name), h("div.sub", st.text), h("div.sub", shipStatLine(d))),
+          h("button.btn.gold", { disabled: !st.can, on: { click: () => bring(e) } }, st.can ? "Bring her here" : st.btn)
+        ));
+      }
+      if (!fleet.length) list.appendChild(h("p", "You don't own a ship. ", h("button.btn.small", { on: { click: () => {
+        mode = "buy";
+        render2();
+      } } }, "Buy ships")));
+      return h("div", list, h("p.muted", "Bringing a ship round takes her from wherever she lies (there's only ever one of each afloat). Anything of yours already at this pier goes into the yard to make room."));
+    };
+    const forSale = () => {
+      const list = h("div.list");
+      const fleet = fleetOf(c);
+      for (const type of S3.shipsFor(island)) {
+        const d = SHIPS[type], price = S3.shipPrice(type, island), can = c.berries >= price;
+        const owned = fleet.filter((e) => e.type === type).length;
+        list.appendChild(h(
+          "div.row-item" + (can ? "" : ".cant"),
+          uiImg("ship", 34, ".ico"),
+          h(
+            "div.grow",
+            h("b", d.name),
+            h("span.tag", shipClassLine(d)),
+            owned ? h("span.tag", `you own ${owned}`) : null,
+            h("div.sub", shipStatLine(d)),
+            h("div.sub", d.desc),
+            d.grandLine ? null : h("div.sub.warn", "Not fit for the Grand Line")
+          ),
+          h("span.price" + (can ? "" : ".short"), formatBerries(price)),
+          h("button.btn.gold", { disabled: !can, title: can ? "" : `${formatBerries(price - c.berries)} short`, on: { click: () => buy(type, price) } }, can ? "Buy" : "Can't afford")
+        ));
+      }
+      const blue = !["paradise", "new_world"].includes(island?.def?.sea);
+      return h("div", list, h("p.muted", `${blue ? "The big ships are built in the Grand Line's yards. " : ""}A new ship is launched here, at this pier, ready to sail${SHIPS_UNBREAKABLE ? " \u2014 and yours can't break" : ""}.`));
+    };
+    const tabBtn = (k, label) => h("button" + (mode === k ? ".on" : ""), { on: { click: () => {
+      mode = k;
+      render2();
+    } } }, label);
+    const render2 = () => {
+      clear(body);
+      add2(
+        body,
+        h("div.sw-head", uiImg("shipwright", 44), h("div", h("h2", npc?.name || "Shipwright"), h("div.muted", `${cap(pierName(dock, island))}${island?.name && dock.name !== island.name ? ", " + island.name : ""}`))),
+        h("div.shop-top", h("div.tabs", tabBtn("spawn", "Spawn ship"), tabBtn("buy", "Buy ships")), h("div.berries", uiImg("berries", 20), ` ${formatBerries(c.berries)}`)),
+        mode === "spawn" ? yourShips() : forSale()
+      );
+    };
+    render2();
+    return entry;
   }
 
   // src/ui/panels.js
@@ -89892,47 +90682,41 @@ Trains by: ${TRAINS_BY[k]}` },
     const S3 = game.services;
     const c = game.state.char;
     const body = h("div");
-    game.ui.openPanel(body, { wide: true, id: "shipyard" });
+    const entry = game.ui.openPanel(body, { wide: true, id: "shipyard" });
+    if (!entry) return;
     const myShips = () => game.ships.filter((s) => s.owner === "player" && !s.sunk);
+    const p = game.player;
+    const pier = (island?.docks || []).slice().sort((a, b) => game.world.distance(a.end.x, a.end.y, p.x, p.y) - game.world.distance(b.end.x, b.end.y, p.x, p.y))[0] || dock;
     const render2 = () => {
       clear(body);
       add2(body, h("h2", building.name || "Shipyard"), berriesLine(c));
-      add2(body, h("h3", "Buy a ship"));
-      const list = h("div.list");
-      for (const type of S3.shipsFor(island)) {
-        const d = SHIPS[type];
-        const price = S3.shipPrice(type, island);
-        list.appendChild(h(
-          "div.row-item",
-          uiImg("ship", 30),
-          h("div.grow", h("b", d.name), h("div.sub", `${d.desc} \xB7 hull ${d.hull} \xB7 speed ${d.speed} \xB7 cannons ${d.cannons}${d.grandLine ? "" : " \xB7 NOT fit for the Grand Line"}`)),
-          h("span.price", formatBerries(price)),
-          h("button.btn.gold", { disabled: c.berries < price, on: { click: async () => {
-            const n = await game.ui.ask({ title: `Buy a ${d.name}`, text: `Name your new ship (${formatBerries(price)}).`, input: d.name, ok: "Buy" });
-            if (n === null) return;
-            S3.buyShip(type, island, dock, (n || d.name).slice(0, 24));
-            game.emit("shipBought", type);
-            render2();
-          } } }, "Buy")
-        ));
-      }
-      body.appendChild(list);
+      const sells = !!pier?.end && game.world === game.surface;
+      add2(
+        body,
+        h("h3", "Buy a ship"),
+        h("p", sells ? "New ships are sold by the shipwright on the pier, who launches them there, ready to sail \u2014 and brings round any ship you own." : "New ships are sold by the shipwrights on the piers of the Blue Sea."),
+        sells ? h("button.btn.gold", { on: { click: () => {
+          game.ui.closePanel(entry);
+          openShipwright(game, { dock: pier, island, tab: "buy" });
+        } } }, uiImg("ship", 20), "Browse the ships for sale") : null
+      );
       const ships = myShips();
       if (ships.length) {
         add2(body, h("h3", "Your ships"));
         for (const s of ships) {
           const near = game.world.distance(s.x, s.y, game.player.x, game.player.y) < 60;
           const rp = S3.repairPrice(s, island);
-          const card = h("div.card", h("h4", `${s.name} \u2014 ${s.def.name}`), h("div", `Hull ${Math.ceil(s.hull)}/${s.maxHull}${s.shotCap ? ` \xB7 cannonballs ${s.shot}/${s.shotCap}` : ""} \xB7 upgrades: ${s.upgrades.map((u) => SHIP_UPGRADES[u]?.name).join(", ") || "none"}${s.coated ? " \xB7 coated" : ""}`));
+          const hull = s.unbreakable ? "Hull sound" : `Hull ${Math.ceil(s.hull)}/${s.maxHull}`;
+          const card = h("div.card", h("h4", `${s.name} \u2014 ${s.def.name}`), h("div", `${hull}${s.shotCap ? ` \xB7 cannonballs ${s.shot}/${s.shotCap}` : ""} \xB7 upgrades: ${s.upgrades.map((u) => SHIP_UPGRADES[u]?.name).join(", ") || "none"}${s.coated ? " \xB7 coated" : ""}`));
           if (!near) card.appendChild(h("p.muted", "Bring this ship to the harbour to work on it."));
           else {
-            card.appendChild(h("button.btn.green", { disabled: s.hull >= s.maxHull || c.berries < rp, on: { click: () => {
+            if (!s.unbreakable) card.appendChild(h("button.btn.green", { style: { marginRight: "6px" }, disabled: s.hull >= s.maxHull || c.berries < rp, on: { click: () => {
               S3.repair(s, island);
               render2();
             } } }, `Repair \u2014 ${formatBerries(rp)}`));
             if (s.shotCap) {
               const sp = S3.shotPrice(s, island);
-              card.appendChild(h("button.btn", { style: { marginLeft: "6px" }, disabled: s.shot >= s.shotCap || c.berries < sp, on: { click: () => {
+              card.appendChild(h("button.btn", { disabled: s.shot >= s.shotCap || c.berries < sp, on: { click: () => {
                 S3.restock(s, island);
                 render2();
               } } }, s.shot >= s.shotCap ? "Cannonballs: full" : `Cannonballs (${s.shotCap - s.shot}) \u2014 ${formatBerries(sp)}`));
@@ -90048,13 +90832,13 @@ Trains by: ${TRAINS_BY[k]}` },
         if (!list.children.length) list.appendChild(h("p", "No techniques to teach you yet."));
       } else if (tab === "training") {
         list.appendChild(h("p.muted", `A master pushes your body further than fighting alone. Training sessions left today: ${S3.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
-        for (const [k, cap] of Object.entries(t.train || {})) {
+        for (const [k, cap2] of Object.entries(t.train || {})) {
           const price = S3.trainPrice(k);
-          const maxed = c.attrs[k] >= cap;
+          const maxed = c.attrs[k] >= cap2;
           list.appendChild(h(
             "div.row-item",
             uiImg("trainer", 30),
-            h("div.grow", h("b", ATTRS[k].name), h("div.sub", `${c.attrs[k]} / ${cap} with this master \xB7 ${ATTRS[k].desc}`)),
+            h("div.grow", h("b", ATTRS[k].name), h("div.sub", `${c.attrs[k]} / ${cap2} with this master \xB7 ${ATTRS[k].desc}`)),
             h("span.price", formatBerries(price)),
             h("button.btn.gold", { disabled: maxed || S3.trainsLeft() <= 0 || c.berries < price, on: { click: () => {
               S3.train(tid, k);
@@ -90064,15 +90848,15 @@ Trains by: ${TRAINS_BY[k]}` },
         }
       } else if (tab === "haki") {
         for (const k of hakiTypes) {
-          const cap = t.haki[k];
+          const cap2 = t.haki[k];
           const lvl = c.haki[k] || 0;
           const price = S3.hakiTrainPrice(k);
           list.appendChild(h(
             "div.row-item",
             uiImg("haki", 30),
-            h("div.grow", h("b", HAKI[k].name), h("div.sub", HAKI[k].desc), h("div.sub", `Level ${Math.floor(lvl)} / ${cap} with this master`)),
+            h("div.grow", h("b", HAKI[k].name), h("div.sub", HAKI[k].desc), h("div.sub", `Level ${Math.floor(lvl)} / ${cap2} with this master`)),
             h("span.price", formatBerries(price)),
-            h("button.btn.gold", { disabled: c.berries < price || lvl >= cap, on: { click: () => {
+            h("button.btn.gold", { disabled: c.berries < price || lvl >= cap2, on: { click: () => {
               S3.hakiTrain(tid, k);
               render2();
             } } }, "Train")
@@ -90149,7 +90933,7 @@ Trains by: ${TRAINS_BY[k]}` },
     }
     // --- HUD -----------------------------------------------------------------
     buildHud() {
-      const R3 = this.root;
+      const R4 = this.root;
       this.hud = h("div.hud");
       this.el = {};
       const E = this.el;
@@ -90261,15 +91045,15 @@ Trains by: ${TRAINS_BY[k]}` },
       this.hud.appendChild(E.crosshair);
       E.lookHint = h("div.look-hint.hidden", "Click to look around", h("small", "Esc frees the mouse \xB7 V switches view"));
       this.hud.appendChild(E.lookHint);
-      R3.appendChild(this.hud);
+      R4.appendChild(this.hud);
       this.bannerEl = h("div.banner", h("h2"), h("h1"), h("p"));
-      R3.appendChild(this.bannerEl);
+      R4.appendChild(this.bannerEl);
       this.hintEl = h("div.hint.hidden");
-      R3.appendChild(this.hintEl);
+      R4.appendChild(this.hintEl);
       this.fadeEl = h("div.fade-black");
-      R3.appendChild(this.fadeEl);
+      R4.appendChild(this.fadeEl);
       this.panelLayer = h("div");
-      R3.appendChild(this.panelLayer);
+      R4.appendChild(this.panelLayer);
       E.side = h("div.sidebar.hidden");
       E.sideBtns = {};
       for (const b of SIDEBAR) {
@@ -90286,11 +91070,11 @@ Trains by: ${TRAINS_BY[k]}` },
         E.sideBtns[b.id] = el;
         E.side.appendChild(el);
       }
-      R3.appendChild(E.side);
+      R4.appendChild(E.side);
       this.screenLayer = h("div");
-      R3.appendChild(this.screenLayer);
+      R4.appendChild(this.screenLayer);
       this.modalLayer = h("div");
-      R3.appendChild(this.modalLayer);
+      R4.appendChild(this.modalLayer);
     }
     setHudVisible(v) {
       this.hudVisible = v;
@@ -90650,9 +91434,9 @@ Trains by: ${TRAINS_BY[k]}` },
           E.lives.appendChild(v);
         }
       }
-      const W3 = game.wanted;
-      const tier = W3 ? W3.tier() : 0;
-      const heat = !W3 || tier < 2 ? "" : W3.spotted > 0 ? "spotted" : W3.watched > 0 ? "watched" : W3.hooded() ? "hooded" : "wanted";
+      const W4 = game.wanted;
+      const tier = W4 ? W4.tier() : 0;
+      const heat = !W4 || tier < 2 ? "" : W4.spotted > 0 ? "spotted" : W4.watched > 0 ? "watched" : W4.hooded() ? "hooded" : "wanted";
       const bk = `${ch.faction}|${ch.bounty || 0}|${ch.berries || 0}|${heat}`;
       if (this.cache.bountyKey !== bk) {
         this.cache.bountyKey = bk;
@@ -90732,7 +91516,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         inter = { label: `${free2 ? verb[0].toUpperCase() + verb.slice(1) : "Hold to " + verb} the ${it.name}` };
         pKey = free2 ? "Right-click" : "RMB";
       }
-      const pk = inter ? pKey + inter.label : "";
+      const pk = inter ? pKey + inter.label + (this.blocksInput() ? "|blocked" : "") : "";
       if (this.cache.prompt !== pk) {
         this.cache.prompt = pk;
         E.prompt.classList.toggle("hidden", !inter || this.blocksInput());
@@ -90783,8 +91567,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       E.ship.classList.toggle("hidden", !s);
       if (s) {
         const oars = s.def.oarsOnly ? s.rowL < 0 || s.rowR < 0 ? "backing water" : s.rowL && s.rowR ? "pulling ahead" : s.rowL || s.rowR ? "pulling one oar" : "shipped" : null;
+        const hull = s.unbreakable ? "Hull sound \xB7 can't break" : `Hull ${Math.ceil(s.hull)}/${s.maxHull}`;
         const html = `<div class="row"><b>${s.name}</b><span>${s.def.name}</span></div>
-        <div class="bar hull"><i style="width:${100 * s.hull / s.maxHull}%"></i><span>Hull ${Math.ceil(s.hull)}/${s.maxHull}</span></div>
+        <div class="bar hull"><i style="width:${s.unbreakable ? 100 : 100 * s.hull / s.maxHull}%"></i><span>${hull}</span></div>
         ${oars ? `<div class="row"><span>Oars: ${oars}</span><span>W/S row, A/D turn</span></div>` : `<div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>`}
         <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span>${oars ? "" : `<span>Wind <span class="wind" style="transform:rotate(${env.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? "none (Calm Belt!)" : Math.round(env.windStrength * 100) + "%"}</span>`}</div>
         ${s.def.cannons ? `<div class="row"><span>Cannonballs ${s.shot}/${s.shotCap}</span><span>${s.shot <= 0 ? "none left!" : s.cannonCd > 0 ? "reloading\u2026" : "ready"}</span></div>` : ""}`;
@@ -90848,17 +91633,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const g = c.getContext("2d");
       const w = game.world;
       const p = game.player;
-      const W3 = c.width, H2 = c.height;
+      const W4 = c.width, H3 = c.height;
       const scale = p.mode === "sail" ? 2.2 : 1;
-      if (!this.mmImg) this.mmImg = g.createImageData(W3, H2);
+      if (!this.mmImg) this.mmImg = g.createImageData(W4, H3);
       const img2 = this.mmImg.data;
       const zoneSea = w.zone === 2 ? [40, 90, 150] : w.zone === 3 ? [20, 16, 24] : [150, 200, 230];
       let sea = w.zone === 0 ? MM_SEA[regionAt(p.x, p.y)] || MM_SEA[REGION.EAST_BLUE] : zoneSea;
-      for (let j = 0; j < H2; j++) {
-        const ty = p.y + (j - H2 / 2) * scale;
-        for (let i = 0; i < W3; i++) {
-          const tx = p.x + (i - W3 / 2) * scale;
-          const o = (j * W3 + i) * 4;
+      for (let j = 0; j < H3; j++) {
+        const ty = p.y + (j - H3 / 2) * scale;
+        for (let i = 0; i < W4; i++) {
+          const tx = p.x + (i - W4 / 2) * scale;
+          const o = (j * W4 + i) * 4;
           if (ty < 0 || ty >= w.height || !w.wrap && (tx < 0 || tx >= w.width)) {
             img2[o] = 30;
             img2[o + 1] = 40;
@@ -90904,13 +91689,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       g.save();
       g.globalCompositeOperation = "destination-in";
       g.beginPath();
-      g.arc(W3 / 2, H2 / 2, W3 / 2, 0, Math.PI * 2);
+      g.arc(W4 / 2, H3 / 2, W4 / 2, 0, Math.PI * 2);
       g.fill();
       g.restore();
       for (const s of game.ships) {
         if (s.sunk) continue;
-        const dx = w.dx(p.x, s.x) / scale + W3 / 2, dy = (s.y - p.y) / scale + H2 / 2;
-        if (Math.hypot(dx - W3 / 2, dy - H2 / 2) > W3 / 2 - 4) continue;
+        const dx = w.dx(p.x, s.x) / scale + W4 / 2, dy = (s.y - p.y) / scale + H3 / 2;
+        if (Math.hypot(dx - W4 / 2, dy - H3 / 2) > W4 / 2 - 4) continue;
         g.fillStyle = s.owner === "player" ? "#ffeb3b" : s.faction === "marine" ? "#64b5f6" : "#ef5350";
         g.beginPath();
         g.ellipse(dx, dy, Math.max(3, s.def.length / scale / 2), Math.max(3, s.def.beam / scale / 2), s.heading || 0, 0, Math.PI * 2);
@@ -90920,14 +91705,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         if (a === p || a.state !== "idle" || a.hidden) continue;
         const hostileNow = a.controller?.target === p || p.observation && a.faction !== "civilian";
         if (!hostileNow && !a.questMarker) continue;
-        const dx = w.dx(p.x, a.x) / scale + W3 / 2, dy = (a.y - p.y) / scale + H2 / 2;
-        if (Math.hypot(dx - W3 / 2, dy - H2 / 2) > W3 / 2 - 3) continue;
+        const dx = w.dx(p.x, a.x) / scale + W4 / 2, dy = (a.y - p.y) / scale + H3 / 2;
+        if (Math.hypot(dx - W4 / 2, dy - H3 / 2) > W4 / 2 - 3) continue;
         g.fillStyle = a.questMarker ? a.questMarker[0] === "M" ? "#ff9100" : "#ffd54f" : "#ff5252";
         g.fillRect(dx - 1.5, dy - 1.5, 3, 3);
       }
       if (game.view3d?.active) return;
       g.save();
-      g.translate(W3 / 2, H2 / 2);
+      g.translate(W4 / 2, H3 / 2);
       g.rotate(p.mode === "sail" && p.ship ? p.ship.heading : p.facing);
       g.fillStyle = "#fff";
       g.strokeStyle = "#000";
@@ -90976,6 +91761,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       type = ALIAS4[type] || type;
       const s = game.addShip({ type, x, y, heading: extra.heading ?? Math.PI / 2, owner: "player", faction: "player", name: name || void 0, jr: game.state?.char?.jr, upgrades: extra.upgrades || [], hull: extra.hull, coated: extra.coated, shot: extra.shot });
       s.uid = extra.uid || `s${Date.now().toString(36)}${shipCounter++}`;
+      recordShip(game.state?.char, s);
       const dock = extra.heading === void 0 ? dockNear(game.world, x, y) : null;
       if (s.def.big && extra.heading === void 0) {
         if (!(dock && s.berth(game.world, dock)) && !s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
@@ -91387,8 +92173,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       p.mode = "foot";
       p.x = r.x;
       p.y = r.y;
-      const ships = g.ships.filter((s) => s.owner === "player" && !s.sunk);
-      if (!ships.length) {
+      if (!(c.fleet || []).length && !g.ships.some((s) => s.owner === "player" && !s.sunk)) {
         const isl = g.world.nearestIsland(r.x, r.y, 200);
         const dock = isl && isl.docks[0];
         if (dock) {
@@ -91684,6 +92469,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       return true;
     }
     // -------------------------------------------------------- shipwright
+    /** What a yard builds: the small ships everywhere, the big ones in the Grand Line. */
     shipsFor(island) {
       const sea = island?.def?.sea || "east_blue", id = island?.id || "";
       const list = ["dinghy", "sloop", "caravel"];
@@ -91697,24 +92483,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     shipPrice(type, island) {
       return Math.round(SHIPS[type].price * (1 + (this.seaMul(island) - 1) * 0.3));
     }
-    buyShip(type, island, dock, name) {
-      const g = this.game;
-      if (!pay(g, this.shipPrice(type, island))) return null;
-      const spot = dock?.moor || this.nearWater();
-      const s = g.giveShip(type, spot.x, spot.y, name || SHIPS[type].name);
-      g.ui.toast("NEW SHIP", `${s.name} (${SHIPS[type].name})`, "#ffe082");
-      g.log(`Your new ${SHIPS[type].name} is moored at the dock: step aboard from the pier, and press E at her wheel to take the helm.`, "#ffe082");
-      persist(g);
-      return s;
-    }
-    nearWater() {
-      const p = this.game.player;
-      for (let r = 2; r < 30; r += 2) for (let a = 0; a < 6.28; a += 0.4) {
-        const x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r;
-        if (this.game.world.sailable(x, y)) return { x, y };
-      }
-      return { x: p.x, y: p.y + 5 };
-    }
+    // (ships are bought from the shipwright on the pier, who launches them there: see shipwrights.js)
     repairPrice(ship, island) {
       return Math.round((ship.maxHull - ship.hull) * 8 * this.seaMul(island));
     }
@@ -91842,8 +92611,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     }
     train(tid, attr) {
       const g = this.game, c = this.char, t = TRAINERS[tid];
-      const cap = t.train[attr] || 0;
-      if ((c.attrs[attr] || 0) >= cap) {
+      const cap2 = t.train[attr] || 0;
+      if ((c.attrs[attr] || 0) >= cap2) {
         g.log(`${t.name} has nothing more to teach you about ${attr.toUpperCase()}. Seek a greater master.`, "#ff8a80");
         return false;
       }
@@ -91868,7 +92637,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     }
     hakiTrain(tid, type) {
       const g = this.game, c = this.char, t = TRAINERS[tid];
-      const cap = t.haki?.[type] || 0;
+      const cap2 = t.haki?.[type] || 0;
       if (type === "conqueror" && !c.haki.conqueror) {
         g.log(`${t.name}: "Conqueror's Haki cannot be taught. Either it lives in you or it doesn't."`, "#ff8a80");
         return false;
@@ -91883,7 +92652,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         g.progression.awakenHaki(type, 5, `Trained by ${t.name}`);
         return true;
       }
-      if (c.haki[type] >= cap) {
+      if (c.haki[type] >= cap2) {
         g.log(`${t.name} can take your ${type} Haki no further.`, "#ff8a80");
         return false;
       }
@@ -91897,7 +92666,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         c.trainCount = 0;
       }
       c.trainCount++;
-      g.progression.addHaki(type, 5, cap);
+      g.progression.addHaki(type, 5, cap2);
       g.env.clock += 3;
       persist(g);
       return true;
@@ -92664,8 +93433,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         if (role === "tavern" || role === "bar" || role === "inn") S3.tavern.push(out);
       }
     }
-    const R3 = Math.max(town.w, town.h) * 0.75 + 8;
-    for (const o of w.objects.near(town.x, town.y, R3)) {
+    const R4 = Math.max(town.w, town.h) * 0.75 + 8;
+    for (const o of w.objects.near(town.x, town.y, R4)) {
       if (o.kind === "barrel" || o.kind === "crate" || o.kind === "haystack") {
         const face = Math.PI / 2;
         const r = (o.col?.r ?? 0.4) + 0.4;
@@ -93355,25 +94124,25 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   }
   function makeShark(game, x, y, level, kind = null) {
     kind = kind || (isGrandLine(regionAt(x, y)) ? "fightfish" : "seacow");
-    const H2 = HUNTERS[kind];
+    const H3 = HUNTERS[kind];
     const k = new Actor({
       x,
       y,
-      name: level > 40 ? H2.big : H2.name,
-      title: H2.title,
+      name: level > 40 ? H3.big : H3.name,
+      title: H3.title,
       faction: "beast",
-      look: { race: H2.race, scale: (level > 40 ? 1.5 : 1) * H2.scale },
+      look: { race: H3.race, scale: (level > 40 ? 1.5 : 1) * H3.scale },
       attrs: { str: Math.round(level * 0.8), agi: Math.round(level * 0.7), end: Math.round(level * 0.6), vit: Math.round(level * 0.7), wil: 5 },
-      hpMul: H2.hpMul
+      hpMul: H3.hpMul
     });
     k.game = game;
-    k.r = H2.r;
+    k.r = H3.r;
     k.shark = true;
     k.hunter = kind;
     k.seaCreature = true;
     k.swimmer = true;
     k.depth = 0.7;
-    k.bodyColor = H2.color;
+    k.bodyColor = H3.color;
     k.kbResist = 0.35;
     k.passable = (w, px2, py2) => w.isLiquid(px2, py2) && !w.isOverlay(px2, py2) && game.seaDepth(px2, py2) > 1.4;
     k.canOccupy = function(w, px2, py2) {
@@ -93381,7 +94150,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     };
     k.updateWater = () => {
     };
-    k.controller = new SharkBrain(H2);
+    k.controller = new SharkBrain(H3);
     k.showName = true;
     k.aggroPlayer = true;
     k.onKO = (a, att, g) => {
@@ -93403,8 +94172,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     return k;
   }
   var SharkBrain = class {
-    constructor(H2 = HUNTERS.seacow) {
-      this.H = H2;
+    constructor(H3 = HUNTERS.seacow) {
+      this.H = H3;
       this.mode = "circle";
       this.t = 4 + Math.random() * 3;
       this.ang = Math.random() * TAU;
@@ -93448,9 +94217,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         if (prey && this.bored > 40) this.bored = 0;
       } else if (this.mode === "circle") {
         this.ang += dt * 0.55;
-        const R3 = 6.5;
-        tx = p.x + Math.cos(this.ang) * R3;
-        ty = p.y + Math.sin(this.ang) * R3;
+        const R4 = 6.5;
+        tx = p.x + Math.cos(this.ang) * R4;
+        ty = p.y + Math.sin(this.ang) * R4;
         this.t -= dt;
         if (this.t <= 0 && d < 12) {
           this.mode = "charge";
@@ -93997,8 +94766,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     return !!(hat && ITEMS[hat]?.hood) && !(p?.hoodBlownT > 0);
   }
   function installWanted(game) {
-    const W3 = game.wanted = { t: 0, spotted: 0, watched: 0, tier: () => wantedTier(game), hooded: () => hooded(game) };
-    game.on("tick", (dt) => tick4(game, W3, dt));
+    const W4 = game.wanted = { t: 0, spotted: 0, watched: 0, tier: () => wantedTier(game), hooded: () => hooded(game) };
+    game.on("tick", (dt) => tick4(game, W4, dt));
     const blow = () => {
       const p = game.player;
       if (!p || !hooded(game)) return;
@@ -94010,27 +94779,27 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     });
     game.on("crime", blow);
   }
-  function tick4(game, W3, dt) {
+  function tick4(game, W4, dt) {
     const p = game.player;
     if (!p) return;
     if (p.hoodBlownT > 0) p.hoodBlownT = Math.max(0, p.hoodBlownT - dt);
     const tier = wantedTier(game);
     const hood = hooded(game);
     p.disguised = hood;
-    W3.spotted = Math.max(0, W3.spotted - dt);
-    W3.t -= dt;
-    if (W3.t > 0) return;
+    W4.spotted = Math.max(0, W4.spotted - dt);
+    W4.t -= dt;
+    if (W4.t > 0) return;
     const step = 0.25;
-    W3.t = step;
+    W4.t = step;
     let watched = 0;
-    const R3 = tier >= 3 ? 16 : 10;
-    const range = hood ? tier >= 3 ? 4 : 2.5 : R3;
-    const aboard = p.mode === "sail" || p.onShip;
-    for (const a of game.actorsNear(p.x, p.y, R3 + 2)) {
+    const R4 = tier >= 3 ? 16 : 10;
+    const range = hood ? tier >= 3 ? 4 : 2.5 : R4;
+    const aboard2 = p.mode === "sail" || p.onShip;
+    for (const a of game.actorsNear(p.x, p.y, R4 + 2)) {
       if (a === p || a.faction !== "marine" || !a.controller || a.state !== "idle" || a.controller.kind === "follower") continue;
       if (a.provoked) continue;
       const d = game.world.distance(a.x, a.y, p.x, p.y);
-      const inView = tier >= 2 && !aboard && d < range && (!game.world.interiorAt || sameSpace(game, a, p));
+      const inView = tier >= 2 && !aboard2 && d < range && (!game.world.interiorAt || sameSpace(game, a, p));
       if (!inView) {
         a.suspect = Math.max(0, (a.suspect || 0) - step * 0.4);
         continue;
@@ -94042,7 +94811,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (before < 0.3 && a.suspect >= 0.3) game.fx.text(a.x, a.y - 2.2, "?", "#fff59d", 0.55, { life: 1.2 });
       if (a.suspect >= 1) recognise(game, a, p);
     }
-    W3.watched = watched;
+    W4.watched = watched;
   }
   function sameSpace(game, a, b) {
     const w = game.world;
@@ -94445,7 +95214,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       else if (tr.kind === "fishing") crime(game, 25e4, "raided a fishing boat", { rep: 8 });
     }
     const who = tr.kind === "marine" ? "the Marines" : tr.kind === "pirate" ? "the pirates" : "the crew";
-    game.ui.banner("BOARDED!", s.name, `The helmsman is coming for you. Beat ${who} \u2014 then the hold and the helm are yours.`, 3);
+    game.ui.banner("BOARDED!", s.name, `The helmsman is coming for you. Beat ${who} \u2014 then the hold is yours.`, 3);
     if (game.audio && game.audio.theme !== "battle") {
       tr.prevTheme = game.audio.theme;
       game.audio.music("battle");
@@ -94458,7 +95227,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     if (standing.length) return;
     tr.cleared = true;
     if (game.audio?.theme === "battle") game.audio.music(tr.prevTheme || "sea");
-    game.ui.toast("THE SHIP IS YOURS", `${s.name}: plunder her hold (down the hatch amidships \u2014 the chest at the foot of the ladder), or take the helm to sail her away.`, "#ffd54f");
+    game.ui.toast("THE DECK IS YOURS", `${s.name}: plunder her hold (down the hatch amidships \u2014 the chest at the foot of the ladder).`, "#ffd54f");
     game.log(`The crew of the ${s.name} is beaten!`, "#ffe082");
   }
   function friendlyBoarding(game, s) {
@@ -94510,35 +95279,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       crime(game, 3e5, "plundered a ship's hold", { rep: 3, quiet: true });
     }
   }
-  function claim2(game, T4, s) {
-    const c = game.state?.char, p = game.player, tr = s.traffic;
-    const lvl = tr.level || 5;
-    if (tr.kind === "marine") crime(game, 3e6 * (1 + lvl / 40), `stole the ${s.name}`, { rep: 6 });
-    else if (tr.kind !== "pirate") crime(game, 12e5, `stole the ${s.name}`, { rep: 8 });
-    for (const a of tr.crew || []) a.alive = false;
-    s.owner = "player";
-    s.faction = "player";
-    s.ai = null;
-    s.traffic = null;
-    s.provoked = false;
-    s.showBar = false;
-    s.label = null;
-    s.expire = void 0;
-    s.cannonsOverride = void 0;
-    s.jr = c?.jr || null;
-    s.uid = `s${Date.now().toString(36)}x`;
-    s.hull = Math.max(s.hull, Math.round(s.maxHull * 0.5));
-    if (tr.kind === "marine") s.name = `Stolen ${s.name.replace(/^Marine /, "")}`;
-    T4.ships = T4.ships.filter((x) => x !== s);
-    if (p.deck) {
-      p.deck.ship.aboard?.delete(p);
-      p.deck = null;
-    }
-    board(game, p, s);
-    game.ui.toast("SHIP TAKEN", `The ${s.name} sails under your command now.`, "#ffd54f");
-    game.audio?.sfx("reveal");
-    persist(game);
-  }
   function footInteraction(game, T4, p) {
     const w = game.world;
     if (p.mode !== "foot" || p.state !== "idle") return null;
@@ -94546,8 +95286,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     if (s) {
       const room = p.deck.room?.kind || null;
       if (s.owner === "player") {
-        const d2 = deckDist(game, p, s, helmSpot(s));
-        if (!room && d2 < (s.def.oarsOnly ? 0.9 : 1.4)) return { d: d2, label: s.def.oarsOnly ? `Take the oars of the ${s.name}` : `Take the helm of the ${s.name}`, run: () => {
+        const d = deckDist(game, p, s, helmSpot(s));
+        if (!room && d < (s.def.oarsOnly ? 0.9 : 1.4)) return { d, label: s.def.oarsOnly ? `Take the oars of the ${s.name}` : `Take the helm of the ${s.name}`, run: () => {
           p.deck.ship.aboard?.delete(p);
           p.deck = null;
           board(game, p, s);
@@ -94558,8 +95298,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (!tr || !tr.cleared) return null;
       const hs = hatchSpot(s), dh = deckDist(game, p, s, hs);
       if (!tr.plundered && (hs.room ? room === hs.room : !room) && dh < 1.3) return { d: dh, label: `Plunder the hold of the ${s.name}`, run: () => plunder(game, s) };
-      const d = deckDist(game, p, s, helmSpot(s));
-      if (!room && d < (s.def.oarsOnly ? 0.9 : 1.4)) return { d, label: `${s.def.oarsOnly ? "Take the oars" : "Take the helm"} \u2014 steal the ${s.name}`, run: () => claim2(game, T4, s) };
       return null;
     }
     return null;
@@ -94777,8 +95515,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     spawnSeaKing(p, reg3) {
       const g = this.game;
       const a = Math.random() * TAU;
-      const R3 = 14 + (p.ship?.def.length || 0) * 0.5;
-      const x = g.world.wx(p.x + Math.cos(a) * R3), y = p.y + Math.sin(a) * R3 * 0.75;
+      const R4 = 14 + (p.ship?.def.length || 0) * 0.5;
+      const x = g.world.wx(p.x + Math.cos(a) * R4), y = p.y + Math.sin(a) * R4 * 0.75;
       if (!g.world.isLiquid(x, y)) return;
       const lvl = reg3 === REGION.CALM_NORTH || reg3 === REGION.CALM_SOUTH ? Math.abs(p.x - RM_X) < 1e3 && p.x > RM_X ? 40 : 55 : 30;
       const k = makeSeaKing(g, x, y, lvl);
@@ -94858,8 +95596,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     spawnFlotsam(p, s) {
       const g = this.game;
       const a = s.heading + (Math.random() - 0.5) * 1.2;
-      const R3 = 20 + s.def.length * 0.6;
-      const x = g.world.wx(s.x + Math.cos(a) * R3), y = s.y + Math.sin(a) * R3;
+      const R4 = 20 + s.def.length * 0.6;
+      const x = g.world.wx(s.x + Math.cos(a) * R4), y = s.y + Math.sin(a) * R4;
       if (!g.world.isLiquid(x, y)) return;
       g.flotsam = g.flotsam || [];
       const f = { x, y, alive: true, sortY: y, draw: drawBarrel, t: Math.random() * 10 };
@@ -100542,11 +101280,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       t = 0.5;
       const c = game.state?.char, p = game.player;
       if (!c || !p || game.world !== game.surface) return;
-      const W3 = game.world;
+      const W4 = game.world;
       const isl = game.currentIsland;
       const near = (spot, r) => {
         const s = isl?.spots?.[spot];
-        return !!s && W3.distance(p.x, p.y, s.x, s.y) < r;
+        return !!s && W4.distance(p.x, p.y, s.x, s.y) < r;
       };
       if (isl?.id === "ohara" && stg(game, "wb_ohara_primer") === "pages" && !c.flags.wbPageLake && near("book_lake", 5)) {
         c.flags.wbPageLake = true;
@@ -100565,7 +101303,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (stg(game, "wb_god_valley") === "serpent" && !findActor(game, "wb_valley_king")) {
         const gv = game.surface.islands.find((i) => i.id === "god_valley");
         const s = gv?.spots?.valley_deep;
-        if (s && W3.distance(p.x, p.y, s.x, s.y) < 30 && W3.isLiquid(s.x, s.y)) {
+        if (s && W4.distance(p.x, p.y, s.x, s.y) < 30 && W4.isLiquid(s.x, s.y)) {
           seaBoss(game, { id: "wb_valley_king", name: "Sea King of the Drowned Ravine", title: "Guardian of God Valley's grave", level: 20, hpMul: 3.4, color: "#4e342e", breakthrough: 3 }, s.x, s.y);
           game.ui.banner("SEA KING", "The Drowned Ravine", "Something the size of a church rises from where God Valley used to be.", 4);
         }
@@ -100589,7 +101327,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       for (const [q2, st, id, r] of PROXIMITY_AGGRO) {
         if (stg(game, q2) !== st) continue;
         const a = findActor(game, id);
-        if (a && !a.provoked && a.state === "idle" && W3.distance(p.x, p.y, a.x, a.y) < r) aggro(game, a);
+        if (a && !a.provoked && a.state === "idle" && W4.distance(p.x, p.y, a.x, a.y) < r) aggro(game, a);
       }
     });
   }
@@ -100673,12 +101411,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     return !!f && !!ring4 && f.o === ring4;
   };
   function ringWait(g, stage2, announce = true) {
-    const R3 = ROUNDS[stage2];
+    const R4 = ROUNDS[stage2];
     const ring4 = ringOf(g);
-    if (!R3 || !ring4 || !populated(g, "karate_island") || g.quests.stageId(OPEN) !== stage2) return null;
+    if (!R4 || !ring4 || !populated(g, "karate_island") || g.quests.stageId(OPEN) !== stage2) return null;
     const s = ring4.s || 1;
     const corner = { x: ring4.x, y: ring4.y - 1.5 * s };
-    const a = findActor(g, R3[0]) || spawnNow(g, R3[0], corner);
+    const a = findActor(g, R4[0]) || spawnNow(g, R4[0], corner);
     if (!a) return null;
     a.x = corner.x;
     a.y = corner.y;
@@ -100699,8 +101437,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       a.controller.home = { ...corner };
     }
     if (g.bossTarget === a) g.bossTarget = null;
-    g.karateBout = { npc: R3[0], stage: stage2, a, started: false, out: 0, readyAt: g.time + 1.2 };
-    if (announce) g.ui.banner(R3[1], "Karate Island Open", R3[2] + " Step into the ring when you are ready.", 5);
+    g.karateBout = { npc: R4[0], stage: stage2, a, started: false, out: 0, readyAt: g.time + 1.2 };
+    if (announce) g.ui.banner(R4[1], "Karate Island Open", R4[2] + " Step into the ring when you are ready.", 5);
     return a;
   }
   function ringBell(g) {
@@ -100751,8 +101489,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   }
   function ruin(g, islandId, match, pieces) {
     const isl = islandRec(g, islandId);
-    const W3 = g.surface;
-    if (!isl || !W3?.objects) return null;
+    const W4 = g.surface;
+    if (!isl || !W4?.objects) return null;
     let obj = null;
     for (const t of isl.towns || []) {
       obj = (t.buildings || []).find(match);
@@ -100762,11 +101500,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     if (!obj || obj._sbRuined) return null;
     obj._sbRuined = true;
     try {
-      W3.objects.remove(obj);
+      W4.objects.remove(obj);
     } catch (e) {
       return null;
     }
-    for (const [dx, dy, kind] of pieces) W3.objects.add({ kind: kind || "ruins", x: obj.x + dx, y: obj.y + dy, block: true, v: 0 });
+    for (const [dx, dy, kind] of pieces) W4.objects.add({ kind: kind || "ruins", x: obj.x + dx, y: obj.y + dy, block: true, v: 0 });
     return obj;
   }
   var ruinPalace = (g) => ruin(
@@ -106597,12 +107335,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   ];
   function drawWhale(g, env, marked) {
     const t = env?.time || 0;
-    const TAU22 = Math.PI * 2;
+    const TAU23 = Math.PI * 2;
     g.save();
     g.translate(0, Math.sin(t * 0.7) * 0.12);
     g.fillStyle = "rgba(255,255,255,0.28)";
     g.beginPath();
-    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU22);
+    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU23);
     g.fill();
     g.fillStyle = "#4e6177";
     g.beginPath();
@@ -106614,7 +107352,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     g.fill();
     g.fillStyle = "#5d7389";
     g.beginPath();
-    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU22);
+    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU23);
     g.fill();
     g.fillStyle = "#d7e1ea";
     g.beginPath();
@@ -106630,16 +107368,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     }
     g.fillStyle = "#fafafa";
     g.beginPath();
-    g.arc(-6.6, -1.8, 0.45, 0, TAU22);
+    g.arc(-6.6, -1.8, 0.45, 0, TAU23);
     g.fill();
     g.fillStyle = "#1a1a1a";
     g.beginPath();
-    g.arc(-6.7, -1.8, 0.24, 0, TAU22);
+    g.arc(-6.7, -1.8, 0.24, 0, TAU23);
     g.fill();
     if (marked) {
       g.fillStyle = "#fafafa";
       g.beginPath();
-      g.arc(-8.2, -3.1, 0.8, 0, TAU22);
+      g.arc(-8.2, -3.1, 0.8, 0, TAU23);
       g.fill();
       g.strokeStyle = "#fafafa";
       g.lineWidth = 0.25;
@@ -106651,8 +107389,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       g.stroke();
       g.fillStyle = "#1a1a1a";
       g.beginPath();
-      g.arc(-8.45, -3.2, 0.16, 0, TAU22);
-      g.arc(-7.95, -3.2, 0.16, 0, TAU22);
+      g.arc(-8.45, -3.2, 0.16, 0, TAU23);
+      g.arc(-7.95, -3.2, 0.16, 0, TAU23);
       g.fill();
     }
     const ph = t % 14;
@@ -106660,7 +107398,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const h2 = Math.sin(ph / 1.6 * Math.PI) * 3.2;
       g.fillStyle = "rgba(225,245,254,0.8)";
       g.beginPath();
-      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU22);
+      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU23);
       g.fill();
     }
     g.font = "bold 0.5px Nunito, sans-serif";
@@ -110710,13 +111448,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         const c = g.state?.char;
         if (!c) return;
         const isl = islandRec3(g, "impel_down");
-        const moor = isl?.docks?.[0]?.moor;
         const p = g.player;
         const near = (g.ships || []).some((s) => s.owner === "player" && !s.sunk && p && g.world.distance(s.x, s.y, p.x, p.y) < 80);
-        if (moor && !near && g.world === g.surface) {
-          g.giveShip("marine_warship", moor.x, moor.y, "Stolen Battleship");
-          g.log("You steal a Marine battleship from the prison docks, just like the escapees in the stories.", "#a5d6a7");
-        }
+        if (isl?.docks?.length && !near && g.world === g.surface) g.log("No ship of yours is waiting at the prison \u2014 but the shipwright on the Main Gate pier can have one of yours brought round.", "#a5d6a7");
         if (!g.quests.state(WAR)) setTimeout(() => {
           if (g.state?.char && !g.quests.state(WAR)) g.quests.start(WAR);
         }, 1500);
@@ -110893,7 +111627,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   }
   function install6(game) {
     const char = () => game.state?.char;
-    const W3 = () => game.world;
+    const W4 = () => game.world;
     let t = 0, nightT = 0, watchT = 0, burnWarn = 0, warT = 0, shellT = 0;
     const shells = [];
     const hqDoor = () => {
@@ -110904,7 +111638,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const near = (id, extra = 0) => {
       const isl = islandRec3(game, id);
       const p = game.player;
-      return !!(isl && p && W3() === game.surface && W3().distance(p.x, p.y, isl.x, isl.y) < (isl.radius || 60) + extra);
+      return !!(isl && p && W4() === game.surface && W4().distance(p.x, p.y, isl.x, isl.y) < (isl.radius || 60) + extra);
     };
     const shell2 = (minR, maxR) => {
       const p = game.player;
@@ -110915,7 +111649,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     };
     game.on("enterIsland", (isl) => {
       const c = char();
-      if (!c || !isl || W3() !== game.surface) return;
+      if (!c || !isl || W4() !== game.surface) return;
       const q2 = game.quests;
       if (isl.id === "thriller_bark" && !q2.state(TB_Q)) q2.start(TB_Q);
       if (isl.id === "amazon_lily" && !q2.state("p2_amazon_lily")) {
@@ -111024,10 +111758,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const prevSea = game.seaInteraction;
     game.seaInteraction = (p, s) => {
       const c = char();
-      if (c && s && W3() === game.surface) {
+      if (c && s && W4() === game.surface) {
         for (const gate of GATES) {
           const spot = spotOf2(game, gate[0], gate[1]);
-          if (!spot || W3().distance(s.x, s.y, spot.x, spot.y) > 16) continue;
+          if (!spot || W4().distance(s.x, s.y, spot.x, spot.y) > 16) continue;
           const open = marine(c) || !!c.flags.p2_taraiOpen;
           return {
             label: open ? "Ride the Tarai Current through the Gate of Justice" : "The Gate of Justice (sealed)",
@@ -111080,7 +111814,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         game.fx.crack?.(sh.x, sh.y, sh.r);
         game.fx.shake(0.35);
         game.audio?.sfx("explosion");
-        if (p.state === "idle" && p.d && W3().distance(p.x, p.y, sh.x, sh.y) < sh.r) {
+        if (p.state === "idle" && p.d && W4().distance(p.x, p.y, sh.x, sh.y) < sh.r) {
           p.hp = Math.max(1, p.hp - p.d.maxHp * 0.08);
           game.fx.text(p.x, p.y - 2, "BOOM!", "#ff7043", 0.5);
         }
@@ -111090,14 +111824,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       t = 0.5;
       const q2 = game.quests;
       const here = game.currentIsland?.id;
-      const surface = W3() === game.surface;
+      const surface = W4() === game.surface;
       if (surface && !c.flags.p2_florian && near("thriller_bark", 70)) {
         c.flags.p2_florian = true;
         game.ui.banner("THE FLORIAN TRIANGLE", "Paradise", "A sea of fog where a hundred ships a year vanish \u2014 and ghost ships drift out again with no one aboard. Somewhere ahead, someone is singing.", 6);
       }
       if (S2(game, "p2_cp9_conspiracy") === "night" && here === "water_7") {
         const door = hqDoor();
-        if (door && W3().distance(p.x, p.y, door.x, door.y) < 18) {
+        if (door && W4().distance(p.x, p.y, door.x, door.y) < 18) {
           watchT += 0.5;
           if (env.daylight < 0.6 || watchT >= 20) {
             if (env.daylight >= 0.6) {
@@ -117646,7 +118380,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const c = game.state?.char;
       if (c && isGrandLine(reg3)) c.flags.enteredGrandLine = true;
     });
-    installFleet(game);
+    installFleet2(game);
   }
   function fleetSize(c) {
     const i = rankIndex(c.marineRank);
@@ -117656,7 +118390,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const i = rankIndex(c.marineRank);
     return i >= rankIndex("Vice Admiral") ? 3 : i >= rankIndex("Captain") ? 2 : i >= rankIndex("Lieutenant") ? 1 : 0;
   }
-  function installFleet(game) {
+  function installFleet2(game) {
     let t = 0;
     const clear3 = () => {
       for (const s of game.ships) if (s.escortOf) s.alive = false;
@@ -117840,12 +118574,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     game.ui.toast("PROMOTED!", n.name, "#64b5f6");
     game.log(`Promoted to ${n.name}.${n.perk ? " " + n.perk : ""}`, "#90caf9");
     const i = rankIndex(n.name);
-    const dock = game.currentIsland?.docks?.[0];
-    const pos = dock ? dock.moor : { x: game.player.x, y: game.player.y + 5 };
-    if (n.name === "Ensign") game.giveShip("sloop", pos.x, pos.y, "Marine Cutter");
-    if (n.name === "Captain") game.giveShip("brigantine", pos.x, pos.y, "Marine Brig");
-    if (n.name === "Rear Admiral") game.giveShip("marine_warship", pos.x, pos.y, "Marine Warship");
-    if (n.name === "Vice Admiral") game.giveShip("marine_battleship", pos.x, pos.y, "Marine Battleship");
+    const SHIP = { Ensign: ["sloop", "Marine Cutter"], Captain: ["brigantine", "Marine Brig"], "Rear Admiral": ["marine_warship", "Marine Warship"], "Vice Admiral": ["marine_battleship", "Marine Battleship"] }[n.name];
+    if (SHIP) orderShip(game, SHIP[0], SHIP[1], "the Navy");
     if (n.name === "Commodore") {
       addItem(game, "marine_coat", 1);
       equip(game, "marine_coat");
@@ -118043,7 +118773,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       breakthrough: 1,
       leash: 22
     });
-    const P4 = o.pirate, M2 = o.marine, H2 = o.hunter;
+    const P4 = o.pirate, M2 = o.marine, H3 = o.hunter;
     const vname = V3.name.replace(/^"[^"]*"\s*/, "");
     const bounty = formatBerries(V3.bounty);
     const she = !!V3.look?.fem;
@@ -118099,19 +118829,19 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         reward: logPose
       },
       hunter: {
-        name: H2.chapter || "The First Poster",
-        summary: `${H2.name} deals in bounties in ${o.townName}. Their first poster for you: ${V3.name}, ${bounty}.`,
-        contact: { name: H2.name, title: H2.title || "Bounty Broker", look: H2.look, race: H2.race, at: H2.at, where: H2.where, level: 12, choices: [posters] },
-        pitch: H2.pitch,
+        name: H3.chapter || "The First Poster",
+        summary: `${H3.name} deals in bounties in ${o.townName}. Their first poster for you: ${V3.name}, ${bounty}.`,
+        contact: { name: H3.name, title: H3.title || "Bounty Broker", look: H3.look, race: H3.race, at: H3.at, where: H3.where, level: 12, choices: [posters] },
+        pitch: H3.pitch,
         accept: "I'll hunt pirates for a living.",
         meet: [
-          H2.first || `Everyone starts with a small one. Here: ${V3.name}, ${bounty}. ${He}'s been ${V3.crime}.`,
+          H3.first || `Everyone starts with a small one. Here: ${V3.name}, ${bounty}. ${He}'s been ${V3.crime}.`,
           `Last seen ${V3.where}. Knock ${him} down \u2014 the dead can't stand trial, so keep it clean \u2014 and I'll handle the paperwork with the Marines.`
         ],
         tasks: [T3.defeat(vid, `Hunt down ${V3.name} (${bounty}) ${V3.where}.`)],
-        wait: H2.wait || `${vname} is still out there ${V3.where}. Money doesn't walk up to you, partner.`,
+        wait: H3.wait || `${vname} is still out there ${V3.where}. Money doesn't walk up to you, partner.`,
         done: [
-          H2.done || `Ha! Look at ${him}. The Marines will be delighted \u2014 and so will I. Here's your cut, and the poster to frame.`,
+          H3.done || `Ha! Look at ${him}. The Marines will be delighted \u2014 and so will I. Here's your cut, and the poster to frame.`,
           (ctx) => `And here \u2014 a Log Pose, for the road. ${onward(ctx.char, "Word is the big money is at")}`
         ],
         // (the broker takes him to the Marines: the claim is theirs now)
@@ -118120,8 +118850,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           c.claims = (c.claims || []).filter((x) => x.name !== V3.name);
           c.flags.bountyHunter = true;
         },
-        after: H2.after || "Bring me more posters' worth, partner. There are always more.",
-        idle: H2.idle || "Every face on these posters is somebody's payday. Could be yours, one day.",
+        after: H3.after || "Bring me more posters' worth, partner. There are always more.",
+        idle: H3.idle || "Every face on these posters is somebody's payday. Could be yours, one day.",
         reward: (g) => ({ ...logPose(g), berries: Math.round(V3.bounty * 4e-3) * 10 })
       }
     });
@@ -119269,8 +119999,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   // src/content/main/blues.js
   var homeNpc = (island, path2) => ({ npc: `mq_home_${island}_${path2}` });
   var hc = (island, path2, where) => ({ npc: `mq_home_${island}_${path2}`, where });
-  var shipGift = (name) => (g) => g.ships.some((s) => s.owner === "player" && !s.sunk && s.def.grandLine && (s.def.cannons || 0) >= 4) ? {} : { ship: "caravel", shipName: name };
-  var navyShip = (g) => g.ships.some((s) => s.owner === "player" && !s.sunk && s.def.grandLine) ? {} : { ship: "sloop", shipName: "Navy Cutter" };
+  var shipGift = (name) => (g) => ownsShip(g, (d) => d.grandLine && (d.cannons || 0) >= 4) ? {} : { ship: "caravel", shipName: name };
+  var navyShip = (g) => ownsShip(g, (d) => d.grandLine) ? {} : { ship: "sloop", shipName: "Navy Cutter" };
   function rival(id, island, town, name, title2, bounty, look, extra = {}) {
     return target({ id, island, name, title: title2, faction: "pirate", boss: true, hpMul: 0.7, level: 9, bounty, at: { town, dock: true, ox: -2 }, look, style: "ittoryu", weapon: "sword", skill: 0.3, breakthrough: 2, ...extra });
   }
@@ -121347,12 +122077,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       lp.frequency.value = 3800;
       this.verb.connect(lp);
       lp.connect(this.sfxGain);
-      const curve = new Float32Array(1024);
+      const curve2 = new Float32Array(1024);
       for (let i = 0; i < 1024; i++) {
         const x = i / 1023 * 2 - 1;
-        curve[i] = Math.tanh(x * 2.6) / Math.tanh(2.6);
+        curve2[i] = Math.tanh(x * 2.6) / Math.tanh(2.6);
       }
-      this.clipCurve = curve;
+      this.clipCurve = curve2;
     }
     /** Where a sound goes: `out` (its level, and how far off it is), echo `send`, and grit (`drive`). */
     route(out, { send = 0, drive = 0 } = {}) {
@@ -121454,315 +122184,315 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (this.last[name] && t - this.last[name] < lim) return;
       this.last[name] = t;
       const r = () => 0.92 + Math.random() * 0.16;
-      const R3 = (o = {}) => this.route(vol, o);
+      const R4 = (o = {}) => this.route(vol, o);
       let d;
       switch (name) {
         // ---- the fight
         case "whoosh":
-          d = R3({ send: 0.05 });
+          d = R4({ send: 0.05 });
           this.noise(t, 0.17, { freq: 700 * r(), q: 1.3, gain: 0.16, sweep: 2600, dest: d });
           this.noise(t + 0.06, 0.1, { freq: 2400, q: 1, gain: 0.06, sweep: 900, dest: d });
           break;
         case "punch":
-          d = R3({ send: 0.06, drive: 2.2 });
+          d = R4({ send: 0.06, drive: 2.2 });
           this.noise(t, 0.016, { freq: 3200 * r(), q: 0.7, type: "highpass", gain: 0.35, attack: 1e-3, dest: d });
           this.tone(t, 0.13, { freq: 165 * r(), to: 48, gain: 0.55, attack: 2e-3, dest: d });
           this.noise(t, 0.075, { freq: 1100 * r(), q: 1.3, gain: 0.32, attack: 2e-3, dest: d });
           break;
         case "punch_heavy":
-          d = R3({ send: 0.16, drive: 3.2 });
+          d = R4({ send: 0.16, drive: 3.2 });
           this.noise(t, 0.022, { freq: 2600, q: 0.6, type: "highpass", gain: 0.4, attack: 1e-3, dest: d });
           this.tone(t, 0.3, { freq: 120 * r(), to: 32, gain: 0.75, attack: 2e-3, dest: d });
           this.noise(t, 0.28, { freq: 520, q: 0.8, type: "lowpass", gain: 0.45, sweep: 110, dest: d });
           this.noise(t + 0.01, 0.1, { freq: 900, q: 1.1, gain: 0.25, dest: d });
           break;
         case "slash_hit":
-          d = R3({ send: 0.12, drive: 0.8 });
+          d = R4({ send: 0.12, drive: 0.8 });
           this.noise(t, 0.09, { freq: 5200 * r(), q: 0.8, type: "highpass", gain: 0.34, attack: 1e-3, sweep: 2600, dest: d });
           this.tone(t, 0.1, { freq: 200, to: 70, gain: 0.3, dest: d });
           this.ring(t + 5e-3, 1480 * r(), 0.38, 0.07, d);
           break;
         case "slash_heavy":
-          d = R3({ send: 0.2, drive: 1.6 });
+          d = R4({ send: 0.2, drive: 1.6 });
           this.noise(t, 0.16, { freq: 4200 * r(), q: 0.7, type: "highpass", gain: 0.42, attack: 1e-3, sweep: 1800, dest: d });
           this.tone(t, 0.24, { freq: 140, to: 40, gain: 0.55, dest: d });
           this.ring(t + 0.01, 1180 * r(), 0.6, 0.09, d);
           break;
         case "block":
-          d = R3({ send: 0.05, drive: 0.6 });
+          d = R4({ send: 0.05, drive: 0.6 });
           this.noise(t, 0.06, { freq: 620 * r(), q: 2, gain: 0.35, attack: 1e-3, dest: d });
           this.tone(t, 0.09, { freq: 125, to: 70, gain: 0.28, dest: d });
           this.ring(t, 900 * r(), 0.16, 0.035, d, [1, 2.1]);
           break;
         case "parry":
-          d = R3({ send: 0.35 });
+          d = R4({ send: 0.35 });
           this.noise(t, 0.03, { freq: 4e3, q: 0.6, type: "highpass", gain: 0.35, attack: 1e-3, dest: d });
           this.ring(t, 1320 * r(), 0.95, 0.14, d, [1, 1.5, 2.25, 3.14, 3.96]);
           this.tone(t + 0.01, 0.4, { freq: 2640, to: 2900, type: "triangle", gain: 0.05, dest: d });
           break;
         case "guardbreak":
-          d = R3({ send: 0.15, drive: 2.5 });
+          d = R4({ send: 0.15, drive: 2.5 });
           this.noise(t, 0.26, { freq: 480, type: "lowpass", gain: 0.5, dest: d });
           this.tone(t, 0.32, { freq: 260, to: 65, type: "sawtooth", gain: 0.3, dest: d });
           this.ring(t, 700, 0.3, 0.05, d, [1, 1.7, 2.6]);
           break;
         case "dodge":
-          d = R3({ send: 0.04 });
+          d = R4({ send: 0.04 });
           this.noise(t, 0.15, { freq: 1200 * r(), q: 0.9, gain: 0.13, sweep: 3200, dest: d });
           break;
         case "ko":
-          d = R3({ send: 0.25, drive: 2 });
+          d = R4({ send: 0.25, drive: 2 });
           this.tone(t, 0.55, { freq: 95, to: 30, gain: 0.7, dest: d });
           this.noise(t, 0.4, { freq: 380, type: "lowpass", gain: 0.35, sweep: 90, dest: d });
           this.crackle(t + 0.05, 0.25, 6, { freq: 900, gain: 0.08, dest: d });
           break;
         case "knocked":
-          d = R3({ send: 0.3 });
+          d = R4({ send: 0.3 });
           this.tone(t, 0.95, { freq: 330, to: 105, type: "sawtooth", gain: 0.1, vib: { rate: 5, depth: 14 }, dest: d });
           this.tone(t, 0.9, { freq: 165, to: 52, gain: 0.14, dest: d });
           break;
         case "getup":
-          d = R3({ send: 0.25 });
+          d = R4({ send: 0.25 });
           [392, 523, 659].forEach((f, i) => this.tone(t + i * 0.08, 0.28, { freq: f, type: "triangle", gain: 0.12, dest: d }));
           break;
         case "death":
-          d = R3({ send: 0.45 });
+          d = R4({ send: 0.45 });
           [330, 311, 294, 220].forEach((f, i) => this.tone(t + i * 0.26, 0.6, { freq: f, type: "triangle", gain: 0.18, dest: d }));
           break;
         case "haki":
-          d = R3({ send: 0.3, drive: 2.4 });
+          d = R4({ send: 0.3, drive: 2.4 });
           this.tone(t, 0.5, { freq: 62, to: 124, type: "sawtooth", gain: 0.2, attack: 0.03, dest: d });
           this.tone(t, 0.45, { freq: 46, to: 38, gain: 0.35, attack: 0.02, dest: d });
           this.crackle(t + 0.05, 0.35, 8, { freq: 2400, gain: 0.06, dest: d });
           break;
         case "haki_obs":
-          d = R3({ send: 0.5 });
+          d = R4({ send: 0.5 });
           this.tone(t, 0.7, { freq: 880, to: 1320, gain: 0.1, attack: 0.04, dest: d });
           this.tone(t + 0.05, 0.6, { freq: 1760, to: 2200, gain: 0.04, attack: 0.05, dest: d });
           break;
         // ---- the elements (a Devil Fruit's blows sound like what they're made of)
         case "fire":
-          d = R3({ send: 0.15, drive: 0.8 });
+          d = R4({ send: 0.15, drive: 0.8 });
           this.noise(t, 0.45, { freq: 1300 * r(), q: 0.5, type: "lowpass", gain: 0.4, attack: 0.02, sweep: 380, dest: d });
           this.crackle(t, 0.4, 10, { freq: 2600, gain: 0.07, dest: d });
           break;
         case "magma":
-          d = R3({ send: 0.2, drive: 2 });
+          d = R4({ send: 0.2, drive: 2 });
           this.tone(t, 0.5, { freq: 70, to: 36, gain: 0.5, dest: d });
           this.noise(t, 0.6, { freq: 700, type: "lowpass", gain: 0.45, attack: 0.03, sweep: 150, dest: d });
           this.crackle(t + 0.05, 0.5, 12, { freq: 1500, gain: 0.08, dest: d });
           break;
         case "ice":
-          d = R3({ send: 0.3 });
+          d = R4({ send: 0.3 });
           this.noise(t, 0.08, { freq: 5e3, type: "highpass", gain: 0.28, attack: 1e-3, dest: d });
           this.ring(t, 2400 * r(), 0.45, 0.06, d, [1, 1.34, 1.87, 2.51]);
           this.crackle(t, 0.15, 6, { freq: 6e3, gain: 0.07, dest: d });
           break;
         case "snow":
-          d = R3({ send: 0.25 });
+          d = R4({ send: 0.25 });
           this.noise(t, 0.2, { freq: 3e3, q: 0.5, gain: 0.14, attack: 0.01, sweep: 1200, dest: d });
           this.ring(t, 3100, 0.3, 0.025, d, [1, 1.5]);
           break;
         case "lightning":
         case "thunder_small":
-          d = R3({ send: 0.2, drive: 1.8 });
+          d = R4({ send: 0.2, drive: 1.8 });
           for (let i = 0; i < 4; i++) this.tone(t + i * 0.025, 0.04, { freq: 1600 + Math.random() * 2800, type: "square", gain: 0.07, attack: 1e-3, dest: d });
           this.noise(t, 0.35, { freq: 2800, gain: 0.3, attack: 2e-3, sweep: 400, dest: d });
           this.tone(t, 0.3, { freq: 62, gain: 0.3, dest: d });
           break;
         case "water":
-          d = R3({ send: 0.12 });
+          d = R4({ send: 0.12 });
           this.noise(t, 0.32, { freq: 950 * r(), q: 0.6, type: "lowpass", gain: 0.35, sweep: 280, dest: d });
           for (let i = 0; i < 3; i++) this.tone(t + 0.04 + i * 0.05, 0.07, { freq: 300 + Math.random() * 250, to: 700, gain: 0.07, dest: d });
           break;
         case "swamp":
-          d = R3({ send: 0.1 });
+          d = R4({ send: 0.1 });
           for (let i = 0; i < 5; i++) this.tone(t + i * 0.07, 0.1, { freq: 110 + Math.random() * 90, to: 260, gain: 0.12, dest: d });
           this.noise(t, 0.4, { freq: 300, type: "lowpass", gain: 0.2, dest: d });
           break;
         case "poison":
-          d = R3({ send: 0.12 });
+          d = R4({ send: 0.12 });
           this.noise(t, 0.5, { freq: 6e3, q: 0.5, type: "highpass", gain: 0.1, attack: 0.02, dest: d });
           this.tone(t, 0.45, { freq: 180, to: 120, type: "sawtooth", gain: 0.07, vib: { rate: 9, depth: 18 }, dest: d });
           break;
         case "gas":
-          d = R3({ send: 0.1 });
+          d = R4({ send: 0.1 });
           this.noise(t, 0.55, { freq: 4500, q: 0.4, type: "highpass", gain: 0.12, attack: 0.05, sweep: 2500, dest: d });
           break;
         case "smoke":
-          d = R3({ send: 0.15 });
+          d = R4({ send: 0.15 });
           this.noise(t, 0.4, { freq: 650 * r(), q: 0.5, type: "lowpass", gain: 0.3, attack: 0.03, sweep: 220, dest: d });
           break;
         case "sand":
-          d = R3({ send: 0.1 });
+          d = R4({ send: 0.1 });
           this.noise(t, 0.42, { freq: 1900 * r(), q: 0.45, gain: 0.22, attack: 0.02, sweep: 900, dest: d });
           this.crackle(t, 0.4, 14, { freq: 4200, gain: 0.05, dest: d });
           break;
         case "light":
-          d = R3({ send: 0.45 });
+          d = R4({ send: 0.45 });
           this.tone(t, 0.3, { freq: 1760, to: 3520, gain: 0.12, attack: 2e-3, dest: d });
           this.ring(t + 0.03, 2640, 0.55, 0.035, d, [1, 1.5, 2]);
           break;
         case "dark":
-          d = R3({ send: 0.3, drive: 1.5 });
+          d = R4({ send: 0.3, drive: 1.5 });
           this.noise(t, 0.35, { freq: 380, type: "lowpass", gain: 0.4, attack: 0.25, dest: d });
           this.tone(t, 0.45, { freq: 55, to: 30, gain: 0.45, attack: 0.2, dest: d });
           break;
         case "quake":
-          d = R3({ send: 0.3, drive: 2.5 });
+          d = R4({ send: 0.3, drive: 2.5 });
           this.tone(t, 0.9, { freq: 48, to: 30, gain: 0.7, vib: { rate: 14, depth: 6 }, dest: d });
           this.noise(t, 0.9, { freq: 300, type: "lowpass", gain: 0.5, dest: d });
           this.crackle(t + 0.1, 0.7, 10, { freq: 800, gain: 0.1, dest: d });
           break;
         case "string":
-          d = R3({ send: 0.15 });
+          d = R4({ send: 0.15 });
           this.tone(t, 0.35, { freq: 440 * r(), to: 400, type: "sawtooth", gain: 0.1, attack: 1e-3, dest: d });
           this.noise(t, 0.05, { freq: 3e3, gain: 0.15, dest: d });
           break;
         case "explosion":
-          d = R3({ send: 0.35, drive: 3 });
+          d = R4({ send: 0.35, drive: 3 });
           this.noise(t, 0.05, { freq: 1500, type: "highpass", gain: 0.5, attack: 1e-3, dest: d });
           this.tone(t, 0.9, { freq: 72, to: 26, gain: 0.85, dest: d });
           this.noise(t, 1.1, { freq: 900, type: "lowpass", gain: 0.7, sweep: 55, dest: d });
           this.crackle(t + 0.08, 0.7, 16, { freq: 1800, gain: 0.1, dest: d });
           break;
         case "cannon":
-          d = R3({ send: 0.45, drive: 2.6 });
+          d = R4({ send: 0.45, drive: 2.6 });
           this.noise(t, 0.04, { freq: 1600, type: "highpass", gain: 0.5, attack: 1e-3, dest: d });
           this.tone(t, 0.8, { freq: 88, to: 30, gain: 0.85, dest: d });
           this.noise(t, 1.3, { freq: 600, type: "lowpass", gain: 0.55, sweep: 60, dest: d });
           break;
         case "crash":
-          d = R3({ send: 0.2, drive: 1.5 });
+          d = R4({ send: 0.2, drive: 1.5 });
           this.noise(t, 0.5, { freq: 320, type: "lowpass", gain: 0.55, dest: d });
           this.tone(t, 0.3, { freq: 100, to: 45, gain: 0.4, dest: d });
           this.crackle(t, 0.45, 14, { freq: 1300, gain: 0.12, dest: d });
           break;
         case "thunder":
-          d = R3({ send: 0.4, drive: 1 });
+          d = R4({ send: 0.4, drive: 1 });
           this.noise(t, 0.12, { freq: 3e3, gain: 0.35, attack: 2e-3, sweep: 900, dest: d });
           this.noise(t + 0.05, 2.3, { freq: 220, gain: 0.7, type: "lowpass", attack: 0.03, sweep: 40, dest: d });
           break;
         // ---- moving about
         case "splash":
-          this.noise(t, 0.4, { freq: 700, q: 0.5, gain: 0.3, type: "lowpass", sweep: 200, dest: R3({ send: 0.08 }) });
+          this.noise(t, 0.4, { freq: 700, q: 0.5, gain: 0.3, type: "lowpass", sweep: 200, dest: R4({ send: 0.08 }) });
           break;
         case "splash_big":
-          d = R3({ send: 0.15 });
+          d = R4({ send: 0.15 });
           this.noise(t, 0.75, { freq: 950, q: 0.4, gain: 0.45, type: "lowpass", sweep: 140, dest: d });
           this.tone(t, 0.3, { freq: 90, to: 42, gain: 0.3, dest: d });
           this.noise(t + 0.05, 0.4, { freq: 2600, q: 0.6, gain: 0.1, sweep: 900, dest: d });
           break;
         case "splash_out":
-          d = R3();
+          d = R4();
           this.noise(t, 0.35, { freq: 1300, q: 0.5, gain: 0.26, sweep: 420, dest: d });
           this.tone(t + 0.04, 0.12, { freq: 300, to: 620, gain: 0.08, dest: d });
           break;
         case "wade":
-          this.noise(t, 0.2, { freq: 1400 * r(), q: 0.8, gain: 0.06, sweep: 600, dest: R3() });
+          this.noise(t, 0.2, { freq: 1400 * r(), q: 0.8, gain: 0.06, sweep: 600, dest: R4() });
           break;
         case "jump":
-          this.noise(t, 0.12, { freq: 1100 * r(), q: 0.7, gain: 0.08, sweep: 2400, dest: R3() });
+          this.noise(t, 0.12, { freq: 1100 * r(), q: 0.7, gain: 0.08, sweep: 2400, dest: R4() });
           break;
         case "jump_big":
-          d = R3({ send: 0.08 });
+          d = R4({ send: 0.08 });
           this.tone(t, 0.18, { freq: 120, to: 60, gain: 0.25, dest: d });
           this.noise(t, 0.32, { freq: 900, q: 0.6, gain: 0.15, sweep: 3200, dest: d });
           break;
         case "land_heavy":
-          d = R3({ send: 0.1, drive: 1.4 });
+          d = R4({ send: 0.1, drive: 1.4 });
           this.noise(t, 0.18, { freq: 260, gain: 0.45, type: "lowpass", dest: d });
           this.tone(t, 0.16, { freq: 110, to: 48, gain: 0.35, dest: d });
           break;
         // breaking the surface out of breath: a long gulp of air
         case "gasp":
-          d = R3();
+          d = R4();
           this.noise(t, 0.5, { freq: 800, q: 0.9, gain: 0.2, attack: 0.1, sweep: 2300, dest: d });
           this.noise(t + 0.55, 0.3, { freq: 600, q: 0.7, gain: 0.08, attack: 0.05, sweep: 300, dest: d });
           break;
         // out of air under water: the last bubbles gurgling out
         case "choke":
-          d = R3();
+          d = R4();
           for (let i = 0; i < 5; i++) this.tone(t + i * 0.07 * r(), 0.08, { freq: 170 + Math.random() * 140, to: 420 + Math.random() * 200, gain: 0.13, dest: d });
           this.noise(t, 0.35, { freq: 380, gain: 0.12, type: "lowpass", dest: d });
           break;
         case "board":
         case "step":
-          d = R3();
+          d = R4();
           this.noise(t, 0.1, { freq: 280 * r(), q: 1.2, gain: 0.22, attack: 2e-3, dest: d });
           this.tone(t, 0.07, { freq: 140, to: 90, gain: 0.1, dest: d });
           break;
         // ---- doors, loot and the like
         case "knock":
-          d = R3({ send: 0.12 });
+          d = R4({ send: 0.12 });
           [0, 0.17, 0.34].forEach((k) => {
             this.noise(t + k, 0.07, { freq: 260 * r(), q: 1.6, gain: 0.55, dest: d });
             this.tone(t + k, 0.08, { freq: 130, to: 80, gain: 0.25, dest: d });
           });
           break;
         case "door":
-          d = R3({ send: 0.1 });
+          d = R4({ send: 0.1 });
           this.noise(t, 0.03, { freq: 2600, q: 2, gain: 0.18, attack: 1e-3, dest: d });
           this.tone(t + 0.04, 0.42, { freq: 170 * r(), to: 250, type: "sawtooth", gain: 0.05, attack: 0.06, vib: { rate: 22, depth: 18 }, dest: d });
           this.noise(t + 0.04, 0.3, { freq: 900, q: 0.6, gain: 0.08, dest: d });
           break;
         case "doorshut":
-          d = R3({ send: 0.12 });
+          d = R4({ send: 0.12 });
           this.noise(t, 0.12, { freq: 220, gain: 0.35, type: "lowpass", dest: d });
           this.tone(t, 0.12, { freq: 95, to: 60, gain: 0.3, dest: d });
           break;
         case "doorbreak":
-          d = R3({ send: 0.2, drive: 2 });
+          d = R4({ send: 0.2, drive: 2 });
           this.noise(t, 0.6, { freq: 320, gain: 0.7, type: "lowpass", dest: d });
           this.noise(t, 0.35, { freq: 2600, gain: 0.3, sweep: 700, dest: d });
           this.tone(t, 0.3, { freq: 110, to: 45, gain: 0.5, dest: d });
           this.crackle(t, 0.4, 12, { freq: 1500, gain: 0.12, dest: d });
           break;
         case "dry":
-          d = R3({ send: 0.08 });
+          d = R4({ send: 0.08 });
           this.noise(t, 0.035, { freq: 3200, q: 3, gain: 0.35, attack: 1e-3, dest: d });
           this.tone(t, 0.05, { freq: 420, to: 300, type: "square", gain: 0.06, dest: d });
           this.noise(t + 0.09, 0.03, { freq: 2400, q: 3, gain: 0.2, attack: 1e-3, dest: d });
           break;
         case "coin":
-          d = R3({ send: 0.15 });
+          d = R4({ send: 0.15 });
           this.ring(t, 1568, 0.18, 0.07, d, [1, 2.76]);
           this.ring(t + 0.07, 2093, 0.3, 0.07, d, [1, 2.76]);
           break;
         case "treasure":
-          d = R3({ send: 0.3 });
+          d = R4({ send: 0.3 });
           [523, 659, 784, 1046].forEach((f, i) => this.tone(t + i * 0.09, 0.35, { freq: f, type: "triangle", gain: 0.14, dest: d }));
           this.ring(t + 0.36, 2093, 0.5, 0.04, d, [1, 2.76, 5.4]);
           break;
         case "bell":
-          this.ring(t, 196, 3.2, 0.2, R3({ send: 0.5 }), [0.5, 1, 1.2, 1.5, 2, 2.6, 3]);
+          this.ring(t, 196, 3.2, 0.2, R4({ send: 0.5 }), [0.5, 1, 1.2, 1.5, 2, 2.6, 3]);
           break;
         case "eat":
-          d = R3();
+          d = R4();
           this.noise(t, 0.08, { freq: 900, gain: 0.2, dest: d });
           this.noise(t + 0.12, 0.08, { freq: 800, gain: 0.2, dest: d });
           this.tone(t + 0.26, 0.12, { freq: 220, to: 160, gain: 0.08, dest: d });
           break;
         case "bite":
-          d = R3({ send: 0.03 });
+          d = R4({ send: 0.03 });
           this.noise(t, 0.05, { freq: 1800 * r(), q: 1.4, gain: 0.22, attack: 2e-3, dest: d });
           this.crackle(t + 0.02, 0.12, 5, { freq: 2600, gain: 0.07, dest: d });
           this.tone(t, 0.07, { freq: 150 * r(), to: 90, gain: 0.12, dest: d });
           break;
         case "equip":
-          d = R3({ send: 0.08 });
+          d = R4({ send: 0.08 });
           this.noise(t, 0.03, { freq: 3500, q: 1.5, gain: 0.2, attack: 1e-3, dest: d });
           this.ring(t + 0.01, 1900, 0.18, 0.05, d, [1, 1.6]);
           break;
         case "page":
-          this.noise(t, 0.2, { freq: 3e3, q: 0.5, gain: 0.08, dest: R3() });
+          this.noise(t, 0.2, { freq: 3e3, q: 0.5, gain: 0.08, dest: R4() });
           break;
         case "reveal":
-          d = R3({ send: 0.3 });
+          d = R4({ send: 0.3 });
           [392, 494, 587].forEach((f, i) => this.tone(t + i * 0.1, 0.4, { freq: f, type: "triangle", gain: 0.16, dest: d }));
           break;
         case "fanfare":
-          d = R3({ send: 0.35, drive: 0.4 });
+          d = R4({ send: 0.35, drive: 0.4 });
           [523, 659, 784, 1046].forEach((f, i) => {
             this.tone(t + i * 0.1, 0.24, { freq: f, type: "sawtooth", gain: 0.06, dest: d });
             this.tone(t + i * 0.1, 0.24, { freq: f, type: "triangle", gain: 0.12, dest: d });
@@ -121771,17 +122501,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           this.ring(t + 0.42, 2093, 0.6, 0.03, d, [1, 2.76]);
           break;
         case "breakthrough":
-          d = R3({ send: 0.35, drive: 0.6 });
+          d = R4({ send: 0.35, drive: 0.6 });
           [440, 554, 659, 880].forEach((f, i) => this.tone(t + i * 0.07, 0.45, { freq: f, type: "sawtooth", gain: 0.06, dest: d }));
           this.tone(t, 0.6, { freq: 55, to: 110, gain: 0.2, dest: d });
           break;
         case "seaking":
-          d = R3({ send: 0.5, drive: 1.5 });
+          d = R4({ send: 0.5, drive: 1.5 });
           this.tone(t, 1.8, { freq: 72, to: 44, type: "sawtooth", gain: 0.3, attack: 0.3, vib: { rate: 3, depth: 4 }, dest: d });
           this.noise(t, 1.6, { freq: 250, gain: 0.3, type: "lowpass", dest: d });
           break;
         default:
-          this.noise(t, 0.05, { freq: 1500, gain: 0.05, dest: R3() });
+          this.noise(t, 0.05, { freq: 1500, gain: 0.05, dest: R4() });
       }
     }
     // --------------------------------------------------------------- music
@@ -122129,6 +122859,80 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     phrases[0] = A;
     const bars = 2 * Math.round((T4.bars[0] + Math.random() * (T4.bars[1] - T4.bars[0])) / 2);
     return { T: T4, chords, midi, perBar, eighth, barDur: eighth * perBar, bars, phrases, arpPat: pick4(ARPS[T4.feel]) };
+  }
+
+  // src/game/shipwrights.js
+  var TOPS2 = ["#eceff1", "#f5f5f5", "#8d6e63", "#607d8b", "#ffe0b2", "#90a4ae"];
+  var BOTTOMS2 = ["#37474f", "#4e342e", "#1e3a5f", "#5d4037", "#455a64"];
+  var HATS3 = [["bandana", "#1565c0"], ["bandana", "#c62828"], ["headband", "#fafafa"], ["cap", "#6d8f5e"], ["goggles", "#8d6e63"], ["bandana", "#f9a825"]];
+  var HELLO = [
+    '"Ahoy! Every hull on this pier is mine to mind. Want one of yours brought round \u2014 or a new one off the slipway?"',
+    `"Mind the tar, it's fresh. Now: fetch you one of your ships, or have a look at what I've got for sale?"`,
+    '"Hah! Sea legs and empty hands. Let me guess \u2014 you want a ship."',
+    `"Any ship you own, I can have her here by the next tide. Any ship you don't, I can sell you."`
+  ];
+  function shipwrightBuilder(ctx) {
+    const { island, game, list } = ctx;
+    if (game.world !== game.surface || !island.docks?.length) return;
+    island.docks.forEach((dock, i) => {
+      const st = dock.stand;
+      if (!st) return;
+      const at5 = game.spawner.freeSpot(st.x, st.y) ? st : game.spawner.findFree(st.x, st.y, 1.2);
+      if (!at5) return;
+      const a = makeShipwright(island, dock, i, at5.x, at5.y);
+      a.facing = a.faceHome = st.face;
+      a.game = game;
+      game.addActor(a);
+      list.push(a);
+    });
+  }
+  function makeShipwright(island, dock, i, x, y) {
+    const rng4 = new RNG(`${island.id}:shipwright:${i}`);
+    const race = rng4.weighted(island.def?.population || townRaces(island));
+    const hat = rng4.pick(HATS3);
+    const def = {
+      name: `Shipwright ${randomName(rng4, race).split(" ")[0]}`,
+      title: pierName(dock, island).replace(/^the (.)/, (m, c) => c.toUpperCase()),
+      race,
+      faction: "civilian",
+      level: 8,
+      ai: "idle",
+      seed: rng4.int(1, 1e9),
+      // (a carpenter's working clothes: rolled-up sleeves or none, work trousers, a tool belt and boots)
+      look: {
+        fem: rng4.chance(0.2),
+        topStyle: rng4.pick(["tank", "tee", "shirt", "vest"]),
+        top: rng4.pick(TOPS2),
+        bottomStyle: rng4.pick(["baggy", "trousers", "capri"]),
+        bottom: rng4.pick(BOTTOMS2),
+        waist: "belt",
+        shoeStyle: "boots",
+        hat: hat[0],
+        hatColor: hat[1],
+        muscle: +(0.7 + rng4.next() * 0.3).toFixed(2)
+      },
+      dialogue: (ctx) => talk(ctx.game, ctx.npc)
+    };
+    const a = makeNPC(def, x, y);
+    a.invulnerable = true;
+    a.shipwright = { dock, island, hello: rng4.pick(HELLO) };
+    return a;
+  }
+  function talk(game, npc) {
+    const sw2 = npc?.shipwright;
+    if (!sw2) return null;
+    const open = (tab) => () => {
+      game.dialogue.close();
+      openShipwright(game, { dock: sw2.dock, island: sw2.island, npc, tab });
+    };
+    return { start: "a", nodes: { a: {
+      text: sw2.hello,
+      choices: [
+        { text: "Spawn ship", do: open("spawn"), end: true },
+        { text: "Buy ships", do: open("buy"), end: true },
+        { text: "Goodbye", end: true }
+      ]
+    } } };
   }
 
   // src/ui/loot.js
@@ -123062,6 +123866,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     };
     game.zoneWorld = zoneWorld;
     game.inZone = () => game.world !== game.surface ? game.world.id : null;
+    game.stashedShips = () => stash2 || [];
+    game.on("characterStart", () => {
+      if (game.world === game.surface) stash2 = null;
+    });
     const spotIn = (world, islandId, spotId) => {
       const isl = world.islands.find((i) => i.id === islandId);
       if (!isl) return null;
@@ -123552,11 +124360,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const lt2 = laughTale();
       if (!lt2 || c.flags.laughTaleRevealed) return;
       const d = game.world.distance(p.x, p.y, lt2.x, lt2.y);
-      const R3 = lt2.radius + 70;
-      if (d < R3) {
-        game.env.storm = Math.max(game.env.storm, 0.9 * (1 - d / R3) + 0.3);
+      const R4 = lt2.radius + 70;
+      if (d < R4) {
+        game.env.storm = Math.max(game.env.storm, 0.9 * (1 - d / R4) + 0.3);
         const ang = Math.atan2(p.y - lt2.y, game.world.dx(lt2.x, p.x));
-        const push = 9 * (1 - d / R3) + 2;
+        const push = 9 * (1 - d / R4) + 2;
         const s = p.mode === "sail" ? p.ship : null;
         if (s) {
           s.x = game.world.wx(s.x + Math.cos(ang) * push * dt);
@@ -123766,7 +124574,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   // src/ui/touch.js
   var DEAD = 0.14;
   var RUN = 0.9;
-  var R2 = 54;
+  var R3 = 54;
   function installTouch(game, root2) {
     const ui = game.ui, inp = game.input;
     const t = inp.touch = { on: false, mx: 0, my: 0, run: false };
@@ -123781,11 +124589,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       use: btn("use", "Use"),
       heal: btn("heal", "Heal")
     };
-    const pad = h("div.touch-pad", ...Object.values(B4));
+    const pad2 = h("div.touch-pad", ...Object.values(B4));
     const knob = h("i");
     const stickEl = h("div.t-stick.idle", knob);
     const rotate = h("div.t-rotate.hidden", "Turn your phone sideways for the best view");
-    ui.hud.append(stickEl, pad, rotate);
+    ui.hud.append(stickEl, pad2, rotate);
     const press = (c) => {
       if (c === "dodge") {
         game.player?.controller?.requestDodge?.();
@@ -123848,7 +124656,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const placeStick = (x, y, kx, ky) => {
       stickEl.style.left = x + "px";
       stickEl.style.top = y + "px";
-      knob.style.transform = `translate(${kx * R2}px, ${ky * R2}px)`;
+      knob.style.transform = `translate(${kx * R3}px, ${ky * R3}px)`;
     };
     const resetStick = () => {
       stick.id = null;
@@ -123889,14 +124697,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (e.pointerId === stick.id) {
         let dx = e.clientX - stick.ox, dy = e.clientY - stick.oy;
         const d = Math.hypot(dx, dy);
-        if (d > R2) {
-          const k = (d - R2) / d;
+        if (d > R3) {
+          const k = (d - R3) / d;
           stick.ox += dx * k;
           stick.oy += dy * k;
-          dx *= R2 / d;
-          dy *= R2 / d;
+          dx *= R3 / d;
+          dy *= R3 / d;
         }
-        const mx = dx / R2, my = dy / R2, m = Math.hypot(mx, my);
+        const mx = dx / R3, my = dy / R3, m = Math.hypot(mx, my);
         const s = m < DEAD ? 0 : (m - DEAD) / (1 - DEAD) / m;
         t.mx = mx * s;
         t.my = my * s;
@@ -123948,7 +124756,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           if (stick.id !== null) resetStick();
           look.id = null;
         }
-        pad.classList.toggle("hidden", !playing());
+        pad2.classList.toggle("hidden", !playing());
         stickEl.classList.toggle("hidden", !playing());
         rotate.classList.toggle("hidden", window.innerHeight <= window.innerWidth * 1.05);
         const sail = p.mode === "sail";
@@ -124134,10 +124942,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     new Services(game);
     game.interactions = new Interactions(game);
     game.spawner.addBuilder(npcBuilder);
+    game.spawner.addBuilder(shipwrightBuilder);
     installMap(game);
     installSea(game);
     installDecks(game);
     installTraffic(game);
+    installFleet(game);
     installWanted(game);
     installLoot(game);
     installContainers(game);
@@ -124386,6 +125196,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         bl,
         bfront,
         portrait: renderPortrait,
+        launchShip,
+        openShipwright,
         deckSpot: (s, which) => {
           const sp = which === "hatch" ? hatchSpot(s) : helmSpot(s);
           return deckToWorld(s, sp.t, sp.v);

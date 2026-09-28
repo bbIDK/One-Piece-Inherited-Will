@@ -9,7 +9,8 @@
 // per look signature + level and shared (ref-counted) by every character
 // that looks the same.
 import { Builder, Prim, M, between, mul, grid, lathe, tcap, lin, THREE } from './geom.js';
-import { B, dims } from './bones.js';
+import { B, dims, bindPose, frameId } from './bones.js';
+import { BLANK_UV } from './detail.js';
 import { buildFigure } from './body.js';
 import { FACE_TOP, FACE_BOTTOM } from './face.js';
 import { shade, mixHex } from '../../core/math.js';
@@ -114,18 +115,21 @@ function sdfHead(x, y, z, k) {
   // the mouth (upper jaw) sits forward of the face
   d = smin(d, ellipsoid(x - 0.58, y + 0.6, z, 0.24, 0.19, 0.32), 0.2);
   // cheekbones
-  d = smin(d, ellipsoid(x - 0.66, y + 0.12, az - 0.5, 0.2, 0.12, 0.2), 0.05 + 0.12 * k.cheek);
+  d = smin(d, ellipsoid(x - 0.66, y + 0.12, az - 0.5, 0.22, 0.13, 0.22), 0.05 + 0.12 * k.cheek);
+  // the cheek plane falls in below the cheekbone toward the jaw (less on women and round faces)
+  d = smax(d, -ellipsoid(x - 0.74, y + 0.42, az - 0.52, 0.2, 0.14, 0.16), (k.fem ? 0.2 : 0.12) + 0.08 * k.cheek);
   // flatter temples
   d = smax(d, az - 0.87, 0.3);
   // eye sockets, under the brow
   d = smax(d, -ellipsoid(x - 0.96, y + 0.04, az - 0.34, 0.13, 0.12, 0.19), 0.08);
-  // brow ridge
-  d = smin(d, capsule(x, y, az, 0.88, 0.19, 0.0, 0.76, 0.17, 0.52, 0.035 + 0.04 * k.brow), 0.08 + 0.04 * k.brow);
+  // brow ridge (heavier on men), shading the eyes
+  d = smin(d, capsule(x, y, az, 0.9, 0.2, 0.0, 0.78, 0.18, 0.52, 0.04 + 0.05 * k.brow * (k.fem ? 0.6 : 1)), 0.08 + 0.04 * k.brow);
   // the nose: bridge, tip and nostril wings
   const n = k.nose;
   if (n) {
-    const tx = 0.9 + n.len, ty = -0.36 * n.h;
-    let nd = capsule(x, y, z, 0.9, 0.02, 0, tx, ty + 0.02, 0, n.r0);
+    // (a sharp anime bridge: narrow, running straight down from between the brows)
+    const tx = 0.92 + n.len * 1.15, ty = -0.36 * n.h;
+    let nd = capsule(x, y, z * 1.25, 0.92, 0.05, 0, tx, ty + 0.02, 0, n.r0 * 1.1);
     if (n.hook) nd = smin(nd, sphere(x - 0.92 - n.len * 0.55, y + 0.15, z, n.r0 + n.hook), 0.05);
     nd = smin(nd, sphere(x - tx + 0.01, y - ty, z, n.tip), 0.05);
     nd = smin(nd, sphere(x - tx + 0.07, y - ty + 0.03, az - 0.07, n.wing), 0.04);
@@ -179,17 +183,18 @@ const dirOf = (thD, phD) => { const t = thD * DEG, p = phD * DEG; return [Math.s
 export function surf(thD, phD, k = 1) { const d = dirOf(thD, phD); const p = headShape(d[0], d[1], d[2]); return [p[0] * k, p[1] * k, p[2] * k]; }
 
 /**
- * Anime face shading. The grid's normals are smoothed (the cel ramp turns
- * every small wobble into a blotch), then lean toward the direction from the
- * head centre: strongly over the jaw and cheeks (clean, round shading), less
- * over the brow, nose and cheekbones (the face's structure still catches the
- * light); the front of the face turns a little toward the viewer.
+ * Anime face shading. The grid's normals are smoothed a little (the cel ramp
+ * turns every small wobble into a blotch) and lean slightly toward the
+ * direction from the head centre — but the face's structure keeps its own
+ * shading: the nose throws its shadow side, the brow shades the eyes, the
+ * cheekbones and the jaw turn their planes away from the light, as in the
+ * anime-game art (a flat, evenly lit face reads as a mask).
  */
 function faceNormals(g, U, V) {
   const P = g.attributes.position, N = g.attributes.normal;
   const W = U + 1, n = N.count;
   let a = Float32Array.from(N.array), b = new Float32Array(a.length);
-  for (let it = 0; it < 3; it++) {
+  for (let it = 0; it < 2; it++) {
     for (let j = 0; j <= V; j++) {
       for (let i = 0; i <= U; i++) {
         const k = (j * W + i) * 3;
@@ -208,10 +213,10 @@ function faceNormals(g, U, V) {
     const l = Math.hypot(px, py, pz) || 1;
     const dx = px / l, dy = py / l, dz = pz / l;
     // how much of the sculpted shape shows: most over the brow, nose and cheekbones
-    const feat = Math.max(0, 1 - Math.abs(py + 0.12) / 0.5) * Math.max(0, 1 - Math.abs(pz) / 0.7) * Math.max(0, Math.min(1, dx * 2));
-    const wg = 0.3 + 0.4 * feat;
+    const feat = Math.max(0, 1 - Math.abs(py + 0.12) / 0.55) * Math.max(0, 1 - Math.abs(pz) / 0.75) * Math.max(0, Math.min(1, dx * 2));
+    const wg = 0.62 + 0.33 * feat;
     const f = Math.max(0, Math.min(1, (dx + 0.1) / 0.7));
-    const nx = a[i * 3] * wg + dx * (1 - wg) + f * 0.2, ny = a[i * 3 + 1] * wg + dy * (1 - wg) + f * 0.05, nz = a[i * 3 + 2] * wg + dz * (1 - wg);
+    const nx = a[i * 3] * wg + dx * (1 - wg) + f * 0.08, ny = a[i * 3 + 1] * wg + dy * (1 - wg) + f * 0.02, nz = a[i * 3 + 2] * wg + dz * (1 - wg);
     const m = Math.hypot(nx, ny, nz) || 1;
     N.setXYZ(i, nx / m, ny / m, nz / m);
   }
@@ -785,7 +790,7 @@ export function geoKey(look, wpn, lod = 0) {
   return [lod, L.race, L.skin, L.hair, L.hairColor, L.top, L.bottom, L.shoes, L.hat, L.hatColor, L.coat, L.openShirt ? 1 : 0, L.sleeve, L.noSleeves ? 1 : 0,
     L.hand, L.arms, L.legs, L.bulk, L.ears, L.fur, L.furFace ? 1 : 0, L.furWhite ? 1 : 0, L.tail, L.fin ? 1 : 0, L.wings, L.nose, L.kind, L.vest, L.belt,
     L.sandals ?? ((L.seed || 0) % 4 === 0 ? 's' : 'b'), L.neck, L.nika ? 1 : 0, L.drums ? 1 : 0, L.seed || 0, wpn ? `${wpn.kind}${wpn.count}` : '-',
-    L.fem ? 1 : 0, L.topStyle, L.bottomStyle, L.waist, L.waistCol, L.shoeStyle, L.top2, L.sleeves, L.muscle, L.bust, L.tie, L.tucked, L.buckle,
+    L.fem ? 1 : 0, L.topStyle, L.bottomStyle, L.waist, L.waistCol, L.shoeStyle, L.top2, L.sleeves, L.muscle, L.bust, L.tie, L.tucked, L.buckle, frameId(L),
     headKey(headParams(L))].join('|');
 }
 
@@ -801,9 +806,10 @@ function buildBody0(look, wpn, lod, articulated) {
   if (articulated && lod === 0) q = { ...q, hands: 2 };
   const d = dims(look);
   const pal = palette(look);
-  const b = new Builder();
+  const bind = bindPose(d);
+  const b = new Builder(bind, BLANK_UV);
   const Bk = d.Bk;
-  const add = (g, m, col, bone, part = 0) => b.add(g, m, col, bone, part);
+  const add = (g, m, col, bone, part = 0, opts) => b.add(g, m, col, bone, part, opts);
   const rb = (k = 0.4, small = true) => Prim.rbox(k, ...(small ? q.rboxS : q.rbox));
 
   // ---- pelvis, torso, arms, legs, feet and clothes (body.js)
@@ -914,8 +920,11 @@ function buildBody0(look, wpn, lod, articulated) {
     if (wpn.kind === 'axe') add(Prim.box(), M(a[0] - 0.02, a[1] + 0.1, a[2] + 0.05, 0.9, 0, 0, [0.015, 0.12, 0.16]), '#cfd8dc', B.backWpn);
   }
 
+  // everything on the head (hair, hat, ears, nose) is tagged: your own first-person body leaves it out
+  for (let i = 0; i < b.bone.length; i++) if (b.bone[i] === B.head || b.bone[i] === B.hairTail) b.part[i] = 5;
   const geo = b.build();
-  return { geo, dims: d, style, meta, hatKind: kind, bubble: kind === 'bubble', lod, fingers: fingers.R ? fingers : null };
+  const inv = bind.map((m) => m.clone().invert());
+  return { geo, dims: d, bind, inv, style, meta, hatKind: kind, bubble: kind === 'bubble', lod, fingers: fingers.R ? fingers : null };
 }
 
 function minkEars(b, HM, look, pal, hb, q) {
@@ -958,16 +967,21 @@ function hands(b, H, s, col, Bk, part, q, kMul = 1) {
     const hand = B['hand' + H];
     b.add(Prim.rbox(0.4, 10, 8), M(-0.002 * k, -0.043 * k, 0, 0, 0, 0, S(0.019, 0.047, 0.043)), col, hand, part);
     const rest = { k, th, knuckle: [], lp: [], thumb: [-0.012 * k, -0.018 * k, th * 0.03 * k], lt: 0.032 * k };
+    // (the finger joints' rest places: see bones.js bindPose)
+    const hb0 = b.bind && b.bind[hand];
+    const at = (base, v) => base.clone().multiply(new THREE.Matrix4().makeTranslation(v[0], v[1], v[2]));
     for (let f = 0; f < 4; f++) {
       // index (by the thumb) … little finger
       const len = [0.93, 1, 0.95, 0.77][f];
       const kn = [0, -0.083 * k * (f === 3 ? 0.95 : 1), th * (1.5 - f) * 0.0205 * k];
       const lp = 0.036 * k * len, ld = 0.034 * k * len;
       rest.knuckle.push(kn); rest.lp.push(lp);
+      if (hb0) { const km = at(hb0, kn); b.setBind(B['k' + (f + 1) + H], km); b.setBind(B['j' + (f + 1) + H], at(km, [0, -lp, 0])); }
       const c = f % 2 ? col : dark;
       b.add(tcap(0.0113 * k, 0.0105 * k, lp, 8, 2), M(), c, B['k' + (f + 1) + H], part);
       b.add(tcap(0.0104 * k, 0.0089 * k, ld, 8, 2), M(), c, B['j' + (f + 1) + H], part);
     }
+    if (hb0) { const tm = at(hb0, rest.thumb); b.setBind(B['tb' + H], tm); b.setBind(B['tc' + H], at(tm, [0, -rest.lt, 0])); }
     b.add(tcap(0.0135 * k, 0.012 * k, rest.lt, 8, 2), M(), col, B['tb' + H], part);
     b.add(tcap(0.0118 * k, 0.0098 * k, 0.027 * k, 8, 2), M(), dark, B['tc' + H], part);
     return rest;

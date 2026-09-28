@@ -3,7 +3,7 @@
 // texture per expression) and held weapons. `pose(P, o)` applies a sampled
 // 2D-rig pose through the 3D rig; the caller turns the model to its facing.
 import * as THREE from 'three';
-import { BONES, B, PARENT } from './bones.js';
+import { BONES, B, PARENT, restOffsets } from './bones.js';
 import { getBody, releaseBody, faceGeo, headLevel } from './build.js';
 import { Rig } from './rig.js';
 import { bodyMaterial, sharedOutline, glowMaterial } from './mats.js';
@@ -49,7 +49,8 @@ export class CharacterModel {
     this.group.name = 'char';
     this.bones = BONES.map((n) => { const b = new THREE.Bone(); b.name = n; return b; });
     for (const n of BONES) (PARENT[n] ? this.bones[B[PARENT[n]]] : this.group).add(this.bones[B[n]]);
-    this.skeleton = new THREE.Skeleton(this.bones, this.bones.map(() => new THREE.Matrix4()));
+    // (inverse bind matrices: the geometry is stored in the rest pose — see bones.js bindPose)
+    this.skeleton = new THREE.Skeleton(this.bones, this.body.inv.map((m) => m.clone()));
     this.mat = bodyMaterial({ fog: opts.fog ?? true });
     this.mesh = new THREE.SkinnedMesh(this.body.geo, this.mat);
     this.mesh.bind(this.skeleton, IDENT);
@@ -61,10 +62,8 @@ export class CharacterModel {
     this.group.add(this.mesh, this.outline);
     // attachments' rest offsets
     const d = this.d;
-    this.bones[B.hairTail].position.set(d.hx, d.hc, 0);
-    this.bones[B.tail].position.set(-0.13 * d.Bk, -0.06, 0);
-    this.bones[B.wingR].position.set(-0.11 * d.Bk, d.chestLen * 0.8, 0.05);
-    this.bones[B.wingL].position.set(-0.11 * d.Bk, d.chestLen * 0.8, -0.05);
+    const R = restOffsets(d);
+    for (const n of ['hairTail', 'tail', 'wingR', 'wingL']) this.bones[B[n]].position.set(...R[n]);
     this.restFingers();
     // face decal on the head
     this.face = new THREE.Mesh(faceGeo(look, headLevel(this.lod)), undefined);
@@ -162,6 +161,7 @@ export class CharacterModel {
     this.lod = lod;
     this.mesh.geometry = nb.geo;
     this.outline.geometry = nb.geo;
+    for (let i = 0; i < nb.inv.length; i++) this.skeleton.boneInverses[i].copy(nb.inv[i]);
     this.restFingers();
     this.face.geometry = faceGeo(this.look, headLevel(lod));
   }

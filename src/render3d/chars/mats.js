@@ -7,21 +7,45 @@
 //    (after skinning), scaled with view depth so it stays ~2 px wide.
 import * as THREE from 'three';
 import { FOG } from '../fog.js';
+import { detailTexture } from './detail.js';
 
-const BODY_KEY = 'op-char-body-4';
+const BODY_KEY = 'op-char-body-5';
 const INK = 0x24160f;
 
 let GRAD = null;
-/** Characters' cel ramp: anime two-tone with a soft mid band and bright shadows (faces stay readable). */
+/**
+ * Characters' cel ramp: anime two-tone, the shadow side clearly darker (so
+ * the form reads: the underside of the pecs, the nose's shadow, the far side
+ * of an arm), deepening a little where the surface turns right away.
+ */
 export function charGradient() {
   if (GRAD) return GRAD;
-  const data = new Uint8Array([158, 158, 158, 255, 176, 176, 176, 255, 255, 255, 255, 255, 255, 255, 255, 255]);
-  GRAD = new THREE.DataTexture(data, 4, 1, THREE.RGBAFormat);
+  const v = [128, 132, 138, 150, 255, 255, 255, 255];
+  const data = new Uint8Array(v.flatMap((x) => [x, x, x, 255]));
+  GRAD = new THREE.DataTexture(data, v.length, 1, THREE.RGBAFormat);
   GRAD.minFilter = THREE.NearestFilter;
   GRAD.magFilter = THREE.NearestFilter;
   GRAD.generateMipmaps = false;
   GRAD.needsUpdate = true;
   return GRAD;
+}
+
+/**
+ * The characters' cel shading: the shadow side of a form takes a warm,
+ * slightly rosy tone (anime skin shadows are never grey), the lit side stays
+ * clean. Shared by the body and the face decal so they match.
+ */
+export function celShading(sh) {
+  const chunk = THREE.ShaderChunk.lights_toon_pars_fragment;
+  const find = 'vec3 irradiance = getGradientIrradiance( geometryNormal, directLight.direction ) * directLight.color;';
+  if (!chunk.includes(find)) return;
+  // (the light that draws the form comes partly from the sun and partly from a
+  // key over the viewer's shoulder, upper left — as the anime-game art is lit —
+  // so every character shows a lit side and a shadow side whichever way it faces)
+  const toon = chunk.replace(find, `vec3 keyL = normalize( mix( directLight.direction, normalize( vec3( -0.62, 0.5, 0.6 ) ), 0.55 ) );
+	vec3 gi = getGradientIrradiance( geometryNormal, keyL );
+	vec3 irradiance = gi * mix( vec3( 0.84, 0.7, 0.74 ), vec3( 1.0 ), smoothstep( 0.62, 0.95, gi.r ) ) * directLight.color;`);
+  sh.fragmentShader = sh.fragmentShader.replace('#include <lights_toon_pars_fragment>', toon);
 }
 
 /** A per-character body material (see the uniforms in `mat.userData.u`). */
@@ -32,12 +56,13 @@ export function bodyMaterial(opts = {}) {
     uLegFx: { value: new THREE.Vector2() }, uLegFxCol: { value: new THREE.Color(1.0, 0.36, 0.0) },
     uFreeze: { value: 0 },
     // your own body seen from your eyes (first person): nothing above the neck, and no arms while the view's own are up
-    uClipY: { value: 1e6 }, uHideArms: { value: 0 },
+    uClipY: { value: 1e6 }, uHideArms: { value: 0 }, uHideHead: { value: 0 },
   };
-  const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), fog: opts.fog ?? true });
+  const m = new THREE.MeshToonMaterial({ vertexColors: true, map: detailTexture(), gradientMap: charGradient(), fog: opts.fog ?? true });
   m.userData.u = u;
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, FOG, u);
+    celShading(sh);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float aPart;\nvarying float vPart;\nvarying float vObjY;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPart = aPart;')
@@ -46,11 +71,11 @@ export function bodyMaterial(opts = {}) {
       .replace('#include <common>', `#include <common>
 varying float vPart; varying float vObjY;
 uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec3 uHakiCol;
-uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms;`)
+uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead;`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);
-float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart);
-if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5) discard;
+float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart) * step(vPart, 4.5), pHead = step(4.5, vPart);
+if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5 || uHideHead * pHead > 0.5) discard;
 float hakiK = pR * uHaki.x + pL * uHaki.y + lR * uHaki.z + lL * uHaki.w;
 float legK = lR * uLegFx.x + lL * uLegFx.y;
 diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);

@@ -175,36 +175,55 @@ export function tcap(r0, r1, L, rs = 8, cap = 3) {
 
 // ---------------------------------------------------------------- builder
 /**
- * Accumulates geometry: positions, normals, linear vertex colours, a bone
- * index per vertex (rigid skinning) and a "part" tag the body shader uses to
- * recolour forearms/shins (Armament Haki, Diable Jambe).
+ * Accumulates geometry: positions, normals, linear vertex colours, up to two
+ * bones per vertex with weights, detail-texture UVs and a "part" tag the body
+ * shader uses to recolour forearms/shins (Armament Haki, Diable Jambe).
+ *
+ * Parts are made in their bone's own frame (a limb hanging down -Y from its
+ * joint). With `bind` (a rest matrix per bone, see bones.js bindPose) they
+ * are stored where they sit in the rest pose, and a part can blend into a
+ * neighbouring bone near a joint — elbows, knees, shoulders, hips, the waist
+ * and the neck bend smoothly instead of like a jointed doll.
  */
 export class Builder {
-  constructor() {
-    this.pos = []; this.nor = []; this.col = []; this.bone = []; this.part = []; this.idx = [];
+  constructor(bind = null, blankUV = [0, 0]) {
+    this.pos = []; this.nor = []; this.col = []; this.bone = []; this.bone2 = []; this.w2 = []; this.part = []; this.idx = []; this.uv = [];
+    this.bind = bind;
+    this.blankUV = blankUV;
   }
   get count() { return this.pos.length / 3; }
+  /** The rest matrix of a bone (set for bones placed while building, e.g. finger joints). */
+  setBind(bone, m) { if (this.bind) this.bind[bone] = m; }
 
   /**
    * Add geometry `g` transformed by matrix `m`. `color` is a colour string /
    * THREE.Color, or fn(x, y, z) of the primitive's local position → colour.
+   * opts: { uv: use g's own uv attribute as detail-texture UVs,
+   *         blend: fn(x, y, z) of the position in the bone's frame → [bone2, weight2] or null }
    */
-  add(g, m, color, bone = 0, part = 0) {
+  add(g, m, color, bone = 0, part = 0, opts = null) {
     const P = g.attributes.position, N = g.attributes.normal;
+    const UV = (opts && opts.uv) || (g.userData && g.userData.detail) ? g.attributes.uv : null;
+    const blend = opts && opts.blend;
     const base = this.count;
     _nm.getNormalMatrix(m);
     const fn = typeof color === 'function' ? color : null;
     const c0 = fn ? null : (color && color.isColor ? color : lin(color));
+    const bm = this.bind && this.bind[bone];
     for (let i = 0; i < P.count; i++) {
       _v.fromBufferAttribute(P, i);
       const c = fn ? toColor(fn(_v.x, _v.y, _v.z)) : c0;
       _v.applyMatrix4(m);
+      const bw = blend ? blend(_v.x, _v.y, _v.z) : null;
+      if (bm) _v.applyMatrix4(bm);
       _n.fromBufferAttribute(N, i).applyMatrix3(_nm).normalize();
       this.pos.push(_v.x, _v.y, _v.z);
       this.nor.push(_n.x, _n.y, _n.z);
       this.col.push(c.r, c.g, c.b);
       this.bone.push(bone);
+      if (bw && bw[1] > 1e-3) { this.bone2.push(bw[0]); this.w2.push(Math.min(1, bw[1])); } else { this.bone2.push(0); this.w2.push(0); }
       this.part.push(part);
+      if (UV) this.uv.push(UV.getX(i), UV.getY(i)); else this.uv.push(this.blankUV[0], this.blankUV[1]);
     }
     const flip = m.determinant() < 0;
     if (g.index) {
@@ -222,15 +241,20 @@ export class Builder {
     return this;
   }
 
-  /** A BufferGeometry ready for a SkinnedMesh (rigid binding). */
+  /** A BufferGeometry ready for a SkinnedMesh (one or two bones per vertex, detail UVs). */
   build() {
     const n = this.count;
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(this.nor, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(this.col, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(this.uv, 2));
     const si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
-    for (let i = 0; i < n; i++) { si[i * 4] = this.bone[i]; sw[i * 4] = 1; }
+    for (let i = 0; i < n; i++) {
+      const w2 = this.w2[i];
+      si[i * 4] = this.bone[i]; sw[i * 4] = 1 - w2;
+      si[i * 4 + 1] = this.bone2[i]; sw[i * 4 + 1] = w2;
+    }
     g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
     g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
     g.setAttribute('aPart', new THREE.Float32BufferAttribute(this.part, 1));
