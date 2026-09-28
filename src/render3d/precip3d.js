@@ -80,12 +80,13 @@ const COMMON = /* glsl */`
   attribute vec4 aSeed;
   uniform float uTime, uBox, uTall, uBelow, uFall;
   uniform vec2 uWind, uOrig, uShelterO;
+  uniform vec2 uDrift;   // how far the wind has carried them (wrapped into the box)
   uniform sampler2D uShelter;
   varying float vA;
   varying vec2 vC;
   // a drop's place: fixed in the world (wrapped into the box around the camera), falling
   vec3 dropAt(float fall, vec2 sway) {
-    vec2 rel = mod(aSeed.xy * uBox + uWind * uTime + sway - uOrig - cameraPosition.xz + uBox * 0.5, uBox) - uBox * 0.5;
+    vec2 rel = mod(aSeed.xy * uBox + uDrift + sway - uOrig - cameraPosition.xz + uBox * 0.5, uBox) - uBox * 0.5;
     float base = cameraPosition.y - uBelow;
     float y = base + mod(aSeed.z * uTall - fall * uTime - base, uTall);
     return vec3(cameraPosition.x + rel.x, y, cameraPosition.z + rel.y);
@@ -177,7 +178,7 @@ function fallMesh(spec, vs, fs, corners, shelter, extra) {
   g.instanceCount = 0;
   const uniforms = {
     uTime: { value: 0 }, uBox: { value: spec.box }, uTall: { value: spec.tall }, uBelow: { value: spec.below }, uFall: { value: spec.fall },
-    uWind: { value: new THREE.Vector2() }, uOrig: { value: new THREE.Vector2() }, uShelterO: { value: new THREE.Vector2(-1e5, -1e5) },
+    uWind: { value: new THREE.Vector2() }, uDrift: { value: new THREE.Vector2() }, uOrig: { value: new THREE.Vector2() }, uShelterO: { value: new THREE.Vector2(-1e5, -1e5) },
     uShelter: { value: shelter.tex }, uColor: { value: new THREE.Color(1, 1, 1) }, uAlpha: { value: 0 }, uNear: { value: spec.near }, ...extra,
   };
   const m = new THREE.ShaderMaterial({ uniforms, vertexShader: vs, fragmentShader: fs, transparent: true, depthWrite: false, side: THREE.DoubleSide });
@@ -370,6 +371,12 @@ class Precipitation {
       u.uOrig.value.set(((v.ox % spec.box) + spec.box) % spec.box, ((v.oy % spec.box) + spec.box) % spec.box);
       u.uShelterO.value.copy(so);
       u.uWind.value.set((env.windX || 0) * wind, (env.windY || 0) * wind);
+      // carried along by the wind a frame at a time (the wind times the game's
+      // whole clock sent them racing whenever the wind or the storm changed)
+      const dt = Math.min(0.25, Math.max(0, env.time - (mesh.userData.t ?? env.time)));
+      mesh.userData.t = env.time;
+      const d = u.uDrift.value.addScaledVector(u.uWind.value, dt);
+      d.set(d.x % spec.box, d.y % spec.box);
       u.uColor.value.setRGB(col[0] * bright, col[1] * bright, col[2] * bright);
       u.uAlpha.value = alpha;
       mesh.geometry.instanceCount = Math.floor(spec.n * Math.min(1, k));

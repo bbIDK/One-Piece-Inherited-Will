@@ -88,6 +88,7 @@ const FRAG = /* glsl */`
   uniform vec2 uSize;       // the window's size in tiles (it repeats)
   uniform vec2 uWin;        // the window's centre
   uniform float uTime;
+  uniform float uRipT;      // the ripples' clock (it runs faster in a storm)
   uniform vec3 uSunDir;
   uniform vec3 uSunCol;
   uniform vec3 uSky;
@@ -176,7 +177,7 @@ const FRAG = /* glsl */`
 
     // the surface normal: swells plus small ripples (the swell worked out
     // again for this pixel, the same as the vertices had it)
-    float t = uTime * (1.0 + uStorm * 0.8);
+    float t = uRipT;
     vec2 p = vWorld.xz;
     vec3 sw = vSwell;
     if (uDetail > 0.5) {
@@ -317,6 +318,7 @@ export class Water {
         uSize: { value: new THREE.Vector2(1, 1) },
         uOrigin: { value: new THREE.Vector2() },
         uTime: { value: 0 },
+        uRipT: { value: 0 },
         uAmp: { value: 0.14 },
         uSunDir: { value: new THREE.Vector3(0.3, 0.8, 0.2) },
         uSunCol: { value: new THREE.Color(1, 0.95, 0.85) },
@@ -479,6 +481,14 @@ export class Water {
     if (this.tex && !this.tex.__uploaded && this.renderer?.properties.get(this.tex).__webglTexture) this.tex.__uploaded = true;
     u.uOrigin.value.set(ox, oy);
     u.uTime.value = env.time;
+    // the ripples, surf and sparkles run up to 1.8× as fast in a storm, so
+    // their clock is wound on a frame at a time at the storm's pace (the
+    // game's whole clock times the pace jumped with every change in the
+    // weather: half an hour in, a storm coming on sent them 300× too fast)
+    const dt = Math.min(0.25, Math.max(0, env.time - (this.lastT ?? env.time)));
+    this.lastT = env.time;
+    this.ripT = (this.ripT ?? env.time) + dt * (1 + env.storm * 0.8);
+    u.uRipT.value = this.ripT;
     u.uDay.value = env.daylight;
     u.uStorm.value = env.storm;
     // calm swells on a fine day, heavy ones in a storm; still water indoors and under the sea
