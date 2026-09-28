@@ -21,6 +21,7 @@ import { TOWN_STYLES } from '../src/world/towngen.js';
 import { CLIMATES } from '../src/world/islandgen.js';
 import { regionAt, REGION_INFO, W, H, RL_HALF, RM_X, POLAR, EQ } from '../src/world/constants.js';
 import { REVERSE_MOUNTAIN, MARY_GEOISE_DEF } from '../src/world/worldgen.js';
+import { checkAllShips } from './shiplayout.mjs';
 
 const SEAS = new Set(['east_blue', 'north_blue', 'west_blue', 'south_blue', 'paradise', 'new_world', 'calm_belt', 'sky', 'undersea', 'zone']);
 const GOALS = new Set(['defeat', 'reach', 'item', 'flag', 'event', 'reachXY', 'days', 'quest', 'weapon', 'ship', 'crew', 'faction', 'bounty', 'counter', 'check']);
@@ -223,6 +224,9 @@ export async function run(opts = {}) {
   for (const [id, list] of Object.entries(STOCK)) for (const it of list) if (!ITEMS[it]) E(`shop stock "${id}": unknown item "${it}"`);
   for (const [id, it] of Object.entries(ITEMS)) if (it.ability && !getAbility(it.ability)) E(`item "${id}": unknown ability "${it.ability}"`);
   for (const [id, a] of Object.entries(ARCHETYPES)) for (const m of a.moves || []) if (!getAbility(m)) E(`archetype "${id}": unknown move "${m}"`);
+
+  // the ships: every cabin, forecastle and hold furnished right, the hatch and the masts clear (tools/shiplayout.mjs)
+  for (const m of checkAllShips()) E(`ship ${m}`);
 
   return { errors, warns, islands: ALL_ISLANDS.length, npcs: npcIds.size, quests: questIds.size };
 }
