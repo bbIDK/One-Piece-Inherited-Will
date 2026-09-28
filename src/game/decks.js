@@ -49,7 +49,7 @@ export function installDecks(game) {
     return null;
   };
   /** The next point on the way to (x, y) across a big ship's decks (by the stairs), or null. */
-  game.deckRoute = (a, x, y) => deckRoute(game, a, x, y);
+  game.deckRoute = (a, x, y, who = null) => deckRoute(game, a, x, y, who);
   /** Is (x, y) at height h inside ship s's timbers — or (a camera's question) in her sails while they're set? */
   game.inShip = (s, x, y, h, sails = false) => {
     if (s.sunk) return false;
@@ -131,13 +131,15 @@ export function crewStation(ship, i) {
 
 /**
  * On a big ship's deck with someone to reach on another deck of her: the
- * next point to head for (the foot or the head of the right flight of stairs).
+ * next point to head for (the foot or the head of the right flight of stairs,
+ * or of the ladder down to the hold). `who`: the one being reached, if it's
+ * someone (down in the hold, say, under the deck at their feet).
  */
-export function deckRoute(game, a, tx, ty) {
+export function deckRoute(game, a, tx, ty, who = null) {
   const dk = a.deck;
   if (!dk || dk.lvl === undefined) return null;
   const s = dk.ship, d = shipDims(s.def), w = game.world;
-  const to = deckPoint(s, w.dx(s.x, tx), ty - s.y, 0);
+  const to = who?.deck?.ship === s ? who.deck : deckPoint(s, w.dx(s.x, tx), ty - s.y, 0);
   if (!to) return null;
   const lvl = (p) => (typeof p.lvl === 'string' ? p.lvl : null);
   const here = lvl(dk), there = lvl(to);
@@ -148,8 +150,12 @@ export function deckRoute(game, a, tx, ty) {
     return deckToWorld(s, tt, (st.va + st.vb) / 2);
   };
   const upper = (st) => (st.ha > st.hb ? st.la : st.lb), lower = (st) => (st.ha > st.hb ? st.lb : st.la);
-  // which deck to cross to next on the way (main ↔ quarter ↔ poop, main ↔ fore)
-  const path = { main: { quarter: 'quarter', poop: 'quarter', fore: 'fore' }, quarter: { main: 'main', fore: 'main', poop: 'poop' }, poop: { quarter: 'quarter', main: 'quarter', fore: 'quarter' }, fore: { main: 'main', quarter: 'main', poop: 'main' } };
+  // which deck to cross to next on the way (main ↔ quarter ↔ poop, main ↔ fore, main ↔ the hold down the ladder)
+  const path = {
+    main: { quarter: 'quarter', poop: 'quarter', fore: 'fore', hold: 'hold' }, quarter: { main: 'main', fore: 'main', poop: 'poop', hold: 'main' },
+    poop: { quarter: 'quarter', main: 'quarter', fore: 'quarter', hold: 'quarter' }, fore: { main: 'main', quarter: 'main', poop: 'main', hold: 'main' },
+    hold: { main: 'main', quarter: 'main', poop: 'main', fore: 'main', cabin: 'main', captain: 'main', forecastle: 'main' },
+  };
   if (!here) {
     // on a flight already: up it, unless the way to the goal lies below
     const st = dk.lvl, up = upper(st), lo = lower(st);

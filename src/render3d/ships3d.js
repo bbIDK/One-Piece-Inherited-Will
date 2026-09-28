@@ -307,14 +307,14 @@ export function hullGeometry(def) {
   return g;
 }
 
-/** Below decks and inside the cabins of a big ship (shared per ship type), or null. */
+/** Below decks and inside the cabins of a big ship (shared per ship type), or null: { main, overhead (the undersides of the decks over the rooms) }. */
 const insideCache = new Map();
 export function interiorGeometry(def) {
   const d = shipDims(def);
   if (!d.big) return null;
   const key = `${def.length}|${def.beam}|${def.color}|${def.cannons}|${def.sail}|${def.masts}`;
   let g = insideCache.get(key);
-  if (!g) { g = bigInterior(def, d).build(false); insideCache.set(key, g); }
+  if (!g) { const m = bigInterior(def, d); g = { main: m.k.build(false), overhead: m.overhead.build(false) }; insideCache.set(key, g); }
   return g;
 }
 
@@ -681,11 +681,17 @@ export class ShipView {
     // below decks and in the cabins (only drawn when the camera's close by)
     const ig = interiorGeometry(def);
     if (ig) {
-      this.inside = new THREE.Mesh(ig, SOLID());
+      this.inside = new THREE.Mesh(ig.main, SOLID());
       // (the decks over the rooms keep the sun out: their undersides and the linings cast the shadows)
       this.inside.receiveShadow = true;
       this.inside.castShadow = true;
       this.inside.visible = false;
+      // (those undersides take none: the sun never reaches them, and the shadow of the
+      // wheel, say, on the deck above isn't to show through onto the cabin's ceiling)
+      this.overhead = new THREE.Mesh(ig.overhead, SOLID());
+      this.overhead.receiveShadow = false;
+      this.overhead.castShadow = true;
+      this.inside.add(this.overhead);
       root.add(this.inside);
     }
     // masts (a rowboat has none)
@@ -949,7 +955,7 @@ export class ShipView {
       this.inside.visible = !!cam && cam.position.distanceTo(r.position) < this.d.L * 0.6 + 12;
       // (its shadows — the decks overhead darkening the rooms — only while you're in one)
       const pl = ctx?.game?.player;
-      this.inside.castShadow = !!(pl?.deck?.room && pl.deck.ship === s);
+      this.inside.castShadow = this.overhead.castShadow = !!(pl?.deck?.room && pl.deck.ship === s);
     }
     // yards brace round to the wind; sails fill
     const relA = (windAngle || 0) - s.heading;

@@ -252,8 +252,8 @@ export class AIController {
     const dist = Math.hypot(dx, dy);
     const ang = Math.atan2(dy, dx);
 
-    // on another deck of a big ship: make for the stairs before anything else
-    const up = game.deckRoute?.(a, t.x, t.y);
+    // on another deck of a big ship (or down in her hold): make for the stairs (or the ladder) before anything else
+    const up = game.deckRoute?.(a, t.x, t.y, t);
     if (up) { this.moveToward(a, up.x, up.y, game, true); a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4; return; }
 
     // defend against incoming attacks
