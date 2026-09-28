@@ -47,7 +47,14 @@ function smallDims(def) {
   d.mastU = masts ? Array.from({ length: masts }, (_, m) => (masts === 1 ? 0.05 * L : L * (0.28 - m * (0.56 / Math.max(1, masts - 1))))) : [];
   d.mastR = 0.05 + L * 0.011;
   d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.16 }));
-  if (!open) d.solids.push({ u: helmX + 1.1, v: 0, r: 0.2 });
+  if (!open) {
+    // the wheel on its post (wheelU: the wheel itself), aft of the mizzen mast
+    // with room to stand at it; the helmsman just behind (no further aft than the stern)
+    const aft = masts > 1 ? d.mastU[masts - 1] : Infinity;
+    d.wheelU = Math.min(helmX + 1, aft - d.mastR - 0.35);
+    d.helmX = helmX = Math.max(-L / 2 + 0.3, Math.min(helmX, d.wheelU - 1));
+    d.solids.push({ u: d.wheelU + 0.1, v: 0, r: 0.2 });
+  }
   if (def.oarsOnly) {
     // a rowboat: the rower sits on the thwart amidships facing the bow, and
     // the oars pivot in rowlocks on the gunwales a little ahead of them
@@ -316,9 +323,12 @@ export function hullSolid(ship, dx, dy, h) {
   if (t < 0 || t > 1 || h < -d.D) return false;
   // the masts, all the way up
   if (d.mastU && v < d.mastR + 0.2 && h < d.mastH && d.mastU.some((m) => Math.abs(u - m) < d.mastR + 0.2)) return true;
-  if (h > topAt(d, t)) return false;
   const hb = hbAt(t, d.B);
   if (v > hb) return false;
+  // the rails along the fronts of the raised decks (and the forecastle's after edge)
+  const rail = d.big ? 1 : 0.8, at = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
+  if ((d.castle && at(d.tq) && h < d.yq + rail) || (d.poop && at(d.tp) && h < d.yp + rail) || (d.fore && at(d.tf) && h < d.yf + rail)) return true;
+  if (h > topAt(d, t)) return false;
   if (v > hb * d.walk - 0.05 || h < d.deckY - 0.1) return true;
   if (d.poop && t < d.tp) return h < d.yp - 0.1;
   if (d.castle && t < d.tq) return h < d.yq - 0.1;

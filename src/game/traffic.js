@@ -282,7 +282,7 @@ function spawnCrew(game, s) {
     game.addActor(a);
     // the helmsman aft, the rest at their stations (clear of the deck's cargo)
     const st = SMALL_STATIONS[(i - 1) % SMALL_STATIONS.length];
-    let t = i === 0 ? (d.row ? d.row.seatT : Math.min(0.46, (d.helmX + d.L / 2) / d.L + 0.08)) : st[0];
+    let t = i === 0 ? helmSpot(s).t : st[0];
     let v = i === 0 ? 0 : st[1] * s.def.beam;
     if (d.big) ({ t, v } = i === 0 ? helmSpot(s) : freeDeckSpot(s, 0.34 + (i / Math.max(1, n)) * 0.46, ((i % 2) ? 1 : -1) * s.def.beam * (0.12 + (i % 3) * 0.08)));
     placeOnDeck(game, a, s, t, v);

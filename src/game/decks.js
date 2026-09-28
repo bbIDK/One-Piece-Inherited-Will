@@ -46,18 +46,28 @@ export function installDecks(game) {
   };
   /** The next point on the way to (x, y) across a big ship's decks (by the stairs), or null. */
   game.deckRoute = (a, x, y) => deckRoute(game, a, x, y);
-  /** Is (x, y) at height h inside any ship's timbers? */
-  game.shipSolidAt = (x, y, h) => {
-    const w = game.world;
-    for (const s of game.ships) {
-      if (s.sunk) continue;
-      const r = s.def.length * 0.56;
-      const dx = w.dx(s.x, x), dy = y - s.y;
-      if (dx * dx + dy * dy > r * r) continue;
-      if (hullSolid(s, dx, dy, h - shipBob(s, game.env?.time || 0))) return true;
+  /** Is (x, y) at height h inside ship s's timbers — or (a camera's question) in her sails while they're set? */
+  game.inShip = (s, x, y, h, sails = false) => {
+    if (s.sunk) return false;
+    const r = s.def.length * 0.56 + (sails ? s.def.length * 0.3 : 0);
+    const dx = game.world.dx(s.x, x), dy = y - s.y;
+    if (dx * dx + dy * dy > r * r) return false;
+    const hh = h - shipBob(s, game.env?.time || 0);
+    if (hullSolid(s, dx, dy, hh)) return true;
+    if (sails && s.sailBoxes) {
+      // (in each sail's own frame: from its mast, turned as the yards are braced; furled, only a gaff sail's still there)
+      const c = Math.cos(s.heading), sn = Math.sin(s.heading), u = dx * c + dy * sn, v = -dx * sn + dy * c;
+      const bc = Math.cos(s.brace || 0), bs = Math.sin(s.brace || 0), set = (s.sailSet || 0) > 0.05;
+      for (const b of s.sailBoxes) {
+        if ((!set && !b.always) || hh < b.h0 || hh > b.h1) continue;
+        const x = b.braced ? (u - b.m) * bc + v * bs : u - b.m, z = b.braced ? -(u - b.m) * bs + v * bc : v;
+        if (x > b.u0 && x < b.u1 && Math.abs(z) < b.v) return true;
+      }
     }
     return false;
   };
+  /** The same, for any ship (`except`: not that one). */
+  game.shipSolidAt = (x, y, h, sails = false, except = null) => game.ships.some((s) => s !== except && game.inShip(s, x, y, h, sails));
 }
 
 /** Put an actor on a ship's deck at (t along, v across), facing the bow. */
@@ -73,12 +83,13 @@ export function placeOnDeck(game, a, ship, t, v = 0) {
   a.facing = ship.heading;
 }
 
-/** Where the wheel is (deck position just forward of it; on the big ships, just aft of the double wheel; a rowboat's oars, at her thwart). */
+/** Where you take the helm: just aft of the wheel (on the big ships, of the double wheel; at a rowboat's oars, her thwart). */
 export function helmSpot(ship) {
   const d = shipDims(ship.def);
   const hp = helmPoint(ship.def);
   if (d.big) return { t: (hp.x - 0.15 + d.L / 2) / d.L, v: 0 };
   if (d.row) return { t: d.row.seatT, v: 0 };
+  if (d.wheelU !== undefined) return { t: (d.wheelU - 0.45 + d.L / 2) / d.L, v: 0 };
   return { t: Math.min(0.5, (hp.x + d.L / 2) / d.L + 0.06), v: 0 };
 }
 

@@ -88,7 +88,7 @@ export function stationSpot(st) {
 /** The wheel: where it stands along the hull, its floor, and its hub's height and radius. */
 function wheelOf(d) {
   if (d.big) return { u: d.wheelU, floor: d.yq, hub: d.yq + 0.92, r: 0.5 };
-  const u = d.helmX + 1.0, floor = floorAt(d, (d.helmX + 1.1 + d.L / 2) / d.L);
+  const u = d.wheelU, floor = floorAt(d, (u + 0.1 + d.L / 2) / d.L);
   return { u, floor, hub: floor + 0.92, r: 0.4 };
 }
 

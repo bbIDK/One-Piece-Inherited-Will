@@ -20,6 +20,7 @@ import { SeaCowView, FightingFishView } from './chars/seacreature.js';
 import { Trail } from './chars/trail.js';
 import { createViewmodel } from './chars/viewmodel.js';
 import { currentLook, weaponOf, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
+import { shipBob, pitchRise } from '../world/hull.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -72,11 +73,14 @@ class ActorView {
 
   update(a, env, ctx, { camYaw3, redraw }) {
     const m = this.model;
-    // at the helm the camera rides the ship; the body isn't drawn on the water below it
-    this.root.visible = !(a.isPlayer && a.mode === 'sail');
+    // at the helm (or the oars) you're drawn where the work is — standing to
+    // the wheel, or rowing — riding with your ship
+    const helm = a.isPlayer && a.mode === 'sail' && a.ship && !a.ship.sunk ? a.station() : null;
+    this.root.visible = !(a.isPlayer && a.mode === 'sail' && !helm);
+    if (helm) this.placeAtStation(a, helm, env, ctx);
     // in the water the body settles to a new height over a moment — treading
     // water or swimming along, afloat or wading on the bottom — not in a jump
-    const wet = a.inWater || a.wading > 0;
+    const wet = !helm && (a.inWater || a.wading > 0);
     const dty = Math.min(0.1, Math.max(0, env.time - (this.yT ?? env.time)));
     this.yT = env.time;
     if (wet) {
@@ -88,6 +92,12 @@ class ActorView {
     this.wetY = wet;
     const cam = ctx.camera;
     const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
+    // (the third-person camera pressed right up behind your head — your back
+    // to a cabin wall on deck, say: you're not drawn over the view)
+    if (a.isPlayer && !helm && cam && ctx.mode === 'third' && dist < 3) {
+      const r = this.root.position;
+      if (cam.position.distanceTo(_v.set(r.x, r.y + 1.55 * (this.look.scale || 1), r.z)) < 0.45) this.root.visible = false;
+    }
     this.frame++;
     // far characters animate at a lower rate (their position still updates every frame)
     const every = dist < 22 ? 1 : dist < 45 ? 2 : 3;
@@ -146,6 +156,14 @@ class ActorView {
     if (lod !== m.lod) m.setLod(lod);
     // (far off, the ink pass's outlines are enough, when it's on)
     m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
+  }
+
+  /** At the helm or the oars of your ship: stand (or sit) where the work is, riding up and down with her. */
+  placeAtStation(a, st, env, ctx) {
+    const s = st.ship, spot = stationSpot(st), w = ctx.world, h = s.heading;
+    // (the ship's middle relative to you: nothing, at her helm)
+    const dx = w ? w.dx(a.x, s.x) : s.x - a.x, dy = s.y - a.y;
+    this.root.position.set(dx + Math.cos(h) * spot.u, shipBob(s, env.time) + spot.floor + pitchRise(s, spot.u), dy + Math.sin(h) * spot.u);
   }
 
   /** Head yaw toward the camera for nearby idle NPCs. */

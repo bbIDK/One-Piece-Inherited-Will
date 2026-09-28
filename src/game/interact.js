@@ -1,7 +1,7 @@
 // Context-sensitive "E" interactions.
 import { WALKABLE } from '../world/tiles.js';
 import { angleDiff } from '../core/math.js';
-import { placeOnDeck, helmSpot, boardingSpot } from './decks.js';
+import { placeOnDeck, helmSpot, boardingSpot, freeDeckSpot } from './decks.js';
 import { shipDims } from '../world/hull.js';
 import { bfront } from '../world/bframe.js';
 import { canSee } from './ai.js';
@@ -130,10 +130,14 @@ export function leaveHelm(game, p, s) {
   s.passengers = s.passengers.filter((x) => x !== p);
   p.mode = 'foot';
   p.onShip = false;
-  const hs = helmSpot(s);
-  if (shipDims(s.def).big) placeOnDeck(game, p, s, hs.t, 0.9);
-  else if (s.def.oarsOnly) placeOnDeck(game, p, s, hs.t - 0.12, 0);
-  else placeOnDeck(game, p, s, hs.t + 0.05, 0);
+  const hs = helmSpot(s), d = shipDims(s.def);
+  if (d.big) {
+    // (beside the double wheel, between it and the stairs up to the poop,
+    // clear of the cabin front behind it)
+    const sp = freeDeckSpot(s, (d.wheelU + d.L / 2) / d.L, 1.12, 'quarter');
+    placeOnDeck(game, p, s, sp.t, sp.v);
+  } else if (s.def.oarsOnly) placeOnDeck(game, p, s, hs.t - 0.12, 0);
+  else placeOnDeck(game, p, s, hs.t, 0);
   game.emit('disembark', s, null);
   game.hint?.('deck', s.def.oarsOnly
     ? 'Stand in your boat, or jump over the side for a swim (Space at her side climbs back in). Press E at the seat to take the oars again.'
