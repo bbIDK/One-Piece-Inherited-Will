@@ -152,7 +152,9 @@ export class Rig {
       _u.subVectors(E, J).normalize();
       const shape = o.shape ? o.shape[k] : 'fist';
       // (a flat hand — swimming — keeps its fingers in line and its back up)
-      if (shape === 'flat') this._ref.set(0.1, 1, side * 0.35); else this._ref.set(-0.3, 0.6, side * 0.8);
+      if (shape === 'flat') this._ref.set(0.1, 1, side * 0.35);
+      else if (shape === 'hold') this._ref.set(0.25, -1, side * 0.35); // (holding food: the palm up under it — or, the hand raised to the mouth, facing it)
+      else this._ref.set(-0.3, 0.6, side * 0.8);
       aimNegY(this.quat[Hd], _u, this._ref);
       if (shape === 'palm' || shape === 'claw') {
         // wrist bent back so an open palm faces where the arm reaches

@@ -557,9 +557,11 @@ export class UI {
         const weapon = def.type === 'weapon';
         const qty = weapon && n === 1 ? '' : String(n);
         if (s.qty.textContent !== qty) s.qty.textContent = qty;
-        s.el.classList.toggle('held', weapon && (ch.equipped?.weapons || []).includes(id.slice(5)));
+        s.el.classList.toggle('held', (weapon && (ch.equipped?.weapons || []).includes(id.slice(5))) || p.held === id.slice(5));
         s.el.classList.toggle('none-left', n <= 0);
-        s.cd.style.transform = 'scaleY(0)';
+        // (eating it: the slot empties as it goes down)
+        const e = p.eating && p.eating.id === id.slice(5) ? p.eating : null;
+        s.cd.style.transform = `scaleY(${e ? clamp(e.t / e.dur, 0, 1) : 0})`;
         if (s.cdt.textContent) s.cdt.textContent = '';
         continue;
       }
@@ -579,14 +581,20 @@ export class UI {
       el.classList.toggle('on', t.type === 'armament' ? p.armament : t.type === 'observation' ? p.observation : !!p.conquerorInfused);
       el.title = `${t.name} — level ${Math.floor(lvl)} (${t.key})`;
     }
-    // prompt
-    const inter = p.controller?.interaction;
-    const pk = inter ? inter.label : '';
+    // prompt (with food in hand and nothing to use nearby: how to eat it)
+    let inter = p.controller?.interaction, pKey = 'E';
+    if (!inter && p.held && ITEMS[p.held]) {
+      const it = ITEMS[p.held], free = !!this.game.view3d?.rig.freeMouse;
+      const verb = it.type !== 'medicine' ? 'eat' : /bandage/i.test(p.held) ? 'bind your wounds with' : 'take';
+      inter = { label: `${free ? verb[0].toUpperCase() + verb.slice(1) : 'Hold to ' + verb} the ${it.name}` };
+      pKey = free ? 'Right-click' : 'RMB';
+    }
+    const pk = inter ? pKey + inter.label : '';
     if (this.cache.prompt !== pk) {
       this.cache.prompt = pk;
       E.prompt.classList.toggle('hidden', !inter || this.blocksInput());
       clear(E.prompt);
-      if (inter) E.prompt.append(h('kbd', 'E'), inter.label);
+      if (inter) E.prompt.append(h('kbd', pKey), inter.label);
     }
     // location
     const isl = game.currentIsland;

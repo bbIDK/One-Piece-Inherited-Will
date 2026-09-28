@@ -23,6 +23,7 @@ const GRIPS = {
   fist: { a: [1.5, 1.56, 1.6, 1.62], b: [1.72, 1.76, 1.76, 1.7], sp: 0, th: 1 },
   grip: { a: [1.3, 1.38, 1.46, 1.52], b: [1.45, 1.52, 1.56, 1.56], sp: 0, th: 0.85 },
   grab: { a: [0.72, 0.82, 0.9, 0.98], b: [0.95, 1.05, 1.12, 1.15], sp: 0.25, th: 0.65 },
+  hold: { a: [0.34, 0.4, 0.46, 0.52], b: [0.5, 0.56, 0.62, 0.68], sp: 0.35, th: 0.25 },
   relaxed: { a: [0.3, 0.4, 0.5, 0.62], b: [0.4, 0.5, 0.6, 0.72], sp: 0.35, th: 0.3 },
   palm: { a: [0.06, 0.08, 0.1, 0.14], b: [0.08, 0.1, 0.13, 0.17], sp: 1, th: 0 },
   flat: { a: [0.04, 0.04, 0.05, 0.06], b: [0.05, 0.05, 0.06, 0.08], sp: 0, th: 0.2 },
@@ -203,7 +204,7 @@ export class CharacterModel {
         this.shape[k] = s;
         continue;
       }
-      if (s === 'claw' || s === 'flat' || s === 'relaxed' || s === 'grab') s = s === 'grab' ? 'fist' : 'palm';
+      if (s === 'claw' || s === 'flat' || s === 'relaxed' || s === 'grab' || s === 'hold') s = s === 'grab' || s === 'hold' ? 'fist' : 'palm';
       const H = k === 0 ? 'R' : 'L';
       for (const sh of SHAPES) this.showBone(B[sh + H], sh === s);
     }

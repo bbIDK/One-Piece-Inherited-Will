@@ -5361,10 +5361,10 @@
       }
       output.object = object;
       return output;
-      function extractFromCache(cache3) {
+      function extractFromCache(cache4) {
         const values = [];
-        for (const key2 in cache3) {
-          const data = cache3[key2];
+        for (const key2 in cache4) {
+          const data = cache4[key2];
           delete data.metadata;
           values.push(data);
         }
@@ -6333,10 +6333,10 @@
       if (this.toneMapped === false) data.toneMapped = false;
       if (this.fog === false) data.fog = false;
       if (Object.keys(this.userData).length > 0) data.userData = this.userData;
-      function extractFromCache(cache3) {
+      function extractFromCache(cache4) {
         const values = [];
-        for (const key2 in cache3) {
-          const data2 = cache3[key2];
+        for (const key2 in cache4) {
+          const data2 = cache4[key2];
           delete data2.metadata;
           values.push(data2);
         }
@@ -9710,7 +9710,7 @@
       return false;
     }
     function saveCache(object, geometry, program2, index) {
-      const cache3 = {};
+      const cache4 = {};
       const attributes2 = geometry.attributes;
       let attributesNum = 0;
       const programAttributes = program2.getAttributes();
@@ -9727,11 +9727,11 @@
           if (attribute && attribute.data) {
             data.data = attribute.data;
           }
-          cache3[name] = data;
+          cache4[name] = data;
           attributesNum++;
         }
       }
-      currentState.attributes = cache3;
+      currentState.attributes = cache4;
       currentState.attributesNum = attributesNum;
       currentState.index = index;
     }
@@ -11462,213 +11462,213 @@
     return r;
   }
   function setValueV1f(gl, v) {
-    const cache3 = this.cache;
-    if (cache3[0] === v) return;
+    const cache4 = this.cache;
+    if (cache4[0] === v) return;
     gl.uniform1f(this.addr, v);
-    cache3[0] = v;
+    cache4[0] = v;
   }
   function setValueV2f(gl, v) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y) {
+      if (cache4[0] !== v.x || cache4[1] !== v.y) {
         gl.uniform2f(this.addr, v.x, v.y);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
+        cache4[0] = v.x;
+        cache4[1] = v.y;
       }
     } else {
-      if (arraysEqual(cache3, v)) return;
+      if (arraysEqual(cache4, v)) return;
       gl.uniform2fv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache4, v);
     }
   }
   function setValueV3f(gl, v) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y || cache3[2] !== v.z) {
+      if (cache4[0] !== v.x || cache4[1] !== v.y || cache4[2] !== v.z) {
         gl.uniform3f(this.addr, v.x, v.y, v.z);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
-        cache3[2] = v.z;
+        cache4[0] = v.x;
+        cache4[1] = v.y;
+        cache4[2] = v.z;
       }
     } else if (v.r !== void 0) {
-      if (cache3[0] !== v.r || cache3[1] !== v.g || cache3[2] !== v.b) {
+      if (cache4[0] !== v.r || cache4[1] !== v.g || cache4[2] !== v.b) {
         gl.uniform3f(this.addr, v.r, v.g, v.b);
-        cache3[0] = v.r;
-        cache3[1] = v.g;
-        cache3[2] = v.b;
+        cache4[0] = v.r;
+        cache4[1] = v.g;
+        cache4[2] = v.b;
       }
     } else {
-      if (arraysEqual(cache3, v)) return;
+      if (arraysEqual(cache4, v)) return;
       gl.uniform3fv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache4, v);
     }
   }
   function setValueV4f(gl, v) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y || cache3[2] !== v.z || cache3[3] !== v.w) {
+      if (cache4[0] !== v.x || cache4[1] !== v.y || cache4[2] !== v.z || cache4[3] !== v.w) {
         gl.uniform4f(this.addr, v.x, v.y, v.z, v.w);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
-        cache3[2] = v.z;
-        cache3[3] = v.w;
+        cache4[0] = v.x;
+        cache4[1] = v.y;
+        cache4[2] = v.z;
+        cache4[3] = v.w;
       }
     } else {
-      if (arraysEqual(cache3, v)) return;
+      if (arraysEqual(cache4, v)) return;
       gl.uniform4fv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache4, v);
     }
   }
   function setValueM2(gl, v) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     const elements = v.elements;
     if (elements === void 0) {
-      if (arraysEqual(cache3, v)) return;
+      if (arraysEqual(cache4, v)) return;
       gl.uniformMatrix2fv(this.addr, false, v);
-      copyArray(cache3, v);
+      copyArray(cache4, v);
     } else {
-      if (arraysEqual(cache3, elements)) return;
+      if (arraysEqual(cache4, elements)) return;
       mat2array.set(elements);
       gl.uniformMatrix2fv(this.addr, false, mat2array);
-      copyArray(cache3, elements);
+      copyArray(cache4, elements);
     }
   }
   function setValueM3(gl, v) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     const elements = v.elements;
     if (elements === void 0) {
-      if (arraysEqual(cache3, v)) return;
+      if (arraysEqual(cache4, v)) return;
       gl.uniformMatrix3fv(this.addr, false, v);
-      copyArray(cache3, v);
+      copyArray(cache4, v);
     } else {
-      if (arraysEqual(cache3, elements)) return;
+      if (arraysEqual(cache4, elements)) return;
       mat3array.set(elements);
       gl.uniformMatrix3fv(this.addr, false, mat3array);
-      copyArray(cache3, elements);
+      copyArray(cache4, elements);
     }
   }
   function setValueM4(gl, v) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     const elements = v.elements;
     if (elements === void 0) {
-      if (arraysEqual(cache3, v)) return;
+      if (arraysEqual(cache4, v)) return;
       gl.uniformMatrix4fv(this.addr, false, v);
-      copyArray(cache3, v);
+      copyArray(cache4, v);
     } else {
-      if (arraysEqual(cache3, elements)) return;
+      if (arraysEqual(cache4, elements)) return;
       mat4array.set(elements);
       gl.uniformMatrix4fv(this.addr, false, mat4array);
-      copyArray(cache3, elements);
+      copyArray(cache4, elements);
     }
   }
   function setValueV1i(gl, v) {
-    const cache3 = this.cache;
-    if (cache3[0] === v) return;
+    const cache4 = this.cache;
+    if (cache4[0] === v) return;
     gl.uniform1i(this.addr, v);
-    cache3[0] = v;
+    cache4[0] = v;
   }
   function setValueV2i(gl, v) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y) {
+      if (cache4[0] !== v.x || cache4[1] !== v.y) {
         gl.uniform2i(this.addr, v.x, v.y);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
+        cache4[0] = v.x;
+        cache4[1] = v.y;
       }
     } else {
-      if (arraysEqual(cache3, v)) return;
+      if (arraysEqual(cache4, v)) return;
       gl.uniform2iv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache4, v);
     }
   }
   function setValueV3i(gl, v) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y || cache3[2] !== v.z) {
+      if (cache4[0] !== v.x || cache4[1] !== v.y || cache4[2] !== v.z) {
         gl.uniform3i(this.addr, v.x, v.y, v.z);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
-        cache3[2] = v.z;
+        cache4[0] = v.x;
+        cache4[1] = v.y;
+        cache4[2] = v.z;
       }
     } else {
-      if (arraysEqual(cache3, v)) return;
+      if (arraysEqual(cache4, v)) return;
       gl.uniform3iv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache4, v);
     }
   }
   function setValueV4i(gl, v) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y || cache3[2] !== v.z || cache3[3] !== v.w) {
+      if (cache4[0] !== v.x || cache4[1] !== v.y || cache4[2] !== v.z || cache4[3] !== v.w) {
         gl.uniform4i(this.addr, v.x, v.y, v.z, v.w);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
-        cache3[2] = v.z;
-        cache3[3] = v.w;
+        cache4[0] = v.x;
+        cache4[1] = v.y;
+        cache4[2] = v.z;
+        cache4[3] = v.w;
       }
     } else {
-      if (arraysEqual(cache3, v)) return;
+      if (arraysEqual(cache4, v)) return;
       gl.uniform4iv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache4, v);
     }
   }
   function setValueV1ui(gl, v) {
-    const cache3 = this.cache;
-    if (cache3[0] === v) return;
+    const cache4 = this.cache;
+    if (cache4[0] === v) return;
     gl.uniform1ui(this.addr, v);
-    cache3[0] = v;
+    cache4[0] = v;
   }
   function setValueV2ui(gl, v) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y) {
+      if (cache4[0] !== v.x || cache4[1] !== v.y) {
         gl.uniform2ui(this.addr, v.x, v.y);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
+        cache4[0] = v.x;
+        cache4[1] = v.y;
       }
     } else {
-      if (arraysEqual(cache3, v)) return;
+      if (arraysEqual(cache4, v)) return;
       gl.uniform2uiv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache4, v);
     }
   }
   function setValueV3ui(gl, v) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y || cache3[2] !== v.z) {
+      if (cache4[0] !== v.x || cache4[1] !== v.y || cache4[2] !== v.z) {
         gl.uniform3ui(this.addr, v.x, v.y, v.z);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
-        cache3[2] = v.z;
+        cache4[0] = v.x;
+        cache4[1] = v.y;
+        cache4[2] = v.z;
       }
     } else {
-      if (arraysEqual(cache3, v)) return;
+      if (arraysEqual(cache4, v)) return;
       gl.uniform3uiv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache4, v);
     }
   }
   function setValueV4ui(gl, v) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     if (v.x !== void 0) {
-      if (cache3[0] !== v.x || cache3[1] !== v.y || cache3[2] !== v.z || cache3[3] !== v.w) {
+      if (cache4[0] !== v.x || cache4[1] !== v.y || cache4[2] !== v.z || cache4[3] !== v.w) {
         gl.uniform4ui(this.addr, v.x, v.y, v.z, v.w);
-        cache3[0] = v.x;
-        cache3[1] = v.y;
-        cache3[2] = v.z;
-        cache3[3] = v.w;
+        cache4[0] = v.x;
+        cache4[1] = v.y;
+        cache4[2] = v.z;
+        cache4[3] = v.w;
       }
     } else {
-      if (arraysEqual(cache3, v)) return;
+      if (arraysEqual(cache4, v)) return;
       gl.uniform4uiv(this.addr, v);
-      copyArray(cache3, v);
+      copyArray(cache4, v);
     }
   }
   function setValueT1(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     const unit = textures.allocateTextureUnit();
-    if (cache3[0] !== unit) {
+    if (cache4[0] !== unit) {
       gl.uniform1i(this.addr, unit);
-      cache3[0] = unit;
+      cache4[0] = unit;
     }
     let emptyTexture2D;
     if (this.type === gl.SAMPLER_2D_SHADOW) {
@@ -11680,29 +11680,29 @@
     textures.setTexture2D(v || emptyTexture2D, unit);
   }
   function setValueT3D1(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     const unit = textures.allocateTextureUnit();
-    if (cache3[0] !== unit) {
+    if (cache4[0] !== unit) {
       gl.uniform1i(this.addr, unit);
-      cache3[0] = unit;
+      cache4[0] = unit;
     }
     textures.setTexture3D(v || empty3dTexture, unit);
   }
   function setValueT6(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     const unit = textures.allocateTextureUnit();
-    if (cache3[0] !== unit) {
+    if (cache4[0] !== unit) {
       gl.uniform1i(this.addr, unit);
-      cache3[0] = unit;
+      cache4[0] = unit;
     }
     textures.setTextureCube(v || emptyCubeTexture, unit);
   }
   function setValueT2DArray1(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     const unit = textures.allocateTextureUnit();
-    if (cache3[0] !== unit) {
+    if (cache4[0] !== unit) {
       gl.uniform1i(this.addr, unit);
-      cache3[0] = unit;
+      cache4[0] = unit;
     }
     textures.setTexture2DArray(v || emptyArrayTexture, unit);
   }
@@ -11843,48 +11843,48 @@
     gl.uniform4uiv(this.addr, v);
   }
   function setValueT1Array(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     const n = v.length;
     const units = allocTexUnits(textures, n);
-    if (!arraysEqual(cache3, units)) {
+    if (!arraysEqual(cache4, units)) {
       gl.uniform1iv(this.addr, units);
-      copyArray(cache3, units);
+      copyArray(cache4, units);
     }
     for (let i = 0; i !== n; ++i) {
       textures.setTexture2D(v[i] || emptyTexture, units[i]);
     }
   }
   function setValueT3DArray(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     const n = v.length;
     const units = allocTexUnits(textures, n);
-    if (!arraysEqual(cache3, units)) {
+    if (!arraysEqual(cache4, units)) {
       gl.uniform1iv(this.addr, units);
-      copyArray(cache3, units);
+      copyArray(cache4, units);
     }
     for (let i = 0; i !== n; ++i) {
       textures.setTexture3D(v[i] || empty3dTexture, units[i]);
     }
   }
   function setValueT6Array(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     const n = v.length;
     const units = allocTexUnits(textures, n);
-    if (!arraysEqual(cache3, units)) {
+    if (!arraysEqual(cache4, units)) {
       gl.uniform1iv(this.addr, units);
-      copyArray(cache3, units);
+      copyArray(cache4, units);
     }
     for (let i = 0; i !== n; ++i) {
       textures.setTextureCube(v[i] || emptyCubeTexture, units[i]);
     }
   }
   function setValueT2DArrayArray(gl, v, textures) {
-    const cache3 = this.cache;
+    const cache4 = this.cache;
     const n = v.length;
     const units = allocTexUnits(textures, n);
-    if (!arraysEqual(cache3, units)) {
+    if (!arraysEqual(cache4, units)) {
       gl.uniform1iv(this.addr, units);
-      copyArray(cache3, units);
+      copyArray(cache4, units);
     }
     for (let i = 0; i !== n; ++i) {
       textures.setTexture2DArray(v[i] || emptyArrayTexture, units[i]);
@@ -12747,20 +12747,20 @@
       this.materialCache.clear();
     }
     _getShaderCacheForMaterial(material) {
-      const cache3 = this.materialCache;
-      let set = cache3.get(material);
+      const cache4 = this.materialCache;
+      let set = cache4.get(material);
       if (set === void 0) {
         set = /* @__PURE__ */ new Set();
-        cache3.set(material, set);
+        cache4.set(material, set);
       }
       return set;
     }
     _getShaderStage(code) {
-      const cache3 = this.shaderCache;
-      let stage2 = cache3.get(code);
+      const cache4 = this.shaderCache;
+      let stage2 = cache4.get(code);
       if (stage2 === void 0) {
         stage2 = new WebGLShaderStage(code);
-        cache3.set(code, stage2);
+        cache4.set(code, stage2);
       }
       return stage2;
     }
@@ -13503,7 +13503,7 @@
     return (lightB.castShadow ? 2 : 0) - (lightA.castShadow ? 2 : 0) + (lightB.map ? 1 : 0) - (lightA.map ? 1 : 0);
   }
   function WebGLLights(extensions) {
-    const cache3 = new UniformsCache();
+    const cache4 = new UniformsCache();
     const shadowCache = ShadowUniformsCache();
     const state = {
       version: 0,
@@ -13576,7 +13576,7 @@
           }
           numLightProbes++;
         } else if (light.isDirectionalLight) {
-          const uniforms = cache3.get(light);
+          const uniforms = cache4.get(light);
           uniforms.color.copy(light.color).multiplyScalar(light.intensity);
           if (light.castShadow) {
             const shadow = light.shadow;
@@ -13594,7 +13594,7 @@
           state.directional[directionalLength] = uniforms;
           directionalLength++;
         } else if (light.isSpotLight) {
-          const uniforms = cache3.get(light);
+          const uniforms = cache4.get(light);
           uniforms.position.setFromMatrixPosition(light.matrixWorld);
           uniforms.color.copy(color).multiplyScalar(intensity);
           uniforms.distance = distance;
@@ -13623,14 +13623,14 @@
           }
           spotLength++;
         } else if (light.isRectAreaLight) {
-          const uniforms = cache3.get(light);
+          const uniforms = cache4.get(light);
           uniforms.color.copy(color).multiplyScalar(intensity);
           uniforms.halfWidth.set(light.width * 0.5, 0, 0);
           uniforms.halfHeight.set(0, light.height * 0.5, 0);
           state.rectArea[rectAreaLength] = uniforms;
           rectAreaLength++;
         } else if (light.isPointLight) {
-          const uniforms = cache3.get(light);
+          const uniforms = cache4.get(light);
           uniforms.color.copy(light.color).multiplyScalar(light.intensity);
           uniforms.distance = light.distance;
           uniforms.decay = light.decay;
@@ -13652,7 +13652,7 @@
           state.point[pointLength] = uniforms;
           pointLength++;
         } else if (light.isHemisphereLight) {
-          const uniforms = cache3.get(light);
+          const uniforms = cache4.get(light);
           uniforms.skyColor.copy(light.color).multiplyScalar(intensity);
           uniforms.groundColor.copy(light.groundColor).multiplyScalar(intensity);
           state.hemi[hemiLength] = uniforms;
@@ -14088,12 +14088,12 @@
       const material = event.target;
       material.removeEventListener("dispose", onMaterialDispose);
       for (const id in _materialCache) {
-        const cache3 = _materialCache[id];
+        const cache4 = _materialCache[id];
         const uuid = event.target.uuid;
-        if (uuid in cache3) {
-          const shadowMaterial = cache3[uuid];
+        if (uuid in cache4) {
+          const shadowMaterial = cache4[uuid];
           shadowMaterial.dispose();
-          delete cache3[uuid];
+          delete cache4[uuid];
         }
       }
     }
@@ -17325,13 +17325,13 @@ void main() {
     function updateBufferData(uniformsGroup) {
       const buffer = buffers[uniformsGroup.id];
       const uniforms = uniformsGroup.uniforms;
-      const cache3 = uniformsGroup.__cache;
+      const cache4 = uniformsGroup.__cache;
       gl.bindBuffer(gl.UNIFORM_BUFFER, buffer);
       for (let i = 0, il = uniforms.length; i < il; i++) {
         const uniformArray = Array.isArray(uniforms[i]) ? uniforms[i] : [uniforms[i]];
         for (let j = 0, jl = uniformArray.length; j < jl; j++) {
           const uniform = uniformArray[j];
-          if (hasUniformChanged(uniform, i, j, cache3) === true) {
+          if (hasUniformChanged(uniform, i, j, cache4) === true) {
             const offset = uniform.__offset;
             const values = Array.isArray(uniform.value) ? uniform.value : [uniform.value];
             let arrayOffset = 0;
@@ -17365,21 +17365,21 @@ void main() {
       }
       gl.bindBuffer(gl.UNIFORM_BUFFER, null);
     }
-    function hasUniformChanged(uniform, index, indexArray, cache3) {
+    function hasUniformChanged(uniform, index, indexArray, cache4) {
       const value = uniform.value;
       const indexString = index + "_" + indexArray;
-      if (cache3[indexString] === void 0) {
+      if (cache4[indexString] === void 0) {
         if (typeof value === "number" || typeof value === "boolean") {
-          cache3[indexString] = value;
+          cache4[indexString] = value;
         } else {
-          cache3[indexString] = value.clone();
+          cache4[indexString] = value.clone();
         }
         return true;
       } else {
-        const cachedObject = cache3[indexString];
+        const cachedObject = cache4[indexString];
         if (typeof value === "number" || typeof value === "boolean") {
           if (cachedObject !== value) {
-            cache3[indexString] = value;
+            cache4[indexString] = value;
             return true;
           }
         } else {
@@ -21100,18 +21100,18 @@ void main() {
         return this.cacheArcLengths;
       }
       this.needsUpdate = false;
-      const cache3 = [];
+      const cache4 = [];
       let current2, last = this.getPoint(0);
       let sum = 0;
-      cache3.push(0);
+      cache4.push(0);
       for (let p = 1; p <= divisions; p++) {
         current2 = this.getPoint(p / divisions);
         sum += current2.distanceTo(last);
-        cache3.push(sum);
+        cache4.push(sum);
         last = current2;
       }
-      this.cacheArcLengths = cache3;
-      return cache3;
+      this.cacheArcLengths = cache4;
+      return cache4;
     }
     updateArcLengths() {
       this.needsUpdate = true;
@@ -27480,17 +27480,17 @@ void main() {
       return geometries;
     }
     parseMaterials(json, textures) {
-      const cache3 = {};
+      const cache4 = {};
       const materials = {};
       if (json !== void 0) {
         const loader = new MaterialLoader();
         loader.setTextures(textures);
         for (let i = 0, l = json.length; i < l; i++) {
           const data = json[i];
-          if (cache3[data.uuid] === void 0) {
-            cache3[data.uuid] = loader.parse(data);
+          if (cache4[data.uuid] === void 0) {
+            cache4[data.uuid] = loader.parse(data);
           }
-          materials[data.uuid] = cache3[data.uuid];
+          materials[data.uuid] = cache4[data.uuid];
         }
       }
       return materials;
@@ -28089,31 +28089,31 @@ void main() {
       };
     }
     update(camera) {
-      const cache3 = this._cache;
-      const needsUpdate = cache3.focus !== camera.focus || cache3.fov !== camera.fov || cache3.aspect !== camera.aspect * this.aspect || cache3.near !== camera.near || cache3.far !== camera.far || cache3.zoom !== camera.zoom || cache3.eyeSep !== this.eyeSep;
+      const cache4 = this._cache;
+      const needsUpdate = cache4.focus !== camera.focus || cache4.fov !== camera.fov || cache4.aspect !== camera.aspect * this.aspect || cache4.near !== camera.near || cache4.far !== camera.far || cache4.zoom !== camera.zoom || cache4.eyeSep !== this.eyeSep;
       if (needsUpdate) {
-        cache3.focus = camera.focus;
-        cache3.fov = camera.fov;
-        cache3.aspect = camera.aspect * this.aspect;
-        cache3.near = camera.near;
-        cache3.far = camera.far;
-        cache3.zoom = camera.zoom;
-        cache3.eyeSep = this.eyeSep;
+        cache4.focus = camera.focus;
+        cache4.fov = camera.fov;
+        cache4.aspect = camera.aspect * this.aspect;
+        cache4.near = camera.near;
+        cache4.far = camera.far;
+        cache4.zoom = camera.zoom;
+        cache4.eyeSep = this.eyeSep;
         _projectionMatrix.copy(camera.projectionMatrix);
-        const eyeSepHalf = cache3.eyeSep / 2;
-        const eyeSepOnProjection = eyeSepHalf * cache3.near / cache3.focus;
-        const ymax = cache3.near * Math.tan(DEG2RAD * cache3.fov * 0.5) / cache3.zoom;
+        const eyeSepHalf = cache4.eyeSep / 2;
+        const eyeSepOnProjection = eyeSepHalf * cache4.near / cache4.focus;
+        const ymax = cache4.near * Math.tan(DEG2RAD * cache4.fov * 0.5) / cache4.zoom;
         let xmin, xmax;
         _eyeLeft.elements[12] = -eyeSepHalf;
         _eyeRight.elements[12] = eyeSepHalf;
-        xmin = -ymax * cache3.aspect + eyeSepOnProjection;
-        xmax = ymax * cache3.aspect + eyeSepOnProjection;
-        _projectionMatrix.elements[0] = 2 * cache3.near / (xmax - xmin);
+        xmin = -ymax * cache4.aspect + eyeSepOnProjection;
+        xmax = ymax * cache4.aspect + eyeSepOnProjection;
+        _projectionMatrix.elements[0] = 2 * cache4.near / (xmax - xmin);
         _projectionMatrix.elements[8] = (xmax + xmin) / (xmax - xmin);
         this.cameraL.projectionMatrix.copy(_projectionMatrix);
-        xmin = -ymax * cache3.aspect - eyeSepOnProjection;
-        xmax = ymax * cache3.aspect - eyeSepOnProjection;
-        _projectionMatrix.elements[0] = 2 * cache3.near / (xmax - xmin);
+        xmin = -ymax * cache4.aspect - eyeSepOnProjection;
+        xmax = ymax * cache4.aspect - eyeSepOnProjection;
+        _projectionMatrix.elements[0] = 2 * cache4.near / (xmax - xmin);
         _projectionMatrix.elements[8] = (xmax + xmin) / (xmax - xmin);
         this.cameraR.projectionMatrix.copy(_projectionMatrix);
       }
@@ -42942,8 +42942,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   D.mango = (I) => {
     const m = "M31 14 C43 11 55 20 55.5 33 C56 47 45 58 31 57 C19 56 9.5 48 10 37 C10.5 26 19 16 31 14 Z";
     const base2 = lg(I, 50, 14, 14, 54, [[0, "#e0452f"], [0.42, "#f59a1f"], [0.78, "#f2c53a"], [1, "#9dbb3a"]]);
-    const shade3 = lg(I, 50, 14, 14, 54, [[0, "#a8321f"], [0.42, "#c0701a"], [0.78, "#c2952a"], [1, "#6f8a2a"]]);
-    part(I, m, base2, { base: "#f59a1f", sh: shade3, hi: "#ffe2a8", sd: 3.8, hd: 2.4, gloss: [21, 27, 3, 5.5, 0.55, 0.5] });
+    const shade4 = lg(I, 50, 14, 14, 54, [[0, "#a8321f"], [0.42, "#c0701a"], [0.78, "#c2952a"], [1, "#6f8a2a"]]);
+    part(I, m, base2, { base: "#f59a1f", sh: shade4, hi: "#ffe2a8", sd: 3.8, hd: 2.4, gloss: [21, 27, 3, 5.5, 0.55, 0.5] });
     if (!I.small) for (const [x, y] of [[40, 40], [34, 47], [45, 30], [25, 44]]) fl(I, circle(x, y, 0.8), "#fff3c8", { a: 0.7 });
     tube2(I, "M33 15 C33 11 34 8 36.5 5.5", "#6b4a2a", 2.2);
     part(I, "M35.5 8.5 C40 2.5 50 2 56 6 C51 11.5 42 12.5 35.5 8.5 Z", C2.leaf, { sd: 1.4, hd: 1 });
@@ -43993,9 +43993,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (lum(col) > 0.84) col = mix2(col, "#9fb2c6", 0.24);
     const shape = o.shape || FRUIT_SHAPE[id] || FRUIT_SHAPES[hash4(id || "x") % FRUIT_SHAPES.length];
     const rr = I.small ? 7.6 : 6.6;
-    const stem = (x, y, leaf = 17) => {
-      part(I, `M${x - 1} ${y + 1} C${x - leaf * 0.35} ${y - 5} ${x - leaf * 0.8} ${y - 5} ${x - leaf} ${y - 1} C${x - leaf * 0.75} ${y + 3} ${x - leaf * 0.35} ${y + 3.5} ${x - 1} ${y + 1} Z`, C2.leaf, { sd: 1.2, hd: 0.9 });
-      if (!I.small) ln(I, `M${x - 3} ${y} C${x - leaf * 0.4} ${y - 2} ${x - leaf * 0.62} ${y - 2.4} ${x - leaf * 0.86} ${y - 1}`, dk(C2.leaf, 0.35), 0.9);
+    const stem = (x, y, leaf2 = 17) => {
+      part(I, `M${x - 1} ${y + 1} C${x - leaf2 * 0.35} ${y - 5} ${x - leaf2 * 0.8} ${y - 5} ${x - leaf2} ${y - 1} C${x - leaf2 * 0.75} ${y + 3} ${x - leaf2 * 0.35} ${y + 3.5} ${x - 1} ${y + 1} Z`, C2.leaf, { sd: 1.2, hd: 0.9 });
+      if (!I.small) ln(I, `M${x - 3} ${y} C${x - leaf2 * 0.4} ${y - 2} ${x - leaf2 * 0.62} ${y - 2.4} ${x - leaf2 * 0.86} ${y - 1}`, dk(C2.leaf, 0.35), 0.9);
       tube2(I, `M${x} ${y + 2} C${x} ${y - 4} ${x + 2} ${y - 8} ${x + 6} ${y - 8.5} C${x + 10} ${y - 9} ${x + 11} ${y - 5} ${x + 8} ${y - 4} C${x + 6} ${y - 3.5} ${x + 5.5} ${y - 5.5} ${x + 7} ${y - 6}`, "#3f6d2a", 2.6);
     };
     if (shape === "grape") {
@@ -53893,8 +53893,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   var GLASS_CLEAR = vcMat({ transparent: true, opacity: 0.22, depthWrite: false });
   function walkIn(grp, b, S3, o) {
-    const leaf = doorLeaf(b, { y0: o.y0, wood: doorWood(b, S3) });
-    grp.add(leaf);
+    const leaf2 = doorLeaf(b, { y0: o.y0, wood: doorWood(b, S3) });
+    grp.add(leaf2);
     let glass = null;
     if (o.panes && o.panes.vertexCount) {
       glass = new Mesh(o.panes.build(false), vcMat());
@@ -53906,7 +53906,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const now2 = performance.now();
       const dt = Math.min(0.1, (now2 - st.t) / 1e3);
       st.t = now2;
-      animateDoor(leaf, b, dt);
+      animateDoor(leaf2, b, dt);
       const p = ctx?.game?.player, w = ctx?.world;
       if (!p || !w) return;
       const c = bw(b, 0, -o.fd / 2);
@@ -61458,10 +61458,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           else sp *= 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1) * (!this.gills && this.stamina <= 0.5 ? 0.45 : 1);
         } else if (this.wading) sp *= 1 - 0.42 * clamp2(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);
         if (this.charging) sp *= 1 - 0.75 * this.charging;
-        if (i.sprint && this.stamina > 1 && (!this.inWater || this.gills)) {
+        if (i.sprint && !this.eating && this.stamina > 1 && (!this.inWater || this.gills)) {
           sp *= this.inWater ? 1.35 : 1.55;
           if (!this.inWater) this.stamina -= 9 * dt;
         }
+        if (this.eating) sp *= 0.45;
         if (this.inWater && !this.gills && (i.mx || i.my || i.mz)) this.stamina = Math.max(0, this.stamina - (this.under ? 4 : 3.5) * dt);
         if (this.blocking) sp *= 0.4;
         if (this.action) sp *= this.action.def.moveMul ?? (this.action.def.m1Chain ? 0.55 : 0.25);
@@ -63510,18 +63511,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var HEAD_R = /* @__PURE__ */ new Map();
   function headRay(dx, dy, dz) {
     const H2 = HEAD || headOf({});
-    let cache3 = H2.cache;
-    if (!cache3) {
-      cache3 = HEAD_R.get(H2.key);
-      if (!cache3) {
+    let cache4 = H2.cache;
+    if (!cache4) {
+      cache4 = HEAD_R.get(H2.key);
+      if (!cache4) {
         if (HEAD_R.size > 400) HEAD_R.clear();
-        cache3 = /* @__PURE__ */ new Map();
-        HEAD_R.set(H2.key, cache3);
+        cache4 = /* @__PURE__ */ new Map();
+        HEAD_R.set(H2.key, cache4);
       }
-      H2.cache = cache3;
+      H2.cache = cache4;
     }
     const key2 = (Math.round(dx * 1e4) + 10001) * 40004e4 + (Math.round(dy * 1e4) + 10001) * 20002 + (Math.round(dz * 1e4) + 10001);
-    let t = cache3.get(key2);
+    let t = cache4.get(key2);
     if (t !== void 0) return t;
     const k = H2.k;
     let out = 1.7, cur = 1.7;
@@ -63542,7 +63543,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       else hi = m;
     }
     t = (lo + hi) / 2;
-    cache3.set(key2, t);
+    cache4.set(key2, t);
     return t;
   }
   function headOf(look) {
@@ -64568,6 +64569,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         _u.subVectors(E, J).normalize();
         const shape = o.shape ? o.shape[k] : "fist";
         if (shape === "flat") this._ref.set(0.1, 1, side * 0.35);
+        else if (shape === "hold") this._ref.set(0.25, -1, side * 0.35);
         else this._ref.set(-0.3, 0.6, side * 0.8);
         aimNegY(this.quat[Hd], _u, this._ref);
         if (shape === "palm" || shape === "claw") {
@@ -64823,6 +64825,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     fist: { a: [1.5, 1.56, 1.6, 1.62], b: [1.72, 1.76, 1.76, 1.7], sp: 0, th: 1 },
     grip: { a: [1.3, 1.38, 1.46, 1.52], b: [1.45, 1.52, 1.56, 1.56], sp: 0, th: 0.85 },
     grab: { a: [0.72, 0.82, 0.9, 0.98], b: [0.95, 1.05, 1.12, 1.15], sp: 0.25, th: 0.65 },
+    hold: { a: [0.34, 0.4, 0.46, 0.52], b: [0.5, 0.56, 0.62, 0.68], sp: 0.35, th: 0.25 },
     relaxed: { a: [0.3, 0.4, 0.5, 0.62], b: [0.4, 0.5, 0.6, 0.72], sp: 0.35, th: 0.3 },
     palm: { a: [0.06, 0.08, 0.1, 0.14], b: [0.08, 0.1, 0.13, 0.17], sp: 1, th: 0 },
     flat: { a: [0.04, 0.04, 0.05, 0.06], b: [0.05, 0.05, 0.06, 0.08], sp: 0, th: 0.2 },
@@ -64996,7 +64999,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           this.shape[k] = s;
           continue;
         }
-        if (s === "claw" || s === "flat" || s === "relaxed" || s === "grab") s = s === "grab" ? "fist" : "palm";
+        if (s === "claw" || s === "flat" || s === "relaxed" || s === "grab" || s === "hold") s = s === "grab" || s === "hold" ? "fist" : "palm";
         const H2 = k === 0 ? "R" : "L";
         for (const sh of SHAPES) this.showBone(B3[sh + H2], sh === s);
       }
@@ -65825,16 +65828,198 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
   };
 
+  // src/render3d/chars/helditem.js
+  var cache3 = /* @__PURE__ */ new Map();
+  var sph = (w = 10, h2 = 7) => new SphereGeometry(1, w, h2);
+  var cyl2 = (r0, r1, h2, n = 8) => new CylinderGeometry(r1, r0, h2, n);
+  var shade3 = (hex3, k) => {
+    const c = new Color(hex3);
+    c.multiplyScalar(k);
+    return c;
+  };
+  function kindOf(id, d) {
+    if (d.type === "fruit") return "devil";
+    if (/meat/.test(id)) return "meat";
+    if (/steak/.test(id)) return "steak";
+    if (/rice_ball/.test(id)) return "onigiri";
+    if (/fish|tuna/.test(id)) return "fish";
+    if (/stew|course/.test(id)) return "bowl";
+    if (/sake/.test(id)) return "bottle";
+    if (/antidote/.test(id)) return "vial";
+    if (/bandage/.test(id)) return "bandage";
+    if (/rumble/.test(id)) return "pill";
+    if (/hormone/.test(id)) return "syringe";
+    if (/banana/.test(id)) return "banana";
+    if (/coconut/.test(id)) return "coconut";
+    if (/cherr/.test(id)) return "cherry";
+    if (/tangerine|orange/.test(id)) return "citrus";
+    if (/mango/.test(id)) return "mango";
+    if (/apple/.test(id)) return "apple";
+    return d.type === "medicine" ? "vial" : "apple";
+  }
+  function leaf(k, at5, rot, col = "#43a047") {
+    k.add(sph(6, 4), { at: at5, rot, scale: [0.022, 4e-3, 0.011], color: col });
+  }
+  var BUILD = {
+    apple(k) {
+      k.add(sph(), { scale: 0.034, color: "#d32f2f" });
+      k.add(cyl2(25e-4, 2e-3, 0.02, 5), { at: [0, 0.036, 0], rot: [0, 0, 0.2], color: "#5d4037" });
+      leaf(k, [0.012, 0.04, 0], [0, 0, -0.5]);
+    },
+    citrus(k) {
+      k.add(sph(), { scale: [0.035, 0.031, 0.035], color: "#fb8c00" });
+      leaf(k, [0.01, 0.034, 0], [0.2, 0, -0.35], "#2e7d32");
+    },
+    mango(k) {
+      k.add(sph(), { scale: [0.042, 0.032, 0.03], color: (v) => v.x > 0 ? "#f9a825" : "#ef6c00" });
+      k.add(cyl2(2e-3, 2e-3, 0.012, 4), { at: [0.04, 0.012, 0], rot: [0, 0, -1], color: "#5d4037" });
+    },
+    coconut(k) {
+      k.add(sph(9, 6), { scale: [0.048, 0.044, 0.046], color: "#6d4c41", flat: true });
+      for (const [a, b] of [[0.4, 0.2], [0.9, -0.1], [0.65, 0.5]]) k.add(sph(5, 4), { at: [Math.cos(a) * 0.012, 0.043, Math.sin(b) * 0.012], scale: 5e-3, color: "#3e2723" });
+    },
+    banana(k) {
+      k.add(new TorusGeometry(0.07, 0.013, 6, 10, 1.7), { rot: [0, 0, 2.3], at: [0.02, -0.05, 0], color: "#fdd835" });
+      k.add(cyl2(5e-3, 4e-3, 0.018, 5), { at: [0.066, 0.02, 0], rot: [0, 0, -0.5], color: "#6d4c41" });
+    },
+    cherry(k) {
+      for (const s of [-1, 1]) {
+        k.add(sph(), { at: [s * 0.014, -8e-3, 0], scale: 0.013, color: "#b71c1c" });
+        k.add(cyl2(15e-4, 15e-4, 0.04, 4), { at: [s * 7e-3, 0.012, 0], rot: [0, 0, s * 0.35], color: "#558b2f" });
+      }
+    },
+    meat(k) {
+      k.add(sph(12, 8), { scale: [0.055, 0.046, 0.044], color: (v) => v.y > 0.03 ? "#8d4a24" : "#a0522d" });
+      k.add(cyl2(0.011, 0.011, 0.16, 7), { rot: [0, 0, Math.PI / 2], color: "#f5f0e1" });
+      for (const s of [-1, 1]) for (const dz of [-9e-3, 9e-3]) k.add(sph(6, 5), { at: [s * 0.08, 4e-3, dz], scale: 0.013, color: "#fffaf0" });
+    },
+    steak(k) {
+      k.add(sph(12, 8), { scale: [0.075, 0.018, 0.055], color: (v) => Math.hypot(v.x / 0.075, v.z / 0.055) > 0.86 ? "#f3e5d8" : "#9b2f2f" });
+    },
+    fish(k) {
+      k.add(sph(10, 6), { scale: [0.07, 0.025, 0.017], color: (v) => v.y > 0 ? "#3f6f98" : "#cfd8dc" });
+      k.add(new ConeGeometry(0.022, 0.04, 4), { at: [-0.085, 0, 0], rot: [0, 0, Math.PI / 2], scale: [1, 1, 0.3], color: "#3f6f98" });
+      k.add(sph(5, 4), { at: [0.052, 8e-3, 0.012], scale: 4e-3, color: "#111111" });
+    },
+    onigiri(k) {
+      k.add(new CylinderGeometry(0.018, 0.05, 0.06, 3, 1), { rot: [Math.PI / 2, 0, 0], scale: [1, 0.55, 1], color: "#fafafa" });
+      k.add(new BoxGeometry(0.05, 0.028, 0.034), { at: [0, -0.02, 0], color: "#1b2a1b" });
+    },
+    bowl(k) {
+      k.add(new CylinderGeometry(0.055, 0.035, 0.04, 12, 1, true), { color: "#6d4c41", double: true });
+      k.add(new CircleGeometry(0.052, 12), { at: [0, 0.014, 0], rot: [-Math.PI / 2, 0, 0], color: "#e07b39" });
+      k.add(sph(6, 4), { at: [0.015, 0.02, 0.01], scale: [0.016, 7e-3, 0.012], color: "#fff3e0" });
+    },
+    bottle(k) {
+      k.add(new LatheGeometry([[0, -0.07], [0.034, -0.07], [0.04, -0.03], [0.034, 0.01], [0.013, 0.04], [0.012, 0.065], [0.016, 0.07], [0, 0.07]].map(([r, y]) => new Vector2(r, y)), 10), { color: (v) => v.y > -0.02 && v.y < -5e-3 ? "#1565c0" : "#f5f0e1" });
+    },
+    vial(k) {
+      k.add(cyl2(0.017, 0.017, 0.06, 8), { at: [0, -0.01, 0], color: "#66bb6a" });
+      k.add(cyl2(8e-3, 8e-3, 0.02, 6), { at: [0, 0.03, 0], color: "#e0f2f1" });
+      k.add(cyl2(0.01, 0.01, 0.01, 6), { at: [0, 0.045, 0], color: "#8d6e63" });
+    },
+    bandage(k) {
+      k.add(cyl2(0.024, 0.024, 0.05, 10), { rot: [Math.PI / 2, 0, 0], color: "#fafafa" });
+      k.add(new BoxGeometry(4e-3, 0.05, 0.045), { at: [0.026, -0.02, 0], rot: [0, 0, 0.2], color: "#f5f5f5" });
+    },
+    pill(k) {
+      k.add(sph(), { scale: 0.016, color: (v) => Math.abs(v.y) < 4e-3 ? "#8d6e00" : "#fdd835" });
+    },
+    syringe(k) {
+      k.add(cyl2(0.012, 0.012, 0.08, 8), { rot: [0, 0, Math.PI / 2], color: "#e1f5fe" });
+      k.add(cyl2(9e-3, 9e-3, 0.06, 6), { at: [-0.01, 0, 0], rot: [0, 0, Math.PI / 2], color: "#f06292" });
+      k.add(cyl2(15e-4, 15e-4, 0.04, 4), { at: [0.06, 0, 0], rot: [0, 0, Math.PI / 2], color: "#b0bec5" });
+      k.add(cyl2(4e-3, 4e-3, 0.02, 6), { at: [-0.05, 0, 0], rot: [0, 0, Math.PI / 2], color: "#90a4ae" });
+    },
+    devil(k, d) {
+      const f = FRUITS[d.fruit] || {};
+      const base2 = new Color(f.color || "#8e44ad"), dark = shade3(base2, 0.62);
+      const swirl = (v) => {
+        const r = Math.hypot(v.x, v.y, v.z) || 1;
+        const th = Math.atan2(v.z, v.x), ph = Math.acos(v.y / r);
+        return Math.sin(th * 3 + ph * 7) > 0.35 ? dark : base2;
+      };
+      k.add(sph(14, 10), { scale: [0.045, 0.043, 0.045], color: swirl });
+      let p = new Vector3(0, 0.042, 0), a = 0.4;
+      for (let i = 0; i < 5; i++) {
+        const q2 = p.clone().add(new Vector3(Math.sin(a) * 9e-3, 8e-3 - i * 2e-3, Math.cos(a) * 4e-3));
+        const mid = p.clone().add(q2).multiplyScalar(0.5), dir = q2.clone().sub(p);
+        const g = cyl2(3e-3, 3e-3, dir.length(), 4);
+        g.applyQuaternion(new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), dir.normalize()));
+        k.add(g, { at: [mid.x, mid.y, mid.z], color: "#33691e" });
+        p = q2;
+        a += 1.1;
+      }
+      leaf(k, [-0.012, 0.046, 4e-3], [0.3, 0.4, 0.5], "#558b2f");
+    }
+  };
+  function heldItemMesh(id, opts = {}) {
+    const d = ITEMS[id];
+    if (!d) return null;
+    let geo2 = cache3.get(id);
+    if (!geo2) {
+      const k = new Mesher();
+      (BUILD[kindOf(id, d)] || BUILD.apple)(k, d);
+      geo2 = k.build(false);
+      cache3.set(id, geo2);
+    }
+    const mat = opts.viewmodel ? vmMat() : vcMat();
+    const m = new Mesh(geo2, mat);
+    m.name = "held-" + id;
+    m.castShadow = !opts.viewmodel;
+    m.frustumCulled = false;
+    m.userData.shared = true;
+    return m;
+  }
+  var _vm = null;
+  function vmMat() {
+    if (_vm) return _vm;
+    const base2 = vcMat();
+    _vm = base2.clone();
+    _vm.onBeforeCompile = base2.onBeforeCompile;
+    _vm.customProgramCacheKey = () => "opvc-vm";
+    _vm.fog = false;
+    _vm.transparent = true;
+    return _vm;
+  }
+  var HOLD_Q = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(new Vector3(0, 0, 1), new Vector3(-1, 0, 0), new Vector3(0, -1, 0)));
+  function holdItem(model2, id, opts = {}) {
+    if ((model2._heldId || null) === (id || null)) return model2._held || null;
+    if (model2._held) model2._held.removeFromParent();
+    model2._held = null;
+    model2._heldId = id || null;
+    if (!id) return null;
+    const m = heldItemMesh(id, opts);
+    if (!m) return null;
+    const g = m.geometry;
+    if (!g.boundingBox) g.computeBoundingBox();
+    const k = model2.body?.fingers?.R?.k || 1.06;
+    m.userData.palm = 0.021 * k;
+    m.userData.under = -g.boundingBox.min.y;
+    m.quaternion.copy(HOLD_Q);
+    m.position.set(0, -0.05 * k, 0);
+    model2.bones[B3.handR].add(m);
+    model2._held = m;
+    heldSize(model2, 1);
+    return m;
+  }
+  function heldSize(model2, s) {
+    const m = model2._held;
+    if (!m) return;
+    m.scale.setScalar(s);
+    m.position.x = -(m.userData.palm + m.userData.under * s);
+  }
+
   // src/render3d/chars/pose.js
-  function currentLook(a, cache3) {
+  function currentLook(a, cache4) {
     const buffLook = a.buffs && a.buffs.find((b) => b.look);
     if (!buffLook) return a.look;
-    if (cache3 && cache3.base === a.look && cache3.buff === buffLook) return cache3.look;
+    if (cache4 && cache4.base === a.look && cache4.buff === buffLook) return cache4.look;
     const look = { ...a.look, ...buffLook.look };
-    if (cache3) {
-      cache3.base = a.look;
-      cache3.buff = buffLook;
-      cache3.look = look;
+    if (cache4) {
+      cache4.base = a.look;
+      cache4.buff = buffLook;
+      cache4.look = look;
     }
     return look;
   }
@@ -65856,12 +66041,27 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     let P4 = pose.anim ? samplePose(pose.anim, pose.anim.t, pose) : restPose(pose, look);
     if (pose.station && !pose.anim) stationPose(P4, pose.station);
+    if (!pose.anim && (a.held || a.eating) && !a.inWater) heldPose(P4, a, env ? env.time : 0);
     if (pose.blend && pose.blend.P) P4 = blendPose(pose.blend.P, P4, pose.blend.k);
     pose.P = P4;
     a._lastP = P4;
     a._lastPose = pose;
     a._lastLook = look;
     return { pose, P: P4 };
+  }
+  function heldPose(P4, a, t) {
+    P4.hand = "hold";
+    if (a.eating) {
+      const e = a.eating, k = Math.min(1, e.t / 0.18);
+      const bite = Math.max(0, Math.sin(e.t / 0.36 * Math.PI * 2)) * 0.03;
+      const hF = Array.isArray(P4.hF) ? P4.hF : [0.05, 0.4];
+      P4.hF = [hF[0] + (0.11 + bite - hF[0]) * k, hF[1] + (-0.2 - hF[1]) * k];
+      P4.eF = 1;
+      P4.ht = (P4.ht || 0) + 0.12 * k + bite;
+    } else {
+      P4.hF = [0.16, 0.2];
+      P4.eF = 1;
+    }
   }
   function stationPose(P4, st) {
     P4.wF = null;
@@ -65973,6 +66173,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/render3d/chars/viewmodel.js
   var clamp5 = (v, a, b) => v < a ? a : v > b ? b : v;
   var FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16 };
+  var FP_HOLD = [0.2, -0.22, 0.36];
+  var FP_EAT = [0.05, -0.2, 0.27];
   var xy = (h2, fb) => !h2 ? fb : Array.isArray(h2) ? h2 : [Math.cos(h2.a) * h2.r, Math.sin(h2.a) * h2.r];
   var mix23 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
   var HIDE = [B3.hips, B3.chest, B3.head, B3.sheath, B3.hilts, B3.tail];
@@ -66121,6 +66323,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         o.spread = (o.spread || 0) + 0.05 * q2 + 0.03 * k;
       }
+      const holding = !!p.held && !swimming && !A && p.state !== "hurt";
+      this.holdK = (this.holdK ?? 0) + ((holding ? 1 : 0) - (this.holdK ?? 0)) * Math.min(1, dtv * 10);
+      let holdAt = null;
+      if (holding) {
+        const e = p.eating && p.eating.id === p.held ? p.eating : null;
+        const k = e ? Math.min(1, e.t / 0.18) : 0;
+        const bite = e ? Math.max(0, Math.sin(e.t / 0.36 * Math.PI * 2)) : 0;
+        const cx = FP_HOLD[0] + (FP_EAT[0] - FP_HOLD[0]) * k;
+        const cy = FP_HOLD[1] + (FP_EAT[1] - FP_HOLD[1]) * k + bite * 0.02 - (1 - this.holdK) * 0.3;
+        const cz = FP_HOLD[2] + (FP_EAT[2] - FP_HOLD[2]) * k - bite * 0.05;
+        const d2 = m.d, eyeY2 = d2.hip0 + d2.chestLen + d2.neck + d2.hc * 0.95;
+        const use2 = Math.max(this.ready ?? 0, (this.pump ?? 0) * 0.28, this.holdK * 0.75);
+        holdAt = (this._holdAt || (this._holdAt = new Vector3())).set(cz - 0.06, cy + eyeY2 + 0.1 - 0.26 * use2, cx);
+        PP = { ...PP, hand: "hold" };
+      }
       if (reach > 0) {
         PP = { ...PP, hF: mix23(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: p.reachT > 0.22 ? "palm" : "grab" };
       }
@@ -66140,8 +66357,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       o.lift = 0;
       o.roll = 0;
       o.squash = 1;
-      o.reachR = p.fruit === "gomu" ? this.stretch(p, ctx) : null;
+      o.reachR = holdAt || (p.fruit === "gomu" ? this.stretch(p, ctx) : null);
       m.pose(PP, o);
+      const held = holdItem(m, holding ? p.held : null, { viewmodel: true });
+      if (held) {
+        const e = p.eating && p.eating.id === p.held ? p.eating : null;
+        heldSize(m, e ? 1 - 0.55 * Math.min(1, e.t / e.dur) : 1);
+      }
       this.fixup();
       const kick = A && (A.limb === "fF" || A.limb === "fB") && A.legs;
       for (const i of LEGS) m.showBone(i, !!kick);
@@ -66165,7 +66387,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const bobA = moving ? pose.sprint ? 0.028 : 0.014 : 4e-3;
       const bx = Math.cos(this.bob * 0.5) * bobA, by = -Math.abs(Math.sin(this.bob * 0.5)) * bobA * 1.4 + Math.sin(env.time * 1.3) * 3e-3;
       this.body.rotation.set(0, Math.PI / 2, 0);
-      const use = swimming ? 0.8 : Math.max(this.ready ?? 0, reach, (this.pump ?? 0) * 0.28);
+      const use = swimming ? 0.8 : Math.max(this.ready ?? 0, reach, (this.pump ?? 0) * 0.28, (this.holdK ?? 0) * 0.75);
       this.body.position.set(this.sway.x + bx, -0.1 + 0.26 * use - eyeY + this.sway.y + by, -0.06);
       this.body.updateMatrix();
       const fx = m.fx;
@@ -66199,6 +66421,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       o.reachR = R3[0];
       o.reachL = R3[1];
       m.pose(P4, o);
+      holdItem(m, null);
       this.fixup();
       for (const i of LEGS) m.showBone(i, false);
       this.lastT = env.time;
@@ -66402,6 +66625,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         m.setExpression(expression2(look, pose, P4, pose.time || 0));
         this.effects(a, pose, P4, o, env, ctx, camYaw3, dist, s);
         this.lastT = env.time;
+      }
+      if (a.isPlayer) {
+        const held = holdItem(m, a.held && !a.inWater && !helm && !a.action ? a.held : null);
+        if (held) {
+          const e = a.eating && a.eating.id === a.held ? a.eating : null;
+          heldSize(m, e ? 1 - 0.55 * Math.min(1, e.t / e.dur) : 1);
+        }
       }
       this.labels(a, env, dist, s);
       const lod = a.isPlayer ? 0 : lodFor(dist, m.lod);
@@ -67762,11 +67992,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       fruit.scale.set(1, 1.1, 1);
       const stem = new Mesh(new CylinderGeometry(0.02, 0.03, 0.14, 6), toon(6111287));
       stem.position.y = 0.26;
-      const leaf = new Mesh(new SphereGeometry(0.08, 8, 6), toon(3046706));
-      leaf.scale.set(1.4, 0.35, 0.8);
-      leaf.position.set(0.08, 0.3, 0);
+      const leaf2 = new Mesh(new SphereGeometry(0.08, 8, 6), toon(3046706));
+      leaf2.scale.set(1.4, 0.35, 0.8);
+      leaf2.position.set(0.08, 0.3, 0);
       spin = new Group();
-      spin.add(fruit, stem, leaf);
+      spin.add(fruit, stem, leaf2);
       spin.position.y = 0.55;
       root2.add(spin);
     } else {
@@ -68024,7 +68254,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return geo2;
   }
   function grassGeo(far = false) {
-    const pos = [], shade3 = [];
+    const pos = [], shade4 = [];
     const n = far ? 4 : 7;
     for (let i = 0; i < n; i++) {
       const a = i / n * Math.PI * 2 + i * 0.7;
@@ -68038,18 +68268,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const tx = bx + ca * lean, tz = bz + sa * lean;
       if (far) {
         pos.push(bx - px2, 0, bz - pz2, bx + px2, 0, bz + pz2, tx, h2, tz);
-        for (let k2 = 0; k2 < 3; k2++) shade3.push(h2);
+        for (let k2 = 0; k2 < 3; k2++) shade4.push(h2);
         continue;
       }
       const mx = bx + ca * lean * 0.35, mz = bz + sa * lean * 0.35, my = h2 * 0.45;
       pos.push(bx, 0, bz, mx + px2, my, mz + pz2, mx - px2, my, mz - pz2);
       pos.push(mx - px2, my, mz - pz2, mx + px2, my, mz + pz2, tx, h2, tz);
-      for (let k2 = 0; k2 < 6; k2++) shade3.push(h2);
+      for (let k2 = 0; k2 < 6; k2++) shade4.push(h2);
     }
     const g = new BufferGeometry();
     g.setAttribute("position", new Float32BufferAttribute(pos, 3));
     g.computeVertexNormals();
-    const hs = shade3;
+    const hs = shade4;
     let k = 0;
     return colored(g, (c, x, y) => {
       const f = y / hs[k++];
@@ -83187,7 +83417,774 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     game.audio?.sfx("board");
   }
 
+  // src/data/dreams.js
+  var LEGENDS = {
+    king: {
+      name: "King of the Pirates",
+      desc: "Find the One Piece on Laugh Tale, the final island of the Grand Line.",
+      check: (c) => !!c.flags?.laughTale,
+      progress: (c) => [Math.min(4, (c.inventory || []).filter((i) => i.id === "poneglyph_rubbing").reduce((s, i) => s + (i.qty || 1), 0)), 4, "Road Poneglyph rubbings"],
+      will: 150
+    },
+    swordsman: {
+      name: "World's Greatest Swordsman",
+      desc: 'Defeat "Hawk-Eyes" Dracule Mihawk in a duel.',
+      check: (c) => (c.bosses || []).includes("mihawk"),
+      will: 90
+    },
+    admiral: {
+      name: "Admiral of the Marines",
+      desc: "Rise through the Marines to the rank of Admiral.",
+      check: (c) => c.marineRank === "Admiral" || c.marineRank === "Fleet Admiral",
+      will: 90
+    },
+    fleet_admiral: {
+      name: "Fleet Admiral",
+      desc: "Command every Marine in the world.",
+      check: (c) => c.marineRank === "Fleet Admiral",
+      will: 120
+    },
+    all_blue: {
+      name: "The All Blue",
+      desc: "Find the legendary sea where the fish of all four Blues meet.",
+      check: (c) => !!c.flags?.allBlue,
+      will: 80
+    },
+    world_map: {
+      name: "Map of the World",
+      desc: "Chart 60 islands with your own eyes.",
+      check: (c) => (c.discovered || []).length >= 60,
+      progress: (c) => [(c.discovered || []).length, 60, "islands charted"],
+      will: 70
+    },
+    warrior: {
+      name: "Brave Warrior of the Sea",
+      desc: "Defeat 12 great foes.",
+      check: (c) => (c.bosses || []).length >= 12,
+      progress: (c) => [(c.bosses || []).length, 12, "great foes defeated"],
+      will: 70
+    },
+    true_history: {
+      name: "The True History",
+      desc: "Read 8 Poneglyphs and learn what happened in the Void Century.",
+      check: (c) => (c.flags?.poneglyphsRead || 0) >= 8,
+      progress: (c) => [c.flags?.poneglyphsRead || 0, 8, "Poneglyphs read"],
+      will: 80
+    },
+    liberation: {
+      name: "Liberator",
+      desc: "Free 6 places from their tyrants.",
+      check: (c) => (c.liberated || []).length >= 6,
+      progress: (c) => [(c.liberated || []).length, 6, "places liberated"],
+      will: 70
+    },
+    emperor: {
+      name: "Emperor of the Sea",
+      desc: "Carry a bounty of over 3,000,000,000 berries.",
+      check: (c) => (c.bounty || 0) >= 3e9,
+      progress: (c) => [Math.floor((c.bounty || 0) / 1e6), 3e3, "million berries"],
+      will: 100
+    }
+  };
+  var LEGEND_IDS = Object.keys(LEGENDS);
+
+  // src/game/save.js
+  var PREFIX = "op-inherited-will";
+  var LEGACY_CHAR = `${PREFIX}:char:v1`;
+  var LEGACY_LEGACY = `${PREFIX}:legacy:v1`;
+  var KEY_SETTINGS = `${PREFIX}:settings:v1`;
+  var KEY_LAST = `${PREFIX}:lastSlot`;
+  var SLOT_COUNT = 3;
+  var slot = 1;
+  var key = (s, what) => `${PREFIX}:slot${s}:${what}:v1`;
+  function read(k) {
+    try {
+      const s = localStorage.getItem(k);
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
+    }
+  }
+  function write(k, v) {
+    try {
+      localStorage.setItem(k, JSON.stringify(v));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function remove(k) {
+    try {
+      localStorage.removeItem(k);
+    } catch {
+    }
+  }
+  (function migrate() {
+    const oldChar = read(LEGACY_CHAR), oldLegacy = read(LEGACY_LEGACY);
+    if (!oldChar && !oldLegacy) return;
+    if (!read(key(1, "char")) && !read(key(1, "legacy"))) {
+      if (oldChar) write(key(1, "char"), oldChar);
+      if (oldLegacy) write(key(1, "legacy"), oldLegacy);
+    }
+    remove(LEGACY_CHAR);
+    remove(LEGACY_LEGACY);
+  })();
+  function defaultLegacy() {
+    return { version: 1, generation: 1, will: 0, totalWill: 0, perks: {}, heirloom: null, hall: [], charted: [], reincarnatedFruits: [], unlocks: {} };
+  }
+  function setSlot(n) {
+    slot = Math.max(1, Math.min(SLOT_COUNT, n | 0));
+    write(KEY_LAST, slot);
+  }
+  var loadLegacy = (s = slot) => ({ ...defaultLegacy(), ...read(key(s, "legacy")) || {} });
+  var saveLegacy = (l, s = slot) => write(key(s, "legacy"), l);
+  var loadChar = (s = slot) => read(key(s, "char"));
+  var saveChar = (c, s = slot) => write(key(s, "char"), c);
+  var clearChar = (s = slot) => remove(key(s, "char"));
+  function clearSlot(s) {
+    remove(key(s, "char"));
+    remove(key(s, "legacy"));
+  }
+  function slotInfo(s) {
+    const char = read(key(s, "char"));
+    const legacy = read(key(s, "legacy"));
+    return { slot: s, char, legacy: legacy ? { ...defaultLegacy(), ...legacy } : null, empty: !char && !legacy };
+  }
+  var loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, view: "first", sensitivity: 0.5, invertY: false, quality: "high", autoRes: true, fov: 0.5, bob: true, renderDist: null, ...read(KEY_SETTINGS) || {} });
+  var saveSettings = (s) => write(KEY_SETTINGS, s);
+  var RENDER_DIST = { min: 4, max: 24, high: 12, low: 8 };
+  function renderChunks(s) {
+    const n = Number(s?.renderDist) || (s?.quality === "low" ? RENDER_DIST.low : RENDER_DIST.high);
+    return Math.max(RENDER_DIST.min, Math.min(RENDER_DIST.max, Math.round(n)));
+  }
+
+  // src/game/lineage.js
+  var TRAITS = {
+    will_of_d: { name: "Will of D.", rarity: "legendary", weight: 0, desc: `Your name carries a hidden "D." \u2014 the mark of those who laugh in the face of death. Fate bends around you, and the world's powers will come to fear the name.`, attrs: { wil: 3 } },
+    // hidden: never shown until it awakens
+    conqueror: { name: "King's Disposition", rarity: "legendary", weight: 0, hidden: true, desc: "One in several million is born with the qualities of a king. It awakened the first time your will was truly tested." },
+    iron_stomach: { name: "Iron Stomach", rarity: "common", weight: 10, desc: "Food heals 30% more." },
+    sea_legs: { name: "Sea Legs", rarity: "common", weight: 10, desc: "Storms and crashes damage your ship 30% less." },
+    silver_tongue: { name: "Silver Tongue", rarity: "common", weight: 10, desc: "Shops charge you 10% less." },
+    hard_head: { name: "Hard Head", rarity: "common", weight: 10, desc: "You recover from stuns faster.", attrs: { end: 1 } },
+    quick_feet: { name: "Quick Feet", rarity: "common", weight: 10, desc: "Dodges cost less stamina.", attrs: { agi: 1 } },
+    lucky: { name: "Lucky Star", rarity: "uncommon", weight: 6, desc: "Treasure chests hold more." },
+    night_owl: { name: "Night Owl", rarity: "uncommon", weight: 6, desc: "+10% damage at night." },
+    born_fighter: { name: "Born Fighter", rarity: "uncommon", weight: 6, desc: "Style mastery grows 15% faster.", attrs: { str: 1 } },
+    keen_eye: { name: "Keen Eye", rarity: "uncommon", weight: 5, desc: "You spot Devil Fruits and treasure from further away." },
+    thick_skin: { name: "Thick Skin", rarity: "uncommon", weight: 5, desc: "+10% maximum health.", attrs: { vit: 2 } },
+    sickly: { name: "Sickly", rarity: "common", weight: 4, desc: "You tire quickly (-1 Endurance) \u2014 but you've learned to read people (+1 Willpower).", attrs: { end: -1, wil: 1 } }
+  };
+  var PERKS = {
+    lives: { name: "Stubborn Bloodline", desc: "+1 starting life (vivre card).", costs: [60, 160], icon: "lives" },
+    berries: { name: "Family Treasure", desc: "+3,000 starting berries per level.", costs: [20, 30, 40], icon: "berries" },
+    reroll: { name: "Fate's Coin", desc: "Re-roll your birth once per level.", costs: [35, 70, 120], icon: "reputation" },
+    attrs: { name: "Trained from Birth", desc: "+2 to every attribute per level.", costs: [50, 110], icon: "skills" },
+    ship: { name: "Old Sea Dog", desc: "Start with a Sloop instead of a rowboat.", costs: [70], icon: "ship" },
+    chart: { name: "Grandfather's Chart", desc: "Every island your ancestors discovered starts charted on your map.", costs: [30], icon: "map" },
+    haki: { name: "Latent Spirit", desc: "Hidden powers, once awakened, grow 25% faster per level.", costs: [80, 160], icon: "character" },
+    will_of_d: { name: "Will of D.", desc: 'Triples the chance to be born with the hidden "D." (5% \u2192 15%).', costs: [90], icon: "journal" },
+    kings_blood: { name: "Kingly Bloodline", desc: "Much higher chance to be born with the qualities of a king.", costs: [150], icon: "crew" },
+    rare_races: { name: "Distant Relatives", desc: "Rare, epic and legendary races are twice as likely.", costs: [100], icon: "character" }
+  };
+  var hakiKnown = (c) => !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
+  var needsHaki = (d) => !!(d && (d.hakiType || d.requiresHaki || d.cost?.haki || d.learn?.haki));
+  function perkLevel(legacy, id) {
+    return legacy.perks && legacy.perks[id] || 0;
+  }
+  function perkCost(legacy, id) {
+    const p = PERKS[id];
+    const lvl = perkLevel(legacy, id);
+    return lvl < p.costs.length ? p.costs[lvl] : null;
+  }
+  function dChance(legacy) {
+    return 0.05 * (perkLevel(legacy, "will_of_d") ? 3 : 1);
+  }
+  function nameWithD(name) {
+    name = (name || "Nameless").trim();
+    if (/(^| )D\.( |$)/.test(name)) return name;
+    const parts = name.split(/\s+/);
+    return parts.length > 1 ? `${parts[0]} D. ${parts.slice(1).join(" ")}` : `${name} D.`;
+  }
+  function rollBirth(legacy, seed) {
+    const rng4 = new RNG(seed);
+    const boosts = {};
+    if (perkLevel(legacy, "rare_races")) for (const r of ["longarm", "longleg", "buccaneer", "three_eye", "lunarian"]) boosts[r] = 2;
+    const race = rollRace(rng4, boosts);
+    const traits = [];
+    const pool = Object.entries(TRAITS).filter(([, t]) => t.weight > 0).map(([id, t]) => [id, t.weight]);
+    traits.push(rng4.weighted(pool));
+    if (rng4.chance(0.25)) {
+      const t2 = rng4.weighted(pool);
+      if (!traits.includes(t2)) traits.push(t2);
+    }
+    if (rng4.chance(dChance(legacy))) traits.push("will_of_d");
+    const kChance = (traits.includes("will_of_d") ? 0.25 : 0.015) * (perkLevel(legacy, "kings_blood") ? 4 : 1);
+    if (rng4.chance(kChance)) traits.push("conqueror");
+    return { race, traits, seed };
+  }
+  function createCharacter(legacy, birth, choices) {
+    const race = RACES[birth.race];
+    const rng4 = new RNG(birth.seed + ":char");
+    const attrs = baseAttrs();
+    for (const k of ATTR_KEYS) attrs[k] += (race.stats[k] || 0) + perkLevel(legacy, "attrs") * 2;
+    for (const t of birth.traits) for (const [k, v] of Object.entries(TRAITS[t]?.attrs || {})) attrs[k] += v;
+    for (const k of ATTR_KEYS) attrs[k] = Math.max(1, attrs[k]);
+    let name = (choices.name || "Nameless").trim().slice(0, 28) || "Nameless";
+    if (birth.traits.includes("will_of_d")) name = nameWithD(name);
+    const lives = Math.min(5, race.lives + perkLevel(legacy, "lives"));
+    let style = "brawler";
+    const masteries = { brawler: 0 };
+    const techniques = [];
+    if (birth.race === "fishman") {
+      style = "fishman_karate";
+      masteries.fishman_karate = 8;
+      techniques.push("fmk_uchimizu");
+    }
+    if (birth.race === "mink") {
+      masteries.electro = 5;
+      techniques.push("elec_discharge");
+      style = "electro";
+    }
+    const inventory = [{ id: "meat", qty: 3 }, { id: "rice_ball", qty: 2 }, { id: "bandage", qty: 2 }];
+    const equipped = { weapons: [], hat: null, coat: null, accessories: [] };
+    if (legacy.heirloom && ITEMS[legacy.heirloom.id]) {
+      const it = legacy.heirloom;
+      inventory.push({ id: it.id, qty: 1, heirloom: true, from: it.from });
+      const d = ITEMS[it.id];
+      if (d.type === "hat") equipped.hat = it.id;
+      else if (d.type === "coat") equipped.coat = it.id;
+      else if (d.type === "weapon" && !equipped.weapons.length) equipped.weapons = [it.id];
+    }
+    const char = {
+      version: 1,
+      id: "c" + Math.floor(rng4.next() * 1e9).toString(36),
+      runSeed: Math.floor(rng4.next() * 1e9),
+      generation: legacy.generation,
+      name,
+      race: birth.race,
+      traits: birth.traits.slice(),
+      look: choices.look || makeLook(birth.race, birth.seed),
+      dream: null,
+      // no crew and no flag yet: you found your own pirate crew later (Crew menu)
+      jr: null,
+      crewName: null,
+      reputation: 0,
+      weaponMastery: { fists: 0, legs: 0, sword: 0, gun: 0, staff: 0, axe: 0 },
+      train: { str: 0, agi: 0, end: 0, vit: 0, wil: 0 },
+      legends: [],
+      attrs,
+      lives,
+      maxLives: lives,
+      berries: 1500 + perkLevel(legacy, "berries") * 3e3,
+      bounty: 0,
+      faction: "civilian",
+      marineRank: null,
+      merit: 0,
+      style,
+      masteries,
+      techniques,
+      hotbar: techniques.slice(0, 6),
+      fruit: null,
+      fruitMastery: 0,
+      fruitsEaten: 0,
+      haki: { armament: 0, observation: birth.race === "three_eye" ? 8 : 0, conqueror: 0 },
+      getUpCharges: 1,
+      inventory,
+      equipped,
+      ships: [],
+      crew: [],
+      discovered: [],
+      logPose: { has: false, target: null, last: null, progress: 0, needles: 1 },
+      eternalPoses: [],
+      quests: {},
+      flags: {},
+      defeated: {},
+      bosses: [],
+      liberated: [],
+      trained: {},
+      stats: { playTime: 0, sailed: 0, kills: 0, knockdowns: 0, deathsAvoided: 0 },
+      world: { day: 1, clock: 8.5, chests: {}, npc: {}, fruitSpawns: null },
+      pos: null,
+      rest: null,
+      worldVer: WORLD_VERSION,
+      createdAt: Date.now()
+    };
+    if (perkLevel(legacy, "chart")) char.discovered = (legacy.charted || []).slice();
+    return char;
+  }
+  var HUMAN_STARTERS = {
+    east_blue: ["foosha", "shells_town", "orange_town", "syrup_village", "shimotsuki_village", "cocoyasi", "satsuruzo_town", "oykot_castle_town"],
+    north_blue: ["lvneel_town", "notice_town", "spider_miles_port", "swallow_town", "rakesh_port", "whiteland_town"],
+    west_blue: ["kano_town", "ilisia_town", "toroa_town", "las_camp_town", "soja_village", "esperia_town"],
+    south_blue: ["baterilla_town", "karate_dojo_town", "sorbet_town", "briss_town", "centaurea_town", "kutsukku_town"]
+  };
+  function resolveSpawn(world, char) {
+    const rng4 = new RNG(char.runSeed + ":spawn");
+    const race = RACES[char.race];
+    const sea = rng4.pick(race.spawnSeas);
+    const seaRegion = SEA_IDS[sea];
+    const allTowns = [];
+    for (const isl2 of world.islands) for (const t2 of isl2.towns) allTowns.push({ isl: isl2, t: t2 });
+    let pick5 = null;
+    if (race.spawnIslet && world.islets) {
+      const cands = world.islets.filter((o) => o.region === seaRegion && o.r >= 5);
+      if (cands.length) {
+        const o = rng4.pick(cands);
+        const spot = findShore(world, o.x, o.y, o.r + 2) || { x: o.x, y: o.y };
+        return { x: spot.x, y: spot.y, island: o.rec, town: null, sea, name: "an uncharted islet" };
+      }
+    }
+    const wanted2 = race.spawnTowns || HUMAN_STARTERS[sea] || [];
+    const byId = allTowns.filter(({ t: t2 }) => wanted2.includes(t2.id));
+    if (byId.length) pick5 = rng4.pick(byId);
+    if (!pick5) {
+      const inSea = allTowns.filter(({ isl: isl2 }) => regionAt(isl2.x, isl2.y) === seaRegion);
+      if (inSea.length) pick5 = rng4.pick(inSea);
+    }
+    if (!pick5) pick5 = allTowns[0];
+    const { isl, t } = pick5;
+    return { x: t.plaza.x + 0.5, y: t.plaza.y + 2.5, island: isl, town: t, sea, name: `${t.name}, ${isl.name}` };
+  }
+  function buildPlayer(game, char) {
+    const a = new Actor({ name: char.name, look: equippedLook(char), race: char.race, attrs: effectiveAttrs(char) });
+    a.char = char;
+    a.game = game;
+    a.style = fightingStyle(char);
+    a.masteries = char.masteries;
+    a.techniques = char.techniques;
+    a.hotbar = char.hotbar;
+    a.fruit = char.fruit;
+    a.fruitMastery = char.fruitMastery;
+    a.hakiSkill = char.haki;
+    a.weapon = weaponFromChar(char);
+    a.weaponMastery = char.weaponMastery;
+    a.baseMods.armor = armorOf(char);
+    a.persistent = true;
+    a.recalc();
+    a.hp = a.d.maxHp;
+    a.stamina = a.d.maxStamina;
+    a.haki = a.hakiUnlocked() ? a.d.maxHaki : 0;
+    return a;
+  }
+  function effectiveAttrs(char) {
+    const a = { ...char.attrs };
+    const eq = char.equipped || {};
+    const worn = [eq.hat, eq.coat, ...eq.accessories || []];
+    for (const id of worn) {
+      const d = ITEMS[id];
+      if (d?.bonus) for (const [k, v] of Object.entries(d.bonus)) a[k] = (a[k] || 0) + v;
+    }
+    return a;
+  }
+  function armorOf(char) {
+    const eq = char.equipped || {};
+    return [eq.hat, eq.coat].reduce((s, id) => s + (ITEMS[id]?.armor || 0), 0);
+  }
+  function upgradeChar(c) {
+    if (!c) return c;
+    c.equipped = c.equipped || { weapons: [], hat: null, coat: null };
+    c.equipped.accessories = c.equipped.accessories || [];
+    c.weaponMastery = c.weaponMastery || { fists: 0, legs: 0, sword: 0, gun: 0, staff: 0, axe: 0 };
+    c.train = c.train || { str: 0, agi: 0, end: 0, vit: 0, wil: 0 };
+    if (c.reputation === void 0) c.reputation = 0;
+    c.legends = c.legends || [];
+    if (c.crewName === void 0) c.crewName = c.faction === "pirate" && c.jr ? `${c.name.split(" ")[0]} Pirates` : null;
+    if (!c.crewName) c.jr = null;
+    if (c.unspent > 0) {
+      const keys = ["str", "agi", "end", "vit", "wil"];
+      for (let i = 0; i < c.unspent; i++) {
+        const k = keys[i % keys.length];
+        c.attrs[k] = Math.min(100, c.attrs[k] + 1);
+      }
+      c.unspent = 0;
+    }
+    return c;
+  }
+  function equippedLook(char) {
+    const look = { ...char.look };
+    const hat = ITEMS[char.equipped?.hat];
+    if (hat?.look) Object.assign(look, hat.look);
+    const coat2 = ITEMS[char.equipped?.coat];
+    if (coat2?.look) Object.assign(look, coat2.look);
+    const ws = (char.equipped?.weapons || []).map((id) => ITEMS[id]).filter(Boolean);
+    const swords = ws.filter((w) => w.kind === "sword").length;
+    look.swords = swords;
+    look.weapon = ws[0]?.kind === "sword" ? "sword" : ws[0]?.kind || null;
+    return look;
+  }
+  function weaponFromChar(char) {
+    const ws = (char.equipped?.weapons || []).map((id) => ITEMS[id]).filter(Boolean);
+    if (!ws.length) return null;
+    const kind = ws[0].kind;
+    const same = ws.filter((w) => w.kind === kind);
+    const power = same.reduce((s, w) => s + (w.power || 1), 0) / same.length;
+    return { kind, power, count: same.length, ids: char.equipped.weapons.slice() };
+  }
+  function fightingStyle(char) {
+    const style = STYLES2[char.style] ? char.style : "brawler";
+    const st = STYLES2[style], w = weaponFromChar(char);
+    if (!w) return st.weapon ? "brawler" : style;
+    const suits = (s) => STYLES2[s]?.weapon === w.kind && w.count >= (STYLES2[s].swords || 1);
+    if (suits(style)) return style;
+    const learned = Object.keys(char.masteries || {}).filter(suits).sort((a, b) => char.masteries[b] - char.masteries[a]);
+    return learned[0] || WEAPON_STYLE[w.kind] || (st.weapon ? "brawler" : style);
+  }
+  function refreshPlayer(game) {
+    const p = game.player, c = p.char;
+    const hpFrac = p.hp / p.d.maxHp;
+    p.attrs = effectiveAttrs(c);
+    p.look = equippedLook(c);
+    p.weapon = weaponFromChar(c);
+    p.style = fightingStyle(c);
+    p.fruit = c.fruit;
+    p.fruitMastery = c.fruitMastery;
+    p.hakiSkill = c.haki;
+    p.techniques = c.techniques;
+    p.hotbar = c.hotbar;
+    p.weaponMastery = c.weaponMastery;
+    p.baseMods.armor = armorOf(c);
+    p.recalc();
+    p.hp = Math.max(1, Math.round(p.d.maxHp * hpFrac));
+  }
+  function snapshot(game) {
+    const p = game.player, c = p.char;
+    if (!c) return;
+    c.masteries = p.masteries;
+    c.fruitMastery = p.fruitMastery;
+    c.hotbar = p.hotbar;
+    c.techniques = p.techniques;
+    c.world.day = game.env.day;
+    c.world.clock = game.env.clock;
+    c.pos = { x: p.x, y: p.y, zone: game.world.id, mode: p.mode };
+    c.ships = game.ships.filter((s) => s.owner === "player" && !s.sunk).map((s) => ({
+      uid: s.uid,
+      type: s.type,
+      name: s.name,
+      upgrades: s.upgrades,
+      hull: s.hull,
+      x: s.x,
+      y: s.y,
+      heading: s.heading,
+      zone: s.zoneId || "surface",
+      coated: s.coated
+    }));
+    c.activeShip = p.ship && !p.ship.sunk ? p.ship.uid : c.activeShip;
+    c.fogSurface = game.surface ? encodeFog(game.surface.fog) : c.fogSurface;
+    c.hintsShown = [...game.hintsShown];
+  }
+  function encodeFog(fog) {
+    const out = [];
+    let cur = fog[0] ? 1 : 0, run = 0;
+    for (let i = 0; i < fog.length; i++) {
+      const v = fog[i] ? 1 : 0;
+      if (v === cur && run < 65535) run++;
+      else {
+        out.push(cur ? run : -run);
+        cur = v;
+        run = 1;
+      }
+    }
+    out.push(cur ? run : -run);
+    return out;
+  }
+  function decodeFog(enc, fog) {
+    if (!enc) return;
+    let i = 0;
+    for (const r of enc) {
+      const n = Math.abs(r), v = r > 0 ? 255 : 0;
+      fog.fill(v, i, i + n);
+      i += n;
+    }
+  }
+  function persist(game) {
+    if (!game.state?.char || game.state.char.dead) return false;
+    snapshot(game);
+    game.state.char.lastSaved = Date.now();
+    const ok = saveChar(game.state.char);
+    saveLegacy(game.state.legacy);
+    if (ok) game.emit?.("saved");
+    return ok;
+  }
+  function computeWill(char) {
+    const islands = (char.discovered || []).length;
+    const bosses = (char.bosses || []).length;
+    const bounty = char.bounty || 0;
+    const days = Math.max(0, (char.world?.day || 1) - 1);
+    let will = 5 + islands + bosses * 6 + Math.floor(Math.sqrt(bounty / 1e5)) * 2 + Math.floor(days / 2);
+    if (char.marineRank) will += 10;
+    for (const id of char.legends || []) will += LEGENDS[id]?.will || 0;
+    return Math.round(will);
+  }
+  function endLineage(game, cause) {
+    const { char, legacy } = game.state;
+    snapshot(game);
+    const will = computeWill(char);
+    legacy.will += will;
+    legacy.totalWill += will;
+    legacy.hall.unshift({
+      name: char.name,
+      race: char.race,
+      generation: char.generation,
+      bounty: char.bounty,
+      faction: char.faction,
+      marineRank: char.marineRank,
+      days: char.world?.day || 1,
+      cause,
+      legends: (char.legends || []).slice(),
+      crewName: char.crewName,
+      bosses: (char.bosses || []).length,
+      islands: (char.discovered || []).length,
+      fruit: char.fruit,
+      will,
+      when: Date.now(),
+      look: char.look,
+      jr: char.jr
+    });
+    legacy.hall = legacy.hall.slice(0, 40);
+    legacy.charted = [.../* @__PURE__ */ new Set([...legacy.charted || [], ...char.discovered || []])];
+    if (char.fruit) legacy.reincarnatedFruits = [...(legacy.reincarnatedFruits || []).filter((f) => f !== char.fruit), char.fruit].slice(-6);
+    legacy.generation += 1;
+    legacy.heirloom = null;
+    char.dead = true;
+    clearChar();
+    saveLegacy(legacy);
+    return will;
+  }
+  var WORLD_VERSION = 2;
+  var OLD_SCALE = 1.5;
+  function migrateWorld(char, world, islandDefs) {
+    if ((char.worldVer || 1) >= WORLD_VERSION) return false;
+    const move = (pt) => {
+      if (!pt || typeof pt.x !== "number" || pt.zone && pt.zone !== "surface") return;
+      let best = null, bd = Infinity;
+      for (const d of islandDefs) {
+        const ox = d.x / POS_SCALE * OLD_SCALE, oy = d.y / POS_SCALE * OLD_SCALE;
+        const r = Math.max(d.w, d.h) / SIZE_SCALE * OLD_SCALE * 0.5;
+        const dd = Math.hypot(pt.x - ox, pt.y - oy) - r;
+        if (dd < bd) {
+          bd = dd;
+          best = { d, ox, oy };
+        }
+      }
+      if (best && bd < 40) {
+        const k = SIZE_SCALE / OLD_SCALE;
+        pt.x = best.d.x + (pt.x - best.ox) * k;
+        pt.y = best.d.y + (pt.y - best.oy) * k;
+      } else {
+        pt.x *= POS_SCALE / OLD_SCALE;
+        pt.y *= POS_SCALE / OLD_SCALE;
+      }
+      pt.x = world.wx(pt.x);
+      if (!pt.mode || pt.mode === "foot") {
+        if (!world.walkable(pt.x, pt.y) && !world.swimmable(pt.x, pt.y)) {
+          const spot = findShore(world, pt.x, pt.y, 24);
+          if (spot) {
+            pt.x = spot.x;
+            pt.y = spot.y;
+          }
+        }
+      }
+    };
+    move(char.pos);
+    move(char.rest);
+    move(char.spawn);
+    for (const s of char.ships || []) if (!s.zone || s.zone === "surface") move(s);
+    for (const s of char.zoneShips || []) move(s);
+    char.fogSurface = null;
+    char.worldVer = WORLD_VERSION;
+    return true;
+  }
+
+  // src/game/inventory.js
+  function count(char, id) {
+    return (char.inventory || []).filter((i) => i.id === id).reduce((s, i) => s + (i.qty || 1), 0);
+  }
+  function addItem(game, id, qty = 1, opts = {}) {
+    const char = game.state.char;
+    const d = ITEMS[id];
+    if (!d) return false;
+    const stackable = !["weapon", "hat", "coat", "fruit", "accessory"].includes(d.type) || d.stack;
+    const ex = stackable && char.inventory.find((i) => i.id === id);
+    if (ex) ex.qty = (ex.qty || 1) + qty;
+    else if (stackable) char.inventory.push({ id, qty });
+    else for (let k = 0; k < qty; k++) char.inventory.push({ id, qty: 1, ...opts });
+    if (!opts.silent) game.log(`Obtained ${d.name}${qty > 1 ? " \xD7" + qty : ""}.`, "#ffe082");
+    game.emit("itemGained", id, qty);
+    return true;
+  }
+  function removeItem(game, id, qty = 1) {
+    const char = game.state.char;
+    let left = qty;
+    for (let i = char.inventory.length - 1; i >= 0 && left > 0; i--) {
+      const it = char.inventory[i];
+      if (it.id !== id) continue;
+      const take = Math.min(left, it.qty || 1);
+      it.qty = (it.qty || 1) - take;
+      left -= take;
+      if (it.qty <= 0) char.inventory.splice(i, 1);
+    }
+    const eq = char.equipped;
+    if (!count(char, id)) {
+      if (eq.hat === id) eq.hat = null;
+      if (eq.coat === id) eq.coat = null;
+      eq.weapons = (eq.weapons || []).filter((w) => w !== id);
+      eq.accessories = (eq.accessories || []).filter((w) => w !== id);
+      const hb = char.hotbar || [];
+      for (let k = 0; k < hb.length; k++) if (hb[k] === "item:" + id) hb[k] = null;
+      refreshPlayer(game);
+    }
+    return left === 0;
+  }
+  function pay(game, amount) {
+    const c = game.state.char;
+    if (c.berries < amount) return false;
+    c.berries -= amount;
+    return true;
+  }
+  function earn(game, amount, why) {
+    const c = game.state.char;
+    c.berries += Math.round(amount);
+    if (why !== false) game.log(`+\u0E3F${Math.round(amount).toLocaleString()}${why ? " \u2014 " + why : ""}`, "#ffd54f");
+  }
+  var ACC_SLOTS = 2;
+  function isEquipped(c, id) {
+    const eq = c.equipped || {};
+    return eq.hat === id || eq.coat === id || (eq.weapons || []).includes(id) || (eq.accessories || []).includes(id);
+  }
+  function equip(game, id, { slot: slot2 } = {}) {
+    const c = game.state.char;
+    const d = ITEMS[id];
+    if (!d || !count(c, id)) return;
+    const eq = c.equipped;
+    if (d.type === "hat") eq.hat = eq.hat === id ? null : id;
+    else if (d.type === "coat") eq.coat = eq.coat === id ? null : id;
+    else if (d.type === "accessory") {
+      const acc = (eq.accessories || []).filter(Boolean);
+      const worn = acc.filter((x) => x === id).length;
+      if (slot2 !== void 0) {
+        if (worn >= count(c, id)) acc.splice(acc.indexOf(id), 1);
+        if (slot2 < acc.length) acc[slot2] = id;
+        else acc.push(id);
+      } else if (worn && worn >= count(c, id)) acc.splice(acc.indexOf(id), 1);
+      else if (acc.length < ACC_SLOTS) acc.push(id);
+      else {
+        acc.shift();
+        acc.push(id);
+      }
+      eq.accessories = acc.slice(0, ACC_SLOTS);
+    } else if (d.type === "weapon") {
+      const ws = eq.weapons || [];
+      if (ws.includes(id) && ws.filter((w) => w === id).length >= count(c, id)) eq.weapons = ws.filter((w) => w !== id);
+      else if (d.kind === "sword" && ws.length && ITEMS[ws[0]]?.kind === "sword" && ws.length < 3) eq.weapons = [...ws, id];
+      else eq.weapons = [id];
+      if (id === "sandai_kitetsu" && !c.flags.kitetsuTested) {
+        c.flags.kitetsuTested = true;
+        game.log("You toss the cursed Kitetsu into the air and hold out your arm\u2026 it spins down and misses you by a hair. The blade accepts you.", "#ef9a9a");
+      }
+    } else return;
+    refreshPlayer(game);
+    game.audio?.sfx("equip");
+  }
+  function unequipSlot(game, slot2) {
+    const eq = game.state.char.equipped;
+    if (slot2 === "head") eq.hat = null;
+    else if (slot2 === "body") eq.coat = null;
+    else if (slot2.startsWith("weapon")) {
+      const i = +slot2.slice(6);
+      eq.weapons = (eq.weapons || []).filter((_, k) => k !== i);
+    } else if (slot2.startsWith("acc")) {
+      const i = +slot2.slice(3);
+      eq.accessories = (eq.accessories || []).filter((_, k) => k !== i);
+    }
+    refreshPlayer(game);
+    game.audio?.sfx("equip");
+  }
+  function slotKind(d) {
+    if (!d) return null;
+    return d.type === "hat" ? "head" : d.type === "coat" ? "body" : d.type === "weapon" ? "weapon" : d.type === "accessory" ? "acc" : null;
+  }
+  function useItem(game, id) {
+    const c = game.state.char;
+    const p = game.player;
+    const d = ITEMS[id];
+    if (!d || !count(c, id)) return false;
+    if (d.type === "food" || d.type === "medicine") {
+      if (p.state !== "idle") return false;
+      let heal = d.heal || 0;
+      if (d.type === "food") {
+        if (c.traits.includes("iron_stomach")) heal *= 1.3;
+        if (c.flags?.allBlue) heal *= 1.25;
+        heal *= game.crewMods?.foodMul || 1;
+      }
+      if (d.costsLife) {
+        if (c.lives <= 1) {
+          game.log(`Ivankov refuses: "You don't have the years to spare, candy-boy!"`, "#ff8a80");
+          return false;
+        }
+        c.lives -= 1;
+        game.log("Tension Hormones! Your body screams back to full strength \u2014 and your lifespan shortens.", "#ff8a80");
+      }
+      p.hp = Math.min(p.d.maxHp, p.hp + heal);
+      p.stamina = Math.min(p.d.maxStamina, p.stamina + (d.stamina || 0));
+      for (const s of d.cure || []) delete p.status[s];
+      if (d.buff) p.addBuff({ ...d.buff });
+      game.fx.text(p.x, p.y - 1.6, `+${Math.round(heal)}`, "#69f0ae", 0.45);
+      game.audio?.sfx("eat");
+      removeItem(game, id, 1);
+      return true;
+    }
+    if (d.type === "fruit") return eatFruit(game, id);
+    if (d.type === "weapon") {
+      equip(game, id);
+      return true;
+    }
+    if (d.type === "pose" && d.target) {
+      const tgt = game.surface.islands.find((i) => i.id === d.target);
+      c.logPose.target = d.target;
+      c.logPose.eternal = id;
+      game.ui.toast("ETERNAL POSE", `The needle points to ${tgt?.name || d.target}.`, "#81d4fa");
+      return true;
+    }
+    if (d.type === "dial" && d.ability) {
+      const learned = c.techniques.includes(d.ability);
+      if (!learned) {
+        c.techniques.push(d.ability);
+        game.log(`You can now use the ${d.name} as a technique \u2014 assign it in Skills (K).`, "#80deea");
+      }
+      return true;
+    }
+    return false;
+  }
+  function eatFruit(game, itemId) {
+    const c = game.state.char;
+    const p = game.player;
+    const fid = ITEMS[itemId].fruit;
+    const f = FRUITS[fid];
+    if (c.fruit) {
+      game.log(`You already carry the power of the ${FRUITS[c.fruit]?.name}. A second Devil Fruit would tear your body apart \u2014 better to keep it, sell it, or give it to someone worthy.`, "#ff8a80");
+      return false;
+    }
+    removeItem(game, itemId, 1);
+    c.fruit = fid;
+    c.fruitMastery = 0;
+    c.fruitsEaten = 1;
+    const first = f.techniques[0];
+    if (first && !c.techniques.includes(first.id)) c.techniques.push(first.id);
+    if (first) addToHotbar(c, first.id);
+    refreshPlayer(game);
+    game.ui.toast(f.name.toUpperCase(), `${f.en} \u2014 ${f.type}. It tastes horrible.`, "#ffab91");
+    game.fx.ring(p.x, p.y, 0.3, 4, f.color, 0.8, 0.25);
+    game.fx.burst(p.x, p.y - 0.8, 30, { color: [f.color, "#ffffff"], speed: 5, g: 0, life: 0.8, kind: "star" });
+    game.log(`You ate the ${f.name}! You can never swim again. Fruit techniques unlock as your mastery grows (fight worthy foes, train).`, "#ffab91");
+    game.emit("fruitEaten", fid);
+    persist(game);
+    return true;
+  }
+
   // src/game/playerController.js
+  var EAT_TIME = { food: 1.25, medicine: 0.9, fruit: 1.7 };
+  var BITE = 0.36;
   var PlayerController = class {
     constructor(game) {
       this.game = game;
@@ -83279,7 +84276,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       buf.jump = Math.max(0, (buf.jump || 0) - dt);
       if (inp.mousePressed(0)) buf.m1 = 0.22;
       const freeMouse = !!v3?.rig.freeMouse;
-      if (freeMouse ? inp.mouse.released[2] && v3.rig.takeRightClick() : inp.mousePressed(2)) buf.heavy = 0.25;
+      const held = this.holding(p, game);
+      const rightClick = freeMouse ? inp.mouse.released[2] && v3.rig.takeRightClick() : inp.mousePressed(2);
+      if (rightClick && !held) buf.heavy = 0.25;
+      if (held) this.eat(p, game, dt, held, rightClick, freeMouse ? null : inp.mouseDown(2));
       if (tapDodge && !(v3 && v3.rig.mode === "third")) buf.dodge = 0.16;
       if (inp.wasPressed("Control") && v3 && v3.rig.mode === "third" && !inp.touch?.on) {
         v3.rig.setShiftLock(!v3.rig.shiftLock);
@@ -83318,6 +84318,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           buf.m1 = 0;
         } else if (p.action) p.facing = prev;
       }
+      if (p.held && (inp.mousePressed(0) || buf.dodge > 0)) this.putAway(p);
       if (buf.m1 > 0 || inp.mouseDown(0) && !p.action) {
         if (!p.action) {
           p.facing = aimM;
@@ -83331,6 +84332,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (let i = 0; i < HOTBAR_SIZE; i++) {
         if (inp.wasPressed(HOTBAR_KEYS[i])) {
           const id = p.hotbar[i];
+          if (id && p.held && id !== "item:" + p.held) {
+            const it = String(id).startsWith("item:") ? ITEMS[id.slice(5)] : null;
+            if (!it || !(it.type === "food" || it.type === "medicine" || it.type === "fruit")) this.putAway(p);
+          }
           if (id) {
             p.facing = aim;
             const target2 = this.aimTarget(p, game, wx, wy);
@@ -83351,6 +84356,55 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         inp.consume("E");
         p.reachT = 0.45;
         this.interaction.run();
+      }
+    }
+    /** The food (or medicine, or Devil Fruit) in your hand, if you still have one. */
+    holding(p, game) {
+      if (!p.held) return null;
+      if (count(game.state.char, p.held) > 0 && ITEMS[p.held]) return p.held;
+      this.putAway(p);
+      return null;
+    }
+    putAway(p) {
+      p.held = null;
+      p.eating = null;
+      this.eatAuto = false;
+    }
+    /**
+     * Eating what you hold: keep the right button down (or, with a free mouse,
+     * click it once) and it goes down in a few bites; let go, get hit, swing or
+     * dodge and you stop. Only when it's finished does it do you any good.
+     */
+    eat(p, game, dt, id, click, down) {
+      if (down === null) {
+        if (click) this.eatAuto = !this.eatAuto;
+        down = this.eatAuto;
+      }
+      const ok = down && p.state === "idle" && !p.action && !p.blocking && !(p.inWater && !p.gills);
+      if (!ok) {
+        p.eating = null;
+        if (!down) this.eatAuto = false;
+        return;
+      }
+      const d = ITEMS[id];
+      if (!p.eating || p.eating.id !== id) p.eating = { id, t: 0, dur: EAT_TIME[d.type] || 1.25, bites: 0 };
+      const e = p.eating;
+      e.t += dt;
+      const b = Math.floor(e.t / BITE);
+      if (b > e.bites && e.t < e.dur - 0.1) {
+        e.bites = b;
+        game.audio?.sfx(d.type === "medicine" ? "page" : "bite", p);
+      }
+      if (e.t < e.dur) return;
+      p.eating = null;
+      this.eatAuto = false;
+      useItem(game, id);
+      if (!(count(game.state.char, id) > 0)) this.putAway(p);
+    }
+    onHurt(p) {
+      if (p.eating) {
+        p.eating = null;
+        this.eatAuto = false;
       }
     }
     /** A dodge requested from outside the keyboard (the touch pad's Dodge button). */
@@ -84341,771 +85395,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   ];
   registerAbilities(HAKI_ABILITIES.map((a) => ({ ...a, source: "haki:" + a.hakiType })), "haki");
 
-  // src/data/dreams.js
-  var LEGENDS = {
-    king: {
-      name: "King of the Pirates",
-      desc: "Find the One Piece on Laugh Tale, the final island of the Grand Line.",
-      check: (c) => !!c.flags?.laughTale,
-      progress: (c) => [Math.min(4, (c.inventory || []).filter((i) => i.id === "poneglyph_rubbing").reduce((s, i) => s + (i.qty || 1), 0)), 4, "Road Poneglyph rubbings"],
-      will: 150
-    },
-    swordsman: {
-      name: "World's Greatest Swordsman",
-      desc: 'Defeat "Hawk-Eyes" Dracule Mihawk in a duel.',
-      check: (c) => (c.bosses || []).includes("mihawk"),
-      will: 90
-    },
-    admiral: {
-      name: "Admiral of the Marines",
-      desc: "Rise through the Marines to the rank of Admiral.",
-      check: (c) => c.marineRank === "Admiral" || c.marineRank === "Fleet Admiral",
-      will: 90
-    },
-    fleet_admiral: {
-      name: "Fleet Admiral",
-      desc: "Command every Marine in the world.",
-      check: (c) => c.marineRank === "Fleet Admiral",
-      will: 120
-    },
-    all_blue: {
-      name: "The All Blue",
-      desc: "Find the legendary sea where the fish of all four Blues meet.",
-      check: (c) => !!c.flags?.allBlue,
-      will: 80
-    },
-    world_map: {
-      name: "Map of the World",
-      desc: "Chart 60 islands with your own eyes.",
-      check: (c) => (c.discovered || []).length >= 60,
-      progress: (c) => [(c.discovered || []).length, 60, "islands charted"],
-      will: 70
-    },
-    warrior: {
-      name: "Brave Warrior of the Sea",
-      desc: "Defeat 12 great foes.",
-      check: (c) => (c.bosses || []).length >= 12,
-      progress: (c) => [(c.bosses || []).length, 12, "great foes defeated"],
-      will: 70
-    },
-    true_history: {
-      name: "The True History",
-      desc: "Read 8 Poneglyphs and learn what happened in the Void Century.",
-      check: (c) => (c.flags?.poneglyphsRead || 0) >= 8,
-      progress: (c) => [c.flags?.poneglyphsRead || 0, 8, "Poneglyphs read"],
-      will: 80
-    },
-    liberation: {
-      name: "Liberator",
-      desc: "Free 6 places from their tyrants.",
-      check: (c) => (c.liberated || []).length >= 6,
-      progress: (c) => [(c.liberated || []).length, 6, "places liberated"],
-      will: 70
-    },
-    emperor: {
-      name: "Emperor of the Sea",
-      desc: "Carry a bounty of over 3,000,000,000 berries.",
-      check: (c) => (c.bounty || 0) >= 3e9,
-      progress: (c) => [Math.floor((c.bounty || 0) / 1e6), 3e3, "million berries"],
-      will: 100
-    }
-  };
-  var LEGEND_IDS = Object.keys(LEGENDS);
-
-  // src/game/save.js
-  var PREFIX = "op-inherited-will";
-  var LEGACY_CHAR = `${PREFIX}:char:v1`;
-  var LEGACY_LEGACY = `${PREFIX}:legacy:v1`;
-  var KEY_SETTINGS = `${PREFIX}:settings:v1`;
-  var KEY_LAST = `${PREFIX}:lastSlot`;
-  var SLOT_COUNT = 3;
-  var slot = 1;
-  var key = (s, what) => `${PREFIX}:slot${s}:${what}:v1`;
-  function read(k) {
-    try {
-      const s = localStorage.getItem(k);
-      return s ? JSON.parse(s) : null;
-    } catch {
-      return null;
-    }
-  }
-  function write(k, v) {
-    try {
-      localStorage.setItem(k, JSON.stringify(v));
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  function remove(k) {
-    try {
-      localStorage.removeItem(k);
-    } catch {
-    }
-  }
-  (function migrate() {
-    const oldChar = read(LEGACY_CHAR), oldLegacy = read(LEGACY_LEGACY);
-    if (!oldChar && !oldLegacy) return;
-    if (!read(key(1, "char")) && !read(key(1, "legacy"))) {
-      if (oldChar) write(key(1, "char"), oldChar);
-      if (oldLegacy) write(key(1, "legacy"), oldLegacy);
-    }
-    remove(LEGACY_CHAR);
-    remove(LEGACY_LEGACY);
-  })();
-  function defaultLegacy() {
-    return { version: 1, generation: 1, will: 0, totalWill: 0, perks: {}, heirloom: null, hall: [], charted: [], reincarnatedFruits: [], unlocks: {} };
-  }
-  function setSlot(n) {
-    slot = Math.max(1, Math.min(SLOT_COUNT, n | 0));
-    write(KEY_LAST, slot);
-  }
-  var loadLegacy = (s = slot) => ({ ...defaultLegacy(), ...read(key(s, "legacy")) || {} });
-  var saveLegacy = (l, s = slot) => write(key(s, "legacy"), l);
-  var loadChar = (s = slot) => read(key(s, "char"));
-  var saveChar = (c, s = slot) => write(key(s, "char"), c);
-  var clearChar = (s = slot) => remove(key(s, "char"));
-  function clearSlot(s) {
-    remove(key(s, "char"));
-    remove(key(s, "legacy"));
-  }
-  function slotInfo(s) {
-    const char = read(key(s, "char"));
-    const legacy = read(key(s, "legacy"));
-    return { slot: s, char, legacy: legacy ? { ...defaultLegacy(), ...legacy } : null, empty: !char && !legacy };
-  }
-  var loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, view: "first", sensitivity: 0.5, invertY: false, quality: "high", autoRes: true, fov: 0.5, bob: true, renderDist: null, ...read(KEY_SETTINGS) || {} });
-  var saveSettings = (s) => write(KEY_SETTINGS, s);
-  var RENDER_DIST = { min: 4, max: 24, high: 12, low: 8 };
-  function renderChunks(s) {
-    const n = Number(s?.renderDist) || (s?.quality === "low" ? RENDER_DIST.low : RENDER_DIST.high);
-    return Math.max(RENDER_DIST.min, Math.min(RENDER_DIST.max, Math.round(n)));
-  }
-
-  // src/game/lineage.js
-  var TRAITS = {
-    will_of_d: { name: "Will of D.", rarity: "legendary", weight: 0, desc: `Your name carries a hidden "D." \u2014 the mark of those who laugh in the face of death. Fate bends around you, and the world's powers will come to fear the name.`, attrs: { wil: 3 } },
-    // hidden: never shown until it awakens
-    conqueror: { name: "King's Disposition", rarity: "legendary", weight: 0, hidden: true, desc: "One in several million is born with the qualities of a king. It awakened the first time your will was truly tested." },
-    iron_stomach: { name: "Iron Stomach", rarity: "common", weight: 10, desc: "Food heals 30% more." },
-    sea_legs: { name: "Sea Legs", rarity: "common", weight: 10, desc: "Storms and crashes damage your ship 30% less." },
-    silver_tongue: { name: "Silver Tongue", rarity: "common", weight: 10, desc: "Shops charge you 10% less." },
-    hard_head: { name: "Hard Head", rarity: "common", weight: 10, desc: "You recover from stuns faster.", attrs: { end: 1 } },
-    quick_feet: { name: "Quick Feet", rarity: "common", weight: 10, desc: "Dodges cost less stamina.", attrs: { agi: 1 } },
-    lucky: { name: "Lucky Star", rarity: "uncommon", weight: 6, desc: "Treasure chests hold more." },
-    night_owl: { name: "Night Owl", rarity: "uncommon", weight: 6, desc: "+10% damage at night." },
-    born_fighter: { name: "Born Fighter", rarity: "uncommon", weight: 6, desc: "Style mastery grows 15% faster.", attrs: { str: 1 } },
-    keen_eye: { name: "Keen Eye", rarity: "uncommon", weight: 5, desc: "You spot Devil Fruits and treasure from further away." },
-    thick_skin: { name: "Thick Skin", rarity: "uncommon", weight: 5, desc: "+10% maximum health.", attrs: { vit: 2 } },
-    sickly: { name: "Sickly", rarity: "common", weight: 4, desc: "You tire quickly (-1 Endurance) \u2014 but you've learned to read people (+1 Willpower).", attrs: { end: -1, wil: 1 } }
-  };
-  var PERKS = {
-    lives: { name: "Stubborn Bloodline", desc: "+1 starting life (vivre card).", costs: [60, 160], icon: "lives" },
-    berries: { name: "Family Treasure", desc: "+3,000 starting berries per level.", costs: [20, 30, 40], icon: "berries" },
-    reroll: { name: "Fate's Coin", desc: "Re-roll your birth once per level.", costs: [35, 70, 120], icon: "reputation" },
-    attrs: { name: "Trained from Birth", desc: "+2 to every attribute per level.", costs: [50, 110], icon: "skills" },
-    ship: { name: "Old Sea Dog", desc: "Start with a Sloop instead of a rowboat.", costs: [70], icon: "ship" },
-    chart: { name: "Grandfather's Chart", desc: "Every island your ancestors discovered starts charted on your map.", costs: [30], icon: "map" },
-    haki: { name: "Latent Spirit", desc: "Hidden powers, once awakened, grow 25% faster per level.", costs: [80, 160], icon: "character" },
-    will_of_d: { name: "Will of D.", desc: 'Triples the chance to be born with the hidden "D." (5% \u2192 15%).', costs: [90], icon: "journal" },
-    kings_blood: { name: "Kingly Bloodline", desc: "Much higher chance to be born with the qualities of a king.", costs: [150], icon: "crew" },
-    rare_races: { name: "Distant Relatives", desc: "Rare, epic and legendary races are twice as likely.", costs: [100], icon: "character" }
-  };
-  var hakiKnown = (c) => !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
-  var needsHaki = (d) => !!(d && (d.hakiType || d.requiresHaki || d.cost?.haki || d.learn?.haki));
-  function perkLevel(legacy, id) {
-    return legacy.perks && legacy.perks[id] || 0;
-  }
-  function perkCost(legacy, id) {
-    const p = PERKS[id];
-    const lvl = perkLevel(legacy, id);
-    return lvl < p.costs.length ? p.costs[lvl] : null;
-  }
-  function dChance(legacy) {
-    return 0.05 * (perkLevel(legacy, "will_of_d") ? 3 : 1);
-  }
-  function nameWithD(name) {
-    name = (name || "Nameless").trim();
-    if (/(^| )D\.( |$)/.test(name)) return name;
-    const parts = name.split(/\s+/);
-    return parts.length > 1 ? `${parts[0]} D. ${parts.slice(1).join(" ")}` : `${name} D.`;
-  }
-  function rollBirth(legacy, seed) {
-    const rng4 = new RNG(seed);
-    const boosts = {};
-    if (perkLevel(legacy, "rare_races")) for (const r of ["longarm", "longleg", "buccaneer", "three_eye", "lunarian"]) boosts[r] = 2;
-    const race = rollRace(rng4, boosts);
-    const traits = [];
-    const pool = Object.entries(TRAITS).filter(([, t]) => t.weight > 0).map(([id, t]) => [id, t.weight]);
-    traits.push(rng4.weighted(pool));
-    if (rng4.chance(0.25)) {
-      const t2 = rng4.weighted(pool);
-      if (!traits.includes(t2)) traits.push(t2);
-    }
-    if (rng4.chance(dChance(legacy))) traits.push("will_of_d");
-    const kChance = (traits.includes("will_of_d") ? 0.25 : 0.015) * (perkLevel(legacy, "kings_blood") ? 4 : 1);
-    if (rng4.chance(kChance)) traits.push("conqueror");
-    return { race, traits, seed };
-  }
-  function createCharacter(legacy, birth, choices) {
-    const race = RACES[birth.race];
-    const rng4 = new RNG(birth.seed + ":char");
-    const attrs = baseAttrs();
-    for (const k of ATTR_KEYS) attrs[k] += (race.stats[k] || 0) + perkLevel(legacy, "attrs") * 2;
-    for (const t of birth.traits) for (const [k, v] of Object.entries(TRAITS[t]?.attrs || {})) attrs[k] += v;
-    for (const k of ATTR_KEYS) attrs[k] = Math.max(1, attrs[k]);
-    let name = (choices.name || "Nameless").trim().slice(0, 28) || "Nameless";
-    if (birth.traits.includes("will_of_d")) name = nameWithD(name);
-    const lives = Math.min(5, race.lives + perkLevel(legacy, "lives"));
-    let style = "brawler";
-    const masteries = { brawler: 0 };
-    const techniques = [];
-    if (birth.race === "fishman") {
-      style = "fishman_karate";
-      masteries.fishman_karate = 8;
-      techniques.push("fmk_uchimizu");
-    }
-    if (birth.race === "mink") {
-      masteries.electro = 5;
-      techniques.push("elec_discharge");
-      style = "electro";
-    }
-    const inventory = [{ id: "meat", qty: 3 }, { id: "rice_ball", qty: 2 }, { id: "bandage", qty: 2 }];
-    const equipped = { weapons: [], hat: null, coat: null, accessories: [] };
-    if (legacy.heirloom && ITEMS[legacy.heirloom.id]) {
-      const it = legacy.heirloom;
-      inventory.push({ id: it.id, qty: 1, heirloom: true, from: it.from });
-      const d = ITEMS[it.id];
-      if (d.type === "hat") equipped.hat = it.id;
-      else if (d.type === "coat") equipped.coat = it.id;
-      else if (d.type === "weapon" && !equipped.weapons.length) equipped.weapons = [it.id];
-    }
-    const char = {
-      version: 1,
-      id: "c" + Math.floor(rng4.next() * 1e9).toString(36),
-      runSeed: Math.floor(rng4.next() * 1e9),
-      generation: legacy.generation,
-      name,
-      race: birth.race,
-      traits: birth.traits.slice(),
-      look: choices.look || makeLook(birth.race, birth.seed),
-      dream: null,
-      // no crew and no flag yet: you found your own pirate crew later (Crew menu)
-      jr: null,
-      crewName: null,
-      reputation: 0,
-      weaponMastery: { fists: 0, legs: 0, sword: 0, gun: 0, staff: 0, axe: 0 },
-      train: { str: 0, agi: 0, end: 0, vit: 0, wil: 0 },
-      legends: [],
-      attrs,
-      lives,
-      maxLives: lives,
-      berries: 1500 + perkLevel(legacy, "berries") * 3e3,
-      bounty: 0,
-      faction: "civilian",
-      marineRank: null,
-      merit: 0,
-      style,
-      masteries,
-      techniques,
-      hotbar: techniques.slice(0, 6),
-      fruit: null,
-      fruitMastery: 0,
-      fruitsEaten: 0,
-      haki: { armament: 0, observation: birth.race === "three_eye" ? 8 : 0, conqueror: 0 },
-      getUpCharges: 1,
-      inventory,
-      equipped,
-      ships: [],
-      crew: [],
-      discovered: [],
-      logPose: { has: false, target: null, last: null, progress: 0, needles: 1 },
-      eternalPoses: [],
-      quests: {},
-      flags: {},
-      defeated: {},
-      bosses: [],
-      liberated: [],
-      trained: {},
-      stats: { playTime: 0, sailed: 0, kills: 0, knockdowns: 0, deathsAvoided: 0 },
-      world: { day: 1, clock: 8.5, chests: {}, npc: {}, fruitSpawns: null },
-      pos: null,
-      rest: null,
-      worldVer: WORLD_VERSION,
-      createdAt: Date.now()
-    };
-    if (perkLevel(legacy, "chart")) char.discovered = (legacy.charted || []).slice();
-    return char;
-  }
-  var HUMAN_STARTERS = {
-    east_blue: ["foosha", "shells_town", "orange_town", "syrup_village", "shimotsuki_village", "cocoyasi", "satsuruzo_town", "oykot_castle_town"],
-    north_blue: ["lvneel_town", "notice_town", "spider_miles_port", "swallow_town", "rakesh_port", "whiteland_town"],
-    west_blue: ["kano_town", "ilisia_town", "toroa_town", "las_camp_town", "soja_village", "esperia_town"],
-    south_blue: ["baterilla_town", "karate_dojo_town", "sorbet_town", "briss_town", "centaurea_town", "kutsukku_town"]
-  };
-  function resolveSpawn(world, char) {
-    const rng4 = new RNG(char.runSeed + ":spawn");
-    const race = RACES[char.race];
-    const sea = rng4.pick(race.spawnSeas);
-    const seaRegion = SEA_IDS[sea];
-    const allTowns = [];
-    for (const isl2 of world.islands) for (const t2 of isl2.towns) allTowns.push({ isl: isl2, t: t2 });
-    let pick5 = null;
-    if (race.spawnIslet && world.islets) {
-      const cands = world.islets.filter((o) => o.region === seaRegion && o.r >= 5);
-      if (cands.length) {
-        const o = rng4.pick(cands);
-        const spot = findShore(world, o.x, o.y, o.r + 2) || { x: o.x, y: o.y };
-        return { x: spot.x, y: spot.y, island: o.rec, town: null, sea, name: "an uncharted islet" };
-      }
-    }
-    const wanted2 = race.spawnTowns || HUMAN_STARTERS[sea] || [];
-    const byId = allTowns.filter(({ t: t2 }) => wanted2.includes(t2.id));
-    if (byId.length) pick5 = rng4.pick(byId);
-    if (!pick5) {
-      const inSea = allTowns.filter(({ isl: isl2 }) => regionAt(isl2.x, isl2.y) === seaRegion);
-      if (inSea.length) pick5 = rng4.pick(inSea);
-    }
-    if (!pick5) pick5 = allTowns[0];
-    const { isl, t } = pick5;
-    return { x: t.plaza.x + 0.5, y: t.plaza.y + 2.5, island: isl, town: t, sea, name: `${t.name}, ${isl.name}` };
-  }
-  function buildPlayer(game, char) {
-    const a = new Actor({ name: char.name, look: equippedLook(char), race: char.race, attrs: effectiveAttrs(char) });
-    a.char = char;
-    a.game = game;
-    a.style = fightingStyle(char);
-    a.masteries = char.masteries;
-    a.techniques = char.techniques;
-    a.hotbar = char.hotbar;
-    a.fruit = char.fruit;
-    a.fruitMastery = char.fruitMastery;
-    a.hakiSkill = char.haki;
-    a.weapon = weaponFromChar(char);
-    a.weaponMastery = char.weaponMastery;
-    a.baseMods.armor = armorOf(char);
-    a.persistent = true;
-    a.recalc();
-    a.hp = a.d.maxHp;
-    a.stamina = a.d.maxStamina;
-    a.haki = a.hakiUnlocked() ? a.d.maxHaki : 0;
-    return a;
-  }
-  function effectiveAttrs(char) {
-    const a = { ...char.attrs };
-    const eq = char.equipped || {};
-    const worn = [eq.hat, eq.coat, ...eq.accessories || []];
-    for (const id of worn) {
-      const d = ITEMS[id];
-      if (d?.bonus) for (const [k, v] of Object.entries(d.bonus)) a[k] = (a[k] || 0) + v;
-    }
-    return a;
-  }
-  function armorOf(char) {
-    const eq = char.equipped || {};
-    return [eq.hat, eq.coat].reduce((s, id) => s + (ITEMS[id]?.armor || 0), 0);
-  }
-  function upgradeChar(c) {
-    if (!c) return c;
-    c.equipped = c.equipped || { weapons: [], hat: null, coat: null };
-    c.equipped.accessories = c.equipped.accessories || [];
-    c.weaponMastery = c.weaponMastery || { fists: 0, legs: 0, sword: 0, gun: 0, staff: 0, axe: 0 };
-    c.train = c.train || { str: 0, agi: 0, end: 0, vit: 0, wil: 0 };
-    if (c.reputation === void 0) c.reputation = 0;
-    c.legends = c.legends || [];
-    if (c.crewName === void 0) c.crewName = c.faction === "pirate" && c.jr ? `${c.name.split(" ")[0]} Pirates` : null;
-    if (!c.crewName) c.jr = null;
-    if (c.unspent > 0) {
-      const keys = ["str", "agi", "end", "vit", "wil"];
-      for (let i = 0; i < c.unspent; i++) {
-        const k = keys[i % keys.length];
-        c.attrs[k] = Math.min(100, c.attrs[k] + 1);
-      }
-      c.unspent = 0;
-    }
-    return c;
-  }
-  function equippedLook(char) {
-    const look = { ...char.look };
-    const hat = ITEMS[char.equipped?.hat];
-    if (hat?.look) Object.assign(look, hat.look);
-    const coat2 = ITEMS[char.equipped?.coat];
-    if (coat2?.look) Object.assign(look, coat2.look);
-    const ws = (char.equipped?.weapons || []).map((id) => ITEMS[id]).filter(Boolean);
-    const swords = ws.filter((w) => w.kind === "sword").length;
-    look.swords = swords;
-    look.weapon = ws[0]?.kind === "sword" ? "sword" : ws[0]?.kind || null;
-    return look;
-  }
-  function weaponFromChar(char) {
-    const ws = (char.equipped?.weapons || []).map((id) => ITEMS[id]).filter(Boolean);
-    if (!ws.length) return null;
-    const kind = ws[0].kind;
-    const same = ws.filter((w) => w.kind === kind);
-    const power = same.reduce((s, w) => s + (w.power || 1), 0) / same.length;
-    return { kind, power, count: same.length, ids: char.equipped.weapons.slice() };
-  }
-  function fightingStyle(char) {
-    const style = STYLES2[char.style] ? char.style : "brawler";
-    const st = STYLES2[style], w = weaponFromChar(char);
-    if (!w) return st.weapon ? "brawler" : style;
-    const suits = (s) => STYLES2[s]?.weapon === w.kind && w.count >= (STYLES2[s].swords || 1);
-    if (suits(style)) return style;
-    const learned = Object.keys(char.masteries || {}).filter(suits).sort((a, b) => char.masteries[b] - char.masteries[a]);
-    return learned[0] || WEAPON_STYLE[w.kind] || (st.weapon ? "brawler" : style);
-  }
-  function refreshPlayer(game) {
-    const p = game.player, c = p.char;
-    const hpFrac = p.hp / p.d.maxHp;
-    p.attrs = effectiveAttrs(c);
-    p.look = equippedLook(c);
-    p.weapon = weaponFromChar(c);
-    p.style = fightingStyle(c);
-    p.fruit = c.fruit;
-    p.fruitMastery = c.fruitMastery;
-    p.hakiSkill = c.haki;
-    p.techniques = c.techniques;
-    p.hotbar = c.hotbar;
-    p.weaponMastery = c.weaponMastery;
-    p.baseMods.armor = armorOf(c);
-    p.recalc();
-    p.hp = Math.max(1, Math.round(p.d.maxHp * hpFrac));
-  }
-  function snapshot(game) {
-    const p = game.player, c = p.char;
-    if (!c) return;
-    c.masteries = p.masteries;
-    c.fruitMastery = p.fruitMastery;
-    c.hotbar = p.hotbar;
-    c.techniques = p.techniques;
-    c.world.day = game.env.day;
-    c.world.clock = game.env.clock;
-    c.pos = { x: p.x, y: p.y, zone: game.world.id, mode: p.mode };
-    c.ships = game.ships.filter((s) => s.owner === "player" && !s.sunk).map((s) => ({
-      uid: s.uid,
-      type: s.type,
-      name: s.name,
-      upgrades: s.upgrades,
-      hull: s.hull,
-      x: s.x,
-      y: s.y,
-      heading: s.heading,
-      zone: s.zoneId || "surface",
-      coated: s.coated
-    }));
-    c.activeShip = p.ship && !p.ship.sunk ? p.ship.uid : c.activeShip;
-    c.fogSurface = game.surface ? encodeFog(game.surface.fog) : c.fogSurface;
-    c.hintsShown = [...game.hintsShown];
-  }
-  function encodeFog(fog) {
-    const out = [];
-    let cur = fog[0] ? 1 : 0, run = 0;
-    for (let i = 0; i < fog.length; i++) {
-      const v = fog[i] ? 1 : 0;
-      if (v === cur && run < 65535) run++;
-      else {
-        out.push(cur ? run : -run);
-        cur = v;
-        run = 1;
-      }
-    }
-    out.push(cur ? run : -run);
-    return out;
-  }
-  function decodeFog(enc, fog) {
-    if (!enc) return;
-    let i = 0;
-    for (const r of enc) {
-      const n = Math.abs(r), v = r > 0 ? 255 : 0;
-      fog.fill(v, i, i + n);
-      i += n;
-    }
-  }
-  function persist(game) {
-    if (!game.state?.char || game.state.char.dead) return false;
-    snapshot(game);
-    game.state.char.lastSaved = Date.now();
-    const ok = saveChar(game.state.char);
-    saveLegacy(game.state.legacy);
-    if (ok) game.emit?.("saved");
-    return ok;
-  }
-  function computeWill(char) {
-    const islands = (char.discovered || []).length;
-    const bosses = (char.bosses || []).length;
-    const bounty = char.bounty || 0;
-    const days = Math.max(0, (char.world?.day || 1) - 1);
-    let will = 5 + islands + bosses * 6 + Math.floor(Math.sqrt(bounty / 1e5)) * 2 + Math.floor(days / 2);
-    if (char.marineRank) will += 10;
-    for (const id of char.legends || []) will += LEGENDS[id]?.will || 0;
-    return Math.round(will);
-  }
-  function endLineage(game, cause) {
-    const { char, legacy } = game.state;
-    snapshot(game);
-    const will = computeWill(char);
-    legacy.will += will;
-    legacy.totalWill += will;
-    legacy.hall.unshift({
-      name: char.name,
-      race: char.race,
-      generation: char.generation,
-      bounty: char.bounty,
-      faction: char.faction,
-      marineRank: char.marineRank,
-      days: char.world?.day || 1,
-      cause,
-      legends: (char.legends || []).slice(),
-      crewName: char.crewName,
-      bosses: (char.bosses || []).length,
-      islands: (char.discovered || []).length,
-      fruit: char.fruit,
-      will,
-      when: Date.now(),
-      look: char.look,
-      jr: char.jr
-    });
-    legacy.hall = legacy.hall.slice(0, 40);
-    legacy.charted = [.../* @__PURE__ */ new Set([...legacy.charted || [], ...char.discovered || []])];
-    if (char.fruit) legacy.reincarnatedFruits = [...(legacy.reincarnatedFruits || []).filter((f) => f !== char.fruit), char.fruit].slice(-6);
-    legacy.generation += 1;
-    legacy.heirloom = null;
-    char.dead = true;
-    clearChar();
-    saveLegacy(legacy);
-    return will;
-  }
-  var WORLD_VERSION = 2;
-  var OLD_SCALE = 1.5;
-  function migrateWorld(char, world, islandDefs) {
-    if ((char.worldVer || 1) >= WORLD_VERSION) return false;
-    const move = (pt) => {
-      if (!pt || typeof pt.x !== "number" || pt.zone && pt.zone !== "surface") return;
-      let best = null, bd = Infinity;
-      for (const d of islandDefs) {
-        const ox = d.x / POS_SCALE * OLD_SCALE, oy = d.y / POS_SCALE * OLD_SCALE;
-        const r = Math.max(d.w, d.h) / SIZE_SCALE * OLD_SCALE * 0.5;
-        const dd = Math.hypot(pt.x - ox, pt.y - oy) - r;
-        if (dd < bd) {
-          bd = dd;
-          best = { d, ox, oy };
-        }
-      }
-      if (best && bd < 40) {
-        const k = SIZE_SCALE / OLD_SCALE;
-        pt.x = best.d.x + (pt.x - best.ox) * k;
-        pt.y = best.d.y + (pt.y - best.oy) * k;
-      } else {
-        pt.x *= POS_SCALE / OLD_SCALE;
-        pt.y *= POS_SCALE / OLD_SCALE;
-      }
-      pt.x = world.wx(pt.x);
-      if (!pt.mode || pt.mode === "foot") {
-        if (!world.walkable(pt.x, pt.y) && !world.swimmable(pt.x, pt.y)) {
-          const spot = findShore(world, pt.x, pt.y, 24);
-          if (spot) {
-            pt.x = spot.x;
-            pt.y = spot.y;
-          }
-        }
-      }
-    };
-    move(char.pos);
-    move(char.rest);
-    move(char.spawn);
-    for (const s of char.ships || []) if (!s.zone || s.zone === "surface") move(s);
-    for (const s of char.zoneShips || []) move(s);
-    char.fogSurface = null;
-    char.worldVer = WORLD_VERSION;
-    return true;
-  }
-
-  // src/game/inventory.js
-  function count(char, id) {
-    return (char.inventory || []).filter((i) => i.id === id).reduce((s, i) => s + (i.qty || 1), 0);
-  }
-  function addItem(game, id, qty = 1, opts = {}) {
-    const char = game.state.char;
-    const d = ITEMS[id];
-    if (!d) return false;
-    const stackable = !["weapon", "hat", "coat", "fruit", "accessory"].includes(d.type) || d.stack;
-    const ex = stackable && char.inventory.find((i) => i.id === id);
-    if (ex) ex.qty = (ex.qty || 1) + qty;
-    else if (stackable) char.inventory.push({ id, qty });
-    else for (let k = 0; k < qty; k++) char.inventory.push({ id, qty: 1, ...opts });
-    if (!opts.silent) game.log(`Obtained ${d.name}${qty > 1 ? " \xD7" + qty : ""}.`, "#ffe082");
-    game.emit("itemGained", id, qty);
-    return true;
-  }
-  function removeItem(game, id, qty = 1) {
-    const char = game.state.char;
-    let left = qty;
-    for (let i = char.inventory.length - 1; i >= 0 && left > 0; i--) {
-      const it = char.inventory[i];
-      if (it.id !== id) continue;
-      const take = Math.min(left, it.qty || 1);
-      it.qty = (it.qty || 1) - take;
-      left -= take;
-      if (it.qty <= 0) char.inventory.splice(i, 1);
-    }
-    const eq = char.equipped;
-    if (!count(char, id)) {
-      if (eq.hat === id) eq.hat = null;
-      if (eq.coat === id) eq.coat = null;
-      eq.weapons = (eq.weapons || []).filter((w) => w !== id);
-      eq.accessories = (eq.accessories || []).filter((w) => w !== id);
-      const hb = char.hotbar || [];
-      for (let k = 0; k < hb.length; k++) if (hb[k] === "item:" + id) hb[k] = null;
-      refreshPlayer(game);
-    }
-    return left === 0;
-  }
-  function pay(game, amount) {
-    const c = game.state.char;
-    if (c.berries < amount) return false;
-    c.berries -= amount;
-    return true;
-  }
-  function earn(game, amount, why) {
-    const c = game.state.char;
-    c.berries += Math.round(amount);
-    if (why !== false) game.log(`+\u0E3F${Math.round(amount).toLocaleString()}${why ? " \u2014 " + why : ""}`, "#ffd54f");
-  }
-  var ACC_SLOTS = 2;
-  function isEquipped(c, id) {
-    const eq = c.equipped || {};
-    return eq.hat === id || eq.coat === id || (eq.weapons || []).includes(id) || (eq.accessories || []).includes(id);
-  }
-  function equip(game, id, { slot: slot2 } = {}) {
-    const c = game.state.char;
-    const d = ITEMS[id];
-    if (!d || !count(c, id)) return;
-    const eq = c.equipped;
-    if (d.type === "hat") eq.hat = eq.hat === id ? null : id;
-    else if (d.type === "coat") eq.coat = eq.coat === id ? null : id;
-    else if (d.type === "accessory") {
-      const acc = (eq.accessories || []).filter(Boolean);
-      const worn = acc.filter((x) => x === id).length;
-      if (slot2 !== void 0) {
-        if (worn >= count(c, id)) acc.splice(acc.indexOf(id), 1);
-        if (slot2 < acc.length) acc[slot2] = id;
-        else acc.push(id);
-      } else if (worn && worn >= count(c, id)) acc.splice(acc.indexOf(id), 1);
-      else if (acc.length < ACC_SLOTS) acc.push(id);
-      else {
-        acc.shift();
-        acc.push(id);
-      }
-      eq.accessories = acc.slice(0, ACC_SLOTS);
-    } else if (d.type === "weapon") {
-      const ws = eq.weapons || [];
-      if (ws.includes(id) && ws.filter((w) => w === id).length >= count(c, id)) eq.weapons = ws.filter((w) => w !== id);
-      else if (d.kind === "sword" && ws.length && ITEMS[ws[0]]?.kind === "sword" && ws.length < 3) eq.weapons = [...ws, id];
-      else eq.weapons = [id];
-      if (id === "sandai_kitetsu" && !c.flags.kitetsuTested) {
-        c.flags.kitetsuTested = true;
-        game.log("You toss the cursed Kitetsu into the air and hold out your arm\u2026 it spins down and misses you by a hair. The blade accepts you.", "#ef9a9a");
-      }
-    } else return;
-    refreshPlayer(game);
-    game.audio?.sfx("equip");
-  }
-  function unequipSlot(game, slot2) {
-    const eq = game.state.char.equipped;
-    if (slot2 === "head") eq.hat = null;
-    else if (slot2 === "body") eq.coat = null;
-    else if (slot2.startsWith("weapon")) {
-      const i = +slot2.slice(6);
-      eq.weapons = (eq.weapons || []).filter((_, k) => k !== i);
-    } else if (slot2.startsWith("acc")) {
-      const i = +slot2.slice(3);
-      eq.accessories = (eq.accessories || []).filter((_, k) => k !== i);
-    }
-    refreshPlayer(game);
-    game.audio?.sfx("equip");
-  }
-  function slotKind(d) {
-    if (!d) return null;
-    return d.type === "hat" ? "head" : d.type === "coat" ? "body" : d.type === "weapon" ? "weapon" : d.type === "accessory" ? "acc" : null;
-  }
-  function useItem(game, id) {
-    const c = game.state.char;
-    const p = game.player;
-    const d = ITEMS[id];
-    if (!d || !count(c, id)) return false;
-    if (d.type === "food" || d.type === "medicine") {
-      if (p.state !== "idle") return false;
-      let heal = d.heal || 0;
-      if (d.type === "food") {
-        if (c.traits.includes("iron_stomach")) heal *= 1.3;
-        if (c.flags?.allBlue) heal *= 1.25;
-        heal *= game.crewMods?.foodMul || 1;
-      }
-      if (d.costsLife) {
-        if (c.lives <= 1) {
-          game.log(`Ivankov refuses: "You don't have the years to spare, candy-boy!"`, "#ff8a80");
-          return false;
-        }
-        c.lives -= 1;
-        game.log("Tension Hormones! Your body screams back to full strength \u2014 and your lifespan shortens.", "#ff8a80");
-      }
-      p.hp = Math.min(p.d.maxHp, p.hp + heal);
-      p.stamina = Math.min(p.d.maxStamina, p.stamina + (d.stamina || 0));
-      for (const s of d.cure || []) delete p.status[s];
-      if (d.buff) p.addBuff({ ...d.buff });
-      game.fx.text(p.x, p.y - 1.6, `+${Math.round(heal)}`, "#69f0ae", 0.45);
-      game.audio?.sfx("eat");
-      removeItem(game, id, 1);
-      return true;
-    }
-    if (d.type === "fruit") return eatFruit(game, id);
-    if (d.type === "weapon") {
-      equip(game, id);
-      return true;
-    }
-    if (d.type === "pose" && d.target) {
-      const tgt = game.surface.islands.find((i) => i.id === d.target);
-      c.logPose.target = d.target;
-      c.logPose.eternal = id;
-      game.ui.toast("ETERNAL POSE", `The needle points to ${tgt?.name || d.target}.`, "#81d4fa");
-      return true;
-    }
-    if (d.type === "dial" && d.ability) {
-      const learned = c.techniques.includes(d.ability);
-      if (!learned) {
-        c.techniques.push(d.ability);
-        game.log(`You can now use the ${d.name} as a technique \u2014 assign it in Skills (K).`, "#80deea");
-      }
-      return true;
-    }
-    return false;
-  }
-  function eatFruit(game, itemId) {
-    const c = game.state.char;
-    const p = game.player;
-    const fid = ITEMS[itemId].fruit;
-    const f = FRUITS[fid];
-    if (c.fruit) {
-      game.log(`You already carry the power of the ${FRUITS[c.fruit]?.name}. A second Devil Fruit would tear your body apart \u2014 better to keep it, sell it, or give it to someone worthy.`, "#ff8a80");
-      return false;
-    }
-    removeItem(game, itemId, 1);
-    c.fruit = fid;
-    c.fruitMastery = 0;
-    c.fruitsEaten = 1;
-    const first = f.techniques[0];
-    if (first && !c.techniques.includes(first.id)) c.techniques.push(first.id);
-    if (first) addToHotbar(c, first.id);
-    refreshPlayer(game);
-    game.ui.toast(f.name.toUpperCase(), `${f.en} \u2014 ${f.type}. It tastes horrible.`, "#ffab91");
-    game.fx.ring(p.x, p.y, 0.3, 4, f.color, 0.8, 0.25);
-    game.fx.burst(p.x, p.y - 0.8, 30, { color: [f.color, "#ffffff"], speed: 5, g: 0, life: 0.8, kind: "star" });
-    game.log(`You ate the ${f.name}! You can never swim again. Fruit techniques unlock as your mastery grows (fight worthy foes, train).`, "#ffab91");
-    game.emit("fruitEaten", fid);
-    persist(game);
-    return true;
-  }
-
   // src/data/shops.js
   var STOCK = {
     general: ["meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "antidote", "sake", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
@@ -86020,7 +86309,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         k("Left click", "attack combo (ship: cannons)"),
         k("Right click", "heavy attack"),
         k("F", "block \u2014 tap just before a hit to PARRY"),
-        k("1-9, 0", "hotbar (techniques & items)"),
+        k("1-9, 0", "hotbar (techniques & items); food goes in your hand \u2014 hold the right mouse button to eat it"),
         haki ? k("R / T", "Armament / Observation Haki (once awakened)") : null,
         haki && char.haki?.conqueror ? k("G", "Conqueror's Haki") : null,
         k("E", "interact / talk / pick fruit / take the helm or the oars / search a knocked-out foe"),
@@ -89568,9 +89857,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           const weapon = def.type === "weapon";
           const qty = weapon && n === 1 ? "" : String(n);
           if (s2.qty.textContent !== qty) s2.qty.textContent = qty;
-          s2.el.classList.toggle("held", weapon && (ch.equipped?.weapons || []).includes(id.slice(5)));
+          s2.el.classList.toggle("held", weapon && (ch.equipped?.weapons || []).includes(id.slice(5)) || p.held === id.slice(5));
           s2.el.classList.toggle("none-left", n <= 0);
-          s2.cd.style.transform = "scaleY(0)";
+          const e = p.eating && p.eating.id === id.slice(5) ? p.eating : null;
+          s2.cd.style.transform = `scaleY(${e ? clamp2(e.t / e.dur, 0, 1) : 0})`;
           if (s2.cdt.textContent) s2.cdt.textContent = "";
           continue;
         }
@@ -89593,13 +89883,19 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         el.classList.toggle("on", t.type === "armament" ? p.armament : t.type === "observation" ? p.observation : !!p.conquerorInfused);
         el.title = `${t.name} \u2014 level ${Math.floor(lvl)} (${t.key})`;
       }
-      const inter = p.controller?.interaction;
-      const pk = inter ? inter.label : "";
+      let inter = p.controller?.interaction, pKey = "E";
+      if (!inter && p.held && ITEMS[p.held]) {
+        const it = ITEMS[p.held], free2 = !!this.game.view3d?.rig.freeMouse;
+        const verb = it.type !== "medicine" ? "eat" : /bandage/i.test(p.held) ? "bind your wounds with" : "take";
+        inter = { label: `${free2 ? verb[0].toUpperCase() + verb.slice(1) : "Hold to " + verb} the ${it.name}` };
+        pKey = free2 ? "Right-click" : "RMB";
+      }
+      const pk = inter ? pKey + inter.label : "";
       if (this.cache.prompt !== pk) {
         this.cache.prompt = pk;
         E.prompt.classList.toggle("hidden", !inter || this.blocksInput());
         clear(E.prompt);
-        if (inter) E.prompt.append(h("kbd", "E"), inter.label);
+        if (inter) E.prompt.append(h("kbd", pKey), inter.label);
       }
       const isl = game.currentIsland;
       const rmHere = game.world.zone === 0 && !isl?.name && Math.abs(game.world.dx(p.x, RM_X)) < 1e3 && Math.abs(p.y - EQ) < 2300 && regionAt(p.x, p.y) === REGION.RED_LINE;
@@ -120307,7 +120603,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           vol = 1 / (1 + Math.max(0, d2 - 4) / 10);
         }
       }
-      const lim = { punch: 0.04, punch_heavy: 0.06, slash_hit: 0.04, slash_heavy: 0.06, block: 0.05, whoosh: 0.05, splash: 0.2, splash_big: 0.3, wade: 0.2, choke: 0.5, gasp: 1, thunder_small: 0.15, lightning: 0.12, coin: 0.05, fire: 0.08, water: 0.08, step: 0.08 }[name] ?? 0.02;
+      const lim = { punch: 0.04, punch_heavy: 0.06, slash_hit: 0.04, slash_heavy: 0.06, block: 0.05, whoosh: 0.05, splash: 0.2, splash_big: 0.3, wade: 0.2, choke: 0.5, gasp: 1, thunder_small: 0.15, lightning: 0.12, coin: 0.05, fire: 0.08, water: 0.08, step: 0.08, bite: 0.2 }[name] ?? 0.02;
       if (this.last[name] && t - this.last[name] < lim) return;
       this.last[name] = t;
       const r = () => 0.92 + Math.random() * 0.16;
@@ -120593,6 +120889,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           this.noise(t, 0.08, { freq: 900, gain: 0.2, dest: d });
           this.noise(t + 0.12, 0.08, { freq: 800, gain: 0.2, dest: d });
           this.tone(t + 0.26, 0.12, { freq: 220, to: 160, gain: 0.08, dest: d });
+          break;
+        case "bite":
+          d = R3({ send: 0.03 });
+          this.noise(t, 0.05, { freq: 1800 * r(), q: 1.4, gain: 0.22, attack: 2e-3, dest: d });
+          this.crackle(t + 0.02, 0.12, 5, { freq: 2600, gain: 0.07, dest: d });
+          this.tone(t, 0.07, { freq: 150 * r(), to: 90, gain: 0.12, dest: d });
           break;
         case "equip":
           d = R3({ send: 0.08 });
@@ -121895,15 +122197,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
 
   // src/game/zones.js
   function installZones(game) {
-    const cache3 = /* @__PURE__ */ new Map();
+    const cache4 = /* @__PURE__ */ new Map();
     let stash2 = null;
     const zoneWorld = (id) => {
-      if (!cache3.has(id)) {
+      if (!cache4.has(id)) {
         const w = generateZoneWorld(ZONES[id]);
         w.fog.fill(255);
-        cache3.set(id, w);
+        cache4.set(id, w);
       }
-      return cache3.get(id);
+      return cache4.get(id);
     };
     game.zoneWorld = zoneWorld;
     game.inZone = () => game.world !== game.surface ? game.world.id : null;
@@ -123056,6 +123358,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (!c.inventory.some((i) => i.id === id)) {
         game.log(`You have no ${ITEMS[id]?.name || id} left.`, "#ff8a80");
         return false;
+      }
+      const d = ITEMS[id], p = game.player;
+      if (d && (d.type === "food" || d.type === "medicine" || d.type === "fruit") && !input.touch?.on && p) {
+        if (p.held === id) p.controller?.putAway?.(p);
+        else {
+          p.held = id;
+          p.eating = null;
+        }
+        audio.sfx("equip");
+        return true;
       }
       return useItem(game, id);
     };

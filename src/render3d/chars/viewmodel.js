@@ -16,6 +16,7 @@ import { CharacterModel } from './model.js';
 import { B } from './bones.js';
 import { bodyMaterial, outlineMaterial, glowMaterial, charGradient } from './mats.js';
 import { Glow } from './fx.js';
+import { holdItem, heldSize } from './helditem.js';
 import { actorPose, rigOptions, currentLook, weaponOf, stationSpot, stationReach } from './pose.js';
 import { FRUITS } from '../../data/fruits.js';
 import { shipDims, shipBob, pitchRise } from '../../world/hull.js';
@@ -25,6 +26,10 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 // xmin: a wind-up stays in view), hands raised c, and L more at full reach, never above top (an
 // uppercut ends up in the middle of the view, not over it)
 const FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16 };
+// food in the hand (see update): where the wrist goes, in the camera's frame
+// (right, up, forward; metres from the eye) — held out low on the right, and
+// brought up under your mouth to eat
+const FP_HOLD = [0.2, -0.22, 0.36], FP_EAT = [0.05, -0.2, 0.27];
 const xy = (h, fb) => (!h ? fb : Array.isArray(h) ? h : [Math.cos(h.a) * h.r, Math.sin(h.a) * h.r]);
 const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
 const HIDE = [B.hips, B.chest, B.head, B.sheath, B.hilts, B.tail];
@@ -156,6 +161,24 @@ class Viewmodel {
       if (k > 0.5) { PP.hF = [PP.hF[0], PP.hF[1] + 0.04 * k]; PP.hB = [PP.hB[0], PP.hB[1] + 0.04 * k]; }
       o.spread = (o.spread || 0) + 0.05 * q + 0.03 * k;
     }
+    // food in your hand: held up in the lower right of the view; eating it,
+    // brought in to your mouth at the bottom of the view, a bite at a time
+    const holding = !!p.held && !swimming && !A && p.state !== 'hurt';
+    this.holdK = (this.holdK ?? 0) + ((holding ? 1 : 0) - (this.holdK ?? 0)) * Math.min(1, dtv * 10);
+    let holdAt = null;
+    if (holding) {
+      const e = p.eating && p.eating.id === p.held ? p.eating : null;
+      const k = e ? Math.min(1, e.t / 0.18) : 0;
+      const bite = e ? Math.max(0, Math.sin((e.t / 0.36) * Math.PI * 2)) : 0;
+      // (camera frame → body frame: see "place in camera space" below; the hand comes up from under the view)
+      const cx = FP_HOLD[0] + (FP_EAT[0] - FP_HOLD[0]) * k;
+      const cy = FP_HOLD[1] + (FP_EAT[1] - FP_HOLD[1]) * k + bite * 0.02 - (1 - this.holdK) * 0.3;
+      const cz = FP_HOLD[2] + (FP_EAT[2] - FP_HOLD[2]) * k - bite * 0.05;
+      const d = m.d, eyeY = d.hip0 + d.chestLen + d.neck + d.hc * 0.95;
+      const use = Math.max(this.ready ?? 0, (this.pump ?? 0) * 0.28, this.holdK * 0.75);
+      holdAt = (this._holdAt || (this._holdAt = new THREE.Vector3())).set(cz - 0.06, cy + eyeY + 0.1 - 0.26 * use, cx);
+      PP = { ...PP, hand: 'hold' };
+    }
     // reaching out to use something: the hand opens on the way out and takes hold coming back
     if (reach > 0) { PP = { ...PP, hF: mix2(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: p.reachT > 0.22 ? 'palm' : 'grab' }; }
     // attacks aim at the crosshair: an extending hand rises toward eye level
@@ -183,8 +206,10 @@ class Viewmodel {
     o.leanAdd = -(PP.l || 0) * 0.55;
     o.lift = 0; o.roll = 0; o.squash = 1;
     // Gum-Gum: the arm stretches out to the fist in flight
-    o.reachR = p.fruit === 'gomu' ? this.stretch(p, ctx) : null;
+    o.reachR = holdAt || (p.fruit === 'gomu' ? this.stretch(p, ctx) : null);
     m.pose(PP, o);
+    const held = holdItem(m, holding ? p.held : null, { viewmodel: true });
+    if (held) { const e = p.eating && p.eating.id === p.held ? p.eating : null; heldSize(m, e ? 1 - 0.55 * Math.min(1, e.t / e.dur) : 1); }
     this.fixup();
     // show the legs only while a kick is out in front
     const kick = A && (A.limb === 'fF' || A.limb === 'fB') && A.legs;
@@ -210,7 +235,7 @@ class Viewmodel {
     const bx = Math.cos(this.bob * 0.5) * bobA, by = -Math.abs(Math.sin(this.bob * 0.5)) * bobA * 1.4 + Math.sin(env.time * 1.3) * 0.003;
     this.body.rotation.set(0, Math.PI / 2, 0);
     // the shoulders ride up toward the eye when the hands are in use, and sink when they aren't
-    const use = swimming ? 0.8 : Math.max(this.ready ?? 0, reach, (this.pump ?? 0) * 0.28);
+    const use = swimming ? 0.8 : Math.max(this.ready ?? 0, reach, (this.pump ?? 0) * 0.28, (this.holdK ?? 0) * 0.75);
     this.body.position.set(this.sway.x + bx, -0.1 + 0.26 * use - eyeY + this.sway.y + by, -0.06);
     this.body.updateMatrix();
     // ---- effects: haki, flash, fruit glow, muzzle flash
@@ -234,6 +259,7 @@ class Viewmodel {
     stationReach(st, spot, m.d, 1, 0, P.l || 0, row.seatH + 0.07, R);
     o.reachR = R[0]; o.reachL = R[1];
     m.pose(P, o);
+    holdItem(m, null);
     this.fixup();
     for (const i of LEGS) m.showBone(i, false);
     this.lastT = env.time;

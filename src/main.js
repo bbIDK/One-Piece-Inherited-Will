@@ -305,6 +305,15 @@ async function start() {
     const c = game.state?.char;
     if (!c) return false;
     if (!c.inventory.some((i) => i.id === id)) { game.log(`You have no ${ITEMS[id]?.name || id} left.`, '#ff8a80'); return false; }
+    // food, medicine and Devil Fruits are taken in hand (hold the right button to
+    // eat; again to put it away). On a touch screen they're eaten at once.
+    const d = ITEMS[id], p = game.player;
+    if (d && (d.type === 'food' || d.type === 'medicine' || d.type === 'fruit') && !input.touch?.on && p) {
+      if (p.held === id) p.controller?.putAway?.(p);
+      else { p.held = id; p.eating = null; }
+      audio.sfx('equip');
+      return true;
+    }
     return useItem(game, id);
   };
   const saveNow = () => {

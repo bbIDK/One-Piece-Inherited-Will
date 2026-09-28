@@ -142,7 +142,7 @@ export class Audio {
       }
     }
     // rate-limit spammy sounds
-    const lim = { punch: 0.04, punch_heavy: 0.06, slash_hit: 0.04, slash_heavy: 0.06, block: 0.05, whoosh: 0.05, splash: 0.2, splash_big: 0.3, wade: 0.2, choke: 0.5, gasp: 1, thunder_small: 0.15, lightning: 0.12, coin: 0.05, fire: 0.08, water: 0.08, step: 0.08 }[name] ?? 0.02;
+    const lim = { punch: 0.04, punch_heavy: 0.06, slash_hit: 0.04, slash_heavy: 0.06, block: 0.05, whoosh: 0.05, splash: 0.2, splash_big: 0.3, wade: 0.2, choke: 0.5, gasp: 1, thunder_small: 0.15, lightning: 0.12, coin: 0.05, fire: 0.08, water: 0.08, step: 0.08, bite: 0.2 }[name] ?? 0.02;
     if (this.last[name] && t - this.last[name] < lim) return;
     this.last[name] = t;
     const r = () => 0.92 + Math.random() * 0.16;
@@ -264,6 +264,12 @@ export class Audio {
       case 'treasure': d = R({ send: 0.3 }); [523, 659, 784, 1046].forEach((f, i) => this.tone(t + i * 0.09, 0.35, { freq: f, type: 'triangle', gain: 0.14, dest: d })); this.ring(t + 0.36, 2093, 0.5, 0.04, d, [1, 2.76, 5.4]); break;
       case 'bell': this.ring(t, 196, 3.2, 0.2, R({ send: 0.5 }), [0.5, 1, 1.2, 1.5, 2, 2.6, 3.0]); break;
       case 'eat': d = R(); this.noise(t, 0.08, { freq: 900, gain: 0.2, dest: d }); this.noise(t + 0.12, 0.08, { freq: 800, gain: 0.2, dest: d }); this.tone(t + 0.26, 0.12, { freq: 220, to: 160, gain: 0.08, dest: d }); break;
+      case 'bite': // CHOMP: teeth through something crisp, a little crunch after
+        d = R({ send: 0.03 });
+        this.noise(t, 0.05, { freq: 1800 * r(), q: 1.4, gain: 0.22, attack: 0.002, dest: d });
+        this.crackle(t + 0.02, 0.12, 5, { freq: 2600, gain: 0.07, dest: d });
+        this.tone(t, 0.07, { freq: 150 * r(), to: 90, gain: 0.12, dest: d });
+        break;
       case 'equip': d = R({ send: 0.08 }); this.noise(t, 0.03, { freq: 3500, q: 1.5, gain: 0.2, attack: 0.001, dest: d }); this.ring(t + 0.01, 1900, 0.18, 0.05, d, [1, 1.6]); break;
       case 'page': this.noise(t, 0.2, { freq: 3000, q: 0.5, gain: 0.08, dest: R() }); break;
       case 'reveal': d = R({ send: 0.3 }); [392, 494, 587].forEach((f, i) => this.tone(t + i * 0.1, 0.4, { freq: f, type: 'triangle', gain: 0.16, dest: d })); break;

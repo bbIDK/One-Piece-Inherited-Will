@@ -3,6 +3,12 @@
 import { HOTBAR_SIZE, HOTBAR_KEYS } from './hotbar.js';
 import { clamp, angleDiff } from '../core/math.js';
 import { findInteraction } from './interact.js';
+import { ITEMS } from '../data/items.js';
+import { count, useItem } from './inventory.js';
+
+// food in hand: how long it takes to get it down (seconds), and between bites
+const EAT_TIME = { food: 1.25, medicine: 0.9, fruit: 1.7 };
+const BITE = 0.36;
 
 export class PlayerController {
   constructor(game) {
@@ -90,7 +96,11 @@ export class PlayerController {
     buf.m1 = Math.max(0, buf.m1 - dt); buf.heavy = Math.max(0, buf.heavy - dt); buf.dodge = Math.max(0, buf.dodge - dt); buf.jump = Math.max(0, (buf.jump || 0) - dt);
     if (inp.mousePressed(0)) buf.m1 = 0.22;
     const freeMouse = !!v3?.rig.freeMouse;
-    if (freeMouse ? inp.mouse.released[2] && v3.rig.takeRightClick() : inp.mousePressed(2)) buf.heavy = 0.25;
+    // food in hand (picked on the hotbar): the right button eats it instead of a heavy blow
+    const held = this.holding(p, game);
+    const rightClick = freeMouse ? inp.mouse.released[2] && v3.rig.takeRightClick() : inp.mousePressed(2);
+    if (rightClick && !held) buf.heavy = 0.25;
+    if (held) this.eat(p, game, dt, held, rightClick, freeMouse ? null : inp.mouseDown(2));
     if (tapDodge && !(v3 && v3.rig.mode === 'third')) buf.dodge = 0.16;
     // in third person Ctrl toggles shift lock (Shift is for running)
     if (inp.wasPressed('Control') && v3 && v3.rig.mode === 'third' && !inp.touch?.on) {
@@ -115,6 +125,7 @@ export class PlayerController {
       p.facing = aimM;
       if (p.tryHeavy(game)) { buf.heavy = 0; buf.m1 = 0; } else if (p.action) p.facing = prev;
     }
+    if (p.held && (inp.mousePressed(0) || buf.dodge > 0)) this.putAway(p); // (fists up: the food goes back in your pocket)
     if (buf.m1 > 0 || (inp.mouseDown(0) && !p.action)) {
       if (!p.action) { p.facing = aimM; if (p.tryM1(game)) buf.m1 = 0; }
       else { p.tryM1(game); if (p.combo.queued) buf.m1 = 0; }
@@ -123,6 +134,11 @@ export class PlayerController {
     for (let i = 0; i < HOTBAR_SIZE; i++) {
       if (inp.wasPressed(HOTBAR_KEYS[i])) {
         const id = p.hotbar[i];
+        // (anything else from the hotbar puts the food in your hand away first)
+        if (id && p.held && id !== 'item:' + p.held) {
+          const it = String(id).startsWith('item:') ? ITEMS[id.slice(5)] : null;
+          if (!it || !(it.type === 'food' || it.type === 'medicine' || it.type === 'fruit')) this.putAway(p);
+        }
         if (id) { p.facing = aim; const target = this.aimTarget(p, game, wx, wy); p.tryTechnique(id, game, target || { x: wx, y: wy }); }
       }
     }
@@ -141,6 +157,40 @@ export class PlayerController {
       this.interaction.run();
     }
   }
+
+  /** The food (or medicine, or Devil Fruit) in your hand, if you still have one. */
+  holding(p, game) {
+    if (!p.held) return null;
+    if (count(game.state.char, p.held) > 0 && ITEMS[p.held]) return p.held;
+    this.putAway(p);
+    return null;
+  }
+
+  putAway(p) { p.held = null; p.eating = null; this.eatAuto = false; }
+
+  /**
+   * Eating what you hold: keep the right button down (or, with a free mouse,
+   * click it once) and it goes down in a few bites; let go, get hit, swing or
+   * dodge and you stop. Only when it's finished does it do you any good.
+   */
+  eat(p, game, dt, id, click, down) {
+    if (down === null) { if (click) this.eatAuto = !this.eatAuto; down = this.eatAuto; }
+    const ok = down && p.state === 'idle' && !p.action && !p.blocking && !(p.inWater && !p.gills);
+    if (!ok) { p.eating = null; if (!down) this.eatAuto = false; return; }
+    const d = ITEMS[id];
+    if (!p.eating || p.eating.id !== id) p.eating = { id, t: 0, dur: EAT_TIME[d.type] || 1.25, bites: 0 };
+    const e = p.eating;
+    e.t += dt;
+    const b = Math.floor(e.t / BITE);
+    if (b > e.bites && e.t < e.dur - 0.1) { e.bites = b; game.audio?.sfx(d.type === 'medicine' ? 'page' : 'bite', p); }
+    if (e.t < e.dur) return;
+    p.eating = null;
+    this.eatAuto = false;
+    useItem(game, id);
+    if (!(count(game.state.char, id) > 0)) this.putAway(p);
+  }
+
+  onHurt(p) { if (p.eating) { p.eating = null; this.eatAuto = false; } }
 
   /** A dodge requested from outside the keyboard (the touch pad's Dodge button). */
   requestDodge() { if (this.buf) this.buf.dodge = 0.16; else this.buf = { m1: 0, heavy: 0, dodge: 0.16, jump: 0 }; }

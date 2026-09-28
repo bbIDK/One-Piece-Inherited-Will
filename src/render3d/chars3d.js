@@ -19,6 +19,7 @@ import { SeaKingView } from './chars/seaking.js';
 import { SeaCowView, FightingFishView } from './chars/seacreature.js';
 import { Trail } from './chars/trail.js';
 import { createViewmodel } from './chars/viewmodel.js';
+import { holdItem, heldSize } from './chars/helditem.js';
 import { currentLook, weaponOf, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
 import { shipBob, pitchRise } from '../world/hull.js';
 
@@ -149,6 +150,11 @@ class ActorView {
       m.setExpression(expression(look, pose, P, pose.time || 0));
       this.effects(a, pose, P, o, env, ctx, camYaw3, dist, s);
       this.lastT = env.time;
+    }
+    // your food in your hand (going down as you eat it)
+    if (a.isPlayer) {
+      const held = holdItem(m, a.held && !a.inWater && !helm && !a.action ? a.held : null);
+      if (held) { const e = a.eating && a.eating.id === a.held ? a.eating : null; heldSize(m, e ? 1 - 0.55 * Math.min(1, e.t / e.dur) : 1); }
     }
     this.labels(a, env, dist, s);
     // detail by distance

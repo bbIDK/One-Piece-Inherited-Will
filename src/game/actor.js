@@ -957,7 +957,8 @@ export class Actor extends Entity {
       }
       else if (this.wading) sp *= 1 - 0.42 * clamp(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);
       if (this.charging) sp *= 1 - 0.75 * this.charging;
-      if (i.sprint && this.stamina > 1 && (!this.inWater || this.gills)) { sp *= this.inWater ? 1.35 : 1.55; if (!this.inWater) this.stamina -= 9 * dt; }
+      if (i.sprint && !this.eating && this.stamina > 1 && (!this.inWater || this.gills)) { sp *= this.inWater ? 1.35 : 1.55; if (!this.inWater) this.stamina -= 9 * dt; }
+      if (this.eating) sp *= 0.45; // (a slow walk with your mouth full)
       if (this.inWater && !this.gills && (i.mx || i.my || i.mz)) this.stamina = Math.max(0, this.stamina - (this.under ? 4 : 3.5) * dt);
       if (this.blocking) sp *= 0.4;
       if (this.action) sp *= this.action.def.moveMul ?? (this.action.def.m1Chain ? 0.55 : 0.25);

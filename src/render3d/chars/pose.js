@@ -39,10 +39,32 @@ export function actorPose(a, env, look) {
   }
   let P = pose.anim ? samplePose(pose.anim, pose.anim.t, pose) : restPose(pose, look);
   if (pose.station && !pose.anim) stationPose(P, pose.station);
+  if (!pose.anim && (a.held || a.eating) && !a.inWater) heldPose(P, a, env ? env.time : 0);
   if (pose.blend && pose.blend.P) P = blendPose(pose.blend.P, P, pose.blend.k);
   pose.P = P;
   a._lastP = P; a._lastPose = pose; a._lastLook = look;
   return { pose, P };
+}
+
+// ------------------------------------------------------------------ food in hand
+/**
+ * Holding food (or medicine, or a Devil Fruit) in the right hand, a little
+ * out in front; eating it, the hand at the mouth, the head bowed to meet it,
+ * a bite every third of a second.
+ */
+function heldPose(P, a, t) {
+  P.hand = 'hold';
+  if (a.eating) {
+    const e = a.eating, k = Math.min(1, e.t / 0.18);
+    const bite = Math.max(0, Math.sin((e.t / 0.36) * Math.PI * 2)) * 0.03;
+    const hF = Array.isArray(P.hF) ? P.hF : [0.05, 0.4];
+    P.hF = [hF[0] + (0.11 + bite - hF[0]) * k, hF[1] + (-0.2 - hF[1]) * k];
+    P.eF = 1;
+    P.ht = (P.ht || 0) + 0.12 * k + bite;
+  } else {
+    P.hF = [0.16, 0.2];
+    P.eF = 1;
+  }
 }
 
 // ------------------------------------------------------------------ at a ship's station

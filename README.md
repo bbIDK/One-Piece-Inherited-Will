@@ -60,10 +60,10 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | Shift | hold to sprint, tap to dodge (i-frames) | Coup de Burst (some ships) |
 | Left / right click | combo / heavy attack | broadside toward where you aim |
 | F | block — tap just before a hit to **parry** | |
-| 1–9, 0 | hotbar: techniques, food and weapons | |
+| 1–9, 0 | hotbar: techniques, food and weapons (food goes in your hand: hold the right mouse button to eat it, in bites; a punch or a dodge puts it away) | |
 | R / T / G | Haki, once it has awakened | |
 | E | talk, enter, take the helm or the oars, pick fruit, examine | dive, knock-up, go ashore, leave the helm |
-| Q | eat | |
+| Q | dash | |
 | Tab/I, C, K, J, U, L | inventory, character, skills, journal, crew, quests | |
 | M | world map | |
 | H / Esc | help / pause menu | |

@@ -434,6 +434,43 @@ export const scenarios = {
       }
     },
   },
+  // food in the hand, in first and third person: held, then eating (mid-bite)
+  //   --items=apple,meat,...  --modes=first,third  --move=5 (metres east, into the open)
+  c3held: {
+    async run(page, snap, args) {
+      await boot(page);
+      // (out into the open: a third-person camera can be pulled in by things behind it)
+      await page.evaluate((m) => { const p = window.OP.game.player; window.OP.teleport(p.x + m, p.y); }, Number(args.move ?? 5));
+      const items = String(args.items || 'apple,meat,rumble_ball').split(',');
+      for (const id of items) {
+        for (const mode of String(args.modes || 'first,third').split(',')) {
+          await page.evaluate(([id, mode]) => {
+            const g = window.OP.game, p = g.player;
+            window.OP.hold = false;
+            window.OP.debug.addItem(g, id, 3, { silent: true });
+            p.held = id; p.eating = null;
+            window.__C3.view(mode === 'first' ? 0 : Math.PI * 0.94, mode === 'first' ? -0.05 : 0.06, mode, 2.0);
+            // (third person: facing the camera — no shift lock turning you to where it looks)
+            if (mode === 'third') g.view3d.rig.setShiftLock?.(false);
+          }, [id, mode]);
+          await settle(page, 5);
+          await page.evaluate(() => { const g = window.OP.game, p = g.player; if (g.view3d.rig.mode === 'third') { if (p.controller) p.controller.aimT = 0; p.facing = -0.2; } });
+          await settle(page, 2);
+          await snap(`${id}-${mode}-held`);
+          for (const t of [0.3, 0.9]) {
+            await page.evaluate(([id, t]) => {
+              const g = window.OP.game, p = g.player;
+              window.OP.hold = true;
+              p.eating = { id, t, dur: 1.25, bites: 0 };
+              g.render();
+            }, [id, t]);
+            await snap(`${id}-${mode}-eat${t}`);
+          }
+          await page.evaluate(() => { window.OP.hold = false; window.OP.game.player.eating = null; });
+        }
+      }
+    },
+  },
   c3atk: { async run(page, snap) { await boot(page); await attacks(page, snap); } },
   c3vm: { async run(page, snap) { await boot(page); await viewmodel(page, snap); } },
   c3crowd: { async run(page, snap) { await boot(page); await crowd(page, snap); await seaKing(page, snap); } },

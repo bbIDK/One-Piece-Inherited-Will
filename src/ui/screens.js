@@ -445,7 +445,7 @@ export function helpContent(char) {
     h('div.kbd-help',
       k('Mouse', 'look around (click the game to capture the mouse, Esc frees it)'), k('V', 'first person / third person'),
       k('WASD', 'move where you look / steer ship'), k('Space', 'jump; at a pier, a bank or a ship\'s side, climb up (ship: row)'), k('Shift', 'hold to sprint (ship: Coup de Burst); tap in first person to dodge'), k('Ctrl', 'third person: shift lock (the character faces where you look)'), k('Q', 'dash / dodge'), k('Right mouse', 'heavy attack; hold and drag to turn the camera in third person without shift lock'), k('Left click', 'attack combo (ship: cannons)'),
-      k('Right click', 'heavy attack'), k('F', 'block — tap just before a hit to PARRY'), k('1-9, 0', 'hotbar (techniques & items)'),
+      k('Right click', 'heavy attack'), k('F', 'block — tap just before a hit to PARRY'), k('1-9, 0', 'hotbar (techniques & items); food goes in your hand — hold the right mouse button to eat it'),
       haki ? k('R / T', 'Armament / Observation Haki (once awakened)') : null,
       haki && char.haki?.conqueror ? k('G', "Conqueror's Haki") : null,
       k('E', 'interact / talk / pick fruit / take the helm or the oars / search a knocked-out foe'),
