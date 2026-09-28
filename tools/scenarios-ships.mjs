@@ -3,6 +3,14 @@
 const waitReady = (page, timeout = 240000) => page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout, polling: 250 });
 const frames = (page, n = 3) => page.evaluate((n) => new Promise((r) => { let k = 0; const f = () => (++k >= n ? r() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
+// (a conversation's words type out a few letters a frame: skip to its choices, as a click does)
+const choicesUp = async (page) => {
+  await page.locator('.dialogue').waitFor({ timeout: 60000 });
+  await page.evaluate(() => { const a = window.OP.game.dialogue.active; if (a && a.typing < a.full.length) window.OP.game.dialogue.advance(); });
+  await page.locator('.dialogue .choices button').first().waitFor({ timeout: 30000 });
+};
+// (the loading screen stays up until the title's backdrop is drawn)
+const bootGone = (page) => page.waitForFunction(() => { const b = document.getElementById('boot'); return !b || b.classList.contains('hidden') || b.classList.contains('done'); }, null, { timeout: 240000, polling: 250 }).then(() => page.waitForTimeout(900));
 
 export const scenarios = {
   bigships: {
@@ -368,6 +376,273 @@ export const scenarios = {
       await snap('helm-first');
       const perf = await page.evaluate(() => { const v = window.OP.game.view3d, i = v.renderer.info; return { calls: i.render.calls, tris: i.render.triangles }; });
       console.log('perf', JSON.stringify(perf));
+    },
+  },
+
+  // The shipwright on the starter pier: E to talk (Spawn ship, Buy ships,
+  // Goodbye), your ships, the ships for sale, a sloop bought and launched at
+  // the pier (the rowboat into the yard), then the sloop sent off out to sea
+  // and brought round again. Esc closes the menu.
+  //   node tools/shot.mjs shipwright
+  shipwright: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'first'; g.applySettings(); g.env.clock = 10.5; g.env.storm = 0; g.env.fog = 0; g.env.rain = 0; document.querySelector('.look-hint')?.remove(); });
+      for (let i = 0; i < 6; i++) await step(page, 0.1);
+      const info = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, c = g.state.char;
+        const isl = w.islandAt(c.spawn.x, c.spawn.y) || w.nearestIsland(c.spawn.x, c.spawn.y, 200);
+        const dock = isl.docks[0];
+        const sw = g.actors.find((a) => a.shipwright?.dock === dock);
+        window.__dock = dock; window.__sw = sw;
+        const boat = g.ships.find((s) => s.owner === 'player');
+        const all = g.actors.filter((a) => a.shipwright).map((a) => ({ n: a.name, pier: w.isDock(a.x, a.y), water: w.isLiquid(a.x, a.y) }));
+        return { island: isl.name, docks: isl.docks.length, dock: dock.name, sw: sw && { name: sw.name, title: sw.title, x: +sw.x.toFixed(2), y: +sw.y.toFixed(2), onPier: w.isDock(sw.x, sw.y), water: w.isLiquid(sw.x, sw.y), prop: w.hitsProp(sw.x, sw.y, 0.3), talk: !!sw.talk, look: [sw.look.topStyle, sw.look.hat, sw.look.waist, sw.look.shoeStyle] }, shipwrightsHere: all, boat: boat && { name: boat.name, pier: boat.uid && g.state.char.fleet.some((f) => f.uid === boat.uid) }, fleet: c.fleet.map((f) => f.name) };
+      });
+      console.log('pier', JSON.stringify(info));
+      const settle = async (n = 6) => { for (let i = 0; i < n; i++) { await step(page, 0.05); await frames(page, 1); } };
+      // 1. walking out along the pier: the shipwright on the head's shoulder, the rowboat alongside the other
+      await page.evaluate(() => {
+        const g = window.OP.game, dk = window.__dock, sw = window.__sw;
+        window.OP.teleport(dk.end.x + 0.5 - dk.dirX * 7, dk.end.y + 0.5 - dk.dirY * 7);
+        const p = g.player, hx = dk.end.x + 0.5 - dk.dirX, hy = dk.end.y + 0.5 - dk.dirY;
+        g.view3d.rig.yaw = Math.atan2((hy + sw.y) / 2 - p.y, g.world.dx(p.x, (hx + sw.x) / 2)); g.view3d.rig.pitch = -0.12;
+      });
+      await settle();
+      await snap('pier');
+      // 2. up to him: the prompt (the crosshair on him)
+      const near = await page.evaluate(() => {
+        const g = window.OP.game, dk = window.__dock, sw = window.__sw, w = g.world;
+        // (on the walkway, a couple of steps from him, looking at him)
+        const ex = dk.end.x + 0.5, ey = dk.end.y + 0.5, t = w.dx(ex, sw.x) * dk.dirX + (sw.y - ey) * dk.dirY;
+        const ax = ex + dk.dirX * t, ay = ey + dk.dirY * t, d = Math.hypot(w.dx(ax, sw.x), sw.y - ay);
+        window.OP.teleport(sw.x - w.dx(ax, sw.x) / d * 2, sw.y - (sw.y - ay) / d * 2);
+        const p = g.player;
+        g.view3d.rig.yaw = Math.atan2(sw.y - p.y, w.dx(p.x, sw.x)); g.view3d.rig.pitch = -0.1;
+        return { d: +w.distance(p.x, p.y, sw.x, sw.y).toFixed(2), onPier: w.isDock(p.x, p.y) };
+      });
+      await settle();
+      const prompt = await page.evaluate(() => window.OP.game.player.controller?.interaction?.label || null);
+      console.log('near him', JSON.stringify(near), 'prompt:', prompt);
+      await snap('talk-prompt');
+      // 3. E: the conversation, three choices
+      await page.evaluate(() => { window.OP.key('E', true); }); await step(page, 0.05); await page.evaluate(() => { window.OP.key('E', false); });
+      await choicesUp(page);
+      await frames(page, 4);
+      const choices = await page.evaluate(() => [...document.querySelectorAll('.dialogue .choices button')].map((b) => b.textContent));
+      console.log('choices', JSON.stringify(choices));
+      await snap('dialogue');
+      // 4. Spawn ship: the ships you own
+      await page.locator('.dialogue .choices button', { hasText: 'Spawn ship' }).click();
+      await frames(page, 4);
+      const spawnList = await page.evaluate(() => [...document.querySelectorAll('.shipwright .row-item')].map((r) => r.innerText.replace(/\s+/g, ' ').trim()));
+      console.log('spawn menu', JSON.stringify(spawnList));
+      await snap('spawn-menu');
+      // 5. Buy ships: with 20,000 berries a sloop is in reach, the rest greyed out
+      await page.evaluate(() => { window.OP.game.state.char.berries = 20000; });
+      await page.locator('.shipwright .tabs button', { hasText: 'Buy ships' }).click();
+      await frames(page, 4);
+      const buyList = await page.evaluate(() => [...document.querySelectorAll('.shipwright .row-item')].map((r) => ({ t: r.innerText.replace(/\s+/g, ' ').trim().slice(0, 150), dim: r.classList.contains('cant'), off: r.querySelector('button').disabled })));
+      console.log('buy menu', JSON.stringify(buyList, null, 1));
+      await snap('buy-menu');
+      // 6. buy the sloop: name her, and she's launched at this pier
+      await page.locator('.shipwright .row-item', { hasText: 'Sloop' }).locator('button').click();
+      await page.locator('#ask-input').waitFor({ timeout: 10000 });
+      await page.fill('#ask-input', 'Sea Sparrow');
+      await page.locator('.ask .btn.gold').click();
+      await frames(page, 3);
+      await step(page, 0.2);
+      const bought = await page.evaluate(() => {
+        const g = window.OP.game, c = g.state.char, w = g.world, dk = window.__dock;
+        const mine = g.ships.filter((s) => s.owner === 'player' && s.alive !== false);
+        return { berries: c.berries, panelOpen: !!document.querySelector('.shipwright'), fleet: c.fleet.map((f) => `${f.name} (${f.type})`), afloat: mine.map((s) => ({ n: s.name, atThisPier: w.distance(s.x, s.y, dk.end.x + 0.5, dk.end.y + 0.5) < s.def.length * 0.6 + 10 })), active: c.fleet.find((f) => f.uid === c.activeShip)?.name };
+      });
+      console.log('bought', JSON.stringify(bought));
+      // 7. she's berthed at the pier (seen from the pier head, third person)
+      await page.evaluate(() => {
+        const g = window.OP.game, dk = window.__dock, s = g.ships.find((x) => x.owner === 'player' && x.alive !== false);
+        g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings();
+        window.OP.teleport(dk.end.x + 0.5 - dk.dirX * 4, dk.end.y + 0.5 - dk.dirY * 4);
+        const p = g.player;
+        g.view3d.rig.yaw = Math.atan2(s.y - p.y, g.world.dx(p.x, s.x)) - 0.35; g.view3d.rig.pitch = -0.2; g.view3d.rig.tp.dist = 6;
+      });
+      await settle(8);
+      await snap('bought-berthed');
+      // 8. she's sent off out to sea; the shipwright brings her round again (only one of her afloat)
+      const away = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, dk = window.__dock, s = g.ships.find((x) => x.owner === 'player' && x.alive !== false);
+        for (let r = 60; r < 260; r += 10) {
+          for (let a = 0; a < Math.PI * 2; a += 0.25) {
+            const x = w.wx(dk.end.x + Math.cos(a) * r), y = dk.end.y + Math.sin(a) * r;
+            if (w.sd(x, y) < -12 && s.fits(w, x, y, a)) { s.x = x; s.y = y; s.heading = a; return { r, name: s.name, uid: s.uid }; }
+          }
+        }
+        return null;
+      });
+      console.log('sent away', JSON.stringify(away));
+      await page.evaluate(() => { const g = window.OP.game; g.settings.view = 'first'; g.applySettings(); g.emit('talk', window.__sw); });
+      await choicesUp(page);
+      await page.locator('.dialogue .choices button', { hasText: 'Spawn ship' }).click();
+      await frames(page, 4);
+      const spawnList2 = await page.evaluate(() => [...document.querySelectorAll('.shipwright .row-item')].map((r) => r.innerText.replace(/\s+/g, ' ').trim()));
+      console.log('spawn menu, later', JSON.stringify(spawnList2));
+      await snap('spawn-menu-2');
+      await page.locator('.shipwright .row-item', { hasText: 'Sea Sparrow' }).locator('button').click();
+      await frames(page, 3);
+      await step(page, 0.3);
+      const back = await page.evaluate((uid) => {
+        const g = window.OP.game, w = g.world, dk = window.__dock, c = g.state.char;
+        const copies = g.ships.filter((s) => s.uid === uid && s.alive !== false);
+        const s = copies[0];
+        return { copies: copies.length, atThisPier: !!s && w.distance(s.x, s.y, dk.end.x + 0.5, dk.end.y + 0.5) < s.def.length * 0.6 + 10, fits: !!s && s.fits(w, s.x, s.y, s.heading), fleet: c.fleet.length, active: c.activeShip === uid, playerShip: g.player.ship === s };
+      }, away?.uid);
+      console.log('brought round', JSON.stringify(back));
+      // 9. Esc closes a menu (and hands the mouse back to the view)
+      await page.evaluate(() => { window.OP.debug.openShipwright(window.OP.game, { dock: window.__dock, island: window.__dock && window.OP.game.world.islandAt(window.__sw.x, window.__sw.y), npc: window.__sw, tab: 'buy' }); });
+      await frames(page, 2);
+      const openBefore = await page.evaluate(() => ({ panel: !!document.querySelector('.shipwright'), blocks: window.OP.ui.blocksInput() }));
+      await page.keyboard.press('Escape');
+      await frames(page, 4);
+      const openAfter = await page.evaluate(() => ({ panel: !!document.querySelector('.shipwright'), blocks: window.OP.ui.blocksInput(), paused: window.OP.game.paused }));
+      console.log('esc', JSON.stringify({ openBefore, openAfter }));
+      await page.evaluate(() => {
+        const g = window.OP.game, dk = window.__dock, s = g.ships.find((x) => x.owner === 'player' && x.alive !== false);
+        g.settings.view = 'third'; g.applySettings();
+        window.OP.teleport(dk.end.x + 0.5 - dk.dirX * 4, dk.end.y + 0.5 - dk.dirY * 4);
+        const p = g.player;
+        g.view3d.rig.yaw = Math.atan2(s.y - p.y, g.world.dx(p.x, s.x)) + 0.3; g.view3d.rig.pitch = -0.22; g.view3d.rig.tp.dist = 6;
+      });
+      await settle(8);
+      await snap('brought-round');
+    },
+  },
+
+  // Your ships can't break (SHIPS_UNBREAKABLE): a broadside of cannonballs,
+  // a monstrous blow, a storm and a crash into the rocks leave her hull
+  // whole, while a pirate ship still sinks. No screenshots but the helm.
+  //   node tools/shot.mjs unbreakable [--shot=no]
+  unbreakable: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings(); g.env.clock = 10.5; g.env.storm = 0; g.env.fog = 0; document.querySelector('.look-hint')?.remove(); });
+      await step(page, 0.5);
+      // your caravel out in open water, you at her helm, and a pirate brigantine abeam of her
+      const setup = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player, c = g.state.char;
+        const isl = w.nearestIsland(p.x, p.y, 300);
+        let spot = null;
+        for (let k = 0; k < 40000 && !spot; k++) {
+          const a = Math.random() * Math.PI * 2, r = isl.radius + 40 + Math.random() * 80;
+          const x = Math.floor(isl.x + Math.cos(a) * r) + 0.5, y = Math.floor(isl.y + Math.sin(a) * r) + 0.5;
+          if (w.sd(x, y) < -30) spot = { x: w.wx(x), y };
+        }
+        const mine = g.giveShip('caravel', spot.x, spot.y, 'Test Caravel', { heading: 0 });
+        p.mode = 'sail'; p.ship = mine; p.onShip = true; mine.captain = p; p.x = mine.x; p.y = mine.y;
+        const foe = g.traffic.spawn({ kind: 'pirate', type: 'brigantine', x: w.wx(mine.x), y: mine.y - 11, heading: 0, level: 30 });
+        foe.provoked = true;
+        window.__mine = mine; window.__foe = foe;
+        return { spot, mine: { hull: mine.hull, max: mine.maxHull, unbreakable: mine.unbreakable }, foe: foe && { hull: foe.hull, max: foe.maxHull, unbreakable: foe.unbreakable }, inFleet: !!c.fleet?.some((f) => f.uid === mine.uid) };
+      });
+      console.log('setup', JSON.stringify(setup));
+      // count every blow that lands on her
+      await page.evaluate(() => { const s = window.__mine, dmg = s.damage.bind(s); window.__hits = { n: 0, total: 0 }; s.damage = (n, a, i) => { window.__hits.n++; window.__hits.total += n; return dmg(n, a, i); }; });
+      // the pirate's broadsides, at point-blank range
+      for (let k = 0; k < 8; k++) {
+        await page.evaluate(() => { const g = window.OP.game, s = window.__mine, f = window.__foe; f.cannonCd = 0; f.shot = f.shotCap; f.fireBroadside(g, s.x, s.y, { name: f.name, faction: 'pirate', isShip: true, power: () => 300 }); });
+        await step(page, 1.2);
+      }
+      const fired = await page.evaluate(() => { const s = window.__mine; return { hits: window.__hits, hull: s.hull, max: s.maxHull, sunk: s.sunk, alive: s.alive !== false }; });
+      console.log('after 8 broadsides', JSON.stringify(fired));
+      if (args.shot !== 'no') { await frames(page, 3); await snap('under-fire'); }
+      // a blow to sink a man-o'-war, a storm, and a crash into the rocks
+      const blow = await page.evaluate(() => { const s = window.__mine; s.damage(1e6, window.__foe, {}); return { hull: s.hull, sunk: s.sunk }; });
+      await page.evaluate(() => { window.OP.game.env.storm = 1; });
+      await step(page, 15);
+      const storm = await page.evaluate(() => { const g = window.OP.game, s = window.__mine; g.env.storm = 0; return { hull: s.hull, sunk: s.sunk }; });
+      const crash = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, s = window.__mine, p = g.player;
+        // (heading straight for the nearest coast, flat out)
+        const isl = w.nearestIsland(s.x, s.y, 400);
+        let best = null;
+        for (let a = 0; a < Math.PI * 2; a += 0.05) {
+          for (let r = 4; r < 140; r += 1) {
+            const x = w.wx(s.x + Math.cos(a) * r), y = s.y + Math.sin(a) * r;
+            if (!w.isLiquid(x, y)) { if (!best || r < best.r) best = { a, r }; break; }
+          }
+        }
+        if (!best) return null;
+        // (brought in close, bow on)
+        const r0 = Math.max(0, best.r - s.def.length * 0.5 - 4);
+        s.x = w.wx(s.x + Math.cos(best.a) * r0); s.y += Math.sin(best.a) * r0; s.heading = best.a; s.speed = 14;
+        p.x = s.x; p.y = s.y;
+        window.__hitsBefore = window.__hits.n;
+        return { isl: isl?.name, dist: best.r };
+      });
+      for (let i = 0; i < 12; i++) { await page.evaluate(() => { window.__mine.speed = Math.max(window.__mine.speed, 12); }); await step(page, 0.1); }
+      const afterCrash = await page.evaluate(() => { const s = window.__mine; return { hull: s.hull, sunk: s.sunk, crashed: window.__hits.n > window.__hitsBefore }; });
+      // everyone else's ships still sink
+      const foe = await page.evaluate(() => { const f = window.__foe; f.damage(1e6, window.OP.game.player, {}); return { sunk: f.sunk, hull: f.hull }; });
+      // (and a Navy escort sailing with you is as sound as your own)
+      const escort = await page.evaluate(() => { const g = window.OP.game, s = window.__mine; const e = g.addShip({ type: 'brigantine', x: g.world.wx(s.x + 30), y: s.y + 30, owner: 'marine', faction: 'marine', name: 'Escort Test' }); e.escortOf = 'player'; e.damage(1e6, null, {}); const r = { hull: e.hull, max: e.maxHull, sunk: e.sunk }; e.alive = false; return r; });
+      const hud = await page.evaluate(() => document.querySelector('.shiphud .bar.hull span')?.textContent || null);
+      console.log('unbreakable', JSON.stringify({ blow, storm, crash: afterCrash, foe, escort, hud }));
+      const ok = fired.hull === fired.max && !fired.sunk && fired.hits.n > 0 && !blow.sunk && blow.hull === fired.max && !storm.sunk && storm.hull === fired.max && !afterCrash.sunk && afterCrash.hull === fired.max && foe.sunk && !escort.sunk && escort.hull === escort.max;
+      console.log(ok ? 'UNBREAKABLE: OK' : 'UNBREAKABLE: FAILED');
+      if (!ok) throw new Error('a ship of yours took damage (or a pirate did not)');
+    },
+  },
+
+  // Owned ships in the save: a bought one and a laid-up one survive a reload,
+  // and an old save (no fleet, two ships afloat) gets them as owned ships.
+  //   node tools/shot.mjs fleetsave
+  fleetsave: {
+    async run(page) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => window.OP.quickStart('human'));
+      await step(page, 0.6);
+      const before = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, c = g.state.char;
+        const isl = w.islandAt(c.spawn.x, c.spawn.y) || w.nearestIsland(c.spawn.x, c.spawn.y, 200);
+        const r = window.OP.debug.launchShip(g, { type: 'sloop', name: 'Save Sloop' }, isl.docks[0]);
+        window.OP.game.emit('shipBought', 'sloop');
+        return { launched: r.ship?.name, laidUp: r.laidUp, fleet: c.fleet.map((f) => f.name), afloat: g.ships.filter((s) => s.owner === 'player' && s.alive !== false).map((s) => s.name) };
+      });
+      console.log('before', JSON.stringify(before));
+      // save (the pause menu's Save game), and back from the title
+      const saved = await page.evaluate(() => { const g = window.OP.game; window.OP.ui.openMenu(); const btn = [...document.querySelectorAll('.menu-btn')].find((b) => /Save game/.test(b.textContent)); btn?.click(); window.OP.ui.closeAll(); const s = JSON.parse(localStorage.getItem('op-inherited-will:slot1:char:v1') || 'null'); return { fleet: (s?.fleet || []).map((f) => f.name), ships: (s?.ships || []).map((x) => x.name) }; });
+      console.log('saved', JSON.stringify(saved));
+      await page.reload();
+      await waitReady(page);
+      await bootGone(page);
+      await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
+      await frames(page, 3);
+      await step(page, 0.6);
+      const after = await page.evaluate(() => { const g = window.OP.game, c = g.state.char; return { fleet: c.fleet.map((f) => f.name), afloat: g.ships.filter((s) => s.owner === 'player' && s.alive !== false).map((s) => s.name) }; });
+      console.log('after reload', JSON.stringify(after));
+      // an old save: no fleet, two ships afloat (one without a uid)
+      await page.evaluate(() => {
+        const k = 'op-inherited-will:slot1:char:v1', s = JSON.parse(localStorage.getItem(k));
+        delete s.fleet;
+        const one = s.ships[0];
+        s.ships = [{ ...one }, { ...one, uid: undefined, type: 'caravel', name: 'Old Caravel', x: one.x + 1, y: one.y + 30 }];
+        localStorage.setItem(k, JSON.stringify(s));
+        window.onbeforeunload = null;
+      });
+      await page.evaluate(() => { window.OP.game.player = null; }); // (don't save over it on the way out)
+      await page.reload();
+      await waitReady(page);
+      await bootGone(page);
+      await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
+      await frames(page, 3);
+      await step(page, 0.6);
+      const migrated = await page.evaluate(() => { const g = window.OP.game, c = g.state.char; return { fleet: c.fleet.map((f) => `${f.name} (${f.type}) ${f.uid ? 'uid' : 'NO UID'}`), afloat: g.ships.filter((s) => s.owner === 'player' && s.alive !== false).map((s) => s.name), sameUids: g.ships.filter((s) => s.owner === 'player').every((s) => c.fleet.some((f) => f.uid === s.uid)) }; });
+      console.log('old save', JSON.stringify(migrated));
+      const ok = saved.fleet.length === 2 && after.fleet.length === 2 && after.afloat.length === 1 && migrated.fleet.length === 2 && migrated.sameUids;
+      console.log(ok ? 'FLEETSAVE: OK' : 'FLEETSAVE: FAILED');
+      if (!ok) throw new Error('owned ships did not survive the save');
     },
   },
 };

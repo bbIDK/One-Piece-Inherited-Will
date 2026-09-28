@@ -344,6 +344,13 @@ h4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c;
 .save-note { margin-top: 10px; }
 .check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }
 .shop-top { display: flex; justify-content: space-between; align-items: center; }
+/* the shipwright's menus: your ships and the ships for sale */
+.sw-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.sw-head h2 { margin: 0; }
+.row-item.cant { opacity: .6; }
+.row-item.here { outline: 2px solid #b8860b; }
+.row-item .sub.warn { color: #b71c1c; opacity: 1; font-weight: 700; }
+.price.short { color: #b71c1c; }
 .btn.steal { background: #37474f; border-color: #263238; }
 .btn.small { padding: 4px 9px; font-size: 12px; }
 .btn.big { font-size: 18px; padding: 8px 22px; }

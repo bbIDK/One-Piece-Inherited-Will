@@ -7,14 +7,16 @@ import './homes.js';
 import { chapter, target, T, LOOK, PLANS, PROLOGUES, CHAPTERS, onward, PATHS3 } from './define.js';
 import { ISLAND_BY_ID } from '../../data/islands/index.js';
 import { regionAt, isGrandLine } from '../../world/constants.js';
+import { ownsShip } from '../../game/fleet.js';
 
 /** Somebody's home-island people (the stop reuses them). */
 const homeNpc = (island, path) => ({ npc: `mq_home_${island}_${path}` });
 const hc = (island, path, where) => ({ npc: `mq_home_${island}_${path}`, where });
 
 // A Grand Line ship for pirates and hunters at the "ship" stops (the Marines get theirs from the Navy).
-const shipGift = (name) => (g) => (g.ships.some((s) => s.owner === 'player' && !s.sunk && s.def.grandLine && (s.def.cannons || 0) >= 4) ? {} : { ship: 'caravel', shipName: name });
-const navyShip = (g) => (g.ships.some((s) => s.owner === 'player' && !s.sunk && s.def.grandLine) ? {} : { ship: 'sloop', shipName: 'Navy Cutter' });
+// (one you own counts, afloat or laid up in the yards: see game/fleet.js)
+const shipGift = (name) => (g) => (ownsShip(g, (d) => d.grandLine && (d.cannons || 0) >= 4) ? {} : { ship: 'caravel', shipName: name });
+const navyShip = (g) => (ownsShip(g, (d) => d.grandLine) ? {} : { ship: 'sloop', shipName: 'Navy Cutter' });
 
 // the rookie captains racing you to the mountain (every road meets one at the last port)
 function rival(id, island, town, name, title, bounty, look, extra = {}) {

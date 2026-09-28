@@ -90,7 +90,8 @@ export function openCrew(game) {
 
 function fleetInfo(game) {
   const c = game.state.char;
-  const ships = game.ships.filter((s) => s.owner === 'player' && !s.sunk);
+  // (every ship you own, afloat or laid up in the yards: see game/fleet.js)
+  const ships = c.fleet || game.ships.filter((s) => s.owner === 'player' && !s.sunk);
   const escorts = game.ships.filter((s) => s.escortOf && !s.sunk);
   return h('div',
     h('p', `Ships under your command: ${ships.map((s) => s.name).join(', ') || 'none'}${escorts.length ? ` · escorts: ${escorts.length}` : ''}`),

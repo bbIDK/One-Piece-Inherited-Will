@@ -1,5 +1,14 @@
 // Ship classes. Speeds in tiles/second at full sail with a following wind
 // (a rowboat has no sail: her speed is what a good pull on the oars gives).
+
+/**
+ * Your own ships (and the Navy escorts sailing with you) can't break: no
+ * cannonball, reef, storm or Sea King takes anything off their hulls, and
+ * they never sink. Everyone else's still can. (For now: set this to false to
+ * bring hull damage, repairs and shipwrecks back.)
+ */
+export const SHIPS_UNBREAKABLE = true;
+
 export const SHIPS = {
   dinghy: {
     name: 'Rowboat', desc: 'A little open boat with no sail: you row her with a pair of oars, wind or no wind. Fine for the Blues — suicide in the Grand Line.',
@@ -77,3 +86,27 @@ export const SHIP_UPGRADES = {
   oars: { name: 'Rowing Sweeps', desc: 'Move at 45% speed without wind (Calm Belt).', price: 9000, apply: (s) => { s.oars = true; } },
   coating: { name: 'Resin Coating', desc: 'A bubble coating for the dive to Fish-Man Island. Lasts one voyage.', price: 100000, apply: (s) => { s.coated = true; } },
 };
+
+/** How many cannonballs a ship with n guns carries (none, without guns). */
+export const shotCapFor = (n) => (n > 0 ? Math.max(12, n * 8) : 0);
+
+/** A ship class as fitted out with her upgrades (plus `maxHull`, her hull with its plating). */
+export function shipStats(type, upgrades = []) {
+  const base = SHIPS[type] || SHIPS.dinghy;
+  const d = { ...base };
+  const mods = {};
+  for (const u of upgrades || []) SHIP_UPGRADES[u]?.apply(mods);
+  d.speed *= mods.speedMul || 1;
+  d.cannons = (d.cannons || 0) + (mods.extraCannons || 0);
+  if (mods.seastone) d.seastone = true;
+  if (mods.oars) d.oars = true;
+  d.maxHull = Math.round(base.hull * (mods.hullMul || 1));
+  return d;
+}
+
+/** "Small ship · 11.5 m · 1 mast": what kind of vessel a class is. */
+export function shipClassLine(d) {
+  const size = d.length < 5 ? 'Boat' : d.length < 14 ? 'Small ship' : d.length < 22 ? 'Ship' : d.length < 30 ? 'Big ship' : 'Great ship';
+  const rig = d.masts ? `${d.masts} mast${d.masts > 1 ? 's' : ''}` : 'oars';
+  return `${size} · ${d.length} m · ${rig}`;
+}

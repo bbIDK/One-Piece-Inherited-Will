@@ -1906,10 +1906,10 @@ const quests = [
       const c = g.state?.char;
       if (!c) return;
       const isl = islandRec(g, 'impel_down');
-      const moor = isl?.docks?.[0]?.moor;
       const p = g.player;
       const near = (g.ships || []).some((s) => s.owner === 'player' && !s.sunk && p && g.world.distance(s.x, s.y, p.x, p.y) < 80);
-      if (moor && !near && g.world === g.surface) { g.giveShip('marine_warship', moor.x, moor.y, 'Stolen Battleship'); g.log('You steal a Marine battleship from the prison docks, just like the escapees in the stories.', '#a5d6a7'); }
+      // (no ship of yours here: the shipwright on the prison's pier can bring one round — see game/shipwrights.js)
+      if (isl?.docks?.length && !near && g.world === g.surface) g.log('No ship of yours is waiting at the prison — but the shipwright on the Main Gate pier can have one of yours brought round.', '#a5d6a7');
       if (!g.quests.state(WAR)) setTimeout(() => { if (g.state?.char && !g.quests.state(WAR)) g.quests.start(WAR); }, 1500);
     } },
 

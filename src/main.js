@@ -50,6 +50,9 @@ import { installSea } from './game/sea.js';
 import { installDecks, hatchSpot, helmSpot, placeOnDeck } from './game/decks.js';
 import { deckToWorld, shipDims } from './world/hull.js';
 import { installTraffic } from './game/traffic.js';
+import { installFleet, launchShip } from './game/fleet.js';
+import { shipwrightBuilder } from './game/shipwrights.js';
+import { openShipwright } from './ui/shipwrightPanel.js';
 import { installWanted } from './game/wanted.js';
 import { installLoot } from './game/loot.js';
 import { installContainers } from './game/containers.js';
@@ -227,10 +230,13 @@ async function start() {
   new Services(game);
   game.interactions = new Interactions(game);
   game.spawner.addBuilder(npcBuilder);
+  // a shipwright on every pier (see game/shipwrights.js)
+  game.spawner.addBuilder(shipwrightBuilder);
   installMap(game);
   installSea(game);
   installDecks(game);
   installTraffic(game);
+  installFleet(game);
   installWanted(game);
   installLoot(game);
   installContainers(game);
@@ -410,7 +416,7 @@ async function start() {
       return game.player;
     },
     prof: { PROF, reset: profReset },
-    debug: { npcDef, allNpcDefs, VIEWS, builders: PROP_BUILDERS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld,
+    debug: { npcDef, allNpcDefs, VIEWS, builders: PROP_BUILDERS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, launchShip, openShipwright, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld,
       // stand in one of a ship's rooms ('cabin', 'captain', 'forecastle', 'hold'), f of the way along it
       inRoom: (s, kind, f = 0.5, v = 0) => {
         const r = shipDims(s.def).rooms.find((x) => x.kind === kind);

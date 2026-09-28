@@ -10,6 +10,7 @@ import { addItem, earn, count } from './inventory.js';
 import { npcDef } from './npcs.js';
 import { persist } from './lineage.js';
 import { ITEMS } from '../data/items.js';
+import { ownsShip } from './fleet.js';
 
 /** Does the character carry (or wield) a weapon? */
 export function hasWeapon(c) {
@@ -91,7 +92,8 @@ export class Quests {
       case 'item': return count(c, g.item) >= (g.n || 1);
       case 'quest': return !!c.quests[g.quest]?.done || !!(g.alt && g.alt(c, game));
       case 'weapon': return hasWeapon(c);
-      case 'ship': return game.ships.some((sh) => sh.owner === 'player' && !sh.sunk && (!g.grandLine || sh.def.grandLine) && (!g.cannons || (sh.def.cannons || 0) >= g.cannons));
+      // (afloat or laid up in the yards: see fleet.js)
+      case 'ship': return ownsShip(game, (d) => (!g.grandLine || d.grandLine) && (!g.cannons || (d.cannons || 0) >= g.cannons));
       case 'crew': return (game.crew?.count?.() || 0) >= (g.n || 1);
       case 'faction': return c.faction === g.faction || (g.faction === 'pirate' && !!c.crewName);
       case 'bounty': return (c.bounty || 0) >= (g.n || 1);

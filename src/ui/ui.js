@@ -589,7 +589,8 @@ export class UI {
       inter = { label: `${free ? verb[0].toUpperCase() + verb.slice(1) : 'Hold to ' + verb} the ${it.name}` };
       pKey = free ? 'Right-click' : 'RMB';
     }
-    const pk = inter ? pKey + inter.label : '';
+    // (hidden while a conversation or a menu is open: it comes back when they close)
+    const pk = inter ? pKey + inter.label + (this.blocksInput() ? '|blocked' : '') : '';
     if (this.cache.prompt !== pk) {
       this.cache.prompt = pk;
       E.prompt.classList.toggle('hidden', !inter || this.blocksInput());
@@ -638,8 +639,10 @@ export class UI {
     if (s) {
       // (a rowboat: no sails and no wind to speak of, just how you're pulling)
       const oars = s.def.oarsOnly ? (s.rowL < 0 || s.rowR < 0 ? 'backing water' : s.rowL && s.rowR ? 'pulling ahead' : s.rowL || s.rowR ? 'pulling one oar' : 'shipped') : null;
+      // (a ship of yours can't break: her hull always reads sound, see SHIPS_UNBREAKABLE)
+      const hull = s.unbreakable ? 'Hull sound · can\'t break' : `Hull ${Math.ceil(s.hull)}/${s.maxHull}`;
       const html = `<div class="row"><b>${s.name}</b><span>${s.def.name}</span></div>
-        <div class="bar hull"><i style="width:${100 * s.hull / s.maxHull}%"></i><span>Hull ${Math.ceil(s.hull)}/${s.maxHull}</span></div>
+        <div class="bar hull"><i style="width:${s.unbreakable ? 100 : 100 * s.hull / s.maxHull}%"></i><span>${hull}</span></div>
         ${oars ? `<div class="row"><span>Oars: ${oars}</span><span>W/S row, A/D turn</span></div>` : `<div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>`}
         <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span>${oars ? '' : `<span>Wind <span class="wind" style="transform:rotate(${env.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? 'none (Calm Belt!)' : Math.round(env.windStrength * 100) + '%'}</span>`}</div>
         ${s.def.cannons ? `<div class="row"><span>Cannonballs ${s.shot}/${s.shotCap}</span><span>${s.shot <= 0 ? 'none left!' : s.cannonCd > 0 ? 'reloading…' : 'ready'}</span></div>` : ''}`;

@@ -5,13 +5,13 @@
 //
 // Come alongside and board, swim up and climb aboard, or jump across from your
 // own deck, and you're raiding her: the crew fights for their ship. Beat them
-// and the hold is yours to plunder and the helm yours to take — a stolen ship
-// joins your fleet. Raiding or stealing from anyone but pirates is piracy, and
-// the bounty that comes with it grows the way One Piece bounties do.
+// and the hold is yours to plunder (the ship herself isn't: new ships come
+// only from a harbour's shipwright, see shipwrights.js). Raiding anyone but
+// pirates is piracy, and the bounty that comes with it grows the way One
+// Piece bounties do.
 import { makeNPC, ARCHETYPES } from './npcs.js';
 import { crime } from './reputation.js';
 import { earn, addItem } from './inventory.js';
-import { persist } from './lineage.js';
 import { board } from './interact.js';
 import { regionAt, REGION, isGrandLine, isCalmBelt, isBlue } from '../world/constants.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
@@ -387,7 +387,7 @@ function startRaid(game, T, s) {
     else if (tr.kind === 'fishing') crime(game, 250000, 'raided a fishing boat', { rep: 8 });
   }
   const who = tr.kind === 'marine' ? 'the Marines' : tr.kind === 'pirate' ? 'the pirates' : 'the crew';
-  game.ui.banner('BOARDED!', s.name, `The helmsman is coming for you. Beat ${who} — then the hold and the helm are yours.`, 3);
+  game.ui.banner('BOARDED!', s.name, `The helmsman is coming for you. Beat ${who} — then the hold is yours.`, 3);
   if (game.audio && game.audio.theme !== 'battle') { tr.prevTheme = game.audio.theme; game.audio.music('battle'); }
   // any Marine ship in sight joins in
   for (const o of T.ships) if (o !== s && o.traffic?.kind === 'marine' && game.world.distance(o.x, o.y, s.x, s.y) < 80) o.provoked = true;
@@ -399,7 +399,7 @@ function checkCleared(game, s) {
   if (standing.length) return;
   tr.cleared = true;
   if (game.audio?.theme === 'battle') game.audio.music(tr.prevTheme || 'sea');
-  game.ui.toast('THE SHIP IS YOURS', `${s.name}: plunder her hold (down the hatch amidships — the chest at the foot of the ladder), or take the helm to sail her away.`, '#ffd54f');
+  game.ui.toast('THE DECK IS YOURS', `${s.name}: plunder her hold (down the hatch amidships — the chest at the foot of the ladder).`, '#ffd54f');
   game.log(`The crew of the ${s.name} is beaten!`, '#ffe082');
 }
 
@@ -462,30 +462,6 @@ function plunder(game, s) {
   if (tr.kind !== 'pirate' && !tr.plunderCrime) { tr.plunderCrime = true; crime(game, 300000, 'plundered a ship\'s hold', { rep: 3, quiet: true }); }
 }
 
-/** Take the helm of a beaten ship: she's yours now. */
-function claim(game, T, s) {
-  const c = game.state?.char, p = game.player, tr = s.traffic;
-  const lvl = tr.level || 5;
-  if (tr.kind === 'marine') crime(game, 3000000 * (1 + lvl / 40), `stole the ${s.name}`, { rep: 6 });
-  else if (tr.kind !== 'pirate') crime(game, 1200000, `stole the ${s.name}`, { rep: 8 });
-  // the beaten crew are put over the side in a boat
-  for (const a of tr.crew || []) a.alive = false;
-  s.owner = 'player'; s.faction = 'player';
-  s.ai = null; s.traffic = null; s.provoked = false;
-  s.showBar = false; s.label = null; s.expire = undefined;
-  s.cannonsOverride = undefined;
-  s.jr = c?.jr || null;
-  s.uid = `s${Date.now().toString(36)}x`;
-  s.hull = Math.max(s.hull, Math.round(s.maxHull * 0.5));
-  if (tr.kind === 'marine') s.name = `Stolen ${s.name.replace(/^Marine /, '')}`;
-  T.ships = T.ships.filter((x) => x !== s);
-  if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
-  board(game, p, s);
-  game.ui.toast('SHIP TAKEN', `The ${s.name} sails under your command now.`, '#ffd54f');
-  game.audio?.sfx('reveal');
-  persist(game);
-}
-
 // ------------------------------------------------------------ E prompts
 
 function footInteraction(game, T, p) {
@@ -506,8 +482,7 @@ function footInteraction(game, T, p) {
     // the plunder's in the treasure chest down in her hold (a small boat's, under the thwarts)
     const hs = hatchSpot(s), dh = deckDist(game, p, s, hs);
     if (!tr.plundered && (hs.room ? room === hs.room : !room) && dh < 1.3) return { d: dh, label: `Plunder the hold of the ${s.name}`, run: () => plunder(game, s) };
-    const d = deckDist(game, p, s, helmSpot(s));
-    if (!room && d < (s.def.oarsOnly ? 0.9 : 1.4)) return { d, label: `${s.def.oarsOnly ? 'Take the oars' : 'Take the helm'} — steal the ${s.name}`, run: () => claim(game, T, s) };
+    // (her helm stays hers: ships are bought from a harbour's shipwright, not taken)
     return null;
   }
   // (in the water beside a hull there's no prompt: jump against her side to climb aboard)

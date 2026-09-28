@@ -222,9 +222,9 @@ export class LivesSystem {
     if (p.onShip && p.ship) { p.ship.captain = null; p.onShip = false; }
     p.mode = 'foot';
     p.x = r.x; p.y = r.y;
-    // make sure the player has some way to sail again
-    const ships = g.ships.filter((s) => s.owner === 'player' && !s.sunk);
-    if (!ships.length) {
+    // make sure the player has some way to sail again (a ship laid up in the
+    // yards counts: any pier's shipwright can bring her round)
+    if (!(c.fleet || []).length && !g.ships.some((s) => s.owner === 'player' && !s.sunk)) {
       const isl = g.world.nearestIsland(r.x, r.y, 200);
       const dock = isl && isl.docks[0];
       if (dock) {

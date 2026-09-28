@@ -647,7 +647,33 @@ function buildDock(world, from, dir, len, rec, dd) {
   const land = at(-Q - 2, 0);
   const tip = at(lastA, headHalf);
   placeObject(world, { kind: 'mooring', x: tip.x + 0.5, y: tip.y + 0.5, block: false });
-  return { x: end.x, y: end.y, dirX: vx, dirY: vy, moor, land: { x: land.x + 0.5, y: land.y + 0.5 }, end: { x: end.x, y: end.y }, half, headHalf, len: lastA + 1 };
+  const stand = shipwrightStand(world, at, { lastA, half, headHalf, qh, vx, vy, px, py });
+  return { x: end.x, y: end.y, dirX: vx, dirY: vy, moor, land: { x: land.x + 0.5, y: land.y + 0.5 }, end: { x: end.x, y: end.y }, half, headHalf, len: lastA + 1, stand };
+}
+
+/**
+ * Where the harbour's shipwright stands (see game/shipwrights.js): on the
+ * pier head's shoulder, a step off the walkway, on the side away from where
+ * the boats tie up (the + side, whenever there's open water there: see
+ * Ship.moorAlongside), facing up the pier. No head to stand on: beside the
+ * walkway near the end, or on the quay. { x, y, face } (or null).
+ */
+function shipwrightStand(world, at, { lastA, half, headHalf, qh, vx, vy, px, py }) {
+  let open = true;
+  for (let a = lastA - 2; a <= lastA; a++) for (let b = headHalf + 1; b <= headHalf + 3; b++) { const t = at(a, b); if (!world.sailable(t.x + 0.5, t.y + 0.5)) open = false; }
+  const far = open ? -1 : 1;
+  const cands = [];
+  if (headHalf > half) for (const sg of [far, -far]) for (const a of [lastA - 1, lastA - 2]) cands.push([a, sg * (half + 1), 'pier']);
+  for (const sg of [far, -far]) for (const a of [lastA - 1, lastA - 2, lastA - 3]) cands.push([a, sg * half, 'pier']);
+  for (const sg of [far, -far]) cands.push([-2, sg * qh, 'quay']);
+  for (const [a, b, on] of cands) {
+    const t = at(a, b), x = t.x + 0.5, y = t.y + 0.5;
+    if (on === 'pier' ? !world.isDock(x, y) : !world.isQuay(x, y)) continue;
+    if (!world.walkable(x, y) || world.isLiquid(x, y) || world.isBlocked(x, y) || world.hitsProp(x, y, 0.45)) continue;
+    const sb = Math.sign(b);
+    return { x, y, face: Math.atan2(-vy - py * sb * 0.6, -vx - px * sb * 0.6) };
+  }
+  return null;
 }
 
 /**

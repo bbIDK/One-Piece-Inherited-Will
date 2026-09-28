@@ -6,6 +6,7 @@ import { board } from './interact.js';
 import { lifeLostScreen, lineageEndScreen, legacyShopScreen } from '../ui/screens.js';
 import { SEA_IDS, REGION_INFO, regionAt } from '../world/constants.js';
 import { RACES } from '../data/races.js';
+import { recordShip } from './fleet.js';
 
 let shipCounter = 0;
 
@@ -24,6 +25,8 @@ export function installSession(game, { onReturnToTitle }) {
     type = ALIAS[type] || type;
     const s = game.addShip({ type, x, y, heading: extra.heading ?? Math.PI / 2, owner: 'player', faction: 'player', name: name || undefined, jr: game.state?.char?.jr, upgrades: extra.upgrades || [], hull: extra.hull, coated: extra.coated, shot: extra.shot });
     s.uid = extra.uid || `s${Date.now().toString(36)}${shipCounter++}`;
+    // (every ship of yours is in your fleet: see fleet.js)
+    recordShip(game.state?.char, s);
     const dock = extra.heading === undefined ? dockNear(game.world, x, y) : null;
     if (s.def.big && extra.heading === undefined) {
       // a big ship lies alongside the pier head, bow out to sea (or out in the roads if she won't fit)

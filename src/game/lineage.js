@@ -14,6 +14,7 @@ import { baseAttrs, ATTR_KEYS } from './stats.js';
 import { saveChar, saveLegacy, clearChar } from './save.js';
 import { regionAt, SEA_IDS } from '../world/constants.js';
 import { findShore } from './interact.js';
+import { upgradeFleet, recordShip, liveShips } from './fleet.js';
 
 // --------------------------------------------------------------- birth traits
 export const TRAITS = {
@@ -141,6 +142,7 @@ export function createCharacter(legacy, birth, choices) {
     getUpCharges: 1,
     inventory, equipped,
     ships: [],
+    fleet: [], // every ship you own (see fleet.js); `ships` is where those afloat lie
     crew: [],
     discovered: [],
     logPose: { has: false, target: null, last: null, progress: 0, needles: 1 },
@@ -245,6 +247,8 @@ export function upgradeChar(c) {
   c.legends = c.legends || [];
   if (c.crewName === undefined) c.crewName = c.faction === 'pirate' && c.jr ? `${c.name.split(' ')[0]} Pirates` : null;
   if (!c.crewName) c.jr = null;
+  // the ships you had are the ships you own
+  upgradeFleet(c);
   // attribute points from the old breakthrough system are spent automatically
   if (c.unspent > 0) {
     const keys = ['str', 'agi', 'end', 'vit', 'wil'];
@@ -326,9 +330,12 @@ export function snapshot(game) {
   c.world.day = game.env.day;
   c.world.clock = game.env.clock;
   c.pos = { x: p.x, y: p.y, zone: game.world.id, mode: p.mode };
-  c.ships = game.ships.filter((s) => s.owner === 'player' && !s.sunk).map((s) => ({
+  // where your ships lie (those waiting on the surface while you're in a zone too)
+  const afloat = liveShips(game);
+  c.ships = afloat.map((s) => ({
     uid: s.uid, type: s.type, name: s.name, upgrades: s.upgrades, hull: s.hull, x: s.x, y: s.y, heading: s.heading, zone: s.zoneId || 'surface', coated: s.coated, shot: s.shot,
   }));
+  for (const s of afloat) recordShip(c, s);
   c.activeShip = p.ship && !p.ship.sunk ? p.ship.uid : c.activeShip;
   c.fogSurface = game.surface ? encodeFog(game.surface.fog) : c.fogSurface;
   c.hintsShown = [...game.hintsShown];

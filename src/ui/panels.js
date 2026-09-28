@@ -12,7 +12,7 @@ import { ATTRS, ATTR_KEYS, ATTR_CAP } from '../game/stats.js';
 import { getAbility } from '../game/abilities.js';
 import { count, equip, useItem, addItem, removeItem, pay, earn, isEquipped, unequipSlot, slotKind, ACC_SLOTS } from '../game/inventory.js';
 import { stockFor, priceOf } from '../data/shops.js';
-import { SHIPS, SHIP_UPGRADES } from '../data/ships.js';
+import { SHIP_UPGRADES } from '../data/ships.js';
 import { TRAINERS } from '../data/trainers.js';
 import { formatBerries, clamp } from '../core/math.js';
 import { helpContent, wantedPoster, portrait } from './screens.js';
@@ -22,6 +22,7 @@ import { itemImg, skillImg, uiImg } from './icon.js';
 import { openJollyRoger } from './crewPanel.js';
 import { HOTBAR_SIZE, HOTBAR_KEYS } from '../game/hotbar.js';
 import { RENDER_DIST, renderChunks } from '../game/save.js';
+import { openShipwright } from './shipwrightPanel.js';
 
 const berriesLine = (c) => h('div.berries', uiImg('berries', 20), ` ${formatBerries(c.berries)}`);
 const HOTBAR = HOTBAR_SIZE;
@@ -645,35 +646,35 @@ export function openShipyard(game, building, island, dock) {
   const S = game.services;
   const c = game.state.char;
   const body = h('div');
-  game.ui.openPanel(body, { wide: true, id: 'shipyard' });
+  const entry = game.ui.openPanel(body, { wide: true, id: 'shipyard' });
+  if (!entry) return;
   const myShips = () => game.ships.filter((s) => s.owner === 'player' && !s.sunk);
+  // (new ships are sold, and launched, by the shipwright on the pier: see game/shipwrights.js)
+  const p = game.player;
+  const pier = (island?.docks || []).slice().sort((a, b) => game.world.distance(a.end.x, a.end.y, p.x, p.y) - game.world.distance(b.end.x, b.end.y, p.x, p.y))[0] || dock;
   const render = () => {
     clear(body);
     add(body, h('h2', building.name || 'Shipyard'), berriesLine(c));
-    add(body, h('h3', 'Buy a ship'));
-    const list = h('div.list');
-    for (const type of S.shipsFor(island)) {
-      const d = SHIPS[type];
-      const price = S.shipPrice(type, island);
-      list.appendChild(h('div.row-item', uiImg('ship', 30),
-        h('div.grow', h('b', d.name), h('div.sub', `${d.desc} · hull ${d.hull} · speed ${d.speed} · cannons ${d.cannons}${d.grandLine ? '' : ' · NOT fit for the Grand Line'}`)),
-        h('span.price', formatBerries(price)),
-        h('button.btn.gold', { disabled: c.berries < price, on: { click: async () => { const n = await game.ui.ask({ title: `Buy a ${d.name}`, text: `Name your new ship (${formatBerries(price)}).`, input: d.name, ok: 'Buy' }); if (n === null) return; S.buyShip(type, island, dock, (n || d.name).slice(0, 24)); game.emit('shipBought', type); render(); } } }, 'Buy')));
-    }
-    body.appendChild(list);
+    // (up on the surface: a zone's yards don't sell ships)
+    const sells = !!pier?.end && game.world === game.surface;
+    add(body, h('h3', 'Buy a ship'),
+      h('p', sells ? 'New ships are sold by the shipwright on the pier, who launches them there, ready to sail — and brings round any ship you own.' : 'New ships are sold by the shipwrights on the piers of the Blue Sea.'),
+      sells ? h('button.btn.gold', { on: { click: () => { game.ui.closePanel(entry); openShipwright(game, { dock: pier, island, tab: 'buy' }); } } }, uiImg('ship', 20), 'Browse the ships for sale') : null);
     const ships = myShips();
     if (ships.length) {
       add(body, h('h3', 'Your ships'));
       for (const s of ships) {
         const near = game.world.distance(s.x, s.y, game.player.x, game.player.y) < 60;
         const rp = S.repairPrice(s, island);
-        const card = h('div.card', h('h4', `${s.name} — ${s.def.name}`), h('div', `Hull ${Math.ceil(s.hull)}/${s.maxHull}${s.shotCap ? ` · cannonballs ${s.shot}/${s.shotCap}` : ''} · upgrades: ${s.upgrades.map((u) => SHIP_UPGRADES[u]?.name).join(', ') || 'none'}${s.coated ? ' · coated' : ''}`));
+        // (a ship that can't break never needs mending: see SHIPS_UNBREAKABLE)
+        const hull = s.unbreakable ? 'Hull sound' : `Hull ${Math.ceil(s.hull)}/${s.maxHull}`;
+        const card = h('div.card', h('h4', `${s.name} — ${s.def.name}`), h('div', `${hull}${s.shotCap ? ` · cannonballs ${s.shot}/${s.shotCap}` : ''} · upgrades: ${s.upgrades.map((u) => SHIP_UPGRADES[u]?.name).join(', ') || 'none'}${s.coated ? ' · coated' : ''}`));
         if (!near) card.appendChild(h('p.muted', 'Bring this ship to the harbour to work on it.'));
         else {
-          card.appendChild(h('button.btn.green', { disabled: s.hull >= s.maxHull || c.berries < rp, on: { click: () => { S.repair(s, island); render(); } } }, `Repair — ${formatBerries(rp)}`));
+          if (!s.unbreakable) card.appendChild(h('button.btn.green', { style: { marginRight: '6px' }, disabled: s.hull >= s.maxHull || c.berries < rp, on: { click: () => { S.repair(s, island); render(); } } }, `Repair — ${formatBerries(rp)}`));
           if (s.shotCap) {
             const sp = S.shotPrice(s, island);
-            card.appendChild(h('button.btn', { style: { marginLeft: '6px' }, disabled: s.shot >= s.shotCap || c.berries < sp, on: { click: () => { S.restock(s, island); render(); } } }, s.shot >= s.shotCap ? 'Cannonballs: full' : `Cannonballs (${s.shotCap - s.shot}) — ${formatBerries(sp)}`));
+            card.appendChild(h('button.btn', { disabled: s.shot >= s.shotCap || c.berries < sp, on: { click: () => { S.restock(s, island); render(); } } }, s.shot >= s.shotCap ? 'Cannonballs: full' : `Cannonballs (${s.shotCap - s.shot}) — ${formatBerries(sp)}`));
           }
           const ups = h('div.list', { style: { marginTop: '6px' } });
           for (const [id, u] of Object.entries(SHIP_UPGRADES)) {
