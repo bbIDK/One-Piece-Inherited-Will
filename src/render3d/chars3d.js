@@ -38,6 +38,24 @@ function lodFor(dist, cur) {
   return dist < near ? 0 : dist < mid ? 2 : 1;
 }
 
+/** Standing still with nothing to do (no clip, fight, errand, seat, weapon or food in hand). */
+function idleStill(a, pose, P, o) {
+  return pose.state === 'idle' && !pose.anim && !pose.moving && !pose.combat && !pose.activity && !pose.station && pose.block === undefined
+    && !pose.swimming && !pose.air && !pose.charge && !pose.launch && !pose.getUp && P.wF == null && P.wB == null
+    && !a.held && !a.eating && o.seatH === null;
+}
+/**
+ * How someone stands about: arms folded ('cross'), hands on the hips
+ * ('hips') or just at rest (null) — `look.idle`, or by the look's seed.
+ */
+export function attitudeOf(look) {
+  if (look.idle !== undefined) return look.idle === 'rest' ? null : look.idle;
+  if ((look.arms || 1) > 1.3 || look.race === 'mink' && look.muzzle) return null;
+  const i = (Math.imul((look.seed || 0) + 17, 2654435761) >>> 0) % 100;
+  const [c, h] = look.fem ? [22, 52] : [34, 54];
+  return i < c ? 'cross' : i < h ? 'hips' : null;
+}
+
 class ActorView {
   constructor(a, ctx, opts = {}) {
     this.a = a;
@@ -137,6 +155,12 @@ class ActorView {
         o.spread = 0.32 * fall; o.legSpread = 0.06 * fall;
         o.lift = 0; o.armed = false;
       }
+      // standing about, folk fold their arms or put their hands on their hips
+      // (each their own way; eased in, and dropped the moment they move)
+      const att = !a.isPlayer && !knocked && idleStill(a, pose, P, o) ? attitudeOf(look) : null;
+      if (att) this.att = att;
+      this.attK = (this.attK || 0) + ((att ? 1 : 0) - (this.attK || 0)) * Math.min(1, dtv * (att ? 4 : 9));
+      o.att = this.attK > 0.01 ? this.att : null; o.attK = this.attK;
       // NPCs glance at you when you're close and they aren't busy
       o.lookYaw = this.lookAt(a, dist, pose, cam, s);
       m.pose(PP, o);

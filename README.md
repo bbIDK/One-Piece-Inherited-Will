@@ -235,6 +235,12 @@ rearrange them.
 
 - **No chosen destiny.** Character creation has no goal and no crew. You
   decide what to become.
+- **The One Piece look.** Characters are drawn in the anime-game style of
+  World Seeker: big dark eyes, bold brows, clumped hair, strong builds. The
+  creator sets eyes, an easy-going or stern look, mouth, face, nose, a scar
+  (across or under the eye), hairstyle (Luffy's messy mop to Zoro's crop),
+  build, muscle and clothes, an open kimono among them. People standing
+  about fold their arms or put their hands on their hips.
 - **Reputation** (from Villain to Hero of the Seas):
   - Crimes lower it: stealing from shops, breaking into houses, picking
     pockets, beating townsfolk, sinking merchants. At **Outlaw (-25)** the
@@ -355,6 +361,7 @@ node tools/shot.mjs townwatch [--island=lvneel]   # a town's people over a minut
 node tools/shot.mjs towntour --islands=a,b,c      # each town photographed from the air
 node tools/shot.mjs viewdist [--rd=<chunks>]      # the render distance: a big town from its square, 130 m and 250 m off, the air and the sea
 node tools/shot.mjs c3hairclose [--styles=a,b] [--fem=1] [--hat=straw]   # hairstyles close up: front, side and back, four at a time
+node tools/shot.mjs c3crew [--only=crew,town,faces]   # the Straw Hats lined up like the World Seeker key art, random townsfolk, face close-ups
 node tools/shot.mjs probeshots --js=<file>        # several camera views in one run (the file returns [{ x, y, yaw, pitch }])
 node tools/shot.mjs story [--path=pirate|marine|hunter]   # plays the story's start, then fast-forwards through all three parts
 node tools/shot.mjs storydrift | storyswitch               # the Grand Line's currents; the story following a change of road

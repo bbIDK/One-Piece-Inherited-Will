@@ -20,6 +20,24 @@ const toXY = (h, fb) => (!h ? fb : Array.isArray(h) ? h : [Math.cos(h.a) * h.r, 
 const _m = new THREE.Matrix4();
 const _a = V(), _b = V(), _c = V(), _d = V(), _u = V(), _p = V(), _t = V();
 const _qa = Q(), _qb = Q(), _qc = Q();
+const _att = V(), _attP = V();
+
+/**
+ * An idle attitude's hand target (model space) and elbow pole for arm k:
+ * 'cross' — arms folded, the right forearm over the left, each hand at the
+ * other arm; 'hips' — hands on the hips, elbows out.
+ */
+function attitude(d, k, side, kind, hip, T, P) {
+  const Bk = d.Bk, BkD = 1 + (Bk - 1) * 0.85;
+  if (kind === 'hips') {
+    T.set(0.005, 0.1 * d.chestLen, side * ((d.fem ? 0.112 : 0.13) * Bk + 0.045)).add(hip);
+    P.set(-0.45, -0.15, side);
+  } else {
+    const top = k === 0;
+    T.set((top ? 0.2 : 0.165) * BkD, d.shY - (top ? 0.17 : 0.215), -side * (top ? 0.1 : 0.115) * Bk).add(hip);
+    P.set(0.3, -1, side * 0.6);
+  }
+}
 
 /** Quaternion whose local -Y points along `dir`, +X toward `ref` (orthogonalised). */
 function aimNegY(q, dir, ref) {
@@ -136,6 +154,7 @@ export class Rig {
         T.set(hx * d.kA, -hy * d.kA, lat);
         if (tiltA) T.applyAxisAngle(X, tiltA * side);
         T.applyQuaternion(this.qLean).add(S);
+        if (o.att && o.attK > 0) { attitude(d, k, side, o.att, hip, _att, _attP); T.lerp(_att, o.attK); }
       }
       // elbow pole: the 2D bend side in the swing plane, flared outward
       const e = k === 0 ? (P.eF ?? 1) : (P.eB ?? 1);
@@ -143,6 +162,7 @@ export class Rig {
       const lxy = Math.hypot(_t.x, _t.y) || 1;
       const sg = e < 0 ? -1 : 1;
       this._pole.set(_t.y / lxy * sg, -_t.x / lxy * sg, side * 0.42);
+      if (o.att && o.attK > 0 && !reach && !(k === 1 && broom)) this._pole.lerp(_attP, o.attK);
       ik(S, T, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P.stretch || !!reach, J, E);
       const U = k === 0 ? B.uarmR : B.uarmL, F = k === 0 ? B.farmR : B.farmL, Hd = k === 0 ? B.handR : B.handL;
       this.pos[U].copy(S); aimNegY(this.quat[U], _t.subVectors(J, S), this._pole);

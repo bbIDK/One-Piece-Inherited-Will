@@ -480,13 +480,13 @@ export const scenarios = {
       // (no HUD over the comparison)
       await page.evaluate(() => { const u = document.getElementById('ui'); if (u) u.style.display = 'none'; });
       const CREW = [
-        ['Sanji', { fem: false, eyeShape: 'bold', hair: 'sidefringe', hairColor: '#f2d16b', skin: '#f6d5b8', topStyle: 'jacket', top: '#1c1c22', top2: '#f5f5f5', tie: '#1c1c22', bottomStyle: 'slim', bottom: '#1c1c22', shoeStyle: 'shoes', shoes: '#111111', muscle: 0.4 }, 5.6, -2.3],
-        ['Zoro', { fem: false, eyeShape: 'sharp', frown: true, mouth: 'flat', openShirt: true, hair: 'crop', hairColor: '#3fae4a', skin: '#e8b98f', topStyle: 'kimono', top: '#2f6b3a', waist: 'sash', waistCol: '#8e1c2a', bottomStyle: 'hakama', bottom: '#27432b', shoeStyle: 'boots', muscle: 0.9 }, 5.2, -1.2],
-        ['Luffy', { fem: false, eyeShape: 'bold', hat: 'straw', hair: 'messy', hairColor: '#141414', skin: '#f3c9a0', topStyle: 'vest', top: '#d12b2b', bottomStyle: 'shorts', bottom: '#2f5fd0', waist: 'sash', waistCol: '#f2c21b', shoeStyle: 'sandals', muscle: 0.75, scarCheek: true, grin: true }, 4.4, 0],
-        ['Robin', { fem: true, eyeShape: 'cool', hair: 'long', hairColor: '#171320', skin: '#dcae8a', topStyle: 'crop', top: '#3b3570', bottomStyle: 'longskirt', bottom: '#d1545a', shoeStyle: 'sandals' }, 5.2, 1.2],
-        ['Nami', { fem: true, eyeShape: 'bright', hair: 'wavy', hairColor: '#e8742a', skin: '#f6cfae', topStyle: 'bikini', top: '#3c9a52', bottomStyle: 'slim', bottom: '#2b4d8a', shoeStyle: 'sandals' }, 5.0, 2.3],
-        ['Franky', { fem: false, eyeShape: 'sharp', hair: 'pompadour', hairColor: '#35a0e8', skin: '#e2a67a', topStyle: 'open', top: '#c9362f', bottomStyle: 'shorts', bottom: '#2a5bb8', muscle: 1.2, bulk: 1.35 }, 6.6, 0.3],
-        ['Usopp', { fem: false, eyeShape: 'bold', noseShape: 'long', nose: 'long', hair: 'curly', hairColor: '#1b1b1b', skin: '#a8714c', hat: 'bandana', hatColor: '#ef6c00', topStyle: 'bare', bottomStyle: 'baggy', bottom: '#e8c75b', waist: 'belt', shoeStyle: 'boots', muscle: 0.45 }, 6.0, 3.3],
+        ['Sanji', { idle: 'rest', fem: false, eyeShape: 'bold', hair: 'sidefringe', hairColor: '#f2d16b', skin: '#f6d5b8', topStyle: 'jacket', top: '#1c1c22', top2: '#f5f5f5', tie: '#1c1c22', bottomStyle: 'slim', bottom: '#1c1c22', shoeStyle: 'shoes', shoes: '#111111', muscle: 0.4 }, 3.8, -1.55],
+        ['Zoro', { idle: 'cross', fem: false, eyeShape: 'sharp', frown: true, mouth: 'flat', openShirt: true, hair: 'crop', hairColor: '#3fae4a', skin: '#e8b98f', topStyle: 'kimono', top: '#2f6b3a', waist: 'sash', waistCol: '#8e1c2a', bottomStyle: 'hakama', bottom: '#27432b', shoeStyle: 'boots', muscle: 0.9 }, 3.5, -0.8],
+        ['Luffy', { idle: 'cross', fem: false, eyeShape: 'bold', hat: 'straw', hair: 'messy', hairColor: '#141414', skin: '#f3c9a0', topStyle: 'vest', top: '#d12b2b', bottomStyle: 'shorts', bottom: '#2f5fd0', waist: 'sash', waistCol: '#f2c21b', shoeStyle: 'sandals', muscle: 0.75, scarCheek: true, grin: true }, 2.9, 0],
+        ['Robin', { idle: 'cross', fem: true, eyeShape: 'cool', hair: 'long', hairColor: '#171320', skin: '#dcae8a', topStyle: 'crop', top: '#3b3570', bottomStyle: 'longskirt', bottom: '#d1545a', shoeStyle: 'sandals' }, 3.5, 0.8],
+        ['Nami', { idle: 'hips', fem: true, eyeShape: 'bright', hair: 'wavy', hairColor: '#e8742a', skin: '#f6cfae', topStyle: 'bikini', top: '#3c9a52', bottomStyle: 'slim', bottom: '#2b4d8a', shoeStyle: 'sandals' }, 3.4, 1.55],
+        ['Franky', { idle: 'hips', fem: false, eyeShape: 'sharp', hair: 'pompadour', hairColor: '#35a0e8', skin: '#e2a67a', topStyle: 'open', top: '#c9362f', bottomStyle: 'shorts', bottom: '#2a5bb8', muscle: 1.2, bulk: 1.35 }, 4.4, 0.3],
+        ['Usopp', { idle: 'hips', fem: false, eyeShape: 'bold', noseShape: 'long', nose: 'long', hair: 'curly', hairColor: '#1b1b1b', skin: '#a8714c', hat: 'bandana', hatColor: '#ef6c00', topStyle: 'bare', bottomStyle: 'baggy', bottom: '#e8c75b', waist: 'belt', shoeStyle: 'boots', muscle: 0.45 }, 4.1, 2.25],
       ];
       if (only.includes('crew')) {
         await page.evaluate((crew) => {

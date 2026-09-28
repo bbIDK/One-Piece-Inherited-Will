@@ -27,7 +27,7 @@ export const scenarios = {
       // customise: sharp eyes and a big grin, a mohawk, a wide build, an open shirt
       // (some rows depend on the rolled race, e.g. Minks and Fish-Men have no nose choice)
       const click = async (name) => { const b = page.getByRole('button', { name, exact: true }); if (!(await b.count())) { console.log('no button', name); return; } await b.first().click(); await frames(page, 3); };
-      await click('Male'); await click('Sharp'); await click('Big grin');
+      await click('Male'); await click('Sharp'); await click('Big grin'); await click('Stern'); await click('Under the eye');
       await click('Square'); await click('Strong'); await click('Hooked'); await click('Heavy');
       await snap('identity-male');
       await click('Female'); await click('Cat-eye'); await click('Heart'); await click('Small');
@@ -35,6 +35,8 @@ export const scenarios = {
       await click('Male');
       await click('Hair'); await click('Mohawk');
       await snap('identity-hair');
+      await click('Crop');
+      await snap('identity-crop');
       await click('Body');
       await page.locator('input.build-slider').fill('1');
       await frames(page, 6);

@@ -65197,6 +65197,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var _qa = Q();
   var _qb = Q();
   var _qc = Q();
+  var _att = V();
+  var _attP = V();
+  function attitude(d, k, side, kind, hip, T4, P4) {
+    const Bk = d.Bk, BkD = 1 + (Bk - 1) * 0.85;
+    if (kind === "hips") {
+      T4.set(5e-3, 0.1 * d.chestLen, side * ((d.fem ? 0.112 : 0.13) * Bk + 0.045)).add(hip);
+      P4.set(-0.45, -0.15, side);
+    } else {
+      const top = k === 0;
+      T4.set((top ? 0.2 : 0.165) * BkD, d.shY - (top ? 0.17 : 0.215), -side * (top ? 0.1 : 0.115) * Bk).add(hip);
+      P4.set(0.3, -1, side * 0.6);
+    }
+  }
   function aimNegY(q2, dir, ref) {
     _b.copy(dir).normalize().negate();
     _a.copy(ref).addScaledVector(_b, -ref.dot(_b));
@@ -65324,12 +65337,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           T4.set(hx * d.kA, -hy * d.kA, lat);
           if (tiltA) T4.applyAxisAngle(X, tiltA * side);
           T4.applyQuaternion(this.qLean).add(S3);
+          if (o.att && o.attK > 0) {
+            attitude(d, k, side, o.att, hip, _att, _attP);
+            T4.lerp(_att, o.attK);
+          }
         }
         const e = k === 0 ? P4.eF ?? 1 : P4.eB ?? 1;
         _t.subVectors(T4, S3);
         const lxy = Math.hypot(_t.x, _t.y) || 1;
         const sg = e < 0 ? -1 : 1;
         this._pole.set(_t.y / lxy * sg, -_t.x / lxy * sg, side * 0.42);
+        if (o.att && o.attK > 0 && !reach && !(k === 1 && broom)) this._pole.lerp(_attP, o.attK);
         ik2(S3, T4, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P4.stretch || !!reach, J, E);
         const U3 = k === 0 ? B3.uarmR : B3.uarmL, F4 = k === 0 ? B3.farmR : B3.farmL, Hd = k === 0 ? B3.handR : B3.handL;
         this.pos[U3].copy(S3);
@@ -67291,6 +67309,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const near = cur === 0 ? 10.5 : 7.5, mid = cur === 1 ? 22 : 25.5;
     return dist < near ? 0 : dist < mid ? 2 : 1;
   }
+  function idleStill(a, pose, P4, o) {
+    return pose.state === "idle" && !pose.anim && !pose.moving && !pose.combat && !pose.activity && !pose.station && pose.block === void 0 && !pose.swimming && !pose.air && !pose.charge && !pose.launch && !pose.getUp && P4.wF == null && P4.wB == null && !a.held && !a.eating && o.seatH === null;
+  }
+  function attitudeOf(look) {
+    if (look.idle !== void 0) return look.idle === "rest" ? null : look.idle;
+    if ((look.arms || 1) > 1.3 || look.race === "mink" && look.muzzle) return null;
+    const i = (Math.imul((look.seed || 0) + 17, 2654435761) >>> 0) % 100;
+    const [c, h2] = look.fem ? [22, 52] : [34, 54];
+    return i < c ? "cross" : i < h2 ? "hips" : null;
+  }
   var ActorView = class {
     constructor(a, ctx, opts = {}) {
       this.a = a;
@@ -67388,6 +67416,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           o.lift = 0;
           o.armed = false;
         }
+        const att = !a.isPlayer && !knocked && idleStill(a, pose, P4, o) ? attitudeOf(look) : null;
+        if (att) this.att = att;
+        this.attK = (this.attK || 0) + ((att ? 1 : 0) - (this.attK || 0)) * Math.min(1, dtv * (att ? 4 : 9));
+        o.att = this.attK > 0.01 ? this.att : null;
+        o.attK = this.attK;
         o.lookYaw = this.lookAt(a, dist, pose, cam, s);
         m.pose(PP, o);
         const want = a.facing || 0;
