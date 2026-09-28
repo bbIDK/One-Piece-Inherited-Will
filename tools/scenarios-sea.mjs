@@ -1043,4 +1043,120 @@ export const scenarios = {
       await snap('night');
     },
   },
+  // How fast the sea moves, a frame (1/30 s) at a time: the clock its ripples,
+  // surf and sparkles run on, the rain's drift, and how much of the picture
+  // changes from one frame to the next — in a calm, while a storm comes on, in
+  // the storm and while it clears, some way into a session (--t=seconds: as if
+  // the game had been running that long). The ripples should keep to 1-1.8 s
+  // of their clock a second, and the rain drift with the wind, whatever the
+  // weather does. --shots: pictures a frame apart, calm and as the storm comes on.
+  // (node tools/shot.mjs seaspeed --w=640 --h=360 [--t=1800] [--shots])
+  seaspeed: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate((T) => {
+        window.OP.quickStart('human');
+        const g = window.OP.game, w = g.world, p = g.player, e = g.env;
+        g.settings.autoRes = false; // (the same size of picture every frame, to compare them)
+        // shallow water off Dawn Island (ripples, sun on the sand, surf), from a few metres up
+        const isl = w.islands.find((i) => i.id === 'dawn_island');
+        let spot = null;
+        for (let k = 0; k < 720 && !spot; k++) {
+          const a = k / 720 * Math.PI * 2;
+          for (let r = isl.radius; r < isl.radius * 2.5 && !spot; r += 2) {
+            const x = isl.x + Math.cos(a) * r, y = isl.y + Math.sin(a) * r;
+            if (w.type(x, y) === 0 && g.seaDepth(x, y) > 2.5 && g.seaDepth(x, y) < 5) spot = { x, y, a };
+          }
+        }
+        window.OP.teleport(spot.x, spot.y);
+        window.OP.step(0.5);
+        g.creative.set(true, true); g.creative.fly(); p.alt = 6;
+        g.settings.view = 'first'; g.applySettings();
+        const st = document.createElement('style');
+        st.textContent = '.look-hint,.hint,.banner,.hud-player,.sidebar,.hotbar,.minimap-wrap,.log,.toast{display:none!important}';
+        document.head.appendChild(st);
+        e.clock = 11; e.storm = 0; e.stormTarget = 0; e.fog = 0; e.weatherTimer = 1e9;
+        g.view3d.rig.yaw = spot.a; g.view3d.rig.pitch = -1.0;
+        window.OP.step(1);
+        window.OP.hold = true;
+        e.time = T;
+        // n frames: the ripples' clock (as the shader has it), the rain's drift
+        // (where the wind has carried it) and the mean change of the middle of the picture
+        let last = null, c2 = null;
+        window.seaRec = (n) => {
+          const v = g.view3d, u = v.water.uniforms, cv = v.canvas, W = cv.width >> 1, H = cv.height >> 1;
+          if (!c2) c2 = Object.assign(document.createElement('canvas'), { width: W, height: H });
+          const x2 = c2.getContext('2d', { willReadFrequently: true });
+          let rain = null;
+          v.scene.traverse((o) => { if (o.material?.uniforms?.uLen && o.material.uniforms.uWind) rain = o.material.uniforms; });
+          const out = [];
+          for (let i = 0; i < n; i++) {
+            window.OP.step(1 / 30);
+            // (older builds: the game's clock, scaled by the storm)
+            const ph = u.uRipT ? u.uRipT.value : u.uTime.value * (1 + u.uStorm.value * 0.8);
+            // (older builds: the wind times the game's clock, unwrapped)
+            const drift = !rain ? null : rain.uDrift ? rain.uDrift.value.toArray() : [rain.uWind.value.x * rain.uTime.value, rain.uWind.value.y * rain.uTime.value];
+            const box = rain?.uDrift ? rain.uBox.value : 0, wind = rain ? rain.uWind.value.length() : 0;
+            x2.drawImage(cv, W >> 1, H >> 1, W, H, 0, 0, W, H);
+            const d = x2.getImageData(0, 0, W, H).data;
+            let diff = 0;
+            if (last) {
+              for (let k = 0; k < d.length; k += 4) diff += Math.abs(d[k] - last[k]) + Math.abs(d[k + 1] - last[k + 1]) + Math.abs(d[k + 2] - last[k + 2]);
+              diff /= d.length / 4 * 3;
+            }
+            last = d;
+            out.push({ t: e.time, storm: e.storm, ph, drift, box, wind, diff });
+          }
+          return out;
+        };
+        window.seaRec(1);
+      }, Number(args.t ?? 1800));
+      const rows = [];
+      let prev = null;
+      // (withPrev: from the frame before the setup, for a change that happens at once)
+      const phase = async (name, n, setup, withPrev = false) => {
+        if (setup) await page.evaluate(setup);
+        let r = await page.evaluate((n) => window.seaRec(n), n);
+        const lastRow = r[r.length - 1];
+        if (withPrev && prev) r = [prev, ...r];
+        prev = lastRow;
+        let most = 0, mostRain = 0, rainN = 0, rainV = 0, windV = 0;
+        for (let i = 1; i < r.length; i++) {
+          const dt = r[i].t - r[i - 1].t;
+          most = Math.max(most, (r[i].ph - r[i - 1].ph) / dt);
+          if (r[i].drift && r[i - 1].drift && r[i].wind > 0 && r[i - 1].wind > 0) {
+            // (the drift is kept within the box the drops wrap round in)
+            const dd = [0, 1].map((k) => { const x = r[i].drift[k] - r[i - 1].drift[k], B = r[i].box; return B ? x - Math.round(x / B) * B : x; });
+            const v = Math.hypot(dd[0], dd[1]) / dt;
+            mostRain = Math.max(mostRain, v); rainV += v; windV += r[i].wind; rainN++;
+          }
+        }
+        const a = r[0], b = r[r.length - 1];
+        const row = {
+          phase: name, frames: r.length, storm: `${a.storm.toFixed(2)}→${b.storm.toFixed(2)}`,
+          'ripple s/s': +((b.ph - a.ph) / (b.t - a.t)).toFixed(2), 'ripple max': +most.toFixed(2),
+          'rain m/s': rainN ? +(rainV / rainN).toFixed(1) : '-', 'rain max': rainN ? +mostRain.toFixed(1) : '-', 'wind m/s': rainN ? +(windV / rainN).toFixed(1) : '-',
+          'pixel Δ': +(r.slice(1).reduce((s, x) => s + x.diff, 0) / (r.length - 1)).toFixed(2),
+        };
+        rows.push(row);
+        console.log('seaspeed', JSON.stringify(row));
+      };
+      const pair = async (name) => {
+        if (!args.shots) return;
+        await frames(page, 2); await snap(name + '-a');
+        await page.evaluate(() => window.seaRec(1));
+        await frames(page, 2); await snap(name + '-b');
+      };
+      await phase('calm', 30);
+      await pair('calm');
+      await phase('storm coming on', 60, () => { window.OP.game.env.stormTarget = 1; });
+      await pair('storm-coming');
+      await phase('storm', 30, () => { const e = window.OP.game.env; e.storm = 1; window.seaRec(1); });
+      await phase('clearing', 60, () => { window.OP.game.env.stormTarget = 0; });
+      // (the Grand Line's storms can vanish at once: news.js)
+      await phase('sudden change', 3, () => { window.OP.game.env.storm *= 0.3; }, true);
+      console.table(rows);
+    },
+  },
 };
