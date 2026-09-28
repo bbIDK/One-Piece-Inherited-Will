@@ -1,5 +1,8 @@
 // Ship classes. Speeds in tiles/second at full sail with a following wind
 // (a rowboat has no sail: her speed is what a good pull on the oars gives).
+// Lengths and beams are metres (a tile is a metre): the ships are built on
+// One Piece's scale, a caravel like the Going Merry a deck you can throw a
+// party on, the rowboat still a rowboat.
 
 /**
  * Your own ships (and the Navy escorts sailing with you) can't break: no
@@ -17,63 +20,63 @@ export const SHIPS = {
   },
   sloop: {
     name: 'Sloop', desc: 'A nimble single-masted boat. Enough to reach Loguetown in style.',
-    length: 11.5, beam: 3.8, hull: 150, speed: 9.5, turn: 2.0, masts: 1, sail: 'fore', cannons: 2, crew: 3, cargo: 10,
+    length: 20, beam: 6.4, hull: 150, speed: 9.5, turn: 2.0, masts: 1, sail: 'fore', cannons: 2, crew: 3, cargo: 10,
     price: 14000, stormResist: 0.45, grandLine: true, color: '#8d5b33', big: true,
   },
   caravel: {
     name: 'Caravel', desc: 'A sturdy two-masted caravel with a ram figurehead — the kind of ship a crew grows to love.',
-    length: 12.5, beam: 4, hull: 260, speed: 10.8, turn: 1.7, masts: 2, sail: 'square', cannons: 4, crew: 6, cargo: 18,
+    length: 28, beam: 8.8, hull: 260, speed: 10.8, turn: 1.7, masts: 2, sail: 'square', cannons: 4, crew: 6, cargo: 18,
     price: 48000, stormResist: 0.6, grandLine: true, figurehead: 'ram', color: '#a0703c', big: true,
   },
   brigantine: {
     name: 'Brigantine', desc: 'Two masts, eight guns and a hold for plunder.',
-    length: 14.5, beam: 4.5, hull: 400, speed: 11.8, turn: 1.4, masts: 2, sail: 'square', cannons: 8, crew: 10, cargo: 26,
+    length: 31, beam: 9.6, hull: 400, speed: 11.8, turn: 1.4, masts: 2, sail: 'square', cannons: 8, crew: 10, cargo: 26,
     price: 150000, stormResist: 0.7, grandLine: true, color: '#7b4a2a', big: true,
   },
   frigate: {
     name: 'Frigate', desc: 'A three-masted warship built for the New World.',
-    length: 17, beam: 5.2, hull: 600, speed: 12.4, turn: 1.15, masts: 3, sail: 'square', cannons: 14, crew: 16, cargo: 34,
+    length: 36, beam: 10.8, hull: 600, speed: 12.4, turn: 1.15, masts: 3, sail: 'square', cannons: 14, crew: 16, cargo: 34,
     price: 450000, stormResist: 0.8, grandLine: true, color: '#5d3a1f', big: true,
   },
   galleon: {
     name: 'Galleon', desc: 'A floating fortress. Slow to turn, impossible to sink.',
-    length: 20, beam: 6.2, hull: 850, speed: 11.2, turn: 0.9, masts: 3, sail: 'square', cannons: 20, crew: 24, cargo: 50,
+    length: 40, beam: 12.2, hull: 850, speed: 11.2, turn: 0.9, masts: 3, sail: 'square', cannons: 20, crew: 24, cargo: 50,
     price: 950000, stormResist: 0.85, grandLine: true, color: '#4e342e', big: true,
   },
   adam_brig: {
     name: 'Adam-wood Brig', desc: 'Built from the Treasure Tree Adam by a Water 7 master shipwright. Paddle wheels, a Coup de Burst, and a lion that roars.',
-    length: 16, beam: 5.4, hull: 1000, speed: 14, turn: 1.5, masts: 2, sail: 'square', cannons: 6, crew: 12, cargo: 30,
+    length: 34, beam: 11, hull: 1000, speed: 14, turn: 1.5, masts: 2, sail: 'square', cannons: 6, crew: 12, cargo: 30,
     price: 0, stormResist: 0.95, grandLine: true, figurehead: 'lion', coupDeBurst: true, paddle: true, color: '#b07d48', special: true, big: true,
   },
   marine_warship: {
     name: 'Marine Warship', desc: 'A seastone-bottomed battleship. Sea Kings mistake it for a rock.',
-    length: 20, beam: 6, hull: 800, speed: 12, turn: 1.0, masts: 3, sail: 'marine', cannons: 18, crew: 30, cargo: 30,
+    length: 38, beam: 11.6, hull: 800, speed: 12, turn: 1.0, masts: 3, sail: 'marine', cannons: 18, crew: 30, cargo: 30,
     price: 0, stormResist: 0.85, grandLine: true, seastone: true, figurehead: 'seagull', color: '#f5f6fa', special: true, big: true,
   },
-  // ---- the big ships: One Piece scale, with decks you can hold a feast on
+  // ---- the great ships: decks you can hold a feast on
   carrack: {
     name: 'Carrack', desc: 'A deep-bellied three-master with high castles fore and aft: the workhorse of the Grand Line trade routes, with room for a real crew and a hold you could get lost in.',
-    length: 21, beam: 6.4, hull: 1400, speed: 11.6, turn: 0.95, masts: 3, sail: 'square', cannons: 12, crew: 20, cargo: 90,
+    length: 42, beam: 12.6, hull: 1400, speed: 11.6, turn: 0.95, masts: 3, sail: 'square', cannons: 12, crew: 20, cargo: 90,
     price: 1800000, stormResist: 0.88, grandLine: true, color: '#8a5a32', figurehead: 'mermaid', big: true,
   },
   war_galleon: {
     name: 'War Galleon', desc: 'Two gun decks, a towering stern castle and a deck big enough for a party: the kind of ship a Supernova crosses the Grand Line in.',
-    length: 24, beam: 7, hull: 2600, speed: 12.2, turn: 0.8, masts: 3, sail: 'square', cannons: 32, crew: 45, cargo: 140,
+    length: 46, beam: 13.6, hull: 2600, speed: 12.2, turn: 0.8, masts: 3, sail: 'square', cannons: 32, crew: 45, cargo: 140,
     price: 5200000, stormResist: 0.92, grandLine: true, color: '#5b3a24', figurehead: 'dragon', big: true,
   },
   man_o_war: {
     name: 'Man-o\'-War', desc: 'A three-decked giant bristling with guns, her poop deck higher than most ships\' mastheads. Fleets scatter when she shows her colours.',
-    length: 32, beam: 9, hull: 4200, speed: 12.6, turn: 0.64, masts: 3, sail: 'square', cannons: 56, crew: 90, cargo: 200,
+    length: 52, beam: 15, hull: 4200, speed: 12.6, turn: 0.64, masts: 3, sail: 'square', cannons: 56, crew: 90, cargo: 200,
     price: 12000000, stormResist: 0.95, grandLine: true, color: '#3f2a1c', figurehead: 'lion_gold', big: true,
   },
   great_galleon: {
     name: 'Great Galleon', desc: 'A Yonko\'s flagship: a white whale of a four-master with a whale\'s head for a bow. A whole pirate fleet could live aboard.',
-    length: 44, beam: 12, hull: 7000, speed: 12.8, turn: 0.5, masts: 4, sail: 'square', cannons: 80, crew: 160, cargo: 320,
+    length: 62, beam: 17, hull: 7000, speed: 12.8, turn: 0.5, masts: 4, sail: 'square', cannons: 80, crew: 160, cargo: 320,
     price: 30000000, stormResist: 0.98, grandLine: true, color: '#f1ece0', figurehead: 'whale', big: true,
   },
   marine_battleship: {
     name: 'Marine Battleship', desc: 'A Vice Admiral\'s flagship: a great grey-and-white warship with a seagull at the bow, MARINE across her sails and a seastone keel.',
-    length: 38, beam: 10.5, hull: 6000, speed: 13, turn: 0.55, masts: 3, sail: 'marine', cannons: 64, crew: 140, cargo: 120,
+    length: 56, beam: 15.6, hull: 6000, speed: 13, turn: 0.55, masts: 3, sail: 'marine', cannons: 64, crew: 140, cargo: 120,
     price: 0, stormResist: 0.96, grandLine: true, seastone: true, figurehead: 'seagull', color: '#f5f6fa', special: true, big: true,
   },
 };
@@ -104,9 +107,9 @@ export function shipStats(type, upgrades = []) {
   return d;
 }
 
-/** "Small ship · 11.5 m · 1 mast": what kind of vessel a class is. */
+/** "Small ship · 20 m · 1 mast": what kind of vessel a class is. */
 export function shipClassLine(d) {
-  const size = d.length < 5 ? 'Boat' : d.length < 14 ? 'Small ship' : d.length < 22 ? 'Ship' : d.length < 30 ? 'Big ship' : 'Great ship';
+  const size = d.length < 5 ? 'Boat' : d.length < 24 ? 'Small ship' : d.length < 38 ? 'Ship' : d.length < 50 ? 'Big ship' : 'Great ship';
   const rig = d.masts ? `${d.masts} mast${d.masts > 1 ? 's' : ''}` : 'oars';
   return `${size} · ${d.length} m · ${rig}`;
 }

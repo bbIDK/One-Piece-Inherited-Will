@@ -17,7 +17,7 @@
 // waterline is y = 0.
 import * as THREE from 'three';
 import { Mesher, box, cyl, cone, torus, tube, lathe, C, shade } from './props/kit.js';
-import { hbAt, topAt, xAt, floorAt, skinAt, innerAt, hullProfile, roomHalf } from '../world/hull.js';
+import { hbAt, topAt, xAt, floorAt, skinAt, innerAt, hullProfile, liningAt, liningYs, FURNITURE } from '../world/hull.js';
 
 const TAU = Math.PI * 2;
 
@@ -258,10 +258,10 @@ export function cannon(k, P, s, gs = 1, opts = {}) {
   return { muzzle: zc + zb + s * Lb, ay };
 }
 
-/** A pyramid of cannonballs in a wooden rack (a shot garland). */
-export function shotPile(k, P, r = 0.075) {
+/** A pyramid of cannonballs in a wooden rack (a shot garland). `seg`: the balls' roundness. */
+export function shotPile(k, P, r = 0.075, seg = 8) {
   k.add(box(r * 7.4, 0.08, r * 5.4), { color: P.wood, outline: 0.008 });
-  const ball = new THREE.SphereGeometry(r, 8, 6);
+  const ball = new THREE.SphereGeometry(r, seg, Math.max(4, seg - 2));
   let y = 0.08 + r;
   for (let layer = 0, n = 3; n > 0; layer++, n--) {
     for (let i = 0; i < n + 1; i++) for (let j = 0; j < n; j++) {
@@ -279,13 +279,6 @@ function gunports(k, d, P) {
     k.save(); k.translate(x, y, g.v); k.rotateY(skinYaw(d, g.t, y + 0.4, s));
     cannon(k, P, s, gs);
     k.restore();
-  }
-  // a pile of shot by the mainmast (or amidships)
-  {
-    const m = d.mastU.find((u) => u > xAt(d, d.tq) + 1 && u < xAt(d, d.fore ? d.tf : 0.9) - 1);
-    const u = m !== undefined ? m - d.mastR - 0.95 : xAt(d, (d.tq + (d.fore ? d.tf : 0.9)) / 2);
-    const t = (u + d.L / 2) / d.L;
-    if (u > d.comp.u1 + 0.4 || u < d.comp.u0 - 0.9) { k.save(); k.translate(u, d.deckY, 0); shotPile(k, P); k.restore(); }
   }
   const port = (t, y, lid, open, s) => {
     const w = skinAt(d, t, y);
@@ -334,15 +327,19 @@ function stern(k, d, P) {
     k.add(cyl(0.16, 0.19, 0.45, 8), { at: [-d.L / 2 + 0.25, ly + 0.6, lz], color: '#fff3c4', glow: '#ffcf70', flicker: 0.2, outline: 0.012 });
     k.add(cone(0.22, 0.24, 8), { at: [-d.L / 2 + 0.25, ly + 1.05, lz], color: P.trim, outline: 0.01 });
   }
-  // quarter galleries: glazed bays bulging from the stern corners
+  // quarter galleries: glazed bays bulging from the stern corners — laid
+  // along her side as it curves in there, and no deeper into it than her
+  // planking (none of it through the lining into the cabin)
   for (const s of [-1, 1]) {
-    const t = 0.055, y0 = d.deckY + 0.55, y1 = (d.poop ? d.yq + 1.5 : d.deckY + 1.9);
-    const w = skinAt(d, t, (y0 + y1) / 2);
+    const t = 0.055, y0 = d.deckY + 0.55, y1 = (d.poop ? d.yq + 1.5 : d.deckY + 1.9), ym = (y0 + y1) / 2;
+    const w = Math.max(skinAt(d, t, y0 - 0.9), skinAt(d, t, y0), skinAt(d, t, ym), skinAt(d, t, y1));
     const len = d.L * 0.07;
-    k.add(box(len, y1 - y0, 0.5), { at: [xAt(d, t), y0, s * (w + 0.1)], color: P.upper, outline: 0.02 });
-    k.add(box(len * 0.8, (y1 - y0) * 0.55, 0.06), { at: [xAt(d, t), y0 + (y1 - y0) * 0.22, s * (w + 0.36)], color: P.glass, glow: '#ffc766' });
-    k.add(cone(0.42, 0.9, 6), { at: [xAt(d, t), y0, s * (w + 0.12)], rot: [Math.PI, 0, 0], scale: [len * 1.1, 1, 0.9], color: P.trim, outline: 0.015 });
-    k.add(cone(0.42, 0.7, 6), { at: [xAt(d, t), y1, s * (w + 0.12)], scale: [len * 1.1, 1, 0.9], color: P.cap, outline: 0.015 });
+    k.save(); k.translate(xAt(d, t), 0, s * w); k.rotateY(skinYaw(d, t, ym, s));
+    k.add(box(len, y1 - y0, 0.5), { at: [0, y0, s * 0.1], color: P.upper, outline: 0.02 });
+    k.add(box(len * 0.8, (y1 - y0) * 0.55, 0.06), { at: [0, y0 + (y1 - y0) * 0.22, s * 0.36], color: P.glass, glow: '#ffc766' });
+    k.add(cone(0.42, 0.9, 6), { at: [0, y0, s * 0.12], rot: [Math.PI, 0, 0], scale: [len * 1.1, 1, 0.62], color: P.trim, outline: 0.015 });
+    k.add(cone(0.42, 0.7, 6), { at: [0, y1, s * 0.12], scale: [len * 1.1, 1, 0.62], color: P.cap, outline: 0.015 });
+    k.restore();
   }
 }
 
@@ -366,26 +363,26 @@ function balustrade(k, d, P, t, y, skipFn) {
   for (const [a, b] of segs) if (b > a) k.add(box(0.12, 0.08, b - a + 0.12), { at: [x, y + 0.9, (a + b) / 2], color: P.cap, outline: 0.012 });
 }
 
-function cabinFront(k, d, P, t, y0, y1, face, doors, stairsHere) {
+/** A room's front wall (see hull.js roomFront: its doorways, where each door folds back, its windows). */
+function cabinFront(k, d, P, r) {
+  const f = r.front, face = f.face, y0 = r.floor, y1 = r.top;
   // `face`: +1 the front faces forward (the cabin is aft of it), -1 aft (the forecastle)
-  const x = xAt(d, t) + face * 0.07;
-  const w = innerAt(d, t, (y0 + y1) / 2) + 0.05;
-  const h = y1 - y0, dh = Math.min(2.05, h - 0.12);
+  const x = f.u + face * 0.07, w = f.w;
+  const h = y1 - y0, dh = f.dh;
   // the wall, in pieces round its doorways (you walk in through them)
-  const ds = [...doors].sort((a, b) => a.v - b.v);
+  const ds = [...r.doors].sort((a, b) => a.v - b.v);
   let z = -w;
   const piece = (za, zb) => { if (zb - za > 0.02) k.add(box(0.14, h, zb - za), { at: [x - face * 0.07, y0, (za + zb) / 2], color: P.front, outline: 0.02 }); };
   for (const dr of ds) { piece(z, dr.v - dr.w / 2); z = dr.v + dr.w / 2; }
   piece(z, w);
   for (const dr of ds) {
-    // the lintel over the doorway, its frame and a door swung open inside
+    // the lintel over the doorway, its frame, and the door standing open
+    // inside, folded back flat against the wall
     k.add(box(0.14, h - dh, dr.w), { at: [x - face * 0.07, y0 + dh, dr.v], color: P.front });
     for (const e of [-1, 1]) k.add(box(0.1, dh, 0.08), { at: [x + face * 0.02, y0, dr.v + e * (dr.w / 2 + 0.02)], color: P.trim, outline: 0.008 });
     k.add(box(0.1, 0.12, dr.w + 0.24), { at: [x + face * 0.03, y0 + dh, dr.v], color: P.trim });
-    // (the door stands open, folded back flat against the inside of the wall, on whichever side has room)
-    const lw = dr.w - 0.1, right = w - (dr.v + dr.w / 2), left = (dr.v - dr.w / 2) + w, sd = right >= left ? 1 : -1;
-    const room = Math.max(right, left) - 0.12;
-    if (room > 0.3) k.add(box(0.05, dh - 0.06, Math.min(lw, room)), { at: [x - face * 0.19, y0 + 0.02, dr.v + sd * (dr.w / 2 + Math.min(lw, room) / 2 + 0.04)], color: shade(P.dark, 0.25), outline: 0.008 });
+    const lf = dr.leaf;
+    if (lf) k.add(box(0.05, dh - 0.06, lf.v1 - lf.v0), { at: [lf.u, y0 + 0.02, (lf.v0 + lf.v1) / 2], color: shade(P.dark, 0.25), outline: 0.008 });
     // a lantern beside the door
     const lz = dr.v + (dr.v > 0 ? -1 : 1) * (dr.w / 2 + 0.3);
     if (Math.abs(lz) < w - 0.2) k.add(cyl(0.1, 0.12, 0.32, 6), { at: [x + face * 0.14, y0 + 1.75, lz], color: '#fff3c4', glow: '#ffcf70', flicker: 0.25, outline: 0.01 });
@@ -393,41 +390,42 @@ function cabinFront(k, d, P, t, y0, y1, face, doors, stairsHere) {
   // pilasters and a moulding under the deck above
   for (const zz of [-w + 0.1, w - 0.1]) k.add(box(0.1, h, 0.16), { at: [x, y0, zz], color: shade(P.front, -0.25) });
   k.add(box(0.12, 0.14, w * 2), { at: [x + face * 0.02, y1 - 0.18, 0], color: P.trim });
-  const clearOfStairs = (zz, half) => !stairsHere.some((st) => zz + half > st.va - 0.1 && zz - half < st.vb + 0.1);
   // windows either side of the doors
-  if (h > 1.8) {
-    for (let zz = -w + 0.75; zz <= w - 0.75; zz += 1.15) {
-      if (ds.some((dr) => Math.abs(zz - dr.v) < dr.w / 2 + 0.5) || !clearOfStairs(zz, 0.4)) continue;
-      k.add(box(0.06, 0.8, 0.62), { at: [x + face * 0.02, y0 + 0.95, zz], color: P.glass, glow: '#ffc766' });
-      k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 1.75, zz], color: P.trim });
-      k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 0.88, zz], color: P.trim });
-    }
+  for (const zz of f.windows) {
+    k.add(box(0.06, 0.8, 0.62), { at: [x + face * 0.02, y0 + 0.95, zz], color: P.glass, glow: '#ffc766' });
+    k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 1.75, zz], color: P.trim });
+    k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 0.88, zz], color: P.trim });
   }
 }
 
 function cabinFronts(k, d, P) {
   const on = (lvlA, lvlB) => d.stairs.filter((s) => (s.la === lvlA && s.lb === lvlB) || (s.la === lvlB && s.lb === lvlA));
   const inStair = (list) => (z) => list.some((s) => z > s.va - 0.05 && z < s.vb + 0.05);
-  const room = (kind) => d.rooms.find((r) => r.kind === kind);
-  // the great cabin under the quarterdeck
-  const q = on('quarter', 'main');
-  cabinFront(k, d, P, d.tq, d.deckY, d.yq, 1, room('cabin').doors, q);
-  balustrade(k, d, P, d.tq + 0.004, d.yq, inStair(q));
-  // the captain's cabin under the poop
-  if (d.poop) {
-    const pp = on('poop', 'quarter');
-    cabinFront(k, d, P, d.tp, d.yq, d.yp, 1, room('captain').doors, pp);
-    balustrade(k, d, P, d.tp + 0.004, d.yp, inStair(pp));
-  }
-  // the forecastle, facing aft
-  if (d.fore) {
-    const f = on('main', 'fore');
-    cabinFront(k, d, P, d.tf, d.deckY, d.yf, -1, room('forecastle').doors, f);
-    balustrade(k, d, P, d.tf - 0.004, d.yf, inStair(f));
-  }
+  for (const r of d.rooms) if (r.front) cabinFront(k, d, P, r);
+  // the rails along the fronts of the raised decks, open at the heads of their stairs
+  balustrade(k, d, P, d.tq + 0.004, d.yq, inStair(on('quarter', 'main')));
+  if (d.poop) balustrade(k, d, P, d.tp + 0.004, d.yp, inStair(on('poop', 'quarter')));
+  if (d.fore) balustrade(k, d, P, d.tf - 0.004, d.yf, inStair(on('main', 'fore')));
 }
 
 // ---------------------------------------------------------------- stairs
+/**
+ * A flight's side board under its steps, from its foot `lo` to its head `hi`
+ * ([x, y]), at z: `dv` deep, cut level with the deck at its foot and square
+ * at the edge of the deck at its head (not through either).
+ */
+function stringer(k, lo, hi, z, dv, thick, color) {
+  const sh = new THREE.Shape();
+  const k0 = dv / (hi[1] - lo[1]);
+  sh.moveTo(lo[0], lo[1]);
+  sh.lineTo(hi[0], hi[1]);
+  sh.lineTo(hi[0], hi[1] - dv);
+  sh.lineTo(lo[0] + (hi[0] - lo[0]) * k0, lo[1]);
+  sh.closePath();
+  const g = new THREE.ExtrudeGeometry(sh, { depth: thick, bevelEnabled: false, curveSegments: 1 });
+  k.add(g, { at: [0, 0, z - thick / 2], color, outline: 0.012 });
+}
+
 function stairs(k, d, P) {
   for (const s of d.stairs) {
     if (s.down) { companionway(k, d, P, s); continue; }
@@ -449,10 +447,14 @@ function stairs(k, d, P) {
     // the stringer and the handrail on the open (inboard) side
     const inb = s.s > 0 ? s.va : s.vb;
     const lo = s.ha < s.hb ? [xa, s.ha] : [xb, s.hb], hi = s.ha < s.hb ? [xb, s.hb] : [xa, s.ha];
-    const len = Math.hypot(hi[0] - lo[0], hi[1] - lo[1]), ang = Math.atan2(hi[1] - lo[1], hi[0] - lo[0]);
-    k.save(); k.translate((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, inb); k.rotateZ(ang);
-    k.add(box(len, 0.28, 0.08), { at: [0, -0.3, 0], color: P.wood, outline: 0.012 });
-    k.add(box(len, 0.07, 0.09), { at: [0, 0.88, 0], color: P.cap, outline: 0.01 });
+    stringer(k, lo, hi, inb, 0.3, 0.08, P.wood);
+    // (the rail on its posts, a hand's height over the steps all the way up — whichever way the flight
+    // climbs, fore or aft, it's over them: never down through the deck, nor into the cabin under the landing)
+    const len = Math.hypot(hi[0] - lo[0], hi[1] - lo[1]);
+    k.save(); k.translate((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2 + 0.88, inb);
+    if (hi[0] < lo[0]) k.rotateY(Math.PI);
+    k.rotateZ(Math.atan2(hi[1] - lo[1], Math.abs(hi[0] - lo[0])));
+    k.add(box(len, 0.07, 0.09), { at: [0, -0.035, 0], color: P.cap, outline: 0.01 });
     k.restore();
     for (let i = 0; i <= 3; i++) {
       const f = i / 3;
@@ -461,27 +463,23 @@ function stairs(k, d, P) {
   }
 }
 
-/** The way down to the hold: a flight of steps (or a ladder) through a railed opening in the main deck. */
+/**
+ * The way down to the hold: a ladder (on the largest, a flight of steps) in
+ * an opening in the main deck with a low coaming round it — nothing to stop
+ * you stepping onto it at its head, or over the coaming anywhere else.
+ */
 function companionway(k, d, P, s) {
   const xa = xAt(d, s.ta), xb = xAt(d, s.tb), w = s.vb - s.va, lo = s.ha, hi = s.hb;
   const len = Math.hypot(xb - xa, hi - lo), ang = Math.atan2(hi - lo, xb - xa);
-  // the coaming round the opening, and a rail along its sides and after end (its head is open)
-  const cz = w / 2 + 0.06;
-  for (const e of [-1, 1]) k.add(box(xb - xa + 0.12, 0.18, 0.1), { at: [(xa + xb) / 2, d.deckY, e * cz], color: shade(P.deck, -0.3), outline: 0.01 });
-  k.add(box(0.1, 0.18, w + 0.22), { at: [xa - 0.05, d.deckY, 0], color: shade(P.deck, -0.3), outline: 0.01 });
-  const rail = (za, zb, x0, x1) => {
-    k.add(box(Math.max(0.08, x1 - x0), 0.07, Math.max(0.08, zb - za)), { at: [(x0 + x1) / 2, d.deckY + 0.95, (za + zb) / 2], color: P.cap, outline: 0.01 });
-  };
-  for (const e of [-1, 1]) {
-    rail(e * cz - 0.04, e * cz + 0.04, xa - 0.05, xb);
-    for (let i = 0; i <= 3; i++) k.add(cyl(0.035, 0.04, 0.95, 5), { at: [xa + (xb - xa) * i / 3, d.deckY, e * cz], color: P.wood });
-  }
-  rail(-cz, cz, xa - 0.09, xa - 0.01);
+  // the coaming: a lip round the opening, ankle high
+  const cz = w / 2 + 0.05, ch = 0.12, col = shade(P.deck, -0.3);
+  for (const e of [-1, 1]) k.add(box(xb - xa + 0.2, ch, 0.1), { at: [(xa + xb) / 2, d.deckY, e * cz], color: col, outline: 0.01 });
+  for (const x of [xa - 0.05, xb + 0.05]) k.add(box(0.1, ch, w), { at: [x, d.deckY, 0], color: col, outline: 0.01 });
   if (s.ladder) {
-    // a steep ladder: two sloping rails and rungs
+    // a steep ladder: two sloping side rails (their tops at the coaming) and the rungs
     for (const e of [-1, 1]) {
       k.save(); k.translate((xa + xb) / 2, (lo + hi) / 2, e * (w / 2 - 0.08)); k.rotateZ(ang);
-      k.add(box(len + 0.1, 0.1, 0.06), { color: P.wood, outline: 0.01 });
+      k.add(box(len, 0.1, 0.06), { at: [0, -0.06, 0], color: P.wood, outline: 0.01 });
       k.restore();
     }
     const n = Math.max(5, Math.round((hi - lo) / 0.3));
@@ -499,11 +497,14 @@ function companionway(k, d, P, s) {
     k.add(box(Math.abs(x1 - x0) + 0.02, 0.06, w - 0.08), { at: [(x0 + x1) / 2, top - 0.06, 0], color: shade(P.deck, -0.05), outline: 0.008 });
     k.add(box(0.03, (hi - lo) / n, w - 0.1), { at: [x0, top - (hi - lo) / n, 0], color: shade(P.deck, -0.3) });
   }
+  // (the handrails run up the flight as far as the opening: they end under the deck's edge, not above it)
+  const f1 = Math.max(0.1, (hi - 0.95 - lo) / (hi - lo)), x1 = xa + (xb - xa) * f1, y1 = lo + (hi - lo) * f1;
   for (const e of [-1, 1]) {
-    k.save(); k.translate((xa + xb) / 2, (lo + hi) / 2, e * (w / 2 - 0.02)); k.rotateZ(ang);
-    k.add(box(len, 0.26, 0.07), { at: [0, -0.28, 0], color: P.wood, outline: 0.01 });
-    k.add(box(len, 0.06, 0.07), { at: [0, 0.85, 0], color: P.cap, outline: 0.008 });
+    stringer(k, [xa, lo], [xb, hi], e * (w / 2 - 0.02), 0.28, 0.07, P.wood);
+    k.save(); k.translate((xa + x1) / 2, (lo + y1) / 2 + 0.85, e * (w / 2 - 0.02)); k.rotateZ(ang);
+    k.add(box(len * f1, 0.06, 0.07), { color: P.cap, outline: 0.008 });
     k.restore();
+    for (const f of [0.02, f1 * 0.5, f1 - 0.02]) k.add(cyl(0.03, 0.03, 0.85, 5), { at: [xa + (xb - xa) * f, lo + (hi - lo) * f, e * (w / 2 - 0.02)], color: P.wood });
   }
 }
 
@@ -555,14 +556,14 @@ function fittings(k, d, P) {
     k.add(box(0.45, 0.95, 0.45), { at: [d.binnacleU, fy, 0], color: P.wood, outline: 0.012 });
     k.add(new THREE.SphereGeometry(0.2, 10, 6, 0, TAU, 0, Math.PI / 2), { at: [d.binnacleU, fy + 0.95, 0], color: '#cfe8ef', glow: '#fff1c1' });
   }
-  // fife rails round each mast
+  // each mast comes up through the deck in a low collar (the mast coat): no
+  // rail round it, you walk right up to it (see hull.js: a mast is as solid as it's thick)
   for (const u of d.mastU) {
-    const t = (u + d.L / 2) / d.L, fl = floorAt(d, t), rr = d.mastR + 0.42;
-    for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      k.add(box(a ? 0.1 : rr * 2, 0.08, b ? 0.1 : rr * 2), { at: [u + a * rr, fl + 0.72, b * rr], color: P.wood, outline: 0.01 });
-      for (const q of [-0.5, 0, 0.5]) k.add(cyl(0.04, 0.05, 0.72, 5), { at: [u + a * rr + (b ? q * rr * 1.6 : 0), fl, b * rr + (a ? q * rr * 1.6 : 0)], color: P.wood });
-    }
+    const t = (u + d.L / 2) / d.L, fl = floorAt(d, t), r = d.mastR;
+    k.add(lathe([[r + 0.07, 0], [r + 0.065, 0.05], [r + 0.03, 0.14], [r + 0.005, 0.2]], 14), { at: [u, fl, 0], color: shade(P.deck, -0.35), outline: 0.008 });
   }
+  // a pile of round shot beside a mast
+  if (d.shotPile) { k.save(); k.translate(d.shotPile.u, d.deckY, d.shotPile.v); shotPile(k, P); k.restore(); }
   // the belfry at the forecastle's after rail, looking down on the main deck
   if (d.fore) {
     const x = xAt(d, d.tf + 0.03), y = d.yf;
@@ -570,13 +571,18 @@ function fittings(k, d, P) {
     k.add(cone(0.85, 0.5, 4), { at: [x, y + 1.5, 0], rot: [0, Math.PI / 4, 0], color: P.cap, outline: 0.012 });
     k.add(lathe([[0.2, 0], [0.16, 0.1], [0.12, 0.3], [0.1, 0.36], [0.01, 0.38]], 10), { at: [x, y + 0.95, 0], color: P.trim });
   }
-  // catted anchors at the bow
+  // catted anchors at the bow (hanging clear of her side all the way down:
+  // she's broader lower down, and aft, than where the ring's made fast)
   for (const s of [-1, 1]) {
-    const t = 0.9, y = topAt(d, t) - 1.1, z = s * (skinAt(d, t, y) + 0.2);
-    const a = 1.6 + d.B * 0.08;
+    const t = 0.9, y = topAt(d, t) - 1.1, a = 1.6 + d.B * 0.08, ta = a * 0.3 / d.L;
+    let w = 0;
+    for (const tt of [t - ta, t, t + ta]) for (const yy of [y - a * 0.6 - 0.1, y - a * 0.3, y, y + a * 0.4]) w = Math.max(w, skinAt(d, tt, yy));
+    const z = s * (w + 0.2);
     k.add(cyl(0.07, 0.07, a, 6), { at: [xAt(d, t), y - a * 0.6, z], color: P.iron, outline: 0.012 });
     k.add(torus(a * 0.28, 0.07, 5, 10, Math.PI), { at: [xAt(d, t), y - a * 0.6, z], rot: [0, 0, Math.PI], color: P.iron, outline: 0.012 });
-    k.add(box(0.12, 0.12, 0.9), { at: [xAt(d, t), topAt(d, t) - 0.25, z * 0.8], color: P.wood });
+    // (the cathead: out from her rail to over the anchor)
+    const yc = topAt(d, t) - 0.25, zi = skinAt(d, t, yc) - 0.15, zo = w + 0.3;
+    k.add(box(0.12, 0.12, zo - zi), { at: [xAt(d, t), yc, s * (zi + zo) / 2], color: P.wood });
   }
   // channels: the ledges the shrouds come down to, beside each mast
   for (const u of d.mastU) {
@@ -636,7 +642,26 @@ function bigFigurehead(k, def, d, P) {
     const cy = (top + bot) / 2, ry = (top - bot) / 2;
     const rz = hbAt(0.86, B) * 1.04;
     const white = C('#f4f1ea');
-    k.add(new THREE.SphereGeometry(1, 28, 18, 0, TAU, 0, Math.PI), { at: [cx, cy, 0], scale: [B * 0.66, ry, rz], color: white, outline: 0.06 });
+    // (the head wraps the bow: wherever it would come inside her — up through
+    // the main deck, into the forecastle or the hold — it's drawn forward onto
+    // her planking instead, where her bow's no broader than it, never across
+    // her; and it never rises over her rail)
+    const head = new THREE.SphereGeometry(1, 28, 18, 0, TAU, 0, Math.PI), hp = head.attributes.position;
+    for (let i = 0; i < hp.count; i++) {
+      let x = cx + hp.getX(i) * B * 0.66, y = cy + hp.getY(i) * ry;
+      const z = hp.getZ(i) * rz;
+      if (x < L / 2 && x > -L / 2) {
+        let t = (x + L / 2) / L;
+        y = Math.min(y, topAt(d, t) - 0.08);
+        if (Math.abs(z) < skinAt(d, t, y) + 0.05) {
+          while (t < 1 && Math.abs(z) < skinAt(d, t, y) + 0.05) t += 0.002;
+          x = xAt(d, Math.min(1, t));
+        }
+      }
+      hp.setXYZ(i, x, y, z);
+    }
+    head.computeVertexNormals();
+    k.add(head, { color: white, outline: 0.06 });
     for (const z of [-1, 1]) {
       k.add(new THREE.SphereGeometry(1, 12, 8), { at: [cx + B * 0.33, cy + ry * 0.22, z * rz * 0.84], scale: [0.35 * s, 0.42 * s, 0.25 * s], color: '#141414', outline: 0.02 });
       k.add(new THREE.SphereGeometry(1, 8, 6), { at: [cx + B * 0.36, cy + ry * 0.3, z * rz * 0.9], scale: [0.1 * s, 0.12 * s, 0.08 * s], color: '#ffffff' });
@@ -746,8 +771,21 @@ export function bigSailPlan(def, d, mast) {
   const wC = Math.min(d.B * 2.05, d.L * 0.5) * (mast.aft ? 0.8 : 1);
   const yr = 0.06 + d.L * 0.0025;
   if (mast.aft) {
-    // the spanker: a big fore-and-aft sail aft of the mizzen
-    sails.push({ type: 'gaff', x: mast.x, y0: mast.base + 2.3, y1: mast.h1 - 0.3, len: Math.min(d.L * 0.2, 8) });
+    // the spanker: a big fore-and-aft sail aft of the mizzen, its boom head-high
+    // over the deck the mast stands on — ending short of a deck that rises aft
+    // of it (the quarterdeck, the poop), not in through the front of the cabin
+    // under it; or, where that would leave it stunted, carried high enough to
+    // clear that deck as well
+    const tm = (mast.x + d.L / 2) / d.L, dt = 0.05 / d.L;
+    let len = Math.min(d.L * 0.2, 8), y0 = mast.base + 2.3;
+    let tUp = null;
+    for (let t = tm; t >= tm - len / d.L; t -= dt) if (floorAt(d, t) > mast.base + 0.05) { tUp = t; break; }
+    if (tUp !== null) {
+      const room = (tm - tUp) * d.L - 0.3;
+      if (room >= len * 0.6) len = room;
+      else { let top = mast.base; for (let t = tm; t >= tm - len / d.L; t -= dt) top = Math.max(top, floorAt(d, t)); y0 = top + 2.3; }
+    }
+    sails.push({ type: 'gaff', x: mast.x, y0, y1: mast.h1 - 0.3, len });
   } else {
     sails.push({ type: 'square', x: mast.x, w: wC, y0: mast.base + 2.7, y1: mast.h1 - 0.35, emblem: mast.main, yardR: yr });
   }
@@ -853,16 +891,16 @@ export function bigRigging(d, plan) {
 // (a separate mesh: it's only drawn when you're close by — see ShipView)
 const IN = { wall: C('#8a6445'), wall2: C('#7d5a3d'), beam: C('#5b3d26'), floor: C('#a57b52'), dark: C('#3e2a1c'), cloth: C('#c9b99a') };
 
-/** The inside of a room's sides (the hull's lining), from its floor up to the deck over it. */
-function lining(k, d, r, top) {
+/** The inside of a room's sides (the hull's lining), from its floor up to the deck over it (see hull.js liningAt). */
+function lining(k, d, r) {
   const N = Math.max(4, Math.round((r.t1 - r.t0) * d.L / 0.5));
   const hold = r.kind === 'hold';
-  const ys = hold ? [r.floor - 0.02, r.floor + 0.55, r.floor + 1.15, r.floor + 1.75, top] : [r.floor - 0.02, r.floor + 0.9, top];
+  const ys = liningYs(r);
   for (const s of [1, -1]) {
     const pos = [], idx = [], cols = [];
     for (let i = 0; i <= N; i++) {
       const t = r.t0 + (r.t1 - r.t0) * i / N, x = xAt(d, t);
-      for (const y of ys) pos.push(x, y, s * (hold ? Math.max(0.3, skinAt(d, t, y) - 0.22) : innerAt(d, t, y) + 0.01));
+      for (const y of ys) pos.push(x, r.floor + y, s * liningAt(d, r, t, y));
     }
     const M = ys.length;
     for (let i = 0; i < N; i++) {
@@ -898,112 +936,234 @@ function beams(k, d, r, ceil, skip = null) {
   }
 }
 
-/** A lantern on an iron bracket on the wall (s: which side), above head height. */
-function lantern(k, x, y, z, s) {
-  k.add(box(0.06, 0.06, 0.26), { at: [x, y + 0.1, z - s * 0.13], color: '#2b1d14' });
-  k.add(cyl(0.012, 0.012, 0.12, 4), { at: [x, y - 0.02, z - s * 0.24], color: '#2b1d14' });
-  k.add(cyl(0.08, 0.09, 0.22, 6), { at: [x, y - 0.26, z - s * 0.24], color: '#fff3c4', glow: '#ffcf70', flicker: 0.25, outline: 0.006 });
-  k.add(cone(0.11, 0.09, 6), { at: [x, y - 0.05, z - s * 0.24], color: '#2b1d14' });
+// ---------------------------------------------------------------- the furniture
+// Each piece is drawn in its own frame: w across it (x), dp from its back to
+// its front (z, the front at +z), from its floor (or the height it hangs at)
+// up — and turned to face the way it stands (see hull.js furnish, FURNITURE,
+// footprint). What's drawn is what you walk round: it fits its footprint.
+const WOOD = IN.beam, TOP = C('#8d6038'), BOOKS = ['#8e2b20', '#23527c', '#2e6b2e', '#b08850', '#6a4c93'];
+
+/** A barrel standing at (x, z) of the piece's frame, 0.6 across and 0.78 tall. */
+function barrelAt(k, x, z) {
+  k.add(lathe([[0.23, 0], [0.275, 0.17], [0.295, 0.39], [0.275, 0.61], [0.23, 0.78], [0.001, 0.78]], 10), { at: [x, 0, z], color: '#8d5b33', outline: 0.008 });
+  for (const hy of [0.12, 0.64]) k.add(torus(0.272, 0.016, 3, 10), { at: [x, hy, z], rot: [Math.PI / 2, 0, 0], color: '#3a3a3a' });
 }
 
-/** One piece of furniture (see hull.js furnish): at (u, floor, v). */
-function furniture(k, d, P, it) {
-  const { u: x, v: z, floor: y, w, dp } = it;
-  const wood = IN.beam, top = C('#8d6038');
-  switch (it.kind) {
-    case 'table': case 'desk': {
-      const h = 0.76;
-      k.add(box(w, 0.06, dp), { at: [x, y + h - 0.06, z], color: top, outline: 0.01 });
-      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.07, h - 0.06, 0.07), { at: [x + a * (w / 2 - 0.08), y, z + b * (dp / 2 - 0.08)], color: wood });
-      if (it.kind === 'desk') {
-        for (const a of [-1, 1]) k.add(box(w * 0.3, h - 0.12, dp - 0.1), { at: [x + a * w * 0.3, y, z], color: wood, outline: 0.008 });
-        for (let i = 0; i < 4; i++) k.add(box(0.05, 0.22, 0.16), { at: [x - w * 0.3 + i * 0.07, y + h, z - dp * 0.3], color: ['#8e2b20', '#23527c', '#2e6b2e', '#6a4c93'][i] });
-      }
-      if (it.room !== 'forecastle') {
-        // a chart spread out, dividers, and a candle
-        k.add(box(w * 0.55, 0.005, dp * 0.6), { at: [x - w * 0.05, y + h, z], rot: [0, 0.08, 0], color: '#e8dcb5' });
-        k.add(cyl(0.035, 0.035, 0.12, 6), { at: [x + w * 0.33, y + h, z + dp * 0.25], color: '#f5f0e1', glow: '#ffcf70', flicker: 0.4 });
-      } else {
-        for (const a of [-0.3, 0.2]) k.add(cyl(0.05, 0.04, 0.1, 6), { at: [x + a * w, y + h, z], color: '#8d8d8d' });
-      }
-      break;
-    }
-    case 'chair': {
-      const s = it.rot || 1;
-      k.add(box(0.42, 0.05, 0.42), { at: [x, y + 0.44, z], color: top, outline: 0.008 });
-      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.05, 0.44, 0.05), { at: [x + a * 0.17, y, z + b * 0.17], color: wood });
-      k.add(box(0.42, 0.5, 0.05), { at: [x, y + 0.49, z + s * 0.19], color: wood, outline: 0.008 });
-      break;
-    }
-    case 'bunk': {
-      // (along the side: w along the ship, dp across)
-      k.add(box(w, 0.4, dp), { at: [x, y, z], color: wood, outline: 0.01 });
-      k.add(box(w - 0.1, 0.14, dp - 0.1), { at: [x, y + 0.4, z], color: '#e8e1d0' });
-      k.add(box(w * 0.62, 0.04, dp - 0.06), { at: [x + w * 0.16, y + 0.54, z], color: '#8e3b2a' });
-      k.add(box(0.36, 0.1, dp * 0.6), { at: [x - w / 2 + 0.26, y + 0.54, z], color: '#f7f3ea' });
-      k.add(box(w, 0.5, 0.06), { at: [x, y, z - Math.sign(z || 1) * (dp / 2 - 0.03)], color: wood });
-      break;
-    }
-    case 'chest': {
-      // a sea chest: iron-bound, a domed lid (a treasure chest shows its gold)
-      const c = it.treasure ? C('#7a4a26') : C('#6d4c33');
-      k.add(box(w, dp * 0.9, dp), { at: [x, y, z], color: c, outline: 0.01 });
-      k.add(cyl(dp / 2, dp / 2, w, 10, false, 1), { at: [x - w / 2, y + dp * 0.9, z], rot: [0, 0, -Math.PI / 2], scale: [1, 1, 0.5], color: shade(c, 0.1), outline: 0.01 });
-      for (const a of [-0.32, 0.32]) k.add(box(0.06, dp * 1.2, dp + 0.02), { at: [x + a * w, y, z], color: '#b8860b' });
-      k.add(box(0.1, 0.12, 0.04), { at: [x, y + dp * 0.72, z + Math.sign(-z || 1) * (dp / 2 + 0.01)], color: '#d4ac0d' });
-      if (it.treasure) for (let i = 0; i < 6; i++) k.add(cyl(0.04, 0.04, 0.015, 8), { at: [x - 0.2 + (i % 3) * 0.14, y + dp * 0.9 + 0.02 + Math.floor(i / 3) * 0.02, z + ((i * 7) % 3 - 1) * 0.08], color: '#f4c430', glow: '#6b4f00' });
-      break;
-    }
-    case 'shelf': {
-      k.add(box(0.35, 1.7, w), { at: [x, y, z], color: wood, outline: 0.01 });
-      for (let j = 0; j < 4; j++) {
-        for (let i = 0; i < Math.floor(w / 0.09); i++) k.add(box(0.2, 0.26 + ((i * 5 + j) % 3) * 0.03, 0.06), { at: [x + 0.02, y + 0.12 + j * 0.4, z - w / 2 + 0.08 + i * 0.09], color: ['#8e2b20', '#23527c', '#2e6b2e', '#b08850', '#6a4c93'][(i + j) % 5] });
-      }
-      break;
-    }
-    case 'stove': {
-      k.add(box(w, 0.7, dp), { at: [x, y, z], color: '#2f2f2f', outline: 0.01 });
-      k.add(box(w * 0.5, 0.25, 0.04), { at: [x, y + 0.2, z - Math.sign(z || 1) * (dp / 2 + 0.01)], color: '#ff7a1a', glow: '#ff5a00', flicker: 0.5 });
-      k.add(cyl(0.08, 0.08, 1.6, 8), { at: [x, y + 0.7, z], color: '#2f2f2f' });
-      k.add(cyl(0.2, 0.17, 0.26, 10), { at: [x, y + 0.7, z + Math.sign(-z || 1) * 0.1], color: '#6b6b6b', outline: 0.008 });
-      break;
-    }
-    case 'hammock': {
-      // slung between two hooks under the deck beams, sagging in the middle
-      const hy = y + 1.35, pts = [];
-      for (let i = 0; i <= 8; i++) { const f = i / 8; pts.push(new THREE.Vector3(x - w / 2 + w * f, hy - Math.sin(f * Math.PI) * 0.3, z)); }
-      k.add(tube(new THREE.CatmullRomCurve3(pts), 10, 0.2, 6), { scale: [1, 0.4, 1], at: [0, hy * 0.6, 0], color: IN.cloth, outline: 0.008 });
-      break;
-    }
-    case 'barrel': case 'barrels': {
-      const n = it.kind === 'barrels' ? 3 : 1;
-      for (let i = 0; i < n; i++) {
-        const bx = x + (n > 1 ? (i - 1) * 0.5 : 0), by = y + (i === 1 && n > 1 ? 0 : 0);
-        k.add(lathe([[0.2, 0], [0.26, 0.18], [0.27, 0.36], [0.26, 0.54], [0.2, 0.72], [0.001, 0.72]], 10), { at: [bx, by, z], color: '#8d5b33', outline: 0.01 });
-        for (const hy of [0.1, 0.62]) k.add(torus(0.235, 0.018, 4, 12), { at: [bx, by + hy, z], rot: [Math.PI / 2, 0, 0], color: '#3a3a3a' });
-      }
-      break;
-    }
-    case 'crate': {
-      k.add(box(0.7, 0.62, 0.7), { at: [x, y, z], color: '#b08850', outline: 0.01 });
-      k.add(box(0.5, 0.45, 0.5), { at: [x + 0.06, y + 0.62, z - 0.04], rot: [0, 0.3, 0], color: '#a57b52', outline: 0.01 });
-      break;
-    }
-    case 'sacks': {
-      for (let i = 0; i < 3; i++) k.add(new THREE.SphereGeometry(0.28, 8, 6), { at: [x + (i - 1) * 0.36, y + 0.22, z + (i % 2) * 0.1], scale: [1, 0.8, 0.9], color: '#d8c49a', outline: 0.008 });
-      break;
-    }
-    case 'shot': {
-      k.save(); k.translate(x, y, z); shotPile(k, P); k.restore();
-      break;
-    }
-    default: break;
-  }
+/** A sea chest's domed lid, hinged along its back edge (the hinge at the origin; the lid runs toward +z). */
+function chestLid(k, w, dp, dome, wood, iron) {
+  const half = new THREE.CylinderGeometry(dp / 2, dp / 2, w, 14, 1, false, 0, Math.PI);
+  k.add(half, { at: [0, 0, dp / 2], rot: [0, 0, Math.PI / 2], scale: [dome / (dp / 2), 1, 1], color: shade(wood, 0.1), outline: 0.01 });
+  k.add(box(w - 0.01, 0.02, dp - 0.01), { at: [0, 0, dp / 2], color: shade(wood, -0.25) });
+  for (const a of [-0.3, 0.3]) k.add(torus(dp / 2 + 0.006, 0.012, 4, 10, Math.PI), { at: [a * w, 0, dp / 2], rot: [0, Math.PI / 2, 0], scale: [1, dome / (dp / 2), 1], color: iron });
 }
 
+const PIECES = {
+  table(k, it) {
+    const { w, dp, h } = it;
+    k.add(box(w, 0.06, dp), { at: [0, h - 0.06, 0], color: TOP, outline: 0.01 });
+    k.add(box(w - 0.16, 0.08, dp - 0.16), { at: [0, h - 0.14, 0], color: shade(WOOD, 0.12) });
+    for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.07, h - 0.06, 0.07), { at: [a * (w / 2 - 0.07), 0, b * (dp / 2 - 0.07)], color: WOOD });
+    if (it.mess) {
+      // the crew's mess: tankards and plates
+      for (const [a, b] of [[-0.32, -0.2], [0.05, 0.22], [0.3, -0.18]]) k.add(cyl(0.045, 0.04, 0.12, 8), { at: [a * w, h, b * dp], color: '#8d8d8d', outline: 0.005 });
+      for (const [a, b] of [[-0.12, 0.18], [0.2, 0.16], [-0.05, -0.2]]) k.add(cyl(0.1, 0.085, 0.02, 12), { at: [a * w, h, b * dp], color: '#d9d2c3' });
+    } else {
+      // a chart spread out, and a candle
+      k.add(box(w * 0.5, 0.005, dp * 0.55), { at: [-w * 0.08, h, 0], rot: [0, 0.08, 0], color: '#e8dcb5' });
+      k.add(cyl(0.035, 0.035, 0.12, 6), { at: [w * 0.34, h, dp * 0.22], color: '#f5f0e1', glow: '#ffcf70', flicker: 0.4 });
+    }
+  },
+  chair(k, it) {
+    // (you sit facing its front: the back is behind you)
+    const seat = 0.45;
+    k.add(box(0.44, 0.05, 0.44), { at: [0, seat - 0.05, 0.005], color: TOP, outline: 0.008 });
+    for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.045, seat - 0.05, 0.045), { at: [a * 0.19, 0, b * 0.19], color: WOOD });
+    for (const a of [-1, 1]) k.add(box(0.045, it.h - seat, 0.045), { at: [a * 0.19, seat, -0.19], color: WOOD });
+    k.add(box(0.42, 0.16, 0.04), { at: [0, it.h - 0.18, -0.19], color: WOOD, outline: 0.008 });
+    k.add(box(0.42, 0.05, 0.035), { at: [0, seat + 0.16, -0.19], color: WOOD });
+  },
+  bench(k, it) {
+    const { w, dp, h } = it;
+    k.add(box(w, 0.05, dp), { at: [0, h - 0.05, 0], color: TOP, outline: 0.008 });
+    for (const a of [-1, 1]) k.add(box(0.05, h - 0.05, dp - 0.08), { at: [a * (w / 2 - 0.14), 0, 0], color: WOOD });
+    k.add(box(w - 0.34, 0.05, 0.04), { at: [0, 0.12, 0], color: WOOD });
+  },
+  desk(k, it) {
+    // (its front faces the visitor; the drawers face whoever sits behind it)
+    const { w, dp, h } = it, pw = w * 0.3;
+    k.add(box(w, 0.05, dp), { at: [0, h - 0.05, 0], color: TOP, outline: 0.01 });
+    for (const a of [-1, 1]) {
+      const x = a * (w / 2 - pw / 2);
+      k.add(box(pw, h - 0.05, dp - 0.04), { at: [x, 0, 0], color: WOOD, outline: 0.008 });
+      for (let j = 0; j < 3; j++) {
+        const y = 0.06 + j * (h - 0.12) / 3;
+        k.add(box(pw - 0.06, (h - 0.12) / 3 - 0.04, 0.02), { at: [x, y, -dp / 2 + 0.01], color: shade(WOOD, 0.15) });
+        k.add(box(0.07, 0.02, 0.02), { at: [x, y + (h - 0.12) / 6 - 0.02, -dp / 2], color: '#d4ac0d' });
+      }
+    }
+    k.add(box(w - 2 * pw, h - 0.3, 0.03), { at: [0, 0.25, dp / 2 - 0.035], color: shade(WOOD, -0.1) });
+    // books, an inkwell, a chart and a candle
+    for (let i = 0; i < 4; i++) k.add(box(0.05, 0.22, 0.16), { at: [-w * 0.4 + i * 0.06, h, dp * 0.18], color: BOOKS[i] });
+    k.add(cyl(0.035, 0.04, 0.06, 8), { at: [w * 0.22, h, -dp * 0.18], color: '#1d1d1d' });
+    k.add(box(w * 0.36, 0.005, dp * 0.46), { at: [0, h, 0], rot: [0, -0.1, 0], color: '#e8dcb5' });
+    k.add(cyl(0.035, 0.035, 0.12, 6), { at: [w * 0.4, h, dp * 0.22], color: '#f5f0e1', glow: '#ffcf70', flicker: 0.4 });
+  },
+  bunk(k, it) {
+    // along a wall, its back to it; the pillow at its head (it.head: -1 aft, 1 forward)
+    const { w, dp, h } = it, hx = (Math.sign(Math.cos(it.rot || 0)) || 1) * (it.head || -1);
+    k.add(box(w, 0.32, dp), { color: WOOD, outline: 0.01 });
+    k.add(box(w - 0.14, 0.14, dp - 0.08), { at: [0, 0.32, 0], color: '#e8e1d0' });
+    k.add(box(w * 0.58, 0.05, dp - 0.05), { at: [-hx * w * 0.19, 0.44, 0], color: '#8e3b2a' });
+    k.add(box(0.38, 0.1, dp * 0.62), { at: [hx * (w / 2 - 0.3), 0.46, 0], color: '#f7f3ea' });
+    k.add(box(0.06, h, dp), { at: [hx * (w / 2 - 0.03), 0, 0], color: WOOD, outline: 0.008 });
+    k.add(box(0.06, h - 0.14, dp), { at: [-hx * (w / 2 - 0.03), 0, 0], color: WOOD, outline: 0.008 });
+    k.add(box(w - 0.12, h - 0.34, 0.035), { at: [0, 0.32, -dp / 2 + 0.018], color: shade(WOOD, 0.1) });
+  },
+  chest(k, it) {
+    // a sea chest: iron-bound, its lock on the front, a domed lid hinged at
+    // the back; a treasure chest's lid thrown back on a heap of gold
+    const dp = FURNITURE.chest.dp, body = 0.4, dome = 0.2, iron = '#b8860b';
+    const wood = it.treasure ? C('#7a4a26') : C('#6d4c33'), w = it.w;
+    k.save(); k.translate(0, 0, it.dp / 2 - dp / 2);
+    k.add(box(w, body, dp), { color: wood, outline: 0.01 });
+    for (const a of [-0.3, 0.3]) k.add(box(0.06, body, dp + 0.012), { at: [a * w, 0, 0], color: iron });
+    k.add(box(0.13, 0.15, 0.02), { at: [0, body - 0.19, dp / 2 + 0.006], color: '#d4ac0d' });
+    for (const e of [-1, 1]) k.add(torus(0.055, 0.012, 4, 8, Math.PI), { at: [e * (w / 2 + 0.002), body * 0.62, 0], rot: [0, Math.PI / 2, Math.PI], color: '#2b2b2b' });
+    k.save(); k.translate(0, body, -dp / 2);
+    if (it.treasure) k.rotateX(-1.3);
+    chestLid(k, w, dp, dome, wood, iron);
+    k.restore();
+    if (it.treasure) {
+      k.add(box(w - 0.08, 0.03, dp - 0.08), { at: [0, body - 0.01, 0], color: '#f4c430', glow: '#6b4f00' });
+      for (let i = 0; i < 9; i++) k.add(new THREE.SphereGeometry(0.05 + (i % 3) * 0.012, 7, 5), { at: [(-0.3 + (i % 5) * 0.15) * w, body + 0.03, (((i * 7) % 5) - 2) * 0.05], scale: [1, 0.55, 1], color: i % 4 ? '#f4c430' : '#c0392b', glow: '#6b4f00' });
+    }
+    k.restore();
+  },
+  shelf(k, it) {
+    // a bookcase against the wall, the books' spines out
+    const { w, dp, h } = it;
+    for (const a of [-1, 1]) k.add(box(0.04, h, dp), { at: [a * (w / 2 - 0.02), 0, 0], color: WOOD, outline: 0.008 });
+    k.add(box(w - 0.08, h, 0.03), { at: [0, 0, -dp / 2 + 0.015], color: shade(WOOD, -0.15) });
+    const levels = [0, 0.44, 0.88, 1.32, h - 0.03];
+    for (const y of levels) k.add(box(w - 0.08, 0.03, dp - 0.03), { at: [0, y, 0.015], color: WOOD });
+    for (let j = 0; j < 4; j++) {
+      const y = levels[j] + 0.03, room = levels[j + 1] - y - 0.03;
+      let x = -w / 2 + 0.06;
+      for (let i = 0; x < w / 2 - 0.12; i++) {
+        const bw = 0.045 + ((i * 7 + j * 3) % 4) * 0.012, bh = room * (0.74 + ((i * 5 + j) % 3) * 0.08);
+        k.add(box(bw, bh, dp * 0.62), { at: [x + bw / 2, y, -dp / 2 + 0.035 + dp * 0.31], color: BOOKS[(i + j) % 5] });
+        x += bw + 0.008;
+      }
+      // (a batten across each shelf keeps the books in when she rolls)
+      k.add(box(w - 0.08, 0.03, 0.02), { at: [0, y + 0.1, dp / 2 - 0.015], color: shade(WOOD, 0.1) });
+    }
+  },
+  stove(k, it, d) {
+    // the galley stove: an iron range on its feet, the firebox glowing, a pot
+    // on the hob, and its pipe up through the deck overhead
+    const { w, dp, h } = it, iron = '#2f2f2f', r = d.rooms.find((x) => x.kind === it.room);
+    for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.06, 0.1, 0.06), { at: [a * (w / 2 - 0.06), 0, b * (dp / 2 - 0.06)], color: iron });
+    k.add(box(w, h - 0.1, dp), { at: [0, 0.1, 0], color: iron, outline: 0.01 });
+    k.add(box(w * 0.42, 0.24, 0.02), { at: [-w * 0.14, 0.24, dp / 2 + 0.006], color: '#ff7a1a', glow: '#ff5a00', flicker: 0.5 });
+    k.add(cyl(0.16, 0.14, 0.24, 10), { at: [w * 0.2, h, dp * 0.08], color: '#6b6b6b', outline: 0.008 });
+    k.add(cyl(0.08, 0.08, (r ? r.ceil + 0.12 - r.floor : 2.4) - h, 8), { at: [-w * 0.25, h, -dp / 2 + 0.14], color: iron });
+  },
+  hammock(k, it) {
+    // the canvas slung between two spreader bars, sagging in the middle; the
+    // lines gathered to a ring at each end and up to a hook in the beams
+    const { w, dp, h } = it, L = w - 0.44, N = 10, sag = 0.22;
+    const pos = [], idx = [];
+    for (let i = 0; i <= N; i++) {
+      const x = -L / 2 + L * i / N, y = 0.04 + sag * (2 * x / L) ** 2;
+      for (const [z, lift] of [[-dp * 0.42, 0.07], [0, 0], [dp * 0.42, 0.07]]) pos.push(x, y + lift, z);
+    }
+    for (let i = 0; i < N; i++) for (let j = 0; j < 2; j++) { const a = i * 3 + j; idx.push(a, a + 1, a + 3, a + 1, a + 4, a + 3); }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    k.add(g, { color: IN.cloth, double: true, outline: 0.006 });
+    const yb = 0.04 + sag + 0.07, dy = 0.12;
+    for (const e of [-1, 1]) {
+      k.add(box(0.04, 0.04, dp * 0.9), { at: [e * L / 2, yb - 0.02, 0], color: WOOD });
+      // (the clews: a line from each end of the bar to the ring, and one up from the ring to the hook)
+      const x0 = e * L / 2, x1 = e * (w / 2 - 0.04);
+      for (const z of [-1, 1]) {
+        const z0 = z * dp * 0.44, ln = Math.hypot(x1 - x0, dy, z0);
+        k.save(); k.translate(x0, yb, z0);
+        k.rotateY(Math.atan2(z0, x1 - x0)); k.rotateZ(Math.atan2(dy, Math.hypot(x1 - x0, z0)) - Math.PI / 2);
+        k.add(cyl(0.008, 0.008, ln, 3), { color: '#8d7b5a' });
+        k.restore();
+      }
+      k.add(cyl(0.012, 0.012, h - 0.03 - yb - dy, 4), { at: [x1, yb + dy, 0], color: '#8d7b5a' });
+      k.add(torus(0.03, 0.008, 3, 8), { at: [x1, h - 0.03, 0], color: '#2b2b2b' });
+    }
+  },
+  barrel(k) { barrelAt(k, 0, 0); },
+  barrels(k) { for (const a of [-1, 1]) barrelAt(k, a * 0.34, 0); },
+  crate(k) {
+    // a big crate, and a smaller one stowed on it askew
+    k.add(box(0.78, 0.7, 0.78), { color: '#b08850', outline: 0.01 });
+    for (const a of [-1, 1]) k.add(box(0.8, 0.07, 0.8), { at: [0, a > 0 ? 0.6 : 0.03, 0], color: '#8d6e4a' });
+    k.add(box(0.52, 0.46, 0.52), { at: [0.02, 0.7, -0.02], rot: [0, 0.35, 0], color: '#a57b52', outline: 0.01 });
+  },
+  sacks(k) {
+    for (let i = 0; i < 3; i++) {
+      const x = (i - 1) * 0.33, z = i % 2 ? 0.06 : -0.06;
+      k.add(new THREE.SphereGeometry(0.26, 7, 5), { at: [x, 0.2, z], scale: [1.05, 0.8, 0.9], color: '#d8c49a', outline: 0.008 });
+      k.add(cyl(0.05, 0.07, 0.07, 6), { at: [x, 0.39, z], color: '#c4ae82' });
+    }
+  },
+  shot(k, it, d, P) { shotPile(k, P, 0.075, 6); },
+  rug(k, it) {
+    const { w, dp } = it;
+    k.add(box(w, 0.01, dp), { at: [0, 0.003, 0], color: '#7b2d26' });
+    k.add(box(w - 0.16, 0.012, dp - 0.16), { at: [0, 0.003, 0], color: '#a8452f' });
+    if (w > 0.8 && dp > 0.8) {
+      k.add(box(w - 0.42, 0.014, dp - 0.42), { at: [0, 0.003, 0], color: '#7b2d26' });
+      k.add(box(w - 0.52, 0.016, dp - 0.52), { at: [0, 0.003, 0], color: '#b8573a' });
+    }
+  },
+  lantern(k, it) {
+    const { dp, h } = it;
+    if (!it.wall) {
+      // hung from a beam overhead on its chain
+      k.add(cyl(0.1, 0.1, 0.04, 6), { at: [0, 0.02, 0], color: '#2b1d14' });
+      k.add(cyl(0.08, 0.09, 0.2, 6), { at: [0, 0.06, 0], color: '#fff3c4', glow: '#ffcf70', flicker: 0.25, outline: 0.006 });
+      k.add(cone(0.11, 0.08, 6), { at: [0, 0.26, 0], color: '#2b1d14' });
+      k.add(cyl(0.008, 0.008, h - 0.34, 3), { at: [0, 0.34, 0], color: '#2b1d14' });
+      return;
+    }
+    // on an iron bracket off the wall behind it, above head height
+    const z = dp / 2 - 0.12;
+    k.add(box(0.1, 0.16, 0.02), { at: [0, h - 0.2, -dp / 2 + 0.01], color: '#2b1d14' });
+    k.add(box(0.04, 0.04, dp - 0.1), { at: [0, h - 0.06, -0.05], color: '#2b1d14' });
+    k.add(cyl(0.01, 0.01, 0.1, 4), { at: [0, h - 0.16, z], color: '#2b1d14' });
+    k.add(cyl(0.1, 0.1, 0.04, 6), { at: [0, 0.02, z], color: '#2b1d14' });
+    k.add(cyl(0.08, 0.09, 0.2, 6), { at: [0, 0.06, z], color: '#fff3c4', glow: '#ffcf70', flicker: 0.25, outline: 0.006 });
+    k.add(cone(0.11, 0.08, 6), { at: [0, 0.26, z], color: '#2b1d14' });
+  },
+};
+
+/** One piece of furniture, standing (or hanging) where hull.js furnish put it, turned to face the way it does. */
+export function furniture(k, d, P, it) {
+  const draw = PIECES[it.kind];
+  if (!draw) return;
+  k.save();
+  k.translate(it.u, it.floor + (it.y || 0), it.v);
+  k.rotateY(it.rot || 0);
+  draw(k, it, d, P);
+  k.restore();
+}
+
+/**
+ * Below decks: the rooms and everything in them (`k`) — and, apart, the
+ * undersides of the decks over them and their beams (`overhead`), which never
+ * see the sun: the shadows of what stands on the deck above aren't to fall on them.
+ */
 export function bigInterior(def, d) {
   const P = bigPalette(def);
-  const k = new Mesher();
+  const k = new Mesher(), overhead = new Mesher();
   const cp = d.comp;
   for (const r of d.rooms) {
     const top = r.ceil + 0.1;     // (the deck over the room: its underside)
@@ -1012,45 +1172,26 @@ export function bigInterior(def, d) {
     else deckGrid(k, d, P, r.t0, r.t1, r.floor, null, false, shade(IN.floor, -0.1));
     // the ceiling (open over the companionway)
     if (r.kind === 'hold') {
-      deckGrid(k, d, P, r.t0, cp.t0, top, null, true, IN.wall);
-      deckGrid(k, d, P, cp.t0, cp.t1, top, cp.w / 2, true, IN.wall);
-      deckGrid(k, d, P, cp.t1, r.t1, top, null, true, IN.wall);
-    } else deckGrid(k, d, P, r.t0, r.t1, top, null, true, IN.wall);
-    lining(k, d, r, top);
-    beams(k, d, r, top, r.kind === 'hold' ? (x) => x > cp.u0 - 0.2 && x < cp.u1 + 0.2 : null);
+      deckGrid(overhead, d, P, r.t0, cp.t0, top, null, true, IN.wall);
+      deckGrid(overhead, d, P, cp.t0, cp.t1, top, cp.w / 2, true, IN.wall);
+      deckGrid(overhead, d, P, cp.t1, r.t1, top, null, true, IN.wall);
+    } else deckGrid(overhead, d, P, r.t0, r.t1, top, null, true, IN.wall);
+    lining(k, d, r);
+    beams(overhead, d, r, top, r.kind === 'hold' ? (x) => x > cp.u0 - 0.2 && x < cp.u1 + 0.2 : null);
     // the ends
     if (r.kind === 'hold') { endWall(k, d, r.t0, r.floor, top, 1, true); endWall(k, d, r.t1, r.floor, top, -1, true); }
     else if (r.kind === 'forecastle') endWall(k, d, r.t1, r.floor, top, -1);
     else {
-      // the stern: panelled, with the gallery windows glowing
+      // the stern: panelled, with the gallery windows glowing (see hull.js sternWindows)
       endWall(k, d, r.t0, r.floor, top, 1);
-      const w = innerAt(d, r.t0, r.floor + 1);
-      const n = Math.max(2, Math.floor((w * 2) / 1.15)), ww = Math.min(0.8, (w * 2) / n - 0.3);
-      if (top - r.floor > 1.9) {
-        for (let i = 0; i < n; i++) {
-          // (the sea and sky beyond the glass: pale by day, lit from within by night)
-          const zz = -w + (i + 0.5) * (w * 2) / n;
-          k.add(box(0.04, 0.9, ww), { at: [xAt(d, r.t0) + 0.01, r.floor + 0.75, zz], color: '#a9d6ee', glow: '#ffd58a' });
-          k.add(box(0.06, 0.05, ww), { at: [xAt(d, r.t0) + 0.02, r.floor + 1.18, zz], color: IN.beam });
-          k.add(box(0.06, 0.9, 0.05), { at: [xAt(d, r.t0) + 0.02, r.floor + 0.75, zz], color: IN.beam });
-          k.add(box(0.12, 0.06, ww + 0.1), { at: [xAt(d, r.t0) + 0.04, r.floor + 0.72, zz], color: IN.beam });
-        }
+      const x = xAt(d, r.t0);
+      for (const wd of r.windows || []) {
+        // (the sea and sky beyond the glass: pale by day, lit from within by night)
+        k.add(box(0.04, 0.9, wd.w), { at: [x + 0.01, r.floor + 0.75, wd.v], color: '#a9d6ee', glow: '#ffd58a' });
+        k.add(box(0.06, 0.05, wd.w), { at: [x + 0.02, r.floor + 1.18, wd.v], color: IN.beam });
+        k.add(box(0.06, 0.9, 0.05), { at: [x + 0.02, r.floor + 0.75, wd.v], color: IN.beam });
+        k.add(box(0.12, 0.06, wd.w + 0.1), { at: [x + 0.04, r.floor + 0.72, wd.v], color: IN.beam });
       }
-    }
-    // lanterns on the walls, above head height
-    const len = (r.t1 - r.t0) * d.L, nL = Math.max(1, Math.round(len / 3.5));
-    for (let i = 0; i < nL; i++) {
-      const t = r.t0 + (r.t1 - r.t0) * (i + 0.5) / nL, x = xAt(d, t), sd = i % 2 ? 1 : -1;
-      const ly = Math.min(top - 0.2, r.floor + 2.05);
-      const wz = r.kind === 'hold' ? Math.max(0.35, skinAt(d, t, ly) - 0.22) : innerAt(d, t, ly);
-      if (d.furniture.some((f) => f.room === r.kind && Math.abs(f.u - x) < f.w / 2 + 0.3 && Math.sign(f.v) === sd && f.kind === 'shelf')) continue;
-      lantern(k, x, ly, sd * wz, sd);
-    }
-    // a rug in the great cabin
-    if (r.kind === 'cabin' || r.kind === 'captain') {
-      const t = (r.t0 + r.t1) / 2, w = Math.min(1.1, roomHalf(d, r, t) - 0.3);
-      k.add(box(Math.min(2.2, len * 0.55), 0.012, w * 2), { at: [xAt(d, t), r.floor + 0.004, 0], color: '#7b2d26' });
-      k.add(box(Math.min(2.2, len * 0.55) - 0.2, 0.014, w * 2 - 0.2), { at: [xAt(d, t), r.floor + 0.004, 0], color: '#a8452f' });
     }
   }
   // the gun deck's guns, run out through their ports
@@ -1060,6 +1201,7 @@ export function bigInterior(def, d) {
     cannon(k, P, g.s, gs);
     k.restore();
   }
+  // the furniture (the rugs, the lanterns on the walls, and all)
   for (const it of d.furniture) furniture(k, d, P, it);
-  return k;
+  return { k, overhead };
 }

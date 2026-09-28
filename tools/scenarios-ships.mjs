@@ -141,12 +141,13 @@ export const scenarios = {
   },
   // inside the ships: the cabin, the forecastle and the hold, a deck gun up close,
   // and a walk from the main deck down the companionway into the hold and back
-  //   --types=sloop,caravel,...  --views=side,deck,gun,cabin,captain,forecastle,hold,down  --view=first|third
+  //   --types=sloop,caravel,...  --views=side,deck,gun,cabin,captain,forecastle,hold,down  --view=first|third  [--storm=0..1]
   shipinside: {
     async run(page, snap, args) {
       await page.evaluate(() => localStorage.clear());
       await waitReady(page);
-      await page.evaluate(({ clock, view }) => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = view; g.settings.shiftLock = false; g.applySettings(); g.env.clock = clock; g.env.storm = 0; g.env.fog = 0; g.env.rain = 0; document.querySelector('.look-hint')?.remove(); }, { clock: +(args.clock || 10.5), view: args.view || 'first' });
+      // (the weather held: clear, or --storm=0..1 to see it rain)
+      await page.evaluate(({ clock, view, storm }) => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = view; g.settings.shiftLock = false; g.applySettings(); g.env.clock = clock; g.env.storm = g.env.stormTarget = storm; g.env.weatherTimer = 1e9; g.env.fog = 0; g.env.rain = 0; document.querySelector('.look-hint')?.remove(); }, { clock: +(args.clock || 10.5), view: args.view || 'first', storm: +(args.storm || 0) });
       const spot = await page.evaluate(() => {
         const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island');
         for (const need of [-40, -32, -26]) {
@@ -163,8 +164,10 @@ export const scenarios = {
       for (const type of types) {
         const info = await page.evaluate(({ s, type }) => {
           const g = window.OP.game;
-          for (const o of g.ships) if (o.name === 'Test Ship') o.alive = false;
-          g.ships = g.ships.filter((o) => o.alive !== false);
+          // (nobody else about: a passing ship given her berth would lie across her)
+          for (const o of g.ships) o.alive = false;
+          g.ships = [];
+          if (g.traffic) { g.traffic.ships = []; g.traffic.t = 1e9; }
           const ship = g.giveShip(type, s.x, s.y, 'Test Ship', { heading: 0.4 });
           ship.anchored = true; ship.speed = 0; ship.sail = 0; ship.sailSet = 0;
           window.__ship = ship;
@@ -211,9 +214,10 @@ export const scenarios = {
         for (const kind of ['cabin', 'captain', 'forecastle', 'hold']) {
           if (!views.includes(kind)) continue;
           await look(kind, (kind) => {
-            const g = window.OP.game, s = window.__ship;
+            const g = window.OP.game, s = window.__ship, d = window.OP.debug.dims(s), room = d.rooms.find((x) => x.kind === kind);
+            // (just inside the door, looking in: from the middle, a mast through the room would fill the view)
             const at = kind === 'hold' ? 0.72 : kind === 'forecastle' ? 0.2 : 0.9;
-            const r = window.OP.debug.inRoom(s, kind, at, kind === 'hold' ? -0.5 : 0.35);
+            const r = window.OP.debug.inRoom(s, kind, at, kind === 'hold' ? -(d.mastR + 0.9) : room?.doors?.[0]?.v ?? 0.35);
             g.view3d.rig.yaw = s.heading + (kind === 'forecastle' || kind === 'hold' ? (kind === 'hold' ? Math.PI : 0) : Math.PI); g.view3d.rig.pitch = -0.08;
             return r;
           }, kind);
@@ -225,8 +229,13 @@ export const scenarios = {
           await page.evaluate(() => window.OP.key('W', false));
           await step(page, 0.3);
           const r1 = await page.evaluate(() => { const p = window.OP.game.player; return { h: +(p.deck?.h ?? -9).toFixed(2), z: +(p.z || 0).toFixed(2), lvl: p.deck ? (typeof p.deck.lvl === 'string' ? p.deck.lvl : 'stair') : 'off', t: +(p.deck?.t ?? 0).toFixed(3) }; });
+          // (walking on aft, off the foot of the ladder, you fetch up against the mainmast: back
+          // to the landing, at the ladder's foot, and look up it)
+          await page.evaluate(() => { const g = window.OP.game, s = window.__ship, d = window.OP.debug.dims(s), r = d.rooms.find((x) => x.kind === 'hold'); window.OP.debug.inRoom(s, 'hold', (d.comp.t0 - 0.8 / d.L - r.t0) / (r.t1 - r.t0), 0); g.view3d.rig.yaw = s.heading; g.view3d.rig.pitch = 0.3; });
+          for (let i = 0; i < 5; i++) { await step(page, 0.05); await frames(page, 1); }
           await snap(`${type}-down`);
-          await page.evaluate(() => { const g = window.OP.game, s = window.__ship; g.view3d.rig.yaw = s.heading; window.OP.key('W', true); });
+          // and climb out
+          await page.evaluate(() => { const g = window.OP.game, s = window.__ship; g.view3d.rig.yaw = s.heading; g.view3d.rig.pitch = 0; window.OP.key('W', true); });
           for (let i = 0; i < 30; i++) await step(page, 0.1);
           await page.evaluate(() => window.OP.key('W', false));
           await step(page, 0.3);
@@ -239,6 +248,180 @@ export const scenarios = {
           await snap(`${type}-incabin`);
           console.log('walk', type, JSON.stringify({ r0, down: r1, up: r2, cabin: r3 }), void r3a);
         }
+      }
+    },
+  },
+  // The rooms cut away above head height and seen from straight overhead, the
+  // bow to the right, starboard down: where every piece of furniture stands
+  // and which way it faces (and the main deck, the same way, cut just above
+  // the rail: the masts and the hatch).
+  //   node tools/shot.mjs shipplan [--types=caravel,...] [--rooms=cabin,captain,forecastle,hold,deck] [--cut=metres over the floor]
+  shipplan: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'first'; g.settings.shiftLock = false; g.applySettings(); g.env.clock = 12; g.env.storm = g.env.stormTarget = 0; g.env.weatherTimer = 1e9; g.env.fog = 0; g.env.rain = 0; document.querySelector('.look-hint')?.remove(); });
+      const spot = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island');
+        for (const need of [-40, -32, -26]) {
+          for (let k = 0; k < 30000; k++) {
+            const a = Math.random() * Math.PI * 2, r = isl.radius * (1 + Math.random() * 1.5) + 20 + Math.random() * 60;
+            const x = Math.floor(isl.x + Math.cos(a) * r) + 0.5, y = Math.floor(isl.y + Math.sin(a) * r) + 0.5;
+            if (w.sd(x, y) < need) return { x, y };
+          }
+        }
+        return null;
+      });
+      const types = String(args.types || 'sloop,caravel,brigantine,frigate,galleon,adam_brig,marine_warship,carrack,war_galleon,man_o_war,great_galleon,marine_battleship').split(',');
+      const rooms = String(args.rooms || 'cabin,captain,forecastle,hold,deck').split(',');
+      for (const type of types) {
+        await page.evaluate(({ s, type }) => {
+          const g = window.OP.game;
+          // (nobody else about: no traffic sailing through the cut)
+          for (const o of g.ships) o.alive = false;
+          g.ships = [];
+          if (g.traffic) { g.traffic.ships = []; g.traffic.t = 1e9; }
+          const ship = g.giveShip(type, s.x, s.y, 'Test Ship', { heading: 0 });
+          ship.anchored = true; ship.speed = 0; ship.sail = 0; ship.sailSet = 0;
+          window.__ship = ship;
+          window.OP.debug.onDeck(ship, 0.5, 0);
+        }, { s: spot, type });
+        for (let i = 0; i < 4; i++) { await step(page, 0.05); await frames(page, 1); }
+        for (const kind of rooms) {
+          const r = await page.evaluate(({ kind, cut }) => {
+            const OP = window.OP, g = OP.game, v3 = g.view3d, THREE = OP.THREE, s = window.__ship, d = OP.debug.dims(s);
+            const room = kind === 'deck' ? { kind, t0: d.tq, t1: d.fore ? d.tf : 0.97, floor: d.deckY } : d.rooms.find((x) => x.kind === kind);
+            if (!room) return null;
+            const sv = v3.shipViews.get(s);
+            if (!sv) return { error: 'no ship view' };
+            // (her insides shown, nothing casting shadows over them, no sails)
+            sv.root.traverse((o) => { o.castShadow = false; });
+            for (const sl of sv.sails) sl.mesh.visible = false;
+            const u0 = -d.L / 2 + room.t0 * d.L, u1 = -d.L / 2 + room.t1 * d.L, W = d.B + 1;
+            const aspect = innerWidth / innerHeight, half = Math.max((u1 - u0 + 1.2) / aspect, W) / 2;
+            const cam = new THREE.OrthographicCamera(-half * aspect, half * aspect, half, -half, 0.1, 60);
+            const cx = sv.root.position.x + (u0 + u1) / 2, cz = sv.root.position.z;
+            cam.position.set(cx, room.floor + 20, cz); cam.up.set(0, 0, -1); cam.lookAt(cx, room.floor, cz);
+            cam.updateProjectionMatrix(); cam.updateMatrixWorld();
+            // (just under the beams overhead: the hammocks and the lanterns on the walls are there to see)
+            const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), sv.root.position.y + room.floor + (kind === 'deck' ? 1.4 : cut || Math.min(room.ceil - room.floor - 0.08, 2.3)));
+            window.__plan = { cam, plane };
+            if (!v3.__draw) v3.__draw = v3.draw;
+            v3.draw = () => {
+              // (level: her roll and pitch would tilt the decks through the cut)
+              sv.root.rotation.set(0, -s.heading, 0, 'YXZ'); sv.root.updateMatrixWorld(true);
+              if (sv.inside) sv.inside.visible = true;
+              v3.renderer.clippingPlanes = [window.__plan.plane];
+              v3.renderer.render(v3.scene, window.__plan.cam);
+              v3.renderer.clippingPlanes = [];
+            };
+            return { kind, u: [+u0.toFixed(1), +u1.toFixed(1)], floor: +room.floor.toFixed(2), items: d.furniture.filter((f) => f.room === kind).map((f) => f.kind).join(',') };
+          }, { kind, cut: +(args.cut || 0) });
+          if (!r) continue;
+          for (let i = 0; i < 2; i++) { await step(page, 0.02); await frames(page, 1); }
+          console.log('plan', type, JSON.stringify(r));
+          await snap(`${type}-${kind}`);
+        }
+        await page.evaluate(() => { const v3 = window.OP.game.view3d; if (v3.__draw) { v3.draw = v3.__draw; delete v3.__draw; } });
+      }
+    },
+  },
+  // A look round aboard: stand at t along (0 stern → 1 bow), v across, on a
+  // deck (or in a room), and look yaw (radians off the bow) and pitch.
+  //   node tools/shot.mjs shiplook --type=great_galleon --at=0.72,2,0,-0.1[;0.3,0,3.1,0] [--room=hold] [--view=first|third] [--clock=10.5] [--storm=0..1]
+  shiplook: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      // (the weather held: clear, or --storm=0..1 to see it rain)
+      await page.evaluate(({ clock, view, storm }) => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = view; g.settings.shiftLock = false; g.applySettings(); g.env.clock = clock; g.env.storm = g.env.stormTarget = storm; g.env.weatherTimer = 1e9; g.env.fog = 0; g.env.rain = 0; document.querySelector('.look-hint')?.remove(); }, { clock: +(args.clock || 10.5), view: args.view || 'first', storm: +(args.storm || 0) });
+      const spot = await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island');
+        for (const need of [-40, -32, -26]) for (let k = 0; k < 30000; k++) {
+          const a = Math.random() * Math.PI * 2, r = isl.radius * (1 + Math.random() * 1.5) + 20 + Math.random() * 60;
+          const x = Math.floor(isl.x + Math.cos(a) * r) + 0.5, y = Math.floor(isl.y + Math.sin(a) * r) + 0.5;
+          if (w.sd(x, y) < need) return { x, y };
+        }
+        return null;
+      });
+      await page.evaluate(({ s, type }) => {
+        const g = window.OP.game;
+        for (const o of g.ships) o.alive = false;
+        g.ships = [];
+        if (g.traffic) { g.traffic.ships = []; g.traffic.t = 1e9; }
+        const ship = g.giveShip(type, s.x, s.y, 'Test Ship', { heading: 0.4 });
+        ship.anchored = true; ship.speed = 0; ship.sail = 0; ship.sailSet = 0;
+        window.__ship = ship;
+      }, { s: spot, type: args.type || 'caravel' });
+      for (const [i, at] of String(args.at || '0.5,0,0,0').split(';').entries()) {
+        const [t, v, yaw, pitch] = at.split(',').map(Number);
+        const r = await page.evaluate(({ t, v, yaw, pitch, room }) => {
+          const g = window.OP.game, s = window.__ship, p = g.player;
+          if (room) {
+            const d = window.OP.debug.dims(s), rm = d.rooms.find((x) => x.kind === room);
+            window.OP.debug.onDeck(s, t, v);
+            const dk = g.deckAt(p.x, p.y, 0, rm.floor, s);
+            if (dk) { p.deck = dk; dk.ship = s; }
+            p.z = 0;
+          } else window.OP.debug.onDeck(s, t, v);
+          g.view3d.rig.yaw = s.heading + (yaw || 0); g.view3d.rig.pitch = pitch || 0;
+          return { h: +(p.deck?.h ?? -1).toFixed(2), lvl: p.deck ? (typeof p.deck.lvl === 'string' ? p.deck.lvl : 'stair') : 'off', solid: +(p.deck?.solid || 0).toFixed(2) };
+        }, { t, v, yaw, pitch, room: args.room || null });
+        for (let k = 0; k < 5; k++) { await step(page, 0.05); await frames(page, 1); }
+        console.log('look', i, JSON.stringify({ t, v, yaw, pitch, ...r }));
+        await snap(`${args.type || 'caravel'}-${i}`);
+      }
+    },
+  },
+  // Onto a big ship from the pier she's berthed at: from the planks of the
+  // pier head alongside her waist, a run and a jump across to her side, up
+  // over her rail and down on her main deck.
+  //   node tools/shot.mjs pierboard [--types=caravel,great_galleon] [--island=dawn_island] [--charge=0..1]
+  pierboard: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate(() => { window.OP.quickStart('human'); const g = window.OP.game; g.settings.view = 'third'; g.settings.shiftLock = false; g.applySettings(); g.env.clock = 10.5; g.env.storm = g.env.stormTarget = 0; g.env.weatherTimer = 1e9; g.env.fog = 0; g.env.rain = 0; document.querySelector('.look-hint')?.remove(); });
+      for (const type of String(args.types || 'caravel,great_galleon').split(',')) {
+        const info = await page.evaluate(({ type, island }) => {
+          const g = window.OP.game, w = g.world, p = g.player, isl = w.islands.find((i) => i.id === island), dock = isl.docks[0];
+          if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
+          for (const o of g.ships) if (o.name === 'Pier Test') o.alive = false;
+          g.ships = g.ships.filter((o) => o.alive !== false);
+          const s = g.giveShip(type, dock.moor.x, dock.moor.y, 'Pier Test');
+          s.anchored = true; s.speed = 0; s.sail = 0;
+          window.__ship = s;
+          // where the pier head lies along her, and on which side
+          const d = window.OP.debug.dims(s), c = Math.cos(s.heading), sn = Math.sin(s.heading);
+          const ex = w.dx(s.x, dock.end.x + 0.5), ey = dock.end.y + 0.5 - s.y, u = ex * c + ey * sn, side = Math.sign(-ex * sn + ey * c) || 1;
+          const t = (u + d.L / 2) / d.L;
+          // from her side there, out across the water to the planks
+          const edge = window.OP.debug.deckToWorld(s, t, side * (d.B / 2));
+          const ox = -sn * side, oy = c * side;
+          let k = 0;
+          while (k < 8 && !w.isDock(edge.x + ox * k, edge.y + oy * k)) k += 0.1;
+          // (a stride or two back from the edge of the planks)
+          window.OP.teleport(edge.x + ox * (k + 1.2), edge.y + oy * (k + 1.2));
+          g.view3d.rig.yaw = Math.atan2(-oy, -ox); g.view3d.rig.pitch = 0.1;
+          return { type, t: +t.toFixed(3), alongside: d.fore && t > d.tf ? 'forecastle' : d.stairs.find((x) => x.la === 'quarter')?.tb < t ? 'waist' : 'quarterdeck', gap: +(k).toFixed(1), rail: +(d.deckY + d.bulH).toFixed(2), onPier: w.isDock(p.x, p.y) };
+        }, { type, island: args.island || 'dawn_island' });
+        for (let i = 0; i < 4; i++) { await step(page, 0.05); await frames(page, 1); }
+        await snap(`${type}-pier`);
+        // a stride and a jump (a plain one: tap Space; --charge=0..1 to hold it)
+        await page.evaluate(() => window.OP.key('W', true));
+        for (let i = 0; i < 2; i++) await step(page, 0.05);
+        const jumped = await page.evaluate((k) => { const g = window.OP.game; return g.player.tryJump(g, k); }, +(args.charge || 0));
+        let aboard = null;
+        for (let i = 0; i < 30 && !aboard; i++) {
+          await step(page, 0.1);
+          aboard = await page.evaluate(() => { const p = window.OP.game.player; return p.deck?.ship === window.__ship && !p.climb ? { lvl: typeof p.deck.lvl === 'string' ? p.deck.lvl : 'stair', h: +p.deck.h.toFixed(2) } : null; });
+        }
+        await page.evaluate(() => window.OP.key('W', false));
+        await step(page, 0.3);
+        const end = await page.evaluate(() => { const p = window.OP.game.player; return { deck: p.deck ? (typeof p.deck.lvl === 'string' ? p.deck.lvl : 'stair') : null, water: !!p.inWater }; });
+        console.log('pierboard', JSON.stringify({ ...info, jumped, aboard, end }));
+        await frames(page, 2);
+        await snap(`${type}-aboard`);
       }
     },
   },

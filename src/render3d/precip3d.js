@@ -351,7 +351,9 @@ class Precipitation {
     if (!v || !w) return;
     this.bolt.update(env, ctx);
     const zone = w.zone;
-    const under = !!v.isUnder;
+    // (under the sea, or below decks: a ship's cabins, her forecastle and her hold keep it off)
+    const lv = game.player?.deck?.lvl;
+    const under = !!v.isUnder || lv === 'cabin' || lv === 'captain' || lv === 'forecastle' || lv === 'hold';
     const rain = !zone && !under ? env.rain || 0 : 0;
     const snow = zone !== 1 && zone !== 2 && !under ? env.snow || 0 : 0;
     this.rain.visible = rain > 0.03;

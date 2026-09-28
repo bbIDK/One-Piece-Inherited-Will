@@ -7,7 +7,7 @@ import { drawCharacter } from '../render/character.js';
 import { SAILABLE } from '../world/tiles.js';
 import { angleDiff, clamp, TAU } from '../core/math.js';
 import { drawProjectile } from '../render/projectiles.js';
-import { hbAt, hullGap, BIG_SHIP, oarStroke, oarDrive, shipDims, deckToWorld } from '../world/hull.js';
+import { hbAt, hullGap, BIG_SHIP, oarStroke, oarDrive, shipDims, deckToWorld, xAt } from '../world/hull.js';
 
 // where the hull meets the water, as fractions of the length and beam (the small ships)
 const SMALL_HULL = [[0.47, 0], [-0.46, 0], [0.2, 0.42], [0.2, -0.42], [-0.25, 0.42], [-0.25, -0.42]];
@@ -292,15 +292,22 @@ export class Ship extends Entity {
     return false;
   }
 
-  /** A big ship moors alongside a pier head, bow out to sea (as near as she'll fit). */
+  /**
+   * A big ship berths alongside a pier head, bow out to sea: her waist (the
+   * main deck, where her rail's lowest: a jump from the planks) alongside the
+   * head — or, where the water's too shallow for that, as near it as she'll lie.
+   */
   berth(w, dock) {
-    const L = this.def.length, B = this.def.beam;
+    const L = this.def.length, B = this.def.beam, d = shipDims(this.def);
     const dx = dock.dirX ?? 0, dy = dock.dirY ?? 1, hd = Math.atan2(dy, dx);
     const end = dock.end || dock;
-    for (let k = 0; k < 10; k++) {
+    // (the head's planks, from 2.5 m short of its end, alongside her main deck just forward of the stairs up to her quarterdeck)
+    const qs = d.big ? d.stairs.find((s) => s.la === 'quarter' && s.lb === 'main') : null;
+    const waist = Math.min(L * 0.5 - 5, qs ? -xAt(d, qs.tb) - 3.2 : Infinity);
+    for (let k = 0; k < 26; k++) {
       for (const sg of [1, -1]) {
         // (alongside the pier's T-head, clear of it)
-        const along = L * 0.5 - 5 + k * 2.5, off = sg * (B * 0.5 + (dock.headHalf ?? 1) + 1.4);
+        const along = waist + k * 2, off = sg * (B * 0.5 + (dock.headHalf ?? 1) + 1.4);
         const x = w.wx(end.x + 0.5 + dx * along - dy * off), y = end.y + 0.5 + dy * along + dx * off;
         if (this.fits(w, x, y, hd)) { this.x = x; this.y = y; this.heading = hd; return true; }
       }

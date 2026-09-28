@@ -26,7 +26,7 @@ import { nearRM } from '../world/reverseMountain.js';
 const SAILOR = { name: 'Sailor', faction: 'civilian', style: 'brawler', look: { top: '#eceff1', bottom: '#37474f', hat: 'bandana', hatColor: '#1565c0' }, skill: 0.1, barks: ['Repel boarders!', 'Get off our ship!'] };
 const FISHER = { name: 'Fisherman', faction: 'civilian', style: 'brawler', look: { top: '#8d6e63', bottom: '#455a64', hat: 'cap', hatColor: '#6d8f5e' }, skill: 0.05, barks: ['Not the catch!', 'Help!'] };
 // (as many as have room to stand on deck)
-const CREW = { dinghy: 1, sloop: 2, caravel: 2, brigantine: 3, carrack: 5, war_galleon: 8, man_o_war: 10, great_galleon: 12, marine_battleship: 10 };
+const CREW = { dinghy: 1, sloop: 3, caravel: 4, brigantine: 5, frigate: 6, galleon: 6, marine_warship: 6, carrack: 6, war_galleon: 8, man_o_war: 10, great_galleon: 12, marine_battleship: 10 };
 // where the hands stand on a small ship's deck (t along from the stern, v
 // across in beams): clear of the mast, the hatch, the barrels and the crate
 const SMALL_STATIONS = [[0.82, 0], [0.36, 0.26], [0.64, -0.3], [0.36, -0.26], [0.72, 0.28]];
@@ -202,13 +202,14 @@ export function engage(s, game, target) {
   s.heaveTo = false;
   const blues = isBlue(regionAt(target.x, target.y));
   const pace = Math.abs(target.speed);
-  if (d > 13) {
+  // (abreast of her at a gun's range, side to side — however broad the two of them are)
+  const lane = (s.def.beam + target.def.beam) / 2 + 7;
+  if (d > lane + 2) {
     // (in chase: never much faster than her, and in the Blues hardly faster than a rowboat)
     s.speedCap = blues ? 8.5 : Math.max(10, pace * 1.2 + 2);
     return Math.atan2(target.y - s.y, w.dx(s.x, target.x));
   }
   // up with her: abreast at a gun's range, keeping her pace (a little faster to draw level)
-  const lane = (s.def.beam + target.def.beam) / 2 + 7;
   s.speedCap = Math.min(blues ? 8.5 : 99, pace + clamp(-ahead * 0.3, -1.5, 2) + 0.3);
   return th - side * clamp((abeam - lane) * 0.1, -0.6, 0.6);
 }
@@ -219,11 +220,14 @@ export function playerShip(p) {
   return s && !s.sunk ? s : null;
 }
 
+/** How far off (middle to middle) her guns reach another ship: a cannonball's flight from her side to the other's. */
+export const gunReach = (s, target) => 12 + (s.def.beam + target.def.beam) / 2;
+
 /** A broadside when her guns bear (lying hove to alongside, only now and then: you're meant to be able to board her). */
 export function fireOn(game, s, target, d) {
   const toT = Math.atan2(target.y - s.y, game.world.dx(s.x, target.x));
   const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
-  if (d < 17 && side < 0.6 && s.cannonCd <= 0 && s.fireBroadside(game, target.x, target.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 }) && s.heaveTo) s.cannonCd = Math.max(s.cannonCd, 6.5);
+  if (d < gunReach(s, target) && side < 0.6 && s.cannonCd <= 0 && s.fireBroadside(game, target.x, target.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 }) && s.heaveTo) s.cannonCd = Math.max(s.cannonCd, 6.5);
 }
 
 /** Sail on past (round the coasts, clear of other ships) — or fight. */
@@ -238,7 +242,7 @@ function trafficAI(s, dt, game) {
   if (tr.crippled) {
     s.sail = 0; s.rowing = 0; s.anchored = true; s.speedCap = 0;
     const target = playerShip(p);
-    if (target && hostile(s, game) && (s.def.cannons || 0) > 0 && s.cannonCd <= 0 && w.distance(s.x, s.y, target.x, target.y) < 17) s.fireBroadside(game, target.x, target.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
+    if (target && hostile(s, game) && (s.def.cannons || 0) > 0 && s.cannonCd <= 0 && w.distance(s.x, s.y, target.x, target.y) < gunReach(s, target)) s.fireBroadside(game, target.x, target.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
     return;
   }
   const target = playerShip(p);
