@@ -415,7 +415,8 @@ async function start() {
     if (game.player) {
       touch.update();
       const t0 = performance.now();
-      game.update(dt);
+      // (OP.hold: tests stepping the game frame by frame keep the live loop from advancing it)
+      if (!debug.hold) game.update(dt);
       prof('sim', t0);
       // menus and dialogue need the mouse back; closing them (a click or a key:
       // the browser allows a capture then) takes it again where the view wants it

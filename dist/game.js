@@ -65972,6 +65972,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
 
   // src/render3d/chars/viewmodel.js
   var clamp5 = (v, a, b) => v < a ? a : v > b ? b : v;
+  var FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16 };
   var xy = (h2, fb) => !h2 ? fb : Array.isArray(h2) ? h2 : [Math.cos(h2.a) * h2.r, Math.sin(h2.a) * h2.r];
   var mix23 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
   var HIDE = [B3.hips, B3.chest, B3.head, B3.sheath, B3.hilts, B3.tail];
@@ -66073,6 +66074,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const busy = !!A || pose.block !== void 0 || pose.dodge !== void 0 || pose.getUp !== void 0 || !!pose.launch || pose.state === "hurt";
       const wantReady = busy || pose.combat || pose.armed ? 1 : 0;
       this.ready = (this.ready ?? 0) + (wantReady - (this.ready ?? 0)) * Math.min(1, dtv * (wantReady ? 12 : 2.5));
+      if (A) this.ready = 1;
       if (p.reachT > 0) p.reachT = Math.max(0, p.reachT - dtv);
       const reach = p.reachT > 0 ? Math.sin((1 - p.reachT / 0.45) * Math.PI) : 0;
       this.pump = (this.pump ?? 0) + ((pose.sprint && !busy ? 1 : 0) - (this.pump ?? 0)) * Math.min(1, dtv * 6);
@@ -66123,8 +66125,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         PP = { ...PP, hF: mix23(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: p.reachT > 0.22 ? "palm" : "grab" };
       }
       if (A) {
-        const lift = (h2) => h2 ? [h2[0], h2[1] - 0.17 * clamp5(h2[0] / 0.43, 0, 1)] : h2;
-        PP = { ...PP, hF: lift(PP.hF), hB: lift(PP.hB) };
+        const T4 = FP;
+        const fp = (h2) => {
+          if (!h2) return h2;
+          const k = clamp5(h2[0] / 0.43, 0, 1);
+          let x = h2[0] > T4.x0 ? T4.x0 + (h2[0] - T4.x0) * T4.xs : h2[0] >= 0 ? Math.max(T4.xmin, h2[0]) : h2[0];
+          const y = h2[1] - T4.c - T4.L * k;
+          if (y < 0 && h2[0] > 0) x = Math.max(x, T4.xmin + (T4.xhigh - T4.xmin) * clamp5(-y / 0.3, 0, 1));
+          return [x, Math.max(T4.top, y)];
+        };
+        PP = { ...PP, hF: fp(PP.hF), hB: fp(PP.hB) };
       }
       o.leanAdd = -(PP.l || 0) * 0.55;
       o.lift = 0;
@@ -123210,7 +123220,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (game.player) {
         touch.update();
         const t0 = performance.now();
-        game.update(dt);
+        if (!debug.hold) game.update(dt);
         prof("sim", t0);
         const blocked = ui.blocksInput();
         if (view3d?.rig.locked && blocked) view3d.rig.releaseLock();

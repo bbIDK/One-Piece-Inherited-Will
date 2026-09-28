@@ -381,6 +381,35 @@ export const scenarios = {
     },
   },
   c3hair: { async run(page, snap) { await boot(page); await hairLineup(page, snap); await hatLineup(page, snap); } },
+  // a first-person punch frame by frame (a 60 fps filmstrip): --moves=jab,cross,hook,heavy --n=8
+  c3punch: {
+    async run(page, snap, args) {
+      await boot(page);
+      await page.evaluate(() => {
+        const C = window.__C3; C.clear();
+        const g = window.OP.game, p = g.player;
+        p.style = 'brawler'; p.weapon = null; p.fruit = null; p.stamina = 999;
+        C.spawn({ name: 'Training Dummy', id: 'dummy1', showName: false, look: { hair: 'bald', top: '#8d6e63' } }, 2.2, 0.2);
+        C.view(0, -0.05, 'first');
+      });
+      await settle(page, 3);
+      const moves = String(args.moves || 'jab,cross,hook,heavy').split(','), n = Number(args.n || 8);
+      for (const mv of moves) {
+        await page.evaluate((mv) => {
+          const g = window.OP.game, p = g.player;
+          p.combo.window = mv === 'jab' ? 0 : 1; p.combo.step = { jab: 0, cross: 1, hook: 2, uppercut: 3 }[mv] ?? 0;
+          if (mv === 'heavy') p.tryHeavy(g); else p.tryM1(g);
+        }, mv);
+        await page.evaluate(() => { window.OP.hold = true; });
+        for (let i = 0; i < n; i++) {
+          await page.evaluate(() => { const g = window.OP.game; g.update(1 / 60); g.render(); });
+          await snap(`${mv}-${String(i).padStart(2, '0')}`);
+        }
+        await page.evaluate(() => { window.OP.hold = false; });
+        await step(page, 1.2);
+      }
+    },
+  },
   // close-ups of hairstyles, four at a time, from the front, three-quarter and back:
   //   --styles=short,long,...  --fem=1 (women's heads)  --hat=straw
   c3hairclose: {

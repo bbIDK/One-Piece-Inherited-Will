@@ -21,6 +21,10 @@ import { FRUITS } from '../../data/fruits.js';
 import { shipDims, shipBob, pitchRise } from '../../world/hull.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+// first-person strikes (see update): reach kept to x0 + xs of the rest (and never pulled in closer than
+// xmin: a wind-up stays in view), hands raised c, and L more at full reach, never above top (an
+// uppercut ends up in the middle of the view, not over it)
+const FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16 };
 const xy = (h, fb) => (!h ? fb : Array.isArray(h) ? h : [Math.cos(h.a) * h.r, Math.sin(h.a) * h.r]);
 const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
 const HIDE = [B.hips, B.chest, B.head, B.sheath, B.hilts, B.tail];
@@ -109,6 +113,8 @@ class Viewmodel {
     const busy = !!A || pose.block !== undefined || pose.dodge !== undefined || pose.getUp !== undefined || !!pose.launch || pose.state === 'hurt';
     const wantReady = busy || pose.combat || pose.armed ? 1 : 0;
     this.ready = (this.ready ?? 0) + (wantReady - (this.ready ?? 0)) * Math.min(1, dtv * (wantReady ? 12 : 2.5));
+    // (a blow starts from the guard, not from the hands down at your sides)
+    if (A) this.ready = 1;
     if (p.reachT > 0) p.reachT = Math.max(0, p.reachT - dtv);
     const reach = p.reachT > 0 ? Math.sin((1 - p.reachT / 0.45) * Math.PI) : 0;
     this.pump = (this.pump ?? 0) + ((pose.sprint && !busy ? 1 : 0) - (this.pump ?? 0)) * Math.min(1, dtv * 6);
@@ -155,8 +161,23 @@ class Viewmodel {
     // attacks aim at the crosshair: an extending hand rises toward eye level
     // (the shoulders sit well below the eye) and swings in toward the centre
     if (A) {
-      const lift = (h) => (h ? [h[0], h[1] - 0.17 * clamp(h[0] / 0.43, 0, 1)] : h);
-      PP = { ...PP, hF: lift(PP.hF), hB: lift(PP.hB) };
+      // Seen from your own eyes a straight punch drives INTO the view: the
+      // fist ends big, just right of and below the crosshair, the forearm
+      // foreshortened behind it. Full reach (as the body strikes in third
+      // person) would put it the length of a pole away, a small fist at the
+      // end of a long sleeve; the last of the reach is taken in.
+      const T = FP;
+      const fp = (h) => {
+        if (!h) return h;
+        const k = clamp(h[0] / 0.43, 0, 1);
+        // (a hand drawn back for a swing is left where it is: it winds up out of sight)
+        let x = h[0] > T.x0 ? T.x0 + (h[0] - T.x0) * T.xs : h[0] >= 0 ? Math.max(T.xmin, h[0]) : h[0];
+        const y = h[1] - T.c - T.L * k;
+        // (a fist going up in front of the face is kept further out, so it stays in view)
+        if (y < 0 && h[0] > 0) x = Math.max(x, T.xmin + (T.xhigh - T.xmin) * clamp(-y / 0.3, 0, 1));
+        return [x, Math.max(T.top, y)];
+      };
+      PP = { ...PP, hF: fp(PP.hF), hB: fp(PP.hB) };
     }
     // the body lean mostly stays out of first person
     o.leanAdd = -(PP.l || 0) * 0.55;
