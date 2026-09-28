@@ -484,9 +484,10 @@ function layTown(world, town, rng, noise, dry) {
     for (const [px, py] of rng.shuffle(spots).slice(0, town.style === 'village' ? 2 : 4)) {
       if (clearAt(px, py - 0.5, 1.5) && !nearDoor(px, py, 2.2)) placeObject(world, { kind: 'stall', x: px, y: py, block: true, v: rng.int(0, 5), yaw: Math.atan2(world.dx(px, plaza.x), plaza.y - py) });
     }
-    // benches on the square
+    // benches on the square (back from the water: the last few steps of land
+    // fall to the waterline — in a town high over the sea, a sea wall)
     for (const [px, py] of [[plaza.x - 2.6, plaza.y + 2.2], [plaza.x + 2.6, plaza.y - 2.2]]) {
-      if (clearAt(px, py, 1.1)) placeObject(world, { kind: 'bench', x: px, y: py, block: true });
+      if (clearAt(px, py, 1.1) && world.sd(px, py) > 4.4) placeObject(world, { kind: 'bench', x: px, y: py, block: true });
     }
   }
 

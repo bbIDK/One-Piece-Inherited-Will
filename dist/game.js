@@ -58183,9 +58183,23 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(cyl(0.06, 0.09, 0.3, 8), { at: [0, 1.62, 0], color: "#bdb5a6" });
     k.add(new SphereGeometry(0.1, 8, 6), { at: [0, 1.95, 0], color: "#bdb5a6" });
   });
-  reg2("fountain", (o) => {
+  var fountainBase = (h2) => model("fountain-base:" + h2, (k) => {
+    k.add(cyl(1.49, 1.53, h2, 18), { at: [0, -h2 - 0.1, 0], color: "#c2b9aa", outline: 0.03 });
+  });
+  reg2("fountain", (o, ctx) => {
     const root2 = group("fountain");
     add(root2, fountainGeo());
+    root2.userData.founded = true;
+    const terr = ctx?.terrain || ctx?.ground;
+    if (terr && ctx.ground) {
+      let lo = terr(o.x, o.y);
+      for (let k = 0; k < 12; k++) {
+        const a = k / 12 * Math.PI * 2;
+        lo = Math.min(lo, terr(o.x + Math.cos(a) * 1.5, o.y + Math.sin(a) * 1.5));
+      }
+      const depth = Math.min(8, ctx.ground(o.x, o.y) - lo);
+      if (depth > 0.05) add(root2, fountainBase(Math.ceil((depth + 0.2) * 4) / 4));
+    }
     const sheet = new Mesh(new CylinderGeometry(0.57, 0.62, 1.28, 18, 1, true), glowMat(13627135, { opacity: 0.33 }));
     sheet.position.y = 1.1;
     root2.add(sheet);
@@ -70514,7 +70528,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.propsDirty = true;
         return;
       }
-      v.position.set(w.dx(O.x, o.x), v.userData.noGround ? 0 : this.propY(o), o.y - O.y);
+      v.position.set(w.dx(O.x, o.x), v.userData.noGround ? 0 : v.userData.founded ? this.ground(o.x, o.y) : this.propY(o), o.y - O.y);
       if (o.kind === "building") v.addEventListener("added", () => {
         if (!this.retiring.has(o)) this.buildingsFar.show(o, false);
       });
@@ -74651,7 +74665,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (clearAt(px2, py2 - 0.5, 1.5) && !nearDoor(px2, py2, 2.2)) placeObject(world, { kind: "stall", x: px2, y: py2, block: true, v: rng4.int(0, 5), yaw: Math.atan2(world.dx(px2, plaza.x), plaza.y - py2) });
       }
       for (const [px2, py2] of [[plaza.x - 2.6, plaza.y + 2.2], [plaza.x + 2.6, plaza.y - 2.2]]) {
-        if (clearAt(px2, py2, 1.1)) placeObject(world, { kind: "bench", x: px2, y: py2, block: true });
+        if (clearAt(px2, py2, 1.1) && world.sd(px2, py2) > 4.4) placeObject(world, { kind: "bench", x: px2, y: py2, block: true });
       }
     }
     if (bare) {

@@ -872,7 +872,8 @@ export class Renderer3D {
     prof('b.' + o.kind, t1);
     this.built.set(o, v);
     if (!v) { this.propsDirty = true; return; } // (drawn as a sprite from the next pass)
-    v.position.set(w.dx(O.x, o.x), v.userData.noGround ? 0 : this.propY(o), o.y - O.y);
+    // (one with its own base down to the ground, as a building has, stands on the ground at its middle)
+    v.position.set(w.dx(O.x, o.x), v.userData.noGround ? 0 : v.userData.founded ? this.ground(o.x, o.y) : this.propY(o), o.y - O.y);
     // (a building's far block gives way once its model is in the scene)
     if (o.kind === 'building') v.addEventListener('added', () => { if (!this.retiring.has(o)) this.buildingsFar.show(o, false); });
     this.attach(v, this.props);

@@ -184,9 +184,25 @@ const fountainGeo = () => model('fountain', (k) => {
   k.add(new THREE.SphereGeometry(0.1, 8, 6), { at: [0, 1.95, 0], color: '#bdb5a6' });
 });
 
-reg('fountain', (o) => {
+// (a stone base under the basin, h deep: see the fountain below)
+const fountainBase = (h) => model('fountain-base:' + h, (k) => {
+  k.add(cyl(1.49, 1.53, h, 18), { at: [0, -h - 0.1, 0], color: '#c2b9aa', outline: 0.03 });
+});
+reg('fountain', (o, ctx) => {
   const root = group('fountain');
   add(root, fountainGeo());
+  // on a slope it stands level at its middle on a stone base down to the
+  // lowest ground under it (sunk into the high side as small things are, a
+  // basin this wide ended up flush with the paving there: a pool in the
+  // ground whose wall you still bumped into)
+  root.userData.founded = true;
+  const terr = ctx?.terrain || ctx?.ground;
+  if (terr && ctx.ground) {
+    let lo = terr(o.x, o.y);
+    for (let k = 0; k < 12; k++) { const a = (k / 12) * Math.PI * 2; lo = Math.min(lo, terr(o.x + Math.cos(a) * 1.5, o.y + Math.sin(a) * 1.5)); }
+    const depth = Math.min(8, ctx.ground(o.x, o.y) - lo);
+    if (depth > 0.05) add(root, fountainBase(Math.ceil((depth + 0.2) * 4) / 4));
+  }
   // the sheet of water falling from the bowl
   const sheet = new THREE.Mesh(new THREE.CylinderGeometry(0.57, 0.62, 1.28, 18, 1, true), glowMat(0xcfeeff, { opacity: 0.33 }));
   sheet.position.y = 1.1;
