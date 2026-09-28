@@ -54,6 +54,7 @@ export class Ship extends Entity {
     // where the stroke is, and how each lies now (see updateOars)
     this.rowL = 0; this.rowR = 0; this.rowPh = 0; this.drive = 0;
     this.oars = this.def.oarsOnly ? [{ ...OAR_REST }, { ...OAR_REST }] : null;
+    this.speedCap = null; // (a pursuer holding back to your pace: see traffic.js)
     this.burstCd = 0;
     this.ai = o.ai || null;
     this.cannonsOverride = o.cannons;
@@ -138,6 +139,7 @@ export class Ship extends Entity {
       const rowSpeed = this.def.paddle ? 0.6 : this.def.oars ? 0.42 : 0.12;
       if (this.rowing) target = Math.max(target, this.def.speed * rowSpeed * this.rowing);
     }
+    if (this.speedCap != null && target > this.speedCap) target = this.speedCap;
     if (this.coupT > 0) { this.coupT -= dt; target = this.def.speed * 5; }
     // storms slow you and batter the hull
     if (env.storm > 0.3 && !game.isCalmAt(this.x, this.y)) {
@@ -327,6 +329,8 @@ export class Ship extends Entity {
     if (this.sunk || n <= 0) return;
     this.hull -= n;
     this.lastHitBy = attacker;
+    // (fire on a ship and she'll fire back, newcomer or not)
+    if (attacker && this.owner !== 'player' && (attacker.isPlayer || attacker.ownerShip?.owner === 'player')) this.provoked = true;
     if (this.game) {
       this.game.fx.text(this.x, this.y - 1, String(Math.round(n)), '#ffcc80', 0.45);
       this.game.fx.burst(this.x, this.y - 0.5, 8, { color: ['#8d6e63', '#bcaaa4', '#ffab40'], speed: 4, g: 7, life: 0.5 });
