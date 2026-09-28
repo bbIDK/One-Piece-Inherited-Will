@@ -125,8 +125,11 @@ export class Rig {
     // head: pivot at the top of the neck
     this.neck.set(0, d.chestLen + d.neck, 0).applyQuaternion(this.qChest).add(hip);
     const tilt = (P.ht || 0) + (o.tiltAdd || 0);
-    this.qHead.copy(this.qChest).multiply(_qa.setFromAxisAngle(Z, -tilt));
+    // (turned first, then nodded about its own axis: a head turned to the side
+    // and bowed looks down over that shoulder)
+    this.qHead.copy(this.qChest);
     if (o.lookYaw) this.qHead.multiply(_qb.setFromAxisAngle(Y, o.lookYaw));
+    this.qHead.multiply(_qa.setFromAxisAngle(Z, -tilt));
     if (o.headRoll) this.qHead.multiply(_qb.setFromAxisAngle(X, o.headRoll));
     this.pos[B.head].copy(this.neck); this.quat[B.head].copy(this.qHead);
     this.headC.set(d.hx || 0, d.hc, 0).applyQuaternion(this.qHead).add(this.neck);

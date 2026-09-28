@@ -186,6 +186,7 @@ export class Renderer3D {
     Object.defineProperty(this.ctx, 'camera', { get: () => this.rig.camera });
     Object.defineProperty(this.ctx, 'world', { get: () => this.world });
     Object.defineProperty(this.ctx, 'yaw', { get: () => this.rig.yaw });
+    Object.defineProperty(this.ctx, 'pitch', { get: () => this.rig.pitch });
     Object.defineProperty(this.ctx, 'mode', { get: () => this.rig.mode });
     // a projection shim so the 2D effects layer can draw on top of the 3D view
     const self = this;

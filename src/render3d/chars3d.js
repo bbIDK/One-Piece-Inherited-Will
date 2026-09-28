@@ -25,7 +25,7 @@ import { shipBob, pitchRise } from '../world/hull.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-const _v = new THREE.Vector3(), _v2 = new THREE.Vector3();
+const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _eyeP = new THREE.Vector3(), _eyeQ = new THREE.Quaternion();
 
 // ------------------------------------------------------------------ actor view
 /**
@@ -129,6 +129,13 @@ class ActorView {
       const { pose, P } = actorPose(a, env, look);
       const o = rigOptions(a, pose, P, this.o);
       o.wpn = this.wpn;
+      // in first person, looking down you bow your head (and looking up, tip
+      // it back), as anyone does: the eyes the view rides go with it, out over
+      // your chest (see eyeOffset) — and your shadow nods too
+      if (a.isPlayer && ctx.mode === 'first') {
+        const pt = ctx.pitch || 0;
+        o.tiltAdd += pt < 0 ? -pt * 0.55 : -pt * 0.3;
+      }
       this.drawing(pose, o, this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT));
       // sit down (and get up) over a moment
       const dtv = this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT);
@@ -164,6 +171,15 @@ class ActorView {
       o.att = this.attK > 0.01 ? this.att : null; o.attK = this.attK;
       // NPCs glance at you when you're close and they aren't busy
       o.lookYaw = this.lookAt(a, dist, pose, cam, s);
+      // (in first person your head turns to where you look — at the helm or
+      // the oars, say, your body square to the ship: as far as a neck turns;
+      // look further round than that and you'd have turned: see ownBody)
+      this.lookPast = 0;
+      if (a.isPlayer && ctx.mode === 'first') {
+        const want = -angleDiff(this.visF ?? a.facing ?? 0, ctx.yaw ?? 0);
+        o.lookYaw = clamp(want, -1.45, 1.45);
+        this.lookPast = Math.abs(want - o.lookYaw);
+      }
       m.pose(PP, o);
       // turning: eased, so people swing round rather than snap (quickly for
       // you and anyone mid-technique, more gently for folk walking about)
@@ -190,30 +206,66 @@ class ActorView {
     if (lod !== m.lod) m.setLod(lod);
     // (far off, the ink pass's outlines are enough, when it's on)
     m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
-    if (a.isPlayer) this.ownBody(fp, a);
+    if (a.isPlayer) this.ownBody(fp, a, ctx, env);
   }
 
   /**
    * First person: your own body under your eyes — look down and there are
    * your chest, your legs and your feet — but not your head (you're looking
    * out of it), and not your arms while the view's own arms are up (a guard,
-   * a weapon, the food you're holding, the oars). Its shadow stays whole.
+   * a weapon, the food you're holding). Its shadow stays whole.
    */
-  ownBody(fp, a) {
+  ownBody(fp, a, ctx, env) {
     const m = this.model, u = m.fx, pose = a._lastPose || {};
-    const busy = !!pose.anim || !!pose.combat || !!pose.armed || !!this.draw || pose.block !== undefined || !!pose.station || !!a.held || !!pose.launch || a.inWater;
+    // (at the helm or the oars the view has no arms of its own: yours are on the wheel, or the grips)
+    const busy = !!pose.anim || !!pose.combat || !!pose.armed || !!this.draw || pose.block !== undefined || (!!pose.station && a.mode !== 'sail') || !!a.held || !!pose.launch || a.inWater;
     // (like the first-person view in the big open-world games: from the eyes you
     // see your chest, arms, legs and feet — never your own head, hair or hat,
-    // however long the hair or deep the hood; and the neck is cut below the chin)
-    u.uClipY.value = fp ? m.rig.neck.y - m.d.neck * 0.5 : 1e6;
+    // however long the hair or deep the hood. The body is whole below the
+    // head: the eyes are in front of the neck, so looking down you see your
+    // chest and belly from above, never into yourself — and the neck is
+    // closed over at the top (body.js neckGeo). None of you is drawn over
+    // the view knocked flat (it's down on the ground where you lie), at the
+    // helm or the oars looking back over your shoulder further than a neck
+    // turns (you'd have turned round), or while the view is held back behind
+    // your eyes: a lunge up against a wall, and the head goes on without it.)
+    const away = a.state === 'knocked' || a.state === 'dead' || (!!pose.station && (this.lookPast || 0) > 0.4) || (a._eye3?.held || 0) > 0.15;
+    u.uClipY.value = fp && away ? -1e6 : 1e6;
     u.uHideHead.value = fp ? 1 : 0;
     u.uHideArms.value = fp && busy ? 1 : 0;
     m.face.visible = !fp;
     if (m.bubble) m.bubble.visible = !fp;
     if (fp) m.outline.visible = false;
     for (const h of m.held) if (h) h.group.visible = !fp;
-    // (a step back, so the eye isn't inside the collar)
-    m.group.position.x = fp ? -0.12 : 0;
+    if (fp) this.eyeOffset(a, pose, ctx, env);
+  }
+
+  /**
+   * Where your eyes are on your posed body, from where you stand (scene
+   * axes): the first-person camera rides there (camera3d.js), so the view
+   * goes with your head — leaning into a sprint, lunging into a blow,
+   * bowing it to look down at yourself — as your eyes would.
+   */
+  eyeOffset(a, pose, ctx, env) {
+    const m = this.model, d = m.d, hb = m.bones[B.head];
+    this.root.updateMatrixWorld(true);
+    hb.getWorldPosition(_eyeP);
+    hb.getWorldQuaternion(_eyeQ);
+    // (the eyes: at the front of the head, a little above its middle)
+    _v.set(d.hx + d.headR * 0.7, d.hc + d.headR * 0.12, 0).multiplyScalar(this.root.scale.x).applyQuaternion(_eyeQ);
+    _eyeP.add(_v);
+    const e = a._eye3 || (a._eye3 = { x: 0, y: 0, z: 0, t: 0, ship: null, u: 0, v: 0, hy: 0 });
+    e.x = _eyeP.x - this.root.position.x; e.y = _eyeP.y - this.root.position.y; e.z = _eyeP.z - this.root.position.z;
+    e.t = performance.now();
+    // at the helm or the oars, where they are on the ship (along her, across
+    // her, over her waterline): she has moved on by the time the view is placed
+    const s = pose.station?.ship;
+    e.ship = s || null;
+    if (s) {
+      const w = ctx.world, h = s.heading, c = Math.cos(h), sn = Math.sin(h);
+      const rx = _eyeP.x - (w ? w.dx(a.x, s.x) : s.x - a.x), rz = _eyeP.z - (s.y - a.y);
+      e.u = rx * c + rz * sn; e.v = -rx * sn + rz * c; e.hy = _eyeP.y - shipBob(s, env.time);
+    }
   }
 
   /**

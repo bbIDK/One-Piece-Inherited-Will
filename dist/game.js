@@ -40366,6 +40366,33 @@ void main() {
       return best;
     }
     /**
+     * First person: how far out from where you stand (x0, y0), along (ux, uy),
+     * up to `reach`, your eyes can go at height `eyeY` before a wall, a tree
+     * trunk, a pillar or a rock as tall as that (with a hand's breadth to
+     * spare). A bench, a barrel or a table is below them.
+     */
+    headRoom(w, ground, x0, y0, ux, uy, reach, eyeY) {
+      const tall = (x, y) => {
+        const list = w.colliders?.get(w.colKey(Math.floor(x / 4), Math.floor(y / 4)));
+        if (!list) return false;
+        for (const c of list) {
+          const dx = w.dx(c.x, x), dy = y - c.y;
+          const inside2 = c.r !== void 0 ? dx * dx + dy * dy < (c.r + 0.04) ** 2 : Math.abs(dx) < c.hw + 0.04 && Math.abs(dy) < c.hd + 0.04;
+          if (!inside2) continue;
+          const o = c.o;
+          if (c.wall || o?.kind === "building" && (o.hut || o.colCols?.includes(c))) return true;
+          const S3 = o && CAM_SOLID[o.kind];
+          if (S3 && ground(o.x, o.y) + (o.kind === "tree" && TREE_H[o.sub] || S3[0]) * (o.s || 1) > eyeY - 0.1) return true;
+        }
+        return false;
+      };
+      for (let t = 0.05; t < reach + 0.14; t += 0.05) {
+        const x = x0 + ux * t, y = y0 + uy * t;
+        if (w.solid(x, y) || tall(x, y)) return Math.min(reach, Math.max(0, t - 0.14));
+      }
+      return reach;
+    }
+    /**
      * Place the camera for this frame. `ground(x, y)` gives ground heights in
      * world tile coordinates; `p` is the player actor (at the origin).
      */
@@ -40555,7 +40582,42 @@ void main() {
         cam.position.set(cx, cy, cz);
         cam.rotation.set(this.pitch * 0.8 - 0.12 - this.tilt + this.shake.y, yaw3 + this.shake.x, 0);
       } else {
-        cam.position.set(gx + Math.cos(this.yaw + Math.PI / 2) * bobX, gh + eyeH + bobY, gz + Math.sin(this.yaw + Math.PI / 2) * bobX);
+        let ex = gx + Math.cos(this.yaw + Math.PI / 2) * bobX, ey = gh + eyeH + bobY, ez = gz + Math.sin(this.yaw + Math.PI / 2) * bobX;
+        const e = p._eye3;
+        const fresh = !!e && e.t > (this.rigT || 0);
+        const ride = sailing ? fresh && e.ship === p.ship ? "helm" : null : fresh && !p.inWater && p.state !== "knocked" && p.state !== "dead" && !p.flying ? "foot" : null;
+        if (ride !== this.ride) this.headSm = null;
+        this.ride = ride;
+        if (e) e.held = 0;
+        const k = 1 - Math.exp(-dt * 20);
+        if (ride === "helm") {
+          const s = p.ship, c = Math.cos(s.heading), sn = Math.sin(s.heading);
+          const hs = this.headSm || (this.headSm = { u: e.u, v: e.v, hy: e.hy });
+          hs.u += (e.u - hs.u) * k;
+          hs.v += (e.v - hs.v) * k;
+          hs.hy += (e.hy - hs.hy) * k;
+          ex = shipX + c * hs.u - sn * hs.v;
+          ez = shipZ + sn * hs.u + c * hs.v;
+          ey = shipBob(s, time) + hs.hy;
+        } else if (ride === "foot") {
+          const hs = this.headSm || (this.headSm = { x: e.x, y: e.y, z: e.z });
+          hs.x += (e.x - hs.x) * k;
+          hs.y += (e.y - hs.y) * k;
+          hs.z += (e.z - hs.z) * k;
+          let hx = hs.x, hz = hs.z;
+          const r = Math.hypot(hx, hz);
+          let reach = Math.min(r, 1.2 * scale);
+          if (game.world && r > 0.02) reach = this.headRoom(game.world, ground, p.x, p.y, hx / r, hz / r, reach, gh + hs.y);
+          if (r > 0.02) {
+            hx *= reach / r;
+            hz *= reach / r;
+          }
+          e.held = r - reach;
+          ex = gx + hx;
+          ez = gz + hz;
+          ey = gh + hs.y;
+        }
+        cam.position.set(ex, ey, ez);
         cam.rotation.set(this.pitch + this.shake.y + (sailing ? this.seaPitch || 0 : 0), yaw3 + this.shake.x, this.roll + rollSea);
       }
       const sprint = !sailing && p.intent?.sprint && moving;
@@ -40567,6 +40629,7 @@ void main() {
       }
       cam.updateMatrixWorld();
       this.aimCache = null;
+      this.rigT = performance.now();
     }
     /**
      * The world point under the crosshair (screen centre), or under the mouse
@@ -64725,9 +64788,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return skirtInfo ? { ...o, skirtInfo } : o;
   }
   function neckGeo(nk, y0, y1, o, cloth) {
-    const U3 = cloth ? 14 : 7, V3 = cloth ? 6 : 2;
+    const U3 = cloth ? 14 : 7, V3 = cloth ? 6 : 2, C3 = cloth ? 3 : 1, VV = V3 + C3;
     const g = grid((u, v) => {
-      const a = -Math.PI + u * TAU13, h2 = 1 - v;
+      const a = -Math.PI + u * TAU13, j = Math.round(v * VV);
+      if (j < C3) {
+        const t = j / C3 * Math.PI / 2, r2 = nk * 0.98 * Math.sin(t);
+        return [Math.cos(a) * r2 * 0.95, y1 + nk * 0.5 * Math.cos(t), Math.sin(a) * r2];
+      }
+      const h2 = 1 - (j - C3) / V3;
       const y = y0 + (y1 - y0) * h2;
       let r = nk * (1.1 - 0.12 * sstep(0, 0.5, h2));
       if (cloth) {
@@ -64740,9 +64808,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       }
       return [Math.cos(a) * r * 0.95, y, Math.sin(a) * r];
-    }, U3, V3);
+    }, U3, VV);
     const n = g.attributes.normal, W4 = U3 + 1;
-    for (let j = 0; j <= V3; j++) {
+    for (let j = 0; j <= VV; j++) {
       const a = j * W4, b = j * W4 + U3;
       const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b), l = Math.hypot(x, y, z) || 1;
       n.setXYZ(a, x / l, y / l, z / l);
@@ -66632,8 +66700,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.quat[B3.chest].copy(this.qChest);
       this.neck.set(0, d.chestLen + d.neck, 0).applyQuaternion(this.qChest).add(hip);
       const tilt = (P4.ht || 0) + (o.tiltAdd || 0);
-      this.qHead.copy(this.qChest).multiply(_qa.setFromAxisAngle(Z, -tilt));
+      this.qHead.copy(this.qChest);
       if (o.lookYaw) this.qHead.multiply(_qb.setFromAxisAngle(Y, o.lookYaw));
+      this.qHead.multiply(_qa.setFromAxisAngle(Z, -tilt));
       if (o.headRoll) this.qHead.multiply(_qb.setFromAxisAngle(X, o.headRoll));
       this.pos[B3.head].copy(this.neck);
       this.quat[B3.head].copy(this.qHead);
@@ -68838,6 +68907,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var clamp6 = (v, a, b) => v < a ? a : v > b ? b : v;
   var _v8 = new Vector3();
   var _v24 = new Vector3();
+  var _eyeP = new Vector3();
+  var _eyeQ = new Quaternion();
   function lodFor(dist, cur) {
     const near = cur === 0 ? 10.5 : 7.5, mid = cur === 1 ? 22 : 25.5;
     return dist < near ? 0 : dist < mid ? 2 : 1;
@@ -68922,6 +68993,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const { pose, P: P4 } = actorPose(a, env, look);
         const o = rigOptions(a, pose, P4, this.o);
         o.wpn = this.wpn;
+        if (a.isPlayer && ctx.mode === "first") {
+          const pt = ctx.pitch || 0;
+          o.tiltAdd += pt < 0 ? -pt * 0.55 : -pt * 0.3;
+        }
         this.drawing(pose, o, this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT));
         const dtv = this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT);
         this.sitK = (this.sitK || 0) + ((o.seatH !== null ? 1 : 0) - (this.sitK || 0)) * Math.min(1, dtv * 6);
@@ -68956,6 +69031,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         o.att = this.attK > 0.01 ? this.att : null;
         o.attK = this.attK;
         o.lookYaw = this.lookAt(a, dist, pose, cam, s);
+        this.lookPast = 0;
+        if (a.isPlayer && ctx.mode === "first") {
+          const want2 = -angleDiff(this.visF ?? a.facing ?? 0, ctx.yaw ?? 0);
+          o.lookYaw = clamp6(want2, -1.45, 1.45);
+          this.lookPast = Math.abs(want2 - o.lookYaw);
+        }
         m.pose(PP, o);
         const want = a.facing || 0;
         if (this.visF === void 0 || dtv >= 1 || knocked) this.visF = want;
@@ -68978,25 +69059,54 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const lod = a.isPlayer ? 0 : lodFor(dist, m.lod);
       if (lod !== m.lod) m.setLod(lod);
       m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
-      if (a.isPlayer) this.ownBody(fp, a);
+      if (a.isPlayer) this.ownBody(fp, a, ctx, env);
     }
     /**
      * First person: your own body under your eyes — look down and there are
      * your chest, your legs and your feet — but not your head (you're looking
      * out of it), and not your arms while the view's own arms are up (a guard,
-     * a weapon, the food you're holding, the oars). Its shadow stays whole.
+     * a weapon, the food you're holding). Its shadow stays whole.
      */
-    ownBody(fp, a) {
+    ownBody(fp, a, ctx, env) {
       const m = this.model, u = m.fx, pose = a._lastPose || {};
-      const busy = !!pose.anim || !!pose.combat || !!pose.armed || !!this.draw || pose.block !== void 0 || !!pose.station || !!a.held || !!pose.launch || a.inWater;
-      u.uClipY.value = fp ? m.rig.neck.y - m.d.neck * 0.5 : 1e6;
+      const busy = !!pose.anim || !!pose.combat || !!pose.armed || !!this.draw || pose.block !== void 0 || !!pose.station && a.mode !== "sail" || !!a.held || !!pose.launch || a.inWater;
+      const away = a.state === "knocked" || a.state === "dead" || !!pose.station && (this.lookPast || 0) > 0.4 || (a._eye3?.held || 0) > 0.15;
+      u.uClipY.value = fp && away ? -1e6 : 1e6;
       u.uHideHead.value = fp ? 1 : 0;
       u.uHideArms.value = fp && busy ? 1 : 0;
       m.face.visible = !fp;
       if (m.bubble) m.bubble.visible = !fp;
       if (fp) m.outline.visible = false;
       for (const h2 of m.held) if (h2) h2.group.visible = !fp;
-      m.group.position.x = fp ? -0.12 : 0;
+      if (fp) this.eyeOffset(a, pose, ctx, env);
+    }
+    /**
+     * Where your eyes are on your posed body, from where you stand (scene
+     * axes): the first-person camera rides there (camera3d.js), so the view
+     * goes with your head — leaning into a sprint, lunging into a blow,
+     * bowing it to look down at yourself — as your eyes would.
+     */
+    eyeOffset(a, pose, ctx, env) {
+      const m = this.model, d = m.d, hb = m.bones[B3.head];
+      this.root.updateMatrixWorld(true);
+      hb.getWorldPosition(_eyeP);
+      hb.getWorldQuaternion(_eyeQ);
+      _v8.set(d.hx + d.headR * 0.7, d.hc + d.headR * 0.12, 0).multiplyScalar(this.root.scale.x).applyQuaternion(_eyeQ);
+      _eyeP.add(_v8);
+      const e = a._eye3 || (a._eye3 = { x: 0, y: 0, z: 0, t: 0, ship: null, u: 0, v: 0, hy: 0 });
+      e.x = _eyeP.x - this.root.position.x;
+      e.y = _eyeP.y - this.root.position.y;
+      e.z = _eyeP.z - this.root.position.z;
+      e.t = performance.now();
+      const s = pose.station?.ship;
+      e.ship = s || null;
+      if (s) {
+        const w = ctx.world, h2 = s.heading, c = Math.cos(h2), sn = Math.sin(h2);
+        const rx = _eyeP.x - (w ? w.dx(a.x, s.x) : s.x - a.x), rz = _eyeP.z - (s.y - a.y);
+        e.u = rx * c + rz * sn;
+        e.v = -rx * sn + rz * c;
+        e.hy = _eyeP.y - shipBob(s, env.time);
+      }
     }
     /**
      * A weapon coming out of its sheath (the holster, or off the back) — or
@@ -69418,6 +69528,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       Object.defineProperty(this.ctx, "camera", { get: () => this.rig.camera });
       Object.defineProperty(this.ctx, "world", { get: () => this.world });
       Object.defineProperty(this.ctx, "yaw", { get: () => this.rig.yaw });
+      Object.defineProperty(this.ctx, "pitch", { get: () => this.rig.pitch });
       Object.defineProperty(this.ctx, "mode", { get: () => this.rig.mode });
       const self2 = this;
       this.proj = {

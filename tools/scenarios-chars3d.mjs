@@ -758,9 +758,82 @@ export const scenarios = {
       await page.evaluate(() => { const g = window.OP.game; g.player.combatT = 5; window.__C3.view(0, -0.9, 'first'); g.player.setBlock(true); });
       await settle(page, 4);
       await snap('down-block');
+      await page.evaluate(() => window.OP.game.player.setBlock(false));
+      // as far down as you can look, standing — then sprinting (the eyes ride
+      // the head as you lean into it), then a heavy blow's lunge (right click)
+      // (the game runs only as it's stepped here: a slow screenshot doesn't carry you off)
+      await page.evaluate(() => { window.OP.hold = true; window.__C3.view(0, -1.35, 'first'); });
+      await settle(page, 4);
+      await snap('down-straight');
+      await page.evaluate(() => { window.__C3.view(0, -1.1, 'first'); window.OP.key('W', true); window.OP.key('Shift', true); });
+      for (const [i, n] of [[1, 12], [2, 3]]) {
+        for (let k = 0; k < n; k++) { await step(page, 0.05); await frames(page, 1); }
+        await snap(`down-sprint${i}`);
+      }
+      await page.evaluate(() => { window.OP.key('W', false); window.OP.key('Shift', false); });
+      await settle(page, 6);
+      await page.evaluate(() => { const g = window.OP.game; window.__C3.view(0, -0.7, 'first'); g.player.tryHeavy(g); });
+      for (const [i, n] of [[1, 3], [2, 4]]) {
+        for (let k = 0; k < n; k++) { await step(page, 0.05); await frames(page, 1); }
+        await snap(`heavy${i}`);
+      }
+      await page.evaluate(() => { window.OP.hold = false; });
+      await settle(page, 6);
       await page.evaluate(() => { const g = window.OP.game; g.player.setBlock(false); window.__C3.view(Math.PI * 0.9, 0.05, 'third', 2.6); g.view3d.rig.setShiftLock?.(false); if (g.player.controller) g.player.controller.aimT = 0; g.player.facing = -0.3; });
       await settle(page, 5);
       await snap('third');
+    },
+  },
+  // first person at a ship's helm and a rowboat's oars: the view from your
+  // eyes over the wheel (your hands on it when you look down), looking back
+  // past your shoulder, and at the oars looking down into your lap
+  fphelm: {
+    async run(page, snap) {
+      await boot(page);
+      await page.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player, OP = window.OP;
+        const isl = w.islands.find((i) => i.id === 'dawn_island');
+        let spot = null;
+        for (let k = 0; k < 40000 && !spot; k++) {
+          const a = k * 2.399, r = isl.radius * (1 + (k % 97) / 60) + 20 + (k % 61);
+          const x = Math.floor(isl.x + Math.cos(a) * r) + 0.5, y = Math.floor(isl.y + Math.sin(a) * r) + 0.5;
+          if (w.sd(x, y) < -30) spot = { x, y };
+        }
+        g.env.windStrength = 0.3; g.env.storm = 0; g.env.clock = 12;
+        const s = g.giveShip('caravel', spot.x, spot.y, 'Probe Ship', { heading: 0 });
+        const hs = OP.debug.deckSpot(s, 'helm');
+        p.x = hs.x; p.y = hs.y; OP.step(0.3);
+        p.controller.interaction?.run(); OP.step(0.2);
+        window.__fph = { spot, s };
+        OP.hold = true;
+        window.__C3.view(s.heading, -0.25, 'first');
+      });
+      await settle(page, 5);
+      await snap('helm-ahead');
+      await page.evaluate(() => { window.__C3.view(window.__fph.s.heading, -1.1, 'first'); });
+      await settle(page, 5);
+      await snap('helm-down');
+      await page.evaluate(() => { window.__C3.view(window.__fph.s.heading + Math.PI, -1.2, 'first'); });
+      await settle(page, 5);
+      await snap('helm-back');
+      await page.evaluate(() => {
+        const g = window.OP.game, p = g.player, OP = window.OP, { spot } = window.__fph;
+        OP.hold = false;
+        // (off the helm onto her deck, as E does, then over to a rowboat)
+        p.controller.interaction?.run(); OP.step(0.1);
+        if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
+        p.mode = 'foot';
+        const b = g.giveShip('dinghy', spot.x + 70, spot.y + 70, 'Probe Boat', { heading: 0 });
+        const hs = OP.debug.deckSpot(b, 'helm');
+        p.x = hs.x; p.y = hs.y; OP.step(0.3);
+        p.controller.interaction?.run(); OP.step(0.2);
+        OP.key('W', true); OP.step(0.5); OP.key('W', false); OP.step(1.5);
+        OP.hold = true;
+        window.__C3.view(b.heading, -1.2, 'first');
+      });
+      await settle(page, 5);
+      await snap('oars-down');
+      await page.evaluate(() => { window.OP.hold = false; });
     },
   },
   c3atk: { async run(page, snap) { await boot(page); await attacks(page, snap); } },

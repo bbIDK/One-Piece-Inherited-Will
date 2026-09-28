@@ -269,8 +269,15 @@ rearrange them.
     in its holster, a staff or an axe across the back. Its hotbar key draws
     it (the hand goes to the hilt and pulls it out along the sheath into
     your stance) and puts it back again.
-  - In first person you never see your own head, hair or hat, only your
-    arms and body below.
+  - In first person the view rides your head: lean into a sprint or lunge
+    into a heavy blow and your eyes go with it (never through a wall).
+    Look down and you bow your head, as anyone does: you see your chest,
+    arms, legs and feet, never your own head, hair or hat, and never into
+    yourself. At the helm you look out over the wheel with your hands on
+    its spokes, and at the oars down into your lap with your hands on the
+    grips. Your head turns as far as a neck turns to where you look; look
+    further back over your shoulder than that and your body is left out of
+    the view.
 - **Reputation** (from Villain to Hero of the Seas):
   - Crimes lower it: stealing from shops, breaking into houses, picking
     pockets, beating townsfolk, sinking merchants. At **Outlaw (-25)** the
@@ -394,6 +401,8 @@ node tools/shot.mjs c3hairclose [--styles=a,b] [--fem=1] [--hat=straw]   # hairs
 node tools/shot.mjs c3crew [--only=crew,town,faces] [--side]   # the Straw Hats lined up like the World Seeker key art, random townsfolk, face close-ups
 node tools/shot.mjs c3body [--only=men,women]   # frames and muscles, front, side and back
 node tools/shot.mjs c3ears                      # ears and profiles, side-on and three-quarter
+node tools/shot.mjs fpbody                      # first person: looking down standing, walking, sprinting, in a heavy blow's lunge
+node tools/shot.mjs fphelm                      # first person at a caravel's helm (ahead, down at the wheel, back) and a rowboat's oars
 node tools/shot.mjs c3motion [--looks=longskirt,dress,skirt,coat,longarm] [--sit]   # clothes and hair moving: standing, walking, running, stopping (and sat down)
 node tools/shot.mjs c3draw [--wpns=fine_katana,flintlock,bo_staff] [--modes=third,first]   # weapons worn, drawn from the hotbar and sheathed, part way through
 node tools/shot.mjs probeshots --js=<file>        # several camera views in one run (the file returns [{ x, y, yaw, pitch }])

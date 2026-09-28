@@ -228,6 +228,34 @@ export class CameraRig {
   }
 
   /**
+   * First person: how far out from where you stand (x0, y0), along (ux, uy),
+   * up to `reach`, your eyes can go at height `eyeY` before a wall, a tree
+   * trunk, a pillar or a rock as tall as that (with a hand's breadth to
+   * spare). A bench, a barrel or a table is below them.
+   */
+  headRoom(w, ground, x0, y0, ux, uy, reach, eyeY) {
+    const tall = (x, y) => {
+      const list = w.colliders?.get(w.colKey(Math.floor(x / 4), Math.floor(y / 4)));
+      if (!list) return false;
+      for (const c of list) {
+        const dx = w.dx(c.x, x), dy = y - c.y;
+        const inside = c.r !== undefined ? dx * dx + dy * dy < (c.r + 0.04) ** 2 : Math.abs(dx) < c.hw + 0.04 && Math.abs(dy) < c.hd + 0.04;
+        if (!inside) continue;
+        const o = c.o;
+        if (c.wall || (o?.kind === 'building' && (o.hut || o.colCols?.includes(c)))) return true;
+        const S = o && CAM_SOLID[o.kind];
+        if (S && ground(o.x, o.y) + ((o.kind === 'tree' && TREE_H[o.sub]) || S[0]) * (o.s || 1) > eyeY - 0.1) return true;
+      }
+      return false;
+    };
+    for (let t = 0.05; t < reach + 0.14; t += 0.05) {
+      const x = x0 + ux * t, y = y0 + uy * t;
+      if (w.solid(x, y) || tall(x, y)) return Math.min(reach, Math.max(0, t - 0.14));
+    }
+    return reach;
+  }
+
+  /**
    * Place the camera for this frame. `ground(x, y)` gives ground heights in
    * world tile coordinates; `p` is the player actor (at the origin).
    */
@@ -437,7 +465,50 @@ export class CameraRig {
       cam.position.set(cx, cy, cz);
       cam.rotation.set(this.pitch * 0.8 - 0.12 - this.tilt + this.shake.y, yaw3 + this.shake.x, 0);
     } else {
-      cam.position.set(gx + Math.cos(this.yaw + Math.PI / 2) * bobX, gh + eyeH + bobY, gz + Math.sin(this.yaw + Math.PI / 2) * bobX);
+      let ex = gx + Math.cos(this.yaw + Math.PI / 2) * bobX, ey = gh + eyeH + bobY, ez = gz + Math.sin(this.yaw + Math.PI / 2) * bobX;
+      // The eye rides your head (chars3d.js ActorView.eyeOffset), on your
+      // feet and at the helm or the oars: leaning into a sprint, lunging into
+      // a blow, bowing your head to look down — the view goes where your eyes
+      // go, smoothed a little (the head's own sway is the bob). Swimming,
+      // flying or knocked flat, it's where it always was. (The eye is placed
+      // on the body as it's drawn, just after the camera: it's the last
+      // frame's, as long as you were drawn in that one — however long the
+      // frame took.)
+      const e = p._eye3;
+      const fresh = !!e && e.t > (this.rigT || 0);
+      const ride = sailing ? (fresh && e.ship === p.ship ? 'helm' : null)
+        : fresh && !p.inWater && p.state !== 'knocked' && p.state !== 'dead' && !p.flying ? 'foot' : null;
+      // (taking up the ride afresh — or the other one — it starts where the eyes are)
+      if (ride !== this.ride) this.headSm = null;
+      this.ride = ride;
+      if (e) e.held = 0;
+      const k = 1 - Math.exp(-dt * 20);
+      if (ride === 'helm') {
+        // at the helm or the oars: your eyes where they are on her as she is now
+        // (leaning into a stroke, bowing your head to look down at the wheel)
+        const s = p.ship, c = Math.cos(s.heading), sn = Math.sin(s.heading);
+        const hs = this.headSm || (this.headSm = { u: e.u, v: e.v, hy: e.hy });
+        hs.u += (e.u - hs.u) * k; hs.v += (e.v - hs.v) * k; hs.hy += (e.hy - hs.hy) * k;
+        ex = shipX + c * hs.u - sn * hs.v; ez = shipZ + sn * hs.u + c * hs.v;
+        ey = shipBob(s, time) + hs.hy;
+      } else if (ride === 'foot') {
+        const hs = this.headSm || (this.headSm = { x: e.x, y: e.y, z: e.z });
+        hs.x += (e.x - hs.x) * k; hs.y += (e.y - hs.y) * k; hs.z += (e.z - hs.z) * k;
+        // (out as far as the head goes — a lunge carries it well forward — but
+        // never into a wall, a tree trunk or a big rock: stopped short of it,
+        // and while it's held back behind your eyes you're not drawn over the
+        // view — see chars3d ownBody)
+        let hx = hs.x, hz = hs.z;
+        const r = Math.hypot(hx, hz);
+        let reach = Math.min(r, 1.2 * scale);
+        if (game.world && r > 0.02) reach = this.headRoom(game.world, ground, p.x, p.y, hx / r, hz / r, reach, gh + hs.y);
+        if (r > 0.02) { hx *= reach / r; hz *= reach / r; }
+        e.held = r - reach;
+        ex = gx + hx; ez = gz + hz;
+        // (the charged jump's crouch and a landing's dip are in gh and the pose already)
+        ey = gh + hs.y;
+      }
+      cam.position.set(ex, ey, ez);
       cam.rotation.set(this.pitch + this.shake.y + (sailing ? this.seaPitch || 0 : 0), yaw3 + this.shake.x, this.roll + rollSea);
     }
     const sprint = !sailing && p.intent?.sprint && moving;
@@ -447,6 +518,7 @@ export class CameraRig {
     if (Math.abs(cam.fov - fov) > 0.05) { cam.fov += (fov - cam.fov) * Math.min(1, dt * 6); cam.updateProjectionMatrix(); }
     cam.updateMatrixWorld();
     this.aimCache = null;
+    this.rigT = performance.now();
   }
 
   /**

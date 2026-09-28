@@ -707,12 +707,20 @@ export function buildFigure(add0, look, d, pal, q) {
 /**
  * The neck, from inside the collar up into the head: a little wider at the
  * base, the two tendons running from behind the ears down to the notch
- * between the collarbones, and an Adam's apple on men.
+ * between the collarbones, and an Adam's apple on men. Its top is domed over
+ * inside the head, so with the head not drawn (your own, in first person)
+ * there's never a hole down into the body.
  */
 function neckGeo(nk, y0, y1, o, cloth) {
-  const U = cloth ? 14 : 7, V = cloth ? 6 : 2;
+  const U = cloth ? 14 : 7, V = cloth ? 6 : 2, C = cloth ? 3 : 1, VV = V + C;
   const g = grid((u, v) => {
-    const a = -Math.PI + u * TAU, h = 1 - v; // h: 0 at the base, 1 at the top
+    const a = -Math.PI + u * TAU, j = Math.round(v * VV);
+    if (j < C) {
+      // the dome: from its crown (j = 0) down to the top of the neck
+      const t = (j / C) * Math.PI / 2, r = nk * 0.98 * Math.sin(t);
+      return [Math.cos(a) * r * 0.95, y1 + nk * 0.5 * Math.cos(t), Math.sin(a) * r];
+    }
+    const h = 1 - (j - C) / V; // h: 0 at the base, 1 at the top
     const y = y0 + (y1 - y0) * h;
     let r = nk * (1.1 - 0.12 * sstep(0, 0.5, h));
     if (cloth) {
@@ -726,10 +734,10 @@ function neckGeo(nk, y0, y1, o, cloth) {
       }
     }
     return [Math.cos(a) * r * 0.95, y, Math.sin(a) * r];
-  }, U, V);
+  }, U, VV);
   // weld the seam at the back
   const n = g.attributes.normal, W = U + 1;
-  for (let j = 0; j <= V; j++) {
+  for (let j = 0; j <= VV; j++) {
     const a = j * W, b = j * W + U;
     const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b), l = Math.hypot(x, y, z) || 1;
     n.setXYZ(a, x / l, y / l, z / l); n.setXYZ(b, x / l, y / l, z / l);
