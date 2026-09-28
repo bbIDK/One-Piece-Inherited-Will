@@ -68,9 +68,11 @@ export function dockOf(w, s) {
     const R = (isl.radius || 0) + 80;
     if (!isl.docks?.length || Math.abs(w.dx(isl.x, s.x)) > R || Math.abs(isl.y - s.y) > R) continue;
     for (const dk of isl.docks) {
-      const e = dk.end || dk;
+      const e = dk.end || dk, hh = dk.headHalf ?? 2;
       const d = w.distance(s.x, s.y, e.x + 0.5, e.y + 0.5);
-      if (d < s.def.length * 0.6 + (dk.headHalf ?? 2) + 6 && d < bd) { bd = d; best = dk; }
+      // (a big ship lies alongside the head, her waist to it — or further out, where the water's shallow: see Ship.berth)
+      const reach = Math.max(s.def.length * 0.6 + hh + 6, s.def.big ? Math.hypot(s.def.length * 0.5 + 12, s.def.beam * 0.5 + hh + 3) : 0);
+      if (d < reach && d < bd) { bd = d; best = dk; }
     }
   }
   return best;

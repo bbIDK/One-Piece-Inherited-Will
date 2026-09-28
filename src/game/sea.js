@@ -13,7 +13,7 @@ import { crime } from './reputation.js';
 import { RNG } from '../core/rng.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
 import { drawShip } from '../render/ship.js';
-import { hullGap } from '../world/hull.js';
+import { hullGap, hbAt } from '../world/hull.js';
 import { engage, playerShip, fireOn } from './traffic.js';
 
 export function installSea(game) {
@@ -397,7 +397,16 @@ class SeaKingBrain {
   update(k, dt, game) {
     const p = game.player;
     const tgtShip = p.mode === 'sail' && p.ship && !p.ship.sunk ? p.ship : null;
-    const tx = tgtShip ? tgtShip.x : p.x, ty = tgtShip ? tgtShip.y : p.y;
+    let tx = p.x, ty = p.y;
+    if (tgtShip) {
+      // (a ship: it goes for her deck on the side it's come up, not her middle — a
+      // great ship's broader than it can reach across)
+      const c = Math.cos(tgtShip.heading), sn = Math.sin(tgtShip.heading), L = tgtShip.def.length;
+      const ox = game.world.dx(tgtShip.x, k.x), oy = k.y - tgtShip.y;
+      const u = clamp(ox * c + oy * sn, -L * 0.35, L * 0.35), hb = hbAt(u / L + 0.5, tgtShip.def.beam) * 0.7;
+      const v = clamp(-ox * sn + oy * c, -hb, hb);
+      tx = game.world.wx(tgtShip.x + u * c - v * sn); ty = tgtShip.y + u * sn + v * c;
+    }
     const dx = game.world.dx(k.x, tx), dy = ty - k.y;
     const d = Math.hypot(dx, dy);
     k.facing = Math.atan2(dy, dx);
@@ -414,7 +423,8 @@ class SeaKingBrain {
         if (!k.alive || k.state !== 'idle') return;
         const dmg = (bite ? 60 : 40) * (1 + k.attrs.str / 25);
         game.combat.hitbox({ owner: k, x: tx, y: ty - 0.4, shape: 'circle', range: bite ? 2.6 : 4, damage: dmg * 0.5, knockback: 10, stun: 0.6, heavy: true, duration: 0.1, radial: true });
-        if (tgtShip && game.world.distance(tgtShip.x, tgtShip.y, tx, ty) < 4) tgtShip.damage(dmg, k);
+        // (unless she's sailed on out from under it)
+        if (tgtShip && hullGap(tgtShip, game.world.dx(tgtShip.x, tx), ty - tgtShip.y) < 2.5) tgtShip.damage(dmg, k);
         game.fx.burst(tx, ty, 30, { color: ['#e1f5fe', '#81d4fa', '#ffffff'], speed: 6, vz: 7, g: 12, life: 0.9, size: 0.22 });
         game.fx.shake(0.6);
         game.audio?.sfx('crash', { x: tx, y: ty });

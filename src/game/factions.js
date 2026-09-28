@@ -145,23 +145,23 @@ function escortAI(s, dt, game) {
   const c = game.state?.char;
   if (!c || c.faction !== 'marine' || !lead || lead.sunk || p.mode !== 'sail') { s.sail = 0; return; }
   const w = game.world;
-  // engage the nearest pirate ship
-  let foe = null, fd = 22;
+  // engage the nearest pirate ship (in reach, however broad the two of them are)
+  let foe = null, fd = Infinity;
   for (const o of game.ships) {
     if (o === s || o.sunk || o.faction !== 'pirate') continue;
     const d = w.distance(s.x, s.y, o.x, o.y);
-    if (d < fd) { fd = d; foe = o; }
+    if (d < 22 + (s.def.beam + o.def.beam) / 2 && d < fd) { fd = d; foe = o; }
   }
   if (foe) {
     s.sail = 1;
-    const toT = Math.atan2(foe.y - s.y, w.dx(s.x, foe.x));
-    const want = fd > 12 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
+    const toT = Math.atan2(foe.y - s.y, w.dx(s.x, foe.x)), abreast = (s.def.beam + foe.def.beam) / 2;
+    const want = fd > abreast + 7 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
     s.heading += clamp(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
     const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
     // never fire across your own flagship
     const toLead = Math.atan2(lead.y - s.y, w.dx(s.x, lead.x));
     const clear = Math.abs(angleDiff(toT, toLead)) > 0.5 || w.distance(s.x, s.y, lead.x, lead.y) > fd + 3;
-    if (fd < 16 && side < 0.6 && clear && s.cannonCd <= 0) s.fireBroadside(game, foe.x, foe.y, { name: s.name, faction: 'player', isShip: true, escort: true, power: () => (s.level || 10) * 10 });
+    if (fd < 11 + abreast && side < 0.6 && clear && s.cannonCd <= 0) s.fireBroadside(game, foe.x, foe.y, { name: s.name, faction: 'player', isShip: true, escort: true, power: () => (s.level || 10) * 10 });
     return;
   }
   // hold formation behind the flagship
