@@ -7,9 +7,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { checkShipLayout, bigTypes } from '../tools/shiplayout.mjs';
 import { SHIPS, shipClassLine } from '../src/data/ships.js';
-import { shipDims } from '../src/world/hull.js';
+import { shipDims, floorAt } from '../src/world/hull.js';
 import { Mesher } from '../src/render3d/props/kit.js';
-import { furniture, bigPalette, bigHull } from '../src/render3d/bigship.js';
+import { furniture, bigPalette, bigHull, bigMastPlan, bigSailPlan } from '../src/render3d/bigship.js';
 
 test('ships come in sizes that make sense: the rowboat small, then sloop < caravel < brigantine < frigate < galleon < carrack < war galleon < man-o\'-war < great galleon', () => {
   assert.ok(SHIPS.dinghy.length < 4 && SHIPS.dinghy.beam < 1.5);
@@ -34,6 +34,21 @@ test('the big ships\' decks, rooms and hold are sized for people: headroom, a ra
     assert.ok(d.bulH >= 1 && d.bulH <= 1.2, `${type}: rail ${d.bulH}`);
     // (a pier's planks are 1.5 m over the sea: a jump of 1.3 m and a reach of 1.35 over the rail)
     assert.ok(d.deckY + d.bulH <= 1.5 + 1.3 + 1.3, `${type}: rail ${d.deckY + d.bulH} m over the sea`);
+  }
+});
+
+test('the spanker\'s boom is head-high over every deck it reaches over, never in through a cabin front or a ceiling', () => {
+  for (const type of bigTypes()) {
+    const def = { ...SHIPS[type] }, d = shipDims(def);
+    for (const m of bigMastPlan(d)) {
+      for (const sp of bigSailPlan(def, d, m)) {
+        if (sp.type !== 'gaff') continue;
+        for (let x = sp.x - sp.len; x <= sp.x; x += 0.1) {
+          const over = sp.y0 - 0.1 - floorAt(d, (x + d.L / 2) / d.L);
+          assert.ok(over >= 1.9, `${type}: the spanker's boom at u ${x.toFixed(1)} is ${over.toFixed(2)} m over the deck`);
+        }
+      }
+    }
   }
 });
 

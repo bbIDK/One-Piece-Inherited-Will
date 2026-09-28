@@ -771,8 +771,21 @@ export function bigSailPlan(def, d, mast) {
   const wC = Math.min(d.B * 2.05, d.L * 0.5) * (mast.aft ? 0.8 : 1);
   const yr = 0.06 + d.L * 0.0025;
   if (mast.aft) {
-    // the spanker: a big fore-and-aft sail aft of the mizzen
-    sails.push({ type: 'gaff', x: mast.x, y0: mast.base + 2.3, y1: mast.h1 - 0.3, len: Math.min(d.L * 0.2, 8) });
+    // the spanker: a big fore-and-aft sail aft of the mizzen, its boom head-high
+    // over the deck the mast stands on — ending short of a deck that rises aft
+    // of it (the quarterdeck, the poop), not in through the front of the cabin
+    // under it; or, where that would leave it stunted, carried high enough to
+    // clear that deck as well
+    const tm = (mast.x + d.L / 2) / d.L, dt = 0.05 / d.L;
+    let len = Math.min(d.L * 0.2, 8), y0 = mast.base + 2.3;
+    let tUp = null;
+    for (let t = tm; t >= tm - len / d.L; t -= dt) if (floorAt(d, t) > mast.base + 0.05) { tUp = t; break; }
+    if (tUp !== null) {
+      const room = (tm - tUp) * d.L - 0.3;
+      if (room >= len * 0.6) len = room;
+      else { let top = mast.base; for (let t = tm; t >= tm - len / d.L; t -= dt) top = Math.max(top, floorAt(d, t)); y0 = top + 2.3; }
+    }
+    sails.push({ type: 'gaff', x: mast.x, y0, y1: mast.h1 - 0.3, len });
   } else {
     sails.push({ type: 'square', x: mast.x, w: wC, y0: mast.base + 2.7, y1: mast.h1 - 0.35, emblem: mast.main, yardR: yr });
   }
