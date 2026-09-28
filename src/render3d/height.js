@@ -28,7 +28,7 @@ const BOOST = new Float32Array(256);
 BOOST[T.MOUNTAIN] = 7;
 BOOST[T.CLIFF] = 4;
 BOOST[T.SNOWROCK] = 9;
-BOOST[T.RED_ROCK] = 0; // the Red Line gets its own curve below
+BOOST[T.RED_ROCK] = 7; // (red crags on an island; the Red Line itself gets its own curve below)
 BOOST[T.ROCK] = 1.2;
 BOOST[T.FOREST] = 0.3;
 BOOST[T.JUNGLE] = 0.4;
@@ -42,16 +42,23 @@ export function waterLevel(world, x, y) {
   return k ? k.level : SEA_Y;
 }
 
-/** Is this surface tile part of the Red Line (or the Reverse Mountain massif)? */
-function onRedLine(world, x) {
+/**
+ * Is this surface tile part of the Red Line (or the Reverse Mountain massif)?
+ * Its rock is the world's own (see worldgen's base), not an island's red crags.
+ */
+function onRedLine(world, x, y) {
   if (world.zone !== 0) return false;
+  if (world.base?.type) {
+    const t = world.base.type(world.wx(Math.floor(x)), Math.floor(y));
+    return t === T.RED_ROCK || t === T.SNOWROCK;
+  }
   const dm = Math.abs(world.dx(x, RM_X)), ds = Math.abs(world.dx(x, 0));
   return dm < RL_HALF + chart(90) || ds < RL_HALF + chart(30);
 }
 
 /** Height of one land tile before the coastal ramp. */
-function landHeight(world, x, t, e) {
-  if (t === T.RED_ROCK || (t === T.SNOWROCK && onRedLine(world, x))) {
+function landHeight(world, x, y, t, e) {
+  if ((t === T.RED_ROCK || t === T.SNOWROCK) && onRedLine(world, x, y)) {
     // the Red Line: a wall of red rock that dwarfs everything
     return 38 + Math.max(0, e - 90) * 0.55 + (t === T.SNOWROCK ? 9 : 0);
   }
@@ -150,7 +157,7 @@ function naturalHeight(world, cx, cy) {
       if (t === T.RAPIDS) rapids++;
       if (IS_LIQUID[t] || OVERLAY[t]) continue;
       if (t === T.WALL) { walls++; continue; }
-      const h = landHeight(world, x, t, world.elev(x, y));
+      const h = landHeight(world, x, y, t, world.elev(x, y));
       sum += h; n++;
       if (h > tall) tall = h;
     }

@@ -317,7 +317,7 @@ function settleLandmark(world, rec, o, ground) {
   // (astride a cliff or the foot of a mountain — rock and cliff stand metres
   // taller than the ground beside them, and the ground's mesh blends a tile
   // either side)
-  const LIFT = { [T.MOUNTAIN]: 7, [T.CLIFF]: 4, [T.SNOWROCK]: 9, [T.RED_ROCK]: 40 };
+  const LIFT = { [T.MOUNTAIN]: 7, [T.CLIFF]: 4, [T.SNOWROCK]: 9, [T.RED_ROCK]: 7 };
   const steep = (x, y) => {
     let lo = Infinity, hi = -Infinity;
     tiles(x, y, r + 1.2, (tx, ty) => {

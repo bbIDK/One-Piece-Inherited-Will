@@ -34585,7 +34585,7 @@ void main() {
   BOOST[T.MOUNTAIN] = 7;
   BOOST[T.CLIFF] = 4;
   BOOST[T.SNOWROCK] = 9;
-  BOOST[T.RED_ROCK] = 0;
+  BOOST[T.RED_ROCK] = 7;
   BOOST[T.ROCK] = 1.2;
   BOOST[T.FOREST] = 0.3;
   BOOST[T.JUNGLE] = 0.4;
@@ -34594,13 +34594,17 @@ void main() {
     const k = canalAt(world.wx(x), y, 60);
     return k ? k.level : SEA_Y;
   }
-  function onRedLine(world, x) {
+  function onRedLine(world, x, y) {
     if (world.zone !== 0) return false;
+    if (world.base?.type) {
+      const t = world.base.type(world.wx(Math.floor(x)), Math.floor(y));
+      return t === T.RED_ROCK || t === T.SNOWROCK;
+    }
     const dm = Math.abs(world.dx(x, RM_X)), ds = Math.abs(world.dx(x, 0));
     return dm < RL_HALF + chart(90) || ds < RL_HALF + chart(30);
   }
-  function landHeight(world, x, t, e) {
-    if (t === T.RED_ROCK || t === T.SNOWROCK && onRedLine(world, x)) {
+  function landHeight(world, x, y, t, e) {
+    if ((t === T.RED_ROCK || t === T.SNOWROCK) && onRedLine(world, x, y)) {
       return 38 + Math.max(0, e - 90) * 0.55 + (t === T.SNOWROCK ? 9 : 0);
     }
     return 0.45 + Math.min(e, 190) * ELEV_K + BOOST[t];
@@ -34675,7 +34679,7 @@ void main() {
           walls++;
           continue;
         }
-        const h2 = landHeight(world, x, t, world.elev(x, y));
+        const h2 = landHeight(world, x, y, t, world.elev(x, y));
         sum += h2;
         n++;
         if (h2 > tall) tall = h2;
@@ -70969,7 +70973,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return false;
     };
     const wet = (x, y) => tiles(x, y, r, (tx, ty) => !shore && world.isLiquid(tx, ty) || world.isBlocked(tx, ty));
-    const LIFT2 = { [T.MOUNTAIN]: 7, [T.CLIFF]: 4, [T.SNOWROCK]: 9, [T.RED_ROCK]: 40 };
+    const LIFT2 = { [T.MOUNTAIN]: 7, [T.CLIFF]: 4, [T.SNOWROCK]: 9, [T.RED_ROCK]: 7 };
     const steep = (x, y) => {
       let lo = Infinity, hi = -Infinity;
       tiles(x, y, r + 1.2, (tx, ty) => {
@@ -71428,7 +71432,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return world;
   }
   function openGentleRock(world) {
-    const hard = /* @__PURE__ */ new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK]);
+    const hard = /* @__PURE__ */ new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK, T.RED_ROCK]);
+    const redLine = (x, y) => {
+      const t = world.base?.type(world.wx(x), y);
+      return t === T.RED_ROCK || t === T.SNOWROCK;
+    };
     const W1 = world.width + 1, heights = /* @__PURE__ */ new Map();
     const key2 = (x, y) => y * W1 + world.wx(x);
     const corner = (x, y) => {
@@ -71440,7 +71448,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const centre = (x, y) => (corner(x, y) + corner(x + 1, y + 1)) / 2;
     const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     const gentle = (x, y) => {
-      if (!hard.has(world.type(x, y))) return false;
+      if (!hard.has(world.type(x, y)) || redLine(x, y)) return false;
       let h2 = null;
       for (const [i, j] of N4) {
         if (!world.walkable(x + i, y + j)) continue;
@@ -72882,9 +72890,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           { role: "palace", name: "Vinsmoke Castle", npc: "nb_judge", w: 12, d: 6, hgt: 6, wall: "#a1887f", roof: "#b71c1c" },
           { role: "restaurant", name: "Royal Kitchen", npc: "nb_cosette" },
           { role: "doctor", name: "Medical Ward", npc: "nb_eponi" },
-          { role: "hall", name: "Soldier Stock Depot", wall: "#546e7a", roof: "#263238" }
+          { role: "hall", name: "Soldier Stock Depot", wall: "#546e7a", roof: "#263238" },
+          { role: "hall", name: "Germa 66 Barracks", wall: "#78909c", roof: "#263238" },
+          { role: "hall", name: "Lineage Factor Laboratory", wall: "#cfd8dc", roof: "#37474f" },
+          { role: "weapons", name: "Raid Suit Armoury", wall: "#8d6e63", roof: "#b71c1c" },
+          { role: "shop", name: "Quartermaster", wall: "#a1887f", roof: "#4e342e" }
         ],
-        houses: 0
+        // (the clone soldiers' quarters, row on row round the keep)
+        houses: 14
       }],
       landmarks: [
         { kind: "building", role: "hall", name: "Yonji Castle", dx: 0.62, dy: -0.55, fw: 6, fd: 4, hgt: 5, wall: "#a1887f", roof: "#2e7d32", style: "noble" },
@@ -75702,11 +75715,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       name: "Water 7",
       sea: "paradise",
       ...W7,
+      // (the city's own streets are paved by its towns; round them, lawns and gardens)
       climate: "temperate",
-      rough: 0.14,
-      ground: T.COBBLE,
+      rough: 0.05,
+      ground: T.LAWN,
       beach: T.STONE,
       archipelago: true,
+      treeDensity: 0.012,
+      trees: ["oak", "bush"],
       blobs: [[0, 0, 0.72, 0.8], [-0.8, 0.26, 0.16, 0.12], [0.86, 0.42, 0.12, 0.15]],
       // Shipbuilding Island, Rocky Cape, Scrap Island
       areas: [
@@ -75758,15 +75774,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           ]
         },
         {
+          // (the whole canal district: every block between the canals built up)
           id: "w7_downtown",
           name: "Water 7 Downtown",
-          dx: 0.05,
-          dy: 0,
-          w: 90,
-          h: 66,
+          dx: 0,
+          dy: 0.04,
+          w: 170,
+          h: 190,
           style: "city",
           plaza: "fountain",
-          houses: 70,
+          houses: 240,
           buildings: [
             { role: "hall", name: "Blue Station", npc: "p2_bushon", w: 7, d: 4, wall: "#e3f2fd", roof: "#1565c0" },
             { role: "bar", name: "Blueno's Bar", npc: "p2_blueno" },

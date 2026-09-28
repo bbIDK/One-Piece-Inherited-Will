@@ -260,3 +260,31 @@ export async function rockAudit(step = 0.5) {
   res.towns.sort((a, b) => b.n - a.n);
   return res;
 }
+
+/** An ASCII map of an island (k tiles a character): ~ water, = canal, # building, + plank/bridge, . paving, , ground, T town rect corners. */
+export async function asciiMap(island, k = 2) {
+  const world = await generateWorld({ seed: 'blue-planet', islands: ALL_ISLANDS });
+  const isl = world.islands.find((i) => i.id === island);
+  const { x0, y0, x1, y1 } = isl.landBox;
+  const blds = world.objects.query(x0, y0, x1, y1).filter((o) => o.kind === 'building');
+  const inB = new Set();
+  for (const b of blds) { const r = bfoot(b); for (let y = Math.floor(r.y0); y < r.y1; y++) for (let x = Math.floor(r.x0); x < r.x1; x++) inB.add(y * 1e6 + x); }
+  const rows = [];
+  for (let y = y0 - 4; y <= y1 + 4; y += k) {
+    let row = '';
+    for (let x = x0 - 4; x <= x1 + 4; x += k) {
+      let ch = ' ';
+      const t = world.type(x, y);
+      if (inB.has(y * 1e6 + x)) ch = '#';
+      else if (t === T.CANAL) ch = '=';
+      else if (world.isLiquid(x, y)) ch = '~';
+      else if (t === T.PLANK || t === T.BRIDGE) ch = '+';
+      else if (t === T.COBBLE || t === T.STONE || t === T.MARBLE) ch = '.';
+      else ch = ',';
+      for (const tn of isl.towns) if ((x === tn.x || x === tn.x + tn.w - 1) && (y === tn.y || y === tn.y + tn.h - 1)) ch = 'T';
+      row += ch;
+    }
+    rows.push(row);
+  }
+  return `${island} land ${x1 - x0}x${y1 - y0}; towns ${isl.towns.map((t) => `${t.id} ${t.w}x${t.h} @${t.x - x0},${t.y - y0} (${t.buildings.length})`).join('; ')}\n` + rows.join('\n');
+}

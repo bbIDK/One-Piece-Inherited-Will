@@ -245,8 +245,13 @@ export const NORTH_BLUE = [
         { role: 'restaurant', name: 'Royal Kitchen', npc: 'nb_cosette' },
         { role: 'doctor', name: 'Medical Ward', npc: 'nb_eponi' },
         { role: 'hall', name: 'Soldier Stock Depot', wall: '#546e7a', roof: '#263238' },
+        { role: 'hall', name: 'Germa 66 Barracks', wall: '#78909c', roof: '#263238' },
+        { role: 'hall', name: 'Lineage Factor Laboratory', wall: '#cfd8dc', roof: '#37474f' },
+        { role: 'weapons', name: 'Raid Suit Armoury', wall: '#8d6e63', roof: '#b71c1c' },
+        { role: 'shop', name: 'Quartermaster', wall: '#a1887f', roof: '#4e342e' },
       ],
-      houses: 0,
+      // (the clone soldiers' quarters, row on row round the keep)
+      houses: 14,
     }],
     landmarks: [
       { kind: 'building', role: 'hall', name: 'Yonji Castle', dx: 0.62, dy: -0.55, fw: 6, fd: 4, hgt: 5, wall: '#a1887f', roof: '#2e7d32', style: 'noble' },

@@ -80,13 +80,15 @@ export async function generateWorld({ seed = 'blue-planet', islands = [], onProg
 }
 
 /**
- * Mountain, cliff and snow-rock tiles drawn so gently that a walkable
+ * Mountain, cliff, snow-rock and red-crag tiles drawn so gently that a walkable
  * neighbour is within half a metre of them look like ground you could walk
  * on: an invisible wall. They become walkable rock; each change lowers the
  * ground round it a little, so their neighbours are looked at again.
  */
 function openGentleRock(world) {
-  const hard = new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK]);
+  const hard = new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK, T.RED_ROCK]);
+  // (the Red Line's own rock stays as it is: only islands' crags)
+  const redLine = (x, y) => { const t = world.base?.type(world.wx(x), y); return t === T.RED_ROCK || t === T.SNOWROCK; };
   const W1 = world.width + 1, heights = new Map();
   const key = (x, y) => y * W1 + world.wx(x);
   const corner = (x, y) => { const k = key(x, y); let h = heights.get(k); if (h === undefined) heights.set(k, (h = cornerHeight(world, x, y))); return h; };
@@ -94,7 +96,7 @@ function openGentleRock(world) {
   const centre = (x, y) => (corner(x, y) + corner(x + 1, y + 1)) / 2;
   const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const gentle = (x, y) => {
-    if (!hard.has(world.type(x, y))) return false;
+    if (!hard.has(world.type(x, y)) || redLine(x, y)) return false;
     let h = null;
     for (const [i, j] of N4) {
       if (!world.walkable(x + i, y + j)) continue;

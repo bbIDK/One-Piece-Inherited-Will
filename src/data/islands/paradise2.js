@@ -66,7 +66,8 @@ export const PARADISE_2 = [
   // ============================================================ WATER 7
   {
     id: 'water_7', name: 'Water 7', sea: 'paradise', ...W7,
-    climate: 'temperate', rough: 0.14, ground: T.COBBLE, beach: T.STONE, archipelago: true,
+    // (the city's own streets are paved by its towns; round them, lawns and gardens)
+    climate: 'temperate', rough: 0.05, ground: T.LAWN, beach: T.STONE, archipelago: true, treeDensity: 0.012, trees: ['oak', 'bush'],
     blobs: [[0, 0, 0.72, 0.8], [-0.8, 0.26, 0.16, 0.12], [0.86, 0.42, 0.12, 0.15]], // Shipbuilding Island, Rocky Cape, Scrap Island
     areas: [
       { name: 'Rocky Cape', tile: T.ROCK, dx: -0.82, dy: 0.26, rx: 0.1, ry: 0.1 },
@@ -96,7 +97,8 @@ export const PARADISE_2 = [
         ],
       },
       {
-        id: 'w7_downtown', name: 'Water 7 Downtown', dx: 0.05, dy: 0, w: 90, h: 66, style: 'city', plaza: 'fountain', houses: 70,
+        // (the whole canal district: every block between the canals built up)
+        id: 'w7_downtown', name: 'Water 7 Downtown', dx: 0, dy: 0.04, w: 170, h: 190, style: 'city', plaza: 'fountain', houses: 240,
         buildings: [
           { role: 'hall', name: 'Blue Station', npc: 'p2_bushon', w: 7, d: 4, wall: '#e3f2fd', roof: '#1565c0' },
           { role: 'bar', name: "Blueno's Bar", npc: 'p2_blueno' },

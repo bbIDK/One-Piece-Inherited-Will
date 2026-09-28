@@ -23,6 +23,10 @@ await build({
 const origErr = console.error;
 console.error = (...a) => { if (typeof a[0] === 'string' && a[0].startsWith('island ')) return; origErr(...a); };
 const mod = await import(pathToFileURL(out).href);
+if (args.map) {
+  console.log(await mod.asciiMap(String(args.map), Number(args.k || 2)));
+  process.exit(0);
+}
 if (args.rock) {
   const r = await mod.rockAudit(Number(args.step || 0.5));
   console.log(`unwalkable ground that looks walkable: ${r.islandWide} tiles island-wide`, JSON.stringify(r.byType));
