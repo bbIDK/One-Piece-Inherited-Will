@@ -37233,9 +37233,15 @@ void main() {
     return t * t * (3 - 2 * t);
   };
   var BIG_SHIP = 8;
+  var dimsCache = /* @__PURE__ */ new Map();
   function shipDims(def) {
     if (def._dims) return def._dims;
-    const d = def.length >= BIG_SHIP ? bigDims(def) : smallDims(def);
+    const key2 = `${def.length}|${def.beam}|${def.masts}|${def.cannons}|${!!def.oarsOnly}`;
+    let d = dimsCache.get(key2);
+    if (!d) {
+      d = def.length >= BIG_SHIP ? bigDims(def) : smallDims(def);
+      dimsCache.set(key2, d);
+    }
     Object.defineProperty(def, "_dims", { value: d, enumerable: false, configurable: true });
     return d;
   }
@@ -37356,14 +37362,14 @@ void main() {
   function bigDims(def) {
     const L2 = def.length, B4 = def.beam;
     const D3 = B4 * 0.45;
-    const narrow = B4 < 4.8;
-    const large = L2 >= 22, mid = !narrow && !large;
-    const deckY = 0.55 + B4 * 0.2 + (mid && L2 >= 16 ? 0.45 : 0);
-    const bulH = 1.05;
-    const fore = L2 >= 14;
-    const hq = narrow ? 2.15 : 2.3, hf = 2.2;
-    const poop = large, hp = poop ? 2.1 : 0;
-    const tq = narrow ? Math.max(0.24, 2.9 / L2) : mid ? 0.26 : 0.3, tf2 = fore ? large ? 0.85 : 0.88 : 1, tp = poop ? 0.13 : 0;
+    const narrow = B4 < 7;
+    const large = L2 >= 44, mid = !narrow && !large;
+    const deckY = 0.6 + Math.min(B4, 11) * 0.2;
+    const bulH = 1.1;
+    const fore = L2 >= 24;
+    const hq = narrow ? 2.4 : Math.min(3, 1.95 + B4 * 0.075), hf = hq - 0.1;
+    const poop = large, hp = poop ? hq - 0.2 : 0;
+    const tq = narrow ? Math.max(0.24, 2.9 / L2) : mid ? 0.26 : 0.3, tf2 = fore ? large ? 0.85 : 1 - Math.max(0.13, 5.4 / L2) : 1, tp = poop ? 0.13 : 0;
     const yq = deckY + hq, yf = deckY + hf, yp = yq + hp;
     const masts = Math.max(1, Math.min(4, def.masts || 3));
     const tHelm = poop ? tp + 0.02 : narrow ? 0.08 : 0.1;
@@ -37397,11 +37403,11 @@ void main() {
     };
     d.bowY = fore ? yf : deckY + 0.9;
     d.mastU = { 1: [0.06], 2: [0.22, -0.06], 3: large ? [0.27, 0.03, -0.24] : [0.26, 0.02, -0.28], 4: [0.3, 0.1, -0.12, -0.27] }[masts].map((k) => k * L2);
-    d.mastR = 0.05 + L2 * 0.011;
+    d.mastR = Math.min(0.6, 0.05 + L2 * 0.011);
     d.wheelU = d.helmX + 0.9;
     const bu = d.wheelU + 1.45;
     d.binnacleU = !narrow && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
-    const W4 = narrow ? 0.95 : 1.2, sides2 = narrow ? [1] : [-1, 1];
+    const W4 = narrow ? 1.05 : Math.min(1.6, 0.75 + B4 * 0.055), sides2 = narrow ? [1] : [-1, 1];
     const run = (rise2) => rise2 * (narrow ? 1.1 : mid ? 1.15 : 1.3);
     const edge = (t) => hbAt(t, B4) * d.walk - 0.22;
     d.stairs = [];
@@ -37414,53 +37420,54 @@ void main() {
     if (poop) flight(tp, tp + run(hp) / L2, yp, yq, "poop", "quarter");
     const qs = d.stairs.find((s) => s.la === "quarter" && s.lb === "main"), fs = d.stairs.find((s) => s.lb === "fore");
     const mainT0 = qs.tb, mainT1 = fs ? fs.ta : 0.84;
-    const holdY = deckY - 2.25;
+    const holdY = deckY - Math.max(2.25, Math.min(2.7, 1.9 + B4 * 0.045));
     d.holdY = holdY;
     const holdHalf = (t) => skinAt(d, t, holdY + 0.3) - 0.3;
     let h0 = 0.06, h1 = 0.94;
     while (h0 < 0.4 && holdHalf(h0) < 0.8) h0 += 5e-3;
     while (h1 > 0.6 && holdHalf(h1) < 0.8) h1 -= 5e-3;
     const clearU = (u0, u1, pad2) => d.mastU.every((m) => m < u0 - d.mastR - pad2 || m > u1 + d.mastR + pad2);
+    const clearComp = (u0, u1) => d.mastU.every((m) => m < u0 - d.mastR - 1.2 || m > u1 + d.mastR + 1.5);
     const rise = deckY - holdY;
     let comp = null;
-    for (const cRun of [...large ? [rise * 1.15, rise, rise * 0.85] : [], 1]) {
-      for (let k = 0; k < 80 && !comp; k++) {
-        const tc = (mainT0 + mainT1) / 2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 6e-3;
+    for (const cRun of [...large ? [rise * 1.15, rise, rise * 0.85] : [], rise * 0.55]) {
+      for (let k = 0; k < 160 && !comp; k++) {
+        const tc = (mainT0 + mainT1) / 2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 3e-3;
         const t0 = tc - cRun / L2 / 2, t1 = tc + cRun / L2 / 2;
-        if (t0 < mainT0 + 0.5 / L2 || t1 > mainT1 - 0.4 / L2 || t0 < h0 + 0.3 / L2 || t1 > h1 - 0.3 / L2) continue;
-        if (clearU(xAt(d, t0), xAt(d, t1), cRun > 1 ? 0.7 : 0.45)) comp = { t0, t1, ladder: cRun <= 1 };
+        if (t0 < mainT0 + 0.5 / L2 || t1 > mainT1 - 1.8 / L2 || t0 < h0 + 1.8 / L2 || t1 > h1 - 0.3 / L2) continue;
+        if (clearComp(xAt(d, t0), xAt(d, t1))) comp = { t0, t1, ladder: cRun < rise * 0.7 };
       }
       if (comp) break;
     }
-    if (!comp) comp = { t0: (mainT0 + mainT1) / 2 - 0.5 / L2, t1: (mainT0 + mainT1) / 2 + 0.5 / L2, ladder: true };
-    const cw = comp.ladder ? 0.8 : narrow ? 0.9 : 1.1;
+    if (!comp) comp = { t0: (mainT0 + mainT1) / 2 - rise * 0.275 / L2, t1: (mainT0 + mainT1) / 2 + rise * 0.275 / L2, ladder: true };
+    const cw = comp.ladder ? 0.9 : 1.3;
     d.comp = { ...comp, w: cw, u0: xAt(d, comp.t0), u1: xAt(d, comp.t1) };
     d.stairs.push({ ta: comp.t0, tb: comp.t1, ha: holdY, hb: deckY, la: "hold", lb: "main", s: 0, va: -cw / 2, vb: cw / 2, down: true, ladder: comp.ladder });
     d.hatchT = (comp.t0 + comp.t1) / 2;
     const freeT = (want2, len, pad2) => {
-      for (let k = 0; k < 60; k++) {
-        const tc = want2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 8e-3;
+      for (let k = 0; k < 80; k++) {
+        const tc = want2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 6e-3;
         const u0 = xAt(d, tc) - len / 2, u1 = u0 + len;
         if (tc - len / L2 / 2 < mainT0 + 0.3 / L2 || tc + len / L2 / 2 > mainT1 - 0.3 / L2) continue;
         if (!clearU(u0, u1, pad2)) continue;
-        if (u1 > d.comp.u0 - pad2 && u0 < d.comp.u1 + pad2) continue;
+        if (u1 > d.comp.u0 - pad2 && u0 < d.comp.u1 + Math.max(pad2, 1.6)) continue;
         return tc;
       }
       return null;
     };
     d.capstanT = L2 >= 14 ? freeT(masts >= 4 ? 0.54 : 0.385, 0.9, 0.7) : null;
-    const bl2 = Math.min(4.5, L2 * 0.16), bt = L2 >= 16 ? freeT(masts >= 4 ? 0.69 : 0.645, bl2, 0.6) : null;
+    const bl2 = Math.min(6, L2 * 0.14), bt = L2 >= 24 ? freeT(masts >= 4 ? 0.69 : 0.645, bl2, 0.6) : null;
     if (bt !== null && d.capstanT !== null && Math.abs(xAt(d, bt) - xAt(d, d.capstanT)) < bl2 / 2 + 1.2) d.boat = null;
-    else d.boat = bt !== null ? { u0: (bt - 0.5) * L2 - bl2 / 2, u1: (bt - 0.5) * L2 + bl2 / 2, w: Math.min(1.9, B4 * 0.3) } : null;
+    else d.boat = bt !== null ? { u0: (bt - 0.5) * L2 - bl2 / 2, u1: (bt - 0.5) * L2 + bl2 / 2, w: Math.min(2.2, B4 * 0.22) } : null;
     const gs = Math.max(0.6, Math.min(1, B4 / 6.5));
     d.gunScale = gs;
-    const rows = [{ y: deckY + 0.42, t0: mainT0 + 0.5 / L2, t1: mainT1 - 0.5 / L2, lid: 0.42, open: 1.4, deck: true }];
-    if (deckY - 1.3 - 0.3 > 0.3) rows.push({ y: deckY - 1.3, t0: Math.max(0.12, h0 + 0.8 / L2), t1: Math.min(0.86, h1 - 0.8 / L2), lid: 0.6, open: 1.05 });
+    const rows = [{ y: deckY + 0.42, t0: mainT0 + 1.5 / L2, t1: mainT1 - 1.5 / L2, lid: 0.42, open: 1.4, deck: true }];
+    if ((def.cannons || 0) >= 12) rows.push({ y: holdY + 0.42 * Math.max(0.85, gs), t0: Math.max(0.12, h0 + 0.8 / L2), t1: Math.min(0.86, h1 - 0.8 / L2), lid: 0.6, open: 1.05 });
     const perSide = Math.ceil((def.cannons || 0) / 2);
     const capU = d.capstanT !== null ? (d.capstanT - 0.5) * L2 : null;
     const centre = (u) => {
       let w = 0;
-      for (const m of d.mastU) if (Math.abs(u - m) < d.mastR + 1.05) w = Math.max(w, d.mastR + 0.5);
+      for (const m of d.mastU) if (Math.abs(u - m) < d.mastR + 0.6) w = Math.max(w, d.mastR + 0.1);
       if (capU !== null && Math.abs(u - capU) < 1.17) w = Math.max(w, 0.62);
       if (d.boat && u > d.boat.u0 - 0.55 && u < d.boat.u1 + 0.55) w = Math.max(w, d.boat.w / 2);
       if (u > d.comp.u0 - 0.6 && u < d.comp.u1 + 0.6) w = Math.max(w, cw / 2 + 0.05);
@@ -37470,7 +37477,7 @@ void main() {
     const offAt = (t) => hbAt(t, B4) * 0.93 - 0.95 * gs;
     const fitsGun = (t) => {
       const u = (t - 0.5) * L2, reach = 0.5 * gs;
-      return [u - reach, u, u + reach].every((uu) => offAt(t) - 0.55 * gs - centre(uu) >= walkway);
+      return [u - reach, u, u + reach].every((uu) => offAt(t) - gunIn(gs) - centre(uu) >= walkway);
     };
     const top = rows[0], want = rows.length > 1 ? Math.ceil(perSide / 2) : perSide;
     const cand = [];
@@ -37494,98 +37501,420 @@ void main() {
     if (low) {
       for (let i = 0; i < low.n; i++) {
         const t = low.t0 + (low.t1 - low.t0) * (i + 0.5) / low.n;
-        if (t > comp.t0 - 0.6 / L2 && t < comp.t1 + 0.6 / L2) continue;
         const off = skinAt(d, t, low.y) - 0.3 - 0.85 * gs;
+        if (t > comp.t0 - 1.6 / L2 && t < comp.t1 + 0.5 / L2 && off - gunIn(gs) - 0.8 < cw / 2 + 0.5) continue;
         for (const s of [-1, 1]) d.lowGuns.push({ t, u: (t - 0.5) * L2, v: s * off, s });
       }
     }
     const tS = 0.02 + 0.3 / L2;
-    const doorV = narrow ? Math.max(-edge(tq) + 0.75, Math.min(0, qs.va - 0.75)) : 0;
+    const mastIn = d.mastU.some((m) => m < xAt(d, tq) && m > xAt(d, tq) - 2.6);
+    const doorVs = narrow ? [Math.max(-edge(tq) + 0.75, Math.min(0, qs.va - 0.75))] : mastIn ? [-1, 1].map((s) => s * Math.max(0.95, d.mastR + 1.15)) : [0];
     d.rooms = [
-      { kind: "cabin", t0: tS, t1: tq, floor: deckY, ceil: yq - 0.12, doors: [{ t: tq, v: doorV, w: 1.05, face: 1 }] }
+      { kind: "cabin", t0: tS, t1: tq, floor: deckY, ceil: yq - 0.12, top: yq, doors: doorVs.map((v) => ({ t: tq, v, w: 1.05, face: 1 })) }
     ];
-    if (poop) d.rooms.push({ kind: "captain", t0: tS, t1: tp, floor: yq, ceil: yp - 0.12, doors: [{ t: tp, v: 0, w: 1.05, face: 1 }] });
+    if (poop) d.rooms.push({ kind: "captain", t0: tS, t1: tp, floor: yq, ceil: yp - 0.12, top: yp, doors: [{ t: tp, v: 0, w: 1.05, face: 1 }] });
     if (fore) {
       let fe = 0.95;
       while (fe > tf2 + 0.03 && innerAt(d, fe, deckY + 1) < 0.85) fe -= 5e-3;
       const fdv = narrow ? [Math.max(-edge(tf2) + 0.75, Math.min(0, fs.va - 0.75))] : [-0.95, 0.95];
-      d.rooms.push({ kind: "forecastle", t0: tf2, t1: fe, floor: deckY, ceil: yf - 0.12, doors: fdv.map((v) => ({ t: tf2, v, w: 1, face: -1 })) });
+      d.rooms.push({ kind: "forecastle", t0: tf2, t1: fe, floor: deckY, ceil: yf - 0.12, top: yf, doors: fdv.map((v) => ({ t: tf2, v, w: 1, face: -1 })) });
     }
     d.rooms.push({ kind: "hold", t0: h0, t1: h1, floor: holdY, ceil: deckY - 0.12, doors: [] });
+    const upTo = { cabin: ["quarter", "main"], captain: ["poop", "quarter"], forecastle: ["main", "fore"] };
+    for (const r of d.rooms) if (r.doors.length) roomFront(d, r, d.stairs.filter((s) => s.la === upTo[r.kind][0] && s.lb === upTo[r.kind][1]));
+    for (const r of d.rooms) if (r.kind === "cabin" || r.kind === "captain") r.windows = sternWindows(d, r);
     d.walls = [];
     for (const r of d.rooms) {
-      for (const [t, doors] of r.kind === "forecastle" ? [[r.t0, r.doors]] : r.kind === "hold" ? [] : [[r.t1, r.doors]]) {
-        const u = xAt(d, t), w = innerAt(d, t, r.floor + 1) + 0.1;
-        let v = -w;
-        for (const dr of [...doors].sort((a, b) => a.v - b.v)) {
-          d.walls.push({ u0: u, v0: v, u1: u, v1: dr.v - dr.w / 2, y0: r.floor, y1: r.ceil + 0.12 });
-          v = dr.v + dr.w / 2;
-        }
-        d.walls.push({ u0: u, v0: v, u1: u, v1: w, y0: r.floor, y1: r.ceil + 0.12 });
+      if (!r.doors.length) continue;
+      const u = xAt(d, r.front.t), w = innerAt(d, r.front.t, r.floor + 1) + 0.1;
+      let v = -w;
+      for (const dr of [...r.doors].sort((a, b) => a.v - b.v)) {
+        d.walls.push({ u0: u, v0: v, u1: u, v1: dr.v - dr.w / 2, y0: r.floor, y1: r.ceil + 0.12 });
+        v = dr.v + dr.w / 2;
+      }
+      d.walls.push({ u0: u, v0: v, u1: u, v1: w, y0: r.floor, y1: r.ceil + 0.12 });
+    }
+    for (const r of d.rooms) {
+      const hold = r.kind === "hold";
+      for (const [t, off] of hold ? [[r.t0, 0], [r.t1, 0]] : r.kind === "forecastle" ? [[r.t1, 0]] : [[r.t0, 0.05]]) {
+        const u = xAt(d, t) + off, w = (hold ? skinAt(d, t, r.floor + 0.3) : innerAt(d, t, r.floor + 1)) + 0.1;
+        d.walls.push({ u0: u, v0: -w, u1: u, v1: w, y0: r.floor, y1: r.ceil + 0.12, end: true });
       }
     }
-    const cu0 = d.comp.u0, cu1 = d.comp.u1, ch = cw / 2 + 0.05;
-    d.walls.push({ u0: cu0, v0: -ch, u1: cu1, v1: -ch, y0: deckY, y1: deckY + 1 }, { u0: cu0, v0: ch, u1: cu1, v1: ch, y0: deckY, y1: deckY + 1 }, { u0: cu0, v0: -ch, u1: cu0, v1: ch, y0: deckY, y1: deckY + 1 });
-    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.5, rIn: d.mastR + 0.08 }));
-    for (const gn of d.guns) d.solids.push({ u: gn.u, v: gn.v, r: 0.55 * gs, lvl: "main" });
-    for (const gn of d.lowGuns) d.solids.push({ u: gn.u, v: gn.v, r: 0.5 * gs, lvl: "hold" });
+    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.08 }));
+    for (const gn of d.guns) d.solids.push({ ...gunBox(gn, gs), lvl: "main" });
+    for (const gn of d.lowGuns) d.solids.push({ ...gunBox(gn, gs), lvl: "hold" });
     if (capU !== null) d.solids.push({ u: capU, v: 0, r: 0.62, lvl: "main" });
     d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: "quarter" });
     if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35, lvl: "quarter" });
     if (fore) d.solids.push({ u: (tf2 + 0.03 - 0.5) * L2, v: 0, r: 0.55, lvl: "fore" });
     if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: "main" });
+    d.shotPile = null;
+    const mainFirst = [...d.mastU].sort((a, b) => Math.abs(a) - Math.abs(b));
+    const S3 = FURNITURE.shot;
+    for (const m of mainFirst) {
+      for (const [u, v] of [[m + d.mastR + 0.95, 0], [m - d.mastR - 0.95, 0], [m, d.mastR + 0.85], [m, -d.mastR - 0.85]]) {
+        const box2 = { u0: u - S3.w / 2, u1: u + S3.w / 2, v0: v - S3.dp / 2, v1: v + S3.dp / 2 };
+        if (deckClear(d, box2, 0.55)) {
+          d.shotPile = { u, v, ...box2 };
+          break;
+        }
+      }
+      if (d.shotPile) break;
+    }
+    if (d.shotPile) {
+      const p = d.shotPile;
+      d.solids.push({ u0: p.u0, u1: p.u1, v0: p.v0, v1: p.v1, lvl: "main" });
+    }
     furnish(d);
     return d;
   }
-  function furnish(d) {
-    const F4 = d.furniture = [];
-    const put2 = (kind, room, t, v, w, dp, extra = {}) => {
-      const r = d.rooms.find((x) => x.kind === room);
-      F4.push({ kind, room, u: xAt(d, t), v, w, dp, floor: r.floor, ...extra });
+  var gunIn = (gs) => 0.92 * gs + 0.05;
+  function gunBox(g, gs) {
+    const a = 0.25 * gs + 0.15, i = gunIn(gs), o = 0.6 * gs;
+    return { u0: g.u - a, u1: g.u + a, v0: g.s > 0 ? g.v - i : g.v - o, v1: g.s > 0 ? g.v + o : g.v + i };
+  }
+  var hits = (a, b, pad2 = 0) => a.u0 < b.u1 + pad2 && a.u1 > b.u0 - pad2 && a.v0 < b.v1 + pad2 && a.v1 > b.v0 - pad2;
+  var nearRing = (a, u, v, r) => Math.hypot(u - Math.max(a.u0, Math.min(a.u1, u)), v - Math.max(a.v0, Math.min(a.v1, v))) < r;
+  function deckClear(d, b, pad2) {
+    const t0 = (b.u0 + d.L / 2) / d.L, t1 = (b.u1 + d.L / 2) / d.L;
+    if (t0 < d.tq || t1 > d.tf) return false;
+    for (const t of [t0, t1]) if (Math.max(-b.v0, b.v1) > hbAt(t, d.B) * d.walk - pad2) return false;
+    const cp = d.comp;
+    if (hits(b, { u0: cp.u0, u1: cp.u1 + 1.6, v0: -cp.w / 2 - 0.4, v1: cp.w / 2 + 0.4 }, pad2)) return false;
+    for (const s of d.stairs) if (!s.down && (s.la === "main" || s.lb === "main") && hits(b, { u0: xAt(d, s.ta), u1: xAt(d, s.tb), v0: s.va, v1: s.vb }, pad2)) return false;
+    for (const o of d.solids) {
+      if (o.lvl && o.lvl !== "main") continue;
+      if (o.r !== void 0 ? nearRing(b, o.u, o.v, o.r + pad2) : hits(b, o, pad2)) return false;
+    }
+    return true;
+  }
+  function roomFront(d, r, stairs2) {
+    const face = r.kind === "forecastle" ? -1 : 1, t = face > 0 ? r.t1 : r.t0, u = xAt(d, t);
+    const w = innerAt(d, t, (r.floor + r.top) / 2) + 0.05, dh = Math.min(2.05, r.top - r.floor - 0.12);
+    const ds = [...r.doors].sort((a, b) => a.v - b.v);
+    ds.forEach((dr, i) => {
+      const lo = i ? (ds[i - 1].v + ds[i - 1].w / 2 + dr.v - dr.w / 2) / 2 : -w, hi = i < ds.length - 1 ? (dr.v + dr.w / 2 + ds[i + 1].v - ds[i + 1].w / 2) / 2 : w;
+      const right = hi - (dr.v + dr.w / 2), left = dr.v - dr.w / 2 - lo, sd = right >= left ? 1 : -1;
+      const lw = Math.min(dr.w - 0.1, Math.max(right, left) - 0.12), e = dr.v + sd * (dr.w / 2 + 0.04);
+      dr.dh = dh;
+      dr.leaf = lw > 0.3 ? { u: u - face * 0.12, v0: Math.min(e, e + sd * lw), v1: Math.max(e, e + sd * lw), s: sd } : null;
+    });
+    const clearOfStairs = (zz, half2) => !stairs2.some((st) => zz + half2 > st.va - 0.1 && zz - half2 < st.vb + 0.1);
+    const windows = [];
+    if (r.top - r.floor > 1.8) {
+      for (let zz = -w + 0.75; zz <= w - 0.75; zz += 1.15) {
+        if (ds.some((dr) => Math.abs(zz - dr.v) < dr.w / 2 + 0.5 || dr.leaf && zz + 0.38 > dr.leaf.v0 && zz - 0.38 < dr.leaf.v1) || !clearOfStairs(zz, 0.4)) continue;
+        windows.push(zz);
+      }
+    }
+    r.front = { t, u, face, w, dh, windows };
+  }
+  function sternWindows(d, r) {
+    const w = innerAt(d, r.t0, r.floor + 1);
+    if (r.ceil + 0.1 - r.floor <= 1.9) return [];
+    const n = Math.max(2, Math.floor(w * 2 / 1.15)), ww = Math.min(0.8, w * 2 / n - 0.3);
+    return Array.from({ length: n }, (_, i) => ({ v: -w + (i + 0.5) * (w * 2) / n, w: ww }));
+  }
+  var FURNITURE = {
+    table: { w: 1.6, dp: 0.9, h: 0.76 },
+    chair: { w: 0.46, dp: 0.46, h: 0.95 },
+    bench: { w: 1.5, dp: 0.36, h: 0.46 },
+    desk: { w: 1.4, dp: 0.75, h: 0.78 },
+    bunk: { w: 2.05, dp: 0.95, h: 0.7 },
+    chest: { w: 0.9, dp: 0.55, h: 0.62 },
+    treasure: { w: 0.9, dp: 0.8, h: 0.98 },
+    shelf: { w: 1.3, dp: 0.38, h: 1.8 },
+    stove: { w: 0.9, dp: 0.7, h: 0.8 },
+    hammock: { w: 2.1, dp: 0.8, h: 0.62 },
+    barrel: { w: 0.66, dp: 0.66, h: 0.78 },
+    barrels: { w: 1.34, dp: 0.66, h: 0.78 },
+    crate: { w: 0.8, dp: 0.8, h: 1.2 },
+    sacks: { w: 1.2, dp: 0.7, h: 0.48 },
+    shot: { w: 0.6, dp: 0.45, h: 0.48 },
+    lantern: { w: 0.28, dp: 0.36, h: 0.46 }
+  };
+  function footprint(it) {
+    const across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
+    const hu = (across ? it.dp : it.w) / 2, hv = (across ? it.w : it.dp) / 2;
+    return { u0: it.u - hu, u1: it.u + hu, v0: it.v - hv, v1: it.v + hv };
+  }
+  var liningYs = (r) => r.kind === "hold" ? [-0.02, 0.55, 1.15, 1.75, r.ceil + 0.1 - r.floor] : [-0.02, 0.9, r.ceil + 0.1 - r.floor];
+  function liningAt(d, r, t, y) {
+    const ys = liningYs(r);
+    const at5 = (yy) => r.kind === "hold" ? Math.max(0.3, skinAt(d, t, r.floor + yy) - 0.22) : innerAt(d, t, r.floor + yy) + 0.01;
+    const yc = Math.max(ys[0], Math.min(ys[ys.length - 1], y));
+    for (let i = 0; i < ys.length - 1; i++) {
+      if (yc <= ys[i + 1]) return at5(ys[i]) + (at5(ys[i + 1]) - at5(ys[i])) * (yc - ys[i]) / (ys[i + 1] - ys[i]);
+    }
+    return at5(ys[ys.length - 1]);
+  }
+  function roomEnds(d, r) {
+    const a = xAt(d, r.t0), b = xAt(d, r.t1);
+    if (r.kind === "forecastle") return [a + 0.07, b];
+    if (r.kind === "hold") return [a, b];
+    return [a + 0.1, b - 0.07];
+  }
+  function roomPlacer(d, r) {
+    const [ua, ub] = roomEnds(d, r), H3 = r.ceil - r.floor;
+    const tOf = (u) => (Math.max(ua, Math.min(ub, u)) + d.L / 2) / d.L;
+    const ys = liningYs(r);
+    const P4 = { d, r, ua, ub, H: H3, items: [], keep: [], low: [], rings: [] };
+    const reached = /* @__PURE__ */ new Map();
+    P4.reach = (u, y0, y1) => {
+      const key2 = `${Math.round(u * 100)}|${y0}|${y1}`;
+      let m = reached.get(key2);
+      if (m === void 0) {
+        m = Infinity;
+        for (const y of [y0, y1, ...ys.filter((yy) => yy > y0 && yy < y1)]) m = Math.min(m, liningAt(d, r, tOf(Math.round(u * 100) / 100), y));
+        reached.set(key2, m);
+      }
+      return m - 0.03;
     };
-    const c = d.rooms.find((r) => r.kind === "cabin");
-    const cw = innerAt(d, (c.t0 + c.t1) / 2, c.floor + 1);
-    const clen = (c.t1 - c.t0) * d.L;
-    const tc = c.t0 + (c.t1 - c.t0) * 0.42;
-    const big = clen > 3.4 && cw > 1.6;
-    put2("table", "cabin", tc, 0, big ? 1.4 : 1, big ? 0.9 : 0.7);
-    for (const s of [-1, 1]) put2("chair", "cabin", tc, s * ((big ? 0.9 : 0.7) / 2 + 0.3), 0.42, 0.42, { rot: s });
-    put2("bunk", "cabin", c.t0 + 0.9 / d.L + 0.05, cw - 0.55, 1.9, 0.85, { along: true });
-    put2("chest", "cabin", c.t0 + 0.35 / d.L + 0.02, -cw + 0.55, 0.8, 0.5, { loot: "cabin" });
-    if (d.poop) {
-      const p = d.rooms.find((r) => r.kind === "captain"), pw = innerAt(d, (p.t0 + p.t1) / 2, p.floor + 1);
-      put2("desk", "captain", p.t0 + (p.t1 - p.t0) * 0.45, 0, 1.2, 0.7);
-      put2("chest", "captain", p.t0 + 0.4 / d.L + 0.02, pw - 0.6, 0.8, 0.5, { loot: "captain" });
-      put2("shelf", "captain", p.t0 + (p.t1 - p.t0) * 0.5, -pw + 0.3, 1.4, 0.35);
+    const top = (o) => o.pipe ? H3 - 0.1 : (o.y || 0) + o.h;
+    P4.fits = (it) => {
+      const fp = footprint(it), y0 = it.y || 0, y1 = top(it);
+      if (fp.u0 < ua - 1e-6 || fp.u1 > ub + 1e-6 || y1 > H3 - (it.y ? 0 : 0.06)) return false;
+      for (const u of [fp.u0, (fp.u0 + fp.u1) / 2, fp.u1]) {
+        const w = P4.reach(u, y0, y1);
+        if (fp.v0 < -w - 1e-6 || fp.v1 > w + 1e-6) return false;
+      }
+      if (P4.keep.some((k) => hits(fp, k) && y0 < (k.top ?? Infinity))) return false;
+      if (y1 > 0.72 && P4.low.some((k) => hits(fp, k))) return false;
+      if (P4.rings.some((c) => nearRing(fp, c.u, c.v, c.r))) return false;
+      for (const o of P4.items) if (hits(fp, footprint(o), 0.02) && y0 < top(o) && (o.y || 0) < y1) return false;
+      return true;
+    };
+    P4.put = (it) => {
+      const x = { rot: 0, ...it, room: r.kind, floor: r.floor };
+      if (!P4.fits(x)) return null;
+      P4.items.push(x);
+      return x;
+    };
+    const spec = (kind, extra = {}) => ({ kind, ...FURNITURE[kind], ...extra });
+    const sidePlace = (kind, s, u, extra) => {
+      const S3 = spec(kind, extra), y0 = S3.y || 0, y1 = S3.pipe ? H3 - 0.1 : y0 + S3.h;
+      const w = Math.min(P4.reach(u - S3.w / 2, y0, y1), P4.reach(u, y0, y1), P4.reach(u + S3.w / 2, y0, y1));
+      const it = { rot: s > 0 ? Math.PI : 0, ...S3, u, v: s * (w - 0.01 - S3.dp / 2), room: r.kind, floor: r.floor };
+      return { it, off: P4.reach(u, y0, y1) - w };
+    };
+    P4.onSide = (kind, s, u, extra = {}) => P4.put(sidePlace(kind, s, u, extra).it);
+    P4.alongSide = (kind, s, from, to, extra = {}) => {
+      const dir = to >= from ? 1 : -1;
+      let best = null;
+      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
+        const c = sidePlace(kind, s, u, extra);
+        if (!P4.fits(c.it)) continue;
+        if (c.off < 0.12) {
+          best = c;
+          break;
+        }
+        if (!best || c.off < best.off - 0.02) best = c;
+      }
+      if (!best) return null;
+      P4.items.push(best.it);
+      return best.it;
+    };
+    P4.row = (kinds, s, from, to, gap, extra = {}) => {
+      const out = [], dir = to >= from ? 1 : -1;
+      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
+        const kind = kinds[out.length % kinds.length], S3 = spec(kind, extra);
+        const it = P4.onSide(kind, s, u + dir * S3.w / 2, extra);
+        if (it) {
+          out.push(it);
+          u += dir * (S3.w + (typeof gap === "function" ? gap(out.length) : gap) - 0.05);
+        }
+      }
+      return out;
+    };
+    P4.onEnd = (kind, e, v, extra = {}) => {
+      const S3 = spec(kind, extra);
+      return P4.put({ ...S3, u: e < 0 ? ua + 0.01 + S3.dp / 2 : ub - 0.01 - S3.dp / 2, v, rot: e < 0 ? Math.PI / 2 : -Math.PI / 2 });
+    };
+    P4.around = (u0, v0, fn) => {
+      for (let k = 0; k < 160; k++) {
+        const u = u0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.1;
+        if (u < ua || u > ub) continue;
+        for (const dv of [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9]) {
+          const g = fn(u, v0 + dv);
+          if (g) return g;
+        }
+      }
+      return null;
+    };
+    P4.group = (build2, clear3 = 0.55) => {
+      const mark = P4.items.length;
+      const g = build2();
+      const mine = P4.items.slice(mark);
+      if (g && mine.length) {
+        const b = mine.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
+        if (!P4.items.slice(0, mark).some((o) => !o.ghost && hits(b, footprint(o), clear3) && (o.y || 0) < 1.7)) {
+          P4.keep.push({ u0: b.u0 - clear3, u1: b.u1 + clear3, v0: b.v0 - clear3, v1: b.v1 + clear3, top: 1.7 });
+          return mine;
+        }
+      }
+      P4.items.length = mark;
+      return null;
+    };
+    P4.table = (u, v, len, wid, seats = "chairs") => P4.group(() => {
+      if (!P4.put({ kind: "table", w: len, dp: wid, h: FURNITURE.table.h, u, v, mess: seats === "benches" })) return null;
+      let n = 0;
+      if (seats === "benches") {
+        for (const s of [-1, 1]) if (P4.put({ ...spec("bench"), w: len, u, v: v + s * (wid / 2 + 0.05 + FURNITURE.bench.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
+      } else {
+        const C3 = FURNITURE.chair, k = Math.max(1, Math.min(4, Math.floor((len + 0.1) / 0.75)));
+        for (const s of [-1, 1]) for (let i = 0; i < k; i++) if (P4.put({ ...spec("chair"), u: u - len / 2 + len * (i + 0.5) / k, v: v + s * (wid / 2 + 0.05 + C3.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
+        for (const e of [-1, 1]) if (P4.put({ ...spec("chair"), u: u + e * (len / 2 + 0.05 + C3.dp / 2), v, rot: e > 0 ? -Math.PI / 2 : Math.PI / 2 })) n++;
+      }
+      return n >= 2;
+    });
+    P4.rug = (group3) => {
+      if (!group3) return null;
+      const b = group3.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
+      for (let pad2 = 0.35; pad2 > -0.2; pad2 -= 0.05) {
+        const rug = { kind: "rug", u: (b.u0 + b.u1) / 2, v: (b.v0 + b.v1) / 2, w: b.u1 - b.u0 + 2 * pad2, dp: b.v1 - b.v0 + 2 * pad2, h: 0.02, rot: 0, ghost: true, room: r.kind, floor: r.floor };
+        const fp = footprint(rug);
+        if (fp.u0 < ua || fp.u1 > ub || [fp.u0, fp.u1].some((u) => P4.reach(u, 0, 0.02) < Math.max(-fp.v0, fp.v1))) continue;
+        if (P4.items.some((o) => !group3.includes(o) && !o.y && !o.wall && hits(fp, footprint(o)))) continue;
+        P4.items.push(rug);
+        return rug;
+      }
+      return null;
+    };
+    P4.lanterns = () => {
+      const S3 = FURNITURE.lantern, y = Math.min(H3 - 0.12, 2.25) - S3.h, len = ub - ua, n = Math.max(1, Math.round(len / 3.2));
+      const free = (lt2) => {
+        const fp = footprint(lt2);
+        return fp.u0 >= ua && fp.u1 <= ub && !P4.items.some((o) => hits(fp, footprint(o), 0.08) && (o.y || 0) < lt2.y + S3.h && top(o) > lt2.y);
+      };
+      for (let i = 0; i < n; i++) {
+        const u = ua + len * (i + 0.5) / n;
+        let put2 = null;
+        for (const s of i % 2 ? [1, -1] : [-1, 1]) {
+          const w = Math.min(P4.reach(u - S3.w / 2, y, y + S3.h), P4.reach(u, y, y + S3.h), P4.reach(u + S3.w / 2, y, y + S3.h)) + 0.02;
+          const lt2 = { kind: "lantern", ...S3, u, v: s * (w - S3.dp / 2), y, rot: s > 0 ? Math.PI : 0, ghost: true, wall: s, room: r.kind, floor: r.floor };
+          if (free(lt2)) {
+            put2 = lt2;
+            break;
+          }
+        }
+        for (const dv of [0, 0.6, -0.6, 1.2, -1.2]) {
+          if (put2) break;
+          const lt2 = { kind: "lantern", ...S3, dp: S3.w, u, v: dv, y: H3 - 0.5, h: 0.5, rot: 0, ghost: true, wall: 0, room: r.kind, floor: r.floor };
+          if (free(lt2)) put2 = lt2;
+        }
+        if (put2) P4.items.push(put2);
+      }
+    };
+    for (const dr of r.doors) {
+      const f = r.front.face, u = r.front.u;
+      const inside2 = (a, b) => f > 0 ? { u0: u - b, u1: u - a } : { u0: u + a, u1: u + b };
+      P4.keep.push({ ...inside2(-1, 1.35), v0: dr.v - dr.w / 2 - 0.2, v1: dr.v + dr.w / 2 + 0.2, top: dr.dh + 0.15 });
+      if (dr.leaf) P4.keep.push({ ...inside2(-1, 0.25), v0: dr.leaf.v0 - 0.05, v1: dr.leaf.v1 + 0.05, top: dr.dh + 0.05 });
     }
-    const f = d.rooms.find((r) => r.kind === "forecastle");
-    if (f) {
-      const fw = innerAt(d, (f.t0 + f.t1) / 2, f.floor + 1), fm = (f.t0 + f.t1) / 2;
-      put2("stove", "forecastle", f.t0 + 0.7 / d.L + 0.02, fw - 0.5, 0.8, 0.7);
-      put2("table", "forecastle", fm, 0, 1.3, 0.75);
-      for (let i = 0; i < 3; i++) put2("hammock", "forecastle", f.t0 + (f.t1 - f.t0) * (0.3 + i * 0.22), -fw * 0.45, 1.6, 0.6, { hang: true });
+    if (r.front) for (const zz of r.front.windows) P4.low.push({ ...r.front.face > 0 ? { u0: ub - 0.35, u1: ub + 1 } : { u0: ua - 1, u1: ua + 0.35 }, v0: zz - 0.4, v1: zz + 0.4 });
+    for (const wd of r.windows || []) P4.low.push({ u0: ua - 1, u1: ua + 0.35, v0: wd.v - wd.w / 2 - 0.1, v1: wd.v + wd.w / 2 + 0.1 });
+    for (const m of d.mastU) if (m > ua - 1.5 && m < ub + 1.5) P4.rings.push({ u: m, v: 0, r: d.mastR + 0.08 + 0.45 });
+    if (r.kind === "hold") {
+      const cp = d.comp;
+      P4.keep.push({ u0: cp.u0 - 1.4, u1: cp.u1 + 0.3, v0: -cp.w / 2 - 0.45, v1: cp.w / 2 + 0.45 });
+      for (const g of d.lowGuns) {
+        const b = gunBox(g, d.gunScale);
+        P4.keep.push({ u0: b.u0 - 0.2, u1: b.u1 + 0.2, v0: g.s > 0 ? b.v0 - 0.9 : b.v0, v1: g.s > 0 ? b.v1 : b.v1 + 0.9, top: 1.3 });
+      }
     }
-    const h2 = d.rooms.find((r) => r.kind === "hold");
-    const hw = (t) => skinAt(d, t, h2.floor + 0.3) - 0.3;
-    const foot = d.comp.t0 - 0.9 / d.L;
-    put2("chest", "hold", foot, -Math.min(0.9, hw(foot) - 0.5), 0.9, 0.55, { loot: "hold", treasure: true });
-    const gunT = d.lowGuns.map((g) => g.t);
-    const taken = (t, span2) => t > d.comp.t0 - span2 / d.L && t < d.comp.t1 + span2 / d.L || gunT.some((g) => Math.abs(g - t) * d.L < 0.9) || d.mastU.some((m) => Math.abs(xAt(d, t) - m) < d.mastR + 0.9);
-    let n = 0;
-    for (let t = h2.t0 + 0.6 / d.L; t < h2.t1 - 0.6 / d.L; t += 1.3 / d.L) {
-      if (taken(t, 1.6)) continue;
-      const s = n % 2 ? 1 : -1, w = hw(t);
-      if (w < 1.1) continue;
-      const kind = ["barrel", "crate", "barrels", "sacks", "crate", "shot"][n % 6];
-      put2(kind, "hold", t, s * (w - 0.45), 0.8, 0.8);
-      n++;
+    return P4;
+  }
+  var clampN = (x, a, b) => Math.max(a, Math.min(b, x));
+  var CARGO = ["barrels", "crate", "sacks", "barrel", "crate", "shot", "barrels", "sacks", "barrel"];
+  var ROOMS2 = {
+    // the great cabin: a bunk along the starboard side with the sea chest at
+    // its foot, books and another chest to port (and on the bigger ships a
+    // second bunk, a water cask and a chest under the stern windows), the
+    // table down the middle with its chairs round it, a rug under it
+    cabin(P4) {
+      const { ua, ub } = P4, len = ub - ua;
+      const bunk = P4.alongSide("bunk", 1, ua + 1.05, ub - 1.05, { head: -1 });
+      if (bunk) P4.alongSide("chest", 1, bunk.u + bunk.w / 2 + 0.5, ub - 0.5, { loot: "cabin" });
+      P4.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
+      P4.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "cabin" });
+      if (len > 5.5) P4.alongSide("bunk", -1, ua + 1.05, ub - 1.05, { head: -1 });
+      if (len > 5.5) P4.onEnd("chest", -1, 0);
+      const half2 = P4.reach((ua + ub) / 2, 0, 1);
+      const tl = clampN(len * 0.3, 1.1, 2.6), tw = clampN(half2 * 0.24, 0.75, 1.05);
+      let table = null;
+      for (const [l, w] of [[tl, tw], [Math.max(1, tl * 0.75), Math.max(0.7, tw - 0.1)]]) if (!table) table = P4.around((ua + ub) / 2 - 0.2, 0, (u, v) => P4.table(u, v, l, w));
+      if (len > 5.5) P4.alongSide("barrel", 1, ub - 0.4, ua + 0.4);
+      P4.rug(table);
+      P4.lanterns();
+    },
+    // the captain's cabin under the poop: the desk facing the door, his chair
+    // behind it (his back to the stern windows); a bunk with a chest at its
+    // foot, bookcases and another chest; a rug
+    captain(P4) {
+      const { ua, ub } = P4, C3 = FURNITURE.chair, D3 = FURNITURE.desk;
+      const bunk = P4.alongSide("bunk", 1, ub - 1.05, ua + 1.05, { head: -1 });
+      if (bunk) P4.alongSide("chest", 1, bunk.u - bunk.w / 2 - 0.5, ua + 0.5, { loot: "captain" });
+      P4.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
+      P4.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
+      P4.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "captain" });
+      let desk = null;
+      for (let du = 0; du < 2.5 && !desk; du += 0.1) {
+        for (const v of [0, 0.3, -0.3, 0.6, -0.6]) {
+          if (desk) break;
+          const cu = ua + 0.42 + du + C3.dp / 2;
+          desk = P4.group(() => P4.put({ ...FURNITURE.chair, kind: "chair", u: cu, v, rot: Math.PI / 2 }) && P4.put({ ...D3, kind: "desk", u: cu + C3.dp / 2 + 0.05 + D3.dp / 2, v, rot: Math.PI / 2 }));
+        }
+      }
+      P4.rug(desk);
+      P4.lanterns();
+    },
+    // the forecastle: the galley stove, the mess table and its benches, the
+    // crew's hammocks slung up under the deck beams and their sea chests below
+    forecastle(P4) {
+      const { ua, ub, H: H3 } = P4, len = ub - ua;
+      P4.alongSide("stove", -1, ua + 0.5, ub - 0.5, { pipe: true });
+      P4.row(["chest"], 1, ua + 0.1, ub - 0.1, 1.4, { loot: "crew" });
+      P4.row(["chest"], -1, ua + 1.2, ub - 0.1, 1.4, { loot: "crew" });
+      if (P4.reach(ua + len * 0.45, 0, 1) > 1.7) {
+        const tl = clampN(len * 0.4, 1.1, 2.4);
+        for (const l of [tl, 1.1]) if (P4.around(ua + len * 0.45, 0, (u, v) => P4.table(u, v, l, 0.7, "benches"))) break;
+      }
+      for (const s of [1, -1]) P4.row(["hammock"], s, ua + 0.05, ub - 0.05, 0.12, { y: H3 - 0.64, ghost: true });
+      P4.lanterns();
+    },
+    // the hold: the treasure chest by the foot of the ladder (its lid thrown
+    // back, facing you as you come down), the cargo stowed along both sides —
+    // a second row in a wide hold — with the way down the middle clear (on a
+    // gun deck, what fits between the guns)
+    hold(P4) {
+      const { d, ua, ub } = P4, cp = d.comp, T4 = FURNITURE.treasure;
+      let chest = null;
+      for (let du = 0; du < 3 && !chest; du += 0.1) {
+        for (const s of [-1, 1]) {
+          if (!chest) chest = P4.put({ ...T4, kind: "chest", treasure: true, loot: "hold", u: cp.u0 - 0.7 - du, v: s * (cp.w / 2 + 0.47 + T4.dp / 2), rot: s < 0 ? 0 : Math.PI });
+        }
+      }
+      if (!chest) P4.around(cp.u0 - 2.2, 0, (u, v) => P4.put({ ...T4, kind: "chest", treasure: true, loot: "hold", u, v, rot: Math.PI / 2 }));
+      let n = 0;
+      for (const s of [-1, 1]) n += P4.row(CARGO.slice(n % 3), s, ua + 0.3, ub - 0.3, (k) => k % 3 ? 0.15 : 1.1).length;
+      for (const o of P4.items.slice()) {
+        if (o.treasure || o.kind === "shot") continue;
+        const s = Math.sign(o.v), f = footprint(o), kind = ["barrel", "sacks", "barrel", "crate"][Math.floor(Math.abs(o.u) * 3.7) % 4], S3 = FURNITURE[kind];
+        const v = s > 0 ? f.v0 - 0.08 - S3.dp / 2 : f.v1 + 0.08 + S3.dp / 2;
+        if (Math.abs(v) - S3.dp / 2 >= 1.3) P4.put({ ...S3, kind, u: o.u, v, rot: s > 0 ? Math.PI : 0 });
+      }
+      P4.lanterns();
     }
-    for (const it of F4) {
-      const along = it.along || it.kind === "hammock";
-      const hu = (along ? it.w : it.dp) / 2, hv = (along ? it.dp : it.w) / 2;
-      if (it.hang) continue;
-      d.solids.push({ u0: it.u - hu, u1: it.u + hu, v0: it.v - hv, v1: it.v + hv, lvl: it.room });
+  };
+  function furnish(d) {
+    d.furniture = [];
+    for (const r of d.rooms) {
+      const P4 = roomPlacer(d, r);
+      ROOMS2[r.kind](P4);
+      d.furniture.push(...P4.items);
     }
+    for (const it of d.furniture) if (!it.ghost) d.solids.push({ ...footprint(it), lvl: it.room });
   }
   var keelAt = (d, t) => -d.D * (1 - 0.5 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
   function hullProfile(d, t) {
@@ -37660,7 +37989,7 @@ void main() {
   function floorAt(d, t, v = null, h2 = null) {
     if (v !== null && d.stairs.length) {
       const s = stairAt(d, t, v);
-      if (s && (!s.down || h2 === null || h2 < s.hb - 0.3 || stairHere(s, t, h2))) return s.ha + (s.hb - s.ha) * (t - s.ta) / (s.tb - s.ta);
+      if (s) return s.ha + (s.hb - s.ha) * (t - s.ta) / (s.tb - s.ta);
     }
     if (h2 !== null) {
       const r = roomAt(d, t, h2);
@@ -37671,10 +38000,9 @@ void main() {
     if (d.fore && t > d.tf) return d.yf;
     return d.deckY;
   }
-  var stairHere = (s, t, h2) => Math.abs(s.ha + (s.hb - s.ha) * (t - s.ta) / (s.tb - s.ta) - h2) < 0.7;
   function levelAt(d, t, v, h2 = null) {
     const s = v !== null && d.stairs.length ? stairAt(d, t, v) : null;
-    if (s && (!s.down || h2 === null || h2 < s.hb - 0.3 || stairHere(s, t, h2))) return s;
+    if (s) return s;
     if (h2 !== null) {
       const r = roomAt(d, t, h2);
       if (r) return r.kind;
@@ -37686,10 +38014,9 @@ void main() {
   }
   function solidAt(d, u, v, margin = 0, lvl = null) {
     let depth = 0;
-    const inside2 = lvl === "hold" || lvl === "cabin" || lvl === "captain" || lvl === "forecastle";
     for (const o of d.solids) {
       if (o.lvl && lvl !== null && o.lvl !== lvl) continue;
-      if (o.r !== void 0) depth = Math.max(depth, (inside2 && o.rIn !== void 0 ? o.rIn : o.r) + margin - Math.hypot(u - o.u, v - o.v));
+      if (o.r !== void 0) depth = Math.max(depth, o.r + margin - Math.hypot(u - o.u, v - o.v));
       else depth = Math.max(depth, Math.min(u - (o.u0 - margin), o.u1 + margin - u, v - (o.v0 - margin), o.v1 + margin - v));
     }
     return depth;
@@ -37987,9 +38314,9 @@ void main() {
     k.add(cyl(r * 0.55, r * 0.55, cw + 0.08, 8), { at: [-(cw + 0.08) / 2, ay, zc], rot: [0, 0, -Math.PI / 2], color: iron });
     return { muzzle: zc + zb + s * Lb, ay };
   }
-  function shotPile(k, P4, r = 0.075) {
+  function shotPile(k, P4, r = 0.075, seg = 8) {
     k.add(box(r * 7.4, 0.08, r * 5.4), { color: P4.wood, outline: 8e-3 });
-    const ball = new SphereGeometry(r, 8, 6);
+    const ball = new SphereGeometry(r, seg, Math.max(4, seg - 2));
     let y = 0.08 + r;
     for (let layer = 0, n = 3; n > 0; layer++, n--) {
       for (let i = 0; i < n + 1; i++) for (let j = 0; j < n; j++) {
@@ -38007,17 +38334,6 @@ void main() {
       k.rotateY(skinYaw(d, g.t, y + 0.4, s));
       cannon(k, P4, s, gs);
       k.restore();
-    }
-    {
-      const m = d.mastU.find((u2) => u2 > xAt(d, d.tq) + 1 && u2 < xAt(d, d.fore ? d.tf : 0.9) - 1);
-      const u = m !== void 0 ? m - d.mastR - 0.95 : xAt(d, (d.tq + (d.fore ? d.tf : 0.9)) / 2);
-      const t = (u + d.L / 2) / d.L;
-      if (u > d.comp.u1 + 0.4 || u < d.comp.u0 - 0.9) {
-        k.save();
-        k.translate(u, d.deckY, 0);
-        shotPile(k, P4);
-        k.restore();
-      }
     }
     const port = (t, y, lid, open, s) => {
       const w = skinAt(d, t, y);
@@ -38064,13 +38380,17 @@ void main() {
       k.add(cone(0.22, 0.24, 8), { at: [-d.L / 2 + 0.25, ly + 1.05, lz], color: P4.trim, outline: 0.01 });
     }
     for (const s of [-1, 1]) {
-      const t = 0.055, y0 = d.deckY + 0.55, y1 = d.poop ? d.yq + 1.5 : d.deckY + 1.9;
-      const w = skinAt(d, t, (y0 + y1) / 2);
+      const t = 0.055, y0 = d.deckY + 0.55, y1 = d.poop ? d.yq + 1.5 : d.deckY + 1.9, ym = (y0 + y1) / 2;
+      const w = Math.max(skinAt(d, t, y0 - 0.9), skinAt(d, t, y0), skinAt(d, t, ym), skinAt(d, t, y1));
       const len = d.L * 0.07;
-      k.add(box(len, y1 - y0, 0.5), { at: [xAt(d, t), y0, s * (w + 0.1)], color: P4.upper, outline: 0.02 });
-      k.add(box(len * 0.8, (y1 - y0) * 0.55, 0.06), { at: [xAt(d, t), y0 + (y1 - y0) * 0.22, s * (w + 0.36)], color: P4.glass, glow: "#ffc766" });
-      k.add(cone(0.42, 0.9, 6), { at: [xAt(d, t), y0, s * (w + 0.12)], rot: [Math.PI, 0, 0], scale: [len * 1.1, 1, 0.9], color: P4.trim, outline: 0.015 });
-      k.add(cone(0.42, 0.7, 6), { at: [xAt(d, t), y1, s * (w + 0.12)], scale: [len * 1.1, 1, 0.9], color: P4.cap, outline: 0.015 });
+      k.save();
+      k.translate(xAt(d, t), 0, s * w);
+      k.rotateY(skinYaw(d, t, ym, s));
+      k.add(box(len, y1 - y0, 0.5), { at: [0, y0, s * 0.1], color: P4.upper, outline: 0.02 });
+      k.add(box(len * 0.8, (y1 - y0) * 0.55, 0.06), { at: [0, y0 + (y1 - y0) * 0.22, s * 0.36], color: P4.glass, glow: "#ffc766" });
+      k.add(cone(0.42, 0.9, 6), { at: [0, y0, s * 0.12], rot: [Math.PI, 0, 0], scale: [len * 1.1, 1, 0.62], color: P4.trim, outline: 0.015 });
+      k.add(cone(0.42, 0.7, 6), { at: [0, y1, s * 0.12], scale: [len * 1.1, 1, 0.62], color: P4.cap, outline: 0.015 });
+      k.restore();
     }
   }
   function balustrade(k, d, P4, t, y, skipFn) {
@@ -38094,11 +38414,11 @@ void main() {
     if (run) segs.push(run);
     for (const [a, b] of segs) if (b > a) k.add(box(0.12, 0.08, b - a + 0.12), { at: [x, y + 0.9, (a + b) / 2], color: P4.cap, outline: 0.012 });
   }
-  function cabinFront(k, d, P4, t, y0, y1, face, doors, stairsHere) {
-    const x = xAt(d, t) + face * 0.07;
-    const w = innerAt(d, t, (y0 + y1) / 2) + 0.05;
-    const h2 = y1 - y0, dh = Math.min(2.05, h2 - 0.12);
-    const ds = [...doors].sort((a, b) => a.v - b.v);
+  function cabinFront(k, d, P4, r) {
+    const f = r.front, face = f.face, y0 = r.floor, y1 = r.top;
+    const x = f.u + face * 0.07, w = f.w;
+    const h2 = y1 - y0, dh = f.dh;
+    const ds = [...r.doors].sort((a, b) => a.v - b.v);
     let z = -w;
     const piece3 = (za, zb) => {
       if (zb - za > 0.02) k.add(box(0.14, h2, zb - za), { at: [x - face * 0.07, y0, (za + zb) / 2], color: P4.front, outline: 0.02 });
@@ -38112,41 +38432,37 @@ void main() {
       k.add(box(0.14, h2 - dh, dr.w), { at: [x - face * 0.07, y0 + dh, dr.v], color: P4.front });
       for (const e of [-1, 1]) k.add(box(0.1, dh, 0.08), { at: [x + face * 0.02, y0, dr.v + e * (dr.w / 2 + 0.02)], color: P4.trim, outline: 8e-3 });
       k.add(box(0.1, 0.12, dr.w + 0.24), { at: [x + face * 0.03, y0 + dh, dr.v], color: P4.trim });
-      const lw = dr.w - 0.1, right = w - (dr.v + dr.w / 2), left = dr.v - dr.w / 2 + w, sd = right >= left ? 1 : -1;
-      const room = Math.max(right, left) - 0.12;
-      if (room > 0.3) k.add(box(0.05, dh - 0.06, Math.min(lw, room)), { at: [x - face * 0.19, y0 + 0.02, dr.v + sd * (dr.w / 2 + Math.min(lw, room) / 2 + 0.04)], color: shade2(P4.dark, 0.25), outline: 8e-3 });
+      const lf = dr.leaf;
+      if (lf) k.add(box(0.05, dh - 0.06, lf.v1 - lf.v0), { at: [lf.u, y0 + 0.02, (lf.v0 + lf.v1) / 2], color: shade2(P4.dark, 0.25), outline: 8e-3 });
       const lz = dr.v + (dr.v > 0 ? -1 : 1) * (dr.w / 2 + 0.3);
       if (Math.abs(lz) < w - 0.2) k.add(cyl(0.1, 0.12, 0.32, 6), { at: [x + face * 0.14, y0 + 1.75, lz], color: "#fff3c4", glow: "#ffcf70", flicker: 0.25, outline: 0.01 });
     }
     for (const zz of [-w + 0.1, w - 0.1]) k.add(box(0.1, h2, 0.16), { at: [x, y0, zz], color: shade2(P4.front, -0.25) });
     k.add(box(0.12, 0.14, w * 2), { at: [x + face * 0.02, y1 - 0.18, 0], color: P4.trim });
-    const clearOfStairs = (zz, half2) => !stairsHere.some((st) => zz + half2 > st.va - 0.1 && zz - half2 < st.vb + 0.1);
-    if (h2 > 1.8) {
-      for (let zz = -w + 0.75; zz <= w - 0.75; zz += 1.15) {
-        if (ds.some((dr) => Math.abs(zz - dr.v) < dr.w / 2 + 0.5) || !clearOfStairs(zz, 0.4)) continue;
-        k.add(box(0.06, 0.8, 0.62), { at: [x + face * 0.02, y0 + 0.95, zz], color: P4.glass, glow: "#ffc766" });
-        k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 1.75, zz], color: P4.trim });
-        k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 0.88, zz], color: P4.trim });
-      }
+    for (const zz of f.windows) {
+      k.add(box(0.06, 0.8, 0.62), { at: [x + face * 0.02, y0 + 0.95, zz], color: P4.glass, glow: "#ffc766" });
+      k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 1.75, zz], color: P4.trim });
+      k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 0.88, zz], color: P4.trim });
     }
   }
   function cabinFronts(k, d, P4) {
     const on = (lvlA, lvlB) => d.stairs.filter((s) => s.la === lvlA && s.lb === lvlB || s.la === lvlB && s.lb === lvlA);
     const inStair = (list) => (z) => list.some((s) => z > s.va - 0.05 && z < s.vb + 0.05);
-    const room = (kind) => d.rooms.find((r) => r.kind === kind);
-    const q2 = on("quarter", "main");
-    cabinFront(k, d, P4, d.tq, d.deckY, d.yq, 1, room("cabin").doors, q2);
-    balustrade(k, d, P4, d.tq + 4e-3, d.yq, inStair(q2));
-    if (d.poop) {
-      const pp3 = on("poop", "quarter");
-      cabinFront(k, d, P4, d.tp, d.yq, d.yp, 1, room("captain").doors, pp3);
-      balustrade(k, d, P4, d.tp + 4e-3, d.yp, inStair(pp3));
-    }
-    if (d.fore) {
-      const f = on("main", "fore");
-      cabinFront(k, d, P4, d.tf, d.deckY, d.yf, -1, room("forecastle").doors, f);
-      balustrade(k, d, P4, d.tf - 4e-3, d.yf, inStair(f));
-    }
+    for (const r of d.rooms) if (r.front) cabinFront(k, d, P4, r);
+    balustrade(k, d, P4, d.tq + 4e-3, d.yq, inStair(on("quarter", "main")));
+    if (d.poop) balustrade(k, d, P4, d.tp + 4e-3, d.yp, inStair(on("poop", "quarter")));
+    if (d.fore) balustrade(k, d, P4, d.tf - 4e-3, d.yf, inStair(on("main", "fore")));
+  }
+  function stringer(k, lo, hi, z, dv, thick, color) {
+    const sh = new Shape();
+    const k0 = dv / (hi[1] - lo[1]);
+    sh.moveTo(lo[0], lo[1]);
+    sh.lineTo(hi[0], hi[1]);
+    sh.lineTo(hi[0], hi[1] - dv);
+    sh.lineTo(lo[0] + (hi[0] - lo[0]) * k0, lo[1]);
+    sh.closePath();
+    const g = new ExtrudeGeometry(sh, { depth: thick, bevelEnabled: false, curveSegments: 1 });
+    k.add(g, { at: [0, 0, z - thick / 2], color, outline: 0.012 });
   }
   function stairs(k, d, P4) {
     for (const s of d.stairs) {
@@ -38169,12 +38485,13 @@ void main() {
       }
       const inb = s.s > 0 ? s.va : s.vb;
       const lo = s.ha < s.hb ? [xa, s.ha] : [xb, s.hb], hi = s.ha < s.hb ? [xb, s.hb] : [xa, s.ha];
-      const len = Math.hypot(hi[0] - lo[0], hi[1] - lo[1]), ang = Math.atan2(hi[1] - lo[1], hi[0] - lo[0]);
+      stringer(k, lo, hi, inb, 0.3, 0.08, P4.wood);
+      const len = Math.hypot(hi[0] - lo[0], hi[1] - lo[1]);
       k.save();
-      k.translate((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, inb);
-      k.rotateZ(ang);
-      k.add(box(len, 0.28, 0.08), { at: [0, -0.3, 0], color: P4.wood, outline: 0.012 });
-      k.add(box(len, 0.07, 0.09), { at: [0, 0.88, 0], color: P4.cap, outline: 0.01 });
+      k.translate((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2 + 0.88, inb);
+      if (hi[0] < lo[0]) k.rotateY(Math.PI);
+      k.rotateZ(Math.atan2(hi[1] - lo[1], Math.abs(hi[0] - lo[0])));
+      k.add(box(len, 0.07, 0.09), { at: [0, -0.035, 0], color: P4.cap, outline: 0.01 });
       k.restore();
       for (let i = 0; i <= 3; i++) {
         const f = i / 3;
@@ -38185,23 +38502,15 @@ void main() {
   function companionway(k, d, P4, s) {
     const xa = xAt(d, s.ta), xb = xAt(d, s.tb), w = s.vb - s.va, lo = s.ha, hi = s.hb;
     const len = Math.hypot(xb - xa, hi - lo), ang = Math.atan2(hi - lo, xb - xa);
-    const cz = w / 2 + 0.06;
-    for (const e of [-1, 1]) k.add(box(xb - xa + 0.12, 0.18, 0.1), { at: [(xa + xb) / 2, d.deckY, e * cz], color: shade2(P4.deck, -0.3), outline: 0.01 });
-    k.add(box(0.1, 0.18, w + 0.22), { at: [xa - 0.05, d.deckY, 0], color: shade2(P4.deck, -0.3), outline: 0.01 });
-    const rail2 = (za, zb, x0, x1) => {
-      k.add(box(Math.max(0.08, x1 - x0), 0.07, Math.max(0.08, zb - za)), { at: [(x0 + x1) / 2, d.deckY + 0.95, (za + zb) / 2], color: P4.cap, outline: 0.01 });
-    };
-    for (const e of [-1, 1]) {
-      rail2(e * cz - 0.04, e * cz + 0.04, xa - 0.05, xb);
-      for (let i = 0; i <= 3; i++) k.add(cyl(0.035, 0.04, 0.95, 5), { at: [xa + (xb - xa) * i / 3, d.deckY, e * cz], color: P4.wood });
-    }
-    rail2(-cz, cz, xa - 0.09, xa - 0.01);
+    const cz = w / 2 + 0.05, ch = 0.12, col = shade2(P4.deck, -0.3);
+    for (const e of [-1, 1]) k.add(box(xb - xa + 0.2, ch, 0.1), { at: [(xa + xb) / 2, d.deckY, e * cz], color: col, outline: 0.01 });
+    for (const x of [xa - 0.05, xb + 0.05]) k.add(box(0.1, ch, w), { at: [x, d.deckY, 0], color: col, outline: 0.01 });
     if (s.ladder) {
       for (const e of [-1, 1]) {
         k.save();
         k.translate((xa + xb) / 2, (lo + hi) / 2, e * (w / 2 - 0.08));
         k.rotateZ(ang);
-        k.add(box(len + 0.1, 0.1, 0.06), { color: P4.wood, outline: 0.01 });
+        k.add(box(len, 0.1, 0.06), { at: [0, -0.06, 0], color: P4.wood, outline: 0.01 });
         k.restore();
       }
       const n2 = Math.max(5, Math.round((hi - lo) / 0.3));
@@ -38213,18 +38522,20 @@ void main() {
     }
     const n = Math.max(6, Math.round((hi - lo) / 0.22));
     for (let i = 0; i < n; i++) {
-      const f0 = i / n, f1 = (i + 1) / n;
-      const x0 = xa + (xb - xa) * f0, x1 = xa + (xb - xa) * f1, top = lo + (hi - lo) * f1;
-      k.add(box(Math.abs(x1 - x0) + 0.02, 0.06, w - 0.08), { at: [(x0 + x1) / 2, top - 0.06, 0], color: shade2(P4.deck, -0.05), outline: 8e-3 });
+      const f0 = i / n, f12 = (i + 1) / n;
+      const x0 = xa + (xb - xa) * f0, x12 = xa + (xb - xa) * f12, top = lo + (hi - lo) * f12;
+      k.add(box(Math.abs(x12 - x0) + 0.02, 0.06, w - 0.08), { at: [(x0 + x12) / 2, top - 0.06, 0], color: shade2(P4.deck, -0.05), outline: 8e-3 });
       k.add(box(0.03, (hi - lo) / n, w - 0.1), { at: [x0, top - (hi - lo) / n, 0], color: shade2(P4.deck, -0.3) });
     }
+    const f1 = Math.max(0.1, (hi - 0.95 - lo) / (hi - lo)), x1 = xa + (xb - xa) * f1, y1 = lo + (hi - lo) * f1;
     for (const e of [-1, 1]) {
+      stringer(k, [xa, lo], [xb, hi], e * (w / 2 - 0.02), 0.28, 0.07, P4.wood);
       k.save();
-      k.translate((xa + xb) / 2, (lo + hi) / 2, e * (w / 2 - 0.02));
+      k.translate((xa + x1) / 2, (lo + y1) / 2 + 0.85, e * (w / 2 - 0.02));
       k.rotateZ(ang);
-      k.add(box(len, 0.26, 0.07), { at: [0, -0.28, 0], color: P4.wood, outline: 0.01 });
-      k.add(box(len, 0.06, 0.07), { at: [0, 0.85, 0], color: P4.cap, outline: 8e-3 });
+      k.add(box(len * f1, 0.06, 0.07), { color: P4.cap, outline: 8e-3 });
       k.restore();
+      for (const f of [0.02, f1 * 0.5, f1 - 0.02]) k.add(cyl(0.03, 0.03, 0.85, 5), { at: [xa + (xb - xa) * f, lo + (hi - lo) * f, e * (w / 2 - 0.02)], color: P4.wood });
     }
   }
   function helmWheel(k, P4, x, y, R4 = 0.56, hub = 0.92) {
@@ -38268,11 +38579,14 @@ void main() {
       k.add(new SphereGeometry(0.2, 10, 6, 0, TAU3, 0, Math.PI / 2), { at: [d.binnacleU, fy + 0.95, 0], color: "#cfe8ef", glow: "#fff1c1" });
     }
     for (const u of d.mastU) {
-      const t = (u + d.L / 2) / d.L, fl2 = floorAt(d, t), rr = d.mastR + 0.42;
-      for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        k.add(box(a ? 0.1 : rr * 2, 0.08, b ? 0.1 : rr * 2), { at: [u + a * rr, fl2 + 0.72, b * rr], color: P4.wood, outline: 0.01 });
-        for (const q2 of [-0.5, 0, 0.5]) k.add(cyl(0.04, 0.05, 0.72, 5), { at: [u + a * rr + (b ? q2 * rr * 1.6 : 0), fl2, b * rr + (a ? q2 * rr * 1.6 : 0)], color: P4.wood });
-      }
+      const t = (u + d.L / 2) / d.L, fl2 = floorAt(d, t), r = d.mastR;
+      k.add(lathe([[r + 0.07, 0], [r + 0.065, 0.05], [r + 0.03, 0.14], [r + 5e-3, 0.2]], 14), { at: [u, fl2, 0], color: shade2(P4.deck, -0.35), outline: 8e-3 });
+    }
+    if (d.shotPile) {
+      k.save();
+      k.translate(d.shotPile.u, d.deckY, d.shotPile.v);
+      shotPile(k, P4);
+      k.restore();
     }
     if (d.fore) {
       const x = xAt(d, d.tf + 0.03), y = d.yf;
@@ -38281,11 +38595,14 @@ void main() {
       k.add(lathe([[0.2, 0], [0.16, 0.1], [0.12, 0.3], [0.1, 0.36], [0.01, 0.38]], 10), { at: [x, y + 0.95, 0], color: P4.trim });
     }
     for (const s of [-1, 1]) {
-      const t = 0.9, y = topAt(d, t) - 1.1, z = s * (skinAt(d, t, y) + 0.2);
-      const a = 1.6 + d.B * 0.08;
+      const t = 0.9, y = topAt(d, t) - 1.1, a = 1.6 + d.B * 0.08, ta = a * 0.3 / d.L;
+      let w = 0;
+      for (const tt of [t - ta, t, t + ta]) for (const yy of [y - a * 0.6 - 0.1, y - a * 0.3, y, y + a * 0.4]) w = Math.max(w, skinAt(d, tt, yy));
+      const z = s * (w + 0.2);
       k.add(cyl(0.07, 0.07, a, 6), { at: [xAt(d, t), y - a * 0.6, z], color: P4.iron, outline: 0.012 });
       k.add(torus(a * 0.28, 0.07, 5, 10, Math.PI), { at: [xAt(d, t), y - a * 0.6, z], rot: [0, 0, Math.PI], color: P4.iron, outline: 0.012 });
-      k.add(box(0.12, 0.12, 0.9), { at: [xAt(d, t), topAt(d, t) - 0.25, z * 0.8], color: P4.wood });
+      const yc = topAt(d, t) - 0.25, zi = skinAt(d, t, yc) - 0.15, zo = w + 0.3;
+      k.add(box(0.12, 0.12, zo - zi), { at: [xAt(d, t), yc, s * (zi + zo) / 2], color: P4.wood });
     }
     for (const u of d.mastU) {
       const t = (u + d.L / 2) / d.L;
@@ -38341,7 +38658,22 @@ void main() {
       const cy = (top + bot) / 2, ry = (top - bot) / 2;
       const rz = hbAt(0.86, B4) * 1.04;
       const white = C("#f4f1ea");
-      k.add(new SphereGeometry(1, 28, 18, 0, TAU3, 0, Math.PI), { at: [cx, cy, 0], scale: [B4 * 0.66, ry, rz], color: white, outline: 0.06 });
+      const head = new SphereGeometry(1, 28, 18, 0, TAU3, 0, Math.PI), hp = head.attributes.position;
+      for (let i = 0; i < hp.count; i++) {
+        let x = cx + hp.getX(i) * B4 * 0.66, y = cy + hp.getY(i) * ry;
+        const z = hp.getZ(i) * rz;
+        if (x < L2 / 2 && x > -L2 / 2) {
+          let t = (x + L2 / 2) / L2;
+          y = Math.min(y, topAt(d, t) - 0.08);
+          if (Math.abs(z) < skinAt(d, t, y) + 0.05) {
+            while (t < 1 && Math.abs(z) < skinAt(d, t, y) + 0.05) t += 2e-3;
+            x = xAt(d, Math.min(1, t));
+          }
+        }
+        hp.setXYZ(i, x, y, z);
+      }
+      head.computeVertexNormals();
+      k.add(head, { color: white, outline: 0.06 });
       for (const z of [-1, 1]) {
         k.add(new SphereGeometry(1, 12, 8), { at: [cx + B4 * 0.33, cy + ry * 0.22, z * rz * 0.84], scale: [0.35 * s, 0.42 * s, 0.25 * s], color: "#141414", outline: 0.02 });
         k.add(new SphereGeometry(1, 8, 6), { at: [cx + B4 * 0.36, cy + ry * 0.3, z * rz * 0.9], scale: [0.1 * s, 0.12 * s, 0.08 * s], color: "#ffffff" });
@@ -38453,7 +38785,23 @@ void main() {
     const wC = Math.min(d.B * 2.05, d.L * 0.5) * (mast.aft ? 0.8 : 1);
     const yr = 0.06 + d.L * 25e-4;
     if (mast.aft) {
-      sails.push({ type: "gaff", x: mast.x, y0: mast.base + 2.3, y1: mast.h1 - 0.3, len: Math.min(d.L * 0.2, 8) });
+      const tm = (mast.x + d.L / 2) / d.L, dt = 0.05 / d.L;
+      let len = Math.min(d.L * 0.2, 8), y0 = mast.base + 2.3;
+      let tUp = null;
+      for (let t = tm; t >= tm - len / d.L; t -= dt) if (floorAt(d, t) > mast.base + 0.05) {
+        tUp = t;
+        break;
+      }
+      if (tUp !== null) {
+        const room = (tm - tUp) * d.L - 0.3;
+        if (room >= len * 0.6) len = room;
+        else {
+          let top = mast.base;
+          for (let t = tm; t >= tm - len / d.L; t -= dt) top = Math.max(top, floorAt(d, t));
+          y0 = top + 2.3;
+        }
+      }
+      sails.push({ type: "gaff", x: mast.x, y0, y1: mast.h1 - 0.3, len });
     } else {
       sails.push({ type: "square", x: mast.x, w: wC, y0: mast.base + 2.7, y1: mast.h1 - 0.35, emblem: mast.main, yardR: yr });
     }
@@ -38540,15 +38888,15 @@ void main() {
     return pts;
   }
   var IN = { wall: C("#8a6445"), wall2: C("#7d5a3d"), beam: C("#5b3d26"), floor: C("#a57b52"), dark: C("#3e2a1c"), cloth: C("#c9b99a") };
-  function lining(k, d, r, top) {
+  function lining(k, d, r) {
     const N4 = Math.max(4, Math.round((r.t1 - r.t0) * d.L / 0.5));
     const hold = r.kind === "hold";
-    const ys = hold ? [r.floor - 0.02, r.floor + 0.55, r.floor + 1.15, r.floor + 1.75, top] : [r.floor - 0.02, r.floor + 0.9, top];
+    const ys = liningYs(r);
     for (const s of [1, -1]) {
       const pos = [], idx = [], cols = [];
       for (let i = 0; i <= N4; i++) {
         const t = r.t0 + (r.t1 - r.t0) * i / N4, x = xAt(d, t);
-        for (const y of ys) pos.push(x, y, s * (hold ? Math.max(0.3, skinAt(d, t, y) - 0.22) : innerAt(d, t, y) + 0.01));
+        for (const y of ys) pos.push(x, r.floor + y, s * liningAt(d, r, t, y));
       }
       const M2 = ys.length;
       for (let i = 0; i < N4; i++) {
@@ -38579,155 +38927,238 @@ void main() {
       k.add(box(0.16, 0.14, w * 2), { at: [x, ceil - 0.14, 0], color: IN.beam });
     }
   }
-  function lantern(k, x, y, z, s) {
-    k.add(box(0.06, 0.06, 0.26), { at: [x, y + 0.1, z - s * 0.13], color: "#2b1d14" });
-    k.add(cyl(0.012, 0.012, 0.12, 4), { at: [x, y - 0.02, z - s * 0.24], color: "#2b1d14" });
-    k.add(cyl(0.08, 0.09, 0.22, 6), { at: [x, y - 0.26, z - s * 0.24], color: "#fff3c4", glow: "#ffcf70", flicker: 0.25, outline: 6e-3 });
-    k.add(cone(0.11, 0.09, 6), { at: [x, y - 0.05, z - s * 0.24], color: "#2b1d14" });
+  var WOOD = IN.beam;
+  var TOP = C("#8d6038");
+  var BOOKS = ["#8e2b20", "#23527c", "#2e6b2e", "#b08850", "#6a4c93"];
+  function barrelAt(k, x, z) {
+    k.add(lathe([[0.23, 0], [0.275, 0.17], [0.295, 0.39], [0.275, 0.61], [0.23, 0.78], [1e-3, 0.78]], 10), { at: [x, 0, z], color: "#8d5b33", outline: 8e-3 });
+    for (const hy of [0.12, 0.64]) k.add(torus(0.272, 0.016, 3, 10), { at: [x, hy, z], rot: [Math.PI / 2, 0, 0], color: "#3a3a3a" });
   }
-  function furniture(k, d, P4, it) {
-    const { u: x, v: z, floor: y, w, dp } = it;
-    const wood = IN.beam, top = C("#8d6038");
-    switch (it.kind) {
-      case "table":
-      case "desk": {
-        const h2 = 0.76;
-        k.add(box(w, 0.06, dp), { at: [x, y + h2 - 0.06, z], color: top, outline: 0.01 });
-        for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.07, h2 - 0.06, 0.07), { at: [x + a * (w / 2 - 0.08), y, z + b * (dp / 2 - 0.08)], color: wood });
-        if (it.kind === "desk") {
-          for (const a of [-1, 1]) k.add(box(w * 0.3, h2 - 0.12, dp - 0.1), { at: [x + a * w * 0.3, y, z], color: wood, outline: 8e-3 });
-          for (let i = 0; i < 4; i++) k.add(box(0.05, 0.22, 0.16), { at: [x - w * 0.3 + i * 0.07, y + h2, z - dp * 0.3], color: ["#8e2b20", "#23527c", "#2e6b2e", "#6a4c93"][i] });
+  function chestLid(k, w, dp, dome2, wood, iron) {
+    const half2 = new CylinderGeometry(dp / 2, dp / 2, w, 14, 1, false, 0, Math.PI);
+    k.add(half2, { at: [0, 0, dp / 2], rot: [0, 0, Math.PI / 2], scale: [dome2 / (dp / 2), 1, 1], color: shade2(wood, 0.1), outline: 0.01 });
+    k.add(box(w - 0.01, 0.02, dp - 0.01), { at: [0, 0, dp / 2], color: shade2(wood, -0.25) });
+    for (const a of [-0.3, 0.3]) k.add(torus(dp / 2 + 6e-3, 0.012, 4, 10, Math.PI), { at: [a * w, 0, dp / 2], rot: [0, Math.PI / 2, 0], scale: [1, dome2 / (dp / 2), 1], color: iron });
+  }
+  var PIECES = {
+    table(k, it) {
+      const { w, dp, h: h2 } = it;
+      k.add(box(w, 0.06, dp), { at: [0, h2 - 0.06, 0], color: TOP, outline: 0.01 });
+      k.add(box(w - 0.16, 0.08, dp - 0.16), { at: [0, h2 - 0.14, 0], color: shade2(WOOD, 0.12) });
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.07, h2 - 0.06, 0.07), { at: [a * (w / 2 - 0.07), 0, b * (dp / 2 - 0.07)], color: WOOD });
+      if (it.mess) {
+        for (const [a, b] of [[-0.32, -0.2], [0.05, 0.22], [0.3, -0.18]]) k.add(cyl(0.045, 0.04, 0.12, 8), { at: [a * w, h2, b * dp], color: "#8d8d8d", outline: 5e-3 });
+        for (const [a, b] of [[-0.12, 0.18], [0.2, 0.16], [-0.05, -0.2]]) k.add(cyl(0.1, 0.085, 0.02, 12), { at: [a * w, h2, b * dp], color: "#d9d2c3" });
+      } else {
+        k.add(box(w * 0.5, 5e-3, dp * 0.55), { at: [-w * 0.08, h2, 0], rot: [0, 0.08, 0], color: "#e8dcb5" });
+        k.add(cyl(0.035, 0.035, 0.12, 6), { at: [w * 0.34, h2, dp * 0.22], color: "#f5f0e1", glow: "#ffcf70", flicker: 0.4 });
+      }
+    },
+    chair(k, it) {
+      const seat = 0.45;
+      k.add(box(0.44, 0.05, 0.44), { at: [0, seat - 0.05, 5e-3], color: TOP, outline: 8e-3 });
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.045, seat - 0.05, 0.045), { at: [a * 0.19, 0, b * 0.19], color: WOOD });
+      for (const a of [-1, 1]) k.add(box(0.045, it.h - seat, 0.045), { at: [a * 0.19, seat, -0.19], color: WOOD });
+      k.add(box(0.42, 0.16, 0.04), { at: [0, it.h - 0.18, -0.19], color: WOOD, outline: 8e-3 });
+      k.add(box(0.42, 0.05, 0.035), { at: [0, seat + 0.16, -0.19], color: WOOD });
+    },
+    bench(k, it) {
+      const { w, dp, h: h2 } = it;
+      k.add(box(w, 0.05, dp), { at: [0, h2 - 0.05, 0], color: TOP, outline: 8e-3 });
+      for (const a of [-1, 1]) k.add(box(0.05, h2 - 0.05, dp - 0.08), { at: [a * (w / 2 - 0.14), 0, 0], color: WOOD });
+      k.add(box(w - 0.34, 0.05, 0.04), { at: [0, 0.12, 0], color: WOOD });
+    },
+    desk(k, it) {
+      const { w, dp, h: h2 } = it, pw = w * 0.3;
+      k.add(box(w, 0.05, dp), { at: [0, h2 - 0.05, 0], color: TOP, outline: 0.01 });
+      for (const a of [-1, 1]) {
+        const x = a * (w / 2 - pw / 2);
+        k.add(box(pw, h2 - 0.05, dp - 0.04), { at: [x, 0, 0], color: WOOD, outline: 8e-3 });
+        for (let j = 0; j < 3; j++) {
+          const y = 0.06 + j * (h2 - 0.12) / 3;
+          k.add(box(pw - 0.06, (h2 - 0.12) / 3 - 0.04, 0.02), { at: [x, y, -dp / 2 + 0.01], color: shade2(WOOD, 0.15) });
+          k.add(box(0.07, 0.02, 0.02), { at: [x, y + (h2 - 0.12) / 6 - 0.02, -dp / 2], color: "#d4ac0d" });
         }
-        if (it.room !== "forecastle") {
-          k.add(box(w * 0.55, 5e-3, dp * 0.6), { at: [x - w * 0.05, y + h2, z], rot: [0, 0.08, 0], color: "#e8dcb5" });
-          k.add(cyl(0.035, 0.035, 0.12, 6), { at: [x + w * 0.33, y + h2, z + dp * 0.25], color: "#f5f0e1", glow: "#ffcf70", flicker: 0.4 });
-        } else {
-          for (const a of [-0.3, 0.2]) k.add(cyl(0.05, 0.04, 0.1, 6), { at: [x + a * w, y + h2, z], color: "#8d8d8d" });
+      }
+      k.add(box(w - 2 * pw, h2 - 0.3, 0.03), { at: [0, 0.25, dp / 2 - 0.035], color: shade2(WOOD, -0.1) });
+      for (let i = 0; i < 4; i++) k.add(box(0.05, 0.22, 0.16), { at: [-w * 0.4 + i * 0.06, h2, dp * 0.18], color: BOOKS[i] });
+      k.add(cyl(0.035, 0.04, 0.06, 8), { at: [w * 0.22, h2, -dp * 0.18], color: "#1d1d1d" });
+      k.add(box(w * 0.36, 5e-3, dp * 0.46), { at: [0, h2, 0], rot: [0, -0.1, 0], color: "#e8dcb5" });
+      k.add(cyl(0.035, 0.035, 0.12, 6), { at: [w * 0.4, h2, dp * 0.22], color: "#f5f0e1", glow: "#ffcf70", flicker: 0.4 });
+    },
+    bunk(k, it) {
+      const { w, dp, h: h2 } = it, hx = (Math.sign(Math.cos(it.rot || 0)) || 1) * (it.head || -1);
+      k.add(box(w, 0.32, dp), { color: WOOD, outline: 0.01 });
+      k.add(box(w - 0.14, 0.14, dp - 0.08), { at: [0, 0.32, 0], color: "#e8e1d0" });
+      k.add(box(w * 0.58, 0.05, dp - 0.05), { at: [-hx * w * 0.19, 0.44, 0], color: "#8e3b2a" });
+      k.add(box(0.38, 0.1, dp * 0.62), { at: [hx * (w / 2 - 0.3), 0.46, 0], color: "#f7f3ea" });
+      k.add(box(0.06, h2, dp), { at: [hx * (w / 2 - 0.03), 0, 0], color: WOOD, outline: 8e-3 });
+      k.add(box(0.06, h2 - 0.14, dp), { at: [-hx * (w / 2 - 0.03), 0, 0], color: WOOD, outline: 8e-3 });
+      k.add(box(w - 0.12, h2 - 0.34, 0.035), { at: [0, 0.32, -dp / 2 + 0.018], color: shade2(WOOD, 0.1) });
+    },
+    chest(k, it) {
+      const dp = FURNITURE.chest.dp, body = 0.4, dome2 = 0.2, iron = "#b8860b";
+      const wood = it.treasure ? C("#7a4a26") : C("#6d4c33"), w = it.w;
+      k.save();
+      k.translate(0, 0, it.dp / 2 - dp / 2);
+      k.add(box(w, body, dp), { color: wood, outline: 0.01 });
+      for (const a of [-0.3, 0.3]) k.add(box(0.06, body, dp + 0.012), { at: [a * w, 0, 0], color: iron });
+      k.add(box(0.13, 0.15, 0.02), { at: [0, body - 0.19, dp / 2 + 6e-3], color: "#d4ac0d" });
+      for (const e of [-1, 1]) k.add(torus(0.055, 0.012, 4, 8, Math.PI), { at: [e * (w / 2 + 2e-3), body * 0.62, 0], rot: [0, Math.PI / 2, Math.PI], color: "#2b2b2b" });
+      k.save();
+      k.translate(0, body, -dp / 2);
+      if (it.treasure) k.rotateX(-1.3);
+      chestLid(k, w, dp, dome2, wood, iron);
+      k.restore();
+      if (it.treasure) {
+        k.add(box(w - 0.08, 0.03, dp - 0.08), { at: [0, body - 0.01, 0], color: "#f4c430", glow: "#6b4f00" });
+        for (let i = 0; i < 9; i++) k.add(new SphereGeometry(0.05 + i % 3 * 0.012, 7, 5), { at: [(-0.3 + i % 5 * 0.15) * w, body + 0.03, (i * 7 % 5 - 2) * 0.05], scale: [1, 0.55, 1], color: i % 4 ? "#f4c430" : "#c0392b", glow: "#6b4f00" });
+      }
+      k.restore();
+    },
+    shelf(k, it) {
+      const { w, dp, h: h2 } = it;
+      for (const a of [-1, 1]) k.add(box(0.04, h2, dp), { at: [a * (w / 2 - 0.02), 0, 0], color: WOOD, outline: 8e-3 });
+      k.add(box(w - 0.08, h2, 0.03), { at: [0, 0, -dp / 2 + 0.015], color: shade2(WOOD, -0.15) });
+      const levels = [0, 0.44, 0.88, 1.32, h2 - 0.03];
+      for (const y of levels) k.add(box(w - 0.08, 0.03, dp - 0.03), { at: [0, y, 0.015], color: WOOD });
+      for (let j = 0; j < 4; j++) {
+        const y = levels[j] + 0.03, room = levels[j + 1] - y - 0.03;
+        let x = -w / 2 + 0.06;
+        for (let i = 0; x < w / 2 - 0.12; i++) {
+          const bw2 = 0.045 + (i * 7 + j * 3) % 4 * 0.012, bh = room * (0.74 + (i * 5 + j) % 3 * 0.08);
+          k.add(box(bw2, bh, dp * 0.62), { at: [x + bw2 / 2, y, -dp / 2 + 0.035 + dp * 0.31], color: BOOKS[(i + j) % 5] });
+          x += bw2 + 8e-3;
         }
-        break;
+        k.add(box(w - 0.08, 0.03, 0.02), { at: [0, y + 0.1, dp / 2 - 0.015], color: shade2(WOOD, 0.1) });
       }
-      case "chair": {
-        const s = it.rot || 1;
-        k.add(box(0.42, 0.05, 0.42), { at: [x, y + 0.44, z], color: top, outline: 8e-3 });
-        for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.05, 0.44, 0.05), { at: [x + a * 0.17, y, z + b * 0.17], color: wood });
-        k.add(box(0.42, 0.5, 0.05), { at: [x, y + 0.49, z + s * 0.19], color: wood, outline: 8e-3 });
-        break;
+    },
+    stove(k, it, d) {
+      const { w, dp, h: h2 } = it, iron = "#2f2f2f", r = d.rooms.find((x) => x.kind === it.room);
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.06, 0.1, 0.06), { at: [a * (w / 2 - 0.06), 0, b * (dp / 2 - 0.06)], color: iron });
+      k.add(box(w, h2 - 0.1, dp), { at: [0, 0.1, 0], color: iron, outline: 0.01 });
+      k.add(box(w * 0.42, 0.24, 0.02), { at: [-w * 0.14, 0.24, dp / 2 + 6e-3], color: "#ff7a1a", glow: "#ff5a00", flicker: 0.5 });
+      k.add(cyl(0.16, 0.14, 0.24, 10), { at: [w * 0.2, h2, dp * 0.08], color: "#6b6b6b", outline: 8e-3 });
+      k.add(cyl(0.08, 0.08, (r ? r.ceil + 0.12 - r.floor : 2.4) - h2, 8), { at: [-w * 0.25, h2, -dp / 2 + 0.14], color: iron });
+    },
+    hammock(k, it) {
+      const { w, dp, h: h2 } = it, L2 = w - 0.44, N4 = 10, sag = 0.22;
+      const pos = [], idx = [];
+      for (let i = 0; i <= N4; i++) {
+        const x = -L2 / 2 + L2 * i / N4, y = 0.04 + sag * (2 * x / L2) ** 2;
+        for (const [z, lift] of [[-dp * 0.42, 0.07], [0, 0], [dp * 0.42, 0.07]]) pos.push(x, y + lift, z);
       }
-      case "bunk": {
-        k.add(box(w, 0.4, dp), { at: [x, y, z], color: wood, outline: 0.01 });
-        k.add(box(w - 0.1, 0.14, dp - 0.1), { at: [x, y + 0.4, z], color: "#e8e1d0" });
-        k.add(box(w * 0.62, 0.04, dp - 0.06), { at: [x + w * 0.16, y + 0.54, z], color: "#8e3b2a" });
-        k.add(box(0.36, 0.1, dp * 0.6), { at: [x - w / 2 + 0.26, y + 0.54, z], color: "#f7f3ea" });
-        k.add(box(w, 0.5, 0.06), { at: [x, y, z - Math.sign(z || 1) * (dp / 2 - 0.03)], color: wood });
-        break;
+      for (let i = 0; i < N4; i++) for (let j = 0; j < 2; j++) {
+        const a = i * 3 + j;
+        idx.push(a, a + 1, a + 3, a + 1, a + 4, a + 3);
       }
-      case "chest": {
-        const c = it.treasure ? C("#7a4a26") : C("#6d4c33");
-        k.add(box(w, dp * 0.9, dp), { at: [x, y, z], color: c, outline: 0.01 });
-        k.add(cyl(dp / 2, dp / 2, w, 10, false, 1), { at: [x - w / 2, y + dp * 0.9, z], rot: [0, 0, -Math.PI / 2], scale: [1, 1, 0.5], color: shade2(c, 0.1), outline: 0.01 });
-        for (const a of [-0.32, 0.32]) k.add(box(0.06, dp * 1.2, dp + 0.02), { at: [x + a * w, y, z], color: "#b8860b" });
-        k.add(box(0.1, 0.12, 0.04), { at: [x, y + dp * 0.72, z + Math.sign(-z || 1) * (dp / 2 + 0.01)], color: "#d4ac0d" });
-        if (it.treasure) for (let i = 0; i < 6; i++) k.add(cyl(0.04, 0.04, 0.015, 8), { at: [x - 0.2 + i % 3 * 0.14, y + dp * 0.9 + 0.02 + Math.floor(i / 3) * 0.02, z + (i * 7 % 3 - 1) * 0.08], color: "#f4c430", glow: "#6b4f00" });
-        break;
-      }
-      case "shelf": {
-        k.add(box(0.35, 1.7, w), { at: [x, y, z], color: wood, outline: 0.01 });
-        for (let j = 0; j < 4; j++) {
-          for (let i = 0; i < Math.floor(w / 0.09); i++) k.add(box(0.2, 0.26 + (i * 5 + j) % 3 * 0.03, 0.06), { at: [x + 0.02, y + 0.12 + j * 0.4, z - w / 2 + 0.08 + i * 0.09], color: ["#8e2b20", "#23527c", "#2e6b2e", "#b08850", "#6a4c93"][(i + j) % 5] });
+      const g = new BufferGeometry();
+      g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      k.add(g, { color: IN.cloth, double: true, outline: 6e-3 });
+      const yb = 0.04 + sag + 0.07, dy = 0.12;
+      for (const e of [-1, 1]) {
+        k.add(box(0.04, 0.04, dp * 0.9), { at: [e * L2 / 2, yb - 0.02, 0], color: WOOD });
+        const x0 = e * L2 / 2, x1 = e * (w / 2 - 0.04);
+        for (const z of [-1, 1]) {
+          const z0 = z * dp * 0.44, ln2 = Math.hypot(x1 - x0, dy, z0);
+          k.save();
+          k.translate(x0, yb, z0);
+          k.rotateY(Math.atan2(z0, x1 - x0));
+          k.rotateZ(Math.atan2(dy, Math.hypot(x1 - x0, z0)) - Math.PI / 2);
+          k.add(cyl(8e-3, 8e-3, ln2, 3), { color: "#8d7b5a" });
+          k.restore();
         }
-        break;
+        k.add(cyl(0.012, 0.012, h2 - 0.03 - yb - dy, 4), { at: [x1, yb + dy, 0], color: "#8d7b5a" });
+        k.add(torus(0.03, 8e-3, 3, 8), { at: [x1, h2 - 0.03, 0], color: "#2b2b2b" });
       }
-      case "stove": {
-        k.add(box(w, 0.7, dp), { at: [x, y, z], color: "#2f2f2f", outline: 0.01 });
-        k.add(box(w * 0.5, 0.25, 0.04), { at: [x, y + 0.2, z - Math.sign(z || 1) * (dp / 2 + 0.01)], color: "#ff7a1a", glow: "#ff5a00", flicker: 0.5 });
-        k.add(cyl(0.08, 0.08, 1.6, 8), { at: [x, y + 0.7, z], color: "#2f2f2f" });
-        k.add(cyl(0.2, 0.17, 0.26, 10), { at: [x, y + 0.7, z + Math.sign(-z || 1) * 0.1], color: "#6b6b6b", outline: 8e-3 });
-        break;
+    },
+    barrel(k) {
+      barrelAt(k, 0, 0);
+    },
+    barrels(k) {
+      for (const a of [-1, 1]) barrelAt(k, a * 0.34, 0);
+    },
+    crate(k) {
+      k.add(box(0.78, 0.7, 0.78), { color: "#b08850", outline: 0.01 });
+      for (const a of [-1, 1]) k.add(box(0.8, 0.07, 0.8), { at: [0, a > 0 ? 0.6 : 0.03, 0], color: "#8d6e4a" });
+      k.add(box(0.52, 0.46, 0.52), { at: [0.02, 0.7, -0.02], rot: [0, 0.35, 0], color: "#a57b52", outline: 0.01 });
+    },
+    sacks(k) {
+      for (let i = 0; i < 3; i++) {
+        const x = (i - 1) * 0.33, z = i % 2 ? 0.06 : -0.06;
+        k.add(new SphereGeometry(0.26, 7, 5), { at: [x, 0.2, z], scale: [1.05, 0.8, 0.9], color: "#d8c49a", outline: 8e-3 });
+        k.add(cyl(0.05, 0.07, 0.07, 6), { at: [x, 0.39, z], color: "#c4ae82" });
       }
-      case "hammock": {
-        const hy = y + 1.35, pts = [];
-        for (let i = 0; i <= 8; i++) {
-          const f = i / 8;
-          pts.push(new Vector3(x - w / 2 + w * f, hy - Math.sin(f * Math.PI) * 0.3, z));
-        }
-        k.add(tube(new CatmullRomCurve3(pts), 10, 0.2, 6), { scale: [1, 0.4, 1], at: [0, hy * 0.6, 0], color: IN.cloth, outline: 8e-3 });
-        break;
+    },
+    shot(k, it, d, P4) {
+      shotPile(k, P4, 0.075, 6);
+    },
+    rug(k, it) {
+      const { w, dp } = it;
+      k.add(box(w, 0.01, dp), { at: [0, 3e-3, 0], color: "#7b2d26" });
+      k.add(box(w - 0.16, 0.012, dp - 0.16), { at: [0, 3e-3, 0], color: "#a8452f" });
+      if (w > 0.8 && dp > 0.8) {
+        k.add(box(w - 0.42, 0.014, dp - 0.42), { at: [0, 3e-3, 0], color: "#7b2d26" });
+        k.add(box(w - 0.52, 0.016, dp - 0.52), { at: [0, 3e-3, 0], color: "#b8573a" });
       }
-      case "barrel":
-      case "barrels": {
-        const n = it.kind === "barrels" ? 3 : 1;
-        for (let i = 0; i < n; i++) {
-          const bx = x + (n > 1 ? (i - 1) * 0.5 : 0), by = y + (i === 1 && n > 1 ? 0 : 0);
-          k.add(lathe([[0.2, 0], [0.26, 0.18], [0.27, 0.36], [0.26, 0.54], [0.2, 0.72], [1e-3, 0.72]], 10), { at: [bx, by, z], color: "#8d5b33", outline: 0.01 });
-          for (const hy of [0.1, 0.62]) k.add(torus(0.235, 0.018, 4, 12), { at: [bx, by + hy, z], rot: [Math.PI / 2, 0, 0], color: "#3a3a3a" });
-        }
-        break;
+    },
+    lantern(k, it) {
+      const { dp, h: h2 } = it;
+      if (!it.wall) {
+        k.add(cyl(0.1, 0.1, 0.04, 6), { at: [0, 0.02, 0], color: "#2b1d14" });
+        k.add(cyl(0.08, 0.09, 0.2, 6), { at: [0, 0.06, 0], color: "#fff3c4", glow: "#ffcf70", flicker: 0.25, outline: 6e-3 });
+        k.add(cone(0.11, 0.08, 6), { at: [0, 0.26, 0], color: "#2b1d14" });
+        k.add(cyl(8e-3, 8e-3, h2 - 0.34, 3), { at: [0, 0.34, 0], color: "#2b1d14" });
+        return;
       }
-      case "crate": {
-        k.add(box(0.7, 0.62, 0.7), { at: [x, y, z], color: "#b08850", outline: 0.01 });
-        k.add(box(0.5, 0.45, 0.5), { at: [x + 0.06, y + 0.62, z - 0.04], rot: [0, 0.3, 0], color: "#a57b52", outline: 0.01 });
-        break;
-      }
-      case "sacks": {
-        for (let i = 0; i < 3; i++) k.add(new SphereGeometry(0.28, 8, 6), { at: [x + (i - 1) * 0.36, y + 0.22, z + i % 2 * 0.1], scale: [1, 0.8, 0.9], color: "#d8c49a", outline: 8e-3 });
-        break;
-      }
-      case "shot": {
-        k.save();
-        k.translate(x, y, z);
-        shotPile(k, P4);
-        k.restore();
-        break;
-      }
-      default:
-        break;
+      const z = dp / 2 - 0.12;
+      k.add(box(0.1, 0.16, 0.02), { at: [0, h2 - 0.2, -dp / 2 + 0.01], color: "#2b1d14" });
+      k.add(box(0.04, 0.04, dp - 0.1), { at: [0, h2 - 0.06, -0.05], color: "#2b1d14" });
+      k.add(cyl(0.01, 0.01, 0.1, 4), { at: [0, h2 - 0.16, z], color: "#2b1d14" });
+      k.add(cyl(0.1, 0.1, 0.04, 6), { at: [0, 0.02, z], color: "#2b1d14" });
+      k.add(cyl(0.08, 0.09, 0.2, 6), { at: [0, 0.06, z], color: "#fff3c4", glow: "#ffcf70", flicker: 0.25, outline: 6e-3 });
+      k.add(cone(0.11, 0.08, 6), { at: [0, 0.26, z], color: "#2b1d14" });
     }
+  };
+  function furniture(k, d, P4, it) {
+    const draw = PIECES[it.kind];
+    if (!draw) return;
+    k.save();
+    k.translate(it.u, it.floor + (it.y || 0), it.v);
+    k.rotateY(it.rot || 0);
+    draw(k, it, d, P4);
+    k.restore();
   }
   function bigInterior(def, d) {
     const P4 = bigPalette(def);
-    const k = new Mesher();
+    const k = new Mesher(), overhead = new Mesher();
     const cp = d.comp;
     for (const r of d.rooms) {
       const top = r.ceil + 0.1;
       if (r.kind !== "hold") deckGrid(k, d, P4, r.t0, r.t1, r.floor, null, false, IN.floor);
       else deckGrid(k, d, P4, r.t0, r.t1, r.floor, null, false, shade2(IN.floor, -0.1));
       if (r.kind === "hold") {
-        deckGrid(k, d, P4, r.t0, cp.t0, top, null, true, IN.wall);
-        deckGrid(k, d, P4, cp.t0, cp.t1, top, cp.w / 2, true, IN.wall);
-        deckGrid(k, d, P4, cp.t1, r.t1, top, null, true, IN.wall);
-      } else deckGrid(k, d, P4, r.t0, r.t1, top, null, true, IN.wall);
-      lining(k, d, r, top);
-      beams(k, d, r, top, r.kind === "hold" ? (x) => x > cp.u0 - 0.2 && x < cp.u1 + 0.2 : null);
+        deckGrid(overhead, d, P4, r.t0, cp.t0, top, null, true, IN.wall);
+        deckGrid(overhead, d, P4, cp.t0, cp.t1, top, cp.w / 2, true, IN.wall);
+        deckGrid(overhead, d, P4, cp.t1, r.t1, top, null, true, IN.wall);
+      } else deckGrid(overhead, d, P4, r.t0, r.t1, top, null, true, IN.wall);
+      lining(k, d, r);
+      beams(overhead, d, r, top, r.kind === "hold" ? (x) => x > cp.u0 - 0.2 && x < cp.u1 + 0.2 : null);
       if (r.kind === "hold") {
         endWall(k, d, r.t0, r.floor, top, 1, true);
         endWall(k, d, r.t1, r.floor, top, -1, true);
       } else if (r.kind === "forecastle") endWall(k, d, r.t1, r.floor, top, -1);
       else {
         endWall(k, d, r.t0, r.floor, top, 1);
-        const w = innerAt(d, r.t0, r.floor + 1);
-        const n = Math.max(2, Math.floor(w * 2 / 1.15)), ww = Math.min(0.8, w * 2 / n - 0.3);
-        if (top - r.floor > 1.9) {
-          for (let i = 0; i < n; i++) {
-            const zz = -w + (i + 0.5) * (w * 2) / n;
-            k.add(box(0.04, 0.9, ww), { at: [xAt(d, r.t0) + 0.01, r.floor + 0.75, zz], color: "#a9d6ee", glow: "#ffd58a" });
-            k.add(box(0.06, 0.05, ww), { at: [xAt(d, r.t0) + 0.02, r.floor + 1.18, zz], color: IN.beam });
-            k.add(box(0.06, 0.9, 0.05), { at: [xAt(d, r.t0) + 0.02, r.floor + 0.75, zz], color: IN.beam });
-            k.add(box(0.12, 0.06, ww + 0.1), { at: [xAt(d, r.t0) + 0.04, r.floor + 0.72, zz], color: IN.beam });
-          }
+        const x = xAt(d, r.t0);
+        for (const wd of r.windows || []) {
+          k.add(box(0.04, 0.9, wd.w), { at: [x + 0.01, r.floor + 0.75, wd.v], color: "#a9d6ee", glow: "#ffd58a" });
+          k.add(box(0.06, 0.05, wd.w), { at: [x + 0.02, r.floor + 1.18, wd.v], color: IN.beam });
+          k.add(box(0.06, 0.9, 0.05), { at: [x + 0.02, r.floor + 0.75, wd.v], color: IN.beam });
+          k.add(box(0.12, 0.06, wd.w + 0.1), { at: [x + 0.04, r.floor + 0.72, wd.v], color: IN.beam });
         }
-      }
-      const len = (r.t1 - r.t0) * d.L, nL = Math.max(1, Math.round(len / 3.5));
-      for (let i = 0; i < nL; i++) {
-        const t = r.t0 + (r.t1 - r.t0) * (i + 0.5) / nL, x = xAt(d, t), sd = i % 2 ? 1 : -1;
-        const ly = Math.min(top - 0.2, r.floor + 2.05);
-        const wz = r.kind === "hold" ? Math.max(0.35, skinAt(d, t, ly) - 0.22) : innerAt(d, t, ly);
-        if (d.furniture.some((f) => f.room === r.kind && Math.abs(f.u - x) < f.w / 2 + 0.3 && Math.sign(f.v) === sd && f.kind === "shelf")) continue;
-        lantern(k, x, ly, sd * wz, sd);
-      }
-      if (r.kind === "cabin" || r.kind === "captain") {
-        const t = (r.t0 + r.t1) / 2, w = Math.min(1.1, roomHalf(d, r, t) - 0.3);
-        k.add(box(Math.min(2.2, len * 0.55), 0.012, w * 2), { at: [xAt(d, t), r.floor + 4e-3, 0], color: "#7b2d26" });
-        k.add(box(Math.min(2.2, len * 0.55) - 0.2, 0.014, w * 2 - 0.2), { at: [xAt(d, t), r.floor + 4e-3, 0], color: "#a8452f" });
       }
     }
     const gs = d.gunScale || 1;
@@ -38739,7 +39170,7 @@ void main() {
       k.restore();
     }
     for (const it of d.furniture) furniture(k, d, P4, it);
-    return k;
+    return { k, overhead };
   }
 
   // src/render3d/ships3d.js
@@ -39013,7 +39444,8 @@ void main() {
     const key2 = `${def.length}|${def.beam}|${def.color}|${def.cannons}|${def.sail}|${def.masts}`;
     let g = insideCache.get(key2);
     if (!g) {
-      g = bigInterior(def, d).build(false);
+      const m = bigInterior(def, d);
+      g = { main: m.k.build(false), overhead: m.overhead.build(false) };
       insideCache.set(key2, g);
     }
     return g;
@@ -39387,10 +39819,14 @@ void main() {
       this.hull = hull;
       const ig = interiorGeometry(def);
       if (ig) {
-        this.inside = new Mesh(ig, SOLID());
+        this.inside = new Mesh(ig.main, SOLID());
         this.inside.receiveShadow = true;
         this.inside.castShadow = true;
         this.inside.visible = false;
+        this.overhead = new Mesh(ig.overhead, SOLID());
+        this.overhead.receiveShadow = false;
+        this.overhead.castShadow = true;
+        this.inside.add(this.overhead);
         root2.add(this.inside);
       }
       const plan = d.big ? bigMastPlan(d) : mastPlan(def, d);
@@ -39645,7 +40081,7 @@ void main() {
         const cam = ctx?.camera;
         this.inside.visible = !!cam && cam.position.distanceTo(r.position) < this.d.L * 0.6 + 12;
         const pl = ctx?.game?.player;
-        this.inside.castShadow = !!(pl?.deck?.room && pl.deck.ship === s);
+        this.inside.castShadow = this.overhead.castShadow = !!(pl?.deck?.room && pl.deck.ship === s);
       }
       const relA = (windAngle || 0) - s.heading;
       const brace = Math.max(-0.5, Math.min(0.5, Math.sin(relA) * 0.45));
@@ -48205,8 +48641,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     sloop: {
       name: "Sloop",
       desc: "A nimble single-masted boat. Enough to reach Loguetown in style.",
-      length: 11.5,
-      beam: 3.8,
+      length: 20,
+      beam: 6.4,
       hull: 150,
       speed: 9.5,
       turn: 2,
@@ -48224,8 +48660,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     caravel: {
       name: "Caravel",
       desc: "A sturdy two-masted caravel with a ram figurehead \u2014 the kind of ship a crew grows to love.",
-      length: 12.5,
-      beam: 4,
+      length: 28,
+      beam: 8.8,
       hull: 260,
       speed: 10.8,
       turn: 1.7,
@@ -48244,8 +48680,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     brigantine: {
       name: "Brigantine",
       desc: "Two masts, eight guns and a hold for plunder.",
-      length: 14.5,
-      beam: 4.5,
+      length: 31,
+      beam: 9.6,
       hull: 400,
       speed: 11.8,
       turn: 1.4,
@@ -48263,8 +48699,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     frigate: {
       name: "Frigate",
       desc: "A three-masted warship built for the New World.",
-      length: 17,
-      beam: 5.2,
+      length: 36,
+      beam: 10.8,
       hull: 600,
       speed: 12.4,
       turn: 1.15,
@@ -48282,8 +48718,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     galleon: {
       name: "Galleon",
       desc: "A floating fortress. Slow to turn, impossible to sink.",
-      length: 20,
-      beam: 6.2,
+      length: 40,
+      beam: 12.2,
       hull: 850,
       speed: 11.2,
       turn: 0.9,
@@ -48301,8 +48737,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     adam_brig: {
       name: "Adam-wood Brig",
       desc: "Built from the Treasure Tree Adam by a Water 7 master shipwright. Paddle wheels, a Coup de Burst, and a lion that roars.",
-      length: 16,
-      beam: 5.4,
+      length: 34,
+      beam: 11,
       hull: 1e3,
       speed: 14,
       turn: 1.5,
@@ -48324,8 +48760,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     marine_warship: {
       name: "Marine Warship",
       desc: "A seastone-bottomed battleship. Sea Kings mistake it for a rock.",
-      length: 20,
-      beam: 6,
+      length: 38,
+      beam: 11.6,
       hull: 800,
       speed: 12,
       turn: 1,
@@ -48343,12 +48779,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       special: true,
       big: true
     },
-    // ---- the big ships: One Piece scale, with decks you can hold a feast on
+    // ---- the great ships: decks you can hold a feast on
     carrack: {
       name: "Carrack",
       desc: "A deep-bellied three-master with high castles fore and aft: the workhorse of the Grand Line trade routes, with room for a real crew and a hold you could get lost in.",
-      length: 21,
-      beam: 6.4,
+      length: 42,
+      beam: 12.6,
       hull: 1400,
       speed: 11.6,
       turn: 0.95,
@@ -48367,8 +48803,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     war_galleon: {
       name: "War Galleon",
       desc: "Two gun decks, a towering stern castle and a deck big enough for a party: the kind of ship a Supernova crosses the Grand Line in.",
-      length: 24,
-      beam: 7,
+      length: 46,
+      beam: 13.6,
       hull: 2600,
       speed: 12.2,
       turn: 0.8,
@@ -48387,8 +48823,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     man_o_war: {
       name: "Man-o'-War",
       desc: "A three-decked giant bristling with guns, her poop deck higher than most ships' mastheads. Fleets scatter when she shows her colours.",
-      length: 32,
-      beam: 9,
+      length: 52,
+      beam: 15,
       hull: 4200,
       speed: 12.6,
       turn: 0.64,
@@ -48407,8 +48843,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     great_galleon: {
       name: "Great Galleon",
       desc: "A Yonko's flagship: a white whale of a four-master with a whale's head for a bow. A whole pirate fleet could live aboard.",
-      length: 44,
-      beam: 12,
+      length: 62,
+      beam: 17,
       hull: 7e3,
       speed: 12.8,
       turn: 0.5,
@@ -48427,8 +48863,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     marine_battleship: {
       name: "Marine Battleship",
       desc: "A Vice Admiral's flagship: a great grey-and-white warship with a seagull at the bow, MARINE across her sails and a seastone keel.",
-      length: 38,
-      beam: 10.5,
+      length: 56,
+      beam: 15.6,
       hull: 6e3,
       speed: 13,
       turn: 0.55,
@@ -48481,7 +48917,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return d;
   }
   function shipClassLine(d) {
-    const size = d.length < 5 ? "Boat" : d.length < 14 ? "Small ship" : d.length < 22 ? "Ship" : d.length < 30 ? "Big ship" : "Great ship";
+    const size = d.length < 5 ? "Boat" : d.length < 24 ? "Small ship" : d.length < 38 ? "Ship" : d.length < 50 ? "Big ship" : "Great ship";
     const rig = d.masts ? `${d.masts} mast${d.masts > 1 ? "s" : ""}` : "oars";
     return `${size} \xB7 ${d.length} m \xB7 ${rig}`;
   }
@@ -53152,14 +53588,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       return false;
     }
-    /** A big ship moors alongside a pier head, bow out to sea (as near as she'll fit). */
+    /**
+     * A big ship berths alongside a pier head, bow out to sea: her waist (the
+     * main deck, where her rail's lowest: a jump from the planks) alongside the
+     * head — or, where the water's too shallow for that, as near it as she'll lie.
+     */
     berth(w, dock) {
-      const L2 = this.def.length, B4 = this.def.beam;
+      const L2 = this.def.length, B4 = this.def.beam, d = shipDims(this.def);
       const dx = dock.dirX ?? 0, dy = dock.dirY ?? 1, hd = Math.atan2(dy, dx);
       const end = dock.end || dock;
-      for (let k = 0; k < 10; k++) {
+      const qs = d.big ? d.stairs.find((s) => s.la === "quarter" && s.lb === "main") : null;
+      const waist = Math.min(L2 * 0.5 - 5, qs ? -xAt(d, qs.tb) - 3.2 : Infinity);
+      for (let k = 0; k < 26; k++) {
         for (const sg of [1, -1]) {
-          const along = L2 * 0.5 - 5 + k * 2.5, off = sg * (B4 * 0.5 + (dock.headHalf ?? 1) + 1.4);
+          const along = waist + k * 2, off = sg * (B4 * 0.5 + (dock.headHalf ?? 1) + 1.4);
           const x = w.wx(end.x + 0.5 + dx * along - dy * off), y = end.y + 0.5 + dy * along + dx * off;
           if (this.fits(w, x, y, hd)) {
             this.x = x;
@@ -53674,7 +54116,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   var BOTTLES = ["#2e7d32", "#6d4c41", "#1b5e20", "#827717", "#4e342e", "#b71c1c", "#1565c0"];
   var GOODS = ["#c0392b", "#d68910", "#27ae60", "#2980b9", "#8e44ad", "#f1c40f", "#a1887f", "#e67e22"];
-  var BOOKS = ["#7b241c", "#1a5276", "#145a32", "#6e2c00", "#4a235a", "#7d6608", "#512e5f", "#1b2631"];
+  var BOOKS2 = ["#7b241c", "#1a5276", "#145a32", "#6e2c00", "#4a235a", "#7d6608", "#512e5f", "#1b2631"];
   function legs(k, w, d, h2, col, t = 0.06, inset = 0.04) {
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(k, sx * (w / 2 - inset) - t / 2, 0, sz * (d / 2 - inset) - t / 2, sx * (w / 2 - inset) + t / 2, h2, sz * (d / 2 - inset) + t / 2, col);
   }
@@ -53787,7 +54229,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             const r = R4(row * 31 + i * 7 + (it.x * 13 | 0));
             if (kind === "books" || kind === "bookcase") {
               const bw2 = 0.04 + r * 0.05, bh = gap * (0.6 + r * 0.35);
-              B(k, x, y, -d / 2 + 0.05, x + bw2, y + bh, d / 2 - 0.04, BOOKS[Math.floor(r * BOOKS.length)]);
+              B(k, x, y, -d / 2 + 0.05, x + bw2, y + bh, d / 2 - 0.04, BOOKS2[Math.floor(r * BOOKS2.length)]);
               x += bw2 + 4e-3;
             } else if (kind === "bottles" || kind === "medcabinet") {
               const bh = gap * (0.45 + r * 0.4);
@@ -55773,7 +56215,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     /** Mark or clear the tiles covered by an object's footprint. */
     stamp(obj, v) {
       const w = this.world;
-      const fp = footprint(obj);
+      const fp = footprint2(obj);
       for (let y = fp.y0; y < fp.y1; y++) {
         for (let x = fp.x0; x < fp.x1; x++) {
           if (y < 0 || y >= w.height) continue;
@@ -55807,7 +56249,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function isHut(o) {
     return o.kind === "building" && (o.style === "tribal" || o.roofType === "hut");
   }
-  function footprint(o) {
+  function footprint2(o) {
     if (o.rot) {
       const r = bfoot(o);
       const x02 = Math.floor(r.x0 + 1e-3), y02 = Math.floor(r.y0 + 1e-3);
@@ -56933,7 +57375,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return instanced(o, ctx, [part5, ...opts.more || []], { yaw, scale: opts.scale ?? (o.s || 1) });
   }
   var jitterYaw = (o, amt = 0.25) => (hash2(o.x, o.y, 5) - 0.5) * amt;
-  var WOOD = "#8d6e4a";
+  var WOOD2 = "#8d6e4a";
   var DARK_WOOD = "#5d4037";
   var IRON2 = "#2d3436";
   var barrel = () => model("barrel", (k) => {
@@ -56970,9 +57412,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(torus(0.6, 0.035, 4, 16), { at: [0, 0.35, 0], rot: [Math.PI / 2, 0, 0], color: "#8d6e4a" });
   });
   var bench = () => model("bench", (k) => {
-    k.add(box(1.5, 0.07, 0.2), { at: [0, 0.45, 0.1], color: WOOD, outline: 0.012 });
-    k.add(box(1.5, 0.07, 0.2), { at: [0, 0.45, -0.12], color: shade2(WOOD, -0.06), outline: 0.012 });
-    for (const y of [0.62, 0.8]) k.add(box(1.5, 0.12, 0.05), { at: [0, y, -0.25], rot: [-0.12, 0, 0], color: WOOD, outline: 0.012 });
+    k.add(box(1.5, 0.07, 0.2), { at: [0, 0.45, 0.1], color: WOOD2, outline: 0.012 });
+    k.add(box(1.5, 0.07, 0.2), { at: [0, 0.45, -0.12], color: shade2(WOOD2, -0.06), outline: 0.012 });
+    for (const y of [0.62, 0.8]) k.add(box(1.5, 0.12, 0.05), { at: [0, y, -0.25], rot: [-0.12, 0, 0], color: WOOD2, outline: 0.012 });
     for (const x of [-0.62, 0.62]) {
       for (const z of [0.15, -0.18]) k.add(box(0.07, 0.45, 0.07), { at: [x, 0, z], color: DARK_WOOD });
       k.add(box(0.07, 0.55, 0.06), { at: [x, 0.45, -0.25], rot: [-0.12, 0, 0], color: DARK_WOOD });
@@ -56980,10 +57422,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   var fence = () => model("fence", (k) => {
     for (const x of [-0.45, -0.15, 0.15, 0.45]) {
-      k.add(box(0.08, 0.72, 0.06), { at: [x, 0, 0], color: WOOD, outline: 0.012 });
-      k.add(cone(0.058, 0.12, 4), { at: [x, 0.72, 0], rot: [0, Math.PI / 4, 0], color: WOOD });
+      k.add(box(0.08, 0.72, 0.06), { at: [x, 0, 0], color: WOOD2, outline: 0.012 });
+      k.add(cone(0.058, 0.12, 4), { at: [x, 0.72, 0], rot: [0, Math.PI / 4, 0], color: WOOD2 });
     }
-    for (const y of [0.24, 0.5]) k.add(box(1.04, 0.07, 0.04), { at: [0, y, 0.05], color: shade2(WOOD, -0.12) });
+    for (const y of [0.24, 0.5]) k.add(box(1.04, 0.07, 0.04), { at: [0, y, 0.05], color: shade2(WOOD2, -0.12) });
   });
   var mooring = () => model("mooring", (k) => {
     k.add(cyl(0.13, 0.15, 0.62, 8), { color: DARK_WOOD, outline: 0.015 });
@@ -57153,9 +57595,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(torus(0.14, 0.018, 4, 12), { at: [0, 1.05, 0.26], color: "#c0392b" });
   });
   var stall = () => model("stall", (k) => {
-    k.add(box(1.8, 0.85, 0.7), { at: [0, 0, 0.1], color: WOOD, outline: 0.02 });
-    for (let x = -0.8; x < 0.9; x += 0.3) k.add(box(0.02, 0.8, 0.02), { at: [x, 0.02, 0.46], color: shade2(WOOD, -0.25) });
-    k.add(box(1.9, 0.06, 0.8), { at: [0, 0.85, 0.1], color: shade2(WOOD, 0.15) });
+    k.add(box(1.8, 0.85, 0.7), { at: [0, 0, 0.1], color: WOOD2, outline: 0.02 });
+    for (let x = -0.8; x < 0.9; x += 0.3) k.add(box(0.02, 0.8, 0.02), { at: [x, 0.02, 0.46], color: shade2(WOOD2, -0.25) });
+    k.add(box(1.9, 0.06, 0.8), { at: [0, 0.85, 0.1], color: shade2(WOOD2, 0.15) });
     for (const x of [-0.85, 0.85]) {
       k.add(cyl(0.04, 0.045, 2, 5), { at: [x, 0, 0.42], color: DARK_WOOD });
       k.add(cyl(0.04, 0.045, 2.35, 5), { at: [x, 0, -0.3], color: DARK_WOOD });
@@ -57200,7 +57642,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(cone(0.28, 0.24, 6), { at: [0, 3.05, 0], color: IRON2, outline: 0.012 });
     k.add(new SphereGeometry(0.045, 5, 4), { at: [0, 3.31, 0], color: IRON2 });
   });
-  var lantern2 = () => model("lantern", (k) => {
+  var lantern = () => model("lantern", (k) => {
     k.add(box(0.11, 2.1, 0.11), { color: "#4e342e", outline: 0.012 });
     k.add(box(0.55, 0.07, 0.07), { at: [0.24, 2, 0], color: "#4e342e" });
     k.add(cyl(8e-3, 8e-3, 0.18, 3), { at: [0.45, 1.84, 0], color: IRON2 });
@@ -57251,7 +57693,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   reg("dummy", (o, ctx) => simple(o, ctx, "dummy", dummy(), { yaw: jitterYaw(o, 0.6) }));
   reg("well", (o, ctx) => simple(o, ctx, "well", well(), { yaw: 0 }));
   reg("lamp", (o, ctx) => simple(o, ctx, "lamp", lamp(), { yaw: 0 }));
-  reg("lantern", (o, ctx) => simple(o, ctx, "lantern", lantern2(), { yaw: hash2(o.x, o.y) < 0.5 ? 0 : Math.PI }));
+  reg("lantern", (o, ctx) => simple(o, ctx, "lantern", lantern(), { yaw: hash2(o.x, o.y) < 0.5 ? 0 : Math.PI }));
   reg("skull", (o, ctx) => simple(o, ctx, "skull", skull3(), { yaw: jitterYaw(o, 0.6) }));
   reg("stall", (o, ctx) => {
     let yaw = 0;
@@ -57755,7 +58197,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (const x of [-0.4, 0.4]) for (const z of [-0.24, 0.24]) k.add(box(0.1, 0.06, 0.1), { at: [x, -0.04, z], color: band2 });
     k.add(new CircleGeometry(0.3, 10), { at: [0, 0.47, 0], rot: [-Math.PI / 2, 0, 0], scale: [1.4, 0.9, 1], color: "#3b2a1a" });
   });
-  var chestLid = (tier) => model("chest-lid:" + tier, (k) => {
+  var chestLid2 = (tier) => model("chest-lid:" + tier, (k) => {
     const [wood, band2] = tier >= 3 ? ["#a63a2e", "#f1c40f"] : tier === 2 ? ["#6d4c33", "#cfd8dc"] : ["#a86f3f", "#f1c40f"];
     k.add(new CylinderGeometry(0.3, 0.3, 0.92, 12, 1, false, 0, Math.PI), { at: [0, 0, 0.3], rot: [0, 0, Math.PI / 2], color: wood, outline: 0.02 });
     for (const x of [-0.34, 0, 0.34]) k.add(new CylinderGeometry(0.31, 0.31, 0.08, 12, 1, false, 0, Math.PI), { at: [x, 0, 0.3], rot: [0, 0, Math.PI / 2], color: band2 });
@@ -57769,7 +58211,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const root2 = group("chest");
     const tier = o.tier ?? 1;
     add(root2, chestBody(tier));
-    const lid = add(root2, chestLid(tier));
+    const lid = add(root2, chestLid2(tier));
     lid.position.set(0, 0.5, -0.3);
     const coins = add(root2, coinsGeo(), { castShadow: false });
     const aura = new Mesh(AURA_GEO, glowMat(16769126, { opacity: 0.16, additive: true }));
@@ -61255,7 +61697,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       return null;
     };
-    game.deckRoute = (a, x, y) => deckRoute(game, a, x, y);
+    game.deckRoute = (a, x, y, who = null) => deckRoute(game, a, x, y, who);
     game.inShip = (s, x, y, h2, sails = false) => {
       if (s.sunk) return false;
       const r = s.def.length * 0.56 + (sails ? s.def.length * 0.3 : 0);
@@ -61333,11 +61775,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const [lvl, t, v] = S3[i % S3.length];
     return { ...freeDeckSpot(ship, t, v, lvl), lvl };
   }
-  function deckRoute(game, a, tx, ty) {
+  function deckRoute(game, a, tx, ty, who = null) {
     const dk3 = a.deck;
     if (!dk3 || dk3.lvl === void 0) return null;
     const s = dk3.ship, d = shipDims(s.def), w = game.world;
-    const to = deckPoint(s, w.dx(s.x, tx), ty - s.y, 0);
+    const to = who?.deck?.ship === s ? who.deck : deckPoint(s, w.dx(s.x, tx), ty - s.y, 0);
     if (!to) return null;
     const lvl = (p) => typeof p.lvl === "string" ? p.lvl : null;
     const here = lvl(dk3), there = lvl(to);
@@ -61347,7 +61789,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return deckToWorld(s, tt, (st.va + st.vb) / 2);
     };
     const upper = (st) => st.ha > st.hb ? st.la : st.lb, lower = (st) => st.ha > st.hb ? st.lb : st.la;
-    const path2 = { main: { quarter: "quarter", poop: "quarter", fore: "fore" }, quarter: { main: "main", fore: "main", poop: "poop" }, poop: { quarter: "quarter", main: "quarter", fore: "quarter" }, fore: { main: "main", quarter: "main", poop: "main" } };
+    const path2 = {
+      main: { quarter: "quarter", poop: "quarter", fore: "fore", hold: "hold" },
+      quarter: { main: "main", fore: "main", poop: "poop", hold: "main" },
+      poop: { quarter: "quarter", main: "quarter", fore: "quarter", hold: "quarter" },
+      fore: { main: "main", quarter: "main", poop: "main", hold: "main" },
+      hold: { main: "main", quarter: "main", poop: "main", fore: "main", cabin: "main", captain: "main", forecastle: "main" }
+    };
     if (!here) {
       const st = dk3.lvl, up = upper(st), lo = lower(st);
       return end(st, there === up || there !== lo && path2[up]?.[there] !== lo);
@@ -64030,22 +64478,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const TR = bd === 2 ? [1, 0.975, 0.955, 0.935, 0.915, 0.89, 0.86, 0.83, 0.8, 0.765, 0.73, 0.7, 0.67, 0.645, 0.62, 0.6, 0.575, 0.55, 0.52, 0.49, 0.46, 0.43, 0.4, 0.37, 0.34, 0.31, 0.28, 0.24, 0.2, 0.16, 0.12, 0.07, 0.02, -0.04, -0.1] : bd === 1 ? [1, 0.97, 0.93, 0.89, 0.84, 0.78, 0.72, 0.67, 0.62, 0.57, 0.5, 0.42, 0.33, 0.24, 0.14, 0.03, -0.1] : [1, 0.93, 0.82, 0.7, 0.58, 0.4, 0.2, -0.1];
     const tpt = (mS, off = 0) => (s, a) => torsoPt(sh, s, a, off, mS);
     const skinTorso = tpt(1);
-    const TOP = o.top;
+    const TOP2 = o.top;
     const shirtM = 0.45;
     const skinReg = o.fem ? "torsoFem" : o.muscle >= 0.55 ? "torsoMusc" : "torsoLean";
     const tuv = (reg3) => reg3 ? (s, a) => torsoUV(reg3, a, s) : null;
     const addT = (rows, pt, col, a0 = -Math.PI, a1 = Math.PI, inward = false, reg3 = null) => add5(band(pt, rows, a0, a1, U3, inward, inward ? null : tuv(reg3)), M(), col, B3.chest);
-    const neckS = TOP === "shirt" || TOP === "jacket" ? 0.955 : TOP === "tank" || TOP === "dress" ? 0.84 : 0.93;
-    const openKim = TOP === "kimono" && !!look.openShirt;
-    if (TOP === "bare" || TOP === "vest" || TOP === "open" || openKim || TOP === "coat" && !look.top2) {
+    const neckS = TOP2 === "shirt" || TOP2 === "jacket" ? 0.955 : TOP2 === "tank" || TOP2 === "dress" ? 0.84 : 0.93;
+    const openKim = TOP2 === "kimono" && !!look.openShirt;
+    if (TOP2 === "bare" || TOP2 === "vest" || TOP2 === "open" || openKim || TOP2 === "coat" && !look.top2) {
       addT(TR, skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
-    } else if (TOP === "crop" || TOP === "bikini") {
-      const lo = TOP === "crop" ? 0.5 : 0.58, hi = TOP === "crop" ? 0.86 : 0.78;
+    } else if (TOP2 === "crop" || TOP2 === "bikini") {
+      const lo = TOP2 === "crop" ? 0.5 : 0.58, hi = TOP2 === "crop" ? 0.86 : 0.78;
       addT(cut2(TR, hi, 1), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
       addT(cut2(TR, lo, hi), tpt(1, 2e-3), pal.top);
       addT(cut2(TR, -0.1, lo), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
       straps(add5, sh, hi, pal.top, q2);
-    } else if (TOP === "striped") {
+    } else if (TOP2 === "striped") {
       addT(cut2(TR, neckS, 1), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
       const n = cloth ? 7 : 4;
       for (let k = 0; k < n; k++) {
@@ -64053,11 +64501,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         addT(cut2(TR, lo, hi), tpt(shirtM), k % 2 ? cc.top2 : pal.top, -Math.PI, Math.PI, false, "torsoCloth");
       }
     } else {
-      const col = TOP === "jacket" || TOP === "coat" ? cc.top2 : pal.top;
+      const col = TOP2 === "jacket" || TOP2 === "coat" ? cc.top2 : pal.top;
       addT(cut2(TR, neckS, 1), skinTorso, skin, -Math.PI, Math.PI, false, skinReg);
       addT(cut2(TR, -0.1, neckS), tpt(shirtM), col, -Math.PI, Math.PI, false, "torsoCloth");
-      if (TOP === "tank" || TOP === "dress") straps(add5, sh, neckS, col, q2);
-      if (cloth && TOP !== "tank" && TOP !== "dress") {
+      if (TOP2 === "tank" || TOP2 === "dress") straps(add5, sh, neckS, col, q2);
+      if (cloth && TOP2 !== "tank" && TOP2 !== "dress") {
         const f = torsoPt(sh, neckS, 0, 0, shirtM)[0], bk = -torsoPt(sh, neckS, Math.PI, 0, shirtM)[0], W4 = torsoPt(sh, neckS, Math.PI / 2, 0, shirtM)[2];
         add5(torus2(q2), mul(M((f - bk) / 2, 0, 0), ringAt(neckS * sh.cl, (f + bk) / 2 + 2e-3, W4 + 2e-3, 0.012)), shade(col, -0.18), B3.chest);
       }
@@ -64073,7 +64521,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       add5(band(tpt(mS, off), rows, edge(aFn), rest(aFn), U3, false, tuv("torsoCloth")), M(), col, B3.chest);
       if (cloth) add5(band(tpt(mS, off - 5e-3), half(rows), edge(aFn), rest(aFn), U3 / 2, true), M(), lin2, B3.chest);
     };
-    if (TOP === "vest") {
+    if (TOP2 === "vest") {
       const rows = cut2(TR, 0.1, 0.975);
       shell2(rows, (s) => 0.36 + (s - 0.1) * 0.36, 9e-3, 1, pal.top, cc.lining);
       if (cloth) for (let k = 0; k < 3; k++) {
@@ -64081,13 +64529,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const p = torsoPt(sh, s, a, 0.016, 1);
         add5(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), "#ffd54f", B3.chest);
       }
-    } else if (TOP === "open") {
+    } else if (TOP2 === "open") {
       const rows = cut2(TR, -0.08, 0.97);
       shell2(rows, (s) => 0.3 + Math.max(0, s - 0.25) * 0.5, 0.01, 1, pal.top, cc.lining);
       if (cloth) collarFlaps(add5, sh, pal.top, 0.62);
-    } else if (TOP === "jacket" || TOP === "kimono" || TOP === "coat" && look.top2) {
-      const kim = TOP === "kimono";
-      const col = TOP === "coat" ? look.coat || pal.top : pal.top;
+    } else if (TOP2 === "jacket" || TOP2 === "kimono" || TOP2 === "coat" && look.top2) {
+      const kim = TOP2 === "kimono";
+      const col = TOP2 === "coat" ? look.coat || pal.top : pal.top;
       const rows = cut2(TR, -0.1, 0.985);
       const open = openKim ? (s) => 0.06 + sstep(0.05, 0.9, s) * 0.62 : kim ? (s) => 0.02 + sstep(0.28, 0.98, s) * 0.46 : (s) => 0.015 + sstep(0.46, 0.96, s) * 0.62;
       shell2(rows, open, kim ? 0.014 : 0.012, openKim ? 1 : 0.2, col, shade(col, -0.3));
@@ -64107,29 +64555,29 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           add5(Prim.rbox(0.4, 6, 5), between(a, b, 0.024, 6e-3), cc.tie, B3.chest);
         }
       }
-      if (TOP === "jacket") {
+      if (TOP2 === "jacket") {
         const rows2 = cloth ? [0.075, 0, -0.08, -0.16] : [0.075, -0.16];
         const pp3 = (y, a) => pelvisPt(sh, y, a, 0.022 + (0.075 - y) * 0.12);
         add5(band(pp3, rows2, 0.22, TAU13 - 0.22, U3), M(), col, B3.hips);
         if (cloth) add5(band((y, a) => pelvisPt(sh, y, a, 0.017 + (0.075 - y) * 0.12), rows2, 0.22, TAU13 - 0.22, U3, true), M(), shade(col, -0.3), B3.hips);
       }
     }
-    if (look.vest && TOP !== "vest") {
+    if (look.vest && TOP2 !== "vest") {
       shell2(cut2(TR, 0.05, 0.97), (s) => 0.4 + (s - 0.05) * 0.3, 0.02, 0.3, look.vest, shade(look.vest, -0.3));
     }
-    const loose = !o.tucked && (TOP === "tee" || TOP === "shirt" || TOP === "striped" || TOP === "tank" || TOP === "open");
+    const loose = !o.tucked && (TOP2 === "tee" || TOP2 === "shirt" || TOP2 === "striped" || TOP2 === "tank" || TOP2 === "open");
     if (loose && !o.skirt) {
       const hem = cloth ? [0.2, 0.08, -0.06, -0.2, -0.34] : [0.2, -0.34];
-      const col = TOP === "striped" ? pal.top : pal.top;
+      const col = TOP2 === "striped" ? pal.top : pal.top;
       const off = (s) => 6e-3 + (0.2 - s) * 0.03;
-      const a0 = TOP === "open" ? 0.3 : -Math.PI, a1 = TOP === "open" ? TAU13 - 0.3 : Math.PI;
+      const a0 = TOP2 === "open" ? 0.3 : -Math.PI, a1 = TOP2 === "open" ? TAU13 - 0.3 : Math.PI;
       add5(band((s, a) => torsoPt(sh, s, a, off(s), shirtM * 0.5), hem, a0, a1, U3), M(), col, B3.chest);
       if (cloth) add5(band((s, a) => torsoPt(sh, s, a, off(s) - 6e-3, 0.2), hem.slice(-2), a0, a1, U3, true), M(), cc.lining, B3.chest);
     }
     const PR = cloth ? [0.08, 0.05, 0.02, -0.02, -0.06, -0.1, -0.13, -0.155, -0.18, -0.2, -0.215] : [0.08, 0, -0.08, -0.15, -0.215];
-    const skirtPelvis = o.skirt || TOP === "dress";
+    const skirtPelvis = o.skirt || TOP2 === "dress";
     let skirtInfo = null;
-    const pelvisCol = TOP === "dress" ? pal.top : pal.bottom;
+    const pelvisCol = TOP2 === "dress" ? pal.top : pal.bottom;
     add5(band((y, a) => pelvisPt(sh, y, a), PR, -Math.PI, Math.PI, U3), M(), pelvisCol, B3.hips);
     if (o.waist === "belt") {
       const rows = [0.082, 0.04];
@@ -64156,7 +64604,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (skirtPelvis) {
       const long = o.bottom === "longskirt";
       const SS = skirtShape(d, long), yb = SS.yb;
-      const col = TOP === "dress" ? pal.top : pal.bottom;
+      const col = TOP2 === "dress" ? pal.top : pal.bottom;
       const rows = cloth ? [0.08, 0, -0.1, -0.1 + (yb + 0.1) * 0.25, -0.1 + (yb + 0.1) * 0.5, -0.1 + (yb + 0.1) * 0.75, yb] : [0.08, -0.1, (yb - 0.1) * 0.5, yb];
       const Wh = SS.Wh, Dh = SS.Dh;
       const sp = (y, a, inset = 0) => {
@@ -64183,7 +64631,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (cloth) add5(band((y, a) => sp(y, a, 8e-3), rows.slice(-2), -Math.PI, Math.PI, U3, true), M(), shade(col, -0.35), B3.hips, 0, skirtW);
       skirtInfo = { yb, Wh, Dh, hK: bends ? SS.hK : 0 };
     }
-    const armCol = pal.sleeve || (TOP === "coat" ? look.coat || pal.top : TOP === "jacket" ? pal.top : TOP === "striped" ? pal.top : pal.top);
+    const armCol = pal.sleeve || (TOP2 === "coat" ? look.coat || pal.top : TOP2 === "jacket" ? pal.top : TOP2 === "striped" ? pal.top : pal.top);
     const Lk = Math.sqrt(d.Am);
     for (const [s, Ub, Fb, part5] of [[1, B3.uarmR, B3.farmR, 1], [-1, B3.uarmL, B3.farmL, 2]]) {
       const sl = o.sleeves;
@@ -64267,8 +64715,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       feet(add5, o, pal, d, q2, Ft, part5);
     }
-    if (look.coat && TOP !== "coat" || TOP === "coat" && !look.top2 && look.coat) coat(add5, sh, look.coat, TR, U3, cloth, d, q2);
-    else if (TOP === "coat") coatTail(add5, sh, look.coat || pal.top, U3, cloth, d, 0.03);
+    if (look.coat && TOP2 !== "coat" || TOP2 === "coat" && !look.top2 && look.coat) coat(add5, sh, look.coat, TR, U3, cloth, d, q2);
+    else if (TOP2 === "coat") coatTail(add5, sh, look.coat || pal.top, U3, cloth, d, 0.03);
     return skirtInfo ? { ...o, skirtInfo } : o;
   }
   function neckGeo(nk, y0, y1, o, cloth) {
@@ -72473,7 +72921,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (!v || !w) return;
       this.bolt.update(env, ctx);
       const zone = w.zone;
-      const under = !!v.isUnder;
+      const lv = game.player?.deck?.lvl;
+      const under = !!v.isUnder || lv === "cabin" || lv === "captain" || lv === "forecastle" || lv === "hold";
       const rain = !zone && !under ? env.rain || 0 : 0;
       const snow2 = zone !== 1 && zone !== 2 && !under ? env.snow || 0 : 0;
       this.rain.visible = rain > 0.03;
@@ -84967,7 +85416,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const dx = w.dx(a.x, t.x), dy = t.y - a.y;
       const dist = Math.hypot(dx, dy);
       const ang = Math.atan2(dy, dx);
-      const up = game.deckRoute?.(a, t.x, t.y);
+      const up = game.deckRoute?.(a, t.x, t.y, t);
       if (up) {
         this.moveToward(a, up.x, up.y, game, true);
         a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4;
@@ -85664,9 +86113,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const R4 = (isl.radius || 0) + 80;
       if (!isl.docks?.length || Math.abs(w.dx(isl.x, s.x)) > R4 || Math.abs(isl.y - s.y) > R4) continue;
       for (const dk3 of isl.docks) {
-        const e = dk3.end || dk3;
+        const e = dk3.end || dk3, hh = dk3.headHalf ?? 2;
         const d = w.distance(s.x, s.y, e.x + 0.5, e.y + 0.5);
-        if (d < s.def.length * 0.6 + (dk3.headHalf ?? 2) + 6 && d < bd) {
+        const reach = Math.max(s.def.length * 0.6 + hh + 6, s.def.big ? Math.hypot(s.def.length * 0.5 + 12, s.def.beam * 0.5 + hh + 3) : 0);
+        if (d < reach && d < bd) {
           bd = d;
           best = dk3;
         }
@@ -95540,7 +95990,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   // src/game/traffic.js
   var SAILOR = { name: "Sailor", faction: "civilian", style: "brawler", look: { top: "#eceff1", bottom: "#37474f", hat: "bandana", hatColor: "#1565c0" }, skill: 0.1, barks: ["Repel boarders!", "Get off our ship!"] };
   var FISHER = { name: "Fisherman", faction: "civilian", style: "brawler", look: { top: "#8d6e63", bottom: "#455a64", hat: "cap", hatColor: "#6d8f5e" }, skill: 0.05, barks: ["Not the catch!", "Help!"] };
-  var CREW = { dinghy: 1, sloop: 2, caravel: 2, brigantine: 3, carrack: 5, war_galleon: 8, man_o_war: 10, great_galleon: 12, marine_battleship: 10 };
+  var CREW = { dinghy: 1, sloop: 3, caravel: 4, brigantine: 5, frigate: 6, galleon: 6, marine_warship: 6, carrack: 6, war_galleon: 8, man_o_war: 10, great_galleon: 12, marine_battleship: 10 };
   var SMALL_STATIONS = [[0.82, 0], [0.36, 0.26], [0.64, -0.3], [0.36, -0.26], [0.72, 0.28]];
   function installTraffic(game) {
     const T4 = game.traffic = { t: 3, ships: [] };
@@ -95706,11 +96156,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     s.heaveTo = false;
     const blues = isBlue(regionAt(target2.x, target2.y));
     const pace = Math.abs(target2.speed);
-    if (d > 13) {
+    const lane = (s.def.beam + target2.def.beam) / 2 + 7;
+    if (d > lane + 2) {
       s.speedCap = blues ? 8.5 : Math.max(10, pace * 1.2 + 2);
       return Math.atan2(target2.y - s.y, w.dx(s.x, target2.x));
     }
-    const lane = (s.def.beam + target2.def.beam) / 2 + 7;
     s.speedCap = Math.min(blues ? 8.5 : 99, pace + clamp2(-ahead * 0.3, -1.5, 2) + 0.3);
     return th - side * clamp2((abeam - lane) * 0.1, -0.6, 0.6);
   }
@@ -95718,10 +96168,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const s = p.mode === "sail" ? p.ship : p.deck?.ship?.owner === "player" ? p.deck.ship : null;
     return s && !s.sunk ? s : null;
   }
+  var gunReach = (s, target2) => 12 + (s.def.beam + target2.def.beam) / 2;
   function fireOn(game, s, target2, d) {
     const toT = Math.atan2(target2.y - s.y, game.world.dx(s.x, target2.x));
     const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
-    if (d < 17 && side < 0.6 && s.cannonCd <= 0 && s.fireBroadside(game, target2.x, target2.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 }) && s.heaveTo) s.cannonCd = Math.max(s.cannonCd, 6.5);
+    if (d < gunReach(s, target2) && side < 0.6 && s.cannonCd <= 0 && s.fireBroadside(game, target2.x, target2.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 }) && s.heaveTo) s.cannonCd = Math.max(s.cannonCd, 6.5);
   }
   function trafficAI(s, dt, game) {
     const tr = s.traffic, w = game.world, p = game.player;
@@ -95741,7 +96192,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       s.anchored = true;
       s.speedCap = 0;
       const target3 = playerShip(p);
-      if (target3 && hostile2(s, game) && (s.def.cannons || 0) > 0 && s.cannonCd <= 0 && w.distance(s.x, s.y, target3.x, target3.y) < 17) s.fireBroadside(game, target3.x, target3.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
+      if (target3 && hostile2(s, game) && (s.def.cannons || 0) > 0 && s.cannonCd <= 0 && w.distance(s.x, s.y, target3.x, target3.y) < gunReach(s, target3)) s.fireBroadside(game, target3.x, target3.y, { name: s.name, faction: s.faction, isShip: true, power: () => (s.level || 5) * 10 });
       return;
     }
     const target2 = playerShip(p);
@@ -96419,7 +96870,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     update(k, dt, game) {
       const p = game.player;
       const tgtShip = p.mode === "sail" && p.ship && !p.ship.sunk ? p.ship : null;
-      const tx = tgtShip ? tgtShip.x : p.x, ty = tgtShip ? tgtShip.y : p.y;
+      let tx = p.x, ty = p.y;
+      if (tgtShip) {
+        const c = Math.cos(tgtShip.heading), sn = Math.sin(tgtShip.heading), L2 = tgtShip.def.length;
+        const ox = game.world.dx(tgtShip.x, k.x), oy = k.y - tgtShip.y;
+        const u = clamp2(ox * c + oy * sn, -L2 * 0.35, L2 * 0.35), hb = hbAt(u / L2 + 0.5, tgtShip.def.beam) * 0.7;
+        const v = clamp2(-ox * sn + oy * c, -hb, hb);
+        tx = game.world.wx(tgtShip.x + u * c - v * sn);
+        ty = tgtShip.y + u * sn + v * c;
+      }
       const dx = game.world.dx(k.x, tx), dy = ty - k.y;
       const d = Math.hypot(dx, dy);
       k.facing = Math.atan2(dy, dx);
@@ -96443,7 +96902,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           if (!k.alive || k.state !== "idle") return;
           const dmg = (bite ? 60 : 40) * (1 + k.attrs.str / 25);
           game.combat.hitbox({ owner: k, x: tx, y: ty - 0.4, shape: "circle", range: bite ? 2.6 : 4, damage: dmg * 0.5, knockback: 10, stun: 0.6, heavy: true, duration: 0.1, radial: true });
-          if (tgtShip && game.world.distance(tgtShip.x, tgtShip.y, tx, ty) < 4) tgtShip.damage(dmg, k);
+          if (tgtShip && hullGap(tgtShip, game.world.dx(tgtShip.x, tx), ty - tgtShip.y) < 2.5) tgtShip.damage(dmg, k);
           game.fx.burst(tx, ty, 30, { color: ["#e1f5fe", "#81d4fa", "#ffffff"], speed: 6, vz: 7, g: 12, life: 0.9, size: 0.22 });
           game.fx.shake(0.6);
           game.audio?.sfx("crash", { x: tx, y: ty });
@@ -119153,24 +119612,24 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       return;
     }
     const w = game.world;
-    let foe = null, fd = 22;
+    let foe = null, fd = Infinity;
     for (const o of game.ships) {
       if (o === s || o.sunk || o.faction !== "pirate") continue;
       const d2 = w.distance(s.x, s.y, o.x, o.y);
-      if (d2 < fd) {
+      if (d2 < 22 + (s.def.beam + o.def.beam) / 2 && d2 < fd) {
         fd = d2;
         foe = o;
       }
     }
     if (foe) {
       s.sail = 1;
-      const toT = Math.atan2(foe.y - s.y, w.dx(s.x, foe.x));
-      const want2 = fd > 12 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
+      const toT = Math.atan2(foe.y - s.y, w.dx(s.x, foe.x)), abreast = (s.def.beam + foe.def.beam) / 2;
+      const want2 = fd > abreast + 7 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
       s.heading += clamp2(angleDiff(s.heading, want2), -1, 1) * s.def.turn * dt;
       const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
       const toLead = Math.atan2(lead.y - s.y, w.dx(s.x, lead.x));
       const clear3 = Math.abs(angleDiff(toT, toLead)) > 0.5 || w.distance(s.x, s.y, lead.x, lead.y) > fd + 3;
-      if (fd < 16 && side < 0.6 && clear3 && s.cannonCd <= 0) s.fireBroadside(game, foe.x, foe.y, { name: s.name, faction: "player", isShip: true, escort: true, power: () => (s.level || 10) * 10 });
+      if (fd < 11 + abreast && side < 0.6 && clear3 && s.cannonCd <= 0) s.fireBroadside(game, foe.x, foe.y, { name: s.name, faction: "player", isShip: true, escort: true, power: () => (s.level || 10) * 10 });
       return;
     }
     const pt = formationPoint(game, lead, s.escortSlot || 0, s.formSpread || 1);
