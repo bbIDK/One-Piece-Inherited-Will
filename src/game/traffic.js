@@ -282,11 +282,13 @@ function spawnCrew(game, s) {
     game.addActor(a);
     // the helmsman aft, the rest at their stations (clear of the deck's cargo)
     const st = SMALL_STATIONS[(i - 1) % SMALL_STATIONS.length];
-    let t = i === 0 ? Math.min(0.46, (d.helmX + d.L / 2) / d.L + 0.08) : st[0];
+    let t = i === 0 ? (d.row ? d.row.seatT : Math.min(0.46, (d.helmX + d.L / 2) / d.L + 0.08)) : st[0];
     let v = i === 0 ? 0 : st[1] * s.def.beam;
     if (d.big) ({ t, v } = i === 0 ? helmSpot(s) : freeDeckSpot(s, 0.34 + (i / Math.max(1, n)) * 0.46, ((i % 2) ? 1 : -1) * s.def.beam * (0.12 + (i % 3) * 0.08)));
     placeOnDeck(game, a, s, t, v);
     a.facing = s.heading + (i === 0 ? 0 : (i % 2 ? 1 : -1) * 1.2);
+    // (a rowboat's hand sits at her oars and rows her)
+    if (i === 0 && s.def.oarsOnly) s.rower = a;
     if (a.controller) a.controller.home = null;
     tr.crew.push(a);
   }
@@ -425,7 +427,7 @@ function footInteraction(game, T, p) {
   if (s) {
     if (s.owner === 'player') {
       const d = deckDist(game, p, s, helmSpot(s));
-      if (d < 1.4) return { d, label: `Take the helm of the ${s.name}`, run: () => { p.deck.ship.aboard?.delete(p); p.deck = null; board(game, p, s); } };
+      if (d < (s.def.oarsOnly ? 0.9 : 1.4)) return { d, label: s.def.oarsOnly ? `Take the oars of the ${s.name}` : `Take the helm of the ${s.name}`, run: () => { p.deck.ship.aboard?.delete(p); p.deck = null; board(game, p, s); } };
       return null;
     }
     const tr = s.traffic;
@@ -433,7 +435,7 @@ function footInteraction(game, T, p) {
     const dh = deckDist(game, p, s, hatchSpot(s));
     if (!tr.plundered && dh < 1.3) return { d: dh, label: `Plunder the hold of the ${s.name}`, run: () => plunder(game, s) };
     const d = deckDist(game, p, s, helmSpot(s));
-    if (d < 1.4) return { d, label: `Take the helm — steal the ${s.name}`, run: () => claim(game, T, s) };
+    if (d < (s.def.oarsOnly ? 0.9 : 1.4)) return { d, label: `${s.def.oarsOnly ? 'Take the oars' : 'Take the helm'} — steal the ${s.name}`, run: () => claim(game, T, s) };
     return null;
   }
   // (in the water beside a hull there's no prompt: jump against her side to climb aboard)

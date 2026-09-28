@@ -1226,12 +1226,14 @@ export class Actor extends Entity {
     // in the air from a jump (not a knock-back launch): up with the knees, then reaching for the ground
     // (hauling yourself up onto a ledge: knees up, arms reaching over the top)
     const air = this.climb ? 'up' : !swim && !act && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? (this.vz > 0 ? 'up' : 'down') : null;
-    const mode = act || `${this.state}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${swim || ''}${busy ? busy.pose : ''}${this.charging > 0 ? 'k' : ''}${air || ''}`;
+    // at a ship's station: rowing a rowboat, or at the wheel
+    const st = !act ? this.station() : null;
+    const mode = act || `${this.state}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${swim || ''}${busy ? busy.pose : ''}${this.charging > 0 ? 'k' : ''}${air || ''}${st ? st.kind : ''}`;
     if (mode !== this._mode) {
       this._blendFrom = this._lastP || null;
       this._blendT = 0;
       // settling into (or getting up from) a seat or a lean takes a moment
-      const slow = busy || swim || (this._mode && /(lean|sit|sweep|vend|fish|drunk|chat|tread|crawl|dive|float|struggle)$/.test(this._mode));
+      const slow = busy || swim || st || (this._mode && /(lean|sit|sweep|vend|fish|drunk|chat|tread|crawl|dive|float|struggle|row|helm)$/.test(this._mode));
       this._blendDur = act ? Math.min(0.06, (act.def.windup ?? 0.1) * 0.45) : hurt ? 0.05 : slow ? 0.45 : 0.12;
       this._mode = mode;
     }
@@ -1247,7 +1249,7 @@ export class Actor extends Entity {
       anim, stanceP: STANCES[stance], combat, sprint: !!(this.intent.sprint && this.moving),
       weapon: wpn, armed: !!wpn && ((combat && !!STANCE_ARMED[stance]) || !!(anim && anim.weapon)), armament: this.armament,
       knockT: this.knockT,
-      activity: busy ? busy.pose : null, prop: busy ? busy.prop : null, seatH: busy ? busy.h : 0,
+      activity: busy ? busy.pose : null, prop: busy ? busy.prop : null, seatH: busy ? busy.h : 0, station: st,
     };
     if (this.charging > 0 && !act && !swim) pose.charge = this.charging;
     if (air) pose.air = { up: air === 'up', k: this.jumpK || 0 };
@@ -1272,6 +1274,19 @@ export class Actor extends Entity {
     }
     Object.assign(pose, actorVisuals(this, act, anim));
     return pose;
+  }
+
+  /**
+   * Where you're working a ship: at a rowboat's oars ({ kind: 'row', ship }) —
+   * you at the oars, or her hand rowing her — or at the wheel ({ kind: 'helm',
+   * ship }); else null.
+   */
+  station() {
+    const s = this.mode === 'sail' ? this.ship : this.crewOf;
+    if (!s || s.sunk) return null;
+    if (this.mode === 'sail') return { kind: s.def.oarsOnly ? 'row' : 'helm', ship: s };
+    if (s.rower === this && s.oars && this.deck?.ship === s && this.state === 'idle' && !this.moving && !this.provoked) return { kind: 'row', ship: s };
+    return null;
   }
 
   draw(g, env) {

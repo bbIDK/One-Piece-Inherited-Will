@@ -34,9 +34,9 @@ function smallDims(def) {
   const hq = castle ? 0.85 + (L - 5.5) * 0.1 : 0;
   const hf = fore ? 0.5 : 0;
   const tq = castle ? 0.27 : 0, tf = fore ? 0.83 : 1;
-  const masts = def.masts || 1;
-  const mastH = 1.2 + L * 0.75;
-  const helmX = -L * 0.42;
+  const masts = def.masts ?? 1;
+  const mastH = masts ? 1.2 + L * 0.75 : 0;
+  let helmX = -L * 0.42;
   const d = {
     L, B, D, open, deckY, bulH, castle, fore, hq, hf, tq, tf, masts, mastH, helmX,
     yq: deckY + hq, yf: deckY + hf,
@@ -44,11 +44,72 @@ function smallDims(def) {
     big: false, poop: false, hp: 0, tp: 0, sheer: 0.16 * B, walk: 0.94, stairs: [], solids: [],
   };
   // the masts (you walk round them, and a camera keeps out of them) and the wheel's post
-  d.mastU = Array.from({ length: masts }, (_, m) => (masts === 1 ? 0.05 * L : L * (0.28 - m * (0.56 / Math.max(1, masts - 1)))));
+  d.mastU = masts ? Array.from({ length: masts }, (_, m) => (masts === 1 ? 0.05 * L : L * (0.28 - m * (0.56 / Math.max(1, masts - 1))))) : [];
   d.mastR = 0.05 + L * 0.011;
   d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.16 }));
   if (!open) d.solids.push({ u: helmX + 1.1, v: 0, r: 0.2 });
+  if (def.oarsOnly) {
+    // a rowboat: the rower sits on the thwart amidships facing the bow, and
+    // the oars pivot in rowlocks on the gunwales a little ahead of them
+    const seatT = 0.44, lockT = seatT + 0.4 / L;
+    d.row = {
+      seatT, seatU: xAt(d, seatT), seatH: 0.3, // (the top of the thwart, over the floor)
+      lockT, lockU: xAt(d, lockT), lockV: hbAt(lockT, B) * 0.965, lockH: topAt(d, lockT) + 0.04,
+      inboard: 0.56, outboard: 1.5,
+    };
+    d.helmX = helmX = d.row.seatU;
+  }
   return d;
+}
+
+/**
+ * A rowboat's oar at stroke phase `ph` (0..1: the catch, the drive, the
+ * release, the swing forward again) for `pull` 1 (rowing ahead) or -1
+ * (backing water): { a (the sweep round the rowlock, + blade forward), b (the
+ * dip, + blade down), f (the feather: 0 blade square, 1 laid flat) }.
+ */
+export const OAR = { catchA: 0.6, finishA: -0.3, dipB: 0.52, liftB: 0.2 };
+const ease = (k) => k * k * (3 - 2 * k);
+export function oarStroke(ph, pull = 1) {
+  const { catchA: ca, finishA: fa, dipB, liftB } = OAR;
+  let a, b, f;
+  if (ph < 0.08) { const k = ease(ph / 0.08); a = ca; b = liftB + (dipB - liftB) * k; f = 0; }
+  else if (ph < 0.52) { a = ca + (fa - ca) * ease((ph - 0.08) / 0.44); b = dipB; f = 0; }
+  else if (ph < 0.6) { const k = ease((ph - 0.52) / 0.08); a = fa; b = dipB + (liftB - dipB) * k; f = k; }
+  else { const k = (ph - 0.6) / 0.4; a = fa + (ca - fa) * ease(k); b = liftB + Math.sin(k * Math.PI) * 0.05; f = k < 0.8 ? 1 : 1 - ease((k - 0.8) / 0.2); }
+  // backing water: the same stroke run the other way round (in at the stern, swept forward)
+  if (pull < 0) a = ca + fa - a;
+  return { a, b, f };
+}
+/**
+ * How far a rowboat's rower leans (radians, + forward) with her oars as they
+ * lie: sitting back with the hands at the chest at the catch, forward with
+ * the arms out at the finish.
+ */
+export function rowLean(ship) {
+  const o = ship.oars;
+  if (!o) return 0;
+  const k = clamp01((OAR.catchA - (o[0].a + o[1].a) / 2) / (OAR.catchA - OAR.finishA));
+  return -0.08 + 0.44 * k;
+}
+
+/** How hard a stroke drives at phase `ph` (0 out of the water, 1 mid-drive). */
+export const oarDrive = (ph) => (ph < 0.08 || ph > 0.52 ? 0 : Math.sin(((ph - 0.08) / 0.44) * Math.PI));
+
+/**
+ * Where an oar's grip and blade are for sweep a and dip b (see oarStroke),
+ * in the boat's frame (x forward, y up, z to starboard; side +1 starboard,
+ * -1 port).
+ */
+export function oarPoints(d, side, a, b) {
+  const r = d.row, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+  const ox = sa * cb, oy = -sb, oz = side * ca * cb; // outboard along the loom
+  const px = r.lockU, py = r.lockH, pz = side * r.lockV;
+  return {
+    lock: [px, py, pz], dir: [ox, oy, oz],
+    grip: [px - ox * r.inboard, py - oy * r.inboard, pz - oz * r.inboard],
+    tip: [px + ox * r.outboard, py + oy * r.outboard, pz + oz * r.outboard],
+  };
 }
 
 function bigDims(def) {
@@ -128,9 +189,10 @@ function bigDims(def) {
   return d;
 }
 
-/** Where the helmsman stands: x along the hull (stern < 0) and the floor height above the waterline. */
+/** Where the helmsman stands (a rowboat's rower sits): x along the hull (stern < 0) and the floor height above the waterline. */
 export function helmPoint(def) {
   const d = shipDims(def);
+  if (d.row) return { x: d.helmX, floor: d.deckY, eye: d.deckY + d.row.seatH + 0.8, seated: true };
   return { x: d.helmX, floor: d.helmFloor, eye: d.helmFloor + (d.open ? 1.45 : 1.7) };
 }
 

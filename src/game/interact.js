@@ -20,8 +20,8 @@ export function findInteraction(game, p) {
       const isl = w.islandAt(spot.x, spot.y) || w.nearestIsland(spot.x, spot.y, 40);
       return { label: `Go ashore${isl && isl.name ? ' — ' + isl.name : ''}`, key: 'E', run: () => disembark(game, p, spot) };
     }
-    // hove to: leave the wheel and walk your own deck
-    if (Math.abs(s.speed) < 1.6) return { label: 'Leave the helm (walk the deck)', key: 'E', run: () => leaveHelm(game, p, s) };
+    // hove to: leave the wheel (or ship the oars) and walk your own deck
+    if (Math.abs(s.speed) < 1.6) return { label: s.def.oarsOnly ? 'Leave the oars (stand up)' : 'Leave the helm (walk the deck)', key: 'E', run: () => leaveHelm(game, p, s) };
     return null;
   }
   // on foot / swimming (boarding is by hand: jump onto a deck from a pier or
@@ -124,7 +124,7 @@ export function disembark(game, p, spot) {
   game.audio?.sfx('step');
 }
 
-/** Let go of the wheel and stand on the deck beside it (the ship heaves to). */
+/** Let go of the wheel (or ship the oars) and stand on the deck beside it (the ship heaves to). */
 export function leaveHelm(game, p, s) {
   s.captain = null; s.sail = 0; s.rowing = 0; s.anchored = true;
   s.passengers = s.passengers.filter((x) => x !== p);
@@ -132,9 +132,12 @@ export function leaveHelm(game, p, s) {
   p.onShip = false;
   const hs = helmSpot(s);
   if (shipDims(s.def).big) placeOnDeck(game, p, s, hs.t, 0.9);
+  else if (s.def.oarsOnly) placeOnDeck(game, p, s, hs.t - 0.12, 0);
   else placeOnDeck(game, p, s, hs.t + 0.05, 0);
   game.emit('disembark', s, null);
-  game.hint?.('deck', 'Walk your deck freely — jump over the rail for a swim (Space at her side climbs back aboard), and press E at the wheel to take the helm again.');
+  game.hint?.('deck', s.def.oarsOnly
+    ? 'Stand in your boat, or jump over the side for a swim (Space at her side climbs back in). Press E at the seat to take the oars again.'
+    : 'Walk your deck freely — jump over the rail for a swim (Space at her side climbs back aboard), and press E at the wheel to take the helm again.');
 }
 
 /** A Devil Fruit user in the sea, hauled up onto the deck on a line thrown from it. */
@@ -156,6 +159,7 @@ export function board(game, p, s) {
   p.setBlock(false);
   p.action = null;
   game.emit('board', s);
-  game.hint('sailing', 'Sailing: W raises the sails, S lowers them, A/D steer. Hold SPACE to row (works without wind). Left-click fires a broadside toward the mouse. E near land to go ashore.');
+  if (s.def.oarsOnly) game.hint('rowing', 'Rowing: W pulls on the oars, S backs water, A/D pull one oar to turn her. No sail and no wind — just your arms (and the currents). E near land to go ashore; E away from it to stand up in her.');
+  else game.hint('sailing', 'Sailing: W raises the sails, S lowers them, A/D steer. Hold SPACE to row (works without wind). Left-click fires a broadside toward the mouse. E near land to go ashore.');
   game.audio?.sfx('board');
 }

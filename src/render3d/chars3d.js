@@ -9,7 +9,7 @@
 // Sea Kings get their own serpent model.
 import * as THREE from 'three';
 import { angleDiff } from '../core/math.js';
-import { registerActorView, registerViewmodel } from './registry.js';
+import { registerActorView, registerViewmodel, registerFrameHook } from './registry.js';
 import { Actor } from '../game/actor.js';
 import { CharacterModel } from './chars/model.js';
 import { expression } from './chars/face.js';
@@ -19,7 +19,7 @@ import { SeaKingView } from './chars/seaking.js';
 import { SeaCowView, FightingFishView } from './chars/seacreature.js';
 import { Trail } from './chars/trail.js';
 import { createViewmodel } from './chars/viewmodel.js';
-import { currentLook, weaponOf, actorPose, rigOptions, LYING } from './chars/pose.js';
+import { currentLook, weaponOf, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -106,9 +106,15 @@ class ActorView {
       if (o.seatH !== null) this.sitH = o.seatH;
       o.sitK = this.sitK > 0.01 ? this.sitK : 0;
       o.sitY = (this.sitH || 0) / s;
-      // rubber punch in flight: the arm stretches out to the fist
-      o.reachR = null;
-      if (a.fruit === 'gomu') o.reachR = this.stretchTarget(a, ctx, s);
+      // the hands on the oar grips (or the wheel's rim) — or a rubber punch in
+      // flight: the arm stretches out to the fist
+      o.reachR = null; o.reachL = null;
+      if (pose.station) {
+        const st = pose.station, R = this._grips || (this._grips = [new THREE.Vector3(), new THREE.Vector3()]);
+        const hipY = m.d.hip0 + ((o.sitY ?? m.d.hA) + 0.07 - m.d.hip0) * o.sitK;
+        stationReach(st, stationSpot(st), m.d, s, (this.visF ?? a.facing) - st.ship.heading, P.l || 0, hipY, R);
+        o.reachR = R[0]; o.reachL = R[1];
+      } else if (a.fruit === 'gomu') o.reachR = this.stretchTarget(a, ctx, s);
       const knocked = pose.state === 'knocked' || pose.state === 'dead';
       let PP = P;
       if (knocked) {
@@ -329,5 +335,22 @@ registerActorView((a, ctx, opts) => {
   }
 });
 registerViewmodel((ctx) => createViewmodel(ctx));
+
+// First person at a rowboat's oars: your own arms on the grips, rowing (the
+// everyday first-person arms are put away at sea; these sit in the boat)
+let rowArms = null;
+registerFrameHook((env, ctx) => {
+  const p = ctx.game?.player;
+  const rowing = !!p && ctx.mode === 'first' && p.mode === 'sail' && !!p.ship?.def.oarsOnly && !p.ship.sunk && p.state !== 'knocked';
+  if (!rowing) { if (rowArms) rowArms.root.visible = false; return; }
+  if (!rowArms) {
+    rowArms = createViewmodel(ctx);
+    const cam = ctx.camera;
+    if (!cam.parent) ctx.scene.add(cam);
+    cam.add(rowArms.root);
+  }
+  rowArms.root.visible = true;
+  rowArms.update(p, env, ctx);
+}, 'rowing arms');
 
 export { ActorView };

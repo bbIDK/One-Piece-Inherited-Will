@@ -135,7 +135,12 @@ export function drawShip(g, def, st) {
   }
 
   // masts + sails (sails swing with the wind, billow when set)
-  const masts = def.masts || 1;
+  // (a rowboat has no mast: her oars lie along her sides)
+  const masts = def.masts ?? 1;
+  if (def.oarsOnly) {
+    g.strokeStyle = '#b08850'; g.lineWidth = 0.06;
+    for (const sy of [-1, 1]) { g.beginPath(); g.moveTo(-0.1, sy * B * 0.3); g.lineTo(-0.9, sy * (B * 0.5 + 0.35)); g.stroke(); }
+  }
   const wind = st.windAngle ?? 0;
   const rel = wind - st.heading;
   const set = st.sailSet ?? 0;
@@ -175,7 +180,7 @@ export function drawShip(g, def, st) {
   }
   // flag on the main mast (points downwind) — a ship with no colours flies none
   const marineFlag = def.sail === 'marine' || st.marine;
-  if (!st.noFlag || marineFlag) {
+  if ((!st.noFlag || marineFlag) && masts > 0) {
     const mx = masts === 1 ? 0.05 * L : L * 0.28 - (masts > 1 ? L * 0.56 / (masts - 1) : 0) * Math.min(1, masts - 1) * 0.5;
     g.save(); g.translate(mx, 0); g.rotate(rel + Math.PI);
     const wave = Math.sin(t * 7) * 0.08;

@@ -1,8 +1,9 @@
-// Ship classes. Speeds in tiles/second at full sail with a following wind.
+// Ship classes. Speeds in tiles/second at full sail with a following wind
+// (a rowboat has no sail: her speed is what a good pull on the oars gives).
 export const SHIPS = {
   dinghy: {
-    name: 'Rowboat', desc: 'A tiny boat with oars and a scrap of sail. Fine for the Blues — suicide in the Grand Line.',
-    length: 2.8, beam: 1.2, hull: 60, speed: 7, turn: 2.6, masts: 1, sail: 'small', cannons: 0, crew: 1, cargo: 4,
+    name: 'Rowboat', desc: 'A little open boat with no sail: you row her with a pair of oars, wind or no wind. Fine for the Blues — suicide in the Grand Line.',
+    length: 2.8, beam: 1.2, hull: 60, speed: 7, turn: 2.2, masts: 0, sail: null, oarsOnly: true, cannons: 0, crew: 1, cargo: 4,
     price: 900, stormResist: 0.2, grandLine: false, color: '#9a6a3c',
   },
   sloop: {

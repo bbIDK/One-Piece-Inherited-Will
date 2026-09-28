@@ -5,10 +5,11 @@
 import { deckPoint, deckToWorld, helmPoint, shipDims, hullSolid, shipBob, hullPoint, pitchRise, hbAt, levelAt } from '../world/hull.js';
 
 export function installDecks(game) {
-  // taking the helm, you look out over the bow
+  // taking the helm, you look out over the bow (at a rowboat's oars, down a
+  // little at your oars and the water ahead)
   game.on('board', (s) => {
     const r = game.view3d?.rig;
-    if (r && s) { r.yaw = ((s.heading % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2); r.pitch = -0.04; }
+    if (r && s) { r.yaw = ((s.heading % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2); r.pitch = s.def.oarsOnly ? -0.35 : -0.04; }
   });
   /** The deck under a point: { ship, t, v, h, edge } or null (margin: how far in from the rail). */
   game.deckAt = (x, y, margin = 0.2) => {
@@ -72,11 +73,12 @@ export function placeOnDeck(game, a, ship, t, v = 0) {
   a.facing = ship.heading;
 }
 
-/** Where the wheel is (deck position just forward of it; on the big ships, just aft of the double wheel). */
+/** Where the wheel is (deck position just forward of it; on the big ships, just aft of the double wheel; a rowboat's oars, at her thwart). */
 export function helmSpot(ship) {
   const d = shipDims(ship.def);
   const hp = helmPoint(ship.def);
   if (d.big) return { t: (hp.x - 0.15 + d.L / 2) / d.L, v: 0 };
+  if (d.row) return { t: d.row.seatT, v: 0 };
   return { t: Math.min(0.5, (hp.x + d.L / 2) / d.L + 0.06), v: 0 };
 }
 

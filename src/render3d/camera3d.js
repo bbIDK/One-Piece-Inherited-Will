@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { interiorRect, heightsOf } from '../world/interiors.js';
 import { helmPoint } from './ships3d.js';
-import { shipBob, pitchRise } from '../world/hull.js';
+import { shipBob, pitchRise, rowLean } from '../world/hull.js';
 import { waterLevel } from './height.js';
 
 const TAU = Math.PI * 2;
@@ -190,13 +190,22 @@ export class CameraRig {
     if (!sailing) this.seaPitch = 0;
     if (sailing) {
       // standing at the helm on the stern deck (your own rigging turns
-      // see-through), rising and rolling gently with the ship
+      // see-through) or sitting at a rowboat's oars, rising and rolling
+      // gently with the ship
       const s = p.ship;
       const hp = helmPoint(s.def);
-      gx = Math.cos(s.heading) * hp.x; gz = Math.sin(s.heading) * hp.x;
+      // (from her middle: where you are while you've her helm)
+      const shipX = game.world ? game.world.dx(p.x, s.x) : 0, shipZ = s.y - p.y;
+      gx = shipX + Math.cos(s.heading) * hp.x; gz = shipZ + Math.sin(s.heading) * hp.x;
       const t = time + (s.seed || 0);
       gh = (s.lvl || 0) + 0.05 + hp.floor + Math.sin(t * 1.3) * 0.07 + pitchRise(s, hp.x);
-      eyeH = hp.eye - hp.floor + 0.15;
+      eyeH = hp.eye - hp.floor + (hp.seated ? 0 : 0.15);
+      if (hp.seated && s.oars) {
+        // (the rower's head goes with the stroke: forward and down into the drive, back on the recovery)
+        const lean = rowLean(s);
+        gx += Math.cos(s.heading) * Math.sin(lean) * 0.7; gz += Math.sin(s.heading) * Math.sin(lean) * 0.7;
+        eyeH -= (1 - Math.cos(lean)) * 0.7;
+      }
       rollSea = Math.sin(t * 0.9) * 0.03 * Math.cos(this.yaw - s.heading);
       // (feel the climb up Reverse Mountain: the view tips with the deck)
       this.seaPitch = (s.pitch || 0) * Math.cos(this.yaw - s.heading);
