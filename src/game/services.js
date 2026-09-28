@@ -90,7 +90,7 @@ export class Services {
     const spot = dock?.moor || this.nearWater();
     const s = g.giveShip(type, spot.x, spot.y, name || SHIPS[type].name);
     g.ui.toast('NEW SHIP', `${s.name} (${SHIPS[type].name})`, '#ffe082');
-    g.log(`Your new ${SHIPS[type].name} is moored at the dock. Board it with E.`, '#ffe082');
+    g.log(`Your new ${SHIPS[type].name} is moored at the dock: step aboard from the pier, and press E at her wheel to take the helm.`, '#ffe082');
     persist(g);
     return s;
   }
