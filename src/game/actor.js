@@ -9,7 +9,8 @@ import { FRUITS } from '../data/fruits.js';
 import { RACES } from '../data/races.js';
 import { WALKABLE, SWIMMABLE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
 import { clamp, TAU } from '../core/math.js';
-import { shipDims, topAt, deckToWorld } from '../world/hull.js';
+import { shipDims, hbAt, deckToWorld, shipBob } from '../world/hull.js';
+import { placeOnDeck, boardingSpot } from './decks.js';
 
 const smooth01 = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
@@ -138,7 +139,7 @@ export class Actor extends Entity {
   leaveWater(game, out = false) {
     const df = !!this.fruit && !this.gills;
     this.inWater = false;
-    this.depth = 0; this.under = false; this.drownT = 0; this.sinking = false; this.lowAir = false;
+    this.depth = 0; this.under = false; this.drownT = 0; this.sinking = false; this.lowAir = false; this.plungeV = 0;
     if (df && this.state === 'idle') {
       this.addBuff({ id: 'drenched', name: 'Drenched', dur: 16, mods: { speedMul: 0.7, damage: 0.75 } });
       if (this.isPlayer) game.log(out ? 'Drenched in seawater — your body feels heavy and weak.' : 'Hauled out of the sea, dripping and weak.', '#81d4fa');
@@ -246,12 +247,12 @@ export class Actor extends Entity {
   }
 
   // --- actions ---------------------------------------------------------------
-  busy() { return !!this.action || this.hitstun > 0 || this.state !== 'idle' || this.status.freeze || this.status.despair; }
+  busy() { return !!this.action || this.hitstun > 0 || this.state !== 'idle' || this.status.freeze || this.status.despair || !!this.climb; }
 
   canAct() { return !this.busy() && !this.blocking; }
 
   tryM1(game) {
-    if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.despair) return false;
+    if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.despair || this.climb) return false;
     if (this.action) {
       // buffer the next combo hit from partway through the current swing
       const a = this.action;
@@ -334,7 +335,7 @@ export class Actor extends Entity {
   }
 
   tryDodge(game, dx, dy) {
-    if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root || this.dodgeCd > 0) return false;
+    if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root || this.dodgeCd > 0 || this.climb) return false;
     if (this.action && this.action.t < this.action.total * 0.5 && !this.action.def.m1Chain) return false;
     const cost = 16;
     if (this.stamina < cost * 0.6) return false;
@@ -385,7 +386,7 @@ export class Actor extends Entity {
     const k = clamp(charge, 0, 1);
     // swimming against a ship's side: haul yourself up it and over the rail —
     // or against a pier, a quay or a steep bank: up onto it
-    if (this.inWater && ((this.isPlayer && game.climbAboard?.(this, k)) || this.climbOut(game))) { this.stamina = Math.max(0, this.stamina - 6); return true; }
+    if ((this.inWater || this.wading) && ((this.isPlayer && game.climbAboard?.(this, k)) || this.climbOut(game))) { this.stamina = Math.max(0, this.stamina - 6); return true; }
     let v = J.v * (1 + (J.charge - 1) * k);
     const fromWater = this.inWater;
     // (wading, you spring off the bottom: the jump starts where your feet are)
@@ -394,9 +395,10 @@ export class Actor extends Entity {
       // up from treading water (the body starts where it floats, so the leap is continuous)
       v *= 1.3 * J.leap;
       const s = this.look?.scale || 1;
+      const z = -(this.depth || 0) - (this.moving ? 0.95 : 1.3) * s;
       this.leaveWater(game, true);
       this.leapT = 0.5;
-      this.z = -1.3 * s;
+      this.z = z;
       game.fx.ripple?.(this.x, this.y, 1 + k * 0.6);
       game.fx.burst(this.x, this.y, 12 + Math.round(k * 8), { color: ['#e1f5fe', '#b3e5fc', '#ffffff'], speed: 2.4, z: 0.1, vz: 5 + k * 2, g: 11, life: 0.7, size: 0.1 });
       game.audio?.sfx('splash_out');
@@ -417,7 +419,8 @@ export class Actor extends Entity {
   /** How deep the water under you is (m); 0 on land or on a deck. */
   waterUnder(game) {
     if (this.deck || (this.dash && this.dash.ignoreWater)) return 0;
-    const t = game.world.type(this.x, this.y - 0.1);
+    // (right where you stand — the same spot your height is measured from — not a step ahead)
+    const t = game.world.type(this.x, this.y);
     if (IS_LIQUID[t] !== 1 || OVERLAY[t]) return 0;
     if (t === T.LAVA) return 0;
     return game.seaDepth ? game.seaDepth(this.x, this.y) : 3;
@@ -429,19 +432,30 @@ export class Actor extends Entity {
   /**
    * Gravity for jumps, launches and falls. A fall ends on the ground (a puff
    * of dust), on the bottom of the shallows, or — in deep water — where a
-   * swimmer floats, so going in is one smooth plunge (with a splash and a
-   * ring on the water as the feet meet it).
+   * swimmer floats: once the feet are in, the sea slows the fall and holds
+   * you up, and what's left of it carries you under for a moment before you
+   * bob back up (see updateWater), so going in is one smooth plunge (with a
+   * splash and a ring on the water as the feet meet it).
    */
   updateVertical(dt, game) {
     if (this.flying) return;
     if (this.leapT > 0) this.leapT -= dt;
     if (!(this.z > 0) && !this.vz) return;
     this.airT = (this.airT || 0) + dt;
-    this.vz -= 22 * dt;
+    const s = this.look?.scale || 1;
+    const wd = this.waterUnder(game);
+    const deep = wd > this.swimDepth(false);
     const z0 = this.z;
+    let grav = 22;
+    if (deep && z0 < 0 && this.vz < 0) {
+      // (in up to the chest: drag, and the water takes your weight)
+      const sub = clamp(-z0 / (1.3 * s), 0, 1);
+      grav *= 1 - sub * 0.8;
+      this.vz -= this.vz * Math.min(1, dt * 9 * sub);
+    }
+    this.vz -= grav * dt;
     this.z += this.vz * dt;
     if (this.vz > 0) return; // (still rising: out of the water too)
-    const wd = this.waterUnder(game);
     if (wd > 0 && z0 > 0 && this.z <= 0) {
       const impact = -this.vz;
       game.fx.ripple?.(this.x, this.y, Math.min(2.4, 0.8 + impact * 0.1));
@@ -449,17 +463,17 @@ export class Actor extends Entity {
       game.audio?.sfx(impact > 9 ? 'splash_big' : 'splash');
       this.splashedAt = game.time || 0;
     }
-    const s = this.look?.scale || 1;
-    const deep = wd > this.swimDepth(false);
-    const floor = wd <= 0 ? 0 : deep ? -Math.min(wd - 0.1, 1.3 * s) : -wd;
+    // (afloat, the body lies where a swimmer's does: stretched out if you came in moving)
+    const floor = wd <= 0 ? 0 : deep ? -Math.min(wd - 0.1, (this.moving ? 0.95 : 1.3) * s) : -wd;
     if (this.z <= floor) {
       const impact = -this.vz;
       this.z = 0;
       this.vz = 0;
       this.airT = 0;
       this.leapT = 0;
-      // a hard dive takes you under for a moment
-      if (deep) this.plunge = clamp((impact - 7) * 0.12, 0, Math.max(0, wd - 0.5));
+      this.lastLanded = game.time || 0;
+      // what's left of the fall takes you on under for a moment
+      if (deep) this.plungeV = Math.min(impact, Math.max(0, wd - 1.5) * 4);
       else if (impact > 3) {
         game.fx.burst(this.x, this.y, Math.min(14, 4 + impact), { color: wd > 0 ? ['#e1f5fe', '#b3e5fc'] : ['#d7ccc8', '#bcaaa4', '#efebe9'], speed: 1.5 + impact * 0.25, z: 0.05, vz: 0.6, g: 1.2, life: 0.45, kind: wd > 0 ? undefined : 'dust', size: 0.18, grow: 0.4 });
         if (impact > 9 && !wd) game.audio?.sfx('land_heavy');
@@ -494,7 +508,7 @@ export class Actor extends Entity {
 
   setBlock(on) {
     if (on && !this.blocking) {
-      if (this.state !== 'idle' || this.action || this.hitstun > 0 || this.status.freeze) return;
+      if (this.state !== 'idle' || this.action || this.hitstun > 0 || this.status.freeze || this.climb) return;
       this.blocking = true;
       this.blockTime = 0;
     } else if (!on) this.blocking = false;
@@ -508,13 +522,15 @@ export class Actor extends Entity {
       this.knockT += dt;
       this.updateVertical(dt, game);
       this.updateMovement(dt, game, true);
+      this.followGround(game);
       if (this.controller && this.controller.whileKnocked) this.controller.whileKnocked(this, dt, game);
       return;
     }
     if (this.state === 'dead') return;
 
-    if (this.onShip) {
-      // standing at the helm: no walking physics, but timers and techniques still run
+    if (this.onShip || this.climb) {
+      // standing at the helm (or hauling yourself up onto a ledge): no walking
+      // physics, but timers and techniques still run
       if (this.controller) this.controller.update(this, dt, game);
       this.iframes = Math.max(0, this.iframes - dt);
       this.hitstun = Math.max(0, this.hitstun - dt);
@@ -523,12 +539,16 @@ export class Actor extends Entity {
       this.updateBuffs(dt, game);
       this.updateResources(dt, game);
       if (this.action) updateAbility(this, dt, game);
-      this.inWater = false;
       this.moving = false;
+      if (this.climb) { this.updateClimb(dt, game); return; }
+      this.inWater = false;
       return;
     }
 
     if (this.controller) this.controller.update(this, dt, game);
+    // (a climb begun just now — Space at a pier or a ship's side — runs from the
+    // next frame; and taking the helm just now, you're no longer on your feet)
+    if (this.climb || this.onShip) return;
 
     // timers
     this.iframes = Math.max(0, this.iframes - dt);
@@ -563,7 +583,20 @@ export class Actor extends Entity {
       return;
     }
     this.updateMovement(dt, game, false);
+    this.followGround(game);
+    // Against a ledge you can reach: in the air (a jump at a pier, a quay or a
+    // ship's rail) you grab it and haul yourself up at once; swimming or on
+    // your feet, pushing on against a pier, a quay or a steep bank for a moment
+    // does it (a ship's side from the water takes a jump: see traffic.js)
+    const L = this.ledge;
+    const toward = L && (this.intent.mx * L.dx + this.intent.my * L.dy) > 0.4;
+    if (toward && ((this.z || 0) > 0.05 || this.vz) && this.climbOnto(game, L)) return;
+    if (toward && !L.ship) {
+      this.pushT = (this.pushT || 0) + dt;
+      if (this.pushT > 0.3 && this.climbOnto(game, L)) { this.pushT = 0; return; }
+    } else this.pushT = 0;
     this.updateVertical(dt, game);
+    if (this.climb) return;
     this.updateDeck(game);
     // (in the air — over water too, or leaping out of it — you haven't splashed down yet)
     if (!this.vz && !(this.z > 0.02)) this.updateWater(dt, game);
@@ -668,20 +701,74 @@ export class Actor extends Entity {
     // ship decks: walk anywhere on your deck (the rail keeps you aboard unless
     // you jump over it); nobody swims or walks through a hull
     const g = this.game;
-    if (g && g.deckAt && g.ships.length) {
-      if (this.deck) {
-        const dk = g.deckAt(x, y, r * 0.7);
-        if (dk && dk.ship === this.deck.ship) {
-          // into a mast (or the like) only while already in it and getting out
-          if (dk.solid && !((g.deckAt(this.x, this.y, r * 0.7)?.solid || 0) >= dk.solid - 1e-4)) return false;
-          return this.deckStep(dk);
-        }
-        if (!(this.z > 0.3)) return false;
-      } else if (g.deckAt(x, y, -0.15)) return false;
+    if (g && g.deckAt && g.ships.length && this.deck) {
+      const dk = g.deckAt(x, y, r * 0.7);
+      if (dk && dk.ship === this.deck.ship) {
+        // into a mast (or the like) only while already in it and getting out
+        if (dk.solid && !((g.deckAt(this.x, this.y, r * 0.7)?.solid || 0) >= dk.solid - 1e-4)) return false;
+        return this.deckStep(dk);
+      }
+      if (!(this.z > 0.3)) return false;
+    }
+    // a ledge too high to step onto: a pier or a quay out of the sea, a ship's
+    // side (you come over the rail from above, or climb it), the shore from a deck
+    if (g && g.world === w) {
+      const L = this.ledgeAt(g, x, y);
+      if (L) { this.blocked = L; return false; }
     }
     if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
     if (!this.passable(w, x - r, y) || !this.passable(w, x + r, y) || !this.passable(w, x, y - r) || !this.passable(w, x, y + r)) return false;
     return !w.hitsProp(x, y, r * 0.9);
+  }
+
+  /** Where feet rest at (x, y) off a deck: the ground, a pier or a quay — over the sea, its surface. */
+  groundAt(game, x, y) { return game.view3d ? game.view3d.ground(x, y) : 0; }
+
+  /** How high your feet are (m above the sea): on a deck, afloat, wading, standing or in the air. */
+  feetH(game) {
+    if (this.deck) return this.deck.h + shipBob(this.deck.ship, game.env?.time || 0) + (this.z || 0);
+    const g = this.groundAt(game, this.x, this.y);
+    if (this.inWater) return g - (this.depth || 0) - (this.moving ? 0.95 : 1.3) * (this.look?.scale || 1);
+    return g - (this.wading || 0) + (this.z || 0);
+  }
+
+  /**
+   * A ledge in the way at (x, y) — too high to step onto from where your feet
+   * are — or null: a ship's side from outside her (unless you come over the
+   * rail from above), or, out of the sea or off a deck, a pier, a quay or a
+   * bank (slopes, stairs and steps on land are walked). { top (m), dx, dy
+   * (the way you were going), ship? }.
+   */
+  ledgeAt(g, x, y) {
+    const w = g.world;
+    const air = (this.z || 0) > 0.05 || !!this.vz;
+    let feet = null;
+    // a hull: solid from outside, below her rail (from a deck, another ship's)
+    if (g.ships.length && g.hullAt) {
+      const hk = g.hullAt(x, y, 0.15);
+      if (hk && hk.ship !== this.deck?.ship && g.hullAt(this.x, this.y, 0.15)?.ship !== hk.ship) {
+        feet = this.feetH(g);
+        const top = hk.rail;
+        // (only you come aboard over the rail: townsfolk on a pier don't wander onto a boat below)
+        if (this.inWater || !this.isPlayer || feet < top - 0.1) return this.blockedBy(x, y, top, hk);
+      }
+    }
+    const t = w.type(x, y);
+    const high = !IS_LIQUID[t] || OVERLAY[t];
+    if (!high) return null;
+    const here = w.type(this.x, this.y);
+    const wet = IS_LIQUID[here] && !OVERLAY[here];
+    // (on land: only up onto a pier or a quay from lower ground — a jump, or a climb)
+    if (!wet && !this.deck && !(OVERLAY[t] && !OVERLAY[here]) && !(w.quays.size && w.isQuay(x, y) && !w.isQuay(this.x, this.y))) return null;
+    const top = this.groundAt(g, x, y);
+    if (this.inWater) return top > this.groundAt(g, this.x, this.y) + 0.35 ? this.blockedBy(x, y, top) : null;
+    if (feet === null) feet = this.feetH(g);
+    return top > feet + (air ? 0.12 : wet || this.deck ? 0.5 : 0.6) ? this.blockedBy(x, y, top) : null;
+  }
+
+  blockedBy(x, y, top, hk = null) {
+    const l = Math.hypot(this.game.world.dx(this.x, x), y - this.y) || 1;
+    return { x, y, top, dx: this.game.world.dx(this.x, x) / l, dy: (y - this.y) / l, ship: hk ? hk.ship : null };
   }
 
   /**
@@ -692,6 +779,170 @@ export class Actor extends Entity {
   deckStep(dk) {
     if (dk.lvl === undefined) return true;
     return dk.h <= this.deck.h + Math.max(0, this.z || 0) + 0.55;
+  }
+
+  /**
+   * z counts from the ground under you, so when that falls away — off the
+   * edge of a pier, a quay or a stage, or knocked off one — your height above
+   * it grows and you fall, instead of dropping to the water in one frame. In
+   * the air, rising ground (a jump up onto a pier) takes height off z the
+   * same way. (A big move at once — a door, a teleport — is not a fall.)
+   */
+  followGround(game) {
+    if (this.deck || this.inWater || this.flying || !game.view3d) { this.lastG = null; return; }
+    const g = this.groundAt(game, this.x, this.y), last = this.lastG;
+    const moved = last == null ? 0 : Math.abs(game.world.dx(this.lastGX, this.x)) + Math.abs(this.y - this.lastGY);
+    this.lastG = g; this.lastGX = this.x; this.lastGY = this.y;
+    if (last == null || moved > 2) return;
+    const drop = last - g, air = (this.z || 0) > 0.02 || !!this.vz;
+    if (air) this.z = (this.z || 0) + drop;
+    else if (drop > 0.3) { this.z = drop; this.vz = -0.01; this.airT = 0; }
+    if (this.z < 0 && !this.overWater(game)) { this.z = 0; if (this.vz < 0) this.vz = 0; }
+  }
+
+  /** Over the open water (not a pier, a bridge or dry land)? */
+  overWater(game) { const t = game.world.type(this.x, this.y); return IS_LIQUID[t] === 1 && !OVERLAY[t]; }
+
+  /** Room to stand at (x, y) on dry ground or a pier (where a climb ends). */
+  standsAt(game, x, y) {
+    const w = game.world, r = this.r * 0.9;
+    for (const [ox, oy] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]]) {
+      const t = w.type(x + ox, y + oy);
+      if (!WALKABLE[t] || w.solid(x + ox, y + oy)) return false;
+    }
+    return !w.hitsProp(x, y, r) && !game.hullAt?.(x, y, 0.1);
+  }
+
+  /**
+   * Haul yourself up onto a ledge you ran into (see ledgeAt): a pier, a quay
+   * or a bank out of the water, or — from a jump — a ship's rail. Only if it's
+   * within reach (from the water you kick up to a pier; on your feet, about
+   * chest high) and there's room to stand on top. True if the climb began.
+   */
+  climbOnto(game, L) {
+    if (this.climb || this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root) return false;
+    if (this.inWater && ((this.fruit && !this.gills) || this.under)) return false;
+    const s = this.look?.scale || 1;
+    const air = (this.z || 0) > 0.05 || !!this.vz;
+    const from = this.inWater ? this.groundAt(game, this.x, this.y) : this.feetH(game);
+    if (L.top - from > (this.inWater ? 2.1 : air ? 1.35 : 1.25) * s) return false;
+    if (L.ship) {
+      // over her rail where you grabbed it, onto the deck just inside
+      const spot = boardingSpot(game, L.ship, L.x, L.y);
+      this.startClimb(game, { ship: L.ship, t: spot.t, v: spot.v });
+      return true;
+    }
+    for (const d of [0.4, 0.6, 0.85]) {
+      const x = game.world.wx(L.x + L.dx * d), y = L.y + L.dy * d;
+      const top = this.groundAt(game, x, y);
+      if (Math.abs(top - L.top) > 0.45 || !this.standsAt(game, x, y)) continue;
+      this.startClimb(game, { x, y, h: top });
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Out of the water onto a pier, a quay or a bank in front of you (Space at
+   * the edge; pushing on against it does it too, see update).
+   */
+  climbOut(game) {
+    if (!this.inWater) return false;
+    let dx = this.intent.mx, dy = this.intent.my;
+    if (Math.hypot(dx, dy) < 0.2) { dx = Math.cos(this.facing); dy = Math.sin(this.facing); }
+    const l = Math.hypot(dx, dy) || 1, a0 = Math.atan2(dy / l, dx / l), w = game.world;
+    for (const da of [0, 0.5, -0.5, 1, -1]) {
+      const ux = Math.cos(a0 + da), uy = Math.sin(a0 + da);
+      for (let d = 0.25; d <= 1.1; d += 0.15) {
+        const x = w.wx(this.x + ux * d), y = this.y + uy * d;
+        const L = this.ledgeAt(game, x, y);
+        if (L && !L.ship) { L.dx = ux; L.dy = uy; if (this.climbOnto(game, L)) return true; break; }
+        if (!w.isLiquid(x, y) || w.isOverlay(x, y)) break;
+      }
+    }
+    return false;
+  }
+
+  /** Start hauling yourself up to `to`: a spot to stand on ({ x, y, h }), or a deck spot ({ ship, t, v }). */
+  startClimb(game, to) {
+    const w = game.world, s = this.look?.scale || 1;
+    const wet = this.inWater;
+    // (from where the body is drawn: afloat, on the bottom, in the air)
+    const h0 = wet ? this.groundAt(game, this.x, this.y) - (this.depth || 0) - (this.moving ? 0.95 : 1.3) * s : this.feetH(game);
+    if (wet) {
+      this.leaveWater(game, true);
+      game.fx.ripple?.(this.x, this.y, 1);
+      game.fx.burst(this.x, this.y, 10, { color: ['#e1f5fe', '#b3e5fc', '#ffffff'], speed: 2, z: 0.1, vz: 3.5, g: 11, life: 0.6, size: 0.1 });
+      if (this.isPlayer) game.audio?.sfx('splash_out');
+    }
+    if (this.deck) { this.deck.ship.aboard?.delete(this); this.deck = null; }
+    const c = { t: 0, h0, to, x0: this.x, y0: this.y };
+    let tx, ty, th;
+    if (to.ship) {
+      const sh = to.ship, p = deckToWorld(sh, to.t, to.v);
+      tx = p.x; ty = p.y; th = p.h + shipBob(sh, game.env?.time || 0);
+      // (up her side: where you started moves with her as she sails and turns)
+      const cs = Math.cos(sh.heading), sn = Math.sin(sh.heading), dx = w.dx(sh.x, this.x), dy = this.y - sh.y;
+      c.u0 = dx * cs + dy * sn; c.v0 = -dx * sn + dy * cs;
+    } else { tx = to.x; ty = to.y; th = to.h; }
+    c.T = 0.32 + 0.2 * clamp(th - h0, 0, 3);
+    this.climb = c;
+    this.vx = 0; this.vy = 0; this.vz = 0; this.kb.x = 0; this.kb.y = 0;
+    this.dash = null; this.blocking = false; this.wading = 0; this.charging = 0;
+    this.ledge = null; this.pushT = 0; this.lastG = null;
+    if (this.action?.def.m1Chain) this.action = null;
+    this.facing = Math.atan2(ty - this.y, w.dx(this.x, tx));
+    // (from where you are, this very frame)
+    this.z = h0 - this.groundAt(game, this.x, this.y);
+    if (this.isPlayer) game.emit('playerClimb', to);
+  }
+
+  /** Up the side, over the top and onto your feet (the start and the end ride along on a ship). */
+  updateClimb(dt, game) {
+    const c = this.climb, w = game.world, to = c.to;
+    if (to.ship && (to.ship.sunk || to.ship.alive === false)) { this.endClimb(game, true); return; }
+    c.t += dt;
+    const k = Math.min(1, c.t / c.T);
+    let x0 = c.x0, y0 = c.y0, x1, y1, h1;
+    if (to.ship) {
+      const sh = to.ship, p = deckToWorld(sh, to.t, to.v), cs = Math.cos(sh.heading), sn = Math.sin(sh.heading);
+      x1 = p.x; y1 = p.y; h1 = p.h + shipBob(sh, game.env?.time || 0);
+      x0 = sh.x + c.u0 * cs - c.v0 * sn; y0 = sh.y + c.u0 * sn + c.v0 * cs;
+    } else { x1 = to.x; y1 = to.y; h1 = to.h; }
+    const up = smooth01(0, 0.65, k), over = smooth01(0.35, 1, k);
+    const h = c.h0 + (h1 - c.h0) * up + Math.sin(Math.PI * k) * 0.14;
+    this.x = w.wx(x0 + w.dx(x0, x1) * over); this.y = y0 + (y1 - y0) * over;
+    this.z = h - this.groundAt(game, this.x, this.y);
+    this.airT = 0.1;
+    if (k >= 1) this.endClimb(game);
+  }
+
+  /** On your feet at the top — or, knocked off it, falling back from where you were. */
+  endClimb(game, fall = false) {
+    const c = this.climb;
+    this.climb = null;
+    if (!c) return;
+    const f = this.facing;
+    if (fall) { this.vz = -0.01; this.lastG = null; return; }
+    if (c.to.ship) placeOnDeck(game, this, c.to.ship, c.to.t, c.to.v);
+    else { this.x = game.world.wx(c.to.x); this.y = c.to.y; this.z = 0; this.vz = 0; this.lastG = null; }
+    this.facing = f;
+    this.airT = 0;
+    this.lastLanded = game.time || 0;
+  }
+
+  /** Airborne just inside a ship's bulwark (over her side, not yet over the deck): come down on the deck there. */
+  insideRail(game) {
+    if (!((this.z || 0) > 0.02 || this.vz)) return null;
+    const hk = game.hullAt(this.x, this.y, 0);
+    if (!hk || this.feetH(game) < hk.deckH - 0.05) return null;
+    const sh = hk.ship, d = shipDims(sh.def);
+    const t = clamp(hk.t, 0.05, 0.95), room = Math.max(0, hbAt(t, d.B) * d.walk - 0.22);
+    const p = deckToWorld(sh, t, clamp(hk.v, -room, room));
+    const dk = game.deckAt(p.x, p.y, 0);
+    if (!dk || dk.ship !== sh || dk.solid) return null;
+    this.x = game.world.wx(p.x); this.y = p.y;
+    return dk;
   }
 
   updateMovement(dt, game, knocked) {
@@ -715,7 +966,9 @@ export class Actor extends Entity {
       if (this.status.chill) sp *= 0.6;
       if (this.zoneSlow) sp *= this.zoneSlow;
       const tx = i.mx * sp, ty = i.my * sp;
-      const k = Math.min(1, dt * 16);
+      // (the water holds you: a swimmer gathers way and loses it over a moment —
+      // running in, you glide on and slow down rather than stopping dead)
+      const k = Math.min(1, dt * (this.inWater ? 4 : 16));
       this.vx += (tx - this.vx) * k;
       this.vy += (ty - this.vy) * k;
       vx = this.vx; vy = this.vy;
@@ -744,9 +997,12 @@ export class Actor extends Entity {
     const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 0.2));
     const sx = dx / n, sy = dy / n;
     let hit = false;
+    // (a ledge that stopped you: see update — you may climb it)
+    this.ledge = null;
+    const can = (x, y) => { this.blocked = null; const ok = this.canOccupy(w, x, y); if (!ok && this.blocked && !this.ledge) this.ledge = this.blocked; return ok; };
     for (let s = 0; s < n; s++) {
-      if (sx) { if (this.canOccupy(w, this.x + sx, this.y)) this.x += sx; else { hit = true; this.kb.x *= -0.3; } }
-      if (sy) { if (this.canOccupy(w, this.x, this.y + sy)) this.y += sy; else { hit = true; this.kb.y *= -0.3; } }
+      if (sx) { if (can(this.x + sx, this.y)) this.x += sx; else { hit = true; this.kb.x *= -0.3; } }
+      if (sy) { if (can(this.x, this.y + sy)) this.y += sy; else { hit = true; this.kb.y *= -0.3; } }
     }
     this.x = w.wx(this.x);
     if (this.y < 1) this.y = 1;
@@ -754,7 +1010,12 @@ export class Actor extends Entity {
     return hit;
   }
 
-  /** Standing on a ship's deck? (Stepping off it over the rail drops you to the water.) */
+  /**
+   * Standing on a ship's deck? Jumping over her rail you fly on (into the sea,
+   * onto a pier, across to another deck); coming down over a deck, you land
+   * on it. Heights carry over exactly: z counts from the deck aboard, from the
+   * ground (or the sea's surface) off it.
+   */
   updateDeck(game) {
     const was = this.deck;
     let dk = game.deckAt && game.ships.length ? game.deckAt(this.x, this.y, was ? 0 : 0.1) : null;
@@ -764,6 +1025,8 @@ export class Actor extends Entity {
       if (!this.under) this.shoveFromHull(game, dk.ship);
       dk = null;
     }
+    // (in over her side, just inside the bulwark: onto the deck, not into the sea)
+    if (!dk && !was && !this.inWater && game.hullAt && game.ships.length) dk = this.insideRail(game);
     if (dk && was && dk.ship === was.ship) {
       // off the edge of an upper deck: drop to the one below (stairs are gentler than this)
       const drop = was.h - dk.h;
@@ -772,14 +1035,24 @@ export class Actor extends Entity {
       this.deck = dk;
       return;
     }
+    const time = game.env?.time || 0;
     if (was) {
       was.ship.aboard?.delete(this);
-      // over the side: fall from the deck's height
-      if (!dk) { this.z = (this.z || 0) + was.h; this.vz = Math.min(this.vz || 0, 0.5); }
+      if (!dk) {
+        // over the side: on from the deck's height (a jump keeps its lift)
+        const g = this.groundAt(game, this.x, this.y);
+        this.z = was.h + shipBob(was.ship, time) + (this.z || 0) - g;
+        if (this.z < 0 && !this.overWater(game)) this.z = 0;
+        if (!this.vz && this.z > 0) this.vz = -0.01;
+        this.lastG = g; this.lastGX = this.x; this.lastGY = this.y;
+      }
     }
     if (dk) {
-      // (from one ship's deck across to another's, the height changes too)
-      this.z = Math.max(0, (this.z || 0) + (was ? was.h : 0) - dk.h);
+      // (from one ship's deck across to another's, or down onto one, the height changes too)
+      const abs = was ? was.h + shipBob(was.ship, time) + (this.z || 0) : this.groundAt(game, this.x, this.y) - (this.wading || 0) + (this.z || 0);
+      this.z = Math.max(0, abs - dk.h - shipBob(dk.ship, time));
+      this.wading = 0;
+      if (!this.vz && this.z > 0) this.vz = -0.01;
       (dk.ship.aboard || (dk.ship.aboard = new Set())).add(this);
     }
     this.deck = dk;
@@ -803,7 +1076,7 @@ export class Actor extends Entity {
 
   updateWater(dt, game) {
     const w = game.world;
-    const t = w.type(this.x, this.y - 0.1);
+    const t = w.type(this.x, this.y);
     const was = this.inWater;
     const liquid = IS_LIQUID[t] === 1 && !OVERLAY[t] && !(this.dash && this.dash.ignoreWater) && !this.deck;
     // shallow water is waded, feet on the bottom; you swim once it's about chest-deep
@@ -824,8 +1097,7 @@ export class Actor extends Entity {
         game.fx.ripple?.(this.x, this.y, 1);
         game.audio?.sfx('splash');
       }
-      this.depth = this.plunge || 0;
-      this.plunge = 0;
+      this.depth = 0;
       this.sinking = false;
       if (df && this.isPlayer) game.log("A Devil Fruit user can't swim! Get out before your strength gives out!", '#ff8a80');
       if (this.fruit) { this.armament = this.armament && this.hakiUnlocked(); this.buffs = this.buffs.filter((b) => !b.source || !getAbility(b.source)?.source?.startsWith('fruit')); this.recalc(); }
@@ -858,7 +1130,16 @@ export class Actor extends Entity {
       if (df) vz = this.sinking ? 1.15 : this.depth > 0.02 ? -0.6 : 0;
       else if (iz) vz = -iz * (this.gills ? 3.4 : tired ? 0.9 : 1.7);
       else vz = this.depth > 0.05 && !this.gills ? -(breathless ? 0.12 : 0.35) : 0;
+      if (this.plungeV) {
+        // in from a jump or a fall: carried on under, slowing, then buoyed
+        // back up to the surface (swimming up or down still works meanwhile)
+        this.plungeV -= (this.plungeV * 6 + 3.2) * dt;
+        if (this.plungeV < -0.55) this.plungeV = -0.55;
+        if (this.plungeV < 0 && (this.depth <= 0.02 || iz || this.gills)) this.plungeV = 0;
+        vz = (iz || df ? vz : 0) + this.plungeV;
+      }
       this.depth = clamp(this.depth + vz * dt, 0, bottom);
+      if (this.depth >= bottom && this.plungeV > 0) this.plungeV = 0;
       if (tired && (this.moving || iz)) {
         if (this.isPlayer && !this.spentHint) { this.spentHint = true; game.log('Exhausted! Stop and tread water at the surface to get your strength back.', '#ff8a80'); }
       } else if (this.stamina > this.d.maxStamina * 0.5) this.spentHint = false;
@@ -943,7 +1224,8 @@ export class Actor extends Entity {
           : this.under ? (this.moving || this.intent.mz ? 'dive' : 'float')
             : this.moving ? 'crawl' : 'tread';
     // in the air from a jump (not a knock-back launch): up with the knees, then reaching for the ground
-    const air = !swim && !act && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? (this.vz > 0 ? 'up' : 'down') : null;
+    // (hauling yourself up onto a ledge: knees up, arms reaching over the top)
+    const air = this.climb ? 'up' : !swim && !act && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? (this.vz > 0 ? 'up' : 'down') : null;
     const mode = act || `${this.state}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${swim || ''}${busy ? busy.pose : ''}${this.charging > 0 ? 'k' : ''}${air || ''}`;
     if (mode !== this._mode) {
       this._blendFrom = this._lastP || null;

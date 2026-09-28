@@ -179,15 +179,13 @@ export class CameraRig {
     const cam = this.camera;
     const sailing = p.mode === 'sail' && p.ship;
     const scale = p.look?.scale || 1;
+    const time = game.env?.time || 0;
     let eyeH = 1.72 * scale;
     let gx = 0, gz = 0; // eye position relative to the player (origin)
-    // the ground under your feet, smoothed so bumps and steps don't jolt the view
-    const g0 = p.deck ? p.deck.h + shipBob(p.deck.ship, game.env?.time || 0) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) : ground(p.x, p.y) - (p.wading || 0);
-    // (dropping off an upper deck: the fall itself carries you down)
-    if (this.smoothG === undefined || Math.abs(g0 - this.smoothG) > 2.5 || p.mode !== this.lastMode || (p.deck && g0 < this.smoothG - 0.6 && p.z > 0.3)) this.smoothG = g0;
-    this.smoothG += (g0 - this.smoothG) * Math.min(1, dt * 14);
-    this.lastMode = p.mode;
-    let gh = p.flying && p.alt != null ? p.alt : this.smoothG + (p.z || 0);
+    // where your feet are: on a deck, on the ground (or the bottom of the shallows), in the air
+    let gh = p.flying && p.alt != null ? p.alt
+      : p.deck ? p.deck.h + shipBob(p.deck.ship, time) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) + (p.z || 0)
+        : ground(p.x, p.y) - (p.wading || 0) + (p.z || 0);
     let rollSea = 0;
     if (!sailing) this.seaPitch = 0;
     if (sailing) {
@@ -196,7 +194,7 @@ export class CameraRig {
       const s = p.ship;
       const hp = helmPoint(s.def);
       gx = Math.cos(s.heading) * hp.x; gz = Math.sin(s.heading) * hp.x;
-      const t = (game.env?.time || 0) + (s.seed || 0);
+      const t = time + (s.seed || 0);
       gh = (s.lvl || 0) + 0.05 + hp.floor + Math.sin(t * 1.3) * 0.07 + pitchRise(s, hp.x);
       eyeH = hp.eye - hp.floor + 0.15;
       rollSea = Math.sin(t * 0.9) * 0.03 * Math.cos(this.yaw - s.heading);
@@ -208,6 +206,19 @@ export class CameraRig {
       const floor = game.seaDepth ? -game.seaDepth(p.x, p.y) : -99;
       if (gh + eyeH < floor + 0.3) gh = floor + 0.3 - eyeH;
     }
+    if (p.state === 'knocked') eyeH = 0.45;
+    // The view glides between heights: over steps and bumps, wading out into a
+    // swim and back, climbing out onto a pier or aboard a deck, getting knocked
+    // down. Jumps, falls and climbs are followed as they happen (they're smooth
+    // already) — only a sudden change mid-air (a state switch) is eased.
+    const eye = gh + eyeH;
+    const air = !sailing && !p.inWater && ((p.z || 0) > 0.05 || !!p.vz || !!p.climb);
+    if (this.eyeLast === undefined || Math.abs(eye - this.eyeLast) > 4 || p.mode !== this.lastMode || sailing) this.eyeOff = 0;
+    else if (!air || Math.abs(eye - this.eyeLast) > Math.abs(p.vz || 0) * dt * 2 + 0.15) this.eyeOff -= eye - this.eyeLast;
+    this.eyeLast = eye;
+    this.lastMode = p.mode;
+    this.eyeOff *= Math.exp(-dt * 14);
+    gh += this.eyeOff;
     // a small dip when you land from a jump or a fall
     if (!sailing && this.lastZ > 0.3 && !(p.z > 0)) this.dip = Math.min(0.22, 0.05 + this.lastZ * 0.12);
     this.lastZ = p.z || 0;
@@ -225,7 +236,7 @@ export class CameraRig {
     // lateral speed relative to the view: lean a little into it
     const side = !sailing ? ((p.vx || 0) * -Math.sin(this.yaw) + (p.vy || 0) * Math.cos(this.yaw)) : 0;
     let roll = this.bobOn ? -side * 0.006 : 0;
-    if (p.state === 'knocked') { eyeH = 0.45; roll = 0.35; }
+    if (p.state === 'knocked') roll = 0.35;
     // crouching to spring for a charged jump
     this.crouch = (this.crouch || 0) + ((p.charging || 0) - (this.crouch || 0)) * Math.min(1, dt * 12);
     eyeH -= this.crouch * 0.34 * scale;

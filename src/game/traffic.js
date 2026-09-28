@@ -16,7 +16,7 @@ import { board } from './interact.js';
 import { regionAt, REGION, isGrandLine, isCalmBelt } from '../world/constants.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
 import { RNG } from '../core/rng.js';
-import { placeOnDeck, helmSpot, hatchSpot, deckDist, nearestDeck, freeDeckSpot } from './decks.js';
+import { placeOnDeck, helmSpot, hatchSpot, deckDist, freeDeckSpot, boardingSpot } from './decks.js';
 import { shipDims } from '../world/hull.js';
 import { SHIPS } from '../data/ships.js';
 import { wantedTier } from './wanted.js';
@@ -355,19 +355,18 @@ function welcomeAboard(game, s) {
   game.log(`The crew of the ${s.name} salute as you come aboard.`, '#90caf9');
 }
 
-/** Swimming against a hull and jumping: you haul yourself up her side and onto the deck. */
+/**
+ * Swimming (or wading) against a hull and jumping: you haul yourself up her
+ * side and over the rail onto the deck there — any ship, however tall.
+ */
 function climbAboard(game, T, p, k) {
-  if (!p.inWater || p.under || (p.fruit && !p.gills)) return false;
-  const dk = game.deckAt(p.x, p.y, -1.3);
-  const s = dk?.ship;
+  if (!(p.inWater || p.wading) || p.under || p.climb || (p.fruit && !p.gills)) return false;
+  const hk = game.hullAt(p.x, p.y, 1.1);
+  const s = hk?.ship;
   if (!s || s.sunk || s.alive === false) return false;
-  const n = nearestDeck(game, p, s);
-  const splash = { x: p.x, y: p.y };
-  p.leaveWater?.(game, true);
-  placeOnDeck(game, p, s, n ? n.t : 0.5, n ? n.v * 0.6 : 0);
-  game.fx.ripple?.(splash.x, splash.y, 1 + k * 0.5);
-  game.fx.burst(splash.x, splash.y, 12, { color: ['#e1f5fe', '#b3e5fc', '#ffffff'], speed: 2.2, z: 0.1, vz: 4, g: 11, life: 0.6, size: 0.1 });
-  game.audio?.sfx('splash_out');
+  const spot = boardingSpot(game, s, p.x, p.y);
+  game.fx.ripple?.(p.x, p.y, 1 + k * 0.5);
+  p.startClimb(game, { ship: s, t: spot.t, v: spot.v });
   game.log(s.owner === 'player' ? `You climb back aboard the ${s.name}.` : `You haul yourself up the side of the ${s.name} and over the rail!`, s.owner === 'player' ? '#b0bec5' : '#ffe082');
   return true;
 }

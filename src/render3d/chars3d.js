@@ -74,6 +74,18 @@ class ActorView {
     const m = this.model;
     // at the helm the camera rides the ship; the body isn't drawn on the water below it
     this.root.visible = !(a.isPlayer && a.mode === 'sail');
+    // in the water the body settles to a new height over a moment — treading
+    // water or swimming along, afloat or wading on the bottom — not in a jump
+    const wet = a.inWater || a.wading > 0;
+    const dty = Math.min(0.1, Math.max(0, env.time - (this.yT ?? env.time)));
+    this.yT = env.time;
+    if (wet) {
+      const y = this.root.position.y;
+      if (!this.wetY || Math.abs(y - this.smY) > 1.2) this.smY = y;
+      else this.smY += (y - this.smY) * Math.min(1, dty * 9);
+      this.root.position.y = this.smY;
+    }
+    this.wetY = wet;
     const cam = ctx.camera;
     const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
     this.frame++;

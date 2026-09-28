@@ -1,7 +1,7 @@
 // Context-sensitive "E" interactions.
 import { WALKABLE } from '../world/tiles.js';
 import { angleDiff } from '../core/math.js';
-import { placeOnDeck, helmSpot } from './decks.js';
+import { placeOnDeck, helmSpot, boardingSpot } from './decks.js';
 import { shipDims } from '../world/hull.js';
 import { bfront } from '../world/bframe.js';
 import { canSee } from './ai.js';
@@ -21,17 +21,19 @@ export function findInteraction(game, p) {
       return { label: `Go ashore${isl && isl.name ? ' — ' + isl.name : ''}`, key: 'E', run: () => disembark(game, p, spot) };
     }
     // hove to: leave the wheel and walk your own deck
-    if (Math.abs(s.speed) < 1.6 && !s.def.open) return { label: 'Leave the helm (walk the deck)', key: 'E', run: () => leaveHelm(game, p, s) };
+    if (Math.abs(s.speed) < 1.6) return { label: 'Leave the helm (walk the deck)', key: 'E', run: () => leaveHelm(game, p, s) };
     return null;
   }
-  // on foot / swimming
+  // on foot / swimming (boarding is by hand: jump onto a deck from a pier or
+  // another deck, or climb her side from the water — Space at the hull)
   const cands = [];
-  for (const s of game.ships) {
-    if (s.sunk || s.owner !== 'player' || p.deck?.ship === s) continue;
-    const d = w.distance(p.x, p.y, s.x, s.y);
+  if (p.inWater && p.fruit && !p.gills && !p.climb) {
     // a Devil Fruit user in the sea can't climb, but can grab a line thrown from the deck
-    const sinking = p.inWater && p.fruit && !p.gills;
-    if (d < s.def.length * 0.55 + (sinking ? 6 : 1.6)) cands.push({ d: d - 1, x: s.x, y: s.y, label: sinking ? `Grab the line from the ${s.name}` : `Board the ${s.name}`, run: () => board(game, p, s) });
+    for (const s of game.ships) {
+      if (s.sunk || s.owner !== 'player') continue;
+      const d = w.distance(p.x, p.y, s.x, s.y);
+      if (d < s.def.length * 0.55 + 6) cands.push({ d: d - 1, x: s.x, y: s.y, label: `Grab the line from the ${s.name}`, run: () => hauledAboard(game, p, s) });
+    }
   }
   // people: only the one under your crosshair (or cursor) — standing near
   // someone isn't the same as talking to them
@@ -132,7 +134,14 @@ export function leaveHelm(game, p, s) {
   if (shipDims(s.def).big) placeOnDeck(game, p, s, hs.t, 0.9);
   else placeOnDeck(game, p, s, hs.t + 0.05, 0);
   game.emit('disembark', s, null);
-  game.hint?.('deck', 'Walk your deck freely — jump over the rail for a swim, and press E at the wheel to take the helm again.');
+  game.hint?.('deck', 'Walk your deck freely — jump over the rail for a swim (Space at her side climbs back aboard), and press E at the wheel to take the helm again.');
+}
+
+/** A Devil Fruit user in the sea, hauled up onto the deck on a line thrown from it. */
+export function hauledAboard(game, p, s) {
+  const spot = boardingSpot(game, s, p.x, p.y);
+  p.startClimb(game, { ship: s, t: spot.t, v: spot.v });
+  game.log(`Your crew haul you up the side of the ${s.name} on a line, dripping and weak.`, '#81d4fa');
 }
 
 export function board(game, p, s) {

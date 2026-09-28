@@ -37,12 +37,18 @@ function smallDims(def) {
   const masts = def.masts || 1;
   const mastH = 1.2 + L * 0.75;
   const helmX = -L * 0.42;
-  return {
+  const d = {
     L, B, D, open, deckY, bulH, castle, fore, hq, hf, tq, tf, masts, mastH, helmX,
     yq: deckY + hq, yf: deckY + hf,
     helmFloor: castle ? deckY + hq : deckY,
     big: false, poop: false, hp: 0, tp: 0, sheer: 0.16 * B, walk: 0.94, stairs: [], solids: [],
   };
+  // the masts (you walk round them, and a camera keeps out of them) and the wheel's post
+  d.mastU = Array.from({ length: masts }, (_, m) => (masts === 1 ? 0.05 * L : L * (0.28 - m * (0.56 / Math.max(1, masts - 1)))));
+  d.mastR = 0.05 + L * 0.011;
+  d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.16 }));
+  if (!open) d.solids.push({ u: helmX + 1.1, v: 0, r: 0.2 });
+  return d;
 }
 
 function bigDims(def) {
@@ -204,12 +210,27 @@ export function deckPoint(ship, dx, dy, margin = 0.2) {
   if (hb <= 0 || Math.abs(v) > hb) return null;
   // the bow narrows to a point: keep off the very tip
   const out = { t, u, v, h: floorAt(d, t, v), edge: hb - Math.abs(v) };
-  if (d.big) {
-    out.lvl = levelAt(d, t, v);
+  if (d.big) out.lvl = levelAt(d, t, v);
+  if (d.solids.length) {
     const depth = solidAt(d, u, v, Math.max(0, margin));
     if (depth > 0) out.solid = depth;
   }
   return out;
+}
+
+/**
+ * A point inside a ship's hull outline, out to her planking (plus `pad`):
+ * { t, u, v, top (the top of her side there), floor (the deck under it) } —
+ * or null. Heights are above her waterline.
+ */
+export function hullPoint(ship, dx, dy, pad = 0) {
+  const d = shipDims(ship.def);
+  const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+  const u = dx * c + dy * s, v = -dx * s + dy * c;
+  const t = (u + d.L / 2) / d.L, tc = clamp01(t);
+  if (Math.abs(t - tc) * d.L > pad) return null;
+  if (Math.abs(v) > hbAt(tc, d.B) + pad) return null;
+  return { t: tc, u, v, top: topAt(d, tc), floor: floorAt(d, tc, v) };
 }
 
 /** World point of a deck position (t along, v across) of a ship. */

@@ -2,7 +2,7 @@
 // forecastle) is solid ground for anyone standing on it, and carries them
 // along as the ship sails or turns; the bulwarks keep you aboard unless you
 // jump over the rail, and you can't swim through a hull — you climb aboard.
-import { deckPoint, deckToWorld, helmPoint, shipDims, hullSolid, shipBob } from '../world/hull.js';
+import { deckPoint, deckToWorld, helmPoint, shipDims, hullSolid, shipBob, hullPoint, pitchRise, hbAt, levelAt } from '../world/hull.js';
 
 export function installDecks(game) {
   // taking the helm, you look out over the bow
@@ -20,6 +20,26 @@ export function installDecks(game) {
       if (dx * dx + dy * dy > r * r) continue;
       const d = deckPoint(s, dx, dy, margin);
       if (d) { d.ship = s; return d; }
+    }
+    return null;
+  };
+  /**
+   * The hull under a point, out to her planking (plus `pad`): { ship, t, u, v,
+   * rail (the top of her side there), deckH (her deck there) } — heights in
+   * metres above the sea as she rides now — or null.
+   */
+  game.hullAt = (x, y, pad = 0) => {
+    const w = game.world, time = game.env?.time || 0;
+    for (const s of game.ships) {
+      if (s.sunk || s.alive === false) continue;
+      const r = s.def.length * 0.56 + pad;
+      const dx = w.dx(s.x, x), dy = y - s.y;
+      if (dx * dx + dy * dy > r * r) continue;
+      const h = hullPoint(s, dx, dy, pad);
+      if (!h) continue;
+      const lift = shipBob(s, time) + pitchRise(s, h.u);
+      h.ship = s; h.rail = h.top + lift; h.deckH = h.floor + lift;
+      return h;
     }
     return null;
   };
@@ -131,21 +151,24 @@ export function deckRoute(game, a, tx, ty) {
   return best.p;
 }
 
+/**
+ * Where you come aboard over a ship's side at (x, y): the deck just inside
+ * her rail there (on the big ships, the deck at that height, clear of the
+ * guns and the like) — { t, v }.
+ */
+export function boardingSpot(game, ship, x, y) {
+  const d = shipDims(ship.def), w = game.world;
+  const c = Math.cos(ship.heading), s = Math.sin(ship.heading), dx = w.dx(ship.x, x), dy = y - ship.y;
+  const u = dx * c + dy * s, v = -dx * s + dy * c;
+  const t = Math.max(0.1, Math.min(0.9, (u + d.L / 2) / d.L));
+  const room = Math.max(0, hbAt(t, d.B) * d.walk - 0.32), vv = Math.max(-room, Math.min(room, v));
+  if (!d.big) return { t, v: vv };
+  const lv = levelAt(d, t, vv);
+  return freeDeckSpot(ship, t, vv, typeof lv === 'string' ? lv : 'main');
+}
+
 /** Distance from an actor to a deck spot. */
 export function deckDist(game, a, ship, spot) {
   const p = deckToWorld(ship, spot.t, spot.v);
   return game.world.distance(a.x, a.y, p.x, p.y);
-}
-
-/** The nearest point on a ship's deck to a swimmer beside it (for climbing aboard). */
-export function nearestDeck(game, a, ship) {
-  let best = null;
-  for (let t = 0.12; t <= 0.9; t += 0.04) {
-    for (const v of [-0.35, 0, 0.35]) {
-      const p = deckToWorld(ship, t, v * ship.def.beam * 0.5);
-      const dd = game.world.distance(a.x, a.y, p.x, p.y);
-      if (!best || dd < best.d) best = { t, v: v * ship.def.beam * 0.5, d: dd };
-    }
-  }
-  return best;
 }
