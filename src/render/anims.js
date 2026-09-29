@@ -569,7 +569,8 @@ function activityPose(P, act, t) {
  *   crawl: along the surface: a breaststroke, head up (as in first person)
  *   dive: underwater breaststroke (both arms sweep, a frog kick), tipping with the dive
  *   float: hanging in the water, slow sculling
- *   fish: a Fish-Man's dolphin kick, arms along the sides, fast and smooth
+ *   fish: a dolphin kick, arms along the sides, fast and smooth (Fish-Men swim
+ *     the breaststroke like everyone, quicker: see actor.js swimRate)
  *   struggle: a Devil Fruit user thrashing to keep their head up
  *   sink: a Devil Fruit user whose strength has gone, limp and going down
  */
@@ -694,7 +695,7 @@ export function restPose(pose) {
     P.b = [0, 0.02];
     P.eF = 1; P.eB = 1;
   }
-  if (pose.swimming) swimPose(P, pose.swim || 'tread', t, pose.swimDir || 0);
+  if (pose.swimming) swimPose(P, pose.swim || 'tread', t * (pose.swimRate || 1), pose.swimDir || 0);
   if (pose.block !== undefined) {
     // cross-arm guard in front of the face; a fresh guard (parry window) snaps up
     const fresh = Math.max(0, 1 - pose.block / 0.2);

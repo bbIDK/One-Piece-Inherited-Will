@@ -50193,7 +50193,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       P4.eF = 1;
       P4.eB = 1;
     }
-    if (pose.swimming) swimPose(P4, pose.swim || "tread", t, pose.swimDir || 0);
+    if (pose.swimming) swimPose(P4, pose.swim || "tread", t * (pose.swimRate || 1), pose.swimDir || 0);
     if (pose.block !== void 0) {
       const fresh = Math.max(0, 1 - pose.block / 0.2);
       P4.hF = [0.2 + fresh * 0.04, -0.13 - fresh * 0.03];
@@ -63860,7 +63860,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         anim.t = act2.t;
       }
       const busy = this.act3d && !act2 && !combat && !this.moving && this.state === "idle" ? this.act3d : null;
-      const swim = !this.inWater ? null : this.fruit && !this.gills ? this.sinking ? "sink" : "struggle" : this.gills && (this.moving || this.under) ? "fish" : this.under ? this.moving || this.intent.mz ? "dive" : "float" : this.moving ? "crawl" : "tread";
+      const swim = !this.inWater ? null : this.fruit && !this.gills ? this.sinking ? "sink" : "struggle" : this.under ? this.moving || this.intent.mz ? "dive" : "float" : this.moving ? "crawl" : "tread";
       const air = this.climb ? "up" : !swim && !act2 && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? this.vz > 0 ? "up" : "down" : null;
       const st = !act2 ? this.station() : null;
       const mode = act2 || `${this.state}${drawn ? "w" : ""}${this.blocking ? "b" : ""}${dodging ? "d" : ""}${hurt ? "h" : ""}${this.moving ? "m" : ""}${combat ? "c" : ""}${this.intent.sprint ? "s" : ""}${swim || ""}${busy ? busy.pose : ""}${this.charging > 0 ? "k" : ""}${air || ""}${st ? st.kind : ""}`;
@@ -63885,6 +63885,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         swimming: this.inWater,
         swim,
         swimDir: this.intent.mz || 0,
+        swimRate: this.gills ? 5.5 / 3.6 : 1,
         alpha: alphaBuff ? alphaBuff.alpha : this.fadeAlpha,
         aura,
         anim,

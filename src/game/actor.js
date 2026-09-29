@@ -1324,12 +1324,13 @@ export class Actor extends Entity {
     }
     // ease between clips, stances and states instead of snapping
     const busy = this.act3d && !act && !combat && !this.moving && this.state === 'idle' ? this.act3d : null;
-    // how you're swimming: treading water, front crawl, diving (breaststroke), a Fish-Man's dolphin kick, sinking
+    // how you're swimming: treading water, a breaststroke along the surface or
+    // under it (a Fish-Man's too — quicker, in step with his first-person
+    // arms), hanging in the water, or a Devil Fruit user's struggle and sinking
     const swim = !this.inWater ? null
       : this.fruit && !this.gills ? (this.sinking ? 'sink' : 'struggle')
-        : this.gills && (this.moving || this.under) ? 'fish'
-          : this.under ? (this.moving || this.intent.mz ? 'dive' : 'float')
-            : this.moving ? 'crawl' : 'tread';
+        : this.under ? (this.moving || this.intent.mz ? 'dive' : 'float')
+          : this.moving ? 'crawl' : 'tread';
     // in the air from a jump (not a knock-back launch): up with the knees, then reaching for the ground
     // (hauling yourself up onto a ledge: knees up, arms reaching over the top)
     const air = this.climb ? 'up' : !swim && !act && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? (this.vz > 0 ? 'up' : 'down') : null;
@@ -1352,7 +1353,7 @@ export class Actor extends Entity {
     const pose = {
       facing: this.facing, walk: this.walk, moving: this.moving, speed: (this.speed || 0) / (this.look?.scale || 1), time: now + this.seed,
       state: this.state === 'knocked' ? 'knocked' : hurt ? 'hurt' : this.state,
-      swimming: this.inWater, swim, swimDir: this.intent.mz || 0, alpha: alphaBuff ? alphaBuff.alpha : this.fadeAlpha, aura,
+      swimming: this.inWater, swim, swimDir: this.intent.mz || 0, swimRate: this.gills ? 5.5 / 3.6 : 1, alpha: alphaBuff ? alphaBuff.alpha : this.fadeAlpha, aura,
       anim, stanceP: STANCES[stance], combat, sprint: !!(this.intent.sprint && this.moving),
       weapon: wpn, armed: !!wpn && (drawn || (combat && !!STANCE_ARMED[stance]) || !!(anim && anim.weapon)), drawn, armament: this.armament,
       knockT: this.knockT,
