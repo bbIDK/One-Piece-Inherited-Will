@@ -13,7 +13,7 @@ import { uiIcon } from '../render/icons.js';
 import { vcMat, bindCtx, STATE } from './props/mats.js';
 import { Mesher, box, cyl, cone, lathe, slab, quad, C, shade, mix, hash } from './props/kit.js';
 import { CLIMATE } from '../world/tiles.js';
-import { doorOf, doorLocalX, windowSlots, STEPS_MAX } from '../world/interiors.js';
+import { doorOf, doorLocalX, windowSlots, STEPS_MAX, styleScale } from '../world/interiors.js';
 import { bw, bangle } from '../world/bframe.js';
 import { hollowWalls, rectFrame, shapeFrame, doorLeaf, animateDoor, roomSteps, requestRoom, cancelRoom } from './interiors3d.js';
 
@@ -198,7 +198,7 @@ const MAX_RISE = 16;
  * trimmings are drawn here — the doorway is a real opening and the leaf is
  * its own mesh (see interiors3d.doorLeaf).
  */
-function doorAt(k, b, S, x, g, wallCol, big, y0 = null) {
+function doorAt(k, b, S, x, g, wallCol, big, y0 = null, sink = 0.3) {
   const dw = (big ? 1.7 : 1.05) * g, dh = (big ? 2.5 : 2.15) * g;
   const wood = doorWood(b, S);
   const frame = S.wall === 'post' ? '#3e2723' : S.wall === 'brick' ? shade(wallCol, 0.4) : shade(wallCol, -0.4);
@@ -211,9 +211,9 @@ function doorAt(k, b, S, x, g, wallCol, big, y0 = null) {
     const n = y0 <= STEPS_MAX + 0.01 ? Math.max(1, Math.round(y0 / 0.2)) : 0;
     for (let i = 0; i < n; i++) {
       const top = y0 - (i + 1) * y0 / (n + 1);
-      B(k, -dw / 2 - 0.2 - i * 0.05, -0.3, i * 0.32 - 0.02, dw / 2 + 0.2 + i * 0.05, top, (i + 1) * 0.32, '#9a948a', { outline: 0.02 });
+      B(k, -dw / 2 - 0.2 - i * 0.05, -Math.max(0.3, sink), i * 0.32 - 0.02, dw / 2 + 0.2 + i * 0.05, top, (i + 1) * 0.32, '#9a948a', { outline: 0.02 });
     }
-  } else B(k, -dw / 2 - 0.2, -0.3, -0.02, dw / 2 + 0.2, 0.12, 0.45, '#9a948a', { outline: 0.02 });
+  } else B(k, -dw / 2 - 0.2, -Math.max(0.3, sink), -0.02, dw / 2 + 0.2, 0.12, 0.45, '#9a948a', { outline: 0.02 });
   switch (S.door) {
     case 'arch': case 'hole': {
       const s = new THREE.Shape();
@@ -459,7 +459,7 @@ function buildBuilding0(b, ctx) {
   ctx = ctx || STATE.ctx;
   const S = STYLE[b.style] || STYLE.village;
   const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-  const g = S.scale || 1; // giant scale for doors, windows and storeys
+  const g = styleScale(b); // giant scale for doors, windows and storeys (a giants' town, or a very tall keeper)
   const role = b.role || 'house';
   const big = role === 'marine_base' || role === 'palace' || role === 'hall' || role === 'church';
   const rt = b.roofType || 'gable';
@@ -534,7 +534,7 @@ function buildBuilding0(b, ctx) {
   }
 
   // door and windows (on a walk-in ground floor the glass is its own mesh: see-through up close)
-  const dd = doorAt(k, b, S, door.x, g, wallCol, big && fw >= 5, enter ? plinth : null);
+  const dd = doorAt(k, b, S, door.x, g, wallCol, big && fw >= 5, enter ? plinth : null, sink);
   const panes = enter ? new Mesher() : null;
   const winW = 0.85 * g, winH = 1.05 * g;
   let wi = 0;
@@ -610,7 +610,7 @@ function buildBuilding0(b, ctx) {
   }
 
   // extras by style and role
-  styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex);
+  styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex, sink);
 
   const grp = finish(b, k, { door, dd, H, S, rt, storeys, storeyH, plinth }, top);
   if (enter) walkIn(grp, b, S, { fw, fd, y0: plinth, ceil: Hc - plinth, panes });
@@ -1090,7 +1090,10 @@ function awningOf(b, S, fw, H, dd) {
   return { top: dd.top + 0.8 };
 }
 
-function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex = (sx, d) => d) {
+function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex = (sx, d) => d, sink = 0.5) {
+  // (what stands on the ground before the front goes down into it as the
+  // foundation does: on a slope it would stand over a gap)
+  const dn = Math.max(0.5, sink);
   const role = b.role || 'house';
   const clearOfDoor = (x0, x1) => x1 < door.x - dd.dw / 2 - 0.25 || x0 > door.x + dd.dw / 2 + 0.25;
   // shop awnings (striped cloth) over the door
@@ -1108,9 +1111,9 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex 
   }
   if (S.engawa) {
     // a raised wooden veranda along the front
-    B(k, -fw / 2 - ex(-1, 0.1), -0.5, 0, fw / 2 + ex(1, 0.1), 0.42, 0.9, '#8d6e4a', { outline: 0.02 });
+    B(k, -fw / 2 - ex(-1, 0.1), -dn, 0, fw / 2 + ex(1, 0.1), 0.42, 0.9, '#8d6e4a', { outline: 0.02 });
     for (let x = -fw / 2 + 0.2; x < fw / 2; x += 0.3) B(k, x, 0.42, 0.02, x + 0.02, 0.425, 0.88, '#6d4c33');
-    if (Math.abs(door.x) < fw) B(k, door.x - 0.6, -0.3, 0.85, door.x + 0.6, 0.22, 1.3, '#9a948a');
+    if (Math.abs(door.x) < fw) B(k, door.x - 0.6, -dn, 0.85, door.x + 0.6, 0.22, 1.3, '#9a948a');
   }
   if (S.lanterns || (b.style === 'wano' && role !== 'house')) {
     // red paper lanterns under the eaves
@@ -1128,7 +1131,7 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex 
     const px = door.x, pw = dd.dw + 1.8;
     for (const sx of [-1, 1]) {
       k.add(cyl(0.17, 0.2, dd.top + 0.9, 10), { at: [px + sx * pw / 2, 0.3, 1.1], color: '#fdfefe', outline: 0.02 });
-      B(k, px + sx * pw / 2 - 0.26, 0.1, 0.85, px + sx * pw / 2 + 0.26, 0.32, 1.35, '#ecf0f1');
+      B(k, px + sx * pw / 2 - 0.26, -dn, 0.85, px + sx * pw / 2 + 0.26, 0.32, 1.35, '#ecf0f1');
     }
     B(k, px - pw / 2 - 0.35, dd.top + 1.2, -0.05, px + pw / 2 + 0.35, dd.top + 1.45, 1.4, '#fdfefe', { outline: 0.02 });
     k.save(); k.translate(px, dd.top + 1.45, 0.65); k.rotateY(0);
@@ -1242,7 +1245,7 @@ const PANES = { shoji: ['#f3ead3', '#ffb84d'], lattice: ['#f6ddcc', '#ffab66'], 
 export function farBuilding(k, b, ctx) {
   const S = STYLE[b.style] || STYLE.village;
   const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-  const g = S.scale || 1;
+  const g = styleScale(b);
   const role = b.role || 'house';
   const big = role === 'marine_base' || role === 'palace' || role === 'hall' || role === 'church';
   const rt = b.roofType || 'gable';
@@ -1339,7 +1342,7 @@ export function farBuilding(k, b, ctx) {
     const c = ['#e74c3c', '#3498db', '#27ae60', '#f39c12', '#9b59b6', '#16a085'][(b.v || 0) % 6];
     k.add(box(Math.min(fw - 0.6, dw + 2.4), 0.06, 1.0), { at: [dx, dd.top + 0.52, 0.42], rot: [0.42, 0, 0], color: mix(c, '#ffffff', 0.4) });
   }
-  if (S.engawa) B(k, x0, -0.5, 0, x1, 0.4, 0.88, '#8d6e4a');
+  if (S.engawa) B(k, x0, -Math.max(0.5, sink), 0, x1, 0.4, 0.88, '#8d6e4a');
   if (b.role === 'marine_base' || (b.style === 'marine' && fw >= 6)) B(k, x0 - 0.01, H - 1.15, -0.2, x1 + 0.01, H - 0.35, 0.05, '#f5f6fa');
   if (S.wall === 'column') B(k, x0, H - 0.5, 0.05, x1, H - 0.12, 0.4, '#b03a2e');
 

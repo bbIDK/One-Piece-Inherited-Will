@@ -255,7 +255,8 @@ export class ObjectIndex {
     for (const c of b.cols || []) w.removeCol(c);
     if (b.doorCol) w.removeCol(b.doorCol);
     if (b.floor) w.removeFloor(b.floor);
-    b.cols = null; b.doorCol = null; b.floor = null; b.furnished = false;
+    if (b.stepsFloor) w.removeFloor(b.stepsFloor);
+    b.cols = null; b.doorCol = null; b.floor = null; b.stepsFloor = null; b.furnished = false;
   }
 
   remove(obj) {

@@ -9,7 +9,7 @@ import { count } from './inventory.js';
 import { persist } from './lineage.js';
 import { findShore } from './interact.js';
 import { formatBerries } from '../core/math.js';
-import { npcDef, allNpcDefs } from './npcs.js';
+import { npcDef, allNpcDefs, sizeBuildingsForOccupants } from './npcs.js';
 
 export function installZones(game) {
   const cache = new Map();
@@ -19,6 +19,7 @@ export function installZones(game) {
     if (!cache.has(id)) {
       const w = generateZoneWorld(ZONES[id]);
       w.fog.fill(255);
+      sizeBuildingsForOccupants(w);
       cache.set(id, w);
     }
     return cache.get(id);

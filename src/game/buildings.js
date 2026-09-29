@@ -8,11 +8,11 @@
 // Breaking a door down is a crime (a bounty — or, for a Marine, lost standing)
 // unless the house belongs to pirates: nobody reports a burglary on them.
 // Blows never break a door: kicking it in is always a choice.
-import { layoutOf, doorOf, HOURS, KEEPER, WALL_T, roomOf, interiorRect } from '../world/interiors.js';
+import { layoutOf, doorOf, HOURS, KEEPER, WALL_T, roomOf, interiorRect, heightsOf } from '../world/interiors.js';
 import { bw, bl } from '../world/bframe.js';
 import { crime, raiseAlarm, seaOf } from './reputation.js';
 import { makeLook } from '../data/races.js';
-import { makeEnemy } from './npcs.js';
+import { makeEnemy, standingHeight } from './npcs.js';
 import { civilianOutfit, randomName, townRaces } from './spawner.js';
 import { RNG } from '../core/rng.js';
 import { earn, addItem } from './inventory.js';
@@ -103,12 +103,19 @@ export function installBuildings(game) {
           // someone standing in the open doorway: don't shut it on them (just
           // leaning on a shut door doesn't count — that's how locks get opened)
           if (b.doorOpen && dx < d.dw / 2 + a.r && dy < WALL_T / 2 + a.r - 0.08) blocking = true;
-          // a locked door opens only for whoever lives there, and only as they come and go
-          const allowed = a.isPlayer ? !locked || B.inside(a, b) : !locked || (a.homeB === b && a.moving);
-          if (allowed && a.state !== 'knocked' && (dx < 1.2 && dy < 1.5)) want = true;
+          // it opens for you as you walk up to it, and for anyone on their way
+          // through it (see route) — not for everyone who passes the house;
+          // a locked door only for whoever lives there
+          const through = a.isPlayer || (a.doorway?.b === b && game.time - a.doorway.t < 0.6);
+          const allowed = a.isPlayer ? !locked || B.inside(a, b) : !locked || a.homeB === b;
+          if (through && allowed && a.state !== 'knocked' && dx < 1.2 && dy < 1.5) want = true;
         }
       }
       if (blocking) want = true;
+      // (it swings shut a moment after the last one through, not the instant
+      // they're clear of it: no door flapping as people come and go)
+      if (want) b.doorHold = 0.7;
+      else if (b.doorOpen && (b.doorHold = (b.doorHold || 0) - dt) > 0) want = true;
       if (want !== !!b.doorOpen) {
         b.doorOpen = want;
         if (want && b.doorCol) { w.removeCol(b.doorCol); b.doorCol = null; }
@@ -160,7 +167,8 @@ export function installBuildings(game) {
         if (home.length) {
           for (const a of home) {
             game.fx.text(a.x, a.y - 2.1, a.keeper ? 'THIEF! GUARDS!' : 'BURGLAR!!', '#ff5252', 0.4, { life: 1.6 });
-            if (a.controller && !a.keeper) { a.controller.state = 'flee'; a.controller.fleeFrom = game.player; a.controller.fleeT = 6; }
+            // (they keep out of your way while you're in the house: see ai.js flee)
+            if (a.controller && !a.keeper) { a.controller.state = 'flee'; a.controller.fleeFrom = game.player; a.controller.fleeT = 25; a.controller.fleeTo = null; a.controller.fleePick = 0; }
           }
           raiseAlarm(game, d.mid.x, d.mid.y, 'Burglar');
         } else if (Math.random() < 0.35) raiseAlarm(game, d.mid.x, d.mid.y, 'Burglar'); // a neighbour saw
@@ -186,6 +194,8 @@ export function installBuildings(game) {
       const ba = w.interiorAt(a.x, a.y), bt = w.interiorAt(tx, ty);
       if (ba === bt) return null;
       const b = ba || bt;
+      // (on their way through this door: it opens for them — see door)
+      a.doorway = { b, t: game.time };
       const d = B.doorPts(b);
       // (worked out in the building's own frame: the door in the front wall at z = 0)
       const q = bl(b, a.x, a.y, w);
@@ -325,9 +335,8 @@ const KEEPER_LOOK = {
 function keeper(game, b, L, town, island, rng, list, spawner, room) {
   const p = worldPt(b, L.keeper.x, L.keeper.z);
   const marine = room === 'marine';
-  const race = rng.weighted(island.def.population || townRaces(island));
   const over = marine ? { role: 'officer', top: '#ffffff', bottom: '#1b4f72', hat: 'marine', coat: '#fafafa', coatText: 'JUSTICE' } : { ...civilianOutfit(town.style, rng), ...(KEEPER_LOOK[room] || {}) };
-  const look = makeLook(race, rng.int(1, 1e9), over);
+  const { race, look } = indoorLook(b, rng.weighted(island.def.population || townRaces(island)), rng.int(1, 1e9), over);
   const a = spawner.spawn({
     x: p.x, y: p.y, name: KEEPER[room] || 'Keeper', look, race, faction: marine ? 'marine' : 'civilian',
     attrs: marine ? { str: 14, agi: 12, end: 14, vit: 14, wil: 12 } : { str: 4, agi: 4, end: 4, vit: 4, wil: 4 },
@@ -343,8 +352,7 @@ function keeper(game, b, L, town, island, rng, list, spawner, room) {
 
 function resident(game, b, s, town, island, rng, list, spawner, patron = false) {
   const p = worldPt(b, s.x, s.z);
-  const race = rng.weighted(island.def.population || townRaces(island));
-  const look = makeLook(race, rng.int(1, 1e9), civilianOutfit(town.style, rng));
+  const { race, look } = indoorLook(b, rng.weighted(island.def.population || townRaces(island)), rng.int(1, 1e9), civilianOutfit(town.style, rng));
   const a = spawner.spawn({
     x: p.x, y: p.y, name: randomName(rng, race), look, race, faction: 'civilian', attrs: { str: 3, agi: 4, end: 3, vit: 3, wil: 3 },
     ai: { kind: 'wander' },
@@ -383,9 +391,18 @@ function hideout(game, b, L, rng, list, lvl) {
     a.calm = true;
     a.controller.aggroRange = 5;
     a.controller.leash = 7;
+    // (at ease they stay in their den: nobody's in and out of its door all day)
+    a.wanderBox = interiorRect(b);
     game.addActor(a);
     list.push(a);
   }
+}
+
+/** A look for someone indoors in `b` who stands up under its ceiling (someone too tall for it is a plain human instead). */
+function indoorLook(b, race, seed, over) {
+  const look = makeLook(race, seed, over);
+  if (race === 'human' || standingHeight(look) + 0.15 <= heightsOf(b).ceil) return { race, look };
+  return { race: 'human', look: makeLook('human', seed, over) };
 }
 
 /** Someone who lives or works inside `b`. */

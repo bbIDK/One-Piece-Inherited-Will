@@ -13,7 +13,8 @@ import { STYLES } from '../data/styles.js';
 import { FRUITS } from '../data/fruits.js';
 import { persist } from './lineage.js';
 import { rumorFor } from './rumors.js';
-import { layoutOf, interiorRect, doorLocalX } from '../world/interiors.js';
+import { layoutOf, interiorRect, doorLocalX, styleScale } from '../world/interiors.js';
+import { dims } from '../render3d/chars/bones.js';
 import { formatBerries } from '../core/math.js';
 import { bw } from '../world/bframe.js';
 
@@ -51,8 +52,8 @@ export const ARCHETYPES = {
 const WOMEN = /\b(Makino|Dadan|Alvida|Rika|Kaya|Nojiko|Bell-?m[eè]re|Tashigi|Kuina|Nami|Robin|Vivi|Kureha|Conis|Laki|Aisa|Hina|Isuka|Hancock|Sandersonia|Marigold|Nyon|Perona|Kalifa|Bonney|Shirahoshi|Otohime|Shyarly|Big Mom|Linlin|Pudding|Smoothie|Br[uû]l[eé]e|Galette|Flampe|Praline|Amande|Chiffon|Lola|Viola|Rebecca|Monet|Baby 5|Koala|Carrot|Wanda|Yamato|Hiyori|Kiku|Tama|Ulti|Black Maria|Sugar|Kokoro|Chimney|Shakky|Valentine|Doublefinger|Goldenweek|All ?Sunday|Merry ?Christmas|Paula|Porche|Cindry|Stussy|Lilith|Jewelry|Catarina|Tsuru|Gion|Momousagi|Olvia|Toki|Rouge|Uta|Betty|Hibari|Carina|Mozu|Kiwi|Ishley|Nico)\b/i;
 const ROLE_OF = { pirate: 'pirate', bandit: 'bandit', marine: 'marine', cp: 'agent', baroque: 'agent', rival: 'swordsman', beast: 'beast', fishman: 'fishman' };
 
-export function makeNPC(def, x, y, extra = {}) {
-  const L = def.level ?? 6;
+/** A named NPC's look (the same every time: seeded by their id). */
+function npcLook(def) {
   let role = def.role || (def.beast || def.faction === 'beast' ? 'beast' : ROLE_OF[def.faction]) || 'civilian';
   if (role === 'marine' && (def.look?.coat || def.boss || def.named)) role = 'officer';
   const lookOver = { ...(def.look || {}), role };
@@ -62,6 +63,60 @@ export function makeNPC(def, x, y, extra = {}) {
   const look = def.fullLook ? { ...def.fullLook } : makeLook(def.race || 'human', def.seed ?? hashSeed(def.id || def.name), lookOver);
   if (def.bulk) look.bulk = def.bulk;
   if (def.scale) look.scale = def.scale;
+  return look;
+}
+
+/** How tall someone stands (m), their hair (or hat) on top. */
+export function standingHeight(look) {
+  const d = dims(look);
+  return (d.hip0 + d.chestLen + d.neck + d.hc + d.headR * 1.05) * (look.scale || 1) + 0.12;
+}
+
+/** The walk-in building a named NPC keeps (lives or works in), as placeNPC puts them there — not one they stand outside. */
+function buildingOf(island, def) {
+  if (typeof def.at === 'function') return null; // (placed by a rule of its own)
+  const pl = def.at || {};
+  if (pl.spot && island.spots[pl.spot]) return null;
+  const walkIn = (b) => (b?.enterable ? b : null);
+  for (const town of island.towns) {
+    if (pl.town && town.id !== pl.town) continue;
+    if (pl.dock || pl.door) return null;
+    if (pl.building) {
+      const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
+      if (b) return walkIn(b);
+    }
+    if (pl.plaza || (!pl.building && !pl.dx && !pl.door) || (pl.town && !pl.dx)) return null;
+  }
+  for (const town of island.towns) { const b = town.buildings.find((x) => x.npc === def.id); if (b) return walkIn(b); }
+  return null;
+}
+
+/**
+ * Buildings are made for who's in them: one a named character keeps (a boxing
+ * coach a head taller than anyone, Kuma in his church, Big Mom in her chateau)
+ * stands as much taller as they are — its doors, storeys and the ceiling over
+ * their head (world/interiors.js styleScale) — rather than a house they'd
+ * stand up through the roof of. Run once a world and the NPCs are known,
+ * before anything is drawn.
+ */
+export function sizeBuildingsForOccupants(world) {
+  for (const def of NPC_DEFS.values()) {
+    const island = world.islands.find((i) => i.id === def.island);
+    const b = island && buildingOf(island, def);
+    if (!b) continue;
+    // (the ground floor's ceiling is 2.75 m at scale 1, over a head with room to spare)
+    const need = (standingHeight(npcLook(def)) + 0.3) / 2.75;
+    if (need <= styleScale(b) + 0.01) continue;
+    b.tall = Math.round(need * 20) / 20 + 0.05;
+    // (the doorway in its walls and the furniture are sized to match)
+    delete b._layout;
+    if (world.objects) { world.objects.removeInterior(b); world.objects.addInterior(b); }
+  }
+}
+
+export function makeNPC(def, x, y, extra = {}) {
+  const L = def.level ?? 6;
+  const look = npcLook(def);
   const attrs = def.attrs || { str: L, agi: L, end: L, vit: L, wil: L };
   const a = new Actor({
     x, y, name: def.name, title: def.title, look, race: def.race || look.race, faction: def.faction || 'civilian', attrs,

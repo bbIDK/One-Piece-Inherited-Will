@@ -33953,7 +33953,7 @@ void main() {
   };
   var winKind = (b) => WIN[b.style] || "cross";
   var doorKind = (b) => DOOR[b.style] || "plank";
-  var styleScale = (b) => b.style === "giant" ? 2.1 : 1;
+  var styleScale = (b) => Math.max(b.style === "giant" ? 2.1 : 1, b.tall || 1);
   var lowStyle = (b) => b.style === "wano";
   var HOURS = {
     shop: [7, 21],
@@ -54934,7 +54934,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.restore();
   }
   var MAX_RISE = 16;
-  function doorAt(k, b, S3, x, g, wallCol, big, y0 = null) {
+  function doorAt(k, b, S3, x, g, wallCol, big, y0 = null, sink = 0.3) {
     const dw = (big ? 1.7 : 1.05) * g, dh = (big ? 2.5 : 2.15) * g;
     const wood = doorWood(b, S3);
     const frame2 = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" ? shade2(wallCol, 0.4) : shade2(wallCol, -0.4);
@@ -54946,9 +54946,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const n = y0 <= STEPS_MAX + 0.01 ? Math.max(1, Math.round(y0 / 0.2)) : 0;
       for (let i = 0; i < n; i++) {
         const top = y0 - (i + 1) * y0 / (n + 1);
-        B2(k, -dw / 2 - 0.2 - i * 0.05, -0.3, i * 0.32 - 0.02, dw / 2 + 0.2 + i * 0.05, top, (i + 1) * 0.32, "#9a948a", { outline: 0.02 });
+        B2(k, -dw / 2 - 0.2 - i * 0.05, -Math.max(0.3, sink), i * 0.32 - 0.02, dw / 2 + 0.2 + i * 0.05, top, (i + 1) * 0.32, "#9a948a", { outline: 0.02 });
       }
-    } else B2(k, -dw / 2 - 0.2, -0.3, -0.02, dw / 2 + 0.2, 0.12, 0.45, "#9a948a", { outline: 0.02 });
+    } else B2(k, -dw / 2 - 0.2, -Math.max(0.3, sink), -0.02, dw / 2 + 0.2, 0.12, 0.45, "#9a948a", { outline: 0.02 });
     switch (S3.door) {
       case "arch":
       case "hole": {
@@ -55187,7 +55187,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     ctx = ctx || STATE.ctx;
     const S3 = STYLE[b.style] || STYLE.village;
     const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-    const g = S3.scale || 1;
+    const g = styleScale(b);
     const role = b.role || "house";
     const big = role === "marine_base" || role === "palace" || role === "hall" || role === "church";
     const rt = b.roofType || "gable";
@@ -55247,7 +55247,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (V3.jetty) jetty(k, S3, fw, plinth, storeys, storeyH, H3, Hc, V3.jetty, wallCol, ex);
       k.restore();
     }
-    const dd = doorAt(k, b, S3, door.x, g, wallCol, big && fw >= 5, enter ? plinth : null);
+    const dd = doorAt(k, b, S3, door.x, g, wallCol, big && fw >= 5, enter ? plinth : null, sink);
     const panes = enter ? new Mesher() : null;
     const winW = 0.85 * g, winH = 1.05 * g;
     let wi = 0;
@@ -55317,7 +55317,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       }
     }
-    styleExtras(k, b, S3, fw, fd, H3, door, dd, wallCol, roofCol, winter, ex);
+    styleExtras(k, b, S3, fw, fd, H3, door, dd, wallCol, roofCol, winter, ex, sink);
     const grp = finish(b, k, { door, dd, H: H3, S: S3, rt, storeys, storeyH, plinth }, top);
     if (enter) walkIn(grp, b, S3, { fw, fd, y0: plinth, ceil: Hc - plinth, panes });
     return grp;
@@ -55743,7 +55743,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (S3.lanterns || H3 - dd.top < 1.3) return null;
     return { top: dd.top + 0.8 };
   }
-  function styleExtras(k, b, S3, fw, fd, H3, door, dd, wallCol, roofCol, winter, ex = (sx, d) => d) {
+  function styleExtras(k, b, S3, fw, fd, H3, door, dd, wallCol, roofCol, winter, ex = (sx, d) => d, sink = 0.5) {
+    const dn = Math.max(0.5, sink);
     const role = b.role || "house";
     const clearOfDoor = (x0, x1) => x1 < door.x - dd.dw / 2 - 0.25 || x0 > door.x + dd.dw / 2 + 0.25;
     if (awningOf(b, S3, fw, H3, dd)) {
@@ -55758,9 +55759,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       for (let i = 0; i < n; i++) k.add(new CircleGeometry(aw / n / 2, 8, Math.PI, Math.PI), { at: [door.x - aw / 2 + (i + 0.5) * aw / n, ay - 0.4, 0.92], rot: [-0.42, 0, 0], color: i % 2 ? "#ffffff" : c, double: true, backShade: 0.85 });
     }
     if (S3.engawa) {
-      B2(k, -fw / 2 - ex(-1, 0.1), -0.5, 0, fw / 2 + ex(1, 0.1), 0.42, 0.9, "#8d6e4a", { outline: 0.02 });
+      B2(k, -fw / 2 - ex(-1, 0.1), -dn, 0, fw / 2 + ex(1, 0.1), 0.42, 0.9, "#8d6e4a", { outline: 0.02 });
       for (let x = -fw / 2 + 0.2; x < fw / 2; x += 0.3) B2(k, x, 0.42, 0.02, x + 0.02, 0.425, 0.88, "#6d4c33");
-      if (Math.abs(door.x) < fw) B2(k, door.x - 0.6, -0.3, 0.85, door.x + 0.6, 0.22, 1.3, "#9a948a");
+      if (Math.abs(door.x) < fw) B2(k, door.x - 0.6, -dn, 0.85, door.x + 0.6, 0.22, 1.3, "#9a948a");
     }
     if (S3.lanterns || b.style === "wano" && role !== "house") {
       for (const sx of [-1, 1]) {
@@ -55776,7 +55777,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const px2 = door.x, pw = dd.dw + 1.8;
       for (const sx of [-1, 1]) {
         k.add(cyl(0.17, 0.2, dd.top + 0.9, 10), { at: [px2 + sx * pw / 2, 0.3, 1.1], color: "#fdfefe", outline: 0.02 });
-        B2(k, px2 + sx * pw / 2 - 0.26, 0.1, 0.85, px2 + sx * pw / 2 + 0.26, 0.32, 1.35, "#ecf0f1");
+        B2(k, px2 + sx * pw / 2 - 0.26, -dn, 0.85, px2 + sx * pw / 2 + 0.26, 0.32, 1.35, "#ecf0f1");
       }
       B2(k, px2 - pw / 2 - 0.35, dd.top + 1.2, -0.05, px2 + pw / 2 + 0.35, dd.top + 1.45, 1.4, "#fdfefe", { outline: 0.02 });
       k.save();
@@ -55857,7 +55858,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function farBuilding(k, b, ctx) {
     const S3 = STYLE[b.style] || STYLE.village;
     const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-    const g = S3.scale || 1;
+    const g = styleScale(b);
     const role = b.role || "house";
     const big = role === "marine_base" || role === "palace" || role === "hall" || role === "church";
     const rt = b.roofType || "gable";
@@ -55951,7 +55952,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const c = ["#e74c3c", "#3498db", "#27ae60", "#f39c12", "#9b59b6", "#16a085"][(b.v || 0) % 6];
       k.add(box(Math.min(fw - 0.6, dw + 2.4), 0.06, 1), { at: [dx, dd.top + 0.52, 0.42], rot: [0.42, 0, 0], color: mix(c, "#ffffff", 0.4) });
     }
-    if (S3.engawa) B2(k, x0, -0.5, 0, x1, 0.4, 0.88, "#8d6e4a");
+    if (S3.engawa) B2(k, x0, -Math.max(0.5, sink), 0, x1, 0.4, 0.88, "#8d6e4a");
     if (b.role === "marine_base" || b.style === "marine" && fw >= 6) B2(k, x0 - 0.01, H3 - 1.15, -0.2, x1 + 0.01, H3 - 0.35, 0.05, "#f5f6fa");
     if (S3.wall === "column") B2(k, x0, H3 - 0.5, 0.05, x1, H3 - 0.12, 0.4, "#b03a2e");
     if (rt === "flat") {
@@ -56429,9 +56430,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       for (const c of b.cols || []) w.removeCol(c);
       if (b.doorCol) w.removeCol(b.doorCol);
       if (b.floor) w.removeFloor(b.floor);
+      if (b.stepsFloor) w.removeFloor(b.stepsFloor);
       b.cols = null;
       b.doorCol = null;
       b.floor = null;
+      b.stepsFloor = null;
       b.furnished = false;
     }
     remove(obj) {
@@ -57653,8 +57656,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function simple(o, ctx, key2, geo2, opts = {}) {
     const part5 = { key: key2, geo: geo2, tinted: !!opts.color, color: opts.color ? C(opts.color).clone() : null, castShadow: opts.castShadow !== false, local: opts.local };
     const yaw = opts.yaw ?? (opts.randomYaw ? hash3(o.x, o.y) * Math.PI * 2 : 0);
-    return instanced(o, ctx, [part5, ...opts.more || []], { yaw, scale: opts.scale ?? (o.s || 1) });
+    return instanced(o, ctx, [part5, ...opts.more || []], { yaw, scale: opts.scale ?? (o.s || 1), y: opts.y });
   }
+  function footY(o, ctx, feet2, yaw = 0, s = o.s || 1) {
+    if (!ctx?.ground) return void 0;
+    const c = Math.cos(yaw), sn = Math.sin(yaw);
+    let lo = ctx.ground(o.x, o.y);
+    for (const [lx, lz] of feet2) lo = Math.min(lo, ctx.ground(o.x + (lx * c + lz * sn) * s, o.y + (-lx * sn + lz * c) * s));
+    return lo;
+  }
+  var postFeet = (x, z, h2) => [[x, z], [x - h2, z - h2], [x + h2, z - h2], [x - h2, z + h2], [x + h2, z + h2]];
   var jitterYaw = (o, amt = 0.25) => (hash3(o.x, o.y, 5) - 0.5) * amt;
   var WOOD2 = "#8d6e4a";
   var DARK_WOOD = "#5d4037";
@@ -58734,8 +58745,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var toriiGeo = () => model("torii", (k) => {
     const red = "#c0392b", black = "#2d3436";
     for (const s of [-1, 1]) {
-      k.add(cyl(0.2, 0.24, 4.3, 12), { at: [s * 1.55, 0, 0], color: red, outline: 0.03 });
-      k.add(cyl(0.3, 0.32, 0.45, 12), { at: [s * 1.55, -0.1, 0], color: black });
+      k.add(cyl(0.2, 0.24, 5, 12), { at: [s * 1.55, -0.7, 0], color: red, outline: 0.03 });
+      k.add(cyl(0.3, 0.32, 1.05, 12), { at: [s * 1.55, -0.7, 0], color: black });
     }
     k.add(box(3.9, 0.26, 0.3), { at: [0, 3.25, 0], color: red, outline: 0.02 });
     k.add(box(0.28, 0.72, 0.24), { at: [0, 3.5, 0], color: red });
@@ -58749,7 +58760,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.add(cbox(5.25 / (n - 1) + 0.08, 0.18, 0.56), { at: [x - Math.sin(ang) * 0.23, y + Math.cos(ang) * 0.23, 0], rot: [0, 0, ang], color: black });
     }
   });
-  reg2("torii", (o, ctx) => simple(o, ctx, "torii", toriiGeo(), { yaw: 0 }));
+  var TORII_FEET = [...postFeet(-1.55, 0, 0.32), ...postFeet(1.55, 0, 0.32)];
+  reg2("torii", (o, ctx) => simple(o, ctx, "torii", toriiGeo(), { yaw: 0, y: footY(o, ctx, TORII_FEET) }));
   var scaffoldGeo = () => model("platform-exec", (k) => {
     const wood = "#7b5e3b", dark = "#4e3a22";
     k.add(box(3.4, 2.5, 2.6), { at: [0, -0.3, -0.2], color: wood, outline: 0.035 });
@@ -58808,11 +58820,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(cyl(0.12 * s, 0.12 * s, 0.3 * s, 8), { at: [0, 2.12 * s, 0], color: "#b7950b" });
     k.restore();
     const top = (big ? 1.2 : 1) + 2.45 * s;
-    for (const sx of [-1, 1]) k.add(box(0.3 * s + 0.08, top + 0.2, 0.3 * s + 0.08), { at: [sx * (1.35 * s + 0.2), 0, 0], color: frame2, outline: 0.03 });
+    for (const sx of [-1, 1]) k.add(box(0.3 * s + 0.08, top + 0.8, 0.3 * s + 0.08), { at: [sx * (1.35 * s + 0.2), -0.6, 0], color: frame2, outline: 0.03 });
     k.add(box(2.9 * s + 0.7, 0.3 * s + 0.1, 0.4 * s + 0.1), { at: [0, top + 0.1, 0], color: frame2, outline: 0.02 });
     if (big) for (const sx of [-1, 1]) k.add(cone(0.35, 0.5, 4), { at: [sx * 1.9, top + 0.4, 0], rot: [0, Math.PI / 4, 0], color: frame2 });
   });
-  reg2("bell", (o, ctx) => simple(o, ctx, "bell:" + (/harbou?r/i.test(o.name || "") ? 0 : 1), bellGeo(/harbou?r/i.test(o.name || "") ? 0 : 1), { yaw: 0 }));
+  var bellFeet = (big) => {
+    const s = big ? 1 : 0.32, x = 1.35 * s + 0.2, h2 = (0.3 * s + 0.08) / 2;
+    return [...postFeet(-x, 0, h2), ...postFeet(x, 0, h2)];
+  };
+  reg2("bell", (o, ctx) => {
+    const big = /harbou?r/i.test(o.name || "") ? 0 : 1;
+    return simple(o, ctx, "bell:" + big, bellGeo(big), { yaw: 0, y: footY(o, ctx, bellFeet(big)) });
+  });
   var poneglyphGeo = (red) => model("poneglyph:" + red, (k) => {
     const stone = red ? "#8e2b22" : "#37474f", light = red ? "#ffcdb4" : "#c8e6f0";
     k.add(box(2.6, 0.35, 2.4), { at: [0, -0.2, 0], color: red ? "#6e5a50" : "#5d6468", outline: 0.025 });
@@ -62669,9 +62688,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (this.climb) return;
       this.updateDeck(game);
       if (!this.vz && !(this.z > 0.02)) this.updateWater(dt, game);
-      const sp = Math.hypot(this.vx, this.vy);
+      const sp = Math.min(Math.hypot(this.vx, this.vy), this.went ?? Infinity);
       this.moving = sp > 0.4;
       this.speed = sp;
+      if (this.moving && !this.isPlayer && !this.action && !this.controller?.target && !(this.hitstun > 0) && Math.hypot(this.kb.x, this.kb.y) < 0.5 && this.wentDir !== void 0) {
+        this.facing += angleDiff(this.facing, this.wentDir) * Math.min(1, dt * 12);
+      }
       if (this.moving) this.walk += dt * TAU * gaitCadence(sp / (this.look?.scale || 1), this.intent.sprint);
     }
     updateStatus(dt, game) {
@@ -62801,6 +62823,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
       if (!this.passable(w, x - r, y) || !this.passable(w, x + r, y) || !this.passable(w, x, y - r) || !this.passable(w, x, y + r)) return false;
+      const body = 0.24 * Math.min(3, this.look?.scale || 1);
+      if (body > r * 0.9 && w.hitsProp(x, y, body, true) && !w.hitsProp(this.x, this.y, body, true)) return false;
       return !w.hitsProp(x, y, r * 0.9);
     }
     /** Where feet rest at (x, y) off a deck: the ground, a pier or a quay — over the sea, its surface. */
@@ -63139,7 +63163,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           vy += cur.y * 0.85;
         }
       }
+      const x0 = this.x, y0 = this.y;
       this.moveBy(w, vx * dt, vy * dt);
+      const gx = w.dx(x0, this.x), gy = this.y - y0;
+      this.went = dt > 0 ? Math.hypot(gx, gy) / dt : 0;
+      if (this.went > 0.3) this.wentDir = Math.atan2(gy, gx);
     }
     moveBy(w, dx, dy) {
       const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 0.2));
@@ -85761,7 +85789,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         return;
       }
       if (!this.target) {
-        if (this.kind === "patrol" || this.kind === "hostile" && this.home && Math.random() < 0.3) this.wander(a, dt, game, true);
+        if (this.kind === "patrol" || this.kind === "hostile" && this.home && (this.roams ?? (this.roams = Math.random() < 0.3))) this.wander(a, dt, game, true);
         return;
       }
       const t = this.target;
@@ -85991,22 +86019,39 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lastX = a.x;
       this.lastY = a.y;
     }
-    wander(a, dt, game, combatant) {
-      if (this.state === "flee" && this.fleeFrom) {
-        this.fleeT -= dt;
-        const dx = game.world.dx(this.fleeFrom.x, a.x), dy = a.y - this.fleeFrom.y;
-        const d = Math.hypot(dx, dy) || 1;
-        a.intent.mx = dx / d;
-        a.intent.my = dy / d;
-        a.intent.sprint = true;
-        a.facing = Math.atan2(dy, dx);
-        if (this.fleeT <= 0) {
-          this.state = "idle";
-          this.fleeFrom = null;
-        }
-        this.avoidStuck(a, dt, game);
+    /**
+     * Running from a fight (or a burglar): to somewhere clear and away from
+     * them, the way people really go — round the furniture, and out of the
+     * door if they aren't between you and it — cowering, facing them, when
+     * there's nowhere further to go. (Never flat out in a straight line away
+     * from them, into the nearest wall.)
+     */
+    flee(a, dt, game) {
+      const w = game.world, f = this.fleeFrom;
+      this.fleeT -= dt;
+      if (f && a.homeB && w.interiorAt(f.x, f.y) !== a.homeB && w.distance(a.x, a.y, f.x, f.y) > 10) this.fleeT = Math.min(this.fleeT, 0.5);
+      if (this.fleeT <= 0 || !f) {
+        this.state = "idle";
+        this.fleeFrom = null;
+        this.fleeTo = null;
         return;
       }
+      if ((this.fleePick = (this.fleePick || 0) - dt) <= 0) {
+        this.fleePick = 0.8 + Math.random() * 0.4;
+        this.fleeTo = fleeSpot(a, f, game, this.fleeTo);
+      }
+      const to = this.fleeTo;
+      const d = to ? this.moveToward(a, to.x, to.y, game) : 0;
+      if (!to || d < 0.5) {
+        a.intent.mx = 0;
+        a.intent.my = 0;
+        a.facing = Math.atan2(f.y - a.y, w.dx(a.x, f.x));
+        return;
+      }
+      a.intent.sprint = d > 2;
+    }
+    wander(a, dt, game, combatant) {
+      if (this.state === "flee" && this.fleeFrom) return this.flee(a, dt, game);
       if (!this.home) this.home = { x: a.x, y: a.y };
       this.wanderT -= dt;
       if (this.wanderT <= 0) {
@@ -86125,6 +86170,44 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
   };
+  function fleeSpot(a, f, game, cur) {
+    const w = game.world, B4 = game.buildings;
+    const from = (p) => Math.hypot(w.dx(f.x, p.x), p.y - f.y);
+    const b = w.interiorAt(a.x, a.y);
+    if (b && B4) {
+      const dp = B4.doorPts(b);
+      const mine = Math.hypot(w.dx(a.x, dp.mid.x), dp.mid.y - a.y);
+      if (w.interiorAt(f.x, f.y) === b && from(dp.mid) > mine + 1.2 && (!B4.isLocked(b) || a.homeB === b || b.doorOpen)) {
+        for (const z of [4, 2.5]) {
+          const q2 = bw(b, dp.lx, z), p = { x: w.wx(q2.x), y: q2.y };
+          if (standable(w, p.x, p.y, a.r) && !w.interiorAt(p.x, p.y)) return p;
+        }
+      }
+      const R4 = interiorRect(b);
+      let best = null, bd = -Infinity;
+      for (let i = 0; i < 16; i++) {
+        const p = { x: R4.x0 + 0.45 + Math.random() * Math.max(0, R4.x1 - R4.x0 - 0.9), y: R4.y0 + 0.45 + Math.random() * Math.max(0, R4.y1 - R4.y0 - 0.9) };
+        if (!B4.freeAt(b, p.x, p.y, 0.4)) continue;
+        const s = from(p);
+        if (s > bd) {
+          bd = s;
+          best = p;
+        }
+      }
+      if (cur && w.interiorAt(cur.x, cur.y) === b && from(cur) > bd - 0.6) return cur;
+      return best;
+    }
+    if (cur && !w.interiorAt(cur.x, cur.y) && from(cur) > from(a) + 2 && Math.hypot(w.dx(a.x, cur.x), cur.y - a.y) > 1) return cur;
+    const away = Math.atan2(a.y - f.y, w.dx(f.x, a.x));
+    for (const off of [0, 0.45, -0.45, 0.9, -0.9, 1.35, -1.35, 1.8, -1.8]) {
+      for (const L2 of [7, 4]) {
+        const x = w.wx(a.x + Math.cos(away + off) * L2), y = a.y + Math.sin(away + off) * L2;
+        if (w.interiorAt(x, y)) continue;
+        if (standable(w, x, y, a.r) && clearLine(w, a.x, a.y, x, y, a.r * 0.85)) return { x, y };
+      }
+    }
+    return null;
+  }
 
   // src/game/interact.js
   function findInteraction(game, p) {
@@ -89494,8 +89577,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
   var WOMEN = /\b(Makino|Dadan|Alvida|Rika|Kaya|Nojiko|Bell-?m[eè]re|Tashigi|Kuina|Nami|Robin|Vivi|Kureha|Conis|Laki|Aisa|Hina|Isuka|Hancock|Sandersonia|Marigold|Nyon|Perona|Kalifa|Bonney|Shirahoshi|Otohime|Shyarly|Big Mom|Linlin|Pudding|Smoothie|Br[uû]l[eé]e|Galette|Flampe|Praline|Amande|Chiffon|Lola|Viola|Rebecca|Monet|Baby 5|Koala|Carrot|Wanda|Yamato|Hiyori|Kiku|Tama|Ulti|Black Maria|Sugar|Kokoro|Chimney|Shakky|Valentine|Doublefinger|Goldenweek|All ?Sunday|Merry ?Christmas|Paula|Porche|Cindry|Stussy|Lilith|Jewelry|Catarina|Tsuru|Gion|Momousagi|Olvia|Toki|Rouge|Uta|Betty|Hibari|Carina|Mozu|Kiwi|Ishley|Nico)\b/i;
   var ROLE_OF = { pirate: "pirate", bandit: "bandit", marine: "marine", cp: "agent", baroque: "agent", rival: "swordsman", beast: "beast", fishman: "fishman" };
-  function makeNPC(def, x, y, extra = {}) {
-    const L2 = def.level ?? 6;
+  function npcLook(def) {
     let role = def.role || (def.beast || def.faction === "beast" ? "beast" : ROLE_OF[def.faction]) || "civilian";
     if (role === "marine" && (def.look?.coat || def.boss || def.named)) role = "officer";
     const lookOver = { ...def.look || {}, role };
@@ -89505,6 +89587,50 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const look = def.fullLook ? { ...def.fullLook } : makeLook(def.race || "human", def.seed ?? hashSeed(def.id || def.name), lookOver);
     if (def.bulk) look.bulk = def.bulk;
     if (def.scale) look.scale = def.scale;
+    return look;
+  }
+  function standingHeight(look) {
+    const d = dims(look);
+    return (d.hip0 + d.chestLen + d.neck + d.hc + d.headR * 1.05) * (look.scale || 1) + 0.12;
+  }
+  function buildingOf(island, def) {
+    if (typeof def.at === "function") return null;
+    const pl = def.at || {};
+    if (pl.spot && island.spots[pl.spot]) return null;
+    const walkIn2 = (b) => b?.enterable ? b : null;
+    for (const town of island.towns) {
+      if (pl.town && town.id !== pl.town) continue;
+      if (pl.dock || pl.door) return null;
+      if (pl.building) {
+        const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
+        if (b) return walkIn2(b);
+      }
+      if (pl.plaza || !pl.building && !pl.dx && !pl.door || pl.town && !pl.dx) return null;
+    }
+    for (const town of island.towns) {
+      const b = town.buildings.find((x) => x.npc === def.id);
+      if (b) return walkIn2(b);
+    }
+    return null;
+  }
+  function sizeBuildingsForOccupants(world) {
+    for (const def of NPC_DEFS.values()) {
+      const island = world.islands.find((i) => i.id === def.island);
+      const b = island && buildingOf(island, def);
+      if (!b) continue;
+      const need = (standingHeight(npcLook(def)) + 0.3) / 2.75;
+      if (need <= styleScale(b) + 0.01) continue;
+      b.tall = Math.round(need * 20) / 20 + 0.05;
+      delete b._layout;
+      if (world.objects) {
+        world.objects.removeInterior(b);
+        world.objects.addInterior(b);
+      }
+    }
+  }
+  function makeNPC(def, x, y, extra = {}) {
+    const L2 = def.level ?? 6;
+    const look = npcLook(def);
     const attrs = def.attrs || { str: L2, agi: L2, end: L2, vit: L2, wil: L2 };
     const a = new Actor({
       x,
@@ -94563,11 +94689,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             const q2 = bl(b, a.x, a.y, w);
             const dx = Math.abs(q2.lx - d.lx), dy = Math.abs(q2.lz + WALL_T / 2);
             if (b.doorOpen && dx < d.dw / 2 + a.r && dy < WALL_T / 2 + a.r - 0.08) blocking = true;
-            const allowed = a.isPlayer ? !locked || B4.inside(a, b) : !locked || a.homeB === b && a.moving;
-            if (allowed && a.state !== "knocked" && (dx < 1.2 && dy < 1.5)) want = true;
+            const through = a.isPlayer || a.doorway?.b === b && game.time - a.doorway.t < 0.6;
+            const allowed = a.isPlayer ? !locked || B4.inside(a, b) : !locked || a.homeB === b;
+            if (through && allowed && a.state !== "knocked" && dx < 1.2 && dy < 1.5) want = true;
           }
         }
         if (blocking) want = true;
+        if (want) b.doorHold = 0.7;
+        else if (b.doorOpen && (b.doorHold = (b.doorHold || 0) - dt) > 0) want = true;
         if (want !== !!b.doorOpen) {
           b.doorOpen = want;
           if (want && b.doorCol) {
@@ -94635,7 +94764,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
               if (a.controller && !a.keeper) {
                 a.controller.state = "flee";
                 a.controller.fleeFrom = game.player;
-                a.controller.fleeT = 6;
+                a.controller.fleeT = 25;
+                a.controller.fleeTo = null;
+                a.controller.fleePick = 0;
               }
             }
             raiseAlarm(game, d.mid.x, d.mid.y, "Burglar");
@@ -94667,6 +94798,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         const ba = w.interiorAt(a.x, a.y), bt = w.interiorAt(tx, ty);
         if (ba === bt) return null;
         const b = ba || bt;
+        a.doorway = { b, t: game.time };
         const d = B4.doorPts(b);
         const q2 = bl(b, a.x, a.y, w);
         const ax = Math.abs(q2.lx - d.lx);
@@ -94806,9 +94938,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   function keeper(game, b, L2, town, island, rng4, list, spawner, room) {
     const p = worldPt(b, L2.keeper.x, L2.keeper.z);
     const marine2 = room === "marine";
-    const race = rng4.weighted(island.def.population || townRaces(island));
     const over = marine2 ? { role: "officer", top: "#ffffff", bottom: "#1b4f72", hat: "marine", coat: "#fafafa", coatText: "JUSTICE" } : { ...civilianOutfit(town.style, rng4), ...KEEPER_LOOK[room] || {} };
-    const look = makeLook(race, rng4.int(1, 1e9), over);
+    const { race, look } = indoorLook(b, rng4.weighted(island.def.population || townRaces(island)), rng4.int(1, 1e9), over);
     const a = spawner.spawn({
       x: p.x,
       y: p.y,
@@ -94828,8 +94959,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   }
   function resident(game, b, s, town, island, rng4, list, spawner, patron = false) {
     const p = worldPt(b, s.x, s.z);
-    const race = rng4.weighted(island.def.population || townRaces(island));
-    const look = makeLook(race, rng4.int(1, 1e9), civilianOutfit(town.style, rng4));
+    const { race, look } = indoorLook(b, rng4.weighted(island.def.population || townRaces(island)), rng4.int(1, 1e9), civilianOutfit(town.style, rng4));
     const a = spawner.spawn({
       x: p.x,
       y: p.y,
@@ -94870,9 +95000,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       a.calm = true;
       a.controller.aggroRange = 5;
       a.controller.leash = 7;
+      a.wanderBox = interiorRect(b);
       game.addActor(a);
       list.push(a);
     }
+  }
+  function indoorLook(b, race, seed, over) {
+    const look = makeLook(race, seed, over);
+    if (race === "human" || standingHeight(look) + 0.15 <= heightsOf(b).ceil) return { race, look };
+    return { race: "human", look: makeLook("human", seed, over) };
   }
   function settle(a, b, face) {
     a.homeB = b;
@@ -95036,7 +95172,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
     }
     if (!day || clock >= 20) {
-      for (const t of S3.tavern.slice(0, 2)) if (rng4.next() < 0.6) start(game, spawnFolk(game, town, isl, rng4, list, { x: t.x + 1.4, y: t.y + 0.8 }), { kind: "drunk", t: rng4.range(60, 200) }, true);
+      for (const t of S3.tavern.slice(0, 2)) if (rng4.next() < 0.6) start(game, spawnFolk(game, town, isl, rng4, list, bw(t.b, doorLocalX(t.b) + 1.4, 1.75)), { kind: "drunk", t: rng4.range(60, 200) }, true);
     }
     const n = Math.round(crowdOf(town) * outShare(clock));
     for (let i = 0; i < n; i++) {
@@ -95061,18 +95197,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           const a = folk.find((x) => x.activity?.kind !== "goHome" && x.state === "idle");
           const door = a && nearest(game, S3.door, a);
           if (door) {
-            start(game, a, { kind: "goHome", to: door, t: 90 });
+            start(game, a, { kind: "goHome", to: indoors(game, door), t: 90 });
             a.homeB = door.b;
           }
         } else if (folk.length < want - 1 && S3.door.length) {
           const rng4 = new RNG(Math.floor(game.time * 1e3) + folk.length);
           const d = rng4.pick(S3.door);
           if (game.world.distance(d.x, d.y, game.player.x, game.player.y) < 70) {
-            const a = spawnFolk(game, town, isl, rng4, list, d);
+            const a = spawnFolk(game, town, isl, rng4, list, indoors(game, d));
             a.homeB = d.b;
-            setTimeout(() => {
-              if (a.homeB === d.b) a.homeB = null;
-            }, 4e3);
             const act2 = pick2(game, a);
             if (act2) start(game, a, act2);
           }
@@ -95081,7 +95214,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           for (const a of list) if (a.alive && a.town === town && a.activity?.kind === "vend") {
             const door = nearest(game, S3.door, a);
             if (door) {
-              start(game, a, { kind: "goHome", to: door, t: 90 });
+              start(game, a, { kind: "goHome", to: indoors(game, door), t: 90 });
               a.homeB = door.b;
             }
           }
@@ -95193,9 +95326,22 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     a.act3d = P4 ? { pose: P4, prop, h: spot?.h ?? (act2.kind === "sit" ? 0.45 : 0) } : null;
     a.faceHome = a.facing;
   }
+  function atHome(a, ai, b) {
+    a.townsfolk = false;
+    a.homeB = b;
+    a.wanderRadius = 1.2;
+    a.wanderBox = interiorRect(b);
+    ai.kind = "wander";
+    ai.home = { x: a.x, y: a.y };
+    ai.wanderTo = null;
+  }
+  function indoors(game, door) {
+    return door.b?.enterable && game.buildings ? game.buildings.doorPts(door.b).in : door;
+  }
   function stop(a) {
     const act2 = a.activity;
     if (!act2) return;
+    if (act2.kind === "goHome") a.homeB = null;
     if (act2.spot?.taken === a) act2.spot.taken = null;
     if (act2.phase === "do" && act2.spot?.stand) {
       a.x = act2.spot.stand.x;
@@ -95223,6 +95369,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       return ai.wander(a, dt, game);
     }
     let act2 = a.activity;
+    if (a.homeB && act2?.kind !== "goHome" && !w.interiorAt(a.x, a.y)) a.homeB = null;
     if (!act2) {
       act2 = pick2(game, a);
       if (!act2) return ai.wander(a, dt, game);
@@ -95239,7 +95386,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       act2.goT += dt;
       if (d < 0.45 || act2.goT > 40) {
         if (act2.kind === "goHome") {
-          a.alive = false;
+          const b = a.homeB;
+          if (b && p && w.interiorAt(p.x, p.y) === b) {
+            stop(a);
+            atHome(a, ai, b);
+          } else a.alive = false;
           return;
         }
         if (act2.kind === "stroll") {
@@ -123531,6 +123682,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     }
     installFruits(game);
     for (const p of PACKS) if (p.install) p.install(game);
+    if (game.surface) sizeBuildingsForOccupants(game.surface);
   }
 
   // src/audio/audio.js
@@ -125387,6 +125539,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (!cache4.has(id)) {
         const w = generateZoneWorld(ZONES[id]);
         w.fog.fill(255);
+        sizeBuildingsForOccupants(w);
         cache4.set(id, w);
       }
       return cache4.get(id);
@@ -126711,6 +126864,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       debug: {
         npcDef,
         allNpcDefs,
+        standingHeight,
         VIEWS,
         builders: PROP_BUILDERS,
         makeNPC,

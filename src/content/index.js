@@ -3,7 +3,7 @@
 //   { id, npcs, groups, quests, items, trainers, stock, archetypes, abilities, dynamicIds, install(game) }
 // Registries (items, trainers, shop stock, enemy archetypes, abilities) are
 // merged as soon as this module loads so every system sees them.
-import { registerNPCs, registerGroups, ARCHETYPES } from '../game/npcs.js';
+import { registerNPCs, registerGroups, ARCHETYPES, sizeBuildingsForOccupants } from '../game/npcs.js';
 import { registerQuests } from '../game/quests.js';
 import { registerAbilities } from '../game/abilities.js';
 import { ITEMS } from '../data/items.js';
@@ -41,4 +41,6 @@ export function installContent(game) {
   }
   installFruits(game);
   for (const p of PACKS) if (p.install) p.install(game);
+  // (the houses of very tall people are built to fit them: see npcs.js)
+  if (game.surface) sizeBuildingsForOccupants(game.surface);
 }

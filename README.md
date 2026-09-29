@@ -297,6 +297,15 @@ rearrange them.
     grips. Your head turns as far as a neck turns to where you look; look
     further back over your shoulder than that and your body is left out of
     the view.
+- **People at home.** A door opens for whoever is on their way through it
+  (you, someone heading home or coming out) and swings shut a moment after
+  they're through, not for everyone who walks past the house. Kick a door in
+  and the people inside keep clear of you: to the far side of the room, or
+  out of the door once you aren't between them and it. Nobody runs on the
+  spot into a wall (arms and knees through it): pressed against one, you
+  stand still, and people look the way they're really going. A house kept by
+  someone very tall (Kuma's church, Jerry's boxing gym) is built taller to
+  fit them, doorway and ceiling and all.
 - **Reputation** (from Villain to Hero of the Seas):
   - Crimes lower it: stealing from shops, breaking into houses, picking
     pockets, beating townsfolk, sinking merchants. At **Outlaw (-25)** the

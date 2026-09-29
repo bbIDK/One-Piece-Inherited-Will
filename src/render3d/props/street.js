@@ -27,8 +27,23 @@ export function model(key, fn) {
 export function simple(o, ctx, key, geo, opts = {}) {
   const part = { key, geo, tinted: !!opts.color, color: opts.color ? C(opts.color).clone() : null, castShadow: opts.castShadow !== false, local: opts.local };
   const yaw = opts.yaw ?? (opts.randomYaw ? hash(o.x, o.y) * Math.PI * 2 : 0);
-  return instanced(o, ctx, [part, ...(opts.more || [])], { yaw, scale: opts.scale ?? (o.s || 1) });
+  return instanced(o, ctx, [part, ...(opts.more || [])], { yaw, scale: opts.scale ?? (o.s || 1), y: opts.y });
 }
+
+/**
+ * The ground under the lowest of a prop's feet (points [x, z] in its own
+ * frame, turned and scaled as its model is): stood at that height, none of
+ * its legs hangs in the air on a slope (the others run on into the ground).
+ */
+export function footY(o, ctx, feet, yaw = 0, s = o.s || 1) {
+  if (!ctx?.ground) return undefined;
+  const c = Math.cos(yaw), sn = Math.sin(yaw);
+  let lo = ctx.ground(o.x, o.y);
+  for (const [lx, lz] of feet) lo = Math.min(lo, ctx.ground(o.x + (lx * c + lz * sn) * s, o.y + (-lx * sn + lz * c) * s));
+  return lo;
+}
+/** The corners (and middle) of a square post's foot, `h` its half-width, at (x, z). */
+export const postFeet = (x, z, h) => [[x, z], [x - h, z - h], [x + h, z - h], [x - h, z + h], [x + h, z + h]];
 
 const jitterYaw = (o, amt = 0.25) => (hash(o.x, o.y, 5) - 0.5) * amt;
 

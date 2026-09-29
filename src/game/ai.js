@@ -7,7 +7,9 @@
 //   boss     – hostile + phase scripts
 import { angleDiff, clamp, TAU } from '../core/math.js';
 import { placeOnDeck, freeDeckSpot, crewStation } from './decks.js';
-import { clearLine, findPath } from './path.js';
+import { clearLine, findPath, standable } from './path.js';
+import { interiorRect } from '../world/interiors.js';
+import { bw } from '../world/bframe.js';
 import { getAbility, canUse } from './abilities.js';
 import { hostile } from './entity.js';
 import { regionAt, REGION, isBlue } from '../world/constants.js';
@@ -236,7 +238,8 @@ export class AIController {
       return;
     }
     if (!this.target) {
-      if (this.kind === 'patrol' || (this.kind === 'hostile' && this.home && Math.random() < 0.3)) this.wander(a, dt, game, true);
+      // (some of a crew at ease stroll about where they are; the rest stay put)
+      if (this.kind === 'patrol' || (this.kind === 'hostile' && this.home && (this.roams ??= Math.random() < 0.3))) this.wander(a, dt, game, true);
       return;
     }
     const t = this.target;
@@ -409,17 +412,35 @@ export class AIController {
     this.lastX = a.x; this.lastY = a.y;
   }
 
-  wander(a, dt, game, combatant) {
-    if (this.state === 'flee' && this.fleeFrom) {
-      this.fleeT -= dt;
-      const dx = game.world.dx(this.fleeFrom.x, a.x), dy = a.y - this.fleeFrom.y;
-      const d = Math.hypot(dx, dy) || 1;
-      a.intent.mx = dx / d; a.intent.my = dy / d; a.intent.sprint = true;
-      a.facing = Math.atan2(dy, dx);
-      if (this.fleeT <= 0) { this.state = 'idle'; this.fleeFrom = null; }
-      this.avoidStuck(a, dt, game);
+  /**
+   * Running from a fight (or a burglar): to somewhere clear and away from
+   * them, the way people really go — round the furniture, and out of the
+   * door if they aren't between you and it — cowering, facing them, when
+   * there's nowhere further to go. (Never flat out in a straight line away
+   * from them, into the nearest wall.)
+   */
+  flee(a, dt, game) {
+    const w = game.world, f = this.fleeFrom;
+    this.fleeT -= dt;
+    // (a burglar who's left the house and gone off is no longer anything to run from)
+    if (f && a.homeB && w.interiorAt(f.x, f.y) !== a.homeB && w.distance(a.x, a.y, f.x, f.y) > 10) this.fleeT = Math.min(this.fleeT, 0.5);
+    if (this.fleeT <= 0 || !f) { this.state = 'idle'; this.fleeFrom = null; this.fleeTo = null; return; }
+    if ((this.fleePick = (this.fleePick || 0) - dt) <= 0) {
+      this.fleePick = 0.8 + Math.random() * 0.4;
+      this.fleeTo = fleeSpot(a, f, game, this.fleeTo);
+    }
+    const to = this.fleeTo;
+    const d = to ? this.moveToward(a, to.x, to.y, game) : 0;
+    if (!to || d < 0.5) {
+      a.intent.mx = 0; a.intent.my = 0;
+      a.facing = Math.atan2(f.y - a.y, w.dx(a.x, f.x));
       return;
     }
+    a.intent.sprint = d > 2;
+  }
+
+  wander(a, dt, game, combatant) {
+    if (this.state === 'flee' && this.fleeFrom) return this.flee(a, dt, game);
     if (!this.home) this.home = { x: a.x, y: a.y };
     this.wanderT -= dt;
     if (this.wanderT <= 0) {
@@ -523,4 +544,48 @@ export class AIController {
     }
     void clamp; void angleDiff; void TAU;
   }
+}
+
+/**
+ * Where to run from `f`: out of the house if the way to its door is clear of
+ * them, else the far side of the room, on clear floor; out of doors, clear
+ * ground away from them (off to one side if straight away is blocked).
+ * Null: cornered. (`cur`, where they were already running, is kept while
+ * it's as good.)
+ */
+function fleeSpot(a, f, game, cur) {
+  const w = game.world, B = game.buildings;
+  const from = (p) => Math.hypot(w.dx(f.x, p.x), p.y - f.y);
+  const b = w.interiorAt(a.x, a.y);
+  if (b && B) {
+    const dp = B.doorPts(b);
+    const mine = Math.hypot(w.dx(a.x, dp.mid.x), dp.mid.y - a.y);
+    // (a fight out in the street: stay in, away from it; someone in here with you: out, if you can get past them)
+    if (w.interiorAt(f.x, f.y) === b && from(dp.mid) > mine + 1.2 && (!B.isLocked(b) || a.homeB === b || b.doorOpen)) {
+      for (const z of [4, 2.5]) {
+        const q = bw(b, dp.lx, z), p = { x: w.wx(q.x), y: q.y };
+        if (standable(w, p.x, p.y, a.r) && !w.interiorAt(p.x, p.y)) return p;
+      }
+    }
+    const R = interiorRect(b);
+    let best = null, bd = -Infinity;
+    for (let i = 0; i < 16; i++) {
+      const p = { x: R.x0 + 0.45 + Math.random() * Math.max(0, R.x1 - R.x0 - 0.9), y: R.y0 + 0.45 + Math.random() * Math.max(0, R.y1 - R.y0 - 0.9) };
+      if (!B.freeAt(b, p.x, p.y, 0.4)) continue;
+      const s = from(p);
+      if (s > bd) { bd = s; best = p; }
+    }
+    if (cur && w.interiorAt(cur.x, cur.y) === b && from(cur) > bd - 0.6) return cur;
+    return best;
+  }
+  if (cur && !w.interiorAt(cur.x, cur.y) && from(cur) > from(a) + 2 && Math.hypot(w.dx(a.x, cur.x), cur.y - a.y) > 1) return cur;
+  const away = Math.atan2(a.y - f.y, w.dx(f.x, a.x));
+  for (const off of [0, 0.45, -0.45, 0.9, -0.9, 1.35, -1.35, 1.8, -1.8]) {
+    for (const L of [7, 4]) {
+      const x = w.wx(a.x + Math.cos(away + off) * L), y = a.y + Math.sin(away + off) * L;
+      if (w.interiorAt(x, y)) continue; // (not into somebody else's house)
+      if (standable(w, x, y, a.r) && clearLine(w, a.x, a.y, x, y, a.r * 0.85)) return { x, y };
+    }
+  }
+  return null;
 }

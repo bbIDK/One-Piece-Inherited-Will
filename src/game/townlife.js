@@ -6,7 +6,7 @@
 // of the pier. Children play tag. At dusk people drift home through their
 // front doors, the streets empty out and a drunk or two wobbles outside the
 // tavern; in the morning they come out again.
-import { doorOf, isEnterable, doorLocalX } from '../world/interiors.js';
+import { doorOf, isEnterable, doorLocalX, interiorRect } from '../world/interiors.js';
 import { bw, bfacing } from '../world/bframe.js';
 import { makeLook } from '../data/races.js';
 import { civilianOutfit, randomName, townRaces } from './spawner.js';
@@ -165,7 +165,8 @@ function populate(game, town, isl, rng, list, ctx) {
     }
   }
   if (!day || clock >= 20) {
-    for (const t of S.tavern.slice(0, 2)) if (rng.next() < 0.6) start(game, spawnFolk(game, town, isl, rng, list, { x: t.x + 1.4, y: t.y + 0.8 }), { kind: 'drunk', t: rng.range(60, 200) }, true);
+    // (beside the door, out front — whichever way the tavern faces)
+    for (const t of S.tavern.slice(0, 2)) if (rng.next() < 0.6) start(game, spawnFolk(game, town, isl, rng, list, bw(t.b, doorLocalX(t.b) + 1.4, 1.75)), { kind: 'drunk', t: rng.range(60, 200) }, true);
   }
   const n = Math.round(crowdOf(town) * outShare(clock));
   for (let i = 0; i < n; i++) {
@@ -192,21 +193,21 @@ function routines(game) {
         // someone heads home
         const a = folk.find((x) => x.activity?.kind !== 'goHome' && x.state === 'idle');
         const door = a && nearest(game, S.door, a);
-        if (door) { start(game, a, { kind: 'goHome', to: door, t: 90 }); a.homeB = door.b; }
+        if (door) { start(game, a, { kind: 'goHome', to: indoors(game, door), t: 90 }); a.homeB = door.b; }
       } else if (folk.length < want - 1 && S.door.length) {
         // someone comes out of their front door
         const rng = new RNG(Math.floor(game.time * 1000) + folk.length);
         const d = rng.pick(S.door);
         if (game.world.distance(d.x, d.y, game.player.x, game.player.y) < 70) {
-          const a = spawnFolk(game, town, isl, rng, list, d);
-          a.homeB = d.b; // their door opens to let them out
-          setTimeout(() => { if (a.homeB === d.b) a.homeB = null; }, 4000);
+          // (from just inside: they come out through the door, which opens for them)
+          const a = spawnFolk(game, town, isl, rng, list, indoors(game, d));
+          a.homeB = d.b;
           const act = pick(game, a);
           if (act) start(game, a, act);
         }
       }
       // stallholders pack up at dusk
-      if (clock >= 19 || clock < 6) for (const a of list) if (a.alive && a.town === town && a.activity?.kind === 'vend') { const door = nearest(game, S.door, a); if (door) { start(game, a, { kind: 'goHome', to: door, t: 90 }); a.homeB = door.b; } }
+      if (clock >= 19 || clock < 6) for (const a of list) if (a.alive && a.town === town && a.activity?.kind === 'vend') { const door = nearest(game, S.door, a); if (door) { start(game, a, { kind: 'goHome', to: indoors(game, door), t: 90 }); a.homeB = door.b; } }
     }
   }
 }
@@ -310,10 +311,27 @@ function settle(a, act) {
   a.faceHome = a.facing;
 }
 
+/** Home for the night: pottering about their own rooms like anyone living there (see buildings.js resident). */
+function atHome(a, ai, b) {
+  a.townsfolk = false;
+  a.homeB = b;
+  a.wanderRadius = 1.2;
+  a.wanderBox = interiorRect(b);
+  ai.kind = 'wander';
+  ai.home = { x: a.x, y: a.y };
+  ai.wanderTo = null;
+}
+
+/** Just inside a house's front door (a walk-in one; else its doorstep). */
+function indoors(game, door) {
+  return door.b?.enterable && game.buildings ? game.buildings.doorPts(door.b).in : door;
+}
+
 /** Leave whatever you were doing (step off the seat first). */
 function stop(a) {
   const act = a.activity;
   if (!act) return;
+  if (act.kind === 'goHome') a.homeB = null; // (not going in after all)
   if (act.spot?.taken === a) act.spot.taken = null;
   if (act.phase === 'do' && act.spot?.stand) { a.x = act.spot.stand.x; a.y = act.spot.stand.y; }
   a.activity = null;
@@ -337,6 +355,8 @@ function think(game, a, ai, dt) {
     return ai.wander(a, dt, game);
   }
   let act = a.activity;
+  // (out of their front door: it shuts behind them — it isn't theirs to come and go by)
+  if (a.homeB && act?.kind !== 'goHome' && !w.interiorAt(a.x, a.y)) a.homeB = null;
   if (!act) {
     act = pick(game, a);
     if (!act) return ai.wander(a, dt, game);
@@ -349,7 +369,13 @@ function think(game, a, ai, dt) {
     a.intent.mx *= 0.45; a.intent.my *= 0.45;
     act.goT += dt;
     if (d < 0.45 || act.goT > 40) {
-      if (act.kind === 'goHome') { a.alive = false; return; } // in through the front door
+      if (act.kind === 'goHome') {
+        // in through the front door (and out of the story — unless you're in
+        // there to see them come home: then they're at home)
+        const b = a.homeB;
+        if (b && p && w.interiorAt(p.x, p.y) === b) { stop(a); atHome(a, ai, b); } else a.alive = false;
+        return;
+      }
       if (act.kind === 'stroll') {
         // look in a shop window for a moment, then carry on
         act.phase = 'pause'; act.pauseT = a.rng.range(2, 6);

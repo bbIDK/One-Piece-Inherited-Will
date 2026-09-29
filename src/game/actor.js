@@ -8,7 +8,7 @@ import { STYLES } from '../data/styles.js';
 import { FRUITS } from '../data/fruits.js';
 import { RACES } from '../data/races.js';
 import { WALKABLE, SWIMMABLE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
-import { clamp, TAU } from '../core/math.js';
+import { clamp, TAU, angleDiff } from '../core/math.js';
 import { shipDims, hbAt, deckToWorld, shipBob } from '../world/hull.js';
 import { placeOnDeck, boardingSpot } from './decks.js';
 
@@ -602,9 +602,14 @@ export class Actor extends Entity {
     // (in the air — over water too, or leaping out of it — you haven't splashed down yet)
     if (!this.vz && !(this.z > 0.02)) this.updateWater(dt, game);
 
-    const sp = Math.hypot(this.vx, this.vy);
+    const sp = Math.min(Math.hypot(this.vx, this.vy), this.went ?? Infinity);
     this.moving = sp > 0.4;
     this.speed = sp;
+    // (people going about their business look the way they're going — sliding
+    // along a wall too, not striding into it)
+    if (this.moving && !this.isPlayer && !this.action && !this.controller?.target && !(this.hitstun > 0) && Math.hypot(this.kb.x, this.kb.y) < 0.5 && this.wentDir !== undefined) {
+      this.facing += angleDiff(this.facing, this.wentDir) * Math.min(1, dt * 12);
+    }
     // the stride cycle keeps pace with the ground (no skating feet): see render/anims.js gait()
     if (this.moving) this.walk += dt * TAU * gaitCadence(sp / (this.look?.scale || 1), this.intent.sprint);
   }
@@ -720,6 +725,11 @@ export class Actor extends Entity {
     }
     if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
     if (!this.passable(w, x - r, y) || !this.passable(w, x + r, y) || !this.passable(w, x, y - r) || !this.passable(w, x, y + r)) return false;
+    // (walls keep a big body its own width off them: a big man's shoulders
+    // don't show through the wall of the room he's in — unless he's already
+    // that close, and getting clear)
+    const body = 0.24 * Math.min(3, this.look?.scale || 1);
+    if (body > r * 0.9 && w.hitsProp(x, y, body, true) && !w.hitsProp(this.x, this.y, body, true)) return false;
     return !w.hitsProp(x, y, r * 0.9);
   }
 
@@ -1004,7 +1014,13 @@ export class Actor extends Entity {
       const cur = game.currentAt(this.x, this.y, this);
       if (cur.canal) { vx += cur.x * 0.85; vy += cur.y * 0.85; }
     }
+    const x0 = this.x, y0 = this.y;
     this.moveBy(w, vx * dt, vy * dt);
+    // (how fast you really went: pushing against a wall you stand still, legs
+    // and arms and all — not running on the spot with your hands through it)
+    const gx = w.dx(x0, this.x), gy = this.y - y0;
+    this.went = dt > 0 ? Math.hypot(gx, gy) / dt : 0;
+    if (this.went > 0.3) this.wentDir = Math.atan2(gy, gx);
   }
 
   moveBy(w, dx, dy) {

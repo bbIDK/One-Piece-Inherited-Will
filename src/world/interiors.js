@@ -26,7 +26,8 @@ const DOOR = {
 };
 export const winKind = (b) => WIN[b.style] || 'cross';
 export const doorKind = (b) => DOOR[b.style] || 'plank';
-export const styleScale = (b) => (b.style === 'giant' ? 2.1 : 1);
+/** How much bigger than a person's a building is made: a giants' town, or one kept by someone very tall (b.tall: game/npcs.js sizeBuildingsForOccupants). */
+export const styleScale = (b) => Math.max(b.style === 'giant' ? 2.1 : 1, b.tall || 1);
 /** Floor-sitting interiors: futons, low tables and cushions. */
 export const lowStyle = (b) => b.style === 'wano';
 

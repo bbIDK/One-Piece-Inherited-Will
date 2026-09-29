@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { Mesher, box, cbox, cyl, cone, lathe, torus, extrude, slab, ribbon, C, shade, hash, rng } from './kit.js';
 import { vcMat, glowMat, meshOf, animate, bindCtx, STATE, U } from './mats.js';
-import { model, simple, signModel } from './street.js';
+import { model, simple, signModel, footY, postFeet } from './street.js';
 import { registerPropBuilder } from '../registry.js';
 import { canvasTexture } from '../materials.js';
 import { drawJollyRoger, drawMarineEmblem } from '../../render/ship.js';
@@ -721,9 +721,10 @@ reg('arch', (o) => {
 // ------------------------------------------------------------ torii
 const toriiGeo = () => model('torii', (k) => {
   const red = '#c0392b', black = '#2d3436';
+  // (the pillars run on down into the ground: on a slope it stands at its lower foot, see footY)
   for (const s of [-1, 1]) {
-    k.add(cyl(0.2, 0.24, 4.3, 12), { at: [s * 1.55, 0, 0], color: red, outline: 0.03 });
-    k.add(cyl(0.3, 0.32, 0.45, 12), { at: [s * 1.55, -0.1, 0], color: black });
+    k.add(cyl(0.2, 0.24, 5.0, 12), { at: [s * 1.55, -0.7, 0], color: red, outline: 0.03 });
+    k.add(cyl(0.3, 0.32, 1.05, 12), { at: [s * 1.55, -0.7, 0], color: black });
   }
   k.add(box(3.9, 0.26, 0.3), { at: [0, 3.25, 0], color: red, outline: 0.02 });
   k.add(box(0.28, 0.72, 0.24), { at: [0, 3.5, 0], color: red });
@@ -738,7 +739,8 @@ const toriiGeo = () => model('torii', (k) => {
     k.add(cbox(5.25 / (n - 1) + 0.08, 0.18, 0.56), { at: [x - Math.sin(ang) * 0.23, y + Math.cos(ang) * 0.23, 0], rot: [0, 0, ang], color: black });
   }
 });
-reg('torii', (o, ctx) => simple(o, ctx, 'torii', toriiGeo(), { yaw: 0 }));
+const TORII_FEET = [...postFeet(-1.55, 0, 0.32), ...postFeet(1.55, 0, 0.32)];
+reg('torii', (o, ctx) => simple(o, ctx, 'torii', toriiGeo(), { yaw: 0, y: footY(o, ctx, TORII_FEET) }));
 
 // ------------------------------------------------------------ platforms
 const scaffoldGeo = () => model('platform-exec', (k) => {
@@ -804,11 +806,16 @@ const bellGeo = (big) => model('bell:' + big, (k) => {
   k.add(cyl(0.12 * s, 0.12 * s, 0.3 * s, 8), { at: [0, 2.12 * s, 0], color: '#b7950b' });
   k.restore();
   const top = (big ? 1.2 : 1.0) + 2.45 * s;
-  for (const sx of [-1, 1]) k.add(box(0.3 * s + 0.08, top + 0.2, 0.3 * s + 0.08), { at: [sx * (1.35 * s + 0.2), 0, 0], color: frame, outline: 0.03 });
+  for (const sx of [-1, 1]) k.add(box(0.3 * s + 0.08, top + 0.8, 0.3 * s + 0.08), { at: [sx * (1.35 * s + 0.2), -0.6, 0], color: frame, outline: 0.03 });
   k.add(box(2.9 * s + 0.7, 0.3 * s + 0.1, 0.4 * s + 0.1), { at: [0, top + 0.1, 0], color: frame, outline: 0.02 });
   if (big) for (const sx of [-1, 1]) k.add(cone(0.35, 0.5, 4), { at: [sx * 1.9, top + 0.4, 0], rot: [0, Math.PI / 4, 0], color: frame });
 });
-reg('bell', (o, ctx) => simple(o, ctx, 'bell:' + (/harbou?r/i.test(o.name || '') ? 0 : 1), bellGeo(/harbou?r/i.test(o.name || '') ? 0 : 1), { yaw: 0 }));
+// (on a slope it stands at the lower of its posts' feet, the other running on into the ground)
+const bellFeet = (big) => { const s = big ? 1 : 0.32, x = 1.35 * s + 0.2, h = (0.3 * s + 0.08) / 2; return [...postFeet(-x, 0, h), ...postFeet(x, 0, h)]; };
+reg('bell', (o, ctx) => {
+  const big = /harbou?r/i.test(o.name || '') ? 0 : 1;
+  return simple(o, ctx, 'bell:' + big, bellGeo(big), { yaw: 0, y: footY(o, ctx, bellFeet(big)) });
+});
 
 // ------------------------------------------------------------ poneglyph
 const poneglyphGeo = (red) => model('poneglyph:' + red, (k) => {
