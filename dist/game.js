@@ -61871,12 +61871,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       rarity: "uncommon",
       weight: 13,
       desc: "Born with ten times the strength of a human and the sea in their blood. Many followed Arlong to the East Blue.",
-      origin: "Born near Arlong Park in the Conomi Islands (East Blue).",
+      origin: "Born in the Conomi Islands (East Blue), in the shadow of Arlong Park.",
       stats: { str: 4, agi: 0, end: 2, vit: 1, wil: 0 },
       lives: 3,
       traits: ["Gills: breathe underwater \u2014 never drown (unless a Devil Fruit user)", "Swims 3\xD7 faster, no stamina drain", "Fish-Man Karate affinity: learns it 30% faster", "Dolphin leap: springs far out of the water"],
       spawnSeas: ["east_blue"],
-      spawnTowns: ["arlong_park", "cocoyasi"],
+      spawnTowns: ["cocoyasi"],
       swim: 3,
       hpMul: 1.1,
       gills: true,
@@ -63139,10 +63139,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (!this.belowDeck && !(this.z > 0.4) && w.type(this.x, this.y) === T.BRIDGE) {
           const hf = g.view3d?.terrain?.hf;
           if (hf) {
-            const tx = Math.floor(this.x), ty = Math.floor(this.y), m = r + 0.14;
+            const on = w.type(x, y) === T.BRIDGE;
+            const tx = Math.floor(on ? x : this.x), ty = Math.floor(on ? y : this.y), m = r + 0.14;
             for (const [px2, py2] of [[x + m, y], [x - m, y], [x, y + m], [x, y - m]]) {
               const nx = Math.floor(px2), ny = Math.floor(py2);
-              if ((nx !== tx || ny !== ty) && w.type(px2, py2) !== T.BRIDGE && hf.railAt(tx, ty, nx, ny)) return false;
+              if (Math.abs(nx - tx) + Math.abs(ny - ty) === 1 && w.type(px2, py2) !== T.BRIDGE && hf.railAt(tx, ty, nx, ny)) return false;
             }
           }
         }
@@ -87181,7 +87182,39 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     west_blue: ["kano_town", "ilisia_town", "toroa_town", "las_camp_town", "soja_village", "esperia_town"],
     south_blue: ["baterilla_town", "karate_dojo_town", "sorbet_town", "briss_town", "centaurea_town", "kutsukku_town"]
   };
-  function resolveSpawn(world, char) {
+  function heldTowns(world, defs, groups9, char) {
+    const held = /* @__PURE__ */ new Set();
+    const about = (d) => {
+      try {
+        return !d.when || !!d.when(char);
+      } catch (e) {
+        return true;
+      }
+    };
+    for (const d of defs) {
+      if (!d.hostile || d.calm || !d.at || typeof d.at !== "object" || !d.at.town) continue;
+      const pl = d.at;
+      const inSquare = pl.plaza || !pl.building && !pl.door && !pl.dock && !pl.spot && !pl.dx;
+      if (inSquare && about(d)) held.add(pl.town);
+    }
+    for (const grp of groups9 || []) {
+      if (grp.calm || !about(grp)) continue;
+      const isl = world.islands.find((i) => i.id === grp.island);
+      if (!isl) continue;
+      const base2 = grp.spot ? isl.spots?.[grp.spot] : { x: isl.x + (grp.dx || 0) * isl.def.w / 2, y: isl.y + (grp.dy || 0) * isl.def.h / 2 };
+      if (!base2) continue;
+      for (const t of isl.towns) if (t.plaza && world.distance(base2.x, base2.y, t.plaza.x, t.plaza.y) < (grp.radius || 5) + 16) held.add(t.id);
+    }
+    return held;
+  }
+  function townAt(world, x, y, ids) {
+    for (const isl of world.islands) {
+      if (Math.abs(world.dx(isl.x, x)) > isl.radius + 60 || Math.abs(isl.y - y) > isl.radius + 60) continue;
+      for (const t of isl.towns) if ((!ids || ids.has(t.id)) && x >= t.x0 - 3 && x <= t.x1 + 3 && y >= t.y0 - 3 && y <= t.y1 + 3) return t;
+    }
+    return null;
+  }
+  function resolveSpawn(world, char, avoid = /* @__PURE__ */ new Set()) {
     const rng4 = new RNG(char.runSeed + ":spawn");
     const race = RACES[char.race];
     const sea = rng4.pick(race.spawnSeas);
@@ -87198,13 +87231,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
     const wanted2 = race.spawnTowns || HUMAN_STARTERS[sea] || [];
-    const byId = allTowns.filter(({ t: t2 }) => wanted2.includes(t2.id));
+    const byId = allTowns.filter(({ t: t2 }) => wanted2.includes(t2.id) && !avoid.has(t2.id));
     if (byId.length) pick5 = rng4.pick(byId);
     if (!pick5) {
-      const inSea = allTowns.filter(({ isl: isl2 }) => regionAt(isl2.x, isl2.y) === seaRegion);
+      const inSea = allTowns.filter(({ isl: isl2, t: t2 }) => regionAt(isl2.x, isl2.y) === seaRegion && !avoid.has(t2.id));
       if (inSea.length) pick5 = rng4.pick(inSea);
     }
-    if (!pick5) pick5 = allTowns[0];
+    if (!pick5) pick5 = allTowns.find(({ t: t2 }) => !avoid.has(t2.id)) || allTowns[0];
     const { isl, t } = pick5;
     return { x: t.plaza.x + 0.5, y: t.plaza.y + 2.5, island: isl, town: t, sea, name: `${t.name}, ${isl.name}` };
   }
@@ -89952,6 +89985,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   var npcDef = (id) => NPC_DEFS.get(id);
   var allNpcDefs = () => [...NPC_DEFS.values()];
+  var allGroups = () => GROUPS.slice();
   var ARCHETYPES = {
     bandit: { name: "Mountain Bandit", faction: "bandit", style: "brawler", look: { top: "#6d4c41", hat: "bandana", hatColor: "#8d6e63" }, skill: 0.15, barks: ["Hand over your money!", "Heh heh heh!"] },
     pirate: { name: "Pirate Grunt", faction: "pirate", style: "ittoryu", weapon: "sword", look: { top: "#37474f", hat: "bandana", hatColor: "#b71c1c" }, skill: 0.2, barks: ["Yo-ho!", "Get 'em!"] },
@@ -90087,6 +90121,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       a.faceHome = Math.PI / 2;
     }
     if (def.hostile) a.aggroPlayer = true;
+    if (def.calm) a.calm = true;
     return a;
   }
   function hashSeed(s) {
@@ -90153,6 +90188,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const a = makeEnemy(arch, lvl, p.x, p.y, over || {});
         a.game = game;
         if (grp.leash) a.controller.leash = grp.leash;
+        if (grp.calm) a.calm = true;
         game.addActor(a);
         list.push(a);
       }
@@ -94432,7 +94468,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     legacy.heirloom = null;
     saveLegacy(legacy);
     const world = game.surface;
-    const spawn = resolveSpawn(world, char);
+    const spawn = resolveSpawn(world, char, heldTowns(world, allNpcDefs(), allGroups(), char));
     char.spawn = { x: spawn.x, y: spawn.y, name: spawn.name, sea: spawn.sea };
     char.rest = { ...char.spawn };
     char.birthplace = spawn.name;
@@ -94451,7 +94487,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const shipType = legacy.perks?.ship ? "sloop" : "dinghy";
     let placed = false;
     if (isl) {
-      const dock = isl.docks[0];
+      const dock = isl.docks.slice().sort((a, b) => world.distance(a.land.x, a.land.y, spawn.x, spawn.y) - world.distance(b.land.x, b.land.y, spawn.x, spawn.y))[0];
       if (dock) {
         game.giveShip(shipType, dock.moor.x, dock.moor.y, shipType === "dinghy" ? "Little Rowboat" : "Sea Sparrow");
         placed = true;
@@ -94481,6 +94517,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const world = game.surface;
     game.state = { char, legacy };
     const moved = migrateWorld(char, world, ALL_ISLANDS);
+    safeStart(world, char);
     if (char.fogSurface) decodeFog(char.fogSurface, world.fog);
     else world.fog.fill(0);
     if (moved) for (const id of char.discovered || []) revealIsland(game, id);
@@ -94518,6 +94555,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     setTimeout(() => game.ui.banner(char.name, `Generation ${char.generation} \xB7 ${RACES[char.race]?.name}`, `${reg3} \u2014 Day ${game.env.day}`, 4), 300);
     game.emit("characterStart", { char, isNew: false });
     return p;
+  }
+  function safeStart(world, char) {
+    const held = heldTowns(world, allNpcDefs(), allGroups(), char);
+    if (!char.spawn || !townAt(world, char.spawn.x, char.spawn.y, held)) return false;
+    const s = resolveSpawn(world, char, held);
+    const fresh = { x: s.x, y: s.y, name: s.name, sea: s.sea };
+    if (!char.rest || townAt(world, char.rest.x, char.rest.y, held)) char.rest = { ...fresh };
+    if (char.pos && (!char.pos.zone || char.pos.zone === "surface") && char.pos.mode !== "sail" && townAt(world, char.pos.x, char.pos.y, held)) char.pos = { ...char.pos, x: fresh.x, y: fresh.y };
+    if (char.birthplace === char.spawn.name) char.birthplace = fresh.name;
+    char.spawn = fresh;
+    return true;
   }
   function revealIsland(game, id) {
     const isl = game.surface.islands.find((i) => i.id === id);
@@ -98909,6 +98957,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       island: "organ_islands",
       at: { town: "orange_town", plaza: true, ox: -4 },
       hostile: true,
+      calm: true,
       named: true,
       faction: "pirate",
       level: 7,
@@ -98925,6 +98974,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       island: "organ_islands",
       at: { town: "orange_town", plaza: true, ox: 4 },
       hostile: true,
+      calm: true,
       named: true,
       faction: "pirate",
       level: 9,
@@ -99479,7 +99529,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     { island: "dawn_island", dx: 0.42, dy: 0.35, radius: 5, enemies: [["pirate", 5, { name: "Bluejam Pirate" }], ["pirate_gunner", 5, { name: "Bluejam Gunner" }], ["pirate", 5, { name: "Bluejam Pirate" }]], when: (c) => !c.bosses.includes("bluejam") },
     { island: "goat_island", dx: 0, dy: 0.2, radius: 4, enemies: [["pirate", 3, { name: "Alvida Pirate" }], ["pirate", 3, { name: "Alvida Pirate" }]], when: (c) => !c.bosses.includes("alvida") },
     { island: "shells_island", town: "marine_153", spot: "execution_yard", radius: 4, enemies: [["marine", 5, { name: "Morgan's Marine", lethal: false }], ["marine_rifle", 5, { name: "Morgan's Rifleman" }]], when: (c, g) => g.quests.stageId("pirate_hunter") === "morgan" },
-    { island: "organ_islands", dx: 0, dy: 0.1, radius: 7, enemies: [["pirate", 6, { name: "Buggy Pirate" }], ["pirate", 6, { name: "Buggy Pirate" }], ["pirate_gunner", 6, { name: "Buggy Cannoneer" }], ["beast", 8, { name: "Richie the Lion", look: { fur: "#f6b93b", skin: "#f6b93b", hairColor: "#e67e22", hair: "afro" } }]], when: (c) => !c.bosses.includes("buggy") },
+    // (Buggy's crew lord it over Orange Town, but leave a newcomer be — till
+    // someone lays a hand on one of them, or stands up to their captain)
+    { island: "organ_islands", dx: 0, dy: 0.1, radius: 7, calm: true, enemies: [["pirate", 6, { name: "Buggy Pirate" }], ["pirate", 6, { name: "Buggy Pirate" }], ["pirate_gunner", 6, { name: "Buggy Cannoneer" }], ["beast", 8, { name: "Richie the Lion", look: { fur: "#f6b93b", skin: "#f6b93b", hairColor: "#e67e22", hair: "afro" } }]], when: (c) => !c.bosses.includes("buggy") },
     { island: "gecko_islands", spot: "north_slope", radius: 6, enemies: [["pirate", 8, { name: "Black Cat Pirate" }], ["pirate", 8, { name: "Black Cat Pirate" }], ["brute", 9, { name: "Siam (Nyaban Brother)" }], ["brute", 9, { name: "Butchie (Nyaban Brother)" }]], when: (c, g) => g.quests.stageId("black_cat_plot") === "slope" },
     { island: "baratie", spot: "baratie_deck", radius: 4, enemies: [["pirate", 10, { name: "Krieg Pirate" }], ["pirate_gunner", 10, { name: "Krieg Gunner" }], ["pirate", 10, { name: "Pearl the Iron Wall", hpMul: 2, look: { bulk: 1.4 } }]], when: (c, g) => g.quests.stageId("baratie_krieg") === "krieg" },
     { island: "conomi_islands", dx: 0.55, dy: -0.15, radius: 7, enemies: [["fishman_thug", 9], ["fishman_thug", 9], ["fishman_thug", 10], ["fishman_thug", 10]], when: (c) => !c.bosses.includes("arlong") },
@@ -127471,6 +127523,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           game.update(dt);
         }
         game.render();
+      },
+      // (carry on a saved character, as Continue does)
+      resume(char) {
+        hideBoot(true);
+        sail = null;
+        ui.hideScreen();
+        return resumeCharacter(game, char);
       },
       quickStart(race = "human", opts = {}) {
         const birth = { race, traits: opts.traits || ["lucky"], seed: opts.seed || 12345 };
