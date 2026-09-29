@@ -69129,6 +69129,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       pose.dodgeSide = (-d.vx * Math.sin(a.facing) + d.vy * Math.cos(a.facing)) / dl;
     }
     let P4 = pose.anim ? samplePose(pose.anim, pose.anim.t, pose) : restPose(pose, look);
+    if (pose.dodge !== void 0 && P4.r && a.isPlayer && a.game?.view3d?.rig?.mode === "first") firstPersonDash(P4, pose);
     if (pose.station && !pose.anim) stationPose(P4, pose.station);
     if (!pose.anim && (a.held || a.eating) && !a.inWater) heldPose(P4, a, env ? env.time : 0);
     if (pose.blend && pose.blend.P) P4 = blendPose(pose.blend.P, P4, pose.blend.k);
@@ -69137,6 +69138,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     a._lastPose = pose;
     a._lastLook = look;
     return { pose, P: P4 };
+  }
+  function firstPersonDash(P4, pose) {
+    const e = Math.sin(pose.dodge * Math.PI), fwd2 = (pose.dodgeDir || 1) > 0;
+    P4.r = 0;
+    P4.b = [0, 0.18 * e];
+    P4.l = (fwd2 ? 0.32 : -0.16) * e;
+    P4.fF = fwd2 ? [0.3, 0] : [0.12, 0];
+    P4.fB = fwd2 ? [-0.28, -0.04] : [-0.34, -0.02];
+    P4.hF = [0.24, 0.12];
+    P4.hB = [-0.18, 0.14];
   }
   function heldPose(P4, a, t) {
     P4.hand = "hold";

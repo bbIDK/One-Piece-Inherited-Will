@@ -38,12 +38,31 @@ export function actorPose(a, env, look) {
     pose.dodgeSide = (-d.vx * Math.sin(a.facing) + d.vy * Math.cos(a.facing)) / dl;
   }
   let P = pose.anim ? samplePose(pose.anim, pose.anim.t, pose) : restPose(pose, look);
+  // (in first person a dash forwards or back is a low lunge, not a tumble:
+  // rolled head over heels, your body turned right through the eyes you see
+  // from — and the view, riding your head, dips and lunges with it)
+  if (pose.dodge !== undefined && P.r && a.isPlayer && a.game?.view3d?.rig?.mode === 'first') firstPersonDash(P, pose);
   if (pose.station && !pose.anim) stationPose(P, pose.station);
   if (!pose.anim && (a.held || a.eating) && !a.inWater) heldPose(P, a, env ? env.time : 0);
   if (pose.blend && pose.blend.P) P = blendPose(pose.blend.P, P, pose.blend.k);
   pose.P = P;
   a._lastP = P; a._lastPose = pose; a._lastLook = look;
   return { pose, P };
+}
+
+/**
+ * A dash in first person: low and leaning into it (forwards), or rocked back
+ * on the heels (a backstep) — the tucked roll's crouch and stride without the
+ * roll itself.
+ */
+function firstPersonDash(P, pose) {
+  const e = Math.sin(pose.dodge * Math.PI), fwd = (pose.dodgeDir || 1) > 0;
+  P.r = 0;
+  P.b = [0, 0.18 * e];
+  P.l = (fwd ? 0.32 : -0.16) * e;
+  P.fF = fwd ? [0.3, 0] : [0.12, 0];
+  P.fB = fwd ? [-0.28, -0.04] : [-0.34, -0.02];
+  P.hF = [0.24, 0.12]; P.hB = [-0.18, 0.14];
 }
 
 // ------------------------------------------------------------------ food in hand
