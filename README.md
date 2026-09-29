@@ -59,7 +59,7 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | V | first person / third person | |
 | WASD | move where you look | W/S sails, A/D steer (at a rowboat's oars: W/S set the rowing pace, which she keeps, A/D turn) |
 | Space | jump; at a pier, a bank or a ship's side, climb up | row (works without wind) |
-| Shift | hold to sprint, tap to dodge (i-frames) | Coup de Burst (some ships) |
+| Shift | hold to sprint (it drains stamina fast; your everyday run takes a little too, back once you stop or walk), tap to dodge (i-frames) | Coup de Burst (some ships) |
 | Left / right click | combo / heavy attack | broadside toward where you aim |
 | X | draw your weapon, or put it back in its sheath. Sheathed, a click is a punch (your fist style); drawn, it's the weapon's moves, listed with their keys at the bottom right (the skills you've learned for it; greyed while they cool down). At the helm or the oars it's always sheathed | |
 | F | block — tap just before a hit to **parry** | |
@@ -216,6 +216,11 @@ rearrange them.
 - Haki: Armament (with Emission and Ryuo), Observation (with Future Sight)
   and Conqueror's (with Infusion).
 - Parry, guard breaks, i-frame dodges, finishers and anime impact frames.
+- **Footsteps** sound like what you walk on, in time with your feet: a soft
+  crush on grass, a gritty shuffle on sand, a crisp tap on stone and
+  paving, a hollow knock on decks, piers and floorboards, a squeaky crunch
+  in snow, a squelch in mud (louder when you sprint). Running leaves no
+  trail of dust puffs behind you.
 
 **The sea.**
 
@@ -261,6 +266,18 @@ rearrange them.
     Line past Laboon, the whale who waits;
   - the current does the sailing and only runs one way, so steer for the
     middle of the canal.
+- **Swimming** is the breaststroke, as it's taught: out of the glide the
+  hands press out wide, sweep down and in under the chest while the head and
+  shoulders come up for a breath, meet under the chin and shoot forward just
+  under the surface as the heels come up; then the frog kick whips the feet
+  out and back together and the body lunges long into the glide. Only the
+  head (and the shoulders at each breath) shows above the water; treading
+  water you hang upright, in to the shoulders. Swimmers ride the swell — the
+  same waves the sea is drawn with — so a crest never washes over a face,
+  and they leave a faint V of foam behind, not a string of rings. Coming up
+  from a dive, the head breaks the surface with a ring and a few drops, and
+  setting off, stopping or surfacing never jolts the body up or down. A
+  diver's bubbles rise and burst at the surface.
 - The world is big: you can't see the next island from the last one.
 - Marine patrols, pirate ships, merchants and flotsam. Pirates keep to
   their own business at sea: they fight only when you fire on them or board

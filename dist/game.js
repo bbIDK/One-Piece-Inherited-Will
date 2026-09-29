@@ -34251,18 +34251,18 @@ void main() {
       else if (w.face === "left") P4.low.push({ x0: L2.x0 - 1, x1: L2.x0 + 0.7, z0: w.u - hw, z1: w.u + hw });
       else P4.low.push({ x0: L2.x1 - 0.7, x1: L2.x1 + 1, z0: w.u - hw, z1: w.u + hw });
     }
-    const S3 = (k) => sized(F[k], g);
-    (ROOMS[L2.room] || ROOMS.house)(P4, L2, b, R4, S3, g);
+    const S4 = (k) => sized(F[k], g);
+    (ROOMS[L2.room] || ROOMS.house)(P4, L2, b, R4, S4, g);
     P4.deco({ k: "lamp", w: 0.3, d: 0.3, h: 0.5 }, (L2.x0 + L2.x1) / 2, (L2.z0 + L2.z1) / 2);
     b._layout = L2;
     return L2;
   }
-  function counterRoom(P4, L2, S3, g, { shelf = "goods", len = 2.2, gapBehind = 0.58 } = {}) {
+  function counterRoom(P4, L2, S4, g, { shelf = "goods", len = 2.2, gapBehind = 0.58 } = {}) {
     const width = L2.x1 - L2.x0;
     const bd = 0.26 * g;
     const cw = Math.min(len * g, width - 0.75 * g);
-    const cz = L2.z0 + bd + gapBehind * g + S3("counter").d / 2;
-    const counter = P4.at({ ...S3("counter"), w: cw }, L2.x0 + cw / 2 + 0.02, cz, 0) || P4.at({ ...S3("counter"), w: cw * 0.8 }, L2.x0 + cw * 0.4 + 0.02, cz, 0);
+    const cz = L2.z0 + bd + gapBehind * g + S4("counter").d / 2;
+    const counter = P4.at({ ...S4("counter"), w: cw }, L2.x0 + cw / 2 + 0.02, cz, 0) || P4.at({ ...S4("counter"), w: cw * 0.8 }, L2.x0 + cw * 0.4 + 0.02, cz, 0);
     if (!counter) return null;
     const bw2 = Math.min(width - 0.1, cw + 0.4 * g);
     P4.deco({ k: shelf, w: bw2, d: bd, h: 1.9 * g }, L2.x0 + bw2 / 2 + 0.02, L2.z0 + bd / 2 + 0.01, 0);
@@ -34272,9 +34272,9 @@ void main() {
     L2.use.push({ kind: "service", x: counter.x, z: counter.rect.z1 + 0.45, label: null });
     return counter;
   }
-  function bedIn(P4, S3, low, order) {
+  function bedIn(P4, S4, low, order) {
     const k = low ? "futon" : "bed";
-    return P4.wall(S3(k), "back", order) || P4.wall(S3(k), "left", "start") || P4.wall(S3(k), "right", "start");
+    return P4.wall(S4(k), "back", order) || P4.wall(S4(k), "left", "start") || P4.wall(S4(k), "right", "start");
   }
   function searchable(L2, it, label) {
     if (!it) return null;
@@ -34282,31 +34282,31 @@ void main() {
     L2.use.push({ kind: "loot", x: it.x + f[0] * (it.d / 2 + 0.42), z: it.z + f[1] * (it.d / 2 + 0.42), label });
     return it;
   }
-  function stash(P4, L2, S3, k, walls, label) {
+  function stash(P4, L2, S4, k, walls, label) {
     for (const [wall, order] of walls) {
-      const it = P4.wall({ ...S3(k), loot: true }, wall, order);
+      const it = P4.wall({ ...S4(k), loot: true }, wall, order);
       if (it) return searchable(L2, it, label);
     }
     return null;
   }
-  function footChest(P4, L2, S3, bed2, label) {
+  function footChest(P4, L2, S4, bed2, label) {
     if (!bed2 || bed2.rot !== 0) return null;
-    const c = S3("chest"), r = bed2.rect;
+    const c = S4("chest"), r = bed2.rect;
     const it = P4.at({ ...c, loot: true }, (r.x0 + r.x1) / 2, r.z1 + c.d / 2 + 0.05, 0);
     if (it) L2.use.push({ kind: "loot", x: it.x, z: it.rect.z1 + 0.45, label });
     return it;
   }
-  function hearthIn(P4, L2, b, S3, low, order) {
+  function hearthIn(P4, L2, b, S4, low, order) {
     const k = b.style === "snow" || b.style === "village" || b.style === "giant" ? "fireplace" : low ? "hibachi" : "stove";
-    const st = P4.wall(S3(k), "back", order) || P4.wall(S3(k), "left", "end") || P4.wall(S3(k), "right", "end");
+    const st = P4.wall(S4(k), "back", order) || P4.wall(S4(k), "left", "end") || P4.wall(S4(k), "right", "end");
     if (st) L2.residents.push({ x: st.x + Math.sin(st.rot) * (st.d / 2 + 0.35), z: st.z + Math.cos(st.rot) * (st.d / 2 + 0.35) });
     return st;
   }
-  function tableIn(P4, L2, S3, low, kind, x, z, seat) {
-    const tb = P4.free(S3(low ? "lowTable" : kind), x, z);
+  function tableIn(P4, L2, S4, low, kind, x, z, seat) {
+    const tb = P4.free(S4(low ? "lowTable" : kind), x, z);
     if (!tb) return null;
     for (const s of [-1, 1]) {
-      const st = S3(low ? "cushion" : seat);
+      const st = S4(low ? "cushion" : seat);
       const sx = tb.x + s * (tb.w / 2 + st.w * 0.45);
       if (sx - st.w / 2 < L2.x0 || sx + st.w / 2 > L2.x1) continue;
       P4.deco(st, sx, tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
@@ -34316,101 +34316,101 @@ void main() {
   }
   var sides = (R4) => R4() < 0.5 ? ["start", "end"] : ["end", "start"];
   var HOMES = {
-    family(P4, L2, b, R4, S3, g, low) {
+    family(P4, L2, b, R4, S4, g, low) {
       const [end, other] = sides(R4);
-      const bed2 = bedIn(P4, S3, low, end);
-      if (bed2 && L2.x1 - L2.x0 > 5) P4.wall(S3(low ? "futon" : "bed"), "back", other);
-      if (!low) footChest(P4, L2, S3, bed2, "Search the chest");
-      stash(P4, L2, S3, low ? "tansu" : "cupboard", [["left", "random"], ["right", "random"], ["front", "start"]], "Search the cupboard");
-      hearthIn(P4, L2, b, S3, low, other);
-      tableIn(P4, L2, S3, low, "table", (L2.x0 + L2.x1) / 2 + (end === "start" ? 0.8 : -0.8), L2.z0 + (L2.z1 - L2.z0) * 0.55, "chair");
-      P4.wall(S3("shelf"), "right", "random") || P4.wall(S3("lowShelf"), "front", "end");
-      if (R4() < 0.6) P4.wall(S3("barrel"), "front", R4() < 0.5 ? "start" : "end");
-      if (R4() < 0.5) P4.wall(S3("plant"), "front", "end");
+      const bed2 = bedIn(P4, S4, low, end);
+      if (bed2 && L2.x1 - L2.x0 > 5) P4.wall(S4(low ? "futon" : "bed"), "back", other);
+      if (!low) footChest(P4, L2, S4, bed2, "Search the chest");
+      stash(P4, L2, S4, low ? "tansu" : "cupboard", [["left", "random"], ["right", "random"], ["front", "start"]], "Search the cupboard");
+      hearthIn(P4, L2, b, S4, low, other);
+      tableIn(P4, L2, S4, low, "table", (L2.x0 + L2.x1) / 2 + (end === "start" ? 0.8 : -0.8), L2.z0 + (L2.z1 - L2.z0) * 0.55, "chair");
+      P4.wall(S4("shelf"), "right", "random") || P4.wall(S4("lowShelf"), "front", "end");
+      if (R4() < 0.6) P4.wall(S4("barrel"), "front", R4() < 0.5 ? "start" : "end");
+      if (R4() < 0.5) P4.wall(S4("plant"), "front", "end");
     },
     // nets, floats and barrels of salt fish; a sea chest by the bed
-    fisher(P4, L2, b, R4, S3, g, low) {
+    fisher(P4, L2, b, R4, S4, g, low) {
       const [end, other] = sides(R4);
-      const bed2 = bedIn(P4, S3, low, end);
-      footChest(P4, L2, S3, bed2, "Search the sea chest") || stash(P4, L2, S3, "chest", [["right", "random"], ["left", "random"]], "Search the sea chest");
-      hearthIn(P4, L2, b, S3, low, other);
-      P4.wall(S3("rack"), "left", "random");
-      P4.wall(S3("barrel"), "right", "start");
-      P4.wall(S3("barrel"), "right", "start");
-      P4.wall(S3("crate"), "front", R4() < 0.5 ? "start" : "end");
-      tableIn(P4, L2, S3, low, "roundTable", (L2.x0 + L2.x1) / 2, L2.z0 + (L2.z1 - L2.z0) * 0.6, "stool");
-      stash(P4, L2, S3, low ? "tansu" : "dresser", [["front", "end"], ["left", "end"]], "Search the drawers");
+      const bed2 = bedIn(P4, S4, low, end);
+      footChest(P4, L2, S4, bed2, "Search the sea chest") || stash(P4, L2, S4, "chest", [["right", "random"], ["left", "random"]], "Search the sea chest");
+      hearthIn(P4, L2, b, S4, low, other);
+      P4.wall(S4("rack"), "left", "random");
+      P4.wall(S4("barrel"), "right", "start");
+      P4.wall(S4("barrel"), "right", "start");
+      P4.wall(S4("crate"), "front", R4() < 0.5 ? "start" : "end");
+      tableIn(P4, L2, S4, low, "roundTable", (L2.x0 + L2.x1) / 2, L2.z0 + (L2.z1 - L2.z0) * 0.6, "stool");
+      stash(P4, L2, S4, low ? "tansu" : "dresser", [["front", "end"], ["left", "end"]], "Search the drawers");
     },
     // a carpenter or smith who works at home: a workbench, timber, tools
-    crafter(P4, L2, b, R4, S3, g, low) {
+    crafter(P4, L2, b, R4, S4, g, low) {
       const [end, other] = sides(R4);
-      const wb = P4.wall(S3("workbench"), "back", other) || P4.wall(S3("workbench"), "left", "random") || P4.wall(S3("workbench"), "right", "random");
+      const wb = P4.wall(S4("workbench"), "back", other) || P4.wall(S4("workbench"), "left", "random") || P4.wall(S4("workbench"), "right", "random");
       if (wb) {
         const f = [Math.sin(wb.rot), Math.cos(wb.rot)];
         L2.residents.push({ x: wb.x + f[0] * (wb.d / 2 + 0.3), z: wb.z + f[1] * (wb.d / 2 + 0.3), face: wb.rot + Math.PI });
       }
-      P4.wall(S3("rack"), "right", "random") || P4.wall(S3("rack"), "left", "random");
-      P4.wall(S3("lumber"), "front", R4() < 0.5 ? "start" : "end") || P4.wall(S3("crate"), "front", "start");
-      const bed2 = bedIn(P4, S3, low, end);
-      footChest(P4, L2, S3, bed2, "Search the tool chest");
-      stash(P4, L2, S3, low ? "tansu" : "dresser", [["left", "random"], ["right", "random"], ["front", "end"]], "Search the drawers");
-      hearthIn(P4, L2, b, S3, low, "center");
-      if (R4() < 0.7) P4.wall(S3("crate"), "right", "end");
+      P4.wall(S4("rack"), "right", "random") || P4.wall(S4("rack"), "left", "random");
+      P4.wall(S4("lumber"), "front", R4() < 0.5 ? "start" : "end") || P4.wall(S4("crate"), "front", "start");
+      const bed2 = bedIn(P4, S4, low, end);
+      footChest(P4, L2, S4, bed2, "Search the tool chest");
+      stash(P4, L2, S4, low ? "tansu" : "dresser", [["left", "random"], ["right", "random"], ["front", "end"]], "Search the drawers");
+      hearthIn(P4, L2, b, S4, low, "center");
+      if (R4() < 0.7) P4.wall(S4("crate"), "right", "end");
     },
     // books everywhere, a desk under the lamp
-    scholar(P4, L2, b, R4, S3, g, low) {
+    scholar(P4, L2, b, R4, S4, g, low) {
       const [end, other] = sides(R4);
-      P4.wall(S3("bookcase"), "back", other) || P4.wall(S3("shelf"), "back", other);
-      P4.wall(S3("bookcase"), "left", "random") || P4.wall(S3("lowShelf"), "left", "random");
-      const desk = P4.wall(S3("desk"), "right", "random") || P4.free(S3("desk"), 0, (L2.z0 + L2.z1) / 2);
+      P4.wall(S4("bookcase"), "back", other) || P4.wall(S4("shelf"), "back", other);
+      P4.wall(S4("bookcase"), "left", "random") || P4.wall(S4("lowShelf"), "left", "random");
+      const desk = P4.wall(S4("desk"), "right", "random") || P4.free(S4("desk"), 0, (L2.z0 + L2.z1) / 2);
       if (desk) {
-        const f = [Math.sin(desk.rot), Math.cos(desk.rot)], ch = S3("chair");
+        const f = [Math.sin(desk.rot), Math.cos(desk.rot)], ch = S4("chair");
         const cx = desk.x + f[0] * (desk.d / 2 + ch.d * 0.4), cz = desk.z + f[1] * (desk.d / 2 + ch.d * 0.4);
         P4.deco(ch, cx, cz, desk.rot + Math.PI);
         L2.residents.push({ x: cx, z: cz, sit: true, face: desk.rot + Math.PI });
       }
-      const bed2 = bedIn(P4, S3, low, end);
-      footChest(P4, L2, S3, bed2, "Search the chest") || stash(P4, L2, S3, "chest", [["front", "end"], ["left", "end"]], "Search the chest");
-      hearthIn(P4, L2, b, S3, low, "center");
-      if (R4() < 0.7) P4.wall(S3("plant"), "front", "end");
+      const bed2 = bedIn(P4, S4, low, end);
+      footChest(P4, L2, S4, bed2, "Search the chest") || stash(P4, L2, S4, "chest", [["front", "end"], ["left", "end"]], "Search the chest");
+      hearthIn(P4, L2, b, S4, low, "center");
+      if (R4() < 0.7) P4.wall(S4("plant"), "front", "end");
     },
     // sacks of grain, barrels, baskets of produce
-    farmer(P4, L2, b, R4, S3, g, low) {
+    farmer(P4, L2, b, R4, S4, g, low) {
       const [end, other] = sides(R4);
-      const bed2 = bedIn(P4, S3, low, end);
-      stash(P4, L2, S3, low ? "tansu" : "cupboard", [["right", "random"], ["front", "end"], ["left", "random"]], "Search the cupboard");
-      hearthIn(P4, L2, b, S3, low, other);
-      P4.wall(S3("sacks"), "left", "start");
-      P4.wall(S3("sacks"), "left", "end");
-      P4.wall(S3("produce"), "right", "random") || P4.wall(S3("barrel"), "right", "random");
-      P4.wall(S3("barrel"), "front", R4() < 0.5 ? "start" : "end");
-      tableIn(P4, L2, S3, low, "table", (L2.x0 + L2.x1) / 2, L2.z0 + (L2.z1 - L2.z0) * 0.58, "chair");
-      if (!low) footChest(P4, L2, S3, bed2, "Search the chest");
+      const bed2 = bedIn(P4, S4, low, end);
+      stash(P4, L2, S4, low ? "tansu" : "cupboard", [["right", "random"], ["front", "end"], ["left", "random"]], "Search the cupboard");
+      hearthIn(P4, L2, b, S4, low, other);
+      P4.wall(S4("sacks"), "left", "start");
+      P4.wall(S4("sacks"), "left", "end");
+      P4.wall(S4("produce"), "right", "random") || P4.wall(S4("barrel"), "right", "random");
+      P4.wall(S4("barrel"), "front", R4() < 0.5 ? "start" : "end");
+      tableIn(P4, L2, S4, low, "table", (L2.x0 + L2.x1) / 2, L2.z0 + (L2.z1 - L2.z0) * 0.58, "chair");
+      if (!low) footChest(P4, L2, S4, bed2, "Search the chest");
     },
     // an old sea-dog's place: a hammock-bed, a sea chest, a round table and rum
-    sailor(P4, L2, b, R4, S3, g, low) {
+    sailor(P4, L2, b, R4, S4, g, low) {
       const [end, other] = sides(R4);
-      const bed2 = bedIn(P4, S3, low, end);
-      footChest(P4, L2, S3, bed2, "Search the sea chest") || stash(P4, L2, S3, "chest", [["left", "random"]], "Search the sea chest");
-      P4.wall(S3("barrel"), "back", other);
-      P4.wall(S3("barrel"), "right", "start");
-      tableIn(P4, L2, S3, low, "roundTable", (L2.x0 + L2.x1) / 2 + (end === "start" ? 0.5 : -0.5), L2.z0 + (L2.z1 - L2.z0) * 0.55, "stool");
-      P4.wall(S3("lowShelf"), "left", "random") || P4.wall(S3("shelf"), "right", "random");
-      hearthIn(P4, L2, b, S3, low, "center");
-      stash(P4, L2, S3, low ? "tansu" : "dresser", [["front", "start"], ["right", "end"]], "Search the drawers");
+      const bed2 = bedIn(P4, S4, low, end);
+      footChest(P4, L2, S4, bed2, "Search the sea chest") || stash(P4, L2, S4, "chest", [["left", "random"]], "Search the sea chest");
+      P4.wall(S4("barrel"), "back", other);
+      P4.wall(S4("barrel"), "right", "start");
+      tableIn(P4, L2, S4, low, "roundTable", (L2.x0 + L2.x1) / 2 + (end === "start" ? 0.5 : -0.5), L2.z0 + (L2.z1 - L2.z0) * 0.55, "stool");
+      P4.wall(S4("lowShelf"), "left", "random") || P4.wall(S4("shelf"), "right", "random");
+      hearthIn(P4, L2, b, S4, low, "center");
+      stash(P4, L2, S4, low ? "tansu" : "dresser", [["front", "start"], ["right", "end"]], "Search the drawers");
     }
   };
   var ROOMS = {
-    house(P4, L2, b, R4, S3, g) {
+    house(P4, L2, b, R4, S4, g) {
       const low = lowStyle(b);
       const kinds = ["family", "family", "fisher", "crafter", "scholar", "farmer", "sailor"];
       const kind = b.npc ? "family" : kinds[Math.floor(hash(b.x, b.y, 3.3) * kinds.length) % kinds.length];
       L2.kind = kind;
-      HOMES[kind](P4, L2, b, R4, S3, g, low);
+      HOMES[kind](P4, L2, b, R4, S4, g, low);
       if (!L2.use.some((u) => u.kind === "loot")) {
         const walls = [["left", "random"], ["right", "random"], ["front", "start"], ["front", "end"], ["back", "center"]];
-        if (!stash(P4, L2, S3, "chest", walls, "Search the chest")) {
-          const it = P4.free({ ...S3("chest"), loot: true }, 0, (L2.z0 + L2.z1) / 2);
+        if (!stash(P4, L2, S4, "chest", walls, "Search the chest")) {
+          const it = P4.free({ ...S4("chest"), loot: true }, 0, (L2.z0 + L2.z1) / 2);
           if (it) searchable(L2, it, "Search the chest");
         }
       }
@@ -34418,118 +34418,118 @@ void main() {
       P4.deco({ k: R4() < 0.35 ? "poster" : "picture", w: 0.55, d: 0.04, h: 0.7 }, L2.x0 + (L2.x1 - L2.x0) * (0.3 + R4() * 0.4), L2.z0 + 0.02, 0);
       if (!L2.residents.length) L2.residents.push({ x: (L2.x0 + L2.x1) / 2, z: (L2.z0 + L2.z1) / 2 });
     },
-    shop(P4, L2, b, R4, S3, g) {
-      counterRoom(P4, L2, S3, g, { shelf: "goods" });
-      P4.wall(S3("shelf"), "left", "start") || P4.wall(S3("lowShelf"), "left", "start");
-      P4.wall(S3("shelf"), "right", "start") || P4.wall(S3("lowShelf"), "right", "start");
-      P4.wall(S3("barrel"), "front", "start");
-      P4.wall(S3("crate"), "front", "end");
-      if (L2.z1 - L2.z0 > 3) P4.free(S3("produce"), 0, L2.z1 - 1.4);
+    shop(P4, L2, b, R4, S4, g) {
+      counterRoom(P4, L2, S4, g, { shelf: "goods" });
+      P4.wall(S4("shelf"), "left", "start") || P4.wall(S4("lowShelf"), "left", "start");
+      P4.wall(S4("shelf"), "right", "start") || P4.wall(S4("lowShelf"), "right", "start");
+      P4.wall(S4("barrel"), "front", "start");
+      P4.wall(S4("crate"), "front", "end");
+      if (L2.z1 - L2.z0 > 3) P4.free(S4("produce"), 0, L2.z1 - 1.4);
       P4.deco({ k: "rug", w: 1.4 * g, d: 0.9 * g, h: 0.02 }, L2.door.x, L2.z1 - 0.7);
     },
-    market(P4, L2, b, R4, S3, g) {
-      counterRoom(P4, L2, S3, g, { shelf: "goods" });
-      P4.wall(S3("produce"), "left", "start");
-      P4.wall(S3("produce"), "right", "start");
-      P4.wall(S3("sacks"), "front", "start");
-      P4.wall(S3("barrel"), "front", "end");
-      P4.wall(S3("crate"), "left", "end");
+    market(P4, L2, b, R4, S4, g) {
+      counterRoom(P4, L2, S4, g, { shelf: "goods" });
+      P4.wall(S4("produce"), "left", "start");
+      P4.wall(S4("produce"), "right", "start");
+      P4.wall(S4("sacks"), "front", "start");
+      P4.wall(S4("barrel"), "front", "end");
+      P4.wall(S4("crate"), "left", "end");
     },
-    weapons(P4, L2, b, R4, S3, g) {
-      counterRoom(P4, L2, S3, g, { shelf: "wallrack" });
-      P4.wall(S3("rack"), "left", "start") || P4.wall(S3("rack"), "left", "end");
-      P4.wall(S3("rack"), "right", "start") || P4.wall(S3("armor"), "right", "start");
-      P4.wall(S3("armor"), "front", "start");
-      P4.wall(S3("barrel"), "front", "end");
+    weapons(P4, L2, b, R4, S4, g) {
+      counterRoom(P4, L2, S4, g, { shelf: "wallrack" });
+      P4.wall(S4("rack"), "left", "start") || P4.wall(S4("rack"), "left", "end");
+      P4.wall(S4("rack"), "right", "start") || P4.wall(S4("armor"), "right", "start");
+      P4.wall(S4("armor"), "front", "start");
+      P4.wall(S4("barrel"), "front", "end");
     },
-    bank(P4, L2, b, R4, S3, g) {
-      counterRoom(P4, L2, S3, g, { shelf: "goods", len: 2.6 });
-      P4.wall(S3("safe"), "right", "start");
-      P4.wall(S3("bench"), "left", "end") || P4.wall(S3("bench"), "front", "start");
-      P4.wall(S3("plant"), "front", "end");
+    bank(P4, L2, b, R4, S4, g) {
+      counterRoom(P4, L2, S4, g, { shelf: "goods", len: 2.6 });
+      P4.wall(S4("safe"), "right", "start");
+      P4.wall(S4("bench"), "left", "end") || P4.wall(S4("bench"), "front", "start");
+      P4.wall(S4("plant"), "front", "end");
     },
-    bounty(P4, L2, b, R4, S3, g) {
-      counterRoom(P4, L2, S3, g, { shelf: "goods", len: 1.6 });
+    bounty(P4, L2, b, R4, S4, g) {
+      counterRoom(P4, L2, S4, g, { shelf: "goods", len: 1.6 });
       P4.deco({ k: "wanted", w: Math.min(1.8, L2.z1 - L2.z0 - 0.4), d: 0.04, h: 1 }, L2.x0 + 0.03, (L2.z0 + L2.z1) / 2 + 0.2, Math.PI / 2);
-      P4.wall(S3("filing"), "right", "start");
-      P4.wall(S3("bench"), "front", "start");
+      P4.wall(S4("filing"), "right", "start");
+      P4.wall(S4("bench"), "front", "start");
     },
-    library(P4, L2, b, R4, S3, g) {
-      counterRoom(P4, L2, S3, g, { shelf: "books", len: 1.6 });
-      P4.wall(S3("bookcase"), "left", "start");
-      P4.wall(S3("bookcase"), "left", "end");
-      P4.wall(S3("bookcase"), "right", "start");
-      P4.wall(S3("bookcase"), "right", "end");
-      const tb = P4.free(S3("table"), 0.6, L2.z1 - 1.5);
-      if (tb) for (const s of [-1, 1]) P4.deco(S3("chair"), tb.x + s * (tb.w / 2 + 0.2), tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
+    library(P4, L2, b, R4, S4, g) {
+      counterRoom(P4, L2, S4, g, { shelf: "books", len: 1.6 });
+      P4.wall(S4("bookcase"), "left", "start");
+      P4.wall(S4("bookcase"), "left", "end");
+      P4.wall(S4("bookcase"), "right", "start");
+      P4.wall(S4("bookcase"), "right", "end");
+      const tb = P4.free(S4("table"), 0.6, L2.z1 - 1.5);
+      if (tb) for (const s of [-1, 1]) P4.deco(S4("chair"), tb.x + s * (tb.w / 2 + 0.2), tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
       L2.use.push({ kind: "read", x: L2.x0 + 0.7, z: (L2.z0 + L2.z1) / 2, label: "Browse the shelves" });
     },
-    tavern(P4, L2, b, R4, S3, g) {
-      counterRoom(P4, L2, S3, g, { shelf: "bottles", len: 3 });
+    tavern(P4, L2, b, R4, S4, g) {
+      counterRoom(P4, L2, S4, g, { shelf: "bottles", len: 3 });
       const bar2 = L2.items.find((it) => it.k === "counter");
-      if (bar2) for (let x = bar2.rect.x0 + 0.35; x < bar2.rect.x1 - 0.2; x += 0.62) P4.deco(S3("stool"), x, bar2.rect.z1 + 0.3, 0);
+      if (bar2) for (let x = bar2.rect.x0 + 0.35; x < bar2.rect.x1 - 0.2; x += 0.62) P4.deco(S4("stool"), x, bar2.rect.z1 + 0.3, 0);
       for (const px2 of [L2.x0 + 0.9, L2.x1 - 0.9]) {
-        const t = P4.free(S3("roundTable"), px2, L2.z1 - 1.05);
+        const t = P4.free(S4("roundTable"), px2, L2.z1 - 1.05);
         if (!t) continue;
         for (const a of [0, 2.1, 4.2]) {
           const x = t.x + Math.cos(a) * 0.62, z = t.z + Math.sin(a) * 0.62;
           if (x < L2.x0 + 0.15 || x > L2.x1 - 0.15 || z < L2.z0 + 0.15 || z > L2.z1 - 0.15) continue;
-          P4.deco(S3("stool"), x, z, 0);
+          P4.deco(S4("stool"), x, z, 0);
         }
         L2.residents.push({ x: t.x + 0.62, z: t.z, sit: true, face: Math.PI / 2 });
       }
-      P4.wall(S3("barrel"), "right", "end") || P4.wall(S3("barrel"), "front", "end");
-      P4.wall(S3("barrel"), "left", "end");
+      P4.wall(S4("barrel"), "right", "end") || P4.wall(S4("barrel"), "front", "end");
+      P4.wall(S4("barrel"), "left", "end");
       P4.deco({ k: "wanted", w: 0.9, d: 0.04, h: 0.8 }, L2.x1 - 0.03, (L2.z0 + L2.z1) / 2, -Math.PI / 2);
       L2.rest = bar2 ? { x: bar2.x, z: bar2.rect.z1 + 0.7 } : { x: 0, z: L2.z1 - 1 };
     },
-    inn(P4, L2, b, R4, S3, g) {
-      ROOMS.tavern(P4, L2, b, R4, S3, g);
-      P4.wall(S3("stairs"), "left", "start") || P4.wall(S3("stairs"), "right", "start");
+    inn(P4, L2, b, R4, S4, g) {
+      ROOMS.tavern(P4, L2, b, R4, S4, g);
+      P4.wall(S4("stairs"), "left", "start") || P4.wall(S4("stairs"), "right", "start");
     },
-    restaurant(P4, L2, b, R4, S3, g) {
-      counterRoom(P4, L2, S3, g, { shelf: "bottles", len: 2.2 });
+    restaurant(P4, L2, b, R4, S4, g) {
+      counterRoom(P4, L2, S4, g, { shelf: "bottles", len: 2.2 });
       for (const px2 of [L2.x0 + 0.8, L2.x1 - 0.8]) {
-        const t = P4.free(S3("table"), px2, L2.z1 - 1.1);
+        const t = P4.free(S4("table"), px2, L2.z1 - 1.1);
         if (!t) continue;
         for (const s of [-1, 1]) {
           const x = t.x + s * (t.w / 2 + 0.22);
           if (x < L2.x0 + 0.2 || x > L2.x1 - 0.2) continue;
-          P4.deco(S3("chair"), x, t.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
+          P4.deco(S4("chair"), x, t.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
         }
         L2.residents.push({ x: t.x + t.w / 2 + 0.22, z: t.z, sit: true, face: -Math.PI / 2 });
       }
-      P4.wall(S3("plant"), "front", "end");
+      P4.wall(S4("plant"), "front", "end");
     },
-    doctor(P4, L2, b, R4, S3, g) {
-      const desk = P4.wall(S3("desk"), "back", "start", 0.62 * g);
+    doctor(P4, L2, b, R4, S4, g) {
+      const desk = P4.wall(S4("desk"), "back", "start", 0.62 * g);
       if (desk) {
         L2.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
         P4.rects.push({ x0: desk.rect.x0, x1: desk.rect.x1, z0: L2.z0, z1: desk.rect.z0 });
         L2.use.push({ kind: "service", x: desk.x, z: desk.rect.z1 + 0.45, label: null });
-        P4.deco(S3("chair"), desk.x, desk.rect.z0 - 0.3, 0);
+        P4.deco(S4("chair"), desk.x, desk.rect.z0 - 0.3, 0);
       }
-      P4.wall(S3("cabinet"), "back", "end");
-      const b1 = P4.wall(S3("medbed"), "right", "start") || P4.wall(S3("medbed"), "left", "start");
+      P4.wall(S4("cabinet"), "back", "end");
+      const b1 = P4.wall(S4("medbed"), "right", "start") || P4.wall(S4("medbed"), "left", "start");
       if (b1) L2.residents.push({ x: b1.x, z: b1.z, lie: true, rot: b1.rot });
-      P4.wall(S3("medbed"), "left", "start");
-      P4.wall(S3("screen"), "right", "end");
+      P4.wall(S4("medbed"), "left", "start");
+      P4.wall(S4("screen"), "right", "end");
       P4.deco({ k: "redcross", w: 0.6, d: 0.03, h: 0.6 }, desk ? desk.x : 0, L2.z0 + 0.02, 0);
-      P4.wall(S3("plant"), "front", "end");
+      P4.wall(S4("plant"), "front", "end");
     },
-    dojo(P4, L2, b, R4, S3, g) {
+    dojo(P4, L2, b, R4, S4, g) {
       P4.deco({ k: "mats", w: L2.x1 - L2.x0 - 0.4, d: L2.z1 - L2.z0 - 0.3, h: 0.03 }, (L2.x0 + L2.x1) / 2, (L2.z0 + L2.z1) / 2);
-      const sh = P4.wall(S3("shrine"), "back", "center");
+      const sh = P4.wall(S4("shrine"), "back", "center");
       L2.keeper = { x: sh ? sh.x : 0, z: (sh ? sh.rect.z1 : L2.z0) + 0.55 };
       P4.rects.push({ x0: L2.keeper.x - 0.4, x1: L2.keeper.x + 0.4, z0: L2.keeper.z - 0.35, z1: L2.keeper.z + 0.35 });
-      P4.wall(S3("rack"), "left", "start");
-      P4.wall(S3("rack"), "right", "start");
-      P4.free(S3("dummy"), L2.x0 + 1, L2.z1 - 1.2);
-      P4.free(S3("dummy"), L2.x1 - 1, L2.z1 - 1.2);
+      P4.wall(S4("rack"), "left", "start");
+      P4.wall(S4("rack"), "right", "start");
+      P4.free(S4("dummy"), L2.x0 + 1, L2.z1 - 1.2);
+      P4.free(S4("dummy"), L2.x1 - 1, L2.z1 - 1.2);
       L2.use.push({ kind: "service", x: L2.keeper.x, z: L2.keeper.z + 0.9, label: null });
     },
-    church(P4, L2, b, R4, S3, g) {
-      const al = P4.wall(S3("altar"), "back", "center", 0.6 * g);
+    church(P4, L2, b, R4, S4, g) {
+      const al = P4.wall(S4("altar"), "back", "center", 0.6 * g);
       if (al) {
         L2.keeper = { x: al.x, z: al.rect.z0 - 0.3 };
         P4.rects.push({ x0: al.rect.x0, x1: al.rect.x1, z0: L2.z0, z1: al.rect.z0 });
@@ -34539,39 +34539,39 @@ void main() {
         for (const s of [-1, 1]) {
           const w = Math.min(1.9 * g, (L2.x1 - L2.x0) / 2 - 0.7);
           if (w < 0.8) continue;
-          P4.at({ ...S3("pew"), w }, s * ((L2.x1 - L2.x0) / 4 + 0.15), z, Math.PI);
+          P4.at({ ...S4("pew"), w }, s * ((L2.x1 - L2.x0) / 4 + 0.15), z, Math.PI);
         }
       }
-      P4.wall(S3("plant"), "front", "start");
-      P4.wall(S3("plant"), "front", "end");
+      P4.wall(S4("plant"), "front", "start");
+      P4.wall(S4("plant"), "front", "end");
     },
-    marine(P4, L2, b, R4, S3, g) {
-      const desk = P4.wall(S3("desk"), "back", "center", 0.62 * g);
+    marine(P4, L2, b, R4, S4, g) {
+      const desk = P4.wall(S4("desk"), "back", "center", 0.62 * g);
       if (desk) {
         L2.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
         P4.rects.push({ x0: desk.rect.x0, x1: desk.rect.x1, z0: L2.z0, z1: desk.rect.z0 });
         L2.use.push({ kind: "service", x: desk.x, z: desk.rect.z1 + 0.45, label: null });
-        P4.deco(S3("chair"), desk.x, desk.rect.z0 - 0.3, 0);
-        P4.deco({ ...S3("flag"), k: "marineflag" }, desk.x, L2.z0 + 0.03, 0);
+        P4.deco(S4("chair"), desk.x, desk.rect.z0 - 0.3, 0);
+        P4.deco({ ...S4("flag"), k: "marineflag" }, desk.x, L2.z0 + 0.03, 0);
       }
-      P4.wall(S3("filing"), "back", "start");
-      P4.wall(S3("filing"), "back", "end");
-      P4.wall(S3("rack"), "left", "start");
-      P4.wall(S3("bench"), "right", "end") || P4.wall(S3("bench"), "front", "start");
+      P4.wall(S4("filing"), "back", "start");
+      P4.wall(S4("filing"), "back", "end");
+      P4.wall(S4("rack"), "left", "start");
+      P4.wall(S4("bench"), "right", "end") || P4.wall(S4("bench"), "front", "start");
       P4.deco({ k: "wanted", w: 1.2, d: 0.04, h: 0.9 }, L2.x1 - 0.03, (L2.z0 + L2.z1) / 2 - 0.3, -Math.PI / 2);
       L2.residents.push({ x: L2.x0 + 0.8, z: L2.z1 - 1, guard: true });
     },
-    shipwright(P4, L2, b, R4, S3, g) {
-      const wb = P4.wall(S3("workbench"), "back", "start", 0.62 * g);
+    shipwright(P4, L2, b, R4, S4, g) {
+      const wb = P4.wall(S4("workbench"), "back", "start", 0.62 * g);
       if (wb) {
         L2.keeper = { x: wb.x, z: wb.rect.z0 - 0.32 };
         P4.rects.push({ x0: wb.rect.x0, x1: wb.rect.x1, z0: L2.z0, z1: wb.rect.z0 });
         L2.use.push({ kind: "service", x: wb.x, z: wb.rect.z1 + 0.45, label: null });
       }
-      P4.free(S3("hull"), L2.x1 - 1.6, (L2.z0 + L2.z1) / 2);
-      P4.wall(S3("lumber"), "front", "start") || P4.wall(S3("lumber"), "left", "end");
-      P4.wall(S3("rack"), "right", "start");
-      P4.wall(S3("barrel"), "front", "end");
+      P4.free(S4("hull"), L2.x1 - 1.6, (L2.z0 + L2.z1) / 2);
+      P4.wall(S4("lumber"), "front", "start") || P4.wall(S4("lumber"), "left", "end");
+      P4.wall(S4("rack"), "right", "start");
+      P4.wall(S4("barrel"), "front", "end");
     }
   };
 
@@ -34896,12 +34896,12 @@ void main() {
       const w = this.world;
       const tx = w.wx(Math.floor(x)), ty = Math.floor(y);
       if (w.type(tx, ty) !== T.BRIDGE) return null;
-      const S3 = this.spans || (this.spans = /* @__PURE__ */ new Map());
+      const S4 = this.spans || (this.spans = /* @__PURE__ */ new Map());
       const k = ty * w.width + tx;
-      let s = S3.get(k);
+      let s = S4.get(k);
       if (!s) {
         s = buildSpan(w, tx, ty);
-        for (const q2 of s.top.keys()) S3.set(q2, s);
+        for (const q2 of s.top.keys()) S4.set(q2, s);
       }
       return s;
     }
@@ -36569,11 +36569,15 @@ void main() {
     return m;
   }
 
-  // src/render3d/water3d.js
-  var SWELL = (
+  // src/render3d/swell.js
+  var SWELL_GLSL = (
     /* glsl */
     `
-  float sHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float sHash(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
   float sNoise(vec2 p) {
     vec2 i = floor(p), f = fract(p);
     vec2 u = f * f * (3.0 - 2.0 * f);
@@ -36602,6 +36606,69 @@ void main() {
   }
 `
   );
+  var fract = (v) => v - Math.floor(v);
+  function sHash(x, y) {
+    let a = fract(x * 0.1031), b = fract(y * 0.1031), c = a;
+    const d = a * (b + 33.33) + b * (c + 33.33) + c * (a + 33.33);
+    a += d;
+    b += d;
+    c += d;
+    return fract((a + b) * c);
+  }
+  function sNoise(x, y) {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+    const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+    const a = sHash(ix, iy), b = sHash(ix + 1, iy), c = sHash(ix, iy + 1), d = sHash(ix + 1, iy + 1);
+    const top = a + (b - a) * ux, bot = c + (d - c) * ux;
+    return top + (bot - top) * uy;
+  }
+  function sFbm(x, y) {
+    const a = sNoise(x, y);
+    const px2 = (0.8 * x + 0.6 * y) * 2.03 + 17.3, py2 = (-0.6 * x + 0.8 * y) * 2.03 + 17.3;
+    return a * 0.64 + sNoise(px2, py2) * 0.36;
+  }
+  function swells(x, y, t) {
+    const qx = x + (sNoise(x * 0.021, y * 0.021) - 0.5) * 14;
+    const qy = y + (sNoise(x * 0.021 + 7.7, y * 0.021 + 7.7) - 0.5) * 14;
+    const g1 = 0.35 + 0.9 * sFbm(x * 0.011 + t * 0.02, y * 0.011);
+    const g2 = 0.3 + 0.9 * sFbm(x * 0.017 + 31, y * 0.017 + 31 - t * 0.025);
+    const g3 = 0.3 + 0.9 * sFbm(x * 0.026 + 57, y * 0.026 + 57);
+    const a1 = 0.2856 * (0.96 * qx + 0.28 * qy) - 1.673 * t;
+    const a2 = 0.4833 * (-0.37 * qx + 0.93 * qy) - 2.177 * t + 1.7;
+    const a3 = 0.7854 * (0.75 * qx - 0.66 * qy) - 2.774 * t + 4.1;
+    return (Math.sin(a1) * g1 + Math.sin(a2) * 0.6 * g2 + Math.sin(a3) * 0.35 * g3) / 1.95;
+  }
+  var swellAmp = (storm, zone) => zone >= 2 ? 0 : 0.14 + storm * 0.34;
+  var sst = (a, b, x) => {
+    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  var LIQUID = new Float32Array(256).fill(0.15);
+  for (const k of [0, 1, 2, 5, 7]) LIQUID[k] = 1;
+  LIQUID[3] = 0.5;
+  LIQUID[9] = 0;
+  var S = { t: 0, amp: 0, world: null, ox: 0, oy: 0 };
+  function setSwell(t, amp, world, ox, oy) {
+    S.t = t;
+    S.amp = amp;
+    S.world = world;
+    S.ox = ox;
+    S.oy = oy;
+  }
+  function swellAt(x, y) {
+    const w = S.world;
+    if (!w || !S.amp) return 0;
+    const dx = w.dx ? w.dx(S.ox, x) : x - S.ox, dy = y - S.oy;
+    const fade2 = 1 - sst(70, 190, Math.hypot(dx, dy));
+    if (fade2 <= 0) return 0;
+    const t = w.type(Math.floor(x), Math.floor(y));
+    const liquid = LIQUID[t < 16 ? t : 255];
+    const shore = 0.35 + 0.65 * sst(0.5, -7, w.sd ? w.sd(x, y) : -32);
+    return swells(x, y, S.t) * S.amp * shore * fade2 * liquid;
+  }
+
+  // src/render3d/water3d.js
+  var SWELL = SWELL_GLSL;
   var VERT = (
     /* glsl */
     `
@@ -37057,7 +37124,8 @@ void main() {
       u.uDay.value = env.daylight;
       u.uStorm.value = env.storm;
       const zone = u.uZone.value;
-      u.uAmp.value = zone >= 2 ? 0 : 0.14 + env.storm * 0.34;
+      u.uAmp.value = swellAmp(env.storm, zone);
+      setSwell(env.time, u.uAmp.value, this.world, ox, oy);
       if (sunDir) u.uSunDir.value.copy(sunDir);
       if (sunCol) u.uSunCol.value.copy(sunCol);
       if (sky) u.uSky.value.copy(sky);
@@ -37970,10 +38038,10 @@ void main() {
     if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: "main" });
     d.shotPile = null;
     const mainFirst = [...d.mastU].sort((a, b) => Math.abs(a) - Math.abs(b));
-    const S3 = FURNITURE.shot;
+    const S4 = FURNITURE.shot;
     for (const m of mainFirst) {
       for (const [u, v] of [[m + d.mastR + 0.95, 0], [m - d.mastR - 0.95, 0], [m, d.mastR + 0.85], [m, -d.mastR - 0.85]]) {
-        const box2 = { u0: u - S3.w / 2, u1: u + S3.w / 2, v0: v - S3.dp / 2, v1: v + S3.dp / 2 };
+        const box2 = { u0: u - S4.w / 2, u1: u + S4.w / 2, v0: v - S4.dp / 2, v1: v + S4.dp / 2 };
         if (deckClear(d, box2, 0.55)) {
           d.shotPile = { u, v, ...box2 };
           break;
@@ -38112,9 +38180,9 @@ void main() {
     };
     const spec = (kind, extra = {}) => ({ kind, ...FURNITURE[kind], ...extra });
     const sidePlace = (kind, s, u, extra) => {
-      const S3 = spec(kind, extra), y0 = S3.y || 0, y1 = S3.pipe ? H3 - 0.1 : y0 + S3.h;
-      const w = Math.min(P4.reach(u - S3.w / 2, y0, y1), P4.reach(u, y0, y1), P4.reach(u + S3.w / 2, y0, y1));
-      const it = { rot: s > 0 ? Math.PI : 0, ...S3, u, v: s * (w - 0.01 - S3.dp / 2), room: r.kind, floor: r.floor };
+      const S4 = spec(kind, extra), y0 = S4.y || 0, y1 = S4.pipe ? H3 - 0.1 : y0 + S4.h;
+      const w = Math.min(P4.reach(u - S4.w / 2, y0, y1), P4.reach(u, y0, y1), P4.reach(u + S4.w / 2, y0, y1));
+      const it = { rot: s > 0 ? Math.PI : 0, ...S4, u, v: s * (w - 0.01 - S4.dp / 2), room: r.kind, floor: r.floor };
       return { it, off: P4.reach(u, y0, y1) - w };
     };
     P4.onSide = (kind, s, u, extra = {}) => P4.put(sidePlace(kind, s, u, extra).it);
@@ -38137,18 +38205,18 @@ void main() {
     P4.row = (kinds, s, from, to, gap, extra = {}) => {
       const out = [], dir = to >= from ? 1 : -1;
       for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
-        const kind = kinds[out.length % kinds.length], S3 = spec(kind, extra);
-        const it = P4.onSide(kind, s, u + dir * S3.w / 2, extra);
+        const kind = kinds[out.length % kinds.length], S4 = spec(kind, extra);
+        const it = P4.onSide(kind, s, u + dir * S4.w / 2, extra);
         if (it) {
           out.push(it);
-          u += dir * (S3.w + (typeof gap === "function" ? gap(out.length) : gap) - 0.05);
+          u += dir * (S4.w + (typeof gap === "function" ? gap(out.length) : gap) - 0.05);
         }
       }
       return out;
     };
     P4.onEnd = (kind, e, v, extra = {}) => {
-      const S3 = spec(kind, extra);
-      return P4.put({ ...S3, u: e < 0 ? ua + 0.01 + S3.dp / 2 : ub - 0.01 - S3.dp / 2, v, rot: e < 0 ? Math.PI / 2 : -Math.PI / 2 });
+      const S4 = spec(kind, extra);
+      return P4.put({ ...S4, u: e < 0 ? ua + 0.01 + S4.dp / 2 : ub - 0.01 - S4.dp / 2, v, rot: e < 0 ? Math.PI / 2 : -Math.PI / 2 });
     };
     P4.around = (u0, v0, fn) => {
       for (let k = 0; k < 160; k++) {
@@ -38201,17 +38269,17 @@ void main() {
       return null;
     };
     P4.lanterns = () => {
-      const S3 = FURNITURE.lantern, y = Math.min(H3 - 0.12, 2.25) - S3.h, len = ub - ua, n = Math.max(1, Math.round(len / 3.2));
+      const S4 = FURNITURE.lantern, y = Math.min(H3 - 0.12, 2.25) - S4.h, len = ub - ua, n = Math.max(1, Math.round(len / 3.2));
       const free = (lt2) => {
         const fp = footprint(lt2);
-        return fp.u0 >= ua && fp.u1 <= ub && !P4.items.some((o) => hits(fp, footprint(o), 0.08) && (o.y || 0) < lt2.y + S3.h && top(o) > lt2.y);
+        return fp.u0 >= ua && fp.u1 <= ub && !P4.items.some((o) => hits(fp, footprint(o), 0.08) && (o.y || 0) < lt2.y + S4.h && top(o) > lt2.y);
       };
       for (let i = 0; i < n; i++) {
         const u = ua + len * (i + 0.5) / n;
         let put2 = null;
         for (const s of i % 2 ? [1, -1] : [-1, 1]) {
-          const w = Math.min(P4.reach(u - S3.w / 2, y, y + S3.h), P4.reach(u, y, y + S3.h), P4.reach(u + S3.w / 2, y, y + S3.h)) + 0.02;
-          const lt2 = { kind: "lantern", ...S3, u, v: s * (w - S3.dp / 2), y, rot: s > 0 ? Math.PI : 0, ghost: true, wall: s, room: r.kind, floor: r.floor };
+          const w = Math.min(P4.reach(u - S4.w / 2, y, y + S4.h), P4.reach(u, y, y + S4.h), P4.reach(u + S4.w / 2, y, y + S4.h)) + 0.02;
+          const lt2 = { kind: "lantern", ...S4, u, v: s * (w - S4.dp / 2), y, rot: s > 0 ? Math.PI : 0, ghost: true, wall: s, room: r.kind, floor: r.floor };
           if (free(lt2)) {
             put2 = lt2;
             break;
@@ -38219,7 +38287,7 @@ void main() {
         }
         for (const dv of [0, 0.6, -0.6, 1.2, -1.2]) {
           if (put2) break;
-          const lt2 = { kind: "lantern", ...S3, dp: S3.w, u, v: dv, y: H3 - 0.5, h: 0.5, rot: 0, ghost: true, wall: 0, room: r.kind, floor: r.floor };
+          const lt2 = { kind: "lantern", ...S4, dp: S4.w, u, v: dv, y: H3 - 0.5, h: 0.5, rot: 0, ghost: true, wall: 0, room: r.kind, floor: r.floor };
           if (free(lt2)) put2 = lt2;
         }
         if (put2) P4.items.push(put2);
@@ -38319,9 +38387,9 @@ void main() {
       for (const s of [-1, 1]) n += P4.row(CARGO.slice(n % 3), s, ua + 0.3, ub - 0.3, (k) => k % 3 ? 0.15 : 1.1).length;
       for (const o of P4.items.slice()) {
         if (o.treasure || o.kind === "shot") continue;
-        const s = Math.sign(o.v), f = footprint(o), kind = ["barrel", "sacks", "barrel", "crate"][Math.floor(Math.abs(o.u) * 3.7) % 4], S3 = FURNITURE[kind];
-        const v = s > 0 ? f.v0 - 0.08 - S3.dp / 2 : f.v1 + 0.08 + S3.dp / 2;
-        if (Math.abs(v) - S3.dp / 2 >= 1.3) P4.put({ ...S3, kind, u: o.u, v, rot: s > 0 ? Math.PI : 0 });
+        const s = Math.sign(o.v), f = footprint(o), kind = ["barrel", "sacks", "barrel", "crate"][Math.floor(Math.abs(o.u) * 3.7) % 4], S4 = FURNITURE[kind];
+        const v = s > 0 ? f.v0 - 0.08 - S4.dp / 2 : f.v1 + 0.08 + S4.dp / 2;
+        if (Math.abs(v) - S4.dp / 2 >= 1.3) P4.put({ ...S4, kind, u: o.u, v, rot: s > 0 ? Math.PI : 0 });
       }
       P4.lanterns();
     }
@@ -39592,6 +39660,160 @@ void main() {
     return { k, overhead };
   }
 
+  // src/render3d/wake3d.js
+  var FOAM = null;
+  function foamTexture() {
+    if (FOAM) return FOAM;
+    const S4 = 128, c = document.createElement("canvas");
+    c.width = c.height = S4;
+    const g = c.getContext("2d");
+    const img2 = g.createImageData(S4, S4);
+    let seed = 7;
+    const r = () => {
+      seed = seed * 16807 % 2147483647;
+      return seed / 2147483647;
+    };
+    const lat = /* @__PURE__ */ new Map();
+    const grad2 = (P4, i, j) => {
+      const k = P4 * 4096 + (j % P4 + P4) % P4 * P4 + (i % P4 + P4) % P4;
+      let v = lat.get(k);
+      if (!v) {
+        const a = r() * Math.PI * 2;
+        v = [Math.cos(a), Math.sin(a)];
+        lat.set(k, v);
+      }
+      return v;
+    };
+    const q2 = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+    const noise = (x, y, P4) => {
+      const fx = x / S4 * P4, fy = y / S4 * P4, i = Math.floor(fx), j = Math.floor(fy), u = fx - i, v = fy - j;
+      const d = (gi, gj, dx, dy) => {
+        const gg = grad2(P4, gi, gj);
+        return gg[0] * dx + gg[1] * dy;
+      };
+      const a = d(i, j, u, v), b = d(i + 1, j, u - 1, v), c2 = d(i, j + 1, u, v - 1), e = d(i + 1, j + 1, u - 1, v - 1);
+      const su = q2(u), top = a + (b - a) * su;
+      return top + (c2 + (e - c2) * su - top) * q2(v);
+    };
+    const sst2 = (a, b, x) => {
+      const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+      return t * t * (3 - 2 * t);
+    };
+    for (let y = 0; y < S4; y++) {
+      for (let x = 0; x < S4; x++) {
+        const wx = x + noise(x, y, 4) * 14, wy = y + noise(x + 40, y + 17, 4) * 14;
+        let ridged = 0, fbm = 0, amp = 0.55, tot = 0;
+        for (const P4 of [4, 8, 16, 32]) {
+          const n = 1 - Math.abs(noise(wx, wy, P4) * 1.6);
+          ridged += amp * n * n;
+          tot += amp;
+          amp *= 0.55;
+        }
+        ridged /= tot;
+        amp = 0.6;
+        tot = 0;
+        for (const P4 of [4, 8, 16]) {
+          fbm += amp * noise(x, y, P4);
+          tot += amp;
+          amp *= 0.5;
+        }
+        fbm = fbm / tot * 1.5 + 0.5;
+        const fine = noise(x, y, 16) * 0.6 + noise(x, y, 32) * 0.4;
+        const veins = sst2(0.58, 0.86, ridged), body = sst2(0.5, 0.9, fbm) * sst2(-0.1, 0.35, fine);
+        const a = Math.min(1, veins * (0.35 + 0.65 * sst2(0.3, 0.7, fbm)) + body * 0.45);
+        const o = (y * S4 + x) * 4;
+        img2.data[o] = img2.data[o + 1] = img2.data[o + 2] = 255;
+        img2.data[o + 3] = Math.round(a * 255);
+      }
+    }
+    g.putImageData(img2, 0, 0);
+    FOAM = new CanvasTexture(c);
+    FOAM.wrapS = FOAM.wrapT = RepeatWrapping;
+    FOAM.anisotropy = 8;
+    return FOAM;
+  }
+  var ACROSS = [-1, -0.62, -0.22, 0.22, 0.62, 1];
+  var ALPHA = [0, 1, 0.45, 0.45, 1, 0];
+  var WK = ACROSS.length;
+  var WakeTrail = class {
+    constructor({ n = 36, life: life2 = 4.2, every = 0.11, y = 0.04, grain = 0.3, drift = 0.17 } = {}) {
+      this.n = n;
+      this.life = life2;
+      this.every = every;
+      this.y = y;
+      this.grain = grain;
+      this.drift = drift;
+      this.pts = [];
+      const m = n * WK;
+      this.pos = new Float32Array(m * 3);
+      this.col = new Float32Array(m * 4);
+      this.uv = new Float32Array(m * 2);
+      const idx = [];
+      for (let i = 0; i < n - 1; i++) {
+        for (let k = 0; k < WK - 1; k++) {
+          const a = i * WK + k, b = a + 1, c = a + WK, d = b + WK;
+          idx.push(a, c, b, b, c, d);
+        }
+      }
+      const g = new BufferGeometry();
+      g.setAttribute("position", new BufferAttribute(this.pos, 3));
+      g.setAttribute("color", new BufferAttribute(this.col, 4));
+      g.setAttribute("uv", new BufferAttribute(this.uv, 2));
+      g.setIndex(idx);
+      g.setDrawRange(0, 0);
+      this.mesh = new Mesh(g, new MeshBasicMaterial({ map: foamTexture(), vertexColors: true, transparent: true, depthWrite: false, fog: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+      this.mesh.frustumCulled = false;
+      this.mesh.renderOrder = 2;
+      this.lastT = -1;
+    }
+    update(src, time, ox, oy, w, shape) {
+      if (src && time - this.lastT > this.every) {
+        this.lastT = time;
+        this.pts.unshift({ x: src.x, y: src.y, h: src.h, t: time, sp: src.sp });
+        if (this.pts.length > this.n) this.pts.length = this.n;
+      }
+      while (this.pts.length && time - this.pts[this.pts.length - 1].t > this.life) this.pts.pop();
+      const n = this.pts.length;
+      const g = this.mesh.geometry;
+      if (n < 2) {
+        g.setDrawRange(0, 0);
+        return;
+      }
+      for (let i = 0; i < n; i++) {
+        const q2 = this.pts[i];
+        const [half2, bright] = shape(q2, (time - q2.t) / this.life);
+        const fade2 = bright * (i === 0 ? 0 : 1);
+        const px2 = -Math.sin(q2.h), py2 = Math.cos(q2.h);
+        const cx = w.dx(ox, q2.x), cz = q2.y - oy;
+        for (let j = 0; j < WK; j++) {
+          const o = i * WK + j;
+          this.uv[o * 2] = ACROSS[j] * half2 * this.grain;
+          this.uv[o * 2 + 1] = (q2.x * Math.cos(q2.h) + q2.y * Math.sin(q2.h)) * this.drift;
+          this.pos[o * 3] = cx + px2 * half2 * ACROSS[j];
+          this.pos[o * 3 + 1] = this.y + swellAt(q2.x + px2 * half2 * ACROSS[j], q2.y + py2 * half2 * ACROSS[j]);
+          this.pos[o * 3 + 2] = cz + py2 * half2 * ACROSS[j];
+          this.col[o * 4] = 0.95;
+          this.col[o * 4 + 1] = 0.98;
+          this.col[o * 4 + 2] = 1;
+          this.col[o * 4 + 3] = ALPHA[j] * fade2;
+        }
+      }
+      g.attributes.position.needsUpdate = true;
+      g.attributes.color.needsUpdate = true;
+      g.attributes.uv.needsUpdate = true;
+      g.setDrawRange(0, (n - 1) * (WK - 1) * 6);
+    }
+    clear() {
+      this.pts.length = 0;
+      this.mesh.geometry.setDrawRange(0, 0);
+    }
+    dispose() {
+      this.mesh.geometry.dispose();
+      this.mesh.material.dispose();
+      this.mesh.removeFromParent();
+    }
+  };
+
   // src/render3d/ships3d.js
   var keelAt2 = (d, t) => -d.D * (1 - 0.55 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
   function palette(def) {
@@ -40075,154 +40297,6 @@ void main() {
   var REST_OAR = { a: -1.15, b: 0.12, f: 1 };
   var SOLID = () => vcMat();
   var GHOST = () => vcMat({ transparent: true, opacity: 0.15, depthWrite: false });
-  var WAKE_N = 36;
-  var WAKE_LIFE = 4.2;
-  var WAKE_ACROSS = [-1, -0.62, -0.22, 0.22, 0.62, 1];
-  var WAKE_ALPHA = [0, 1, 0.45, 0.45, 1, 0];
-  var WK = WAKE_ACROSS.length;
-  var FOAM = null;
-  function foamTexture() {
-    if (FOAM) return FOAM;
-    const S3 = 128, c = document.createElement("canvas");
-    c.width = c.height = S3;
-    const g = c.getContext("2d");
-    const img2 = g.createImageData(S3, S3);
-    let seed = 7;
-    const r = () => {
-      seed = seed * 16807 % 2147483647;
-      return seed / 2147483647;
-    };
-    const lat = /* @__PURE__ */ new Map();
-    const grad2 = (P4, i, j) => {
-      const k = P4 * 4096 + (j % P4 + P4) % P4 * P4 + (i % P4 + P4) % P4;
-      let v = lat.get(k);
-      if (!v) {
-        const a = r() * Math.PI * 2;
-        v = [Math.cos(a), Math.sin(a)];
-        lat.set(k, v);
-      }
-      return v;
-    };
-    const q2 = (t) => t * t * t * (t * (t * 6 - 15) + 10);
-    const noise = (x, y, P4) => {
-      const fx = x / S3 * P4, fy = y / S3 * P4, i = Math.floor(fx), j = Math.floor(fy), u = fx - i, v = fy - j;
-      const d = (gi, gj, dx, dy) => {
-        const gg = grad2(P4, gi, gj);
-        return gg[0] * dx + gg[1] * dy;
-      };
-      const a = d(i, j, u, v), b = d(i + 1, j, u - 1, v), c2 = d(i, j + 1, u, v - 1), e = d(i + 1, j + 1, u - 1, v - 1);
-      const su = q2(u), top = a + (b - a) * su;
-      return top + (c2 + (e - c2) * su - top) * q2(v);
-    };
-    const sst = (a, b, x) => {
-      const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-      return t * t * (3 - 2 * t);
-    };
-    for (let y = 0; y < S3; y++) {
-      for (let x = 0; x < S3; x++) {
-        const wx = x + noise(x, y, 4) * 14, wy = y + noise(x + 40, y + 17, 4) * 14;
-        let ridged = 0, fbm = 0, amp = 0.55, tot = 0;
-        for (const P4 of [4, 8, 16, 32]) {
-          const n = 1 - Math.abs(noise(wx, wy, P4) * 1.6);
-          ridged += amp * n * n;
-          tot += amp;
-          amp *= 0.55;
-        }
-        ridged /= tot;
-        amp = 0.6;
-        tot = 0;
-        for (const P4 of [4, 8, 16]) {
-          fbm += amp * noise(x, y, P4);
-          tot += amp;
-          amp *= 0.5;
-        }
-        fbm = fbm / tot * 1.5 + 0.5;
-        const fine = noise(x, y, 16) * 0.6 + noise(x, y, 32) * 0.4;
-        const veins = sst(0.58, 0.86, ridged), body = sst(0.5, 0.9, fbm) * sst(-0.1, 0.35, fine);
-        const a = Math.min(1, veins * (0.35 + 0.65 * sst(0.3, 0.7, fbm)) + body * 0.45);
-        const o = (y * S3 + x) * 4;
-        img2.data[o] = img2.data[o + 1] = img2.data[o + 2] = 255;
-        img2.data[o + 3] = Math.round(a * 255);
-      }
-    }
-    g.putImageData(img2, 0, 0);
-    FOAM = new CanvasTexture(c);
-    FOAM.wrapS = FOAM.wrapT = RepeatWrapping;
-    FOAM.anisotropy = 8;
-    return FOAM;
-  }
-  var WakeTrail = class {
-    constructor() {
-      this.pts = [];
-      const n = WAKE_N * WK;
-      this.pos = new Float32Array(n * 3);
-      this.col = new Float32Array(n * 4);
-      this.uv = new Float32Array(n * 2);
-      const idx = [];
-      for (let i = 0; i < WAKE_N - 1; i++) {
-        for (let k = 0; k < WK - 1; k++) {
-          const a = i * WK + k, b = a + 1, c = a + WK, d = b + WK;
-          idx.push(a, c, b, b, c, d);
-        }
-      }
-      const g = new BufferGeometry();
-      g.setAttribute("position", new BufferAttribute(this.pos, 3));
-      g.setAttribute("color", new BufferAttribute(this.col, 4));
-      g.setAttribute("uv", new BufferAttribute(this.uv, 2));
-      g.setIndex(idx);
-      g.setDrawRange(0, 0);
-      this.mesh = new Mesh(g, new MeshBasicMaterial({ map: foamTexture(), vertexColors: true, transparent: true, depthWrite: false, fog: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
-      this.mesh.frustumCulled = false;
-      this.mesh.renderOrder = 2;
-      this.lastT = -1;
-    }
-    update(s, time, ox, oy, w) {
-      const L2 = s.def.length, B4 = s.def.beam;
-      const sp = Math.abs(s.speed || 0);
-      if (!s.sunk && sp > 0.8 && time - this.lastT > 0.11) {
-        this.lastT = time;
-        this.pts.unshift({ x: s.x - Math.cos(s.heading) * L2 * 0.46, y: s.y - Math.sin(s.heading) * L2 * 0.46, h: s.heading, t: time, sp });
-        if (this.pts.length > WAKE_N) this.pts.length = WAKE_N;
-      }
-      while (this.pts.length && time - this.pts[this.pts.length - 1].t > WAKE_LIFE) this.pts.pop();
-      const n = this.pts.length;
-      const g = this.mesh.geometry;
-      if (n < 2) {
-        g.setDrawRange(0, 0);
-        return;
-      }
-      for (let i = 0; i < n; i++) {
-        const q2 = this.pts[i];
-        const age = (time - q2.t) / WAKE_LIFE;
-        const k = Math.min(1, q2.sp / 6);
-        const half2 = B4 * 0.42 + age * (1.6 + L2 * 0.25) * (0.5 + k);
-        const px2 = -Math.sin(q2.h), py2 = Math.cos(q2.h);
-        const cx = w.dx(ox, q2.x), cz = q2.y - oy;
-        const fade2 = Math.pow(1 - age, 1.6) * (0.35 + 0.65 * k) * (i === 0 ? 0 : 1);
-        for (let j = 0; j < WK; j++) {
-          const o = i * WK + j;
-          this.uv[o * 2] = WAKE_ACROSS[j] * half2 * 0.3;
-          this.uv[o * 2 + 1] = (q2.x * Math.cos(q2.h) + q2.y * Math.sin(q2.h)) * 0.17;
-          this.pos[o * 3] = cx + px2 * half2 * WAKE_ACROSS[j];
-          this.pos[o * 3 + 1] = 0.04;
-          this.pos[o * 3 + 2] = cz + py2 * half2 * WAKE_ACROSS[j];
-          this.col[o * 4] = 0.95;
-          this.col[o * 4 + 1] = 0.98;
-          this.col[o * 4 + 2] = 1;
-          this.col[o * 4 + 3] = WAKE_ALPHA[j] * fade2;
-        }
-      }
-      g.attributes.position.needsUpdate = true;
-      g.attributes.color.needsUpdate = true;
-      g.attributes.uv.needsUpdate = true;
-      g.setDrawRange(0, (n - 1) * (WK - 1) * 6);
-    }
-    dispose() {
-      this.mesh.geometry.dispose();
-      this.mesh.material.dispose();
-      this.mesh.removeFromParent();
-    }
-  };
   var CREW_DRESS = {
     marine: { top: "#f5f6fa", bottom: "#1b4f72", hat: "#f5f6fa" },
     pirate: { top: "#37474f", bottom: "#4e342e", hat: "#b71c1c" },
@@ -40541,7 +40615,14 @@ void main() {
       if (!this.wake) this.wake = new WakeTrail();
       if (r.parent && this.wake.mesh.parent !== r.parent) r.parent.add(this.wake.mesh);
       const v3 = ctx?.game?.view3d;
-      if (v3 && ctx.world) this.wake.update(s, env.time, v3.ox, v3.oy, ctx.world);
+      if (v3 && ctx.world) {
+        const L2 = s.def.length, B4 = s.def.beam, sp = Math.abs(s.speed || 0);
+        const src = !s.sunk && sp > 0.8 ? { x: s.x - Math.cos(s.heading) * L2 * 0.46, y: s.y - Math.sin(s.heading) * L2 * 0.46, h: s.heading, sp } : null;
+        this.wake.update(src, env.time, v3.ox, v3.oy, ctx.world, (q2, age) => {
+          const k = Math.min(1, q2.sp / 6);
+          return [B4 * 0.42 + age * (1.6 + L2 * 0.25) * (0.5 + k), Math.pow(1 - age, 1.6) * (0.35 + 0.65 * k)];
+        });
+      }
       const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === "sail" && ctx.mode !== "third";
       if (own !== this.ghost) this.setGhost(own);
       if (this.oars) {
@@ -40813,13 +40894,13 @@ void main() {
           if (!list) continue;
           for (const c of list) {
             const o = c.o;
-            const S3 = o && CAM_SOLID[o.kind];
-            if (!S3) continue;
+            const S4 = o && CAM_SOLID[o.kind];
+            if (!S4) continue;
             const qx = w.dx(x0, c.x), qz = c.y - z0;
             let t0, t1;
             if (c.r !== void 0) {
               const q2 = qx * qx + qz * qz;
-              let R4 = Math.max(c.r, (S3[1] || 0) * (o.s || 1)) + CAM_R;
+              let R4 = Math.max(c.r, (S4[1] || 0) * (o.s || 1)) + CAM_R;
               if (q2 <= R4 * R4) R4 = c.r + CAM_R;
               const b = qx * ux + qz * uz, cc = q2 - R4 * R4;
               if (cc <= 0) continue;
@@ -40838,7 +40919,7 @@ void main() {
               t1 = Math.min(Math.max(xa, xb), Math.max(za, zb));
             }
             if (t1 <= 0 || t0 >= best || t0 >= t1) continue;
-            const h2 = o.kind === "tree" && TREE_H[o.sub] || S3[0];
+            const h2 = o.kind === "tree" && TREE_H[o.sub] || S4[0];
             const base2 = ground(o.x, o.y) - 0.3, top = base2 + 0.3 + h2 * (o.s || 1) + CAM_R;
             if (Math.abs(uy) > 1e-6) {
               const ta = (base2 - y0) / uy, tb = (top - y0) / uy;
@@ -40867,8 +40948,8 @@ void main() {
           if (!inside2) continue;
           const o = c.o;
           if (c.wall || o?.kind === "building" && (o.hut || o.colCols?.includes(c))) return true;
-          const S3 = o && CAM_SOLID[o.kind];
-          if (S3 && ground(o.x, o.y) + (o.kind === "tree" && TREE_H[o.sub] || S3[0]) * (o.s || 1) > eyeY - 0.1) return true;
+          const S4 = o && CAM_SOLID[o.kind];
+          if (S4 && ground(o.x, o.y) + (o.kind === "tree" && TREE_H[o.sub] || S4[0]) * (o.s || 1) > eyeY - 0.1) return true;
         }
         return false;
       };
@@ -40928,7 +41009,7 @@ void main() {
         rollSea = Math.sin(t * 0.9) * 0.03 * Math.cos(this.yaw - s.heading);
         this.seaPitch = (s.pitch || 0) * Math.cos(this.yaw - s.heading);
       } else if (p.inWater) {
-        gh = waterLevel(game.world, p.x, p.y) - (p.depth || 0) - 0.2;
+        gh = waterLevel(game.world, p.x, p.y) - (p.depth || 0) - 0.2 + swellAt(p.x, p.y) * Math.max(0, 1 - (p.depth || 0) / 1.5);
         eyeH = 0.55;
         const floor = game.seaDepth ? -game.seaDepth(p.x, p.y) : -99;
         if (gh + eyeH < floor + 0.3) gh = floor + 0.3 - eyeH;
@@ -49564,101 +49645,101 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     keys.push({ t: Math.max(T4, tHold + 0.05), p: o.end || st, e: "inout" });
     return finalize(keys);
   }
-  var S = (c, o) => ({ ...o, stance: o.stance || c.stance, holdT: c.dashT ? Math.max(o.holdT ?? 0.055, c.dashT) : o.holdT, holdK: c.dashT ? 0.9 : o.holdK });
+  var S2 = (c, o) => ({ ...o, stance: o.stance || c.stance, holdT: c.dashT ? Math.max(o.holdT ?? 0.055, c.dashT) : o.holdT, holdK: c.dashT ? 0.9 : o.holdK });
   var sw = (c) => c.two ? SWORD22 : SWORD2;
   var spun = (c, base2) => ({ ...c.stance || base2 || GUARD, sp: 1 });
   var CLIPS = {
     // ---------------------------------------------------------------- fists
-    jab: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.02, 0.05], l: 0.02, hF: [0.12, 0.07] }, hit: { b: [0.1, 0.02], l: 0.18, hF: [0.46, -0.07], hB: [0.1, 0.1], fF: [0.22, 0], fB: [-0.14, 0], face: "fierce" } })) }),
-    cross: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.03, 0.05], l: -0.06, hB: [0.04, 0.1], hF: [0.18, 0.02] }, hit: { b: [0.13, 0.02], l: 0.3, hB: [0.48, -0.08], hF: [0.08, 0.12], fF: [0.24, 0], fB: [-0.16, -0.02], face: "fierce" } })) }),
-    hook: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.03, 0.06], l: -0.18, hF: [-0.12, 0.02], eF: 1 }, hit: { b: [0.08, 0.03], l: 0.26, hF: [0.34, -0.1], eF: -0.9, hB: [0.1, 0.1], face: "fierce" }, follow: { l: 0.32, hF: [0.22, -0.02], eF: -0.4 } })) }),
-    uppercut: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.16], l: 0.22, hF: [0.12, 0.3], eF: 1, fF: [0.2, 0], fB: [-0.16, 0] }, hit: { b: [0.08, -0.06], z: 0.08, l: -0.16, hF: [0.2, -0.46], eF: 0.5, hB: [0.14, 0.14], fF: [0.18, -0.03], fB: [-0.12, -0.12], face: "shout" }, follow: { z: 0, l: -0.1 } })), legs: true }),
-    haymaker: (w, T4, c) => ({ keys: strike(w, T4, S(c, { loadAt: 0.72, load: { b: [-0.1, 0.08], l: -0.34, hF: [-0.36, -0.12], eF: 0.9, hB: [0.2, 0], fF: [0.24, 0], fB: [-0.18, 0], face: "fierce" }, hit: { b: [0.24, 0.03], l: 0.42, hF: [0.5, -0.03], eF: 0.2, hB: [-0.12, 0.2], fF: [0.34, 0], fB: [-0.14, -0.06], face: "shout" }, follow: { b: [0.26, 0.06], l: 0.46, hF: [0.44, 0.1] } })), jitter: 0.012 }),
-    palm: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: PALMS, load: { b: [-0.02, 0.08], l: 0, hF: [0.1, 0.1] }, hit: { b: [0.12, 0.05], l: 0.22, hF: [0.48, -0.02], hB: [0.08, 0.14], fF: [0.26, 0], face: "fierce" } })) }),
-    palm2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: PALMS, load: { b: [-0.03, 0.08], l: -0.08, hB: [0, 0.12], hF: [0.2, 0.04] }, hit: { b: [0.14, 0.05], l: 0.3, hB: [0.5, -0.03], hF: [0.06, 0.14], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
-    palm_double: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: PALMS, loadAt: 0.7, load: { b: [-0.08, 0.12], l: -0.2, hF: [-0.12, 0.14], hB: [-0.16, 0.18] }, hit: { b: [0.22, 0.06], l: 0.32, hF: [0.5, -0.06], hB: [0.46, 0.06], fF: [0.32, 0], fB: [-0.18, -0.03], face: "shout" }, follow: { l: 0.36 } })), jitter: 0.01 }),
-    shigan: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.03, 0.05], l: -0.06, hF: [0.04, 0.1], hand: "finger" }, hit: { b: [0.16, 0.02], l: 0.32, hF: [0.52, -0.06], hand: "finger", hB: [-0.08, 0.2], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
-    shigan2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.03, 0.05], l: -0.08, hB: [0, 0.12], handB: "finger" }, hit: { b: [0.17, 0.02], l: 0.34, hB: [0.52, -0.06], handB: "finger", hF: [0.06, 0.16], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
-    claw: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.12, hF: [0.02, -0.38], hand: "claw", eF: 1 }, hit: { l: 0.28, b: [0.1, 0.05], hF: [0.34, 0.26], hand: "claw", face: "fierce" } })) }),
-    claw2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: 0.12, b: [0, 0.08], hB: [0.02, 0.32], handB: "claw" }, hit: { l: -0.12, b: [0.1, 0], hB: [0.36, -0.32], handB: "claw", hF: [0.12, 0.12], face: "fierce" } })) }),
-    claw_x: (w, T4, c) => ({ keys: strike(w, T4, S(c, { loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.04], hF: [0, -0.4], hB: [-0.06, -0.36], hand: "claw", handB: "claw", face: "fierce" }, hit: { l: 0.36, b: [0.18, 0.08], hF: [0.36, 0.28], hB: [0.3, 0.32], hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 8e-3 }),
-    grab: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.02, 0.06], l: -0.08, hF: [0.1, 0.02], hand: "claw" }, hit: { b: [0.12, 0.03], l: 0.26, hF: [0.5, -0.05], hand: "claw", face: "fierce" }, follow: { hand: "fist", hF: [0.4, -0.02], l: 0.18 } })) }),
-    grab2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.02, 0.06], l: -0.1, hB: [0.02, 0.06], handB: "claw" }, hit: { b: [0.13, 0.03], l: 0.3, hB: [0.5, -0.04], handB: "claw", hF: [0.08, 0.14], face: "fierce" }, follow: { handB: "fist", hB: [0.4, 0] } })) }),
-    chop: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.14, b: [-0.02, 0.04], hF: { a: -2.1, r: 0.36 }, hand: "palm" }, hit: { l: 0.26, b: [0.12, 0.06], hF: { a: 0.55, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
-    chop2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: 0.12, b: [0, 0.08], hF: { a: 2, r: 0.34 }, hand: "palm" }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
-    thrust: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.05, 0.09], l: -0.06, hF: [0.08, 0.06] }, hit: { b: [0.14, 0.04], l: 0.46, hF: [0.44, 0], hB: [-0.22, 0.16], fF: [0.26, 0], fB: [-0.32, -0.08], face: "shout" } })) }),
-    charge: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [-0.06, 0.12], l: 0.1, hF: [0.1, 0.18], hB: [-0.1, 0.2] }, hit: { b: [0.12, 0.08], l: 0.58, hF: [0.18, 0.2], hB: [-0.2, 0.2], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
-    headbutt: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.4, b: [-0.06, 0.02], hF: [0.1, 0.25], hB: [0.02, 0.28] }, hit: { l: 0.52, b: [0.18, 0.06], ht: 0.3, face: "shout" } })) }),
+    jab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.05], l: 0.02, hF: [0.12, 0.07] }, hit: { b: [0.1, 0.02], l: 0.18, hF: [0.46, -0.07], hB: [0.1, 0.1], fF: [0.22, 0], fB: [-0.14, 0], face: "fierce" } })) }),
+    cross: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.06, hB: [0.04, 0.1], hF: [0.18, 0.02] }, hit: { b: [0.13, 0.02], l: 0.3, hB: [0.48, -0.08], hF: [0.08, 0.12], fF: [0.24, 0], fB: [-0.16, -0.02], face: "fierce" } })) }),
+    hook: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.06], l: -0.18, hF: [-0.12, 0.02], eF: 1 }, hit: { b: [0.08, 0.03], l: 0.26, hF: [0.34, -0.1], eF: -0.9, hB: [0.1, 0.1], face: "fierce" }, follow: { l: 0.32, hF: [0.22, -0.02], eF: -0.4 } })) }),
+    uppercut: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.16], l: 0.22, hF: [0.12, 0.3], eF: 1, fF: [0.2, 0], fB: [-0.16, 0] }, hit: { b: [0.08, -0.06], z: 0.08, l: -0.16, hF: [0.2, -0.46], eF: 0.5, hB: [0.14, 0.14], fF: [0.18, -0.03], fB: [-0.12, -0.12], face: "shout" }, follow: { z: 0, l: -0.1 } })), legs: true }),
+    haymaker: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.72, load: { b: [-0.1, 0.08], l: -0.34, hF: [-0.36, -0.12], eF: 0.9, hB: [0.2, 0], fF: [0.24, 0], fB: [-0.18, 0], face: "fierce" }, hit: { b: [0.24, 0.03], l: 0.42, hF: [0.5, -0.03], eF: 0.2, hB: [-0.12, 0.2], fF: [0.34, 0], fB: [-0.14, -0.06], face: "shout" }, follow: { b: [0.26, 0.06], l: 0.46, hF: [0.44, 0.1] } })), jitter: 0.012 }),
+    palm: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, load: { b: [-0.02, 0.08], l: 0, hF: [0.1, 0.1] }, hit: { b: [0.12, 0.05], l: 0.22, hF: [0.48, -0.02], hB: [0.08, 0.14], fF: [0.26, 0], face: "fierce" } })) }),
+    palm2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, load: { b: [-0.03, 0.08], l: -0.08, hB: [0, 0.12], hF: [0.2, 0.04] }, hit: { b: [0.14, 0.05], l: 0.3, hB: [0.5, -0.03], hF: [0.06, 0.14], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
+    palm_double: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, loadAt: 0.7, load: { b: [-0.08, 0.12], l: -0.2, hF: [-0.12, 0.14], hB: [-0.16, 0.18] }, hit: { b: [0.22, 0.06], l: 0.32, hF: [0.5, -0.06], hB: [0.46, 0.06], fF: [0.32, 0], fB: [-0.18, -0.03], face: "shout" }, follow: { l: 0.36 } })), jitter: 0.01 }),
+    shigan: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.06, hF: [0.04, 0.1], hand: "finger" }, hit: { b: [0.16, 0.02], l: 0.32, hF: [0.52, -0.06], hand: "finger", hB: [-0.08, 0.2], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
+    shigan2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.08, hB: [0, 0.12], handB: "finger" }, hit: { b: [0.17, 0.02], l: 0.34, hB: [0.52, -0.06], handB: "finger", hF: [0.06, 0.16], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
+    claw: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.12, hF: [0.02, -0.38], hand: "claw", eF: 1 }, hit: { l: 0.28, b: [0.1, 0.05], hF: [0.34, 0.26], hand: "claw", face: "fierce" } })) }),
+    claw2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: 0.12, b: [0, 0.08], hB: [0.02, 0.32], handB: "claw" }, hit: { l: -0.12, b: [0.1, 0], hB: [0.36, -0.32], handB: "claw", hF: [0.12, 0.12], face: "fierce" } })) }),
+    claw_x: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.04], hF: [0, -0.4], hB: [-0.06, -0.36], hand: "claw", handB: "claw", face: "fierce" }, hit: { l: 0.36, b: [0.18, 0.08], hF: [0.36, 0.28], hB: [0.3, 0.32], hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 8e-3 }),
+    grab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.06], l: -0.08, hF: [0.1, 0.02], hand: "claw" }, hit: { b: [0.12, 0.03], l: 0.26, hF: [0.5, -0.05], hand: "claw", face: "fierce" }, follow: { hand: "fist", hF: [0.4, -0.02], l: 0.18 } })) }),
+    grab2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.06], l: -0.1, hB: [0.02, 0.06], handB: "claw" }, hit: { b: [0.13, 0.03], l: 0.3, hB: [0.5, -0.04], handB: "claw", hF: [0.08, 0.14], face: "fierce" }, follow: { handB: "fist", hB: [0.4, 0] } })) }),
+    chop: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.14, b: [-0.02, 0.04], hF: { a: -2.1, r: 0.36 }, hand: "palm" }, hit: { l: 0.26, b: [0.12, 0.06], hF: { a: 0.55, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
+    chop2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: 0.12, b: [0, 0.08], hF: { a: 2, r: 0.34 }, hand: "palm" }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
+    thrust: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.05, 0.09], l: -0.06, hF: [0.08, 0.06] }, hit: { b: [0.14, 0.04], l: 0.46, hF: [0.44, 0], hB: [-0.22, 0.16], fF: [0.26, 0], fB: [-0.32, -0.08], face: "shout" } })) }),
+    charge: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.06, 0.12], l: 0.1, hF: [0.1, 0.18], hB: [-0.1, 0.2] }, hit: { b: [0.12, 0.08], l: 0.58, hF: [0.18, 0.2], hB: [-0.2, 0.2], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
+    headbutt: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.4, b: [-0.06, 0.02], hF: [0.1, 0.25], hB: [0.02, 0.28] }, hit: { l: 0.52, b: [0.18, 0.06], ht: 0.3, face: "shout" } })) }),
     // ---------------------------------------------------------------- kicks
-    kick: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.1, fF: [0.12, -0.3], hF: [0.18, 0.04], hB: [0.06, 0.14] }, hit: { l: -0.22, b: [0.05, -0.02], fF: [0.68, -0.42], fB: [-0.08, 0], hF: [0.1, 0.12], hB: [-0.12, 0.16], face: "fierce" } })), legs: true }),
-    kick_high: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.18, fF: [0.02, -0.36], fB: [-0.05, 0] }, hit: { l: -0.44, b: [0.02, -0.02], fF: [0.58, -0.84], fB: [-0.06, 0], hF: [-0.16, 0.12], hB: [0.26, -0.06], face: "fierce" }, follow: { l: -0.3, fF: [0.44, -0.6] } })), legs: true }),
-    kick_low: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.2], l: 0.08, fF: [-0.1, -0.05], fB: [-0.12, 0] }, hit: { b: [0.05, 0.27], l: 0.2, fF: [0.74, -0.06], fB: [-0.22, 0], hF: [0.26, 0.34], hB: [0, 0.3], face: "fierce" } })), legs: true }),
-    kick_spin: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { sp: 0, fF: [0.05, -0.22], l: -0.06 }, hit: { sp: 1, fF: [0.7, -0.54], fB: [-0.06, 0], l: -0.32, hF: [-0.1, 0.15], hB: [0.22, -0.05], face: "shout" }, hitEase: "out", end: spun(c) })), legs: true }),
-    sweep: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.22], l: 0.22, fF: [0.06, -0.04], hF: [0.22, 0.3], hB: [-0.04, 0.3] }, hit: { sp: 1, b: [0.02, 0.3], l: 0.3, fF: [0.8, -0.05], fB: [-0.2, 0], hF: [0.26, 0.42], hB: [-0.1, 0.36], face: "fierce" }, hitEase: "out", end: spun(c) })), legs: true }),
-    knee: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { fF: [0.1, -0.1], l: 0.05, b: [0, 0.06] }, hit: { fF: [0.26, -0.42], l: 0.12, b: [0.08, -0.05], z: 0.06, hF: [0.32, 0.04], hB: [0.26, 0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
-    axe_kick: (w, T4, c) => ({ keys: strike(w, T4, S(c, { loadAt: 0.75, load: { z: 0.55, l: -0.32, fF: [0.2, -0.95], fB: [-0.1, -0.12], hF: [-0.1, -0.1], hB: [0.2, -0.2] }, hit: { z: 0, b: [0.1, 0.08], l: 0.3, fF: [0.58, -0.06], fB: [-0.16, 0], hF: [-0.1, 0.2], hB: [0.1, 0.15], face: "shout" } })), legs: true }),
-    rise_kick: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.18], l: 0.14, fF: [0.28, -0.04], hF: [0.1, 0.3] }, hit: { b: [0, -0.04], z: 0.18, l: -0.52, fF: [0.3, -1.02], fB: [-0.04, 0], hF: [-0.22, 0.1], hB: [0.12, 0.2], face: "shout" }, follow: { z: 0.05 } })), legs: true }),
-    mouton: (w, T4, c) => ({ keys: strike(w, T4, S(c, { loadAt: 0.7, load: { l: -0.32, z: 0.08, fF: [-0.05, -0.46], hF: [0.1, -0.1] }, hit: { l: -0.78, b: [0.26, 0], z: 0.16, fF: [0.88, -0.56], fB: [-0.12, -0.12], hF: [-0.36, 0.25], hB: [-0.32, 0.3], face: "shout" }, follow: { z: 0, l: -0.4 } })), legs: true }),
-    handstand: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.14], l: 0.3, hF: [0.3, 0.4], hB: [0.2, 0.4] }, hit: { r: Math.PI, b: [0, 0], l: 0, hF: [0.12, -0.72], hB: [-0.08, -0.72], hand: "palm", handB: "palm", fF: [0.58, -0.45], fB: [-0.58, -0.45] }, hold: { r: Math.PI, fF: [0.58, -0.4], fB: [-0.58, -0.5] }, holdT: c.hitDur || 0.4, holdK: 0.85 })), legs: true }),
-    flying_kick: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0] }, hit: { z: 0.3, l: -0.34, fF: [0.78, -0.46], fB: [-0.06, -0.3], hF: [-0.2, 0.05], hB: [0.2, -0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
-    stomp: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { fF: [0.18, -0.55], l: -0.1, hF: [0.2, -0.1], hB: [-0.1, -0.1] }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
+    kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.1, fF: [0.12, -0.3], hF: [0.18, 0.04], hB: [0.06, 0.14] }, hit: { l: -0.22, b: [0.05, -0.02], fF: [0.68, -0.42], fB: [-0.08, 0], hF: [0.1, 0.12], hB: [-0.12, 0.16], face: "fierce" } })), legs: true }),
+    kick_high: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.18, fF: [0.02, -0.36], fB: [-0.05, 0] }, hit: { l: -0.44, b: [0.02, -0.02], fF: [0.58, -0.84], fB: [-0.06, 0], hF: [-0.16, 0.12], hB: [0.26, -0.06], face: "fierce" }, follow: { l: -0.3, fF: [0.44, -0.6] } })), legs: true }),
+    kick_low: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.2], l: 0.08, fF: [-0.1, -0.05], fB: [-0.12, 0] }, hit: { b: [0.05, 0.27], l: 0.2, fF: [0.74, -0.06], fB: [-0.22, 0], hF: [0.26, 0.34], hB: [0, 0.3], face: "fierce" } })), legs: true }),
+    kick_spin: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { sp: 0, fF: [0.05, -0.22], l: -0.06 }, hit: { sp: 1, fF: [0.7, -0.54], fB: [-0.06, 0], l: -0.32, hF: [-0.1, 0.15], hB: [0.22, -0.05], face: "shout" }, hitEase: "out", end: spun(c) })), legs: true }),
+    sweep: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.22], l: 0.22, fF: [0.06, -0.04], hF: [0.22, 0.3], hB: [-0.04, 0.3] }, hit: { sp: 1, b: [0.02, 0.3], l: 0.3, fF: [0.8, -0.05], fB: [-0.2, 0], hF: [0.26, 0.42], hB: [-0.1, 0.36], face: "fierce" }, hitEase: "out", end: spun(c) })), legs: true }),
+    knee: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { fF: [0.1, -0.1], l: 0.05, b: [0, 0.06] }, hit: { fF: [0.26, -0.42], l: 0.12, b: [0.08, -0.05], z: 0.06, hF: [0.32, 0.04], hB: [0.26, 0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
+    axe_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.75, load: { z: 0.55, l: -0.32, fF: [0.2, -0.95], fB: [-0.1, -0.12], hF: [-0.1, -0.1], hB: [0.2, -0.2] }, hit: { z: 0, b: [0.1, 0.08], l: 0.3, fF: [0.58, -0.06], fB: [-0.16, 0], hF: [-0.1, 0.2], hB: [0.1, 0.15], face: "shout" } })), legs: true }),
+    rise_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.18], l: 0.14, fF: [0.28, -0.04], hF: [0.1, 0.3] }, hit: { b: [0, -0.04], z: 0.18, l: -0.52, fF: [0.3, -1.02], fB: [-0.04, 0], hF: [-0.22, 0.1], hB: [0.12, 0.2], face: "shout" }, follow: { z: 0.05 } })), legs: true }),
+    mouton: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.7, load: { l: -0.32, z: 0.08, fF: [-0.05, -0.46], hF: [0.1, -0.1] }, hit: { l: -0.78, b: [0.26, 0], z: 0.16, fF: [0.88, -0.56], fB: [-0.12, -0.12], hF: [-0.36, 0.25], hB: [-0.32, 0.3], face: "shout" }, follow: { z: 0, l: -0.4 } })), legs: true }),
+    handstand: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.14], l: 0.3, hF: [0.3, 0.4], hB: [0.2, 0.4] }, hit: { r: Math.PI, b: [0, 0], l: 0, hF: [0.12, -0.72], hB: [-0.08, -0.72], hand: "palm", handB: "palm", fF: [0.58, -0.45], fB: [-0.58, -0.45] }, hold: { r: Math.PI, fF: [0.58, -0.4], fB: [-0.58, -0.5] }, holdT: c.hitDur || 0.4, holdK: 0.85 })), legs: true }),
+    flying_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0] }, hit: { z: 0.3, l: -0.34, fF: [0.78, -0.46], fB: [-0.06, -0.3], hF: [-0.2, 0.05], hB: [0.2, -0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
+    stomp: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { fF: [0.18, -0.55], l: -0.1, hF: [0.2, -0.1], hB: [-0.1, -0.1] }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
     // Okama Kenpo: ballet
-    ballet_kick: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.24], hB: [-0.08, 0.24] }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.03], hF: [0.34, -0.24], hB: [-0.36, -0.22], face: "fierce" } })), legs: true }),
-    pirouette: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 1, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hF: [0.14, -0.44], hB: [0, -0.46], face: "fierce" }, hitEase: "out", end: { ...BALLET, sp: 1 } })), legs: true }),
-    jete: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], face: "fierce" }, follow: { z: 0 } })), legs: true }),
-    arabesque: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], face: "fierce" } })), legs: true }),
+    ballet_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.24], hB: [-0.08, 0.24] }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.03], hF: [0.34, -0.24], hB: [-0.36, -0.22], face: "fierce" } })), legs: true }),
+    pirouette: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 1, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hF: [0.14, -0.44], hB: [0, -0.46], face: "fierce" }, hitEase: "out", end: { ...BALLET, sp: 1 } })), legs: true }),
+    jete: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], face: "fierce" }, follow: { z: 0 } })), legs: true }),
+    arabesque: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], face: "fierce" } })), legs: true }),
     // ---------------------------------------------------------------- blades
-    slash: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.04], hF: { a: -2.1, r: 0.34 }, wF: -2.55, hB: [-0.04, 0.18] }, hit: { l: 0.27, b: [0.13, 0.08], hF: { a: 0.55, r: 0.43 }, wF: 0.8, hB: [0.2, 0.16], fF: [0.3, 0], fB: [-0.17, 0], face: "fierce" }, follow: { l: 0.3, hF: { a: 0.9, r: 0.42 }, wF: 1.15 } })) }),
-    slash2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: sw(c), load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, face: "fierce" }, follow: { hF: { a: -0.95, r: 0.42 }, wF: -1.35 } })) }),
-    rise_slash: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.15], l: 0.26, hF: { a: 1.85, r: 0.36 }, wF: 2.5, hB: [0, 0.22], face: "fierce" }, hit: { b: [0.12, -0.03], z: 0.04, l: -0.22, hF: { a: -1.2, r: 0.43 }, wF: -1.5, hB: [-0.1, 0.12], fF: [0.26, 0], fB: [-0.16, -0.04], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.8, l: -0.26 } })) }),
-    slash3: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: sw(c), loadAt: 0.7, load: { l: -0.22, b: [-0.04, 0.08], hF: { a: 2.7, r: 0.36 }, wF: 3, sp: 0 }, hit: { sp: 1, l: 0.22, b: [0.16, 0.06], hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, hitEase: "out", end: { ...sw(c), sp: 1 } })) }),
-    stab: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: sw(c), load: { l: -0.14, b: [-0.08, 0.06], hF: [-0.02, 0.08], wF: 0, hB: [-0.06, 0.1] }, hit: { l: 0.32, b: [0.22, 0.04], hF: [0.46, -0.03], wF: -0.03, hB: [-0.2, 0.16], fF: [0.36, 0], fB: [-0.22, -0.03], face: "shout" } })) }),
-    cleave: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: HEAVYW, loadAt: 0.72, load: { l: -0.24, b: [-0.06, 0], hF: { a: -1.85, r: 0.36 }, hB: { a: -1.75, r: 0.33 }, wF: -2.25, face: "fierce" }, hit: { l: 0.4, b: [0.22, 0.15], hF: { a: 0.78, r: 0.4 }, hB: { a: 0.88, r: 0.35 }, wF: 1, fF: [0.36, 0], fB: [-0.22, 0], face: "shout" }, follow: { l: 0.44, b: [0.24, 0.17] } })), jitter: 0.01 }),
-    iai: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: { ...SWORD2, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.16], l: 0.34, hF: [0.02, 0.3], wF: 2.7, face: "fierce" }, hit: { l: 0.5, b: [0.2, 0.08], hF: [0.46, 0.04], wF: 0.1, fB: [-0.36, -0.12], face: "shout" }, follow: { l: 0.2, hF: [0.1, 0.28], wF: 2.6 } })) }),
+    slash: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.04], hF: { a: -2.1, r: 0.34 }, wF: -2.55, hB: [-0.04, 0.18] }, hit: { l: 0.27, b: [0.13, 0.08], hF: { a: 0.55, r: 0.43 }, wF: 0.8, hB: [0.2, 0.16], fF: [0.3, 0], fB: [-0.17, 0], face: "fierce" }, follow: { l: 0.3, hF: { a: 0.9, r: 0.42 }, wF: 1.15 } })) }),
+    slash2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, face: "fierce" }, follow: { hF: { a: -0.95, r: 0.42 }, wF: -1.35 } })) }),
+    rise_slash: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.15], l: 0.26, hF: { a: 1.85, r: 0.36 }, wF: 2.5, hB: [0, 0.22], face: "fierce" }, hit: { b: [0.12, -0.03], z: 0.04, l: -0.22, hF: { a: -1.2, r: 0.43 }, wF: -1.5, hB: [-0.1, 0.12], fF: [0.26, 0], fB: [-0.16, -0.04], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.8, l: -0.26 } })) }),
+    slash3: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), loadAt: 0.7, load: { l: -0.22, b: [-0.04, 0.08], hF: { a: 2.7, r: 0.36 }, wF: 3, sp: 0 }, hit: { sp: 1, l: 0.22, b: [0.16, 0.06], hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, hitEase: "out", end: { ...sw(c), sp: 1 } })) }),
+    stab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.14, b: [-0.08, 0.06], hF: [-0.02, 0.08], wF: 0, hB: [-0.06, 0.1] }, hit: { l: 0.32, b: [0.22, 0.04], hF: [0.46, -0.03], wF: -0.03, hB: [-0.2, 0.16], fF: [0.36, 0], fB: [-0.22, -0.03], face: "shout" } })) }),
+    cleave: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.72, load: { l: -0.24, b: [-0.06, 0], hF: { a: -1.85, r: 0.36 }, hB: { a: -1.75, r: 0.33 }, wF: -2.25, face: "fierce" }, hit: { l: 0.4, b: [0.22, 0.15], hF: { a: 0.78, r: 0.4 }, hB: { a: 0.88, r: 0.35 }, wF: 1, fF: [0.36, 0], fB: [-0.22, 0], face: "shout" }, follow: { l: 0.44, b: [0.24, 0.17] } })), jitter: 0.01 }),
+    iai: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: { ...SWORD2, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.16], l: 0.34, hF: [0.02, 0.3], wF: 2.7, face: "fierce" }, hit: { l: 0.5, b: [0.2, 0.08], hF: [0.46, 0.04], wF: 0.1, fB: [-0.36, -0.12], face: "shout" }, follow: { l: 0.2, hF: [0.1, 0.28], wF: 2.6 } })) }),
     // two blades (Nitoryu): alternating cuts, then an X
-    dual1: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: SWORD22, load: { l: -0.16, hF: { a: -2.1, r: 0.34 }, wF: -2.55 }, hit: { l: 0.26, b: [0.12, 0.07], hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" } })) }),
-    dual2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: SWORD22, load: { l: -0.14, hB: { a: -2.2, r: 0.33 }, wB: -2.6 }, hit: { l: 0.28, b: [0.13, 0.07], hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" } })) }),
-    dual3: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: SWORD22, load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
-    dualx: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: SWORD22, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, face: "fierce" }, hit: { l: 0.32, b: [0.18, 0.1], hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, face: "shout" } })) }),
-    dual_stab: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: SWORD22, load: { l: -0.16, b: [-0.1, 0.07], hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "fierce" }, hit: { l: 0.36, b: [0.24, 0.05], hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
-    tora: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: SWORD22, loadAt: 0.72, load: { z: 0.4, l: -0.32, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "fierce" }, hit: { z: 0, l: 0.46, b: [0.24, 0.15], hF: { a: 0.9, r: 0.4 }, hB: { a: 1.1, r: 0.38 }, wF: 1, wB: 1.2, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
-    bladespin: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], hF: { a: 2.6, r: 0.38 }, wF: 2.9 }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
+    dual1: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.16, hF: { a: -2.1, r: 0.34 }, wF: -2.55 }, hit: { l: 0.26, b: [0.12, 0.07], hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" } })) }),
+    dual2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.14, hB: { a: -2.2, r: 0.33 }, wB: -2.6 }, hit: { l: 0.28, b: [0.13, 0.07], hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" } })) }),
+    dual3: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
+    dualx: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, face: "fierce" }, hit: { l: 0.32, b: [0.18, 0.1], hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, face: "shout" } })) }),
+    dual_stab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.16, b: [-0.1, 0.07], hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "fierce" }, hit: { l: 0.36, b: [0.24, 0.05], hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
+    tora: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, loadAt: 0.72, load: { z: 0.4, l: -0.32, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "fierce" }, hit: { z: 0, l: 0.46, b: [0.24, 0.15], hF: { a: 0.9, r: 0.4 }, hB: { a: 1.1, r: 0.38 }, wF: 1, wB: 1.2, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
+    bladespin: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], hF: { a: 2.6, r: 0.38 }, wF: 2.9 }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
     // big weapons
-    axe: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "fierce" }, hit: { l: 0.36, b: [0.2, 0.12], hF: { a: 0.7, r: 0.42 }, hB: { a: 0.9, r: 0.36 }, wF: 1, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4 } })) }),
-    axe2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6 }, hit: { l: -0.2, b: [0.16, 0.02], hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" } })) }),
-    axe_slam: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "fierce" }, hit: { z: 0, l: 0.52, b: [0.24, 0.24], hF: { a: 1.05, r: 0.42 }, hB: { a: 1.15, r: 0.36 }, wF: 1.35, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.5, b: [0.24, 0.24] } })), jitter: 0.012 }),
-    staff: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAFF, load: { l: -0.14, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2] }, hit: { l: 0.24, b: [0.1, 0.05], hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" } })) }),
-    staff2: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], hF: { a: 1.9, r: 0.34 }, wF: 2.3 }, hit: { l: -0.12, b: [0.1, 0.02], hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" } })) }),
-    staff_jab: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], hF: [0, 0.06], wF: 0.02 }, hit: { l: 0.3, b: [0.2, 0.04], hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
+    axe: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "fierce" }, hit: { l: 0.36, b: [0.2, 0.12], hF: { a: 0.7, r: 0.42 }, hB: { a: 0.9, r: 0.36 }, wF: 1, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4 } })) }),
+    axe2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6 }, hit: { l: -0.2, b: [0.16, 0.02], hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" } })) }),
+    axe_slam: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "fierce" }, hit: { z: 0, l: 0.52, b: [0.24, 0.24], hF: { a: 1.05, r: 0.42 }, hB: { a: 1.15, r: 0.36 }, wF: 1.35, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.5, b: [0.24, 0.24] } })), jitter: 0.012 }),
+    staff: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: -0.14, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2] }, hit: { l: 0.24, b: [0.1, 0.05], hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" } })) }),
+    staff2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], hF: { a: 1.9, r: 0.34 }, wF: 2.3 }, hit: { l: -0.12, b: [0.1, 0.02], hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" } })) }),
+    staff_jab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], hF: [0, 0.06], wF: 0.02 }, hit: { l: 0.3, b: [0.2, 0.04], hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
     // ---------------------------------------------------------------- guns & throws
-    shoot: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.42, -0.04], wF: 0, hB: c.sling ? [0.02, -0.04] : [0.3, 0.05], l: 0.03 }, hit: { hF: [0.34, -0.13], wF: -0.4, hB: c.sling ? [0.34, -0.02] : [0.26, 0.04], l: -0.1, b: [-0.07, 0] }, follow: { hF: [0.4, -0.06], wF: -0.1, l: 0 } })) }),
-    aim: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, hB: c.sling ? [-0.02, -0.06] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02] }, hit: { hF: [0.3, -0.24], wF: -0.7, hB: c.sling ? [0.36, -0.04] : [0.24, 0.02], l: -0.16, b: [-0.14, 0.02] } })) }),
-    flick: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { hF: [0.02, 0.2], l: -0.06 }, hit: { hF: [0.46, -0.1], l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
-    throw: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { hF: { a: -2.4, r: 0.4 }, l: -0.16, b: [-0.04, 0.04] }, hit: { hF: { a: 0.15, r: 0.43 }, l: 0.26, b: [0.1, 0.04], hand: "palm", face: "fierce" } })) }),
+    shoot: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.42, -0.04], wF: 0, hB: c.sling ? [0.02, -0.04] : [0.3, 0.05], l: 0.03 }, hit: { hF: [0.34, -0.13], wF: -0.4, hB: c.sling ? [0.34, -0.02] : [0.26, 0.04], l: -0.1, b: [-0.07, 0] }, follow: { hF: [0.4, -0.06], wF: -0.1, l: 0 } })) }),
+    aim: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, hB: c.sling ? [-0.02, -0.06] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02] }, hit: { hF: [0.3, -0.24], wF: -0.7, hB: c.sling ? [0.36, -0.04] : [0.24, 0.02], l: -0.16, b: [-0.14, 0.02] } })) }),
+    flick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { hF: [0.02, 0.2], l: -0.06 }, hit: { hF: [0.46, -0.1], l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
+    throw: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { hF: { a: -2.4, r: 0.4 }, l: -0.16, b: [-0.04, 0.04] }, hit: { hF: { a: 0.15, r: 0.43 }, l: 0.26, b: [0.1, 0.04], hand: "palm", face: "fierce" } })) }),
     // ---------------------------------------------------------------- casting
-    push: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.04, 0.1], l: -0.14, hF: [-0.12, 0.18], hB: [-0.16, 0.2], hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.16, 0], face: "fierce" }, hit: { b: [0.1, 0.04], l: 0.22, hF: [0.47, -0.06], hB: [0.43, 0.03], hand: "palm", handB: "palm", fF: [0.28, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 6e-3 }),
-    point: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, load: { hF: [0.1, 0.1], l: -0.06, face: "fierce" }, hit: { hF: [0.48, -0.12], hand: "finger", l: 0.1, hB: [-0.05, 0.3], fF: [0.18, 0], fB: [-0.12, 0] } })) }),
-    raise: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.14, b: [0.04, 0.04], face: "shout" } })), jitter: 4e-3 }),
-    summon: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.1], l: 0.18, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, -0.02], l: -0.16, hF: [0.18, -0.5], hB: [-0.16, -0.48], hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
-    powerup: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.16], l: 0.26, hF: [0.02, 0.27], hB: [-0.06, 0.29], fF: [0.2, 0], fB: [-0.2, 0], face: "fierce" }, hit: { b: [0, -0.03], l: -0.18, hF: [0.3, -0.34], hB: [-0.28, -0.34], hand: "palm", handB: "palm", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.14 })), jitter: 0.012 }),
-    spread: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], hF: [0.1, 0.26], hB: [0, 0.26], l: 0.22, face: "fierce" }, hit: { b: [0, -0.02], hF: [0.4, -0.14], hB: [-0.38, -0.14], hand: "palm", handB: "palm", l: -0.1, fF: [0.2, 0], fB: [-0.2, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
-    hana: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85 })) }),
-    slam: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, hF: [0.14, -0.46], hB: [0.06, -0.46], l: -0.22, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "fierce" }, hit: { z: 0, b: [0.1, 0.26], l: 0.48, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.26, 0], fB: [-0.2, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
-    quake: (w, T4, c) => ({ keys: strike(w, T4, S(c, { loadAt: 0.72, load: { b: [-0.06, 0.08], l: -0.26, hF: [-0.24, -0.04], hB: [0.2, 0.05], face: "fierce" }, hit: { b: [0.2, 0.05], l: 0.36, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 0.014 }),
-    pray: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
-    blink: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.16], l: 0.32, hF: [-0.1, 0.2], hB: [-0.14, 0.22] }, hit: { l: 0.5, b: [0.2, 0.06], hF: [-0.2, 0.2], hB: [-0.24, 0.22], fB: [-0.3, -0.1] } })), legs: true }),
-    will: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.1], hF: [0, 0.32], hB: [-0.04, 0.32], l: 0.1, ht: 0.15, face: "fierce" }, hit: { b: [0, -0.04], l: -0.12, ht: -0.12, hF: [0.14, 0.36], hB: [-0.1, 0.36], face: "shout" }, holdT: 0.2 })), jitter: 0.01 }),
-    guardup: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: GUARD, load: { b: [0, 0.07], hF: [0.14, -0.1], hB: [0.2, -0.02], eB: -1 }, hit: { b: [0, 0.06], hF: [0.16, -0.12], hB: [0.2, -0.02], eB: -1, face: "fierce" }, holdT: 0.3 })) }),
-    flex: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, load: { b: [0, 0.1], hF: [0.18, -0.2], hB: [-0.18, -0.2], eF: 1, eB: 1, face: "fierce" }, hit: { b: [0, 0.12], hF: [0.2, -0.24], hB: [-0.2, -0.24], face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
-    breath: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "fierce" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
-    pull: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
+    push: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.04, 0.1], l: -0.14, hF: [-0.12, 0.18], hB: [-0.16, 0.2], hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.16, 0], face: "fierce" }, hit: { b: [0.1, 0.04], l: 0.22, hF: [0.47, -0.06], hB: [0.43, 0.03], hand: "palm", handB: "palm", fF: [0.28, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 6e-3 }),
+    point: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.1, 0.1], l: -0.06, face: "fierce" }, hit: { hF: [0.48, -0.12], hand: "finger", l: 0.1, hB: [-0.05, 0.3], fF: [0.18, 0], fB: [-0.12, 0] } })) }),
+    raise: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.14, b: [0.04, 0.04], face: "shout" } })), jitter: 4e-3 }),
+    summon: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.1], l: 0.18, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, -0.02], l: -0.16, hF: [0.18, -0.5], hB: [-0.16, -0.48], hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
+    powerup: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.16], l: 0.26, hF: [0.02, 0.27], hB: [-0.06, 0.29], fF: [0.2, 0], fB: [-0.2, 0], face: "fierce" }, hit: { b: [0, -0.03], l: -0.18, hF: [0.3, -0.34], hB: [-0.28, -0.34], hand: "palm", handB: "palm", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.14 })), jitter: 0.012 }),
+    spread: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], hF: [0.1, 0.26], hB: [0, 0.26], l: 0.22, face: "fierce" }, hit: { b: [0, -0.02], hF: [0.4, -0.14], hB: [-0.38, -0.14], hand: "palm", handB: "palm", l: -0.1, fF: [0.2, 0], fB: [-0.2, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
+    hana: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85 })) }),
+    slam: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, hF: [0.14, -0.46], hB: [0.06, -0.46], l: -0.22, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "fierce" }, hit: { z: 0, b: [0.1, 0.26], l: 0.48, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.26, 0], fB: [-0.2, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
+    quake: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.72, load: { b: [-0.06, 0.08], l: -0.26, hF: [-0.24, -0.04], hB: [0.2, 0.05], face: "fierce" }, hit: { b: [0.2, 0.05], l: 0.36, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 0.014 }),
+    pray: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
+    blink: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.16], l: 0.32, hF: [-0.1, 0.2], hB: [-0.14, 0.22] }, hit: { l: 0.5, b: [0.2, 0.06], hF: [-0.2, 0.2], hB: [-0.24, 0.22], fB: [-0.3, -0.1] } })), legs: true }),
+    will: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.1], hF: [0, 0.32], hB: [-0.04, 0.32], l: 0.1, ht: 0.15, face: "fierce" }, hit: { b: [0, -0.04], l: -0.12, ht: -0.12, hF: [0.14, 0.36], hB: [-0.1, 0.36], face: "shout" }, holdT: 0.2 })), jitter: 0.01 }),
+    guardup: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUARD, load: { b: [0, 0.07], hF: [0.14, -0.1], hB: [0.2, -0.02], eB: -1 }, hit: { b: [0, 0.06], hF: [0.16, -0.12], hB: [0.2, -0.02], eB: -1, face: "fierce" }, holdT: 0.3 })) }),
+    flex: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { b: [0, 0.1], hF: [0.18, -0.2], hB: [-0.18, -0.2], eF: 1, eB: 1, face: "fierce" }, hit: { b: [0, 0.12], hF: [0.2, -0.24], hB: [-0.2, -0.24], face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
+    breath: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "fierce" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
+    pull: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
     // ---------------------------------------------------------------- rubber
-    pistol: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.22, b: [-0.06, 0.05], hF: [-0.56, -0.02], stretch: true, face: "fierce" }, hit: { l: 0.26, b: [0.12, 0.02], hF: [0.47, -0.05], stretch: true, face: "shout" }, holdT: 0.12 })) }),
-    bazooka: (w, T4, c) => ({ keys: strike(w, T4, S(c, { loadAt: 0.74, load: { b: [-0.06, 0.07], l: -0.3, hF: [-0.66, 0], hB: [-0.7, 0.08], hand: "palm", handB: "palm", stretch: true, face: "fierce" }, hit: { b: [0.22, 0.04], l: 0.32, hF: [0.52, -0.04], hB: [0.5, 0.07], hand: "palm", handB: "palm", stretch: true, face: "shout" }, holdT: 0.1 })) }),
-    gatling: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { l: -0.12, hF: [-0.14, 0.04], hB: [-0.16, 0.08], face: "fierce" }, hit: { l: 0.2, b: [0.08, 0.04], hF: [0.4, -0.02], hB: [0.36, 0.05], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
-    kneel: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
-    rocket: (w, T4, c) => ({ keys: strike(w, T4, S(c, { load: { b: [0, 0.12], l: -0.26, hF: [-0.54, 0.08], hB: [-0.56, 0.12], stretch: true }, hit: { l: 0.62, z: 0.16, hF: [0.46, 0], hB: [0.44, 0.06], fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" } })), legs: true }),
-    fly: (w, T4, c) => ({ keys: strike(w, T4, S(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true })
+    pistol: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.22, b: [-0.06, 0.05], hF: [-0.56, -0.02], stretch: true, face: "fierce" }, hit: { l: 0.26, b: [0.12, 0.02], hF: [0.47, -0.05], stretch: true, face: "shout" }, holdT: 0.12 })) }),
+    bazooka: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.74, load: { b: [-0.06, 0.07], l: -0.3, hF: [-0.66, 0], hB: [-0.7, 0.08], hand: "palm", handB: "palm", stretch: true, face: "fierce" }, hit: { b: [0.22, 0.04], l: 0.32, hF: [0.52, -0.04], hB: [0.5, 0.07], hand: "palm", handB: "palm", stretch: true, face: "shout" }, holdT: 0.1 })) }),
+    gatling: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.12, hF: [-0.14, 0.04], hB: [-0.16, 0.08], face: "fierce" }, hit: { l: 0.2, b: [0.08, 0.04], hF: [0.4, -0.02], hB: [0.36, 0.05], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
+    kneel: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
+    rocket: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.12], l: -0.26, hF: [-0.54, 0.08], hB: [-0.56, 0.12], stretch: true }, hit: { l: 0.62, z: 0.16, hF: [0.46, 0], hB: [0.44, 0.06], fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" } })), legs: true }),
+    fly: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true })
   };
   var LIMB = {
     cross: "hB",
@@ -50035,26 +50116,74 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         break;
     }
   }
+  function loopTrack(keys, u, out) {
+    const n = keys.length;
+    u = (u % 1 + 1) % 1;
+    let i = n - 1;
+    for (let k = 0; k < n; k++) if (keys[k][0] > u) {
+      i = (k - 1 + n) % n;
+      break;
+    }
+    const gap = (a, b) => ((b[0] - a[0]) % 1 + 1) % 1 || 1;
+    const k0 = keys[(i - 1 + n) % n], k1 = keys[i], k2 = keys[(i + 1) % n], k3 = keys[(i + 2) % n];
+    const g0 = gap(k0, k1), g1 = gap(k1, k2), g2 = gap(k2, k3);
+    const t = ((u - k1[0]) % 1 + 1) % 1 / g1;
+    const t2 = t * t, t3 = t2 * t;
+    const h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t, h01 = -2 * t3 + 3 * t2, h11 = t3 - t2;
+    for (let j = 1; j < k1.length; j++) {
+      const m12 = (k2[j] - k0[j]) / (g0 + g1), m2 = (k3[j] - k1[j]) / (g1 + g2);
+      out[j - 1] = h00 * k1[j] + h10 * g1 * m12 + h01 * k2[j] + h11 * g1 * m2;
+    }
+    return out;
+  }
+  var STROKE_BODY = [
+    [0, 11, 0, 0, 0.425, -0.07, -0.1, 0.05],
+    [0.15, 13, 0, 0, 0.37, -0.09, 0.24, 0.2],
+    [0.28, 20, -0.01, -0.05, 0.24, -0.24, 0.16, 0.85],
+    [0.38, 25, -0.03, -0.1, 0.12, -0.18, -0.1, 1],
+    [0.46, 23, -0.03, -0.08, 0.19, -0.11, -0.12, 0.8],
+    [0.56, 15, -0.015, -0.02, 0.42, -0.075, -0.1, 0.1],
+    [0.78, 10, 5e-3, 0, 0.43, -0.07, -0.1, 0.05]
+  ];
+  var STROKE_LEGS = [
+    [0, 0, 0, -0.05],
+    [0.26, -4e-3, -0.02, -0.03],
+    [0.38, -0.03, -0.12, 0.06],
+    [0.47, -0.042, -0.17, 0.11],
+    [0.55, -0.03, -0.11, 0.21],
+    [0.63, -8e-3, -0.03, 0.14],
+    [0.7, 0, 0, -0.05]
+  ];
+  var _sb = [];
+  var _sl = [];
+  var sideHand = (r, fwd2, up) => [fwd2 * Math.cos(r) - up * Math.sin(r), -(fwd2 * Math.sin(r) + up * Math.cos(r))];
   function swimPose(P4, kind, t, dir) {
     P4.wF = null;
     P4.wB = null;
     P4.b = [0, 0];
     P4.l = 0;
+    P4.z = 0;
+    P4.legSpread = 0;
     switch (kind) {
       case "crawl": {
-        const w = t * 3.6, s = Math.sin(w), c = Math.cos(w);
-        P4.hF = [0.2 + 0.14 * c, -0.44 + 0.34 * Math.max(0, s)];
+        const u = t * 3.6 / TAU8;
+        const [deg, sink, arch, fwd2, up, spread, elbow] = loopTrack(STROKE_BODY, u, _sb);
+        const [fx, fy, legs2] = loopTrack(STROKE_LEGS, u, _sl);
+        const r = Math.PI / 2 - deg * Math.PI / 180;
+        P4.r = r;
+        P4.l = arch;
+        P4.z = sink;
+        P4.hF = sideHand(r, fwd2, up);
         P4.hB = P4.hF.slice();
-        P4.eF = 0.55;
-        P4.eB = 0.55;
-        P4.hand = s < -0.2 ? "relaxed" : "flat";
-        P4.handB = P4.hand;
-        P4.spread = 0.04 + 0.24 * Math.max(0, s);
-        const kick = Math.max(0, -s);
-        P4.fF = [0.07 * kick, -0.2 * kick];
-        P4.fB = [0.07 * kick, -0.2 * kick];
-        P4.r = 1.12 + 0.05 * s;
-        P4.ht = 0.42;
+        P4.eF = elbow;
+        P4.eB = elbow;
+        P4.spread = spread;
+        P4.hand = "flat";
+        P4.handB = "flat";
+        P4.fF = [fx, fy];
+        P4.fB = [fx, fy];
+        P4.legSpread = legs2;
+        P4.ht = 0.61 - r - arch;
         break;
       }
       case "dive": {
@@ -51743,12 +51872,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     fn(g, C3, v, H3);
     if (k !== 1) g.restore();
   }
-  function fringeOf(S3) {
-    if (S3.fr === void 0) {
-      const f = S3.front.find((p) => p.fringe);
-      S3.fr = f ? path(f.d) : null;
+  function fringeOf(S4) {
+    if (S4.fr === void 0) {
+      const f = S4.front.find((p) => p.fringe);
+      S4.fr = f ? path(f.d) : null;
     }
-    return S3.fr;
+    return S4.fr;
   }
   var FUR_TUFTS = { S: "M-0.3 0.84 L-0.46 1.02 L-0.14 0.9 L-0.1 1.06 L0.1 0.92 Z", F: "M-0.86 0.5 L-1.08 0.66 L-0.84 0.66 L-0.94 0.84 L-0.66 0.78 Z M0.86 0.5 L1.08 0.66 L0.84 0.66 L0.94 0.84 L0.66 0.78 Z" };
   var BALD_SHINE = { S: "M-0.3 -0.8 Q0.0 -0.95 0.34 -0.88", F: "M-0.62 -0.52 Q-0.5 -0.8 -0.18 -0.9", B: "M-0.62 -0.5 Q-0.52 -0.8 -0.2 -0.9" };
@@ -51794,7 +51923,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var q = (v, step) => Math.round(v / step) * step;
   function headState(look, v, pose, P4, t, sx) {
     const style = look.nika ? "nika" : styleId(look.hair);
-    const S3 = STYLES[style][v];
+    const S4 = STYLES[style][v];
     const kind = hatKind(look.hat, look);
     const clipY = hatClip(kind);
     const H3 = {
@@ -51809,18 +51938,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       tailA: void 0,
       haloY: void 0
     };
-    if (S3.sw === void 0) {
-      const sp = S3.back.concat(S3.front).find((pt) => pt.sway);
-      S3.sw = sp ? sp.sway : null;
+    if (S4.sw === void 0) {
+      const sp = S4.back.concat(S4.front).find((pt) => pt.sway);
+      S4.sw = sp ? sp.sway : null;
     }
-    if (S3.sw) H3.swayA = q(swayAngle(S3.sw, H3), 0.05);
+    if (S4.sw) H3.swayA = q(swayAngle(S4.sw, H3), 0.05);
     if (kind === "bandana" || kind === "headband") H3.tailA = q(tailAngle(H3), 0.08);
     const HT = kind ? hatCtx(look, style, t, pose) : null;
     if (HT) {
       HT.tailA = H3.tailA;
       if (kind === "halo") HT.haloY = q(Math.sin(HT.t * 2.2) * 0.04, 0.04);
     }
-    return { style, S: S3, kind, HT, clip: clipY === null ? null : -0.2 + (clipY + 0.2) * hatKy(HT.hatK), H: H3, X: expression(look, pose, P4, t || 0), ghost: !!pose.ghost };
+    return { style, S: S4, kind, HT, clip: clipY === null ? null : -0.2 + (clipY + 0.2) * hatKy(HT.hatK), H: H3, X: expression(look, pose, P4, t || 0), ghost: !!pose.ghost };
   }
   function lookKey(look) {
     return `${look.race}|${look.skin}|${look.hair}|${look.hairColor}|${look.hat}|${look.hatColor}|${look.eyeColor}|${look.seed}|${look.eyeShape}|${look.ears}|${look.fur}|${look.furFace ? 1 : 0}${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.fin ? 1 : 0}${look.grin ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.gills ? 1 : 0}|${look.kind}|${look.nose}|${look.goggles}`;
@@ -51959,7 +52088,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     g.restore();
   }
   function renderHead(g, look, v, pose, st, C3) {
-    const { style, S: S3, kind, HT, clip: clip2, H: H3, X: X2, ghost } = st;
+    const { style, S: S4, kind, HT, clip: clip2, H: H3, X: X2, ghost } = st;
     const white = !!look.furWhite;
     const skinCol = white ? "#fafafa" : hex(look.fur && look.furFace ? look.fur : look.skin, "#f1c9a0");
     const hairCol = white ? "#fafafa" : hex(look.nika ? "#ffffff" : look.hairColor, "#2d2d2d");
@@ -51970,7 +52099,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     withClip(g, clip2, () => {
       if (look.fin && look.kind !== "Octopus") fin(g, C3, v, skinP, style);
       if (style === "nika") drawParts(g, [{ d: new Path2D(nikaFlames(v, H3.t)), off: 0.08 }], C3, H3);
-      drawParts(g, S3.back, C3, H3);
+      drawParts(g, S4.back, C3, H3);
     });
     if (!look.ears && v !== "S") {
       part2(g, C3, EAR_F.both, skinP.base, skinP.shadow, 0.06, 0, true);
@@ -51982,7 +52111,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     const face = P2face(v);
     if (look.furFace && look.ears && v !== "B" && C3.lod) part2(g, C3, v === "S" ? FUR_TUFTS.S : FUR_TUFTS.F, skinP.base, skinP.shadow, 0.05, 0, true);
-    const fr = v !== "B" && !ghost ? fringeOf(S3) : null;
+    const fr = v !== "B" && !ghost ? fringeOf(S4) : null;
     if (C3.lod) {
       g.fillStyle = skinP.shadow;
       g.fill(face);
@@ -52033,7 +52162,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       drawMouth(g, C3, v, look, X2);
     }
     withClip(g, clip2, () => {
-      drawParts(g, S3.front, C3, H3);
+      drawParts(g, S4.front, C3, H3);
       if (look.ears) minkEars(g, C3, v, look, white ? "#fafafa" : hex(look.fur || look.hairColor, skinCol), style);
       if (look.race === "skypiean" && !ghost) antennae(g, C3, v, skinP, style);
     });
@@ -52047,7 +52176,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (pose.flash && !ghost) {
       g.fillStyle = "rgba(255,255,255,0.6)";
       g.fill(face);
-      for (const pt of S3.front) {
+      for (const pt of S4.front) {
         g.save();
         if (pt.at) {
           g.translate(pt.at[0], pt.at[1]);
@@ -55227,14 +55356,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function B2(k, x0, y0, z0, x1, y1, z1, color, o = {}) {
     k.add(box(Math.abs(x1 - x0), Math.abs(y1 - y0), Math.abs(z1 - z0)), { at: [(x0 + x1) / 2, Math.min(y0, y1), (z0 + z1) / 2], color, ...o });
   }
-  function windowAt(k, b, S3, x, y, w, h2, faceZ, litOn, wallCol, flowers, pane = null) {
+  function windowAt(k, b, S4, x, y, w, h2, faceZ, litOn, wallCol, flowers, pane = null) {
     k.save();
     k.translate(x, y, faceZ);
-    const frame2 = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" || S3.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
+    const frame2 = S4.wall === "post" ? "#3e2723" : S4.wall === "brick" || S4.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
     const glass = "#2d4150";
     const glow3 = litOn ? WARM : null;
     const G3 = pane ? (pane.m.copy(k.m), pane) : k;
-    switch (S3.win) {
+    switch (S4.win) {
       case "shoji": {
         if (pane) rectFrame(k, w, h2, 0.06, -0.02, 0.06, "#3e2723");
         else B2(k, -w / 2 - 0.06, -h2 / 2 - 0.06, -0.02, w / 2 + 0.06, h2 / 2 + 0.06, 0.06, "#3e2723");
@@ -55254,7 +55383,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       case "round": {
         const r = Math.min(w, h2) * 0.5;
         k.add(new TorusGeometry(r, 0.07, 5, 14), { at: [0, 0, 0.03], color: frame2 });
-        G3.add(new CircleGeometry(r, 14), { at: [0, 0, 0.02], color: S3.wall === "smooth" && b.style === "sky" ? "#bde3ff" : glass, glow: glow3 });
+        G3.add(new CircleGeometry(r, 14), { at: [0, 0, 0.02], color: S4.wall === "smooth" && b.style === "sky" ? "#bde3ff" : glass, glow: glow3 });
         B2(k, -0.015, -r, 0.03, 0.015, r, 0.05, frame2);
         break;
       }
@@ -55265,7 +55394,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         s.moveTo(-r, -h2 / 2);
         s.lineTo(r, -h2 / 2);
         s.lineTo(r, h2 / 2 - r);
-        if (S3.win === "gothic") {
+        if (S4.win === "gothic") {
           s.quadraticCurveTo(r, h2 / 2 - r * 0.2, 0, h2 / 2 + r * 0.35);
           s.quadraticCurveTo(-r, h2 / 2 - r * 0.2, -r, h2 / 2 - r);
         } else s.absarc(0, h2 / 2 - r, r, 0, Math.PI, false);
@@ -55277,8 +55406,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           out.scale(sx, sy, 1);
           k.add(out, { at: [0, 0, 0.012], color: frame2 });
         }
-        G3.add(new ShapeGeometry(s, 8), { at: [0, 0, 0.025], color: S3.win === "gothic" ? "#2a3a2a" : glass, glow: litOn ? S3.win === "gothic" ? "#b6ff8a" : WARM : null });
-        if (S3.win === "gothic") B2(k, -0.015, -h2 / 2, 0.03, 0.015, h2 / 2, 0.045, frame2);
+        G3.add(new ShapeGeometry(s, 8), { at: [0, 0, 0.025], color: S4.win === "gothic" ? "#2a3a2a" : glass, glow: litOn ? S4.win === "gothic" ? "#b6ff8a" : WARM : null });
+        if (S4.win === "gothic") B2(k, -0.015, -h2 / 2, 0.03, 0.015, h2 / 2, 0.045, frame2);
         if (b.style === "desert") B2(k, -r - 0.12, -h2 / 2 - 0.12, 0, r + 0.12, -h2 / 2 - 0.04, 0.12, shade2(wallCol, -0.15));
         break;
       }
@@ -55289,14 +55418,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       case "none":
         break;
       default: {
-        const hh = S3.win === "tall" ? h2 * 1.2 : h2;
+        const hh = S4.win === "tall" ? h2 * 1.2 : h2;
         if (pane) rectFrame(k, w, hh, 0.08, -0.02, 0.05, frame2);
         else B2(k, -w / 2 - 0.08, -hh / 2 - 0.08, -0.02, w / 2 + 0.08, hh / 2 + 0.08, 0.05, frame2);
         B2(G3, -w / 2, -hh / 2, 0, w / 2, hh / 2, 0.06, glass, { glow: glow3 });
         B2(k, -0.025, -hh / 2, 0.05, 0.025, hh / 2, 0.08, frame2);
         B2(k, -w / 2, -0.025, 0.05, w / 2, 0.025, 0.08, frame2);
         B2(k, -w / 2 - 0.12, -hh / 2 - 0.14, -0.02, w / 2 + 0.12, -hh / 2 - 0.06, 0.14, shade2(frame2, 0.1));
-        if (S3.shutters) {
+        if (S4.shutters) {
           const sc = ["#2e6b8a", "#4f7d3a", "#8a3b2e", "#6d4c33"][(b.v || 0) % 4];
           for (const s of [-1, 1]) {
             B2(k, s * (w / 2 + 0.1), -hh / 2, 0, s * (w / 2 + 0.1 + w * 0.45), hh / 2, 0.04, sc);
@@ -55316,10 +55445,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.restore();
   }
   var MAX_RISE = 16;
-  function doorAt(k, b, S3, x, g, wallCol, big, y0 = null, sink = 0.3) {
+  function doorAt(k, b, S4, x, g, wallCol, big, y0 = null, sink = 0.3) {
     const dw = (big ? 1.7 : 1.05) * g, dh = (big ? 2.5 : 2.15) * g;
-    const wood = doorWood(b, S3);
-    const frame2 = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" ? shade2(wallCol, 0.4) : shade2(wallCol, -0.4);
+    const wood = doorWood(b, S4);
+    const frame2 = S4.wall === "post" ? "#3e2723" : S4.wall === "brick" ? shade2(wallCol, 0.4) : shade2(wallCol, -0.4);
     const open = y0 !== null;
     const yb = open ? y0 : 0.1;
     k.save();
@@ -55331,7 +55460,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         B2(k, -dw / 2 - 0.2 - i * 0.05, -Math.max(0.3, sink), i * 0.32 - 0.02, dw / 2 + 0.2 + i * 0.05, top, (i + 1) * 0.32, "#9a948a", { outline: 0.02 });
       }
     } else B2(k, -dw / 2 - 0.2, -Math.max(0.3, sink), -0.02, dw / 2 + 0.2, 0.12, 0.45, "#9a948a", { outline: 0.02 });
-    switch (S3.door) {
+    switch (S4.door) {
       case "arch":
       case "hole": {
         const s = new Shape();
@@ -55345,9 +55474,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         else {
           const out = new ShapeGeometry(s, 10);
           out.scale((r + 0.13) / r, (dh + 0.13) / dh, 1);
-          if (S3.door !== "hole") k.add(out, { at: [0, yb, 0.012], color: frame2 });
-          k.add(new ShapeGeometry(s, 10), { at: [0, yb, 0.03], color: S3.door === "hole" ? "#231f1b" : wood });
-          if (S3.door !== "hole") k.add(new SphereGeometry(0.05, 5, 4), { at: [r * 0.6, yb + dh * 0.45, 0.06], color: "#f1c40f" });
+          if (S4.door !== "hole") k.add(out, { at: [0, yb, 0.012], color: frame2 });
+          k.add(new ShapeGeometry(s, 10), { at: [0, yb, 0.03], color: S4.door === "hole" ? "#231f1b" : wood });
+          if (S4.door !== "hole") k.add(new SphereGeometry(0.05, 5, 4), { at: [r * 0.6, yb + dh * 0.45, 0.06], color: "#f1c40f" });
         }
         break;
       }
@@ -55379,7 +55508,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         else {
           B2(k, -dw / 2 - 0.14, 0.1, -0.02, dw / 2 + 0.14, dh + 0.16, 0.07, frame2, { outline: 0.015 });
           B2(k, -dw / 2, 0.1, 0, dw / 2, dh, 0.09, wood);
-          if (S3.door === "plank") for (let i = 1; i < 4; i++) B2(k, -dw / 2 + i * dw / 4 - 0.012, 0.15, 0.08, -dw / 2 + i * dw / 4 + 0.012, dh - 0.05, 0.1, shade2(wood, -0.3));
+          if (S4.door === "plank") for (let i = 1; i < 4; i++) B2(k, -dw / 2 + i * dw / 4 - 0.012, 0.15, 0.08, -dw / 2 + i * dw / 4 + 0.012, dh - 0.05, 0.1, shade2(wood, -0.3));
           else {
             B2(k, -dw / 2 + 0.12, 0.35, 0.08, dw / 2 - 0.12, dh * 0.45, 0.11, shade2(wood, 0.12));
             B2(k, -dw / 2 + 0.12, dh * 0.55, 0.08, dw / 2 - 0.12, dh - 0.15, 0.11, shade2(wood, 0.12));
@@ -55404,12 +55533,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     B2(k, -dw / 2 - t, yb + dh, z0, dw / 2 + t, yb + dh + t, z1, color, { outline: 0.015 });
   }
   var DOOR_PAINT = ["#5a3a22", "#2e5e4e", "#1f4e79", "#7b2d26", "#6d4c33", "#3d5a3a", "#4a3b5c", "#8a5a2b"];
-  function doorWood(b, S3) {
-    if (S3.door === "panel" && (b.style === "marine" || b.role === "marine_base")) return "#1b4f72";
+  function doorWood(b, S4) {
+    if (S4.door === "panel" && (b.style === "marine" || b.role === "marine_base")) return "#1b4f72";
     if ((b.role || "house") === "house" && ["village", "town", "port", "city", "noble", "snow", "spooky"].includes(b.style)) return DOOR_PAINT[Math.floor(hash3(b.x, b.y, 5.3) * DOOR_PAINT.length)];
     return b.style === "noble" ? "#6d3b1f" : "#5a3a22";
   }
-  function gableRoof(k, S3, b, hw, hd, y, rise, ov, roofCol, wallCol, snowy, g, ex = () => 0.3) {
+  function gableRoof(k, S4, b, hw, hd, y, rise, ov, roofCol, wallCol, snowy, g, ex = () => 0.3) {
     const alpha2 = Math.atan2(rise, hd);
     const oL = ex(-1, 0.3 * g), oR = ex(1, 0.3 * g);
     const L2 = hw * 2 + oL + oR, xc = (oR - oL) / 2;
@@ -55421,13 +55550,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.rotateY(Math.PI / 2);
     k.add(slab([[-hd, 0], [hd, 0], [0, rise]], hw * 2), { color: wallCol, outline: 0.03 });
     k.restore();
-    if (S3.wall === "timber") {
+    if (S4.wall === "timber") {
       for (const sx of [-1, 1]) {
         if (!ex(sx, 1)) continue;
         k.save();
         k.translate(sx * (hw + 0.01), y, zc);
-        B2(k, -0.03, 0, -hd, 0.03, 0.12, hd, S3.beam);
-        k.add(box(0.06, rise, 0.12), { at: [0, 0, 0], color: S3.beam });
+        B2(k, -0.03, 0, -hd, 0.03, 0.12, hd, S4.beam);
+        k.add(box(0.06, rise, 0.12), { at: [0, 0, 0], color: S4.beam });
         k.restore();
       }
     }
@@ -55567,7 +55696,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function buildBuilding0(b, ctx) {
     bindCtx(ctx);
     ctx = ctx || STATE.ctx;
-    const S3 = STYLE[b.style] || STYLE.village;
+    const S4 = STYLE[b.style] || STYLE.village;
     const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
     const g = styleScale(b);
     const role = b.role || "house";
@@ -55576,10 +55705,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const k = new Mesher();
     const wallCol = C(b.wall || "#d8c29d");
     const roofCol = C(b.roof || "#9c4a2a");
-    const baseCol = S3.base;
+    const baseCol = S4.base;
     const storeys = Math.max(1, Math.min(5, (b.hgt || 2) - 1));
     const storeyH = 2.75 * g;
-    const enter = !!b.enterable && S3.wall !== "hut" && rt !== "hut" && rt !== "ruin" && S3.wall !== "stone";
+    const enter = !!b.enterable && S4.wall !== "hut" && rt !== "hut" && rt !== "ruin" && S4.wall !== "stone";
     let plinth = 0.35;
     if (enter && ctx?.ground) {
       const mid = bw(b, 0, -fd / 2);
@@ -55589,13 +55718,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const H3 = plinth + 3 * g + (storeys - 1) * storeyH;
     const Hc = plinth + (storeys > 1 ? storeyH : 3 * g);
     const hd = fd / 2;
-    const winter = S3.snow || ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER;
+    const winter = S4.snow || ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER;
     const door = { x: Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b))) };
     const att = b.attach || {};
     const AL = !!att.left, AR = !!att.right;
     const ex = (sx, d) => (sx < 0 ? AL : AR) ? 0 : d;
-    const V3 = variant(b, S3, storeys, fw, fd, role);
-    if (S3.wall === "hut" || rt === "hut") return finish(b, hut(k, b, S3, fw, fd, H3, wallCol, roofCol), null, H3 + fd);
+    const V3 = variant(b, S4, storeys, fw, fd, role);
+    if (S4.wall === "hut" || rt === "hut") return finish(b, hut(k, b, S4, fw, fd, H3, wallCol, roofCol), null, H3 + fd);
     let sink = 2;
     const terr = ctx?.terrain || ctx?.ground;
     if (terr) {
@@ -55608,11 +55737,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (Number.isFinite(lo)) sink = Math.min(16, Math.max(2, base2 - lo + 0.4));
     }
     B2(k, -fw / 2 - ex(-1, 0.08), -sink, -fd - 0.08, fw / 2 + ex(1, 0.08), plinth, 0.08, V3.baseCol || baseCol, { outline: 0.03 });
-    const ruined = rt === "ruin" || S3.wall === "stone";
+    const ruined = rt === "ruin" || S4.wall === "stone";
     if (ruined) {
       ruinWalls(k, b, fw, fd, H3, wallCol);
     } else {
-      const lean = S3.crooked && !enter ? 0.04 : 0;
+      const lean = S4.crooked && !enter ? 0.04 : 0;
       k.save();
       if (lean) k.rotateZ(lean * ((b.v || 0) % 2 ? 1 : -1));
       let holes = null;
@@ -55625,11 +55754,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         B2(k, -fw / 2, plinth - 0.05, -fd, fw / 2, Hc, 0, groundCol, { outline: 0.045 });
         B2(k, -fw / 2, Hc, -fd, fw / 2, H3, 0, wallCol, { outline: 0.045 });
       } else B2(k, -fw / 2, plinth - 0.05, -fd, fw / 2, H3, 0, wallCol, { outline: 0.045 });
-      wallDetail(k, b, S3, fw, fd, H3, plinth, storeys, storeyH, wallCol, g, holes, ex, sink);
-      if (V3.jetty) jetty(k, S3, fw, plinth, storeys, storeyH, H3, Hc, V3.jetty, wallCol, ex);
+      wallDetail(k, b, S4, fw, fd, H3, plinth, storeys, storeyH, wallCol, g, holes, ex, sink);
+      if (V3.jetty) jetty(k, S4, fw, plinth, storeys, storeyH, H3, Hc, V3.jetty, wallCol, ex);
       k.restore();
     }
-    const dd = doorAt(k, b, S3, door.x, g, wallCol, big && fw >= 5, enter ? plinth : null, sink);
+    const dd = doorAt(k, b, S4, door.x, g, wallCol, big && fw >= 5, enter ? plinth : null, sink);
     const panes = enter ? new Mesher() : null;
     const winW = 0.85 * g, winH = 1.05 * g;
     let wi = 0;
@@ -55640,24 +55769,24 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const jz = f > 0 && V3.jetty ? V3.jetty : 0;
       W4.front.forEach((x, i) => {
         if (f > 0 && V3.balcony && Math.abs(x - V3.balcony.x) < V3.balcony.w / 2 + 0.3 && f === 1) return;
-        const flowers = (S3.flowers || V3.flowers) && (i + f + (b.v || 0)) % 2 === 0;
-        windowAt(k, b, S3, x, y, winW, winH, jz, lit(b, wi++), wallCol, flowers, pane);
+        const flowers = (S4.flowers || V3.flowers) && (i + f + (b.v || 0)) % 2 === 0;
+        windowAt(k, b, S4, x, y, winW, winH, jz, lit(b, wi++), wallCol, flowers, pane);
       });
       for (const sx of [-1, 1]) {
         for (const z of W4[sx < 0 ? "left" : "right"]) {
           k.save();
           k.translate(sx * fw / 2, 0, z);
           k.rotateY(sx * Math.PI / 2);
-          windowAt(k, b, S3, 0, y, winW, winH, 0, lit(b, wi++), wallCol, false, pane);
+          windowAt(k, b, S4, 0, y, winW, winH, 0, lit(b, wi++), wallCol, false, pane);
           k.restore();
         }
       }
     }
-    if (V3.balcony) balcony(k, b, S3, V3.balcony, plinth + storeyH, wallCol, lit(b, wi++));
+    if (V3.balcony) balcony(k, b, S4, V3.balcony, plinth + storeyH, wallCol, lit(b, wi++));
     if (V3.canopy && !(V3.balcony && Math.abs(V3.balcony.x - door.x) < (V3.balcony.w + dd.dw + 0.9) / 2)) canopy2(k, door, dd, V3.canopy, roofCol);
     let top = H3;
     if (!ruined) {
-      if (rt === "flat") top += flatRoof(k, b, S3, fw, fd, H3, wallCol, roofCol, ex);
+      if (rt === "flat") top += flatRoof(k, b, S4, fw, fd, H3, wallCol, roofCol, ex);
       else if (rt === "dome" || rt === "shell") {
         B2(k, -fw / 2 - 0.15, H3 - 0.05, -fd - 0.15, fw / 2 + 0.15, H3 + 0.18, 0.15, shade2(wallCol, -0.12), { outline: 0.03 });
         const r = Math.min(fw, fd) / 2 * 0.98;
@@ -55666,7 +55795,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (fw > fd * 1.4) {
           B2(k, -fw / 2, H3 + 0.1, -fd, fw / 2, H3 + 0.2, 0, roofCol);
         }
-        if (S3.icing) {
+        if (S4.icing) {
           for (let i = 0; i < 14; i++) {
             const a = i / 14 * Math.PI * 2;
             k.add(new IcosahedronGeometry(0.2, 1), { at: [Math.cos(a) * r * 0.98, H3 + 0.2, -hd + Math.sin(a) * r * 0.98], color: "#ffffff" });
@@ -55680,11 +55809,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
         if (rt === "shell") k.add(cone(0.18, 0.6, 7), { at: [0, top - 0.05, -hd], color: shade2(roofCol, 0.2), outline: 0.02 });
       } else if (rt === "pagoda") {
-        top += pagodaRoofs(k, b, S3, fw, fd, H3, storeys, storeyH, plinth, wallCol, roofCol);
+        top += pagodaRoofs(k, b, S4, fw, fd, H3, storeys, storeyH, plinth, wallCol, roofCol);
       } else {
-        const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S3.crooked ? 0.62 : 0.45) * V3.pitch));
-        top += gableRoof(k, S3, b, fw / 2, hd, H3, rise, 0.4 * g, roofCol, wallCol, winter, g, ex);
-        if (V3.dormers) dormers(k, b, S3, fw, hd, H3, rise, 0.4 * g, V3.dormers, roofCol, wallCol, winter, lit(b, 30));
+        const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S4.crooked ? 0.62 : 0.45) * V3.pitch));
+        top += gableRoof(k, S4, b, fw / 2, hd, H3, rise, 0.4 * g, roofCol, wallCol, winter, g, ex);
+        if (V3.dormers) dormers(k, b, S4, fw, hd, H3, rise, 0.4 * g, V3.dormers, roofCol, wallCol, winter, lit(b, 30));
         if ((b.style === "village" || b.style === "snow" || b.style === "town" || b.style === "giant" || b.style === "port" || b.style === "city") && fw >= 4 && V3.chimney) {
           const cxh = V3.chimney * (fw / 2 - 0.9 * g), czh = -hd - hd * 0.35;
           const yTop = H3 + rise * (1 - 0.35) + 0.9 * g;
@@ -55699,14 +55828,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       }
     }
-    styleExtras(k, b, S3, fw, fd, H3, door, dd, wallCol, roofCol, winter, ex, sink);
-    const grp = finish(b, k, { door, dd, H: H3, S: S3, rt, storeys, storeyH, plinth }, top);
-    if (enter) walkIn(grp, b, S3, { fw, fd, y0: plinth, ceil: Hc - plinth, panes });
+    styleExtras(k, b, S4, fw, fd, H3, door, dd, wallCol, roofCol, winter, ex, sink);
+    const grp = finish(b, k, { door, dd, H: H3, S: S4, rt, storeys, storeyH, plinth }, top);
+    if (enter) walkIn(grp, b, S4, { fw, fd, y0: plinth, ceil: Hc - plinth, panes });
     return grp;
   }
   var GLASS_CLEAR = vcMat({ transparent: true, opacity: 0.22, depthWrite: false });
-  function walkIn(grp, b, S3, o) {
-    const leaf2 = doorLeaf(b, { y0: o.y0, wood: doorWood(b, S3) });
+  function walkIn(grp, b, S4, o) {
+    const leaf2 = doorLeaf(b, { y0: o.y0, wood: doorWood(b, S4) });
     grp.add(leaf2);
     let glass = null;
     if (o.panes && o.panes.vertexCount) {
@@ -55771,22 +55900,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const h2 = marine2 ? 0.6 : 0.5;
       const w = Math.min(b.fw - 0.6, h2 * nb.aspect);
       const board2 = new Mesh(new PlaneGeometry(w, w / nb.aspect), nb.mat);
-      const bh = w / nb.aspect, S3 = info.S || {};
+      const bh = w / nb.aspect, S4 = info.S || {};
       let y = info.dd.top + 0.2 + bh / 2 + (marine2 ? 0.4 : 0);
-      const aw = S3.wall ? awningOf(b, S3, b.fw, info.H, info.dd) : null;
+      const aw = S4.wall ? awningOf(b, S4, b.fw, info.H, info.dd) : null;
       if (aw) y = Math.max(y, aw.top + bh / 2 + 0.08);
       if (info.rt === "pagoda" && info.storeys >= 2) y = info.plinth + info.storeyH + 0.3 + bh / 2 + 0.1;
       y = Math.min(y, info.H - (info.rt === "pagoda" ? 0.4 : 0.3) - bh / 2);
-      board2.position.set(0, y, S3.wall === "column" ? 0.46 : 0.1);
+      board2.position.set(0, y, S4.wall === "column" ? 0.46 : 0.1);
       grp.add(board2);
     }
     grp.userData.height = top;
     return grp;
   }
-  function wallDetail(k, b, S3, fw, fd, H3, plinth, storeys, storeyH, wallCol, g, holes = null, ex = (sx, d) => d, sink = 0) {
+  function wallDetail(k, b, S4, fw, fd, H3, plinth, storeys, storeyH, wallCol, g, holes = null, ex = (sx, d) => d, sink = 0) {
     const free = (sx) => ex(sx, 1) > 0;
     const xl = (d) => -fw / 2 - ex(-1, d), xr = (d) => fw / 2 + ex(1, d);
-    const beam2 = S3.beam || shade2(wallCol, -0.5);
+    const beam2 = S4.beam || shade2(wallCol, -0.5);
     const HF = holes?.front || [], HS = { [-1]: holes?.left || [], [1]: holes?.right || [] };
     const segs = (a0, a1, y0, y1, list) => {
       let parts = [[Math.min(a0, a1), Math.max(a0, a1)]];
@@ -55813,7 +55942,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     };
     const crosses = (x, y0, y1, pad2 = 0.12) => HF.some((o) => x > o.a0 - pad2 && x < o.a1 + pad2 && y1 > o.y0 && y0 < o.y1);
     const crossesSide = (sx, z, y0, y1, pad2 = 0.12) => HS[sx].some((o) => z > o.a0 - pad2 && z < o.a1 + pad2 && y1 > o.y0 && y0 < o.y1);
-    switch (S3.wall) {
+    switch (S4.wall) {
       case "timber": {
         for (const sx of [-1, 1]) for (const sz of [0, -fd]) {
           const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * ex(sx, 0.12);
@@ -55854,7 +55983,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           FB(xl(0.01), y, -0.01, xr(0.01), y + 0.025, 0.012, mortar);
           for (const sx of [-1, 1]) if (free(sx)) SB2(sx, sx * (fw / 2 + 6e-3) - 6e-3, y, -fd, sx * (fw / 2 + 6e-3) + 6e-3, y + 0.025, 0, mortar);
         }
-        for (let f = 1; f < storeys; f++) FB(xl(0.06), plinth + f * storeyH - 0.2, -0.06, xr(0.06), plinth + f * storeyH, 0.1, S3.trim || shade2(wallCol, 0.3));
+        for (let f = 1; f < storeys; f++) FB(xl(0.06), plinth + f * storeyH - 0.2, -0.06, xr(0.06), plinth + f * storeyH, 0.1, S4.trim || shade2(wallCol, 0.3));
         for (const sx of [-1, 1]) {
           const inner = sx * fw / 2 - sx * 0.16, outer = sx * fw / 2 + sx * ex(sx, 0.16);
           B2(k, Math.min(inner, outer), plinth, -0.06, Math.max(inner, outer), H3, 0.08, shade2(wallCol, -0.12));
@@ -55862,8 +55991,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         break;
       }
       case "plaster": {
-        const qc = S3.trim || shade2(wallCol, -0.2);
-        if (S3.quoins || b.style === "marine" || b.style === "noble") {
+        const qc = S4.trim || shade2(wallCol, -0.2);
+        if (S4.quoins || b.style === "marine" || b.style === "noble") {
           for (const sx of [-1, 1]) {
             if (!free(sx)) continue;
             for (let y = plinth, i = 0; y < H3 - 0.3; y += 0.45, i++) {
@@ -55873,7 +56002,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           }
         }
         for (let f = 1; f < storeys; f++) FB(xl(0.05), plinth + f * storeyH - 0.15, -0.05, xr(0.05), plinth + f * storeyH, 0.08, qc);
-        if (S3.band) FB(xl(0.04), H3 - 0.7, -0.04, xr(0.04), H3 - 0.2, 0.08, qc);
+        if (S4.band) FB(xl(0.04), H3 - 0.7, -0.04, xr(0.04), H3 - 0.2, 0.08, qc);
         break;
       }
       case "post": {
@@ -55881,17 +56010,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         for (let i = 0; i <= n; i++) {
           const x = -fw / 2 + i * fw / n;
           if (crosses(x, plinth, H3, 0.1)) continue;
-          B2(k, x - 0.08, plinth, -0.02, x + 0.08, H3, 0.08, S3.beam);
+          B2(k, x - 0.08, plinth, -0.02, x + 0.08, H3, 0.08, S4.beam);
         }
         for (const sx of [-1, 1]) for (let i = 0; i <= 2; i++) {
           if (!free(sx) || crossesSide(sx, -i * fd / 2, plinth, H3, 0.1)) continue;
-          B2(k, sx * fw / 2 - 0.08, plinth, -i * fd / 2 - 0.08, sx * fw / 2 + 0.08, H3, -i * fd / 2 + 0.08, S3.beam);
+          B2(k, sx * fw / 2 - 0.08, plinth, -i * fd / 2 - 0.08, sx * fw / 2 + 0.08, H3, -i * fd / 2 + 0.08, S4.beam);
         }
         for (let f = 0; f < storeys; f++) {
           const y = plinth + f * storeyH + storeyH * 0.45;
-          FB(xl(0.02), y, -0.02, xr(0.02), y + 0.14, 0.1, S3.beam);
+          FB(xl(0.02), y, -0.02, xr(0.02), y + 0.14, 0.1, S4.beam);
         }
-        B2(k, xl(0.02), H3 - 0.25, -0.02, xr(0.02), H3, 0.1, S3.beam);
+        B2(k, xl(0.02), H3 - 0.25, -0.02, xr(0.02), H3, 0.1, S4.beam);
         break;
       }
       case "column": {
@@ -55906,17 +56035,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         break;
       }
       case "adobe": {
-        if (S3.vigas) for (let x = -fw / 2 + 0.5; x < fw / 2 - 0.3; x += 0.9) k.add(cyl(0.08, 0.08, 0.45, 5), { at: [x, H3 - 0.45, -0.02], rot: [Math.PI / 2, 0, 0], color: "#6d4c33" });
+        if (S4.vigas) for (let x = -fw / 2 + 0.5; x < fw / 2 - 0.3; x += 0.9) k.add(cyl(0.08, 0.08, 0.45, 5), { at: [x, H3 - 0.45, -0.02], rot: [Math.PI / 2, 0, 0], color: "#6d4c33" });
         FB(xl(0.05), plinth, -0.05, xr(0.05), plinth + 0.25, 0.06, shade2(wallCol, -0.1));
         break;
       }
       case "smooth": {
-        if (S3.strips) for (let f = 0; f < storeys; f++) FB(xl(0.02), plinth + f * storeyH + 0.4, -0.02, xr(0.02), plinth + f * storeyH + 0.5, 0.05, S3.trim, { glow: "#4ff5e0" });
+        if (S4.strips) for (let f = 0; f < storeys; f++) FB(xl(0.02), plinth + f * storeyH + 0.4, -0.02, xr(0.02), plinth + f * storeyH + 0.5, 0.05, S4.trim, { glow: "#4ff5e0" });
         break;
       }
     }
-    if (S3.cornice) {
-      B2(k, xl(0.18), H3 - 0.3, -fd - 0.18, xr(0.18), H3 - 0.1, 0.18, S3.trim || shade2(wallCol, 0.25), { outline: 0.02 });
+    if (S4.cornice) {
+      B2(k, xl(0.18), H3 - 0.3, -fd - 0.18, xr(0.18), H3 - 0.1, 0.18, S4.trim || shade2(wallCol, 0.25), { outline: 0.02 });
     }
   }
   function holesOf(ops, d, y0) {
@@ -55950,7 +56079,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.add(g, { at: [(R4(i + 20) - 0.5) * fw, 0.1, -R4(i + 30) * fd], flat: true, color: shade2(stone, -0.1), outline: 0.02 });
     }
   }
-  function flatRoof(k, b, S3, fw, fd, H3, wallCol, roofCol, ex = (sx, d) => d) {
+  function flatRoof(k, b, S4, fw, fd, H3, wallCol, roofCol, ex = (sx, d) => d) {
     const hd = fd / 2;
     const xl = -fw / 2 - ex(-1, 0.12), xr = fw / 2 + ex(1, 0.12);
     B2(k, xl, H3 - 0.05, -fd - 0.12, xr, H3 + 0.15, 0.12, roofCol, { outline: 0.03 });
@@ -55975,7 +56104,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     return ph;
   }
-  function pagodaRoofs(k, b, S3, fw, fd, H3, storeys, storeyH, plinth, wallCol, roofCol) {
+  function pagodaRoofs(k, b, S4, fw, fd, H3, storeys, storeyH, plinth, wallCol, roofCol) {
     const hd = fd / 2;
     const chinese = b.style === "chinese";
     const ridgeCol = chinese ? "#d4ac0d" : shade2(roofCol, -0.35);
@@ -55989,7 +56118,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if ((b.role === "palace" || b.role === "hall" && fw >= 7) && fw >= 6) {
       const tw = fw * 0.5, td = fd * 0.55, y0 = H3 - 0.1 + rise * 0.55, th = 2.6;
       B2(k, -tw / 2, y0, -hd - td / 2, tw / 2, y0 + th, -hd + td / 2, wallCol, { outline: 0.04 });
-      for (let i = 0; i <= 3; i++) B2(k, -tw / 2 + i * tw / 3 - 0.07, y0, -hd + td / 2 - 0.02, -tw / 2 + i * tw / 3 + 0.07, y0 + th, -hd + td / 2 + 0.06, S3.beam || "#3e2723");
+      for (let i = 0; i <= 3; i++) B2(k, -tw / 2 + i * tw / 3 - 0.07, y0, -hd + td / 2 - 0.02, -tw / 2 + i * tw / 3 + 0.07, y0 + th, -hd + td / 2 + 0.06, S4.beam || "#3e2723");
       for (let i = 0; i < 3; i++) windowAt(k, b, { win: "shoji", wall: "post" }, -tw / 3 + i * tw / 3, y0 + th * 0.55, 0.7, 0.8, -hd + td / 2 + 0.05, lit(b, i + 20), wallCol, false);
       const r2 = Math.min(2.2, td * 0.55);
       curvedRoof(k, 0, -hd, y0 + th - 0.1, tw, td, r2, 0.6, roofCol, { upturn: 0.35, ridgeCol });
@@ -56000,7 +56129,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     return top;
   }
-  function hut(k, b, S3, fw, fd, H3, wallCol, roofCol) {
+  function hut(k, b, S4, fw, fd, H3, wallCol, roofCol) {
     const rx = fw / 2, rz = fd / 2;
     const h2 = Math.max(2.4, Math.min(H3 * 0.7, 2.6 + (b.hgt || 2) * 0.5));
     k.save();
@@ -56031,8 +56160,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     s.lineTo(dw / 2, dh - dw / 2);
     s.absarc(0, dh - dw / 2, dw / 2, 0, Math.PI, false);
     s.closePath();
-    k.add(new ShapeGeometry(s, 8), { at: [0, 0.02, 0.06], color: S3.door === "hide" ? "#8d6e4a" : "#3e2a1a" });
-    if (S3.win === "round") {
+    k.add(new ShapeGeometry(s, 8), { at: [0, 0.02, 0.06], color: S4.door === "hide" ? "#8d6e4a" : "#3e2a1a" });
+    if (S4.win === "round") {
       for (const sx of [-1, 1]) {
         k.add(new CircleGeometry(0.28, 10), { at: [sx * rx * 0.55, 1.5, -rz * 0.16 + 0.06], rot: [0, sx * 0.55, 0], color: "#2d4150", glow: lit(b, sx + 2) ? WARM : null });
       }
@@ -56041,23 +56170,23 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(new SphereGeometry(0.16, 6, 4), { at: [dw / 2 + 0.5, 1.7, 0.35], color: b.style === "mink" ? "#ffcc80" : "#e67e22", glow: "#ffb74d", flicker: 0.3 });
     return k;
   }
-  function variant(b, S3, storeys, fw, fd, role) {
+  function variant(b, S4, storeys, fw, fd, role) {
     const R4 = (i) => hash3(b.x, b.y, i + 0.71);
     const house = role === "house";
     const V3 = { pitch: 0.82 + R4(1) * 0.4, chimney: R4(2) < 0.8 ? R4(3) < 0.5 ? -1 : 1 : 0 };
-    if (house && storeys >= 2 && (S3.wall === "timber" || S3.wall === "log") && R4(4) < 0.55) V3.jetty = 0.32;
-    if (house && storeys >= 2 && ["plaster", "brick", "adobe", "smooth"].includes(S3.wall) && fw >= 4.5 && R4(5) < 0.45) {
+    if (house && storeys >= 2 && (S4.wall === "timber" || S4.wall === "log") && R4(4) < 0.55) V3.jetty = 0.32;
+    if (house && storeys >= 2 && ["plaster", "brick", "adobe", "smooth"].includes(S4.wall) && fw >= 4.5 && R4(5) < 0.45) {
       const w = Math.min(fw - 1.4, 1.5 + R4(6) * 1.2);
       V3.balcony = { x: (R4(7) - 0.5) * Math.max(0, fw - w - 1.4), w, d: 0.72 };
     }
-    if (house && R4(8) < 0.55 && S3.door !== "noren" && S3.door !== "arch" && S3.wall !== "hut") V3.canopy = { d: 0.62 + R4(9) * 0.25, kind: R4(10) < 0.5 ? "gable" : "lean" };
+    if (house && R4(8) < 0.55 && S4.door !== "noren" && S4.door !== "arch" && S4.wall !== "hut") V3.canopy = { d: 0.62 + R4(9) * 0.25, kind: R4(10) < 0.5 ? "gable" : "lean" };
     if (fw >= 5 && fd >= 4 && R4(11) < 0.4) V3.dormers = fw >= 7.5 ? 2 : 1;
     if (R4(12) < 0.3) V3.flowers = true;
-    if (storeys >= 2 && (S3.wall === "timber" || S3.wall === "plaster") && R4(13) < 0.35) V3.groundCol = R4(14) < 0.5 ? "#b3aa9c" : "#a0634a";
+    if (storeys >= 2 && (S4.wall === "timber" || S4.wall === "plaster") && R4(13) < 0.35) V3.groundCol = R4(14) < 0.5 ? "#b3aa9c" : "#a0634a";
     return V3;
   }
-  function jetty(k, S3, fw, plinth, storeys, storeyH, H3, Hc, j, wallCol, ex) {
-    const beam2 = S3.beam || shade2(wallCol, -0.5);
+  function jetty(k, S4, fw, plinth, storeys, storeyH, H3, Hc, j, wallCol, ex) {
+    const beam2 = S4.beam || shade2(wallCol, -0.5);
     B2(k, -fw / 2, Hc, 0, fw / 2, H3, j, wallCol, { outline: 0.04 });
     B2(k, -fw / 2 - ex(-1, 0.03), Hc - 0.2, -0.02, fw / 2 + ex(1, 0.03), Hc + 0.04, j + 0.07, beam2);
     for (let x = -fw / 2 + 0.35; x < fw / 2 - 0.2; x += 1.15) k.add(box(0.1, 0.5, 0.1), { at: [x, Hc - 0.62, 0.06], rot: [0.55, 0, 0], color: beam2 });
@@ -56071,9 +56200,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       B2(k, -fw / 2, y, j - 0.02, fw / 2, y + 0.18, j + 0.05, beam2);
     }
   }
-  function balcony(k, b, S3, V3, y, wallCol, litOn) {
+  function balcony(k, b, S4, V3, y, wallCol, litOn) {
     const { x, w, d } = V3;
-    const rail2 = S3.wall === "adobe" ? "#6d4c33" : S3.wall === "brick" ? "#2d3436" : shade2(wallCol, -0.55);
+    const rail2 = S4.wall === "adobe" ? "#6d4c33" : S4.wall === "brick" ? "#2d3436" : shade2(wallCol, -0.55);
     B2(k, x - w / 2, y - 0.12, 0, x + w / 2, y + 0.03, d, shade2(wallCol, -0.18), { outline: 0.02 });
     for (const sx of [-1, 1]) k.add(box(0.09, 0.5, 0.09), { at: [x + sx * (w / 2 - 0.18), y - 0.6, 0.05], rot: [0.6, 0, 0], color: shade2(wallCol, -0.3) });
     const rh = 0.9;
@@ -56082,7 +56211,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (let px2 = x - w / 2 + 0.06; px2 <= x + w / 2 - 0.02; px2 += 0.16) B2(k, px2 - 0.015, y + 0.03, d - 0.05, px2 + 0.015, y + rh - 0.05, d - 0.02, rail2);
     for (const sx of [-1, 1]) for (let pz2 = 0.12; pz2 < d - 0.05; pz2 += 0.16) B2(k, x + sx * (w / 2 - 0.025) - 0.015, y + 0.03, pz2 - 0.015, x + sx * (w / 2 - 0.025) + 0.015, y + rh - 0.05, pz2 + 0.015, rail2);
     const ww = Math.min(1.1, w - 0.5), wh = 1.95;
-    const frame2 = S3.wall === "brick" || S3.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
+    const frame2 = S4.wall === "brick" || S4.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
     B2(k, x - ww / 2 - 0.08, y + 0.03, -0.02, x + ww / 2 + 0.08, y + wh + 0.08, 0.05, frame2);
     B2(k, x - ww / 2, y + 0.06, 0, x + ww / 2, y + wh, 0.06, "#2d4150", { glow: litOn ? WARM : null });
     B2(k, x - 0.02, y + 0.06, 0.05, x + 0.02, y + wh, 0.08, frame2);
@@ -56105,31 +56234,31 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     for (const sx of [-1, 1]) k.add(box(0.07, 0.42, 0.07), { at: [door.x + sx * (w / 2 - 0.12), y - 0.46, 0.04], rot: [0.75, 0, 0], color: wood });
   }
-  function dormers(k, b, S3, fw, hd, H3, rise, ov, n, roofCol, wallCol, snowy, litOn) {
+  function dormers(k, b, S4, fw, hd, H3, rise, ov, n, roofCol, wallCol, snowy, litOn) {
     const t = 0.3;
     const zf = -hd * t, yb = H3 + rise * t - 0.12, dw = 1, dh = 0.92, dep = Math.min(1.35, hd * 0.9), rr = 0.4;
     if (rise * (1 - t) < dh + rr - 0.12 + 0.15) return;
     for (let i = 0; i < n; i++) {
       const x = n === 1 ? 0 : (i ? 1 : -1) * fw * 0.24;
       B2(k, x - dw / 2, yb, zf - dep, x + dw / 2, yb + dh, zf, wallCol, { outline: 0.03 });
-      windowAt(k, b, { ...S3, shutters: false }, x, yb + dh * 0.54, 0.52, 0.55, zf, litOn && i === 0, wallCol, false);
+      windowAt(k, b, { ...S4, shutters: false }, x, yb + dh * 0.54, 0.52, 0.55, zf, litOn && i === 0, wallCol, false);
       k.save();
       k.translate(x, yb + dh, zf - dep / 2 + 0.12);
       k.add(slab([[-dw / 2 - 0.14, 0], [dw / 2 + 0.14, 0], [0, rr]], dep + 0.25), { color: snowy ? "#f4f9ff" : roofCol, outline: 0.03 });
       k.restore();
     }
   }
-  function awningOf(b, S3, fw, H3, dd) {
+  function awningOf(b, S4, fw, H3, dd) {
     const role = b.role || "house";
-    if (!["shop", "market", "restaurant", "cafe", "weapons", "bar", "tavern", "inn"].includes(role) || S3.door === "noren" || fw < 3.5) return null;
-    if (S3.lanterns || H3 - dd.top < 1.3) return null;
+    if (!["shop", "market", "restaurant", "cafe", "weapons", "bar", "tavern", "inn"].includes(role) || S4.door === "noren" || fw < 3.5) return null;
+    if (S4.lanterns || H3 - dd.top < 1.3) return null;
     return { top: dd.top + 0.8 };
   }
-  function styleExtras(k, b, S3, fw, fd, H3, door, dd, wallCol, roofCol, winter, ex = (sx, d) => d, sink = 0.5) {
+  function styleExtras(k, b, S4, fw, fd, H3, door, dd, wallCol, roofCol, winter, ex = (sx, d) => d, sink = 0.5) {
     const dn = Math.max(0.5, sink);
     const role = b.role || "house";
     const clearOfDoor = (x0, x1) => x1 < door.x - dd.dw / 2 - 0.25 || x0 > door.x + dd.dw / 2 + 0.25;
-    if (awningOf(b, S3, fw, H3, dd)) {
+    if (awningOf(b, S4, fw, H3, dd)) {
       const cols = ["#e74c3c", "#3498db", "#27ae60", "#f39c12", "#9b59b6", "#16a085"];
       const c = cols[(b.v || 0) % cols.length];
       const aw = Math.min(fw - 0.6, dd.dw + 2.4), ay = dd.top + 0.55;
@@ -56140,12 +56269,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       for (let i = 0; i < n; i++) k.add(new CircleGeometry(aw / n / 2, 8, Math.PI, Math.PI), { at: [door.x - aw / 2 + (i + 0.5) * aw / n, ay - 0.4, 0.92], rot: [-0.42, 0, 0], color: i % 2 ? "#ffffff" : c, double: true, backShade: 0.85 });
     }
-    if (S3.engawa) {
+    if (S4.engawa) {
       B2(k, -fw / 2 - ex(-1, 0.1), -dn, 0, fw / 2 + ex(1, 0.1), 0.42, 0.9, "#8d6e4a", { outline: 0.02 });
       for (let x = -fw / 2 + 0.2; x < fw / 2; x += 0.3) B2(k, x, 0.42, 0.02, x + 0.02, 0.425, 0.88, "#6d4c33");
       if (Math.abs(door.x) < fw) B2(k, door.x - 0.6, -dn, 0.85, door.x + 0.6, 0.22, 1.3, "#9a948a");
     }
-    if (S3.lanterns || b.style === "wano" && role !== "house") {
+    if (S4.lanterns || b.style === "wano" && role !== "house") {
       for (const sx of [-1, 1]) {
         const x = door.x + sx * (dd.dw / 2 + 0.55);
         if (Math.abs(x) > fw / 2 - 0.2) continue;
@@ -56155,7 +56284,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         B2(k, x - 0.13, dd.top - 0.08, 0.33, x + 0.13, dd.top - 0.04, 0.57, "#2d3436");
       }
     }
-    if (S3.portico && fw >= 6 && role !== "house" && Math.abs(door.x) + (dd.dw + 1.8) / 2 + 0.5 < fw / 2) {
+    if (S4.portico && fw >= 6 && role !== "house" && Math.abs(door.x) + (dd.dw + 1.8) / 2 + 0.5 < fw / 2) {
       const px2 = door.x, pw = dd.dw + 1.8;
       for (const sx of [-1, 1]) {
         k.add(cyl(0.17, 0.2, dd.top + 0.9, 10), { at: [px2 + sx * pw / 2, 0.3, 1.1], color: "#fdfefe", outline: 0.02 });
@@ -56165,7 +56294,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.save();
       k.translate(px2, dd.top + 1.45, 0.65);
       k.rotateY(0);
-      k.add(slab([[-pw / 2 - 0.35, 0], [pw / 2 + 0.35, 0], [0, 0.9]], 1.4), { color: S3.trim === "#d4ac0d" ? "#fdfefe" : "#fdfefe", outline: 0.02 });
+      k.add(slab([[-pw / 2 - 0.35, 0], [pw / 2 + 0.35, 0], [0, 0.9]], 1.4), { color: S4.trim === "#d4ac0d" ? "#fdfefe" : "#fdfefe", outline: 0.02 });
       k.add(slab([[-pw / 2 + 0.1, 0.06], [pw / 2 - 0.1, 0.06], [0, 0.72]], 0.05), { at: [0, 0, 0.71], color: "#d4ac0d" });
       k.restore();
     }
@@ -56238,7 +56367,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   var PANES = { shoji: ["#f3ead3", "#ffb84d"], lattice: ["#f6ddcc", "#ffab66"], gothic: ["#2a3a2a", "#b6ff8a"], hole: ["#2a2622", null] };
   function farBuilding(k, b, ctx) {
-    const S3 = STYLE[b.style] || STYLE.village;
+    const S4 = STYLE[b.style] || STYLE.village;
     const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
     const g = styleScale(b);
     const role = b.role || "house";
@@ -56247,7 +56376,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const wallCol = C(b.wall || "#d8c29d"), roofCol = C(b.roof || "#9c4a2a");
     const storeys = Math.max(1, Math.min(5, (b.hgt || 2) - 1));
     const storeyH = 2.75 * g;
-    const enter = !!b.enterable && S3.wall !== "hut" && rt !== "hut" && rt !== "ruin" && S3.wall !== "stone";
+    const enter = !!b.enterable && S4.wall !== "hut" && rt !== "hut" && rt !== "ruin" && S4.wall !== "stone";
     let plinth = 0.35;
     if (enter && ctx?.ground) {
       const mid = bw(b, 0, -fd / 2);
@@ -56257,12 +56386,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const H3 = plinth + 3 * g + (storeys - 1) * storeyH;
     const Hc = plinth + (storeys > 1 ? storeyH : 3 * g);
     const hd = fd / 2;
-    const winter = S3.snow || ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER;
+    const winter = S4.snow || ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER;
     const att = b.attach || {};
     const oL = att.left ? 0 : 0.3 * g, oR = att.right ? 0 : 0.3 * g;
-    const V3 = variant(b, S3, storeys, fw, fd, role);
+    const V3 = variant(b, S4, storeys, fw, fd, role);
     const x0 = -fw / 2 + IN2, x1 = fw / 2 - IN2, z0 = -fd + IN2, z1 = -IN2;
-    if (S3.wall === "hut" || rt === "hut") {
+    if (S4.wall === "hut" || rt === "hut") {
       const rx = fw / 2, rz = fd / 2;
       const h2 = Math.max(2.4, Math.min(H3 * 0.7, 2.6 + (b.hgt || 2) * 0.5));
       k.save();
@@ -56284,8 +56413,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       if (Number.isFinite(lo)) sink = Math.min(16, Math.max(2, base2 - lo + 0.4));
     }
-    B2(k, x0, -sink, z0, x1, plinth, z1, V3.baseCol || S3.base);
-    const ruined = rt === "ruin" || S3.wall === "stone";
+    B2(k, x0, -sink, z0, x1, plinth, z1, V3.baseCol || S4.base);
+    const ruined = rt === "ruin" || S4.wall === "stone";
     if (ruined) {
       ruinWalls(k, b, fw, fd, H3, wallCol);
       return;
@@ -56295,12 +56424,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       B2(k, x0, Hc, z0, x1, H3, z1, wallCol);
     } else B2(k, x0, plinth - 0.05, z0, x1, H3, z1, wallCol);
     const winW = 0.85 * g, winH = 1.05 * g;
-    const frame2 = S3.wall === "post" ? "#3e2723" : S3.wall === "brick" || S3.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
-    const [glass, glowCol] = PANES[S3.win] || [S3.win === "round" && b.style === "sky" ? "#bde3ff" : "#2d4150", WARM];
-    const hh = S3.win === "tall" ? winH * 1.2 : winH;
-    const shutter = S3.shutters && (S3.win === "cross" || S3.win === "tall") ? ["#2e6b8a", "#4f7d3a", "#8a3b2e", "#6d4c33"][(b.v || 0) % 4] : null;
+    const frame2 = S4.wall === "post" ? "#3e2723" : S4.wall === "brick" || S4.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
+    const [glass, glowCol] = PANES[S4.win] || [S4.win === "round" && b.style === "sky" ? "#bde3ff" : "#2d4150", WARM];
+    const hh = S4.win === "tall" ? winH * 1.2 : winH;
+    const shutter = S4.shutters && (S4.win === "cross" || S4.win === "tall") ? ["#2e6b8a", "#4f7d3a", "#8a3b2e", "#6d4c33"][(b.v || 0) % 4] : null;
     const pane = (x, y, z, on) => {
-      farPane(k, x, y, z, winW, hh, S3.win === "hole" ? null : frame2, glass, on ? glowCol : null);
+      farPane(k, x, y, z, winW, hh, S4.win === "hole" ? null : frame2, glass, on ? glowCol : null);
       if (shutter) for (const s of [-1, 1]) k.add(quad(winW * 0.45, hh), { at: [x + s * (winW / 2 + 0.1 + winW * 0.225), y - hh / 2, z + 6e-3], color: shutter });
     };
     let wi = 0;
@@ -56325,18 +56454,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const dw = (big && fw >= 5 ? 1.7 : 1.05) * g, dh = (big ? 2.5 : 2.15) * g;
     const yb = enter ? plinth : 0.1;
     const dz = -IN2 + 0.02;
-    if (S3.door === "noren") {
+    if (S4.door === "noren") {
       farPane(k, dx, yb + dh / 2, dz, dw, dh, "#3e2723", "#2b2420", null);
       k.add(quad(dw, 0.75), { at: [dx, yb + dh - 0.75, dz + 0.02], color: ["#1f3a68", "#7b1f1f", "#2e5e3a", "#4a2e6b"][(b.v || 0) % 4] });
-    } else farPane(k, dx, yb + dh / 2, dz, dw, dh, S3.door === "hole" || S3.door === "hide" ? null : S3.wall === "post" ? "#3e2723" : shade2(wallCol, -0.4), S3.door === "hole" ? "#231f1b" : S3.door === "hide" ? "#a1784f" : doorWood(b, S3), null);
+    } else farPane(k, dx, yb + dh / 2, dz, dw, dh, S4.door === "hole" || S4.door === "hide" ? null : S4.wall === "post" ? "#3e2723" : shade2(wallCol, -0.4), S4.door === "hole" ? "#231f1b" : S4.door === "hide" ? "#a1784f" : doorWood(b, S4), null);
     const dd = { dw, dh, top: yb + dh };
-    if (awningOf(b, S3, fw, H3, dd)) {
+    if (awningOf(b, S4, fw, H3, dd)) {
       const c = ["#e74c3c", "#3498db", "#27ae60", "#f39c12", "#9b59b6", "#16a085"][(b.v || 0) % 6];
       k.add(box(Math.min(fw - 0.6, dw + 2.4), 0.06, 1), { at: [dx, dd.top + 0.52, 0.42], rot: [0.42, 0, 0], color: mix(c, "#ffffff", 0.4) });
     }
-    if (S3.engawa) B2(k, x0, -Math.max(0.5, sink), 0, x1, 0.4, 0.88, "#8d6e4a");
+    if (S4.engawa) B2(k, x0, -Math.max(0.5, sink), 0, x1, 0.4, 0.88, "#8d6e4a");
     if (b.role === "marine_base" || b.style === "marine" && fw >= 6) B2(k, x0 - 0.01, H3 - 1.15, -0.2, x1 + 0.01, H3 - 0.35, 0.05, "#f5f6fa");
-    if (S3.wall === "column") B2(k, x0, H3 - 0.5, 0.05, x1, H3 - 0.12, 0.4, "#b03a2e");
+    if (S4.wall === "column") B2(k, x0, H3 - 0.5, 0.05, x1, H3 - 0.12, 0.4, "#b03a2e");
     if (rt === "flat") {
       const pc = b.style === "marine" ? C("#f5f6fa") : shade2(wallCol, -0.06);
       B2(k, x0 - 0.07, H3 - 0.05, z0 - 0.07, x1 + 0.07, H3 + 0.43, z1 + 0.07, (p, n) => n.y > 0.5 ? roofCol : pc);
@@ -56355,7 +56484,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       for (let f = 1; f < storeys; f++) farRoof(k, fw / 2, hd, plinth + f * storeyH - 0.25, 0.55, 0.5, 0.5, 0.5, rw, roofCol, wallCol);
       farRoof(k, fw / 2, hd, H3 - 0.1, Math.min(2.8, Math.max(1.3, fd * 0.5)), 0.7, 0.7, 0.7, rw, roofCol, wallCol);
     } else {
-      const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S3.crooked ? 0.62 : 0.45) * V3.pitch));
+      const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S4.crooked ? 0.62 : 0.45) * V3.pitch));
       farRoof(k, fw / 2, hd, H3, rise - 0.02, 0.36 * g, oL, oR, fw, winter ? C("#f4f9ff") : roofCol, wallCol);
       if ((b.style === "village" || b.style === "snow" || b.style === "town" || b.style === "giant" || b.style === "port" || b.style === "city") && fw >= 4 && V3.chimney) {
         const cxh = V3.chimney * (fw / 2 - 0.9 * g), czh = -hd - hd * 0.35;
@@ -56939,14 +57068,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.alloc(8);
     }
     alloc(cap2) {
-      const old = this.mesh, S3 = this.home.size;
+      const old = this.mesh, S4 = this.home.size;
       const m = new InstancedMesh(this.home.far && this.farGeo ? this.farGeo : this.geo, this.material, cap2);
       m.instanceMatrix.setUsage(DynamicDrawUsage);
       if (this.tinted) m.instanceColor = new InstancedBufferAttribute(new Float32Array(cap2 * 3).fill(1), 3);
       m.count = this.count;
       m.castShadow = this.castShadow;
       m.receiveShadow = this.receiveShadow;
-      m.boundingSphere = new Sphere(new Vector3(S3 / 2, 0, S3 / 2), S3);
+      m.boundingSphere = new Sphere(new Vector3(S4 / 2, 0, S4 / 2), S4);
       m.name = "inst:" + this.key;
       if (old) {
         m.instanceMatrix.array.set(old.instanceMatrix.array.subarray(0, this.count * 16));
@@ -56976,7 +57105,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return slot2;
     }
     write(slot2, matrix, color, y) {
-      const m = this.mesh, S3 = this.home.size;
+      const m = this.mesh, S4 = this.home.size;
       m.setMatrixAt(slot2, matrix);
       m.instanceMatrix.needsUpdate = true;
       if (this.tinted) {
@@ -56987,8 +57116,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.minY = Math.min(this.minY, y);
         this.maxY = Math.max(this.maxY, y);
         const half2 = (this.maxY - this.minY + this.h) / 2;
-        m.boundingSphere.center.set(S3 / 2, this.minY + half2, S3 / 2);
-        m.boundingSphere.radius = Math.hypot(S3 / 2, S3 / 2, half2) + this.r;
+        m.boundingSphere.center.set(S4 / 2, this.minY + half2, S4 / 2);
+        m.boundingSphere.radius = Math.hypot(S4 / 2, S4 / 2, half2) + this.r;
       }
     }
     remove(slot2) {
@@ -57460,20 +57589,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function broadleaf(sub, variant2) {
     return cached(`tree:broad:${sub}:${variant2}`, () => {
       const k = new Mesher();
-      const S3 = BROAD[variant2];
+      const S4 = BROAD[variant2];
       const tc = TRUNK2[sub] || TRUNK2.oak;
-      const H3 = S3.trunkH;
+      const H3 = S4.trunkH;
       k.add(cyl(0.2, 0.36, 0.45, 7, true), { color: trunkColor(tc, 3), outline: 0.03 });
       k.add(cyl(0.12, 0.2, H3, 7, true), { at: [0, 0.35, 0], rot: [0, 0, 0.04], color: trunkColor(tc, 3), outline: 0.03 });
       for (let i = 0; i < 3; i++) {
         const a = i * 2.1 + 0.4;
         limb2(k, [0, H3 * 0.8, 0], [Math.cos(a) * 0.75, H3 + 0.45, Math.sin(a) * 0.75], 0.08, 0.04, 5, { color: tc });
       }
-      crown(k, S3.blobs, S3.c, { outline: 0.045 });
+      crown(k, S4.blobs, S4.c, { outline: 0.045 });
       if (sub === "cloudtree" || sub === "cottoncandy") {
-        crown(k, [[0.6, S3.c[1] - 0.9, 0.5, 0.5, 0.9], [-0.55, S3.c[1] - 0.85, -0.45, 0.48, 0.9]], S3.c, { outline: 0.03 });
+        crown(k, [[0.6, S4.c[1] - 0.9, 0.5, 0.5, 0.9], [-0.55, S4.c[1] - 0.85, -0.45, 0.48, 0.9]], S4.c, { outline: 0.03 });
       }
-      return { geo: k.build(), sway: true, crown: S3 };
+      return { geo: k.build(), sway: true, crown: S4 };
     });
   }
   var WIDE = { trunkH: 1.5, c: [0.25, 3.05, 0], squash: 0.78, blobs: [[0.25, 3.2, 0, 1.2], [1.3, 2.95, 0.4, 0.92, 0.94], [-0.8, 3, -0.3, 0.95, 0.9], [0.45, 2.9, -1.05, 0.86, 0.88], [0.05, 2.95, 1.05, 0.9, 0.96], [0.4, 3.75, 0.1, 0.7, 1.05]] };
@@ -60975,13 +61104,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       a._ghostTint = null;
       a._ghostAdd = false;
     }
-    if (a.moving && a.intent && a.intent.sprint && !a.inWater && a.state === "idle" && !a.onShip) {
-      a._dustAcc = (a._dustAcc || 0) + dt;
-      if (a._dustAcc > 0.12) {
-        a._dustAcc = 0;
-        dust(fx, a.x - Math.cos(a.facing) * 0.18, a.y + 0.02, 2, { speed: 0.9, size: 0.14, life: 0.45, angle: a.facing + Math.PI, spread: 1.2 });
-      }
-    }
     const kbm = Math.hypot(a.kb.x, a.kb.y);
     if (kbm > 3.5 && !a.inWater) {
       a._skidAcc = (a._skidAcc || 0) + dt;
@@ -62398,7 +62520,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function crewStation(ship, i) {
     const d = shipDims(ship.def), B4 = d.B;
-    const S3 = [
+    const S4 = [
       [d.fore ? "fore" : "main", d.fore ? 0.93 : 0.86, 0],
       ["main", (d.capstanT ?? d.hatchT) + 0.06, B4 * 0.22],
       ["quarter", d.tq - 0.03, -B4 * 0.25],
@@ -62408,7 +62530,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       ["main", d.hatchT, -B4 * 0.3],
       ["quarter", d.tq - 0.06, B4 * 0.28]
     ];
-    const [lvl, t, v] = S3[i % S3.length];
+    const [lvl, t, v] = S4[i % S4.length];
     return { ...freeDeckSpot(ship, t, v, lvl), lvl };
   }
   function deckRoute(game, a, tx, ty, who = null) {
@@ -62468,6 +62590,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
 
   // src/game/actor.js
+  var STEP_SOUND = [];
+  for (const [k, ts] of Object.entries({
+    grass: ["GRASS", "FOREST", "JUNGLE", "FARM", "FLOWERS", "SAKURA", "LAWN", "MANGROVE"],
+    sand: ["SAND", "DESERT", "ASH", "CORAL"],
+    dirt: ["DIRT", "SEAFLOOR"],
+    gravel: ["GRAVEL"],
+    mud: ["MUD"],
+    stone: ["STONE", "COBBLE", "ROCK", "MOUNTAIN", "CLIFF", "RED_ROCK", "MARBLE", "SNOWROCK", "WALL", "GOLD", "BONE"],
+    wood: ["PLANK", "RAIL", "BRIDGE"],
+    snow: ["SNOW"],
+    ice: ["ICE", "PACK_ICE"],
+    soft: ["CARPET", "TATAMI", "CANDY", "CAKE", "ISLAND_CLOUD"],
+    metal: ["STEEL"]
+  })) for (const n of ts) if (T[n] !== void 0) STEP_SOUND[T[n]] = k;
   var smooth01 = (a, b, x) => {
     const t = clamp2((x - a) / (b - a), 0, 1);
     return t * t * (3 - 2 * t);
@@ -62874,7 +63010,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (fromWater) {
         v *= 1.3 * J.leap;
         const s = this.look?.scale || 1;
-        const z = -(this.depth || 0) - (this.moving ? 0.95 : 1.3) * s;
+        const z = -(this.depth || 0) - this.swimSink();
         this.leaveWater(game, true);
         this.leapT = 0.5;
         this.z = z;
@@ -62905,6 +63041,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     /** Deep enough to swim in (about chest-deep; a little less to stand up again, so shorelines don't flicker). */
     swimDepth(was) {
       return 1.75 * (this.look?.scale || 1) * (was ? 0.5 : 0.62);
+    }
+    /**
+     * How far below the surface a swimmer's feet hang (m): stretched along the
+     * surface swimming (only the head out, and the shoulders at each breath),
+     * upright and in to the neck treading water, lower under it, head and
+     * shoulders up for a Devil Fruit user fighting to stay afloat. Eased from
+     * one to the next (see updateWater), so setting off, stopping or coming up
+     * from a dive never jerks the body up or down.
+     */
+    swimSink() {
+      return (this.sinkNow ?? this.sinkWant()) * (this.look?.scale || 1);
+    }
+    sinkWant() {
+      if (this.fruit && !this.gills) return 1.3;
+      if (this.under) return 0.95;
+      return this.moving ? 1.06 : 1.45;
     }
     /**
      * Gravity for jumps, launches and falls. A fall ends on the ground (a puff
@@ -62939,9 +63091,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         game.audio?.sfx(impact > 9 ? "splash_big" : "splash", this);
         this.splashedAt = game.time || 0;
       }
-      const floor = wd <= 0 ? 0 : deep ? -Math.min(wd - 0.1, (this.moving ? 0.95 : 1.3) * s) : -wd;
+      const floor = wd <= 0 ? 0 : deep ? -Math.min(wd - 0.1, (this.moving ? 1.06 : 1.45) * s) : -wd;
       if (this.z <= floor) {
         const impact = -this.vz;
+        this.landSink = deep ? -floor / s : null;
         this.z = 0;
         this.vz = 0;
         this.airT = 0;
@@ -63080,6 +63233,23 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.facing += angleDiff(this.facing, this.wentDir) * Math.min(1, dt * 12);
       }
       if (this.moving) this.walk += dt * TAU * gaitCadence(sp / (this.look?.scale || 1), this.intent.sprint);
+      const stepN = Math.floor(this.walk / Math.PI);
+      if (this.isPlayer && stepN !== this.stepN && this.moving && !this.inWater && !this.wading && !this.climb && !this.flying && !this.vz && !(this.z > 0.05) && this.mode !== "sail") {
+        game.audio?.step?.(this.footSurface(game), this.intent.sprint ? 1 : Math.min(1, sp / 7));
+      }
+      this.stepN = stepN;
+    }
+    /** What's underfoot, for the sound of a step: a deck, a floor, a pier, or the ground's own kind. */
+    footSurface(game) {
+      if (this.deck) return "wood";
+      const w = game.world, x = this.x, y = this.y;
+      const f = w.floorRec ? w.floorRec(x, y) : null;
+      if (f && f.interior) {
+        const t = w.type(x, y);
+        return t === T.CARPET || t === T.TATAMI ? "soft" : t === T.STONE || t === T.MARBLE ? "stone" : "wood";
+      }
+      if (w.isQuay?.(x, y)) return "stone";
+      return STEP_SOUND[w.type(x, y)] || "dirt";
     }
     updateStatus(dt, game) {
       const st = this.status;
@@ -63148,10 +63318,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const d = this.d;
       const swim = this.inWater && !this.gills;
       const treading = swim && !this.fruit && !this.moving && !this.under && !this.intent.mz;
-      const busy = !!this.action || this.blocking || this.intent.sprint || swim && !treading;
+      const busy = !!this.action || this.blocking || this.intent.sprint || this.running || swim && !treading;
       const regenMul = (this.isPlayer ? this.game?.crewMods?.staminaMul || 1 : 1) * (treading ? 0.6 : 1);
       if (!busy) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * regenMul * dt);
-      else if (!this.intent.sprint && !this.inWater) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * 0.25 * dt);
+      else if (!this.intent.sprint && !this.running && !this.inWater) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * 0.25 * dt);
       if (this.hakiUnlocked()) {
         if (this.armament) {
           this.haki -= (1.6 - Math.min(1, this.hakiLevel("armament") * 0.012)) * dt;
@@ -63274,7 +63444,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     feetH(game) {
       if (this.deck) return this.deck.h + shipBob(this.deck.ship, game.env?.time || 0) + (this.z || 0);
       const g = this.groundAt(game, this.x, this.y);
-      if (this.inWater) return g - (this.depth || 0) - (this.moving ? 0.95 : 1.3) * (this.look?.scale || 1);
+      if (this.inWater) return g - (this.depth || 0) - this.swimSink();
       return g - (this.wading || 0) + (this.z || 0);
     }
     /**
@@ -63434,7 +63604,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     startClimb(game, to) {
       const w = game.world, s = this.look?.scale || 1;
       const wet = this.inWater;
-      const h0 = wet ? this.groundAt(game, this.x, this.y) - (this.depth || 0) - (this.moving ? 0.95 : 1.3) * s : this.feetH(game);
+      const h0 = wet ? this.groundAt(game, this.x, this.y) - (this.depth || 0) - this.swimSink() : this.feetH(game);
       if (wet) {
         this.leaveWater(game, true);
         game.fx.ripple?.(this.x, this.y, 1);
@@ -63549,6 +63719,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     updateMovement(dt, game, knocked) {
       const w = game.world;
       let vx = 0, vy = 0;
+      this.running = false;
       if (!knocked) {
         const i = this.intent;
         let sp = this.d.speed * (w.speedAt(this.x, this.y - 0.1) || 1);
@@ -63561,6 +63732,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           sp *= this.inWater ? 1.35 : 1.55;
           if (!this.inWater) this.stamina -= 9 * dt;
         }
+        this.running = this.isPlayer && this.mode !== "sail" && !this.inWater && !this.climb && !i.sprint && !this.eating && !this.flying && Math.hypot(i.mx, i.my) > 0.7;
+        if (this.running) this.stamina = Math.max(0, this.stamina - 1.2 * dt);
         if (this.eating) sp *= 0.45;
         if (this.inWater && !this.gills && (i.mx || i.my || i.mz)) this.stamina = Math.max(0, this.stamina - (this.under ? 4 : 3.5) * dt);
         if (this.blocking) sp *= 0.4;
@@ -63713,7 +63886,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     updateWater(dt, game) {
       const w = game.world;
       const t = w.type(this.x, this.y);
-      const was = this.inWater;
+      const was = this.inWater, wadeWas = this.wading || 0;
       const liquid = (IS_LIQUID[t] === 1 && !OVERLAY[t] || !!this.belowDeck) && !(this.dash && this.dash.ignoreWater) && !this.deck;
       const wd = liquid ? t === T.LAVA ? 99 : game.seaDepth ? game.seaDepth(this.x, this.y) : 99 : 0;
       this.inWater = liquid && !(this.leapT > 0) && (t === T.LAVA || this.forcedWater > 0 || wd > this.swimDepth(was));
@@ -63735,18 +63908,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
         this.depth = 0;
         this.sinking = false;
+        this.sinkNow = this.landSink ?? Math.min(this.sinkWant(), wadeWas / (this.look?.scale || 1));
+        this.landSink = null;
         if (df && this.isPlayer) game.log("A Devil Fruit user can't swim! Get out before your strength gives out!", "#ff8a80");
         if (this.fruit) {
           this.armament = this.armament && this.hakiUnlocked();
           this.buffs = this.buffs.filter((b) => !b.source || !getAbility(b.source)?.source?.startsWith("fruit"));
           this.recalc();
-        }
-      }
-      if (this.inWater && this.moving && !this.under) {
-        this.swimRingT = (this.swimRingT || 0) - dt;
-        if (this.swimRingT <= 0) {
-          this.swimRingT = 0.45;
-          game.fx.ripple?.(this.x, this.y, 0.8, 0.8);
         }
       }
       if (!this.inWater && was) this.leaveWater(game, true);
@@ -63784,7 +63952,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           }
         } else if (this.stamina > this.d.maxStamina * 0.5) this.spentHint = false;
         if (df && !this.sinking) this.stamina = Math.max(0, this.stamina - 14 * dt);
+        const wasUnder = this.under;
         this.under = this.depth > 0.35;
+        if (wasUnder && !this.under && !this.lowAir) {
+          game.fx.ripple?.(this.x, this.y, 0.75);
+          game.fx.burst(this.x, this.y, 4, { color: ["#e1f5fe", "#b3e5fc"], speed: 0.8, vz: 1.4, g: 9, life: 0.3, size: 0.05, kind: "drop", z: 0.25 });
+        }
+        const sw2 = this.sinkWant(), sn = this.sinkNow ?? sw2;
+        this.sinkNow = sn + (sw2 - sn) * Math.min(1, dt * (sw2 < sn ? 8 : 4.5));
         if (!this.gills) {
           if (this.under) {
             this.oxygen = Math.max(0, this.oxygen - dt * (df ? 2.2 : 1) * (this.moving || iz ? 1.2 : 1));
@@ -64730,15 +64905,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     stroke(g, lcurve(F4, (t) => [120 + t * 30, 0.1 + t * 0.55]), 2, soft, 0.45);
   }
   function legLines(g) {
-    const T4 = painter(g, "thigh"), S3 = painter(g, "shin");
+    const T4 = painter(g, "thigh"), S4 = painter(g, "shin");
     const ink2 = 114, soft = 148;
     stroke(g, lcurve(T4, (t) => [300 + t * 20, 0.25 + t * 0.55]), 2.2, soft, 0.5);
     stroke(g, lcurve(T4, (t) => [285 + Math.sin(t * Math.PI) * 25, 0.72 + t * 0.24], 8), 2.4, ink2, 0.6);
     stroke(g, lcurve(T4, (t) => [40 + t * 25, 0.2 + t * 0.55]), 2, soft, 0.4);
-    stroke(g, lcurve(S3, (t) => [335 + t * 50, 0.1 + Math.sin(t * Math.PI) * 0.07], 10), 2.6, ink2, 0.65);
-    stroke(g, lcurve(S3, (t) => [215 - Math.sin(t * Math.PI) * 30, 0.14 + t * 0.4], 10), 2.6, soft, 0.6);
-    stroke(g, lcurve(S3, (t) => [140 + Math.sin(t * Math.PI) * 25, 0.14 + t * 0.34], 10), 2.4, soft, 0.5);
-    stroke(g, lcurve(S3, (t) => [10 + t * 12, 0.2 + t * 0.65]), 2, 172, 0.45);
+    stroke(g, lcurve(S4, (t) => [335 + t * 50, 0.1 + Math.sin(t * Math.PI) * 0.07], 10), 2.6, ink2, 0.65);
+    stroke(g, lcurve(S4, (t) => [215 - Math.sin(t * Math.PI) * 30, 0.14 + t * 0.4], 10), 2.6, soft, 0.6);
+    stroke(g, lcurve(S4, (t) => [140 + Math.sin(t * Math.PI) * 25, 0.14 + t * 0.34], 10), 2.4, soft, 0.5);
+    stroke(g, lcurve(S4, (t) => [10 + t * 12, 0.2 + t * 0.65]), 2, 172, 0.45);
   }
   function limbCloth(g, name, bend) {
     const P4 = painter(g, name);
@@ -65405,12 +65580,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     const bot = o.bottom;
     const bcol = pal.bottom, cuffCol = shade(pal.bottom, -0.22);
-    for (const [T4, S3, Ft, part5, s] of [[B3.thighR, B3.shinR, B3.footR, 3, 1], [B3.thighL, B3.shinL, B3.footL, 4, -1]]) {
+    for (const [T4, S4, Ft, part5, s] of [[B3.thighR, B3.shinR, B3.footR, 3, 1], [B3.thighL, B3.shinL, B3.footL, 4, -1]]) {
       const th = limbFn("thigh", o, d, s), sn = limbFn("shin", o, d, s);
-      const T1 = { blend: limbBlend(d.T1, [B3.hips, 0.35, 0.09], [S3, 0.5, 0.09]) };
+      const T1 = { blend: limbBlend(d.T1, [B3.hips, 0.35, 0.09], [S4, 0.5, 0.09]) };
       const S1 = { blend: limbBlend(d.T2, [T4, 0.5, 0.09], null) };
       const skT = o.fem ? null : "thigh", skS = o.fem ? null : "shin";
-      const thigh = (g, col, m = M()) => add5(g, m, col, T4, 0, T1), shin = (g, col, m = M()) => add5(g, m, col, S3, part5, S1);
+      const thigh = (g, col, m = M()) => add5(g, m, col, T4, 0, T1), shin = (g, col, m = M()) => add5(g, m, col, S4, part5, S1);
       const boots = o.shoes === "boots";
       if (skirtPelvis) {
         thigh(limbSeg(th, d.T1, rs, lrows, { capTop: true, capBot: true, capK: 0.7, uv: skT, side: s }), skin);
@@ -65509,24 +65684,24 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function feet(add5, o, pal, d, q2, Ft, part5) {
     const k = o.fem ? 0.9 : 1.06;
     const w = (o.fem ? 0.048 : 0.058) * d.Bk;
-    const S3 = (x, y, z) => [x * k, y, z];
+    const S4 = (x, y, z) => [x * k, y, z];
     const skin = pal.skin;
     const rb = (small = true) => Prim.rbox(0.42, ...small ? q2.rboxS : q2.rbox);
     if (o.shoes === "sandals" || o.shoes === "geta" || o.shoes === "bare") {
-      add5(rb(), M(0.05 * k, -0.046, 0, 0, 0, 0, S3(0.11, 0.034, w * 0.9)), skin, Ft, part5);
-      add5(rb(), M(0.148 * k, -0.058, 0, 0, 0, 0.1, S3(0.034, 0.022, w * 0.86)), shade(skin, -0.04), Ft, part5);
+      add5(rb(), M(0.05 * k, -0.046, 0, 0, 0, 0, S4(0.11, 0.034, w * 0.9)), skin, Ft, part5);
+      add5(rb(), M(0.148 * k, -0.058, 0, 0, 0, 0.1, S4(0.034, 0.022, w * 0.86)), shade(skin, -0.04), Ft, part5);
       add5(Prim.cyl(6, true), M(0, -0.02, 0, 0, 0, 0, [0.042 * d.Bk, 0.05, 0.042 * d.Bk]), skin, Ft, part5);
       if (o.shoes === "bare") return;
       const sole2 = o.shoes === "geta" ? "#8d6e4a" : shade(pal.shoes, -0.1);
-      add5(rb(), M(0.055 * k, -0.079, 0, 0, 0, 0, S3(0.125, 8e-3, w * 1.02)), sole2, Ft, part5);
+      add5(rb(), M(0.055 * k, -0.079, 0, 0, 0, 0, S4(0.125, 8e-3, w * 1.02)), sole2, Ft, part5);
       add5(Prim.torus(0.28, 3, 10), M(0.078 * k, -0.05, 0, 0, Math.PI / 2, 0, [w * 0.98, 0.03, 0.022 / 0.28]), o.shoes === "geta" ? "#c62828" : pal.shoes, Ft, part5);
       if (o.shoes === "geta") for (const x of [-0.02, 0.1]) add5(Prim.box(), M(x * k, -0.1, 0, 0, 0, 0, [0.012, 0.014, w * 0.9]), "#6d4c41", Ft, part5);
       return;
     }
     const boot2 = o.shoes === "boots";
     const col = pal.shoes, sole = shade(col, -0.4);
-    add5(Prim.rbox(0.4, ...q2.rbox), M(0.055 * k, -0.04, 0, 0, 0, 0, S3(0.128, 0.045, w)), col, Ft, part5);
-    add5(rb(), M(0.056 * k, -0.078, 0, 0, 0, 0, S3(0.132, 0.01, w * 1.04)), sole, Ft, part5);
+    add5(Prim.rbox(0.4, ...q2.rbox), M(0.055 * k, -0.04, 0, 0, 0, 0, S4(0.128, 0.045, w)), col, Ft, part5);
+    add5(rb(), M(0.056 * k, -0.078, 0, 0, 0, 0, S4(0.132, 0.01, w * 1.04)), sole, Ft, part5);
     if (!boot2) add5(Prim.cyl(6, true), M(-5e-3, 0.02, 0, 0, 0, 0, [0.05 * d.Bk, 0.1, 0.05 * d.Bk]), col, Ft, part5);
     else add5(Prim.cyl(7, true), M(-4e-3, 0.03, 0, 0, 0, 0, [0.055 * d.Bk, 0.12, 0.055 * d.Bk]), col, Ft, part5);
   }
@@ -66250,14 +66425,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   var headKey = (hp) => `${hp.fem ? "f" : "m"}.${hp.shape}.${hp.chin}.${hp.nose}.${hp.jaw}.${hp.cheek}.${hp.brow}`;
   function headKind(hp) {
-    const S3 = {
+    const S4 = {
       oval: { cw: 0.72, jw: 0.5, jy: -0.58, cy: -1.03, jr: 0.16 },
       round: { cw: 0.8, jw: 0.56, jy: -0.54, cy: -0.96, jr: 0.2 },
       square: { cw: 0.76, jw: 0.6, jy: -0.62, cy: -1.03, jr: 0.18 },
       long: { cw: 0.7, jw: 0.49, jy: -0.64, cy: -1.15, jr: 0.16 },
       heart: { cw: 0.77, jw: 0.42, jy: -0.54, cy: -1, jr: 0.14 }
     }[hp.shape] || { cw: 0.72, jw: 0.5, jy: -0.58, cy: -1.03, jr: 0.16 };
-    const k = { ...S3 };
+    const k = { ...S4 };
     if (hp.fem) {
       k.jw *= 0.9;
       k.jr *= 0.88;
@@ -66646,7 +66821,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     },
     spiky(h2, k = 1, n = 1) {
       h2.cap(1.08, 58, 95, 118, napeZig(4, 10));
-      const S3 = [
+      const S4 = [
         [14, 180, 0.7, 0.3, 0.7],
         [18, 130, 0.62, 0.28, 0.5],
         [18, 230, 0.62, 0.28, 0.5],
@@ -66661,7 +66836,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         [36, 328, 0.5, 0.24, 0.55],
         [8, 60, 0.55, 0.26, 0.8]
       ];
-      for (const [th, ph, L2, w, up] of S3) outLock(h2, th, ph, L2 * k, w * (0.9 + 0.1 * k), up);
+      for (const [th, ph, L2, w, up] of S4) outLock(h2, th, ph, L2 * k, w * (0.9 + 0.1 * k), up);
       if (n > 1) for (const [th, ph] of [[26, 0], [54, 100], [54, 260], [28, 200], [58, 145], [58, 215]]) outLock(h2, th, ph, 0.55 * k, 0.24, 0.6);
       bangs(h2, 5, 96, 70, 0.22, { sweep: 10, ragged: 4 });
     },
@@ -67184,16 +67359,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function minkEars2(b, HM, look, pal, hb, q2) {
     const fur = pal.fur, inner = look.kind === "Panda" ? "#2b2b2b" : mixHex(fur, "#f48fb1", 0.55);
     const col = look.kind === "Panda" ? "#2b2b2b" : fur;
-    const S3 = Prim.sphere(q2.sph[0], q2.sph[1]);
+    const S4 = Prim.sphere(q2.sph[0], q2.sph[1]);
     for (const s of [-1, 1]) {
       const a = surf(34, s * 52, 0.92);
       if (look.ears === "round") {
-        b.add(S3, HM(M(a[0] - 0.05, a[1] + 0.12, a[2] + s * 0.06, 0, 0, 0, [0.14, 0.3, 0.3])), col, hb);
-        b.add(S3, HM(M(a[0] + 0.05, a[1] + 0.12, a[2] + s * 0.06, 0, 0, 0, [0.08, 0.18, 0.18])), inner, hb);
+        b.add(S4, HM(M(a[0] - 0.05, a[1] + 0.12, a[2] + s * 0.06, 0, 0, 0, [0.14, 0.3, 0.3])), col, hb);
+        b.add(S4, HM(M(a[0] + 0.05, a[1] + 0.12, a[2] + s * 0.06, 0, 0, 0, [0.08, 0.18, 0.18])), inner, hb);
       } else if (look.ears === "long") {
         const t = [a[0] - 0.1, a[1] + 1.05, a[2] + s * 0.18];
-        b.add(S3, HM(between(a, t, 0.1, 0.22)), col, hb);
-        b.add(S3, HM(between(add3(a, [0.07, 0.15, 0]), add3(t, [0.07, -0.12, 0]), 0.04, 0.12)), inner, hb);
+        b.add(S4, HM(between(a, t, 0.1, 0.22)), col, hb);
+        b.add(S4, HM(between(add3(a, [0.07, 0.15, 0]), add3(t, [0.07, -0.12, 0]), 0.04, 0.12)), inner, hb);
       } else {
         const t = [a[0] - 0.02, a[1] + 0.62, a[2] + s * 0.22];
         b.add(Prim.cone(4), HM(between(a, t, 0.1, 0.3)), col, hb);
@@ -67205,11 +67380,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const k = (0.95 + (Bk - 1) * 0.6) * kMul;
     const th = -s;
     const fist = B3["fist" + H3], palm = B3["palm" + H3], finger = B3["finger" + H3];
-    const S3 = (x, y, z) => [x * k, y * k, z * k];
+    const S4 = (x, y, z) => [x * k, y * k, z * k];
     const dark = shade(col, -0.08);
     if (q2.hands === 2) {
       const hand = B3["hand" + H3];
-      b.add(Prim.rbox(0.4, 10, 8), M(-2e-3 * k, -0.043 * k, 0, 0, 0, 0, S3(0.019, 0.047, 0.043)), col, hand, part5);
+      b.add(Prim.rbox(0.4, 10, 8), M(-2e-3 * k, -0.043 * k, 0, 0, 0, 0, S4(0.019, 0.047, 0.043)), col, hand, part5);
       const rest = { k, th, knuckle: [], lp: [], thumb: [-0.012 * k, -0.018 * k, th * 0.03 * k], lt: 0.032 * k };
       const hb0 = b.bind && b.bind[hand];
       const at4 = (base2, v) => base2.clone().multiply(new three_module_exports.Matrix4().makeTranslation(v[0], v[1], v[2]));
@@ -67237,11 +67412,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       b.add(tcap(0.0118 * k, 98e-4 * k, 0.027 * k, 8, 2), M(), dark, B3["tc" + H3], part5);
       return rest;
     }
-    b.add(Prim.rbox(0.42, ...q2.rboxS), M(0, -0.045 * k, 0, 0, 0, 0, S3(0.033, 0.046, 0.043)), col, fist, part5);
-    b.add(Prim.sphere(q2.sph[0], q2.sph[1]), M(-0.012 * k, -0.055 * k, th * 0.036 * k, 0, 0, 0, S3(0.016, 0.03, 0.016)), dark, fist, part5);
+    b.add(Prim.rbox(0.42, ...q2.rboxS), M(0, -0.045 * k, 0, 0, 0, 0, S4(0.033, 0.046, 0.043)), col, fist, part5);
+    b.add(Prim.sphere(q2.sph[0], q2.sph[1]), M(-0.012 * k, -0.055 * k, th * 0.036 * k, 0, 0, 0, S4(0.016, 0.03, 0.016)), dark, fist, part5);
     if (!q2.hands) return;
     b.add(tcap(0.011 * k, 9e-3 * k, 0.07 * k, 5, 1), M(0.02 * k, -0.085 * k, -th * 0.02 * k), col, finger, part5);
-    b.add(Prim.rbox(0.4, ...q2.rboxS), M(0, -0.075 * k, 0, 0, 0, 0, S3(0.017, 0.08, 0.045)), col, palm, part5);
+    b.add(Prim.rbox(0.4, ...q2.rboxS), M(0, -0.075 * k, 0, 0, 0, 0, S4(0.017, 0.08, 0.045)), col, palm, part5);
     b.add(tcap(0.011 * k, 9e-3 * k, 0.05 * k, 5, 1), mul(M(-4e-3, -0.03 * k, th * 0.04 * k), M(0, 0, 0, th * 0.7, 0, 0)), col, palm, part5);
   }
   var BODIES = /* @__PURE__ */ new Map();
@@ -67326,8 +67501,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     _m4.makeBasis(_a, _b, _c);
     return q2.setFromRotationMatrix(_m4);
   }
-  function ik2(S3, T4, L1, L2, pole, bend, stretch, J, E) {
-    _d.subVectors(T4, S3);
+  function ik2(S4, T4, L1, L2, pole, bend, stretch, J, E) {
+    _d.subVectors(T4, S4);
     let dist = _d.length();
     const max = (L1 + L2) * 0.999;
     if (dist > max && !stretch) {
@@ -67338,9 +67513,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       _d.set(0, -1e-4, 0);
       dist = 1e-4;
     }
-    E.copy(S3).add(_d);
+    E.copy(S4).add(_d);
     if (dist >= max) {
-      J.copy(S3).addScaledVector(_d, L1 / (L1 + L2));
+      J.copy(S4).addScaledVector(_d, L1 / (L1 + L2));
       return;
     }
     _u.copy(_d).divideScalar(dist);
@@ -67349,7 +67524,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     _p3.normalize();
     const c = (L1 * L1 + dist * dist - L2 * L2) / (2 * L1 * dist);
     const ang = Math.acos(clamp4(c, -1, 1)) * Math.min(1, Math.abs(bend));
-    J.copy(S3).addScaledVector(_u, Math.cos(ang) * L1).addScaledVector(_p3, Math.sin(ang) * L1);
+    J.copy(S4).addScaledVector(_u, Math.cos(ang) * L1).addScaledVector(_p3, Math.sin(ang) * L1);
   }
   var Rig = class {
     constructor(d) {
@@ -67415,8 +67590,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (let k = 0; k < 2; k++) {
         const side = k === 0 ? 1 : -1;
         const h2 = k === 0 ? hF : hB;
-        const S3 = this.S[k], J = this.J[k], E = this.E[k];
-        S3.set(0, d.shY, side * d.shW).applyQuaternion(this.qChest).add(hip);
+        const S4 = this.S[k], J = this.J[k], E = this.E[k];
+        S4.set(0, d.shY, side * d.shW).applyQuaternion(this.qChest).add(hip);
         const T4 = this._T;
         const reach = k === 0 ? o.reachR : o.reachL;
         if (reach) T4.copy(reach);
@@ -67429,29 +67604,29 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const lat = side * (-d.shW * 0.74 * fwdK + 0.075 * restK + (o.spread || 0));
           T4.set(hx * d.kA, -hy * d.kA, lat);
           if (tiltA) T4.applyAxisAngle(X, tiltA * side);
-          T4.applyQuaternion(this.qLean).add(S3);
+          T4.applyQuaternion(this.qLean).add(S4);
           if (o.att && o.attK > 0) {
             attitude(d, k, side, o.att, hip, _att, _attP);
             T4.lerp(_att, o.attK);
           }
           if (d.Am > 1.25 && restK > 0.02) {
             const lk2 = Math.min(1, (d.Am - 1.25) / 0.4) * Math.min(1, restK * 1.6) * 0.85;
-            _att.set(0.3 * d.Am * 0.6, -(d.A1 + d.A2) * 0.6, side * (d.shW * 0.95 + 0.05)).applyQuaternion(this.qLean).add(S3);
+            _att.set(0.3 * d.Am * 0.6, -(d.A1 + d.A2) * 0.6, side * (d.shW * 0.95 + 0.05)).applyQuaternion(this.qLean).add(S4);
             T4.lerp(_att, lk2);
           }
         }
         const e = k === 0 ? P4.eF ?? 1 : P4.eB ?? 1;
-        _t.subVectors(T4, S3);
+        _t.subVectors(T4, S4);
         const lxy = Math.hypot(_t.x, _t.y) || 1;
         const sg = e < 0 ? -1 : 1;
         this._pole.set(_t.y / lxy * sg, -_t.x / lxy * sg, side * 0.42);
         if (reach) this._pole.set(-0.75, -0.65, side * 0.45);
         if (o.att && o.attK > 0 && !reach && !(k === 1 && broom)) this._pole.lerp(_attP, o.attK);
-        ik2(S3, T4, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P4.stretch || !!reach, J, E);
+        ik2(S4, T4, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P4.stretch || !!reach, J, E);
         const U3 = k === 0 ? B3.uarmR : B3.uarmL, F4 = k === 0 ? B3.farmR : B3.farmL, Hd = k === 0 ? B3.handR : B3.handL;
-        this.pos[U3].copy(S3);
-        aimNegY(this.quat[U3], _t.subVectors(J, S3), this._pole);
-        this.len[U3] = clamp4(S3.distanceTo(J) / d.A1, 0.5, 8);
+        this.pos[U3].copy(S4);
+        aimNegY(this.quat[U3], _t.subVectors(J, S4), this._pole);
+        this.len[U3] = clamp4(S4.distanceTo(J) / d.A1, 0.5, 8);
         this.pos[F4].copy(J);
         aimNegY(this.quat[F4], _t.subVectors(E, J), this._pole);
         this.len[F4] = clamp4(J.distanceTo(E) / d.A2, 0.5, 8);
@@ -68067,12 +68242,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      * hangs from the knee, clear of the shin.
      */
     skirtPanels(dt) {
-      const S3 = this.body.skirt, d = this.d, rig = this.rig, bones2 = this.bones;
+      const S4 = this.body.skirt, d = this.d, rig = this.rig, bones2 = this.bones;
       const th = this.skirtTh || (this.skirtTh = new Float32Array(SKIRT_N * 2));
       const F4 = d.F || {}, Bk = d.Bk;
       const rT = 0.088 * (F4.th || 1) * Bk + 0.028, rS = 0.056 * (F4.ca || 1) * Bk + 0.024;
       const [Dp, Wp] = skirtWaist(d);
-      const hHem = -S3.yb, hK = S3.hK, two = hK > 0;
+      const hHem = -S4.yb, hK = S4.hK, two = hK > 0;
       _sq.copy(rig.quat[B3.hips]).invert();
       const H3 = rig.pos[B3.hips];
       let n = 0;
@@ -68089,7 +68264,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const fall = Math.min(0.2, dt || 0.016) * 2.6;
       for (let i = 0; i < SKIRT_N; i++) {
         const a = i / SKIRT_N * TAU16, ca = Math.cos(a), sa = Math.sin(a);
-        const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S3.Dh, sa * S3.Wh);
+        const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S4.Dh, sa * S4.Wh);
         const phi0 = Math.atan2(rh - rp, hHem);
         let phiA = phi0;
         for (let k = 0; k < n; k++) {
@@ -68127,7 +68302,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const D3 = o.draw, rig = this.rig, d = this.d, w = o.wpn;
       rig.solve(P4, { ...o, reachR: null, draw: null });
       const stanceHand = _dr[0].copy(rig.E[0]), stanceBlade = _dr[1].copy(rig.blade[0]);
-      const S3 = rig.S[0];
+      const S4 = rig.S[0];
       const G3 = _dr[2], out = _dr[3];
       let len;
       if (w.kind === "sword") {
@@ -68148,7 +68323,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         len = 0.55;
       }
       const k = D3.out ? D3.k : 1 - D3.k;
-      const rest = _dr[4].set(S3.x + 0.04, S3.y - (d.A1 + d.A2) * 0.9, S3.z + 0.03 * (S3.z > 0 ? 1 : -1));
+      const rest = _dr[4].set(S4.x + 0.04, S4.y - (d.A1 + d.A2) * 0.9, S4.z + 0.03 * (S4.z > 0 ? 1 : -1));
       const T4 = _dr[5];
       if (k < 0.42) T4.lerpVectors(rest, G3, smooth4(k / 0.42));
       else if (k < 0.78) T4.copy(G3).addScaledVector(out, smooth4((k - 0.42) / 0.36) * len);
@@ -68510,7 +68685,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.root.add(this.yaw);
       this.bodyG = new Group();
       this.yaw.add(this.bodyG);
-      const S3 = 1;
+      const S4 = 1;
       this.neck = [];
       for (let i = 0; i < 5; i++) {
         const r = 0.95 - i * 0.07;
@@ -68518,8 +68693,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       this.head = new Group();
       this.bodyG.add(this.head);
-      part3(SPH, body, [1.75 * S3, 0.95 * S3, 1.2 * S3], [0.5, 0.25, 0], this.head, 0.08);
-      part3(SPH, belly, [1.5 * S3, 0.45 * S3, 1 * S3], [0.75, -0.25, 0], this.head, 0);
+      part3(SPH, body, [1.75 * S4, 0.95 * S4, 1.2 * S4], [0.5, 0.25, 0], this.head, 0.08);
+      part3(SPH, belly, [1.5 * S4, 0.45 * S4, 1 * S4], [0.75, -0.25, 0], this.head, 0);
       part3(SPH, dark, [0.9, 0.3, 0.35], [1.35, 0.72, 0], this.head, 0.04);
       for (const s of [-1, 1]) {
         const h2 = part3(CONE, white, [0.22, 1.3, 0.22], [-0.45, 0.8, s * 0.55], this.head, 0.03);
@@ -69247,6 +69422,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (pose.state === "hurt") o.tiltAdd = -0.25;
     if (pose.swimming && (pose.swim === "tread" || !pose.swim)) o.leanAdd = 0.2;
     if (pose.swimming && P4.spread) o.spread = P4.spread;
+    if (pose.swimming && P4.legSpread) o.legSpread = P4.legSpread;
     if (pose.swimming) o.walkRel = null;
     o.roll = 0;
     o.lift = ((P4.z || 0) + (pose.z || 0)) * 1.3;
@@ -69692,6 +69868,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.root.position.y = this.smY;
       }
       this.wetY = wet;
+      const swimming = !helm && a.inWater && !a.under && a.moving && !(a.fruit && !a.gills);
+      if (swimming || this.wake) {
+        const v3 = ctx.game?.view3d, sc = a.look?.scale || 1;
+        if (!this.wake) this.wake = new WakeTrail({ n: 26, life: 2.4, every: 0.09, y: 0.035, grain: 0.9, drift: 0.5 });
+        if (this.root.parent && this.wake.mesh.parent !== this.root.parent) this.root.parent.add(this.wake.mesh);
+        const sp = Math.hypot(a.vx || 0, a.vy || 0);
+        const src = swimming && sp > 0.4 ? { x: a.x + Math.cos(a.facing) * 0.3 * sc, y: a.y + Math.sin(a.facing) * 0.3 * sc, h: Math.atan2(a.vy, a.vx), sp } : null;
+        if (v3 && ctx.world) this.wake.update(src, env.time, v3.ox, v3.oy, ctx.world, (q2, age) => [(0.2 + age * 1.15) * sc, Math.pow(1 - age, 1.8) * 0.45 * Math.min(1, q2.sp / 2)]);
+      }
       const cam = ctx.camera;
       const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
       if (a.isPlayer && !helm && cam && ctx.mode === "third" && dist < 3) {
@@ -70085,6 +70270,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     dispose() {
       this.model.dispose();
+      this.wake?.dispose();
       this.label?.dispose();
       this.aura?.dispose();
       this.backFlame?.dispose();
@@ -70858,9 +71044,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const O = this.propOrigin;
       if (!O || Math.abs(w.dx(O.x, ox)) > REBASE || Math.abs(oy - O.y) > REBASE) this.rebase(ox, oy);
       this.propT -= 1 / 60;
-      const D3 = this.viewDist(sailing), S3 = this.scan;
-      const full = !S3 || S3.D !== D3 || Math.hypot(w.dx(S3.fx, ox), oy - S3.fy) >= FAR_STEP;
-      if (full || !(Math.hypot(w.dx(S3.x, ox), oy - S3.y) < 7 && this.propT > 0 && S3.day === env.day && !this.propsDirty)) {
+      const D3 = this.viewDist(sailing), S4 = this.scan;
+      const full = !S4 || S4.D !== D3 || Math.hypot(w.dx(S4.fx, ox), oy - S4.fy) >= FAR_STEP;
+      if (full || !(Math.hypot(w.dx(S4.x, ox), oy - S4.y) < 7 && this.propT > 0 && S4.day === env.day && !this.propsDirty)) {
         const t0 = performance.now();
         this.scanProps(ox, oy, env, D3, full);
         prof(full ? "b.scan-far" : "b.scan", t0);
@@ -71195,8 +71381,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         else if (a.flying) gh = Math.max(0, this.ground(a.x, a.y));
         else if (a.seaCreature) gh = Math.max(-(a.depth || 0), this.terrain.terrainAt(a.x, a.y) + 0.35);
         else if (a.inWater) {
-          const flat = (a.moving || a.under || a.gills) && !(a.fruit && !a.gills);
-          gh = waterLevel(this.game.world, a.x, a.y) - (a.depth || 0) - (flat ? 0.95 : 1.3) * (a.look?.scale || 1);
+          gh = waterLevel(this.game.world, a.x, a.y) - (a.depth || 0) - (a.swimSink ? a.swimSink() : 1.3 * (a.look?.scale || 1));
+          gh += swellAt(a.x, a.y) * Math.max(0, 1 - (a.depth || 0) / 1.5);
           if (a.fruit && !a.gills && !a.sinking) gh += Math.sin(env.time * 5.5 + a.x * 3) * 0.09;
           gh = Math.max(gh, this.terrain.terrainAt(a.x, a.y));
         } else if (a.belowDeck) gh = a.groundAt(game, a.x, a.y) - (a.wading || 0);
@@ -72000,17 +72186,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/render3d/ripples3d.js
   var MAX2 = 96;
   function ringTexture() {
-    const S3 = 128, c = document.createElement("canvas");
-    c.width = c.height = S3;
+    const S4 = 128, c = document.createElement("canvas");
+    c.width = c.height = S4;
     const g = c.getContext("2d");
-    const grd = g.createRadialGradient(S3 / 2, S3 / 2, 0, S3 / 2, S3 / 2, S3 / 2);
+    const grd = g.createRadialGradient(S4 / 2, S4 / 2, 0, S4 / 2, S4 / 2, S4 / 2);
     grd.addColorStop(0, "rgba(255,255,255,0)");
     grd.addColorStop(0.62, "rgba(255,255,255,0)");
     grd.addColorStop(0.8, "rgba(255,255,255,0.9)");
     grd.addColorStop(0.9, "rgba(255,255,255,0.35)");
     grd.addColorStop(1, "rgba(255,255,255,0)");
     g.fillStyle = grd;
-    g.fillRect(0, 0, S3, S3);
+    g.fillRect(0, 0, S4, S4);
     const t = new CanvasTexture(c);
     t.colorSpace = SRGBColorSpace;
     return t;
@@ -72069,7 +72255,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         e[0] = rad * 2;
         e[10] = rad * 2;
         e[12] = w.dx(v.ox, r.x);
-        e[13] = SEA_Y + 0.03;
+        e[13] = SEA_Y + 0.03 + swellAt(r.x, r.y);
         e[14] = r.y - v.oy;
         this.mesh.setMatrixAt(n, m4);
         col[n * 3] = fade2;
@@ -73207,24 +73393,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.P = { x: 0, y: 0, z: 0 };
     }
     update(ctx, env) {
-      const game = ctx.game, v = game.view3d, w = ctx.world, S3 = game.seaLife;
+      const game = ctx.game, v = game.view3d, w = ctx.world, S4 = game.seaLife;
       if (!w || !v) return;
       uTime3.value = env.time;
       const ox = v.ox, oy = v.oy;
       const count2 = { fish: 0, flying: 0 };
       const seen = /* @__PURE__ */ new Set();
-      if (S3) {
-        for (const s of S3.schools) {
+      if (S4) {
+        for (const s of S4.schools) {
           if (VIEWS2[s.def.shape]) {
             seen.add(s);
-            this.animals(s, w, ox, oy, env, S3);
+            this.animals(s, w, ox, oy, env, S4);
             continue;
           }
           const kind = s.def.shape === "flying" ? "flying" : "fish", mesh = this.shoals[kind];
           const deep = s.def.shape === "reef" ? 1.55 : 1;
           for (const f of s.fish) {
             if (!f.alive || count2[kind] >= MAX_FISH) continue;
-            S3.fishPos(s, f, this.P);
+            S4.fishPos(s, f, this.P);
             const dx = w.dx(ox, this.P.x), dz = this.P.y - oy;
             if (dx * dx + dz * dz > 60 * 60) continue;
             this.p.set(dx, -this.P.z, dz);
@@ -73269,7 +73455,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
     /** The bigger animals: a model each (a trunked tuna, a baby Sea King, a Sea Cat, a Yagara Bull). */
-    animals(s, w, ox, oy, env, S3) {
+    animals(s, w, ox, oy, env, S4) {
       let views2 = this.critters.get(s);
       if (!views2) {
         views2 = s.fish.map((f) => {
@@ -73284,7 +73470,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const v = views2[i];
         v.root.visible = f.alive;
         if (!f.alive) return;
-        S3.fishPos(s, f, this.P);
+        S4.fishPos(s, f, this.P);
         v.root.position.set(w.dx(ox, this.P.x), -this.P.z, this.P.y - oy);
         v.root.rotation.set(0, -(s.hd + (s.fish.length > 1 ? Math.sin(env.time * 0.7 + f.ph) * 0.25 : 0)), 0);
         v.update(env.time + (s.seed || 0) + i * 1.7);
@@ -73310,16 +73496,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var MAX_POOLS = 160;
   var clamp015 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
   function poolTexture() {
-    const S3 = 128, c = document.createElement("canvas");
-    c.width = c.height = S3;
+    const S4 = 128, c = document.createElement("canvas");
+    c.width = c.height = S4;
     const g = c.getContext("2d");
-    const grd = g.createRadialGradient(S3 / 2, S3 / 2, 0, S3 / 2, S3 / 2, S3 / 2);
+    const grd = g.createRadialGradient(S4 / 2, S4 / 2, 0, S4 / 2, S4 / 2, S4 / 2);
     grd.addColorStop(0, "rgba(255,255,255,1)");
     grd.addColorStop(0.25, "rgba(255,255,255,0.62)");
     grd.addColorStop(0.6, "rgba(255,255,255,0.18)");
     grd.addColorStop(1, "rgba(255,255,255,0)");
     g.fillStyle = grd;
-    g.fillRect(0, 0, S3, S3);
+    g.fillRect(0, 0, S4, S4);
     const t = new CanvasTexture(c);
     t.colorSpace = SRGBColorSpace;
     return t;
@@ -73626,28 +73812,28 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return mesh;
   }
   function splashTexture(ring4) {
-    const S3 = 64, c = document.createElement("canvas");
-    c.width = c.height = S3;
+    const S4 = 64, c = document.createElement("canvas");
+    c.width = c.height = S4;
     const g = c.getContext("2d");
     if (ring4) {
       g.strokeStyle = "rgba(255,255,255,0.9)";
       g.lineWidth = 3;
       g.beginPath();
-      g.arc(S3 / 2, S3 / 2, S3 / 2 - 4, 0, Math.PI * 2);
+      g.arc(S4 / 2, S4 / 2, S4 / 2 - 4, 0, Math.PI * 2);
       g.stroke();
     } else {
       g.fillStyle = "rgba(255,255,255,0.9)";
       for (let i = 0; i < 9; i++) {
-        const a = i / 9 * Math.PI * 2, r = S3 * (0.2 + i % 3 * 0.07);
+        const a = i / 9 * Math.PI * 2, r = S4 * (0.2 + i % 3 * 0.07);
         g.beginPath();
-        g.arc(S3 / 2 + Math.cos(a) * r, S3 / 2 + Math.sin(a) * r, 2.6 - i % 3 * 0.5, 0, Math.PI * 2);
+        g.arc(S4 / 2 + Math.cos(a) * r, S4 / 2 + Math.sin(a) * r, 2.6 - i % 3 * 0.5, 0, Math.PI * 2);
         g.fill();
       }
-      const grd = g.createRadialGradient(S3 / 2, S3 / 2, 0, S3 / 2, S3 / 2, S3 * 0.22);
+      const grd = g.createRadialGradient(S4 / 2, S4 / 2, 0, S4 / 2, S4 / 2, S4 * 0.22);
       grd.addColorStop(0, "rgba(255,255,255,0.7)");
       grd.addColorStop(1, "rgba(255,255,255,0)");
       g.fillStyle = grd;
-      g.fillRect(0, 0, S3, S3);
+      g.fillRect(0, 0, S4, S4);
     }
     const t = new CanvasTexture(c);
     t.colorSpace = SRGBColorSpace;
@@ -74775,8 +74961,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return layTown(world, { ...town, w, h: h2 }, rng4, noise, false);
   }
   function fitTown(world, town, rng4, noise, w, h2) {
-    const S3 = TOWN_STYLES[town.style] || TOWN_STYLES.village;
-    const big = !!S3.big, terraced = TERRACED.has(town.style) && !big;
+    const S4 = TOWN_STYLES[town.style] || TOWN_STYLES.village;
+    const big = !!S4.big, terraced = TERRACED.has(town.style) && !big;
     let need = 0;
     for (const spec of town.buildings || []) {
       const [dw, dd] = ROLE_SIZES[spec.role] || [6, 5];
@@ -74797,18 +74983,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return { w: fw, h: fh };
   }
   function layTown(world, town, rng4, noise, dry) {
-    const S3 = TOWN_STYLES[town.style] || TOWN_STYLES.village;
+    const S4 = TOWN_STYLES[town.style] || TOWN_STYLES.village;
     const cx = town.x, cy = town.y;
     const w = town.w, h2 = town.h;
     const x0 = Math.round(cx - w / 2), y0 = Math.round(cy - h2 / 2);
     const x1 = x0 + w, y1 = y0 + h2;
-    const roadTile = town.road ?? S3.road;
-    const groundTile = town.ground === void 0 ? S3.ground : town.ground;
-    const plazaTile = town.plazaTile ?? S3.plaza;
-    const big = !!S3.big;
+    const roadTile = town.road ?? S4.road;
+    const groundTile = town.ground === void 0 ? S4.ground : town.ground;
+    const plazaTile = town.plazaTile ?? S4.plaza;
+    const big = !!S4.big;
     const terraced = TERRACED.has(town.style) && !big;
     const setback = terraced ? 0 : APART_SETBACK[town.style] ?? 1;
-    const laneTile = terraced ? roadTile : S3.ground === null ? T.DIRT : roadTile;
+    const laneTile = terraced ? roadTile : S4.ground === null ? T.DIRT : roadTile;
     const inTown = (x, y) => Math.max(Math.abs((x + 0.5 - cx) / (w / 2)), Math.abs((y + 0.5 - cy) / (h2 / 2))) <= 1.08;
     const crag = (x, y) => {
       if (!CRAG.has(world.type(x, y)) || !inTown(x, y)) return false;
@@ -74862,7 +75048,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const horiz = town.mainDir ? town.mainDir === "h" : w >= h2;
     const A0 = horiz ? x0 : y0, A1 = horiz ? x1 : y1, C0 = horiz ? y0 : x0, C1 = horiz ? y1 : x1, CC = horiz ? cy : cx, AC = horiz ? cx : cy;
     const rect2 = (a0, a1, c0, c1) => horiz ? { x0: a0, x1: a1, y0: c0, y1: c1 } : { x0: c0, x1: c1, y0: a0, y1: a1 };
-    const mw = w * h2 > 1500 || S3.tall ? 3 : 2;
+    const mw = w * h2 > 1500 || S4.tall ? 3 : 2;
     let off = 0, a = A0;
     const mainSegs = [];
     while (a < A1) {
@@ -75005,9 +75191,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const q2 = lotOf(run, s, fw, fd, sb);
       if (!lotFree(q2) || !frontFree(run, s, fw, sb)) return null;
       const doorX = fw >= 6 && spec.role === "house" ? rng4.pick([-1, 1]) * rng4.range(0.6, fw / 2 - 1.3) : 0;
-      const colors = { wall: spec.wall || rng4.pick(S3.walls), roof: spec.roof || rng4.pick(S3.roofs) };
+      const colors = { wall: spec.wall || rng4.pick(S4.walls), roof: spec.roof || rng4.pick(S4.roofs) };
       const role = spec.role;
-      const tall = S3.tall ? rng4.int(3, 5) : terraced ? rng4.pick([3, 3, 3, 4]) : rng4.chance(0.35) ? 3 : 2;
+      const tall = S4.tall ? rng4.int(3, 5) : terraced ? rng4.pick([3, 3, 3, 4]) : rng4.chance(0.35) ? 3 : 2;
       if (dry) {
         const b2 = { x: q2.x, y: q2.y, rot: run.rot, fw, fd, role, name: spec.name };
         b2.door = bw(b2, doorX, 0.5);
@@ -75019,7 +75205,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const b = placeObject(world, {
         kind: "building",
         style: spec.style || town.style || "village",
-        roofType: spec.roofType || S3.roof,
+        roofType: spec.roofType || S4.roof,
         x: q2.x,
         y: q2.y,
         rot: run.rot,
@@ -75127,12 +75313,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
     if (town.plaza !== false) {
-      const feature = town.plaza || (S3.flags ? "flagpole" : town.style === "desert" ? "well" : w > 30 ? "fountain" : "well");
+      const feature = town.plaza || (S4.flags ? "flagpole" : town.style === "desert" ? "well" : w > 30 ? "fountain" : "well");
       placeObject(world, { kind: feature, x: plaza.x, y: plaza.y + (horiz ? 0 : 0.5), block: true, fw: feature === "platform" ? 3 : 1, fd: feature === "platform" ? 2 : 1, town: town.id });
     }
     const clearAt = (x, y, r) => okLand(x, y) && !world.isBlocked(x, y) && !world.hitsProp(x, y, r);
     const nearDoor = (x, y, r) => buildings.some((b) => Math.hypot(world.dx(b.door.x, x), b.door.y - y) < r);
-    if (S3.lamps) {
+    if (S4.lamps) {
       for (const st of streets) {
         const len = st.dir === "h" ? st.x1 - st.x0 + 1 : st.y1 - st.y0 + 1;
         const step = st.rank === 0 ? 7 : 9;
@@ -75144,10 +75330,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           if (occAt(x, y) > 0) {
             const ix = st.dir === "h" ? x : side < 0 ? st.x0 + 0.35 : st.x1 + 0.65;
             const iy = st.dir === "h" ? side < 0 ? st.y0 + 0.35 : st.y1 + 0.65 : y;
-            if (!nearDoor(ix, iy, 1.6) && clearAt(ix, iy, 0.9)) placeObject(world, { kind: S3.lantern ? "lantern" : "lamp", x: ix, y: iy, block: true, light: true });
+            if (!nearDoor(ix, iy, 1.6) && clearAt(ix, iy, 0.9)) placeObject(world, { kind: S4.lantern ? "lantern" : "lamp", x: ix, y: iy, block: true, light: true });
             continue;
           }
-          if (clearAt(x, y, 0.9)) placeObject(world, { kind: S3.lantern ? "lantern" : "lamp", x, y, block: true, light: true });
+          if (clearAt(x, y, 0.9)) placeObject(world, { kind: S4.lantern ? "lantern" : "lamp", x, y, block: true, light: true });
         }
       }
     }
@@ -75166,7 +75352,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (b.role !== "house") continue;
         const back = [];
         for (let z = -b.fd - 1; z >= -b.fd - 2; z--) for (let x = -b.fw / 2 + 0.5; x < b.fw / 2; x += 1) back.push(bw(b, x, z));
-        if (S3.fences && rng4.chance(0.55)) {
+        if (S4.fences && rng4.chance(0.55)) {
           for (const p of back) if (occAt(p.x, p.y) === FREE && okLand(p.x, p.y)) {
             world.setType(p.x, p.y, T.FARM);
             setOcc(p.x, p.y, YARD);
@@ -76514,7 +76700,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (const f of world.floes || []) wins.push({ x0: f.x - f.r - 1, y0: f.y - f.r - 1, x1: f.x + f.r + 1, y1: f.y + f.r + 1 });
     if (!world.wrap) wins.splice(0, wins.length, { x0: 0, y0: 0, x1: world.width, y1: world.height });
     let t0 = performance.now();
-    const S3 = 1100;
+    const S4 = 1100;
     const boxes2 = wins.map((w) => ({ x0: Math.floor(w.x0) - 34, y0: Math.floor(w.y0) - 34, x1: Math.ceil(w.x1) + 34, y1: Math.ceil(w.y1) + 34 }));
     const near = (a, b) => {
       const dx = Math.abs(world.dx((a.x0 + a.x1) / 2, (b.x0 + b.x1) / 2)), dy = Math.abs((a.y0 + a.y1) / 2 - (b.y0 + b.y1) / 2);
@@ -76534,9 +76720,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const a = boxes2[i];
       let crowded = !world.wrap || mixedNear(a);
       for (let j = 0; j < boxes2.length && !crowded; j++) if (j !== i && near(a, boxes2[j])) crowded = true;
-      for (let y = a.y0; y < a.y1; y += S3) {
-        for (let x = a.x0; x < a.x1; x += S3) {
-          distanceWindow(world, x, y, Math.min(a.x1, x + S3), Math.min(a.y1, y + S3), crowded || a.x1 - a.x0 > S3 || a.y1 - a.y0 > S3 ? 34 : 0);
+      for (let y = a.y0; y < a.y1; y += S4) {
+        for (let x = a.x0; x < a.x1; x += S4) {
+          distanceWindow(world, x, y, Math.min(a.x1, x + S4), Math.min(a.y1, y + S4), crowded || a.x1 - a.x0 > S4 || a.y1 - a.y0 > S4 ? 34 : 0);
           if (yieldFn && performance.now() - t0 > 60) {
             await yieldFn();
             t0 = performance.now();
@@ -84560,7 +84746,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const d = r.dpr;
     for (const p of fx.parts) {
       if (!!p.add !== additive) continue;
-      const B4 = bill(r, p.x, p.y, p.z);
+      const B4 = bill(r, p.x, p.y, p.under !== void 0 ? p.z - p.under : p.z);
       if (!B4 || !onScreen(r, B4, 60)) continue;
       let vx = 0, vy = 0;
       if (p.kind === "spark" || p.kind === "line" || p.kind === "drop") {
@@ -85359,6 +85545,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         p.y += p.vy * sdt;
         p.vz -= p.g * sdt;
         p.z += p.vz * sdt;
+        if (p.under !== void 0 && p.z >= p.under) {
+          this.parts.splice(i, 1);
+          continue;
+        }
         if (p.z < 0) {
           p.z = 0;
           p.vz *= -0.3;
@@ -85438,7 +85628,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
       }
     }
-    /** Afterimages, sprint dust, knockback skids and landing puffs for actors near the camera. */
+    /** Afterimages, knockback skids and landing puffs for actors near the camera. */
     trackMotion(dt) {
       const g = this.game, p = g.player;
       if (!p || !g.actors || !g.world) return;
@@ -92524,7 +92714,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return `Hull ${hull} \xB7 speed ${+d.speed.toFixed(1)}${d.oarsOnly ? " (oars)" : ""} \xB7 ${guns} \xB7 crew ${d.crew} \xB7 hold ${d.cargo}`;
   }
   function openShipwright(game, { dock, island, npc = null, tab = "spawn" }) {
-    const ui = game.ui, c = game.state.char, S3 = game.services, w = game.world;
+    const ui = game.ui, c = game.state.char, S4 = game.services, w = game.world;
     const body = h("div.shipwright");
     const entry = ui.openPanel(body, { wide: true, id: "shipwright" });
     if (!entry) return null;
@@ -92602,8 +92792,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const forSale = () => {
       const list = h("div.list");
       const fleet = fleetOf(c);
-      for (const type of S3.shipsFor(island)) {
-        const d = SHIPS[type], price = S3.shipPrice(type, island), can = c.berries >= price;
+      for (const type of S4.shipsFor(island)) {
+        const d = SHIPS[type], price = S4.shipPrice(type, island), can = c.berries >= price;
         const owned = fleet.filter((e) => e.type === type).length;
         list.appendChild(h(
           "div.row-item" + (can ? "" : ".cant"),
@@ -93402,20 +93592,20 @@ Trains by: ${TRAINS_BY[k]}` },
     return entry;
   }
   function openInn(game, building, island, town) {
-    const S3 = game.services;
-    const price = S3.innPrice(island);
+    const S4 = game.services;
+    const price = S4.innPrice(island);
     game.ui.openPanel(h(
       "div",
       h("h2", building.name || "Inn"),
       h("p", "A warm bed, a hot meal and a roof over your head. Resting here also makes this town the place you wake up if you fall in battle, and restores your second winds."),
       h("p", h("b", "Price: "), formatBerries(price)),
       h("button.btn.gold", { on: { click: () => {
-        if (S3.rest(island, town)) game.ui.closePanel();
+        if (S4.rest(island, town)) game.ui.closePanel();
       } } }, "Rest until morning")
     ), { id: "inn" });
   }
   function openDoctor(game, building, island, doc) {
-    const S3 = game.services;
+    const S4 = game.services;
     const c = game.state.char;
     const p = game.player;
     const body = h("div");
@@ -93428,9 +93618,9 @@ Trains by: ${TRAINS_BY[k]}` },
         h("p", doc?.line || "Let's have a look at you."),
         h("p", `Health ${Math.ceil(p.hp)}/${p.d.maxHp}${Object.keys(p.status).length ? " \xB7 " + Object.keys(p.status).join(", ") : ""}`),
         h("button.btn.green", { disabled: p.hp >= p.d.maxHp && !Object.keys(p.status).length, on: { click: () => {
-          S3.heal(island);
+          S4.heal(island);
           render2();
-        } } }, `Treat wounds \u2014 ${formatBerries(S3.healPrice(island))}`)
+        } } }, `Treat wounds \u2014 ${formatBerries(S4.healPrice(island))}`)
       );
       if (doc?.restoresLife) {
         const done6 = c.flags["lifeRestored_" + doc.id];
@@ -93439,9 +93629,9 @@ Trains by: ${TRAINS_BY[k]}` },
           h("h3", "Mend a vivre card"),
           h("p", `${doc.name} is one of the few doctors in the world who can pull someone back from the edge. (Restores one lost life, once.)`),
           h("button.btn.gold", { disabled: done6 || c.lives >= c.maxLives, on: { click: () => {
-            S3.restoreLife(doc);
+            S4.restoreLife(doc);
             render2();
-          } } }, done6 ? "Already treated" : c.lives >= c.maxLives ? "No lives lost" : `Treatment \u2014 ${formatBerries(S3.lifePrice(doc))}`)
+          } } }, done6 ? "Already treated" : c.lives >= c.maxLives ? "No lives lost" : `Treatment \u2014 ${formatBerries(S4.lifePrice(doc))}`)
         );
       }
     };
@@ -93449,7 +93639,7 @@ Trains by: ${TRAINS_BY[k]}` },
     return entry;
   }
   function openShipyard(game, building, island, dock) {
-    const S3 = game.services;
+    const S4 = game.services;
     const c = game.state.char;
     const body = h("div");
     const entry = game.ui.openPanel(body, { wide: true, id: "shipyard" });
@@ -93475,19 +93665,19 @@ Trains by: ${TRAINS_BY[k]}` },
         add2(body, h("h3", "Your ships"));
         for (const s of ships) {
           const near = game.world.distance(s.x, s.y, game.player.x, game.player.y) < 60;
-          const rp = S3.repairPrice(s, island);
+          const rp = S4.repairPrice(s, island);
           const hull = s.unbreakable ? "Hull sound" : `Hull ${Math.ceil(s.hull)}/${s.maxHull}`;
           const card = h("div.card", h("h4", `${s.name} \u2014 ${s.def.name}`), h("div", `${hull}${s.shotCap ? ` \xB7 cannonballs ${s.shot}/${s.shotCap}` : ""} \xB7 upgrades: ${s.upgrades.map((u) => SHIP_UPGRADES[u]?.name).join(", ") || "none"}${s.coated ? " \xB7 coated" : ""}`));
           if (!near) card.appendChild(h("p.muted", "Bring this ship to the harbour to work on it."));
           else {
             if (!s.unbreakable) card.appendChild(h("button.btn.green", { style: { marginRight: "6px" }, disabled: s.hull >= s.maxHull || c.berries < rp, on: { click: () => {
-              S3.repair(s, island);
+              S4.repair(s, island);
               render2();
             } } }, `Repair \u2014 ${formatBerries(rp)}`));
             if (s.shotCap) {
-              const sp = S3.shotPrice(s, island);
+              const sp = S4.shotPrice(s, island);
               card.appendChild(h("button.btn", { disabled: s.shot >= s.shotCap || c.berries < sp, on: { click: () => {
-                S3.restock(s, island);
+                S4.restock(s, island);
                 render2();
               } } }, s.shot >= s.shotCap ? "Cannonballs: full" : `Cannonballs (${s.shotCap - s.shot}) \u2014 ${formatBerries(sp)}`));
             }
@@ -93496,13 +93686,13 @@ Trains by: ${TRAINS_BY[k]}` },
               if (id === "coating" && !(building.coating || /sabaody/i.test(island?.id || "") || /coat/i.test(building.name || ""))) continue;
               if (id === "seastone_keel" && !(building.seastone || island?.def?.sea === "paradise" || island?.def?.sea === "new_world")) continue;
               const has2 = s.upgrades.includes(id) || id === "coating" && s.coated;
-              const up = S3.upgradePrice(id, island);
+              const up = S4.upgradePrice(id, island);
               ups.appendChild(h(
                 "div.row-item",
                 h("div.grow", h("b", u.name), h("div.sub", u.desc)),
                 h("span.price", formatBerries(up)),
                 h("button.btn", { disabled: has2 || c.berries < up, on: { click: () => {
-                  S3.upgrade(s, id, island);
+                  S4.upgrade(s, id, island);
                   render2();
                 } } }, has2 ? "Fitted" : "Fit")
               ));
@@ -93538,7 +93728,7 @@ Trains by: ${TRAINS_BY[k]}` },
     render2();
   }
   function openTrainer(game, tid, npcName) {
-    const S3 = game.services;
+    const S4 = game.services;
     const t = TRAINERS[tid];
     const c = game.state.char;
     const body = h("div");
@@ -93569,15 +93759,15 @@ Trains by: ${TRAINS_BY[k]}` },
         if (!styles.length) list.appendChild(h("p", `${t.name} doesn't teach a fighting style \u2014 but can train your body.`));
         for (const s of styles) {
           const st = STYLES2[s];
-          const chk = S3.canLearnStyle(tid, s);
-          const price = S3.stylePrice(tid, s);
+          const chk = S4.canLearnStyle(tid, s);
+          const price = S4.stylePrice(tid, s);
           list.appendChild(h(
             "div.row-item",
             uiImg("skills", 30),
             h("div.grow", h("b", st.name), h("div.sub", st.desc), chk.warn ? h("div.sub", { style: { color: "#b71c1c" } }, chk.warn) : null),
             h("span.price", price ? formatBerries(price) : "free"),
             h("button.btn.gold", { disabled: !chk.ok || c.berries < price, on: { click: () => {
-              S3.learnStyle(tid, s);
+              S4.learnStyle(tid, s);
               render2();
             } } }, chk.ok ? "Learn" : chk.why)
           ));
@@ -93586,32 +93776,32 @@ Trains by: ${TRAINS_BY[k]}` },
         for (const id of t.teaches || []) {
           const d = getAbility(id);
           if (!d || needsHaki(d) && !hakiKnown(c)) continue;
-          const chk = S3.canLearnTech(id);
-          const price = S3.techPrice(id);
+          const chk = S4.canLearnTech(id);
+          const price = S4.techPrice(id);
           list.appendChild(h(
             "div.row-item",
             skillImg(d, 34, ".ico"),
             h("div.grow", h("b", d.name), h("span.tag", STYLES2[d.style]?.name || (d.hakiType ? title(d.hakiType) + " Haki" : "")), h("div.sub", d.desc || ""), h("div.sub", `Requires: ${d.learn?.mastery ? STYLES2[d.style]?.name + " mastery " + d.learn.mastery : d.learn?.level ? title(d.hakiType) + " Haki " + d.learn.level : "\u2014"}`)),
             h("span.price", formatBerries(price)),
             h("button.btn.gold", { disabled: !chk.ok || c.berries < price, on: { click: () => {
-              S3.learnTech(id);
+              S4.learnTech(id);
               render2();
             } } }, chk.ok ? "Learn" : chk.why)
           ));
         }
         if (!list.children.length) list.appendChild(h("p", "No techniques to teach you yet."));
       } else if (tab === "training") {
-        list.appendChild(h("p.muted", `A master pushes your body further than fighting alone. Training sessions left today: ${S3.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
+        list.appendChild(h("p.muted", `A master pushes your body further than fighting alone. Training sessions left today: ${S4.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
         for (const [k, cap2] of Object.entries(t.train || {})) {
-          const price = S3.trainPrice(k);
+          const price = S4.trainPrice(k);
           const maxed = c.attrs[k] >= cap2;
           list.appendChild(h(
             "div.row-item",
             uiImg("trainer", 30),
             h("div.grow", h("b", ATTRS[k].name), h("div.sub", `${c.attrs[k]} / ${cap2} with this master \xB7 ${ATTRS[k].desc}`)),
             h("span.price", formatBerries(price)),
-            h("button.btn.gold", { disabled: maxed || S3.trainsLeft() <= 0 || c.berries < price, on: { click: () => {
-              S3.train(tid, k);
+            h("button.btn.gold", { disabled: maxed || S4.trainsLeft() <= 0 || c.berries < price, on: { click: () => {
+              S4.train(tid, k);
               render2();
             } } }, maxed ? "Mastered" : "Train")
           ));
@@ -93620,24 +93810,24 @@ Trains by: ${TRAINS_BY[k]}` },
         for (const k of hakiTypes) {
           const cap2 = t.haki[k];
           const lvl = c.haki[k] || 0;
-          const price = S3.hakiTrainPrice(k);
+          const price = S4.hakiTrainPrice(k);
           list.appendChild(h(
             "div.row-item",
             uiImg("haki", 30),
             h("div.grow", h("b", HAKI[k].name), h("div.sub", HAKI[k].desc), h("div.sub", `Level ${Math.floor(lvl)} / ${cap2} with this master`)),
             h("span.price", formatBerries(price)),
             h("button.btn.gold", { disabled: c.berries < price || lvl >= cap2, on: { click: () => {
-              S3.hakiTrain(tid, k);
+              S4.hakiTrain(tid, k);
               render2();
             } } }, "Train")
           ));
         }
       } else if (tab === "spar") {
-        const chk = S3.canSpar(tid);
+        const chk = S4.canSpar(tid);
         list.appendChild(h("p", `A real duel against ${t.spar.name} (level ${t.spar.level}). Nobody dies in a spar. Win to gain mastery and possibly a breakthrough \u2014 beating someone stronger than you is how warriors grow. Once per day.`));
         list.appendChild(h("button.btn.red", { disabled: !chk.ok, on: { click: () => {
           game.ui.closePanel();
-          S3.startSpar(tid);
+          S4.startSpar(tid);
         } } }, chk.ok ? "Begin the spar" : chk.why));
       }
       body.appendChild(list);
@@ -96256,7 +96446,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   function spotsOf(game, town, isl) {
     if (town._life) return town._life;
     const w = game.world;
-    const S3 = { wall: [], shopfront: [], seat: [], stall: [], street: [], door: [], dock: [], tavern: [] };
+    const S4 = { wall: [], shopfront: [], seat: [], stall: [], street: [], door: [], dock: [], tavern: [] };
     const clear3 = (x, y, r = 0.3) => w.walkable(x, y) && !w.isBlocked(x, y) && !w.hitsProp(x, y, r);
     for (const b of town.buildings) {
       const fw = Math.max(2, b.fw || 3);
@@ -96267,17 +96457,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         if (Math.abs(x - d.x) < d.dw / 2 + 0.85) continue;
         const p = { ...bw(b, x, 0.36), face, b };
         if (!clear3(p.x, p.y)) continue;
-        S3.wall.push(p);
-        if (role !== "house") S3.shopfront.push({ ...p, ...bw(b, x, 0.75) });
+        S4.wall.push(p);
+        if (role !== "house") S4.shopfront.push({ ...p, ...bw(b, x, 0.75) });
       }
       if (role === "house" && !isEnterable(b)) {
         const p = { ...bw(b, d.x + d.dw / 2 + 0.34, 0.3), face, h: SEAT_H.step, stand: bw(b, d.x + d.dw / 2 + 0.34, 0.95), b };
-        if (clear3(p.stand.x, p.stand.y) && clear3(p.x, p.y, 0.2)) S3.seat.push(p);
+        if (clear3(p.stand.x, p.stand.y) && clear3(p.x, p.y, 0.2)) S4.seat.push(p);
       }
       const out = { ...bw(b, d.x, 0.95), b };
       if (clear3(out.x, out.y)) {
-        if (role === "house") S3.door.push(out);
-        if (role === "tavern" || role === "bar" || role === "inn") S3.tavern.push(out);
+        if (role === "house") S4.door.push(out);
+        if (role === "tavern" || role === "bar" || role === "inn") S4.tavern.push(out);
       }
     }
     const R4 = Math.max(town.w, town.h) * 0.75 + 8;
@@ -96286,7 +96476,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         const face = Math.PI / 2;
         const r = (o.col?.r ?? 0.4) + 0.4;
         const stand = { x: o.x + Math.cos(face) * r, y: o.y + Math.sin(face) * r };
-        if (clear3(stand.x, stand.y)) S3.seat.push({ x: o.x, y: o.y, face, h: SEAT_H[o.kind], stand, o });
+        if (clear3(stand.x, stand.y)) S4.seat.push({ x: o.x, y: o.y, face, h: SEAT_H[o.kind], stand, o });
       } else if (o.kind === "well" || o.kind === "fountain" || o.kind === "bench") {
         const rim2 = o.kind === "well" ? 0.86 : o.kind === "fountain" ? 1.32 : 0;
         const n = o.kind === "bench" ? 2 : 4;
@@ -96294,28 +96484,28 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           const a = o.kind === "bench" ? Math.PI / 2 : i * Math.PI / 2 + 0.5;
           const px2 = o.kind === "bench" ? o.x + (i ? 0.35 : -0.35) : o.x + Math.cos(a) * rim2, py2 = o.kind === "bench" ? o.y : o.y + Math.sin(a) * rim2;
           const stand = { x: px2 + Math.cos(a) * 0.6, y: py2 + Math.sin(a) * 0.6 };
-          if (clear3(stand.x, stand.y)) S3.seat.push({ x: px2, y: py2, face: a, h: SEAT_H[o.kind], stand, o });
+          if (clear3(stand.x, stand.y)) S4.seat.push({ x: px2, y: py2, face: a, h: SEAT_H[o.kind], stand, o });
         }
       } else if (o.kind === "stall") {
         const pl = town.plaza;
         const yaw = Math.atan2(w.dx(o.x, pl.x), pl.y - o.y);
         const x = o.x - Math.sin(yaw) * 0.72, y = o.y - Math.cos(yaw) * 0.72;
-        S3.stall.push({ x, y, face: Math.atan2(Math.cos(yaw), Math.sin(yaw)), o });
+        S4.stall.push({ x, y, face: Math.atan2(Math.cos(yaw), Math.sin(yaw)), o });
       }
     }
-    for (const p of town.streetSpots || []) if (clear3(p.x, p.y, 0.4)) S3.street.push({ x: p.x, y: p.y, ax: p.ax, across: p.across });
+    for (const p of town.streetSpots || []) if (clear3(p.x, p.y, 0.4)) S4.street.push({ x: p.x, y: p.y, ax: p.ax, across: p.across });
     for (const ry of town.rows || []) {
-      for (let x = town.x0 + 2; x < town.x1 - 1; x += 3) if (clear3(x + 0.5, ry + 1.1, 0.4)) S3.street.push({ x: x + 0.5, y: ry + 1.1 });
+      for (let x = town.x0 + 2; x < town.x1 - 1; x += 3) if (clear3(x + 0.5, ry + 1.1, 0.4)) S4.street.push({ x: x + 0.5, y: ry + 1.1 });
     }
-    if (town.plaza) S3.street.push({ x: town.plaza.x + 1.8, y: town.plaza.y + 1.8 });
+    if (town.plaza) S4.street.push({ x: town.plaza.x + 1.8, y: town.plaza.y + 1.8 });
     for (const dk3 of isl?.docks || []) {
       if (!dk3.end || w.distance(dk3.end.x, dk3.end.y, town.x, town.y) > 70) continue;
       const face = Math.atan2(dk3.dirY || 0, dk3.dirX || 1);
       const x = dk3.end.x + 0.5 - Math.cos(face) * 0.4, y = dk3.end.y + 0.5 - Math.sin(face) * 0.4;
-      S3.dock.push({ x, y, face, h: SEAT_H.dock, stand: { x: x - Math.cos(face) * 0.7, y: y - Math.sin(face) * 0.7 } });
+      S4.dock.push({ x, y, face, h: SEAT_H.dock, stand: { x: x - Math.cos(face) * 0.7, y: y - Math.sin(face) * 0.7 } });
     }
-    town._life = S3;
-    return S3;
+    town._life = S4;
+    return S4;
   }
   function spawnFolk(game, town, isl, rng4, list, at4, kid = false) {
     const race = kid ? "human" : rng4.weighted(isl.def.population || townRaces(isl));
@@ -96345,11 +96535,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     return a;
   }
   function populate2(game, town, isl, rng4, list, ctx) {
-    const S3 = spotsOf(game, town, isl);
+    const S4 = spotsOf(game, town, isl);
     const clock = game.env.clock;
     const day = clock >= 6 && clock < 19;
     if (day) {
-      for (const st of S3.stall) if (rng4.next() < 0.85) {
+      for (const st of S4.stall) if (rng4.next() < 0.85) {
         const a = spawnFolk(game, town, isl, rng4, list, st);
         start(game, a, { kind: "vend", spot: st, t: 1e6 }, true);
         a.talk = { kind: "keeper", building: { role: "market", name: "Market Stall", town: town.id, x: st.x, y: st.y } };
@@ -96357,19 +96547,19 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         a.name = "Stallholder";
         a.nameColor = "#ffe082";
       }
-      for (const dk3 of S3.dock.slice(0, 2)) if (rng4.next() < 0.6) start(game, spawnFolk(game, town, isl, rng4, list, dk3.stand), { kind: "fish", spot: dk3, t: rng4.range(120, 400) }, true);
-      if (KID_STYLES.has(town.style) && S3.street.length && rng4.next() < 0.7) {
-        const c = rng4.pick(S3.street);
+      for (const dk3 of S4.dock.slice(0, 2)) if (rng4.next() < 0.6) start(game, spawnFolk(game, town, isl, rng4, list, dk3.stand), { kind: "fish", spot: dk3, t: rng4.range(120, 400) }, true);
+      if (KID_STYLES.has(town.style) && S4.street.length && rng4.next() < 0.7) {
+        const c = rng4.pick(S4.street);
         const n2 = 2 + (rng4.next() < 0.5 ? 1 : 0);
         for (let i = 0; i < n2; i++) start(game, spawnFolk(game, town, isl, rng4, list, { x: c.x + i * 0.8, y: c.y }, true), { kind: "play", center: c, t: rng4.range(40, 120) }, true);
       }
     }
     if (!day || clock >= 20) {
-      for (const t of S3.tavern.slice(0, 2)) if (rng4.next() < 0.6) start(game, spawnFolk(game, town, isl, rng4, list, bw(t.b, doorLocalX(t.b) + 1.4, 1.75)), { kind: "drunk", t: rng4.range(60, 200) }, true);
+      for (const t of S4.tavern.slice(0, 2)) if (rng4.next() < 0.6) start(game, spawnFolk(game, town, isl, rng4, list, bw(t.b, doorLocalX(t.b) + 1.4, 1.75)), { kind: "drunk", t: rng4.range(60, 200) }, true);
     }
     const n = Math.round(crowdOf(town) * outShare(clock));
     for (let i = 0; i < n; i++) {
-      const at4 = S3.street.length ? acrossOf(game.world, rng4.pick(S3.street), rng4) : town.plaza;
+      const at4 = S4.street.length ? acrossOf(game.world, rng4.pick(S4.street), rng4) : town.plaza;
       if (!at4) break;
       const a = spawnFolk(game, town, isl, rng4, list, { x: at4.x, y: at4.y });
       const act2 = pick2(game, a);
@@ -96385,17 +96575,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       for (const town of isl.towns || []) {
         const folk = list.filter((a) => a.alive && a.townsfolk && a.town === town && !a.kid && a.activity?.kind !== "vend");
         const want = Math.round(crowdOf(town) * outShare(clock));
-        const S3 = spotsOf(game, town, isl);
+        const S4 = spotsOf(game, town, isl);
         if (folk.length > want + 1) {
           const a = folk.find((x) => x.activity?.kind !== "goHome" && x.state === "idle");
-          const door = a && nearest(game, S3.door, a);
+          const door = a && nearest(game, S4.door, a);
           if (door) {
             start(game, a, { kind: "goHome", to: indoors(game, door), t: 90 });
             a.homeB = door.b;
           }
-        } else if (folk.length < want - 1 && S3.door.length) {
+        } else if (folk.length < want - 1 && S4.door.length) {
           const rng4 = new RNG(Math.floor(game.time * 1e3) + folk.length);
-          const d = rng4.pick(S3.door);
+          const d = rng4.pick(S4.door);
           if (game.world.distance(d.x, d.y, game.player.x, game.player.y) < 70) {
             const a = spawnFolk(game, town, isl, rng4, list, indoors(game, d));
             a.homeB = d.b;
@@ -96405,7 +96595,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         }
         if (clock >= 19 || clock < 6) {
           for (const a of list) if (a.alive && a.town === town && a.activity?.kind === "vend") {
-            const door = nearest(game, S3.door, a);
+            const door = nearest(game, S4.door, a);
             if (door) {
               start(game, a, { kind: "goHome", to: indoors(game, door), t: 90 });
               a.homeB = door.b;
@@ -96422,13 +96612,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const p = s.ax ? { x: s.x + rng4.range(-1, 1), y: c } : { x: c, y: s.y + rng4.range(-1, 1) };
     return w.walkable(p.x, p.y) && !w.isBlocked(p.x, p.y) && !w.hitsProp(p.x, p.y, 0.4) ? p : s;
   }
-  function streetStop(game, a, S3) {
+  function streetStop(game, a, S4) {
     const w = game.world;
-    const near = S3.street.filter((s) => {
+    const near = S4.street.filter((s) => {
       const d = w.distance(s.x, s.y, a.x, a.y);
       return d > 5 && d < 28;
     });
-    return acrossOf(w, a.rng.pick(near.length ? near : S3.street), a.rng);
+    return acrossOf(w, a.rng.pick(near.length ? near : S4.street), a.rng);
   }
   function nearest(game, pts, a) {
     let best = null, bd = Infinity;
@@ -96442,16 +96632,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     return best;
   }
   function pick2(game, a) {
-    const S3 = spotsOf(game, a.town, a.isl);
+    const S4 = spotsOf(game, a.town, a.isl);
     const r = a.rng;
     const clock = game.env.clock;
     const evening = clock >= 18 || clock < 6;
     const free = (list) => list.filter((s) => !s.taken || !s.taken.alive || s.taken.activity?.spot !== s);
     const options = [];
-    const walls = free(S3.wall), seats = free(S3.seat), fronts = free(S3.shopfront);
+    const walls = free(S4.wall), seats = free(S4.seat), fronts = free(S4.shopfront);
     if (walls.length) options.push(["lean", 3]);
     if (seats.length) options.push(["sit", evening ? 4 : 2.5]);
-    if (S3.street.length) options.push(["stroll", evening ? 1.5 : 4]);
+    if (S4.street.length) options.push(["stroll", evening ? 1.5 : 4]);
     options.push(["chat", 1.4]);
     if (fronts.length && !evening) options.push(["sweep", 0.8]);
     let kind = r.weighted(options);
@@ -96476,8 +96666,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     if (kind === "lean") return { kind, spot: r.pick(walls), t: r.range(15, 50) };
     if (kind === "sit") return { kind, spot: r.pick(seats), t: r.range(20, 70) };
     if (kind === "sweep") return { kind, spot: r.pick(fronts), t: r.range(20, 45) };
-    if (!S3.street.length) return null;
-    return { kind: "stroll", to: streetStop(game, a, S3), t: r.range(25, 60), legs: 2 + Math.floor(r.next() * 3) };
+    if (!S4.street.length) return null;
+    return { kind: "stroll", to: streetStop(game, a, S4), t: r.range(25, 60), legs: 2 + Math.floor(r.next() * 3) };
   }
   function start(game, a, act2, now2 = false) {
     stop(a);
@@ -96604,8 +96794,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           stop(a);
           return;
         }
-        const S3 = spotsOf(game, a.town, a.isl);
-        act2.dest = streetStop(game, a, S3);
+        const S4 = spotsOf(game, a.town, a.isl);
+        act2.dest = streetStop(game, a, S4);
         act2.phase = "go";
         act2.goT = 0;
       }
@@ -96674,20 +96864,20 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   var MAX_SCHOOLS = 7;
   var P3 = { x: 0, y: 0, z: 0 };
   function installSeaLife(game) {
-    const S3 = game.seaLife = { schools: [], t: 0, spawnT: 1, sharkT: 30, lastAct: null, fishPos: (s, f, out) => fishPos(s, f, S3.t, out), shark: (x, y, lvl = 10, kind = null) => game.addActor(makeShark(game, x, y, lvl, kind)), spawn: (kind, x, y, z, hd = 0) => {
+    const S4 = game.seaLife = { schools: [], t: 0, spawnT: 1, sharkT: 30, lastAct: null, fishPos: (s, f, out) => fishPos(s, f, S4.t, out), shark: (x, y, lvl = 10, kind = null) => game.addActor(makeShark(game, x, y, lvl, kind)), spawn: (kind, x, y, z, hd = 0) => {
       const s = makeSchool(kind, x, y, z, hd);
-      S3.schools.push(s);
+      S4.schools.push(s);
       return s;
     } };
-    game.on("tick", (dt) => tick3(game, S3, dt));
+    game.on("tick", (dt) => tick3(game, S4, dt));
     game.on("characterStart", () => {
-      S3.schools.length = 0;
+      S4.schools.length = 0;
     });
     game.on("enterZone", () => {
-      S3.schools.length = 0;
+      S4.schools.length = 0;
     });
     game.on("leaveZone", () => {
-      S3.schools.length = 0;
+      S4.schools.length = 0;
     });
     const prevFoot = game.footInteraction;
     game.footInteraction = (p) => {
@@ -96719,48 +96909,48 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const period = 7 + f.ph % 1 * 5, q2 = (t + f.ph * 11) % period / period;
     return q2 < 0.16 ? q2 / 0.16 : 0;
   }
-  function tick3(game, S3, dt) {
+  function tick3(game, S4, dt) {
     const p = game.player, w = game.world;
     if (!p || !w || !game.seaDepth) return;
-    S3.t += dt;
+    S4.t += dt;
     const live = w.zone === 0;
     const near = live && p.mode !== "sail" && (p.inWater || w.sd && w.sd(p.x, p.y) < 7);
-    S3.spawnT -= dt;
-    if (near && S3.spawnT <= 0) {
-      S3.spawnT = 1.5;
-      if (S3.schools.length < MAX_SCHOOLS) spawnSchool(game, S3, p);
+    S4.spawnT -= dt;
+    if (near && S4.spawnT <= 0) {
+      S4.spawnT = 1.5;
+      if (S4.schools.length < MAX_SCHOOLS) spawnSchool(game, S4, p);
     }
-    for (const s of S3.schools) updateSchool(game, s, dt, p);
-    S3.schools = S3.schools.filter((s) => s.alive && w.distance(s.x, s.y, p.x, p.y) < 60 && s.fish.some((f) => f.alive));
+    for (const s of S4.schools) updateSchool(game, s, dt, p);
+    S4.schools = S4.schools.filter((s) => s.alive && w.distance(s.x, s.y, p.x, p.y) < 60 && s.fish.some((f) => f.alive));
     const act2 = p.action;
-    if (act2 && act2 !== S3.lastAct && p.inWater) tryCatch(game, S3, p);
-    S3.lastAct = act2;
-    if (live) sharks(game, S3, dt, p);
-    rescue(game, S3, dt, p);
+    if (act2 && act2 !== S4.lastAct && p.inWater) tryCatch(game, S4, p);
+    S4.lastAct = act2;
+    if (live) sharks(game, S4, dt, p);
+    rescue(game, S4, dt, p);
     const au = game.audio;
     if (au) {
       if (p.under && au.theme !== "underwater" && au.theme !== "battle") {
-        S3.prevTheme = au.theme;
+        S4.prevTheme = au.theme;
         au.music("underwater");
       } else if (!p.under && au.theme === "underwater") {
-        S3.surfT = (S3.surfT || 0) + dt;
-        if (S3.surfT > 1.5) {
-          S3.surfT = 0;
-          au.music(S3.prevTheme || "sea");
+        S4.surfT = (S4.surfT || 0) + dt;
+        if (S4.surfT > 1.5) {
+          S4.surfT = 0;
+          au.music(S4.prevTheme || "sea");
         }
-      } else S3.surfT = 0;
+      } else S4.surfT = 0;
     }
     if (p.inWater && !p.gills && !p.fruit && (p.moving || p.under)) {
-      S3.trainT = (S3.trainT || 0) + dt;
-      if (S3.trainT > 5) {
-        game.progression?.train("end", S3.trainT * (p.under ? 0.07 : 0.05));
-        S3.trainT = 0;
+      S4.trainT = (S4.trainT || 0) + dt;
+      if (S4.trainT > 5) {
+        game.progression?.train("end", S4.trainT * (p.under ? 0.07 : 0.05));
+        S4.trainT = 0;
       }
     }
   }
-  function spawnSchool(game, S3, p) {
+  function spawnSchool(game, S4, p) {
     const w = game.world;
-    const critters = S3.schools.filter((s) => s.def.critter).length;
+    const critters = S4.schools.filter((s) => s.def.critter).length;
     for (let tries = 0; tries < 10; tries++) {
       const a = Math.random() * TAU, r = 12 + Math.random() * 20;
       const x = w.wx(p.x + Math.cos(a) * r), y = p.y + Math.sin(a) * r;
@@ -96784,7 +96974,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
       const def = FISH[kind];
       const z = clamp2(def.low ? depth - 1 : def.depth[0] + Math.random() * Math.min(depth - def.depth[0], 8), 0.5, Math.max(0.5, depth - 0.6));
-      S3.schools.push(makeSchool(kind, x, y, z, Math.random() * TAU));
+      S4.schools.push(makeSchool(kind, x, y, z, Math.random() * TAU));
       return;
     }
   }
@@ -96845,18 +97035,18 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     s.z += clamp2(s.wantZ - s.z, -1, 1) * dt * 0.7;
     s.z = clamp2(s.z, 0.35, zmax);
   }
-  function tryCatch(game, S3, p) {
+  function tryCatch(game, S4, p) {
     const w = game.world;
     const spear = /spear|trident|harpoon/.test(p.weapon?.kind || p.weapon?.id || "");
     const reach = 1.5 + (spear ? 1.1 : 0) + (p.look?.scale || 1) * 0.2;
     const fx = Math.cos(p.facing), fy = Math.sin(p.facing);
     const hz = (p.depth || 0) + 0.35;
     let best = null, bd = 1e9;
-    for (const s2 of S3.schools) {
+    for (const s2 of S4.schools) {
       if (s2.def.critter || !s2.def.item) continue;
       for (const f2 of s2.fish) {
         if (!f2.alive) continue;
-        fishPos(s2, f2, S3.t, P3);
+        fishPos(s2, f2, S4.t, P3);
         const dx = w.dx(p.x, P3.x), dy = P3.y - p.y, dz = P3.z - hz;
         const d = Math.hypot(dx, dy);
         if (d > reach + f2.size || Math.abs(dz) > 1.15 + f2.size * 0.5) continue;
@@ -96879,12 +97069,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       game.fx.burst(best.x, best.y, 10, { color: ["#e1f5fe", "#b3e5fc"], speed: 2, vz: 2, g: -1, life: 0.6, size: 0.08, kind: "bubble" });
       game.audio?.sfx("splash");
       game.progression?.train?.("agi", 0.4);
-      if (!S3.caughtHint) {
-        S3.caughtHint = true;
+      if (!S4.caughtHint) {
+        S4.caughtHint = true;
         game.hint?.("fishing", "Fish you catch go in your bag \u2014 eat them for health and stamina, or sell them. An Elephant Honmaguro from the deep blue is worth a fortune to a cook.");
       }
-    } else if (!S3.missLog || game.time - S3.missLog > 6) {
-      S3.missLog = game.time;
+    } else if (!S4.missLog || game.time - S4.missLog > 6) {
+      S4.missLog = game.time;
       game.log(`The ${s.def.name} dart away!`, "#b0bec5");
     }
   }
@@ -96957,17 +97147,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       hint: "Fighting Fish charge swimmers horn-first in the Grand Line. Dodge the charge, then strike \u2014 or get out of the water."
     }
   };
-  function sharks(game, S3, dt, p) {
+  function sharks(game, S4, dt, p) {
     const w = game.world;
     const reg3 = regionAt(p.x, p.y);
     const out = p.inWater && p.mode !== "sail" && !isCalmBelt(reg3) && (w.sd ? w.sd(p.x, p.y) < -9 : true) && game.seaDepth(p.x, p.y) > 5;
     if (!out) {
-      S3.sharkT = Math.max(S3.sharkT, 15);
+      S4.sharkT = Math.max(S4.sharkT, 15);
       return;
     }
-    S3.sharkT -= dt;
-    if (S3.sharkT > 0) return;
-    S3.sharkT = 45 + Math.random() * 50;
+    S4.sharkT -= dt;
+    if (S4.sharkT > 0) return;
+    S4.sharkT = 45 + Math.random() * 50;
     if (Math.random() > 0.55) return;
     const count2 = game.actors.filter((a) => a.alive && a.shark).length;
     if (count2 >= 2) return;
@@ -97129,25 +97319,25 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       k.depth = clamp2(k.depth, 0.5, Math.max(0.5, floor - 0.5));
     }
   };
-  function rescue(game, S3, dt, p) {
+  function rescue(game, S4, dt, p) {
     const sinking = p.inWater && p.fruit && !p.gills && p.state === "idle" && p.under;
     if (!sinking) {
-      S3.rescueT = 0;
-      S3.rescuer = null;
+      S4.rescueT = 0;
+      S4.rescuer = null;
       return;
     }
-    if (!S3.rescuer) {
+    if (!S4.rescuer) {
       const crew = game.crew?.followers ? [...game.crew.followers.values()] : [];
-      S3.rescuer = crew.find((a) => a.alive && a.state === "idle" && !(a.fruit && !a.gills) && game.world.distance(a.x, a.y, p.x, p.y) < 35) || null;
-      if (!S3.rescuer) return;
-      S3.rescueT = 0;
-      game.log(`${S3.rescuer.name} dives in after you!`, "#81d4fa");
+      S4.rescuer = crew.find((a) => a.alive && a.state === "idle" && !(a.fruit && !a.gills) && game.world.distance(a.x, a.y, p.x, p.y) < 35) || null;
+      if (!S4.rescuer) return;
+      S4.rescueT = 0;
+      game.log(`${S4.rescuer.name} dives in after you!`, "#81d4fa");
     }
-    S3.rescueT += dt;
-    if (S3.rescueT < (S3.rescuer.gills ? 1.5 : 3.2)) return;
-    const w = game.world, who = S3.rescuer;
-    S3.rescuer = null;
-    S3.rescueT = 0;
+    S4.rescueT += dt;
+    if (S4.rescueT < (S4.rescuer.gills ? 1.5 : 3.2)) return;
+    const w = game.world, who = S4.rescuer;
+    S4.rescuer = null;
+    S4.rescueT = 0;
     const ship = game.ships.find((s) => !s.sunk && s.owner === "player" && w.distance(s.x, s.y, p.x, p.y) < 45);
     if (ship) board(game, p, ship);
     else {
@@ -110524,7 +110714,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   };
 
   // src/content/paradise2.js
-  var S2 = (g, id) => g.quests.stageId(id);
+  var S3 = (g, id) => g.quests.stageId(id);
   var D2 = (g, id) => g.quests.isDone(id);
   var ON = (g, id) => !!g.quests.state(id) && !g.quests.isDone(id);
   var at3 = (ctx, id, st) => ctx.game.quests.stageId(id) === st;
@@ -111140,7 +111330,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       at: { town: "w7_main_street", building: "Galley-La Company Headquarters" },
       look: { hair: "pompadour", hairColor: "#1e88e5", top: "#fafafa", bottom: "#263238", coat: "#37474f", skin: "#f1c9a0" },
       level: 32,
-      marker: (c, g) => ["iceburg", "truth"].includes(S2(g, "p2_cp9_conspiracy")) || S2(g, "p2_enies_lobby") === "report" ? "?" : null,
+      marker: (c, g) => ["iceburg", "truth"].includes(S3(g, "p2_cp9_conspiracy")) || S3(g, "p2_enies_lobby") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
@@ -111293,7 +111483,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       bounty: 15e6,
       alert: "You should have stayed at the bar.",
       barks: ["Air Door.", "Tekkai."],
-      when: (c, g) => S2(g, "p2_cp9_conspiracy") === "masks"
+      when: (c, g) => S3(g, "p2_cp9_conspiracy") === "masks"
     },
     {
       id: "p2_kalifa_mask",
@@ -111311,7 +111501,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       skill: 0.55,
       lethal: false,
       alert: "Protecting the mayor? That's sexual harassment.",
-      when: (c, g) => S2(g, "p2_cp9_conspiracy") === "masks"
+      when: (c, g) => S3(g, "p2_cp9_conspiracy") === "masks"
     },
     {
       id: "p2_zambai",
@@ -111325,7 +111515,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       look: { hair: "pompadour", hairColor: "#212121", top: "#ff7043", bottom: "#1565c0", goggles: true, skin: "#e0ac7e" },
       style: "brawler",
       moves: ["brawl_tackle", "brawl_headbutt"],
-      marker: (c, g) => S2(g, "p2_cp9_conspiracy") === "franky" ? "!" : null,
+      marker: (c, g) => S3(g, "p2_cp9_conspiracy") === "franky" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.char.defeated.p2_zambai ? `"OW! Okay, okay! Here's your rudder. (He hands over a plank.) ...Listen. Big Bro Franky's gone into hiding. Men in black suits keep asking about some blueprints. And somebody sent the mayor a death threat. Go tell Iceburg. And don't tell him we told you!"` : `"AOW! (He strikes a pose.) We're the Franky Family, Water 7's finest dismantlers! Your ship looked abandoned. Abandoned ships are ours. Now beat it before Big Bro Franky gets back!"`,
@@ -111348,7 +111538,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       look: { hair: "curly", hairColor: "#fafafa", top: "#7b1fa2", bottom: "#4a148c", skin: "#f1c9a0", bulk: 1.5 },
       bulk: 1.5,
       level: 12,
-      marker: (c, g) => S2(g, "p2_enies_lobby") === "rocketman" ? "!" : null,
+      marker: (c, g) => S3(g, "p2_enies_lobby") === "rocketman" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => at3(ctx, "p2_enies_lobby", "rocketman") ? `"Nngaa~ha~ha! (She takes a long swig from her bottle.) The Aqua Laguna's coming and you want to chase the Puffing Tom to Enies Lobby? The Rocketman's got no brakes and she's never been tested. Chimney! Gonbe! We're going on a trip!"` : ctx.game.quests.isDone("p2_enies_lobby") ? `"Nngaa~ha~ha! You rode the Rocketman through the Aqua Laguna and came back alive. Tom would've liked you."` : `"Nngaa~ha~ha! Shift Station. The trains out of here don't take passengers, dear \u2014 only criminals and Government men ride the line to Enies Lobby."`,
@@ -111408,7 +111598,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       bulk: 1.4,
       level: 45,
       when: (c, g) => D2(g, "p2_enies_lobby"),
-      marker: (c, g) => !g.quests.state("p2_adam_wood") ? "!" : S2(g, "p2_adam_wood") === "build" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_adam_wood") ? "!" : S3(g, "p2_adam_wood") === "build" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"SUUUPER! (He slams his forearms together; the stars on them line up.) I'm building a dream ship \u2014 one that can sail to the end of the sea and back! Know what that takes? ADAM WOOD, bro. The toughest timber in the world."`,
@@ -111448,7 +111638,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       at: { town: "st_poplar_town", building: "Back-Alley Dealer" },
       look: { hair: "long", hairColor: "#424242", top: "#37474f", bottom: "#212121", hat: "cowboy", hatColor: "#212121", scarEye: true },
       level: 20,
-      marker: (c, g) => D2(g, "p2_enies_lobby") && !g.quests.state("p2_candy_pirates") ? "!" : S2(g, "p2_candy_pirates") === "report" ? "?" : null,
+      marker: (c, g) => D2(g, "p2_enies_lobby") && !g.quests.state("p2_candy_pirates") ? "!" : S3(g, "p2_candy_pirates") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.game.quests.isDone("p2_candy_pirates") ? `"You ran the Candy Pirates out of St. Poplar. The town doesn't know your name \u2014 which is how I like my friends. What do you need?"` : '"Timber, stone that makes Devil Fruit users sweat, things that fell off Government ships... (He lowers his voice.) Two girls from the Franky Family bought a plank of Adam wood here once. Two hundred million. Cash."',
@@ -111509,7 +111699,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       infamy: true,
       breakthrough: 2,
       alert: "Sweet! Another sucker for the Candy Pirates!",
-      when: (c, g) => S2(g, "p2_candy_pirates") === "candy"
+      when: (c, g) => S3(g, "p2_candy_pirates") === "candy"
     },
     {
       id: "p2_pucci_chef",
@@ -111589,7 +111779,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       bounty: 8e6,
       alert: "No one passes the Main Gate!",
       when: (c, g) => ON(g, "p2_enies_lobby") && !c.flags.p2_giantsTruth,
-      marker: (c, g) => S2(g, "p2_enies_lobby") === "main_gate" ? "!" : null,
+      marker: (c, g) => S3(g, "p2_enies_lobby") === "main_gate" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: '"HALT, TINY ONE! I am Oimo, gatekeeper of Enies Lobby! For fifty years we have served the World Government, so that our captains Dorry and Brogy are released from prison! None shall pass!"',
@@ -111652,7 +111842,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       alert: "GUILTY! ...Innocent! ...DEATH!",
       barks: ["Guilty!", "Innocent!", "The court finds you... DEAD!"],
       when: (c, g) => ON(g, "p2_enies_lobby"),
-      marker: (c, g) => S2(g, "p2_enies_lobby") === "courthouse" ? "!" : null,
+      marker: (c, g) => S3(g, "p2_enies_lobby") === "courthouse" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: '(Three heads, one robe.) LEFT: "Guilty. Everyone is guilty." RIGHT: "Innocent! Let them go!" MIDDLE: "I am perfectly fair. Execute them!" (The jury box is full of prisoners who want company in Impel Down.)',
@@ -111681,7 +111871,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       moves: ["p2_ramen_kenpo", "brawl_knee"],
       skill: 0.4,
       alert: "Ramen Kenpo! You have been noodled!",
-      when: (c, g) => ["courthouse", "keys"].includes(S2(g, "p2_enies_lobby"))
+      when: (c, g) => ["courthouse", "keys"].includes(S3(g, "p2_enies_lobby"))
     },
     {
       id: "p2_spandam",
@@ -111732,7 +111922,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       bounty: 25e6,
       alert: "Gyahahaha! The Wolf of the Six Powers! Tekkai Kenpo!",
       barks: ["Tekkai Kenpo!", "Grrrah!"],
-      when: (c, g) => ["keys", "lucci"].includes(S2(g, "p2_enies_lobby"))
+      when: (c, g) => ["keys", "lucci"].includes(S3(g, "p2_enies_lobby"))
     },
     {
       id: "p2_kumadori",
@@ -111755,7 +111945,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       bounty: 25e6,
       alert: "YOYOI! I am Kumadori! I shall atone with my life \u2014 after I take yours!",
       barks: ["Yoyoi!", "Life Return!"],
-      when: (c, g) => ["keys", "lucci"].includes(S2(g, "p2_enies_lobby"))
+      when: (c, g) => ["keys", "lucci"].includes(S3(g, "p2_enies_lobby"))
     },
     {
       id: "p2_fukurou",
@@ -111777,7 +111967,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       bounty: 2e7,
       alert: "Chapapa! Your doriki is... not bad! Don't tell anyone I said so. Chapapa!",
       barks: ["Chapapa!"],
-      when: (c, g) => ["keys", "lucci"].includes(S2(g, "p2_enies_lobby"))
+      when: (c, g) => ["keys", "lucci"].includes(S3(g, "p2_enies_lobby"))
     },
     {
       id: "p2_kalifa",
@@ -111797,7 +111987,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       breakthrough: 3,
       bounty: 25e6,
       alert: "Coming all the way to the Tower of Justice? That's sexual harassment.",
-      when: (c, g) => ["keys", "lucci"].includes(S2(g, "p2_enies_lobby"))
+      when: (c, g) => ["keys", "lucci"].includes(S3(g, "p2_enies_lobby"))
     },
     {
       id: "p2_kaku",
@@ -111823,7 +112013,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         g.fx.text(a.x, a.y - 2.4, "GIRAFFE FORM!", "#ffd54f", 0.6);
         a.addBuff({ id: "p2_giraffe", name: "Giraffe Form", dur: 60, mods: { damage: 1.3, scale: 1.4 } });
       } }],
-      when: (c, g) => ["keys", "lucci"].includes(S2(g, "p2_enies_lobby"))
+      when: (c, g) => ["keys", "lucci"].includes(S3(g, "p2_enies_lobby"))
     },
     {
       id: "p2_lucci",
@@ -111852,7 +112042,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         g.fx.text(a.x, a.y - 2.4, "LEOPARD FORM", "#ffb74d", 0.6);
         a.addBuff({ id: "p2_lucci_leopard", name: "Leopard Form", dur: 90, mods: { damage: 1.4, speedMul: 1.2 }, aura: "rgba(255,183,77,0.5)" });
       } }],
-      when: (c, g) => S2(g, "p2_enies_lobby") === "lucci"
+      when: (c, g) => S3(g, "p2_enies_lobby") === "lucci"
     }
   ];
   var TB_Q = "p2_thriller_bark";
@@ -111904,7 +112094,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       bulk: 1.5,
       level: 38,
       bounty: 24e6,
-      marker: (c, g) => S2(g, TB_Q) === "lola" ? "!" : S2(g, TB_Q) === "dawn" ? "?" : null,
+      marker: (c, g) => S3(g, TB_Q) === "lola" ? "!" : S3(g, TB_Q) === "dawn" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
@@ -112145,7 +112335,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         a.addBuff({ id: "p2_asgard", name: "Shadows' Asgard", dur: 120, mods: { damage: 1.5, defMul: 0.75, scale: 1.4 }, aura: "rgba(38,50,56,0.8)" });
       } }],
       when: (c, g) => !D2(g, TB_Q),
-      marker: (c, g) => S2(g, TB_Q) === "moria" ? "!" : null,
+      marker: (c, g) => S3(g, TB_Q) === "moria" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Kishishishi! A guest in my Mast Mansion. I lost my whole crew in the New World, you know. Kaido. Since then I don't keep subordinates who can die. I make them out of corpses and stolen shadows! Why work hard when zombies can make me Pirate King?"`,
@@ -112185,7 +112375,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       bulk: 1.8,
       look: { hair: "short", hairColor: "#212121", hat: "beanie", hatColor: "#263238", ears: "round", fur: "#263238", top: "#212121", bottom: "#212121", skin: "#8d6e63" },
       fruit: "nikyu",
-      when: (c, g) => S2(g, TB_Q) === "dawn" && !c.flags.p2_kumaPain,
+      when: (c, g) => S3(g, TB_Q) === "dawn" && !c.flags.p2_kumaPain,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `(A giant with a Bible and paws for palms stands in the ruins.) "The Government ordered me to erase everyone on this ship. ...I will spare them. But someone must take the pain of this battle in their place." (He pushes a bubble of pure suffering out of a sleeping victim's body.)`,
@@ -112219,7 +112409,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       at: { town: "spa_resort", building: "Spa Island Hot Springs" },
       look: { hair: "short", hairColor: "#ff7043", top: "#ffcc80", bottom: "#8d6e63", bulk: 1.2 },
       level: 14,
-      marker: (c, g) => !g.quests.state("p2_spa_foxy") ? "!" : S2(g, "p2_spa_foxy") === "report" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_spa_foxy") ? "!" : S3(g, "p2_spa_foxy") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.game.quests.isDone("p2_spa_foxy") ? '"Fifty attractions and not a single Silver Fox in any of them! Stay as long as you like \u2014 slides, cola baths, the high dive!"' : '"Welcome to Spa Island \u2014 fifty attractions: slides, pools, a cola bath! ...Though right now, two girls are hiding in my caf\xE9 from Foxy the Silver Fox. He wants their notebook \u2014 it explains how to make gems."',
@@ -112263,7 +112453,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       infamy: true,
       breakthrough: 2,
       alert: "Fehfehfeh! A Davy Back Fight! Loser gives the winner... that notebook!",
-      when: (c, g) => S2(g, "p2_spa_foxy") === "foxy"
+      when: (c, g) => S3(g, "p2_spa_foxy") === "foxy"
     },
     // ========================================================= SABAODY ARCHIPELAGO
     {
@@ -112330,7 +112520,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       ai: "idle",
       look: { hair: "long", hairColor: "#fafafa", top: "#fafafa", bottom: "#5d4037", scarEye: true, skin: "#f1c9a0" },
       level: 90,
-      when: (c, g) => S2(g, "p2_sabaody_auction") === "charlos",
+      when: (c, g) => S3(g, "p2_sabaody_auction") === "charlos",
       dialogue: () => ({ start: "a", nodes: { a: { text: `(An old man in an explosive slave collar sits calmly among the lots, sipping something he definitely brought in himself.) "Hm? Don't mind me. I needed gambling money. ...Though I will say, that mermaid girl up on the stage is a friend of a friend."` } } })
     },
     {
@@ -112356,7 +112546,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       ai: "idle",
       look: { hat: "bubble", hair: "curly", hairColor: "#fafafa", top: "#fafafa", bottom: "#eceff1", bulk: 1.4, skin: "#fdeee4" },
       bulk: 1.4,
-      when: (c, g) => S2(g, "p2_sabaody_auction") === "charlos",
+      when: (c, g) => S3(g, "p2_sabaody_auction") === "charlos",
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Five hundred million for the mermaid! I always wanted a fish for my aquarium! (A Fish-Man pushes through the crowd toward the stage. Charlos draws a pistol and shoots him in the chest.) He moved without permission. Kneel, commoner, or you're next!"`,
@@ -112395,7 +112585,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       level: 5,
       ai: "idle",
       look: { hat: "bubble", hair: "short", hairColor: "#e0e0e0", top: "#fafafa", bottom: "#eceff1", bulk: 1.3 },
-      when: (c, g) => S2(g, "p2_sabaody_auction") === "charlos",
+      when: (c, g) => S3(g, "p2_sabaody_auction") === "charlos",
       dialogue: () => ({ start: "a", nodes: { a: { text: '"Hm? A commoner breathing near me. (He adjusts his bubble helmet so as not to share the air.) My son buys whatever he wants. That is what the world is for."' } } })
     },
     {
@@ -112409,7 +112599,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       look: { hair: "curly", hairColor: "#e53935", skin: "#ef9a9a", top: "#ffeb3b", bottom: "#5d4037" },
       level: 30,
       bounty: 8e6,
-      marker: (c, g) => !g.quests.state("p2_sabaody_auction") ? "!" : S2(g, "p2_sabaody_auction") === "freed" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_sabaody_auction") ? "!" : S3(g, "p2_sabaody_auction") === "freed" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
@@ -112473,7 +112663,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       infamy: true,
       breakthrough: 2,
       alert: "A mermaid sells for seventy million! Stay out of our business!",
-      when: (c, g) => S2(g, "p2_sabaody_auction") === "macro"
+      when: (c, g) => S3(g, "p2_sabaody_auction") === "macro"
     },
     {
       id: "p2_coater",
@@ -112533,7 +112723,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       ai: "idle",
       bounty: 315e6,
       look: { hair: "spiky", hairColor: "#e53935", goggles: true, coat: "#212121", top: "#212121", bottom: "#3e2723", skin: "#f1c9a0" },
-      when: (c, g) => ["auction", "charlos"].includes(S2(g, "p2_sabaody_auction")),
+      when: (c, g) => ["auction", "charlos"].includes(S3(g, "p2_sabaody_auction")),
       dialogue: () => ({ start: "a", nodes: { a: { text: `"Another rookie. There's eleven of us Supernovas on this archipelago right now, all heading for the New World. (He sneers at the Celestial Dragons' box.) Only one of us is going to be Pirate King. Get in my way and I'll crush you."` } } })
     },
     {
@@ -112548,7 +112738,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       ai: "idle",
       bounty: 2e8,
       look: { hair: "short", hairColor: "#212121", hat: "beanie", hatColor: "#fafafa", top: "#fdd835", bottom: "#5d4037", swords: 1, skin: "#e0ac7e" },
-      when: (c, g) => ["auction", "charlos"].includes(S2(g, "p2_sabaody_auction")),
+      when: (c, g) => ["auction", "charlos"].includes(S3(g, "p2_sabaody_auction")),
       dialogue: () => ({ start: "a", nodes: { a: { text: `"Trafalgar Law. (He doesn't look up from his nodachi.) The Celestial Dragons are sitting in the front row. Someone in this room is going to do something stupid today. I'd like to watch."` } } })
     },
     {
@@ -112571,7 +112761,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       lethal: false,
       breakthrough: 8,
       bounty: 25e7,
-      when: (c, g) => ["kizaru", "kuma"].includes(S2(g, "p2_sabaody_auction")) && !c.flags.p2_fledKizaru,
+      when: (c, g) => ["kizaru", "kuma"].includes(S3(g, "p2_sabaody_auction")) && !c.flags.p2_fledKizaru,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Ooh~ how scary~. You're the one who punched a World Noble? (He yawns.) I'm supposed to capture you. But let's see if you can survive the Pacifista first~. Have you ever been kicked at the speed of light?"`,
@@ -112606,7 +112796,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       breakthrough: 4,
       bounty: 5e7,
       alert: "Target identified. Bounty confirmed. Eliminating.",
-      when: (c, g) => S2(g, "p2_sabaody_auction") === "kizaru"
+      when: (c, g) => S3(g, "p2_sabaody_auction") === "kizaru"
     },
     {
       id: "p2_sentomaru",
@@ -112628,7 +112818,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       lethal: false,
       breakthrough: 3,
       bounty: 4e7,
-      when: (c, g) => S2(g, "p2_sabaody_auction") === "kizaru",
+      when: (c, g) => S3(g, "p2_sabaody_auction") === "kizaru",
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Oi oi! Captain of the Science Unit, Sentomaru! I have the tightest defence in the world! (He plants a huge axe.) The Pacifista are Dr. Vegapunk's masterpieces. You'll never get past them \u2014 or me!"`,
@@ -112656,7 +112846,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       bulk: 1.8,
       look: { hair: "short", hairColor: "#212121", hat: "beanie", hatColor: "#263238", ears: "round", fur: "#263238", top: "#212121", bottom: "#212121", skin: "#8d6e63" },
       fruit: "nikyu",
-      when: (c, g) => S2(g, "p2_sabaody_auction") === "kuma",
+      when: (c, g) => S3(g, "p2_sabaody_auction") === "kuma",
       marker: () => "!",
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
@@ -112697,7 +112887,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     if (a) aggro(c.game, a);
   }, end: true });
   var WAR = "p2_summit_war";
-  var warOn = (g, ...st) => st.includes(S2(g, WAR));
+  var warOn = (g, ...st) => st.includes(S3(g, WAR));
   var ADMIRAL = { lethal: false, skill: 0.85, breakthrough: 8, boss: true, hpMul: 3, faction: "marine", ai: "guard", respawn: true, recover: 10, recoverLine: '"Hmph. Not bad... for a rookie."' };
   var kujaLook = (hair, top) => ({ hair: "long", hairColor: hair, top, bottom: "#f5f5f5", skin: "#f1c9a0" });
   npcs6.push(
@@ -112987,7 +113177,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       recover: 10,
       recoverLine: '"...So. You have surpassed me. I will wait for you to do it again."',
       alert: "Show me the weight of your blade.",
-      marker: (c, g) => !g.quests.state("p2_kuraigana_trial") ? "!" : S2(g, "p2_kuraigana_trial") === "report" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_kuraigana_trial") ? "!" : S3(g, "p2_kuraigana_trial") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.game.quests.isDone("p2_kuraigana_trial") ? '"You bowed your head to an enemy to learn his craft. That is not weakness. (He sets his glass of wine down.) The castle training grounds are open to you. Try not to bore me."' : '"This is Kuraigana. There was a kingdom here once; the war left ruins and baboons that learned to fight by watching men die. (His hawk eyes rest on you.) Why have you come to my island?"',
@@ -113035,7 +113225,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       skill: 0.55,
       breakthrough: 3,
       alert: "(It raises a sword in a perfect, stolen stance.)",
-      when: (c, g) => S2(g, "p2_kuraigana_trial") === "chieftain"
+      when: (c, g) => S3(g, "p2_kuraigana_trial") === "chieftain"
     },
     // =================================================================== BOIN
     {
@@ -113048,7 +113238,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       trainer: "p2_heracles",
       look: { hat: "horns", hatColor: "#4e342e", hair: "long", hairColor: "#5d4037", top: "#8d6e63", bottom: "#5d4037", bulk: 1.2 },
       level: 40,
-      marker: (c, g) => !g.quests.state("p2_gluttony") ? "!" : S2(g, "p2_gluttony") === "report" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_gluttony") ? "!" : S3(g, "p2_gluttony") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: '"Heraclesun! I am the Forest Scholar of Boin \u2014 the only man who has survived these islands. (He wears a beetle for a helmet.) This is the Forest of Gluttony: a ramen river, trees of meat, and plants that would like to eat you back."',
@@ -113081,7 +113271,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       moves: ["p2_beast_pounce", "brawl_tackle", "brawl_headbutt"],
       skill: 0.3,
       breakthrough: 3,
-      when: (c, g) => S2(g, "p2_gluttony") === "beetle"
+      when: (c, g) => S3(g, "p2_gluttony") === "beetle"
     },
     // ================================================================ MOMOIRO
     {
@@ -113109,7 +113299,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       at: { town: "kamabakka", building: "Attack Cuisine Kitchen" },
       look: { hair: "curly", hairColor: "#ff80ab", top: "#fafafa", bottom: "#f06292", hat: "captain", hatColor: "#fafafa", bulk: 1.3 },
       level: 38,
-      marker: (c, g) => !g.quests.state("p2_kamabakka") ? "!" : S2(g, "p2_kamabakka") === "report" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_kamabakka") ? "!" : S3(g, "p2_kamabakka") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Attack Cuisine! One hundred secret recipes that make a warrior stronger with every bite! (She winks \u2014 hard.) The recipes are guarded by the Kamabakka Candidates. Beat them and I'll teach you. Lose and you wear a dress for a week."`,
@@ -113152,7 +113342,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       at: { town: "baldimore", building: "Baldimore Workshop" },
       look: { hair: "spiky", hairColor: "#bdbdbd", top: "#607d8b", bottom: "#37474f", goggles: true, skin: "#f1c9a0" },
       level: 22,
-      marker: (c, g) => !g.quests.state("p2_baldimore") ? "!" : S2(g, "p2_baldimore") === "button" ? "?" : null,
+      marker: (c, g) => !g.quests.state("p2_baldimore") ? "!" : S3(g, "p2_baldimore") === "button" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: '"Welcome to Future Land Baldimore, birthplace of the genius Dr. Vegapunk! (His goggles steam in the snow.) Everything here is made by hand: cyborg limbs, heated boots, ships that walk. Need repairs? My workshop is open."',
@@ -113215,7 +113405,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       look: { hair: "long", hairColor: "#fafafa", top: "#fafafa", bottom: "#5d4037", coat: "#8d6e63", scarEye: true, swords: 1, skin: "#f1c9a0" },
       level: 90,
       when: (c, g) => ON(g, "p2_rusukaina"),
-      marker: (c, g) => S2(g, "p2_rusukaina") === "report" ? "?" : null,
+      marker: (c, g) => S3(g, "p2_rusukaina") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => at3(ctx, "p2_rusukaina", "report") ? '"The lord of the plains... fell to you. (He smiles over the campfire.) The beasts will not challenge you now. That is the difference between strength and Haki: they felt it before you struck."' : at3(ctx, "p2_rusukaina", "train") ? '"Good. Now stay a while. Meditate, spar with me, hunt. Haki grows the way trees do \u2014 while you are not watching it. Come back to the fire tomorrow."' : '"Welcome to Rusukaina. Forty-eight seasons a year, five hundred beasts you cannot beat. (He pokes the fire.) Haki is the power of doubt-free will. Go to the plains. Their lord is a monster. Win, and your will has hardened."',
@@ -113245,7 +113435,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       moves: ["p2_beast_pounce", "p2_oars_smash", "brawl_tackle"],
       skill: 0.35,
       breakthrough: 4,
-      when: (c, g) => S2(g, "p2_rusukaina") === "beasts"
+      when: (c, g) => S3(g, "p2_rusukaina") === "beasts"
     },
     // ============================================================ AMAZON LILY
     {
@@ -113259,7 +113449,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       level: 38,
       style: "sniper",
       weapon: "gun",
-      marker: (c, g) => S2(g, "p2_amazon_lily") === "gate" ? "!" : null,
+      marker: (c, g) => S3(g, "p2_amazon_lily") === "gate" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => ctx.char.flags.p2_kujaFriend ? `"The Empress favours you! Every Kuja warrior uses Haki \u2014 Armament to harden our arrows, Observation to see the enemy's next move. I'll teach you. Just don't laugh at my aim."` : at3(ctx, "p2_amazon_lily", "gate") ? `(A blonde warrior aims a snake-bow at your heart.) "Stop right there! No outsider sets foot on Amazon Lily. ...You're strange. Are you... a man? We've only read about them in books."` : '"Marguerite, Kuja warrior. Amazon Lily is not a place for strangers."',
@@ -113289,7 +113479,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       at: { town: "kuja_village", building: "Elder Nyon's Hut" },
       look: { hair: "bun", hairColor: "#fafafa", top: "#7b1fa2", bottom: "#4a148c", scale: 0.6, skin: "#f1c9a0" },
       level: 50,
-      marker: (c, g) => S2(g, "p2_amazon_lily") === "nyon" ? "!" : null,
+      marker: (c, g) => S3(g, "p2_amazon_lily") === "nyon" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => at3(ctx, "p2_amazon_lily", "nyon") ? '"Nyon. I was Empress once, long ago \u2014 before I left to see the world and caught the Love Sickness. (She taps her staff.) The Empress Hancock and her sisters have a secret. They were not always proud. That is all I will say. The Arena waits for you."' : '"Nyon. The Kuja have lived on this island in the Calm Belt for centuries. The Sea Kings are our walls. Outsiders bring nothing but trouble \u2014 and, now and then, something wonderful."',
@@ -113322,7 +113512,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       infamy: true,
       breakthrough: 3,
       alert: "Sister, look! An outsider in our arena!",
-      when: (c, g) => S2(g, "p2_amazon_lily") === "arena"
+      when: (c, g) => S3(g, "p2_amazon_lily") === "arena"
     },
     {
       id: "p2_marigold",
@@ -113346,7 +113536,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       infamy: true,
       breakthrough: 3,
       alert: "You will be turned to stone for your insolence!",
-      when: (c, g) => S2(g, "p2_amazon_lily") === "arena"
+      when: (c, g) => S3(g, "p2_amazon_lily") === "arena"
     },
     {
       id: "p2_hancock",
@@ -113372,7 +113562,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       respawn: true,
       recover: 12,
       recoverLine: '"...Enough. I have seen what I needed to see."',
-      marker: (c, g) => S2(g, "p2_amazon_lily") === "secret" ? "!" : null,
+      marker: (c, g) => S3(g, "p2_amazon_lily") === "secret" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
@@ -113619,7 +113809,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       bounty: 15e7,
       alert: "Hydra. Nobody escapes Impel Down on my watch.",
       barks: ["Hydra!", "Venom Demon: Hell's Judgement!", "(He heads off to the toilet for the ninth time today.)"],
-      when: (c, g) => ["level4", "newkama", "escape"].includes(S2(g, "p2_impel_down"))
+      when: (c, g) => ["level4", "newkama", "escape"].includes(S3(g, "p2_impel_down"))
     },
     {
       id: "p2_domino",
@@ -113672,7 +113862,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       moves: ["p2_hell_wink", "okama_pirouette"],
       invulnerable: true,
       when: (c, g) => !D2(g, "p2_impel_down"),
-      marker: (c, g) => S2(g, "p2_impel_down") === "newkama" ? "!" : null,
+      marker: (c, g) => S3(g, "p2_impel_down") === "newkama" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => at3(ctx, "p2_impel_down", "newkama") ? `"Hee-haw! Welcome to Newkama Land, the paradise inside hell! (A spotlight finds you. Two hundred okama cheer.) You came through Magellan's poison? Vanatta! Candy-boy, you need Tension Hormones. They save you now... and take ten years off your life later. Hee-haw!"` : '"Hee-haw! Candy-boy! Newkama Land welcomes everyone with the heart to party. Train with the queen, or dance!"',
@@ -113714,7 +113904,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       look: { hair: "pompadour", hairColor: "#ff4081", top: "#ce93d8", bottom: "#6a1b9a", bulk: 1.3, skin: "#e0ac7e" },
       bulk: 1.3,
       level: 44,
-      recruit: { role: "fighter", fighter: true, requires: (c, g) => ["escape", "gate"].includes(S2(g, "p2_impel_down")), pitch: '"A breakout AND a pirate crew? Hee-haw! (She cracks her knuckles in a ballgown.) Newkama Kenpo, at your service, candy-captain!"' },
+      recruit: { role: "fighter", fighter: true, requires: (c, g) => ["escape", "gate"].includes(S3(g, "p2_impel_down")), pitch: '"A breakout AND a pirate crew? Hee-haw! (She cracks her knuckles in a ballgown.) Newkama Kenpo, at your service, candy-captain!"' },
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: `"Welcome to the Newkama Bar, darling! We steal newspapers from the jailers' bins and watch them on a stolen snail. (She pours something pink.) Twelve years in hell, and I've never had a better party."`,
@@ -113742,7 +113932,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       breakthrough: 4,
       bounty: 3e7,
       alert: "Over my dead body! This is MY prison! Well \u2014 it will be!",
-      when: (c, g) => S2(g, "p2_impel_down") === "escape"
+      when: (c, g) => S3(g, "p2_impel_down") === "escape"
     },
     {
       id: "p2_id_jinbe",
@@ -113844,7 +114034,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       skill: 0.5,
       alert: "Want the recipes, candy-boy? Dance for them!",
       barks: ["Swan Arabesque!", "Fabulous!"],
-      when: (c, g) => S2(g, "p2_kamabakka") === "candidates"
+      when: (c, g) => S3(g, "p2_kamabakka") === "candidates"
     }
   );
   var ON_TB = (c, g) => ON(g, TB_Q);
@@ -113911,13 +114101,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   ];
   var groups6 = [
     // Water 7 and the sea-train towns
-    { island: "water_7", spot: "franky_house", radius: 6, enemies: FRANKY_FAMILY, when: (c, g) => S2(g, "p2_cp9_conspiracy") === "franky" },
-    { island: "water_7", spot: "galley_la", radius: 5, enemies: MASKED, when: (c, g) => S2(g, "p2_cp9_conspiracy") === "masks" },
-    { island: "st_poplar", spot: "poplar_harbor", radius: 6, enemies: CANDY, when: (c, g) => S2(g, "p2_candy_pirates") === "candy" },
+    { island: "water_7", spot: "franky_house", radius: 6, enemies: FRANKY_FAMILY, when: (c, g) => S3(g, "p2_cp9_conspiracy") === "franky" },
+    { island: "water_7", spot: "galley_la", radius: 5, enemies: MASKED, when: (c, g) => S3(g, "p2_cp9_conspiracy") === "masks" },
+    { island: "st_poplar", spot: "poplar_harbor", radius: 6, enemies: CANDY, when: (c, g) => S3(g, "p2_candy_pirates") === "candy" },
     // Enies Lobby
-    { island: "enies_lobby", spot: "main_gate", radius: 5, enemies: EL_GUARDS, when: (c, g) => S2(g, "p2_enies_lobby") === "main_gate" && !c.flags.p2_giantsTruth },
-    { island: "enies_lobby", spot: "courtyard", radius: 7, enemies: EL_COURT, when: (c, g) => ["courthouse", "keys"].includes(S2(g, "p2_enies_lobby")) },
-    { island: "enies_lobby", spot: "courtyard", radius: 8, enemies: BUSTER, when: (c, g) => S2(g, "p2_enies_lobby") === "buster_call" },
+    { island: "enies_lobby", spot: "main_gate", radius: 5, enemies: EL_GUARDS, when: (c, g) => S3(g, "p2_enies_lobby") === "main_gate" && !c.flags.p2_giantsTruth },
+    { island: "enies_lobby", spot: "courtyard", radius: 7, enemies: EL_COURT, when: (c, g) => ["courthouse", "keys"].includes(S3(g, "p2_enies_lobby")) },
+    { island: "enies_lobby", spot: "courtyard", radius: 8, enemies: BUSTER, when: (c, g) => S3(g, "p2_enies_lobby") === "buster_call" },
     // Thriller Bark: Moria's zombies (while the ship still has a master)
     { island: "thriller_bark", spot: "graveyard", radius: 7, when: ON_TB, enemies: [
       ["swordsman", 40, { name: "General Zombie Jigoro of the Wind", faction: "zombie", look: zlook("#37474f", { hat: "headband", hatColor: "#212121", swords: 2 }) }],
@@ -113934,14 +114124,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     ] },
     { island: "thriller_bark", spot: "mast_hall", radius: 6, when: ON_TB, enemies: [["zombie", 36, { name: "Wild Zombie", look: zlook("#3e2723") }], ["zombie", 36, { name: "Wild Zombie", look: zlook("#263238") }]] },
     // Spa Island and Sabaody
-    { island: "spa_island", spot: "hot_springs", radius: 5, enemies: FOXY_CREW2, when: (c, g) => S2(g, "p2_spa_foxy") === "foxy" },
-    { island: "sabaody", spot: "grove_13", radius: 6, enemies: MACRO_CREW, when: (c, g) => S2(g, "p2_sabaody_auction") === "macro" },
+    { island: "spa_island", spot: "hot_springs", radius: 5, enemies: FOXY_CREW2, when: (c, g) => S3(g, "p2_spa_foxy") === "foxy" },
+    { island: "sabaody", spot: "grove_13", radius: 6, enemies: MACRO_CREW, when: (c, g) => S3(g, "p2_sabaody_auction") === "macro" },
     {
       island: "sabaody",
       spot: "grove_1",
       radius: 7,
       enemies: [["marine", 44, { name: "Marine (auction house siege)" }], ["marine", 44, { name: "Marine (auction house siege)" }], ["marine_rifle", 44, { name: "Marine Rifleman" }]],
-      when: (c, g) => S2(g, "p2_sabaody_auction") === "kizaru"
+      when: (c, g) => S3(g, "p2_sabaody_auction") === "kizaru"
     },
     // Marineford: sentries for wanted pirates, and the war itself (by side)
     { island: "marineford", spot: "oris_plaza", radius: 8, enemies: MF_MARINES.slice(0, 3), when: (c, g) => wanted(c) && !warOn(g, "vice_admiral", "akainu") },
@@ -113950,7 +114140,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     // the islands Kuma sent them to
     { island: "kuraigana", spot: "humandrill_woods", radius: 8, enemies: [HUMANDRILL(0), HUMANDRILL(1), HUMANDRILL(2)], when: (c, g) => !D2(g, "p2_kuraigana_trial") },
     { island: "boin", spot: "boin_depths", radius: 8, enemies: [["beast", 40, { name: "Boin Hunting Boar" }], ["tiger", 42, { name: "Boin Jungle Tiger" }]] },
-    { island: "momoiro", dx: 0.02, dy: 0.1, radius: 6, enemies: CANDIDATES, when: (c, g) => S2(g, "p2_kamabakka") === "candidates" },
+    { island: "momoiro", dx: 0.02, dy: 0.1, radius: 6, enemies: CANDIDATES, when: (c, g) => S3(g, "p2_kamabakka") === "candidates" },
     { island: "rusukaina", spot: "beast_plains", radius: 9, enemies: [["tiger", 50, { name: "Rusukaina Tiger" }], ["gorilla", 50, { name: "Rusukaina Ape" }], ["beast", 50, { name: "Rusukaina Boar", hpMul: 1.5 }]] },
     // Impel Down (zone levels): only for prisoners and intruders, never for a Marine on a tour
     {
@@ -113966,7 +114156,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       spot: "main_gate",
       radius: 6,
       enemies: [["marine", 48, { name: "Impel Down Jailer", look: lk("#78909c", "#37474f", { hat: "marine", hatColor: "#37474f" }) }], ["marine", 48, { name: "Impel Down Jailer", look: lk("#78909c", "#37474f", { hat: "marine", hatColor: "#37474f" }) }], ["marine_rifle", 48, { name: "Jailer Rifleman", look: lk("#78909c", "#37474f", { hat: "marine", hatColor: "#37474f" }) }]],
-      when: (c, g) => S2(g, "p2_impel_down") === "escape"
+      when: (c, g) => S3(g, "p2_impel_down") === "escape"
     },
     {
       island: "id_level2",
@@ -114738,7 +114928,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         const k = 1 - (env.storm * 0.35 + env.fog * 0.15);
         env.ambient = [k, k * 0.98, k * 0.94];
       }
-      if (S2(game, "p2_enies_lobby") === "rocketman" && near("water_7", 20)) {
+      if (S3(game, "p2_enies_lobby") === "rocketman" && near("water_7", 20)) {
         env.storm = Math.max(env.storm, 0.75);
         env.rain = env.storm;
       }
@@ -114766,7 +114956,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         c.flags.p2_florian = true;
         game.ui.banner("THE FLORIAN TRIANGLE", "Paradise", "A sea of fog where a hundred ships a year vanish \u2014 and ghost ships drift out again with no one aboard. Somewhere ahead, someone is singing.", 6);
       }
-      if (S2(game, "p2_cp9_conspiracy") === "night" && here === "water_7") {
+      if (S3(game, "p2_cp9_conspiracy") === "night" && here === "water_7") {
         const door = hqDoor();
         if (door && W4().distance(p.x, p.y, door.x, door.y) < 18) {
           watchT += 0.5;
@@ -114780,7 +114970,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           }
         } else watchT = 0;
       }
-      if (surface && here === "enies_lobby" && S2(game, "p2_enies_lobby") === "buster_call") {
+      if (surface && here === "enies_lobby" && S3(game, "p2_enies_lobby") === "buster_call") {
         shellT -= 0.5;
         if (shellT <= 0) {
           shellT = 1;
@@ -114795,14 +114985,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           shell2(5, 16);
         }
       }
-      if (S2(game, WAR) === "akainu") {
+      if (S3(game, WAR) === "akainu") {
         warT += 0.5;
         if (warT >= 75 || surface && !near("marineford", 120)) {
           warT = 0;
           game.emit("questEvent", "p2_war_end");
         }
       } else warT = 0;
-      if (S2(game, "p2_coating") === "coat" && !c.flags.p2_shipCoated && (game.ships || []).some((s) => s.owner === "player" && !s.sunk && s.coated)) c.flags.p2_shipCoated = true;
+      if (S3(game, "p2_coating") === "coat" && !c.flags.p2_shipCoated && (game.ships || []).some((s) => s.owner === "player" && !s.sunk && s.coated)) c.flags.p2_shipCoated = true;
       if (surface && here === "thriller_bark" && q2.isActive(TB_Q) && !c.flags.p2_shadowTaken && !beat2(c, "p2_moria") && env.isNight && p.state === "idle") {
         nightT += 0.5;
         if (nightT === 15) game.log("Your eyelids are so heavy... (Never fall asleep on Thriller Bark.)", "#b39ddb");
@@ -124437,16 +124627,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     return null;
   }
   function installMainStory(game) {
-    const S3 = {
+    const S4 = {
       game,
       pending: 0,
       // seconds until the next chapter opens
       t: 0,
       driftMsg: 0
     };
-    game.story = S3;
+    game.story = S4;
     const C3 = () => game.state?.char;
-    S3.begin = (chId, path2) => {
+    S4.begin = (chId, path2) => {
       const c = C3();
       const ch = CHAPTERS.get(chId);
       if (!c || !ch || c.main) return false;
@@ -124512,7 +124702,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         nextPart(silent);
         return;
       }
-      S3.pending = silent ? 0.01 : 2.4;
+      S4.pending = silent ? 0.01 : 2.4;
     }
     function nextPart(silent = false) {
       const c = C3(), m = c.main;
@@ -124526,7 +124716,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       m.part = done6 + 1;
       m.chain = PLANS[m.part](c, m.path, null, game);
       m.at = 0;
-      S3.pending = silent ? 0.01 : 5;
+      S4.pending = silent ? 0.01 : 5;
       persist(game);
     }
     function leaveBehind(why) {
@@ -124540,7 +124730,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         game.log(`${questDef(cur.qid)?.name || "A chapter"} is left behind: ${why}`, "#b0bec5");
       }
     }
-    S3.jumpTo = (part5, why) => {
+    S4.jumpTo = (part5, why) => {
       const c = C3(), m = c?.main;
       if (!m || m.finished || m.part >= part5 || !PLANS[part5]) return;
       leaveBehind(why);
@@ -124548,7 +124738,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       m.chain = PLANS[part5](c, m.path, null, game);
       m.at = 0;
       game.ui.banner(`PART ${part5}`, PART_NAMES[part5], why, 6);
-      S3.pending = 3;
+      S4.pending = 3;
       persist(game);
     };
     function switchRoad(to, why) {
@@ -124593,26 +124783,26 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (isMain(qid)) advance(qid);
     });
     game.on("characterStart", ({ char, isNew, spawn } = {}) => {
-      S3.pending = 0;
+      S4.pending = 0;
       const c = char || C3();
       if (!c) return;
       if (!c.main && !c.mainIntro) c.mainIntro = introFor(game, c, spawn);
-      if (c.main && !c.main.finished) S3.pending = 1.5;
+      if (c.main && !c.main.finished) S4.pending = 1.5;
     });
     game.on("tick", (dt) => tick7(dt));
     function tick7(dt) {
       const c = C3();
       if (!c) return;
-      if (S3.pending > 0) {
-        S3.pending -= dt;
-        if (S3.pending <= 0) {
-          S3.pending = 0;
+      if (S4.pending > 0) {
+        S4.pending -= dt;
+        if (S4.pending <= 0) {
+          S4.pending = 0;
           if (!game.dialogue?.active) openChapter();
-          else S3.pending = 0.5;
+          else S4.pending = 0.5;
         }
       }
-      if ((S3.t -= dt) > 0) return;
-      S3.t = 0.5;
+      if ((S4.t -= dt) > 0) return;
+      S4.t = 0.5;
       const m = c.main;
       if (!m || m.finished) return;
       checkRoad();
@@ -124623,17 +124813,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           const cur2 = current(game);
           if (!cur2 || cur2.ch.part === 1) {
             if (cur2 && cur2.ch.gate === "reverse_mountain") {
-            } else S3.jumpTo(2, "You crossed Reverse Mountain before your business in the Blues was done. The Blues are behind you now.");
+            } else S4.jumpTo(2, "You crossed Reverse Mountain before your business in the Blues was done. The Blues are behind you now.");
           }
         }
-        if (m.part === 2 && reg3 === REGION.NEW_WORLD) S3.jumpTo(3, "You reached the New World before your story in Paradise was done.");
+        if (m.part === 2 && reg3 === REGION.NEW_WORLD) S4.jumpTo(3, "You reached the New World before your story in Paradise was done.");
       }
       const cur = current(game);
-      if (cur && !cur.s && !S3.pending) openChapter();
-      else if (cur?.s?.done && !S3.pending) advance(cur.qid, true);
+      if (cur && !cur.s && !S4.pending) openChapter();
+      else if (cur?.s?.done && !S4.pending) advance(cur.qid, true);
       if (cur) pointTheWay();
     }
-    S3.limit = () => {
+    S4.limit = () => {
       const cur = current(game);
       if (!cur || cur.ch.part !== 2 || !cur.ch.island || cur.ch.free) return null;
       const isl = ISLAND_BY_ID[cur.ch.island];
@@ -124643,7 +124833,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     game.storyCurrent = (x, y, out, who) => {
       const p = game.player;
       if (!p || game.world !== game.surface || who !== p.ship && who !== p) return;
-      const L2 = S3.limit();
+      const L2 = S4.limit();
       if (!L2) return;
       const dx = game.world.dx(L2.x, x);
       if (dx <= 0) return;
@@ -124654,8 +124844,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       out.x += Math.cos(back) * f;
       out.y += Math.sin(back) * f;
       out.steer = Math.max(out.steer || 0, 0.5);
-      if (game.time > S3.driftMsg) {
-        S3.driftMsg = game.time + 25;
+      if (game.time > S4.driftMsg) {
+        S4.driftMsg = game.time + 25;
         game.ui.banner("LOST WITHOUT A LOG", L2.isl.name, `Your Log Pose is locked on ${L2.isl.name} \u2014 and without its log the Grand Line's currents turn you round. Your story continues there.`, 5);
       }
     };
@@ -124729,9 +124919,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       return out;
     };
     game.dialogue.decorators.push((tree, npc, ctx) => decorate(tree, npc, ctx));
-    S3.current = () => current(game);
-    S3.qidOf = qidOf;
-    return S3;
+    S4.current = () => current(game);
+    S4.qidOf = qidOf;
+    return S4;
   }
   var safe = (f) => {
     try {
@@ -124795,7 +124985,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const g = ctx.game, c = ctx.char, m = c.main;
     const roles = CONTACTS.get(npcId) || [];
     const nodes = {};
-    const S3 = g.story;
+    const S4 = g.story;
     const live = m && roles.find(({ ch, path: path2 }) => path2 === m.path && g.quests.isActive(qidOf(ch.id, path2)));
     if (live) {
       const { ch, path: path2 } = live;
@@ -124854,7 +125044,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       nodes.mq_o = { text: `(You could also find ${others.join(" or ")}. You can only walk one road \u2014 choose one, and the others close.)`, next: pitchEnd };
       for (const o of offers) {
         const ov = o.ch.v[o.path];
-        nodes["mq_ok_" + o.path] = { text: "", onEnter: () => S3.begin(o.ch.id, o.path), redirect: "mq_s_" + o.path + "0" };
+        nodes["mq_ok_" + o.path] = { text: "", onEnter: () => S4.begin(o.ch.id, o.path), redirect: "mq_s_" + o.path + "0" };
         Object.assign(nodes, chain("mq_s_" + o.path, (ov.meet?.length ? ov.meet : ["Then let's begin."]).map((t) => () => say(t, ctx)), void 0, {
           onEnter: (x) => {
             if (o.ch.kind !== "start") meetDone(g, o.ch, o.path, x);
@@ -125103,6 +125293,85 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       for (let i = 0; i < n; i++) {
         const at4 = t + Math.random() * dur, f = freq * (1 - spread / 2 + Math.random() * spread);
         this.noise(at4, 0.012 + Math.random() * 0.025, { freq: f, q: 2.2, gain: gain * (0.4 + Math.random() * 0.6), attack: 1e-3, dest });
+      }
+    }
+    /**
+     * A footstep on `surface` — grass, sand, dirt, gravel, mud, stone, wood,
+     * snow, ice, soft (a rug, tatami, cloud) or metal — `loud` 0..1 (a stroll
+     * to a sprint): the heel's soft thud and the sound of what it lands on,
+     * pitched a little differently every time, as real steps are.
+     */
+    step(surface, loud = 0.6, at4 = null) {
+      if (!this.ctx || this.ctx.state !== "running") return;
+      this.fxBus();
+      const t = this.ctx.currentTime;
+      let vol = 0.5 + 0.5 * loud;
+      if (at4 && this.ear) {
+        const e = this.ear();
+        if (e) {
+          const dd = Math.hypot(this.dxOf ? this.dxOf(e.x, at4.x) : at4.x - e.x, at4.y - e.y);
+          if (dd > 16) return;
+          vol *= 1 / (1 + Math.max(0, dd - 2) / 4);
+        }
+      }
+      const hard = surface === "wood" || surface === "stone" || surface === "metal" || surface === "ice";
+      const d = this.route(vol, { send: hard ? 0.05 : 0.015 });
+      const r = () => 0.9 + Math.random() * 0.2;
+      const thud = (f, g) => this.tone(t, 0.06, { freq: f * r(), to: f * 0.62, gain: g * (0.7 + 0.5 * loud), attack: 3e-3, dest: d });
+      switch (surface) {
+        case "grass":
+          thud(82, 0.06);
+          this.noise(t, 0.1, { freq: 1100 * r(), q: 0.55, type: "lowpass", gain: 0.09, attack: 6e-3, sweep: 500, dest: d });
+          this.noise(t + 0.012, 0.075, { freq: 3400 * r(), q: 0.9, gain: 0.022, attack: 5e-3, dest: d });
+          break;
+        case "sand":
+          thud(70, 0.045);
+          this.noise(t, 0.14, { freq: 1700 * r(), q: 0.45, gain: 0.085, attack: 0.012, sweep: 700, dest: d });
+          this.crackle(t + 0.01, 0.1, 5, { freq: 4200, gain: 0.018, dest: d });
+          break;
+        case "dirt":
+          thud(95, 0.08);
+          this.noise(t, 0.07, { freq: 620 * r(), q: 0.7, type: "lowpass", gain: 0.1, attack: 3e-3, dest: d });
+          this.crackle(t, 0.05, 2, { freq: 2600, gain: 0.02, dest: d });
+          break;
+        case "gravel":
+          thud(90, 0.06);
+          this.noise(t, 0.09, { freq: 1500 * r(), q: 0.6, gain: 0.07, attack: 4e-3, dest: d });
+          this.crackle(t, 0.1, 9, { freq: 2800, gain: 0.04, dest: d });
+          break;
+        case "mud":
+          thud(75, 0.06);
+          this.tone(t + 0.01, 0.09, { freq: 140 * r(), to: 320, gain: 0.05, attack: 0.01, dest: d });
+          this.noise(t, 0.12, { freq: 500, q: 0.6, type: "lowpass", gain: 0.09, attack: 0.01, dest: d });
+          break;
+        case "stone":
+          this.noise(t, 0.016, { freq: 3e3 * r(), q: 0.8, type: "highpass", gain: 0.07, attack: 1e-3, dest: d });
+          this.tone(t, 0.045, { freq: 190 * r(), to: 120, gain: 0.06 * (0.7 + 0.5 * loud), attack: 2e-3, dest: d });
+          this.noise(t, 0.05, { freq: 900 * r(), q: 1.4, gain: 0.07, attack: 2e-3, dest: d });
+          break;
+        case "wood":
+          this.tone(t, 0.1, { freq: 215 * r(), to: 165, gain: 0.08 * (0.7 + 0.5 * loud), attack: 2e-3, dest: d });
+          this.tone(t, 0.05, { freq: 430 * r(), to: 360, gain: 0.025, attack: 2e-3, dest: d });
+          this.noise(t, 0.045, { freq: 1e3 * r(), q: 1.3, gain: 0.07, attack: 2e-3, dest: d });
+          break;
+        case "snow":
+          thud(80, 0.04);
+          this.noise(t, 0.15, { freq: 2300 * r(), q: 0.6, gain: 0.07, attack: 0.02, sweep: 1300, dest: d });
+          this.crackle(t + 0.02, 0.12, 10, { freq: 5200, gain: 0.03, dest: d });
+          break;
+        case "ice":
+          this.noise(t, 0.02, { freq: 4200 * r(), q: 1, type: "highpass", gain: 0.07, attack: 1e-3, dest: d });
+          this.ring(t, 2300 * r(), 0.08, 0.012, d, [1, 1.7]);
+          this.tone(t, 0.04, { freq: 160, to: 110, gain: 0.04, dest: d });
+          break;
+        case "metal":
+          this.ring(t, 520 * r(), 0.14, 0.03, d, [1, 2.2, 3.4]);
+          this.noise(t, 0.03, { freq: 2600, q: 1, gain: 0.05, attack: 1e-3, dest: d });
+          thud(120, 0.05);
+          break;
+        default:
+          this.noise(t, 0.08, { freq: 420 * r(), q: 0.6, type: "lowpass", gain: 0.07, attack: 6e-3, dest: d });
+          thud(70, 0.035);
       }
     }
     /**
@@ -125532,39 +125801,39 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         this.bar = 0;
       }
       while (this.songT < now2 + 0.5) {
-        const S3 = this.song;
-        if (this.bar >= S3.bars) {
+        const S4 = this.song;
+        if (this.bar >= S4.bars) {
           this.song = null;
           this.fadeSong(4);
           this.restUntil = now2 + T4.rest[0] + Math.random() * (T4.rest[1] - T4.rest[0]);
           return;
         }
-        this.playBar(S3, this.bar, this.songT);
-        this.songT += S3.barDur;
+        this.playBar(S4, this.bar, this.songT);
+        this.songT += S4.barDur;
         this.bar++;
       }
     }
-    playBar(S3, bar2, t0) {
-      const T4 = S3.T, e = S3.eighth, n = S3.perBar;
-      const chord = S3.chords[bar2 % S3.chords.length];
+    playBar(S4, bar2, t0) {
+      const T4 = S4.T, e = S4.eighth, n = S4.perBar;
+      const chord = S4.chords[bar2 % S4.chords.length];
       const bus = this.songBus;
       if (!bus) return;
-      const last = bar2 >= S3.bars - 2;
+      const last = bar2 >= S4.bars - 2;
       if (T4.pad) {
-        const notes = chord.map((d) => S3.midi(d, -1));
-        for (const m of notes) this.inst("pad", t0, S3.barDur * 1.05, m, T4.padVol ?? 0.018, bus);
+        const notes = chord.map((d) => S4.midi(d, -1));
+        for (const m of notes) this.inst("pad", t0, S4.barDur * 1.05, m, T4.padVol ?? 0.018, bus);
       }
-      if (T4.bass) this.inst(T4.bass, t0, e * n * 0.9, S3.midi(chord[0], -2), 0.09, bus);
+      if (T4.bass) this.inst(T4.bass, t0, e * n * 0.9, S4.midi(chord[0], -2), 0.09, bus);
       if (T4.arp) {
-        const pat = S3.arpPat;
+        const pat = S4.arpPat;
         for (let i = 0; i < n; i++) {
           const k = pat[i % pat.length];
           if (k === null || i > 0 && Math.random() > T4.arpDensity) continue;
           const d = k < 3 ? chord[k] : chord[k - 3] + 7;
-          this.inst(T4.arp, t0 + i * e * (T4.feel === "lilt" && i % 3 === 2 ? 1.04 : 1), e * 3, S3.midi(d, T4.arpOct ?? -1), (i === 0 ? 0.085 : 0.06) * (T4.arpVol ?? 1), bus);
+          this.inst(T4.arp, t0 + i * e * (T4.feel === "lilt" && i % 3 === 2 ? 1.04 : 1), e * 3, S4.midi(d, T4.arpOct ?? -1), (i === 0 ? 0.085 : 0.06) * (T4.arpVol ?? 1), bus);
         }
       }
-      const ph = S3.phrases[Math.floor(bar2 / 2) % S3.phrases.length];
+      const ph = S4.phrases[Math.floor(bar2 / 2) % S4.phrases.length];
       if (ph && !last) {
         const half2 = bar2 % 2;
         let pos = 0;
@@ -125574,10 +125843,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           pos += len;
           if (start3 < 0 || start3 >= n || note.len < 0) continue;
           const d = note.deg + (T4.follow ? chord[0] : 0);
-          this.inst(T4.lead, t0 + start3 * e, len * e * (T4.legato ?? 0.95), S3.midi(d, 0), T4.leadVol ?? 0.07, bus);
+          this.inst(T4.lead, t0 + start3 * e, len * e * (T4.legato ?? 0.95), S4.midi(d, 0), T4.leadVol ?? 0.07, bus);
         }
       }
-      if (bar2 === S3.bars - 1) for (const d of S3.chords[0]) this.inst(T4.arp || "piano", t0 + e * 2, e * n * 2, S3.midi(d, 0), 0.05, bus);
+      if (bar2 === S4.bars - 1) for (const d of S4.chords[0]) this.inst(T4.arp || "piano", t0 + e * 2, e * n * 2, S4.midi(d, 0), 0.05, bus);
       if (T4.drums) {
         for (let i = 0; i < n; i++) {
           if (T4.drums.kick[i % T4.drums.kick.length]) this.drum(t0 + i * e, "kick");
@@ -126124,13 +126393,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     };
     const tierHere = () => SEA_TIER2[game.reputation?.sea?.()] || 1;
     function contents(key2, kind, o = {}) {
-      const c = game.state.char, S3 = store();
+      const c = game.state.char, S4 = store();
       const period = kind === "home" ? Math.floor(game.env.day / RESTOCK_DAYS) : 0;
-      let e = S3[key2];
+      let e = S4[key2];
       if (!e || kind === "home" && e.p !== period) {
         const rng4 = new RNG(`${key2}:${period}:${c.runSeed}`);
         e = { ...roll(kind, rng4, o.tier ?? tierHere(), o), p: period };
-        S3[key2] = e;
+        S4[key2] = e;
       }
       return e;
     }
@@ -126562,11 +126831,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       game.setWorld(game.surface);
       game.renderer.terrain.updateFog(game.surface.fog);
       game.env.zoneKind = null;
-      const S3 = game.surface;
+      const S4 = game.surface;
       let target2 = null;
       const tgt = exit?.surface || z?.exits?.find((e) => e.to === "surface")?.surface;
       if (tgt?.island) {
-        const isl = S3.islands.find((i) => i.id === tgt.island);
+        const isl = S4.islands.find((i) => i.id === tgt.island);
         if (isl) target2 = tgt.spot && isl.spots[tgt.spot] ? isl.spots[tgt.spot] : tgt.dock && isl.docks[0] ? isl.docks[0].moor : { x: isl.x, y: isl.y };
       } else if (tgt && tgt.x !== void 0) target2 = { x: tgt.x, y: tgt.y };
       if (!target2 || forced) target2 = game.state.char.rest || game.state.char.spawn;
@@ -126575,16 +126844,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         carried.x = target2.x;
         carried.y = target2.y;
         carried.speed = 0;
-        if (!carried.fits(S3, carried.x, carried.y, carried.heading)) carried.unstick(S3);
+        if (!carried.fits(S4, carried.x, carried.y, carried.heading)) carried.unstick(S4);
         p.x = carried.x;
         p.y = carried.y;
       } else {
         p.mode = "foot";
         p.onShip = false;
-        const s = findShore(S3, target2.x, target2.y, 10) || target2;
+        const s = findShore(S4, target2.x, target2.y, 10) || target2;
         p.x = s.x;
         p.y = s.y;
-        if (!S3.walkable(p.x, p.y - 0.1)) {
+        if (!S4.walkable(p.x, p.y - 0.1)) {
           const r = game.state.char.rest || game.state.char.spawn;
           p.x = r.x;
           p.y = r.y;

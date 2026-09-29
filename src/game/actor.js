@@ -13,6 +13,22 @@ import { clamp, TAU, angleDiff } from '../core/math.js';
 import { shipDims, hbAt, deckToWorld, shipBob } from '../world/hull.js';
 import { placeOnDeck, boardingSpot } from './decks.js';
 
+// what a step sounds like on each kind of ground
+const STEP_SOUND = [];
+for (const [k, ts] of Object.entries({
+  grass: ['GRASS', 'FOREST', 'JUNGLE', 'FARM', 'FLOWERS', 'SAKURA', 'LAWN', 'MANGROVE'],
+  sand: ['SAND', 'DESERT', 'ASH', 'CORAL'],
+  dirt: ['DIRT', 'SEAFLOOR'],
+  gravel: ['GRAVEL'],
+  mud: ['MUD'],
+  stone: ['STONE', 'COBBLE', 'ROCK', 'MOUNTAIN', 'CLIFF', 'RED_ROCK', 'MARBLE', 'SNOWROCK', 'WALL', 'GOLD', 'BONE'],
+  wood: ['PLANK', 'RAIL', 'BRIDGE'],
+  snow: ['SNOW'],
+  ice: ['ICE', 'PACK_ICE'],
+  soft: ['CARPET', 'TATAMI', 'CANDY', 'CAKE', 'ISLAND_CLOUD'],
+  metal: ['STEEL'],
+})) for (const n of ts) if (T[n] !== undefined) STEP_SOUND[T[n]] = k;
+
 const smooth01 = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 const STATUS_DEFAULTS = {
@@ -399,7 +415,7 @@ export class Actor extends Entity {
       // up from treading water (the body starts where it floats, so the leap is continuous)
       v *= 1.3 * J.leap;
       const s = this.look?.scale || 1;
-      const z = -(this.depth || 0) - (this.moving ? 0.95 : 1.3) * s;
+      const z = -(this.depth || 0) - this.swimSink();
       this.leaveWater(game, true);
       this.leapT = 0.5;
       this.z = z;
@@ -432,6 +448,21 @@ export class Actor extends Entity {
 
   /** Deep enough to swim in (about chest-deep; a little less to stand up again, so shorelines don't flicker). */
   swimDepth(was) { return 1.75 * (this.look?.scale || 1) * (was ? 0.5 : 0.62); }
+
+  /**
+   * How far below the surface a swimmer's feet hang (m): stretched along the
+   * surface swimming (only the head out, and the shoulders at each breath),
+   * upright and in to the neck treading water, lower under it, head and
+   * shoulders up for a Devil Fruit user fighting to stay afloat. Eased from
+   * one to the next (see updateWater), so setting off, stopping or coming up
+   * from a dive never jerks the body up or down.
+   */
+  swimSink() { return (this.sinkNow ?? this.sinkWant()) * (this.look?.scale || 1); }
+  sinkWant() {
+    if (this.fruit && !this.gills) return 1.3;
+    if (this.under) return 0.95;
+    return this.moving ? 1.06 : 1.45;
+  }
 
   /**
    * Gravity for jumps, launches and falls. A fall ends on the ground (a puff
@@ -468,9 +499,11 @@ export class Actor extends Entity {
       this.splashedAt = game.time || 0;
     }
     // (afloat, the body lies where a swimmer's does: stretched out if you came in moving)
-    const floor = wd <= 0 ? 0 : deep ? -Math.min(wd - 0.1, (this.moving ? 0.95 : 1.3) * s) : -wd;
+    const floor = wd <= 0 ? 0 : deep ? -Math.min(wd - 0.1, (this.moving ? 1.06 : 1.45) * s) : -wd;
     if (this.z <= floor) {
       const impact = -this.vz;
+      // (and floats on from just there: see updateWater)
+      this.landSink = deep ? -floor / s : null;
       this.z = 0;
       this.vz = 0;
       this.airT = 0;
@@ -617,6 +650,27 @@ export class Actor extends Entity {
     }
     // the stride cycle keeps pace with the ground (no skating feet): see render/anims.js gait()
     if (this.moving) this.walk += dt * TAU * gaitCadence(sp / (this.look?.scale || 1), this.intent.sprint);
+    // your footsteps: a foot comes down every half stride (render/anims.js
+    // legAt: touch-down at the start of each half cycle), and sounds of what
+    // it lands on
+    const stepN = Math.floor(this.walk / Math.PI);
+    if (this.isPlayer && stepN !== this.stepN && this.moving && !this.inWater && !this.wading && !this.climb && !this.flying && !this.vz && !(this.z > 0.05) && this.mode !== 'sail') {
+      game.audio?.step?.(this.footSurface(game), this.intent.sprint ? 1 : Math.min(1, sp / 7));
+    }
+    this.stepN = stepN;
+  }
+
+  /** What's underfoot, for the sound of a step: a deck, a floor, a pier, or the ground's own kind. */
+  footSurface(game) {
+    if (this.deck) return 'wood';
+    const w = game.world, x = this.x, y = this.y;
+    const f = w.floorRec ? w.floorRec(x, y) : null;
+    if (f && f.interior) {
+      const t = w.type(x, y);
+      return t === T.CARPET || t === T.TATAMI ? 'soft' : t === T.STONE || t === T.MARBLE ? 'stone' : 'wood';
+    }
+    if (w.isQuay?.(x, y)) return 'stone';
+    return STEP_SOUND[w.type(x, y)] || 'dirt';
   }
 
   updateStatus(dt, game) {
@@ -672,10 +726,10 @@ export class Actor extends Entity {
     // treading water at the surface is a rest (swimming isn't; a Devil Fruit user can't)
     const swim = this.inWater && !this.gills;
     const treading = swim && !this.fruit && !this.moving && !this.under && !this.intent.mz;
-    const busy = !!this.action || this.blocking || this.intent.sprint || (swim && !treading);
+    const busy = !!this.action || this.blocking || this.intent.sprint || this.running || (swim && !treading);
     const regenMul = (this.isPlayer ? this.game?.crewMods?.staminaMul || 1 : 1) * (treading ? 0.6 : 1);
     if (!busy) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * regenMul * dt);
-    else if (!this.intent.sprint && !this.inWater) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * 0.25 * dt);
+    else if (!this.intent.sprint && !this.running && !this.inWater) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * 0.25 * dt);
     if (this.hakiUnlocked()) {
       if (this.armament) {
         this.haki -= (1.6 - Math.min(1.0, this.hakiLevel('armament') * 0.012)) * dt;
@@ -808,7 +862,7 @@ export class Actor extends Entity {
   feetH(game) {
     if (this.deck) return this.deck.h + shipBob(this.deck.ship, game.env?.time || 0) + (this.z || 0);
     const g = this.groundAt(game, this.x, this.y);
-    if (this.inWater) return g - (this.depth || 0) - (this.moving ? 0.95 : 1.3) * (this.look?.scale || 1);
+    if (this.inWater) return g - (this.depth || 0) - this.swimSink();
     return g - (this.wading || 0) + (this.z || 0);
   }
 
@@ -961,7 +1015,7 @@ export class Actor extends Entity {
     const w = game.world, s = this.look?.scale || 1;
     const wet = this.inWater;
     // (from where the body is drawn: afloat, on the bottom, in the air)
-    const h0 = wet ? this.groundAt(game, this.x, this.y) - (this.depth || 0) - (this.moving ? 0.95 : 1.3) * s : this.feetH(game);
+    const h0 = wet ? this.groundAt(game, this.x, this.y) - (this.depth || 0) - this.swimSink() : this.feetH(game);
     if (wet) {
       this.leaveWater(game, true);
       game.fx.ripple?.(this.x, this.y, 1);
@@ -1041,6 +1095,7 @@ export class Actor extends Entity {
   updateMovement(dt, game, knocked) {
     const w = game.world;
     let vx = 0, vy = 0;
+    this.running = false;
     if (!knocked) {
       const i = this.intent;
       let sp = this.d.speed * (w.speedAt(this.x, this.y - 0.1) || 1);
@@ -1051,6 +1106,11 @@ export class Actor extends Entity {
       else if (this.wading) sp *= 1 - 0.42 * clamp(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);
       if (this.charging) sp *= 1 - 0.75 * this.charging;
       if (i.sprint && !this.eating && this.stamina > 1 && (!this.inWater || this.gills)) { sp *= this.inWater ? 1.35 : 1.55; if (!this.inWater) this.stamina -= 9 * dt; }
+      // (your everyday run takes a little out of you too: the bar dips as you
+      // go and fills again once you stop or slow to a walk — it never stops
+      // you running, but you'll have less left for a sprint or a dodge)
+      this.running = this.isPlayer && this.mode !== 'sail' && !this.inWater && !this.climb && !i.sprint && !this.eating && !this.flying && Math.hypot(i.mx, i.my) > 0.7;
+      if (this.running) this.stamina = Math.max(0, this.stamina - 1.2 * dt);
       if (this.eating) sp *= 0.45; // (a slow walk with your mouth full)
       if (this.inWater && !this.gills && (i.mx || i.my || i.mz)) this.stamina = Math.max(0, this.stamina - (this.under ? 4 : 3.5) * dt);
       if (this.blocking) sp *= 0.4;
@@ -1182,7 +1242,7 @@ export class Actor extends Entity {
   updateWater(dt, game) {
     const w = game.world;
     const t = w.type(this.x, this.y);
-    const was = this.inWater;
+    const was = this.inWater, wadeWas = this.wading || 0;
     // (under a high bridge you're in the water it crosses)
     const liquid = ((IS_LIQUID[t] === 1 && !OVERLAY[t]) || !!this.belowDeck) && !(this.dash && this.dash.ignoreWater) && !this.deck;
     // shallow water is waded, feet on the bottom; you swim once it's about chest-deep
@@ -1205,14 +1265,14 @@ export class Actor extends Entity {
       }
       this.depth = 0;
       this.sinking = false;
+      // (floating on from where the feet were: at the bottom of the shallows
+      // you waded out from, or as deep as a jump in took them)
+      this.sinkNow = this.landSink ?? Math.min(this.sinkWant(), wadeWas / (this.look?.scale || 1));
+      this.landSink = null;
       if (df && this.isPlayer) game.log("A Devil Fruit user can't swim! Get out before your strength gives out!", '#ff8a80');
       if (this.fruit) { this.armament = this.armament && this.hakiUnlocked(); this.buffs = this.buffs.filter((b) => !b.source || !getAbility(b.source)?.source?.startsWith('fruit')); this.recalc(); }
     }
-    // swimming at the surface leaves a ring now and then
-    if (this.inWater && this.moving && !this.under) {
-      this.swimRingT = (this.swimRingT || 0) - dt;
-      if (this.swimRingT <= 0) { this.swimRingT = 0.45; game.fx.ripple?.(this.x, this.y, 0.8, 0.8); }
-    }
+    // (swimming along the surface leaves a wake: see render3d/chars3d.js)
     if (!this.inWater && was) this.leaveWater(game, true);
     if (this.inWater) {
       if (t === T.LAVA) { this.takeDamage(this.d.maxHp * 0.25 * dt, null, { element: 'fire' }, game); }
@@ -1250,7 +1310,17 @@ export class Actor extends Entity {
         if (this.isPlayer && !this.spentHint) { this.spentHint = true; game.log('Exhausted! Stop and tread water at the surface to get your strength back.', '#ff8a80'); }
       } else if (this.stamina > this.d.maxStamina * 0.5) this.spentHint = false;
       if (df && !this.sinking) this.stamina = Math.max(0, this.stamina - 14 * dt);
+      const wasUnder = this.under;
       this.under = this.depth > 0.35;
+      // (coming up from a dive, the water parts round your head as it breaks the surface)
+      if (wasUnder && !this.under && !this.lowAir) {
+        game.fx.ripple?.(this.x, this.y, 0.75);
+        game.fx.burst(this.x, this.y, 4, { color: ['#e1f5fe', '#b3e5fc'], speed: 0.8, vz: 1.4, g: 9, life: 0.3, size: 0.05, kind: 'drop', z: 0.25 });
+      }
+      // (up quickly — setting off, the body lies out along the surface as it
+      // comes up, so the head never ducks under — and settling down gently)
+      const sw = this.sinkWant(), sn = this.sinkNow ?? sw;
+      this.sinkNow = sn + (sw - sn) * Math.min(1, dt * (sw < sn ? 8 : 4.5));
       // breath: held under water (the sea takes a Devil Fruit user's faster),
       // and back in a few gulps at the surface
       if (!this.gills) {

@@ -413,7 +413,8 @@ export function drawParticles3d(fx, g, r, additive, drawPart) {
   const d = r.dpr;
   for (const p of fx.parts) {
     if (!!p.add !== additive) continue;
-    const B = bill(r, p.x, p.y, p.z);
+    // (a diver's bubbles are down under the surface, as deep as the diver was)
+    const B = bill(r, p.x, p.y, p.under !== undefined ? p.z - p.under : p.z);
     if (!B || !onScreen(r, B, 60)) continue;
     let vx = 0, vy = 0;
     if (p.kind === 'spark' || p.kind === 'line' || p.kind === 'drop') {

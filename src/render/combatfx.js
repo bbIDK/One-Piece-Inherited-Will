@@ -1205,14 +1205,8 @@ export function motion(fx, a, dt) {
       afterimage(fx, a, { tint: a._ghostTint || (dash && dash.dodge ? '#b3e5fc' : '#e3f2fd'), life: 0.22, alpha: 0.42, add: a._ghostAdd });
     }
   } else if (!(a._ghostT > 0)) { a._ghostTint = null; a._ghostAdd = false; }
-  // sprint dust kicked up behind the feet
-  if (a.moving && a.intent && a.intent.sprint && !a.inWater && a.state === 'idle' && !a.onShip) {
-    a._dustAcc = (a._dustAcc || 0) + dt;
-    if (a._dustAcc > 0.12) {
-      a._dustAcc = 0;
-      dust(fx, a.x - Math.cos(a.facing) * 0.18, a.y + 0.02, 2, { speed: 0.9, size: 0.14, life: 0.45, angle: a.facing + Math.PI, spread: 1.2 });
-    }
-  }
+  // (no dust kicked up behind a runner's feet: puffs dropped every few
+  // strides lay a trail of flat ovals behind them, like footprints)
   // skid dust while being knocked back
   const kbm = Math.hypot(a.kb.x, a.kb.y);
   if (kbm > 3.5 && !a.inWater) {

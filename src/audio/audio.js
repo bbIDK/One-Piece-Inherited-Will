@@ -125,6 +125,87 @@ export class Audio {
   }
 
   /**
+   * A footstep on `surface` — grass, sand, dirt, gravel, mud, stone, wood,
+   * snow, ice, soft (a rug, tatami, cloud) or metal — `loud` 0..1 (a stroll
+   * to a sprint): the heel's soft thud and the sound of what it lands on,
+   * pitched a little differently every time, as real steps are.
+   */
+  step(surface, loud = 0.6, at = null) {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    this.fxBus();
+    const t = this.ctx.currentTime;
+    let vol = 0.5 + 0.5 * loud;
+    if (at && this.ear) {
+      const e = this.ear();
+      if (e) {
+        const dd = Math.hypot(this.dxOf ? this.dxOf(e.x, at.x) : at.x - e.x, at.y - e.y);
+        if (dd > 16) return;
+        vol *= 1 / (1 + Math.max(0, dd - 2) / 4);
+      }
+    }
+    const hard = surface === 'wood' || surface === 'stone' || surface === 'metal' || surface === 'ice';
+    const d = this.route(vol, { send: hard ? 0.05 : 0.015 });
+    const r = () => 0.9 + Math.random() * 0.2;
+    // the heel meeting the ground (a little heavier running)
+    const thud = (f, g) => this.tone(t, 0.06, { freq: f * r(), to: f * 0.62, gain: g * (0.7 + 0.5 * loud), attack: 0.003, dest: d });
+    switch (surface) {
+      case 'grass': // a soft crush of blades
+        thud(82, 0.06);
+        this.noise(t, 0.1, { freq: 1100 * r(), q: 0.55, type: 'lowpass', gain: 0.09, attack: 0.006, sweep: 500, dest: d });
+        this.noise(t + 0.012, 0.075, { freq: 3400 * r(), q: 0.9, gain: 0.022, attack: 0.005, dest: d });
+        break;
+      case 'sand': // a gritty shuffle that gives underfoot
+        thud(70, 0.045);
+        this.noise(t, 0.14, { freq: 1700 * r(), q: 0.45, gain: 0.085, attack: 0.012, sweep: 700, dest: d });
+        this.crackle(t + 0.01, 0.1, 5, { freq: 4200, gain: 0.018, dest: d });
+        break;
+      case 'dirt': // packed earth: a dull pat
+        thud(95, 0.08);
+        this.noise(t, 0.07, { freq: 620 * r(), q: 0.7, type: 'lowpass', gain: 0.1, attack: 0.003, dest: d });
+        this.crackle(t, 0.05, 2, { freq: 2600, gain: 0.02, dest: d });
+        break;
+      case 'gravel': // loose stones shifting
+        thud(90, 0.06);
+        this.noise(t, 0.09, { freq: 1500 * r(), q: 0.6, gain: 0.07, attack: 0.004, dest: d });
+        this.crackle(t, 0.1, 9, { freq: 2800, gain: 0.04, dest: d });
+        break;
+      case 'mud': // a wet squelch
+        thud(75, 0.06);
+        this.tone(t + 0.01, 0.09, { freq: 140 * r(), to: 320, gain: 0.05, attack: 0.01, dest: d });
+        this.noise(t, 0.12, { freq: 500, q: 0.6, type: 'lowpass', gain: 0.09, attack: 0.01, dest: d });
+        break;
+      case 'stone': // a crisp tap on stone and paving
+        this.noise(t, 0.016, { freq: 3000 * r(), q: 0.8, type: 'highpass', gain: 0.07, attack: 0.001, dest: d });
+        this.tone(t, 0.045, { freq: 190 * r(), to: 120, gain: 0.06 * (0.7 + 0.5 * loud), attack: 0.002, dest: d });
+        this.noise(t, 0.05, { freq: 900 * r(), q: 1.4, gain: 0.07, attack: 0.002, dest: d });
+        break;
+      case 'wood': // boards and decks: a hollow knock
+        this.tone(t, 0.1, { freq: 215 * r(), to: 165, gain: 0.08 * (0.7 + 0.5 * loud), attack: 0.002, dest: d });
+        this.tone(t, 0.05, { freq: 430 * r(), to: 360, gain: 0.025, attack: 0.002, dest: d });
+        this.noise(t, 0.045, { freq: 1000 * r(), q: 1.3, gain: 0.07, attack: 0.002, dest: d });
+        break;
+      case 'snow': // a squeaky crunch
+        thud(80, 0.04);
+        this.noise(t, 0.15, { freq: 2300 * r(), q: 0.6, gain: 0.07, attack: 0.02, sweep: 1300, dest: d });
+        this.crackle(t + 0.02, 0.12, 10, { freq: 5200, gain: 0.03, dest: d });
+        break;
+      case 'ice': // a hard little click
+        this.noise(t, 0.02, { freq: 4200 * r(), q: 1, type: 'highpass', gain: 0.07, attack: 0.001, dest: d });
+        this.ring(t, 2300 * r(), 0.08, 0.012, d, [1, 1.7]);
+        this.tone(t, 0.04, { freq: 160, to: 110, gain: 0.04, dest: d });
+        break;
+      case 'metal': // a dull clank
+        this.ring(t, 520 * r(), 0.14, 0.03, d, [1, 2.2, 3.4]);
+        this.noise(t, 0.03, { freq: 2600, q: 1, gain: 0.05, attack: 0.001, dest: d });
+        thud(120, 0.05);
+        break;
+      default: // soft: a rug, tatami, cloud
+        this.noise(t, 0.08, { freq: 420 * r(), q: 0.6, type: 'lowpass', gain: 0.07, attack: 0.006, dest: d });
+        thud(70, 0.035);
+    }
+  }
+
+  /**
    * Play an effect. `at`: where it happens ({ x, y }); a hit across the
    * harbour is quieter than one in your face, and one out of earshot silent.
    */

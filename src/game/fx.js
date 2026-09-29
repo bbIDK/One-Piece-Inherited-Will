@@ -287,6 +287,9 @@ export class FX {
       p.y += p.vy * sdt;
       p.vz -= p.g * sdt;
       p.z += p.vz * sdt;
+      // (a diver's bubbles rise from where they are, `under` the surface, and
+      // burst when they reach it — not float on up into the air)
+      if (p.under !== undefined && p.z >= p.under) { this.parts.splice(i, 1); continue; }
       if (p.z < 0) { p.z = 0; p.vz *= -0.3; p.vx *= 0.6; p.vy *= 0.6; }
       p.size = Math.max(0.005, p.size + p.grow * sdt);
       if (p.vr) p.rot = (p.rot || 0) + p.vr * sdt;
@@ -336,7 +339,7 @@ export class FX {
     }
   }
 
-  /** Afterimages, sprint dust, knockback skids and landing puffs for actors near the camera. */
+  /** Afterimages, knockback skids and landing puffs for actors near the camera. */
   trackMotion(dt) {
     const g = this.game, p = g.player;
     if (!p || !g.actors || !g.world) return;

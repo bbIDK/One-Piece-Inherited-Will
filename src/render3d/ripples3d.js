@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { registerFrameHook } from './registry.js';
 import { SEA_Y } from './height.js';
+import { swellAt } from './swell.js';
 
 const MAX = 96;
 
@@ -71,7 +72,7 @@ class Ripples {
       const fade = r.a * (1 - k) * Math.min(1, r.t / 0.06) * (0.6 + 0.4 * (env.daylight ?? 1));
       m4.identity();
       e[0] = rad * 2; e[10] = rad * 2;
-      e[12] = w.dx(v.ox, r.x); e[13] = SEA_Y + 0.03; e[14] = r.y - v.oy;
+      e[12] = w.dx(v.ox, r.x); e[13] = SEA_Y + 0.03 + swellAt(r.x, r.y); e[14] = r.y - v.oy;
       this.mesh.setMatrixAt(n, m4);
       col[n * 3] = fade; col[n * 3 + 1] = fade; col[n * 3 + 2] = fade;
       n++;

@@ -563,10 +563,70 @@ function activityPose(P, act, t) {
 }
 
 /**
+ * A looping key track, sampled smoothly: keys are [u, ...values] with u in
+ * [0, 1) in order; between them a cubic runs through every key without
+ * stopping at it (the tangents come from the neighbours, so an uneven
+ * spacing of keys still eases in and out properly). Writes into `out`.
+ */
+function loopTrack(keys, u, out) {
+  const n = keys.length;
+  u = ((u % 1) + 1) % 1;
+  let i = n - 1;
+  for (let k = 0; k < n; k++) if (keys[k][0] > u) { i = (k - 1 + n) % n; break; }
+  const gap = (a, b) => (((b[0] - a[0]) % 1) + 1) % 1 || 1;
+  const k0 = keys[(i - 1 + n) % n], k1 = keys[i], k2 = keys[(i + 1) % n], k3 = keys[(i + 2) % n];
+  const g0 = gap(k0, k1), g1 = gap(k1, k2), g2 = gap(k2, k3);
+  const t = ((((u - k1[0]) % 1) + 1) % 1) / g1;
+  const t2 = t * t, t3 = t2 * t;
+  const h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t, h01 = -2 * t3 + 3 * t2, h11 = t3 - t2;
+  for (let j = 1; j < k1.length; j++) {
+    const m1 = (k2[j] - k0[j]) / (g0 + g1), m2 = (k3[j] - k1[j]) / (g1 + g2);
+    out[j - 1] = h00 * k1[j] + h10 * g1 * m1 + h01 * k2[j] + h11 * g1 * m2;
+  }
+  return out;
+}
+
+// The breaststroke along the surface, as swimmers are taught it (and as it
+// looks from the side): out of the glide the hands press out wide; they sweep
+// down and in under the chest — the head and shoulders rise for the breath,
+// the hips sink — meet under the chin and shoot forward together, just under
+// the surface, while the heels come up to the seat, knees apart; then the
+// frog kick whips the feet out and back together and the body lunges long and
+// flat into the glide. Only the head, and the shoulders at the breath, show
+// above the water.
+//   BODY: u, the body's angle above level (degrees), sink (hips drop at the
+//   breath), the back's arch; the hands as seen from the side (reach forward
+//   and height, from the shoulder, in arm lengths of 0.43), how wide (spread)
+//   and the elbows' bend
+const STROKE_BODY = [
+  [0.00, 11, 0.000, 0.00, 0.425, -0.07, -0.10, 0.05],
+  [0.15, 13, 0.000, 0.00, 0.37, -0.09, 0.24, 0.2],
+  [0.28, 20, -0.010, -0.05, 0.24, -0.24, 0.16, 0.85],
+  [0.38, 25, -0.030, -0.10, 0.12, -0.18, -0.10, 1],
+  [0.46, 23, -0.030, -0.08, 0.19, -0.11, -0.12, 0.8],
+  [0.56, 15, -0.015, -0.02, 0.42, -0.075, -0.10, 0.1],
+  [0.78, 10, 0.005, 0.00, 0.43, -0.07, -0.10, 0.05],
+];
+//   LEGS: u, the feet (forward, up: the heels drawn up to the seat, in 2D leg
+//   units) and how far apart
+const STROKE_LEGS = [
+  [0.00, 0, 0, -0.05],
+  [0.26, -0.004, -0.02, -0.03],
+  [0.38, -0.03, -0.12, 0.06],
+  [0.47, -0.042, -0.17, 0.11],
+  [0.55, -0.03, -0.11, 0.21],
+  [0.63, -0.008, -0.03, 0.14],
+  [0.70, 0, 0, -0.05],
+];
+const _sb = [], _sl = [];
+/** The body-frame hand target for a hand at (fwd, up) from the shoulder, seen from the side, with the body turned face-down by r. */
+const sideHand = (r, fwd, up) => [fwd * Math.cos(r) - up * Math.sin(r), -(fwd * Math.sin(r) + up * Math.cos(r))];
+
+/**
  * Swimming. The horizontal strokes turn the whole body face-down (P.r), so an
  * arm "overhead" in the body's frame reaches forward through the water.
  *   tread: upright, sculling hands, egg-beater legs (a rest at the surface)
- *   crawl: along the surface: a breaststroke, head up (as in first person)
+ *   crawl: along the surface: the breaststroke (above), head up
  *   dive: underwater breaststroke (both arms sweep, a frog kick), tipping with the dive
  *   float: hanging in the water, slow sculling
  *   fish: a dolphin kick, arms along the sides, fast and smooth (Fish-Men swim
@@ -575,20 +635,22 @@ function activityPose(P, act, t) {
  *   sink: a Devil Fruit user whose strength has gone, limp and going down
  */
 function swimPose(P, kind, t, dir) {
-  P.wF = null; P.wB = null; P.b = [0, 0]; P.l = 0;
+  P.wF = null; P.wB = null; P.b = [0, 0]; P.l = 0; P.z = 0; P.legSpread = 0;
   switch (kind) {
     case 'crawl': {
-      // (the stroke along the surface is a breaststroke, in step with the
-      // first-person arms: reach forward together, sweep wide and back, tuck
-      // in under the chin; the frog kick drives as the arms recover. The head
-      // stays up, looking where you're going.)
-      const w = t * 3.6, s = Math.sin(w), c = Math.cos(w);
-      P.hF = [0.2 + 0.14 * c, -0.44 + 0.34 * Math.max(0, s)]; P.hB = P.hF.slice();
-      P.eF = 0.55; P.eB = 0.55; P.hand = s < -0.2 ? 'relaxed' : 'flat'; P.handB = P.hand;
-      P.spread = 0.04 + 0.24 * Math.max(0, s);
-      const kick = Math.max(0, -s);
-      P.fF = [0.07 * kick, -0.2 * kick]; P.fB = [0.07 * kick, -0.2 * kick];
-      P.r = 1.12 + 0.05 * s; P.ht = 0.42;
+      // (in step with the first-person arms: one stroke every 2π/3.6 s)
+      const u = (t * 3.6) / TAU;
+      const [deg, sink, arch, fwd, up, spread, elbow] = loopTrack(STROKE_BODY, u, _sb);
+      const [fx, fy, legs] = loopTrack(STROKE_LEGS, u, _sl);
+      const r = Math.PI / 2 - deg * Math.PI / 180;
+      P.r = r; P.l = arch; P.z = sink;
+      P.hF = sideHand(r, fwd, up); P.hB = P.hF.slice();
+      P.eF = elbow; P.eB = elbow; P.spread = spread;
+      P.hand = 'flat'; P.handB = 'flat';
+      P.fF = [fx, fy]; P.fB = [fx, fy]; P.legSpread = legs;
+      // the head up, looking ahead over the water (its axis some 35° off
+      // upright, whatever the body's doing)
+      P.ht = 0.61 - r - arch;
       break;
     }
     case 'dive': {

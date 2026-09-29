@@ -11,6 +11,7 @@ import './lighting.js'; // cheaper point lights and shadow filtering (also shade
 import { Post } from './post.js';
 import { TerrainManager , CTIME } from './terrain3d.js';
 import { waterLevel } from './height.js';
+import { swellAt } from './swell.js';
 import { Water } from './water3d.js';
 import { Sky } from './sky3d.js';
 import { CameraRig } from './camera3d.js';
@@ -1029,9 +1030,11 @@ export class Renderer3D {
       else if (a.seaCreature) gh = Math.max(-(a.depth || 0), this.terrain.terrainAt(a.x, a.y) + 0.35);
       else if (a.inWater) {
         // afloat with the head out, stretched out along the surface when swimming,
-        // or deeper when diving (and standing on the bottom in the shallows)
-        const flat = (a.moving || a.under || a.gills) && !(a.fruit && !a.gills);
-        gh = waterLevel(this.game.world, a.x, a.y) - (a.depth || 0) - (flat ? 0.95 : 1.3) * (a.look?.scale || 1);
+        // upright treading water, or deeper when diving (and standing on the
+        // bottom in the shallows): see Actor.swimSink
+        gh = waterLevel(this.game.world, a.x, a.y) - (a.depth || 0) - (a.swimSink ? a.swimSink() : 1.3 * (a.look?.scale || 1));
+        // (riding the swell, as the water's drawn: less of it deeper down)
+        gh += swellAt(a.x, a.y) * Math.max(0, 1 - (a.depth || 0) / 1.5);
         // (a Devil Fruit user fighting to keep their head up bobs and splutters)
         if (a.fruit && !a.gills && !a.sinking) gh += Math.sin(env.time * 5.5 + a.x * 3) * 0.09;
         gh = Math.max(gh, this.terrain.terrainAt(a.x, a.y));

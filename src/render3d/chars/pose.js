@@ -185,6 +185,7 @@ export function rigOptions(a, pose, P, o = {}) {
   if (pose.state === 'hurt') o.tiltAdd = -0.25;
   if (pose.swimming && (pose.swim === 'tread' || !pose.swim)) o.leanAdd = 0.2;
   if (pose.swimming && P.spread) o.spread = P.spread;
+  if (pose.swimming && P.legSpread) o.legSpread = P.legSpread; // (the frog kick's knees and feet apart)
   if (pose.swimming) o.walkRel = null; // the legs kick, they don't walk
   o.roll = 0;
   o.lift = ((P.z || 0) + (pose.z || 0)) * 1.3;

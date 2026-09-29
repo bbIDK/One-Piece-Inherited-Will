@@ -7,41 +7,11 @@
 // glance. It also colours the other "liquids": the Skypiea cloud sea, lava,
 // acid.
 import * as THREE from 'three';
+import { SWELL_GLSL, swellAmp, setSwell } from './swell.js';
 
-// The wind swells, shared by both shaders (the vertices move with them; the
-// pixels shade with them, so the level-of-detail rings of the disc never show
-// as seams). Three trains of waves, each gathered into groups that come and
-// go across the sea, their crests gently bent, so from high up they don't
-// line up into a repeating grid.
-const SWELL = /* glsl */`
-  float sHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float sNoise(vec2 p) {
-    vec2 i = floor(p), f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(sHash(i), sHash(i + vec2(1, 0)), u.x), mix(sHash(i + vec2(0, 1)), sHash(i + vec2(1, 1)), u.x), u.y);
-  }
-  // two octaves, rotated against each other (no grid-aligned blobs)
-  float sFbm(vec2 p) {
-    float a = sNoise(p);
-    p = mat2(0.8, -0.6, 0.6, 0.8) * p * 2.03 + 17.3;
-    return a * 0.64 + sNoise(p) * 0.36;
-  }
-  float swells(vec2 p, float t, out vec2 slope) {
-    const vec2 D1 = vec2(0.96, 0.28), D2 = vec2(-0.37, 0.93), D3 = vec2(0.75, -0.66);
-    const float K1 = 0.2856, K2 = 0.4833, K3 = 0.7854;       // 22 m, 13 m, 8 m
-    const float W1 = 1.673, W2 = 2.177, W3 = 2.774;         // deep-water speeds
-    // bent crests
-    vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0;
-    // wave groups
-    float g1 = 0.35 + 0.9 * sFbm(p * 0.011 + vec2(t * 0.02, 0.0));
-    float g2 = 0.3 + 0.9 * sFbm(p * 0.017 + 31.0 - vec2(0.0, t * 0.025));
-    float g3 = 0.3 + 0.9 * sFbm(p * 0.026 + 57.0);
-    float a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1;
-    float h = sin(a1) * g1 + sin(a2) * 0.6 * g2 + sin(a3) * 0.35 * g3;
-    slope = (D1 * K1 * cos(a1) * g1 + D2 * K2 * cos(a2) * 0.6 * g2 + D3 * K3 * cos(a3) * 0.35 * g3) / 1.95;
-    return h / 1.95;
-  }
-`;
+// The wind swells (see swell.js: the same waves are worked out there for the
+// things that float on them)
+const SWELL = SWELL_GLSL;
 
 const VERT = /* glsl */`
   uniform vec2 uOrigin;
@@ -493,7 +463,8 @@ export class Water {
     u.uStorm.value = env.storm;
     // calm swells on a fine day, heavy ones in a storm; still water indoors and under the sea
     const zone = u.uZone.value;
-    u.uAmp.value = zone >= 2 ? 0 : 0.14 + env.storm * 0.34;
+    u.uAmp.value = swellAmp(env.storm, zone);
+    setSwell(env.time, u.uAmp.value, this.world, ox, oy);
     if (sunDir) u.uSunDir.value.copy(sunDir);
     if (sunCol) u.uSunCol.value.copy(sunCol);
     if (sky) u.uSky.value.copy(sky);

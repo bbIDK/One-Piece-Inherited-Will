@@ -36,6 +36,36 @@ export const scenarios = {
       }
     },
   },
+  // a strip of frames, for looking at motion: --js=<file> sets the scene up and
+  // returns { frames, dt, keys?, each? } — `each` is a function body run before
+  // every frame (g, OP and the frame number i); the frames are shot in a row
+  // (lay them out on one sheet to look at them together). The live loop is
+  // held meanwhile: a screenshot takes seconds, and the game would run on
+  // through it, so the frames wouldn't be dt apart.
+  film: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => window.OP.quickStart('human'));
+      await step(page, 0.2);
+      const body = readFileSync(String(args.js), 'utf8');
+      const cfg = await page.evaluate((body) => { const g = window.OP.game, OP = window.OP; return new Function('g', 'OP', body)(g, OP); }, body);
+      console.log('film', JSON.stringify({ frames: cfg.frames, dt: cfg.dt, keys: cfg.keys }));
+      await page.evaluate(() => { window.OP.hold = true; });
+      for (const k of cfg.keys || []) await page.evaluate((k) => window.OP.key(k, true), k);
+      for (let i = 0; i < cfg.frames; i++) {
+        const note = await page.evaluate(({ dt, each, i }) => {
+          const g = window.OP.game, OP = window.OP;
+          const r = each ? new Function('g', 'OP', 'i', each)(g, OP, i) : null;
+          OP.step(dt);
+          return r;
+        }, { dt: cfg.dt, each: cfg.each || null, i });
+        if (note) console.log(`f${i}`, typeof note === 'string' ? note : JSON.stringify(note));
+        await snap(`f${String(i).padStart(2, '0')}`);
+      }
+      for (const k of cfg.keys || []) await page.evaluate((k) => window.OP.key(k, false), k);
+    },
+  },
   probe: {
     async run(page, snap, args) {
       await page.evaluate(() => localStorage.clear());

@@ -22,6 +22,7 @@ import { createViewmodel } from './chars/viewmodel.js';
 import { holdItem, heldSize } from './chars/helditem.js';
 import { currentLook, weaponOf, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
 import { shipBob, pitchRise } from '../world/hull.js';
+import { WakeTrail } from './wake3d.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -111,6 +112,17 @@ class ActorView {
       this.root.position.y = this.smY;
     }
     this.wetY = wet;
+    // swimming along the surface: a faint V of foam spreading back from the
+    // shoulders (as a swimmer leaves one — not a string of rings)
+    const swimming = !helm && a.inWater && !a.under && a.moving && !(a.fruit && !a.gills);
+    if (swimming || this.wake) {
+      const v3 = ctx.game?.view3d, sc = a.look?.scale || 1;
+      if (!this.wake) this.wake = new WakeTrail({ n: 26, life: 2.4, every: 0.09, y: 0.035, grain: 0.9, drift: 0.5 });
+      if (this.root.parent && this.wake.mesh.parent !== this.root.parent) this.root.parent.add(this.wake.mesh);
+      const sp = Math.hypot(a.vx || 0, a.vy || 0);
+      const src = swimming && sp > 0.4 ? { x: a.x + Math.cos(a.facing) * 0.3 * sc, y: a.y + Math.sin(a.facing) * 0.3 * sc, h: Math.atan2(a.vy, a.vx), sp } : null;
+      if (v3 && ctx.world) this.wake.update(src, env.time, v3.ox, v3.oy, ctx.world, (q, age) => [(0.2 + age * 1.15) * sc, Math.pow(1 - age, 1.8) * 0.45 * Math.min(1, q.sp / 2)]);
+    }
     const cam = ctx.camera;
     const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
     // (the third-person camera pressed right up behind your head — your back
@@ -510,6 +522,7 @@ class ActorView {
 
   dispose() {
     this.model.dispose();
+    this.wake?.dispose();
     this.label?.dispose();
     this.aura?.dispose();
     this.backFlame?.dispose();

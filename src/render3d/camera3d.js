@@ -10,6 +10,7 @@ import { interiorRect, heightsOf } from '../world/interiors.js';
 import { helmPoint } from './ships3d.js';
 import { shipBob, pitchRise, shipDims, rowLean } from '../world/hull.js';
 import { waterLevel } from './height.js';
+import { swellAt } from './swell.js';
 
 const TAU = Math.PI * 2;
 
@@ -312,7 +313,7 @@ export class CameraRig {
       this.seaPitch = (s.pitch || 0) * Math.cos(this.yaw - s.heading);
     } else if (p.inWater) {
       // the head just out of the water — or under it, diving (never through the sea floor)
-      gh = waterLevel(game.world, p.x, p.y) - (p.depth || 0) - 0.2; eyeH = 0.55;
+      gh = waterLevel(game.world, p.x, p.y) - (p.depth || 0) - 0.2 + swellAt(p.x, p.y) * Math.max(0, 1 - (p.depth || 0) / 1.5); eyeH = 0.55;
       const floor = game.seaDepth ? -game.seaDepth(p.x, p.y) : -99;
       if (gh + eyeH < floor + 0.3) gh = floor + 0.3 - eyeH;
     }
