@@ -7,7 +7,7 @@
 import { prof } from '../core/prof.js';
 import * as THREE from 'three';
 import { FOG } from './fog.js'; // the atmospheric fog shader chunks (before any material compiles)
-import './lighting.js'; // cheaper point lights and shadow filtering (also shader chunks)
+import './lighting.js'; // cheaper point lights (also shader chunks; the sun's shadows are in sunshadow.js)
 import { Post } from './post.js';
 import { TerrainManager , CTIME } from './terrain3d.js';
 import { waterLevel } from './height.js';
@@ -425,10 +425,8 @@ export class Renderer3D {
     this.terrain.update(ox, oy);
     prof('r.terrain', t0); t0 = performance.now();
     CTIME.value = env.time;
-    // the shadow camera follows the player
-    const gh = this.ground(ox, oy);
-    this.sky.sun.target.position.set(0, gh, 0);
-    this.sky.sun.position.y += gh;
+    // the sun's shadow map follows you, reaching out ahead the way you look
+    this.sky.shadowAt(0, this.rig.footY ?? this.ground(ox, oy), 0, Math.cos(this.rig.yaw), Math.sin(this.rig.yaw), ox, oy);
 
     this.updateProps(game, ox, oy, env, sailing);
     this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
@@ -571,8 +569,7 @@ export class Renderer3D {
     this.sky.mesh.position.copy(cam.position);
     this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
     this.terrain.update(ox, oy);
-    this.sky.sun.target.position.set(0, gh, 0);
-    this.sky.sun.position.y += gh;
+    this.sky.shadowAt(0, gh, 0, Math.cos(yaw), Math.sin(yaw), ox, oy);
     this.updateProps(game, ox, oy, env, true);
     this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
     this.forest.aim(camYaw3);

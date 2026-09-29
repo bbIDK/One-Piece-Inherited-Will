@@ -2,6 +2,7 @@
 // all driven by the game's clock and weather.
 import * as THREE from 'three';
 import { FOG } from './fog.js';
+import { SunShadow } from './sunshadow.js';
 
 const VERT = /* glsl */`
   varying vec3 vDir;
@@ -119,11 +120,8 @@ export class Sky {
 
     this.sun = new THREE.DirectionalLight(0xffffff, 2.2);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
-    const sc = this.sun.shadow.camera;
-    sc.left = -40; sc.right = 40; sc.top = 40; sc.bottom = -40; sc.near = 1; sc.far = 260;
-    this.sun.shadow.bias = -0.0006;
-    this.sun.shadow.normalBias = 0.04;
+    this.sun.shadow = new SunShadow();
+    this.lightDir = new THREE.Vector3(0, 1, 0); // toward the sun by day, the moon by night
     scene.add(this.sun);
     scene.add(this.sun.target);
     this.hemi = new THREE.HemisphereLight(0xbfdcff, 0x6b5a3a, 1.1);
@@ -180,11 +178,10 @@ export class Sky {
     this.horizon.setRGB(...hor);
     this.top.setRGB(...top);
 
-    // lighting: the sun by day, a cool moon by night
+    // lighting: the sun by day, a cool moon by night (the light itself is
+    // placed with its shadow map, round you: see shadowAt)
     const amb = env.ambient || [1, 1, 1];
-    const lit = this.sunDir.y > 0 ? this.sunDir : moon;
-    this.sun.position.copy(lit).multiplyScalar(120);
-    this.sun.target.position.set(0, 0, 0);
+    this.lightDir.copy(this.sunDir.y > 0 ? this.sunDir : moon);
     this.sun.intensity = (this.sunDir.y > 0 ? 2.4 * Math.min(1, day + 0.15) : 0.5) * (1 - env.storm * 0.55) * (zone === 3 ? 0.25 : zone === 2 ? 0.6 : 1);
     this.sun.color.setRGB(this.sunDir.y > 0 ? 1 : 0.6, this.sunDir.y > 0 ? 0.95 - dusk * 0.2 : 0.7, this.sunDir.y > 0 ? 0.88 - dusk * 0.35 : 1);
     this.hemi.color.setRGB(amb[0] * 0.8, amb[1] * 0.85, amb[2] * 0.95);
@@ -214,5 +211,14 @@ export class Sky {
     FOG.fogSunDir.value.copy(this.sunDir.y > -0.05 ? this.sunDir : moon);
     const glow = (this.sunDir.y > -0.05 ? 1 : 0.25) * (1 - env.storm * 0.8) * (zone >= 2 ? 0.3 : 1);
     FOG.fogSunColor.value.copy(this.horizon).lerp(this.sunCol, 0.75 * glow).multiplyScalar(1 + 0.25 * glow);
+  }
+
+  /**
+   * Places the sun (and its shadow map) round you: (x, y, z) where you stand
+   * in the view's frame, (fx, fz) the way you look along the ground, (ox, oy)
+   * where the view's frame sits in the world. See SunShadow.follow.
+   */
+  shadowAt(x, y, z, fx, fz, ox, oy) {
+    this.sun.shadow.follow(this.sun, this.lightDir, x, y, z, fx, fz, ox, oy);
   }
 }

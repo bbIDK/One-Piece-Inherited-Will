@@ -34,7 +34,10 @@ simulation uses. Click the game to capture the mouse and look around (Esc
 frees it). **V** switches between first and third person (the mouse wheel
 sets the third-person distance). In first person your own body is there:
 look down and you see your chest, your legs and your feet walking, and your
-shadow is whole. Settings has mouse sensitivity, invert-Y,
+shadow is whole. Shadows have clean, smooth edges: the sun's shadow map is
+fine close to you (a texel every centimetre or so), coarser farther off, and
+holds still on the world as you move, so edges neither stair-step nor crawl.
+Settings has mouse sensitivity, invert-Y,
 field of view, view bobbing, a fast graphics mode, a **render distance**
 (in 32 m chunks, like Minecraft's: 4 to 24, 12 by default; at sea you see
 half as far again, and a haze closes in at the edge), and (on by default) a

@@ -32450,23 +32450,6 @@ void main() {
     const gated = body.replace(from, "if ( pointLight.color.r + pointLight.color.g + pointLight.color.b > 0.0 ) {\n		" + from).replace(to, to + "\n		}");
     return chunk.slice(0, a) + gated + chunk.slice(b);
   });
-  patch("shadowmap_pars_fragment", "the soft shadow filter", (chunk) => {
-    const a = chunk.indexOf("#elif defined( SHADOWMAP_TYPE_PCF_SOFT )");
-    const b = chunk.indexOf("#elif defined( SHADOWMAP_TYPE_VSM )", a);
-    if (a < 0 || b < 0) return chunk;
-    return chunk.slice(0, a) + `#elif defined( SHADOWMAP_TYPE_PCF_SOFT )
-
-			vec2 texelSize = vec2( 1.0 ) / shadowMapSize;
-			vec2 uv = shadowCoord.xy;
-			vec2 f = fract( uv * shadowMapSize + 0.5 );
-			uv -= f * texelSize;
-			shadow = mix(
-				mix( texture2DCompare( shadowMap, uv, shadowCoord.z ), texture2DCompare( shadowMap, uv + vec2( texelSize.x, 0.0 ), shadowCoord.z ), f.x ),
-				mix( texture2DCompare( shadowMap, uv + vec2( 0.0, texelSize.y ), shadowCoord.z ), texture2DCompare( shadowMap, uv + texelSize, shadowCoord.z ), f.x ),
-				f.y );
-
-		` + chunk.slice(b);
-  });
 
   // node_modules/three/examples/jsm/shaders/CopyShader.js
   var CopyShader = {
@@ -37133,6 +37116,131 @@ void main() {
     }
   };
 
+  // src/render3d/sunshadow.js
+  var SIZE = 2048;
+  var NEAR = 12;
+  var RATIO = 4;
+  var AHEAD = 0.35;
+  var DIST = 120;
+  var DEPTH = 260;
+  var BLEND = 1;
+  var FADE = 4;
+  var BIAS = 0.06;
+  var NORMAL_BIAS = 0.02;
+  function patch2(name, find, fn) {
+    const chunk = ShaderChunk[name];
+    const out = fn(chunk);
+    if (out === chunk) console.warn(`sunshadow: ${find} not found in ${name}; left as it is`);
+    else ShaderChunk[name] = out;
+  }
+  var GLSL = (
+    /* glsl */
+    `
+	const float SUN_RATIO = ${RATIO.toFixed(1)};
+	const float SUN_BLEND = ${(BLEND / (2 * NEAR)).toFixed(5)};
+	const float SUN_FADE = ${(FADE / (2 * NEAR * RATIO)).toFixed(5)};
+
+	float sunShadowRead( sampler2D map, vec2 uv, float z ) {
+		return step( z, unpackRGBAToDepth( texture2D( map, uv ) ) );
+	}
+
+	// One cascade of the sun's map (x0: where it starts across the map, which
+	// is two cascades wide), filtered with a quadratic B-spline over the 3\xD73
+	// texels around uv: the shadow's edge becomes a smooth curve ~2 texels wide.
+	float sunShadowCascade( sampler2D map, vec2 size, vec2 uv, float z, float x0 ) {
+		vec2 p = uv * size - 0.5;
+		vec2 c = floor( p + 0.5 );
+		vec2 f = p - c;
+		vec2 wa = 0.5 * ( 0.5 - f ) * ( 0.5 - f );
+		vec2 wb = 0.75 - f * f;
+		vec2 wc = 0.5 * ( 0.5 + f ) * ( 0.5 + f );
+		vec2 px = vec2( 0.5, 1.0 ) / size;
+		vec2 o = vec2( x0, 0.0 ) + ( c + 0.5 ) * px;
+		float r0 = wa.x * sunShadowRead( map, o - px, z ) + wb.x * sunShadowRead( map, o + vec2( 0.0, - px.y ), z ) + wc.x * sunShadowRead( map, o + vec2( px.x, - px.y ), z );
+		float r1 = wa.x * sunShadowRead( map, o + vec2( - px.x, 0.0 ), z ) + wb.x * sunShadowRead( map, o, z ) + wc.x * sunShadowRead( map, o + vec2( px.x, 0.0 ), z );
+		float r2 = wa.x * sunShadowRead( map, o + vec2( - px.x, px.y ), z ) + wb.x * sunShadowRead( map, o + vec2( 0.0, px.y ), z ) + wc.x * sunShadowRead( map, o + px, z );
+		return wa.y * r0 + wb.y * r1 + wc.y * r2;
+	}
+
+	float getSunShadow( sampler2D map, vec2 size, float intensity, float bias, vec4 coord ) {
+		vec3 c = coord.xyz / coord.w;
+		vec2 d = abs( c.xy - 0.5 );
+		float edge = max( d.x, d.y ); // 0.5 at the coarse cascade's edge
+		float margin = 2.0 / size.x; // (the filter reaches 1.5 texels out)
+		if ( edge > 0.5 - margin || c.z > 1.0 ) return 1.0;
+		float k = smoothstep( 0.5 - SUN_BLEND, 0.5 - margin, edge * SUN_RATIO ); // 0: the fine cascade, 1: the coarse
+		float s = 1.0;
+		if ( k < 1.0 ) s = sunShadowCascade( map, size, ( c.xy - 0.5 ) * SUN_RATIO + 0.5, c.z + bias, 0.0 );
+		if ( k > 0.0 ) s = mix( s, sunShadowCascade( map, size, c.xy, c.z + bias * SUN_RATIO, 0.5 ), k );
+		s = mix( s, 1.0, smoothstep( 0.5 - SUN_FADE, 0.5 - margin, edge ) );
+		return mix( 1.0, s, intensity );
+	}
+`
+  );
+  patch2("shadowmap_pars_fragment", "the directional shadow lookup", (chunk) => {
+    const at4 = chunk.indexOf("	float getShadow(");
+    if (at4 < 0) return chunk;
+    return chunk.slice(0, at4) + `#if NUM_DIR_LIGHT_SHADOWS > 0
+${GLSL}
+#endif
+
+` + chunk.slice(at4);
+  });
+  patch2("lights_fragment_begin", "the directional shadow", (chunk) => chunk.replace(
+    "getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] )",
+    "getSunShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, vDirectionalShadowCoord[ i ] )"
+  ));
+  var DirectionalLightShadow2 = new DirectionalLight().shadow.constructor;
+  function toCoarse(m) {
+    const e = m.elements;
+    for (const i of [0, 4, 8, 1, 5, 9]) e[i] /= RATIO;
+    e[12] = (e[12] - 0.5) / RATIO + 0.5;
+    e[13] = (e[13] - 0.5) / RATIO + 0.5;
+  }
+  var SunShadow = class extends DirectionalLightShadow2 {
+    constructor() {
+      super();
+      this.mapSize.set(SIZE, SIZE);
+      this._frameExtents.set(2, 1);
+      this._viewportCount = 2;
+      this._viewports = [new Vector4(0, 0, 1, 1), new Vector4(1, 0, 1, 1)];
+      this.camera.near = 1;
+      this.camera.far = DEPTH;
+      this.bias = -BIAS / (DEPTH - 1);
+      this.normalBias = NORMAL_BIAS;
+    }
+    /** Each cascade is drawn through its own window; the shaders read both through the coarse one's matrix. */
+    updateMatrices(light, vp = 0) {
+      const r = vp ? NEAR * RATIO : NEAR, cam = this.camera;
+      cam.left = cam.bottom = -r;
+      cam.right = cam.top = r;
+      cam.updateProjectionMatrix();
+      super.updateMatrices(light);
+      if (!vp) toCoarse(this.matrix);
+    }
+    /**
+     * Centres the map a little ahead of (x, y, z) — where you stand, in the
+     * view's frame — along (fx, fz), the way you look; then moves it onto whole
+     * texels of the coarse cascade, counted in the world (ox, oy: where the
+     * view's frame sits in the world), so what's in the world keeps to the
+     * same texels however you move. dir: toward the light.
+     */
+    follow(light, dir, x, y, z, fx, fz, ox, oy) {
+      let cx = x + fx * NEAR * AHEAD, cy = y, cz = z + fz * NEAR * AHEAD;
+      const h2 = Math.hypot(dir.x, dir.z) || 1;
+      const rx = dir.z / h2, rz = -dir.x / h2;
+      const ux = dir.y * rz, uy = dir.z * rx - dir.x * rz, uz = -dir.y * rx;
+      const t = 2 * NEAR * RATIO / SIZE;
+      const X2 = (cx + ox) * rx + (cz + oy) * rz, Y2 = (cx + ox) * ux + cy * uy + (cz + oy) * uz;
+      const dX = Math.round(X2 / t) * t - X2, dY = Math.round(Y2 / t) * t - Y2;
+      cx += rx * dX + ux * dY;
+      cy += uy * dY;
+      cz += rz * dX + uz * dY;
+      light.target.position.set(cx, cy, cz);
+      light.position.set(cx + dir.x * DIST, cy + dir.y * DIST, cz + dir.z * DIST);
+    }
+  };
+
   // src/render3d/sky3d.js
   var VERT2 = (
     /* glsl */
@@ -37261,16 +37369,8 @@ void main() {
       scene.add(this.mesh);
       this.sun = new DirectionalLight(16777215, 2.2);
       this.sun.castShadow = true;
-      this.sun.shadow.mapSize.set(2048, 2048);
-      const sc = this.sun.shadow.camera;
-      sc.left = -40;
-      sc.right = 40;
-      sc.top = 40;
-      sc.bottom = -40;
-      sc.near = 1;
-      sc.far = 260;
-      this.sun.shadow.bias = -6e-4;
-      this.sun.shadow.normalBias = 0.04;
+      this.sun.shadow = new SunShadow();
+      this.lightDir = new Vector3(0, 1, 0);
       scene.add(this.sun);
       scene.add(this.sun.target);
       this.hemi = new HemisphereLight(12573951, 7035450, 1.1);
@@ -37332,9 +37432,7 @@ void main() {
       this.horizon.setRGB(...hor);
       this.top.setRGB(...top);
       const amb = env.ambient || [1, 1, 1];
-      const lit2 = this.sunDir.y > 0 ? this.sunDir : moon;
-      this.sun.position.copy(lit2).multiplyScalar(120);
-      this.sun.target.position.set(0, 0, 0);
+      this.lightDir.copy(this.sunDir.y > 0 ? this.sunDir : moon);
       this.sun.intensity = (this.sunDir.y > 0 ? 2.4 * Math.min(1, day + 0.15) : 0.5) * (1 - env.storm * 0.55) * (zone === 3 ? 0.25 : zone === 2 ? 0.6 : 1);
       this.sun.color.setRGB(this.sunDir.y > 0 ? 1 : 0.6, this.sunDir.y > 0 ? 0.95 - dusk * 0.2 : 0.7, this.sunDir.y > 0 ? 0.88 - dusk * 0.35 : 1);
       this.hemi.color.setRGB(amb[0] * 0.8, amb[1] * 0.85, amb[2] * 0.95);
@@ -37359,6 +37457,14 @@ void main() {
       FOG.fogSunDir.value.copy(this.sunDir.y > -0.05 ? this.sunDir : moon);
       const glow3 = (this.sunDir.y > -0.05 ? 1 : 0.25) * (1 - env.storm * 0.8) * (zone >= 2 ? 0.3 : 1);
       FOG.fogSunColor.value.copy(this.horizon).lerp(this.sunCol, 0.75 * glow3).multiplyScalar(1 + 0.25 * glow3);
+    }
+    /**
+     * Places the sun (and its shadow map) round you: (x, y, z) where you stand
+     * in the view's frame, (fx, fz) the way you look along the ground, (ox, oy)
+     * where the view's frame sits in the world. See SunShadow.follow.
+     */
+    shadowAt(x, y, z, fx, fz, ox, oy) {
+      this.sun.shadow.follow(this.sun, this.lightDir, x, y, z, fx, fz, ox, oy);
     }
   };
 
@@ -70748,9 +70854,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       prof("r.terrain", t0);
       t0 = performance.now();
       CTIME.value = env.time;
-      const gh = this.ground(ox, oy);
-      this.sky.sun.target.position.set(0, gh, 0);
-      this.sky.sun.position.y += gh;
+      this.sky.shadowAt(0, this.rig.footY ?? this.ground(ox, oy), 0, Math.cos(this.rig.yaw), Math.sin(this.rig.yaw), ox, oy);
       this.updateProps(game, ox, oy, env, sailing);
       this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
       this.forest.aim(camYaw3);
@@ -70892,8 +70996,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.sky.mesh.position.copy(cam.position);
       this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
       this.terrain.update(ox, oy);
-      this.sky.sun.target.position.set(0, gh, 0);
-      this.sky.sun.position.y += gh;
+      this.sky.shadowAt(0, gh, 0, Math.cos(yaw), Math.sin(yaw), ox, oy);
       this.updateProps(game, ox, oy, env, true);
       this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
       this.forest.aim(camYaw3);
@@ -71759,7 +71862,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
 
   // src/render3d/groundcover.js
   var CELL4 = 16;
-  var NEAR = 22;
+  var NEAR2 = 22;
   var KINDS = ["grass", "flower", "fern", "pebble", "shell", "rock"];
   var REACH = { grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
   var MAXN = { grass: 5200, flower: 1400, fern: 1100, pebble: 1600, shell: 500, rock: 400 };
@@ -72000,8 +72103,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             if (a < 0.12) continue;
             put2("grass", x + a, y + b, a * 40, 0.7 + b * 0.7, grassTint(clim, col, hash7(x, y, 30 + q2)));
           }
-          const patch2 = vnoise2(x / 7, y / 7, 5);
-          const fp = t === T.FLOWERS ? 0.55 : t === T.SAKURA ? 0.25 : t === T.GRASS ? 0.015 + Math.max(0, patch2 - 0.62) * 1.1 : 0.02;
+          const patch3 = vnoise2(x / 7, y / 7, 5);
+          const fp = t === T.FLOWERS ? 0.55 : t === T.SAKURA ? 0.25 : t === T.GRASS ? 0.015 + Math.max(0, patch3 - 0.62) * 1.1 : 0.02;
           if (r1 < fp) {
             const pick5 = hash7(Math.floor(x / 7), Math.floor(y / 7), 6) * FLOWERS.length + (r2 < 0.3 ? 2 : 0);
             const f = clim === CLIMATE.SAKURA ? FLOWERS[2 + Math.floor(r2 * 2)] : FLOWERS[Math.floor(pick5) % FLOWERS.length];
@@ -72063,7 +72166,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           mat: coverMaterial(k),
           capNear: MAXN[k],
           capFar: MAXF[k],
-          near: NEAR,
+          near: NEAR2,
           wedges: WEDGES[k],
           pad: PAD[k],
           setup: (m) => {
@@ -72109,7 +72212,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > FILL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR / CELL4)) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR2 / CELL4)) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -72330,7 +72433,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var SWAY3 = { fan: 0.5, anemone: 0.7, kelp: 1, seagrass: 0.9 };
   var GLOW2 = { branch: 0.07, brain: 0.04, table: 0.05, fan: 0.08, tube: 0.06, anemone: 0.16, clam: 0.14, star: 0.06 };
   var STRIDE = 9;
-  var NEAR2 = 16;
+  var NEAR3 = 16;
   var PAD2 = { branch: 1, brain: 1, table: 1.5, fan: 1.2, tube: 1, anemone: 0.5, kelp: 1, seagrass: 0.5, boulder: 2, star: 0.3, clam: 0.8 };
   var WEDGES2 = { branch: 4, brain: 4, table: 1, fan: 4, tube: 1, anemone: 1, kelp: 4, seagrass: 8, boulder: 4, star: 1, clam: 1 };
   var CELL_BUDGET_MS = 2.5;
@@ -72638,7 +72741,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const depth = -terrain(x + 0.5, y + 0.5);
         if (!(depth > 0.45)) continue;
         const r1 = hash8(x, y, 101), r2 = hash8(x, y, 102), r3 = hash8(x, y, 103), r4 = hash8(x, y, 104);
-        const patch2 = vnoise3(x / 9, y / 9, 41), patch22 = vnoise3(x / 14, y / 14, 43);
+        const patch3 = vnoise3(x / 9, y / 9, 41), patch22 = vnoise3(x / 14, y / 14, 43);
         const reefTile = t === T.REEF;
         if (depth < 7 && !cold && patch22 > 0.42) {
           const n = patch22 > 0.6 ? 3 : 1;
@@ -72648,7 +72751,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             put2("seagrass", x + a, y + b, a * 40, 0.8 + b * 0.7, 1 + depth * 0.05, rgb([0.36 + b * 0.1, 0.56 + a * 0.08, 0.26]));
           }
         }
-        const reefK = reefTile ? 1.2 : reefy && depth > 0.8 && depth < 20 ? smooth6(0.36, 0.62, patch2) * (1 - smooth6(14, 20, depth)) * 1.4 : 0;
+        const reefK = reefTile ? 1.2 : reefy && depth > 0.8 && depth < 20 ? smooth6(0.36, 0.62, patch3) * (1 - smooth6(14, 20, depth)) * 1.4 : 0;
         if (reefK > 0) {
           for (let q2 = 0; q2 < 3; q2++) {
             const a = hash8(x, y, 130 + q2), b = hash8(x, y, 140 + q2), c = hash8(x, y, 150 + q2);
@@ -72699,7 +72802,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           mat: seabedMaterial(k),
           capNear: Math.ceil(MAX3[k] * 0.3),
           capFar: MAX3[k],
-          near: NEAR2,
+          near: NEAR3,
           wedges: WEDGES2[k],
           pad: PAD2[k],
           setup: (m) => {
@@ -72751,7 +72854,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > CELL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR2 / CELL5) + 1) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR3 / CELL5) + 1) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell2(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -126208,7 +126311,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   // src/game/loot.js
   var BODY_TIME = 120;
   var EMPTY_TIME = 25;
-  var FADE = 2;
+  var FADE2 = 2;
   function installLoot(game) {
     game.on("knockout", (a) => {
       if (lootable(a)) {
@@ -126319,7 +126422,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const limit = empty(a) ? EMPTY_TIME : BODY_TIME;
       if (a.bodyT > limit) {
         a.fading = true;
-        a.fadeAlpha = Math.max(0, 1 - (a.bodyT - limit) / FADE);
+        a.fadeAlpha = Math.max(0, 1 - (a.bodyT - limit) / FADE2);
         if (a.fadeAlpha <= 0) a.alive = false;
       }
     }
