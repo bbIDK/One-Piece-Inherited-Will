@@ -933,6 +933,7 @@ const quests = [
     stages: [
       { id: 'relics', desc: 'Search God Valley\'s remains: the Nobles\' hunting grounds (west), the drowned canyon town (east) and the Rocks longboat wreck (east shore).', goal: { type: 'flag', flag: 'wbGvRelics' } },
       { id: 'serpent', desc: 'Something nests in the drowned ravine. Sail out north of God Valley and slay it.', goal: { type: 'defeat', npc: 'wb_valley_king' },
+        where: (g) => { const s = g.surface.islands.find((i) => i.id === 'god_valley')?.spots?.valley_deep; return s && g.world === g.surface ? { x: s.x, y: s.y, place: 'The drowned ravine' } : null; },
         onStart: (ctx, g) => g.ui.banner('The Drowned Ravine', 'God Valley', 'The water north of the island is black and very deep. Something down there is circling.', 5) },
       { id: 'report', desc: 'Bring the three proofs to Old Coyote.' },
     ],

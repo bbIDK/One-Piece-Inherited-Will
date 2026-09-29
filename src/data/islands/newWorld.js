@@ -193,8 +193,9 @@ export const NEW_WORLD = [
       { name: 'Olive groves', tile: T.FARM, dx: -0.28, dy: 0.12, rx: 0.14, ry: 0.1 },
     ],
     paint: [
-      // the iron bridge to Green Bit (closed for 200 years because of the Fighting Fish)
-      { op: 'path', points: [[0.0, -86], [0.0, -150]], width: 4, tile: T.BRIDGE },
+      // the iron bridge to Green Bit (closed for 200 years because of the Fighting Fish),
+      // all the way across the channel to its gate on the island's south shore
+      { op: 'path', points: [[0.0, -86], [0.0, -405]], width: 4, tile: T.BRIDGE },
     ],
     towns: [
       {

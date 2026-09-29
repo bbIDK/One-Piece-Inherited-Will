@@ -340,18 +340,33 @@ export class TerrainManager {
     // (each wall block stands on the ground beside it: see HeightField.wallSpan)
     const spans = walls.length ? new Float32Array(walls.length) : null;
     for (let q = 0; q < walls.length; q += 2) { const s = this.hf.wallSpan(x0 + walls[q], y0 + walls[q + 1]); spans[q] = s[0]; spans[q + 1] = s[1]; }
+    // a bridge's deck is as high as the land it joins (see HeightField.span):
+    // its posts reach down to the water's bed from under it
+    const hf = this.hf;
+    const bridge = (q, list) => w.type(x0 + list[q], y0 + list[q + 1]) === T.BRIDGE;
+    const deckSpans = decks.length ? new Float32Array(decks.length) : null;
+    for (let q = 0; q < decks.length; q += 2) {
+      const top = bridge(q, decks) ? hf.deckTile(x0 + decks[q], y0 + decks[q + 1]) : DECK_Y;
+      deckSpans[q] = top - 0.22; deckSpans[q + 1] = top;
+    }
+    const postSpans = posts.length ? new Float32Array(posts.length) : null;
+    for (let q = 0; q < posts.length; q += 2) {
+      if (!bridge(q, posts)) { postSpans[q] = DECK_Y - 3.3; postSpans[q + 1] = DECK_Y - 0.1; continue; }
+      const x = x0 + posts[q] + 0.65, y = y0 + posts[q + 1] + 0.65;
+      postSpans[q] = Math.min(hf.terrain(x, y), DECK_Y - 1) - 0.4; postSpans[q + 1] = hf.deckAt(x, y) - 0.2;
+    }
     if (!full) {
       const m = farBoxes([
-        [decks, 1, 0.22, 1, DECK_Y - 0.11, 0x9a6a3c], [piers, 1, 0.26, 1, DOCK_Y - 0.13, 0x9a6a3c],
-        [posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, 0x5d4030, 0.15], [piles, 0.3, DOCK_Y + 2.74, 0.3, (DOCK_Y - 3.26) / 2, 0x5d4030],
+        [decks, 1, 0.22, 1, DECK_Y - 0.11, 0x9a6a3c, 0, deckSpans], [piers, 1, 0.26, 1, DOCK_Y - 0.13, 0x9a6a3c],
+        [posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, 0x5d4030, 0.15, postSpans], [piles, 0.3, DOCK_Y + 2.74, 0.3, (DOCK_Y - 3.26) / 2, 0x5d4030],
         [quayed, 1, DOCK_Y + 1.5, 1, (DOCK_Y - 1.5) / 2, 0xa39c90], [walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, 0x8a7f70, 0, spans],
       ]);
       if (m) root.add(m);
       return;
     }
-    if (decks.length) root.add(boxes(decks, 1, 0.22, 1, DECK_Y - 0.11, this.deckMat));
+    if (decks.length) root.add(deckBoxes(decks, x0, y0, (i, j) => w.type(i, j) === T.BRIDGE, (cx, cy) => hf.deckCorner(cx, cy), this.deckMat));
     if (piers.length) root.add(boxes(piers, 1, 0.26, 1, DOCK_Y - 0.13, this.deckMat));
-    if (posts.length) root.add(boxes(posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, this.postMat, 0.15));
+    if (posts.length) root.add(boxes(posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, this.postMat, 0.15, postSpans));
     if (walls.length) {
       const m = boxes(walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, this.wallMat, 0, spans);
       m.castShadow = true;
@@ -534,6 +549,45 @@ function boxes(list, sx, sy, sz, cy, mat, inset = 0, spans = null) {
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  geo.computeBoundingSphere();
+  const m = new THREE.Mesh(geo, mat);
+  m.receiveShadow = true;
+  return m;
+}
+
+/**
+ * Deck tiles (list: chunk-local [i, j] pairs), 0.22 m thick: a bridge's
+ * (isBridge(world tile x, y)) with its top at the deck's height at each
+ * corner (corner(x, y) → m), so it runs smoothly up or down from one bank to
+ * the other; any other (a sea-train's track, a boardwalk) level at DECK_Y.
+ */
+function deckBoxes(list, x0, y0, isBridge, corner, mat) {
+  const n = list.length / 2;
+  const base = new THREE.BoxGeometry(1, 0.22, 1);
+  const bp = base.attributes.position.array, bi = base.index.array;
+  const vc = bp.length / 3;
+  const pos = new Float32Array(n * bp.length);
+  const idx = new Uint32Array(n * bi.length);
+  const ch = new Float32Array(4);
+  for (let k = 0; k < n; k++) {
+    const i = list[k * 2], j = list[k * 2 + 1];
+    const wi = x0 + i, wj = y0 + j;
+    // (the corners: [x0z0, x1z0, x0z1, x1z1])
+    if (isBridge(wi, wj)) for (let c = 0; c < 4; c++) ch[c] = corner(wi + (c & 1), wj + (c >> 1));
+    else ch.fill(DECK_Y);
+    for (let v = 0; v < vc; v++) {
+      const sx = bp[v * 3] > 0 ? 1 : 0, sz = bp[v * 3 + 2] > 0 ? 1 : 0;
+      pos[(k * vc + v) * 3] = bp[v * 3] + i + 0.5;
+      pos[(k * vc + v) * 3 + 1] = ch[sx + sz * 2] + (bp[v * 3 + 1] > 0 ? 0 : -0.22);
+      pos[(k * vc + v) * 3 + 2] = bp[v * 3 + 2] + j + 0.5;
+    }
+    for (let q = 0; q < bi.length; q++) idx[k * bi.length + q] = bi[q] + k * vc;
+  }
+  base.dispose();
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  geo.computeVertexNormals();
   geo.computeBoundingSphere();
   const m = new THREE.Mesh(geo, mat);
   m.receiveShadow = true;

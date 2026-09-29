@@ -7,7 +7,8 @@
 // Quests of kind 'main' are the main story (see content/mainStory.js): one
 // at a time, and they can't be abandoned; any other quest can.
 import { addItem, earn, count } from './inventory.js';
-import { npcDef } from './npcs.js';
+import { npcDef, whereNPC, allNpcDefs } from './npcs.js';
+import { ZONES } from '../data/zones/index.js';
 import { persist } from './lineage.js';
 import { ITEMS } from '../data/items.js';
 import { ownsShip } from './fleet.js';
@@ -253,7 +254,14 @@ export class Quests {
     return isl?.spots?.[spotId] || null;
   }
 
-  /** Where the current objective of a quest is, for the map. */
+  /**
+   * Where the current objective of a quest is, for the compass, the tracker
+   * and the map: whoever the step is about (someone to beat or to talk to)
+   * where they stand — or, not about yet, where they'll be on the island they
+   * live on (which needn't be the quest's); else the place it names; else
+   * the island. An objective in another world (Skypiea, Fish-Man Island,
+   * Impel Down) shows the way there (or out of the one you're in).
+   */
   marker(id, depth = 0) {
     const s = this.state(id), d = DEFS.get(id);
     if (!s || s.done) return null;
@@ -264,19 +272,155 @@ export class Quests {
       const m = this.marker(g.quest, depth + 1);
       if (m) return { ...m, label: d.name };
     }
-    // (someone to talk to: where they stand, once they're about)
-    if (st?.npc) {
-      const a = this.game.actors.find((x) => x.alive && x.npcId === st.npc);
-      if (a) return { x: a.x, y: a.y, label: d.name, place: a.name, zone: this.game.world === this.game.surface ? null : this.game.world.id };
-    }
+    const who = this.whoFor(id, s.stage, st, g, d);
+    const live = who.length ? this.liveOf(who, d.name) : null;
+    if (live) return live;
     if (st?.where) { const w = st.where(this.game); if (w) return { ...w, label: d.name }; }
-    const island = g.island || st?.island || d.island;
-    let isl = island && this.game.surface.islands.find((i) => i.id === island);
-    let zone = null;
-    if (!isl && island && this.game.world !== this.game.surface) { isl = this.game.world.islands.find((i) => i.id === island); if (isl) zone = this.game.world.id; }
-    if (g.spot && isl?.spots?.[g.spot]) return { ...isl.spots[g.spot], label: d.name, place: isl.name, zone };
+    for (const n of who) {
+      const q = whereNPC(this.game, n);
+      if (!q) continue;
+      const m = q.island ? this.placeOf(q.island, null, d.name) : { ...q, label: d.name };
+      if (m) return m;
+    }
     if (g.type === 'reachXY') return { x: g.x, y: g.y, label: d.name, place: g.place };
-    if (isl) return { x: isl.x, y: isl.y, label: d.name, place: isl.name, zone };
-    return null;
+    return this.placeOf(g.island || st?.island || d.island, g.spot, d.name);
+  }
+
+  /** Who a step is about: someone to talk to, the foes to beat (those still to beat), or whoever its words name. */
+  whoFor(id, si, st, g, d) {
+    if (st?.npc) return [st.npc];
+    if (g.type === 'defeat') {
+      const ids = g.npc ? [g.npc] : g.any || [];
+      const c = this.char;
+      const left = ids.filter((n) => !(c?.defeated?.[n] > 0) && !c?.bosses?.includes(n));
+      return left.length ? left : ids;
+    }
+    if (g.type === 'reach' || g.type === 'reachXY' || g.type === 'quest') return [];
+    const n = this.named(id, si, st, d);
+    return n ? [n] : [];
+  }
+
+  /**
+   * The person a step's words send you to ("Return to Makino at Party's
+   * Bar", "Tell Hatchan at Takoyaki Hachi"): a named character in them —
+   * by their whole name, or a name of theirs nobody else has — preferring
+   * one from the quest's island, one the words send you to ("to X", "tell
+   * X"), one not just owning something ("X's"), then the first.
+   */
+  named(id, si, st, d) {
+    const key = `${id}:${si}`;
+    const C = this.namedC || (this.namedC = new Map());
+    if (C.has(key)) return C.get(key);
+    const text = st?.desc || '';
+    const home = st?.goal?.island || st?.island || d.island;
+    const defs = allNpcDefs();
+    if (!NAME_FREQ.size) {
+      // (a name counts once however many places the same person turns up; an island's or a town's name isn't a person's)
+      for (const n of new Set(defs.map((x) => x.name || ''))) for (const t of n.split(/\s+/)) NAME_FREQ.set(t, (NAME_FREQ.get(t) || 0) + 1);
+      for (const isl of this.allIslands()) for (const n of [isl.name, ...(isl.towns || []).map((t) => t.name)]) for (const t of String(n || '').split(/\s+/)) PLACE_WORDS.add(t);
+    }
+    const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let best = null;
+    for (const def of defs) {
+      if (!def.name) continue;
+      const parts = [def.name, ...def.name.split(/\s+/).filter((t) => t.length >= 3 && /^[A-Z]/.test(t) && !STOP.has(t) && !PLACE_WORDS.has(t) && NAME_FREQ.get(t) === 1 && t !== def.name)];
+      // (the first time the words name them other than as owning something:
+      // "Rika's rice ball" isn't about Rika — though "Franky's workshop" is where Franky is)
+      let at = Infinity;
+      parts.forEach((t, n) => {
+        const re = new RegExp(`\\b${esc(t)}\\b`, n === 0 && /\s/.test(t) ? 'gi' : 'g');
+        for (let m; (m = re.exec(text));) {
+          const rest = text.slice(m.index + t.length);
+          if (rest.startsWith("'s") && !THEIR_PLACE.test(rest)) continue;
+          if (m.index < at) at = m.index;
+          break;
+        }
+      });
+      if (at === Infinity) continue;
+      const sent = SEND_TO.test(text.slice(0, at));
+      // (someone from another island only if the words send you to them, and
+      // name their island or a town on it, or it's in the same sea)
+      if (def.island !== home && !(sent && (this.placeNamed(def.island, text) || this.sameSea(def.island, home)))) continue;
+      const score = (def.island === home ? 0 : 4e6) + (sent ? 0 : 2e6) + at;
+      if (!best || score < best.score) best = { id: def.id, score };
+    }
+    const v = best ? best.id : null;
+    C.set(key, v);
+    return v;
+  }
+
+  /** Every island, on the surface and in the zones (their records, or their data). */
+  allIslands() {
+    return [...(this.game.surface?.islands || []), ...Object.values(ZONES).flatMap((z) => z.islands || [])];
+  }
+
+  /** Are two islands in the same sea (or the same zone)? */
+  sameSea(a, b) {
+    const A = this.allIslands().find((i) => i.id === a), B = this.allIslands().find((i) => i.id === b);
+    if (!A || !B) return false;
+    const za = ZONE_OF.get(a) || null, zb = ZONE_OF.get(b) || null;
+    if (za || zb) return za === zb;
+    return (A.sea || A.def?.sea) === (B.sea || B.def?.sea);
+  }
+
+  /** Do these words name an island (or one of its towns)? */
+  placeNamed(islandId, text) {
+    const isl = this.allIslands().find((i) => i.id === islandId);
+    if (!isl) return false;
+    return [isl.name, ...(isl.towns || []).map((t) => t.name)].some((n) => n && text.includes(n));
+  }
+
+  /** The nearest of these people about in this world, as a marker (or null). */
+  liveOf(ids, label) {
+    const g = this.game, w = g.world, p = g.player;
+    let best = null, bd = Infinity;
+    for (const a of g.actors) {
+      if (!a.alive || !a.npcId || !ids.includes(a.npcId)) continue;
+      const dd = p ? w.distance(p.x, p.y, a.x, a.y) : 0;
+      if (dd < bd) { bd = dd; best = a; }
+    }
+    return best ? { x: best.x, y: best.y, label, place: best.name, zone: w === g.surface ? null : w.id } : null;
+  }
+
+  /** A place on an island (a spot, or the island), in this world — or the way to the world it's in. */
+  placeOf(islandId, spot, label) {
+    if (!islandId) return null;
+    const g = this.game, w = g.world, surf = g.surface;
+    const zone = ZONE_OF.get(islandId) || null;
+    if (zone ? w.id === zone : w === surf) {
+      const isl = w.islands.find((i) => i.id === islandId);
+      if (!isl) return null;
+      if (spot && isl.spots?.[spot]) return { ...isl.spots[spot], label, place: isl.name, zone };
+      return { x: isl.x, y: isl.y, label, place: isl.name, zone };
+    }
+    // (out of the world you're in first, then into the one it's in)
+    if (w !== surf) {
+      const e = ZONES[w.id]?.exits?.[0];
+      if (!e) return null;
+      if (e.x !== undefined) return { x: e.x, y: e.y, label, place: e.label, zone: w.id };
+      const s = w.islands.find((i) => i.id === e.island)?.spots?.[e.spot];
+      return s ? { x: s.x, y: s.y, label, place: e.label, zone: w.id } : null;
+    }
+    const way = WAY_IN[zone];
+    if (!way) return null;
+    const place = `The way to ${ZONES[zone]?.name || zone}`;
+    if (way.spot) for (const isl of surf.islands) { const s = isl.spots?.[way.spot]; if (s) return { x: s.x, y: s.y, label, place, zone: null }; }
+    const isl = way.island && surf.islands.find((i) => i.id === way.island);
+    return isl ? { x: isl.x, y: isl.y, label, place, zone: null } : null;
   }
 }
+
+// which world each island is in: a zone's id (Skypiea, Fish-Man Island,
+// Impel Down), or none for the surface; and where, on the surface, each
+// zone is entered
+const ZONE_OF = new Map();
+for (const z of Object.values(ZONES)) for (const i of z.islands || []) ZONE_OF.set(i.id, z.id);
+const WAY_IN = { skypiea: { spot: 'knock_up_stream' }, fishman_island: { spot: 'fishman_dive' }, impel_down: { island: 'impel_down' } };
+// (a title or a word isn't a name: "Captain" alone doesn't send you to
+// Captain Morgan, nor "Sail to Reverse Mountain" to Old Sail the fisherman)
+const STOP = new Set(['Captain', 'Mayor', 'King', 'Queen', 'Lord', 'Lady', 'Doctor', 'Commodore', 'Admiral', 'Vice', 'Chief', 'Sergeant', 'Colonel', 'Master', 'Prince', 'Princess', 'Sister', 'Brother', 'Grandpa', 'Granny', 'Uncle', 'Aunt', 'Miss', 'Madam', 'Madame', 'General', 'Officer', 'Lieutenant', 'Commander', 'Boss', 'Saint', 'Father', 'Mother', 'Elder', 'Chef', 'Keeper', 'Warden', 'Emperor', 'Young', 'Little', 'Great', 'Marine', 'Marines', 'Pirate', 'Pirates', 'Sensei', 'Shogun', 'Old', 'Big', 'Mad', 'The', 'Don', 'Mister', 'Crewman', 'Guard', 'Village', 'Town', 'City', 'House', 'Island', 'Harbour', 'Port', 'Hall', 'Gate', 'Mountain', 'Reverse', 'Sail', 'Sea', 'Red', 'Black', 'White', 'Blue', 'Green', 'Golden', 'Iron', 'Heart', 'Royal', 'Grand', 'Head', 'First', 'Second', 'Third', 'Man', 'Woman', 'Boy', 'Girl']);
+const NAME_FREQ = new Map(), PLACE_WORDS = new Set();
+// (words that send you to someone: "Return to", "Tell", "Ask the gatekeeper, …")
+const SEND_TO = /(?:\bto|\btell|\bask|\bvisit|\bmeet|\bfind|\bwarn|\bsee|\bwith|\bface|\bbeat|\bdefeat|\bfrom)\s+(?:the\s+)?(?:[\w'.-]+,?\s+)?$/i;
+// (someone's place: "Franky's workshop", "Rayleigh's camp")
+const THEIR_PLACE = /^'s\s+(?:old\s+|new\s+)?(?:workshop|house|home|camp|church|clinic|castle|hall|bar|shop|hut|tent|grave|lab|laboratory|office|mansion|palace|den|hideout|study|forge|garden|farm|dojo|tower|inn|restaurant|tavern|room)\b/i;

@@ -287,7 +287,7 @@ export class CameraRig {
     // where your feet are: on a deck, on the ground (or the bottom of the shallows), in the air
     let gh = p.flying && p.alt != null ? p.alt
       : p.deck ? p.deck.h + shipBob(p.deck.ship, time) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) + (p.z || 0)
-        : ground(p.x, p.y) - (p.wading || 0) + (p.z || 0);
+        : (p.belowDeck ? p.groundAt(game, p.x, p.y) : ground(p.x, p.y)) - (p.wading || 0) + (p.z || 0);
     let rollSea = 0, hp = null, shipX = 0, shipZ = 0;
     if (!sailing) this.seaPitch = 0;
     if (sailing) {

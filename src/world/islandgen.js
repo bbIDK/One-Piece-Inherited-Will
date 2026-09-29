@@ -186,7 +186,18 @@ export function generateIsland(world, def, noise, rng) {
     carvePath(world, pts, f.width ?? 3, f.tile ?? T.RIVER, noise, f.meander ?? 1, { elev: 0 });
   }
 
-  for (const p of def.paint || []) paintOp(world, p, cx, cy, hw, hh, noise);
+  for (const p of def.paint || []) {
+    paintOp(world, p, cx, cy, hw, hh, noise);
+    // (land painted out past the island's own — a landing, a jetty of stone —
+    // is inside the box its coastline is measured in, or it would lie as if
+    // far out at sea: sunk under the water. A bridge is over the water.)
+    const bx = p.tile === T.BRIDGE || IS_LIQUID[p.tile] ? null : opBox(p, cx, cy, hw, hh);
+    if (bx) {
+      const L = rec.landBox;
+      L.x0 = Math.min(L.x0, Math.floor(bx.x0) - 6); L.y0 = Math.min(L.y0, Math.floor(bx.y0) - 6);
+      L.x1 = Math.max(L.x1, Math.ceil(bx.x1) + 7); L.y1 = Math.max(L.y1, Math.ceil(bx.y1) + 7);
+    }
+  }
 
   // towns ---------------------------------------------------------------------
   for (const town of def.towns || []) {
@@ -488,11 +499,29 @@ export function carvePath(world, pts, width, tile, noise, meander = 1, { elev, o
           const cur = world.type(i, j);
           if (!overWater && IS_LIQUID[cur]) continue;
           if (onlyLand && (IS_LIQUID[cur] || OVERLAY[cur])) continue;
+          // (a bridge is over the water: where its line crosses dry land, the land carries it)
+          if (tile === T.BRIDGE && !IS_LIQUID[cur]) continue;
           world.setTile(i, j, tile, elev, clim);
         }
       }
     }
   }
+}
+
+/** The rectangle a paint op covers (world tiles). */
+function opBox(p, cx, cy, hw, hh) {
+  const X = (v) => cx + rel(v, hw), Y = (v) => cy + rel(v, hh);
+  if (p.op === 'rect' || p.op === 'grid') return { x0: X(p.x0), x1: X(p.x1), y0: Y(p.y0), y1: Y(p.y1) };
+  if (p.op === 'circle' || p.op === 'ring') {
+    const r = (Math.abs(p.r) <= 1.5 ? p.r * Math.max(hw, hh) : p.r * SCALE) + (p.op === 'ring' ? (p.width || 2) / 2 : 0);
+    return { x0: X(p.x) - r, x1: X(p.x) + r, y0: Y(p.y) - r, y1: Y(p.y) + r };
+  }
+  if (p.op === 'blob') { const rx = rel(p.rx, hw) * 1.4, ry = rel(p.ry, hh) * 1.4; return { x0: X(p.x) - rx, x1: X(p.x) + rx, y0: Y(p.y) - ry, y1: Y(p.y) + ry }; }
+  if (p.op === 'path') {
+    const xs = p.points.map(([a]) => X(a)), ys = p.points.map(([, b]) => Y(b)), m = (p.width ?? 2) / 2 + 1;
+    return { x0: Math.min(...xs) - m, x1: Math.max(...xs) + m, y0: Math.min(...ys) - m, y1: Math.max(...ys) + m };
+  }
+  return null;
 }
 
 function paintOp(world, p, cx, cy, hw, hh, noise) {
@@ -501,7 +530,7 @@ function paintOp(world, p, cx, cy, hw, hh, noise) {
     const x0 = Math.floor(X(p.x0)), x1 = Math.ceil(X(p.x1)), y0 = Math.floor(Y(p.y0)), y1 = Math.ceil(Y(p.y1));
     for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
       if (p.onlyLand && world.isLiquid(x, y)) continue;
-      if (p.onlyWater && !world.isLiquid(x, y)) continue;
+      if ((p.onlyWater || p.tile === T.BRIDGE) && !world.isLiquid(x, y)) continue;
       world.setTile(x, y, p.tile, p.elev, p.climate);
     }
   } else if (p.op === 'circle') {

@@ -143,7 +143,8 @@ export const WEST_BLUE = [
     blobs: [[-0.16, 0, 0.72, 0.85], [0.8, 0.36, 0.18, 0.28]],
     mountains: [{ name: 'Palace Heights', dx: -0.2, dy: -0.42, r: 0.2, h: 0.4 }],
     paint: [
-      { op: 'path', points: [[0.5, 0.32], [0.66, 0.35]], width: 3, tile: T.BRIDGE },
+      // (out to the lighthouse islet: over the water between, the land either side carrying it)
+      { op: 'path', points: [[0.45, 0.32], [0.74, 0.35]], width: 3, tile: T.BRIDGE },
       { op: 'path', points: [[-0.2, -0.22], [0.1, -0.1], [0.3, -0.02]], width: 3, tile: T.COBBLE, onlyLand: true },
     ],
     areas: [

@@ -16,7 +16,7 @@ import * as THREE from 'three';
 import { Mesher, box, cyl, C } from './kit.js';
 import { vcMat } from './mats.js';
 import { T, IS_LIQUID, OVERLAY } from '../../world/tiles.js';
-import { DECK_Y, DOCK_Y, WALL_H, CHUNK } from '../height.js';
+import { DECK_Y, DOCK_Y, WALL_H, CHUNK, HIGH_DECK } from '../height.js';
 
 const SEAM = '#5d4030', TRIM = '#6d4c33', PILE = '#5a3e2b', ROPE = '#c8b89a', IRON = '#2e2a28';
 const STEEL = '#8a9499', SLEEPER = '#5d4a3a';
@@ -40,7 +40,7 @@ export function dockDetails(world, x0, y0, size = CHUNK, hf = null) {
         any = true;
         const info = world.dockAt(x0 + i, y0 + j);
         if (info) { pierTile(k, i, j, x0, y0, info, { water, pier, floor }); continue; }
-        bridgeTile(k, i, j, x0, y0, t, { water, deck });
+        bridgeTile(k, i, j, x0, y0, t, { water, deck, floor, hf, dry: (a, b) => { const q = type(a, b); return !IS_LIQUID[q] && !OVERLAY[q] && q !== T.WALL; } });
       } else if (world.quays.size && quay(i, j)) {
         any = true;
         quayTile(k, i, j, x0, y0, { water, quay, pier, floor });
@@ -140,8 +140,23 @@ function pierTile(k, i, j, x0, y0, info, { water, pier, floor }) {
 }
 
 // ------------------------------------------------------------------ bridges, rails
-function bridgeTile(k, i, j, x0, y0, t, { water, deck }) {
-  const top = DECK_Y, cx = i + 0.5, cz = j + 0.5;
+/** A box of section w × h laid from A to B (their middles), turned and tipped to lie along it. */
+function beam(k, ax, ay, az, bx, by, bz, w, h, color, o = {}) {
+  const dx = bx - ax, dy = by - ay, dz = bz - az, hz = Math.hypot(dx, dz);
+  k.add(new THREE.BoxGeometry(Math.hypot(hz, dy), h, w), { at: [(ax + bx) / 2, (ay + by) / 2, (az + bz) / 2], rot: [0, Math.atan2(-dz, dx), Math.atan2(dy, hz)], color, ...o });
+}
+/** A round rod from A to B. */
+function rod(k, ax, ay, az, bx, by, bz, r, color) {
+  const dx = bx - ax, dy = by - ay, dz = bz - az, hz = Math.hypot(dx, dz), L = Math.hypot(hz, dy);
+  k.add(cyl(r, r, L, 4), { at: [ax, ay, az], rot: [0, Math.atan2(dz, -dx), Math.atan2(hz, dy)], color });
+}
+
+function bridgeTile(k, i, j, x0, y0, t, { water, deck, floor, hf, dry }) {
+  const cx = i + 0.5, cz = j + 0.5;
+  // (a bridge's deck is as high as the land it joins, running from one bank
+  // to the other: see HeightField.span; a sea-train's track lies just over the sea)
+  const topAt = (x, z) => (t === T.BRIDGE && hf ? hf.deckAt(x0 + x, y0 + z) : DECK_Y);
+  const top = topAt(cx, cz);
   // which way does the deck run? (seams go across it)
   const alongX = (deck(i - 1, j) ? 1 : 0) + (deck(i + 1, j) ? 1 : 0) >= (deck(i, j - 1) ? 1 : 0) + (deck(i, j + 1) ? 1 : 0);
   if (t === T.RAIL) {
@@ -153,26 +168,50 @@ function bridgeTile(k, i, j, x0, y0, t, { water, deck }) {
     for (const r of [-0.3, 0.3]) k.add(box(alongX ? 1.0 : 0.07, 0.09, alongX ? 0.07 : 1.0), { at: [cx + (alongX ? 0 : r), top + 0.06, cz + (alongX ? r : 0)], color: STEEL });
     return;
   }
+  // seams across the planks (lying on the deck as it slopes)
   for (const s of [-0.34, 0, 0.34]) {
-    k.add(box(alongX ? 0.025 : 1.0, 0.012, alongX ? 1.0 : 0.025), { at: [cx + (alongX ? s + 0.16 : 0), top, cz + (alongX ? 0 : s + 0.16)], color: SEAM });
+    if (alongX) { const x = cx + s + 0.16; beam(k, x, topAt(x, j) + 0.006, j, x, topAt(x, j + 1) + 0.006, j + 1, 0.025, 0.012, SEAM); }
+    else { const z = cz + s + 0.16; beam(k, i, topAt(i, z) + 0.006, z, i + 1, topAt(i + 1, z) + 0.006, z, 0.025, 0.012, SEAM); }
   }
-  // edges over the water: a trim board, pilings and a rope rail
+  // where it comes ashore: a stone pier under the deck, down to the bed
+  if (t === T.BRIDGE && (dry(i - 1, j) || dry(i + 1, j) || dry(i, j - 1) || dry(i, j + 1))) {
+    const bed = Math.min(floor(i, j), floor(i + 1, j), floor(i, j + 1), floor(i + 1, j + 1), top - 1) - 0.4;
+    const lo = Math.min(topAt(i, j), topAt(i + 1, j), topAt(i, j + 1), topAt(i + 1, j + 1)) - 0.23;
+    if (lo > bed + 0.2) k.add(box(0.98, lo - bed, 0.98), { at: [cx, bed, cz], color: STONE[(x0 + i + y0 + j) % 3], outline: 0.02 });
+  }
+  // Its open edges: over the water — or, up high, over a drop to the ground
+  // below — a trim board and pilings; a low deck a rope rail between them
+  // (step off it into the shallows), a high one a wooden handrail (see
+  // actor.js: it keeps you on the deck; you jump it to go over)
+  const high = t === T.BRIDGE && top > HIGH_DECK;
+  const open = (a, b) => !deck(a, b) && (water(a, b) || (high && !!hf?.railAt(x0 + i, y0 + j, x0 + a, y0 + b)));
   const edges = [[-1, 0, i, cz], [1, 0, i + 1, cz], [0, -1, cx, j], [0, 1, cx, j + 1]];
   for (const [dx, dz, ex, ez] of edges) {
-    if (!water(i + dx, j + dz)) continue;
+    if (!open(i + dx, j + dz)) continue;
     const alongEdgeX = dz !== 0;
-    k.add(box(alongEdgeX ? 1.0 : 0.12, 0.3, alongEdgeX ? 0.12 : 1.0), { at: [ex - dx * 0.06, top - 0.26, ez - dz * 0.06], color: TRIM });
+    // (the trim board, along the edge as it slopes)
+    const tx = ex - dx * 0.06, tz = ez - dz * 0.06;
+    if (alongEdgeX) beam(k, i, topAt(i, tz) - 0.11, tz, i + 1, topAt(i + 1, tz) - 0.11, tz, 0.12, 0.3, TRIM);
+    else beam(k, tx, topAt(tx, j) - 0.11, j, tx, topAt(tx, j + 1) - 0.11, j + 1, 0.12, 0.3, TRIM);
+    if (high) {
+      // the handrail along this tile's edge: a top rail and a middle one
+      const rx = ex - dx * 0.1, rz = ez - dz * 0.1;
+      for (const [hy, sz] of [[0.92, 0.07], [0.45, 0.05]]) {
+        if (alongEdgeX) beam(k, i, topAt(i, rz) + hy, rz, i + 1, topAt(i + 1, rz) + hy, rz, sz, sz, TRIM);
+        else beam(k, rx, topAt(rx, j) + hy, j, rx, topAt(rx, j + 1) + hy, j + 1, sz, sz, TRIM);
+      }
+    }
     const wx = x0 + i, wy = y0 + j;
     if (((alongEdgeX ? wx : wy) & 1) === 0) {
       const px = alongEdgeX ? i : ex - dx * 0.1, pz = alongEdgeX ? ez - dz * 0.1 : j;
-      k.add(cyl(0.12, 0.14, 3.3, 7), { at: [px, top - 2.8, pz], color: PILE, outline: 0.015 });
-      k.add(cyl(0.13, 0.13, 0.06, 7), { at: [px, top + 0.5, pz], color: '#4a3223' });
+      const ptop = topAt(px, pz), up = high ? 1.0 : 0.5;
+      // (a piling from the bed below up past the deck: a high bridge stands on tall ones)
+      const bed = Math.min(floor(px, pz), ptop - 2.8) - 0.3;
+      k.add(cyl(0.12, 0.14, ptop + up - bed, 7), { at: [px, bed, pz], color: PILE, outline: 0.015 });
+      k.add(cyl(0.13, 0.13, 0.06, 7), { at: [px, ptop + up, pz], color: '#4a3223' });
       const nx = alongEdgeX ? i + 2 : px, nz = alongEdgeX ? pz : j + 2;
-      const nextDeck = alongEdgeX ? deck(i + 1, j) && water(i + 1 + dx, j + dz) : deck(i, j + 1) && water(i + dx, j + 1 + dz);
-      if (nextDeck) {
-        const len = Math.hypot(nx - px, nz - pz);
-        k.add(cyl(0.022, 0.022, len, 4), { at: [px, top + 0.36, pz], rot: alongEdgeX ? [0, 0, -Math.PI / 2] : [Math.PI / 2, 0, 0], color: ROPE });
-      }
+      const nextDeck = alongEdgeX ? deck(i + 1, j) && open(i + 1 + dx, j + dz) : deck(i, j + 1) && open(i + dx, j + 1 + dz);
+      if (nextDeck && !high) rod(k, px, ptop + 0.36, pz, nx, topAt(nx, nz) + 0.36, nz, 0.022, ROPE);
     }
   }
 }

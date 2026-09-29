@@ -27,7 +27,7 @@ import { installSession, startNewCharacter, resumeCharacter } from './game/sessi
 import { LivesSystem } from './game/lives.js';
 import { Progression } from './game/progression.js';
 import { Dialogue } from './game/dialogue.js';
-import { Quests } from './game/quests.js';
+import { Quests, allQuests } from './game/quests.js';
 import { Services } from './game/services.js';
 import { Interactions, npcBuilder, npcDef, makeNPC, allNpcDefs, standingHeight } from './game/npcs.js';
 import { installMap } from './ui/mapUI.js';
@@ -416,7 +416,7 @@ async function start() {
       return game.player;
     },
     prof: { PROF, reset: profReset },
-    debug: { npcDef, allNpcDefs, standingHeight, VIEWS, builders: PROP_BUILDERS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, launchShip, openShipwright, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld,
+    debug: { npcDef, allNpcDefs, standingHeight, allQuests, VIEWS, builders: PROP_BUILDERS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, launchShip, openShipwright, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld,
       // stand in one of a ship's rooms ('cabin', 'captain', 'forecastle', 'hold'), f of the way along it
       inRoom: (s, kind, f = 0.5, v = 0) => {
         const r = shipDims(s.def).rooms.find((x) => x.kind === kind);

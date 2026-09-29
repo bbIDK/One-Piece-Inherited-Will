@@ -233,6 +233,68 @@ function inside(b, guest = false) {
   return { ...bw(b, s.x, s.z), building: b, inside: true, guest };
 }
 
+/**
+ * Where a named NPC is to be found, for a quest's waypoint: where they
+ * stand if they're about in this world, else where the island they live
+ * on puts them (worked out by the same rules as placeNPC, without placing
+ * anyone). { x, y, place, zone }, or { island, zone } for someone on an
+ * island in another world (a zone), or null.
+ */
+export function whereNPC(game, id) {
+  const def = NPC_DEFS.get(id);
+  if (!def) return null;
+  const w = game.world;
+  const key = `${w.id}:${id}`;
+  const now = game.time || 0;
+  const C = game._whereNPC || (game._whereNPC = new Map());
+  const hit = C.get(key);
+  if (hit && now - hit.t < 3) return hit.v;
+  let v = null;
+  const island = w.islands.find((i) => i.id === def.island);
+  if (island) {
+    const q = placeGuess(game, island, def);
+    if (q) v = { x: q.x, y: q.y, place: def.name, zone: w === game.surface ? null : w.id };
+  } else v = { island: def.island };
+  C.set(key, { t: now, v });
+  return v;
+}
+
+/** placeNPC's rules for where someone stands, with no side effects and no dice. */
+function placeGuess(game, island, def) {
+  let pl = {};
+  try { pl = (typeof def.at === 'function' ? def.at(game.state?.char, game) : def.at) || {}; } catch (e) { pl = {}; }
+  // (in a building: at the counter, or where the first of its people sits)
+  const inB = (b) => {
+    if (b.enterable) {
+      const L = layoutOf(b), s = pl.guest ? L.residents[L.residents.length - 1] : L.keeper || L.residents[0];
+      if (s) return bw(b, s.x, s.z);
+    }
+    return bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4);
+  };
+  if (pl.spot && island.spots[pl.spot]) { const s = island.spots[pl.spot]; return { x: s.x + (pl.ox || 0), y: s.y + (pl.oy || 0) }; }
+  for (const town of island.towns) {
+    if (pl.town && town.id !== pl.town) continue;
+    if (pl.dock) {
+      const d = island.docks.slice().sort((a, b) => Math.hypot(a.land.x - town.x, a.land.y - town.y) - Math.hypot(b.land.x - town.x, b.land.y - town.y))[0];
+      if (d) return { x: d.land.x + (pl.ox || 0), y: d.land.y + (pl.oy || 0) };
+    }
+    if (pl.door) {
+      const b = town.buildings.find((x) => x.name === pl.door || x.role === pl.door);
+      if (b) return bw(b, doorLocalX(b) + (pl.ox ?? 1.6), 1.6);
+    }
+    if (pl.building) {
+      const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
+      if (b) return inB(b);
+    }
+    if (pl.plaza || (!pl.building && !pl.dx && !pl.door) || (pl.town && !pl.dx)) return { x: town.plaza.x + (pl.ox || 1.5), y: town.plaza.y + 2.5 + (pl.oy || 0) };
+  }
+  for (const town of island.towns) { const b = town.buildings.find((x) => x.npc === def.id); if (b) return inB(b); }
+  const lm = island.landmarks.find((l) => l.npc === def.id);
+  if (lm) return { x: lm.x + 0.6, y: lm.y + 1.2 };
+  if (pl.dx !== undefined) return { x: island.x + pl.dx * island.def.w / 2, y: island.y + pl.dy * island.def.h / 2 };
+  return { x: island.x, y: island.y };
+}
+
 /** Where a registered NPC stands on their island (the same rules as when the island fills up). */
 export function placeFor(game, island, def) {
   return placeNPC(game, island, def, Math, game.spawner);

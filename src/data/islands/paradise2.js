@@ -14,15 +14,13 @@
 import { T } from '../../world/tiles.js';
 
 // ---------------------------------------------------------------- helpers
-/** Absolute tile position of a relative (dx, dy) on an island. */
-const at = (isl, dx, dy) => ({
-  x: isl.x + (Math.abs(dx) <= 1.5 ? (dx * isl.w) / 2 : dx),
-  y: isl.y + (Math.abs(dy) <= 1.5 ? (dy * isl.h) / 2 : dy),
-});
-/** A stand-alone building (outside any town) with a door you can use. */
+/**
+ * A stand-alone building (outside any town) with a door you can use. (Its
+ * door is worked out where it's built, on the world's grid: see islandgen.js.
+ * One worked out here, in the chart's units, was thousands of tiles off.)
+ */
 function hut(isl, dx, dy, spec) {
-  const p = at(isl, dx, dy);
-  return { kind: 'building', dx, dy, fw: 6, fd: 4, hgt: 3, style: 'town', roofType: 'gable', showName: true, door: { x: p.x, y: p.y + 0.5 }, ...spec };
+  return { kind: 'building', dx, dy, fw: 6, fd: 4, hgt: 3, style: 'town', roofType: 'gable', showName: true, ...spec };
 }
 /** Sea-train track: painted over open water only (tile offsets from the island centre). */
 const rail = (x0, x1, y0, y1) => ({ op: 'rect', x0, x1, y0, y1, tile: T.RAIL, onlyWater: true });

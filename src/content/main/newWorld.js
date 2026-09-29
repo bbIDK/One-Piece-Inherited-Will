@@ -6,6 +6,7 @@
 import { chapter, T, PLANS, CHAPTERS, onward } from './define.js';
 import { MARY_GEOISE } from '../../world/worldgen.js';
 import { regionAt, REGION } from '../../world/constants.js';
+import { ZONES } from '../../data/zones/index.js';
 
 const beaten = (id) => (c) => (c.bosses || []).includes(id) || !!c.defeated?.[id];
 const inNewWorld = (g) => g.world === g.surface && regionAt(g.player.x, g.player.y) === REGION.NEW_WORLD;
@@ -16,6 +17,17 @@ const redPort = (g) => {
   return b ? { x: b.x, y: b.y, place: 'the Red Port' } : null;
 };
 const BONDOLA = 'Cross the Red Line: take the Bondola at the Red Port, east of Marineford, then sail to';
+/** Where to dive for Fish-Man Island, east of Sabaody (for the map). */
+const divePoint = (g) => {
+  if (g.world !== g.surface) return null;
+  for (const isl of g.surface.islands) { const s = isl.spots?.fishman_dive; if (s) return { x: s.x, y: s.y, place: 'The dive point' }; }
+  return null;
+};
+/** The current up to the New World, at the far end of Fish-Man Island (for the map). */
+const riseCurrent = (g) => {
+  const e = g.world?.id === 'fishman_island' && ZONES.fishman_island.exits.find((x) => x.id === 'new_world');
+  return e ? { x: e.x, y: e.y, place: e.label, zone: 'fishman_island' } : null;
+};
 
 // ================================================================= PIRATES
 chapter('nw_fishman', { part: 3, kind: 'solo', place: 'Fish-Man Island' }, {
@@ -23,9 +35,9 @@ chapter('nw_fishman', { part: 3, kind: 'solo', place: 'Fish-Man Island' }, {
     name: 'Ten Thousand Metres Down', lure: 'the only way into the New World for a pirate is under the Red Line',
     summary: 'The New World lies on the far side of the Red Line. Pirates can\'t use the Bondola — so they sail under it, ten thousand metres down, to Fish-Man Island.',
     tasks: [
-      T.check('dive', 'Take your coated ship to the dive point east of Sabaody and sink to Fish-Man Island, ten thousand metres down.', (c, g) => g.world?.id === 'fishman_island' || !!c.quests.p2_coating?.done || inNewWorld(g)),
+      T.check('dive', 'Take your coated ship to the dive point east of Sabaody and sink to Fish-Man Island, ten thousand metres down.', (c, g) => g.world?.id === 'fishman_island' || !!c.quests.p2_coating?.done || inNewWorld(g), { where: divePoint }),
       T.quest('nw_fmi_coup', 'Help King Neptune save Fish-Man Island from the New Fish-Man Pirates (Ryugu Palace).', 'nw_neptune', undefined, { alt: (c, g) => inNewWorld(g) }),
-      T.check('rise', 'Rise to the New World (the current at the far end of Fish-Man Island).', (c, g) => inNewWorld(g)),
+      T.check('rise', 'Rise to the New World (the current at the far end of Fish-Man Island).', (c, g) => inNewWorld(g), { where: riseCurrent }),
     ],
   },
 });

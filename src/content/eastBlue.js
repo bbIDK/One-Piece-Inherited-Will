@@ -466,7 +466,9 @@ const groups = [
 const quests = [
   { id: 'lord_of_the_coast', name: 'The Lord of the Coast', island: 'dawn_island', kind: 'story', summary: 'A Sea King lurks off Foosha Village. It took Shanks\' arm ten years ago.',
     stages: [
-      { id: 'hunt', desc: 'Sail out south of Foosha Village\'s pier and slay the Lord of the Coast.', goal: { type: 'defeat', npc: 'lord_of_the_coast' } },
+      { id: 'hunt', desc: 'Sail out south of Foosha Village\'s pier and slay the Lord of the Coast.', goal: { type: 'defeat', npc: 'lord_of_the_coast' },
+        // (out on the bay where it surfaces: see install)
+        where: (g) => { const d = g.surface.islands.find((i) => i.id === 'dawn_island')?.docks[0]; return d && g.world === g.surface ? { x: d.moor.x, y: d.moor.y + 16, place: 'Foosha Bay' } : null; } },
       { id: 'report', desc: 'Return to Makino at Party\'s Bar.' },
     ],
     rewards: { berries: 3000, items: [['straw_hat', 1]], points: 1 } },
@@ -553,6 +555,12 @@ const quests = [
     rewards: { points: 1, berries: 5000 } },
 ];
 
+/** More than `d` tiles out from an island's shore? */
+function awayFrom(game, id, d) {
+  const isl = game.surface.islands.find((i) => i.id === id);
+  return !isl || game.world.distance(game.player.x, game.player.y, isl.x, isl.y) > (isl.radius || 0) + d;
+}
+
 // -------------------------------------------------------------- install
 function install(game) {
   // Lord of the Coast: surfaces south of Foosha's pier while its quest is on
@@ -590,7 +598,7 @@ function install(game) {
   // leaving Loguetown alive by sea = escaped Smoker
   game.on('enterRegion', () => {
     const c = game.state?.char;
-    if (c && c.bounty > 0 && game.player.mode === 'sail' && game.lastIslandName === 'Polestar Islands' && !c.flags.escapedLoguetown && game.world.distance(game.player.x, game.player.y, 2385, 590) > 120) {
+    if (c && c.bounty > 0 && game.player.mode === 'sail' && game.lastIslandName === 'Polestar Islands' && !c.flags.escapedLoguetown && awayFrom(game, 'polestar_islands', 120)) {
       c.flags.escapedLoguetown = true;
     }
   });

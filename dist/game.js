@@ -24219,24 +24219,24 @@ void main() {
       const P23 = new Vector3();
       const B4 = new Vector3();
       const T4 = new Vector3();
-      const N4 = new Vector3();
+      const N5 = new Vector3();
       for (let i = 0; i <= tubularSegments; ++i) {
         const u = i / tubularSegments * p * Math.PI * 2;
         calculatePositionOnCurve(u, p, q2, radius, P1);
         calculatePositionOnCurve(u + 0.01, p, q2, radius, P23);
         T4.subVectors(P23, P1);
-        N4.addVectors(P23, P1);
-        B4.crossVectors(T4, N4);
-        N4.crossVectors(B4, T4);
+        N5.addVectors(P23, P1);
+        B4.crossVectors(T4, N5);
+        N5.crossVectors(B4, T4);
         B4.normalize();
-        N4.normalize();
+        N5.normalize();
         for (let j = 0; j <= radialSegments; ++j) {
           const v = j / radialSegments * Math.PI * 2;
           const cx = -tube3 * Math.cos(v);
           const cy = tube3 * Math.sin(v);
-          vertex2.x = P1.x + (cx * N4.x + cy * B4.x);
-          vertex2.y = P1.y + (cx * N4.y + cy * B4.y);
-          vertex2.z = P1.z + (cx * N4.z + cy * B4.z);
+          vertex2.x = P1.x + (cx * N5.x + cy * B4.x);
+          vertex2.y = P1.y + (cx * N5.y + cy * B4.y);
+          vertex2.z = P1.z + (cx * N5.z + cy * B4.z);
           vertices.push(vertex2.x, vertex2.y, vertex2.z);
           normal.subVectors(vertex2, P1).normalize();
           normals.push(normal.x, normal.y, normal.z);
@@ -24315,15 +24315,15 @@ void main() {
       }
       function generateSegment(i) {
         P4 = path2.getPointAt(i / tubularSegments, P4);
-        const N4 = frames.normals[i];
+        const N5 = frames.normals[i];
         const B4 = frames.binormals[i];
         for (let j = 0; j <= radialSegments; j++) {
           const v = j / radialSegments * Math.PI * 2;
           const sin = Math.sin(v);
           const cos = -Math.cos(v);
-          normal.x = cos * N4.x + sin * B4.x;
-          normal.y = cos * N4.y + sin * B4.y;
-          normal.z = cos * N4.z + sin * B4.z;
+          normal.x = cos * N5.x + sin * B4.x;
+          normal.y = cos * N5.y + sin * B4.y;
+          normal.z = cos * N5.z + sin * B4.z;
           normal.normalize();
           normals.push(normal.x, normal.y, normal.z);
           vertex2.x = P4.x + radius * normal.x;
@@ -34019,8 +34019,8 @@ void main() {
     let front = spread(fw);
     if (floor === 0) front = front.filter((x) => Math.abs(x - d.x) >= d.dw / 2 + 0.2 + reach);
     const zs = fd < 3 ? [] : fd >= 6.5 ? [-fd * 0.3, -fd * 0.7] : [-fd / 2];
-    const at5 = b.attach || {};
-    return { front, left: at5.left ? [] : zs, right: at5.right ? [] : zs, w: winW, reach };
+    const at4 = b.attach || {};
+    return { front, left: at4.left ? [] : zs, right: at4.right ? [] : zs, w: winW, reach };
   }
   function groundWindows(b) {
     const kind = winKind(b);
@@ -34579,6 +34579,7 @@ void main() {
   var SEA_Y = 0;
   var DECK_Y = 0.55;
   var DOCK_Y = 1.5;
+  var HIGH_DECK = 2.2;
   var deckTop = (world, x, y) => world.docks?.size && world.isDock(x, y) ? DOCK_Y : DECK_Y;
   var WALL_H = 3.2;
   var CHUNK = 32;
@@ -34742,12 +34743,13 @@ void main() {
       const k = this.key(cx, cy);
       let g = this.chunks.get(k);
       if (g) return g;
-      const N4 = CHUNK + 1;
-      g = new Float32Array(N4 * N4);
+      const N5 = CHUNK + 1;
+      g = new Float32Array(N5 * N5);
       const x0 = cx * CHUNK, y0 = cy * CHUNK;
-      for (let j = 0; j < N4; j++) {
-        for (let i = 0; i < N4; i++) g[j * N4 + i] = cornerHeight(w, x0 + i, y0 + j);
+      for (let j = 0; j < N5; j++) {
+        for (let i = 0; i < N5; i++) g[j * N5 + i] = cornerHeight(w, x0 + i, y0 + j);
       }
+      this.raiseAbutments(g, x0, y0);
       if (w.objects) {
         for (const b of w.objects.query(x0 - 12, y0 - 12, x0 + CHUNK + 12, y0 + CHUNK + 12)) {
           if (!b.enterable) continue;
@@ -34755,14 +34757,14 @@ void main() {
           const bx0 = r.x0, bx1 = r.x1, by0 = r.y0, by1 = r.y1;
           const fc = bw(b, 0, 0);
           const front = cornerHeight(w, Math.round(fc.x), Math.round(fc.y));
-          for (let j = 0; j < N4; j++) {
+          for (let j = 0; j < N5; j++) {
             const cy2 = y0 + j;
             if (cy2 <= by0 || cy2 >= by1) continue;
-            for (let i = 0; i < N4; i++) {
+            for (let i = 0; i < N5; i++) {
               const cx2 = x0 + i;
               const dx = w.dx(bx0, cx2);
               if (dx <= 0 || dx >= bx1 - bx0) continue;
-              const q2 = j * N4 + i;
+              const q2 = j * N5 + i;
               if (g[q2] > front + 0.2) g[q2] = front + 0.2;
             }
           }
@@ -34785,14 +34787,15 @@ void main() {
       const lx = x - cx * CHUNK, ly = y - cy * CHUNK;
       const i = Math.min(CHUNK - 1, Math.floor(lx)), j = Math.min(CHUNK - 1, Math.floor(ly));
       const fx = lx - i, fy = ly - j;
-      const N4 = CHUNK + 1;
-      const a = g[j * N4 + i], b = g[j * N4 + i + 1], c = g[(j + 1) * N4 + i], d = g[(j + 1) * N4 + i + 1];
+      const N5 = CHUNK + 1;
+      const a = g[j * N5 + i], b = g[j * N5 + i + 1], c = g[(j + 1) * N5 + i], d = g[(j + 1) * N5 + i + 1];
       if (fx >= fy) return a + (b - a) * fx + (d - b) * fy;
       return a + (d - c) * fx + (c - a) * fy;
     }
     /** Where feet rest at (x, y): decks, quays and wall tops over the terrain. */
     ground(x, y) {
       const w = this.world, t = w.type(x, y);
+      if (t === T.BRIDGE) return this.deckAt(x, y);
       if (OVERLAY[t]) return deckTop(w, x, y);
       if (w.quays.size && w.isQuay(x, y)) return DOCK_Y;
       const h2 = this.terrain(x, y);
@@ -34881,6 +34884,131 @@ void main() {
       if (lo === Infinity) return [0.4, 0.4 + WALL_H];
       return [lo - 0.35, hi + WALL_H];
     }
+    // ---------------------------------------------------------------- bridges
+    // A bridge spans from the land at one end to the land at the other, at
+    // their height: its deck runs from one bank to the other (on an island
+    // that stands high over the sea, high over the water between), and the
+    // banks it lands on are built up to meet it. (It used to lie just over the
+    // water whatever it joined: down at the foot of a bank much taller than
+    // you, out of reach of the land it was meant to join.)
+    /** The run of bridge tiles (x, y) is part of: { top: Map(tile → deck top), ends: [{ tiles, h }] }, or null. */
+    span(x, y) {
+      const w = this.world;
+      const tx = w.wx(Math.floor(x)), ty = Math.floor(y);
+      if (w.type(tx, ty) !== T.BRIDGE) return null;
+      const S3 = this.spans || (this.spans = /* @__PURE__ */ new Map());
+      const k = ty * w.width + tx;
+      let s = S3.get(k);
+      if (!s) {
+        s = buildSpan(w, tx, ty);
+        for (const q2 of s.top.keys()) S3.set(q2, s);
+      }
+      return s;
+    }
+    /** A bridge tile's deck top (m). */
+    deckTile(tx, ty) {
+      const w = this.world;
+      tx = w.wx(tx);
+      const s = this.span(tx, ty);
+      return s ? s.top.get(ty * w.width + tx) : DECK_Y;
+    }
+    /** The deck at a tile corner: level with the bridge tiles round it. */
+    deckCorner(cx, cy) {
+      const w = this.world;
+      let sum = 0, n = 0;
+      for (let j = -1; j <= 0; j++) {
+        for (let i = -1; i <= 0; i++) {
+          if (w.type(cx + i, cy + j) !== T.BRIDGE) continue;
+          sum += this.deckTile(cx + i, cy + j);
+          n++;
+        }
+      }
+      return n ? sum / n : DECK_Y;
+    }
+    /** The top of a bridge's deck at (x, y) (smooth from tile to tile, as it's drawn). */
+    deckAt(x, y) {
+      x = this.world.wx(x);
+      const i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j;
+      const a = this.deckCorner(i, j), b = this.deckCorner(i + 1, j), c = this.deckCorner(i, j + 1), d = this.deckCorner(i + 1, j + 1);
+      return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
+    }
+    /**
+     * Does a high bridge's handrail run along the edge from its deck tile
+     * (tx, ty) to the tile beside it (nx, ny)? Where the deck stands high over
+     * the water — or over ground well below it. (Drawn: props/docks.js; it
+     * keeps you on the deck unless you jump it: game/actor.js.)
+     */
+    railAt(tx, ty, nx, ny) {
+      const w = this.world, t = w.type(nx, ny);
+      if (w.type(tx, ty) !== T.BRIDGE || OVERLAY[t] || t === T.WALL) return false;
+      const top = this.deckAt(Math.floor(tx) + 0.5, Math.floor(ty) + 0.5);
+      if (top <= HIGH_DECK) return false;
+      return !!IS_LIQUID[t] || this.terrain(Math.floor(nx) + 0.5, Math.floor(ny) + 0.5) < top - 2;
+    }
+    /**
+     * The land where a bridge comes ashore, built up to its deck and easing
+     * back to the lie of the land over a few metres (never cut down: a bank
+     * already higher keeps its height).
+     */
+    raiseAbutments(g, x0, y0) {
+      const w = this.world, N5 = CHUNK + 1, R4 = ABUT_R;
+      let ends = null;
+      for (let y = y0 - R4 - 1; y <= y0 + CHUNK + R4; y++) {
+        for (let x = x0 - R4 - 1; x <= x0 + CHUNK + R4; x++) {
+          if (w.type(x, y) !== T.BRIDGE) continue;
+          const s = this.span(x, y);
+          if (!s || !s.ends.length) continue;
+          ends || (ends = /* @__PURE__ */ new Set());
+          for (const e of s.ends) ends.add(e);
+        }
+      }
+      if (!ends) return;
+      const land = (cx, cy) => {
+        let dry = false, wet = false;
+        for (let j = -1; j <= 0; j++) {
+          for (let i = -1; i <= 0; i++) {
+            const t = w.type(cx + i, cy + j);
+            if (w.quays.size && w.isQuay(cx + i, cy + j)) return 0;
+            if (!IS_LIQUID[t] && !OVERLAY[t]) dry = true;
+            else if (!OVERLAY[t]) wet = true;
+          }
+        }
+        return dry ? wet ? 1 : 2 : 0;
+      };
+      const K = new Float32Array(N5 * N5);
+      for (const e of ends) {
+        K.fill(0);
+        let any = false;
+        for (const [tx, ty] of e.tiles) {
+          for (let cy = ty - R4; cy <= ty + 1 + R4; cy++) {
+            const j = cy - y0;
+            if (j < 0 || j >= N5) continue;
+            for (let cx = tx - R4; cx <= tx + 1 + R4; cx++) {
+              const i = w.dx(x0, cx);
+              if (i < 0 || i >= N5) continue;
+              const dx = Math.max(0, tx - cx, cx - (tx + 1)), dy = Math.max(0, ty - cy, cy - (ty + 1));
+              const d = Math.hypot(dx, dy);
+              if (d >= R4) continue;
+              const k = 1 - smooth2(0, R4, d), q2 = j * N5 + i;
+              if (k > K[q2]) {
+                K[q2] = k;
+                any = true;
+              }
+            }
+          }
+        }
+        if (!any) continue;
+        for (let j = 0; j < N5; j++) {
+          for (let i = 0; i < N5; i++) {
+            const q2 = j * N5 + i;
+            if (!K[q2] || g[q2] >= e.h - 0.02) continue;
+            const L2 = land(x0 + i, y0 + j);
+            if (!L2 || L2 === 1 && K[q2] < 1) continue;
+            g[q2] += (e.h - 0.02 - g[q2]) * K[q2];
+          }
+        }
+      }
+    }
     /** Invalidate after the tile map changed in a rectangle (tiles). */
     invalidate(x0, y0, x1, y1) {
       for (let cy = Math.floor((y0 - 1) / CHUNK); cy <= Math.floor((y1 + 1) / CHUNK); cy++) {
@@ -34891,6 +35019,108 @@ void main() {
       }
     }
   };
+  var ABUT_R = 4;
+  var N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  function buildSpan(w, tx, ty) {
+    const W4 = w.width, key2 = (x, y) => y * W4 + x;
+    const tiles = [], seen = /* @__PURE__ */ new Set([key2(tx, ty)]), st = [[tx, ty]];
+    while (st.length) {
+      const [x, y] = st.pop();
+      tiles.push([x, y]);
+      for (const [dx, dy] of N4) {
+        const nx = w.wx(x + dx), ny = y + dy, k = key2(nx, ny);
+        if (!seen.has(k) && w.type(nx, ny) === T.BRIDGE) {
+          seen.add(k);
+          st.push([nx, ny]);
+        }
+      }
+    }
+    const shore = /* @__PURE__ */ new Map();
+    for (const [x, y] of tiles) {
+      for (const [dx, dy] of N4) {
+        const nx = w.wx(x + dx), ny = y + dy, t = w.type(nx, ny);
+        if (IS_LIQUID[t] || OVERLAY[t] || t === T.WALL) continue;
+        const k = key2(nx, ny);
+        if (!shore.has(k)) shore.set(k, { x: nx, y: ny, dx, dy });
+      }
+    }
+    const ends = [], group3 = /* @__PURE__ */ new Map();
+    for (const [k0, s0] of shore) {
+      if (group3.has(k0)) continue;
+      const e = { tiles: [], h: DECK_Y, rise: [] };
+      const q2 = [s0];
+      group3.set(k0, e);
+      while (q2.length) {
+        const s = q2.pop();
+        e.tiles.push([s.x, s.y]);
+        const px2 = s.x + s.dx * 3.5, py2 = s.y + s.dy * 3.5;
+        e.rise.push(naturalHeight(w, Math.round(px2), Math.round(py2)));
+        for (let j = -1; j <= 1; j++) {
+          for (let i = -1; i <= 1; i++) {
+            const nk = key2(w.wx(s.x + i), s.y + j);
+            if (!group3.has(nk) && shore.has(nk)) {
+              group3.set(nk, e);
+              q2.push(shore.get(nk));
+            }
+          }
+        }
+      }
+      e.rise.sort((a, b) => a - b);
+      e.land = Math.max(DECK_Y, e.rise[Math.floor(e.rise.length / 2)]);
+      ends.push(e);
+    }
+    const dist = ends.map((e) => {
+      const D3 = /* @__PURE__ */ new Map(), q2 = [];
+      for (const [x, y] of tiles) {
+        for (const [dx, dy] of N4) if (group3.get(key2(w.wx(x + dx), y + dy)) === e) {
+          D3.set(key2(x, y), 0.5);
+          q2.push([x, y]);
+          break;
+        }
+      }
+      for (let h2 = 0; h2 < q2.length; h2++) {
+        const [x, y] = q2[h2], d = D3.get(key2(x, y));
+        for (const [dx, dy] of N4) {
+          const nx = w.wx(x + dx), ny = y + dy, k = key2(nx, ny);
+          if (seen.has(k) && !D3.has(k)) {
+            D3.set(k, d + 1);
+            q2.push([nx, ny]);
+          }
+        }
+      }
+      return D3;
+    });
+    const top = /* @__PURE__ */ new Map();
+    for (const [x, y] of tiles) {
+      const k = key2(x, y);
+      let h2 = DECK_Y;
+      if (ends.length === 1) h2 = ends[0].land;
+      else if (ends.length === 2) {
+        const a = dist[0].get(k) ?? 1e6, b = dist[1].get(k) ?? 1e6;
+        h2 = (ends[0].land * b + ends[1].land * a) / (a + b);
+      } else if (ends.length) {
+        let sw2 = 0, sh = 0;
+        ends.forEach((e, n) => {
+          const d = dist[n].get(k) ?? 1e6;
+          const wt = 1 / (d * d);
+          sw2 += wt;
+          sh += wt * e.land;
+        });
+        h2 = sh / sw2;
+      }
+      top.set(k, Math.max(DECK_Y, h2));
+    }
+    ends.forEach((e, n) => {
+      let sum = 0, c = 0;
+      for (const [k, d] of dist[n]) if (d === 0.5) {
+        sum += top.get(k);
+        c++;
+      }
+      e.h = c ? sum / c : e.land;
+      e.rise = null;
+    });
+    return { top, ends };
+  }
 
   // src/render3d/materials.js
   var grad = null;
@@ -35292,10 +35522,10 @@ void main() {
       const M2 = this.m;
       _m32.getNormalMatrix(M2);
       const base2 = this.pos.length / 3;
-      const P4 = g.attributes.position, N4 = g.attributes.normal;
+      const P4 = g.attributes.position, N5 = g.attributes.normal;
       for (let i = 0; i < P4.count; i++) {
         _v.fromBufferAttribute(P4, i).applyMatrix4(M2);
-        _n.fromBufferAttribute(N4, i).applyMatrix3(_m32).normalize();
+        _n.fromBufferAttribute(N5, i).applyMatrix3(_m32).normalize();
         this.pos.push(_v.x, _v.y, _v.z);
         this.nor.push(_n.x, _n.y, _n.z);
       }
@@ -35536,7 +35766,10 @@ void main() {
             pierTile(k, i, j, x0, y0, info, { water: water2, pier, floor });
             continue;
           }
-          bridgeTile(k, i, j, x0, y0, t, { water: water2, deck });
+          bridgeTile(k, i, j, x0, y0, t, { water: water2, deck, floor, hf, dry: (a, b) => {
+            const q2 = type(a, b);
+            return !IS_LIQUID[q2] && !OVERLAY[q2] && q2 !== T.WALL;
+          } });
         } else if (world.quays.size && quay(i, j)) {
           any = true;
           quayTile(k, i, j, x0, y0, { water: water2, quay, pier, floor });
@@ -35618,8 +35851,18 @@ void main() {
       k.add(cyl(0.02, 0.22, 0.18, 6), { at: [lx, top + 2.22, lz], color: IRON });
     }
   }
-  function bridgeTile(k, i, j, x0, y0, t, { water: water2, deck }) {
-    const top = DECK_Y, cx = i + 0.5, cz = j + 0.5;
+  function beam(k, ax, ay, az, bx, by, bz, w, h2, color, o = {}) {
+    const dx = bx - ax, dy = by - ay, dz = bz - az, hz = Math.hypot(dx, dz);
+    k.add(new BoxGeometry(Math.hypot(hz, dy), h2, w), { at: [(ax + bx) / 2, (ay + by) / 2, (az + bz) / 2], rot: [0, Math.atan2(-dz, dx), Math.atan2(dy, hz)], color, ...o });
+  }
+  function rod(k, ax, ay, az, bx, by, bz, r, color) {
+    const dx = bx - ax, dy = by - ay, dz = bz - az, hz = Math.hypot(dx, dz), L2 = Math.hypot(hz, dy);
+    k.add(cyl(r, r, L2, 4), { at: [ax, ay, az], rot: [0, Math.atan2(dz, -dx), Math.atan2(hz, dy)], color });
+  }
+  function bridgeTile(k, i, j, x0, y0, t, { water: water2, deck, floor, hf, dry }) {
+    const cx = i + 0.5, cz = j + 0.5;
+    const topAt2 = (x, z) => t === T.BRIDGE && hf ? hf.deckAt(x0 + x, y0 + z) : DECK_Y;
+    const top = topAt2(cx, cz);
     const alongX = (deck(i - 1, j) ? 1 : 0) + (deck(i + 1, j) ? 1 : 0) >= (deck(i, j - 1) ? 1 : 0) + (deck(i, j + 1) ? 1 : 0);
     if (t === T.RAIL) {
       for (let s = 0; s < 2; s++) {
@@ -35630,24 +35873,45 @@ void main() {
       return;
     }
     for (const s of [-0.34, 0, 0.34]) {
-      k.add(box(alongX ? 0.025 : 1, 0.012, alongX ? 1 : 0.025), { at: [cx + (alongX ? s + 0.16 : 0), top, cz + (alongX ? 0 : s + 0.16)], color: SEAM });
+      if (alongX) {
+        const x = cx + s + 0.16;
+        beam(k, x, topAt2(x, j) + 6e-3, j, x, topAt2(x, j + 1) + 6e-3, j + 1, 0.025, 0.012, SEAM);
+      } else {
+        const z = cz + s + 0.16;
+        beam(k, i, topAt2(i, z) + 6e-3, z, i + 1, topAt2(i + 1, z) + 6e-3, z, 0.025, 0.012, SEAM);
+      }
     }
+    if (t === T.BRIDGE && (dry(i - 1, j) || dry(i + 1, j) || dry(i, j - 1) || dry(i, j + 1))) {
+      const bed2 = Math.min(floor(i, j), floor(i + 1, j), floor(i, j + 1), floor(i + 1, j + 1), top - 1) - 0.4;
+      const lo = Math.min(topAt2(i, j), topAt2(i + 1, j), topAt2(i, j + 1), topAt2(i + 1, j + 1)) - 0.23;
+      if (lo > bed2 + 0.2) k.add(box(0.98, lo - bed2, 0.98), { at: [cx, bed2, cz], color: STONE[(x0 + i + y0 + j) % 3], outline: 0.02 });
+    }
+    const high = t === T.BRIDGE && top > HIGH_DECK;
+    const open = (a, b) => !deck(a, b) && (water2(a, b) || high && !!hf?.railAt(x0 + i, y0 + j, x0 + a, y0 + b));
     const edges2 = [[-1, 0, i, cz], [1, 0, i + 1, cz], [0, -1, cx, j], [0, 1, cx, j + 1]];
     for (const [dx, dz, ex, ez] of edges2) {
-      if (!water2(i + dx, j + dz)) continue;
+      if (!open(i + dx, j + dz)) continue;
       const alongEdgeX = dz !== 0;
-      k.add(box(alongEdgeX ? 1 : 0.12, 0.3, alongEdgeX ? 0.12 : 1), { at: [ex - dx * 0.06, top - 0.26, ez - dz * 0.06], color: TRIM });
+      const tx = ex - dx * 0.06, tz = ez - dz * 0.06;
+      if (alongEdgeX) beam(k, i, topAt2(i, tz) - 0.11, tz, i + 1, topAt2(i + 1, tz) - 0.11, tz, 0.12, 0.3, TRIM);
+      else beam(k, tx, topAt2(tx, j) - 0.11, j, tx, topAt2(tx, j + 1) - 0.11, j + 1, 0.12, 0.3, TRIM);
+      if (high) {
+        const rx = ex - dx * 0.1, rz = ez - dz * 0.1;
+        for (const [hy, sz] of [[0.92, 0.07], [0.45, 0.05]]) {
+          if (alongEdgeX) beam(k, i, topAt2(i, rz) + hy, rz, i + 1, topAt2(i + 1, rz) + hy, rz, sz, sz, TRIM);
+          else beam(k, rx, topAt2(rx, j) + hy, j, rx, topAt2(rx, j + 1) + hy, j + 1, sz, sz, TRIM);
+        }
+      }
       const wx = x0 + i, wy = y0 + j;
       if (((alongEdgeX ? wx : wy) & 1) === 0) {
         const px2 = alongEdgeX ? i : ex - dx * 0.1, pz2 = alongEdgeX ? ez - dz * 0.1 : j;
-        k.add(cyl(0.12, 0.14, 3.3, 7), { at: [px2, top - 2.8, pz2], color: PILE, outline: 0.015 });
-        k.add(cyl(0.13, 0.13, 0.06, 7), { at: [px2, top + 0.5, pz2], color: "#4a3223" });
+        const ptop = topAt2(px2, pz2), up = high ? 1 : 0.5;
+        const bed2 = Math.min(floor(px2, pz2), ptop - 2.8) - 0.3;
+        k.add(cyl(0.12, 0.14, ptop + up - bed2, 7), { at: [px2, bed2, pz2], color: PILE, outline: 0.015 });
+        k.add(cyl(0.13, 0.13, 0.06, 7), { at: [px2, ptop + up, pz2], color: "#4a3223" });
         const nx = alongEdgeX ? i + 2 : px2, nz = alongEdgeX ? pz2 : j + 2;
-        const nextDeck = alongEdgeX ? deck(i + 1, j) && water2(i + 1 + dx, j + dz) : deck(i, j + 1) && water2(i + dx, j + 1 + dz);
-        if (nextDeck) {
-          const len = Math.hypot(nx - px2, nz - pz2);
-          k.add(cyl(0.022, 0.022, len, 4), { at: [px2, top + 0.36, pz2], rot: alongEdgeX ? [0, 0, -Math.PI / 2] : [Math.PI / 2, 0, 0], color: ROPE });
-        }
+        const nextDeck = alongEdgeX ? deck(i + 1, j) && open(i + 1 + dx, j + dz) : deck(i, j + 1) && open(i + dx, j + 1 + dz);
+        if (nextDeck && !high) rod(k, px2, ptop + 0.36, pz2, nx, topAt2(nx, nz) + 0.36, nz, 0.022, ROPE);
       }
     }
   }
@@ -35796,8 +36060,8 @@ void main() {
       const w = this.world;
       if (!w) return;
       const ccx = Math.floor(w.wx(ox) / CHUNK), ccy = Math.floor(oy / CHUNK);
-      const at5 = this.wantAt;
-      if (!at5 || at5[0] !== ccx || at5[1] !== ccy || at5[2] !== this.nearR || at5[3] !== this.farR || at5[4] !== this.floorR) {
+      const at4 = this.wantAt;
+      if (!at4 || at4[0] !== ccx || at4[1] !== ccy || at4[2] !== this.nearR || at4[3] !== this.farR || at4[4] !== this.floorR) {
         this.wantAt = [ccx, ccy, this.nearR, this.farR, this.floorR];
         this.want = this.wanted(ccx, ccy);
         this.dropUnwanted();
@@ -35897,7 +36161,7 @@ void main() {
       const w = this.world;
       const g = this.hf.grid(cx, cy);
       const x0 = cx * CHUNK, y0 = cy * CHUNK;
-      const N4 = CHUNK + 1;
+      const N5 = CHUNK + 1;
       const step = lod;
       const n = CHUNK / step + 1;
       const pos = new Float32Array(n * n * 3);
@@ -35907,7 +36171,7 @@ void main() {
       for (let j = 0; j < n; j++) {
         for (let i = 0; i < n; i++) {
           const gi = i * step, gj = j * step;
-          const h2 = g[gj * N4 + gi];
+          const h2 = g[gj * N5 + gi];
           if (h2 < minH) minH = h2;
           const k = (j * n + i) * 3;
           pos[k] = gi;
@@ -36016,11 +36280,30 @@ void main() {
         spans[q2] = s[0];
         spans[q2 + 1] = s[1];
       }
+      const hf = this.hf;
+      const bridge = (q2, list) => w.type(x0 + list[q2], y0 + list[q2 + 1]) === T.BRIDGE;
+      const deckSpans = decks2.length ? new Float32Array(decks2.length) : null;
+      for (let q2 = 0; q2 < decks2.length; q2 += 2) {
+        const top = bridge(q2, decks2) ? hf.deckTile(x0 + decks2[q2], y0 + decks2[q2 + 1]) : DECK_Y;
+        deckSpans[q2] = top - 0.22;
+        deckSpans[q2 + 1] = top;
+      }
+      const postSpans = posts.length ? new Float32Array(posts.length) : null;
+      for (let q2 = 0; q2 < posts.length; q2 += 2) {
+        if (!bridge(q2, posts)) {
+          postSpans[q2] = DECK_Y - 3.3;
+          postSpans[q2 + 1] = DECK_Y - 0.1;
+          continue;
+        }
+        const x = x0 + posts[q2] + 0.65, y = y0 + posts[q2 + 1] + 0.65;
+        postSpans[q2] = Math.min(hf.terrain(x, y), DECK_Y - 1) - 0.4;
+        postSpans[q2 + 1] = hf.deckAt(x, y) - 0.2;
+      }
       if (!full) {
         const m = farBoxes([
-          [decks2, 1, 0.22, 1, DECK_Y - 0.11, 10119740],
+          [decks2, 1, 0.22, 1, DECK_Y - 0.11, 10119740, 0, deckSpans],
           [piers, 1, 0.26, 1, DOCK_Y - 0.13, 10119740],
-          [posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, 6111280, 0.15],
+          [posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, 6111280, 0.15, postSpans],
           [piles, 0.3, DOCK_Y + 2.74, 0.3, (DOCK_Y - 3.26) / 2, 6111280],
           [quayed, 1, DOCK_Y + 1.5, 1, (DOCK_Y - 1.5) / 2, 10722448],
           [walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, 9076592, 0, spans]
@@ -36028,9 +36311,9 @@ void main() {
         if (m) root2.add(m);
         return;
       }
-      if (decks2.length) root2.add(boxes(decks2, 1, 0.22, 1, DECK_Y - 0.11, this.deckMat));
+      if (decks2.length) root2.add(deckBoxes(decks2, x0, y0, (i, j) => w.type(i, j) === T.BRIDGE, (cx, cy) => hf.deckCorner(cx, cy), this.deckMat));
       if (piers.length) root2.add(boxes(piers, 1, 0.26, 1, DOCK_Y - 0.13, this.deckMat));
-      if (posts.length) root2.add(boxes(posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, this.postMat, 0.15));
+      if (posts.length) root2.add(boxes(posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, this.postMat, 0.15, postSpans));
       if (walls.length) {
         const m = boxes(walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, this.wallMat, 0, spans);
         m.castShadow = true;
@@ -36047,8 +36330,8 @@ void main() {
     }
   };
   function detailTexture() {
-    const N4 = 256;
-    const data = new Uint8Array(N4 * N4 * 4);
+    const N5 = 256;
+    const data = new Uint8Array(N5 * N5 * 4);
     const lattice = (n, seed) => {
       const g = new Float32Array(n * n);
       let h2 = seed;
@@ -36058,27 +36341,27 @@ void main() {
       }
       return (x, y) => {
         const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
-        const at5 = (i, j) => g[(j % n + n) % n * n + (i % n + n) % n];
+        const at4 = (i, j) => g[(j % n + n) % n * n + (i % n + n) % n];
         const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
-        const a = at5(xi, yi) + (at5(xi + 1, yi) - at5(xi, yi)) * sx;
-        const b = at5(xi, yi + 1) + (at5(xi + 1, yi + 1) - at5(xi, yi + 1)) * sx;
+        const a = at4(xi, yi) + (at4(xi + 1, yi) - at4(xi, yi)) * sx;
+        const b = at4(xi, yi + 1) + (at4(xi + 1, yi + 1) - at4(xi, yi + 1)) * sx;
         return a + (b - a) * sy;
       };
     };
     const big = lattice(8, 7), mid = lattice(16, 31), fine = lattice(64, 97), finer = lattice(128, 151);
-    for (let y = 0; y < N4; y++) {
-      for (let x = 0; x < N4; x++) {
-        const u = x / N4, v = y / N4;
+    for (let y = 0; y < N5; y++) {
+      for (let x = 0; x < N5; x++) {
+        const u = x / N5, v = y / N5;
         const r = big(u * 8, v * 8) * 0.65 + mid(u * 16, v * 16) * 0.35;
         const g = fine(u * 64, v * 64) * 0.6 + finer(u * 128, v * 128) * 0.4;
-        const o = (y * N4 + x) * 4;
+        const o = (y * N5 + x) * 4;
         data[o] = r * 255;
         data[o + 1] = g * 255;
         data[o + 2] = 0;
         data[o + 3] = 255;
       }
     }
-    const tex2 = new DataTexture(data, N4, N4, RGBAFormat);
+    const tex2 = new DataTexture(data, N5, N5, RGBAFormat);
     tex2.wrapS = tex2.wrapT = RepeatWrapping;
     tex2.magFilter = LinearFilter;
     tex2.minFilter = LinearMipmapLinearFilter;
@@ -36205,6 +36488,37 @@ void main() {
     geo2.setAttribute("position", new BufferAttribute(pos, 3));
     geo2.setAttribute("normal", new BufferAttribute(nor, 3));
     geo2.setIndex(new BufferAttribute(idx, 1));
+    geo2.computeBoundingSphere();
+    const m = new Mesh(geo2, mat);
+    m.receiveShadow = true;
+    return m;
+  }
+  function deckBoxes(list, x0, y0, isBridge, corner, mat) {
+    const n = list.length / 2;
+    const base2 = new BoxGeometry(1, 0.22, 1);
+    const bp = base2.attributes.position.array, bi = base2.index.array;
+    const vc = bp.length / 3;
+    const pos = new Float32Array(n * bp.length);
+    const idx = new Uint32Array(n * bi.length);
+    const ch = new Float32Array(4);
+    for (let k = 0; k < n; k++) {
+      const i = list[k * 2], j = list[k * 2 + 1];
+      const wi = x0 + i, wj = y0 + j;
+      if (isBridge(wi, wj)) for (let c = 0; c < 4; c++) ch[c] = corner(wi + (c & 1), wj + (c >> 1));
+      else ch.fill(DECK_Y);
+      for (let v = 0; v < vc; v++) {
+        const sx = bp[v * 3] > 0 ? 1 : 0, sz = bp[v * 3 + 2] > 0 ? 1 : 0;
+        pos[(k * vc + v) * 3] = bp[v * 3] + i + 0.5;
+        pos[(k * vc + v) * 3 + 1] = ch[sx + sz * 2] + (bp[v * 3 + 1] > 0 ? 0 : -0.22);
+        pos[(k * vc + v) * 3 + 2] = bp[v * 3 + 2] + j + 0.5;
+      }
+      for (let q2 = 0; q2 < bi.length; q2++) idx[k * bi.length + q2] = bi[q2] + k * vc;
+    }
+    base2.dispose();
+    const geo2 = new BufferGeometry();
+    geo2.setAttribute("position", new BufferAttribute(pos, 3));
+    geo2.setIndex(new BufferAttribute(idx, 1));
+    geo2.computeVertexNormals();
     geo2.computeBoundingSphere();
     const m = new Mesh(geo2, mat);
     m.receiveShadow = true;
@@ -37747,12 +38061,12 @@ void main() {
   var liningYs = (r) => r.kind === "hold" ? [-0.02, 0.55, 1.15, 1.75, r.ceil + 0.1 - r.floor] : [-0.02, 0.9, r.ceil + 0.1 - r.floor];
   function liningAt(d, r, t, y) {
     const ys = liningYs(r);
-    const at5 = (yy) => r.kind === "hold" ? Math.max(0.3, skinAt(d, t, r.floor + yy) - 0.22) : innerAt(d, t, r.floor + yy) + 0.01;
+    const at4 = (yy) => r.kind === "hold" ? Math.max(0.3, skinAt(d, t, r.floor + yy) - 0.22) : innerAt(d, t, r.floor + yy) + 0.01;
     const yc = Math.max(ys[0], Math.min(ys[ys.length - 1], y));
     for (let i = 0; i < ys.length - 1; i++) {
-      if (yc <= ys[i + 1]) return at5(ys[i]) + (at5(ys[i + 1]) - at5(ys[i])) * (yc - ys[i]) / (ys[i + 1] - ys[i]);
+      if (yc <= ys[i + 1]) return at4(ys[i]) + (at4(ys[i + 1]) - at4(ys[i])) * (yc - ys[i]) / (ys[i + 1] - ys[i]);
     }
-    return at5(ys[ys.length - 1]);
+    return at4(ys[ys.length - 1]);
   }
   function roomEnds(d, r) {
     const a = xAt(d, r.t0), b = xAt(d, r.t1);
@@ -38185,8 +38499,8 @@ void main() {
       const cp = d.comp;
       if (u > cp.u0 && u < cp.u1 && v < cp.w / 2 && h2 > d.holdY - 0.05 && h2 < d.deckY + 0.05) return false;
     }
-    const rail2 = d.big ? 1 : 0.8, at5 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
-    if (d.castle && at5(d.tq) && h2 < d.yq + rail2 || d.poop && at5(d.tp) && h2 < d.yp + rail2 || d.fore && at5(d.tf) && h2 < d.yf + rail2) return true;
+    const rail2 = d.big ? 1 : 0.8, at4 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
+    if (d.castle && at4(d.tq) && h2 < d.yq + rail2 || d.poop && at4(d.tp) && h2 < d.yp + rail2 || d.fore && at4(d.tf) && h2 < d.yf + rail2) return true;
     if (h2 > topAt(d, t)) return false;
     if (v > hb * d.walk - 0.05 || h2 < d.deckY - 0.1) return true;
     if (d.poop && t < d.tp) return h2 < d.yp - 0.1;
@@ -38248,15 +38562,15 @@ void main() {
     return k;
   }
   function shell(k, d, P4) {
-    const N4 = 48, NP = 10;
+    const N5 = 48, NP = 10;
     const band2 = [P4.cap, P4.upper, P4.stripe, P4.plank, P4.plank2, P4.bottom, P4.bottom, shade2(P4.bottom, -0.12), P4.bottom];
     const pos = [], idx = [], triCol = [];
-    for (let i = 0; i <= N4; i++) {
-      const t = i / N4, x = xAt(d, t), hb = hbAt(t, d.B);
+    for (let i = 0; i <= N5; i++) {
+      const t = i / N5, x = xAt(d, t), hb = hbAt(t, d.B);
       for (const s of [1, -1]) for (const [w, y] of profile(d, t)) pos.push(x, y, s * w * hb);
     }
     const vid = (i, s, j) => (i * 2 + s) * NP + j;
-    for (let i = 0; i < N4; i++) {
+    for (let i = 0; i < N5; i++) {
       for (let s = 0; s < 2; s++) {
         for (let j = 0; j < NP - 1; j++) {
           const a = vid(i, s, j), b = vid(i + 1, s, j), c = vid(i, s, j + 1), e = vid(i + 1, s, j + 1);
@@ -38319,11 +38633,11 @@ void main() {
     k.add(g, { color: col });
   }
   function bulwarks(k, d, P4) {
-    const N4 = 64;
+    const N5 = 64;
     for (const s of [1, -1]) {
       const inner = [], cap2 = [];
-      for (let i = 0; i <= N4; i++) {
-        const t = i / N4, x = xAt(d, t);
+      for (let i = 0; i <= N5; i++) {
+        const t = i / N5, x = xAt(d, t);
         const top = topAt(d, t), fl2 = floorAt(d, t);
         const wt = skinAt(d, t, top), wi = innerAt(d, t, top - 0.12);
         inner.push([[x, top - 0.1, s * wi], [x, fl2 - 0.02, s * innerAt(d, t, fl2)]]);
@@ -38994,17 +39308,17 @@ void main() {
   }
   var IN = { wall: C("#8a6445"), wall2: C("#7d5a3d"), beam: C("#5b3d26"), floor: C("#a57b52"), dark: C("#3e2a1c"), cloth: C("#c9b99a") };
   function lining(k, d, r) {
-    const N4 = Math.max(4, Math.round((r.t1 - r.t0) * d.L / 0.5));
+    const N5 = Math.max(4, Math.round((r.t1 - r.t0) * d.L / 0.5));
     const hold = r.kind === "hold";
     const ys = liningYs(r);
     for (const s of [1, -1]) {
       const pos = [], idx = [], cols = [];
-      for (let i = 0; i <= N4; i++) {
-        const t = r.t0 + (r.t1 - r.t0) * i / N4, x = xAt(d, t);
+      for (let i = 0; i <= N5; i++) {
+        const t = r.t0 + (r.t1 - r.t0) * i / N5, x = xAt(d, t);
         for (const y of ys) pos.push(x, r.floor + y, s * liningAt(d, r, t, y));
       }
       const M2 = ys.length;
-      for (let i = 0; i < N4; i++) {
+      for (let i = 0; i < N5; i++) {
         for (let j = 0; j < M2 - 1; j++) {
           const a = i * M2 + j, b = a + 1, c = a + M2, e = c + 1;
           if (s > 0) idx.push(a, b, c, b, e, c);
@@ -39147,13 +39461,13 @@ void main() {
       k.add(cyl(0.08, 0.08, (r ? r.ceil + 0.12 - r.floor : 2.4) - h2, 8), { at: [-w * 0.25, h2, -dp / 2 + 0.14], color: iron });
     },
     hammock(k, it) {
-      const { w, dp, h: h2 } = it, L2 = w - 0.44, N4 = 10, sag = 0.22;
+      const { w, dp, h: h2 } = it, L2 = w - 0.44, N5 = 10, sag = 0.22;
       const pos = [], idx = [];
-      for (let i = 0; i <= N4; i++) {
-        const x = -L2 / 2 + L2 * i / N4, y = 0.04 + sag * (2 * x / L2) ** 2;
+      for (let i = 0; i <= N5; i++) {
+        const x = -L2 / 2 + L2 * i / N5, y = 0.04 + sag * (2 * x / L2) ** 2;
         for (const [z, lift] of [[-dp * 0.42, 0.07], [0, 0], [dp * 0.42, 0.07]]) pos.push(x, y + lift, z);
       }
-      for (let i = 0; i < N4; i++) for (let j = 0; j < 2; j++) {
+      for (let i = 0; i < N5; i++) for (let j = 0; j < 2; j++) {
         const a = i * 3 + j;
         idx.push(a, a + 1, a + 3, a + 1, a + 4, a + 3);
       }
@@ -39311,7 +39625,7 @@ void main() {
     }
     const P4 = palette(def);
     const k = new Mesher();
-    const N4 = 22;
+    const N5 = 22;
     const prof2 = (t) => {
       const top = topAt(d, t), dk3 = d.deckY;
       return [
@@ -39330,13 +39644,13 @@ void main() {
     const band2 = [P4.cap, P4.bulwark, P4.wale, P4.plank, P4.plank2, P4.plank, P4.bottom, shade2(P4.bottom, -0.1), P4.bottom];
     const NP = 10;
     const pos = [], idx = [], triCol = [];
-    for (let i = 0; i <= N4; i++) {
-      const t = i / N4, x = xAt(d, t), hb = Math.max(0, hbAt(t, d.B));
+    for (let i = 0; i <= N5; i++) {
+      const t = i / N5, x = xAt(d, t), hb = Math.max(0, hbAt(t, d.B));
       const pr = prof2(t);
       for (const s of [1, -1]) for (const [w, y] of pr) pos.push(x, y, s * w * hb);
     }
     const vid = (i, s, j) => (i * 2 + s) * NP + j;
-    for (let i = 0; i < N4; i++) {
+    for (let i = 0; i < N5; i++) {
       for (let s = 0; s < 2; s++) {
         for (let j = 0; j < NP - 1; j++) {
           const a = vid(i, s, j), b = vid(i + 1, s, j), c = vid(i, s, j + 1), dd = vid(i + 1, s, j + 1);
@@ -39375,8 +39689,8 @@ void main() {
     };
     for (const s of [1, -1]) {
       const inner = [], cap2 = [];
-      for (let i = 0; i <= N4; i++) {
-        const t = i / N4, x = xAt(d, t), hb = hbAt(t, d.B);
+      for (let i = 0; i <= N5; i++) {
+        const t = i / N5, x = xAt(d, t), hb = hbAt(t, d.B);
         if (hb < 0.12) continue;
         const top = topAt(d, t);
         const zi = s * Math.max(0.02, 0.965 * hb - inset);
@@ -39388,7 +39702,7 @@ void main() {
     }
     const deckRegion = (t0, t1, yFn) => {
       const M2 = Math.max(4, Math.round(d.B / 0.24));
-      const R4 = Math.max(2, Math.round((t1 - t0) * N4));
+      const R4 = Math.max(2, Math.round((t1 - t0) * N5));
       const dp = [], di = [], dc = [];
       for (let i = 0; i <= R4; i++) {
         const t = t0 + (t1 - t0) * i / R4, x = xAt(d, t);
@@ -40524,7 +40838,7 @@ void main() {
       const time = game.env?.time || 0;
       let eyeH = 1.72 * scale;
       let gx = 0, gz = 0;
-      let gh = p.flying && p.alt != null ? p.alt : p.deck ? p.deck.h + shipBob(p.deck.ship, time) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) + (p.z || 0) : ground(p.x, p.y) - (p.wading || 0) + (p.z || 0);
+      let gh = p.flying && p.alt != null ? p.alt : p.deck ? p.deck.h + shipBob(p.deck.ship, time) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) + (p.z || 0) : (p.belowDeck ? p.groundAt(game, p.x, p.y) : ground(p.x, p.y)) - (p.wading || 0) + (p.z || 0);
       let rollSea = 0, hp = null, shipX = 0, shipZ = 0;
       if (!sailing) this.seaPitch = 0;
       if (sailing) {
@@ -52277,10 +52591,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const A = pose.anim;
     if (!A || A.t <= 5e-3) return;
     if (A.t < (A.trailFrom ?? 0) - 5e-3 || A.t > (A.trailTo ?? 99)) return;
-    const N4 = 11, dt = A.trailDt || 85e-4;
+    const N5 = 11, dt = A.trailDt || 85e-4;
     const tMin = Math.max(0, (A.trailFrom ?? 0) - 0.02);
     const samples = [];
-    for (let k = 0; k < N4; k++) {
+    for (let k = 0; k < N5; k++) {
       const t = A.t - k * dt;
       if (t < tMin) break;
       const P4 = k === 0 ? pose.P : samplePose(A, t, pose);
@@ -55099,17 +55413,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       rings2.push(pts);
     }
-    const N4 = 4 * M2;
+    const N5 = 4 * M2;
     const pos = [], idx = [];
     rings2.forEach((r) => r.forEach((p) => pos.push(...p)));
     for (let i = 0; i < R4; i++) {
-      for (let j = 0; j < N4; j++) {
-        const a = i * N4 + j, b2 = i * N4 + (j + 1) % N4, c = a + N4, d = b2 + N4;
+      for (let j = 0; j < N5; j++) {
+        const a = i * N5 + j, b2 = i * N5 + (j + 1) % N5, c = a + N5, d = b2 + N5;
         idx.push(a, b2, d, a, d, c);
       }
     }
-    const t0 = R4 * N4;
-    for (let j = 1; j < N4 - 1; j++) idx.push(t0, t0 + j, t0 + j + 1);
+    const t0 = R4 * N5;
+    for (let j = 1; j < N5 - 1; j++) idx.push(t0, t0 + j, t0 + j + 1);
     const g = new BufferGeometry();
     g.setAttribute("position", new Float32BufferAttribute(pos, 3));
     g.setIndex(idx);
@@ -55120,10 +55434,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     e0.forEach((p) => fp.push(...p));
     e0.forEach((p) => fp.push(p[0], p[1] - th, p[2]));
     fp.push(cx, y - th + 0.05, cz);
-    for (let j = 0; j < N4; j++) {
-      const a = j, b2 = (j + 1) % N4;
-      fi.push(a, b2 + N4, b2, a, a + N4, b2 + N4);
-      fi.push(2 * N4, b2 + N4, j + N4);
+    for (let j = 0; j < N5; j++) {
+      const a = j, b2 = (j + 1) % N5;
+      fi.push(a, b2 + N5, b2, a, a + N5, b2 + N5);
+      fi.push(2 * N5, b2 + N5, j + N5);
     }
     const fg = new BufferGeometry();
     fg.setAttribute("position", new Float32BufferAttribute(fp, 3));
@@ -55404,7 +55718,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function wallDetail(k, b, S3, fw, fd, H3, plinth, storeys, storeyH, wallCol, g, holes = null, ex = (sx, d) => d, sink = 0) {
     const free = (sx) => ex(sx, 1) > 0;
     const xl = (d) => -fw / 2 - ex(-1, d), xr = (d) => fw / 2 + ex(1, d);
-    const beam = S3.beam || shade2(wallCol, -0.5);
+    const beam2 = S3.beam || shade2(wallCol, -0.5);
     const HF = holes?.front || [], HS = { [-1]: holes?.left || [], [1]: holes?.right || [] };
     const segs = (a0, a1, y0, y1, list) => {
       let parts = [[Math.min(a0, a1), Math.max(a0, a1)]];
@@ -55435,12 +55749,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       case "timber": {
         for (const sx of [-1, 1]) for (const sz of [0, -fd]) {
           const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * ex(sx, 0.12);
-          B2(k, Math.min(inner, outer), plinth, sz - 0.12, Math.max(inner, outer), H3, sz + 0.12, beam);
+          B2(k, Math.min(inner, outer), plinth, sz - 0.12, Math.max(inner, outer), H3, sz + 0.12, beam2);
         }
         for (let f = 0; f <= storeys; f++) {
           const y = f === storeys ? H3 - 0.2 : plinth + f * storeyH;
-          FB(xl(0.02), y, -0.02, xr(0.02), y + 0.2, 0.07, beam);
-          for (const sx of [-1, 1]) if (free(sx)) SB2(sx, sx * fw / 2 - 0.07, y, -fd, sx * fw / 2 + 0.02 * sx, y + 0.2, 0, beam);
+          FB(xl(0.02), y, -0.02, xr(0.02), y + 0.2, 0.07, beam2);
+          for (const sx of [-1, 1]) if (free(sx)) SB2(sx, sx * fw / 2 - 0.07, y, -fd, sx * fw / 2 + 0.02 * sx, y + 0.2, 0, beam2);
         }
         if (fw >= 4) {
           for (const sx of [-1, 1]) {
@@ -55448,7 +55762,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             const y0 = plinth + 0.2, y1 = plinth + Math.min(storeyH, H3 - plinth) - 0.1;
             if (crosses(x0, y0, y1, 0.05) || crosses(x1, y0, y1, 0.05) || crosses((x0 + x1) / 2, y0, y1, 0.05)) continue;
             const len = Math.hypot(x1 - x0, y1 - y0);
-            k.add(box(0.13, len, 0.06), { at: [x0, y0, 0.03], rot: [0, 0, -Math.atan2(x1 - x0, y1 - y0)], color: beam });
+            k.add(box(0.13, len, 0.06), { at: [x0, y0, 0.03], rot: [0, 0, -Math.atan2(x1 - x0, y1 - y0)], color: beam2 });
           }
         }
         break;
@@ -55675,18 +55989,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return V3;
   }
   function jetty(k, S3, fw, plinth, storeys, storeyH, H3, Hc, j, wallCol, ex) {
-    const beam = S3.beam || shade2(wallCol, -0.5);
+    const beam2 = S3.beam || shade2(wallCol, -0.5);
     B2(k, -fw / 2, Hc, 0, fw / 2, H3, j, wallCol, { outline: 0.04 });
-    B2(k, -fw / 2 - ex(-1, 0.03), Hc - 0.2, -0.02, fw / 2 + ex(1, 0.03), Hc + 0.04, j + 0.07, beam);
-    for (let x = -fw / 2 + 0.35; x < fw / 2 - 0.2; x += 1.15) k.add(box(0.1, 0.5, 0.1), { at: [x, Hc - 0.62, 0.06], rot: [0.55, 0, 0], color: beam });
+    B2(k, -fw / 2 - ex(-1, 0.03), Hc - 0.2, -0.02, fw / 2 + ex(1, 0.03), Hc + 0.04, j + 0.07, beam2);
+    for (let x = -fw / 2 + 0.35; x < fw / 2 - 0.2; x += 1.15) k.add(box(0.1, 0.5, 0.1), { at: [x, Hc - 0.62, 0.06], rot: [0.55, 0, 0], color: beam2 });
     for (const sx of [-1, 1]) {
       const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * ex(sx, 0.02);
-      B2(k, Math.min(inner, outer), Hc, j - 0.1, Math.max(inner, outer), H3, j + 0.04, beam);
+      B2(k, Math.min(inner, outer), Hc, j - 0.1, Math.max(inner, outer), H3, j + 0.04, beam2);
     }
     for (let f = 1; f <= storeys; f++) {
       const y = f === storeys ? H3 - 0.2 : plinth + f * storeyH;
       if (y <= Hc + 0.05) continue;
-      B2(k, -fw / 2, y, j - 0.02, fw / 2, y + 0.18, j + 0.05, beam);
+      B2(k, -fw / 2, y, j - 0.02, fw / 2, y + 0.18, j + 0.05, beam2);
     }
   }
   function balcony(k, b, S3, V3, y, wallCol, litOn) {
@@ -57409,9 +57723,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     mango: { col: "#ffb300", r: 0.12 },
     cherry: { col: "#c2185b", r: 0.07 }
   };
-  function addFruit(k, fruit, at5, s = 1) {
+  function addFruit(k, fruit, at4, s = 1) {
     const L2 = FRUIT_LOOK[fruit];
-    const [x, y, z] = at5;
+    const [x, y, z] = at4;
     if (fruit === "banana") {
       k.add(cyl(0.02, 0.025, 0.25, 4, true), { at: [x, y - 0.1, z], color: "#6d8b3a" });
       for (let i = 0; i < 5; i++) {
@@ -58214,20 +58528,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const sheet = new Mesh(new CylinderGeometry(0.57, 0.62, 1.28, 18, 1, true), glowMat(13627135, { opacity: 0.33 }));
     sheet.position.y = 1.1;
     root2.add(sheet);
-    const N4 = 12;
+    const N5 = 12;
     const drop = new IcosahedronGeometry(0.055, 0);
     const dp = drop.attributes.position.array;
     const per = dp.length;
-    const arr = new Float32Array(per * N4);
+    const arr = new Float32Array(per * N5);
     const g = new BufferGeometry();
     g.setAttribute("position", new BufferAttribute(arr, 3));
     const drops = new Mesh(g, glowMat(15136767, { opacity: 0.85 }));
     drops.frustumCulled = false;
     root2.add(drops);
     animate(root2, (t) => {
-      for (let k = 0; k < N4; k++) {
-        const a = k / N4 * Math.PI * 2 + t * 0.4;
-        const ph = (t * 0.9 + k / N4) % 1;
+      for (let k = 0; k < N5; k++) {
+        const a = k / N5 * Math.PI * 2 + t * 0.4;
+        const ph = (t * 0.9 + k / N5) % 1;
         const r = 0.1 + ph * 0.55, y = 2 + ph * 0.55 - ph * ph * 1.3;
         const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
         for (let v = 0; v < per; v += 3) {
@@ -58477,19 +58791,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const root2 = group("lighthouse");
     add(root2, lighthouseGeo());
     if (!beamMat) beamMat = new MeshBasicMaterial({ color: 16773560, transparent: true, opacity: 0.16, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: true });
-    const beam = new Group();
-    beam.position.y = 9.2;
+    const beam2 = new Group();
+    beam2.position.y = 9.2;
     for (const s of [-1, 1]) {
       const c = new Mesh(new ConeGeometry(4.5, 45, 16, 1, true), beamMat);
       c.rotation.z = s * Math.PI / 2;
       c.position.x = s * 22.5;
       c.renderOrder = 4;
-      beam.add(c);
+      beam2.add(c);
     }
-    root2.add(beam);
+    root2.add(beam2);
     animate(root2, (t, env, st) => {
-      beam.visible = st.night > 0.25;
-      beam.rotation.y = t * 0.8;
+      beam2.visible = st.night > 0.25;
+      beam2.rotation.y = t * 0.8;
     });
     return root2;
   });
@@ -62515,7 +62829,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     waterUnder(game) {
       if (this.deck || this.dash && this.dash.ignoreWater) return 0;
       const t = game.world.type(this.x, this.y);
-      if (IS_LIQUID[t] !== 1 || OVERLAY[t]) return 0;
+      if ((IS_LIQUID[t] !== 1 || OVERLAY[t]) && !this.belowDeck) return 0;
       if (t === T.LAVA) return 0;
       return game.seaDepth ? game.seaDepth(this.x, this.y) : 3;
     }
@@ -62672,7 +62986,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.speed = fs;
         return;
       }
+      const feet0 = this.bridgeNear(game) ? this.feetH(game) : 0;
       this.updateMovement(dt, game, false);
+      this.underDeck(game, feet0);
       this.followGround(game);
       const L2 = this.ledge;
       const toward = L2 && this.intent.mx * L2.dx + this.intent.my * L2.dy > 0.4;
@@ -62820,6 +63136,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           this.blocked = L2;
           return false;
         }
+        if (!this.belowDeck && !(this.z > 0.4) && w.type(this.x, this.y) === T.BRIDGE && w.type(x, y) !== T.BRIDGE) {
+          const hf = g.view3d?.terrain?.hf;
+          if (hf && hf.railAt(Math.floor(this.x), Math.floor(this.y), Math.floor(x), Math.floor(y))) return false;
+        }
       }
       if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
       if (!this.passable(w, x - r, y) || !this.passable(w, x + r, y) || !this.passable(w, x, y - r) || !this.passable(w, x, y + r)) return false;
@@ -62829,7 +63149,42 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     /** Where feet rest at (x, y) off a deck: the ground, a pier or a quay — over the sea, its surface. */
     groundAt(game, x, y) {
-      return game.view3d ? game.view3d.ground(x, y) : 0;
+      if (!game.view3d) return 0;
+      if (this.belowDeck && game.world.type(x, y) === T.BRIDGE) return Math.max(game.view3d.terrain.terrainAt(x, y), 0);
+      return game.view3d.ground(x, y);
+    }
+    /** The top of a bridge's deck at (x, y) if it stands high over the water there (room to swim under it), else null. */
+    highDeck(game, x, y) {
+      if (game.world.type(x, y) !== T.BRIDGE) return null;
+      const hf = game.view3d?.terrain?.hf;
+      const top = hf ? hf.deckAt(x, y) : 0;
+      return top > HIGH_DECK ? top : null;
+    }
+    /** Any bridge tile under or beside you? (the only place the deck-or-under question arises) */
+    bridgeNear(game) {
+      const w = game.world;
+      return w.type(this.x, this.y) === T.BRIDGE || w.type(this.x + 1, this.y) === T.BRIDGE || w.type(this.x - 1, this.y) === T.BRIDGE || w.type(this.x, this.y + 1) === T.BRIDGE || w.type(this.x, this.y - 1) === T.BRIDGE;
+    }
+    /**
+     * On a high bridge's deck, or down under it (swimming, or wading the
+     * shallows)? Settled as you come onto its tiles — from below you go under
+     * it, from its deck or the bank you walk on it — and kept while you're on
+     * them. (feet0: where your feet were before this step.)
+     */
+    underDeck(game, feet0) {
+      if (game.world.type(this.x, this.y) !== T.BRIDGE) {
+        this.belowDeck = false;
+        return;
+      }
+      if (this.belowDeck) return;
+      const top = this.highDeck(game, this.x, this.y);
+      this.belowDeck = top !== null && !this.deck && this.canEnterWater() && feet0 < top - 1.2;
+    }
+    /** Would a step onto (x, y) take you under a high bridge rather than up onto it? */
+    passesUnder(game, x, y) {
+      const top = this.highDeck(game, x, y);
+      if (top === null || !this.canEnterWater()) return false;
+      return this.belowDeck || this.feetH(game) < top - 1.2;
     }
     /** How high your feet are (m above the sea): on a deck, afloat, wading, standing or in the air. */
     feetH(game) {
@@ -62860,8 +63215,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const t = w.type(x, y);
       const high = !IS_LIQUID[t] || OVERLAY[t];
       if (!high) return null;
+      if (t === T.BRIDGE && this.passesUnder(g, x, y)) return null;
       const here = w.type(this.x, this.y);
-      const wet = IS_LIQUID[here] && !OVERLAY[here];
+      const wet = IS_LIQUID[here] && !OVERLAY[here] || !!this.belowDeck;
       if (!wet && !this.deck && !(OVERLAY[t] && !OVERLAY[here]) && !(w.quays.size && w.isQuay(x, y) && !w.isQuay(this.x, this.y))) return null;
       const top = this.groundAt(g, x, y);
       if (this.inWater) return top > this.groundAt(g, this.x, this.y) + 0.35 ? this.blockedBy(x, y, top) : null;
@@ -62924,7 +63280,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     /** Over the open water (not a pier, a bridge or dry land)? */
     overWater(game) {
       const t = game.world.type(this.x, this.y);
-      return IS_LIQUID[t] === 1 && !OVERLAY[t];
+      return IS_LIQUID[t] === 1 && !OVERLAY[t] || !!this.belowDeck;
     }
     /** Room to stand at (x, y) on dry ground or a pier (where a climb ends). */
     standsAt(game, x, y) {
@@ -63274,7 +63630,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const w = game.world;
       const t = w.type(this.x, this.y);
       const was = this.inWater;
-      const liquid = IS_LIQUID[t] === 1 && !OVERLAY[t] && !(this.dash && this.dash.ignoreWater) && !this.deck;
+      const liquid = (IS_LIQUID[t] === 1 && !OVERLAY[t] || !!this.belowDeck) && !(this.dash && this.dash.ignoreWater) && !this.deck;
       const wd = liquid ? t === T.LAVA ? 99 : game.seaDepth ? game.seaDepth(this.x, this.y) : 99 : 0;
       this.inWater = liquid && !(this.leapT > 0) && (t === T.LAVA || this.forcedWater > 0 || wd > this.swimDepth(was));
       this.wading = liquid && !this.inWater && !(this.leapT > 0) && !(this.z > 0.02) ? wd : 0;
@@ -64035,7 +64391,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
      *               (still placed from `bone`'s frame) }
      */
     add(g, m, color, bone = 0, part5 = 0, opts = null) {
-      const P4 = g.attributes.position, N4 = g.attributes.normal;
+      const P4 = g.attributes.position, N5 = g.attributes.normal;
       const UV = opts && opts.uv || g.userData && g.userData.detail ? g.attributes.uv : null;
       const blend = opts && opts.blend, skin = opts && opts.skin;
       const base2 = this.count;
@@ -64050,7 +64406,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const sk = skin ? skin(_v4.x, _v4.y, _v4.z) : null;
         const bw2 = sk ? [sk[1], sk[2]] : blend ? blend(_v4.x, _v4.y, _v4.z) : null;
         if (bm) _v4.applyMatrix4(bm);
-        _n3.fromBufferAttribute(N4, i).applyMatrix3(_nm).normalize();
+        _n3.fromBufferAttribute(N5, i).applyMatrix3(_nm).normalize();
         this.pos.push(_v4.x, _v4.y, _v4.z);
         this.nor.push(_n3.x, _n3.y, _n3.z);
         this.col.push(c.r, c.g, c.b);
@@ -64576,13 +64932,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     U3 = Math.max(1, Math.round(U3));
     const V3 = rows.length - 1;
     const full = typeof a0 === "number" && typeof a1 === "number" && a1 - a0 >= TAU13 - 1e-6;
-    const at5 = (i, j) => {
+    const at4 = (i, j) => {
       const h2 = rows[j];
       const A0 = typeof a0 === "function" ? a0(h2) : a0, A1 = typeof a1 === "function" ? a1(h2) : a1;
       return [h2, A0 + (A1 - A0) * (inward ? 1 - i / U3 : i / U3)];
     };
     const g = grid((u, v) => {
-      const [h2, a0v] = at5(Math.round(u * U3), Math.round(v * V3));
+      const [h2, a0v] = at4(Math.round(u * U3), Math.round(v * V3));
       const a = warp(a0v);
       const p = pt(h2, a);
       if (uv) {
@@ -64596,7 +64952,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const n = g.attributes.normal, W4 = U3 + 1;
       for (let j = 0; j <= V3; j++) {
         for (let i = 0; i <= U3; i++) {
-          const [h2, a] = at5(i, j);
+          const [h2, a] = at4(i, j);
           const p = pt(h2, warp(a)), pa = pt(h2, warp(a + 1e-3)), ph = pt(h2 + 1e-3, warp(a));
           const tx = pa[0] - p[0], ty = pa[1] - p[1], tz = pa[2] - p[2];
           const sx = ph[0] - p[0], sy = ph[1] - p[1], sz = ph[2] - p[2];
@@ -65922,9 +66278,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return [p[0] * k, p[1] * k, p[2] * k];
   }
   function faceNormals(g, U3, V3) {
-    const P4 = g.attributes.position, N4 = g.attributes.normal;
-    const W4 = U3 + 1, n = N4.count;
-    let a = Float32Array.from(N4.array), b = new Float32Array(a.length);
+    const P4 = g.attributes.position, N5 = g.attributes.normal;
+    const W4 = U3 + 1, n = N5.count;
+    let a = Float32Array.from(N5.array), b = new Float32Array(a.length);
     for (let it = 0; it < 2; it++) {
       for (let j = 0; j <= V3; j++) {
         for (let i = 0; i <= U3; i++) {
@@ -65962,7 +66318,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const wg = (0.62 + 0.33 * feat) * (1 - 0.55 * low);
       const nx = a[i * 3] * wg + dx * (1 - wg) + f * 0.08, ny = a[i * 3 + 1] * wg + dy * (1 - wg) + f * 0.02, nz = a[i * 3 + 2] * wg + dz * (1 - wg);
       const m = Math.hypot(nx, ny, nz) || 1;
-      N4.setXYZ(i, nx / m, ny / m, nz / m);
+      N5.setXYZ(i, nx / m, ny / m, nz / m);
     }
     return g;
   }
@@ -66274,8 +66630,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       h2.cap(1.09, 58, 102, 118);
       bangs(h2, 5, 100, 74, 0.25, { sweep: 12, part: -10 });
       const wave = (a, b, sd, w) => {
-        const at5 = (k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
-        const c1 = at5(0.33), c2 = at5(0.7);
+        const at4 = (k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+        const c1 = at4(0.33), c2 = at4(0.7);
         const o1 = norm([c1[0], 0, c1[2]]), o2 = norm([c2[0], 0, c2[2]]);
         lock(h2, a, b, w, { c: add3(c1, o1, 0.45), c2: add3(c2, o2, -0.2), flat: 0.5 });
       };
@@ -66771,7 +67127,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       b.add(Prim.rbox(0.4, 10, 8), M(-2e-3 * k, -0.043 * k, 0, 0, 0, 0, S3(0.019, 0.047, 0.043)), col, hand, part5);
       const rest = { k, th, knuckle: [], lp: [], thumb: [-0.012 * k, -0.018 * k, th * 0.03 * k], lt: 0.032 * k };
       const hb0 = b.bind && b.bind[hand];
-      const at5 = (base2, v) => base2.clone().multiply(new three_module_exports.Matrix4().makeTranslation(v[0], v[1], v[2]));
+      const at4 = (base2, v) => base2.clone().multiply(new three_module_exports.Matrix4().makeTranslation(v[0], v[1], v[2]));
       for (let f = 0; f < 4; f++) {
         const len = [0.93, 1, 0.95, 0.77][f];
         const kn = [0, -0.083 * k * (f === 3 ? 0.95 : 1), th * (1.5 - f) * 0.0205 * k];
@@ -66779,18 +67135,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         rest.knuckle.push(kn);
         rest.lp.push(lp);
         if (hb0) {
-          const km = at5(hb0, kn);
+          const km = at4(hb0, kn);
           b.setBind(B3["k" + (f + 1) + H3], km);
-          b.setBind(B3["j" + (f + 1) + H3], at5(km, [0, -lp, 0]));
+          b.setBind(B3["j" + (f + 1) + H3], at4(km, [0, -lp, 0]));
         }
         const c = f % 2 ? col : dark;
         b.add(tcap(0.0113 * k, 0.0105 * k, lp, 8, 2), M(), c, B3["k" + (f + 1) + H3], part5);
         b.add(tcap(0.0104 * k, 89e-4 * k, ld, 8, 2), M(), c, B3["j" + (f + 1) + H3], part5);
       }
       if (hb0) {
-        const tm = at5(hb0, rest.thumb);
+        const tm = at4(hb0, rest.thumb);
         b.setBind(B3["tb" + H3], tm);
-        b.setBind(B3["tc" + H3], at5(tm, [0, -rest.lt, 0]));
+        b.setBind(B3["tc" + H3], at4(tm, [0, -rest.lt, 0]));
       }
       b.add(tcap(0.0135 * k, 0.012 * k, rest.lt, 8, 2), M(), col, B3["tb" + H3], part5);
       b.add(tcap(0.0118 * k, 98e-4 * k, 0.027 * k, 8, 2), M(), dark, B3["tc" + H3], part5);
@@ -67090,15 +67446,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
 
   // src/render3d/chars/weapons.js
   function blade(b, x0, L2, w, t, cols) {
-    const N4 = 6;
+    const N5 = 6;
     const P4 = [], C3 = [], I = [];
     const sec = (u) => {
       const x = x0 + u * L2, curve2 = 0.035 * u * u;
       const ww = w * (1 - 0.3 * u);
       return [[x, curve2 + ww * 0.5, 0], [x, curve2, t * 0.5], [x, curve2 - ww * 0.5, 0], [x, curve2, -t * 0.5]];
     };
-    for (let i = 0; i <= N4; i++) {
-      const s = sec(i / N4);
+    for (let i = 0; i <= N5; i++) {
+      const s = sec(i / N5);
       for (let k = 0; k < 4; k++) {
         P4.push(...s[k]);
         C3.push(cols[k]);
@@ -67106,13 +67462,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     P4.push(x0 + L2 + 0.06, 0.035 + w * 0.12, 0);
     C3.push(cols[0]);
-    for (let i = 0; i < N4; i++) {
+    for (let i = 0; i < N5; i++) {
       for (let k = 0; k < 4; k++) {
         const a = i * 4 + k, b2 = i * 4 + (k + 1) % 4, c = a + 4, d = b2 + 4;
         I.push(a, b2, c, b2, d, c);
       }
     }
-    const tip = (N4 + 1) * 4, last = N4 * 4;
+    const tip = (N5 + 1) * 4, last = N5 * 4;
     for (let k = 0; k < 4; k++) I.push(last + k, last + (k + 1) % 4, tip);
     I.push(0, 2, 1, 0, 3, 2);
     const g = new three_module_exports.BufferGeometry();
@@ -68507,8 +68863,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (/apple/.test(id)) return "apple";
     return d.type === "medicine" ? "vial" : "apple";
   }
-  function leaf(k, at5, rot, col = "#43a047") {
-    k.add(sph(6, 4), { at: at5, rot, scale: [0.022, 4e-3, 0.011], color: col });
+  function leaf(k, at4, rot, col = "#43a047") {
+    k.add(sph(6, 4), { at: at4, rot, scale: [0.022, 4e-3, 0.011], color: col });
   }
   var BUILD = {
     apple(k) {
@@ -70719,7 +71075,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           gh = waterLevel(this.game.world, a.x, a.y) - (a.depth || 0) - (flat ? 0.95 : 1.3) * (a.look?.scale || 1);
           if (a.fruit && !a.gills && !a.sinking) gh += Math.sin(env.time * 5.5 + a.x * 3) * 0.09;
           gh = Math.max(gh, this.terrain.terrainAt(a.x, a.y));
-        } else if (a.wading) gh = this.ground(a.x, a.y) - a.wading;
+        } else if (a.belowDeck) gh = a.groundAt(game, a.x, a.y) - (a.wading || 0);
+        else if (a.wading) gh = this.ground(a.x, a.y) - a.wading;
         else gh = this.ground(a.x, a.y);
         v.root.position.set(dx, gh + (a.z || 0), dy);
         v.update(a, env, this.ctx, { camYaw3, redraw: i < 18 || (this.frame + i) % 3 === 0 });
@@ -72602,9 +72959,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   var VIEWS2 = { elephant: elephantView, serpent: serpentView, seacat: seaCatView, yagara: yagaraView };
   function snow() {
-    const N4 = 900, B4 = 26;
-    const base2 = new Float32Array(N4 * 3), pos = new Float32Array(N4 * 3);
-    for (let i = 0; i < N4; i++) {
+    const N5 = 900, B4 = 26;
+    const base2 = new Float32Array(N5 * 3), pos = new Float32Array(N5 * 3);
+    for (let i = 0; i < N5; i++) {
       base2[i * 3] = Math.random() * B4;
       base2[i * 3 + 1] = Math.random() * 16;
       base2[i * 3 + 2] = Math.random() * B4;
@@ -72618,7 +72975,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       pts,
       /** (wx, wz) = the camera's world position on the sea plane; cy its height. */
       update(wx, wz, cy, t) {
-        for (let i = 0; i < N4; i++) {
+        for (let i = 0; i < N5; i++) {
           const bx = base2[i * 3] + t * 0.05 + Math.sin(t * 0.3 + i) * 0.3, bz = base2[i * 3 + 2] + t * 0.03;
           pos[i * 3] = ((bx - wx) % B4 + B4) % B4 - B4 / 2;
           const by = base2[i * 3 + 1] - t * 0.04;
@@ -72630,7 +72987,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     };
   }
   function shafts() {
-    const N4 = 14, B4 = 48;
+    const N5 = 14, B4 = 48;
     const uStr = { value: 0 }, uCol = { value: new Color(0.8, 0.95, 1) }, uT = { value: 0 };
     const mat = new ShaderMaterial({
       uniforms: { uStr, uCol, uT },
@@ -72668,7 +73025,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     });
     const group3 = new Group();
     const list = [];
-    for (let i = 0; i < N4; i++) {
+    for (let i = 0; i < N5; i++) {
       const w = 1.2 + Math.random() * 2.6, h2 = 34;
       const g = new PlaneGeometry(w, h2);
       g.translate(0, -h2 / 2, 0);
@@ -74606,18 +74963,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       let prevGap = 0;
       while (houses < houseCount) {
         const fw = rng4.int(widths[0], widths[1]);
-        const at5 = fromStart ? s : s - fw;
-        if (fromStart ? at5 + fw > run.s1 : at5 < run.s0) break;
+        const at4 = fromStart ? s : s - fw;
+        if (fromStart ? at4 + fw > run.s1 : at4 < run.s0) break;
         const sb = setback && rng4.chance(0.3) ? setback + 1 : setback;
         const want = rng4.int(depths[0], depths[1]);
-        const fd = depthFor(run, at5, fw, sb, want, terraced ? 1 : 2);
+        const fd = depthFor(run, at4, fw, sb, want, terraced ? 1 : 2);
         let b = null;
-        if (fd >= (big ? 6 : 4)) b = place(run, at5, fw, fd, sb, { role: "house" });
+        if (fd >= (big ? 6 : 4)) b = place(run, at4, fw, fd, sb, { role: "house" });
         if (b) {
           houses++;
           const gap = terraced ? rng4.chance(0.12) && prevGap === 0 ? 1 : 0 : rng4.int(2, 4);
           prevGap = gap;
-          s = fromStart ? at5 + fw + gap : at5 - gap;
+          s = fromStart ? at4 + fw + gap : at4 - gap;
         } else s += fromStart ? 1 : -1;
       }
     }
@@ -74937,7 +75294,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const pts = f.points.map(([px2, py2]) => [cx + rel(px2, hw), cy + rel(py2, hh)]);
       carvePath(world, pts, f.width ?? 3, f.tile ?? T.RIVER, noise, f.meander ?? 1, { elev: 0 });
     }
-    for (const p of def.paint || []) paintOp(world, p, cx, cy, hw, hh, noise);
+    for (const p of def.paint || []) {
+      paintOp(world, p, cx, cy, hw, hh, noise);
+      const bx = p.tile === T.BRIDGE || IS_LIQUID[p.tile] ? null : opBox(p, cx, cy, hw, hh);
+      if (bx) {
+        const L3 = rec.landBox;
+        L3.x0 = Math.min(L3.x0, Math.floor(bx.x0) - 6);
+        L3.y0 = Math.min(L3.y0, Math.floor(bx.y0) - 6);
+        L3.x1 = Math.max(L3.x1, Math.ceil(bx.x1) + 7);
+        L3.y1 = Math.max(L3.y1, Math.ceil(bx.y1) + 7);
+      }
+    }
     for (const town of def.towns || []) {
       const c = P4(town);
       const t = generateTown(world, {
@@ -75109,7 +75476,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function coarseField(fn, x0, y0, w, h2) {
     const GW = (w >> 1) + 2, GH = (h2 >> 1) + 2;
     const g = new Float32Array(GW * GH).fill(NaN);
-    const at5 = (gi, gj) => {
+    const at4 = (gi, gj) => {
       const k = gj * GW + gi;
       let v = g[k];
       if (v !== v) v = g[k] = fn(x0 + gi * 2, y0 + gj * 2);
@@ -75119,7 +75486,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const fx = (x - x0) * 0.5, fy = (y - y0) * 0.5;
       const gi = Math.max(0, Math.min(GW - 2, Math.floor(fx))), gj = Math.max(0, Math.min(GH - 2, Math.floor(fy)));
       const tx = fx - gi, ty = fy - gj;
-      const a = at5(gi, gj), b = at5(gi + 1, gj), c = at5(gi, gj + 1), d = at5(gi + 1, gj + 1);
+      const a = at4(gi, gj), b = at4(gi + 1, gj), c = at4(gi, gj + 1), d = at4(gi + 1, gj + 1);
       return (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
     };
   }
@@ -75236,11 +75603,29 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             const cur = world.type(i, j);
             if (!overWater && IS_LIQUID[cur]) continue;
             if (onlyLand && (IS_LIQUID[cur] || OVERLAY[cur])) continue;
+            if (tile === T.BRIDGE && !IS_LIQUID[cur]) continue;
             world.setTile(i, j, tile, elev, clim);
           }
         }
       }
     }
+  }
+  function opBox(p, cx, cy, hw, hh) {
+    const X2 = (v) => cx + rel(v, hw), Y2 = (v) => cy + rel(v, hh);
+    if (p.op === "rect" || p.op === "grid") return { x0: X2(p.x0), x1: X2(p.x1), y0: Y2(p.y0), y1: Y2(p.y1) };
+    if (p.op === "circle" || p.op === "ring") {
+      const r = (Math.abs(p.r) <= 1.5 ? p.r * Math.max(hw, hh) : p.r * SCALE) + (p.op === "ring" ? (p.width || 2) / 2 : 0);
+      return { x0: X2(p.x) - r, x1: X2(p.x) + r, y0: Y2(p.y) - r, y1: Y2(p.y) + r };
+    }
+    if (p.op === "blob") {
+      const rx = rel(p.rx, hw) * 1.4, ry = rel(p.ry, hh) * 1.4;
+      return { x0: X2(p.x) - rx, x1: X2(p.x) + rx, y0: Y2(p.y) - ry, y1: Y2(p.y) + ry };
+    }
+    if (p.op === "path") {
+      const xs = p.points.map(([a]) => X2(a)), ys = p.points.map(([, b]) => Y2(b)), m = (p.width ?? 2) / 2 + 1;
+      return { x0: Math.min(...xs) - m, x1: Math.max(...xs) + m, y0: Math.min(...ys) - m, y1: Math.max(...ys) + m };
+    }
+    return null;
   }
   function paintOp(world, p, cx, cy, hw, hh, noise) {
     const X2 = (v) => cx + rel(v, hw), Y2 = (v) => cy + rel(v, hh);
@@ -75248,7 +75633,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const x0 = Math.floor(X2(p.x0)), x1 = Math.ceil(X2(p.x1)), y0 = Math.floor(Y2(p.y0)), y1 = Math.ceil(Y2(p.y1));
       for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
         if (p.onlyLand && world.isLiquid(x, y)) continue;
-        if (p.onlyWater && !world.isLiquid(x, y)) continue;
+        if ((p.onlyWater || p.tile === T.BRIDGE) && !world.isLiquid(x, y)) continue;
         world.setTile(x, y, p.tile, p.elev, p.climate);
       }
     } else if (p.op === "circle") {
@@ -75309,13 +75694,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const W4 = Math.max(3, dd.width ?? 5) | 1;
     const half2 = (W4 - 1) / 2, headHalf = half2 + 2, HEAD2 = 3;
     const L2 = Math.max(6, Math.round(len * 1.5));
-    const at5 = (a, b) => ({ x: world.wx(best.x + vx * a + px2 * b), y: best.y + vy * a + py2 * b });
+    const at4 = (a, b) => ({ x: world.wx(best.x + vx * a + px2 * b), y: best.y + vy * a + py2 * b });
     let lastA = 0;
     for (let a = 0; a < L2; a++) {
       const head = a >= L2 - HEAD2, hb = head ? headHalf : half2;
       let placed = false;
       for (let b = -hb; b <= hb; b++) {
-        const { x, y } = at5(a, b);
+        const { x, y } = at4(a, b);
         if (world.isOverlay(x, y)) continue;
         if (!world.isLiquid(x, y)) {
           const t = world.type(x, y);
@@ -75330,7 +75715,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const Q2 = 4, qh = half2 + 1;
     for (let a = -Q2; a < 0; a++) {
       for (let b = -qh; b <= qh; b++) {
-        const { x, y } = at5(a, b);
+        const { x, y } = at4(a, b);
         if (world.isBlocked(x, y) || world.isOverlay(x, y)) continue;
         const t = world.type(x, y);
         if (t === T.WALL || t === T.CLIFF || t === T.MOUNTAIN) continue;
@@ -75349,19 +75734,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       r: 7,
       pierLen: L2 + 1,
       pierHalf: headHalf + 0.5,
-      x0: Math.min(at5(-Q2, -qh).x, at5(-1, qh).x),
-      x1: Math.max(at5(-Q2, -qh).x, at5(-1, qh).x),
-      y0: Math.min(at5(-Q2, -qh).y, at5(-1, qh).y),
-      y1: Math.max(at5(-Q2, -qh).y, at5(-1, qh).y)
+      x0: Math.min(at4(-Q2, -qh).x, at4(-1, qh).x),
+      x1: Math.max(at4(-Q2, -qh).x, at4(-1, qh).x),
+      y0: Math.min(at4(-Q2, -qh).y, at4(-1, qh).y),
+      y1: Math.max(at4(-Q2, -qh).y, at4(-1, qh).y)
     });
     world.padIndex = null;
     for (const sg of [-1, 1]) {
-      const c = at5(-1, sg * qh);
+      const c = at4(-1, sg * qh);
       placeObject(world, { kind: "lamp", x: c.x + 0.5, y: c.y + 0.5, block: true });
-      const k = at5(-Q2 + 1, sg * qh);
+      const k = at4(-Q2 + 1, sg * qh);
       placeObject(world, { kind: sg > 0 ? "crate" : "barrel", x: k.x + 0.5, y: k.y + 0.5, block: true });
     }
-    const end = at5(lastA, 0);
+    const end = at4(lastA, 0);
     const side = headHalf + 3;
     const berth = (sg, out = 0) => ({ x: world.wx(end.x + 0.5 - vx + px2 * side * sg + vx * out), y: end.y + 0.5 - vy + py2 * side * sg + vy * out });
     const clearance = (m) => {
@@ -75386,16 +75771,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         moor = m;
       }
     }
-    const land = at5(-Q2 - 2, 0);
-    const tip = at5(lastA, headHalf);
+    const land = at4(-Q2 - 2, 0);
+    const tip = at4(lastA, headHalf);
     placeObject(world, { kind: "mooring", x: tip.x + 0.5, y: tip.y + 0.5, block: false });
-    const stand = shipwrightStand(world, at5, { lastA, half: half2, headHalf, qh, vx, vy, px: px2, py: py2 });
+    const stand = shipwrightStand(world, at4, { lastA, half: half2, headHalf, qh, vx, vy, px: px2, py: py2 });
     return { x: end.x, y: end.y, dirX: vx, dirY: vy, moor, land: { x: land.x + 0.5, y: land.y + 0.5 }, end: { x: end.x, y: end.y }, half: half2, headHalf, len: lastA + 1, stand };
   }
-  function shipwrightStand(world, at5, { lastA, half: half2, headHalf, qh, vx, vy, px: px2, py: py2 }) {
+  function shipwrightStand(world, at4, { lastA, half: half2, headHalf, qh, vx, vy, px: px2, py: py2 }) {
     let open = true;
     for (let a = lastA - 2; a <= lastA; a++) for (let b = headHalf + 1; b <= headHalf + 3; b++) {
-      const t = at5(a, b);
+      const t = at4(a, b);
       if (!world.sailable(t.x + 0.5, t.y + 0.5)) open = false;
     }
     const far = open ? -1 : 1;
@@ -75404,7 +75789,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (const sg of [far, -far]) for (const a of [lastA - 1, lastA - 2, lastA - 3]) cands.push([a, sg * half2, "pier"]);
     for (const sg of [far, -far]) cands.push([-2, sg * qh, "quay"]);
     for (const [a, b, on] of cands) {
-      const t = at5(a, b), x = t.x + 0.5, y = t.y + 0.5;
+      const t = at4(a, b), x = t.x + 0.5, y = t.y + 0.5;
       if (on === "pier" ? !world.isDock(x, y) : !world.isQuay(x, y)) continue;
       if (!world.walkable(x, y) || world.isLiquid(x, y) || world.isBlocked(x, y) || world.hitsProp(x, y, 0.45)) continue;
       const sb = Math.sign(b);
@@ -75552,11 +75937,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return h2;
     };
     const centre = (x, y) => (corner(x, y) + corner(x + 1, y + 1)) / 2;
-    const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const N42 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     const gentle = (x, y) => {
       if (!hard.has(world.type(x, y)) || redLine(x, y)) return false;
       let h2 = null;
-      for (const [i, j] of N4) {
+      for (const [i, j] of N42) {
         if (!world.walkable(x + i, y + j)) continue;
         h2 ?? (h2 = centre(x, y));
         if (Math.abs(centre(x + i, y + j) - h2) < 0.5) return true;
@@ -76106,13 +76491,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
   }
   function compactDistance(world) {
-    const N4 = BS * BS;
+    const N5 = BS * BS;
     for (let b = 0; b < world.bs.length; b++) {
       const s = world.bs[b];
       if (!s || world.ut[b] === MIXED) continue;
       const v = s[0];
       let same = true;
-      for (let i = 1; i < N4; i++) if (s[i] !== v) {
+      for (let i = 1; i < N5; i++) if (s[i] !== v) {
         same = false;
         break;
       }
@@ -77606,7 +77991,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       blobs: [[-0.16, 0, 0.72, 0.85], [0.8, 0.36, 0.18, 0.28]],
       mountains: [{ name: "Palace Heights", dx: -0.2, dy: -0.42, r: 0.2, h: 0.4 }],
       paint: [
-        { op: "path", points: [[0.5, 0.32], [0.66, 0.35]], width: 3, tile: T.BRIDGE },
+        // (out to the lighthouse islet: over the water between, the land either side carrying it)
+        { op: "path", points: [[0.45, 0.32], [0.74, 0.35]], width: 3, tile: T.BRIDGE },
         { op: "path", points: [[-0.2, -0.22], [0.1, -0.1], [0.3, -0.02]], width: 3, tile: T.COBBLE, onlyLand: true }
       ],
       areas: [
@@ -79770,13 +80156,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   ];
 
   // src/data/islands/paradise2.js
-  var at2 = (isl, dx, dy) => ({
-    x: isl.x + (Math.abs(dx) <= 1.5 ? dx * isl.w / 2 : dx),
-    y: isl.y + (Math.abs(dy) <= 1.5 ? dy * isl.h / 2 : dy)
-  });
   function hut2(isl, dx, dy, spec) {
-    const p = at2(isl, dx, dy);
-    return { kind: "building", dx, dy, fw: 6, fd: 4, hgt: 3, style: "town", roofType: "gable", showName: true, door: { x: p.x, y: p.y + 0.5 }, ...spec };
+    return { kind: "building", dx, dy, fw: 6, fd: 4, hgt: 3, style: "town", roofType: "gable", showName: true, ...spec };
   }
   var rail = (x0, x1, y0, y1) => ({ op: "rect", x0, x1, y0, y1, tile: T.RAIL, onlyWater: true });
   var planks = (x0, x1, y0, y1) => ({ op: "rect", x0, x1, y0, y1, tile: T.BRIDGE, onlyWater: true });
@@ -80943,8 +81324,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         { name: "Olive groves", tile: T.FARM, dx: -0.28, dy: 0.12, rx: 0.14, ry: 0.1 }
       ],
       paint: [
-        // the iron bridge to Green Bit (closed for 200 years because of the Fighting Fish)
-        { op: "path", points: [[0, -86], [0, -150]], width: 4, tile: T.BRIDGE }
+        // the iron bridge to Green Bit (closed for 200 years because of the Fighting Fish),
+        // all the way across the channel to its gate on the island's south shore
+        { op: "path", points: [[0, -86], [0, -405]], width: 4, tile: T.BRIDGE }
       ],
       towns: [
         {
@@ -82522,10 +82904,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.translate(0, -(s.z ?? 0.6));
     g.scale(1, s.tilt ?? 0.72);
     const R4 = s.radius, W4 = s.width || 0.2;
-    const N4 = 20;
+    const N5 = 20;
     const outer = [], inner = [];
-    for (let i = 0; i <= N4; i++) {
-      const u = i / N4;
+    for (let i = 0; i <= N5; i++) {
+      const u = i / N5;
       const th = tail2 + (head - tail2) * u;
       const w = W4 * Math.pow(u, 0.7) * (1 - 0.35 * Math.pow(u, 10));
       outer.push([Math.cos(th) * R4, Math.sin(th) * R4]);
@@ -82533,7 +82915,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     const fade2 = (1 - Math.pow(k, 2.2)) * a;
     if (s.add !== false) g.globalCompositeOperation = "lighter";
-    const gr = g.createLinearGradient(outer[0][0], outer[0][1], outer[N4][0], outer[N4][1]);
+    const gr = g.createLinearGradient(outer[0][0], outer[0][1], outer[N5][0], outer[N5][1]);
     gr.addColorStop(0, rgba2(s.color, 0));
     gr.addColorStop(0.55, rgba2(s.color, 0.55 * fade2));
     gr.addColorStop(0.92, rgba2(s.color, 0.95 * fade2));
@@ -82541,14 +82923,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.fillStyle = gr;
     g.beginPath();
     g.moveTo(outer[0][0], outer[0][1]);
-    for (let i = 1; i <= N4; i++) g.lineTo(outer[i][0], outer[i][1]);
-    for (let i = N4; i >= 0; i--) g.lineTo(inner[i][0], inner[i][1]);
+    for (let i = 1; i <= N5; i++) g.lineTo(outer[i][0], outer[i][1]);
+    for (let i = N5; i >= 0; i--) g.lineTo(inner[i][0], inner[i][1]);
     g.closePath();
     g.fill();
     g.strokeStyle = s.core || "#ffffff";
     g.lineCap = "round";
-    for (let i = Math.floor(N4 * 0.45); i < N4; i++) {
-      const u = i / N4;
+    for (let i = Math.floor(N5 * 0.45); i < N5; i++) {
+      const u = i / N5;
       g.globalAlpha = fade2 * u * u;
       g.lineWidth = Math.max(0.012, W4 * 0.22 * u);
       g.beginPath();
@@ -83661,9 +84043,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return Math.atan2(q2[1] - B4.y, q2[0] - B4.x);
   }
   function clipSeg(r, x0, y0, h0, x1, y1, h1) {
-    const at5 = (u) => [x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, h0 + (h1 - h0) * u];
+    const at4 = (u) => [x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, h0 + (h1 - h0) * u];
     const ok = (u) => {
-      const [x, y, h2] = at5(u);
+      const [x, y, h2] = at4(u);
       return !!bill(r, x, y, h2);
     };
     let u0 = 0, u1 = 1;
@@ -83701,7 +84083,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       u1 = lo;
     }
     if (u1 <= u0) return null;
-    const A = at5(u0), Bw = at5(u1);
+    const A = at4(u0), Bw = at4(u1);
     return { A: bill(r, A[0], A[1], A[2]), B: bill(r, Bw[0], Bw[1], Bw[2]), u0, u1 };
   }
   function ringRuns(r, pts) {
@@ -84238,16 +84620,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const head = easeOut2(u), tail2 = kind === "straight" ? Math.max(0, head - 0.55) : clamp017((u - 0.2) / 0.8) ** 2;
     if (head - tail2 < 0.02) return;
     const wMax = H3 * (kind === "straight" ? 0.026 : blade2 ? 0.042 : 0.032) * (heavy ? 1.35 : 1);
-    const N4 = 22;
+    const N5 = 22;
     const outer = [], inner = [], mid = [];
-    for (let i = 0; i <= N4; i++) {
-      const v = tail2 + (head - tail2) * (i / N4);
+    for (let i = 0; i <= N5; i++) {
+      const v = tail2 + (head - tail2) * (i / N5);
       const [x, y] = P4(v);
       const [x2, y2] = P4(Math.min(1, v + 0.01));
       const [x0, y0] = P4(Math.max(0, v - 0.01));
       const dx = (x2 - x0) * W4, dy = (y2 - y0) * H3, l = Math.hypot(dx, dy) || 1;
       const nx = -dy / l, ny = dx / l;
-      const qq = i / N4;
+      const qq = i / N5;
       const wd = wMax * Math.pow(qq, 0.75) * (1 - 0.35 * Math.pow(qq, 8));
       outer.push([x * W4 + nx * wd * 0.5, y * H3 + ny * wd * 0.5]);
       inner.push([x * W4 - nx * wd * 0.5, y * H3 - ny * wd * 0.5]);
@@ -84255,7 +84637,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     const a = Math.min(1, 0.8 + (heavy ? 0.15 : 0)) * fade2;
     g.globalCompositeOperation = "source-over";
-    const gr = g.createLinearGradient(outer[0][0], outer[0][1], outer[N4][0], outer[N4][1]);
+    const gr = g.createLinearGradient(outer[0][0], outer[0][1], outer[N5][0], outer[N5][1]);
     gr.addColorStop(0, rgba2(col, 0));
     gr.addColorStop(0.55, rgba2(col, 0.35 * a));
     gr.addColorStop(1, rgba2(col, 0.75 * a));
@@ -84263,8 +84645,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.fillStyle = gr;
     g.beginPath();
     g.moveTo(outer[0][0], outer[0][1]);
-    for (let i = 1; i <= N4; i++) g.lineTo(outer[i][0], outer[i][1]);
-    for (let i = N4; i >= 0; i--) g.lineTo(inner[i][0], inner[i][1]);
+    for (let i = 1; i <= N5; i++) g.lineTo(outer[i][0], outer[i][1]);
+    for (let i = N5; i >= 0; i--) g.lineTo(inner[i][0], inner[i][1]);
     g.closePath();
     g.fill();
     g.lineCap = "round";
@@ -84273,14 +84655,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.lineWidth = Math.max(1, H3 * 25e-4);
     g.globalAlpha = 0.45 * a;
     g.beginPath();
-    for (let i = Math.floor(N4 * 0.3); i <= N4; i++) {
-      if (i === Math.floor(N4 * 0.3)) g.moveTo(outer[i][0], outer[i][1]);
+    for (let i = Math.floor(N5 * 0.3); i <= N5; i++) {
+      if (i === Math.floor(N5 * 0.3)) g.moveTo(outer[i][0], outer[i][1]);
       else g.lineTo(outer[i][0], outer[i][1]);
     }
     g.stroke();
     g.strokeStyle = "#ffffff";
-    for (let i = Math.floor(N4 * 0.4); i < N4; i++) {
-      const qq = i / N4;
+    for (let i = Math.floor(N5 * 0.4); i < N5; i++) {
+      const qq = i / N5;
       g.globalAlpha = a * qq * qq;
       g.lineWidth = Math.max(1, wMax * 0.28 * qq);
       g.beginPath();
@@ -89775,6 +90157,67 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (!s) return null;
     return { ...bw(b, s.x, s.z), building: b, inside: true, guest };
   }
+  function whereNPC(game, id) {
+    const def = NPC_DEFS.get(id);
+    if (!def) return null;
+    const w = game.world;
+    const key2 = `${w.id}:${id}`;
+    const now2 = game.time || 0;
+    const C3 = game._whereNPC || (game._whereNPC = /* @__PURE__ */ new Map());
+    const hit = C3.get(key2);
+    if (hit && now2 - hit.t < 3) return hit.v;
+    let v = null;
+    const island = w.islands.find((i) => i.id === def.island);
+    if (island) {
+      const q2 = placeGuess(game, island, def);
+      if (q2) v = { x: q2.x, y: q2.y, place: def.name, zone: w === game.surface ? null : w.id };
+    } else v = { island: def.island };
+    C3.set(key2, { t: now2, v });
+    return v;
+  }
+  function placeGuess(game, island, def) {
+    let pl = {};
+    try {
+      pl = (typeof def.at === "function" ? def.at(game.state?.char, game) : def.at) || {};
+    } catch (e) {
+      pl = {};
+    }
+    const inB = (b) => {
+      if (b.enterable) {
+        const L2 = layoutOf(b), s = pl.guest ? L2.residents[L2.residents.length - 1] : L2.keeper || L2.residents[0];
+        if (s) return bw(b, s.x, s.z);
+      }
+      return bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4);
+    };
+    if (pl.spot && island.spots[pl.spot]) {
+      const s = island.spots[pl.spot];
+      return { x: s.x + (pl.ox || 0), y: s.y + (pl.oy || 0) };
+    }
+    for (const town of island.towns) {
+      if (pl.town && town.id !== pl.town) continue;
+      if (pl.dock) {
+        const d = island.docks.slice().sort((a, b) => Math.hypot(a.land.x - town.x, a.land.y - town.y) - Math.hypot(b.land.x - town.x, b.land.y - town.y))[0];
+        if (d) return { x: d.land.x + (pl.ox || 0), y: d.land.y + (pl.oy || 0) };
+      }
+      if (pl.door) {
+        const b = town.buildings.find((x) => x.name === pl.door || x.role === pl.door);
+        if (b) return bw(b, doorLocalX(b) + (pl.ox ?? 1.6), 1.6);
+      }
+      if (pl.building) {
+        const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
+        if (b) return inB(b);
+      }
+      if (pl.plaza || !pl.building && !pl.dx && !pl.door || pl.town && !pl.dx) return { x: town.plaza.x + (pl.ox || 1.5), y: town.plaza.y + 2.5 + (pl.oy || 0) };
+    }
+    for (const town of island.towns) {
+      const b = town.buildings.find((x) => x.npc === def.id);
+      if (b) return inB(b);
+    }
+    const lm = island.landmarks.find((l) => l.npc === def.id);
+    if (lm) return { x: lm.x + 0.6, y: lm.y + 1.2 };
+    if (pl.dx !== void 0) return { x: island.x + pl.dx * island.def.w / 2, y: island.y + pl.dy * island.def.h / 2 };
+    return { x: island.x, y: island.y };
+  }
   function placeFor(game, island, def) {
     return placeNPC(game, island, def, Math, game.spawner);
   }
@@ -90136,6 +90579,354 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
   }
 
+  // src/data/zones/index.js
+  var ZONES = {
+    skypiea: {
+      id: "skypiea",
+      name: "Skypiea",
+      kind: "sky",
+      w: 640,
+      h: 480,
+      fill: T.CLOUD_SEA,
+      altitude: "10,000 m",
+      arrive: { x: 320, y: 450, heading: -Math.PI / 2 },
+      // falling off Cloud End drops you back into the sea near Jaya
+      exits: [{ id: "cloud_end", x: 18, y: 240, r: 14, to: "surface", surface: { island: "jaya", spot: "knock_up_stream" }, label: "Cloud End \u2014 the long fall to the Blue Sea" }],
+      islands: [
+        {
+          id: "heavens_gate",
+          name: "Heaven's Gate",
+          sea: "sky",
+          x: 320,
+          y: 405,
+          w: 40,
+          h: 22,
+          climate: "sky",
+          rough: 0.15,
+          landmarks: [{ kind: "arch", dx: 0, dy: -0.2, name: "Heaven's Gate" }, { kind: "sign", dx: 0.4, dy: 0.3, spot: "gate_booth" }],
+          docks: [{ dx: 0, dy: 0.6, dir: "s", len: 4, name: "Heaven's Gate" }]
+        },
+        {
+          id: "angel_island",
+          name: "Angel Island",
+          sea: "sky",
+          x: 190,
+          y: 285,
+          w: 160,
+          h: 110,
+          climate: "sky",
+          rough: 0.25,
+          population: [["skypiean", 92], ["human", 8]],
+          trees: ["cloudtree", "palm"],
+          towns: [{
+            id: "lovely_street",
+            name: "Lovely Street",
+            dx: 0.05,
+            dy: 0.05,
+            w: 56,
+            h: 38,
+            style: "sky",
+            dockDir: "s",
+            plaza: "fountain",
+            buildings: [
+              { role: "house", name: "Pagaya's House" },
+              { role: "shop", name: "Dial Shop", shop: "skypiea" },
+              { role: "inn", name: "Cloud Inn" },
+              { role: "cafe", name: "Angel Beach Caf\xE9" },
+              { role: "hall", name: "White Berets Post" }
+            ]
+          }],
+          landmarks: [{ kind: "sign", dx: -0.55, dy: 0.55, spot: "angel_beach", name: "Angel Beach" }]
+        },
+        {
+          id: "upper_yard",
+          name: "Upper Yard",
+          sea: "sky",
+          x: 470,
+          y: 225,
+          w: 190,
+          h: 170,
+          climate: "jungle",
+          rough: 0.22,
+          mountains: [{ name: "Giant Jack", dx: 0, dy: -0.12, r: 0.12, h: 1.1 }],
+          areas: [
+            { name: "Ruins of Shandora", tile: T.STONE, dx: 0.28, dy: 0.28, rx: 0.2, ry: 0.18 },
+            { name: "Forest of Ordeals", tile: T.JUNGLE, dx: -0.3, dy: -0.1, rx: 0.3, ry: 0.35 }
+          ],
+          landmarks: [
+            { kind: "ruins", dx: 0.28, dy: 0.28, name: "Shandora" },
+            { kind: "ruins", dx: 0.36, dy: 0.2 },
+            { kind: "bell", dx: 0.02, dy: -0.36, spot: "golden_bell", name: "The Golden Bell of Shandora" },
+            { kind: "poneglyph", dx: 0.3, dy: 0.34, poneglyph: "shandora", name: "Poneglyph of Shandora" },
+            { kind: "totem", dx: -0.3, dy: 0.32, spot: "altar", name: "Sacrificial Altar" }
+          ],
+          spots: [
+            { id: "ordeal_balls", dx: -0.6, dy: 0.1 },
+            { id: "ordeal_swamp", dx: 0.55, dy: -0.3 },
+            { id: "ordeal_iron", dx: -0.2, dy: -0.55 },
+            { id: "ordeal_string", dx: 0.6, dy: 0.45 },
+            { id: "god_shrine", dx: 0.05, dy: 0.12 }
+          ],
+          docks: [{ dx: -0.8, dy: 0.2, dir: "w", len: 5, name: "Upper Yard" }]
+        },
+        {
+          id: "shandia_village",
+          name: "Hidden Shandian Village",
+          sea: "sky",
+          x: 95,
+          y: 110,
+          w: 90,
+          h: 64,
+          climate: "sky",
+          rough: 0.3,
+          population: [["skypiean", 100]],
+          towns: [{
+            id: "shandia_camp",
+            name: "Shandian Village",
+            dx: 0,
+            dy: 0,
+            w: 34,
+            h: 24,
+            style: "tribal",
+            dockDir: "s",
+            plaza: "well",
+            buildings: [{ role: "hall", name: "Chief's Hut" }, { role: "house", name: "Wyper's Hut" }]
+          }]
+        },
+        {
+          id: "weatheria",
+          name: "Weatheria",
+          sea: "sky",
+          x: 565,
+          y: 60,
+          w: 70,
+          h: 48,
+          climate: "sky",
+          rough: 0.2,
+          population: [["human", 70], ["skypiean", 30]],
+          towns: [{
+            id: "weatheria_town",
+            name: "Weatheria",
+            dx: 0,
+            dy: 0.05,
+            w: 34,
+            h: 24,
+            style: "sky",
+            dockDir: "w",
+            plaza: "fountain",
+            buildings: [{ role: "library", name: "Weatheria Library" }, { role: "trainer", name: "Weather Laboratory", trainer: "weatheria_scholar" }]
+          }]
+        }
+      ]
+    },
+    fishman_island: {
+      id: "fishman_island",
+      name: "Fish-Man Island",
+      kind: "undersea",
+      w: 480,
+      h: 380,
+      fill: T.SEA,
+      altitude: "10,000 m below",
+      arrive: { x: 420, y: 200, heading: Math.PI },
+      exits: [
+        { id: "new_world", x: 20, y: 60, r: 16, to: "surface", surface: { x: chart(118), y: chart(990) }, label: "Rise to the New World" },
+        { id: "paradise", x: 462, y: 330, r: 16, to: "surface", surface: { x: chart(3985), y: chart(1070) }, label: "Rise back to Sabaody" }
+      ],
+      islands: [
+        {
+          id: "fishman_island",
+          name: "Fish-Man Island",
+          sea: "undersea",
+          x: 245,
+          y: 195,
+          w: 230,
+          h: 190,
+          climate: "undersea",
+          rough: 0.2,
+          population: [["fishman", 82], ["human", 12], ["mink", 2]],
+          trees: ["coral", "kelp"],
+          towns: [
+            {
+              id: "ryugu_kingdom",
+              name: "Ryugu Kingdom",
+              dx: 0,
+              dy: -0.35,
+              w: 56,
+              h: 34,
+              style: "fishman",
+              walls: true,
+              dockDir: "n",
+              plaza: "fountain",
+              buildings: [{ role: "palace", name: "Ryugu Palace", w: 14, d: 7, hgt: 5 }, { role: "hall", name: "Hard Shell Tower" }]
+            },
+            {
+              id: "mermaid_cove",
+              name: "Mermaid Cove",
+              dx: 0.5,
+              dy: 0.2,
+              w: 40,
+              h: 28,
+              style: "fishman",
+              dockDir: "e",
+              plaza: "fountain",
+              buildings: [{ role: "cafe", name: "Mermaid Caf\xE9" }, { role: "shop", name: "Coral Hill Market", shop: "fishman" }, { role: "inn", name: "Bubble Inn" }]
+            },
+            {
+              id: "fishman_district",
+              name: "Fish-Man District",
+              dx: -0.45,
+              dy: 0.35,
+              w: 40,
+              h: 28,
+              style: "fishman",
+              dockDir: "sw",
+              plaza: "well",
+              buildings: [{ role: "bar", name: "Noah Tavern" }, { role: "dojo", name: "Fish-Man Karate Dojo", trainer: "jinbe" }]
+            }
+          ],
+          spots: [{ id: "gyoncorde_plaza", dx: 0, dy: 0.05 }, { id: "coral_hill", dx: 0.35, dy: 0.45 }],
+          landmarks: [{ kind: "fountain", dx: 0, dy: 0.1, name: "Gyoncorde Plaza" }]
+        },
+        {
+          id: "sea_forest",
+          name: "Forest of the Sea",
+          sea: "undersea",
+          x: 75,
+          y: 320,
+          w: 90,
+          h: 60,
+          climate: "undersea",
+          rough: 0.3,
+          noDock: false,
+          trees: ["kelp", "coral"],
+          landmarks: [
+            { kind: "poneglyph", dx: 0, dy: -0.1, poneglyph: "apology", name: "Joy Boy's Apology" },
+            { kind: "shipwreck", dx: 0.4, dy: 0.2, name: "The Ark Noah" },
+            { kind: "grave", dx: -0.3, dy: 0.2, name: "Queen Otohime's grave" }
+          ]
+        }
+      ]
+    },
+    impel_down: {
+      id: "impel_down",
+      name: "Impel Down",
+      kind: "prison",
+      w: 420,
+      h: 520,
+      fill: T.ABYSS,
+      altitude: "beneath the Calm Belt",
+      arrive: { island: "id_level1", spot: "cell" },
+      exits: [{ id: "main_gate", island: "id_level1", spot: "main_gate", r: 3, to: "surface", surface: { island: "impel_down", dock: true }, label: "The Main Gate" }],
+      islands: [
+        {
+          id: "id_level1",
+          name: "Level 1 \u2014 Crimson Hell",
+          sea: "zone",
+          x: 110,
+          y: 70,
+          w: 150,
+          h: 80,
+          climate: "autumn",
+          ground: T.DIRT,
+          rough: 0.12,
+          noDock: true,
+          areas: [{ name: "Blade forest", tile: T.FOREST, dx: 0.1, dy: 0, rx: 0.5, ry: 0.5 }],
+          spots: [{ id: "cell", dx: -0.6, dy: 0.2 }, { id: "main_gate", dx: -0.85, dy: -0.4 }, { id: "stairs_down", dx: 0.8, dy: 0.4 }]
+        },
+        {
+          id: "id_level2",
+          name: "Level 2 \u2014 Wild Beast Hell",
+          sea: "zone",
+          x: 300,
+          y: 145,
+          w: 150,
+          h: 80,
+          climate: "jungle",
+          rough: 0.12,
+          noDock: true,
+          spots: [{ id: "stairs_up", dx: -0.8, dy: -0.4 }, { id: "stairs_down", dx: 0.8, dy: 0.4 }]
+        },
+        {
+          id: "id_level3",
+          name: "Level 3 \u2014 Starvation Hell",
+          sea: "zone",
+          x: 110,
+          y: 220,
+          w: 150,
+          h: 80,
+          climate: "desert",
+          rough: 0.12,
+          noDock: true,
+          spots: [{ id: "stairs_up", dx: 0.8, dy: -0.4 }, { id: "stairs_down", dx: -0.8, dy: 0.4 }]
+        },
+        {
+          id: "id_level4",
+          name: "Level 4 \u2014 Burning Hell",
+          sea: "zone",
+          x: 300,
+          y: 295,
+          w: 150,
+          h: 80,
+          climate: "volcanic",
+          rough: 0.12,
+          noDock: true,
+          lakes: [{ dx: 0, dy: 0, rx: 0.2, ry: 0.25, tile: T.LAVA }],
+          spots: [{ id: "stairs_up", dx: -0.8, dy: -0.4 }, { id: "stairs_down", dx: 0.8, dy: 0.4 }, { id: "warden_office", dx: 0.4, dy: -0.4 }]
+        },
+        {
+          id: "id_level5",
+          name: "Level 5 \u2014 Freezing Hell",
+          sea: "zone",
+          x: 110,
+          y: 370,
+          w: 150,
+          h: 80,
+          climate: "winter",
+          rough: 0.12,
+          noDock: true,
+          spots: [{ id: "stairs_up", dx: 0.8, dy: -0.4 }, { id: "stairs_down", dx: -0.8, dy: 0.4 }, { id: "secret_passage", dx: 0.6, dy: 0.45 }]
+        },
+        {
+          id: "id_newkama",
+          name: "Level 5.5 \u2014 Newkama Land",
+          sea: "zone",
+          x: 320,
+          y: 440,
+          w: 100,
+          h: 60,
+          climate: "spring",
+          rough: 0.12,
+          noDock: true,
+          towns: [{ id: "newkama_land", name: "Newkama Land", dx: 0, dy: 0, w: 40, h: 26, style: "noble", plaza: "fountain", buildings: [{ role: "hall", name: "Ivankov's Party Hall", trainer: "ivankov" }, { role: "bar", name: "Newkama Bar" }] }],
+          spots: [{ id: "stairs_up", dx: -0.8, dy: -0.5 }]
+        },
+        {
+          id: "id_level6",
+          name: "Level 6 \u2014 Eternal Hell",
+          sea: "zone",
+          x: 110,
+          y: 475,
+          w: 150,
+          h: 60,
+          climate: "rocky",
+          rough: 0.1,
+          noDock: true,
+          spots: [{ id: "stairs_up", dx: -0.8, dy: -0.4 }, { id: "deepest_cell", dx: 0.6, dy: 0.2 }]
+        }
+      ],
+      // stairways between levels (portal objects are placed at these spots)
+      links: [
+        ["id_level1", "stairs_down", "id_level2", "stairs_up"],
+        ["id_level2", "stairs_down", "id_level3", "stairs_up"],
+        ["id_level3", "stairs_down", "id_level4", "stairs_up"],
+        ["id_level4", "stairs_down", "id_level5", "stairs_up"],
+        ["id_level5", "secret_passage", "id_newkama", "stairs_up"],
+        ["id_level5", "stairs_down", "id_level6", "stairs_up"]
+      ]
+    }
+  };
+  var ZONE_ISLAND_IDS = new Set(Object.values(ZONES).flatMap((z) => z.islands.map((i) => i.id)));
+
   // src/game/quests.js
   function hasWeapon(c) {
     if ((c.equipped?.weapons || []).length) return true;
@@ -90147,6 +90938,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (const q2 of list) DEFS.set(q2.id, q2);
   }
   var questDef = (id) => DEFS.get(id);
+  var allQuests = () => [...DEFS.values()];
   var Quests = class {
     constructor(game) {
       this.game = game;
@@ -90429,7 +91221,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const isl = (w.islands || []).find((i) => i.id === islandId) || (w === this.game.surface ? null : null);
       return isl?.spots?.[spotId] || null;
     }
-    /** Where the current objective of a quest is, for the map. */
+    /**
+     * Where the current objective of a quest is, for the compass, the tracker
+     * and the map: whoever the step is about (someone to beat or to talk to)
+     * where they stand — or, not about yet, where they'll be on the island they
+     * live on (which needn't be the quest's); else the place it names; else
+     * the island. An objective in another world (Skypiea, Fish-Man Island,
+     * Impel Down) shows the way there (or out of the one you're in).
+     */
     marker(id, depth = 0) {
       const s = this.state(id), d = DEFS.get(id);
       if (!s || s.done) return null;
@@ -90439,27 +91238,147 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const m = this.marker(g.quest, depth + 1);
         if (m) return { ...m, label: d.name };
       }
-      if (st?.npc) {
-        const a = this.game.actors.find((x) => x.alive && x.npcId === st.npc);
-        if (a) return { x: a.x, y: a.y, label: d.name, place: a.name, zone: this.game.world === this.game.surface ? null : this.game.world.id };
-      }
+      const who = this.whoFor(id, s.stage, st, g, d);
+      const live = who.length ? this.liveOf(who, d.name) : null;
+      if (live) return live;
       if (st?.where) {
         const w = st.where(this.game);
         if (w) return { ...w, label: d.name };
       }
-      const island = g.island || st?.island || d.island;
-      let isl = island && this.game.surface.islands.find((i) => i.id === island);
-      let zone = null;
-      if (!isl && island && this.game.world !== this.game.surface) {
-        isl = this.game.world.islands.find((i) => i.id === island);
-        if (isl) zone = this.game.world.id;
+      for (const n of who) {
+        const q2 = whereNPC(this.game, n);
+        if (!q2) continue;
+        const m = q2.island ? this.placeOf(q2.island, null, d.name) : { ...q2, label: d.name };
+        if (m) return m;
       }
-      if (g.spot && isl?.spots?.[g.spot]) return { ...isl.spots[g.spot], label: d.name, place: isl.name, zone };
       if (g.type === "reachXY") return { x: g.x, y: g.y, label: d.name, place: g.place };
-      if (isl) return { x: isl.x, y: isl.y, label: d.name, place: isl.name, zone };
-      return null;
+      return this.placeOf(g.island || st?.island || d.island, g.spot, d.name);
+    }
+    /** Who a step is about: someone to talk to, the foes to beat (those still to beat), or whoever its words name. */
+    whoFor(id, si, st, g, d) {
+      if (st?.npc) return [st.npc];
+      if (g.type === "defeat") {
+        const ids = g.npc ? [g.npc] : g.any || [];
+        const c = this.char;
+        const left = ids.filter((n2) => !(c?.defeated?.[n2] > 0) && !c?.bosses?.includes(n2));
+        return left.length ? left : ids;
+      }
+      if (g.type === "reach" || g.type === "reachXY" || g.type === "quest") return [];
+      const n = this.named(id, si, st, d);
+      return n ? [n] : [];
+    }
+    /**
+     * The person a step's words send you to ("Return to Makino at Party's
+     * Bar", "Tell Hatchan at Takoyaki Hachi"): a named character in them —
+     * by their whole name, or a name of theirs nobody else has — preferring
+     * one from the quest's island, one the words send you to ("to X", "tell
+     * X"), one not just owning something ("X's"), then the first.
+     */
+    named(id, si, st, d) {
+      const key2 = `${id}:${si}`;
+      const C3 = this.namedC || (this.namedC = /* @__PURE__ */ new Map());
+      if (C3.has(key2)) return C3.get(key2);
+      const text2 = st?.desc || "";
+      const home2 = st?.goal?.island || st?.island || d.island;
+      const defs = allNpcDefs();
+      if (!NAME_FREQ.size) {
+        for (const n of new Set(defs.map((x) => x.name || ""))) for (const t of n.split(/\s+/)) NAME_FREQ.set(t, (NAME_FREQ.get(t) || 0) + 1);
+        for (const isl of this.allIslands()) for (const n of [isl.name, ...(isl.towns || []).map((t) => t.name)]) for (const t of String(n || "").split(/\s+/)) PLACE_WORDS.add(t);
+      }
+      const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      let best = null;
+      for (const def of defs) {
+        if (!def.name) continue;
+        const parts = [def.name, ...def.name.split(/\s+/).filter((t) => t.length >= 3 && /^[A-Z]/.test(t) && !STOP.has(t) && !PLACE_WORDS.has(t) && NAME_FREQ.get(t) === 1 && t !== def.name)];
+        let at4 = Infinity;
+        parts.forEach((t, n) => {
+          const re = new RegExp(`\\b${esc(t)}\\b`, n === 0 && /\s/.test(t) ? "gi" : "g");
+          for (let m; m = re.exec(text2); ) {
+            const rest = text2.slice(m.index + t.length);
+            if (rest.startsWith("'s") && !THEIR_PLACE.test(rest)) continue;
+            if (m.index < at4) at4 = m.index;
+            break;
+          }
+        });
+        if (at4 === Infinity) continue;
+        const sent = SEND_TO.test(text2.slice(0, at4));
+        if (def.island !== home2 && !(sent && (this.placeNamed(def.island, text2) || this.sameSea(def.island, home2)))) continue;
+        const score = (def.island === home2 ? 0 : 4e6) + (sent ? 0 : 2e6) + at4;
+        if (!best || score < best.score) best = { id: def.id, score };
+      }
+      const v = best ? best.id : null;
+      C3.set(key2, v);
+      return v;
+    }
+    /** Every island, on the surface and in the zones (their records, or their data). */
+    allIslands() {
+      return [...this.game.surface?.islands || [], ...Object.values(ZONES).flatMap((z) => z.islands || [])];
+    }
+    /** Are two islands in the same sea (or the same zone)? */
+    sameSea(a, b) {
+      const A = this.allIslands().find((i) => i.id === a), B4 = this.allIslands().find((i) => i.id === b);
+      if (!A || !B4) return false;
+      const za = ZONE_OF.get(a) || null, zb = ZONE_OF.get(b) || null;
+      if (za || zb) return za === zb;
+      return (A.sea || A.def?.sea) === (B4.sea || B4.def?.sea);
+    }
+    /** Do these words name an island (or one of its towns)? */
+    placeNamed(islandId, text2) {
+      const isl = this.allIslands().find((i) => i.id === islandId);
+      if (!isl) return false;
+      return [isl.name, ...(isl.towns || []).map((t) => t.name)].some((n) => n && text2.includes(n));
+    }
+    /** The nearest of these people about in this world, as a marker (or null). */
+    liveOf(ids, label) {
+      const g = this.game, w = g.world, p = g.player;
+      let best = null, bd = Infinity;
+      for (const a of g.actors) {
+        if (!a.alive || !a.npcId || !ids.includes(a.npcId)) continue;
+        const dd = p ? w.distance(p.x, p.y, a.x, a.y) : 0;
+        if (dd < bd) {
+          bd = dd;
+          best = a;
+        }
+      }
+      return best ? { x: best.x, y: best.y, label, place: best.name, zone: w === g.surface ? null : w.id } : null;
+    }
+    /** A place on an island (a spot, or the island), in this world — or the way to the world it's in. */
+    placeOf(islandId, spot, label) {
+      if (!islandId) return null;
+      const g = this.game, w = g.world, surf2 = g.surface;
+      const zone = ZONE_OF.get(islandId) || null;
+      if (zone ? w.id === zone : w === surf2) {
+        const isl2 = w.islands.find((i) => i.id === islandId);
+        if (!isl2) return null;
+        if (spot && isl2.spots?.[spot]) return { ...isl2.spots[spot], label, place: isl2.name, zone };
+        return { x: isl2.x, y: isl2.y, label, place: isl2.name, zone };
+      }
+      if (w !== surf2) {
+        const e = ZONES[w.id]?.exits?.[0];
+        if (!e) return null;
+        if (e.x !== void 0) return { x: e.x, y: e.y, label, place: e.label, zone: w.id };
+        const s = w.islands.find((i) => i.id === e.island)?.spots?.[e.spot];
+        return s ? { x: s.x, y: s.y, label, place: e.label, zone: w.id } : null;
+      }
+      const way = WAY_IN[zone];
+      if (!way) return null;
+      const place = `The way to ${ZONES[zone]?.name || zone}`;
+      if (way.spot) for (const isl2 of surf2.islands) {
+        const s = isl2.spots?.[way.spot];
+        if (s) return { x: s.x, y: s.y, label, place, zone: null };
+      }
+      const isl = way.island && surf2.islands.find((i) => i.id === way.island);
+      return isl ? { x: isl.x, y: isl.y, label, place, zone: null } : null;
     }
   };
+  var ZONE_OF = /* @__PURE__ */ new Map();
+  for (const z of Object.values(ZONES)) for (const i of z.islands || []) ZONE_OF.set(i.id, z.id);
+  var WAY_IN = { skypiea: { spot: "knock_up_stream" }, fishman_island: { spot: "fishman_dive" }, impel_down: { island: "impel_down" } };
+  var STOP = /* @__PURE__ */ new Set(["Captain", "Mayor", "King", "Queen", "Lord", "Lady", "Doctor", "Commodore", "Admiral", "Vice", "Chief", "Sergeant", "Colonel", "Master", "Prince", "Princess", "Sister", "Brother", "Grandpa", "Granny", "Uncle", "Aunt", "Miss", "Madam", "Madame", "General", "Officer", "Lieutenant", "Commander", "Boss", "Saint", "Father", "Mother", "Elder", "Chef", "Keeper", "Warden", "Emperor", "Young", "Little", "Great", "Marine", "Marines", "Pirate", "Pirates", "Sensei", "Shogun", "Old", "Big", "Mad", "The", "Don", "Mister", "Crewman", "Guard", "Village", "Town", "City", "House", "Island", "Harbour", "Port", "Hall", "Gate", "Mountain", "Reverse", "Sail", "Sea", "Red", "Black", "White", "Blue", "Green", "Golden", "Iron", "Heart", "Royal", "Grand", "Head", "First", "Second", "Third", "Man", "Woman", "Boy", "Girl"]);
+  var NAME_FREQ = /* @__PURE__ */ new Map();
+  var PLACE_WORDS = /* @__PURE__ */ new Set();
+  var SEND_TO = /(?:\bto|\btell|\bask|\bvisit|\bmeet|\bfind|\bwarn|\bsee|\bwith|\bface|\bbeat|\bdefeat|\bfrom)\s+(?:the\s+)?(?:[\w'.-]+,?\s+)?$/i;
+  var THEIR_PLACE = /^'s\s+(?:old\s+|new\s+)?(?:workshop|house|home|camp|church|clinic|castle|hall|bar|shop|hut|tent|grave|lab|laboratory|office|mansion|palace|den|hideout|study|forge|garden|farm|dojo|tower|inn|restaurant|tavern|room)\b/i;
 
   // src/game/reputation.js
   var REP_TIERS = [
@@ -93250,12 +94169,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const card = (qq, main3) => {
         const st = qq.def.stages[qq.s.stage];
         const pr = q2.progress(qq.id);
-        const at5 = where(qq.id);
+        const at4 = where(qq.id);
         return [
           main3 ? h("div.qt-head", uiImg("quest", 14), qq.def.part ? `MAIN STORY \xB7 PART ${qq.def.part}` : "MAIN STORY") : null,
           h("div.qt-title", qq.def.name),
           h("div.qt-obj", st?.desc || "", pr ? h("span.qt-n", ` ${pr.n}/${pr.of}`) : null),
-          at5 ? h("div.qt-where", at5 === "here" ? "You are here" : at5) : null
+          at4 ? h("div.qt-where", at4 === "here" ? "You are here" : at4) : null
         ];
       };
       const main2 = q2.main();
@@ -94803,17 +95722,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         const q2 = bl(b, a.x, a.y, w);
         const ax = Math.abs(q2.lx - d.lx);
         const zIn = -WALL_T - 0.75, zOut = 0.75;
-        const at5 = (z) => {
+        const at4 = (z) => {
           const r = bw(b, d.lx, z);
           return { x: w.wx(r.x), y: r.y };
         };
         if (ba) {
-          if (ax > 0.3 && q2.lz < zIn + 0.35) return at5(zIn);
-          if (ax > 0.3) return at5(Math.min(q2.lz, zIn));
-          return at5(zOut);
+          if (ax > 0.3 && q2.lz < zIn + 0.35) return at4(zIn);
+          if (ax > 0.3) return at4(Math.min(q2.lz, zIn));
+          return at4(zOut);
         }
-        if (ax > 0.3 || q2.lz > zOut + 0.4 || q2.lz < 0) return at5(zOut);
-        return at5(zIn);
+        if (ax > 0.3 || q2.lz > zOut + 0.4 || q2.lz < 0) return at4(zOut);
+        return at4(zIn);
       },
       /** "E" things around enterable buildings (for interact.js). */
       candidates(p, out) {
@@ -95124,7 +96043,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     town._life = S3;
     return S3;
   }
-  function spawnFolk(game, town, isl, rng4, list, at5, kid = false) {
+  function spawnFolk(game, town, isl, rng4, list, at4, kid = false) {
     const race = kid ? "human" : rng4.weighted(isl.def.population || townRaces(isl));
     const look = makeLook(race, rng4.int(1, 1e9), civilianOutfit(town.style, rng4));
     if (kid) {
@@ -95132,8 +96051,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       look.bulk = 0.9;
     }
     const a = game.spawner.spawn({
-      x: at5.x,
-      y: at5.y,
+      x: at4.x,
+      y: at4.y,
       name: kid ? "Kid" : randomName(rng4, race),
       look,
       race,
@@ -95176,9 +96095,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     }
     const n = Math.round(crowdOf(town) * outShare(clock));
     for (let i = 0; i < n; i++) {
-      const at5 = S3.street.length ? acrossOf(game.world, rng4.pick(S3.street), rng4) : town.plaza;
-      if (!at5) break;
-      const a = spawnFolk(game, town, isl, rng4, list, { x: at5.x, y: at5.y });
+      const at4 = S3.street.length ? acrossOf(game.world, rng4.pick(S3.street), rng4) : town.plaza;
+      if (!at4) break;
+      const a = spawnFolk(game, town, isl, rng4, list, { x: at4.x, y: at4.y });
       const act2 = pick2(game, a);
       if (act2) start(game, a, act2, true);
       if (ctx?.onTownsfolk) ctx.onTownsfolk(a, town);
@@ -97507,10 +98426,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const list = game.spawner.populated.get(def.island);
     if (!list && !pos) return null;
     let p = pos;
-    const at5 = typeof def.at === "function" ? def.at(game.state?.char, game) : def.at;
+    const at4 = typeof def.at === "function" ? def.at(game.state?.char, game) : def.at;
     if (!p && isl) {
-      const s = at5?.spot && isl.spots[at5.spot];
-      p = s ? game.spawner.findFree(s.x, s.y, 4) : at5 && (at5.town || at5.dock || at5.door || at5.building || at5.plaza || at5.dx !== void 0) ? placeFor(game, isl, def) : game.spawner.findFree(game.player.x + 4, game.player.y, 6);
+      const s = at4?.spot && isl.spots[at4.spot];
+      p = s ? game.spawner.findFree(s.x, s.y, 4) : at4 && (at4.town || at4.dock || at4.door || at4.building || at4.plaza || at4.dx !== void 0) ? placeFor(game, isl, def) : game.spawner.findFree(game.player.x + 4, game.player.y, 6);
     }
     if (!p) p = { x: game.player.x + 4, y: game.player.y };
     const a = makeNPC(def, p.x, p.y);
@@ -98563,7 +99482,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "story",
       summary: "A Sea King lurks off Foosha Village. It took Shanks' arm ten years ago.",
       stages: [
-        { id: "hunt", desc: "Sail out south of Foosha Village's pier and slay the Lord of the Coast.", goal: { type: "defeat", npc: "lord_of_the_coast" } },
+        {
+          id: "hunt",
+          desc: "Sail out south of Foosha Village's pier and slay the Lord of the Coast.",
+          goal: { type: "defeat", npc: "lord_of_the_coast" },
+          // (out on the bay where it surfaces: see install)
+          where: (g) => {
+            const d = g.surface.islands.find((i) => i.id === "dawn_island")?.docks[0];
+            return d && g.world === g.surface ? { x: d.moor.x, y: d.moor.y + 16, place: "Foosha Bay" } : null;
+          }
+        },
         { id: "report", desc: "Return to Makino at Party's Bar." }
       ],
       rewards: { berries: 3e3, items: [["straw_hat", 1]], points: 1 }
@@ -98752,6 +99680,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       rewards: { points: 1, berries: 5e3 }
     }
   ];
+  function awayFrom(game, id, d) {
+    const isl = game.surface.islands.find((i) => i.id === id);
+    return !isl || game.world.distance(game.player.x, game.player.y, isl.x, isl.y) > (isl.radius || 0) + d;
+  }
   function install(game) {
     game.on("tick", () => {
       const c = game.state?.char;
@@ -98785,7 +99717,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     });
     game.on("enterRegion", () => {
       const c = game.state?.char;
-      if (c && c.bounty > 0 && game.player.mode === "sail" && game.lastIslandName === "Polestar Islands" && !c.flags.escapedLoguetown && game.world.distance(game.player.x, game.player.y, 2385, 590) > 120) {
+      if (c && c.bounty > 0 && game.player.mode === "sail" && game.lastIslandName === "Polestar Islands" && !c.flags.escapedLoguetown && awayFrom(game, "polestar_islands", 120)) {
         c.flags.escapedLoguetown = true;
       }
     });
@@ -98829,7 +99761,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   var eastBlue_default = { id: "east_blue", npcs, groups, quests, install, dynamicIds: ["lord_of_the_coast"] };
 
   // src/content/northBlue.js
-  var at3 = (ctx, id, stage2) => ctx.game.quests.stageId(id) === stage2;
+  var at2 = (ctx, id, stage2) => ctx.game.quests.stageId(id) === stage2;
   var done2 = (ctx, id) => ctx.game.quests.isDone(id);
   var stageOf = (g, id) => g.quests.stageId(id);
   var spawnAggro = (g, id) => {
@@ -98868,9 +99800,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             },
             choices: [
               { text: "I'll stand with Rakesh.", if: () => !ctx.quest("nb_rakesh_raid"), do: (c) => c.startQuest("nb_rakesh_raid"), end: true },
-              { text: "The raiders are beaten.", if: () => at3(ctx, "nb_rakesh_raid", "report"), do: (c) => c.complete("nb_rakesh_raid"), next: "thanks" },
+              { text: "The raiders are beaten.", if: () => at2(ctx, "nb_rakesh_raid", "report"), do: (c) => c.complete("nb_rakesh_raid"), next: "thanks" },
               { text: "I'll get your strongbox back.", if: () => done2(ctx, "nb_rakesh_raid") && !ctx.quest("nb_rakesh_strongbox"), do: (c) => c.startQuest("nb_rakesh_strongbox"), end: true },
-              { text: "Here is Rakesh's strongbox.", if: () => at3(ctx, "nb_rakesh_strongbox", "report") && ctx.has("nb_rakesh_strongbox"), do: (c) => {
+              { text: "Here is Rakesh's strongbox.", if: () => at2(ctx, "nb_rakesh_strongbox", "report") && ctx.has("nb_rakesh_strongbox"), do: (c) => {
                 c.take("nb_rakesh_strongbox", 1);
                 c.complete("nb_rakesh_strongbox");
               }, next: "box" },
@@ -99043,12 +99975,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         nodes: {
           a: {
             text: () => {
-              if (at3(ctx, "nb_boy_grenades", "talk")) return `(The boy crawls out of the scrap, blood running down his forehead. He glares up at the broken window.) "...That tall clown threw me out a window. Doesn't matter. I'm going back up. They're going to take me."`;
+              if (at2(ctx, "nb_boy_grenades", "talk")) return `(The boy crawls out of the scrap, blood running down his forehead. He glares up at the broken window.) "...That tall clown threw me out a window. Doesn't matter. I'm going back up. They're going to take me."`;
               if (done2(ctx, "nb_white_city")) return `"You went to Flevance? ...Then you saw it. Don't call it a tragedy. It was MURDER. And the World Government watched and did nothing."`;
               return `"I'm part of the family now. Diamante teaches me the sword, Gladius the gun, Lao G the fists. I read 'Sora, Warrior of the Sea' at night. ...Three years. I'll use every day of them."`;
             },
             choices: [
-              { text: "Why go back to them?", if: () => at3(ctx, "nb_boy_grenades", "talk"), next: "flev" },
+              { text: "Why go back to them?", if: () => at2(ctx, "nb_boy_grenades", "talk"), next: "flev" },
               { text: "Leave him be.", end: true }
             ]
           },
@@ -99107,7 +100039,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         nodes: {
           a: {
             text: () => {
-              if (at3(ctx, "nb_rakesh_strongbox", "escape")) return `"Fuffuffuffu! So you're the rat who knocked Trebol down. Relax \u2014 I'm in a generous mood today. Run along... before I change my mind."`;
+              if (at2(ctx, "nb_rakesh_strongbox", "escape")) return `"Fuffuffuffu! So you're the rat who knocked Trebol down. Relax \u2014 I'm in a generous mood today. Run along... before I change my mind."`;
               if (ctx.char.faction === "marine") return `"Fuffuffu... a Marine, all alone in my junkyard? Brave. Tell your masters I send my regards. ...Or don't. I'll deliver them myself, one day."`;
               return `"Fuffuffuffu! A new face. Everyone who comes here wants something \u2014 money, revenge, a family. Careful how you answer. In this family, betrayal is paid for in blood."`;
             },
@@ -99300,24 +100232,24 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           a: {
             text: () => {
               if (done2(ctx, "nb_white_city")) return `"The dead don't need the truth. The living do. ...Thank you for carrying it as far as you did. The lodge is yours whenever you need a bed."`;
-              if (at3(ctx, "nb_white_city", "choice")) return `"You found it. A hundred years of lies in one envelope \u2014 and the Government came running to take it back." (He leans on his shovel.) "So. What will you do with it?"`;
+              if (at2(ctx, "nb_white_city", "choice")) return `"You found it. A hundred years of lies in one envelope \u2014 and the Government came running to take it back." (He leans on his shovel.) "So. What will you do with it?"`;
               if (ctx.quest("nb_white_city")) return `"The hospital is east of the square, the palace north. Mind the white dust \u2014 it's only poison if you breathe it for a lifetime."`;
               return `"Welcome to the White Town. Or what we left of it." (He leans on his shovel.) "I stood on the quarantine line. We were told the white sickness spread by touch, so we shot anyone who crossed. Children too. It never spread. So I stay, and I dig."`;
             },
             choices: [
               { text: "Rest at the lodge.", do: (c) => c.open("inn") },
               { text: "What really happened here?", if: () => !ctx.quest("nb_white_city"), next: "story" },
-              { text: "Give the survey to the Revolutionary.", if: () => at3(ctx, "nb_white_city", "choice") && ctx.has("nb_amber_survey"), do: (c) => {
+              { text: "Give the survey to the Revolutionary.", if: () => at2(ctx, "nb_white_city", "choice") && ctx.has("nb_amber_survey"), do: (c) => {
                 c.take("nb_amber_survey", 1);
                 c.setFlag("nbSurveyRevolution");
                 c.complete("nb_white_city");
               }, next: "rev" },
-              { text: "Burn it. No one would believe it.", if: () => at3(ctx, "nb_white_city", "choice") && ctx.has("nb_amber_survey"), do: (c) => {
+              { text: "Burn it. No one would believe it.", if: () => at2(ctx, "nb_white_city", "choice") && ctx.has("nb_amber_survey"), do: (c) => {
                 c.take("nb_amber_survey", 1);
                 c.setFlag("nbSurveyBurned");
                 c.complete("nb_white_city");
               }, next: "burn" },
-              { text: "I'll keep it. One day the world will listen.", if: () => at3(ctx, "nb_white_city", "choice"), do: (c) => {
+              { text: "I'll keep it. One day the world will listen.", if: () => at2(ctx, "nb_white_city", "choice"), do: (c) => {
                 c.setFlag("nbSurveyKept");
                 c.complete("nb_white_city");
               }, next: "keep" },
@@ -99404,8 +100336,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           a: {
             text: () => {
               if (done2(ctx, "nb_liar_noland")) return `"Carry the log well. If you ever reach Jaya, find Noland's descendant, Montblanc Cricket. Tell him the archive of Lvneel remembers the truth \u2014 even if the Crown never will."`;
-              if (at3(ctx, "nb_liar_noland", "report")) return `"The Sea King is slain? Then you have done what the picture book says a KING did." (He smiles thinly.) "The log tells it otherwise: ADMIRAL Noland dragged that beast aboard alone, while His Majesty hid below deck."`;
-              if (at3(ctx, "nb_liar_noland", "archive")) return `"You have the picture book? Good \u2014 you know what the Crown tells children. Now read what it wrote in private." (He unlocks a cabinet sealed with royal wax.) "The ship's log of the royal expedition to Jaya. Four hundred years old."`;
+              if (at2(ctx, "nb_liar_noland", "report")) return `"The Sea King is slain? Then you have done what the picture book says a KING did." (He smiles thinly.) "The log tells it otherwise: ADMIRAL Noland dragged that beast aboard alone, while His Majesty hid below deck."`;
+              if (at2(ctx, "nb_liar_noland", "archive")) return `"You have the picture book? Good \u2014 you know what the Crown tells children. Now read what it wrote in private." (He unlocks a cabinet sealed with royal wax.) "The ship's log of the royal expedition to Jaya. Four hundred years old."`;
               if (ctx.char.race === "skypiean") return `"...Wings? Then the stories are true. Noland wrote of fish that swim through clouds, and a golden bell ringing above Jaya. Welcome to the Royal Archive, child of the sky. I have thirty years of questions for you."`;
               return `"Welcome to the Royal Archive. Every child in the North Blue learns 'Liar Noland' before they can read. I have spent thirty years in these stacks, and I will tell you a secret: I do not believe a word of it."`;
             },
@@ -99413,8 +100345,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
               { text: "Browse the archive.", do: (c) => c.open("library") },
               { text: "Why don't you believe it?", if: () => !ctx.quest("nb_liar_noland"), next: "why" },
               { text: "Let's find out the truth.", if: () => !ctx.quest("nb_liar_noland"), do: (c) => c.startQuest("nb_liar_noland"), end: true },
-              { text: "Read the sealed log.", if: () => at3(ctx, "nb_liar_noland", "archive"), next: "log" },
-              { text: "The Sea King is dead.", if: () => at3(ctx, "nb_liar_noland", "report"), do: (c) => c.complete("nb_liar_noland"), next: "end" },
+              { text: "Read the sealed log.", if: () => at2(ctx, "nb_liar_noland", "archive"), next: "log" },
+              { text: "The Sea King is dead.", if: () => at2(ctx, "nb_liar_noland", "report"), do: (c) => c.complete("nb_liar_noland"), next: "end" },
               { text: "Goodbye.", end: true }
             ]
           },
@@ -99484,14 +100416,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         nodes: {
           a: {
             text: () => {
-              if (at3(ctx, "nb_ope_ope", "call")) return `(Before you can speak, the Den Den Mushi in Corazon's coat rings. "Corazon. It's me." Doflamingo's voice. Corazon taps the receiver \u2014 three taps for yes, two for no. "...I've found the Ope Ope no Mi. We steal it, you eat it, you cure the brat." Click.)`;
-              if (at3(ctx, "nb_ope_ope", "rubeck")) return `(Corazon mouths two words: "RUBECK. SOUTH-EAST." Then he gets up, trips over the bench and lands face-first on the cobbles.)`;
-              if (at3(ctx, "nb_ope_ope", "whiteland")) return `(Corazon writes on his notepad: "WHITELAND ROYAL HOSPITAL. NORTH OF HERE. ASK FOR A DOCTOR WHO'LL TREAT HIM. I CAN'T GO IN \u2014 I BROKE THE LAST DOCTOR'S JAW.")`;
+              if (at2(ctx, "nb_ope_ope", "call")) return `(Before you can speak, the Den Den Mushi in Corazon's coat rings. "Corazon. It's me." Doflamingo's voice. Corazon taps the receiver \u2014 three taps for yes, two for no. "...I've found the Ope Ope no Mi. We steal it, you eat it, you cure the brat." Click.)`;
+              if (at2(ctx, "nb_ope_ope", "rubeck")) return `(Corazon mouths two words: "RUBECK. SOUTH-EAST." Then he gets up, trips over the bench and lands face-first on the cobbles.)`;
+              if (at2(ctx, "nb_ope_ope", "whiteland")) return `(Corazon writes on his notepad: "WHITELAND ROYAL HOSPITAL. NORTH OF HERE. ASK FOR A DOCTOR WHO'LL TREAT HIM. I CAN'T GO IN \u2014 I BROKE THE LAST DOCTOR'S JAW.")`;
               return `(Corazon sits on a harbour bench beside the white-spotted boy, who is shivering. He writes: "SIX MONTHS. EVERY HOSPITAL IN THE NORTH BLUE. THEY CALL HIM A MONSTER." He looks at you for a long time. Then: "WILL YOU HELP US?")`;
             },
             choices: [
               { text: "I'll help.", if: () => !ctx.quest("nb_ope_ope"), do: (c) => c.startQuest("nb_ope_ope"), next: "help" },
-              { text: "...Wait. Can you talk?", if: () => at3(ctx, "nb_ope_ope", "call"), next: "talk" },
+              { text: "...Wait. Can you talk?", if: () => at2(ctx, "nb_ope_ope", "call"), next: "talk" },
               { text: "Leave", end: true }
             ]
           },
@@ -99518,7 +100450,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         start: "a",
         nodes: {
           a: {
-            text: () => at3(ctx, "nb_ope_ope", "rubeck") ? `"...Cora-san can talk. He lied to everybody. Even to Doflamingo." (The boy almost smiles.) "A Devil Fruit that can cure me? I don't believe in anything anymore. But he does. Idiot."` : `(The boy shivers, the white patches creeping up his neck.) "Cora-san keeps dragging me to hospitals. They all scream the same thing: 'Get the white monster out.' ...It's pointless. I'm going to die anyway."`
+            text: () => at2(ctx, "nb_ope_ope", "rubeck") ? `"...Cora-san can talk. He lied to everybody. Even to Doflamingo." (The boy almost smiles.) "A Devil Fruit that can cure me? I don't believe in anything anymore. But he does. Idiot."` : `(The boy shivers, the white patches creeping up his neck.) "Cora-san keeps dragging me to hospitals. They all scream the same thing: 'Get the white monster out.' ...It's pointless. I'm going to die anyway."`
           }
         }
       })
@@ -99561,7 +100493,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             text: () => ctx.has("nb_amber_survey") ? `"What is that \u2014 a Government seal? '...not contagious.'" (He reads it twice, then sits down heavily.) "We turned away dying children. For NOTHING."` : `"Whiteland Royal Hospital. Frostbite, broken bones, fever. Sit down, sit down."`,
             choices: [
               { text: "Treat me.", do: (c) => c.open("doctor", {}) },
-              { text: "Will you treat a boy with Amber Lead Syndrome?", if: () => at3(ctx, "nb_ope_ope", "whiteland"), next: "refuse" },
+              { text: "Will you treat a boy with Amber Lead Syndrome?", if: () => at2(ctx, "nb_ope_ope", "whiteland"), next: "refuse" },
               { text: "Goodbye.", end: true }
             ]
           },
@@ -99634,7 +100566,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             choices: [
               { text: "Train at the club", do: (c) => c.open("trainer", { trainer: "nb_longarm" }) },
               { text: "Is there a tournament?", if: () => !ctx.quest("nb_notice_cup"), next: "cup" },
-              { text: "Otto is down.", if: () => at3(ctx, "nb_notice_cup", "report"), do: (c) => c.complete("nb_notice_cup"), next: "won" },
+              { text: "Otto is down.", if: () => at2(ctx, "nb_notice_cup", "report"), do: (c) => c.complete("nb_notice_cup"), next: "won" },
               { text: "Goodbye.", end: true }
             ]
           },
@@ -99670,11 +100602,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           a: {
             text: () => {
               if (done2(ctx, "nb_notice_cup")) return `"Champ! My arms still hurt. Both elbows on both of them."`;
-              if (at3(ctx, "nb_notice_cup", "bout")) return `"So you're my opponent! Keep your guard up \u2014 my Lover Elbow comes in from angles you won't believe!"`;
+              if (at2(ctx, "nb_notice_cup", "bout")) return `"So you're my opponent! Keep your guard up \u2014 my Lover Elbow comes in from angles you won't believe!"`;
               return `"Notice is the richest, most BORING town in the North Blue. Banks, gardens, tea at four. I want OUT. ...You're a sailor, right? What's it like out there?"`;
             },
             choices: [
-              { text: "Fight! (Notice Cup)", if: () => at3(ctx, "nb_notice_cup", "bout"), do: (c) => aggro(c.game, findActor(c.game, "nb_otto")), end: true },
+              { text: "Fight! (Notice Cup)", if: () => at2(ctx, "nb_notice_cup", "bout"), do: (c) => aggro(c.game, findActor(c.game, "nb_otto")), end: true },
               { text: "See you around.", end: true }
             ]
           }
@@ -99722,12 +100654,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           a: {
             text: () => {
               if (done2(ctx, "nb_kuen")) return `"...She's alive. Somewhere out there she's alive, and eating. That's more than I could ever give her."`;
-              if (at3(ctx, "nb_kuen", "report")) return `"You went up the mountain? ...What did you find? Tell me. Please."`;
+              if (at2(ctx, "nb_kuen", "report")) return `"You went up the mountain? ...What did you find? Tell me. Please."`;
               return `(A thin woman sits on her doorstep, staring at the mountain.) "Four years ago the rains stopped. The elders said a child who can't work is a mouth we can't feed. So I walked my little girl up the mountain... and came back alone. She was four. Every night I hear her calling."`;
             },
             choices: [
               { text: "I'll search the mountain.", if: () => !ctx.quest("nb_kuen"), do: (c) => c.startQuest("nb_kuen"), end: true },
-              { text: "I found a ribbon... and a pink feather.", if: () => at3(ctx, "nb_kuen", "report"), next: "news" },
+              { text: "I found a ribbon... and a pink feather.", if: () => at2(ctx, "nb_kuen", "report"), next: "news" },
               { text: "Goodbye.", end: true }
             ]
           },
@@ -99751,9 +100683,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         start: "a",
         nodes: {
           a: {
-            text: () => at3(ctx, "nb_kuen", "elder") ? `"Rice? REAL rice? ...You don't know what you're carrying, stranger. That's five children who eat tonight."` : `"Kuen, they call this place. 'Can't eat', the old folk say it means. The name came true: the wells are dust and the fields are straw. Any food you bring here is a life."`,
+            text: () => at2(ctx, "nb_kuen", "elder") ? `"Rice? REAL rice? ...You don't know what you're carrying, stranger. That's five children who eat tonight."` : `"Kuen, they call this place. 'Can't eat', the old folk say it means. The name came true: the wells are dust and the fields are straw. Any food you bring here is a life."`,
             choices: [
-              { text: "Give 5 Rice Balls.", if: () => at3(ctx, "nb_kuen", "elder") && ctx.has("rice_ball", 5), do: (c) => {
+              { text: "Give 5 Rice Balls.", if: () => at2(ctx, "nb_kuen", "elder") && ctx.has("rice_ball", 5), do: (c) => {
                 c.take("rice_ball", 5);
                 c.stage("nb_kuen", "mountain");
               }, next: "thanks" },
@@ -99829,7 +100761,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           a: {
             text: () => {
               if (done2(ctx, "nb_third_prince")) return `"A cook, on a sea restaurant. Alive, and cooking." (A real smile, quickly hidden.) "Father must never know I asked. And neither must my brothers."`;
-              if (at3(ctx, "nb_third_prince", "report")) return `"You went all the way to the East Blue? ...Well? Tell me. Did he look happy?"`;
+              if (at2(ctx, "nb_third_prince", "report")) return `"You went all the way to the East Blue? ...Well? Tell me. Did he look happy?"`;
               if (ctx.quest("nb_third_prince")) return `"The Baratie \u2014 a floating restaurant in the East Blue. I can't go myself. Germa never sails anywhere without a war to sell."`;
               return `"You're brave, or stupid, to wander around Germa." (She lowers her voice.) "I had a brother once. Everyone was told he died in a shipwreck. There's a rumour of a young cook in the East Blue, on a sea restaurant \u2014 curly eyebrow, kicks like a cannon. If it's true... just tell me he's alive."`;
             },
@@ -99838,7 +100770,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
                 c.startQuest("nb_third_prince");
                 if (c.game.quests.isDone("baratie_krieg")) c.setFlag("nbSawSanji");
               }, end: true },
-              { text: "He's alive. He cooks at the Baratie \u2014 and he's happy.", if: () => at3(ctx, "nb_third_prince", "report"), do: (c) => c.complete("nb_third_prince"), next: "thanks" },
+              { text: "He's alive. He cooks at the Baratie \u2014 and he's happy.", if: () => at2(ctx, "nb_third_prince", "report"), do: (c) => c.complete("nb_third_prince"), next: "thanks" },
               { text: "Goodbye, princess.", end: true }
             ]
           },
@@ -99887,13 +100819,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           a: {
             text: () => {
               if (done2(ctx, "nb_germa")) return `"Prince Niji won't be throwing plates for a while..." (She laughs, covers her mouth, then laughs again.) "Nobody here has ever stood up for a servant. Would you... let me cook for YOUR table?"`;
-              if (at3(ctx, "nb_germa", "report")) return `"You... you beat Prince Niji? In his raid suit?!"`;
-              if (ctx.quest("nb_germa") && !at3(ctx, "nb_germa", "cosette")) return `"The soldiers drill on the west platform. They all have the same face \u2014 they come out of the Depot like that. Please be careful."`;
+              if (at2(ctx, "nb_germa", "report")) return `"You... you beat Prince Niji? In his raid suit?!"`;
+              if (ctx.quest("nb_germa") && !at2(ctx, "nb_germa", "cosette")) return `"The soldiers drill on the west platform. They all have the same face \u2014 they come out of the Depot like that. Please be careful."`;
               return `(A young cook with a bruised, freckled face is scrubbing a pot.) "Oh! You shouldn't be in the royal kitchen... Please keep your voice down. Prince Niji doesn't like noise. He doesn't like anything. Least of all the servants."`;
             },
             choices: [
-              { text: "Who did this to you?", if: () => !ctx.quest("nb_germa") || at3(ctx, "nb_germa", "cosette"), next: "who" },
-              { text: "Niji is beaten.", if: () => at3(ctx, "nb_germa", "report"), do: (c) => c.complete("nb_germa"), next: "a" },
+              { text: "Who did this to you?", if: () => !ctx.quest("nb_germa") || at2(ctx, "nb_germa", "cosette"), next: "who" },
+              { text: "Niji is beaten.", if: () => at2(ctx, "nb_germa", "report"), do: (c) => c.complete("nb_germa"), next: "a" },
               { text: "Something to eat?", do: (c) => c.open("shop", { shop: "nb_germa_kitchen", building: { name: "Royal Kitchen", role: "restaurant" } }) },
               { text: "Goodbye.", end: true }
             ]
@@ -99966,9 +100898,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         start: "a",
         nodes: {
           a: {
-            text: () => at3(ctx, "nb_ope_ope", "rubeck") ? `"This island is under Marine control. ...The 'exchange'? (He glances around, then lowers his voice.) Five BILLION berries, for one Devil Fruit. Makes you sick, doesn't it?"` : `"This island is under Marine control until further notice. Move along \u2014 nothing to see here."`,
+            text: () => at2(ctx, "nb_ope_ope", "rubeck") ? `"This island is under Marine control. ...The 'exchange'? (He glances around, then lowers his voice.) Five BILLION berries, for one Devil Fruit. Makes you sick, doesn't it?"` : `"This island is under Marine control until further notice. Move along \u2014 nothing to see here."`,
             choices: [
-              { text: "Who is selling it?", if: () => at3(ctx, "nb_ope_ope", "rubeck"), next: "where" },
+              { text: "Who is selling it?", if: () => at2(ctx, "nb_ope_ope", "rubeck"), next: "where" },
               { text: "Marine business", if: () => ctx.char.faction === "marine", do: (c) => c.emit("marineOffice", { name: "Rubeck Exchange Camp" }), end: true },
               { text: "Moving along.", end: true }
             ]
@@ -100019,7 +100951,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         start: "a",
         nodes: {
           a: {
-            text: () => at3(ctx, "nb_ope_ope", "vergo") ? `"The fruit's gone. Father's down... and there's something glittering in the sky. Strings?" (He looks at the sea, then at the mansion.) "...I'm sorry, Father."` : `(A tall, orange-haired youth stands guard, bruises on his arms.) "My father was a Marine officer once. A good one \u2014 people saluted him in the street. Now he hits me when a deal goes wrong. Don't look at me like that. He's still my father."`,
+            text: () => at2(ctx, "nb_ope_ope", "vergo") ? `"The fruit's gone. Father's down... and there's something glittering in the sky. Strings?" (He looks at the sea, then at the mansion.) "...I'm sorry, Father."` : `(A tall, orange-haired youth stands guard, bruises on his arms.) "My father was a Marine officer once. A good one \u2014 people saluted him in the street. Now he hits me when a deal goes wrong. Don't look at me like that. He's still my father."`,
             choices: [{ text: "You could leave.", next: "b" }, { text: "Leave", end: true }]
           },
           b: { text: `"...Someday I'll wear the Marine coat myself. The way he used to, before all this." (He says it quietly, as if the mansion might hear.)` }
@@ -100084,12 +101016,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         nodes: {
           a: {
             text: () => {
-              if (at3(ctx, "nb_ope_ope", "farewell")) return `(Rosinante sits against a ruined wall, the snow around him red. The strings above hum like a harp. He smiles \u2014 a wide, painted, clumsy smile.) "...You got him into the chest. Good. Now he's free."`;
-              if (at3(ctx, "nb_ope_ope", "birdcage")) return `"Strings... Doffy's Birdcage. He'll comb every inch." (He coughs red onto the snow.) "The Barrels' treasure chests, east of the mansion \u2014 his crew will load them onto their ship. Put Law in one. I'll make sure no one can hear him. Go!"`;
+              if (at2(ctx, "nb_ope_ope", "farewell")) return `(Rosinante sits against a ruined wall, the snow around him red. The strings above hum like a harp. He smiles \u2014 a wide, painted, clumsy smile.) "...You got him into the chest. Good. Now he's free."`;
+              if (at2(ctx, "nb_ope_ope", "birdcage")) return `"Strings... Doffy's Birdcage. He'll comb every inch." (He coughs red onto the snow.) "The Barrels' treasure chests, east of the mansion \u2014 his crew will load them onto their ship. Put Law in one. I'll make sure no one can hear him. Go!"`;
               return `(Corazon is slumped in the snow, riddled with bullets, a cigarette still between his lips. And he SPEAKS, softly.) "He ate it. Law ate the fruit. ...I sent him to the Marines with a letter. If the wrong Marine reads it..."`;
             },
             choices: [
-              { text: "Tell me who you really are.", if: () => at3(ctx, "nb_ope_ope", "farewell"), next: "f1" },
+              { text: "Tell me who you really are.", if: () => at2(ctx, "nb_ope_ope", "farewell"), next: "f1" },
               { text: "Hold on!", end: true }
             ]
           },
@@ -100116,14 +101048,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         nodes: {
           a: {
             text: () => {
-              if (at3(ctx, "nb_bacca", "report")) return `"You beat Bacca? ...Then you know. He's my son." (Wolf stares at his hands.) "I sailed with him for years to keep him in line. It didn't work. When he came home and burned this town, I cut him off. I should have stopped him myself."`;
+              if (at2(ctx, "nb_bacca", "report")) return `"You beat Bacca? ...Then you know. He's my son." (Wolf stares at his hands.) "I sailed with him for years to keep him in line. It didn't work. When he came home and burned this town, I cut him off. I should have stopped him myself."`;
               if (done2(ctx, "nb_heart_pirates")) return `"Those four brats eat like a crew of forty. Give and take! They pay me back in chores. ...Don't you dare tell them I said they're good kids."`;
               return `"Hm? Who are you? If you want something from Wolf the genius inventor, you give something back. Give and take! That's my policy. Firewood, bullets, a hand in the greenhouse \u2014 or money. Money is also good."`;
             },
             choices: [
               { text: "Teach me to shoot.", do: (c) => c.open("trainer", { trainer: "nb_wolf" }) },
               { text: "What do you invent?", next: "inv" },
-              { text: "You gave this town a chance, too.", if: () => at3(ctx, "nb_bacca", "report"), do: (c) => c.complete("nb_bacca"), next: "gift" },
+              { text: "You gave this town a chance, too.", if: () => at2(ctx, "nb_bacca", "report"), do: (c) => c.complete("nb_bacca"), next: "gift" },
               { text: "Goodbye.", end: true }
             ]
           },
@@ -100239,11 +101171,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           a: {
             text: () => {
               if (done2(ctx, "nb_heart_pirates")) return `"Cora-san's business in the New World isn't finished. I'll finish it. Someday Doflamingo will pay. ...Don't get in my way. And don't die before then."`;
-              if (at3(ctx, "nb_heart_pirates", "report")) return `"...You were on Minion Island." (He watches three boys squabble over firewood.) "Three years ago I wanted to destroy the world. Now I have something to do in it. We're going to be pirates."`;
+              if (at2(ctx, "nb_heart_pirates", "report")) return `"...You were on Minion Island." (He watches three boys squabble over firewood.) "Three years ago I wanted to destroy the world. Now I have something to do in it. We're going to be pirates."`;
               return `"...Don't say his name. Not yet." (The boy turns away. The white patches on his skin are fading.)`;
             },
             choices: [
-              { text: "What will you call your crew?", if: () => at3(ctx, "nb_heart_pirates", "report"), do: (c) => c.complete("nb_heart_pirates"), next: "heart" },
+              { text: "What will you call your crew?", if: () => at2(ctx, "nb_heart_pirates", "report"), do: (c) => c.complete("nb_heart_pirates"), next: "heart" },
               { text: "Take care, Law.", end: true }
             ]
           },
@@ -102350,6 +103282,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           id: "serpent",
           desc: "Something nests in the drowned ravine. Sail out north of God Valley and slay it.",
           goal: { type: "defeat", npc: "wb_valley_king" },
+          where: (g) => {
+            const s = g.surface.islands.find((i) => i.id === "god_valley")?.spots?.valley_deep;
+            return s && g.world === g.surface ? { x: s.x, y: s.y, place: "The drowned ravine" } : null;
+          },
           onStart: (ctx, g) => g.ui.banner("The Drowned Ravine", "God Valley", "The water north of the island is black and very deep. Something down there is circling.", 5)
         },
         { id: "report", desc: "Bring the three proofs to Old Coyote." }
@@ -108160,7 +109096,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "side",
       summary: "A Sea King nests in the whirlpools north of Kenzan Island and swallows the Longarms' fishing boats.",
       stages: [
-        { id: "hunt", desc: "Sail into the whirlpools north of Kenzan Island and slay the Whirlpool Lord.", goal: { type: "defeat", npc: "p1_whirlpool_lord" } },
+        {
+          id: "hunt",
+          desc: "Sail into the whirlpools north of Kenzan Island and slay the Whirlpool Lord.",
+          goal: { type: "defeat", npc: "p1_whirlpool_lord" },
+          where: (g) => {
+            const s = g.surface.islands.find((i) => i.id === "kenzan_island")?.spots?.whirlpool;
+            return s && g.world === g.surface ? { x: s.x, y: s.y, place: "The Kenzan whirlpools" } : null;
+          }
+        },
         { id: "report", desc: "Return to Old Tenaga in the Tehna Gehna Kingdom." }
       ],
       rewards: { berries: 12e3, points: 1, items: [["sea_king_steak", 1]] }
@@ -108452,7 +109396,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           }
         },
         { id: "ship", desc: "Bring the South Bird to Masira of the Saruyama Alliance, beside Cricket's house." },
-        { id: "stream", desc: "Sail south of Jaya to where the sea churns, and ride the Knock Up Stream to the sky (press E on the churning sea).", goal: { type: "event", event: "p1_reached_sky" } }
+        {
+          id: "stream",
+          desc: "Sail south of Jaya to where the sea churns, and ride the Knock Up Stream to the sky (press E on the churning sea).",
+          goal: { type: "event", event: "p1_reached_sky" },
+          where: (g) => {
+            const s = g.surface.islands.find((i) => i.id === "jaya")?.spots?.knock_up_stream;
+            return s && g.world === g.surface ? { x: s.x, y: s.y, place: "The Knock Up Stream" } : null;
+          }
+        }
       ],
       rewards: { berries: 12e3, points: 1 }
     },
@@ -109268,7 +110220,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   var S2 = (g, id) => g.quests.stageId(id);
   var D2 = (g, id) => g.quests.isDone(id);
   var ON = (g, id) => !!g.quests.state(id) && !g.quests.isDone(id);
-  var at4 = (ctx, id, st) => ctx.game.quests.stageId(id) === st;
+  var at3 = (ctx, id, st) => ctx.game.quests.stageId(id) === st;
   var beat2 = (c, id) => (c.bosses || []).includes(id) || !!(c.defeated || {})[id];
   var marine = (c) => c.faction === "marine";
   var wanted = (c) => (c.bounty || 0) > 0 && c.faction !== "marine";
@@ -109886,7 +110838,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         a: {
           text: () => {
             const st = ctx.game.quests.stageId("p2_cp9_conspiracy");
-            if (at4(ctx, "p2_enies_lobby", "report")) return '"Nma! You came back from Enies Lobby \u2014 through a Buster Call. Franky too, the idiot. (For the first time, the mayor laughs.) Tom would have been proud of every one of you."';
+            if (at3(ctx, "p2_enies_lobby", "report")) return '"Nma! You came back from Enies Lobby \u2014 through a Buster Call. Franky too, the idiot. (For the first time, the mayor laughs.) Tom would have been proud of every one of you."';
             if (st === "iceburg") return '"Nma. You are the rookie who handled the Franky Family. (A mouse peeks out of his breast pocket: Tyrannosaurus.) I will be honest. Someone has been sending threats. I do not think they want my life. They want something I do not have."';
             if (st === "night" || st === "masks") return '"Nma. Lucci, Kaku, Kalifa \u2014 my people are all here tonight. Keep watch on the grounds after dark. Whoever they are, they come at night."';
             if (st === "truth") return `(Iceburg is bandaged and pale.) "...The masks came off. Lucci. Kaku. Kalifa, my secretary of five years. Blueno the bartender. CP9 \u2014 the Government's assassins, hidden in my company for five years."`;
@@ -109894,9 +110846,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             return '"Nma. This is Galley-La, the finest shipwrights in the world. If you want a ship built or repaired, Dock 1 will take care of you. Even pirates \u2014 if they pay."';
           },
           choices: [
-            { text: "I'll stand guard tonight.", if: () => at4(ctx, "p2_cp9_conspiracy", "iceburg"), next: "guard" },
-            { text: "What did CP9 want?", if: () => at4(ctx, "p2_cp9_conspiracy", "truth"), next: "pluton" },
-            { text: "We're back, Mayor.", if: () => at4(ctx, "p2_enies_lobby", "report"), next: "back" },
+            { text: "I'll stand guard tonight.", if: () => at3(ctx, "p2_cp9_conspiracy", "iceburg"), next: "guard" },
+            { text: "What did CP9 want?", if: () => at3(ctx, "p2_cp9_conspiracy", "truth"), next: "pluton" },
+            { text: "We're back, Mayor.", if: () => at3(ctx, "p2_enies_lobby", "report"), next: "back" },
             { text: "Galley-La shipyard", do: (c) => c.open("shipwright", {}) },
             { text: "Goodbye, Mayor.", end: true }
           ]
@@ -110071,7 +111023,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         a: {
           text: () => ctx.char.defeated.p2_zambai ? `"OW! Okay, okay! Here's your rudder. (He hands over a plank.) ...Listen. Big Bro Franky's gone into hiding. Men in black suits keep asking about some blueprints. And somebody sent the mayor a death threat. Go tell Iceburg. And don't tell him we told you!"` : `"AOW! (He strikes a pose.) We're the Franky Family, Water 7's finest dismantlers! Your ship looked abandoned. Abandoned ships are ours. Now beat it before Big Bro Franky gets back!"`,
           choices: [
-            { text: "Give back my rudder. Now.", if: () => at4(ctx, "p2_cp9_conspiracy", "franky") && !ctx.char.defeated.p2_zambai, do: (c) => aggro(c.game, findActor(c.game, "p2_zambai")), end: true },
+            { text: "Give back my rudder. Now.", if: () => at3(ctx, "p2_cp9_conspiracy", "franky") && !ctx.char.defeated.p2_zambai, do: (c) => aggro(c.game, findActor(c.game, "p2_zambai")), end: true },
             { text: "Who is Franky?", next: "franky" },
             { text: "Leave", end: true }
           ]
@@ -110092,9 +111044,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       marker: (c, g) => S2(g, "p2_enies_lobby") === "rocketman" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
-          text: () => at4(ctx, "p2_enies_lobby", "rocketman") ? `"Nngaa~ha~ha! (She takes a long swig from her bottle.) The Aqua Laguna's coming and you want to chase the Puffing Tom to Enies Lobby? The Rocketman's got no brakes and she's never been tested. Chimney! Gonbe! We're going on a trip!"` : ctx.game.quests.isDone("p2_enies_lobby") ? `"Nngaa~ha~ha! You rode the Rocketman through the Aqua Laguna and came back alive. Tom would've liked you."` : `"Nngaa~ha~ha! Shift Station. The trains out of here don't take passengers, dear \u2014 only criminals and Government men ride the line to Enies Lobby."`,
+          text: () => at3(ctx, "p2_enies_lobby", "rocketman") ? `"Nngaa~ha~ha! (She takes a long swig from her bottle.) The Aqua Laguna's coming and you want to chase the Puffing Tom to Enies Lobby? The Rocketman's got no brakes and she's never been tested. Chimney! Gonbe! We're going on a trip!"` : ctx.game.quests.isDone("p2_enies_lobby") ? `"Nngaa~ha~ha! You rode the Rocketman through the Aqua Laguna and came back alive. Tom would've liked you."` : `"Nngaa~ha~ha! Shift Station. The trains out of here don't take passengers, dear \u2014 only criminals and Government men ride the line to Enies Lobby."`,
           choices: [
-            { text: "Ride the Rocketman to Enies Lobby!", if: () => at4(ctx, "p2_enies_lobby", "rocketman"), do: (c) => {
+            { text: "Ride the Rocketman to Enies Lobby!", if: () => at3(ctx, "p2_enies_lobby", "rocketman"), do: (c) => {
               c.game.env.stormTarget = 1;
               travel(c.game, "enies_lobby", { spot: "main_gate", banner: ["THE ROCKETMAN", "Through the Aqua Laguna", "It leaves the rails twice. It lands on them both times. Enies Lobby rises out of the storm, bathed in endless daylight.", 6] });
             }, end: true },
@@ -110196,7 +111148,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           choices: [
             { text: "Show me the black market.", do: (c) => c.open("shop", { shop: "p2_poplar_black_market", building: { name: "Back-Alley Dealer", role: "shop" } }) },
             { text: "You look worried.", if: () => ctx.game.quests.isDone("p2_enies_lobby") && !ctx.quest("p2_candy_pirates"), next: "candy" },
-            { text: "The Candy Pirates are finished.", if: () => at4(ctx, "p2_candy_pirates", "report"), next: "paid" },
+            { text: "The Candy Pirates are finished.", if: () => at3(ctx, "p2_candy_pirates", "report"), next: "paid" },
             { text: "Leave", end: true }
           ]
         },
@@ -110300,9 +111252,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       level: 20,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
-          text: () => at4(ctx, "p2_enies_lobby", "buster_call") ? `"THE BUSTER CALL! They're shelling their own island! (He points at the rails.) Kokoro brought the Puffing Tom back for the survivors \u2014 get on, now!"` : ctx.game.quests.isDone("p2_enies_lobby") ? '(The platform is scorched. Beyond it, the Judicial Island is a ruin \u2014 but the sun still has not set.) "The trains still stop here. Old habits."' : '"Day Station, Enies Lobby. The sun never sets on the Judicial Island. You are not on the list. Turn around."',
+          text: () => at3(ctx, "p2_enies_lobby", "buster_call") ? `"THE BUSTER CALL! They're shelling their own island! (He points at the rails.) Kokoro brought the Puffing Tom back for the survivors \u2014 get on, now!"` : ctx.game.quests.isDone("p2_enies_lobby") ? '(The platform is scorched. Beyond it, the Judicial Island is a ruin \u2014 but the sun still has not set.) "The trains still stop here. Old habits."' : '"Day Station, Enies Lobby. The sun never sets on the Judicial Island. You are not on the list. Turn around."',
           choices: [
-            { text: "Ride back to Water 7", if: () => at4(ctx, "p2_enies_lobby", "buster_call") || ctx.game.quests.isDone("p2_enies_lobby") || ctx.has("p2_sea_train_pass"), do: (c) => travel(c.game, "water_7", { banner: ["PUFFING TOM", "Water 7", "The sea train pulls away from the Judicial Island.", 4] }), end: true },
+            { text: "Ride back to Water 7", if: () => at3(ctx, "p2_enies_lobby", "buster_call") || ctx.game.quests.isDone("p2_enies_lobby") || ctx.has("p2_sea_train_pass"), do: (c) => travel(c.game, "water_7", { banner: ["PUFFING TOM", "Water 7", "The sea train pulls away from the Judicial Island.", 4] }), end: true },
             { text: "Leave", end: true }
           ]
         }
@@ -110335,8 +111287,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         a: {
           text: '"HALT, TINY ONE! I am Oimo, gatekeeper of Enies Lobby! For fifty years we have served the World Government, so that our captains Dorry and Brogy are released from prison! None shall pass!"',
           choices: [
-            { text: `"Dorry and Brogy aren't prisoners. They're still dueling on Little Garden!"`, if: () => at4(ctx, "p2_enies_lobby", "main_gate") && ctx.char.discovered.includes("little_garden"), next: "truth" },
-            { text: "Then I'll go through you.", if: () => at4(ctx, "p2_enies_lobby", "main_gate"), do: (c) => {
+            { text: `"Dorry and Brogy aren't prisoners. They're still dueling on Little Garden!"`, if: () => at3(ctx, "p2_enies_lobby", "main_gate") && ctx.char.discovered.includes("little_garden"), next: "truth" },
+            { text: "Then I'll go through you.", if: () => at3(ctx, "p2_enies_lobby", "main_gate"), do: (c) => {
               const o = findActor(c.game, "p2_oimo");
               if (o) aggro(c.game, o);
             }, end: true },
@@ -110398,7 +111350,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         a: {
           text: '(Three heads, one robe.) LEFT: "Guilty. Everyone is guilty." RIGHT: "Innocent! Let them go!" MIDDLE: "I am perfectly fair. Execute them!" (The jury box is full of prisoners who want company in Impel Down.)',
           choices: [
-            { text: "I object!", if: () => at4(ctx, "p2_enies_lobby", "courthouse"), do: (c) => {
+            { text: "I object!", if: () => at3(ctx, "p2_enies_lobby", "courthouse"), do: (c) => {
               const b = findActor(c.game, "p2_baskerville");
               if (b) aggro(c.game, b);
             }, end: true },
@@ -110649,13 +111601,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
-            if (at4(ctx, TB_Q, "dawn")) return '"The sun is up and nobody burned! (All around the camp, shadowless people are laughing and crying.) Our shadows came home! ...Will you marry me? No? HA! Nobody ever says yes."';
+            if (at3(ctx, TB_Q, "dawn")) return '"The sun is up and nobody burned! (All around the camp, shadowless people are laughing and crying.) Our shadows came home! ...Will you marry me? No? HA! Nobody ever says yes."';
             if (ctx.game.quests.isDone(TB_Q)) return `"Moria's gone and we've got our shadows back. The Rolling Pirates sail on! ...Last chance: marry me? No? Ha!"`;
             return `"Will you marry me? ...No? Ha, nobody ever says yes. I'm Lola, captain of the Rolling Pirates. Gecko Moria took our shadows, so we hide in this forest from the sun. (She looks at your feet.) You still have yours. Not for long, if you sleep here."`;
           },
           choices: [
-            { text: "How does Moria steal shadows?", if: () => at4(ctx, TB_Q, "lola"), next: "how" },
-            { text: "It's over, Lola.", if: () => at4(ctx, TB_Q, "dawn"), next: "end" },
+            { text: "How does Moria steal shadows?", if: () => at3(ctx, TB_Q, "lola"), next: "how" },
+            { text: "It's over, Lola.", if: () => at3(ctx, TB_Q, "dawn"), next: "end" },
             { text: "Leave", end: true }
           ]
         },
@@ -110967,7 +111919,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           choices: [
             { text: "Rest at the hot springs", do: (c) => c.open("inn", {}) },
             { text: "I'll deal with Foxy.", if: () => !ctx.quest("p2_spa_foxy"), do: (c) => c.startQuest("p2_spa_foxy"), end: true },
-            { text: "Foxy won't bother anyone.", if: () => at4(ctx, "p2_spa_foxy", "report"), do: (c) => c.complete("p2_spa_foxy"), next: "thx" },
+            { text: "Foxy won't bother anyone.", if: () => at3(ctx, "p2_spa_foxy", "report"), do: (c) => c.complete("p2_spa_foxy"), next: "thx" },
             { text: "Leave", end: true }
           ]
         },
@@ -111154,14 +112106,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
-            if (at4(ctx, "p2_sabaody_auction", "freed")) return `"Nyu~! Camie's safe! (He wipes his eyes with four hands at once.) I used to be one of Arlong's crew, you know. I did bad things. And still you helped us. Takoyaki for life, on the house!"`;
+            if (at3(ctx, "p2_sabaody_auction", "freed")) return `"Nyu~! Camie's safe! (He wipes his eyes with four hands at once.) I used to be one of Arlong's crew, you know. I did bad things. And still you helped us. Takoyaki for life, on the house!"`;
             if (ctx.game.quests.isDone("p2_sabaody_auction")) return '"Nyu~! Best takoyaki in Sabaody! Six arms, six times the flavour!"';
             return '"Nyu~! Takoyaki Hachi, best in Sabaody! (His face falls.) ...Have you seen a mermaid? Green hair, pink tail, very excitable? Camie went to deliver takoyaki at Grove 13 and never came back. Fish-Men and mermaids get kidnapped here all the time..."';
           },
           choices: [
             { text: "Buy takoyaki", do: (c) => c.open("shop", { shop: "p2_takoyaki_menu", building: { name: "Takoyaki Hachi", role: "restaurant" } }) },
             { text: "I'll find Camie.", if: () => !ctx.quest("p2_sabaody_auction"), do: (c) => c.startQuest("p2_sabaody_auction"), end: true },
-            { text: "Camie is safe.", if: () => at4(ctx, "p2_sabaody_auction", "freed"), do: (c) => c.complete("p2_sabaody_auction"), end: true },
+            { text: "Camie is safe.", if: () => at3(ctx, "p2_sabaody_auction", "freed"), do: (c) => c.complete("p2_sabaody_auction"), end: true },
             { text: "Leave", end: true }
           ]
         }
@@ -111248,7 +112200,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       at: { spot: "grove_13", ox: -4 },
       look: { hair: "short", hairColor: "#fdd835", top: "#fafafa", bottom: "#1565c0", hat: "cowboy", hatColor: "#6d4c41" },
       level: 34,
-      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: () => at4(ctx, "p2_sabaody_auction", "macro") ? `"The mermaid? The Macro Pirates grabbed her right here in Grove 13 \u2014 Fish-Man slavers. They'll sell her to Disco's auction at Grove 1 if nobody stops them. My Rosy Life Riders will watch the bridges. Handsome, right?"` : '"Duval of the Rosy Life Riders. I used to wear an iron mask and hunt a man with my face. Then somebody kicked my face into THIS. (He poses, sparkling.) Handsome, right? Now my boys and I help people. Mostly handsome people."' } } })
+      dialogue: (ctx) => ({ start: "a", nodes: { a: { text: () => at3(ctx, "p2_sabaody_auction", "macro") ? `"The mermaid? The Macro Pirates grabbed her right here in Grove 13 \u2014 Fish-Man slavers. They'll sell her to Disco's auction at Grove 1 if nobody stops them. My Rosy Life Riders will watch the bridges. Handsome, right?"` : '"Duval of the Rosy Life Riders. I used to wear an iron mask and hunt a man with my face. Then somebody kicked my face into THIS. (He poses, sparkling.) Handsome, right? Now my boys and I help people. Mostly handsome people."' } } })
     },
     {
       id: "p2_gil",
@@ -111734,7 +112686,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           text: () => ctx.game.quests.isDone("p2_kuraigana_trial") ? '"You bowed your head to an enemy to learn his craft. That is not weakness. (He sets his glass of wine down.) The castle training grounds are open to you. Try not to bore me."' : '"This is Kuraigana. There was a kingdom here once; the war left ruins and baboons that learned to fight by watching men die. (His hawk eyes rest on you.) Why have you come to my island?"',
           choices: [
             { text: "Teach me the way of the sword.", if: () => !ctx.quest("p2_kuraigana_trial"), next: "ask" },
-            { text: "The Humandrill chieftain is defeated.", if: () => at4(ctx, "p2_kuraigana_trial", "report"), next: "done" },
+            { text: "The Humandrill chieftain is defeated.", if: () => at3(ctx, "p2_kuraigana_trial", "report"), next: "done" },
             { text: "Train with Mihawk", if: () => ctx.game.quests.isDone("p2_kuraigana_trial"), do: (c) => c.open("trainer", { trainer: "mihawk" }) },
             { ...challenge("mihawk", "Challenge the World's Greatest Swordsman. (Extremely dangerous)") },
             { text: "Leave", end: true }
@@ -111796,7 +112748,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           choices: [
             { text: "Teach me to survive here (sniper)", do: (c) => c.open("trainer", { trainer: "p2_heracles" }) },
             { text: "Anything I can hunt for you?", if: () => !ctx.quest("p2_gluttony"), next: "hunt" },
-            { text: "The beetle is dead.", if: () => at4(ctx, "p2_gluttony", "report"), next: "done" },
+            { text: "The beetle is dead.", if: () => at3(ctx, "p2_gluttony", "report"), next: "done" },
             { text: "Leave", end: true }
           ]
         },
@@ -111857,7 +112809,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           choices: [
             { text: "Buy Attack Cuisine", do: (c) => c.open("shop", { shop: "p2_attack_menu", building: { name: "Attack Cuisine Kitchen", role: "restaurant" } }) },
             { text: "I'll take on the Candidates.", if: () => !ctx.quest("p2_kamabakka"), do: (c) => c.startQuest("p2_kamabakka"), end: true },
-            { text: "The Candidates are down!", if: () => at4(ctx, "p2_kamabakka", "report"), do: (c) => c.complete("p2_kamabakka"), next: "win" },
+            { text: "The Candidates are down!", if: () => at3(ctx, "p2_kamabakka", "report"), do: (c) => c.complete("p2_kamabakka"), next: "win" },
             { text: "Leave", end: true }
           ]
         },
@@ -111900,7 +112852,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           choices: [
             { text: "Workshop (ship repairs and upgrades)", do: (c) => c.open("shipwright", {}) },
             { text: "Tell me about Vegapunk.", if: () => !ctx.quest("p2_baldimore"), next: "vp" },
-            { text: "I've read the old lab's notes.", if: () => at4(ctx, "p2_baldimore", "button"), next: "button" },
+            { text: "I've read the old lab's notes.", if: () => at3(ctx, "p2_baldimore", "button"), next: "button" },
             { text: "Leave", end: true }
           ]
         },
@@ -111959,10 +112911,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       marker: (c, g) => S2(g, "p2_rusukaina") === "report" ? "?" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
-          text: () => at4(ctx, "p2_rusukaina", "report") ? '"The lord of the plains... fell to you. (He smiles over the campfire.) The beasts will not challenge you now. That is the difference between strength and Haki: they felt it before you struck."' : at4(ctx, "p2_rusukaina", "train") ? '"Good. Now stay a while. Meditate, spar with me, hunt. Haki grows the way trees do \u2014 while you are not watching it. Come back to the fire tomorrow."' : '"Welcome to Rusukaina. Forty-eight seasons a year, five hundred beasts you cannot beat. (He pokes the fire.) Haki is the power of doubt-free will. Go to the plains. Their lord is a monster. Win, and your will has hardened."',
+          text: () => at3(ctx, "p2_rusukaina", "report") ? '"The lord of the plains... fell to you. (He smiles over the campfire.) The beasts will not challenge you now. That is the difference between strength and Haki: they felt it before you struck."' : at3(ctx, "p2_rusukaina", "train") ? '"Good. Now stay a while. Meditate, spar with me, hunt. Haki grows the way trees do \u2014 while you are not watching it. Come back to the fire tomorrow."' : '"Welcome to Rusukaina. Forty-eight seasons a year, five hundred beasts you cannot beat. (He pokes the fire.) Haki is the power of doubt-free will. Go to the plains. Their lord is a monster. Win, and your will has hardened."',
           choices: [
             { text: "Train Haki", do: (c) => c.open("trainer", { trainer: "rayleigh" }) },
-            { text: "It's done, Rayleigh.", if: () => at4(ctx, "p2_rusukaina", "report"), do: (c) => c.complete("p2_rusukaina"), end: true },
+            { text: "It's done, Rayleigh.", if: () => at3(ctx, "p2_rusukaina", "report"), do: (c) => c.complete("p2_rusukaina"), end: true },
             { text: "Leave", end: true }
           ]
         }
@@ -112003,10 +112955,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       marker: (c, g) => S2(g, "p2_amazon_lily") === "gate" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
-          text: () => ctx.char.flags.p2_kujaFriend ? `"The Empress favours you! Every Kuja warrior uses Haki \u2014 Armament to harden our arrows, Observation to see the enemy's next move. I'll teach you. Just don't laugh at my aim."` : at4(ctx, "p2_amazon_lily", "gate") ? `(A blonde warrior aims a snake-bow at your heart.) "Stop right there! No outsider sets foot on Amazon Lily. ...You're strange. Are you... a man? We've only read about them in books."` : '"Marguerite, Kuja warrior. Amazon Lily is not a place for strangers."',
+          text: () => ctx.char.flags.p2_kujaFriend ? `"The Empress favours you! Every Kuja warrior uses Haki \u2014 Armament to harden our arrows, Observation to see the enemy's next move. I'll teach you. Just don't laugh at my aim."` : at3(ctx, "p2_amazon_lily", "gate") ? `(A blonde warrior aims a snake-bow at your heart.) "Stop right there! No outsider sets foot on Amazon Lily. ...You're strange. Are you... a man? We've only read about them in books."` : '"Marguerite, Kuja warrior. Amazon Lily is not a place for strangers."',
           choices: [
-            { text: `"I'm a woman."`, if: () => at4(ctx, "p2_amazon_lily", "gate"), next: "woman" },
-            { text: `"I'm a man."`, if: () => at4(ctx, "p2_amazon_lily", "gate"), next: "man" },
+            { text: `"I'm a woman."`, if: () => at3(ctx, "p2_amazon_lily", "gate"), next: "woman" },
+            { text: `"I'm a man."`, if: () => at3(ctx, "p2_amazon_lily", "gate"), next: "man" },
             { text: "Train Haki with the Kuja", if: () => !!ctx.char.flags.p2_kujaFriend, do: (c) => c.open("trainer", { trainer: "kuja" }) },
             { text: "Leave", end: true }
           ]
@@ -112033,9 +112985,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       marker: (c, g) => S2(g, "p2_amazon_lily") === "nyon" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
-          text: () => at4(ctx, "p2_amazon_lily", "nyon") ? '"Nyon. I was Empress once, long ago \u2014 before I left to see the world and caught the Love Sickness. (She taps her staff.) The Empress Hancock and her sisters have a secret. They were not always proud. That is all I will say. The Arena waits for you."' : '"Nyon. The Kuja have lived on this island in the Calm Belt for centuries. The Sea Kings are our walls. Outsiders bring nothing but trouble \u2014 and, now and then, something wonderful."',
+          text: () => at3(ctx, "p2_amazon_lily", "nyon") ? '"Nyon. I was Empress once, long ago \u2014 before I left to see the world and caught the Love Sickness. (She taps her staff.) The Empress Hancock and her sisters have a secret. They were not always proud. That is all I will say. The Arena waits for you."' : '"Nyon. The Kuja have lived on this island in the Calm Belt for centuries. The Sea Kings are our walls. Outsiders bring nothing but trouble \u2014 and, now and then, something wonderful."',
           choices: [
-            { text: "To the Arena.", if: () => at4(ctx, "p2_amazon_lily", "nyon"), do: (c) => c.stage("p2_amazon_lily", "arena"), end: true },
+            { text: "To the Arena.", if: () => at3(ctx, "p2_amazon_lily", "nyon"), do: (c) => c.stage("p2_amazon_lily", "arena"), end: true },
             { text: "Leave", end: true }
           ]
         }
@@ -112117,13 +113069,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
           text: () => {
-            if (at4(ctx, "p2_amazon_lily", "secret")) return `(In the arena, the sisters' robes tore away... and you saw it on their backs: the Hoof of the Soaring Dragon, the brand of the Celestial Dragons' slaves. Hancock's voice is ice.) "You saw. Every one who has seen it has turned to stone. Why should you be different?"`;
+            if (at3(ctx, "p2_amazon_lily", "secret")) return `(In the arena, the sisters' robes tore away... and you saw it on their backs: the Hoof of the Soaring Dragon, the brand of the Celestial Dragons' slaves. Hancock's voice is ice.) "You saw. Every one who has seen it has turned to stone. Why should you be different?"`;
             if (ctx.char.flags.p2_kujaFriend) return `"Oh. It's you. (She looks away, cheeks faintly pink \u2014 or is it the sun?) The Kuja will train you. The ship is at your disposal. ...Do not mistake this for kindness."`;
             return '"Who allowed this commoner into my castle? (She leans back so far she is looking down at you from above.) Kneel. Even if I insult you, the world forgives me \u2014 because I am beautiful."';
           },
           choices: [
-            { text: `"I'll never tell a soul. Some things should never have happened to anyone."`, if: () => at4(ctx, "p2_amazon_lily", "secret"), next: "swear" },
-            { text: '"Then turn me to stone \u2014 if you can."', if: () => at4(ctx, "p2_amazon_lily", "secret"), do: (c) => {
+            { text: `"I'll never tell a soul. Some things should never have happened to anyone."`, if: () => at3(ctx, "p2_amazon_lily", "secret"), next: "swear" },
+            { text: '"Then turn me to stone \u2014 if you can."', if: () => at3(ctx, "p2_amazon_lily", "secret"), do: (c) => {
               const h2 = findActor(c.game, "p2_hancock");
               if (h2) aggro(c.game, h2);
             }, end: true },
@@ -112416,9 +113368,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       marker: (c, g) => S2(g, "p2_impel_down") === "newkama" ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
-          text: () => at4(ctx, "p2_impel_down", "newkama") ? `"Hee-haw! Welcome to Newkama Land, the paradise inside hell! (A spotlight finds you. Two hundred okama cheer.) You came through Magellan's poison? Vanatta! Candy-boy, you need Tension Hormones. They save you now... and take ten years off your life later. Hee-haw!"` : '"Hee-haw! Candy-boy! Newkama Land welcomes everyone with the heart to party. Train with the queen, or dance!"',
+          text: () => at3(ctx, "p2_impel_down", "newkama") ? `"Hee-haw! Welcome to Newkama Land, the paradise inside hell! (A spotlight finds you. Two hundred okama cheer.) You came through Magellan's poison? Vanatta! Candy-boy, you need Tension Hormones. They save you now... and take ten years off your life later. Hee-haw!"` : '"Hee-haw! Candy-boy! Newkama Land welcomes everyone with the heart to party. Train with the queen, or dance!"',
           choices: [
-            { text: "Give me the Tension Hormones.", if: () => at4(ctx, "p2_impel_down", "newkama"), next: "hormones" },
+            { text: "Give me the Tension Hormones.", if: () => at3(ctx, "p2_impel_down", "newkama"), next: "hormones" },
             { text: "Train with Ivankov (Newkama Kenpo)", do: (c) => c.open("trainer", { trainer: "ivankov" }) },
             { text: "Leave", end: true }
           ]
@@ -122815,15 +123767,27 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     return b ? { x: b.x, y: b.y, place: "the Red Port" } : null;
   };
   var BONDOLA = "Cross the Red Line: take the Bondola at the Red Port, east of Marineford, then sail to";
+  var divePoint = (g) => {
+    if (g.world !== g.surface) return null;
+    for (const isl of g.surface.islands) {
+      const s = isl.spots?.fishman_dive;
+      if (s) return { x: s.x, y: s.y, place: "The dive point" };
+    }
+    return null;
+  };
+  var riseCurrent = (g) => {
+    const e = g.world?.id === "fishman_island" && ZONES.fishman_island.exits.find((x) => x.id === "new_world");
+    return e ? { x: e.x, y: e.y, place: e.label, zone: "fishman_island" } : null;
+  };
   chapter("nw_fishman", { part: 3, kind: "solo", place: "Fish-Man Island" }, {
     pirate: {
       name: "Ten Thousand Metres Down",
       lure: "the only way into the New World for a pirate is under the Red Line",
       summary: "The New World lies on the far side of the Red Line. Pirates can't use the Bondola \u2014 so they sail under it, ten thousand metres down, to Fish-Man Island.",
       tasks: [
-        T3.check("dive", "Take your coated ship to the dive point east of Sabaody and sink to Fish-Man Island, ten thousand metres down.", (c, g) => g.world?.id === "fishman_island" || !!c.quests.p2_coating?.done || inNewWorld(g)),
+        T3.check("dive", "Take your coated ship to the dive point east of Sabaody and sink to Fish-Man Island, ten thousand metres down.", (c, g) => g.world?.id === "fishman_island" || !!c.quests.p2_coating?.done || inNewWorld(g), { where: divePoint }),
         T3.quest("nw_fmi_coup", "Help King Neptune save Fish-Man Island from the New Fish-Man Pirates (Ryugu Palace).", "nw_neptune", void 0, { alt: (c, g) => inNewWorld(g) }),
-        T3.check("rise", "Rise to the New World (the current at the far end of Fish-Man Island).", (c, g) => inNewWorld(g))
+        T3.check("rise", "Rise to the New World (the current at the far end of Fish-Man Island).", (c, g) => inNewWorld(g), { where: riseCurrent })
       ]
     }
   });
@@ -123468,16 +124432,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   function approxPos(game, def) {
     const isl = game.surface.islands.find((i) => i.id === def.island);
     if (!isl) return null;
-    const at5 = (typeof def.at === "function" ? null : def.at) || {};
-    if (at5.spot && isl.spots?.[at5.spot]) return { x: isl.spots[at5.spot].x, y: isl.spots[at5.spot].y };
-    const town = at5.town && isl.towns.find((t) => t.id === at5.town) || (!at5.dx ? isl.towns[0] : null);
+    const at4 = (typeof def.at === "function" ? null : def.at) || {};
+    if (at4.spot && isl.spots?.[at4.spot]) return { x: isl.spots[at4.spot].x, y: isl.spots[at4.spot].y };
+    const town = at4.town && isl.towns.find((t) => t.id === at4.town) || (!at4.dx ? isl.towns[0] : null);
     if (town) {
-      const key2 = at5.building || at5.door;
+      const key2 = at4.building || at4.door;
       const b = key2 && town.buildings.find((x) => x.name === key2 || x.role === key2 || x.npc === def.id);
       if (b) return { x: b.x + (b.w || 0) / 2, y: b.y + (b.h || 0) / 2 };
       return { x: town.plaza.x, y: town.plaza.y };
     }
-    if (at5.dx !== void 0) return { x: isl.x + at5.dx * isl.def.w / 2, y: isl.y + at5.dy * isl.def.h / 2 };
+    if (at4.dx !== void 0) return { x: isl.x + at4.dx * isl.def.w / 2, y: isl.y + at4.dy * isl.def.h / 2 };
     return { x: isl.x, y: isl.y };
   }
   function introFor(game, c, spawn) {
@@ -123835,15 +124799,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     /** Debris, sparks, splinters, bubbles: `n` tiny random pops over `dur`. */
     crackle(t, dur, n, { freq = 3e3, gain = 0.12, spread = 0.6, dest } = {}) {
       for (let i = 0; i < n; i++) {
-        const at5 = t + Math.random() * dur, f = freq * (1 - spread / 2 + Math.random() * spread);
-        this.noise(at5, 0.012 + Math.random() * 0.025, { freq: f, q: 2.2, gain: gain * (0.4 + Math.random() * 0.6), attack: 1e-3, dest });
+        const at4 = t + Math.random() * dur, f = freq * (1 - spread / 2 + Math.random() * spread);
+        this.noise(at4, 0.012 + Math.random() * 0.025, { freq: f, q: 2.2, gain: gain * (0.4 + Math.random() * 0.6), attack: 1e-3, dest });
       }
     }
     /**
      * Play an effect. `at`: where it happens ({ x, y }); a hit across the
      * harbour is quieter than one in your face, and one out of earshot silent.
      */
-    sfx(name, at5 = null) {
+    sfx(name, at4 = null) {
       if (!this.ctx || this.ctx.state !== "running") {
         if (this.ctx) this.ctx.resume();
         return;
@@ -123851,10 +124815,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       this.fxBus();
       const t = this.ctx.currentTime;
       let vol = 1;
-      if (at5 && this.ear) {
+      if (at4 && this.ear) {
         const e = this.ear();
         if (e) {
-          const d2 = Math.hypot(this.dxOf ? this.dxOf(e.x, at5.x) : at5.x - e.x, at5.y - e.y);
+          const d2 = Math.hypot(this.dxOf ? this.dxOf(e.x, at4.x) : at4.x - e.x, at4.y - e.y);
           if (d2 > 70) return;
           vol = 1 / (1 + Math.max(0, d2 - 4) / 10);
         }
@@ -124556,9 +125520,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     island.docks.forEach((dock, i) => {
       const st = dock.stand;
       if (!st) return;
-      const at5 = game.spawner.freeSpot(st.x, st.y) ? st : game.spawner.findFree(st.x, st.y, 1.2);
-      if (!at5) return;
-      const a = makeShipwright(island, dock, i, at5.x, at5.y);
+      const at4 = game.spawner.freeSpot(st.x, st.y) ? st : game.spawner.findFree(st.x, st.y, 1.2);
+      if (!at4) return;
+      const a = makeShipwright(island, dock, i, at4.x, at4.y);
       a.facing = a.faceHome = st.face;
       a.game = game;
       game.addActor(a);
@@ -125148,354 +126112,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     C3.fullFog = () => FULL.fog;
     return C3;
   }
-
-  // src/data/zones/index.js
-  var ZONES = {
-    skypiea: {
-      id: "skypiea",
-      name: "Skypiea",
-      kind: "sky",
-      w: 640,
-      h: 480,
-      fill: T.CLOUD_SEA,
-      altitude: "10,000 m",
-      arrive: { x: 320, y: 450, heading: -Math.PI / 2 },
-      // falling off Cloud End drops you back into the sea near Jaya
-      exits: [{ id: "cloud_end", x: 18, y: 240, r: 14, to: "surface", surface: { island: "jaya", spot: "knock_up_stream" }, label: "Cloud End \u2014 the long fall to the Blue Sea" }],
-      islands: [
-        {
-          id: "heavens_gate",
-          name: "Heaven's Gate",
-          sea: "sky",
-          x: 320,
-          y: 405,
-          w: 40,
-          h: 22,
-          climate: "sky",
-          rough: 0.15,
-          landmarks: [{ kind: "arch", dx: 0, dy: -0.2, name: "Heaven's Gate" }, { kind: "sign", dx: 0.4, dy: 0.3, spot: "gate_booth" }],
-          docks: [{ dx: 0, dy: 0.6, dir: "s", len: 4, name: "Heaven's Gate" }]
-        },
-        {
-          id: "angel_island",
-          name: "Angel Island",
-          sea: "sky",
-          x: 190,
-          y: 285,
-          w: 160,
-          h: 110,
-          climate: "sky",
-          rough: 0.25,
-          population: [["skypiean", 92], ["human", 8]],
-          trees: ["cloudtree", "palm"],
-          towns: [{
-            id: "lovely_street",
-            name: "Lovely Street",
-            dx: 0.05,
-            dy: 0.05,
-            w: 56,
-            h: 38,
-            style: "sky",
-            dockDir: "s",
-            plaza: "fountain",
-            buildings: [
-              { role: "house", name: "Pagaya's House" },
-              { role: "shop", name: "Dial Shop", shop: "skypiea" },
-              { role: "inn", name: "Cloud Inn" },
-              { role: "cafe", name: "Angel Beach Caf\xE9" },
-              { role: "hall", name: "White Berets Post" }
-            ]
-          }],
-          landmarks: [{ kind: "sign", dx: -0.55, dy: 0.55, spot: "angel_beach", name: "Angel Beach" }]
-        },
-        {
-          id: "upper_yard",
-          name: "Upper Yard",
-          sea: "sky",
-          x: 470,
-          y: 225,
-          w: 190,
-          h: 170,
-          climate: "jungle",
-          rough: 0.22,
-          mountains: [{ name: "Giant Jack", dx: 0, dy: -0.12, r: 0.12, h: 1.1 }],
-          areas: [
-            { name: "Ruins of Shandora", tile: T.STONE, dx: 0.28, dy: 0.28, rx: 0.2, ry: 0.18 },
-            { name: "Forest of Ordeals", tile: T.JUNGLE, dx: -0.3, dy: -0.1, rx: 0.3, ry: 0.35 }
-          ],
-          landmarks: [
-            { kind: "ruins", dx: 0.28, dy: 0.28, name: "Shandora" },
-            { kind: "ruins", dx: 0.36, dy: 0.2 },
-            { kind: "bell", dx: 0.02, dy: -0.36, spot: "golden_bell", name: "The Golden Bell of Shandora" },
-            { kind: "poneglyph", dx: 0.3, dy: 0.34, poneglyph: "shandora", name: "Poneglyph of Shandora" },
-            { kind: "totem", dx: -0.3, dy: 0.32, spot: "altar", name: "Sacrificial Altar" }
-          ],
-          spots: [
-            { id: "ordeal_balls", dx: -0.6, dy: 0.1 },
-            { id: "ordeal_swamp", dx: 0.55, dy: -0.3 },
-            { id: "ordeal_iron", dx: -0.2, dy: -0.55 },
-            { id: "ordeal_string", dx: 0.6, dy: 0.45 },
-            { id: "god_shrine", dx: 0.05, dy: 0.12 }
-          ],
-          docks: [{ dx: -0.8, dy: 0.2, dir: "w", len: 5, name: "Upper Yard" }]
-        },
-        {
-          id: "shandia_village",
-          name: "Hidden Shandian Village",
-          sea: "sky",
-          x: 95,
-          y: 110,
-          w: 90,
-          h: 64,
-          climate: "sky",
-          rough: 0.3,
-          population: [["skypiean", 100]],
-          towns: [{
-            id: "shandia_camp",
-            name: "Shandian Village",
-            dx: 0,
-            dy: 0,
-            w: 34,
-            h: 24,
-            style: "tribal",
-            dockDir: "s",
-            plaza: "well",
-            buildings: [{ role: "hall", name: "Chief's Hut" }, { role: "house", name: "Wyper's Hut" }]
-          }]
-        },
-        {
-          id: "weatheria",
-          name: "Weatheria",
-          sea: "sky",
-          x: 565,
-          y: 60,
-          w: 70,
-          h: 48,
-          climate: "sky",
-          rough: 0.2,
-          population: [["human", 70], ["skypiean", 30]],
-          towns: [{
-            id: "weatheria_town",
-            name: "Weatheria",
-            dx: 0,
-            dy: 0.05,
-            w: 34,
-            h: 24,
-            style: "sky",
-            dockDir: "w",
-            plaza: "fountain",
-            buildings: [{ role: "library", name: "Weatheria Library" }, { role: "trainer", name: "Weather Laboratory", trainer: "weatheria_scholar" }]
-          }]
-        }
-      ]
-    },
-    fishman_island: {
-      id: "fishman_island",
-      name: "Fish-Man Island",
-      kind: "undersea",
-      w: 480,
-      h: 380,
-      fill: T.SEA,
-      altitude: "10,000 m below",
-      arrive: { x: 420, y: 200, heading: Math.PI },
-      exits: [
-        { id: "new_world", x: 20, y: 60, r: 16, to: "surface", surface: { x: chart(118), y: chart(990) }, label: "Rise to the New World" },
-        { id: "paradise", x: 462, y: 330, r: 16, to: "surface", surface: { x: chart(3985), y: chart(1070) }, label: "Rise back to Sabaody" }
-      ],
-      islands: [
-        {
-          id: "fishman_island",
-          name: "Fish-Man Island",
-          sea: "undersea",
-          x: 245,
-          y: 195,
-          w: 230,
-          h: 190,
-          climate: "undersea",
-          rough: 0.2,
-          population: [["fishman", 82], ["human", 12], ["mink", 2]],
-          trees: ["coral", "kelp"],
-          towns: [
-            {
-              id: "ryugu_kingdom",
-              name: "Ryugu Kingdom",
-              dx: 0,
-              dy: -0.35,
-              w: 56,
-              h: 34,
-              style: "fishman",
-              walls: true,
-              dockDir: "n",
-              plaza: "fountain",
-              buildings: [{ role: "palace", name: "Ryugu Palace", w: 14, d: 7, hgt: 5 }, { role: "hall", name: "Hard Shell Tower" }]
-            },
-            {
-              id: "mermaid_cove",
-              name: "Mermaid Cove",
-              dx: 0.5,
-              dy: 0.2,
-              w: 40,
-              h: 28,
-              style: "fishman",
-              dockDir: "e",
-              plaza: "fountain",
-              buildings: [{ role: "cafe", name: "Mermaid Caf\xE9" }, { role: "shop", name: "Coral Hill Market", shop: "fishman" }, { role: "inn", name: "Bubble Inn" }]
-            },
-            {
-              id: "fishman_district",
-              name: "Fish-Man District",
-              dx: -0.45,
-              dy: 0.35,
-              w: 40,
-              h: 28,
-              style: "fishman",
-              dockDir: "sw",
-              plaza: "well",
-              buildings: [{ role: "bar", name: "Noah Tavern" }, { role: "dojo", name: "Fish-Man Karate Dojo", trainer: "jinbe" }]
-            }
-          ],
-          spots: [{ id: "gyoncorde_plaza", dx: 0, dy: 0.05 }, { id: "coral_hill", dx: 0.35, dy: 0.45 }],
-          landmarks: [{ kind: "fountain", dx: 0, dy: 0.1, name: "Gyoncorde Plaza" }]
-        },
-        {
-          id: "sea_forest",
-          name: "Forest of the Sea",
-          sea: "undersea",
-          x: 75,
-          y: 320,
-          w: 90,
-          h: 60,
-          climate: "undersea",
-          rough: 0.3,
-          noDock: false,
-          trees: ["kelp", "coral"],
-          landmarks: [
-            { kind: "poneglyph", dx: 0, dy: -0.1, poneglyph: "apology", name: "Joy Boy's Apology" },
-            { kind: "shipwreck", dx: 0.4, dy: 0.2, name: "The Ark Noah" },
-            { kind: "grave", dx: -0.3, dy: 0.2, name: "Queen Otohime's grave" }
-          ]
-        }
-      ]
-    },
-    impel_down: {
-      id: "impel_down",
-      name: "Impel Down",
-      kind: "prison",
-      w: 420,
-      h: 520,
-      fill: T.ABYSS,
-      altitude: "beneath the Calm Belt",
-      arrive: { island: "id_level1", spot: "cell" },
-      exits: [{ id: "main_gate", island: "id_level1", spot: "main_gate", r: 3, to: "surface", surface: { island: "impel_down", dock: true }, label: "The Main Gate" }],
-      islands: [
-        {
-          id: "id_level1",
-          name: "Level 1 \u2014 Crimson Hell",
-          sea: "zone",
-          x: 110,
-          y: 70,
-          w: 150,
-          h: 80,
-          climate: "autumn",
-          ground: T.DIRT,
-          rough: 0.12,
-          noDock: true,
-          areas: [{ name: "Blade forest", tile: T.FOREST, dx: 0.1, dy: 0, rx: 0.5, ry: 0.5 }],
-          spots: [{ id: "cell", dx: -0.6, dy: 0.2 }, { id: "main_gate", dx: -0.85, dy: -0.4 }, { id: "stairs_down", dx: 0.8, dy: 0.4 }]
-        },
-        {
-          id: "id_level2",
-          name: "Level 2 \u2014 Wild Beast Hell",
-          sea: "zone",
-          x: 300,
-          y: 145,
-          w: 150,
-          h: 80,
-          climate: "jungle",
-          rough: 0.12,
-          noDock: true,
-          spots: [{ id: "stairs_up", dx: -0.8, dy: -0.4 }, { id: "stairs_down", dx: 0.8, dy: 0.4 }]
-        },
-        {
-          id: "id_level3",
-          name: "Level 3 \u2014 Starvation Hell",
-          sea: "zone",
-          x: 110,
-          y: 220,
-          w: 150,
-          h: 80,
-          climate: "desert",
-          rough: 0.12,
-          noDock: true,
-          spots: [{ id: "stairs_up", dx: 0.8, dy: -0.4 }, { id: "stairs_down", dx: -0.8, dy: 0.4 }]
-        },
-        {
-          id: "id_level4",
-          name: "Level 4 \u2014 Burning Hell",
-          sea: "zone",
-          x: 300,
-          y: 295,
-          w: 150,
-          h: 80,
-          climate: "volcanic",
-          rough: 0.12,
-          noDock: true,
-          lakes: [{ dx: 0, dy: 0, rx: 0.2, ry: 0.25, tile: T.LAVA }],
-          spots: [{ id: "stairs_up", dx: -0.8, dy: -0.4 }, { id: "stairs_down", dx: 0.8, dy: 0.4 }, { id: "warden_office", dx: 0.4, dy: -0.4 }]
-        },
-        {
-          id: "id_level5",
-          name: "Level 5 \u2014 Freezing Hell",
-          sea: "zone",
-          x: 110,
-          y: 370,
-          w: 150,
-          h: 80,
-          climate: "winter",
-          rough: 0.12,
-          noDock: true,
-          spots: [{ id: "stairs_up", dx: 0.8, dy: -0.4 }, { id: "stairs_down", dx: -0.8, dy: 0.4 }, { id: "secret_passage", dx: 0.6, dy: 0.45 }]
-        },
-        {
-          id: "id_newkama",
-          name: "Level 5.5 \u2014 Newkama Land",
-          sea: "zone",
-          x: 320,
-          y: 440,
-          w: 100,
-          h: 60,
-          climate: "spring",
-          rough: 0.12,
-          noDock: true,
-          towns: [{ id: "newkama_land", name: "Newkama Land", dx: 0, dy: 0, w: 40, h: 26, style: "noble", plaza: "fountain", buildings: [{ role: "hall", name: "Ivankov's Party Hall", trainer: "ivankov" }, { role: "bar", name: "Newkama Bar" }] }],
-          spots: [{ id: "stairs_up", dx: -0.8, dy: -0.5 }]
-        },
-        {
-          id: "id_level6",
-          name: "Level 6 \u2014 Eternal Hell",
-          sea: "zone",
-          x: 110,
-          y: 475,
-          w: 150,
-          h: 60,
-          climate: "rocky",
-          rough: 0.1,
-          noDock: true,
-          spots: [{ id: "stairs_up", dx: -0.8, dy: -0.4 }, { id: "deepest_cell", dx: 0.6, dy: 0.2 }]
-        }
-      ],
-      // stairways between levels (portal objects are placed at these spots)
-      links: [
-        ["id_level1", "stairs_down", "id_level2", "stairs_up"],
-        ["id_level2", "stairs_down", "id_level3", "stairs_up"],
-        ["id_level3", "stairs_down", "id_level4", "stairs_up"],
-        ["id_level4", "stairs_down", "id_level5", "stairs_up"],
-        ["id_level5", "secret_passage", "id_newkama", "stairs_up"],
-        ["id_level5", "stairs_down", "id_level6", "stairs_up"]
-      ]
-    }
-  };
-  var ZONE_ISLAND_IDS = new Set(Object.values(ZONES).flatMap((z) => z.islands.map((i) => i.id)));
 
   // src/world/zonegen.js
   var ZONE_KIND = { sky: 1, undersea: 2, prison: 3 };
@@ -126865,6 +127481,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         npcDef,
         allNpcDefs,
         standingHeight,
+        allQuests,
         VIEWS,
         builders: PROP_BUILDERS,
         makeNPC,

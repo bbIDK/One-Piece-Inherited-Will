@@ -1035,7 +1035,8 @@ export class Renderer3D {
         // (a Devil Fruit user fighting to keep their head up bobs and splutters)
         if (a.fruit && !a.gills && !a.sinking) gh += Math.sin(env.time * 5.5 + a.x * 3) * 0.09;
         gh = Math.max(gh, this.terrain.terrainAt(a.x, a.y));
-      } else if (a.wading) gh = this.ground(a.x, a.y) - a.wading; // (feet on the bottom of the shallows)
+      } else if (a.belowDeck) gh = a.groundAt(game, a.x, a.y) - (a.wading || 0); // (under a high bridge: see actor.js underDeck)
+      else if (a.wading) gh = this.ground(a.x, a.y) - a.wading; // (feet on the bottom of the shallows)
       else gh = this.ground(a.x, a.y);
       v.root.position.set(dx, gh + (a.z || 0), dy);
       v.update(a, env, this.ctx, { camYaw3, redraw: i < 18 || (this.frame + i) % 3 === 0 });

@@ -17,6 +17,8 @@ import { bw, bl, bfoot } from '../world/bframe.js';
 export const SEA_Y = 0;
 export const DECK_Y = 0.55; // top of bridges (and sea-train tracks)
 export const DOCK_Y = 1.5; // top of the harbour piers and their stone quays
+// a bridge's deck this far over the water (m) has a handrail (it keeps you on it) and room to swim under it
+export const HIGH_DECK = 2.2;
 
 /** The top of the deck at an overlay tile: a harbour pier stands taller than a bridge. */
 export const deckTop = (world, x, y) => (world.docks?.size && world.isDock(x, y) ? DOCK_Y : DECK_Y);
@@ -230,6 +232,7 @@ export class HeightField {
     for (let j = 0; j < N; j++) {
       for (let i = 0; i < N; i++) g[j * N + i] = cornerHeight(w, x0 + i, y0 + j);
     }
+    this.raiseAbutments(g, x0, y0);
     // the ground inside a walk-in building is dug down to the street in front
     // of it (the walls hide the cut), so its floor is a step up from the street
     if (w.objects) {
@@ -282,6 +285,7 @@ export class HeightField {
   /** Where feet rest at (x, y): decks, quays and wall tops over the terrain. */
   ground(x, y) {
     const w = this.world, t = w.type(x, y);
+    if (t === T.BRIDGE) return this.deckAt(x, y);
     if (OVERLAY[t]) return deckTop(w, x, y);
     if (w.quays.size && w.isQuay(x, y)) return DOCK_Y;
     const h = this.terrain(x, y);
@@ -376,6 +380,136 @@ export class HeightField {
     return [lo - 0.35, hi + WALL_H];
   }
 
+  // ---------------------------------------------------------------- bridges
+  // A bridge spans from the land at one end to the land at the other, at
+  // their height: its deck runs from one bank to the other (on an island
+  // that stands high over the sea, high over the water between), and the
+  // banks it lands on are built up to meet it. (It used to lie just over the
+  // water whatever it joined: down at the foot of a bank much taller than
+  // you, out of reach of the land it was meant to join.)
+
+  /** The run of bridge tiles (x, y) is part of: { top: Map(tile → deck top), ends: [{ tiles, h }] }, or null. */
+  span(x, y) {
+    const w = this.world;
+    const tx = w.wx(Math.floor(x)), ty = Math.floor(y);
+    if (w.type(tx, ty) !== T.BRIDGE) return null;
+    const S = this.spans || (this.spans = new Map());
+    const k = ty * w.width + tx;
+    let s = S.get(k);
+    if (!s) { s = buildSpan(w, tx, ty); for (const q of s.top.keys()) S.set(q, s); }
+    return s;
+  }
+
+  /** A bridge tile's deck top (m). */
+  deckTile(tx, ty) {
+    const w = this.world;
+    tx = w.wx(tx);
+    const s = this.span(tx, ty);
+    return s ? s.top.get(ty * w.width + tx) : DECK_Y;
+  }
+
+  /** The deck at a tile corner: level with the bridge tiles round it. */
+  deckCorner(cx, cy) {
+    const w = this.world;
+    let sum = 0, n = 0;
+    for (let j = -1; j <= 0; j++) {
+      for (let i = -1; i <= 0; i++) {
+        if (w.type(cx + i, cy + j) !== T.BRIDGE) continue;
+        sum += this.deckTile(cx + i, cy + j); n++;
+      }
+    }
+    return n ? sum / n : DECK_Y;
+  }
+
+  /** The top of a bridge's deck at (x, y) (smooth from tile to tile, as it's drawn). */
+  deckAt(x, y) {
+    x = this.world.wx(x);
+    const i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j;
+    const a = this.deckCorner(i, j), b = this.deckCorner(i + 1, j), c = this.deckCorner(i, j + 1), d = this.deckCorner(i + 1, j + 1);
+    return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
+  }
+
+  /**
+   * Does a high bridge's handrail run along the edge from its deck tile
+   * (tx, ty) to the tile beside it (nx, ny)? Where the deck stands high over
+   * the water — or over ground well below it. (Drawn: props/docks.js; it
+   * keeps you on the deck unless you jump it: game/actor.js.)
+   */
+  railAt(tx, ty, nx, ny) {
+    const w = this.world, t = w.type(nx, ny);
+    if (w.type(tx, ty) !== T.BRIDGE || OVERLAY[t] || t === T.WALL) return false;
+    const top = this.deckAt(Math.floor(tx) + 0.5, Math.floor(ty) + 0.5);
+    if (top <= HIGH_DECK) return false;
+    return !!IS_LIQUID[t] || this.terrain(Math.floor(nx) + 0.5, Math.floor(ny) + 0.5) < top - 2;
+  }
+
+  /**
+   * The land where a bridge comes ashore, built up to its deck and easing
+   * back to the lie of the land over a few metres (never cut down: a bank
+   * already higher keeps its height).
+   */
+  raiseAbutments(g, x0, y0) {
+    const w = this.world, N = CHUNK + 1, R = ABUT_R;
+    let ends = null;
+    for (let y = y0 - R - 1; y <= y0 + CHUNK + R; y++) {
+      for (let x = x0 - R - 1; x <= x0 + CHUNK + R; x++) {
+        if (w.type(x, y) !== T.BRIDGE) continue;
+        const s = this.span(x, y);
+        if (!s || !s.ends.length) continue;
+        (ends || (ends = new Set()));
+        for (const e of s.ends) ends.add(e);
+      }
+    }
+    if (!ends) return;
+    // (a corner of some dry ground: 0 none (the water, a harbour's quay or pier keeping their own
+    // height), 1 on the bank by open water, 2 inland; built up by the bank only where the
+    // bridge lands, so the river or the channel beside it keeps its width)
+    const land = (cx, cy) => {
+      let dry = false, wet = false;
+      for (let j = -1; j <= 0; j++) {
+        for (let i = -1; i <= 0; i++) {
+          const t = w.type(cx + i, cy + j);
+          if (w.quays.size && w.isQuay(cx + i, cy + j)) return 0;
+          if (!IS_LIQUID[t] && !OVERLAY[t]) dry = true;
+          else if (!OVERLAY[t]) wet = true;
+        }
+      }
+      return dry ? (wet ? 1 : 2) : 0;
+    };
+    const K = new Float32Array(N * N);
+    for (const e of ends) {
+      // (each corner by the nearest of the tiles it lands on)
+      K.fill(0);
+      let any = false;
+      for (const [tx, ty] of e.tiles) {
+        for (let cy = ty - R; cy <= ty + 1 + R; cy++) {
+          const j = cy - y0;
+          if (j < 0 || j >= N) continue;
+          for (let cx = tx - R; cx <= tx + 1 + R; cx++) {
+            const i = w.dx(x0, cx);
+            if (i < 0 || i >= N) continue;
+            // (how far the corner is from the landing tile's square)
+            const dx = Math.max(0, tx - cx, cx - (tx + 1)), dy = Math.max(0, ty - cy, cy - (ty + 1));
+            const d = Math.hypot(dx, dy);
+            if (d >= R) continue;
+            const k = 1 - smooth(0, R, d), q = j * N + i;
+            if (k > K[q]) { K[q] = k; any = true; }
+          }
+        }
+      }
+      if (!any) continue;
+      for (let j = 0; j < N; j++) {
+        for (let i = 0; i < N; i++) {
+          const q = j * N + i;
+          if (!K[q] || g[q] >= e.h - 0.02) continue;
+          const L = land(x0 + i, y0 + j);
+          if (!L || (L === 1 && K[q] < 1)) continue;
+          g[q] += (e.h - 0.02 - g[q]) * K[q];
+        }
+      }
+    }
+  }
+
   /** Invalidate after the tile map changed in a rectangle (tiles). */
   invalidate(x0, y0, x1, y1) {
     for (let cy = Math.floor((y0 - 1) / CHUNK); cy <= Math.floor((y1 + 1) / CHUNK); cy++) {
@@ -385,4 +519,100 @@ export class HeightField {
       }
     }
   }
+}
+
+// ------------------------------------------------------------------ bridges
+const ABUT_R = 4; // how far (tiles) round where a bridge lands the bank is built up to it
+const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+/**
+ * A run of bridge tiles and its deck: the land touching it, in one group
+ * per bank, each at its own height (the land's, where it has risen from the
+ * water's edge: 3–4 m in from the bank); every tile of the deck between them
+ * in proportion to how far it lies from each (straight from one to the other
+ * between two banks).
+ */
+function buildSpan(w, tx, ty) {
+  const W = w.width, key = (x, y) => y * W + x;
+  const tiles = [], seen = new Set([key(tx, ty)]), st = [[tx, ty]];
+  while (st.length) {
+    const [x, y] = st.pop();
+    tiles.push([x, y]);
+    for (const [dx, dy] of N4) {
+      const nx = w.wx(x + dx), ny = y + dy, k = key(nx, ny);
+      if (!seen.has(k) && w.type(nx, ny) === T.BRIDGE) { seen.add(k); st.push([nx, ny]); }
+    }
+  }
+  // the land it touches (and which way it lies from the deck)
+  const shore = new Map();
+  for (const [x, y] of tiles) {
+    for (const [dx, dy] of N4) {
+      const nx = w.wx(x + dx), ny = y + dy, t = w.type(nx, ny);
+      if (IS_LIQUID[t] || OVERLAY[t] || t === T.WALL) continue;
+      const k = key(nx, ny);
+      if (!shore.has(k)) shore.set(k, { x: nx, y: ny, dx, dy });
+    }
+  }
+  // in groups, one per bank (touching tiles, diagonally too)
+  const ends = [], group = new Map();
+  for (const [k0, s0] of shore) {
+    if (group.has(k0)) continue;
+    const e = { tiles: [], h: DECK_Y, rise: [] };
+    const q = [s0];
+    group.set(k0, e);
+    while (q.length) {
+      const s = q.pop();
+      e.tiles.push([s.x, s.y]);
+      // the land's own height 3.5 m in from the bank (where it has risen from the water)
+      const px = s.x + s.dx * 3.5, py = s.y + s.dy * 3.5;
+      e.rise.push(naturalHeight(w, Math.round(px), Math.round(py)));
+      for (let j = -1; j <= 1; j++) {
+        for (let i = -1; i <= 1; i++) {
+          const nk = key(w.wx(s.x + i), s.y + j);
+          if (!group.has(nk) && shore.has(nk)) { group.set(nk, e); q.push(shore.get(nk)); }
+        }
+      }
+    }
+    e.rise.sort((a, b) => a - b);
+    e.land = Math.max(DECK_Y, e.rise[Math.floor(e.rise.length / 2)]);
+    ends.push(e);
+  }
+  // how far each deck tile is from each bank, along the deck
+  const dist = ends.map((e) => {
+    const D = new Map(), q = [];
+    for (const [x, y] of tiles) {
+      for (const [dx, dy] of N4) if (group.get(key(w.wx(x + dx), y + dy)) === e) { D.set(key(x, y), 0.5); q.push([x, y]); break; }
+    }
+    for (let h = 0; h < q.length; h++) {
+      const [x, y] = q[h], d = D.get(key(x, y));
+      for (const [dx, dy] of N4) {
+        const nx = w.wx(x + dx), ny = y + dy, k = key(nx, ny);
+        if (seen.has(k) && !D.has(k)) { D.set(k, d + 1); q.push([nx, ny]); }
+      }
+    }
+    return D;
+  });
+  const top = new Map();
+  for (const [x, y] of tiles) {
+    const k = key(x, y);
+    let h = DECK_Y;
+    if (ends.length === 1) h = ends[0].land;
+    else if (ends.length === 2) {
+      const a = dist[0].get(k) ?? 1e6, b = dist[1].get(k) ?? 1e6;
+      h = (ends[0].land * b + ends[1].land * a) / (a + b);
+    } else if (ends.length) {
+      let sw = 0, sh = 0;
+      ends.forEach((e, n) => { const d = dist[n].get(k) ?? 1e6; const wt = 1 / (d * d); sw += wt; sh += wt * e.land; });
+      h = sh / sw;
+    }
+    top.set(k, Math.max(DECK_Y, h));
+  }
+  // (each bank is built up to the deck where it lands: see raiseAbutments)
+  ends.forEach((e, n) => {
+    let sum = 0, c = 0;
+    for (const [k, d] of dist[n]) if (d === 0.5) { sum += top.get(k); c++; }
+    e.h = c ? sum / c : e.land;
+    e.rise = null;
+  });
+  return { top, ends };
 }

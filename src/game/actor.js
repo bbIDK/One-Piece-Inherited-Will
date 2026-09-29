@@ -8,6 +8,7 @@ import { STYLES } from '../data/styles.js';
 import { FRUITS } from '../data/fruits.js';
 import { RACES } from '../data/races.js';
 import { WALKABLE, SWIMMABLE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
+import { HIGH_DECK } from '../render3d/height.js';
 import { clamp, TAU, angleDiff } from '../core/math.js';
 import { shipDims, hbAt, deckToWorld, shipBob } from '../world/hull.js';
 import { placeOnDeck, boardingSpot } from './decks.js';
@@ -422,7 +423,7 @@ export class Actor extends Entity {
     if (this.deck || (this.dash && this.dash.ignoreWater)) return 0;
     // (right where you stand — the same spot your height is measured from — not a step ahead)
     const t = game.world.type(this.x, this.y);
-    if (IS_LIQUID[t] !== 1 || OVERLAY[t]) return 0;
+    if ((IS_LIQUID[t] !== 1 || OVERLAY[t]) && !this.belowDeck) return 0;
     if (t === T.LAVA) return 0;
     return game.seaDepth ? game.seaDepth(this.x, this.y) : 3;
   }
@@ -583,7 +584,9 @@ export class Actor extends Entity {
       this.moving = fs > 0.4; this.speed = fs;
       return;
     }
+    const feet0 = this.bridgeNear(game) ? this.feetH(game) : 0;
     this.updateMovement(dt, game, false);
+    this.underDeck(game, feet0);
     this.followGround(game);
     // Against a ledge you can reach: in the air (a jump at a pier, a quay or a
     // ship's rail) you grab it and haul yourself up at once; swimming or on
@@ -722,6 +725,11 @@ export class Actor extends Entity {
     if (g && g.world === w) {
       const L = this.ledgeAt(g, x, y);
       if (L) { this.blocked = L; return false; }
+      // (up on a high bridge its handrail keeps you on the deck: jump it to dive off)
+      if (!this.belowDeck && !(this.z > 0.4) && w.type(this.x, this.y) === T.BRIDGE && w.type(x, y) !== T.BRIDGE) {
+        const hf = g.view3d?.terrain?.hf;
+        if (hf && hf.railAt(Math.floor(this.x), Math.floor(this.y), Math.floor(x), Math.floor(y))) return false;
+      }
     }
     if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
     if (!this.passable(w, x - r, y) || !this.passable(w, x + r, y) || !this.passable(w, x, y - r) || !this.passable(w, x, y + r)) return false;
@@ -734,7 +742,46 @@ export class Actor extends Entity {
   }
 
   /** Where feet rest at (x, y) off a deck: the ground, a pier or a quay — over the sea, its surface. */
-  groundAt(game, x, y) { return game.view3d ? game.view3d.ground(x, y) : 0; }
+  groundAt(game, x, y) {
+    if (!game.view3d) return 0;
+    // (under a high bridge the ground is what's under its deck: the water, or the bed of it)
+    if (this.belowDeck && game.world.type(x, y) === T.BRIDGE) return Math.max(game.view3d.terrain.terrainAt(x, y), 0);
+    return game.view3d.ground(x, y);
+  }
+
+  /** The top of a bridge's deck at (x, y) if it stands high over the water there (room to swim under it), else null. */
+  highDeck(game, x, y) {
+    if (game.world.type(x, y) !== T.BRIDGE) return null;
+    const hf = game.view3d?.terrain?.hf;
+    const top = hf ? hf.deckAt(x, y) : 0;
+    return top > HIGH_DECK ? top : null;
+  }
+
+  /** Any bridge tile under or beside you? (the only place the deck-or-under question arises) */
+  bridgeNear(game) {
+    const w = game.world;
+    return w.type(this.x, this.y) === T.BRIDGE || w.type(this.x + 1, this.y) === T.BRIDGE || w.type(this.x - 1, this.y) === T.BRIDGE || w.type(this.x, this.y + 1) === T.BRIDGE || w.type(this.x, this.y - 1) === T.BRIDGE;
+  }
+
+  /**
+   * On a high bridge's deck, or down under it (swimming, or wading the
+   * shallows)? Settled as you come onto its tiles — from below you go under
+   * it, from its deck or the bank you walk on it — and kept while you're on
+   * them. (feet0: where your feet were before this step.)
+   */
+  underDeck(game, feet0) {
+    if (game.world.type(this.x, this.y) !== T.BRIDGE) { this.belowDeck = false; return; }
+    if (this.belowDeck) return;
+    const top = this.highDeck(game, this.x, this.y);
+    this.belowDeck = top !== null && !this.deck && this.canEnterWater() && feet0 < top - 1.2;
+  }
+
+  /** Would a step onto (x, y) take you under a high bridge rather than up onto it? */
+  passesUnder(game, x, y) {
+    const top = this.highDeck(game, x, y);
+    if (top === null || !this.canEnterWater()) return false;
+    return this.belowDeck || this.feetH(game) < top - 1.2;
+  }
 
   /** How high your feet are (m above the sea): on a deck, afloat, wading, standing or in the air. */
   feetH(game) {
@@ -768,8 +815,10 @@ export class Actor extends Entity {
     const t = w.type(x, y);
     const high = !IS_LIQUID[t] || OVERLAY[t];
     if (!high) return null;
+    // (on under a high bridge: no ledge — it's over your head)
+    if (t === T.BRIDGE && this.passesUnder(g, x, y)) return null;
     const here = w.type(this.x, this.y);
-    const wet = IS_LIQUID[here] && !OVERLAY[here];
+    const wet = (IS_LIQUID[here] && !OVERLAY[here]) || !!this.belowDeck;
     // (on land: only up onto a pier or a quay from lower ground — a jump, or a climb)
     if (!wet && !this.deck && !(OVERLAY[t] && !OVERLAY[here]) && !(w.quays.size && w.isQuay(x, y) && !w.isQuay(this.x, this.y))) return null;
     const top = this.groundAt(g, x, y);
@@ -824,7 +873,7 @@ export class Actor extends Entity {
   }
 
   /** Over the open water (not a pier, a bridge or dry land)? */
-  overWater(game) { const t = game.world.type(this.x, this.y); return IS_LIQUID[t] === 1 && !OVERLAY[t]; }
+  overWater(game) { const t = game.world.type(this.x, this.y); return (IS_LIQUID[t] === 1 && !OVERLAY[t]) || !!this.belowDeck; }
 
   /** Room to stand at (x, y) on dry ground or a pier (where a climb ends). */
   standsAt(game, x, y) {
@@ -1113,7 +1162,8 @@ export class Actor extends Entity {
     const w = game.world;
     const t = w.type(this.x, this.y);
     const was = this.inWater;
-    const liquid = IS_LIQUID[t] === 1 && !OVERLAY[t] && !(this.dash && this.dash.ignoreWater) && !this.deck;
+    // (under a high bridge you're in the water it crosses)
+    const liquid = ((IS_LIQUID[t] === 1 && !OVERLAY[t]) || !!this.belowDeck) && !(this.dash && this.dash.ignoreWater) && !this.deck;
     // shallow water is waded, feet on the bottom; you swim once it's about chest-deep
     // (lava is always "in"). Leaping out of the sea, you're out of it until you come down.
     const wd = liquid ? (t === T.LAVA ? 99 : game.seaDepth ? game.seaDepth(this.x, this.y) : 99) : 0;

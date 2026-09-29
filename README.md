@@ -95,6 +95,13 @@ rearrange them.
   boulder on a hillside lies along the slope. A house on an upper town over
   a lower quay stands on a tall stone base rather than sunk into the hill.
   Every town is walked in every direction to check (`barrierhunt`, below).
+- **Bridges** join the land at the height of the land. Most islands stand
+  high over the sea, so a bridge across a river, a canal or a channel between
+  two parts of an island spans it high over the water, sloping from one bank
+  to the other when they differ. The bank it lands on is built up to meet it,
+  on a stone pier, with its pilings reaching down to the bed. A high deck has
+  a wooden handrail (jump it to dive off), and you can swim or wade under it.
+  Dressrosa's iron bridge runs all the way to Green Bit.
 
 **The main story.**
 
@@ -129,6 +136,14 @@ rearrange them.
   side quests you can track or give up. An on-screen **tracker** on the right
   shows the next step and how far away it is. The **world map** marks the
   story's next stop and the quest givers on the islands you know.
+- **Waypoints** point at whoever the step is about: the foe to beat or the
+  person to see (a step that says "Return to Makino" points at Makino)
+  where they stand, or — not about yet — where they'll be on the island
+  they live on, which needn't be the quest's (Katakuri on Cacao Island, Leo
+  on Green Bit). A Sea King's waypoint is out on the water where it
+  surfaces. A step in Skypiea or on Fish-Man Island points at the way
+  there (the Knock Up Stream, the dive point) until you're in it, and at
+  the way out once you are.
 
 **Lineage (roguelike).**
 
