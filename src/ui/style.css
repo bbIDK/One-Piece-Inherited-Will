@@ -563,6 +563,7 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }
 .qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }
 .qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }
+.qt-sub { text-align: right; font: 700 11.5px Nunito, sans-serif; color: #ffd98a; margin-top: 1px; letter-spacing: 0.02em; }
 .qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }
 .qt-n { color: #ffd54f; font-weight: 800; }
 .qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }

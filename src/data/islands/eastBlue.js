@@ -127,7 +127,8 @@ export const EAST_BLUE = [
         houses: 0,
       },
     ],
-    landmarks: [{ kind: 'sign', dx: -0.4, dy: 0.35, spot: 'north_slope' }, { kind: 'dummy', dx: -0.25, dy: -0.02, spot: 'usopp_target' }],
+    // (the north slope: where the plateau falls away to the beach on the north coast, north of the village)
+    landmarks: [{ kind: 'sign', dx: 0.09, dy: -0.74, spot: 'north_slope', name: 'North Slope' }, { kind: 'dummy', dx: -0.25, dy: -0.02, spot: 'usopp_target' }],
     danger: 1,
   },
   {

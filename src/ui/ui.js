@@ -623,8 +623,13 @@ export class UI {
       this.set(E.logpose.children[1], 'lpt', lp.label);
     }
     // boss
-    const boss = game.bossTarget;
-    E.boss.classList.toggle('hidden', !boss || boss.state !== 'idle');
+    // (only while you're in the fight with them, close by: beaten, gone, or
+    // you've gone down and woken far away, it goes)
+    let boss = game.bossTarget;
+    if (boss && (!boss.alive || boss.state === 'dead' || !game.actors.includes(boss))) boss = game.bossTarget = null;
+    const inIt = boss && boss.state === 'idle' && p.state !== 'knocked' && game.world.distance(p.x, p.y, boss.x, boss.y) < 40
+      && (boss.controller?.target === p || (boss.lastHitBy === p && game.time - (boss.lastHitT || -99) < 15));
+    E.boss.classList.toggle('hidden', !inIt);
     if (boss) {
       const h3 = E.boss.children[0];
       const bk2 = boss.name + (boss.title || '');
@@ -672,24 +677,28 @@ export class UI {
       const dir = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'][((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8];
       return `${d >= 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d / 10) * 10 + ' m'} ${dir}`;
     };
-    const card = (qq, main) => {
-      const st = qq.def.stages[qq.s.stage];
-      const pr = q.progress(qq.id);
+    const card = (qq, main, sub = null) => {
+      // (a step that's "see that quest through": what to do in it, here)
+      const on = sub || qq;
+      const st = on.def.stages[on.s.stage];
+      const pr = q.progress(on.id);
       const at = where(qq.id);
       return [
         main ? h('div.qt-head', uiImg('quest', 14), qq.def.part ? `MAIN STORY · PART ${qq.def.part}` : 'MAIN STORY') : null,
         h('div.qt-title', qq.def.name),
+        sub ? h('div.qt-sub', sub.def.name) : null,
         h('div.qt-obj', st?.desc || '', pr ? h('span.qt-n', ` ${pr.n}/${pr.of}`) : null),
         at ? h('div.qt-where', at === 'here' ? 'You are here' : at) : null,
       ];
     };
     const main = q.main();
+    const sub = q.mainSub();
     const side = q.tracked();
-    const key = JSON.stringify([main && [main.id, main.s.stage, q.progress(main.id), where(main.id)], side.map((x) => [x.id, x.s.stage, q.progress(x.id), where(x.id)]), c.mainIntro || null, (c.stats?.playTime || 0) > 600 && !game.currentIsland]);
+    const key = JSON.stringify([main && [main.id, main.s.stage, q.progress(main.id), where(main.id)], sub && [sub.id, sub.s.stage, q.progress(sub.id)], side.map((x) => [x.id, x.s.stage, q.progress(x.id), where(x.id)]), c.mainIntro || null, (c.stats?.playTime || 0) > 600 && !game.currentIsland]);
     if (key === this.cache.track) return;
     this.cache.track = key;
     clear(E.track);
-    if (main) E.track.appendChild(h('div.qt-main', ...card(main, true)));
+    if (main) E.track.appendChild(h('div.qt-main', ...card(main, true, sub)));
     else if (c.mainIntro) {
       // (after a while away from home, just a reminder)
       const brief = (c.stats?.playTime || 0) > 600 && !game.currentIsland;

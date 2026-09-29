@@ -232,8 +232,10 @@ export class LivesSystem {
         g.log('A kind fisherman lends you his rowboat.', '#b0bec5');
       }
     }
-    // hostile mobs don't camp your bed
+    // hostile mobs don't camp your bed (and the fight you lost is over)
     for (const a of g.actorsNear(p.x, p.y, 12)) if (a.controller?.target === p) { a.controller.target = null; a.controller.state = 'return'; }
+    if (g.bossTarget?.controller?.target === p) { g.bossTarget.controller.target = null; g.bossTarget.controller.state = 'return'; }
+    g.bossTarget = null;
     g.snapCamera();
     void findShore;
   }

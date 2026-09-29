@@ -1,6 +1,7 @@
 // East Blue content pack: the canon arcs of the "weakest sea".
 import './bossMoves.js';
 import { spawnNow, findActor, aggro, seaBoss, despawn } from './helpers.js';
+import { makeEnemy } from '../game/npcs.js';
 import { addItem, count } from '../game/inventory.js';
 import { persist } from '../game/lineage.js';
 
@@ -270,7 +271,7 @@ const npcs = [
             { text: 'You look worried about something.', if: () => !ctx.quest('black_cat_plot'), next: 'plot' },
             { text: 'Bye, Captain.', end: true },
           ] },
-        plot: { text: '"...Okay. This one isn\'t a lie. I overheard Kaya\'s butler, Klahadore, on the cliffs with a hypnotist. He\'s really Captain Kuro of the Black Cat Pirates! He faked his death and now he wants to kill Kaya for her fortune! Nobody believes me — I\'m the boy who cried pirates..."', choices: [{ text: 'I believe you.', do: (c) => c.startQuest('black_cat_plot'), end: true }, { text: 'Sounds like another lie.', end: true }] },
+        plot: { text: '"...Okay. This one isn\'t a lie. I overheard Kaya\'s butler, Klahadore, on the cliffs with a hypnotist. He\'s really Captain Kuro of the Black Cat Pirates! He faked his death and now he wants to kill Kaya for her fortune! His crew land on the north coast at dawn and come up the north slope, north of the village. Nobody believes me — I\'m the boy who cried pirates..."', choices: [{ text: 'I believe you.', do: (c) => c.startQuest('black_cat_plot'), end: true }, { text: 'Sounds like another lie.', end: true }] },
       },
     }),
   },
@@ -290,12 +291,13 @@ const npcs = [
     look: { hair: 'curly', hairColor: '#fafafa', top: '#212121', bottom: '#212121', skin: '#fafafa', hat: 'horns' }, level: 2,
     dialogue: (ctx) => ({ start: 'a', nodes: { a: { text: '"I designed the caravel myself. She\'s not big, but she has a heart. Treat her well, and she\'ll carry you anywhere."', choices: [
       { text: 'Thank you, Merry.', end: true }] } } }) },
-  { id: 'jango', name: 'Jango', title: 'Hypnotist, Black Cat Pirates', island: 'gecko_islands', at: { spot: 'north_slope' }, hostile: true, named: true, faction: 'pirate', level: 9,
+  { id: 'jango', name: 'Jango', title: 'Hypnotist, Black Cat Pirates', island: 'gecko_islands', at: { spot: 'north_slope' }, hostile: true, named: true, faction: 'pirate', level: 8,
     look: { hair: 'afro', hairColor: '#212121', top: '#fafafa', bottom: '#1a237e', hat: 'cowboy', hatColor: '#212121', goggles: true }, moves: ['jango_chakram', 'jango_hypnosis'], bounty: 9000000, infamy: true, breakthrough: 1,
     when: (c, g) => g.quests.stageId('black_cat_plot') === 'slope' || g.quests.stageId('black_cat_plot') === 'kuro' },
-  { id: 'kuro', name: 'Captain Kuro', title: '"Kuro of a Hundred Plans"', island: 'gecko_islands', at: { spot: 'north_slope' }, hostile: true, boss: true, hpMul: 1.1, faction: 'pirate', level: 13,
+  // (a starter island's boss: a hard fight, not a wall)
+  { id: 'kuro', name: 'Captain Kuro', title: '"Kuro of a Hundred Plans"', island: 'gecko_islands', at: { spot: 'north_slope' }, hostile: true, boss: true, hpMul: 0.85, faction: 'pirate', level: 11,
     look: { hair: 'buzz', hairColor: '#212121', top: '#212121', bottom: '#212121', skin: '#f1c9a0', goggles: true, hand: '#eceff1' }, style: 'brawler', moves: ['kuro_stealth', 'kuro_claws'],
-    bounty: 16000000, infamy: true, breakthrough: 3, skill: 0.5, alert: 'Three years of planning. I will not let a nobody ruin it.',
+    bounty: 16000000, infamy: true, breakthrough: 3, skill: 0.35, alert: 'Three years of planning. I will not let a nobody ruin it.',
     when: (c, g) => g.quests.stageId('black_cat_plot') === 'kuro' },
 
   // ------------------------------------------------------------ Baratie
@@ -447,6 +449,28 @@ const npcs = [
 ];
 
 // --------------------------------------------------------- enemy groups
+// Kuro's crew on the north slope: a band while the fight there lasts (see groups)
+const BLACK_CAT_CREW = [['pirate', 6, { name: 'Black Cat Pirate' }], ['pirate', 6, { name: 'Black Cat Pirate' }], ['brute', 7, { name: 'Siam (Nyaban Brother)' }], ['brute', 7, { name: 'Butchie (Nyaban Brother)' }]];
+
+/**
+ * The crew come up the slope now, if you're on the island when the fight
+ * starts (a band only turns up when an island fills with people: with you
+ * already there, Jango stood on the slope alone).
+ */
+function blackCatCrew(g) {
+  const list = g.spawner.populated.get('gecko_islands');
+  const s = g.surface.islands.find((i) => i.id === 'gecko_islands')?.spots.north_slope;
+  if (!list || !s || g.world !== g.surface) return;
+  if (g.actors.some((a) => a.alive && /^(Black Cat Pirate|Siam|Butchie)/.test(a.name || ''))) return;
+  for (const [arch, lvl, over] of BLACK_CAT_CREW) {
+    const p = g.spawner.findFree(s.x, s.y, 6) || { x: s.x, y: s.y };
+    const a = makeEnemy(arch, lvl, p.x, p.y, over);
+    a.game = g;
+    g.addActor(a);
+    list.push(a);
+  }
+}
+
 const groups = [
   { island: 'dawn_island', dx: -0.25, dy: 0.12, radius: 5, level: 4, enemies: [['bandit', 4], ['bandit', 4], ['bandit', 5]], when: (c) => !c.bosses.includes('higuma') },
   { island: 'dawn_island', dx: 0.1, dy: -0.25, radius: 8, enemies: [['tiger', 9, { name: 'Colubo Tiger' }], ['beast', 5, { name: 'Mountain Boar' }]] },
@@ -456,7 +480,7 @@ const groups = [
   // (Buggy's crew lord it over Orange Town, but leave a newcomer be — till
   // someone lays a hand on one of them, or stands up to their captain)
   { island: 'organ_islands', dx: 0, dy: 0.1, radius: 7, calm: true, enemies: [['pirate', 6, { name: 'Buggy Pirate' }], ['pirate', 6, { name: 'Buggy Pirate' }], ['pirate_gunner', 6, { name: 'Buggy Cannoneer' }], ['beast', 8, { name: 'Richie the Lion', look: { fur: '#f6b93b', skin: '#f6b93b', hairColor: '#e67e22', hair: 'afro' } }]], when: (c) => !c.bosses.includes('buggy') },
-  { island: 'gecko_islands', spot: 'north_slope', radius: 6, enemies: [['pirate', 8, { name: 'Black Cat Pirate' }], ['pirate', 8, { name: 'Black Cat Pirate' }], ['brute', 9, { name: 'Siam (Nyaban Brother)' }], ['brute', 9, { name: 'Butchie (Nyaban Brother)' }]], when: (c, g) => g.quests.stageId('black_cat_plot') === 'slope' },
+  { island: 'gecko_islands', spot: 'north_slope', radius: 6, enemies: BLACK_CAT_CREW, when: (c, g) => g.quests.stageId('black_cat_plot') === 'slope' },
   { island: 'baratie', spot: 'baratie_deck', radius: 4, enemies: [['pirate', 10, { name: 'Krieg Pirate' }], ['pirate_gunner', 10, { name: 'Krieg Gunner' }], ['pirate', 10, { name: 'Pearl the Iron Wall', hpMul: 2, look: { bulk: 1.4 } }]], when: (c, g) => g.quests.stageId('baratie_krieg') === 'krieg' },
   { island: 'conomi_islands', dx: 0.55, dy: -0.15, radius: 7, enemies: [['fishman_thug', 9], ['fishman_thug', 9], ['fishman_thug', 10], ['fishman_thug', 10]], when: (c) => !c.bosses.includes('arlong') },
   { island: 'polestar_islands', dx: 0, dy: 0, radius: 9, enemies: [['marine', 10, { name: 'Loguetown Marine' }], ['marine_rifle', 10, { name: 'Loguetown Rifleman' }], ['marine', 10, { name: 'Loguetown Marine' }]], when: (c) => c.bounty > 0 && !c.flags.escapedLoguetown },
@@ -519,7 +543,8 @@ const quests = [
     rewards: { items: [['jewels', 2]], berries: 2000 } },
   { id: 'black_cat_plot', name: 'The Black Cat\'s Plot', island: 'gecko_islands', kind: 'story', summary: 'Kaya\'s butler Klahadore is really Captain Kuro. He plans to kill her at dawn.',
     stages: [
-      { id: 'slope', desc: 'Hold the north slope below Syrup Village against the Black Cat Pirates — defeat Jango the hypnotist.', goal: { type: 'defeat', npc: 'jango' }, onStart: (ctx, g) => { spawnNow(g, 'jango'); } },
+      { id: 'slope', desc: 'The Black Cat Pirates are coming ashore on the north coast. Hold the north slope (north of Syrup Village, up from the beach) — defeat Jango the hypnotist.', goal: { type: 'defeat', npc: 'jango' },
+        onStart: (ctx, g) => { spawnNow(g, 'jango'); blackCatCrew(g); } },
       { id: 'kuro', desc: 'Captain Kuro has shed his disguise. Defeat him on the north slope!', goal: { type: 'defeat', npc: 'kuro' }, onStart: (ctx, g) => { const k = spawnNow(g, 'kuro'); aggro(g, k); g.ui.banner('Captain Kuro', '"Kuro of a Hundred Plans"', 'The butler removes his glasses...', 4); } },
       { id: 'report', desc: 'Visit Kaya at her mansion.' },
     ],

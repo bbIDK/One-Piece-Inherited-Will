@@ -112,7 +112,7 @@ export class AIController {
     this.skill = o.skill ?? 0.3; // defensive skill 0..1
     this.aggression = o.aggression ?? 0.7;
     this.ranged = !!o.ranged;
-    this.prefRange = o.prefRange ?? (this.ranged ? 7 : 1.2);
+    this.prefRange = o.prefRange ?? (this.ranged ? 6 : 1.2);
     this.state = 'idle';
     this.target = null;
     this.think = Math.random() * 0.5;
@@ -301,7 +301,8 @@ export class AIController {
         this.comboLeft = Math.floor(Math.random() * 3);
         return;
       }
-      if (this.ranged && dist < this.prefRange + 3) { a.facing = ang; a.tryM1(game); return; }
+      // (a gunner opens fire from a few paces further off than they like to stand — not from across the square)
+      if (this.ranged && dist < this.prefRange + 2) { a.facing = ang; a.tryM1(game); return; }
     }
     if (this.comboLeft > 0 && !a.action && dist < this.meleeRange(a) + 0.5) { this.comboLeft--; a.tryM1(game); }
 

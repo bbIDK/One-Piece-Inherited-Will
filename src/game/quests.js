@@ -45,11 +45,26 @@ export class Quests {
   main() { return this.active().find((q) => q.def.kind === 'main') || null; }
   /** Active quests that aren't the main story. */
   side() { return this.active().filter((q) => q.def.kind !== 'main'); }
-  /** The side quests shown on the tracker: the ones pinned, else the two most recent. */
+  /**
+   * The quest the main story's current step is waiting on ("see the Black
+   * Cat's Plot through"), while it's under way: { id, def, s }, or null.
+   */
+  mainSub() {
+    const m = this.main();
+    const st = m && m.def.stages[m.s.stage];
+    const id = st?.goal?.type === 'quest' ? st.goal.quest : null;
+    return id && this.isActive(id) ? this.active().find((q) => q.id === id) || null : null;
+  }
+  /**
+   * The side quests shown on the tracker: the ones pinned, else the two most
+   * recent (not the one the main story's step is about: that's shown in the
+   * main story's place, not twice).
+   */
   tracked() {
     const c = this.char;
     if (!c) return [];
-    const side = this.side();
+    const sub = this.mainSub()?.id;
+    const side = this.side().filter((q) => q.id !== sub);
     const pinned = (c.trackedQuests || []).map((id) => side.find((q) => q.id === id)).filter(Boolean);
     if (pinned.length) return pinned.slice(0, 2);
     return side.sort((a, b) => (b.s.started || 0) - (a.s.started || 0)).slice(0, 2);

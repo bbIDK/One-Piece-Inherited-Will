@@ -134,8 +134,13 @@ rearrange them.
     pirate, a hunter who raises a flag becomes a captain.
 - **Quests menu (L)** lists the chapter under way and the story so far, plus
   side quests you can track or give up. An on-screen **tracker** on the right
-  shows the next step and how far away it is. The **world map** marks the
+  shows the next step and how far away it is. When the story's step is to
+  see another quest through (the Black Cat's Plot), its card shows that
+  quest's step instead of listing it twice. The **world map** marks the
   story's next stop and the quest givers on the islands you know.
+- **A boss's health bar** shows while you're in the fight with them and close
+  by. It goes once they're beaten, when you get well away, or when you go
+  down and wake up somewhere else.
 - **Waypoints** point at whoever the step is about: the foe to beat or the
   person to see (a step that says "Return to Makino" points at Makino)
   where they stand, or — not about yet — where they'll be on the island
